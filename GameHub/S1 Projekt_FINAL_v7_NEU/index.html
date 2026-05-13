@@ -9,24 +9,23 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; height: 100%; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
   body {
     font-family: 'Nunito', -apple-system, sans-serif;
     background: linear-gradient(135deg, #fbe9c8 0%, #f5b7c4 40%, #b6d8f5 100%);
     color: #1d1d1f;
-    min-height: 100vh;
+    height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 24px;
-    overflow-x: hidden;
   }
 
   /* iPad frame */
   .ipad {
-    width: min(1200px, 100%);
+    width: min(1200px, 100%, calc((100dvh - 48px) * 4 / 3));
     aspect-ratio: 4 / 3;
-    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
     background: #1d1d1f;
     border-radius: 44px;
     padding: 18px;
