@@ -4,7 +4,7 @@ GAME_ACCESS = {
   // Season 1
   game1:  { status: 'locked' },            // Finde Grün
   game3:  { status: 'available'}, // Daten-Quiz
-  game7:  { status: 'available' },            // Escape Game
+  game7:  { status: 'locked' },            // Escape Game
   game8:  { status: 'available'},      // Projekt_FINAL_v7_Neu
   // Season 2
   game5:  { status: 'available' },               // Finde Gelb
