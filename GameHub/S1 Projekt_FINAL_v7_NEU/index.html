@@ -2189,6 +2189,7 @@ function endTest() {
 
 function triggerVirusFail() {
   state.phase = 'failed';
+  state.test.allPerfect = false;
   closeModal();
   testBanner.classList.add('hidden');
   screenEl.classList.remove('test-mode');

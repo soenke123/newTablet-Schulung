@@ -9,7 +9,7 @@
         * { box-sizing: border-box; }
 
         body {
-            margin: 0; overflow: hidden; height: 100vh;
+            margin: 0; overflow: hidden; height: 100vh; height: 100dvh;
             display: flex; flex-direction: column;
             background: #0f172a; color: white;
             font-family: 'Inter', system-ui, sans-serif;
@@ -580,6 +580,39 @@
             pointer-events: none; z-index: 15; white-space: nowrap;
             animation: scorePop 1.4s ease forwards;
         }
+
+        /* ─── Responsive: Tablet / kleiner Bildschirm ─── */
+        @media (max-height: 860px) {
+            /* Header kompakter */
+            #header { height: 50px; padding: 0 14px; }
+            #target-display { font-size: 20px !important; }
+            #wave-display   { font-size: 17px !important; }
+            #progress-text  { font-size: 10px !important; }
+            #timer          { font-size: 20px !important; }
+
+            /* Tools-Panel: Overflow verhindern, kompakter */
+            #tools-panel    { padding: 8px 6px; gap: 6px; overflow: hidden; }
+            #eggVisual      { width: min(88px, 80%) !important; height: min(88px, 80%) !important; }
+            #score-value    { font-size: 24px !important; }
+            #highscore-value{ font-size: 14px !important; }
+
+            /* ── Startscreen ── */
+            #ff-title        { font-size: clamp(24px, 3.5vw, 40px) !important; }
+            #ff-subtitle     { font-size: 12px !important; margin: 3px 0 0 !important; }
+            .ff-banner-h2    { font-size: clamp(14px, 1.6vw, 18px) !important; }
+            #ff-big-stat     { padding: 8px !important; }
+            #ff-stat-num     { font-size: clamp(32px, 4vw, 48px) !important; }
+            #ff-task-arrow   { font-size: clamp(26px, 3vw, 36px) !important; letter-spacing: 2px !important; }
+            #ff-start-banners{ padding: 10px 24px !important; gap: 12px !important; }
+            .ff-banner       { padding: 14px 16px !important; gap: 8px !important; }
+            .ff-banner p     { font-size: 14px !important; line-height: 1.5 !important; }
+            #start-highscore { font-size: 22px !important; }
+            #start-creature  { width: 80px !important; height: 80px !important; }
+
+            /* ── Win-Screen ── */
+            #ff-win-title { font-size: 36px !important; margin-bottom: 12px !important; }
+            #final-time   { font-size: 32px !important; }
+        }
     </style>
 </head>
 <body>
@@ -646,26 +679,26 @@
         <div style="flex-shrink:0;display:flex;align-items:center;padding:16px 24px 0;">
             <a href="../index.html" style="color:rgba(148,163,184,.8);font-size:14px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(30,41,59,.7);border:1px solid rgba(255,255,255,.08);border-radius:10px;-webkit-tap-highlight-color:transparent;">← Hub</a>
             <div style="flex:1;text-align:center;">
-                <h1 style="font-size:52px;font-weight:900;background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0;line-height:1;">FokusFlow</h1>
-                <p style="color:rgba(148,163,184,.75);font-size:15px;margin:6px 0 0;letter-spacing:.1em;text-transform:uppercase;font-weight:600;">Fokus-Trainings-Simulation</p>
+                <h1 id="ff-title" style="font-size:52px;font-weight:900;background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0;line-height:1;">FokusFlow</h1>
+                <p id="ff-subtitle" style="color:rgba(148,163,184,.75);font-size:15px;margin:6px 0 0;letter-spacing:.1em;text-transform:uppercase;font-weight:600;">Fokus-Trainings-Simulation</p>
             </div>
             <!-- Platzhalter rechts für symmetrisches Layout -->
             <div style="width:80px;flex-shrink:0;"></div>
         </div>
 
         <!-- Three banners -->
-        <div style="flex:1;display:flex;gap:16px;padding:18px 40px;min-height:0;">
+        <div id="ff-start-banners" style="flex:1;display:flex;gap:16px;padding:18px 40px;min-height:0;">
 
             <!-- Banner Links: Was wird simuliert? -->
-            <div style="flex:1;background:rgba(30,41,59,.8);border:1px solid rgba(167,139,250,.22);border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:14px;">
+            <div class="ff-banner" style="flex:1;background:rgba(30,41,59,.8);border:1px solid rgba(167,139,250,.22);border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:14px;">
                 <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
                     <span style="font-size:28px;">🧠</span>
-                    <h2 style="font-size:22px;font-weight:800;color:#a78bfa;margin:0;">Was wird simuliert?</h2>
+                    <h2 class="ff-banner-h2" style="font-size:22px;font-weight:800;color:#a78bfa;margin:0;">Was wird simuliert?</h2>
                 </div>
 
                 <!-- Big stat -->
-                <div style="text-align:center;padding:14px 10px;background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.18);border-radius:14px;flex-shrink:0;">
-                    <div style="font-size:64px;font-weight:900;color:#a78bfa;line-height:1;">23</div>
+                <div id="ff-big-stat" style="text-align:center;padding:14px 10px;background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.18);border-radius:14px;flex-shrink:0;">
+                    <div id="ff-stat-num" style="font-size:64px;font-weight:900;color:#a78bfa;line-height:1;">23</div>
                     <div style="font-size:19px;font-weight:700;color:rgba(220,210,255,.9);margin-top:3px;">Minuten</div>
                     <div style="font-size:15px;color:rgba(200,215,235,.8);margin-top:5px;">bis du nach einer Ablenkung wieder voll fokussiert bist</div>
                 </div>
@@ -683,10 +716,10 @@
             </div>
 
             <!-- Banner Mitte: Ziel -->
-            <div style="flex:1;background:rgba(30,41,59,.8);border:1px solid rgba(96,165,250,.28);border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:14px;">
+            <div class="ff-banner" style="flex:1;background:rgba(30,41,59,.8);border:1px solid rgba(96,165,250,.28);border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:14px;">
                 <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
                     <span style="font-size:28px;">🎯</span>
-                    <h2 style="font-size:22px;font-weight:800;color:#60a5fa;margin:0;">Deine Aufgabe</h2>
+                    <h2 class="ff-banner-h2" style="font-size:22px;font-weight:800;color:#60a5fa;margin:0;">Deine Aufgabe</h2>
                 </div>
                 <p style="color:rgba(255,255,255,.9);font-size:17px;line-height:1.65;margin:0;">
                     Klicke so schnell wie möglich die Zahlen <strong style="color:#60a5fa;">1 bis 64</strong> in der richtigen Reihenfolge an.
@@ -695,17 +728,17 @@
                     Zwischen den echten Zahlen tauchen <strong style="color:rgba(239,68,68,.9);">Fakes</strong> auf — ignoriere sie und tippe nur die nächste korrekte Zahl.
                 </p>
                 <div style="margin-top:auto;background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.16);border-radius:14px;padding:18px;text-align:center;">
-                    <div style="font-size:44px;font-weight:900;color:#60a5fa;letter-spacing:4px;line-height:1;">1 → 64</div>
+                    <div id="ff-task-arrow" style="font-size:44px;font-weight:900;color:#60a5fa;letter-spacing:4px;line-height:1;">1 → 64</div>
                     <p style="margin:8px 0 0;color:rgba(200,215,235,.75);font-size:14px;letter-spacing:.05em;text-transform:uppercase;">In richtiger Reihenfolge</p>
                 </div>
                 <p style="color:#34d399;font-size:17px;font-weight:800;text-align:center;margin:0;letter-spacing:.04em;">Konzentriere dich.</p>
             </div>
 
             <!-- Banner Rechts: Ablenkungen & Tools -->
-            <div style="flex:1;background:rgba(30,41,59,.8);border:1px solid rgba(250,204,21,.2);border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:13px;">
+            <div class="ff-banner" style="flex:1;background:rgba(30,41,59,.8);border:1px solid rgba(250,204,21,.2);border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:13px;">
                 <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
                     <span style="font-size:28px;">📵</span>
-                    <h2 style="font-size:22px;font-weight:800;color:#fbbf24;margin:0;">Ablenkungen & Tools</h2>
+                    <h2 class="ff-banner-h2" style="font-size:22px;font-weight:800;color:#fbbf24;margin:0;">Ablenkungen & Tools</h2>
                 </div>
                 <p style="color:rgba(255,255,255,.88);font-size:16px;line-height:1.6;margin:0;">
                     Mit der Zeit tauchen <strong style="color:#fbbf24;">Ablenkungen</strong> auf — WhatsApp, TikTok & Co. Ignoriere sie.
@@ -757,7 +790,7 @@
         <div style="max-width:900px;width:100%;padding-bottom:16px;">
 
             <!-- Titel: volle Breite, zentriert -->
-            <h1 style="font-size:52px;font-weight:900;color:#34d399;margin:0 0 20px;text-align:center;">Geschafft!</h1>
+            <h1 id="ff-win-title" style="font-size:52px;font-weight:900;color:#34d399;margin:0 0 20px;text-align:center;">Geschafft!</h1>
 
             <!-- Zweispaltig: Links = Ergebnis, Rechts = Lerninhalt -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-bottom:16px;">
