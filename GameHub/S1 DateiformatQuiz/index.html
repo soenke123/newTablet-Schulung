@@ -342,27 +342,7 @@ function saveToHub() {
     }
     gd.growth = 0;
   } else {
-    let contribution = computeSessionGrowth(correct, TOTAL);
-    if (sd.wachstumsBooster) contribution *= 2;
-    const room = Math.max(0, GROWTH_MAX - gd.growth);
-    if (room === 0) {
-      let coins = Math.round(contribution);
-      if (sd.coinsx3) coins *= 3;
-      gd.coins = (gd.coins || 0) + coins;
-      lastCoinsGained += coins;
-    } else if (contribution > room) {
-      gd.growth = GROWTH_MAX;
-      let overflow = Math.round(contribution - room);
-      if (sd.coinsx3) overflow *= 3;
-      gd.coins = (gd.coins || 0) + overflow;
-      lastCoinsGained += overflow;
-    } else {
-      gd.growth = Math.min(gd.growth + contribution, GROWTH_MAX);
-    }
-    if (correct === TOTAL && gd.growth >= GROWTH_MAX) {
-      gd.coins = (gd.coins || 0) + 3;
-      lastCoinsGained += 3;
-    }
+    lastCoinsGained += computeRoundResult(gd, correct, TOTAL, sd);
   }
   gd.points       += correct;
   gd.roundsPlayed += 1;

@@ -96,28 +96,9 @@ function saveAlgorithmHubData(score) {
       }
     }
   } else {
-    let gain = computeSessionGrowth(s, ALG_MAX_SCORE);
-    if (sd.wachstumsBooster) {
-      gain *= 2;
-      sd.wachstumsBooster = false;
-      saveShopData(sd);
-    }
-    const room = Math.max(0, GROWTH_MAX - gd.growth);
-    if (room === 0) {
-      let coins = Math.round(gain);
-      if (sd.coinsx3) { coins *= 3; sd.coinsx3 = false; saveShopData(sd); }
-      gd.coins = (gd.coins || 0) + coins;
-      _algCoinsGained += coins;
-    } else if (gain > room) {
-      gd.growth = GROWTH_MAX;
-      const overflow = Math.round(gain - room);
-      let coins = sd.coinsx3 ? overflow * 3 : overflow;
-      if (sd.coinsx3) { sd.coinsx3 = false; saveShopData(sd); }
-      gd.coins = (gd.coins || 0) + coins;
-      _algCoinsGained += coins;
-    } else {
-      gd.growth = Math.min(gd.growth + gain, GROWTH_MAX);
-    }
+    _algCoinsGained += computeRoundResult(gd, s, ALG_MAX_SCORE, sd);
+    if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+    if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
   }
 
   gd.points      = (gd.points      || 0) + s;

@@ -31,15 +31,12 @@ function getGameAccess(gameId) {
    ───────────────────────────────────────────────── */
 // Atari4 · Enter 9-0-4-3
 const GAMES_CONFIG = [
-  { id: 'game1', season: 1, title: 'Finde Grün',       icon: '🟢', url: 'Finde Grün/index.html'          },
   { id: 'game7', season: 1, title: 'Escape Game',      icon: '🔐', url: 'S1 EscapeGame/index.html'       },
   { id: 'game3', season: 1, title: 'Daten-Quiz',       icon: '📁', url: 'S1 DateiformatQuiz/index.html'  },
   { id: 'game8', season: 1, title: 'Projekt_FINAL_v7_NEU',  icon: '🗂️', url: 'S1 Projekt_FINAL_v7_NEU/index.html'       },
-  { id: 'game5',  season: 2, title: 'Finde Gelb',       icon: '🟡', url: 'Finde Gelb/index.html'                },
   { id: 'game9',  season: 2, title: 'Fokusflow',        icon: '🎯', url: 'S2 Fokusflow/index.html'             },
   { id: 'game10', season: 2, title: 'The Algorithm',    icon: '⚙️', url: 'S2 The Algorithm/index.html'        },
   { id: 'game11', season: 2, title: '10-Finger-Tippen', icon: '⌨️', url: 'S2 10finger Blindschreiben/index.html' },
-  { id: 'game6',  season: 3, title: 'Finde nicht Grün', icon: '🚫', url: 'Finde nicht Grün/index.html' },
   { id: 'game12', season: 3, title: 'Quellen-Tinder',  icon: '🃏', url: 'S3 Quellen Tinder/index.html' },
   { id: 'game13', season: 3, title: 'KI 1',            icon: '🤖', url: 'S3 KI1/index.html'           },
   { id: 'game14', season: 3, title: 'KI 2',            icon: '🧠', url: 'S3 KI2/index.html'           },
@@ -57,14 +54,14 @@ const SEASONS_CONFIG = [
 // Atari0 · Enter 7-3-9-1
 const SHOP_ITEMS = [
   { id: 'wachstumstrank',   icon: '🧪', name: 'Wachstumstrank',    description: 'Gibt einem Tier deiner Wahl sofort +5 Wachstumspunkte.', price: 5,  consumable: true },
-  { id: 'wachstumsBooster', icon: '⚡', name: 'Wachstums-Booster', description: 'Im nächsten Spiel wächst dein Tier doppelt so schnell.',  price: 15, consumable: true },
+  { id: 'wachstumsBooster', icon: '⚡', name: 'Wachstums-Booster', description: 'Im nächsten Spiel wächst dein Tier doppelt so schnell.',  price: 10, consumable: true },
   { id: 'coinsx3',          icon: '🎰', name: 'Coins ×3',          description: 'Im nächsten Spiel verdienst du dreimal so viele Münzen.', price: 10, consumable: true },
-  { id: 'glucksklee',   icon: '🍀', name: 'Glücksklee',      description: 'Erhöht die Chance auf ein episches Tier um mindestens 20 %. Aber spiele gut – je mehr richtige Antworten, desto höher steigt sie!', price: 30, consumable: true },
-  { id: 'buchDerMonster',   icon: '📜', name: 'Buch der Monster',  description: 'Enthüllt das Bestiarum der Lernwelt. Alle Wesen, die du je erblickt hast, werden darin verewigt.', price: 40, consumable: false, bookItem: true },
-  { id: 'seltenesEi',   icon: '🥚', name: 'Seltenes Ei',    description: 'Öffnet einen neuen Kreatur-Slot. 10 % Chance auf ein episches Tier!',   price: 40,  eggItem: true, eggType: 'rare'      },
-  { id: 'mythischesEi', icon: '🥚', name: 'Episches Ei',      description: 'Öffnet einen neuen Kreatur-Slot. 50 % Chance auf ein episches Tier!',   price: 120, eggItem: true, eggType: 'mythic'    },
-  { id: 'legendaresEi', icon: '🥚', name: 'Legendäres Ei',   description: 'Öffnet einen neuen Kreatur-Slot. 100 % Chance auf ein episches Tier!',  price: 200, eggItem: true, eggType: 'legendary' },
-  { id: 'atariHint', icon: '📡', name: 'Hinweis zum verlorenen Ei', description: 'Enthüllt die Spur einer verborgenen Kreatur. Nur für die Mutigen.', price: 400, consumable: false, atariHintItem: true },
+  { id: 'glucksklee',   icon: '🍀', name: 'Glücksklee',      description: 'Erhöht die Chance auf ein episches Tier um mindestens 20 %. Aber spiele gut – je mehr richtige Antworten, desto höher steigt sie!', price: 15, consumable: true },
+  { id: 'buchDerMonster',   icon: '📜', name: 'Buch der Monster',  description: 'Enthüllt das Bestiarum der Lernwelt. Alle Wesen, die du je erblickt hast, werden darin verewigt.', price: 25, consumable: false, bookItem: true },
+  { id: 'seltenesEi',   icon: '🥚', name: 'Seltenes Ei',    description: 'Öffnet einen neuen Kreatur-Slot. 10 % Chance auf ein episches Tier!',   price: 30,  eggItem: true, eggType: 'rare'      },
+  { id: 'mythischesEi', icon: '🥚', name: 'Episches Ei',      description: 'Öffnet einen neuen Kreatur-Slot. 50 % Chance auf ein episches Tier!',   price: 60, eggItem: true, eggType: 'mythic'    },
+  { id: 'legendaresEi', icon: '🥚', name: 'Legendäres Ei',   description: 'Öffnet einen neuen Kreatur-Slot. 100 % Chance auf ein episches Tier!',  price: 100, eggItem: true, eggType: 'legendary' },
+  { id: 'atariHint', icon: '📡', name: 'Hinweis zum verlorenen Ei', description: 'Enthüllt die Spur einer verborgenen Kreatur. Nur für die Mutigen.', price: 200, consumable: false, atariHintItem: true },
 ];
 
 // Atari2 · Enter 1-5-0-7

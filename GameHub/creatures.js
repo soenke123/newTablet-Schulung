@@ -675,6 +675,36 @@ function computeSessionGrowth(correct, maxPoints) {
   return (correct / maxPoints) * 10;
 }
 
+/* Berechnet Coins und Wachstum für eine abgeschlossene Runde (nicht Runde 1).
+   Mutiert data.growth und data.coins direkt. Gibt coinsGained zurück.
+   Booster/coinsx3 werden hier geprüft aber NICHT gecleart – das macht der Aufrufer. */
+function computeRoundResult(data, correct, maxPoints, sd) {
+  let contribution = computeSessionGrowth(correct, maxPoints);
+  const alreadyMaxed = data.growth >= GROWTH_MAX;
+
+  if (!alreadyMaxed && sd.wachstumsBooster) contribution *= 2;
+
+  let coinsGained = 0;
+  if (alreadyMaxed) {
+    coinsGained = Math.round(contribution);
+    if (sd.coinsx3) coinsGained *= 3;
+  } else {
+    const room = GROWTH_MAX - data.growth;
+    if (contribution > room) {
+      data.growth = GROWTH_MAX;
+      coinsGained = Math.round(contribution - room);
+    } else {
+      data.growth = Math.min(data.growth + contribution, GROWTH_MAX);
+      coinsGained = Math.round(contribution);
+    }
+  }
+
+  if (correct === maxPoints) coinsGained += 3;
+
+  data.coins = (data.coins || 0) + coinsGained;
+  return coinsGained;
+}
+
 /* ─── Local Storage ─── */
 const STORAGE_KEY = 'lernwelt_v3';
 

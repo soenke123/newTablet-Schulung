@@ -261,24 +261,7 @@
         }
         data.growth = 0;
       } else {
-        let contribution = computeSessionGrowth(correct, ROUNDS_PER_GAME);
-        if (sd.wachstumsBooster) contribution *= 2;
-
-        const room = Math.max(0, GROWTH_MAX - data.growth);
-        if (room === 0) {
-          coinsGained = Math.round(contribution);
-        } else if (contribution > room) {
-          data.growth = GROWTH_MAX;
-          coinsGained = Math.round(contribution - room);
-        } else {
-          data.growth = Math.min(data.growth + contribution, GROWTH_MAX);
-        }
-        if (sd.coinsx3) coinsGained *= 3;
-        data.coins = (data.coins || 0) + coinsGained;
-        if (correct === ROUNDS_PER_GAME && data.growth >= GROWTH_MAX) {
-          data.coins += 3;
-          coinsGained += 3;
-        }
+        coinsGained = computeRoundResult(data, correct, ROUNDS_PER_GAME, sd);
       }
 
       data.points       += correct;

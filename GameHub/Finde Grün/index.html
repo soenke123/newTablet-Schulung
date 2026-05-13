@@ -258,27 +258,7 @@
             }
             gameData.growth = 0;
         } else {
-            let contribution = computeSessionGrowth(greenFound, TARGET_COUNT);
-            if (sd.wachstumsBooster) contribution *= 2;
-            const room = Math.max(0, GROWTH_MAX - gameData.growth);
-            if (room === 0) {
-                let coins = Math.round(contribution);
-                if (sd.coinsx3) coins *= 3;
-                gameData.coins = (gameData.coins || 0) + coins;
-                lastCoinsGained += coins;
-            } else if (contribution > room) {
-                gameData.growth = GROWTH_MAX;
-                let overflow = Math.round(contribution - room);
-                if (sd.coinsx3) overflow *= 3;
-                gameData.coins = (gameData.coins || 0) + overflow;
-                lastCoinsGained += overflow;
-            } else {
-                gameData.growth = Math.min(gameData.growth + contribution, GROWTH_MAX);
-            }
-            if (greenFound === TARGET_COUNT && gameData.growth >= GROWTH_MAX) {
-                gameData.coins = (gameData.coins || 0) + 3;
-                lastCoinsGained += 3;
-            }
+            lastCoinsGained += computeRoundResult(gameData, greenFound, TARGET_COUNT, sd);
         }
         gameData.points       += greenFound;
         gameData.roundsPlayed += 1;

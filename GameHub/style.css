@@ -659,6 +659,43 @@ a { text-decoration: none; color: inherit; }
 }
 .shop-modal-close:hover { color: var(--clr-gold); }
 
+/* ── Challenge-Banner am Ende des Shops ────────── */
+
+.shop-challenge-banner {
+  margin: 16px 12px 12px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(139,90,43,0.18), rgba(232,131,10,0.12));
+  border: 1.5px solid var(--clr-gold);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.shop-challenge-banner__icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.shop-challenge-banner__text {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--clr-text);
+}
+
+.shop-challenge-banner__mail {
+  font-size: 0.82rem;
+  color: var(--clr-gold);
+  text-decoration: none;
+  word-break: break-all;
+}
+.shop-challenge-banner__mail:hover {
+  text-decoration: underline;
+}
+
 /* ── Shop-Liste (Einträge untereinander) ─────────── */
 
 .shop-list {
