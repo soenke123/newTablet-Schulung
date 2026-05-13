@@ -1,0 +1,2423 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Projekt_FINAL_v7_NEU – iPad Lernspiel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: 'Nunito', -apple-system, sans-serif;
+    background: linear-gradient(135deg, #fbe9c8 0%, #f5b7c4 40%, #b6d8f5 100%);
+    color: #1d1d1f;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow-x: hidden;
+  }
+
+  /* iPad frame */
+  .ipad {
+    width: min(1200px, 100%);
+    aspect-ratio: 4 / 3;
+    max-height: calc(100vh - 48px);
+    background: #1d1d1f;
+    border-radius: 44px;
+    padding: 18px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.35), inset 0 0 0 2px #3a3a3c;
+    position: relative;
+  }
+  .ipad::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -6px;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 60px;
+    background: #3a3a3c;
+    border-radius: 0 4px 4px 0;
+  }
+  .screen {
+    width: 100%;
+    height: 100%;
+    background: #f2f5fb;
+    border-radius: 28px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Status bar */
+  .statusbar {
+    height: 28px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1d1d1f;
+    flex-shrink: 0;
+  }
+  .statusbar .right { display: flex; gap: 6px; align-items: center; }
+
+  /* App layout */
+  .app {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    background: #f2f5fb;
+    overflow: hidden;
+  }
+
+  /* Constrain creature/egg images to their container */
+  #eggVisual img, #eggVisual svg,
+  #pf-start-creature img, #pf-start-creature svg,
+  #pf-win-creature-wrap img, #pf-win-creature-wrap svg { width:100% !important; height:100% !important; object-fit:contain; }
+
+  /* Sidebar */
+  .sidebar {
+    background: #e9eef7;
+    border-right: 1px solid #d5dbe6;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .sidebar-folders {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sidebar h3 {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #6e7787;
+    margin: 12px 8px 6px;
+  }
+  .folder {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d1d1f;
+    transition: background 0.15s, transform 0.1s;
+    user-select: none;
+  }
+  .folder:hover { background: #dde3ee; }
+  .folder.active { background: #007AFF; color: white; }
+  .folder.active .folder-icon { filter: brightness(0) invert(1); }
+  .folder.drop-target {
+    background: #cfe5ff;
+    outline: 2px dashed #007AFF;
+    outline-offset: -4px;
+    transform: scale(1.02);
+  }
+  .folder-icon {
+    width: 22px; height: 22px;
+    flex-shrink: 0;
+  }
+  .folder-count {
+    margin-left: auto;
+    background: rgba(0,0,0,0.08);
+    color: #1d1d1f;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+  }
+  .folder.active .folder-count {
+    background: rgba(255,255,255,0.25);
+    color: white;
+  }
+
+  /* Main */
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .main-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #e0e5ee;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(12px);
+  }
+  .main-header h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+  }
+  .hud {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .badge {
+    background: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .badge.score { background: #34c759; color: white; }
+  .badge.round { background: #007AFF; color: white; }
+  .badge.coins { background: #FF9500; color: white; }
+
+  .file-grid {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 22px;
+    align-content: start;
+  }
+
+  .file {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: grab;
+    padding: 8px;
+    border-radius: 14px;
+    transition: background 0.15s, transform 0.15s;
+    user-select: none;
+  }
+  .file:hover { background: rgba(0,122,255,0.08); transform: translateY(-2px); }
+  .file:active { cursor: grabbing; }
+  .file.dragging { opacity: 0.4; }
+  .file-thumb {
+    width: 68px;
+    height: 86px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .file-thumb svg.thumb-icon { width: 40px; height: 40px; }
+  .file-type-tag {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: white;
+    letter-spacing: 0.5px;
+  }
+  .file-type-tag.pdf { background: #ff3b30; }
+  .file-type-tag.png { background: #34c759; }
+  .file-type-tag.dat, .file-type-tag.tmp { background: #8e8e93; }
+  .file-type-tag.bat { background: #8e8e93; }
+  .file-type-tag.pages { background: #5856D6; }
+  .file-type-tag.pptx { background: #D13438; }
+  .file-name {
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    max-width: 110px;
+    word-break: break-word;
+    line-height: 1.25;
+    color: #1d1d1f;
+  }
+  .file.unknown .file-name { color: #6e7787; font-style: italic; }
+
+  /* Test highlight */
+  .file.test-target-hint { animation: pulse 1.6s infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,122,255,0); }
+    50% { box-shadow: 0 0 0 6px rgba(0,122,255,0.25); }
+  }
+
+  /* Modal */
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(20,20,30,0.55);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 30px;
+    animation: fadeIn 0.2s;
+  }
+  .modal-backdrop.visible { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: white;
+    border-radius: 22px;
+    width: min(640px, 100%);
+    max-height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+    animation: popIn 0.25s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #eef0f5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .modal-header h3 { margin: 0; font-size: 17px; font-weight: 800; flex: 1; }
+  .modal-close {
+    background: #e9eef7;
+    border: none;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 700;
+    color: #6e7787;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-close:hover { background: #d5dbe6; }
+  .modal-body {
+    padding: 22px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .modal-actions {
+    padding: 14px 20px;
+    border-top: 1px solid #eef0f5;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    background: #f8fafd;
+  }
+
+  .btn {
+    border: none;
+    background: #007AFF;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    transition: transform 0.1s, background 0.15s;
+  }
+  .btn:hover { background: #0066d6; }
+  .btn:active { transform: scale(0.97); }
+  .btn.secondary { background: #e9eef7; color: #1d1d1f; }
+  .btn.secondary:hover { background: #d5dbe6; }
+  .btn.success { background: #34c759; }
+  .btn.success:hover { background: #2aa84a; }
+  .btn.danger { background: #ff3b30; }
+
+  .preview-pdf {
+    background: #fff8e1;
+    border-left: 4px solid #ff3b30;
+    padding: 18px 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    color: #1d1d1f;
+  }
+  .preview-png {
+    display: flex;
+    justify-content: center;
+    background: #f2f5fb;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .preview-png svg { max-width: 240px; max-height: 240px; }
+  .preview-locked {
+    text-align: center;
+    padding: 30px 16px;
+    color: #6e7787;
+  }
+  .preview-locked svg { width: 64px; height: 64px; margin-bottom: 12px; }
+
+  .rename-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #007AFF;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    font-weight: 600;
+    margin-top: 8px;
+    outline: none;
+  }
+
+  /* Start / End screens */
+  .overlay-screen {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,122,255,0.95), rgba(88,86,214,0.95));
+    color: white;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+  }
+  .overlay-screen h1 {
+    font-size: clamp(36px, 5vw, 60px);
+    margin: 0 0 12px;
+    font-weight: 900;
+    letter-spacing: -1px;
+  }
+  .overlay-screen p {
+    font-size: 16px;
+    max-width: 540px;
+    line-height: 1.6;
+    margin: 0 0 18px;
+    opacity: 0.95;
+  }
+  .overlay-screen .btn {
+    background: white;
+    color: #007AFF;
+    padding: 14px 28px;
+    font-size: 16px;
+    margin-top: 10px;
+  }
+  .overlay-screen .btn:hover { background: #f0f0f0; }
+  .overlay-screen .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 14px;
+    margin: 18px 0;
+    max-width: 480px;
+    width: 100%;
+  }
+  .stat-card {
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(10px);
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .stat-card .num { font-size: 28px; font-weight: 900; }
+  .stat-card .lbl { font-size: 12px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Test banner */
+  .test-banner {
+    background: linear-gradient(135deg, #ff9500, #ff3b30);
+    color: white;
+    padding: 12px 20px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-weight: 700;
+    border-bottom: 3px solid rgba(255,255,255,0.2);
+    position: relative;
+    overflow: hidden;
+  }
+  .test-banner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      -55deg,
+      transparent, transparent 14px,
+      rgba(255,255,255,0.045) 14px, rgba(255,255,255,0.045) 28px
+    );
+    pointer-events: none;
+  }
+  .test-banner.hidden { display: none; }
+
+  @keyframes testBannerSlide {
+    from { transform: translateY(-100%); opacity: 0.6; }
+    65%  { transform: translateY(5px); }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  .test-banner.slide-in {
+    animation: testBannerSlide 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .test-q-badge {
+    background: rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.38);
+    border-radius: 12px;
+    padding: 5px 12px;
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    flex-shrink: 0;
+    justify-content: center;
+    min-width: 54px;
+  }
+  .test-q-num {
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    display: inline-block;
+  }
+  .test-q-sep {
+    font-size: 12px;
+    opacity: 0.75;
+    font-weight: 600;
+  }
+
+  @keyframes numBounce {
+    0%   { transform: scale(0.4); opacity: 0; }
+    65%  { transform: scale(1.3); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .test-q-num.bounce {
+    animation: numBounce 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .test-banner .question {
+    flex: 1;
+    min-width: 0;
+  }
+  .test-banner .q-label {
+    font-size: 10px;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+    font-weight: 700;
+  }
+  .test-banner .q-text {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  @keyframes questionSlide {
+    from { opacity: 0; transform: translateX(18px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .test-banner .q-text.new-q {
+    animation: questionSlide 0.28s ease both;
+  }
+
+  .test-banner .lives {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .test-banner .heart {
+    width: 20px; height: 20px;
+    transition: opacity 0.3s, transform 0.2s;
+  }
+  .test-banner .heart.lost { opacity: 0.25; transform: scale(0.8); }
+
+  /* Test-Modus: subtiler Hintergrund-Schimmer */
+  .screen.test-mode .app {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 149, 0, 0.08) 0%,
+      rgba(255, 59, 48, 0.03) 60px,
+      transparent 170px
+    );
+  }
+  .screen.test-mode .sidebar {
+    border-right: 1px solid rgba(255, 149, 0, 0.28);
+  }
+  .screen.test-mode .main-header {
+    border-bottom: 2px solid rgba(255, 149, 0, 0.18);
+  }
+
+  /* Toasts */
+  .toast-stack {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 200;
+    pointer-events: none;
+  }
+  .toast {
+    background: rgba(20,20,30,0.92);
+    color: white;
+    padding: 12px 22px;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    animation: toastIn 0.3s, toastOut 0.3s 2.2s forwards;
+    backdrop-filter: blur(10px);
+  }
+  .toast.success { background: rgba(52,199,89,0.95); }
+  .toast.error { background: rgba(255,59,48,0.95); }
+  .toast.coin { background: rgba(255,149,0,0.97); color: white; }
+  @keyframes toastIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes toastOut {
+    to { transform: translateY(20px); opacity: 0; }
+  }
+
+  /* Floating "+N 🪙" label that pops up from the badge */
+  @keyframes coinFloat {
+    0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    18%  { transform: translate(-50%, -50%) scale(1.35); opacity: 1; }
+    75%  { opacity: 1; }
+    100% { transform: translate(-50%, calc(-50% - 64px)) scale(1.1); opacity: 0; }
+  }
+  .coin-popup {
+    position: absolute;
+    font-size: 18px;
+    font-weight: 900;
+    color: #FF9500;
+    text-shadow: 0 0 14px rgba(255,149,0,0.55), 0 2px 6px rgba(0,0,0,0.18);
+    pointer-events: none;
+    z-index: 600;
+    animation: coinFloat 1s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+    white-space: nowrap;
+  }
+  .coin-popup.points {
+    color: #34c759;
+    font-size: 20px;
+    text-shadow: 0 0 14px rgba(52,199,89,0.6), 0 2px 6px rgba(0,0,0,0.18);
+  }
+
+  /* Badge bounce when updated */
+  @keyframes badgePop {
+    0%   { transform: scale(1); }
+    25%  { transform: scale(1.45) rotate(-5deg); }
+    55%  { transform: scale(0.87) rotate(3deg); }
+    78%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+  .badge-punch { animation: badgePop 0.48s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+
+  /* Particle burst */
+  @keyframes particleBurst {
+    0%   { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0); opacity: 0; }
+  }
+  .coin-particle {
+    position: absolute;
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 599;
+    animation: particleBurst 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-10px) rotate(-5deg); }
+    40% { transform: translateX(10px) rotate(5deg); }
+    60% { transform: translateX(-8px) rotate(-3deg); }
+    80% { transform: translateX(8px) rotate(3deg); }
+  }
+
+  /* Item-Badges & Effekte */
+  .file-virus-badge {
+    position: absolute; top: 4px; right: 4px;
+    background: #FF3B30; color: white;
+    font-size: 11px; font-weight: 900;
+    width: 18px; height: 18px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 5; box-shadow: 0 1px 4px rgba(255,59,48,0.5);
+  }
+  .file-round-badge {
+    font-size: 9px; font-weight: 700; color: #636366;
+    background: rgba(0,0,0,0.06);
+    border-radius: 4px; padding: 1px 5px;
+    margin-top: 2px;
+  }
+  .file.greyed {
+    opacity: 0.3;
+    pointer-events: none;
+    filter: grayscale(80%);
+  }
+  .folder.highlight {
+    background: #cfe5ff !important;
+    outline: 2px solid #007AFF;
+    animation: folderPulse 1s infinite;
+  }
+  @keyframes folderPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,122,255,0.4); }
+    50%       { box-shadow: 0 0 0 6px rgba(0,122,255,0); }
+  }
+  .unicorn-dancer {
+    position: absolute;
+    bottom: 24px; right: 24px;
+    z-index: 300;
+    animation: unicornDance 0.4s ease infinite alternate, fadeIn 0.2s;
+    pointer-events: none;
+  }
+  .unicorn-dancer img {
+    width: 288px;
+    height: auto;
+    display: block;
+    image-rendering: pixelated;
+  }
+  @keyframes unicornDance {
+    from { transform: translateY(0) rotate(-8deg); }
+    to   { transform: translateY(-10px) rotate(8deg); }
+  }
+
+  /* Helpers */
+  .empty {
+    grid-column: 1/-1;
+    text-align: center;
+    color: #8e95a3;
+    padding: 60px 20px;
+    font-size: 15px;
+  }
+  .empty svg { width: 80px; height: 80px; margin-bottom: 14px; opacity: 0.5; }
+
+  .sortable-progress {
+    background: #e9eef7;
+    border-radius: 50px;
+    height: 8px;
+    overflow: hidden;
+    width: 140px;
+  }
+  .sortable-progress .bar {
+    background: linear-gradient(90deg, #34c759, #007AFF);
+    height: 100%;
+    transition: width 0.4s;
+  }
+
+  /* Shop button */
+  .shop-btn {
+    background: white;
+    border: none;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    transition: transform 0.12s, background 0.15s;
+    flex-shrink: 0;
+    color: #1d1d1f;
+  }
+  .shop-btn:hover { background: #eef0f8; transform: scale(1.1); }
+  .shop-btn:active { transform: scale(0.93); }
+
+  /* Shop backdrop + panel */
+  .shop-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(20,20,30,0.32);
+    z-index: 180;
+    display: none;
+    backdrop-filter: blur(4px);
+    border-radius: 28px;
+  }
+  .shop-backdrop.visible { display: block; }
+
+  .shop-panel {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: min(360px, 94%);
+    background: #f2f5fb;
+    border-radius: 0 28px 28px 0;
+    z-index: 190;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -8px 0 36px rgba(0,0,0,0.18);
+    transform: translateX(105%);
+    transition: transform 0.3s cubic-bezier(0.34, 1.1, 0.64, 1);
+  }
+  .shop-panel.open { transform: translateX(0); }
+
+  .shop-header {
+    padding: 16px 18px 14px;
+    background: linear-gradient(135deg, #FF9500, #FF6000);
+    border-radius: 0 28px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .shop-header h3 { margin: 0; font-size: 17px; font-weight: 800; flex: 1; }
+  .shop-coin-display {
+    background: rgba(255,255,255,0.22);
+    padding: 4px 11px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .shop-close {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .shop-close:hover { background: rgba(255,255,255,0.35); }
+
+  .shop-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .shop-section-label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #6e7787;
+    margin: 4px 2px 0;
+  }
+
+  .shop-items-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .shop-item-card {
+    background: white;
+    border-radius: 16px;
+    padding: 14px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    text-align: center;
+    border: 2px solid transparent;
+    transition: border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+    cursor: pointer;
+    user-select: none;
+  }
+  .shop-item-card:hover:not(.owned):not(.cant-afford) {
+    border-color: #FF9500;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(255,149,0,0.18);
+  }
+  .shop-item-card.owned { border-color: #34c759; cursor: default; }
+  .shop-item-card.cant-afford { opacity: 0.55; cursor: not-allowed; }
+  .shop-item-card .item-icon { font-size: 34px; }
+  .shop-item-card .item-name { font-weight: 800; font-size: 12px; color: #1d1d1f; line-height: 1.2; }
+  .shop-item-card .item-desc { font-size: 10px; color: #6e7787; line-height: 1.4; }
+  .shop-item-card .item-price {
+    margin-top: 4px;
+    background: #FF9500;
+    color: white;
+    padding: 4px 11px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: 11px;
+  }
+  .shop-item-card.owned .item-price { background: #34c759; }
+  .shop-item-card.cant-afford .item-price { background: #8e8e93; }
+
+  .shop-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #8e95a3;
+    padding: 30px 20px;
+    gap: 10px;
+  }
+  .shop-empty-icon { font-size: 56px; }
+
+  /* Start screen cards */
+  #startScreen {
+    padding: 28px 36px;
+    justify-content: flex-start;
+    overflow-y: auto;
+  }
+  .start-title {
+    font-size: clamp(30px, 4.5vw, 54px);
+    font-weight: 900;
+    letter-spacing: -1px;
+    margin: 12px 0 4px;
+    line-height: 1.1;
+  }
+  .start-tagline {
+    font-size: 15px;
+    opacity: 0.88;
+    margin: 0 0 20px;
+    font-weight: 600;
+  }
+  .start-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 900px;
+    margin-bottom: 22px;
+  }
+  .start-card {
+    background: rgba(255,255,255,0.13);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 18px;
+    padding: 18px 16px;
+    text-align: left;
+  }
+  .start-card-icon { font-size: 32px; margin-bottom: 8px; }
+  .start-card h2 {
+    font-size: 15px;
+    font-weight: 800;
+    margin: 0 0 10px;
+    opacity: 1;
+  }
+  .start-card ul {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 12.5px;
+    line-height: 1.75;
+    opacity: 0.92;
+  }
+  .start-card ul li { margin-bottom: 2px; }
+  .start-card .ext-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+  }
+  .ext-badge {
+    background: rgba(255,255,255,0.22);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: monospace;
+  }
+
+  /* Hide on small screens warning */
+  @media (max-width: 720px) {
+    body { padding: 8px; align-items: flex-start; }
+    .ipad { padding: 8px; border-radius: 24px; }
+    .app { grid-template-columns: 90px 1fr; }
+    .folder span.folder-label { display: none; }
+    .folder-count { display: none; }
+    .sidebar h3 { display: none; }
+    .file-thumb { width: 56px; height: 70px; }
+    .file-grid { padding: 14px; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<div class="ipad">
+  <div class="screen" id="screen">
+
+    <!-- STATUS BAR -->
+    <div class="statusbar">
+      <span id="clock">09:41</span>
+      <span style="font-weight:800;">Projekt_FINAL_v7_NEU</span>
+      <span class="right">
+        <svg width="16" height="11" viewBox="0 0 16 11" fill="currentColor"><path d="M1 4.5C3 2.5 5.5 1.5 8 1.5s5 1 7 3l-1 1c-1.7-1.7-3.8-2.5-6-2.5S3.7 3.8 2 5.5l-1-1z"/><circle cx="8" cy="9" r="1.5"/></svg>
+        <svg width="22" height="11" viewBox="0 0 22 11" fill="none" stroke="currentColor"><rect x="0.5" y="0.5" width="19" height="10" rx="2"/><rect x="2" y="2" width="14" height="7" rx="1" fill="currentColor"/><rect x="20" y="3.5" width="1.5" height="4" rx="0.5" fill="currentColor"/></svg>
+      </span>
+    </div>
+
+    <!-- TEST BANNER -->
+    <div class="test-banner hidden" id="testBanner">
+      <div class="test-q-badge">
+        <span class="test-q-num" id="testQuestionNum">1</span>
+        <span class="test-q-sep">/ <span id="testQuestionTotal">3</span></span>
+      </div>
+      <div class="question">
+        <div class="q-label">Testphase – finde die Datei!</div>
+        <div id="testQuestion" class="q-text">Lade Frage…</div>
+      </div>
+      <div class="lives" id="testLives"></div>
+    </div>
+
+    <!-- APP -->
+    <div class="app">
+      <aside class="sidebar" id="sidebar"></aside>
+      <main class="main">
+        <div class="main-header">
+          <h2 id="folderTitle">Eingang</h2>
+          <div class="hud">
+            <div class="badge round">Runde <span id="roundNum">1</span> / 3</div>
+            <div class="badge score">⭐ <span id="score">0</span></div>
+            <div class="badge coins">🪙 <span id="coins">0</span></div>
+            <button class="shop-btn" id="shopBtn" title="Shop öffnen">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+              </svg>
+            </button>
+            <button class="btn success" id="starteTestBtn" style="display:none;">Starte Test</button>
+          </div>
+        </div>
+        <div class="file-grid" id="fileGrid"></div>
+      </main>
+    </div>
+
+    <!-- MODAL -->
+    <div class="modal-backdrop" id="modalBackdrop">
+      <div class="modal" id="modal">
+        <div class="modal-header">
+          <span id="modalIcon"></span>
+          <h3 id="modalTitle">Datei</h3>
+          <button class="modal-close" id="modalClose">×</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-actions" id="modalActions"></div>
+      </div>
+    </div>
+
+    <!-- START SCREEN -->
+    <div class="overlay-screen" id="startScreen">
+      <a href="../index.html" style="position:absolute;top:14px;left:14px;color:rgba(255,255,255,.85);font-size:13px;font-weight:700;text-decoration:none;padding:7px 13px;background:rgba(255,255,255,.15);border-radius:10px;border:1px solid rgba(255,255,255,.25);">← Hub</a>
+      <div style="font-size:48px;">🔍</div>
+      <div class="start-title">Projekt_FINAL_v7_NEU</div>
+      <div class="start-tagline">Werde zum Meister der digitalen Ordnung</div>
+
+      <div class="start-cards">
+
+        <!-- LEFT: Warum Ordnung? -->
+        <div class="start-card">
+          <div class="start-card-icon">📂</div>
+          <h2>Warum Ordnung wichtig ist</h2>
+          <ul>
+            <li>Gut benannte Dateien lassen sich sofort wiederfinden</li>
+            <li>Ordner helfen dir, den Überblick zu behalten</li>
+            <li>Die <b>Dateiendung</b> zeigt dir, was in einer Datei steckt</li>
+          </ul>
+          <div class="ext-row">
+            <span class="ext-badge">.pdf</span>
+            <span class="ext-badge">.png</span>
+            <span class="ext-badge">.tmp</span>
+            <span class="ext-badge">.dat</span>
+            <span class="ext-badge">.bat</span>
+          </div>
+        </div>
+
+        <!-- CENTER: Dein Auftrag -->
+        <div class="start-card">
+          <div class="start-card-icon">🎯</div>
+          <h2>Dein Auftrag</h2>
+          <ul>
+            <li>Das Spiel hat <b>3 Runden</b> — jede mit mehr Dateien</li>
+            <li>Sortiere alle Dateien in die richtigen Fach-Ordner</li>
+            <li>Benenne Dateien mit sinnvollen Namen</li>
+            <li>In der <b>Testphase</b> musst du deine Dateien wiederfinden</li>
+            <li>⚠️ <b>.bat-Dateien</b> sind Viren — direkt in den Papierkorb!</li>
+          </ul>
+        </div>
+
+        <!-- RIGHT: Der Shop -->
+        <div class="start-card">
+          <div class="start-card-icon">🏪</div>
+          <h2>Dein Shop</h2>
+          <ul>
+            <li>Durch gutes Sortieren sammelst du <b>Coins</b></li>
+            <li>Im Shop gibt es Hilfen, die dir das Leben leichter machen</li>
+            <li>Kaufe Hinweise, Scanner und mehr</li>
+            <li>Je besser du sortierst, desto mehr kannst du kaufen</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px;">
+        <button class="btn" id="startBtn" style="font-size:18px; padding:16px 40px;">Spiel starten</button>
+        <div id="pf-start-creature" style="width:180px;height:180px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;"></div>
+      </div>
+    </div>
+
+    <!-- ROUND-START SCREEN -->
+    <div class="overlay-screen" id="roundScreen" style="display:none;">
+      <h1 id="roundScreenTitle">Runde 1</h1>
+      <p id="roundScreenDesc">Sortiere alle Dateien in die richtigen Ordner!</p>
+      <button class="btn" id="roundStartBtn" data-testid="round-start-btn">Los geht's!</button>
+    </div>
+
+    <!-- TEST INTRO SCREEN -->
+    <div class="overlay-screen" id="testIntroScreen" style="display:none; background:linear-gradient(135deg, rgba(255,149,0,0.95), rgba(255,59,48,0.95));">
+      <div style="font-size:64px;">🔎</div>
+      <h1>Such-Test!</h1>
+      <p>Stark! Jetzt prüfen wir, ob du deine Dateien wiederfindest. Du bekommst 3 Aufgaben. Klicke schnell die richtige Datei an.</p>
+      <p style="font-size:14px; opacity:0.9;">Sofort gefunden: 2 Punkte · 1 Fehlklick: 1 Punkt · 2 Fehlklicks: nächste Frage</p>
+      <button class="btn" id="testStartBtn" data-testid="test-start-btn">Test starten</button>
+    </div>
+
+    <!-- VIRUS / ROUND-LOST SCREEN -->
+    <div class="overlay-screen" id="virusScreen" style="display:none; background:linear-gradient(135deg, rgba(180,20,30,0.97), rgba(60,0,10,0.97));">
+      <div style="font-size:84px; animation: shake 0.6s;">☠️</div>
+      <h1 style="color:#ffe6e6;">Virus aktiviert!</h1>
+      <p>Du hast eine <b>.bat-Datei</b> geöffnet. Solche Dateien können Schadsoftware ausführen – die Runde ist verloren und der Test entfällt.</p>
+      <p style="font-size:14px; opacity:0.9;">Merke: <b>.bat</b>-Dateien niemals öffnen! Schiebe sie ungesehen direkt in den Papierkorb.</p>
+      <button class="btn" id="virusContinueBtn" data-testid="virus-continue-btn">Weiter zur nächsten Runde</button>
+    </div>
+
+    <!-- END SCREEN -->
+    <div class="overlay-screen" id="endScreen" style="display:none;background:linear-gradient(135deg,rgba(52,199,89,0.97),rgba(0,122,255,0.97));justify-content:center;overflow-y:auto;padding:20px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:820px;width:100%;align-items:start;">
+
+        <!-- Links: Tier + Hub-Coins + Zurück-Button -->
+        <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+          <div id="pf-win-creature-wrap" style="display:flex;flex-direction:column;align-items:center;gap:6px;"></div>
+          <div id="pf-coin-bank" style="width:100%;"></div>
+          <a href="../index.html" style="display:block;width:100%;box-sizing:border-box;padding:13px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:14px;font-size:15px;font-weight:700;color:white;text-decoration:none;text-align:center;">← Zurück zum Hub</a>
+        </div>
+
+        <!-- Rechts: Titel + Ingame-Stats + Nochmal + Nutzen -->
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="text-align:center;">
+            <div style="font-size:44px;">🏆</div>
+            <h1 style="margin:4px 0;font-size:clamp(24px,4vw,40px);">Geschafft!</h1>
+            <p id="endMessage" style="margin:0;opacity:.9;font-size:14px;">Du hast alle Runden abgeschlossen.</p>
+          </div>
+          <div class="stats-grid" style="margin:0;">
+            <div class="stat-card"><div class="num" id="finalScore">0</div><div class="lbl">Punkte</div></div>
+            <div class="stat-card"><div class="num" id="finalBest">0</div><div class="lbl">Bestleistung</div></div>
+            <div class="stat-card"><div class="num" id="finalCoins">0</div><div class="lbl">🪙 Coins</div></div>
+            <div class="stat-card"><div class="num" id="finalSorted">0</div><div class="lbl">Sortiert</div></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn" id="restartBtn" data-testid="restart-btn" style="background:white;color:#007AFF;padding:13px 20px;border-radius:14px;font-size:15px;font-weight:700;margin-top:0;flex:1;">Nochmal →</button>
+            <div id="pf-result-item" style="flex-shrink:0;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SHOP -->
+    <div class="shop-backdrop" id="shopBackdrop"></div>
+    <div class="shop-panel" id="shopPanel">
+      <div class="shop-header">
+        <h3>🛒 Shop</h3>
+        <span class="shop-coin-display">🪙 <span id="shopCoinDisplay">0</span></span>
+        <button class="shop-close" id="shopClose">×</button>
+      </div>
+      <div class="shop-content" id="shopContent"></div>
+    </div>
+
+    <!-- TOASTS -->
+    <div class="toast-stack" id="toastStack"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- DATEN ---------- */
+// Alle Dateien zentral. question (optional) = Testfrage für diese Datei.
+// subject bestimmt, ab welcher Runde eine Datei auftauchen kann:
+//   Mathe/Deutsch/Bio/Papierkorb → ab Runde 1
+//   Englisch                     → ab Runde 2
+//   Orga                         → ab Runde 3
+const ALL_FILES = [
+  { id:'f01', startName:'IMG_0234',      name:'Dreieck',               type:'png', subject:'Mathe',    content:`<svg viewBox="0 0 200 200"><polygon points="100,30 30,170 170,170" fill="#007AFF" stroke="#003a82" stroke-width="3"/><text x="100" y="195" text-anchor="middle" font-size="14" font-weight="700">Dreieck</text></svg>` },
+  { id:'f02', startName:'scan_final_v2', name:'Herbstgedicht',          type:'pdf', subject:'Deutsch',  content:`Herbstgedicht\n\nBunt sind schon die Wälder,\ngelb die Stoppelfelder,\nund der Herbst beginnt.\nRote Blätter fallen,\ngraue Nebel wallen,\nkühler weht der Wind.`,                                                question:'Öffne das Herbstgedicht.' },
+  { id:'f03', startName:'datei_neu',     name:'Photosynthese',          type:'pdf', subject:'Bio',      content:`Photosynthese\n\nPflanzen wandeln Sonnenlicht, Wasser und Kohlendioxid in Sauerstoff und Traubenzucker um. Dieser Vorgang heißt Photosynthese und findet in den Chloroplasten statt.`,                    question:'Öffne die Datei über Photosynthese.' },
+  { id:'f04', startName:'unbenannt',     name:'Rechenaufgaben',         type:'pdf', subject:'Mathe',    content:`Rechenaufgaben\n\n12 + 15 = 27\n8 × 7 = 56\n45 - 19 = 26\n81 ÷ 9 = 9\n\nLöse alle Aufgaben in deinem Heft.`,                                                                                             question:'Öffne die Datei mit den Rechenaufgaben (12 + 15 = 27).' },
+  { id:'f05', startName:'foto1',         name:'Sonnenblume',            type:'png', subject:'Bio',      content:`<svg viewBox="0 0 200 200"><circle cx="100" cy="80" r="22" fill="#FFC107"/><g stroke="#FF9800" stroke-width="3" fill="#FFEB3B"><ellipse cx="100" cy="40" rx="10" ry="20"/><ellipse cx="140" cy="60" rx="10" ry="20" transform="rotate(45 140 60)"/><ellipse cx="160" cy="100" rx="10" ry="20" transform="rotate(90 160 100)"/><ellipse cx="140" cy="140" rx="10" ry="20" transform="rotate(135 140 140)"/><ellipse cx="100" cy="160" rx="10" ry="20"/><ellipse cx="60" cy="140" rx="10" ry="20" transform="rotate(45 60 140)"/><ellipse cx="40" cy="100" rx="10" ry="20" transform="rotate(90 40 100)"/><ellipse cx="60" cy="60" rx="10" ry="20" transform="rotate(135 60 60)"/></g><text x="100" y="195" text-anchor="middle" font-size="13" font-weight="700">Sonnenblume</text></svg>`,                                                                                                                                                                                                                                                    question:'Öffne das Bild mit der Sonnenblume.' },
+  { id:'f06', startName:'tmp_xyz',       name:'Maerchen-Aufsatz',       type:'tmp', subject:'Deutsch',  content:`Märchen-Aufsatz\n\nEs war einmal ein kleines Mädchen, das im tiefen Wald wohnte. Eines Tages traf es einen sprechenden Fuchs, der ihm den Weg zu einem verzauberten Schloss zeigte…`,                    question:'Öffne den Märchen-Aufsatz.' },
+  { id:'f07', startName:'win_update',    name:null,                     type:'bat', subject:'Papierkorb', content:null },
+
+  { id:'f08', startName:'IMG_4519',      name:'Quadrat-Diagonale',      type:'png', subject:'Mathe',    content:`<svg viewBox="0 0 200 200"><rect x="40" y="40" width="120" height="120" fill="none" stroke="#007AFF" stroke-width="4"/><line x1="40" y1="40" x2="160" y2="160" stroke="#FF3B30" stroke-width="3"/><text x="100" y="195" text-anchor="middle" font-size="13" font-weight="700">Quadrat + Diagonale</text></svg>`,                                                                                                                                                                                                                                                                              question:'Öffne das Bild mit dem Quadrat und der Diagonale.' },
+  { id:'f09', startName:'doku_2',        name:'Englisch-Vokabeln',      type:'pdf', subject:'Englisch', content:`English Vocabulary\n\nschool – Schule\nteacher – Lehrer\npupil – Schüler\nbook – Buch\npencil – Bleistift\nhomework – Hausaufgabe`,                                                                        question:'Öffne die Englisch-Vokabelliste (school, teacher, pupil…).' },
+  { id:'f10', startName:'datei_alt',     name:'Wasserkreislauf',        type:'pdf', subject:'Bio',      content:`Wasserkreislauf\n\nDie Sonne erwärmt das Wasser. Es verdunstet und steigt als Wasserdampf in die Luft. Dort kondensiert es zu Wolken. Aus den Wolken regnet das Wasser zurück auf die Erde.`,              question:'Öffne die Datei über den Wasserkreislauf.' },
+  { id:'f11', startName:'final_v3',      name:'Wortarten',              type:'pdf', subject:'Deutsch',  content:`Wortarten\n\nNomen: Hund, Tisch, Schule\nVerben: laufen, lesen, spielen\nAdjektive: schnell, klein, gelb\n\nNenne zu jeder Wortart drei eigene Beispiele.`,                                               question:'Öffne die Datei über Wortarten (Nomen, Verben, Adjektive).' },
+  { id:'f12', startName:'foto_22',       name:'Laubbaum',               type:'png', subject:'Bio',      content:`<svg viewBox="0 0 200 200"><ellipse cx="100" cy="120" rx="70" ry="40" fill="#8B4513"/><circle cx="100" cy="80" r="50" fill="#228B22"/><circle cx="80" cy="70" r="30" fill="#2EAB2E"/><circle cx="125" cy="75" r="35" fill="#2EAB2E"/><rect x="95" y="120" width="10" height="50" fill="#5C2C0E"/><text x="100" y="195" text-anchor="middle" font-size="13" font-weight="700">Laubbaum</text></svg>` },
+  { id:'f13', startName:'tmp_a1',        name:'Brueche',                type:'pdf', subject:'Mathe',    content:`Brüche\n\n1/2 + 1/4 = 3/4\n2/3 - 1/6 = 1/2\n3/5 × 2 = 6/5\n\nKürze, wenn möglich.`,                                                                                                                     question:'Öffne die Datei über Brüche.' },
+  { id:'f14', startName:'IMG_0067',      name:'Union-Jack',             type:'png', subject:'Englisch', content:`<svg viewBox="0 0 200 200"><rect x="20" y="20" width="160" height="100" fill="#012169"/><path d="M20 20 L180 120 M180 20 L20 120" stroke="white" stroke-width="14"/><path d="M20 20 L180 120 M180 20 L20 120" stroke="#C8102E" stroke-width="6"/><rect x="85" y="20" width="30" height="100" fill="white"/><rect x="20" y="55" width="160" height="30" fill="white"/><rect x="93" y="20" width="14" height="100" fill="#C8102E"/><rect x="20" y="63" width="160" height="14" fill="#C8102E"/><text x="100" y="155" text-anchor="middle" font-size="14" font-weight="700">Union Jack</text><text x="100" y="180" text-anchor="middle" font-size="12">Flagge Großbritannien</text></svg>`,                                                                                                                                                                                                question:'Öffne das Bild mit dem Union Jack (Flagge Großbritanniens).' },
+  { id:'f15', startName:'kopie_kopie',   name:'Lesetagebuch',           type:'pdf', subject:'Deutsch',  content:`Lesetagebuch\n\nKapitel 3 – Der geheime Garten\n\nMary entdeckt den verborgenen Schlüssel. Sie öffnet die alte Holztür und tritt in einen wilden, vergessenen Garten…`,                                   question:'Öffne das Lesetagebuch (Der geheime Garten).' },
+  { id:'f16', startName:'scann_07',      name:'Simple-Present',         type:'pdf', subject:'Englisch', content:`Simple Present\n\nI play – ich spiele\nyou play – du spielst\nhe / she / it plays\nwe play\nyou play\nthey play\n\nDon't forget the -s in the third person!`,                                             question:'Öffne die Datei mit dem Simple Present.' },
+  { id:'f17', startName:'datei_x',       name:'Flaechenformeln',        type:'dat', subject:'Mathe',    content:`Geometrie – Flächen\n\nQuadrat: A = a × a\nRechteck: A = a × b\nDreieck: A = (g × h) / 2\nKreis: A = π × r²`,                                                                                           question:'Öffne die Datei mit den Flächenformeln (Quadrat, Dreieck, Kreis).' },
+  { id:'f18', startName:'tmp_neu_neu',   name:'Saeugetiere',            type:'pdf', subject:'Bio',      content:`Säugetiere\n\nMerkmale aller Säugetiere:\n- haben Fell oder Haare\n- atmen mit Lungen\n- gebären lebende Junge\n- säugen ihren Nachwuchs\n\nBeispiele: Hund, Wal, Mensch, Maus.`,                        question:'Öffne die Datei über Säugetiere.' },
+  { id:'f19', startName:'IMG_9911',      name:'Brief',                  type:'png', subject:'Deutsch',  content:`<svg viewBox="0 0 200 200"><rect x="30" y="30" width="140" height="140" fill="#fff8e1" stroke="#8B7355" stroke-width="3"/><line x1="50" y1="60" x2="150" y2="60" stroke="#3a3a3c" stroke-width="2"/><line x1="50" y1="80" x2="150" y2="80" stroke="#3a3a3c" stroke-width="2"/><line x1="50" y1="100" x2="130" y2="100" stroke="#3a3a3c" stroke-width="2"/><line x1="50" y1="120" x2="150" y2="120" stroke="#3a3a3c" stroke-width="2"/><line x1="50" y1="140" x2="120" y2="140" stroke="#3a3a3c" stroke-width="2"/><text x="100" y="195" text-anchor="middle" font-size="13" font-weight="700">Brief</text></svg>`,                                                                                                                                                                                                                                                                              question:'Öffne das Bild mit dem Brief.' },
+
+  { id:'f22', startName:'IMG_2201',      name:'Kreis-Radius',           type:'png', subject:'Mathe',    content:`<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="70" fill="none" stroke="#007AFF" stroke-width="4"/><line x1="100" y1="30" x2="100" y2="170" stroke="#FF3B30" stroke-width="2" stroke-dasharray="4 4"/><text x="105" y="100" font-size="13" font-weight="700">r</text><text x="100" y="195" text-anchor="middle" font-size="13" font-weight="700">Kreis mit Radius</text></svg>`,                                                                                                                                                                                                               question:'Öffne das Bild mit dem Kreis und dem Radius.' },
+  { id:'f23', startName:'pdf_doc_1',     name:'Multiplikation',         type:'pdf', subject:'Mathe',    content:`Multiplikation\n\n7 × 8 = 56\n6 × 9 = 54\n12 × 12 = 144\n15 × 4 = 60\n\nLerne das kleine Einmaleins auswendig.`,                                                                                         question:'Öffne die Datei mit den Multiplikationsaufgaben (7 × 8 = 56).' },
+  { id:'f24', startName:'datei.0001',    name:'Wahrscheinlichkeit',     type:'pdf', subject:'Mathe',    content:`Wahrscheinlichkeit\n\nBeim Würfeln gibt es 6 mögliche Ergebnisse. Die Wahrscheinlichkeit für eine bestimmte Augenzahl beträgt 1/6 ≈ 16,7 %.`,                                                             question:'Öffne die Datei über Wahrscheinlichkeit beim Würfeln.' },
+  { id:'f25', startName:'final_FINAL',   name:'Rechtschreibung',        type:'pdf', subject:'Deutsch',  content:`Rechtschreibung\n\nGroßschreibung:\n- Nomen werden großgeschrieben\n- Satzanfänge werden großgeschrieben\n- Eigennamen werden großgeschrieben\n\nBeispiel: Der Hund läuft schnell.`,                      question:'Öffne die Datei über Rechtschreibung und Großschreibung.' },
+  { id:'f26', startName:'unsortiert_5',  name:'Loreley-Gedicht',        type:'pdf', subject:'Deutsch',  content:`Lyrik\n\nDie Loreley\n\nIch weiß nicht, was soll es bedeuten,\nDass ich so traurig bin;\nEin Märchen aus alten Zeiten,\nDas kommt mir nicht aus dem Sinn.\n\n— Heinrich Heine`,                          question:'Öffne das Gedicht "Die Loreley" von Heinrich Heine.' },
+  { id:'f27', startName:'tmp_xx',        name:'Hausaufgaben-Eroerterung', type:'pdf', subject:'Deutsch',  content:`Erörterung\n\nThema: Sollten Schüler Hausaufgaben bekommen?\n\nPro: festigt den Unterrichtsstoff, fördert Selbstständigkeit\nContra: weniger Freizeit, ungleiche Bedingungen zu Hause`,                   question:'Öffne die Datei über die Erörterung zu Hausaufgaben.' },
+  { id:'f28', startName:'foto_neu',      name:'Schnecke',               type:'png', subject:'Bio',      content:`<svg viewBox="0 0 200 200"><ellipse cx="100" cy="110" rx="60" ry="35" fill="#FF6B9D"/><circle cx="78" cy="100" r="6" fill="white"/><circle cx="78" cy="100" r="3" fill="#1d1d1f"/><path d="M 50 110 Q 35 90 30 70" stroke="#FF6B9D" stroke-width="6" fill="none"/><path d="M 150 110 Q 165 90 170 70" stroke="#FF6B9D" stroke-width="6" fill="none"/><text x="100" y="190" text-anchor="middle" font-size="13" font-weight="700">Schnecke</text></svg>`,                                                                                                                                                                                                                                                 question:'Öffne das Bild mit der Schnecke.' },
+  { id:'f29', startName:'datei_99',      name:'Skelett',                type:'pdf', subject:'Bio',      content:`Skelett des Menschen\n\nDer erwachsene Mensch hat ca. 206 Knochen. Die Wirbelsäule besteht aus 33 Wirbeln. Das größte Knochen ist der Oberschenkelknochen (Femur).`,                                      question:'Öffne die Datei über das Skelett des Menschen.' },
+  { id:'f30', startName:'tmp_pflanze',   name:'Insekten',               type:'pdf', subject:'Bio',      content:`Insekten\n\nKörperbau:\n- Kopf, Brust, Hinterleib\n- 6 Beine\n- meist 4 Flügel\n- Facettenaugen\n\nBeispiele: Biene, Käfer, Schmetterling, Ameise.`,                                                     question:'Öffne die Datei über Insekten.' },
+  { id:'f31', startName:'IMG_3344',      name:'Erde',                   type:'png', subject:'Bio',      content:`<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="70" fill="#4FC3F7"/><path d="M 60 80 Q 80 70 100 90 T 140 100" fill="#2E7D32"/><circle cx="70" cy="60" r="20" fill="white" opacity="0.8"/><text x="100" y="195" text-anchor="middle" font-size="13" font-weight="700">Erde</text></svg>` },
+  { id:'f32', startName:'pdf_223',       name:'Tier-Vokabeln',          type:'pdf', subject:'Englisch', content:`Vocabulary – Animals\n\ncat – Katze\ndog – Hund\nhorse – Pferd\nrabbit – Kaninchen\nbird – Vogel\nfish – Fisch`,                                                                                          question:'Öffne die Tier-Vokabelliste (cat, dog, horse…).' },
+  { id:'f33', startName:'unbenannt_2',   name:'Unregm-Verben',          type:'pdf', subject:'Englisch', content:`Past Tense\n\nI played\nyou played\nshe played\n\nIrregular verbs:\ngo → went\nsee → saw\nmake → made\nhave → had`,                                                                                        question:'Öffne die Datei mit den unregelmäßigen englischen Verben (Past Tense).' },
+  { id:'f34', startName:'datei_uk',      name:'London',                 type:'dat', subject:'Englisch', content:`London\n\nLondon is the capital of the United Kingdom. Famous landmarks: Big Ben, Tower Bridge, Buckingham Palace, Hyde Park, the London Eye.`,                                                           question:'Öffne die Datei über London.' },
+  { id:'f35', startName:'IMG_0001',      name:'USA-Flagge',             type:'png', subject:'Englisch', content:`<svg viewBox="0 0 200 200"><rect x="20" y="40" width="160" height="100" fill="#B22234"/><g fill="white"><rect x="20" y="56" width="160" height="12"/><rect x="20" y="84" width="160" height="12"/><rect x="20" y="112" width="160" height="12"/></g><rect x="20" y="40" width="80" height="56" fill="#3C3B6E"/><text x="100" y="170" text-anchor="middle" font-size="14" font-weight="700">USA Flagge</text></svg>`,                                                                                                                                                                                          question:'Öffne das Bild mit der USA-Flagge.' },
+  { id:'f36', startName:'stundenplan_alt', name:'Stundenplan',        type:'pdf', subject:'Orga',   content:`Stundenplan\n\nMontag: Mathe, Deutsch, Bio, Sport\nDienstag: Englisch, Mathe, Kunst, Musik\nMittwoch: Deutsch, Bio, Mathe, Englisch\nDonnerstag: Sport, Deutsch, Mathe, Bio\nFreitag: Englisch, Mathe, Deutsch`, question:'Öffne den Stundenplan.' },
+  { id:'f37', startName:'scan_zeugnis',  name:'Zwischenzeugnis',        type:'pdf', subject:'Orga',     content:`Zwischenzeugnis\n\nMathematik: 2\nDeutsch: 2\nBiologie: 1\nEnglisch: 3\nSport: 1\n\nBemerkung: Lina arbeitet engagiert mit.`,                                                                             question:'Öffne das Zwischenzeugnis.' },
+  { id:'f38', startName:'datei_orga',    name:'Klassenliste',           type:'pdf', subject:'Orga',     content:`Klassenliste\n\n1. Anna Bauer\n2. Ben Klein\n3. Clara Roth\n4. David Weiss\n5. Emma Schmidt\n…\n\nKlassensprecher: Ben Klein`,                                                                             question:'Öffne die Klassenliste.' },
+  { id:'f39', startName:'tmp_terminplan', name:'Terminplan',           type:'tmp', subject:'Orga',    content:`Termine\n\n12.03. Wandertag\n20.03. Mathe-Klassenarbeit\n25.03. Elternsprechtag\n02.04. Beginn Osterferien`,                                                                                               question:'Öffne den Terminplan.' },
+  { id:'f40', startName:'IMG_klasse',    name:'Klassenfoto',            type:'png', subject:'Orga',     content:`<svg viewBox="0 0 200 200"><rect x="20" y="40" width="160" height="120" fill="#FFE0B2"/><circle cx="60" cy="90" r="14" fill="#FFB74D"/><circle cx="100" cy="90" r="14" fill="#A1887F"/><circle cx="140" cy="90" r="14" fill="#FFB74D"/><rect x="40" y="105" width="40" height="40" fill="#42A5F5"/><rect x="80" y="105" width="40" height="40" fill="#EF5350"/><rect x="120" y="105" width="40" height="40" fill="#66BB6A"/><text x="100" y="180" text-anchor="middle" font-size="13" font-weight="700">Klassenfoto</text></svg>`,                                                                                                                                                                                                                                                                              question:'Öffne das Klassenfoto.' },
+  { id:'f41', startName:'final_pdf_neu', name:'Prozentrechnung',        type:'pdf', subject:'Mathe',    content:`Prozentrechnung\n\n10 % von 50 = 5\n25 % von 80 = 20\n50 % von 200 = 100\n\nFormel: Prozentwert = (Prozentsatz / 100) × Grundwert`,                                                                      question:'Öffne die Datei über Prozentrechnung.' },
+  { id:'f42', startName:'klick_mich',    name:null,                     type:'bat', subject:'Papierkorb', content:null },
+  { id:'f43', startName:'gewinn',        name:null,                     type:'bat', subject:'Papierkorb', content:null },
+  { id:'f44', startName:'IMG_virus',     name:null,                     type:'bat', subject:'Papierkorb', content:null },
+
+  { id:'f45', startName:'IMG_kompass',   name:'Kompass',                type:'png', subject:'Geographie', content:`<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="68" fill="#EBF5FB" stroke="#5AC8FA" stroke-width="4"/><polygon points="100,32 108,100 100,96 92,100" fill="#FF3B30"/><polygon points="100,168 108,100 100,104 92,100" fill="#636366"/><polygon points="32,100 100,92 96,100 100,108" fill="#636366"/><polygon points="168,100 100,92 104,100 100,108" fill="#636366"/><text x="100" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#FF3B30">N</text><text x="100" y="191" text-anchor="middle" font-size="12" font-weight="700">S</text><text x="18" y="105" text-anchor="middle" font-size="12" font-weight="700">W</text><text x="186" y="105" text-anchor="middle" font-size="12" font-weight="700">O</text><text x="100" y="195" text-anchor="middle" font-size="13" font-weight="700">Kompass</text></svg>`, question:'Öffne das Bild mit dem Kompass.' },
+  { id:'f46', startName:'kontinente',    name:'Kontinente',             type:'pdf', subject:'Geographie', content:`Kontinente der Erde\n\n1. Europa\n2. Asien\n3. Afrika\n4. Nordamerika\n5. Südamerika\n6. Australien / Ozeanien\n7. Antarktis\n\nDie größten Kontinente sind Asien und Afrika.`,                         question:'Öffne die Datei über die Kontinente der Erde.' },
+  { id:'f47', startName:'datei_geo',     name:'Hauptstaedte-Europas',   type:'pdf', subject:'Geographie', content:`Hauptstädte Europas\n\nDeutschland – Berlin\nFrankreich – Paris\nItalien – Rom\nSpanien – Madrid\nÖsterreich – Wien\nSchweiz – Bern\nPolen – Warschau`,                                                  question:'Öffne die Datei mit den europäischen Hauptstädten.' },
+  { id:'f48', startName:'tmp_fluesse',   name:'Fluesse-Deutschlands',   type:'pdf', subject:'Geographie', content:`Flüsse Deutschlands\n\nRhein: 865 km (in Deutschland)\nElbe: 727 km\nDonau: 687 km\nWeser: 452 km\nOder: 162 km (in Deutschland)\n\nDer längste Fluss Deutschlands ist der Rhein.`,                    question:'Öffne die Datei über die Flüsse Deutschlands.' },
+
+  // --- Pages-Dateien (5) ---
+  { id:'f50', startName:'unbekannt_(1)',  name:'Geometrie-Aufgaben',     type:'pages', subject:'Mathe',    content:`Geometrie-Aufgaben\n\nAufgabe 1: Berechne den Umfang eines Rechtecks mit a = 8 cm und b = 5 cm.\nAufgabe 2: Wie groß ist die Fläche eines Dreiecks mit g = 10 cm und h = 6 cm?\nAufgabe 3: Berechne den Kreisumfang mit r = 4 cm.`,                                                                      question:'Öffne die Geometrie-Aufgaben (Rechteck, Dreieck, Kreis).' },
+  { id:'f51', startName:'Download', name:'Aufsatz-Entwurf',      type:'pages', subject:'Deutsch',  content:`Aufsatz-Entwurf\n\nThema: Ein unvergesslicher Schultag\n\nEinleitung: An einem gewöhnlichen Dienstag passierte etwas Außergewöhnliches…\nHauptteil: Als wir die Turnhalle betraten, sahen wir eine riesige Überraschung.\nSchluss: Dieser Tag wird mir für immer in Erinnerung bleiben.`,          question:'Öffne den Aufsatz-Entwurf (Ein unvergesslicher Schultag).' },
+  { id:'f52', startName:'Dokument1', name:'Tiere-Referat',          type:'pages', subject:'Bio',      content:`Referat: Tiere im Winter\n\nVögel: Einige ziehen in wärmere Länder (Zugvögel).\nIgel: Halten Winterschlaf von Oktober bis März.\nEichhörnchen: Legen Vorräte an und halten Winterruhe.\nFüchse: Bleiben aktiv und suchen Nahrung im Schnee.`,                                               question:'Öffne das Referat über Tiere im Winter.' },
+  { id:'f53', startName:'kopie_von_kopie', name:'English-Essay',          type:'pages', subject:'Englisch', content:`My Favourite Season\n\nMy favourite season is summer. The days are long and the weather is warm. I love swimming in the lake and playing football with my friends. In summer, we have six weeks of holidays – that is the best part!`,                                                               question:'Öffne das englische Essay (My Favourite Season).' },
+  { id:'f54', startName:'IMG_8823', name:'Laender-Bericht',      type:'pages', subject:'Geographie', content:`Länderbericht: Brasilien\n\nHauptstadt: Brasília\nFläche: 8,5 Mio. km²\nEinwohner: ca. 215 Millionen\nSprache: Portugiesisch\nBesonderheit: Brasilien beheimatet den größten Regenwald der Erde – den Amazonas.`,                                                                               question:'Öffne den Länderbericht über Brasilien.' },
+
+  // --- PowerPoint-Dateien (5) ---
+  { id:'f55', startName:'Praesentation1',   name:'Zahlen-Praesentation',   type:'pptx',  subject:'Mathe',    content:`Präsentation: Zahlen & Rechnen\n\nFolie 1 – Titel: Zahlen sind überall!\nFolie 2 – Gerade Zahlen: 2, 4, 6, 8, 10 …\nFolie 3 – Ungerade Zahlen: 1, 3, 5, 7, 9 …\nFolie 4 – Primzahlen: 2, 3, 5, 7, 11, 13, 17 …\nFolie 5 – Aufgabe: Finde alle Primzahlen bis 30!`,                          question:'Öffne die Präsentation über Zahlen (Primzahlen).' },
+  { id:'f56', startName:'neu_FINAL_v2',  name:'Gedicht-Praesentation',  type:'pptx',  subject:'Deutsch',  content:`Präsentation: Lyrik in der Schule\n\nFolie 1 – Was ist ein Gedicht?\nFolie 2 – Merkmale: Verse, Strophen, Reim\nFolie 3 – Reimschema: aaab, abab, abba\nFolie 4 – Beispiel: "Der Erlkönig" von Goethe\nFolie 5 – Aufgabe: Schreibe ein eigenes Haiku!`,                                    question:'Öffne die Präsentation über Lyrik (Gedicht, Verse, Reim).' },
+  { id:'f57', startName:'tmp_0045',     name:'Oekosystem-Praesentation', type:'pptx', subject:'Bio',     content:`Präsentation: Ökosysteme der Erde\n\nFolie 1 – Was ist ein Ökosystem?\nFolie 2 – Wald: Produzenten, Konsumenten, Destruenten\nFolie 3 – See: Nahrungskette im Wasser\nFolie 4 – Wüste: Leben unter extremen Bedingungen\nFolie 5 – Aufgabe: Zeichne eine Nahrungskette!`,                  question:'Öffne die Präsentation über Ökosysteme.' },
+  { id:'f58', startName:'Mappe1',       name:'UK-Praesentation',        type:'pptx',  subject:'Englisch', content:`Presentation: The United Kingdom\n\nSlide 1 – Capital: London\nSlide 2 – Countries: England, Scotland, Wales, Northern Ireland\nSlide 3 – Landmarks: Big Ben, Stonehenge, Loch Ness\nSlide 4 – Traditions: Tea time, the Queen, red buses\nSlide 5 – Task: Name five UK cities!`,           question:'Öffne die Präsentation über das Vereinigte Königreich.' },
+  { id:'f59', startName:'ohne_Titel',  name:'Klassenprojekt-Praesentation', type:'pptx', subject:'Orga', content:`Präsentation: Unser Klassenprojekt\n\nFolie 1 – Titel: "Unsere Schule – gestern und heute"\nFolie 2 – Aufgaben: Fotos sammeln, Interviews führen\nFolie 3 – Zeitplan: KW 12 Recherche, KW 13 Gestaltung\nFolie 4 – Team: Gruppe A Fotos, Gruppe B Text\nFolie 5 – Präsentation am 02.04.`,  question:'Öffne die Präsentation über das Klassenprojekt.' },
+
+  // --- Export-Dateien (.dat/.tmp) (2) ---
+  { id:'f60', startName:'datei_0002',  name:'Klimazonen',             type:'dat',   subject:'Geographie', content:`Klimazonen der Erde\n\nTropisch: ganzjährig heiß und feucht (z.B. Amazonas)\nSubtropisch: heiße Sommer, milde Winter (z.B. Mittelmeer)\nGemäßigt: vier Jahreszeiten (z.B. Mitteleuropa)\nPolar: ganzjährig kalt (z.B. Arktis, Antarktis)`,                                               question:'Öffne die Datei über Klimazonen.' },
+  { id:'f61', startName:'tmp_backup',  name:'Lernplan',               type:'tmp',   subject:'Orga',     content:`Lernplan – Woche 12\n\nMontag: Mathe-Übungen S. 34–36\nDienstag: Deutsch-Aufsatz überarbeiten\nMittwoch: Bio-Vokabeln lernen\nDonnerstag: Englisch-Vokabeln wiederholen\nFreitag: Freizeit – du hast es verdient!`,                                                                            question:'Öffne den Lernplan.' },
+
+  // --- Neue PDF-Dateien (5) ---
+  { id:'f62', startName:'scan_0003',  name:'Division',               type:'pdf',   subject:'Mathe',    content:`Division\n\n56 ÷ 7 = 8\n81 ÷ 9 = 9\n144 ÷ 12 = 12\n75 ÷ 5 = 15\n\nTipp: Division ist die Umkehrung der Multiplikation.\n56 ÷ 7 = 8, weil 8 × 7 = 56.`,                                                                                                                                      question:'Öffne die Datei über Division (56 ÷ 7).' },
+  { id:'f63', startName:'doku_NEU',   name:'Satzglieder',            type:'pdf',   subject:'Deutsch',  content:`Satzglieder\n\nSubjekt: Wer oder was? → "Der Hund bellt."\nPrädikat: Was tut es? → "Der Hund bellt."\nObjekt: Wen oder was? → "Der Hund beißt den Ball."\nAdverbiale: Wann/Wo/Wie? → "Er läuft schnell nach Hause."`,                                                                          question:'Öffne die Datei über Satzglieder (Subjekt, Prädikat, Objekt).' },
+  { id:'f64', startName:'unbenannt_3',    name:'Zellaufbau',             type:'pdf',   subject:'Bio',      content:`Zellaufbau\n\nPflanzenzelle:\n- Zellwand (Stütz- und Schutzfunktion)\n- Zellmembran\n- Zellkern (enthält die DNA)\n- Chloroplasten (Photosynthese)\n- Vakuole (Wasserspeicher)\n\nTierzelle fehlen: Zellwand, Chloroplasten, Vakuole.`,                                                          question:'Öffne die Datei über den Zellaufbau.' },
+  { id:'f65', startName:'kopie_(2)', name:'Present-Perfect',      type:'pdf',   subject:'Englisch', content:`Present Perfect\n\nFormel: have / has + past participle\n\nI have eaten.\nShe has gone to school.\nWe have finished our homework.\n\nWann benutzt man es?\n- Ergebnis einer Handlung ist jetzt sichtbar\n- Erfahrungen im Leben (ever, never)\n- Kürzlich passierte Ereignisse (just, already, yet)`, question:'Öffne die Datei über das Present Perfect.' },
+  { id:'f66', startName:'IMG_9034',    name:'Gebirge-Europas',        type:'pdf',   subject:'Geographie', content:`Gebirge Europas\n\nAlpen: höchster Gipfel Mont Blanc (4.808 m)\nPyrenäen: Grenze zwischen Spanien und Frankreich\nApennin: Rückgrat Italiens\nKarpaten: Osteuropa (Slowakei, Rumänien)\nSkandinavisches Gebirge: Norwegen und Schweden`,                                                    question:'Öffne die Datei über die Gebirge Europas.' },
+
+  // --- Neue BAT-Dateien (2) ---
+  { id:'f67', startName:'setup_install', name:null,                     type:'bat',   subject:'Papierkorb', content:null },
+  { id:'f68', startName:'free_coins',    name:null,                     type:'bat',   subject:'Papierkorb', content:null },
+];
+
+const ALL_FOLDERS = ['Mathe', 'Deutsch', 'Bio', 'Englisch', 'Geographie', 'Orga'];
+
+// Nur noch Metadaten: fileCount = neue Dateien pro Runde, folders = immer alle Fächer
+const ROUNDS = [
+  { fileCount: 10, questionCount: 3, folders: ALL_FOLDERS },
+  { fileCount: 15, questionCount: 3, folders: ALL_FOLDERS },
+  { fileCount: 20, questionCount: 3, folders: ALL_FOLDERS },
+];
+
+const SUBJECT_COLORS = {
+  Mathe: '#007AFF',
+  Deutsch: '#FF3B30',
+  Bio: '#34C759',
+  Englisch: '#AF52DE',
+  Geographie: '#5AC8FA',
+  Orga: '#FF9500'
+};
+const SUBJECT_EMOJI = {
+  Mathe: '📐',
+  Deutsch: '📖',
+  Bio: '🌿',
+  Englisch: '🇬🇧',
+  Geographie: '🌍',
+  Orga: '🗂️'
+};
+
+/* ---------- ZUFALLS-HELFER ---------- */
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// fileId → roundIndex (wird bei startGame() neu befüllt)
+let roundAssignments = {};
+
+function assignFilesToRounds() {
+  // Frühest mögliche Runde je Datei: erste Runde, deren folders das subject enthält
+  const minRound = {};
+  ALL_FILES.forEach(f => {
+    const idx = f.subject === 'Papierkorb'
+      ? 0
+      : ROUNDS.findIndex(r => r.folders.includes(f.subject));
+    minRound[f.id] = idx === -1 ? ROUNDS.length - 1 : idx;
+  });
+
+  const assigned = new Set();
+  roundAssignments = {};
+
+  ROUNDS.forEach((round, rIdx) => {
+    const pool = ALL_FILES
+      .filter(f => minRound[f.id] <= rIdx && !assigned.has(f.id))
+      .map(f => f.id);
+    shuffle(pool);
+    pool.slice(0, round.fileCount).forEach(id => {
+      roundAssignments[id] = rIdx;
+      assigned.add(id);
+    });
+  });
+}
+
+function buildTestQuestions(roundIndex) {
+  const { questionCount } = ROUNDS[roundIndex];
+  const candidates = ALL_FILES.filter(f =>
+    roundAssignments[f.id] === roundIndex && f.question
+  );
+  shuffle(candidates);
+  return candidates.slice(0, questionCount).map(f => ({ match: f.id, prompt: f.question }));
+}
+
+/* ---------- STATE ---------- */
+const state = {
+  roundIndex: 0,
+  files: [],                   // Dateien im Posteingang (aktuelle Runde)
+  folders: {},                 // folderName → array of file objects
+  activeFolder: 'Inbox',
+  score: 0,
+  coins: 0,
+  inventory: [],               // bought item ids
+  ordnerScannerCharges: 0,     // Ladungen des Ordner-Scanners
+  phase: 'idle',               // 'sorting' | 'test' | 'idle'
+  currentRoundFileCount: 0,    // Anzahl neuer Dateien dieser Runde (für HUD)
+  testQuestions: [],           // [{match, prompt}] für die Test-Phase
+  test: { qIndex: 0, misses: 0, locked: false, allPerfect: true, greyedFiles: null },
+  highlightedTestFolder: null  // Ordner-Finder: welcher Ordner in der Testphase leuchtet
+};
+
+/* ---------- HUB INTEGRATION ---------- */
+const PF_MAX_SCORE = 18;
+let pfGameId        = 'game8';
+let pfGameData      = null;
+let lastCoinsGained = 0;
+let hubSaved        = false;
+
+function initHubState() {
+  pfGameId   = new URLSearchParams(window.location.search).get('id') || 'game8';
+  pfGameData = getGameData(pfGameId);
+  updateGameEggDisplay(pfGameData || defaultGameData(), 0, false, null);
+  renderBoostIndicators('pf-boost-bar');
+  const startEl = document.getElementById('pf-start-creature');
+  if (startEl) {
+    startEl.innerHTML = (pfGameData && pfGameData.creature)
+      ? getCreatureHTML(pfGameData.creature, getGrowthStage(pfGameData.growth))
+      : getEggSVG(0);
+  }
+}
+
+function updatePFCreatureDisplay() {
+  const crackStage = crackStageFromRatio(state.score, PF_MAX_SCORE);
+  const liveGrowth = (pfGameData && pfGameData.creature)
+    ? Math.min(pfGameData.growth + computeSessionGrowth(state.score, PF_MAX_SCORE), GROWTH_MAX)
+    : null;
+  updateGameEggDisplay(pfGameData || defaultGameData(), crackStage, false, liveGrowth);
+  renderBoostIndicators('pf-boost-bar');
+}
+
+function saveToHub() {
+  if (hubSaved) return;
+  const gd       = pfGameData || defaultGameData();
+  const isFirst  = gd.roundsPlayed === 0;
+  const sd       = loadShopData();
+  const _norm    = Math.round(state.score / PF_MAX_SCORE * 10);
+  const _eggType = new URLSearchParams(window.location.search).get('egg');
+  lastCoinsGained = 0;
+
+  if (isFirst) {
+    if (_eggType) {
+      gd.creature = determineEggCreature(_eggType, _norm);
+    } else {
+      gd.creature = sd.glucksklee
+        ? determineCreatureWithGlucksklee(_norm, pfGameId)
+        : determineCreature(_norm, true, pfGameId);
+    }
+    gd.growth = 0;
+  } else {
+    let contribution = computeSessionGrowth(state.score, PF_MAX_SCORE);
+    if (sd.wachstumsBooster) contribution *= 2;
+    const room = Math.max(0, GROWTH_MAX - gd.growth);
+    if (room === 0) {
+      let coins = Math.round(contribution);
+      if (sd.coinsx3) coins *= 3;
+      gd.coins = (gd.coins || 0) + coins;
+      lastCoinsGained += coins;
+    } else if (contribution > room) {
+      gd.growth = GROWTH_MAX;
+      let overflow = Math.round(contribution - room);
+      if (sd.coinsx3) overflow *= 3;
+      gd.coins = (gd.coins || 0) + overflow;
+      lastCoinsGained += overflow;
+    } else {
+      gd.growth = Math.min(gd.growth + contribution, GROWTH_MAX);
+    }
+  }
+  gd.points += _norm;
+  gd.roundsPlayed += 1;
+  saveGameData(pfGameId, gd);
+  pfGameData = gd;
+  hubSaved   = true;
+
+  if (!isFirst) {
+    if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+    if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+  }
+  if (isFirst && sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
+}
+
+function renderWinHubWidgets() {
+  const wrap = document.getElementById('pf-win-creature-wrap');
+  if (wrap && pfGameData && pfGameData.creature) {
+    const stage = getGrowthStage(pfGameData.growth);
+    wrap.innerHTML =
+      '<div style="width:180px;height:180px;overflow:hidden;display:flex;align-items:center;justify-content:center;">'
+      + getCreatureHTML(pfGameData.creature, stage) + '</div>'
+      + '<div style="font-size:13px;font-weight:700;color:white;">'
+      + (CREATURE_NAMES[pfGameData.creature] || '') + ' · ' + (GROWTH_LABELS[stage] || '') + '</div>';
+  }
+  renderCoinBank('pf-coin-bank', lastCoinsGained);
+  renderResultItemButton('pf-result-item', pfGameId, () => location.reload());
+}
+
+/* ---------- DOM ---------- */
+const $ = (id) => document.getElementById(id);
+const screen = $('screen');
+const sidebar = $('sidebar');
+const fileGrid = $('fileGrid');
+const folderTitle = $('folderTitle');
+const scoreEl = $('score');
+const coinsEl = $('coins');
+const starteTestBtn = $('starteTestBtn');
+const roundNumEl = $('roundNum');
+const roundScreen = $('roundScreen');
+const testIntroScreen = $('testIntroScreen');
+const endScreen = $('endScreen');
+const modalBackdrop = $('modalBackdrop');
+const modalTitle = $('modalTitle');
+const modalIcon = $('modalIcon');
+const modalBody = $('modalBody');
+const modalActions = $('modalActions');
+const modalClose = $('modalClose');
+const testBanner = $('testBanner');
+const testQuestionEl = $('testQuestion');
+const testQuestionNumEl = $('testQuestionNum');
+const testQuestionTotalEl = $('testQuestionTotal');
+const testLivesEl = $('testLives');
+const screenEl = $('screen');
+const toastStack = $('toastStack');
+
+const touchDragState = { active: false, file: null, el: null, ghost: null, offsetX: 0, offsetY: 0, wasDrag: false };
+
+/* ---------- HELPERS ---------- */
+function showOverlay(el) { el.style.display = 'flex'; }
+function hideOverlay(el) { el.style.display = 'none'; }
+
+function toast(msg, kind = '') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + kind;
+  t.textContent = msg;
+  toastStack.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
+}
+
+function getBestScore() {
+  return parseInt(localStorage.getItem('datei_detektive_best') || '0', 10);
+}
+function setBestScore(score) {
+  const best = getBestScore();
+  if (score > best) {
+    localStorage.setItem('datei_detektive_best', String(score));
+    return true;
+  }
+  return false;
+}
+
+/* ---------- RENDER ---------- */
+function fileTypeLabel(t) { return t.toUpperCase(); }
+
+
+function renderSidebar() {
+  sidebar.innerHTML = '';
+
+  // Scrollable folder list — fills all space above the creature strip
+  const list = document.createElement('div');
+  list.className = 'sidebar-folders';
+
+  list.appendChild(makeFolderEl('Inbox', state.files.length, '📥', 'Downloads'));
+
+  const heading = document.createElement('h3');
+  heading.textContent = 'Fächer';
+  list.appendChild(heading);
+
+  const round = ROUNDS[state.roundIndex];
+  round.folders.forEach(name => {
+    const count = state.folders[name]?.length || 0;
+    list.appendChild(makeFolderEl(name, count, SUBJECT_EMOJI[name] || '📁', name));
+  });
+
+  const trashSpacer = document.createElement('h3');
+  trashSpacer.textContent = 'System';
+  list.appendChild(trashSpacer);
+  const trashCount = state.folders.Papierkorb?.length || 0;
+  list.appendChild(makeFolderEl('Papierkorb', trashCount, '🗑️', 'Papierkorb'));
+
+  // Creature widget — sits below Papierkorb inside the scrollable list
+  const cw = document.createElement('div');
+  cw.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px solid #d5dbe6;display:flex;flex-direction:column;align-items:center;gap:3px;';
+  cw.innerHTML = `
+    <div id="eggVisual" style="width:180px;height:180px;overflow:hidden;display:flex;align-items:center;justify-content:center;"></div>
+    <div id="eggStageLabel" style="font-size:8px;color:#6e7787;text-transform:uppercase;letter-spacing:.06em;text-align:center;font-weight:700;">Ei schlummert…</div>
+    <div style="width:90%;height:3px;background:#d5dbe6;border-radius:99px;overflow:hidden;"><div id="eggProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,#007AFF,#34c759);border-radius:99px;transition:width .4s;"></div></div>
+    <div id="pf-boost-bar" style="width:100%;"></div>
+  `;
+  list.appendChild(cw);
+
+  sidebar.appendChild(list);
+}
+
+function makeFolderEl(key, count, emoji, label) {
+  const el = document.createElement('div');
+  const isTestHighlight = state.phase === 'test' && state.highlightedTestFolder === key;
+  el.className = 'folder' + (state.activeFolder === key ? ' active' : '') + (isTestHighlight ? ' highlight' : '');
+  el.dataset.folder = key;
+  el.innerHTML = `
+    <span class="folder-icon" style="font-size:20px;">${emoji}</span>
+    <span class="folder-label">${label}</span>
+    <span class="folder-count">${count}</span>
+  `;
+  el.addEventListener('click', () => { state.activeFolder = key; renderAll(); });
+
+  if (key !== 'Inbox') {
+    el.addEventListener('dragover', (e) => {
+      if (state.phase !== 'sorting') return;
+      e.preventDefault();
+      el.classList.add('drop-target');
+    });
+    el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
+    el.addEventListener('drop', (e) => {
+      e.preventDefault();
+      el.classList.remove('drop-target');
+      const fileId = e.dataTransfer.getData('text/plain');
+      handleDrop(fileId, key);
+    });
+  }
+  return el;
+}
+
+function renderFiles() {
+  fileGrid.innerHTML = '';
+  let visible;
+  if (state.activeFolder === 'Inbox') {
+    visible = state.files;
+    folderTitle.textContent = 'Downloads';
+  } else {
+    visible = state.folders[state.activeFolder] || [];
+    folderTitle.textContent = state.activeFolder;
+  }
+
+  if (visible.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.innerHTML = `
+      <svg viewBox="0 0 64 64" fill="#cbd2e0"><path d="M8 18a4 4 0 0 1 4-4h14l4 6h22a4 4 0 0 1 4 4v24a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V18z"/></svg>
+      <div>Dieser Ordner ist leer.</div>
+    `;
+    fileGrid.appendChild(empty);
+    return;
+  }
+
+  visible.forEach(file => {
+    const el = document.createElement('div');
+    el.className = 'file' + ((file.exported || file.type === 'pdf' || file.type === 'png' || file.type === 'pages' || file.type === 'pptx') ? '' : ' unknown');
+    el.dataset.id = file.id;
+    el.draggable = state.phase === 'sorting' && state.activeFolder === 'Inbox';
+    el.setAttribute('data-testid', `file-${file.id}`);
+
+    const thumb = document.createElement('div');
+    thumb.className = 'file-thumb';
+    thumb.innerHTML = thumbnailFor(file);
+    const tag = document.createElement('span');
+    tag.className = 'file-type-tag ' + (file.exported ? 'pdf' : file.type);
+    tag.textContent = fileTypeLabel(file.exported ? 'pdf' : file.type);
+    thumb.appendChild(tag);
+
+    const name = document.createElement('div');
+    name.className = 'file-name';
+    name.textContent = displayName(file);
+
+    el.appendChild(thumb);
+    el.appendChild(name);
+
+    // Virenscanner: roter !-Badge auf .bat-Dateien
+    if (state.inventory.includes('virenscanner') && file.type === 'bat') {
+      el.style.position = 'relative';
+      const vbadge = document.createElement('div');
+      vbadge.className = 'file-virus-badge';
+      vbadge.textContent = '!';
+      el.appendChild(vbadge);
+    }
+
+    // Datumsanzeige: "Runde X"-Label
+    if (state.inventory.includes('datumsanzeige') && roundAssignments[file.id] !== undefined) {
+      const rbadge = document.createElement('div');
+      rbadge.className = 'file-round-badge';
+      rbadge.textContent = `Runde ${roundAssignments[file.id] + 1}`;
+      el.appendChild(rbadge);
+    }
+
+    // Detektiv-Instinkt: ausgegraute falsche Dateien in Testphase
+    if (state.phase === 'test' && state.test.greyedFiles?.has(file.id)) {
+      el.classList.add('greyed');
+    }
+
+    el.addEventListener('dragstart', (e) => {
+      if (state.phase !== 'sorting' || state.activeFolder !== 'Inbox') {
+        e.preventDefault();
+        return;
+      }
+      e.dataTransfer.setData('text/plain', file.id);
+      el.classList.add('dragging');
+      // Ordner-Scanner: richtigen Ordner hervorheben + Ladung verbrauchen
+      if (state.ordnerScannerCharges > 0) {
+        state.ordnerScannerCharges--;
+        document.querySelectorAll('.folder').forEach(f => {
+          if (f.dataset.folder === file.subject) f.classList.add('highlight');
+        });
+        if (state.ordnerScannerCharges === 0) {
+          toast('🔦 Letzte Ladung verbraucht!', 'info');
+        } else {
+          toast(`🔦 Ladung verbraucht – noch ${state.ordnerScannerCharges} übrig`, 'info');
+        }
+      }
+    });
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+      document.querySelectorAll('.folder.highlight').forEach(f => f.classList.remove('highlight'));
+    });
+    el.addEventListener('click', () => {
+      if (touchDragState.wasDrag) { touchDragState.wasDrag = false; return; }
+      openFile(file);
+    });
+    addTouchDragHandlers(el, file);
+
+    fileGrid.appendChild(el);
+  });
+}
+
+function addTouchDragHandlers(el, file) {
+  let startX = 0, startY = 0;
+
+  el.addEventListener('touchstart', (e) => {
+    if (state.phase !== 'sorting' || state.activeFolder !== 'Inbox') return;
+    const touch = e.touches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+    const rect = el.getBoundingClientRect();
+    touchDragState.offsetX = touch.clientX - rect.left;
+    touchDragState.offsetY = touch.clientY - rect.top;
+    touchDragState.file = file;
+    touchDragState.el = el;
+    touchDragState.active = false;
+    touchDragState.wasDrag = false;
+  }, { passive: true });
+
+  el.addEventListener('touchmove', (e) => {
+    if (touchDragState.file !== file) return;
+    const touch = e.touches[0];
+
+    if (!touchDragState.active) {
+      if (Math.hypot(touch.clientX - startX, touch.clientY - startY) < 8) return;
+      touchDragState.active = true;
+      touchDragState.wasDrag = true;
+      const rect = el.getBoundingClientRect();
+      const ghost = el.cloneNode(true);
+      Object.assign(ghost.style, {
+        position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
+        width: rect.width + 'px', height: rect.height + 'px',
+        opacity: '0.9', pointerEvents: 'none', zIndex: '9999',
+        transform: 'scale(1.1) rotate(2deg)',
+        boxShadow: '0 12px 32px rgba(0,0,0,0.28)', borderRadius: '14px', transition: 'none',
+      });
+      document.body.appendChild(ghost);
+      touchDragState.ghost = ghost;
+      el.classList.add('dragging');
+      if (state.ordnerScannerCharges > 0) {
+        state.ordnerScannerCharges--;
+        document.querySelectorAll('.folder').forEach(f => {
+          if (f.dataset.folder === file.subject) f.classList.add('highlight');
+        });
+        toast(state.ordnerScannerCharges === 0 ? '🔦 Letzte Ladung verbraucht!' : `🔦 Ladung verbraucht – noch ${state.ordnerScannerCharges} übrig`, 'info');
+      }
+    }
+
+    e.preventDefault();
+    touchDragState.ghost.style.left = (touch.clientX - touchDragState.offsetX) + 'px';
+    touchDragState.ghost.style.top  = (touch.clientY - touchDragState.offsetY) + 'px';
+
+    touchDragState.ghost.style.visibility = 'hidden';
+    const below = document.elementFromPoint(touch.clientX, touch.clientY);
+    touchDragState.ghost.style.visibility = '';
+    document.querySelectorAll('.folder.drop-target').forEach(f => f.classList.remove('drop-target'));
+    const folderEl = below?.closest?.('.folder');
+    if (folderEl && folderEl.dataset.folder && folderEl.dataset.folder !== 'Inbox') {
+      folderEl.classList.add('drop-target');
+    }
+  }, { passive: false });
+
+  function endTouch(e) {
+    if (touchDragState.file !== file) return;
+    if (touchDragState.ghost) { touchDragState.ghost.remove(); touchDragState.ghost = null; }
+    el.classList.remove('dragging');
+    document.querySelectorAll('.folder.highlight, .folder.drop-target').forEach(f => {
+      f.classList.remove('highlight', 'drop-target');
+    });
+    if (touchDragState.active && e.changedTouches) {
+      const touch = e.changedTouches[0];
+      const below = document.elementFromPoint(touch.clientX, touch.clientY);
+      const folderEl = below?.closest?.('.folder');
+      if (folderEl && folderEl.dataset.folder && folderEl.dataset.folder !== 'Inbox') {
+        handleDrop(file.id, folderEl.dataset.folder);
+      }
+    }
+    touchDragState.active = false;
+    touchDragState.file = null;
+    touchDragState.el = null;
+  }
+
+  el.addEventListener('touchend', endTouch, { passive: true });
+  el.addEventListener('touchcancel', endTouch, { passive: true });
+}
+
+function displayName(file) {
+  const ext = file.exported ? 'pdf' : file.type;
+  return `${file.currentName}.${ext}`;
+}
+
+function thumbnailFor(file) {
+  if (file.type === 'bat') {
+    return `<svg class="thumb-icon" viewBox="0 0 24 24" fill="#8e8e93"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/><text x="12" y="18" text-anchor="middle" font-size="5" font-weight="900" fill="white">BAT</text></svg>`;
+  }
+  if (file.type === 'png') {
+    return `<svg class="thumb-icon" viewBox="0 0 200 200">${file.content}</svg>`;
+  }
+  if (file.type === 'pdf' || file.exported) {
+    return `<svg class="thumb-icon" viewBox="0 0 24 24" fill="#FF3B30"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/><text x="12" y="18" text-anchor="middle" font-size="6" font-weight="900" fill="white">PDF</text></svg>`;
+  }
+  if (file.type === 'pages') {
+    return `<svg class="thumb-icon" viewBox="0 0 24 24" fill="#5856D6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/><text x="12" y="18" text-anchor="middle" font-size="4.5" font-weight="900" fill="white">PAGES</text></svg>`;
+  }
+  if (file.type === 'pptx') {
+    return `<svg class="thumb-icon" viewBox="0 0 24 24" fill="#D13438"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/><text x="12" y="18" text-anchor="middle" font-size="4.5" font-weight="900" fill="white">PPTX</text></svg>`;
+  }
+  // dat / tmp = unknown
+  return `<svg class="thumb-icon" viewBox="0 0 24 24" fill="#8e8e93"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/><text x="12" y="18" text-anchor="middle" font-size="5" font-weight="900" fill="white">${file.type.toUpperCase()}</text></svg>`;
+}
+
+function renderHud() {
+  scoreEl.textContent = state.score;
+  coinsEl.textContent = state.coins;
+  roundNumEl.textContent = state.roundIndex + 1;
+  starteTestBtn.style.display = (state.phase === 'sorting' || state.phase === 'idle') ? '' : 'none';
+}
+
+function renderAll() {
+  renderSidebar();
+  renderFiles();
+  renderHud();
+  updatePFCreatureDisplay();
+}
+
+/* ---------- JUICE HELPERS ---------- */
+function spawnFloatingLabel(badgeEl, text, extraClass) {
+  const rect = badgeEl.getBoundingClientRect();
+  const screenEl = document.querySelector('.screen');
+  const sr = screenEl.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'coin-popup' + (extraClass ? ' ' + extraClass : '');
+  el.textContent = text;
+  el.style.left = (rect.left - sr.left + rect.width  / 2) + 'px';
+  el.style.top  = (rect.top  - sr.top  + rect.height / 2) + 'px';
+  screenEl.appendChild(el);
+  setTimeout(() => el.remove(), 1100);
+}
+
+function spawnParticles(badgeEl, count, emojis) {
+  const rect = badgeEl.getBoundingClientRect();
+  const screenEl = document.querySelector('.screen');
+  const sr = screenEl.getBoundingClientRect();
+  const cx = rect.left - sr.left + rect.width  / 2;
+  const cy = rect.top  - sr.top  + rect.height / 2;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'coin-particle';
+    p.textContent = emojis[i % emojis.length];
+    const angle = (360 / count) * i + Math.random() * 25 - 12;
+    const dist  = 30 + Math.random() * 30;
+    p.style.left = cx + 'px';
+    p.style.top  = cy + 'px';
+    p.style.setProperty('--dx', Math.cos(angle * Math.PI / 180) * dist + 'px');
+    p.style.setProperty('--dy', Math.sin(angle * Math.PI / 180) * dist + 'px');
+    screenEl.appendChild(p);
+    setTimeout(() => p.remove(), 800);
+  }
+}
+
+function punchBadge(sel) {
+  const badge = document.querySelector(sel);
+  if (!badge) return;
+  badge.classList.remove('badge-punch');
+  void badge.offsetWidth;
+  badge.classList.add('badge-punch');
+  badge.addEventListener('animationend', () => badge.classList.remove('badge-punch'), { once: true });
+}
+
+/* ---------- DROP HANDLING ---------- */
+function awardCoins(amount, label) {
+  state.coins += amount;
+  const coinBadge = document.querySelector('.badge.coins');
+  if (coinBadge) {
+    spawnFloatingLabel(coinBadge, `+${amount} 🪙`);
+    spawnParticles(coinBadge, Math.min(amount + 2, 6), ['🪙', '✨', '💛', '⭐']);
+    punchBadge('.badge.coins');
+  }
+  toast(`🪙 +${amount} ${label}`, 'coin');
+  renderHud();
+}
+
+function handleDrop(fileId, folderName) {
+  const idx = state.files.findIndex(f => f.id === fileId);
+  if (idx === -1) return;
+  const file = state.files[idx];
+
+  state.files.splice(idx, 1);
+  if (!state.folders[folderName]) state.folders[folderName] = [];
+  state.folders[folderName].push(file);
+
+  // Münzen für korrektes Sortieren
+  if (file.type === 'bat' && folderName === 'Papierkorb') {
+    awardCoins(5, 'Virus erkannt!');
+    state.sortStreak = 0;
+  } else if (file.type !== 'bat' && file.subject === folderName) {
+    awardCoins(1, 'Richtig sortiert');
+    state.sortStreak += 1;
+    if (state.sortStreak % 3 === 0) {
+      awardCoins(2, `${state.sortStreak}er-Combo!`);
+    }
+  } else {
+    state.sortStreak = 0;
+  }
+
+  toast(`In ${folderName} verschoben`, 'success');
+  renderAll();
+  if (state.files.length === 0) finishSorting();
+}
+
+function flashFile(id, kind) {
+  const el = fileGrid.querySelector(`[data-id="${id}"]`);
+  if (!el) return;
+  el.style.transition = 'background 0.2s';
+  el.style.background = kind === 'error' ? 'rgba(255,59,48,0.25)' : 'rgba(52,199,89,0.25)';
+  setTimeout(() => { el.style.background = ''; }, 500);
+}
+
+
+/* ---------- FILE MODAL ---------- */
+let currentModalFile = null;
+function openFile(file) {
+  // Virus check – clicking a .bat file fails the round
+  if (file.type === 'bat') {
+    if (state.inventory.includes('backup')) {
+      state.inventory = state.inventory.filter(id => id !== 'backup');
+      state.files = state.files.filter(f => f.id !== file.id);
+      toast('💾 Backup geladen! Virus neutralisiert!', 'success');
+      renderAll();
+      return;
+    }
+    triggerVirusFail(file);
+    return;
+  }
+  currentModalFile = file;
+  modalTitle.textContent = displayName(file);
+  modalIcon.innerHTML = `<span style="font-size:22px;">${file.exported || file.type === 'pdf' ? '📄' : file.type === 'png' ? '🖼️' : file.type === 'pages' ? '📝' : file.type === 'pptx' ? '📊' : '📦'}</span>`;
+  modalBody.innerHTML = '';
+  modalActions.innerHTML = '';
+
+  // Test phase: handle click
+  if (state.phase === 'test') {
+    handleTestClick(file);
+    return;
+  }
+
+  if (file.type === 'png') {
+    const wrap = document.createElement('div');
+    wrap.className = 'preview-png';
+    wrap.innerHTML = `<svg viewBox="0 0 200 200">${file.content}</svg>`;
+    modalBody.appendChild(wrap);
+  } else if (file.type === 'pdf' || file.exported || file.type === 'pages' || file.type === 'pptx') {
+    const wrap = document.createElement('div');
+    wrap.className = 'preview-pdf';
+    wrap.textContent = file.content;
+    modalBody.appendChild(wrap);
+  } else {
+    // unknown .dat / .tmp
+    const lock = document.createElement('div');
+    lock.className = 'preview-locked';
+    lock.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="#8e8e93"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3H9z"/></svg>
+      <h3 style="margin:6px 0;">Diese Datei kann nicht gelesen werden</h3>
+      <p>Die Endung <b>.${file.type}</b> ist unbekannt. Exportiere die Datei als PDF, um den Inhalt zu sehen.</p>
+    `;
+    modalBody.appendChild(lock);
+  }
+
+  // Rename row
+  const renameWrap = document.createElement('div');
+  renameWrap.style.marginTop = '20px';
+  renameWrap.innerHTML = `
+    <label style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#6e7787;">Dateiname</label>
+    <input type="text" class="rename-input" id="renameInput" value="${file.currentName}" data-testid="rename-input">
+  `;
+  modalBody.appendChild(renameWrap);
+
+  // Actions
+  if (file.type === 'dat' || file.type === 'tmp') {
+    if (!file.exported) {
+      const exportBtn = document.createElement('button');
+      exportBtn.className = 'btn success';
+      exportBtn.textContent = 'In PDF exportieren';
+      exportBtn.setAttribute('data-testid', 'export-pdf-btn');
+      exportBtn.onclick = () => {
+        file.exported = true;
+        toast('Datei wurde als PDF exportiert!', 'success');
+        awardCoins(2, 'PDF-Export');
+        openFile(file); // refresh modal
+        renderAll();
+      };
+      modalActions.appendChild(exportBtn);
+    }
+  }
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn';
+  saveBtn.textContent = 'Speichern';
+  saveBtn.setAttribute('data-testid', 'save-rename-btn');
+  saveBtn.onclick = () => {
+    const input = document.getElementById('renameInput');
+    const newName = (input.value || '').trim().replace(/\.[a-z]+$/i, '');
+    if (newName.length < 2) {
+      toast('Bitte gib einen sinnvollen Namen ein.', 'error');
+      return;
+    }
+    file.currentName = newName;
+    toast('Name gespeichert.', 'success');
+    closeModal();
+    renderAll();
+  };
+  const renameInput = document.getElementById('renameInput');
+  if (renameInput) {
+    renameInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveBtn.click();
+    });
+  }
+  modalActions.appendChild(saveBtn);
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn secondary';
+  cancelBtn.textContent = 'Schließen';
+  cancelBtn.onclick = closeModal;
+  modalActions.appendChild(cancelBtn);
+
+  modalBackdrop.classList.add('visible');
+  setTimeout(() => {
+    const inp = document.getElementById('renameInput');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 0);
+}
+
+function closeModal() {
+  modalBackdrop.classList.remove('visible');
+  currentModalFile = null;
+}
+
+modalClose.addEventListener('click', closeModal);
+modalBackdrop.addEventListener('click', (e) => {
+  if (e.target === modalBackdrop && state.phase !== 'test') closeModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && state.phase !== 'test') closeModal();
+});
+
+/* ---------- ROUND FLOW ---------- */
+function startGame() {
+  state.roundIndex = 0;
+  state.score = 0;
+  state.coins = 0;
+  state.inventory = [];
+  state.ordnerScannerCharges = 0;
+  hubSaved = false;
+  assignFilesToRounds();
+  beginRound();
+}
+
+function beginRound() {
+  const round = ROUNDS[state.roundIndex];
+
+  // Neue Dateien dieser Runde in den Posteingang laden (unsortierte Reste behalten)
+  const newFiles = ALL_FILES
+    .filter(f => roundAssignments[f.id] === state.roundIndex)
+    .map(f => ({ ...f, currentName: f.startName, exported: false }));
+  shuffle(newFiles);
+  state.files = [...state.files, ...newFiles];
+  state.currentRoundFileCount = newFiles.length;
+
+  // Runde 1: Ordner frisch anlegen; Folgerunden: bestehende Ordner behalten
+  if (state.roundIndex === 0) {
+    state.folders = { Papierkorb: [] };
+  }
+  round.folders.forEach(name => {
+    if (!state.folders[name]) state.folders[name] = [];
+  });
+
+  state.activeFolder = 'Inbox';
+  state.phase = 'sorting';
+  state.sortStreak = 0;
+  state.highlightedTestFolder = null;
+  state.testQuestions = buildTestQuestions(state.roundIndex);
+
+  $('roundScreenTitle').textContent = `Runde ${state.roundIndex + 1}`;
+  $('roundScreenDesc').textContent = `${newFiles.length} neue Dateien • ${ALL_FOLDERS.length} Fach-Ordner. Achtung: .bat-Dateien sind Viren – ungesehen in den Papierkorb!`;
+  showOverlay(roundScreen);
+  renderAll();
+  testBanner.classList.add('hidden');
+}
+
+function finishSorting() {
+  state.phase = 'idle';
+  renderAll();
+}
+
+function startTest() {
+  starteTestBtn.style.display = 'none';
+  state.phase = 'test';
+  state.test = { qIndex: 0, misses: 0, locked: false, allPerfect: true, greyedFiles: null };
+  screenEl.classList.add('test-mode');
+  showTestQuestion();
+}
+
+function findCurrentFolder(fileId) {
+  if (state.files.some(f => f.id === fileId)) return 'Inbox';
+  for (const [name, files] of Object.entries(state.folders)) {
+    if (files.some(f => f.id === fileId)) return name;
+  }
+  return null;
+}
+
+function applyOrdnerFinder(fileId) {
+  const folder = findCurrentFolder(fileId);
+  state.highlightedTestFolder = folder;
+}
+
+function applyDetektivInstinkt(fileId) {
+  const targetFolder = findCurrentFolder(fileId);
+
+  // Falsche Dateien primär aus demselben Ordner wie die Zieldatei
+  let wrongFiles;
+  if (targetFolder === 'Inbox') {
+    wrongFiles = state.files.filter(f => f.id !== fileId);
+  } else if (targetFolder) {
+    wrongFiles = (state.folders[targetFolder] || []).filter(f => f.id !== fileId);
+  } else {
+    wrongFiles = [];
+  }
+
+  // Auffüllen aus anderen Ordnern falls nötig
+  if (wrongFiles.length < 5) {
+    const allOthers = [
+      ...state.files,
+      ...Object.values(state.folders).flat()
+    ].filter(f => f.id !== fileId && !wrongFiles.some(w => w.id === f.id));
+    wrongFiles = [...wrongFiles, ...shuffle(allOthers)];
+  }
+
+  state.test.greyedFiles = new Set(shuffle([...wrongFiles]).slice(0, 5).map(f => f.id));
+}
+
+function showTestQuestion() {
+  const q = state.testQuestions[state.test.qIndex];
+  if (!q) return endTest();
+  const isFirst = state.test.qIndex === 0;
+  testBanner.classList.remove('hidden');
+
+  // Banner slide-in bei erster Frage
+  if (isFirst) {
+    testBanner.classList.remove('slide-in');
+    void testBanner.offsetWidth;
+    testBanner.classList.add('slide-in');
+  }
+
+  // Nummern-Badge mit Bounce-Animation
+  testQuestionNumEl.classList.remove('bounce');
+  void testQuestionNumEl.offsetWidth;
+  testQuestionNumEl.textContent = state.test.qIndex + 1;
+  testQuestionNumEl.classList.add('bounce');
+  testQuestionTotalEl.textContent = state.testQuestions.length;
+
+  // Fragetext mit Slide-Animation
+  testQuestionEl.classList.remove('new-q');
+  void testQuestionEl.offsetWidth;
+  testQuestionEl.textContent = q.prompt;
+  testQuestionEl.classList.add('new-q');
+
+  state.test.misses = 0;
+  state.test.locked = false;
+  state.highlightedTestFolder = null;
+  state.test.greyedFiles = null;
+
+  // Ordner-Finder aus Inventory: einmalig konsumieren + anwenden
+  if (state.inventory.includes('ordner-finder')) {
+    applyOrdnerFinder(q.match);
+    state.inventory = state.inventory.filter(id => id !== 'ordner-finder');
+  }
+
+  // Detektiv-Instinkt aus Inventory: einmalig konsumieren + anwenden
+  if (state.inventory.includes('detektiv-instinkt')) {
+    applyDetektivInstinkt(q.match);
+    state.inventory = state.inventory.filter(id => id !== 'detektiv-instinkt');
+  }
+
+  renderTestLives();
+  renderAll();
+}
+
+function renderTestLives() {
+  testLivesEl.innerHTML = '';
+  for (let i = 0; i < 2; i++) {
+    const heart = document.createElement('span');
+    heart.className = 'heart' + (i < state.test.misses ? ' lost' : '');
+    heart.innerHTML = `<svg viewBox="0 0 24 24" fill="white"><path d="M12 21s-7-4.5-9.5-9.3C.5 7.5 3.5 4 7 4c2 0 3.7 1 5 2.5C13.3 5 15 4 17 4c3.5 0 6.5 3.5 4.5 7.7C19 16.5 12 21 12 21z"/></svg>`;
+    testLivesEl.appendChild(heart);
+  }
+}
+
+function handleTestClick(file) {
+  if (state.test.locked) return;
+  const q = state.testQuestions[state.test.qIndex];
+  if (file.id === q.match) {
+    const points = state.test.misses === 0 ? 2 : 1;
+    const coinReward = state.test.misses === 0 ? 2 : 1;
+    state.score += points;
+    state.test.locked = true;
+    if (state.test.misses > 0) state.test.allPerfect = false;
+    if (state.inventory.includes('motivationsboost')) showUnicorn();
+    toast(`Richtig! +${points} Punkt${points > 1 ? 'e' : ''}`, 'success');
+    const scoreBadge = document.querySelector('.badge.score');
+    if (scoreBadge) {
+      spawnFloatingLabel(scoreBadge, `+${points} ⭐`, 'points');
+      punchBadge('.badge.score');
+    }
+    awardCoins(coinReward, state.test.misses === 0 ? 'Sofort gefunden!' : '2. Versuch');
+    flashFile(file.id, 'success');
+    renderHud();
+    setTimeout(() => {
+      closeModal();
+      state.test.qIndex += 1;
+      if (state.test.qIndex >= state.testQuestions.length) endTest();
+      else showTestQuestion();
+    }, 900);
+  } else {
+    state.test.misses += 1;
+    toast(state.test.misses === 1 ? 'Falsch! Noch ein Versuch.' : 'Wieder falsch – nächste Frage.', 'error');
+    flashFile(file.id, 'error');
+    renderTestLives();
+    setTimeout(() => closeModal(), 700);
+    if (state.test.misses >= 2) {
+      state.test.locked = true;
+      state.test.allPerfect = false;
+      setTimeout(() => {
+        state.test.qIndex += 1;
+        if (state.test.qIndex >= state.testQuestions.length) endTest();
+        else showTestQuestion();
+      }, 900);
+    }
+  }
+}
+
+function endTest() {
+  testBanner.classList.add('hidden');
+  screenEl.classList.remove('test-mode');
+  state.phase = 'idle';
+  state.highlightedTestFolder = null;
+  if (state.test.allPerfect) {
+    setTimeout(() => awardCoins(3, 'Runden-Bonus: Alles perfekt!'), 400);
+  }
+  if (state.roundIndex < ROUNDS.length - 1) {
+    state.roundIndex += 1;
+    beginRound();
+  } else {
+    showEndScreen();
+  }
+}
+
+function triggerVirusFail() {
+  state.phase = 'failed';
+  closeModal();
+  testBanner.classList.add('hidden');
+  screenEl.classList.remove('test-mode');
+  showOverlay($('virusScreen'));
+}
+
+function showEndScreen() {
+  $('finalScore').textContent = state.score;
+  $('finalCoins').textContent = state.coins;
+  const totalSorted = ALL_FILES.length;
+  $('finalSorted').textContent = totalSorted;
+  const isNewBest = setBestScore(state.score);
+  $('finalBest').textContent = getBestScore();
+  $('endMessage').textContent = isNewBest
+    ? '🎉 Neue Bestleistung! Du bist ein wahrer Datei-Detektiv!'
+    : 'Super gemacht! Schaffst du beim nächsten Mal mehr Punkte?';
+  saveToHub();
+  renderWinHubWidgets();
+  showOverlay(endScreen);
+}
+
+/* ---------- SHOP ---------- */
+const SHOP_ITEMS = [
+  // I. Permanent
+  { id:'virenscanner',     category:'permanent', icon:'🔬', name:'Virenscanner',     price: 4,  desc:'Markiert alle Viren-Dateien mit einem roten !' },
+  { id:'datumsanzeige',    category:'permanent', icon:'📅', name:'Datumsanzeige',    price: 2,  desc:'Zeigt bei jeder Datei, in welcher Runde sie auftauchte.' },
+  { id:'backup',           category:'permanent', icon:'💾', name:'Backup',           price: 2,  desc:'Schützt einmalig vor einem Virus-Klick.' },
+  { id:'motivationsboost', category:'permanent', icon:'🦄', name:'Motivationsboost', price: 6,  desc:'Tanzendes Einhorn bei jeder richtigen Testantwort.' },
+  // II. Sortierphase (Consumables: mehrfach kaufbar, sofort angewendet)
+  { id:'ordner-scanner',  category:'sort', consumable:true, icon:'🔦', name:'Ordner-Scanner',  price: 8, desc:'Leuchtet den richtigen Ordner für die nächsten 3 Ablagen auf.', onBuy: () => { state.ordnerScannerCharges += 3; toast(`🔦 Ordner-Scanner aktiv! (${state.ordnerScannerCharges} Ladung${state.ordnerScannerCharges !== 1 ? 'en' : ''})`, 'success'); } },
+  { id:'auto-umbenennen', category:'sort', consumable:true, icon:'✏️', name:'Auto-Umbenennen', price: 6, desc:'Benennt 2 Dateien sofort korrekt um.',               onBuy: () => autoRename(2) },
+  // III. Testphase (Consumables: einmalig nutzbar, sofort aktivierbar)
+  { id:'ordner-finder',    category:'test', consumable:true, icon:'📂', name:'Ordner Finder',    price: 8,  desc:'Der Ordner mit der gesuchten Datei leuchtet links auf.',
+    onBuy: () => {
+      if (state.phase === 'test' && !state.test.locked) {
+        const q = state.testQuestions[state.test.qIndex];
+        if (q) {
+          applyOrdnerFinder(q.match);
+          renderSidebar();
+          toast('📂 Ordner-Finder: Schau links – der Ordner leuchtet!', 'success');
+        }
+      } else {
+        state.inventory.push('ordner-finder');
+        toast('📂 Ordner-Finder gespeichert – wird beim nächsten Test aktiviert!', 'success');
+      }
+    }
+  },
+  { id:'detektiv-instinkt',category:'test', consumable:true, icon:'🧠', name:'Detektiv-Instinkt',price:10,  desc:'Graut 5 falsche Dateien aus.',
+    onBuy: () => {
+      if (state.phase === 'test' && !state.test.locked) {
+        const q = state.testQuestions[state.test.qIndex];
+        if (q) {
+          applyDetektivInstinkt(q.match);
+          renderAll();
+          toast('🧠 Detektiv-Instinkt: 5 falsche Dateien ausgegraut!', 'success');
+        }
+      } else {
+        state.inventory.push('detektiv-instinkt');
+        toast('🧠 Detektiv-Instinkt gespeichert – wird beim nächsten Test aktiviert!', 'success');
+      }
+    }
+  },
+];
+
+
+function autoRename(n) {
+  const targets = state.files.filter(f => f.name && f.currentName !== f.name).slice(0, n);
+  if (targets.length === 0) { toast('Alle Dateien sind schon korrekt benannt!', 'error'); return; }
+  targets.forEach(f => { f.currentName = f.name; });
+  toast(`✏️ ${targets.length} Datei(en) umbenannt!`, 'success');
+  renderAll();
+}
+
+function showUnicorn() {
+  const el = document.createElement('div');
+  el.className = 'unicorn-dancer';
+
+  const img = document.createElement('img');
+  img.src = 'data/einhorn1.png';
+  el.appendChild(img);
+  document.getElementById('screen').appendChild(el);
+
+  const frames = ['data/einhorn1.png','data/einhorn2.png','data/einhorn3.png','data/einhorn4.png'];
+  const delays = [250, 250, 250, 700];
+  let frameIndex = 0;
+
+  function step() {
+    frameIndex++;
+    if (frameIndex >= frames.length) { el.remove(); return; }
+    img.src = frames[frameIndex];
+    setTimeout(step, delays[frameIndex]);
+  }
+  setTimeout(step, delays[0]);
+  // total: 250+250+250+700 = 1450ms
+}
+
+function openShop() {
+  $('shopCoinDisplay').textContent = state.coins;
+  renderShopContent();
+  $('shopBackdrop').classList.add('visible');
+  $('shopPanel').classList.add('open');
+}
+
+function closeShop() {
+  $('shopBackdrop').classList.remove('visible');
+  $('shopPanel').classList.remove('open');
+}
+
+function renderShopContent() {
+  const container = $('shopContent');
+  container.innerHTML = '';
+
+  if (SHOP_ITEMS.length === 0) {
+    container.innerHTML = `
+      <div class="shop-empty">
+        <span class="shop-empty-icon">🔧</span>
+        <p style="font-weight:800; font-size:14px; margin:0; color:#1d1d1f;">Items kommen bald!</p>
+        <p style="font-size:12px; margin:0; line-height:1.5;">Sammle schon mal Münzen —<br>hier gibt es bald Power-ups für deinen Detektiv-Einsatz.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const categories = [
+    { key: 'permanent', label: '⚙️ Permanente Items' },
+    { key: 'sort',      label: '📁 Sortierphase' },
+    { key: 'test',      label: '🔍 Testphase' },
+  ];
+
+  categories.forEach(cat => {
+    const items = SHOP_ITEMS.filter(i => i.category === cat.key);
+    if (items.length === 0) return;
+
+    const label = document.createElement('div');
+    label.className = 'shop-section-label';
+    label.textContent = cat.label;
+    container.appendChild(label);
+
+    const grid = document.createElement('div');
+    grid.className = 'shop-items-grid';
+    items.forEach(item => {
+      const isConsumable = !!item.consumable;
+      const owned = !isConsumable && state.inventory.includes(item.id);
+      const canAfford = state.coins >= item.price;
+      const card = document.createElement('div');
+      card.className = 'shop-item-card' + (owned ? ' owned' : (!canAfford ? ' cant-afford' : ''));
+      let descText = item.desc;
+      if (item.id === 'ordner-scanner' && state.ordnerScannerCharges > 0) {
+        descText += ` <b style="color:#FF9500">(${state.ordnerScannerCharges} aktiv)</b>`;
+      }
+      card.innerHTML = `
+        <span class="item-icon">${item.icon}</span>
+        <span class="item-name">${item.name}</span>
+        <span class="item-desc">${descText}</span>
+        <span class="item-price">${owned ? '✓ Gekauft' : `🪙 ${item.price}`}</span>
+      `;
+      if (!owned && canAfford) {
+        card.addEventListener('click', () => buyItem(item));
+      } else if (!owned && !canAfford) {
+        card.title = 'Nicht genug Münzen';
+      }
+      grid.appendChild(card);
+    });
+    container.appendChild(grid);
+  });
+}
+
+function buyItem(item) {
+  if (state.coins < item.price) { toast('Nicht genug Münzen!', 'error'); return; }
+  state.coins -= item.price;
+  if (item.consumable) {
+    renderAll();
+    if (item.onBuy) item.onBuy();
+    closeShop();
+  } else {
+    state.inventory.push(item.id);
+    toast(`${item.icon} ${item.name} gekauft!`, 'success');
+    renderAll();
+    $('shopCoinDisplay').textContent = state.coins;
+    renderShopContent();
+    if (item.onBuy) item.onBuy();
+  }
+}
+
+/* ---------- BUTTONS ---------- */
+$('shopBtn').addEventListener('click', openShop);
+$('shopClose').addEventListener('click', closeShop);
+$('shopBackdrop').addEventListener('click', closeShop);
+$('startBtn').addEventListener('click', () => { hideOverlay($('startScreen')); startGame(); });
+$('roundStartBtn').addEventListener('click', () => hideOverlay(roundScreen));
+$('virusContinueBtn').addEventListener('click', () => {
+  hideOverlay($('virusScreen'));
+  endTest();
+});
+starteTestBtn.addEventListener('click', startTest);
+$('restartBtn').addEventListener('click', () => {
+  hideOverlay(endScreen);
+  startGame();
+});
+
+/* ---------- CLOCK ---------- */
+function tickClock() {
+  const d = new Date();
+  $('clock').textContent = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+tickClock();
+setInterval(tickClock, 60000);
+
+/* ---------- INIT ---------- */
+showOverlay($('startScreen'));
+
+</script>
+<script>window.CREATURE_IMAGE_BASE = '../data/';</script>
+<script src="../creatures.js"></script>
+<script>initHubState();</script>
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PROTOKOLL // 1337</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0c0c0c;
+      color: #e8e8e8;
+      font-family: 'Courier New', Courier, monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+    }
+
+    /* Subtile Scanlines */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px, transparent 3px,
+        rgba(255,255,255,0.018) 3px, rgba(255,255,255,0.018) 4px
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .console-wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 580px;
+    }
+
+    /* macOS-ähnliche Titelleiste */
+    .console-titlebar {
+      background: #1e1e1e;
+      border: 1px solid #2e2e2e;
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: #28c840; }
+    .console-titlebar__label {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.28);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin: 0 auto;
+    }
+
+    /* Terminal-Körper */
+    .console-body {
+      background: #111;
+      border: 1px solid #2e2e2e;
+      border-radius: 0 0 8px 8px;
+      padding: 24px 28px 28px;
+    }
+
+    .c-line {
+      font-size: 0.83rem;
+      line-height: 2;
+      color: rgba(255,255,255,0.38);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .c-line.visible { opacity: 1; }
+    .c-line.cmd     { color: rgba(255,255,255,0.3); }
+    .c-line.out     { color: rgba(255,255,255,0.6); }
+    .c-line.warn    { color: #c8a800; }
+    .c-line.ok      { color: rgba(255,255,255,0.5); }
+
+    /* Protokoll-Kasten */
+    .proto-box {
+      margin: 20px 0 6px;
+      padding: 18px 22px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.03);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .proto-box.visible { opacity: 1; }
+
+    .proto-label {
+      font-size: 0.62rem;
+      color: rgba(255,255,255,0.22);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .proto-entry {
+      font-size: 0.9rem;
+      color: #e8e8e8;
+      line-height: 1.85;
+    }
+    .proto-entry strong {
+      color: #ffffff;
+      font-size: 1.05rem;
+    }
+
+    /* Zurück-Button */
+    .back-btn {
+      display: block;
+      margin-top: 28px;
+      width: 100%;
+      padding: 13px 0;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 4px;
+      color: rgba(255,255,255,0.5);
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.8rem;
+      letter-spacing: 2px;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 0.4s, background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .back-btn.visible { opacity: 1; }
+    .back-btn:hover {
+      background: rgba(255,255,255,0.05);
+      color: #e8e8e8;
+      border-color: rgba(255,255,255,0.35);
+    }
+
+    /* Zugriff verweigert */
+    .denied-box {
+      text-align: center;
+      padding: 20px 0 8px;
+    }
+    .denied-title {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.22);
+      letter-spacing: 4px;
+      margin-bottom: 18px;
+    }
+    .denied-msg {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.18);
+      line-height: 2;
+      margin-bottom: 28px;
+    }
+  </style>
+</head>
+<body>
+  <div class="console-wrap">
+    <div class="console-titlebar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <div class="console-titlebar__label">1337.html — Protokoll-Server</div>
+    </div>
+    <div class="console-body" id="consoleBody">
+      <!-- per JS befüllt -->
+    </div>
+  </div>
+
+  <script src="creatures.js"></script>
+  <script>
+    (function () {
+      const body = document.getElementById('consoleBody');
+
+      const shopData    = loadShopData();
+      const hasBought   = shopData.purchased.includes('atariHint');
+      const atariNumber = shopData.atariNumber;
+      const isSolved    = shopData.atariSolved;
+
+      if (!hasBought) {
+        body.innerHTML = `
+          <div class="denied-box">
+            <div class="denied-title">// ZUGRIFF VERWEIGERT //</div>
+            <div class="denied-msg">
+              &gt; Keine gültige Zugangsberechtigung gefunden.<br>
+              &gt; Kehre zum Spiel-Hub zurück.
+            </div>
+            <a href="index.html" class="back-btn visible">← Zurück zum Spiel-Hub</a>
+          </div>`;
+        return;
+      }
+
+      const statusLine = isSolved
+        ? { text: '&gt; STATUS: Atari-1337 entfesselt — Protokoll abgeschlossen.', cls: 'ok' }
+        : { text: '&gt; STATUS: Warte auf Code-Eingabe…', cls: 'warn' };
+
+      const cmdLines = [
+        { text: '&gt; Verbindung wird hergestellt…',       cls: 'cmd' },
+        { text: '&gt; Protokoll-Server erreicht.',          cls: 'cmd' },
+        { text: '&gt; Authentifizierung erfolgreich.',      cls: 'out' },
+        { text: '',                                         cls: 'cmd' },
+        statusLine,
+      ];
+
+      const linesHTML = cmdLines.map((l, i) =>
+        `<div class="c-line ${l.cls}" data-delay="${i * 180}">${l.text}</div>`
+      ).join('');
+
+      const numDisplay = atariNumber !== null ? atariNumber : '?';
+
+      body.innerHTML = `
+        ${linesHTML}
+        <div class="proto-box" id="protoBox" data-delay="${cmdLines.length * 180 + 100}">
+          <div class="proto-label">// Offizielles Protokoll //</div>
+          <div class="proto-entry">
+            Atari <strong>${numDisplay}</strong> wurde aktiviert.
+          </div>
+          <div class="proto-entry" style="margin-top:6px;">
+            Zahlenfrequenz wurde im Source-Code des Hubs versteckt.
+          </div>
+        </div>
+        <a href="index.html" class="back-btn" id="backBtn"
+           data-delay="${cmdLines.length * 180 + 320}">
+          ← Zurück zum Spiel-Hub
+        </a>
+      `;
+
+      /* Elemente mit Verzögerung einblenden */
+      body.querySelectorAll('[data-delay]').forEach(el => {
+        const delay = parseInt(el.dataset.delay, 10) || 0;
+        setTimeout(() => el.classList.add('visible'), delay);
+      });
+    })();
+  </script>
+</body>
+</html>

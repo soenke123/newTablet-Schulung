@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<!-- Tipp: Drücke 3× auf ›_ um das Terminal zu öffnen -->
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MPS-Game-Hub – Kreaturen Sammeln · Lernen · Meister werden</title>
+  <!-- Atari2 · Enter 1-5-0-7 -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="hub-page">
+
+  <!-- ═══ HUD (fixiert oben rechts) ═══ -->
+  <div class="hud-bar">
+    <button class="hud-btn" id="bookBtn" title="Buch der Monster" hidden>📜</button>
+    <!-- Atari5 · Enter 2-7-1-8 -->
+    <button class="hud-btn" id="shopBtn" title="Shop">🛒</button>
+    <button class="hud-btn theme-cycle-btn" id="themeCycleBtn" hidden title="Theme wechseln">🎨</button>
+    <div class="hud-coins">
+      <span class="hud-coins__icon">🪙</span>
+      <span class="hud-coins__amount" id="coinAmount">0</span>
+    </div>
+  </div>
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="hub-header">
+    <div class="hub-header__inner">
+      <div class="hub-header__title">
+        <span class="hub-header__rune">🌟</span>
+        <!-- Atari0 · Enter 7-3-9-1 -->
+        <h1>MPS-Game-Hub</h1>
+        <span class="hub-header__rune">🌟</span>
+      </div>
+      <p class="hub-header__subtitle">Kreaturen Sammeln · Lernen · Meister werden</p>
+    </div>
+  </header>
+
+  <!-- ═══ CREATURE GALLERY ═══ -->
+  <div class="gallery-row">
+    <section class="gallery-bar" id="galleryBar">
+      <div class="gallery-bar__slots" id="gallerySlots">
+        <!-- wird per JS befüllt -->
+        <!-- Atari7 · Enter 3-6-8-0 -->
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══ SPIELE-GRID ═══ -->
+  <main class="hub-main">
+    <h2 class="hub-section-title">Wähle dein Abenteuer</h2>
+
+    <div id="gamesGrid">
+      <!-- Spiel-Kacheln werden per JS generiert -->
+    </div>
+  </main>
+
+  <!-- ═══ NESTER (Ei-Slots) ═══ -->
+  <section class="hub-nests" id="nestSection" hidden>
+    <h2 class="hub-section-title">🥚 Deine Nester</h2>
+    <!-- Atari4 · Enter 9-0-4-3 -->
+    <div class="games-grid" id="nestsGrid"></div>
+  </section>
+
+  <!-- ═══ MODAL: Kreatur-Details ═══ -->
+  <div class="modal-overlay" id="modalOverlay" hidden>
+    <div class="modal-box">
+      <button class="modal-close" id="modalClose">✕</button>
+      <div class="modal-content" id="modalContent"></div>
+      <!-- Atari6 · Enter 5-1-6-4 -->
+    </div>
+  </div>
+
+  <!-- ═══ SHOP MODAL ═══ -->
+  <div class="shop-modal-overlay" id="shopModal" hidden>
+    <div class="shop-modal-box">
+      <div class="shop-modal-header">
+        <h2 class="shop-modal-title">🛒 Shop</h2>
+        <div class="shop-coin-badge">
+          <span>🪙</span>
+          <span id="shopCoinAmount">0</span>
+          <!-- Atari3 · Enter 1-3-5-2 -->
+          <span class="shop-coin-badge__label">Münzen</span>
+        </div>
+        <button class="shop-modal-close" id="shopModalClose">✕</button>
+      </div>
+      <div class="shop-list" id="shopList"></div>
+    </div>
+  </div>
+
+  <script src="creatures.js"></script>
+  <script src="script.js"></script>
+  <script src="config.js"></script>
+  <script>
+    // Hub-spezifischer Code
+    // Atari1 · Enter 4-8-2-6
+    document.addEventListener('DOMContentLoaded', () => {
+      renderHub();
+
+      document.getElementById('modalClose').addEventListener('click', () => {
+        document.getElementById('modalOverlay').hidden = true;
+      });
+
+      document.getElementById('bookBtn')?.addEventListener('click', openBookModal);
+      document.getElementById('shopBtn')?.addEventListener('click', openShopModal);
+      document.getElementById('shopModalClose')?.addEventListener('click', closeShopModal);
+      document.getElementById('themeCycleBtn')?.addEventListener('click', cycleTheme);
+    });
+  </script>
+</body>
+</html>

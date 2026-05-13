@@ -1,0 +1,2030 @@
+/* ═══════════════════════════════════════════════════
+   LERNWELT – Stylesheet
+   Ästhetik: Warm-Fantasy / Abenteuer-Buch
+   ═══════════════════════════════════════════════════ */
+
+/* ── Google Fonts ──────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Nunito:wght@400;600;700;800&display=swap');
+
+/* ── CSS-Variablen ─────────────────────────────── */
+:root {
+  --clr-bg:        #1a0e05;
+  --clr-surface:   #2b1a0d;
+  --clr-surface2:  #3a2410;
+  --clr-border:    #6b3f1a;
+  --clr-gold:      #f0b429;
+  --clr-gold-dim:  #a87820;
+  --clr-amber:     #e8830a;
+  --clr-cream:     #f5e6c8;
+  --clr-cream-dim: #c9b38a;
+  --clr-green:     #3ecf6a;
+  --clr-red:       #e85555;
+  --clr-blue:      #5ba4e8;
+
+  --font-display: 'Cinzel', serif;
+  --font-body:    'Nunito', sans-serif;
+
+  --radius-sm:  8px;
+  --radius-md:  16px;
+  --radius-lg:  24px;
+  --radius-xl:  32px;
+
+  --shadow-glow-gold: 0 0 20px rgba(240, 180, 41, 0.4);
+  --shadow-card: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+/* ── Reset & Base ──────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--clr-bg);
+  color: var(--clr-cream);
+  min-height: 100vh;
+  /* Subtiles Pergament-Muster im Hintergrund */
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(240,180,41,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(232,131,10,0.04) 0%, transparent 60%);
+}
+
+a { text-decoration: none; color: inherit; }
+
+/* ── Utility ───────────────────────────────────── */
+.hidden { display: none !important; }
+
+/* ══════════════════════════════════════════════════
+   HUB – STARTSEITE
+   ══════════════════════════════════════════════════ */
+
+/* ── Hub Header ────────────────────────────────── */
+.hub-header {
+  text-align: center;
+  padding: 40px 20px 24px;
+}
+
+.hub-header::after {
+  content: '';
+  display: block;
+  width: 80%;
+  max-width: 400px;
+  height: 2px;
+  margin: 20px auto 0;
+  background: linear-gradient(to right, transparent, var(--clr-gold), transparent);
+}
+
+.hub-header__inner {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.hub-header__title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.hub-header__title h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 900;
+  color: var(--clr-gold);
+  text-shadow: 0 0 30px rgba(240,180,41,0.5), 0 2px 4px rgba(0,0,0,0.8);
+  letter-spacing: 4px;
+}
+
+.hub-header__rune {
+  font-size: 1.8rem;
+  animation: pulse 2.5s ease-in-out infinite;
+}
+
+.hub-header__rune:last-child { animation-delay: 1.25s; }
+
+.hub-header__subtitle {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: var(--clr-cream-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ── Gallery Row (Bar + Coins nebeneinander) ───── */
+.gallery-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  max-width: min(95vw, 1400px);
+  margin: 0 auto 24px;
+  padding: 0 16px;
+}
+
+/* ── Gallery Bar ───────────────────────────────── */
+.gallery-bar {
+  position: relative;
+  flex: 1;
+  height: 168px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.gallery-bar__slots {
+  position: absolute;
+  inset: 0;
+}
+
+.gallery-walker {
+  position: absolute;
+  bottom: 8px;
+  width: 158px;
+  height: 158px;
+  transform-origin: center;
+  cursor: pointer;
+  filter: drop-shadow(0 0 6px rgba(240,180,41,0.4));
+  transition: filter 0.2s, transform 0.18s ease;
+}
+
+.gallery-walker:hover {
+  filter: drop-shadow(0 0 12px rgba(240,180,41,0.8));
+}
+
+.gallery-walker .creature-img {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Hub Main ──────────────────────────────────── */
+.hub-main {
+  max-width: min(95vw, 1400px);
+  margin: 0 auto;
+  padding: 0 16px 60px;
+}
+
+.hub-section-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--clr-gold-dim);
+  text-align: center;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+
+/* ── Games Grid ────────────────────────────────── */
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  column-gap: 20px;
+  row-gap: 70px; /* erhöht wegen Kreatur-Überlauf */
+  padding-top: 55px; /* Platz für Kreatur-Überlauf der ersten Reihe */
+}
+
+/* ── Spiel-Kachel ──────────────────────────────── */
+.game-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 24px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: visible;
+}
+
+/* Karte mit ausgewachsener Kreatur – Kreatur ragt oben über den Rahmen */
+.game-card.has-creature {
+  padding-top: 82px;
+}
+
+.game-card.has-creature .game-card__creature-wrap {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -38%);
+  z-index: 3;
+}
+
+.game-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(240,180,41,0.03) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6), var(--shadow-glow-gold);
+  border-color: var(--clr-gold);
+}
+
+.game-card__title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--clr-gold);
+  letter-spacing: 1px;
+  text-align: center;
+  position: relative;
+  z-index: 4; /* über transparentem PNG-Rand der Kreatur */
+}
+
+/* ── Ei in der Kachel ──────────────────────────── */
+.game-card__egg-wrap {
+  position: relative;
+  width: 100px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.egg-svg { width: 100%; height: 100%; }
+
+/* SVG (Ei) füllt seinen Container */
+.egg svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.creature-img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Kreatur im Hub-Spielkarte (statisch) */
+.hub-creature-display {
+  width: 155px;
+  height: 195px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Kreatur im Modal */
+.modal-creature-img {
+  width: 180px;
+  height: 180px;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── HUD-Leiste (fixiert oben rechts) ─────────── */
+.hud-bar {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-gold);
+  border-radius: 999px;
+  box-shadow: var(--shadow-glow-gold), 0 4px 16px rgba(0,0,0,0.5);
+  padding: 4px 2px 4px 4px;
+  gap: 2px;
+}
+
+.hud-coins {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-left: 1px solid var(--clr-border);
+  margin-left: 2px;
+}
+
+.hud-coins__icon { font-size: 1.25rem; line-height: 1; }
+
+.hud-coins__amount {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--clr-gold);
+  min-width: 20px;
+}
+
+.hud-btn {
+  background: none;
+  border: none;
+  font-size: 1.35rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.hud-btn[hidden] { display: none; }
+.hud-btn:hover { background: var(--clr-surface2); }
+
+/* ── Theme-Wechsel-Button ──────────────────────── */
+/* Desktop: unter der HUD-Pill positioniert */
+.theme-cycle-btn {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  border-radius: var(--radius-md);
+  width: auto;
+  height: auto;
+  padding: 5px 10px;
+  font-size: 0.88rem;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-gold-dim);
+  color: var(--clr-cream-dim);
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+.theme-cycle-btn:hover {
+  background: var(--clr-surface2);
+  color: var(--clr-gold);
+  border-color: var(--clr-gold);
+}
+
+/* ── Punkte-Badge ──────────────────────────────── */
+.game-card__points {
+  background: var(--clr-surface2);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-xl);
+  padding: 6px 18px;
+  font-size: 0.85rem;
+  color: var(--clr-cream-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.game-card__points strong {
+  color: var(--clr-gold);
+  font-size: 1.1rem;
+}
+
+/* ── Epische Karte (Lila/Silber) ───────────────── */
+.game-card--epic {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(167,139,250,0.08) 0%, transparent 55%),
+    var(--clr-surface);
+  border-color: rgba(167,139,250,0.55);
+}
+
+.game-card--epic:hover {
+  border-color: #a78bfa;
+}
+
+/* ── Legendäre Karte (Gold, intensiv) ──────────── */
+.game-card--legendary {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.12) 0%, transparent 55%),
+    var(--clr-surface);
+  border-color: rgba(240,180,41,0.7);
+  box-shadow: 0 0 18px rgba(212,168,48,0.18);
+}
+
+.game-card--legendary:hover {
+  border-color: var(--clr-gold);
+  box-shadow: 0 0 28px rgba(212,168,48,0.35);
+}
+
+/* ── Gesperrte Karte ───────────────────────────── */
+.game-card--locked {
+  opacity: 0.5;
+  filter: grayscale(0.5);
+}
+
+.epic-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #5b21b6 0%, #a855f7 40%, #e2d9f3 60%, #a855f7 80%, #5b21b6 100%);
+  background-size: 300% 100%;
+  animation: epicBadgeShine 3s ease-in-out infinite;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+@keyframes epicBadgeShine {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+.legendary-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #78350f 0%, #d4a830 35%, #fef3c7 55%, #d4a830 75%, #78350f 100%);
+  background-size: 300% 100%;
+  animation: legendaryBadgeShine 2s ease-in-out infinite;
+  color: #fff8e1;
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  box-shadow: 0 0 8px rgba(212,168,48,0.45);
+}
+@keyframes legendaryBadgeShine {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+.rare-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 40%, #bfdbfe 60%, #3b82f6 80%, #1e3a8a 100%);
+  background-size: 300% 100%;
+  animation: rareBadgeShine 3.2s ease-in-out infinite;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+@keyframes rareBadgeShine {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+/* ── Seltene Karte (Mittel-Dunkelblau) ──────────── */
+.game-card--rare {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.08) 0%, transparent 55%),
+    var(--clr-surface);
+  border-color: rgba(59,130,246,0.55);
+}
+
+.game-card--rare:hover {
+  border-color: #3b82f6;
+}
+
+/* ── Freilassen-Button ─────────────────────────── */
+.game-card__release {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s, background 0.2s;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.game-card__release:hover {
+  color: var(--clr-red);
+  background: rgba(232, 85, 85, 0.12);
+}
+
+/* ── Spielen-Button ────────────────────────────── */
+.game-card__btn {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--clr-amber), var(--clr-gold));
+  color: var(--clr-bg);
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 1rem;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 32px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.game-card__btn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 20px rgba(240,180,41,0.5);
+}
+
+/* ── Item-Nutzen-Button (neben Spielen) ─────────── */
+.game-card__action-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  align-items: stretch;
+}
+.game-card__action-row .game-card__btn {
+  flex: 1;
+}
+.game-card__use-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: 2px solid var(--clr-amber);
+  border-radius: var(--radius-md);
+  color: var(--clr-amber);
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 1rem;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+.game-card__use-btn:hover {
+  background: rgba(232,131,10,0.15);
+}
+
+/* ── Kreatur-Hinweis ───────────────────────────── */
+.game-card__creature-hint {
+  font-size: 1.6rem;
+  text-align: center;
+  filter: drop-shadow(0 0 6px rgba(240,180,41,0.5));
+}
+
+
+
+/* ══════════════════════════════════════════════════
+   SHOP – Modal
+   ══════════════════════════════════════════════════ */
+
+.shop-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+.shop-modal-overlay[hidden] { display: none; }
+
+.shop-modal-box {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-gold);
+  border-radius: var(--radius-lg);
+  max-width: 500px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: var(--shadow-glow-gold);
+  display: flex;
+  flex-direction: column;
+}
+
+.shop-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 52px 16px 20px;
+  border-bottom: 1px solid var(--clr-border);
+  position: sticky;
+  top: 0;
+  background: var(--clr-surface);
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+.shop-modal-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--clr-gold);
+  letter-spacing: 2px;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.shop-coin-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--clr-surface2);
+  border: 1px solid var(--clr-gold);
+  border-radius: var(--radius-xl);
+  padding: 5px 12px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--clr-gold);
+  box-shadow: var(--shadow-glow-gold);
+}
+
+.shop-coin-badge__label {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--clr-cream-dim);
+}
+
+.shop-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--clr-cream-dim);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s;
+}
+.shop-modal-close:hover { color: var(--clr-gold); }
+
+/* ── Shop-Liste (Einträge untereinander) ─────────── */
+
+.shop-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.shop-list-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--clr-border);
+  position: relative;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+.shop-list-item:last-child { border-bottom: none; }
+.shop-list-item:hover { background: var(--clr-surface2); }
+
+.shop-list-item--active {
+  background: rgba(232,131,10,0.06);
+}
+.shop-list-item--active .shop-list-item__icon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.shop-list-item__icon {
+  font-size: 2.2rem;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 44px;
+  text-align: center;
+  filter: drop-shadow(0 0 6px rgba(240,180,41,0.35));
+}
+
+.shop-list-item__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-list-item__name {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: var(--clr-gold);
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+
+.shop-list-item__desc {
+  font-size: 0.78rem;
+  color: var(--clr-cream-dim);
+  line-height: 1.45;
+  margin-bottom: 5px;
+}
+
+.shop-list-item__price {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--clr-gold);
+  background: var(--clr-surface2);
+  border: 1px solid var(--clr-gold-dim);
+  border-radius: var(--radius-xl);
+  padding: 3px 10px;
+}
+
+.shop-list-item__btn {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--clr-amber), var(--clr-gold));
+  color: var(--clr-bg);
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 0.82rem;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.shop-list-item__btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(240,180,41,0.5);
+}
+.shop-list-item__btn:disabled {
+  background: var(--clr-surface2);
+  color: var(--clr-cream-dim);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ── Kauf-Spalte & Besitz-Anzeige im Shop ────────── */
+.shop-list-item__buy-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.shop-item-owned {
+  font-size: 0.7rem;
+  color: var(--clr-amber);
+  font-family: var(--font-body);
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* ── Ei-Typen Farben ─────────────────────────────── */
+.shop-list-item--egg-rare .shop-list-item__name  { color: #93c5fd; }
+.shop-list-item--egg-rare .shop-list-item__price { border-color: rgba(99,179,237,0.4); color: #93c5fd; }
+.shop-list-item--egg-mythic .shop-list-item__name  { color: #d8b4fe; }
+.shop-list-item--egg-mythic .shop-list-item__price { border-color: rgba(192,132,252,0.4); color: #d8b4fe; }
+.shop-list-item--egg-legendary .shop-list-item__name  { color: #fdba74; }
+.shop-list-item--egg-legendary .shop-list-item__price { border-color: rgba(251,146,60,0.4); color: #fdba74; }
+.shop-list-item--book .shop-list-item__name  { color: #d4a040; }
+.shop-list-item--book .shop-list-item__price { border-color: rgba(160,110,60,0.4); color: #d4a040; }
+
+/* ── Ausverkauft-Schild ───────────────────────────── */
+.shop-list-item--soldout {
+  opacity: 0.65;
+}
+.shop-list-item--soldout:hover { background: transparent; }
+
+.shop-soldout-ribbon {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.shop-soldout-ribbon::after {
+  content: 'Ausverkauft';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-10deg);
+  width: 130%;
+  text-align: center;
+  background: rgba(150, 25, 25, 0.88);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 7px 0;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+/* ── Nest-Sektion ──────────────────────────────── */
+.hub-nests {
+  max-width: min(95vw, 1400px);
+  margin: 0 auto;
+  padding: 0 16px 48px;
+}
+
+.nest-game-card { cursor: default; }
+.nest-game-card:hover { transform: none; box-shadow: var(--shadow-card); border-color: var(--clr-border); }
+.nest-game-card.has-creature:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.6), var(--shadow-glow-gold); border-color: var(--clr-gold); }
+
+.nest-card__subtitle {
+  font-size: 0.78rem;
+  color: var(--clr-cream-dim);
+  text-align: center;
+  margin-top: -8px;
+}
+
+/* ── Ei-Shop-Items (Farben) ────────────────────── */
+.shop-item--egg-rare {
+  border-color: rgba(99, 179, 237, 0.45);
+  background: radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.07) 0%, transparent 60%), var(--clr-surface);
+}
+.shop-item--egg-rare:hover { border-color: rgba(99,179,237,0.8); box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 18px rgba(59,130,246,0.2); }
+.shop-item--egg-rare .shop-item__name  { color: #93c5fd; }
+.shop-item--egg-rare .shop-item__price { border-color: rgba(99,179,237,0.4); color: #93c5fd; }
+
+.shop-item--egg-mythic {
+  border-color: rgba(192, 132, 252, 0.45);
+  background: radial-gradient(ellipse at 50% 0%, rgba(168,85,247,0.07) 0%, transparent 60%), var(--clr-surface);
+}
+.shop-item--egg-mythic:hover { border-color: rgba(192,132,252,0.8); box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 18px rgba(168,85,247,0.2); }
+.shop-item--egg-mythic .shop-item__name  { color: #d8b4fe; }
+.shop-item--egg-mythic .shop-item__price { border-color: rgba(192,132,252,0.4); color: #d8b4fe; }
+
+.shop-item--egg-legendary {
+  border-color: rgba(251, 146, 60, 0.45);
+  background: radial-gradient(ellipse at 50% 0%, rgba(232,131,10,0.09) 0%, transparent 60%), var(--clr-surface);
+}
+.shop-item--egg-legendary:hover { border-color: rgba(251,146,60,0.8); box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 18px rgba(232,131,10,0.25); }
+.shop-item--egg-legendary .shop-item__name  { color: #fdba74; }
+.shop-item--egg-legendary .shop-item__price { border-color: rgba(251,146,60,0.4); color: #fdba74; }
+
+/* ── Nest-Karten (Ei-Slots im Shop) ────────────── */
+.nest-card {
+  padding: 16px 14px 16px;
+  gap: 8px;
+  min-width: 0;
+}
+
+.nest-card--epic {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(167,139,250,0.08) 0%, transparent 55%),
+    var(--clr-surface);
+  border-color: rgba(167,139,250,0.55);
+}
+
+.nest-card--legendary {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.12) 0%, transparent 55%),
+    var(--clr-surface);
+  border-color: rgba(240,180,41,0.7);
+  box-shadow: 0 0 18px rgba(212,168,48,0.18);
+}
+
+.nest-card--pending {
+  border-color: var(--clr-gold);
+  animation: trankPulse 1.5s ease-in-out infinite;
+}
+
+.nest-card__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+}
+
+.nest-card__egg-badge {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  color: var(--clr-amber);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.nest-card__game-label {
+  font-size: 0.72rem;
+  color: var(--clr-cream-dim);
+}
+
+.nest-card__visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nest-card__creature-wrap {
+  width: 110px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nest-card__creature-wrap .creature-img { width: 100%; height: 100%; object-fit: contain; }
+
+.nest-card__egg-wrap {
+  width: 80px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nest-card__egg-wrap svg { width: 100%; height: 100%; }
+
+.nest-card__hint {
+  font-size: 0.78rem;
+  color: var(--clr-gold);
+  text-align: center;
+  line-height: 1.5;
+  padding: 6px 8px;
+  background: var(--clr-surface2);
+  border-radius: var(--radius-sm);
+  width: 100%;
+}
+
+.game-card__progress {
+  width: 100%;
+  height: 6px;
+  background: var(--clr-surface2);
+  border-radius: 4px;
+  border: 1px solid var(--clr-border);
+  overflow: hidden;
+  margin-top: auto; /* schiebt Fortschrittsbalken + Button nach unten */
+}
+
+.game-card__progress-fill {
+  height: 100%;
+  background: linear-gradient(to right, var(--clr-amber), var(--clr-gold));
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+@keyframes trankPulse {
+  0%, 100% { box-shadow: var(--shadow-card); }
+  50%      { box-shadow: 0 0 28px rgba(232,131,10,0.6), var(--shadow-card); }
+}
+
+/* ── Wachstumstrank-Button auf Spielkarte ─────── */
+.game-card__trank-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 5px;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s, transform 0.15s;
+  z-index: 5;
+  line-height: 1;
+}
+
+.game-card__trank-btn:hover {
+  background: rgba(232, 131, 10, 0.15);
+  transform: scale(1.2);
+}
+
+/* ── Pending-Egg Banner (fixed am unteren Bildschirmrand) ─────── */
+.trank-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, var(--clr-surface) 0%, #2a1a00 100%);
+  border-top: 2px solid var(--clr-gold);
+  box-shadow: 0 -4px 20px rgba(212, 168, 48, 0.3);
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  color: var(--clr-text);
+}
+
+.trank-banner span {
+  flex: 1;
+}
+
+.trank-banner button {
+  flex-shrink: 0;
+  background: rgba(255, 80, 80, 0.15);
+  border: 1px solid rgba(255, 80, 80, 0.5);
+  color: #ff8080;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.trank-banner button:hover {
+  background: rgba(255, 80, 80, 0.3);
+}
+
+/* ── Season-Abschnitte ─────────────────────────── */
+.season-section {
+  margin-bottom: 32px;
+}
+
+.season-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--clr-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  user-select: none;
+  letter-spacing: 1px;
+}
+
+.season-title:hover {
+  color: var(--clr-text);
+}
+
+.season-title .chevron {
+  display: inline-block;
+  font-style: normal;
+  font-size: 0.75em;
+  transition: transform 0.2s;
+}
+
+.season-title.open .chevron {
+  transform: rotate(180deg);
+}
+
+.season-desc {
+  font-size: 0.82rem;
+  color: var(--clr-text-muted);
+
+  margin: 0 0 8px;
+  padding-left: 2px;
+  line-height: 1.5;
+}
+
+.season-desc[hidden] {
+  display: none;
+}
+
+.season-section .games-grid {
+  padding-top: 20px;
+}
+
+/* ══════════════════════════════════════════════════
+   GAME – SPIELSEITE
+   ══════════════════════════════════════════════════ */
+
+/* ── Game Nav ──────────────────────────────────── */
+.game-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: var(--clr-surface);
+  border-bottom: 1px solid var(--clr-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.game-nav__back {
+  color: var(--clr-gold);
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 8px 14px;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  transition: background 0.2s;
+}
+
+.game-nav__back:hover { background: var(--clr-surface2); }
+
+.game-nav__title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--clr-gold);
+  letter-spacing: 2px;
+}
+
+.game-nav__round {
+  font-size: 0.85rem;
+  color: var(--clr-cream-dim);
+  font-weight: 600;
+}
+
+/* ── Ei-Sektion ────────────────────────────────── */
+.egg-section {
+  padding: 24px 20px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.egg-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.egg {
+  width: 170px;
+  height: 215px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s;
+}
+
+.egg.shake {
+  animation: eggShake 0.5s ease-in-out;
+}
+
+.egg-stage-label {
+  font-size: 0.8rem;
+  color: var(--clr-cream-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.egg-progress-bar {
+  width: 200px;
+  max-width: 90%;
+  height: 8px;
+  background: var(--clr-surface2);
+  border-radius: 4px;
+  border: 1px solid var(--clr-border);
+  overflow: hidden;
+}
+
+.egg-progress-fill {
+  height: 100%;
+  background: linear-gradient(to right, var(--clr-amber), var(--clr-gold));
+  border-radius: 4px;
+  width: 0%;
+  transition: width 0.6s ease;
+}
+
+/* ── Game Main ─────────────────────────────────── */
+.game-main {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 16px 16px 60px;
+}
+
+/* ── Screens ───────────────────────────────────── */
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+/* ── Intro Card ────────────────────────────────── */
+.intro-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 40px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow-card);
+  width: 100%;
+  max-width: 440px;
+}
+
+.intro-card__icon { font-size: 3rem; }
+
+.intro-card h2 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--clr-gold);
+  letter-spacing: 2px;
+}
+
+.intro-card p { color: var(--clr-cream-dim); line-height: 1.6; }
+
+.intro-hint {
+  font-size: 0.85rem !important;
+  color: var(--clr-gold-dim) !important;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ── Score Bar ─────────────────────────────────── */
+.score-bar {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  width: 100%;
+}
+
+.score-bar__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  padding: 10px 24px;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.score-bar__icon { font-size: 1rem; }
+
+.score-bar__item--good { color: var(--clr-green); border-color: var(--clr-green); }
+.score-bar__item--bad  { color: var(--clr-red);   border-color: var(--clr-red);   }
+
+/* ── Spielfrage ────────────────────────────────── */
+.game-question {
+  font-size: 1rem;
+  color: var(--clr-cream-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* ── Zahlen-Buttons ────────────────────────────── */
+.number-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* ── Feedback ──────────────────────────────────── */
+.feedback {
+  font-size: 1.4rem;
+  font-weight: 800;
+  text-align: center;
+  min-height: 2rem;
+  transition: opacity 0.3s;
+}
+
+.feedback.correct { color: var(--clr-green); }
+.feedback.wrong   { color: var(--clr-red);   }
+
+/* ── Result Card ───────────────────────────────── */
+.result-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-gold);
+  border-radius: var(--radius-lg);
+  padding: 36px 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  box-shadow: var(--shadow-card), var(--shadow-glow-gold);
+  width: 100%;
+  max-width: 480px;
+}
+
+.result-card__creature {
+  width: 170px;
+  height: 215px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.result-card h2 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--clr-gold);
+  letter-spacing: 2px;
+}
+
+.result-stats {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.result-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--clr-surface2);
+  border-radius: var(--radius-md);
+  padding: 12px 20px;
+  min-width: 80px;
+}
+
+.result-stat__label {
+  font-size: 0.75rem;
+  color: var(--clr-cream-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.result-stat__value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--clr-cream);
+}
+
+.result-stat__value--good { color: var(--clr-green); }
+.result-stat__value--bad  { color: var(--clr-red);   }
+
+/* ── Creature Reveal ───────────────────────────── */
+.result-creature-reveal {
+  font-size: 1.1rem;
+  color: var(--clr-cream-dim);
+  line-height: 1.6;
+  padding: 12px 20px;
+  background: var(--clr-surface2);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--clr-gold);
+}
+
+.result-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ══════════════════════════════════════════════════
+   BUTTONS (Shared)
+   ══════════════════════════════════════════════════ */
+
+.btn {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-weight: 800;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  text-align: center;
+}
+
+.btn--start {
+  background: linear-gradient(135deg, var(--clr-amber), var(--clr-gold));
+  color: var(--clr-bg);
+  font-size: 1.1rem;
+  padding: 16px 40px;
+  letter-spacing: 1px;
+}
+
+.btn--start:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 24px rgba(240,180,41,0.5);
+}
+
+.btn--secondary {
+  background: var(--clr-surface2);
+  color: var(--clr-cream);
+  border: 1px solid var(--clr-border);
+  font-size: 1rem;
+  padding: 14px 28px;
+}
+
+.btn--secondary:hover { background: var(--clr-surface); }
+
+/* ── Zahlen-Button (groß, touch-freundlich) ─────── */
+.btn--number {
+  background: var(--clr-surface);
+  color: var(--clr-cream);
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  font-weight: 800;
+  border: 2px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  width: clamp(130px, 40vw, 200px);
+  height: clamp(130px, 40vw, 200px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.btn--number:hover {
+  background: var(--clr-surface2);
+  border-color: var(--clr-gold);
+  box-shadow: var(--shadow-glow-gold);
+  transform: scale(1.04);
+}
+
+.btn--number.correct {
+  background: rgba(62, 207, 106, 0.15);
+  border-color: var(--clr-green);
+  box-shadow: 0 0 20px rgba(62,207,106,0.4);
+  color: var(--clr-green);
+}
+
+.btn--number.wrong {
+  background: rgba(232, 85, 85, 0.15);
+  border-color: var(--clr-red);
+  box-shadow: 0 0 20px rgba(232,85,85,0.3);
+  color: var(--clr-red);
+}
+
+/* ══════════════════════════════════════════════════
+   MODAL
+   ══════════════════════════════════════════════════ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.modal-overlay[hidden] { display: none; }
+
+.modal-box {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-gold);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  max-width: 440px;
+  width: 100%;
+  position: relative;
+  box-shadow: var(--shadow-glow-gold);
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--clr-cream-dim);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s;
+}
+
+.modal-close:hover { color: var(--clr-gold); }
+
+/* .modal-creature-svg ersetzt durch .modal-creature-img in script.js */
+
+/* ══════════════════════════════════════════════════
+   EI – SVG-STILE
+   ══════════════════════════════════════════════════ */
+
+/* Glow-Effekt für geschlüpfte Kreatur */
+.creature-glow {
+  filter: drop-shadow(0 0 12px rgba(240,180,41,0.7));
+  animation: floatCreature 3s ease-in-out infinite;
+}
+
+/* Riss-Animation */
+@keyframes eggCrack {
+  0%, 100% { transform: rotate(0deg); }
+  25%       { transform: rotate(-3deg) scale(1.05); }
+  75%       { transform: rotate(3deg) scale(1.05); }
+}
+
+/* ══════════════════════════════════════════════════
+   ANIMATIONEN
+   ══════════════════════════════════════════════════ */
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.15); opacity: 0.7; }
+}
+
+@keyframes eggShake {
+  0%, 100% { transform: rotate(0deg); }
+  20%       { transform: rotate(-8deg); }
+  40%       { transform: rotate(8deg); }
+  60%       { transform: rotate(-5deg); }
+  80%       { transform: rotate(5deg); }
+}
+
+@keyframes floatCreature {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes hatch {
+  0%   { transform: scale(0.8) rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(1.1) rotate(5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-hatch { animation: hatch 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+.animate-fadein { animation: fadeIn 0.4s ease forwards; }
+
+/* Level-Up-CSS wird von creatures.js injiziert (spiele-übergreifend) */
+
+/* ══════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .hud-bar {
+    top: 12px;
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .hub-header { padding: 72px 16px 12px; }
+
+  /* Grid: kein Überlauf-Platz mehr nötig */
+  .games-grid {
+    grid-template-columns: 1fr;
+    row-gap: 12px;
+    padding-top: 0;
+  }
+
+  /* Karte: horizontales Grid (Bild links, Inhalt rechts) */
+  .game-card {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    grid-template-rows: auto auto auto auto;
+    column-gap: 12px;
+    row-gap: 5px;
+    padding: 10px;
+    align-items: center;
+  }
+
+  /* has-creature: absolute Positionierung aufheben */
+  .game-card.has-creature {
+    padding-top: 10px;
+  }
+  .game-card.has-creature .game-card__creature-wrap {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    z-index: auto;
+  }
+
+  /* Linke Spalte: Kreatur/Ei über alle Zeilen */
+  .game-card__creature-wrap {
+    grid-column: 1;
+    grid-row: 1 / span 4;
+    align-self: center;
+    justify-self: center;
+  }
+
+  .hub-creature-display {
+    width: 140px;
+    height: 140px;
+  }
+
+  /* Rechte Spalte: Titel, Fortschritt, Button */
+  .game-card__title {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: left;
+    font-size: 0.88rem;
+  }
+
+  .game-card__progress {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 0; /* auto-margin nur im Desktop-Flex-Layout */
+  }
+
+  .game-card__btn {
+    grid-column: 2;
+    grid-row: 3;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  /* action-row (btn + use-item) sitzt an gleicher Grid-Position */
+  .game-card__action-row {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .game-card__action-row .game-card__btn,
+  .game-card__action-row .game-card__use-btn {
+    flex: 1;
+    padding: 9px 10px;
+    font-size: 0.85rem;
+  }
+
+  .game-card__release {
+    grid-column: 2;
+    grid-row: 4;
+    position: relative;
+    top: auto;
+    left: auto;
+    bottom: auto;
+    right: auto;
+    justify-self: end;
+  }
+
+  .game-card__trank-btn {
+    position: relative;
+    top: auto;
+    right: auto;
+    grid-column: 2;
+    grid-row: 4;
+    justify-self: start;
+    align-self: center;
+    font-size: 1.1rem;
+    padding: 4px 6px;
+  }
+
+  /* Textlastige Elemente ausblenden */
+  .game-card__points,
+  .game-card__stage-label,
+  .epic-badge,
+  .legendary-badge,
+  .rare-badge {
+    display: none;
+  }
+
+  .result-buttons { flex-direction: column; width: 100%; }
+  .result-buttons .btn { width: 100%; }
+  .result-play-row { flex-direction: column; }
+  .result-play-row .btn-use-item { flex-shrink: 1; }
+  .number-buttons { gap: 12px; }
+
+  /* Buch der Monster – Mobile: 3 Spalten für Normale, Slots gleiche Größe */
+  .book-grid--normals {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .book-grid--centered .book-slot {
+    flex: 0 0 calc((100% - 16px) / 3);
+    max-width: calc((100% - 16px) / 3);
+  }
+
+  /* Theme-Button: inline in der HUD-Pill */
+  .theme-cycle-btn {
+    position: static;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 1.35rem;
+    background: none;
+    border: none;
+    color: inherit;
+    letter-spacing: 0;
+    white-space: normal;
+  }
+  .theme-cycle-btn__label { display: none; }
+}
+
+@media (min-width: 700px) {
+  .number-buttons { gap: 32px; }
+}
+
+/* ══════════════════════════════════════════════════
+   BUCH DER MONSTER – Shop-Item
+   ══════════════════════════════════════════════════ */
+
+.shop-item--book {
+  border-color: rgba(160, 110, 60, 0.45);
+  background: radial-gradient(ellipse at 50% 0%, rgba(160,110,60,0.08) 0%, transparent 60%), var(--clr-surface);
+}
+.shop-item--book:hover {
+  border-color: rgba(210,165,80,0.8);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 18px rgba(160,110,60,0.25);
+}
+.shop-item--book .shop-item__name { color: #d4a040; }
+.shop-item--book .shop-item__price { border-color: rgba(160,110,60,0.4); color: #d4a040; }
+
+.shop-item--book-owned {
+  border-color: rgba(240,180,41,0.5);
+  background: radial-gradient(ellipse at 50% 0%, rgba(240,180,41,0.06) 0%, transparent 60%), var(--clr-surface);
+}
+.shop-item--book-owned .shop-item__btn {
+  background: linear-gradient(135deg, #7a5914, #c49020);
+  color: #fff8e0;
+}
+.shop-item--book-owned .shop-item__btn:hover:not(:disabled) {
+  box-shadow: 0 4px 20px rgba(160,110,60,0.5);
+}
+
+/* Coin-Display – Buch-Icon */
+.coin-display__book {
+  font-size: 1rem;
+  line-height: 1;
+  margin-left: 2px;
+  filter: drop-shadow(0 0 4px rgba(240,180,41,0.4));
+}
+
+/* ══════════════════════════════════════════════════
+   BUCH DER MONSTER – Modal Grid
+   ══════════════════════════════════════════════════ */
+
+.book-modal-inner { text-align: center; }
+
+.book-modal__title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--clr-gold);
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+
+.book-modal__count {
+  font-size: 0.78rem;
+  color: var(--clr-cream-dim);
+  letter-spacing: 1px;
+  margin-bottom: 14px;
+}
+
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+/* Buch-Modal: breiter auf Tablet/Desktop */
+@media (min-width: 481px) {
+  .modal-box:has(.book-modal-inner) {
+    max-width: 700px;
+    padding: 24px;
+  }
+}
+
+/* 5-Spalten-Grid für normale Monster */
+.book-grid--normals {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+/* Zentrierte Reihe für Epics (3) und Legies (2) */
+.book-grid--centered {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.book-grid--centered .book-slot {
+  flex: 0 0 calc((100% - 32px) / 5);
+  max-width: calc((100% - 32px) / 5);
+  aspect-ratio: 1;
+  min-width: 0;
+}
+
+.book-slot {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--clr-border);
+  background: var(--clr-surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.book-slot--seen {
+  cursor: pointer;
+}
+.book-slot--seen:hover {
+  border-color: var(--clr-gold);
+  box-shadow: 0 0 12px rgba(240,180,41,0.3);
+}
+
+.book-slot--unseen { opacity: 0.4; cursor: default; }
+
+
+/* Trennlinie vor den Legies */
+.book-divider {
+  height: 1px;
+  margin: 10px 0 6px;
+  background: linear-gradient(to right, transparent, var(--clr-gold-dim), transparent);
+}
+
+.book-slot--rare {
+  border-color: rgba(59,130,246,0.6);
+  background: radial-gradient(ellipse at 50% 20%, rgba(59,130,246,0.1) 0%, transparent 65%), var(--clr-surface2);
+  box-shadow: 0 0 8px rgba(59,130,246,0.15);
+}
+.book-slot--rare:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 0 18px rgba(59,130,246,0.45);
+}
+.book-slot--rare-unseen {
+  border-color: rgba(59,130,246,0.25);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.book-slot--epic {
+  border-color: rgba(167,139,250,0.6);
+  background: radial-gradient(ellipse at 50% 20%, rgba(167,139,250,0.1) 0%, transparent 65%), var(--clr-surface2);
+  box-shadow: 0 0 8px rgba(167,139,250,0.15);
+}
+.book-slot--epic:hover {
+  border-color: #a78bfa;
+  box-shadow: 0 0 18px rgba(167,139,250,0.45);
+}
+.book-slot--epic-unseen {
+  border-color: rgba(167,139,250,0.25);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.book-slot--legendary {
+  border-color: rgba(240,180,41,0.6);
+  background: radial-gradient(ellipse at 50% 20%, rgba(255,215,0,0.1) 0%, transparent 65%), var(--clr-surface2);
+  box-shadow: 0 0 8px rgba(240,180,41,0.15);
+}
+.book-slot--legendary:hover {
+  border-color: var(--clr-gold);
+  box-shadow: 0 0 18px rgba(240,180,41,0.45);
+}
+.book-slot--legendary-unseen {
+  border-color: rgba(240,180,41,0.25);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.book-slot__unknown {
+  font-size: 1.5rem;
+  color: var(--clr-cream-dim);
+  font-family: var(--font-display);
+  font-weight: 700;
+  user-select: none;
+}
+
+.book-slot__img {
+  width: 76%;
+  height: 76%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.book-slot__img .creature-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.book-slot__img .epic-frame,
+.book-slot__img .legendary-frame {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.book-slot__img .epic-frame .creature-img,
+.book-slot__img .legendary-frame .creature-img {
+  width: 100%;
+  height: 100%;
+}
+
+.book-slot__check {
+  position: absolute;
+  bottom: 3px;
+  right: 4px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--clr-green);
+  background: rgba(0,0,0,0.6);
+  border-radius: 4px;
+  padding: 1px 4px;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+/* ══════════════════════════════════════════════════
+   BUCH DER MONSTER – Detail-Ansicht
+   ══════════════════════════════════════════════════ */
+
+.book-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.book-detail__back {
+  align-self: flex-start;
+  background: none;
+  border: 1px solid var(--clr-border);
+  color: var(--clr-cream-dim);
+  font-size: 0.82rem;
+  font-family: var(--font-body);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.book-detail__back:hover { color: var(--clr-gold); border-color: var(--clr-gold); }
+
+.book-detail__img-wrap {
+  width: 230px;
+  height: 230px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;
+}
+.book-detail__img {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.book-detail__img .creature-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.book-detail__img .epic-frame,
+.book-detail__img .legendary-frame {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.book-detail__img .epic-frame .creature-img,
+.book-detail__img .legendary-frame .creature-img {
+  width: 100%;
+  height: 100%;
+}
+
+.book-detail__name {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--clr-gold);
+  letter-spacing: 1px;
+}
+
+.book-detail__stage-label {
+  font-size: 0.75rem;
+  color: var(--clr-amber);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.book-detail__nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.book-detail__arrow {
+  background: var(--clr-surface2);
+  border: 1px solid var(--clr-border);
+  color: var(--clr-cream);
+  font-size: 1.5rem;
+  font-weight: 700;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.2s, border-color 0.2s;
+}
+.book-detail__arrow:hover:not(:disabled) {
+  background: var(--clr-surface);
+  border-color: var(--clr-gold);
+  color: var(--clr-gold);
+}
+.book-detail__arrow:disabled { opacity: 0.3; cursor: default; }
+
+.book-detail__dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.book-detail__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--clr-surface2);
+  border: 1px solid var(--clr-border);
+  transition: background 0.2s, border-color 0.2s;
+}
+.book-detail__dot.active {
+  background: var(--clr-gold);
+  border-color: var(--clr-gold);
+}

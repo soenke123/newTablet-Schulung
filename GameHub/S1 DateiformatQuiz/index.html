@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daten-Quiz – MPS-Game-Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1117;--surface:#181d27;--surf2:#1f2636;--border:#2a3346;--accent:#4ade80;--cyan:#22d3ee;--orange:#f97316;--wrong:#f43f5e;--text:#e8edf8;--muted:#7a8ba8;--streak:#fbbf24;--sw:256px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;padding-top:48px;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(1px 1px at 15% 25%,rgba(255,255,255,.14) 0%,transparent 100%),radial-gradient(1px 1px at 65% 72%,rgba(255,255,255,.09) 0%,transparent 100%),radial-gradient(1px 1px at 82% 18%,rgba(255,255,255,.11) 0%,transparent 100%),radial-gradient(2px 2px at 8% 62%,rgba(74,222,128,.07) 0%,transparent 100%),radial-gradient(2px 2px at 72% 8%,rgba(34,211,238,.05) 0%,transparent 100%);}
+/* TOP NAV */
+.quiz-top-nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(14,17,23,0.96);border-bottom:1px solid var(--border);padding:0 16px;height:48px;display:flex;justify-content:space-between;align-items:center;}
+.quiz-nav-back{color:var(--muted);font-family:'Outfit',sans-serif;font-weight:600;font-size:0.82rem;text-decoration:none;transition:color .2s;}
+.quiz-nav-back:hover{color:var(--text);}
+.quiz-nav-title{font-family:'Outfit',sans-serif;font-weight:700;font-size:0.85rem;color:var(--text);}
+.page{display:none;position:relative;z-index:1;}.page.active{display:block;}
+/* START */
+#start-screen{flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 48px);padding:40px 20px;text-align:center;animation:fadeIn .5s ease both;}
+#start-screen.active{display:flex;}
+.start-egg{width:88px;height:106px;margin:0 auto 20px;display:block;}
+.start-egg svg{width:100%;height:100%;}
+.start-egg .creature-img{width:100%;height:100%;object-fit:contain;display:block;}
+.start-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:clamp(1.6rem,5vw,2.6rem);background:linear-gradient(135deg,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:14px;line-height:1.2;}
+.start-sub{color:var(--muted);font-size:.95rem;line-height:1.75;max-width:480px;margin-bottom:28px;}
+.feature-pills{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:32px;}
+.pill{background:var(--surf2);border:1px solid var(--border);border-radius:99px;padding:6px 14px;font-size:.8rem;color:var(--muted);}
+.start-btn{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--accent),#16a34a);border:none;border-radius:16px;padding:16px 40px;color:#000;font-family:'Outfit',sans-serif;font-weight:700;font-size:1.1rem;cursor:pointer;transition:transform .2s,box-shadow .2s;box-shadow:0 8px 32px rgba(74,222,128,.25);}
+.start-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(74,222,128,.35);}
+/* QUIZ LAYOUT */
+#quiz-screen{min-height:calc(100vh - 48px);}
+.quiz-layout{display:grid;grid-template-columns:1fr;grid-template-areas:"strip" "plant" "main";max-width:720px;margin:0 auto;padding:20px 16px 60px;}
+@media(min-width:860px){
+  .quiz-layout{max-width:1060px;grid-template-columns:var(--sw) 1fr;grid-template-areas:"sidebar strip" "sidebar main";gap:0 32px;align-items:start;padding:32px 40px 60px;}
+  .sidebar{display:flex!important;}
+  .inline-plant{display:none!important;}
+  .compact-strip{display:none!important;}
+}
+@media(max-width:859px){.sidebar{display:none!important;}}
+/* SIDEBAR */
+.sidebar{grid-area:sidebar;display:none;flex-direction:column;align-items:center;position:sticky;top:80px;}
+.sb-card{background:var(--surface);border:1.5px solid var(--border);border-radius:20px;padding:22px 18px;width:100%;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.sb-lbl{font-family:'Outfit',sans-serif;font-weight:700;font-size:.67rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.sb-pw{width:163px;height:163px;display:flex;align-items:center;justify-content:center;}
+.sb-pw svg{width:100%;height:100%;}
+.sb-pw .creature-img{width:100%;height:100%;object-fit:contain;display:block;}
+.sb-div{width:80%;height:1px;background:var(--border);}
+.sb-stat{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.sb-val{font-family:'Outfit',sans-serif;font-weight:800;font-size:2.2rem;line-height:1;color:var(--accent);}
+.sb-sv{font-family:'Outfit',sans-serif;font-weight:800;font-size:2.2rem;line-height:1;color:var(--muted);transition:color .3s,text-shadow .3s;}
+.sb-sv.hot{color:var(--streak);text-shadow:0 0 20px rgba(251,191,36,.4);}
+.sb-pw2{width:100%;display:flex;flex-direction:column;gap:6px;}
+.sb-pl{font-size:.72rem;color:var(--muted);font-family:'Outfit',sans-serif;font-weight:600;}
+.sb-pb{height:6px;background:var(--surf2);border-radius:99px;overflow:hidden;}
+.sb-pf{height:100%;background:linear-gradient(90deg,var(--accent),var(--cyan));border-radius:99px;transition:width .5s cubic-bezier(.34,1.56,.64,1);width:0%;}
+/* COMPACT STRIP */
+.compact-strip{grid-area:strip;display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:10px;}
+.badge{display:flex;align-items:center;gap:5px;background:var(--surf2);border:1.5px solid var(--border);border-radius:99px;padding:6px 13px;font-family:'Outfit',sans-serif;font-weight:700;font-size:.82rem;color:var(--muted);transition:all .3s;white-space:nowrap;}
+.badge.sc{color:var(--accent);}
+.badge.fire{border-color:var(--streak);color:var(--streak);box-shadow:0 0 14px rgba(251,191,36,.2);}
+.badge.pop{animation:badgePop .4s cubic-bezier(.34,1.56,.64,1);}
+.quiz-restart-btn{width:100%;padding:11px;margin-top:10px;background:transparent;border:1.5px solid var(--border);border-radius:13px;color:var(--muted);font-family:'Outfit',sans-serif;font-weight:600;font-size:.85rem;cursor:pointer;transition:border-color .2s,color .2s;}
+.quiz-restart-btn:hover{border-color:var(--wrong);color:var(--wrong);}
+/* INLINE PLANT */
+.inline-plant{grid-area:plant;display:flex;flex-direction:column;align-items:center;margin-bottom:14px;}
+.ipl{font-size:.68rem;color:var(--muted);font-family:'Outfit',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;}
+.ipw{width:119px;height:119px;display:flex;align-items:center;justify-content:center;}
+.ipw svg{width:100%;height:100%;}
+.ipw .creature-img{width:100%;height:100%;object-fit:contain;display:block;}
+/* MAIN */
+.quiz-main{grid-area:main;}
+/* QUESTION CARD */
+.question-card{background:var(--surface);border:1.5px solid var(--border);border-radius:20px;padding:22px 20px 18px;margin-bottom:12px;position:relative;overflow:hidden;animation:slideUp .35s ease both;}
+.question-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--cyan),transparent);border-radius:20px 20px 0 0;}
+.q-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.q-part{font-family:'Outfit',sans-serif;font-weight:700;font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);}
+.q-num{font-family:'Outfit',sans-serif;font-weight:600;font-size:.67rem;color:var(--muted);}
+.q-text{font-family:'Plus Jakarta Sans',sans-serif;font-size:clamp(1rem,2.6vw,1.12rem);font-weight:600;color:var(--text);line-height:1.7;letter-spacing:-.01em;}
+.multi-hint{font-size:.76rem;color:var(--muted);margin-top:8px;font-style:italic;}
+/* OPTIONS */
+.options-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.option-btn{background:var(--surf2);border:1.5px solid var(--border);border-radius:13px;padding:13px 16px;text-align:left;cursor:pointer;display:flex;align-items:flex-start;gap:11px;transition:border-color .18s,background .18s,transform .12s;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:.95rem;font-weight:500;line-height:1.55;width:100%;}
+.option-btn:hover:not(:disabled){border-color:var(--cyan);background:#1a2538;transform:translateX(3px);}
+.option-btn:disabled{cursor:default;}
+.option-btn.sel-ok{border-color:var(--accent);background:rgba(74,222,128,.09);animation:pulse .4s ease;}
+.option-btn.sel-bad{border-color:var(--wrong);background:rgba(244,63,94,.09);animation:shake .35s ease;}
+.option-btn.rev-ok{border-color:var(--accent);background:rgba(74,222,128,.05);}
+.option-btn.sel-pending{border-color:var(--cyan);background:rgba(34,211,238,.07);}
+.opt-key{flex-shrink:0;width:26px;height:26px;border-radius:7px;background:var(--surface);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-weight:700;font-size:.74rem;color:var(--muted);transition:all .18s;margin-top:1px;}
+.sel-ok .opt-key{background:var(--accent);border-color:var(--accent);color:#000;}
+.sel-bad .opt-key{background:var(--wrong);border-color:var(--wrong);color:#fff;}
+.rev-ok .opt-key{background:var(--accent);border-color:var(--accent);color:#000;}
+.sel-pending .opt-key{background:var(--cyan);border-color:var(--cyan);color:#000;}
+/* DND */
+.dnd-hint{font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:10px;font-style:italic;}
+.dnd-bank{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:14px;background:var(--surf2);border:1.5px dashed var(--border);border-radius:14px;min-height:58px;margin-bottom:12px;transition:border-color .2s;}
+.dnd-bank.drag-over{border-color:var(--cyan);background:rgba(34,211,238,.04);}
+.format-chip{background:linear-gradient(135deg,#1a2e4a,#162540);border:1.5px solid var(--cyan);border-radius:9px;padding:8px 16px;font-family:'Outfit',sans-serif;font-weight:700;font-size:.9rem;color:var(--cyan);cursor:grab;user-select:none;touch-action:none;display:inline-flex;align-items:center;transition:transform .15s,box-shadow .15s;}
+.format-chip:hover{transform:scale(1.06);box-shadow:0 4px 14px rgba(34,211,238,.25);}
+.format-chip.dragging{opacity:.25;}
+.format-chip.ok-chip{background:linear-gradient(135deg,#14532d,#166534);border-color:var(--accent);color:var(--accent);cursor:default;pointer-events:none;}
+.format-chip.bad-chip{background:linear-gradient(135deg,#4c0519,#881337);border-color:var(--wrong);color:var(--wrong);cursor:default;pointer-events:none;}
+.dnd-targets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+@media(max-width:400px){.dnd-targets{grid-template-columns:1fr;}}
+.drop-zone{background:var(--surf2);border:1.5px dashed var(--border);border-radius:13px;padding:11px;min-height:72px;display:flex;flex-direction:column;gap:6px;transition:border-color .2s,background .2s;}
+.drop-zone.drag-over{border-color:var(--cyan);background:rgba(34,211,238,.05);}
+.drop-zone.ok-zone{border-color:var(--accent);background:rgba(74,222,128,.05);border-style:solid;}
+.drop-zone.bad-zone{border-color:var(--wrong);background:rgba(244,63,94,.05);border-style:solid;}
+.dz-label{font-family:'Outfit',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+.dz-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.dz-ph{font-size:.72rem;color:var(--border);font-style:italic;text-align:center;width:100%;padding:3px 0;}
+/* BUTTONS */
+.submit-btn{width:100%;padding:13px;margin-bottom:12px;background:linear-gradient(135deg,var(--accent),#16a34a);border:none;border-radius:13px;color:#000;font-family:'Outfit',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;transition:opacity .2s,transform .15s;display:none;}
+.submit-btn:hover:not(:disabled){opacity:.9;transform:translateY(-1px);}
+.submit-btn:disabled{opacity:.4;cursor:default;transform:none;}
+.next-btn{width:100%;padding:14px;background:transparent;border:1.5px solid var(--accent);border-radius:13px;color:var(--accent);font-family:'Outfit',sans-serif;font-weight:700;font-size:.95rem;cursor:pointer;transition:background .2s,color .2s;display:none;letter-spacing:.02em;}
+.next-btn:hover{background:var(--accent);color:#000;}
+/* EXPLANATION */
+.explanation-box{background:var(--surf2);border:1.5px solid var(--border);border-left:3px solid var(--cyan);border-radius:13px;padding:14px 16px;font-size:.9rem;line-height:1.65;color:var(--text);margin-bottom:12px;display:none;animation:fadeIn .35s ease both;font-family:'Plus Jakarta Sans',sans-serif;font-weight:400;}
+.explanation-box.ok{border-left-color:var(--accent);}
+.explanation-box.bad{border-left-color:var(--wrong);}
+.expl-hd{font-family:'Outfit',sans-serif;font-weight:700;font-size:.73rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;}
+.ok .expl-hd{color:var(--accent);}
+.bad .expl-hd{color:var(--wrong);}
+.streak-msg{text-align:center;font-family:'Outfit',sans-serif;font-weight:700;font-size:.95rem;color:var(--streak);display:none;animation:fadeIn .35s ease;margin-bottom:10px;}
+/* RESULT */
+#result-screen{max-width:680px;margin:0 auto;padding:32px 20px 60px;animation:fadeIn .5s ease both;}
+.result-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:clamp(1.5rem,4vw,2rem);text-align:center;background:linear-gradient(135deg,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:24px;}
+.result-creature-wrap{text-align:center;margin-bottom:8px;}
+.result-creature-wrap .creature-img{width:187px;height:187px;object-fit:contain;display:inline-block;}
+.result-creature-wrap svg{width:187px;height:187px;display:inline-block;}
+.result-creature-name{text-align:center;font-family:'Outfit',sans-serif;font-weight:700;font-size:1rem;color:var(--cyan);margin-bottom:4px;}
+.result-creature-desc{text-align:center;font-size:.85rem;color:var(--muted);font-style:italic;margin-bottom:16px;}
+.rsc{background:var(--surface);border:1.5px solid var(--border);border-radius:20px;padding:26px;text-align:center;margin-bottom:18px;position:relative;overflow:hidden;}
+.rsc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--cyan));}
+.rsl{font-size:.72rem;font-family:'Outfit',sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.rsn{font-family:'Outfit',sans-serif;font-size:3.2rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:6px;}
+.rss{color:var(--muted);font-size:.9rem;}
+.rst{margin-top:10px;font-size:.82rem;color:var(--streak);font-family:'Outfit',sans-serif;font-weight:700;}
+.feedback-section{display:grid;gap:12px;margin-bottom:18px;}
+.fb-card{background:var(--surface);border:1.5px solid var(--border);border-radius:15px;padding:18px;}
+.fb-card h3{font-family:'Outfit',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:9px;}
+.fb-card.good h3{color:var(--accent);}
+.fb-card.improve h3{color:var(--orange);}
+.fb-card ul{list-style:none;display:flex;flex-direction:column;gap:5px;}
+.fb-card ul li{font-size:.88rem;color:var(--text);line-height:1.55;padding-left:18px;position:relative;font-family:'Plus Jakarta Sans',sans-serif;}
+.fb-card ul li::before{content:'→';position:absolute;left:0;color:var(--muted);}
+.fb-card.good ul li::before{color:var(--accent);content:'✓';}
+.fb-card.improve ul li::before{color:var(--orange);content:'!';}
+.result-buttons{display:flex;flex-direction:column;gap:10px;}
+.restart-btn{width:100%;padding:15px;background:linear-gradient(135deg,var(--accent),#16a34a);border:none;border-radius:13px;color:#000;font-family:'Outfit',sans-serif;font-weight:800;font-size:.95rem;cursor:pointer;transition:opacity .2s;box-shadow:0 4px 20px rgba(74,222,128,.2);}
+.restart-btn:hover{opacity:.85;}
+.hub-btn{display:block;text-align:center;padding:13px;border:1.5px solid var(--border);border-radius:13px;color:var(--muted);font-family:'Outfit',sans-serif;font-weight:600;font-size:.9rem;text-decoration:none;transition:border-color .2s,color .2s;}
+.hub-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.confetti-piece{position:fixed;pointer-events:none;z-index:1000;border-radius:2px;animation:confettiFall linear forwards;}
+.drag-ghost{position:fixed;pointer-events:none;z-index:9999;opacity:.85;transform:rotate(4deg) scale(1.08);}
+@keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%{transform:scale(1)}40%{transform:scale(1.02)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@keyframes badgePop{0%{transform:scale(1)}50%{transform:scale(1.14)}100%{transform:scale(1)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes confettiFall{0%{opacity:1;transform:translateY(-20px) rotate(0deg)}100%{opacity:0;transform:translateY(100vh) rotate(720deg)}}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOP NAVIGATION ═══ -->
+<nav class="quiz-top-nav">
+  <a href="../index.html" class="quiz-nav-back">← Hub</a>
+  <span class="quiz-nav-title">Daten-Quiz</span>
+  <span></span>
+</nav>
+
+<div id="start-screen" class="page active">
+  <div class="start-egg" id="startEgg"></div>
+  <h2 class="start-title">Daten-Quiz</h2>
+  <p class="start-sub">Zeig, was du drauf hast! Sammle Punkte, baue eine Streak auf und schlüpfe dein Begleiter-Tier – Frage für Frage.</p>
+  <div class="feature-pills">
+    <span class="pill">16 Fragen</span>
+    <span class="pill">4 Themenbereiche</span>
+    <span class="pill">🔥 Streak-System</span>
+    <span class="pill">Tier schlüpft!</span>
+  </div>
+  <button class="start-btn" onclick="startQuiz()">Quiz starten →</button>
+</div>
+
+<div id="quiz-screen" class="page">
+  <div class="quiz-layout">
+    <aside class="sidebar">
+      <div class="sb-card">
+        <div class="sb-lbl">Dein Begleiter</div>
+        <div class="sb-pw" id="quiz-creature-sb"></div>
+        <div class="boost-bar" id="boostBarSb"></div>
+        <div class="sb-div"></div>
+        <div class="sb-stat"><div class="sb-lbl">Punkte</div><div class="sb-val" id="sb-score">0</div></div>
+        <div class="sb-div"></div>
+        <div class="sb-stat"><div class="sb-lbl">🔥 Streak</div><div class="sb-sv" id="sb-streak">0</div></div>
+        <div class="sb-div"></div>
+        <div class="sb-pw2">
+          <div class="sb-pl" id="sb-prog-label">Frage 1 / 16</div>
+          <div class="sb-pb"><div class="sb-pf" id="sb-prog-fill"></div></div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="compact-strip">
+      <div class="badge" id="streak-badge">🔥 <span id="streak-num">0</span></div>
+      <div class="badge sc">⭐ <span id="score-num">0</span></div>
+    </div>
+
+    <div class="inline-plant">
+      <div class="ipl">Dein Begleiter</div>
+      <div class="ipw" id="quiz-creature-inline"></div>
+      <div class="boost-bar" id="boostBarInline"></div>
+    </div>
+
+    <main class="quiz-main">
+      <div id="streak-msg" class="streak-msg"></div>
+      <div id="question-card" class="question-card">
+        <div class="q-meta"><div class="q-part" id="q-part"></div><div class="q-num" id="q-num"></div></div>
+        <div class="q-text" id="q-text"></div>
+        <div class="multi-hint" id="multi-hint" style="display:none">Wähle alle richtigen Antworten.</div>
+      </div>
+      <div class="options-grid" id="options-grid" style="display:none"></div>
+      <div id="dnd-area" style="display:none"></div>
+      <button class="submit-btn" id="submit-btn">Antwort prüfen</button>
+      <div class="explanation-box" id="explanation-box">
+        <div class="expl-hd" id="expl-hd"></div>
+        <div id="expl-text"></div>
+      </div>
+      <button class="next-btn" id="next-btn" onclick="goNext()">Weiter →</button>
+      <button class="quiz-restart-btn" onclick="restartQuiz()">↺ Quiz neu starten</button>
+    </main>
+  </div>
+</div>
+
+<div id="result-screen" class="page">
+  <h1 class="result-title">Quiz abgeschlossen! 🎉</h1>
+  <div class="result-creature-wrap" id="quiz-creature-result"></div>
+  <div class="result-creature-name" id="quiz-creature-name"></div>
+  <div class="result-creature-desc" id="quiz-creature-desc"></div>
+  <div class="rsc">
+    <div class="rsl">Dein Ergebnis</div>
+    <div class="rsn" id="result-score-num"></div>
+    <div class="rss" id="result-score-sub"></div>
+    <div class="rst" id="result-streak"></div>
+  </div>
+  <div class="feedback-section" id="feedback-section"></div>
+  <div id="coinBankContainer"></div>
+  <div class="result-buttons">
+    <div class="result-play-row">
+      <button class="restart-btn" onclick="restartQuiz()">🔄 Nochmal spielen</button>
+      <div id="resultItemBtnWrap"></div>
+    </div>
+    <a href="../index.html" class="hub-btn">← Zurück zum Hub</a>
+  </div>
+</div>
+
+<script>window.CREATURE_IMAGE_BASE = '../data/';</script>
+<script src="../creatures.js"></script>
+<script>
+let lastCoinsGained = 0;
+const SK='quiz_df_v4';
+const PARTS={1:'Teil 1: Grundlagen',2:'Teil 2: Apple & iPad',3:'Teil 3: Schulalltag',4:'Teil 4: Fortgeschrittene Verwaltung'};
+const TOPICS=['Dateiformate und ihre Zwecke','PDF ist der plattformunabhängige Standard','PNG unterstützt Transparenz (Alpha-Kanal)','SVG ist verlustfrei skalierbar','HEIC spart Speicher bei gleicher Qualität','App-Sandboxing: Dateien leben in Apps','Die Dateien-App ist der zentrale Datei-Manager','Exportieren erstellt eine Kopie in neuem Format','Apple iWork-Formate (.pages, .key, .numbers)','Keynote → PowerPoint Export (.pptx)','.odt stammt aus LibreOffice / OpenOffice','Dateien können lokal, in Apps oder in der Cloud sein','Drag nach lokal trennt Cloud-Synchronisation','ZIP komprimiert und bündelt mehrere Dateien','Native Formate (z.B. .psd) sind Arbeitsformate','Sinnvolle Dateinamen mit Datum und Thema'];
+const RQ=[
+  {part:1,type:'dragdrop',text:'Ordne die Dateiformate den richtigen Zwecken zu!',formats:[{label:'.png',category:'Bild'},{label:'.mp4',category:'Video'},{label:'.pdf',category:'Dokument'},{label:'.mp3',category:'Audio'},{label:'.docx',category:'Dokument'}],categories:['Bild','Video','Dokument','Audio'],explanation:'Jedes Format hat seinen Zweck: PNG → Bild, MP4 → Video, MP3 → Audio, PDF & DOCX → Dokumente.'},
+  {part:1,text:'Welches Format ist der weltweite Standard für Dokumente, die auf jedem Gerät (iPad, Windows, Android) exakt gleich aussehen sollen?',options:['PDF (.pdf)','Pages (.pages)','Word (.docx)','Keynote (.key)'],correct:[0],explanation:'Das Portable Document Format (PDF) wurde speziell entwickelt, um Layouts plattformunabhängig und unveränderlich anzuzeigen.'},
+  {part:1,text:'Du möchtest eine Grafik (z. B. ein Logo) mit transparentem Hintergrund speichern. Welches Format ist am besten geeignet?',options:['PNG (.png)','JPEG (.jpg)','MP3 (.mp3)','PDF (.pdf)'],correct:[0],explanation:'PNG unterstützt Transparenz (Alpha-Kanal), während JPEG Hintergründe immer mit einer Farbe (meist weiß) füllt.'},
+  {part:1,text:'Welches Format ist verlustfrei und wird für Logos genutzt, die man ohne Qualitätsverlust unendlich groß ziehen kann?',options:['JPG','MP3','SVG','GIF'],correct:[2],explanation:'Im Gegensatz zu Pixelbildern basieren SVGs auf mathematischen Kurven und bleiben beim Vergrößern immer scharf.'},
+  {part:2,text:'Was ist der entscheidende Vorteil des HEIC-Formats, das Apple standardmäßig für Fotos nutzt?',options:['Bessere Bildqualität bei deutlich geringerer Dateigröße als JPEG.','Es kann auf jedem alten PC seit 1990 geöffnet werden.','Es wandelt Fotos automatisch in Word-Dokumente um.','Es speichert aus Sicherheitsgründen keine Metadaten.'],correct:[0],explanation:'HEIC ist hocheffizient: Gleiche Schärfe bei etwa halbem Speicherplatzverbrauch im Vergleich zu JPEG.'},
+  {part:2,text:'Wo wird ein Pages-Dokument standardmäßig gespeichert, wenn du keine eigene Ordnerstruktur nutzt?',options:['Innerhalb der App-Umgebung (lokal oder iCloud)','Direkt auf dem Desktop des iPads','Im Systemordner „Downloads"','In der Fotos-App'],correct:[0],explanation:'Wegen des Sandboxing-Prinzips liegen Dateien primär im Speicherbereich der jeweiligen App – oft mit iCloud-Sync.'},
+  {part:2,text:'Welche App ist die zentrale Anlaufstelle, um alle Ordner und Dateien (auch Clouds) auf dem iPad zu verwalten?',options:['Dateien-App (Files)','Einstellungen','App Store','iCloud Drive App'],correct:[0],explanation:'Die Dateien-App ist das Äquivalent zum Explorer (Windows) oder Finder (Mac) – hier siehst du alles an einem Ort.'},
+  {part:3,text:'Was passiert technisch gesehen, wenn du ein Dokument „exportierst"?',options:['Es wird eine Kopie in einem anderen Format oder an einem externen Ort erstellt.','Die Originaldatei wird gelöscht.','Die Datei wird nur umbenannt.','Die Datei wird automatisch ins Internet hochgeladen.'],correct:[0],explanation:'Exportieren bedeutet, eine Kopie auszulagern, oft um sie in ein universelles Format (wie PDF) umzuwandeln. Das Original bleibt erhalten.'},
+  {part:3,text:'Welche Dateiendungen gehören zu Apple-eigenen Formaten, die auf Windows oft nicht direkt geöffnet werden können?',options:['.pages, .key, .numbers','.docx, .xlsx, .pptx','.txt, .rtf, .csv','.odt, .ods, .odp'],correct:[0],explanation:'Dies sind Formate der iWork-Suite. Für Windows-Nutzer müssen sie meist als PDF oder Office-Datei exportiert werden.'},
+  {part:3,text:'Wie öffnest du eine Keynote-Präsentation auf einem Windows-PC mit PowerPoint?',options:['In Keynote auf „Exportieren" tippen und das Format „.pptx" wählen.','Die Dateiendung manuell von .key in .exe umschreiben.','Das iPad schütteln, um die Konvertierung zu starten.','Es ist unmöglich.'],correct:[0],explanation:'Über den Export übersetzt Keynote die Datei in die Sprache von Microsoft Office (.pptx), die PowerPoint versteht.'},
+  {part:3,text:'Ein Mitschüler schickt dir eine Datei mit der Endung .odt. Welches Programm wurde genutzt?',options:['LibreOffice oder OpenOffice','Apple Pages','Microsoft Excel','Adobe Photoshop'],correct:[0],explanation:'.odt steht für Open Document Text und ist der Standard für freie Office-Programme wie LibreOffice oder OpenOffice.'},
+  {part:4,text:'Wo können Dateien auf dem iPad gespeichert sein? (Mehrfachauswahl)',options:['In Apps','In der Dateien-App','In der Cloud (z. B. iCloud)','In der Hardware-Hülle'],correct:[0,1,2],multi:true,explanation:'Dateien sind flexibel verteilt – lokal in Apps, zentral in der Dateien-App oder online in der Cloud. In der Hülle liegt natürlich nichts!'},
+  {part:4,text:'Was passiert, wenn du eine Datei in der Dateien-App von „iCloud Drive" nach „Auf meinem iPad" ziehst?',options:['Die Datei wird lokal kopiert und ist nicht mehr mit der Cloud-Version synchron.','Das Internet wird für diesen Ordner abgeschaltet.','Die Datei wird automatisch in ein PDF umgewandelt.','Die Datei wird auf allen Geräten gleichzeitig gelöscht.'],correct:[0],explanation:'Es entsteht eine unabhängige lokale Kopie. Änderungen werden nicht mehr automatisch in die Cloud übertragen.'},
+  {part:4,text:'Du möchtest 20 hochauflösende Fotos per E-Mail verschicken, aber die Datei ist zu groß. Was ist die beste Lösung?',options:['Die Fotos einzeln in 20 E-Mails schicken.','Die Fotos in einen Ordner legen und diesen komprimieren (als ZIP-Datei).','Die Fotos in ein Word-Dokument kopieren.','Die Fotos ausdrucken und per Post schicken.'],correct:[1],explanation:'Ein ZIP-Archiv bündelt mehrere Dateien zu einer einzigen Datei und verringert oft die Gesamtgröße durch Komprimierung.'},
+  {part:4,text:'Warum speichern Programme wie Photoshop (.psd) oder Word (.docx) nicht einfach alles direkt als universelles PDF?',options:['Um Nutzer zu ärgern.','Weil eigene Formate Arbeitsformate sind, die Ebenen, Korrekturen und Bearbeitungsverläufe speichern können.','Weil PDF-Dateien auf dem iPad nicht gelöscht werden können.','Damit die Dateien absichtlich komplizierter werden.'],correct:[1],explanation:'Native Formate speichern alle Infos zum Weiterarbeiten. Ein PDF ist ein Endformat – alles wird auf eine Ebene reduziert.'},
+  {part:4,text:'Welche Dateibenennung ist am sinnvollsten, um ein Referat nach zwei Monaten schnell wiederzufinden?',options:['referat_final_final_jetztwirklich.pdf','Unbenannt 1.pdf','2024-05-12_Biologie_Waldreferat_V01.pdf','Dings_fuer_Schule.pdf'],correct:[2],explanation:'Eine gute Benennung enthält Datum (Jahr-Monat-Tag), Fach, Thema und Version. So findet die Suche die Datei sofort.'},
+];
+const TOTAL=RQ.length;
+
+/* ─── Quiz-State ─── */
+function dfltState(){return{phase:'start',currentQ:0,score:0,streak:0,bestStreak:0,correctAnswers:[],wrongAnswers:[],answers:Array(TOTAL).fill(null),hubSaved:false};}
+let ST=dfltState();
+function save(){try{localStorage.setItem(SK,JSON.stringify(ST));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(SK));if(s&&s.phase&&Array.isArray(s.answers)&&s.answers.length===TOTAL){ST=s;return true;}}catch(e){}return false;}
+function shuf(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');}
+
+/* ─── Kreatur-State (Hub-Integration) ─── */
+let quizGameId = 'game3';
+let quizGameData = null;
+
+function initCreatureState() {
+  quizGameId = new URLSearchParams(window.location.search).get('id') || 'game3';
+  quizGameData = getGameData(quizGameId);
+}
+
+/* Egg/Kreatur in Sidebar und Inline-Bereich aktualisieren.
+   Für Erstbesucher: Ei mit Rissen (proportional zum aktuellen Score).
+   Für Rückkehrer: Tier auf Live-Wachstumsstufe (gespeichert + aktuelle Sitzung). */
+function updQuizCreature() {
+  let html;
+  if (quizGameData && quizGameData.creature) {
+    const liveGrowth = Math.min(quizGameData.growth + computeSessionGrowth(ST.score, TOTAL), GROWTH_MAX);
+    html = getCreatureHTML(quizGameData.creature, getGrowthStage(liveGrowth));
+  } else {
+    html = getEggSVG(crackStageFromRatio(ST.score, TOTAL));
+  }
+  ['quiz-creature-sb','quiz-creature-inline'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
+  renderBoostIndicators('boostBarSb');
+  renderBoostIndicators('boostBarInline');
+}
+
+/* Hub-Daten einmalig beim Abschluss speichern */
+function saveToHub() {
+  if (ST.hubSaved) return;
+  const correct = ST.score;
+  const gd = quizGameData || defaultGameData();
+  const isFirst = gd.roundsPlayed === 0;
+  const sd = loadShopData();
+
+  lastCoinsGained = 0;
+  if (isFirst) {
+    const _eggType = new URLSearchParams(window.location.search).get('egg');
+    const _norm = Math.round(correct / TOTAL * 10);
+    if (_eggType) {
+      gd.creature = determineEggCreature(_eggType, _norm);
+    } else {
+      gd.creature = sd.glucksklee
+        ? determineCreatureWithGlucksklee(_norm, quizGameId)
+        : determineCreature(_norm, true, quizGameId);
+    }
+    gd.growth = 0;
+  } else {
+    let contribution = computeSessionGrowth(correct, TOTAL);
+    if (sd.wachstumsBooster) contribution *= 2;
+    const room = Math.max(0, GROWTH_MAX - gd.growth);
+    if (room === 0) {
+      let coins = Math.round(contribution);
+      if (sd.coinsx3) coins *= 3;
+      gd.coins = (gd.coins || 0) + coins;
+      lastCoinsGained += coins;
+    } else if (contribution > room) {
+      gd.growth = GROWTH_MAX;
+      let overflow = Math.round(contribution - room);
+      if (sd.coinsx3) overflow *= 3;
+      gd.coins = (gd.coins || 0) + overflow;
+      lastCoinsGained += overflow;
+    } else {
+      gd.growth = Math.min(gd.growth + contribution, GROWTH_MAX);
+    }
+    if (correct === TOTAL && gd.growth >= GROWTH_MAX) {
+      gd.coins = (gd.coins || 0) + 3;
+      lastCoinsGained += 3;
+    }
+  }
+  gd.points       += correct;
+  gd.roundsPlayed += 1;
+  saveGameData(quizGameId, gd);
+  quizGameData = gd;
+  ST.hubSaved = true;
+  save();
+
+  if (!isFirst) {
+    if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+    if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+  }
+  if (isFirst && sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
+}
+
+function startQuiz(){
+  if(ST.phase==='quiz'){showPage('quiz-screen');showQuestion();return;}
+  ST.phase='quiz';save();showPage('quiz-screen');showQuestion();
+}
+
+function showQuestion(){
+  const qi=ST.currentQ,raw=RQ[qi];
+  if(!ST.answers[qi]){
+    ST.answers[qi]={answered:false,wasCorrect:undefined,selectedOrig:[],dndPlacement:{},
+      shuffleOrder:raw.options?shuf(raw.options.map((_,i)=>i)):null,
+      dndOrder:raw.formats?shuf(raw.formats.map((_,i)=>i)):null};
+    save();
+  }
+  const ans=ST.answers[qi];
+  const card=document.getElementById('question-card');
+  card.style.animation='none';requestAnimationFrame(()=>{card.style.animation='slideUp .35s ease both';});
+  document.getElementById('q-part').textContent=PARTS[raw.part];
+  document.getElementById('q-num').textContent=`${qi+1} / ${TOTAL}`;
+  document.getElementById('q-text').textContent=raw.text;
+  document.getElementById('multi-hint').style.display=raw.multi?'block':'none';
+  const box=document.getElementById('explanation-box');
+  if(ans.answered){box.style.display='block';box.className='explanation-box '+(ans.wasCorrect?'ok':'bad');document.getElementById('expl-hd').textContent=ans.wasCorrect?'✓ Richtig!':'✗ Leider falsch';document.getElementById('expl-text').textContent=raw.explanation;}
+  else box.style.display='none';
+  document.getElementById('streak-msg').style.display='none';
+  const nb=document.getElementById('next-btn');
+  nb.style.display=ans.answered?'block':'none';
+  nb.textContent=qi<TOTAL-1?'Weiter →':'Auswertung anzeigen';
+  const og=document.getElementById('options-grid'),da=document.getElementById('dnd-area'),sb=document.getElementById('submit-btn');
+  if(raw.type==='dragdrop'){
+    og.style.display='none';da.style.display='block';buildDnD(raw,ans,qi);
+    if(ans.answered){sb.style.display='none';}else{sb.style.display='block';sb.disabled=!raw.formats.every(f=>ans.dndPlacement[f.label]);sb.onclick=()=>submitDnD(qi);}
+  } else {
+    da.style.display='none';og.style.display='flex';buildMC(raw,ans,qi);
+    if(!raw.multi||ans.answered){sb.style.display='none';}else{sb.style.display='block';sb.disabled=ans.selectedOrig.length===0;sb.onclick=()=>submitMulti(qi);}
+  }
+  updHUD();
+}
+
+function goNext(){
+  ST.currentQ++;
+  if(ST.currentQ>=TOTAL){ST.phase='result';save();showResult();}
+  else{save();showQuestion();}
+}
+
+/* MC */
+function buildMC(raw,ans,qi){
+  const grid=document.getElementById('options-grid');grid.innerHTML='';
+  const order=ans.shuffleOrder||raw.options.map((_,i)=>i);
+  const cs=new Set(raw.correct),ss=new Set(ans.selectedOrig);
+  order.forEach((oi,dp)=>{
+    const btn=document.createElement('button');btn.className='option-btn';btn.dataset.origIdx=oi;
+    const key=document.createElement('span');key.className='opt-key';key.textContent=String.fromCharCode(65+dp);btn.appendChild(key);
+    const txt=document.createElement('span');txt.textContent=raw.options[oi];btn.appendChild(txt);
+    if(ans.answered){
+      btn.disabled=true;
+      if(cs.has(oi))btn.classList.add('rev-ok');
+      if(ss.has(oi)&&!cs.has(oi))btn.classList.add('sel-bad');
+      if(ss.has(oi)&&cs.has(oi))btn.classList.add('sel-ok');
+    } else {
+      if(ss.has(oi))btn.classList.add('sel-pending');
+      btn.onclick=raw.multi?()=>toggleM(btn,oi,qi):()=>answerS(btn,oi,qi);
+    }
+    grid.appendChild(btn);
+  });
+}
+function toggleM(btn,oi,qi){
+  const ans=ST.answers[qi],sel=new Set(ans.selectedOrig);
+  if(sel.has(oi)){sel.delete(oi);btn.classList.remove('sel-pending');}else{sel.add(oi);btn.classList.add('sel-pending');}
+  ans.selectedOrig=[...sel];save();
+  document.getElementById('submit-btn').disabled=ans.selectedOrig.length===0;
+}
+function answerS(btn,oi,qi){
+  const raw=RQ[qi],ans=ST.answers[qi];
+  ans.selectedOrig=[oi];const isOk=raw.correct[0]===oi;ans.answered=true;ans.wasCorrect=isOk;save();
+  document.querySelectorAll('#options-grid .option-btn').forEach(b=>{b.disabled=true;if(new Set(raw.correct).has(parseInt(b.dataset.origIdx)))b.classList.add('rev-ok');});
+  btn.classList.add(isOk?'sel-ok':'sel-bad');finishQ(isOk,qi,raw);
+}
+function submitMulti(qi){
+  const raw=RQ[qi],ans=ST.answers[qi];
+  const cs=new Set(raw.correct),ss=new Set(ans.selectedOrig);
+  const isOk=ss.size===cs.size&&[...ss].every(i=>cs.has(i));
+  ans.answered=true;ans.wasCorrect=isOk;save();
+  document.getElementById('submit-btn').style.display='none';
+  document.querySelectorAll('#options-grid .option-btn').forEach(b=>{
+    b.disabled=true;const o=parseInt(b.dataset.origIdx);b.classList.remove('sel-pending');
+    if(cs.has(o))b.classList.add('rev-ok');
+    if(ss.has(o)&&!cs.has(o))b.classList.add('sel-bad');
+    if(ss.has(o)&&cs.has(o))b.classList.add('sel-ok');
+  });
+  finishQ(isOk,qi,raw);
+}
+
+/* DnD */
+let DL=null,TG=null,TL=null;
+function buildDnD(raw,ans,qi){
+  const area=document.getElementById('dnd-area');area.innerHTML='';
+  if(!ans.answered){const h=document.createElement('div');h.className='dnd-hint';h.textContent='📱 Gedrückt halten und in die richtige Kategorie ziehen.';area.appendChild(h);}
+  const bank=document.createElement('div');bank.className='dnd-bank';bank.id='dnd-bank';bank.setAttribute('data-zone','__bank__');
+  const placed=new Set(Object.keys(ans.dndPlacement));
+  (ans.dndOrder||raw.formats.map((_,i)=>i)).forEach(fi=>{const f=raw.formats[fi];if(!placed.has(f.label))bank.appendChild(mkChip(f,ans,qi));});
+  if(!ans.answered){bank.addEventListener('dragover',e=>{e.preventDefault();bank.classList.add('drag-over');});bank.addEventListener('dragleave',()=>bank.classList.remove('drag-over'));bank.addEventListener('drop',e=>{e.preventDefault();bank.classList.remove('drag-over');dropC('__bank__',null,qi);});}
+  area.appendChild(bank);
+  const grid=document.createElement('div');grid.className='dnd-targets';
+  raw.categories.forEach(cat=>{
+    const zone=document.createElement('div');zone.className='drop-zone';zone.id='zone-'+cat;zone.setAttribute('data-zone',cat);
+    const lbl=document.createElement('div');lbl.className='dz-label';lbl.textContent=cat;zone.appendChild(lbl);
+    const chips=document.createElement('div');chips.className='dz-chips';chips.id='chips-'+cat;
+    raw.formats.forEach(f=>{if(ans.dndPlacement[f.label]===cat)chips.appendChild(mkChip(f,ans,qi));});
+    zone.appendChild(chips);
+    const ph=document.createElement('div');ph.className='dz-ph';ph.id='ph-'+cat;ph.textContent='Hierher ziehen…';ph.style.display=chips.children.length?'none':'block';zone.appendChild(ph);
+    if(ans.answered){const here=raw.formats.filter(f=>ans.dndPlacement[f.label]===cat);if(here.length&&here.every(f=>f.category===cat))zone.classList.add('ok-zone');else if(here.some(f=>f.category!==cat))zone.classList.add('bad-zone');}
+    else{zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over');});zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag-over');dropC(cat,null,qi);});}
+    grid.appendChild(zone);
+  });
+  area.appendChild(grid);
+}
+function mkChip(f,ans,qi){
+  const chip=document.createElement('div');chip.className='format-chip';chip.id='chip-'+f.label;chip.setAttribute('data-label',f.label);chip.textContent=f.label;
+  if(ans.answered){const p=ans.dndPlacement[f.label];if(p!==undefined)chip.classList.add(f.category===p?'ok-chip':'bad-chip');}
+  else{
+    chip.setAttribute('draggable','true');
+    chip.addEventListener('dragstart',e=>{DL=f.label;setTimeout(()=>chip.classList.add('dragging'),0);e.dataTransfer.effectAllowed='move';});
+    chip.addEventListener('dragend',()=>{DL=null;chip.classList.remove('dragging');});
+    chip.addEventListener('touchstart',onTS,{passive:false});
+    chip.addEventListener('touchmove',onTM,{passive:false});
+    chip.addEventListener('touchend',onTE);
+  }
+  return chip;
+}
+function onTS(e){e.preventDefault();const c=e.currentTarget;TL=c.getAttribute('data-label');c.classList.add('dragging');TG=c.cloneNode(true);TG.className='format-chip drag-ghost';TG.style.width=c.offsetWidth+'px';document.body.appendChild(TG);mvTG(e.touches[0]);}
+function onTM(e){e.preventDefault();if(!TG)return;mvTG(e.touches[0]);hlZ(e.touches[0]);}
+function mvTG(t){TG.style.left=(t.clientX-parseInt(TG.style.width)/2)+'px';TG.style.top=(t.clientY-24)+'px';}
+function hlZ(t){document.querySelectorAll('.drop-zone,.dnd-bank').forEach(z=>z.classList.remove('drag-over'));TG.style.display='none';const el=document.elementFromPoint(t.clientX,t.clientY);TG.style.display='';if(el){const z=el.closest('[data-zone]');if(z)z.classList.add('drag-over');}}
+function onTE(e){
+  const lbl=TL;const chip=document.getElementById('chip-'+lbl);if(chip)chip.classList.remove('dragging');
+  if(TG){TG.remove();TG=null;}document.querySelectorAll('.drop-zone,.dnd-bank').forEach(z=>z.classList.remove('drag-over'));
+  const t=e.changedTouches[0];const el=document.elementFromPoint(t.clientX,t.clientY);TL=null;
+  if(el){const zone=el.closest('[data-zone]');if(zone)dropC(zone.getAttribute('data-zone'),lbl,ST.currentQ);}
+}
+function dropC(tz,label,qi){
+  const lbl=label||DL;if(!lbl)return;
+  const raw=RQ[qi],ans=ST.answers[qi];
+  const old=document.getElementById('chip-'+lbl);if(old)old.remove();delete ans.dndPlacement[lbl];
+  if(tz==='__bank__'){const f=raw.formats.find(f=>f.label===lbl);if(f)document.getElementById('dnd-bank').appendChild(mkChip(f,ans,qi));}
+  else{ans.dndPlacement[lbl]=tz;const f=raw.formats.find(f=>f.label===lbl);if(f)document.getElementById('chips-'+tz).appendChild(mkChip(f,ans,qi));}
+  raw.categories.forEach(cat=>{const ph=document.getElementById('ph-'+cat),ch=document.getElementById('chips-'+cat);if(ph)ph.style.display=(ch&&ch.children.length)?'none':'block';});
+  save();document.getElementById('submit-btn').disabled=!raw.formats.every(f=>ans.dndPlacement[f.label]);
+}
+function submitDnD(qi){
+  const raw=RQ[qi],ans=ST.answers[qi];
+  const isOk=raw.formats.every(f=>ans.dndPlacement[f.label]===f.category);
+  ans.answered=true;ans.wasCorrect=isOk;save();
+  document.getElementById('submit-btn').style.display='none';
+  buildDnD(raw,ans,qi);finishQ(isOk,qi,raw);
+}
+
+function finishQ(isOk,qi,raw){
+  if(isOk){ST.score++;ST.streak++;if(ST.streak>ST.bestStreak)ST.bestStreak=ST.streak;ST.correctAnswers.push(qi);if(ST.score%5===0)confetti();}
+  else{ST.streak=0;ST.wrongAnswers.push(qi);}
+  save();
+  const box=document.getElementById('explanation-box');box.style.display='block';box.className='explanation-box '+(isOk?'ok':'bad');
+  document.getElementById('expl-hd').textContent=isOk?'✓ Richtig!':'✗ Leider falsch';
+  document.getElementById('expl-text').textContent=raw.explanation;
+  const nb=document.getElementById('next-btn');nb.style.display='block';nb.textContent=qi<TOTAL-1?'Weiter →':'Auswertung anzeigen';
+  updHUD();
+  if(isOk&&ST.streak>=3){const sm=document.getElementById('streak-msg');sm.style.display='block';const msgs=['🔥 Heiß! '+ST.streak+'er Streak!','⚡ Unstoppable! '+ST.streak+' richtig!','🎯 Meisterhaft! '+ST.streak+' in Folge!'];sm.textContent=msgs[Math.min(ST.streak-3,msgs.length-1)];const b=document.getElementById('streak-badge');b.classList.add('pop');setTimeout(()=>b.classList.remove('pop'),400);}
+}
+
+function updHUD(){
+  const qi=ST.currentQ,pct=(qi/TOTAL)*100;
+  const sbs=document.getElementById('sb-score'),sbst=document.getElementById('sb-streak'),sbf=document.getElementById('sb-prog-fill'),sbl=document.getElementById('sb-prog-label');
+  if(sbs)sbs.textContent=ST.score;
+  if(sbst){sbst.textContent=ST.streak;sbst.classList.toggle('hot',ST.streak>=2);}
+  if(sbf)sbf.style.width=pct+'%';
+  if(sbl)sbl.textContent=`Frage ${qi+1} / ${TOTAL}`;
+  document.getElementById('score-num').textContent=ST.score;
+  document.getElementById('streak-num').textContent=ST.streak;
+  const b=document.getElementById('streak-badge');
+  b.classList.toggle('fire',ST.streak>=2);
+  updQuizCreature();
+}
+
+function showResult(){
+  showPage('result-screen');
+  saveToHub();
+
+  const stage = getGrowthStage(quizGameData.growth);
+  const name  = CREATURE_NAMES[quizGameData.creature];
+  const desc  = CREATURE_DESCRIPTIONS[quizGameData.creature][stage];
+
+  const resultCreEl = document.getElementById('quiz-creature-result');
+  if(resultCreEl) resultCreEl.innerHTML = getCreatureHTML(quizGameData.creature, stage);
+  const nameEl = document.getElementById('quiz-creature-name');
+  if(nameEl) nameEl.textContent = `${name} – ${GROWTH_LABELS[stage]}`;
+  const descEl = document.getElementById('quiz-creature-desc');
+  if(descEl) descEl.textContent = desc;
+
+  const pct=Math.round(ST.score/TOTAL*100);
+  document.getElementById('result-score-num').textContent=ST.score+'/'+TOTAL;
+  document.getElementById('result-score-sub').textContent=pct===100?'🌟 Perfekt! Du bist ein Profi!':pct>=80?'🎉 Sehr gut! Du hast das meiste drauf.':pct>=60?'👍 Gut gemacht! Ein paar Lücken noch.':pct>=40?'💪 Du lernst noch – das ist okay!':'📚 Noch etwas üben – du schaffst das!';
+  document.getElementById('result-streak').textContent=ST.bestStreak>=2?'🔥 Beste Streak: '+ST.bestStreak+' in Folge':'';
+
+  const sec=document.getElementById('feedback-section');sec.innerHTML='';
+  const good=[...new Set(ST.correctAnswers.map(i=>TOPICS[i]))].slice(0,5);
+  const bad=[...new Set(ST.wrongAnswers.map(i=>TOPICS[i]))].slice(0,5);
+  if(good.length){const c=document.createElement('div');c.className='fb-card good';c.innerHTML=`<h3>✅ Das lief gut</h3><ul>${good.map(t=>`<li>${t}</li>`).join('')}</ul>`;sec.appendChild(c);}
+  if(bad.length){const c=document.createElement('div');c.className='fb-card improve';c.innerHTML=`<h3>📌 Das solltest du mitnehmen</h3><ul>${bad.map(t=>`<li>${t}</li>`).join('')}</ul>`;sec.appendChild(c);}
+  if(!bad.length){const c=document.createElement('div');c.className='fb-card good';c.innerHTML=`<h3>🏆 Alles richtig!</h3><ul><li>Du hast alle Themen souverän gemeistert – Respekt!</li></ul>`;sec.appendChild(c);}
+  if(ST.score>=TOTAL*.7)confetti();
+  renderResultItemButton('resultItemBtnWrap', quizGameId, function() {
+    restartQuiz();
+    startQuiz();
+  });
+  renderCoinBank('coinBankContainer', lastCoinsGained);
+}
+
+function restartQuiz(){ST=dfltState();save();showPage('start-screen');}
+
+function confetti(){const cols=['#4ade80','#22d3ee','#f97316','#fbbf24','#f43f5e','#a78bfa'];for(let i=0;i<40;i++){const el=document.createElement('div');el.className='confetti-piece';el.style.left=Math.random()*100+'vw';el.style.top='-10px';el.style.background=cols[Math.floor(Math.random()*cols.length)];el.style.animationDuration=(1.5+Math.random()*2)+'s';el.style.animationDelay=(Math.random()*.8)+'s';const sz=6+Math.random()*8;el.style.width=el.style.height=sz+'px';el.style.borderRadius=Math.random()>.5?'50%':'2px';document.body.appendChild(el);setTimeout(()=>el.remove(),4000);}}
+
+(function init(){
+  initCreatureState();
+  const startEgg = document.getElementById('startEgg');
+  if(startEgg) {
+    if (quizGameData && quizGameData.creature) {
+      const stage = getGrowthStage(quizGameData.growth);
+      startEgg.innerHTML = getCreatureHTML(quizGameData.creature, stage);
+      startEgg.style.width = '264px';
+      startEgg.style.height = '318px';
+    } else {
+      startEgg.innerHTML = getEggSVG(0);
+    }
+  }
+  updQuizCreature();
+})();
+</script>
+</body>
+</html>

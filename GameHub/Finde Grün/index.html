@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finde Grün – MPS-Game-Hub</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --muted: #94a3b8;
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --yellow: #eab308;
+            --border: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding-top: 48px;
+        }
+
+        /* ── Top Nav ── */
+        .top-nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            background: rgba(15,23,42,0.96); border-bottom: 1px solid var(--border);
+            height: 48px; padding: 0 16px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav-back {
+            color: var(--muted); font-weight: 600; font-size: 0.82rem;
+            text-decoration: none; transition: color .2s;
+        }
+        .nav-back:hover { color: var(--text-color); }
+        .nav-title { font-weight: 700; font-size: 0.9rem; }
+
+        /* ── Game Layout ── */
+        .game-wrap {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; min-height: calc(100vh - 48px);
+            padding: 20px;
+        }
+
+        /* ── Creature / Egg Display ── */
+        .creature-bar {
+            display: flex; align-items: center; gap: 16px;
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 14px; padding: 10px 20px;
+            margin-bottom: 16px; width: 100%; max-width: 450px;
+        }
+        #game-egg { width: 170px; height: 215px; flex-shrink: 0; }
+        #game-egg svg { width: 170px; height: 215px; }
+        #game-egg .creature-img { width: 170px; height: 215px; object-fit: contain; display: block; }
+        .creature-info { flex: 1; }
+        .creature-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+        .creature-name  { font-size: 0.95rem; font-weight: 700; margin-top: 2px; }
+        .creature-prog  { height: 5px; background: #0f172a; border-radius: 99px; margin-top: 6px; overflow: hidden; }
+        .creature-prog-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #22d3ee); border-radius: 99px; transition: width .4s; }
+
+        /* ── Stats ── */
+        .stats {
+            display: flex; gap: 12px;
+            margin-bottom: 14px; width: 100%; max-width: 450px;
+        }
+        .stat-box {
+            background: var(--card-bg); padding: 10px 16px;
+            border-radius: 12px; border: 1px solid var(--border);
+            display: flex; align-items: center; gap: 8px;
+            font-size: 1.1rem; font-weight: bold; flex: 1; justify-content: center;
+        }
+
+        /* ── Grid ── */
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 8px;
+            width: 100%; max-width: 450px; aspect-ratio: 1 / 1;
+            background: var(--card-bg);
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+        }
+
+        .tile {
+            border-radius: 6px; cursor: pointer;
+            transition: all 0.15s ease;
+            opacity: 0.85; border: 2px solid transparent;
+        }
+        .tile:hover:not(.clicked) { opacity: 1; transform: scale(1.04); border-color: white; }
+        .tile.clicked { cursor: default; opacity: 0.25; transform: scale(0.88); filter: grayscale(0.8); }
+        .tile.green  { background-color: var(--green); }
+        .tile.blue   { background-color: var(--blue); }
+        .tile.yellow { background-color: var(--yellow); }
+
+        /* ── Result Modal ── */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: none; justify-content: center; align-items: center; z-index: 300;
+        }
+        .modal {
+            background: var(--card-bg); padding: 2rem;
+            border-radius: 16px; text-align: center;
+            max-width: 340px; width: 90%;
+            border: 2px solid var(--border);
+        }
+        .modal-creature { width: 170px; height: 215px; margin: 0 auto 12px; }
+        .modal-creature .creature-img { width: 170px; height: 215px; object-fit: contain; display: block; }
+        .modal-creature svg { width: 170px; height: 215px; }
+        .modal h2 { font-size: 1.4rem; margin-bottom: 6px; }
+        .modal-creature-name { font-size: 1rem; font-weight: 700; color: #22d3ee; margin-bottom: 4px; }
+        .modal-creature-desc { font-size: 0.82rem; color: var(--muted); font-style: italic; margin-bottom: 16px; line-height: 1.5; }
+        .modal-score { font-size: 1.1rem; margin-bottom: 16px; color: var(--muted); }
+        .modal-score strong { color: var(--text-color); font-size: 1.6rem; }
+        .btn-row { display: flex; flex-direction: column; gap: 10px; }
+        .btn-primary {
+            background: var(--green); color: #000; border: none;
+            padding: 12px 24px; border-radius: 10px;
+            font-size: 1rem; font-weight: bold; cursor: pointer;
+        }
+        .btn-hub {
+            background: transparent; color: var(--muted);
+            border: 1.5px solid var(--border); padding: 11px 24px;
+            border-radius: 10px; font-size: 0.9rem; font-weight: 600;
+            cursor: pointer; text-decoration: none; display: block;
+            transition: border-color .2s, color .2s;
+        }
+        .btn-hub:hover { border-color: #22d3ee; color: #22d3ee; }
+    </style>
+</head>
+<body>
+
+<!-- ── Top Navigation ── -->
+<nav class="top-nav">
+    <a href="../index.html" class="nav-back">← Hub</a>
+    <span class="nav-title">🟢 Finde Grün</span>
+    <span></span>
+</nav>
+
+<div class="game-wrap">
+
+    <!-- Creature / Egg Bar -->
+    <div class="creature-bar">
+        <div id="game-egg"></div>
+        <div class="boost-bar" id="boostBar"></div>
+        <div class="creature-info">
+            <div class="creature-label">Dein Begleiter</div>
+            <div class="creature-name" id="creature-name-label">Ei schlummert…</div>
+            <div class="creature-prog">
+                <div class="creature-prog-fill" id="creature-prog-fill" style="width:0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+        <div class="stat-box">
+            🖱️ <span id="click-counter">0</span> / 12
+        </div>
+        <div class="stat-box">
+            🟢 <span id="green-counter">0</span>
+        </div>
+    </div>
+
+    <!-- Grid -->
+    <div id="grid"></div>
+
+</div>
+
+<!-- Result Modal -->
+<div class="modal-overlay" id="result-modal">
+    <div class="modal">
+        <div class="modal-creature" id="modal-creature"></div>
+        <h2 id="modal-title">Runde beendet!</h2>
+        <div class="modal-creature-name" id="modal-creature-name"></div>
+        <div class="modal-creature-desc" id="modal-creature-desc"></div>
+        <div class="modal-score">
+            Grüne gefunden: <strong id="final-green">0</strong> / 12
+        </div>
+        <div id="coinBankContainer"></div>
+        <div class="btn-row">
+            <div class="result-play-row">
+                <button class="btn-primary" onclick="resetGame()">🔄 Nochmal spielen</button>
+                <div id="resultItemBtnWrap"></div>
+            </div>
+            <a href="../index.html" class="btn-hub">← Zurück zum Hub</a>
+        </div>
+    </div>
+</div>
+
+<script>window.CREATURE_IMAGE_BASE = '../data/';</script>
+<script src="../creatures.js"></script>
+<script>
+    const GRID_TOTAL   = 36;
+    const TARGET_COUNT = 12;
+    const MAX_CLICKS   = 12;
+    const GAME_ID      = new URLSearchParams(window.location.search).get('id') || 'game1';
+
+    let greenFound      = 0;
+    let clicks          = 0;
+    let isFinished      = false;
+    let gameData        = null;
+    let lastCoinsGained = 0;
+
+    /* ── Creature display ── */
+    function updateCreatureDisplay() {
+        const eggEl  = document.getElementById('game-egg');
+        const nameEl = document.getElementById('creature-name-label');
+        const fillEl = document.getElementById('creature-prog-fill');
+        if (!eggEl) return;
+
+        if (gameData && gameData.creature) {
+            const prevGrowth = Math.min(
+                gameData.growth + computeSessionGrowth(Math.max(0, greenFound - 1), TARGET_COUNT),
+                GROWTH_MAX
+            );
+            const liveGrowth = Math.min(
+                gameData.growth + computeSessionGrowth(greenFound, TARGET_COUNT),
+                GROWTH_MAX
+            );
+            const prevStage = getGrowthStage(prevGrowth);
+            const stage     = getGrowthStage(liveGrowth);
+            eggEl.innerHTML = getCreatureHTML(gameData.creature, stage);
+            if (nameEl) nameEl.textContent = `${CREATURE_NAMES[gameData.creature]} · ${GROWTH_LABELS[stage]}`;
+            if (fillEl) fillEl.style.width = Math.min(liveGrowth / GROWTH_MAX * 100, 100) + '%';
+            if (stage > prevStage) {
+                triggerCreatureLevelUp(stage === GROWTH_STAGES - 1, 'game-egg');
+            }
+        } else {
+            eggEl.innerHTML = getEggSVG(crackStageFromRatio(greenFound, TARGET_COUNT));
+            const eggLabels = ['Ei schlummert…','Etwas bewegt sich…','Das Ei bricht auf!','Augen tauchen auf!','Die Kreatur schlüpft!'];
+            if (nameEl) nameEl.textContent = eggLabels[crackStageFromRatio(greenFound, TARGET_COUNT)];
+            if (fillEl) fillEl.style.width = (crackStageFromRatio(greenFound, TARGET_COUNT) / 4 * 100) + '%';
+        }
+    }
+
+    /* ── Save result to hub ── */
+    function saveToHub() {
+        const isFirst = gameData.roundsPlayed === 0;
+        const sd = loadShopData();
+        lastCoinsGained = 0;
+        if (isFirst) {
+            const _eggType = new URLSearchParams(window.location.search).get('egg');
+            const _norm = Math.round(greenFound / TARGET_COUNT * 10);
+            if (_eggType) {
+                gameData.creature = determineEggCreature(_eggType, _norm);
+            } else {
+                gameData.creature = sd.glucksklee
+                    ? determineCreatureWithGlucksklee(_norm, GAME_ID)
+                    : determineCreature(_norm, true, GAME_ID);
+            }
+            gameData.growth = 0;
+        } else {
+            let contribution = computeSessionGrowth(greenFound, TARGET_COUNT);
+            if (sd.wachstumsBooster) contribution *= 2;
+            const room = Math.max(0, GROWTH_MAX - gameData.growth);
+            if (room === 0) {
+                let coins = Math.round(contribution);
+                if (sd.coinsx3) coins *= 3;
+                gameData.coins = (gameData.coins || 0) + coins;
+                lastCoinsGained += coins;
+            } else if (contribution > room) {
+                gameData.growth = GROWTH_MAX;
+                let overflow = Math.round(contribution - room);
+                if (sd.coinsx3) overflow *= 3;
+                gameData.coins = (gameData.coins || 0) + overflow;
+                lastCoinsGained += overflow;
+            } else {
+                gameData.growth = Math.min(gameData.growth + contribution, GROWTH_MAX);
+            }
+            if (greenFound === TARGET_COUNT && gameData.growth >= GROWTH_MAX) {
+                gameData.coins = (gameData.coins || 0) + 3;
+                lastCoinsGained += 3;
+            }
+        }
+        gameData.points       += greenFound;
+        gameData.roundsPlayed += 1;
+        saveGameData(GAME_ID, gameData);
+
+        if (!isFirst) {
+            if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+            if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+        }
+        if (isFirst && sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
+    }
+
+    /* ── Setup grid ── */
+    function setup() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        greenFound = 0;
+        clicks     = 0;
+        isFinished = false;
+        document.getElementById('click-counter').textContent = '0';
+        document.getElementById('green-counter').textContent = '0';
+        document.getElementById('result-modal').style.display = 'none';
+
+        gameData = getGameData(GAME_ID);
+        updateCreatureDisplay();
+        renderBoostIndicators('boostBar');
+
+        let types = [];
+        for (let i = 0; i < TARGET_COUNT; i++) types.push('green');
+        for (let i = 0; i < 12; i++) types.push('blue');
+        for (let i = 0; i < 12; i++) types.push('yellow');
+        types.sort(() => Math.random() - 0.5);
+
+        types.forEach(type => {
+            const el = document.createElement('div');
+            el.className = `tile ${type}`;
+            el.onclick = () => {
+                if (isFinished || el.classList.contains('clicked')) return;
+                clicks++;
+                el.classList.add('clicked');
+                document.getElementById('click-counter').textContent = clicks;
+
+                if (type === 'green') {
+                    greenFound++;
+                    document.getElementById('green-counter').textContent = greenFound;
+                    updateCreatureDisplay();
+                }
+
+                if (clicks >= MAX_CLICKS) finish();
+            };
+            grid.appendChild(el);
+        });
+    }
+
+    /* ── Finish round ── */
+    function finish() {
+        isFinished = true;
+        saveToHub();
+        gameData = getGameData(GAME_ID);  // reload updated data
+
+        const stage = getGrowthStage(gameData.growth);
+        const name  = CREATURE_NAMES[gameData.creature];
+        const desc  = CREATURE_DESCRIPTIONS[gameData.creature][stage];
+
+        const pct = greenFound / TARGET_COUNT;
+        let title;
+        if (pct === 1)       title = '🎉 Perfekt!';
+        else if (pct >= 0.8) title = '🌟 Sehr gut!';
+        else if (pct >= 0.6) title = '👍 Gut gemacht!';
+        else if (pct >= 0.4) title = '📚 Weiter üben!';
+        else                 title = '💪 Nicht aufgeben!';
+
+        document.getElementById('modal-title').textContent        = title;
+        document.getElementById('final-green').textContent        = greenFound;
+        document.getElementById('modal-creature-name').textContent = `${name} – ${GROWTH_LABELS[stage]}`;
+        document.getElementById('modal-creature-desc').textContent = desc;
+        document.getElementById('modal-creature').innerHTML        = getCreatureHTML(gameData.creature, stage);
+
+        // Kreatur-Bar mit gespeichertem (korrektem) Wachstum aktualisieren – kein Doppelzählen
+        const eggEl  = document.getElementById('game-egg');
+        const nameEl = document.getElementById('creature-name-label');
+        const fillEl = document.getElementById('creature-prog-fill');
+        if (eggEl) {
+            eggEl.innerHTML = getCreatureHTML(gameData.creature, stage);
+            if (nameEl) nameEl.textContent = `${name} · ${GROWTH_LABELS[stage]}`;
+            if (fillEl) fillEl.style.width = Math.min(gameData.growth / GROWTH_MAX * 100, 100) + '%';
+        }
+
+        renderResultItemButton('resultItemBtnWrap', GAME_ID);
+        renderCoinBank('coinBankContainer', lastCoinsGained);
+        setTimeout(() => {
+            document.getElementById('result-modal').style.display = 'flex';
+        }, 300);
+    }
+
+    function resetGame() { setup(); }
+
+    window.onload = setup;
+</script>
+</body>
+</html>
