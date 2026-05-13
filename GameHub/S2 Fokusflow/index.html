@@ -34,8 +34,8 @@
             border-right: 1px solid rgba(255,255,255,.06);
             display: flex; flex-direction: column;
             align-items: center;
-            padding: clamp(6px, 1.5vh, 14px) 10px;
-            gap: clamp(4px, 0.9vh, 10px);
+            padding: clamp(4px, 1vh, 10px) 8px;
+            gap: clamp(3px, 0.6vh, 7px);
             overflow: hidden;
         }
 
@@ -46,12 +46,15 @@
         }
 
         .tool-slot {
-            width: 100%; flex: 1;
-            border: 2px dashed rgba(255,255,255,.12); border-radius: 14px;
+            width: 100%; flex: 1 1 0;
+            max-height: clamp(56px, 14vh, 90px);
+            min-height: 44px;
+            border: 2px dashed rgba(255,255,255,.12); border-radius: 10px;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
-            gap: 4px; color: rgba(255,255,255,.18);
-            font-size: 11px; text-align: center; padding: 8px;
+            gap: 3px; color: rgba(255,255,255,.18);
+            font-size: 10px; text-align: center;
+            padding: clamp(4px, 0.8vh, 8px);
             transition: border-color .2s, background .2s, box-shadow .2s;
             cursor: default;
         }
@@ -670,11 +673,11 @@
                 </div>
                 <div id="ff-boost-bar" style="margin-top:clamp(2px,0.4vh,3px);width:100%;"></div>
             </div>
-            <div id="score-display" style="width:100%;text-align:center;padding:clamp(4px,0.9vh,8px) 4px clamp(4px,1vh,10px);border-top:1px solid rgba(255,255,255,.06);flex-shrink:0;">
-                <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.4);margin-bottom:2px;">Punkte</div>
-                <div id="score-value" style="font-size:clamp(20px,4vh,34px);font-weight:900;color:rgba(255,255,255,.85);line-height:1;">0</div>
-                <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.3);margin-top:clamp(3px,0.6vh,6px);margin-bottom:2px;">Highscore</div>
-                <div id="highscore-value" style="font-size:clamp(12px,2.2vh,18px);font-weight:700;color:rgba(148,163,184,.4);line-height:1;">0</div>
+            <div id="score-display" style="width:100%;text-align:center;padding:clamp(3px,0.6vh,6px) 4px;border-top:1px solid rgba(255,255,255,.06);flex-shrink:0;">
+                <div style="font-size:8px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.4);margin-bottom:1px;">Punkte</div>
+                <div id="score-value" style="font-size:clamp(18px,3.5vh,30px);font-weight:900;color:rgba(255,255,255,.85);line-height:1.1;">0</div>
+                <div style="font-size:8px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.3);margin-top:clamp(2px,0.4vh,4px);margin-bottom:1px;">Highscore</div>
+                <div id="highscore-value" style="font-size:clamp(11px,2vh,16px);font-weight:700;color:rgba(148,163,184,.4);line-height:1.1;">0</div>
             </div>
         </div>
 
