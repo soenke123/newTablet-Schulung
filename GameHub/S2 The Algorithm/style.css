@@ -10,6 +10,7 @@ body {
   color: #eee;
   font-family: 'Segoe UI', sans-serif;
   height: 100vh;
+  height: 100dvh; /* iOS Safari: passt sich dem sichtbaren Bereich an */
   width: 100vw;
   overflow: hidden;
   display: flex;
@@ -26,6 +27,7 @@ body {
   justify-content: flex-end; /* Drückt den Wrapper nach unten */
   width: 100%;
   flex: 1;
+  min-height: 0; /* Erlaubt Schrumpfen in Flexbox */
   background-color: #2a5e58; /* Deckenfarbe */
   overflow: hidden;
 }
