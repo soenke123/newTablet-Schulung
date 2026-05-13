@@ -211,9 +211,9 @@ body {
 #values-widget::after {
   content: 'Basiswerte';
   position: absolute;
-  bottom: -27px;
+  bottom: clamp(-20px, -2cqw, -12px);
   left: 0;
-  font-size: 17px;
+  font-size: clamp(8px, 1.1cqw, 14px);
   font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -517,7 +517,7 @@ body {
 
 /* Grauer Platzhalter links */
 #event-panel {
-  flex: 0 0 160px;
+  flex: 0 0 clamp(105px, 13vw, 160px);
   height: 185px;
   background: rgba(30, 35, 48, 0.82);
   border: 1px solid rgba(255,255,255,.08);
@@ -579,7 +579,7 @@ body {
 
 #hand {
   display: flex;
-  gap: 10px;
+  gap: clamp(4px, 0.8vw, 10px);
   overflow: visible;
   align-items: flex-end;
 }
@@ -633,8 +633,8 @@ body {
 }
 
 .feed-slot {
-  width: 90px;
-  height: 128px;
+  width: clamp(55px, 6.5vw, 90px);
+  height: clamp(78px, 9.3vw, 128px);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -865,8 +865,8 @@ body {
    KARTEN — Pokémon/Magic Style
 ──────────────────────────────────────────── */
 .card {
-  width: 120px;
-  height: 175px;
+  width: clamp(70px, 9vw, 120px);
+  height: clamp(102px, 13.1vw, 175px);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
