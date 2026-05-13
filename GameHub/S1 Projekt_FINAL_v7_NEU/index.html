@@ -96,10 +96,10 @@
   .sidebar-folders {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 12px;
+    padding: 13px 10px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
   }
   .sidebar h3 {
     font-size: 11px;
@@ -107,13 +107,13 @@
     text-transform: uppercase;
     letter-spacing: 0.6px;
     color: #6e7787;
-    margin: 12px 8px 6px;
+    margin: 10px 7px 5px;
   }
   .folder {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 9px 10px;
+    gap: 8px;
+    padding: 7px 8px;
     border-radius: 10px;
     cursor: pointer;
     font-size: 14px;
@@ -425,7 +425,7 @@
   .overlay-screen .btn:hover { background: #f0f0f0; }
   .overlay-screen .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
     margin: 4px 0;
     max-width: 480px;
@@ -1109,14 +1109,13 @@
     <div class="overlay-screen" id="endScreen" style="display:none;background:linear-gradient(135deg,rgba(52,199,89,0.97),rgba(0,122,255,0.97));justify-content:center;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:820px;width:100%;align-items:start;">
 
-        <!-- Links: Tier + Hub-Coins + Zurück-Button -->
+        <!-- Links: Tier + Hub-Coins -->
         <div style="display:flex;flex-direction:column;gap:8px;align-items:center;">
           <div id="pf-win-creature-wrap" style="display:flex;flex-direction:column;align-items:center;gap:4px;"></div>
           <div id="pf-coin-bank" style="width:100%;"></div>
-          <a href="../index.html" style="display:block;width:100%;box-sizing:border-box;padding:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:14px;font-size:13px;font-weight:700;color:white;text-decoration:none;text-align:center;">← Zurück zum Hub</a>
         </div>
 
-        <!-- Rechts: Titel + Ingame-Stats + Nochmal + Nutzen -->
+        <!-- Rechts: Titel + Ingame-Stats + alle 3 Buttons -->
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div style="text-align:center;">
             <div style="font-size:28px;">🏆</div>
@@ -1130,6 +1129,7 @@
             <div class="stat-card"><div class="num" id="finalSorted">0</div><div class="lbl">Sortiert</div></div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
+            <a href="../index.html" style="flex:1;box-sizing:border-box;padding:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:14px;font-size:13px;font-weight:700;color:white;text-decoration:none;text-align:center;">← Hub</a>
             <button class="btn" id="restartBtn" data-testid="restart-btn" style="background:white;color:#007AFF;padding:10px 16px;border-radius:14px;font-size:13px;font-weight:700;margin-top:0;flex:1;">Nochmal →</button>
             <div id="pf-result-item" style="flex-shrink:0;"></div>
           </div>
@@ -1492,9 +1492,9 @@ function renderSidebar() {
 
   // Creature widget — sits below Papierkorb inside the scrollable list
   const cw = document.createElement('div');
-  cw.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px solid #d5dbe6;display:flex;flex-direction:column;align-items:center;gap:3px;';
+  cw.style.cssText = 'margin-top:8px;padding-top:7px;border-top:1px solid #d5dbe6;display:flex;flex-direction:column;align-items:center;gap:3px;';
   cw.innerHTML = `
-    <div id="eggVisual" style="width:180px;height:180px;overflow:hidden;display:flex;align-items:center;justify-content:center;"></div>
+    <div id="eggVisual" style="width:150px;height:150px;overflow:hidden;display:flex;align-items:center;justify-content:center;"></div>
     <div id="eggStageLabel" style="font-size:8px;color:#6e7787;text-transform:uppercase;letter-spacing:.06em;text-align:center;font-weight:700;">Ei schlummert…</div>
     <div style="width:90%;height:3px;background:#d5dbe6;border-radius:99px;overflow:hidden;"><div id="eggProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,#007AFF,#34c759);border-radius:99px;transition:width .4s;"></div></div>
     <div id="pf-boost-bar" style="width:100%;"></div>
