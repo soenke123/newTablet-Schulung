@@ -33,7 +33,10 @@
             width: 15%; background: rgba(15,23,42,.9);
             border-right: 1px solid rgba(255,255,255,.06);
             display: flex; flex-direction: column;
-            align-items: center; padding: 14px 10px; gap: 10px;
+            align-items: center;
+            padding: clamp(6px, 1.5vh, 14px) 10px;
+            gap: clamp(4px, 0.9vh, 10px);
+            overflow: hidden;
         }
 
         .panel-label {
@@ -590,11 +593,8 @@
             #progress-text  { font-size: 10px !important; }
             #timer          { font-size: 20px !important; }
 
-            /* Tools-Panel: Overflow verhindern, kompakter */
-            #tools-panel    { padding: 8px 6px; gap: 6px; overflow: hidden; }
-            #eggVisual      { width: min(88px, 80%) !important; height: min(88px, 80%) !important; }
-            #score-value    { font-size: 24px !important; }
-            #highscore-value{ font-size: 14px !important; }
+            /* Tools-Panel: kompakter auf kleinen Bildschirmen */
+            #tools-panel    { padding: 6px; gap: 5px; }
 
             /* ── Startscreen ── */
             #ff-title        { font-size: clamp(24px, 3.5vw, 40px) !important; }
@@ -610,8 +610,24 @@
             #start-creature  { width: 80px !important; height: 80px !important; }
 
             /* ── Win-Screen ── */
-            #ff-win-title { font-size: 36px !important; margin-bottom: 12px !important; }
+            #ff-win-title { font-size: 36px !important; margin-bottom: 10px !important; }
             #final-time   { font-size: 32px !important; }
+
+            /* ── Start-Button: auf Tablet in eigene Zeile ── */
+            #ff-start-bottom-inner {
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                width: auto !important;
+                max-width: 420px !important;
+                gap: 10px !important;
+            }
+            #ff-start-btn {
+                flex: none !important;
+                width: 100% !important;
+                font-size: 17px !important;
+                padding: 13px 18px !important;
+                text-align: center !important;
+            }
         }
     </style>
 </head>
@@ -646,20 +662,19 @@
             <div class="tool-slot" id="slot-0"><span style="font-size:18px;opacity:.3;">+</span><span>Leer</span></div>
             <div class="tool-slot" id="slot-1"><span style="font-size:18px;opacity:.3;">+</span><span>Leer</span></div>
             <!-- Hub: Ei/Tier-Anzeige -->
-            <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px 0;">
-                <div id="eggVisual" style="width:130px;height:130px;display:flex;align-items:center;justify-content:center;"></div>
+            <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:clamp(2px,0.4vh,4px);padding:clamp(3px,0.6vh,6px) 4px 0;flex-shrink:0;">
+                <div id="eggVisual" style="width:clamp(56px,14vh,120px);height:clamp(56px,14vh,120px);display:flex;align-items:center;justify-content:center;"></div>
                 <div id="eggStageLabel" style="font-size:8px;color:rgba(148,163,184,.45);text-transform:uppercase;letter-spacing:.07em;text-align:center;font-weight:700;">Ei schlummert…</div>
                 <div style="width:88%;height:3px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden;">
                     <div id="eggProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,#60a5fa,#34d399);border-radius:99px;transition:width .4s;"></div>
                 </div>
-                <div id="ff-boost-bar" style="margin-top:3px;width:100%;"></div>
+                <div id="ff-boost-bar" style="margin-top:clamp(2px,0.4vh,3px);width:100%;"></div>
             </div>
-            <div style="flex:1;"></div>
-            <div id="score-display" style="width:100%;text-align:center;padding:8px 4px 10px;border-top:1px solid rgba(255,255,255,.06);">
+            <div id="score-display" style="width:100%;text-align:center;padding:clamp(4px,0.9vh,8px) 4px clamp(4px,1vh,10px);border-top:1px solid rgba(255,255,255,.06);flex-shrink:0;">
                 <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.4);margin-bottom:2px;">Punkte</div>
-                <div id="score-value" style="font-size:34px;font-weight:900;color:rgba(255,255,255,.85);line-height:1;">0</div>
-                <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.3);margin-top:6px;margin-bottom:2px;">Highscore</div>
-                <div id="highscore-value" style="font-size:18px;font-weight:700;color:rgba(148,163,184,.4);line-height:1;">0</div>
+                <div id="score-value" style="font-size:clamp(20px,4vh,34px);font-weight:900;color:rgba(255,255,255,.85);line-height:1;">0</div>
+                <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.3);margin-top:clamp(3px,0.6vh,6px);margin-bottom:2px;">Highscore</div>
+                <div id="highscore-value" style="font-size:clamp(12px,2.2vh,18px);font-weight:700;color:rgba(148,163,184,.4);line-height:1;">0</div>
             </div>
         </div>
 
@@ -771,13 +786,13 @@
 
         <!-- Bottom: Highscore, Kreatur, Start -->
         <div style="flex-shrink:0;padding:0 40px 24px;display:flex;justify-content:center;">
-            <div style="display:flex;align-items:center;gap:14px;width:calc(33.33% - 11px);">
+            <div id="ff-start-bottom-inner" style="display:flex;align-items:center;gap:14px;width:calc(33.33% - 11px);">
                 <div style="background:rgba(30,41,59,.8);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 22px;text-align:center;flex-shrink:0;">
                     <div style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.75);margin-bottom:2px;">Highscore</div>
                     <div id="start-highscore" style="font-size:28px;font-weight:900;color:rgba(200,215,235,.85);line-height:1.1;">0</div>
                 </div>
                 <div id="start-creature" style="width:108px;height:108px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"></div>
-                <button onclick="initGame()" style="flex:1;padding:15px 18px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border:none;border-radius:14px;font-size:20px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(37,99,235,.4);letter-spacing:.02em;-webkit-tap-highlight-color:transparent;">
+                <button id="ff-start-btn" onclick="initGame()" style="flex:1;padding:15px 18px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border:none;border-radius:14px;font-size:20px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(37,99,235,.4);letter-spacing:.02em;-webkit-tap-highlight-color:transparent;">
                     Spiel starten →
                 </button>
             </div>
@@ -786,42 +801,49 @@
     </div>
 
     <!-- ── Win overlay ── -->
-    <div id="win-overlay" style="position:fixed;inset:0;background:rgba(15,23,42,.98);z-index:100;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;">
-        <div style="max-width:900px;width:100%;padding-bottom:16px;">
+    <div id="win-overlay" style="position:fixed;inset:0;background:rgba(15,23,42,.98);z-index:100;display:none;flex-direction:column;">
 
-            <!-- Titel: volle Breite, zentriert -->
-            <h1 id="ff-win-title" style="font-size:52px;font-weight:900;color:#34d399;margin:0 0 20px;text-align:center;">Geschafft!</h1>
+        <!-- scrollbarer Inhaltsbereich -->
+        <div style="flex:1;overflow-y:auto;padding:20px 20px 0;display:flex;justify-content:center;">
+            <div style="max-width:900px;width:100%;">
 
-            <!-- Zweispaltig: Links = Ergebnis, Rechts = Lerninhalt -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-bottom:16px;">
+                <!-- Titel: volle Breite, zentriert -->
+                <h1 id="ff-win-title" style="font-size:52px;font-weight:900;color:#34d399;margin:0 0 20px;text-align:center;">Geschafft!</h1>
 
-                <!-- Linke Spalte -->
-                <div style="display:flex;flex-direction:column;gap:12px;text-align:center;">
-                    <div id="ff-win-creature-wrap" style="display:flex;flex-direction:column;align-items:center;gap:6px;"></div>
-                    <div id="ff-coin-bank"></div>
-                    <div id="ff-result-item"></div>
-                    <div style="padding:14px;background:rgba(30,41,59,1);border-radius:16px;border:1px solid rgba(255,255,255,.08);">
-                        <p style="color:rgba(148,163,184,.7);text-transform:uppercase;font-size:10px;letter-spacing:.12em;margin:0 0 2px;">Deine Zeit</p>
-                        <div id="final-time" style="font-size:44px;font-weight:900;font-family:monospace;color:#e2e8f0;margin:0;">0.00</div>
+                <!-- Zweispaltig: Links = Ergebnis, Rechts = Lerninhalt -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+
+                    <!-- Linke Spalte -->
+                    <div style="display:flex;flex-direction:column;gap:12px;text-align:center;">
+                        <div id="ff-win-creature-wrap" style="display:flex;flex-direction:column;align-items:center;gap:6px;"></div>
+                        <div id="ff-coin-bank"></div>
+                        <div id="ff-result-item"></div>
+                        <div style="padding:14px;background:rgba(30,41,59,1);border-radius:16px;border:1px solid rgba(255,255,255,.08);">
+                            <p style="color:rgba(148,163,184,.7);text-transform:uppercase;font-size:10px;letter-spacing:.12em;margin:0 0 2px;">Deine Zeit</p>
+                            <div id="final-time" style="font-size:44px;font-weight:900;font-family:monospace;color:#e2e8f0;margin:0;">0.00</div>
+                        </div>
+                        <div id="win-score-left"></div>
                     </div>
-                    <div id="win-score-left"></div>
-                </div>
 
-                <!-- Rechte Spalte -->
-                <div style="display:flex;flex-direction:column;gap:8px;text-align:left;">
-                    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:700;color:rgba(148,163,184,.6);">Was hast du gelernt?</div>
-                    <div id="insights-section"></div>
+                    <!-- Rechte Spalte -->
+                    <div style="display:flex;flex-direction:column;gap:8px;text-align:left;">
+                        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:700;color:rgba(148,163,184,.6);">Was hast du gelernt?</div>
+                        <div id="insights-section"></div>
+                    </div>
+
                 </div>
 
             </div>
+        </div>
 
-            <!-- Buttons: nebeneinander, volle Breite -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <!-- Buttons: immer sichtbar am unteren Rand -->
+        <div style="flex-shrink:0;padding:12px 20px 20px;display:flex;justify-content:center;">
+            <div style="max-width:900px;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 <a href="../index.html" style="display:block;padding:15px;background:rgba(30,41,59,1);border:1px solid rgba(255,255,255,.12);border-radius:16px;font-size:16px;font-weight:700;color:rgba(200,215,235,.85);text-decoration:none;text-align:center;">← Zurück zum Hub</a>
                 <button onclick="location.reload()" style="padding:15px;background:#059669;color:white;border:none;border-radius:16px;font-size:16px;font-weight:700;cursor:pointer;width:100%;">Nochmal →</button>
             </div>
-
         </div>
+
     </div>
 
     <script>

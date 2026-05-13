@@ -877,6 +877,7 @@ body {
   touch-action: none;
   position: relative;
   overflow: hidden;
+  container-type: inline-size;
   transition: transform .22s ease, box-shadow .22s ease,
               width .22s ease, height .22s ease;
   border: 1.5px solid rgba(255,255,255,.18);
@@ -915,21 +916,21 @@ body {
 .card-header {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 5px 6px 4px;
+  gap: 3.3cqi;
+  padding: 4.2cqi 5cqi 3.3cqi;
   background: rgba(0,0,0,.38);
   border-bottom: 1px solid rgba(255,255,255,.1);
   flex-shrink: 0;
 }
 
 .card-icon {
-  font-size: 16px;
+  font-size: clamp(11px, 13.3cqi, 16px);
   line-height: 1;
   flex-shrink: 0;
 }
 
 .card-name {
-  font-size: 13px;
+  font-size: clamp(9px, 10.8cqi, 13px);
   font-weight: 800;
   line-height: 1.2;
   flex: 1;
@@ -944,9 +945,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px 6px 6px;
+  gap: 3.3cqi;
+  padding: 5cqi;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
   justify-content: flex-start;
 }
 
@@ -955,10 +958,10 @@ body {
 .card-compact-interests {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1.7cqi;
   background: rgba(255,255,255,.07);
   border-radius: 6px;
-  padding: 4px 5px;
+  padding: 3.3cqi 4.2cqi;
   width: 100%;
   box-sizing: border-box;
 }
@@ -973,17 +976,17 @@ body {
 .card-compact-wirkung {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1.7cqi;
   width: 100%;
 }
 
 .card-compact-wirkung-item {
-  font-size: 15px;
+  font-size: clamp(10px, 12.5cqi, 15px);
   font-weight: 800;
   opacity: .9;
   background: rgba(0,0,0,.2);
   border-radius: 4px;
-  padding: 4px 6px;
+  padding: 3.3cqi 5cqi;
   width: 100%;
   box-sizing: border-box;
   line-height: 1.2;
@@ -993,18 +996,18 @@ body {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2.5cqi;
   width: 100%;
-  padding-top: 4px;
+  padding-top: 3.3cqi;
 }
 
 .card-compact-effekt {
-  font-size: 11px;
+  font-size: clamp(8px, 9.2cqi, 11px);
   font-weight: 700;
   letter-spacing: .04em;
   background: rgba(255,255,255,.16);
   border-radius: 4px;
-  padding: 3px 6px;
+  padding: 2.5cqi 5cqi;
   color: rgba(255,255,255,.9);
   width: 100%;
   box-sizing: border-box;
@@ -1012,12 +1015,12 @@ body {
 }
 
 .card-compact-fähigkeit {
-  font-size: 11px;
+  font-size: clamp(8px, 9.2cqi, 11px);
   font-weight: 700;
   letter-spacing: .04em;
   background: rgba(255,255,255,.25);
   border-radius: 4px;
-  padding: 3px 6px;
+  padding: 2.5cqi 5cqi;
   color: rgba(255,255,255,.95);
   width: 100%;
   box-sizing: border-box;
@@ -1098,12 +1101,12 @@ body {
 
 /* ── Interessenpunkt-Badges (kompakt) ── */
 .card-ip-item {
-  font-size: 15px;
+  font-size: clamp(10px, 12.5cqi, 15px);
   font-weight: 700;
   opacity: .5;
   background: rgba(0,0,0,.2);
   border-radius: 4px;
-  padding: 4px 6px;
+  padding: 3.3cqi 5cqi;
   line-height: 1.2;
   width: 100%;
   box-sizing: border-box;
