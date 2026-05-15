@@ -312,12 +312,60 @@ function startRecoveryPhase(posX, goLeft, ingameMinutes) {
   }, 1000);
 }
 
+function applyRecoveryFeedEffects() {
+  const syn = getFeedSynergies();
+  updateFeedSynergyGlow(syn);
+
+  // Synergie-Einmalboni (wie in tick, aber unabhängig vom _prev*Active-State)
+  if (syn.rainbow) {
+    gameState.dopamin     = Math.min(100, gameState.dopamin + 10);
+    gameState.sozialdrang = Math.max(0,   gameState.sozialdrang - 10);
+    const opt = gameState.reizschwelleOptimalwert;
+    gameState.reizschwelle = gameState.reizschwelle < opt
+      ? Math.min(opt, gameState.reizschwelle + 10)
+      : Math.max(opt, gameState.reizschwelle - 10);
+    showSynergyToast(SYNERGY_DISPLAY.rainbow.text, 'syn-rainbow');
+  } else {
+    if (syn.tripleRot)   showSynergyToast(SYNERGY_DISPLAY.tripleRot.text,   'syn-rot');
+    if (syn.tripleGruen) showSynergyToast(SYNERGY_DISPLAY.tripleGruen.text, 'syn-gruen');
+    if (syn.tripleBlau)  showSynergyToast(SYNERGY_DISPLAY.tripleBlau.text,  'syn-blau');
+  }
+
+  // tripleGruen: Sozialdrang senken (5 Ticks simuliert)
+  if (syn.tripleGruen) {
+    gameState.sozialdrang = Math.max(0, gameState.sozialdrang - 5);
+  }
+
+  // tripleBlau: Optimalwert senken (wie in tick)
+  if (syn.tripleBlau && gameState.reizschwelleOptimalwert > 30) {
+    gameState.reizschwelleOptimalwert -= 5;
+  }
+
+  // Feed-Interesse-Ratio → Dopamin-Zielwert (5 Ticks simuliert)
+  if (!gameState.feedSlots.some(c => c?.effekt?.rabbithole)) {
+    const ratio  = calcFeedInterestRatio();
+    let   target = dopaminTarget(ratio);
+    if (syn.tripleRot) target = Math.max(70, target);
+    const step = 2;
+    for (let i = 0; i < 5; i++) {
+      if (gameState.dopamin < target)      gameState.dopamin = Math.min(target, gameState.dopamin + step);
+      else if (gameState.dopamin > target) gameState.dopamin = Math.max(target, gameState.dopamin - step);
+    }
+    gameState.dopamin = Math.max(0, gameState.dopamin);
+  }
+
+  renderStatusBars();
+  renderFeed();
+}
+
 function onRecoveryCardPlayed() {
   clearInterval(_recoveryTimer);
   _recoveryCardPlayed = true;
   _playWindowOpen = false;
   renderHand();
   hideRecoveryOverlay();
+
+  applyRecoveryFeedEffects();
 
   if (isInSurvivalZone()) {
     walkBackToCenter(_recoveryPosX, _recoveryGoLeft);
@@ -661,25 +709,31 @@ function initCardDrag(el, cardId) {
                       && !(gameState.isInRecovery && _recoveryCardPlayed);
         if (over && canPlay) {
           const prevFreeCardPlays = gameState.freeCardPlays;
-          playCard(cardId);
+          const cardPlayed = playCard(cardId);
           _expandedCardId = null;
           _expandedFeedSlots.clear();
           document.getElementById('feed-card-portal').innerHTML = '';
           document.getElementById('hand-card-portal').innerHTML = '';
-          renderFeedAnimated();
-          if (prevFreeCardPlays > 0) {
-            // Freisspiel verbraucht
-            gameState.freeCardPlays--;
+          if (!cardPlayed) {
+            // Karte durch Event geblockt — Fenster bleibt offen
             renderHand();
             renderWindowStatus();
-          } else if (gameState.freeCardPlays > 0) {
-            // Diese Karte hat Freisspiele aktiviert — nicht dekrementieren
-            renderHand();
-            renderWindowStatus();
-          } else if (gameState.isInRecovery) {
-            onRecoveryCardPlayed();
           } else {
-            closePlayWindow();
+            renderFeedAnimated();
+            if (prevFreeCardPlays > 0) {
+              // Freisspiel verbraucht
+              gameState.freeCardPlays--;
+              renderHand();
+              renderWindowStatus();
+            } else if (gameState.freeCardPlays > 0) {
+              // Diese Karte hat Freisspiele aktiviert — nicht dekrementieren
+              renderHand();
+              renderWindowStatus();
+            } else if (gameState.isInRecovery) {
+              onRecoveryCardPlayed();
+            } else {
+              closePlayWindow();
+            }
           }
         }
       }

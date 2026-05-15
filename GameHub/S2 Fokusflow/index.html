@@ -632,6 +632,176 @@
                 text-align: center !important;
             }
         }
+
+        /* ── Portrait-Handy-Layout (< 768px, Hochkant) ── */
+        @media (orientation: portrait) and (max-width: 767px) {
+
+            /* Header kompakt */
+            #header {
+                height: auto;
+                padding: 6px 12px;
+                gap: 6px;
+            }
+            #target-display { font-size: 18px !important; }
+            #wave-display   { font-size: 16px !important; }
+            #progress-text  { font-size: 9px !important; }
+            #timer          { font-size: 18px !important; }
+            #distraction-display { gap: 3px; min-height: 16px; }
+
+            /* Main stapelt vertikal */
+            #main { flex-direction: column; }
+
+            /* tools-panel auflösen: Kinder nehmen direkt an #main-Flex teil */
+            #tools-panel { display: contents; }
+            #tools-panel > .panel-label { display: none; }
+
+            /* Aktive Tool-Slots: horizontale Leiste über dem Spielfeld */
+            #active-tools-strip {
+                order: 1;
+                display: flex;
+                flex-direction: row;
+                width: 100%;
+                height: 56px;
+                flex-shrink: 0;
+                padding: 6px 8px;
+                gap: 8px;
+                background: rgba(15,23,42,.9);
+                border-bottom: 1px solid rgba(255,255,255,.06);
+            }
+            #active-tools-strip .tool-slot {
+                flex: 1;
+                max-height: none;
+                min-height: 40px;
+                font-size: 9px;
+            }
+            #active-tools-strip .tool-slot span:first-child { font-size: 14px !important; }
+
+            /* Spielfeld: nimmt verbleibenden Platz ein */
+            #play-area {
+                order: 2;
+                width: 100%;
+                flex: 1;
+            }
+
+            /* Bottom-Bar: Ei + Punkte nebeneinander */
+            #portrait-bottom {
+                order: 3;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-around;
+                width: 100%;
+                height: 80px;
+                flex-shrink: 0;
+                background: rgba(15,23,42,.9);
+                border-top: 1px solid rgba(255,255,255,.06);
+                padding: 6px 16px;
+                gap: 12px;
+            }
+            /* Ei-Visual kleiner */
+            #portrait-bottom #eggVisual {
+                width: clamp(40px, 9vh, 56px) !important;
+                height: clamp(40px, 9vh, 56px) !important;
+            }
+            /* eggStageLabel im Bottom-Bar verstecken (zu wenig Platz) */
+            #portrait-bottom #eggStageLabel { display: none; }
+            /* Score horizontal */
+            #portrait-bottom #score-display {
+                border-top: none !important;
+                padding: 0 !important;
+                text-align: left;
+            }
+            #portrait-bottom #score-value      { font-size: clamp(22px, 5.5vw, 30px) !important; }
+            #portrait-bottom #highscore-value  { font-size: clamp(12px, 3vw, 16px) !important; }
+
+            /* Reflexions-Spalte: Bottom-Sheet */
+            #reflection-column {
+                position: fixed;
+                bottom: 0; left: 0; right: 0;
+                width: 100%;
+                max-height: 62vh;
+                z-index: 80;
+                background: rgba(15,23,42,.98);
+                border-top: 2px solid rgba(255,255,255,.12);
+                border-radius: 20px 20px 0 0;
+                overflow-y: auto;
+                transform: translateY(100%);
+                transition: transform .35s cubic-bezier(.32,.72,0,1);
+                padding: 16px 14px;
+            }
+            #reflection-column.portrait-open {
+                transform: translateY(0);
+            }
+            #reflection-column .panel-label { display: block; margin-bottom: 10px; }
+
+            /* Tool-Cards im Bottom-Sheet etwas größer */
+            #reflection-column .tool-card { padding: 12px; }
+            #reflection-column .tc-icon   { font-size: 24px; }
+            #reflection-column .tc-name   { font-size: 13px; }
+            #reflection-column .tc-desc   { font-size: 11px; }
+
+            /* ── Ablenkungen 30 % kleiner ── */
+            .distraction-notif       { transform: scale(0.7); transform-origin: top right; }
+            .distraction-notif.large { transform: scale(0.7); transform-origin: top right; }
+            .distraction-like        { transform: scale(0.7); transform-origin: bottom left; }
+            .distraction-like.large  { transform: scale(0.7); transform-origin: bottom left; }
+            .distraction-gaming      { transform: scale(0.7); transform-origin: top left; }
+            .distraction-gaming.large{ transform: scale(0.7); transform-origin: top left; }
+            .distraction-call        { transform: translateX(-50%) scale(0.7); transform-origin: top center; }
+            .distraction-egg         { transform: translateY(-50%) scale(0.7); transform-origin: center right; }
+            .distraction-ad          { height: 40px !important; font-size: 0.85em; }
+            .distraction-ad.large    { height: 40px !important; font-size: 0.85em; }
+
+            /* ── Startscreen: 3 Banner untereinander ── */
+            #start-overlay { overflow-y: auto !important; }
+
+            /* Top-Bar kompakter */
+            #start-overlay > div:first-child { padding: 12px 14px 0; }
+            #ff-title    { font-size: 28px !important; }
+            #ff-subtitle { font-size: 11px !important; margin: 3px 0 0 !important; }
+
+            /* Banner-Container: Spalte statt Reihe */
+            #ff-start-banners {
+                flex-direction: column !important;
+                overflow-y: visible !important;
+                padding: 10px 14px !important;
+                gap: 10px !important;
+                flex: none !important;
+            }
+            .ff-banner {
+                flex: none !important;
+                padding: 14px 16px !important;
+                gap: 10px !important;
+            }
+            .ff-banner-h2 { font-size: 15px !important; }
+
+            /* Großes Statistik-Element kompakter */
+            #ff-big-stat { padding: 8px !important; }
+            #ff-stat-num { font-size: 40px !important; }
+
+            /* Ziel-Banner: Pfeil kleiner */
+            #ff-task-arrow { font-size: 28px !important; letter-spacing: 2px !important; }
+
+            /* Fließtexte etwas kleiner */
+            .ff-banner p { font-size: 13px !important; line-height: 1.5 !important; }
+
+            /* Bottom-Bar: volle Breite, Start-Button prominent */
+            #start-overlay > div:last-child { padding: 10px 14px 16px !important; }
+            #ff-start-bottom-inner {
+                width: 100% !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                gap: 10px !important;
+            }
+            #ff-start-btn {
+                flex: none !important;
+                width: 100% !important;
+                font-size: 17px !important;
+                padding: 13px !important;
+            }
+            #start-highscore { font-size: 20px !important; }
+            #start-creature  { width: 72px !important; height: 72px !important; }
+        }
     </style>
 </head>
 <body>
@@ -662,22 +832,26 @@
 
         <div id="tools-panel">
             <div class="panel-label">Aktive Hilfen</div>
-            <div class="tool-slot" id="slot-0"><span style="font-size:18px;opacity:.3;">+</span><span>Leer</span></div>
-            <div class="tool-slot" id="slot-1"><span style="font-size:18px;opacity:.3;">+</span><span>Leer</span></div>
-            <!-- Hub: Ei/Tier-Anzeige -->
-            <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:clamp(2px,0.4vh,4px);padding:clamp(3px,0.6vh,6px) 4px 0;flex-shrink:0;">
-                <div id="eggVisual" style="width:clamp(56px,14vh,120px);height:clamp(56px,14vh,120px);display:flex;align-items:center;justify-content:center;"></div>
-                <div id="eggStageLabel" style="font-size:8px;color:rgba(148,163,184,.45);text-transform:uppercase;letter-spacing:.07em;text-align:center;font-weight:700;">Ei schlummert…</div>
-                <div style="width:88%;height:3px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden;">
-                    <div id="eggProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,#60a5fa,#34d399);border-radius:99px;transition:width .4s;"></div>
-                </div>
-                <div id="ff-boost-bar" style="margin-top:clamp(2px,0.4vh,3px);width:100%;"></div>
+            <div id="active-tools-strip">
+                <div class="tool-slot" id="slot-0"><span style="font-size:18px;opacity:.3;">+</span><span>Leer</span></div>
+                <div class="tool-slot" id="slot-1"><span style="font-size:18px;opacity:.3;">+</span><span>Leer</span></div>
             </div>
-            <div id="score-display" style="width:100%;text-align:center;padding:clamp(3px,0.6vh,6px) 4px;border-top:1px solid rgba(255,255,255,.06);flex-shrink:0;">
-                <div style="font-size:8px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.4);margin-bottom:1px;">Punkte</div>
-                <div id="score-value" style="font-size:clamp(18px,3.5vh,30px);font-weight:900;color:rgba(255,255,255,.85);line-height:1.1;">0</div>
-                <div style="font-size:8px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.3);margin-top:clamp(2px,0.4vh,4px);margin-bottom:1px;">Highscore</div>
-                <div id="highscore-value" style="font-size:clamp(11px,2vh,16px);font-weight:700;color:rgba(148,163,184,.4);line-height:1.1;">0</div>
+            <div id="portrait-bottom">
+                <!-- Hub: Ei/Tier-Anzeige -->
+                <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:clamp(2px,0.4vh,4px);padding:clamp(3px,0.6vh,6px) 4px 0;flex-shrink:0;">
+                    <div id="eggVisual" style="width:clamp(56px,14vh,120px);height:clamp(56px,14vh,120px);display:flex;align-items:center;justify-content:center;"></div>
+                    <div id="eggStageLabel" style="font-size:8px;color:rgba(148,163,184,.45);text-transform:uppercase;letter-spacing:.07em;text-align:center;font-weight:700;">Ei schlummert…</div>
+                    <div style="width:88%;height:3px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden;">
+                        <div id="eggProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,#60a5fa,#34d399);border-radius:99px;transition:width .4s;"></div>
+                    </div>
+                    <div id="ff-boost-bar" style="margin-top:clamp(2px,0.4vh,3px);width:100%;"></div>
+                </div>
+                <div id="score-display" style="width:100%;text-align:center;padding:clamp(3px,0.6vh,6px) 4px;border-top:1px solid rgba(255,255,255,.06);flex-shrink:0;">
+                    <div style="font-size:8px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.4);margin-bottom:1px;">Punkte</div>
+                    <div id="score-value" style="font-size:clamp(18px,3.5vh,30px);font-weight:900;color:rgba(255,255,255,.85);line-height:1.1;">0</div>
+                    <div style="font-size:8px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:rgba(148,163,184,.3);margin-top:clamp(2px,0.4vh,4px);margin-bottom:1px;">Highscore</div>
+                    <div id="highscore-value" style="font-size:clamp(11px,2vh,16px);font-weight:700;color:rgba(148,163,184,.4);line-height:1.1;">0</div>
+                </div>
             </div>
         </div>
 
@@ -1132,7 +1306,8 @@
             el.className = 'balloon' + (isFake ? ' fake' : '');
             el.innerText = num;
 
-            const size = 70 + Math.random() * 50;
+            const isPortrait = window.matchMedia('(orientation: portrait) and (max-width: 767px)').matches;
+            const size = isPortrait ? 35 + Math.random() * 25 : 70 + Math.random() * 50;
             el.style.width    = `${size}px`;
             el.style.height   = `${size}px`;
             el.style.fontSize = `${size * 0.4}px`;
@@ -1322,6 +1497,10 @@
             activePanelEl    = panel;
             panelClicksLeft  = PANEL_DISMISS_CLICKS;
             panelPendingTool = null;
+
+            if (window.matchMedia('(orientation: portrait) and (max-width: 767px)').matches) {
+                document.getElementById('reflection-column').classList.add('portrait-open');
+            }
         }
 
         function tickPanelCountdown() {
@@ -1344,6 +1523,7 @@
             setTimeout(() => el.remove(), 420);
             if (!toolTaken) { exitSlotSelectMode(); if (!panelIsToolSelection) showMissedToast(); }
             panelIsToolSelection = false;
+            document.getElementById('reflection-column').classList.remove('portrait-open');
         }
 
         function showMissedToast() {

@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
 <title>Projekt_FINAL_v7_NEU – iPad Lernspiel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -953,6 +953,98 @@
     .file-thumb { width: 56px; height: 70px; }
     .file-grid { padding: 14px; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
   }
+
+  /* ─── Phone portrait (≤500px) ───────────────────────────────────────── */
+  .home-indicator { display: none; }
+
+  @media (max-width: 500px) and (orientation: portrait) {
+    body {
+      padding: 0;
+      align-items: stretch;
+      justify-content: stretch;
+      background: #1d1d1f;
+    }
+    /* iPhone-style frame: full-screen, thin dark bezel via padding */
+    .ipad {
+      width: 100dvw;
+      height: 100dvh;
+      border-radius: 0;
+      padding: 10px 6px 0;
+      box-shadow: none;
+    }
+    .ipad::before { display: none; }
+    .screen { border-radius: 6px 6px 0 0; }
+
+    /* Sidebar: icon-only, 64px wide */
+    .app { grid-template-columns: 64px 1fr; }
+    .sidebar { background: #dde4f0; }
+    .sidebar-folders { padding: 6px 4px; gap: 2px; }
+    .folder {
+      flex-direction: column;
+      gap: 1px;
+      padding: 8px 4px;
+      border-radius: 10px;
+      justify-content: center;
+      align-items: center;
+      min-height: 52px;
+    }
+    .folder .folder-label { display: none; }
+    .folder-count { display: none; }
+    .sidebar h3 { display: none; }
+    .folder-icon { width: 26px; height: 26px; font-size: 22px; }
+
+    /* Main area */
+    .main-header { padding: 8px 10px; gap: 8px; }
+    .main-header h2 { font-size: 14px; }
+    .file-grid {
+      padding: 10px;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+    }
+    .file-thumb { width: 48px; height: 60px; }
+    .file-name { font-size: 10px; max-width: 68px; }
+
+    /* Modal: fixed overlay anchored to visual viewport, rises above keyboard */
+    .modal-backdrop {
+      position: fixed;
+      align-items: flex-end;
+      padding: 12px 10px calc(var(--keyboard-h, 0px) + 12px);
+      transition: padding-bottom 0.2s ease;
+    }
+    .modal {
+      width: 100%;
+      max-height: 70dvh;
+      border-radius: 20px 20px 14px 14px;
+    }
+
+    /* Start screen: stack 3 cards vertically, allow scroll */
+    #startScreen {
+      justify-content: flex-start;
+      padding-top: 48px;
+      overflow-y: auto;
+    }
+    .start-cards { grid-template-columns: 1fr; }
+
+    /* End screen: stack 2 columns vertically */
+    #endScreen > div { grid-template-columns: 1fr !important; }
+
+    /* Phone home indicator pill */
+    .home-indicator {
+      display: flex;
+      height: 26px;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      background: #f2f5fb;
+    }
+    .home-indicator::after {
+      content: '';
+      width: 120px;
+      height: 5px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 3px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1151,6 +1243,9 @@
 
     <!-- TOASTS -->
     <div class="toast-stack" id="toastStack"></div>
+
+    <!-- Phone home indicator (visible only on phone portrait via CSS) -->
+    <div class="home-indicator" aria-hidden="true"></div>
   </div>
 </div>
 
@@ -2400,6 +2495,16 @@ setInterval(tickClock, 60000);
 
 /* ---------- INIT ---------- */
 showOverlay($('startScreen'));
+
+/* ── Mobile keyboard height tracking ──────────────────────────────────── */
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    const kbH = Math.max(0,
+      window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop
+    );
+    document.documentElement.style.setProperty('--keyboard-h', kbH + 'px');
+  });
+}
 
 </script>
 <script>window.CREATURE_IMAGE_BASE = '../data/';</script>

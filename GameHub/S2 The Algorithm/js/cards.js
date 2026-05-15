@@ -454,10 +454,10 @@ function applyReizToOptimal(amount) {
 
 function playCard(cardId) {
   const cardIdx = gameState.hand.findIndex(c => c.id === cardId);
-  if (cardIdx === -1) return;
+  if (cardIdx === -1) return false;
   if (gameState.activeEvent) {
     const def = EVENT_DEFINITIONS.find(e => e.id === gameState.activeEvent.id);
-    if (!def?.allowCards && !gameState.hand[cardIdx].effekt?.eventSkip) return;
+    if (!def?.allowCards && !gameState.hand[cardIdx].effekt?.eventSkip) return false;
   }
   gameState.secondsSinceLastCard = 0;
   const [card] = gameState.hand.splice(cardIdx, 1);
