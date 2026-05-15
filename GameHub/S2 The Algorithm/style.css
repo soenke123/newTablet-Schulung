@@ -2118,6 +2118,12 @@ body.augen-brennen #bottom-ui {
    RESPONSIVE — Handy Querformat (max-height ≤ 480px)
 ──────────────────────────────────────────── */
 @media (max-height: 480px) {
+  .image-wrapper {
+    aspect-ratio: unset;
+    flex: 1;
+    min-height: 0;
+  }
+
   #clock {
     font-size: 16px;
     padding: 2px 8px;
@@ -2170,14 +2176,19 @@ body.augen-brennen #bottom-ui {
   }
 
   #values-widget {
-    width: 120px;
-    gap: 9px;
+    width: 90px;
+    gap: 3px;
   }
 
+  .value-scale { gap: 2px; }
+  .scale-label  { font-size: 6px; }
+  .scale-track  { height: 9px; }
+  .trend-arrow  { font-size: 11px; }
+
   #interest-widget {
-    width: 108px;
-    height: 93px;
-    left: calc(2% + 130px);
+    width: 84px;
+    height: 72px;
+    left: calc(15% + 100px);
   }
 
   #clock {
@@ -2185,15 +2196,15 @@ body.augen-brennen #bottom-ui {
     letter-spacing: 2px;
   }
 
-  #row-haupt    { top: 11px; }
-  #row-hoch     { top: 33px; }
-  #row-gering-1 { top: 55px; }
-  #row-gering-2 { top: 74px; }
+  #row-haupt    { top: 8px; }
+  #row-hoch     { top: 25px; }
+  #row-gering-1 { top: 42px; }
+  #row-gering-2 { top: 57px; }
 
-  #row-haupt .interest-icon  { font-size: 15px; }
-  #row-hoch .interest-icon   { font-size: 13px; }
+  #row-haupt .interest-icon  { font-size: 13px; }
+  #row-hoch .interest-icon   { font-size: 11px; }
   #row-gering-1 .interest-icon,
-  #row-gering-2 .interest-icon { font-size: 11px; }
+  #row-gering-2 .interest-icon { font-size: 10px; }
 
   .scale-label {
     font-size: 8px;
@@ -2548,4 +2559,100 @@ body.augen-brennen #bottom-ui {
   .alg-result-body { grid-template-columns: 1fr; }
   .alg-result-left { border-right: none; }
   .alg-result-buttons { flex-direction: column; }
+}
+
+/* ════════════════════════════════════════════════
+   RESPONSIVE — Handy Hochformat (≤ 500px breit)
+   Betrifft: Telefone (iPhone 390–430px)
+   Nicht betrifft: Tablets (iPad min. 768px), Desktop, Querformat
+════════════════════════════════════════════════ */
+@media (orientation: portrait) and (max-width: 500px) {
+
+  /* 1. Basiswerte + Dreieck: über das Raumbild in die leere Deckenfläche heben */
+  #values-widget {
+    width: 130px;
+    gap: 6px;
+    bottom: calc(100% + 10px); /* hebt den Widget über den oberen Rand von .image-wrapper */
+  }
+
+  #interest-widget {
+    width: 108px;
+    height: 93px;
+    transform: scale(1);
+    bottom: calc(100% + 10px);
+    left: calc(15% + 142px);
+  }
+  #row-haupt    { top: 11px; }
+  #row-hoch     { top: 33px; }
+  #row-gering-1 { top: 55px; }
+  #row-gering-2 { top: 74px; }
+  #row-haupt    .interest-icon { font-size: 15px; }
+  #row-hoch     .interest-icon { font-size: 13px; }
+  #row-gering-1 .interest-icon,
+  #row-gering-2 .interest-icon { font-size: 11px; }
+
+  /* 2. Bottom-UI: zwei Reihen via flex-wrap */
+  #bottom-ui {
+    flex-wrap: wrap;
+    align-items: stretch;
+    padding: 4px;
+    gap: 0;
+  }
+
+  /* Reihe 1 links: Score + Kreatur — flex-grow/shrink damit immer eine Zeile */
+  #event-panel {
+    flex: 1 1 35%;
+    min-width: 100px;
+    order: 1;
+    height: 130px;
+  }
+
+  /* Reihe 1 rechts: Feed — flex-grow/shrink damit immer eine Zeile */
+  #feed-panel {
+    flex: 2 1 55%;
+    min-width: 160px;
+    order: 2;
+    flex-direction: column;
+    padding: 6px;
+    height: 130px;
+  }
+
+  /* Reihe 2: Handkarten volle Breite */
+  #hand-area {
+    flex: 0 0 100%;
+    order: 3;
+    padding: 8px;
+    justify-content: center;
+    height: 130px;
+  }
+
+  /* 3. Monster/Kreatur-Widget kompakter damit es in die 130px-Box passt */
+  #event-panel { overflow: hidden; }
+  #score-panel { padding: 6px 10px 3px; gap: 3px; }
+  #alg-creature-widget { padding: 3px 6px 4px; gap: 2px; }
+  #alg-creature-widget #eggVisual { height: 46px !important; }
+
+  /* 4. Feed-Slots */
+  #feed { flex-direction: row; gap: 6px; }
+  .feed-slot { width: 71px; height: 100px; }
+
+  /* 4. Handkarten: alle 5 ohne Scroll */
+  .card { width: 70px; height: 96px; }
+  #hand {
+    gap: 6px;
+    flex-wrap: nowrap;
+    justify-content: center;
+    overflow: visible;
+  }
+
+  /* 5. cqw-Overrides (bei 390px-Container wären diese ~5-8px) */
+  #clock         { font-size: 16px; padding: 2px 6px; }
+  #notif-badge   { font-size: 12px; }
+  #event-overlay { font-size: 12px; max-width: 200px; }
+
+  /* 6. Kleinere Anpassungen */
+  .scale-label   { font-size: 10px; }
+  .scale-track   { height: 14px; }
+  #window-status { margin-bottom: 4px; }
+  .window-label  { font-size: 9px; }
 }
