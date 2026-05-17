@@ -1,3 +1,6 @@
+ToDo:
+
+
 Spiel 1: 10 Finger blind schreiben
 Spielperson tippt kurze Sätze nach, die ggf. schwieriger werden. 
 5 Sätze je 2 Punkte einen für Geschwindigkeit und einen für die Richtigkeit. 

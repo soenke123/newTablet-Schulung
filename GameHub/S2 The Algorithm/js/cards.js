@@ -482,20 +482,20 @@ function playCard(cardId) {
   if (card.effekt?.swapHand) {
     gameState.hand = [];
     drawHand();
-    return;
+    return true;
   }
 
   if (card.effekt?.feedReset) {
     gameState.feedSlots = [null, null, null];
     gameState.freeCardPlays = 3;
     drawHand();
-    return;
+    return true;
   }
 
   if (card.effekt?.eventSkip) {
     if (gameState.activeEvent) endActiveEvent();
     drawHand();
-    return;
+    return true;
   }
 
   if (card.effekt?.feedCopy) {
@@ -505,7 +505,7 @@ function playCard(cardId) {
       drawHand();
     }
     renderFeed();
-    return;
+    return true;
   }
 
   if (card.fähigkeit?.typ === 'notification') {
@@ -533,4 +533,5 @@ function playCard(cardId) {
   }
 
   drawHand();
+  return true;
 }

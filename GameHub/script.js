@@ -31,12 +31,12 @@ function getGameAccess(gameId) {
    ───────────────────────────────────────────────── */
 // Atari4 · Enter 9-0-4-3
 const GAMES_CONFIG = [
-  { id: 'game7', season: 1, title: 'Escape Game',      icon: '🔐', url: 'S1 EscapeGame/index.html'       },
+  { id: 'game7', season: 1, title: 'Escape the Rules', icon: '🔐', url: 'S1 EscapeGame/index.html'       },
   { id: 'game3', season: 1, title: 'Daten-Quiz',       icon: '📁', url: 'S1 DateiformatQuiz/index.html'  },
   { id: 'game8', season: 1, title: 'Projekt_FINAL_v7_NEU',  icon: '🗂️', url: 'S1 Projekt_FINAL_v7_NEU/index.html'       },
   { id: 'game9',  season: 2, title: 'Fokusflow',        icon: '🎯', url: 'S2 Fokusflow/index.html'             },
   { id: 'game10', season: 2, title: 'The Algorithm',    icon: '⚙️', url: 'S2 The Algorithm/index.html'        },
-  { id: 'game11', season: 2, title: '10-Finger-Tippen', icon: '⌨️', url: 'S2 10finger Blindschreiben/index.html' },
+  { id: 'game11', season: 2, title: 'Tip Turbo Kids',   icon: '⌨️', url: 'S2 10finger Blindschreiben/index.html' },
   { id: 'game12', season: 3, title: 'Quellen-Tinder',  icon: '🃏', url: 'S3 Quellen Tinder/index.html' },
   { id: 'game13', season: 3, title: 'KI 1',            icon: '🤖', url: 'S3 KI1/index.html'           },
   { id: 'game14', season: 3, title: 'KI 2',            icon: '🧠', url: 'S3 KI2/index.html'           },
@@ -44,7 +44,7 @@ const GAMES_CONFIG = [
 
 const SEASONS_CONFIG = [
   { id: 1, title: 'Season 1 – Regeln, Ordnung, Dateien',      desc: 'Diese Season knüpft an die Inhalte der ersten Tablet-Schulung an und bringt dein Wissen auf das nächste Level. In drei spannenden Spielen sicherst und vertiefst du wichtige Grundlagen rund um die Tabletnutzung – von unseren Hausregeln über Dateiformate bis hin zur richtigen Struktur auf deinem Gerät. So wirst du Schritt für Schritt sicherer und schneller im Umgang mit deinem Tablet.' },
-  { id: 2, title: 'Season 2 – Aufmerksamkeit und Schreiben', desc: 'Deine Aufmerksamkeit ist eine deiner wichtigsten Ressourcen – deshalb lohnt es sich, bewusst mit ihr umzugehen. Diese Season baut auf den Inhalten eines Workshops aus der ersten Schulung. In zwei Aufmerksamkeitsspielen geht es um Fokus und das Binden von Aufmerksamkeit. Außerdem tauchst du in das 10-Finger-Blindschreiben ein: Vielleicht nicht die wichtigste Methode zum Lernen, aber eine Fähigkeit, die dir das Schreiben längerer Texte enorm erleichtert und im Schulalltag wie auch später im Berufsleben unverzichtbar ist.' },
+  { id: 2, title: 'Season 2 – Aufmerksamkeit und Schreiben', desc: 'Deine Aufmerksamkeit ist eine deiner wichtigsten Ressourcen – deshalb lohnt es sich, bewusst mit ihr umzugehen. Diese Season baut auf den Inhalten eines Workshops aus der ersten Schulung. In zwei Aufmerksamkeitsspielen geht es um Fokus und das Binden von Aufmerksamkeit. Außerdem tauchst du mit Tip Turbo Kids in das 10-Finger-Blindschreiben ein: Vielleicht nicht die wichtigste Methode zum Lernen, aber eine Fähigkeit, die dir das Schreiben längerer Texte enorm erleichtert und im Schulalltag wie auch später im Berufsleben unverzichtbar ist.' },
   { id: 3, title: 'Season 3 – KI und Recherche',     desc: 'coming soon' },
 ];
 

@@ -4,13 +4,13 @@ GAME_ACCESS = {
   // Season 1
   game1:  { status: 'locked' },            // Finde Grün
   game3:  { status: 'available'}, // Daten-Quiz
-  game7:  { status: 'locked' },            // Escape Game
+  game7:  { status: 'available' },            // Escape Game
   game8:  { status: 'available'},      // Projekt_FINAL_v7_Neu
   // Season 2
   game5:  { status: 'available' },               // Finde Gelb
   game9:  { status: 'available' },     // Fokusflow
   game10: { status: 'available'},     // The Algorithm
-  game11: { status: 'password', password: 'qweasdyxc' },     // 10-Finger-Tippen
+  game11: { status: 'password', password: 'qweasdyxc' },     // Tip Turbo Kids
   // Season 3
   game6:  { status: 'available' },               // Finde nicht Grün
   game12: { status: 'locked' },               // Quellen-Tinder
@@ -29,7 +29,7 @@ GAME_ACCESS = {
   game5:  { status: 'available' },               // Finde Gelb
   game9:  { status: 'password', password: 'Aufmerksamkeitsbingo' },     // Fokusflow
   game10: { status: 'password', password: 'Aufmerksamkeitsbingo' },     // The Algorithm
-  game11: { status: 'password', password: 'qweasdyxc' },     // 10-Finger-Tippen
+  game11: { status: 'password', password: 'qweasdyxc' },     // Tip Turbo Kids
   // Season 3
   game6:  { status: 'available' },               // Finde nicht Grün
   game12: { status: 'locked' },               // Quellen-Tinder

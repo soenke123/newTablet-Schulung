@@ -1,39 +1,1130 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Schulungsspiel</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tip Turbo Kids</title>
 
   <style>
-    body {
-      margin: 0;
-      height: 100vh;
+    *{
+      box-sizing:border-box;
+      margin:0;
+      padding:0;
+      font-family:Arial, Helvetica, sans-serif;
+    }
+
+    body{
+      background:linear-gradient(180deg,#87cefa,#dff6ff);
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:20px;
+    }
+
+    .game{
+      width:900px;
+      max-width:100%;
+      background:white;
+      border-radius:25px;
+      padding:25px;
+      box-shadow:0 10px 25px rgba(0,0,0,0.15);
+      text-align:center;
+      position:relative;
+    }
+
+    h1{
+      color:#ff6b6b;
+      margin-bottom:10px;
+      font-size:2.5rem;
+    }
+
+    .subtitle{
+      color:#555;
+      margin-bottom:20px;
+    }
+
+    .stats{
+      display:flex;
+      justify-content:center;
+      gap:20px;
+      flex-wrap:wrap;
+      margin-bottom:20px;
+    }
+
+    .stat{
+      background:#f1f9ff;
+      padding:12px 18px;
+      border-radius:15px;
+      font-weight:bold;
+      color:#333;
+      min-width:120px;
+      transition: background 0.4s, box-shadow 0.4s, color 0.4s;
+    }
+
+    /* ── Combo fire stage 1 (≥3) ── */
+    .stat.combo-warm {
+      background: #fff8f0;
+      border: 2px solid rgba(255,150,50,0.5);
+      animation: hotPulse 1.8s ease-in-out infinite alternate;
+    }
+
+    /* ── Combo fire stage 2 (≥5) ── */
+    .stat.combo-fire {
+      background: #fff3f0;
+      border: 2px solid rgba(255,80,0,0.55);
+      animation: firePulse 1.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes hotPulse {
+      from { border-color: rgba(255,150,50,0.25); }
+      to   { border-color: rgba(255,150,50,0.65); }
+    }
+    @keyframes firePulse {
+      from { border-color: rgba(255,80,0,0.3); }
+      to   { border-color: rgba(255,80,0,0.75); }
+    }
+
+    /* ── Timer danger (last 5 s) ── */
+    .stat.time-danger {
+      background: #fff0f3;
+      color: #ef476f;
+      animation: timeBlink 0.55s ease-in-out infinite alternate;
+    }
+    @keyframes timeBlink {
+      from { background: #fff0f3; box-shadow: none; }
+      to   { background: #ffe0e7; box-shadow: 0 0 10px rgba(239,71,111,0.3); }
+    }
+
+    /* ── Word box ── */
+    .word-box{
+      background:#fff8dc;
+      border:4px dashed #ffd166;
+      border-radius:20px;
+      padding:30px;
+      margin-bottom:20px;
+      position: relative;
+      overflow: visible;
+    }
+
+    .word{
+      font-size:3rem;
+      color:#118ab2;
+      font-weight:bold;
+      letter-spacing:3px;
+      word-break:break-word;
+    }
+
+    /* ── Caps badge (right side of word box) ── */
+    .caps-badge {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%) scale(0);
+      background: linear-gradient(135deg, #06d6a0, #00b894);
+      color: white;
+      border-radius: 14px;
+      padding: 9px 15px;
+      font-weight: bold;
+      font-size: 0.88rem;
+      text-align: center;
+      opacity: 0;
+      white-space: nowrap;
+      box-shadow: 0 4px 18px rgba(6,214,160,0.55);
+      pointer-events: none;
+      line-height: 1.3;
+    }
+    .caps-badge .caps-pts {
+      display: block;
+      font-size: 1.15rem;
+      font-weight: 900;
+    }
+    .caps-badge.flash {
+      animation: capsPop 1.3s ease-out forwards;
+    }
+    @keyframes capsPop {
+      0%  { transform: translateY(-50%) scale(0);    opacity: 0; }
+      14% { transform: translateY(-50%) scale(1.3);  opacity: 1; }
+      28% { transform: translateY(-50%) scale(1);    opacity: 1; }
+      72% { transform: translateY(-50%) scale(1);    opacity: 1; }
+      100%{ transform: translateY(-68%) scale(0.75); opacity: 0; }
+    }
+
+    /* ── Floating score popup ── */
+    .score-popup {
+      position: fixed;
+      font-size: 1.75rem;
+      font-weight: 900;
+      pointer-events: none;
+      z-index: 1000;
+      transform: translateX(-50%);
+      animation: floatUp 0.95s ease-out forwards;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    }
+    @keyframes floatUp {
+      0%   { opacity: 1; transform: translateX(-50%) translateY(0px);  }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-80px); }
+    }
+
+    /* ── Level banner ── */
+    #levelBanner {
+      position: absolute;
+      bottom: 195px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 800;
+      pointer-events: none;
+      visibility: hidden;
+      white-space: nowrap;
+    }
+    #levelBanner.show { visibility: visible; }
+
+    .level-banner-inner {
+      background: linear-gradient(135deg, #ffd166 0%, #ff9f43 50%, #ff6b6b 100%);
+      border-radius: 22px;
+      padding: 22px 48px;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(255,215,0,0.65), 0 0 20px rgba(255,165,0,0.45), 0 12px 35px rgba(0,0,0,0.25);
+      border: 3px solid rgba(255,255,255,0.45);
+      transform: scale(0);
+    }
+    #levelBanner.show .level-banner-inner {
+      animation: levelPop 2.0s ease forwards;
+    }
+    @keyframes levelPop {
+      0%  { transform: scale(0)    rotate(-8deg);  opacity: 0; }
+      15% { transform: scale(1.2)  rotate(3deg);   opacity: 1; }
+      27% { transform: scale(0.97) rotate(-1deg);  opacity: 1; }
+      35% { transform: scale(1)    rotate(0deg);   opacity: 1; }
+      72% { transform: scale(1)    rotate(0deg);   opacity: 1; }
+      88% { transform: scale(1.04) rotate(1.5deg); opacity: 1; }
+      100%{ transform: scale(0)    rotate(5deg);   opacity: 0; }
+    }
+    .level-banner-emoji  { font-size: 2.4rem; line-height: 1; margin-bottom: 5px; }
+    .level-banner-title  { font-size: 2.8rem; font-weight: 900; color: white; text-shadow: 0 3px 14px rgba(0,0,0,0.28); letter-spacing: 3px; }
+    .level-banner-sub    { font-size: 1.05rem; color: rgba(255,255,255,0.95); margin-top: 6px; font-weight: bold; }
+
+    /* ── End screen ── */
+    #endScreen {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
       display: flex;
       justify-content: center;
       align-items: center;
-      background-color: #f4f4f4;
-      font-family: Arial, sans-serif;
+      z-index: 900;
+      padding: 20px;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.35s;
     }
-
-    h1 {
-      font-size: 3rem;
+    #endScreen.show {
+      visibility: visible;
+      opacity: 1;
+    }
+    .end-box {
+      background: white;
+      border-radius: 28px;
+      padding: 38px 45px 32px;
       text-align: center;
-      color: #333;
-      font-weight: normal;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      max-width: 480px;
+      width: 100%;
+      animation: endPop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+    @keyframes endPop {
+      from { transform: scale(0.75); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
     }
 
-    span {
+    .end-emoji { font-size: 3.5rem; line-height: 1; margin-bottom: 6px; }
+
+    .end-title {
+      font-size: 1.6rem;
+      color: #555;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+
+    .end-score-wrap {
+      margin-bottom: 10px;
+    }
+    .end-score-number {
+      font-size: 5rem;
+      font-weight: 900;
+      color: #ff6b6b;
+      line-height: 1;
+    }
+    .end-score-label {
+      font-size: 1rem;
+      color: #aaa;
+      margin-top: 2px;
+    }
+
+    .end-hs {
+      font-size: 1rem;
+      color: #888;
+      margin: 8px 0 6px;
+    }
+    .end-hs strong { color: #ff9f43; }
+
+    .new-record {
+      display: inline-block;
+      background: linear-gradient(135deg, #ffd166, #ff9f43);
+      color: white;
+      border-radius: 12px;
+      padding: 6px 20px;
+      font-weight: 900;
+      font-size: 1.1rem;
+      margin: 6px 0 4px;
+      animation: recordPop 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes recordPop {
+      from { transform: scale(0.7); }
+      to   { transform: scale(1); }
+    }
+
+    .end-stats {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 18px 0 22px;
+      flex-wrap: wrap;
+    }
+    .end-stat {
+      background: #f1f9ff;
+      border-radius: 14px;
+      padding: 14px 16px;
+      flex: 1;
+      min-width: 95px;
+    }
+    .end-stat-val {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #118ab2;
+      line-height: 1;
+    }
+    .end-stat-label {
+      font-size: 0.75rem;
+      color: #777;
+      margin-top: 5px;
+    }
+
+    #playAgainBtn {
+      background: #06d6a0;
+      font-size: 1.15rem;
+      padding: 14px 36px;
+      border-radius: 16px;
+      border: none;
+      color: white;
+      font-weight: 900;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    #playAgainBtn:hover {
+      background: #05b384;
+      transform: scale(1.05);
+    }
+
+    /* ── Input ── */
+    .input-area{ margin-bottom:20px; }
+    input{
+      width:100%;
+      padding:18px;
+      font-size:16px;
+      border-radius:15px;
+      border:3px solid #90e0ef;
+      outline:none;
+      text-align:center;
+    }
+    input:focus{
+      border-color:#00b4d8;
+      box-shadow:0 0 10px rgba(0,180,216,0.4);
+    }
+
+    .message{
+      font-size:1.4rem;
+      min-height:40px;
+      margin:10px 0;
+      font-weight:bold;
+    }
+    .correct{ color:#06d6a0; }
+    .wrong{ color:#ef476f; }
+
+    /* ── Restart button (subtle, at the bottom) ── */
+    #restartBtn {
+      background: transparent;
+      border: 2px solid #ddd;
+      color: #aaa;
+      padding: 7px 20px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: normal;
+      cursor: pointer;
+      transition: 0.2s;
+      margin-top: 14px;
+    }
+    #restartBtn:hover {
+      background: #f5f5f5;
+      color: #666;
+      border-color: #bbb;
+      transform: none;
+    }
+
+    .keyboard{
+      margin-top:20px;
+      display:grid;
+      gap:8px;
+    }
+    .row{
+      display:flex;
+      justify-content:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .key{
+      width:45px;
+      height:45px;
+      background:#caf0f8;
+      border-radius:10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:bold;
+      color:#023047;
+      transition:0.15s;
+    }
+    .active{
+      background:#06d6a0;
+      color:white;
+      transform:translateY(-3px);
+    }
+    .space-key{
+      width:200px;
+      height:45px;
+      font-size:0.8rem;
+    }
+    .word.sentence{
+      font-size:1.8rem;
+      letter-spacing:1px;
+    }
+
+    .footer{
+      margin-top:16px;
+      color:#bbb;
+      font-size:0.85rem;
+    }
+
+    /* ── Companion box (Start- & End-Screen) ── */
+    .companion-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin: 0 auto 14px;
+      min-height: 80px;
+    }
+    .companion-box .creature-img,
+    .end-creature .creature-img { width: 80px; height: 80px; object-fit: contain; }
+    .companion-box svg, .end-creature svg { width: 60px; height: 70px; }
+    .companion-label { font-size: 0.82rem; color: #666; font-weight: bold; }
+    .end-creature {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      margin: 10px 0 6px;
+      font-size: 0.88rem;
+      color: #555;
       font-weight: bold;
     }
+
+    /* ── Hub button ── */
+    .btn--hub {
+      display: block;
+      background: #118ab2;
+      color: white;
+      border-radius: 16px;
+      padding: 13px 24px;
+      font-size: 1rem;
+      font-weight: 900;
+      text-decoration: none;
+      text-align: center;
+      transition: 0.2s;
+      margin-top: 10px;
+    }
+    .btn--hub:hover { background: #0d7094; transform: scale(1.03); }
+
+    /* ── Tablet ── */
+    @media (max-width: 1024px){
+      .game{ padding:20px; }
+      h1{ font-size:2.2rem; }
+      .word{ font-size:2.5rem; }
+      .key{ width:40px; height:40px; }
+    }
+
+    /* ── Nav: Zurück zum Hub ── */
+    .nav-hub-btn {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      background: rgba(255,255,255,0.92);
+      color: #118ab2;
+      border: 2px solid #118ab2;
+      border-radius: 12px;
+      padding: 7px 15px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      text-decoration: none;
+      z-index: 100;
+      backdrop-filter: blur(4px);
+      transition: 0.2s;
+    }
+    .nav-hub-btn:hover { background: #118ab2; color: white; }
+
+    /* ── Game header (Titel + Begleiter nebeneinander) ── */
+    .game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .game-header-text { flex: 1; text-align: center; }
+    .game-header-text h1 { margin-bottom: 4px; }
+    .game-companion {
+      flex: 0 0 72px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .game-companion .creature-img { width: 60px; height: 60px; object-fit: contain; }
+    .game-companion svg           { width: 48px; height: 56px; }
+    .game-companion-label { font-size: 0.68rem; color: #888; font-weight: bold; text-align: center; line-height: 1.2; }
+    .game-companion-icon  { font-size: 1.3rem; line-height: 1; margin-bottom: 1px; }
+    .end-item-btn-wrap    { display: flex; justify-content: flex-end; margin: 2px 0 6px; }
+
+    /* ── Start screen ── */
+    .start-screen{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.55);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index:999;
+      padding:20px;
+    }
+    .start-box{
+      background:white;
+      max-width:760px;
+      width:100%;
+      border-radius:25px;
+      padding:35px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.2);
+      animation:popup 0.3s ease;
+    }
+    /* ── Zwei Spalten im Start-Screen ── */
+    .start-columns {
+      display: flex;
+      gap: 28px;
+      align-items: flex-start;
+    }
+    .start-col-left {
+      flex: 0 0 140px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding-top: 6px;
+    }
+    .start-col-right { flex: 1; }
+    .start-col-right h2 { color:#118ab2; margin-bottom:16px; }
+    .start-col-right p  { margin-bottom:12px; color:#444; line-height:1.5; }
+    .start-col-right img { max-width:100%; border-radius:10px; margin-bottom:12px; }
+    #startBtn{
+      background:#ffb703;
+      border:none;
+      padding:14px 32px;
+      border-radius:15px;
+      font-size:1.1rem;
+      font-weight:bold;
+      color:white;
+      cursor:pointer;
+      margin-top:10px;
+      transition:0.2s;
+      width: 100%;
+    }
+    #startBtn:hover{ background:#fb8500; transform:scale(1.05); }
+    @keyframes popup{
+      from{ transform:scale(0.8); opacity:0; }
+      to{ transform:scale(1); opacity:1; }
+    }
+    @media (max-width:600px) {
+      .start-columns { flex-direction: column; align-items: center; }
+      .start-col-left { flex: none; }
+    }
+
   </style>
 </head>
+
 <body>
 
-  <h1>
-    Ich bin ein Schulungsspiel<br>
-    und heiße: <span>"10 Finger"</span>
-  </h1>
+<a href="../index.html" class="nav-hub-btn">← Hub</a>
+
+<!-- ── Intro screen ── -->
+<div id="startScreen" class="start-screen">
+  <div class="start-box">
+    <div class="start-columns">
+      <div class="start-col-left">
+        <div class="companion-box" id="startCompanion"></div>
+      </div>
+      <div class="start-col-right">
+        <h2>⌨️ Warum 10-Finger-Tippen?</h2>
+        <p>Anders als auf dem Smartphone bietet es sich beim Tablet oder dem PC an, mit zehn Fingern zu schreiben.</p>
+        <p>Das erhöht die Geschwindigkeit beim Produzieren von Text enorm und macht das Arbeiten effizienter.</p>
+        <p>Daher ist das Erlernen des 10-Finger-Tippens sehr empfehlenswert!</p>
+        <p>Die Grundpositionierung für die Finger könnt ihr dem unterem Bild entnehmen:</p>
+        <img src="basic-position.png">
+        <p>Nehmt euch beim Schreiben der Wörter Zeit und versucht mit den 10 Fingern zu tippen.</p>
+        <p>Je besser ihr das 10-Finger-Tippen beherrscht, umso mehr Punkte werdet ihr machen können.</p>
+        <button id="startBtn">🚀 Spiel starten</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Level-up banner ── -->
+<div id="levelBanner">
+  <div class="level-banner-inner">
+    <div class="level-banner-emoji">🏆</div>
+    <div id="levelBannerTitle" class="level-banner-title">LEVEL 2!</div>
+    <div id="levelBannerSub"   class="level-banner-sub">Schwere Wörter! +30s ⏱</div>
+  </div>
+</div>
+
+<!-- ── End screen ── -->
+<div id="endScreen">
+  <div class="end-box">
+    <div class="end-emoji">🏁</div>
+    <div class="end-title">Spiel vorbei!</div>
+
+    <div class="end-score-wrap">
+      <div class="end-score-number" id="endScore">0</div>
+      <div class="end-score-label">Punkte</div>
+    </div>
+
+    <div class="end-hs">🏆 Highscore: <strong id="endHsVal">0</strong></div>
+    <div class="new-record" id="newRecord" style="display:none;">🎉 NEUER REKORD!</div>
+
+    <div id="endCreatureWrap" class="end-creature"></div>
+    <div id="coinBankContainer"></div>
+
+    <div class="end-stats">
+      <div class="end-stat">
+        <div class="end-stat-val" id="endWords">0</div>
+        <div class="end-stat-label">✅ Richtige Wörter</div>
+      </div>
+      <div class="end-stat">
+        <div class="end-stat-val" id="endChars">0</div>
+        <div class="end-stat-label">⌨️ Getippte Zeichen</div>
+      </div>
+      <div class="end-stat">
+        <div class="end-stat-val" id="endMaxCombo">0</div>
+        <div class="end-stat-label">🔥 Längste Serie</div>
+      </div>
+    </div>
+
+    <div class="result-play-row">
+      <button id="playAgainBtn">🔄 Nochmal!</button>
+      <div id="resultItemBtnWrap"></div>
+    </div>
+    <a href="../index.html" class="btn--hub">🏠 Zum Hub</a>
+  </div>
+</div>
+
+<!-- ── Game ── -->
+<div class="game">
+
+  <div class="game-header">
+    <div class="game-header-text">
+      <h1>Tip Turbo Kids</h1>
+      <p class="subtitle">Trainiere spielerisch das 10-Finger-Tippen!</p>
+    </div>
+    <div id="gameCompanion" class="game-companion"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">⭐ Punkte: <span id="score">0</span></div>
+    <div class="stat" id="comboStat">
+      <span class="combo-icon">⭐</span> Serie: <span id="combo">0</span>
+    </div>
+    <div class="stat" id="timeStat">⏱ Zeit: <span id="time">60</span>s</div>
+  </div>
+
+  <div id="boostIndicators" class="boost-bar"></div>
+
+  <div class="word-box">
+    <div class="word" id="word">hallo</div>
+    <div class="caps-badge" id="capsBadge">
+      ✓ Groß!
+      <span class="caps-pts">+5</span>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <input type="text" id="input"
+      placeholder="Tippe das Wort hier..."
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"/>
+  </div>
+
+  <div class="message" id="message"></div>
+
+  <div class="keyboard">
+    <div class="row">
+      <div class="key">Q</div><div class="key">W</div><div class="key">E</div><div class="key">R</div><div class="key">T</div><div class="key">Y</div><div class="key">U</div><div class="key">I</div><div class="key">O</div><div class="key">P</div>
+    </div>
+    <div class="row">
+      <div class="key">A</div><div class="key">S</div><div class="key">D</div><div class="key">F</div><div class="key">G</div><div class="key">H</div><div class="key">J</div><div class="key">K</div><div class="key">L</div>
+    </div>
+    <div class="row">
+      <div class="key">Z</div><div class="key">X</div><div class="key">C</div><div class="key">V</div><div class="key">B</div><div class="key">N</div><div class="key">M</div>
+    </div>
+    <div class="row">
+      <div class="key space-key">Leertaste</div>
+    </div>
+  </div>
+
+  <div class="footer">🎯 Tipp schnell und fehlerfrei!</div>
+
+  <button id="restartBtn">🔄 Neu starten</button>
+
+</div>
+
+<script>
+  const words  = ["Hallo","Katze","Sonne","Schule","Rakete","Banane","Tiger","Roboter","Zauber","Insel","Apfel","Baum","Mond","Stern","Vogel","Feuer","Wasser","Blume","Brücke","Schere","Fenster","Lampe","Hund","Pizza","Roller","Garten","Kiste"];
+  const words2 = ["Informatik","Raketenantrieb","Hundesitter","Unterrichtsstunde","Basketball","Schmetterling","Bibliothek","Computerspiel","Klassenzimmer","Taschenrechner","Schulranzen","Straßenbahn","Geburtstag","Sonnenbrille","Hausaufgaben","Fußballspieler","Zimmerpflanze","Druckerpatronen"];
+  const words3 = [
+    "Der Drache frisst meine Hausaufgaben.",
+    "Mein Lehrer trägt einen Raketenrucksack.",
+    "Die Schnecke tippt schneller als ich.",
+    "Der Roboter hat meine Socken geklaut.",
+    "Ein Pinguin surft im Internet.",
+    "Meine Katze hat das Tablet gefressen.",
+    "Das Einhorn schreibt mit zehn Fingern.",
+    "Mein Hamster spielt nachts Gitarre.",
+    "Der Zombie mag keine Mathematik.",
+    "Der Computer lacht über meine Tippfehler.",
+    "Der Elefant vergisst sein Passwort immer.",
+    "Meine Oma surft auf einem Skateboard.",
+    "Das Krokodil hat mein Frühstück aufgegessen.",
+    "Der Weihnachtsmann tippt mit Handschuhen.",
+    "Der Zauberer hat sein Tablet verzaubert."
+  ];
+
+  const wordElement  = document.getElementById("word");
+  const inputEl      = document.getElementById("input");
+  const message      = document.getElementById("message");
+  const scoreElement = document.getElementById("score");
+  const comboElement = document.getElementById("combo");
+  const timeElement  = document.getElementById("time");
+  const restartBtn   = document.getElementById("restartBtn");
+  const startScreen  = document.getElementById("startScreen");
+  const startBtn     = document.getElementById("startBtn");
+  const comboStatEl  = document.getElementById("comboStat");
+  const comboIconEl  = comboStatEl.querySelector(".combo-icon");
+  const capsBadge    = document.getElementById("capsBadge");
+  const levelBanner  = document.getElementById("levelBanner");
+  const wordBox      = document.querySelector(".word-box");
+  const endScreen    = document.getElementById("endScreen");
+  const playAgainBtn = document.getElementById("playAgainBtn");
+  const timeStatEl   = document.getElementById("timeStat");
+
+  const HS_KEY = "tippturbo_hs";
+
+  let currentWord    = "";
+  let score          = 0;
+  let combo          = 0;
+  let maxCombo       = 0;
+  let prevInputLen   = 0;
+  let totalWords = 0;
+  let totalChars = 0;
+  let time       = 60;
+  let gameRunning = false;
+  let timer;
+  let level = 0;
+  let sessionBaseData  = null;
+  let lastShownStage   = -1;
+
+  /* ── Highscore ── */
+  function loadHs() { return parseInt(localStorage.getItem(HS_KEY) || "0", 10); }
+  function saveHs(s) { localStorage.setItem(HS_KEY, s); }
+
+  /* ── Visual helpers ── */
+  function updateComboFire() {
+    comboStatEl.classList.remove("combo-warm", "combo-fire");
+    if (combo >= 5) {
+      comboStatEl.classList.add("combo-fire");
+      comboIconEl.textContent = "🔥🔥";
+    } else if (combo >= 3) {
+      comboStatEl.classList.add("combo-warm");
+      comboIconEl.textContent = "🔥";
+    } else {
+      comboIconEl.textContent = "⭐";
+    }
+  }
+
+  function showCapsBadge() {
+    capsBadge.classList.remove("flash");
+    void capsBadge.offsetWidth;
+    capsBadge.classList.add("flash");
+  }
+
+  function showScorePopup(text, color, fromEl) {
+    const rect  = fromEl.getBoundingClientRect();
+    const popup = document.createElement("div");
+    popup.className   = "score-popup";
+    popup.textContent = text;
+    popup.style.color = color;
+    popup.style.left  = (rect.left + rect.width  / 2) + "px";
+    popup.style.top   = (rect.top  + rect.height / 2) + "px";
+    document.body.appendChild(popup);
+    popup.addEventListener("animationend", () => popup.remove());
+  }
+
+  function showLevelBanner(levelNum, sub) {
+    document.getElementById("levelBannerTitle").textContent = "LEVEL " + levelNum + "!";
+    document.getElementById("levelBannerSub").textContent   = sub + " — +30s ⏱";
+    levelBanner.classList.add("show");
+    setTimeout(() => levelBanner.classList.remove("show"), 2080);
+  }
+
+  /* ── Coin-Formel: < 100 Pkt → 0, > 550 Pkt → 10, dazwischen linear ── */
+  function calcCoins(rawScore) {
+    if (rawScore < 100) return 0;
+    if (rawScore >= 550) return 10;
+    return Math.round((rawScore - 100) / 450 * 10);
+  }
+
+  /* ── Begleiter-HTML für den Game-Header ── */
+  function buildGameCompanionHTML(data) {
+    if (data.creature) {
+      const stage = getGrowthStage(data.growth);
+      return getCreatureHTML(data.creature, stage) +
+        '<span class="game-companion-label">' + CREATURE_NAMES[data.creature] + ' · ' + GROWTH_LABELS[stage] + '</span>';
+    }
+    return getEggSVG(0) + '<span class="game-companion-label">Dein Begleiter!</span>';
+  }
+
+  /* ── Begleiter im Game-Header live aktualisieren (optional: Animation) ── */
+  function refreshGameCompanion(animate, isFinal) {
+    const data = getGameData('game11');
+    const el   = document.getElementById('gameCompanion');
+    if (!el) return;
+    el.innerHTML = buildGameCompanionHTML(data);
+    if (animate) triggerCreatureLevelUp(!!isFinal, 'gameCompanion');
+  }
+
+  /* ── Begleiter live während des Spiels aktualisieren ── */
+  function updateLiveCompanion() {
+    if (!sessionBaseData || !gameRunning) return;
+    const el = document.getElementById('gameCompanion');
+    if (!el) return;
+
+    const normalizedNow = Math.min(10, Math.round(score / 55));
+
+    if (!sessionBaseData.creature) {
+      /* Noch kein Tier: Ei zeigen, Risse wachsen mit Score */
+      const crack = crackStageFromCorrect(normalizedNow);
+      if (crack !== lastShownStage) {
+        lastShownStage = crack;
+        el.innerHTML = getEggSVG(crack) +
+          '<span class="game-companion-label">Dein Begleiter!</span>';
+      }
+      return;
+    }
+
+    /* Tier vorhanden: voraussichtliche Wachstumsstufe anzeigen */
+    const projectedGrowth = Math.min(sessionBaseData.growth + normalizedNow, GROWTH_MAX);
+    const projectedStage  = getGrowthStage(projectedGrowth);
+
+    if (projectedStage > lastShownStage) {
+      lastShownStage = projectedStage;
+      el.innerHTML = getCreatureHTML(sessionBaseData.creature, projectedStage) +
+        '<span class="game-companion-label">' +
+        CREATURE_NAMES[sessionBaseData.creature] + ' · ' + GROWTH_LABELS[projectedStage] +
+        '</span>';
+      triggerCreatureLevelUp(projectedStage === GROWTH_STAGES - 1, 'gameCompanion');
+    }
+  }
+
+  /* ── Init: Start- & Game-Screen befüllen (nach creatures.js-Load) ── */
+  function initCompanion() {
+    const data = getGameData('game11');
+
+    const startWrap = document.getElementById('startCompanion');
+    if (startWrap) {
+      if (data.creature) {
+        const stage = getGrowthStage(data.growth);
+        startWrap.innerHTML = getCreatureHTML(data.creature, stage) +
+          '<span class="companion-label">' + CREATURE_NAMES[data.creature] + ' · ' + GROWTH_LABELS[stage] + '</span>';
+      } else {
+        startWrap.innerHTML = getEggSVG(0) + '<span class="companion-label">Dein Begleiter!</span>';
+      }
+    }
+
+    const gameWrap = document.getElementById('gameCompanion');
+    if (gameWrap) gameWrap.innerHTML = buildGameCompanionHTML(data);
+
+    renderBoostIndicators('boostIndicators');
+
+    /* sessionBaseData jetzt setzen – creatures.js ist geladen */
+    sessionBaseData = data;
+    lastShownStage  = data.creature ? getGrowthStage(data.growth) : -1;
+  }
+
+  function showEndScreen() {
+    const hs       = loadHs();
+    const isRecord = score > hs;
+    if (isRecord) saveHs(score);
+    const finalHs  = isRecord ? score : hs;
+
+    document.getElementById("endScore").textContent    = score;
+    document.getElementById("endHsVal").textContent    = finalHs;
+    document.getElementById("endWords").textContent    = totalWords;
+    document.getElementById("endChars").textContent    = totalChars;
+    document.getElementById("endMaxCombo").textContent = maxCombo;
+
+    const recEl = document.getElementById("newRecord");
+    recEl.style.display = isRecord ? "inline-block" : "none";
+
+    /* ── Hub-Integration ── */
+    const data     = getGameData('game11');
+    const isFirst  = !data.creature;
+    const oldStage = data.creature ? getGrowthStage(data.growth) : -1;
+    const normalized = Math.min(10, Math.round(score / 55));
+    const sd      = loadShopData();
+
+    if (isFirst) {
+      data.creature = sd.glucksklee
+        ? determineCreatureWithGlucksklee(normalized, 'game11')
+        : determineCreature(normalized, true, 'game11');
+      data.growth = 0;
+      if (sd.glucksklee) {
+        sd.glucksklee = false;
+        sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
+      }
+    } else {
+      let growthContrib = computeSessionGrowth(normalized, 10);
+      if (sd.wachstumsBooster) {
+        growthContrib *= 2;
+        sd.wachstumsBooster = false;
+        sd.wachstumsBoosterCount = Math.max(0, (sd.wachstumsBoosterCount || 0) - 1);
+      }
+      data.growth = Math.min(data.growth + growthContrib, GROWTH_MAX);
+    }
+
+    let coinsGained = 0;
+    if (!isFirst) {
+      coinsGained = calcCoins(score);
+      if (sd.coinsx3) {
+        coinsGained = Math.round(coinsGained * 3);
+        sd.coinsx3 = false;
+        sd.coinsx3Count = Math.max(0, (sd.coinsx3Count || 0) - 1);
+      }
+    }
+
+    data.coins        = (data.coins || 0) + coinsGained;
+    data.points       += totalWords;
+    data.roundsPlayed += 1;
+
+    saveGameData('game11', data);
+    saveShopData(sd);
+
+    /* ── Kreatur anzeigen ── */
+    const stage       = getGrowthStage(data.growth);
+    const creatureWrap = document.getElementById('endCreatureWrap');
+    if (creatureWrap) {
+      creatureWrap.innerHTML =
+        getCreatureHTML(data.creature, stage) +
+        '<span>' + CREATURE_NAMES[data.creature] + ' · ' + GROWTH_LABELS[stage] + '</span>';
+    }
+
+    renderCoinBank('coinBankContainer', isFirst ? 0 : coinsGained);
+    renderResultItemButton('resultItemBtnWrap', 'game11', () => {
+      endScreen.classList.remove("show");
+      resetGame();
+    });
+
+    /* Begleiter im Game-Header live aktualisieren + animieren */
+    const newStage   = getGrowthStage(data.growth);
+    const leveledUp  = isFirst || newStage > oldStage;
+    const isFinalStg = newStage === GROWTH_STAGES - 1;
+    refreshGameCompanion(leveledUp, isFinalStg);
+
+    endScreen.classList.add("show");
+  }
+
+  /* ── Game logic ── */
+  function randomWord() {
+    if (level === 2) return words3[Math.floor(Math.random() * words3.length)];
+    if (level === 1) return words2[Math.floor(Math.random() * words2.length)];
+    return words[Math.floor(Math.random() * words.length)];
+  }
+
+  function showWord() {
+    currentWord = randomWord();
+    wordElement.textContent = currentWord;
+    wordElement.classList.toggle("sentence", level === 2);
+    highlightKey(currentWord[0]);
+  }
+
+  function updateStats() {
+    scoreElement.textContent = score;
+    comboElement.textContent = combo;
+    timeElement.textContent  = time;
+    updateLiveCompanion();
+  }
+
+  function highlightKey(letter) {
+    document.querySelectorAll(".key").forEach(k => {
+      k.classList.remove("active");
+      if (letter === " " && k.classList.contains("space-key")) {
+        k.classList.add("active");
+      } else if (letter !== " " && k.textContent.toLowerCase() === letter.toLowerCase()) {
+        k.classList.add("active");
+      }
+    });
+  }
+
+  function startTimer() {
+    clearInterval(timer);
+    timer = setInterval(() => {
+      if (!gameRunning) return;
+      time--;
+      updateStats();
+      timeStatEl.classList.toggle("time-danger", time <= 5 && time > 0);
+      if (time <= 0) {
+        clearInterval(timer);
+        gameRunning      = false;
+        inputEl.disabled = true;
+        setTimeout(showEndScreen, 400);
+      }
+    }, 1000);
+  }
+
+  function resetGame() {
+    score      = 0;
+    combo      = 0;
+    maxCombo   = 0;
+    totalWords = 0;
+    totalChars = 0;
+    time       = 60;
+    level      = 0;
+
+    inputEl.disabled    = false;
+    inputEl.value       = "";
+    inputEl.placeholder = "Tippe das Wort hier...";
+    inputEl.focus();
+    wordElement.classList.remove("sentence");
+    message.textContent = "";
+    timeStatEl.classList.remove("time-danger");
+    prevInputLen = 0;
+    updateComboFire();
+    showWord();
+    updateStats();
+    startTimer();
+    gameRunning = true;
+    sessionBaseData = getGameData('game11');
+    lastShownStage  = sessionBaseData.creature ? getGrowthStage(sessionBaseData.growth) : -1;
+    refreshGameCompanion(false);
+    renderBoostIndicators('boostIndicators');
+  }
+
+  inputEl.addEventListener("input", () => {
+    if (!gameRunning) return;
+
+    const typed = inputEl.value.trim();
+
+    // Combo break when the player deletes a character
+    if (inputEl.value.length < prevInputLen) {
+      combo = 0;
+      updateComboFire();
+    }
+    prevInputLen = inputEl.value.length;
+
+    const next = currentWord[typed.length];
+    if (next) highlightKey(next);
+
+    if (typed.toLowerCase() === currentWord.toLowerCase()) {
+      combo++;
+      if (combo > maxCombo) maxCombo = combo;
+      totalWords++;
+      totalChars += currentWord.length;
+
+      updateComboFire();
+
+      const basePoints = level === 2 ? 30 : 10;
+      const capsBonus  = typed === currentWord ? 5 : 0;
+      const comboBonus = combo >= 5 ? 5 : combo >= 3 ? 3 : 0;
+      score += basePoints + capsBonus + comboBonus;
+
+      showScorePopup("+" + basePoints, "#118ab2", wordBox);
+      if (capsBonus) showCapsBadge();
+      if (comboBonus) showScorePopup("+" + comboBonus + (combo >= 5 ? " 🔥🔥" : " 🔥"), "#ff4500", comboStatEl);
+
+      message.textContent = "";
+      inputEl.value = "";
+      prevInputLen  = 0;
+
+      if (score >= 200 && level === 1) {
+        level = 2;
+        time += 30;
+        inputEl.placeholder = "Tippe den Satz hier...";
+        showLevelBanner(3, "Jetzt Sätze!");
+      } else if (score >= 100 && level === 0) {
+        level = 1;
+        time += 30;
+        showLevelBanner(2, "Schwere Wörter!");
+      }
+
+      showWord();
+      updateStats();
+    }
+  });
+
+  restartBtn.addEventListener("click", () => {
+    endScreen.classList.remove("show");
+    resetGame();
+  });
+
+  playAgainBtn.addEventListener("click", () => {
+    endScreen.classList.remove("show");
+    resetGame();
+  });
+
+  function startGame() {
+    startScreen.style.display = "none";
+    lastShownStage = sessionBaseData && sessionBaseData.creature
+      ? getGrowthStage(sessionBaseData.growth) : -1;
+    gameRunning = true;
+    inputEl.focus();
+    showWord();
+    updateStats();
+    startTimer();
+  }
+
+  startBtn.addEventListener("click", startGame);
+
+</script>
+
+<script>window.CREATURE_IMAGE_BASE = '../data/';</script>
+<script src="../creatures.js"></script>
+<script>initCompanion();</script>
 
 </body>
 </html>
