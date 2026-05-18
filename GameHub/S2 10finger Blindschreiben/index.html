@@ -593,6 +593,24 @@
       .start-col-left { flex: none; }
     }
 
+    /* ── Bildschirmtastatur offen: kompakter Spielbereich ── */
+    body.keyboard-open .keyboard,
+    body.keyboard-open .footer,
+    body.keyboard-open #restartBtn,
+    body.keyboard-open #boostIndicators,
+    body.keyboard-open .subtitle { display: none !important; }
+
+    body.keyboard-open .game            { padding: 10px 16px; }
+    body.keyboard-open .game-header     { margin-bottom: 4px; }
+    body.keyboard-open h1               { font-size: 1.4rem; }
+    body.keyboard-open .game-companion  { display: none; }
+    body.keyboard-open .stats           { gap: 8px; margin-bottom: 8px; }
+    body.keyboard-open .stat            { padding: 6px 10px; min-width: 70px; font-size: 0.82rem; }
+    body.keyboard-open .word-box        { padding: 12px 16px; margin-bottom: 8px; }
+    body.keyboard-open .word            { font-size: 2rem; }
+    body.keyboard-open .input-area      { margin-bottom: 6px; }
+    body.keyboard-open .message         { font-size: 0.95rem; min-height: 22px; margin: 4px 0; }
+
   </style>
 </head>
 
@@ -1148,6 +1166,18 @@
 
   startBtn.addEventListener("click", startGame);
 
+</script>
+
+<script>
+  /* ── Bildschirmtastatur erkennen (Visual Viewport API) ── */
+  (function () {
+    if (!window.visualViewport) return;
+    const baseH = window.screen.height;
+    window.visualViewport.addEventListener('resize', function () {
+      const keyboardOpen = window.visualViewport.height < baseH * 0.72;
+      document.body.classList.toggle('keyboard-open', keyboardOpen);
+    });
+  })();
 </script>
 
 <script>window.CREATURE_IMAGE_BASE = '../data/';</script>
