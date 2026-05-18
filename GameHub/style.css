@@ -1497,6 +1497,16 @@ a { text-decoration: none; color: inherit; }
   width: 100%;
   position: relative;
   box-shadow: var(--shadow-glow-gold);
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-content {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-close {
