@@ -16,6 +16,7 @@
     body{
       background:linear-gradient(180deg,#87cefa,#dff6ff);
       min-height:100vh;
+      min-height:100dvh;
       display:flex;
       justify-content:center;
       align-items:center;
@@ -1172,10 +1173,14 @@
   /* ── Bildschirmtastatur erkennen (Visual Viewport API) ── */
   (function () {
     if (!window.visualViewport) return;
-    const baseH = window.screen.height;
+    let baseH = 0;
+    /* Baseline nach dem Laden messen – Tastatur ist dann garantiert zu */
+    setTimeout(function () { baseH = window.visualViewport.height; }, 600);
     window.visualViewport.addEventListener('resize', function () {
-      const keyboardOpen = window.visualViewport.height < baseH * 0.72;
-      document.body.classList.toggle('keyboard-open', keyboardOpen);
+      if (!baseH) return;
+      /* Tastatur gilt als offen wenn Viewport um mehr als 150px schrumpft */
+      document.body.classList.toggle('keyboard-open',
+        baseH - window.visualViewport.height > 150);
     });
   })();
 </script>
