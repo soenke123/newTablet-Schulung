@@ -462,24 +462,6 @@
       .word{ font-size:2.5rem; }
       .key{ width:40px; height:40px; }
 
-      /* Start-Screen kompakter auf Tablet */
-      .start-screen {
-        align-items: flex-start;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 16px;
-      }
-      .start-box {
-        padding: 20px 22px;
-        margin: auto 0;
-      }
-      .start-col-left { flex: 0 0 100px; }
-      .start-col-left .companion-box svg,
-      .start-col-left .companion-box .creature-img { width: 70px; height: 70px; }
-      .start-col-right h2 { font-size: 1.15rem; margin-bottom: 10px; }
-      .start-col-right p  { font-size: 0.9rem;  margin-bottom: 7px; line-height: 1.4; }
-      .start-col-right img { max-height: 160px; width: auto; object-fit: contain; }
-      #startBtn { padding: 11px 24px; font-size: 1rem; }
     }
 
     /* ── Nav: Zurück zum Hub ── */
@@ -524,7 +506,7 @@
     .game-companion-icon  { font-size: 1.3rem; line-height: 1; margin-bottom: 1px; }
     .end-item-btn-wrap    { display: flex; justify-content: flex-end; margin: 2px 0 6px; }
 
-    /* ── Start screen ── */
+    /* ── Start screen: kein Scrollen, Schrift skaliert per clamp() ── */
     .start-screen{
       position:fixed;
       inset:0;
@@ -533,25 +515,35 @@
       justify-content:center;
       align-items:center;
       z-index:999;
-      padding:20px;
+      padding:12px;
+      overflow:hidden;
     }
     .start-box{
       background:white;
       max-width:760px;
       width:100%;
+      max-height:calc(100vh - 24px);
       border-radius:25px;
-      padding:35px;
+      padding:clamp(12px, 2.8vh, 35px);
       box-shadow:0 10px 30px rgba(0,0,0,0.2);
       animation:popup 0.3s ease;
+      overflow:hidden;
+    }
+    .start-title {
+      color:#ff6b6b;
+      font-size:clamp(1.1rem, 2.8vh, 1.6rem);
+      text-align:center;
+      margin-bottom:clamp(5px, 1vh, 14px);
+      font-weight:bold;
     }
     /* ── Zwei Spalten im Start-Screen ── */
     .start-columns {
       display: flex;
-      gap: 28px;
+      gap: clamp(10px, 2vh, 28px);
       align-items: flex-start;
     }
     .start-col-left {
-      flex: 0 0 140px;
+      flex: 0 0 clamp(80px, 11vw, 140px);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -559,19 +551,35 @@
       padding-top: 6px;
     }
     .start-col-right { flex: 1; }
-    .start-col-right h2 { color:#118ab2; margin-bottom:16px; }
-    .start-col-right p  { margin-bottom:12px; color:#444; line-height:1.5; }
-    .start-col-right img { max-width:100%; border-radius:10px; margin-bottom:12px; }
+    .start-col-right h2 {
+      color:#118ab2;
+      font-size:clamp(0.9rem, 2.1vh, 1.15rem);
+      margin-bottom:clamp(5px, 1.1vh, 16px);
+    }
+    .start-col-right p  {
+      margin-bottom:clamp(3px, 0.9vh, 12px);
+      color:#444;
+      line-height:1.4;
+      font-size:clamp(0.78rem, 1.75vh, 0.92rem);
+    }
+    .start-col-right img {
+      max-width:100%;
+      max-height:clamp(70px, 14vh, 160px);
+      object-fit:contain;
+      border-radius:10px;
+      margin-bottom:clamp(4px, 0.9vh, 12px);
+      display:block;
+    }
     #startBtn{
       background:#ffb703;
       border:none;
-      padding:14px 32px;
+      padding:clamp(9px, 1.7vh, 14px) 32px;
       border-radius:15px;
-      font-size:1.1rem;
+      font-size:clamp(0.92rem, 1.9vh, 1.1rem);
       font-weight:bold;
       color:white;
       cursor:pointer;
-      margin-top:10px;
+      margin-top:clamp(5px, 0.9vh, 10px);
       transition:0.2s;
       width: 100%;
     }
@@ -583,21 +591,6 @@
     @media (max-width:600px) {
       .start-columns { flex-direction: column; align-items: center; }
       .start-col-left { flex: none; }
-
-      /* Mobil (Hochformat): Start-Screen scrollbar machen */
-      .start-screen {
-        align-items: flex-start;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 16px;
-      }
-      .start-box {
-        padding: 22px 18px;
-        border-radius: 18px;
-        margin: auto 0;
-      }
-      .start-col-right h2 { font-size: 1.1rem; margin-bottom: 10px; }
-      .start-col-right p  { font-size: 0.92rem; margin-bottom: 8px; }
     }
 
   </style>
@@ -610,6 +603,7 @@
 <!-- ── Intro screen ── -->
 <div id="startScreen" class="start-screen">
   <div class="start-box">
+    <h2 class="start-title">⌨️ Tip Turbo Kids</h2>
     <div class="start-columns">
       <div class="start-col-left">
         <div class="companion-box" id="startCompanion"></div>
