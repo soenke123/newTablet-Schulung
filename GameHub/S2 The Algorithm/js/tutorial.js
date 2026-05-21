@@ -135,21 +135,36 @@
 
     labelEl.style.maxWidth = labelMaxW + 'px';
 
-    if (step.dir === 'from-right') {
-      // Label to the right of the arrow, vertically centered on spotlight
+    if (window.innerWidth < 600) {
+      // Mobil: Label über dem Schwein-Sprite zentrieren
+      const spriteRect = document.getElementById('user-sprite').getBoundingClientRect();
+      const roomRect   = document.getElementById('room').getBoundingClientRect();
+      const mobileMaxW = Math.min(Math.round(roomRect.width * 0.88), window.innerWidth - 16);
+      labelEl.style.maxWidth = mobileMaxW + 'px';
+      const lLeft = Math.max(8, roomRect.left + roomRect.width / 2 - mobileMaxW / 2);
+      labelEl.style.left = lLeft + 'px';
+      labelEl.style.top  = '0px';
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const labelH    = labelEl.offsetHeight || 80;
+        const spriteCY  = spriteRect.top + spriteRect.height / 2;
+        const idealTop  = spriteCY - labelH / 2;
+        const clampedTop = Math.max(roomRect.top + 6, Math.min(roomRect.bottom - labelH - 6, idealTop));
+        labelEl.style.top = clampedTop + 'px';
+      }));
+    } else if (step.dir === 'from-right') {
+      // Label rechts neben dem Pfeil, vertikal auf Spotlight-Mitte
       const lLeft = Math.min(window.innerWidth - labelMaxW - 8, arrowLeft + arrowW + 10);
       labelEl.style.left = Math.max(8, lLeft) + 'px';
-      labelEl.style.top  = '0px'; // two-pass for vertical center
+      labelEl.style.top  = '0px';
       requestAnimationFrame(() => {
         const labelH   = labelEl.offsetHeight || 80;
-        const finalTop = Math.max(8, spotCY - labelH / 2);
-        labelEl.style.top = finalTop + 'px';
+        labelEl.style.top = Math.max(8, spotCY - labelH / 2) + 'px';
       });
     } else {
-      // from-above / inside-top-up: label centered horizontally above arrow/spotlight
+      // from-above / inside-top-up: Label zentriert über Pfeil/Spotlight
       const lLeft = Math.max(8, Math.min(window.innerWidth - labelMaxW - 8, spotCX - labelMaxW / 2));
       labelEl.style.left = lLeft + 'px';
-      labelEl.style.top  = '0px'; // two-pass
+      labelEl.style.top  = '0px';
       requestAnimationFrame(() => {
         const labelH  = labelEl.offsetHeight || 80;
         const anchor  = step.dir === 'inside-top-up' ? (spotTop + GAP) : (spotTop - arrowH - GAP);

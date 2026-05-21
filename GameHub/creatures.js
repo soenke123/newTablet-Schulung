@@ -404,7 +404,7 @@ function determineCreatureWithGlucksklee(correct, gameId = null) {
 function determineEggCreature(eggType, correct) {
   if (eggType === 'atari') return 'robot';
   if (eggType === 'pfau')  return 'pfau';
-  const legendaryChance = { rare: 0.1, mythic: 0.5, legendary: 1.0 }[eggType] ?? 0;
+  const legendaryChance = { rare: 0.3, mythic: 0.6, legendary: 1.0 }[eggType] ?? 0;
   if (Math.random() < legendaryChance) return determineEpicCreature();
   const normals = ['snail', 'fish', 'chicken', 'salamander', 'falkeneule', 'triceratops', 'dragon'];
   return normals[Math.floor(Math.random() * normals.length)];
