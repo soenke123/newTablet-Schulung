@@ -407,11 +407,11 @@ function showCreatureModal(data) {
         </div>
         <div style="background:var(--clr-surface2);border-radius:12px;padding:10px 16px;text-align:center;">
           <div style="font-size:0.7rem;color:var(--clr-cream-dim);text-transform:uppercase;letter-spacing:1px;">Wachstum</div>
-          <div style="font-size:1.7rem;font-weight:800;color:var(--clr-amber);">${data.growth}</div>
+          <div style="font-size:1.7rem;font-weight:800;color:var(--clr-amber);">${Math.round(data.growth)}</div>
         </div>
       </div>
       ${nextPts > 0
-        ? `<p style="font-size:0.82rem;color:var(--clr-cream-dim);">Noch <strong style="color:var(--clr-gold);">${nextPts} Punkte</strong> bis zur nächsten Stufe!</p>`
+        ? `<p style="font-size:0.82rem;color:var(--clr-cream-dim);">Noch <strong style="color:var(--clr-gold);">${Math.round(nextPts)} Punkte</strong> bis zur nächsten Stufe!</p>`
         : `<p style="font-size:0.82rem;color:var(--clr-green);">✓ Vollständig ausgewachsen!</p>`}
     </div>`;
   overlay.hidden = false;
