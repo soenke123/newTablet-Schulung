@@ -1,6 +1,8 @@
 /* Spiel-Verfügbarkeit – diese Datei auf dem Server anpassen
    status: "available" | "password" | "locked"            */
-GAME_ACCESS = {
+
+
+/*GAME_ACCESS = {
   // Season 1
   game1:  { status: 'locked' },            // Finde Grün
   game3:  { status: 'available'}, // Daten-Quiz
@@ -16,9 +18,9 @@ GAME_ACCESS = {
   game12: { status: 'locked' },               // Quellen-Tinder
   game13: { status: 'locked' },               // KI 1
   game14: { status: 'locked' },               // KI 2
-};
+};*/
 
-/*
+
 GAME_ACCESS = {
   // Season 1
   game1:  { status: 'available' },            // Finde Grün
@@ -35,5 +37,5 @@ GAME_ACCESS = {
   game12: { status: 'locked' },               // Quellen-Tinder
   game13: { status: 'locked' },               // KI 1
   game14: { status: 'locked' },               // KI 2
-};*/
+};
 
