@@ -368,7 +368,7 @@ function determineCreature(correct, isFirst = false, gameId = null) {
   if (correct <= 2 && Math.random() < 0.05) return 'butterfly';
 
   // Schneckendrache – selten, unabhängig vom Rang
-  const epicChance = (correct <= 2 || correct === 10) ? 9 : 4;
+  const epicChance = (correct <= 2 || correct === 10) ? 5 : 2;
   if (Math.random() * 100 < epicChance) return 'snaildragon';
 
   // Season Rare – 8 % Chance wenn das Spiel einer Season angehört
