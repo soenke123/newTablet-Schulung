@@ -604,13 +604,17 @@ function tick() {
   }
 }
 
-function startGame() {
-  scheduleEvents();
+function _startGameLoop() {
   gameState.isRunning = true;
-  document.getElementById('start-overlay').style.display = 'none';
   openPlayWindow();
   animateUser();
   _gameInterval = setInterval(tick, 1000);
+}
+
+function startGame() {
+  scheduleEvents();
+  document.getElementById('start-overlay').style.display = 'none';
+  showTutorial();
 }
 
 function triggerEndlessEnd() {

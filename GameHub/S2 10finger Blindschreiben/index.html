@@ -169,8 +169,7 @@
 
     /* ── Level banner ── */
     #levelBanner {
-      position: absolute;
-      bottom: 195px;
+      position: fixed;
       left: 50%;
       transform: translateX(-50%);
       z-index: 800;
@@ -845,6 +844,12 @@
   function showLevelBanner(levelNum, sub) {
     document.getElementById("levelBannerTitle").textContent = "LEVEL " + levelNum + "!";
     document.getElementById("levelBannerSub").textContent   = sub + " — +30s ⏱";
+    const keyboard = document.querySelector(".keyboard");
+    if (keyboard) {
+      const kRect = keyboard.getBoundingClientRect();
+      levelBanner.style.bottom = (window.innerHeight - kRect.top + 16) + "px";
+      levelBanner.style.top    = "auto";
+    }
     levelBanner.classList.add("show");
     setTimeout(() => levelBanner.classList.remove("show"), 2080);
   }

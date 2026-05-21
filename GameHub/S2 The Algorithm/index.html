@@ -279,7 +279,20 @@
   <div id="feed-card-portal"></div>
   <div id="hand-card-portal"></div>
 
+  <!-- Tutorial Overlay -->
+  <div id="tutorial-overlay" style="display:none">
+    <div id="tutorial-spotlight"></div>
+    <div id="tutorial-arrow"></div>
+    <div id="tutorial-label-box">
+      <p id="tutorial-label-text"></p>
+    </div>
+    <div id="tutorial-skip-wrap">
+      <button id="tutorial-skip-btn" onclick="tutorialSkipToLast(event)">Tutorial überspringen →</button>
+    </div>
+  </div>
+
   <script src="js/startscreen.js"></script>
+  <script src="js/tutorial.js"></script>
   <script src="js/state.js"></script>
   <script src="js/interests.js"></script>
   <script src="js/sprites.js"></script>

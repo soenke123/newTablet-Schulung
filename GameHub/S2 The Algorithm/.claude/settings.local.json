@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -i '\\\\.png$')"
+      "Bash(grep -i '\\\\.png$')",
+      "Bash(start *)"
     ]
   }
 }
