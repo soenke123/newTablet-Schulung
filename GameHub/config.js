@@ -2,7 +2,7 @@
    status: "available" | "password" | "locked"            */
 
 
-/*GAME_ACCESS = {
+GAME_ACCESS = {
   // Season 1
   game1:  { status: 'locked' },            // Finde Grün
   game3:  { status: 'available'}, // Daten-Quiz
@@ -12,15 +12,15 @@
   game5:  { status: 'available' },               // Finde Gelb
   game9:  { status: 'available' },     // Fokusflow
   game10: { status: 'available'},     // The Algorithm
-  game11: { status: 'password', password: 'qweasdyxc' },     // Tip Turbo Kids
+  game11: { status: 'available'},     // Tip Turbo Kids
   // Season 3
   game6:  { status: 'available' },               // Finde nicht Grün
   game12: { status: 'locked' },               // Quellen-Tinder
   game13: { status: 'locked' },               // KI 1
   game14: { status: 'locked' },               // KI 2
-};*/
+};
 
-
+/*
 GAME_ACCESS = {
   // Season 1
   game1:  { status: 'available' },            // Finde Grün
@@ -39,3 +39,4 @@ GAME_ACCESS = {
   game14: { status: 'locked' },               // KI 2
 };
 
+*/
