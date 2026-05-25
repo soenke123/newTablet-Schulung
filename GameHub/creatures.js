@@ -792,7 +792,7 @@ function loadShopData() {
     const d   = raw ? JSON.parse(raw) : {};
     // toCount: migrate old boolean flags (true→1, false→0) to numeric inventory counts
     const toCount = (val, countField) => countField !== undefined ? countField : (val ? 1 : 0);
-    return {
+    const result = {
       spentCoins:            d.spentCoins            ?? 0,
       purchased:             d.purchased             ?? [],
       wachstumstrank:        d.wachstumstrank        ?? false,
@@ -814,6 +814,12 @@ function loadShopData() {
       pfauEggGranted:        d.pfauEggGranted        ?? false,
       bankedCoins:           d.bankedCoins           ?? 0,
     };
+    // Self-heal: atariSolved but no atari nest → recreate the egg
+    if (result.atariSolved && !result.nests.some(n => n.eggType === 'atari')) {
+      result.nests.push({ nestId: 'nest_atari_recovered', eggType: 'atari', gameId: null, gameUrl: null });
+      try { localStorage.setItem(SHOP_KEY, JSON.stringify(result)); } catch(_) {}
+    }
+    return result;
   } catch(e) {
     return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, coinsx3: false, coinsx3Count: 0, glucksklee: false, gluckskleeCount: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false };
   }
