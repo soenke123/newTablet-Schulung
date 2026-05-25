@@ -849,6 +849,7 @@ function releaseNest(nestId) {
     nest.gameId           = null;
     nest.gameUrl          = null;
     sd.pendingEggNestId   = nestId;
+    sd.bankedCoins        = (sd.bankedCoins || 0) + nestCoins;
   } else {
     sd.nests       = sd.nests.filter(n => n.nestId !== nestId);
     sd.bankedCoins = (sd.bankedCoins || 0) + nestCoins;
@@ -1487,14 +1488,26 @@ function _spawnCodeFragment() {
 
 /* ─────────────────────────────────────────────────
    15. PFAU — ULTIMATIVES LEGENDÄRES TIER
-   Freigeschaltet wenn alle normalen, seltenen und epischen Kreaturen ausgewachsen sind (nicht Legendary)
+   Freigeschaltet wenn genau diese 12 Kreaturen gefunden UND voll ausgewachsen sind.
+   WICHTIG: Diese Liste ist fest – neue Normal/Epic-Monster erweitern sie NICHT automatisch.
    ───────────────────────────────────────────────── */
+
+// Feste Bedingung für den Pfau-Unlock – bewusst explizit, nicht dynamisch.
+// 7 Normale + Biene (S1) + Oktopus (S2) + 3 Epische = 12 Monster
+const PFAU_REQUIRED_CREATURES = [
+  // Normale (7)
+  'snail', 'fish', 'chicken', 'salamander', 'falkeneule', 'triceratops', 'dragon',
+  // Season-Raritäten (2) – kein ente
+  'biene', 'oktopus',
+  // Epische (3)
+  'butterfly', 'snaildragon', 'turtle',
+];
+
 function checkPfauUnlock() {
   const sd = loadShopData();
   if (sd.pfauEggGranted) return;
 
-  const required = ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','butterfly','snaildragon','turtle','biene','oktopus','ente'];
-  const allMaxed = required.every(c => (sd.seenCreatures[c] ?? -1) >= GROWTH_STAGES - 1);
+  const allMaxed = PFAU_REQUIRED_CREATURES.every(c => (sd.seenCreatures[c] ?? -1) >= GROWTH_STAGES - 1);
   if (!allMaxed) return;
 
   const nestId = 'nest_pfau_' + Date.now();
@@ -1516,7 +1529,7 @@ function _showPfauUnlockAnimation() {
     <div class="pfau-unlock-box">
       <div class="pfau-unlock-emoji">🦚</div>
       <h2 class="pfau-unlock-title">Der Pfau erwacht</h2>
-      <p class="pfau-unlock-sub">Du hast alle Kreaturen ausgewachsen!</p>
+      <p class="pfau-unlock-sub">Du hast alle 12 Kreaturen ausgewachsen!</p>
       <p class="pfau-unlock-hint">Ein legendäres Ei erscheint in deiner Welt…</p>
     </div>`;
   document.body.appendChild(overlay);

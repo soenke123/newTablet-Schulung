@@ -3,7 +3,8 @@
     "allow": [
       "Bash(python3 *)",
       "PowerShell(python --version 2>&1; where python 2>&1)",
-      "PowerShell(Move-Item *)"
+      "PowerShell(Move-Item *)",
+      "Bash(awk '{print $NF}')"
     ]
   }
 }

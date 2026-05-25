@@ -751,6 +751,7 @@
 </div>
 
 <script>
+  const GAME_ID = new URLSearchParams(window.location.search).get('id') || 'game11';
   const words  = ["Hallo","Katze","Sonne","Schule","Rakete","Banane","Tiger","Roboter","Zauber","Insel","Apfel","Baum","Mond","Stern","Vogel","Feuer","Wasser","Blume","Brücke","Schere","Fenster","Lampe","Hund","Pizza","Roller","Garten","Kiste"];
   const words2 = ["Informatik","Raketenantrieb","Hundesitter","Unterrichtsstunde","Basketball","Schmetterling","Bibliothek","Computerspiel","Klassenzimmer","Taschenrechner","Schulranzen","Straßenbahn","Geburtstag","Sonnenbrille","Hausaufgaben","Fußballspieler","Zimmerpflanze","Druckerpatronen"];
   const words3 = [
@@ -873,7 +874,7 @@
 
   /* ── Begleiter im Game-Header live aktualisieren (optional: Animation) ── */
   function refreshGameCompanion(animate, isFinal) {
-    const data = getGameData('game11');
+    const data = getGameData(GAME_ID);
     const el   = document.getElementById('gameCompanion');
     if (!el) return;
     el.innerHTML = buildGameCompanionHTML(data);
@@ -915,7 +916,7 @@
 
   /* ── Init: Start- & Game-Screen befüllen (nach creatures.js-Load) ── */
   function initCompanion() {
-    const data = getGameData('game11');
+    const data = getGameData(GAME_ID);
 
     const startWrap = document.getElementById('startCompanion');
     if (startWrap) {
@@ -954,21 +955,26 @@
     recEl.style.display = isRecord ? "inline-block" : "none";
 
     /* ── Hub-Integration ── */
-    const data     = getGameData('game11');
+    const data     = getGameData(GAME_ID);
     const isFirst  = !data.creature;
     const oldStage = data.creature ? getGrowthStage(data.growth) : -1;
     const normalized = Math.min(10, Math.round(score / 55));
     const sd      = loadShopData();
 
     if (isFirst) {
-      data.creature = sd.glucksklee
-        ? determineCreatureWithGlucksklee(normalized, 'game11')
-        : determineCreature(normalized, true, 'game11');
-      data.growth = 0;
-      if (sd.glucksklee) {
-        sd.glucksklee = false;
-        sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
+      const _eggType = new URLSearchParams(window.location.search).get('egg');
+      if (_eggType) {
+        data.creature = determineEggCreature(_eggType, normalized);
+      } else {
+        data.creature = sd.glucksklee
+          ? determineCreatureWithGlucksklee(normalized, GAME_ID)
+          : determineCreature(normalized, true, GAME_ID);
+        if (sd.glucksklee) {
+          sd.glucksklee = false;
+          sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
+        }
       }
+      data.growth = 0;
     } else {
       let growthContrib = computeSessionGrowth(normalized, 10);
       if (sd.wachstumsBooster) {
@@ -993,7 +999,7 @@
     data.points       += totalWords;
     data.roundsPlayed += 1;
 
-    saveGameData('game11', data);
+    saveGameData(GAME_ID, data);
     saveShopData(sd);
 
     /* ── Kreatur anzeigen ── */
@@ -1006,7 +1012,7 @@
     }
 
     renderCoinBank('coinBankContainer', isFirst ? 0 : coinsGained);
-    renderResultItemButton('resultItemBtnWrap', 'game11', () => {
+    renderResultItemButton('resultItemBtnWrap', GAME_ID, () => {
       endScreen.classList.remove("show");
       resetGame();
     });
@@ -1090,7 +1096,7 @@
     updateStats();
     startTimer();
     gameRunning = true;
-    sessionBaseData = getGameData('game11');
+    sessionBaseData = getGameData(GAME_ID);
     lastShownStage  = sessionBaseData.creature ? getGrowthStage(sessionBaseData.growth) : -1;
     refreshGameCompanion(false);
     renderBoostIndicators('boostIndicators');

@@ -812,6 +812,7 @@ function loadShopData() {
       atariSolved:           d.atariSolved           ?? false,
       atariThemeShown:       d.atariThemeShown       ?? false,
       pfauEggGranted:        d.pfauEggGranted        ?? false,
+      bankedCoins:           d.bankedCoins           ?? 0,
     };
   } catch(e) {
     return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, coinsx3: false, coinsx3Count: 0, glucksklee: false, gluckskleeCount: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false };
