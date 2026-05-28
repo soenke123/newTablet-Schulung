@@ -9,16 +9,19 @@
    ZUGRIFFSKONTROLLE (geladen aus config.json)
    ───────────────────────────────────────────────── */
 let GAME_ACCESS = {};
-const UNLOCK_KEY = 'lernwelt_unlocked';
+let SEASON_3_OPEN = false;
+function loadUnlocked() { return window.getUnlocked ? window.getUnlocked() : []; }
+function saveUnlocked(gameId) { if (window.setUnlocked) window.setUnlocked(gameId); }
 
-function loadUnlocked() {
-  try { return JSON.parse(localStorage.getItem(UNLOCK_KEY)) || []; } catch(e) { return []; }
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
-function saveUnlocked(gameId) {
-  const list = loadUnlocked();
-  if (!list.includes(gameId)) { list.push(gameId); localStorage.setItem(UNLOCK_KEY, JSON.stringify(list)); }
-}
+window.hashPassword = hashPassword;
+
 function getGameAccess(gameId) {
+  const game = GAMES_CONFIG.find(g => g.id === gameId);
+  if (game?.season === 3 && !SEASON_3_OPEN) return 'locked';
   const cfg = GAME_ACCESS[gameId];
   if (!cfg || cfg.status === 'available') return 'available';
   if (cfg.status === 'locked') return 'locked';
@@ -45,7 +48,7 @@ const GAMES_CONFIG = [
 const SEASONS_CONFIG = [
   { id: 1, title: 'Season 1 – Regeln, Ordnung, Dateien',      desc: 'Diese Season knüpft an die Inhalte der ersten Tablet-Schulung an und bringt dein Wissen auf das nächste Level. In drei spannenden Spielen sicherst und vertiefst du wichtige Grundlagen rund um die Tabletnutzung – von unseren Hausregeln über Dateiformate bis hin zur richtigen Struktur auf deinem Gerät. So wirst du Schritt für Schritt sicherer und schneller im Umgang mit deinem Tablet.' },
   { id: 2, title: 'Season 2 – Aufmerksamkeit und Schreiben', desc: 'Deine Aufmerksamkeit ist eine deiner wichtigsten Ressourcen – deshalb lohnt es sich, bewusst mit ihr umzugehen. Diese Season baut auf den Inhalten eines Workshops aus der ersten Schulung. In zwei Aufmerksamkeitsspielen geht es um Fokus und das Binden von Aufmerksamkeit. Außerdem tauchst du mit Tip Turbo Kids in das 10-Finger-Blindschreiben ein: Vielleicht nicht die wichtigste Methode zum Lernen, aber eine Fähigkeit, die dir das Schreiben längerer Texte enorm erleichtert und im Schulalltag wie auch später im Berufsleben unverzichtbar ist.' },
-  { id: 3, title: 'Season 3 – LLM und Recherche',     desc: 'coming soon' },
+  { id: 3, title: 'Season 3 – LLM und Recherche',     desc: 'Age of Seal – Zeitalter der Siegel' },
 ];
 
 /* ─────────────────────────────────────────────────
@@ -65,7 +68,13 @@ const SHOP_ITEMS = [
 ];
 
 // Atari2 · Enter 1-5-0-7
-const CREATURE_ORDER = ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','butterfly','snaildragon','turtle','robot','pfau','biene','oktopus','ente'];
+const CREATURE_ORDER = ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','butterfly','snaildragon','turtle','robot','pfau','biene','oktopus','ente','frosch','pinguin','raptor','chinDrache','schnabeltier'];
+const S3_CREATURES   = new Set(['ente','chamaeleon','chinDrache','schnabeltier','frosch','pinguin','raptor']);
+
+/* Season 2 Kreatur-Paket – bald verfügbar (nur im Buch sichtbar wenn Season 3 offen) */
+const S2_NORMALS   = [];
+const S2_EPICS     = ['chamaeleon'];
+const S2_LEGIES    = [];
 
 const RELEASE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z"/></svg>`;
 
@@ -85,6 +94,12 @@ const BOOK_NAMES = {
   biene:       'Seltene Biene — Season 1',
   oktopus:     'Seltener Oktopus — Season 2',
   ente:        'Seltene Ente — Season 3',
+  chamaeleon:   'Episches Chamäleon — Meister des Wandels',
+  pinguin:      'Stolzer Kaiserpinguin',
+  frosch:       'Prächtiger Riesenfrosch',
+  raptor:       'Mächtiger Velociraptor',
+  chinDrache:   'Legendärer Chinesischer Drache — Hüter des Himmels',
+  schnabeltier: 'Legendäres Schnabeltier — Das Unmögliche',
 };
 
 /* ─────────────────────────────────────────────────
@@ -121,8 +136,7 @@ function getTotalCoins(allData) {
 
 function loadAllData() {
   try {
-    const raw  = localStorage.getItem(STORAGE_KEY);
-    const data = raw ? JSON.parse(raw) : {};
+    const data = loadStorage(STORAGE_KEY);
     for (const g of GAMES_CONFIG) {
       if (!data[g.id]) data[g.id] = defaultGameData();
     }
@@ -131,7 +145,7 @@ function loadAllData() {
 }
 
 function saveAllData(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+  saveStorage(STORAGE_KEY, data);
 }
 
 /* ─────────────────────────────────────────────────
@@ -147,115 +161,156 @@ function refundAbandonedItems() {
   if (changed) saveShopData(sd);
 }
 
+function repairAtariEggState() {
+  const sd = loadShopData();
+  if (sd.atariSolved && !sd.nests.some(n => n.eggType === 'atari')) {
+    const nestId = 'nest_atari_repair_' + Date.now();
+    sd.nests.push({ nestId, eggType: 'atari', gameId: null, gameUrl: null });
+    sd.pendingEggNestId = nestId;
+    saveShopData(sd);
+  }
+}
+
 // Atari1 · Enter 4-8-2-6
 function renderHub() {
+  refundAbandonedItems();
+  repairAtariEggState();
+
+  const allData  = loadAllData();
+  const shopData = loadShopData();
+  updateSeenCreatures(allData);
+  checkPfauUnlock();
+
+  renderGamesGrid(allData, shopData);
+  renderGallery(allData);
+  renderCoinDisplay(allData);
+  renderNestSection(allData);
+  renderSealedEggs();
+  initGalleryWalk();
+  applyThemeFromPreference(allData);
+  _injectPfauThemeStyles();
+  document.body.classList.toggle('s3-active', typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN);
+  updateLootboxBlink();
+
+  if (shopData.pendingEggNestId) enterPendingEggMode();
+  else exitPendingEggMode();
+
+  if (shopData.pendingBackup) enterBackupSwapMode();
+  else exitBackupSwapMode();
+}
+
+function renderGamesGrid(allData, shopData) {
   const grid = document.getElementById('gamesGrid');
   if (!grid) return;
   grid.innerHTML = '';
 
-  refundAbandonedItems();
-  const allData = loadAllData();
-  updateSeenCreatures(allData);
-  checkPfauUnlock();
-  const shopData = loadShopData();
-
   for (const season of SEASONS_CONFIG) {
-    const section = document.createElement('section');
-    section.className = 'season-section';
+    grid.appendChild(buildSeasonSection(season, allData, shopData));
+  }
+}
 
-    const titleEl = document.createElement('h3');
-    titleEl.className = 'season-title';
-    titleEl.innerHTML = `${season.title} <span class="chevron">&#9660;</span>`;
+function buildSeasonSection(season, allData, shopData) {
+  const section = document.createElement('section');
+  section.className = 'season-section';
 
-    const descEl = document.createElement('p');
-    descEl.className = 'season-desc';
-    descEl.textContent = season.desc;
-    descEl.hidden = true;
+  const titleEl = document.createElement('h3');
+  titleEl.className = 'season-title';
+  titleEl.innerHTML = `${season.title} <span class="chevron">&#9660;</span>`;
 
-    titleEl.addEventListener('click', () => {
-      descEl.hidden = !descEl.hidden;
-      titleEl.classList.toggle('open');
-    });
+  const descEl = document.createElement('p');
+  descEl.className = 'season-desc';
+  descEl.textContent = season.desc;
+  descEl.hidden = true;
 
-    const seasonGrid = document.createElement('div');
-    seasonGrid.className = 'games-grid';
+  titleEl.addEventListener('click', () => {
+    descEl.hidden = !descEl.hidden;
+    titleEl.classList.toggle('open');
+  });
 
-    for (const game of GAMES_CONFIG.filter(g => g.season === season.id)) {
-      const data = allData[game.id] || defaultGameData();
-      const card = document.createElement('div');
-      const access    = getGameAccess(game.id);
-      const rare      = data.creature && isRare(data.creature);
-      const epic      = data.creature && isEpic(data.creature);
-      const legendary = data.creature && isLegendary(data.creature);
-      const maxed     = data.creature && data.growth >= GROWTH_MAX;
-      card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}`;
-      card.innerHTML  = buildCardHTML(game, data, shopData);
+  const seasonGrid = document.createElement('div');
+  seasonGrid.className = 'games-grid';
 
-      card.querySelector('.game-card__use-btn')?.addEventListener('click', e => {
-        e.stopPropagation();
-        const btn = e.currentTarget;
-        const sd = loadShopData();
-        const countKey = btn.dataset.countKey;
-        const itemId   = btn.dataset.item;
-        if (!countKey || (sd[countKey] ?? 0) <= 0) return;
-        sd[countKey]--;
-        sd[itemId] = true;
-        saveShopData(sd);
-        window.location.href = game.url + '?id=' + game.id;
-      });
-
-      card.querySelector('.game-card__trank-btn')?.addEventListener('click', e => {
-        e.stopPropagation();
-        tryApplyWachstumstrank(game.id);
-      });
-
-      card.querySelector('.game-card__btn')?.addEventListener('click', () => {
-        const access = getGameAccess(game.id);
-        if (access === 'locked') return;
-        if (access === 'password') { showPasswordPrompt(game.id); return; }
-        const sd = loadShopData();
-        if (sd.pendingEggNestId) {
-          const nest = sd.nests.find(n => n.nestId === sd.pendingEggNestId);
-          if (nest) {
-            nest.gameId  = game.id;
-            nest.gameUrl = game.url;
-            sd.pendingEggNestId = null;
-            saveShopData(sd);
-            exitPendingEggMode();
-            window.location.href = game.url + '?id=' + nest.nestId + '&egg=' + nest.eggType;
-            return;
-          }
-        }
-        window.location.href = game.url + '?id=' + game.id;
-      });
-      if (data.creature) {
-        card.querySelector('.creature-preview')?.addEventListener('click', e => {
-          e.stopPropagation();
-          showCreatureModal(data);
-        });
-      }
-      card.querySelector('.game-card__release')?.addEventListener('click', e => {
-        e.stopPropagation();
-        confirmRelease(game.id);
-      });
-      seasonGrid.appendChild(card);
-    }
-
-    section.appendChild(titleEl);
-    section.appendChild(descEl);
-    section.appendChild(seasonGrid);
-    grid.appendChild(section);
+  for (const game of GAMES_CONFIG.filter(g => g.season === season.id)) {
+    const data = allData[game.id] || defaultGameData();
+    seasonGrid.appendChild(buildGameCard(game, data, shopData));
   }
 
-  renderGallery(allData);
-  renderCoinDisplay(allData);
-  renderNestSection(allData);
-  initGalleryWalk();
-  applyThemeFromPreference(allData);
-  _injectPfauThemeStyles();
+  section.appendChild(titleEl);
+  section.appendChild(descEl);
+  section.appendChild(seasonGrid);
+  return section;
+}
 
-  if (shopData.pendingEggNestId) enterPendingEggMode();
-  else exitPendingEggMode();
+function buildGameCard(game, data, shopData) {
+  const access    = getGameAccess(game.id);
+  const rare      = data.creature && isRare(data.creature);
+  const epic      = data.creature && isEpic(data.creature);
+  const legendary = data.creature && isLegendary(data.creature);
+  const maxed     = data.creature && data.growth >= GROWTH_MAX;
+  const isBackupTarget = !!shopData.pendingBackup && !!data.creature && access === 'available';
+
+  const card = document.createElement('div');
+  card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
+  card.innerHTML = buildCardHTML(game, data, shopData);
+
+  attachCardListeners(card, game, data, isBackupTarget);
+  return card;
+}
+
+function attachCardListeners(card, game, data, isBackupTarget) {
+  card.querySelector('.game-card__use-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    const sd = loadShopData();
+    const countKey = btn.dataset.countKey;
+    const itemId   = btn.dataset.item;
+    if (!countKey || (sd[countKey] ?? 0) <= 0) return;
+    sd[countKey]--;
+    sd[itemId] = true;
+    saveShopData(sd);
+    window.location.href = game.url + '?id=' + game.id;
+  });
+
+  card.querySelector('.game-card__trank-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    tryApplyWachstumstrank(game.id);
+  });
+
+  card.querySelector('.game-card__btn')?.addEventListener('click', () => {
+    if (isBackupTarget) { applyBackupSwap(game.id); return; }
+    const access = getGameAccess(game.id);
+    if (access === 'locked') return;
+    if (access === 'password') { showPasswordPrompt(game.id); return; }
+    const sd = loadShopData();
+    if (sd.pendingEggNestId) {
+      const nest = sd.nests.find(n => n.nestId === sd.pendingEggNestId);
+      if (nest) {
+        nest.gameId  = game.id;
+        nest.gameUrl = game.url;
+        sd.pendingEggNestId = null;
+        saveShopData(sd);
+        exitPendingEggMode();
+        const nestData = getGameData(nest.nestId);
+        if (nestData.creature) { renderHub(); return; }
+        window.location.href = game.url + '?id=' + nest.nestId + '&egg=' + nest.eggType;
+        return;
+      }
+    }
+    window.location.href = game.url + '?id=' + game.id;
+  });
+
+  if (data.creature) {
+    card.querySelector('.creature-preview')?.addEventListener('click', e => {
+      e.stopPropagation();
+      if (isBackupTarget) { applyBackupSwap(game.id); return; }
+      showCreatureModal(data);
+    });
+  }
+
+  card.querySelector('.game-card__release')?.addEventListener('click', e => {
+    e.stopPropagation();
+    confirmRelease(game.id);
+  });
 }
 
 function buildCardHTML(game, data, shopData) {
@@ -423,6 +478,9 @@ function renderCoinDisplay(allData) {
   const el = document.getElementById('coinAmount');
   if (el) el.textContent = available;
 
+  const kristallEl = document.getElementById('kristallAmount');
+  if (kristallEl) kristallEl.textContent = shopData.kristalle ?? 0;
+
   const bookBtn = document.getElementById('bookBtn');
   if (bookBtn) bookBtn.hidden = !shopData.purchased.includes('buchDerMonster');
 }
@@ -430,9 +488,306 @@ function renderCoinDisplay(allData) {
 /* ─────────────────────────────────────────────────
    6. SHOP MODAL
    ───────────────────────────────────────────────── */
+let shopActiveTab = 1;
+
+const LOOTBOX_SLOTS = [
+  { key: '06', minutes:  6 * 60, label: '06:00' },
+  { key: '12', minutes: 12 * 60, label: '12:00' },
+  { key: '18', minutes: 18 * 60, label: '18:00' },
+];
+
+function getFreeLootboxStatus() {
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const claimed = loadShopData().lootboxDailyClaimed || {};
+  let latestPassed = null;
+  let nextLabel = null;
+  for (const slot of LOOTBOX_SLOTS) {
+    if (currentMinutes >= slot.minutes) latestPassed = slot;
+    else if (!nextLabel) nextLabel = slot.label;
+  }
+  if (!nextLabel) nextLabel = '06:00 (morgen)';
+  const available = latestPassed && claimed[latestPassed.key] !== today;
+  return { available: available ? 1 : 0, nextLabel };
+}
+
+function claimFreeLootbox() {
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const sd = loadShopData();
+  if (!sd.lootboxDailyClaimed) sd.lootboxDailyClaimed = {};
+  let latestPassed = null;
+  for (const slot of LOOTBOX_SLOTS) {
+    if (currentMinutes >= slot.minutes) latestPassed = slot;
+  }
+  if (latestPassed && sd.lootboxDailyClaimed[latestPassed.key] !== today) {
+    sd.lootboxDailyClaimed[latestPassed.key] = today;
+    saveShopData(sd);
+    updateLootboxBlink();
+    const reward = rollLootbox(sd, loadAllData());
+    openLootboxModal(reward);
+  }
+}
+
+function updateLootboxBlink() {
+  const blink = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN && getFreeLootboxStatus().available > 0;
+  document.getElementById('shopBtn')?.classList.toggle('lootbox-blink', blink);
+  document.querySelector('.shop-tab[data-tab="2"]')?.classList.toggle('lootbox-blink', blink);
+}
+
+// ── Lootbox: Wahrscheinlichkeits-Engine & Modal ───────────────────────────
+
+function _emptyConsumables() {
+  return { wachstumstrank: 0, wachstumsBooster: 0, coinsx3: 0, glucksklee: 0 };
+}
+
+function _rollCommonItem() {
+  const COMMONS = [
+    { key: 'wachstumstrank',   label: 'Wachstumstrank',    icon: '🧪' },
+    { key: 'wachstumsBooster', label: 'Wachstums-Booster', icon: '⚡' },
+    { key: 'coinsx3',          label: 'Coins ×3',          icon: '🎰' },
+    { key: 'glucksklee',       label: 'Glücksklee',        icon: '🍀' },
+  ];
+  return COMMONS[Math.floor(Math.random() * COMMONS.length)];
+}
+
+function rollLootbox(shopData, allData) {
+  const r = Math.random() * 100;
+
+  // 3% Ultra
+  if (r < 3) {
+    const priority = [
+      { type: 'seal', id: 'siegelHimmel',  label: 'Siegel des Himmels', icon: '🌟' },
+      { type: 'seal', id: 'siegelSuempfe', label: 'Siegel der Sümpfe',  icon: '🌿' },
+      { type: 'egg',  id: 'shinyEi',       eggType: 'shiny',     label: 'Versiegeltes Ei', icon: '✨' },
+      { type: 'egg',  id: 'legendaresEi',  eggType: 'legendary', label: 'Legendäres Ei',   icon: '🥚' },
+      { type: 'egg',  id: 'mythischesEi',  eggType: 'mythic',    label: 'Episches Ei',     icon: '🥚' },
+      { type: 'egg',  id: 'seltenesEi',    eggType: 'rare',      label: 'Seltenes Ei',     icon: '🥚' },
+    ];
+    for (const c of priority) {
+      if (c.type === 'seal') {
+        if (!shopData.purchased.includes(c.id))
+          return { rarity: 'ultra', seal: c.id, egg: null, label: c.label, icon: c.icon, consumables: _emptyConsumables(), coins: 0, kristalle: 0, steinDerVollendung: false };
+      } else {
+        if (!shopData.nests.some(n => n.eggType === c.eggType))
+          return { rarity: 'ultra', egg: c.eggType, seal: null, label: c.label, icon: c.icon, consumables: _emptyConsumables(), coins: 0, kristalle: 0, steinDerVollendung: false };
+      }
+    }
+    return { rarity: 'ultra', kristalle: 50, label: '50 Kristalle', icon: '💎', consumables: _emptyConsumables(), coins: 0, egg: null, seal: null, steinDerVollendung: false };
+  }
+
+  // 4% Legendary (kumulativ 7%)
+  if (r < 7)
+    return { rarity: 'legendary', kristalle: 15, label: '15 Kristalle', icon: '💎', consumables: _emptyConsumables(), coins: 0, egg: null, seal: null, steinDerVollendung: false };
+
+  // 6% Epic (kumulativ 13%)
+  if (r < 13) {
+    const s3Open = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN;
+    const hasEligible = s3Open && Object.values(allData).some(d => d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6);
+    if (hasEligible)
+      return { rarity: 'epic', steinDerVollendung: true, label: 'Stein der Vollendung', icon: '🧿', consumables: _emptyConsumables(), coins: 0, kristalle: 0, egg: null, seal: null };
+    return { rarity: 'epic', consumables: { wachstumstrank: 1, wachstumsBooster: 1, coinsx3: 1, glucksklee: 1 }, label: 'Alle 4 Tränke', icon: '🎒', coins: 0, kristalle: 0, egg: null, seal: null, steinDerVollendung: false };
+  }
+
+  // 15% Rare (kumulativ 28%)
+  if (r < 28) {
+    const common = _rollCommonItem();
+    const bonus = Math.random() < 0.5
+      ? { coins: 10, kristalle: 0, bonusLabel: '+ 10 🪙' }
+      : { coins: 0, kristalle: 2, bonusLabel: '+ 2 💎' };
+    const c = _emptyConsumables(); c[common.key] = 1;
+    return { rarity: 'rare', consumables: c, coins: bonus.coins, kristalle: bonus.kristalle, label: `${common.label} ${bonus.bonusLabel}`, icon: common.icon, egg: null, seal: null, steinDerVollendung: false };
+  }
+
+  // 25% Uncommon (kumulativ 53%)
+  if (r < 53) {
+    if (Math.random() < 0.5)
+      return { rarity: 'uncommon', coins: 10, label: '10 Münzen', icon: '🪙', consumables: _emptyConsumables(), kristalle: 0, egg: null, seal: null, steinDerVollendung: false };
+    return { rarity: 'uncommon', kristalle: 2, label: '2 Kristalle', icon: '💎', consumables: _emptyConsumables(), coins: 0, egg: null, seal: null, steinDerVollendung: false };
+  }
+
+  // 60% Common
+  const common = _rollCommonItem();
+  const c = _emptyConsumables(); c[common.key] = 1;
+  return { rarity: 'common', consumables: c, label: common.label, icon: common.icon, coins: 0, kristalle: 0, egg: null, seal: null, steinDerVollendung: false };
+}
+
+function applyLootboxReward(reward) {
+  const sd = loadShopData();
+  const allData = loadAllData();
+
+  for (const [key, count] of Object.entries(reward.consumables)) {
+    if (count > 0) sd[key + 'Count'] = (sd[key + 'Count'] ?? 0) + count;
+  }
+  if (reward.coins     > 0) sd.bankedCoins = (sd.bankedCoins ?? 0) + reward.coins;
+  if (reward.kristalle > 0) sd.kristalle   = (sd.kristalle   ?? 0) + reward.kristalle;
+  if (reward.seal && !sd.purchased.includes(reward.seal)) sd.purchased.push(reward.seal);
+  if (reward.egg) {
+    const nestId = 'nest_lootbox_' + Date.now();
+    sd.nests.push({ nestId, eggType: reward.egg, gameId: null, gameUrl: null });
+    sd.pendingEggNestId = nestId;
+  }
+  if (reward.steinDerVollendung) {
+    const s3Open = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN;
+    if (s3Open) {
+      const eligible = Object.keys(allData).filter(k => allData[k]?.creature && allData[k].growth >= GROWTH_MAX && allData[k].growth < GROWTH_S6);
+      if (eligible.length > 0) {
+        allData[eligible[Math.floor(Math.random() * eligible.length)]].growth = GROWTH_S6;
+        saveAllData(allData);
+      }
+    }
+  }
+  saveShopData(sd);
+}
+
+function _spawnLootboxParticles(rarity, container) {
+  const cfgs = {
+    common:    { count: 8,  colours: ['#fff8c0','#f0b429','#e8c850'], maxDist: 80,  dur: 1.0 },
+    uncommon:  { count: 12, colours: ['#5ba4e8','#93c5fd','#bfdbfe'], maxDist: 100, dur: 1.1 },
+    rare:      { count: 18, colours: ['#a855f7','#c084fc','#e9d5ff'], maxDist: 120, dur: 1.2 },
+    epic:      { count: 24, colours: ['#f97316','#fb923c','#fbbf24'], maxDist: 140, dur: 1.3 },
+    legendary: { count: 30, colours: ['#ffd700','#fff8c0','#f0b429'], maxDist: 160, dur: 1.5 },
+    ultra:     { count: 40, colours: ['#e879f9','#5ba4e8','#ffd700','#f0abfc','#93c5fd'], maxDist: 200, dur: 1.8 },
+  };
+  const cfg = cfgs[rarity] ?? cfgs.common;
+
+  for (let i = 0; i < cfg.count; i++) {
+    const p = document.createElement('div');
+    p.className = 'lootbox-particle';
+    const angle  = (i / cfg.count) * 360 + (Math.random() * 30 - 15);
+    const dist   = cfg.maxDist * (0.5 + Math.random() * 0.5);
+    const dur    = cfg.dur * (0.7 + Math.random() * 0.6);
+    const colour = cfg.colours[Math.floor(Math.random() * cfg.colours.length)];
+    p.style.cssText = `--lb-angle:${angle}deg;--lb-dist:${dist}px;--lb-dur:${dur}s;background:${colour};box-shadow:0 0 4px ${colour};animation-delay:${Math.random() * 0.2}s;`;
+    container.appendChild(p);
+    p.addEventListener('animationend', () => p.remove(), { once: true });
+  }
+
+  if (rarity === 'legendary' || rarity === 'ultra') {
+    const emojis = rarity === 'ultra' ? ['💎','🌟','💫','✨'] : ['🪙','⭐','💫'];
+    const rainCount = rarity === 'ultra' ? 16 : 10;
+    for (let i = 0; i < rainCount; i++) {
+      setTimeout(() => {
+        const drop = document.createElement('div');
+        drop.className = 'lootbox-rain-drop';
+        drop.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+        drop.style.cssText = `left:${5 + Math.random() * 90}%;top:-10%;animation-duration:${1.2 + Math.random() * 0.8}s;`;
+        container.appendChild(drop);
+        drop.addEventListener('animationend', () => drop.remove(), { once: true });
+      }, i * 80);
+    }
+  }
+}
+
+function openLootboxModal(reward) {
+  closeShopModal();
+
+  const overlay   = document.getElementById('lootboxModal');
+  const box       = document.getElementById('lootboxModalBox');
+  const phase1    = document.getElementById('lootboxPhase1');
+  const phase2    = document.getElementById('lootboxPhase2');
+  const graphic   = document.getElementById('lootboxGraphic');
+  const lid       = document.getElementById('lootboxLid');
+  const flash     = document.getElementById('lootboxFlash');
+  const rarLbl    = document.getElementById('lootboxRarityLabel');
+  const rewIcon   = document.getElementById('lootboxRewardIcon');
+  const rewName   = document.getElementById('lootboxRewardName');
+  const particles = document.getElementById('lootboxParticles');
+  const collectBtn = document.getElementById('lootboxCollectBtn');
+  if (!overlay) return;
+
+  // Reset
+  phase1.hidden = false;
+  phase2.hidden = true;
+  collectBtn.classList.add('invisible');
+  flash.className = 'lootbox-flash';
+  box.className = 'lootbox-modal-box';
+  lid.className = 'lootbox-lid';
+  graphic.className = 'lootbox-graphic';
+  particles.innerHTML = '';
+  rewIcon.className = 'lootbox-reward-icon';
+  overlay.hidden = false;
+
+  // Phase 1: Wobble nach 1,5s
+  setTimeout(() => {
+    graphic.classList.add('lootbox-wobble');
+    graphic.addEventListener('animationend', () => graphic.classList.remove('lootbox-wobble'), { once: true });
+  }, 1500);
+
+  // Deckel + Flash nach 2,8s → Phase 2 nach weiteren 300ms
+  setTimeout(() => {
+    lid.classList.add('lootbox-lid-open');
+    const flashColours = { common: 'rgba(255,255,255,0.25)', uncommon: 'rgba(91,164,232,0.35)', rare: 'rgba(168,85,247,0.4)', epic: 'rgba(249,115,22,0.5)', legendary: 'rgba(255,215,0,0.55)', ultra: 'rgba(232,121,249,0.55)' };
+    flash.style.background = flashColours[reward.rarity] ?? flashColours.common;
+    flash.classList.add('active');
+    flash.addEventListener('animationend', () => flash.classList.remove('active'), { once: true });
+
+    setTimeout(() => {
+      phase1.hidden = true;
+      phase2.hidden = false;
+      box.classList.add(`lootbox-rarity--${reward.rarity}`);
+
+      const rarNames = { common: 'Gewöhnlich', uncommon: 'Ungewöhnlich', rare: 'Rar', epic: 'Episch', legendary: 'Legendär', ultra: 'Ultra' };
+      rarLbl.textContent = rarNames[reward.rarity] ?? reward.rarity;
+      rarLbl.className = `lootbox-rarity-label lb-label--${reward.rarity}`;
+
+      rewIcon.textContent = reward.icon;
+      rewIcon.classList.add('lootbox-reward-appear');
+      rewName.textContent = reward.label;
+
+      _spawnLootboxParticles(reward.rarity, particles);
+      setTimeout(() => { collectBtn.classList.remove('invisible'); }, 600);
+
+      // Epic: zweiter Flash
+      if (reward.rarity === 'epic') {
+        setTimeout(() => {
+          flash.style.background = 'rgba(249,115,22,0.18)';
+          flash.classList.add('active');
+          flash.addEventListener('animationend', () => flash.classList.remove('active'), { once: true });
+        }, 400);
+      }
+    }, 300);
+  }, 2800);
+
+  // Collect
+  const onCollect = () => {
+    collectBtn.removeEventListener('click', onCollect);
+    applyLootboxReward(reward);
+    overlay.hidden = true;
+    box.className = 'lootbox-modal-box';
+    renderHub();
+    renderShop(loadAllData());
+    updateLootboxBlink();
+  };
+  collectBtn.addEventListener('click', onCollect);
+}
+
+// ── Season 3 Shop-Items (nn = noch nicht funktionsfähig) ─────────────────
+const SHOP_ITEMS_P2 = [
+  { id: 'kristall1',          icon: '💎',      name: '1 Kristall',                description: 'Tausche Münzen gegen Kristalle – die seltene Währung der Lernwelt.',  price: 10, kristallItem: true, kristallAmount: 1  },
+  { id: 'kristall3',          icon: '💎💎',   name: '3 Kristalle',               description: 'Ein kleines Bündel Kristalle – günstiger als einzeln kaufen.',             price: 25, kristallItem: true, kristallAmount: 3  },
+  { id: 'kristall10',         icon: '💎💎💎', name: '10 Kristalle',              description: 'Der große Vorrat – der beste Preis pro Kristall.',                          price: 60, kristallItem: true, kristallAmount: 10 },
+  { id: 'lootbox',             icon: '🎁', name: 'Lootbox',               description: 'Gratis um 06:00, 12:00 und 18:00 – oder jederzeit für 2 Kristalle kaufen.',                                                                         price: 2,   currency: 'kristall', lootboxItem: true },
+  { id: 's3Ei',               icon: '🥚', name: 'versiegeltes Ei',              description: 'Hier droppen nur Monster aus Season 3 – Epic, Rare und Normal.',                                                                              price: 8,   currency: 'kristall', eggItem: true, eggType: 's3' },
+  { id: 'backupDesBuches',    icon: '💾', name: 'Backup des Buches',          description: 'Lade ein beliebiges Monster aus dem Buch der Monster in einen Hub – kostet 2 Kristalle pro Nutzung.',                                                         price: 20,  currency: 'kristall', backupItem: true },
+  { id: 'steinDerVollendung', icon: '🧿', name: 'Stein der Vollendung',   description: 'Löst die verborgenen Fesseln eines zufälligen Wesens und öffnet den Weg zu einer Stufe, die niemand für möglich hielt.',                                              price: 10,  currency: 'kristall', consumable: true, upgradeItem: true },
+  { id: 'siegelSuempfe',      icon: '🌿', name: 'Siegel der Sümpfe nn',      description: 'Ein moosbedecktes Siegel aus den Tiefen der Sümpfe. Nur Kristalle können es öffnen.',                                                                        price: 20,  currency: 'kristall', sealItem: true, sealType: 'swamp'  },
+  { id: 'siegelHimmel',       icon: '🌟', name: 'Siegel des Himmels nn',     description: 'Ein strahlendes Siegel aus den Höhen. Bezahle mit Kristallen, um zu enthüllen, was sich dahinter verbirgt.',                                                 price: 20,  currency: 'kristall', sealItem: true, sealType: 'heaven' },
+];
+
 function openShopModal() {
   const modal = document.getElementById('shopModal');
   if (!modal) return;
+  shopActiveTab = (typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN) ? 2 : 1;
+  if (!modal._tabsWired) {
+    modal._tabsWired = true;
+    document.querySelectorAll('.shop-tab').forEach(btn => {
+      btn.addEventListener('click', () => renderShop(loadAllData(), +btn.dataset.tab));
+    });
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeShopModal(); });
+  }
   renderShop(loadAllData());
   modal.hidden = false;
 }
@@ -443,7 +798,12 @@ function closeShopModal() {
 }
 
 // Atari5 · Enter 2-7-1-8
-function renderShop(allData) {
+function renderShop(allData, tab) {
+  if (tab !== undefined) shopActiveTab = tab;
+  const s3Open = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN;
+
+  _renderShopTabs(s3Open);
+
   const list = document.getElementById('shopList');
   if (!list) return;
   list.innerHTML = '';
@@ -451,82 +811,157 @@ function renderShop(allData) {
   const shopData  = loadShopData();
   const available = getTotalCoins(allData) - shopData.spentCoins;
 
+  _renderShopBadges(shopData, available, s3Open);
+
+  const activeItems = shopActiveTab === 1 ? SHOP_ITEMS : SHOP_ITEMS_P2;
+  for (const item of activeItems) {
+    list.appendChild(_buildShopItem(item, shopData, allData, available, s3Open));
+  }
+}
+
+function _renderShopTabs(s3Open) {
+  document.querySelectorAll('.shop-tab').forEach(btn => {
+    btn.classList.toggle('shop-tab--active', +btn.dataset.tab === shopActiveTab);
+    if (+btn.dataset.tab === 2) btn.hidden = !s3Open;
+  });
+}
+
+function _renderShopBadges(shopData, available, s3Open) {
   const shopCoinEl = document.getElementById('shopCoinAmount');
   if (shopCoinEl) shopCoinEl.textContent = available;
 
-  const STACKABLE = ['wachstumstrank', 'wachstumsBooster', 'coinsx3', 'glucksklee'];
-  const COUNT_KEYS = { wachstumstrank: 'wachstumstrankCount', wachstumsBooster: 'wachstumsBoosterCount', coinsx3: 'coinsx3Count', glucksklee: 'gluckskleeCount' };
+  const kristallBadge = document.getElementById('shopKristallBadge');
+  const kristallAmountEl = document.getElementById('shopKristallAmount');
+  if (!kristallBadge) return;
+  const activeTabNr = +(document.querySelector('.shop-tab--active')?.dataset.tab ?? shopActiveTab);
+  const showKristall = s3Open && activeTabNr === 2;
+  kristallBadge.hidden = !showKristall;
+  if (showKristall && kristallAmountEl) kristallAmountEl.textContent = shopData.kristalle ?? 0;
+}
 
-  for (const item of SHOP_ITEMS) {
-    const soldOut = (item.bookItem || item.atariHintItem)
-      ? shopData.purchased.includes(item.id)
-      : item.eggItem
-        ? shopData.nests.some(n => n.eggType === item.eggType)
-        : false;
+function _buildShopItem(item, shopData, allData, available, s3Open) {
+  if (item.lootboxItem) return _buildLootboxItemElement(item, shopData);
 
-    const isStackable = STACKABLE.includes(item.id);
-    const ownedCount  = isStackable ? (shopData[COUNT_KEYS[item.id]] ?? 0) : 0;
-    const isActive    = !isStackable && !!item.consumable && !!shopData[item.id];
-    const canAfford   = available >= item.price;
-    const btnDisabled = soldOut || isActive || !canAfford;
+  const soldOut = (item.bookItem || item.atariHintItem || item.backupItem || item.sealItem)
+    ? shopData.purchased.includes(item.id)
+    : item.eggItem
+      ? shopData.nests.some(n => n.eggType === item.eggType)
+      : false;
 
-    let typeClass = '';
-    if (item.bookItem)          typeClass = 'shop-list-item--book';
-    else if (item.atariHintItem) typeClass = 'shop-list-item--atari';
-    else if (item.eggItem)      typeClass = `shop-list-item--egg-${item.eggType}`;
-    else if (isActive)          typeClass = 'shop-list-item--active';
+  if (item.atariHintItem && soldOut) return _buildAtariHintItemElement(item, shopData);
 
-    const li = document.createElement('div');
-    li.className = `shop-list-item ${typeClass}${soldOut ? ' shop-list-item--soldout' : ''}`.trim();
+  return _buildStandardShopItemElement(item, shopData, allData, available, s3Open, soldOut);
+}
 
-    let btnText = 'Kaufen';
-    if (isActive) btnText = '⚡ Aktiv';
+function _buildLootboxItemElement(item, shopData) {
+  const status = getFreeLootboxStatus();
+  const hasFree = status.available > 0;
 
-    if (item.atariHintItem && soldOut) {
-      const isSolved = shopData.atariSolved;
-      _injectAtariStyles();
-      li.innerHTML = `
-        <div class="shop-list-item__icon">${item.icon}</div>
-        <div class="shop-list-item__info">
-          <div class="shop-list-item__name">${item.name}</div>
-          ${isSolved
-            ? `<p class="atari-hint-solved">✓ Code eingegeben — Atari-1337 entfesselt</p>`
-            : `<div class="atari-paper-hint" id="atariHintNote">
-                Navigiere zu 1337.html
-               </div>`}
-        </div>
-        <div class="shop-list-item__buy-col"></div>
-      `;
-      if (!isSolved) {
-        const note = li.querySelector('#atariHintNote');
-        note.addEventListener('click', () => {
-          const now = Date.now();
-          _atariHintClicks = _atariHintClicks.filter(t => now - t < 700);
-          _atariHintClicks.push(now);
-          if (_atariHintClicks.length >= 3) { _atariHintClicks = []; openAtariTerminal(); }
-        });
-      }
+  const li = document.createElement('div');
+  li.className = 'shop-list-item' + (hasFree ? ' lootbox-blink' : '');
+  li.innerHTML = `
+    <div class="shop-list-item__icon">${item.icon}</div>
+    <div class="shop-list-item__info">
+      <div class="shop-list-item__name">${item.name}</div>
+      <p class="shop-list-item__desc">${item.description}</p>
+      <div class="shop-list-item__price">
+        ${hasFree
+          ? `<span style="color:var(--clr-green);">✓ Gratis verfügbar!</span>`
+          : `<span style="opacity:0.6;">Nächste um ${status.nextLabel}</span>`}
+      </div>
+    </div>
+    <div class="shop-list-item__buy-col">
+      <button class="shop-list-item__btn"${!hasFree && (shopData.kristalle ?? 0) < 2 ? ' disabled' : ''}>${hasFree ? 'Gratis' : '2 💎 Kaufen'}</button>
+    </div>
+  `;
+  li.querySelector('.shop-list-item__btn').addEventListener('click', () => {
+    if (hasFree) {
+      claimFreeLootbox();
     } else {
-      li.innerHTML = `
-        <div class="shop-list-item__icon">${item.icon}</div>
-        <div class="shop-list-item__info">
-          <div class="shop-list-item__name">${item.name}</div>
-          <p class="shop-list-item__desc">${item.description}</p>
-          <div class="shop-list-item__price"><span>🪙</span><span>${item.price} Münzen</span></div>
-        </div>
-        <div class="shop-list-item__buy-col">
-          ${!soldOut ? `<button class="shop-list-item__btn"${btnDisabled ? ' disabled' : ''}>${btnText}</button>` : ''}
-          ${isStackable && ownedCount > 0 ? `<div class="shop-item-owned">${ownedCount}× besitz</div>` : ''}
-          ${soldOut && !item.atariHintItem ? '<div class="shop-soldout-ribbon"></div>' : ''}
-        </div>
-      `;
-      if (!soldOut && !btnDisabled) {
-        li.querySelector('.shop-list-item__btn').addEventListener('click', () => buyItem(item.id));
-      }
+      const currentSd = loadShopData();
+      if ((currentSd.kristalle ?? 0) < 2) return;
+      currentSd.kristalle -= 2;
+      saveShopData(currentSd);
+      const reward = rollLootbox(currentSd, loadAllData());
+      openLootboxModal(reward);
     }
+  });
+  return li;
+}
 
-    list.appendChild(li);
+function _buildAtariHintItemElement(item, shopData) {
+  const isSolved = shopData.atariSolved;
+  _injectAtariStyles();
+
+  const li = document.createElement('div');
+  li.className = 'shop-list-item shop-list-item--atari shop-list-item--soldout';
+  li.innerHTML = `
+    <div class="shop-list-item__icon">${item.icon}</div>
+    <div class="shop-list-item__info">
+      <div class="shop-list-item__name">${item.name}</div>
+      ${isSolved
+        ? `<p class="atari-hint-solved">✓ Code eingegeben — Atari-1337 entfesselt</p>`
+        : `<div class="atari-paper-hint" id="atariHintNote">
+            Navigiere zu 1337.html
+           </div>`}
+    </div>
+    <div class="shop-list-item__buy-col"></div>
+  `;
+  if (!isSolved) {
+    li.querySelector('#atariHintNote')?.addEventListener('click', () => {
+      const now = Date.now();
+      _atariHintClicks = _atariHintClicks.filter(t => now - t < 700);
+      _atariHintClicks.push(now);
+      if (_atariHintClicks.length >= 3) { _atariHintClicks = []; openAtariTerminal(); }
+    });
   }
+  return li;
+}
+
+const _SHOP_STACKABLE  = ['wachstumstrank', 'wachstumsBooster', 'coinsx3', 'glucksklee'];
+const _SHOP_COUNT_KEYS = { wachstumstrank: 'wachstumstrankCount', wachstumsBooster: 'wachstumsBoosterCount', coinsx3: 'coinsx3Count', glucksklee: 'gluckskleeCount' };
+
+function _buildStandardShopItemElement(item, shopData, allData, available, s3Open, soldOut) {
+  const isStackable = _SHOP_STACKABLE.includes(item.id);
+  const ownedCount  = isStackable ? (shopData[_SHOP_COUNT_KEYS[item.id]] ?? 0) : 0;
+  const isActive    = !isStackable && !!item.consumable && !!shopData[item.id];
+  const canAfford   = item.currency === 'kristall'
+    ? (shopData.kristalle ?? 0) >= item.price
+    : available >= item.price;
+  const hasMaxedCreature = item.upgradeItem
+    ? s3Open && Object.values(allData).some(d => d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6)
+    : true;
+  const btnDisabled = soldOut || isActive || !canAfford || !hasMaxedCreature;
+
+  let typeClass = '';
+  if (item.bookItem)           typeClass = 'shop-list-item--book';
+  else if (item.atariHintItem) typeClass = 'shop-list-item--atari';
+  else if (item.eggItem)       typeClass = `shop-list-item--egg-${item.eggType}`;
+  else if (isActive)           typeClass = 'shop-list-item--active';
+
+  const btnText = isActive ? '⚡ Aktiv' : 'Kaufen';
+  const noEligible = item.upgradeItem && !hasMaxedCreature;
+
+  const li = document.createElement('div');
+  li.className = `shop-list-item ${typeClass}${soldOut ? ' shop-list-item--soldout' : ''}`.trim();
+  li.innerHTML = `
+    <div class="shop-list-item__icon">${item.icon}</div>
+    <div class="shop-list-item__info">
+      <div class="shop-list-item__name">${item.name}</div>
+      <p class="shop-list-item__desc">${item.description}</p>
+      <div class="shop-list-item__price"><span>${item.currency === 'kristall' ? '💎' : '🪙'}</span><span>${item.price} ${item.currency === 'kristall' ? 'Kristalle' : 'Münzen'}${item.kristallItem ? ` <span style="opacity:0.5;">→</span> ${item.kristallAmount} 💎` : ''}</span></div>
+    </div>
+    <div class="shop-list-item__buy-col">
+      ${!soldOut ? `<button class="shop-list-item__btn"${btnDisabled ? ' disabled' : ''}>${btnText}</button>` : ''}
+      ${isStackable && ownedCount > 0 ? `<div class="shop-item-owned">${ownedCount}× besitz</div>` : ''}
+      ${soldOut && !item.atariHintItem ? `<div class="shop-soldout-ribbon${item.backupItem ? ' shop-soldout-ribbon--backup' : item.sealItem ? ' shop-soldout-ribbon--seal' : ''}"></div>` : ''}
+    </div>
+    ${noEligible ? `<div class="shop-list-item__no-eligible">Kein Monster auf Stufe 5</div>` : ''}
+  `;
+  if (!soldOut && !btnDisabled) {
+    li.querySelector('.shop-list-item__btn').addEventListener('click', () => buyItem(item.id));
+  }
+  return li;
 }
 
 function confirmRelease(gameId) {
@@ -575,17 +1010,30 @@ function releaseCreature(gameId) {
   renderHub();
 }
 
+function _isPurchased(shopData, itemId) {
+  return shopData.purchased.includes(itemId);
+}
+
+function _charge(shopData, item) {
+  if (item.currency === 'kristall') shopData.kristalle = (shopData.kristalle ?? 0) - item.price;
+  else shopData.spentCoins += item.price;
+}
+
 function buyItem(itemId) {
-  const item = SHOP_ITEMS.find(i => i.id === itemId);
+  const item = [...SHOP_ITEMS, ...SHOP_ITEMS_P2].find(i => i.id === itemId);
   if (!item) return;
   const shopData  = loadShopData();
   const allData   = loadAllData();
   const available = getTotalCoins(allData) - shopData.spentCoins;
-  if (available < item.price) return;
+  if (item.currency === 'kristall') {
+    if ((shopData.kristalle ?? 0) < item.price) return;
+  } else {
+    if (available < item.price) return;
+  }
 
   if (item.atariHintItem) {
-    if (shopData.purchased.includes(itemId)) return;
-    shopData.spentCoins += item.price;
+    if (_isPurchased(shopData, itemId)) return;
+    _charge(shopData, item);
     shopData.purchased.push(itemId);
     shopData.atariNumber = Math.floor(Math.random() * 8);
     saveShopData(shopData);
@@ -593,9 +1041,19 @@ function buyItem(itemId) {
     return;
   }
 
+  if (item.backupItem) {
+    if (_isPurchased(shopData, itemId)) return;
+    _charge(shopData, item);
+    shopData.purchased.push(itemId);
+    saveShopData(shopData);
+    closeShopModal();
+    renderHub();
+    return;
+  }
+
   if (item.eggItem) {
     const nestId = 'nest_' + Date.now();
-    shopData.spentCoins += item.price;
+    _charge(shopData, item);
     shopData.nests.push({ nestId, eggType: item.eggType, gameId: null, gameUrl: null });
     shopData.pendingEggNestId = nestId;
     saveShopData(shopData);
@@ -604,16 +1062,69 @@ function buyItem(itemId) {
     return;
   }
 
+  if (item.sealItem) {
+    if (_isPurchased(shopData, itemId)) return;
+    _charge(shopData, item);
+    shopData.purchased.push(itemId);
+    if (!shopData.sealedEggs) shopData.sealedEggs = [];
+    const egKey = item.sealType === 'heaven' ? 'himmel' : 'suempfe';
+    if (!shopData.sealedEggs.some(e => e.type === egKey)) {
+      shopData.sealedEggs.push({
+        type: egKey,
+        seals: [
+          { hintBought: false, solved: false },
+          { hintBought: false, solved: false },
+          { hintBought: false, solved: false },
+          { hintBought: false, solved: false },
+        ],
+        nestId: null,
+      });
+    }
+    saveShopData(shopData);
+    closeShopModal();
+    renderHub();
+    return;
+  }
+
+  if (item.upgradeItem) {
+    const s3Open = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN;
+    if (!s3Open) return;
+    const eligibleKeys = Object.keys(allData).filter(k => {
+      const d = allData[k];
+      return d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6;
+    });
+    if (!eligibleKeys.length) return;
+    const chosenKey = eligibleKeys[Math.floor(Math.random() * eligibleKeys.length)];
+    const chosenCreature = allData[chosenKey].creature;
+    allData[chosenKey].growth = GROWTH_S6;
+    _charge(shopData, item);
+    saveAllData(allData);
+    saveShopData(shopData);
+    closeShopModal();
+    renderHub();
+    showEvolutionModal(chosenCreature);
+    return;
+  }
+
+  if (item.kristallItem) {
+    _charge(shopData, item);
+    shopData.kristalle = (shopData.kristalle ?? 0) + item.kristallAmount;
+    saveShopData(shopData);
+    renderHub();
+    renderShop(loadAllData());
+    return;
+  }
+
   if (item.consumable) {
-    shopData.spentCoins += item.price;
+    _charge(shopData, item);
     shopData[itemId + 'Count'] = (shopData[itemId + 'Count'] ?? 0) + 1;
     saveShopData(shopData);
     renderHub();
     renderShop(loadAllData());
     return;
   }
-  if (shopData.purchased.includes(itemId)) return;
-  shopData.spentCoins += item.price;
+  if (_isPurchased(shopData, itemId)) return;
+  _charge(shopData, item);
   shopData.purchased.push(itemId);
   saveShopData(shopData);
   closeShopModal();
@@ -634,6 +1145,134 @@ function tryApplyWachstumstrank(gameId) {
   sd.wachstumstrankCount--;
   saveShopData(sd);
   renderHub();
+}
+
+/* ─────────────────────────────────────────────────
+   STEIN DER VOLLENDUNG – Evolutionsmodal
+   ───────────────────────────────────────────────── */
+function showEvolutionModal(creature) {
+  const name = CREATURE_NAMES[creature] ?? creature;
+  const overlay = document.createElement('div');
+  overlay.id = 'evolutionOverlay';
+  overlay.innerHTML = `
+    <style>
+      #evolutionOverlay {
+        position:fixed;inset:0;z-index:10000;
+        background:radial-gradient(ellipse at center,#0a0a1a 0%,#000 100%);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        cursor:default;opacity:0;transition:opacity 0.5s;
+      }
+      @keyframes _evo-pulse {
+        0%,100%{filter:drop-shadow(0 0 6px #fff) brightness(1)}
+        50%{filter:drop-shadow(0 0 22px #fff) drop-shadow(0 0 44px #ffd700) brightness(1.18)}
+      }
+      @keyframes _evo-float {
+        0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)}
+      }
+      @keyframes _evo-flash {
+        0%{opacity:0} 35%{opacity:1} 100%{opacity:0}
+      }
+      @keyframes _evo-appear {
+        from{opacity:0;transform:scale(0.3) rotate(-8deg)}
+        to{opacity:1;transform:scale(1) rotate(0deg)}
+      }
+      @keyframes _evo-aura {
+        0%,100%{filter:drop-shadow(0 0 14px #ffd700) drop-shadow(0 0 28px #ff6400) brightness(1.05)}
+        50%{filter:drop-shadow(0 0 28px #ffd700) drop-shadow(0 0 56px #ff6400) drop-shadow(0 0 84px #ffff00) brightness(1.2)}
+      }
+      @keyframes _evo-title {
+        from{opacity:0;letter-spacing:0.5em}
+        to{opacity:1;letter-spacing:0.08em}
+      }
+      @keyframes _evo-particles {
+        0%{opacity:0;transform:translateY(0) scale(0)}
+        20%{opacity:1}
+        100%{opacity:0;transform:translateY(-60px) scale(1.5)}
+      }
+      #_evo-initial { display:flex;flex-direction:column;align-items:center;gap:18px }
+      #_evo-initial .creature-img {
+        width:170px;height:170px;object-fit:contain;
+        animation:_evo-pulse 1.3s ease-in-out infinite,_evo-float 2.5s ease-in-out infinite;
+      }
+      #_evo-flash-layer {
+        position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:1;
+      }
+      #_evo-final { display:none;flex-direction:column;align-items:center;gap:18px;z-index:2 }
+      #_evo-final.show { display:flex }
+      #_evo-final .creature-img {
+        width:210px;height:210px;object-fit:contain;
+        animation:_evo-appear 0.9s cubic-bezier(0.34,1.56,0.64,1),_evo-aura 2.2s 0.9s ease-in-out infinite,_evo-float 3s 0.9s ease-in-out infinite;
+      }
+      ._evo-name-before {
+        color:rgba(255,215,0,0.7);font-family:Cinzel,serif;font-size:1.2rem;font-weight:600;
+        text-align:center;text-shadow:0 0 12px #ff8c00;
+      }
+      ._evo-title-final {
+        color:#ffd700;font-family:Cinzel,serif;font-size:1.5rem;font-weight:700;
+        text-align:center;text-shadow:0 0 18px #ffd700,0 0 36px #ff8c00;
+        animation:_evo-title 1s 0.4s both;
+      }
+      ._evo-badge {
+        color:#fff;background:linear-gradient(135deg,#7b2ff7,#f107a3);
+        font-family:Cinzel,serif;font-size:0.75rem;font-weight:700;letter-spacing:0.12em;
+        padding:3px 12px;border-radius:20px;text-transform:uppercase;
+        animation:_evo-appear 1s 0.8s both;box-shadow:0 0 16px #7b2ff7;
+      }
+      ._evo-particles {
+        position:fixed;font-size:1.6rem;pointer-events:none;
+        animation:_evo-particles 1.8s ease-out both;
+      }
+      #_evo-close-btn {
+        position:absolute;bottom:28px;
+        padding:10px 28px;font-family:Cinzel,serif;font-size:0.95rem;font-weight:700;
+        color:#1a0e05;background:linear-gradient(135deg,#ffd700,#f0b429);
+        border:none;border-radius:999px;cursor:pointer;
+        box-shadow:0 0 18px rgba(255,215,0,0.5);
+        opacity:0;transition:opacity 0.4s ease;pointer-events:none;
+      }
+      #_evo-close-btn.show { opacity:1;pointer-events:auto; }
+    </style>
+    <div id="_evo-flash-layer"></div>
+    <div id="_evo-initial">
+      ${getCreatureHTML(creature, 4)}
+      <div class="_evo-name-before">${name}</div>
+    </div>
+    <div id="_evo-final">
+      ${getCreatureHTML(creature, 5)}
+      <div class="_evo-title-final">✦ ${name} ✦</div>
+      <div class="_evo-badge">Vollendet</div>
+    </div>
+    <button id="_evo-close-btn">Weiter ✦</button>
+  `;
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+  setTimeout(() => {
+    const flash = overlay.querySelector('#_evo-flash-layer');
+    flash.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:1;pointer-events:none;animation:_evo-flash 0.7s ease';
+    const spawnParticle = (emoji, delay) => {
+      const p = document.createElement('span');
+      p.className = '_evo-particles';
+      p.textContent = emoji;
+      p.style.cssText = `left:${15 + Math.random()*70}%;top:${30 + Math.random()*40}%;animation-delay:${delay}s`;
+      overlay.appendChild(p);
+    };
+    ['✨','⭐','🌟','💫','✨','⭐','💫','🌟'].forEach((e,i) => spawnParticle(e, i * 0.12));
+    setTimeout(() => {
+      overlay.querySelector('#_evo-initial').style.display = 'none';
+      const final = overlay.querySelector('#_evo-final');
+      final.style.display = 'flex';
+      requestAnimationFrame(() => final.classList.add('show'));
+      setTimeout(() => overlay.querySelector('#_evo-close-btn').classList.add('show'), 800);
+    }, 350);
+  }, 2400);
+
+  overlay.querySelector('#_evo-close-btn').addEventListener('click', () => {
+    overlay.style.transition = 'opacity 0.3s';
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 320);
+  });
 }
 
 function showPasswordPrompt(gameId) {
@@ -661,9 +1300,10 @@ function showPasswordPrompt(gameId) {
   const error  = document.getElementById('pwError');
   const submit = document.getElementById('pwSubmit');
 
-  const attempt = () => {
+  const attempt = async () => {
     const cfg = GAME_ACCESS[gameId];
-    if (input.value === cfg.password) {
+    const inputHash = await hashPassword(input.value);
+    if (inputHash === cfg.passwordHash) {
       saveUnlocked(gameId);
       overlay.hidden = true;
       window.location.href = game.url + '?id=' + gameId;
@@ -682,7 +1322,8 @@ function showPasswordPrompt(gameId) {
 /* ─────────────────────────────────────────────────
    8. NEST-SEKTION (zwischen Spielen und Shop)
    ───────────────────────────────────────────────── */
-const EGG_TYPE_NAMES = { rare: 'Selten', mythic: 'Episch', legendary: 'Legendär', atari: 'ATARI', pfau: '🦚 Pfau' };
+const EGG_TYPE_NAMES  = { rare: 'Selten', mythic: 'Episch', legendary: 'Legendär', atari: 'ATARI', pfau: '🦚 Pfau', himmel: '🌟 Ei des Himmels', suempfe: '🌿 Ei der Sümpfe' };
+const SEAL_CREATURE   = { himmel: 'chinDrache', suempfe: 'schnabeltier' };
 
 function renderNestSection(allData) {
   const section = document.getElementById('nestSection');
@@ -695,100 +1336,107 @@ function renderNestSection(allData) {
   grid.innerHTML = '';
 
   for (const nest of shopData.nests) {
-    const nestData    = allData[nest.nestId] || defaultGameData();
-    const hasCreature = !!nestData.creature;
-    const stage       = hasCreature ? getGrowthStage(nestData.growth) : -1;
-    const progressPct = hasCreature ? Math.min(nestData.growth / GROWTH_MAX * 100, 100) : 0;
-    const epic       = hasCreature && isEpic(nestData.creature);
-    const legendary  = hasCreature && isLegendary(nestData.creature);
-    const linkedGame  = GAMES_CONFIG.find(g => g.id === nest.gameId);
-    const isPending   = shopData.pendingEggNestId === nest.nestId;
-    const eggTypeName = EGG_TYPE_NAMES[nest.eggType] ?? nest.eggType;
-    const canPlay     = hasCreature || !!nest.gameId;
-
-    const imgContent = hasCreature
-      ? `<div class="hub-creature-display">${getCreatureHTML(nestData.creature, stage)}</div>`
-      : eggStage0();
-
-    const specialBadge = epic ? `<span class="epic-badge">✦ Episch ✦</span>`
-      : legendary ? `<span class="legendary-badge">✦ Legendär ✦</span>` : '';
-
-    let playBtn;
-    if (canPlay) {
-      playBtn = `<button class="game-card__btn">Spielen!</button>`;
-    } else {
-      playBtn = isPending
-        ? `<p class="nest-card__hint">Klicke auf "Spielen!" bei einem Spiel!</p>`
-        : `<p class="nest-card__hint" style="opacity:0.5;">Wähle ein Spiel…</p>`;
-    }
-
-    const nestMaxed = hasCreature && nestData.growth >= GROWTH_MAX;
-    const canUseTrank = hasCreature && !nestMaxed && (shopData.wachstumstrankCount ?? 0) > 0;
-    const card = document.createElement('div');
-    const isAtariEgg = !hasCreature && nest.eggType === 'atari';
-    const isPfauEgg  = !hasCreature && nest.eggType === 'pfau';
-    card.className = `game-card nest-game-card${hasCreature ? ' has-creature' : ''}${epic ? ' game-card--epic' : ''}${legendary ? ' game-card--legendary' : ''}${isAtariEgg ? ' nest-card--atari' : ''}${isPfauEgg ? ' nest-card--pfau' : ''}${isPending ? ' nest-card--pending' : ''}${nestMaxed ? ' creature-maxed' : ''}`;
-
-    const nestActiveItem = canPlay ? getActiveItemForSlot(nestData, shopData) : null;
-
-    card.innerHTML = `
-      <h3 class="game-card__title">🥚 ${eggTypeName}</h3>
-      <p class="nest-card__subtitle">
-        ${linkedGame ? `${linkedGame.icon} ${linkedGame.title}` : '<em>Spiel noch nicht gewählt</em>'}
-      </p>
-      ${specialBadge}
-      <div class="game-card__creature-wrap${hasCreature ? ' creature-preview' : ''}">
-        ${imgContent}
-      </div>
-      ${!hasCreature ? `<p class="game-card__stage-label" style="font-size:0.8rem;color:var(--clr-cream-dim);">Ei schlummert…</p>` : ''}
-      <div class="game-card__progress">
-        <div class="game-card__progress-fill" style="width:${progressPct}%"></div>
-      </div>
-      <div class="game-card__points">
-        ⭐ Gesamt: <strong>${nestData.points}</strong>
-        &nbsp;·&nbsp; 🔄 Runden: <strong>${nestData.roundsPlayed}</strong>
-      </div>
-      ${nestActiveItem
-        ? `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${nestActiveItem.id}" data-count-key="${nestActiveItem.countKey}">nutze ${nestActiveItem.icon}</button></div>`
-        : playBtn}
-      <button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>
-      ${canUseTrank ? `<button class="game-card__trank-btn" title="Wachstumstrank anwenden">🧪</button>` : ''}
-    `;
-
-    if (canPlay) {
-      card.querySelector('.game-card__btn').addEventListener('click', () => {
-        playNest(nest.nestId);
-      });
-      card.querySelector('.game-card__use-btn')?.addEventListener('click', e => {
-        e.stopPropagation();
-        const btn = e.currentTarget;
-        const sd = loadShopData();
-        const countKey = btn.dataset.countKey;
-        const itemId   = btn.dataset.item;
-        if (!countKey || (sd[countKey] ?? 0) <= 0) return;
-        sd[countKey]--;
-        sd[itemId] = true;
-        saveShopData(sd);
-        if (!nest.gameUrl) return;
-        window.location.href = nest.gameUrl + '?id=' + nest.nestId + '&egg=' + nest.eggType;
-      });
-    }
-    if (hasCreature) {
-      card.querySelector('.creature-preview')?.addEventListener('click', e => {
-        e.stopPropagation();
-        showCreatureModal(nestData);
-      });
-    }
-    card.querySelector('.game-card__trank-btn')?.addEventListener('click', e => {
-      e.stopPropagation();
-      tryApplyWachstumstrank(nest.nestId);
-    });
-    card.querySelector('.game-card__release').addEventListener('click', e => {
-      e.stopPropagation();
-      confirmReleaseNest(nest.nestId);
-    });
-    grid.appendChild(card);
+    grid.appendChild(buildNestCard(nest, allData, shopData));
   }
+}
+
+function buildNestCard(nest, allData, shopData) {
+  const nestData    = allData[nest.nestId] || defaultGameData();
+  const hasCreature = !!nestData.creature;
+  const stage       = hasCreature ? getGrowthStage(nestData.growth) : -1;
+  const progressPct = hasCreature ? Math.min(nestData.growth / GROWTH_MAX * 100, 100) : 0;
+  const epic        = hasCreature && isEpic(nestData.creature);
+  const legendary   = hasCreature && isLegendary(nestData.creature);
+  const linkedGame  = GAMES_CONFIG.find(g => g.id === nest.gameId);
+  const isPending   = shopData.pendingEggNestId === nest.nestId;
+  const eggTypeName = EGG_TYPE_NAMES[nest.eggType] ?? nest.eggType;
+  const canPlay     = hasCreature || !!nest.gameId;
+  const nestMaxed   = hasCreature && nestData.growth >= GROWTH_MAX;
+  const canUseTrank = hasCreature && !nestMaxed && (shopData.wachstumstrankCount ?? 0) > 0;
+  const isAtariEgg  = !hasCreature && nest.eggType === 'atari';
+  const isPfauEgg   = !hasCreature && nest.eggType === 'pfau';
+
+  const imgContent = hasCreature
+    ? `<div class="hub-creature-display">${getCreatureHTML(nestData.creature, stage)}</div>`
+    : eggStage0();
+
+  const specialBadge = epic ? `<span class="epic-badge">✦ Episch ✦</span>`
+    : legendary ? `<span class="legendary-badge">✦ Legendär ✦</span>` : '';
+
+  let playBtn;
+  if (canPlay) {
+    playBtn = `<button class="game-card__btn">Spielen!</button>`;
+  } else {
+    playBtn = isPending
+      ? `<p class="nest-card__hint">Klicke auf "Spielen!" bei einem Spiel!</p>`
+      : `<p class="nest-card__hint" style="opacity:0.5;">Wähle ein Spiel…</p>`;
+  }
+
+  const nestActiveItem = canPlay ? getActiveItemForSlot(nestData, shopData) : null;
+
+  const card = document.createElement('div');
+  card.className = `game-card nest-game-card${hasCreature ? ' has-creature' : ''}${epic ? ' game-card--epic' : ''}${legendary ? ' game-card--legendary' : ''}${isAtariEgg ? ' nest-card--atari' : ''}${isPfauEgg ? ' nest-card--pfau' : ''}${isPending ? ' nest-card--pending' : ''}${nestMaxed ? ' creature-maxed' : ''}`;
+  card.innerHTML = `
+    <h3 class="game-card__title">🥚 ${eggTypeName}</h3>
+    <p class="nest-card__subtitle">
+      ${linkedGame ? `${linkedGame.icon} ${linkedGame.title}` : '<em>Spiel noch nicht gewählt</em>'}
+    </p>
+    ${specialBadge}
+    <div class="game-card__creature-wrap${hasCreature ? ' creature-preview' : ''}">
+      ${imgContent}
+    </div>
+    ${!hasCreature ? `<p class="game-card__stage-label" style="font-size:0.8rem;color:var(--clr-cream-dim);">Ei schlummert…</p>` : ''}
+    <div class="game-card__progress">
+      <div class="game-card__progress-fill" style="width:${progressPct}%"></div>
+    </div>
+    <div class="game-card__points">
+      ⭐ Gesamt: <strong>${nestData.points}</strong>
+      &nbsp;·&nbsp; 🔄 Runden: <strong>${nestData.roundsPlayed}</strong>
+    </div>
+    ${nestActiveItem
+      ? `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${nestActiveItem.id}" data-count-key="${nestActiveItem.countKey}">nutze ${nestActiveItem.icon}</button></div>`
+      : playBtn}
+    <button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>
+    ${canUseTrank ? `<button class="game-card__trank-btn" title="Wachstumstrank anwenden">🧪</button>` : ''}
+  `;
+
+  attachNestCardListeners(card, nest, nestData, hasCreature, canPlay);
+  return card;
+}
+
+function attachNestCardListeners(card, nest, nestData, hasCreature, canPlay) {
+  if (canPlay) {
+    card.querySelector('.game-card__btn').addEventListener('click', () => {
+      playNest(nest.nestId);
+    });
+    card.querySelector('.game-card__use-btn')?.addEventListener('click', e => {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      const sd = loadShopData();
+      const countKey = btn.dataset.countKey;
+      const itemId   = btn.dataset.item;
+      if (!countKey || (sd[countKey] ?? 0) <= 0) return;
+      sd[countKey]--;
+      sd[itemId] = true;
+      saveShopData(sd);
+      if (!nest.gameUrl) return;
+      window.location.href = nest.gameUrl + '?id=' + nest.nestId + '&egg=' + nest.eggType;
+    });
+  }
+  if (hasCreature) {
+    card.querySelector('.creature-preview')?.addEventListener('click', e => {
+      e.stopPropagation();
+      showCreatureModal(nestData);
+    });
+  }
+  card.querySelector('.game-card__trank-btn')?.addEventListener('click', e => {
+    e.stopPropagation();
+    tryApplyWachstumstrank(nest.nestId);
+  });
+  card.querySelector('.game-card__release').addEventListener('click', e => {
+    e.stopPropagation();
+    confirmReleaseNest(nest.nestId);
+  });
 }
 
 function playNest(nestId) {
@@ -843,7 +1491,7 @@ function releaseNest(nestId) {
   if (!nest) return;
 
   const nestCoins = getGameData(nestId).coins || 0;
-  const legendary = nest.eggType === 'pfau' || nest.eggType === 'atari';
+  const legendary = ['pfau', 'atari', 'himmel', 'suempfe'].includes(nest.eggType);
 
   if (legendary) {
     nest.gameId           = null;
@@ -857,12 +1505,9 @@ function releaseNest(nestId) {
   saveShopData(sd);
 
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const all = JSON.parse(raw);
-      delete all[nestId];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-    }
+    const all = loadStorage(STORAGE_KEY);
+    delete all[nestId];
+    saveStorage(STORAGE_KEY, all);
   } catch(e) {}
   document.getElementById('modalOverlay').hidden = true;
   renderHub();
@@ -873,11 +1518,15 @@ function releaseNest(nestId) {
    ───────────────────────────────────────────────── */
 function enterPendingEggMode() {
   if (document.getElementById('pendingEggBanner')) return;
+  const sd         = loadShopData();
+  const nestId     = sd.pendingEggNestId;
+  const nestData   = nestId ? getGameData(nestId) : null;
+  const hasCreature = !!(nestData && nestData.creature);
   const banner = document.createElement('div');
   banner.id = 'pendingEggBanner';
   banner.className = 'trank-banner';
   banner.innerHTML = `
-    <span>🥚 Klicke bei einem Spiel auf "Spielen!", um dein Ei dort auszubrüten!</span>
+    <span>${hasCreature ? '✨ Wähle ein Spiel, um deine Kreatur dort zu leveln!' : '🥚 Klicke bei einem Spiel auf "Spielen!", um dein Ei dort auszubrüten!'}</span>
     <button onclick="cancelPendingEgg()">✕ Abbrechen</button>
   `;
   document.body.appendChild(banner);
@@ -905,6 +1554,513 @@ function cancelPendingEgg() {
 }
 
 /* ─────────────────────────────────────────────────
+   9b. BACKUP-SWAP-MODUS
+   ───────────────────────────────────────────────── */
+function enterBackupSwapMode() {
+  if (document.getElementById('backupSwapBanner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'backupSwapBanner';
+  banner.className = 'trank-banner';
+  banner.innerHTML = `
+    <span>💾 Wähle einen Hub zum Monster tauschen</span>
+    <button onclick="cancelBackupSwap()">✕ Abbrechen</button>
+  `;
+  document.body.appendChild(banner);
+}
+
+function exitBackupSwapMode() {
+  document.getElementById('backupSwapBanner')?.remove();
+}
+
+function cancelBackupSwap() {
+  const sd = loadShopData();
+  sd.pendingBackup = null;
+  saveShopData(sd);
+  exitBackupSwapMode();
+  renderHub();
+}
+
+/* ─────────────────────────────────────────────────
+   10. VERSIEGELTE EIER — Siegel-System
+   ───────────────────────────────────────────────── */
+const SEALED_EGG_DEFS = {
+  himmel: {
+    label: 'Ei des Himmels',
+    icon: '🌟',
+    imgSrc: 'data/originals/Himmelssiegel.png',
+    eggType: 'himmel',
+    seals: [
+      {
+        name: 'Siegel I', icon: '☁️',
+        hint: 'Die Wolken kennen deine Adresse. Kennst du sie auch?',
+        hasInput: true,
+        verifyAsync: async function(val) {
+          try {
+            const r = await fetch('https://api.ipify.org?format=json');
+            const d = await r.json();
+            const h = async s => Array.from(new Uint8Array(
+              await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s.trim()))
+            )).map(b => b.toString(16).padStart(2,'0')).join('');
+            return await h(val) === await h(d.ip);
+          } catch(e) { return false; }
+        }
+      },
+      {
+        name: 'Siegel II', icon: '📜',
+        hint: 'Das Gedächtnis der Schule reicht weiter zurück als du denkst. Was geschah hier vor einem Viertel Jahrhundert?',
+        hasInput: true,
+        verifyAsync: async function(val) {
+          const h = async s => Array.from(new Uint8Array(
+            await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s.trim()))
+          )).map(b => b.toString(16).padStart(2,'0')).join('');
+          return await h(val) === '9fbbe982e10d5be5810770259fa95ce2db0cdaf8ec937ae64eab931f06ab4177';
+        }
+      },
+      {
+        name: 'Siegel III', icon: '⚡',
+        hint: `<code style="font-family:'Courier New',monospace;font-size:0.74rem;color:#c8a800;line-height:1.9;word-break:break-all;display:block">01010111 01101111 01101100 01101011 01100101</code>`,
+        hasInput: true,
+        verifyAsync: async function(val) {
+          const buf  = new TextEncoder().encode(val.trim());
+          const hash = await crypto.subtle.digest('SHA-256', buf);
+          const hex  = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+          return hex === '3a1338ef215e8415265abb1a4b41ca314ab7a7a7ebcc6e8f0aa341f3dbc4063c';
+        }
+      },
+      {
+        name: 'Siegel IV', icon: '🏗️',
+        hint: 'Am Fundament der Baumeister. Wo Nichts zu Etwas wird.\n\n54.31148725259439, 10.118052182410645',
+        hasInput: true,
+        verifyAsync: async function(val) {
+          const h = async s => Array.from(new Uint8Array(
+            await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s.trim()))
+          )).map(b => b.toString(16).padStart(2,'0')).join('');
+          return await h(val) === 'd8033f6baef90a59408348e855fb1495597bb0c7fbcd0396932ac470b3d9be2e';
+        }
+      },
+    ]
+  },
+  suempfe: {
+    label: 'Ei der Sümpfe',
+    icon: '🌿',
+    imgSrc: 'data/originals/Sumpfsiegel.png',
+    eggType: 'suempfe',
+    seals: [
+      {
+        name: 'Siegel I', icon: '🧪',
+        hint: 'Im Trank liegt die Kraft. Bringe eine Kreatur vom Baby zur maximalen Stufe – ausschließlich durch Wachstumstränke, ohne ein weiteres Spiel zu spielen.',
+        verify: function() {
+          const all = loadStorage(STORAGE_KEY);
+          for (const key in all) {
+            const d = all[key];
+            if (d.creature && d.growth >= GROWTH_MAX && d.roundsPlayed === 1) return true;
+          }
+          return false;
+        }
+      },
+      {
+        name: 'Siegel II', icon: '🏆',
+        hint: function() {
+          const ff  = parseInt(localStorage.getItem('fokusflow_highscore')  || '0');
+          const alg = parseInt(localStorage.getItem('algorithmBestTime')    || '0');
+          const tt  = parseInt(localStorage.getItem('tippturbo_hs')         || '0');
+          const th  = 15 * 60 + alg;
+          const algStr = String(Math.floor(th / 60) % 24).padStart(2,'0') + ':' + String(th % 60).padStart(2,'0');
+          const row = (ok, text) => `<div style="display:flex;align-items:center;gap:8px;margin:5px 0;font-size:0.84rem">
+            <span style="color:${ok ? '#4ade80' : 'rgba(255,255,255,0.28)'};font-size:1rem">${ok ? '✓' : '○'}</span>
+            <span style="color:${ok ? '#e8dcc8' : 'rgba(255,255,255,0.45)'}">${text}</span></div>`;
+          return '<div style="margin-top:4px">'
+            + row(ff  >= 900, `Fokusflow – ${ff} / 900 Pkt`)
+            + row(alg >= 660, `The Algorithm – ${algStr} Uhr (Ziel: 02:00)`)
+            + row(tt  >= 450, `Tip Turbo Kids – ${tt} / 450 Pkt`)
+            + '</div>';
+        },
+        verify: function() {
+          return parseInt(localStorage.getItem('fokusflow_highscore') || '0') >= 900
+              && parseInt(localStorage.getItem('algorithmBestTime')   || '0') >= 660
+              && parseInt(localStorage.getItem('tippturbo_hs')        || '0') >= 450;
+        }
+      },
+      {
+        name: 'Siegel III', icon: '⭐',
+        hint: function() {
+          const seen = loadShopData().seenCreatures;
+          const count = Object.values(seen).filter(stage => stage >= 5).length;
+          const done = count >= 5;
+          return `Bringe mindestens 5 Kreaturen auf die Stufe Vollendet (✦).<br>
+            <span style="font-size:1.1rem;font-weight:bold;color:${done ? '#4ade80' : '#e8dcc8'}">${count} / 5</span>`;
+        },
+        verify: function() {
+          const seen = loadShopData().seenCreatures;
+          return Object.values(seen).filter(stage => stage >= 5).length >= 5;
+        }
+      },
+      {
+        name: 'Siegel IV', icon: '🐣',
+        hint: function() {
+          const all     = loadStorage(STORAGE_KEY);
+          const total   = GAMES_CONFIG.length;
+          const withC   = GAMES_CONFIG.filter(g => all[g.id] && all[g.id].creature);
+          const babies  = withC.filter(g => getGrowthStage(all[g.id].growth) === 0).length;
+          const done    = withC.length > 0 && babies === withC.length;
+          return `In allen Spielslots schlummern nur Babys.<br>
+            <span style="font-size:1.1rem;font-weight:bold;color:${done ? '#4ade80' : '#e8dcc8'}">${babies} / ${total}</span>`;
+        },
+        verify: function() {
+          const all     = loadStorage(STORAGE_KEY);
+          const gameIds = GAMES_CONFIG.map(g => g.id);
+          const withC   = gameIds.filter(id => all[id] && all[id].creature);
+          return withC.length > 0 && withC.every(id => getGrowthStage(all[id].growth) === 0);
+        }
+      },
+    ]
+  },
+};
+
+function renderSealedEggs() {
+  const section = document.getElementById('sealedEggsSection');
+  const grid    = document.getElementById('sealedEggsGrid');
+  if (!section || !grid) return;
+
+  const sd = loadShopData();
+  const activeEggs = (sd.sealedEggs ?? []).filter(e => !e.nestId || !sd.nests.some(n => n.nestId === e.nestId));
+
+  if (!activeEggs.length) { section.hidden = true; return; }
+  section.hidden = false;
+  grid.innerHTML = '';
+
+  for (const egg of activeEggs) {
+    const def          = SEALED_EGG_DEFS[egg.type];
+    if (!def) continue;
+    const solvedCount  = egg.seals.filter(s => s.solved).length;
+    const allSolved    = solvedCount === 4;
+
+    const card = document.createElement('div');
+    card.className = `game-card sealed-egg-card${allSolved ? ' sealed-egg-card--ready' : ''}`;
+    card.innerHTML = `
+      <h3 class="game-card__title">${def.icon} ${def.label}</h3>
+      <div class="sealed-egg-img-wrap">
+        <img src="${def.imgSrc}" class="sealed-egg-img" alt="${def.label}">
+      </div>
+      <p class="sealed-egg-progress">${solvedCount} / 4 Siegel gebrochen</p>
+      <button class="game-card__btn">${allSolved ? '✨ Ei öffnen!' : 'Siegel untersuchen'}</button>
+    `;
+    card.querySelector('.game-card__btn').addEventListener('click', () => openSealedEggModal(egg.type));
+    grid.appendChild(card);
+  }
+}
+
+let _sealModalType = null;
+
+function autoCheckSeals(type) {
+  const def = SEALED_EGG_DEFS[type];
+  if (!def) return;
+  const sd  = loadShopData();
+  const egg = (sd.sealedEggs ?? []).find(e => e.type === type);
+  if (!egg) return;
+  let changed = false;
+  def.seals.forEach((sealDef, i) => {
+    if (egg.seals[i].solved || !egg.seals[i].hintBought) return;
+    if (typeof sealDef.verify === 'function' && sealDef.verify()) {
+      egg.seals[i].solved = true;
+      changed = true;
+    }
+  });
+  if (changed) { saveShopData(sd); renderSealedEggs(); }
+}
+
+function openSealedEggModal(type) {
+  _sealModalType = type;
+  const overlay = document.getElementById('sealedEggOverlay');
+  if (!overlay) return;
+  autoCheckSeals(type);
+  renderSealedEggModalContent(type);
+  overlay.hidden = false;
+  document.getElementById('sealedEggClose')?.addEventListener('click', closeSealedEggModal, { once: true });
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeSealedEggModal(); }, { once: true });
+}
+
+function closeSealedEggModal() {
+  const overlay = document.getElementById('sealedEggOverlay');
+  if (overlay) overlay.hidden = true;
+  _sealModalType = null;
+}
+
+function renderSealedEggModalContent(type) {
+  const content = document.getElementById('sealedEggModalContent');
+  if (!content) return;
+
+  const def = SEALED_EGG_DEFS[type];
+  if (!def) return;
+
+  const sd = loadShopData();
+  const egg = (sd.sealedEggs ?? []).find(e => e.type === type);
+  if (!egg) return;
+
+  const kristalle   = sd.kristalle ?? 0;
+  const solvedCount = egg.seals.filter(s => s.solved).length;
+  const allSolved   = solvedCount === 4;
+
+  const tilesHTML = egg.seals.map((s, i) => {
+    const sealDef = def.seals[i];
+    if (s.solved) {
+      return `
+        <div class="seal-card seal-card--broken">
+          <div class="seal-card__icon">${sealDef.icon}</div>
+          <div class="seal-card__name">${sealDef.name}</div>
+          <div class="seal-card__solved">✓ gebrochen</div>
+        </div>`;
+    }
+    if (!s.hintBought) {
+      const canAfford = kristalle >= 5;
+      return `
+        <div class="seal-card seal-card--locked">
+          <div class="seal-card__icon">🔒</div>
+          <div class="seal-card__name">${sealDef.name}</div>
+          <button class="seal-hint-btn${canAfford ? '' : ' seal-hint-btn--disabled'}"
+            onclick="buySealHint('${type}',${i})" ${canAfford ? '' : 'disabled'}>
+            Hinweis (5 💎)
+          </button>
+        </div>`;
+    }
+    // hint bought
+    const hintText = typeof sealDef.hint === 'function' ? sealDef.hint() : sealDef.hint;
+    const inputHTML = sealDef.hasInput
+      ? `<div class="seal-input-row">
+           <input class="seal-input" type="text" placeholder="Antwort…" id="sealInput_${type}_${i}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+           <button class="seal-submit-btn" onclick="verifySeal('${type}',${i})">✓</button>
+         </div>
+         <div class="seal-error" id="sealError_${type}_${i}" hidden>Falsch – versuch es nochmal.</div>`
+      : sealDef.hasButton
+      ? `<button class="seal-submit-btn" style="margin-top:10px;width:100%;padding:8px" onclick="verifySeal('${type}',${i})">Prüfen ↗</button>
+         <div class="seal-error" id="sealError_${type}_${i}" hidden>Bedingung noch nicht erfüllt.</div>`
+      : '';
+    return `
+      <div class="seal-card seal-card--hinted" id="sealCard_${type}_${i}">
+        <div class="seal-card__icon">${sealDef.icon} 🔓</div>
+        <div class="seal-card__name">${sealDef.name}</div>
+        <p class="seal-hint-text">${hintText}</p>
+        ${inputHTML}
+      </div>`;
+  }).join('');
+
+  content.innerHTML = `
+    <h2 class="seal-modal-title">${def.icon} ${def.label}</h2>
+    <p class="seal-modal-sub">${solvedCount} von 4 Siegeln gebrochen</p>
+    <div class="seal-grid">${tilesHTML}</div>
+    ${allSolved ? `<button class="seal-open-btn" onclick="triggerSealEggOpening('${type}')">✨ Ei öffnen!</button>` : ''}
+  `;
+
+  def.seals.forEach((_, i) => {
+    const inp = document.getElementById(`sealInput_${type}_${i}`);
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') verifySeal(type, i); });
+  });
+}
+
+function buySealHint(type, index) {
+  const sd = loadShopData();
+  if ((sd.kristalle ?? 0) < 5) return;
+  const egg = (sd.sealedEggs ?? []).find(e => e.type === type);
+  if (!egg || egg.seals[index].hintBought) return;
+  egg.seals[index].hintBought = true;
+  sd.kristalle -= 5;
+  saveShopData(sd);
+  renderSealedEggModalContent(type);
+  renderSealedEggs();
+}
+
+async function verifySeal(type, index) {
+  const def = SEALED_EGG_DEFS[type];
+  if (!def) return;
+  const sealDef = def.seals[index];
+  const inputEl = document.getElementById(`sealInput_${type}_${index}`);
+  if (!inputEl) return;
+
+  const inputVal = inputEl ? inputEl.value : '';
+  let correct = false;
+  if (typeof sealDef.verify === 'function') {
+    correct = sealDef.verify(inputVal);
+  } else if (typeof sealDef.verifyAsync === 'function') {
+    if (inputEl) inputEl.disabled = true;
+    correct = await sealDef.verifyAsync(inputVal);
+    if (inputEl) inputEl.disabled = false;
+  }
+
+  if (correct) {
+    const sd = loadShopData();
+    const egg = (sd.sealedEggs ?? []).find(e => e.type === type);
+    if (!egg) return;
+    egg.seals[index].solved = true;
+    saveShopData(sd);
+
+    const card = document.getElementById(`sealCard_${type}_${index}`);
+    if (card) card.classList.add('seal-card--breaking');
+    setTimeout(() => {
+      renderSealedEggModalContent(type);
+      renderSealedEggs();
+      const sdNew = loadShopData();
+      const eggNew = (sdNew.sealedEggs ?? []).find(e => e.type === type);
+      if (eggNew && eggNew.seals.every(s => s.solved)) {
+        setTimeout(() => document.querySelector('.seal-open-btn')?.classList.add('seal-open-btn--glow'), 300);
+      }
+    }, 500);
+  } else {
+    const errEl = document.getElementById(`sealError_${type}_${index}`);
+    if (errEl) errEl.hidden = false;
+    inputEl.classList.add('seal-input--error');
+    setTimeout(() => {
+      if (errEl) errEl.hidden = true;
+      inputEl.classList.remove('seal-input--error');
+    }, 2000);
+  }
+}
+
+function triggerSealEggOpening(type) {
+  const sd  = loadShopData();
+  const egg = (sd.sealedEggs ?? []).find(e => e.type === type);
+  if (!egg || !egg.seals.every(s => s.solved)) return;
+  closeSealedEggModal();
+
+  const def      = SEALED_EGG_DEFS[type];
+  const creature = SEAL_CREATURE[type];
+  const nestId   = 'nest_sealed_' + Date.now();
+
+  const gd = defaultGameData();
+  gd.creature = creature;
+  saveGameData(nestId, gd);
+
+  sd.nests.push({ nestId, eggType: type, gameId: null, gameUrl: null });
+  sd.pendingEggNestId = nestId;
+  sd.sealedEggs = (sd.sealedEggs ?? []).filter(e => e.type !== type);
+  saveShopData(sd);
+
+  showSealEggOpeningAnimation(def, creature, () => { renderHub(); });
+}
+
+const SEAL_EGG_OPEN_PARTICLE_COUNT = 14;
+
+function showSealEggOpeningAnimation(def, creature, onClose) {
+  const overlay = document.createElement('div');
+  overlay.id = 'sealEggOpenOverlay';
+  overlay.innerHTML = `
+    <style>
+      #sealEggOpenOverlay {
+        position:fixed;inset:0;z-index:10000;
+        background:radial-gradient(ellipse at center,#1a0a2e 0%,#000 100%);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        opacity:0;transition:opacity 0.5s;cursor:default;
+      }
+      @keyframes _segg-shake {
+        0%,100%{transform:rotate(0)} 15%{transform:rotate(-8deg)} 30%{transform:rotate(8deg)}
+        45%{transform:rotate(-8deg)} 60%{transform:rotate(8deg)} 75%{transform:rotate(-5deg)} 90%{transform:rotate(5deg)}
+      }
+      @keyframes _segg-crack {
+        0%{filter:brightness(1)} 40%{filter:brightness(2) drop-shadow(0 0 20px #fff)}
+        100%{filter:brightness(3) drop-shadow(0 0 40px #ffd700) drop-shadow(0 0 80px #ff6400)}
+      }
+      @keyframes _segg-flash { 0%{opacity:0} 50%{opacity:1} 100%{opacity:0} }
+      @keyframes _segg-appear {
+        from{opacity:0;transform:scale(0.2) translateY(40px)} to{opacity:1;transform:scale(1) translateY(0)}
+      }
+      @keyframes _segg-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+      @keyframes _segg-title { from{opacity:0;letter-spacing:0.5em} to{opacity:1;letter-spacing:0.06em} }
+      @keyframes _segg-particles {
+        0%{opacity:0;transform:translateY(0) scale(0)} 20%{opacity:1}
+        100%{opacity:0;transform:translateY(-70px) scale(1.5)}
+      }
+      #_segg-egg { font-size:6rem;line-height:1;display:block; }
+      #_segg-egg.shaking { animation:_segg-shake 0.55s ease-in-out; }
+      #_segg-egg.cracking { animation:_segg-crack 1s ease-in forwards; }
+      #_segg-flash { position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:1; }
+      #_segg-flash.go { animation:_segg-flash 0.6s ease-out forwards; }
+      #_segg-initial { display:flex;flex-direction:column;align-items:center;gap:18px; }
+      #_segg-caption { color:rgba(255,255,255,0.45);font-family:Cinzel,serif;font-size:0.82rem;letter-spacing:0.12em; }
+      #_segg-final { display:none;flex-direction:column;align-items:center;gap:16px;z-index:2; }
+      #_segg-final.show {
+        display:flex;
+        animation:_segg-appear 0.9s cubic-bezier(0.34,1.56,0.64,1) both,_segg-float 3s ease-in-out 0.9s infinite;
+      }
+      #_segg-final .fe { font-size:5rem; }
+      ._segg-title {
+        color:#ffd700;font-family:Cinzel,serif;font-size:1.55rem;font-weight:700;
+        text-align:center;text-shadow:0 0 18px #ffd700,0 0 36px #ff6400;
+        animation:_segg-title 1s 0.4s both;
+      }
+      ._segg-sub { color:rgba(255,215,0,0.65);font-family:Nunito,sans-serif;font-size:0.95rem;text-align:center;animation:_segg-appear 0.8s 0.6s both; }
+      ._segg-particle { position:fixed;font-size:1.8rem;pointer-events:none;animation:_segg-particles 2s ease-out both; }
+      #_segg-close {
+        position:absolute;bottom:32px;padding:11px 32px;font-family:Cinzel,serif;font-size:0.95rem;font-weight:700;
+        color:#1a0e05;background:linear-gradient(135deg,#ffd700,#f0b429);border:none;border-radius:999px;cursor:pointer;
+        box-shadow:0 0 20px rgba(255,215,0,0.5);opacity:0;transition:opacity 0.4s;pointer-events:none;
+      }
+      #_segg-close.show { opacity:1;pointer-events:auto; }
+    </style>
+    <div id="_segg-flash"></div>
+    <div id="_segg-initial">
+      <span id="_segg-egg">🥚</span>
+      <span id="_segg-caption">DIE SIEGEL BRECHEN…</span>
+    </div>
+    <div id="_segg-final">
+      <div id="_segg-creature" style="width:120px;height:120px;display:flex;align-items:center;justify-content:center">${getCreatureHTML(creature, 0)}</div>
+      <div class="_segg-title">${CREATURE_NAMES[creature] ?? creature} erwacht!</div>
+      <div class="_segg-sub">Verbinde ihn mit einem Spiel, um ihn zu leveln.</div>
+    </div>
+    <button id="_segg-close">Weiter →</button>
+  `;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+  const egg      = overlay.querySelector('#_segg-egg');
+  const flash    = overlay.querySelector('#_segg-flash');
+  const initial  = overlay.querySelector('#_segg-initial');
+  const final_   = overlay.querySelector('#_segg-final');
+  const closeBtn = overlay.querySelector('#_segg-close');
+
+  const shake = () => { egg.classList.remove('shaking'); void egg.offsetWidth; egg.classList.add('shaking'); };
+  setTimeout(() => shake(), 600);
+  setTimeout(() => shake(), 1400);
+  setTimeout(() => shake(), 2100);
+  setTimeout(() => { egg.classList.remove('shaking'); egg.classList.add('cracking'); }, 2700);
+  setTimeout(() => {
+    flash.classList.add('go');
+    const emojis = ['✨','🌟','💫','⭐','🌈','💎','🐉'];
+    for (let i = 0; i < SEAL_EGG_OPEN_PARTICLE_COUNT; i++) {
+      const p = document.createElement('span');
+      p.className = '_segg-particle';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      p.style.left = (10 + Math.random() * 80) + '%';
+      p.style.top  = (15 + Math.random() * 70) + '%';
+      p.style.animationDelay = (Math.random() * 0.5) + 's';
+      overlay.appendChild(p);
+    }
+  }, 3300);
+  setTimeout(() => {
+    initial.style.display = 'none';
+    final_.classList.add('show');
+    closeBtn.classList.add('show');
+  }, 4000);
+
+  closeBtn.addEventListener('click', () => {
+    overlay.style.opacity = '0';
+    setTimeout(() => { overlay.remove(); if (onClose) onClose(); }, 500);
+  });
+}
+
+function applyBackupSwap(gameId) {
+  const sd = loadShopData();
+  if (!sd.pendingBackup) return;
+  const allData = loadAllData();
+  const { creature, stage } = sd.pendingBackup;
+  allData[gameId].creature = creature;
+  allData[gameId].growth   = GROWTH_THRESHOLDS[stage];
+  sd.pendingBackup = null;
+  saveAllData(allData);
+  saveShopData(sd);
+  exitBackupSwapMode();
+  renderHub();
+}
+
+/* ─────────────────────────────────────────────────
    10. BUCH DER MONSTER
    ───────────────────────────────────────────────── */
 // Atari7 · Enter 3-6-8-0
@@ -914,19 +2070,30 @@ function openBookModal() {
   const content = document.getElementById('modalContent');
   if (!overlay || !content) return;
 
-  const seen  = sd.seenCreatures;
-  const total = CREATURE_ORDER.length;
-  const found = Object.keys(seen).length;
+  const seen    = sd.seenCreatures;
+  const s3Open  = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN;
+  const visibleOrder = s3Open ? CREATURE_ORDER : CREATURE_ORDER.filter(c => !S3_CREATURES.has(c));
+  const total   = visibleOrder.length;
+  const found   = Object.keys(seen).filter(c => visibleOrder.includes(c)).length;
 
   const makeSlot = (creature) => {
     const hasSeen  = seen[creature] !== undefined;
     const maxStage = hasSeen ? seen[creature] : -1;
-    const isFinal  = maxStage >= GROWTH_STAGES - 1;
-    const rare     = isRare(creature);
-    const epic     = isEpic(creature);
-    const leg      = isLegendary(creature);
+    const isFinal     = maxStage >= GROWTH_STAGES - 1;
+    const isVollendet = maxStage >= 5;
+    const rare        = isRare(creature);
+    const epic        = isEpic(creature);
+    const leg         = isLegendary(creature);
+    const isS3Rare    = creature === 'ente';
+    const isS3Leg     = creature === 'chinDrache' || creature === 'schnabeltier';
+    const isS3Normal  = ['frosch','pinguin','raptor'].includes(creature);
     const specialClass       = rare ? ' book-slot--rare' : epic ? ' book-slot--epic' : leg ? ' book-slot--legendary' : '';
-    const specialUnseenClass = rare ? ' book-slot--rare-unseen' : epic ? ' book-slot--epic-unseen' : leg ? ' book-slot--legendary-unseen' : '';
+    const specialUnseenClass = isS3Leg  ? ' book-slot--s3-legendary-unseen'
+      : isS3Rare   ? ' book-slot--s3-rare-unseen'
+      : rare       ? ' book-slot--rare-unseen'
+      : epic       ? ' book-slot--epic-unseen'
+      : leg        ? ' book-slot--legendary-unseen'
+      : isS3Normal ? ' book-slot--s2locked-normal' : '';
     if (!hasSeen) {
       return `<div class="book-slot book-slot--unseen${specialUnseenClass}" title="Noch nicht entdeckt">
         <span class="book-slot__unknown">?</span>
@@ -934,26 +2101,42 @@ function openBookModal() {
     }
     return `<div class="book-slot book-slot--seen${specialClass}" data-creature="${creature}" title="${BOOK_NAMES[creature] ?? CREATURE_NAMES[creature]}">
       <div class="book-slot__img">${getCreatureHTML(creature, maxStage)}</div>
-      ${isFinal ? '<span class="book-slot__check">✓</span>' : ''}
+      ${isVollendet ? '<span class="book-slot__check book-slot__check--gold">✦</span>' : isFinal ? '<span class="book-slot__check">✓</span>' : ''}
     </div>`;
   };
 
-  const normals = ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon'];
-  const rares   = ['biene','oktopus','ente'];
+  const normals = s3Open
+    ? ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','frosch','pinguin','raptor']
+    : ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon'];
+  const rares   = s3Open ? ['biene','oktopus','ente'] : ['biene','oktopus'];
   const epics   = ['butterfly','snaildragon','turtle'];
-  const legies  = ['robot','pfau'];
+  const legies  = s3Open ? ['robot','pfau','chinDrache','schnabeltier'] : ['robot','pfau'];
+
+  const makeS2Slot = (creature) => {
+    const leg  = isLegendary(creature);
+    const epic = isEpic(creature);
+    const tierClass = leg ? ' book-slot--s2locked-legendary' : epic ? ' book-slot--s2locked-epic' : ' book-slot--s2locked-normal';
+    const label = BOOK_NAMES[creature] ?? CREATURE_NAMES[creature];
+    return `<div class="book-slot book-slot--unseen book-slot--s2locked${tierClass}" title="${label} – Season 2 Kreatur-Paket">
+      <span class="book-slot__unknown">?</span>
+    </div>`;
+  };
+
+  const s2NormalsHtml = SEASON_3_OPEN ? S2_NORMALS.map(makeS2Slot).join('') : '';
+  const s2EpicsHtml   = SEASON_3_OPEN ? S2_EPICS.map(makeS2Slot).join('') : '';
+  const s2LegiesHtml  = SEASON_3_OPEN ? S2_LEGIES.map(makeS2Slot).join('') : '';
 
   content.innerHTML = `
     <div class="book-modal-inner">
       <h2 class="book-modal__title">📜 Buch der Monster</h2>
       <p class="book-modal__count">${found} / ${total} entdeckt</p>
-      <div class="book-grid book-grid--normals">${normals.map(makeSlot).join('')}</div>
+      <div class="book-grid book-grid--normals">${normals.map(makeSlot).join('')}${s2NormalsHtml}</div>
       <div class="book-divider"></div>
       <div class="book-grid book-grid--centered">${rares.map(makeSlot).join('')}</div>
       <div class="book-divider"></div>
-      <div class="book-grid book-grid--centered">${epics.map(makeSlot).join('')}</div>
+      <div class="book-grid book-grid--centered">${epics.map(makeSlot).join('')}${s2EpicsHtml}</div>
       <div class="book-divider"></div>
-      <div class="book-grid book-grid--centered">${legies.map(makeSlot).join('')}</div>
+      <div class="book-grid book-grid--centered">${legies.map(makeSlot).join('')}${s2LegiesHtml}</div>
     </div>`;
 
   overlay.hidden = false;
@@ -971,6 +2154,7 @@ function showBookDetail(creature, maxStage) {
   let stage = maxStage;
   const epic = isEpic(creature);
   const leg  = isLegendary(creature);
+  const hasBackup = loadShopData().purchased.includes('backupDesBuches');
 
   const render = () => {
     const specialBadge = epic
@@ -997,11 +2181,13 @@ function showBookDetail(creature, maxStage) {
           </span>
           <button class="book-detail__arrow" id="bookNext" ${stage >= maxStage ? 'disabled' : ''}>&#8250;</button>
         </div>
+        ${hasBackup && !leg ? `<button class="book-detail__backup-btn" id="bookBackupBtn">💾 Backup laden</button>` : ''}
       </div>`;
 
     document.getElementById('bookBack')?.addEventListener('click', openBookModal);
     document.getElementById('bookPrev')?.addEventListener('click', () => { if (stage > 0) { stage--; render(); } });
     document.getElementById('bookNext')?.addEventListener('click', () => { if (stage < maxStage) { stage++; render(); } });
+    document.getElementById('bookBackupBtn')?.addEventListener('click', () => openBackupConfirmModal(creature, stage, maxStage));
 
     const wrap = document.getElementById('bookDetailImg');
     if (wrap) {
@@ -1016,6 +2202,39 @@ function showBookDetail(creature, maxStage) {
   };
 
   render();
+}
+
+function openBackupConfirmModal(creature, stage, maxStage) {
+  const content = document.getElementById('modalContent');
+  if (!content) return;
+  const sd = loadShopData();
+  const hasKristall = (sd.kristalle ?? 0) >= 2;
+  content.innerHTML = `
+    <div class="backup-confirm">
+      <h2 class="backup-confirm__title">💾 Backup laden?</h2>
+      <div class="backup-confirm__img">${getCreatureHTML(creature, stage)}</div>
+      <p class="backup-confirm__name">${BOOK_NAMES[creature] ?? CREATURE_NAMES[creature]} · ${GROWTH_LABELS[stage]}</p>
+      <p class="backup-confirm__text">
+        Möchtest du von diesem Monster ein Backup laden?<br>
+        Nach der Bestätigung kannst du ein Monster im Hub damit tauschen.
+      </p>
+      <div class="backup-confirm__btns">
+        <button class="backup-confirm__cancel" id="backupCancel">Abbrechen</button>
+        <button class="backup-confirm__ok" id="backupOk"${!hasKristall ? ' disabled' : ''}>Bestätigen (2× 💎)</button>
+      </div>
+      ${!hasKristall ? '<p class="backup-confirm__no-kristall">Nicht genug Kristalle</p>' : ''}
+    </div>`;
+
+  document.getElementById('backupCancel')?.addEventListener('click', () => showBookDetail(creature, maxStage));
+  document.getElementById('backupOk')?.addEventListener('click', () => {
+    const sd2 = loadShopData();
+    if ((sd2.kristalle ?? 0) < 1) return;
+    sd2.kristalle -= 2;
+    sd2.pendingBackup = { creature, stage };
+    saveShopData(sd2);
+    document.getElementById('modalOverlay').hidden = true;
+    renderHub();
+  });
 }
 
 /* ─────────────────────────────────────────────────
@@ -1455,10 +2674,12 @@ function _deactivateAtariTheme() {
   _stopCodeRain();
 }
 
+const ATARI_CODE_SPAWN_INTERVAL_MS = 1600;
+
 function _startCodeRain() {
   if (_atariCodeInterval) return;
   _spawnCodeFragment();
-  _atariCodeInterval = setInterval(_spawnCodeFragment, 1600);
+  _atariCodeInterval = setInterval(_spawnCodeFragment, ATARI_CODE_SPAWN_INTERVAL_MS);
 }
 
 function _stopCodeRain() {
@@ -1519,6 +2740,8 @@ function checkPfauUnlock() {
   setTimeout(() => _showPfauUnlockAnimation(), 400);
 }
 
+const PFAU_UNLOCK_PARTICLE_COUNT = 28;
+
 function _showPfauUnlockAnimation() {
   _injectPfauThemeStyles();
 
@@ -1535,7 +2758,7 @@ function _showPfauUnlockAnimation() {
   document.body.appendChild(overlay);
 
   const wrap = document.getElementById('pfauUnlockSparkles');
-  for (let i = 0; i < 28; i++) {
+  for (let i = 0; i < PFAU_UNLOCK_PARTICLE_COUNT; i++) {
     setTimeout(() => {
       const s = document.createElement('div');
       s.className = 'pfau-unlock-spark';
@@ -1592,10 +2815,12 @@ function _deactivatePfauTheme() {
   _stopGlitter();
 }
 
+const PFAU_GLITTER_SPAWN_INTERVAL_MS = 700;
+
 function _startGlitter() {
   if (_pfauGlitterTimer) return;
   _spawnGlitterParticle();
-  _pfauGlitterTimer = setInterval(_spawnGlitterParticle, 700);
+  _pfauGlitterTimer = setInterval(_spawnGlitterParticle, PFAU_GLITTER_SPAWN_INTERVAL_MS);
 }
 
 function _stopGlitter() {

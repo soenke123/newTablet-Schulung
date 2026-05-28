@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ei des Himmels – Die vier Siegel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold:       #d4a830;
+      --gold-light: #f5d76e;
+      --red:        #c41e1e;
+      --bg:         #0a0705;
+      --bg-card:    #140d08;
+      --border:     rgba(212,168,48,0.22);
+      --text:       #e8dcc8;
+      --text-dim:   rgba(232,220,200,0.48);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 64px;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 0%,   rgba(196,30,30,0.09)  0%, transparent 55%),
+        radial-gradient(ellipse at 50% 100%, rgba(212,168,48,0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 660px;
+    }
+
+    /* ── Header ── */
+    .legie-header {
+      text-align: center;
+      margin-bottom: 44px;
+    }
+
+    .legie-dragon-img {
+      width: 96px;
+      height: 96px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 22px rgba(196,30,30,0.65));
+      margin-bottom: 20px;
+    }
+
+    .legie-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.75rem;
+      font-weight: 900;
+      color: var(--gold);
+      text-shadow: 0 0 30px rgba(212,168,48,0.4);
+      letter-spacing: 3px;
+      margin-bottom: 6px;
+    }
+
+    .legie-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    /* ── Fortschritts-Punkte ── */
+    .seals-progress {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 36px;
+    }
+
+    .seal-pip {
+      width: 44px;
+      height: 5px;
+      border-radius: 3px;
+      background: rgba(212,168,48,0.12);
+      border: 1px solid rgba(212,168,48,0.18);
+      transition: background 0.5s, border-color 0.5s, box-shadow 0.5s;
+    }
+
+    .seal-pip.done {
+      background: var(--gold);
+      border-color: var(--gold);
+      box-shadow: 0 0 8px rgba(212,168,48,0.55);
+    }
+
+    /* ── Grid ── */
+    .seals-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 500px) {
+      .seals-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Karte ── */
+    .seal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 18px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s, opacity 0.3s;
+    }
+
+    .seal-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(212,168,48,0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .seal-card.locked  { opacity: 0.5; }
+
+    .seal-card.active {
+      border-color: rgba(212,168,48,0.5);
+      box-shadow: 0 0 24px rgba(212,168,48,0.07);
+    }
+
+    .seal-card.solved {
+      border-color: rgba(212,168,48,0.65);
+      background: linear-gradient(160deg, #1c1206 0%, #0d0a05 100%);
+    }
+
+    .seal-number {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .seal-icon {
+      font-size: 1.7rem;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .seal-name {
+      font-family: 'Cinzel', serif;
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+
+    .seal-desc {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+
+    /* ── Gelöst-Badge ── */
+    .seal-solved-badge {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-top: 14px;
+      color: #4ade80;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .seal-card.solved .seal-solved-badge { display: flex; }
+    .seal-card.solved .seal-puzzle       { display: none; }
+
+    /* ── Rätsel-Bereich ── */
+    .seal-puzzle { margin-top: 16px; }
+
+    .binary-hint {
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(212,168,48,0.2);
+      border-radius: 8px;
+      padding: 13px 15px;
+      margin-bottom: 13px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.76rem;
+      color: #c8a800;
+      word-break: break-all;
+      line-height: 1.9;
+      letter-spacing: 1px;
+    }
+
+    .binary-hint__label {
+      font-size: 0.58rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .seal-input {
+      width: 100%;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(212,168,48,0.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 10px;
+    }
+
+    .seal-input:focus {
+      border-color: rgba(212,168,48,0.6);
+      box-shadow: 0 0 0 3px rgba(212,168,48,0.1);
+    }
+
+    .seal-input.shake {
+      border-color: rgba(196,30,30,0.7);
+      animation: inputShake 0.35s ease;
+    }
+
+    @keyframes inputShake {
+      0%, 100% { transform: translateX(0); }
+      25%       { transform: translateX(-6px); }
+      75%       { transform: translateX(6px); }
+    }
+
+    .seal-btn {
+      width: 100%;
+      background: linear-gradient(135deg, rgba(212,168,48,0.14) 0%, rgba(212,168,48,0.07) 100%);
+      border: 1px solid rgba(212,168,48,0.45);
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: var(--gold);
+      font-family: 'Cinzel', serif;
+      font-size: 0.83rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.1s;
+    }
+
+    .seal-btn:hover {
+      background: linear-gradient(135deg, rgba(212,168,48,0.24) 0%, rgba(212,168,48,0.14) 100%);
+      border-color: rgba(212,168,48,0.7);
+    }
+
+    .seal-btn:active { transform: scale(0.98); }
+
+    .seal-error {
+      font-size: 0.77rem;
+      color: #f87171;
+      margin-top: 8px;
+      min-height: 1.1em;
+      display: none;
+    }
+
+    /* ── Freischalt-Banner ── */
+    .unlock-banner {
+      display: none;
+      margin-top: 40px;
+      text-align: center;
+      padding: 32px 24px;
+      background: linear-gradient(160deg, rgba(212,168,48,0.1) 0%, rgba(196,30,30,0.07) 100%);
+      border: 1px solid rgba(212,168,48,0.4);
+      border-radius: 16px;
+      animation: bannerFadeIn 0.8s ease forwards;
+    }
+
+    .unlock-banner.visible { display: block; }
+
+    @keyframes bannerFadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .unlock-banner__title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--gold-light);
+      text-shadow: 0 0 20px rgba(212,168,48,0.5);
+      margin-bottom: 12px;
+    }
+
+    .unlock-banner__text {
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      line-height: 1.75;
+    }
+
+    /* ── Zurück ── */
+    .back-btn {
+      display: block;
+      margin-top: 36px;
+      text-align: center;
+      padding: 12px 28px;
+      background: transparent;
+      border: 1px solid rgba(212,168,48,0.22);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-family: 'Cinzel', serif;
+      font-size: 0.78rem;
+      letter-spacing: 2px;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+
+    .back-btn:hover {
+      border-color: rgba(212,168,48,0.5);
+      color: var(--text);
+      background: rgba(212,168,48,0.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+
+    <header class="legie-header">
+      <img src="../data/chinDrache1.png" alt="Chinesischer Drache" class="legie-dragon-img">
+      <h1 class="legie-title">Ei des Himmels</h1>
+      <p class="legie-subtitle">Die vier Siegel</p>
+    </header>
+
+    <div class="seals-progress">
+      <div class="seal-pip" id="pip0"></div>
+      <div class="seal-pip" id="pip1"></div>
+      <div class="seal-pip" id="pip2"></div>
+      <div class="seal-pip" id="pip3"></div>
+    </div>
+
+    <div class="seals-grid">
+
+      <!-- Siegel I -->
+      <div class="seal-card locked" id="seal1">
+        <div class="seal-number">Siegel I</div>
+        <span class="seal-icon">📜</span>
+        <div class="seal-name">Stimme der Vergangenheit</div>
+        <div class="seal-desc">Eine alte Version dieser Welt wartet im Archiv des Internets auf dich.</div>
+        <div class="seal-solved-badge">✓ Siegel gebrochen</div>
+      </div>
+
+      <!-- Siegel II -->
+      <div class="seal-card locked" id="seal2">
+        <div class="seal-number">Siegel II</div>
+        <span class="seal-icon">🔒</span>
+        <div class="seal-name">???</div>
+        <div class="seal-desc">Noch in den Nebeln verborgen…</div>
+        <div class="seal-solved-badge">✓ Siegel gebrochen</div>
+      </div>
+
+      <!-- Siegel III: Binary ASCII -->
+      <div class="seal-card active" id="seal3">
+        <div class="seal-number">Siegel III</div>
+        <span class="seal-icon">⚡</span>
+        <div class="seal-name">Sprache der Maschinen</div>
+        <div class="seal-desc">Der Name ist verschlüsselt – entschlüssele ihn. Groß- und Kleinschreibung zählt.</div>
+
+        <div class="seal-puzzle">
+          <div class="binary-hint">
+            <div class="binary-hint__label">// Verschlüsselter Code //</div>
+            01010111&nbsp;01101111&nbsp;01101100&nbsp;01101011&nbsp;01100101
+          </div>
+          <input
+            type="text"
+            id="seal3Input"
+            class="seal-input"
+            placeholder="Antwort eingeben…"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+          >
+          <button class="seal-btn" id="seal3Btn">Siegel brechen</button>
+          <div class="seal-error" id="seal3Error">Falsche Antwort – versuche es erneut.</div>
+        </div>
+
+        <div class="seal-solved-badge">✓ Siegel gebrochen</div>
+      </div>
+
+      <!-- Siegel IV -->
+      <div class="seal-card locked" id="seal4">
+        <div class="seal-number">Siegel IV</div>
+        <span class="seal-icon">🏫</span>
+        <div class="seal-name">Zeichen im Verborgenen</div>
+        <div class="seal-desc">Suche nach dem versteckten Hinweis in deiner Schule.</div>
+        <div class="seal-solved-badge">✓ Siegel gebrochen</div>
+      </div>
+
+    </div>
+
+    <div class="unlock-banner" id="unlockBanner">
+      <div class="unlock-banner__title">⭐ Der Himmelshüter erwacht ⭐</div>
+      <div class="unlock-banner__text">
+        Alle vier Siegel sind gebrochen.<br>
+        Der Chinesische Drache gehört dir.
+      </div>
+    </div>
+
+    <a href="../index.html" class="back-btn">← Zurück zum Spiel-Hub</a>
+
+  </div>
+
+  <script src="../creatures.js"></script>
+  <script>
+    const LEGIE_KEY  = 'lernwelt_legie_v1';
+    const SEAL3_HASH = '3a1338ef215e8415265abb1a4b41ca314ab7a7a7ebcc6e8f0aa341f3dbc4063c';
+
+    function loadLegie() {
+      try {
+        const raw = localStorage.getItem(LEGIE_KEY);
+        return raw ? JSON.parse(raw) : defaultLegie();
+      } catch(e) { return defaultLegie(); }
+    }
+
+    function defaultLegie() {
+      return { chinDrache: { seals: [false, false, false, false] } };
+    }
+
+    function saveLegie(data) {
+      try { localStorage.setItem(LEGIE_KEY, JSON.stringify(data)); } catch(e) {}
+    }
+
+    async function sha256(str) {
+      const buf  = new TextEncoder().encode(str);
+      const hash = await crypto.subtle.digest('SHA-256', buf);
+      return Array.from(new Uint8Array(hash))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function renderSeals() {
+      const seals = loadLegie().chinDrache.seals;
+      seals.forEach((done, i) => {
+        const card = document.getElementById('seal' + (i + 1));
+        const pip  = document.getElementById('pip' + i);
+        if (done && card) {
+          card.classList.remove('locked', 'active');
+          card.classList.add('solved');
+        }
+        if (done && pip) pip.classList.add('done');
+      });
+
+      if (seals.every(Boolean)) {
+        document.getElementById('unlockBanner').classList.add('visible');
+        grantChinDrache();
+      }
+    }
+
+    function grantChinDrache() {
+      const sd = loadShopData();
+      if (!sd.chinDracheUnlocked) {
+        sd.chinDracheUnlocked = true;
+        saveShopData(sd);
+      }
+    }
+
+    async function checkSeal3() {
+      const inputEl = document.getElementById('seal3Input');
+      const errorEl = document.getElementById('seal3Error');
+      const input   = inputEl.value.trim();
+      if (!input) return;
+
+      const hash = await sha256(input);
+
+      if (hash === SEAL3_HASH) {
+        errorEl.style.display = 'none';
+        const legie = loadLegie();
+        legie.chinDrache.seals[2] = true;
+        saveLegie(legie);
+        renderSeals();
+      } else {
+        errorEl.style.display = 'block';
+        inputEl.classList.remove('shake');
+        void inputEl.offsetWidth;
+        inputEl.classList.add('shake');
+        inputEl.addEventListener('animationend', () => inputEl.classList.remove('shake'), { once: true });
+      }
+    }
+
+    document.getElementById('seal3Btn').addEventListener('click', checkSeal3);
+    document.getElementById('seal3Input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') checkSeal3();
+    });
+
+    renderSeals();
+  </script>
+</body>
+</html>

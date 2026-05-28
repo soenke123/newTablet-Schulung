@@ -1307,6 +1307,10 @@ function saveHighscore() {
   if (gameState.score > hs) {
     localStorage.setItem('algorithmHighscore', String(gameState.score));
   }
+  const t = Math.floor(realToIngameMinutes(gameState.elapsedSeconds));
+  if (t > parseInt(localStorage.getItem('algorithmBestTime') || '0', 10)) {
+    localStorage.setItem('algorithmBestTime', String(t));
+  }
 }
 
 function renderBackground() {

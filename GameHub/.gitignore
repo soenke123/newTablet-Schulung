@@ -1,0 +1,10 @@
+# GIMP-Master
+*.xcf
+
+# 3D-Druck
+*.gcode
+*.stl
+
+# OS-Müll
+.DS_Store
+Thumbs.db

@@ -4,7 +4,21 @@
       "Bash(python3 *)",
       "PowerShell(python --version 2>&1; where python 2>&1)",
       "PowerShell(Move-Item *)",
-      "Bash(awk '{print $NF}')"
+      "Bash(awk '{print $NF}')",
+      "Bash(node *)",
+      "Bash(xargs grep *)",
+      "Bash(awk -F: '$1>=1880 && $1<=2010 {print}')",
+      "Bash(echo \"exit=$?\")",
+      "Bash(awk '/^function /{if \\(name\\) print name\": \"NR-startline\" Zeilen \\(ab \"startline\"\\)\"; name=$2; startline=NR} END{print name\": \"NR-startline\" Zeilen \\(ab \"startline\"\\)\"}' \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/GameHub 1.2/creatures.js\")",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(awk '{print $5, $NF}')",
+      "Bash(grep -n \"function.*{$\" \"C:\\\\Users\\\\snke\\\\OneDrive\\\\ClaudeProjekte\\\\MPS TabletSchlung\\\\GameHub 1.2\\\\S2 Fokusflow\\\\index.html\")",
+      "Bash(grep -n \"console.log\\\\|debugger\\\\|//\" \"C:\\\\Users\\\\snke\\\\OneDrive\\\\ClaudeProjekte\\\\MPS TabletSchlung\\\\GameHub 1.2\\\\S1 Projekt_FINAL_v7_NEU\\\\index.html\")",
+      "Bash(cat)",
+      "Bash(bash /tmp/check_trio.sh)",
+      "Bash(awk ' *)",
+      "Bash(sort -k2 -t= -nr)",
+      "Bash(awk '/^function buyItem/{name=$2; ifc=0; startline=NR; in_fn=1; next} *)"
     ]
   }
 }

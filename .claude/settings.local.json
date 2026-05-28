@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -E \"\\\\.\\(html|json\\)$\")"
+      "Bash(grep -E \"\\\\.\\(html|json\\)$\")",
+      "Bash(git -C \"GameHub\" rev-parse --git-dir)",
+      "Bash(git -C \"GameHub\" status --short)",
+      "Bash(git -C \"GameHub\" log --oneline -20)",
+      "Bash(git -C \"GameHub\" remote -v)",
+      "Bash(git -C \"GameHub\" branch --show-current)"
     ]
   }
 }

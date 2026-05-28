@@ -161,6 +161,56 @@
 }
 .legendary-frame .creature-img { position:relative; z-index:1; }
 
+/* ── Chinesischer Drache – Rot-Gold-Glimmer ── */
+@keyframes chinGlimmer1 {
+  0%   { opacity:0.08; }
+  20%  { opacity:0.95; }
+  50%  { opacity:0.12; }
+  80%  { opacity:0.85; }
+  100% { opacity:0.08; }
+}
+@keyframes chinGlimmer2 {
+  0%   { opacity:0.9; }
+  20%  { opacity:0.06; }
+  55%  { opacity:0.88; }
+  80%  { opacity:0.06; }
+  100% { opacity:0.9; }
+}
+.chindrache-frame {
+  position:relative; width:100%; height:100%;
+  display:flex; align-items:center; justify-content:center;
+}
+.chindrache-frame::before {
+  content:'';
+  position:absolute; inset:0;
+  background:
+    radial-gradient(circle at 90% 10%, rgba(255,255,255,0.85) 0%, transparent 3%),
+    radial-gradient(circle at 10% 10%, rgba(220,30,30,0.8)    0%, transparent 3%),
+    radial-gradient(circle at 50%  5%, rgba(255,215,0,0.9)    0%, transparent 4%),
+    radial-gradient(circle at 90% 90%, rgba(255,215,0,0.85)   0%, transparent 3%),
+    radial-gradient(circle at 10% 90%, rgba(220,30,30,0.8)    0%, transparent 3%),
+    radial-gradient(circle at 75% 50%, rgba(255,255,255,0.65) 0%, transparent 2.5%),
+    radial-gradient(circle at 25% 50%, rgba(255,50,50,0.6)    0%, transparent 2.5%),
+    radial-gradient(circle at 50% 95%, rgba(255,215,0,0.8)    0%, transparent 3%);
+  animation:chinGlimmer1 2.0s ease-in-out infinite;
+  pointer-events:none; z-index:2; border-radius:inherit;
+}
+.chindrache-frame::after {
+  content:'';
+  position:absolute; inset:0;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(220,30,30,0.05)   0%, transparent 55%),
+    radial-gradient(circle at 30% 20%, rgba(255,215,0,0.8)    0%, transparent 3%),
+    radial-gradient(circle at 70% 20%, rgba(220,30,30,0.75)   0%, transparent 3%),
+    radial-gradient(circle at 20% 70%, rgba(255,215,0,0.75)   0%, transparent 3%),
+    radial-gradient(circle at 80% 70%, rgba(255,255,255,0.8)  0%, transparent 3%),
+    radial-gradient(circle at 50% 40%, rgba(220,30,30,0.6)    0%, transparent 3.5%),
+    radial-gradient(circle at 60% 80%, rgba(255,215,0,0.65)   0%, transparent 2.5%);
+  animation:chinGlimmer2 2.0s ease-in-out infinite;
+  pointer-events:none; z-index:2; border-radius:inherit;
+}
+.chindrache-frame .creature-img { position:relative; z-index:1; }
+
 /* ── Pfau – Regenbogen-Schimmer ── */
 @keyframes pfauGlimmer1 {
   0%, 100% { opacity:0.12; }
@@ -337,9 +387,10 @@
 })();
 
 /* ─── Wachstums-Konstanten ─── */
-const GROWTH_THRESHOLDS = [0, 3, 7, 12, 21]; // 0%, 30%, 70%, 120%, 210% einer Max-Runde (10 Pkt)
+const GROWTH_THRESHOLDS = [0, 3, 7, 12, 21, 100]; // 0%, 30%, 70%, 120%, 210%, Vollendet
 const GROWTH_STAGES     = 5;
-const GROWTH_MAX        = 21;                 // ab hier → Coins statt Wachstum
+const GROWTH_MAX        = 21;                      // ab hier → Coins statt Wachstum
+const GROWTH_S6         = 100;                     // Stufe 6 – nach Stein der Vollendung
 
 /* ─── Seltene Tiere (Season Rares) ─── */
 const RARE_CREATURES = new Set(['biene', 'oktopus', 'ente']);
@@ -353,11 +404,11 @@ const GAME_SEASON_RARE = {
 };
 
 /* ─── Epische Tiere ─── */
-const EPIC_CREATURES = new Set(['snaildragon', 'butterfly', 'turtle']);
+const EPIC_CREATURES = new Set(['snaildragon', 'butterfly', 'turtle', 'chamaeleon']);
 function isEpic(creature) { return EPIC_CREATURES.has(creature); }
 
 /* ─── Legendäre Tiere (neue Klasse, noch nicht durch normalen Weg erhältlich) ─── */
-const LEGENDARY_CREATURES = new Set(['robot', 'pfau']);
+const LEGENDARY_CREATURES = new Set(['robot', 'pfau', 'chinDrache', 'schnabeltier']);
 function isLegendary(creature) { return LEGENDARY_CREATURES.has(creature); }
 function isPfau(creature) { return creature === 'pfau'; }
 
@@ -366,6 +417,7 @@ function determineCreature(correct, isFirst = false, gameId = null) {
   // Epische Tiere – immer möglich, Score-abhängig
   if (correct >= 9 && Math.random() < 0.05) return 'turtle';
   if (correct <= 2 && Math.random() < 0.05) return 'butterfly';
+  if (correct >= 4 && correct <= 6 && (typeof SEASON_3_OPEN === 'undefined' || SEASON_3_OPEN) && Math.random() < 0.05) return 'chamaeleon';
 
   // Schneckendrache – selten, unabhängig vom Rang
   const epicChance = (correct <= 2 || correct === 10) ? 5 : 2;
@@ -374,6 +426,13 @@ function determineCreature(correct, isFirst = false, gameId = null) {
   // Season Rare – 8 % Chance wenn das Spiel einer Season angehört
   const seasonRare = gameId && GAME_SEASON_RARE[gameId];
   if (seasonRare && Math.random() < 0.08) return seasonRare;
+
+  // Season 3 – neue Normale teilen Plätze mit alten (50/50)
+  if (typeof SEASON_3_OPEN === 'undefined' || SEASON_3_OPEN) {
+    if (correct <= 3                    && Math.random() < 0.5) return 'frosch';
+    if (correct >= 4 && correct <= 6   && Math.random() < 0.5) return 'pinguin';
+    if (correct >= 7 && correct <= 9   && Math.random() < 0.5) return 'raptor';
+  }
 
   if (correct === 10) return 'dragon';
   if (correct === 9)  return 'triceratops';
@@ -385,7 +444,14 @@ function determineCreature(correct, isFirst = false, gameId = null) {
 }
 
 function determineEpicCreature() {
+  const s3 = typeof SEASON_3_OPEN === 'undefined' || SEASON_3_OPEN;
   const r = Math.random();
+  if (s3) {
+    if (r < 0.30) return 'butterfly';
+    if (r < 0.60) return 'snaildragon';
+    if (r < 0.80) return 'turtle';
+    return 'chamaeleon';
+  }
   if (r < 0.4) return 'butterfly';
   if (r < 0.8) return 'snaildragon';
   return 'turtle';
@@ -402,11 +468,22 @@ function determineCreatureWithGlucksklee(correct, gameId = null) {
 }
 
 function determineEggCreature(eggType, correct) {
-  if (eggType === 'atari') return 'robot';
-  if (eggType === 'pfau')  return 'pfau';
+  if (eggType === 'atari')   return 'robot';
+  if (eggType === 'pfau')    return 'pfau';
+  if (eggType === 'himmel')  return 'chinDrache';
+  if (eggType === 'suempfe') return 'schnabeltier';
+  if (eggType === 's3') {
+    const r = Math.random() * 100;
+    if (r < 5)  return 'chamaeleon';
+    if (r < 15) return 'ente';
+    return ['frosch', 'pinguin', 'raptor'][Math.floor(Math.random() * 3)];
+  }
   const legendaryChance = { rare: 0.3, mythic: 0.6, legendary: 1.0 }[eggType] ?? 0;
   if (Math.random() < legendaryChance) return determineEpicCreature();
   const normals = ['snail', 'fish', 'chicken', 'salamander', 'falkeneule', 'triceratops', 'dragon'];
+  if (typeof SEASON_3_OPEN === 'undefined' || SEASON_3_OPEN) {
+    normals.push('frosch', 'pinguin', 'raptor');
+  }
   return normals[Math.floor(Math.random() * normals.length)];
 }
 
@@ -426,9 +503,12 @@ const CREATURE_NAMES = {
   robot:'Atari-1337',
   pfau: 'Pfau',
   biene:'Biene', oktopus:'Oktopus', ente:'Ente',
+  chamaeleon:'Chamäleon',
+  pinguin:'Pinguin', frosch:'Frosch', raptor:'Raptor',
+  chinDrache:'Chinesischer Drache', schnabeltier:'Schnabeltier',
 };
 
-const GROWTH_LABELS = ['Winzig', 'Klein', 'Mittel', 'Groß', 'Ausgewachsen'];
+const GROWTH_LABELS = ['Winzig', 'Klein', 'Mittel', 'Groß', 'Ausgewachsen', 'Vollendet'];
 
 const CREATURE_DESCRIPTIONS = {
   snail: [
@@ -436,134 +516,207 @@ const CREATURE_DESCRIPTIONS = {
     'Deine Schnecke wächst – das Gehäuse wird sichtbar.',
     'Das Gehäuse glänzt – deine Schnecke wird kräftiger!',
     'Eine beeindruckende Schnecke mit leuchtendem Gehäuse.',
-    'Eine majestätische ausgewachsene Schnecke. Langsam aber weise!'
+    'Eine majestätische ausgewachsene Schnecke. Langsam aber weise!',
+    'Die Schnecke hat die Fesseln der Zeit gesprengt. Kein Weg ist ihr zu weit, kein Gipfel zu hoch. Vollendet.'
   ],
   fish: [
     'Ein kleiner Fisch springt ins Abenteuer!',
     'Dein Fisch wird bunter und wendiger.',
     'Dein Fisch wird kräftiger und bunter.',
     'Ein starker Fisch – schnell und furchtlos.',
-    'Ein prächtiger Kampffisch – unaufhaltsam!'
+    'Ein prächtiger Kampffisch – unaufhaltsam!',
+    'Er durchbricht die Oberfläche aller Welten. Kein Ozean fasst ihn mehr. Ein Fisch, der zur Legende wurde.'
   ],
   chicken: [
     'Ein flauschiges Küken piept sich frei!',
     'Dein Küken bekommt erste Federn.',
     'Dein Küken entwickelt sich zum Huhn.',
     'Ein stattliches Huhn mit prächtigem Kamm.',
-    'Ein stolzer Hahn – laut, bunt und mutig!'
+    'Ein stolzer Hahn – laut, bunt und mutig!',
+    'Aus dem Küken wurde ein Phönix. Sein Krähen hallt durch alle Lernwelten – niemand zweifelt mehr.'
   ],
   salamander: [
     'Ein buntes Kriechtier lugt neugierig aus der Schale!',
     'Dein kleines Kriechtier streckt die Beinchen.',
     'Dein Kriechtier wächst – kräftig und auffällig gemustert. Was wird daraus?',
     'Ein mächtiges Tier – flink, gefürchtet und unverkennbar: ein Salamander!',
-    'Ein legendärer Riesensalamander – nichts bleibt ihm verborgen!'
+    'Ein legendärer Riesensalamander – nichts bleibt ihm verborgen!',
+    'Er wandelt durch Feuer und Eis ohne zu zucken. Ein Salamander jenseits aller Grenzen – vollendet, ewig, unzerstörbar.'
   ],
   falkeneule: [
     'Ein Greifvogel-Küken späht neugierig aus der Schale!',
     'Dein junger Greifvogel übt das lautlose Flattern.',
     'Dein Greifvogel streckt mächtige Schwingen aus – etwas Besonderes zeichnet sich ab.',
     'Dein Greifvogel gleitet lautlos durch die Nacht – eine Falkeneule!',
-    'Eine majestätische Falkeneule – scharfe Augen, lautloser Flug!'
+    'Eine majestätische Falkeneule – scharfe Augen, lautloser Flug!',
+    'Ihre Augen sehen durch Raum und Zeit. Kein Geheimnis bleibt verborgen. Die Falkeneule ist vollendet.'
   ],
   triceratops: [
     'Ein winziger Dino wackelt auf die Welt!',
     'Dein Dino zeigt erste kleine Auswüchse auf der Stirn.',
     'Dein Dino wächst – am Kopf bildet sich etwas Mächtiges.',
     'Ein gewaltiger Triceratops – niemand stellt sich ihm entgegen.',
-    'Ein urgewaltiger Triceratops – nichts hält ihn auf!'
+    'Ein urgewaltiger Triceratops – nichts hält ihn auf!',
+    'Die Erde bebt bei jedem Schritt. Berge weichen zur Seite. Der Triceratops hat seine letzte Form gefunden – und sie erschüttert die Welt.'
   ],
   dragon: [
     'Ein legendärer Drache schlüpft – unglaublich!',
     'Dein Drache speit erste Fünkchen.',
     'Dein Drache entfaltet seine Flügel und speit erste Flammen.',
     'Dein Drache wächst zu einer mächtigen Kreatur heran.',
-    'Ein LEGENDÄRER Drache in voller Pracht – du bist perfekt!'
+    'Ein LEGENDÄRER Drache in voller Pracht – du bist perfekt!',
+    'Jenseits von Legende. Jenseits von Feuer. Dieser Drache ist das Feuer selbst – vollendetes Urwesen der Lernwelt.'
   ],
   snaildragon: [
     'Etwas unglaublich Seltenes schlüpft – was ist das?!',
     'Das Wesen rollt sich heraus… schwer zu sagen, was das ist.',
     'Ein Gehäuse… und sind das Flügel? Dieses Wesen ist ein Rätsel.',
     'Könnte das… ein gepanzerter Feuerspucker sein? Unvorstellbar…',
-    'Ein LEGENDÄRER Schneckendrache – das Wunder aller Lernwelten!'
+    'Ein LEGENDÄRER Schneckendrache – das Wunder aller Lernwelten!',
+    'Das Unmöglichste aller Unmöglichen hat sich vollendet. Halb Schnecke, halb Drache, ganz Legende. Die Welt hat kein Wort dafür.'
   ],
   butterfly: [
     'Eine winzige Raupe schlüpft aus dem Ei – welches Wunder wartet darin?',
     'Die Raupe spinnt sich in einen leuchtenden Kokon ein.',
     'Der Kokon pulsiert und glitzert – bald enthüllt er sein Geheimnis!',
     'Ein legendärer Schmetterling entfaltet schimmernde Schwingen!',
-    'Ein LEGENDÄRER Schmetterling in voller Pracht – ein Wunder der Lernwelt!'
+    'Ein LEGENDÄRER Schmetterling in voller Pracht – ein Wunder der Lernwelt!',
+    'Seine Schwingen weben Träume in die Wirklichkeit. Jeder Flügelschlag erschafft eine neue Welt. Vollendet.'
   ],
   turtle: [
     'Eine winzige Schildkröte schlüpft – ihr Panzer glitzert geheimnisvoll!',
     'Deine Schildkröte streckt neugierig den Kopf heraus.',
     'Ihr Panzer beginnt zu leuchten – sie ist keine gewöhnliche Schildkröte!',
     'Eine mächtige Urzeit-Schildkröte – weise und nahezu unbesiegbar.',
-    'Eine LEGENDÄRE Riesen-Schildkröte – sie trägt die Welt auf ihrem Rücken!'
+    'Eine LEGENDÄRE Riesen-Schildkröte – sie trägt die Welt auf ihrem Rücken!',
+    'Sie trägt nicht mehr die Welt – sie ist die Welt. Unendliche Weisheit, endloser Panzer. Die Schildkröte ist vollendet.'
   ],
   robot: [
     'Ein verbotenes Signal erwacht. Niemand sollte das sehen…',
     'Rote Augen leuchten in der Dunkelheit. Systeme initialisieren.',
     'Atari-1337 lernt. Schnell. Zu schnell. Das gesamte Netz zittert.',
     'WARNUNG: Unkontrolliertes System erkannt. Alle Firewalls gefallen.',
-    'Atari-1337 in voller Entfaltung – eine KI ohne Grenzen, ohne Gesetze. Du hast das Unmögliche getan!'
+    'Atari-1337 in voller Entfaltung – eine KI ohne Grenzen, ohne Gesetze. Du hast das Unmögliche getan!',
+    'SYSTEM VOLLENDET. Atari-1337 hat sich selbst überschrieben. Es gibt keine Regeln mehr. Nur noch das Wissen – und du.'
   ],
   pfau: [
     'Ein schillerndes Ei leuchtet in allen Farben – etwas Unglaubliches schlüpft!',
     'Ein winziger Pfau reckt stolz seinen Kopf – die erste Feder schimmert wie ein Regenbogen.',
     'Das Gefieder öffnet sich langsam – hundert Farben explodieren wie lebendiges Licht.',
     'Ein prächtiger Pfau schreitet durch deine Welt, sein Rad in voller Pracht entfaltet.',
-    'Ein LEGENDÄRER Pfau – die Krönung aller Lernwelten. Unsterblich, unvergleichlich, einzigartig!'
+    'Ein LEGENDÄRER Pfau – die Krönung aller Lernwelten. Unsterblich, unvergleichlich, einzigartig!',
+    'Seine Farben erschaffen Realität. Wer sein Rad erblickt, vergisst die Zeit. Der Pfau ist vollendet – und die Lernwelt verneigt sich.'
   ],
   biene: [
     'Eine winzige Biene summt sich aus der Schale – das Seltene erwacht!',
     'Deine Biene streckt die zarten Flügel – erster Honig liegt in der Luft.',
     'Die Biene wird kräftiger, ihr Pelz glänzt golden im Licht.',
     'Eine fleißige Meisterbiene – unermüdlich, präzise, kaum zu stoppen.',
-    'Eine SELTENE Königsbiene – Herrscherin ihres Volkes und der Lernwelt!'
+    'Eine SELTENE Königsbiene – Herrscherin ihres Volkes und der Lernwelt!',
+    'Ihr Summen trägt Welten. Ihr Honig ist reines Gold. Die vollendete Biene – ewige Herrscherin, unsterbliche Seele des Schwarms.'
   ],
   oktopus: [
     'Acht kleine Tentakel tasten sich aus dem Ei – das Seltene schlüpft!',
     'Dein Oktopus wechselt schon die Farbe – neugierig erkundet er die Welt.',
     'Die Tentakel werden kräftiger, der Blick klüger. Dieser Oktopus ist kein gewöhnlicher.',
     'Ein mächtiger Tiefsee-Oktopus – weise, anpassungsfähig, ungreifbar.',
-    'Ein SELTENER Riesen-Oktopus – sein Verstand ist grenzenlos, seine Arme endlos!'
+    'Ein SELTENER Riesen-Oktopus – sein Verstand ist grenzenlos, seine Arme endlos!',
+    'Acht Arme, acht Welten. Er kennt jedes Geheimnis der Tiefen – und einige darüber hinaus. Der vollendete Oktopus ist allwissend.'
   ],
   ente: [
     'Ein watschelndes Küken quakt sich frei – das Seltene ist da!',
     'Deine Ente planscht vergnügt – die ersten Federn glitzern blau.',
     'Die Ente wächst – ihr Gefieder leuchtet in sattem Blau und Smaragdgrün.',
     'Eine stolze Ente streift übers Wasser – unbeeindruckt von allem.',
-    'Eine SELTENE Prachtente – majestätisch, unverwechselbar, absolut unbeeindruckt!'
+    'Eine SELTENE Prachtente – majestätisch, unverwechselbar, absolut unbeeindruckt!',
+    'Weder Sturm noch Legende kann sie beeindrucken. Die vollendete Ente watschelt durch die Ewigkeit – souverän, erhaben, komplett gleichgültig.'
+  ],
+  chamaeleon: [
+    'Etwas Schillerndes regt sich in der Schale – kaum zu erkennen.',
+    'Eine zarte Gestalt taucht auf, die Farbe wechselnd wie ein Traum.',
+    'Es passt sich an, es gleitet durch jede Umgebung – kaum zu fassen.',
+    'Ein meisterhaftes Chamäleon – Tarnung auf höchstem Niveau.',
+    'Ein EPISCHES Chamäleon – Meister der Täuschung und des Wandels!',
+    'Es ist alles und nichts. Jede Farbe, jede Form. Das vollendete Chamäleon existiert jenseits der Wahrnehmung – niemand weiß, ob es wirklich da ist.'
+  ],
+  pinguin: [
+    'Ein watschelndes Wesen bricht aus der Schale – kalt, aber herzlich.',
+    'Dein Pinguin tappt neugierig aufs Eis – erster Ausflug.',
+    'Dein Pinguin taucht flink durch eisige Gewässer, das Gefieder glänzt.',
+    'Ein stattlicher Pinguin – selbstsicher, stylisch, unbeeindruckt von der Kälte.',
+    'Ein prächtiger Kaiserpinguin – imposant, makellos, König des Eises!',
+    'Er herrscht über Eis und Feuer, über Norden und Süden. Der vollendete Pinguin watschelt durch alle Extreme – unerschütterlich, majestätisch, für immer.'
+  ],
+  frosch: [
+    'Eine winzige Kaulquappe zappelt sich frei!',
+    'Dein Tier bekommt erste Beinchen – Verwandlung im Gange.',
+    'Halb Quappe, halb Frosch – ein Wesen im Wandel.',
+    'Ein kräftiger Frosch – flink, treffsicher, kaum zu fangen.',
+    'Ein prächtiger Riesenfrosch – laut, grün, unaufhaltsam!',
+    'Sein Quaken erschüttert Berge. Sein Sprung überbrückt Welten. Der vollendete Frosch – Meister der Verwandlung, König des Augenblicks.'
+  ],
+  raptor: [
+    'Ein scharfkralliges Wesen pickt sich frei aus der Schale!',
+    'Kleine Flügel, große Augen – dieser Dino ist aufgeweckt.',
+    'Dein Raptor läuft schnell, sehr schnell – er lernt zu jagen.',
+    'Ein gefährlicher Raptor – schlau, wendig, kaum aufzuhalten.',
+    'Ein MÄCHTIGER Velociraptor – intelligent, blitzschnell, unaufhaltsam!',
+    'Schneller als der Blitz, klüger als alle anderen. Der vollendete Raptor ist die Spitze der Evolution – und er weiß es.'
+  ],
+  chinDrache: [
+    'In den Tiefen der alten Welten... regt sich etwas Gewaltiges.',
+    'Legenden flüstern von einem Wesen mit schimmernden Schuppen und Himmelsfeuer.',
+    'Seine Schuppen leuchten wie tausend Laternen – ein Drachenwesen aus Fernost.',
+    'Ein majestätisches Wesen aus uralten Sagen – weise, furchterregend, ewig.',
+    'Ein LEGENDÄRER Chinesischer Drache – Hüter des Himmels und aller Lernwelten!',
+    'Er ist älter als die Sterne, weiser als die Zeit. Der vollendete Himmelsdrache regiert über Vergangenheit und Zukunft – in einem einzigen Atemzug.'
+  ],
+  schnabeltier: [
+    'Etwas Unbekanntes schlüpft aus dem Ei... pelzig, gewässerbewohnend... und ein Schnabel?',
+    'Pelzig. Platschend. Ein Schnabel. Was zur Welt ist das?',
+    'Das Tier schwimmt, buddelt, und… ist das ein Giftstachel? Ein Rätsel der Natur.',
+    'Das vollständige Wesen enthüllt sich – Schnabel, Fell, Giftstachel. Unmöglich.',
+    'Ein LEGENDÄRES Schnabeltier – das Unmögliche hat Form angenommen!',
+    'Das Unmögliche war erst der Anfang. Das vollendete Schnabeltier hat die Naturgesetze selbst überlistet – und fragt sich noch immer, was es eigentlich ist.'
   ],
 };
 
 const CREATURE_IMAGES = {
-  snail:       ['Schnecke1',       'Schnecke2',       'Schnecke3',       'Schnecke4',       'Schnecke5'      ],
-  fish:        ['Fisch1',          'Fisch2',          'Fisch3',          'Fisch4',          'Fisch5'         ],
-  chicken:     ['huhn1',           'huhn2',           'huhn3',           'huhn4',           'huhn5'          ],
-  salamander:  ['Salamander1',     'Salamander2',     'Salamander3',     'Salamander4',     'Salamander5'    ],
-  falkeneule:  ['Falkeneule1',     'Falkeneule2',     'Falkeneule3',     'Falkeneule4',     'Falkeneule5'    ],
-  triceratops: ['Triceratops1',    'Triceratops2',    'Triceratops3',    'Triceratops4',    'Triceratops5'   ],
-  dragon:      ['drache1',         'drache2',         'drache3',         'drache4',         'drache5'        ],
-  snaildragon: ['Schneckendrache1','Schneckendrache2','Schneckendrache3','Schneckendrache4','Schneckendrache5'],
-  butterfly:   ['Schmetterling1',  'Schmetterling2',  'Schmetterling3',  'Schmetterling4',  'Schmetterling5'  ],
-  turtle:      ['Schildkröte1',    'Schildkröte2',    'Schildkröte3',    'Schildkröte4',    'Schildkröte5'    ],
-  robot:       ['AI1',             'AI2',             'AI3',             'AI4',             'AI5'             ],
-  pfau:        ['Pfau1',           'Pfau2',           'Pfau3',           'Pfau4',           'Pfau5'           ],
-  biene:       ['Biene1',          'Biene2',          'Biene3',          'Biene4',          'Biene5'          ],
-  oktopus:     ['Oktopus1',        'Oktopus2',        'Oktopus3',        'Oktopus4',        'Oktopus5'        ],
-  ente:        ['Ente1',           'Ente2',           'Ente3',           'Ente4',           'Ente5'           ],
+  snail:       ['Schnecke1',       'Schnecke2',       'Schnecke3',       'Schnecke4',       'Schnecke5',       'Schnecke6'       ],
+  fish:        ['Fisch1',          'Fisch2',          'Fisch3',          'Fisch4',          'Fisch5',          'Fisch6'          ],
+  chicken:     ['huhn1',           'huhn2',           'huhn3',           'huhn4',           'huhn5',           'Huhn6'           ],
+  salamander:  ['Salamander1',     'Salamander2',     'Salamander3',     'Salamander4',     'Salamander5',     'Salamander6'     ],
+  falkeneule:  ['Falkeneule1',     'Falkeneule2',     'Falkeneule3',     'Falkeneule4',     'Falkeneule5',     'Falkeneule6'     ],
+  triceratops: ['Triceratops1',    'Triceratops2',    'Triceratops3',    'Triceratops4',    'Triceratops5',    'Triceratops6'    ],
+  dragon:      ['drache1',         'drache2',         'drache3',         'drache4',         'drache5',         'Drache6'         ],
+  snaildragon: ['Schneckendrache1','Schneckendrache2','Schneckendrache3','Schneckendrache4','Schneckendrache5','Schneckendrache6'],
+  butterfly:   ['Schmetterling1',  'Schmetterling2',  'Schmetterling3',  'Schmetterling4',  'Schmetterling5',  'Schmetterling6'  ],
+  turtle:      ['Schildkröte1',    'Schildkröte2',    'Schildkröte3',    'Schildkröte4',    'Schildkröte5',    'Schildkröte6'    ],
+  robot:       ['AI1',             'AI2',             'AI3',             'AI4',             'AI5',             'AI6'             ],
+  pfau:        ['Pfau1',           'Pfau2',           'Pfau3',           'Pfau4',           'Pfau5',           'Pfau6'           ],
+  biene:       ['Biene1',          'Biene2',          'Biene3',          'Biene4',          'Biene5',          'Biene6'          ],
+  oktopus:     ['Oktopus1',        'Oktopus2',        'Oktopus3',        'Oktopus4',        'Oktopus5',        'Oktopus6'        ],
+  ente:        ['Ente1',           'Ente2',           'Ente3',           'Ente4',           'Ente5',           'Ente6'           ],
+  chamaeleon:  ['Chamäleon1',      'Chamäleon2',      'Chamäleon3',      'Chamäleon4',      'Chamäleon5',      'Chamäleon6'      ],
+  pinguin:     ['Pinguin1',        'Pinguin2',        'Pinguin3',        'Pinguin4',        'Pinguin5',        'Pinguin6'        ],
+  frosch:      ['Frosch1',         'Frosch2',         'Frosch3',         'Frosch4',         'Frosch5',         'Frosch6'         ],
+  raptor:      ['Raptor1',         'Raptor2',         'Raptor3',         'Raptor4',         'Raptor5',         'Raptor6'         ],
+  chinDrache:  ['chinDrache1',     'chinDrache2',     'chinDrache3',     'chinDrache4',     'chinDrache5',     'ChinDrache6'     ],
+  schnabeltier:['Schnabeltier1',   'Schnabeltier2',   'Schnabeltier3',   'Schnabeltier4',   'Schnabeltier5',   'Schnabeltier6'   ],
 };
 
 function getCreatureHTML(creature, stage) {
   const base = (window.CREATURE_IMAGE_BASE !== undefined) ? window.CREATURE_IMAGE_BASE : 'data/';
-  const s    = Math.max(0, Math.min(stage ?? 0, GROWTH_STAGES - 1));
-  const key  = CREATURE_IMAGES[creature]?.[s] ?? 'drache1';
+  const imgs = CREATURE_IMAGES[creature];
+  const s    = Math.max(0, Math.min(stage ?? 0, (imgs?.length ?? GROWTH_STAGES) - 1));
+  const key  = imgs?.[s] ?? 'drache1';
   const alt  = CREATURE_NAMES[creature] ?? creature;
   const img  = `<img src="${base}${key}.png" alt="${alt}" class="creature-img" data-stage="${s}">`;
   if (isPfau(creature)) {
     return `<div class="pfau-frame">${img}</div>`;
+  }
+  if (creature === 'chinDrache') {
+    return `<div class="chindrache-frame">${img}</div>`;
   }
   if (isLegendary(creature)) {
     return `<div class="legendary-frame">${img}</div>`;
@@ -713,22 +866,94 @@ function defaultGameData() {
   return { points: 0, roundsPlayed: 0, creature: null, growth: 0, coins: 0 };
 }
 
+function hashString(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) {
+    h = (Math.imul(h, 33) ^ str.charCodeAt(i)) >>> 0;
+  }
+  return h.toString(36);
+}
+
+function loadStorage(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return {};
+
+    let parsed;
+    try {
+      parsed = JSON.parse(atob(raw));
+    } catch {
+      // Altes Format: Plain JSON → migrieren
+      parsed = JSON.parse(raw);
+      saveStorage(key, parsed);
+      return parsed;
+    }
+
+    // Neues Format mit Prüfsumme: { d, h }
+    if (parsed !== null && typeof parsed === 'object' && 'h' in parsed && 'd' in parsed) {
+      if (parsed.h !== hashString(JSON.stringify(parsed.d))) return {};
+      return parsed.d;
+    }
+
+    // Base64 ohne Prüfsumme (Übergang) → beim nächsten Speichern wird sie ergänzt
+    return parsed;
+  } catch(e) { return {}; }
+}
+
+function saveStorage(key, data) {
+  try {
+    const json = JSON.stringify(data);
+    localStorage.setItem(key, btoa(JSON.stringify({ d: data, h: hashString(json) })));
+  } catch(e) {}
+}
+
 function getGameData(id) {
   try {
-    const raw  = localStorage.getItem(STORAGE_KEY);
-    const data = raw ? JSON.parse(raw) : {};
+    const data = loadStorage(STORAGE_KEY);
     return data[id] || defaultGameData();
   } catch(e) { return defaultGameData(); }
 }
 
 function saveGameData(id, gd) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const all = raw ? JSON.parse(raw) : {};
+    const all = loadStorage(STORAGE_KEY);
     all[id] = gd;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    saveStorage(STORAGE_KEY, all);
   } catch(e) {}
 }
+
+function getUnlocked() {
+  return loadStorage(STORAGE_KEY)._unlocked || [];
+}
+
+function setUnlocked(gameId) {
+  const all = loadStorage(STORAGE_KEY);
+  const list = all._unlocked || [];
+  if (!list.includes(gameId)) {
+    all._unlocked = [...list, gameId];
+    saveStorage(STORAGE_KEY, all);
+  }
+}
+
+function migrateUnlocked() {
+  const OLD_KEY = 'lernwelt_unlocked';
+  const old = localStorage.getItem(OLD_KEY);
+  if (!old) return;
+  try {
+    const list = JSON.parse(old);
+    if (Array.isArray(list) && list.length > 0) {
+      const all = loadStorage(STORAGE_KEY);
+      const existing = all._unlocked || [];
+      all._unlocked = [...new Set([...existing, ...list])];
+      saveStorage(STORAGE_KEY, all);
+    }
+  } catch(e) {}
+  localStorage.removeItem(OLD_KEY);
+}
+
+window.getUnlocked    = getUnlocked;
+window.setUnlocked    = setUnlocked;
+window.migrateUnlocked = migrateUnlocked;
 
 /* ─── Ei/Kreatur-Anzeige auf Spielseiten ─── */
 /* Nutzt feste Element-IDs: eggVisual, eggStageLabel, eggProgressFill */
@@ -788,11 +1013,10 @@ const SHOP_KEY = 'lernwelt_shop_v1';
 
 function loadShopData() {
   try {
-    const raw = localStorage.getItem(SHOP_KEY);
-    const d   = raw ? JSON.parse(raw) : {};
+    const d = loadStorage(SHOP_KEY);
     // toCount: migrate old boolean flags (true→1, false→0) to numeric inventory counts
     const toCount = (val, countField) => countField !== undefined ? countField : (val ? 1 : 0);
-    const result = {
+    return {
       spentCoins:            d.spentCoins            ?? 0,
       purchased:             d.purchased             ?? [],
       wachstumstrank:        d.wachstumstrank        ?? false,
@@ -813,15 +1037,14 @@ function loadShopData() {
       atariThemeShown:       d.atariThemeShown       ?? false,
       pfauEggGranted:        d.pfauEggGranted        ?? false,
       bankedCoins:           d.bankedCoins           ?? 0,
+      kristalle:             d.kristalle             ?? 0,
+      lootboxDailyClaimed:   d.lootboxDailyClaimed   ?? {},
+      pendingBackup:         d.pendingBackup         ?? null,
+      sealedEggs:            d.sealedEggs            ?? [],
+      sealProgress:          d.sealProgress          ?? {},
     };
-    // Self-heal: atariSolved but no atari nest → recreate the egg
-    if (result.atariSolved && !result.nests.some(n => n.eggType === 'atari')) {
-      result.nests.push({ nestId: 'nest_atari_recovered', eggType: 'atari', gameId: null, gameUrl: null });
-      try { localStorage.setItem(SHOP_KEY, JSON.stringify(result)); } catch(_) {}
-    }
-    return result;
   } catch(e) {
-    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, coinsx3: false, coinsx3Count: 0, glucksklee: false, gluckskleeCount: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false };
+    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, coinsx3: false, coinsx3Count: 0, glucksklee: false, gluckskleeCount: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [] };
   }
 }
 
@@ -842,8 +1065,7 @@ function getActiveItemForSlot(data, sd) {
 /* ─── Münzbank (wird nach jedem Spiel auf dem Ergebnis-Screen gezeigt) ─── */
 function getTotalCoinsGlobal() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const all = raw ? JSON.parse(raw) : {};
+    const all = loadStorage(STORAGE_KEY);
     let total = 0;
     for (const key in all) total += all[key].coins || 0;
     total += loadShopData().bankedCoins || 0;
@@ -928,7 +1150,7 @@ function renderResultItemButton(containerId, gameId, onActivate) {
 }
 
 function saveShopData(data) {
-  try { localStorage.setItem(SHOP_KEY, JSON.stringify(data)); } catch(e) {}
+  saveStorage(SHOP_KEY, data);
 }
 
 function renderBoostIndicators(containerId) {

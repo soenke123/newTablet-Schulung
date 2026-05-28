@@ -4,8 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MPS-Game-Hub – Kreaturen Sammeln · Lernen · Meister werden</title>
+  <title>MPS-Game-Hub 1.2 – Kreaturen Sammeln · Lernen · Meister werden</title>
   <!-- Atari2 · Enter 1-5-0-7 -->
+  <script defer src="/_vercel/insights/script.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body class="hub-page">
@@ -20,6 +21,10 @@
       <span class="hud-coins__icon">🪙</span>
       <span class="hud-coins__amount" id="coinAmount">0</span>
     </div>
+    <div class="hud-kristalle">
+      <span class="hud-coins__icon">💎</span>
+      <span class="hud-coins__amount" id="kristallAmount">0</span>
+    </div>
   </div>
 
   <!-- ═══ HEADER ═══ -->
@@ -28,7 +33,7 @@
       <div class="hub-header__title">
         <span class="hub-header__rune">🌟</span>
         <!-- Atari0 · Enter 7-3-9-1 -->
-        <h1>MPS-Game-Hub</h1>
+        <h1>MPS-Game-Hub 1.2</h1>
         <span class="hub-header__rune">🌟</span>
       </div>
       <p class="hub-header__subtitle">Kreaturen Sammeln · Lernen · Meister werden</p>
@@ -61,6 +66,20 @@
     <div class="games-grid" id="nestsGrid"></div>
   </section>
 
+  <!-- ═══ VERSIEGELTE EIER ═══ -->
+  <section class="hub-nests" id="sealedEggsSection" hidden>
+    <h2 class="hub-section-title">🔮 Versiegelte Eier</h2>
+    <div class="games-grid" id="sealedEggsGrid"></div>
+  </section>
+
+  <!-- ═══ MODAL: Versiegeltes Ei ═══ -->
+  <div class="modal-overlay" id="sealedEggOverlay" hidden>
+    <div class="modal-box sealed-egg-modal-box">
+      <button class="modal-close" id="sealedEggClose">✕</button>
+      <div id="sealedEggModalContent"></div>
+    </div>
+  </div>
+
   <!-- ═══ MODAL: Kreatur-Details ═══ -->
   <div class="modal-overlay" id="modalOverlay" hidden>
     <div class="modal-box">
@@ -69,6 +88,74 @@
       <!-- Atari6 · Enter 5-1-6-4 -->
     </div>
   </div>
+
+  <!-- ═══ SEASON 3 ANNOUNCEMENT MODAL ═══ -->
+  <div class="s3-overlay" id="s3Modal" hidden>
+    <div class="s3-panel">
+
+      <!-- Banner -->
+      <div class="s3-banner">
+        <div class="s3-badge">Neu verfügbar</div>
+        <h2 class="s3-banner__title">Season 3</h2>
+        <p class="s3-banner__sub">Age of Seal</p>
+      </div>
+
+      <!-- Inhalt: Bild + kompakte Liste -->
+      <div class="s3-body">
+        <!-- Bundle-Bild: src="..." eintragen wenn fertig -->
+        <div class="s3-layout">
+
+          <div class="s3-preview">
+            <!-- Bild hier einfügen: <img src="data/season3_bundle.png" alt="Season 3"> -->
+            <span class="s3-preview__ph">🌟</span>
+          </div>
+
+          <ul class="s3-list">
+            <li class="s3-list__item">
+              <span class="s3-list__tag s3-tag--new">Neu</span>
+              <span class="s3-list__text"><strong>3 neue Kreaturen</strong> — in allen Spielen erspielbar</span>
+            </li>
+            <li class="s3-list__item">
+              <span class="s3-list__tag s3-tag--epic">Episch</span>
+              <span class="s3-list__text"><strong>1 neues Episches Wesen</strong></span>
+            </li>
+            <li class="s3-list__item">
+              <span class="s3-list__tag s3-tag--legendary">Legendary</span>
+              <span class="s3-list__text"><strong>2 neue Legendäre Wesen</strong></span>
+            </li>
+            <li class="s3-list__item">
+              <span class="s3-list__tag s3-tag--new">Neu</span>
+              <span class="s3-list__text"><strong>Neue Items</strong> im Shop — darunter Siegel &amp; seltene Eier</span>
+            </li>
+            <li class="s3-list__item">
+              <span class="s3-list__tag" style="background:#4a2d8a;color:#d4b8ff;">Währung</span>
+              <span class="s3-list__text"><strong>💎 Kristalle</strong> — neue Währung, im Shop gegen Münzen tauschbar</span>
+            </li>
+            <li class="s3-list__divider"></li>
+            <li class="s3-list__item">
+              <span class="s3-list__game-icon">🃏</span>
+              <span class="s3-list__text"><strong>Quellen-Tinder</strong> — Echte oder Fake-Quellen?</span>
+            </li>
+            <li class="s3-list__item">
+              <span class="s3-list__game-icon">🤖</span>
+              <span class="s3-list__text"><strong>KI 1</strong> — Grundlagen der KI</span>
+            </li>
+            <li class="s3-list__item">
+              <span class="s3-list__game-icon">🧠</span>
+              <span class="s3-list__text"><strong>KI 2</strong> — Wie lenke ich eine KI?</span>
+            </li>
+          </ul>
+
+        </div>
+      </div><!-- /.s3-body -->
+
+      <!-- CTA -->
+      <div class="s3-footer">
+        <button class="s3-cta" id="s3Close">Abenteuer beginnen</button>
+      </div>
+
+    </div><!-- /.s3-panel -->
+  </div><!-- /.s3-overlay -->
 
   <!-- ═══ SHOP MODAL ═══ -->
   <div class="shop-modal-overlay" id="shopModal" hidden>
@@ -79,9 +166,16 @@
           <span>🪙</span>
           <span id="shopCoinAmount">0</span>
           <!-- Atari3 · Enter 1-3-5-2 -->
-          <span class="shop-coin-badge__label">Münzen</span>
+        </div>
+        <div class="shop-coin-badge shop-kristall-badge" id="shopKristallBadge" hidden>
+          <span>💎</span>
+          <span id="shopKristallAmount">0</span>
         </div>
         <button class="shop-modal-close" id="shopModalClose">✕</button>
+      </div>
+      <div class="shop-tabs" id="shopTabs">
+        <button class="shop-tab shop-tab--active" data-tab="1">S1 / S2</button>
+        <button class="shop-tab" data-tab="2">S3</button>
       </div>
       <div class="shop-list" id="shopList"></div>
       <div class="shop-challenge-banner">
@@ -96,6 +190,27 @@
     </div>
   </div>
 
+  <!-- ═══ LOOTBOX ÖFFNUNGS-MODAL ═══ -->
+  <div class="lootbox-modal-overlay" id="lootboxModal" hidden>
+    <div class="lootbox-modal-box" id="lootboxModalBox">
+      <div class="lootbox-phase" id="lootboxPhase1">
+        <div class="lootbox-graphic" id="lootboxGraphic">
+          <div class="lootbox-lid"  id="lootboxLid"></div>
+          <div class="lootbox-body" id="lootboxBody"></div>
+        </div>
+        <p class="lootbox-hint">Öffnet sich gleich…</p>
+      </div>
+      <div class="lootbox-phase" id="lootboxPhase2" hidden>
+        <div class="lootbox-rarity-label" id="lootboxRarityLabel"></div>
+        <div class="lootbox-reward-icon"  id="lootboxRewardIcon"></div>
+        <div class="lootbox-reward-name"  id="lootboxRewardName"></div>
+        <div class="lootbox-particles"    id="lootboxParticles"></div>
+        <button class="lootbox-collect-btn invisible" id="lootboxCollectBtn">Einsammeln ✦</button>
+      </div>
+      <div class="lootbox-flash" id="lootboxFlash"></div>
+    </div>
+  </div>
+
   <script src="creatures.js"></script>
   <script src="script.js"></script>
   <script src="config.js"></script>
@@ -103,10 +218,25 @@
     // Hub-spezifischer Code
     // Atari1 · Enter 4-8-2-6
     document.addEventListener('DOMContentLoaded', () => {
+      migrateUnlocked();
       renderHub();
+
+      // Season 3 Announcement — einmal pro Sitzung zeigen
+      if (typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN
+          && !sessionStorage.getItem('s3_modal_seen')) {
+        document.getElementById('s3Modal').hidden = false;
+      }
+      document.getElementById('s3Close').addEventListener('click', () => {
+        document.getElementById('s3Modal').hidden = true;
+        sessionStorage.setItem('s3_modal_seen', '1');
+      });
 
       document.getElementById('modalClose').addEventListener('click', () => {
         document.getElementById('modalOverlay').hidden = true;
+      });
+
+      document.getElementById('modalOverlay').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) document.getElementById('modalOverlay').hidden = true;
       });
 
       document.getElementById('bookBtn')?.addEventListener('click', openBookModal);
