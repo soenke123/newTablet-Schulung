@@ -3014,3 +3014,13 @@ body.s3-active .hud-kristalle { display: flex; }
   50%      { box-shadow: 0 0 40px rgba(255,215,0,0.7), 0 0 60px rgba(255,140,0,0.4); }
 }
 .seal-open-btn--glow { animation: _seal-pulse-glow 1.2s ease-in-out infinite; }
+
+/* ── Passwort-Auge (Browser-nativ) ─────────────── */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  filter: invert(1);
+}
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-textfield-decoration-container {
+  filter: invert(1);
+}

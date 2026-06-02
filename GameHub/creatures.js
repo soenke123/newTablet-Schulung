@@ -854,6 +854,7 @@ function computeRoundResult(data, correct, maxPoints, sd) {
   }
 
   if (correct === maxPoints) coinsGained += 3;
+  if (data.growth >= GROWTH_S6) coinsGained += 5;
 
   data.coins = (data.coins || 0) + coinsGained;
   return coinsGained;

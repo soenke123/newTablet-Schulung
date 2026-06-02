@@ -1699,18 +1699,17 @@ const SEALED_EGG_DEFS = {
         name: 'Siegel IV', icon: '🐣',
         hint: function() {
           const all     = loadStorage(STORAGE_KEY);
-          const total   = GAMES_CONFIG.length;
           const withC   = GAMES_CONFIG.filter(g => all[g.id] && all[g.id].creature);
           const babies  = withC.filter(g => getGrowthStage(all[g.id].growth) === 0).length;
-          const done    = withC.length > 0 && babies === withC.length;
-          return `In allen Spielslots schlummern nur Babys.<br>
-            <span style="font-size:1.1rem;font-weight:bold;color:${done ? '#4ade80' : '#e8dcc8'}">${babies} / ${total}</span>`;
+          const done    = babies >= 6;
+          return `In mindestens 6 Spielslots schlummern nur Babys.<br>
+            <span style="font-size:1.1rem;font-weight:bold;color:${done ? '#4ade80' : '#e8dcc8'}">${babies} / 6</span>`;
         },
         verify: function() {
-          const all     = loadStorage(STORAGE_KEY);
-          const gameIds = GAMES_CONFIG.map(g => g.id);
-          const withC   = gameIds.filter(id => all[id] && all[id].creature);
-          return withC.length > 0 && withC.every(id => getGrowthStage(all[id].growth) === 0);
+          const all    = loadStorage(STORAGE_KEY);
+          const withC  = GAMES_CONFIG.filter(g => all[g.id] && all[g.id].creature);
+          const babies = withC.filter(g => getGrowthStage(all[g.id].growth) === 0).length;
+          return babies >= 6;
         }
       },
     ]
@@ -1867,6 +1866,7 @@ function buySealHint(type, index) {
   saveShopData(sd);
   renderSealedEggModalContent(type);
   renderSealedEggs();
+  renderCoinDisplay(loadAllData());
 }
 
 async function verifySeal(type, index) {
@@ -2228,7 +2228,7 @@ function openBackupConfirmModal(creature, stage, maxStage) {
   document.getElementById('backupCancel')?.addEventListener('click', () => showBookDetail(creature, maxStage));
   document.getElementById('backupOk')?.addEventListener('click', () => {
     const sd2 = loadShopData();
-    if ((sd2.kristalle ?? 0) < 1) return;
+    if ((sd2.kristalle ?? 0) < 2) return;
     sd2.kristalle -= 2;
     sd2.pendingBackup = { creature, stage };
     saveShopData(sd2);
@@ -2565,7 +2565,8 @@ function _injectAtariStyles() {
 /* ─────────────────────────────────────────────────
    13. THEME-WECHSEL
    ───────────────────────────────────────────────── */
-const THEME_PREF_KEY = 'lernwelt_theme_pref';
+const THEME_PREF_KEY         = 'lernwelt_theme_pref';
+const THEME_UNLOCK_ORDER_KEY = 'lernwelt_theme_unlock_order';
 
 function _getUnlockedThemes(allData) {
   const sd = loadShopData();
@@ -2583,29 +2584,41 @@ function _getUnlockedThemes(allData) {
     return false;
   };
 
-  if (hasMaxed('pfau'))  themes.push('pfau');
-  if (hasMaxed('robot')) themes.push('atari');
+  if (hasMaxed('pfau'))        themes.push('pfau');
+  if (hasMaxed('robot'))       themes.push('atari');
+  if (hasMaxed('chinDrache'))  themes.push('chindrache');
+  if (hasMaxed('schnabeltier')) themes.push('schnabeltier');
   return themes;
 }
 
 function applyThemeFromPreference(allData) {
   const unlocked = _getUnlockedThemes(allData);
-  const pref = localStorage.getItem(THEME_PREF_KEY);
-  let active = (pref && unlocked.includes(pref)) ? pref
-    : unlocked.includes('atari') ? 'atari'
-    : unlocked.includes('pfau')  ? 'pfau'
-    : 'default';
 
-  if (active === 'atari') {
-    _activateAtariTheme();
-    _deactivatePfauTheme();
-  } else if (active === 'pfau') {
-    _deactivateAtariTheme();
-    _activatePfauTheme();
-  } else {
-    _deactivateAtariTheme();
-    _deactivatePfauTheme();
+  // Neu freigeschaltete Themes werden automatisch aktiv (letztes gewinnt)
+  const order = JSON.parse(localStorage.getItem(THEME_UNLOCK_ORDER_KEY) || '[]');
+  let orderChanged = false;
+  for (const theme of unlocked) {
+    if (theme !== 'default' && !order.includes(theme)) {
+      order.push(theme);
+      orderChanged = true;
+      localStorage.setItem(THEME_PREF_KEY, theme);
+    }
   }
+  if (orderChanged) localStorage.setItem(THEME_UNLOCK_ORDER_KEY, JSON.stringify(order));
+
+  const pref = localStorage.getItem(THEME_PREF_KEY);
+  const active = (pref && unlocked.includes(pref)) ? pref : 'default';
+
+  // Zuerst alle deaktivieren, dann das aktive einschalten
+  if (active !== 'atari')        _deactivateAtariTheme();
+  if (active !== 'pfau')         _deactivatePfauTheme();
+  if (active !== 'chindrache')   _deactivateChinDracheTheme();
+  if (active !== 'schnabeltier') _deactivateSchnabeltierTheme();
+
+  if      (active === 'atari')        _activateAtariTheme();
+  else if (active === 'pfau')         _activatePfauTheme();
+  else if (active === 'chindrache')   _activateChinDracheTheme();
+  else if (active === 'schnabeltier') _activateSchnabeltierTheme();
 
   _updateThemeCycleBtn(unlocked, active);
 }
@@ -2626,8 +2639,8 @@ function _updateThemeCycleBtn(unlocked, active) {
   if (!btn) return;
   btn.hidden = unlocked.length < 2;
   if (unlocked.length < 2) return;
-  const icons = { default: '🌟', pfau: '🦚', atari: '💾' };
-  const names = { default: 'Standard', pfau: 'Pfau', atari: 'Atari' };
+  const icons = { default: '🌟', pfau: '🦚', atari: '💾', chindrache: '🐉', schnabeltier: '🦆' };
+  const names = { default: 'Standard', pfau: 'Pfau', atari: 'Atari', chindrache: 'Drache', schnabeltier: 'Schnabeltier' };
   btn.innerHTML = `${icons[active] || '🎨'}<span class="theme-cycle-btn__label"> ${names[active] || ''}</span>`;
   btn.title = 'Theme wechseln';
 }
@@ -3108,7 +3121,33 @@ body.pfau-theme .hub-section-title { color:#5838a0 !important; }
 /* Scrollbar */
 body.pfau-theme ::-webkit-scrollbar-track { background:#f5efff !important; }
 body.pfau-theme ::-webkit-scrollbar-thumb { background:#b090e0 !important; border-color:#f5efff !important; }
+
+/* ── Season 3 Modal ── */
+body.pfau-theme .s3-panel {
+  background:rgba(250,244,255,0.98) !important;
+  border-color:rgba(148,88,200,0.5) !important;
+  box-shadow:0 0 60px rgba(148,88,200,0.2) !important;
+}
+body.pfau-theme .s3-banner {
+  background:linear-gradient(160deg, #2d1060 0%, #4a1a90 55%, #2a0e58 100%) !important;
+  border-bottom-color:rgba(180,110,255,0.4) !important;
+}
+body.pfau-theme .s3-banner::before {
+  background:radial-gradient(ellipse at 50% 0%, rgba(180,110,255,0.25) 0%, transparent 65%) !important;
+}
+body.pfau-theme .s3-badge {
+  background:linear-gradient(135deg,#a855f7,#7c3aed) !important;
+  color:#fff !important;
+}
+body.pfau-theme .s3-banner__title {
+  background:linear-gradient(90deg,#c06060,#b850a0,#8860b8,#5888c0);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text; text-shadow:none !important;
+}
+body.pfau-theme .s3-banner__sub { color:rgba(220,200,255,0.8) !important; }
+body.pfau-theme .s3-body { background:rgba(250,244,255,0.98) !important; }
 `;
+
   document.head.appendChild(s);
 }
 
@@ -3344,6 +3383,613 @@ body.atari-theme .rare-badge {
 /* Scrollbar */
 body.atari-theme ::-webkit-scrollbar-track { background:#060f0a !important; }
 body.atari-theme ::-webkit-scrollbar-thumb { background:#00a028 !important; border-color:#060f0a !important; }
+
+/* ── Season 3 Modal ── */
+body.atari-theme .s3-panel {
+  background:#000 !important;
+  border-color:#00ff41 !important;
+  box-shadow:0 0 40px rgba(0,255,65,0.2) !important;
+}
+body.atari-theme .s3-banner {
+  background:linear-gradient(160deg, #000 0%, #060f06 55%, #000 100%) !important;
+  border-bottom-color:rgba(0,255,65,0.4) !important;
+}
+body.atari-theme .s3-banner::before {
+  background:radial-gradient(ellipse at 50% 0%, rgba(0,255,65,0.1) 0%, transparent 65%) !important;
+}
+body.atari-theme .s3-badge {
+  background:#00ff41 !important;
+  color:#000 !important;
+}
+body.atari-theme .s3-banner__title {
+  color:#00ff41 !important;
+  text-shadow:0 0 30px rgba(0,255,65,0.6), 0 0 60px rgba(0,255,65,0.2) !important;
+}
+body.atari-theme .s3-banner__sub { color:rgba(0,200,50,0.7) !important; font-family:'Courier New',monospace !important; }
+body.atari-theme .s3-body { background:#000 !important; }
+`;
+
+  document.head.appendChild(s);
+}
+
+/* ─────────────────────────────────────────────────
+   16. CHINESISCHER DRACHE — GOLDENE LATERNEN THEME
+   Aktiv wenn chinDrache-Kreatur auf max. Wachstum
+   ───────────────────────────────────────────────── */
+let _chinDracheThemeActive  = false;
+let _chinDracheLanternTimer = null;
+
+function _activateChinDracheTheme() {
+  if (_chinDracheThemeActive) return;
+  _chinDracheThemeActive = true;
+  _injectChinDracheThemeStyles();
+  document.body.classList.add('chindrache-theme');
+  _startLanterns();
+}
+
+function _deactivateChinDracheTheme() {
+  if (!_chinDracheThemeActive) return;
+  _chinDracheThemeActive = false;
+  document.body.classList.remove('chindrache-theme');
+  _stopLanterns();
+}
+
+const CHINDRACHE_LANTERN_INTERVAL_MS = 2400;
+
+function _startLanterns() {
+  if (_chinDracheLanternTimer) return;
+  _spawnLantern();
+  _chinDracheLanternTimer = setInterval(_spawnLantern, CHINDRACHE_LANTERN_INTERVAL_MS);
+}
+
+function _stopLanterns() {
+  if (_chinDracheLanternTimer) { clearInterval(_chinDracheLanternTimer); _chinDracheLanternTimer = null; }
+  document.querySelectorAll('.lw-lantern, .lw-ink-stroke').forEach(el => el.remove());
+}
+
+const _LANTERN_PALETTE = [
+  { hue: '#d4af37', glow: '#f8d860' },
+  { hue: '#d4af37', glow: '#f8d860' },
+  { hue: '#d4af37', glow: '#ffd700' },
+  { hue: '#d4af37', glow: '#f8d860' },
+  { hue: '#c03020', glow: '#f06040' },
+];
+
+function _spawnLantern() {
+  const { hue, glow } = _LANTERN_PALETTE[Math.floor(Math.random() * _LANTERN_PALETTE.length)];
+  const scale = 0.65 + Math.random() * 1.1;
+  const bW    = Math.round(16 * scale);
+  const bH    = Math.round(25 * scale);
+  const x     = 3 + Math.random() * 92;
+  const dur   = 12 + Math.random() * 10;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'lw-lantern';
+  wrap.style.cssText = `left:${x}vw;bottom:-70px;animation-duration:${dur}s;`;
+
+  const str = document.createElement('div');
+  str.className = 'lw-lantern__string';
+  str.style.height = `${Math.round(10 * scale)}px`;
+
+  const cap = document.createElement('div');
+  cap.className = 'lw-lantern__cap';
+  cap.style.cssText = `background:${hue};width:${Math.round(bW * 0.68)}px;height:${Math.round(4 * scale)}px;box-shadow:0 0 5px ${glow};`;
+
+  const body = document.createElement('div');
+  body.className = 'lw-lantern__body';
+  body.style.cssText = `width:${bW}px;height:${bH}px;background:radial-gradient(ellipse at 38% 30%,${glow}cc,${hue}bb 60%,${hue}88);box-shadow:0 0 ${Math.round(14*scale)}px ${Math.round(6*scale)}px ${glow}66;`;
+
+  const fringe = document.createElement('div');
+  fringe.className = 'lw-lantern__fringe';
+  for (let i = 0; i < 3 + Math.floor(Math.random() * 3); i++) {
+    const s = document.createElement('span');
+    s.style.cssText = `background:${hue};height:${Math.round((5 + Math.random() * 8) * scale)}px;box-shadow:0 0 3px ${glow}88;`;
+    fringe.appendChild(s);
+  }
+
+  wrap.append(str, cap, body, fringe);
+  document.body.appendChild(wrap);
+  wrap.addEventListener('animationend', () => wrap.remove(), { once: true });
+
+  if (Math.random() < 0.45) _spawnInkStroke();
+}
+
+function _spawnInkStroke() {
+  const el  = document.createElement('div');
+  el.className = 'lw-ink-stroke';
+  const w   = 60 + Math.random() * 160;
+  const ang = -45 + Math.random() * 90;
+  const dur = 5 + Math.random() * 6;
+  el.style.cssText = `left:${Math.random() * (window.innerWidth - w)}px;top:${10 + Math.random() * (window.innerHeight - 60)}px;width:${w}px;height:${2 + Math.random() * 3}px;--a:${ang}deg;animation-duration:${dur}s;`;
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
+
+function _injectChinDracheThemeStyles() {
+  if (document.getElementById('lw-chindrache-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'lw-chindrache-styles';
+  s.textContent = `
+@import url('https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@400;500;600;700;900&display=swap');
+
+/* ════════════════════════════════════════════════
+   CHINESISCHER DRACHE — GOLDENE LATERNEN THEME
+   ════════════════════════════════════════════════ */
+
+/* ── Laternen-Partikel ── */
+.lw-lantern {
+  position: fixed; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center;
+  z-index: 9000; animation: lwLanternRise linear forwards;
+}
+@keyframes lwLanternRise {
+  0%   { transform: translateY(0) rotate(0deg);     opacity: 0; }
+  5%   { opacity: 0.92; }
+  35%  { transform: translateY(-38vh) rotate(3deg); }
+  65%  { transform: translateY(-76vh) rotate(-3deg); }
+  97%  { opacity: 0.55; }
+  100% { transform: translateY(-140vh) rotate(1deg); opacity: 0; }
+}
+.lw-lantern__string { width: 1px; background: rgba(212,175,55,0.55); }
+.lw-lantern__cap    { border-radius: 3px 3px 0 0; }
+.lw-lantern__body   { border-radius: 42% 42% 38% 38% / 50% 50% 40% 40%; position: relative; overflow: hidden; }
+.lw-lantern__body::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(155deg, rgba(255,255,255,0.22), transparent 50%);
+  border-radius: inherit;
+}
+.lw-lantern__fringe      { display: flex; justify-content: center; gap: 2px; margin-top: 2px; }
+.lw-lantern__fringe span { width: 1.5px; border-radius: 1px; }
+
+.lw-ink-stroke {
+  position: fixed; pointer-events: none; z-index: 9000; border-radius: 60%;
+  background: linear-gradient(var(--a), transparent, rgba(212,175,55,0.2) 35%, rgba(212,175,55,0.25) 50%, rgba(212,175,55,0.2) 65%, transparent);
+  animation: lwInkFade ease-in-out forwards;
+}
+@keyframes lwInkFade {
+  0%, 100% { opacity: 0; transform: scaleX(0.2) rotate(var(--a)); }
+  35%      { opacity: 1; transform: scaleX(1)   rotate(var(--a)); }
+  65%      { opacity: 0.6; }
+}
+
+/* ── CSS-Variablen überschreiben (deckt alle inline-styles + automatische Elemente ab) ── */
+body.chindrache-theme {
+  --clr-bg:        #060f1e;
+  --clr-surface:   #0b1634;
+  --clr-surface2:  #0f1e42;
+  --clr-border:    rgba(212,175,55,0.3);
+  --clr-gold:      #d4af37;
+  --clr-gold-dim:  #9a7a1a;
+  --clr-amber:     #c49a28;
+  --clr-cream:     #f0e8d0;
+  --clr-cream-dim: rgba(212,175,55,0.6);
+  background-color: #0d1f3c !important;
+  background-image: radial-gradient(ellipse at 50% 110%, #1f3f6f, #0d1f3c 50%, #060f1e) !important;
+}
+
+/* ── Schriftart ── */
+body.chindrache-theme {
+  --font-display: 'Zen Old Mincho', serif;
+}
+body.chindrache-theme h1,
+body.chindrache-theme h2,
+body.chindrache-theme .hub-section-title,
+body.chindrache-theme .game-card__title,
+body.chindrache-theme .book-modal__title,
+body.chindrache-theme .shop-modal-title {
+  font-family: 'Zen Old Mincho', serif !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* ── Hub Header ── */
+body.chindrache-theme .hub-header__title h1 {
+  color: #d4af37 !important;
+  text-shadow: 0 0 30px rgba(212,175,55,0.55), 0 2px 4px rgba(0,0,0,0.9) !important;
+}
+body.chindrache-theme .hub-header__subtitle {
+  color: rgba(212,175,55,0.6) !important;
+  font-family: 'Zen Old Mincho', serif !important;
+  letter-spacing: 0.12em !important;
+}
+body.chindrache-theme .hub-header::after {
+  background: linear-gradient(to right, transparent, #d4af37, transparent) !important;
+}
+body.chindrache-theme .hub-section-title {
+  color: rgba(212,175,55,0.7) !important;
+}
+
+/* ── Runen: 🌟 → 龍 ── */
+body.chindrache-theme .hub-header__rune {
+  font-size: 0 !important;
+}
+body.chindrache-theme .hub-header__rune::after {
+  content: '龍';
+  font-size: 2rem;
+  font-family: 'Zen Old Mincho', serif;
+  color: #d4af37;
+  text-shadow: 0 0 16px rgba(212,175,55,0.7), 0 0 40px rgba(212,175,55,0.3);
+  animation: none;
+}
+
+/* ── HUD-Leiste ── */
+body.chindrache-theme .hud-bar {
+  background: rgba(11,22,52,0.92) !important;
+  border-color: rgba(212,175,55,0.5) !important;
+  box-shadow: 0 0 18px rgba(212,175,55,0.2), 0 4px 16px rgba(0,0,0,0.6) !important;
+}
+body.chindrache-theme .hud-btn:hover {
+  background: rgba(212,175,55,0.12) !important;
+}
+body.chindrache-theme .hud-coins {
+  border-left-color: rgba(212,175,55,0.25) !important;
+}
+body.chindrache-theme .hud-coins__amount {
+  color: #f0d878 !important;
+}
+body.chindrache-theme .theme-cycle-btn {
+  background: rgba(11,22,52,0.92) !important;
+  border-color: rgba(212,175,55,0.4) !important;
+  color: #d4af37 !important;
+}
+body.chindrache-theme .theme-cycle-btn:hover {
+  background: rgba(20,40,90,0.95) !important;
+  color: #f0d878 !important;
+}
+
+/* ── Gallery Bar ── */
+body.chindrache-theme .gallery-bar {
+  background: rgba(11,22,52,0.78) !important;
+  border-color: rgba(212,175,55,0.35) !important;
+}
+body.chindrache-theme .gallery-walker {
+  filter: drop-shadow(0 0 8px rgba(212,175,55,0.5)) !important;
+}
+body.chindrache-theme .gallery-walker:hover {
+  filter: drop-shadow(0 0 16px rgba(212,175,55,0.85)) !important;
+}
+
+/* ── Spielkarten ── */
+body.chindrache-theme .game-card {
+  background: rgba(11,22,52,0.78) !important;
+  border-color: rgba(212,175,55,0.35) !important;
+  backdrop-filter: blur(4px) !important;
+}
+body.chindrache-theme .game-card::before {
+  background: linear-gradient(135deg, rgba(212,175,55,0.04) 0%, transparent 60%) !important;
+}
+body.chindrache-theme .game-card:hover {
+  border-color: rgba(212,175,55,0.75) !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 28px rgba(212,175,55,0.2) !important;
+}
+body.chindrache-theme .game-card--locked {
+  background: rgba(6,12,28,0.7) !important;
+  border-color: rgba(212,175,55,0.15) !important;
+}
+body.chindrache-theme .game-card__title {
+  color: #f0d878 !important;
+  text-shadow: 0 0 10px rgba(212,175,55,0.35) !important;
+}
+body.chindrache-theme .game-card__points {
+  background: rgba(212,175,55,0.08) !important;
+  border-color: rgba(212,175,55,0.25) !important;
+  color: rgba(240,220,140,0.8) !important;
+}
+body.chindrache-theme .game-card__points strong {
+  color: #f0d878 !important;
+}
+
+/* ── Spielen-Button (Königsblau-Pille) ── */
+body.chindrache-theme .game-card__btn {
+  background: linear-gradient(135deg, #0c1e6b, #1840c0) !important;
+  border: 1.5px solid #c9a830 !important;
+  border-radius: 999px !important;
+  color: #f0d878 !important;
+  box-shadow: 0 0 14px rgba(20,55,200,0.45), 0 2px 5px rgba(0,0,0,0.5) !important;
+}
+body.chindrache-theme .game-card__btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1028a0, #2050e0) !important;
+  box-shadow: 0 0 22px rgba(30,70,220,0.6), 0 0 8px rgba(212,175,55,0.3) !important;
+}
+body.chindrache-theme .game-card__use-btn {
+  background: rgba(212,175,55,0.08) !important;
+  border: 1.5px solid rgba(212,175,55,0.45) !important;
+  border-radius: 999px !important;
+  color: #d4af37 !important;
+}
+body.chindrache-theme .game-card__use-btn:hover:not(:disabled) {
+  background: rgba(212,175,55,0.18) !important;
+  border-color: #d4af37 !important;
+}
+
+/* ── Shop Modal ── */
+body.chindrache-theme .shop-modal-overlay {
+  background: rgba(4,10,24,0.88) !important;
+}
+body.chindrache-theme .shop-modal-box {
+  background: linear-gradient(180deg, #0c1e3e, #07101e) !important;
+  border-color: rgba(212,175,55,0.4) !important;
+}
+body.chindrache-theme .shop-modal-title {
+  color: #f0d878 !important;
+  text-shadow: 0 0 14px rgba(212,175,55,0.4) !important;
+}
+body.chindrache-theme .shop-modal-close {
+  color: rgba(212,175,55,0.5) !important;
+}
+body.chindrache-theme .shop-modal-close:hover {
+  color: #d4af37 !important;
+}
+body.chindrache-theme .shop-coin-badge {
+  background: rgba(212,175,55,0.12) !important;
+  border-color: rgba(212,175,55,0.4) !important;
+  color: #f0d878 !important;
+}
+body.chindrache-theme .shop-tabs {
+  border-bottom-color: rgba(212,175,55,0.2) !important;
+}
+body.chindrache-theme .shop-tab {
+  color: rgba(212,175,55,0.55) !important;
+}
+body.chindrache-theme .shop-tab:hover {
+  background: rgba(212,175,55,0.07) !important;
+  color: #d4af37 !important;
+}
+body.chindrache-theme .shop-tab--active {
+  border-bottom-color: #d4af37 !important;
+  color: #f0d878 !important;
+}
+body.chindrache-theme .shop-list-item {
+  border-bottom-color: rgba(212,175,55,0.12) !important;
+}
+body.chindrache-theme .shop-list-item:hover {
+  background: rgba(212,175,55,0.06) !important;
+}
+body.chindrache-theme .shop-list-item__name {
+  color: #f0d878 !important;
+}
+body.chindrache-theme .shop-list-item__desc {
+  color: rgba(212,175,55,0.5) !important;
+}
+body.chindrache-theme .shop-list-item__price {
+  border-color: rgba(212,175,55,0.3) !important;
+  color: #d4af37 !important;
+}
+body.chindrache-theme .shop-list-item__btn {
+  background: linear-gradient(135deg, #b8861e, #d4af37) !important;
+  color: #0b1428 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 2px 8px rgba(212,175,55,0.3) !important;
+}
+body.chindrache-theme .shop-list-item__btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d4af37, #f0d060) !important;
+  box-shadow: 0 0 16px rgba(212,175,55,0.5) !important;
+}
+body.chindrache-theme .shop-list-item__btn:disabled {
+  background: rgba(11,22,52,0.7) !important;
+  color: rgba(212,175,55,0.3) !important;
+  border: 1px solid rgba(212,175,55,0.15) !important;
+}
+
+/* ── Modals (Galerie, Kreatur-Detail) ── */
+body.chindrache-theme .modal-overlay {
+  background: rgba(4,10,24,0.88) !important;
+}
+body.chindrache-theme .modal-box {
+  background: linear-gradient(180deg, #0c1e3e, #07101e) !important;
+  border-color: rgba(212,175,55,0.4) !important;
+}
+body.chindrache-theme .modal-close {
+  color: rgba(212,175,55,0.5) !important;
+}
+body.chindrache-theme .modal-close:hover {
+  color: #d4af37 !important;
+}
+
+/* ── Wachstumsbalken (Spielkarten + Nester) ── */
+body.chindrache-theme .game-card__progress {
+  background: rgba(6,15,30,0.8) !important;
+  border-color: rgba(212,175,55,0.2) !important;
+}
+body.chindrache-theme .game-card__progress-fill {
+  background: linear-gradient(to right, #0c1e6b, #1840c0) !important;
+  box-shadow: 0 0 6px rgba(24,64,192,0.6) !important;
+}
+body.chindrache-theme .egg-progress-bar {
+  background: rgba(6,15,30,0.8) !important;
+  border-color: rgba(212,175,55,0.2) !important;
+}
+body.chindrache-theme .egg-progress-fill {
+  background: linear-gradient(to right, #0c1e6b, #1840c0) !important;
+}
+
+/* ── Buch der Monster Modal ── */
+body.chindrache-theme .book-modal__title {
+  color: #f0d878 !important;
+  text-shadow: 0 0 14px rgba(212,175,55,0.4) !important;
+}
+body.chindrache-theme .book-modal__count {
+  color: rgba(212,175,55,0.55) !important;
+}
+body.chindrache-theme .book-slot {
+  background: rgba(11,22,52,0.8) !important;
+  border-color: rgba(212,175,55,0.25) !important;
+}
+body.chindrache-theme .book-slot--seen:hover {
+  border-color: rgba(212,175,55,0.75) !important;
+  box-shadow: 0 0 14px rgba(212,175,55,0.3) !important;
+}
+body.chindrache-theme .book-divider {
+  background: linear-gradient(to right, transparent, rgba(212,175,55,0.4), transparent) !important;
+}
+body.chindrache-theme .book-detail__backup-btn {
+  background: rgba(12,30,107,0.35) !important;
+  border-color: rgba(212,175,55,0.4) !important;
+  color: #d4af37 !important;
+}
+body.chindrache-theme .book-detail__backup-btn:hover {
+  background: rgba(12,30,107,0.6) !important;
+}
+
+/* ── Trank-Banner ── */
+body.chindrache-theme .trank-banner {
+  background: linear-gradient(135deg, #0b1634 0%, #0f1e42 100%) !important;
+  border-top-color: rgba(212,175,55,0.5) !important;
+  box-shadow: 0 -4px 20px rgba(212,175,55,0.15) !important;
+}
+
+/* ── Sealed Egg Modal ── */
+body.chindrache-theme .sealed-egg-modal-box {
+  background: linear-gradient(180deg, #0c1e3e, #07101e) !important;
+  border-color: rgba(212,175,55,0.4) !important;
+}
+
+/* ── Season 3 Modal ── */
+body.chindrache-theme .s3-panel {
+  background: linear-gradient(180deg, #0c1e3e, #07101e) !important;
+  border-color: rgba(212,175,55,0.5) !important;
+  box-shadow: 0 0 60px rgba(212,175,55,0.15) !important;
+}
+body.chindrache-theme .s3-banner {
+  background: linear-gradient(160deg, #060f1e 0%, #0d1f3c 55%, #060f1e 100%) !important;
+  border-bottom-color: rgba(212,175,55,0.4) !important;
+}
+body.chindrache-theme .s3-banner::before {
+  background: radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.15) 0%, transparent 65%) !important;
+}
+body.chindrache-theme .s3-badge {
+  background: linear-gradient(135deg, #b8861e, #d4af37) !important;
+  color: #060f1e !important;
+}
+body.chindrache-theme .s3-banner__title {
+  color: #d4af37 !important;
+  text-shadow: 0 0 40px rgba(212,175,55,0.5) !important;
+}
+body.chindrache-theme .s3-banner__sub { color: rgba(212,175,55,0.6) !important; }
+body.chindrache-theme .s3-body { background: linear-gradient(180deg, #0c1e3e, #07101e) !important; }
+`;
+  document.head.appendChild(s);
+}
+
+/* ─────────────────────────────────────────────────
+   17. SCHNABELTIER — BIOLUMINESZENZ THEME
+   Aktiv wenn schnabeltier-Kreatur auf max. Wachstum
+   ───────────────────────────────────────────────── */
+let _schnabeltierThemeActive = false;
+let _schnabeltierBubbleTimer = null;
+
+function _activateSchnabeltierTheme() {
+  if (_schnabeltierThemeActive) return;
+  _schnabeltierThemeActive = true;
+  _injectSchnabeltierThemeStyles();
+  document.body.classList.add('schnabeltier-theme');
+  _startBubbles();
+}
+
+function _deactivateSchnabeltierTheme() {
+  if (!_schnabeltierThemeActive) return;
+  _schnabeltierThemeActive = false;
+  document.body.classList.remove('schnabeltier-theme');
+  _stopBubbles();
+}
+
+const SCHNABELTIER_BUBBLE_INTERVAL_MS = 900;
+
+function _startBubbles() {
+  if (_schnabeltierBubbleTimer) return;
+  for (let i = 0; i < 8; i++) setTimeout(_spawnBubble, i * 400);
+  _schnabeltierBubbleTimer = setInterval(_spawnBubble, SCHNABELTIER_BUBBLE_INTERVAL_MS);
+}
+
+function _stopBubbles() {
+  if (_schnabeltierBubbleTimer) { clearInterval(_schnabeltierBubbleTimer); _schnabeltierBubbleTimer = null; }
+  document.querySelectorAll('.lw-bubble, .lw-bubble-pop').forEach(el => el.remove());
+}
+
+function _spawnBubble() {
+  const size  = 5 + Math.random() * 18;
+  const x     = 3 + Math.random() * 92;
+  const sway  = (Math.random() < 0.5 ? 1 : -1) * (8 + Math.random() * 28);
+  const dur   = 6 + Math.random() * 8;
+  const rise  = -(window.innerHeight + size + 40);
+
+  const b = document.createElement('div');
+  b.className = 'lw-bubble';
+  b.style.cssText = `width:${size}px;height:${size}px;left:${x}vw;bottom:-${size + 6}px;--sway:${sway}px;--rise:${rise}px;animation-duration:${dur}s;`;
+  document.body.appendChild(b);
+
+  b.addEventListener('animationend', () => {
+    const rect = b.getBoundingClientRect();
+    const pop  = document.createElement('div');
+    pop.className = 'lw-bubble-pop';
+    pop.style.cssText = `width:${size}px;height:${size}px;left:${rect.left}px;top:${rect.top}px;`;
+    document.body.appendChild(pop);
+    pop.addEventListener('animationend', () => pop.remove(), { once: true });
+    b.remove();
+  }, { once: true });
+}
+
+function _injectSchnabeltierThemeStyles() {
+  if (document.getElementById('lw-schnabeltier-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'lw-schnabeltier-styles';
+  s.textContent = `
+/* ════════════════════════════════════
+   SCHNABELTIER — BIOLUMINESZENZ THEME
+   ════════════════════════════════════ */
+.lw-bubble {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9000;
+  border: 1px solid rgba(125,249,255,0.45);
+  background: radial-gradient(circle at 38% 35%, rgba(125,249,255,0.13), rgba(0,207,255,0.04));
+  box-shadow: 0 0 9px rgba(125,249,255,0.28), inset 0 0 5px rgba(125,249,255,0.08);
+  animation: lwBubbleRise linear forwards;
+}
+@keyframes lwBubbleRise {
+  0%   { transform: translateY(0) translateX(0);                           opacity: 0; }
+  5%   { opacity: 0.85; }
+  88%  { opacity: 0.65; }
+  96%  { transform: translateY(var(--rise)) translateX(var(--sway)); opacity: 0; }
+  100% { transform: translateY(var(--rise)) translateX(var(--sway)); opacity: 0; }
+}
+.lw-bubble-pop {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9000;
+  border: 1px solid rgba(125,249,255,0.5);
+  animation: lwBubblePop 0.5s ease-out forwards;
+}
+@keyframes lwBubblePop {
+  0%   { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+/* ── Season 3 Modal ── */
+body.schnabeltier-theme .s3-panel {
+  background: linear-gradient(180deg, #0d2a18, #060f08) !important;
+  border-color: rgba(125,249,255,0.4) !important;
+  box-shadow: 0 0 60px rgba(125,249,255,0.12) !important;
+}
+body.schnabeltier-theme .s3-banner {
+  background: linear-gradient(160deg, #041208 0%, #0a2215 55%, #041208 100%) !important;
+  border-bottom-color: rgba(125,249,255,0.35) !important;
+}
+body.schnabeltier-theme .s3-banner::before {
+  background: radial-gradient(ellipse at 50% 0%, rgba(125,249,255,0.1) 0%, transparent 65%) !important;
+}
+body.schnabeltier-theme .s3-badge {
+  background: rgba(0,207,255,0.2) !important;
+  border: 1px solid #7df9ff !important;
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .s3-banner__title {
+  color: #7df9ff !important;
+  text-shadow: 0 0 40px rgba(125,249,255,0.5) !important;
+}
+body.schnabeltier-theme .s3-banner__sub { color: rgba(125,249,255,0.6) !important; }
+body.schnabeltier-theme .s3-body { background: linear-gradient(180deg, #0d2a18, #060f08) !important; }
 `;
   document.head.appendChild(s);
 }
