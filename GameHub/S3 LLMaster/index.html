@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LLMaster</title>
+  <link rel="stylesheet" href="style.css">
+  <script>window.CREATURE_IMAGE_BASE = '../data/';</script>
+  <script src="../creatures.js"></script>
+</head>
+<body>
+  <!-- Begleiter-Widget: klein, oben links, sichtbar auf allen Screens -->
+  <div id="companion-widget">
+    <div id="eggVisual"></div>
+    <div id="companion-item-icon"></div>
+    <div id="eggStageLabel"></div>
+    <div style="height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin-top:4px;">
+      <div id="eggProgressFill"></div>
+    </div>
+  </div>
+
+  <main id="app">
+
+    <!-- INTRO -->
+    <section id="screen-intro" class="screen is-active">
+      <div class="intro-card">
+        <h1><span class="brand-llmaster"><span class="llm">LLM</span>aster</span></h1>
+        <p class="lead">Wir bauen eine KI — in 3 Schritten.</p>
+
+        <div class="intro-steps">
+          <div class="intro-step">
+            <span class="intro-step-icon">🧩</span>
+            <span class="intro-step-label">Schritt 1</span>
+            <strong>Puzzle</strong>
+            <p>Ordne das einfache KI-Poster mit möglichst wenigen Zügen.</p>
+          </div>
+          <div class="intro-step-arrow">›</div>
+          <div class="intro-step">
+            <span class="intro-step-icon">🗺️</span>
+            <span class="intro-step-label">Schritt 2</span>
+            <strong>7 Stationen</strong>
+            <p>Löse die Mini-Quizze — jede Station deckt das Poster auf.</p>
+          </div>
+          <div class="intro-step-arrow">›</div>
+          <div class="intro-step">
+            <span class="intro-step-icon">🏆</span>
+            <span class="intro-step-label">Schritt 3</span>
+            <strong>Großes Puzzle</strong>
+            <p>Setze am Ende das komplette Poster zusammen.</p>
+          </div>
+        </div>
+
+        <div class="intro-tip">
+          💡 <strong>Puzzle-Tipp:</strong> Je weniger Züge du brauchst, desto mehr Punkte!
+        </div>
+
+        <p class="hint">ca. 10–15 Minuten · für Tablet optimiert</p>
+        <button class="btn-primary" data-action="start-puzzle1">Jetzt starten →</button>
+        <button class="hub-back-btn" onclick="resetAndGoHub()">← Zurück zum Hub</button>
+      </div>
+    </section>
+
+    <!-- PUZZLE 1: leichtes Poster -->
+    <section id="screen-puzzle1" class="screen screen--puzzle">
+      <header class="screen-head screen-head--compact">
+        <h2>Puzzle 1 — Das Grundprinzip</h2>
+        <p>Ordne die Kacheln — so wenige Züge wie möglich!</p>
+      </header>
+      <div class="puzzle-stage">
+        <div class="slide-board" data-puzzle="leicht"></div>
+      </div>
+    </section>
+
+    <!-- MAP: Stationen auf dem Poster -->
+    <section id="screen-map" class="screen">
+      <header class="screen-head">
+        <div class="map-head-row">
+          <button class="hub-back-btn" onclick="resetAndGoHub()">← Hub</button>
+          <p class="brand-eyebrow"><span class="brand-llmaster"><span class="llm">LLM</span>aster</span></p>
+          <button class="btn-puzzle2-unlock" id="btn-to-puzzle2" style="display:none">🏆 Endpuzzle!</button>
+        </div>
+        <p>Tippe eine Station an. <span class="progress-label" id="score-display">0/0</span> <span id="station-indicators" class="station-indicators"></span></p>
+      </header>
+      <div class="map-stage">
+        <!-- Komplexes Poster liegt unten -->
+        <img class="map-complex" src="Wie funktioniet ein LLM.png" alt="Komplexes LLM-Poster">
+        <!-- 7 Overlays mit dem leichten Poster verdecken jeweils 1/7 -->
+        <div class="map-overlays" id="map-overlays"></div>
+        <!-- 7 Station-Marker -->
+        <div class="map-stations" id="map-stations"></div>
+      </div>
+    </section>
+
+    <!-- QUIZ-OVERLAY (Platzhalter) -->
+    <div id="quiz-overlay" class="overlay" aria-hidden="true">
+      <div class="quiz-card">
+        <header>
+          <span class="quiz-badge">Station <span id="quiz-station-num">?</span></span>
+          <h3 id="quiz-station-title">Platzhalter</h3>
+        </header>
+        <div class="quiz-body" id="quiz-body"></div>
+        <footer>
+          <button class="btn-secondary" data-action="quiz-cancel">Abbrechen</button>
+          <button class="btn-primary" id="btn-quiz-finish" data-action="quiz-finish">Quiz beenden</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- MEILENSTEIN-MODAL (nach 4 Stationen) / Phase-1-Gewinnscreen -->
+    <div id="milestone-overlay" class="overlay" aria-hidden="true">
+      <div class="milestone-card milestone-card--wide">
+        <div class="milestone-left">
+          <div class="milestone-icon" id="milestone-icon">⭐</div>
+          <h2 class="milestone-title">Halbzeit!</h2>
+          <p class="milestone-sub">Du hast 4 von 7 Stationen abgeschlossen.</p>
+          <div class="milestone-score-box">
+            <span class="milestone-score-label">Punkte bisher</span>
+            <span class="milestone-score-val" id="milestone-score">0/0</span>
+          </div>
+          <p class="milestone-msg" id="milestone-msg"></p>
+          <button class="btn-primary milestone-btn" data-action="milestone-continue">Weiter spielen →</button>
+        </div>
+        <div class="milestone-hub" id="milestone-hub" style="display:none">
+          <p class="milestone-hub-title">Dein Begleiter</p>
+          <div class="milestone-creature-wrap" id="milestone-creature"></div>
+          <div class="milestone-creature-label" id="milestone-creature-label"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PUZZLE 2: komplexes Poster -->
+    <section id="screen-puzzle2" class="screen screen--puzzle">
+      <div class="p2-hud" id="p2-hud" style="display:none">
+        <div class="p2-hud-item">
+          <span class="p2-hud-label">Punkte</span>
+          <span class="p2-hud-value" id="p2-score">0</span>
+        </div>
+        <div class="p2-hud-item p2-hud-sep">+</div>
+        <div class="p2-hud-item">
+          <span class="p2-hud-label">Bonus</span>
+          <span class="p2-hud-value" id="p2-bonus">+20</span>
+        </div>
+        <div class="p2-hud-item">
+          <span class="p2-hud-label">Zeit</span>
+          <span class="p2-hud-value" id="p2-timer">0:00</span>
+        </div>
+        <button class="p2-cheat-btn" id="p2-cheat">🔄 Tausch <span class="p2-cheat-cost">−5 Pkt</span></button>
+      </div>
+      <div class="puzzle-stage">
+        <div class="slide-board" data-puzzle="komplex"></div>
+      </div>
+    </section>
+
+    <!-- END / Phase-2-Gewinnscreen -->
+    <section id="screen-end" class="screen">
+      <div class="win-card-llm">
+        <div class="win-col-game">
+          <p class="brand-eyebrow"><span class="brand-llmaster"><span class="llm">LLM</span>aster</span></p>
+          <h1>Geschafft! 🎉</h1>
+          <p class="lead">Du hast alle 7 Stationen gelöst und das Gesamtsystem zusammengesetzt.</p>
+          <div class="score-box">
+            <div><span class="score-label">Gesamt</span><span class="score-val" id="end-total">0/0</span></div>
+            <div><span class="score-label">Spielzeit</span><span class="score-val" id="end-time">0:00</span></div>
+          </div>
+        </div>
+        <div class="win-col-hub">
+          <div id="win-creature" class="win-creature-display"></div>
+          <div id="win-creature-label" class="win-creature-label"></div>
+          <div id="win-coins"></div>
+          <div class="win-btns-llm">
+            <button class="btn-primary" data-action="restart">🔄 Nochmal spielen</button>
+            <div id="win-item-btn-wrap"></div>
+            <button class="btn-secondary" onclick="resetAndGoHub()">← Zurück zum Hub</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

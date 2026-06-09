@@ -30,7 +30,7 @@ GAME_ACCESS = {
   game10: { status: 'password', passwordHash: '8bd18d730cb0594285e09af7869d1baab844a1573ecfdce9c25480f0ab31fb58' }, // Aufmerksamkeitsbingo
   game11: { status: 'password', passwordHash: 'dd8265590e8dcbe0be95c93961e8f3e5ed3b877d98b136e1a11e7b6827eba84e' }, // qweasdyxc
   // Season 3  (nur aktiv wenn SEASON_3_OPEN = true)
-  game12: { status: 'locked' },   // Quellen-Tinder
-  game13: { status: 'locked' },   // KI 1
-  game14: { status: 'locked' },   // KI 2
+  game12: { status: 'available' }, // Quellen-Tinder
+  game15: { status: 'available' }, // LLMaster
+  game14: { status: 'available' }, // Reinforce Yourself!
 };

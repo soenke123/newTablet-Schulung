@@ -400,7 +400,7 @@ function isRare(creature) { return RARE_CREATURES.has(creature); }
 const GAME_SEASON_RARE = {
   game1:'biene', game3:'biene', game7:'biene', game8:'biene',
   game5:'oktopus', game9:'oktopus', game10:'oktopus', game11:'oktopus',
-  game6:'ente', game12:'ente', game13:'ente', game14:'ente',
+  game6:'ente', game12:'ente', game15:'ente', game14:'ente',
 };
 
 /* ─── Epische Tiere ─── */

@@ -40,9 +40,9 @@ const GAMES_CONFIG = [
   { id: 'game9',  season: 2, title: 'Fokusflow',        icon: '🎯', url: 'S2 Fokusflow/index.html'             },
   { id: 'game10', season: 2, title: 'The Algorithm',    icon: '⚙️', url: 'S2 The Algorithm/index.html'        },
   { id: 'game11', season: 2, title: 'Tip Turbo Kids',   icon: '⌨️', url: 'S2 10finger Blindschreiben/index.html' },
-  { id: 'game12', season: 3, title: 'Quellen-Tinder',  icon: '🃏', url: 'S3 Quellen Tinder/index.html' },
-  { id: 'game13', season: 3, title: 'KI 1',            icon: '🤖', url: 'S3 KI1/index.html'           },
-  { id: 'game14', season: 3, title: 'KI 2',            icon: '🧠', url: 'S3 KI2/index.html'           },
+  { id: 'game12', season: 3, title: 'Quellen-Tinder',      icon: '🃏', url: 'S3 Quellen Tinder/index.html'      },
+  { id: 'game15', season: 3, title: 'LLMaster',            icon: '💬', url: 'S3 LLMaster/index.html'             },
+  { id: 'game14', season: 3, title: 'Reinforce Yourself!', icon: '🤖', url: 'S3 Reinforce Yourself!/index.html'  },
 ];
 
 const SEASONS_CONFIG = [
@@ -3933,9 +3933,13 @@ function _injectSchnabeltierThemeStyles() {
   const s = document.createElement('style');
   s.id = 'lw-schnabeltier-styles';
   s.textContent = `
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600;700&display=swap');
+
 /* ════════════════════════════════════
    SCHNABELTIER — BIOLUMINESZENZ THEME
    ════════════════════════════════════ */
+
+/* ── Blasen-Partikel ── */
 .lw-bubble {
   position: fixed;
   border-radius: 50%;
@@ -3965,6 +3969,347 @@ function _injectSchnabeltierThemeStyles() {
   0%   { transform: scale(1); opacity: 0.6; }
   100% { transform: scale(4); opacity: 0; }
 }
+
+/* ── CSS-Variablen (deckt alle automatischen Elemente ab) ── */
+body.schnabeltier-theme {
+  --clr-bg:        #060f08;
+  --clr-surface:   #0d1a10;
+  --clr-surface2:  #0b1f12;
+  --clr-border:    rgba(125,249,255,0.22);
+  --clr-gold:      #7df9ff;
+  --clr-gold-dim:  #3ac8d4;
+  --clr-amber:     #40d0b8;
+  --clr-cream:     #b8f8ff;
+  --clr-cream-dim: rgba(125,249,255,0.6);
+  --clr-green:     #7df9ff;
+  background-color: #060f08 !important;
+  background-image: radial-gradient(ellipse at 50% 110%, #0d3020, #060f08 50%, #020806) !important;
+  color: #b8f8ff !important;
+}
+
+/* ── Schriftart ── */
+body.schnabeltier-theme {
+  --font-display: 'Josefin Sans', sans-serif;
+}
+body.schnabeltier-theme h1,
+body.schnabeltier-theme h2,
+body.schnabeltier-theme .hub-section-title,
+body.schnabeltier-theme .game-card__title,
+body.schnabeltier-theme .book-modal__title,
+body.schnabeltier-theme .shop-modal-title {
+  font-family: 'Josefin Sans', sans-serif !important;
+  letter-spacing: 0.06em !important;
+}
+
+/* ── Hub Header ── */
+body.schnabeltier-theme .hub-header__title h1 {
+  color: #7df9ff !important;
+  text-shadow: 0 0 30px rgba(125,249,255,0.6), 0 0 60px rgba(125,249,255,0.25), 0 2px 4px rgba(0,0,0,0.9) !important;
+}
+body.schnabeltier-theme .hub-header__subtitle {
+  color: rgba(125,249,255,0.6) !important;
+}
+body.schnabeltier-theme .hub-header::after {
+  background: linear-gradient(to right, transparent, #7df9ff, transparent) !important;
+}
+body.schnabeltier-theme .hub-section-title {
+  color: rgba(125,249,255,0.7) !important;
+}
+body.schnabeltier-theme h2 {
+  color: rgba(125,249,255,0.8) !important;
+}
+body.schnabeltier-theme .hub-header__rune {
+  font-size: 0 !important;
+}
+body.schnabeltier-theme .hub-header__rune::after {
+  content: '🫧';
+  font-size: 2rem;
+  animation: none;
+}
+
+/* ── HUD-Leiste ── */
+body.schnabeltier-theme .hud-bar {
+  background: rgba(6,20,12,0.92) !important;
+  border-color: rgba(125,249,255,0.35) !important;
+  box-shadow: 0 0 18px rgba(125,249,255,0.12), 0 4px 16px rgba(0,0,0,0.6) !important;
+}
+body.schnabeltier-theme .hud-btn {
+  background: rgba(6,20,12,0.88) !important;
+  border: 1px solid rgba(125,249,255,0.25) !important;
+  color: rgba(125,249,255,0.8) !important;
+}
+body.schnabeltier-theme .hud-btn:hover {
+  background: rgba(125,249,255,0.08) !important;
+  box-shadow: 0 0 12px rgba(125,249,255,0.2) !important;
+}
+body.schnabeltier-theme .hud-coins {
+  border-left-color: rgba(125,249,255,0.25) !important;
+}
+body.schnabeltier-theme .hud-coins__amount {
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .theme-cycle-btn {
+  background: rgba(6,20,12,0.92) !important;
+  border-color: rgba(125,249,255,0.4) !important;
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .theme-cycle-btn:hover {
+  background: rgba(0,40,25,0.95) !important;
+  color: #b8f8ff !important;
+}
+
+/* ── Gallery Bar ── */
+body.schnabeltier-theme .gallery-bar {
+  background: rgba(6,20,12,0.78) !important;
+  border-color: rgba(125,249,255,0.28) !important;
+}
+body.schnabeltier-theme .gallery-slot {
+  border-color: rgba(125,249,255,0.2) !important;
+  background: rgba(8,22,12,0.9) !important;
+}
+body.schnabeltier-theme .gallery-slot:hover {
+  border-color: rgba(125,249,255,0.55) !important;
+  box-shadow: 0 0 16px rgba(125,249,255,0.2) !important;
+}
+body.schnabeltier-theme .gallery-walker {
+  filter: drop-shadow(0 0 8px rgba(125,249,255,0.5)) !important;
+}
+body.schnabeltier-theme .gallery-walker:hover {
+  filter: drop-shadow(0 0 16px rgba(125,249,255,0.85)) !important;
+}
+
+/* ── Spielkarten ── */
+body.schnabeltier-theme .game-card {
+  background: rgba(8,22,12,0.82) !important;
+  border-color: rgba(125,249,255,0.28) !important;
+  backdrop-filter: blur(4px) !important;
+}
+body.schnabeltier-theme .game-card::before {
+  background: linear-gradient(135deg, rgba(125,249,255,0.04) 0%, transparent 60%) !important;
+}
+body.schnabeltier-theme .game-card:hover:not(.game-card--locked) {
+  border-color: rgba(125,249,255,0.75) !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 28px rgba(125,249,255,0.18) !important;
+}
+body.schnabeltier-theme .game-card--locked {
+  background: rgba(3,10,6,0.7) !important;
+  border-color: rgba(125,249,255,0.10) !important;
+}
+body.schnabeltier-theme .game-card__title {
+  color: #7df9ff !important;
+  text-shadow: 0 0 10px rgba(125,249,255,0.35) !important;
+}
+body.schnabeltier-theme .game-card__stage-label {
+  color: rgba(125,249,255,0.6) !important;
+}
+body.schnabeltier-theme .game-card__points {
+  background: rgba(125,249,255,0.06) !important;
+  border-color: rgba(125,249,255,0.2) !important;
+  color: rgba(125,249,255,0.7) !important;
+}
+body.schnabeltier-theme .game-card__points strong {
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .game-card__btn {
+  background: linear-gradient(135deg, #042a18, #0a5030) !important;
+  border: 1.5px solid #7df9ff !important;
+  border-radius: 999px !important;
+  color: #7df9ff !important;
+  box-shadow: 0 0 14px rgba(125,249,255,0.3), 0 2px 5px rgba(0,0,0,0.5) !important;
+}
+body.schnabeltier-theme .game-card__btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0a5030, #12704a) !important;
+  box-shadow: 0 0 22px rgba(125,249,255,0.5), 0 0 8px rgba(125,249,255,0.3) !important;
+}
+body.schnabeltier-theme .game-card__use-btn {
+  background: rgba(125,249,255,0.06) !important;
+  border: 1.5px solid rgba(125,249,255,0.4) !important;
+  border-radius: 999px !important;
+  color: rgba(125,249,255,0.85) !important;
+}
+body.schnabeltier-theme .game-card__use-btn:hover:not(:disabled) {
+  background: rgba(125,249,255,0.14) !important;
+  border-color: #7df9ff !important;
+}
+body.schnabeltier-theme .game-card__release {
+  color: rgba(125,249,255,0.65) !important;
+}
+body.schnabeltier-theme .game-card__release:hover {
+  color: #7df9ff !important;
+  background: rgba(125,249,255,0.1) !important;
+}
+
+/* ── Wachstumsbalken ── */
+body.schnabeltier-theme .game-card__progress {
+  background: rgba(3,12,6,0.8) !important;
+  border-color: rgba(125,249,255,0.15) !important;
+}
+body.schnabeltier-theme .game-card__progress-fill {
+  background: linear-gradient(to right, #042a18, #7df9ff) !important;
+  box-shadow: 0 0 6px rgba(125,249,255,0.5) !important;
+}
+body.schnabeltier-theme .egg-progress-bar {
+  background: rgba(3,12,6,0.8) !important;
+  border-color: rgba(125,249,255,0.15) !important;
+}
+body.schnabeltier-theme .egg-progress-fill {
+  background: linear-gradient(to right, #042a18, #7df9ff) !important;
+}
+
+/* ── Shop Modal ── */
+body.schnabeltier-theme .shop-modal-overlay {
+  background: rgba(2,8,4,0.88) !important;
+}
+body.schnabeltier-theme .shop-modal-box {
+  background: linear-gradient(180deg, #0a1e10, #04100a) !important;
+  border-color: rgba(125,249,255,0.35) !important;
+}
+body.schnabeltier-theme .shop-modal-title {
+  color: #7df9ff !important;
+  text-shadow: 0 0 14px rgba(125,249,255,0.4) !important;
+}
+body.schnabeltier-theme .shop-modal-close {
+  color: rgba(125,249,255,0.5) !important;
+}
+body.schnabeltier-theme .shop-modal-close:hover {
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .shop-coin-badge {
+  background: rgba(125,249,255,0.10) !important;
+  border-color: rgba(125,249,255,0.35) !important;
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .shop-tabs {
+  border-bottom-color: rgba(125,249,255,0.2) !important;
+}
+body.schnabeltier-theme .shop-tab {
+  color: rgba(125,249,255,0.5) !important;
+}
+body.schnabeltier-theme .shop-tab:hover {
+  background: rgba(125,249,255,0.06) !important;
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .shop-tab--active {
+  border-bottom-color: #7df9ff !important;
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .shop-list-item {
+  border-bottom-color: rgba(125,249,255,0.10) !important;
+}
+body.schnabeltier-theme .shop-list-item:hover {
+  background: rgba(125,249,255,0.05) !important;
+}
+body.schnabeltier-theme .shop-list-item__name {
+  color: #b8f8ff !important;
+}
+body.schnabeltier-theme .shop-list-item__desc {
+  color: rgba(125,249,255,0.5) !important;
+}
+body.schnabeltier-theme .shop-list-item__price {
+  border-color: rgba(125,249,255,0.28) !important;
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .shop-list-item__btn {
+  background: linear-gradient(135deg, #042a18, #0a6040) !important;
+  color: #7df9ff !important;
+  border-radius: 999px !important;
+  box-shadow: 0 2px 8px rgba(125,249,255,0.2) !important;
+}
+body.schnabeltier-theme .shop-list-item__btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0a6040, #10804c) !important;
+  box-shadow: 0 0 16px rgba(125,249,255,0.4) !important;
+}
+body.schnabeltier-theme .shop-list-item__btn:disabled {
+  background: rgba(8,22,12,0.7) !important;
+  color: rgba(125,249,255,0.25) !important;
+  border: 1px solid rgba(125,249,255,0.12) !important;
+}
+
+/* ── Modals (Galerie, Kreatur-Detail) ── */
+body.schnabeltier-theme .modal-overlay {
+  background: rgba(2,8,4,0.88) !important;
+}
+body.schnabeltier-theme .modal-box {
+  background: linear-gradient(180deg, #0a1e10, #04100a) !important;
+  border-color: rgba(125,249,255,0.35) !important;
+  box-shadow: 0 0 50px rgba(125,249,255,0.1), 0 24px 80px rgba(0,0,0,0.4) !important;
+}
+body.schnabeltier-theme .modal-close {
+  color: rgba(125,249,255,0.5) !important;
+  border-color: rgba(125,249,255,0.25) !important;
+  background: transparent !important;
+}
+body.schnabeltier-theme .modal-close:hover {
+  color: #7df9ff !important;
+}
+
+/* ── Buch der Monster ── */
+body.schnabeltier-theme .book-modal__title {
+  color: #7df9ff !important;
+  text-shadow: 0 0 14px rgba(125,249,255,0.4) !important;
+}
+body.schnabeltier-theme .book-modal__count {
+  color: rgba(125,249,255,0.55) !important;
+}
+body.schnabeltier-theme .book-slot {
+  background: rgba(8,22,12,0.8) !important;
+  border-color: rgba(125,249,255,0.2) !important;
+}
+body.schnabeltier-theme .book-slot--seen:hover {
+  border-color: rgba(125,249,255,0.75) !important;
+  box-shadow: 0 0 14px rgba(125,249,255,0.25) !important;
+}
+body.schnabeltier-theme .book-divider {
+  background: linear-gradient(to right, transparent, rgba(125,249,255,0.35), transparent) !important;
+}
+body.schnabeltier-theme .book-detail__backup-btn {
+  background: rgba(4,42,24,0.35) !important;
+  border-color: rgba(125,249,255,0.35) !important;
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .book-detail__backup-btn:hover {
+  background: rgba(4,42,24,0.6) !important;
+}
+
+/* ── Trank-Banner ── */
+body.schnabeltier-theme .trank-banner {
+  background: linear-gradient(135deg, #0a1e10 0%, #0b2415 100%) !important;
+  border-top-color: rgba(125,249,255,0.4) !important;
+  box-shadow: 0 -4px 20px rgba(125,249,255,0.1) !important;
+}
+
+/* ── Sealed Egg Modal ── */
+body.schnabeltier-theme .sealed-egg-modal-box {
+  background: linear-gradient(180deg, #0a1e10, #04100a) !important;
+  border-color: rgba(125,249,255,0.35) !important;
+}
+
+/* ── Badges ── */
+body.schnabeltier-theme .legendary-badge {
+  background: linear-gradient(135deg, rgba(125,249,255,0.18), rgba(0,180,200,0.16)) !important;
+  border-color: rgba(125,249,255,0.45) !important;
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .epic-badge {
+  background: linear-gradient(135deg, rgba(100,220,230,0.14), rgba(0,160,180,0.14)) !important;
+  border-color: rgba(125,249,255,0.38) !important;
+  color: #7df9ff !important;
+}
+body.schnabeltier-theme .rare-badge {
+  background: linear-gradient(135deg, rgba(50,200,200,0.16), rgba(0,150,170,0.14)) !important;
+  border-color: rgba(125,249,255,0.35) !important;
+  color: rgba(125,249,255,0.85) !important;
+}
+
+/* ── Nest-Kachel ── */
+.nest-card--schnabeltier {
+  border-color: rgba(125,249,255,0.5) !important;
+  box-shadow: 0 0 18px rgba(125,249,255,0.15) !important;
+}
+
+/* ── Scrollbar ── */
+body.schnabeltier-theme ::-webkit-scrollbar-track { background: #060f08 !important; }
+body.schnabeltier-theme ::-webkit-scrollbar-thumb { background: rgba(125,249,255,0.35) !important; border-color: #060f08 !important; }
 
 /* ── Season 3 Modal ── */
 body.schnabeltier-theme .s3-panel {
