@@ -267,7 +267,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
   /* Artikel-Bereich: fuellt exakt die restlichen ~81% */
   .g-card-col{justify-content:flex-start;padding:0.5dvh 12px;overflow:hidden}
-  #card-wrap{flex:1;min-height:0;max-height:none;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+  #card-wrap{flex:1;min-height:0;max-height:none;touch-action:none}
 
   /* Bild: max 20% der Bildschirmhoehe */
   .card img{max-height:20dvh}
@@ -1240,69 +1240,117 @@ var S = { queue:[], cur:0, score:0, results:[], total:8, jokers:{fifty:true,chec
 var ovFilter = "all";
 
 // ---- DRAG ----
-var drag = { on:false, ghost:null, pid:-1, cardW:0, cardH:0, offsetX:0, offsetY:0 };
+var drag = { on:false, ghost:null, pid:-1, offsetX:0, offsetY:0 };
 
 function initDrag() {
   var cw = document.getElementById("card-wrap");
   if (!cw) return;
-  cw.removeEventListener("pointerdown", dragStart);
-  cw.addEventListener("pointerdown", dragStart);
+  cw.removeEventListener("touchstart", dragStartTouch);
+  cw.removeEventListener("mousedown",  dragStartMouse);
+  cw.addEventListener("touchstart", dragStartTouch, { passive: false });
+  cw.addEventListener("mousedown",  dragStartMouse);
 }
 
-function dragStart(e) {
-  if (drag.on) return;
-  e.preventDefault();
+function _dragBegin(clientX, clientY) {
   var card = document.querySelector("#card-wrap .card");
-  if (!card) return;
-  drag.on  = true;
-  drag.pid = e.pointerId;
-  e.currentTarget.setPointerCapture(e.pointerId);
+  if (!card) return false;
   var rect = card.getBoundingClientRect();
-  drag.cardW   = rect.width;
-  drag.cardH   = rect.height;
-  drag.offsetX = e.clientX - rect.left;
-  drag.offsetY = e.clientY - rect.top;
-
+  drag.offsetX = clientX - rect.left;
+  drag.offsetY = clientY - rect.top;
   drag.ghost = card.cloneNode(true);
   drag.ghost.className = card.className + " drag-ghost";
-  drag.ghost.style.width  = rect.width  + "px";
-  drag.ghost.style.height = rect.height + "px";
-  drag.ghost.style.left   = rect.left + "px";
-  drag.ghost.style.top    = rect.top  + "px";
+  drag.ghost.style.width    = rect.width  + "px";
+  drag.ghost.style.height   = rect.height + "px";
+  drag.ghost.style.left     = rect.left + "px";
+  drag.ghost.style.top      = rect.top  + "px";
   drag.ghost.style.overflow = "hidden";
   document.body.appendChild(drag.ghost);
   card.style.opacity = "0.35";
-
-  document.addEventListener("pointermove", dragMove);
-  document.addEventListener("pointerup",   dragEnd);
-  document.addEventListener("pointercancel", dragEnd);
+  drag.on = true;
+  return true;
 }
 
-function dragMove(e) {
-  if (!drag.on || e.pointerId !== drag.pid || !drag.ghost) return;
-  drag.ghost.style.left = (e.clientX - drag.offsetX) + "px";
-  drag.ghost.style.top  = (e.clientY - drag.offsetY) + "px";
+function _dragMove(clientX, clientY) {
+  if (!drag.ghost) return;
+  drag.ghost.style.left = (clientX - drag.offsetX) + "px";
+  drag.ghost.style.top  = (clientY - drag.offsetY) + "px";
   var bins = document.querySelectorAll(".bin");
   for (var i = 0; i < bins.length; i++) bins[i].classList.remove("bin-hover");
-  var el = document.elementFromPoint(e.clientX, e.clientY);
+  var el = document.elementFromPoint(clientX, clientY);
   var bin = el && el.closest(".bin");
   if (bin) bin.classList.add("bin-hover");
 }
 
-function dragEnd(e) {
-  if (!drag.on || e.pointerId !== drag.pid) return;
+function _dragEnd(clientX, clientY) {
   drag.on = false;
   if (drag.ghost) { drag.ghost.remove(); drag.ghost = null; }
   var card = document.querySelector("#card-wrap .card");
   if (card) card.style.opacity = "";
   var bins = document.querySelectorAll(".bin");
   for (var i = 0; i < bins.length; i++) bins[i].classList.remove("bin-hover");
-  document.removeEventListener("pointermove", dragMove);
-  document.removeEventListener("pointerup",   dragEnd);
-  document.removeEventListener("pointercancel", dragEnd);
-  var el = document.elementFromPoint(e.clientX, e.clientY);
-  var bin = el && el.closest(".bin");
-  if (bin) rate(bin.dataset.cat);
+  if (clientX >= 0) {
+    var el = document.elementFromPoint(clientX, clientY);
+    var bin = el && el.closest(".bin");
+    if (bin) rate(bin.dataset.cat);
+  }
+}
+
+// Touch (iPad/iPhone) — preventDefault blockiert iOS-Scroll bevor er startet
+function dragStartTouch(e) {
+  if (drag.on) return;
+  e.preventDefault();
+  var t = e.changedTouches[0];
+  drag.pid = t.identifier;
+  if (!_dragBegin(t.clientX, t.clientY)) return;
+  document.addEventListener("touchmove",   dragMoveTouch,  { passive: false });
+  document.addEventListener("touchend",    dragEndTouch);
+  document.addEventListener("touchcancel", dragCancelTouch);
+}
+function dragMoveTouch(e) {
+  if (!drag.on) return;
+  e.preventDefault();
+  var t = null;
+  for (var i = 0; i < e.touches.length; i++) {
+    if (e.touches[i].identifier === drag.pid) { t = e.touches[i]; break; }
+  }
+  if (t) _dragMove(t.clientX, t.clientY);
+}
+function dragEndTouch(e) {
+  if (!drag.on) return;
+  document.removeEventListener("touchmove",   dragMoveTouch);
+  document.removeEventListener("touchend",    dragEndTouch);
+  document.removeEventListener("touchcancel", dragCancelTouch);
+  var t = null;
+  for (var i = 0; i < e.changedTouches.length; i++) {
+    if (e.changedTouches[i].identifier === drag.pid) { t = e.changedTouches[i]; break; }
+  }
+  _dragEnd(t ? t.clientX : -1, t ? t.clientY : -1);
+}
+function dragCancelTouch() {
+  if (!drag.on) return;
+  document.removeEventListener("touchmove",   dragMoveTouch);
+  document.removeEventListener("touchend",    dragEndTouch);
+  document.removeEventListener("touchcancel", dragCancelTouch);
+  _dragEnd(-1, -1);
+}
+
+// Mouse (Desktop)
+function dragStartMouse(e) {
+  if (drag.on || e.button !== 0) return;
+  e.preventDefault();
+  if (!_dragBegin(e.clientX, e.clientY)) return;
+  document.addEventListener("mousemove", dragMoveMouse);
+  document.addEventListener("mouseup",   dragEndMouse);
+}
+function dragMoveMouse(e) {
+  if (!drag.on) return;
+  _dragMove(e.clientX, e.clientY);
+}
+function dragEndMouse(e) {
+  if (!drag.on) return;
+  document.removeEventListener("mousemove", dragMoveMouse);
+  document.removeEventListener("mouseup",   dragEndMouse);
+  _dragEnd(e.clientX, e.clientY);
 }
 
 // ---- NAV ----
