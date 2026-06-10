@@ -2267,97 +2267,201 @@ html, body {
 /* === Tablet-Responsive (iPad portrait & landscape, 641px–1100px) === */
 @media (max-width: 1100px) and (min-width: 641px) {
 
-  /* Allgemeine Abstände */
-  .screen {
-    padding: 18px clamp(12px, 2.5vw, 28px);
+  /* Allgemeine Abstände – aber Puzzle-Screens bewusst ausnehmen */
+  .screen:not(.screen--puzzle) {
+    padding: clamp(14px, 2dvh, 22px) clamp(12px, 2.5vw, 28px);
   }
 
-  /* Intro-Screen: Titelgröße drastisch reduzieren */
+  /* Intro-Screen */
   .intro-card {
-    max-width: 600px;
-    padding: clamp(18px, 3vw, 32px);
+    max-width: min(600px, 90vw);
+    padding: clamp(16px, 3vw, 28px);
   }
   .intro-card h1 {
-    font-size: clamp(32px, 5.5vw, 54px);
+    font-size: clamp(28px, 5vw, 52px);
   }
   .lead {
-    font-size: clamp(14px, 1.8vw, 16px);
-    margin-bottom: 16px;
+    font-size: clamp(13px, 1.8vw, 16px);
+    margin-bottom: clamp(12px, 1.5dvh, 20px);
   }
-  .intro-steps {
-    margin-bottom: 14px;
-  }
-  .intro-step {
-    padding: 12px 8px 10px;
-  }
-  .intro-step-icon { font-size: 20px; }
-  .intro-step strong { font-size: 13px; }
-  .intro-step p { font-size: 11px; }
+  .intro-steps { margin-bottom: clamp(10px, 1.5dvh, 18px); }
+  .intro-step  { padding: clamp(10px, 1.5vw, 14px) clamp(6px, 1vw, 10px); }
+  .intro-step-icon  { font-size: clamp(18px, 2.5vw, 24px); }
+  .intro-step strong { font-size: clamp(12px, 1.6vw, 15px); }
+  .intro-step p      { font-size: clamp(10px, 1.3vw, 12px); }
   .intro-tip {
-    font-size: 12px;
-    padding: 10px 14px;
-    margin-bottom: 14px;
+    font-size: clamp(11px, 1.4vw, 13px);
+    padding: clamp(8px, 1.2vw, 12px) clamp(10px, 1.5vw, 16px);
+    margin-bottom: clamp(10px, 1.5dvh, 16px);
   }
-  .hint { margin-bottom: 18px; }
+  .hint { margin-bottom: clamp(12px, 2dvh, 22px); }
 
   /* Buttons */
   .btn-primary, .btn-secondary {
-    font-size: 15px;
-    padding: 11px 20px;
+    font-size: clamp(13px, 1.8vw, 16px);
+    padding: clamp(9px, 1.2dvh, 13px) clamp(16px, 2.5vw, 24px);
   }
 
   /* Map-Header */
-  .map-head-row .brand-eyebrow {
-    font-size: clamp(16px, 3vw, 26px);
-  }
-  #screen-map {
-    padding-top: 6px;
-    padding-bottom: 6px;
-  }
-  #screen-map .screen-head {
-    margin-bottom: 4px;
-  }
-  .screen-head p { font-size: 14px; }
-  .station-indicator { width: 22px; height: 22px; font-size: 11px; }
+  .map-head-row .brand-eyebrow { font-size: clamp(15px, 2.8vw, 26px); }
+  #screen-map { padding-top: 6px; padding-bottom: 6px; }
+  #screen-map .screen-head { margin-bottom: 4px; }
+  .screen-head p { font-size: clamp(12px, 1.6vw, 15px); }
+  .station-indicator { width: clamp(18px, 2.5vw, 24px); height: clamp(18px, 2.5vw, 24px); font-size: clamp(10px, 1.3vw, 13px); }
 
   /* Stationen-Marker auf der Karte */
   .station {
-    width: clamp(38px, 4.5vw, 52px);
-    height: clamp(38px, 4.5vw, 52px);
-    font-size: clamp(16px, 1.8vw, 22px);
+    width: clamp(36px, 4.5vw, 52px);
+    height: clamp(36px, 4.5vw, 52px);
+    font-size: clamp(15px, 2vw, 22px);
   }
 
-  /* Quiz-Overlay */
-  .overlay { padding: 14px; }
+  /* Quiz-Overlay allgemein */
+  .overlay { padding: clamp(8px, 1.2vw, 16px); }
   .quiz-card {
-    padding: 20px 22px;
-    max-width: 560px;
+    padding: clamp(16px, 2.5vw, 24px) clamp(18px, 2.8vw, 28px);
+    max-width: min(720px, 94vw);
   }
-  .quiz-card h3 { font-size: 20px; }
-  .quiz-body { font-size: 15px; margin-bottom: 16px; }
-  .quiz-badge { font-size: 12px; }
+  /* quiz-card--wide (Station 4 + 5): mein .quiz-card-Override rückgängig, volle Breite */
+  .quiz-card--wide {
+    max-width: min(960px, 97vw);
+    height: calc(100dvh - clamp(18px, 2.5dvh, 36px));
+    padding: clamp(14px, 2vw, 22px) clamp(16px, 2.2vw, 26px);
+  }
+  .quiz-card h3 { font-size: clamp(17px, 2.5vw, 22px); }
+  .quiz-body    { font-size: clamp(13px, 1.8vw, 16px); margin-bottom: clamp(12px, 1.5dvh, 20px); }
+  .quiz-badge   { font-size: clamp(11px, 1.4vw, 13px); }
+
+  /* Station 1 — Lückentext: kleinere Schrift, schmalere Lücken */
+  .luecken-text {
+    font-size: clamp(13px, 1.9vw, 15px);
+    line-height: 2.2;
+  }
+  .blank-slot {
+    min-width: clamp(80px, 13vw, 120px);
+    min-height: clamp(32px, 4.5dvh, 42px);
+  }
+  .word-bank { padding: clamp(10px, 1.5vw, 14px); gap: 6px; }
+  .word-chip {
+    font-size: clamp(12px, 1.7vw, 15px);
+    padding: clamp(5px, 0.8dvh, 7px) clamp(12px, 1.8vw, 18px);
+  }
 
   /* Multiple Choice */
-  .mc-question { font-size: 15px; }
-  .mc-option { font-size: 14px; padding: 9px 12px 9px 40px; }
+  .mc-question { font-size: clamp(14px, 1.9vw, 17px); }
+  .mc-option   { font-size: clamp(13px, 1.7vw, 15px); padding: clamp(8px, 1dvh, 12px) clamp(10px, 1.5vw, 14px) clamp(8px, 1dvh, 12px) clamp(36px, 5vw, 44px); }
+
+  /* Station 4 — Wer bin ich? (werbinich): kleinere Elemente */
+  .wbi-layout { gap: clamp(8px, 1.2vw, 16px); }
+  .wbi-hint-text { font-size: clamp(12px, 1.6vw, 14px); line-height: 1.4; }
+  .wbi-hint { padding: clamp(6px, 0.9vw, 9px) clamp(9px, 1.3vw, 13px); gap: 1px; }
+  .wbi-hints { gap: 5px; }
+  .wbi-card { width: clamp(58px, 7.5vw, 74px); padding: clamp(5px, 0.8vw, 8px); }
+  .wbi-card-logo, .wbi-card-fallback { width: clamp(28px, 3.8vw, 38px); height: clamp(28px, 3.8vw, 38px); }
+  .wbi-card-name { font-size: clamp(9px, 1.1vw, 11px); }
+  .wbi-zone--top  { min-height: clamp(66px, 9dvh, 86px); }
+  .wbi-zone--mid  { min-height: clamp(76px, 10dvh, 98px); }
+  .wbi-zone--elim { min-height: clamp(52px, 7dvh, 70px); }
+  .wbi-zone-label { font-size: clamp(9px, 1.2vw, 11px); }
+
+  /* Station 5 — KartenSort: kleinere Karten + Zonen */
+  .ks-intro { font-size: clamp(12px, 1.6vw, 14px); margin-bottom: clamp(10px, 1.3dvh, 14px); }
+  .ks-zones { gap: clamp(6px, 1vw, 10px); margin-bottom: clamp(10px, 1.3dvh, 16px); }
+  .ks-zone  { min-height: clamp(88px, 13dvh, 120px); padding: clamp(7px, 1vw, 10px); }
+  .ks-zone-label { font-size: clamp(10px, 1.3vw, 12px); }
+  .ks-chip-text  { font-size: clamp(10px, 1.3vw, 12px); }
+  .ks-chip { padding: clamp(4px, 0.6dvh, 6px) clamp(6px, 0.9vw, 8px); }
+  .ks-card { width: clamp(86px, 11vw, 110px); height: clamp(116px, 15dvh, 148px); }
+  .ks-card-text { font-size: clamp(10px, 1.3vw, 11.5px); }
+  .ks-hand { padding: clamp(8px, 1.2vw, 12px); gap: clamp(5px, 0.8vw, 8px); }
+
+  /* Station 6 — Vom Prompt zur Antwort (promptflow) */
+  /* Fortschrittsbalken */
+  .pf-bar { gap: clamp(2px, 0.5vw, 4px); padding-bottom: clamp(10px, 1.5dvh, 16px); }
+  .pf-bar-num  { width: clamp(20px, 2.8vw, 26px); height: clamp(20px, 2.8vw, 26px); font-size: clamp(11px, 1.4vw, 13px); }
+  .pf-bar-name { font-size: clamp(9px, 1.1vw, 11px); }
+  /* Runden-Intro */
+  .pf-round-intro { padding: clamp(8px, 1.2dvh, 14px) 6px clamp(12px, 1.8dvh, 20px); gap: clamp(6px, 0.9dvh, 10px); }
+  .pf-round-num   { font-size: clamp(11px, 1.4vw, 13px); }
+  .pf-round-title { font-size: clamp(15px, 2.2vw, 20px); }
+  .pf-round-badge { font-size: clamp(12px, 1.6vw, 14px); padding: 3px 12px; }
+  .pf-round-desc  { font-size: clamp(12px, 1.6vw, 14px); max-width: 100%; }
+  /* Info-Box */
+  .pf-info { padding: clamp(6px, 0.9dvh, 8px) clamp(10px, 1.4vw, 14px); margin-bottom: clamp(6px, 0.9dvh, 10px); }
+  .pf-info strong, .pf-info p { font-size: clamp(11px, 1.4vw, 13px); }
+  /* Chat */
+  .pf-chat { max-height: clamp(180px, 24dvh, 280px); padding: clamp(10px, 1.4vw, 14px); gap: clamp(6px, 0.9dvh, 10px); }
+  .pf-chat-bubble { font-size: clamp(12px, 1.6vw, 14px); padding: clamp(7px, 1dvh, 9px) clamp(10px, 1.4vw, 14px); }
+  .pf-attachment  { font-size: clamp(11px, 1.4vw, 13px); }
+  /* Tokenisierung */
+  .pf-tokenize { padding: clamp(10px, 1.4vw, 16px); }
+  .pf-token-sentence { font-size: clamp(12px, 1.6vw, 15px); }
+  .pf-token    { font-size: clamp(12px, 1.5vw, 14px); padding: 3px 6px; }
+  .pf-id-note  { font-size: clamp(11px, 1.4vw, 13px); }
+  /* Modell-Visualisierung */
+  .pf-model-box { padding: clamp(7px, 1vw, 10px) clamp(10px, 1.4vw, 14px); min-width: clamp(60px, 8vw, 80px); }
+  .pf-model-box-icon  { font-size: clamp(16px, 2.2vw, 20px); }
+  .pf-model-box-label { font-size: clamp(9px, 1.1vw, 11px); }
+  .pf-model-box-count { font-size: clamp(11px, 1.4vw, 13px); }
+  /* Filter */
+  .pf-filter-bar  { font-size: clamp(12px, 1.6vw, 14px); padding: clamp(8px, 1.2dvh, 10px) clamp(14px, 2vw, 20px); }
+  .pf-filter-icon { font-size: clamp(16px, 2.2vw, 20px); }
+  .pf-filter-result { font-size: clamp(12px, 1.6vw, 15px); }
+  .pf-filter-why  { font-size: clamp(11px, 1.4vw, 13px); }
+  .pf-filter-chip { font-size: clamp(11px, 1.4vw, 13px); }
+  /* Fragen */
+  .pf-question { font-size: clamp(12px, 1.6vw, 14px); }
+  .pf-option   { font-size: clamp(11px, 1.4vw, 13px); padding: clamp(6px, 0.9dvh, 8px) clamp(10px, 1.4vw, 14px); }
+  .pf-explanation { font-size: clamp(12px, 1.5vw, 14px); padding: clamp(8px, 1dvh, 10px) clamp(10px, 1.4vw, 14px); }
+  /* Abschluss-Stack */
+  .pf-summary-title { font-size: clamp(14px, 2vw, 18px); }
+  .pf-summary-sub   { font-size: clamp(12px, 1.5vw, 14px); max-width: 100%; }
+  .pf-summary-note  { font-size: clamp(11px, 1.4vw, 13px); max-width: 100%; }
+  .pf-stack { max-width: 100%; }
+  .pf-stack-item  { padding: clamp(7px, 1dvh, 9px) clamp(10px, 1.4vw, 14px); gap: clamp(8px, 1.2vw, 12px); }
+  .pf-stack-icon  { font-size: clamp(16px, 2.2vw, 20px); }
+  .pf-stack-label { font-size: clamp(12px, 1.6vw, 14px); }
+  .pf-stack-sub   { font-size: clamp(10px, 1.3vw, 12px); }
+  /* Scroll-Bereich + Fragen-Panel */
+  .pf-question-panel { padding: clamp(8px, 1.2dvh, 12px) clamp(16px, 2.2vw, 28px) clamp(6px, 0.9dvh, 8px); }
+
+  /* ── Station 7: Begriffe ────────────────────────────────────────── */
+  /* 2 Spalten statt 3 → Karten breiter, Text lesbar */
+  .beg-expl-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: clamp(6px, 1vw, 10px);
+  }
+  .beg-expl-card { padding: clamp(8px, 1.2vw, 12px); }
+  /* Erklärungstext: viewport-relativ */
+  .beg-expl-text {
+    font-size: clamp(12px, 1.6vw, 14px);
+    line-height: 1.5;
+  }
+  .beg-expl-drop { min-height: clamp(30px, 4dvh, 40px); padding: clamp(4px, 0.6dvh, 7px) 8px; }
+  .beg-expl-drop-hint  { font-size: clamp(10px, 1.3vw, 12px); }
+  .beg-expl-drop-term  { font-size: clamp(11px, 1.5vw, 13px); }
+  .beg-term-chip       { font-size: clamp(11px, 1.6vw, 14px); padding: clamp(5px, 0.8dvh, 8px) clamp(10px, 1.5vw, 16px); }
+  .beg-heading { font-size: clamp(15px, 2.2vw, 19px); }
+  .beg-sub     { font-size: clamp(12px, 1.6vw, 14px); }
+  .beg-chip    { font-size: clamp(12px, 1.6vw, 14px); }
 
   /* Meilenstein-Modal */
-  .milestone-card { padding: 24px 20px; }
-  .milestone-title { font-size: 22px; }
-  .milestone-score-val { font-size: 26px; }
-  .milestone-msg { font-size: 15px; padding: 10px 12px; }
-  .milestone-icon { font-size: 40px; }
+  .milestone-card { padding: clamp(20px, 3vw, 32px); }
+  .milestone-title { font-size: clamp(20px, 3vw, 26px); }
+  .milestone-score-val { font-size: clamp(22px, 3.5vw, 30px); }
+  .milestone-msg  { font-size: clamp(13px, 1.8vw, 16px); padding: clamp(8px, 1.2vw, 14px); }
+  .milestone-icon { font-size: clamp(36px, 5vw, 48px); }
 
   /* End-Screen */
-  .win-card-llm { max-width: 620px; }
-  .win-col-game { padding: 24px 20px; }
-  .win-col-game h1 { font-size: clamp(24px, 4vw, 38px); }
-  .win-col-hub { padding: 20px 16px; }
-  .score-val { font-size: 22px; }
+  .win-card-llm   { max-width: min(640px, 94vw); }
+  .win-col-game   { padding: clamp(18px, 3vw, 28px); }
+  .win-col-game h1 { font-size: clamp(22px, 4vw, 38px); }
+  .win-col-hub    { padding: clamp(16px, 2.5vw, 24px); }
+  .score-val      { font-size: clamp(20px, 3vw, 26px); }
 
   /* Companion Widget */
-  #companion-widget { width: 76px; padding: 0.5rem 0.6rem; }
+  #companion-widget { width: clamp(70px, 9vw, 86px); padding: 0.5rem 0.6rem; }
   #companion-widget #eggVisual img,
-  #companion-widget #eggVisual svg { width: 56px; height: 56px; }
+  #companion-widget #eggVisual svg { width: clamp(50px, 7vw, 66px); height: clamp(50px, 7vw, 66px); }
 }
 
