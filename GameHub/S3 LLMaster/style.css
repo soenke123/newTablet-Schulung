@@ -2061,7 +2061,8 @@ html, body {
   letter-spacing: .04em;
 }
 .beg-heading { font-size: 19px; font-weight: 700; color: var(--c-text); margin: 0 0 6px; }
-.beg-sub     { font-size: 14px; color: var(--c-muted); margin: 0 0 18px; }
+.beg-sub     { font-size: 14px; color: var(--c-muted); margin: 0 0 8px; }
+.beg-counter { font-size: 13px; font-weight: 700; color: var(--c-primary-dark); margin: 0 0 14px; letter-spacing: .03em; }
 
 /* Phase 1 — Chip-Auswahl */
 .beg-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }

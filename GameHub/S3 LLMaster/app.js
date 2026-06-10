@@ -2330,15 +2330,26 @@ function renderBegriffe(bodyEl, actionBtn) {
 
     bodyEl.innerHTML = `
       <p class="beg-heading">Welche Begriffe gehören dazu?</p>
-      <p class="beg-sub">Wähle alle Schlüsselkonzepte aus, die beim Umgang mit einem LLM wichtig sind.</p>
+      <p class="beg-sub">Wähle genau die 7 Schlüsselkonzepte aus, die beim Umgang mit einem LLM wichtig sind.</p>
+      <p class="beg-counter" id="beg-counter">0 / 7 ausgewählt</p>
       <div class="beg-chips" id="beg-chips-container"></div>
       <div class="beg-result" id="beg-result" style="display:none"></div>
     `;
     setBegPhaseTag("Phase 1/2");
 
-    const container = document.getElementById("beg-chips-container");
-    const selected  = new Set();
-    let   checked   = false;
+    const container  = document.getElementById("beg-chips-container");
+    const counterEl  = document.getElementById("beg-counter");
+    const selected   = new Set();
+    let   checked    = false;
+
+    function updateChipStates() {
+      const full = selected.size >= 7;
+      container.querySelectorAll(".beg-chip").forEach(c => {
+        if (!c.classList.contains("is-selected")) c.disabled = full;
+      });
+      counterEl.textContent = `${selected.size} / 7 ausgewählt`;
+      actionBtn.disabled = selected.size !== 7;
+    }
 
     allChips.forEach(term => {
       const btn = document.createElement("button");
@@ -2347,10 +2358,12 @@ function renderBegriffe(bodyEl, actionBtn) {
       btn.dataset.term = term;
       btn.addEventListener("click", () => {
         if (checked) return;
+        const wasSelected = selected.has(term);
+        if (!wasSelected && selected.size >= 7) return;
         btn.classList.toggle("is-selected");
-        if (selected.has(term)) selected.delete(term);
+        if (wasSelected) selected.delete(term);
         else selected.add(term);
-        actionBtn.disabled = selected.size === 0;
+        updateChipStates();
       });
       container.appendChild(btn);
     });
