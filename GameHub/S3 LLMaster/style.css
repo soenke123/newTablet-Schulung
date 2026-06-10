@@ -2354,7 +2354,7 @@ html, body {
   }
   /* quiz-card--wide (Station 4 + 5): mein .quiz-card-Override rückgängig, volle Breite */
   .quiz-card--wide {
-    max-width: min(960px, 97vw);
+    max-width: 96vw;
     height: calc(100dvh - clamp(18px, 2.5dvh, 36px));
     padding: clamp(14px, 2vw, 22px) clamp(16px, 2.2vw, 26px);
   }

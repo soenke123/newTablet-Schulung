@@ -1240,7 +1240,7 @@ var S = { queue:[], cur:0, score:0, results:[], total:8, jokers:{fifty:true,chec
 var ovFilter = "all";
 
 // ---- DRAG ----
-var drag = { on:false, ghost:null, pid:-1, cardW:0, cardH:0 };
+var drag = { on:false, ghost:null, pid:-1, cardW:0, cardH:0, offsetX:0, offsetY:0 };
 
 function initDrag() {
   var cw = document.getElementById("card-wrap");
@@ -1256,16 +1256,19 @@ function dragStart(e) {
   if (!card) return;
   drag.on  = true;
   drag.pid = e.pointerId;
+  e.currentTarget.setPointerCapture(e.pointerId);
   var rect = card.getBoundingClientRect();
-  drag.cardW = rect.width;
-  drag.cardH = rect.height;
+  drag.cardW   = rect.width;
+  drag.cardH   = rect.height;
+  drag.offsetX = e.clientX - rect.left;
+  drag.offsetY = e.clientY - rect.top;
 
   drag.ghost = card.cloneNode(true);
   drag.ghost.className = card.className + " drag-ghost";
   drag.ghost.style.width  = rect.width  + "px";
   drag.ghost.style.height = rect.height + "px";
-  drag.ghost.style.left   = (e.clientX - rect.width  / 2) + "px";
-  drag.ghost.style.top    = (e.clientY - rect.height / 2) + "px";
+  drag.ghost.style.left   = rect.left + "px";
+  drag.ghost.style.top    = rect.top  + "px";
   drag.ghost.style.overflow = "hidden";
   document.body.appendChild(drag.ghost);
   card.style.opacity = "0.35";
@@ -1277,8 +1280,8 @@ function dragStart(e) {
 
 function dragMove(e) {
   if (!drag.on || e.pointerId !== drag.pid || !drag.ghost) return;
-  drag.ghost.style.left = (e.clientX - drag.cardW / 2) + "px";
-  drag.ghost.style.top  = (e.clientY - drag.cardH / 2) + "px";
+  drag.ghost.style.left = (e.clientX - drag.offsetX) + "px";
+  drag.ghost.style.top  = (e.clientY - drag.offsetY) + "px";
   var bins = document.querySelectorAll(".bin");
   for (var i = 0; i < bins.length; i++) bins[i].classList.remove("bin-hover");
   var el = document.elementFromPoint(e.clientX, e.clientY);
