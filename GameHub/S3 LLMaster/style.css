@@ -2031,6 +2031,22 @@ html, body {
   border-radius: 999px; padding: 3px 10px; margin-bottom: 10px;
 }
 
+/* Phase 2 — Zwei-Spalten-Wrapper (Desktop: Sidebar oben, Grid unten) */
+.beg-p2-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.beg-p2-sidebar {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.beg-p2-layout > .beg-expl-grid {
+  order: 2;
+}
+
 /* Phase-Tag im Quiz-Badge-Header (Station 7) */
 .beg-phase-tag {
   display: inline-block;
@@ -2460,7 +2476,39 @@ html, body {
   }
 
   /* ── Station 7: Begriffe ────────────────────────────────────────── */
-  /* 3×3 Grid: kleinere Schrift damit alle 9 Karten sichtbar sind */
+  /* Zwei-Spalten-Layout: Grid links, Begriffe-Sidebar rechts */
+  .beg-p2-layout {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: clamp(8px, 1.2vw, 14px);
+    flex: 1;
+    min-height: 0;
+  }
+  .beg-p2-layout > .beg-expl-grid {
+    order: 1;
+    flex: 1;
+    min-width: 0;
+  }
+  .beg-p2-sidebar {
+    order: 2;
+    flex: 0 0 clamp(150px, 21vw, 200px);
+    gap: clamp(6px, 0.9dvh, 10px);
+  }
+  /* Chips in der Sidebar: vertikal gestapelt */
+  .beg-p2-sidebar .beg-hand {
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: clamp(6px, 0.9vw, 10px);
+    gap: clamp(4px, 0.6dvh, 7px);
+  }
+  .beg-p2-sidebar .beg-term-chip {
+    text-align: center;
+    white-space: normal;
+    word-break: break-word;
+    font-size: clamp(10px, 1.3vw, 12px);
+    padding: clamp(4px, 0.6dvh, 6px) clamp(6px, 1vw, 10px);
+  }
+  /* 3×3 Grid mit kleiner Schrift */
   .beg-expl-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: clamp(4px, 0.7vw, 8px);
@@ -2473,11 +2521,9 @@ html, body {
   .beg-expl-drop { min-height: clamp(24px, 3.2dvh, 34px); padding: clamp(3px, 0.4dvh, 5px) 6px; }
   .beg-expl-drop-hint  { font-size: clamp(9px, 1.1vw, 11px); }
   .beg-expl-drop-term  { font-size: clamp(10px, 1.2vw, 12px); }
-  .beg-term-chip       { font-size: clamp(10px, 1.3vw, 12px); padding: clamp(4px, 0.6dvh, 6px) clamp(8px, 1.2vw, 13px); }
-  .beg-heading { font-size: clamp(14px, 1.9vw, 17px); margin-bottom: 2px; }
-  .beg-sub     { font-size: clamp(11px, 1.4vw, 13px); margin-bottom: clamp(6px, 0.9dvh, 12px); }
+  .beg-heading { font-size: clamp(13px, 1.7vw, 16px); margin-bottom: 2px; }
+  .beg-sub     { font-size: clamp(10px, 1.3vw, 12px); margin-bottom: clamp(4px, 0.6dvh, 8px); }
   .beg-chip    { font-size: clamp(11px, 1.4vw, 13px); }
-  .beg-hand    { gap: clamp(5px, 0.8vw, 8px); padding: clamp(8px, 1.2vw, 12px); margin-bottom: clamp(6px, 0.9dvh, 12px); }
 
   /* Meilenstein-Modal */
   .milestone-card { padding: clamp(20px, 3vw, 32px); }

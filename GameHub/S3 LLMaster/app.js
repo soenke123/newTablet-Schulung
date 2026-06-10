@@ -2393,10 +2393,14 @@ function renderBegriffe(bodyEl, actionBtn) {
 
     setBegPhaseTag("Phase 2/2");
     bodyEl.innerHTML = `
-      <p class="beg-heading">Ordne die Begriffe zu</p>
-      <p class="beg-sub">Ziehe jeden Begriff auf die passende Erklärung. Zwei Erklärungen gehören zu keinem Begriff.</p>
-      <div class="beg-hand" id="beg-hand"></div>
-      <div class="beg-expl-grid" id="beg-expl-grid"></div>
+      <div class="beg-p2-layout">
+        <div class="beg-expl-grid" id="beg-expl-grid"></div>
+        <div class="beg-p2-sidebar">
+          <p class="beg-heading">Ordne die Begriffe zu</p>
+          <p class="beg-sub">Ziehe jeden Begriff auf die passende Erklärung. Zwei gehören zu keinem.</p>
+          <div class="beg-hand" id="beg-hand"></div>
+        </div>
+      </div>
     `;
 
     const handEl = document.getElementById("beg-hand");
