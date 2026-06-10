@@ -2030,6 +2030,20 @@ html, body {
   color: var(--c-primary-dark); background: var(--c-primary-light);
   border-radius: 999px; padding: 3px 10px; margin-bottom: 10px;
 }
+
+/* Phase-Tag im Quiz-Badge-Header (Station 7) */
+.beg-phase-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-primary);
+  background: var(--c-primary-light);
+  border-radius: 999px;
+  padding: 2px 9px;
+  vertical-align: middle;
+  letter-spacing: .04em;
+}
 .beg-heading { font-size: 19px; font-weight: 700; color: var(--c-text); margin: 0 0 6px; }
 .beg-sub     { font-size: 14px; color: var(--c-muted); margin: 0 0 18px; }
 
@@ -2363,6 +2377,22 @@ html, body {
   .wbi-zone--mid  { min-height: clamp(76px, 10dvh, 98px); }
   .wbi-zone--elim { min-height: clamp(52px, 7dvh, 70px); }
   .wbi-zone-label { font-size: clamp(9px, 1.2vw, 11px); }
+  /* Endscreen: kompakter damit nichts unten herausfällt */
+  .wbi-summary { gap: clamp(8px, 1.2dvh, 16px); }
+  .wbi-summary-cards { gap: clamp(8px, 1.2vw, 12px); }
+  .wbi-summary-card {
+    padding: clamp(10px, 1.4dvh, 16px) clamp(10px, 1.4vw, 14px);
+    gap: clamp(4px, 0.6dvh, 7px);
+  }
+  .wbi-summary-logo { width: clamp(34px, 5dvh, 46px); height: clamp(34px, 5dvh, 46px); }
+  .wbi-summary-llm-name { font-size: clamp(13px, 1.8vw, 16px); }
+  .wbi-summary-card-score { font-size: clamp(18px, 2.8vw, 24px); margin-top: 2px; }
+  .wbi-summary-facts { gap: 3px; }
+  .wbi-summary-facts li { font-size: clamp(10px, 1.3vw, 12px); padding: clamp(2px, 0.4dvh, 4px) 8px; }
+  /* Die große Gesamtpunktzahl: 68px → passend zur Displayhöhe */
+  .wbi-summary-total-num { font-size: clamp(38px, 7dvh, 56px); }
+  .wbi-summary-total-label { font-size: clamp(10px, 1.3vw, 12px); }
+  .wbi-summary-max { font-size: clamp(11px, 1.4vw, 13px); margin-top: 1px; }
 
   /* Station 5 — KartenSort: kleinere Karten + Zonen */
   .ks-intro { font-size: clamp(12px, 1.6vw, 14px); margin-bottom: clamp(10px, 1.3dvh, 14px); }
@@ -2371,7 +2401,8 @@ html, body {
   .ks-zone-label { font-size: clamp(10px, 1.3vw, 12px); }
   .ks-chip-text  { font-size: clamp(10px, 1.3vw, 12px); }
   .ks-chip { padding: clamp(4px, 0.6dvh, 6px) clamp(6px, 0.9vw, 8px); }
-  .ks-card { width: clamp(86px, 11vw, 110px); height: clamp(116px, 15dvh, 148px); }
+  .ks-card { width: clamp(86px, 11vw, 110px); height: clamp(116px, 15dvh, 148px); padding-bottom: 8px; }
+  .ks-card-icon { width: clamp(42px, 5.5vw, 58px); height: clamp(42px, 5.5vw, 58px); top: 6px; }
   .ks-card-text { font-size: clamp(10px, 1.3vw, 11.5px); }
   .ks-hand { padding: clamp(8px, 1.2vw, 12px); gap: clamp(5px, 0.8vw, 8px); }
 
@@ -2423,27 +2454,30 @@ html, body {
   .pf-stack-label { font-size: clamp(12px, 1.6vw, 14px); }
   .pf-stack-sub   { font-size: clamp(10px, 1.3vw, 12px); }
   /* Scroll-Bereich + Fragen-Panel */
-  .pf-question-panel { padding: clamp(8px, 1.2dvh, 12px) clamp(16px, 2.2vw, 28px) clamp(6px, 0.9dvh, 8px); }
+  .pf-question-panel {
+    margin: 0 clamp(-26px, -2.2vw, -16px) -4px;
+    padding: clamp(8px, 1.2dvh, 12px) clamp(16px, 2.2vw, 26px) clamp(6px, 0.9dvh, 8px);
+  }
 
   /* ── Station 7: Begriffe ────────────────────────────────────────── */
-  /* 2 Spalten statt 3 → Karten breiter, Text lesbar */
+  /* 3×3 Grid: kleinere Schrift damit alle 9 Karten sichtbar sind */
   .beg-expl-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: clamp(6px, 1vw, 10px);
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(4px, 0.7vw, 8px);
   }
-  .beg-expl-card { padding: clamp(8px, 1.2vw, 12px); }
-  /* Erklärungstext: viewport-relativ */
+  .beg-expl-card { padding: clamp(5px, 0.8vw, 8px); }
   .beg-expl-text {
-    font-size: clamp(12px, 1.6vw, 14px);
-    line-height: 1.5;
+    font-size: clamp(10px, 1.3vw, 12px);
+    line-height: 1.4;
   }
-  .beg-expl-drop { min-height: clamp(30px, 4dvh, 40px); padding: clamp(4px, 0.6dvh, 7px) 8px; }
-  .beg-expl-drop-hint  { font-size: clamp(10px, 1.3vw, 12px); }
-  .beg-expl-drop-term  { font-size: clamp(11px, 1.5vw, 13px); }
-  .beg-term-chip       { font-size: clamp(11px, 1.6vw, 14px); padding: clamp(5px, 0.8dvh, 8px) clamp(10px, 1.5vw, 16px); }
-  .beg-heading { font-size: clamp(15px, 2.2vw, 19px); }
-  .beg-sub     { font-size: clamp(12px, 1.6vw, 14px); }
-  .beg-chip    { font-size: clamp(12px, 1.6vw, 14px); }
+  .beg-expl-drop { min-height: clamp(24px, 3.2dvh, 34px); padding: clamp(3px, 0.4dvh, 5px) 6px; }
+  .beg-expl-drop-hint  { font-size: clamp(9px, 1.1vw, 11px); }
+  .beg-expl-drop-term  { font-size: clamp(10px, 1.2vw, 12px); }
+  .beg-term-chip       { font-size: clamp(10px, 1.3vw, 12px); padding: clamp(4px, 0.6dvh, 6px) clamp(8px, 1.2vw, 13px); }
+  .beg-heading { font-size: clamp(14px, 1.9vw, 17px); margin-bottom: 2px; }
+  .beg-sub     { font-size: clamp(11px, 1.4vw, 13px); margin-bottom: clamp(6px, 0.9dvh, 12px); }
+  .beg-chip    { font-size: clamp(11px, 1.4vw, 13px); }
+  .beg-hand    { gap: clamp(5px, 0.8vw, 8px); padding: clamp(8px, 1.2vw, 12px); margin-bottom: clamp(6px, 0.9dvh, 12px); }
 
   /* Meilenstein-Modal */
   .milestone-card { padding: clamp(20px, 3vw, 32px); }

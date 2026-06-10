@@ -254,14 +254,35 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* Tablet (641px – 1024px): Bins-Bar passt nicht im Row-Layout */
 @media(min-width:641px) and (max-width:1024px){
-  .g-bins-bar{height:auto;min-height:80px;max-height:130px;padding:6px 8px;gap:5px}
-  .bin{flex-direction:column;gap:2px;padding:5px 5px}
-  .bin-icon-wrap{width:42px;height:42px}
-  .bin-icon{font-size:2.6rem}
-  .bin-letter{font-size:.95rem}
-  .bin-name{font-size:.65rem;text-align:center;white-space:normal;line-height:1.2}
-  .g-card-col{justify-content:flex-start;padding-top:10px}
-  #card-wrap{max-height:calc(100dvh - 130px - 52px - 30px)}
+  /* Bins: kompaktes Spalten-Layout wie auf Mobil */
+  .g-bins-bar{height:auto;min-height:75px;max-height:115px;padding:5px 8px;gap:5px}
+  .bin{flex-direction:column;gap:2px;padding:4px 5px}
+  .bin-icon-wrap{width:38px;height:38px}
+  .bin-icon{font-size:2.3rem}
+  .bin-letter{font-size:.9rem}
+  .bin-name{font-size:.62rem;text-align:center;white-space:normal;line-height:1.2}
+
+  /* Karten-Bereich: oben ausrichten, Touch-Scrollen erlauben */
+  .g-card-col{justify-content:flex-start;padding:8px 12px}
+  #card-wrap{
+    max-height:calc(100dvh - 115px - 52px - 20px);
+    touch-action:pan-y
+  }
+
+  /* Karten-Inhalt: kompakter damit der ganze Text sichtbar ist */
+  .card img{max-height:100px}
+  .cbody{padding:10px 12px}
+  .card h2{font-size:.9rem}
+  .txt{font-size:.8rem;line-height:1.5}
+  .meta{font-size:.68rem}
+  .badge{font-size:.62rem;padding:2px 7px;margin-bottom:6px}
+  .img-cap{font-size:.65rem;padding:4px 10px}
+  .c-wikipedia .cbody{padding:10px}
+  .c-wikipedia h2{font-size:1rem}
+  .c-wikipedia .txt{font-size:.78rem}
+  .wabubble{font-size:.8rem;padding:9px 11px}
+  .aitag,.chatgpt-tag{font-size:.66rem;padding:2px 7px}
+  .c-googleai .txt,.c-chatgpt .txt{font-size:.78rem;padding:9px}
 }
 
 /* Companion Widget */

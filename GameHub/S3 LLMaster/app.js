@@ -2310,6 +2310,16 @@ function renderWahrOderMythos(bodyEl, actionBtn, quiz) {
 // =====================================================================
 // Station 7 — "Schlüsselkonzepte" (Render-Funktion)
 // =====================================================================
+function setBegPhaseTag(label) {
+  let tag = document.querySelector(".quiz-badge .beg-phase-tag");
+  if (!tag) {
+    tag = document.createElement("span");
+    tag.className = "beg-phase-tag";
+    document.querySelector(".quiz-badge").appendChild(tag);
+  }
+  tag.textContent = label;
+}
+
 function renderBegriffe(bodyEl, actionBtn) {
   const data   = BEGRIFFE_DATA;
   let   p1Earned = 0;
@@ -2319,12 +2329,12 @@ function renderBegriffe(bodyEl, actionBtn) {
     const allChips = shuffleArr([...correct, ...decoys]);
 
     bodyEl.innerHTML = `
-      <div class="beg-phase-badge">Phase 1 von 2</div>
       <p class="beg-heading">Welche Begriffe gehören dazu?</p>
       <p class="beg-sub">Wähle alle Schlüsselkonzepte aus, die beim Umgang mit einem LLM wichtig sind.</p>
       <div class="beg-chips" id="beg-chips-container"></div>
       <div class="beg-result" id="beg-result" style="display:none"></div>
     `;
+    setBegPhaseTag("Phase 1/2");
 
     const container = document.getElementById("beg-chips-container");
     const selected  = new Set();
@@ -2381,8 +2391,8 @@ function renderBegriffe(bodyEl, actionBtn) {
       ...decoyExplanations.map(t => ({ text: t, termIdx: -1 })),
     ]);
 
+    setBegPhaseTag("Phase 2/2");
     bodyEl.innerHTML = `
-      <div class="beg-phase-badge">Phase 2 von 2</div>
       <p class="beg-heading">Ordne die Begriffe zu</p>
       <p class="beg-sub">Ziehe jeden Begriff auf die passende Erklärung. Zwei Erklärungen gehören zu keinem Begriff.</p>
       <div class="beg-hand" id="beg-hand"></div>
@@ -3430,6 +3440,7 @@ function openQuiz(station) {
 function closeQuiz() {
   document.getElementById("quiz-overlay").classList.remove("is-active");
   document.querySelector(".quiz-card").classList.remove("quiz-card--wide");
+  document.querySelector(".quiz-badge .beg-phase-tag")?.remove();
   const actionBtn = document.getElementById("btn-quiz-finish");
   actionBtn.setAttribute("data-action", "quiz-finish");
   actionBtn.onclick = null;
