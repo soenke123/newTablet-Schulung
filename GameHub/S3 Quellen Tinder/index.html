@@ -252,22 +252,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   #card-wrap{overflow:visible;max-height:none}
 }
 
-/* Tablet (641px – 1024px) */
-@media(min-width:641px) and (max-width:1024px){
-  /* Bins: ~30% kleiner, Spalten-Layout */
-  .g-bins-bar{height:auto;min-height:55px;max-height:80px;padding:4px 8px;gap:5px}
-  .bin{flex-direction:column;gap:1px;padding:3px 4px}
-  .bin-icon-wrap{width:28px;height:28px}
-  .bin-icon{font-size:1.7rem}
-  .bin-letter{font-size:.7rem}
-  .bin-name{font-size:.55rem;text-align:center;white-space:normal;line-height:1.15}
+/* Tablets: dvh-proportionales Layout — greift auf ALLEN iPads (Touch-Screen, kein Maus-Desktop) */
+@media(min-width:641px) and (pointer:coarse){
+  /* Header: 4% der Bildschirmhoehe */
+  .g-header{height:4dvh;min-height:30px;padding:0 14px}
 
-  /* Karten-Spalte: flex:1 auf card-wrap → füllt exakt den freien Platz, kein Überlauf */
-  .g-card-col{justify-content:flex-start;padding:6px 12px;overflow:hidden}
-  #card-wrap{flex:1;min-height:0;max-height:none;touch-action:pan-y}
+  /* Bins: 15% der Bildschirmhoehe, Spalten-Layout */
+  .g-bins-bar{height:15dvh;min-height:55px;max-height:none;padding:1dvh 8px;gap:5px}
+  .bin{flex-direction:column;gap:0;padding:0.8dvh 4px}
+  .bin-icon-wrap{width:5dvh;height:5dvh;max-width:40px;max-height:40px}
+  .bin-icon{font-size:3.2dvh}
+  .bin-letter{font-size:1.6dvh}
+  .bin-name{font-size:1.3dvh;text-align:center;white-space:normal;line-height:1.15}
 
-  /* Karten-Inhalt: Bild 20% kleiner, Schrift & Abstände reduziert */
-  .card img{max-height:80px}
+  /* Artikel-Bereich: fuellt exakt die restlichen ~81% */
+  .g-card-col{justify-content:flex-start;padding:0.5dvh 12px;overflow:hidden}
+  #card-wrap{flex:1;min-height:0;max-height:none;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+
+  /* Bild: max 20% der Bildschirmhoehe */
+  .card img{max-height:20dvh}
+
+  /* Kompakter Karten-Inhalt */
   .cbody{padding:8px 12px}
   .card h2{font-size:.88rem}
   .txt{font-size:.78rem;line-height:1.45}
@@ -275,7 +280,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   .badge{font-size:.6rem;padding:2px 7px;margin-bottom:5px}
   .img-cap{font-size:.62rem;padding:3px 10px}
   .c-wikipedia .cbody{padding:8px 10px}
-  .c-wikipedia h2{font-size:.95rem}
+  .c-wikipedia h2{font-size:.92rem}
   .c-wikipedia .txt{font-size:.76rem}
   .wabubble{font-size:.78rem;padding:8px 10px}
   .aitag,.chatgpt-tag{font-size:.62rem;padding:2px 7px}
