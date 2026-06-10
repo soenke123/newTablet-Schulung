@@ -144,7 +144,7 @@ html, body {
 .brand-llmaster { font-weight: 900; letter-spacing: -.03em; color: var(--c-primary); }
 .brand-llmaster .llm { color: var(--c-accent); }
 .brand-eyebrow { font-weight: 900; margin: 0 0 4px; line-height: 1; }
-.map-head-row .brand-eyebrow { font-size: clamp(28px, 5vw, 48px); }
+.map-head-row .brand-eyebrow { font-size: clamp(20px, 4vw, 40px); }
 .lead {
   margin: 0 0 24px;
   font-size: clamp(16px, 2vw, 19px);
@@ -349,17 +349,36 @@ html, body {
 .p2-start-btn:hover { background: rgba(255,255,255,0.25); }
 
 /* === Map === */
+
+/* Map-Screen: kein Scrollen auf Tablets */
+#screen-map {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+#screen-map .screen-head {
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
 .map-stage {
   position: relative;
-  width: min(1100px, 95vw);
+  width: fit-content;
+  max-width: min(1100px, 95vw);
   margin: 0 auto;
   border-radius: var(--r-card);
   overflow: hidden;
   box-shadow: var(--shadow-card);
 }
+/* Bild begrenzt sich selbst: auf breiten Screens volle Breite,
+   auf Landscape-Tablets durch max-height nach unten gestaucht. */
 .map-complex {
   display: block;
-  width: 100%;
+  max-width: min(1100px, 95vw);
+  max-height: calc(100dvh - 130px);
+  width: auto;
   height: auto;
 }
 .map-overlays {
@@ -2243,5 +2262,102 @@ html, body {
 @media (max-width: 540px) {
   .win-card-llm { flex-direction: column; max-height: none; }
   .win-col-hub { border-left: none; border-top: 1px solid var(--c-primary-light); }
+}
+
+/* === Tablet-Responsive (iPad portrait & landscape, 641px–1100px) === */
+@media (max-width: 1100px) and (min-width: 641px) {
+
+  /* Allgemeine Abstände */
+  .screen {
+    padding: 18px clamp(12px, 2.5vw, 28px);
+  }
+
+  /* Intro-Screen: Titelgröße drastisch reduzieren */
+  .intro-card {
+    max-width: 600px;
+    padding: clamp(18px, 3vw, 32px);
+  }
+  .intro-card h1 {
+    font-size: clamp(32px, 5.5vw, 54px);
+  }
+  .lead {
+    font-size: clamp(14px, 1.8vw, 16px);
+    margin-bottom: 16px;
+  }
+  .intro-steps {
+    margin-bottom: 14px;
+  }
+  .intro-step {
+    padding: 12px 8px 10px;
+  }
+  .intro-step-icon { font-size: 20px; }
+  .intro-step strong { font-size: 13px; }
+  .intro-step p { font-size: 11px; }
+  .intro-tip {
+    font-size: 12px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+  .hint { margin-bottom: 18px; }
+
+  /* Buttons */
+  .btn-primary, .btn-secondary {
+    font-size: 15px;
+    padding: 11px 20px;
+  }
+
+  /* Map-Header */
+  .map-head-row .brand-eyebrow {
+    font-size: clamp(16px, 3vw, 26px);
+  }
+  #screen-map {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  #screen-map .screen-head {
+    margin-bottom: 4px;
+  }
+  .screen-head p { font-size: 14px; }
+  .station-indicator { width: 22px; height: 22px; font-size: 11px; }
+
+  /* Stationen-Marker auf der Karte */
+  .station {
+    width: clamp(38px, 4.5vw, 52px);
+    height: clamp(38px, 4.5vw, 52px);
+    font-size: clamp(16px, 1.8vw, 22px);
+  }
+
+  /* Quiz-Overlay */
+  .overlay { padding: 14px; }
+  .quiz-card {
+    padding: 20px 22px;
+    max-width: 560px;
+  }
+  .quiz-card h3 { font-size: 20px; }
+  .quiz-body { font-size: 15px; margin-bottom: 16px; }
+  .quiz-badge { font-size: 12px; }
+
+  /* Multiple Choice */
+  .mc-question { font-size: 15px; }
+  .mc-option { font-size: 14px; padding: 9px 12px 9px 40px; }
+
+  /* Meilenstein-Modal */
+  .milestone-card { padding: 24px 20px; }
+  .milestone-title { font-size: 22px; }
+  .milestone-score-val { font-size: 26px; }
+  .milestone-msg { font-size: 15px; padding: 10px 12px; }
+  .milestone-icon { font-size: 40px; }
+
+  /* End-Screen */
+  .win-card-llm { max-width: 620px; }
+  .win-col-game { padding: 24px 20px; }
+  .win-col-game h1 { font-size: clamp(24px, 4vw, 38px); }
+  .win-col-hub { padding: 20px 16px; }
+  .score-val { font-size: 22px; }
+
+  /* Companion Widget */
+  #companion-widget { width: 76px; padding: 0.5rem 0.6rem; }
+  #companion-widget #eggVisual img,
+  #companion-widget #eggVisual svg { width: 56px; height: 56px; }
 }
 

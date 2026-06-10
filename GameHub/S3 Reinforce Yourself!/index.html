@@ -623,6 +623,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 @media (pointer:coarse) {
   .board.board-sb .cell{width:33px; height:33px; font-size:0.9rem;}
   .sb-brett-col .sb-status{width:auto; min-width:99px;}
+  #sb-alien-canvas{width:auto; height:auto; aspect-ratio:unset; flex-shrink:0;}
 }
 #sb-alien-ai-moves,
 #sb-alien-moves{display:flex; flex-direction:column; gap:4px; margin-top:4px; margin-bottom:6px;}
@@ -3187,6 +3188,7 @@ function sbInitTree() {
     cv.width  = cv.parentElement.clientWidth;
     cv.height = cv.parentElement.clientHeight;
     drawSandboxTree();
+    sbFitAlienCanvas();
   }).observe(cv.parentElement);
 
   // Mouse pan
@@ -3462,6 +3464,17 @@ function renderSandboxAlien() {
   }
 }
 
+// ── Auf Touch-Geräten: Alien-Canvas so hoch wie die Brett-Spalte ──
+function sbFitAlienCanvas() {
+  if (!navigator.maxTouchPoints) return;
+  const brettCol = document.querySelector('.sb-brett-col');
+  const canvas   = document.getElementById('sb-alien-canvas');
+  if (!brettCol || !canvas) return;
+  const h = brettCol.offsetHeight;
+  canvas.style.width  = h + 'px';
+  canvas.style.height = h + 'px';
+}
+
 // ── Sandbox game logic ──
 function sbRenderAll() {
   renderSandboxBrett();
@@ -3643,6 +3656,7 @@ function enterSandbox() {
   sbInitTree();
   updateSbStatsDisplay();
   startSandboxGame();
+  requestAnimationFrame(sbFitAlienCanvas);
   document.getElementById('sandbox-intro-dialog').showModal();
 }
 

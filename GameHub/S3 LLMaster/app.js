@@ -915,7 +915,7 @@ const WBI_HINT1 = {
 
 const WBI_LLMS = [
   {
-    id: "gpt", name: "GPT", logo: "Logo/openai-logomark.png",
+    id: "gpt", name: "GPT", logo: "logo/openai-logomark.png",
     facts: ["Firma: OpenAI", "Bildgenerierung: DALL-E", "Löste 2022 den KI-Boom aus"],
     hint1Keys: ["A","B","C","D","E"],
     hints: [
@@ -925,7 +925,7 @@ const WBI_LLMS = [
     ],
   },
   {
-    id: "claude", name: "Claude", logo: "Logo/claude logo.svg",
+    id: "claude", name: "Claude", logo: "logo/claude logo.svg",
     facts: ["Firma: Anthropic", "Kein Bildgenerierungstool", "Gegründet von Ex-OpenAI-Team"],
     hint1Keys: ["A","B","C","D","E"],
     hints: [
@@ -935,7 +935,7 @@ const WBI_LLMS = [
     ],
   },
   {
-    id: "gemini", name: "Gemini", logo: "Logo/Geminilogo.png",
+    id: "gemini", name: "Gemini", logo: "logo/Geminilogo.png",
     facts: ["Firma: Google", "Bildgenerierung: Nano Banana 2", "In Google Search integriert"],
     hint1Keys: ["A","B","C","E"],
     hints: [
@@ -945,7 +945,7 @@ const WBI_LLMS = [
     ],
   },
   {
-    id: "metaai", name: "Meta AI", logo: "Logo/Meta AI Logo.png",
+    id: "metaai", name: "Meta AI", logo: "logo/Meta AI Logo.png",
     facts: ["Firma: Meta (ehem. Facebook)", "Open Source: LLaMA-Modelle", "In WhatsApp & Instagram"],
     hint1Keys: ["A","B","D","E"],
     hints: [
@@ -955,7 +955,7 @@ const WBI_LLMS = [
     ],
   },
   {
-    id: "deepseek", name: "DeepSeek", logo: "Logo/Deepseek.png",
+    id: "deepseek", name: "DeepSeek", logo: "logo/Deepseek.png",
     facts: ["Firma: DeepSeek, China", "Open Source", "Überraschte die KI-Welt 2025"],
     hint1Keys: ["B","C","D","E"],
     hints: [
@@ -965,7 +965,7 @@ const WBI_LLMS = [
     ],
   },
   {
-    id: "grok", name: "Grok", logo: "Logo/Grok logo.png",
+    id: "grok", name: "Grok", logo: "logo/Grok logo.png",
     facts: ["Firma: xAI", "Gründer: Elon Musk", "In X (Twitter) integriert"],
     hint1Keys: ["A","C","D","E"],
     hints: [
@@ -975,7 +975,7 @@ const WBI_LLMS = [
     ],
   },
   {
-    id: "copilot", name: "Copilot", logo: "Logo/Microsoft_Copilot_.png",
+    id: "copilot", name: "Copilot", logo: "logo/Microsoft_Copilot_.png",
     facts: ["Firma: Microsoft", "Basiert auf GPT (OpenAI)", "In Windows & Office integriert"],
     hint1Keys: ["A","B","C","D"],
     hints: [
