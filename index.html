@@ -235,6 +235,17 @@
       overflow: hidden;
     }
 
+    /* Season 3: leicht hellere Variante */
+    .gamehub-button.season3 {
+      background: linear-gradient(
+        135deg,
+        #d4956a,
+        #b07045
+      );
+      box-shadow:
+        0 12px 30px rgba(176, 112, 69, 0.22);
+    }
+
     .gamehub-button::before {
       content: "";
 
@@ -419,6 +430,42 @@
       font-weight: 600;
     }
 
+    /* Version-Badge (v2) */
+    .version-badge {
+      font-size: 0.38em;
+      font-weight: 500;
+      opacity: 0.55;
+      letter-spacing: 0.05em;
+      vertical-align: super;
+      margin-left: 0.3em;
+    }
+
+    /* Season-3-Trennlinie im Modal */
+    .season3-divider {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0.25rem 0 0.1rem;
+      border-top: 1px solid var(--border);
+      margin-top: 0.25rem;
+    }
+
+    /* Platzhalter-Eintrag (noch keine Datei) */
+    .presentation-placeholder {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: var(--surface-soft);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-medium);
+      padding: 1rem 1.2rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-style: italic;
+    }
+
     /* Responsive */
     @media (max-width: 760px) {
       .button-layout {
@@ -448,7 +495,7 @@
   <main>
 
     <header>
-      <h1>Tablet Schulung</h1>
+      <h1 id="pageTitle">Tablet Schulung</h1>
     </header>
 
     <section
@@ -497,6 +544,7 @@
       <!-- Game Hub -->
       <a
         class="card-button gamehub-button"
+        id="gamehubLink"
         target="_blank"
         href="GameHub/index.html"
       >
@@ -570,7 +618,20 @@
           <span class="pdf-icon" aria-hidden="true"></span>
           <span class="presentation-name">Workshop Aufmerksamkeit</span>
         </a>
-        
+
+        <!-- ── Season 3 (nur sichtbar wenn SEASON_3 = true in index.html) ── -->
+        <div class="season3-only" style="display:none">
+          <div class="season3-divider">Season 3</div>
+          <!-- Präsentations-Links hier eintragen sobald Dateien vorhanden: -->
+          <!-- <a class="presentation-link" href="Dokumente/DATEINAME.pdf" target="_blank">
+            <span class="pdf-icon" aria-hidden="true"></span>
+            <span class="presentation-name">NAME DER PRÄSENTATION</span>
+          </a> -->
+          <div class="presentation-placeholder">
+            <span class="pdf-icon" aria-hidden="true"></span>
+            <span>Neue Präsentationen folgen</span>
+          </div>
+        </div>
 
       </div>
 
@@ -579,6 +640,28 @@
   </div>
 
   <script>
+    // ── SEASON 3 TOGGLE ──────────────────────────────────────────
+    const SEASON_3 = true;
+    // ─────────────────────────────────────────────────────────────
+
+    // GameHub-Link immer mit s3-Parameter setzen (auch wenn false)
+    const ghLink = document.getElementById('gamehubLink');
+    ghLink.href = 'GameHub/index.html?s3=' + (SEASON_3 ? '1' : '0');
+
+    if (SEASON_3) {
+      // Titel → "Tablet Schulung v2"
+      document.getElementById('pageTitle').innerHTML =
+        'Tablet Schulung<span class="version-badge">v2</span>';
+
+      // GameHub-Button: hellere Farbe
+      ghLink.classList.add('season3');
+
+      // Season-3-Inhalte einblenden (Präsentationen, Handouts)
+      document.querySelectorAll('.season3-only').forEach(el => {
+        el.style.display = 'contents';
+      });
+    }
+
     // Touch-Feedback
     document.querySelectorAll(".card-button").forEach(button => {
       button.addEventListener("touchstart", () => {

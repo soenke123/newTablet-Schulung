@@ -59,7 +59,7 @@ body[data-screen="screen-p1-train"] .train-row.result-lose > .train-section {
 
 /* ── Base ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html,body{min-height:100vh;}
+html,body{min-height:100vh;min-height:100dvh;}
 body{
   background:var(--bg); color:var(--text);
   font-family:'Segoe UI',system-ui,sans-serif;
@@ -571,7 +571,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 /* ── Sandbox (Phase 3) ── */
 #screen-p3-sandbox{
   max-width:none; padding:0; overflow:hidden;
-  height:100vh; align-self:stretch;
+  height:100vh; height:100dvh; align-self:stretch;
 }
 #screen-p3-sandbox.active{display:flex; flex-direction:column;}
 .sb-topbar{
@@ -643,7 +643,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 #win-confetti.active{display:block;}
 .win-card{
   background:var(--surface); border:1px solid var(--border); border-radius:22px;
-  width:92%; max-width:680px; max-height:92vh;
+  width:92%; max-width:680px; max-height:92vh; max-height:92dvh;
   position:relative; z-index:902; overflow:hidden;
   box-shadow:0 0 80px rgba(59,130,246,.2), 0 24px 64px rgba(0,0,0,.5);
   animation:winPop .55s cubic-bezier(.34,1.56,.64,1) both;
@@ -656,14 +656,14 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 .win-col-game{
   flex:1.2; padding:32px 28px; text-align:center;
   display:flex; flex-direction:column;
-  overflow-y:auto; max-height:92vh;
+  overflow-y:auto; max-height:92vh; max-height:92dvh;
 }
 .win-col-hub{
   flex:1; padding:28px 20px;
   border-left:1px solid var(--border);
   background:rgba(0,0,0,.15);
   display:flex; flex-direction:column; align-items:center; gap:10px;
-  overflow-y:auto; max-height:92vh;
+  overflow-y:auto; max-height:92vh; max-height:92dvh;
 }
 .win-icon{margin-bottom:10px;}
 .win-icon img{

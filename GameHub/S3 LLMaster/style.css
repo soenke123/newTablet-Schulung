@@ -39,6 +39,7 @@ html, body {
 .screen {
   display: none;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 32px clamp(16px, 4vw, 48px);
   animation: fadeIn 0.3s ease;
 }
@@ -47,8 +48,11 @@ html, body {
 /* Puzzle-Screens nutzen die ganze Höhe ohne Scroll */
 .screen--puzzle {
   height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
+  min-height: 100dvh;
   max-height: 100vh;
+  max-height: 100dvh;
   padding: 12px clamp(8px, 2vw, 24px);
   overflow: hidden;
 }
@@ -452,11 +456,13 @@ html, body {
   width: 100%;
   box-shadow: var(--shadow-card);
   max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   overflow-y: auto;
 }
 .quiz-card--wide {
   max-width: min(960px, 96vw);
   height: calc(100vh - 48px);
+  height: calc(100dvh - 48px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2190,6 +2196,7 @@ html, body {
   max-width: 680px;
   width: 96%;
   max-height: 92vh;
+  max-height: 92dvh;
   background: white;
   border-radius: var(--r-card);
   box-shadow: var(--shadow-card);

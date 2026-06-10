@@ -14,8 +14,17 @@
 // SEASON 3 TOGGLE
 // true  = Season 3 geöffnet  (Einzeleinstellungen unten gelten)
 // false = Season 3 gesperrt  (überschreibt alle Einzeleinstellungen)
+//
+// Hinweis: Wird von index.html via URL-Parameter ?s3=1/0 gesteuert.
+//          Dieser Wert dient als Fallback bei Direktaufruf.
 // ──────────────────────────────────────────────────────────────
 SEASON_3_OPEN = true;
+
+// URL-Parameter von index.html übernehmen (hat Vorrang)
+(function () {
+  const p = new URLSearchParams(location.search).get('s3');
+  if (p !== null) SEASON_3_OPEN = (p === '1');
+}());
 
 
 GAME_ACCESS = {
