@@ -1088,15 +1088,14 @@ function restoreProgress() {
     applyCompletedToMap(completed);
     show("screen-map");
   } else if (screen === "puzzle2") {
+    // Direkt zu screen-puzzle2 wiederherstellen würde den HUD nicht initialisieren.
+    // Stattdessen: Karte zeigen mit freigeschaltetem Endpuzzle-Button.
     initMap();
     applyCompletedToMap(completed);
-    show("screen-puzzle2");
-    initPuzzle(
-      document.querySelector('.slide-board[data-puzzle="komplex"]'),
-      ASSETS.komplex,
-      PUZZLES.komplex,
-      () => { clearProgress(); showEnd(); }
-    );
+    const p2btn = document.getElementById("btn-to-puzzle2");
+    p2btn.style.display = "";
+    p2btn.classList.add("is-unlocked");
+    show("screen-map");
   }
 }
 
