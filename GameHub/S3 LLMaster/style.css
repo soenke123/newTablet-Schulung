@@ -294,6 +294,34 @@ html, body {
   100% { opacity: 1; transform: var(--final-transform) scale(1); }
 }
 
+/* Puzzle 1: Kopfzeile mit Zurück-Button */
+.puzzle-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.puzzle-head-row h2 { margin: 0; }
+
+/* Puzzle 2: Zurück-Button in der Opener-Karte */
+.p2-back-opener {
+  margin-top: 8px;
+  width: 100%;
+  font-size: 14px;
+}
+
+/* Puzzle 2: Zurück-Button im HUD — klein, links */
+.p2-hud-back {
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+.p2-hud-back:hover { background: rgba(255,255,255,0.25); }
+
 /* === Puzzle 2: HUD + Opener + Cheat === */
 .p2-hud {
   display: flex;

@@ -70,7 +70,11 @@
     <!-- PUZZLE 1: leichtes Poster -->
     <section id="screen-puzzle1" class="screen screen--puzzle">
       <header class="screen-head screen-head--compact">
-        <h2>Puzzle 1 — Das Grundprinzip</h2>
+        <div class="puzzle-head-row">
+          <button class="hub-back-btn" onclick="resetAndGoHub()">← Hub</button>
+          <h2>Puzzle 1 — Das Grundprinzip</h2>
+          <span></span>
+        </div>
         <p>Ordne die Kacheln — so wenige Züge wie möglich!</p>
       </header>
       <div class="puzzle-stage">
@@ -138,6 +142,7 @@
     <!-- PUZZLE 2: komplexes Poster -->
     <section id="screen-puzzle2" class="screen screen--puzzle">
       <div class="p2-hud" id="p2-hud" style="display:none">
+        <button class="hub-back-btn p2-hud-back" onclick="resetAndGoHub()">← Hub</button>
         <div class="p2-hud-item">
           <span class="p2-hud-label">Punkte</span>
           <span class="p2-hud-value" id="p2-score">0</span>

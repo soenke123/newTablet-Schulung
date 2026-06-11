@@ -4265,6 +4265,7 @@ document.getElementById("btn-to-puzzle2").addEventListener("click", () => {
       <span class="wom-intro-hint-mythos">🔄 Tausch-Item: −${CHEAT_COST} Punkte</span>
     </div>
     <button class="p2-start-btn">Los geht's</button>
+    <button class="btn-secondary p2-back-opener" onclick="resetAndGoHub()">← Zurück zum Hub</button>
   `;
   boardEl.innerHTML = "";
   boardEl.style.display = "flex";
