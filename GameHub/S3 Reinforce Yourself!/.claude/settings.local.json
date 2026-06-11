@@ -5,7 +5,8 @@
       "Bash(node generate_data.js)",
       "Bash(node renumber.js)",
       "Bash(grep -oP '\\\\{from:\\\\d+,to:\\\\d+[^}]*\\\\}' C:/Users/snke/OneDrive/ClaudeProjekte/kilernen/bauernschach_spielbaum.html)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(grep -v \"//.*click\\\\|//.*mouse\")"
     ]
   }
 }

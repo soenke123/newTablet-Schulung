@@ -582,7 +582,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 .sb-topbar h2{font-size:1rem; font-weight:700; margin:0;}
 .sb-layout{display:flex; flex:1; overflow:hidden;}
 .sb-left{
-  width:30%; min-width:320px; flex-shrink:0;
+  width:auto; flex-shrink:0;
   display:flex; flex-direction:column;
   border-right:1px solid var(--border); overflow-y:auto;
   background:var(--surface);
@@ -617,13 +617,12 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 .board.board-sb .cell.light{background:var(--sq-light2);}
 .board.board-sb .cell.dark{background:var(--sq-dark2);}
 .board.board-sb .cell.moved{background:#6b8c2a!important;}
-#sb-alien-canvas{display:block; width:100%; height:auto; aspect-ratio:1/1; border-radius:6px; background:#0d0520;}
+#sb-alien-canvas{display:block; border-radius:6px; background:#0d0520;}
 .sb-alien-options{padding:8px 10px 0; overflow-y:auto; flex:1;}
 /* ── Tablet / Touch-Gerät ── */
 @media (pointer:coarse) {
   .board.board-sb .cell{width:33px; height:33px; font-size:0.9rem;}
   .sb-brett-col .sb-status{width:auto; min-width:99px;}
-  #sb-alien-canvas{width:auto; height:auto; aspect-ratio:unset; flex-shrink:0;}
 }
 #sb-alien-ai-moves,
 #sb-alien-moves{display:flex; flex-direction:column; gap:4px; margin-top:4px; margin-bottom:6px;}
@@ -2867,8 +2866,8 @@ let sbSelectedNode = null;
 // ── Sandbox tree layout constants ──
 const SB_NW   = 44;   // node width
 const SB_NH_B = 44;   // brett board area height
-const SB_NH_A = 36;   // alien sprite area height
-const SB_NH   = 84;   // total node height (44 + 4 gap + 36)
+const SB_NH_A = 40;   // alien sprite area height (areaH = 40-4 = 36 = gleich wie Brett 3×SQ)
+const SB_NH   = 88;   // total node height (44 + 4 gap + 40)
 const SB_SQ   = 12;   // brett square size
 const SB_PAD  = 4;    // brett padding
 const SB_GAPX = 16;   // horizontal gap between nodes
@@ -3199,7 +3198,7 @@ function sbInitTree() {
   });
   cv.addEventListener('mousemove', e => {
     if (!sbDrag) return;
-    sbDragMoved = true;
+    if (Math.hypot(e.clientX - sbDragX0, e.clientY - sbDragY0) > 4) sbDragMoved = true;
     sbPanX = sbPanX0 + (e.clientX - sbDragX0);
     sbPanY = sbPanY0 + (e.clientY - sbDragY0);
     drawSandboxTree();
@@ -3259,7 +3258,16 @@ function sbInitTree() {
     }
   }, { passive: false });
 
-  cv.addEventListener('touchend', () => { sbDrag = false; });
+  cv.addEventListener('touchend', e => {
+    if (!sbDragMoved && e.changedTouches.length === 1) {
+      const t = e.changedTouches[0];
+      const rect = cv.getBoundingClientRect();
+      const hitId = sbNodeAt(t.clientX - rect.left, t.clientY - rect.top);
+      sbSelectedNode = (hitId === null || hitId === sbSelectedNode) ? null : hitId;
+      drawSandboxTree();
+    }
+    sbDrag = false;
+  });
 }
 
 // ── Brett panel render ──
@@ -3464,13 +3472,13 @@ function renderSandboxAlien() {
   }
 }
 
-// ── Auf Touch-Geräten: Alien-Canvas so hoch wie die Brett-Spalte ──
+// ── Alien-Canvas: Höhe = board.bottom − status.top (exakt Brett + Status-Zeile) ──
 function sbFitAlienCanvas() {
-  if (!navigator.maxTouchPoints) return;
-  const brettCol = document.querySelector('.sb-brett-col');
+  const statusEl = document.getElementById('sb-brett-status');
+  const boardEl  = document.getElementById('sb-brett-board');
   const canvas   = document.getElementById('sb-alien-canvas');
-  if (!brettCol || !canvas) return;
-  const h = brettCol.offsetHeight;
+  if (!statusEl || !boardEl || !canvas) return;
+  const h = Math.round(boardEl.getBoundingClientRect().bottom - statusEl.getBoundingClientRect().top);
   canvas.style.width  = h + 'px';
   canvas.style.height = h + 'px';
 }
