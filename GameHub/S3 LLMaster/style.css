@@ -53,7 +53,8 @@ html, body {
   min-height: 100dvh;
   max-height: 100vh;
   max-height: 100dvh;
-  padding: 12px clamp(8px, 2vw, 24px);
+  /* env(safe-area-inset-top) schützt vor Browser-Leiste auf Tablets/Phones */
+  padding: max(12px, env(safe-area-inset-top)) clamp(8px, 2vw, 24px) max(12px, env(safe-area-inset-bottom)) clamp(8px, 2vw, 24px);
   overflow: hidden;
 }
 
