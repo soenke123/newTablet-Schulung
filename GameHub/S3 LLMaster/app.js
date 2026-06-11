@@ -1303,16 +1303,19 @@ function initSlidingPuzzle(boardEl, imageUrl, rows, cols, onComplete, cheatRef) 
     // Brett auf die verfügbare Stage-Größe einpassen (Aspect Ratio bleibt erhalten)
     function sizeBoard() {
       const stage = boardEl.parentElement;
-      const pw = stage.clientWidth;
-      const ph = stage.clientHeight;
-      if (pw === 0 || ph === 0) return;
+      const cs    = getComputedStyle(stage);
+      const pw = stage.clientWidth  - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const ph = stage.clientHeight - parseFloat(cs.paddingTop)  - parseFloat(cs.paddingBottom);
+      if (pw <= 0 || ph <= 0) return;
       let w, h;
       if (pw / ph > ar) { h = ph; w = h * ar; }
       else              { w = pw; h = w / ar; }
       boardEl.style.width  = Math.floor(w) + "px";
       boardEl.style.height = Math.floor(h) + "px";
     }
-    sizeBoard();
+    // requestAnimationFrame stellt sicher, dass der HUD-Reflow committed ist
+    // bevor die Boardgröße berechnet wird (relevant bei gecachtem Bild)
+    requestAnimationFrame(sizeBoard);
     // Auf Größenänderungen reagieren (Tablet drehen, Fenstergröße ändern)
     window.addEventListener("resize", sizeBoard);
 

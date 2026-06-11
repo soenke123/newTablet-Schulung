@@ -2544,5 +2544,27 @@ html, body {
   #companion-widget { width: clamp(70px, 9vw, 86px); padding: 0.5rem 0.6rem; }
   #companion-widget #eggVisual img,
   #companion-widget #eggVisual svg { width: clamp(50px, 7vw, 66px); height: clamp(50px, 7vw, 66px); }
+
+  /* ── Abschluss-Puzzle (screen-puzzle2) ─────────────────────────── */
+  /* Weniger vertikales Padding damit HUD + Board auf den Bildschirm passen */
+  #screen-puzzle2 {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  /* HUD kompakter + links genug Platz für das Companion-Widget (fixed, ~86px breit) */
+  .p2-hud {
+    padding: 5px clamp(8px, 1.2vw, 14px) 5px clamp(76px, 10.5vw, 96px);
+    gap: clamp(6px, 0.9vw, 10px);
+    margin-bottom: 4px;
+    border-radius: 10px;
+  }
+  .p2-hud-value { font-size: clamp(14px, 2vw, 18px); }
+  .p2-hud-label { font-size: clamp(8px, 1vw, 10px); }
+  .p2-hud-item  { min-width: clamp(36px, 4.8vw, 48px); }
+  .p2-cheat-btn {
+    font-size: clamp(11px, 1.4vw, 13px);
+    padding: 4px clamp(7px, 1vw, 10px);
+  }
+  .p2-cheat-cost { font-size: clamp(9px, 1.1vw, 11px); }
 }
 
