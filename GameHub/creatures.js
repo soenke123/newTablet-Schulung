@@ -417,7 +417,7 @@ function determineCreature(correct, isFirst = false, gameId = null) {
   // Epische Tiere – immer möglich, Score-abhängig
   if (correct >= 9 && Math.random() < 0.05) return 'turtle';
   if (correct <= 2 && Math.random() < 0.05) return 'butterfly';
-  if (correct >= 4 && correct <= 6 && (typeof SEASON_3_OPEN === 'undefined' || SEASON_3_OPEN) && Math.random() < 0.05) return 'chamaeleon';
+  if (correct >= 4 && correct <= 6 && (typeof _rel === 'undefined' || _rel) && Math.random() < 0.05) return 'chamaeleon';
 
   // Schneckendrache – selten, unabhängig vom Rang
   const epicChance = (correct <= 2 || correct === 10) ? 5 : 2;
@@ -428,7 +428,7 @@ function determineCreature(correct, isFirst = false, gameId = null) {
   if (seasonRare && Math.random() < 0.08) return seasonRare;
 
   // Season 3 – neue Normale teilen Plätze mit alten (50/50)
-  if (typeof SEASON_3_OPEN === 'undefined' || SEASON_3_OPEN) {
+  if (typeof _rel === 'undefined' || _rel) {
     if (correct <= 3                    && Math.random() < 0.5) return 'frosch';
     if (correct >= 4 && correct <= 6   && Math.random() < 0.5) return 'pinguin';
     if (correct >= 7 && correct <= 9   && Math.random() < 0.5) return 'raptor';
@@ -444,7 +444,7 @@ function determineCreature(correct, isFirst = false, gameId = null) {
 }
 
 function determineEpicCreature() {
-  const s3 = typeof SEASON_3_OPEN === 'undefined' || SEASON_3_OPEN;
+  const s3 = typeof _rel === 'undefined' || _rel;
   const r = Math.random();
   if (s3) {
     if (r < 0.30) return 'butterfly';
@@ -481,7 +481,7 @@ function determineEggCreature(eggType, correct) {
   const legendaryChance = { rare: 0.3, mythic: 0.6, legendary: 1.0 }[eggType] ?? 0;
   if (Math.random() < legendaryChance) return determineEpicCreature();
   const normals = ['snail', 'fish', 'chicken', 'salamander', 'falkeneule', 'triceratops', 'dragon'];
-  if (typeof SEASON_3_OPEN === 'undefined' || SEASON_3_OPEN) {
+  if (typeof _rel === 'undefined' || _rel) {
     normals.push('frosch', 'pinguin', 'raptor');
   }
   return normals[Math.floor(Math.random() * normals.length)];

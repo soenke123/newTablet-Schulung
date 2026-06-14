@@ -40,7 +40,7 @@ All game logic, styling, and markup live in `index.html`. There are no external 
 
 ## GameHub Integration (currently incomplete)
 
-The game is registered in the parent hub as `game11` with password `qweasdyxc` (see `../config.js`), but it does **not** yet call `saveGameData()` or import `../creatures.js`.
+The game is registered in the parent hub as `game11` (see `../config.js`), but it does **not** yet call `saveGameData()` or import `../creatures.js`.
 
 To complete integration, add before `</body>`:
 ```html

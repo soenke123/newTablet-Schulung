@@ -9,7 +9,6 @@
    ZUGRIFFSKONTROLLE (geladen aus config.json)
    ───────────────────────────────────────────────── */
 let GAME_ACCESS = {};
-let SEASON_3_OPEN = false;
 function loadUnlocked() { return window.getUnlocked ? window.getUnlocked() : []; }
 function saveUnlocked(gameId) { if (window.setUnlocked) window.setUnlocked(gameId); }
 
@@ -21,7 +20,7 @@ window.hashPassword = hashPassword;
 
 function getGameAccess(gameId) {
   const game = GAMES_CONFIG.find(g => g.id === gameId);
-  if (game?.season === 3 && !SEASON_3_OPEN) return 'locked';
+  if (game?.season === 3 && !_rel) return 'locked';
   const cfg = GAME_ACCESS[gameId];
   if (!cfg || cfg.status === 'available') return 'available';
   if (cfg.status === 'locked') return 'locked';
@@ -48,7 +47,7 @@ const GAMES_CONFIG = [
 const SEASONS_CONFIG = [
   { id: 1, title: 'Season 1 – Regeln, Ordnung, Dateien',      desc: 'Diese Season knüpft an die Inhalte der ersten Tablet-Schulung an und bringt dein Wissen auf das nächste Level. In drei spannenden Spielen sicherst und vertiefst du wichtige Grundlagen rund um die Tabletnutzung – von unseren Hausregeln über Dateiformate bis hin zur richtigen Struktur auf deinem Gerät. So wirst du Schritt für Schritt sicherer und schneller im Umgang mit deinem Tablet.' },
   { id: 2, title: 'Season 2 – Aufmerksamkeit und Schreiben', desc: 'Deine Aufmerksamkeit ist eine deiner wichtigsten Ressourcen – deshalb lohnt es sich, bewusst mit ihr umzugehen. Diese Season baut auf den Inhalten eines Workshops aus der ersten Schulung. In zwei Aufmerksamkeitsspielen geht es um Fokus und das Binden von Aufmerksamkeit. Außerdem tauchst du mit Tip Turbo Kids in das 10-Finger-Blindschreiben ein: Vielleicht nicht die wichtigste Methode zum Lernen, aber eine Fähigkeit, die dir das Schreiben längerer Texte enorm erleichtert und im Schulalltag wie auch später im Berufsleben unverzichtbar ist.' },
-  { id: 3, title: 'Season 3 – LLM und Recherche',     desc: 'Age of Seal – Zeitalter der Siegel' },
+  { id: 3, title: 'Season 3 – LLM und Recherche',     desc: 'Welchen Quellen kannst du vertrauen – und wie erkennst du es? In dieser Season lernst du, Quellen zu bewerten und ihre Glaubwürdigkeit einzuschätzen. Du erforschst außerdem, wie Sprachmodelle wie ChatGPT funktionieren: Was passiert eigentlich unter der Haube – und warum verstehen KIs viel weniger, als es auf den ersten Blick scheint? Drei Spiele, ein Grundverständnis für das mächtigste Werkzeug unserer Zeit.' },
 ];
 
 /* ─────────────────────────────────────────────────
@@ -68,12 +67,12 @@ const SHOP_ITEMS = [
 ];
 
 // Atari2 · Enter 1-5-0-7
-const CREATURE_ORDER = ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','butterfly','snaildragon','turtle','robot','pfau','biene','oktopus','ente','frosch','pinguin','raptor','chinDrache','schnabeltier'];
+const CREATURE_ORDER = ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','butterfly','snaildragon','turtle','chamaeleon','robot','pfau','biene','oktopus','ente','frosch','pinguin','raptor','chinDrache','schnabeltier'];
 const S3_CREATURES   = new Set(['ente','chamaeleon','chinDrache','schnabeltier','frosch','pinguin','raptor']);
 
 /* Season 2 Kreatur-Paket – bald verfügbar (nur im Buch sichtbar wenn Season 3 offen) */
 const S2_NORMALS   = [];
-const S2_EPICS     = ['chamaeleon'];
+const S2_EPICS     = [];
 const S2_LEGIES    = [];
 
 const RELEASE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z"/></svg>`;
@@ -189,7 +188,7 @@ function renderHub() {
   initGalleryWalk();
   applyThemeFromPreference(allData);
   _injectPfauThemeStyles();
-  document.body.classList.toggle('s3-active', typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN);
+  document.body.classList.toggle('s3-active', typeof _rel !== 'undefined' && _rel);
   updateLootboxBlink();
 
   if (shopData.pendingEggNestId) enterPendingEggMode();
@@ -532,7 +531,7 @@ function claimFreeLootbox() {
 }
 
 function updateLootboxBlink() {
-  const blink = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN && getFreeLootboxStatus().available > 0;
+  const blink = typeof _rel !== 'undefined' && _rel && getFreeLootboxStatus().available > 0;
   document.getElementById('shopBtn')?.classList.toggle('lootbox-blink', blink);
   document.querySelector('.shop-tab[data-tab="2"]')?.classList.toggle('lootbox-blink', blink);
 }
@@ -584,7 +583,7 @@ function rollLootbox(shopData, allData) {
 
   // 6% Epic (kumulativ 13%)
   if (r < 13) {
-    const s3Open = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN;
+    const s3Open = typeof _rel !== 'undefined' && _rel;
     const hasEligible = s3Open && Object.values(allData).some(d => d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6);
     if (hasEligible)
       return { rarity: 'epic', steinDerVollendung: true, label: 'Stein der Vollendung', icon: '🧿', consumables: _emptyConsumables(), coins: 0, kristalle: 0, egg: null, seal: null };
@@ -630,7 +629,7 @@ function applyLootboxReward(reward) {
     sd.pendingEggNestId = nestId;
   }
   if (reward.steinDerVollendung) {
-    const s3Open = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN;
+    const s3Open = typeof _rel !== 'undefined' && _rel;
     if (s3Open) {
       const eligible = Object.keys(allData).filter(k => allData[k]?.creature && allData[k].growth >= GROWTH_MAX && allData[k].growth < GROWTH_S6);
       if (eligible.length > 0) {
@@ -773,14 +772,14 @@ const SHOP_ITEMS_P2 = [
   { id: 's3Ei',               icon: '🥚', name: 'versiegeltes Ei',              description: 'Hier droppen nur Monster aus Season 3 – Epic, Rare und Normal.',                                                                              price: 8,   currency: 'kristall', eggItem: true, eggType: 's3' },
   { id: 'backupDesBuches',    icon: '💾', name: 'Backup des Buches',          description: 'Lade ein beliebiges Monster aus dem Buch der Monster in einen Hub – kostet 2 Kristalle pro Nutzung.',                                                         price: 20,  currency: 'kristall', backupItem: true },
   { id: 'steinDerVollendung', icon: '🧿', name: 'Stein der Vollendung',   description: 'Löst die verborgenen Fesseln eines zufälligen Wesens und öffnet den Weg zu einer Stufe, die niemand für möglich hielt.',                                              price: 10,  currency: 'kristall', consumable: true, upgradeItem: true },
-  { id: 'siegelSuempfe',      icon: '🌿', name: 'Siegel der Sümpfe nn',      description: 'Ein moosbedecktes Siegel aus den Tiefen der Sümpfe. Nur Kristalle können es öffnen.',                                                                        price: 20,  currency: 'kristall', sealItem: true, sealType: 'swamp'  },
-  { id: 'siegelHimmel',       icon: '🌟', name: 'Siegel des Himmels nn',     description: 'Ein strahlendes Siegel aus den Höhen. Bezahle mit Kristallen, um zu enthüllen, was sich dahinter verbirgt.',                                                 price: 20,  currency: 'kristall', sealItem: true, sealType: 'heaven' },
+  { id: 'siegelSuempfe',      icon: '🌿', name: 'Siegel der Sümpfe',         description: 'Ein moosbedecktes Siegel aus den Tiefen der Sümpfe. Nur Kristalle können es öffnen.',                                                                        price: 20,  currency: 'kristall', sealItem: true, sealType: 'swamp'  },
+  { id: 'siegelHimmel',       icon: '🌟', name: 'Siegel des Himmels',        description: 'Ein strahlendes Siegel aus den Höhen. Bezahle mit Kristallen, um zu enthüllen, was sich dahinter verbirgt.',                                                 price: 20,  currency: 'kristall', sealItem: true, sealType: 'heaven' },
 ];
 
 function openShopModal() {
   const modal = document.getElementById('shopModal');
   if (!modal) return;
-  shopActiveTab = (typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN) ? 2 : 1;
+  shopActiveTab = (typeof _rel !== 'undefined' && _rel) ? 2 : 1;
   if (!modal._tabsWired) {
     modal._tabsWired = true;
     document.querySelectorAll('.shop-tab').forEach(btn => {
@@ -800,7 +799,7 @@ function closeShopModal() {
 // Atari5 · Enter 2-7-1-8
 function renderShop(allData, tab) {
   if (tab !== undefined) shopActiveTab = tab;
-  const s3Open = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN;
+  const s3Open = typeof _rel !== 'undefined' && _rel;
 
   _renderShopTabs(s3Open);
 
@@ -816,6 +815,15 @@ function renderShop(allData, tab) {
   const activeItems = shopActiveTab === 1 ? SHOP_ITEMS : SHOP_ITEMS_P2;
   for (const item of activeItems) {
     list.appendChild(_buildShopItem(item, shopData, allData, available, s3Open));
+  }
+
+  const bannerText = document.getElementById('shopChallengeBannerText');
+  if (bannerText) {
+    if (shopActiveTab === 1) {
+      bannerText.innerHTML = 'Hast du alle <strong>14 Kreaturen</strong> gefunden und großgezogen?<br>Dann schicke mir einen Screenshot von deinem <strong>Buch der Monster!</strong><br>Die ersten drei <strong>Monster-Meister</strong> erhalten einen Preis!';
+    } else {
+      bannerText.innerHTML = 'Hast du alle <strong>7 neuen Kreaturen</strong> aus Season 3 gefunden und großgezogen?<br>Dann schicke mir einen Screenshot von deinem <strong>Buch der Monster!</strong><br>Die ersten drei <strong>Monster-Meister</strong> erhalten einen Preis!';
+    }
   }
 }
 
@@ -1087,7 +1095,7 @@ function buyItem(itemId) {
   }
 
   if (item.upgradeItem) {
-    const s3Open = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN;
+    const s3Open = typeof _rel !== 'undefined' && _rel;
     if (!s3Open) return;
     const eligibleKeys = Object.keys(allData).filter(k => {
       const d = allData[k];
@@ -1635,7 +1643,7 @@ const SEALED_EGG_DEFS = {
           const h = async s => Array.from(new Uint8Array(
             await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s.trim()))
           )).map(b => b.toString(16).padStart(2,'0')).join('');
-          return await h(val) === 'd8033f6baef90a59408348e855fb1495597bb0c7fbcd0396932ac470b3d9be2e';
+          return await h(val) === '577587694431fae945617def651986628c43050eea00c5e45660ba158f8a60da';
         }
       },
     ]
@@ -2071,7 +2079,7 @@ function openBookModal() {
   if (!overlay || !content) return;
 
   const seen    = sd.seenCreatures;
-  const s3Open  = typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN;
+  const s3Open  = typeof _rel !== 'undefined' && _rel;
   const visibleOrder = s3Open ? CREATURE_ORDER : CREATURE_ORDER.filter(c => !S3_CREATURES.has(c));
   const total   = visibleOrder.length;
   const found   = Object.keys(seen).filter(c => visibleOrder.includes(c)).length;
@@ -2109,7 +2117,7 @@ function openBookModal() {
     ? ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','frosch','pinguin','raptor']
     : ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon'];
   const rares   = s3Open ? ['biene','oktopus','ente'] : ['biene','oktopus'];
-  const epics   = ['butterfly','snaildragon','turtle'];
+  const epics   = s3Open ? ['butterfly','snaildragon','turtle','chamaeleon'] : ['butterfly','snaildragon','turtle'];
   const legies  = s3Open ? ['robot','pfau','chinDrache','schnabeltier'] : ['robot','pfau'];
 
   const makeS2Slot = (creature) => {
@@ -2122,9 +2130,9 @@ function openBookModal() {
     </div>`;
   };
 
-  const s2NormalsHtml = SEASON_3_OPEN ? S2_NORMALS.map(makeS2Slot).join('') : '';
-  const s2EpicsHtml   = SEASON_3_OPEN ? S2_EPICS.map(makeS2Slot).join('') : '';
-  const s2LegiesHtml  = SEASON_3_OPEN ? S2_LEGIES.map(makeS2Slot).join('') : '';
+  const s2NormalsHtml = _rel ? S2_NORMALS.map(makeS2Slot).join('') : '';
+  const s2EpicsHtml   = _rel ? S2_EPICS.map(makeS2Slot).join('') : '';
+  const s2LegiesHtml  = _rel ? S2_LEGIES.map(makeS2Slot).join('') : '';
 
   content.innerHTML = `
     <div class="book-modal-inner">

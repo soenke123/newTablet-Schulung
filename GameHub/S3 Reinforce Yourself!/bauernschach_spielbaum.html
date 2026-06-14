@@ -66,6 +66,7 @@
   </div>
 </div>
 
+<script src="../creatures.js"></script>
 <script>
 const W=1,B=2;
 const dark=matchMedia('(prefers-color-scheme: dark)').matches;
@@ -78,34 +79,30 @@ const TERM_EDGES=[{from:5,win:1},{from:6,win:1},{from:16,win:-1},{from:14,win:-1
 
 const nmap=new Map(NODES.map(n=>[n.id,n]));
 
-// localStorage persistence
-const LS_KEY='brettspiel_comments';
-const LS_EDGE_KEY='brettspiel_edge_comments';
-const LS_POS_KEY='brettspiel_positions';
+// localStorage persistence via creatures.js saveStorage/loadStorage (Base64 + Prüfsumme)
+const LS_KEY='brettspiel_v1';
 const comments=new Map();
 const edgeComments=new Map();
 try{
-  const saved=JSON.parse(localStorage.getItem(LS_KEY)||'{}');
-  Object.entries(saved).forEach(([k,v])=>comments.set(Number(k),v));
+  const saved=loadStorage(LS_KEY);
+  Object.entries(saved.comments||{}).forEach(([k,v])=>comments.set(Number(k),v));
+  Object.entries(saved.edgeComments||{}).forEach(([k,v])=>edgeComments.set(k,v));
 }catch(e){}
-try{
-  const saved=JSON.parse(localStorage.getItem(LS_EDGE_KEY)||'{}');
-  Object.entries(saved).forEach(([k,v])=>edgeComments.set(k,v));
-}catch(e){}
-function saveComments(){
-  const obj={};comments.forEach((v,k)=>obj[k]=v);
-  try{localStorage.setItem(LS_KEY,JSON.stringify(obj));}catch(e){}
+function _saveBrettspiel(){
+  const co={};comments.forEach((v,k)=>co[k]=v);
+  const ec={};edgeComments.forEach((v,k)=>ec[k]=v);
+  const cur=loadStorage(LS_KEY);
+  saveStorage(LS_KEY,Object.assign({},cur,{comments:co,edgeComments:ec}));
 }
-function saveEdgeComments(){
-  const obj={};edgeComments.forEach((v,k)=>obj[k]=v);
-  try{localStorage.setItem(LS_EDGE_KEY,JSON.stringify(obj));}catch(e){}
-}
+function saveComments(){ _saveBrettspiel(); }
+function saveEdgeComments(){ _saveBrettspiel(); }
 function savePositions(){
   const obj={};
   NODES.forEach(n=>obj['n'+n.id]={x:n.x,y:n.y});
   obj['sinkW']={x:SINK_W.x,y:SINK_W.y};
   obj['sinkB']={x:SINK_B.x,y:SINK_B.y};
-  try{localStorage.setItem(LS_POS_KEY,JSON.stringify(obj));}catch(e){}
+  const cur=loadStorage(LS_KEY);
+  saveStorage(LS_KEY,Object.assign({},cur,{positions:obj}));
 }
 const NW=42,NH=42,SQ=12,PAD=3,GAPX=18,GAPY=66,SINK_R=30;
 
@@ -140,7 +137,7 @@ const canvasH=sinkY+SINK_R+60;
 
 // restore saved node positions
 try{
-  const sp=JSON.parse(localStorage.getItem(LS_POS_KEY)||'{}');
+  const sp=loadStorage(LS_KEY).positions||{};
   NODES.forEach(n=>{const p=sp['n'+n.id];if(p){n.x=p.x;n.y=p.y;}});
   if(sp['sinkW']){SINK_W.x=sp['sinkW'].x;SINK_W.y=sp['sinkW'].y;}
   if(sp['sinkB']){SINK_B.x=sp['sinkB'].x;SINK_B.y=sp['sinkB'].y;}

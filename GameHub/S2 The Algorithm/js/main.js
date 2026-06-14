@@ -1293,24 +1293,26 @@ function currentScore() {
   return Math.max(0, Math.floor((mins - 120) / 60));
 }
 
+function loadAlgHighscores() {
+  const d = loadStorage('algorithm_hs_v1');
+  return { highscore: Number(d.highscore || 0), bestTime: Number(d.bestTime || 0) };
+}
+
 function renderScore() {
   const s = currentScore();
   gameState.score = s;
   document.getElementById('score-value').textContent = s;
-  const hs = parseInt(localStorage.getItem('algorithmHighscore') || '0', 10);
+  const hs = loadAlgHighscores().highscore;
   document.getElementById('highscore-value').textContent = hs;
   updateAlgCreatureDisplay();
 }
 
 function saveHighscore() {
-  const hs = parseInt(localStorage.getItem('algorithmHighscore') || '0', 10);
-  if (gameState.score > hs) {
-    localStorage.setItem('algorithmHighscore', String(gameState.score));
-  }
+  const stored = loadAlgHighscores();
+  if (gameState.score > stored.highscore) stored.highscore = gameState.score;
   const t = Math.floor(realToIngameMinutes(gameState.elapsedSeconds));
-  if (t > parseInt(localStorage.getItem('algorithmBestTime') || '0', 10)) {
-    localStorage.setItem('algorithmBestTime', String(t));
-  }
+  if (t > stored.bestTime) stored.bestTime = t;
+  saveStorage('algorithm_hs_v1', stored);
 }
 
 function renderBackground() {
@@ -1713,7 +1715,7 @@ function init() {
   initValueInfoPanels();
   initFeedInfoPanel();
 
-  const hs = parseInt(localStorage.getItem('algorithmHighscore') || '0', 10);
+  const hs = loadAlgHighscores().highscore;
   if (hs >= 10) {
     document.getElementById('endless-mode-btn').style.display = '';
     document.getElementById('cards-overview-btn').style.display = '';

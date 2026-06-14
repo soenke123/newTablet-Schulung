@@ -167,7 +167,7 @@
       <div class="shop-list" id="shopList"></div>
       <div class="shop-challenge-banner">
         <div class="shop-challenge-banner__icon">🏆</div>
-        <p class="shop-challenge-banner__text">
+        <p class="shop-challenge-banner__text" id="shopChallengeBannerText">
           Hast du alle Monster gefunden und großgezogen?<br>
           Dann schicke mir einen Screenshot von deinem <strong>Buch der Monster!</strong><br>
           Die ersten drei <strong>Monster-Meister</strong> erhalten einen Preis!
@@ -209,7 +209,7 @@
       renderHub();
 
       // Season 3 Announcement — einmal pro Sitzung zeigen
-      if (typeof SEASON_3_OPEN !== 'undefined' && SEASON_3_OPEN
+      if (typeof _rel !== 'undefined' && _rel
           && !sessionStorage.getItem('s3_modal_seen')) {
         document.getElementById('s3Modal').hidden = false;
       }
