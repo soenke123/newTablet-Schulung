@@ -1543,19 +1543,21 @@ html, body {
 
 .ks-zone-slots {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
 }
 
-/* Chip (platzierte Karte in der Zone) */
+/* Chip (platzierte Karte in der Zone) — Icon only */
 .ks-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   background: white;
   border: 2px solid var(--ks-color, var(--c-primary));
   border-radius: 10px;
-  padding: 6px 8px;
+  padding: 6px;
   cursor: grab;
   transition: opacity 0.15s, border-color 0.2s, background 0.2s;
   user-select: none;
@@ -1565,18 +1567,12 @@ html, body {
 .ks-chip:hover { opacity: 0.85; }
 .ks-chip-icon {
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   color: var(--ks-color, var(--c-primary));
   display: flex;
 }
 .ks-chip-icon svg { width: 100%; height: 100%; }
-.ks-chip-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--c-text);
-  line-height: 1.35;
-}
 .ks-chip.is-correct {
   border-color: var(--c-success);
   background: rgba(76, 175, 80, 0.1);
@@ -2454,8 +2450,6 @@ html, body {
   .ks-zones { gap: clamp(6px, 1vw, 10px); margin-bottom: clamp(10px, 1.3dvh, 16px); }
   .ks-zone  { min-height: clamp(88px, 13dvh, 120px); padding: clamp(7px, 1vw, 10px); }
   .ks-zone-label { font-size: clamp(10px, 1.3vw, 12px); }
-  .ks-chip-text  { font-size: clamp(10px, 1.3vw, 12px); }
-  .ks-chip { padding: clamp(4px, 0.6dvh, 6px) clamp(6px, 0.9vw, 8px); }
   .ks-card { width: clamp(86px, 11vw, 110px); height: clamp(116px, 15dvh, 148px); padding-bottom: 8px; }
   .ks-card-icon { width: clamp(42px, 5.5vw, 58px); height: clamp(42px, 5.5vw, 58px); top: 6px; }
   .ks-card-text { font-size: clamp(10px, 1.3vw, 11.5px); }
@@ -2639,6 +2633,20 @@ html, body {
   .quiz-card footer { gap: 8px; }
   .quiz-card footer .btn-secondary,
   .quiz-card footer .btn-primary { font-size: 13px; padding: 9px 16px; }
+
+  /* Station 7 Phase 2 — Erklärungs-Karussell */
+  .beg-expl-grid                    { display: block; }
+  .beg-expl-card                    { display: none; }
+  .beg-expl-card.is-carousel-active { display: flex; flex-direction: column; }
+
+  .beg-carousel-dots { display: flex; gap: 7px; justify-content: center; padding: 8px 0 4px; }
+  .beg-carousel-dot  { width: 8px; height: 8px; border-radius: 50%; background: #d5ceef; flex-shrink: 0; transition: background 0.2s, transform 0.2s; }
+  .beg-carousel-dot.is-active { background: var(--c-primary); transform: scale(1.3); }
+
+  .beg-heading   { font-size: 15px; margin-bottom: 3px; }
+  .beg-sub       { font-size: 12px; margin-bottom: 6px; }
+  .beg-hand      { padding: 8px 10px; gap: 6px; margin-bottom: 6px; }
+  .beg-term-chip { font-size: 12px; padding: 5px 11px; }
 
   /* Station 2 — Multiple Choice */
   .mc-section-intro        { padding: 14px 12px; }

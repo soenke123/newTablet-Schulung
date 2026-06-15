@@ -1835,7 +1835,7 @@ function renderKartenSort(bodyEl, actionBtn, quiz) {
     const chip = document.createElement("div");
     chip.className  = "ks-chip";
     chip.dataset.ks = idx;
-    chip.innerHTML  = `<span class="ks-chip-icon">${ksSvg(card.icon)}</span><span class="ks-chip-text">${card.text}</span>`;
+    chip.innerHTML  = `<span class="ks-chip-icon">${ksSvg(card.icon)}</span>`;
     attachChipDrag(chip, idx);
     zone.appendChild(chip);
 
@@ -2312,6 +2312,46 @@ function renderWahrOderMythos(bodyEl, actionBtn, quiz) {
 // =====================================================================
 // Station 7 — "Schlüsselkonzepte" (Render-Funktion)
 // =====================================================================
+
+function initBegCarousel(gridEl) {
+  if (window.innerWidth > 640) return;
+  const cards = Array.from(gridEl.querySelectorAll(".beg-expl-card"));
+  if (!cards.length) return;
+  let current = 0;
+
+  const dotsEl = document.createElement("div");
+  dotsEl.className = "beg-carousel-dots";
+  cards.forEach(() => {
+    const dot = document.createElement("span");
+    dot.className = "beg-carousel-dot";
+    dotsEl.appendChild(dot);
+  });
+  gridEl.insertAdjacentElement("afterend", dotsEl);
+
+  function goTo(idx) {
+    cards[current].classList.remove("is-carousel-active");
+    current = ((idx % cards.length) + cards.length) % cards.length;
+    cards[current].classList.add("is-carousel-active");
+    dotsEl.querySelectorAll(".beg-carousel-dot").forEach((d, i) =>
+      d.classList.toggle("is-active", i === current));
+  }
+
+  goTo(0);
+
+  let swipeStart = null;
+  gridEl.addEventListener("pointerdown", e => {
+    if (e.target.closest(".beg-term-chip")) return;
+    swipeStart = { x: e.clientX, id: e.pointerId };
+  });
+  gridEl.addEventListener("pointerup", e => {
+    if (!swipeStart || e.pointerId !== swipeStart.id) return;
+    const dx = e.clientX - swipeStart.x;
+    swipeStart = null;
+    if (Math.abs(dx) > 40) goTo(dx < 0 ? current + 1 : current - 1);
+  });
+  gridEl.addEventListener("pointercancel", () => { swipeStart = null; });
+}
+
 function setBegPhaseTag(label) {
   let tag = document.querySelector(".quiz-badge .beg-phase-tag");
   if (!tag) {
@@ -2449,6 +2489,8 @@ function renderBegriffe(bodyEl, actionBtn) {
       attachTermDrag(chip, termIdx);
       handEl.appendChild(chip);
     });
+
+    initBegCarousel(gridEl);
 
     function attachTermDrag(el, termIdx) {
       let drag = null;

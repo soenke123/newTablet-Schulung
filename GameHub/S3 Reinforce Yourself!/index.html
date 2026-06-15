@@ -339,6 +339,20 @@ body{
 #score-total{font-size:1.35rem; font-weight:800; color:var(--accent);}
 .sw-pkt{font-size:.78rem; color:var(--muted);}
 
+/* ── Mobile Score Button (Overview) ── */
+.ov-score-btn{
+  display:none; position:absolute; top:0; right:0;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:20px; padding:4px 12px;
+  font-size:.8rem; font-weight:700; color:var(--accent);
+  cursor:pointer; transition:background .15s;
+}
+.ov-score-btn:hover{background:var(--border);}
+@media(max-width:600px){
+  #score-widget{display:none !important;}
+  .ov-score-btn{display:block;}
+}
+
 /* ── Score Badge (in-game screens) ── */
 .score-badge{
   position:absolute; top:12px; right:16px;
@@ -678,6 +692,19 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 
   /* Topbar: "Simulation" ausblenden */
   .sb-beenden-long{display:none;}
+
+  /* Companion im sb-bottom eingebettet */
+  #companion-widget.sb-companion-inline{
+    position:static !important;
+    width:100% !important;
+    margin-top:10px;
+    border-radius:var(--radius);
+    background:var(--surface);
+    border-color:var(--border);
+    color:var(--text);
+  }
+  #companion-widget.sb-companion-inline #eggVisual img,
+  #companion-widget.sb-companion-inline #eggVisual svg{width:72px;height:72px;}
 }
 
 /* ── Win Screens ── */
@@ -785,6 +812,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
   <div class="ov-main">
   <div class="ov-header">
     <span class="back-link" onclick="resetAndGoHub()">← Hub</span>
+    <button class="ov-score-btn" id="ov-score-btn" onclick="openScoreModal()">0 Pkt</button>
     <h1>Reinforce Yourself!</h1>
     <p>Lerne wie eine Maschine</p>
   </div>
@@ -1224,6 +1252,23 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════ SCORE MODAL (nur Mobile) -->
+<dialog id="score-modal">
+  <h3>Punkte</h3>
+  <div style="margin-top:14px;">
+    <div class="sw-row" id="sm-row-p1"><span class="sw-label">Phase 1</span><span class="sw-val" id="sm-p1">—</span><span class="sw-check">✓</span></div>
+    <div class="sw-row" id="sm-row-q1"><span class="sw-label">Quiz 1</span><span class="sw-val" id="sm-q1">—</span><span class="sw-check">✓</span></div>
+    <div class="sw-row" id="sm-row-p2"><span class="sw-label">Phase 2</span><span class="sw-val" id="sm-p2">—</span><span class="sw-check">✓</span></div>
+    <div class="sw-row" id="sm-row-q2"><span class="sw-label">Quiz 2</span><span class="sw-val" id="sm-q2">—</span><span class="sw-check">✓</span></div>
+    <div class="sw-row"><span class="sw-label">Phase 3</span><span class="sw-val" id="sm-p3">—</span></div>
+    <hr class="sw-divider">
+    <div class="sw-total"><span id="sm-score-total">0 / 414</span><span class="sw-pkt">Pkt</span></div>
+  </div>
+  <div class="dialog-btns" style="margin-top:18px;">
+    <button class="btn btn-primary" onclick="document.getElementById('score-modal').close()">Schließen</button>
+  </div>
+</dialog>
+
 <!-- ════════════════════════════════════════ SANDBOX INTRO DIALOG -->
 <dialog id="sandbox-intro-dialog">
   <h3>Sandbox — Freies Erkunden</h3>
@@ -1298,6 +1343,13 @@ function el(name) {
 }
 
 function showScreen(id) {
+  if (id !== 'screen-p3-sandbox') {
+    const cw = document.getElementById('companion-widget');
+    if (cw && cw.classList.contains('sb-companion-inline')) {
+      cw.classList.remove('sb-companion-inline');
+      document.body.insertBefore(cw, document.body.firstChild);
+    }
+  }
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.body.dataset.screen = id;
@@ -2119,6 +2171,23 @@ function updateP1Stats() {
   }
 }
 
+function openScoreModal() {
+  ['p1','q1','p2','q2','p3'].forEach(k => {
+    const src = document.getElementById('sw-' + k);
+    const dst = document.getElementById('sm-' + k);
+    if (src && dst) dst.textContent = src.textContent;
+  });
+  const total = document.getElementById('score-total');
+  const smTotal = document.getElementById('sm-score-total');
+  if (total && smTotal) smTotal.textContent = total.textContent;
+  ['p1','q1','p2','q2'].forEach(k => {
+    const srcRow = document.getElementById('sw-row-' + k);
+    const dstRow = document.getElementById('sm-row-' + k);
+    if (srcRow && dstRow) dstRow.classList.toggle('score-locked', srcRow.classList.contains('score-locked'));
+  });
+  document.getElementById('score-modal').showModal();
+}
+
 function updateScoreDisplay() {
   const total  = score.total;
   const p2     = score.p2brett + score.p2alien;
@@ -2128,6 +2197,7 @@ function updateScoreDisplay() {
   if (widget) widget.classList.toggle('visible', total > 0 || score.p1 > 0);
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   set('score-total',      total       + ' / ' + maxTot);
+  set('ov-score-btn',     total       + ' / ' + maxTot + ' Pkt');
   set('sw-p1',            score.p1    + ' / 100');
   set('sw-q1',            score.quiz1 + ' / 40');
   set('sw-p2',            p2          + ' / 100');
@@ -3727,7 +3797,15 @@ function enterSandbox() {
     recalcScore();
   }
   showScreen('screen-p3-sandbox');
-  if (window.matchMedia('(max-width:600px)').matches && !sbSettingsOpen) sbToggleSettings();
+  if (window.matchMedia('(max-width:600px)').matches) {
+    const cw = document.getElementById('companion-widget');
+    const sbBottom = document.querySelector('#screen-p3-sandbox .sb-bottom');
+    if (cw && sbBottom && !cw.classList.contains('sb-companion-inline')) {
+      sbBottom.appendChild(cw);
+      cw.classList.add('sb-companion-inline');
+    }
+    if (!sbSettingsOpen) sbToggleSettings();
+  }
   sbComputeLayout();
   sbInitTree();
   updateSbStatsDisplay();
