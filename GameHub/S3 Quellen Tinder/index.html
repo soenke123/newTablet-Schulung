@@ -251,15 +251,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   #s-game{height:auto;min-height:100vh;min-height:100dvh;overflow:auto}
   .g-main{flex-direction:column;overflow:visible}
 
-  /* Score-Leiste: horizontal, kompakt, eine Zeile */
+  /* Score-Leiste: [Ei] [──Ladebalken──] [Punkte X/16] – slim, eine Zeile */
   .g-left-col{flex:0 0 auto;max-width:none;width:100%;flex-direction:row;align-items:center;border-right:none;border-bottom:1px solid #e2e8f0;padding:5px 10px;gap:8px}
-  #eggVisual{min-height:0;width:46px;height:46px;flex-shrink:0}
-  #eggVisual img,#eggVisual svg{width:46px;height:46px}
+  .g-logo{font-size:.8rem}
+  #eggVisual{min-height:0;width:38px;height:38px;flex-shrink:0}
+  #eggVisual img,#eggVisual svg{width:38px;height:38px}
   #eggStageLabel{display:none}
-  #eggProgressBar{display:none}
+  #eggProgressBar{flex:1;width:auto!important;margin-top:0!important;height:5px;align-self:center;min-width:40px}
 
   /* Punkte: Label + Zahl in einer Zeile */
-  .score-live-box{flex:1;padding:4px 8px;display:flex;align-items:center;gap:5px;text-align:left;box-shadow:none;border-radius:8px}
+  .score-live-box{flex-shrink:0;padding:4px 8px;display:flex;align-items:center;gap:4px;text-align:left;box-shadow:none;border-radius:8px}
   .score-live-lbl{margin-bottom:0;font-size:.6rem}
   .score-live-num{font-size:1rem}
   .score-live-max{font-size:.82rem}
@@ -273,13 +274,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   .j-fifty{font-size:.72rem}
   .joker-sidebar{padding:8px 6px;gap:6px}
 
-  /* Ablage-Leiste */
+  /* Ablage-Leiste – normal (sichtbar wenn in View) */
   .g-bins-bar{height:auto;min-height:70px;max-height:none;padding:6px 8px;gap:4px}
   .bin{flex-direction:column;gap:2px;padding:5px 3px}
   .bin-icon-wrap{width:42px;height:42px}
   .bin-icon{font-size:2.6rem}
   .bin-letter{font-size:1rem}
   .bin-name{font-size:.6rem;text-align:center;white-space:normal}
+
+  /* Beim Ziehen: Bins als fixiertes Overlay von unten einblenden */
+  body.dragging .g-bins-bar{
+    position:fixed;bottom:0;left:0;right:0;z-index:700;
+    height:auto;min-height:85px;max-height:140px;
+    padding:8px 8px 12px;gap:5px;
+    box-shadow:0 -6px 28px rgba(0,0,0,.28);
+    border-top:2px solid #cbd5e1;
+    animation:binsPopUp .18s ease;
+  }
+  @keyframes binsPopUp{
+    from{transform:translateY(70%);opacity:0}
+    to{transform:translateY(0);opacity:1}
+  }
+  body.dragging .bin{padding:6px 3px}
+  body.dragging .bin-icon{font-size:2.8rem}
 }
 
 /* Tablets: dvh-proportionales Layout — greift auf ALLEN iPads (Touch-Screen, kein Maus-Desktop) */
@@ -371,7 +388,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div id="s-game" class="screen">
   <header class="g-header">
     <button class="hub-btn-header" onclick="resetAndGoHub()">&#8592; Hub</button>
-    <span class="g-logo">CRAAP</span>
+    <span class="g-logo">Quellen-Tinder</span>
     <div class="bar-wrap"><div class="bar-fill" id="bar"></div></div>
     <span class="bar-lbl" id="bar-lbl">0 / 10</span>
   </header>
@@ -1297,6 +1314,7 @@ function _dragBegin(clientX, clientY) {
   document.body.appendChild(drag.ghost);
   card.style.opacity = "0.35";
   drag.on = true;
+  document.body.classList.add('dragging');
   return true;
 }
 
@@ -1313,6 +1331,7 @@ function _dragMove(clientX, clientY) {
 
 function _dragEnd(clientX, clientY) {
   drag.on = false;
+  document.body.classList.remove('dragging');
   if (drag.ghost) { drag.ghost.remove(); drag.ghost = null; }
   var card = document.querySelector("#card-wrap .card");
   if (card) card.style.opacity = "";

@@ -2611,3 +2611,50 @@ html, body {
   .p2-cheat-cost { font-size: clamp(9px, 1.1vw, 11px); }
 }
 
+/* === Handy (≤640px) — Quiz-Modal kompakt === */
+@media (max-width: 640px) {
+  .overlay { padding: 10px; }
+
+  .quiz-card {
+    padding: 16px;
+    max-width: 96vw;
+    max-height: calc(100dvh - 20px);
+  }
+  .quiz-card header { margin-bottom: 10px; }
+  .quiz-badge       { font-size: 11px; padding: 3px 9px; margin-bottom: 5px; }
+  .quiz-card h3     { font-size: 16px; }
+
+  .quiz-body        { font-size: 13px; margin-bottom: 10px; }
+
+  /* Station 1 — Lückentext */
+  .luecken-text {
+    font-size: 13px;
+    line-height: 2.1;
+    margin-bottom: 12px;
+  }
+  .blank-slot   { min-width: 76px; min-height: 30px; padding: 2px 5px; border-radius: 6px; }
+  .word-bank    { padding: 10px; gap: 5px; }
+  .word-chip    { font-size: 12px; padding: 5px 11px; }
+
+  .quiz-card footer { gap: 8px; }
+  .quiz-card footer .btn-secondary,
+  .quiz-card footer .btn-primary { font-size: 13px; padding: 9px 16px; }
+
+  /* Station 2 — Multiple Choice */
+  .mc-section-intro        { padding: 14px 12px; }
+  .mc-section-intro-title  { font-size: 15px; margin-bottom: 6px; }
+  .mc-section-intro-text   { font-size: 13px; }
+
+  .mc-progress             { margin-bottom: 7px; }
+  .mc-progress-label       { font-size: 11px; }
+  .mc-streak               { font-size: 12px; padding: 4px 10px; gap: 4px; }
+  .mc-streak-count         { font-size: 15px; }
+  .mc-milestone            { font-size: 13px; padding: 7px 12px; margin-bottom: 8px; }
+
+  .mc-question             { font-size: 13px; margin-bottom: 8px; }
+  .mc-options              { gap: 5px; }
+  .mc-option               { font-size: 13px; padding: 8px 10px 8px 36px; border-radius: 8px; }
+  .mc-option::before       { left: 10px; width: 15px; height: 15px; }
+
+  .mc-explanation          { font-size: 12px; line-height: 1.4; padding: 7px 10px; margin-top: 8px; }
+}
