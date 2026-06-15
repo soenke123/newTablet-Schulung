@@ -639,16 +639,11 @@
 
   </div>
 
+  <script src="GameHub/config.js"></script>
   <script>
-    // ── SEASON 3 TOGGLE ──────────────────────────────────────────
-    const SEASON_3 = true;
-    // ─────────────────────────────────────────────────────────────
-
-    // GameHub-Link immer mit s3-Parameter setzen (auch wenn false)
     const ghLink = document.getElementById('gamehubLink');
-    ghLink.href = 'GameHub/index.html?s3=' + (SEASON_3 ? '1' : '0');
 
-    if (SEASON_3) {
+    if (_rel) {
       // Titel → "Tablet Schulung v2"
       document.getElementById('pageTitle').innerHTML =
         'Tablet Schulung<span class="version-badge">v2</span>';

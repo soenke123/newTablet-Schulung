@@ -1931,6 +1931,39 @@ body.s3-active .hud-kristalle { display: flex; }
     white-space: normal;
   }
   .theme-cycle-btn__label { display: none; }
+
+  /* ── S3 Banner: Bild oben, Text unten ───────────── */
+  .s3-layout {
+    flex-direction: column;
+  }
+  .s3-preview {
+    flex: none;
+    width: 100%;
+    max-width: 220px;
+    margin: 0 auto;
+  }
+
+  /* ── Siegel-Karten: vertikales Layout ────────────── */
+  .sealed-egg-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .sealed-egg-card .game-card__title {
+    grid-column: unset;
+    grid-row: unset;
+    text-align: center;
+    font-size: 0.95rem;
+  }
+  .sealed-egg-card .game-card__btn {
+    grid-column: unset;
+    grid-row: unset;
+    width: 100%;
+  }
+  .sealed-egg-card .sealed-egg-progress {
+    grid-column: unset;
+    grid-row: unset;
+  }
 }
 
 @media (min-width: 700px) {
@@ -2825,6 +2858,12 @@ body.s3-active .hud-kristalle { display: flex; }
 .sealed-egg-modal-box {
   max-width: 600px;
   width: 95vw;
+}
+
+#sealedEggModalContent {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .seal-modal-title {
