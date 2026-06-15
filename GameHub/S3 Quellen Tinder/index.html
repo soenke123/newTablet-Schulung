@@ -260,14 +260,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   #eggProgressBar{flex:1;width:auto!important;margin-top:0!important;height:5px;align-self:center;min-width:40px}
 
   /* Punkte: Label + Zahl in einer Zeile */
-  .score-live-box{flex-shrink:0;padding:4px 8px;display:flex;align-items:center;gap:4px;text-align:left;box-shadow:none;border-radius:8px}
+  .score-live-box{flex-shrink:0;width:auto;padding:4px 8px;display:flex;align-items:center;gap:4px;text-align:left;box-shadow:none;border-radius:8px}
   .score-live-lbl{margin-bottom:0;font-size:.6rem}
   .score-live-num{font-size:1rem}
   .score-live-max{font-size:.82rem}
 
   /* Karten-Bereich: kein Clipping mehr, Texte vollständig lesbar */
   .g-card-col{overflow:visible;padding:10px}
-  #card-wrap{overflow:visible;max-height:none}
+  #card-wrap{overflow:visible;max-height:none;position:relative}
+  /* Scroll-Streifen rechts: visueller Hinweis */
+  #card-wrap::after{content:'';position:absolute;right:0;top:0;bottom:0;width:44px;background:linear-gradient(to right,transparent,rgba(148,163,184,.14));border-radius:0 14px 14px 0;pointer-events:none}
 
   /* Joker */
   .joker-btn{width:44px;height:44px;font-size:1.1rem}
@@ -1287,7 +1289,7 @@ var S = { queue:[], cur:0, score:0, results:[], total:8, jokers:{fifty:true,chec
 var ovFilter = "all";
 
 // ---- DRAG ----
-var drag = { on:false, ghost:null, pid:-1, offsetX:0, offsetY:0 };
+var drag = { on:false, ghost:null, pid:-1, offsetX:0, offsetY:0, scrollMode:false, scrollStartY:0, scrollStartTop:0 };
 
 function initDrag() {
   var cw = document.getElementById("card-wrap");
@@ -1346,9 +1348,21 @@ function _dragEnd(clientX, clientY) {
 
 // Touch (iPad/iPhone) — preventDefault blockiert iOS-Scroll bevor er startet
 function dragStartTouch(e) {
-  if (drag.on) return;
-  e.preventDefault();
+  if (drag.on || drag.scrollMode) return;
   var t = e.changedTouches[0];
+  // Rechter Rand (48 px): Scroll-Modus statt Drag
+  if (window.innerWidth - t.clientX < 48) {
+    drag.scrollMode   = true;
+    drag.scrollStartY   = t.clientY;
+    drag.scrollStartTop = window.scrollY || document.documentElement.scrollTop;
+    drag.pid = t.identifier;
+    e.preventDefault();
+    document.addEventListener("touchmove",   dragMoveTouch,  { passive: false });
+    document.addEventListener("touchend",    dragEndTouch);
+    document.addEventListener("touchcancel", dragCancelTouch);
+    return;
+  }
+  e.preventDefault();
   drag.pid = t.identifier;
   if (!_dragBegin(t.clientX, t.clientY)) return;
   document.addEventListener("touchmove",   dragMoveTouch,  { passive: false });
@@ -1356,19 +1370,25 @@ function dragStartTouch(e) {
   document.addEventListener("touchcancel", dragCancelTouch);
 }
 function dragMoveTouch(e) {
-  if (!drag.on) return;
+  if (!drag.on && !drag.scrollMode) return;
   e.preventDefault();
   var t = null;
   for (var i = 0; i < e.touches.length; i++) {
     if (e.touches[i].identifier === drag.pid) { t = e.touches[i]; break; }
   }
-  if (t) _dragMove(t.clientX, t.clientY);
+  if (!t) return;
+  if (drag.scrollMode) {
+    window.scrollTo(0, drag.scrollStartTop + (drag.scrollStartY - t.clientY));
+    return;
+  }
+  _dragMove(t.clientX, t.clientY);
 }
 function dragEndTouch(e) {
-  if (!drag.on) return;
+  if (!drag.on && !drag.scrollMode) return;
   document.removeEventListener("touchmove",   dragMoveTouch);
   document.removeEventListener("touchend",    dragEndTouch);
   document.removeEventListener("touchcancel", dragCancelTouch);
+  if (drag.scrollMode) { drag.scrollMode = false; return; }
   var t = null;
   for (var i = 0; i < e.changedTouches.length; i++) {
     if (e.changedTouches[i].identifier === drag.pid) { t = e.changedTouches[i]; break; }
@@ -1376,11 +1396,12 @@ function dragEndTouch(e) {
   _dragEnd(t ? t.clientX : -1, t ? t.clientY : -1);
 }
 function dragCancelTouch() {
-  if (!drag.on) return;
+  if (!drag.on && !drag.scrollMode) return;
   document.removeEventListener("touchmove",   dragMoveTouch);
   document.removeEventListener("touchend",    dragEndTouch);
   document.removeEventListener("touchcancel", dragCancelTouch);
-  _dragEnd(-1, -1);
+  drag.scrollMode = false;
+  if (drag.on) _dragEnd(-1, -1);
 }
 
 // Mouse (Desktop)
