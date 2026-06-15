@@ -233,23 +233,53 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .disc-btn{width:100%;padding:13px;background:#cbd5e1;color:white;border:none;border-radius:11px;font-size:.95rem;font-weight:700;cursor:not-allowed;transition:background .2s}
 .disc-btn.ready{background:#2563eb;cursor:pointer}
 
-/* Responsive */
+/* Responsive – Phone */
 @media(max-width:640px){
-  #s-start h1{font-size:1.9rem}
+  /* ---- Start-Screen: kompakter ---- */
+  #s-start{padding:16px 14px}
+  #s-start h1{font-size:1.5rem;margin-bottom:4px}
+  #s-start h2{font-size:1rem}
+  .tag{font-size:.82rem;margin-bottom:14px}
+  .info-box{padding:10px 12px;margin-bottom:12px;max-width:100%}
+  .info-box h3{font-size:.68rem;margin-bottom:6px}
+  .craap-list li{font-size:.8rem;padding:2px 0}
+  .btn-main{padding:10px;font-size:.88rem;max-width:260px;margin-bottom:8px}
+  .btn-ghost{padding:8px;font-size:.76rem;max-width:260px}
+  .count-info{margin-top:10px}
+
+  /* ---- Game-Screen ---- */
   #s-game{height:auto;min-height:100vh;min-height:100dvh;overflow:auto}
-  .g-main{flex-direction:column}
-  .g-left-col{flex:0 0 auto;max-width:none;width:100%;flex-direction:row;border-right:none;border-bottom:1px solid #e2e8f0;padding:8px 10px;gap:8px}
-  .score-live-box{flex:1}
+  .g-main{flex-direction:column;overflow:visible}
+
+  /* Score-Leiste: horizontal, kompakt, eine Zeile */
+  .g-left-col{flex:0 0 auto;max-width:none;width:100%;flex-direction:row;align-items:center;border-right:none;border-bottom:1px solid #e2e8f0;padding:5px 10px;gap:8px}
+  #eggVisual{min-height:0;width:46px;height:46px;flex-shrink:0}
+  #eggVisual img,#eggVisual svg{width:46px;height:46px}
+  #eggStageLabel{display:none}
+  #eggProgressBar{display:none}
+
+  /* Punkte: Label + Zahl in einer Zeile */
+  .score-live-box{flex:1;padding:4px 8px;display:flex;align-items:center;gap:5px;text-align:left;box-shadow:none;border-radius:8px}
+  .score-live-lbl{margin-bottom:0;font-size:.6rem}
+  .score-live-num{font-size:1rem}
+  .score-live-max{font-size:.82rem}
+
+  /* Karten-Bereich: kein Clipping mehr, Texte vollständig lesbar */
+  .g-card-col{overflow:visible;padding:10px}
+  #card-wrap{overflow:visible;max-height:none}
+
+  /* Joker */
   .joker-btn{width:44px;height:44px;font-size:1.1rem}
   .j-fifty{font-size:.72rem}
   .joker-sidebar{padding:8px 6px;gap:6px}
+
+  /* Ablage-Leiste */
   .g-bins-bar{height:auto;min-height:70px;max-height:none;padding:6px 8px;gap:4px}
   .bin{flex-direction:column;gap:2px;padding:5px 3px}
   .bin-icon-wrap{width:42px;height:42px}
   .bin-icon{font-size:2.6rem}
   .bin-letter{font-size:1rem}
   .bin-name{font-size:.6rem;text-align:center;white-space:normal}
-  #card-wrap{overflow:visible;max-height:none}
 }
 
 /* Tablets: dvh-proportionales Layout — greift auf ALLEN iPads (Touch-Screen, kein Maus-Desktop) */
@@ -350,7 +380,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div id="eggVisual"></div>
       <div id="companion-item-icon"></div>
       <div id="eggStageLabel"></div>
-      <div style="height:4px;background:#e2e8f0;border-radius:2px;width:100%;margin-top:2px">
+      <div id="eggProgressBar" style="height:4px;background:#e2e8f0;border-radius:2px;width:100%;margin-top:2px">
         <div id="eggProgressFill"></div>
       </div>
       <div class="score-live-box">

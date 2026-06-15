@@ -637,6 +637,50 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 #sb-settings-body{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
 #sb-settings-body label{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;}
 
+/* ── Mobile Sandbox Tabs ── */
+.sb-tabs{display:none; flex-shrink:0;}
+.sb-tab-btn{
+  flex:1; padding:10px 0; border:none; background:none;
+  color:var(--muted); font-size:.88rem; font-weight:600; cursor:pointer;
+  border-bottom:2px solid transparent; transition:color .15s,border-color .15s;
+}
+.sb-tab-btn.active{color:var(--accent); border-bottom-color:var(--accent);}
+.sb-tab-gear{
+  padding:10px 14px; border:none; background:none; color:var(--muted);
+  font-size:1.1rem; cursor:pointer; border-left:1px solid var(--border);
+  transition:color .15s;
+}
+.sb-tab-gear:hover,.sb-tab-gear:active{color:var(--text);}
+
+@media(max-width:600px){
+  .sb-tabs{display:flex; border-bottom:1px solid var(--border); background:var(--surface);}
+
+  /* Panel-Sichtbarkeit per aktivem Tab */
+  #screen-p3-sandbox[data-tab="tree"] .sb-left{display:none !important;}
+  #screen-p3-sandbox[data-tab="games"] .sb-right{display:none !important;}
+
+  /* Spiele untereinander stapeln */
+  .sb-games-row{flex-direction:column; align-items:stretch;}
+  .sb-brett-col{align-items:stretch;}
+  .sb-brett-col .sb-status{width:100% !important;}
+  .sb-brett-wrap{margin:0 auto;}
+  .sb-alien-col{width:100%; min-width:0;}
+  #sb-alien-canvas{width:100% !important; aspect-ratio:1/1; height:auto !important;}
+
+  /* Linkes Panel füllt volle Breite */
+  .sb-left{width:100% !important; border-right:none !important;}
+
+  /* Einstellungs-Widget: am unteren Rand als Sheet */
+  #sb-settings{top:auto; bottom:0; left:0; right:0; padding:0 8px 8px;}
+  #sb-settings-panel{border-radius:12px 12px 0 0; box-shadow:0 -4px 20px rgba(0,0,0,.3);}
+
+  /* Gear-Button im Widget ausblenden — Tab-Bar-Button übernimmt */
+  #sb-gear-btn{display:none !important;}
+
+  /* Einstellungen auf Baum-Tab ausblenden */
+  #screen-p3-sandbox[data-tab="tree"] #sb-settings{display:none !important;}
+}
+
 /* ── Win Screens ── */
 .win-overlay{
   position:fixed; inset:0; z-index:900; display:none;
@@ -1049,7 +1093,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 </div>
 
 <!-- ════════════════════════════════════════════════════ PHASE 3: SANDBOX -->
-<div id="screen-p3-sandbox" class="screen">
+<div id="screen-p3-sandbox" class="screen" data-tab="games">
   <div class="sb-topbar">
     <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
     <h2>Sandbox</h2>
@@ -1062,6 +1106,14 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
       <button class="btn btn-danger" onclick="showWin2()" style="white-space:nowrap;">Simulation beenden</button>
     </div>
   </div>
+
+  <!-- Mobile Tab-Bar (nur auf kleinen Screens sichtbar) -->
+  <div class="sb-tabs" id="sb-tabs">
+    <button class="sb-tab-btn active" id="sb-tab-games" onclick="sbSetTab('games')">🎮 Spiele</button>
+    <button class="sb-tab-btn" id="sb-tab-tree" onclick="sbSetTab('tree')">🌳 Baum</button>
+    <button class="sb-tab-gear" onclick="sbToggleSettings()" title="Einstellungen">⚙</button>
+  </div>
+
   <div class="sb-layout">
 
     <!-- Linkes Panel -->
@@ -3560,6 +3612,22 @@ function sbToggleSettings() {
   sbSettingsOpen = !sbSettingsOpen;
   document.getElementById('sb-gear-btn').style.display     = sbSettingsOpen ? 'none' : 'flex';
   document.getElementById('sb-settings-panel').style.display = sbSettingsOpen ? '' : 'none';
+}
+function sbSetTab(tab) {
+  document.getElementById('screen-p3-sandbox').dataset.tab = tab;
+  document.getElementById('sb-tab-games').classList.toggle('active', tab === 'games');
+  document.getElementById('sb-tab-tree').classList.toggle('active', tab === 'tree');
+  if (tab === 'tree') {
+    if (sbSettingsOpen) sbToggleSettings();
+    setTimeout(() => {
+      const cv = document.getElementById('sb-tree-canvas');
+      if (cv && cv.parentElement) {
+        cv.width  = cv.parentElement.clientWidth  || cv.parentElement.offsetWidth;
+        cv.height = cv.parentElement.clientHeight || cv.parentElement.offsetHeight;
+        if (typeof drawSandboxTree === 'function') drawSandboxTree();
+      }
+    }, 50);
+  }
 }
 function sbApplySettings() {
   sbWhiteIsAI = document.getElementById('cb-white-ai').checked;
