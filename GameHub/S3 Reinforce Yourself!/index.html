@@ -659,13 +659,9 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
   #screen-p3-sandbox[data-tab="tree"] .sb-left{display:none !important;}
   #screen-p3-sandbox[data-tab="games"] .sb-right{display:none !important;}
 
-  /* Spiele untereinander stapeln */
-  .sb-games-row{flex-direction:column; align-items:stretch;}
-  .sb-brett-col{align-items:stretch;}
-  .sb-brett-col .sb-status{width:100% !important;}
-  .sb-brett-wrap{margin:0 auto;}
-  .sb-alien-col{width:100%; min-width:0;}
-  #sb-alien-canvas{width:100% !important; aspect-ratio:1/1; height:auto !important;}
+  /* Spiele nebeneinander, gleich groß */
+  .sb-brett-col{flex:1; min-width:0;}
+  .sb-brett-col .sb-status{width:auto !important; min-width:0;}
 
   /* Linkes Panel füllt volle Breite */
   .sb-left{width:100% !important; border-right:none !important;}
@@ -679,6 +675,9 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 
   /* Einstellungen auf Baum-Tab ausblenden */
   #screen-p3-sandbox[data-tab="tree"] #sb-settings{display:none !important;}
+
+  /* Topbar: "Simulation" ausblenden */
+  .sb-beenden-long{display:none;}
 }
 
 /* ── Win Screens ── */
@@ -1103,7 +1102,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
         <button class="score-badge-i" onclick="toggleBadgeInfo('p3')">i</button>
         <div class="score-badge-popup" id="badge-info-p3">+2 pro entdecktem Knoten<br>(Brett- + Alien-Ansicht).<br>+20 Bonus wenn alle 42 gefunden.</div>
       </div>
-      <button class="btn btn-danger" onclick="showWin2()" style="white-space:nowrap;">Simulation beenden</button>
+      <button class="btn btn-danger" onclick="showWin2()" style="white-space:nowrap;"><span class="sb-beenden-long">Simulation </span>Beenden</button>
     </div>
   </div>
 
@@ -3728,6 +3727,7 @@ function enterSandbox() {
     recalcScore();
   }
   showScreen('screen-p3-sandbox');
+  if (window.matchMedia('(max-width:600px)').matches && !sbSettingsOpen) sbToggleSettings();
   sbComputeLayout();
   sbInitTree();
   updateSbStatsDisplay();

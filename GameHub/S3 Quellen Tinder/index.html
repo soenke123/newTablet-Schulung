@@ -251,19 +251,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   #s-game{height:auto;min-height:100vh;min-height:100dvh;overflow:auto}
   .g-main{flex-direction:column;overflow:visible}
 
-  /* Score-Leiste: [Ei] [──Ladebalken──] [Punkte X/16] – slim, eine Zeile */
-  .g-left-col{flex:0 0 auto;max-width:none;width:100%;flex-direction:row;align-items:center;border-right:none;border-bottom:1px solid #e2e8f0;padding:5px 10px;gap:8px}
+  /* Score-Leiste: [Ei] [Punkte X/16] – alles andere ausgeblendet */
+  .g-left-col{flex:0 0 auto;max-width:none;width:100%;flex-direction:row;align-items:center;border-right:none;border-bottom:1px solid #e2e8f0;padding:5px 10px;gap:10px}
   .g-logo{font-size:.8rem}
   #eggVisual{min-height:0;width:38px;height:38px;flex-shrink:0}
   #eggVisual img,#eggVisual svg{width:38px;height:38px}
   #eggStageLabel{display:none}
-  #eggProgressBar{flex:1;width:auto!important;margin-top:0!important;height:5px;align-self:center;min-width:40px}
+  #eggProgressBar{display:none}
+  #companion-item-icon{display:none!important}
 
-  /* Punkte: Label + Zahl in einer Zeile */
-  .score-live-box{flex-shrink:0;width:auto;padding:4px 8px;display:flex;align-items:center;gap:4px;text-align:left;box-shadow:none;border-radius:8px}
-  .score-live-lbl{margin-bottom:0;font-size:.6rem}
-  .score-live-num{font-size:1rem}
-  .score-live-max{font-size:.82rem}
+  /* Punkte: Ei daneben, Label + Zahl in einer Zeile */
+  .score-live-box{flex-shrink:0;width:auto;padding:4px 10px;display:flex;align-items:center;gap:5px;text-align:left;box-shadow:none;background:#f1f5f9;border-radius:20px}
+  .score-live-lbl{margin-bottom:0;font-size:.65rem;color:#64748b}
+  .score-live-num{font-size:1.05rem;line-height:1}
+  .score-live-max{font-size:.85rem}
 
   /* Karten-Bereich: kein Clipping mehr, Texte vollständig lesbar */
   .g-card-col{overflow:visible;padding:10px}
@@ -1333,7 +1334,6 @@ function _dragMove(clientX, clientY) {
 
 function _dragEnd(clientX, clientY) {
   drag.on = false;
-  document.body.classList.remove('dragging');
   if (drag.ghost) { drag.ghost.remove(); drag.ghost = null; }
   var card = document.querySelector("#card-wrap .card");
   if (card) card.style.opacity = "";
@@ -1344,6 +1344,9 @@ function _dragEnd(clientX, clientY) {
     var bin = el && el.closest(".bin");
     if (bin) rate(bin.dataset.cat);
   }
+  // Erst nach elementFromPoint entfernen – sonst springt die fixierte Bins-Leiste
+  // weg bevor wir prüfen, ob der Finger über einem Bin war.
+  document.body.classList.remove('dragging');
 }
 
 // Touch (iPad/iPhone) — preventDefault blockiert iOS-Scroll bevor er startet
