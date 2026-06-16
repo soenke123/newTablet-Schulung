@@ -280,6 +280,12 @@ body {
 }
 .chapter-btn.active .chapter-arrow { transform: rotate(90deg); }
 
+/* Neue Kapitel (12–17): leicht eingefärbter Hintergrund im Ruhezustand */
+.chapter-btn.chapter-btn--new {
+  background: var(--btn-bg);
+  border-color: color-mix(in srgb, var(--btn-color) 22%, transparent);
+}
+
 /* ==========================================
    Chapter Sections (Accordion Panels)
    ========================================== */

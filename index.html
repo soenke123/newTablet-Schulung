@@ -519,6 +519,7 @@
 
           <!-- PDF Download -->
           <a
+            id="handoutLink"
             class="card-button pdf-button"
             href="Dokumente/Handout_Tablet-Schulung.pdf"
             download
@@ -594,7 +595,7 @@
 
         <a
           class="presentation-link"
-          href="Dokumente/Schulung1_Block1_Einstieg_v2.pdf"
+          href="Dokumente/Schulung1_Block1_Einstieg.pdf"
           target="_blank"
         >
           <span class="pdf-icon" aria-hidden="true"></span>
@@ -603,7 +604,7 @@
 
         <a
           class="presentation-link"
-          href="Dokumente/WS1_Dateiformate_v2.pdf"
+          href="Dokumente/WS1_Dateiformate.pdf"
           target="_blank"
         >
           <span class="pdf-icon" aria-hidden="true"></span>
@@ -612,7 +613,7 @@
 
         <a
           class="presentation-link"
-          href="Dokumente/WS2_Aufmerksamkeit_Fokus_v2.pdf"
+          href="Dokumente/WS2_Aufmerksamkeit_Fokus.pdf"
           target="_blank"
         >
           <span class="pdf-icon" aria-hidden="true"></span>
@@ -655,6 +656,11 @@
       document.querySelectorAll('.season3-only').forEach(el => {
         el.style.display = 'contents';
       });
+
+      // Handout v2 anzeigen
+      const handoutLink = document.getElementById('handoutLink');
+      handoutLink.href = 'Dokumente/Handout_Tablet-Schulung v2.pdf';
+      handoutLink.download = 'Handout_Tablet-Schulung v2.pdf';
     }
 
     // Touch-Feedback

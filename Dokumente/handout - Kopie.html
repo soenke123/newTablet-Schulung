@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tablet-Schulung – Handout</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="handout.css" />
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     HEADER – Titel + Suche
+══════════════════════════════════════════════ -->
+<header class="site-header">
+  <p class="header-eyebrow">Schulung 1: Einstieg &amp; Grundlagen</p>
+  <h1 class="header-title">Tablet-Schulung Handout</h1>
+  <p class="header-subtitle">Alle wichtigen Infos für den Schulalltag</p>
+
+  <div class="search-wrapper">
+    <!-- Such-Icon (SVG Lupe) -->
+    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+
+    <input
+      type="search"
+      id="searchInput"
+      class="search-input"
+      placeholder="Begriff suchen…"
+      autocomplete="off"
+      aria-label="Inhalte durchsuchen"
+    />
+
+    <!-- X-Button zum Leeren -->
+    <button class="search-clear" id="searchClear" aria-label="Suche leeren">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <p class="search-results-info" id="resultsInfo"></p>
+</header>
+
+
+<!-- ══════════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════════ -->
+<main class="page-wrapper">
+
+  <!-- ── Kapitel-Navigations-Grid ── -->
+  <nav class="chapter-grid" aria-label="Kapitelnavigation">
+
+    <button class="chapter-btn" data-target="ch-1" data-color="blue" aria-expanded="false">
+      <span class="chapter-icon">🎯</span>
+      <span class="chapter-num">Kapitel 1</span>
+      <span class="chapter-label">Grundprinzip</span>
+      <span class="chapter-arrow">›</span>
+    </button>
+
+    <button class="chapter-btn" data-target="ch-2" data-color="blue" aria-expanded="false">
+      <span class="chapter-icon">📋</span>
+      <span class="chapter-num">Kapitel 2</span>
+      <span class="chapter-label">Hausregeln</span>
+      <span class="chapter-arrow">›</span>
+    </button>
+
+    <button class="chapter-btn" data-target="ch-3" data-color="blue" aria-expanded="false">
+      <span class="chapter-icon">📱</span>
+      <span class="chapter-num">Kapitel 3</span>
+      <span class="chapter-label">App-Liste</span>
+      <span class="chapter-arrow">›</span>
+    </button>
+
+    <button class="chapter-btn" data-target="ch-4" data-color="purple" aria-expanded="false">
+      <span class="chapter-icon">📄</span>
+      <span class="chapter-num">Kapitel 4</span>
+      <span class="chapter-label">Dateiformate &amp; Abgabe</span>
+      <span class="chapter-arrow">›</span>
+    </button>
+
+    <button class="chapter-btn" data-target="ch-5" data-color="purple" aria-expanded="false">
+      <span class="chapter-icon">📁</span>
+      <span class="chapter-num">Kapitel 5</span>
+      <span class="chapter-label">Ordner&shy;struktur</span>
+      <span class="chapter-arrow">›</span>
+    </button>
+
+    <button class="chapter-btn" data-target="ch-6" data-color="green" aria-expanded="false">
+      <span class="chapter-icon">🔒</span>
+      <span class="chapter-num">Kapitel 6</span>
+      <span class="chapter-label">Datei&shy;sicherheit</span>
+      <span class="chapter-arrow">›</span>
+    </button>
+
+    <button class="chapter-btn" data-target="ch-7" data-color="amber" aria-expanded="false">
+      <span class="chapter-icon">🧠</span>
+      <span class="chapter-num">Kapitel 7</span>
+      <span class="chapter-label">Aufmerksamkeit</span>
+      <span class="chapter-arrow">›</span>
+    </button>
+
+    <button class="chapter-btn" data-target="ch-8" data-color="amber" aria-expanded="false">
+      <span class="chapter-icon">🛡️</span>
+      <span class="chapter-num">Kapitel 8</span>
+      <span class="chapter-label">Weniger abgelenkt</span>
+      <span class="chapter-arrow">›</span>
+    </button>
+
+    <button class="chapter-btn" data-target="ch-9" data-color="amber" aria-expanded="false">
+      <span class="chapter-icon">🔕</span>
+      <span class="chapter-num">Kapitel 9</span>
+      <span class="chapter-label">Fokus-Modus</span>
+      <span class="chapter-arrow">›</span>
+    </button>
+
+    <button class="chapter-btn" data-target="ch-10" data-color="red" aria-expanded="false">
+      <span class="chapter-icon">✏️</span>
+      <span class="chapter-num">Kapitel 10</span>
+      <span class="chapter-label">Digitales Schreiben</span>
+      <span class="chapter-arrow">›</span>
+    </button>
+
+    <button class="chapter-btn" data-target="ch-11" data-color="red" aria-expanded="false">
+      <span class="chapter-icon">📖</span>
+      <span class="chapter-num">Kapitel 11</span>
+      <span class="chapter-label">Digitales Lesen</span>
+      <span class="chapter-arrow">›</span>
+    </button>
+
+  </nav><!-- /chapter-grid -->
+
+
+  <!-- ── Kapitel-Inhalte ── -->
+  <div class="chapters-container">
+
+    <!-- ════════════ KAPITEL 1: GRUNDPRINZIP ════════════ -->
+    <section class="chapter-section" id="ch-1">
+      <div class="chapter-content" data-open="false">
+        <div class="chapter-content-inner">
+          <div class="panel-heading">
+            <span class="panel-heading-icon">🎯</span>
+            <div class="panel-heading-meta">
+              <span class="panel-chapter-badge">Kapitel 1</span>
+              <h2>Grundprinzip</h2>
+            </div>
+          </div>
+
+          <p>Das Tablet ist ein <strong>Arbeitsgerät – kein Freizeitgerät</strong>. Diese Schulungsreihe vermittelt keine Klick-für-Klick-Anleitungen. Das Ziel ist es, die Konzepte hinter digitalen Werkzeugen zu verstehen – und dann selbst herauszufinden, wie man sie umsetzt.</p>
+
+          <h3>Kernprinzipien</h3>
+          <ul>
+            <li><strong>Selbstständig handeln:</strong> Google, YouTube und Lehrkräfte/Mitschüler/-innen sind die erste Anlaufstelle bei Fragen.</li>
+            <li><strong>Mehrwert schaffen:</strong> Tablets sollen den Lernprozess aktiv unterstützen, nicht behindern.</li>
+            <li><strong>Digital kompetent werden:</strong> Dateisysteme und Speicherkonzepte verstehen.</li>
+            <li><strong>Lese- und Schreibkompetenz:</strong> Richtiges Arbeiten mit digitalen Texten will gelernt sein.</li>
+            <li><strong>Ablenkung vermeiden:</strong> Tablets bieten ständige Konkurrenz zum Unterricht – wer das weiß, kann gegensteuern.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════════════ KAPITEL 2: HAUSREGELN ════════════ -->
+    <section class="chapter-section" id="ch-2">
+      <div class="chapter-content" data-open="false">
+        <div class="chapter-content-inner">
+          <div class="panel-heading">
+            <span class="panel-heading-icon">📋</span>
+            <div class="panel-heading-meta">
+              <span class="panel-chapter-badge">Kapitel 2</span>
+              <h2>Hausregeln für den Tablet-Einsatz</h2>
+            </div>
+          </div>
+
+          <p>Die folgenden Regeln gelten verbindlich für jede Unterrichtsstunde und werden dauerhaft auf IServ sichtbar gemacht.</p>
+
+          <ol>
+            <li>Das Gerät wird vollständig geladen zum Schultag mitgebracht.</li>
+            <li>Das Gerät bleibt bis zur ausdrücklichen Erlaubnis der Lehrkraft geschlossen.</li>
+            <li>Analoge Unterrichtsmaterialien (Papier, Stifte, Ordner, Hefte) sind immer dabei.</li>
+            <li>Der Fokus-Modus ist Pflicht und immer aktiviert.</li>
+            <li>Nur unterrichtsbezogene Apps sind aktiv – alle anderen vollständig geschlossen.</li>
+            <li>Kein Splitscreen und kein App-Wechsel während des Unterrichts.</li>
+            <li>Handys und Smartwatches bleiben während des Unterrichts in der Tasche.</li>
+          </ol>
+
+          <div class="hinweis-box">
+            <p class="box-label">💡 Hinweis</p>
+            <p>Wenn du den Home-Button auf dem iPad zweimal hintereinander drückst, öffnet sich die Übersicht aller aktuell geöffneten Apps. Diese Apps laufen im Hintergrund weiter und können Akku verbrauchen – auf dem Schulgelände sind dort ausschließlich Schul-Apps erlaubt; andere Apps verstoßen gegen Regel 5 und müssen geschlossen werden.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════════════ KAPITEL 3: APP-LISTE ════════════ -->
+    <section class="chapter-section" id="ch-3">
+      <div class="chapter-content" data-open="false">
+        <div class="chapter-content-inner">
+          <div class="panel-heading">
+            <span class="panel-heading-icon">📱</span>
+            <div class="panel-heading-meta">
+              <span class="panel-chapter-badge">Kapitel 3</span>
+              <h2>App-Liste für den Unterricht</h2>
+            </div>
+          </div>
+
+          <p>Die folgende Liste legt fest, welche Apps im schulischen Kontext genutzt werden. Fachspezifische Ergänzungen kommen von der jeweiligen Fachlehrkraft.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>App</th>
+                  <th>Bereich</th>
+                  <th>Wofür / Hinweis</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>IServ</strong></td>
+                  <td>Schulorganisation</td>
+                  <td>E-Mail, Aufgaben, Dateien – zentrale Schulplattform. Immer aktuell halten.</td>
+                </tr>
+                <tr>
+                  <td><strong>Untis Mobile</strong></td>
+                  <td>Schulorganisation</td>
+                  <td>Stundenplan, Vertretungen, Raumänderungen. Täglich checken.</td>
+                </tr>
+                <tr>
+                  <td><strong>GoodNotes / CollaNote</strong></td>
+                  <td>Mitschriften</td>
+                  <td>Handschriftliche Notizen, Annotieren von PDFs. GoodNotes kostenpflichtig, CollaNote kostenlos.</td>
+                </tr>
+                <tr>
+                  <td><strong>Pages</strong></td>
+                  <td>Textverarbeitung</td>
+                  <td>Abgaben und Dokumente erstellen. Abgabe immer als PDF exportieren.</td>
+                </tr>
+                <tr>
+                  <td><strong>Numbers</strong></td>
+                  <td>Tabellenkalkulation</td>
+                  <td>Daten auswerten, Diagramme erstellen.</td>
+                </tr>
+                <tr>
+                  <td><strong>Keynote</strong></td>
+                  <td>Präsentationen</td>
+                  <td>Vorträge und Referate. Auf dem iPad intuitiver als PowerPoint.</td>
+                </tr>
+                <tr>
+                  <td><strong>GeoGebra</strong></td>
+                  <td>Mathematik</td>
+                  <td>Funktionen, Geometrie, Statistik. Kostenlos, auch browserbasiert verfügbar.</td>
+                </tr>
+                <tr>
+                  <td><strong>Weitere</strong></td>
+                  <td>–</td>
+                  <td>Können noch ergänzt werden.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════════════ KAPITEL 4: DATEIFORMATE & ABGABE ════════════ -->
+    <section class="chapter-section" id="ch-4">
+      <div class="chapter-content" data-open="false">
+        <div class="chapter-content-inner">
+          <div class="panel-heading">
+            <span class="panel-heading-icon">📄</span>
+            <div class="panel-heading-meta">
+              <span class="panel-chapter-badge">Kapitel 4</span>
+              <h2>Dateiformate &amp; Abgabe</h2>
+            </div>
+          </div>
+
+          <h3>4a) Übersicht: Gängige Dateiformate</h3>
+          <p>Dateiformate sind Vereinbarungen zwischen Programmen. Unterschiedliche Programme sprechen unterschiedliche „Sprachen". Die folgende Tabelle gibt einen kleinen Überblick über die im Schulalltag relevanten Formate.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Dateiendung</th>
+                  <th>Typ</th>
+                  <th>Konzept / Hinweis</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>.docx / .odt</strong></td>
+                  <td>Textdokument</td>
+                  <td>Bearbeitbar, aber layoutabhängig. Abgabe immer als PDF exportieren.</td>
+                </tr>
+                <tr>
+                  <td><strong>.xlsx / .ods</strong></td>
+                  <td>Tabelle</td>
+                  <td>Zahlen und Berechnungen. Abgabe als PDF, wenn kein interaktives Arbeiten nötig.</td>
+                </tr>
+                <tr>
+                  <td><strong>.pptx / .odp</strong></td>
+                  <td>Präsentation</td>
+                  <td>Live-Vortrag: Original behalten. Abgabe: als PDF exportieren.</td>
+                </tr>
+                <tr>
+                  <td><strong>.jpg / .jpeg</strong></td>
+                  <td>Foto (komprimiert)</td>
+                  <td>Qualitätsverlust bei Bearbeitung. Für Fotos geeignet, nicht für Text.</td>
+                </tr>
+                <tr>
+                  <td><strong>.png</strong></td>
+                  <td>Bild (verlustfrei)</td>
+                  <td>Ideal für Screenshots, Grafiken und Logos.</td>
+                </tr>
+                <tr>
+                  <td><strong>.pdf</strong></td>
+                  <td>Universalformat</td>
+                  <td>Sieht auf jedem Gerät gleich aus. Standard für alle Abgaben.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>4b) Standard bei Abgaben</h3>
+          <p>Grundsätzlich werden Abgaben im PDF-Format abgegeben. Längere Texte werden getippt und sauber formatiert. Dies ist nicht nur in der Schule sondern auch in der Arbeitswelt ein gängiger Standard. Ein einheitlicher Dateiname erleichtert Lehrkräften die Zuordnung erheblich. Das Standardformat lautet:</p>
+
+          <div class="code-box">Nachname_Vorname_LK-Kürzel_Aufgabe.pdf</div>
+
+          <p>Das genaue Format kann je nach Aufgabenstellung von der Lehrkraft abweichen. Dieses gilt, wenn nichts anderes vereinbart wurde.</p>
+
+          <div class="infobox">
+            <p class="box-label">📌 Warum immer PDF?</p>
+            <p>PDF (Portable Document Format) ist die Lingua franca für Abgaben: Das Layout bleibt auf jedem Gerät und Betriebssystem identisch. Eine .docx-Datei kann je nach Programm und System anders aussehen – eine PDF nicht.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════════════ KAPITEL 5: ORDNERSTRUKTUR ════════════ -->
+    <section class="chapter-section" id="ch-5">
+      <div class="chapter-content" data-open="false">
+        <div class="chapter-content-inner">
+          <div class="panel-heading">
+            <span class="panel-heading-icon">📁</span>
+            <div class="panel-heading-meta">
+              <span class="panel-chapter-badge">Kapitel 5</span>
+              <h2>Ordnerstruktur</h2>
+            </div>
+          </div>
+
+          <p>Eine gute Ordnerstruktur spart langfristig Zeit und Nerven. <strong>Wichtig:</strong> Nicht nach Schuljahren sortieren – die Themen kehren im Laufe der Schulzeit wieder. Besser: Fächer als Hauptordner, Themen als Unterordner.</p>
+
+          <div class="folder-tree">📁 Schule<br>
+ ├── 📁 Mathe<br>
+ │&nbsp;&nbsp;&nbsp;├── 📁 Analysis<br>
+ │&nbsp;&nbsp;&nbsp;├── 📁 Analytische Geometrie<br>
+ │&nbsp;&nbsp;&nbsp;├── 📁 Stochastik<br>
+ │&nbsp;&nbsp;&nbsp;└── 📁 SEK I<br>
+ ├── 📁 Deutsch<br>
+ │&nbsp;&nbsp;&nbsp;└── …<br>
+ ├── 📁 Biologie<br>
+ └── 📁 …</div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════════════ KAPITEL 6: DATEISICHERHEIT ════════════ -->
+    <section class="chapter-section" id="ch-6">
+      <div class="chapter-content" data-open="false">
+        <div class="chapter-content-inner">
+          <div class="panel-heading">
+            <span class="panel-heading-icon">🔒</span>
+            <div class="panel-heading-meta">
+              <span class="panel-chapter-badge">Kapitel 6</span>
+              <h2>Dateisicherheit</h2>
+            </div>
+          </div>
+
+          <h3>6a) Cloud, Gerät &amp; Datenverlust</h3>
+          <p>Drei Fragen, die jede/r beantworten können sollte:</p>
+          <ul>
+            <li>Wo liegen meine Dateien – lokal auf dem Gerät, in der Cloud oder an beiden Orten?</li>
+            <li>Was passiert, wenn mein Gerät kaputt geht oder gestohlen wird?</li>
+            <li>Wer hat theoretisch Zugriff auf meine Cloud-Daten?</li>
+          </ul>
+
+          <div class="regel-box">
+            <p class="box-label">📐 Grundregel</p>
+            <p>Wichtige Dateien sollten immer an mindestens zwei Orten gespeichert sein – z.&nbsp;B. lokal auf dem iPad und zusätzlich in der iCloud oder auf IServ. Wer nur lokal speichert, riskiert Datenverlust.</p>
+          </div>
+
+          <h3>6b) IServ-Dateien einbinden</h3>
+          <p>Mit der Einbindung von IServ in die Dateien-App des iPads hast du jederzeit Zugriff auf deine Schuldokumente. „Mit Server verbinden" verknüpfst du dein iPad direkt mit deinem IServ-Account.</p>
+          <ul>
+            <li>Dateien in Gruppenordnern sind sofort für alle Beteiligten sichtbar.</li>
+            <li>Änderungen synchronisieren sich automatisch – kein manuelles Verschicken nötig.</li>
+            <li>Gemeinsames Arbeiten an Projekten wird deutlich einfacher.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════════════ KAPITEL 7: AUFMERKSAMKEIT ════════════ -->
+    <section class="chapter-section" id="ch-7">
+      <div class="chapter-content" data-open="false">
+        <div class="chapter-content-inner">
+          <div class="panel-heading">
+            <span class="panel-heading-icon">🧠</span>
+            <div class="panel-heading-meta">
+              <span class="panel-chapter-badge">Kapitel 7</span>
+              <h2>Aufmerksamkeit als Ressource</h2>
+            </div>
+          </div>
+
+          <p>Aufmerksamkeit ist begrenzt – und genau darauf sind soziale Medien und Apps ausgelegt. Wer das versteht, kann bewusster mit seiner Zeit umgehen.</p>
+
+          <div class="stat-card">
+            <div class="stat-number">231</div>
+            <div class="stat-label">
+              <strong>Minuten täglich am Smartphone</strong> – das entspricht knapp 4 Stunden. Bei einem 16-Stunden-Wachtag sind das rund <strong>24 % des gesamten Tages</strong> – allein mit dem Handy.<br>
+              <small style="color: #92400e; font-size: 0.8rem;">Quelle: JIM-Studie 2025</small>
+            </div>
+          </div>
+
+          <p><strong>Warum das wichtig ist:</strong> Soziale Medien verdienen ihr Geld mit Aufmerksamkeit. Je länger du scrollst, desto mehr Werbung siehst du. Die Algorithmen sind darauf optimiert, dich möglichst lang auf der Plattform zu halten. Wer das weiß, kann aktiv gegensteuern.</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════════════ KAPITEL 8: WENIGER ABGELENKT ════════════ -->
+    <section class="chapter-section" id="ch-8">
+      <div class="chapter-content" data-open="false">
+        <div class="chapter-content-inner">
+          <div class="panel-heading">
+            <span class="panel-heading-icon">🛡️</span>
+            <div class="panel-heading-meta">
+              <span class="panel-chapter-badge">Kapitel 8</span>
+              <h2>Weniger abgelenkt werden – Werkzeuge &amp; Strategien</h2>
+            </div>
+          </div>
+
+          <p>Es gibt verschiedene Ansätze, Ablenkungen durch das iPad zu reduzieren. Nicht jeder Ansatz passt für jeden – probiere aus, was für dich funktioniert.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ansatz</th>
+                  <th>Tool / Weg</th>
+                  <th>Wie es wirkt</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Graustufen-Modus</strong></td>
+                  <td>Einstellungen → Bedienungshilfen → Anzeigeoptionen → Farbfilter → Graustufen</td>
+                  <td>Bunte Apps werden unattraktiver. Einfach, kostenlos und überraschend wirksam.</td>
+                </tr>
+                <tr>
+                  <td><strong>Öffnungs-Verzögerung</strong></td>
+                  <td>One Sec (iOS-App)</td>
+                  <td>Erzwingt eine kurze Pause vor dem App-Start. Unterbricht den automatischen Reflex.</td>
+                </tr>
+                <tr>
+                  <td><strong>Zeitlimit pro App</strong></td>
+                  <td>Einstellungen → Bildschirmzeit (iOS, kostenlos) · Forest App</td>
+                  <td>Die App wird nach dem Zeitlimit gesperrt. Forest pflanzt dabei einen virtuellen Baum als Motivation.</td>
+                </tr>
+                <tr>
+                  <td><strong>Zugriff über Dritte</strong></td>
+                  <td>Bildschirmzeit-Passwort durch Elternteil oder Vertrauensperson setzen lassen</td>
+                  <td>Die Sperre kann nicht selbst umgangen werden – höchste Hürde für konzentrierte Lernphasen.</td>
+                </tr>
+                <tr>
+                  <td><strong>Fokus-Modi</strong></td>
+                  <td>Einstellungen → Fokus</td>
+                  <td>Automatische Steuerung nach Kontext, Uhrzeit oder Standort. Apps und Benachrichtigungen werden gezielt blockiert.</td>
+                </tr>
+                <tr>
+                  <td><strong>Benachrichtigungen</strong></td>
+                  <td>Einstellungen → Mitteilungen → App auswählen → Deaktivieren</td>
+                  <td>Jede Benachrichtigung ist eine Unterbrechung. Nur wirklich wichtige Apps sollten Benachrichtigungen senden dürfen.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════════════ KAPITEL 9: FOKUS-MODUS ════════════ -->
+    <section class="chapter-section" id="ch-9">
+      <div class="chapter-content" data-open="false">
+        <div class="chapter-content-inner">
+          <div class="panel-heading">
+            <span class="panel-heading-icon">🔕</span>
+            <div class="panel-heading-meta">
+              <span class="panel-chapter-badge">Kapitel 9</span>
+              <h2>Fokus-Modus einrichten</h2>
+            </div>
+          </div>
+
+          <p>Der Fokus-Modus auf dem iPad ermöglicht es, Benachrichtigungen gezielt zu blockieren und nur bestimmte Apps zuzulassen – je nach Situation. Wie genau man ihn einrichtet, findest du selbst heraus (Einstellungen, Apple-Supportseite, YouTube).</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fokus-Profil</th>
+                  <th>Wann sinnvoll</th>
+                  <th>Was es bewirkt</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Schule</strong></td>
+                  <td>Unterrichtszeiten</td>
+                  <td>Nur Lern-Apps erlaubt, alle sozialen Medien blockiert.</td>
+                </tr>
+                <tr>
+                  <td><strong>Lernen</strong></td>
+                  <td>Nachmittags, Klausurvorbereitung</td>
+                  <td>Stille – keine Benachrichtigungen, kein Klingeln.</td>
+                </tr>
+                <tr>
+                  <td><strong>Schlafen</strong></td>
+                  <td>Nachts (automatisch)</td>
+                  <td>Display-Sperre, kein Klingeln außer Weckern.</td>
+                </tr>
+                <tr>
+                  <td><strong>Eigener Modus</strong></td>
+                  <td>Nach Bedarf</td>
+                  <td>Du kannst eigene Fokus-Profile für deine Routine erstellen.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="wichtig-box">
+            <p class="box-label">⚠️ Hausregel: Fokus-Modus ist Pflicht</p>
+            <p>Während des Unterrichts muss ein geeigneter Fokus-Modus aktiv sein. Richte dir deinen persönlichen Schul-Fokus ein und erkläre einer Mitschülerin oder einem Mitschüler, was du eingestellt hast und warum.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════════════ KAPITEL 10: DIGITALES SCHREIBEN ════════════ -->
+    <section class="chapter-section" id="ch-10">
+      <div class="chapter-content" data-open="false">
+        <div class="chapter-content-inner">
+          <div class="panel-heading">
+            <span class="panel-heading-icon">✏️</span>
+            <div class="panel-heading-meta">
+              <span class="panel-chapter-badge">Kapitel 10</span>
+              <h2>Digitales Schreiben – Wann Tastatur, wann Stift, wann analog?</h2>
+            </div>
+          </div>
+
+          <p>Es gibt nicht „die eine richtige" Methode. Entscheidend ist, dass die Wahl bewusst und passend zur Aufgabe getroffen wird.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Methode</th>
+                  <th>Am besten für z.&nbsp;B.&nbsp;…</th>
+                  <th>Vor- &amp; Nachteile</th>
+                  <th>Lerneffekt</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Papier + Stift</strong></td>
+                  <td>Mitschriften zum Lernen, Vokabeln, Formeln, Klausurvorbereitung</td>
+                  <td>Bestes Behalten und Verstehen – das Gehirn arbeitet aktiver, weil man langsamer schreibt. Und merkt sich auch viel über die Orientierung auf dem Blatt.</td>
+                  <td>
+                    <span class="star-rating" aria-label="3 von 3 Sternen">
+                      <span class="star filled">★</span>
+                      <span class="star filled">★</span>
+                      <span class="star filled">★</span>
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Tablet + Stift</strong></td>
+                  <td>Mathematik, Diagramme, Mindmaps, Skizzen</td>
+                  <td>Guter Kompromiss: handschriftlich und digital. Glasoberfläche ist gewöhnungsbedürftig, Hand ermüdet schneller. Schlechterer Schreibfluss durchs Scrollen.</td>
+                  <td>
+                    <span class="star-rating" aria-label="2 von 3 Sternen">
+                      <span class="star filled">★</span>
+                      <span class="star filled">★</span>
+                      <span class="star">★</span>
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Tastatur</strong></td>
+                  <td>Lange Texte, Hausarbeiten, digitale Abgaben</td>
+                  <td>Am schnellsten für lange Texte. Nachteil: Man tippt oft mit, ohne den Inhalt wirklich zu durchdenken. Weniger zum Lernen geeignet. Hoher Lebensweltbezug für später.</td>
+                  <td>
+                    <span class="star-rating" aria-label="2 von 3 Sternen">
+                      <span class="star filled">★</span>
+                      <span class="star filled">★</span>
+                      <span class="star">★</span>
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="wichtig-box">
+            <p class="box-label">⚠️ Wichtig: Klausuren bleiben analog</p>
+            <p>Klausuren werden weiterhin handschriftlich auf Papier geschrieben. Das regelmäßige Üben mit Stift und Papier bleibt daher unverzichtbar – auch wenn der Unterricht digital läuft.</p>
+          </div>
+
+          <div class="tipp-box">
+            <p class="box-label">💡 Tipp: 10-Finger-Schreiben</p>
+            <p>Wer auf dem Tablet schnell und sicher tippt, hat im Unterricht einen klaren Vorteil. Übungsseiten:</p>
+            <ul>
+              <li><a href="https://www.edclub.com/sportal/" target="_blank" rel="noopener">edclub.com/sportal</a></li>
+              <li><a href="https://play.typeracer.com/?universe=lang_de" target="_blank" rel="noopener">play.typeracer.com</a></li>
+              <li><a href="https://www.ticken.de/kurs-10-finger-schreiben/schreib-games.html" target="_blank" rel="noopener">ticken.de – 10-Finger-Schreiben</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════════════ KAPITEL 11: DIGITALES LESEN ════════════ -->
+    <section class="chapter-section" id="ch-11">
+      <div class="chapter-content" data-open="false">
+        <div class="chapter-content-inner">
+          <div class="panel-heading">
+            <span class="panel-heading-icon">📖</span>
+            <div class="panel-heading-meta">
+              <span class="panel-chapter-badge">Kapitel 11</span>
+              <h2>Digitales Lesen</h2>
+            </div>
+          </div>
+
+          <p>Texte am Bildschirm werden von vielen Menschen <strong>schlechter verstanden und weniger gut behalten</strong> als auf Papier. Die Forschung nennt das den <strong>„Screen-Inferiority-Effekt"</strong>. Besonders bei langen oder anspruchsvollen Texten schneiden Leserinnen und Leser auf Papier häufig besser ab.</p>
+
+          <h3>Warum lesen wir am Bildschirm schlechter?</h3>
+          <ul>
+            <li>Viele lesen am Bildschirm schneller und oberflächlicher.</li>
+            <li>Benachrichtigungen und andere Apps lenken ab.</li>
+            <li>Beim Scrollen verliert man leichter die Orientierung im Text.</li>
+            <li>Man sieht den Text nie als Ganzes – immer nur einen Ausschnitt.</li>
+            <li>Das Lesen am Bildschirm kann die Augen schneller ermüden.</li>
+            <li>„Querlesen" wird erschwert.</li>
+          </ul>
+
+          <h3>Strategien für besseres digitales Lesen</h3>
+          <ul>
+            <li><strong>Lesemodus aktivieren:</strong> Im Browser reduziert er Ablenkungen und verbessert die Typografie (Safari: Textformat-Symbol in der Adressleiste).</li>
+            <li><strong>PDF in GoodNotes:</strong> Längere Texte als PDF speichern und in GoodNotes lesen, markieren und kommentieren.</li>
+            <li><strong>Aktiv lesen:</strong> Zusammenfassen, markieren, Fragen notieren – nicht einfach nur durchscrollen.</li>
+            <li><strong>Papier bevorzugen:</strong> Anspruchsvolle oder lange Texte wann immer möglich ausdrucken und auf Papier lesen.</li>
+          </ul>
+
+          <div class="fazit-box">
+            <p class="box-label">🔬 Fazit (durch Forschung belegt)</p>
+            <p>Wer einen langen oder schwierigen Text wirklich verstehen und behalten will, liest ihn besser auf Papier. Tablets können beim Lesen unterstützen – aber nur, wenn man ihre Schwächen kennt und aktiv gegensteuert.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /chapters-container -->
+
+
+  <!-- No-Results Message -->
+  <div class="no-results" id="noResults">
+    <span class="no-results-icon">🔍</span>
+    <p><strong>Keine Treffer gefunden.</strong></p>
+    <p>Versuche einen anderen Suchbegriff.</p>
+  </div>
+
+</main><!-- /page-wrapper -->
+
+
+<footer class="site-footer">
+  Tablet-Schulung Handout · Schulung 1: Einstieg &amp; Grundlagen
+</footer>
+
+<script src="handout.js"></script>
+</body>
+</html>

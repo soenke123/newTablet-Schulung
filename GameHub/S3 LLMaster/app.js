@@ -3705,6 +3705,13 @@ function renderWerBinIch(bodyEl, actionBtn) {
 
     bodyEl.appendChild(layout);
 
+    if (window.innerWidth <= 640) {
+      requestAnimationFrame(() => {
+        const col = bodyEl.querySelector(".wbi-col-hints");
+        if (col) col.scrollTop = col.scrollHeight;
+      });
+    }
+
     if (hintIdx < 3) {
       actionBtn.textContent = "Nächster Hinweis →";
       actionBtn.disabled    = false;
@@ -3894,6 +3901,30 @@ function renderWerBinIch(bodyEl, actionBtn) {
     const board = document.createElement("div");
     board.className = "wbi-board";
 
+    // ── Mobile: flaches Raster, alle 7 Kandidaten, kein Drag ─────────
+    if (window.innerWidth <= 640) {
+      const midZone = document.createElement("div");
+      midZone.className = "wbi-zone wbi-zone--mid";
+      const midLabel = document.createElement("div");
+      midLabel.className   = "wbi-zone-label";
+      midLabel.textContent = "Kandidaten";
+      midZone.appendChild(midLabel);
+      const instr = document.createElement("p");
+      instr.className   = "wbi-mobile-instr";
+      instr.textContent = "Wähle deinen Tipp — du kannst dich immer umentscheiden.";
+      midZone.appendChild(instr);
+      const row = document.createElement("div");
+      row.className = "wbi-candidate-row";
+      WBI_LLMS.forEach(l => {
+        const card = makeCard(l.id, "mid");
+        if (l.id === topId) card.classList.add("wbi-card--top");
+        row.appendChild(card);
+      });
+      midZone.appendChild(row);
+      board.appendChild(midZone);
+      return board;
+    }
+
     // Tipp-Zone (oben)
     const topZone  = document.createElement("div");
     topZone.className = "wbi-zone wbi-zone--top";
@@ -3987,8 +4018,12 @@ function renderWerBinIch(bodyEl, actionBtn) {
     let drag = null;
 
     card.addEventListener("pointerdown", e => {
-      e.preventDefault();
       card.setPointerCapture(e.pointerId);
+      if (window.innerWidth <= 640) {
+        drag = { ghost: null, sy: e.clientY };
+        return;
+      }
+      e.preventDefault();
       const rect  = card.getBoundingClientRect();
       const ghost = card.cloneNode(true);
       ghost.classList.add("wbi-card--ghost-floating");
@@ -4001,17 +4036,35 @@ function renderWerBinIch(bodyEl, actionBtn) {
     });
 
     card.addEventListener("pointermove", e => {
-      if (!drag) return;
+      if (!drag || !drag.ghost) return;
       drag.ghost.style.top  = (drag.oy + e.clientY - drag.sy) + "px";
       drag.ghost.style.left = (drag.ox + e.clientX - drag.sx) + "px";
     });
 
     const endDrag = e => {
       if (!drag) return;
-      drag.ghost.remove();
-      card.classList.remove("wbi-card--dragging-src");
+      if (drag.ghost) {
+        drag.ghost.remove();
+        card.classList.remove("wbi-card--dragging-src");
+      }
       const dy = e.clientY - drag.sy;
       drag = null;
+
+      if (window.innerWidth <= 640) {
+        if (Math.abs(dy) < 15) {
+          const correctId = roundLLMs[roundIdx].id;
+          if (topId === id) {
+            topId = null;
+            if (id === correctId) lastTopHintIdx = null;
+          } else {
+            if (topId !== null && topId === correctId) lastTopHintIdx = null;
+            topId = id;
+            if (id === correctId) lastTopHintIdx = hintIdx;
+          }
+          render();
+        }
+        return;
+      }
 
       const correctId = roundLLMs[roundIdx].id;
       if (dy < -50) {

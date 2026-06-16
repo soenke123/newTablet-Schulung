@@ -1072,6 +1072,12 @@ html, body {
   border: 1px solid #ddd;
   min-height: 72px;
 }
+.wbi-mobile-instr {
+  font-size: 12px;
+  color: var(--c-muted);
+  margin: 2px 0 6px;
+  line-height: 1.3;
+}
 .wbi-zone-label {
   font-size: 11px;
   font-weight: 700;
@@ -2607,6 +2613,16 @@ html, body {
 
 /* === Handy (≤640px) — Quiz-Modal kompakt === */
 @media (max-width: 640px) {
+  /* Map-Screen: normales Seiten-Scrolling statt fixe Viewport-Höhe */
+  #screen-map {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  .map-complex {
+    max-height: none;
+  }
+
   .overlay { padding: 10px; }
 
   .quiz-card {
@@ -2639,14 +2655,16 @@ html, body {
   .beg-expl-card                    { display: none; }
   .beg-expl-card.is-carousel-active { display: flex; flex-direction: column; }
 
-  .beg-carousel-dots { display: flex; gap: 7px; justify-content: center; padding: 8px 0 4px; }
+  /* Dots nach dem Grid (order 2) → order 3 damit sie unter den Definitions-Karten erscheinen */
+  .beg-carousel-dots { display: flex; gap: 7px; justify-content: center; padding: 4px 0 6px; order: 3; }
   .beg-carousel-dot  { width: 8px; height: 8px; border-radius: 50%; background: #d5ceef; flex-shrink: 0; transition: background 0.2s, transform 0.2s; }
   .beg-carousel-dot.is-active { background: var(--c-primary); transform: scale(1.3); }
 
   .beg-heading   { font-size: 15px; margin-bottom: 3px; }
   .beg-sub       { font-size: 12px; margin-bottom: 6px; }
-  .beg-hand      { padding: 8px 10px; gap: 6px; margin-bottom: 6px; }
-  .beg-term-chip { font-size: 12px; padding: 5px 11px; }
+  /* Horizontal scrollbar statt Zeilenumbruch */
+  .beg-hand      { padding: 8px 10px; gap: 6px; margin-bottom: 4px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .beg-term-chip { font-size: 12px; padding: 5px 11px; flex-shrink: 0; }
 
   /* Station 2 — Multiple Choice */
   .mc-section-intro        { padding: 14px 12px; }
@@ -2665,4 +2683,40 @@ html, body {
   .mc-option::before       { left: 10px; width: 15px; height: 15px; }
 
   .mc-explanation          { font-size: 12px; line-height: 1.4; padding: 7px 10px; margin-top: 8px; }
+
+  /* Station 4 — Wer bin ich? (mobile) */
+  .wbi-layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .wbi-col-hints {
+    max-height: 38vh;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+
+  .wbi-zone--top,
+  .wbi-zone--elim {
+    display: none;
+  }
+
+  .wbi-zone--mid {
+    background: #f0eefa;
+    padding: 10px;
+    border-radius: 12px;
+    min-height: unset;
+  }
+
+  .wbi-candidate-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .wbi-card {
+    width: auto;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
 }

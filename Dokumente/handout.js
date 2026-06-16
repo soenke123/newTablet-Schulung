@@ -1,6 +1,18 @@
 'use strict';
 
 /* ==========================================
+   Schulung 2 – Sichtbarkeit (gesteuert via _rel in config.js)
+   ========================================== */
+if (typeof _rel === 'undefined' || !_rel) {
+  ['ch-12', 'ch-13', 'ch-14', 'ch-15', 'ch-16', 'ch-17'].forEach(id => {
+    document.getElementById(id)?.remove();
+    document.querySelector(`.chapter-btn[data-target="${id}"]`)?.remove();
+  });
+} else {
+  document.getElementById('s2-eyebrow').style.display = '';
+}
+
+/* ==========================================
    State & DOM References
    ========================================== */
 const sections  = Array.from(document.querySelectorAll('.chapter-section'));
