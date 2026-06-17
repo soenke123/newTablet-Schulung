@@ -2341,6 +2341,7 @@ function initBegCarousel(gridEl) {
   let swipeStart = null;
   gridEl.addEventListener("pointerdown", e => {
     if (e.target.closest(".beg-term-chip")) return;
+    gridEl.setPointerCapture(e.pointerId);
     swipeStart = { x: e.clientX, id: e.pointerId };
   });
   gridEl.addEventListener("pointerup", e => {

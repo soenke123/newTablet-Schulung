@@ -2651,7 +2651,7 @@ html, body {
   .quiz-card footer .btn-primary { font-size: 13px; padding: 9px 16px; }
 
   /* Station 7 Phase 2 — Erklärungs-Karussell */
-  .beg-expl-grid                    { display: block; }
+  .beg-expl-grid                    { display: block; touch-action: pan-y; }
   .beg-expl-card                    { display: none; }
   .beg-expl-card.is-carousel-active { display: flex; flex-direction: column; }
 
