@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lernwelt – Fortschritt wiederherstellen</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #1a1208;
+      --bg2:       #231a0a;
+      --bg3:       #2e2010;
+      --gold:      #d4a830;
+      --gold-l:    #f5d76e;
+      --gold-d:    #7a5e18;
+      --text:      #e8d5a0;
+      --text-d:    #9a7a40;
+      --rare:      #4488cc;
+      --epic:      #9944cc;
+      --legend:    #cc8800;
+      --ok:        #44aa55;
+      --err:       #cc3333;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ─── Passwort-Overlay ─── */
+    #pwOverlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px;
+    }
+    #pwOverlay .lock-icon { font-size: 3rem; }
+    #pwOverlay h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.7rem;
+      color: var(--gold-l);
+    }
+    #pwOverlay p { color: var(--text-d); font-size: 0.88rem; }
+    #pwInput {
+      background: var(--bg2);
+      border: 2px solid var(--gold-d);
+      border-radius: 8px;
+      color: var(--gold-l);
+      font-size: 1.1rem;
+      padding: 10px 18px;
+      width: 280px;
+      text-align: center;
+      outline: none;
+      margin-top: 4px;
+    }
+    #pwInput:focus { border-color: var(--gold); }
+    #pwBtn {
+      background: var(--gold);
+      color: #1a1208;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 10px 32px;
+      cursor: pointer;
+    }
+    #pwBtn:hover { background: var(--gold-l); }
+    #pwError { color: var(--err); font-size: 0.88rem; min-height: 18px; }
+
+    /* ─── Haupt-Tool ─── */
+    #tool {
+      display: none;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 20px 80px;
+    }
+
+    .tool-header { text-align: center; margin-bottom: 32px; }
+    .tool-header h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.5rem;
+      color: var(--gold-l);
+    }
+    .tool-header p { color: var(--text-d); font-size: 0.83rem; margin-top: 7px; line-height: 1.5; }
+
+    /* ─── Sections ─── */
+    .section { margin-bottom: 26px; }
+    .section-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.82rem;
+      color: var(--gold-d);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      margin-bottom: 11px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #3a2a10;
+    }
+    .section-title.rare   { color: var(--rare); border-color: #1a3358; }
+    .section-title.epic   { color: var(--epic); border-color: #3a1858; }
+    .section-title.legend { color: var(--legend); border-color: #583010; }
+
+    .creature-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* ─── Kreatur-Karte ─── */
+    .card {
+      width: 100px;
+      background: var(--bg2);
+      border: 2px solid #3a2a10;
+      border-radius: 10px;
+      padding: 8px 6px 6px;
+      text-align: center;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: border-color 0.12s, transform 0.1s, box-shadow 0.12s;
+      user-select: none;
+      position: relative;
+    }
+    .card:hover:not(.locked) {
+      border-color: var(--gold-d);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(212,168,48,0.15);
+    }
+    .card:active:not(.locked) { transform: translateY(0); }
+    .card.locked { cursor: not-allowed; opacity: 0.45; }
+    .card.rare   { border-color: var(--rare); }
+    .card.epic   { border-color: var(--epic); }
+    .card.legend { border-color: var(--legend); }
+
+    .card-img-wrap {
+      width: 80px; height: 80px;
+      margin: 0 auto 5px;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card-img-wrap img {
+      width: 80px; height: 80px;
+      object-fit: contain;
+    }
+    .card.hidden .card-img-wrap img { filter: brightness(0.15) saturate(0); }
+
+    .card-question {
+      width: 80px; height: 80px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.2rem;
+      color: var(--text-d);
+      background: #1a1208;
+      border-radius: 8px;
+    }
+    .lock-overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      pointer-events: none;
+    }
+
+    .card-name { display: none; }
+    .card-stage {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--gold-d);
+    }
+    .s0 { color: #666; }
+    .s1 { color: #5599bb; }
+    .s2 { color: #55aa66; }
+    .s3 { color: #cc9933; }
+    .s4 { color: var(--gold-l); }
+
+    /* ─── Extras-Box ─── */
+    .extras-box {
+      background: var(--bg2);
+      border: 2px solid #3a2a10;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 26px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .extras-box label {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; font-size: 0.9rem;
+    }
+    .extras-box input[type=checkbox] {
+      width: 18px; height: 18px; accent-color: var(--gold); cursor: pointer;
+    }
+    .extras-hint { color: var(--text-d); font-size: 0.78rem; }
+
+    /* ─── Münz-Bereich ─── */
+    .coin-box {
+      background: var(--bg2);
+      border: 2px solid #3a2a10;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .coin-box h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 0.95rem;
+      color: var(--gold-l);
+      margin-bottom: 4px;
+    }
+    .coin-box .sub { color: var(--text-d); font-size: 0.78rem; margin-bottom: 12px; }
+    .coin-row { display: flex; align-items: center; gap: 12px; }
+    .coin-btn {
+      width: 42px; height: 42px;
+      background: var(--bg3);
+      border: 2px solid var(--gold-d);
+      border-radius: 8px;
+      color: var(--gold-l);
+      font-size: 1.3rem;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+      line-height: 1;
+    }
+    .coin-btn:hover:not(:disabled) { background: #3a2e12; border-color: var(--gold); }
+    .coin-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .coin-val {
+      font-family: 'Cinzel', serif;
+      font-size: 1.7rem;
+      color: var(--gold-l);
+      min-width: 80px;
+      text-align: center;
+    }
+    .coin-current { color: var(--text-d); font-size: 0.8rem; margin-top: 8px; }
+
+    /* ─── Transfer-Button ─── */
+    .transfer-btn {
+      display: block; width: 100%;
+      background: var(--gold);
+      color: #1a1208;
+      border: none; border-radius: 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 15px;
+      cursor: pointer;
+      touch-action: manipulation;
+      margin-bottom: 14px;
+      transition: background 0.15s;
+    }
+    .transfer-btn:hover { background: var(--gold-l); }
+
+    #status { text-align: center; font-size: 0.9rem; min-height: 22px; }
+    .ok  { color: var(--ok); }
+    .err { color: var(--err); }
+
+    .back { display:block; text-align:center; color:var(--text-d); font-size:0.82rem; text-decoration:none; margin-top:10px; }
+    .back:hover { color: var(--gold); }
+  </style>
+</head>
+<body>
+
+<!-- ══ PASSWORT-OVERLAY ══ -->
+<div id="pwOverlay">
+  <div class="lock-icon">🔐</div>
+  <h1>Lernwelt-Zugang</h1>
+  <p>Nur für Lehrkräfte</p>
+  <input type="password" id="pwInput" placeholder="Passwort eingeben" autocomplete="off">
+  <button id="pwBtn">Bestätigen</button>
+  <p id="pwError"></p>
+</div>
+
+<!-- ══ HAUPT-TOOL ══ -->
+<div id="tool">
+  <div class="tool-header">
+    <h1>🛡️ Fortschritt wiederherstellen</h1>
+    <p>Klicke die Kreaturen an, um die Stufen einzustellen, die wiederhergestellt werden sollen.<br>
+       Der Hub wird nur <strong>erweitert</strong>, nie verringert. Legendäre Kreaturen sind gesperrt.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Normale Kreaturen</div>
+    <div class="creature-grid" id="grp-normal"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Season 3 – Normale Kreaturen</div>
+    <div class="creature-grid" id="grp-s3"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title rare">Seltene Kreaturen</div>
+    <div class="creature-grid" id="grp-rare"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title epic">Epische Kreaturen</div>
+    <div class="creature-grid" id="grp-epic"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title legend">Legendäre Kreaturen <span style="font-size:0.85em;opacity:0.55">(nicht editierbar)</span></div>
+    <div class="creature-grid" id="grp-legend"></div>
+  </div>
+
+  <div class="extras-box">
+    <label>
+      <input type="checkbox" id="chkBuch">
+      📜 Buch der Monster freischalten
+    </label>
+    <span class="extras-hint">(falls durch Datenverlust weg)</span>
+  </div>
+
+  <div class="coin-box">
+    <h2>🪙 Münzen hinzufügen</h2>
+    <p class="sub">Wird auf den vorhandenen Münzstand aufaddiert – nie ersetzt.</p>
+    <div class="coin-row">
+      <button class="coin-btn" id="btnM" disabled>−</button>
+      <div class="coin-val" id="coinVal">0</div>
+      <button class="coin-btn" id="btnP">+</button>
+    </div>
+    <p class="coin-current" id="coinCur"></p>
+  </div>
+
+  <button class="transfer-btn" id="btnTransfer">⚡ Diesen Fortschritt ins Hub übertragen</button>
+  <p id="status"></p>
+  <a class="back" href="index.html">← Zurück zum Hub</a>
+</div>
+
+<script>
+/* ── Passwort-Prüfung (DJB2, läuft auf HTTP + HTTPS + file://) ── */
+const HASH = 'rrdha4';
+
+function checkPw() {
+  const v = document.getElementById('pwInput').value;
+  if (djb2(v) === HASH) {
+    document.getElementById('pwOverlay').style.display = 'none';
+    document.getElementById('tool').style.display = 'block';
+    init();
+  } else {
+    document.getElementById('pwError').textContent = '❌ Falsches Passwort.';
+  }
+}
+
+/* ── Storage (identisch mit creatures.js / addcoins.html) ── */
+function djb2(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(h, 33) ^ str.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+function load(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return {};
+    let p;
+    try { p = JSON.parse(atob(raw)); } catch { p = JSON.parse(raw); }
+    if (p && typeof p === 'object' && 'h' in p && 'd' in p) {
+      if (p.h !== djb2(JSON.stringify(p.d))) return {};
+      return p.d;
+    }
+    return p;
+  } catch { return {}; }
+}
+function save(key, data) {
+  const json = JSON.stringify(data);
+  localStorage.setItem(key, btoa(JSON.stringify({ d: data, h: djb2(json) })));
+}
+
+/* ── Kreatur-Daten ── */
+const CREATURES = [
+  { id:'snail',        name:'Tapfere Schnecke',              grp:'normal',  imgs:['Schnecke1','Schnecke2','Schnecke3','Schnecke4','Schnecke5'] },
+  { id:'fish',         name:'Wilder Fisch',                  grp:'normal',  imgs:['Fisch1','Fisch2','Fisch3','Fisch4','Fisch5'] },
+  { id:'chicken',      name:'Stolzer Hahn',                  grp:'normal',  imgs:['huhn1','huhn2','huhn3','huhn4','huhn5'] },
+  { id:'salamander',   name:'Großer Salamander',             grp:'normal',  imgs:['Salamander1','Salamander2','Salamander3','Salamander4','Salamander5'] },
+  { id:'falkeneule',   name:'Majest. Falkeneule',            grp:'normal',  imgs:['Falkeneule1','Falkeneule2','Falkeneule3','Falkeneule4','Falkeneule5'] },
+  { id:'triceratops',  name:'Mächt. Triceratops',            grp:'normal',  imgs:['Triceratops1','Triceratops2','Triceratops3','Triceratops4','Triceratops5'] },
+  { id:'dragon',       name:'Mächtiger Drache',              grp:'normal',  imgs:['drache1','drache2','drache3','drache4','drache5'] },
+  { id:'frosch',       name:'Riesenfrosch',                  grp:'s3',      imgs:['Frosch1','Frosch2','Frosch3','Frosch4','Frosch5'] },
+  { id:'pinguin',      name:'Kaiserpinguin',                  grp:'s3',      imgs:['Pinguin1','Pinguin2','Pinguin3','Pinguin4','Pinguin5'] },
+  { id:'raptor',       name:'Velociraptor',                  grp:'s3',      imgs:['Raptor1','Raptor2','Raptor3','Raptor4','Raptor5'] },
+  { id:'biene',        name:'Seltene Biene – S1',            grp:'rare',    imgs:['Biene1','Biene2','Biene3','Biene4','Biene5'] },
+  { id:'oktopus',      name:'Seltener Oktopus – S2',         grp:'rare',    imgs:['Oktopus1','Oktopus2','Oktopus3','Oktopus4','Oktopus5'] },
+  { id:'ente',         name:'Seltene Ente – S3',             grp:'rare',    imgs:['Ente1','Ente2','Ente3','Ente4','Ente5'] },
+  { id:'butterfly',    name:'Gold. Schmetterling',           grp:'epic',    imgs:['Schmetterling1','Schmetterling2','Schmetterling3','Schmetterling4','Schmetterling5'] },
+  { id:'snaildragon',  name:'Schneckendrache',               grp:'epic',    imgs:['Schneckendrache1','Schneckendrache2','Schneckendrache3','Schneckendrache4','Schneckendrache5'] },
+  { id:'turtle',       name:'Gold. Schildkröte',             grp:'epic',    imgs:['Schildkröte1','Schildkröte2','Schildkröte3','Schildkröte4','Schildkröte5'] },
+  { id:'chamaeleon',   name:'Episch. Chamäleon',             grp:'epic',    imgs:['Chamäleon1','Chamäleon2','Chamäleon3','Chamäleon4','Chamäleon5'] },
+  { id:'robot',        name:'Atari-1337',                    grp:'legend',  imgs:['AI1','AI2','AI3','AI4','AI5'] },
+  { id:'pfau',         name:'Legendärer Pfau',               grp:'legend',  imgs:['Pfau1','Pfau2','Pfau3','Pfau4','Pfau5'] },
+  { id:'chinDrache',   name:'Chinesischer Drache',           grp:'legend',  imgs:['chinDrache1','chinDrache2','chinDrache3','chinDrache4','chinDrache5'] },
+  { id:'schnabeltier', name:'Legendäres Schnabeltier',       grp:'legend',  imgs:['Schnabeltier1','Schnabeltier2','Schnabeltier3','Schnabeltier4','Schnabeltier5'] },
+];
+
+const STAGE_LABELS = ['Verborgen','Winzig','Klein','Mittel','Groß','Ausgewachsen'];
+const STAGE_COLORS = ['','s0','s1','s2','s3','s4'];
+const IMG_BASE     = 'data/';
+
+const stages = {};
+CREATURES.forEach(c => stages[c.id] = -1);
+let coins = 0;
+
+/* ── Karten bauen ── */
+function buildCard(c) {
+  const locked = c.grp === 'legend';
+  const cls    = locked ? 'legend' : c.grp === 'rare' ? 'rare' : c.grp === 'epic' ? 'epic' : '';
+  return `
+    <div class="card ${cls} hidden${locked ? ' locked' : ''}" id="card-${c.id}" data-id="${c.id}">
+      <div class="card-img-wrap">
+        <div class="card-question">?</div>
+        ${locked ? '<div class="lock-overlay">🔒</div>' : ''}
+      </div>
+      <div class="card-name">${c.name}</div>
+      <div class="card-stage" id="st-${c.id}">Verborgen</div>
+    </div>`;
+}
+
+function renderGroup(grpId, containerId) {
+  document.getElementById(containerId).innerHTML =
+    CREATURES.filter(c => c.grp === grpId).map(buildCard).join('');
+}
+
+/* ── Stufe wechseln ── */
+function cycle(id) {
+  const c    = CREATURES.find(x => x.id === id);
+  const next = stages[id] >= 4 ? -1 : stages[id] + 1;
+  stages[id] = next;
+
+  const card    = document.getElementById('card-' + id);
+  const stEl    = document.getElementById('st-' + id);
+  const imgWrap = card.querySelector('.card-img-wrap');
+
+  if (next === -1) {
+    imgWrap.innerHTML = '<div class="card-question">?</div>';
+    card.classList.add('hidden');
+  } else {
+    const src = `${IMG_BASE}${c.imgs[next]}.png`;
+    imgWrap.innerHTML = `<img src="${src}" alt="${c.name}" onerror="this.style.opacity='0.3'">`;
+    card.classList.remove('hidden');
+  }
+
+  const idx  = next + 1; // -1→0, 0→1, ..., 4→5
+  stEl.className = `card-stage${STAGE_COLORS[idx] ? ' ' + STAGE_COLORS[idx] : ''}`;
+  stEl.textContent = STAGE_LABELS[idx];
+}
+
+/* ── Münzen ── */
+function adj(delta) {
+  coins = Math.max(0, coins + delta);
+  document.getElementById('coinVal').textContent = coins;
+  document.getElementById('btnM').disabled = (coins === 0);
+}
+
+/* ── Aktuellen Münzstand laden und anzeigen ── */
+function refreshCoinInfo() {
+  const d = load('lernwelt_shop_v1');
+  const b = d.bankedCoins || 0;
+  document.getElementById('coinCur').textContent =
+    `Aktueller Münzstand im Hub: ${b} 🪙`;
+}
+
+/* ── Transfer ── */
+function transfer() {
+  const st = document.getElementById('status');
+  try {
+    const d = load('lernwelt_shop_v1');
+    if (!d.seenCreatures) d.seenCreatures = {};
+
+    // Buch der Monster: max-merge (nur erhöhen)
+    for (const c of CREATURES) {
+      if (c.grp === 'legend') continue;
+      const s = stages[c.id];
+      if (s < 0) continue;
+      const cur = d.seenCreatures[c.id] ?? -1;
+      if (s > cur) d.seenCreatures[c.id] = s;
+    }
+
+    // Münzen addieren
+    if (coins > 0) d.bankedCoins = (d.bankedCoins || 0) + coins;
+
+    // Buch der Monster freischalten (falls gewünscht)
+    if (document.getElementById('chkBuch').checked) {
+      if (!Array.isArray(d.purchased)) d.purchased = [];
+      if (!d.purchased.includes('buchDerMonster')) {
+        d.purchased.push('buchDerMonster');
+      }
+    }
+
+    save('lernwelt_shop_v1', d);
+    st.className = 'ok';
+    st.textContent = '✅ Fortschritt erfolgreich ins Hub übertragen!';
+    refreshCoinInfo();
+  } catch(e) {
+    st.className = 'err';
+    st.textContent = '❌ Fehler: ' + e.message;
+  }
+}
+
+/* ── Init nach Login ── */
+function init() {
+  renderGroup('normal',  'grp-normal');
+  renderGroup('s3',      'grp-s3');
+  renderGroup('rare',    'grp-rare');
+  renderGroup('epic',    'grp-epic');
+  renderGroup('legend',  'grp-legend');
+  refreshCoinInfo();
+
+  // Event-Delegation für alle Kreatur-Karten (kein onclick im HTML)
+  ['grp-normal','grp-s3','grp-rare','grp-epic','grp-legend'].forEach(function(grpId) {
+    document.getElementById(grpId).addEventListener('click', function(e) {
+      var card = e.target.closest('[data-id]');
+      if (!card || card.classList.contains('locked')) return;
+      cycle(card.dataset.id);
+    });
+  });
+
+  document.getElementById('btnTransfer').addEventListener('click', transfer);
+  document.getElementById('btnM').addEventListener('click', function() { adj(-10); });
+  document.getElementById('btnP').addEventListener('click', function() { adj(10); });
+}
+
+/* ── Passwort-Handler beim Laden setzen ── */
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('pwBtn').addEventListener('click', checkPw);
+  document.getElementById('pwInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') checkPw();
+  });
+});
+</script>
+</body>
+</html>

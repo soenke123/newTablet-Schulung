@@ -949,7 +949,7 @@ const WBI_LLMS = [
     facts: ["Firma: Meta (ehem. Facebook)", "Open Source: LLaMA-Modelle", "In WhatsApp & Instagram"],
     hint1Keys: ["A","B","D","E"],
     hints: [
-      "Meine Modelle sind quelloffen (Open Source) — jeder kann sie herunterladen und selbst nutzen.",
+      "Die Modell-Dateien sind öffentlich zugänglich — Firmen und Entwickler können sie auf eigenen Servern betreiben, ohne Meta zu fragen.",
       "Ich bin direkt in Apps wie WhatsApp und Instagram nutzbar.",
       "Meine Firma heißt Meta — früher bekannt als Facebook.",
     ],
@@ -959,7 +959,7 @@ const WBI_LLMS = [
     facts: ["Firma: DeepSeek, China", "Open Source", "Überraschte die KI-Welt 2025"],
     hint1Keys: ["B","C","D","E"],
     hints: [
-      "Meine Modelle sind quelloffen (Open Source) — jeder kann sie herunterladen und selbst nutzen.",
+      "Die Modell-Dateien sind öffentlich zugänglich — Firmen und Entwickler können sie auf eigenen Servern betreiben, ohne DeepSeek zu fragen.",
       "Meine Firma kommt nicht aus den USA oder Europa, sondern aus Asien.",
       "Meine Firma heißt DeepSeek und hat ihren Sitz in China.",
     ],
