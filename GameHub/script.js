@@ -8,7 +8,7 @@
 /* ─────────────────────────────────────────────────
    ZUGRIFFSKONTROLLE (geladen aus config.json)
    ───────────────────────────────────────────────── */
-let GAME_ACCESS = {};
+if (typeof GAME_ACCESS === 'undefined') window.GAME_ACCESS = {};
 function loadUnlocked() { return window.getUnlocked ? window.getUnlocked() : []; }
 function saveUnlocked(gameId) { if (window.setUnlocked) window.setUnlocked(gameId); }
 

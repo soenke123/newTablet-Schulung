@@ -198,14 +198,14 @@
     </div>
   </div>
 
-  <script src="config.js"></script>
-  <script src="creatures.js"></script>
-  <script src="script.js"></script>
+  <script src="config.js?v=2"></script>
+  <script src="creatures.js?v=2"></script>
+  <script src="script.js?v=2"></script>
   <script>
     // Hub-spezifischer Code
     // Atari1 · Enter 4-8-2-6
     document.addEventListener('DOMContentLoaded', () => {
-      migrateUnlocked();
+      if (typeof migrateUnlocked === 'function') migrateUnlocked();
       renderHub();
 
       // Season 3 Announcement — einmal pro Sitzung zeigen
