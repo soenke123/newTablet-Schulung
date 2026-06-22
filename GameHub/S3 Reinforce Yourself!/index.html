@@ -1462,6 +1462,7 @@ const SIM_KEY = 'rl_sim_state';
 let simState = { phase2Unlocked: false, p2BrettPlayed: false, p2AlienPlayed: false, p2Locked: false, quizDone: false, p3QuizDone: false };
 
 let score = {};
+let win1Applied = false;
 const SCORE_DEF = { total:0, p1:0, quiz1:0, p2brett:0, p2alien:0, quiz2:0, p3:0,
                     _p2bWins:0, _p2aWins:0, _p2bPenalties:0, _p2aPenalties:0, _p3Bonus:false };
 
@@ -1502,7 +1503,9 @@ function updateCompanion() {
     const part1    = (score.p1 || 0) + (score.quiz1 || 0) + p2total;    // Win1-Scores
     const maxP3dyn = typeof T_NODES !== 'undefined' ? T_NODES.length * 2 + 20 : 50;
     const part3    = (score.p3 || 0) + (score.quiz2 || 0);              // Win2-Scores
-    let contrib = computeSessionGrowth(part1, 240) + computeSessionGrowth(part3, maxP3dyn + 70);
+    let contrib = win1Applied
+        ? computeSessionGrowth(part3, maxP3dyn + 70)
+        : computeSessionGrowth(part1, 240) + computeSessionGrowth(part3, maxP3dyn + 70);
     if (sd2.wachstumsBooster) contrib *= 2;
     liveGrowth = Math.min(gd.growth + contrib, 21);
   }
@@ -3983,6 +3986,7 @@ function showWin1() {
   populateWinHub(1);
   renderCoinBank('win1-coins', isFirstHatch ? 0 : coinsW1);
 
+  win1Applied = true;
   document.getElementById('win1').classList.add('active');
   startConfetti();
 }
