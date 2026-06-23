@@ -1600,7 +1600,7 @@ const SEALED_EGG_DEFS = {
     seals: [
       {
         name: 'Siegel I', icon: '☁️',
-        hint: 'Die Wolken kennen deine Adresse. Kennst du sie auch?',
+        hint: 'Alle im Netz kennen deine Adresse. Kennst du sie auch?',
         hasInput: true,
         verifyAsync: async function(val) {
           try {
@@ -1615,7 +1615,7 @@ const SEALED_EGG_DEFS = {
       },
       {
         name: 'Siegel II', icon: '📜',
-        hint: 'Das Gedächtnis der Schule reicht weiter zurück als du denkst. Was geschah hier vor einem Viertel Jahrhundert?',
+        hint: 'Das Gedächtnis von IServ reicht weiter zurück als du denkst. Was geschah hier vor einem Viertel Jahrhundert?',
         hasInput: true,
         verifyAsync: async function(val) {
           const h = async s => Array.from(new Uint8Array(

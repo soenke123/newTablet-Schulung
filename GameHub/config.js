@@ -10,7 +10,7 @@
      4. Den ausgegebenen Hash hier als passwordHash eintragen
    ══════════════════════════════════════════════════════════════ */
 
-_rel = false;
+_rel = true;
 
 
 GAME_ACCESS = {
