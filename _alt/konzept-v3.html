@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Platform — Konzept v0.3 (Campus-Builder)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream: #fff5e1;
+  --peach: #ffe5c2;
+  --paper: #fffaf0;
+  --pink: #ff7eb6;
+  --pink-soft: #ffb8d6;
+  --purple: #a78bfa;
+  --purple-soft: #d4c5ff;
+  --yellow: #fcd34d;
+  --yellow-soft: #fff0a8;
+  --mint: #7eddc1;
+  --mint-soft: #b6f0dd;
+  --coral: #ff8a7a;
+  --sky: #7ecbff;
+  --sky-soft: #c8e8ff;
+  --grass: #a3d977;
+  --grass-dark: #8ac362;
+  --brown: #4a3829;
+  --brown-light: #8c7869;
+  --shadow: rgba(74, 56, 41, 0.2);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--cream);
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,184,214,0.25) 0%, transparent 35%),
+    radial-gradient(circle at 80% 80%, rgba(212,197,255,0.25) 0%, transparent 35%);
+  color: var(--brown); font-family: 'Nunito', sans-serif; font-weight: 700;
+  line-height: 1.6; overflow-x: hidden;
+}
+
+/* ── HERO ── */
+.hero {
+  position: relative; min-height: 85vh; padding: 4rem 2rem;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center; z-index: 1;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: var(--paper); border: 3px solid var(--purple);
+  border-radius: 99px; padding: .5rem 1.25rem;
+  font-family: 'Fredoka', sans-serif; font-size: .85rem; color: var(--purple);
+  margin-bottom: 1.5rem; box-shadow: 0 4px 0 var(--purple-soft);
+}
+.hero h1 {
+  font-family: 'Fredoka', sans-serif; font-weight: 700;
+  font-size: clamp(2.6rem, 8vw, 5.5rem);
+  line-height: 1; margin-bottom: 1rem; color: var(--brown);
+  text-shadow: 4px 4px 0 var(--purple-soft);
+}
+.hero h1 .accent {
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-sub {
+  font-size: clamp(1rem, 2vw, 1.25rem); color: var(--brown);
+  max-width: 700px; margin: 0 auto 2.5rem; font-weight: 600;
+}
+
+.hero-buildings {
+  display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; align-items: flex-end;
+  background: var(--grass);
+  border: 4px solid var(--brown); border-radius: 24px;
+  padding: 2.5rem 2rem 1.5rem;
+  box-shadow: 0 10px 0 var(--brown);
+  position: relative; overflow: hidden;
+}
+.hero-buildings::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: radial-gradient(circle at 20% 30%, var(--grass-dark) 8px, transparent 9px),
+                    radial-gradient(circle at 80% 60%, var(--grass-dark) 6px, transparent 7px),
+                    radial-gradient(circle at 50% 80%, var(--grass-dark) 7px, transparent 8px);
+  background-size: 80px 80px;
+  opacity: .5;
+}
+.hb { position: relative; z-index: 1; }
+.hb-tile {
+  width: 90px; height: 90px;
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3rem;
+  box-shadow: 0 6px 0 var(--brown);
+  animation: bldg-bob 3s ease-in-out infinite;
+}
+.hb-tile.t1 { background: var(--pink-soft); animation-delay: 0s; }
+.hb-tile.t2 { background: var(--mint-soft); animation-delay: .3s; }
+.hb-tile.t3 { background: var(--sky-soft); animation-delay: .6s; }
+.hb-tile.t4 { background: var(--yellow-soft); animation-delay: .9s; }
+.hb-tile.t5 { background: var(--purple-soft); animation-delay: 1.2s; }
+@keyframes bldg-bob {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-6px) rotate(1deg); }
+}
+.hb-label { font-family: 'Fredoka', sans-serif; font-size: .75rem; color: var(--brown); margin-top: .5rem; text-align: center; }
+
+.scroll-hint {
+  margin-top: 2rem;
+  color: var(--brown-light); font-family: 'Fredoka', sans-serif; font-size: .9rem;
+  display: flex; flex-direction: column; align-items: center; gap: .25rem;
+  animation: bob 2s infinite;
+}
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+/* ── NAV ── */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255, 245, 225, 0.95); backdrop-filter: blur(12px);
+  border-bottom: 3px solid var(--brown);
+  padding: .75rem 2rem;
+  display: flex; gap: .25rem; overflow-x: auto;
+}
+.nav a {
+  color: var(--brown-light); text-decoration: none;
+  padding: .4rem .9rem; border-radius: 99px;
+  font-family: 'Fredoka', sans-serif; font-size: .82rem;
+  font-weight: 500; white-space: nowrap; transition: all .2s;
+}
+.nav a:hover { color: var(--brown); background: var(--paper); }
+.nav a.active { color: var(--paper); background: var(--purple); }
+
+/* ── SECTIONS ── */
+.section {
+  max-width: 1100px; margin: 0 auto;
+  padding: 5rem 2rem; position: relative; z-index: 1;
+}
+.section-label {
+  font-family: 'Fredoka', sans-serif; font-size: .85rem;
+  color: var(--purple); background: var(--purple-soft);
+  display: inline-block; padding: .3rem .9rem; border-radius: 99px;
+  margin-bottom: .75rem;
+}
+.section-title {
+  font-family: 'Fredoka', sans-serif; font-weight: 600;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  color: var(--brown); margin-bottom: 1rem; line-height: 1.1;
+}
+.section-desc { font-size: 1.05rem; color: var(--brown); max-width: 700px; margin-bottom: 3rem; font-weight: 600; }
+
+/* ── DIE VERSCHIEBUNG ── */
+.shift-grid {
+  display: grid; grid-template-columns: 1fr 70px 1fr; gap: 1.25rem;
+  align-items: stretch;
+}
+@media (max-width: 700px) { .shift-grid { grid-template-columns: 1fr; } .shift-arrow { display: none !important; } }
+.shift-card {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 24px; padding: 1.5rem;
+  box-shadow: 0 8px 0 var(--brown);
+}
+.shift-card.before { background: #e8e8ec; }
+.shift-card.after { background: var(--mint-soft); }
+.shift-label {
+  font-family: 'Fredoka', sans-serif; font-size: .8rem;
+  display: inline-block; padding: .25rem .7rem; border-radius: 99px;
+  margin-bottom: .75rem;
+}
+.shift-label.before { background: var(--brown-light); color: var(--paper); }
+.shift-label.after { background: var(--mint); color: var(--brown); }
+.shift-title { font-family: 'Fredoka', sans-serif; font-size: 1.3rem; color: var(--brown); margin-bottom: 1rem; }
+.shift-list { list-style: none; }
+.shift-list li { font-size: .9rem; color: var(--brown); padding: .35rem 0; display: flex; gap: .5rem; }
+.shift-list li::before { content: '•'; color: var(--brown-light); }
+.shift-card.after .shift-list li::before { content: '✓'; color: var(--mint); font-weight: 900; }
+.shift-arrow {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3rem; color: var(--purple);
+  animation: arrow-pulse 1.5s ease-in-out infinite;
+}
+@keyframes arrow-pulse {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.15) rotate(5deg); }
+}
+
+/* ── CAMPUS MOCKUP ── */
+.campus-wrap {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 28px; padding: 1.5rem;
+  box-shadow: 0 10px 0 var(--brown);
+}
+.campus-header {
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(135deg, var(--purple-soft), var(--pink-soft));
+  border: 3px solid var(--brown); border-radius: 16px;
+  padding: .9rem 1.25rem; margin-bottom: 1rem; flex-wrap: wrap; gap: .5rem;
+}
+.campus-stats { display: flex; gap: .5rem; flex-wrap: wrap; }
+.cs-pill {
+  background: var(--paper); border: 2px solid var(--brown);
+  border-radius: 99px; padding: .25rem .7rem;
+  font-family: 'Fredoka', sans-serif; font-size: .75rem; color: var(--brown);
+  display: flex; align-items: center; gap: .35rem;
+}
+.cs-next {
+  background: var(--mint); border: 3px solid var(--brown); border-radius: 12px;
+  padding: .4rem 1rem; font-family: 'Fredoka', sans-serif; font-size: .9rem;
+  color: var(--brown); cursor: pointer; box-shadow: 0 3px 0 var(--brown);
+}
+
+.campus-plot {
+  background: var(--grass);
+  background-image:
+    radial-gradient(circle at 20% 30%, var(--grass-dark) 5px, transparent 6px),
+    radial-gradient(circle at 70% 70%, var(--grass-dark) 6px, transparent 7px),
+    radial-gradient(circle at 50% 50%, var(--grass-dark) 4px, transparent 5px);
+  background-size: 100px 100px;
+  border: 4px solid var(--brown); border-radius: 18px;
+  padding: 1.25rem;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: .75rem;
+  min-height: 320px;
+}
+
+.tile {
+  aspect-ratio: 1; background: var(--paper);
+  border: 3px solid var(--brown); border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; cursor: pointer; transition: transform .2s;
+  text-align: center; padding: .4rem;
+}
+.tile:hover { transform: translateY(-4px); }
+.tile.empty {
+  background: rgba(255,250,240,0.4); border-style: dashed; border-color: rgba(74,56,41,0.4);
+}
+.tile.empty::before { content: '+'; font-size: 1.5rem; color: rgba(74,56,41,0.4); font-weight: 900; }
+.tile.hq { background: var(--coral); }
+.tile.office { background: var(--sky-soft); }
+.tile.server { background: var(--purple-soft); }
+.tile.lab { background: var(--mint-soft); }
+.tile.marketing { background: var(--pink-soft); }
+.tile.legal { background: var(--yellow-soft); }
+.tile.mod { background: var(--mint); }
+.tile.lobby { background: #c4b09c; }
+.tile.wellbeing { background: #f0d4ff; }
+.tile.creator { background: #ffd4b8; }
+.tile.ads { background: var(--yellow); }
+.tile.dc { background: #b8c8ff; }
+
+.tile-icon { font-size: 1.8rem; line-height: 1; animation: tile-bob 3s ease-in-out infinite; }
+.tile:nth-child(even) .tile-icon { animation-delay: .5s; }
+.tile:nth-child(3n) .tile-icon { animation-delay: 1s; }
+@keyframes tile-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-3px) rotate(2deg); }
+}
+.tile-name {
+  font-family: 'Fredoka', sans-serif; font-size: .65rem;
+  color: var(--brown); margin-top: .15rem; line-height: 1.1;
+}
+.tile-level {
+  position: absolute; top: -6px; right: -6px;
+  background: var(--brown); color: var(--paper);
+  width: 22px; height: 22px; border-radius: 50%;
+  font-family: 'Fredoka', sans-serif; font-size: .7rem;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--paper);
+}
+.tile-coin {
+  position: absolute; top: -10px; left: -2px;
+  font-size: 1rem; animation: coin-float 2s ease-in-out infinite;
+}
+@keyframes coin-float {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-20px); opacity: 0; }
+}
+
+.campus-callout {
+  background: var(--yellow-soft); border: 3px dashed var(--coral);
+  border-radius: 16px; padding: 1rem 1.25rem; margin-top: 1.25rem;
+  font-size: .9rem; color: var(--brown); font-weight: 700;
+}
+.campus-callout strong { color: var(--coral); }
+
+/* ── BUILDINGS LIST ── */
+.bldg-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+.bldg-card {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 20px; padding: 1.25rem;
+  box-shadow: 0 6px 0 var(--brown);
+  transition: transform .2s;
+}
+.bldg-card:hover { transform: translateY(-4px); }
+.bldg-head {
+  display: flex; align-items: center; gap: .75rem; margin-bottom: .9rem;
+}
+.bldg-icon-box {
+  width: 56px; height: 56px; border-radius: 14px;
+  border: 3px solid var(--brown);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; flex-shrink: 0;
+  box-shadow: 0 3px 0 var(--brown);
+}
+.bldg-name { font-family: 'Fredoka', sans-serif; font-size: 1.05rem; color: var(--brown); line-height: 1.2; }
+.bldg-tag {
+  display: inline-block; font-size: .65rem; font-family: 'Fredoka', sans-serif;
+  padding: .1rem .5rem; border-radius: 99px;
+  margin-top: .2rem; color: var(--brown);
+}
+.bldg-tag.basic { background: var(--mint-soft); }
+.bldg-tag.tech { background: var(--purple-soft); }
+.bldg-tag.money { background: var(--yellow-soft); }
+.bldg-tag.ethics { background: var(--pink-soft); }
+.bldg-tag.power { background: #d4c5b5; }
+.bldg-desc { font-size: .85rem; color: var(--brown); font-weight: 600; margin-bottom: .8rem; }
+.bldg-produces {
+  background: rgba(74,56,41,0.06); border-radius: 10px;
+  padding: .5rem .8rem; font-size: .75rem; color: var(--brown);
+  display: flex; flex-wrap: wrap; gap: .35rem;
+}
+.bldg-prod-tag {
+  background: var(--paper); border: 2px solid var(--brown);
+  border-radius: 99px; padding: .1rem .55rem;
+  font-family: monospace; font-weight: 700; font-size: .72rem;
+}
+.bldg-prod-tag.plus { color: var(--mint); border-color: var(--mint); }
+.bldg-prod-tag.minus { color: var(--coral); border-color: var(--coral); }
+
+/* ── PHASEN als CAMPUS ── */
+.phase-tabs {
+  display: flex; gap: .5rem; margin-bottom: 2rem; flex-wrap: wrap;
+}
+.phase-tab {
+  padding: .5rem 1.1rem; border-radius: 99px;
+  border: 3px solid var(--brown); background: var(--paper);
+  color: var(--brown); cursor: pointer;
+  font-family: 'Fredoka', sans-serif; font-size: .85rem;
+  box-shadow: 0 3px 0 var(--brown); transition: all .15s;
+}
+.phase-tab:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--brown); }
+.phase-tab.active { background: var(--purple); color: var(--paper); }
+
+.phase-view { display: none; }
+.phase-view.active { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; }
+@media (max-width: 800px) { .phase-view.active { grid-template-columns: 1fr; } }
+
+.phase-campus {
+  background: var(--grass);
+  background-image:
+    radial-gradient(circle at 20% 30%, var(--grass-dark) 4px, transparent 5px),
+    radial-gradient(circle at 70% 70%, var(--grass-dark) 5px, transparent 6px);
+  background-size: 80px 80px;
+  border: 4px solid var(--brown); border-radius: 20px;
+  padding: 1rem; min-height: 280px;
+  box-shadow: 0 8px 0 var(--brown);
+}
+.phase-grid { display: grid; gap: .5rem; height: 100%; }
+.phase-grid.p1 { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); }
+.phase-grid.p2 { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
+.phase-grid.p3 { grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 1fr); }
+.phase-grid.p4 { grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(4, 1fr); }
+.phase-grid .tile { font-size: .55rem; padding: .25rem; }
+.phase-grid .tile-icon { font-size: 1.2rem; }
+.phase-grid.p3 .tile-icon, .phase-grid.p4 .tile-icon { font-size: 1rem; }
+.phase-grid .tile-name { font-size: .55rem; }
+
+.phase-info {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 20px; padding: 1.25rem;
+  box-shadow: 0 8px 0 var(--brown);
+}
+.phase-info-label {
+  font-family: 'Fredoka', sans-serif; font-size: .75rem;
+  color: var(--purple); background: var(--purple-soft);
+  display: inline-block; padding: .2rem .7rem; border-radius: 99px; margin-bottom: .5rem;
+}
+.phase-info-title { font-family: 'Fredoka', sans-serif; font-size: 1.3rem; color: var(--brown); margin-bottom: .75rem; }
+.phase-info-desc { font-size: .9rem; color: var(--brown); font-weight: 600; margin-bottom: 1rem; }
+.phase-info ul { list-style: none; }
+.phase-info ul li {
+  font-size: .85rem; padding: .3rem 0; display: flex; align-items: flex-start; gap: .5rem;
+  color: var(--brown);
+}
+.phase-info ul li::before { content: '✦'; color: var(--coral); flex-shrink: 0; }
+.phase-stat-row {
+  background: var(--mint-soft); border: 2px solid var(--brown);
+  border-radius: 10px; padding: .5rem .75rem; margin-top: 1rem;
+  display: flex; justify-content: space-between; font-size: .8rem;
+}
+
+/* ── SPIELSCHLEIFE NEU ── */
+.loop-new {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+.loop-step-new {
+  background: var(--paper); border: 4px solid var(--brown); border-radius: 18px;
+  padding: 1.25rem 1rem; text-align: center;
+  box-shadow: 0 6px 0 var(--brown);
+  position: relative;
+}
+.loop-step-new:nth-child(1) { background: var(--mint-soft); }
+.loop-step-new:nth-child(2) { background: var(--sky-soft); }
+.loop-step-new:nth-child(3) { background: var(--yellow-soft); }
+.loop-step-new:nth-child(4) { background: var(--pink-soft); }
+.loop-step-new:nth-child(5) { background: var(--purple-soft); }
+.loop-num-new {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--brown); color: var(--paper);
+  font-family: 'Fredoka', sans-serif; font-size: .85rem;
+  display: flex; align-items: center; justify-content: center;
+  border: 3px solid var(--paper);
+}
+.loop-icon-new { font-size: 2.5rem; margin: .5rem 0; display: inline-block; animation: bounce-mini 2s ease-in-out infinite; }
+@keyframes bounce-mini { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.loop-label-new { font-family: 'Fredoka', sans-serif; font-size: 1rem; color: var(--brown); margin-bottom: .35rem; }
+.loop-text-new { font-size: .78rem; color: var(--brown); font-weight: 600; }
+
+/* ── VOR/NACHTEIL ── */
+.pro-con-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+@media (max-width: 700px) { .pro-con-grid { grid-template-columns: 1fr; } }
+.pc-card {
+  background: var(--paper); border: 4px solid var(--brown); border-radius: 20px;
+  padding: 1.5rem; box-shadow: 0 8px 0 var(--brown);
+}
+.pc-card.pro { background: var(--mint-soft); }
+.pc-card.con { background: #ffe0d8; }
+.pc-title { font-family: 'Fredoka', sans-serif; font-size: 1.25rem; color: var(--brown); margin-bottom: 1rem; }
+.pc-list { list-style: none; }
+.pc-list li {
+  padding: .5rem 0; font-size: .9rem; color: var(--brown); font-weight: 700;
+  display: flex; align-items: flex-start; gap: .6rem;
+  border-bottom: 1px dashed rgba(74,56,41,0.2);
+}
+.pc-list li:last-child { border-bottom: none; }
+.pc-list.pro li::before { content: '✓'; color: var(--mint); font-weight: 900; font-size: 1.1rem; }
+.pc-list.con li::before { content: '⚠'; color: var(--coral); flex-shrink: 0; }
+.pc-sub { font-size: .78rem; color: var(--brown-light); font-weight: 600; margin-top: .2rem; display: block; }
+
+/* ── SCOPE ── */
+.scope-warning {
+  background: var(--yellow-soft); border: 4px dashed var(--coral);
+  border-radius: 20px; padding: 1.5rem; margin-bottom: 2rem;
+  display: flex; gap: 1rem; align-items: flex-start;
+}
+.scope-warning .icon { font-size: 2rem; animation: wobble-r 2s ease-in-out infinite; }
+@keyframes wobble-r { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+.scope-warning .text { font-size: .95rem; color: var(--brown); font-weight: 700; }
+
+.timeline {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 20px; padding: 1.5rem;
+  box-shadow: 0 8px 0 var(--brown);
+}
+.tl-item {
+  display: flex; gap: 1rem; padding: .9rem 0;
+  border-bottom: 1px dashed rgba(74,56,41,0.2);
+}
+.tl-item:last-child { border-bottom: none; }
+.tl-week {
+  font-family: 'Fredoka', sans-serif; font-size: .85rem; color: var(--purple);
+  background: var(--purple-soft); border-radius: 99px;
+  padding: .25rem .7rem; height: fit-content; white-space: nowrap;
+}
+.tl-content { flex: 1; }
+.tl-title { font-family: 'Fredoka', sans-serif; font-size: 1rem; color: var(--brown); }
+.tl-desc { font-size: .82rem; color: var(--brown); font-weight: 600; margin-top: .2rem; }
+
+/* ── QUESTIONS ── */
+.q-list { display: flex; flex-direction: column; gap: 1rem; }
+.q-card {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 20px; padding: 1.25rem 1.5rem;
+  box-shadow: 0 6px 0 var(--brown);
+}
+.q-card.crit { background: #ffe0d8; }
+.q-head { display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem; }
+.q-tag {
+  font-family: 'Fredoka', sans-serif; font-size: .7rem;
+  padding: .2rem .6rem; border-radius: 99px;
+}
+.q-tag.crit { background: var(--coral); color: var(--paper); }
+.q-tag.imp { background: var(--yellow); color: var(--brown); }
+.q-title-new { font-family: 'Fredoka', sans-serif; font-size: 1rem; color: var(--brown); }
+.q-body { font-size: .88rem; color: var(--brown); font-weight: 600; }
+
+footer {
+  text-align: center; padding: 4rem 2rem 3rem;
+  color: var(--brown-light); font-size: .9rem; position: relative; z-index: 1;
+}
+footer p { margin: .25rem 0; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">🏗️ Konzept v0.3 · Campus-Builder</div>
+  <h1>Bau deine <span class="accent">Plattform</span><br>von der Garage zum Imperium</h1>
+  <p class="hero-sub">
+    Aus dem Dashboard wird ein lebendiger Campus. Du baust Server-Farmen, Büros, KI-Labore — und siehst,
+    wie deine Entscheidungen sichtbar wachsen. Wie FarmVille, aber mit echten Konsequenzen.
+  </p>
+  <div class="hero-buildings">
+    <div class="hb"><div class="hb-tile t1">🏠</div><div class="hb-label">Garage</div></div>
+    <div class="hb"><div class="hb-tile t2">💻</div><div class="hb-label">Büro</div></div>
+    <div class="hb"><div class="hb-tile t3">🛰️</div><div class="hb-label">Server</div></div>
+    <div class="hb"><div class="hb-tile t4">🔬</div><div class="hb-label">KI-Labor</div></div>
+    <div class="hb"><div class="hb-tile t5">🏛️</div><div class="hb-label">HQ</div></div>
+  </div>
+  <div class="scroll-hint">↓ Wie das alles funktioniert</div>
+</section>
+
+<!-- NAV -->
+<nav class="nav" id="main-nav">
+  <a href="#shift" class="active">Die Verschiebung</a>
+  <a href="#campus">Der Campus</a>
+  <a href="#buildings">Gebäude</a>
+  <a href="#phasen">Phasen-Wachstum</a>
+  <a href="#loop">Spielschleife</a>
+  <a href="#bewertung">Pro & Contra</a>
+  <a href="#scope">Neuer MVP</a>
+  <a href="#fragen">Neue Fragen</a>
+  <a href="#schritte">Nächste Schritte</a>
+</nav>
+
+<!-- DIE VERSCHIEBUNG -->
+<section class="section" id="shift">
+  <span class="section-label">Was sich ändert</span>
+  <h2 class="section-title">Vom Dashboard zum Campus</h2>
+  <p class="section-desc">Die Spiellogik bleibt gleich — Ressourcen, Events, Phasen, Algorithmus-Labor. Aber alles wird sichtbar. Du baust nicht mehr in Listen, du baust in einer kleinen Welt.</p>
+
+  <div class="shift-grid">
+    <div class="shift-card before">
+      <span class="shift-label before">Vorher · v0.2</span>
+      <div class="shift-title">Dashboard-Manager</div>
+      <ul class="shift-list">
+        <li>Tech-Tree als Liste mit Knoten</li>
+        <li>Ressourcen als Zahlen in Topbar</li>
+        <li>Mitarbeiter implizit über Geld</li>
+        <li>Skalierung als +N Buttons</li>
+        <li>Pro/Contra abstrakt im Kopf</li>
+        <li>Spielerfahrung: „lese und klicke"</li>
+      </ul>
+    </div>
+    <div class="shift-arrow">→</div>
+    <div class="shift-card after">
+      <span class="shift-label after">Jetzt · v0.3</span>
+      <div class="shift-title">Campus-Builder</div>
+      <ul class="shift-list">
+        <li>Tech-Tree als Gebäude zum Bauen</li>
+        <li>Ressourcen sichtbar produziert</li>
+        <li>Mitarbeiter wohnen in Büros</li>
+        <li>Skalierung = neue Server-Farmen</li>
+        <li>Pro/Contra physisch im Campus</li>
+        <li>Spielerfahrung: „baue und beobachte"</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- DER CAMPUS -->
+<section class="section" id="campus">
+  <span class="section-label">Die zentrale Ansicht</span>
+  <h2 class="section-title">So sieht der Campus aus</h2>
+  <p class="section-desc">Dein Campus ist die ganze Zeit sichtbar. Hier passiert alles. Klick ein leeres Feld → wähle ein Gebäude → bezahle → es wächst.</p>
+
+  <div class="campus-wrap">
+    <div class="campus-header">
+      <div class="campus-stats">
+        <div class="cs-pill">👥 125K</div>
+        <div class="cs-pill">🪙 €45K</div>
+        <div class="cs-pill">💕 67%</div>
+        <div class="cs-pill">👀 8 min</div>
+        <div class="cs-pill">🌍 +12</div>
+      </div>
+      <button class="cs-next">📅 Monat 12 · Nächster →</button>
+    </div>
+
+    <div class="campus-plot">
+      <div class="tile hq">
+        <span class="tile-level">2</span>
+        <div class="tile-icon">🏠</div>
+        <div class="tile-name">HQ</div>
+      </div>
+      <div class="tile office">
+        <span class="tile-level">1</span>
+        <div class="tile-icon">💻</div>
+        <div class="tile-name">Büro</div>
+      </div>
+      <div class="tile server">
+        <span class="tile-level">1</span>
+        <span class="tile-coin">🪙</span>
+        <div class="tile-icon">🛰️</div>
+        <div class="tile-name">Server</div>
+      </div>
+      <div class="tile ads">
+        <span class="tile-level">1</span>
+        <div class="tile-icon">📢</div>
+        <div class="tile-name">Ads</div>
+      </div>
+      <div class="tile empty"></div>
+      <div class="tile lab">
+        <span class="tile-level">1</span>
+        <div class="tile-icon">🔬</div>
+        <div class="tile-name">KI-Labor</div>
+      </div>
+      <div class="tile mod">
+        <span class="tile-level">1</span>
+        <div class="tile-icon">🛡️</div>
+        <div class="tile-name">Moderation</div>
+      </div>
+      <div class="tile empty"></div>
+      <div class="tile empty"></div>
+      <div class="tile empty"></div>
+    </div>
+
+    <div class="campus-callout">
+      <strong>💡 Was hier passiert:</strong> Jeden Monat (Klick auf „Nächster") produzieren Gebäude Ressourcen.
+      Klick auf ein leeres Feld öffnet das Bau-Menü. Klick auf ein bestehendes Gebäude öffnet seine Details (Upgrade, Mitarbeiter, Status).
+      Das KI-Labor ist besonders: Es öffnet das Algorithmus-Labor — die wichtigste Lern-Ansicht.
+    </div>
+  </div>
+</section>
+
+<!-- GEBÄUDE -->
+<section class="section" id="buildings">
+  <span class="section-label">Was du bauen kannst</span>
+  <h2 class="section-title">Die Gebäude</h2>
+  <p class="section-desc">12 Gebäudetypen — jedes mit Funktion, Kosten und Konsequenz. Manche sind essenziell, manche optional, manche moralisch fragwürdig. Genau das ist die Spielspannung.</p>
+
+  <div class="bldg-grid">
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:var(--coral)">🏠</div>
+        <div><div class="bldg-name">Hauptquartier</div><span class="bldg-tag basic">Basis</span></div>
+      </div>
+      <p class="bldg-desc">Dein Hauptgebäude. Beginnt als Garage, wird durch Phasen-Aufstieg zum gläsernen Campus. Symbol für deine Größe.</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+2 Mitarbeiter-Slots</span></div>
+    </div>
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:var(--sky-soft)">💻</div>
+        <div><div class="bldg-name">Büro</div><span class="bldg-tag basic">Basis</span></div>
+      </div>
+      <p class="bldg-desc">Beherbergt Mitarbeiter. Stufe 1: Home-Office (3 Plätze). Stufe 2: kleines Büro (8). Stufe 3: Open-Space (15).</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+Mitarbeiter</span><span class="bldg-prod-tag minus">-€/Monat</span></div>
+    </div>
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:var(--purple-soft)">🛰️</div>
+        <div><div class="bldg-name">Server-Farm</div><span class="bldg-tag tech">Tech</span></div>
+      </div>
+      <p class="bldg-desc">Macht Skalierung möglich. Ohne Server-Farmen ist eure Nutzer-Kapazität limitiert. Mehr Farmen = mehr Daten-Kapazität.</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+Nutzer-Kapazität</span><span class="bldg-prod-tag plus">+Daten</span></div>
+    </div>
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:var(--mint-soft)">🔬</div>
+        <div><div class="bldg-name">KI-Labor</div><span class="bldg-tag tech">Tech</span></div>
+      </div>
+      <p class="bldg-desc">Hier wird der Algorithmus entwickelt. Jedes Upgrade schaltet einen neuen Slider im Algorithmus-Labor frei. Pädagogisches Herzstück.</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+Algo-Features</span></div>
+    </div>
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:var(--yellow)">📢</div>
+        <div><div class="bldg-name">Werbeagentur</div><span class="bldg-tag money">Geld</span></div>
+      </div>
+      <p class="bldg-desc">Verwandelt Aufmerksamkeit in Geld. Mit Daten (aus Server-Farmen) wird die Werbung personalisiert — und 5× wertvoller.</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+€</span><span class="bldg-prod-tag minus">-Vertrauen</span></div>
+    </div>
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:var(--pink-soft)">📣</div>
+        <div><div class="bldg-name">Marketing-Studio</div><span class="bldg-tag money">Geld</span></div>
+      </div>
+      <p class="bldg-desc">Macht aktive Werbung für deine Plattform. Bringt schnell neue Nutzer, kostet aber Geld pro Kampagne.</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+Nutzer</span><span class="bldg-prod-tag minus">-€</span></div>
+    </div>
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:var(--mint)">🛡️</div>
+        <div><div class="bldg-name">Moderations-Center</div><span class="bldg-tag ethics">Ethik</span></div>
+      </div>
+      <p class="bldg-desc">Wehrt Skandale ab. Pro Stufe sinkt die Skandal-Wahrscheinlichkeit. Aber: Moderation kostet und bringt kein Geld.</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+Vertrauen</span><span class="bldg-prod-tag plus">−Skandal-Risiko</span></div>
+    </div>
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:var(--yellow-soft)">⚖️</div>
+        <div><div class="bldg-name">Rechtsabteilung</div><span class="bldg-tag ethics">Ethik</span></div>
+      </div>
+      <p class="bldg-desc">Schutz vor Klagen und DSGVO-Anfragen. Macht Datenmissbrauch-Events weniger schmerzhaft. Pflicht ab Phase 3.</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+Regulierungs-Schutz</span></div>
+    </div>
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:#ffd4b8">⭐</div>
+        <div><div class="bldg-name">Creator-Studio</div><span class="bldg-tag money">Geld</span></div>
+      </div>
+      <p class="bldg-desc">Startet die Creator Economy. Bringt Top-Influencer auf deine Plattform — und damit Reichweite & Werbedeals.</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+Nutzer</span><span class="bldg-prod-tag plus">+Engagement</span></div>
+    </div>
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:#c4b09c">🏛️</div>
+        <div><div class="bldg-name">Lobbying-Büro</div><span class="bldg-tag power">Macht</span></div>
+      </div>
+      <p class="bldg-desc">Beeinflusse Gesetze in deinem Sinne. Optional, aber mächtig. Ab Phase 4 verfügbar. Senkt Gesellschaft drastisch.</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+Gesetzes-Schutz</span><span class="bldg-prod-tag minus">−Gesellschaft</span></div>
+    </div>
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:#f0d4ff">🧘</div>
+        <div><div class="bldg-name">Wellbeing-Center</div><span class="bldg-tag ethics">Ethik</span></div>
+      </div>
+      <p class="bldg-desc">Das „gute Gewissen". Aktiviert Bildschirmzeit-Limits und Mental-Health-Features. Erhöht Vertrauen massiv — kostet Engagement.</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+Gesellschaft</span><span class="bldg-prod-tag minus">−Engagement</span></div>
+    </div>
+
+    <div class="bldg-card">
+      <div class="bldg-head">
+        <div class="bldg-icon-box" style="background:#b8c8ff">🗄️</div>
+        <div><div class="bldg-name">Datenzentrum</div><span class="bldg-tag tech">Tech</span></div>
+      </div>
+      <p class="bldg-desc">Premium-Variante der Server-Farm. Massiv mehr Kapazität, aber teuer und sichtbares Regulierungs-Risiko.</p>
+      <div class="bldg-produces"><span class="bldg-prod-tag plus">+++Nutzer-Kapazität</span><span class="bldg-prod-tag minus">−Vertrauen</span></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- PHASEN ALS CAMPUS-WACHSTUM -->
+<section class="section" id="phasen">
+  <span class="section-label">Visuelles Wachstum</span>
+  <h2 class="section-title">Phasen = sichtbares Wachstum</h2>
+  <p class="section-desc">In jeder Phase wächst dein Plot. Neue Slots erscheinen. Neue Gebäude werden freigeschaltet. Klick durch die Phasen.</p>
+
+  <div class="phase-tabs">
+    <button class="phase-tab active" onclick="showPhase(1, this)">Phase 1 · Garage</button>
+    <button class="phase-tab" onclick="showPhase(2, this)">Phase 2 · Wachstum</button>
+    <button class="phase-tab" onclick="showPhase(3, this)">Phase 3 · Skalierung</button>
+    <button class="phase-tab" onclick="showPhase(4, this)">Phase 4 · Imperium</button>
+  </div>
+
+  <div class="phase-view active" id="pv-1">
+    <div class="phase-campus">
+      <div class="phase-grid p1">
+        <div class="tile hq"><div class="tile-icon">🏠</div><div class="tile-name">Garage</div></div>
+        <div class="tile office"><div class="tile-icon">💻</div><div class="tile-name">Home-Office</div></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+      </div>
+    </div>
+    <div class="phase-info">
+      <span class="phase-info-label">Monat 0–6</span>
+      <div class="phase-info-title">🏠 Garage</div>
+      <p class="phase-info-desc">Anfang. 2 Slots, gerade genug für ein Dach überm Kopf und einen Schreibtisch.</p>
+      <ul>
+        <li>Gebäude verfügbar: Garage, Home-Office, einfache Server, Basis-Werbung</li>
+        <li>Mitarbeiter: max. 3</li>
+        <li>Ziel: 10.000 Nutzer erreichen, dann Phase 2 starten</li>
+      </ul>
+      <div class="phase-stat-row"><span>🎯 Phasen-Aufstieg</span><span>→ 10K Nutzer</span></div>
+    </div>
+  </div>
+
+  <div class="phase-view" id="pv-2">
+    <div class="phase-campus">
+      <div class="phase-grid p2">
+        <div class="tile hq"><span class="tile-level">2</span><div class="tile-icon">🏢</div><div class="tile-name">HQ</div></div>
+        <div class="tile office"><div class="tile-icon">💻</div><div class="tile-name">Büro</div></div>
+        <div class="tile server"><div class="tile-icon">🛰️</div><div class="tile-name">Server</div></div>
+        <div class="tile ads"><div class="tile-icon">📢</div><div class="tile-name">Ads</div></div>
+        <div class="tile lab"><div class="tile-icon">🔬</div><div class="tile-name">KI-Labor</div></div>
+        <div class="tile mod"><div class="tile-icon">🛡️</div><div class="tile-name">Moderation</div></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+      </div>
+    </div>
+    <div class="phase-info">
+      <span class="phase-info-label">Monat 7–18</span>
+      <div class="phase-info-title">📈 Wachstum</div>
+      <p class="phase-info-desc">Plot wächst auf 12 Slots. HQ wird zum kleinen Bürogebäude. Investoren wollen Wachstum sehen.</p>
+      <ul>
+        <li>Neu: Marketing-Studio, KI-Labor Stufe 2</li>
+        <li>Mitarbeiter: max. 8</li>
+        <li>Investoren-Druck startet</li>
+        <li>Erste Konkurrenz erscheint (sichtbar links neben deinem Campus)</li>
+      </ul>
+      <div class="phase-stat-row"><span>🎯 Phasen-Aufstieg</span><span>→ 1 Mio Nutzer</span></div>
+    </div>
+  </div>
+
+  <div class="phase-view" id="pv-3">
+    <div class="phase-campus">
+      <div class="phase-grid p3">
+        <div class="tile hq"><span class="tile-level">3</span><div class="tile-icon">🏬</div><div class="tile-name">HQ</div></div>
+        <div class="tile office"><span class="tile-level">2</span><div class="tile-icon">💻</div><div class="tile-name">Büro</div></div>
+        <div class="tile office"><div class="tile-icon">💻</div><div class="tile-name">Büro 2</div></div>
+        <div class="tile server"><span class="tile-level">2</span><div class="tile-icon">🛰️</div><div class="tile-name">Server</div></div>
+        <div class="tile server"><div class="tile-icon">🛰️</div><div class="tile-name">Server 2</div></div>
+        <div class="tile lab"><span class="tile-level">2</span><div class="tile-icon">🔬</div><div class="tile-name">KI-Labor</div></div>
+        <div class="tile ads"><span class="tile-level">2</span><div class="tile-icon">📢</div><div class="tile-name">Ads</div></div>
+        <div class="tile marketing"><div class="tile-icon">📣</div><div class="tile-name">Marketing</div></div>
+        <div class="tile creator"><div class="tile-icon">⭐</div><div class="tile-name">Creator</div></div>
+        <div class="tile mod"><div class="tile-icon">🛡️</div><div class="tile-name">Moderation</div></div>
+        <div class="tile legal"><div class="tile-icon">⚖️</div><div class="tile-name">Recht</div></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+      </div>
+    </div>
+    <div class="phase-info">
+      <span class="phase-info-label">Monat 19–30</span>
+      <div class="phase-info-title">🚀 Skalierung</div>
+      <p class="phase-info-desc">Plot explodiert auf 20 Slots. Mehrere Bürogebäude, mehrere Server-Farmen, Creator-Studio, Rechtsabteilung.</p>
+      <ul>
+        <li>Neu: Creator-Studio, Datenzentrum, Wellbeing-Center</li>
+        <li>Mitarbeiter: max. 30</li>
+        <li>Internationale Expansion möglich</li>
+        <li>Echte ethische Trade-offs: Wellbeing oder Datenzentrum?</li>
+      </ul>
+      <div class="phase-stat-row"><span>🎯 Phasen-Aufstieg</span><span>→ 100 Mio Nutzer</span></div>
+    </div>
+  </div>
+
+  <div class="phase-view" id="pv-4">
+    <div class="phase-campus">
+      <div class="phase-grid p4">
+        <div class="tile hq"><span class="tile-level">4</span><div class="tile-icon">🏛️</div><div class="tile-name">HQ</div></div>
+        <div class="tile office"><span class="tile-level">3</span><div class="tile-icon">💻</div><div class="tile-name">Büro</div></div>
+        <div class="tile office"><span class="tile-level">2</span><div class="tile-icon">💻</div><div class="tile-name">Büro 2</div></div>
+        <div class="tile dc"><div class="tile-icon">🗄️</div><div class="tile-name">DataCenter</div></div>
+        <div class="tile server"><span class="tile-level">3</span><div class="tile-icon">🛰️</div><div class="tile-name">Server</div></div>
+        <div class="tile server"><span class="tile-level">2</span><div class="tile-icon">🛰️</div><div class="tile-name">Server 2</div></div>
+        <div class="tile lab"><span class="tile-level">3</span><div class="tile-icon">🔬</div><div class="tile-name">KI-Labor</div></div>
+        <div class="tile ads"><span class="tile-level">3</span><div class="tile-icon">📢</div><div class="tile-name">Ads</div></div>
+        <div class="tile marketing"><span class="tile-level">2</span><div class="tile-icon">📣</div><div class="tile-name">Marketing</div></div>
+        <div class="tile creator"><span class="tile-level">2</span><div class="tile-icon">⭐</div><div class="tile-name">Creator</div></div>
+        <div class="tile mod"><span class="tile-level">2</span><div class="tile-icon">🛡️</div><div class="tile-name">Moderation</div></div>
+        <div class="tile legal"><span class="tile-level">2</span><div class="tile-icon">⚖️</div><div class="tile-name">Recht</div></div>
+        <div class="tile lobby"><div class="tile-icon">🏛️</div><div class="tile-name">Lobbying</div></div>
+        <div class="tile wellbeing"><div class="tile-icon">🧘</div><div class="tile-name">Wellbeing</div></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+        <div class="tile empty"></div>
+      </div>
+    </div>
+    <div class="phase-info">
+      <span class="phase-info-label">Monat 31–42</span>
+      <div class="phase-info-title">🏛️ Imperium</div>
+      <p class="phase-info-desc">Mega-Campus mit 24 Slots. Glaspalast als HQ. Lobbying freigeschaltet. Jetzt entscheidest du, was für ein Konzern du bist.</p>
+      <ul>
+        <li>Neu: Lobbying-Büro (mächtig & moralisch grau)</li>
+        <li>Mitarbeiter: max. 100+</li>
+        <li>Übernahme-Option: schluck einen Konkurrenten</li>
+        <li>Dein finaler Campus = dein Vermächtnis</li>
+      </ul>
+      <div class="phase-stat-row"><span>🏆 Abschluss</span><span>→ 7 mögliche Enden</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPIELSCHLEIFE NEU -->
+<section class="section" id="loop">
+  <span class="section-label">So spielt es sich</span>
+  <h2 class="section-title">Die neue Spielschleife</h2>
+  <p class="section-desc">Jede Runde ist ein Monat. Du beobachtest, entscheidest, baust — und drückst dann den großen Button.</p>
+
+  <div class="loop-new">
+    <div class="loop-step-new">
+      <div class="loop-num-new">1</div>
+      <div class="loop-icon-new">👀</div>
+      <div class="loop-label-new">Campus checken</div>
+      <div class="loop-text-new">Ressourcen lesen, was haben die Gebäude letzten Monat produziert?</div>
+    </div>
+    <div class="loop-step-new">
+      <div class="loop-num-new">2</div>
+      <div class="loop-icon-new">⚡</div>
+      <div class="loop-label-new">Event reagieren</div>
+      <div class="loop-text-new">Pop-up Karte, 3 Optionen. Konsequenzen sieht man danach am Campus.</div>
+    </div>
+    <div class="loop-step-new">
+      <div class="loop-num-new">3</div>
+      <div class="loop-icon-new">🏗️</div>
+      <div class="loop-label-new">Bauen / Upgraden</div>
+      <div class="loop-text-new">Neues Gebäude auf leeres Feld. Oder bestehendes upgraden.</div>
+    </div>
+    <div class="loop-step-new">
+      <div class="loop-num-new">4</div>
+      <div class="loop-icon-new">🔬</div>
+      <div class="loop-label-new">Algorithmus tunen</div>
+      <div class="loop-text-new">KI-Labor besuchen, Slider anpassen, Feed-Vorschau prüfen.</div>
+    </div>
+    <div class="loop-step-new">
+      <div class="loop-num-new">5</div>
+      <div class="loop-icon-new">📅</div>
+      <div class="loop-label-new">Nächster Monat</div>
+      <div class="loop-text-new">Großer Button. Zeit-Sprung mit Mini-Animation. Loop von vorn.</div>
+    </div>
+  </div>
+</section>
+
+<!-- BEWERTUNG -->
+<section class="section" id="bewertung">
+  <span class="section-label">Ehrliche Bewertung</span>
+  <h2 class="section-title">Was wir gewinnen, was teurer wird</h2>
+  <p class="section-desc">Der Campus-Builder ist ein Plus für die Lernerfahrung — aber kein Geschenk. Hier transparent die Trade-offs.</p>
+
+  <div class="pro-con-grid">
+    <div class="pc-card pro">
+      <div class="pc-title">✨ Was besser wird</div>
+      <ul class="pc-list pro">
+        <li><div>Visuelles Storytelling<span class="pc-sub">Dein Campus erzählt deine Entscheidungen ohne Worte</span></div></li>
+        <li><div>Stärkeres Engagement<span class="pc-sub">FarmVille-Loop ist intrinsisch motivierend — auch für Lernspiele</span></div></li>
+        <li><div>Räumliche Trade-offs<span class="pc-sub">Begrenzter Platz erzwingt sichtbare Prioritäten</span></div></li>
+        <li><div>Erinnerbarer Endscreen<span class="pc-sub">Time-lapse vom Wachstum bleibt im Kopf, Zahlen nicht</span></div></li>
+        <li><div>Cuter Look passt natürlich<span class="pc-sub">Pastell + Tiercharaktere + Gebäude = Bilderbuch-Ästhetik</span></div></li>
+        <li><div>Mitarbeiter werden sichtbar<span class="pc-sub">Mika der Coder-Kater wohnt im Büro, du siehst ihn</span></div></li>
+      </ul>
+    </div>
+    <div class="pc-card con">
+      <div class="pc-title">⚠️ Was teurer wird</div>
+      <ul class="pc-list con">
+        <li><div>Deutlich mehr Bildmaterial<span class="pc-sub">~50 Sprites statt ~30 (Gebäude × Levels × Zustände)</span></div></li>
+        <li><div>Komplexere Spiellogik<span class="pc-sub">Bauen, Produzieren, Upgraden — mehr Code als Dashboard</span></div></li>
+        <li><div>Größerer Test-Aufwand<span class="pc-sub">Balancing in einem System mit räumlichen Constraints</span></div></li>
+        <li><div>Scope-Creep-Gefahr<span class="pc-sub">Jeder will Tiere, die zur Arbeit gehen — sehr viel Aufwand</span></div></li>
+        <li><div>iPad-Performance prüfen<span class="pc-sub">Viele animierte Tiles können auf älteren iPads ruckeln</span></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- NEUER MVP -->
+<section class="section" id="scope">
+  <span class="section-label">Neuer Realitäts-Check</span>
+  <h2 class="section-title">MVP für Campus-Builder</h2>
+  <p class="section-desc">Mit dem Campus brauchen wir eher 8–10 Wochen statt 6–8. Hier ehrlich, was machbar ist.</p>
+
+  <div class="scope-warning">
+    <span class="icon">🚧</span>
+    <span class="text">
+      <strong>Mein Vorschlag:</strong> Wir reduzieren auf <strong>vordefinierte Slots</strong> (keine freie Platzierung).
+      Damit fällt ein Großteil der Komplexität weg, das Spielgefühl bleibt erhalten. Schüler bauen in feste Plätze —
+      wie ein Adventskalender mit Türchen, statt SimCity.
+    </span>
+  </div>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-week">Woche 1</div>
+      <div class="tl-content">
+        <div class="tl-title">Campus-Grid + Plot-Rendering</div>
+        <div class="tl-desc">5 statische Gebäude-Typen auf festen Slots, Klick öffnet Detail-Modal</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 2</div>
+      <div class="tl-content">
+        <div class="tl-title">Bau-System + Ressourcen-Tick</div>
+        <div class="tl-desc">Gebäude produzieren bei „Nächster Monat", Münzen-Animation, leere Slots klickbar</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 3</div>
+      <div class="tl-content">
+        <div class="tl-title">8 Gebäude-Typen + Upgrades</div>
+        <div class="tl-desc">Vollständige Wirtschaftsformeln, Upgrade-Logik, Slot-Freischaltung pro Phase</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 4</div>
+      <div class="tl-content">
+        <div class="tl-title">Ereignis-System</div>
+        <div class="tl-desc">15 Events als Pop-Up-Karten, Konsequenzen wirken auf Campus (Skandal-Wolke etc.)</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 5</div>
+      <div class="tl-content">
+        <div class="tl-title">KI-Labor als Sub-Ansicht</div>
+        <div class="tl-desc">Klick auf KI-Labor → Algorithmus-Slider-Ansicht mit Live-Feed</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 6</div>
+      <div class="tl-content">
+        <div class="tl-title">Phasen-Übergänge</div>
+        <div class="tl-desc">Plot wächst sichtbar, HQ upgraded sich, neue Gebäude verfügbar</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 7</div>
+      <div class="tl-content">
+        <div class="tl-title">Bilder integrieren</div>
+        <div class="tl-desc">Sprites einbauen (KI-generiert oder selbst gezeichnet), Animationen</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 8</div>
+      <div class="tl-content">
+        <div class="tl-title">Endscreen + Reflexion</div>
+        <div class="tl-desc">Time-lapse-Animation des Wachstums, 4 Enden mit Charakter-Reaktionen</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 9–10</div>
+      <div class="tl-content">
+        <div class="tl-title">Balancing + Schüler-Test</div>
+        <div class="tl-desc">Zahlen so einstellen, dass Aha-Momente getriggert werden. iPad-Performance prüfen.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NEUE FRAGEN -->
+<section class="section" id="fragen">
+  <span class="section-label">Neue Entscheidungen</span>
+  <h2 class="section-title">Was wir jetzt klären müssen</h2>
+  <p class="section-desc">Der Campus bringt drei neue große Fragen, die wir vor dem Code beantworten sollten.</p>
+
+  <div class="q-list">
+
+    <div class="q-card crit">
+      <div class="q-head">
+        <span class="q-tag crit">🔴 Kritisch</span>
+        <span class="q-title-new">Freie Platzierung oder feste Slots?</span>
+      </div>
+      <p class="q-body">
+        <strong>Feste Slots</strong> (Empfehlung): Vordefinierte Bauplätze. Schüler wählen nur WAS, nicht WO. Klassische Casual-Game-Mechanik. Einfach umzusetzen, klar zu balancen, schnell zu lernen.<br>
+        <strong>Freie Platzierung</strong>: Wie SimCity. Schüler bauen wo sie wollen. Maximale Freiheit — aber viel komplexer und überfordert manche.
+      </p>
+    </div>
+
+    <div class="q-card crit">
+      <div class="q-head">
+        <span class="q-tag crit">🔴 Kritisch</span>
+        <span class="q-title-new">Top-Down 2D oder isometrisch?</span>
+      </div>
+      <p class="q-body">
+        <strong>Top-Down 2D</strong> (Empfehlung für MVP): Wie auf der Konzept-Seite. Quadrate von oben. Einfache CSS-Implementierung, klar lesbar.<br>
+        <strong>Isometrisch</strong>: Klassischer SimCity-Look. Wirkt „richtiger" für ein Aufbauspiel — aber deutlich mehr Bildaufwand, da jedes Gebäude isometrisch perspektivisch gezeichnet werden muss.
+      </p>
+    </div>
+
+    <div class="q-card">
+      <div class="q-head">
+        <span class="q-tag imp">🟡 Wichtig</span>
+        <span class="q-title-new">Sichtbare Mitarbeiter oder nicht?</span>
+      </div>
+      <p class="q-body">
+        <strong>Implizit</strong>: Mitarbeiter sind nur Zahlen + Slot-Kapazität. Einfach.<br>
+        <strong>Sichtbar</strong>: Tier-Charaktere stehen vor Gebäuden, gehen zwischen Büros, zeigen Stimmung. Sehr charmant, aber deutlich mehr Aufwand.<br>
+        <em>Vorschlag: Im MVP nicht. Wenn das Spiel funktioniert und wir Zeit haben → einbauen.</em>
+      </p>
+    </div>
+
+    <div class="q-card">
+      <div class="q-head">
+        <span class="q-tag imp">🟡 Wichtig</span>
+        <span class="q-title-new">Bauzeiten — sofort oder über Monate?</span>
+      </div>
+      <p class="q-body">
+        <strong>Sofort</strong>: Bauen kostet Geld, Gebäude steht. Schnelles Spieltempo.<br>
+        <strong>1–3 Monate Bauzeit</strong>: Gebäude erscheint im Bau-Zustand, fertig nach N Monaten. Strategischere Entscheidungen, aber langsamer.<br>
+        <em>Vorschlag: Sofort im MVP, Bauzeiten optional in V2.</em>
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- NÄCHSTE SCHRITTE -->
+<section class="section" id="schritte">
+  <span class="section-label">Jetzt geht's los</span>
+  <h2 class="section-title">Nächste Schritte</h2>
+  <p class="section-desc">Vier konkrete Entscheidungen, dann können wir mit dem Prototyp starten.</p>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-week">Step 1</div>
+      <div class="tl-content">
+        <div class="tl-title">Drei kritische Fragen oben beantworten</div>
+        <div class="tl-desc">Feste Slots vs frei? Top-Down vs isometrisch? Das entscheidet den Aufwand.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Step 2</div>
+      <div class="tl-content">
+        <div class="tl-title">8 Gebäude-Typen final festlegen</div>
+        <div class="tl-desc">Welche 8 von den 12 oben kommen ins MVP? Mit exakten Produktions-Werten.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Step 3</div>
+      <div class="tl-content">
+        <div class="tl-title">Erste Test-Sprites bestellen / zeichnen</div>
+        <div class="tl-desc">2–3 Gebäude im finalen Stil. KI-Prompt testen oder Procreate-Skizze. Schauen ob die Ästhetik passt.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Step 4</div>
+      <div class="tl-content">
+        <div class="tl-title">Statisches HTML/CSS-Mockup des Spielbildschirms</div>
+        <div class="tl-desc">Bevor wir Spiellogik bauen: ein perfekt aussehendes statisches Bild des fertigen Spiels. Damit wissen wir genau worauf wir zubauen.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>🌟 The Platform — Konzept v0.3 · Campus-Builder Edition</p>
+  <p>Verfeinert mit Opus 4.7</p>
+</footer>
+
+<script>
+const navLinks = document.querySelectorAll('.nav a');
+const sections = document.querySelectorAll('section[id]');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const a = document.querySelector(`.nav a[href="#${e.target.id}"]`);
+      if (a) a.classList.add('active');
+    }
+  });
+}, { threshold: 0.3, rootMargin: '-80px 0px -50% 0px' });
+sections.forEach(s => observer.observe(s));
+
+function showPhase(n, btn) {
+  document.querySelectorAll('.phase-view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.phase-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('pv-' + n).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

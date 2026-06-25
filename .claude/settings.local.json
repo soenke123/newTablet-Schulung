@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep *)",
+      "Bash(python3 *)",
+      "Bash(node --check \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Spiele inProgress/Startup Story/js/debug/devtools.js\")",
+      "Bash(node --check \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Spiele inProgress/Startup Story/js/core/state.js\")",
+      "Bash(node --check \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Spiele inProgress/Startup Story/js/core/questlog.js\")",
+      "Bash(node --check \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Spiele inProgress/Startup Story/js/core/assets.js\")",
+      "Bash(node --check \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Spiele inProgress/Startup Story/js/core/tick.js\")",
+      "PowerShell(Move-Item *)"
+    ]
+  }
+}
