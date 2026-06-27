@@ -56,7 +56,7 @@
     return result;
   }
 
-  // Gibt Definition aus RT.marketing.CAMPAIGNS oder RT.werbeagentur.DEALS zurück.
+  // Gibt Definition aus RT.marketing.CAMPAIGNS, RT.werbeagentur.DEALS oder RT.communitycenter.CC_ACTIONS zurück.
   function getCampaignDef(type) {
     var list = RT.marketing ? RT.marketing.CAMPAIGNS : [];
     for (var i = 0; i < list.length; i++) {
@@ -66,7 +66,40 @@
     for (var j = 0; j < deals.length; j++) {
       if (deals[j].id === type) return deals[j];
     }
+    var ccActions = RT.communitycenter ? (RT.communitycenter.CC_ACTIONS || []) : [];
+    for (var k = 0; k < ccActions.length; k++) {
+      if (ccActions[k].id === type) return ccActions[k];
+    }
     return null;
+  }
+
+  function isCCAction(type) {
+    var ccActions = RT.communitycenter ? (RT.communitycenter.CC_ACTIONS || []) : [];
+    for (var i = 0; i < ccActions.length; i++) {
+      if (ccActions[i].id === type) return true;
+    }
+    return false;
+  }
+
+  function sfTileName(sl) {
+    if (sl >= 2) return 'Rechenzentrum';
+    if (sl >= 1) return 'Serverfarm';
+    return 'Kleine Serverfarm';
+  }
+
+  function sfTileSprite(sl) {
+    if (sl >= 2) return 'sprites/buildings/Serverfarm2.png';
+    if (sl >= 1) return 'sprites/buildings/Serverfarm1.png';
+    return RT.assets.buildingSrc('serverfarm', 0);
+  }
+
+  function sfTileBadge(sl, et) {
+    if (sl >= 2) {
+      var badges2 = ['50k · 0€/Mo', '300k · 2k€/Mo', '800k · 5k€/Mo', '2M · 10k€/Mo', '10M · 40k€/Mo', '100M · 300k€/Mo'];
+      return '🚀 ' + (badges2[et + 2] || badges2[2]);
+    }
+    if (sl >= 1 && et >= 1) return '⚡ 300k · 2k€/Mo';
+    return '🛰️ 50k';
   }
 
   function isWerbeDeal(type) {
@@ -112,34 +145,58 @@
       var inProg = byWSlot[wi];
       if (!inProg) {
         if (celebByWSlot[wi]) {
-          var celebIsCampaign = typeof celebByWSlot[wi] === 'object' && celebByWSlot[wi].kind === 'campaign';
+          var celebIsCampaign  = typeof celebByWSlot[wi] === 'object' && celebByWSlot[wi].kind === 'campaign';
+          var celebIsMetadaten = typeof celebByWSlot[wi] === 'object' && celebByWSlot[wi].nodeId === 'metadaten';
+          var metaWarn = false;
+          if (celebIsMetadaten) {
+            var mr = s.resources;
+            metaWarn = ((mr.serverSoftwareUsage || 0) + (mr.serverUsage || 0) * 2) > (mr.serverCapacity || 0);
+          }
           wrap.classList.remove('rt-bld-slot-wrap--idle');
           wrap.classList.add('rt-bld-slot-wrap--done');
           wrap.classList.remove('rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung');
+          if (metaWarn) {
+            wrap.classList.add('rt-bld-slot-wrap--metawarn');
+          } else {
+            wrap.classList.remove('rt-bld-slot-wrap--metawarn');
+          }
           if (celebIsCampaign) {
             var celebType = celebByWSlot[wi].campaignType;
-            wrap.classList.add(isWerbeDeal(celebType) ? 'rt-bld-slot-wrap--werbung' : 'rt-bld-slot-wrap--marketing');
+            wrap.classList.add(isWerbeDeal(celebType) ? 'rt-bld-slot-wrap--werbung'
+              : isCCAction(celebType) ? 'rt-bld-slot-wrap--support'
+              : 'rt-bld-slot-wrap--marketing');
           }
           if (icon) icon.innerHTML = '';
           if (name) name.textContent = '';
           bar.style.width = '100%';
-          if (lbl) lbl.textContent = '🎉 Klicken!';
+          if (lbl) lbl.textContent = metaWarn ? '⚠️ Klicken!' : '🎉 Klicken!';
         } else if (campsByWSlot[wi]) {
           var campDef = getCampaignDef(campsByWSlot[wi].type);
           if (campDef) {
             var campElapsed = Math.max(0, (s.month + _clockProg) - campsByWSlot[wi].startMonthFull);
             var campProg    = Math.min(1, campElapsed / campDef.duration);
-            var campColor   = isWerbeDeal(campsByWSlot[wi].type) ? 'rt-bld-slot-wrap--werbung' : 'rt-bld-slot-wrap--marketing';
-            wrap.classList.remove('rt-bld-slot-wrap--idle', 'rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung');
+            var campColor   = isWerbeDeal(campsByWSlot[wi].type) ? 'rt-bld-slot-wrap--werbung'
+              : isCCAction(campsByWSlot[wi].type) ? 'rt-bld-slot-wrap--support'
+              : 'rt-bld-slot-wrap--marketing';
+            wrap.classList.remove('rt-bld-slot-wrap--idle', 'rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung', 'rt-bld-slot-wrap--support');
             wrap.classList.add(campColor);
             if (icon) icon.innerHTML = campDef.icon || '';
             if (name) name.textContent = campDef.name;
             bar.style.width = (campProg * 100).toFixed(1) + '%';
             if (lbl) lbl.textContent = campProg >= 1 ? 'Gleich fertig!' : Math.round(campProg * 100) + '%';
           }
+        } else if (s.supportProgram && s.supportProgram.active
+                   && s.supportProgram.buildingGridSlot === 0
+                   && s.supportProgram.workSlotIndex === wi) {
+          wrap.classList.remove('rt-bld-slot-wrap--idle', 'rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung');
+          wrap.classList.add('rt-bld-slot-wrap--support');
+          if (icon) icon.innerHTML = '🎧';
+          if (name) name.textContent = 'User-Support';
+          bar.style.width = '100%';
+          if (lbl) lbl.textContent = 'Aktiv';
         } else {
           wrap.classList.add('rt-bld-slot-wrap--idle');
-          wrap.classList.remove('rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung');
+          wrap.classList.remove('rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung', 'rt-bld-slot-wrap--support');
           if (icon) icon.innerHTML = '';
           if (name) name.textContent = '';
           bar.style.width = '0%';
@@ -151,7 +208,7 @@
       var node = RT.techtree.getNode(inProg.nodeId);
       if (!node) {
         wrap.classList.add('rt-bld-slot-wrap--idle');
-        wrap.classList.remove('rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung');
+        wrap.classList.remove('rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung', 'rt-bld-slot-wrap--support');
         continue;
       }
       var elapsed = Math.max(0, (s.month + _clockProg) - inProg.entry.startMonthFull);
@@ -223,7 +280,9 @@
             wrap.classList.remove('rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung');
             if (celebIsCampaign) {
               var celebType = celebByWSlot[wi].campaignType;
-              wrap.classList.add(isWerbeDeal(celebType) ? 'rt-bld-slot-wrap--werbung' : 'rt-bld-slot-wrap--marketing');
+              wrap.classList.add(isWerbeDeal(celebType) ? 'rt-bld-slot-wrap--werbung'
+                : isCCAction(celebType) ? 'rt-bld-slot-wrap--support'
+                : 'rt-bld-slot-wrap--marketing');
             }
             if (icon) icon.innerHTML = '';
             if (name) name.textContent = '';
@@ -235,17 +294,28 @@
             if (campDef) {
               var campElapsed = Math.max(0, (s.month + _clockProg) - campsByWSlot[wi].startMonthFull);
               var campProg    = Math.min(1, campElapsed / campDef.duration);
-              var campColor   = isWerbeDeal(campsByWSlot[wi].type) ? 'rt-bld-slot-wrap--werbung' : 'rt-bld-slot-wrap--marketing';
-              wrap.classList.remove('rt-bld-slot-wrap--idle', 'rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung');
+              var campColor   = isWerbeDeal(campsByWSlot[wi].type) ? 'rt-bld-slot-wrap--werbung'
+                : isCCAction(campsByWSlot[wi].type) ? 'rt-bld-slot-wrap--support'
+                : 'rt-bld-slot-wrap--marketing';
+              wrap.classList.remove('rt-bld-slot-wrap--idle', 'rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung', 'rt-bld-slot-wrap--support');
               wrap.classList.add(campColor);
               if (icon) icon.innerHTML = campDef.icon || '';
               if (name) name.textContent = campDef.name;
               bar.style.width = (campProg * 100).toFixed(1) + '%';
               if (lbl) lbl.textContent = campProg >= 1 ? 'Fertig!' : Math.round(campProg * 100) + '%';
             }
+          } else if (s.supportProgram && s.supportProgram.active
+                     && s.supportProgram.buildingGridSlot === gridSlot
+                     && s.supportProgram.workSlotIndex === wi) {
+            wrap.classList.remove('rt-bld-slot-wrap--idle', 'rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung');
+            wrap.classList.add('rt-bld-slot-wrap--support');
+            if (icon) icon.innerHTML = '🎧';
+            if (name) name.textContent = 'User-Support';
+            bar.style.width = '100%';
+            if (lbl) lbl.textContent = 'Aktiv';
           } else {
             wrap.classList.add('rt-bld-slot-wrap--idle');
-            wrap.classList.remove('rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung');
+            wrap.classList.remove('rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung', 'rt-bld-slot-wrap--support');
             if (icon) icon.innerHTML = '';
             if (name) name.textContent = '';
             bar.style.width = '0%';
@@ -256,7 +326,7 @@
         var node = RT.techtree.getNode(inProg.nodeId);
         if (!node) {
           wrap.classList.add('rt-bld-slot-wrap--idle');
-          wrap.classList.remove('rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing');
+          wrap.classList.remove('rt-bld-slot-wrap--done', 'rt-bld-slot-wrap--marketing', 'rt-bld-slot-wrap--werbung', 'rt-bld-slot-wrap--support');
           continue;
         }
         var elapsed = Math.max(0, (s.month + _clockProg) - inProg.entry.startMonthFull);
@@ -406,6 +476,76 @@
     });
   }
 
+  // ── Metadaten-Aktivierungsmodal ───────────────────────────────────────────────
+  function showMetadatenModal() {
+    var s        = RT.state.get();
+    var r        = s.resources;
+    var swUsage  = r.serverSoftwareUsage || 0;
+    var usrUsage = r.serverUsage         || 0;
+    var cap      = r.serverCapacity      || 0;
+    var canActivate = (swUsage + usrUsage * 2) <= cap;
+
+    if (canActivate) spawnConfetti();
+
+    var actionHTML;
+    if (canActivate) {
+      actionHTML = '<button class="rt-btn rt-btn--primary" id="rt-metadaten-ok">Aktivieren</button>'
+        + '<button class="rt-btn rt-btn--ghost" id="rt-metadaten-skip">Sp&auml;ter</button>';
+    } else {
+      actionHTML = '<button class="rt-btn" disabled style="opacity:0.45;cursor:not-allowed;">Aktivieren</button>'
+        + '<p style="margin-top:6px;font-size:0.82rem;color:#c0392b;font-weight:600;">Serverkapazit&auml;t nicht ausreichend</p>'
+        + '<button class="rt-btn rt-btn--ghost" id="rt-metadaten-skip">Sp&auml;ter</button>';
+    }
+
+    var modal = document.createElement('div');
+    modal.className = 'rt-modal-overlay is-open';
+    modal.innerHTML = ''
+      + '<div class="rt-modal rt-celebration-modal">'
+      + '  <div class="rt-celebration-icon">&#128451;</div>'
+      + '  <h2 class="rt-celebration-title">Forschung abgeschlossen!</h2>'
+      + '  <p class="rt-celebration-name">Metadatenspeicherung bereit</p>'
+      + '  <p class="rt-celebration-fx">'
+      + '    Ab Aktivierung verbraucht jeder User 2 Servereinheiten statt 1.<br>'
+      + '    Bedarf nach Aktivierung: <strong>'
+      + (swUsage + usrUsage * 2).toLocaleString('de-DE')
+      + '</strong> / ' + cap.toLocaleString('de-DE')
+      + '  </p>'
+      + '  <div class="rt-modal__actions">' + actionHTML + '</div>'
+      + '</div>';
+
+    document.body.appendChild(modal);
+
+    var okBtn = modal.querySelector('#rt-metadaten-ok');
+    if (okBtn) {
+      okBtn.addEventListener('click', function () {
+        RT.state.dispatch('ACTIVATE_METADATEN');
+
+        // Watchtime initialisieren: Basis + alle bereits abgeschlossenen Features addieren.
+        // (Features die NACH Metadaten freigeschaltet werden, addieren per ADD_WATCHTIME.)
+        var sAfterMeta   = RT.state.get();
+        var wtInitial    = 1.1;
+        var wtDeltas     = { videos: 0.8, gruppen: 0.2, dm: 0.15 };
+        for (var wtNid in wtDeltas) {
+          if (Object.prototype.hasOwnProperty.call(wtDeltas, wtNid)
+              && (sAfterMeta.techtree || {})[wtNid] === 'done') {
+            wtInitial += wtDeltas[wtNid];
+          }
+        }
+        RT.state.dispatch('SET_WATCHTIME', { value: wtInitial });
+
+        RT.state.dispatch('CELEBRATE_NODE', { nodeId: 'metadaten' });
+        if (modal.parentNode) modal.parentNode.removeChild(modal);
+        updateHqProgress();
+        updateBueroProgress();
+      });
+    }
+    modal.querySelector('#rt-metadaten-skip').addEventListener('click', function () {
+      if (modal.parentNode) modal.parentNode.removeChild(modal);
+      updateHqProgress();
+      updateBueroProgress();
+    });
+  }
+
   // ── Feier-Modal ──────────────────────────────────────────────────────────────
   function showCelebration(nodeId) {
     var node = RT.techtree.getNode(nodeId);
@@ -415,11 +555,26 @@
       return;
     }
 
+    if (nodeId === 'metadaten') { showMetadatenModal(); return; }
+
     // Boni sofort beim "Klicken!"-Tap vergeben — bevor das Modal aufgeht.
-    if (node.usersBonus)  RT.state.dispatch('ADD_RESOURCE',    { key: 'users', delta: node.usersBonus  });
-    if (node.moneyBonus)  RT.state.dispatch('ADD_RESOURCE',    { key: 'money', delta: node.moneyBonus  });
-    if (node.growthBonus) RT.state.dispatch('ADD_GROWTH_RATE', { delta: node.growthBonus });
-    if (node.rufBonus)    RT.state.dispatch('ADD_REPUTATION',  { delta: node.rufBonus    });
+    if (node.usersBonus)      RT.state.dispatch('ADD_RESOURCE',    { key: 'users', delta: node.usersBonus      });
+    if (node.moneyBonus)      RT.state.dispatch('ADD_RESOURCE',    { key: 'money', delta: node.moneyBonus      });
+    if (node.growthBonus)     RT.state.dispatch('ADD_GROWTH_RATE', { delta: node.growthBonus     });
+    if (node.rufBonus)        RT.state.dispatch('ADD_REPUTATION',  { delta: node.rufBonus        });
+    if (node.marketExpansion) RT.state.dispatch('UNLOCK_MARKET',   { market: node.marketExpansion });
+
+    // Watchtime: Node-eigener watchtimeBonus (Phase-2-Features) — nur wenn Metadaten aktiv.
+    if (node.watchtimeBonus && RT.state.get().metadatenActive) {
+      RT.state.dispatch('ADD_WATCHTIME', { delta: node.watchtimeBonus });
+    }
+
+    // Watchtime: statische Beiträge bestimmter Features addieren (nur wenn Metadaten bereits aktiv).
+    // Features die VOR Metadaten abgeschlossen wurden, werden bei der Aktivierung berücksichtigt.
+    var wtDeltas = { videos: 0.8, gruppen: 0.2, dm: 0.15 };
+    if (wtDeltas[nodeId] !== undefined && RT.state.get().metadatenActive) {
+      RT.state.dispatch('ADD_WATCHTIME', { delta: wtDeltas[nodeId] });
+    }
 
     spawnConfetti();
 
@@ -472,6 +627,56 @@
 
   // ── Kampagnen-Feier (kurzer Toast, auto-close) ───────────────────────────────
   function showCampaignCelebration(pcEntry) {
+    // Community Event: Boni vergeben + Feier-Modal
+    if (pcEntry.campaignType === 'community_event') {
+      var s          = RT.state.get();
+      var userBonus  = Math.floor((s.resources.users || 0) * 0.02);
+      if (userBonus > 0) RT.state.dispatch('ADD_RESOURCE', { key: 'users', delta: userBonus });
+      RT.state.dispatch('ADD_REPUTATION', { delta: 0.03 });
+      RT.state.dispatch('CELEBRATE_CAMPAIGN', { campaignId: pcEntry.campaignId });
+      updateHqProgress();
+      updateBueroProgress();
+      spawnConfetti();
+      var sAfter  = RT.state.get();
+      var repAfter = typeof sAfter.reputation === 'number' ? sAfter.reputation : 0;
+      var ceModal = document.createElement('div');
+      ceModal.className = 'rt-modal-overlay is-open';
+      ceModal.innerHTML = ''
+        + '<div class="rt-modal rt-celebration-modal">'
+        + '  <div class="rt-celebration-icon">🎪</div>'
+        + '  <h2 class="rt-celebration-title">🎉 Event abgeschlossen!</h2>'
+        + '  <p class="rt-celebration-name">Community Event erfolgreich!</p>'
+        + '  <p class="rt-celebration-fx">'
+        + '    <strong>+' + userBonus.toLocaleString('de-DE') + ' User</strong> (2&nbsp;% der aktuellen Userbasis)<br>'
+        + '    <strong>+3,000&nbsp;% Ruf</strong> &mdash; jetzt: ' + (repAfter * 100).toFixed(3) + '&nbsp;%'
+        + '  </p>'
+        + '  <div class="rt-modal__actions">'
+        + '    <button class="rt-btn rt-btn--primary" id="rt-cc-ev-ok">Super! 🚀</button>'
+        + '  </div>'
+        + '</div>';
+      document.body.appendChild(ceModal);
+      ceModal.querySelector('#rt-cc-ev-ok').addEventListener('click', function () {
+        if (ceModal.parentNode) ceModal.parentNode.removeChild(ceModal);
+      });
+      return;
+    }
+
+    // Image-Kampagne: Slot freigeben + Toast
+    if (pcEntry.campaignType === 'image_kampagne') {
+      RT.state.dispatch('CELEBRATE_CAMPAIGN', { campaignId: pcEntry.campaignId });
+      updateHqProgress();
+      updateBueroProgress();
+      var ikToast = document.createElement('div');
+      ikToast.className = 'rt-campaign-toast';
+      ikToast.textContent = '🌟 Image-Kampagne abgeschlossen!';
+      document.body.appendChild(ikToast);
+      setTimeout(function () {
+        ikToast.classList.add('rt-campaign-toast--fade');
+        setTimeout(function () { if (ikToast.parentNode) ikToast.parentNode.removeChild(ikToast); }, 400);
+      }, 1400);
+      return;
+    }
+
     var def = getCampaignDef(pcEntry.campaignType);
 
     // users_once-Effekt erst jetzt vergeben (wurde beim Start zurückgehalten).
@@ -519,7 +724,9 @@
   }
 
   function showSlotMonthProduction() {
-    var s     = RT.state.get();
+    var s    = RT.state.get();
+    var sat  = RT.marketing ? RT.marketing.computeSaturation(s) : 0;
+    var mult = Math.max(0, 1 - sat);
     var camps = s.campaigns || [];
     for (var i = 0; i < camps.length; i++) {
       var camp = camps[i];
@@ -531,9 +738,10 @@
       if (!slotEl) continue;
 
       if (def.effectType === 'users_per_month') {
-        spawnSlotFloat(slotEl, '+' + RT.ui.formatNumber(def.effectValue) + ' User');
+        var delta = Math.round(def.effectValue * mult);
+        if (delta > 0) spawnSlotFloat(slotEl, '+' + RT.ui.formatNumber(delta) + ' User');
       } else if (def.effectType === 'users_percent') {
-        var bonus = Math.floor((s.resources.users || 0) * def.effectValue);
+        var bonus = Math.floor((s.resources.users || 0) * def.effectValue * mult);
         if (bonus > 0) spawnSlotFloat(slotEl, '+' + RT.ui.formatNumber(bonus) + ' User');
       } else if (def.effectType === 'income_per_user_month') {
         var income = Math.floor((s.resources.users || 0) * def.effectValue);
@@ -575,6 +783,10 @@
     for (var i = 0; i < pcs.length; i++) {
       var c = pcs[i];
       if ((typeof c === 'object' ? c.buildingGridSlot : 0) === 0) {
+        if (typeof c === 'object' && c.kind === 'support_restart') {
+          showSupportRestartMessage(c);
+          return;
+        }
         if (typeof c === 'object' && c.kind === 'campaign') {
           showCampaignCelebration(c);
           return;
@@ -588,10 +800,15 @@
 
   // ── Büro-Klick (Feier wenn ein Slot fertig ist) ───────────────────────────────
   function onBueroClick(gridSlot) {
-    var pcs = RT.state.get().pendingCelebrations || [];
+    var s   = RT.state.get();
+    var pcs = s.pendingCelebrations || [];
     for (var i = 0; i < pcs.length; i++) {
       var c = pcs[i];
       if ((typeof c === 'object' ? c.buildingGridSlot : 0) === gridSlot) {
+        if (typeof c === 'object' && c.kind === 'support_restart') {
+          showSupportRestartMessage(c);
+          return;
+        }
         if (typeof c === 'object' && c.kind === 'campaign') {
           showCampaignCelebration(c);
           return;
@@ -600,6 +817,53 @@
         return;
       }
     }
+    // Wenn Support-Programm oder CC-Kampagne auf diesem Slot läuft → CC-Modal öffnen
+    var sp = s.supportProgram;
+    if (sp && sp.active && sp.buildingGridSlot === gridSlot) {
+      if (RT.communitycenter) RT.communitycenter.open();
+      return;
+    }
+    var camps = s.campaigns || [];
+    for (var ci = 0; ci < camps.length; ci++) {
+      if (camps[ci].buildingGridSlot === gridSlot && isCCAction(camps[ci].type)) {
+        if (RT.communitycenter) RT.communitycenter.open();
+        return;
+      }
+    }
+  }
+
+  // ── Support-Programm Neustart-Hinweis ─────────────────────────────────────────
+  function showSupportRestartMessage(pcEntry) {
+    var TIER_LABELS = ['Basis', 'Nach EU-Expansion', 'Nach Amerika/Afrika', 'Nach Asien'];
+    var TIER_COSTS  = ['30.000 €', '100.000 €', '300.000 €', '1.000.000 €'];
+    var TIER_WORKERS = ['1', '2', '3', '5'];
+    var newTier = pcEntry.newTier || 0;
+    var label   = TIER_LABELS[newTier]  || '';
+    var cost    = TIER_COSTS[newTier]   || '';
+    var workers = TIER_WORKERS[newTier] || '';
+
+    RT.state.dispatch('CLEAR_SUPPORT_RESTART', {});
+    updateHqProgress();
+    updateBueroProgress();
+
+    var modal = document.createElement('div');
+    modal.className = 'rt-modal-overlay is-open';
+    modal.innerHTML = ''
+      + '<div class="rt-modal">'
+      + '  <div style="font-size:2rem;text-align:center;margin-bottom:.5rem;">🔄</div>'
+      + '  <h2 class="rt-card__title">Support-Programm gestoppt</h2>'
+      + '  <p>Durch die neue Marktexpansion (<strong>' + RT.ui.escapeHTML(label) + '</strong>) muss das Programm '
+      + '  neu gestartet werden — auf höherem Niveau.</p>'
+      + '  <p><strong>Neue Kosten:</strong> ' + cost + '/Monat · ' + workers + ' Mitarbeiter</p>'
+      + '  <p>Starte es im <strong>Community Center</strong> neu.</p>'
+      + '  <div class="rt-modal__actions">'
+      + '    <button class="rt-btn rt-btn--primary" id="rt-sr-ok">Verstanden</button>'
+      + '  </div>'
+      + '</div>';
+    document.body.appendChild(modal);
+    modal.querySelector('#rt-sr-ok').addEventListener('click', function () {
+      if (modal.parentNode) modal.parentNode.removeChild(modal);
+    });
   }
 
   // ── Grid rendern ─────────────────────────────────────────────────────────────
@@ -635,21 +899,17 @@
       var bldg = buildingAtSlot(buildings, slot);
 
       if (bldg) {
-        var sfUpgraded = bldg.type === 'serverfarm' && !!bldg.upgraded;
-        var sfWorker   = bldg.type === 'serverfarm' && !!bldg.workerAssigned;
-        var src = (bldg.type === 'serverfarm' && sfUpgraded)
-          ? 'sprites/buildings/Serverfarm1.png'
+        var src = (bldg.type === 'serverfarm')
+          ? sfTileSprite(bldg.structLevel || 0)
           : RT.assets.buildingSrc(bldg.type, bldg.level || 0);
         var def      = RT.assets.BUILDINGS[bldg.type];
-        var lbl      = def ? def.label : bldg.type;
+        var lbl      = bldg.type === 'serverfarm' ? sfTileName(bldg.structLevel || 0) : (def ? def.label : bldg.type);
         var progHTML    = bldg.type === 'buero' ? buildingProgressHTML(slot) : '';
         var sfBadgeHTML = '';
         if (bldg.type === 'serverfarm') {
-          if (sfUpgraded && !sfWorker) {
-            sfBadgeHTML = '<span class="rt-sf-tile-badge rt-sf-tile-badge--warn">⚠️ Mitarbeiter?</span>';
-          } else if (sfUpgraded && sfWorker) {
-            sfBadgeHTML = '<span class="rt-sf-tile-badge rt-sf-tile-badge--ok">✅ 300k</span>';
-          }
+          sfBadgeHTML = '<span class="rt-sf-tile-badge rt-sf-tile-badge--ok">'
+            + sfTileBadge(bldg.structLevel || 0, bldg.expansionTier || 0)
+            + '</span>';
         }
         var waExtraHTML = '';
         if (bldg.type === 'werbeagentur') {
@@ -679,12 +939,14 @@
               + '</span>';
           }
         }
+        var imgClass = 'rt-campus-tile__img'
+          + (bldg.type === 'serverfarm' && (bldg.structLevel || 0) >= 2 ? ' rt-campus-tile__img--sf-large' : '');
         html += '<div class="rt-campus-tile rt-campus-tile--building" style="position:relative;"'
           + ' data-slot="' + slot + '" data-type="' + bldg.type + '">'
           + progHTML
           + waExtraHTML
           + sfBadgeHTML
-          + '<img class="rt-campus-tile__img" src="' + src + '" alt="' + RT.ui.escapeHTML(lbl) + '">'
+          + '<img class="' + imgClass + '" src="' + src + '" alt="' + RT.ui.escapeHTML(lbl) + '">'
           + '<span class="rt-campus-tile__label">' + RT.ui.escapeHTML(lbl) + '</span>'
           + '</div>';      } else if (pending) {
         html += '<div class="rt-campus-tile rt-campus-tile--placeable rt-campus-tile--js-place"'
@@ -733,6 +995,13 @@
     for (var wi = 0; wi < wbTiles.length; wi++) {
       wbTiles[wi].addEventListener('click', function () {
         if (RT.werbeagentur) RT.werbeagentur.open();
+      });
+    }
+
+    var ccTiles = document.querySelectorAll('.rt-campus-tile--building[data-type="communitycenter"]');
+    for (var cci = 0; cci < ccTiles.length; cci++) {
+      ccTiles[cci].addEventListener('click', function () {
+        if (RT.communitycenter) RT.communitycenter.open();
       });
     }
 
@@ -902,17 +1171,6 @@
       _clockProg = 0;
       showSlotMonthProduction();
       updateMonthlyIncome();
-      // Marcus' 15%-Anteil auf den Gewinn — nur ab Phase 2 (Deal akzeptiert).
-      // werbeagentur.js hat die Einnahmen bereits addiert + lastMonthRevenue gesetzt.
-      // Gehälter werden danach in tick.js abgezogen — hier schätzen wir sie voraus.
-      if (RT.state.get().marcusDealAccepted) {
-        var ms       = RT.state.get();
-        var revenue  = (ms.werbeagentur && ms.werbeagentur.lastMonthRevenue) || 0;
-        var salaries = Math.max(0, ((ms.resources.workers.max || 0) - 1)) * 2000;
-        var profit   = revenue - salaries;
-        var cut      = Math.floor(Math.max(0, profit) * 0.15);
-        if (cut > 0) RT.state.dispatch('ADD_RESOURCE', { key: 'money', delta: -cut, label: 'marcus' });
-      }
     });
 
     container.querySelector('.rt-placement-cancel-btn').addEventListener('click', cancelPlacement);

@@ -34,7 +34,10 @@
     mail:        ico('mail'),
     usersPlus:   ico('users'),
     search:      ico('search'),
-    video:       ico('video')
+    video:       ico('video'),
+    bell:        ico('bell'),
+    circle:      ico('circle'),
+    playCircle:  ico('play-circle')
   };
 
   // ── Phase-0-Nodes: Hauptbaum / Entwicklung ───────────────────────────────
@@ -84,6 +87,14 @@
       effectFull: 'Die Serverlogik wird neu aufgestellt und kann deutlich mehr Traffic verarbeiten. Stabiler Betrieb stärkt das Vertrauen.',
       rufBonus: 0.005,
       requires: ['backend1'], requiresPurchase: []
+    },
+    {
+      id: 'metadaten', tab: 'entwicklung',
+      name: 'Metadatenspeicherung', icon: ICO.server,
+      phase: 1, workers: 3, months: 5, server: 0, cost: 0,
+      effect: 'Jeder User belegt ab Aktivierung 2 statt 1 Servereinheit.',
+      effectFull: 'Deine Plattform speichert Aktivitäts-, Präferenz- und Verbindungsdaten pro User. Das verdoppelt den Serverbedarf. Vor der Aktivierung wird geprüft, ob genug Kapazität vorhanden ist.',
+      requires: ['backend2'], requiresPurchase: []
     },
     {
       id: 'feed', tab: 'entwicklung',
@@ -174,6 +185,79 @@
       rufBonus: 0.06,
       unlocks: 'Werbung: Video-Ad-Integration',
       requires: ['backend2'], requiresPurchase: []
+    },
+    // ── Phase 2 ──────────────────────────────────────────────────────────────
+    {
+      id: 'feedback_system', tab: 'entwicklung',
+      name: 'Feedback-System', icon: ICO.msgCircle,
+      phase: 2, workers: 2, months: 3, server: 5000, cost: 20000,
+      effect: 'User können Bugs und Verbesserungen melden. Ruf +0,5 %. Freischaltet: User-Support-Programm.',
+      effectFull: 'User können direkt in der App Fehler melden und Verbesserungen vorschlagen. Das stärkt das Vertrauen in deine Plattform. Freischaltet das User-Support-Programm im Community Center.',
+      rufBonus: 0.005,
+      unlocks: 'Community Center: User-Support-Programm',
+      requires: ['dm'], requiresPurchase: [], requiresBuilding: 'communitycenter'
+    },
+    {
+      id: 'pr_abteilung', tab: 'entwicklung',
+      name: 'PR-Abteilung', icon: ICO.trendingUp,
+      phase: 2, workers: 3, months: 4, server: 0, cost: 30000,
+      effect: 'Professionelle Öffentlichkeitsarbeit. Ruf +0,5 %. Freischaltet: Community Event + Image-Kampagne.',
+      effectFull: 'Du stellst ein professionelles Team für Öffentlichkeitsarbeit ein. Sie kommunizieren Erfolge nach außen und managen das Markenimage. Freischaltet Community Event und Image-Kampagne im Community Center.',
+      rufBonus: 0.005,
+      unlocks: 'Community Center: Community Event, Image-Kampagne',
+      requires: [], requiresPurchase: [], requiresBuilding: 'communitycenter'
+    },
+    // ── Phase 2: Watchtime-Features ──────────────────────────────────────────
+    {
+      id: 'infiniteScroll', tab: 'entwicklung',
+      name: 'Infiniter Scroll', icon: ICO.list,
+      phase: 2, workers: 2, months: 2, server: 2000, cost: 5000,
+      effect: 'Feed hört nicht mehr auf. User scrollen automatisch weiter. Watchtime +0,3 Std./Tag. Ruf sinkt leicht.',
+      effectFull: 'Der Feed lädt automatisch nach — es gibt kein Ende mehr. User verlieren das Zeitgefühl und scrollen deutlich länger. Das ist das erste "Dark Pattern": Deine Plattform erhöht die Watchtime bewusst auf Kosten des Rufs.',
+      rufBonus: -0.005,
+      watchtimeBonus: 0.3,
+      requires: ['feed', 'metadaten'], requiresPurchase: []
+    },
+    {
+      id: 'pushNotifications', tab: 'entwicklung',
+      name: 'Push-Benachrichtigungen', icon: ICO.bell,
+      phase: 2, workers: 2, months: 4, server: 3000, cost: 15000,
+      effect: 'Benachrichtigungen zu Likes und DMs. Holt User zurück. Watchtime +0,1 Std./Tag.',
+      effectFull: 'User erhalten Push-Nachrichten wenn jemand ihren Post liked oder ihnen schreibt. Das holt sie häufiger auf die Plattform zurück und erhöht die Session-Häufigkeit. Die meisten User schätzen das Update zu ihren Inhalten.',
+      rufBonus: 0.005,
+      watchtimeBonus: 0.1,
+      requires: ['like', 'dm'], requiresPurchase: []
+    },
+    {
+      id: 'stories', tab: 'entwicklung',
+      name: 'Stories', icon: ICO.circle,
+      phase: 2, workers: 2, months: 6, server: 10000, cost: 20000,
+      effect: 'Kurzvideos mit 24h-Ablauf. Tägliche Rückkehr. Watchtime +0,2 Std./Tag. Voraussetzung für Autoplay.',
+      effectFull: 'User können 24-Stunden-Kurzvideos posten. Da Inhalte ablaufen, kommen Nutzer jeden Tag zurück — sie wollen nichts verpassen. Stories schaffen ein Gefühl von Verpasstem ("FOMO") und erhöhen die Nutzungsfrequenz stark.',
+      rufBonus: 0.01,
+      watchtimeBonus: 0.2,
+      unlocks: 'Hauptbaum: Autoplay',
+      requires: ['videos', 'metadaten'], requiresPurchase: []
+    },
+    {
+      id: 'autoplay', tab: 'entwicklung',
+      name: 'Autoplay', icon: ICO.playCircle,
+      phase: 2, workers: 1, months: 3, server: 2000, cost: 2000,
+      effect: 'Nächste Story startet automatisch. Stärkster Watchtime-Booster. Ruf sinkt deutlich.',
+      effectFull: 'Nach einer Story startet die nächste ohne Klick. User können nicht mehr aktiv aufhören — das ist das stärkste Dark Pattern. Viele merken: "Ich wollte eigentlich schon längst aufhören." Die Watchtime steigt stark, der Ruf sinkt.',
+      rufBonus: -0.02,
+      watchtimeBonus: 0.3,
+      requires: ['stories'], requiresPurchase: []
+    },
+    {
+      id: 'liveStreaming', tab: 'entwicklung',
+      name: 'Live-Streaming', icon: ICO.video,
+      phase: 2, workers: 3, months: 6, server: 20000, cost: 40000,
+      effect: 'Echtzeit-Streams. Höchstes Engagement. Watchtime +0,4 Std./Tag. Ruf +2 %.',
+      effectFull: 'User können live streamen. Zuschauer kommentieren in Echtzeit und schicken Reaktionen. Live-Events ziehen viele User gleichzeitig auf die Plattform und halten sie stundenlang — das teuerste aber ruf-freundlichste Watchtime-Feature.',
+      rufBonus: 0.02,
+      watchtimeBonus: 0.4,
+      requires: ['videos', 'metadaten'], requiresPurchase: []
     }
   ];
 
@@ -227,6 +311,36 @@
       effect: 'Schaltet Langzeit-Kooperation frei: 15 Mon +2%/Mon, dann 12 Mon +1% Nachhall.',
       effectFull: 'Dein Team entwickelt eine komplexe Kooperationsstrategie mit externen Partnern.',
       requires: ['mk_langzeit', 'mk_sprint'], requiresPurchase: [], requiresGoLive: true, requiresBuilding: 'marketingstudio'
+    },
+    {
+      id: 'mk_eu', tab: 'marketing',
+      name: 'EU-Expansion', icon: '🇪🇺',
+      phase: 2, workers: 2, months: 3, server: 0, cost: 50000,
+      marketExpansion: 'eu',
+      effect: 'Öffnet EU-Märkte — +400 Mio. erreichbar. Sättigung sinkt, Kampagnen werden teurer.',
+      effectFull: 'Dein Team baut internationale Marketing-Strukturen auf. Kampagnen erreichen jetzt bis zu 440 Mio. Menschen in Europa. Der Markt wächst — <strong>die Marktsättigung sinkt</strong> und bisherige Kampagnen werden wieder wirksamer.',
+      tradeoffNote: '⚠️ Achtung: Internationale Kampagnen sind teurer als lokale. 💡 Tipp: Diese Expansion lohnt sich erst ab ca. 50 % Marktsättigung — vorher fressen die Mehrkosten den Vorteil des größeren Markts auf.',
+      requires: ['mk_nachhall'], requiresPurchase: [], requiresGoLive: true, requiresBuilding: 'marketingstudio'
+    },
+    {
+      id: 'mk_americas', tab: 'marketing',
+      name: 'Amerika & Afrika', icon: '🌎',
+      phase: 2, workers: 2, months: 4, server: 0, cost: 200000,
+      marketExpansion: 'americas',
+      effect: 'Amerika & Afrika — +1,6 Mrd. erreichbar. Sättigung sinkt, Kampagnen werden deutlich teurer.',
+      effectFull: 'Deine Plattform geht in englischsprachigen amerikanischen und afrikanischen Märkten online. Über Kampagnen sind jetzt rund 2 Mrd. Menschen erreichbar. <strong>Die Marktsättigung sinkt deutlich.</strong>',
+      tradeoffNote: '⚠️ Achtung: Kampagnen werden deutlich teurer. 💡 Tipp: Lohnt sich erst ab ca. 50 % Sättigung des EU-Markts — sonst überwiegen die Mehrkosten den Vorteil des größeren Markts.',
+      requires: ['mk_eu'], requiresPurchase: [], requiresGoLive: true, requiresBuilding: 'marketingstudio'
+    },
+    {
+      id: 'mk_asia', tab: 'marketing',
+      name: 'Asien-Expansion', icon: '🌏',
+      phase: 2, workers: 3, months: 5, server: 0, cost: 700000,
+      marketExpansion: 'asia',
+      effect: 'Asien — +3 Mrd. erreichbar. Größter Markt, aber teuerste Kampagnen.',
+      effectFull: 'Der asiatische Markt ist der größte der Welt. Lokalisierung und Partner-Netzwerke erschließen 3 Mrd. weitere potenzielle User. <strong>Die Marktsättigung sinkt auf ein Minimum.</strong>',
+      tradeoffNote: '⚠️ Achtung: Asiatische Kampagnen sind am teuersten. 💡 Tipp: Diese Expansion lohnt sich erst bei hoher Sättigung aller anderen Märkte (über 50 %) — nur dann überwiegt das Potenzial die Mehrkosten.',
+      requires: ['mk_americas'], requiresPurchase: [], requiresGoLive: true, requiresBuilding: 'marketingstudio'
     }
   ];
 
@@ -319,6 +433,10 @@
         occupied[pc.buildingGridSlot + ':' + (pc.workSlotIndex || 0)] = true;
       }
     }
+    // Aktives Support-Programm belegt seinen Slot
+    if (s.supportProgram && s.supportProgram.active && s.supportProgram.buildingGridSlot >= 0) {
+      occupied[s.supportProgram.buildingGridSlot + ':' + (s.supportProgram.workSlotIndex || 0)] = true;
+    }
     if (!occupied['0:0']) return { buildingGridSlot: 0, workSlotIndex: 0 };
     if (!occupied['0:1']) return { buildingGridSlot: 0, workSlotIndex: 1 };
     var buildings = s.buildings || [];
@@ -399,7 +517,7 @@
     var tt = s.techtree || {};
     var missing = [];
     var shopNames = { server1: 'Server (Shop)', rechner: 'Rechner (Shop)' };
-    var bldgNames = { marketingstudio: '📣 Marketing Studio', werbeagentur: '📢 Werbeagentur', ki: '🧠 KI-Labor' };
+    var bldgNames = { marketingstudio: '📣 Marketing Studio', werbeagentur: '📢 Werbeagentur', ki: '🧠 KI-Labor', communitycenter: '🤝 Community Center' };
     if (node.requiresBuilding) {
       var bldgs2 = s.buildings || [];
       var hasBldg2 = false;
@@ -462,6 +580,11 @@
     { from: 'mk_sprint',   to: 'mk_nachhall'  }
   ];
 
+  var EXPANSION_EDGES = [
+    { from: 'mk_eu', to: 'mk_americas' },
+    { from: 'mk_americas', to: 'mk_asia' }
+  ];
+
   var WERBUNG_EDGES = [
     { from: 'wb_coop',    to: 'wb_display' },
     { from: 'wb_display', to: 'wb_search'  },
@@ -479,16 +602,30 @@
     { from: 'feed',      to: 'kommentar' },
     { from: 'feed',      to: 'teilen'    },
     { from: 'frontend2', to: 'logoNeu'   },
-    { from: 'backend2',  to: 'dm'        },
-    { from: 'backend2',  to: 'gruppen'   },
-    { from: 'backend2',  to: 'suche'     },
-    { from: 'backend2',  to: 'videos'    }
+    { from: 'backend2',  to: 'dm'              },
+    { from: 'backend2',  to: 'gruppen'         },
+    { from: 'backend2',  to: 'suche'           },
+    { from: 'backend2',  to: 'videos'          },
+    { from: 'backend2',  to: 'metadaten'       },
+    { from: 'dm',        to: 'feedback_system'    },
+    { from: 'feed',      to: 'infiniteScroll'    },
+    { from: 'metadaten', to: 'infiniteScroll'    },
+    { from: 'like',      to: 'pushNotifications' },
+    { from: 'dm',        to: 'pushNotifications' },
+    { from: 'videos',    to: 'stories'           },
+    { from: 'metadaten', to: 'stories'           },
+    { from: 'stories',   to: 'autoplay'          },
+    { from: 'videos',    to: 'liveStreaming'      },
+    { from: 'metadaten', to: 'liveStreaming'      }
   ];
 
   // ── Wirkung-Chips (geteilt zwischen Karte und Detailansicht) ────────────
   function buildEffectChips(node) {
+    var rufVal  = node.rufBonus ? (Math.round(node.rufBonus * 1000) / 10) : 0;
+    var rufSign = rufVal >= 0 ? '+' : '';
     return ''
-      + (node.rufBonus    ? '<span class="rt-tt-effect-item">🏆 Ruf +' + (Math.round(node.rufBonus * 1000) / 10) + ' %</span>' : '')
+      + (node.rufBonus    ? '<span class="rt-tt-effect-item">🏆 Ruf ' + rufSign + rufVal + ' %</span>' : '')
+      + (node.watchtimeBonus ? '<span class="rt-tt-effect-item">⏱ Watchtime +' + node.watchtimeBonus.toFixed(1).replace('.', ',') + ' Std./Tag</span>' : '')
       + (node.growthBonus ? '<span class="rt-tt-effect-item">📈 +' + Math.round(node.growthBonus * 100) + ' %/Mon. Wachstum</span>' : '')
       + (node.usersBonus  ? '<span class="rt-tt-effect-item">👥 +' + node.usersBonus.toLocaleString('de-DE') + ' User</span>' : '')
       + (node.moneyBonus  ? '<span class="rt-tt-effect-item">💵 +€' + node.moneyBonus.toLocaleString('de-DE') + ' Einnahmen</span>' : '')
@@ -555,7 +692,10 @@
     if (_activeTab === 'entwicklung' || !showTabs) {
       requestAnimationFrame(function () { drawConnections(inner, EDGES); });
     } else if (_activeTab === 'marketing') {
-      requestAnimationFrame(function () { drawConnections(inner, MARKETING_EDGES); });
+      requestAnimationFrame(function () {
+        drawConnections(inner, MARKETING_EDGES);
+        drawConnections(inner, EXPANSION_EDGES, 'rt-tt-grid-wrap-exp', 'rt-tt-svg-exp');
+      });
     } else if (_activeTab === 'werbung') {
       requestAnimationFrame(function () { drawConnections(inner, WERBUNG_EDGES); });
     }
@@ -584,7 +724,8 @@
   }
 
   function renderDevContent() {
-    var phaseNum = (RT.state.get().phase === 'campus' || RT.state.get().phase === 'expansion') ? 1 : 0;
+    var ph = RT.state.get().phase;
+    var phaseNum = ph === 'expansion' ? 2 : (ph === 'campus' ? 1 : 0);
     var visible  = DEV_NODES.filter(function (n) { return n.phase <= phaseNum; });
 
     // pick() steuert die Anzeigereihenfolge unabhängig von DEV_NODES-Reihenfolge.
@@ -601,10 +742,14 @@
     // col1: account oben (bündig mit feed), dann frontend2, backend2
     // col2: feed + bilder oben (wie Garage-Phase, verschiebt sich nie) · darunter Backend-v2-Kinder
     // col3: Feed-Kinder · logoNeu ganz unten (braucht frontend2)
+    // col4: Phase-2-Watchtime-Features (Scroll, Push, Stories, Live)
+    // col5: Autoplay (hängt an Stories in col4)
     var col0 = pick(['frontend1', 'backend1']);
-    var col1 = pick(['account', 'frontend2', 'logoNeu', 'backend2']);
-    var col2 = pick(['feed', 'bilder', 'dm', 'gruppen', 'suche', 'videos']);
-    var col3 = pick(['like', 'kommentar', 'teilen']);
+    var col1 = pick(['account', 'frontend2', 'logoNeu', 'backend2', 'pr_abteilung']);
+    var col2 = pick(['feed', 'bilder', 'dm', 'gruppen', 'suche', 'videos', 'metadaten']);
+    var col3 = pick(['like', 'kommentar', 'teilen', 'feedback_system']);
+    var col4 = pick(['infiniteScroll', 'pushNotifications', 'stories', 'liveStreaming']);
+    var col5 = pick(['autoplay']);
 
     return '<div class="rt-tt-grid-wrap" id="rt-tt-grid-wrap">'
       + '  <svg class="rt-tt-svg" id="rt-tt-svg"></svg>'
@@ -613,17 +758,44 @@
       + '    <div class="rt-tt-col">' + col1.map(nodeCard).join('') + '</div>'
       + '    <div class="rt-tt-col">' + col2.map(nodeCard).join('') + '</div>'
       + (col3.length > 0 ? '<div class="rt-tt-col">' + col3.map(nodeCard).join('') + '</div>' : '')
+      + (col4.length > 0 ? '<div class="rt-tt-col">' + col4.map(nodeCard).join('') + '</div>' : '')
+      + (col5.length > 0 ? '<div class="rt-tt-col">' + col5.map(nodeCard).join('') + '</div>' : '')
       + '  </div>'
       + '</div>';
   }
 
   function renderMarketingContent() {
-    var phaseNum = (RT.state.get().phase === 'campus' || RT.state.get().phase === 'expansion') ? 1 : 0;
+    var ph       = RT.state.get().phase;
+    var phaseNum = ph === 'expansion' ? 2 : (ph === 'campus' ? 1 : 0);
     var visible  = MARKETING_NODES.filter(function (n) { return n.phase <= phaseNum; });
+
+    // Reguläre Nodes (immer sichtbar ab campus)
     var col0 = visible.filter(function (n) { return n.id === 'mk_freunde'  || n.id === 'mk_flyer';    });
     var col1 = visible.filter(function (n) { return n.id === 'mk_langzeit' || n.id === 'mk_sprint';   });
     var col2 = visible.filter(function (n) { return n.id === 'mk_nachhall'; });
-    return '<div class="rt-tt-grid-wrap" id="rt-tt-grid-wrap">'
+
+    // Expansion-Nodes (nur in Expansionsphase, eigene Sektion oben)
+    var expNodes = visible.filter(function (n) { return n.id === 'mk_eu' || n.id === 'mk_americas' || n.id === 'mk_asia'; });
+    var expEU  = visible.filter(function (n) { return n.id === 'mk_eu';       });
+    var expAM  = visible.filter(function (n) { return n.id === 'mk_americas'; });
+    var expAS  = visible.filter(function (n) { return n.id === 'mk_asia';     });
+
+    var expSection = expNodes.length > 0
+      ? '<div class="rt-tt-exp-section">'
+        + '<div class="rt-tt-exp-label">🌍 Internationale Märkte</div>'
+        + '<div class="rt-tt-grid-wrap" id="rt-tt-grid-wrap-exp">'
+        + '  <svg class="rt-tt-svg" id="rt-tt-svg-exp"></svg>'
+        + '  <div class="rt-tt-grid" id="rt-tt-grid-exp">'
+        + (expEU.length > 0 ? '<div class="rt-tt-col">' + expEU.map(nodeCard).join('') + '</div>' : '')
+        + (expAM.length > 0 ? '<div class="rt-tt-col">' + expAM.map(nodeCard).join('') + '</div>' : '')
+        + (expAS.length > 0 ? '<div class="rt-tt-col">' + expAS.map(nodeCard).join('') + '</div>' : '')
+        + '  </div>'
+        + '</div>'
+        + '</div>'
+      : '';
+
+    return expSection
+      + '<div class="rt-tt-grid-wrap" id="rt-tt-grid-wrap">'
       + '  <svg class="rt-tt-svg" id="rt-tt-svg"></svg>'
       + '  <div class="rt-tt-grid" id="rt-tt-grid">'
       + '    <div class="rt-tt-col">' + col0.map(nodeCard).join('') + '</div>'
@@ -662,9 +834,9 @@
       + '</div>';
   }
 
-  function drawConnections(inner, edges) {
-    var wrap = inner.querySelector('#rt-tt-grid-wrap');
-    var svg  = inner.querySelector('#rt-tt-svg');
+  function drawConnections(inner, edges, wrapId, svgId) {
+    var wrap = inner.querySelector('#' + (wrapId || 'rt-tt-grid-wrap'));
+    var svg  = inner.querySelector('#' + (svgId  || 'rt-tt-svg'));
     if (!wrap || !svg) return;
 
     var wR = wrap.getBoundingClientRect();
@@ -791,7 +963,8 @@
       + '        <div class="rt-tt-detail__ico">' + node.icon + '</div>'
       + '        <h3 class="rt-tt-detail__name">' + RT.ui.escapeHTML(node.name) + '</h3>'
       + '      </div>'
-      + '      <p class="rt-tt-detail__fx">' + RT.ui.escapeHTML(node.effectFull) + '</p>'
+      + '      <p class="rt-tt-detail__fx">' + node.effectFull + '</p>'
+      + (node.tradeoffNote ? '<p class="rt-tt-detail__tradeoff">' + node.tradeoffNote + '</p>' : '')
       + effectsRow
       + '    </div>'
       + '    <div class="rt-tt-detail__right">'
