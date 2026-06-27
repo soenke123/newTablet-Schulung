@@ -226,7 +226,7 @@
       effectFull: 'User erhalten Push-Nachrichten wenn jemand ihren Post liked oder ihnen schreibt. Das holt sie häufiger auf die Plattform zurück und erhöht die Session-Häufigkeit. Die meisten User schätzen das Update zu ihren Inhalten.',
       rufBonus: 0.005,
       watchtimeBonus: 0.1,
-      requires: ['like', 'dm'], requiresPurchase: []
+      requires: ['like', 'dm', 'metadaten'], requiresPurchase: []
     },
     {
       id: 'stories', tab: 'entwicklung',
@@ -612,6 +612,7 @@
     { from: 'metadaten', to: 'infiniteScroll'    },
     { from: 'like',      to: 'pushNotifications' },
     { from: 'dm',        to: 'pushNotifications' },
+    { from: 'metadaten', to: 'pushNotifications' },
     { from: 'videos',    to: 'stories'           },
     { from: 'metadaten', to: 'stories'           },
     { from: 'stories',   to: 'autoplay'          },
