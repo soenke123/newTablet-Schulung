@@ -68,8 +68,14 @@
       return null;
     }
     if (!data) {
-      console.warn('[SESSION] Auth-User', authSession.user?.email, 'hat KEIN Profil — als Guest behandelt. Profile-Row in DB fehlt.');
+      console.warn('[SESSION] Auth-User', authSession.user?.email, 'hat KEIN Profil in der DB — signOut, um kaputten Zustand zu vermeiden.');
+      // Ohne SignOut würde die JWT im Storage bleiben und alle folgenden
+      // supabase-js-Queries würden auf ein Refresh-Token warten, das nie kommt.
+      await client.auth.signOut();
       window.__session = null;
+      window.dispatchEvent(new CustomEvent('lernwelt:no-profile', {
+        detail: { email: authSession.user?.email }
+      }));
       return null;
     }
     console.log('[SESSION] Profil geladen:', data.display_name, '· Season:', data.season, '· Status:', data.status);

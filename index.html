@@ -1015,6 +1015,11 @@
       applySeasonUI();
       refreshAuthUI();
     });
+    window.addEventListener('lernwelt:no-profile', e => {
+      loginError.textContent = 'Anmeldung erfolgreich, aber Deinem Account fehlt ein Profil. Bitte an die Schulung wenden.';
+      loginError.hidden = false;
+      openLoginModal();
+    });
 
     // Touch-Feedback
     document.querySelectorAll(".card-button").forEach(button => {
