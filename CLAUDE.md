@@ -30,7 +30,13 @@ Webauftrtitt/
 
 Die Plattform migriert von Frontend-only (localStorage) auf **Supabase-Backend + Vercel Functions**. Referenzdokument: `PROJEKTBRIEFING.md`. Kernkonzept: Cluster (Schulungs-Kohorten mit Zeitfenster + Season) statt globalem `_rel`-Flag. Fake-Mail-Accounts auf `.fake`-TLD (kein E-Mail-Versand), Cheat-Härtung über RLS + SECURITY-DEFINER-RPCs.
 
-Aktueller Stand: **Arbeitsschritt 1 (Fundament & erste Migration)** — Schema-Datei liegt unter `supabase/migrations/0001_init.sql`, Setup-Anleitung unter `supabase/SETUP.md`. RLS und RPCs kommen in Arbeitsschritt 2.
+**Aktueller Stand: Arbeitsschritt 3 fertig.**
+
+Schritt 1 (Schema/Seed), Schritt 2 (RLS + RPCs), Schritt 3 (Session-Layer + Login) sind durch. Der frühere globale `_rel`-Bool ist entfernt — Season-Sichtbarkeit liest jetzt `getUserSeason()` aus `session.js`. Landing hat Login-UI oben rechts (via `supabase.auth.signInWithPassword`), Signup-Flow kommt erst in Schritt 4 (braucht Vercel Function für Cluster-Erkennung).
+
+**Frontend-Session-Layer** (`session.js` im Repo-Root): stellt `window.supabaseClient`, `getUserSeason()`, `isLoggedIn()`, `getSessionUser()`, `waitForSession()` und ein `lernwelt:session-changed`-Event bereit. Landing + GameHub + Handout laden es vor allem anderen. Einzel-Games laden es NICHT — `creatures.js` fällt dort auf „Season 2 offen" zurück (backward-compat mit altem `_rel=true`).
+
+**Offen für Schritt 4+:** Signup mit Fake-Mail-Domain via Vercel Function, `game_state`/`wallets`-Persistenz über `submit_game_result`-RPC statt localStorage, Passwort-Modal für gesperrte Games über `unlock_game`-RPC, PDF-Storage-Anbindung, Admin-Panel.
 
 ## Architecture
 

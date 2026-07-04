@@ -10,7 +10,8 @@
       "Bash(grep -n \"window.open\\\\|location\\\\|href\\\\|url\\\\|game12\\\\|\\\\\\\\.url\" \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Webauftrtitt/GameHub/script.js\")",
       "Bash(git mv *)",
       "Bash(awk 'NR==169 || NR==1269 {print NR\": \"length\\($0\\)\" chars, first 100: \"substr\\($0,1,100\\)}' \"GameHub/S1 EscapeGame/index.html\")",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }

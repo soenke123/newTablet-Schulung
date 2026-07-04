@@ -7,6 +7,17 @@
 
 'use strict';
 
+/* ─── Season-Check-Helper ─────────────────────────────────────
+   Nutzt die Backend-Session, wenn session.js geladen ist.
+   In Einzel-Spielen (die session.js nicht laden) ist die Default-
+   Semantik "Season 2 offen" — mirrort das alte _rel=true.
+   ─────────────────────────────────────────────────────────── */
+function _isS2Open() {
+  return typeof window.getUserSeason === 'function'
+    ? window.getUserSeason() >= 2
+    : true;
+}
+
 /* ─── Level-Up-CSS (einmalig injiziert, funktioniert in allen Spielen) ─── */
 (function injectLevelUpStyles() {
   if (document.getElementById('lw-levelup-styles')) return;
@@ -419,7 +430,7 @@ function determineCreature(correct, isFirst = false, gameId = null) {
   // Epische Tiere – immer möglich, Score-abhängig
   if (correct >= 9 && Math.random() < 0.05) return 'turtle';
   if (correct <= 2 && Math.random() < 0.05) return 'butterfly';
-  if (correct >= 4 && correct <= 6 && (typeof _rel === 'undefined' || _rel) && Math.random() < 0.05) return 'chamaeleon';
+  if (correct >= 4 && correct <= 6 && _isS2Open() && Math.random() < 0.05) return 'chamaeleon';
 
   // Schneckendrache – selten, unabhängig vom Rang
   const epicChance = (correct <= 2 || correct === 10) ? 5 : 2;
@@ -432,7 +443,7 @@ function determineCreature(correct, isFirst = false, gameId = null) {
   }
 
   // Season 2 – neue Normale teilen Plätze mit alten (50/50)
-  if (typeof _rel === 'undefined' || _rel) {
+  if (_isS2Open()) {
     if (correct <= 3                    && Math.random() < 0.5) return 'frosch';
     if (correct >= 4 && correct <= 6   && Math.random() < 0.5) return 'pinguin';
     if (correct >= 7 && correct <= 9   && Math.random() < 0.5) return 'raptor';
@@ -448,7 +459,7 @@ function determineCreature(correct, isFirst = false, gameId = null) {
 }
 
 function determineEpicCreature() {
-  const s2 = typeof _rel === 'undefined' || _rel;
+  const s2 = _isS2Open();
   const r = Math.random();
   if (s2) {
     if (r < 0.30) return 'butterfly';
@@ -487,7 +498,7 @@ function determineEggCreature(eggType, correct) {
   const legendaryChance = { rare: 0.3, mythic: 0.6, legendary: 1.0 }[eggType] ?? 0;
   if (Math.random() < legendaryChance) return determineEpicCreature();
   const normals = ['snail', 'fish', 'chicken', 'salamander', 'falkeneule', 'triceratops', 'dragon'];
-  if (typeof _rel === 'undefined' || _rel) {
+  if (_isS2Open()) {
     normals.push('frosch', 'pinguin', 'raptor');
   }
   return normals[Math.floor(Math.random() * normals.length)];

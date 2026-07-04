@@ -1,15 +1,25 @@
 'use strict';
 
 /* ==========================================
-   Schulung 2 – Sichtbarkeit (gesteuert via _rel in config.js)
+   Schulung 2 – Sichtbarkeit (gesteuert via Backend-Session)
    ========================================== */
-if (typeof _rel === 'undefined' || !_rel) {
-  ['ch-12', 'ch-13', 'ch-14', 'ch-15', 'ch-16', 'ch-17'].forEach(id => {
-    document.getElementById(id)?.remove();
-    document.querySelector(`.chapter-btn[data-target="${id}"]`)?.remove();
-  });
+function applySeasonVisibility() {
+  const s2Open = typeof window.getUserSeason === 'function' && window.getUserSeason() >= 2;
+  if (!s2Open) {
+    ['ch-12', 'ch-13', 'ch-14', 'ch-15', 'ch-16', 'ch-17'].forEach(id => {
+      document.getElementById(id)?.remove();
+      document.querySelector(`.chapter-btn[data-target="${id}"]`)?.remove();
+    });
+  } else {
+    const eyebrow = document.getElementById('s2-eyebrow');
+    if (eyebrow) eyebrow.style.display = '';
+  }
+}
+
+if (window.waitForSession) {
+  window.waitForSession().then(applySeasonVisibility);
 } else {
-  document.getElementById('s2-eyebrow').style.display = '';
+  applySeasonVisibility();
 }
 
 /* ==========================================

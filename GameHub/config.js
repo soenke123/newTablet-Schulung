@@ -8,9 +8,11 @@
      2. Konsole öffnen (F12)
      3. Eingeben:  hashPassword('meinPasswort').then(h => console.log(h))
      4. Den ausgegebenen Hash hier als passwordHash eintragen
-   ══════════════════════════════════════════════════════════════ */
 
-_rel = true;
+   Hinweis: Season-Sichtbarkeit wird jetzt über die Backend-Session
+   geregelt (siehe session.js: getUserSeason()). Der frühere
+   globale _rel-Bool ist entfallen.
+   ══════════════════════════════════════════════════════════════ */
 
 
 GAME_ACCESS = {

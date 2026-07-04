@@ -20,7 +20,7 @@ window.hashPassword = hashPassword;
 
 function getGameAccess(gameId) {
   const game = GAMES_CONFIG.find(g => g.id === gameId);
-  if (game?.season === 2 && !_rel) return 'locked';
+  if (game && game.season > getUserSeason()) return 'locked';
   const cfg = GAME_ACCESS[gameId];
   if (!cfg || cfg.status === 'available') return 'available';
   if (cfg.status === 'locked') return 'locked';
@@ -187,7 +187,7 @@ function renderHub() {
   initGalleryWalk();
   applyThemeFromPreference(allData);
   _injectPfauThemeStyles();
-  document.body.classList.toggle('s2-active', typeof _rel !== 'undefined' && _rel);
+  document.body.classList.toggle('s2-active', getUserSeason() >= 2);
   updateLootboxBlink();
 
   if (shopData.pendingEggNestId) enterPendingEggMode();
@@ -530,7 +530,7 @@ function claimFreeLootbox() {
 }
 
 function updateLootboxBlink() {
-  const blink = typeof _rel !== 'undefined' && _rel && getFreeLootboxStatus().available > 0;
+  const blink = getUserSeason() >= 2 && getFreeLootboxStatus().available > 0;
   document.getElementById('shopBtn')?.classList.toggle('lootbox-blink', blink);
   document.querySelector('.shop-tab[data-tab="2"]')?.classList.toggle('lootbox-blink', blink);
 }
@@ -582,7 +582,7 @@ function rollLootbox(shopData, allData) {
 
   // 6% Epic (kumulativ 13%)
   if (r < 13) {
-    const s2Open = typeof _rel !== 'undefined' && _rel;
+    const s2Open = getUserSeason() >= 2;
     const hasEligible = s2Open && Object.values(allData).some(d => d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6);
     if (hasEligible)
       return { rarity: 'epic', steinDerVollendung: true, label: 'Stein der Vollendung', icon: '🧿', consumables: _emptyConsumables(), coins: 0, kristalle: 0, egg: null, seal: null };
@@ -628,7 +628,7 @@ function applyLootboxReward(reward) {
     sd.pendingEggNestId = nestId;
   }
   if (reward.steinDerVollendung) {
-    const s2Open = typeof _rel !== 'undefined' && _rel;
+    const s2Open = getUserSeason() >= 2;
     if (s2Open) {
       const eligible = Object.keys(allData).filter(k => allData[k]?.creature && allData[k].growth >= GROWTH_MAX && allData[k].growth < GROWTH_S6);
       if (eligible.length > 0) {
@@ -778,7 +778,7 @@ const SHOP_ITEMS_P2 = [
 function openShopModal() {
   const modal = document.getElementById('shopModal');
   if (!modal) return;
-  shopActiveTab = (typeof _rel !== 'undefined' && _rel) ? 2 : 1;
+  shopActiveTab = (getUserSeason() >= 2) ? 2 : 1;
   if (!modal._tabsWired) {
     modal._tabsWired = true;
     document.querySelectorAll('.shop-tab').forEach(btn => {
@@ -798,7 +798,7 @@ function closeShopModal() {
 // Atari5 · Enter 2-7-1-8
 function renderShop(allData, tab) {
   if (tab !== undefined) shopActiveTab = tab;
-  const s2Open = typeof _rel !== 'undefined' && _rel;
+  const s2Open = getUserSeason() >= 2;
 
   _renderShopTabs(s2Open);
 
@@ -1094,7 +1094,7 @@ function buyItem(itemId) {
   }
 
   if (item.upgradeItem) {
-    const s2Open = typeof _rel !== 'undefined' && _rel;
+    const s2Open = getUserSeason() >= 2;
     if (!s2Open) return;
     const eligibleKeys = Object.keys(allData).filter(k => {
       const d = allData[k];
@@ -2078,7 +2078,7 @@ function openBookModal() {
   if (!overlay || !content) return;
 
   const seen    = sd.seenCreatures;
-  const s2Open  = typeof _rel !== 'undefined' && _rel;
+  const s2Open  = getUserSeason() >= 2;
   const visibleOrder = s2Open ? CREATURE_ORDER : CREATURE_ORDER.filter(c => !S2_CREATURES.has(c));
   const total   = visibleOrder.length;
   const found   = Object.keys(seen).filter(c => visibleOrder.includes(c)).length;
@@ -2129,9 +2129,10 @@ function openBookModal() {
     </div>`;
   };
 
-  const s2NormalsHtml = _rel ? S2_NORMALS.map(makeS2Slot).join('') : '';
-  const s2EpicsHtml   = _rel ? S2_EPICS.map(makeS2Slot).join('') : '';
-  const s2LegiesHtml  = _rel ? S2_LEGIES.map(makeS2Slot).join('') : '';
+  const _s2Book = getUserSeason() >= 2;
+  const s2NormalsHtml = _s2Book ? S2_NORMALS.map(makeS2Slot).join('') : '';
+  const s2EpicsHtml   = _s2Book ? S2_EPICS.map(makeS2Slot).join('') : '';
+  const s2LegiesHtml  = _s2Book ? S2_LEGIES.map(makeS2Slot).join('') : '';
 
   content.innerHTML = `
     <div class="book-modal-inner">

@@ -467,6 +467,146 @@
       font-style: italic;
     }
 
+    /* ─── Auth-Bar (oben rechts) ───────────────────────────── */
+    .auth-bar {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 100;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .auth-btn {
+      background: rgba(255,255,255,0.08);
+      color: #f5e6c8;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 999px;
+      padding: 0.5rem 1.1rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition);
+    }
+    .auth-btn:hover {
+      background: rgba(255,255,255,0.15);
+    }
+    .auth-btn--primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    .auth-btn--primary:hover {
+      background: var(--accent-hover);
+    }
+    .auth-user {
+      position: relative;
+    }
+    .auth-user-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255,255,255,0.08);
+      color: #f5e6c8;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 999px;
+      padding: 0.5rem 1.1rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .auth-user-name {
+      font-weight: 600;
+    }
+    .auth-user-caret {
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+    .auth-user-menu {
+      position: absolute;
+      top: calc(100% + 0.4rem);
+      right: 0;
+      background: white;
+      color: var(--text);
+      border-radius: var(--radius-medium);
+      box-shadow: var(--shadow);
+      min-width: 160px;
+      overflow: hidden;
+    }
+    .auth-user-menu button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: 0;
+      padding: 0.8rem 1rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .auth-user-menu button:hover {
+      background: var(--surface-soft);
+    }
+
+    /* ─── Login-Modal ─────────────────────────────────────── */
+    .login-modal-box {
+      background: white;
+      color: var(--text);
+      border-radius: var(--radius-large);
+      padding: 2rem;
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      box-shadow: var(--shadow);
+    }
+    .login-modal-box h2 {
+      margin: 0 0 1.5rem;
+      font-size: 1.6rem;
+    }
+    .login-modal-box form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .login-modal-box label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .login-modal-box input,
+    .login-modal-box select {
+      padding: 0.7rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-medium);
+      font-family: inherit;
+      font-size: 1rem;
+      color: var(--text);
+      background: white;
+    }
+    .login-modal-box input:focus,
+    .login-modal-box select:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .login-error {
+      margin: 0;
+      padding: 0.6rem 0.8rem;
+      background: #fdecea;
+      color: #b32020;
+      border-radius: var(--radius-medium);
+      font-size: 0.88rem;
+    }
+    .login-hint {
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
     /* Responsive */
     @media (max-width: 760px) {
       .button-layout {
@@ -487,11 +627,37 @@
       .modal {
         padding: 1.5rem;
       }
+
+      .auth-bar {
+        top: 0.5rem;
+        right: 0.5rem;
+      }
+      .auth-btn, .auth-user-btn {
+        padding: 0.4rem 0.9rem;
+        font-size: 0.85rem;
+      }
     }
   </style>
 </head>
 
 <body>
+
+  <!-- ═══ AUTH-BAR (oben rechts) ═══ -->
+  <div class="auth-bar" id="authBar">
+    <div class="auth-guest" id="authGuest">
+      <button class="auth-btn" id="loginBtn">Einloggen</button>
+      <button class="auth-btn auth-btn--primary" id="registerBtn">Registrieren</button>
+    </div>
+    <div class="auth-user" id="authUser" hidden>
+      <button class="auth-user-btn" id="userMenuBtn">
+        <span class="auth-user-name" id="authUserName">…</span>
+        <span class="auth-user-caret">▼</span>
+      </button>
+      <div class="auth-user-menu" id="authUserMenu" hidden>
+        <button id="logoutBtn">Ausloggen</button>
+      </div>
+    </div>
+  </div>
 
   <main>
 
@@ -623,7 +789,7 @@
           <span class="presentation-name">Workshop Aufmerksamkeit</span>
         </a>
 
-        <!-- ── Season 2 / Schulung 2 (nur sichtbar wenn _rel = true in config.js) ── -->
+        <!-- ── Season 2 / Schulung 2 (sichtbar wenn Session-Season >= 2) ── -->
         <div class="season2-only" style="display:none">
           <div class="schulung-divider">Schulung 2</div>
           <a
@@ -651,28 +817,168 @@
 
   </div>
 
+  <!-- ═══ LOGIN-MODAL ═══ -->
+  <div class="modal-overlay" id="loginModal" aria-hidden="true">
+    <div class="login-modal-box">
+      <button class="close-button" id="loginModalClose" aria-label="Schließen">×</button>
+      <h2>Einloggen</h2>
+      <form id="loginForm">
+        <label>
+          Schule
+          <select id="loginSchool" required></select>
+        </label>
+        <label>
+          Accountname
+          <input type="text" id="loginAccount" required autocomplete="username" />
+        </label>
+        <label>
+          Passwort
+          <input type="password" id="loginPassword" required autocomplete="current-password" />
+        </label>
+        <p class="login-error" id="loginError" hidden></p>
+        <button type="submit" class="auth-btn auth-btn--primary">Einloggen</button>
+        <p class="login-hint">Noch keinen Account? Registrieren kommt bald.</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ Supabase SDK + Session-Layer ═══ -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="session.js"></script>
   <script src="GameHub/config.js?v=20260623"></script>
+
   <script>
-    const ghLink = document.getElementById('gamehubLink');
+    /* ─── Season-Sichtbarkeit ─────────────────────────────── */
+    function applySeasonUI() {
+      const s2 = getUserSeason() >= 2;
+      const pageTitle = document.getElementById('pageTitle');
+      const ghLink    = document.getElementById('gamehubLink');
+      const handoutLink = document.getElementById('handoutLink');
 
-    if (typeof _rel !== 'undefined' && _rel) {
-      // Titel → "Tablet Schulung v3"
-      document.getElementById('pageTitle').innerHTML =
-        'Tablet Schulung<span class="version-badge">v3</span>';
+      pageTitle.innerHTML = s2
+        ? 'Tablet Schulung<span class="version-badge">v3</span>'
+        : 'Tablet Schulung';
 
-      // GameHub-Button: hellere Farbe
-      ghLink.classList.add('season2');
+      ghLink.classList.toggle('season2', s2);
 
-      // Season-2-Inhalte einblenden (Präsentationen, Handouts)
       document.querySelectorAll('.season2-only').forEach(el => {
-        el.style.display = 'contents';
+        el.style.display = s2 ? 'contents' : 'none';
       });
 
-      // Handout v2 anzeigen
-      const handoutLink = document.getElementById('handoutLink');
-      handoutLink.href = 'Dokumente/Handout_Tablet-Schulung v2.pdf';
-      handoutLink.download = 'Handout_Tablet-Schulung v2.pdf';
+      if (s2) {
+        handoutLink.href = 'Dokumente/Handout_Tablet-Schulung v2.pdf';
+        handoutLink.download = 'Handout_Tablet-Schulung v2.pdf';
+      } else {
+        handoutLink.href = 'Dokumente/Handout_Tablet-Schulung.pdf';
+        handoutLink.download = 'Handout_Tablet-Schulung.pdf';
+      }
     }
+
+    /* ─── Auth-UI ─────────────────────────────────────────── */
+    const authGuest   = document.getElementById('authGuest');
+    const authUser    = document.getElementById('authUser');
+    const authUserName = document.getElementById('authUserName');
+    const userMenuBtn = document.getElementById('userMenuBtn');
+    const userMenu    = document.getElementById('authUserMenu');
+    const loginBtn    = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    const logoutBtn   = document.getElementById('logoutBtn');
+    const loginModal  = document.getElementById('loginModal');
+    const loginModalClose = document.getElementById('loginModalClose');
+    const loginForm   = document.getElementById('loginForm');
+    const loginError  = document.getElementById('loginError');
+    const loginSchool = document.getElementById('loginSchool');
+
+    function refreshAuthUI() {
+      const user = getSessionUser();
+      if (user) {
+        authGuest.hidden = true;
+        authUser.hidden = false;
+        authUserName.textContent = user.display_name || user.account_name || 'Angemeldet';
+      } else {
+        authGuest.hidden = false;
+        authUser.hidden = true;
+        userMenu.hidden = true;
+      }
+    }
+
+    async function populateSchools() {
+      if (!window.supabaseClient) return;
+      const { data, error } = await window.supabaseClient
+        .from('schools')
+        .select('slug,name')
+        .eq('active', true)
+        .order('name');
+      if (error) {
+        console.warn('[landing] schools laden fehlgeschlagen:', error.message);
+        loginSchool.innerHTML = '<option value="mps">MPS</option>';
+        return;
+      }
+      loginSchool.innerHTML = data.map(s => `<option value="${s.slug}">${s.name}</option>`).join('');
+    }
+
+    function openLoginModal() {
+      loginError.hidden = true;
+      loginModal.classList.add('active');
+      loginModal.setAttribute('aria-hidden', 'false');
+      populateSchools();
+      setTimeout(() => document.getElementById('loginAccount').focus(), 50);
+    }
+    function closeLoginModal() {
+      loginModal.classList.remove('active');
+      loginModal.setAttribute('aria-hidden', 'true');
+    }
+
+    loginBtn?.addEventListener('click', openLoginModal);
+    loginModalClose?.addEventListener('click', closeLoginModal);
+    loginModal?.addEventListener('click', e => { if (e.target === loginModal) closeLoginModal(); });
+    registerBtn?.addEventListener('click', () => {
+      alert('Registrieren kommt in Kürze — zuerst wird der Signup-Backend-Endpoint fertiggestellt.');
+    });
+
+    userMenuBtn?.addEventListener('click', e => {
+      e.stopPropagation();
+      userMenu.hidden = !userMenu.hidden;
+    });
+    document.addEventListener('click', e => {
+      if (!authUser.contains(e.target)) userMenu.hidden = true;
+    });
+
+    logoutBtn?.addEventListener('click', async () => {
+      await window.supabaseClient.auth.signOut();
+      userMenu.hidden = true;
+    });
+
+    loginForm?.addEventListener('submit', async e => {
+      e.preventDefault();
+      loginError.hidden = true;
+      const schoolSlug = loginSchool.value;
+      const account    = document.getElementById('loginAccount').value.trim().toLowerCase();
+      const password   = document.getElementById('loginPassword').value;
+      if (!account || !password) return;
+
+      const email = `${account}@${schoolSlug}.${window.FAKE_EMAIL_DOMAIN}`;
+      const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) {
+        loginError.textContent = 'Login fehlgeschlagen — Accountname oder Passwort falsch.';
+        loginError.hidden = false;
+        return;
+      }
+      closeLoginModal();
+    });
+
+    /* ─── Initial + auf Session-Änderung ──────────────────── */
+    async function bootLanding() {
+      await (window.waitForSession?.() ?? Promise.resolve());
+      applySeasonUI();
+      refreshAuthUI();
+    }
+    bootLanding();
+    window.addEventListener('lernwelt:session-changed', () => {
+      applySeasonUI();
+      refreshAuthUI();
+    });
 
     // Touch-Feedback
     document.querySelectorAll(".card-button").forEach(button => {
