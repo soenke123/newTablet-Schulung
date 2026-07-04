@@ -19,14 +19,17 @@
 (() => {
   'use strict';
 
+  console.log('%c[SESSION] session.js läuft', 'background:#2f6b4e;color:white;padding:2px 6px;border-radius:3px');
+
   if (!window.supabase || !window.supabase.createClient) {
-    console.error('[session] Supabase-SDK fehlt. Prüfe, ob supabase-js VOR session.js geladen wurde.');
+    console.error('[SESSION] Supabase-SDK fehlt. Prüfe, ob supabase-js VOR session.js geladen wurde.');
     return;
   }
   if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
-    console.error('[session] supabase-config.js fehlt oder unvollständig.');
+    console.error('[SESSION] supabase-config.js fehlt oder unvollständig.');
     return;
   }
+  console.log('[SESSION] Client wird initialisiert mit URL:', window.SUPABASE_URL);
 
   const client = window.supabase.createClient(
     window.SUPABASE_URL,
