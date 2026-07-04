@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(node *)",
+      "Bash(start index.html)",
+      "Bash(git -C \"C:\\\\Users\\\\snke\\\\OneDrive\\\\ClaudeProjekte\\\\MPS TabletSchlung\\\\Webauftrtitt\" show --name-only HEAD~4)",
+      "Bash(git *)"
+    ]
+  }
+}

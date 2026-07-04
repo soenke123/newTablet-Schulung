@@ -397,10 +397,12 @@ const RARE_CREATURES = new Set(['biene', 'oktopus', 'ente']);
 function isRare(creature) { return RARE_CREATURES.has(creature); }
 
 /* Welches Season-Rare droppen kann bei welchem Spiel */
+/* Season 1: Biene + Oktopus können in allen Season-1-Spielen droppen (50/50)
+   Season 2: Ente droppt in allen Season-2-Spielen */
 const GAME_SEASON_RARE = {
-  game1:'biene', game3:'biene', game7:'biene', game8:'biene',
-  game5:'oktopus', game9:'oktopus', game10:'oktopus', game11:'oktopus',
-  game6:'ente', game12:'ente', game15:'ente', game14:'ente',
+  game1: ['biene','oktopus'], game3: ['biene','oktopus'], game7: ['biene','oktopus'], game8: ['biene','oktopus'],
+  game5: ['biene','oktopus'], game9: ['biene','oktopus'], game10: ['biene','oktopus'], game11: ['biene','oktopus'],
+  game6: ['ente'], game12: ['ente'], game15: ['ente'], game14: ['ente'],
 };
 
 /* ─── Epische Tiere ─── */
@@ -424,10 +426,12 @@ function determineCreature(correct, isFirst = false, gameId = null) {
   if (Math.random() * 100 < epicChance) return 'snaildragon';
 
   // Season Rare – 8 % Chance wenn das Spiel einer Season angehört
-  const seasonRare = gameId && GAME_SEASON_RARE[gameId];
-  if (seasonRare && Math.random() < 0.08) return seasonRare;
+  const seasonRares = gameId && GAME_SEASON_RARE[gameId];
+  if (seasonRares && Math.random() < 0.08) {
+    return seasonRares[Math.floor(Math.random() * seasonRares.length)];
+  }
 
-  // Season 3 – neue Normale teilen Plätze mit alten (50/50)
+  // Season 2 – neue Normale teilen Plätze mit alten (50/50)
   if (typeof _rel === 'undefined' || _rel) {
     if (correct <= 3                    && Math.random() < 0.5) return 'frosch';
     if (correct >= 4 && correct <= 6   && Math.random() < 0.5) return 'pinguin';
@@ -444,9 +448,9 @@ function determineCreature(correct, isFirst = false, gameId = null) {
 }
 
 function determineEpicCreature() {
-  const s3 = typeof _rel === 'undefined' || _rel;
+  const s2 = typeof _rel === 'undefined' || _rel;
   const r = Math.random();
-  if (s3) {
+  if (s2) {
     if (r < 0.30) return 'butterfly';
     if (r < 0.60) return 'snaildragon';
     if (r < 0.80) return 'turtle';
@@ -462,8 +466,10 @@ function determineCreatureWithGlucksklee(correct, gameId = null) {
   const chance = (20 + correct * 3) / 100;
   if (Math.random() < chance) return determineEpicCreature();
   // Season Rare mit erhöhter Chance; gameId=null verhindert Doppel-Check in determineCreature
-  const seasonRare = gameId && GAME_SEASON_RARE[gameId];
-  if (seasonRare && Math.random() < 0.15) return seasonRare;
+  const seasonRares = gameId && GAME_SEASON_RARE[gameId];
+  if (seasonRares && Math.random() < 0.15) {
+    return seasonRares[Math.floor(Math.random() * seasonRares.length)];
+  }
   return determineCreature(correct, false, null);
 }
 
@@ -472,7 +478,7 @@ function determineEggCreature(eggType, correct) {
   if (eggType === 'pfau')    return 'pfau';
   if (eggType === 'himmel')  return 'chinDrache';
   if (eggType === 'suempfe') return 'schnabeltier';
-  if (eggType === 's3') {
+  if (eggType === 's2') {
     const r = Math.random() * 100;
     if (r < 5)  return 'chamaeleon';
     if (r < 15) return 'ente';

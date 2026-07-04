@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE ALGORITHM</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <a id="hub-back-btn" href="../index.html">← Hub</a>
+
+  <!-- SPIELFELD (Raum-Hintergrund + Charakter-Sprites + Wand-Elemente) -->
+  
+
+  <div id="room">
+    <div class="image-wrapper">
+    <img id="bad-sprite" src="data/Bett.png" alt="Bad">
+    <img id="user-sprite" src="data/user1.png" alt="User">
+    <img id="handy-sprite" src="data/handy.png" alt="">
+    <img id="room-front" src="" alt="">
+    <div id="notif-badge" style="display:none">
+      <span id="notif-card-icon"></span>
+      <span id="notif-effect-text"></span>
+    </div>
+    <div id="event-overlay" style="display:none"></div>
+
+    <div id="values-widget">
+      <div class="value-scale" id="scale-dopamin">
+        <span class="scale-label">💊 Dopamin</span>
+        <div class="scale-row">
+          <div class="scale-track">
+            <div class="scale-zones zones-dopamin"></div>
+            <div class="scale-marker" id="marker-dopamin"></div>
+          </div>
+          <span class="trend-arrow" id="arrow-dopamin"></span>
+        </div>
+      </div>
+      <div class="value-scale" id="scale-sozialdrang">
+        <span class="scale-label">👥 Sozialdrang</span>
+        <div class="scale-row">
+          <div class="scale-track">
+            <div class="scale-zones zones-sozialdrang"></div>
+            <div class="scale-marker" id="marker-sozialdrang"></div>
+          </div>
+          <span class="trend-arrow" id="arrow-sozialdrang"></span>
+        </div>
+      </div>
+      <div class="value-scale" id="scale-reiz-container">
+        <span class="scale-label">🔥 Reizschwelle</span>
+        <div class="scale-row">
+          <div class="scale-track">
+            <div class="scale-zones zones-reiz"></div>
+            <div class="scale-marker" id="marker-reiz"></div>
+          </div>
+          <span class="trend-arrow" id="arrow-reiz"></span>
+        </div>
+      </div>
+      <div id="value-info-panel"><p id="value-info-text"></p></div>
+    </div>
+
+    <div id="interest-widget">
+      <svg id="interest-triangle" viewBox="0 0 132 114" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="tri-grad" x1="0" y1="0" x2="0" y2="114" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"   stop-color="#27ae60"/>
+            <stop offset="28%"  stop-color="#27ae60"/>
+            <stop offset="28%"  stop-color="#5dba6f"/>
+            <stop offset="55%"  stop-color="#5dba6f"/>
+            <stop offset="55%"  stop-color="#e07820"/>
+            <stop offset="100%" stop-color="#e07820"/>
+          </linearGradient>
+          <clipPath id="tri-clip">
+            <path d="M55.58,18 A12,12 0 0,1 76.42,18 L121.58,96 A12,12 0 0,1 111.22,114 L20.78,114 A12,12 0 0,1 10.42,96 Z"/>
+          </clipPath>
+        </defs>
+        <path d="M55.58,18 A12,12 0 0,1 76.42,18 L121.58,96 A12,12 0 0,1 111.22,114 L20.78,114 A12,12 0 0,1 10.42,96 Z"
+              fill="url(#tri-grad)"/>
+        <line x1="0" y1="62.7" x2="132" y2="62.7" stroke="rgba(0,0,0,0.28)" stroke-width="1.5" clip-path="url(#tri-clip)"/>
+      </svg>
+      <div class="itier-row" id="row-haupt"></div>
+      <div class="itier-row" id="row-hoch"></div>
+      <div class="itier-row" id="row-gering-1"></div>
+      <div class="itier-row" id="row-gering-2"></div>
+      <div id="interest-tooltip"></div>
+    </div>
+
+    <div id="clock">15:00</div>
+    <div id="endless-label" style="display:none">∞ ENDLESS</div>
+    <div id="event-duration-wrap" style="display:none">
+      <div id="event-duration-bar"></div>
+    </div>
+
+  </div>
+  </div>
+
+  <!-- BOTTOM-UI BALKEN (Platzhalter, Handkarten, Feed) -->
+  <div id="bottom-ui">
+
+    <!-- Grauer Platzhalter links (Event-Log / Info-Panel) -->
+    <div id="event-panel">
+      <div id="score-panel">
+        <div class="score-row">
+          <span class="score-label">Punkte</span>
+          <span id="score-value" class="score-number">0</span>
+        </div>
+        <div class="score-divider"></div>
+        <div class="score-row">
+          <span class="score-label">Bestpunktzahl</span>
+          <span id="highscore-value" class="score-number score-hs">0</span>
+        </div>
+      </div>
+      <!-- Hub Kreatur-Widget -->
+      <div id="alg-creature-widget">
+        <div id="eggVisual" style="width:100%;height:80px;display:flex;align-items:center;justify-content:center;overflow:hidden;"></div>
+        <div id="eggStageLabel" class="alg-creature-label">Ei schlummert…</div>
+        <div class="alg-progress-track"><div id="eggProgressFill" class="alg-progress-fill"></div></div>
+        <div id="pf-boost-bar" class="boost-bar"></div>
+      </div>
+    </div>
+
+    <!-- Handkarten + Countdown — Mitte -->
+    <div id="hand-area">
+      <div id="window-status">
+        <div id="window-bar-bg"><div id="window-bar" class="window-bar closed"></div></div>
+        <span id="window-label" class="window-label closed">Warte…</span>
+      </div>
+      <div id="hand"></div>
+    </div>
+
+    <!-- Feed — Reihe links nach rechts -->
+    <div id="feed-panel">
+      <div id="feed-info-panel"><p id="feed-info-text"></p></div>
+      <div id="feed-header">
+        <div class="panel-label">Feed</div>
+        <div id="feed-ratio"></div>
+      </div>
+      <div id="feed">
+        <div class="feed-slot empty" id="feed-slot-2">—</div>
+        <div class="feed-slot empty" id="feed-slot-1">—</div>
+        <div class="feed-slot empty" id="feed-slot-0">—</div>
+      </div>
+      <div id="synergy-toast"></div>
+    </div>
+
+  </div>
+
+  <!-- Start-Overlay (wird bei startGame() ausgeblendet) -->
+  <div id="start-overlay">
+    <div class="start-bg-glow"></div>
+
+    <header class="start-header">
+      <h1 class="game-title">THE ALGORITHM</h1>
+      <p class="game-tagline">Du bist der Algorithmus.</p>
+    </header>
+
+    <div class="carousel-viewport" id="carousel-viewport">
+      <div class="carousel-track" id="carousel-track"></div>
+    </div>
+
+    <div class="carousel-dots" id="carousel-dots"></div>
+
+    <footer class="start-footer">
+      <button class="start-btn-primary" id="start-btn" onclick="startGame()">Spiel starten</button>
+      <button id="endless-mode-btn" class="start-btn-gold" onclick="startEndlessMode()" style="display:none">∞ Endless Mode</button>
+      <button id="cards-overview-btn" class="start-btn-secondary" onclick="openCardsOverview()" style="display:none">Kartenansicht</button>
+    </footer>
+  </div>
+
+  <!-- Recovery-Banner (erscheint bei letzter Chance) -->
+  <div id="recovery-overlay" style="display:none">
+    <div id="recovery-box">
+      <div class="recovery-title">LETZTE CHANCE!</div>
+      <div class="recovery-subtitle">Spiele eine Karte, um das Schwein zurückzuhalten!</div>
+      <div class="recovery-timer-display"><span id="recovery-timer">10</span>s</div>
+      <div class="recovery-count-info">Recovery noch verfügbar: <span id="recovery-count-left">—</span>x</div>
+    </div>
+  </div>
+
+  <!-- Game-Over-Banner -->
+  <div id="gameover-overlay" style="display:none">
+    <div id="gameover-box">
+      <div class="alg-result-top">
+        <div id="gameover-title">VERLOREN</div>
+      </div>
+      <div class="alg-result-body">
+        <div class="alg-result-left">
+          <div id="alg-go-creature-wrap" class="alg-result-creature-wrap"></div>
+          <div id="alg-go-coin-bank"></div>
+        </div>
+        <div class="alg-result-right">
+          <p id="gameover-info">Du hast das Schwein bis <strong><span id="gameover-time">—</span></strong> am Handy gehalten.</p>
+          <div class="alg-result-score-display">
+            <span class="alg-score-big" id="alg-go-score">0</span>
+            <span class="alg-score-label">Punkte</span>
+          </div>
+        </div>
+      </div>
+      <div class="alg-result-buttons">
+        <a href="../index.html" class="alg-result-btn alg-btn-secondary">← Hub</a>
+        <button class="alg-result-btn alg-btn-primary alg-btn-gameover" onclick="location.reload()">Nochmal spielen</button>
+        <div id="alg-go-result-item"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Win-Banner -->
+  <div id="win-overlay" style="display:none">
+    <div id="win-box">
+      <div class="alg-result-top">
+        <div id="win-title">GEWONNEN!</div>
+      </div>
+      <div class="alg-result-body">
+        <div class="alg-result-left">
+          <div id="alg-win-creature-wrap" class="alg-result-creature-wrap"></div>
+          <div id="alg-win-coin-bank"></div>
+        </div>
+        <div class="alg-result-right">
+          <p id="win-info">Das Schwein hat die ganze Nacht durchgescrollt. Bis <strong>03:00 Uhr.</strong></p>
+          <div class="alg-result-score-display">
+            <span class="alg-score-big" id="alg-win-score">10</span>
+            <span class="alg-score-label">Punkte</span>
+          </div>
+        </div>
+      </div>
+      <div class="alg-result-buttons">
+        <a href="../index.html" class="alg-result-btn alg-btn-secondary">← Hub</a>
+        <button class="alg-result-btn alg-btn-primary alg-btn-win" onclick="location.reload()">Nochmal spielen</button>
+        <div id="alg-win-result-item"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Endless-End-Overlay -->
+  <div id="endless-end-overlay" style="display:none">
+    <div id="endless-end-box">
+      <div class="alg-result-top alg-result-top--endless">
+        <div id="endless-end-icon">📱</div>
+        <div id="endless-end-title">HALT.</div>
+      </div>
+      <div class="alg-result-body">
+        <div class="alg-result-left">
+          <div id="alg-ee-creature-wrap" class="alg-result-creature-wrap"></div>
+          <div id="alg-ee-coin-bank"></div>
+        </div>
+        <div class="alg-result-right alg-result-right--endless">
+          <p id="endless-end-text">
+            Es ist 09:00 Uhr morgens.<br>
+            Du hast die ganze Nacht weitergespielt.<br><br>
+            Dieses Spiel ist eine Konsumkritik.<br>
+            Es nutzt dieselben Mechanismen wie die Apps, die es simuliert:<br>
+            <strong>Belohnungsschleifen. Steigende Schwierigkeit.<br>Das Gefühl von Kontrolle.</strong><br><br>
+            Du bist nicht der Algorithmus.<br>
+            <strong>Du warst der User.</strong><br><br>
+            Entscheide dich bewusst.
+          </p>
+        </div>
+      </div>
+      <div class="alg-result-buttons">
+        <a href="../index.html" class="alg-result-btn alg-btn-secondary">← Hub</a>
+        <button id="endless-end-btn" class="alg-result-btn alg-btn-endless" onclick="location.reload()">Tablet weg.</button>
+        <div id="alg-ee-result-item"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kartenübersicht-Modal -->
+  <div id="cards-overview-overlay" style="display:none">
+    <div id="cards-overview-box">
+      <div id="cards-overview-header">
+        <h2>Kartenübersicht</h2>
+        <button id="cards-close-btn" onclick="closeCardsOverview()">✕</button>
+      </div>
+      <div id="cards-overview-grid"></div>
+      <div id="cards-interest-summary"></div>
+    </div>
+  </div>
+
+  <div id="feed-card-portal"></div>
+  <div id="hand-card-portal"></div>
+
+  <!-- Tutorial Overlay -->
+  <div id="tutorial-overlay" style="display:none">
+    <div id="tutorial-spotlight"></div>
+    <div id="tutorial-arrow"></div>
+    <div id="tutorial-label-box">
+      <p id="tutorial-label-text"></p>
+    </div>
+    <div id="tutorial-skip-wrap">
+      <button id="tutorial-skip-btn" onclick="tutorialSkipToLast(event)">Tutorial überspringen →</button>
+    </div>
+  </div>
+
+  <script src="js/startscreen.js"></script>
+  <script src="js/tutorial.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/interests.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/time.js"></script>
+  <script src="js/cards.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/main.js"></script>
+  <script>window.CREATURE_IMAGE_BASE = '../data/';</script>
+  <script src="../config.js"></script>
+  <script src="../creatures.js"></script>
+</body>
+</html>

@@ -49,8 +49,8 @@ body {
     radial-gradient(ellipse at 80% 80%, rgba(232,131,10,0.04) 0%, transparent 60%);
 }
 
-/* ── Season 3 – leicht hellerer Hintergrund ────────── */
-body.s3-active {
+/* ── Season 2 – leicht hellerer Hintergrund ────────── */
+body.s2-active {
   --clr-bg: #2a1a0a;
   background-color: var(--clr-bg);
   background-image:
@@ -334,7 +334,7 @@ a { text-decoration: none; color: inherit; }
 }
 .hud-kristalle .hud-coins__amount { color: #d4b8ff; }
 
-body.s3-active .hud-kristalle { display: flex; }
+body.s2-active .hud-kristalle { display: flex; }
 
 @keyframes lootbox-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -1726,6 +1726,178 @@ body.s3-active .hud-kristalle { display: flex; }
 /* .modal-creature-svg ersetzt durch .modal-creature-img in script.js */
 
 /* ══════════════════════════════════════════════════
+   SEASON 3 ANNOUNCEMENT MODAL
+   ══════════════════════════════════════════════════ */
+
+.s2-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 20px;
+  backdrop-filter: blur(6px);
+}
+
+.s2-overlay[hidden] { display: none; }
+
+.s2-panel {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-gold);
+  border-radius: var(--radius-xl);
+  max-width: 560px;
+  width: 100%;
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(240,180,41,0.25), var(--shadow-card);
+}
+
+.s2-banner {
+  background: linear-gradient(135deg, #2b1500, #4a2200);
+  border-bottom: 1px solid var(--clr-gold-dim);
+  padding: 24px 28px 20px;
+  text-align: center;
+}
+
+.s2-badge {
+  display: inline-block;
+  background: var(--clr-gold);
+  color: #1a0e05;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-bottom: 10px;
+}
+
+.s2-banner__title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--clr-gold);
+  margin: 0 0 4px;
+  letter-spacing: 0.05em;
+}
+
+.s2-banner__sub {
+  font-size: 0.9rem;
+  color: var(--clr-cream-dim);
+  margin: 0;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.s2-body {
+  padding: 20px 24px;
+}
+
+.s2-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.s2-preview {
+  flex-shrink: 0;
+  width: 110px;
+}
+
+.s2-preview__img {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--clr-border);
+}
+
+.s2-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.s2-list__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.s2-list__tag {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 10px;
+  margin-top: 2px;
+}
+
+.s2-tag--new {
+  background: rgba(62,207,106,0.18);
+  color: var(--clr-green);
+  border: 1px solid rgba(62,207,106,0.3);
+}
+
+.s2-list__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.88rem;
+  color: var(--clr-cream);
+}
+
+.s2-list__sub {
+  font-size: 0.76rem;
+  color: var(--clr-cream-dim);
+}
+
+.s2-list__divider {
+  height: 1px;
+  background: var(--clr-border);
+  margin: 2px 0;
+}
+
+.s2-list__game-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  margin-top: 1px;
+}
+
+.s2-footer {
+  padding: 16px 24px 20px;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--clr-border);
+}
+
+.s2-cta {
+  background: var(--clr-gold);
+  color: #1a0e05;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 32px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.1s;
+}
+
+.s2-cta:hover { background: #f5c040; }
+.s2-cta:active { transform: scale(0.97); }
+
+@media (max-width: 480px) {
+  .s2-layout { flex-direction: column; }
+  .s2-preview { width: 100%; max-width: 160px; margin: 0 auto; }
+  .s2-banner__title { font-size: 1.5rem; }
+}
+
+/* ══════════════════════════════════════════════════
    EI – SVG-STILE
    ══════════════════════════════════════════════════ */
 
@@ -1932,11 +2104,11 @@ body.s3-active .hud-kristalle { display: flex; }
   }
   .theme-cycle-btn__label { display: none; }
 
-  /* ── S3 Banner: Bild oben, Text unten ───────────── */
-  .s3-layout {
+  /* ── S2 Banner: Bild oben, Text unten ───────────── */
+  .s2-layout {
     flex-direction: column;
   }
-  .s3-preview {
+  .s2-preview {
     flex: none;
     width: 100%;
     max-width: 220px;
@@ -2097,7 +2269,7 @@ body.s3-active .hud-kristalle { display: flex; }
    SEASON 3 ANNOUNCEMENT MODAL
    ══════════════════════════════════════════════════ */
 
-.s3-overlay {
+.s2-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.88);
@@ -2109,14 +2281,14 @@ body.s3-active .hud-kristalle { display: flex; }
   padding: 16px;
   animation: s3FadeIn 0.35s ease;
 }
-.s3-overlay[hidden] { display: none; }
+.s2-overlay[hidden] { display: none; }
 
 @keyframes s3FadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
-.s3-panel {
+.s2-panel {
   background: var(--clr-surface);
   border: 2px solid var(--clr-gold);
   border-radius: var(--radius-lg);
@@ -2136,7 +2308,7 @@ body.s3-active .hud-kristalle { display: flex; }
 }
 
 /* ── Banner ─────────────────────────────────────── */
-.s3-banner {
+.s2-banner {
   background: linear-gradient(160deg, #1e0b00 0%, #2f1600 55%, #1a0a00 100%);
   border-bottom: 1px solid var(--clr-gold);
   padding: 30px 28px 26px;
@@ -2144,14 +2316,14 @@ body.s3-active .hud-kristalle { display: flex; }
   position: relative;
   overflow: hidden;
 }
-.s3-banner::before {
+.s2-banner::before {
   content: '';
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at 50% 0%, rgba(240,180,41,0.18) 0%, transparent 65%);
   pointer-events: none;
 }
-.s3-banner::after {
+.s2-banner::after {
   content: '';
   position: absolute;
   bottom: 0; left: 50%; transform: translateX(-50%);
@@ -2159,7 +2331,7 @@ body.s3-active .hud-kristalle { display: flex; }
   background: linear-gradient(to right, transparent, var(--clr-gold), transparent);
 }
 
-.s3-badge {
+.s2-badge {
   display: inline-block;
   background: var(--clr-gold);
   color: #1a0e05;
@@ -2173,7 +2345,7 @@ body.s3-active .hud-kristalle { display: flex; }
   margin-bottom: 12px;
 }
 
-.s3-banner__title {
+.s2-banner__title {
   font-family: var(--font-display);
   font-size: 2.8rem;
   font-weight: 900;
@@ -2184,7 +2356,7 @@ body.s3-active .hud-kristalle { display: flex; }
   margin-bottom: 8px;
 }
 
-.s3-banner__sub {
+.s2-banner__sub {
   font-family: var(--font-display);
   font-size: 0.82rem;
   color: var(--clr-cream-dim);
@@ -2193,20 +2365,20 @@ body.s3-active .hud-kristalle { display: flex; }
 }
 
 /* ── Scrollbarer Body ───────────────────────────── */
-.s3-body {
+.s2-body {
   overflow-y: auto;
   flex: 1;
   padding: 20px 24px 16px;
 }
-.s3-body::-webkit-scrollbar { width: 6px; }
-.s3-body::-webkit-scrollbar-track { background: transparent; }
-.s3-body::-webkit-scrollbar-thumb {
+.s2-body::-webkit-scrollbar { width: 6px; }
+.s2-body::-webkit-scrollbar-track { background: transparent; }
+.s2-body::-webkit-scrollbar-thumb {
   background: var(--clr-gold-dim);
   border-radius: 3px;
 }
 
 /* ── Section ────────────────────────────────────── */
-.s3-section__header {
+.s2-section__header {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2214,8 +2386,8 @@ body.s3-active .hud-kristalle { display: flex; }
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(240,180,41,0.2);
 }
-.s3-section__icon { font-size: 1.1rem; flex-shrink: 0; }
-.s3-section__title {
+.s2-section__icon { font-size: 1.1rem; flex-shrink: 0; }
+.s2-section__title {
   font-family: var(--font-display);
   font-size: 0.78rem;
   letter-spacing: 3px;
@@ -2223,7 +2395,7 @@ body.s3-active .hud-kristalle { display: flex; }
   text-transform: uppercase;
   flex: 1;
 }
-.s3-section__tag {
+.s2-section__tag {
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 1px;
@@ -2231,35 +2403,35 @@ body.s3-active .hud-kristalle { display: flex; }
   border-radius: 4px;
   text-transform: uppercase;
 }
-.s3-tag--new {
+.s2-tag--new {
   background: rgba(62,207,106,0.15);
   color: var(--clr-green);
   border: 1px solid rgba(62,207,106,0.3);
 }
-.s3-tag--epic {
+.s2-tag--epic {
   background: rgba(160,100,240,0.15);
   color: #c084f5;
   border: 1px solid rgba(160,100,240,0.3);
 }
-.s3-tag--legendary {
+.s2-tag--legendary {
   background: rgba(240,180,41,0.12);
   color: var(--clr-gold);
   border: 1px solid rgba(240,180,41,0.35);
 }
 
 /* ── Zweispalten-Layout ─────────────────────────── */
-.s3-layout {
+.s2-layout {
   display: flex;
   gap: 20px;
   align-items: flex-start;
 }
 
-.s3-preview {
+.s2-preview {
   flex: 0 0 50%;
   border-radius: var(--radius-md);
   overflow: hidden;
 }
-.s3-preview__img {
+.s2-preview__img {
   width: 100%;
   height: auto;
   display: block;
@@ -2267,14 +2439,14 @@ body.s3-active .hud-kristalle { display: flex; }
 }
 
 /* ── Kompakte Liste ─────────────────────────────── */
-.s3-list {
+.s2-list {
   flex: 1;
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
-.s3-list__item {
+.s2-list__item {
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -2282,14 +2454,14 @@ body.s3-active .hud-kristalle { display: flex; }
   line-height: 1.4;
   color: var(--clr-cream-dim);
 }
-.s3-list__item strong { color: var(--clr-cream); }
-.s3-list__sub {
+.s2-list__item strong { color: var(--clr-cream); }
+.s2-list__sub {
   display: block;
   font-size: 0.78rem;
   opacity: 0.65;
   margin-top: 1px;
 }
-.s3-list__tag {
+.s2-list__tag {
   flex-shrink: 0;
   font-size: 0.6rem;
   font-weight: 800;
@@ -2298,20 +2470,20 @@ body.s3-active .hud-kristalle { display: flex; }
   border-radius: 4px;
   text-transform: uppercase;
 }
-.s3-list__game-icon { flex-shrink: 0; font-size: 1rem; }
-.s3-list__divider {
+.s2-list__game-icon { flex-shrink: 0; font-size: 1rem; }
+.s2-list__divider {
   height: 1px;
   background: linear-gradient(to right, transparent, rgba(240,180,41,0.2), transparent);
   margin: 2px 0;
 }
 
 /* ── Footer / CTA ───────────────────────────────── */
-.s3-footer {
+.s2-footer {
   padding: 16px 24px 22px;
   border-top: 1px solid rgba(240,180,41,0.18);
   background: var(--clr-surface);
 }
-.s3-cta {
+.s2-cta {
   width: 100%;
   padding: 15px 0;
   background: linear-gradient(135deg, var(--clr-gold-dim) 0%, var(--clr-gold) 100%);
@@ -2327,12 +2499,12 @@ body.s3-active .hud-kristalle { display: flex; }
   box-shadow: 0 4px 20px rgba(240,180,41,0.3);
   transition: filter 0.2s, transform 0.15s, box-shadow 0.2s;
 }
-.s3-cta:hover {
+.s2-cta:hover {
   filter: brightness(1.08);
   transform: translateY(-2px);
   box-shadow: 0 6px 28px rgba(240,180,41,0.45);
 }
-.s3-cta:active { transform: translateY(0); }
+.s2-cta:active { transform: translateY(0); }
 
 .book-slot--rare {
   border-color: rgba(59,130,246,0.6);
@@ -2379,14 +2551,14 @@ body.s3-active .hud-kristalle { display: flex; }
   cursor: default;
 }
 
-/* ── Season 3 unseen-Slots: Tier-Border bleibt, Hintergrund leicht orange getönt ── */
-.book-slot--s3-rare-unseen {
+/* ── Season 2 unseen-Slots: Tier-Border bleibt, Hintergrund leicht orange getönt ── */
+.book-slot--s2-rare-unseen {
   border-color: rgba(59,130,246,0.25);
   background: rgba(200,90,20,0.18);
   opacity: 0.4;
   cursor: default;
 }
-.book-slot--s3-legendary-unseen {
+.book-slot--s2-legendary-unseen {
   border-color: rgba(240,180,41,0.25);
   background: rgba(200,90,20,0.18);
   opacity: 0.4;

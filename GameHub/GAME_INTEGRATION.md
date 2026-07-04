@@ -503,14 +503,14 @@ if (sd.glucksklee)        { sd.glucksklee = false;        saveShopData(sd); }
 
 ```javascript
 const GAME_SEASON_RARE = {
-  game1:'biene',  game3:'biene',  game7:'biene',  game8:'biene',      // S1
-  game5:'oktopus',game9:'oktopus',game10:'oktopus',game11:'oktopus',  // S2
-  game6:'ente',   game12:'ente',  game13:'ente',  game14:'ente',      // S3
+  game1: ['biene','oktopus'], game3: ['biene','oktopus'], game7: ['biene','oktopus'], game8: ['biene','oktopus'],
+  game5: ['biene','oktopus'], game9: ['biene','oktopus'], game10: ['biene','oktopus'], game11: ['biene','oktopus'],  // S1
+  game6: ['ente'], game12: ['ente'], game15: ['ente'], game14: ['ente'],  // S2
 };
 ```
 
-**8 % Drop-Chance** — automatisch in `determineCreature(score, isFirst, gameId)` eingebaut.
-Für neue Spiele: gameId hier eintragen, dann passiert der Rest automatisch.
+**8 % Drop-Chance** — automatisch in `determineCreature(score, isFirst, gameId)` eingebaut. In Season 1 wird zufällig zwischen Biene und Oktopus gewählt.
+Für neue Spiele: gameId hier eintragen (als Array mit den möglichen Rares der Season), dann passiert der Rest automatisch.
 
 ### Score → Kreaturtyp-Mapping
 
@@ -518,10 +518,10 @@ Für neue Spiele: gameId hier eintragen, dann passiert der Rest automatisch.
 
 | correct | Kreatur (ohne Zufall) |
 |---------|-----------------------|
-| 0–2 | Schnecke / Frosch (S3 50%) |
-| 3–4 | Fisch / Frosch oder Pinguin (S3) |
-| 5–6 | Huhn / Pinguin (S3 50%) |
-| 7 | Salamander / Raptor (S3 50%) |
+| 0–2 | Schnecke / Frosch (S2 50%) |
+| 3–4 | Fisch / Frosch oder Pinguin (S2) |
+| 5–6 | Huhn / Pinguin (S2 50%) |
+| 7 | Salamander / Raptor (S2 50%) |
 | 8 | Falkeneule / Raptor |
 | 9 | Triceratops / Raptor |
 | 10 | Drache |

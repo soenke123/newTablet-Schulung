@@ -740,6 +740,32 @@
   .shop-btn:hover { background: #eef0f8; transform: scale(1.1); }
   .shop-btn:active { transform: scale(0.93); }
 
+  @keyframes shopPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,149,0,0.75), 0 1px 4px rgba(0,0,0,0.12); }
+    50%       { box-shadow: 0 0 0 9px rgba(255,149,0,0),   0 1px 4px rgba(0,0,0,0.12); }
+  }
+  @keyframes shopArrow {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%       { transform: translateX(-50%) translateY(-5px); }
+  }
+  .shop-btn-highlight {
+    position: relative;
+    border: 2px solid #FF9500 !important;
+    animation: shopPulse 0.9s ease-in-out infinite;
+  }
+  .shop-btn-highlight::before {
+    content: '▼';
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #FF9500;
+    font-size: 14px;
+    line-height: 1;
+    pointer-events: none;
+    animation: shopArrow 0.9s ease-in-out infinite;
+  }
+
   /* Shop backdrop + panel */
   .shop-backdrop {
     position: absolute;
@@ -1351,9 +1377,9 @@ const ALL_FOLDERS = ['Mathe', 'Deutsch', 'Bio', 'Englisch', 'Geographie', 'Orga'
 
 // Nur noch Metadaten: fileCount = neue Dateien pro Runde, folders = immer alle Fächer
 const ROUNDS = [
+  { fileCount: 6, questionCount: 3, folders: ALL_FOLDERS },
   { fileCount: 10, questionCount: 3, folders: ALL_FOLDERS },
-  { fileCount: 15, questionCount: 3, folders: ALL_FOLDERS },
-  { fileCount: 20, questionCount: 3, folders: ALL_FOLDERS },
+  { fileCount: 13, questionCount: 3, folders: ALL_FOLDERS },
 ];
 
 const SUBJECT_COLORS = {
@@ -1621,20 +1647,18 @@ function makeFolderEl(key, count, emoji, label) {
   `;
   el.addEventListener('click', () => { state.activeFolder = key; renderAll(); });
 
-  if (key !== 'Inbox') {
-    el.addEventListener('dragover', (e) => {
-      if (state.phase !== 'sorting') return;
-      e.preventDefault();
-      el.classList.add('drop-target');
-    });
-    el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
-    el.addEventListener('drop', (e) => {
-      e.preventDefault();
-      el.classList.remove('drop-target');
-      const fileId = e.dataTransfer.getData('text/plain');
-      handleDrop(fileId, key);
-    });
-  }
+  el.addEventListener('dragover', (e) => {
+    if (state.phase !== 'sorting') return;
+    e.preventDefault();
+    el.classList.add('drop-target');
+  });
+  el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
+  el.addEventListener('drop', (e) => {
+    e.preventDefault();
+    el.classList.remove('drop-target');
+    const fileId = e.dataTransfer.getData('text/plain');
+    handleDrop(fileId, key);
+  });
   return el;
 }
 
@@ -1664,7 +1688,7 @@ function renderFiles() {
     const el = document.createElement('div');
     el.className = 'file' + ((file.exported || file.type === 'pdf' || file.type === 'png' || file.type === 'pages' || file.type === 'pptx') ? '' : ' unknown');
     el.dataset.id = file.id;
-    el.draggable = state.phase === 'sorting' && state.activeFolder === 'Inbox';
+    el.draggable = state.phase === 'sorting';
     el.setAttribute('data-testid', `file-${file.id}`);
 
     const thumb = document.createElement('div');
@@ -1705,7 +1729,7 @@ function renderFiles() {
     }
 
     el.addEventListener('dragstart', (e) => {
-      if (state.phase !== 'sorting' || state.activeFolder !== 'Inbox') {
+      if (state.phase !== 'sorting') {
         e.preventDefault();
         return;
       }
@@ -1742,7 +1766,7 @@ function addTouchDragHandlers(el, file) {
   let startX = 0, startY = 0;
 
   el.addEventListener('touchstart', (e) => {
-    if (state.phase !== 'sorting' || state.activeFolder !== 'Inbox') return;
+    if (state.phase !== 'sorting') return;
     const touch = e.touches[0];
     startX = touch.clientX;
     startY = touch.clientY;
@@ -1793,7 +1817,7 @@ function addTouchDragHandlers(el, file) {
     touchDragState.ghost.style.visibility = '';
     document.querySelectorAll('.folder.drop-target').forEach(f => f.classList.remove('drop-target'));
     const folderEl = below?.closest?.('.folder');
-    if (folderEl && folderEl.dataset.folder && folderEl.dataset.folder !== 'Inbox') {
+    if (folderEl && folderEl.dataset.folder) {
       folderEl.classList.add('drop-target');
     }
   }, { passive: false });
@@ -1809,7 +1833,7 @@ function addTouchDragHandlers(el, file) {
       const touch = e.changedTouches[0];
       const below = document.elementFromPoint(touch.clientX, touch.clientY);
       const folderEl = below?.closest?.('.folder');
-      if (folderEl && folderEl.dataset.folder && folderEl.dataset.folder !== 'Inbox') {
+      if (folderEl && folderEl.dataset.folder) {
         handleDrop(file.id, folderEl.dataset.folder);
       }
     }
@@ -1919,29 +1943,48 @@ function awardCoins(amount, label) {
 }
 
 function handleDrop(fileId, folderName) {
-  const idx = state.files.findIndex(f => f.id === fileId);
-  if (idx === -1) return;
-  const file = state.files[idx];
-
-  state.files.splice(idx, 1);
-  if (!state.folders[folderName]) state.folders[folderName] = [];
-  state.folders[folderName].push(file);
-
-  // Münzen für korrektes Sortieren
-  if (file.type === 'bat' && folderName === 'Papierkorb') {
-    awardCoins(5, 'Virus erkannt!');
-    state.sortStreak = 0;
-  } else if (file.type !== 'bat' && file.subject === folderName) {
-    awardCoins(1, 'Richtig sortiert');
-    state.sortStreak += 1;
-    if (state.sortStreak % 3 === 0) {
-      awardCoins(2, `${state.sortStreak}er-Combo!`);
-    }
+  // Datei in Inbox oder in einem Ordner suchen
+  let file = null;
+  let sourceFolder = 'Inbox';
+  const idxInbox = state.files.findIndex(f => f.id === fileId);
+  if (idxInbox !== -1) {
+    file = state.files.splice(idxInbox, 1)[0];
   } else {
-    state.sortStreak = 0;
+    for (const [fname, ffiles] of Object.entries(state.folders)) {
+      const idx = ffiles.findIndex(f => f.id === fileId);
+      if (idx !== -1) {
+        file = ffiles.splice(idx, 1)[0];
+        sourceFolder = fname;
+        break;
+      }
+    }
+  }
+  if (!file || sourceFolder === folderName) return;
+
+  if (folderName === 'Inbox') {
+    state.files.push(file);
+  } else {
+    if (!state.folders[folderName]) state.folders[folderName] = [];
+    state.folders[folderName].push(file);
   }
 
-  toast(`In ${folderName} verschoben`, 'success');
+  // Münzen nur bei Erstplatzierung aus der Inbox
+  if (sourceFolder === 'Inbox' && folderName !== 'Inbox') {
+    if (file.type === 'bat' && folderName === 'Papierkorb') {
+      awardCoins(5, 'Virus erkannt!');
+      state.sortStreak = 0;
+    } else if (file.type !== 'bat' && file.subject === folderName) {
+      awardCoins(1, 'Richtig sortiert');
+      state.sortStreak += 1;
+      if (state.sortStreak % 3 === 0) {
+        awardCoins(2, `${state.sortStreak}er-Combo!`);
+      }
+    } else {
+      state.sortStreak = 0;
+    }
+  }
+
+  toast(folderName === 'Inbox' ? 'Zurück in Downloads' : `In ${folderName} verschoben`, 'success');
   renderAll();
   if (state.files.length === 0) finishSorting();
 }
@@ -2286,6 +2329,9 @@ function endTest() {
   }
   if (state.roundIndex < ROUNDS.length - 1) {
     state.roundIndex += 1;
+    if (state.roundIndex === 1) {
+      $('shopBtn').classList.add('shop-btn-highlight');
+    }
     beginRound();
   } else {
     showEndScreen();
@@ -2392,6 +2438,7 @@ function showUnicorn() {
 }
 
 function openShop() {
+  $('shopBtn').classList.remove('shop-btn-highlight');
   $('shopCoinDisplay').textContent = state.coins;
   renderShopContent();
   $('shopBackdrop').classList.add('visible');
@@ -2518,6 +2565,7 @@ if (window.visualViewport) {
 
 </script>
 <script>window.CREATURE_IMAGE_BASE = '../data/';</script>
+<script src="../config.js"></script>
 <script src="../creatures.js"></script>
 <script>initHubState();</script>
 </body>

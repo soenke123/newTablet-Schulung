@@ -20,7 +20,7 @@ window.hashPassword = hashPassword;
 
 function getGameAccess(gameId) {
   const game = GAMES_CONFIG.find(g => g.id === gameId);
-  if (game?.season === 3 && !_rel) return 'locked';
+  if (game?.season === 2 && !_rel) return 'locked';
   const cfg = GAME_ACCESS[gameId];
   if (!cfg || cfg.status === 'available') return 'available';
   if (cfg.status === 'locked') return 'locked';
@@ -36,18 +36,17 @@ const GAMES_CONFIG = [
   { id: 'game7', season: 1, title: 'Escape the Rules', icon: '🔐', url: 'S1 EscapeGame/index.html'       },
   { id: 'game3', season: 1, title: 'Daten-Quiz',       icon: '📁', url: 'S1 DateiformatQuiz/index.html'  },
   { id: 'game8', season: 1, title: 'Projekt_FINAL_v7_NEU',  icon: '🗂️', url: 'S1 Projekt_FINAL_v7_NEU/index.html'       },
-  { id: 'game9',  season: 2, title: 'Fokusflow',        icon: '🎯', url: 'S2 Fokusflow/index.html'             },
-  { id: 'game10', season: 2, title: 'The Algorithm',    icon: '⚙️', url: 'S2 The Algorithm/index.html'        },
-  { id: 'game11', season: 2, title: 'Tip Turbo Kids',   icon: '⌨️', url: 'S2 10finger Blindschreiben/index.html' },
-  { id: 'game12', season: 3, title: 'Quellen-Tinder',      icon: '🃏', url: 'S3 Quellen Tinder/index.html'      },
-  { id: 'game15', season: 3, title: 'LLMaster',            icon: '💬', url: 'S3 LLMaster/index.html'             },
-  { id: 'game14', season: 3, title: 'Reinforce Yourself!', icon: '🤖', url: 'S3 Reinforce Yourself!/index.html'  },
+  { id: 'game9',  season: 1, title: 'Fokusflow',        icon: '🎯', url: 'S1 Fokusflow/index.html'             },
+  { id: 'game10', season: 1, title: 'The Algorithm',    icon: '⚙️', url: 'S1 The Algorithm/index.html'        },
+  { id: 'game11', season: 1, title: 'Tip Turbo Kids',   icon: '⌨️', url: 'S1 10finger Blindschreiben/index.html' },
+  { id: 'game12', season: 2, title: 'Quellen-Tinder',      icon: '🃏', url: 'S2 Quellen Tinder/index.html'      },
+  { id: 'game15', season: 2, title: 'LLMaster',            icon: '💬', url: 'S2 LLMaster/index.html'             },
+  { id: 'game14', season: 2, title: 'Reinforce Yourself!', icon: '🤖', url: 'S2 Reinforce Yourself!/index.html'  },
 ];
 
 const SEASONS_CONFIG = [
-  { id: 1, title: 'Season 1 – Regeln, Ordnung, Dateien',      desc: 'Diese Season knüpft an die Inhalte der ersten Tablet-Schulung an und bringt dein Wissen auf das nächste Level. In drei spannenden Spielen sicherst und vertiefst du wichtige Grundlagen rund um die Tabletnutzung – von unseren Hausregeln über Dateiformate bis hin zur richtigen Struktur auf deinem Gerät. So wirst du Schritt für Schritt sicherer und schneller im Umgang mit deinem Tablet.' },
-  { id: 2, title: 'Season 2 – Aufmerksamkeit und Schreiben', desc: 'Deine Aufmerksamkeit ist eine deiner wichtigsten Ressourcen – deshalb lohnt es sich, bewusst mit ihr umzugehen. Diese Season baut auf den Inhalten eines Workshops aus der ersten Schulung. In zwei Aufmerksamkeitsspielen geht es um Fokus und das Binden von Aufmerksamkeit. Außerdem tauchst du mit Tip Turbo Kids in das 10-Finger-Blindschreiben ein: Vielleicht nicht die wichtigste Methode zum Lernen, aber eine Fähigkeit, die dir das Schreiben längerer Texte enorm erleichtert und im Schulalltag wie auch später im Berufsleben unverzichtbar ist.' },
-  { id: 3, title: 'Season 3 – LLM und Recherche',     desc: 'Welchen Quellen kannst du vertrauen – und wie erkennst du es? In dieser Season lernst du, Quellen zu bewerten und ihre Glaubwürdigkeit einzuschätzen. Du erforschst außerdem, wie Sprachmodelle wie ChatGPT funktionieren: Was passiert eigentlich unter der Haube – und warum verstehen KIs viel weniger, als es auf den ersten Blick scheint? Drei Spiele, ein Grundverständnis für das mächtigste Werkzeug unserer Zeit.' },
+  { id: 1, title: 'Season 1 – Regeln, Ordnung, Dateien & Aufmerksamkeit', desc: 'Diese Season knüpft an die Inhalte der ersten Tablet-Schulung an und bringt dein Wissen auf das nächste Level. In sechs spannenden Spielen sicherst und vertiefst du wichtige Grundlagen rund um die Tabletnutzung – von unseren Hausregeln über Dateiformate bis hin zur richtigen Struktur auf deinem Gerät. Und weil deine Aufmerksamkeit eine deiner wichtigsten Ressourcen ist, lernst du außerdem, bewusst mit ihr umzugehen: In zwei Aufmerksamkeitsspielen geht es um Fokus und das Binden von Aufmerksamkeit. Mit Tip Turbo Kids tauchst du zusätzlich in das 10-Finger-Blindschreiben ein – eine Fähigkeit, die dir das Schreiben längerer Texte enorm erleichtert und im Schulalltag wie auch später im Berufsleben unverzichtbar ist.' },
+  { id: 2, title: 'Season 2 – LLM und Recherche',     desc: 'Welchen Quellen kannst du vertrauen – und wie erkennst du es? In dieser Season lernst du, Quellen zu bewerten und ihre Glaubwürdigkeit einzuschätzen. Du erforschst außerdem, wie Sprachmodelle wie ChatGPT funktionieren: Was passiert eigentlich unter der Haube – und warum verstehen KIs viel weniger, als es auf den ersten Blick scheint? Drei Spiele, ein Grundverständnis für das mächtigste Werkzeug unserer Zeit.' },
 ];
 
 /* ─────────────────────────────────────────────────
@@ -68,9 +67,9 @@ const SHOP_ITEMS = [
 
 // Atari2 · Enter 1-5-0-7
 const CREATURE_ORDER = ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','butterfly','snaildragon','turtle','chamaeleon','robot','pfau','biene','oktopus','ente','frosch','pinguin','raptor','chinDrache','schnabeltier'];
-const S3_CREATURES   = new Set(['ente','chamaeleon','chinDrache','schnabeltier','frosch','pinguin','raptor']);
+const S2_CREATURES   = new Set(['ente','chamaeleon','chinDrache','schnabeltier','frosch','pinguin','raptor']);
 
-/* Season 2 Kreatur-Paket – bald verfügbar (nur im Buch sichtbar wenn Season 3 offen) */
+/* Zukünftiges Kreatur-Paket – bald verfügbar (nur im Buch sichtbar wenn Season 2 offen) */
 const S2_NORMALS   = [];
 const S2_EPICS     = [];
 const S2_LEGIES    = [];
@@ -91,8 +90,8 @@ const BOOK_NAMES = {
   robot:       'Atari-1337 — Verbotenes Protokoll',
   pfau:        'Legendärer Pfau — Krönung der Lernwelt',
   biene:       'Seltene Biene — Season 1',
-  oktopus:     'Seltener Oktopus — Season 2',
-  ente:        'Seltene Ente — Season 3',
+  oktopus:     'Seltener Oktopus — Season 1',
+  ente:        'Seltene Ente — Season 2',
   chamaeleon:   'Episches Chamäleon — Meister des Wandels',
   pinguin:      'Stolzer Kaiserpinguin',
   frosch:       'Prächtiger Riesenfrosch',
@@ -188,7 +187,7 @@ function renderHub() {
   initGalleryWalk();
   applyThemeFromPreference(allData);
   _injectPfauThemeStyles();
-  document.body.classList.toggle('s3-active', typeof _rel !== 'undefined' && _rel);
+  document.body.classList.toggle('s2-active', typeof _rel !== 'undefined' && _rel);
   updateLootboxBlink();
 
   if (shopData.pendingEggNestId) enterPendingEggMode();
@@ -583,8 +582,8 @@ function rollLootbox(shopData, allData) {
 
   // 6% Epic (kumulativ 13%)
   if (r < 13) {
-    const s3Open = typeof _rel !== 'undefined' && _rel;
-    const hasEligible = s3Open && Object.values(allData).some(d => d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6);
+    const s2Open = typeof _rel !== 'undefined' && _rel;
+    const hasEligible = s2Open && Object.values(allData).some(d => d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6);
     if (hasEligible)
       return { rarity: 'epic', steinDerVollendung: true, label: 'Stein der Vollendung', icon: '🧿', consumables: _emptyConsumables(), coins: 0, kristalle: 0, egg: null, seal: null };
     return { rarity: 'epic', consumables: { wachstumstrank: 1, wachstumsBooster: 1, coinsx3: 1, glucksklee: 1 }, label: 'Alle 4 Tränke', icon: '🎒', coins: 0, kristalle: 0, egg: null, seal: null, steinDerVollendung: false };
@@ -629,8 +628,8 @@ function applyLootboxReward(reward) {
     sd.pendingEggNestId = nestId;
   }
   if (reward.steinDerVollendung) {
-    const s3Open = typeof _rel !== 'undefined' && _rel;
-    if (s3Open) {
+    const s2Open = typeof _rel !== 'undefined' && _rel;
+    if (s2Open) {
       const eligible = Object.keys(allData).filter(k => allData[k]?.creature && allData[k].growth >= GROWTH_MAX && allData[k].growth < GROWTH_S6);
       if (eligible.length > 0) {
         allData[eligible[Math.floor(Math.random() * eligible.length)]].growth = GROWTH_S6;
@@ -763,13 +762,13 @@ function openLootboxModal(reward) {
   collectBtn.addEventListener('click', onCollect);
 }
 
-// ── Season 3 Shop-Items (nn = noch nicht funktionsfähig) ─────────────────
+// ── Season 2 Shop-Items (nn = noch nicht funktionsfähig) ─────────────────
 const SHOP_ITEMS_P2 = [
   { id: 'kristall1',          icon: '💎',      name: '1 Kristall',                description: 'Tausche Münzen gegen Kristalle – die seltene Währung der Lernwelt.',  price: 10, kristallItem: true, kristallAmount: 1  },
   { id: 'kristall3',          icon: '💎💎',   name: '3 Kristalle',               description: 'Ein kleines Bündel Kristalle – günstiger als einzeln kaufen.',             price: 25, kristallItem: true, kristallAmount: 3  },
   { id: 'kristall10',         icon: '💎💎💎', name: '10 Kristalle',              description: 'Der große Vorrat – der beste Preis pro Kristall.',                          price: 60, kristallItem: true, kristallAmount: 10 },
   { id: 'lootbox',             icon: '🎁', name: 'Lootbox',               description: 'Gratis um 06:00, 12:00 und 18:00 – oder jederzeit für 2 Kristalle kaufen.',                                                                         price: 2,   currency: 'kristall', lootboxItem: true },
-  { id: 's3Ei',               icon: '🥚', name: 'versiegeltes Ei',              description: 'Hier droppen nur Monster aus Season 3 – Epic, Rare und Normal.',                                                                              price: 8,   currency: 'kristall', eggItem: true, eggType: 's3' },
+  { id: 's2Ei',               icon: '🥚', name: 'versiegeltes Ei',              description: 'Hier droppen nur Monster aus Season 2 – Epic, Rare und Normal.',                                                                              price: 8,   currency: 'kristall', eggItem: true, eggType: 's2' },
   { id: 'backupDesBuches',    icon: '💾', name: 'Backup des Buches',          description: 'Lade ein beliebiges Monster aus dem Buch der Monster in einen Hub – kostet 2 Kristalle pro Nutzung.',                                                         price: 20,  currency: 'kristall', backupItem: true },
   { id: 'steinDerVollendung', icon: '🧿', name: 'Stein der Vollendung',   description: 'Löst die verborgenen Fesseln eines zufälligen Wesens und öffnet den Weg zu einer Stufe, die niemand für möglich hielt.',                                              price: 10,  currency: 'kristall', consumable: true, upgradeItem: true },
   { id: 'siegelSuempfe',      icon: '🌿', name: 'Siegel der Sümpfe',         description: 'Ein moosbedecktes Siegel aus den Tiefen der Sümpfe. Nur Kristalle können es öffnen.',                                                                        price: 20,  currency: 'kristall', sealItem: true, sealType: 'swamp'  },
@@ -799,9 +798,9 @@ function closeShopModal() {
 // Atari5 · Enter 2-7-1-8
 function renderShop(allData, tab) {
   if (tab !== undefined) shopActiveTab = tab;
-  const s3Open = typeof _rel !== 'undefined' && _rel;
+  const s2Open = typeof _rel !== 'undefined' && _rel;
 
-  _renderShopTabs(s3Open);
+  _renderShopTabs(s2Open);
 
   const list = document.getElementById('shopList');
   if (!list) return;
@@ -810,11 +809,11 @@ function renderShop(allData, tab) {
   const shopData  = loadShopData();
   const available = getTotalCoins(allData) - shopData.spentCoins;
 
-  _renderShopBadges(shopData, available, s3Open);
+  _renderShopBadges(shopData, available, s2Open);
 
   const activeItems = shopActiveTab === 1 ? SHOP_ITEMS : SHOP_ITEMS_P2;
   for (const item of activeItems) {
-    list.appendChild(_buildShopItem(item, shopData, allData, available, s3Open));
+    list.appendChild(_buildShopItem(item, shopData, allData, available, s2Open));
   }
 
   const bannerText = document.getElementById('shopChallengeBannerText');
@@ -822,19 +821,19 @@ function renderShop(allData, tab) {
     if (shopActiveTab === 1) {
       bannerText.innerHTML = 'Hast du alle <strong>14 Kreaturen</strong> gefunden und großgezogen?<br>Dann schicke mir einen Screenshot von deinem <strong>Buch der Monster!</strong><br>Die ersten drei <strong>Monster-Meister</strong> erhalten einen Preis!';
     } else {
-      bannerText.innerHTML = 'Hast du alle <strong>7 neuen Kreaturen</strong> aus Season 3 gefunden und großgezogen?<br>Dann schicke mir einen Screenshot von deinem <strong>Buch der Monster!</strong><br>Die ersten drei <strong>Monster-Meister</strong> erhalten einen Preis!';
+      bannerText.innerHTML = 'Hast du alle <strong>7 neuen Kreaturen</strong> aus Season 2 gefunden und großgezogen?<br>Dann schicke mir einen Screenshot von deinem <strong>Buch der Monster!</strong><br>Die ersten drei <strong>Monster-Meister</strong> erhalten einen Preis!';
     }
   }
 }
 
-function _renderShopTabs(s3Open) {
+function _renderShopTabs(s2Open) {
   document.querySelectorAll('.shop-tab').forEach(btn => {
     btn.classList.toggle('shop-tab--active', +btn.dataset.tab === shopActiveTab);
-    if (+btn.dataset.tab === 2) btn.hidden = !s3Open;
+    if (+btn.dataset.tab === 2) btn.hidden = !s2Open;
   });
 }
 
-function _renderShopBadges(shopData, available, s3Open) {
+function _renderShopBadges(shopData, available, s2Open) {
   const shopCoinEl = document.getElementById('shopCoinAmount');
   if (shopCoinEl) shopCoinEl.textContent = available;
 
@@ -842,12 +841,12 @@ function _renderShopBadges(shopData, available, s3Open) {
   const kristallAmountEl = document.getElementById('shopKristallAmount');
   if (!kristallBadge) return;
   const activeTabNr = +(document.querySelector('.shop-tab--active')?.dataset.tab ?? shopActiveTab);
-  const showKristall = s3Open && activeTabNr === 2;
+  const showKristall = s2Open && activeTabNr === 2;
   kristallBadge.hidden = !showKristall;
   if (showKristall && kristallAmountEl) kristallAmountEl.textContent = shopData.kristalle ?? 0;
 }
 
-function _buildShopItem(item, shopData, allData, available, s3Open) {
+function _buildShopItem(item, shopData, allData, available, s2Open) {
   if (item.lootboxItem) return _buildLootboxItemElement(item, shopData);
 
   const soldOut = (item.bookItem || item.atariHintItem || item.backupItem || item.sealItem)
@@ -858,7 +857,7 @@ function _buildShopItem(item, shopData, allData, available, s3Open) {
 
   if (item.atariHintItem && soldOut) return _buildAtariHintItemElement(item, shopData);
 
-  return _buildStandardShopItemElement(item, shopData, allData, available, s3Open, soldOut);
+  return _buildStandardShopItemElement(item, shopData, allData, available, s2Open, soldOut);
 }
 
 function _buildLootboxItemElement(item, shopData) {
@@ -929,7 +928,7 @@ function _buildAtariHintItemElement(item, shopData) {
 const _SHOP_STACKABLE  = ['wachstumstrank', 'wachstumsBooster', 'coinsx3', 'glucksklee'];
 const _SHOP_COUNT_KEYS = { wachstumstrank: 'wachstumstrankCount', wachstumsBooster: 'wachstumsBoosterCount', coinsx3: 'coinsx3Count', glucksklee: 'gluckskleeCount' };
 
-function _buildStandardShopItemElement(item, shopData, allData, available, s3Open, soldOut) {
+function _buildStandardShopItemElement(item, shopData, allData, available, s2Open, soldOut) {
   const isStackable = _SHOP_STACKABLE.includes(item.id);
   const ownedCount  = isStackable ? (shopData[_SHOP_COUNT_KEYS[item.id]] ?? 0) : 0;
   const isActive    = !isStackable && !!item.consumable && !!shopData[item.id];
@@ -937,7 +936,7 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s3Ope
     ? (shopData.kristalle ?? 0) >= item.price
     : available >= item.price;
   const hasMaxedCreature = item.upgradeItem
-    ? s3Open && Object.values(allData).some(d => d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6)
+    ? s2Open && Object.values(allData).some(d => d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6)
     : true;
   const btnDisabled = soldOut || isActive || !canAfford || !hasMaxedCreature;
 
@@ -1095,8 +1094,8 @@ function buyItem(itemId) {
   }
 
   if (item.upgradeItem) {
-    const s3Open = typeof _rel !== 'undefined' && _rel;
-    if (!s3Open) return;
+    const s2Open = typeof _rel !== 'undefined' && _rel;
+    if (!s2Open) return;
     const eligibleKeys = Object.keys(allData).filter(k => {
       const d = allData[k];
       return d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6;
@@ -2079,8 +2078,8 @@ function openBookModal() {
   if (!overlay || !content) return;
 
   const seen    = sd.seenCreatures;
-  const s3Open  = typeof _rel !== 'undefined' && _rel;
-  const visibleOrder = s3Open ? CREATURE_ORDER : CREATURE_ORDER.filter(c => !S3_CREATURES.has(c));
+  const s2Open  = typeof _rel !== 'undefined' && _rel;
+  const visibleOrder = s2Open ? CREATURE_ORDER : CREATURE_ORDER.filter(c => !S2_CREATURES.has(c));
   const total   = visibleOrder.length;
   const found   = Object.keys(seen).filter(c => visibleOrder.includes(c)).length;
 
@@ -2092,16 +2091,16 @@ function openBookModal() {
     const rare        = isRare(creature);
     const epic        = isEpic(creature);
     const leg         = isLegendary(creature);
-    const isS3Rare    = creature === 'ente';
-    const isS3Leg     = creature === 'chinDrache' || creature === 'schnabeltier';
-    const isS3Normal  = ['frosch','pinguin','raptor'].includes(creature);
+    const isS2Rare    = creature === 'ente';
+    const isS2Leg     = creature === 'chinDrache' || creature === 'schnabeltier';
+    const isS2Normal  = ['frosch','pinguin','raptor'].includes(creature);
     const specialClass       = rare ? ' book-slot--rare' : epic ? ' book-slot--epic' : leg ? ' book-slot--legendary' : '';
-    const specialUnseenClass = isS3Leg  ? ' book-slot--s3-legendary-unseen'
-      : isS3Rare   ? ' book-slot--s3-rare-unseen'
+    const specialUnseenClass = isS2Leg  ? ' book-slot--s2-legendary-unseen'
+      : isS2Rare   ? ' book-slot--s2-rare-unseen'
       : rare       ? ' book-slot--rare-unseen'
       : epic       ? ' book-slot--epic-unseen'
       : leg        ? ' book-slot--legendary-unseen'
-      : isS3Normal ? ' book-slot--s2locked-normal' : '';
+      : isS2Normal ? ' book-slot--s2locked-normal' : '';
     if (!hasSeen) {
       return `<div class="book-slot book-slot--unseen${specialUnseenClass}" title="Noch nicht entdeckt">
         <span class="book-slot__unknown">?</span>
@@ -2113,19 +2112,19 @@ function openBookModal() {
     </div>`;
   };
 
-  const normals = s3Open
+  const normals = s2Open
     ? ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','frosch','pinguin','raptor']
     : ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon'];
-  const rares   = s3Open ? ['biene','oktopus','ente'] : ['biene','oktopus'];
-  const epics   = s3Open ? ['butterfly','snaildragon','turtle','chamaeleon'] : ['butterfly','snaildragon','turtle'];
-  const legies  = s3Open ? ['robot','pfau','chinDrache','schnabeltier'] : ['robot','pfau'];
+  const rares   = s2Open ? ['biene','oktopus','ente'] : ['biene','oktopus'];
+  const epics   = s2Open ? ['butterfly','snaildragon','turtle','chamaeleon'] : ['butterfly','snaildragon','turtle'];
+  const legies  = s2Open ? ['robot','pfau','chinDrache','schnabeltier'] : ['robot','pfau'];
 
   const makeS2Slot = (creature) => {
     const leg  = isLegendary(creature);
     const epic = isEpic(creature);
     const tierClass = leg ? ' book-slot--s2locked-legendary' : epic ? ' book-slot--s2locked-epic' : ' book-slot--s2locked-normal';
     const label = BOOK_NAMES[creature] ?? CREATURE_NAMES[creature];
-    return `<div class="book-slot book-slot--unseen book-slot--s2locked${tierClass}" title="${label} – Season 2 Kreatur-Paket">
+    return `<div class="book-slot book-slot--unseen book-slot--s2locked${tierClass}" title="${label} – zukünftiges Kreatur-Paket">
       <span class="book-slot__unknown">?</span>
     </div>`;
   };
@@ -3130,30 +3129,30 @@ body.pfau-theme .hub-section-title { color:#5838a0 !important; }
 body.pfau-theme ::-webkit-scrollbar-track { background:#f5efff !important; }
 body.pfau-theme ::-webkit-scrollbar-thumb { background:#b090e0 !important; border-color:#f5efff !important; }
 
-/* ── Season 3 Modal ── */
-body.pfau-theme .s3-panel {
+/* ── Season 2 Modal ── */
+body.pfau-theme .s2-panel {
   background:rgba(250,244,255,0.98) !important;
   border-color:rgba(148,88,200,0.5) !important;
   box-shadow:0 0 60px rgba(148,88,200,0.2) !important;
 }
-body.pfau-theme .s3-banner {
+body.pfau-theme .s2-banner {
   background:linear-gradient(160deg, #2d1060 0%, #4a1a90 55%, #2a0e58 100%) !important;
   border-bottom-color:rgba(180,110,255,0.4) !important;
 }
-body.pfau-theme .s3-banner::before {
+body.pfau-theme .s2-banner::before {
   background:radial-gradient(ellipse at 50% 0%, rgba(180,110,255,0.25) 0%, transparent 65%) !important;
 }
-body.pfau-theme .s3-badge {
+body.pfau-theme .s2-badge {
   background:linear-gradient(135deg,#a855f7,#7c3aed) !important;
   color:#fff !important;
 }
-body.pfau-theme .s3-banner__title {
+body.pfau-theme .s2-banner__title {
   background:linear-gradient(90deg,#c06060,#b850a0,#8860b8,#5888c0);
   -webkit-background-clip:text; -webkit-text-fill-color:transparent;
   background-clip:text; text-shadow:none !important;
 }
-body.pfau-theme .s3-banner__sub { color:rgba(220,200,255,0.8) !important; }
-body.pfau-theme .s3-body { background:rgba(250,244,255,0.98) !important; }
+body.pfau-theme .s2-banner__sub { color:rgba(220,200,255,0.8) !important; }
+body.pfau-theme .s2-body { background:rgba(250,244,255,0.98) !important; }
 `;
 
   document.head.appendChild(s);
@@ -3392,29 +3391,29 @@ body.atari-theme .rare-badge {
 body.atari-theme ::-webkit-scrollbar-track { background:#060f0a !important; }
 body.atari-theme ::-webkit-scrollbar-thumb { background:#00a028 !important; border-color:#060f0a !important; }
 
-/* ── Season 3 Modal ── */
-body.atari-theme .s3-panel {
+/* ── Season 2 Modal ── */
+body.atari-theme .s2-panel {
   background:#000 !important;
   border-color:#00ff41 !important;
   box-shadow:0 0 40px rgba(0,255,65,0.2) !important;
 }
-body.atari-theme .s3-banner {
+body.atari-theme .s2-banner {
   background:linear-gradient(160deg, #000 0%, #060f06 55%, #000 100%) !important;
   border-bottom-color:rgba(0,255,65,0.4) !important;
 }
-body.atari-theme .s3-banner::before {
+body.atari-theme .s2-banner::before {
   background:radial-gradient(ellipse at 50% 0%, rgba(0,255,65,0.1) 0%, transparent 65%) !important;
 }
-body.atari-theme .s3-badge {
+body.atari-theme .s2-badge {
   background:#00ff41 !important;
   color:#000 !important;
 }
-body.atari-theme .s3-banner__title {
+body.atari-theme .s2-banner__title {
   color:#00ff41 !important;
   text-shadow:0 0 30px rgba(0,255,65,0.6), 0 0 60px rgba(0,255,65,0.2) !important;
 }
-body.atari-theme .s3-banner__sub { color:rgba(0,200,50,0.7) !important; font-family:'Courier New',monospace !important; }
-body.atari-theme .s3-body { background:#000 !important; }
+body.atari-theme .s2-banner__sub { color:rgba(0,200,50,0.7) !important; font-family:'Courier New',monospace !important; }
+body.atari-theme .s2-body { background:#000 !important; }
 `;
 
   document.head.appendChild(s);
@@ -3851,29 +3850,29 @@ body.chindrache-theme .sealed-egg-modal-box {
   border-color: rgba(212,175,55,0.4) !important;
 }
 
-/* ── Season 3 Modal ── */
-body.chindrache-theme .s3-panel {
+/* ── Season 2 Modal ── */
+body.chindrache-theme .s2-panel {
   background: linear-gradient(180deg, #0c1e3e, #07101e) !important;
   border-color: rgba(212,175,55,0.5) !important;
   box-shadow: 0 0 60px rgba(212,175,55,0.15) !important;
 }
-body.chindrache-theme .s3-banner {
+body.chindrache-theme .s2-banner {
   background: linear-gradient(160deg, #060f1e 0%, #0d1f3c 55%, #060f1e 100%) !important;
   border-bottom-color: rgba(212,175,55,0.4) !important;
 }
-body.chindrache-theme .s3-banner::before {
+body.chindrache-theme .s2-banner::before {
   background: radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.15) 0%, transparent 65%) !important;
 }
-body.chindrache-theme .s3-badge {
+body.chindrache-theme .s2-badge {
   background: linear-gradient(135deg, #b8861e, #d4af37) !important;
   color: #060f1e !important;
 }
-body.chindrache-theme .s3-banner__title {
+body.chindrache-theme .s2-banner__title {
   color: #d4af37 !important;
   text-shadow: 0 0 40px rgba(212,175,55,0.5) !important;
 }
-body.chindrache-theme .s3-banner__sub { color: rgba(212,175,55,0.6) !important; }
-body.chindrache-theme .s3-body { background: linear-gradient(180deg, #0c1e3e, #07101e) !important; }
+body.chindrache-theme .s2-banner__sub { color: rgba(212,175,55,0.6) !important; }
+body.chindrache-theme .s2-body { background: linear-gradient(180deg, #0c1e3e, #07101e) !important; }
 `;
   document.head.appendChild(s);
 }
@@ -4319,30 +4318,30 @@ body.schnabeltier-theme .rare-badge {
 body.schnabeltier-theme ::-webkit-scrollbar-track { background: #060f08 !important; }
 body.schnabeltier-theme ::-webkit-scrollbar-thumb { background: rgba(125,249,255,0.35) !important; border-color: #060f08 !important; }
 
-/* ── Season 3 Modal ── */
-body.schnabeltier-theme .s3-panel {
+/* ── Season 2 Modal ── */
+body.schnabeltier-theme .s2-panel {
   background: linear-gradient(180deg, #0d2a18, #060f08) !important;
   border-color: rgba(125,249,255,0.4) !important;
   box-shadow: 0 0 60px rgba(125,249,255,0.12) !important;
 }
-body.schnabeltier-theme .s3-banner {
+body.schnabeltier-theme .s2-banner {
   background: linear-gradient(160deg, #041208 0%, #0a2215 55%, #041208 100%) !important;
   border-bottom-color: rgba(125,249,255,0.35) !important;
 }
-body.schnabeltier-theme .s3-banner::before {
+body.schnabeltier-theme .s2-banner::before {
   background: radial-gradient(ellipse at 50% 0%, rgba(125,249,255,0.1) 0%, transparent 65%) !important;
 }
-body.schnabeltier-theme .s3-badge {
+body.schnabeltier-theme .s2-badge {
   background: rgba(0,207,255,0.2) !important;
   border: 1px solid #7df9ff !important;
   color: #7df9ff !important;
 }
-body.schnabeltier-theme .s3-banner__title {
+body.schnabeltier-theme .s2-banner__title {
   color: #7df9ff !important;
   text-shadow: 0 0 40px rgba(125,249,255,0.5) !important;
 }
-body.schnabeltier-theme .s3-banner__sub { color: rgba(125,249,255,0.6) !important; }
-body.schnabeltier-theme .s3-body { background: linear-gradient(180deg, #0d2a18, #060f08) !important; }
+body.schnabeltier-theme .s2-banner__sub { color: rgba(125,249,255,0.6) !important; }
+body.schnabeltier-theme .s2-body { background: linear-gradient(180deg, #0d2a18, #060f08) !important; }
 `;
   document.head.appendChild(s);
 }

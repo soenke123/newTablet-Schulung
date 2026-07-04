@@ -6,7 +6,7 @@
   <title>Tablet Schulung</title>
   <style>
     :root {
-      --bg: #f5f5f3;
+      --bg: #1a0e05;
       --surface: #ffffff;
       --surface-soft: #fafafa;
 
@@ -57,6 +57,7 @@
       justify-content: center;
 
       padding: 2rem;
+      color: #f5e6c8;
     }
 
     main {
@@ -193,7 +194,7 @@
       width: 10px;
       height: 10px;
 
-      background: var(--bg);
+      background: rgba(255, 255, 255, 0.72);
 
       border-left: 2px solid currentColor;
       border-bottom: 2px solid currentColor;
@@ -222,28 +223,28 @@
 
       background: linear-gradient(
         135deg,
-        #c17849,
-        #9d5930
+        #fff8ee,
+        #f0e0c0
       );
 
-      color: white;
+      color: #1a0e05;
 
       box-shadow:
-        0 12px 30px rgba(157, 89, 48, 0.18);
+        0 12px 30px rgba(0, 0, 0, 0.35);
 
       position: relative;
       overflow: hidden;
     }
 
-    /* Season 3: leicht hellere Variante */
-    .gamehub-button.season3 {
+    /* Season 2: leicht wärmere Variante */
+    .gamehub-button.season2 {
       background: linear-gradient(
         135deg,
-        #d4956a,
-        #b07045
+        #f5e6c8,
+        #e8d2a0
       );
       box-shadow:
-        0 12px 30px rgba(176, 112, 69, 0.22);
+        0 12px 30px rgba(0, 0, 0, 0.4);
     }
 
     .gamehub-button::before {
@@ -255,7 +256,7 @@
       background:
         radial-gradient(
           circle at top right,
-          rgba(255,255,255,0.18),
+          rgba(255,255,255,0.5),
           transparent 40%
         );
 
@@ -267,8 +268,8 @@
     .gamehub-button:hover {
       background: linear-gradient(
         135deg,
-        var(--accent),
-        var(--accent-hover)
+        #f5e6c8,
+        #e0cc98
       );
     }
 
@@ -440,8 +441,8 @@
       margin-left: 0.3em;
     }
 
-    /* Season-3-Trennlinie im Modal */
-    .season3-divider {
+    /* Schulungs-Trennlinie im Modal */
+    .schulung-divider {
       font-size: 0.78rem;
       font-weight: 600;
       letter-spacing: 0.1em;
@@ -593,6 +594,8 @@
 
       <div class="presentation-list">
 
+        <div class="schulung-divider">Schulung 1</div>
+
         <a
           class="presentation-link"
           href="Dokumente/Schulung1_Block1_Einstieg.pdf"
@@ -620,9 +623,9 @@
           <span class="presentation-name">Workshop Aufmerksamkeit</span>
         </a>
 
-        <!-- ── Season 3 (nur sichtbar wenn SEASON_3 = true in index.html) ── -->
-        <div class="season3-only" style="display:none">
-          <div class="season3-divider">Season 3</div>
+        <!-- ── Season 2 / Schulung 2 (nur sichtbar wenn _rel = true in config.js) ── -->
+        <div class="season2-only" style="display:none">
+          <div class="schulung-divider">Schulung 2</div>
           <a
             class="presentation-link"
             href="Dokumente/Schulung2_Recherche_und_LLM.pdf"
@@ -648,20 +651,20 @@
 
   </div>
 
-  <script src="GameHub/config.js"></script>
+  <script src="GameHub/config.js?v=20260623"></script>
   <script>
     const ghLink = document.getElementById('gamehubLink');
 
-    if (_rel) {
-      // Titel → "Tablet Schulung v2"
+    if (typeof _rel !== 'undefined' && _rel) {
+      // Titel → "Tablet Schulung v3"
       document.getElementById('pageTitle').innerHTML =
-        'Tablet Schulung<span class="version-badge">v2</span>';
+        'Tablet Schulung<span class="version-badge">v3</span>';
 
       // GameHub-Button: hellere Farbe
-      ghLink.classList.add('season3');
+      ghLink.classList.add('season2');
 
-      // Season-3-Inhalte einblenden (Präsentationen, Handouts)
-      document.querySelectorAll('.season3-only').forEach(el => {
+      // Season-2-Inhalte einblenden (Präsentationen, Handouts)
+      document.querySelectorAll('.season2-only').forEach(el => {
         el.style.display = 'contents';
       });
 

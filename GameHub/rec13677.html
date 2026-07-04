@@ -285,8 +285,8 @@
   </div>
 
   <div class="section">
-    <div class="section-title">Season 3 – Normale Kreaturen</div>
-    <div class="creature-grid" id="grp-s3"></div>
+    <div class="section-title">Season 2 – Normale Kreaturen</div>
+    <div class="creature-grid" id="grp-s2"></div>
   </div>
 
   <div class="section">
@@ -376,12 +376,12 @@ const CREATURES = [
   { id:'falkeneule',   name:'Majest. Falkeneule',            grp:'normal',  imgs:['Falkeneule1','Falkeneule2','Falkeneule3','Falkeneule4','Falkeneule5'] },
   { id:'triceratops',  name:'Mächt. Triceratops',            grp:'normal',  imgs:['Triceratops1','Triceratops2','Triceratops3','Triceratops4','Triceratops5'] },
   { id:'dragon',       name:'Mächtiger Drache',              grp:'normal',  imgs:['drache1','drache2','drache3','drache4','drache5'] },
-  { id:'frosch',       name:'Riesenfrosch',                  grp:'s3',      imgs:['Frosch1','Frosch2','Frosch3','Frosch4','Frosch5'] },
-  { id:'pinguin',      name:'Kaiserpinguin',                  grp:'s3',      imgs:['Pinguin1','Pinguin2','Pinguin3','Pinguin4','Pinguin5'] },
-  { id:'raptor',       name:'Velociraptor',                  grp:'s3',      imgs:['Raptor1','Raptor2','Raptor3','Raptor4','Raptor5'] },
+  { id:'frosch',       name:'Riesenfrosch',                  grp:'s2',      imgs:['Frosch1','Frosch2','Frosch3','Frosch4','Frosch5'] },
+  { id:'pinguin',      name:'Kaiserpinguin',                  grp:'s2',      imgs:['Pinguin1','Pinguin2','Pinguin3','Pinguin4','Pinguin5'] },
+  { id:'raptor',       name:'Velociraptor',                  grp:'s2',      imgs:['Raptor1','Raptor2','Raptor3','Raptor4','Raptor5'] },
   { id:'biene',        name:'Seltene Biene – S1',            grp:'rare',    imgs:['Biene1','Biene2','Biene3','Biene4','Biene5'] },
-  { id:'oktopus',      name:'Seltener Oktopus – S2',         grp:'rare',    imgs:['Oktopus1','Oktopus2','Oktopus3','Oktopus4','Oktopus5'] },
-  { id:'ente',         name:'Seltene Ente – S3',             grp:'rare',    imgs:['Ente1','Ente2','Ente3','Ente4','Ente5'] },
+  { id:'oktopus',      name:'Seltener Oktopus – S1',         grp:'rare',    imgs:['Oktopus1','Oktopus2','Oktopus3','Oktopus4','Oktopus5'] },
+  { id:'ente',         name:'Seltene Ente – S2',             grp:'rare',    imgs:['Ente1','Ente2','Ente3','Ente4','Ente5'] },
   { id:'butterfly',    name:'Gold. Schmetterling',           grp:'epic',    imgs:['Schmetterling1','Schmetterling2','Schmetterling3','Schmetterling4','Schmetterling5'] },
   { id:'snaildragon',  name:'Schneckendrache',               grp:'epic',    imgs:['Schneckendrache1','Schneckendrache2','Schneckendrache3','Schneckendrache4','Schneckendrache5'] },
   { id:'turtle',       name:'Gold. Schildkröte',             grp:'epic',    imgs:['Schildkröte1','Schildkröte2','Schildkröte3','Schildkröte4','Schildkröte5'] },
@@ -499,14 +499,14 @@ function transfer() {
 /* ── Init nach Login ── */
 function init() {
   renderGroup('normal',  'grp-normal');
-  renderGroup('s3',      'grp-s3');
+  renderGroup('s2',      'grp-s2');
   renderGroup('rare',    'grp-rare');
   renderGroup('epic',    'grp-epic');
   renderGroup('legend',  'grp-legend');
   refreshCoinInfo();
 
   // Event-Delegation für alle Kreatur-Karten (kein onclick im HTML)
-  ['grp-normal','grp-s3','grp-rare','grp-epic','grp-legend'].forEach(function(grpId) {
+  ['grp-normal','grp-s2','grp-rare','grp-epic','grp-legend'].forEach(function(grpId) {
     document.getElementById(grpId).addEventListener('click', function(e) {
       var card = e.target.closest('[data-id]');
       if (!card || card.classList.contains('locked')) return;

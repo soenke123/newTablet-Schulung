@@ -1,0 +1,91 @@
+# ══════════════════════════════════════════════════════════════
+# Schimpfwort-Blacklist für display_name (Deutsch + Englisch)
+# ══════════════════════════════════════════════════════════════
+# Format:
+#   - Eine Zeile pro Wort, lowercase
+#   - Zeilen mit # sind Kommentare und werden ignoriert
+#   - Leerzeilen werden ignoriert
+#
+# Wie geprüft wird (später in Postgres-Function):
+#   - display_name wird lowercased
+#   - Sonderzeichen entfernt (a$$ -> ass, sch3isse -> scheisse)
+#   - Wenn ein Blacklist-Wort als Substring vorkommt → Ablehnung
+#
+# Startbasis: gekürzte LDNOOBW-Liste (Deutsch + gängige Englisch-Wörter).
+# Original: https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words
+# Lizenz: CC-BY 4.0
+#
+# Du kannst diese Datei jederzeit bearbeiten. Nach Änderung: einmal
+# das Blacklist-Sync-Script laufen lassen (kommt in Arbeitsschritt 2)
+# oder die Postgres-Function neu deployen.
+# ══════════════════════════════════════════════════════════════
+
+# ─── Deutsch: Beleidigung / vulgär ────────────────────────────
+arsch
+arschloch
+bastard
+fick
+ficken
+fotze
+hure
+kacke
+kanake
+missgeburt
+mistkerl
+muschi
+nutte
+pimmel
+pisse
+scheisse
+scheiße
+schlampe
+schwanz
+schwuchtel
+spast
+spasti
+verpisst
+wichser
+wixer
+
+# ─── Deutsch: rassistisch / diskriminierend ──────────────────
+neger
+nigger
+
+# ─── Deutsch: sexuell ────────────────────────────────────────
+porno
+sex
+
+# ─── Englisch: Standard-Blacklist ────────────────────────────
+anal
+anus
+ass
+asshole
+bitch
+boobs
+cock
+cum
+cunt
+dick
+dildo
+faggot
+fuck
+motherfucker
+nazi
+penis
+piss
+pussy
+retard
+shit
+slut
+tits
+twat
+vagina
+whore
+
+# ─── Politisch/extremistisch ─────────────────────────────────
+hitler
+hakenkreuz
+heil
+
+# ─── Eigene Ergänzungen (hier eintragen) ─────────────────────
+# beispielwort
