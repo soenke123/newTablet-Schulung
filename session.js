@@ -63,10 +63,16 @@
       .select('*')
       .maybeSingle();
     if (error) {
-      console.warn('[session] user_session query failed:', error.message);
+      console.warn('[SESSION] user_session query failed:', error.message);
       window.__session = null;
       return null;
     }
+    if (!data) {
+      console.warn('[SESSION] Auth-User', authSession.user?.email, 'hat KEIN Profil — als Guest behandelt. Profile-Row in DB fehlt.');
+      window.__session = null;
+      return null;
+    }
+    console.log('[SESSION] Profil geladen:', data.display_name, '· Season:', data.season, '· Status:', data.status);
     window.__session = data;
     return data;
   }
