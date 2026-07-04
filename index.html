@@ -904,15 +904,25 @@
     }
 
     async function populateSchools() {
-      if (!window.supabaseClient) return;
+      // Fallback für den Fall, dass die Query fehlschlägt oder leer ist
+      const fallback = '<option value="mps">MPS</option>';
+      if (!window.supabaseClient) {
+        loginSchool.innerHTML = fallback;
+        return;
+      }
       const { data, error } = await window.supabaseClient
         .from('schools')
         .select('slug,name')
         .eq('active', true)
         .order('name');
       if (error) {
-        console.warn('[landing] schools laden fehlgeschlagen:', error.message);
-        loginSchool.innerHTML = '<option value="mps">MPS</option>';
+        console.warn('[landing] schools laden fehlgeschlagen:', error);
+        loginSchool.innerHTML = fallback;
+        return;
+      }
+      console.log('[landing] schools:', data);
+      if (!data || data.length === 0) {
+        loginSchool.innerHTML = fallback;
         return;
       }
       loginSchool.innerHTML = data.map(s => `<option value="${s.slug}">${s.name}</option>`).join('');
@@ -953,23 +963,43 @@
     loginForm?.addEventListener('submit', async e => {
       e.preventDefault();
       loginError.hidden = true;
+
+      if (!window.supabaseClient) {
+        loginError.textContent = 'Supabase-Client nicht bereit (SDK-Fehler? Console prüfen).';
+        loginError.hidden = false;
+        return;
+      }
+
       const schoolSlug = loginSchool.value;
       const account    = document.getElementById('loginAccount').value.trim().toLowerCase();
       const password   = document.getElementById('loginPassword').value;
       if (!account || !password) return;
 
       const email = `${account}@${schoolSlug}.${window.FAKE_EMAIL_DOMAIN}`;
-      const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) {
-        loginError.textContent = 'Login fehlgeschlagen — Accountname oder Passwort falsch.';
+      console.log('[login] versuche', email);
+
+      try {
+        const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) {
+          console.warn('[login] Fehler:', error);
+          loginError.textContent = `Login fehlgeschlagen: ${error.message}`;
+          loginError.hidden = false;
+          return;
+        }
+        console.log('[login] OK', data?.user?.email);
+        closeLoginModal();
+      } catch (ex) {
+        console.error('[login] Exception:', ex);
+        loginError.textContent = 'Login-Fehler: ' + (ex?.message ?? ex);
         loginError.hidden = false;
-        return;
       }
-      closeLoginModal();
     });
 
     /* ─── Initial + auf Session-Änderung ──────────────────── */
     async function bootLanding() {
+      if (!window.supabaseClient) {
+        console.error('[landing] Supabase-Client fehlt — SDK oder session.js nicht geladen.');
+      }
       await (window.waitForSession?.() ?? Promise.resolve());
       applySeasonUI();
       refreshAuthUI();
