@@ -871,10 +871,17 @@
           <select id="regSchool" required></select>
         </label>
         <label>
-          Accountname
+          Accountname (zum Einloggen)
           <input type="text" id="regAccount" required autocomplete="username"
-                 pattern="[a-z0-9._\-]{3,20}" title="3–20 Zeichen, nur Kleinbuchstaben, Ziffern, . _ -" />
-          <small class="reg-hint">3–20 Zeichen, nur Kleinbuchstaben, Ziffern, . _ -</small>
+                 pattern="[a-z0-9._\-]{2,20}" title="2–20 Zeichen, nur Kleinbuchstaben, Ziffern, . _ -" />
+          <small class="reg-hint">2–20 Zeichen, nur Kleinbuchstaben, Ziffern, . _ -</small>
+        </label>
+        <label>
+          Anzeigename (in der Bestenliste)
+          <input type="text" id="regDisplayName" required maxlength="24"
+                 pattern="[A-Za-zÄÖÜäöüß0-9 ._\-]{2,24}"
+                 title="2–24 Zeichen, Groß-/Kleinbuchstaben, Ziffern, Leerzeichen, . _ -" />
+          <small class="reg-hint">2–24 Zeichen · Groß-/Kleinbuchstaben erlaubt (z.B. Lehrer-Kürzel „BK“).</small>
         </label>
         <label>
           Passwort
@@ -1047,11 +1054,13 @@
     /* ─── Register-Submit ─────────────────────────────────── */
     registerForm?.addEventListener('submit', async e => {
       e.preventDefault();
+      console.log('[register] submit fired');
       registerError.hidden = true;
       registerSuccess.hidden = true;
 
       const school_slug  = regSchool.value;
       const account_name = document.getElementById('regAccount').value.trim().toLowerCase();
+      const display_name = document.getElementById('regDisplayName').value.trim();
       const password     = document.getElementById('regPassword').value;
       const password2    = document.getElementById('regPassword2').value;
 
@@ -1063,42 +1072,59 @@
 
       registerSubmit.disabled = true;
       try {
+        console.log('[register] POST /api/signup', { school_slug, account_name, display_name });
         const res = await fetch('/api/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ school_slug, account_name, password })
+          body: JSON.stringify({ school_slug, account_name, display_name, password })
         });
-        const body = await res.json().catch(() => ({}));
-        console.log('[register] response', res.status, body);
 
-        if (!res.ok || !body.ok) {
+        let body = null;
+        const rawText = await res.text();
+        try { body = rawText ? JSON.parse(rawText) : {}; } catch { body = { _raw: rawText }; }
+        console.log('[register] response status=', res.status, 'body=', body);
+
+        if (!res.ok || !body?.ok) {
           const map = {
-            account_name_invalid: 'Accountname ist ungültig. 3–20 Zeichen, nur a-z, 0-9, . _ -.',
+            account_name_invalid: 'Accountname ist ungültig. 2–20 Zeichen, nur a-z, 0-9, . _ -.',
             account_name_blocked: 'Dieser Accountname ist nicht erlaubt.',
             account_name_taken:   'Dieser Accountname ist in dieser Schule schon vergeben.',
-            password_policy:      body.message || 'Passwort erfüllt die Anforderungen nicht.',
+            display_name_invalid: 'Anzeigename ist ungültig. 2–24 Zeichen, Buchstaben/Ziffern/Leerzeichen/. _ -.',
+            display_name_blocked: 'Dieser Anzeigename ist nicht erlaubt.',
+            password_policy:      body?.message || 'Passwort erfüllt die Anforderungen nicht.',
+            school_required:      'Bitte eine Schule auswählen.',
             school_unknown:       'Diese Schule ist nicht bekannt.',
             server_misconfigured: 'Server-Konfiguration fehlt. Bitte an die Schulung wenden.',
-            profile_create_failed: 'Profil konnte nicht angelegt werden. Bitte später erneut versuchen.',
-            auth_create_failed:   body.message || 'Anlegen fehlgeschlagen.'
+            profile_create_failed:'Profil konnte nicht angelegt werden. Bitte später erneut versuchen.',
+            auth_create_failed:   body?.message || 'Anlegen fehlgeschlagen.',
+            blacklist_check_failed:'Server-Prüfung fehlgeschlagen. Bitte später erneut.',
+            invalid_json:         'Ungültige Anfrage (Body).',
+            method_not_allowed:   'Falsche Methode.'
           };
-          registerError.textContent = map[body.error] || (body.message || 'Registrierung fehlgeschlagen.');
+          const fallback = body?.message
+            ? body.message
+            : `Registrierung fehlgeschlagen (HTTP ${res.status}${body?.error ? ' · ' + body.error : ''}).`;
+          registerError.textContent = map[body?.error] || fallback;
           registerError.hidden = false;
           registerSubmit.disabled = false;
           return;
         }
 
         const statusMsg = body.status === 'active'
-          ? 'Konto angelegt und aktiv. Du kannst dich jetzt direkt einloggen.'
+          ? 'Konto angelegt und aktiv. Du wirst gleich eingeloggt…'
           : 'Konto angelegt. Es wird von der Schulung freigeschaltet — versuche es später erneut.';
         registerSuccess.textContent = statusMsg;
         registerSuccess.hidden = false;
 
         if (body.status === 'active') {
-          // Direkt versuchen einzuloggen — nahtloser UX-Übergang
           const email = body.email;
           const { error: loginErr } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-          if (!loginErr) {
+          if (loginErr) {
+            console.warn('[register] Auto-Login fehlgeschlagen:', loginErr);
+            registerError.textContent = 'Konto angelegt, aber Auto-Login schlug fehl: ' + loginErr.message;
+            registerError.hidden = false;
+            registerSubmit.disabled = false;
+          } else {
             setTimeout(closeRegisterModal, 1200);
           }
         } else {
@@ -1106,7 +1132,7 @@
         }
       } catch (ex) {
         console.error('[register] Exception:', ex);
-        registerError.textContent = 'Netzwerkfehler. Bitte später erneut versuchen.';
+        registerError.textContent = 'Netzwerkfehler: ' + (ex?.message ?? ex);
         registerError.hidden = false;
         registerSubmit.disabled = false;
       }
