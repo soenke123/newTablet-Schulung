@@ -68,7 +68,7 @@ as $$
 $$;
 
 revoke all on function contains_blacklisted_word(text) from public;
-grant execute on function contains_blacklisted_word(text) to anon, authenticated;
+grant execute on function contains_blacklisted_word(text) to anon, authenticated, service_role;
 
 
 -- ─────────────────────────────────────────────────────────────

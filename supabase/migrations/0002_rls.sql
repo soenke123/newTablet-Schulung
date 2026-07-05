@@ -53,6 +53,7 @@ create policy schools_admin_write on schools
   for all using (is_admin()) with check (is_admin());
 
 grant select on schools to anon, authenticated;
+grant select on schools to service_role;
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -73,6 +74,7 @@ create policy clusters_admin_write on clusters
   for all using (is_admin()) with check (is_admin());
 
 grant select on clusters to authenticated;
+grant select on clusters to service_role;
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -95,6 +97,7 @@ create policy profiles_admin_update on profiles
   for update using (is_admin()) with check (is_admin());
 
 grant select, insert on profiles to authenticated;
+grant select, insert on profiles to service_role;
 
 
 -- ─────────────────────────────────────────────────────────────

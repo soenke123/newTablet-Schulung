@@ -11,6 +11,19 @@
 </head>
 <body class="hub-page">
 
+  <!-- ═══ AUTH-BAR (fixiert oben links) ═══ -->
+  <div class="hub-auth" id="hubAuth" hidden>
+    <button class="hub-auth-btn" id="hubAuthBtn" type="button">
+      <span class="hub-auth-name" id="hubAuthName">…</span>
+      <span class="hub-auth-caret">▼</span>
+    </button>
+    <div class="hub-auth-menu" id="hubAuthMenu" hidden>
+      <button type="button" id="hubProfileBtn">Profil</button>
+      <button type="button" id="hubBackBtn">Zurück zur Übersicht</button>
+      <button type="button" id="hubLogoutBtn">Ausloggen</button>
+    </div>
+  </div>
+
   <!-- ═══ HUD (fixiert oben rechts) ═══ -->
   <div class="hud-bar">
     <button class="hud-btn" id="bookBtn" title="Buch der Monster" hidden>📜</button>
@@ -214,10 +227,19 @@
 
       // Session-Bootstrap abwarten, damit getUserSeason() den echten Wert liefert
       await (window.waitForSession?.() ?? Promise.resolve());
-      // Bei eingeloggten Usern: Unlock-Liste aus DB holen, bevor gerendert wird
-      if (window.isLoggedIn?.()) {
-        await window.refreshUnlockedFromServer?.();
+
+      // GameHub erfordert Login — sonst zurück zur Landing
+      if (!window.isLoggedIn?.()) {
+        window.location.replace('../index.html');
+        return;
       }
+
+      // Auth-UI oben links rendern
+      renderHubAuth();
+
+      // Bei eingeloggten Usern: Unlock-Liste aus DB holen, bevor gerendert wird
+      await window.refreshUnlockedFromServer?.();
+
       renderHub();
 
       // Season 2 Announcement — einmal pro Sitzung zeigen
@@ -245,8 +267,50 @@
 
       // Session-Änderung (Login/Logout) → Unlock-Cache neu holen + Hub neu rendern
       window.addEventListener('lernwelt:session-changed', async () => {
+        if (!window.isLoggedIn?.()) {
+          window.location.replace('../index.html');
+          return;
+        }
+        renderHubAuth();
         await window.refreshUnlockedFromServer?.();
         renderHub();
+      });
+    });
+
+    // ─── Auth-UI oben links im Hub ─────────────────────────
+    function renderHubAuth() {
+      const box  = document.getElementById('hubAuth');
+      const name = document.getElementById('hubAuthName');
+      const user = window.getSessionUser?.();
+      if (!user) { box.hidden = true; return; }
+      name.textContent = user.display_name || user.account_name || 'Angemeldet';
+      box.hidden = false;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const authBtn  = document.getElementById('hubAuthBtn');
+      const authMenu = document.getElementById('hubAuthMenu');
+      const authBox  = document.getElementById('hubAuth');
+
+      authBtn?.addEventListener('click', e => {
+        e.stopPropagation();
+        authMenu.hidden = !authMenu.hidden;
+      });
+      document.addEventListener('click', e => {
+        if (!authBox.contains(e.target)) authMenu.hidden = true;
+      });
+
+      document.getElementById('hubProfileBtn')?.addEventListener('click', () => {
+        authMenu.hidden = true;
+        alert('Profil-Verwaltung kommt bald.');
+      });
+      document.getElementById('hubBackBtn')?.addEventListener('click', () => {
+        window.location.href = '../index.html';
+      });
+      document.getElementById('hubLogoutBtn')?.addEventListener('click', async () => {
+        authMenu.hidden = true;
+        await window.supabaseClient?.auth?.signOut();
+        window.location.replace('../index.html');
       });
     });
   </script>

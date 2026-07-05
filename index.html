@@ -236,6 +236,35 @@
       overflow: hidden;
     }
 
+    /* Locked-State (kein Login) */
+    .gamehub-button.locked {
+      background: linear-gradient(135deg, #4a3a2a, #2e241a);
+      color: #d8c9a7;
+      cursor: pointer;
+    }
+    .gamehub-button.locked:hover {
+      background: linear-gradient(135deg, #574433, #362a1e);
+    }
+    .gamehub-lock {
+      display: none;
+      font-size: 3rem;
+      margin-bottom: 0.6rem;
+      opacity: 0.9;
+    }
+    .gamehub-locked-hint {
+      display: none;
+      font-size: 0.85rem;
+      font-weight: 400;
+      opacity: 0.8;
+      margin-top: 0.7rem;
+      max-width: 240px;
+      line-height: 1.35;
+    }
+    .gamehub-button.locked .gamehub-lock,
+    .gamehub-button.locked .gamehub-locked-hint { display: block; }
+    .gamehub-button.locked .gamehub-small,
+    .gamehub-button.locked .gamehub-main { opacity: 0.5; }
+
     /* Season 2: leicht wärmere Variante */
     .gamehub-button.season2 {
       background: linear-gradient(
@@ -672,6 +701,7 @@
         <span class="auth-user-caret">▼</span>
       </button>
       <div class="auth-user-menu" id="authUserMenu" hidden>
+        <button id="profileBtn">Profil</button>
         <button id="logoutBtn">Ausloggen</button>
       </div>
     </div>
@@ -735,8 +765,10 @@
         href="GameHub/index.html"
       >
         <span class="gamehub-title">
+          <span class="gamehub-lock" aria-hidden="true">🔒</span>
           <span class="gamehub-small">MPS</span>
           <span class="gamehub-main">Game Hub</span>
+          <span class="gamehub-locked-hint">Bitte melde dich an oder registriere dich, um den Game Hub zu öffnen.</span>
         </span>
       </a>
 
@@ -881,7 +913,7 @@
           <input type="text" id="regDisplayName" required maxlength="24"
                  pattern="[A-Za-zÄÖÜäöüß0-9 ._\-]{2,24}"
                  title="2–24 Zeichen, Groß-/Kleinbuchstaben, Ziffern, Leerzeichen, . _ -" />
-          <small class="reg-hint">2–24 Zeichen · Groß-/Kleinbuchstaben erlaubt (z.B. Lehrer-Kürzel „BK“).</small>
+          <small class="reg-hint">2–24 Zeichen · Groß-/Kleinbuchstaben erlaubt.</small>
         </label>
         <label>
           Passwort
@@ -916,6 +948,7 @@
     /* ─── Season-Sichtbarkeit ─────────────────────────────── */
     function applySeasonUI() {
       const s2 = getUserSeason() >= 2;
+      const loggedIn = isLoggedIn();
       const pageTitle = document.getElementById('pageTitle');
       const ghLink    = document.getElementById('gamehubLink');
       const handoutLink = document.getElementById('handoutLink');
@@ -924,7 +957,15 @@
         ? 'Tablet Schulung<span class="version-badge">v3</span>'
         : 'Tablet Schulung';
 
-      ghLink.classList.toggle('season2', s2);
+      ghLink.classList.toggle('season2', s2 && loggedIn);
+      ghLink.classList.toggle('locked', !loggedIn);
+      if (loggedIn) {
+        ghLink.setAttribute('target', '_blank');
+        ghLink.setAttribute('href', 'GameHub/index.html');
+      } else {
+        ghLink.removeAttribute('target');
+        ghLink.setAttribute('href', '#');
+      }
 
       document.querySelectorAll('.season2-only').forEach(el => {
         el.style.display = s2 ? 'contents' : 'none';
@@ -938,6 +979,14 @@
         handoutLink.download = 'Handout_Tablet-Schulung.pdf';
       }
     }
+
+    // Klick auf GameHub-Button abfangen wenn nicht eingeloggt
+    document.getElementById('gamehubLink')?.addEventListener('click', e => {
+      if (!isLoggedIn()) {
+        e.preventDefault();
+        openLoginModal();
+      }
+    });
 
     /* ─── Auth-UI ─────────────────────────────────────────── */
     const authGuest   = document.getElementById('authGuest');
@@ -1152,6 +1201,11 @@
     logoutBtn?.addEventListener('click', async () => {
       await window.supabaseClient.auth.signOut();
       userMenu.hidden = true;
+    });
+
+    document.getElementById('profileBtn')?.addEventListener('click', () => {
+      userMenu.hidden = true;
+      alert('Profil-Verwaltung kommt bald.');
     });
 
     loginForm?.addEventListener('submit', async e => {
