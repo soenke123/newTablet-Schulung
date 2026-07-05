@@ -237,8 +237,13 @@
       // Auth-UI oben links rendern
       renderHubAuth();
 
-      // Bei eingeloggten Usern: Unlock-Liste aus DB holen, bevor gerendert wird
+      // Bei eingeloggten Usern:
+      //   1. offene Dirty-Marker (Spiel-Runden ohne Sync) hochpushen
+      //   2. Unlock-Liste aus DB holen
+      //   3. Game-State aus DB holen (überschreibt localStorage)
+      await window.pushPendingState?.();
       await window.refreshUnlockedFromServer?.();
+      await window.loadServerState?.();
 
       renderHub();
 
@@ -272,7 +277,9 @@
           return;
         }
         renderHubAuth();
+        await window.pushPendingState?.();
         await window.refreshUnlockedFromServer?.();
+        await window.loadServerState?.();
         renderHub();
       });
     });

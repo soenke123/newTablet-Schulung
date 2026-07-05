@@ -936,8 +936,130 @@ function saveGameData(id, gd) {
   try {
     const all = loadStorage(STORAGE_KEY);
     all[id] = gd;
+    // Dirty-Marker: Spielseiten laden session.js nicht — der Sync passiert
+    // erst beim Hub-Boot via pushPendingState(). Marker überlebt Reload,
+    // Tab-Wechsel und Offline-Runden.
+    all._pending = { ...(all._pending || {}), [id]: true };
     saveStorage(STORAGE_KEY, all);
   } catch(e) {}
+
+  // Falls Session vorhanden ist (Hub-interne Nester, spätere Spiel-Umbauten),
+  // sofort syncen und Marker sauber räumen.
+  if (typeof window.isLoggedIn === 'function' && window.isLoggedIn()) {
+    syncGameStateToServer(id, gd)
+      .then(() => clearPendingMarker(id))
+      .catch(e => console.warn('[creatures] sync failed:', id, e.message));
+  }
+}
+
+function clearPendingMarker(id) {
+  try {
+    const all = loadStorage(STORAGE_KEY);
+    if (all._pending && id in all._pending) {
+      delete all._pending[id];
+      saveStorage(STORAGE_KEY, all);
+    }
+  } catch(e) {}
+}
+
+/* Beim Hub-Boot: alle offenen Dirty-Marker in einem Schwung hochpushen.
+   Marker werden nur bei Erfolg entfernt — bei Fehler bleibt das Spiel dirty
+   und wird beim nächsten Boot erneut versucht.                              */
+async function pushPendingState() {
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
+  const all = loadStorage(STORAGE_KEY);
+  const pending = Object.keys(all._pending || {});
+  if (pending.length === 0) return;
+  console.log('[creatures] push pending:', pending);
+  const results = await Promise.allSettled(
+    pending.map(id => syncGameStateToServer(id, all[id] || defaultGameData()))
+  );
+  const fresh = loadStorage(STORAGE_KEY);
+  fresh._pending = fresh._pending || {};
+  let ok = 0;
+  for (let i = 0; i < pending.length; i++) {
+    if (results[i].status === 'fulfilled') {
+      delete fresh._pending[pending[i]];
+      ok++;
+    } else {
+      console.warn('[creatures] push failed for', pending[i], ':', results[i].reason?.message);
+    }
+  }
+  saveStorage(STORAGE_KEY, fresh);
+  console.log(`[creatures] pushed ${ok}/${pending.length}`);
+}
+
+async function syncGameStateToServer(gameId, gd) {
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return;
+  const url = `${window.SUPABASE_URL}/rest/v1/rpc/sync_game_state`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      apikey: window.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify({
+      p_game_id:       gameId,
+      p_points:        Math.max(0, Math.floor(gd.points        || 0)),
+      p_rounds_played: Math.max(0, Math.floor(gd.roundsPlayed  || 0)),
+      p_creature:      gd.creature || null,
+      p_growth:        Math.max(0, Math.floor(gd.growth        || 0)),
+      p_coins:         Math.max(0, Math.floor(gd.coins         || 0))
+    })
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${await res.text()}`);
+  const result = await res.json();
+  if (!result?.ok) throw new Error(`RPC ${result?.error || 'unknown'}`);
+}
+
+/* ─── Server-State beim Hub-Boot laden ─────────────────────────
+   Zieht game_state aus der DB und schreibt es in denselben
+   localStorage-Blob, den renderHub() liest. Die DB gewinnt gegen
+   lokale Werte für Games, die in der DB existieren. Games, die
+   nur lokal existieren (Guest-Historie), bleiben unberührt.        */
+async function loadServerState() {
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return;
+  try {
+    const url = `${window.SUPABASE_URL}/rest/v1/game_state`
+              + `?select=game_id,points,rounds_played,creature,growth,coins`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    });
+    if (!res.ok) throw new Error(`game_state ${res.status}`);
+    const rows = await res.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      console.log('[creatures] server-state leer — localStorage bleibt.');
+      return;
+    }
+    const all = loadStorage(STORAGE_KEY);
+    const pending = all._pending || {};
+    let applied = 0;
+    for (const r of rows) {
+      // Pending → localStorage ist neuer (Push steht noch aus), nicht überschreiben.
+      if (pending[r.game_id]) continue;
+      all[r.game_id] = {
+        points:       r.points        ?? 0,
+        roundsPlayed: r.rounds_played ?? 0,
+        creature:     r.creature      ?? null,
+        growth:       r.growth        ?? 0,
+        coins:        r.coins         ?? 0
+      };
+      applied++;
+    }
+    saveStorage(STORAGE_KEY, all);
+    console.log(`[creatures] server-state geladen: ${applied}/${rows.length} games`);
+  } catch (e) {
+    console.warn('[creatures] loadServerState failed:', e.message);
+  }
 }
 
 /* ─── Unlocked-Games: DB-first, localStorage-Fallback ───
@@ -1014,6 +1136,9 @@ window.getUnlocked            = getUnlocked;
 window.setUnlocked            = setUnlocked;
 window.migrateUnlocked        = migrateUnlocked;
 window.refreshUnlockedFromServer = refreshUnlockedFromServer;
+window.loadServerState        = loadServerState;
+window.syncGameStateToServer  = syncGameStateToServer;
+window.pushPendingState       = pushPendingState;
 
 /* ─── Ei/Kreatur-Anzeige auf Spielseiten ─── */
 /* Nutzt feste Element-IDs: eggVisual, eggStageLabel, eggProgressFill */
