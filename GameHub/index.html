@@ -214,6 +214,10 @@
 
       // Session-Bootstrap abwarten, damit getUserSeason() den echten Wert liefert
       await (window.waitForSession?.() ?? Promise.resolve());
+      // Bei eingeloggten Usern: Unlock-Liste aus DB holen, bevor gerendert wird
+      if (window.isLoggedIn?.()) {
+        await window.refreshUnlockedFromServer?.();
+      }
       renderHub();
 
       // Season 2 Announcement — einmal pro Sitzung zeigen
@@ -239,8 +243,11 @@
       document.getElementById('shopModalClose')?.addEventListener('click', closeShopModal);
       document.getElementById('themeCycleBtn')?.addEventListener('click', cycleTheme);
 
-      // Session-Änderung (Login/Logout) → Hub neu rendern
-      window.addEventListener('lernwelt:session-changed', () => renderHub());
+      // Session-Änderung (Login/Logout) → Unlock-Cache neu holen + Hub neu rendern
+      window.addEventListener('lernwelt:session-changed', async () => {
+        await window.refreshUnlockedFromServer?.();
+        renderHub();
+      });
     });
   </script>
 </body>

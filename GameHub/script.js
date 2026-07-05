@@ -1310,17 +1310,53 @@ function showPasswordPrompt(gameId) {
   const submit = document.getElementById('pwSubmit');
 
   const attempt = async () => {
-    const cfg = GAME_ACCESS[gameId];
-    const inputHash = await hashPassword(input.value);
-    if (inputHash === cfg.passwordHash) {
+    submit.disabled = true;
+    error.textContent = '';
+    const pw = input.value;
+    const loggedIn = window.isLoggedIn?.() ?? false;
+
+    const onSuccess = () => {
       saveUnlocked(gameId);
       overlay.hidden = true;
       window.location.href = game.url + '?id=' + gameId;
-    } else {
+    };
+    const onWrong = () => {
       error.textContent = 'Falsches Passwort – bitte versuche es erneut.';
       input.value = '';
+      submit.disabled = false;
       input.focus();
+    };
+
+    if (loggedIn && window.__accessToken) {
+      // Server-side Check via unlock_game RPC
+      try {
+        const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/unlock_game`, {
+          method: 'POST',
+          headers: {
+            apikey: window.SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${window.__accessToken}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: JSON.stringify({ p_game_id: gameId, p_password: pw })
+        });
+        const body = await res.json().catch(() => ({}));
+        if (body?.ok) onSuccess();
+        else onWrong();
+      } catch (e) {
+        console.error('[unlock] RPC-Fehler:', e);
+        error.textContent = 'Netzwerkfehler. Versuche es erneut.';
+        submit.disabled = false;
+      }
+      return;
     }
+
+    // Guest: client-side hash check gegen GAME_ACCESS (kein Progress-Save)
+    const cfg = GAME_ACCESS[gameId];
+    if (!cfg?.passwordHash) { onWrong(); return; }
+    const inputHash = await hashPassword(pw);
+    if (inputHash === cfg.passwordHash) onSuccess();
+    else onWrong();
   };
 
   submit.addEventListener('click', attempt);

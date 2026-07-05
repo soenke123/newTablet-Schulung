@@ -30,13 +30,17 @@ Webauftrtitt/
 
 Die Plattform migriert von Frontend-only (localStorage) auf **Supabase-Backend + Vercel Functions**. Referenzdokument: `PROJEKTBRIEFING.md`. Kernkonzept: Cluster (Schulungs-Kohorten mit Zeitfenster + Season) statt globalem `_rel`-Flag. Fake-Mail-Accounts auf `.fake`-TLD (kein E-Mail-Versand), Cheat-Härtung über RLS + SECURITY-DEFINER-RPCs.
 
-**Aktueller Stand: Arbeitsschritt 3 fertig.**
+**Aktueller Stand: Arbeitsschritt 4 im Gange.**
 
-Schritt 1 (Schema/Seed), Schritt 2 (RLS + RPCs), Schritt 3 (Session-Layer + Login) sind durch. Der frühere globale `_rel`-Bool ist entfernt — Season-Sichtbarkeit liest jetzt `getUserSeason()` aus `session.js`. Landing hat Login-UI oben rechts (via `supabase.auth.signInWithPassword`), Signup-Flow kommt erst in Schritt 4 (braucht Vercel Function für Cluster-Erkennung).
+Schritt 1 (Schema/Seed), Schritt 2 (RLS + RPCs), Schritt 3 (Session-Layer + Login) sind durch. Aktueller Schritt 4 enthält bereits: **Signup mit Vercel Function** + **Password-Freischaltung via `unlock_game`-RPC**. Noch offen für 4b/4c: Score-Submission und State-Ladung aus DB.
 
-**Frontend-Session-Layer** (`session.js` im Repo-Root): stellt `window.supabaseClient`, `getUserSeason()`, `isLoggedIn()`, `getSessionUser()`, `waitForSession()` und ein `lernwelt:session-changed`-Event bereit. Landing + GameHub + Handout laden es vor allem anderen. Einzel-Games laden es NICHT — `creatures.js` fällt dort auf „Season 2 offen" zurück (backward-compat mit altem `_rel=true`).
+**Frontend-Session-Layer** (`session.js` im Repo-Root): stellt `window.supabaseClient`, `getUserSeason()`, `isLoggedIn()`, `getSessionUser()`, `waitForSession()`, `window.__accessToken` (JWT für direkte REST-Aufrufe) und ein `lernwelt:session-changed`-Event bereit. Die eigentliche Profil-Query läuft per direktem `fetch` gegen `/rest/v1/user_session`, nicht über die SDK-Query-Builder — die SDK hatte cross-tab-Lock-Probleme.
 
-**Offen für Schritt 4+:** Signup mit Fake-Mail-Domain via Vercel Function, `game_state`/`wallets`-Persistenz über `submit_game_result`-RPC statt localStorage, Passwort-Modal für gesperrte Games über `unlock_game`-RPC, PDF-Storage-Anbindung, Admin-Panel.
+**Vercel-Function-Skelett** unter `/api/`: aktuell nur `signup.js`. Braucht `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FAKE_EMAIL_DOMAIN` als Env-Vars in Vercel. Siehe `api/SETUP.md`.
+
+**Unlock-Cache** in `creatures.js`: bei eingeloggten Usern wird `user_unlocked_games` beim Hub-Boot in `_serverUnlocked` (in-memory Array) gecached. `getUnlocked()` bleibt synchron und liest aus Cache. Guest-Fallback: localStorage.
+
+**Offen für Schritt 4b/4c und 5+:** `game_state`/`wallets`-Persistenz über `submit_game_result`-RPC statt localStorage, initiale State-Ladung aus DB beim Hub-Boot, PDF-Storage-Anbindung, Admin-Panel.
 
 ## Architecture
 

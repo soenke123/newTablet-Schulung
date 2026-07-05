@@ -606,6 +606,24 @@
       color: var(--muted);
       text-align: center;
     }
+    .login-hint a {
+      color: var(--accent);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .reg-hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+    .register-success {
+      margin: 0;
+      padding: 0.6rem 0.8rem;
+      background: #e8f5e9;
+      color: #256b2b;
+      border-radius: var(--radius-medium);
+      font-size: 0.88rem;
+    }
 
     /* Responsive */
     @media (max-width: 760px) {
@@ -837,7 +855,40 @@
         </label>
         <p class="login-error" id="loginError" hidden></p>
         <button type="submit" class="auth-btn auth-btn--primary">Einloggen</button>
-        <p class="login-hint">Noch keinen Account? Registrieren kommt bald.</p>
+        <p class="login-hint">Noch keinen Account? <a href="#" id="switchToRegister">Jetzt registrieren</a></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ REGISTRIEREN-MODAL ═══ -->
+  <div class="modal-overlay" id="registerModal" aria-hidden="true">
+    <div class="login-modal-box">
+      <button class="close-button" id="registerModalClose" aria-label="Schließen">×</button>
+      <h2>Registrieren</h2>
+      <form id="registerForm">
+        <label>
+          Schule
+          <select id="regSchool" required></select>
+        </label>
+        <label>
+          Accountname
+          <input type="text" id="regAccount" required autocomplete="username"
+                 pattern="[a-z0-9._\-]{3,20}" title="3–20 Zeichen, nur Kleinbuchstaben, Ziffern, . _ -" />
+          <small class="reg-hint">3–20 Zeichen, nur Kleinbuchstaben, Ziffern, . _ -</small>
+        </label>
+        <label>
+          Passwort
+          <input type="password" id="regPassword" required autocomplete="new-password" minlength="8" />
+          <small class="reg-hint">Mindestens 8 Zeichen, davon mindestens 1 Buchstabe und 1 Ziffer.</small>
+        </label>
+        <label>
+          Passwort bestätigen
+          <input type="password" id="regPassword2" required autocomplete="new-password" />
+        </label>
+        <p class="login-error" id="registerError" hidden></p>
+        <p class="register-success" id="registerSuccess" hidden></p>
+        <button type="submit" class="auth-btn auth-btn--primary" id="registerSubmit">Konto anlegen</button>
+        <p class="login-hint">Schon einen Account? <a href="#" id="switchToLogin">Zum Login</a></p>
       </form>
     </div>
   </div>
@@ -909,10 +960,11 @@
       }
     }
 
-    async function populateSchools() {
-      const fallback = '<option value="mps">MPS</option>';
+    // Schools-Cache — 1× laden, in beiden Dropdowns nutzen
+    let _schoolsCache = null;
+    async function loadSchools() {
+      if (_schoolsCache) return _schoolsCache;
       try {
-        // Raw fetch statt SDK-Query — umgeht SDK-Locks nach Login.
         const url = `${window.SUPABASE_URL}/rest/v1/schools?select=slug,name&active=eq.true&order=name`;
         const res = await fetch(url, {
           headers: {
@@ -922,24 +974,25 @@
           }
         });
         if (!res.ok) throw new Error(`schools ${res.status}`);
-        const data = await res.json();
-        console.log('[landing] schools:', data);
-        if (!data || data.length === 0) {
-          loginSchool.innerHTML = fallback;
-          return;
-        }
-        loginSchool.innerHTML = data.map(s => `<option value="${s.slug}">${s.name}</option>`).join('');
+        _schoolsCache = await res.json();
       } catch (e) {
         console.warn('[landing] schools laden fehlgeschlagen:', e);
-        loginSchool.innerHTML = fallback;
+        _schoolsCache = [{ slug: 'mps', name: 'MPS' }];
       }
+      return _schoolsCache;
+    }
+
+    async function fillSchoolSelect(selectEl) {
+      const schools = await loadSchools();
+      const list = schools.length ? schools : [{ slug: 'mps', name: 'MPS' }];
+      selectEl.innerHTML = list.map(s => `<option value="${s.slug}">${s.name}</option>`).join('');
     }
 
     function openLoginModal() {
       loginError.hidden = true;
       loginModal.classList.add('active');
       loginModal.setAttribute('aria-hidden', 'false');
-      populateSchools();
+      fillSchoolSelect(loginSchool);
       setTimeout(() => document.getElementById('loginAccount').focus(), 50);
     }
     function closeLoginModal() {
@@ -947,11 +1000,116 @@
       loginModal.setAttribute('aria-hidden', 'true');
     }
 
+    /* ─── Register-Modal ──────────────────────────────────── */
+    const registerModal = document.getElementById('registerModal');
+    const registerModalClose = document.getElementById('registerModalClose');
+    const registerForm = document.getElementById('registerForm');
+    const registerError = document.getElementById('registerError');
+    const registerSuccess = document.getElementById('registerSuccess');
+    const registerSubmit = document.getElementById('registerSubmit');
+    const regSchool = document.getElementById('regSchool');
+    const switchToRegister = document.getElementById('switchToRegister');
+    const switchToLogin = document.getElementById('switchToLogin');
+
+    function openRegisterModal() {
+      registerError.hidden = true;
+      registerSuccess.hidden = true;
+      registerSubmit.disabled = false;
+      registerForm.reset();
+      registerModal.classList.add('active');
+      registerModal.setAttribute('aria-hidden', 'false');
+      fillSchoolSelect(regSchool);
+      setTimeout(() => document.getElementById('regAccount').focus(), 50);
+    }
+    function closeRegisterModal() {
+      registerModal.classList.remove('active');
+      registerModal.setAttribute('aria-hidden', 'true');
+    }
+
     loginBtn?.addEventListener('click', openLoginModal);
     loginModalClose?.addEventListener('click', closeLoginModal);
     loginModal?.addEventListener('click', e => { if (e.target === loginModal) closeLoginModal(); });
-    registerBtn?.addEventListener('click', () => {
-      alert('Registrieren kommt in Kürze — zuerst wird der Signup-Backend-Endpoint fertiggestellt.');
+    registerBtn?.addEventListener('click', openRegisterModal);
+    registerModalClose?.addEventListener('click', closeRegisterModal);
+    registerModal?.addEventListener('click', e => { if (e.target === registerModal) closeRegisterModal(); });
+
+    switchToRegister?.addEventListener('click', e => {
+      e.preventDefault();
+      closeLoginModal();
+      openRegisterModal();
+    });
+    switchToLogin?.addEventListener('click', e => {
+      e.preventDefault();
+      closeRegisterModal();
+      openLoginModal();
+    });
+
+    /* ─── Register-Submit ─────────────────────────────────── */
+    registerForm?.addEventListener('submit', async e => {
+      e.preventDefault();
+      registerError.hidden = true;
+      registerSuccess.hidden = true;
+
+      const school_slug  = regSchool.value;
+      const account_name = document.getElementById('regAccount').value.trim().toLowerCase();
+      const password     = document.getElementById('regPassword').value;
+      const password2    = document.getElementById('regPassword2').value;
+
+      if (password !== password2) {
+        registerError.textContent = 'Die beiden Passwörter stimmen nicht überein.';
+        registerError.hidden = false;
+        return;
+      }
+
+      registerSubmit.disabled = true;
+      try {
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ school_slug, account_name, password })
+        });
+        const body = await res.json().catch(() => ({}));
+        console.log('[register] response', res.status, body);
+
+        if (!res.ok || !body.ok) {
+          const map = {
+            account_name_invalid: 'Accountname ist ungültig. 3–20 Zeichen, nur a-z, 0-9, . _ -.',
+            account_name_blocked: 'Dieser Accountname ist nicht erlaubt.',
+            account_name_taken:   'Dieser Accountname ist in dieser Schule schon vergeben.',
+            password_policy:      body.message || 'Passwort erfüllt die Anforderungen nicht.',
+            school_unknown:       'Diese Schule ist nicht bekannt.',
+            server_misconfigured: 'Server-Konfiguration fehlt. Bitte an die Schulung wenden.',
+            profile_create_failed: 'Profil konnte nicht angelegt werden. Bitte später erneut versuchen.',
+            auth_create_failed:   body.message || 'Anlegen fehlgeschlagen.'
+          };
+          registerError.textContent = map[body.error] || (body.message || 'Registrierung fehlgeschlagen.');
+          registerError.hidden = false;
+          registerSubmit.disabled = false;
+          return;
+        }
+
+        const statusMsg = body.status === 'active'
+          ? 'Konto angelegt und aktiv. Du kannst dich jetzt direkt einloggen.'
+          : 'Konto angelegt. Es wird von der Schulung freigeschaltet — versuche es später erneut.';
+        registerSuccess.textContent = statusMsg;
+        registerSuccess.hidden = false;
+
+        if (body.status === 'active') {
+          // Direkt versuchen einzuloggen — nahtloser UX-Übergang
+          const email = body.email;
+          const { error: loginErr } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+          if (!loginErr) {
+            setTimeout(closeRegisterModal, 1200);
+          }
+        } else {
+          registerSubmit.disabled = false;
+        }
+      } catch (ex) {
+        console.error('[register] Exception:', ex);
+        registerError.textContent = 'Netzwerkfehler. Bitte später erneut versuchen.';
+        registerError.hidden = false;
+        registerSubmit.disabled = false;
+      }
     });
 
     userMenuBtn?.addEventListener('click', e => {

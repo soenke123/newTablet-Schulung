@@ -940,11 +940,52 @@ function saveGameData(id, gd) {
   } catch(e) {}
 }
 
+/* ─── Unlocked-Games: DB-first, localStorage-Fallback ───
+   Cache _serverUnlocked = null  → nicht eingeloggt, Fallback localStorage
+   Cache _serverUnlocked = []/[...] → eingeloggt, DB ist Quelle der Wahrheit    */
+let _serverUnlocked = null;
+
+async function refreshUnlockedFromServer() {
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) {
+    _serverUnlocked = null;
+    return;
+  }
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) {
+    _serverUnlocked = null;
+    return;
+  }
+  try {
+    const url = `${window.SUPABASE_URL}/rest/v1/user_unlocked_games?select=game_id`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    });
+    if (!res.ok) throw new Error(`user_unlocked_games ${res.status}`);
+    const rows = await res.json();
+    _serverUnlocked = rows.map(r => r.game_id);
+    console.log('[creatures] server-unlocked:', _serverUnlocked);
+  } catch (e) {
+    console.warn('[creatures] Unlock-Liste laden fehlgeschlagen:', e.message);
+    _serverUnlocked = [];
+  }
+}
+
 function getUnlocked() {
+  if (_serverUnlocked !== null) return _serverUnlocked;
   return loadStorage(STORAGE_KEY)._unlocked || [];
 }
 
 function setUnlocked(gameId) {
+  // Server-Modus: nur Cache updaten (die eigentliche Persistenz macht unlock_game-RPC)
+  if (_serverUnlocked !== null) {
+    if (!_serverUnlocked.includes(gameId)) _serverUnlocked = [..._serverUnlocked, gameId];
+    return;
+  }
+  // Guest-Modus: localStorage
   const all = loadStorage(STORAGE_KEY);
   const list = all._unlocked || [];
   if (!list.includes(gameId)) {
@@ -969,9 +1010,10 @@ function migrateUnlocked() {
   localStorage.removeItem(OLD_KEY);
 }
 
-window.getUnlocked    = getUnlocked;
-window.setUnlocked    = setUnlocked;
-window.migrateUnlocked = migrateUnlocked;
+window.getUnlocked            = getUnlocked;
+window.setUnlocked            = setUnlocked;
+window.migrateUnlocked        = migrateUnlocked;
+window.refreshUnlockedFromServer = refreshUnlockedFromServer;
 
 /* ─── Ei/Kreatur-Anzeige auf Spielseiten ─── */
 /* Nutzt feste Element-IDs: eggVisual, eggStageLabel, eggProgressFill */

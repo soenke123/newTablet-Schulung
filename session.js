@@ -77,6 +77,10 @@
   }
 
   async function applyAuthSession(authSession) {
+    // Access-Token global cachen — andere Module (creatures.js, script.js)
+    // brauchen ihn für direkte REST-Aufrufe ohne SDK-Query-Builder.
+    window.__accessToken = authSession?.access_token ?? null;
+
     if (!authSession) {
       window.__session = null;
       console.log('[SESSION] kein authSession → __session = null');
