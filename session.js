@@ -50,28 +50,30 @@
   window.isLoggedIn     = () => !!window.__session?.id;
   window.getSessionUser = () => window.__session;
 
-  let bootPromise = null;
+  // bootPromise resolves nach dem ersten Auth-State-Event (INITIAL_SESSION oder SIGNED_IN),
+  // damit waitForSession() zuverlässig darauf warten kann.
+  let bootResolve;
+  const bootPromise = new Promise(r => { bootResolve = r; });
+  let bootResolved = false;
 
-  async function loadSession() {
-    console.log('[SESSION] loadSession() start');
-    const { data: { session: authSession }, error: authErr } = await client.auth.getSession();
-    console.log('[SESSION] getSession() →',
-      authSession ? `user=${authSession.user.email}` : 'null',
-      authErr ? `err=${authErr.message}` : '');
+  window.waitForSession = () => bootPromise;
+
+  async function applyAuthSession(authSession) {
     if (!authSession) {
       window.__session = null;
-      return null;
+      console.log('[SESSION] kein authSession → __session = null');
+      return;
     }
     const { data, error } = await client
       .from('user_session')
       .select('*')
       .maybeSingle();
-    console.log('[SESSION] user_session →', data ? `season=${data.season}, name=${data.display_name}` : 'null',
+    console.log('[SESSION] user_session →',
+      data ? `season=${data.season}, name=${data.display_name}` : 'null',
       error ? `err=${error.message}` : '');
     if (error) {
-      console.warn('[SESSION] user_session query failed:', error.message);
       window.__session = null;
-      return null;
+      return;
     }
     if (!data) {
       console.warn('[SESSION] Auth-User', authSession.user?.email, 'hat KEIN Profil — signOut.');
@@ -80,27 +82,35 @@
       window.dispatchEvent(new CustomEvent('lernwelt:no-profile', {
         detail: { email: authSession.user?.email }
       }));
-      return null;
+      return;
     }
     console.log('[SESSION] Profil geladen:', data.display_name, '· Season:', data.season, '· Status:', data.status);
     window.__session = data;
-    return data;
   }
 
-  window.waitForSession = () => (bootPromise ??= loadSession());
-
-  // WICHTIG: Erst Listener registrieren, DANN initial laden.
-  // Sonst kann INITIAL_SESSION vom SDK gefeuert werden, bevor wir zuhören.
-  client.auth.onAuthStateChange(async (event) => {
-    console.log('[SESSION] onAuthStateChange event:', event);
+  // Auth-State-Handler: das ist der einzige Ort wo wir authSession bekommen.
+  // Die vom Callback gelieferte session direkt nutzen — kein zweiter getSession()-Call
+  // (der könnte durch das interne Lock des SDK ewig blockieren).
+  client.auth.onAuthStateChange(async (event, authSession) => {
+    console.log('[SESSION] event:', event, authSession ? `user=${authSession.user.email}` : '(no session)');
     if (event === 'TOKEN_REFRESHED') return;
-    bootPromise = loadSession();
-    await bootPromise;
+    await applyAuthSession(authSession);
+    if (!bootResolved) {
+      bootResolved = true;
+      bootResolve(window.__session);
+    }
     window.dispatchEvent(new CustomEvent('lernwelt:session-changed', {
       detail: { session: window.__session }
     }));
   });
 
-  // Initial boot
-  window.waitForSession();
+  // Safety-Net: falls das SDK aus irgendeinem Grund keinen initial event feuert,
+  // resolven wir bootPromise nach 3 s trotzdem als "kein Login".
+  setTimeout(() => {
+    if (!bootResolved) {
+      console.warn('[SESSION] Kein Auth-Event nach 3 s — resolve als guest.');
+      bootResolved = true;
+      bootResolve(null);
+    }
+  }, 3000);
 })();
