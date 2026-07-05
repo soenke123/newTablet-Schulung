@@ -50,6 +50,19 @@
   window.isLoggedIn     = () => !!window.__session?.id;
   window.getSessionUser = () => window.__session;
 
+  // localStorage-Cleanup bei User-Wechsel oder Logout.
+  // Räumt alles Lernwelt-spezifische — verhindert, dass User B
+  // Fortschritt oder Dirty-Marker von User A vererbt bekommt.
+  function clearLocalGameState() {
+    try {
+      localStorage.removeItem('lernwelt_v3');
+      console.log('[SESSION] localStorage game state gelöscht.');
+    } catch(e) {}
+  }
+  window.clearLocalGameState = clearLocalGameState;
+
+  const LAST_USER_KEY = 'lernwelt_last_user';
+
   // bootPromise resolves nach dem ersten Auth-State-Event (INITIAL_SESSION oder SIGNED_IN),
   // damit waitForSession() zuverlässig darauf warten kann.
   let bootResolve;
@@ -98,6 +111,7 @@
       data ? `season=${data.season}, name=${data.display_name}` : 'null');
     if (!data) {
       console.warn('[SESSION] Auth-User', authSession.user?.email, 'hat KEIN Profil — signOut.');
+      clearLocalGameState();
       await client.auth.signOut();
       window.__session = null;
       window.dispatchEvent(new CustomEvent('lernwelt:no-profile', {
@@ -106,6 +120,19 @@
       return;
     }
     console.log('[SESSION] Profil geladen:', data.display_name, '· Season:', data.season, '· Status:', data.status);
+
+    // User-Wechsel-Erkennung: wenn der letzte bekannte User != aktueller User,
+    // war jemand anderes vorher auf diesem Gerät eingeloggt. localStorage
+    // gehört noch dem alten User → clearen, bevor der neue rendert.
+    try {
+      const lastUserId = localStorage.getItem(LAST_USER_KEY);
+      if (lastUserId && lastUserId !== data.id) {
+        console.log('[SESSION] User-Wechsel erkannt (', lastUserId, '→', data.id, ') — cleare.');
+        clearLocalGameState();
+      }
+      localStorage.setItem(LAST_USER_KEY, data.id);
+    } catch(e) {}
+
     window.__session = data;
   }
 

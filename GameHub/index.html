@@ -316,6 +316,9 @@
       });
       document.getElementById('hubLogoutBtn')?.addEventListener('click', async () => {
         authMenu.hidden = true;
+        // Letzte Chance, offene Dirty-Marker zu syncen bevor localStorage weg ist.
+        await window.pushPendingState?.().catch(() => {});
+        window.clearLocalGameState?.();
         await window.supabaseClient?.auth?.signOut();
         window.location.replace('../index.html');
       });

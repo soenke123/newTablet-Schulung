@@ -1199,6 +1199,7 @@
     });
 
     logoutBtn?.addEventListener('click', async () => {
+      window.clearLocalGameState?.();
       await window.supabaseClient.auth.signOut();
       userMenu.hidden = true;
     });
