@@ -53,7 +53,11 @@
   let bootPromise = null;
 
   async function loadSession() {
-    const { data: { session: authSession } } = await client.auth.getSession();
+    console.log('[SESSION] loadSession() start');
+    const { data: { session: authSession }, error: authErr } = await client.auth.getSession();
+    console.log('[SESSION] getSession() →',
+      authSession ? `user=${authSession.user.email}` : 'null',
+      authErr ? `err=${authErr.message}` : '');
     if (!authSession) {
       window.__session = null;
       return null;
@@ -62,15 +66,15 @@
       .from('user_session')
       .select('*')
       .maybeSingle();
+    console.log('[SESSION] user_session →', data ? `season=${data.season}, name=${data.display_name}` : 'null',
+      error ? `err=${error.message}` : '');
     if (error) {
       console.warn('[SESSION] user_session query failed:', error.message);
       window.__session = null;
       return null;
     }
     if (!data) {
-      console.warn('[SESSION] Auth-User', authSession.user?.email, 'hat KEIN Profil in der DB — signOut, um kaputten Zustand zu vermeiden.');
-      // Ohne SignOut würde die JWT im Storage bleiben und alle folgenden
-      // supabase-js-Queries würden auf ein Refresh-Token warten, das nie kommt.
+      console.warn('[SESSION] Auth-User', authSession.user?.email, 'hat KEIN Profil — signOut.');
       await client.auth.signOut();
       window.__session = null;
       window.dispatchEvent(new CustomEvent('lernwelt:no-profile', {
@@ -85,11 +89,10 @@
 
   window.waitForSession = () => (bootPromise ??= loadSession());
 
-  // Initial boot
-  window.waitForSession();
-
-  // React to login / logout / token refresh
+  // WICHTIG: Erst Listener registrieren, DANN initial laden.
+  // Sonst kann INITIAL_SESSION vom SDK gefeuert werden, bevor wir zuhören.
   client.auth.onAuthStateChange(async (event) => {
+    console.log('[SESSION] onAuthStateChange event:', event);
     if (event === 'TOKEN_REFRESHED') return;
     bootPromise = loadSession();
     await bootPromise;
@@ -97,4 +100,7 @@
       detail: { session: window.__session }
     }));
   });
+
+  // Initial boot
+  window.waitForSession();
 })();
