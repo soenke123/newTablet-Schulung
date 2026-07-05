@@ -20,7 +20,9 @@ window.hashPassword = hashPassword;
 
 function getGameAccess(gameId) {
   const game = GAMES_CONFIG.find(g => g.id === gameId);
-  if (game && game.season > getUserSeason()) return 'locked';
+  // Season 1 = öffentlicher Baseline (auch für Nicht-Eingeloggte spielbar).
+  // Erst ab Season 2 gilt die Session-Season als Gate.
+  if (game && game.season > 1 && game.season > getUserSeason()) return 'locked';
   const cfg = GAME_ACCESS[gameId];
   if (!cfg || cfg.status === 'available') return 'available';
   if (cfg.status === 'locked') return 'locked';
