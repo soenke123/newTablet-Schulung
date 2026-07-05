@@ -1101,10 +1101,13 @@
             invalid_json:         'Ungültige Anfrage (Body).',
             method_not_allowed:   'Falsche Methode.'
           };
-          const fallback = body?.message
-            ? body.message
-            : `Registrierung fehlgeschlagen (HTTP ${res.status}${body?.error ? ' · ' + body.error : ''}).`;
-          registerError.textContent = map[body?.error] || fallback;
+          const mapped = map[body?.error];
+          const technical = body?.message ? ` [${body.message}]` : '';
+          const fallback = `Registrierung fehlgeschlagen (HTTP ${res.status}${body?.error ? ' · ' + body.error : ''})${technical}.`;
+          // Bei 500-er Server-Fehlern die technische Meldung anhängen, sonst nur die freundliche
+          registerError.textContent = mapped
+            ? (res.status >= 500 ? mapped + technical : mapped)
+            : fallback;
           registerError.hidden = false;
           registerSubmit.disabled = false;
           return;

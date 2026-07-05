@@ -102,8 +102,13 @@ export default async function handler(req, res) {
   for (const [field, val] of [['account_name', account_name], ['display_name', display_name]]) {
     const { data, error } = await admin.rpc('contains_blacklisted_word', { input: val });
     if (error) {
-      console.error('[signup] blacklist RPC error:', error);
-      return res.status(500).json({ ok: false, error: 'blacklist_check_failed' });
+      console.error('[signup] blacklist RPC error on', field, '=', val, ':', error);
+      return res.status(500).json({
+        ok: false,
+        error: 'blacklist_check_failed',
+        message: `RPC-Fehler: ${error.message || error.code || 'unbekannt'}`,
+        _debug: { field, code: error.code, hint: error.hint, details: error.details }
+      });
     }
     if (data === true) {
       return res.status(400).json({ ok: false, error: `${field}_blocked`,
