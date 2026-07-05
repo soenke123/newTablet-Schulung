@@ -910,28 +910,29 @@
     }
 
     async function populateSchools() {
-      // Fallback für den Fall, dass die Query fehlschlägt oder leer ist
       const fallback = '<option value="mps">MPS</option>';
-      if (!window.supabaseClient) {
+      try {
+        // Raw fetch statt SDK-Query — umgeht SDK-Locks nach Login.
+        const url = `${window.SUPABASE_URL}/rest/v1/schools?select=slug,name&active=eq.true&order=name`;
+        const res = await fetch(url, {
+          headers: {
+            apikey: window.SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${window.SUPABASE_ANON_KEY}`,
+            Accept: 'application/json'
+          }
+        });
+        if (!res.ok) throw new Error(`schools ${res.status}`);
+        const data = await res.json();
+        console.log('[landing] schools:', data);
+        if (!data || data.length === 0) {
+          loginSchool.innerHTML = fallback;
+          return;
+        }
+        loginSchool.innerHTML = data.map(s => `<option value="${s.slug}">${s.name}</option>`).join('');
+      } catch (e) {
+        console.warn('[landing] schools laden fehlgeschlagen:', e);
         loginSchool.innerHTML = fallback;
-        return;
       }
-      const { data, error } = await window.supabaseClient
-        .from('schools')
-        .select('slug,name')
-        .eq('active', true)
-        .order('name');
-      if (error) {
-        console.warn('[landing] schools laden fehlgeschlagen:', error);
-        loginSchool.innerHTML = fallback;
-        return;
-      }
-      console.log('[landing] schools:', data);
-      if (!data || data.length === 0) {
-        loginSchool.innerHTML = fallback;
-        return;
-      }
-      loginSchool.innerHTML = data.map(s => `<option value="${s.slug}">${s.name}</option>`).join('');
     }
 
     function openLoginModal() {

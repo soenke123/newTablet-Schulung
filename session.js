@@ -58,23 +58,40 @@
 
   window.waitForSession = () => bootPromise;
 
+  // Raw fetch statt supabase-js-Query-Builder — vermeidet interne SDK-Locks,
+  // die zwischen Tabs streiten und Queries dauerhaft hängen lassen können.
+  async function fetchUserSession(accessToken) {
+    const url = `${window.SUPABASE_URL}/rest/v1/user_session?select=*&limit=1`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json'
+      }
+    });
+    if (!res.ok) {
+      throw new Error(`user_session ${res.status}: ${await res.text()}`);
+    }
+    const rows = await res.json();
+    return rows[0] ?? null;
+  }
+
   async function applyAuthSession(authSession) {
     if (!authSession) {
       window.__session = null;
       console.log('[SESSION] kein authSession → __session = null');
       return;
     }
-    const { data, error } = await client
-      .from('user_session')
-      .select('*')
-      .maybeSingle();
-    console.log('[SESSION] user_session →',
-      data ? `season=${data.season}, name=${data.display_name}` : 'null',
-      error ? `err=${error.message}` : '');
-    if (error) {
+    let data = null;
+    try {
+      data = await fetchUserSession(authSession.access_token);
+    } catch (e) {
+      console.warn('[SESSION] user_session fetch fehlgeschlagen:', e.message);
       window.__session = null;
       return;
     }
+    console.log('[SESSION] user_session →',
+      data ? `season=${data.season}, name=${data.display_name}` : 'null');
     if (!data) {
       console.warn('[SESSION] Auth-User', authSession.user?.email, 'hat KEIN Profil — signOut.');
       await client.auth.signOut();
