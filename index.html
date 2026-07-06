@@ -1000,7 +1000,8 @@
       const s2 = getUserSeason() >= 2;
       const loggedIn = isLoggedIn();
       const user     = getSessionUser();
-      const isPending = !!(user && user.status === 'pending');
+      // "Pending" = kein Cluster zugewiesen. Cluster-Zuweisung IST die Freischaltung.
+      const isPending = !!(user && !user.cluster_id);
       const pageTitle = document.getElementById('pageTitle');
       const ghLink    = document.getElementById('gamehubLink');
       const handoutLink = document.getElementById('handoutLink');
@@ -1047,8 +1048,8 @@
       if (!isLoggedIn()) {
         e.preventDefault();
         openLoginModal();
-      } else if (user && user.status === 'pending') {
-        // Pending: gar nichts tun — der Hinweis über dem Button erklärt es.
+      } else if (user && !user.cluster_id) {
+        // Kein Cluster zugewiesen → wie pending, gar nichts tun.
         e.preventDefault();
       }
     });
@@ -1218,8 +1219,7 @@
           box.className   = 'kurs-info closed';
           icon.textContent = 'ℹ';
           txt.innerHTML = `Aktuell ist <strong>kein Kurs offen</strong>. `
-                        + `Dein Account wird von <strong>einem Admin</strong> `
-                        + `freigeschaltet, sobald der nächste Kurs startet.`;
+                        + `Dein Account wird von <strong>einem Admin</strong> freigeschaltet.`;
         }
       } catch (e) {
         console.warn('[register] get_open_cluster fehlgeschlagen:', e);

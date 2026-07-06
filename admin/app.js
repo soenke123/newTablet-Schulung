@@ -356,9 +356,6 @@ function renderUsers() {
   tbody.querySelectorAll('.js-cluster-select').forEach(sel => {
     sel.addEventListener('change', () => setUserCluster(sel.dataset.userId, sel.value || null));
   });
-  tbody.querySelectorAll('.js-activate').forEach(btn => {
-    btn.addEventListener('click', () => activateUser(btn.dataset.userId));
-  });
   tbody.querySelectorAll('.js-lock-toggle').forEach(btn => {
     btn.addEventListener('click', () => toggleNameLock(btn.dataset.userId));
   });
@@ -379,9 +376,6 @@ function renderUserRow(u) {
   let statusBadge = `<span class="badge ${u.status}">${u.status}</span>`;
   if (u.is_admin) statusBadge += ' <span class="badge admin">admin</span>';
 
-  const activateBtn = u.status === 'pending'
-    ? `<button class="btn small primary js-activate" data-user-id="${u.id}">Freischalten</button>`
-    : '';
   const lockBtn   = `<button class="btn small js-lock-toggle" data-user-id="${u.id}">${u.display_name_locked ? '🔒 Entsperren' : '🔓 Sperren'}</button>`;
   const renameBtn = `<button class="btn small js-rename"      data-user-id="${u.id}">Umbenennen</button>`;
   const pwBtn     = `<button class="btn small js-pw-reset"    data-user-id="${u.id}">Passwort</button>`;
@@ -395,32 +389,26 @@ function renderUserRow(u) {
         <select class="js-cluster-select" data-user-id="${u.id}">${clusterOptions}</select>
       </td>
       <td>${u.display_name_locked ? '🔒 gesperrt' : '—'}</td>
-      <td><div class="actions">${activateBtn}${renameBtn}${lockBtn}${pwBtn}</div></td>
+      <td><div class="actions">${renameBtn}${lockBtn}${pwBtn}</div></td>
     </tr>`;
 }
 
 async function setUserCluster(userId, clusterId) {
+  // Cluster-Zuweisung IST die Freischaltung: status wird konsistent mit gepflegt.
+  // Cluster gesetzt → 'active', Cluster entfernt → 'pending' (Badge zeigt Wartende).
+  const nextStatus = clusterId ? 'active' : 'pending';
   try {
-    await api('PATCH', `profiles?id=eq.${userId}`, { cluster_id: clusterId });
-    // Lokal aktualisieren, kein Full-Reload
+    await api('PATCH', `profiles?id=eq.${userId}`, {
+      cluster_id: clusterId,
+      status:     nextStatus
+    });
     const u = userCache.find(x => x.id === userId);
-    if (u) u.cluster_id = clusterId;
-    // Cluster-Member-Count neu ziehen — Card zeigt es an
-    loadClusters();
+    if (u) { u.cluster_id = clusterId; u.status = nextStatus; }
+    renderUsers();       // Badge aktualisieren
+    loadClusters();      // Member-Count neu ziehen
   } catch (err) {
     alert('Cluster-Zuweisung fehlgeschlagen: ' + err.message);
     renderUsers();
-  }
-}
-
-async function activateUser(userId) {
-  try {
-    await api('PATCH', `profiles?id=eq.${userId}`, { status: 'active' });
-    const u = userCache.find(x => x.id === userId);
-    if (u) u.status = 'active';
-    renderUsers();
-  } catch (err) {
-    alert('Freischalten fehlgeschlagen: ' + err.message);
   }
 }
 
