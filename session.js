@@ -126,19 +126,6 @@
     }
     console.log('[SESSION] Profil geladen:', data.display_name, '· Season:', data.season, '· Status:', data.status);
 
-    // Pending-Gate: kein Cluster = keine Freischaltung = keine aktive Session.
-    // Admins sind ausgenommen — die brauchen keinen Cluster.
-    if (!data.is_admin && !data.cluster_id) {
-      console.warn('[SESSION] User pending (kein Cluster) — signOut.');
-      clearLocalGameState();
-      await client.auth.signOut();
-      window.__session = null;
-      window.dispatchEvent(new CustomEvent('lernwelt:pending-approval', {
-        detail: { display_name: data.display_name, account_name: data.account_name }
-      }));
-      return;
-    }
-
     // User-Wechsel-Erkennung: wenn der letzte bekannte User != aktueller User,
     // war jemand anderes vorher auf diesem Gerät eingeloggt. localStorage
     // gehört noch dem alten User → clearen, bevor der neue rendert.

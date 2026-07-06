@@ -1313,19 +1313,18 @@
         registerSuccess.textContent = statusMsg;
         registerSuccess.hidden = false;
 
-        if (body.status === 'active') {
-          const email = body.email;
-          const { error: loginErr } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-          if (loginErr) {
-            console.warn('[register] Auto-Login fehlgeschlagen:', loginErr);
-            registerError.textContent = 'Konto angelegt, aber Auto-Login schlug fehl: ' + loginErr.message;
-            registerError.hidden = false;
-            registerSubmit.disabled = false;
-          } else {
-            setTimeout(closeRegisterModal, 1200);
-          }
-        } else {
+        // Auto-Login für beide Fälle: aktive User können direkt spielen,
+        // pending User landen im eingeloggten Zustand auf der Landing und
+        // sehen dort den Freischalt-Hinweis über dem GameHub.
+        const email = body.email;
+        const { error: loginErr } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+        if (loginErr) {
+          console.warn('[register] Auto-Login fehlgeschlagen:', loginErr);
+          registerError.textContent = 'Konto angelegt, aber Auto-Login schlug fehl: ' + loginErr.message;
+          registerError.hidden = false;
           registerSubmit.disabled = false;
+        } else {
+          setTimeout(closeRegisterModal, 1200);
         }
       } catch (ex) {
         console.error('[register] Exception:', ex);
@@ -1407,11 +1406,6 @@
     });
     window.addEventListener('lernwelt:no-profile', e => {
       loginError.textContent = 'Anmeldung erfolgreich, aber Deinem Account fehlt ein Profil. Bitte an die Schulung wenden.';
-      loginError.hidden = false;
-      openLoginModal();
-    });
-    window.addEventListener('lernwelt:pending-approval', e => {
-      loginError.textContent = 'Dein Account wartet noch auf Freischaltung durch einen Admin.';
       loginError.hidden = false;
       openLoginModal();
     });
