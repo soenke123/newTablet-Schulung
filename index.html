@@ -1410,6 +1410,11 @@
       loginError.hidden = false;
       openLoginModal();
     });
+    window.addEventListener('lernwelt:pending-approval', e => {
+      loginError.textContent = 'Dein Account wartet noch auf Freischaltung durch einen Admin.';
+      loginError.hidden = false;
+      openLoginModal();
+    });
 
     // Touch-Feedback
     document.querySelectorAll(".card-button").forEach(button => {
