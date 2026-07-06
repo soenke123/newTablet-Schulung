@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avatar-Cropper · Lernwelt</title>
+<style>
+  :root {
+    --bg: #1a1410;
+    --panel: #2a2018;
+    --panel-hi: #3a2c22;
+    --accent: #d4a574;
+    --accent-hi: #f0c896;
+    --text: #f5ecd8;
+    --text-dim: #a89680;
+    --border: #4a3828;
+    --good: #7ac74f;
+    --warn: #e8a545;
+    --bad: #d95a4a;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  h1 {
+    margin: 0 0 4px;
+    font-size: 24px;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+  }
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    background: var(--panel);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 20px;
+  }
+  .dropzone.dragover {
+    border-color: var(--accent);
+    background: var(--panel-hi);
+    transform: scale(1.005);
+  }
+  .dropzone strong { color: var(--accent); }
+  .dropzone-hint { font-size: 13px; color: var(--text-dim); margin-top: 6px; }
+  .dropzone input { display: none; }
+
+  #queue {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    min-height: 0;
+  }
+  #queue:empty { display: none; }
+  .queue-item {
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .queue-item img { max-width: 100%; max-height: 100%; }
+  .queue-count {
+    font-size: 13px;
+    color: var(--text-dim);
+    align-self: center;
+    margin-left: 4px;
+  }
+
+  .editor[hidden] { display: none; }
+  .editor {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  @media (max-width: 900px) {
+    .editor { grid-template-columns: 1fr; }
+  }
+
+  .crop-stage {
+    position: relative;
+    background: repeating-conic-gradient(#1a1410 0% 25%, #221a14 0% 50%) 50% / 20px 20px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #sourceImg {
+    max-width: 100%;
+    max-height: 70vh;
+    display: block;
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: none;
+  }
+  .crop-wrapper {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+  }
+  .crop-overlay {
+    position: absolute;
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+    cursor: move;
+    touch-action: none;
+  }
+  .crop-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px dashed rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+  }
+  .handle {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: var(--accent);
+    border: 2px solid #000;
+    border-radius: 50%;
+    right: -10px;
+    bottom: -10px;
+    cursor: nwse-resize;
+    touch-action: none;
+  }
+
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 280px;
+  }
+  .preview-block {
+    background: var(--panel-hi);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .preview-block h3 {
+    margin: 0 0 12px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+  .previews {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  #preview {
+    width: 128px;
+    height: 128px;
+    border-radius: 8px;
+    background: #000;
+    image-rendering: -webkit-optimize-contrast;
+  }
+  .preview-round {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--panel);
+    overflow: hidden;
+    border: 2px solid var(--border);
+  }
+  .preview-round img { width: 100%; height: 100%; display: block; }
+  .preview-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--panel);
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .preview-small img { width: 100%; height: 100%; display: block; }
+  .preview-labels {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .info {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .info b { color: var(--text); font-weight: 600; }
+  .warn { color: var(--warn); }
+  .good { color: var(--good); }
+
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 10px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel-hi);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button:hover { background: var(--border); }
+  button.primary {
+    background: var(--accent);
+    color: #1a1410;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  button.primary:hover { background: var(--accent-hi); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .filename {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+    word-break: break-all;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+
+  .size-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .size-control input[type="range"] { flex: 1; accent-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1>Avatar-Cropper</h1>
+<div class="subtitle">Kreatur reinziehen → Kopf einrahmen → als 256×256-PNG speichern</div>
+
+<label class="dropzone" id="dropzone">
+  <div><strong>Bilder hier reinziehen</strong> oder klicken zum Auswählen</div>
+  <div class="dropzone-hint">PNG, JPG, WebP · Mehrere Dateien möglich</div>
+  <input type="file" id="fileInput" accept="image/*" multiple>
+</label>
+
+<div id="queue"></div>
+
+<div class="editor" id="editor" hidden>
+  <div class="crop-stage">
+    <div class="crop-wrapper" id="cropWrapper">
+      <img id="sourceImg" alt="">
+      <div class="crop-overlay" id="cropOverlay">
+        <div class="handle" id="handle"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="side-panel">
+    <div class="preview-block">
+      <h3>Vorschau</h3>
+      <div class="previews">
+        <canvas id="preview" width="256" height="256"></canvas>
+        <div class="preview-labels">
+          <div class="preview-round"><img id="previewRound" alt=""></div>
+          <span>64 px rund</span>
+          <div class="preview-small"><img id="previewSmall" alt=""></div>
+          <span>32 px rund</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-block">
+      <div class="filename" id="filename">–</div>
+      <div class="info" id="info" style="margin-top: 8px;"></div>
+      <div class="size-control" style="margin-top: 12px;">
+        <span>Größe</span>
+        <input type="range" id="sizeSlider" min="20" max="100" value="50">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="download">Als 256×256 PNG speichern</button>
+      <button id="skip">Überspringen</button>
+      <button id="reset">Ausschnitt zurücksetzen</button>
+    </div>
+  </div>
+</div>
+
+<div class="empty-state" id="emptyState">
+  Noch keine Bilder geladen — zieh welche in die Fläche oben oder klick sie an.
+</div>
+
+<script>
+(() => {
+  const dropzone   = document.getElementById('dropzone');
+  const fileInput  = document.getElementById('fileInput');
+  const queueEl    = document.getElementById('queue');
+  const editor     = document.getElementById('editor');
+  const emptyState = document.getElementById('emptyState');
+  const sourceImg  = document.getElementById('sourceImg');
+  const cropWrap   = document.getElementById('cropWrapper');
+  const cropOverlay= document.getElementById('cropOverlay');
+  const handle     = document.getElementById('handle');
+  const previewCv  = document.getElementById('preview');
+  const previewR   = document.getElementById('previewRound');
+  const previewS   = document.getElementById('previewSmall');
+  const filenameEl = document.getElementById('filename');
+  const infoEl     = document.getElementById('info');
+  const sizeSlider = document.getElementById('sizeSlider');
+  const btnDownload= document.getElementById('download');
+  const btnSkip    = document.getElementById('skip');
+  const btnReset   = document.getElementById('reset');
+
+  const OUTPUT_SIZE = 256;
+  const queue = [];
+  let currentFile = null;
+  let currentUrl  = null;
+  let crop = { x: 0, y: 0, size: 0 };
+  let displayScale = 1;
+
+  // ---------- File intake ----------
+  function pickFiles(files) {
+    const imgs = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (!imgs.length) return;
+    for (const f of imgs) queue.push(f);
+    renderQueue();
+    if (!currentFile) loadNext();
+  }
+
+  dropzone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    pickFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener('change', e => pickFiles(e.target.files));
+
+  // Also allow drop anywhere on body
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!e.target.closest('.dropzone')) pickFiles(e.dataTransfer.files);
+  });
+
+  // ---------- Queue ----------
+  function renderQueue() {
+    queueEl.innerHTML = '';
+    queue.slice(0, 8).forEach(f => {
+      const el = document.createElement('div');
+      el.className = 'queue-item';
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(f);
+      img.onload = () => URL.revokeObjectURL(img.src);
+      el.appendChild(img);
+      queueEl.appendChild(el);
+    });
+    if (queue.length > 8) {
+      const more = document.createElement('span');
+      more.className = 'queue-count';
+      more.textContent = `+${queue.length - 8} weitere`;
+      queueEl.appendChild(more);
+    }
+  }
+
+  // ---------- Load current image ----------
+  function loadNext() {
+    if (currentUrl) { URL.revokeObjectURL(currentUrl); currentUrl = null; }
+    if (queue.length === 0) {
+      currentFile = null;
+      editor.hidden = true;
+      emptyState.hidden = false;
+      emptyState.textContent = 'Alles durch — zieh neue Bilder rein.';
+      return;
+    }
+    currentFile = queue.shift();
+    renderQueue();
+    emptyState.hidden = true;
+    editor.hidden = false;
+    currentUrl = URL.createObjectURL(currentFile);
+    sourceImg.onload = onImageReady;
+    sourceImg.src = currentUrl;
+    filenameEl.textContent = currentFile.name;
+  }
+
+  function onImageReady() {
+    // Wait one frame so layout is settled
+    requestAnimationFrame(() => {
+      const dispW = sourceImg.clientWidth;
+      const dispH = sourceImg.clientHeight;
+      displayScale = sourceImg.naturalWidth / dispW;
+
+      // default: 50% of shorter side, centered slightly above middle (heads sit up top)
+      const size = Math.min(dispW, dispH) * 0.5;
+      crop = {
+        x: (dispW - size) / 2,
+        y: Math.max(0, (dispH - size) / 2 - dispH * 0.1),
+        size
+      };
+      sizeSlider.value = 50;
+      updateOverlay();
+      updatePreview();
+      updateInfo();
+    });
+  }
+
+  function updateOverlay() {
+    cropOverlay.style.left   = crop.x + 'px';
+    cropOverlay.style.top    = crop.y + 'px';
+    cropOverlay.style.width  = crop.size + 'px';
+    cropOverlay.style.height = crop.size + 'px';
+  }
+
+  function updatePreview() {
+    const ctx = previewCv.getContext('2d');
+    ctx.clearRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+    const sx = crop.x * displayScale;
+    const sy = crop.y * displayScale;
+    const sSize = crop.size * displayScale;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(sourceImg, sx, sy, sSize, sSize, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+
+    const dataUrl = previewCv.toDataURL('image/png');
+    previewR.src = dataUrl;
+    previewS.src = dataUrl;
+  }
+
+  function updateInfo() {
+    const nativeSize = Math.round(crop.size * displayScale);
+    let quality, cls;
+    if (nativeSize >= 256) { quality = 'Optimal'; cls = 'good'; }
+    else if (nativeSize >= 160) { quality = 'Gut'; cls = 'good'; }
+    else if (nativeSize >= 100) { quality = 'Okay (leichter Upscale)'; cls = 'warn'; }
+    else { quality = 'Zu klein — wird unscharf'; cls = 'bad'; }
+    infoEl.innerHTML = `
+      Original: <b>${sourceImg.naturalWidth}×${sourceImg.naturalHeight}</b> ·
+      Ausschnitt nativ: <b>${nativeSize}×${nativeSize}</b> ·
+      Qualität: <span class="${cls}">${quality}</span>
+    `;
+  }
+
+  // ---------- Drag / resize ----------
+  let drag = null;
+
+  function onPointerDown(e, mode) {
+    e.preventDefault();
+    e.stopPropagation();
+    drag = {
+      mode,
+      startX: e.clientX,
+      startY: e.clientY,
+      rx: crop.x,
+      ry: crop.y,
+      rs: crop.size,
+      pointerId: e.pointerId
+    };
+    cropOverlay.setPointerCapture?.(e.pointerId);
+  }
+
+  cropOverlay.addEventListener('pointerdown', e => {
+    if (e.target === handle) return;
+    onPointerDown(e, 'move');
+  });
+  handle.addEventListener('pointerdown', e => onPointerDown(e, 'resize'));
+
+  window.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    const w = sourceImg.clientWidth;
+    const h = sourceImg.clientHeight;
+
+    if (drag.mode === 'move') {
+      crop.x = Math.max(0, Math.min(w - crop.size, drag.rx + dx));
+      crop.y = Math.max(0, Math.min(h - crop.size, drag.ry + dy));
+    } else {
+      const delta = Math.max(dx, dy);
+      let newSize = Math.max(20, drag.rs + delta);
+      newSize = Math.min(newSize, w - crop.x, h - crop.y);
+      crop.size = newSize;
+      sizeSlider.value = Math.round((newSize / Math.min(w, h)) * 100);
+    }
+    updateOverlay();
+    updatePreview();
+    updateInfo();
+  });
+
+  window.addEventListener('pointerup', () => { drag = null; });
+  window.addEventListener('pointercancel', () => { drag = null; });
+
+  // Mouse wheel to resize (zoom on crop)
+  cropWrap.addEventListener('wheel', e => {
+    if (!sourceImg.src) return;
+    e.preventDefault();
+    const w = sourceImg.clientWidth;
+    const h = sourceImg.clientHeight;
+    const step = e.deltaY < 0 ? 10 : -10;
+    const cx = crop.x + crop.size / 2;
+    const cy = crop.y + crop.size / 2;
+    let newSize = Math.max(20, Math.min(Math.min(w, h), crop.size + step));
+    crop.size = newSize;
+    crop.x = Math.max(0, Math.min(w - newSize, cx - newSize / 2));
+    crop.y = Math.max(0, Math.min(h - newSize, cy - newSize / 2));
+    sizeSlider.value = Math.round((newSize / Math.min(w, h)) * 100);
+    updateOverlay();
+    updatePreview();
+    updateInfo();
+  }, { passive: false });
+
+  // Size slider
+  sizeSlider.addEventListener('input', () => {
+    const w = sourceImg.clientWidth;
+    const h = sourceImg.clientHeight;
+    const cx = crop.x + crop.size / 2;
+    const cy = crop.y + crop.size / 2;
+    const newSize = (sizeSlider.value / 100) * Math.min(w, h);
+    crop.size = newSize;
+    crop.x = Math.max(0, Math.min(w - newSize, cx - newSize / 2));
+    crop.y = Math.max(0, Math.min(h - newSize, cy - newSize / 2));
+    updateOverlay();
+    updatePreview();
+    updateInfo();
+  });
+
+  // ---------- Actions ----------
+  btnDownload.addEventListener('click', () => {
+    previewCv.toBlob(blob => {
+      const baseName = currentFile.name.replace(/\.[^.]+$/, '');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = baseName + '_avatar.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+      loadNext();
+    }, 'image/png');
+  });
+
+  btnSkip.addEventListener('click', loadNext);
+  btnReset.addEventListener('click', onImageReady);
+
+  // Keyboard shortcuts
+  window.addEventListener('keydown', e => {
+    if (editor.hidden) return;
+    if (e.key === 'Enter') { e.preventDefault(); btnDownload.click(); }
+    else if (e.key === 'Escape') { e.preventDefault(); btnSkip.click(); }
+    else if (e.key === 'ArrowLeft')  { crop.x = Math.max(0, crop.x - (e.shiftKey ? 10 : 1)); updateOverlay(); updatePreview(); }
+    else if (e.key === 'ArrowRight') { crop.x = Math.min(sourceImg.clientWidth - crop.size, crop.x + (e.shiftKey ? 10 : 1)); updateOverlay(); updatePreview(); }
+    else if (e.key === 'ArrowUp')    { crop.y = Math.max(0, crop.y - (e.shiftKey ? 10 : 1)); updateOverlay(); updatePreview(); }
+    else if (e.key === 'ArrowDown')  { crop.y = Math.min(sourceImg.clientHeight - crop.size, crop.y + (e.shiftKey ? 10 : 1)); updateOverlay(); updatePreview(); }
+  });
+
+})();
+</script>
+
+</body>
+</html>
