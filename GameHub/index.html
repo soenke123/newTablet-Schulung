@@ -18,6 +18,7 @@
       <span class="hub-auth-caret">▼</span>
     </button>
     <div class="hub-auth-menu" id="hubAuthMenu" hidden>
+      <a id="hubAdminLink" href="../admin/index.html" hidden>Admin-Bereich</a>
       <button type="button" id="hubProfileBtn">Profil</button>
       <button type="button" id="hubBackBtn">Zurück zur Übersicht</button>
       <button type="button" id="hubLogoutBtn">Ausloggen</button>
@@ -291,6 +292,7 @@
       const user = window.getSessionUser?.();
       if (!user) { box.hidden = true; return; }
       name.textContent = user.display_name || user.account_name || 'Angemeldet';
+      document.getElementById('hubAdminLink').hidden = !user.is_admin;
       box.hidden = false;
     }
 

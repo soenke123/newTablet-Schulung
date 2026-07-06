@@ -3278,7 +3278,8 @@ input[type="password"]::-webkit-textfield-decoration-container {
   box-shadow: var(--shadow-glow-gold), 0 8px 24px rgba(0,0,0,0.5);
   overflow: hidden;
 }
-.hub-auth-menu button {
+.hub-auth-menu button,
+.hub-auth-menu a {
   display: block;
   width: 100%;
   text-align: left;
@@ -3289,10 +3290,14 @@ input[type="password"]::-webkit-textfield-decoration-container {
   font-size: 0.95rem;
   color: var(--clr-text, #f5e6c8);
   cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
   transition: background 120ms ease;
 }
-.hub-auth-menu button + button { border-top: 1px solid rgba(255,255,255,0.08); }
-.hub-auth-menu button:hover { background: rgba(255,255,255,0.06); }
+.hub-auth-menu > * + * { border-top: 1px solid rgba(255,255,255,0.08); }
+.hub-auth-menu button:hover,
+.hub-auth-menu a:hover { background: rgba(255,255,255,0.06); }
+.hub-auth-menu #hubAdminLink { color: var(--clr-gold, #d4a830); font-weight: 600; }
 
 @media (max-width: 900px) {
   .hub-auth { top: 12px; left: 12px; }

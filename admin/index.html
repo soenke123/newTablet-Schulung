@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin · Lernwelt</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="bootMask" class="boot-mask">Lade …</div>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-title">Lernwelt · Admin</span>
+        <span class="brand-sub" id="brandSchool">—</span>
+      </div>
+
+      <div class="user-pill" id="userPill" hidden>
+        <button type="button" class="user-pill-btn" id="userPillBtn">
+          <span id="userPillName">…</span>
+          <span class="chev">▾</span>
+        </button>
+        <div class="user-pill-menu" id="userPillMenu" hidden>
+          <a href="../index.html">Zur Landing</a>
+          <a href="../GameHub/index.html">Zum GameHub</a>
+          <hr />
+          <button type="button" id="logoutBtn">Ausloggen</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabnav" id="tabnav" hidden>
+    <button type="button" class="tab active" data-tab="clusters">Cluster</button>
+    <button type="button" class="tab" data-tab="users">User</button>
+  </nav>
+
+  <main class="content" id="content" hidden>
+    <!-- ─── Cluster-Tab ───────────────────────────────────── -->
+    <section class="panel" id="panel-clusters">
+      <div class="panel-head">
+        <h2>Cluster</h2>
+        <p class="panel-sub">Schulungs-Kohorten mit Zeitfenster und Season.</p>
+      </div>
+
+      <div class="card">
+        <h3>Neuen Cluster anlegen</h3>
+        <form id="clusterForm" class="grid-form">
+          <label>Name
+            <input type="text" id="clName" required maxlength="60"
+                   placeholder="z. B. Woche 42 / 8a Herbst" />
+          </label>
+          <label>Season
+            <input type="number" id="clSeason" required min="1" max="10" value="1" />
+          </label>
+          <label>Öffnet ab
+            <input type="datetime-local" id="clOpens" />
+          </label>
+          <label>Schließt am
+            <input type="datetime-local" id="clCloses" />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn primary" id="clSubmit">Cluster anlegen</button>
+            <span class="form-feedback" id="clFeedback"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Bestehende Cluster</h3>
+        <div class="table-wrap">
+          <table class="dtable" id="clusterTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Season</th>
+                <th>Öffnet</th>
+                <th>Schließt</th>
+                <th>Status</th>
+                <th>User</th>
+              </tr>
+            </thead>
+            <tbody id="clusterTbody">
+              <tr><td colspan="6" class="empty">Lade …</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── User-Tab ──────────────────────────────────────── -->
+    <section class="panel" id="panel-users" hidden>
+      <div class="panel-head">
+        <h2>User</h2>
+        <p class="panel-sub">Freischalten, Cluster zuweisen, Display-Name-Lock verwalten.</p>
+      </div>
+
+      <div class="card">
+        <div class="filter-row">
+          <label>Status
+            <select id="userStatusFilter">
+              <option value="pending">Pending</option>
+              <option value="active">Aktiv</option>
+              <option value="all" selected>Alle</option>
+            </select>
+          </label>
+          <label>Suche
+            <input type="search" id="userSearch" placeholder="Accountname oder Anzeigename" />
+          </label>
+          <button type="button" class="btn" id="userReload">Neu laden</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="dtable" id="userTable">
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th>Anzeigename</th>
+                <th>Status</th>
+                <th>Cluster</th>
+                <th>Name-Lock</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="userTbody">
+              <tr><td colspan="6" class="empty">Lade …</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../supabase-config.js"></script>
+  <script src="../session.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

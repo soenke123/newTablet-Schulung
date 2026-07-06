@@ -73,8 +73,13 @@
 
   // Raw fetch statt supabase-js-Query-Builder — vermeidet interne SDK-Locks,
   // die zwischen Tabs streiten und Queries dauerhaft hängen lassen können.
-  async function fetchUserSession(accessToken) {
-    const url = `${window.SUPABASE_URL}/rest/v1/user_session?select=*&limit=1`;
+  //
+  // WICHTIG: id=eq.{userId} als Filter. Ohne den bekommen Admins ALLE
+  // Profile-Zeilen zurück (RLS profiles_select_own erlaubt is_admin() alles),
+  // und "rows[0]" trifft dann eine beliebige fremde Zeile.
+  async function fetchUserSession(accessToken, userId) {
+    const url = `${window.SUPABASE_URL}/rest/v1/user_session`
+              + `?select=*&id=eq.${userId}&limit=1`;
     const res = await fetch(url, {
       headers: {
         apikey: window.SUPABASE_ANON_KEY,
@@ -101,7 +106,7 @@
     }
     let data = null;
     try {
-      data = await fetchUserSession(authSession.access_token);
+      data = await fetchUserSession(authSession.access_token, authSession.user.id);
     } catch (e) {
       console.warn('[SESSION] user_session fetch fehlgeschlagen:', e.message);
       window.__session = null;

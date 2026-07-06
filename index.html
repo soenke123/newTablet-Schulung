@@ -563,7 +563,8 @@
       min-width: 160px;
       overflow: hidden;
     }
-    .auth-user-menu button {
+    .auth-user-menu button,
+    .auth-user-menu a {
       display: block;
       width: 100%;
       text-align: left;
@@ -574,10 +575,13 @@
       font-size: 0.95rem;
       cursor: pointer;
       color: var(--text);
+      text-decoration: none;
     }
-    .auth-user-menu button:hover {
+    .auth-user-menu button:hover,
+    .auth-user-menu a:hover {
       background: var(--surface-soft);
     }
+    #adminLink { color: var(--accent); font-weight: 600; }
 
     /* ─── Login-Modal ─────────────────────────────────────── */
     .login-modal-box {
@@ -701,6 +705,7 @@
         <span class="auth-user-caret">▼</span>
       </button>
       <div class="auth-user-menu" id="authUserMenu" hidden>
+        <a id="adminLink" href="admin/index.html" hidden>Admin-Bereich</a>
         <button id="profileBtn">Profil</button>
         <button id="logoutBtn">Ausloggen</button>
       </div>
@@ -1003,12 +1008,24 @@
     const loginError  = document.getElementById('loginError');
     const loginSchool = document.getElementById('loginSchool');
 
+    // Wird beim Login-Submit auf true gesetzt. refreshAuthUI() prüft und
+    // routet Admins direkt in ihr Panel — nur einmal, nicht bei jedem Reload.
+    let pendingAdminRedirect = false;
+
     function refreshAuthUI() {
       const user = getSessionUser();
       if (user) {
         authGuest.hidden = true;
         authUser.hidden = false;
         authUserName.textContent = user.display_name || user.account_name || 'Angemeldet';
+        document.getElementById('adminLink').hidden = !user.is_admin;
+
+        if (pendingAdminRedirect && user.is_admin) {
+          pendingAdminRedirect = false;
+          location.replace('admin/index.html');
+          return;
+        }
+        pendingAdminRedirect = false;
       } else {
         authGuest.hidden = false;
         authUser.hidden = true;
@@ -1227,9 +1244,11 @@
       const email = `${account}@${schoolSlug}.${window.FAKE_EMAIL_DOMAIN}`;
       console.log('[login] versuche', email);
 
+      pendingAdminRedirect = true;   // Wird von refreshAuthUI konsumiert, falls Admin
       try {
         const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
         if (error) {
+          pendingAdminRedirect = false;
           console.warn('[login] Fehler:', error);
           loginError.textContent = `Login fehlgeschlagen: ${error.message}`;
           loginError.hidden = false;
