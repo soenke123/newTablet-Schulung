@@ -79,10 +79,11 @@
                 <th>Schließt</th>
                 <th>Status</th>
                 <th>User</th>
+                <th>Aktion</th>
               </tr>
             </thead>
             <tbody id="clusterTbody">
-              <tr><td colspan="6" class="empty">Lade …</td></tr>
+              <tr><td colspan="7" class="empty">Lade …</td></tr>
             </tbody>
           </table>
         </div>
@@ -131,6 +132,32 @@
       </div>
     </section>
   </main>
+
+  <!-- ─── Cluster-Edit-Modal ─────────────────────────────── -->
+  <div class="modal-overlay" id="clusterEditModal" hidden>
+    <div class="modal-box">
+      <button type="button" class="modal-close" id="clusterEditClose">×</button>
+      <h3>Cluster bearbeiten</h3>
+      <form id="clusterEditForm" class="grid-form">
+        <label>Name
+          <input type="text" id="edClName" required maxlength="60" />
+        </label>
+        <label>Season
+          <input type="number" id="edClSeason" required min="1" max="10" />
+        </label>
+        <label>Öffnet ab
+          <input type="datetime-local" id="edClOpens" />
+        </label>
+        <label>Schließt am
+          <input type="datetime-local" id="edClCloses" />
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn primary" id="edClSubmit">Speichern</button>
+          <span class="form-feedback" id="edClFeedback"></span>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../supabase-config.js"></script>

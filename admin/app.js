@@ -68,9 +68,12 @@ async function api(method, path, body) {
   wireUserMenu();
   wireTabs();
   wireClusterForm();
+  wireClusterEditModal();
   wireUserFilters();
 
-  await Promise.all([loadClusters(), loadUsers()]);
+  // Cluster ZUERST — renderUsers braucht clusterCache für die Dropdown-Options.
+  await loadClusters();
+  await loadUsers();
 
   bootMask.classList.add('hidden');
   setTimeout(() => bootMask.remove(), 250);
@@ -141,8 +144,8 @@ function wireClusterForm() {
         school_id: currentSchoolId,
         name,
         season,
-        opens_at:  opensAt  ? new Date(opensAt).toISOString()  : null,
-        closes_at: closesAt ? new Date(closesAt).toISOString() : null
+        opens_at:  toIso(opensAt),
+        closes_at: toIso(closesAt)
       });
       feedback.textContent = 'Cluster angelegt.';
       feedback.classList.add('ok');
@@ -174,12 +177,15 @@ async function loadClusters() {
     for (const m of members) if (m.cluster_id) counts[m.cluster_id] = (counts[m.cluster_id] || 0) + 1;
 
     if (rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty">Noch keine Cluster.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">Noch keine Cluster.</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(c => renderClusterRow(c, counts[c.id] || 0)).join('');
+    tbody.querySelectorAll('.js-cluster-edit').forEach(btn => {
+      btn.addEventListener('click', () => openClusterEdit(btn.dataset.id));
+    });
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler: ${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Fehler: ${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -199,7 +205,64 @@ function renderClusterRow(c, memberCount) {
       <td>${fmtDT(c.closes_at)}</td>
       <td>${statusBadge}</td>
       <td>${memberCount}</td>
+      <td><button class="btn small js-cluster-edit" data-id="${c.id}">Bearbeiten</button></td>
     </tr>`;
+}
+
+// ─── Cluster-Edit-Modal ──────────────────────────────────────
+let editingClusterId = null;
+
+function wireClusterEditModal() {
+  const overlay = document.getElementById('clusterEditModal');
+  const close   = document.getElementById('clusterEditClose');
+  const form    = document.getElementById('clusterEditForm');
+
+  const doClose = () => { overlay.hidden = true; editingClusterId = null; };
+  close.addEventListener('click', doClose);
+  overlay.addEventListener('click', e => { if (e.target === overlay) doClose(); });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!editingClusterId) return;
+    const feedback = document.getElementById('edClFeedback');
+    const btn      = document.getElementById('edClSubmit');
+    feedback.className = 'form-feedback';
+    feedback.textContent = '';
+
+    const patch = {
+      name:      document.getElementById('edClName').value.trim(),
+      season:    parseInt(document.getElementById('edClSeason').value, 10),
+      opens_at:  toIso(document.getElementById('edClOpens').value),
+      closes_at: toIso(document.getElementById('edClCloses').value)
+    };
+    if (!patch.name) { feedback.textContent = 'Name fehlt.'; feedback.classList.add('error'); return; }
+    if (!patch.season || patch.season < 1) { feedback.textContent = 'Season ungültig.'; feedback.classList.add('error'); return; }
+
+    btn.disabled = true;
+    try {
+      await api('PATCH', `clusters?id=eq.${editingClusterId}`, patch);
+      doClose();
+      await loadClusters();
+      renderUsers();  // Cluster-Namen/Seasons in User-Dropdown aktualisieren
+    } catch (err) {
+      feedback.textContent = err.message;
+      feedback.classList.add('error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+function openClusterEdit(id) {
+  const c = clusterCache.find(x => x.id === id);
+  if (!c) return;
+  editingClusterId = id;
+  document.getElementById('edClName').value    = c.name;
+  document.getElementById('edClSeason').value  = c.season;
+  document.getElementById('edClOpens').value   = isoToLocalInput(c.opens_at);
+  document.getElementById('edClCloses').value  = isoToLocalInput(c.closes_at);
+  document.getElementById('edClFeedback').textContent = '';
+  document.getElementById('clusterEditModal').hidden = false;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -253,6 +316,12 @@ function renderUsers() {
   tbody.querySelectorAll('.js-lock-toggle').forEach(btn => {
     btn.addEventListener('click', () => toggleNameLock(btn.dataset.userId));
   });
+  tbody.querySelectorAll('.js-rename').forEach(btn => {
+    btn.addEventListener('click', () => renameUser(btn.dataset.userId));
+  });
+  tbody.querySelectorAll('.js-pw-reset').forEach(btn => {
+    btn.addEventListener('click', () => resetPassword(btn.dataset.userId));
+  });
 }
 
 function renderUserRow(u) {
@@ -267,8 +336,9 @@ function renderUserRow(u) {
   const activateBtn = u.status === 'pending'
     ? `<button class="btn small primary js-activate" data-user-id="${u.id}">Freischalten</button>`
     : '';
-
-  const lockBtn = `<button class="btn small js-lock-toggle" data-user-id="${u.id}">${u.display_name_locked ? '🔒 Entsperren' : '🔓 Sperren'}</button>`;
+  const lockBtn   = `<button class="btn small js-lock-toggle" data-user-id="${u.id}">${u.display_name_locked ? '🔒 Entsperren' : '🔓 Sperren'}</button>`;
+  const renameBtn = `<button class="btn small js-rename"      data-user-id="${u.id}">Umbenennen</button>`;
+  const pwBtn     = `<button class="btn small js-pw-reset"    data-user-id="${u.id}">Passwort</button>`;
 
   return `
     <tr>
@@ -279,7 +349,7 @@ function renderUserRow(u) {
         <select class="js-cluster-select" data-user-id="${u.id}">${clusterOptions}</select>
       </td>
       <td>${u.display_name_locked ? '🔒 gesperrt' : '—'}</td>
-      <td><div class="actions">${activateBtn}${lockBtn}</div></td>
+      <td><div class="actions">${activateBtn}${renameBtn}${lockBtn}${pwBtn}</div></td>
     </tr>`;
 }
 
@@ -321,6 +391,54 @@ async function toggleNameLock(userId) {
   }
 }
 
+async function renameUser(userId) {
+  const u = userCache.find(x => x.id === userId);
+  if (!u) return;
+  const next = prompt(`Neuer Anzeigename für "${u.account_name}":`, u.display_name || '');
+  if (next === null) return;
+  const trimmed = next.trim();
+  if (trimmed.length < 2 || trimmed.length > 24) {
+    alert('Name muss 2–24 Zeichen haben.');
+    return;
+  }
+  try {
+    await api('PATCH', `profiles?id=eq.${userId}`, { display_name: trimmed });
+    u.display_name = trimmed;
+    renderUsers();
+  } catch (err) {
+    alert('Umbenennen fehlgeschlagen: ' + err.message);
+  }
+}
+
+async function resetPassword(userId) {
+  const u = userCache.find(x => x.id === userId);
+  if (!u) return;
+  const pw = prompt(`Neues Passwort für "${u.account_name}" (mind. 8 Zeichen):`);
+  if (pw === null) return;
+  if (pw.length < 8) {
+    alert('Passwort zu kurz (mind. 8 Zeichen).');
+    return;
+  }
+  try {
+    const token = window.__accessToken;
+    const res = await fetch('/api/admin_reset_password', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ user_id: userId, new_password: pw })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body?.ok) {
+      throw new Error(body?.error || `HTTP ${res.status}`);
+    }
+    alert(`Passwort für ${u.account_name} gesetzt.`);
+  } catch (err) {
+    alert('Passwort-Reset fehlgeschlagen: ' + err.message);
+  }
+}
+
 /* ─── Utilities ─────────────────────────────────────────────── */
 
 function escapeHtml(s) {
@@ -336,4 +454,16 @@ function fmtDT(iso) {
     year: '2-digit', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit'
   });
+}
+
+// datetime-local ↔ ISO: Input erwartet "YYYY-MM-DDTHH:MM" in Ortszeit.
+function isoToLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+       + `T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function toIso(localVal) {
+  return localVal ? new Date(localVal).toISOString() : null;
 }
