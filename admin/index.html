@@ -55,10 +55,10 @@
             <input type="number" id="clSeason" required min="1" max="10" value="1" />
           </label>
           <label>Öffnet ab
-            <input type="datetime-local" id="clOpens" />
+            <input type="datetime-local" id="clOpens" required />
           </label>
           <label>Schließt am
-            <input type="datetime-local" id="clCloses" />
+            <input type="datetime-local" id="clCloses" required />
           </label>
           <div class="form-actions">
             <button type="submit" class="btn primary" id="clSubmit">Cluster anlegen</button>
@@ -146,10 +146,10 @@
           <input type="number" id="edClSeason" required min="1" max="10" />
         </label>
         <label>Öffnet ab
-          <input type="datetime-local" id="edClOpens" />
+          <input type="datetime-local" id="edClOpens" required />
         </label>
         <label>Schließt am
-          <input type="datetime-local" id="edClCloses" />
+          <input type="datetime-local" id="edClCloses" required />
         </label>
         <div class="form-actions">
           <button type="submit" class="btn primary" id="edClSubmit">Speichern</button>

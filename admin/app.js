@@ -35,11 +35,51 @@ async function api(method, path, body) {
   });
   const text = await res.text();
   if (!res.ok) {
-    let err = text;
-    try { err = JSON.parse(text).message || text; } catch {}
-    throw new Error(`HTTP ${res.status}: ${err}`);
+    let msg = text, code = null, details = null;
+    try {
+      const parsed = JSON.parse(text);
+      msg     = parsed.message || text;
+      code    = parsed.code    || null;
+      details = parsed.details || null;
+    } catch {}
+    const e = new Error(`HTTP ${res.status}: ${msg}`);
+    e.status  = res.status;
+    e.pgCode  = code;
+    e.details = details;
+    throw e;
   }
   return text ? JSON.parse(text) : null;
+}
+
+// Postgres-Fehler → deutsche Klartext-Meldung für den Admin.
+function humanizeClusterError(err) {
+  // 23P01 = exclusion_violation (Overlap mit anderem Cluster)
+  if (err.pgCode === '23P01') {
+    return 'Zeitfenster überschneidet sich mit einem anderen Kurs. Bitte anderes Fenster wählen.';
+  }
+  // 23514 = check_violation (opens<closes verletzt oder > 7 Tage)
+  if (err.pgCode === '23514') {
+    return 'Ungültiges Zeitfenster (Start vor Ende, max. 7 Tage).';
+  }
+  // 23502 = not_null_violation
+  if (err.pgCode === '23502') {
+    return 'Öffnungs- und Schließzeit sind Pflicht.';
+  }
+  return err.message;
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+// Client-seitige Validierung — spart Round-Trip und liefert klare Fehler.
+// Rückgabe: null wenn ok, sonst Fehlermeldung.
+function validateClusterWindow(opensAt, closesAt) {
+  if (!opensAt || !closesAt)   return 'Öffnungs- und Schließzeit sind Pflicht.';
+  const o = new Date(opensAt).getTime();
+  const c = new Date(closesAt).getTime();
+  if (!isFinite(o) || !isFinite(c)) return 'Zeitwerte ungültig.';
+  if (o >= c)                  return 'Öffnungszeit muss vor Schließzeit liegen.';
+  if (c - o > WEEK_MS)         return 'Anmeldefenster darf maximal 7 Tage groß sein.';
+  return null;
 }
 
 // ─── Boot ─────────────────────────────────────────────────────
@@ -137,6 +177,8 @@ function wireClusterForm() {
 
     if (!name)   { feedback.textContent = 'Name fehlt.'; feedback.classList.add('error'); return; }
     if (!season || season < 1) { feedback.textContent = 'Season ungültig.'; feedback.classList.add('error'); return; }
+    const winErr = validateClusterWindow(opensAt, closesAt);
+    if (winErr) { feedback.textContent = winErr; feedback.classList.add('error'); return; }
 
     btn.disabled = true;
     try {
@@ -153,7 +195,7 @@ function wireClusterForm() {
       document.getElementById('clSeason').value = '1';
       await loadClusters();
     } catch (err) {
-      feedback.textContent = err.message;
+      feedback.textContent = humanizeClusterError(err);
       feedback.classList.add('error');
     } finally {
       btn.disabled = false;
@@ -229,14 +271,18 @@ function wireClusterEditModal() {
     feedback.className = 'form-feedback';
     feedback.textContent = '';
 
+    const opensLocal  = document.getElementById('edClOpens').value;
+    const closesLocal = document.getElementById('edClCloses').value;
     const patch = {
       name:      document.getElementById('edClName').value.trim(),
       season:    parseInt(document.getElementById('edClSeason').value, 10),
-      opens_at:  toIso(document.getElementById('edClOpens').value),
-      closes_at: toIso(document.getElementById('edClCloses').value)
+      opens_at:  toIso(opensLocal),
+      closes_at: toIso(closesLocal)
     };
     if (!patch.name) { feedback.textContent = 'Name fehlt.'; feedback.classList.add('error'); return; }
     if (!patch.season || patch.season < 1) { feedback.textContent = 'Season ungültig.'; feedback.classList.add('error'); return; }
+    const winErr = validateClusterWindow(opensLocal, closesLocal);
+    if (winErr) { feedback.textContent = winErr; feedback.classList.add('error'); return; }
 
     btn.disabled = true;
     try {
@@ -245,7 +291,7 @@ function wireClusterEditModal() {
       await loadClusters();
       renderUsers();  // Cluster-Namen/Seasons in User-Dropdown aktualisieren
     } catch (err) {
-      feedback.textContent = err.message;
+      feedback.textContent = humanizeClusterError(err);
       feedback.classList.add('error');
     } finally {
       btn.disabled = false;
