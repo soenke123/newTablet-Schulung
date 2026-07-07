@@ -14,12 +14,13 @@
   <!-- ═══ AUTH-BAR (fixiert oben links) ═══ -->
   <div class="hub-auth" id="hubAuth" hidden>
     <button class="hub-auth-btn" id="hubAuthBtn" type="button">
+      <span class="hub-auth-avatar"><img id="hubAuthAvatar" alt="" /></span>
       <span class="hub-auth-name" id="hubAuthName">…</span>
       <span class="hub-auth-caret">▼</span>
     </button>
     <div class="hub-auth-menu" id="hubAuthMenu" hidden>
       <a id="hubAdminLink" href="../admin/index.html" hidden>Admin-Bereich</a>
-      <button type="button" id="hubProfileBtn">Profil</button>
+      <a id="hubProfileLink" href="../profil.html">Profil</a>
       <button type="button" id="hubBackBtn">Zurück zur Übersicht</button>
       <button type="button" id="hubLogoutBtn">Ausloggen</button>
     </div>
@@ -216,6 +217,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../supabase-config.js"></script>
   <script src="../session.js"></script>
+  <script src="../avatars.js"></script>
 
   <script src="config.js?v=20260623"></script>
   <script src="creatures.js?v=20260623"></script>
@@ -292,6 +294,10 @@
       const user = window.getSessionUser?.();
       if (!user) { box.hidden = true; return; }
       name.textContent = user.display_name || user.account_name || 'Angemeldet';
+      const avatarImg = document.getElementById('hubAuthAvatar');
+      if (avatarImg && window.getAvatarUrl) {
+        avatarImg.src = window.getAvatarUrl(user.avatar_id, '../');
+      }
       document.getElementById('hubAdminLink').hidden = !user.is_admin;
       box.hidden = false;
     }
@@ -309,9 +315,8 @@
         if (!authBox.contains(e.target)) authMenu.hidden = true;
       });
 
-      document.getElementById('hubProfileBtn')?.addEventListener('click', () => {
+      document.getElementById('hubProfileLink')?.addEventListener('click', () => {
         authMenu.hidden = true;
-        alert('Profil-Verwaltung kommt bald.');
       });
       document.getElementById('hubBackBtn')?.addEventListener('click', () => {
         window.location.href = '../index.html';

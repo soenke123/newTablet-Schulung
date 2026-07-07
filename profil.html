@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profil · Tablet Schulung</title>
+  <style>
+    :root {
+      --bg: #1a0e05;
+      --surface: #ffffff;
+      --surface-soft: #fafafa;
+      --text: #1f1f1f;
+      --muted: #666;
+      --border: rgba(0, 0, 0, 0.08);
+      --accent: #b56a3c;
+      --accent-hover: #9d5930;
+      --danger: #c0392b;
+      --success: #2f6b4e;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+      --radius-large: 24px;
+      --radius-medium: 18px;
+      --radius-small: 12px;
+      --transition: 180ms ease;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: #f5e6c8;
+    }
+
+    body {
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    .topbar {
+      max-width: 900px;
+      margin: 0 auto 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .back-link {
+      color: #f5e6c8;
+      text-decoration: none;
+      font-size: 0.95rem;
+      opacity: 0.85;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .back-link:hover { opacity: 1; }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--surface);
+      color: var(--text);
+      border-radius: var(--radius-large);
+      box-shadow: var(--shadow);
+      padding: 2rem;
+    }
+
+    .card h2 {
+      margin: 0 0 1.25rem;
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    /* ─── Header-Card: Avatar + Infos ───────────────────────── */
+    .profile-header {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 2.5rem;
+      align-items: center;
+    }
+    @media (max-width: 640px) {
+      .profile-header {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        text-align: center;
+      }
+      .avatar-column { justify-self: center; }
+    }
+
+    .avatar-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.9rem;
+    }
+    .avatar-frame {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: var(--surface-soft);
+      border: 3px solid var(--accent);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition);
+      position: relative;
+    }
+    .avatar-frame:hover {
+      transform: scale(1.03);
+      box-shadow: 0 0 0 6px rgba(181, 106, 60, 0.15);
+    }
+    .avatar-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .avatar-change-btn {
+      background: var(--accent);
+      color: white;
+      border: 0;
+      border-radius: 999px;
+      padding: 0.55rem 1.3rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+    .avatar-change-btn:hover { background: var(--accent-hover); }
+
+    .info-list {
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      row-gap: 0.9rem;
+      column-gap: 1.5rem;
+      margin: 0;
+    }
+    .info-list dt {
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      align-self: center;
+    }
+    .info-list dd {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 500;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .badge-season {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      padding: 0.15rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .badge-status {
+      display: inline-block;
+      padding: 0.15rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .badge-status.active  { background: #d7ecdd; color: var(--success); }
+    .badge-status.pending { background: #fbe2c8; color: #7a4b12; }
+
+    /* ─── Passwort-Card ─────────────────────────────────────── */
+    .pw-form {
+      display: grid;
+      gap: 0.9rem;
+      max-width: 420px;
+    }
+    .pw-form label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+    .pw-form input {
+      width: 100%;
+      padding: 0.7rem 0.9rem;
+      border-radius: var(--radius-small);
+      border: 1px solid var(--border);
+      font-family: inherit;
+      font-size: 1rem;
+      background: var(--surface-soft);
+      color: var(--text);
+    }
+    .pw-form input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .pw-form button {
+      justify-self: start;
+      background: var(--accent);
+      color: white;
+      border: 0;
+      border-radius: 999px;
+      padding: 0.7rem 1.6rem;
+      font-family: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background var(--transition);
+    }
+    .pw-form button:hover:not(:disabled) { background: var(--accent-hover); }
+    .pw-form button:disabled { opacity: 0.6; cursor: default; }
+
+    .form-msg {
+      font-size: 0.9rem;
+      padding: 0.6rem 0.9rem;
+      border-radius: var(--radius-small);
+    }
+    .form-msg.error   { background: #fadadd; color: var(--danger); }
+    .form-msg.success { background: #d7ecdd; color: var(--success); }
+    .form-msg[hidden] { display: none; }
+
+    /* ─── Avatar-Picker-Modal ───────────────────────────────── */
+    .picker-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 1rem;
+    }
+    .picker-overlay[hidden] { display: none; }
+
+    .picker-box {
+      background: var(--surface);
+      color: var(--text);
+      border-radius: var(--radius-large);
+      width: 100%;
+      max-width: 780px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .picker-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.4rem 1.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .picker-head h3 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+    .picker-close {
+      background: none;
+      border: 0;
+      color: var(--muted);
+      font-size: 1.6rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0.2rem 0.6rem;
+    }
+    .picker-close:hover { color: var(--text); }
+
+    .picker-tabs {
+      display: flex;
+      gap: 0.4rem;
+      padding: 0.9rem 1.6rem;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .picker-tab {
+      background: var(--surface-soft);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.4rem 1rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background var(--transition), border-color var(--transition);
+    }
+    .picker-tab.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    .picker-tab:hover:not(.active) {
+      border-color: var(--accent);
+    }
+
+    .picker-grid {
+      padding: 1.4rem 1.6rem 2rem;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1rem;
+    }
+
+    .avatar-tile {
+      background: none;
+      border: 3px solid transparent;
+      border-radius: var(--radius-medium);
+      padding: 0.6rem;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      transition: border-color var(--transition), background var(--transition);
+    }
+    .avatar-tile:hover {
+      background: var(--surface-soft);
+      border-color: rgba(181, 106, 60, 0.35);
+    }
+    .avatar-tile.selected {
+      border-color: var(--accent);
+      background: rgba(181, 106, 60, 0.08);
+    }
+    .avatar-tile.locked {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .avatar-tile-img {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: var(--surface-soft);
+    }
+    .avatar-tile-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .avatar-tile-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* ─── Ladeanzeige (bevor Session da ist) ─────────────────── */
+    .loading, .not-logged-in {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #f5e6c8;
+    }
+    .not-logged-in a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="topbar">
+    <a class="back-link" href="index.html">← Zurück zur Startseite</a>
+    <a class="back-link" href="GameHub/index.html" id="hubBackLink" style="display:none">Zum Game Hub →</a>
+  </div>
+
+  <div class="loading" id="loadingState">Lade Profil…</div>
+
+  <div class="not-logged-in" id="guestState" hidden>
+    <p>Du bist nicht eingeloggt.</p>
+    <p><a href="index.html">Zur Startseite</a></p>
+  </div>
+
+  <main id="profileMain" hidden>
+
+    <!-- ─── Header mit Avatar + Infos ───────────────── -->
+    <section class="card profile-header">
+      <div class="avatar-column">
+        <div class="avatar-frame" id="avatarFrame" role="button" tabindex="0" aria-label="Profilbild ändern">
+          <img id="avatarImg" alt="Profilbild" />
+        </div>
+        <button class="avatar-change-btn" id="avatarChangeBtn">Ändern</button>
+      </div>
+
+      <dl class="info-list">
+        <dt>Anzeigename</dt><dd id="infoDisplayName">–</dd>
+        <dt>Username</dt>   <dd id="infoAccountName">–</dd>
+        <dt>Schule</dt>     <dd id="infoSchool">–</dd>
+        <dt>Kurs</dt>       <dd id="infoCluster">–</dd>
+        <dt>Season</dt>     <dd><span class="badge-season" id="infoSeason">0</span></dd>
+        <dt>Status</dt>     <dd><span class="badge-status" id="infoStatus">–</span></dd>
+      </dl>
+    </section>
+
+    <!-- ─── Passwort ändern ─────────────────────────── -->
+    <section class="card">
+      <h2>Passwort ändern</h2>
+      <form class="pw-form" id="pwForm" autocomplete="off">
+        <div>
+          <label for="pwNew">Neues Passwort</label>
+          <input type="password" id="pwNew" name="pwNew" minlength="6" required autocomplete="new-password" />
+        </div>
+        <div>
+          <label for="pwNew2">Neues Passwort wiederholen</label>
+          <input type="password" id="pwNew2" name="pwNew2" minlength="6" required autocomplete="new-password" />
+        </div>
+        <div class="form-msg" id="pwMsg" hidden></div>
+        <button type="submit" id="pwSubmit">Passwort speichern</button>
+      </form>
+    </section>
+
+  </main>
+
+  <!-- ─── Avatar-Picker-Modal ─────────────────────── -->
+  <div class="picker-overlay" id="pickerOverlay" hidden>
+    <div class="picker-box" role="dialog" aria-labelledby="pickerTitle" aria-modal="true">
+      <div class="picker-head">
+        <h3 id="pickerTitle">Profilbild wählen</h3>
+        <button class="picker-close" id="pickerClose" aria-label="Schließen">×</button>
+      </div>
+      <div class="picker-tabs" id="pickerTabs"></div>
+      <div class="picker-grid" id="pickerGrid"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="session.js"></script>
+  <script src="avatars.js"></script>
+  <script>
+    'use strict';
+
+    const loadingState = document.getElementById('loadingState');
+    const guestState   = document.getElementById('guestState');
+    const profileMain  = document.getElementById('profileMain');
+    const hubBackLink  = document.getElementById('hubBackLink');
+
+    const avatarImg       = document.getElementById('avatarImg');
+    const avatarFrame     = document.getElementById('avatarFrame');
+    const avatarChangeBtn = document.getElementById('avatarChangeBtn');
+
+    const pickerOverlay = document.getElementById('pickerOverlay');
+    const pickerClose   = document.getElementById('pickerClose');
+    const pickerTabs    = document.getElementById('pickerTabs');
+    const pickerGrid    = document.getElementById('pickerGrid');
+
+    const pwForm    = document.getElementById('pwForm');
+    const pwNew     = document.getElementById('pwNew');
+    const pwNew2    = document.getElementById('pwNew2');
+    const pwMsg     = document.getElementById('pwMsg');
+    const pwSubmit  = document.getElementById('pwSubmit');
+
+    let currentAvatarId = window.DEFAULT_AVATAR_ID;
+    let currentGroupId  = window.AVATAR_GROUPS?.[0]?.id || 'egg';
+
+    /* ─── Boot ──────────────────────────────────────────────── */
+    (async () => {
+      await window.waitForSession?.();
+      const user = window.getSessionUser?.();
+      loadingState.hidden = true;
+      if (!user) {
+        guestState.hidden = false;
+        return;
+      }
+      renderProfile(user);
+      profileMain.hidden = false;
+      if (user.cluster_id) hubBackLink.style.display = '';
+    })();
+
+    // Falls die Session in einem anderen Tab wechselt (Logout etc.)
+    window.addEventListener('lernwelt:session-changed', () => {
+      const user = window.getSessionUser?.();
+      if (!user) location.replace('index.html');
+      else renderProfile(user);
+    });
+
+    /* ─── Render Profil-Infos + Avatar ──────────────────────── */
+    function renderProfile(user) {
+      document.getElementById('infoDisplayName').textContent = user.display_name || '–';
+      document.getElementById('infoAccountName').textContent = user.account_name  || '–';
+      document.getElementById('infoSchool').textContent      = user.school_name   || '–';
+      document.getElementById('infoCluster').textContent     = user.cluster_name  || 'Kein Kurs zugewiesen';
+      document.getElementById('infoSeason').textContent      = user.season ?? 0;
+
+      const statusEl = document.getElementById('infoStatus');
+      statusEl.textContent = user.status === 'active' ? 'Aktiv' : 'Wartet auf Freischaltung';
+      statusEl.className   = 'badge-status ' + (user.status === 'active' ? 'active' : 'pending');
+
+      currentAvatarId = user.avatar_id || window.DEFAULT_AVATAR_ID;
+      avatarImg.src = window.getAvatarUrl(currentAvatarId, '');
+      avatarImg.alt = 'Profilbild: ' + (window.getAvatarById(currentAvatarId)?.label || '');
+    }
+
+    /* ─── Avatar-Picker ─────────────────────────────────────── */
+    function openPicker() {
+      renderPickerTabs();
+      renderPickerGrid();
+      pickerOverlay.hidden = false;
+      document.body.style.overflow = 'hidden';
+    }
+    function closePicker() {
+      pickerOverlay.hidden = true;
+      document.body.style.overflow = '';
+    }
+
+    function renderPickerTabs() {
+      pickerTabs.innerHTML = '';
+      // Wenn nur 1 Gruppe existiert, Tabs komplett ausblenden.
+      if ((window.AVATAR_GROUPS || []).length <= 1) {
+        pickerTabs.style.display = 'none';
+        return;
+      }
+      pickerTabs.style.display = '';
+      for (const g of window.AVATAR_GROUPS) {
+        const btn = document.createElement('button');
+        btn.className = 'picker-tab' + (g.id === currentGroupId ? ' active' : '');
+        btn.textContent = g.label;
+        btn.addEventListener('click', () => {
+          currentGroupId = g.id;
+          renderPickerTabs();
+          renderPickerGrid();
+        });
+        pickerTabs.appendChild(btn);
+      }
+    }
+
+    function renderPickerGrid() {
+      pickerGrid.innerHTML = '';
+      const items = (window.AVATARS || []).filter(a => a.group === currentGroupId);
+      for (const a of items) {
+        const tile = document.createElement('button');
+        tile.type = 'button';
+        tile.className = 'avatar-tile'
+          + (a.id === currentAvatarId ? ' selected' : '')
+          + (a.locked ? ' locked' : '');
+        tile.disabled = !!a.locked;
+        tile.innerHTML = `
+          <div class="avatar-tile-img">
+            <img src="${window.getAvatarUrl(a.id, '')}" alt="" />
+          </div>
+          <div class="avatar-tile-label">${a.label}</div>
+        `;
+        tile.addEventListener('click', () => selectAvatar(a.id));
+        pickerGrid.appendChild(tile);
+      }
+    }
+
+    async function selectAvatar(id) {
+      if (id === currentAvatarId) { closePicker(); return; }
+      const prev = currentAvatarId;
+      currentAvatarId = id;
+      avatarImg.src = window.getAvatarUrl(id, '');
+      renderPickerGrid();
+
+      try {
+        // Raw REST statt SDK-Builder — konsistent mit unlock_game/sync_game_state
+        // und vermeidet die bekannten SDK-Lock-Probleme.
+        const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/update_avatar_id`, {
+          method: 'POST',
+          headers: {
+            apikey: window.SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${window.__accessToken}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: JSON.stringify({ p_new_id: id })
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body?.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+        // Session-Objekt lokal aktuell halten, damit andere Screens es
+        // sofort sehen (falls sie window.__session lesen).
+        if (window.__session) window.__session.avatar_id = id;
+        closePicker();
+      } catch (e) {
+        console.warn('[profil] avatar update failed:', e.message);
+        currentAvatarId = prev;
+        avatarImg.src = window.getAvatarUrl(prev, '');
+        renderPickerGrid();
+        alert('Speichern fehlgeschlagen. Bitte erneut versuchen.');
+      }
+    }
+
+    avatarFrame.addEventListener('click', openPicker);
+    avatarFrame.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); }
+    });
+    avatarChangeBtn.addEventListener('click', openPicker);
+    pickerClose.addEventListener('click', closePicker);
+    pickerOverlay.addEventListener('click', e => {
+      if (e.target === pickerOverlay) closePicker();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !pickerOverlay.hidden) closePicker();
+    });
+
+    /* ─── Passwort ändern ───────────────────────────────────── */
+    function showPwMsg(text, type) {
+      pwMsg.textContent = text;
+      pwMsg.className   = 'form-msg ' + type;
+      pwMsg.hidden      = false;
+    }
+
+    pwForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      pwMsg.hidden = true;
+
+      const p1 = pwNew.value;
+      const p2 = pwNew2.value;
+      if (p1.length < 6) {
+        showPwMsg('Passwort muss mindestens 6 Zeichen haben.', 'error');
+        return;
+      }
+      if (p1 !== p2) {
+        showPwMsg('Die Passwörter stimmen nicht überein.', 'error');
+        return;
+      }
+
+      pwSubmit.disabled = true;
+      pwSubmit.textContent = 'Speichere…';
+      try {
+        const { error } = await window.supabaseClient.auth.updateUser({ password: p1 });
+        if (error) throw error;
+        pwForm.reset();
+        showPwMsg('Passwort erfolgreich geändert.', 'success');
+      } catch (err) {
+        showPwMsg('Fehler beim Speichern: ' + (err?.message || 'Unbekannt'), 'error');
+      } finally {
+        pwSubmit.disabled = false;
+        pwSubmit.textContent = 'Passwort speichern';
+      }
+    });
+
+  </script>
+</body>
+</html>
