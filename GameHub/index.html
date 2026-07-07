@@ -14,13 +14,16 @@
   <!-- ═══ AUTH-BAR (fixiert oben links) ═══ -->
   <div class="hub-auth" id="hubAuth" hidden>
     <button class="hub-auth-btn" id="hubAuthBtn" type="button">
-      <span class="hub-auth-avatar"><img id="hubAuthAvatar" alt="" /></span>
+      <span class="hub-auth-avatar">
+        <img id="hubAuthAvatar" alt="" />
+        <span class="new-dot" id="hubPillNewDot" hidden></span>
+      </span>
       <span class="hub-auth-name" id="hubAuthName">…</span>
       <span class="hub-auth-caret">▼</span>
     </button>
     <div class="hub-auth-menu" id="hubAuthMenu" hidden>
       <a id="hubAdminLink" href="../admin/index.html" hidden>Admin-Bereich</a>
-      <a id="hubProfileLink" href="../profil.html">Profil</a>
+      <a id="hubProfileLink" href="../profil.html">Profil<span class="new-dot" id="hubMenuNewDot" hidden></span></a>
       <button type="button" id="hubBackBtn">Zurück zur Übersicht</button>
       <button type="button" id="hubLogoutBtn">Ausloggen</button>
     </div>
@@ -249,6 +252,9 @@
       await window.loadServerState?.();
 
       renderHub();
+      // seenCreatures wird von renderHub aktuell gehalten → jetzt erst
+      // sind NEW-Badges zuverlässig berechenbar (nicht schon bei renderHubAuth).
+      refreshHubAvatarNewBadges();
 
       // Season 2 Announcement — einmal pro Sitzung zeigen
       if (getUserSeason() >= 2
@@ -300,7 +306,30 @@
       }
       document.getElementById('hubAdminLink').hidden = !user.is_admin;
       box.hidden = false;
+      refreshHubAvatarNewBadges();
     }
+
+    // NEW-Sticker für Profilbild + Profil-Menüeintrag.
+    // Wird nach jedem Hub-Render + nach Avatar-Picker-Öffnung neu berechnet,
+    // damit frisch freigeschaltete Kreaturen sofort einen Kringel bekommen.
+    function refreshHubAvatarNewBadges() {
+      const user = window.getSessionUser?.();
+      const pill = document.getElementById('hubPillNewDot');
+      const menu = document.getElementById('hubMenuNewDot');
+      if (!user || !window.hasAnyNewAvatars) {
+        if (pill) pill.hidden = true;
+        if (menu) menu.hidden = true;
+        return;
+      }
+      window.refreshUnlockTimestamps?.();
+      const hasNew = window.hasAnyNewAvatars(user.avatars_seen_at);
+      if (pill) pill.hidden = !hasNew;
+      if (menu) menu.hidden = !hasNew;
+    }
+    window.refreshHubAvatarNewBadges = refreshHubAvatarNewBadges;
+
+    // profil.html feuert dieses Event nach Picker-Öffnung — Badges sofort verstecken
+    window.addEventListener('lernwelt:avatars-seen', refreshHubAvatarNewBadges);
 
     document.addEventListener('DOMContentLoaded', () => {
       const authBtn  = document.getElementById('hubAuthBtn');

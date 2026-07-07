@@ -112,6 +112,21 @@
       transition: transform var(--transition), box-shadow var(--transition);
       position: relative;
     }
+    .avatar-frame .new-dot {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: var(--danger);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+      letter-spacing: 0.06em;
+      z-index: 2;
+    }
+    .avatar-frame .new-dot[hidden] { display: none; }
     .avatar-frame:hover {
       transform: scale(1.03);
       box-shadow: 0 0 0 6px rgba(181, 106, 60, 0.15);
@@ -282,6 +297,7 @@
       overflow-x: auto;
     }
     .picker-tab {
+      position: relative;
       background: var(--surface-soft);
       color: var(--text);
       border: 1px solid var(--border);
@@ -301,6 +317,15 @@
     .picker-tab:hover:not(.active) {
       border-color: var(--accent);
     }
+    .picker-tab .tab-new-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--danger);
+      border-radius: 50%;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
 
     .picker-grid {
       padding: 1.4rem 1.6rem 2rem;
@@ -311,6 +336,7 @@
     }
 
     .avatar-tile {
+      position: relative;
       background: none;
       border: 3px solid transparent;
       border-radius: var(--radius-medium);
@@ -322,7 +348,7 @@
       gap: 0.5rem;
       transition: border-color var(--transition), background var(--transition);
     }
-    .avatar-tile:hover {
+    .avatar-tile:hover:not(:disabled) {
       background: var(--surface-soft);
       border-color: rgba(181, 106, 60, 0.35);
     }
@@ -331,8 +357,29 @@
       background: rgba(181, 106, 60, 0.08);
     }
     .avatar-tile.locked {
-      opacity: 0.35;
+      opacity: 0.4;
       cursor: not-allowed;
+      filter: grayscale(1);
+    }
+    .avatar-tile .tile-new {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: var(--danger);
+      color: white;
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      letter-spacing: 0.05em;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+    .avatar-tile .tile-lock {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 1rem;
+      opacity: 0.8;
     }
     .avatar-tile-img {
       width: 96px;
@@ -387,6 +434,7 @@
     <section class="card profile-header">
       <div class="avatar-column">
         <div class="avatar-frame" id="avatarFrame" role="button" tabindex="0" aria-label="Profilbild ändern">
+          <span class="new-dot" id="frameNewDot" hidden>NEU</span>
           <img id="avatarImg" alt="Profilbild" />
         </div>
         <button class="avatar-change-btn" id="avatarChangeBtn">Ändern</button>
@@ -462,6 +510,10 @@
 
     let currentAvatarId = window.DEFAULT_AVATAR_ID;
     let currentGroupId  = window.AVATAR_GROUPS?.[0]?.id || 'egg';
+    let unlockedSet     = new Set();
+    let newSet          = new Set();
+
+    const frameNewDot = document.getElementById('frameNewDot');
 
     /* ─── Boot ──────────────────────────────────────────────── */
     (async () => {
@@ -484,6 +536,15 @@
       else renderProfile(user);
     });
 
+    /* ─── Unlock- + NEW-State neu berechnen ───────────────────── */
+    function recomputeAvatarState(user) {
+      unlockedSet = window.computeUnlockedAvatarIds();
+      window.refreshUnlockTimestamps(unlockedSet);
+      newSet = window.getNewAvatarIds(user?.avatars_seen_at);
+      // Header-NEW-Dot: sichtbar wenn mind. 1 NEUES Avatar existiert
+      frameNewDot.hidden = newSet.size === 0;
+    }
+
     /* ─── Render Profil-Infos + Avatar ──────────────────────── */
     function renderProfile(user) {
       document.getElementById('infoDisplayName').textContent = user.display_name || '–';
@@ -499,32 +560,75 @@
       currentAvatarId = user.avatar_id || window.DEFAULT_AVATAR_ID;
       avatarImg.src = window.getAvatarUrl(currentAvatarId, '');
       avatarImg.alt = 'Profilbild: ' + (window.getAvatarById(currentAvatarId)?.label || '');
+
+      recomputeAvatarState(user);
     }
 
     /* ─── Avatar-Picker ─────────────────────────────────────── */
-    function openPicker() {
+    // NEW-Sticker während einer Picker-Session sichtbar lassen, damit
+    // der User sie über Tabs hinweg wahrnimmt. Reset passiert erst beim
+    // Schließen — Parent-Page-Badges (Landing, Hub) verschwinden schon
+    // bei Open über das Event + Server-RPC.
+    let pickerSessionNewSet = new Set();
+
+    async function openPicker() {
+      pickerSessionNewSet = new Set(newSet);   // Snapshot fürs Rendering
+      if (pickerSessionNewSet.size > 0) {
+        const firstNewGroup = firstGroupWithNew(pickerSessionNewSet);
+        if (firstNewGroup) currentGroupId = firstNewGroup;
+      }
       renderPickerTabs();
       renderPickerGrid();
       pickerOverlay.hidden = false;
       document.body.style.overflow = 'hidden';
+
+      // "Gesehen" sofort spiegeln — der User sieht die Sticker jetzt.
+      const nowISO = new Date().toISOString();
+      if (window.__session) window.__session.avatars_seen_at = nowISO;
+      newSet = new Set();
+      frameNewDot.hidden = true;
+      window.dispatchEvent(new CustomEvent('lernwelt:avatars-seen'));
+      markAvatarsSeenOnServer().catch(() => {});
     }
     function closePicker() {
       pickerOverlay.hidden = true;
       document.body.style.overflow = '';
+      pickerSessionNewSet = new Set();  // Sticker im Picker jetzt auch zurücksetzen
+    }
+
+    async function markAvatarsSeenOnServer() {
+      if (!window.__accessToken) return;
+      try {
+        await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/mark_avatars_seen`, {
+          method: 'POST',
+          headers: {
+            apikey: window.SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${window.__accessToken}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: '{}'
+        });
+      } catch (e) { console.warn('[profil] mark_avatars_seen failed:', e.message); }
+    }
+
+    function firstGroupWithNew(set) {
+      for (const g of window.AVATAR_GROUPS) {
+        if (window.AVATARS.some(a => a.group === g.id && set.has(a.id))) return g.id;
+      }
+      return null;
+    }
+    function groupHasNew(gId) {
+      return window.AVATARS.some(a => a.group === gId && pickerSessionNewSet.has(a.id));
     }
 
     function renderPickerTabs() {
       pickerTabs.innerHTML = '';
-      // Wenn nur 1 Gruppe existiert, Tabs komplett ausblenden.
-      if ((window.AVATAR_GROUPS || []).length <= 1) {
-        pickerTabs.style.display = 'none';
-        return;
-      }
       pickerTabs.style.display = '';
       for (const g of window.AVATAR_GROUPS) {
         const btn = document.createElement('button');
         btn.className = 'picker-tab' + (g.id === currentGroupId ? ' active' : '');
-        btn.textContent = g.label;
+        btn.innerHTML = g.label + (groupHasNew(g.id) ? '<span class="tab-new-dot"></span>' : '');
         btn.addEventListener('click', () => {
           currentGroupId = g.id;
           renderPickerTabs();
@@ -538,25 +642,30 @@
       pickerGrid.innerHTML = '';
       const items = (window.AVATARS || []).filter(a => a.group === currentGroupId);
       for (const a of items) {
+        const isUnlocked = unlockedSet.has(a.id);
+        const isNew      = pickerSessionNewSet.has(a.id);
         const tile = document.createElement('button');
         tile.type = 'button';
         tile.className = 'avatar-tile'
           + (a.id === currentAvatarId ? ' selected' : '')
-          + (a.locked ? ' locked' : '');
-        tile.disabled = !!a.locked;
+          + (!isUnlocked ? ' locked' : '');
+        tile.disabled = !isUnlocked;
         tile.innerHTML = `
+          ${isNew ? '<span class="tile-new">NEU</span>' : ''}
+          ${!isUnlocked ? '<span class="tile-lock" aria-hidden="true">🔒</span>' : ''}
           <div class="avatar-tile-img">
             <img src="${window.getAvatarUrl(a.id, '')}" alt="" />
           </div>
           <div class="avatar-tile-label">${a.label}</div>
         `;
-        tile.addEventListener('click', () => selectAvatar(a.id));
+        if (isUnlocked) tile.addEventListener('click', () => selectAvatar(a.id));
         pickerGrid.appendChild(tile);
       }
     }
 
     async function selectAvatar(id) {
       if (id === currentAvatarId) { closePicker(); return; }
+      if (!unlockedSet.has(id)) return;
       const prev = currentAvatarId;
       currentAvatarId = id;
       avatarImg.src = window.getAvatarUrl(id, '');

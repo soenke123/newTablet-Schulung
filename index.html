@@ -546,11 +546,12 @@
       cursor: pointer;
     }
     .auth-user-avatar {
+      position: relative;
       width: 32px;
       height: 32px;
       border-radius: 50%;
       background: rgba(255,255,255,0.14);
-      overflow: hidden;
+      overflow: visible;
       flex-shrink: 0;
       display: flex;
       align-items: center;
@@ -561,7 +562,28 @@
       height: 100%;
       object-fit: cover;
       display: block;
+      border-radius: 50%;
     }
+    .auth-user-avatar .new-dot,
+    .auth-user-menu .new-dot {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      width: 12px;
+      height: 12px;
+      background: #c0392b;
+      border: 2px solid #1a0e05;
+      border-radius: 50%;
+      box-sizing: border-box;
+    }
+    .auth-user-menu #profileLink { position: relative; }
+    .auth-user-menu .new-dot {
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%);
+      border-color: white;
+    }
+    .new-dot[hidden] { display: none; }
     .auth-user-name {
       font-weight: 600;
     }
@@ -761,13 +783,16 @@
     </div>
     <div class="auth-user" id="authUser" hidden>
       <button class="auth-user-btn" id="userMenuBtn">
-        <span class="auth-user-avatar"><img id="authUserAvatar" alt="" /></span>
+        <span class="auth-user-avatar">
+          <img id="authUserAvatar" alt="" />
+          <span class="new-dot" id="pillNewDot" hidden></span>
+        </span>
         <span class="auth-user-name" id="authUserName">…</span>
         <span class="auth-user-caret">▼</span>
       </button>
       <div class="auth-user-menu" id="authUserMenu" hidden>
         <a id="adminLink" href="admin/index.html" hidden>Admin-Bereich</a>
-        <a id="profileLink" href="profil.html">Profil</a>
+        <a id="profileLink" href="profil.html">Profil<span class="new-dot" id="menuNewDot" hidden></span></a>
         <button id="logoutBtn">Ausloggen</button>
       </div>
     </div>
@@ -1104,6 +1129,7 @@
         if (avatarImg && window.getAvatarUrl) {
           avatarImg.src = window.getAvatarUrl(user.avatar_id, '');
         }
+        refreshAvatarNewBadges();
         document.getElementById('adminLink').hidden = !user.is_admin;
 
         if (pendingAdminRedirect && user.is_admin) {
@@ -1118,6 +1144,27 @@
         userMenu.hidden = true;
       }
     }
+
+    // Avatar-NEW-Sticker: prüft ob seit letztem "seen" neue Unlocks da sind.
+    // Wird bei jedem refreshAuthUI + nach Avatar-Picker-Öffnung aufgerufen.
+    function refreshAvatarNewBadges() {
+      const user = getSessionUser();
+      const pillDot = document.getElementById('pillNewDot');
+      const menuDot = document.getElementById('menuNewDot');
+      if (!user || !window.hasAnyNewAvatars) {
+        if (pillDot) pillDot.hidden = true;
+        if (menuDot) menuDot.hidden = true;
+        return;
+      }
+      // Timestamps für alle bereits freigeschalteten Avatare aktualisieren
+      window.refreshUnlockTimestamps?.();
+      const hasNew = window.hasAnyNewAvatars(user.avatars_seen_at);
+      if (pillDot) pillDot.hidden = !hasNew;
+      if (menuDot) menuDot.hidden = !hasNew;
+    }
+
+    // profil.html feuert dieses Event nach Picker-Öffnung — sofort Badges verstecken
+    window.addEventListener('lernwelt:avatars-seen', refreshAvatarNewBadges);
 
     // Schools-Cache — 1× laden, in beiden Dropdowns nutzen
     let _schoolsCache = null;
