@@ -197,6 +197,11 @@ function renderHub() {
 
   if (shopData.pendingBackup) enterBackupSwapMode();
   else exitBackupSwapMode();
+
+  // Avatar-NEW-Sticker (Auth-Pill + Profil-Menüpunkt) neu berechnen —
+  // updateSeenCreatures oben hat vielleicht gerade eine neue Wachstums-
+  // stufe registriert (z.B. nach Trank oder Rundenrückkehr).
+  window.refreshHubAvatarNewBadges?.();
 }
 
 function renderGamesGrid(allData, shopData) {
@@ -1150,7 +1155,10 @@ function tryApplyWachstumstrank(gameId) {
   const data = allData[gameId];
   if (!data || !data.creature || data.growth >= GROWTH_MAX) return;
   data.growth = Math.min(data.growth + 5, GROWTH_MAX);
-  saveAllData(allData);
+  // saveGameData (nicht saveAllData) — triggert Server-Sync via sync_game_state.
+  // Sonst geht die Wachstumsstufe beim nächsten Login/Reload verloren, weil
+  // loadServerState den alten DB-Stand über die localStorage-Änderung schreibt.
+  saveGameData(gameId, data);
   sd.wachstumstrankCount--;
   saveShopData(sd);
   renderHub();
