@@ -62,12 +62,12 @@
      Label = Kreatur-Name (der Anzeige-Kontext im Picker macht die Stufe klar). */
   const AVATARS = [
     // ─── Eier (immer freigeschaltet) ─────────────────────────
-    { id: 'default', group: 'egg', file: 'ei_avatar default.png', label: 'Ei (Start)' },
-    { id: 'ei1',     group: 'egg', file: 'ei_avatar (1).png',     label: 'Ei 1' },
-    { id: 'ei2',     group: 'egg', file: 'ei_avatar (2).png',     label: 'Ei 2' },
-    { id: 'ei3',     group: 'egg', file: 'ei_avatar (3).png',     label: 'Ei 3' },
-    { id: 'ei4',     group: 'egg', file: 'ei_avatar (4).png',     label: 'Ei 4' },
-    { id: 'ei5',     group: 'egg', file: 'ei_avatar (5).png',     label: 'Ei 5' },
+    { id: 'default', group: 'egg', file: 'ei_avatar default.png', label: 'Sprenkelei' },
+    { id: 'ei1',     group: 'egg', file: 'ei_avatar (1).png',     label: 'Wachtelei' },
+    { id: 'ei2',     group: 'egg', file: 'ei_avatar (2).png',     label: 'Flickenei' },
+    { id: 'ei3',     group: 'egg', file: 'ei_avatar (3).png',     label: 'Herbstei' },
+    { id: 'ei4',     group: 'egg', file: 'ei_avatar (4).png',     label: 'Osterei' },
+    { id: 'ei5',     group: 'egg', file: 'ei_avatar (5).png',     label: 'Kristallei' },
 
     // ─── Normal ──────────────────────────────────────────────
     { id: 'snail_1',  group: 'normal', creature: 'snail', stage: 1, file: 'Schnecke1_avatar.png', label: 'Schnecke Baby' },

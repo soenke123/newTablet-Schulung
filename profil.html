@@ -298,6 +298,7 @@
     }
     .picker-tab {
       position: relative;
+      flex-shrink: 0;
       background: var(--surface-soft);
       color: var(--text);
       border: 1px solid var(--border);
@@ -305,6 +306,7 @@
       padding: 0.4rem 1rem;
       font-family: inherit;
       font-size: 0.9rem;
+      line-height: 1.2;
       cursor: pointer;
       white-space: nowrap;
       transition: background var(--transition), border-color var(--transition);
@@ -334,6 +336,20 @@
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
       gap: 1rem;
     }
+    .picker-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: var(--muted);
+      padding: 2.5rem 1rem;
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+    .picker-empty .picker-empty-icon {
+      font-size: 2.2rem;
+      display: block;
+      margin-bottom: 0.6rem;
+      opacity: 0.6;
+    }
 
     .avatar-tile {
       position: relative;
@@ -356,11 +372,6 @@
       border-color: var(--accent);
       background: rgba(181, 106, 60, 0.08);
     }
-    .avatar-tile.locked {
-      opacity: 0.4;
-      cursor: not-allowed;
-      filter: grayscale(1);
-    }
     .avatar-tile .tile-new {
       position: absolute;
       top: 2px;
@@ -373,13 +384,6 @@
       border-radius: 999px;
       letter-spacing: 0.05em;
       box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-    }
-    .avatar-tile .tile-lock {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      font-size: 1rem;
-      opacity: 0.8;
     }
     .avatar-tile-img {
       width: 96px;
@@ -640,25 +644,36 @@
 
     function renderPickerGrid() {
       pickerGrid.innerHTML = '';
-      const items = (window.AVATARS || []).filter(a => a.group === currentGroupId);
+      // Nur freigeschaltete zeigen — sonst spoilert der Picker alle Kreaturen.
+      const items = (window.AVATARS || [])
+        .filter(a => a.group === currentGroupId && unlockedSet.has(a.id));
+
+      if (items.length === 0) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'picker-empty';
+        emptyMsg.innerHTML = `
+          <span class="picker-empty-icon">🥚</span>
+          Hier gibt's noch nichts.<br>
+          Spiel im <strong>Game Hub</strong>, um Kreaturen dieser Kategorie freizuschalten —
+          sie erscheinen dann automatisch hier.
+        `;
+        pickerGrid.appendChild(emptyMsg);
+        return;
+      }
+
       for (const a of items) {
-        const isUnlocked = unlockedSet.has(a.id);
-        const isNew      = pickerSessionNewSet.has(a.id);
+        const isNew = pickerSessionNewSet.has(a.id);
         const tile = document.createElement('button');
         tile.type = 'button';
-        tile.className = 'avatar-tile'
-          + (a.id === currentAvatarId ? ' selected' : '')
-          + (!isUnlocked ? ' locked' : '');
-        tile.disabled = !isUnlocked;
+        tile.className = 'avatar-tile' + (a.id === currentAvatarId ? ' selected' : '');
         tile.innerHTML = `
           ${isNew ? '<span class="tile-new">NEU</span>' : ''}
-          ${!isUnlocked ? '<span class="tile-lock" aria-hidden="true">🔒</span>' : ''}
           <div class="avatar-tile-img">
             <img src="${window.getAvatarUrl(a.id, '')}" alt="" />
           </div>
           <div class="avatar-tile-label">${a.label}</div>
         `;
-        if (isUnlocked) tile.addEventListener('click', () => selectAvatar(a.id));
+        tile.addEventListener('click', () => selectAvatar(a.id));
         pickerGrid.appendChild(tile);
       }
     }
