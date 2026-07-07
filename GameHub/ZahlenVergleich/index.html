@@ -131,7 +131,7 @@
       const data = getGameData(gameState.gameId);
       updateGameEggDisplay(data, 0);
 
-      renderBoostIndicators('boostBar');
+      renderBoostIndicators('boostBar', gameState.gameId);
       document.getElementById('btnStart').addEventListener('click', startGame);
       document.getElementById('btnPlayAgain').addEventListener('click', () => {
         showScreen('screenIntro');
@@ -261,18 +261,15 @@
             : determineCreature(correct, true, gameState.gameId);
         }
         data.growth = 0;
-      } else {
-        coinsGained = computeRoundResult(data, correct, ROUNDS_PER_GAME, sd);
       }
+      coinsGained = computeRoundResult(data, correct, ROUNDS_PER_GAME, sd);
 
       data.points       += correct;
       data.roundsPlayed += 1;
       saveGameData(gameState.gameId, data);
 
-      if (!isFirstRound) {
-        if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-        if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
-      }
+      if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+      if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
       if (isFirstRound && sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
 
       showResultScreen(data, correct, isFirstRound, coinsGained);

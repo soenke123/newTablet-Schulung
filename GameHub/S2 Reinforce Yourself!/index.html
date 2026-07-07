@@ -805,6 +805,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
   <div style="height:4px;background:#333;border-radius:2px;margin-top:4px;">
     <div id="eggProgressFill"></div>
   </div>
+  <div id="ry-boost-bar" class="boost-bar" style="margin-top:6px;"></div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ OVERVIEW -->
@@ -1519,6 +1520,7 @@ function updateCompanion() {
     iconEl.textContent = activeIcon ?? '';
     iconEl.classList.toggle('active', !!activeIcon);
   }
+  renderBoostIndicators('ry-boost-bar', gameId);
 }
 
 function loadSimState() {
@@ -3965,15 +3967,10 @@ function showWin1() {
         : determineCreature(creatureEquiv, true, gameId);
       if (sd0.glucksklee) { sd0.glucksklee = false; saveShopData(sd0); }
     }
+    gd.growth = 0;
   }
   const sd1 = loadShopData();
-  const growthBefore = gd.growth;
-  const coinsBefore  = gd.coins;
   const coinsW1 = computeRoundResult(gd, growthTotal1, 240, sd1);
-  if (isFirstHatch) {
-    gd.growth = growthBefore; // Erster Schlupf: kein Wachstum
-    gd.coins  = coinsBefore;  // Erster Schlupf: kein Geld
-  }
   if (sd1.wachstumsBooster) { sd1.wachstumsBooster = false; saveShopData(sd1); }
   if (sd1.coinsx3)          { sd1.coinsx3 = false;          saveShopData(sd1); }
   gd.points      = score.p1 + score.quiz1 + p2;
@@ -3985,7 +3982,7 @@ function showWin1() {
   const w1img   = document.getElementById('win1-creature');
   if (w1img) w1img.innerHTML = gd.creature ? getCreatureHTML(gd.creature, stageW1) : '';
   populateWinHub(1);
-  renderCoinBank('win1-coins', isFirstHatch ? 0 : coinsW1);
+  renderCoinBank('win1-coins', coinsW1);
 
   win1Applied = true;
   document.getElementById('win1').classList.add('active');

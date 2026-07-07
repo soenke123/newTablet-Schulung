@@ -932,7 +932,7 @@
     const gameWrap = document.getElementById('gameCompanion');
     if (gameWrap) gameWrap.innerHTML = buildGameCompanionHTML(data);
 
-    renderBoostIndicators('boostIndicators');
+    renderBoostIndicators('boostIndicators', GAME_ID);
 
     /* sessionBaseData jetzt setzen – creatures.js ist geladen */
     sessionBaseData = data;
@@ -975,25 +975,22 @@
         }
       }
       data.growth = 0;
-    } else {
-      let growthContrib = computeSessionGrowth(normalized, 10);
-      if (sd.wachstumsBooster) {
-        growthContrib *= 2;
-        sd.wachstumsBooster = false;
-        sd.wachstumsBoosterCount = Math.max(0, (sd.wachstumsBoosterCount || 0) - 1);
-      }
-      data.growth = Math.min(data.growth + growthContrib, GROWTH_MAX);
     }
+    let growthContrib = computeSessionGrowth(normalized, 10);
+    if (sd.wachstumsBooster) {
+      growthContrib *= 2;
+      sd.wachstumsBooster = false;
+      sd.wachstumsBoosterCount = Math.max(0, (sd.wachstumsBoosterCount || 0) - 1);
+    }
+    data.growth = Math.min(data.growth + growthContrib, GROWTH_MAX);
 
-    let coinsGained = 0;
-    if (!isFirst) {
-      coinsGained = calcCoins(score);
-      if (sd.coinsx3) {
-        coinsGained = Math.round(coinsGained * 3);
-        sd.coinsx3 = false;
-        sd.coinsx3Count = Math.max(0, (sd.coinsx3Count || 0) - 1);
-      }
+    let coinsGained = calcCoins(score);
+    if (sd.coinsx3) {
+      coinsGained = Math.round(coinsGained * 3);
+      sd.coinsx3 = false;
+      sd.coinsx3Count = Math.max(0, (sd.coinsx3Count || 0) - 1);
     }
+    coinsGained += getGrowthBonusCoins(data.growth);
 
     data.coins        = (data.coins || 0) + coinsGained;
     data.points       += totalWords;
@@ -1011,7 +1008,7 @@
         '<span>' + CREATURE_NAMES[data.creature] + ' · ' + GROWTH_LABELS[stage] + '</span>';
     }
 
-    renderCoinBank('coinBankContainer', isFirst ? 0 : coinsGained);
+    renderCoinBank('coinBankContainer', coinsGained);
     renderResultItemButton('resultItemBtnWrap', GAME_ID, () => {
       endScreen.classList.remove("show");
       resetGame();
@@ -1099,7 +1096,7 @@
     sessionBaseData = getGameData(GAME_ID);
     lastShownStage  = sessionBaseData.creature ? getGrowthStage(sessionBaseData.growth) : -1;
     refreshGameCompanion(false);
-    renderBoostIndicators('boostIndicators');
+    renderBoostIndicators('boostIndicators', GAME_ID);
   }
 
   inputEl.addEventListener("input", () => {

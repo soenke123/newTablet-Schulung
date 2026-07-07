@@ -67,7 +67,7 @@ function startEndlessGlow() {
 function initHubState() {
   _algGameData = getGameData(ALG_GAME_ID);
   updateGameEggDisplay(_algGameData, crackStageFromCorrect(0), false, null);
-  renderBoostIndicators('pf-boost-bar');
+  renderBoostIndicators('pf-boost-bar', ALG_GAME_ID);
 }
 
 function saveAlgorithmHubData(score) {
@@ -95,11 +95,10 @@ function saveAlgorithmHubData(score) {
         saveShopData(sd);
       }
     }
-  } else {
-    _algCoinsGained += computeRoundResult(gd, s, ALG_MAX_SCORE, sd);
-    if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-    if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
   }
+  _algCoinsGained += computeRoundResult(gd, s, ALG_MAX_SCORE, sd);
+  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+  if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
 
   gd.points      = (gd.points      || 0) + s;
   gd.roundsPlayed = (gd.roundsPlayed || 0) + 1;
@@ -143,7 +142,7 @@ function updateAlgCreatureDisplay() {
     ? Math.min(gd.growth + computeSessionGrowth(s, ALG_MAX_SCORE), GROWTH_MAX)
     : null;
   updateGameEggDisplay(gd, cs, false, liveGrowth);
-  renderBoostIndicators('pf-boost-bar');
+  renderBoostIndicators('pf-boost-bar', ALG_GAME_ID);
 }
 
 // ── Karten-State ───────────────────────────────

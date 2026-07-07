@@ -404,6 +404,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div id="eggProgressBar" style="height:4px;background:#e2e8f0;border-radius:2px;width:100%;margin-top:2px">
         <div id="eggProgressFill"></div>
       </div>
+      <div id="qt-boost-bar" class="boost-bar" style="margin-top:6px;"></div>
       <div class="score-live-box">
         <div class="score-live-lbl">Punkte</div>
         <div class="score-live-num"><span id="score-live">0</span><span class="score-live-max">&thinsp;/ 16</span></div>
@@ -1706,19 +1707,11 @@ function showEnd() {
           : determineCreature(normalizedScore, true, gameId);
         if (sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
       }
-      var growthBefore = gd.growth;
-      var coinsBefore  = gd.coins;
-      computeRoundResult(gd, normalizedScore, 10, sd);
-      gd.growth  = growthBefore; // kein Wachstum beim Schlupf
-      gd.coins   = coinsBefore;  // kein Geld beim Schlupf
-      coinsGained = 0;
-      if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-      if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
-    } else {
-      coinsGained = computeRoundResult(gd, normalizedScore, 10, sd);
-      if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-      if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+      gd.growth = 0;
     }
+    coinsGained = computeRoundResult(gd, normalizedScore, 10, sd);
+    if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+    if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
     gd.points      += normalizedScore;
     gd.roundsPlayed += 1;
     saveGameData(gameId, gd);
@@ -1973,6 +1966,7 @@ function updateCompanion() {
   var icon = sd.wachstumsBooster ? '⚡' : sd.coinsx3 ? '🎰' : sd.glucksklee ? '🍀' : null;
   var el = document.getElementById('companion-item-icon');
   if (el) { el.textContent = icon || ''; el.classList.toggle('active', !!icon); }
+  if (typeof renderBoostIndicators === 'function') renderBoostIndicators('qt-boost-bar', gameId);
 }
 
 // ---- WIN HUB ----

@@ -318,8 +318,8 @@ function updQuizCreature() {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
   });
-  renderBoostIndicators('boostBarSb');
-  renderBoostIndicators('boostBarInline');
+  renderBoostIndicators('boostBarSb', quizGameId);
+  renderBoostIndicators('boostBarInline', quizGameId);
 }
 
 /* Hub-Daten einmalig beim Abschluss speichern */
@@ -342,9 +342,8 @@ function saveToHub() {
         : determineCreature(_norm, true, quizGameId);
     }
     gd.growth = 0;
-  } else {
-    lastCoinsGained += computeRoundResult(gd, correct, TOTAL, sd);
   }
+  lastCoinsGained += computeRoundResult(gd, correct, TOTAL, sd);
   gd.points       += correct;
   gd.roundsPlayed += 1;
   saveGameData(quizGameId, gd);
@@ -352,10 +351,8 @@ function saveToHub() {
   ST.hubSaved = true;
   save();
 
-  if (!isFirst) {
-    if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-    if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
-  }
+  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+  if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
   if (isFirst && sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
 }
 

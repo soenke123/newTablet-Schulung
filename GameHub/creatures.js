@@ -85,6 +85,18 @@ function _isS2Open() {
   0%,100% { box-shadow:none; }
   50%     { box-shadow:0 0 8px rgba(232,131,10,0.55); }
 }
+.bonus-coin-badge {
+  background:rgba(212,168,48,0.22); border:1px solid rgba(212,168,48,0.85);
+  border-radius:20px; padding:3px 10px; font-size:0.9rem; cursor:default;
+  color:#7a5a10; font-weight:800;
+  display:inline-flex; align-items:center; gap:3px; line-height:1;
+  animation:bonusCoinPulse 2s ease-in-out infinite;
+}
+.bonus-coin-badge__coin { font-weight:400; }
+@keyframes bonusCoinPulse {
+  0%,100% { box-shadow:none; }
+  50%     { box-shadow:0 0 10px rgba(212,168,48,0.65); }
+}
 
 /* ── Epische Tiere – Glitzereffekt (Lila/Silber) ── */
 @keyframes epicGlimmer {
@@ -845,7 +857,7 @@ function computeSessionGrowth(correct, maxPoints) {
   return (correct / maxPoints) * 10;
 }
 
-/* Berechnet Coins und Wachstum für eine abgeschlossene Runde (nicht Runde 1).
+/* Berechnet Coins und Wachstum für eine abgeschlossene Runde (auch Runde 1).
    Mutiert data.growth und data.coins direkt. Gibt coinsGained zurück.
    Booster/coinsx3 werden hier geprüft aber NICHT gecleart – das macht der Aufrufer. */
 function computeRoundResult(data, correct, maxPoints, sd) {
@@ -871,10 +883,17 @@ function computeRoundResult(data, correct, maxPoints, sd) {
   }
 
   if (correct === maxPoints) coinsGained += 3;
-  if (data.growth >= GROWTH_S6) coinsGained += 5;
+  coinsGained += getGrowthBonusCoins(data.growth);
 
   data.coins = (data.coins || 0) + coinsGained;
   return coinsGained;
+}
+
+/* Wachstums-Bonus je Runde: +5 wenn ausgewachsen, +10 wenn vollendet (nicht kumulativ). */
+function getGrowthBonusCoins(growth) {
+  if (growth >= GROWTH_S6)  return 10;
+  if (growth >= GROWTH_MAX) return 5;
+  return 0;
 }
 
 /* ─── Local Storage ─── */
@@ -933,15 +952,26 @@ function getGameData(id) {
 }
 
 function saveGameData(id, gd) {
+  // Nest-IDs sind dynamisch (nest_atari_repair_..., nest_backup_...) und
+  // existieren nicht in der games-Tabelle → sync_game_state würde
+  // 'game_not_found' returnen und den Pending-Marker ewig retryen lassen.
+  // Bis Nester eigene Server-Persistenz haben, überspringen wir Marker+Sync
+  // komplett und speichern nur lokal.
+  const isNest = typeof id === 'string' && id.startsWith('nest_');
+
   try {
     const all = loadStorage(STORAGE_KEY);
     all[id] = gd;
-    // Dirty-Marker: Spielseiten laden session.js nicht — der Sync passiert
-    // erst beim Hub-Boot via pushPendingState(). Marker überlebt Reload,
-    // Tab-Wechsel und Offline-Runden.
-    all._pending = { ...(all._pending || {}), [id]: true };
+    if (!isNest) {
+      // Dirty-Marker: Spielseiten laden session.js nicht — der Sync passiert
+      // erst beim Hub-Boot via pushPendingState(). Marker überlebt Reload,
+      // Tab-Wechsel und Offline-Runden.
+      all._pending = { ...(all._pending || {}), [id]: true };
+    }
     saveStorage(STORAGE_KEY, all);
   } catch(e) {}
+
+  if (isNest) return;
 
   // Falls Session vorhanden ist (Hub-interne Nester, spätere Spiel-Umbauten),
   // sofort syncen und Marker sauber räumen.
@@ -968,14 +998,19 @@ function clearPendingMarker(id) {
 async function pushPendingState() {
   if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
   const all = loadStorage(STORAGE_KEY);
-  const pending = Object.keys(all._pending || {});
-  if (pending.length === 0) return;
-  console.log('[creatures] push pending:', pending);
+  const allPending = Object.keys(all._pending || {});
+  // Alt-Bestand: vor dem Nest-Skip-Fix konnten nest_-IDs im _pending
+  // landen. Die returnen ewig 'game_not_found' — hier still verwerfen.
+  const stale   = allPending.filter(id => id.startsWith('nest_'));
+  const pending = allPending.filter(id => !id.startsWith('nest_'));
+  if (pending.length === 0 && stale.length === 0) return;
+  if (pending.length) console.log('[creatures] push pending:', pending);
   const results = await Promise.allSettled(
     pending.map(id => syncGameStateToServer(id, all[id] || defaultGameData()))
   );
   const fresh = loadStorage(STORAGE_KEY);
   fresh._pending = fresh._pending || {};
+  for (const id of stale) delete fresh._pending[id];
   let ok = 0;
   for (let i = 0; i < pending.length; i++) {
     if (results[i].status === 'fulfilled') {
@@ -986,7 +1021,7 @@ async function pushPendingState() {
     }
   }
   saveStorage(STORAGE_KEY, fresh);
-  console.log(`[creatures] pushed ${ok}/${pending.length}`);
+  console.log(`[creatures] pushed ${ok}/${pending.length}${stale.length ? ` (dropped ${stale.length} nest markers)` : ''}`);
 }
 
 async function syncGameStateToServer(gameId, gd) {
@@ -1338,7 +1373,7 @@ function saveShopData(data) {
   saveStorage(SHOP_KEY, data);
 }
 
-function renderBoostIndicators(containerId) {
+function renderBoostIndicators(containerId, gameId) {
   const el = document.getElementById(containerId);
   if (!el) return;
   const sd = loadShopData();
@@ -1346,7 +1381,22 @@ function renderBoostIndicators(containerId) {
   if (sd.wachstumsBooster) items.push({ icon: '⚡', title: 'Wachstums-Booster aktiv' });
   if (sd.coinsx3)          items.push({ icon: '🎰', title: 'Coins ×3 aktiv' });
   if (sd.glucksklee)       items.push({ icon: '🍀', title: 'Glücksklee aktiv' });
-  el.innerHTML = items.map(i => `<span class="boost-badge" title="${i.title}">${i.icon}</span>`).join('');
+
+  let bonusHtml = '';
+  if (gameId) {
+    const gd = getGameData(gameId);
+    if (gd && gd.creature) {
+      const bonus = getGrowthBonusCoins(gd.growth || 0);
+      if (bonus > 0) {
+        const title = bonus === 10
+          ? 'Vollendungs-Bonus: +10 Münzen pro Runde'
+          : 'Ausgewachsen-Bonus: +5 Münzen pro Runde';
+        bonusHtml = `<span class="bonus-coin-badge" title="${title}">+${bonus}<span class="bonus-coin-badge__coin">🪙</span></span>`;
+      }
+    }
+  }
+
+  el.innerHTML = items.map(i => `<span class="boost-badge" title="${i.title}">${i.icon}</span>`).join('') + bonusHtml;
 }
 
 function spawnLevelUpParticles(anchor) {

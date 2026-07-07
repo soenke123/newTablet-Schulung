@@ -1049,7 +1049,7 @@
             ffGameId   = new URLSearchParams(window.location.search).get('id') || 'game9';
             ffGameData = getGameData(ffGameId);
             updateGameEggDisplay(ffGameData || defaultGameData(), 0, false, null);
-            renderBoostIndicators('ff-boost-bar');
+            renderBoostIndicators('ff-boost-bar', ffGameId);
             const startEl = document.getElementById('start-creature');
             if (startEl) {
                 startEl.innerHTML = (ffGameData && ffGameData.creature)
@@ -1084,19 +1084,16 @@
                         : determineCreature(_norm, true, ffGameId);
                 }
                 gd.growth = 0;
-            } else {
-                lastCoinsGained += computeRoundResult(gd, totalScore, FF_MAX_SCORE, sd);
             }
+            lastCoinsGained += computeRoundResult(gd, totalScore, FF_MAX_SCORE, sd);
             gd.points += _norm;
             gd.roundsPlayed += 1;
             saveGameData(ffGameId, gd);
             ffGameData = gd;
             hubSaved   = true;
 
-            if (!isFirst) {
-                if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-                if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
-            }
+            if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+            if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
             if (isFirst && sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
         }
 

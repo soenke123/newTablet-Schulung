@@ -36,18 +36,19 @@ Es enthält technische API-Referenz, visuelle Standards, bekannte Fehlerquellen 
 [ ] Begleiter-Widget HTML (eggVisual, eggStageLabel, eggProgressFill) einfügen
 [ ] Companion live in recalcScore() / nach jeder Runde aktualisieren
 [ ] GAME_SEASON_RARE in creatures.js für neue gameId eintragen
-[ ] Beim ersten Sieg: determineCreature() aufrufen, growth UND coins einfrieren (growthBefore + coinsBefore-Pattern, coinsGained = 0)
-[ ] Items (wachstumsBooster, coinsx3) IMMER nach computeRoundResult clearen — auch beim ersten Sieg
-[ ] Beim Folge-Sieg: computeRoundResult() aufrufen (growth wächst normal)
+[ ] Beim ersten Sieg: determineCreature() aufrufen und gd.growth = 0 setzen (KEIN growthBefore/coinsBefore-Rollback mehr — Runde 1 zahlt jetzt auch Coins)
+[ ] Items (wachstumsBooster, coinsx3) IMMER nach computeRoundResult clearen — auch in Runde 1
+[ ] computeRoundResult() nach jedem Sieg aufrufen (auch beim ersten) — mit rawScore und maxScore
 [ ] saveGameData(gameId, gd) nach jedem Sieg
-[ ] renderCoinBank(containerId, coinsGained) im Win-Screen
+[ ] renderCoinBank(containerId, coinsGained) im Win-Screen — auch in Runde 1 (kein `isFirst ? 0 : coinsGained` mehr)
 [ ] Win-Screen zweispaltig: links Game-Infos, rechts Hub-Infos
 [ ] Item-Button (konditionell) via renderResultItemButton() aufrufen
 [ ] "Zurück zum Hub": erst Reset, dann window.location.href → kein reiner <a href>
 [ ] "Nochmal spielen": Reset-Funktion des Spiels aufrufen (nicht nur Modal schließen)
 [ ] "Item nutzen": Item aktivieren + Reset (nicht zum Hub navigieren!)
 [ ] Hub-Button oben links in der Hauptansicht
-[ ] Vollendetes Monster (growth ≥ 21): computeRoundResult gibt Coins statt Wachstum — kein Extra-Code nötig
+[ ] Ausgewachsen (growth ≥ 21): computeRoundResult gibt +5 Bonus. Vollendet (growth ≥ 100): +10.
+[ ] renderBoostIndicators(containerId, gameId) IMMER mit gameId aufrufen, damit das Bonus-Badge angezeigt wird
 ```
 
 ---
@@ -115,39 +116,31 @@ danach einfach `saveGameData` aufrufen.
 
 ## 5. Erster vs. wiederholter Durchlauf
 
+Seit 2026-07-07: **auch die erste Runde vergibt Münzen und Wachstum** (Ei-Schlupf + normales
+Wachstum in einem Rutsch). Nur der Kreaturtyp wird einmalig bestimmt.
+
 ```javascript
 const isFirst = !gd.creature; // true = Ei schlüpft jetzt zum ersten Mal
+const sd = loadShopData();
+let coinsGained = 0;
 
 if (isFirst) {
   // Kreaturtyp bestimmen (einmalig, nie überschreiben)
   if (eggType) {
     gd.creature = determineEggCreature(eggType, normalizedScore);
   } else {
-    const sd = loadShopData();
     gd.creature = sd.glucksklee
       ? determineCreatureWithGlucksklee(normalizedScore, gameId)
       : determineCreature(normalizedScore, true, gameId);
     if (sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
   }
-  // Weder Growth noch Coins beim Schlupf — nur Items verbrauchen:
-  const sd = loadShopData();
-  const growthBefore = gd.growth;
-  const coinsBefore  = gd.coins;
-  computeRoundResult(gd, normalizedScore, 10, sd); // Items-Flags intern lesen, aber...
-  gd.growth   = growthBefore; // ...Growth zurücksetzen → Creature bleibt auf Stage 0
-  gd.coins    = coinsBefore;  // ...Coins zurücksetzen → kein Geld beim Schlupf
-  coinsGained = 0;            // Win-Screen zeigt 0 Münzen
-  // Items AUCH beim ersten Sieg verbrauchen:
-  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-  if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
-
-} else {
-  // Wachstum & Coins normal
-  const sd = loadShopData();
-  const coinsGained = computeRoundResult(gd, normalizedScore, maxScore, sd);
-  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-  if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+  gd.growth = 0; // sauber initialisieren, damit computeRoundResult drauf aufsetzt
 }
+
+// Wachstum & Coins — auch in Runde 1
+coinsGained = computeRoundResult(gd, rawScore, maxScore, sd);
+if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
 
 gd.points      += normalizedScore;
 gd.roundsPlayed += 1;
@@ -155,40 +148,43 @@ saveGameData(gameId, gd);
 ```
 
 > **Wichtig:** `computeRoundResult` modifiziert `gd.growth` und `gd.coins` direkt in-place.
-> Beim ersten Schlupf Growth vorher sichern und danach zurücksetzen (siehe oben).
+> Für Runde 1 vorher `gd.growth = 0` setzen — dann verhält sich alles wie in Folgerunden.
 >
-> **Items immer clearen** — egal ob erster oder wiederholter Durchlauf. Fehlt das beim
-> ersten Sieg, bleibt z.B. das 🍀 noch aktiv für den zweiten Win-Screen.
+> **Items immer clearen** — Booster/Coins×3 werden auch in Runde 1 verbraucht,
+> da sie jetzt auf die Rundenergebnisse wirken.
 
 ---
 
-## 6. Vollendetes Monster → Coin-Bonus
+## 6. Ausgewachsen / Vollendet → Coin-Bonus
 
 Wenn ein Monster ausgewachsen ist (`gd.growth >= GROWTH_MAX`, d.h. `growth >= 21`),
 wandelt `computeRoundResult` den gesamten Wachstumsbeitrag automatisch in Coins um.
-Das Monster wächst nicht mehr weiter — stattdessen bekommt der Spieler Bonus-Münzen.
+Zusätzlich gibt es einen **Pauschal-Bonus pro Runde**, abhängig vom Zustand des Monsters:
+
+| Monster-Zustand | Wachstum | Basis-Coins | Bonus (`getGrowthBonusCoins`) |
+|---|---|---|---|
+| `growth < 21` (Baby/Jungtier) | steigt | Basis (baseContribution) | 0 |
+| `growth = 21` (ausgewachsen) | steht bei Max | volle Coins statt Growth | **+5 pro Runde** |
+| `growth >= 100` (vollendet, nach Stein) | steht bei Max | volle Coins statt Growth | **+10 pro Runde** |
+
+Perfekter Score (`correct === maxPoints`) gibt zusätzlich **+3 Coins** — kumulativ mit dem Bonus oben.
+
+**Das Spiel muss nichts tun** — `computeRoundResult` erkennt den Zustand selbst und
+addiert die Boni. Der shared Helper `getGrowthBonusCoins(growth)` gibt den Bonus-Wert
+zurück und wird sowohl in `computeRoundResult` als auch in `renderBoostIndicators`
+verwendet.
+
+### Sichtbarer Hinweis während des Spiels
+
+`renderBoostIndicators(containerId, gameId)` zeigt automatisch ein goldenes
+`+5 🪙` / `+10 🪙` Badge in der Boost-Bar an, sobald das Monster ausgewachsen bzw.
+vollendet ist. Voraussetzung: `gameId` als zweiter Parameter übergeben. Ohne `gameId`
+wird nur die klassische Booster-Anzeige gerendert (keine Bonus-Vorschau).
 
 ```javascript
-// Intern in computeRoundResult (kein Extra-Code nötig im Spiel):
-const alreadyMaxed = data.growth >= GROWTH_MAX; // 21
-if (alreadyMaxed) {
-  coinsGained = Math.round(contribution); // growth → coins
-  if (sd.coinsx3) coinsGained *= 3;       // Item verdreifacht
-} else {
-  data.growth += contribution;            // normal wachsen
-  coinsGained  = Math.round(baseContribution);
-}
+// Empfohlener Aufruf in jedem Spiel:
+renderBoostIndicators('boostBar', GAME_ID);
 ```
-
-**Das Spiel muss nichts tun** — `computeRoundResult` erkennt den Zustand selbst.
-`renderCoinBank` zeigt die verdienten Coins dann im Win-Screen an.
-
-| Monster-Zustand | computeRoundResult-Ergebnis |
-|---|---|
-| `growth < 21` | Wachstum steigt, Basis-Coins |
-| `growth = 21` (vollständig ausgewachsen) | 0 Wachstum, Coins statt Wachstum |
-| `growth = 21` + `coinsx3`-Item aktiv | 0 Wachstum, dreifache Coins |
-| `growth = 100` (Stein der Vollendung) | wie `= 21`, aber Ultimate-Stage-Anzeige |
 
 ---
 
@@ -572,27 +568,27 @@ getCreatureHTML(gd.creature, stage)
 // stage ist 0-indexed (0 = erste Stufe = Bild 1)
 ```
 
-### ❌ Growth und Coins beim ersten Schlupf nicht zurücksetzen
+### ❌ `gd.growth` beim ersten Schlupf nicht auf 0 setzen
 
-Beim ersten Schlupf darf weder Wachstum noch Geld vergeben werden — beides wird von
-`computeRoundResult` intern in `gd` geschrieben und muss explizit rückgängig gemacht werden.
+Seit 2026-07-07 zahlt auch Runde 1 Wachstum + Coins. Wenn `gd.growth` beim ersten
+Schlupf nicht sauber auf 0 initialisiert wird, addiert `computeRoundResult` die
+Contribution auf einen alten oder undefinierten Wert — Ergebnisse werden inkonsistent.
 
 ```javascript
-// FALSCH — creature springt auf Stufe 2+, Spieler bekommt Münzen:
+// FALSCH — gd.growth kann undefined oder ein alter Wert sein:
 gd.creature = determineCreature(...);
-const coins = computeRoundResult(gd, score, 10, sd); // growth +3, coins +2
+const coins = computeRoundResult(gd, score, maxScore, sd);
 saveGameData(gameId, gd);
 
-// RICHTIG — growth UND coins vor computeRoundResult sichern:
+// RICHTIG — gd.growth explizit auf 0 setzen vor computeRoundResult:
 gd.creature = determineCreature(...);
-const growthBefore = gd.growth;
-const coinsBefore  = gd.coins;
-computeRoundResult(gd, score, 10, sd); // Items-Flags lesen, aber...
-gd.growth   = growthBefore; // ...kein Wachstum beim Schlupf
-gd.coins    = coinsBefore;  // ...kein Geld beim Schlupf
-coinsGained = 0;            // Win-Screen zeigt 0 Münzen
+gd.growth   = 0;
+const coins = computeRoundResult(gd, score, maxScore, sd); // wächst sauber ab 0
 saveGameData(gameId, gd);
 ```
+
+**Nicht mehr benötigt:** growthBefore/coinsBefore-Rollback. Wer alten Code
+migriert, entfernt beides und lässt `computeRoundResult` seinen Wert direkt schreiben.
 
 ### ❌ "Zurück zum Hub" als reiner Link
 

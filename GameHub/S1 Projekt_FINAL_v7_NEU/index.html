@@ -1473,7 +1473,7 @@ function initHubState() {
   pfGameId   = new URLSearchParams(window.location.search).get('id') || 'game8';
   pfGameData = getGameData(pfGameId);
   updateGameEggDisplay(pfGameData || defaultGameData(), 0, false, null);
-  renderBoostIndicators('pf-boost-bar');
+  renderBoostIndicators('pf-boost-bar', pfGameId);
   const startEl = document.getElementById('pf-start-creature');
   if (startEl) {
     startEl.innerHTML = (pfGameData && pfGameData.creature)
@@ -1488,7 +1488,7 @@ function updatePFCreatureDisplay() {
     ? Math.min(pfGameData.growth + computeSessionGrowth(state.score, PF_MAX_SCORE), GROWTH_MAX)
     : null;
   updateGameEggDisplay(pfGameData || defaultGameData(), crackStage, false, liveGrowth);
-  renderBoostIndicators('pf-boost-bar');
+  renderBoostIndicators('pf-boost-bar', pfGameId);
 }
 
 function saveToHub() {
@@ -1509,19 +1509,16 @@ function saveToHub() {
         : determineCreature(_norm, true, pfGameId);
     }
     gd.growth = 0;
-  } else {
-    lastCoinsGained += computeRoundResult(gd, state.score, PF_MAX_SCORE, sd);
   }
+  lastCoinsGained += computeRoundResult(gd, state.score, PF_MAX_SCORE, sd);
   gd.points += _norm;
   gd.roundsPlayed += 1;
   saveGameData(pfGameId, gd);
   pfGameData = gd;
   hubSaved   = true;
 
-  if (!isFirst) {
-    if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-    if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
-  }
+  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+  if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
   if (isFirst && sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
 }
 
@@ -2127,10 +2124,16 @@ document.addEventListener('keydown', (e) => {
 /* ---------- ROUND FLOW ---------- */
 function startGame() {
   state.roundIndex = 0;
+  state.files = [];
+  state.folders = {};
   state.score = 0;
   state.coins = 0;
   state.inventory = [];
   state.ordnerScannerCharges = 0;
+  state.activeFolder = 'Inbox';
+  state.sortStreak = 0;
+  state.highlightedTestFolder = null;
+  state.test = { qIndex: 0, misses: 0, locked: false, allPerfect: true, greyedFiles: null };
   hubSaved = false;
   assignFilesToRounds();
   beginRound();

@@ -4127,6 +4127,7 @@ function updateCompanion() {
   const icon = sd.wachstumsBooster ? '⚡' : sd.coinsx3 ? '🎰' : sd.glucksklee ? '🍀' : null;
   const el   = document.getElementById('companion-item-icon');
   if (el) { el.textContent = icon ?? ''; el.classList.toggle('active', !!icon); }
+  renderBoostIndicators('llm-boost-bar', gameId);
 }
 
 function resetAndGoHub() {

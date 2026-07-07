@@ -258,17 +258,14 @@
                     : determineCreature(_norm, true, GAME_ID);
             }
             gameData.growth = 0;
-        } else {
-            lastCoinsGained += computeRoundResult(gameData, greenFound, TARGET_COUNT, sd);
         }
+        lastCoinsGained += computeRoundResult(gameData, greenFound, TARGET_COUNT, sd);
         gameData.points       += greenFound;
         gameData.roundsPlayed += 1;
         saveGameData(GAME_ID, gameData);
 
-        if (!isFirst) {
-            if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-            if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
-        }
+        if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+        if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
         if (isFirst && sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
     }
 
@@ -285,7 +282,7 @@
 
         gameData = getGameData(GAME_ID);
         updateCreatureDisplay();
-        renderBoostIndicators('boostBar');
+        renderBoostIndicators('boostBar', GAME_ID);
 
         let types = [];
         for (let i = 0; i < TARGET_COUNT; i++) types.push('green');
