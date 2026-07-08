@@ -99,6 +99,13 @@
 
       <div class="card">
         <div class="filter-row">
+          <label>Ansicht
+            <div class="view-switch" id="userViewSwitch" role="tablist">
+              <button type="button" class="view-btn active" data-view="admin">Verwaltung</button>
+              <button type="button" class="view-btn"        data-view="progress">Fortschritt</button>
+              <button type="button" class="view-btn"        data-view="account">Account</button>
+            </div>
+          </label>
           <label>Status
             <select id="userStatusFilter">
               <option value="pending">Pending</option>
@@ -112,20 +119,28 @@
           <button type="button" class="btn" id="userReload">Neu laden</button>
         </div>
 
+        <!-- Bulk-Aktionsbar: erscheint sobald ≥1 User ausgewählt ist -->
+        <div class="bulk-bar" id="bulkBar" hidden>
+          <span class="bulk-count"><strong id="bulkCount">0</strong> ausgewählt</span>
+          <label class="bulk-cluster-label">
+            → Cluster zuweisen
+            <select id="bulkClusterSelect">
+              <option value="">— kein Cluster —</option>
+            </select>
+          </label>
+          <button type="button" class="btn"        id="bulkAssignBtn">Zuweisen</button>
+          <button type="button" class="btn danger" id="bulkDeleteBtn">Löschen</button>
+          <button type="button" class="btn small"  id="bulkClearBtn">Auswahl aufheben</button>
+          <span class="form-feedback" id="bulkFeedback"></span>
+        </div>
+
         <div class="table-wrap">
-          <table class="dtable" id="userTable">
-            <thead>
-              <tr>
-                <th>Account</th>
-                <th>Anzeigename</th>
-                <th>Status</th>
-                <th>Cluster</th>
-                <th>Name-Lock</th>
-                <th>Aktion</th>
-              </tr>
+          <table class="dtable dtable-sortable" id="userTable">
+            <thead id="userThead">
+              <!-- wird dynamisch je nach View gerendert -->
             </thead>
             <tbody id="userTbody">
-              <tr><td colspan="6" class="empty">Lade …</td></tr>
+              <tr><td class="empty">Lade …</td></tr>
             </tbody>
           </table>
         </div>
@@ -159,9 +174,37 @@
     </div>
   </div>
 
+  <!-- ─── User-Detail-Modal (Progress-View) ────────────────── -->
+  <div class="modal-overlay" id="userDetailModal" hidden>
+    <div class="modal-box modal-wide">
+      <button type="button" class="modal-close" id="userDetailClose">×</button>
+      <h3 id="userDetailTitle">User-Fortschritt</h3>
+      <div id="userDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- ─── Löschen-Bestätigungs-Modal ──────────────────────── -->
+  <div class="modal-overlay" id="deleteModal" hidden>
+    <div class="modal-box">
+      <button type="button" class="modal-close" id="deleteClose">×</button>
+      <h3 id="deleteTitle">User löschen?</h3>
+      <div id="deleteBody"></div>
+      <label id="deleteConfirmLabel" hidden>
+        Zum Bestätigen exakt tippen:
+        <input type="text" id="deleteConfirmInput" autocomplete="off" spellcheck="false" />
+      </label>
+      <div class="form-actions" style="margin-top:16px;">
+        <button type="button" class="btn"        id="deleteCancelBtn">Abbrechen</button>
+        <button type="button" class="btn danger" id="deleteConfirmBtn" disabled>Endgültig löschen</button>
+        <span class="form-feedback" id="deleteFeedback"></span>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../supabase-config.js"></script>
   <script src="../session.js"></script>
+  <script src="../avatars.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
