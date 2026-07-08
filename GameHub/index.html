@@ -7,7 +7,7 @@
   <title>MPS-Game-Hub v3 – Kreaturen Sammeln · Lernen · Meister werden</title>
   <!-- Atari2 · Enter 1-5-0-7 -->
   <script defer src="/_vercel/insights/script.js"></script>
-  <link rel="stylesheet" href="style.css?v=20260623" />
+  <link rel="stylesheet" href="style.css?v=20260708" />
 </head>
 <body class="hub-page">
 
@@ -222,9 +222,9 @@
   <script src="../session.js"></script>
   <script src="../avatars.js"></script>
 
-  <script src="config.js?v=20260623"></script>
-  <script src="creatures.js?v=20260623"></script>
-  <script src="script.js?v=20260623"></script>
+  <script src="config.js?v=20260708"></script>
+  <script src="creatures.js?v=20260708"></script>
+  <script src="script.js?v=20260708"></script>
   <script>
     // Hub-spezifischer Code
     // Atari1 · Enter 4-8-2-6
@@ -250,6 +250,7 @@
       await window.pushPendingState?.();
       await window.refreshUnlockedFromServer?.();
       await window.loadServerState?.();
+      await window.loadServerShop?.();
 
       renderHub();
       // seenCreatures wird von renderHub aktuell gehalten → jetzt erst

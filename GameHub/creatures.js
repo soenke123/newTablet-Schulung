@@ -957,9 +957,9 @@ function getGameData(id) {
 function saveGameData(id, gd) {
   // Nest-IDs sind dynamisch (nest_atari_repair_..., nest_backup_...) und
   // existieren nicht in der games-Tabelle → sync_game_state würde
-  // 'game_not_found' returnen und den Pending-Marker ewig retryen lassen.
-  // Bis Nester eigene Server-Persistenz haben, überspringen wir Marker+Sync
-  // komplett und speichern nur lokal.
+  // 'game_not_found' returnen. Statt eigenem game_state landen Nest-
+  // Kreaturen in shopData.nests[i].hatched und werden mit dem
+  // Shop-Blob-Sync (sync_shop_state) hochgezogen.
   const isNest = typeof id === 'string' && id.startsWith('nest_');
 
   try {
@@ -974,7 +974,24 @@ function saveGameData(id, gd) {
     saveStorage(STORAGE_KEY, all);
   } catch(e) {}
 
-  if (isNest) return;
+  if (isNest) {
+    // Nest-Snapshot ins Shop-Blob spiegeln → wird durch saveShopData gesynct
+    try {
+      const sd   = loadShopData();
+      const nest = sd.nests.find(n => n.nestId === id);
+      if (nest) {
+        nest.hatched = {
+          creature:     gd.creature     ?? null,
+          growth:       gd.growth       ?? 0,
+          points:       gd.points       ?? 0,
+          roundsPlayed: gd.roundsPlayed ?? 0,
+          coins:        gd.coins        ?? 0
+        };
+        saveShopData(sd);
+      }
+    } catch (e) { console.warn('[creatures] nest hatched mirror failed:', e.message); }
+    return;
+  }
 
   // Falls Session vorhanden ist (Hub-interne Nester, spätere Spiel-Umbauten),
   // sofort syncen und Marker sauber räumen.
@@ -1177,6 +1194,8 @@ window.refreshUnlockedFromServer = refreshUnlockedFromServer;
 window.loadServerState        = loadServerState;
 window.syncGameStateToServer  = syncGameStateToServer;
 window.pushPendingState       = pushPendingState;
+window.loadServerShop         = loadServerShop;
+window.syncShopStateToServer  = syncShopStateToServer;
 
 /* ─── Ei/Kreatur-Anzeige auf Spielseiten ─── */
 /* Nutzt feste Element-IDs: eggVisual, eggStageLabel, eggProgressFill */
@@ -1374,6 +1393,139 @@ function renderResultItemButton(containerId, gameId, onActivate) {
 
 function saveShopData(data) {
   saveStorage(SHOP_KEY, data);
+  markShopDirty();
+  // Sofort pushen wenn eingeloggt. Marker wird bei Erfolg gelöscht,
+  // bei Fehler bleibt er → nächster saveShopData oder Boot pusht erneut.
+  if (typeof window.isLoggedIn === 'function' && window.isLoggedIn()) {
+    syncShopStateToServer(data)
+      .then(merged => {
+        clearShopDirty();
+        // Server-Merge kann höhere Werte enthalten (max-Regel). Wenn ja,
+        // lokal übernehmen — sonst driften Tabs auseinander.
+        if (merged) applyMergedShopState(merged);
+      })
+      .catch(e => console.warn('[creatures] shop sync failed:', e.message));
+  }
+}
+
+/* ─── Shop-Sync ─────────────────────────────────────────────
+   Dirty-Marker als eigener localStorage-Key, damit der Shop-Blob
+   selbst sauber bleibt und identisch zum Server-Format ist.       */
+const SHOP_DIRTY_KEY = 'lernwelt_shop_dirty';
+
+function markShopDirty()  { try { localStorage.setItem(SHOP_DIRTY_KEY, '1'); } catch(e) {} }
+function clearShopDirty() { try { localStorage.removeItem(SHOP_DIRTY_KEY);  } catch(e) {} }
+function isShopDirty()    { try { return localStorage.getItem(SHOP_DIRTY_KEY) === '1'; } catch(e) { return false; } }
+
+async function syncShopStateToServer(shopData) {
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return null;
+  const url = `${window.SUPABASE_URL}/rest/v1/rpc/sync_shop_state`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      apikey: window.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify({ p_state: shopData })
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${await res.text()}`);
+  const result = await res.json();
+  if (!result?.ok) throw new Error(`RPC ${result?.error || 'unknown'}`);
+  return result.state || null;
+}
+
+/* Beim Hub-Boot: Server-State holen und lokal überschreiben.
+   Merged wird server-seitig — hier kommt fertig gemergter Blob rein. */
+async function loadServerShop() {
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return;
+
+  // Falls lokal noch ungesicherte Änderungen liegen: erst pushen,
+  // damit sie in den Merge einfließen bevor wir überschreiben.
+  if (isShopDirty()) {
+    try {
+      const local = loadShopData();
+      const merged = await syncShopStateToServer(local);
+      clearShopDirty();
+      if (merged) { applyMergedShopState(merged); return; }
+    } catch (e) {
+      console.warn('[creatures] pending shop push failed:', e.message);
+      // Weiter mit reinem Load — Marker bleibt für nächsten Versuch.
+    }
+  }
+
+  try {
+    const url = `${window.SUPABASE_URL}/rest/v1/rpc/load_shop_state`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: '{}'
+    });
+    if (!res.ok) throw new Error(`load_shop_state ${res.status}`);
+    const result = await res.json();
+    if (!result?.ok) throw new Error(`RPC ${result?.error || 'unknown'}`);
+    const state = result.state || {};
+    if (Object.keys(state).length === 0) {
+      // Server hat noch nichts → erster Sync bringt den lokalen Stand hoch.
+      const local = loadShopData();
+      try {
+        const merged = await syncShopStateToServer(local);
+        if (merged) applyMergedShopState(merged);
+      } catch (e) {
+        console.warn('[creatures] initial shop push failed:', e.message);
+      }
+      return;
+    }
+    applyMergedShopState(state);
+    console.log('[creatures] shop-state geladen');
+  } catch (e) {
+    console.warn('[creatures] loadServerShop failed:', e.message);
+  }
+}
+
+/* Schreibt den Server-Merge-Output in den lokalen Shop-Blob.
+   Ruft NICHT saveShopData → sonst rekursiver Sync-Loop.
+   Löscht Dirty-Marker, weil der Zustand jetzt server-authoritativ ist.
+   Spiegelt zusätzlich nest.hatched → lernwelt_v3[nestId] zurück, damit
+   die vielen Direktzugriffe auf allData[nestId] weiter funktionieren.  */
+function applyMergedShopState(merged) {
+  saveStorage(SHOP_KEY, merged);
+  clearShopDirty();
+
+  try {
+    const nests = Array.isArray(merged?.nests) ? merged.nests : [];
+    if (nests.length === 0) return;
+    const all = loadStorage(STORAGE_KEY);
+    let changed = false;
+    for (const n of nests) {
+      if (!n?.nestId || !n.hatched) continue;
+      const local = all[n.nestId];
+      // Server gewinnt nur, wenn er mindestens gleichauf ist — verhindert,
+      // dass lokal frischer, noch nicht gepushter Fortschritt geplättet wird.
+      const localGrowth = local?.growth ?? -1;
+      const serverGrowth = n.hatched.growth ?? 0;
+      if (!local || serverGrowth >= localGrowth) {
+        all[n.nestId] = {
+          points:       n.hatched.points       ?? 0,
+          roundsPlayed: n.hatched.roundsPlayed ?? 0,
+          creature:     n.hatched.creature     ?? null,
+          growth:       n.hatched.growth       ?? 0,
+          coins:        n.hatched.coins        ?? 0
+        };
+        changed = true;
+      }
+    }
+    if (changed) saveStorage(STORAGE_KEY, all);
+  } catch (e) { console.warn('[creatures] nest hatched restore failed:', e.message); }
 }
 
 function renderBoostIndicators(containerId, gameId) {
