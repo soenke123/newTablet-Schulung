@@ -645,8 +645,10 @@ function applyLootboxReward(reward) {
     if (s2Open) {
       const eligible = Object.keys(allData).filter(k => allData[k]?.creature && allData[k].growth >= GROWTH_MAX && allData[k].growth < GROWTH_S6);
       if (eligible.length > 0) {
-        allData[eligible[Math.floor(Math.random() * eligible.length)]].growth = GROWTH_S6;
-        saveAllData(allData);
+        const chosenKey = eligible[Math.floor(Math.random() * eligible.length)];
+        allData[chosenKey].growth = GROWTH_S6;
+        // saveGameData statt saveAllData: triggert Server-Sync via sync_game_state.
+        saveGameData(chosenKey, allData[chosenKey]);
       }
     }
   }
@@ -1025,7 +1027,8 @@ function releaseCreature(gameId) {
   updateSeenCreatures(allData);
   const keepCoins      = allData[gameId]?.coins || 0;
   allData[gameId]      = { ...defaultGameData(), coins: keepCoins };
-  saveAllData(allData);
+  // saveGameData statt saveAllData: triggert Server-Sync via sync_game_state.
+  saveGameData(gameId, allData[gameId]);
   document.getElementById('modalOverlay').hidden = true;
   renderHub();
 }
@@ -1118,7 +1121,8 @@ function buyItem(itemId) {
     const chosenCreature = allData[chosenKey].creature;
     allData[chosenKey].growth = GROWTH_S6;
     _charge(shopData, item);
-    saveAllData(allData);
+    // saveGameData statt saveAllData: triggert Server-Sync via sync_game_state.
+    saveGameData(chosenKey, allData[chosenKey]);
     saveShopData(shopData);
     closeShopModal();
     renderHub();
@@ -2113,7 +2117,8 @@ function applyBackupSwap(gameId) {
   allData[gameId].creature = creature;
   allData[gameId].growth   = GROWTH_THRESHOLDS[stage];
   sd.pendingBackup = null;
-  saveAllData(allData);
+  // saveGameData statt saveAllData: triggert Server-Sync via sync_game_state.
+  saveGameData(gameId, allData[gameId]);
   saveShopData(sd);
   exitBackupSwapMode();
   renderHub();
