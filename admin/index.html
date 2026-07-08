@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin · Lernwelt</title>
-  <link rel="stylesheet" href="style.css?v=20260708d" />
+  <link rel="stylesheet" href="style.css?v=20260708e" />
 </head>
 <body>
   <div id="bootMask" class="boot-mask">Lade …</div>
@@ -182,6 +182,43 @@
     </div>
   </div>
 
+  <!-- ─── Cluster-Löschen-Modal ──────────────────────────── -->
+  <div class="modal-overlay" id="clusterDeleteModal" hidden>
+    <div class="modal-box">
+      <button type="button" class="modal-close" id="clusterDeleteClose">×</button>
+      <h3 id="clusterDeleteTitle">Cluster löschen?</h3>
+      <p id="clusterDeleteInfo" class="cluster-delete-info"></p>
+
+      <div class="cluster-delete-options" id="clusterDeleteOptions">
+        <label class="cluster-delete-option">
+          <input type="radio" name="clDelMode" value="cluster_only" />
+          <div>
+            <strong>Nur Cluster löschen</strong>
+            <span>Schüler:innen bleiben bestehen. Cluster-Zuweisung wird entfernt — sie können sich nicht mehr einloggen, bis du sie einem neuen Cluster zuweist.</span>
+          </div>
+        </label>
+        <label class="cluster-delete-option danger">
+          <input type="radio" name="clDelMode" value="cluster_and_users" />
+          <div>
+            <strong>⚠ Cluster + alle Schülerdaten löschen</strong>
+            <span>Alle zugewiesenen Accounts, Kreaturen, Coins, Nester und Fortschritte werden endgültig entfernt. Nicht rückgängig zu machen.</span>
+          </div>
+        </label>
+      </div>
+
+      <label id="clusterDeleteConfirmLabel" hidden>
+        Zum Bestätigen exakt tippen:
+        <input type="text" id="clusterDeleteConfirmInput" autocomplete="off" spellcheck="false" />
+      </label>
+
+      <div class="form-actions" style="margin-top:16px;">
+        <button type="button" class="btn"        id="clusterDeleteCancelBtn">Abbrechen</button>
+        <button type="button" class="btn danger" id="clusterDeleteConfirmBtn" disabled>Endgültig löschen</button>
+        <span class="form-feedback" id="clusterDeleteFeedback"></span>
+      </div>
+    </div>
+  </div>
+
   <!-- ─── Löschen-Bestätigungs-Modal ──────────────────────── -->
   <div class="modal-overlay" id="deleteModal" hidden>
     <div class="modal-box">
@@ -201,9 +238,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../supabase-config.js?v=20260708d"></script>
-  <script src="../session.js?v=20260708d"></script>
-  <script src="../avatars.js?v=20260708d"></script>
-  <script src="app.js?v=20260708d"></script>
+  <script src="../supabase-config.js?v=20260708e"></script>
+  <script src="../session.js?v=20260708e"></script>
+  <script src="../avatars.js?v=20260708e"></script>
+  <script src="app.js?v=20260708e"></script>
 </body>
 </html>

@@ -456,6 +456,68 @@ html, body {
   font-size: 13px;
 }
 
+/* ─── Cluster-Delete-Modal ────────────────────────────── */
+#clusterDeleteModal .modal-box { max-width: 520px; }
+.cluster-delete-info {
+  margin: 8px 0 14px;
+  color: var(--a-muted);
+  font-size: 13px;
+}
+.cluster-delete-options {
+  display: flex; flex-direction: column; gap: 10px;
+  margin: 12px 0 8px;
+}
+.cluster-delete-option {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px;
+  background: var(--a-surface-2);
+  border: 1px solid var(--a-border);
+  border-radius: var(--a-radius-sm);
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.cluster-delete-option:hover { border-color: var(--a-accent); }
+.cluster-delete-option input[type="radio"] { margin-top: 3px; flex-shrink: 0; }
+.cluster-delete-option strong { display: block; font-size: 13px; margin-bottom: 3px; }
+.cluster-delete-option span {
+  display: block;
+  font-size: 12px;
+  color: var(--a-muted);
+  line-height: 1.45;
+}
+.cluster-delete-option.danger strong { color: #ff8c8c; }
+.cluster-delete-option.danger:hover { border-color: var(--a-danger); background: rgba(201,75,75,0.08); }
+.cluster-delete-option.selected { border-color: var(--a-accent); background: rgba(255,255,255,0.03); }
+.cluster-delete-option.danger.selected { border-color: var(--a-danger); background: rgba(201,75,75,0.12); }
+
+#clusterDeleteConfirmLabel {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 12px;
+  font-size: 12px; color: var(--a-muted);
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+#clusterDeleteConfirmLabel input {
+  background: var(--a-surface-2);
+  border: 1px solid var(--a-border);
+  color: var(--a-text);
+  border-radius: var(--a-radius-sm);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Cluster-Zeile: Löschen-Button neben Bearbeiten */
+.btn.small.danger {
+  color: var(--a-danger);
+  border-color: rgba(201,75,75,0.4);
+}
+.btn.small.danger:hover {
+  background: rgba(201,75,75,0.12);
+  border-color: var(--a-danger);
+}
+
 /* ─── Zeilen-Aktions-Dropdown ─────────────────────────── */
 .row-actions {
   position: relative;

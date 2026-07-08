@@ -128,6 +128,7 @@ function validateClusterWindow(opensAt, closesAt) {
   wireTabs();
   wireClusterForm();
   wireClusterEditModal();
+  wireClusterDeleteModal();
   wireUserFilters();
   wireViewSwitch();
   wireBulkBar();
@@ -243,6 +244,9 @@ async function loadClusters() {
       tbody.querySelectorAll('.js-cluster-edit').forEach(btn => {
         btn.addEventListener('click', () => openClusterEdit(btn.dataset.id));
       });
+      tbody.querySelectorAll('.js-cluster-delete').forEach(btn => {
+        btn.addEventListener('click', () => openClusterDelete(btn.dataset.id, counts[btn.dataset.id] || 0));
+      });
     }
 
     // Bulk-Cluster-Dropdown aktuell halten
@@ -268,7 +272,10 @@ function renderClusterRow(c, memberCount) {
       <td>${fmtDT(c.closes_at)}</td>
       <td>${statusBadge}</td>
       <td>${memberCount}</td>
-      <td><button class="btn small js-cluster-edit" data-id="${c.id}">Bearbeiten</button></td>
+      <td>
+        <button class="btn small js-cluster-edit"   data-id="${c.id}">Bearbeiten</button>
+        <button class="btn small danger js-cluster-delete" data-id="${c.id}">Löschen</button>
+      </td>
     </tr>`;
 }
 
@@ -330,6 +337,155 @@ function openClusterEdit(id) {
   document.getElementById('edClCloses').value  = isoToLocalInput(c.closes_at);
   document.getElementById('edClFeedback').textContent = '';
   document.getElementById('clusterEditModal').hidden = false;
+}
+
+// ─── Cluster-Delete-Modal ────────────────────────────────────
+// State: welches Cluster + wie viele Mitglieder. Der Modus (nur Cluster
+// vs. Cluster+User) kommt aus dem Radio-Button. Bei 0 Mitgliedern wird
+// das Options-Modal übersprungen und direkt gelöscht (delete_users=false
+// ist da eh äquivalent). Bei „Cluster+Userdaten" und >20 Mitgliedern
+// verlangen wir eine Text-Confirmation wie beim Bulk-User-Delete.
+let clusterDeleteState = null;
+
+function wireClusterDeleteModal() {
+  const overlay = document.getElementById('clusterDeleteModal');
+  const close   = document.getElementById('clusterDeleteClose');
+  const cancel  = document.getElementById('clusterDeleteCancelBtn');
+  const confirm = document.getElementById('clusterDeleteConfirmBtn');
+  const input   = document.getElementById('clusterDeleteConfirmInput');
+  const radios  = overlay.querySelectorAll('input[name="clDelMode"]');
+
+  const doClose = () => {
+    overlay.hidden = true;
+    clusterDeleteState = null;
+    radios.forEach(r => { r.checked = false; });
+    overlay.querySelectorAll('.cluster-delete-option').forEach(o => o.classList.remove('selected'));
+    document.getElementById('clusterDeleteConfirmLabel').hidden = true;
+    input.value = '';
+    input.dataset.expected = '';
+    confirm.disabled = true;
+    document.getElementById('clusterDeleteFeedback').textContent = '';
+    document.getElementById('clusterDeleteFeedback').className   = 'form-feedback';
+  };
+  close.addEventListener('click', doClose);
+  cancel.addEventListener('click', doClose);
+  overlay.addEventListener('click', e => { if (e.target === overlay) doClose(); });
+
+  radios.forEach(r => r.addEventListener('change', () => {
+    overlay.querySelectorAll('.cluster-delete-option').forEach(o => o.classList.remove('selected'));
+    r.closest('.cluster-delete-option').classList.add('selected');
+    updateClusterDeleteConfirmState();
+  }));
+  input.addEventListener('input', updateClusterDeleteConfirmState);
+
+  confirm.addEventListener('click', confirmClusterDelete);
+}
+
+function updateClusterDeleteConfirmState() {
+  if (!clusterDeleteState) return;
+  const overlay = document.getElementById('clusterDeleteModal');
+  const confirm = document.getElementById('clusterDeleteConfirmBtn');
+  const label   = document.getElementById('clusterDeleteConfirmLabel');
+  const input   = document.getElementById('clusterDeleteConfirmInput');
+  const mode    = overlay.querySelector('input[name="clDelMode"]:checked')?.value;
+  if (!mode) { confirm.disabled = true; label.hidden = true; return; }
+
+  const memberCount = clusterDeleteState.memberCount;
+  const needsTextConfirm = mode === 'cluster_and_users' && memberCount > 20;
+  if (needsTextConfirm) {
+    const expected = `Ja alle ${memberCount} SuS unwiderruflich löschen`;
+    label.hidden = false;
+    input.placeholder = expected;
+    input.dataset.expected = expected;
+    confirm.disabled = input.value !== expected;
+  } else {
+    label.hidden = true;
+    input.dataset.expected = '';
+    input.value = '';
+    confirm.disabled = false;
+  }
+}
+
+function openClusterDelete(clusterId, memberCount) {
+  const c = clusterCache.find(x => x.id === clusterId);
+  if (!c) return;
+
+  // Leerer Cluster → kein Options-Modal, einfacher Confirm
+  if (memberCount === 0) {
+    if (!window.confirm(`Cluster „${c.name}" wirklich löschen?`)) return;
+    performClusterDelete(clusterId, false).catch(err =>
+      showToast('Löschen fehlgeschlagen: ' + err.message, 'error'));
+    return;
+  }
+
+  clusterDeleteState = { clusterId, memberCount, clusterName: c.name };
+  document.getElementById('clusterDeleteTitle').textContent = `Cluster „${c.name}" löschen?`;
+  document.getElementById('clusterDeleteInfo').textContent =
+    memberCount === 1
+      ? '1 Schüler:in ist diesem Cluster zugewiesen.'
+      : `${memberCount} Schüler:innen sind diesem Cluster zugewiesen.`;
+  updateClusterDeleteConfirmState();
+  document.getElementById('clusterDeleteModal').hidden = false;
+}
+
+async function confirmClusterDelete() {
+  if (!clusterDeleteState) return;
+  const overlay = document.getElementById('clusterDeleteModal');
+  const mode    = overlay.querySelector('input[name="clDelMode"]:checked')?.value;
+  if (!mode) return;
+  const deleteUsers = mode === 'cluster_and_users';
+
+  const fb  = document.getElementById('clusterDeleteFeedback');
+  const btn = document.getElementById('clusterDeleteConfirmBtn');
+  fb.className = 'form-feedback';
+  fb.textContent = 'Lösche …';
+  btn.disabled = true;
+  try {
+    const body = await performClusterDelete(clusterDeleteState.clusterId, deleteUsers);
+    overlay.hidden = true;
+    const users = body.users_deleted ?? 0;
+    const failCount = (body.failed || []).length;
+    if (deleteUsers) {
+      if (failCount > 0) {
+        showToast(`Cluster gelöscht. ${users} User entfernt, ${failCount} fehlgeschlagen.`, 'error');
+      } else if (users > 0) {
+        showToast(`Cluster + ${users} User gelöscht.`);
+      } else {
+        showToast('Cluster gelöscht.');
+      }
+    } else {
+      showToast('Cluster gelöscht.');
+    }
+    clusterDeleteState = null;
+  } catch (err) {
+    fb.textContent = 'Fehler: ' + err.message;
+    fb.classList.add('error');
+    btn.disabled = false;
+  }
+}
+
+async function performClusterDelete(clusterId, deleteUsers) {
+  const token = window.__accessToken;
+  const res = await fetch('/api/admin_delete_cluster', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cluster_id: clusterId, delete_users: deleteUsers })
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body?.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+
+  // Cluster-Cache anpassen und Tabellen neu laden.
+  // Bei delete_users=true kann es Teilfehler geben (body.failed) — dann sind
+  // manche Profile noch da. Ein Full-Reload der User ist einfacher und sicher.
+  clusterCache = clusterCache.filter(c => c.id !== clusterId);
+  if (deleteUsers) {
+    await loadUsers();  // frisch aus DB, cluster_id ist per FK schon null
+  } else {
+    for (const u of userCache) if (u.cluster_id === clusterId) u.cluster_id = null;
+  }
+  await loadClusters();
+  renderUsers();
+  return body;
 }
 
 /* ══════════════════════════════════════════════════════════════
