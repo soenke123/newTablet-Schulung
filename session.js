@@ -56,7 +56,9 @@
   function clearLocalGameState() {
     try {
       localStorage.removeItem('lernwelt_v3');
-      console.log('[SESSION] localStorage game state gelöscht.');
+      localStorage.removeItem('lernwelt_shop_v1');
+      localStorage.removeItem('lernwelt_shop_dirty');
+      console.log('[SESSION] localStorage game state + shop gelöscht.');
     } catch(e) {}
   }
   window.clearLocalGameState = clearLocalGameState;
