@@ -58,7 +58,8 @@
       localStorage.removeItem('lernwelt_v3');
       localStorage.removeItem('lernwelt_shop_v1');
       localStorage.removeItem('lernwelt_shop_dirty');
-      console.log('[SESSION] localStorage game state + shop gelöscht.');
+      localStorage.removeItem('lernwelt_avatar_unlocks');
+      console.log('[SESSION] localStorage game state + shop + avatars gelöscht.');
     } catch(e) {}
   }
   window.clearLocalGameState = clearLocalGameState;
