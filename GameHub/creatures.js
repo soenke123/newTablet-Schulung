@@ -1501,6 +1501,45 @@ function applyMergedShopState(merged) {
   saveStorage(SHOP_KEY, merged);
   clearShopDirty();
 
+  // Avatar-Unlock-Timestamps: wenn Server noch keine hat, bootstrappen —
+  // Legacy-localStorage übernehmen, Rest backdatiert (0 = nie NEW).
+  // Verhindert das "alle Avatare blinken NEU nach Login"-Symptom.
+  try {
+    const serverStamps = merged.avatarUnlocks;
+    const needsBootstrap = !serverStamps || Object.keys(serverStamps).length === 0;
+    let stamps = { ...(serverStamps || {}) };
+    if (needsBootstrap) {
+      try {
+        const raw = localStorage.getItem('lernwelt_avatar_unlocks');
+        if (raw) {
+          const legacy = JSON.parse(raw) || {};
+          for (const k in legacy) {
+            if (stamps[k] == null) stamps[k] = legacy[k];
+          }
+        }
+      } catch (e) {}
+      if (window.computeUnlockedAvatarIds) {
+        for (const id of window.computeUnlockedAvatarIds()) {
+          if (stamps[id] == null) stamps[id] = 0;
+        }
+      }
+      merged.avatarUnlocks = stamps;
+      saveStorage(SHOP_KEY, merged);
+      // Bootstrap zum Server pushen, damit Zweit-Geräte denselben Stand sehen.
+      if (window.isLoggedIn?.() && Object.keys(stamps).length > 0) {
+        syncShopStateToServer(merged).catch(e =>
+          console.warn('[creatures] avatarUnlocks bootstrap push failed:', e.message));
+      }
+    }
+    // Legacy-Key spiegeln — Landing/profil.html lesen ohne Shop-Sync von dort.
+    try {
+      localStorage.setItem('lernwelt_avatar_unlocks',
+        JSON.stringify(merged.avatarUnlocks || {}));
+    } catch (e) {}
+  } catch (e) {
+    console.warn('[creatures] avatarUnlocks handling failed:', e.message);
+  }
+
   try {
     const nests = Array.isArray(merged?.nests) ? merged.nests : [];
     if (nests.length === 0) return;

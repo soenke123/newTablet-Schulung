@@ -108,12 +108,33 @@ const BOOK_NAMES = {
 function updateSeenCreatures(allData) {
   const sd = loadShopData();
   let changed = false;
+  const now = Date.now();
+  sd.avatarUnlocks = sd.avatarUnlocks || {};
 
   const check = (data) => {
     if (!data?.creature) return;
     const stage = getGrowthStage(data.growth);
     const prev  = sd.seenCreatures[data.creature] ?? -1;
-    if (stage > prev) { sd.seenCreatures[data.creature] = stage; changed = true; }
+    if (stage > prev) {
+      sd.seenCreatures[data.creature] = stage;
+      changed = true;
+
+      // Neu freigeschaltete Avatare für diese Kreatur/Stufe stempeln.
+      // Nur hier weiß der Client zuverlässig "Unlock passiert JETZT"
+      // — deshalb ist das der einzige Ort, wo now() korrekt ist.
+      // avatars.js verwendet 1-indizierte a.stage, seenCreatures 0-indiziert.
+      if (window.AVATARS) {
+        for (const a of window.AVATARS) {
+          if (a.creature !== data.creature) continue;
+          const idx = a.stage - 1;
+          if (idx <= prev) continue;   // war schon vorher unlocked
+          if (idx > stage) continue;   // ist noch nicht unlocked
+          if (sd.avatarUnlocks[a.id] == null || sd.avatarUnlocks[a.id] === 0) {
+            sd.avatarUnlocks[a.id] = now;
+          }
+        }
+      }
+    }
   };
 
   for (const g of GAMES_CONFIG)    check(allData[g.id]);

@@ -241,33 +241,56 @@
     return unlocked;
   }
 
-  /* ─── Unlock-Timestamps (localStorage) ───────────────────────
+  /* ─── Unlock-Timestamps ──────────────────────────────────────
      Merkt sich pro Avatar wann er zum ersten Mal unlocked wurde.
-     Nur clientseitig — dient dem "NEU"-Vergleich gegen den Server-
-     Timestamp profiles.avatars_seen_at. */
+     Vergleich gegen Server-Timestamp profiles.avatars_seen_at
+     produziert die "NEU"-Badges.
+
+     Quelle der Wahrheit:
+       1. shopData.avatarUnlocks (server-persistent, cross-device)
+       2. lernwelt_avatar_unlocks (localStorage, Legacy-Fallback)
+     Wir lesen aus (1) primär, (2) als Fallback für Uralt-Clients.
+
+     WICHTIG (Bug-Fix): refreshUnlockTimestamps stempelt fehlende
+     Einträge nur noch mit 0 ("unbekannt, backdatiert"), NIEMALS
+     mit now(). Ein echtes now()-Stempeln passiert ausschließlich
+     bei tatsächlich neuen Unlocks — und zwar dort, wo wir das
+     zuverlässig wissen (updateSeenCreatures in script.js).
+     Damit fällt das "alle Avatare blinken NEU nach Login"-Symptom
+     weg, das durch clearLocalGameState() (leeres UNLOCKS_KEY) +
+     now()-Stempeln beim nächsten Boot entstand. */
   function getUnlockTimestamps() {
+    // shopData.avatarUnlocks ist die primäre Quelle (server-sync);
+    // Legacy-localStorage bleibt als Fallback für Alt-Daten und
+    // wird mit shopData-Werten überschrieben, wo beide vorhanden.
+    const shop = loadShopRaw();
+    const shopStamps = shop.avatarUnlocks || {};
+    let legacy = {};
     try {
       const raw = localStorage.getItem(UNLOCKS_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch { return {}; }
+      legacy = raw ? JSON.parse(raw) : {};
+    } catch {}
+    return { ...legacy, ...shopStamps };
   }
   function saveUnlockTimestamps(obj) {
+    // Mirror in Legacy-Key — Landing/profil.html sollen dieselbe
+    // Sicht bekommen wie GameHub, auch ohne loadShopRaw-Sync-Runde.
     try { localStorage.setItem(UNLOCKS_KEY, JSON.stringify(obj)); } catch {}
   }
 
-  // Fügt fehlende Timestamps hinzu (existierende bleiben unverändert).
-  // Wird auf jeder Seite beim Boot aufgerufen — Eier bekommen einen
-  // Uralt-Timestamp, damit sie nie als NEW markiert sind.
+  // Fügt fehlende Timestamps mit 0 (backdatiert = nie NEW) hinzu.
+  // Wird auf jeder Seite beim Boot aufgerufen. Neue "echte" Unlocks
+  // werden NICHT hier gestempelt — dafür ist updateSeenCreatures
+  // im GameHub verantwortlich (das ist die einzige Stelle, wo wir
+  // wirklich wissen, dass jetzt gerade ein Unlock passiert ist).
   function refreshUnlockTimestamps(unlockedSet) {
     if (!unlockedSet) unlockedSet = computeUnlockedAvatarIds();
     const stamps = getUnlockTimestamps();
-    const now = Date.now();
     let changed = false;
     for (const id of unlockedSet) {
       if (stamps[id] != null) continue;
-      // Eier sind Startbestand → sollen nie als NEW aufpoppen
-      const entry = _byId.get(id);
-      stamps[id] = (entry?.group === 'egg') ? 0 : now;
+      // Backdatiert — nie als NEW markiert. Eier sowieso 0.
+      stamps[id] = 0;
       changed = true;
     }
     if (changed) saveUnlockTimestamps(stamps);
