@@ -424,13 +424,21 @@ async function loadProgressData() {
       }
     }
 
-    // In userCache mergen
+    // In userCache mergen.
+    // Verfügbare Coins = wallets.coins (Summe der game_state.coins)
+    //                  + bankedCoins (aus geschlüpften Nestern eingezahlt)
+    //                  − spentCoins  (im Shop ausgegeben).
+    // wallets.coins allein zeigt nur "je verdient" ohne Ausgaben — falsch für die Balance.
     for (const u of userCache) {
       const w  = wByUser[u.id];
       const gs = gsByUser[u.id];
       const sc = scByUser[u.id] || {};
+      const walletCoins = w?.coins ?? 0;
+      const banked      = Number(sc.bankedCoins) || 0;
+      const spent       = Number(sc.spentCoins)  || 0;
+      const available   = Math.max(0, walletCoins + banked - spent);
       u._progress = {
-        coins:        w?.coins ?? 0,
+        coins:        available,
         kristalle:    sc.kristalle ?? 0,
         creatures:    gs ? gs.creatures.size : 0,
         legendaries:  gs ? gs.legendaries    : 0,
