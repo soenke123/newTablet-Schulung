@@ -538,9 +538,10 @@ async function fetchDashboardData(schoolId) {
   // Alle Queries parallel. Wir lesen roh, aggregieren clientseitig
   // (Datenmenge ist mit einer Schule überschaubar; für Skalierung
   // später eine RPC dashboard_stats(school_id) empfehlenswert).
-  const [profiles, clusters, gameStates, wallets, shopStates, school] = await Promise.all([
+  const cheatSince = new Date(Date.now() - 7 * 86400_000).toISOString();
+  const [profiles, clusters, gameStates, wallets, shopStates, school, cheatFlags] = await Promise.all([
     api('GET',
-      `profiles?select=id,status,cluster_id,created_at,last_login_at`
+      `profiles?select=id,account_name,status,cluster_id,created_at,last_login_at`
       + `&school_id=eq.${schoolId}`),
     api('GET',
       `clusters?select=id,name,opens_at,closes_at`
@@ -548,7 +549,11 @@ async function fetchDashboardData(schoolId) {
     api('GET', `game_state?select=user_id,updated_at`),
     api('GET', `wallets?select=user_id,coins,updated_at`),
     api('GET', `user_collectibles?select=user_id,value,updated_at&key=eq.shop_state`),
-    api('GET', `schools?select=name&id=eq.${schoolId}`)
+    api('GET', `schools?select=name&id=eq.${schoolId}`),
+    api('GET',
+      `cheat_flags?select=user_id,game_id,reason,detail,created_at`
+      + `&created_at=gte.${encodeURIComponent(cheatSince)}`
+      + `&order=created_at.desc&limit=200`)
   ]);
 
   // Auf Schul-User filtern — game_state/wallets/user_collectibles sind aktuell
@@ -560,6 +565,7 @@ async function fetchDashboardData(schoolId) {
     gameStates: gameStates.filter(g => schoolUserIds.has(g.user_id)),
     wallets:    wallets.filter(w => schoolUserIds.has(w.user_id)),
     shopStates: shopStates.filter(s => schoolUserIds.has(s.user_id)),
+    cheatFlags: cheatFlags.filter(f => schoolUserIds.has(f.user_id)),
     schoolName: school[0]?.name || ''
   };
 }
@@ -651,8 +657,32 @@ function aggregateDashboard(d) {
   const activityByDay = days.map(d => ({ label: d.label, count: d.users.size }));
   const activityMax = Math.max(1, ...activityByDay.map(x => x.count));
 
+  // Cheat-Flags der letzten 7 Tage, nach User gruppiert
+  const cheatByUser = new Map();
+  for (const f of (d.cheatFlags || [])) {
+    const arr = cheatByUser.get(f.user_id) || [];
+    arr.push(f);
+    cheatByUser.set(f.user_id, arr);
+  }
+  const cheatUserCount = cheatByUser.size;
+  const cheatFlagTotal = (d.cheatFlags || []).length;
+
   // Aufmerksamkeits-Liste (sortiert nach Dringlichkeit)
   const attention = [];
+  if (cheatUserCount > 0) {
+    const accountByUser = new Map(d.profiles.map(p => [p.id, p.account_name]));
+    const names = [...cheatByUser.keys()]
+      .map(uid => accountByUser.get(uid))
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(', ');
+    attention.push({
+      level: 'danger',
+      icon: '🚨',
+      title: `${cheatFlagTotal} auffällige Submits (${cheatUserCount} User, 7 Tage)`,
+      sub: names ? `Betroffen: ${names}${cheatUserCount > 3 ? ' …' : ''}` : 'Cheat-Versuche wurden geblockt.'
+    });
+  }
   if (pendingOld > 0) {
     attention.push({
       level: 'warn',
