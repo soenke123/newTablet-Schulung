@@ -37,12 +37,11 @@ function saveUiState() {
 // Auswahl-Set für Bulk-Aktionen
 const selectedIds = new Set();
 
-// Legendary-Kreaturen (spiegelt EPIC_CREATURES in GameHub/creatures.js)
+// Legendary-Kreaturen (spiegelt LEGENDARY_CREATURES in GameHub/creatures.js:436).
 // Wenn dort ergänzt wird → hier nachziehen. Bewusst duplizierte Wahrheit,
 // damit der Admin-Panel ohne GameHub-Import laufen kann.
 const LEGENDARY_CREATURES = new Set([
-  'snaildragon', 'butterfly', 'turtle', 'chamaeleon',
-  'pfau', 'chinDrache', 'schnabeltier', 'raptor'
+  'robot', 'pfau', 'chinDrache', 'schnabeltier'
 ]);
 
 // ─── REST helper ──────────────────────────────────────────────
