@@ -2,12 +2,13 @@
 -- Migration 0018 — Rate-Limit-Log für /api/signup
 -- ══════════════════════════════════════════════════════════════
 -- Verhindert Bot-Spam auf den öffentlichen Signup-Endpoint.
--- Die Vercel Function loggt jeden Aufruf mit IP + Timestamp und
--- lehnt ab, sobald pro IP innerhalb einer Stunde ein Limit
--- überschritten wird.
+-- Die Vercel Function loggt nur FEHLGESCHLAGENE Signup-Versuche
+-- (User-Fehler, 4xx) und lehnt ab, sobald pro IP im letzten
+-- Stundenfenster ein Limit überschritten wird. Erfolgreiche
+-- Anmeldungen und Server-Fehler (5xx) zählen nicht mit.
 --
--- Limit-Wahl: 300/Stunde/IP. Klassenzimmer-tauglich (30 Schüler
--- hinter einem NAT, Retries eingerechnet), aber ein Bot kratzt
+-- Limit-Wahl: 500/Stunde/IP. Klassenzimmer-tauglich (30 Schüler
+-- hinter einem NAT, viele Retries möglich), aber ein Bot kratzt
 -- die Grenze in Sekunden.
 --
 -- Nur service_role greift zu (die Vercel Function nutzt

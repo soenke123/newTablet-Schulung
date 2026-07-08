@@ -25,10 +25,12 @@ import { createClient } from '@supabase/supabase-js';
 
 const FAKE_EMAIL_DOMAIN = process.env.FAKE_EMAIL_DOMAIN ?? 'tablet-schulung.fake';
 
-// Rate-Limit: max Signup-Versuche pro IP pro Stunde. 300 lässt
-// Klassenzimmer (30 SuS hinter einem NAT + Retries) locker durch,
-// blockt aber Bot-Spam. Siehe Migration 0018.
-const RATE_LIMIT_PER_HOUR = 300;
+// Rate-Limit: max FEHLGESCHLAGENE Signup-Versuche pro IP pro Stunde.
+// Erfolgreiche Anmeldungen zählen NICHT — nur User-Fehler (400/409):
+// Enumeration, Blacklist-Bruteforce, invalid input in Serie etc.
+// 500 lässt großzügig Klassenzimmer-Retries durch, blockt aber Bot-Spam.
+// Siehe Migration 0018.
+const RATE_LIMIT_PER_HOUR = 500;
 
 // Client-IP aus Vercel-Headern extrahieren. x-forwarded-for kann
 // eine Kommaliste sein (Client, Proxy1, Proxy2, ...) — der erste
@@ -89,9 +91,10 @@ export default async function handler(req, res) {
 
   const admin = createClient(url, serviceRole, { auth: { persistSession: false } });
 
-  // ── Rate-Limit-Check (vor allem anderen — auch invalid_json zählt) ──
-  // Absicht: Bot-Loops erwischen, die z.B. per curl in 10.000ern kommen.
-  // Zählt Versuche der letzten Stunde für die IP, blockt bei > Limit.
+  // ── Rate-Limit-Check ──
+  // Nur User-Fehler zählen (4xx-Antworten): Enumeration, Blacklist-
+  // Bruteforce, Bot-Loops mit invalid input. Erfolgreiche Signups
+  // und Server-Fehler (5xx) werden NICHT geloggt.
   const clientIp = extractClientIp(req);
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   try {
@@ -106,21 +109,26 @@ export default async function handler(req, res) {
       return res.status(429).json({
         ok: false,
         error: 'rate_limit',
-        message: 'Zu viele Anmelde-Versuche von dieser IP. Bitte später erneut versuchen.'
+        message: 'Zu viele fehlgeschlagene Versuche von dieser IP. Bitte in einer Stunde erneut probieren.'
       });
     }
-    // Versuch loggen (fire-and-forget — Fehler ignorieren, Signup läuft trotzdem)
-    admin.from('signup_attempts').insert({ ip: clientIp })
-      .then(({ error }) => {
-        if (error) console.warn('[signup] attempt log failed:', error.message);
-      });
   } catch (e) {
     console.warn('[signup] rate-limit block failed (fail-open):', e.message);
   }
 
+  // Helper: fehlgeschlagenen Versuch (4xx) loggen und Response zurückgeben.
+  // Fire-and-forget-Log — verzögert die User-Antwort nicht.
+  const fail = (status, payload) => {
+    admin.from('signup_attempts').insert({ ip: clientIp })
+      .then(({ error }) => {
+        if (error) console.warn('[signup] attempt log failed:', error.message);
+      });
+    return res.status(status).json({ ok: false, ...payload });
+  };
+
   const body = await readJsonBody(req);
   if (!body || typeof body !== 'object') {
-    return res.status(400).json({ ok: false, error: 'invalid_json' });
+    return fail(400, { error: 'invalid_json' });
   }
 
   const school_slug  = String(body.school_slug  ?? '').trim().toLowerCase();
@@ -130,19 +138,19 @@ export default async function handler(req, res) {
 
   // 1) Input-Validierung
   if (!school_slug) {
-    return res.status(400).json({ ok: false, error: 'school_required' });
+    return fail(400, { error: 'school_required' });
   }
   if (!ACCOUNT_NAME_RE.test(account_name)) {
-    return res.status(400).json({ ok: false, error: 'account_name_invalid',
+    return fail(400, { error: 'account_name_invalid',
       message: 'Accountname: 2–20 Zeichen, nur a-z, 0-9, . _ -' });
   }
   if (!DISPLAY_NAME_RE.test(display_name)) {
-    return res.status(400).json({ ok: false, error: 'display_name_invalid',
+    return fail(400, { error: 'display_name_invalid',
       message: 'Anzeigename: 2–24 Zeichen, Buchstaben, Ziffern, Leerzeichen, . _ -' });
   }
   const pwErr = validatePassword(password);
   if (pwErr) {
-    return res.status(400).json({ ok: false, error: 'password_policy', message: pwErr });
+    return fail(400, { error: 'password_policy', message: pwErr });
   }
 
   // 2) Schimpfwort-Prüfung (beide Namen)
@@ -158,7 +166,7 @@ export default async function handler(req, res) {
       });
     }
     if (data === true) {
-      return res.status(400).json({ ok: false, error: `${field}_blocked`,
+      return fail(400, { error: `${field}_blocked`,
         message: 'Dieser Name ist nicht erlaubt.' });
     }
   }
@@ -174,7 +182,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'lookup_failed' });
   }
   if (!school || !school.active) {
-    return res.status(400).json({ ok: false, error: 'school_unknown' });
+    return fail(400, { error: 'school_unknown' });
   }
 
   const { data: existingProfile } = await admin
@@ -184,7 +192,7 @@ export default async function handler(req, res) {
     .eq('account_name', account_name)
     .maybeSingle();
   if (existingProfile) {
-    return res.status(409).json({ ok: false, error: 'account_name_taken' });
+    return fail(409, { error: 'account_name_taken' });
   }
 
   // 4) Aktives Cluster JETZT?
@@ -217,7 +225,7 @@ export default async function handler(req, res) {
     const msg = /already registered|duplicate/i.test(createErr?.message || '')
       ? 'account_name_taken'
       : 'auth_create_failed';
-    return res.status(400).json({ ok: false, error: msg, message: createErr?.message });
+    return fail(400, { error: msg, message: createErr?.message });
   }
   const user_id = created.user.id;
 
