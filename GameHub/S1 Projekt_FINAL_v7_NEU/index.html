@@ -1510,7 +1510,7 @@ function saveToHub() {
     }
     gd.growth = 0;
   }
-  lastCoinsGained += computeRoundResult(gd, state.score, PF_MAX_SCORE, sd);
+  lastCoinsGained += computeRoundResult(gd, state.score, PF_MAX_SCORE, sd, isFirst);
   gd.points += _norm;
   gd.roundsPlayed += 1;
   saveGameData(pfGameId, gd);

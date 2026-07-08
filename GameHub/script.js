@@ -362,7 +362,13 @@ function buildCardHTML(game, data, shopData) {
     : hasCreature && isLegendary(data.creature)
     ? `<span class="legendary-badge">✦ Legendär ✦</span>` : '';
 
+  const bonusCoins = hasCreature ? getGrowthBonusCoins(data.growth || 0) : 0;
+  const bonusHint = bonusCoins > 0
+    ? `<div class="game-card__bonus-hint" title="${bonusCoins === 10 ? 'Vollendungs-Bonus' : 'Ausgewachsen-Bonus'}: +${bonusCoins} Münzen pro Runde">+${bonusCoins}<span class="game-card__bonus-hint-coin">🪙</span></div>`
+    : '';
+
   return `
+    ${bonusHint}
     <h3 class="game-card__title">${game.icon} ${game.title}</h3>
     ${specialBadge}
     <div class="game-card__creature-wrap${hasCreature ? ' creature-preview' : ''}"

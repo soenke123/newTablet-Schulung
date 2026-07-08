@@ -982,7 +982,7 @@
       sd.wachstumsBooster = false;
       sd.wachstumsBoosterCount = Math.max(0, (sd.wachstumsBoosterCount || 0) - 1);
     }
-    data.growth = Math.min(data.growth + growthContrib, GROWTH_MAX);
+    if (!isFirst) data.growth = Math.min(data.growth + growthContrib, GROWTH_MAX);
 
     let coinsGained = calcCoins(score);
     if (sd.coinsx3) {

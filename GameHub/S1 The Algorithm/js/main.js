@@ -75,8 +75,9 @@ function saveAlgorithmHubData(score) {
   const gd = getGameData(ALG_GAME_ID);
   const sd = loadShopData();
   const s  = Math.min(10, Math.max(0, score));
+  const isFirst = !gd.creature;
 
-  if (!gd.creature) {
+  if (isFirst) {
     if (ALG_EGG_TYPE) {
       gd.creature = determineEggCreature(ALG_EGG_TYPE, s);
     } else if (sd.glucksklee) {
@@ -96,7 +97,7 @@ function saveAlgorithmHubData(score) {
       }
     }
   }
-  _algCoinsGained += computeRoundResult(gd, s, ALG_MAX_SCORE, sd);
+  _algCoinsGained += computeRoundResult(gd, s, ALG_MAX_SCORE, sd, isFirst);
   if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
   if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
 

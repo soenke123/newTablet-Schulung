@@ -4174,7 +4174,8 @@ function showEnd() {
     const raw = total.earned + total.bonus;
     const sd  = loadShopData();
     if (gd.creature) {
-      coinsGained = computeRoundResult(gd, raw, 90, sd);
+      const isFirst = (gd.roundsPlayed || 0) === 0;
+      coinsGained = computeRoundResult(gd, raw, 90, sd, isFirst);
       if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
       if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
     }

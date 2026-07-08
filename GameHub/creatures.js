@@ -859,8 +859,10 @@ function computeSessionGrowth(correct, maxPoints) {
 
 /* Berechnet Coins und Wachstum für eine abgeschlossene Runde (auch Runde 1).
    Mutiert data.growth und data.coins direkt. Gibt coinsGained zurück.
-   Booster/coinsx3 werden hier geprüft aber NICHT gecleart – das macht der Aufrufer. */
-function computeRoundResult(data, correct, maxPoints, sd) {
+   Booster/coinsx3 werden hier geprüft aber NICHT gecleart – das macht der Aufrufer.
+   skipGrowth=true (Runde 1): Coins werden vergeben, Growth bleibt unverändert. */
+function computeRoundResult(data, correct, maxPoints, sd, skipGrowth) {
+  const savedGrowth = data.growth;
   const baseContribution = computeSessionGrowth(correct, maxPoints);
   let contribution = baseContribution;
   const alreadyMaxed = data.growth >= GROWTH_MAX;
@@ -885,6 +887,7 @@ function computeRoundResult(data, correct, maxPoints, sd) {
   if (correct === maxPoints) coinsGained += 3;
   coinsGained += getGrowthBonusCoins(data.growth);
 
+  if (skipGrowth) data.growth = savedGrowth;
   data.coins = (data.coins || 0) + coinsGained;
   return coinsGained;
 }

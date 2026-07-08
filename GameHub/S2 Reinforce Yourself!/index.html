@@ -3970,7 +3970,7 @@ function showWin1() {
     gd.growth = 0;
   }
   const sd1 = loadShopData();
-  const coinsW1 = computeRoundResult(gd, growthTotal1, 240, sd1);
+  const coinsW1 = computeRoundResult(gd, growthTotal1, 240, sd1, isFirstHatch);
   if (sd1.wachstumsBooster) { sd1.wachstumsBooster = false; saveShopData(sd1); }
   if (sd1.coinsx3)          { sd1.coinsx3 = false;          saveShopData(sd1); }
   gd.points      = score.p1 + score.quiz1 + p2;

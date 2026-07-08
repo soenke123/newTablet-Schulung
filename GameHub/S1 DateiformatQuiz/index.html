@@ -343,7 +343,7 @@ function saveToHub() {
     }
     gd.growth = 0;
   }
-  lastCoinsGained += computeRoundResult(gd, correct, TOTAL, sd);
+  lastCoinsGained += computeRoundResult(gd, correct, TOTAL, sd, isFirst);
   gd.points       += correct;
   gd.roundsPlayed += 1;
   saveGameData(quizGameId, gd);

@@ -262,7 +262,7 @@
         }
         data.growth = 0;
       }
-      coinsGained = computeRoundResult(data, correct, ROUNDS_PER_GAME, sd);
+      coinsGained = computeRoundResult(data, correct, ROUNDS_PER_GAME, sd, isFirstRound);
 
       data.points       += correct;
       data.roundsPlayed += 1;

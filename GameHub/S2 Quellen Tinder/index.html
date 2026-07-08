@@ -1709,7 +1709,7 @@ function showEnd() {
       }
       gd.growth = 0;
     }
-    coinsGained = computeRoundResult(gd, normalizedScore, 10, sd);
+    coinsGained = computeRoundResult(gd, normalizedScore, 10, sd, isFirst);
     if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
     if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
     gd.points      += normalizedScore;

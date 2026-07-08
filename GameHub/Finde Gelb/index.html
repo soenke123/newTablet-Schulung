@@ -247,7 +247,7 @@
             }
             gameData.growth = 0;
         }
-        lastCoinsGained += computeRoundResult(gameData, targetFound, TARGET_COUNT, sd);
+        lastCoinsGained += computeRoundResult(gameData, targetFound, TARGET_COUNT, sd, isFirst);
         gameData.points       += targetFound;
         gameData.roundsPlayed += 1;
         saveGameData(GAME_ID, gameData);
