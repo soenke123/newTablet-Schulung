@@ -25,6 +25,24 @@ import { createClient } from '@supabase/supabase-js';
 
 const FAKE_EMAIL_DOMAIN = process.env.FAKE_EMAIL_DOMAIN ?? 'tablet-schulung.fake';
 
+// Rate-Limit: max Signup-Versuche pro IP pro Stunde. 300 lässt
+// Klassenzimmer (30 SuS hinter einem NAT + Retries) locker durch,
+// blockt aber Bot-Spam. Siehe Migration 0018.
+const RATE_LIMIT_PER_HOUR = 300;
+
+// Client-IP aus Vercel-Headern extrahieren. x-forwarded-for kann
+// eine Kommaliste sein (Client, Proxy1, Proxy2, ...) — der erste
+// Eintrag ist die echte Client-IP.
+function extractClientIp(req) {
+  const xff = req.headers['x-forwarded-for'];
+  if (typeof xff === 'string' && xff.length > 0) {
+    return xff.split(',')[0].trim();
+  }
+  const realIp = req.headers['x-real-ip'];
+  if (typeof realIp === 'string' && realIp.length > 0) return realIp.trim();
+  return 'unknown';
+}
+
 // Accountname: klein a-z, 0-9, . _ - · 2–20 Zeichen
 const ACCOUNT_NAME_RE = /^[a-z0-9._-]{2,20}$/;
 
@@ -69,6 +87,37 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'server_misconfigured' });
   }
 
+  const admin = createClient(url, serviceRole, { auth: { persistSession: false } });
+
+  // ── Rate-Limit-Check (vor allem anderen — auch invalid_json zählt) ──
+  // Absicht: Bot-Loops erwischen, die z.B. per curl in 10.000ern kommen.
+  // Zählt Versuche der letzten Stunde für die IP, blockt bei > Limit.
+  const clientIp = extractClientIp(req);
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  try {
+    const { count, error: rlErr } = await admin
+      .from('signup_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('ip', clientIp)
+      .gte('created_at', oneHourAgo);
+    if (rlErr) {
+      console.warn('[signup] rate-limit check failed (fail-open):', rlErr.message);
+    } else if ((count ?? 0) >= RATE_LIMIT_PER_HOUR) {
+      return res.status(429).json({
+        ok: false,
+        error: 'rate_limit',
+        message: 'Zu viele Anmelde-Versuche von dieser IP. Bitte später erneut versuchen.'
+      });
+    }
+    // Versuch loggen (fire-and-forget — Fehler ignorieren, Signup läuft trotzdem)
+    admin.from('signup_attempts').insert({ ip: clientIp })
+      .then(({ error }) => {
+        if (error) console.warn('[signup] attempt log failed:', error.message);
+      });
+  } catch (e) {
+    console.warn('[signup] rate-limit block failed (fail-open):', e.message);
+  }
+
   const body = await readJsonBody(req);
   if (!body || typeof body !== 'object') {
     return res.status(400).json({ ok: false, error: 'invalid_json' });
@@ -95,8 +144,6 @@ export default async function handler(req, res) {
   if (pwErr) {
     return res.status(400).json({ ok: false, error: 'password_policy', message: pwErr });
   }
-
-  const admin = createClient(url, serviceRole, { auth: { persistSession: false } });
 
   // 2) Schimpfwort-Prüfung (beide Namen)
   for (const [field, val] of [['account_name', account_name], ['display_name', display_name]]) {
