@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin · Lernwelt</title>
-  <link rel="stylesheet" href="style.css?v=20260708e" />
+  <link rel="stylesheet" href="style.css?v=20260708f" />
 </head>
 <body>
   <div id="bootMask" class="boot-mask">Lade …</div>
@@ -32,13 +32,29 @@
   </header>
 
   <nav class="tabnav" id="tabnav" hidden>
-    <button type="button" class="tab active" data-tab="clusters">Cluster (Kurs)</button>
+    <button type="button" class="tab active" data-tab="dashboard">Dashboard</button>
+    <button type="button" class="tab" data-tab="clusters">Cluster (Kurs)</button>
     <button type="button" class="tab" data-tab="users">User</button>
   </nav>
 
   <main class="content" id="content" hidden>
+    <!-- ─── Dashboard-Tab ─────────────────────────────────── -->
+    <section class="panel" id="panel-dashboard">
+      <div class="panel-head">
+        <h2>Dashboard</h2>
+        <p class="panel-sub">
+          Überblick über Nutzung und Handlungsbedarf.
+          <button type="button" class="btn small" id="dashReload" style="margin-left:12px;">Neu laden</button>
+        </p>
+      </div>
+
+      <div id="dashboardContent">
+        <p class="empty">Lade …</p>
+      </div>
+    </section>
+
     <!-- ─── Cluster-Tab ───────────────────────────────────── -->
-    <section class="panel" id="panel-clusters">
+    <section class="panel" id="panel-clusters" hidden>
       <div class="panel-head">
         <h2>Cluster <span style="color:var(--a-muted);font-weight:400;font-size:0.7em">(Kurs)</span></h2>
         <p class="panel-sub">Schulungs-Kohorten mit Zeitfenster und Season. Nach außen heißt das ein „Kurs".</p>
@@ -238,9 +254,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../supabase-config.js?v=20260708e"></script>
-  <script src="../session.js?v=20260708e"></script>
-  <script src="../avatars.js?v=20260708e"></script>
-  <script src="app.js?v=20260708e"></script>
+  <script src="../supabase-config.js?v=20260708f"></script>
+  <script src="../session.js?v=20260708f"></script>
+  <script src="../avatars.js?v=20260708f"></script>
+  <script src="app.js?v=20260708f"></script>
 </body>
 </html>

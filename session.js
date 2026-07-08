@@ -147,10 +147,31 @@
   // Auth-State-Handler: das ist der einzige Ort wo wir authSession bekommen.
   // Die vom Callback gelieferte session direkt nutzen — kein zweiter getSession()-Call
   // (der könnte durch das interne Lock des SDK ewig blockieren).
+  // touch_login pflegt profiles.last_login_at für die Dashboard-Metrik.
+  // Fire-and-forget: Fehler ignorieren, kein Blocker für den Login-Flow.
+  async function touchLogin(accessToken) {
+    try {
+      await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/touch_login`, {
+        method: 'POST',
+        headers: {
+          apikey: window.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: '{}'
+      });
+    } catch (e) {
+      console.warn('[SESSION] touch_login failed (ignored):', e.message);
+    }
+  }
+
   client.auth.onAuthStateChange(async (event, authSession) => {
     console.log('[SESSION] event:', event, authSession ? `user=${authSession.user.email}` : '(no session)');
     if (event === 'TOKEN_REFRESHED') return;
     await applyAuthSession(authSession);
+    if (event === 'SIGNED_IN' && authSession?.access_token) {
+      touchLogin(authSession.access_token);  // fire-and-forget
+    }
     if (!bootResolved) {
       bootResolved = true;
       bootResolve(window.__session);

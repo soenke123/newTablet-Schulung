@@ -134,9 +134,11 @@ function validateClusterWindow(opensAt, closesAt) {
   wireBulkBar();
   wireDeleteModal();
   wireDetailModal();
+  wireDashboard();
 
   await loadClusters();  // erst Cluster (User-Dropdowns brauchen sie)
   await loadUsers();
+  loadDashboard(currentSchoolId);  // fire-and-forget — Dashboard ist default-Tab
 
   bootMask.classList.add('hidden');
   setTimeout(() => bootMask.remove(), 250);
@@ -169,14 +171,22 @@ function wireUserMenu() {
 }
 
 // ─── Tabs ────────────────────────────────────────────────────
+const TAB_PANELS = ['dashboard', 'clusters', 'users'];
+
 function wireTabs() {
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      const target = tab.dataset.tab;
-      document.getElementById('panel-clusters').hidden = target !== 'clusters';
-      document.getElementById('panel-users').hidden    = target !== 'users';
+      for (const p of TAB_PANELS) {
+        document.getElementById(`panel-${p}`).hidden = target !== p;
+      }
+      // Dashboard lädt beim ersten Öffnen — Cluster & User haben ihren
+      // eigenen initialen Load in init().
+      if (target === 'dashboard' && !dashboardLoaded) {
+        loadDashboard(currentSchoolId);
+      }
     });
   });
 }
@@ -486,6 +496,283 @@ async function performClusterDelete(clusterId, deleteUsers) {
   await loadClusters();
   renderUsers();
   return body;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Dashboard-Tab
+   ══════════════════════════════════════════════════════════════
+   Alle Aggregation-Functions nehmen schoolId als Argument. Aktuell
+   läuft nur eine Schule → nur ein school-panel. Wenn später ein
+   Super-Admin (mehrschulen-fähig) kommt, loopen wir hier über alle
+   Schulen und rendern eine Section pro Schule + eine Total-Section.
+   ══════════════════════════════════════════════════════════════ */
+
+let dashboardLoaded = false;
+const ACTIVE_THRESHOLD_DAYS   = 14;  // Cluster gilt als "regelmäßig aktiv" wenn ≥1 User in dieser Zeit aktiv war
+const PENDING_ALARM_DAYS      = 7;   // Pending seit >7d → Aufmerksamkeit
+const CLUSTER_DEAD_DAYS       = 30;  // Cluster ohne Aktivität >30d, aber mit Mitgliedern → verwaist
+const CLUSTER_OPENING_WINDOW  = 48 * 3600 * 1000;  // Cluster öffnet in <48h → Info
+
+function wireDashboard() {
+  document.getElementById('dashReload').addEventListener('click', async () => {
+    dashboardLoaded = false;
+    await loadDashboard(currentSchoolId);
+  });
+}
+
+async function loadDashboard(schoolId) {
+  const container = document.getElementById('dashboardContent');
+  container.innerHTML = '<p class="empty">Lade …</p>';
+  try {
+    const data = await fetchDashboardData(schoolId);
+    const agg  = aggregateDashboard(data);
+    container.innerHTML = renderDashboard(agg, data.schoolName);
+    dashboardLoaded = true;
+  } catch (err) {
+    console.error('[dashboard]', err);
+    container.innerHTML = `<p class="empty">Fehler: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+async function fetchDashboardData(schoolId) {
+  // Alle Queries parallel. Wir lesen roh, aggregieren clientseitig
+  // (Datenmenge ist mit einer Schule überschaubar; für Skalierung
+  // später eine RPC dashboard_stats(school_id) empfehlenswert).
+  const [profiles, clusters, gameStates, wallets, shopStates, school] = await Promise.all([
+    api('GET',
+      `profiles?select=id,status,cluster_id,created_at,last_login_at`
+      + `&school_id=eq.${schoolId}`),
+    api('GET',
+      `clusters?select=id,name,opens_at,closes_at`
+      + `&school_id=eq.${schoolId}`),
+    api('GET', `game_state?select=user_id,updated_at`),
+    api('GET', `wallets?select=user_id,coins,updated_at`),
+    api('GET', `user_collectibles?select=user_id,value,updated_at&key=eq.shop_state`),
+    api('GET', `schools?select=name&id=eq.${schoolId}`)
+  ]);
+
+  // Auf Schul-User filtern — game_state/wallets/user_collectibles sind aktuell
+  // nicht per RLS auf die eigene Schule beschränkt (siehe Migration 0012-Kommentar).
+  const schoolUserIds = new Set(profiles.map(p => p.id));
+  return {
+    profiles,
+    clusters,
+    gameStates: gameStates.filter(g => schoolUserIds.has(g.user_id)),
+    wallets:    wallets.filter(w => schoolUserIds.has(w.user_id)),
+    shopStates: shopStates.filter(s => schoolUserIds.has(s.user_id)),
+    schoolName: school[0]?.name || ''
+  };
+}
+
+function aggregateDashboard(d) {
+  const now = Date.now();
+  const activeMs  = ACTIVE_THRESHOLD_DAYS * 86400_000;
+  const pendingMs = PENDING_ALARM_DAYS   * 86400_000;
+  const deadMs    = CLUSTER_DEAD_DAYS    * 86400_000;
+
+  // Pro-User last_active_at aus allen Signal-Quellen
+  const lastActiveByUser = new Map();
+  const bump = (uid, ts) => {
+    if (!uid || !ts) return;
+    const t = Date.parse(ts);
+    if (Number.isNaN(t)) return;
+    const cur = lastActiveByUser.get(uid) || 0;
+    if (t > cur) lastActiveByUser.set(uid, t);
+  };
+  for (const p of d.profiles) bump(p.id, p.last_login_at);
+  for (const g of d.gameStates) bump(g.user_id, g.updated_at);
+  for (const w of d.wallets)    bump(w.user_id, w.updated_at);
+  for (const s of d.shopStates) bump(s.user_id, s.updated_at);
+
+  // Kernzahlen
+  const total = d.profiles.length;
+  const active = d.profiles.filter(p => p.status === 'active').length;
+  const pending = d.profiles.filter(p => p.status === 'pending').length;
+  const pendingOld = d.profiles.filter(p =>
+    p.status === 'pending' && p.created_at && (now - Date.parse(p.created_at) > pendingMs)
+  ).length;
+  const activeNoCluster = d.profiles.filter(p => p.status === 'active' && !p.cluster_id).length;
+
+  // "Regelmäßig aktive" Cluster
+  const membersByCluster = new Map();
+  for (const p of d.profiles) {
+    if (!p.cluster_id) continue;
+    const arr = membersByCluster.get(p.cluster_id) || [];
+    arr.push(p.id);
+    membersByCluster.set(p.cluster_id, arr);
+  }
+  const activeClusterIds = new Set();
+  const deadClusters = [];
+  for (const c of d.clusters) {
+    const members = membersByCluster.get(c.id) || [];
+    if (members.length === 0) continue;
+    const anyRecent = members.some(uid => (lastActiveByUser.get(uid) || 0) > now - activeMs);
+    if (anyRecent) activeClusterIds.add(c.id);
+    const anyIn30d = members.some(uid => (lastActiveByUser.get(uid) || 0) > now - deadMs);
+    if (!anyIn30d) deadClusters.push({ cluster: c, memberCount: members.length });
+  }
+
+  // Coins & Kristalle gesamt
+  const walletByUser = new Map(d.wallets.map(w => [w.user_id, w.coins || 0]));
+  const shopByUser   = new Map(d.shopStates.map(s => [s.user_id, s.value || {}]));
+  let totalCoins = 0, totalKristalle = 0;
+  for (const p of d.profiles) {
+    const wc     = walletByUser.get(p.id) || 0;
+    const shop   = shopByUser.get(p.id) || {};
+    const banked = Number(shop.bankedCoins) || 0;
+    const spent  = Number(shop.spentCoins)  || 0;
+    totalCoins    += Math.max(0, wc + banked - spent);
+    totalKristalle += Number(shop.kristalle) || 0;
+  }
+
+  // Aktivitäts-Chart: letzte 7 Tage, distinct User mit ≥1 Signal an dem Tag
+  const days = [];
+  const dayKey = (t) => {
+    const d = new Date(t);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  };
+  for (let i = 6; i >= 0; i--) {
+    const t = now - i * 86400_000;
+    days.push({ key: dayKey(t), label: new Date(t).toLocaleDateString('de-DE', { weekday: 'short' }), users: new Set() });
+  }
+  const dayIndex = new Map(days.map((d, i) => [d.key, i]));
+  const addSignal = (uid, ts) => {
+    if (!uid || !ts) return;
+    const t = Date.parse(ts);
+    if (Number.isNaN(t)) return;
+    const k = dayKey(t);
+    const idx = dayIndex.get(k);
+    if (idx !== undefined) days[idx].users.add(uid);
+  };
+  for (const p of d.profiles) addSignal(p.id, p.last_login_at);
+  for (const g of d.gameStates) addSignal(g.user_id, g.updated_at);
+  for (const w of d.wallets)    addSignal(w.user_id, w.updated_at);
+  for (const s of d.shopStates) addSignal(s.user_id, s.updated_at);
+  const activityByDay = days.map(d => ({ label: d.label, count: d.users.size }));
+  const activityMax = Math.max(1, ...activityByDay.map(x => x.count));
+
+  // Aufmerksamkeits-Liste (sortiert nach Dringlichkeit)
+  const attention = [];
+  if (pendingOld > 0) {
+    attention.push({
+      level: 'warn',
+      icon: '⏳',
+      title: `${pendingOld} User pending seit >${PENDING_ALARM_DAYS} Tagen`,
+      sub: 'Freischalten oder löschen im User-Tab.'
+    });
+  }
+  if (activeNoCluster > 0) {
+    attention.push({
+      level: 'warn',
+      icon: '🎯',
+      title: `${activeNoCluster} aktive User ohne Cluster`,
+      sub: 'Können sich nicht einloggen. Cluster im User-Tab zuweisen.'
+    });
+  }
+  for (const dc of deadClusters) {
+    attention.push({
+      level: 'info',
+      icon: '💤',
+      title: `Cluster „${dc.cluster.name}" — 0 Aktivität in >${CLUSTER_DEAD_DAYS}d`,
+      sub: `${dc.memberCount} Mitglieder, aber keiner war aktiv. Löschen oder ignorieren.`
+    });
+  }
+  for (const c of d.clusters) {
+    if (!c.opens_at) continue;
+    const opens = Date.parse(c.opens_at);
+    if (Number.isNaN(opens)) continue;
+    const delta = opens - now;
+    if (delta > 0 && delta < CLUSTER_OPENING_WINDOW) {
+      const h = Math.round(delta / 3600_000);
+      attention.push({
+        level: 'info',
+        icon: '📅',
+        title: `Cluster „${c.name}" öffnet in ${h} Stunden`,
+        sub: 'Anmeldungen werden ab dann möglich.'
+      });
+    }
+  }
+
+  return {
+    active, total, pending, pendingOld, activeNoCluster,
+    activeClusters: activeClusterIds.size,
+    totalClusters: d.clusters.length,
+    totalCoins, totalKristalle,
+    activityByDay, activityMax,
+    attention
+  };
+}
+
+function renderDashboard(a, schoolName) {
+  const fmtNum = (n) => n.toLocaleString('de-DE');
+
+  const pendingValueClass = a.pendingOld > 0 ? 'dash-card__value dash-card__value--warn' : 'dash-card__value';
+  const pendingSub = a.pendingOld > 0
+    ? `⚠ ${a.pendingOld} seit >${PENDING_ALARM_DAYS} Tagen`
+    : (a.pending > 0 ? 'neu, unter Schwelle' : 'keine offenen');
+
+  const cards = `
+    <div class="dash-cards">
+      <div class="dash-card">
+        <span class="dash-card__label">Aktive User</span>
+        <span class="dash-card__value">${a.active}</span>
+        <span class="dash-card__sub">von ${a.total} gesamt</span>
+      </div>
+      <div class="dash-card">
+        <span class="dash-card__label">Pending</span>
+        <span class="${pendingValueClass}">${a.pending}</span>
+        <span class="dash-card__sub">${escapeHtml(pendingSub)}</span>
+      </div>
+      <div class="dash-card">
+        <span class="dash-card__label">Regelmäßig aktive Cluster</span>
+        <span class="dash-card__value">${a.activeClusters} / ${a.totalClusters}</span>
+        <span class="dash-card__sub">≥1 User in letzten ${ACTIVE_THRESHOLD_DAYS}d aktiv</span>
+      </div>
+      <div class="dash-card">
+        <span class="dash-card__label">Coins & Kristalle</span>
+        <span class="dash-card__value">${fmtNum(a.totalCoins)} 🪙</span>
+        <span class="dash-card__sub">${fmtNum(a.totalKristalle)} 💎 · Summe verfügbar</span>
+      </div>
+    </div>`;
+
+  const activityRows = a.activityByDay.map((d, i) => {
+    const pct = Math.round((d.count / a.activityMax) * 100);
+    const today = i === a.activityByDay.length - 1;
+    return `
+      <div class="activity-row${today ? ' today' : ''}">
+        <span class="activity-row__label">${escapeHtml(d.label)}</span>
+        <div class="activity-row__bar"><div class="activity-row__bar-fill" style="width:${pct}%;"></div></div>
+        <span class="activity-row__value">${d.count}</span>
+      </div>`;
+  }).join('');
+
+  const attentionHtml = a.attention.length === 0
+    ? '<div class="attention-empty">Nichts zu tun. Alles läuft.</div>'
+    : a.attention.map(x => `
+        <div class="attention-item attention-item--${x.level}">
+          <span class="attention-item__icon">${x.icon}</span>
+          <div class="attention-item__body">
+            <strong>${escapeHtml(x.title)}</strong>
+            <small>${escapeHtml(x.sub)}</small>
+          </div>
+        </div>`).join('');
+
+  return `
+    <section class="school-panel" data-school-id="${escapeHtml(currentSchoolId)}">
+      ${schoolName ? `<h3 class="school-panel-title">${escapeHtml(schoolName)}</h3>` : ''}
+      ${cards}
+      <div class="dash-row">
+        <div class="card">
+          <h3>Aktivität (letzte 7 Tage)</h3>
+          <div class="activity-chart">${activityRows}</div>
+        </div>
+        <div class="card">
+          <h3>Braucht Aufmerksamkeit</h3>
+          <div class="attention-list">${attentionHtml}</div>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 /* ══════════════════════════════════════════════════════════════
