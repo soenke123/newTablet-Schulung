@@ -643,12 +643,11 @@ function renderCell(u, col) {
     case 'lastActive':
       return `<td>${u._progress?.lastActive ? fmtRelative(u._progress.lastActive) : '—'}</td>`;
     default: {
-      // Aktions-Zelle (col.key === null) — abhängig von View
+      // Erst Spezial-Spalten (nicht-Aktion), dann View-basierte Aktion.
+      if (col.label === 'Avatar')      return `<td>${renderAvatarThumb(u.avatar_id)}</td>`;
       if (uiState.view === 'admin')    return renderAdminActions(u);
       if (uiState.view === 'progress') return renderProgressActions(u);
       if (uiState.view === 'account')  return renderAccountActions(u);
-      // Avatar-Miniatur
-      if (col.label === 'Avatar')      return `<td>${renderAvatarThumb(u.avatar_id)}</td>`;
       return '<td>—</td>';
     }
   }
