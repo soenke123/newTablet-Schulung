@@ -456,6 +456,76 @@ html, body {
   font-size: 13px;
 }
 
+/* ─── Zeilen-Aktions-Dropdown ─────────────────────────── */
+.row-actions {
+  position: relative;
+  display: inline-block;
+}
+.row-actions__btn {
+  background: var(--a-surface-2);
+  border: 1px solid var(--a-border);
+  color: var(--a-text);
+  border-radius: var(--a-radius-sm);
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.row-actions__btn:hover { border-color: var(--a-gold); background: var(--a-gold-soft); }
+.row-actions__btn::after { content: '▾'; font-size: 10px; opacity: 0.7; }
+
+.row-actions__menu {
+  position: absolute;
+  right: 0; top: calc(100% + 4px);
+  min-width: 180px;
+  background: var(--a-surface-2);
+  border: 1px solid var(--a-border);
+  border-radius: var(--a-radius-sm);
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 20;
+  display: flex; flex-direction: column;
+}
+.row-actions__menu button {
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--a-text);
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.row-actions__menu button:hover { background: var(--a-gold-soft); }
+.row-actions__menu button.danger { color: #ff8c8c; }
+.row-actions__menu button.danger:hover { background: rgba(201,75,75,0.12); }
+.row-actions__menu hr {
+  border: none;
+  border-top: 1px solid var(--a-border);
+  margin: 4px 0;
+}
+
+/* Inline-Schloss neben Anzeigename */
+.name-lock-icon {
+  margin-left: 4px;
+  color: var(--a-muted);
+  font-size: 11px;
+  vertical-align: middle;
+  cursor: help;
+}
+
+/* Avatar-Miniatur */
+.avatar-thumb {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  vertical-align: middle;
+  object-fit: cover;
+  background: var(--a-surface-2);
+  border: 1px solid var(--a-border);
+}
+
 /* ─── Toast (kurze Erfolgs-Meldung) ───────────────────── */
 .admin-toast {
   position: fixed; top: 20px; left: 50%;

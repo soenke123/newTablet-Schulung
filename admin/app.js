@@ -20,11 +20,15 @@ let progressLoaded  = false;  // game_state/wallets/user_collectibles einmal nac
 const uiState = loadUiState();
 
 function loadUiState() {
+  const fallback = { view: 'admin', sort: { key: 'created_at', dir: 'desc' } };
   try {
     const raw = sessionStorage.getItem('admin_ui_state');
-    if (raw) return JSON.parse(raw);
-  } catch(e) {}
-  return { view: 'admin', sort: { key: 'created_at', dir: 'desc' } };
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    // Alte View-Namen abfangen (Migration nach Account-View-Wegfall)
+    if (parsed.view !== 'admin' && parsed.view !== 'progress') parsed.view = 'admin';
+    return parsed;
+  } catch(e) { return fallback; }
 }
 function saveUiState() {
   try { sessionStorage.setItem('admin_ui_state', JSON.stringify(uiState)); } catch(e) {}
@@ -449,8 +453,9 @@ const VIEW_COLUMNS = {
     { label: 'Anzeigename',  key: 'display_name'    },
     { label: 'Status',       key: 'status'          },
     { label: 'Cluster',      key: 'cluster'         },
+    { label: 'Rolle',        key: 'is_admin'        },
+    { label: 'Avatar',       key: null              },
     { label: 'Erstellt',     key: 'created_at'      },
-    { label: 'Name-Lock',    key: 'display_name_locked' },
     { label: 'Aktion',       key: null              }
   ],
   progress: [
@@ -461,14 +466,6 @@ const VIEW_COLUMNS = {
     { label: 'Kreaturen',    key: 'creatures'       },
     { label: 'Legies',       key: 'legendaries'     },
     { label: 'Zuletzt aktiv',key: 'lastActive'      },
-    { label: 'Aktion',       key: null              }
-  ],
-  account: [
-    { label: 'Account',      key: 'account_name'    },
-    { label: 'Anzeigename',  key: 'display_name'    },
-    { label: 'Rolle',        key: 'is_admin'        },
-    { label: 'Avatar',       key: null              },
-    { label: 'Erstellt',     key: 'created_at'      },
     { label: 'Aktion',       key: null              }
   ]
 };
@@ -545,6 +542,18 @@ function renderUsers() {
     btn.addEventListener('click', () => toggleAdminFlag(btn.dataset.userId));
   });
 
+  // Zeilen-Dropdown öffnen/schließen. Klick außerhalb schließt via document-Handler unten.
+  tbody.querySelectorAll('.js-row-actions-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const menu = btn.nextElementSibling;
+      const wasOpen = !menu.hidden;
+      // Alle anderen schließen
+      document.querySelectorAll('.row-actions__menu').forEach(m => m.hidden = true);
+      menu.hidden = wasOpen;
+    });
+  });
+
   // Select-All
   document.getElementById('selectAllCheckbox').addEventListener('change', e => {
     const target = e.target.checked;
@@ -609,8 +618,13 @@ function renderCell(u, col) {
   switch (col.key) {
     case 'account_name':
       return `<td>${escapeHtml(u.account_name)}</td>`;
-    case 'display_name':
-      return `<td>${escapeHtml(u.display_name || '—')}</td>`;
+    case 'display_name': {
+      const name = escapeHtml(u.display_name || '—');
+      const lock = u.display_name_locked
+        ? '<span class="name-lock-icon" title="Anzeigename gesperrt">🔒</span>'
+        : '';
+      return `<td>${name}${lock}</td>`;
+    }
     case 'status': {
       let badge = `<span class="badge ${u.status}">${u.status}</span>`;
       if (u.is_admin) badge += ' <span class="badge admin">admin</span>';
@@ -647,7 +661,6 @@ function renderCell(u, col) {
       if (col.label === 'Avatar')      return `<td>${renderAvatarThumb(u.avatar_id)}</td>`;
       if (uiState.view === 'admin')    return renderAdminActions(u);
       if (uiState.view === 'progress') return renderProgressActions(u);
-      if (uiState.view === 'account')  return renderAccountActions(u);
       return '<td>—</td>';
     }
   }
@@ -655,34 +668,35 @@ function renderCell(u, col) {
 
 function renderAdminActions(u) {
   const isSelf = u.id === currentUserId;
-  return `<td><div class="actions">
-    <button class="btn small js-rename"   data-user-id="${u.id}">Umbenennen</button>
-    <button class="btn small js-lock-toggle" data-user-id="${u.id}">${u.display_name_locked ? '🔒 Entsperren' : '🔓 Sperren'}</button>
-    <button class="btn small js-pw-reset" data-user-id="${u.id}">Passwort</button>
-    <button class="btn small danger js-delete" data-user-id="${u.id}" ${isSelf ? 'disabled' : ''}>Löschen</button>
-  </div></td>`;
+  const lockLabel  = u.display_name_locked ? '🔒 Entsperren' : '🔓 Sperren';
+  const adminLabel = u.is_admin ? 'Admin entziehen' : 'Zum Admin machen';
+  return `<td>
+    <div class="row-actions" data-user-id="${u.id}">
+      <button type="button" class="row-actions__btn js-row-actions-btn">Aktionen</button>
+      <div class="row-actions__menu" hidden>
+        <button type="button" class="js-rename"       data-user-id="${u.id}">Umbenennen</button>
+        <button type="button" class="js-pw-reset"     data-user-id="${u.id}">Passwort setzen</button>
+        <button type="button" class="js-lock-toggle"  data-user-id="${u.id}">${lockLabel}</button>
+        <button type="button" class="js-admin-toggle" data-user-id="${u.id}" ${isSelf ? 'disabled' : ''}>${adminLabel}</button>
+        <hr />
+        <button type="button" class="danger js-delete" data-user-id="${u.id}" ${isSelf ? 'disabled' : ''}>Löschen</button>
+      </div>
+    </div>
+  </td>`;
 }
 function renderProgressActions(u) {
   return `<td><div class="actions">
     <button class="btn small js-detail" data-user-id="${u.id}">Details</button>
   </div></td>`;
 }
-function renderAccountActions(u) {
-  const isSelf = u.id === currentUserId;
-  return `<td><div class="actions">
-    <button class="btn small js-admin-toggle" data-user-id="${u.id}" ${isSelf ? 'disabled' : ''}>
-      ${u.is_admin ? 'Admin entziehen' : 'Zum Admin machen'}
-    </button>
-    <button class="btn small danger js-delete" data-user-id="${u.id}" ${isSelf ? 'disabled' : ''}>Löschen</button>
-  </div></td>`;
-}
 
 function renderAvatarThumb(avatarId) {
   if (!avatarId) return '—';
-  // avatars.js liefert getAvatarUrl(id, basePath). Basepath relativ zum admin/ = '../avatare/'
-  const url = window.getAvatarUrl?.(avatarId, '../avatare/');
+  // getAvatarUrl hängt selbst 'avatare/<file>' an → basePath ist der Ordner DAVOR.
+  // admin/ → '../' ergibt '../avatare/<file>'.
+  const url = window.getAvatarUrl?.(avatarId, '../');
   if (!url) return escapeHtml(avatarId);
-  return `<img src="${url}" alt="${escapeHtml(avatarId)}" style="width:28px;height:28px;border-radius:50%;vertical-align:middle;" />`;
+  return `<img class="avatar-thumb" src="${url}" alt="${escapeHtml(avatarId)}" />`;
 }
 
 // ─── Sort-Handler (Klick auf Spaltenkopf) ────────────────────
@@ -698,6 +712,12 @@ document.addEventListener('click', e => {
   }
   saveUiState();
   renderUsers();
+});
+
+// ─── Row-Actions-Dropdown: außerhalb klicken schließt ────────
+document.addEventListener('click', e => {
+  if (e.target.closest('.row-actions')) return;
+  document.querySelectorAll('.row-actions__menu').forEach(m => m.hidden = true);
 });
 
 /* ─── User-Aktionen (unverändert aus alter Version) ─── */
