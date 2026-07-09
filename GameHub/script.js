@@ -1589,6 +1589,10 @@ function releaseNest(nestId) {
   if (legendary) {
     nest.gameId           = null;
     nest.gameUrl          = null;
+    // hatched entfernen — sonst spielt applyMergedShopState beim nächsten
+    // Sync die alte Kreatur wieder in lernwelt_v3[nestId] zurück und der
+    // "Zurücksetzen"-Reset ist im ersten Login-Reload wieder rückgängig.
+    delete nest.hatched;
     sd.pendingEggNestId   = nestId;
     sd.bankedCoins        = (sd.bankedCoins || 0) + nestCoins;
   } else {
@@ -2018,10 +2022,13 @@ function triggerSealEggOpening(type) {
   const creature = SEAL_CREATURE[type];
   const nestId   = 'nest_sealed_' + Date.now();
 
-  const gd = defaultGameData();
-  gd.creature = creature;
-  saveGameData(nestId, gd);
-
+  // gd.creature bewusst NICHT vorher setzen — das würde beim ersten Play
+  // den isFirst-Check der Spiele (`!gd.creature`) fehlschlagen lassen und
+  // die Kreatur wäre im Hub schon "geschlüpft und wachsend" statt regulär
+  // in der 1. Runde zu schlüpfen (wie bei atari/pfau). Beim 1. Play greift
+  // determineEggCreature('himmel'|'suempfe', score) und liefert
+  // chinDrache/schnabeltier deterministisch. Die Cutscene unten zeigt die
+  // Kreatur trotzdem — rein cosmetisch, nichts wird persistiert.
   sd.nests.push({ nestId, eggType: type, gameId: null, gameUrl: null });
   sd.pendingEggNestId = nestId;
   sd.sealedEggs = (sd.sealedEggs ?? []).filter(e => e.type !== type);

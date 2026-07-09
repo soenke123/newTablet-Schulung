@@ -1559,6 +1559,11 @@ function applyMergedShopState(merged) {
     let changed = false;
     for (const n of nests) {
       if (!n?.nestId || !n.hatched) continue;
+      // Reset-Schutz: Wenn das Nest lokal existiert, aber gameId=null hat
+      // (User hat es gerade zurückgesetzt), NICHT vom Server-hatched
+      // überschreiben — sonst kehrt die alte Kreatur nach jedem Login
+      // zurück und der Reset ist wirkungslos.
+      if (!n.gameId) continue;
       const local = all[n.nestId];
       // Server gewinnt nur, wenn er mindestens gleichauf ist — verhindert,
       // dass lokal frischer, noch nicht gepushter Fortschritt geplättet wird.
