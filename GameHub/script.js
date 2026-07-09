@@ -1440,7 +1440,10 @@ function buildNestCard(nest, allData, shopData) {
   const linkedGame  = GAMES_CONFIG.find(g => g.id === nest.gameId);
   const isPending   = shopData.pendingEggNestId === nest.nestId;
   const eggTypeName = EGG_TYPE_NAMES[nest.eggType] ?? nest.eggType;
-  const canPlay     = hasCreature || !!nest.gameId;
+  // canPlay muss an nest.gameId hängen, nicht an hasCreature. Sealed-Egg-Nester
+  // (himmel/suempfe) und zurückgesetzte Legi-Nester haben creature bereits gesetzt,
+  // aber keine gameUrl → playNest() returnt still und der Klick tut nichts.
+  const canPlay     = !!nest.gameId;
   const nestMaxed   = hasCreature && nestData.growth >= GROWTH_MAX;
   const canUseTrank = hasCreature && !nestMaxed && (shopData.wachstumstrankCount ?? 0) > 0;
   const isAtariEgg  = !hasCreature && nest.eggType === 'atari';
