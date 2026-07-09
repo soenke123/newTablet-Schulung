@@ -1687,27 +1687,22 @@ const HIGHSCORE_LOCAL_KEYS = {
   game9:  'fokusflow_highscore',
   game11: 'tippturbo_hs'
 };
-// Algorithm hat einen JSON-Blob mit .bestTime — separater Getter/Setter
+// Algorithm nutzt loadStorage/saveStorage (base64 + Prüfsumme).
+// Wir lesen/schreiben denselben Kanal, sonst matcht das Format nicht.
 function readAlgBestTime() {
-  try {
-    const raw = localStorage.getItem('algorithm_hs_v1');
-    if (!raw) return 0;
-    const d = JSON.parse(raw);
-    return Number(d.bestTime || 0);
-  } catch(e) { return 0; }
+  const d = loadStorage('algorithm_hs_v1');
+  return Number(d.bestTime || 0);
 }
 function writeAlgBestTime(minutes) {
-  try {
-    const raw = localStorage.getItem('algorithm_hs_v1');
-    const d   = raw ? JSON.parse(raw) : {};
-    if (Number(minutes) > Number(d.bestTime || 0)) {
-      d.bestTime = Number(minutes);
-      // Score-Feld analog rekonstruieren, damit die Endless-Freischaltung stimmt
-      const derived = Math.max(0, Math.floor((Number(minutes) - 120) / 60));
-      if (derived > Number(d.highscore || 0)) d.highscore = derived;
-      localStorage.setItem('algorithm_hs_v1', JSON.stringify(d));
-    }
-  } catch(e) {}
+  const d = loadStorage('algorithm_hs_v1');
+  const m = Number(minutes) || 0;
+  if (m > Number(d.bestTime || 0)) {
+    d.bestTime = m;
+    // Score-Feld analog rekonstruieren, damit die Endless-Freischaltung stimmt
+    const derived = Math.max(0, Math.floor((m - 120) / 60));
+    if (derived > Number(d.highscore || 0)) d.highscore = derived;
+    saveStorage('algorithm_hs_v1', d);
+  }
 }
 
 function readLocalHighscore(gameId) {
