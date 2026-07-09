@@ -251,17 +251,30 @@ export default async function handler(req, res) {
 
   // 8) Cluster-Starthilfe (Bonus) ausschütten — best-effort.
   //    Wenn dieser Aufruf scheitert, ist der Account trotzdem
-  //    nutzbar; der Bonus bleibt nur aus. Fehler nur loggen.
+  //    nutzbar; der Bonus bleibt nur aus. Fehler wird zur besseren
+  //    Diagnose in die Response mitgegeben.
   let bonus = null;
+  let bonus_error = null;
   if (cluster_id) {
+    console.log('[signup] apply_cluster_bonus → user_id=', user_id, 'cluster_id=', cluster_id);
     const { data: bonusRes, error: bonusErr } = await admin.rpc('apply_cluster_bonus', {
       p_user_id: user_id
     });
     if (bonusErr) {
-      console.warn('[signup] apply_cluster_bonus failed:', bonusErr.message);
+      console.warn('[signup] apply_cluster_bonus failed:',
+        bonusErr.message, bonusErr.code, bonusErr.details, bonusErr.hint);
+      bonus_error = {
+        message: bonusErr.message,
+        code:    bonusErr.code,
+        details: bonusErr.details,
+        hint:    bonusErr.hint
+      };
     } else {
+      console.log('[signup] apply_cluster_bonus result:', bonusRes);
       bonus = bonusRes;
     }
+  } else {
+    console.log('[signup] no cluster → skip bonus');
   }
 
   return res.status(200).json({
@@ -270,6 +283,7 @@ export default async function handler(req, res) {
     status,
     cluster_id,
     season: cluster?.season ?? 0,
-    bonus
+    bonus,
+    bonus_error
   });
 }

@@ -134,6 +134,7 @@ $$;
 
 revoke all on function random_baby_from_season(int) from public;
 grant execute on function random_baby_from_season(int) to authenticated;
+grant execute on function random_baby_from_season(int) to service_role;
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -295,7 +296,7 @@ $$;
 
 revoke all on function apply_cluster_bonus(uuid) from public;
 grant execute on function apply_cluster_bonus(uuid) to authenticated;
--- service_role hat implizit Ausführungsrecht auf alle Functions.
+grant execute on function apply_cluster_bonus(uuid) to service_role;
 
 
 -- ─────────────────────────────────────────────────────────────
