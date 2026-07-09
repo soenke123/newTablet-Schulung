@@ -1086,7 +1086,7 @@
         function saveToHub() {
             if (hubSaved) return;
             const gd       = ffGameData || defaultGameData();
-            const isFirst  = gd.roundsPlayed === 0;
+            const isFirst  = !gd.creature;
             const sd       = loadShopData();
             const _norm    = Math.round(totalScore / FF_MAX_SCORE * 10);
             const _eggType = new URLSearchParams(window.location.search).get('egg');

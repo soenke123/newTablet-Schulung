@@ -327,7 +327,7 @@ function saveToHub() {
   if (ST.hubSaved) return;
   const correct = ST.score;
   const gd = quizGameData || defaultGameData();
-  const isFirst = gd.roundsPlayed === 0;
+  const isFirst = !gd.creature;
   const sd = loadShopData();
 
   lastCoinsGained = 0;

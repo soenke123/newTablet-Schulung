@@ -244,7 +244,7 @@
 
     /* ── Save result to hub ── */
     function saveToHub() {
-        const isFirst = gameData.roundsPlayed === 0;
+        const isFirst = !gameData.creature;
         const sd = loadShopData();
         lastCoinsGained = 0;
         if (isFirst) {

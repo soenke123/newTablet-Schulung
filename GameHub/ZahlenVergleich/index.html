@@ -248,7 +248,7 @@
     function endGame() {
       const data         = getGameData(gameState.gameId);
       const correct      = gameState.correctCount;
-      const isFirstRound = data.roundsPlayed === 0;
+      const isFirstRound = !data.creature;
       let   coinsGained  = 0;
       const sd           = loadShopData();
 
