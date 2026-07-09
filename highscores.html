@@ -189,7 +189,18 @@
       z-index: 1;
       filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
     }
-    .rank-first .name-block { flex: 1; z-index: 1; }
+    .rank-first .hero-avatar {
+      width: 4.5rem;
+      height: 4.5rem;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #fff;
+      border: 3px solid var(--gold);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      z-index: 1;
+      flex-shrink: 0;
+    }
+    .rank-first .name-block { flex: 1; z-index: 1; min-width: 0; }
     .rank-first .rank-num {
       font-size: 0.85rem;
       color: #8a6a1a;
@@ -232,15 +243,24 @@
     }
     .rank-item {
       display: grid;
-      grid-template-columns: 2.2rem 1.5rem 1fr auto;
+      grid-template-columns: 2rem 1.2rem 2.4rem 1fr auto;
       align-items: center;
-      gap: 0.7rem;
+      gap: 0.6rem;
       background: var(--surface-soft);
       border: 1px solid var(--border);
       border-radius: var(--radius-small);
-      padding: 0.75rem 1rem;
+      padding: 0.6rem 0.9rem;
       font-size: 0.95rem;
     }
+    .rank-item .row-avatar {
+      width: 2.4rem;
+      height: 2.4rem;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #fff;
+      border: 1.5px solid var(--border);
+    }
+    .rank-item.is-self .row-avatar { border-color: var(--accent); }
     .rank-item .rank-badge {
       font-weight: 700;
       color: var(--muted);
@@ -317,7 +337,14 @@
       .rank-first .crown { font-size: 2rem; }
       .rank-first .display-name { font-size: 1.2rem; }
       .rank-first .score-primary { font-size: 1.4rem; }
-      .rank-item { padding: 0.65rem 0.85rem; font-size: 0.9rem; }
+      .rank-item {
+        padding: 0.55rem 0.75rem;
+        font-size: 0.9rem;
+        grid-template-columns: 1.7rem 1rem 2rem 1fr auto;
+        gap: 0.5rem;
+      }
+      .rank-item .row-avatar { width: 2rem; height: 2rem; }
+      .rank-first .hero-avatar { width: 3.4rem; height: 3.4rem; border-width: 2px; }
     }
   </style>
 </head>
@@ -361,6 +388,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="session.js?v=20260709"></script>
+  <script src="avatars.js?v=20260709"></script>
   <script>
     'use strict';
 
@@ -412,6 +440,13 @@
       return String(s ?? '').replace(/[&<>"']/g, c => ({
         '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
       }[c]));
+    }
+
+    function avatarUrl(id) {
+      if (typeof window.getAvatarUrl === 'function') {
+        return window.getAvatarUrl(id || window.DEFAULT_AVATAR_ID || 'default', '');
+      }
+      return 'avatare/ei_avatar%20default.png';
     }
 
     // ─── Chip-Nav rendern ────────────────────────────────
@@ -517,6 +552,7 @@
       parts.push(`
         <div class="rank-first ${first.is_self ? 'is-self' : ''}">
           <div class="crown">👑</div>
+          <img class="hero-avatar" src="${escapeHtml(avatarUrl(first.avatar_id))}" alt="">
           <div class="name-block">
             <div class="rank-num">Platz 1${first.is_self ? ' · Du' : ''}</div>
             <p class="display-name">${escapeHtml(first.display_name)}</p>
@@ -537,6 +573,7 @@
             <li class="rank-item rank-${entry.rank} ${entry.is_self ? 'is-self' : ''}">
               <span class="rank-badge">${entry.rank}.</span>
               <span class="self-arrow">${entry.is_self ? '→' : ''}</span>
+              <img class="row-avatar" src="${escapeHtml(avatarUrl(entry.avatar_id))}" alt="">
               <span class="display-name">${escapeHtml(entry.display_name)}</span>
               <span class="score">
                 ${escapeHtml(s.primary)}
@@ -557,6 +594,7 @@
             <li class="rank-item is-self">
               <span class="rank-badge">${self.rank}.</span>
               <span class="self-arrow">→</span>
+              <img class="row-avatar" src="${escapeHtml(avatarUrl(self.avatar_id))}" alt="">
               <span class="display-name">${escapeHtml(self.display_name)}</span>
               <span class="score">
                 ${escapeHtml(s.primary)}
