@@ -1585,14 +1585,25 @@ function releaseNest(nestId) {
 
   const nestCoins = getGameData(nestId).coins || 0;
   const legendary = ['pfau', 'atari', 'himmel', 'suempfe'].includes(nest.eggType);
+  // Sealed-Eggs behalten ihre feste Kreatur (himmel=chinDrache, suempfe=schnabeltier)
+  // auch nach Reset: der User wählt neues Spiel und spielt von growth=0 aus weiter,
+  // ohne die Kreatur zu verlieren. Atari/Pfau werden dagegen komplett auf Ei
+  // zurückgesetzt — sie brauchen eine Schlupf-Runde im nächsten Spiel.
+  const keepCreature = nest.eggType === 'himmel' || nest.eggType === 'suempfe'
+    ? SEAL_CREATURE[nest.eggType]
+    : null;
 
   if (legendary) {
     nest.gameId           = null;
     nest.gameUrl          = null;
-    // hatched entfernen — sonst spielt applyMergedShopState beim nächsten
-    // Sync die alte Kreatur wieder in lernwelt_v3[nestId] zurück und der
-    // "Zurücksetzen"-Reset ist im ersten Login-Reload wieder rückgängig.
-    delete nest.hatched;
+    if (keepCreature) {
+      // hatched auf Baby-Zustand mit erhaltener Kreatur setzen.
+      nest.hatched = { creature: keepCreature, growth: 0, points: 0, roundsPlayed: 0, coins: 0 };
+    } else {
+      // Atari/Pfau: kompletter Reset auf Ei — creature wird beim 1. Play neu
+      // via determineEggCreature bestimmt.
+      delete nest.hatched;
+    }
     sd.pendingEggNestId   = nestId;
     sd.bankedCoins        = (sd.bankedCoins || 0) + nestCoins;
   } else {
@@ -1603,7 +1614,12 @@ function releaseNest(nestId) {
 
   try {
     const all = loadStorage(STORAGE_KEY);
-    delete all[nestId];
+    if (keepCreature) {
+      // Kreatur behalten, aber growth/coins/roundsPlayed/points zurücksetzen.
+      all[nestId] = { points: 0, roundsPlayed: 0, creature: keepCreature, growth: 0, coins: 0 };
+    } else {
+      delete all[nestId];
+    }
     saveStorage(STORAGE_KEY, all);
   } catch(e) {}
   document.getElementById('modalOverlay').hidden = true;
@@ -2022,13 +2038,13 @@ function triggerSealEggOpening(type) {
   const creature = SEAL_CREATURE[type];
   const nestId   = 'nest_sealed_' + Date.now();
 
-  // gd.creature bewusst NICHT vorher setzen — das würde beim ersten Play
-  // den isFirst-Check der Spiele (`!gd.creature`) fehlschlagen lassen und
-  // die Kreatur wäre im Hub schon "geschlüpft und wachsend" statt regulär
-  // in der 1. Runde zu schlüpfen (wie bei atari/pfau). Beim 1. Play greift
-  // determineEggCreature('himmel'|'suempfe', score) und liefert
-  // chinDrache/schnabeltier deterministisch. Die Cutscene unten zeigt die
-  // Kreatur trotzdem — rein cosmetisch, nichts wird persistiert.
+  // Sealed-Eggs: creature ist deterministisch (himmel=chinDrache, suempfe=schnabeltier)
+  // und wird sofort gesetzt — die Kreatur ist im Nest als Baby sichtbar. Beim
+  // 1. Play wächst sie ab Runde 1 (wie Cluster-Bonus-Baby), keine Schlupf-Runde.
+  const gd = defaultGameData();
+  gd.creature = creature;
+  saveGameData(nestId, gd);
+
   sd.nests.push({ nestId, eggType: type, gameId: null, gameUrl: null });
   sd.pendingEggNestId = nestId;
   sd.sealedEggs = (sd.sealedEggs ?? []).filter(e => e.type !== type);
