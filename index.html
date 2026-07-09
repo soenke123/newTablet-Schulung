@@ -1416,6 +1416,10 @@
     });
 
     logoutBtn?.addEventListener('click', async () => {
+      // Last-Chance-Push: Highscores aus localStorage in die DB retten,
+      // BEVOR gecleart wird. Sonst gehen Scores verloren, die im Hub-Tab
+      // erspielt aber noch nicht via Bridge gepusht wurden.
+      await window.pushLocalHighscoresToServer?.().catch(() => {});
       window.clearLocalGameState?.();
       await window.supabaseClient.auth.signOut();
       userMenu.hidden = true;

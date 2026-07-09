@@ -164,6 +164,10 @@ function wireUserMenu() {
   });
   document.addEventListener('click', () => menu.hidden = true);
   document.getElementById('logoutBtn').addEventListener('click', async () => {
+    // Konsistent mit Landing/Hub: Last-Chance-Push für Highscores.
+    // Admins spielen zwar praktisch keine Schüler-Games, aber der Aufruf
+    // kostet nichts und hält alle Logout-Pfade uniform.
+    await window.pushLocalHighscoresToServer?.().catch(() => {});
     window.clearLocalGameState?.();
     await window.supabaseClient?.auth?.signOut();
     location.replace('../index.html');

@@ -68,6 +68,62 @@
   }
   window.clearLocalGameState = clearLocalGameState;
 
+  // ─── Last-Chance-Push für Game-Highscores ─────────────────
+  // Muss VOR clearLocalGameState und VOR signOut laufen, sonst
+  // gehen Scores verloren, die im Game gesetzt aber noch nicht
+  // via Hub-Bridge gepusht wurden (z.B. Logout von Landing).
+  //
+  // Nutzt den aktuellen Access-Token (also den User, dessen
+  // Scores gerade in localStorage stehen). Bei User-Wechsel muss
+  // der Aufruf VOR dem Wechsel passieren, sonst pusht man A's
+  // Scores mit B's Token.
+  async function pushLocalHighscoresToServer(token) {
+    const accessToken = token || window.__accessToken;
+    if (!accessToken || !window.SUPABASE_URL) return;
+
+    // Nur die drei bekannten Game-Score-Keys — kein pull, kein write local
+    const jobs = [];
+    // FokusFlow: plain int
+    try {
+      const v = parseInt(localStorage.getItem('fokusflow_highscore') || '0', 10);
+      if (v > 0) jobs.push({ gameId: 'game9', score: v });
+    } catch(e) {}
+    // Tipp-Turbo: plain int
+    try {
+      const v = parseInt(localStorage.getItem('tippturbo_hs') || '0', 10);
+      if (v > 0) jobs.push({ gameId: 'game11', score: v });
+    } catch(e) {}
+    // Algorithm: base64-encoded Blob mit .bestTime — Prüfsumme nicht validieren,
+    // hier nur Best-Effort. Bei Format-Wechsel fällt der Push aus.
+    try {
+      const raw = localStorage.getItem('algorithm_hs_v1');
+      if (raw) {
+        let bestTime = 0;
+        try {
+          const parsed = JSON.parse(atob(raw));
+          const d = (parsed && typeof parsed === 'object' && 'd' in parsed) ? parsed.d : parsed;
+          bestTime = Number(d?.bestTime || 0);
+        } catch(e) {}
+        if (bestTime > 0) jobs.push({ gameId: 'game10', score: bestTime });
+      }
+    } catch(e) {}
+
+    if (jobs.length === 0) return;
+    await Promise.all(jobs.map(({ gameId, score }) => (
+      fetch(`${window.SUPABASE_URL}/rest/v1/rpc/upsert_highscore`, {
+        method: 'POST',
+        headers: {
+          apikey: window.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({ p_game_id: gameId, p_score: score })
+      }).catch(e => console.warn('[SESSION] highscore last-push failed', gameId, e.message))
+    )));
+  }
+  window.pushLocalHighscoresToServer = pushLocalHighscoresToServer;
+
   const LAST_USER_KEY = 'lernwelt_last_user';
 
   // bootPromise resolves nach dem ersten Auth-State-Event (INITIAL_SESSION oder SIGNED_IN),

@@ -356,8 +356,10 @@
       });
       document.getElementById('hubLogoutBtn')?.addEventListener('click', async () => {
         authMenu.hidden = true;
-        // Letzte Chance, offene Dirty-Marker zu syncen bevor localStorage weg ist.
+        // Letzte Chance, offene Dirty-Marker + Highscores zu syncen
+        // bevor localStorage weg ist.
         await window.pushPendingState?.().catch(() => {});
+        await window.pushLocalHighscoresToServer?.().catch(() => {});
         window.clearLocalGameState?.();
         await window.supabaseClient?.auth?.signOut();
         window.location.replace('../index.html');
