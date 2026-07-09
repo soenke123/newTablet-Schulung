@@ -1313,6 +1313,8 @@ function saveHighscore() {
   const t = Math.floor(realToIngameMinutes(gameState.elapsedSeconds));
   if (t > stored.bestTime) stored.bestTime = t;
   saveStorage('algorithm_hs_v1', stored);
+  // Cross-Device: Ingame-Zeit in Minuten als DB-Highscore (Server macht GREATEST).
+  window.pushHighscore?.('game10', stored.bestTime);
 }
 
 function renderBackground() {
@@ -1722,6 +1724,36 @@ function init() {
   }
 
   initHubState();
+
+  // Cross-Device: bei Login den DB-Highscore holen und ggf. lokal übernehmen.
+  // Score-Feld in DB = bestTime (Ingame-Minuten); rekonstruiere daraus den
+  // Score-Wert für den Endless-Freischalt-Check.
+  (async () => {
+    if (!window.pullHighscore) return;
+    const doPull = async () => {
+      const serverBestTime = await window.pullHighscore('game10');
+      if (!serverBestTime) return;
+      const stored = loadAlgHighscores();
+      let dirty = false;
+      if (serverBestTime > stored.bestTime) {
+        stored.bestTime = serverBestTime;
+        // Score aus Zeit rekonstruieren: floor((minutes - 120) / 60), min 0
+        const derivedScore = Math.max(0, Math.floor((serverBestTime - 120) / 60));
+        if (derivedScore > stored.highscore) stored.highscore = derivedScore;
+        dirty = true;
+      }
+      if (dirty) {
+        saveStorage('algorithm_hs_v1', stored);
+        renderScore();
+        if (stored.highscore >= 10) {
+          document.getElementById('endless-mode-btn').style.display = '';
+          document.getElementById('cards-overview-btn').style.display = '';
+        }
+      }
+    };
+    if (window.waitForSession) window.waitForSession().then(doPull);
+    else setTimeout(doPull, 500);
+  })();
 }
 
 

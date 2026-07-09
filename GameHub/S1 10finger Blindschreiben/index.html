@@ -944,6 +944,8 @@
     const isRecord = score > hs;
     if (isRecord) saveHs(score);
     const finalHs  = isRecord ? score : hs;
+    // Cross-Device Sync: Server macht selbst GREATEST, wir schicken den aktuellen Score.
+    window.pushHighscore?.('game11', score);
 
     document.getElementById("endScore").textContent    = score;
     document.getElementById("endHsVal").textContent    = finalHs;
@@ -1195,7 +1197,21 @@
 <script>window.CREATURE_IMAGE_BASE = '../data/';</script>
 <script src="../config.js"></script>
 <script src="../creatures.js"></script>
-<script>initCompanion();</script>
+<script>
+  initCompanion();
+  // Cross-Device: Server-Highscore ziehen und ggf. lokalen überschreiben,
+  // damit der End-Screen den korrekten Wert anzeigt.
+  (async () => {
+    if (!window.pullHighscore) return;
+    const apply = async () => {
+      const server = await window.pullHighscore('game11');
+      const local  = parseInt(localStorage.getItem('tippturbo_hs') || '0', 10);
+      if (server > local) localStorage.setItem('tippturbo_hs', String(server));
+    };
+    if (window.waitForSession) window.waitForSession().then(apply);
+    else setTimeout(apply, 500);
+  })();
+</script>
 
 </body>
 </html>

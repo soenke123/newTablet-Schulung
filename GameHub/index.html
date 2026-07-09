@@ -24,6 +24,7 @@
     <div class="hub-auth-menu" id="hubAuthMenu" hidden>
       <a id="hubAdminLink" href="../admin/index.html" hidden>Admin-Bereich</a>
       <a id="hubProfileLink" href="../profil.html">Profil<span class="new-dot" id="hubMenuNewDot" hidden></span></a>
+      <a id="hubHighscoresLink" href="../highscores.html">Highscores</a>
       <button type="button" id="hubBackBtn">Zurück zur Übersicht</button>
       <button type="button" id="hubLogoutBtn">Ausloggen</button>
     </div>
@@ -251,6 +252,7 @@
       await window.refreshUnlockedFromServer?.();
       await window.loadServerState?.();
       await window.loadServerShop?.();
+      await window.syncHighscores?.();
 
       renderHub();
       // seenCreatures wird von renderHub aktuell gehalten → jetzt erst
@@ -290,6 +292,7 @@
         await window.pushPendingState?.();
         await window.refreshUnlockedFromServer?.();
         await window.loadServerState?.();
+        await window.syncHighscores?.();
         renderHub();
       });
     });

@@ -1028,6 +1028,23 @@
         document.getElementById('start-highscore').textContent =
             parseInt(localStorage.getItem('fokusflow_highscore') || '0');
 
+        // Cross-Device: Server-Best holen und ggf. lokal überschreiben.
+        // Läuft nach kurzer Verzögerung, damit session.js gebootet ist.
+        (function syncHighscoreFromServer() {
+          const apply = async () => {
+            if (!window.pullHighscore) return;
+            const server = await window.pullHighscore('game9');
+            const local  = parseInt(localStorage.getItem('fokusflow_highscore') || '0');
+            if (server > local) {
+              localStorage.setItem('fokusflow_highscore', String(server));
+              const el = document.getElementById('start-highscore');
+              if (el) el.textContent = server;
+            }
+          };
+          if (window.waitForSession) window.waitForSession().then(apply);
+          else setTimeout(apply, 500);
+        })();
+
         // === DOM refs ===
         const playArea        = document.getElementById('play-area');
         const targetDisplay   = document.getElementById('target-display');
@@ -2448,6 +2465,8 @@
             const finalHS = Math.max(prevHS, totalScore);
             localStorage.setItem('fokusflow_highscore', String(finalHS));
             document.getElementById('highscore-value').textContent = finalHS;
+            // Server-Sync (fire-and-forget). Server macht selbst GREATEST.
+            window.pushHighscore?.('game9', totalScore);
 
             winOverlay.style.display = 'flex';
             document.getElementById('final-time').innerText =

@@ -1612,3 +1612,135 @@ function spawnLevelUpParticles(anchor) {
     p.addEventListener('animationend', () => p.remove(), { once: true });
   }
 }
+
+
+/* ─── Highscore-Sync (Best-Score pro Spiel in DB) ─────────────
+   Von den einzelnen Games genutzt, damit persönliche Bestwerte
+   Cross-Device bleiben und im Leaderboard auftauchen.
+
+   pullHighscore(gameId) → int (aus DB, oder 0 wenn Gast/kein Score)
+   pushHighscore(gameId, score) → fire-and-forget, kein Fehler wenn Gast */
+async function pullHighscore(gameId) {
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return 0;
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return 0;
+  try {
+    const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/get_my_highscore`, {
+      method: 'POST',
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify({ p_game_id: gameId })
+    });
+    if (!res.ok) throw new Error(`get_my_highscore ${res.status}`);
+    const result = await res.json();
+    if (!result?.ok) return 0;
+    return Number(result.best_score) || 0;
+  } catch (e) {
+    console.warn('[creatures] pullHighscore failed:', e.message);
+    return 0;
+  }
+}
+
+async function pushHighscore(gameId, score) {
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return;
+  const s = Math.max(0, Math.floor(Number(score) || 0));
+  try {
+    const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/upsert_highscore`, {
+      method: 'POST',
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify({ p_game_id: gameId, p_score: s })
+    });
+    if (!res.ok) throw new Error(`upsert_highscore ${res.status}`);
+  } catch (e) {
+    console.warn('[creatures] pushHighscore failed:', e.message);
+  }
+}
+
+window.pullHighscore = pullHighscore;
+window.pushHighscore = pushHighscore;
+
+
+/* ─── Highscore-Bridge Hub ↔ localStorage ↔ DB ────────────────
+   Die Games (FokusFlow, Algorithm, 10-Finger) laden kein
+   session.js und können nicht direkt mit der DB reden. Sie
+   schreiben ihre Bestwerte in localStorage. Der Hub übernimmt
+   die Cross-Device-Synchronisation:
+
+     Boot / Login  → DB → localStorage  (damit Games den globalen
+                                          Bestwert sehen)
+     Rückkehr Game → localStorage → DB  (falls im Game verbessert)
+
+   Merge = GREATEST auf beiden Seiten (Server macht upsert-MAX,
+   Client vergleicht selbst gegen alten localStorage-Wert). */
+const HIGHSCORE_LOCAL_KEYS = {
+  game9:  'fokusflow_highscore',
+  game11: 'tippturbo_hs'
+};
+// Algorithm hat einen JSON-Blob mit .bestTime — separater Getter/Setter
+function readAlgBestTime() {
+  try {
+    const raw = localStorage.getItem('algorithm_hs_v1');
+    if (!raw) return 0;
+    const d = JSON.parse(raw);
+    return Number(d.bestTime || 0);
+  } catch(e) { return 0; }
+}
+function writeAlgBestTime(minutes) {
+  try {
+    const raw = localStorage.getItem('algorithm_hs_v1');
+    const d   = raw ? JSON.parse(raw) : {};
+    if (Number(minutes) > Number(d.bestTime || 0)) {
+      d.bestTime = Number(minutes);
+      // Score-Feld analog rekonstruieren, damit die Endless-Freischaltung stimmt
+      const derived = Math.max(0, Math.floor((Number(minutes) - 120) / 60));
+      if (derived > Number(d.highscore || 0)) d.highscore = derived;
+      localStorage.setItem('algorithm_hs_v1', JSON.stringify(d));
+    }
+  } catch(e) {}
+}
+
+function readLocalHighscore(gameId) {
+  if (gameId === 'game10') return readAlgBestTime();
+  const key = HIGHSCORE_LOCAL_KEYS[gameId];
+  if (!key) return 0;
+  try { return parseInt(localStorage.getItem(key) || '0', 10) || 0; }
+  catch(e) { return 0; }
+}
+function writeLocalHighscore(gameId, score) {
+  if (gameId === 'game10') { writeAlgBestTime(score); return; }
+  const key = HIGHSCORE_LOCAL_KEYS[gameId];
+  if (!key) return;
+  try {
+    const cur = parseInt(localStorage.getItem(key) || '0', 10) || 0;
+    if (score > cur) localStorage.setItem(key, String(score));
+  } catch(e) {}
+}
+
+async function syncHighscores() {
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
+  const gameIds = ['game9', 'game10', 'game11'];
+  for (const gid of gameIds) {
+    try {
+      const server = await pullHighscore(gid);
+      const local  = readLocalHighscore(gid);
+      if (server > local) writeLocalHighscore(gid, server);
+      const best = Math.max(server, local);
+      if (best > server) await pushHighscore(gid, best);
+    } catch (e) {
+      console.warn('[creatures] syncHighscores', gid, 'failed:', e.message);
+    }
+  }
+}
+
+window.syncHighscores = syncHighscores;
