@@ -59,7 +59,11 @@
       localStorage.removeItem('lernwelt_shop_v1');
       localStorage.removeItem('lernwelt_shop_dirty');
       localStorage.removeItem('lernwelt_avatar_unlocks');
-      console.log('[SESSION] localStorage game state + shop + avatars gelöscht.');
+      // Game-Highscores: pro Game eigener Key, gehören zum User → wegräumen
+      localStorage.removeItem('fokusflow_highscore');
+      localStorage.removeItem('tippturbo_hs');
+      localStorage.removeItem('algorithm_hs_v1');
+      console.log('[SESSION] localStorage game state + shop + avatars + highscores gelöscht.');
     } catch(e) {}
   }
   window.clearLocalGameState = clearLocalGameState;
