@@ -346,11 +346,11 @@
         <button type="button" data-scope="school">Meine Schule</button>
       </div>
 
-      <p class="board-section-title">Spiele</p>
-      <div class="board-chips" id="gameChips"></div>
-
       <p class="board-section-title">Sammlung</p>
       <div class="board-chips" id="hubChips"></div>
+
+      <p class="board-section-title">Spiele</p>
+      <div class="board-chips" id="gameChips"></div>
 
       <div id="boardContainer">
         <div class="loading">Lade Board…</div>
@@ -591,8 +591,8 @@
       hsMain.hidden = false;
 
       const season = Number(session.season) || 0;
-      // Erstes freigeschaltetes Game als Default
-      currentBoard = GAME_BOARDS.find(b => b.season <= season) || GAME_BOARDS[0];
+      // Default-Board: Kreaturen — es geht ja um die Tiere
+      currentBoard = HUB_BOARDS.find(b => b.key === 'creatures') || HUB_BOARDS[0];
       renderChips(season);
       loadAndRenderBoard();
     })();
