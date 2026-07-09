@@ -860,7 +860,14 @@ function computeSessionGrowth(correct, maxPoints) {
 /* Berechnet Coins und Wachstum für eine abgeschlossene Runde (auch Runde 1).
    Mutiert data.growth und data.coins direkt. Gibt coinsGained zurück.
    Booster/coinsx3 werden hier geprüft aber NICHT gecleart – das macht der Aufrufer.
-   skipGrowth=true (Runde 1): Coins werden vergeben, Growth bleibt unverändert. */
+   skipGrowth=true (Runde 1): Coins werden vergeben, Growth bleibt unverändert.
+
+   Auto-skipGrowth bei pre-set creature: Sealed-Egg-Nester (himmel/suempfe) und
+   Cluster-Bonus-Babys haben creature schon VOR dem 1. Play gesetzt. Die Spiele
+   erkennen sie über `!gd.creature` NICHT als isFirst (siehe Memory: `!gd.creature`
+   darf nicht auf `roundsPlayed===0` geändert werden, sonst wird die pre-set
+   creature überschrieben). Ohne den Auto-Skip würden diese Nester in Runde 1
+   growth schreiben statt nur zu schlüpfen — Bug: Legis wachsen sofort. */
 function computeRoundResult(data, correct, maxPoints, sd, skipGrowth) {
   const savedGrowth = data.growth;
   const baseContribution = computeSessionGrowth(correct, maxPoints);
@@ -887,7 +894,8 @@ function computeRoundResult(data, correct, maxPoints, sd, skipGrowth) {
   if (correct === maxPoints) coinsGained += 3;
   coinsGained += getGrowthBonusCoins(data.growth);
 
-  if (skipGrowth) data.growth = savedGrowth;
+  const isPreSetFirstPlay = (data.roundsPlayed || 0) === 0 && !!data.creature;
+  if (skipGrowth || isPreSetFirstPlay) data.growth = savedGrowth;
   data.coins = (data.coins || 0) + coinsGained;
   return coinsGained;
 }
