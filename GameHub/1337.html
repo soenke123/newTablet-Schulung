@@ -173,15 +173,41 @@
     </div>
   </div>
 
-  <script src="creatures.js"></script>
+  <!-- Supabase-SDK + Session-Layer: Shop-State muss vom Server kommen,
+       sonst zeigt der Terminal-Screen auf Zweit-Geräten "?" (localStorage leer). -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../supabase-config.js"></script>
+  <script src="../session.js?v=20260709"></script>
+  <script src="creatures.js?v=20260709"></script>
   <script>
-    (function () {
+    (async function () {
       const body = document.getElementById('consoleBody');
+
+      // Session-Bootstrap abwarten — sonst holen wir den Shop ohne Token.
+      await (window.waitForSession?.() ?? Promise.resolve());
+
+      // 1337.html erfordert Login (wie der Hub) — sonst zurück zur Landing.
+      if (!window.isLoggedIn?.()) {
+        window.location.replace('../index.html');
+        return;
+      }
+
+      // Server-Shop laden, damit atariNumber/atariSolved/purchased frisch sind.
+      await window.loadServerShop?.();
 
       const shopData    = loadShopData();
       const hasBought   = shopData.purchased.includes('atariHint');
-      const atariNumber = shopData.atariNumber;
+      let atariNumber   = shopData.atariNumber;
       const isSolved    = shopData.atariSolved;
+
+      // Selbst-Reparatur: gekauft, aber Zahl fehlt (Legacy/inkonsistent) →
+      // einmalig würfeln und persistieren. shop_state_merge nimmt
+      // "nicht-null gewinnt" — der Server übernimmt den Wert und behält ihn.
+      if (hasBought && (atariNumber === null || atariNumber === undefined)) {
+        atariNumber = Math.floor(Math.random() * 8);
+        shopData.atariNumber = atariNumber;
+        saveShopData(shopData);
+      }
 
       if (!hasBought) {
         body.innerHTML = `
@@ -212,7 +238,7 @@
         `<div class="c-line ${l.cls}" data-delay="${i * 180}">${l.text}</div>`
       ).join('');
 
-      const numDisplay = atariNumber !== null ? atariNumber : '?';
+      const numDisplay = atariNumber !== null && atariNumber !== undefined ? atariNumber : '?';
 
       body.innerHTML = `
         ${linesHTML}
