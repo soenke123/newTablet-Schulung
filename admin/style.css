@@ -631,6 +631,65 @@ html, body {
   border-color: var(--a-danger);
 }
 
+/* ─── Cluster-Starthilfe-Modal ────────────────────────── */
+#clusterBonusModal .modal-box { max-width: 480px; }
+.modal-hint {
+  margin: 0 0 16px;
+  color: var(--a-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.cb-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--a-surface-2);
+  border: 1px solid var(--a-border);
+  border-radius: var(--a-radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--a-text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cb-toggle input { flex-shrink: 0; }
+.cb-seasons {
+  border: 1px solid var(--a-border);
+  border-radius: var(--a-radius-sm);
+  padding: 10px 14px;
+  margin: 0;
+  background: var(--a-surface-2);
+}
+.cb-seasons legend {
+  color: var(--a-muted);
+  font-size: 11px;
+  padding: 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.cb-seasons__loading,
+.cb-seasons .empty {
+  color: var(--a-muted);
+  font-size: 12px;
+  padding: 6px 0;
+}
+.cb-season {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--a-text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cb-season + .cb-season { border-top: 1px solid var(--a-border); }
+.cb-season input { margin-top: 3px; flex-shrink: 0; }
+.cb-season strong { color: var(--a-gold); }
+.cb-season span { line-height: 1.4; }
+
 /* ─── Zeilen-Aktions-Dropdown ─────────────────────────── */
 .row-actions {
   position: relative;

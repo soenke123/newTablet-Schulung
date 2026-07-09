@@ -12,7 +12,8 @@
 const bootMask = document.getElementById('bootMask');
 let currentSchoolId = null;
 let currentUserId   = null;   // eingeloggter Admin — für Self-Delete-Schutz
-let clusterCache    = [];     // {id, name, season, opens_at, closes_at}
+let clusterCache    = [];     // {id, name, season, opens_at, closes_at, bonus?}
+let gamesBySeason   = null;   // { 1: ['game1', ...], 2: [...] }, lazy geladen
 let userCache       = [];     // profiles rows (angereichert mit progress-Daten wenn geladen)
 let progressLoaded  = false;  // game_state/wallets/user_collectibles einmal nachgeladen?
 
@@ -129,6 +130,7 @@ function validateClusterWindow(opensAt, closesAt) {
   wireClusterForm();
   wireClusterEditModal();
   wireClusterDeleteModal();
+  wireClusterBonusModal();
   wireUserFilters();
   wireViewSwitch();
   wireBulkBar();
@@ -251,12 +253,32 @@ async function loadClusters() {
     const counts = {};
     for (const m of members) if (m.cluster_id) counts[m.cluster_id] = (counts[m.cluster_id] || 0) + 1;
 
+    // Bonus-Konfig pro Cluster mitziehen — für Badge in der Zeile
+    // und um beim Modal-Open den Zustand kennen. Fehler tolerieren
+    // (Migration 0020 evtl. noch nicht deployed).
+    try {
+      const clusterIds = rows.map(r => r.id);
+      if (clusterIds.length > 0) {
+        const filter = `in.(${clusterIds.join(',')})`;
+        const bonuses = await api('GET',
+          `cluster_bonus?select=cluster_id,active,startup_coins,seasons&cluster_id=${filter}`);
+        const byId = {};
+        for (const b of bonuses) byId[b.cluster_id] = b;
+        for (const c of rows) c.bonus = byId[c.id] || null;
+      }
+    } catch (e) {
+      console.warn('[admin] cluster_bonus laden fehlgeschlagen:', e.message);
+    }
+
     if (rows.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" class="empty">Noch keine Cluster.</td></tr>';
     } else {
       tbody.innerHTML = rows.map(c => renderClusterRow(c, counts[c.id] || 0)).join('');
       tbody.querySelectorAll('.js-cluster-edit').forEach(btn => {
         btn.addEventListener('click', () => openClusterEdit(btn.dataset.id));
+      });
+      tbody.querySelectorAll('.js-cluster-bonus').forEach(btn => {
+        btn.addEventListener('click', () => openClusterBonus(btn.dataset.id));
       });
       tbody.querySelectorAll('.js-cluster-delete').forEach(btn => {
         btn.addEventListener('click', () => openClusterDelete(btn.dataset.id, counts[btn.dataset.id] || 0));
@@ -278,6 +300,13 @@ function renderClusterRow(c, memberCount) {
   if (opens  && now < opens)  statusBadge = '<span class="badge closed">geplant</span>';
   if (closes && now > closes) statusBadge = '<span class="badge closed">vorbei</span>';
   if (!opens && !closes)      statusBadge = '<span class="badge open">unbegrenzt</span>';
+
+  // Starthilfe-Label: "•" wenn nicht konfiguriert, "★ aktiv"/"gehemmt" sonst.
+  let bonusLabel = 'Starthilfe';
+  if (c.bonus) {
+    bonusLabel = c.bonus.active ? '★ Starthilfe' : 'Starthilfe (aus)';
+  }
+
   return `
     <tr>
       <td>${escapeHtml(c.name)}</td>
@@ -288,6 +317,7 @@ function renderClusterRow(c, memberCount) {
       <td>${memberCount}</td>
       <td>
         <button class="btn small js-cluster-edit"   data-id="${c.id}">Bearbeiten</button>
+        <button class="btn small js-cluster-bonus"  data-id="${c.id}">${bonusLabel}</button>
         <button class="btn small danger js-cluster-delete" data-id="${c.id}">Löschen</button>
       </td>
     </tr>`;
@@ -351,6 +381,132 @@ function openClusterEdit(id) {
   document.getElementById('edClCloses').value  = isoToLocalInput(c.closes_at);
   document.getElementById('edClFeedback').textContent = '';
   document.getElementById('clusterEditModal').hidden = false;
+}
+
+// ─── Cluster-Starthilfe-Modal ────────────────────────────────
+// Konfiguriert cluster_bonus (Row existiert nur wenn konfiguriert).
+// Deaktivieren ohne Löschen ist bewusst: die Grants bleiben bestehen,
+// aber neue Anmeldungen bekommen nichts mehr.
+let bonusClusterId = null;
+
+async function ensureGamesBySeason() {
+  if (gamesBySeason) return gamesBySeason;
+  const rows = await api('GET', `games?select=id,season&active=eq.true&order=season.asc`);
+  gamesBySeason = {};
+  for (const g of rows) {
+    if (!gamesBySeason[g.season]) gamesBySeason[g.season] = [];
+    gamesBySeason[g.season].push(g.id);
+  }
+  return gamesBySeason;
+}
+
+function wireClusterBonusModal() {
+  const overlay = document.getElementById('clusterBonusModal');
+  const close   = document.getElementById('clusterBonusClose');
+  const cancel  = document.getElementById('cbCancel');
+  const form    = document.getElementById('clusterBonusForm');
+
+  const doClose = () => { overlay.hidden = true; bonusClusterId = null; };
+  close.addEventListener('click', doClose);
+  cancel.addEventListener('click', doClose);
+  overlay.addEventListener('click', e => { if (e.target === overlay) doClose(); });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!bonusClusterId) return;
+    const feedback = document.getElementById('cbFeedback');
+    const btn      = document.getElementById('cbSubmit');
+    feedback.className = 'form-feedback';
+    feedback.textContent = '';
+
+    const active = document.getElementById('cbActive').checked;
+    const coins  = parseInt(document.getElementById('cbCoins').value, 10) || 0;
+    const seasons = Array.from(
+      document.querySelectorAll('#cbSeasonList input[type="checkbox"]:checked')
+    ).map(cb => parseInt(cb.value, 10)).sort((a, b) => a - b);
+
+    if (coins < 0 || coins > 10000) {
+      feedback.textContent = 'Startcoins: 0 bis 10000.';
+      feedback.classList.add('error');
+      return;
+    }
+
+    btn.disabled = true;
+    try {
+      // Upsert via PostgREST: on_conflict + Prefer resolution=merge-duplicates.
+      // Der api()-Helper setzt nur return=representation — wir müssen den
+      // Merge-Modus selbst nachlegen, sonst wirft PostgREST 23505.
+      const token = window.__accessToken;
+      const res = await fetch(
+        `${window.SUPABASE_URL}/rest/v1/cluster_bonus?on_conflict=cluster_id`,
+        {
+          method: 'POST',
+          headers: {
+            apikey: window.SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation,resolution=merge-duplicates',
+            Accept: 'application/json'
+          },
+          body: JSON.stringify({
+            cluster_id: bonusClusterId,
+            active,
+            startup_coins: coins,
+            seasons
+          })
+        }
+      );
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`HTTP ${res.status}: ${txt}`);
+      }
+      doClose();
+      await loadClusters();
+    } catch (err) {
+      feedback.textContent = err.message;
+      feedback.classList.add('error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+async function openClusterBonus(id) {
+  const c = clusterCache.find(x => x.id === id);
+  if (!c) return;
+  bonusClusterId = id;
+
+  // Formular mit Cluster-Werten füllen. Ohne Bonus-Row: Defaults.
+  const b = c.bonus || { active: false, startup_coins: 0, seasons: [] };
+  document.getElementById('cbActive').checked = !!b.active;
+  document.getElementById('cbCoins').value    = b.startup_coins ?? 0;
+  document.getElementById('cbFeedback').textContent = '';
+
+  // Season-Liste dynamisch aufbauen.
+  const list = document.getElementById('cbSeasonList');
+  list.innerHTML = '<div class="cb-seasons__loading">Lade Spielübersicht…</div>';
+  try {
+    const bySeason = await ensureGamesBySeason();
+    const seasons = Object.keys(bySeason).map(Number).sort((a, b) => a - b);
+    if (seasons.length === 0) {
+      list.innerHTML = '<div class="empty">Keine aktiven Spiele gefunden.</div>';
+    } else {
+      const preselected = new Set(b.seasons || []);
+      list.innerHTML = seasons.map(s => {
+        const checked = preselected.has(s) ? 'checked' : '';
+        const count = bySeason[s].length;
+        return `
+          <label class="cb-season">
+            <input type="checkbox" value="${s}" ${checked} />
+            <span><strong>Season ${s}</strong> — ${count} Spiel${count === 1 ? '' : 'e'} werden freigeschaltet, je ein Baby-Monster.</span>
+          </label>`;
+      }).join('');
+    }
+  } catch (err) {
+    list.innerHTML = `<div class="empty">Fehler: ${escapeHtml(err.message)}</div>`;
+  }
+
+  document.getElementById('clusterBonusModal').hidden = false;
 }
 
 // ─── Cluster-Delete-Modal ────────────────────────────────────
@@ -1217,9 +1373,30 @@ async function setUserCluster(userId, clusterId) {
     if (u) { u.cluster_id = clusterId; u.status = nextStatus; }
     renderUsers();
     loadClusters();
+    // Starthilfe ausschütten (idempotent — schadet nicht, wenn Cluster
+    // keinen Bonus hat oder User bereits Grant besitzt).
+    if (clusterId) applyBonusForUser(userId);
   } catch (err) {
     showToast('Cluster-Zuweisung fehlgeschlagen: ' + err.message, 'error');
     renderUsers();
+  }
+}
+
+// Ruft apply_cluster_bonus für einen User als best-effort auf.
+// Idempotent per DB-Design; Fehler nur loggen, User-Facing-Toast nur
+// bei tatsächlichem Grant (damit stumme Skips nicht nerven).
+async function applyBonusForUser(userId) {
+  try {
+    const result = await api('POST', 'rpc/apply_cluster_bonus', { p_user_id: userId });
+    if (result?.granted) {
+      const parts = [];
+      if (result.coins_added)    parts.push(`+${result.coins_added} 🪙`);
+      if (result.babies_placed)  parts.push(`${result.babies_placed} Baby-Monster`);
+      if (result.games_unlocked) parts.push(`${result.games_unlocked} Spiele frei`);
+      showToast('Starthilfe: ' + (parts.join(', ') || 'ausgeschüttet'));
+    }
+  } catch (err) {
+    console.warn('[admin] apply_cluster_bonus fehlgeschlagen:', err.message);
   }
 }
 
@@ -1345,6 +1522,19 @@ async function bulkAssignCluster() {
     selectedIds.clear();
     renderUsers();
     loadClusters();  // Member-Counts neu
+    // Starthilfe für alle betroffenen User (idempotent). Parallel, ohne
+    // auf einzelne Fehler zu warten — Bulk-Toast läuft schon.
+    if (clusterId) {
+      Promise.all(ids.map(uid =>
+        api('POST', 'rpc/apply_cluster_bonus', { p_user_id: uid }).catch(e => {
+          console.warn('[admin] bulk bonus fail', uid, e.message);
+          return null;
+        })
+      )).then(results => {
+        const granted = results.filter(r => r?.granted).length;
+        if (granted > 0) showToast(`Starthilfe: ${granted} User haben Bonus erhalten.`);
+      });
+    }
   } catch (err) {
     fb.textContent = 'Fehler: ' + err.message;
     fb.classList.add('error');

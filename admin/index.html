@@ -189,6 +189,39 @@
     </div>
   </div>
 
+  <!-- ─── Cluster-Starthilfe-Modal ───────────────────────── -->
+  <div class="modal-overlay" id="clusterBonusModal" hidden>
+    <div class="modal-box">
+      <button type="button" class="modal-close" id="clusterBonusClose">×</button>
+      <h3>Starthilfe für Kurs konfigurieren</h3>
+      <p class="modal-hint" id="clusterBonusHint">
+        Neu-Anmeldungen in diesem Kurs erhalten die Starthilfe automatisch.
+        Bereits ausgeschüttete Boni bleiben erhalten — Deaktivieren wirkt nur
+        für künftige Anmeldungen.
+      </p>
+      <form id="clusterBonusForm" class="grid-form">
+        <label class="cb-toggle">
+          <input type="checkbox" id="cbActive" />
+          <span>Bonus aktiv</span>
+        </label>
+        <label>Startcoins
+          <input type="number" id="cbCoins" min="0" max="10000" step="1" value="0" />
+        </label>
+        <fieldset class="cb-seasons">
+          <legend>Seasons freischalten</legend>
+          <div id="cbSeasonList">
+            <!-- dynamisch befüllt -->
+          </div>
+        </fieldset>
+        <div class="form-actions">
+          <button type="submit" class="btn primary" id="cbSubmit">Speichern</button>
+          <button type="button" class="btn"        id="cbCancel">Abbrechen</button>
+          <span class="form-feedback" id="cbFeedback"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ─── User-Detail-Modal (Progress-View) ────────────────── -->
   <div class="modal-overlay" id="userDetailModal" hidden>
     <div class="modal-box modal-wide">
