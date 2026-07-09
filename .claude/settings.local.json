@@ -12,7 +12,8 @@
       "Bash(awk 'NR==169 || NR==1269 {print NR\": \"length\\($0\\)\" chars, first 100: \"substr\\($0,1,100\\)}' \"GameHub/S1 EscapeGame/index.html\")",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git ls-tree *)"
+      "Bash(git ls-tree *)",
+      "Bash(node *)"
     ]
   }
 }

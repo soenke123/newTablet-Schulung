@@ -1280,13 +1280,17 @@ function loadShopData() {
       pfauEggGranted:        d.pfauEggGranted        ?? false,
       bankedCoins:           d.bankedCoins           ?? 0,
       kristalle:             d.kristalle             ?? 0,
+      // Migration 0023: spentKristalle wächst monoton, Anzeige-balance =
+      // kristalle − spentKristalle. Vorher wurde kristalle direkt dekrementiert
+      // und beim Sync per max-Merge auf den Server-Wert zurückgeplättet.
+      spentKristalle:        d.spentKristalle        ?? 0,
       lootboxDailyClaimed:   d.lootboxDailyClaimed   ?? {},
       pendingBackup:         d.pendingBackup         ?? null,
       sealedEggs:            d.sealedEggs            ?? [],
       sealProgress:          d.sealProgress          ?? {},
     };
   } catch(e) {
-    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, coinsx3: false, coinsx3Count: 0, glucksklee: false, gluckskleeCount: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [] };
+    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, coinsx3: false, coinsx3Count: 0, glucksklee: false, gluckskleeCount: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [] };
   }
 }
 

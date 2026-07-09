@@ -504,6 +504,12 @@ function showCreatureModal(data) {
   overlay.hidden = false;
 }
 
+// Migration 0023: Kristall-Balance = Grants − Ausgaben. Vorher wurde
+// sd.kristalle direkt dekrementiert und beim Sync zurückgeplättet.
+function getAvailableKristalle(sd) {
+  return (sd.kristalle ?? 0) - (sd.spentKristalle ?? 0);
+}
+
 function renderCoinDisplay(allData) {
   const shopData  = loadShopData();
   const available = getTotalCoins(allData) - shopData.spentCoins;
@@ -511,7 +517,7 @@ function renderCoinDisplay(allData) {
   if (el) el.textContent = available;
 
   const kristallEl = document.getElementById('kristallAmount');
-  if (kristallEl) kristallEl.textContent = shopData.kristalle ?? 0;
+  if (kristallEl) kristallEl.textContent = getAvailableKristalle(shopData);
 
   const bookBtn = document.getElementById('bookBtn');
   if (bookBtn) bookBtn.hidden = !shopData.purchased.includes('buchDerMonster');
@@ -879,7 +885,7 @@ function _renderShopBadges(shopData, available, s2Open) {
   const activeTabNr = +(document.querySelector('.shop-tab--active')?.dataset.tab ?? shopActiveTab);
   const showKristall = s2Open && activeTabNr === 2;
   kristallBadge.hidden = !showKristall;
-  if (showKristall && kristallAmountEl) kristallAmountEl.textContent = shopData.kristalle ?? 0;
+  if (showKristall && kristallAmountEl) kristallAmountEl.textContent = getAvailableKristalle(shopData);
 }
 
 function _buildShopItem(item, shopData, allData, available, s2Open) {
@@ -914,7 +920,7 @@ function _buildLootboxItemElement(item, shopData) {
       </div>
     </div>
     <div class="shop-list-item__buy-col">
-      <button class="shop-list-item__btn"${!hasFree && (shopData.kristalle ?? 0) < 2 ? ' disabled' : ''}>${hasFree ? 'Gratis' : '2 💎 Kaufen'}</button>
+      <button class="shop-list-item__btn"${!hasFree && getAvailableKristalle(shopData) < 2 ? ' disabled' : ''}>${hasFree ? 'Gratis' : '2 💎 Kaufen'}</button>
     </div>
   `;
   li.querySelector('.shop-list-item__btn').addEventListener('click', () => {
@@ -922,8 +928,8 @@ function _buildLootboxItemElement(item, shopData) {
       claimFreeLootbox();
     } else {
       const currentSd = loadShopData();
-      if ((currentSd.kristalle ?? 0) < 2) return;
-      currentSd.kristalle -= 2;
+      if (getAvailableKristalle(currentSd) < 2) return;
+      currentSd.spentKristalle = (currentSd.spentKristalle ?? 0) + 2;
       saveShopData(currentSd);
       const reward = rollLootbox(currentSd, loadAllData());
       openLootboxModal(reward);
@@ -969,7 +975,7 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
   const ownedCount  = isStackable ? (shopData[_SHOP_COUNT_KEYS[item.id]] ?? 0) : 0;
   const isActive    = !isStackable && !!item.consumable && !!shopData[item.id];
   const canAfford   = item.currency === 'kristall'
-    ? (shopData.kristalle ?? 0) >= item.price
+    ? getAvailableKristalle(shopData) >= item.price
     : available >= item.price;
   const hasMaxedCreature = item.upgradeItem
     ? s2Open && Object.values(allData).some(d => d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6)
@@ -1059,7 +1065,7 @@ function _isPurchased(shopData, itemId) {
 }
 
 function _charge(shopData, item) {
-  if (item.currency === 'kristall') shopData.kristalle = (shopData.kristalle ?? 0) - item.price;
+  if (item.currency === 'kristall') shopData.spentKristalle = (shopData.spentKristalle ?? 0) + item.price;
   else shopData.spentCoins += item.price;
 }
 
@@ -1070,7 +1076,7 @@ function buyItem(itemId) {
   const allData   = loadAllData();
   const available = getTotalCoins(allData) - shopData.spentCoins;
   if (item.currency === 'kristall') {
-    if ((shopData.kristalle ?? 0) < item.price) return;
+    if (getAvailableKristalle(shopData) < item.price) return;
   } else {
     if (available < item.price) return;
   }
@@ -1880,7 +1886,7 @@ function renderSealedEggModalContent(type) {
   const egg = (sd.sealedEggs ?? []).find(e => e.type === type);
   if (!egg) return;
 
-  const kristalle   = sd.kristalle ?? 0;
+  const kristalle   = getAvailableKristalle(sd);
   const solvedCount = egg.seals.filter(s => s.solved).length;
   const allSolved   = solvedCount === 4;
 
@@ -1942,11 +1948,11 @@ function renderSealedEggModalContent(type) {
 
 function buySealHint(type, index) {
   const sd = loadShopData();
-  if ((sd.kristalle ?? 0) < 5) return;
+  if (getAvailableKristalle(sd) < 5) return;
   const egg = (sd.sealedEggs ?? []).find(e => e.type === type);
   if (!egg || egg.seals[index].hintBought) return;
   egg.seals[index].hintBought = true;
-  sd.kristalle -= 5;
+  sd.spentKristalle = (sd.spentKristalle ?? 0) + 5;
   saveShopData(sd);
   renderSealedEggModalContent(type);
   renderSealedEggs();
@@ -2294,7 +2300,7 @@ function openBackupConfirmModal(creature, stage, maxStage) {
   const content = document.getElementById('modalContent');
   if (!content) return;
   const sd = loadShopData();
-  const hasKristall = (sd.kristalle ?? 0) >= 2;
+  const hasKristall = getAvailableKristalle(sd) >= 2;
   content.innerHTML = `
     <div class="backup-confirm">
       <h2 class="backup-confirm__title">💾 Backup laden?</h2>
@@ -2314,8 +2320,8 @@ function openBackupConfirmModal(creature, stage, maxStage) {
   document.getElementById('backupCancel')?.addEventListener('click', () => showBookDetail(creature, maxStage));
   document.getElementById('backupOk')?.addEventListener('click', () => {
     const sd2 = loadShopData();
-    if ((sd2.kristalle ?? 0) < 2) return;
-    sd2.kristalle -= 2;
+    if (getAvailableKristalle(sd2) < 2) return;
+    sd2.spentKristalle = (sd2.spentKristalle ?? 0) + 2;
     sd2.pendingBackup = { creature, stage };
     saveShopData(sd2);
     document.getElementById('modalOverlay').hidden = true;
