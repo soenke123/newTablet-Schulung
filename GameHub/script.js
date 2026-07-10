@@ -2038,17 +2038,28 @@ function triggerSealEggOpening(type) {
   const creature = SEAL_CREATURE[type];
   const nestId   = 'nest_sealed_' + Date.now();
 
-  // Sealed-Eggs: creature ist deterministisch (himmel=chinDrache, suempfe=schnabeltier)
-  // und wird sofort gesetzt — die Kreatur ist im Nest als Baby sichtbar. Beim
-  // 1. Play wächst sie ab Runde 1 (wie Cluster-Bonus-Baby), keine Schlupf-Runde.
-  const gd = defaultGameData();
-  gd.creature = creature;
-  saveGameData(nestId, gd);
-
-  sd.nests.push({ nestId, eggType: type, gameId: null, gameUrl: null });
+  // Nest MIT hatched-Snapshot direkt ins Shop-Blob eintragen — damit der
+  // Sync die Baby-Kreatur persistiert. Ohne hatched würde beim Sync
+  // hatched=null landen und die Kreatur wäre nach Login/Zweit-Gerät weg
+  // (Nest würde als leeres Ei erscheinen).
+  sd.nests.push({
+    nestId,
+    eggType: type,
+    gameId: null,
+    gameUrl: null,
+    hatched: { creature, growth: 0, points: 0, roundsPlayed: 0, coins: 0 }
+  });
   sd.pendingEggNestId = nestId;
   sd.sealedEggs = (sd.sealedEggs ?? []).filter(e => e.type !== type);
   saveShopData(sd);
+
+  // lernwelt_v3[nestId] direkt schreiben — renderHub sieht die Kreatur
+  // sofort, ohne auf den Sync-Roundtrip warten zu müssen.
+  try {
+    const all = loadStorage(STORAGE_KEY);
+    all[nestId] = { points: 0, roundsPlayed: 0, creature, growth: 0, coins: 0 };
+    saveStorage(STORAGE_KEY, all);
+  } catch (e) {}
 
   showSealEggOpeningAnimation(def, creature, () => { renderHub(); });
 }
