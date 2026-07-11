@@ -541,24 +541,27 @@ body.s2-active .hud-kristalle { display: flex; }
   position: absolute;
   top: 8px;
   left: 8px;
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 0.9rem;
+  background: rgba(232, 85, 85, 0.14);
+  border: 1px solid rgba(232, 85, 85, 0.45);
+  color: rgba(255, 220, 220, 0.9);
+  font-size: 1.05rem;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 5px 8px;
   border-radius: var(--radius-sm);
-  transition: color 0.2s, background 0.2s;
+  transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.15s;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   z-index: 5;
 }
 
 .game-card__release:hover {
-  color: var(--clr-red);
-  background: rgba(232, 85, 85, 0.12);
+  color: #fff;
+  background: rgba(232, 85, 85, 0.85);
+  border-color: var(--clr-red);
+  transform: scale(1.08);
 }
 
 /* ── Spielen-Button ────────────────────────────── */

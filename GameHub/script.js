@@ -409,7 +409,7 @@ function buildCardHTML(game, data, shopData) {
   if (it) return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" data-count-key="${it.countKey}">nutze ${it.icon}</button></div>`;
   return `<button class="game-card__btn">Spielen!</button>`;
 })()}
-    ${data.roundsPlayed > 0 ? `<button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>` : ''}
+    ${data.creature ? `<button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>` : ''}
     ${canUseTrank ? `<button class="game-card__trank-btn" title="Wachstumstrank anwenden">🧪</button>` : ''}
   `;
 }
@@ -1766,7 +1766,7 @@ const SEALED_EGG_DEFS = {
           const all = loadStorage(STORAGE_KEY);
           for (const key in all) {
             const d = all[key];
-            if (d.creature && d.growth >= GROWTH_MAX && d.roundsPlayed === 1) return true;
+            if (d.creature && d.growth >= GROWTH_MAX && d.roundsPlayed <= 1) return true;
           }
           return false;
         }
@@ -1835,7 +1835,11 @@ function renderSealedEggs() {
   if (!section || !grid) return;
 
   const sd = loadShopData();
-  const activeEggs = (sd.sealedEggs ?? []).filter(e => !e.nestId || !sd.nests.some(n => n.nestId === e.nestId));
+  const openedTypes = new Set(sd.openedSealTypes ?? []);
+  const activeEggs = (sd.sealedEggs ?? []).filter(e =>
+    !openedTypes.has(e.type) &&
+    (!e.nestId || !sd.nests.some(n => n.nestId === e.nestId))
+  );
 
   if (!activeEggs.length) { section.hidden = true; return; }
   section.hidden = false;
@@ -2051,6 +2055,11 @@ function triggerSealEggOpening(type) {
   });
   sd.pendingEggNestId = nestId;
   sd.sealedEggs = (sd.sealedEggs ?? []).filter(e => e.type !== type);
+  // Migration 0027: Type als geöffnet markieren, damit Server-Merge
+  // das Ei nicht bei nächstem Sync wieder auftauchen lässt. Ohne diesen
+  // Marker gewinnt der Server-seitige Union-Merge und der User könnte
+  // das Legi-Monster beliebig oft erzeugen.
+  sd.openedSealTypes = Array.from(new Set([...(sd.openedSealTypes ?? []), type]));
   saveShopData(sd);
 
   // lernwelt_v3[nestId] direkt schreiben — renderHub sieht die Kreatur

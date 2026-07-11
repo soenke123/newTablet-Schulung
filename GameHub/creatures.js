@@ -1287,10 +1287,13 @@ function loadShopData() {
       lootboxDailyClaimed:   d.lootboxDailyClaimed   ?? {},
       pendingBackup:         d.pendingBackup         ?? null,
       sealedEggs:            d.sealedEggs            ?? [],
+      // Migration 0027: einmal geöffnete Siegel-Types bleiben für immer
+      // geöffnet — verhindert Legi-Duplikate durch Merge-Reappear.
+      openedSealTypes:       d.openedSealTypes       ?? [],
       sealProgress:          d.sealProgress          ?? {},
     };
   } catch(e) {
-    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, coinsx3: false, coinsx3Count: 0, glucksklee: false, gluckskleeCount: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [] };
+    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, coinsx3: false, coinsx3Count: 0, glucksklee: false, gluckskleeCount: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [] };
   }
 }
 
