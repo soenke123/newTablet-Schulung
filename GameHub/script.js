@@ -2036,10 +2036,33 @@ function triggerSealEggOpening(type) {
   const sd  = loadShopData();
   const egg = (sd.sealedEggs ?? []).find(e => e.type === type);
   if (!egg || !egg.seals.every(s => s.solved)) return;
+
+  // Uniqueness-Guard: wenn diese Legi-Kreatur bereits als Nest oder
+  // Spielslot existiert, nicht erneut erschaffen. Schützt gegen
+  // Two-Tab-Race, Client-Manipulation und race-artige Doppelklicks.
+  const creature = SEAL_CREATURE[type];
+  const nestHasLegi = (sd.nests ?? []).some(n => n.hatched?.creature === creature);
+  const slotHasLegi = (function() {
+    try {
+      const all = loadStorage(STORAGE_KEY);
+      for (const key in all) if (all[key]?.creature === creature) return true;
+    } catch(e) {}
+    return false;
+  })();
+  if (nestHasLegi || slotHasLegi) {
+    // Ei aus der Liste entfernen und Type als geöffnet markieren, damit
+    // das Siegel-Card nicht ewig als "Ei öffnen!" hängen bleibt.
+    sd.sealedEggs = (sd.sealedEggs ?? []).filter(e => e.type !== type);
+    sd.openedSealTypes = Array.from(new Set([...(sd.openedSealTypes ?? []), type]));
+    saveShopData(sd);
+    closeSealedEggModal();
+    renderHub();
+    return;
+  }
+
   closeSealedEggModal();
 
   const def      = SEALED_EGG_DEFS[type];
-  const creature = SEAL_CREATURE[type];
   const nestId   = 'nest_sealed_' + Date.now();
 
   // Nest MIT hatched-Snapshot direkt ins Shop-Blob eintragen — damit der
