@@ -980,12 +980,14 @@ function saveGameData(id, gd) {
       const sd   = loadShopData();
       const nest = sd.nests.find(n => n.nestId === id);
       if (nest) {
+        // Server-Merge castet mit ::int → Floats (z.B. gd.growth=9.375 aus
+        // computeSessionGrowth) würden 22P02 werfen. Deshalb hier flooren.
         nest.hatched = {
-          creature:     gd.creature     ?? null,
-          growth:       gd.growth       ?? 0,
-          points:       gd.points       ?? 0,
-          roundsPlayed: gd.roundsPlayed ?? 0,
-          coins:        gd.coins        ?? 0
+          creature:     gd.creature ?? null,
+          growth:       Math.max(0, Math.floor(gd.growth       ?? 0)),
+          points:       Math.max(0, Math.floor(gd.points       ?? 0)),
+          roundsPlayed: Math.max(0, Math.floor(gd.roundsPlayed ?? 0)),
+          coins:        Math.max(0, Math.floor(gd.coins        ?? 0))
         };
         saveShopData(sd);
       }
@@ -1447,9 +1449,32 @@ function markShopDirty()  { try { localStorage.setItem(SHOP_DIRTY_KEY, '1'); } c
 function clearShopDirty() { try { localStorage.removeItem(SHOP_DIRTY_KEY);  } catch(e) {} }
 function isShopDirty()    { try { return localStorage.getItem(SHOP_DIRTY_KEY) === '1'; } catch(e) { return false; } }
 
+/* Sanitize: garantiert dass alle numerischen nests[].hatched-Felder Integer
+   sind, bevor der Push rausgeht. Ohne das wirft der Server ::int-Cast
+   22P02 wenn Floats (wie growth=9.375) drinstecken. Andere Felder werden
+   unverändert durchgereicht. */
+function sanitizeShopForServer(shopData) {
+  if (!shopData || !Array.isArray(shopData.nests)) return shopData;
+  const cleanNests = shopData.nests.map(n => {
+    if (!n?.hatched) return n;
+    return {
+      ...n,
+      hatched: {
+        creature:     n.hatched.creature ?? null,
+        growth:       Math.max(0, Math.floor(n.hatched.growth       ?? 0)),
+        points:       Math.max(0, Math.floor(n.hatched.points       ?? 0)),
+        roundsPlayed: Math.max(0, Math.floor(n.hatched.roundsPlayed ?? 0)),
+        coins:        Math.max(0, Math.floor(n.hatched.coins        ?? 0))
+      }
+    };
+  });
+  return { ...shopData, nests: cleanNests };
+}
+
 async function syncShopStateToServer(shopData) {
   const token = getAccessToken();
   if (!token || !window.SUPABASE_URL) return null;
+  shopData = sanitizeShopForServer(shopData);
   const url = `${window.SUPABASE_URL}/rest/v1/rpc/sync_shop_state`;
   const res = await fetch(url, {
     method: 'POST',
