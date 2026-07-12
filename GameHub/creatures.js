@@ -993,13 +993,35 @@ function saveGameData(id, gd) {
     return;
   }
 
-  // Falls Session vorhanden ist (Hub-interne Nester, spätere Spiel-Umbauten),
-  // sofort syncen und Marker sauber räumen.
-  if (typeof window.isLoggedIn === 'function' && window.isLoggedIn()) {
+  // Sofort syncen wenn ein Token verfügbar ist — funktioniert auch in
+  // Game-Frames ohne geladenes session.js (Fallback aus lernwelt-auth).
+  if (getAccessToken() && window.SUPABASE_URL) {
     syncGameStateToServer(id, gd)
       .then(() => clearPendingMarker(id))
       .catch(e => console.warn('[creatures] sync failed:', id, e.message));
   }
+}
+
+/* Access-Token aus window.__accessToken (session.js) ODER direkt aus dem
+   Supabase-Auth-Storage lesen. Game-Frames laden session.js nicht, brauchen
+   aber trotzdem einen sofortigen Server-Push (sonst gehen Nest-Coins beim
+   Logout verloren). storageKey ist 'lernwelt-auth' (siehe session.js).
+   Prüft expires_at und gibt bei Ablauf null zurück — der Push scheitert
+   dann sauber und der Dirty-Marker bleibt für den nächsten Boot bestehen. */
+function getAccessToken() {
+  if (typeof window.__accessToken === 'string' && window.__accessToken) {
+    return window.__accessToken;
+  }
+  try {
+    const raw = localStorage.getItem('lernwelt-auth');
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    const token = s?.access_token ?? s?.currentSession?.access_token ?? null;
+    const expiresAt = s?.expires_at ?? s?.currentSession?.expires_at ?? null;
+    if (!token) return null;
+    if (expiresAt && (Date.now() / 1000) >= expiresAt) return null;
+    return token;
+  } catch (e) { return null; }
 }
 
 function clearPendingMarker(id) {
@@ -1045,7 +1067,7 @@ async function pushPendingState() {
 }
 
 async function syncGameStateToServer(gameId, gd) {
-  const token = window.__accessToken;
+  const token = getAccessToken();
   if (!token || !window.SUPABASE_URL) return;
   const url = `${window.SUPABASE_URL}/rest/v1/rpc/sync_game_state`;
   const res = await fetch(url, {
@@ -1401,9 +1423,10 @@ function renderResultItemButton(containerId, gameId, onActivate) {
 function saveShopData(data) {
   saveStorage(SHOP_KEY, data);
   markShopDirty();
-  // Sofort pushen wenn eingeloggt. Marker wird bei Erfolg gelöscht,
-  // bei Fehler bleibt er → nächster saveShopData oder Boot pusht erneut.
-  if (typeof window.isLoggedIn === 'function' && window.isLoggedIn()) {
+  // Sofort pushen wenn ein Token verfügbar ist (auch aus Game-Frames ohne
+  // session.js). Marker wird bei Erfolg gelöscht, bei Fehler bleibt er
+  // stehen → nächster saveShopData oder Hub-Boot versucht es erneut.
+  if (getAccessToken() && window.SUPABASE_URL) {
     syncShopStateToServer(data)
       .then(merged => {
         clearShopDirty();
@@ -1425,7 +1448,7 @@ function clearShopDirty() { try { localStorage.removeItem(SHOP_DIRTY_KEY);  } ca
 function isShopDirty()    { try { return localStorage.getItem(SHOP_DIRTY_KEY) === '1'; } catch(e) { return false; } }
 
 async function syncShopStateToServer(shopData) {
-  const token = window.__accessToken;
+  const token = getAccessToken();
   if (!token || !window.SUPABASE_URL) return null;
   const url = `${window.SUPABASE_URL}/rest/v1/rpc/sync_shop_state`;
   const res = await fetch(url, {
