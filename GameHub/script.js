@@ -1456,6 +1456,11 @@ function buildNestCard(nest, allData, shopData) {
   const specialBadge = epic ? `<span class="epic-badge">✦ Episch ✦</span>`
     : legendary ? `<span class="legendary-badge">✦ Legendär ✦</span>` : '';
 
+  const bonusCoins = hasCreature ? getGrowthBonusCoins(nestData.growth || 0) : 0;
+  const bonusHint = bonusCoins > 0
+    ? `<div class="game-card__bonus-hint" title="${bonusCoins === 10 ? 'Vollendungs-Bonus' : 'Ausgewachsen-Bonus'}: +${bonusCoins} Münzen pro Runde">+${bonusCoins}<span class="game-card__bonus-hint-coin">🪙</span></div>`
+    : '';
+
   let playBtn;
   if (canPlay) {
     playBtn = `<button class="game-card__btn">Spielen!</button>`;
@@ -1470,6 +1475,7 @@ function buildNestCard(nest, allData, shopData) {
   const card = document.createElement('div');
   card.className = `game-card nest-game-card${hasCreature ? ' has-creature' : ''}${epic ? ' game-card--epic' : ''}${legendary ? ' game-card--legendary' : ''}${isAtariEgg ? ' nest-card--atari' : ''}${isPfauEgg ? ' nest-card--pfau' : ''}${isPending ? ' nest-card--pending' : ''}${nestMaxed ? ' creature-maxed' : ''}`;
   card.innerHTML = `
+    ${bonusHint}
     <h3 class="game-card__title">🥚 ${eggTypeName}</h3>
     <p class="nest-card__subtitle">
       ${linkedGame ? `${linkedGame.icon} ${linkedGame.title}` : '<em>Spiel noch nicht gewählt</em>'}
