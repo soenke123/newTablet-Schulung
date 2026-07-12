@@ -11,26 +11,7 @@
 </head>
 <body class="hub-page">
 
-  <!-- ═══ AUTH-BAR (fixiert oben links) ═══ -->
-  <div class="hub-auth" id="hubAuth" hidden>
-    <button class="hub-auth-btn" id="hubAuthBtn" type="button">
-      <span class="hub-auth-avatar">
-        <img id="hubAuthAvatar" alt="" />
-        <span class="new-dot" id="hubPillNewDot" hidden></span>
-      </span>
-      <span class="hub-auth-name" id="hubAuthName">…</span>
-      <span class="hub-auth-caret">▼</span>
-    </button>
-    <div class="hub-auth-menu" id="hubAuthMenu" hidden>
-      <a id="hubAdminLink" href="../admin/index.html" hidden>Admin-Bereich</a>
-      <a id="hubProfileLink" href="../profil.html">Profil<span class="new-dot" id="hubMenuNewDot" hidden></span></a>
-      <a id="hubHighscoresLink" href="../highscores.html">Highscores</a>
-      <button type="button" id="hubBackBtn">Zurück zur Übersicht</button>
-      <button type="button" id="hubLogoutBtn">Ausloggen</button>
-    </div>
-  </div>
-
-  <!-- ═══ HUD (fixiert oben rechts) ═══ -->
+  <!-- ═══ HUD (fixiert oben rechts) — enthält Menü + Profil-Pill ═══ -->
   <div class="hud-bar">
     <button class="hud-btn" id="bookBtn" title="Buch der Monster" hidden>📜</button>
     <!-- Atari5 · Enter 2-7-1-8 -->
@@ -43,6 +24,24 @@
     <div class="hud-kristalle">
       <span class="hud-coins__icon">💎</span>
       <span class="hud-coins__amount" id="kristallAmount">0</span>
+    </div>
+
+    <div class="hub-auth" id="hubAuth" hidden>
+      <button class="hub-auth-btn" id="hubAuthBtn" type="button">
+        <span class="hub-auth-avatar">
+          <img id="hubAuthAvatar" alt="" />
+          <span class="new-dot" id="hubPillNewDot" hidden></span>
+        </span>
+        <span class="hub-auth-name" id="hubAuthName">…</span>
+        <span class="hub-auth-caret">▼</span>
+      </button>
+      <div class="hub-auth-menu" id="hubAuthMenu" hidden>
+        <a id="hubAdminLink" href="../admin/index.html" hidden>Admin-Bereich</a>
+        <a id="hubProfileLink" href="../profil.html">Profil<span class="new-dot" id="hubMenuNewDot" hidden></span></a>
+        <a id="hubHighscoresLink" href="../highscores.html">Highscores</a>
+        <button type="button" id="hubBackBtn">Zurück zur Übersicht</button>
+        <button type="button" id="hubLogoutBtn">Ausloggen</button>
+      </div>
     </div>
   </div>
 

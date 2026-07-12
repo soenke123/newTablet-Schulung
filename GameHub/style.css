@@ -2088,6 +2088,16 @@ body.s2-active .hud-kristalle { display: flex; }
     padding: 4px 6px;
   }
 
+  .game-card__bonus-hint {
+    position: relative;
+    top: auto;
+    right: auto;
+    grid-column: 2;
+    grid-row: 4;
+    justify-self: start;
+    align-self: center;
+  }
+
   /* Textlastige Elemente ausblenden */
   .game-card__points,
   .game-card__stage-label,
@@ -3268,24 +3278,26 @@ input[type="password"]::-webkit-textfield-decoration-container {
    Hub-Auth-Bar (oben links, Fantasy-Pill wie HUD)
    ═════════════════════════════════════════════════════════ */
 .hub-auth {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  z-index: 60;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 6px 0 8px;
+  margin-left: 2px;
+  border-left: 1px solid var(--clr-border);
 }
+.hub-auth[hidden] { display: none; }
 .hub-auth-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--clr-surface);
+  background: none;
   color: var(--clr-text, #f5e6c8);
-  border: 1px solid var(--clr-gold);
+  border: none;
   border-radius: 999px;
-  padding: 4px 14px 4px 4px;
+  padding: 2px 6px 2px 2px;
   font-family: inherit;
   font-size: 0.95rem;
   cursor: pointer;
-  box-shadow: var(--shadow-glow-gold), 0 4px 16px rgba(0,0,0,0.5);
   transition: filter 180ms ease;
 }
 .hub-auth-btn:hover { filter: brightness(1.15); }
@@ -3333,14 +3345,16 @@ input[type="password"]::-webkit-textfield-decoration-container {
 .hub-auth-caret { font-size: 0.75rem; opacity: 0.75; }
 .hub-auth-menu {
   position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
+  top: calc(100% + 12px);
+  right: 0;
+  left: auto;
   min-width: 200px;
   background: var(--clr-surface);
   border: 1px solid var(--clr-gold);
   border-radius: 14px;
   box-shadow: var(--shadow-glow-gold), 0 8px 24px rgba(0,0,0,0.5);
   overflow: hidden;
+  z-index: 60;
 }
 .hub-auth-menu button,
 .hub-auth-menu a {
@@ -3366,8 +3380,16 @@ input[type="password"]::-webkit-textfield-decoration-container {
 .hub-auth-menu #hubAdminLink { color: var(--clr-gold, #d4a830); font-weight: 600; }
 
 @media (max-width: 900px) {
-  .hub-auth { top: 12px; left: 12px; }
-  .hub-auth-btn { padding: 3px 12px 3px 3px; font-size: 0.88rem; }
+  .hub-auth-btn { padding: 2px 4px 2px 2px; font-size: 0.88rem; }
   .hub-auth-avatar { width: 30px; height: 30px; }
+}
+
+/* Handy Hochformat: Name + Caret ausblenden, nur Avatar zeigen */
+@media (max-width: 480px) and (orientation: portrait) {
+  .hub-auth-name,
+  .hub-auth-caret { display: none; }
+  .hub-auth { padding: 0 4px 0 6px; }
+  .hub-auth-btn { padding: 2px; gap: 0; }
+  .hub-auth-menu { max-width: calc(100vw - 24px); }
 }
 
