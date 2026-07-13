@@ -1076,9 +1076,10 @@
         }
 
         function updateFFCreatureDisplay() {
-            const crackStage = crackStageFromRatio(totalScore, FF_MAX_SCORE);
+            const capped = Math.min(totalScore, FF_MAX_SCORE);
+            const crackStage = crackStageFromRatio(capped, FF_MAX_SCORE);
             const liveGrowth = (ffGameData && ffGameData.creature)
-                ? Math.min(ffGameData.growth + computeSessionGrowth(totalScore, FF_MAX_SCORE), GROWTH_MAX)
+                ? Math.min(ffGameData.growth + computeSessionGrowth(capped, FF_MAX_SCORE), GROWTH_MAX)
                 : null;
             updateGameEggDisplay(ffGameData || defaultGameData(), crackStage, true, liveGrowth);
         }
@@ -1088,7 +1089,8 @@
             const gd       = ffGameData || defaultGameData();
             const isFirst  = !gd.creature;
             const sd       = loadShopData();
-            const _norm    = Math.round(totalScore / FF_MAX_SCORE * 10);
+            const _capped  = Math.min(totalScore, FF_MAX_SCORE);
+            const _norm    = Math.min(10, Math.round(_capped / FF_MAX_SCORE * 10));
             const _eggType = new URLSearchParams(window.location.search).get('egg');
             lastCoinsGained = 0;
 
@@ -1102,7 +1104,7 @@
                 }
                 gd.growth = 0;
             }
-            lastCoinsGained += computeRoundResult(gd, totalScore, FF_MAX_SCORE, sd, isFirst);
+            lastCoinsGained += computeRoundResult(gd, _capped, FF_MAX_SCORE, sd, isFirst);
             gd.points += _norm;
             gd.roundsPlayed += 1;
             saveGameData(ffGameId, gd);
@@ -1143,7 +1145,7 @@
             adblocker:      { id: 'adblocker',      name: 'Ad-Blocker',             icon: '🚫', desc: 'Blockiert Werbebanner dauerhaft.', type: 'permanent' },
             gaming_blocker: { id: 'gaming_blocker', name: 'Gaming-Pause',           icon: '🎮', desc: 'Blockiert Gaming-Benachrichtigungen dauerhaft.', type: 'permanent' },
             call_blocker:   { id: 'call_blocker',   name: 'Nicht stören',           icon: '📵', desc: 'Blockiert eingehende Anrufe während der Fokuszeit.', type: 'permanent' },
-            focus_sprint:   { id: 'focus_sprint',   name: 'Fokus-Sprint',           icon: '⚡', desc: '15 Sek. ohne jede Ablenkung. Einmalig nutzbar — tippe zum Starten.', type: 'temporary' },
+            focus_sprint:   { id: 'focus_sprint',   name: 'Fokus-Sprint',           icon: '⚡', desc: '15 Sek. ohne jede Ablenkung. Startet sofort, sobald er im Slot ist.', type: 'temporary' },
         };
 
         // Which tools are offered after each wave (index = waveIdx 0–5)
@@ -1441,7 +1443,7 @@
         function awardPaceCheckpoint(n) {
             const segs   = clickIntervals.slice(n - 8, n);
             const avgSec = segs.reduce((a, b) => a + b, 0) / 8 / 1000;
-            const pts    = Math.max(0, Math.min(100, Math.round(100 * (3.0 - avgSec) / 1.5)));
+            const pts    = Math.max(0, Math.min(100, Math.round(100 * (2.8 - avgSec) / 1.4)));
             totalScore  += pts;
             updateScoreDisplay();
             updateFFCreatureDisplay();
@@ -1556,6 +1558,7 @@
                 activeTools[emptyIdx] = tool;
                 updateSlotUI(emptyIdx, tool);
                 dismissPanel(true);
+                if (tool.type === 'temporary') activateTemporaryTool(emptyIdx, tool);
             } else {
                 enterSlotSelectMode(tool);
             }
@@ -1588,6 +1591,7 @@
             activeTools[index] = tool;
             updateSlotUI(index, tool);
             dismissPanel(true);
+            if (tool.type === 'temporary') activateTemporaryTool(index, tool);
         }
 
         function updateSlotUI(index, tool) {
@@ -1597,18 +1601,9 @@
 
             if (tool) {
                 slot.classList.add('occupied');
-                if (tool.type === 'temporary') {
-                    slot.innerHTML = `
-                        <span style="font-size:22px;">${tool.icon}</span>
-                        <span style="font-size:10px;font-weight:700;line-height:1.3;text-align:center;">${tool.name}</span>
-                        <span style="font-size:13px;font-weight:700;color:rgba(52,211,153,.95);margin-top:2px;">Aktivieren</span>`;
-                    slot.classList.add('tappable');
-                    slot.onclick = () => activateTemporaryTool(index, tool);
-                } else {
-                    slot.innerHTML = `
-                        <span style="font-size:22px;">${tool.icon}</span>
-                        <span style="font-size:10px;font-weight:700;line-height:1.3;text-align:center;">${tool.name}</span>`;
-                }
+                slot.innerHTML = `
+                    <span style="font-size:22px;">${tool.icon}</span>
+                    <span style="font-size:10px;font-weight:700;line-height:1.3;text-align:center;">${tool.name}</span>`;
                 onToolActivated(tool);
             } else {
                 slot.innerHTML = `<span style="font-size:18px;opacity:.3;">+</span><span>Leer</span>`;
@@ -1635,7 +1630,11 @@
         }
 
         function activateFocusSprint(slotIndex) {
-            if (focusSprintActive) return;
+            if (focusSprintActive) {
+                activeTools[slotIndex] = null;
+                updateSlotUI(slotIndex, null);
+                return;
+            }
             focusSprintActive = true;
             sprintSlotIndex   = slotIndex;
 
@@ -2452,10 +2451,8 @@
             // === Finish bonus & highscore ===
             const elapsed = (Date.now() - startTime) / 1000;
             let finishBonus = 0;
-            if (elapsed <= 96) {
-                finishBonus = 200;
-            } else if (elapsed < 120) {
-                finishBonus = Math.max(0, Math.round(200 * (120 - elapsed) / 24));
+            if (elapsed < 120) {
+                finishBonus = Math.max(0, Math.round(200 * (120 - elapsed) / 30));
             }
             totalScore += finishBonus;
             updateScoreDisplay();

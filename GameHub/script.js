@@ -1789,13 +1789,13 @@ const SEALED_EGG_DEFS = {
             <span style="color:${ok ? '#4ade80' : 'rgba(255,255,255,0.28)'};font-size:1rem">${ok ? '✓' : '○'}</span>
             <span style="color:${ok ? '#e8dcc8' : 'rgba(255,255,255,0.45)'}">${text}</span></div>`;
           return '<div style="margin-top:4px">'
-            + row(ff  >= 900, `Fokusflow – ${ff} / 900 Pkt`)
+            + row(ff  >= 850, `Fokusflow – ${ff} / 850 Pkt`)
             + row(alg >= 660, `The Algorithm – ${algStr} Uhr (Ziel: 02:00)`)
             + row(tt  >= 450, `Tip Turbo Kids – ${tt} / 450 Pkt`)
             + '</div>';
         },
         verify: function() {
-          return parseInt(localStorage.getItem('fokusflow_highscore') || '0') >= 900
+          return parseInt(localStorage.getItem('fokusflow_highscore') || '0') >= 850
               && parseInt(localStorage.getItem('algorithmBestTime')   || '0') >= 660
               && parseInt(localStorage.getItem('tippturbo_hs')        || '0') >= 450;
         }
