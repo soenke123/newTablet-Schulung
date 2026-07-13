@@ -995,12 +995,85 @@ function saveGameData(id, gd) {
     return;
   }
 
-  // Sofort syncen wenn ein Token verfügbar ist — funktioniert auch in
-  // Game-Frames ohne geladenes session.js (Fallback aus lernwelt-auth).
+  // Debounced Push statt Fire-and-Forget: Rapid-Klicks (Trank auf mehrere
+  // Slots, Kettenaufrufe aus renderHub) kollabieren zu einem Sync mit finalem
+  // Snapshot. Vorher: jeder Klick → separater Sync → Server-Rate-Limit (1s
+  // in Migration 0016) verwarf den späteren Push und der `_pending`-Marker
+  // wurde vom früheren Erfolg fälschlich gelöscht → wichtiger Endzustand
+  // ging beim nächsten `loadServerState` verloren.
   if (getAccessToken() && window.SUPABASE_URL) {
-    syncGameStateToServer(id, gd)
-      .then(() => clearPendingMarker(id))
-      .catch(e => console.warn('[creatures] sync failed:', id, e.message));
+    schedulePushGameState(id);
+  }
+}
+
+/* ─── Debounced Push für game_state ───────────────────────────
+   Warum debounce + snapshot-compare statt Fire-and-Forget:
+   - Debounce (400ms pro gameId): mehrere Klicks im gleichen Zeitfenster
+     landen in EINEM Sync mit dem finalen Snapshot. Vermeidet das
+     server-seitige rate_limit (1s in Migration 0016).
+   - Snapshot-Compare vor clearPendingMarker: wenn der lokale State sich
+     während des Syncs geändert hat (paralleler Save), bleibt der Marker
+     stehen und wird durch einen Follow-up-Push abgeräumt.
+   - Marker-Reset im .catch: garantiert, dass ein fehlgeschlagener Sync
+     (rate_limit, Netzwerk) den Marker nicht in "clean" hinterlässt.
+   - Einmaliger Retry nach rate_limit-Rejection (1200ms > Server-Fenster).
+     delta_cap ist eine legitime Cheat-Ablehnung → NICHT retryen.        */
+const _gsPushTimers   = Object.create(null);
+const _gsPushInflight = Object.create(null);
+const GS_PUSH_DEBOUNCE_MS  = 400;
+const GS_PUSH_RETRY_MS     = 1200;
+
+function schedulePushGameState(gameId) {
+  if (_gsPushTimers[gameId]) clearTimeout(_gsPushTimers[gameId]);
+  _gsPushTimers[gameId] = setTimeout(() => {
+    delete _gsPushTimers[gameId];
+    if (_gsPushInflight[gameId]) {
+      // Aktueller Push nicht fertig → nach kurzer Wartezeit erneut prüfen.
+      schedulePushGameState(gameId);
+      return;
+    }
+    pushGameStateNow(gameId, false);
+  }, GS_PUSH_DEBOUNCE_MS);
+}
+
+async function pushGameStateNow(gameId, isRetry) {
+  if (_gsPushInflight[gameId]) return;
+  const all = loadStorage(STORAGE_KEY);
+  const gd  = all[gameId];
+  if (!gd) return;
+  const snapshot = JSON.stringify(gd);
+  _gsPushInflight[gameId] = true;
+  try {
+    await syncGameStateToServer(gameId, gd);
+    // Nur clearen wenn der lokale Stand noch der ist, den wir gerade gepusht
+    // haben. Sonst hat ein späterer Save den Marker neu gesetzt und dieser
+    // gehört einem folgenden Push.
+    const fresh = loadStorage(STORAGE_KEY);
+    if (JSON.stringify(fresh[gameId]) === snapshot) {
+      clearPendingMarker(gameId);
+    } else {
+      // Lokal ist schon weiter → nächsten Sync anstoßen.
+      schedulePushGameState(gameId);
+    }
+  } catch (e) {
+    console.warn('[creatures] sync failed:', gameId, e.message);
+    // Marker muss stehenbleiben, damit pushPendingState beim nächsten
+    // Hub-Boot einen erneuten Versuch macht. Ein früherer erfolgreicher
+    // Sync-Run könnte ihn gelöscht haben.
+    try {
+      const fresh = loadStorage(STORAGE_KEY);
+      if (!fresh._pending?.[gameId]) {
+        fresh._pending = { ...(fresh._pending || {}), [gameId]: true };
+        saveStorage(STORAGE_KEY, fresh);
+      }
+    } catch (e2) {}
+    // Rate-Limit ist temporär (Server-Fenster 1s). Einmalig retryen.
+    // delta_cap/first_submit_cap sind Business-Ablehnungen → NICHT retryen.
+    if (!isRetry && /rate_limit/i.test(e.message)) {
+      setTimeout(() => pushGameStateNow(gameId, true), GS_PUSH_RETRY_MS);
+    }
+  } finally {
+    _gsPushInflight[gameId] = false;
   }
 }
 
@@ -1425,18 +1498,62 @@ function renderResultItemButton(containerId, gameId, onActivate) {
 function saveShopData(data) {
   saveStorage(SHOP_KEY, data);
   markShopDirty();
-  // Sofort pushen wenn ein Token verfügbar ist (auch aus Game-Frames ohne
-  // session.js). Marker wird bei Erfolg gelöscht, bei Fehler bleibt er
-  // stehen → nächster saveShopData oder Hub-Boot versucht es erneut.
+  // Debounced Push: renderHub triggert bei jedem Aufruf mehrere saveShopData
+  // (updateSeenCreatures, refundAbandonedItems, …). Vorher liefen die
+  // parallel und die Response mit dem älteren Merge-Ergebnis konnte den
+  // neueren lokalen Stand via applyMergedShopState zurücksetzen.
   if (getAccessToken() && window.SUPABASE_URL) {
-    syncShopStateToServer(data)
-      .then(merged => {
-        clearShopDirty();
-        // Server-Merge kann höhere Werte enthalten (max-Regel). Wenn ja,
-        // lokal übernehmen — sonst driften Tabs auseinander.
-        if (merged) applyMergedShopState(merged);
-      })
-      .catch(e => console.warn('[creatures] shop sync failed:', e.message));
+    schedulePushShop();
+  }
+}
+
+/* ─── Debounced Push für shop_state ──────────────────────────
+   Gleiches Muster wie schedulePushGameState. Unterschiede:
+   - Kein rate_limit (sync_shop_state hat keinen), also kein Retry.
+   - Snapshot-Compare schützt hier zusätzlich gegen den max-Merge-Effekt:
+     wenn zwischen Push und Response ein neuer Save mit niedrigerer
+     wachstumstrankCount lokal steht, dürfen wir das applyMergedShopState
+     NICHT ausführen — sonst dreht der Server-Merge unsere Reduzierung
+     wieder auf den alten Wert. Stattdessen: neuen Push planen.       */
+let _shopPushTimer     = null;
+let _shopPushInflight  = false;
+const SHOP_PUSH_DEBOUNCE_MS = 400;
+
+function schedulePushShop() {
+  if (_shopPushTimer) clearTimeout(_shopPushTimer);
+  _shopPushTimer = setTimeout(() => {
+    _shopPushTimer = null;
+    if (_shopPushInflight) {
+      schedulePushShop();
+      return;
+    }
+    pushShopNow();
+  }, SHOP_PUSH_DEBOUNCE_MS);
+}
+
+async function pushShopNow() {
+  if (_shopPushInflight) return;
+  const data = loadShopData();
+  const snapshot = JSON.stringify(data);
+  _shopPushInflight = true;
+  try {
+    const merged = await syncShopStateToServer(data);
+    const fresh = loadShopData();
+    if (JSON.stringify(fresh) === snapshot) {
+      // Kein neuer Save während des Pushes → Server-Merge übernehmen.
+      clearShopDirty();
+      if (merged) applyMergedShopState(merged);
+    } else {
+      // Lokal ist weiter → merged NICHT anwenden (würde neuen Stand plätten).
+      // Marker bleibt dirty; ein Follow-up-Push holt den finalen State.
+      schedulePushShop();
+    }
+  } catch (e) {
+    console.warn('[creatures] shop sync failed:', e.message);
+    // markShopDirty() wurde in saveShopData gesetzt → bleibt bestehen für
+    // nächsten Sync oder Hub-Boot (loadServerShop pusht dirty zuerst).
+  } finally {
+    _shopPushInflight = false;
   }
 }
 
