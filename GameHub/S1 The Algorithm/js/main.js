@@ -1104,6 +1104,34 @@ function createCardElement(card, opts = {}) {
   return el;
 }
 
+function fitHandToContainer() {
+  const container = document.getElementById('hand');
+  const parent    = container?.parentElement;
+  if (!container || !parent) return;
+
+  const cards = Array.from(container.querySelectorAll('.card'));
+  if (cards.length === 0) return;
+
+  cards.forEach(c => { c.style.width = ''; c.style.height = ''; });
+  container.style.gap = '';
+
+  const available   = parent.clientWidth - 8;
+  const actualWidth = container.scrollWidth;
+  if (actualWidth <= available) return;
+
+  const scale = available / actualWidth;
+  cards.forEach(c => {
+    c.style.width  = Math.floor(c.offsetWidth  * scale) + 'px';
+    c.style.height = Math.floor(c.offsetHeight * scale) + 'px';
+  });
+  const gapPx = parseFloat(getComputedStyle(container).gap) || 6;
+  container.style.gap = Math.max(2, Math.floor(gapPx * scale)) + 'px';
+
+  console.warn('[hand] overflow abgefangen', {
+    available, actualWidth, scale: scale.toFixed(3), cards: cards.length,
+  });
+}
+
 function renderHand() {
   if (_handBackdropHandler) {
     document.removeEventListener('click', _handBackdropHandler);
@@ -1125,6 +1153,8 @@ function renderHand() {
     if (card.id === _expandedCardId) el.classList.add('card-hand-active');
     container.appendChild(el);
   });
+
+  fitHandToContainer();
 
   if (_expandedCardId) {
     const card   = gameState.hand.find(c => c.id === _expandedCardId);
@@ -1703,6 +1733,9 @@ function init() {
   generateInterests();
   buildDeck();
   drawHand();
+
+  window.addEventListener('resize', fitHandToContainer);
+  window.addEventListener('orientationchange', fitHandToContainer);
 
   renderStatusBars();
   renderHand();
