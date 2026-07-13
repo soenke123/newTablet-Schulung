@@ -40,7 +40,7 @@ Visualisierung: Die Interessen werden in einem Dreieck und passenden Icons darge
 
 
 ## 5. Karten-System (Deck-Mechanik)
-Der Spieler hat 5 Karten auf der Hand. Alle 10s kann eine Karte in den "Feed" (3 Slots) gespielt werden.
+Der Spieler hat 6 Karten auf der Hand. Alle 10s kann eine Karte in den "Feed" (3 Slots) gespielt werden.
 
 ### Kategorien:
 1.  **ROT (Video):** Fokus auf Dopamin & Interessen. Bei zu langer Nutzung steigt der Sozialdruck.

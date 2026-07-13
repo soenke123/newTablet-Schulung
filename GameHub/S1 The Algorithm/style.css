@@ -2143,9 +2143,11 @@ body.augen-brennen #bottom-ui {
   }
 
   .card {
-    width: 82px;
-    height: 112px;
+    width: 68px;
+    height: 94px;
   }
+
+  #hand { gap: 5px; }
 
   .card-icon {
     font-size: 13px;
@@ -2636,10 +2638,10 @@ body.augen-brennen #bottom-ui {
   #feed { flex-direction: row; gap: 6px; }
   .feed-slot { width: 71px; height: 100px; }
 
-  /* 4. Handkarten: alle 5 ohne Scroll */
-  .card { width: 70px; height: 96px; }
+  /* 4. Handkarten: alle 6 ohne Scroll (Portrait ≤500px) */
+  .card { width: 58px; height: 80px; }
   #hand {
-    gap: 6px;
+    gap: 3px;
     flex-wrap: nowrap;
     justify-content: center;
     overflow: visible;

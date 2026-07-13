@@ -439,7 +439,7 @@ function buildDeck() {
 }
 
 function drawHand() {
-  while (gameState.hand.length < 5 && _deck.length > 0) {
+  while (gameState.hand.length < 6 && _deck.length > 0) {
     gameState.hand.push(_deck.shift());
     if (_deck.length === 0) buildDeck();
   }

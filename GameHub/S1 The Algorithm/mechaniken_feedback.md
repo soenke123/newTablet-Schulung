@@ -179,7 +179,7 @@ Karten, die beim Spielen sofort eine Aktion ausführen und **nicht in den Feed**
 
 | Karte | Effekt |
 |-------|--------|
-| Tausche Handkarten | Alle 5 Handkarten werden sofort durch neue ersetzt |
+| Tausche Handkarten | Alle 6 Handkarten werden sofort durch neue ersetzt |
 | Neuer Feed | Feed wird geleert, 3 Freizüge werden gewährt |
 | Ablenkung | Aktives Event sofort beenden (auch bei gesperrten Events spielbar) |
 | Kopieren | Wähle eine Feed-Karte → Kopie kommt auf die Hand |

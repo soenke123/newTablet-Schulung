@@ -809,7 +809,7 @@ function renderValueScales() {
 }
 
 function _updateTrendArrows(current) {
-  const THRESHOLD = 0.5;
+  const THRESHOLD = 0.3;
   const optimal   = gameState.reizschwelleOptimalwert;
 
   const configs = {
