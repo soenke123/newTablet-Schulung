@@ -1169,7 +1169,10 @@ function renderHand() {
       portal.appendChild(portalCardEl);
 
       const rect = cardEl.getBoundingClientRect();
-      portal.style.left      = rect.left + 'px';
+      const cardWidth = 185;
+      const margin    = 8;
+      const clampedLeft = Math.max(margin, Math.min(rect.left, window.innerWidth - cardWidth - margin));
+      portal.style.left      = clampedLeft + 'px';
       portal.style.bottom    = (window.innerHeight - rect.top + 8) + 'px';
       portal.style.top       = '';
       portal.style.transform = '';
