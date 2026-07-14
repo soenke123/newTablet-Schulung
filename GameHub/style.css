@@ -58,6 +58,15 @@ body.s2-active {
     radial-gradient(ellipse at 80% 80%, rgba(232,131,10,0.06) 0%, transparent 60%);
 }
 
+/* ── Season 3 – noch einen Tick heller ─────────────── */
+body.s3-active {
+  --clr-bg: #3a2814;
+  background-color: var(--clr-bg);
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(240,180,41,0.09) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(232,131,10,0.09) 0%, transparent 60%);
+}
+
 a { text-decoration: none; color: inherit; }
 
 /* ── Utility ───────────────────────────────────── */

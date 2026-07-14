@@ -211,6 +211,7 @@ function renderHub() {
   applyThemeFromPreference(allData);
   _injectPfauThemeStyles();
   document.body.classList.toggle('s2-active', getUserSeason() >= 2);
+  document.body.classList.toggle('s3-active', getUserSeason() >= 3);
   updateLootboxBlink();
 
   if (shopData.pendingEggNestId) enterPendingEggMode();
