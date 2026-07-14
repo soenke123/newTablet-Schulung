@@ -958,6 +958,14 @@
           </a>
         </div>
 
+        <!-- ── Season 3 / Schulung 3 (sichtbar wenn Session-Season >= 3) ── -->
+        <div class="season3-only" style="display:none">
+          <div class="schulung-divider">Schulung 3</div>
+          <div class="presentation-placeholder">
+            Präsentationen folgen — Schulung 3 ist in Vorbereitung.
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -1090,6 +1098,9 @@
 
       document.querySelectorAll('.season2-only').forEach(el => {
         el.style.display = s2 ? 'contents' : 'none';
+      });
+      document.querySelectorAll('.season3-only').forEach(el => {
+        el.style.display = season >= 3 ? 'contents' : 'none';
       });
 
       if (s2) {

@@ -162,6 +162,57 @@
     </div><!-- /.s2-panel -->
   </div><!-- /.s2-overlay -->
 
+  <!-- ═══ SEASON 3 ANNOUNCEMENT MODAL ═══ -->
+  <div class="s2-overlay" id="s3Modal" hidden>
+    <div class="s2-panel">
+
+      <!-- Banner -->
+      <div class="s2-banner">
+        <div class="s2-badge">Neu verfügbar</div>
+        <h2 class="s2-banner__title">Season 3</h2>
+        <p class="s2-banner__sub">Age of Unity</p>
+      </div>
+
+      <!-- Inhalt: Bild + kompakte Liste -->
+      <div class="s2-body">
+        <div class="s2-layout">
+
+          <div class="s2-preview">
+            <!-- Bild wird nachgeliefert -->
+            <img src="data/others/Seaseon Img.png" alt="Season 3" class="s2-preview__img">
+          </div>
+
+          <ul class="s2-list">
+            <li class="s2-list__item">
+              <span class="s2-list__tag s2-tag--new">Neu</span>
+              <span class="s2-list__text"><strong>5 neue Kreaturen</strong><span class="s2-list__sub">wer schlüpft aus deinem Ei?</span></span>
+            </li>
+            <li class="s2-list__item">
+              <span class="s2-list__tag s2-tag--new">Neu</span>
+              <span class="s2-list__text"><strong>Kooperative Aufgaben</strong><span class="s2-list__sub">meistert die Season als Kurs gemeinsam</span></span>
+            </li>
+            <li class="s2-list__item">
+              <span class="s2-list__tag s2-tag--new">Neu</span>
+              <span class="s2-list__text"><strong>Gemeinsames Sammeln</strong><span class="s2-list__sub">🍬 Regenbogen-Bonbons — die neue Kurs-Währung</span></span>
+            </li>
+            <li class="s2-list__divider"></li>
+            <li class="s2-list__item">
+              <span class="s2-list__game-icon">🎮</span>
+              <span class="s2-list__text"><strong>4 neue Spiele</strong><span class="s2-list__sub">über Social Media und die Auswirkungen von KI</span></span>
+            </li>
+          </ul>
+
+        </div>
+      </div><!-- /.s2-body -->
+
+      <!-- CTA -->
+      <div class="s2-footer">
+        <button class="s2-cta" id="s3Close">Abenteuer fortsetzen</button>
+      </div>
+
+    </div><!-- /.s2-panel -->
+  </div><!-- /.s2-overlay -->
+
   <!-- ═══ SHOP MODAL ═══ -->
   <div class="shop-modal-overlay" id="shopModal" hidden>
     <div class="shop-modal-box">
@@ -259,13 +310,24 @@
       refreshHubAvatarNewBadges();
 
       // Season 2 Announcement — einmal pro Sitzung zeigen
-      if (getUserSeason() >= 2
+      // (nur wenn Season 3 noch nicht aktiv; sonst zeigt S3 den Neu-Banner)
+      if (getUserSeason() === 2
           && !sessionStorage.getItem('s2_modal_seen')) {
         document.getElementById('s2Modal').hidden = false;
       }
       document.getElementById('s2Close').addEventListener('click', () => {
         document.getElementById('s2Modal').hidden = true;
         sessionStorage.setItem('s2_modal_seen', '1');
+      });
+
+      // Season 3 Announcement — einmal pro Sitzung zeigen
+      if (getUserSeason() >= 3
+          && !sessionStorage.getItem('s3_modal_seen')) {
+        document.getElementById('s3Modal').hidden = false;
+      }
+      document.getElementById('s3Close').addEventListener('click', () => {
+        document.getElementById('s3Modal').hidden = true;
+        sessionStorage.setItem('s3_modal_seen', '1');
       });
 
       document.getElementById('modalClose').addEventListener('click', () => {
