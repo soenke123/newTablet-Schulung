@@ -49,6 +49,7 @@ const GAMES_CONFIG = [
 const SEASONS_CONFIG = [
   { id: 1, title: 'Season 1 – Regeln, Ordnung, Dateien & Aufmerksamkeit', desc: 'Diese Season knüpft an die Inhalte der ersten Tablet-Schulung an und bringt dein Wissen auf das nächste Level. In sechs spannenden Spielen sicherst und vertiefst du wichtige Grundlagen rund um die Tabletnutzung – von unseren Hausregeln über Dateiformate bis hin zur richtigen Struktur auf deinem Gerät. Und weil deine Aufmerksamkeit eine deiner wichtigsten Ressourcen ist, lernst du außerdem, bewusst mit ihr umzugehen: In zwei Aufmerksamkeitsspielen geht es um Fokus und das Binden von Aufmerksamkeit. Mit Tip Turbo Kids tauchst du zusätzlich in das 10-Finger-Blindschreiben ein – eine Fähigkeit, die dir das Schreiben längerer Texte enorm erleichtert und im Schulalltag wie auch später im Berufsleben unverzichtbar ist.' },
   { id: 2, title: 'Season 2 – LLM und Recherche',     desc: 'Welchen Quellen kannst du vertrauen – und wie erkennst du es? In dieser Season lernst du, Quellen zu bewerten und ihre Glaubwürdigkeit einzuschätzen. Du erforschst außerdem, wie Sprachmodelle wie ChatGPT funktionieren: Was passiert eigentlich unter der Haube – und warum verstehen KIs viel weniger, als es auf den ersten Blick scheint? Drei Spiele, ein Grundverständnis für das mächtigste Werkzeug unserer Zeit.' },
+  { id: 3, title: 'Season 3 – Social Media und Folgen von KI', desc: 'Social Media prägt unseren Alltag mehr denn je – und KI verändert, was wir dort zu sehen bekommen. In dieser Season blickst du hinter die Kulissen: Wie funktionieren Empfehlungsalgorithmen und die kleinen Tricks der Plattformen, die uns zum Weiterscrollen bringen? Was macht generative KI mit Bildern, Texten und mit der Wahrheit? Und zum ersten Mal ist die Season kooperativ: Ihr sammelt als Kurs gemeinsam Regenbogen-Bonbons und schaltet damit ein legendäres Kreatur-Event frei, das nur euer Kurs zusammen erreichen kann. Vier neue Spiele – ein gemeinsames Ziel.' },
 ];
 
 /* ─────────────────────────────────────────────────
@@ -231,7 +232,15 @@ function renderGamesGrid(allData, shopData) {
   if (!grid) return;
   grid.innerHTML = '';
 
-  for (const season of SEASONS_CONFIG) {
+  // Season 1 ist Baseline und immer sichtbar. Höhere Seasons erscheinen
+  // erst, sobald der User dorthin freigeschaltet ist. Reihenfolge: neueste oben.
+  const userSeason = Math.max(getUserSeason(), 1);
+  const visible = SEASONS_CONFIG
+    .filter(s => s.id <= userSeason)
+    .slice()
+    .sort((a, b) => b.id - a.id);
+
+  for (const season of visible) {
     grid.appendChild(buildSeasonSection(season, allData, shopData));
   }
 }
