@@ -13,6 +13,7 @@
      window.isLoggedIn()          — bool
      window.getSessionUser()      — Session-Objekt oder null
      window.waitForSession()      — Promise, resolved wenn Boot fertig
+     window.escapeHtml(s)         — HTML-Escape für &<>"'
      Event 'lernwelt:session-changed' auf window bei Login/Logout
    ══════════════════════════════════════════════════════════════ */
 
@@ -45,6 +46,12 @@
 
   window.supabaseClient = client;
   window.__session      = null;
+
+  window.escapeHtml = function (s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  };
 
   window.getUserSeason  = () => window.__session?.season ?? 0;
   window.isLoggedIn     = () => !!window.__session?.id;

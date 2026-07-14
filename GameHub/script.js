@@ -1781,7 +1781,7 @@ const SEALED_EGG_DEFS = {
         name: 'Siegel II', icon: '🏆',
         hint: function() {
           const ff  = parseInt(localStorage.getItem('fokusflow_highscore')  || '0');
-          const alg = parseInt(localStorage.getItem('algorithmBestTime')    || '0');
+          const alg = readAlgBestTime();
           const tt  = parseInt(localStorage.getItem('tippturbo_hs')         || '0');
           const th  = 15 * 60 + alg;
           const algStr = String(Math.floor(th / 60) % 24).padStart(2,'0') + ':' + String(th % 60).padStart(2,'0');
@@ -1796,7 +1796,7 @@ const SEALED_EGG_DEFS = {
         },
         verify: function() {
           return parseInt(localStorage.getItem('fokusflow_highscore') || '0') >= 850
-              && parseInt(localStorage.getItem('algorithmBestTime')   || '0') >= 660
+              && readAlgBestTime() >= 660
               && parseInt(localStorage.getItem('tippturbo_hs')        || '0') >= 450;
         }
       },

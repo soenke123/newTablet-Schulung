@@ -436,11 +436,7 @@
       return { primary: `${pad(hh % 24)}:${pad(mm)} Uhr`, secondary: '' };
     }
 
-    function escapeHtml(s) {
-      return String(s ?? '').replace(/[&<>"']/g, c => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-      }[c]));
-    }
+    // escapeHtml lebt in session.js als window.escapeHtml.
 
     function avatarUrl(id) {
       if (typeof window.getAvatarUrl === 'function') {

@@ -15,22 +15,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
-
-async function readJsonBody(req) {
-  if (req.body && typeof req.body === 'object') return req.body;
-  if (typeof req.body === 'string' && req.body) {
-    try { return JSON.parse(req.body); } catch { return null; }
-  }
-  try {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const raw = Buffer.concat(chunks).toString('utf8');
-    if (!raw) return {};
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
+import { readJsonBody } from './_utils.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

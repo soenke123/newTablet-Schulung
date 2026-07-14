@@ -1532,7 +1532,9 @@ async function bulkAssignCluster() {
         })
       )).then(results => {
         const granted = results.filter(r => r?.granted).length;
+        const failed  = results.filter(r => r === null).length;
         if (granted > 0) showToast(`Starthilfe: ${granted} User haben Bonus erhalten.`);
+        if (failed > 0)  showToast(`Starthilfe: ${failed} User fehlgeschlagen (siehe Konsole).`);
       });
     }
   } catch (err) {
@@ -1722,11 +1724,7 @@ async function openUserDetail(userId) {
 
 /* ─── Utilities ─────────────────────────────────────────────── */
 
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]));
-}
+// escapeHtml lebt in session.js als window.escapeHtml.
 
 function fmtDT(iso) {
   if (!iso) return '—';

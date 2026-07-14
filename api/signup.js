@@ -22,6 +22,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
+import { readJsonBody } from './_utils.js';
 
 const FAKE_EMAIL_DOMAIN = process.env.FAKE_EMAIL_DOMAIN ?? 'tablet-schulung.fake';
 
@@ -57,24 +58,6 @@ function validatePassword(pw) {
   if (!/[a-zA-Z]/.test(pw))                    return 'Passwort muss mindestens einen Buchstaben enthalten.';
   if (!/[0-9]/.test(pw))                       return 'Passwort muss mindestens eine Zahl enthalten.';
   return null;
-}
-
-async function readJsonBody(req) {
-  // Vercel Node.js: req.body ist meist bereits geparst.
-  if (req.body && typeof req.body === 'object') return req.body;
-  if (typeof req.body === 'string' && req.body) {
-    try { return JSON.parse(req.body); } catch { return null; }
-  }
-  // Fallback: rohen Stream lesen
-  try {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
-    const raw = Buffer.concat(chunks).toString('utf8');
-    if (!raw) return {};
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
 }
 
 export default async function handler(req, res) {
