@@ -69,13 +69,19 @@ const SHOP_ITEMS = [
 ];
 
 // Atari2 · Enter 1-5-0-7
-const CREATURE_ORDER = ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','butterfly','snaildragon','turtle','chamaeleon','robot','pfau','biene','oktopus','ente','frosch','pinguin','raptor','chinDrache','schnabeltier'];
+const CREATURE_ORDER = ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','butterfly','snaildragon','turtle','chamaeleon','robot','pfau','biene','oktopus','ente','frosch','pinguin','raptor','chinDrache','schnabeltier','krabbe','hai','libelle','hippogreif','einhornkatze'];
 const S2_CREATURES   = new Set(['ente','chamaeleon','chinDrache','schnabeltier','frosch','pinguin','raptor']);
+const S3_CREATURES   = new Set(['krabbe','hai','libelle','hippogreif','einhornkatze']);
 
 /* Zukünftiges Kreatur-Paket – bald verfügbar (nur im Buch sichtbar wenn Season 2 offen) */
 const S2_NORMALS   = [];
 const S2_EPICS     = [];
 const S2_LEGIES    = [];
+
+/* Zukünftiges Kreatur-Paket – bald verfügbar (nur im Buch sichtbar wenn Season 3 offen) */
+const S3_NORMALS   = [];
+const S3_EPICS     = [];
+const S3_LEGIES    = [];
 
 const RELEASE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z"/></svg>`;
 
@@ -101,6 +107,11 @@ const BOOK_NAMES = {
   raptor:       'Mächtiger Velociraptor',
   chinDrache:   'Legendärer Chinesischer Drache — Hüter des Himmels',
   schnabeltier: 'Legendäres Schnabeltier — Das Unmögliche',
+  krabbe:       'Krabbe — Season 3',
+  hai:          'Hai — Season 3',
+  libelle:      'Seltene Libelle — Season 3',
+  hippogreif:   'Epischer Hippogreif — Season 3',
+  einhornkatze: 'Einhornkatze — Season 3 (Team-Legendär)',
 };
 
 /* ─────────────────────────────────────────────────
@@ -888,7 +899,7 @@ function renderShop(allData, tab) {
     } else if (shopActiveTab === 2) {
       bannerText.innerHTML = 'Hast du alle <strong>7 neuen Kreaturen</strong> aus Season 2 gefunden und großgezogen?<br>Dann schicke mir einen Screenshot von deinem <strong>Buch der Monster!</strong><br>Die ersten drei <strong>Monster-Meister</strong> erhalten einen Preis!';
     } else {
-      bannerText.innerHTML = 'Sammelt als Kurs gemeinsam <strong>Regenbogen-Bonbons</strong> 🍬 und schaltet den <strong>legendären Rosa Einhorntiger</strong> frei!';
+      bannerText.innerHTML = 'Sammelt als Kurs gemeinsam <strong>Regenbogen-Bonbons</strong> 🍬 und schaltet die <strong>legendäre Einhornkatze</strong> frei!';
     }
   }
 }
@@ -2264,7 +2275,10 @@ function openBookModal() {
 
   const seen    = sd.seenCreatures;
   const s2Open  = getUserSeason() >= 2;
-  const visibleOrder = s2Open ? CREATURE_ORDER : CREATURE_ORDER.filter(c => !S2_CREATURES.has(c));
+  const s3Open  = getUserSeason() >= 3;
+  const visibleOrder = CREATURE_ORDER
+    .filter(c => s2Open || !S2_CREATURES.has(c))
+    .filter(c => s3Open || !S3_CREATURES.has(c));
   const total   = visibleOrder.length;
   const found   = Object.keys(seen).filter(c => visibleOrder.includes(c)).length;
 
@@ -2279,12 +2293,18 @@ function openBookModal() {
     const isS2Rare    = creature === 'ente';
     const isS2Leg     = creature === 'chinDrache' || creature === 'schnabeltier';
     const isS2Normal  = ['frosch','pinguin','raptor'].includes(creature);
+    const isS3Rare    = creature === 'libelle';
+    const isS3Leg     = creature === 'einhornkatze';
+    const isS3Normal  = ['krabbe','hai'].includes(creature);
     const specialClass       = rare ? ' book-slot--rare' : epic ? ' book-slot--epic' : leg ? ' book-slot--legendary' : '';
-    const specialUnseenClass = isS2Leg  ? ' book-slot--s2-legendary-unseen'
+    const specialUnseenClass = isS3Leg  ? ' book-slot--s2-legendary-unseen'
+      : isS3Rare   ? ' book-slot--s2-rare-unseen'
+      : isS2Leg    ? ' book-slot--s2-legendary-unseen'
       : isS2Rare   ? ' book-slot--s2-rare-unseen'
       : rare       ? ' book-slot--rare-unseen'
       : epic       ? ' book-slot--epic-unseen'
       : leg        ? ' book-slot--legendary-unseen'
+      : isS3Normal ? ' book-slot--s2locked-normal'
       : isS2Normal ? ' book-slot--s2locked-normal' : '';
     if (!hasSeen) {
       return `<div class="book-slot book-slot--unseen${specialUnseenClass}" title="Noch nicht entdeckt">
@@ -2297,12 +2317,18 @@ function openBookModal() {
     </div>`;
   };
 
-  const normals = s2Open
+  let normals = s2Open
     ? ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','frosch','pinguin','raptor']
     : ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon'];
-  const rares   = s2Open ? ['biene','oktopus','ente'] : ['biene','oktopus'];
-  const epics   = s2Open ? ['butterfly','snaildragon','turtle','chamaeleon'] : ['butterfly','snaildragon','turtle'];
-  const legies  = s2Open ? ['robot','pfau','chinDrache','schnabeltier'] : ['robot','pfau'];
+  let rares   = s2Open ? ['biene','oktopus','ente'] : ['biene','oktopus'];
+  let epics   = s2Open ? ['butterfly','snaildragon','turtle','chamaeleon'] : ['butterfly','snaildragon','turtle'];
+  let legies  = s2Open ? ['robot','pfau','chinDrache','schnabeltier'] : ['robot','pfau'];
+  if (s3Open) {
+    normals = [...normals, 'krabbe','hai'];
+    rares   = [...rares, 'libelle'];
+    epics   = [...epics, 'hippogreif'];
+    legies  = [...legies, 'einhornkatze'];
+  }
 
   const makeS2Slot = (creature) => {
     const leg  = isLegendary(creature);

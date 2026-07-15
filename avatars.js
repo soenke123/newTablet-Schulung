@@ -177,7 +177,38 @@
     { id: 'st_1',     group: 'legi', creature: 'schnabeltier', stage: 1, file: 'Schnabeltier1_avatar.png', label: 'Schnabeltier Baby' },
     { id: 'st_2',     group: 'legi', creature: 'schnabeltier', stage: 2, file: 'Schnabeltier2_avatar.png', label: 'Schnabeltier Jung' },
     { id: 'st_5',     group: 'legi', creature: 'schnabeltier', stage: 5, file: 'Schnabeltier5_avatar.png', label: 'Schnabeltier Groß' },
-    { id: 'st_6',     group: 'legi', creature: 'schnabeltier', stage: 6, file: 'Schnabeltier6_avatar.png', label: 'Schnabeltier Vollendet' }
+    { id: 'st_6',     group: 'legi', creature: 'schnabeltier', stage: 6, file: 'Schnabeltier6_avatar.png', label: 'Schnabeltier Vollendet' },
+
+    // ─── Season 3 – Normal ───────────────────────────────────
+    { id: 'krabbe_1', group: 'normal', creature: 'krabbe', stage: 1, file: 'Krabbe1_avatar.png', label: 'Krabbe Baby' },
+    { id: 'krabbe_2', group: 'normal', creature: 'krabbe', stage: 2, file: 'Krabbe2_avatar.png', label: 'Krabbe Klein' },
+    { id: 'krabbe_5', group: 'normal', creature: 'krabbe', stage: 5, file: 'Krabbe5_avatar.png', label: 'Krabbe Groß' },
+    { id: 'krabbe_6', group: 'normal', creature: 'krabbe', stage: 6, file: 'Krabbe6_avatar.png', label: 'Krabbe Vollendet' },
+
+    { id: 'hai_1',    group: 'normal', creature: 'hai', stage: 1, file: 'Hai1_avatar.png', label: 'Hai Baby' },
+    { id: 'hai_3',    group: 'normal', creature: 'hai', stage: 3, file: 'Hai3_avatar.png', label: 'Hai Jung' },
+    { id: 'hai_5',    group: 'normal', creature: 'hai', stage: 5, file: 'Hai5_avatar.png', label: 'Hai Groß' },
+    { id: 'hai_6',    group: 'normal', creature: 'hai', stage: 6, file: 'Hai6_avatar.png', label: 'Hai Vollendet' },
+
+    // ─── Season 3 – Rar ──────────────────────────────────────
+    { id: 'lib_1',    group: 'rar', creature: 'libelle', stage: 1, file: 'Liebelle1_avatar.png', label: 'Libelle Baby' },
+    { id: 'lib_3',    group: 'rar', creature: 'libelle', stage: 3, file: 'Liebelle3_avatar.png', label: 'Libelle Jung' },
+    { id: 'lib_5',    group: 'rar', creature: 'libelle', stage: 5, file: 'Liebelle5_avatar.png', label: 'Libelle Groß' },
+    { id: 'lib_6',    group: 'rar', creature: 'libelle', stage: 6, file: 'Liebelle6_avatar.png', label: 'Libelle Vollendet' },
+
+    // ─── Season 3 – Epic ─────────────────────────────────────
+    { id: 'hippo_1',  group: 'epic', creature: 'hippogreif', stage: 1, file: 'Hypogreif1_avatar.png', label: 'Hippogreif Baby' },
+    { id: 'hippo_3',  group: 'epic', creature: 'hippogreif', stage: 3, file: 'Hypogreif3_avatar.png', label: 'Hippogreif Jung' },
+    { id: 'hippo_5',  group: 'epic', creature: 'hippogreif', stage: 5, file: 'Hypogreif5_avatar.png', label: 'Hippogreif Groß' },
+    { id: 'hippo_6',  group: 'epic', creature: 'hippogreif', stage: 6, file: 'Hypogreif6_avatar.png', label: 'Hippogreif Vollendet' },
+
+    // ─── Season 3 – Legi (pro-Stage Avatar, alle 6 Stufen) ───
+    { id: 'ehk_1',    group: 'legi', creature: 'einhornkatze', stage: 1, file: 'Einhornkatze1_avatar.png', label: 'Einhornkatze Baby' },
+    { id: 'ehk_2',    group: 'legi', creature: 'einhornkatze', stage: 2, file: 'Einhornkatze2_avatar.png', label: 'Einhornkatze Klein' },
+    { id: 'ehk_3',    group: 'legi', creature: 'einhornkatze', stage: 3, file: 'Einhornkatze3_avatar.png', label: 'Einhornkatze Jung' },
+    { id: 'ehk_4',    group: 'legi', creature: 'einhornkatze', stage: 4, file: 'Einhornkatze4_avatar.png', label: 'Einhornkatze Ausgewachsen' },
+    { id: 'ehk_5',    group: 'legi', creature: 'einhornkatze', stage: 5, file: 'Einhornkatze5_avatar.png', label: 'Einhornkatze Groß' },
+    { id: 'ehk_6',    group: 'legi', creature: 'einhornkatze', stage: 6, file: 'Einhornkatze6_avatar.png', label: 'Einhornkatze Vollendet' }
   ];
 
   const _byId = new Map(AVATARS.map(a => [a.id, a]));

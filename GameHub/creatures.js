@@ -17,6 +17,11 @@ function _isS2Open() {
     ? window.getUserSeason() >= 2
     : true;
 }
+function _isS3Open() {
+  return typeof window.getUserSeason === 'function'
+    ? window.getUserSeason() >= 3
+    : false;
+}
 
 /* ─── Level-Up-CSS (einmalig injiziert, funktioniert in allen Spielen) ─── */
 (function injectLevelUpStyles() {
@@ -416,12 +421,13 @@ const GROWTH_MAX        = 21;                      // ab hier → Coins statt Wa
 const GROWTH_S6         = 100;                     // Stufe 6 – nach Stein der Vollendung
 
 /* ─── Seltene Tiere (Season Rares) ─── */
-const RARE_CREATURES = new Set(['biene', 'oktopus', 'ente']);
+const RARE_CREATURES = new Set(['biene', 'oktopus', 'ente', 'libelle']);
 function isRare(creature) { return RARE_CREATURES.has(creature); }
 
 /* Welches Season-Rare droppen kann bei welchem Spiel */
 /* Season 1: Biene + Oktopus können in allen Season-1-Spielen droppen (50/50)
-   Season 2: Ente droppt in allen Season-2-Spielen */
+   Season 2: Ente droppt in allen Season-2-Spielen
+   Season 3: Libelle — Einträge werden ergänzt, sobald S3-Spiele in GAMES_CONFIG registriert sind. */
 const GAME_SEASON_RARE = {
   game1: ['biene','oktopus'], game3: ['biene','oktopus'], game7: ['biene','oktopus'], game8: ['biene','oktopus'],
   game5: ['biene','oktopus'], game9: ['biene','oktopus'], game10: ['biene','oktopus'], game11: ['biene','oktopus'],
@@ -429,11 +435,11 @@ const GAME_SEASON_RARE = {
 };
 
 /* ─── Epische Tiere ─── */
-const EPIC_CREATURES = new Set(['snaildragon', 'butterfly', 'turtle', 'chamaeleon']);
+const EPIC_CREATURES = new Set(['snaildragon', 'butterfly', 'turtle', 'chamaeleon', 'hippogreif']);
 function isEpic(creature) { return EPIC_CREATURES.has(creature); }
 
 /* ─── Legendäre Tiere (neue Klasse, noch nicht durch normalen Weg erhältlich) ─── */
-const LEGENDARY_CREATURES = new Set(['robot', 'pfau', 'chinDrache', 'schnabeltier']);
+const LEGENDARY_CREATURES = new Set(['robot', 'pfau', 'chinDrache', 'schnabeltier', 'einhornkatze']);
 function isLegendary(creature) { return LEGENDARY_CREATURES.has(creature); }
 function isPfau(creature) { return creature === 'pfau'; }
 
@@ -448,10 +454,27 @@ function determineCreature(correct, isFirst = false, gameId = null) {
   const epicChance = (correct <= 2 || correct === 10) ? 5 : 2;
   if (Math.random() * 100 < epicChance) return 'snaildragon';
 
+  // Hippogreif (Epic S3) – wie Schneckendrache, in JEDEM Spiel möglich (kein gameId-Check),
+  // sobald der User Season 3 hat.
+  if (_isS3Open()) {
+    const hippoChance = (correct <= 2 || correct === 10) ? 5 : 2;
+    if (Math.random() * 100 < hippoChance) return 'hippogreif';
+  }
+
   // Season Rare – 8 % Chance wenn das Spiel einer Season angehört
   const seasonRares = gameId && GAME_SEASON_RARE[gameId];
   if (seasonRares && Math.random() < 0.08) {
     return seasonRares[Math.floor(Math.random() * seasonRares.length)];
+  }
+
+  // Season 3 – neue Normale (Krabbe/Hai) – Score-Split ≤5 / >5.
+  // Bei S3-Spielen 50 %, bei S1/S2-Spielen 1/3 (gleichmäßige Drei-Teilung mit S1/S2).
+  if (_isS3Open()) {
+    const isS3Game = typeof window !== 'undefined'
+      && window.GAMES_CONFIG?.find?.(g => g.id === gameId)?.season === 3;
+    const s3NormalChance = isS3Game ? 0.5 : (1/3);
+    if (correct <= 5 && Math.random() < s3NormalChance) return 'krabbe';
+    if (correct >  5 && Math.random() < s3NormalChance) return 'hai';
   }
 
   // Season 2 – neue Normale teilen Plätze mit alten (50/50)
@@ -472,7 +495,15 @@ function determineCreature(correct, isFirst = false, gameId = null) {
 
 function determineEpicCreature() {
   const s2 = _isS2Open();
+  const s3 = _isS3Open();
   const r = Math.random();
+  if (s3) {
+    if (r < 0.20) return 'butterfly';
+    if (r < 0.40) return 'snaildragon';
+    if (r < 0.60) return 'turtle';
+    if (r < 0.80) return 'chamaeleon';
+    return 'hippogreif';
+  }
   if (s2) {
     if (r < 0.30) return 'butterfly';
     if (r < 0.60) return 'snaildragon';
@@ -535,6 +566,7 @@ const CREATURE_NAMES = {
   chamaeleon:'Chamäleon',
   pinguin:'Pinguin', frosch:'Frosch', raptor:'Raptor',
   chinDrache:'Chinesischer Drache', schnabeltier:'Schnabeltier',
+  krabbe:'Krabbe', hai:'Hai', libelle:'Libelle', hippogreif:'Hippogreif', einhornkatze:'Einhornkatze',
 };
 
 const GROWTH_LABELS = ['Winzig', 'Klein', 'Mittel', 'Groß', 'Ausgewachsen', 'Vollendet'];
@@ -732,6 +764,11 @@ const CREATURE_IMAGES = {
   raptor:      ['Raptor1',         'Raptor2',         'Raptor3',         'Raptor4',         'Raptor5',         'Raptor6'         ],
   chinDrache:  ['chinDrache1',     'chinDrache2',     'chinDrache3',     'chinDrache4',     'chinDrache5',     'ChinDrache6'     ],
   schnabeltier:['Schnabeltier1',   'Schnabeltier2',   'Schnabeltier3',   'Schnabeltier4',   'Schnabeltier5',   'Schnabeltier6'   ],
+  krabbe:      ['Krabbe1',         'Krabbe2',         'Krabbe3',         'Krabbe4',         'Krabbe5',         'Krabbe6'         ],
+  hai:         ['Hai1',            'Hai2',            'Hai3',            'Hai4',            'Hai5',            'Hai6'            ],
+  libelle:     ['Liebelle1',       'Liebelle2',       'Liebelle3',       'Liebelle4',       'Liebelle5',       'Liebelle6'       ],
+  hippogreif:  ['Hypogreif1',      'Hypogreif2',      'Hypogreif3',      'Hypogreif4',      'Hypogreif5',      'Hypogreif6'      ],
+  einhornkatze:['Einhornkatze1',   'Einhornkatze2',   'Einhornkatze3',   'Einhornkatze4',   'Einhornkatze5',   'Einhornkatze6'   ],
 };
 
 function getCreatureHTML(creature, stage) {
