@@ -805,6 +805,14 @@ body.s2-active .hud-kristalle { display: flex; }
   flex-direction: column;
 }
 
+.shop-empty-hint {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--clr-cream-dim);
+  font-style: italic;
+  font-size: 0.95rem;
+}
+
 .shop-list-item {
   display: flex;
   align-items: center;

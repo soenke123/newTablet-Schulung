@@ -827,10 +827,14 @@ const SHOP_ITEMS_P2 = [
   { id: 'siegelHimmel',       icon: '🌟', name: 'Siegel des Himmels',        description: 'Ein strahlendes Siegel aus den Höhen. Bezahle mit Kristallen, um zu enthüllen, was sich dahinter verbirgt.',                                                 price: 20,  currency: 'kristall', sealItem: true, sealType: 'heaven' },
 ];
 
+// ── Season 3 Shop-Items (Regenbogen-Bonbons — Items folgen) ───────────
+const SHOP_ITEMS_P3 = [];
+
 function openShopModal() {
   const modal = document.getElementById('shopModal');
   if (!modal) return;
-  shopActiveTab = (getUserSeason() >= 2) ? 2 : 1;
+  const season = getUserSeason();
+  shopActiveTab = season >= 3 ? 3 : (season >= 2 ? 2 : 1);
   if (!modal._tabsWired) {
     modal._tabsWired = true;
     document.querySelectorAll('.shop-tab').forEach(btn => {
@@ -851,8 +855,9 @@ function closeShopModal() {
 function renderShop(allData, tab) {
   if (tab !== undefined) shopActiveTab = tab;
   const s2Open = getUserSeason() >= 2;
+  const s3Open = getUserSeason() >= 3;
 
-  _renderShopTabs(s2Open);
+  _renderShopTabs(s2Open, s3Open);
 
   const list = document.getElementById('shopList');
   if (!list) return;
@@ -863,25 +868,36 @@ function renderShop(allData, tab) {
 
   _renderShopBadges(shopData, available, s2Open);
 
-  const activeItems = shopActiveTab === 1 ? SHOP_ITEMS : SHOP_ITEMS_P2;
+  const activeItems = shopActiveTab === 1
+    ? SHOP_ITEMS
+    : shopActiveTab === 2 ? SHOP_ITEMS_P2 : SHOP_ITEMS_P3;
   for (const item of activeItems) {
     list.appendChild(_buildShopItem(item, shopData, allData, available, s2Open));
+  }
+  if (shopActiveTab === 3 && activeItems.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'shop-empty-hint';
+    empty.textContent = 'Season-3-Items folgen bald.';
+    list.appendChild(empty);
   }
 
   const bannerText = document.getElementById('shopChallengeBannerText');
   if (bannerText) {
     if (shopActiveTab === 1) {
       bannerText.innerHTML = 'Hast du alle <strong>14 Kreaturen</strong> gefunden und großgezogen?<br>Dann schicke mir einen Screenshot von deinem <strong>Buch der Monster!</strong><br>Die ersten drei <strong>Monster-Meister</strong> erhalten einen Preis!';
-    } else {
+    } else if (shopActiveTab === 2) {
       bannerText.innerHTML = 'Hast du alle <strong>7 neuen Kreaturen</strong> aus Season 2 gefunden und großgezogen?<br>Dann schicke mir einen Screenshot von deinem <strong>Buch der Monster!</strong><br>Die ersten drei <strong>Monster-Meister</strong> erhalten einen Preis!';
+    } else {
+      bannerText.innerHTML = 'Sammelt als Kurs gemeinsam <strong>Regenbogen-Bonbons</strong> 🍬 und schaltet den <strong>legendären Rosa Einhorntiger</strong> frei!';
     }
   }
 }
 
-function _renderShopTabs(s2Open) {
+function _renderShopTabs(s2Open, s3Open) {
   document.querySelectorAll('.shop-tab').forEach(btn => {
     btn.classList.toggle('shop-tab--active', +btn.dataset.tab === shopActiveTab);
     if (+btn.dataset.tab === 2) btn.hidden = !s2Open;
+    if (+btn.dataset.tab === 3) btn.hidden = !s3Open;
   });
 }
 
