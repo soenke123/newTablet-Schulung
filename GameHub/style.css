@@ -798,6 +798,33 @@ body.s2-active .hud-kristalle { display: flex; }
   color: var(--clr-gold);
 }
 
+/* ── Buch-Tabs (Season-Filter im Buch der Monster) ─── */
+.book-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.book-tab {
+  padding: 6px 16px;
+  background: var(--clr-surface2);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  color: var(--clr-cream-dim);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+.book-tab:hover { background: var(--clr-surface); color: var(--clr-cream); }
+.book-tab--active {
+  background: rgba(240,180,41,0.12);
+  border-color: rgba(240,180,41,0.5);
+  color: var(--clr-gold);
+}
+
 /* ── Shop-Liste (Einträge untereinander) ─────────── */
 
 .shop-list {

@@ -548,6 +548,7 @@ function renderCoinDisplay(allData) {
    6. SHOP MODAL
    ───────────────────────────────────────────────── */
 let shopActiveTab = 1;
+let bookActiveTab = 'all';   // 'all' | 1 | 2 | 3
 
 const LOOTBOX_SLOTS = [
   { key: '06', minutes:  6 * 60, label: '06:00' },
@@ -2276,11 +2277,10 @@ function openBookModal() {
   const seen    = sd.seenCreatures;
   const s2Open  = getUserSeason() >= 2;
   const s3Open  = getUserSeason() >= 3;
-  const visibleOrder = CREATURE_ORDER
-    .filter(c => s2Open || !S2_CREATURES.has(c))
-    .filter(c => s3Open || !S3_CREATURES.has(c));
-  const total   = visibleOrder.length;
-  const found   = Object.keys(seen).filter(c => visibleOrder.includes(c)).length;
+
+  // Tab-Guard: falls User keine passende Season (mehr) hat, auf 'all' zurückfallen
+  if (!s2Open) bookActiveTab = 'all';
+  else if (bookActiveTab === 3 && !s3Open) bookActiveTab = 'all';
 
   const makeSlot = (creature) => {
     const hasSeen  = seen[creature] !== undefined;
@@ -2330,6 +2330,20 @@ function openBookModal() {
     legies  = [...legies, 'einhornkatze'];
   }
 
+  // Tab-Filter über alle Sections (Alle | S1 | S2 | S3)
+  const tabFilter = (c) => {
+    if (bookActiveTab === 'all') return true;
+    if (bookActiveTab === 1)     return !S2_CREATURES.has(c) && !S3_CREATURES.has(c);
+    if (bookActiveTab === 2)     return S2_CREATURES.has(c);
+    if (bookActiveTab === 3)     return S3_CREATURES.has(c);
+    return true;
+  };
+  normals = normals.filter(tabFilter);
+  rares   = rares.filter(tabFilter);
+  epics   = epics.filter(tabFilter);
+  legies  = legies.filter(tabFilter);
+
+  // Coming-Soon-Buckets (aktuell leer) — nur im "Alle"-Tab anzeigen
   const makeS2Slot = (creature) => {
     const leg  = isLegendary(creature);
     const epic = isEpic(creature);
@@ -2339,15 +2353,29 @@ function openBookModal() {
       <span class="book-slot__unknown">?</span>
     </div>`;
   };
+  const showLocked    = bookActiveTab === 'all';
+  const s2NormalsHtml = (showLocked && s2Open) ? S2_NORMALS.map(makeS2Slot).join('') : '';
+  const s2EpicsHtml   = (showLocked && s2Open) ? S2_EPICS.map(makeS2Slot).join('')   : '';
+  const s2LegiesHtml  = (showLocked && s2Open) ? S2_LEGIES.map(makeS2Slot).join('')  : '';
 
-  const _s2Book = getUserSeason() >= 2;
-  const s2NormalsHtml = _s2Book ? S2_NORMALS.map(makeS2Slot).join('') : '';
-  const s2EpicsHtml   = _s2Book ? S2_EPICS.map(makeS2Slot).join('') : '';
-  const s2LegiesHtml  = _s2Book ? S2_LEGIES.map(makeS2Slot).join('') : '';
+  // total/found neu berechnen anhand der tatsächlich sichtbaren Kreaturen
+  const activeCreatures = [...normals, ...rares, ...epics, ...legies];
+  const total = activeCreatures.length;
+  const found = activeCreatures.filter(c => seen[c] !== undefined).length;
+
+  // Tab-Leiste nur für Season-2+ User
+  const tabsHtml = s2Open ? `
+    <div class="book-tabs">
+      <button class="book-tab${bookActiveTab === 'all' ? ' book-tab--active' : ''}" data-book-tab="all">Alle</button>
+      <button class="book-tab${bookActiveTab === 1     ? ' book-tab--active' : ''}" data-book-tab="1">S1</button>
+      <button class="book-tab${bookActiveTab === 2     ? ' book-tab--active' : ''}" data-book-tab="2">S2</button>
+      ${s3Open ? `<button class="book-tab${bookActiveTab === 3 ? ' book-tab--active' : ''}" data-book-tab="3">S3</button>` : ''}
+    </div>` : '';
 
   content.innerHTML = `
     <div class="book-modal-inner">
       <h2 class="book-modal__title">📜 Buch der Monster</h2>
+      ${tabsHtml}
       <p class="book-modal__count">${found} / ${total} entdeckt</p>
       <div class="book-grid book-grid--normals">${normals.map(makeSlot).join('')}${s2NormalsHtml}</div>
       <div class="book-divider"></div>
@@ -2359,6 +2387,14 @@ function openBookModal() {
     </div>`;
 
   overlay.hidden = false;
+
+  content.querySelectorAll('.book-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.bookTab;
+      bookActiveTab = val === 'all' ? 'all' : +val;
+      openBookModal();
+    });
+  });
 
   content.querySelectorAll('.book-slot--seen').forEach(slot => {
     slot.addEventListener('click', () => {
