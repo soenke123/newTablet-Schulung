@@ -2157,10 +2157,8 @@ body.s2-active .hud-kristalle { display: flex; }
   .result-play-row .btn-use-item { flex-shrink: 1; }
   .number-buttons { gap: 12px; }
 
-  /* Buch der Monster – Mobile: 3 Spalten für Normale, Slots gleiche Größe */
-  .book-grid--normals {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  /* Buch der Monster – Mobile: 3 Slots pro Reihe, alle zentriert */
+  .book-grid--normals .book-slot,
   .book-grid--centered .book-slot {
     flex: 0 0 calc((100% - 16px) / 3);
     max-width: calc((100% - 16px) / 3);
@@ -2294,17 +2292,15 @@ body.s2-active .hud-kristalle { display: flex; }
   }
 }
 
-/* 5-Spalten-Grid für normale Monster */
-.book-grid--normals {
-  grid-template-columns: repeat(5, 1fr);
-}
-
-/* Zentrierte Reihe für Epics (3) und Legies (2) */
+/* Alle Reihen zentriert (Normale, Rare, Epic, Legi) */
+.book-grid--normals,
 .book-grid--centered {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
+.book-grid--normals .book-slot,
 .book-grid--centered .book-slot {
   flex: 0 0 calc((100% - 32px) / 5);
   max-width: calc((100% - 32px) / 5);
