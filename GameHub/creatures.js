@@ -527,6 +527,20 @@ function determineCreatureWithGlucksklee(correct, gameId = null) {
   return determineCreature(correct, false, null);
 }
 
+/* Lockmittel: 90 % Chance auf ein Season-3-Monster.
+   Verteilung innerhalb der 90 %: 10 % Libelle (Rare), 5 % Hippogreif (Epic),
+   Rest Krabbe (Score ≤5) / Hai (Score >5).
+   Bei den restlichen 10 % fällt der Roll auf das normale determineCreature zurück. */
+function determineCreatureWithLockmittel(correct, gameId = null) {
+  if (Math.random() < 0.90) {
+    const r = Math.random();
+    if (r < 0.10) return 'libelle';
+    if (r < 0.15) return 'hippogreif';
+    return (correct <= 5) ? 'krabbe' : 'hai';
+  }
+  return determineCreature(correct, false, gameId);
+}
+
 function determineEggCreature(eggType, correct) {
   if (eggType === 'atari')   return 'robot';
   if (eggType === 'pfau')    return 'pfau';
@@ -1433,16 +1447,22 @@ function loadShopData() {
 
 /* Gibt zurück welches Item für diesen Slot nutzbar ist (und ob eins im Besitz ist).
    Ei → Glücksklee, Jungtier → Wachstums-Booster, Ausgewachsen → Coins ×3 */
-function getActiveItemForSlot(data, sd) {
+function getActiveItemsForSlot(data, sd) {
   if (!sd) sd = loadShopData();
+  const items = [];
   if (!data || !data.creature) {
-    if (sd.gluckskleeCount > 0) return { id: 'glucksklee', icon: '🍀', name: 'Glücksklee', countKey: 'gluckskleeCount' };
+    if (sd.gluckskleeCount > 0) items.push({ id: 'glucksklee', icon: '🍀', name: 'Glücksklee', countKey: 'gluckskleeCount' });
+    if (sd.lockmittelCount > 0) items.push({ id: 'lockmittel', icon: '🧲', name: 'Lockmittel', countKey: 'lockmittelCount' });
   } else if (data.growth >= GROWTH_MAX) {
-    if (sd.coinsx3Count > 0) return { id: 'coinsx3', icon: '🎰', name: 'Coins ×3', countKey: 'coinsx3Count' };
+    if (sd.coinsx3Count > 0) items.push({ id: 'coinsx3', icon: '🎰', name: 'Coins ×3', countKey: 'coinsx3Count' });
   } else {
-    if (sd.wachstumsBoosterCount > 0) return { id: 'wachstumsBooster', icon: '⚡', name: 'Wachstums-Booster', countKey: 'wachstumsBoosterCount' };
+    if (sd.wachstumsBoosterCount > 0) items.push({ id: 'wachstumsBooster', icon: '⚡', name: 'Wachstums-Booster', countKey: 'wachstumsBoosterCount' });
   }
-  return null;
+  return items;
+}
+
+function getActiveItemForSlot(data, sd) {
+  return getActiveItemsForSlot(data, sd)[0] ?? null;
 }
 
 /* ─── Münzbank (wird nach jedem Spiel auf dem Ergebnis-Screen gezeigt) ─── */
@@ -1515,21 +1535,25 @@ function renderResultItemButton(containerId, gameId, onActivate) {
   if (!el) return;
   el.innerHTML = '';
   const data = getGameData(gameId);
-  const item = getActiveItemForSlot(data);
-  if (!item) return;
-  const btn = document.createElement('button');
-  btn.className = 'btn-use-item';
-  btn.textContent = 'nutze ' + item.icon;
-  btn.addEventListener('click', () => {
-    const sd = loadShopData();
-    if ((sd[item.countKey] ?? 0) <= 0) return;
-    sd[item.countKey]--;
-    sd[item.id] = true;
-    saveShopData(sd);
-    if (typeof onActivate === 'function') onActivate();
-    else window.location.reload();
-  });
-  el.appendChild(btn);
+  const items = getActiveItemsForSlot(data);
+  if (!items.length) return;
+  const iconOnly = items.length > 1;
+  for (const item of items) {
+    const btn = document.createElement('button');
+    btn.className = 'btn-use-item' + (iconOnly ? ' btn-use-item--icon' : '');
+    btn.textContent = iconOnly ? item.icon : ('nutze ' + item.icon);
+    btn.title = item.name + ' einsetzen';
+    btn.addEventListener('click', () => {
+      const sd = loadShopData();
+      if ((sd[item.countKey] ?? 0) <= 0) return;
+      sd[item.countKey]--;
+      sd[item.id] = true;
+      saveShopData(sd);
+      if (typeof onActivate === 'function') onActivate();
+      else window.location.reload();
+    });
+    el.appendChild(btn);
+  }
 }
 
 function saveShopData(data) {
@@ -1790,6 +1814,7 @@ function renderBoostIndicators(containerId, gameId) {
   if (sd.wachstumsBooster) items.push({ icon: '⚡', title: 'Wachstums-Booster aktiv' });
   if (sd.coinsx3)          items.push({ icon: '🎰', title: 'Coins ×3 aktiv' });
   if (sd.glucksklee)       items.push({ icon: '🍀', title: 'Glücksklee aktiv' });
+  if (sd.lockmittel)       items.push({ icon: '🧲', title: 'Lockmittel aktiv' });
 
   let bonusHtml = '';
   if (gameId) {

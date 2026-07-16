@@ -1515,7 +1515,7 @@ function updateCompanion() {
   updateGameEggDisplay(gd, crack, false, liveGrowth);
 
   const sd = loadShopData();
-  const activeIcon = sd.wachstumsBooster ? '⚡' : sd.coinsx3 ? '🎰' : sd.glucksklee ? '🍀' : null;
+  const activeIcon = sd.wachstumsBooster ? '⚡' : sd.coinsx3 ? '🎰' : sd.lockmittel ? '🧲' : sd.glucksklee ? '🍀' : null;
   const iconEl = document.getElementById('companion-item-icon');
   if (iconEl) {
     iconEl.textContent = activeIcon ?? '';
@@ -3963,10 +3963,20 @@ function showWin1() {
     if (eggType) {
       gd.creature = determineEggCreature(eggType, creatureEquiv);
     } else {
-      gd.creature = sd0.glucksklee
-        ? determineCreatureWithGlucksklee(creatureEquiv, gameId)
-        : determineCreature(creatureEquiv, true, gameId);
-      if (sd0.glucksklee) { sd0.glucksklee = false; saveShopData(sd0); }
+      gd.creature = sd0.lockmittel
+        ? determineCreatureWithLockmittel(creatureEquiv, gameId)
+        : sd0.glucksklee
+          ? determineCreatureWithGlucksklee(creatureEquiv, gameId)
+          : determineCreature(creatureEquiv, true, gameId);
+      if (sd0.lockmittel) {
+        sd0.lockmittel = false;
+        sd0.lockmittelCount = Math.max(0, (sd0.lockmittelCount || 0) - 1);
+        saveShopData(sd0);
+      } else if (sd0.glucksklee) {
+        sd0.glucksklee = false;
+        sd0.gluckskleeCount = Math.max(0, (sd0.gluckskleeCount || 0) - 1);
+        saveShopData(sd0);
+      }
     }
     gd.growth = 0;
   }

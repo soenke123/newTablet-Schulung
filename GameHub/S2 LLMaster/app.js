@@ -3586,10 +3586,20 @@ function showMilestoneModal() {
     const sd = loadShopData();
     gd.creature = eggType
       ? determineEggCreature(eggType, norm0)
-      : (sd.glucksklee
-          ? determineCreatureWithGlucksklee(norm0, gameId)
-          : determineCreature(norm0, true, gameId));
-    if (sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
+      : (sd.lockmittel
+          ? determineCreatureWithLockmittel(norm0, gameId)
+          : sd.glucksklee
+            ? determineCreatureWithGlucksklee(norm0, gameId)
+            : determineCreature(norm0, true, gameId));
+    if (sd.lockmittel) {
+      sd.lockmittel = false;
+      sd.lockmittelCount = Math.max(0, (sd.lockmittelCount || 0) - 1);
+      saveShopData(sd);
+    } else if (sd.glucksklee) {
+      sd.glucksklee = false;
+      sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
+      saveShopData(sd);
+    }
     const growthBefore = gd.growth;
     const coinsBefore  = gd.coins;
     computeRoundResult(gd, norm0, 10, sd);
@@ -4124,7 +4134,7 @@ function updateCompanion() {
   }
   updateGameEggDisplay(gd, crack, false, liveGrowth);
   const sd   = loadShopData();
-  const icon = sd.wachstumsBooster ? '⚡' : sd.coinsx3 ? '🎰' : sd.glucksklee ? '🍀' : null;
+  const icon = sd.wachstumsBooster ? '⚡' : sd.coinsx3 ? '🎰' : sd.lockmittel ? '🧲' : sd.glucksklee ? '🍀' : null;
   const el   = document.getElementById('companion-item-icon');
   if (el) { el.textContent = icon ?? ''; el.classList.toggle('active', !!icon); }
   renderBoostIndicators('llm-boost-bar', gameId);

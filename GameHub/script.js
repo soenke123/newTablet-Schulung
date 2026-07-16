@@ -191,6 +191,7 @@ function refundAbandonedItems() {
   if (sd.wachstumsBooster) { sd.wachstumsBooster = false; sd.wachstumsBoosterCount = (sd.wachstumsBoosterCount || 0) + 1; changed = true; }
   if (sd.coinsx3)           { sd.coinsx3 = false;           sd.coinsx3Count          = (sd.coinsx3Count || 0) + 1;           changed = true; }
   if (sd.glucksklee)        { sd.glucksklee = false;         sd.gluckskleeCount       = (sd.gluckskleeCount || 0) + 1;        changed = true; }
+  if (sd.lockmittel)        { sd.lockmittel = false;         sd.lockmittelCount       = (sd.lockmittelCount || 0) + 1;        changed = true; }
   if (changed) saveShopData(sd);
 }
 
@@ -305,17 +306,19 @@ function buildGameCard(game, data, shopData) {
 }
 
 function attachCardListeners(card, game, data, isBackupTarget) {
-  card.querySelector('.game-card__use-btn')?.addEventListener('click', e => {
-    e.stopPropagation();
-    const btn = e.currentTarget;
-    const sd = loadShopData();
-    const countKey = btn.dataset.countKey;
-    const itemId   = btn.dataset.item;
-    if (!countKey || (sd[countKey] ?? 0) <= 0) return;
-    sd[countKey]--;
-    sd[itemId] = true;
-    saveShopData(sd);
-    window.location.href = game.url + '?id=' + game.id;
+  card.querySelectorAll('.game-card__use-btn').forEach(useBtn => {
+    useBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      const sd = loadShopData();
+      const countKey = btn.dataset.countKey;
+      const itemId   = btn.dataset.item;
+      if (!countKey || (sd[countKey] ?? 0) <= 0) return;
+      sd[countKey]--;
+      sd[itemId] = true;
+      saveShopData(sd);
+      window.location.href = game.url + '?id=' + game.id;
+    });
   });
 
   card.querySelector('.game-card__trank-btn')?.addEventListener('click', e => {
@@ -426,9 +429,16 @@ function buildCardHTML(game, data, shopData) {
       &nbsp;·&nbsp; 🔄 Runden: <strong>${data.roundsPlayed}</strong>
     </div>
     ${(function(){
-  const it = getActiveItemForSlot(data, shopData);
-  if (it) return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" data-count-key="${it.countKey}">nutze ${it.icon}</button></div>`;
-  return `<button class="game-card__btn">Spielen!</button>`;
+  const items = getActiveItemsForSlot(data, shopData);
+  if (items.length === 0) return `<button class="game-card__btn">Spielen!</button>`;
+  if (items.length === 1) {
+    const it = items[0];
+    return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" data-count-key="${it.countKey}" title="${it.name} einsetzen">nutze ${it.icon}</button></div>`;
+  }
+  const useBtns = items.map(it =>
+    `<button class="game-card__use-btn game-card__use-btn--icon" data-item="${it.id}" data-count-key="${it.countKey}" title="${it.name} einsetzen">${it.icon}</button>`
+  ).join('');
+  return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button>${useBtns}</div>`;
 })()}
     ${data.creature ? `<button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>` : ''}
     ${canUseTrank ? `<button class="game-card__trank-btn" title="Wachstumstrank anwenden">🧪</button>` : ''}
@@ -600,7 +610,7 @@ function updateLootboxBlink() {
 // ── Lootbox: Wahrscheinlichkeits-Engine & Modal ───────────────────────────
 
 function _emptyConsumables() {
-  return { wachstumstrank: 0, wachstumsBooster: 0, coinsx3: 0, glucksklee: 0 };
+  return { wachstumstrank: 0, wachstumsBooster: 0, coinsx3: 0, glucksklee: 0, lockmittel: 0 };
 }
 
 function _rollCommonItem() {
@@ -840,7 +850,9 @@ const SHOP_ITEMS_P2 = [
 ];
 
 // ── Season 3 Shop-Items (Regenbogen-Bonbons — Items folgen) ───────────
-const SHOP_ITEMS_P3 = [];
+const SHOP_ITEMS_P3 = [
+  { id: 'lockmittel', icon: '🧲', name: 'Lockmittel', description: 'Setze es bei einem schlummernden Ei ein: Zu 90 % droppt beim ersten Spiel ein Season-3-Monster!', price: 10, consumable: true },
+];
 
 function openShopModal() {
   const modal = document.getElementById('shopModal');
@@ -1005,8 +1017,8 @@ function _buildAtariHintItemElement(item, shopData) {
   return li;
 }
 
-const _SHOP_STACKABLE  = ['wachstumstrank', 'wachstumsBooster', 'coinsx3', 'glucksklee'];
-const _SHOP_COUNT_KEYS = { wachstumstrank: 'wachstumstrankCount', wachstumsBooster: 'wachstumsBoosterCount', coinsx3: 'coinsx3Count', glucksklee: 'gluckskleeCount' };
+const _SHOP_STACKABLE  = ['wachstumstrank', 'wachstumsBooster', 'coinsx3', 'glucksklee', 'lockmittel'];
+const _SHOP_COUNT_KEYS = { wachstumstrank: 'wachstumstrankCount', wachstumsBooster: 'wachstumsBoosterCount', coinsx3: 'coinsx3Count', glucksklee: 'gluckskleeCount', lockmittel: 'lockmittelCount' };
 
 function _buildStandardShopItemElement(item, shopData, allData, available, s2Open, soldOut) {
   const isStackable = _SHOP_STACKABLE.includes(item.id);
@@ -1508,7 +1520,7 @@ function buildNestCard(nest, allData, shopData) {
       : `<p class="nest-card__hint" style="opacity:0.5;">Wähle ein Spiel…</p>`;
   }
 
-  const nestActiveItem = canPlay ? getActiveItemForSlot(nestData, shopData) : null;
+  const nestActiveItems = canPlay ? getActiveItemsForSlot(nestData, shopData) : [];
 
   const card = document.createElement('div');
   card.className = `game-card nest-game-card${hasCreature ? ' has-creature' : ''}${epic ? ' game-card--epic' : ''}${legendary ? ' game-card--legendary' : ''}${isAtariEgg ? ' nest-card--atari' : ''}${isPfauEgg ? ' nest-card--pfau' : ''}${isPending ? ' nest-card--pending' : ''}${nestMaxed ? ' creature-maxed' : ''}`;
@@ -1530,9 +1542,17 @@ function buildNestCard(nest, allData, shopData) {
       ⭐ Gesamt: <strong>${nestData.points}</strong>
       &nbsp;·&nbsp; 🔄 Runden: <strong>${nestData.roundsPlayed}</strong>
     </div>
-    ${nestActiveItem
-      ? `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${nestActiveItem.id}" data-count-key="${nestActiveItem.countKey}">nutze ${nestActiveItem.icon}</button></div>`
-      : playBtn}
+    ${(function(){
+      if (!nestActiveItems.length) return playBtn;
+      if (nestActiveItems.length === 1) {
+        const it = nestActiveItems[0];
+        return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" data-count-key="${it.countKey}" title="${it.name} einsetzen">nutze ${it.icon}</button></div>`;
+      }
+      const useBtns = nestActiveItems.map(it =>
+        `<button class="game-card__use-btn game-card__use-btn--icon" data-item="${it.id}" data-count-key="${it.countKey}" title="${it.name} einsetzen">${it.icon}</button>`
+      ).join('');
+      return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button>${useBtns}</div>`;
+    })()}
     <button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>
     ${canUseTrank ? `<button class="game-card__trank-btn" title="Wachstumstrank anwenden">🧪</button>` : ''}
   `;
@@ -1546,18 +1566,20 @@ function attachNestCardListeners(card, nest, nestData, hasCreature, canPlay) {
     card.querySelector('.game-card__btn').addEventListener('click', () => {
       playNest(nest.nestId);
     });
-    card.querySelector('.game-card__use-btn')?.addEventListener('click', e => {
-      e.stopPropagation();
-      const btn = e.currentTarget;
-      const sd = loadShopData();
-      const countKey = btn.dataset.countKey;
-      const itemId   = btn.dataset.item;
-      if (!countKey || (sd[countKey] ?? 0) <= 0) return;
-      sd[countKey]--;
-      sd[itemId] = true;
-      saveShopData(sd);
-      if (!nest.gameUrl) return;
-      window.location.href = nest.gameUrl + '?id=' + nest.nestId + '&egg=' + nest.eggType;
+    card.querySelectorAll('.game-card__use-btn').forEach(useBtn => {
+      useBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const btn = e.currentTarget;
+        const sd = loadShopData();
+        const countKey = btn.dataset.countKey;
+        const itemId   = btn.dataset.item;
+        if (!countKey || (sd[countKey] ?? 0) <= 0) return;
+        sd[countKey]--;
+        sd[itemId] = true;
+        saveShopData(sd);
+        if (!nest.gameUrl) return;
+        window.location.href = nest.gameUrl + '?id=' + nest.nestId + '&egg=' + nest.eggType;
+      });
     });
   }
   if (hasCreature) {

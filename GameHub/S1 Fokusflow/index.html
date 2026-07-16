@@ -1098,9 +1098,11 @@
                 if (_eggType) {
                     gd.creature = determineEggCreature(_eggType, _norm);
                 } else {
-                    gd.creature = sd.glucksklee
-                        ? determineCreatureWithGlucksklee(_norm, ffGameId)
-                        : determineCreature(_norm, true, ffGameId);
+                    gd.creature = sd.lockmittel
+                        ? determineCreatureWithLockmittel(_norm, ffGameId)
+                        : sd.glucksklee
+                            ? determineCreatureWithGlucksklee(_norm, ffGameId)
+                            : determineCreature(_norm, true, ffGameId);
                 }
                 gd.growth = 0;
             }
@@ -1113,7 +1115,15 @@
 
             if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
             if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
-            if (isFirst && sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
+            if (isFirst && sd.lockmittel) {
+                sd.lockmittel = false;
+                sd.lockmittelCount = Math.max(0, (sd.lockmittelCount || 0) - 1);
+                saveShopData(sd);
+            } else if (isFirst && sd.glucksklee) {
+                sd.glucksklee = false;
+                sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
+                saveShopData(sd);
+            }
         }
 
         function renderWinHubWidgets() {

@@ -80,9 +80,15 @@ function saveAlgorithmHubData(score) {
   if (isFirst) {
     if (ALG_EGG_TYPE) {
       gd.creature = determineEggCreature(ALG_EGG_TYPE, s);
+    } else if (sd.lockmittel) {
+      gd.creature = determineCreatureWithLockmittel(s, ALG_GAME_ID);
+      sd.lockmittel = false;
+      sd.lockmittelCount = Math.max(0, (sd.lockmittelCount || 0) - 1);
+      saveShopData(sd);
     } else if (sd.glucksklee) {
       gd.creature = determineCreatureWithGlucksklee(s, ALG_GAME_ID);
       sd.glucksklee = false;
+      sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
       saveShopData(sd);
     } else {
       gd.creature = determineCreature(s, true, ALG_GAME_ID);

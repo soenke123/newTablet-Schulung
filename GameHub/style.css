@@ -623,6 +623,12 @@ body.s2-active .hud-kristalle { display: flex; }
 .game-card__use-btn:hover {
   background: rgba(232,131,10,0.15);
 }
+/* Icon-only Variante: bei mehreren Items nebeneinander (z.B. Kleeblatt + Lockmittel) */
+.game-card__use-btn--icon {
+  padding: 12px 10px;
+  font-size: 1.2rem;
+  letter-spacing: 0;
+}
 
 /* ── Kreatur-Hinweis ───────────────────────────── */
 .game-card__creature-hint {

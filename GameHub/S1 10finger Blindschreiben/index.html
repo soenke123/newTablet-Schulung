@@ -968,10 +968,15 @@
       if (_eggType) {
         data.creature = determineEggCreature(_eggType, normalized);
       } else {
-        data.creature = sd.glucksklee
-          ? determineCreatureWithGlucksklee(normalized, GAME_ID)
-          : determineCreature(normalized, true, GAME_ID);
-        if (sd.glucksklee) {
+        data.creature = sd.lockmittel
+          ? determineCreatureWithLockmittel(normalized, GAME_ID)
+          : sd.glucksklee
+            ? determineCreatureWithGlucksklee(normalized, GAME_ID)
+            : determineCreature(normalized, true, GAME_ID);
+        if (sd.lockmittel) {
+          sd.lockmittel = false;
+          sd.lockmittelCount = Math.max(0, (sd.lockmittelCount || 0) - 1);
+        } else if (sd.glucksklee) {
           sd.glucksklee = false;
           sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
         }

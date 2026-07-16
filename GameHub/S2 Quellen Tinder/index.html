@@ -1703,10 +1703,20 @@ function showEnd() {
       if (eggType) {
         gd.creature = determineEggCreature(eggType, normalizedScore);
       } else {
-        gd.creature = sd.glucksklee
-          ? determineCreatureWithGlucksklee(normalizedScore, gameId)
-          : determineCreature(normalizedScore, true, gameId);
-        if (sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
+        gd.creature = sd.lockmittel
+          ? determineCreatureWithLockmittel(normalizedScore, gameId)
+          : sd.glucksklee
+            ? determineCreatureWithGlucksklee(normalizedScore, gameId)
+            : determineCreature(normalizedScore, true, gameId);
+        if (sd.lockmittel) {
+          sd.lockmittel = false;
+          sd.lockmittelCount = Math.max(0, (sd.lockmittelCount || 0) - 1);
+          saveShopData(sd);
+        } else if (sd.glucksklee) {
+          sd.glucksklee = false;
+          sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
+          saveShopData(sd);
+        }
       }
       gd.growth = 0;
     }
@@ -1964,7 +1974,7 @@ function updateCompanion() {
   }
   updateGameEggDisplay(gd, crack, false, liveGrowth);
   var sd = typeof loadShopData === 'function' ? loadShopData() : {};
-  var icon = sd.wachstumsBooster ? '⚡' : sd.coinsx3 ? '🎰' : sd.glucksklee ? '🍀' : null;
+  var icon = sd.wachstumsBooster ? '⚡' : sd.coinsx3 ? '🎰' : sd.lockmittel ? '🧲' : sd.glucksklee ? '🍀' : null;
   var el = document.getElementById('companion-item-icon');
   if (el) { el.textContent = icon || ''; el.classList.toggle('active', !!icon); }
   if (typeof renderBoostIndicators === 'function') renderBoostIndicators('qt-boost-bar', gameId);
