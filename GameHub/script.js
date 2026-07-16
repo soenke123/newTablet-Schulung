@@ -1120,7 +1120,7 @@ function _charge(shopData, item) {
 }
 
 function buyItem(itemId) {
-  const item = [...SHOP_ITEMS, ...SHOP_ITEMS_P2].find(i => i.id === itemId);
+  const item = [...SHOP_ITEMS, ...SHOP_ITEMS_P2, ...SHOP_ITEMS_P3].find(i => i.id === itemId);
   if (!item) return;
   const shopData  = loadShopData();
   const allData   = loadAllData();

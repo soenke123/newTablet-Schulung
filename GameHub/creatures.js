@@ -12,15 +12,22 @@
    In Einzel-Spielen (die session.js nicht laden) ist die Default-
    Semantik "Season 2 offen" — mirrort das alte _rel=true.
    ─────────────────────────────────────────────────────────── */
+function _getCachedSeason() {
+  // Einzel-Spiele laden session.js nicht — Fallback über localStorage-Cache,
+  // den session.js beim Hub setzt (Key 'lernwelt_season').
+  try {
+    const v = parseInt(localStorage.getItem('lernwelt_season') || '0', 10);
+    return Number.isFinite(v) ? v : 0;
+  } catch { return 0; }
+}
 function _isS2Open() {
-  return typeof window.getUserSeason === 'function'
-    ? window.getUserSeason() >= 2
-    : true;
+  if (typeof window.getUserSeason === 'function') return window.getUserSeason() >= 2;
+  const cached = _getCachedSeason();
+  return cached >= 2 || cached === 0; // 0 = kein Cache/Guest → Default S2-offen (Legacy)
 }
 function _isS3Open() {
-  return typeof window.getUserSeason === 'function'
-    ? window.getUserSeason() >= 3
-    : false;
+  if (typeof window.getUserSeason === 'function') return window.getUserSeason() >= 3;
+  return _getCachedSeason() >= 3;
 }
 
 /* ─── Level-Up-CSS (einmalig injiziert, funktioniert in allen Spielen) ─── */

@@ -66,6 +66,7 @@
       localStorage.removeItem('lernwelt_shop_v1');
       localStorage.removeItem('lernwelt_shop_dirty');
       localStorage.removeItem('lernwelt_avatar_unlocks');
+      localStorage.removeItem('lernwelt_season');
       // Game-Highscores: pro Game eigener Key, gehören zum User → wegräumen
       localStorage.removeItem('fokusflow_highscore');
       localStorage.removeItem('tippturbo_hs');
@@ -171,6 +172,7 @@
 
     if (!authSession) {
       window.__session = null;
+      try { localStorage.removeItem('lernwelt_season'); } catch(e) {}
       console.log('[SESSION] kein authSession → __session = null');
       return;
     }
@@ -180,6 +182,7 @@
     } catch (e) {
       console.warn('[SESSION] user_session fetch fehlgeschlagen:', e.message);
       window.__session = null;
+      try { localStorage.removeItem('lernwelt_season'); } catch(err) {}
       return;
     }
     console.log('[SESSION] user_session →',
@@ -189,6 +192,7 @@
       clearLocalGameState();
       await client.auth.signOut();
       window.__session = null;
+      try { localStorage.removeItem('lernwelt_season'); } catch(err) {}
       window.dispatchEvent(new CustomEvent('lernwelt:no-profile', {
         detail: { email: authSession.user?.email }
       }));
@@ -209,6 +213,10 @@
     } catch(e) {}
 
     window.__session = data;
+    // Season in localStorage cachen — Einzel-Spiele laden session.js nicht
+    // und können so trotzdem den korrekten Season-Kontext (z.B. für S3-Drops
+    // in determineCreature) lesen.
+    try { localStorage.setItem('lernwelt_season', String(data.season ?? 0)); } catch(e) {}
   }
 
   // Auth-State-Handler: das ist der einzige Ort wo wir authSession bekommen.
