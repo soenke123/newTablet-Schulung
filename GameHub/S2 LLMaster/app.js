@@ -4186,6 +4186,9 @@ function showEnd() {
     if (gd.creature) {
       const isFirst = !gd.creature;
       coinsGained = computeRoundResult(gd, raw, 90, sd, isFirst);
+      // Items VOR saveGameData clearen: bei Nest-IDs spiegelt saveGameData intern
+      // gd → sd.nests[i].hatched. Danach sd (Snapshot mit alten Werten) speichern
+      // würde die Spiegelung plätten.
       if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
       if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
     }

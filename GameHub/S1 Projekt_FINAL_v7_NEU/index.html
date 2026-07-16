@@ -1515,10 +1515,10 @@ function saveToHub() {
   lastCoinsGained += computeRoundResult(gd, state.score, PF_MAX_SCORE, sd, isFirst);
   gd.points += _norm;
   gd.roundsPlayed += 1;
-  saveGameData(pfGameId, gd);
-  pfGameData = gd;
-  hubSaved   = true;
 
+  // Items VOR saveGameData clearen: bei Nest-IDs spiegelt saveGameData intern
+  // gd → sd.nests[i].hatched. Danach sd (Snapshot mit alten Werten) speichern
+  // würde die Spiegelung plätten.
   if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
   if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
   if (isFirst && sd.lockmittel) {
@@ -1530,6 +1530,10 @@ function saveToHub() {
     sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
     saveShopData(sd);
   }
+
+  saveGameData(pfGameId, gd);
+  pfGameData = gd;
+  hubSaved   = true;
 }
 
 function renderWinHubWidgets() {

@@ -930,7 +930,6 @@ function computeRoundResult(data, correct, maxPoints, sd, skipGrowth) {
   let coinsGained = 0;
   if (alreadyMaxed) {
     coinsGained = Math.round(contribution);
-    if (sd.coinsx3) coinsGained *= 3;
   } else {
     const room = GROWTH_MAX - data.growth;
     if (contribution > room) {
@@ -944,6 +943,12 @@ function computeRoundResult(data, correct, maxPoints, sd, skipGrowth) {
 
   if (correct === maxPoints) coinsGained += 3;
   coinsGained += getGrowthBonusCoins(data.growth);
+
+  // Coins ×3 multipliziert den GESAMTEN Ertrag (Basis + Perfekt- + Vollendet-Bonus).
+  // Nur wenn Kreatur schon ausgewachsen ist — getActiveItemsForSlot zeigt das
+  // Item ohnehin nur dann an. Max ergibt bei perfektem Score in Vollendet-Stufe
+  // (10 + 3 + 10) × 3 = 69 — weit unter dem 300er-Delta-Cap in Migration 0016.
+  if (alreadyMaxed && sd.coinsx3) coinsGained *= 3;
 
   if (skipGrowth) data.growth = savedGrowth;
   data.coins = (data.coins || 0) + coinsGained;

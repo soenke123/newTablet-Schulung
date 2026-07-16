@@ -3982,10 +3982,15 @@ function showWin1() {
   }
   const sd1 = loadShopData();
   const coinsW1 = computeRoundResult(gd, growthTotal1, 240, sd1, isFirstHatch);
-  if (sd1.wachstumsBooster) { sd1.wachstumsBooster = false; saveShopData(sd1); }
-  if (sd1.coinsx3)          { sd1.coinsx3 = false;          saveShopData(sd1); }
   gd.points      = score.p1 + score.quiz1 + p2;
   gd.roundsPlayed = Math.max(gd.roundsPlayed || 0, 1);
+
+  // Items VOR saveGameData clearen: bei Nest-IDs spiegelt saveGameData intern
+  // gd → sd.nests[i].hatched. Danach sd (Snapshot mit alten Werten) speichern
+  // würde die Spiegelung plätten.
+  if (sd1.wachstumsBooster) { sd1.wachstumsBooster = false; saveShopData(sd1); }
+  if (sd1.coinsx3)          { sd1.coinsx3 = false;          saveShopData(sd1); }
+
   saveGameData(gameId, gd);
   updateGameEggDisplay(gd, 4, true);
 

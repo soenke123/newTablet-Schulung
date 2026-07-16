@@ -104,11 +104,16 @@ function saveAlgorithmHubData(score) {
     }
   }
   _algCoinsGained += computeRoundResult(gd, s, ALG_MAX_SCORE, sd, isFirst);
-  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-  if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
 
   gd.points      = (gd.points      || 0) + s;
   gd.roundsPlayed = (gd.roundsPlayed || 0) + 1;
+
+  // Items VOR saveGameData clearen: bei Nest-IDs spiegelt saveGameData intern
+  // gd → sd.nests[i].hatched. Danach sd (Snapshot mit alten Werten) speichern
+  // würde die Spiegelung plätten.
+  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+  if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+
   saveGameData(ALG_GAME_ID, gd);
   _algGameData = gd;
   _algHubSaved = true;

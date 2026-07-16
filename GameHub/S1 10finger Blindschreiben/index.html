@@ -987,24 +987,26 @@
     if (sd.wachstumsBooster) {
       growthContrib *= 2;
       sd.wachstumsBooster = false;
-      sd.wachstumsBoosterCount = Math.max(0, (sd.wachstumsBoosterCount || 0) - 1);
     }
     if (!isFirst) data.growth = Math.min(data.growth + growthContrib, GROWTH_MAX);
 
-    let coinsGained = calcCoins(score);
+    let coinsGained = calcCoins(score) + getGrowthBonusCoins(data.growth);
     if (sd.coinsx3) {
       coinsGained = Math.round(coinsGained * 3);
       sd.coinsx3 = false;
-      sd.coinsx3Count = Math.max(0, (sd.coinsx3Count || 0) - 1);
     }
-    coinsGained += getGrowthBonusCoins(data.growth);
 
     data.coins        = (data.coins || 0) + coinsGained;
     data.points       += totalWords;
     data.roundsPlayed += 1;
 
-    saveGameData(GAME_ID, data);
+    // saveShopData ZUERST (mit gecleartem Flag), dann saveGameData. saveGameData
+    // spiegelt bei Nest-IDs gd → sd.nests[i].hatched intern; würde saveShopData
+    // danach mit stale sd (Snapshot mit alten nest.hatched-Werten) laufen, würde
+    // die Spiegelung geplättet und der Coin-Zuwachs geht beim Sync verloren.
+    // (Counts nicht doppelt dekrementieren — das erledigt der Hub-Klick-Handler.)
     saveShopData(sd);
+    saveGameData(GAME_ID, data);
 
     /* ── Kreatur anzeigen ── */
     const stage       = getGrowthStage(data.growth);

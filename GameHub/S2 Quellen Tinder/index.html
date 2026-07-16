@@ -1721,10 +1721,15 @@ function showEnd() {
       gd.growth = 0;
     }
     coinsGained = computeRoundResult(gd, normalizedScore, 10, sd, isFirst);
-    if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-    if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
     gd.points      += normalizedScore;
     gd.roundsPlayed += 1;
+
+    // Items VOR saveGameData clearen: bei Nest-IDs spiegelt saveGameData intern
+    // gd → sd.nests[i].hatched. Danach sd (Snapshot mit alten Werten) speichern
+    // würde die Spiegelung plätten.
+    if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
+    if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+
     saveGameData(gameId, gd);
     if (typeof updateGameEggDisplay === 'function') updateGameEggDisplay(gd, 4);
   }
