@@ -30,12 +30,30 @@ alter table clusters
   add column if not exists bonbon_target int,
   add column if not exists bonbons_unlocked_at timestamptz;
 
+-- Backfill: Bestehende S3-Cluster ohne Ziel bekommen einen sicheren
+-- Default (500), sonst würde der folgende CHECK-Constraint auf
+-- Legacy-Zeilen krachen. Admins können den Wert danach im Panel
+-- pro Cluster anpassen (Änderung lässt gesammelte Bonbons unberührt).
+update clusters
+   set bonbon_target = 500
+ where season >= 3
+   and bonbon_target is null;
+
 -- Constraint: S3-Cluster brauchen ein positives Ziel.
--- S1/S2 dürfen NULL bleiben. Kein S3-Cluster existiert aktuell,
--- daher kann der Check ohne NOT VALID direkt greifen.
-alter table clusters
-  add constraint clusters_bonbon_target_required
-  check (season < 3 or (bonbon_target is not null and bonbon_target > 0));
+-- S1/S2 dürfen NULL bleiben. Idempotent per Catalog-Check statt
+-- DROP CONSTRAINT — vermeidet Supabase-Warnung für destruktive Ops.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conname = 'clusters_bonbon_target_required'
+       and conrelid = 'clusters'::regclass
+  ) then
+    alter table clusters
+      add constraint clusters_bonbon_target_required
+      check (season < 3 or (bonbon_target is not null and bonbon_target > 0));
+  end if;
+end $$;
 
 comment on column clusters.bonbon_target is
   'Zielwert für kooperativen Bonbon-Pool. Pflicht ab season 3. '
@@ -65,22 +83,40 @@ comment on column wallets.bonbons is
 -- Cluster) darf der Legi genau einmal ausgeschüttet werden.
 -- Cluster-Wechsel A→B: wenn beide Cluster ihr Ziel erreichen,
 -- bekommt der User in beiden Clustern jeweils einen Grant.
-create table user_legi_grants (
+create table if not exists user_legi_grants (
   user_id     uuid not null references auth.users(id) on delete cascade,
   cluster_id  uuid not null references clusters(id)   on delete cascade,
   granted_at  timestamptz not null default now(),
   primary key (user_id, cluster_id)
 );
 
-create index user_legi_grants_user_idx on user_legi_grants(user_id);
+create index if not exists user_legi_grants_user_idx on user_legi_grants(user_id);
 
 alter table user_legi_grants enable row level security;
 
-create policy ulg_select_own on user_legi_grants
-  for select using (user_id = auth.uid());
+-- Policies idempotent per Catalog-Check anlegen — kein DROP nötig.
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+     where schemaname = 'public'
+       and tablename  = 'user_legi_grants'
+       and policyname = 'ulg_select_own'
+  ) then
+    create policy ulg_select_own on user_legi_grants
+      for select using (user_id = auth.uid());
+  end if;
 
-create policy ulg_admin_select_all on user_legi_grants
-  for select using (is_admin());
+  if not exists (
+    select 1 from pg_policies
+     where schemaname = 'public'
+       and tablename  = 'user_legi_grants'
+       and policyname = 'ulg_admin_select_all'
+  ) then
+    create policy ulg_admin_select_all on user_legi_grants
+      for select using (is_admin());
+  end if;
+end $$;
 
 -- Kein direktes INSERT für authenticated — nur via SECURITY-DEFINER-RPC.
 grant select on user_legi_grants to authenticated;
