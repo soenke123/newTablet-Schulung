@@ -1425,6 +1425,8 @@ function loadShopData() {
       coinsx3Count:          toCount(d.coinsx3, d.coinsx3Count),
       glucksklee:            d.gluckskleeCount       !== undefined ? !!(d.glucksklee)        : false,
       gluckskleeCount:       toCount(d.glucksklee, d.gluckskleeCount),
+      lockmittel:            d.lockmittelCount       !== undefined ? !!(d.lockmittel)        : false,
+      lockmittelCount:       toCount(d.lockmittel, d.lockmittelCount),
       nests:                 d.nests                 ?? [],
       pendingEggNestId:      d.pendingEggNestId      ?? null,
       seenCreatures:         d.seenCreatures         ?? {},
@@ -1448,7 +1450,7 @@ function loadShopData() {
       sealProgress:          d.sealProgress          ?? {},
     };
   } catch(e) {
-    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, coinsx3: false, coinsx3Count: 0, glucksklee: false, gluckskleeCount: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [] };
+    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, coinsx3: false, coinsx3Count: 0, glucksklee: false, gluckskleeCount: 0, lockmittel: false, lockmittelCount: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [] };
   }
 }
 
