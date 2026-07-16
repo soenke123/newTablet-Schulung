@@ -83,9 +83,15 @@ async function api(method, path, body) {
 }
 
 // Postgres-Fehler → deutsche Klartext-Meldung für den Admin.
+// 23514 = check_violation: mehrere Constraints möglich, wir müssen den
+// Constraint-Namen prüfen (steckt in err.message oder err.details).
 function humanizeClusterError(err) {
   if (err.pgCode === '23P01') return 'Zeitfenster überschneidet sich mit einem anderen Kurs. Bitte anderes Fenster wählen.';
-  if (err.pgCode === '23514') return 'Ungültiges Zeitfenster (Start vor Ende, max. 7 Tage).';
+  if (err.pgCode === '23514') {
+    const hay = `${err.message || ''} ${err.details || ''}`.toLowerCase();
+    if (hay.includes('bonbon_target')) return 'Bonbon-Ziel fehlt (Pflicht ab Season 3).';
+    return 'Ungültiges Zeitfenster (Start vor Ende, max. 7 Tage).';
+  }
   if (err.pgCode === '23502') return 'Öffnungs- und Schließzeit sind Pflicht.';
   return err.message;
 }
