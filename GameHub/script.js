@@ -23,6 +23,11 @@ function getGameAccess(gameId) {
   // Season 1 = öffentlicher Baseline (auch für Nicht-Eingeloggte spielbar).
   // Erst ab Season 2 gilt die Session-Season als Gate.
   if (game && game.season > 1 && game.season > getUserSeason()) return 'locked';
+  // Cluster-Legi (Season 3): Bonbon-Ziel muss erreicht sein.
+  if (game && game.clusterLegi) {
+    const status = window.__bonbonStatus;
+    if (!status || !status.enabled || !status.unlocked) return 'cluster_locked';
+  }
   const cfg = GAME_ACCESS[gameId];
   if (!cfg || cfg.status === 'available') return 'available';
   if (cfg.status === 'locked') return 'locked';
@@ -44,6 +49,7 @@ const GAMES_CONFIG = [
   { id: 'game12', season: 2, title: 'Quellen-Tinder',      icon: '🃏', url: 'S2 Quellen Tinder/index.html'      },
   { id: 'game15', season: 2, title: 'LLMaster',            icon: '💬', url: 'S2 LLMaster/index.html'             },
   { id: 'game14', season: 2, title: 'Reinforce Yourself!', icon: '🤖', url: 'S2 Reinforce Yourself!/index.html'  },
+  { id: 'game16', season: 3, title: 'Rosa Einhorntiger',   icon: '🌈', url: 'S3 LegiTrainer/index.html', clusterLegi: true },
 ];
 
 const SEASONS_CONFIG = [
@@ -218,6 +224,7 @@ function renderHub() {
   renderGamesGrid(allData, shopData);
   renderGallery(allData);
   renderCoinDisplay(allData);
+  renderBonbonDisplay();
   renderNestSection(allData);
   renderSealedEggs();
   initGalleryWalk();
@@ -298,7 +305,7 @@ function buildGameCard(game, data, shopData) {
   const isBackupTarget = !!shopData.pendingBackup && !!data.creature && access === 'available';
 
   const card = document.createElement('div');
-  card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
+  card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
   card.innerHTML = buildCardHTML(game, data, shopData);
 
   attachCardListeners(card, game, data, isBackupTarget);
@@ -330,6 +337,7 @@ function attachCardListeners(card, game, data, isBackupTarget) {
     if (isBackupTarget) { applyBackupSwap(game.id); return; }
     const access = getGameAccess(game.id);
     if (access === 'locked') return;
+    if (access === 'cluster_locked') { openBonbonModal(); return; }
     if (access === 'password') { showPasswordPrompt(game.id); return; }
     const sd = loadShopData();
     if (sd.pendingEggNestId) {
@@ -389,6 +397,26 @@ function buildCardHTML(game, data, shopData) {
       <div class="game-card__progress"><div class="game-card__progress-fill" style="width:0%"></div></div>
       <div class="game-card__points" style="opacity:0.3;">— —</div>
       <button class="game-card__btn">🔑 Freischalten</button>
+    `;
+  }
+
+  if (access === 'cluster_locked') {
+    const status = window.__bonbonStatus || {};
+    const collected = status.collected ?? 0;
+    const target    = status.target ?? 1;
+    const pct       = Math.max(0, Math.min(100, Math.round(collected / target * 100)));
+    return `
+      <div class="rainbow-progress" title="${collected} / ${target} Regenbogen-Bonbons">
+        <div class="rainbow-progress__fill" style="width:${pct}%"></div>
+        <span class="rainbow-progress__label">🌈 ${pct}%</span>
+      </div>
+      <h3 class="game-card__title">${game.icon} ${game.title}</h3>
+      <div class="game-card__creature-wrap">
+        <div class="legi-silhouette">❓</div>
+      </div>
+      <p class="game-card__stage-label" style="color:var(--clr-cream-dim);">Sammelt gemeinsam Regenbogen-Bonbons!</p>
+      <div class="game-card__points" style="opacity:0.6;">🍬 ${collected} / ${target}</div>
+      <button class="game-card__btn">Fortschritt ansehen</button>
     `;
   }
 
@@ -552,6 +580,97 @@ function renderCoinDisplay(allData) {
 
   const bookBtn = document.getElementById('bookBtn');
   if (bookBtn) bookBtn.hidden = !shopData.purchased.includes('buchDerMonster');
+}
+
+function renderBonbonDisplay() {
+  const wrap = document.getElementById('hudBonbons');
+  const amt  = document.getElementById('bonbonAmount');
+  const status = window.__bonbonStatus;
+  const enabled = !!(status && status.enabled);
+  if (wrap) wrap.hidden = !enabled;
+  if (amt && enabled) amt.textContent = status.own_amount ?? 0;
+}
+
+async function openBonbonModal() {
+  const overlay = document.getElementById('bonbonModal');
+  const content = document.getElementById('bonbonModalContent');
+  if (!overlay || !content) return;
+
+  // Bevor wir anzeigen: aktuellste Cluster-Summe ziehen. Verhindert
+  // veraltete Anzeige, wenn ein Mitschüler frisch beigetragen hat.
+  content.innerHTML = '<div class="bonbon-modal-loading">Lade Fortschritt…</div>';
+  overlay.hidden = false;
+  const status = (await window.refreshBonbonStatus?.()) || window.__bonbonStatus;
+  if (!status || !status.enabled) {
+    content.innerHTML = '<p style="text-align:center;padding:32px;">Der Bonbon-Fortschritt ist für deinen Kurs nicht aktiv.</p>';
+    return;
+  }
+  content.innerHTML = buildBonbonModalHTML(status);
+  // Nach Modal-Öffnung ggf. den Hub-HUD auf den aktualisierten Wert bringen.
+  renderBonbonDisplay();
+}
+window.openBonbonModal = openBonbonModal;
+
+function buildBonbonModalHTML(status) {
+  const collected = status.collected ?? 0;
+  const target    = status.target ?? 1;
+  const pct       = Math.max(0, Math.min(100, Math.round(collected / target * 100)));
+  const own       = status.own_amount ?? 0;
+  const unlocked  = !!status.unlocked;
+  const milestones = Array.isArray(status.milestones) ? status.milestones : [];
+
+  const milestoneMarkers = milestones.map(m => `
+    <div class="bonbon-milestone ${m.reached ? 'bonbon-milestone--reached' : ''}"
+         style="left:${m.percent}%">
+      <span class="bonbon-milestone__dot">${m.reached ? '✦' : '·'}</span>
+      <span class="bonbon-milestone__label">${m.percent}%</span>
+    </div>`).join('');
+
+  const rainbowBlock = `
+    <div class="bonbon-rainbow">
+      <div class="bonbon-rainbow__track">
+        <div class="bonbon-rainbow__fill" style="width:${pct}%"></div>
+        <div class="bonbon-rainbow__markers">${milestoneMarkers}</div>
+      </div>
+      <div class="bonbon-rainbow__stats">
+        <div><strong>${collected}</strong> / ${target} 🍬 gesammelt</div>
+        <div class="bonbon-rainbow__own">Du hast <strong>${own}</strong> beigetragen</div>
+      </div>
+    </div>`;
+
+  if (!unlocked) {
+    return `
+      <h2 class="bonbon-modal__title">Regenbogen-Bonbons</h2>
+      <p class="bonbon-modal__intro">Euer Kurs sammelt gemeinsam Bonbons. Erreicht das Ziel und der Rosa Einhorntiger schlüpft!</p>
+      ${rainbowBlock}
+      <div class="bonbon-modal__milestones-info">
+        <p>Jede erreichte Marke bringt euch dem Legi näher. Bei 100 % wird das Legi-Trainer-Spiel für alle im Kurs freigeschaltet.</p>
+      </div>
+    `;
+  }
+
+  // Freigeschaltet — Legi + Stages
+  const stages = [1, 2, 3, 4, 5].map(n => `
+    <div class="bonbon-stage bonbon-stage--locked">
+      <div class="bonbon-stage__num">Stage ${n}</div>
+      <div class="bonbon-stage__body">🔒</div>
+    </div>`).join('');
+
+  return `
+    <h2 class="bonbon-modal__title">🌈 Der Rosa Einhorntiger ist erwacht!</h2>
+    ${rainbowBlock}
+    <div class="bonbon-legi-panel">
+      <div class="bonbon-legi-panel__monster">
+        <div class="bonbon-legi-sprite">🌈🦄🐯</div>
+        <p class="bonbon-legi-caption">Rosa Einhorntiger · Stufe 0</p>
+      </div>
+      <div class="bonbon-legi-panel__stages">
+        <p class="bonbon-legi-panel__stages-title">Trainer-Stufen</p>
+        ${stages}
+        <a class="bonbon-legi-start" href="S3 LegiTrainer/index.html?id=game16">Trainer starten →</a>
+      </div>
+    </div>
+  `;
 }
 
 /* ─────────────────────────────────────────────────

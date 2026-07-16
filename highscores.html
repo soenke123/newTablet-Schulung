@@ -404,9 +404,10 @@
       { key: 'game11', label: 'Tipp-Turbo Kids',   icon: '⌨️', season: 1, kind: 'game', formatter: fmtPoints }
     ];
     const HUB_BOARDS = [
-      { key: 'coins',       label: 'Münzen',           icon: '🪙', kind: 'hub', formatter: fmtCoins },
-      { key: 'creatures',   label: 'Monster',          icon: '🐣', kind: 'hub', formatter: fmtCreatures },
-      { key: 'legendaries', label: 'Legendäre Tiere',  icon: '✨', kind: 'hub', formatter: fmtLegendaries }
+      { key: 'coins',       label: 'Münzen',              icon: '🪙', kind: 'hub', formatter: fmtCoins },
+      { key: 'creatures',   label: 'Monster',             icon: '🐣', kind: 'hub', formatter: fmtCreatures },
+      { key: 'legendaries', label: 'Legendäre Tiere',     icon: '✨', kind: 'hub', formatter: fmtLegendaries },
+      { key: 'bonbons',     label: 'Regenbogen-Bonbons',  icon: '🍬', kind: 'hub', season: 3, formatter: fmtBonbons }
     ];
 
     let currentScope = 'cluster';
@@ -415,6 +416,7 @@
     // ─── Score-Formatter ────────────────────────────────
     function fmtPoints(entry)  { return { primary: `${entry.best_score} Pkt`,   secondary: '' }; }
     function fmtCoins(entry)   { return { primary: `${entry.primary_score} 🪙`, secondary: '' }; }
+    function fmtBonbons(entry) { return { primary: `${entry.primary_score} 🍬`, secondary: '' }; }
     function fmtCreatures(entry) {
       return {
         primary:   `${entry.primary_score} gesehen`,
@@ -457,8 +459,8 @@
         btn.type = 'button';
         btn.className = 'board-chip';
         if (board === currentBoard) btn.classList.add('active');
-        // Season-Gate nur für Games
-        const locked = board.kind === 'game' && board.season > season;
+        // Season-Gate für Games und für Hub-Boards mit board.season
+        const locked = board.season && board.season > season;
         if (locked) {
           btn.disabled = true;
           btn.title = `Board freigeschaltet ab Season ${board.season}`;

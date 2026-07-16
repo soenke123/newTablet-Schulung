@@ -306,6 +306,14 @@ html, body {
 .form-feedback.ok    { color: var(--a-success); }
 .form-feedback.error { color: var(--a-danger); }
 
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  color: var(--a-muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
 /* ─── Buttons ────────────────────────────────────────────── */
 .btn {
   background: var(--a-surface-2);

@@ -202,6 +202,19 @@ function wireTabs() {
    ══════════════════════════════════════════════════════════════ */
 
 function wireClusterForm() {
+  // Bonbon-Ziel-Feld ist S3-Pflichtfeld. Toggle bei Season-Wechsel.
+  const seasonInput = document.getElementById('clSeason');
+  const bonbonWrap  = document.getElementById('clBonbonTargetWrap');
+  const bonbonInput = document.getElementById('clBonbonTarget');
+  const toggleBonbon = () => {
+    const isS3 = parseInt(seasonInput.value, 10) >= 3;
+    bonbonWrap.hidden = !isS3;
+    bonbonInput.required = isS3;
+    if (!isS3) bonbonInput.value = '';
+  };
+  seasonInput.addEventListener('input', toggleBonbon);
+  toggleBonbon();
+
   document.getElementById('clusterForm').addEventListener('submit', async e => {
     e.preventDefault();
     const feedback = document.getElementById('clFeedback');
@@ -210,12 +223,18 @@ function wireClusterForm() {
     feedback.textContent = '';
 
     const name    = document.getElementById('clName').value.trim();
-    const season  = parseInt(document.getElementById('clSeason').value, 10);
+    const season  = parseInt(seasonInput.value, 10);
     const opensAt = document.getElementById('clOpens').value;
     const closesAt= document.getElementById('clCloses').value;
+    const bonbonTarget = bonbonInput.value ? parseInt(bonbonInput.value, 10) : null;
 
     if (!name)   { feedback.textContent = 'Name fehlt.'; feedback.classList.add('error'); return; }
     if (!season || season < 1) { feedback.textContent = 'Season ungültig.'; feedback.classList.add('error'); return; }
+    if (season >= 3 && (!bonbonTarget || bonbonTarget < 1)) {
+      feedback.textContent = 'Bonbon-Ziel fehlt (Pflicht ab Season 3).';
+      feedback.classList.add('error');
+      return;
+    }
     const winErr = validateClusterWindow(opensAt, closesAt);
     if (winErr) { feedback.textContent = winErr; feedback.classList.add('error'); return; }
 
@@ -223,12 +242,14 @@ function wireClusterForm() {
     try {
       await api('POST', 'clusters', {
         school_id: currentSchoolId, name, season,
-        opens_at: toIso(opensAt), closes_at: toIso(closesAt)
+        opens_at: toIso(opensAt), closes_at: toIso(closesAt),
+        bonbon_target: season >= 3 ? bonbonTarget : null
       });
       feedback.textContent = 'Cluster angelegt.';
       feedback.classList.add('ok');
       e.target.reset();
-      document.getElementById('clSeason').value = '1';
+      seasonInput.value = '1';
+      toggleBonbon();
       await loadClusters();
     } catch (err) {
       feedback.textContent = humanizeClusterError(err);
@@ -243,7 +264,7 @@ async function loadClusters() {
   const tbody = document.getElementById('clusterTbody');
   try {
     const rows = await api('GET',
-      `clusters?select=id,name,season,opens_at,closes_at`
+      `clusters?select=id,name,season,opens_at,closes_at,bonbon_target,bonbons_unlocked_at`
       + `&school_id=eq.${currentSchoolId}`
       + `&order=season.desc,opens_at.desc.nullslast`);
     clusterCache = rows;
@@ -270,8 +291,22 @@ async function loadClusters() {
       console.warn('[admin] cluster_bonus laden fehlgeschlagen:', e.message);
     }
 
+    // Bonbon-Summen pro S3-Cluster in einem Rutsch (RPC aggregiert
+    // über alle Schul-Cluster). Fehler tolerieren, wenn Migration
+    // 0032 noch nicht deployed ist.
+    try {
+      const res = await api('POST', 'rpc/admin_cluster_bonbon_totals', {});
+      if (res?.ok) {
+        const byId = {};
+        for (const t of res.clusters || []) byId[t.cluster_id] = t.collected;
+        for (const c of rows) if (c.season >= 3) c.bonbons_collected = byId[c.id] ?? 0;
+      }
+    } catch (e) {
+      console.warn('[admin] admin_cluster_bonbon_totals fehlgeschlagen:', e.message);
+    }
+
     if (rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty">Noch keine Cluster.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="empty">Noch keine Cluster.</td></tr>';
     } else {
       tbody.innerHTML = rows.map(c => renderClusterRow(c, counts[c.id] || 0)).join('');
       tbody.querySelectorAll('.js-cluster-edit').forEach(btn => {
@@ -288,7 +323,7 @@ async function loadClusters() {
     // Bulk-Cluster-Dropdown aktuell halten
     refreshBulkClusterOptions();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="7" class="empty">Fehler: ${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">Fehler: ${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -307,6 +342,17 @@ function renderClusterRow(c, memberCount) {
     bonusLabel = c.bonus.active ? '★ Starthilfe' : 'Starthilfe (aus)';
   }
 
+  let bonbonsCell = '—';
+  if (c.season >= 3 && c.bonbon_target) {
+    const collected = c.bonbons_collected ?? 0;
+    if (c.bonbons_unlocked_at) {
+      bonbonsCell = `<span class="badge open">🌈 freigeschaltet</span><br><small>${collected} / ${c.bonbon_target}</small>`;
+    } else {
+      const pct = Math.min(100, Math.round(collected / c.bonbon_target * 100));
+      bonbonsCell = `🍬 ${collected} / ${c.bonbon_target} <small>(${pct}%)</small>`;
+    }
+  }
+
   return `
     <tr>
       <td>${escapeHtml(c.name)}</td>
@@ -315,6 +361,7 @@ function renderClusterRow(c, memberCount) {
       <td>${fmtDT(c.closes_at)}</td>
       <td>${statusBadge}</td>
       <td>${memberCount}</td>
+      <td>${bonbonsCell}</td>
       <td>
         <button class="btn small js-cluster-edit"   data-id="${c.id}">Bearbeiten</button>
         <button class="btn small js-cluster-bonus"  data-id="${c.id}">${bonusLabel}</button>
@@ -335,6 +382,17 @@ function wireClusterEditModal() {
   close.addEventListener('click', doClose);
   overlay.addEventListener('click', e => { if (e.target === overlay) doClose(); });
 
+  // Bonbon-Ziel-Feld toggeln, wenn Season editiert wird.
+  const seasonInput  = document.getElementById('edClSeason');
+  const bonbonWrap   = document.getElementById('edClBonbonTargetWrap');
+  const bonbonInput  = document.getElementById('edClBonbonTarget');
+  const toggleBonbon = () => {
+    const isS3 = parseInt(seasonInput.value, 10) >= 3;
+    bonbonWrap.hidden = !isS3;
+    bonbonInput.required = isS3;
+  };
+  seasonInput.addEventListener('input', toggleBonbon);
+
   form.addEventListener('submit', async e => {
     e.preventDefault();
     if (!editingClusterId) return;
@@ -345,14 +403,24 @@ function wireClusterEditModal() {
 
     const opensLocal  = document.getElementById('edClOpens').value;
     const closesLocal = document.getElementById('edClCloses').value;
+    const bonbonTarget = bonbonInput.value ? parseInt(bonbonInput.value, 10) : null;
     const patch = {
       name:      document.getElementById('edClName').value.trim(),
-      season:    parseInt(document.getElementById('edClSeason').value, 10),
+      season:    parseInt(seasonInput.value, 10),
       opens_at:  toIso(opensLocal),
-      closes_at: toIso(closesLocal)
+      closes_at: toIso(closesLocal),
+      bonbon_target: null
     };
     if (!patch.name) { feedback.textContent = 'Name fehlt.'; feedback.classList.add('error'); return; }
     if (!patch.season || patch.season < 1) { feedback.textContent = 'Season ungültig.'; feedback.classList.add('error'); return; }
+    if (patch.season >= 3) {
+      if (!bonbonTarget || bonbonTarget < 1) {
+        feedback.textContent = 'Bonbon-Ziel fehlt (Pflicht ab Season 3).';
+        feedback.classList.add('error');
+        return;
+      }
+      patch.bonbon_target = bonbonTarget;
+    }
     const winErr = validateClusterWindow(opensLocal, closesLocal);
     if (winErr) { feedback.textContent = winErr; feedback.classList.add('error'); return; }
 
@@ -379,6 +447,12 @@ function openClusterEdit(id) {
   document.getElementById('edClSeason').value  = c.season;
   document.getElementById('edClOpens').value   = isoToLocalInput(c.opens_at);
   document.getElementById('edClCloses').value  = isoToLocalInput(c.closes_at);
+  const bonbonWrap = document.getElementById('edClBonbonTargetWrap');
+  const bonbonInp  = document.getElementById('edClBonbonTarget');
+  const isS3 = c.season >= 3;
+  bonbonWrap.hidden = !isS3;
+  bonbonInp.required = isS3;
+  bonbonInp.value = c.bonbon_target ?? '';
   document.getElementById('edClFeedback').textContent = '';
   document.getElementById('clusterEditModal').hidden = false;
 }

@@ -56,6 +56,8 @@
   window.getUserSeason  = () => window.__session?.season ?? 0;
   window.isLoggedIn     = () => !!window.__session?.id;
   window.getSessionUser = () => window.__session;
+  window.__bonbonStatus = null;
+  window.getBonbonStatus = () => window.__bonbonStatus;
 
   // localStorage-Cleanup bei User-Wechsel oder Logout.
   // Räumt alles Lernwelt-spezifische — verhindert, dass User B
@@ -142,6 +144,42 @@
 
   window.waitForSession = () => bootPromise;
 
+  // Bonbon-Status per RPC ziehen. Wenn User keine S3-Season hat,
+  // liefert die RPC { enabled:false } — merken wir uns trotzdem im
+  // Cache, damit renderBonbonDisplay eine klare Antwort hat.
+  async function fetchBonbonStatus(accessToken) {
+    if (!accessToken || !window.SUPABASE_URL) return null;
+    try {
+      const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/get_cluster_bonbon_status`, {
+        method: 'POST',
+        headers: {
+          apikey: window.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: '{}'
+      });
+      if (!res.ok) throw new Error(`bonbon-status ${res.status}`);
+      const data = await res.json();
+      return data && data.ok ? data : null;
+    } catch (e) {
+      console.warn('[SESSION] bonbon-status fetch failed:', e.message);
+      return null;
+    }
+  }
+
+  // Public helper: kann von Hub/Spielen aufgerufen werden nach add_bonbons,
+  // um den lokalen Cache aufzufrischen. Feuert 'lernwelt:bonbon-changed'.
+  async function refreshBonbonStatus() {
+    if (!window.__accessToken) return null;
+    const s = await fetchBonbonStatus(window.__accessToken);
+    window.__bonbonStatus = s;
+    window.dispatchEvent(new CustomEvent('lernwelt:bonbon-changed', { detail: { status: s } }));
+    return s;
+  }
+  window.refreshBonbonStatus = refreshBonbonStatus;
+
   // Raw fetch statt supabase-js-Query-Builder — vermeidet interne SDK-Locks,
   // die zwischen Tabs streiten und Queries dauerhaft hängen lassen können.
   //
@@ -172,6 +210,7 @@
 
     if (!authSession) {
       window.__session = null;
+      window.__bonbonStatus = null;
       try { localStorage.removeItem('lernwelt_season'); } catch(e) {}
       console.log('[SESSION] kein authSession → __session = null');
       return;
@@ -217,6 +256,11 @@
     // und können so trotzdem den korrekten Season-Kontext (z.B. für S3-Drops
     // in determineCreature) lesen.
     try { localStorage.setItem('lernwelt_season', String(data.season ?? 0)); } catch(e) {}
+
+    // Bonbon-Status parallel ziehen — Hub-HUD und Legi-Kachel brauchen ihn
+    // beim ersten Rendern. Kein blocking der Session — schlägt der Fetch
+    // fehl, ist der Cache halt null und die Anzeige zeigt 0/hidden.
+    window.__bonbonStatus = await fetchBonbonStatus(authSession.access_token);
   }
 
   // Auth-State-Handler: das ist der einzige Ort wo wir authSession bekommen.

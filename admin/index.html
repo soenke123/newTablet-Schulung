@@ -76,6 +76,11 @@
           <label>Schließt am
             <input type="datetime-local" id="clCloses" required />
           </label>
+          <label id="clBonbonTargetWrap" hidden>Bonbon-Ziel (Kurs)
+            <input type="number" id="clBonbonTarget" min="1" step="1"
+                   placeholder="z. B. 500" />
+            <small class="field-hint">Regenbogen-Bonbons, die der Kurs gemeinsam sammeln muss, um den Legi freizuschalten. Pflicht ab Season 3.</small>
+          </label>
           <div class="form-actions">
             <button type="submit" class="btn primary" id="clSubmit">Cluster anlegen</button>
             <span class="form-feedback" id="clFeedback"></span>
@@ -95,11 +100,12 @@
                 <th>Schließt</th>
                 <th>Status</th>
                 <th>User</th>
+                <th>🍬 Bonbons</th>
                 <th>Aktion</th>
               </tr>
             </thead>
             <tbody id="clusterTbody">
-              <tr><td colspan="7" class="empty">Lade …</td></tr>
+              <tr><td colspan="8" class="empty">Lade …</td></tr>
             </tbody>
           </table>
         </div>
@@ -180,6 +186,10 @@
         </label>
         <label>Schließt am
           <input type="datetime-local" id="edClCloses" required />
+        </label>
+        <label id="edClBonbonTargetWrap" hidden>Bonbon-Ziel (Kurs)
+          <input type="number" id="edClBonbonTarget" min="1" step="1" />
+          <small class="field-hint">Ändern hat keinen Einfluss auf bereits gesammelte Bonbons.</small>
         </label>
         <div class="form-actions">
           <button type="submit" class="btn primary" id="edClSubmit">Speichern</button>

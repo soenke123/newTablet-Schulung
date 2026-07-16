@@ -49,6 +49,18 @@ on conflict (id) do update set
   requires_login = excluded.requires_login,
   active         = excluded.active;
 
+-- Season 3 — Legi-Trainer (cluster-locked bis Bonbon-Ziel erreicht)
+insert into games (id, season, folder, title, icon, password_hash, requires_login, active) values
+  ('game16', 3, 'S3 LegiTrainer', 'Legi-Trainer', '🌈', null, false, true)
+on conflict (id) do update set
+  season         = excluded.season,
+  folder         = excluded.folder,
+  title          = excluded.title,
+  icon           = excluded.icon,
+  password_hash  = excluded.password_hash,
+  requires_login = excluded.requires_login,
+  active         = excluded.active;
+
 -- Easter-Egg: 1337.html — Login-Pflicht, kein Passwort, kein regulärer Season-Content
 insert into games (id, season, folder, title, icon, password_hash, requires_login, active) values
   ('game1337', 1, '', 'Atari-1337', '📡', null, true, true)
