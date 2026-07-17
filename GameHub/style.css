@@ -3504,6 +3504,22 @@ input[type="password"]::-webkit-textfield-decoration-container {
   border: none;
 }
 
+/* Legi-Ready: Cluster hat 100 % erreicht, User hat noch nicht revealed.
+   Kachel pulsiert regenbogenfarben um Aufmerksamkeit zu ziehen. */
+.game-card--legi-ready {
+  animation: legi-rainbow-pulse 2.4s ease-in-out infinite;
+  border-color: transparent !important;
+}
+@keyframes legi-rainbow-pulse {
+  0%   { box-shadow: 0 0 22px 4px rgba(255,  91, 107, 0.60), inset 0 0 0 2px rgba(255,  91, 107, 0.75); }
+  17%  { box-shadow: 0 0 22px 4px rgba(255, 169,  64, 0.60), inset 0 0 0 2px rgba(255, 169,  64, 0.75); }
+  33%  { box-shadow: 0 0 22px 4px rgba(255, 235,  59, 0.60), inset 0 0 0 2px rgba(255, 235,  59, 0.75); }
+  50%  { box-shadow: 0 0 22px 4px rgba(102, 209, 107, 0.60), inset 0 0 0 2px rgba(102, 209, 107, 0.75); }
+  67%  { box-shadow: 0 0 22px 4px rgba( 79, 179, 255, 0.60), inset 0 0 0 2px rgba( 79, 179, 255, 0.75); }
+  83%  { box-shadow: 0 0 22px 4px rgba(180, 119, 255, 0.60), inset 0 0 0 2px rgba(180, 119, 255, 0.75); }
+  100% { box-shadow: 0 0 22px 4px rgba(255,  91, 107, 0.60), inset 0 0 0 2px rgba(255,  91, 107, 0.75); }
+}
+
 /* Bonbon-Modal */
 .bonbon-modal-overlay { z-index: 130; }
 .bonbon-modal-box {
@@ -3528,6 +3544,32 @@ input[type="password"]::-webkit-textfield-decoration-container {
   color: var(--clr-cream-dim, #cbb59a);
   line-height: 1.45;
   font-size: 0.95rem;
+}
+.bonbon-modal__actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+.bonbon-reveal-btn {
+  padding: 14px 32px;
+  border: none;
+  border-radius: 999px;
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #2a1250;
+  background: linear-gradient(90deg, #ff5b6b, #ffa940, #ffeb3b, #66d16b, #4fb3ff, #b477ff);
+  background-size: 300% 100%;
+  cursor: pointer;
+  animation: reveal-btn-shimmer 4s linear infinite;
+  box-shadow: 0 8px 22px rgba(180, 119, 255, 0.35), 0 0 30px rgba(255, 255, 255, 0.25);
+  transition: transform 0.15s ease;
+}
+.bonbon-reveal-btn:hover  { transform: scale(1.05); }
+.bonbon-reveal-btn:active { transform: scale(0.98); }
+@keyframes reveal-btn-shimmer {
+  0%   { background-position:   0% 50%; }
+  100% { background-position: 300% 50%; }
 }
 .bonbon-modal-loading {
   padding: 40px 12px;
@@ -3619,5 +3661,86 @@ input[type="password"]::-webkit-textfield-decoration-container {
 @media (max-width: 560px) {
   .bonbon-legi-panel { grid-template-columns: 1fr; }
   .bonbon-rainbow__stats { justify-content: center; text-align: center; }
+}
+
+/* Team-Legi Aufgaben-Modal — Katze links, Aufgaben rechts */
+.legi-task-modal {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 22px;
+  padding: 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(180, 119, 255, 0.3);
+}
+.legi-task-modal__monster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.legi-task-modal__sprite {
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 8px 22px rgba(255, 133, 193, 0.35));
+}
+.legi-task-modal__name {
+  margin: 4px 0 0;
+  color: var(--clr-cream, #fef6e4);
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  text-align: center;
+  font-size: 1rem;
+}
+.legi-task-modal__stage {
+  margin: 0;
+  color: var(--clr-cream-dim, #cbb59a);
+  font-size: 0.8rem;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+.legi-task-modal__progress {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.legi-task-modal__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff85c1, #b477ff);
+  transition: width 0.5s ease;
+}
+.legi-task-modal__tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.legi-task {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--clr-cream, #fef6e4);
+}
+.legi-task--active { border-color: rgba(180, 119, 255, 0.4); }
+.legi-task--locked { opacity: 0.45; }
+.legi-task__icon { font-size: 1.4rem; line-height: 1; }
+.legi-task__body { display: flex; flex-direction: column; gap: 2px; }
+.legi-task__label { font-weight: 700; font-size: 0.95rem; }
+.legi-task__hint {
+  font-size: 0.75rem;
+  color: var(--clr-cream-dim, #cbb59a);
+  letter-spacing: 0.02em;
+}
+@media (max-width: 560px) {
+  .legi-task-modal { grid-template-columns: 1fr; }
 }
 

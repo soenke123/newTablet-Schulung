@@ -24,9 +24,15 @@ function getGameAccess(gameId) {
   // Erst ab Season 2 gilt die Session-Season als Gate.
   if (game && game.season > 1 && game.season > getUserSeason()) return 'locked';
   // Cluster-Legi (Season 3): Bonbon-Ziel muss erreicht sein.
+  // Drei-Zustände:
+  //   - Cluster noch nicht unlocked → 'cluster_locked' (Sammel-Phase)
+  //   - Cluster unlocked, User hat noch nicht geclaimed → 'ready_to_reveal' (Blink)
+  //   - Cluster unlocked, User hat geclaimed (creature gesetzt) → fällt durch zu 'available'
   if (game && game.clusterLegi) {
     const status = window.__bonbonStatus;
     if (!status || !status.enabled || !status.unlocked) return 'cluster_locked';
+    const gd = loadAllData()[gameId];
+    if (!gd || !gd.creature) return 'ready_to_reveal';
   }
   const cfg = GAME_ACCESS[gameId];
   if (!cfg || cfg.status === 'available') return 'available';
@@ -304,7 +310,7 @@ function buildGameCard(game, data, shopData) {
   const isBackupTarget = !!shopData.pendingBackup && !!data.creature && access === 'available';
 
   const card = document.createElement('div');
-  card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
+  card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${access === 'ready_to_reveal' ? ' game-card--cluster-locked game-card--legi-ready' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
   card.innerHTML = buildCardHTML(game, data, shopData);
 
   attachCardListeners(card, game, data, isBackupTarget);
@@ -336,7 +342,8 @@ function attachCardListeners(card, game, data, isBackupTarget) {
     if (isBackupTarget) { applyBackupSwap(game.id); return; }
     const access = getGameAccess(game.id);
     if (access === 'locked') return;
-    if (access === 'cluster_locked') { openBonbonModal(); return; }
+    if (access === 'cluster_locked' || access === 'ready_to_reveal') { openBonbonModal(); return; }
+    if (game.clusterLegi && access === 'available') { openLegiTaskModal(); return; }
     if (access === 'password') { showPasswordPrompt(game.id); return; }
     const sd = loadShopData();
     if (sd.pendingEggNestId) {
@@ -399,11 +406,13 @@ function buildCardHTML(game, data, shopData) {
     `;
   }
 
-  if (access === 'cluster_locked') {
+  if (access === 'cluster_locked' || access === 'ready_to_reveal') {
     const status = window.__bonbonStatus || {};
     const collected = status.collected ?? 0;
     const target    = status.target ?? 1;
-    const pct       = Math.max(0, Math.min(100, Math.round(collected / target * 100)));
+    const pct       = access === 'ready_to_reveal'
+      ? 100
+      : Math.max(0, Math.min(100, Math.round(collected / target * 100)));
     return `
       <div class="game-card__cluster-locked-body">
         ${buildRainbowSVG(pct, 'small', { showLabel: true })}
@@ -416,7 +425,13 @@ function buildCardHTML(game, data, shopData) {
   const hasCreature  = !!data.creature;
   const stage        = hasCreature ? getGrowthStage(data.growth) : -1;
   const maxed        = hasCreature && data.growth >= GROWTH_MAX;
-  const canUseTrank  = hasCreature && !maxed && (shopData?.wachstumstrankCount ?? 0) > 0;
+  const isLegi       = !!game.clusterLegi;
+  // Kein Wachstumstrank am Team-Legendär — er wächst durch Aufgaben, nicht Tränke.
+  const canUseTrank  = hasCreature && !maxed && !isLegi && (shopData?.wachstumstrankCount ?? 0) > 0;
+  // Legi-Titel überschreibt das GAMES_CONFIG '???' mit dem echten Kreatur-Namen.
+  const titleText    = isLegi && hasCreature
+    ? `${game.icon} ${escapeHtml(CREATURE_NAMES[data.creature] ?? data.creature)}`
+    : `${game.icon} ${game.title}`;
   const imgContent   = hasCreature
     ? `<div class="hub-creature-display">${getCreatureHTML(data.creature, stage)}</div>`
     : eggStage0();
@@ -435,7 +450,7 @@ function buildCardHTML(game, data, shopData) {
 
   return `
     ${bonusHint}
-    <h3 class="game-card__title">${game.icon} ${game.title}</h3>
+    <h3 class="game-card__title">${titleText}</h3>
     ${specialBadge}
     <div class="game-card__creature-wrap${hasCreature ? ' creature-preview' : ''}"
          title="${hasCreature ? 'Klicken für Details' : ''}">
@@ -590,6 +605,15 @@ async function openBonbonModal() {
     return;
   }
   content.innerHTML = buildBonbonModalHTML(status);
+
+  // Reveal-Button binden (existiert nur bei unlocked + !legiRevealed)
+  const revealBtn = document.getElementById('bonbonRevealBtn');
+  if (revealBtn) {
+    revealBtn.addEventListener('click', () => {
+      overlay.hidden = true;
+      showLegiRevealAnimation();
+    });
+  }
 }
 window.openBonbonModal = openBonbonModal;
 
@@ -686,27 +710,27 @@ function buildBonbonModalHTML(status) {
     `;
   }
 
-  // Freigeschaltet — Legi + Stages (Name bleibt Überraschung im Reveal-Screen)
-  const stages = [1, 2, 3, 4, 5].map(n => `
-    <div class="bonbon-stage bonbon-stage--locked">
-      <div class="bonbon-stage__num">Stage ${n}</div>
-      <div class="bonbon-stage__body">🔒</div>
-    </div>`).join('');
+  // Cluster hat 100 % erreicht. Zwei Fälle:
+  //   a) User hat noch nicht revealed → Button „Kreatur befreien" startet die Animation.
+  //   b) User hat schon revealed → Modal ist reine Fortschritts-Historie.
+  const shop = loadShopData();
+  const alreadyRevealed = !!shop.legiRevealed;
+
+  if (!alreadyRevealed) {
+    return `
+      <h2 class="bonbon-modal__title">🌈 Euer Ziel ist erreicht!</h2>
+      <p class="bonbon-modal__intro">Der Kurs hat es geschafft. Nun kannst du das Team-Legendär selbst zum Leben erwecken.</p>
+      ${rainbowBlock}
+      <div class="bonbon-modal__actions">
+        <button class="bonbon-reveal-btn" id="bonbonRevealBtn">🌈 Kreatur befreien</button>
+      </div>
+    `;
+  }
 
   return `
-    <h2 class="bonbon-modal__title">🌈 Euer Team-Legendär ist erwacht!</h2>
+    <h2 class="bonbon-modal__title">🌈 Ihr habt es geschafft!</h2>
+    <p class="bonbon-modal__intro">Dein Team-Legendär wartet im Hub auf dich.</p>
     ${rainbowBlock}
-    <div class="bonbon-legi-panel">
-      <div class="bonbon-legi-panel__monster">
-        <div class="bonbon-legi-sprite">❓</div>
-        <p class="bonbon-legi-caption">Team-Legendär · Stufe 0</p>
-      </div>
-      <div class="bonbon-legi-panel__stages">
-        <p class="bonbon-legi-panel__stages-title">Trainer-Stufen</p>
-        ${stages}
-        <a class="bonbon-legi-start" href="S3 LegiTrainer/index.html?id=game16">Trainer starten →</a>
-      </div>
-    </div>
   `;
 }
 
@@ -1392,6 +1416,12 @@ function buyItem(itemId) {
    7. WACHSTUMSTRANK
    ───────────────────────────────────────────────── */
 function tryApplyWachstumstrank(gameId) {
+  const game = GAMES_CONFIG.find(g => g.id === gameId);
+  // Team-Legendär wächst ausschließlich durch die Trainings-Aufgaben,
+  // keine Trank-Beschleunigung. Der Trank-Button wird für ihn nicht
+  // gerendert; dieser Guard blockt nur falls doch mal ein Aufruf
+  // durchrutscht.
+  if (game?.clusterLegi) return;
   const sd = loadShopData();
   if ((sd.wachstumstrankCount ?? 0) <= 0) return;
   const allData = loadAllData();
@@ -2426,6 +2456,247 @@ function showSealEggOpeningAnimation(def, creature, onClose) {
     setTimeout(() => { overlay.remove(); if (onClose) onClose(); }, 500);
   });
 }
+
+// ─── Team-Legi Aufgaben-Modal ───────────────────────────────
+// Statisch definierte Aufgabenliste. Mechanik folgt in eigener
+// Iteration — hier nur die UI-Struktur.
+const LEGI_TASKS = [
+  { key: 'friends',  icon: '🤝', label: 'Freunde finden',       status: 'active', hint: 'bald verfügbar' },
+  { key: 'gift',     icon: '🎁', label: 'Andere beschenken',    status: 'active', hint: 'bald verfügbar' },
+  { key: 'win',      icon: '🏆', label: 'Gemeinsam siegen',     status: 'active', hint: 'bald verfügbar' },
+  { key: 'locked_1', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
+  { key: 'locked_2', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
+];
+
+function openLegiTaskModal() {
+  const overlay = document.getElementById('legiTaskModal');
+  const content = document.getElementById('legiTaskModalContent');
+  if (!overlay || !content) return;
+
+  const legiGame = GAMES_CONFIG.find(g => g.clusterLegi);
+  if (!legiGame) return;
+  const data = loadAllData()[legiGame.id] || defaultGameData();
+  const creature = data.creature || 'einhornkatze';
+  const stage    = getGrowthStage(data.growth);
+  const progressPct = Math.min((data.growth / GROWTH_MAX) * 100, 100);
+  const displayName = CREATURE_NAMES[creature] ?? creature;
+
+  const taskItems = LEGI_TASKS.map(t => `
+    <div class="legi-task legi-task--${t.status}">
+      <span class="legi-task__icon">${t.status === 'locked' ? '🔒' : t.icon}</span>
+      <div class="legi-task__body">
+        <div class="legi-task__label">${escapeHtml(t.label)}</div>
+        <div class="legi-task__hint">${escapeHtml(t.hint)}</div>
+      </div>
+    </div>`).join('');
+
+  content.innerHTML = `
+    <h2 class="bonbon-modal__title">Trainings-Aufgaben</h2>
+    <div class="legi-task-modal">
+      <div class="legi-task-modal__monster">
+        <div class="legi-task-modal__sprite">${getCreatureHTML(creature, stage)}</div>
+        <p class="legi-task-modal__name">${escapeHtml(displayName)}</p>
+        <p class="legi-task-modal__stage">Stufe ${stage + 1}</p>
+        <div class="legi-task-modal__progress">
+          <div class="legi-task-modal__progress-fill" style="width:${progressPct}%"></div>
+        </div>
+      </div>
+      <div class="legi-task-modal__tasks">
+        ${taskItems}
+      </div>
+    </div>
+  `;
+  overlay.hidden = false;
+}
+window.openLegiTaskModal = openLegiTaskModal;
+
+// ─── Team-Legi Reveal-Animation ─────────────────────────────
+// Fullscreen-Overlay: Katzenei wackelt, blitzt, verwandelt sich in die
+// Baby-Einhornkatze. Beim „Weiter" wird die Kreatur serverseitig via
+// claim_cluster_legi vergeben, der Client-Marker legiRevealed gesetzt
+// und der Hub neu gerendert.
+function showLegiRevealAnimation() {
+  const overlay = document.createElement('div');
+  overlay.id = 'legiRevealOverlay';
+  overlay.innerHTML = `
+    <style>
+      #legiRevealOverlay {
+        position:fixed;inset:0;z-index:10001;
+        background:radial-gradient(ellipse at center, #4a2560 0%, #1a0930 65%, #000 100%);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        opacity:0;transition:opacity 0.6s;
+      }
+      @keyframes _legi-shake {
+        0%,100%{transform:rotate(0)} 15%{transform:rotate(-9deg)} 30%{transform:rotate(9deg)}
+        45%{transform:rotate(-9deg)} 60%{transform:rotate(9deg)} 75%{transform:rotate(-6deg)} 90%{transform:rotate(6deg)}
+      }
+      @keyframes _legi-glow {
+        0%{filter:brightness(1) drop-shadow(0 0 0 rgba(255,255,255,0))}
+        100%{filter:brightness(2.4) drop-shadow(0 0 60px #fff) drop-shadow(0 0 100px #ff85c1)}
+      }
+      @keyframes _legi-flash { 0%{opacity:0} 40%{opacity:1} 100%{opacity:0} }
+      @keyframes _legi-appear {
+        from{opacity:0;transform:scale(0.15) translateY(50px)}
+        to{opacity:1;transform:scale(1) translateY(0)}
+      }
+      @keyframes _legi-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+      @keyframes _legi-title {
+        from{opacity:0;letter-spacing:0.5em}
+        to{opacity:1;letter-spacing:0.06em}
+      }
+      @keyframes _legi-particles {
+        0%{opacity:0;transform:translateY(0) scale(0)}
+        20%{opacity:1}
+        100%{opacity:0;transform:translateY(-90px) scale(1.6)}
+      }
+      @keyframes _legi-halo-rotate {
+        0%{transform:translate(-50%,-50%) rotate(0)}
+        100%{transform:translate(-50%,-50%) rotate(360deg)}
+      }
+      #_legi-egg {
+        width:180px;height:180px;object-fit:contain;display:block;
+        filter:drop-shadow(0 8px 24px rgba(255,133,193,0.35));
+      }
+      #_legi-egg.shaking { animation:_legi-shake 0.55s ease-in-out; }
+      #_legi-egg.glowing { animation:_legi-glow 0.9s ease-in forwards; }
+      #_legi-flash { position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:1; }
+      #_legi-flash.go { animation:_legi-flash 0.7s ease-out forwards; }
+      #_legi-halo {
+        position:fixed;top:50%;left:50%;width:360px;height:360px;
+        background:conic-gradient(#ff5b6b,#ffa940,#ffeb3b,#66d16b,#4fb3ff,#b477ff,#ff5b6b);
+        border-radius:50%;opacity:0;filter:blur(28px);
+        transform:translate(-50%,-50%);pointer-events:none;
+        transition:opacity 0.8s;
+      }
+      #_legi-halo.show {
+        opacity:0.55;
+        animation:_legi-halo-rotate 10s linear infinite;
+      }
+      #_legi-initial { display:flex;flex-direction:column;align-items:center;gap:22px;z-index:2; }
+      #_legi-caption {
+        color:rgba(255,255,255,0.65);font-family:Cinzel,serif;
+        font-size:0.85rem;letter-spacing:0.14em;
+      }
+      #_legi-final { display:none;flex-direction:column;align-items:center;gap:18px;z-index:2; }
+      #_legi-final.show {
+        display:flex;
+        animation:_legi-appear 1s cubic-bezier(0.34,1.56,0.64,1) both,_legi-float 3s ease-in-out 1s infinite;
+      }
+      #_legi-final .creature-slot { width:170px;height:170px;display:flex;align-items:center;justify-content:center; }
+      ._legi-title {
+        color:#ffe1f4;font-family:Cinzel,serif;font-size:1.65rem;font-weight:800;
+        text-align:center;
+        text-shadow:0 0 20px #ff85c1,0 0 40px #b477ff;
+        animation:_legi-title 1s 0.4s both;
+      }
+      ._legi-sub {
+        color:rgba(255,235,244,0.75);font-family:Nunito,sans-serif;font-size:1rem;text-align:center;
+        max-width:420px;line-height:1.4;
+        animation:_legi-appear 0.9s 0.7s both;
+      }
+      ._legi-particle { position:fixed;font-size:1.9rem;pointer-events:none;animation:_legi-particles 2.2s ease-out both; }
+      #_legi-close {
+        position:absolute;bottom:36px;padding:13px 34px;font-family:Cinzel,serif;font-size:1rem;font-weight:800;
+        color:#2a1250;background:linear-gradient(90deg,#ff85c1,#b477ff);border:none;border-radius:999px;cursor:pointer;
+        box-shadow:0 0 26px rgba(255,133,193,0.55);
+        opacity:0;transition:opacity 0.4s;pointer-events:none;
+      }
+      #_legi-close.show { opacity:1;pointer-events:auto; }
+      #_legi-close:disabled { opacity:0.5;cursor:wait; }
+    </style>
+    <div id="_legi-halo"></div>
+    <div id="_legi-flash"></div>
+    <div id="_legi-initial">
+      <img id="_legi-egg" src="data/others/Katzenei.png" alt="" />
+      <span id="_legi-caption">DAS EI ERWACHT…</span>
+    </div>
+    <div id="_legi-final">
+      <div class="creature-slot">${getCreatureHTML('einhornkatze', 0)}</div>
+      <div class="_legi-title">Euer Team-Legendär ist erwacht!</div>
+      <div class="_legi-sub">Ein legendäres Wesen begleitet euren Kurs von nun an — pflegt es gemeinsam.</div>
+    </div>
+    <button id="_legi-close">Weiter →</button>
+  `;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+  const egg      = overlay.querySelector('#_legi-egg');
+  const flash    = overlay.querySelector('#_legi-flash');
+  const halo     = overlay.querySelector('#_legi-halo');
+  const initial  = overlay.querySelector('#_legi-initial');
+  const final_   = overlay.querySelector('#_legi-final');
+  const closeBtn = overlay.querySelector('#_legi-close');
+
+  const shake = () => { egg.classList.remove('shaking'); void egg.offsetWidth; egg.classList.add('shaking'); };
+  setTimeout(shake, 700);
+  setTimeout(shake, 1500);
+  setTimeout(shake, 2300);
+  setTimeout(() => { halo.classList.add('show'); }, 2500);
+  setTimeout(() => { egg.classList.remove('shaking'); egg.classList.add('glowing'); }, 2900);
+  setTimeout(() => {
+    flash.classList.add('go');
+    const emojis = ['🌈','✨','🍬','💫','⭐','🎀','💎'];
+    for (let i = 0; i < 22; i++) {
+      const p = document.createElement('span');
+      p.className = '_legi-particle';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      p.style.left = (8 + Math.random() * 84) + '%';
+      p.style.top  = (12 + Math.random() * 74) + '%';
+      p.style.animationDelay = (Math.random() * 0.5) + 's';
+      overlay.appendChild(p);
+    }
+  }, 3500);
+  setTimeout(() => {
+    initial.style.display = 'none';
+    final_.classList.add('show');
+    closeBtn.classList.add('show');
+  }, 4200);
+
+  closeBtn.addEventListener('click', async () => {
+    closeBtn.disabled = true;
+    closeBtn.textContent = 'Bereite vor…';
+
+    // 1) Server-seitige Kreatur-Vergabe (cheat-sicher via user_legi_grants).
+    try {
+      const token = window.__accessToken;
+      if (token && window.SUPABASE_URL) {
+        await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/claim_cluster_legi`, {
+          method: 'POST',
+          headers: {
+            apikey: window.SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: '{}'
+        });
+      }
+    } catch (e) {
+      console.warn('[legi-reveal] claim_cluster_legi failed:', e.message);
+    }
+
+    // 2) Client-Marker setzen und synchronisieren.
+    try {
+      const sd = loadShopData();
+      sd.legiRevealed = true;
+      saveShopData(sd);
+      await window.syncShopStateToServer?.(sd);
+    } catch (e) {
+      console.warn('[legi-reveal] shop-sync failed:', e.message);
+    }
+
+    // 3) Frisches game_state ziehen (bringt creature='einhornkatze').
+    try { await window.loadServerState?.(); } catch(e) {}
+
+    // 4) Overlay ausblenden + Hub neu rendern.
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+      overlay.remove();
+      renderHub();
+    }, 500);
+  });
+}
+window.showLegiRevealAnimation = showLegiRevealAnimation;
 
 function applyBackupSwap(gameId) {
   const sd = loadShopData();
