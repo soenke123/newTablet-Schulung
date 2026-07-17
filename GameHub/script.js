@@ -2582,7 +2582,8 @@ function showLegiRevealAnimation() {
         display:flex;
         animation:_legi-appear 1s cubic-bezier(0.34,1.56,0.64,1) both,_legi-float 3s ease-in-out 1s infinite;
       }
-      #_legi-final .creature-slot { width:170px;height:170px;display:flex;align-items:center;justify-content:center; }
+      #_legi-final .creature-slot { width:340px;height:340px;display:flex;align-items:center;justify-content:center; }
+      #_legi-final .creature-slot img { width:100%;height:100%;object-fit:contain; }
       ._legi-title {
         color:#ffe1f4;font-family:Cinzel,serif;font-size:1.65rem;font-weight:800;
         text-align:center;
