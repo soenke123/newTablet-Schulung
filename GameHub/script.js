@@ -443,7 +443,10 @@ function buildCardHTML(game, data, shopData) {
     : hasCreature && isLegendary(data.creature)
     ? `<span class="legendary-badge">✦ Legendär ✦</span>` : '';
 
-  const bonusCoins = hasCreature ? getGrowthBonusCoins(data.growth || 0) : 0;
+  // Team-Legendär verdient keine Münzen (spielt keine Runden) und lässt
+  // keine Shop-Items (Booster, Coins×3, Glücksklee, Trank) zu — Growth
+  // kommt ausschließlich durch die Trainings-Aufgaben.
+  const bonusCoins = (!isLegi && hasCreature) ? getGrowthBonusCoins(data.growth || 0) : 0;
   const bonusHint = bonusCoins > 0
     ? `<div class="game-card__bonus-hint" title="${bonusCoins === 10 ? 'Vollendungs-Bonus' : 'Ausgewachsen-Bonus'}: +${bonusCoins} Münzen pro Runde">+${bonusCoins}<span class="game-card__bonus-hint-coin">🪙</span></div>`
     : '';
@@ -465,7 +468,7 @@ function buildCardHTML(game, data, shopData) {
       &nbsp;·&nbsp; 🔄 Runden: <strong>${data.roundsPlayed}</strong>
     </div>
     ${(function(){
-  const items = getActiveItemsForSlot(data, shopData);
+  const items = isLegi ? [] : getActiveItemsForSlot(data, shopData);
   if (items.length === 0) return `<button class="game-card__btn">Spielen!</button>`;
   if (items.length === 1) {
     const it = items[0];
