@@ -2535,6 +2535,33 @@ function openLegiTaskModal() {
 }
 window.openLegiTaskModal = openLegiTaskModal;
 
+// ─── Recovery-Hook für Late-Joiner-Reveal-Bug ───────────────
+// Wenn der Cluster unlocked ist, aber der User weder eine Kreatur
+// noch (indirekt) einen echten user_legi_grants-Eintrag hat, war ein
+// früherer Reveal-Klick gescheitert (claim_cluster_legi → no_grant).
+// In dem Fall den Client-Marker legiRevealed zurücksetzen, damit die
+// Kachel wieder pulsiert und der User beim nächsten Klick einen zweiten
+// Versuch bekommt. Wird nach loadServerShop + loadServerState im Hub-
+// Boot aufgerufen, bevor renderHub läuft.
+function repairLegiRevealMarker() {
+  try {
+    const status = window.__bonbonStatus;
+    if (!status?.unlocked) return;
+    const legiGame = GAMES_CONFIG.find(g => g.clusterLegi);
+    if (!legiGame) return;
+    const gd = loadAllData()[legiGame.id];
+    if (gd?.creature) return; // Kreatur ist da → alles gut
+    const sd = loadShopData();
+    if (!sd.legiRevealed) return; // Marker war bereits sauber
+    sd.legiRevealed = false;
+    saveShopData(sd);
+    console.log('[hub] legiRevealed-Marker zurückgesetzt — Reveal-Klick war zuvor gescheitert.');
+  } catch (e) {
+    console.warn('[hub] repairLegiRevealMarker failed:', e.message);
+  }
+}
+window.repairLegiRevealMarker = repairLegiRevealMarker;
+
 // ─── Team-Legi Reveal-Animation ─────────────────────────────
 // Fullscreen-Overlay: Katzenei wackelt, blitzt, verwandelt sich in die
 // Baby-Einhornkatze. Beim „Weiter" wird die Kreatur serverseitig via
@@ -2683,10 +2710,19 @@ function showLegiRevealAnimation() {
     closeBtn.textContent = 'Bereite vor…';
 
     // 1) Server-seitige Kreatur-Vergabe (cheat-sicher via user_legi_grants).
+    //    Response prüfen: bei 'no_grant' (Späteinsteiger ohne Grant, z.B.
+    //    wenn Migration 0035 noch nicht deployed ist) NICHT als revealed
+    //    markieren — sonst zeigt das Bonbon-Modal "Ihr habt es geschafft"
+    //    ohne Kreatur im Hub. Kachel bleibt auf ready_to_reveal und der
+    //    User bekommt beim nächsten Klick einen zweiten Versuch.
+    let claimOk    = false;
+    let claimError = null;
     try {
       const token = window.__accessToken;
-      if (token && window.SUPABASE_URL) {
-        await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/claim_cluster_legi`, {
+      if (!token || !window.SUPABASE_URL) {
+        claimError = 'no_session';
+      } else {
+        const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/claim_cluster_legi`, {
           method: 'POST',
           headers: {
             apikey: window.SUPABASE_ANON_KEY,
@@ -2696,9 +2732,23 @@ function showLegiRevealAnimation() {
           },
           body: '{}'
         });
+        const body = await res.json().catch(() => null);
+        if (res.ok && body?.ok) claimOk = true;
+        else claimError = body?.error || `http_${res.status}`;
       }
     } catch (e) {
-      console.warn('[legi-reveal] claim_cluster_legi failed:', e.message);
+      claimError = e.message;
+    }
+
+    if (!claimOk) {
+      console.warn('[legi-reveal] claim_cluster_legi failed:', claimError);
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        overlay.remove();
+        alert('Die Kreatur konnte gerade nicht befreit werden. Bitte lade die Seite neu und versuche es erneut.');
+        renderHub();
+      }, 500);
+      return;
     }
 
     // 2) Client-Marker setzen und synchronisieren.

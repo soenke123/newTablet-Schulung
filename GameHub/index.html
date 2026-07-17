@@ -321,6 +321,11 @@
       await window.loadServerShop?.();
       await window.syncHighscores?.();
 
+      // Late-Joiner-Reveal-Recovery: legiRevealed=true stehen lassen wäre
+      // ein inkonsistenter Zustand, wenn die Kreatur nie im game_state
+      // gelandet ist. Vor dem ersten renderHub aufräumen.
+      window.repairLegiRevealMarker?.();
+
       renderHub();
       // seenCreatures wird von renderHub aktuell gehalten → jetzt erst
       // sind NEW-Badges zuverlässig berechenbar (nicht schon bei renderHubAuth).
@@ -385,6 +390,7 @@
         await window.refreshUnlockedFromServer?.();
         await window.loadServerState?.();
         await window.syncHighscores?.();
+        window.repairLegiRevealMarker?.();
         renderHub();
       });
     });
