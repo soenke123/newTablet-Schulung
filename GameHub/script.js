@@ -2486,8 +2486,8 @@ function showSealEggOpeningAnimation(def, creature, onClose) {
 // Statisch definierte Aufgabenliste. Mechanik folgt in eigener
 // Iteration — hier nur die UI-Struktur.
 const LEGI_TASKS = [
-  { key: 'friends',  icon: '🤝', label: 'Freunde finden',       status: 'active', hint: 'bald verfügbar' },
   { key: 'gift',     icon: '🎁', label: 'Andere beschenken',    status: 'active', hint: 'bald verfügbar' },
+  { key: 'friends',  icon: '🤝', label: 'Freunde finden',       status: 'active', hint: 'bald verfügbar' },
   { key: 'win',      icon: '🏆', label: 'Gemeinsam siegen',     status: 'active', hint: 'bald verfügbar' },
   { key: 'locked_1', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
   { key: 'locked_2', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
@@ -2516,7 +2516,8 @@ function openLegiTaskModal() {
     </div>`).join('');
 
   content.innerHTML = `
-    <h2 class="bonbon-modal__title">Trainings-Aufgaben</h2>
+    <h2 class="bonbon-modal__title">Der Weg zur Legende</h2>
+    <p class="bonbon-modal__intro">Mit jeder gelösten Aufgabe wächst sie ein Stück näher an ihre legendäre Form.</p>
     <div class="legi-task-modal">
       <div class="legi-task-modal__monster">
         <div class="legi-task-modal__sprite">${getCreatureHTML(creature, stage)}</div>
