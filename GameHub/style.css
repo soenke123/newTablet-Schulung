@@ -366,23 +366,6 @@ a { text-decoration: none; color: inherit; }
 
 body.s2-active .hud-kristalle { display: flex; }
 
-.hud-bonbons {
-  display: none;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-left: 1px solid var(--clr-border);
-  margin-left: 2px;
-}
-.hud-bonbons .hud-coins__amount {
-  background: linear-gradient(90deg, #ff5b6b, #ffa940, #ffeb3b, #66d16b, #4fb3ff, #b477ff);
-  -webkit-background-clip: text;
-          background-clip: text;
-  color: transparent;
-  font-weight: 800;
-}
-body.s3-active .hud-bonbons:not([hidden]) { display: flex; }
-
 @keyframes lootbox-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.5; transform: scale(1.08); }

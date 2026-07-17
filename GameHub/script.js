@@ -224,7 +224,6 @@ function renderHub() {
   renderGamesGrid(allData, shopData);
   renderGallery(allData);
   renderCoinDisplay(allData);
-  renderBonbonDisplay();
   renderNestSection(allData);
   renderSealedEggs();
   initGalleryWalk();
@@ -576,15 +575,6 @@ function renderCoinDisplay(allData) {
   if (bookBtn) bookBtn.hidden = !shopData.purchased.includes('buchDerMonster');
 }
 
-function renderBonbonDisplay() {
-  const wrap = document.getElementById('hudBonbons');
-  const amt  = document.getElementById('bonbonAmount');
-  const status = window.__bonbonStatus;
-  const enabled = !!(status && status.enabled);
-  if (wrap) wrap.hidden = !enabled;
-  if (amt && enabled) amt.textContent = status.own_amount ?? 0;
-}
-
 async function openBonbonModal() {
   const overlay = document.getElementById('bonbonModal');
   const content = document.getElementById('bonbonModalContent');
@@ -600,8 +590,6 @@ async function openBonbonModal() {
     return;
   }
   content.innerHTML = buildBonbonModalHTML(status);
-  // Nach Modal-Öffnung ggf. den Hub-HUD auf den aktualisierten Wert bringen.
-  renderBonbonDisplay();
 }
 window.openBonbonModal = openBonbonModal;
 
