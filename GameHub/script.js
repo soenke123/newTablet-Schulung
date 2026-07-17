@@ -406,13 +406,10 @@ function buildCardHTML(game, data, shopData) {
     const target    = status.target ?? 1;
     const pct       = Math.max(0, Math.min(100, Math.round(collected / target * 100)));
     return `
-      ${buildRainbowSVG(pct, 'small', { showLabel: true })}
-      <h3 class="game-card__title">${game.icon} ${game.title}</h3>
-      <div class="game-card__creature-wrap">
-        <div class="legi-silhouette">❓</div>
+      <div class="game-card__cluster-locked-body">
+        ${buildRainbowSVG(pct, 'small', { showLabel: true })}
+        <div class="game-card__points" style="opacity:0.7;">🍬 ${collected} / ${target}</div>
       </div>
-      <p class="game-card__stage-label" style="color:var(--clr-cream-dim);">Sammelt gemeinsam Regenbogen-Bonbons!</p>
-      <div class="game-card__points" style="opacity:0.6;">🍬 ${collected} / ${target}</div>
       <button class="game-card__btn">Fortschritt ansehen</button>
     `;
   }
@@ -608,15 +605,25 @@ async function openBonbonModal() {
 }
 window.openBonbonModal = openBonbonModal;
 
-// Baut den halbkreisförmigen SVG-Regenbogen. Grauer Basis-Bogen
-// + bunter Overlay-Bogen, geclippt bei pct * 2 (0–200 in viewBox-Einheiten).
+// Baut den halbkreisförmigen SVG-Regenbogen. Grauer Basis-Bogen +
+// bunter Overlay-Bogen, radial aufgespannt: clipPath ist ein Kreis-
+// Sektor um (100, 100), der von 180° (links) mit dem Fortschritt zu
+// 0° (rechts) rotiert — wie ein aufklappender Fächer.
 // Milestones = optionaler Marker-Array {percent, reached}.
 function buildRainbowSVG(pct, size = 'small', opts = {}) {
   const p = Math.max(0, Math.min(100, pct || 0));
-  const clipW = p * 2;
   const clipId = 'rainbow-clip-' + Math.random().toString(36).slice(2, 8);
   const showLabel = opts.showLabel !== false;
   const milestones = Array.isArray(opts.milestones) ? opts.milestones : [];
+
+  // Sektor-Path für clipPath: vom Zentrum (100,100) zum linken Startpunkt
+  // (10,100), Kreisbogen mit Radius 90 im Uhrzeigersinn (sweep=1) zum
+  // Endpunkt entsprechend dem Fortschritts-Winkel, zurück zum Zentrum.
+  const cx = 100, cy = 100, r = 90;
+  const angleRad = Math.PI * (1 - p / 100);
+  const endX = cx + r * Math.cos(angleRad);
+  const endY = cy - r * Math.sin(angleRad);
+  const clipD = `M ${cx} ${cy} L ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${endX.toFixed(3)} ${endY.toFixed(3)} Z`;
 
   const grayStripes = [
     ['M 20 100 A 80 80 0 0 1 180 100', '#4c4658'],
@@ -637,9 +644,14 @@ function buildRainbowSVG(pct, size = 'small', opts = {}) {
   ].map(([d, c]) => `<path d="${d}" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="butt" />`).join('');
 
   const markers = milestones.map(m => {
-    const x = 20 + (m.percent / 100) * 160; // Bogen läuft von x=20 bis x=180
+    // Milestone-Marker sitzen auf dem Bogen selbst (mittlerer Radius 55)
+    // und rotieren mit — bei 25 % sitzt der Marker links oben, bei 100 %
+    // rechts. Gleicher Winkel-Mapping wie das clipPath.
+    const angle = Math.PI * (1 - m.percent / 100);
+    const mx = cx + 55 * Math.cos(angle);
+    const my = cy - 55 * Math.sin(angle);
     const cls = m.reached ? 'rainbow-arc__marker rainbow-arc__marker--reached' : 'rainbow-arc__marker';
-    return `<circle cx="${x}" cy="106" r="3.5" class="${cls}" />`;
+    return `<circle cx="${mx.toFixed(2)}" cy="${my.toFixed(2)}" r="3" class="${cls}" />`;
   }).join('');
 
   const label = showLabel
@@ -650,7 +662,7 @@ function buildRainbowSVG(pct, size = 'small', opts = {}) {
       <svg viewBox="0 0 200 112" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet">
         <defs>
           <clipPath id="${clipId}">
-            <rect x="0" y="0" width="${clipW}" height="112" />
+            <path d="${clipD}" />
           </clipPath>
         </defs>
         <g class="rainbow-arc__base">${grayStripes}</g>

@@ -3501,17 +3501,19 @@ input[type="password"]::-webkit-textfield-decoration-container {
   filter: drop-shadow(0 0 3px rgba(255, 200, 60, 0.85));
 }
 
-/* Cluster-Locked Legi-Kachel — mit halbtransparenter Silhouette */
+/* Cluster-Locked Legi-Kachel — nur Regenbogen + Zahl + Button.
+   Der Name/Silhouette bleibt Überraschung bis zum Reveal. */
 .game-card--cluster-locked {
   border-color: rgba(180, 119, 255, 0.5);
   box-shadow: 0 0 26px rgba(180, 119, 255, 0.18);
 }
-.game-card--cluster-locked .legi-silhouette {
-  font-size: 3.5rem;
-  line-height: 1;
-  margin: 16px 0 12px;
-  opacity: 0.55;
-  filter: grayscale(0.4) drop-shadow(0 4px 12px rgba(180, 119, 255, 0.35));
+.game-card__cluster-locked-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 8px 20px;
 }
 .game-card--cluster-locked .game-card__btn {
   background: linear-gradient(90deg, #ff85c1, #b477ff);
