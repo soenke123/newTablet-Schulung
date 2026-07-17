@@ -560,13 +560,13 @@ function showResult(){
   saveToHub();
 
   const stage = getGrowthStage(quizGameData.growth);
-  const name  = CREATURE_NAMES[quizGameData.creature];
-  const desc  = CREATURE_DESCRIPTIONS[quizGameData.creature][stage];
+  const name  = CREATURE_NAMES[quizGameData.creature] || '';
+  const desc  = CREATURE_DESCRIPTIONS[quizGameData.creature]?.[stage] || '';
 
   const resultCreEl = document.getElementById('quiz-creature-result');
   if(resultCreEl) resultCreEl.innerHTML = getCreatureHTML(quizGameData.creature, stage);
   const nameEl = document.getElementById('quiz-creature-name');
-  if(nameEl) nameEl.textContent = `${name} – ${GROWTH_LABELS[stage]}`;
+  if(nameEl) nameEl.textContent = name ? `${name} – ${GROWTH_LABELS[stage] || ''}` : '';
   const descEl = document.getElementById('quiz-creature-desc');
   if(descEl) descEl.textContent = desc;
 

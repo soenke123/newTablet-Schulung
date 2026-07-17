@@ -761,6 +761,46 @@ const CREATURE_DESCRIPTIONS = {
     'Ein LEGENDÄRES Schnabeltier – das Unmögliche hat Form angenommen!',
     'Das Unmögliche war erst der Anfang. Das vollendete Schnabeltier hat die Naturgesetze selbst überlistet – und fragt sich noch immer, was es eigentlich ist.'
   ],
+  krabbe: [
+    'Eine winzige Krabbe krabbelt seitwärts aus der Schale!',
+    'Deine Krabbe wächst – die ersten Scheren klackern zaghaft.',
+    'Deine Krabbe wird kräftiger – der Panzer schimmert im Licht.',
+    'Eine stolze Krabbe – flink im Sand, unbeugsam an der Küste.',
+    'Eine mächtige Panzerkrabbe – niemand kommt an ihren Scheren vorbei!',
+    'Sie hat die Gezeiten überdauert und die Küsten aller Welten erobert. Die vollendete Krabbe – unaufhaltsam, seitwärts, für immer.'
+  ],
+  hai: [
+    'Ein kleiner Hai schießt aus dem Ei ins offene Wasser!',
+    'Dein Hai wächst – die ersten Zähne blitzen scharf.',
+    'Dein Hai wird stärker – ein geübter Jäger der Tiefen.',
+    'Ein gefährlicher Hai – lautlos, schnell, unaufhaltsam.',
+    'Ein prächtiger Weißer Hai – Herrscher der Ozeane!',
+    'Sein Schatten gleitet durch alle Meere. Kein Wesen bleibt ihm verborgen. Der vollendete Hai – Legende der Tiefe.'
+  ],
+  libelle: [
+    'Eine winzige Libelle schwirrt aus der Schale – das Seltene erwacht!',
+    'Deine Libelle streckt schimmernde Flügel – erste Flugversuche.',
+    'Die Libelle wird kräftiger – ihre Flügel glitzern wie flüssiger Kristall.',
+    'Eine prächtige Libelle – wendig, blitzschnell, kaum zu fangen.',
+    'Eine SELTENE Kristall-Libelle – ein fliegendes Juwel der Lüfte!',
+    'Ihre Flügel weben Regenbögen in die Luft. Sie ist überall und nirgends. Die vollendete Libelle – Kristall der Ewigkeit.'
+  ],
+  hippogreif: [
+    'Ein flauschiges Wesen mit Federn und Fell lugt aus dem Ei – was für ein Mischwesen?',
+    'Kleine Krallen, weiche Flügel, ein neugieriger Blick – etwas Besonderes wächst heran.',
+    'Der junge Hippogreif spreizt mächtige Schwingen – ein Wesen aus alten Sagen.',
+    'Ein stolzer Hippogreif – halb Adler, halb Pferd, ganz majestätisch.',
+    'Ein EPISCHER Hippogreif – Reittier der Helden, Wächter der Lüfte!',
+    'Zwischen Himmel und Erde findet er seine Heimat. Der vollendete Hippogreif trägt Legenden auf seinem Rücken – frei, stolz, unsterblich.'
+  ],
+  einhornkatze: [
+    'Ein rosa schimmerndes Ei bebt – das Team hat es geschafft!',
+    'Ein winziges Einhornkatzen-Baby schnurrt heraus, das Horn glitzert.',
+    'Die Einhornkatze wächst – ihre Mähne schillert in allen Regenbogenfarben.',
+    'Eine anmutige Einhornkatze – schnurrend, verschmust, magisch.',
+    'Eine LEGENDÄRE Einhornkatze – Symbol des Kurs-Zusammenhalts, geboren aus Teamgeist!',
+    'Sie ist mehr als ein Wesen – sie ist das Herz des Kurses geworden. Die vollendete Einhornkatze schnurrt durch alle Welten, unsterblich und unvergesslich.'
+  ],
 };
 
 const CREATURE_IMAGES = {

@@ -3866,6 +3866,22 @@ body.pfau-theme .s2-banner__title {
 }
 body.pfau-theme .s2-banner__sub { color:rgba(220,200,255,0.8) !important; }
 body.pfau-theme .s2-body { background:rgba(250,244,255,0.98) !important; }
+
+/* Auth-Pill + Profil-Menü — heller Surface braucht dunklen Text */
+body.pfau-theme .hub-auth { border-left-color:rgba(148,88,200,0.22) !important; }
+body.pfau-theme .hub-auth-btn { color:#281640 !important; }
+body.pfau-theme .hub-auth-avatar { background:rgba(148,90,210,0.12) !important; }
+body.pfau-theme .hub-auth-menu {
+  background:rgba(252,247,255,0.98) !important;
+  border-color:rgba(148,90,210,0.30) !important;
+  box-shadow:0 8px 24px rgba(148,90,210,0.18) !important;
+}
+body.pfau-theme .hub-auth-menu > * + * { border-top-color:rgba(148,90,210,0.14) !important; }
+body.pfau-theme .hub-auth-menu button,
+body.pfau-theme .hub-auth-menu a { color:#281640 !important; }
+body.pfau-theme .hub-auth-menu button:hover,
+body.pfau-theme .hub-auth-menu a:hover { background:rgba(148,90,210,0.10) !important; }
+body.pfau-theme .hub-auth-menu #hubAdminLink { color:#7848b8 !important; }
 `;
 
   document.head.appendChild(s);
@@ -4127,6 +4143,22 @@ body.atari-theme .s2-banner__title {
 }
 body.atari-theme .s2-banner__sub { color:rgba(0,200,50,0.7) !important; font-family:'Courier New',monospace !important; }
 body.atari-theme .s2-body { background:#000 !important; }
+
+/* Auth-Pill + Profil-Menü — Terminal-Grün auf Schwarz */
+body.atari-theme .hub-auth { border-left-color:rgba(0,255,65,0.28) !important; }
+body.atari-theme .hub-auth-btn { color:#00ff41 !important; font-family:'Courier New',monospace !important; }
+body.atari-theme .hub-auth-avatar { background:rgba(0,255,65,0.08) !important; }
+body.atari-theme .hub-auth-menu {
+  background:#050f08 !important;
+  border-color:#00ff41 !important;
+  box-shadow:0 0 24px rgba(0,255,65,0.28) !important;
+}
+body.atari-theme .hub-auth-menu > * + * { border-top-color:rgba(0,255,65,0.15) !important; }
+body.atari-theme .hub-auth-menu button,
+body.atari-theme .hub-auth-menu a { color:#00ff41 !important; font-family:'Courier New',monospace !important; }
+body.atari-theme .hub-auth-menu button:hover,
+body.atari-theme .hub-auth-menu a:hover { background:rgba(0,255,65,0.10) !important; }
+body.atari-theme .hub-auth-menu #hubAdminLink { color:#7dff9b !important; }
 `;
 
   document.head.appendChild(s);
@@ -4586,6 +4618,22 @@ body.chindrache-theme .s2-banner__title {
 }
 body.chindrache-theme .s2-banner__sub { color: rgba(212,175,55,0.6) !important; }
 body.chindrache-theme .s2-body { background: linear-gradient(180deg, #0c1e3e, #07101e) !important; }
+
+/* Auth-Pill + Profil-Menü — Gold auf Nachtblau */
+body.chindrache-theme .hub-auth { border-left-color: rgba(212,175,55,0.28) !important; }
+body.chindrache-theme .hub-auth-btn { color: #d4af37 !important; }
+body.chindrache-theme .hub-auth-avatar { background: rgba(212,175,55,0.10) !important; }
+body.chindrache-theme .hub-auth-menu {
+  background: linear-gradient(180deg, #0c1e3e, #07101e) !important;
+  border-color: rgba(212,175,55,0.45) !important;
+  box-shadow: 0 0 24px rgba(212,175,55,0.22) !important;
+}
+body.chindrache-theme .hub-auth-menu > * + * { border-top-color: rgba(212,175,55,0.18) !important; }
+body.chindrache-theme .hub-auth-menu button,
+body.chindrache-theme .hub-auth-menu a { color: #f0d97a !important; }
+body.chindrache-theme .hub-auth-menu button:hover,
+body.chindrache-theme .hub-auth-menu a:hover { background: rgba(212,175,55,0.12) !important; }
+body.chindrache-theme .hub-auth-menu #hubAdminLink { color: #ffd75a !important; }
 `;
   document.head.appendChild(s);
 }
@@ -5055,6 +5103,22 @@ body.schnabeltier-theme .s2-banner__title {
 }
 body.schnabeltier-theme .s2-banner__sub { color: rgba(125,249,255,0.6) !important; }
 body.schnabeltier-theme .s2-body { background: linear-gradient(180deg, #0d2a18, #060f08) !important; }
+
+/* Auth-Pill + Profil-Menü — Bioluminesz-Cyan */
+body.schnabeltier-theme .hub-auth { border-left-color: rgba(125,249,255,0.28) !important; }
+body.schnabeltier-theme .hub-auth-btn { color: #7df9ff !important; }
+body.schnabeltier-theme .hub-auth-avatar { background: rgba(125,249,255,0.10) !important; }
+body.schnabeltier-theme .hub-auth-menu {
+  background: linear-gradient(180deg, #0d2a18, #060f08) !important;
+  border-color: rgba(125,249,255,0.45) !important;
+  box-shadow: 0 0 24px rgba(125,249,255,0.22) !important;
+}
+body.schnabeltier-theme .hub-auth-menu > * + * { border-top-color: rgba(125,249,255,0.18) !important; }
+body.schnabeltier-theme .hub-auth-menu button,
+body.schnabeltier-theme .hub-auth-menu a { color: #d0fbff !important; }
+body.schnabeltier-theme .hub-auth-menu button:hover,
+body.schnabeltier-theme .hub-auth-menu a:hover { background: rgba(125,249,255,0.12) !important; }
+body.schnabeltier-theme .hub-auth-menu #hubAdminLink { color: #7df9ff !important; }
 `;
   document.head.appendChild(s);
 }
