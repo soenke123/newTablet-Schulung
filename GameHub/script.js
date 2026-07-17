@@ -885,7 +885,13 @@ function applyLootboxReward(reward) {
   if (reward.steinDerVollendung) {
     const s2Open = getUserSeason() >= 2;
     if (s2Open) {
-      const eligible = Object.keys(allData).filter(k => allData[k]?.creature && allData[k].growth >= GROWTH_MAX && allData[k].growth < GROWTH_S6);
+      const eligible = Object.keys(allData).filter(k => {
+        // Team-Legendär (clusterLegi) bleibt außen vor — er wächst
+        // ausschließlich durch die Trainings-Aufgaben.
+        const g = GAMES_CONFIG.find(cfg => cfg.id === k);
+        if (g?.clusterLegi) return false;
+        return allData[k]?.creature && allData[k].growth >= GROWTH_MAX && allData[k].growth < GROWTH_S6;
+      });
       if (eligible.length > 0) {
         const chosenKey = eligible[Math.floor(Math.random() * eligible.length)];
         allData[chosenKey].growth = GROWTH_S6;
@@ -1211,7 +1217,11 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
     ? getAvailableKristalle(shopData) >= item.price
     : available >= item.price;
   const hasMaxedCreature = item.upgradeItem
-    ? s2Open && Object.values(allData).some(d => d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6)
+    ? s2Open && Object.entries(allData).some(([k, d]) => {
+        const g = GAMES_CONFIG.find(cfg => cfg.id === k);
+        if (g?.clusterLegi) return false; // Team-Legendär ignorieren
+        return d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6;
+      })
     : true;
   const btnDisabled = soldOut || isActive || !canAfford || !hasMaxedCreature;
 
@@ -1373,6 +1383,8 @@ function buyItem(itemId) {
     const s2Open = getUserSeason() >= 2;
     if (!s2Open) return;
     const eligibleKeys = Object.keys(allData).filter(k => {
+      const g = GAMES_CONFIG.find(cfg => cfg.id === k);
+      if (g?.clusterLegi) return false; // Team-Legendär bleibt außen vor
       const d = allData[k];
       return d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6;
     });
