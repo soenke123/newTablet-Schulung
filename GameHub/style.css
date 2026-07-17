@@ -3460,40 +3460,45 @@ input[type="password"]::-webkit-textfield-decoration-container {
    Season 3 — Regenbogen-Bonbons
    ══════════════════════════════════════════════════════════════ */
 
-/* Regenbogen-Ladebalken über der Legi-Kachel */
-.rainbow-progress {
-  position: relative;
-  height: 22px;
-  border-radius: 999px;
-  overflow: hidden;
-  margin: -8px 0 12px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+/* Regenbogen-Bogen (SVG) — kleine Version über der Legi-Kachel,
+   große Version im Bonbon-Modal. Grauer Basis-Bogen + bunter
+   Overlay-Bogen mit clipPath. */
+.rainbow-arc {
+  display: block;
+  width: 100%;
+  margin: 0 auto;
 }
-.rainbow-progress__fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: linear-gradient(90deg, #ff5b6b, #ffa940, #ffeb3b, #66d16b, #4fb3ff, #b477ff);
-  background-size: 200% 100%;
-  animation: rainbow-shift 6s linear infinite;
-  transition: width 0.6s ease;
+.rainbow-arc svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
-.rainbow-progress__label {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.rainbow-arc--small {
+  max-width: 150px;
+  margin: -4px auto 8px;
+}
+.rainbow-arc--large {
+  max-width: 340px;
+  margin: 4px auto 6px;
+}
+.rainbow-arc__label {
+  font-family: 'Cinzel', serif;
   font-weight: 800;
-  font-size: 0.85rem;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-  letter-spacing: 0.03em;
+  fill: var(--clr-cream, #fef6e4);
+  font-size: 18px;
+  letter-spacing: 0.02em;
 }
-@keyframes rainbow-shift {
-  0%   { background-position:   0% 50%; }
-  100% { background-position: 200% 50%; }
+.rainbow-arc--small .rainbow-arc__label { font-size: 22px; }
+.rainbow-arc--large .rainbow-arc__label { font-size: 20px; }
+.rainbow-arc__marker {
+  fill: rgba(255, 255, 255, 0.25);
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 0.6;
+}
+.rainbow-arc__marker--reached {
+  fill: #ffeb3b;
+  stroke: #ffb500;
+  filter: drop-shadow(0 0 3px rgba(255, 200, 60, 0.85));
 }
 
 /* Cluster-Locked Legi-Kachel — mit halbtransparenter Silhouette */
@@ -3532,8 +3537,7 @@ input[type="password"]::-webkit-textfield-decoration-container {
   font-size: 1.5rem;
   color: var(--clr-cream, #fef6e4);
 }
-.bonbon-modal__intro,
-.bonbon-modal__milestones-info p {
+.bonbon-modal__intro {
   margin: 0;
   text-align: center;
   color: var(--clr-cream-dim, #cbb59a);
@@ -3546,62 +3550,11 @@ input[type="password"]::-webkit-textfield-decoration-container {
   color: var(--clr-cream-dim, #cbb59a);
 }
 
-/* Fortschritts-Anzeige im Modal (großer Regenbogen + Marker) */
+/* Fortschritts-Anzeige im Modal (großer SVG-Regenbogen + Stats) */
 .bonbon-rainbow {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-.bonbon-rainbow__track {
-  position: relative;
-  height: 30px;
-  border-radius: 999px;
-  overflow: visible;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-}
-.bonbon-rainbow__fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #ff5b6b, #ffa940, #ffeb3b, #66d16b, #4fb3ff, #b477ff);
-  background-size: 200% 100%;
-  animation: rainbow-shift 6s linear infinite;
-  transition: width 0.6s ease;
-}
-.bonbon-rainbow__markers { position: absolute; inset: 0; pointer-events: none; }
-.bonbon-milestone {
-  position: absolute;
-  transform: translateX(-50%);
-  top: -6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-.bonbon-milestone__dot {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-.bonbon-milestone--reached .bonbon-milestone__dot {
-  background: #ffeb3b;
-  color: #4a2f00;
-  border-color: #ffb500;
-  box-shadow: 0 0 12px rgba(255, 200, 60, 0.6);
-}
-.bonbon-milestone__label {
-  font-size: 0.7rem;
-  color: var(--clr-cream-dim, #cbb59a);
-  margin-top: 30px;
+  gap: 6px;
 }
 .bonbon-rainbow__stats {
   display: flex;

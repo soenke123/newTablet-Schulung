@@ -49,7 +49,7 @@ const GAMES_CONFIG = [
   { id: 'game12', season: 2, title: 'Quellen-Tinder',      icon: '🃏', url: 'S2 Quellen Tinder/index.html'      },
   { id: 'game15', season: 2, title: 'LLMaster',            icon: '💬', url: 'S2 LLMaster/index.html'             },
   { id: 'game14', season: 2, title: 'Reinforce Yourself!', icon: '🤖', url: 'S2 Reinforce Yourself!/index.html'  },
-  { id: 'game16', season: 3, title: 'Rosa Einhorntiger',   icon: '🌈', url: 'S3 LegiTrainer/index.html', clusterLegi: true },
+  { id: 'game16', season: 3, title: '???',                 icon: '🌈', url: 'S3 LegiTrainer/index.html', clusterLegi: true },
 ];
 
 const SEASONS_CONFIG = [
@@ -406,10 +406,7 @@ function buildCardHTML(game, data, shopData) {
     const target    = status.target ?? 1;
     const pct       = Math.max(0, Math.min(100, Math.round(collected / target * 100)));
     return `
-      <div class="rainbow-progress" title="${collected} / ${target} Regenbogen-Bonbons">
-        <div class="rainbow-progress__fill" style="width:${pct}%"></div>
-        <span class="rainbow-progress__label">🌈 ${pct}%</span>
-      </div>
+      ${buildRainbowSVG(pct, 'small', { showLabel: true })}
       <h3 class="game-card__title">${game.icon} ${game.title}</h3>
       <div class="game-card__creature-wrap">
         <div class="legi-silhouette">❓</div>
@@ -611,6 +608,59 @@ async function openBonbonModal() {
 }
 window.openBonbonModal = openBonbonModal;
 
+// Baut den halbkreisförmigen SVG-Regenbogen. Grauer Basis-Bogen
+// + bunter Overlay-Bogen, geclippt bei pct * 2 (0–200 in viewBox-Einheiten).
+// Milestones = optionaler Marker-Array {percent, reached}.
+function buildRainbowSVG(pct, size = 'small', opts = {}) {
+  const p = Math.max(0, Math.min(100, pct || 0));
+  const clipW = p * 2;
+  const clipId = 'rainbow-clip-' + Math.random().toString(36).slice(2, 8);
+  const showLabel = opts.showLabel !== false;
+  const milestones = Array.isArray(opts.milestones) ? opts.milestones : [];
+
+  const grayStripes = [
+    ['M 20 100 A 80 80 0 0 1 180 100', '#4c4658'],
+    ['M 30 100 A 70 70 0 0 1 170 100', '#443f52'],
+    ['M 40 100 A 60 60 0 0 1 160 100', '#3d394b'],
+    ['M 50 100 A 50 50 0 0 1 150 100', '#363244'],
+    ['M 60 100 A 40 40 0 0 1 140 100', '#2f2c3d'],
+    ['M 70 100 A 30 30 0 0 1 130 100', '#292636'],
+  ].map(([d, c]) => `<path d="${d}" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="butt" />`).join('');
+
+  const colorStripes = [
+    ['M 20 100 A 80 80 0 0 1 180 100', '#ff5b6b'],
+    ['M 30 100 A 70 70 0 0 1 170 100', '#ffa940'],
+    ['M 40 100 A 60 60 0 0 1 160 100', '#ffeb3b'],
+    ['M 50 100 A 50 50 0 0 1 150 100', '#66d16b'],
+    ['M 60 100 A 40 40 0 0 1 140 100', '#4fb3ff'],
+    ['M 70 100 A 30 30 0 0 1 130 100', '#b477ff'],
+  ].map(([d, c]) => `<path d="${d}" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="butt" />`).join('');
+
+  const markers = milestones.map(m => {
+    const x = 20 + (m.percent / 100) * 160; // Bogen läuft von x=20 bis x=180
+    const cls = m.reached ? 'rainbow-arc__marker rainbow-arc__marker--reached' : 'rainbow-arc__marker';
+    return `<circle cx="${x}" cy="106" r="3.5" class="${cls}" />`;
+  }).join('');
+
+  const label = showLabel
+    ? `<text x="100" y="88" text-anchor="middle" class="rainbow-arc__label">${Math.round(p)}%</text>`
+    : '';
+
+  return `<div class="rainbow-arc rainbow-arc--${size}">
+      <svg viewBox="0 0 200 112" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax meet">
+        <defs>
+          <clipPath id="${clipId}">
+            <rect x="0" y="0" width="${clipW}" height="112" />
+          </clipPath>
+        </defs>
+        <g class="rainbow-arc__base">${grayStripes}</g>
+        <g class="rainbow-arc__fill" clip-path="url(#${clipId})">${colorStripes}</g>
+        ${markers}
+        ${label}
+      </svg>
+    </div>`;
+}
+
 function buildBonbonModalHTML(status) {
   const collected = status.collected ?? 0;
   const target    = status.target ?? 1;
@@ -619,19 +669,9 @@ function buildBonbonModalHTML(status) {
   const unlocked  = !!status.unlocked;
   const milestones = Array.isArray(status.milestones) ? status.milestones : [];
 
-  const milestoneMarkers = milestones.map(m => `
-    <div class="bonbon-milestone ${m.reached ? 'bonbon-milestone--reached' : ''}"
-         style="left:${m.percent}%">
-      <span class="bonbon-milestone__dot">${m.reached ? '✦' : '·'}</span>
-      <span class="bonbon-milestone__label">${m.percent}%</span>
-    </div>`).join('');
-
   const rainbowBlock = `
     <div class="bonbon-rainbow">
-      <div class="bonbon-rainbow__track">
-        <div class="bonbon-rainbow__fill" style="width:${pct}%"></div>
-        <div class="bonbon-rainbow__markers">${milestoneMarkers}</div>
-      </div>
+      ${buildRainbowSVG(pct, 'large', { milestones, showLabel: true })}
       <div class="bonbon-rainbow__stats">
         <div><strong>${collected}</strong> / ${target} 🍬 gesammelt</div>
         <div class="bonbon-rainbow__own">Du hast <strong>${own}</strong> beigetragen</div>
@@ -641,15 +681,12 @@ function buildBonbonModalHTML(status) {
   if (!unlocked) {
     return `
       <h2 class="bonbon-modal__title">Regenbogen-Bonbons</h2>
-      <p class="bonbon-modal__intro">Euer Kurs sammelt gemeinsam Bonbons. Erreicht das Ziel und der Rosa Einhorntiger schlüpft!</p>
+      <p class="bonbon-modal__intro">Euer Kurs sammelt gemeinsam Bonbons. Erreicht das Ziel und ein legendäres Wesen erwacht!</p>
       ${rainbowBlock}
-      <div class="bonbon-modal__milestones-info">
-        <p>Jede erreichte Marke bringt euch dem Legi näher. Bei 100 % wird das Legi-Trainer-Spiel für alle im Kurs freigeschaltet.</p>
-      </div>
     `;
   }
 
-  // Freigeschaltet — Legi + Stages
+  // Freigeschaltet — Legi + Stages (Name bleibt Überraschung im Reveal-Screen)
   const stages = [1, 2, 3, 4, 5].map(n => `
     <div class="bonbon-stage bonbon-stage--locked">
       <div class="bonbon-stage__num">Stage ${n}</div>
@@ -657,12 +694,12 @@ function buildBonbonModalHTML(status) {
     </div>`).join('');
 
   return `
-    <h2 class="bonbon-modal__title">🌈 Der Rosa Einhorntiger ist erwacht!</h2>
+    <h2 class="bonbon-modal__title">🌈 Euer Team-Legendär ist erwacht!</h2>
     ${rainbowBlock}
     <div class="bonbon-legi-panel">
       <div class="bonbon-legi-panel__monster">
-        <div class="bonbon-legi-sprite">🌈🦄🐯</div>
-        <p class="bonbon-legi-caption">Rosa Einhorntiger · Stufe 0</p>
+        <div class="bonbon-legi-sprite">❓</div>
+        <p class="bonbon-legi-caption">Team-Legendär · Stufe 0</p>
       </div>
       <div class="bonbon-legi-panel__stages">
         <p class="bonbon-legi-panel__stages-title">Trainer-Stufen</p>
@@ -1031,7 +1068,7 @@ function renderShop(allData, tab) {
     } else if (shopActiveTab === 2) {
       bannerText.innerHTML = 'Hast du alle <strong>7 neuen Kreaturen</strong> aus Season 2 gefunden und großgezogen?<br>Dann schicke mir einen Screenshot von deinem <strong>Buch der Monster!</strong><br>Die ersten drei <strong>Monster-Meister</strong> erhalten einen Preis!';
     } else {
-      bannerText.innerHTML = 'Sammelt als Kurs gemeinsam <strong>Regenbogen-Bonbons</strong> 🍬 und schaltet die <strong>legendäre Einhornkatze</strong> frei!';
+      bannerText.innerHTML = 'Sammelt als Kurs gemeinsam <strong>Regenbogen-Bonbons</strong> 🍬 und schaltet euer <strong>Team-Legendär</strong> frei!';
     }
   }
 }
