@@ -69,14 +69,14 @@ const SEASONS_CONFIG = [
    ───────────────────────────────────────────────── */
 // Atari0 · Enter 7-3-9-1
 const SHOP_ITEMS = [
-  { id: 'wachstumstrank',   icon: '🧪', name: 'Wachstumstrank',    description: 'Gibt einem Tier deiner Wahl sofort +5 Wachstumspunkte.', price: 5,  consumable: true },
-  { id: 'wachstumsBooster', icon: '⚡', name: 'Wachstums-Booster', description: 'Im nächsten Spiel wächst dein Tier doppelt so schnell.',  price: 10, consumable: true },
-  { id: 'coinsx3',          icon: '🎰', name: 'Coins ×3',          description: 'Im nächsten Spiel verdienst du dreimal so viele Münzen.', price: 10, consumable: true },
-  { id: 'glucksklee',   icon: '🍀', name: 'Glücksklee',      description: 'Erhöht die Chance auf ein episches Tier um mindestens 20 %. Aber spiele gut – je mehr richtige Antworten, desto höher steigt sie!', price: 15, consumable: true },
-  { id: 'buchDerMonster',   icon: '📜', name: 'Buch der Monster',  description: 'Enthüllt das Bestiarum der Lernwelt. Alle Wesen, die du je erblickt hast, werden darin verewigt.', price: 25, consumable: false, bookItem: true },
-  { id: 'seltenesEi',   icon: '🥚', name: 'Seltenes Ei',    description: 'Öffnet einen neuen Kreatur-Slot. 30 % Chance auf ein episches Tier!',   price: 30,  eggItem: true, eggType: 'rare'      },
-  { id: 'mythischesEi', icon: '🥚', name: 'Episches Ei',      description: 'Öffnet einen neuen Kreatur-Slot. 60 % Chance auf ein episches Tier!',   price: 60, eggItem: true, eggType: 'mythic'    },
-  { id: 'legendaresEi', icon: '🥚', name: 'Legendäres Ei',   description: 'Öffnet einen neuen Kreatur-Slot. 100 % Chance auf ein episches Tier!',  price: 120, eggItem: true, eggType: 'legendary' },
+  { id: 'wachstumstrank',   icon: '🧪', name: 'Wachstumstrank',    description: 'Gibt einem Tier deiner Wahl sofort +5 Wachstumspunkte.', price: 10, consumable: true },
+  { id: 'wachstumsBooster', icon: '⚡', name: 'Wachstums-Booster', description: 'Im nächsten Spiel wächst dein Tier doppelt so schnell.',  price: 15, consumable: true },
+  { id: 'coinsx3',          icon: '🎰', name: 'Coins ×3',          description: 'Im nächsten Spiel verdienst du dreimal so viele Münzen.', price: 15, consumable: true },
+  { id: 'glucksklee',   icon: '🍀', name: 'Glücksklee',      description: 'Erhöht die Chance auf ein episches Tier um mindestens 20 %. Aber spiele gut – je mehr richtige Antworten, desto höher steigt sie!', price: 20, consumable: true },
+  { id: 'buchDerMonster',   icon: '📜', name: 'Buch der Monster',  description: 'Enthüllt das Bestiarum der Lernwelt. Alle Wesen, die du je erblickt hast, werden darin verewigt.', price: 30, consumable: false, bookItem: true },
+  { id: 'seltenesEi',   icon: '🥚', name: 'Seltenes Ei',    description: 'Öffnet einen neuen Kreatur-Slot. 30 % Chance auf ein episches Tier!',   price: 40,  eggItem: true, eggType: 'rare'      },
+  { id: 'mythischesEi', icon: '🥚', name: 'Episches Ei',      description: 'Öffnet einen neuen Kreatur-Slot. 60 % Chance auf ein episches Tier!',   price: 80, eggItem: true, eggType: 'mythic'    },
+  { id: 'legendaresEi', icon: '🥚', name: 'Legendäres Ei',   description: 'Öffnet einen neuen Kreatur-Slot. 100 % Chance auf ein episches Tier!',  price: 140, eggItem: true, eggType: 'legendary' },
   { id: 'atariHint', icon: '📡', name: 'Hinweis zum verlorenen Ei', description: 'Enthüllt die Spur einer verborgenen Kreatur. Nur für die Mutigen.', price: 200, consumable: false, atariHintItem: true },
 ];
 
@@ -1027,10 +1027,10 @@ function openLootboxModal(reward) {
 
 // ── Season 2 Shop-Items (nn = noch nicht funktionsfähig) ─────────────────
 const SHOP_ITEMS_P2 = [
-  { id: 'kristall1',          icon: '💎',      name: '1 Kristall',                description: 'Tausche Münzen gegen Kristalle – die seltene Währung der Lernwelt.',  price: 10, kristallItem: true, kristallAmount: 1  },
-  { id: 'kristall3',          icon: '💎💎',   name: '3 Kristalle',               description: 'Ein kleines Bündel Kristalle – günstiger als einzeln kaufen.',             price: 25, kristallItem: true, kristallAmount: 3  },
-  { id: 'kristall10',         icon: '💎💎💎', name: '10 Kristalle',              description: 'Der große Vorrat – der beste Preis pro Kristall.',                          price: 60, kristallItem: true, kristallAmount: 10 },
-  { id: 'lootbox',             icon: '🎁', name: 'Lootbox',               description: 'Gratis um 06:00, 12:00 und 18:00 – oder jederzeit für 2 Kristalle kaufen.',                                                                         price: 2,   currency: 'kristall', lootboxItem: true },
+  { id: 'kristall1',          icon: '💎',      name: '1 Kristall',                description: 'Tausche Münzen gegen Kristalle – die seltene Währung der Lernwelt.',  price: 15, kristallItem: true, kristallAmount: 1  },
+  { id: 'kristall3',          icon: '💎💎',   name: '3 Kristalle',               description: 'Ein kleines Bündel Kristalle – günstiger als einzeln kaufen.',             price: 40, kristallItem: true, kristallAmount: 3  },
+  { id: 'kristall10',         icon: '💎💎💎', name: '10 Kristalle',              description: 'Der große Vorrat – der beste Preis pro Kristall.',                          price: 90, kristallItem: true, kristallAmount: 10 },
+  { id: 'lootbox',             icon: '🎁', name: 'Lootbox',               description: 'Gratis um 06:00, 12:00 und 18:00 – oder jederzeit für 3 Kristalle kaufen.',                                                                         price: 3,   currency: 'kristall', lootboxItem: true },
   { id: 's2Ei',               icon: '🥚', name: 'versiegeltes Ei',              description: 'Hier droppen nur Monster aus Season 2 – Epic, Rare und Normal.',                                                                              price: 8,   currency: 'kristall', eggItem: true, eggType: 's2' },
   { id: 'backupDesBuches',    icon: '💾', name: 'Backup des Buches',          description: 'Lade ein beliebiges Monster aus dem Buch der Monster in einen Hub – kostet 2 Kristalle pro Nutzung.',                                                         price: 20,  currency: 'kristall', backupItem: true },
   { id: 'steinDerVollendung', icon: '🧿', name: 'Stein der Vollendung',   description: 'Löst die verborgenen Fesseln eines zufälligen Wesens und öffnet den Weg zu einer Stufe, die niemand für möglich hielt.',                                              price: 10,  currency: 'kristall', consumable: true, upgradeItem: true },
@@ -1040,7 +1040,7 @@ const SHOP_ITEMS_P2 = [
 
 // ── Season 3 Shop-Items (Regenbogen-Bonbons — Items folgen) ───────────
 const SHOP_ITEMS_P3 = [
-  { id: 'lockmittel', icon: '🧲', name: 'Lockmittel', description: 'Setze es bei einem schlummernden Ei ein: Zu 90 % droppt beim ersten Spiel ein Season-3-Monster!', price: 10, consumable: true },
+  { id: 'lockmittel', icon: '🧲', name: 'Lockmittel', description: 'Setze es bei einem schlummernden Ei ein: Zu 90 % droppt beim ersten Spiel ein Season-3-Monster!', price: 20, consumable: true },
 ];
 
 function openShopModal() {
@@ -1159,7 +1159,7 @@ function _buildLootboxItemElement(item, shopData) {
       </div>
     </div>
     <div class="shop-list-item__buy-col">
-      <button class="shop-list-item__btn"${!hasFree && getAvailableKristalle(shopData) < 2 ? ' disabled' : ''}>${hasFree ? 'Gratis' : '2 💎 Kaufen'}</button>
+      <button class="shop-list-item__btn"${!hasFree && getAvailableKristalle(shopData) < item.price ? ' disabled' : ''}>${hasFree ? 'Gratis' : `${item.price} 💎 Kaufen`}</button>
     </div>
   `;
   li.querySelector('.shop-list-item__btn').addEventListener('click', () => {
@@ -1167,8 +1167,8 @@ function _buildLootboxItemElement(item, shopData) {
       claimFreeLootbox();
     } else {
       const currentSd = loadShopData();
-      if (getAvailableKristalle(currentSd) < 2) return;
-      currentSd.spentKristalle = (currentSd.spentKristalle ?? 0) + 2;
+      if (getAvailableKristalle(currentSd) < item.price) return;
+      currentSd.spentKristalle = (currentSd.spentKristalle ?? 0) + item.price;
       saveShopData(currentSd);
       const reward = rollLootbox(currentSd, loadAllData());
       openLootboxModal(reward);
