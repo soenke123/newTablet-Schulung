@@ -882,6 +882,11 @@ function applyLootboxReward(reward) {
     sd.nests.push({ nestId, eggType: reward.egg, gameId: null, gameUrl: null });
     sd.pendingEggNestId = nestId;
   }
+  // Reward-Mods am sd erst persistieren, DANN saveGameData für die SdV-
+  // Evolution: bei Nest-chosenKey mirror't saveGameData den hatched-Update
+  // via loadShopData → saveShopData. Käme saveShopData(sd) danach, würde
+  // der stale sd den Mirror clobbern.
+  saveShopData(sd);
   if (reward.steinDerVollendung) {
     const s2Open = getUserSeason() >= 2;
     if (s2Open) {
@@ -900,7 +905,6 @@ function applyLootboxReward(reward) {
       }
     }
   }
-  saveShopData(sd);
 }
 
 function _spawnLootboxParticles(rarity, container) {
@@ -1393,9 +1397,12 @@ function buyItem(itemId) {
     const chosenCreature = allData[chosenKey].creature;
     allData[chosenKey].growth = GROWTH_S6;
     _charge(shopData, item);
+    // Reihenfolge: saveShopData(shopData) ZUERST, damit saveGameData
+    // beim Nest-Mirror ein bereits belastetes shopData sieht und der
+    // frische hatched-Update nicht vom stale shopData überschrieben wird.
+    saveShopData(shopData);
     // saveGameData statt saveAllData: triggert Server-Sync via sync_game_state.
     saveGameData(chosenKey, allData[chosenKey]);
-    saveShopData(shopData);
     closeShopModal();
     renderHub();
     showEvolutionModal(chosenCreature);
@@ -1443,12 +1450,15 @@ function tryApplyWachstumstrank(gameId) {
   const data = allData[gameId];
   if (!data || !data.creature || data.growth >= GROWTH_MAX) return;
   data.growth = Math.min(data.growth + 5, GROWTH_MAX);
-  // saveGameData (nicht saveAllData) — triggert Server-Sync via sync_game_state.
-  // Sonst geht die Wachstumsstufe beim nächsten Login/Reload verloren, weil
-  // loadServerState den alten DB-Stand über die localStorage-Änderung schreibt.
-  saveGameData(gameId, data);
+  // Reihenfolge kritisch bei Nests: saveShopData ZUERST, saveGameData DANACH.
+  // saveGameData(nestId) mirror't nests[i].hatched in shopData und ruft
+  // intern saveShopData nach einem loadShopData(). Käme das umgekehrt,
+  // würde das nachgelagerte saveShopData(sd) mit dem stale sd (ohne
+  // frischen Mirror) den hatched-Wert clobbern → auf Zweitgerät fehlt der
+  // Fortschritt, obwohl er lokal korrekt in lernwelt_v3 steht.
   sd.wachstumstrankCount--;
   saveShopData(sd);
+  saveGameData(gameId, data);
   renderHub();
 }
 
