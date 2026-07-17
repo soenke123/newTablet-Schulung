@@ -2639,7 +2639,7 @@ function showLegiRevealAnimation() {
     <div id="_legi-final">
       <div class="creature-slot">${getCreatureHTML('einhornkatze', 0)}</div>
       <div class="_legi-title">Euer Team-Legendär ist erwacht!</div>
-      <div class="_legi-sub">Ein legendäres Wesen begleitet euren Kurs von nun an — pflegt es gemeinsam.</div>
+      <div class="_legi-sub">Ihr habt es gemeinsam freigespielt.</div>
     </div>
     <button id="_legi-close">Weiter →</button>
   `;
@@ -3005,7 +3005,11 @@ function initGalleryWalk() {
       dir:        Math.random() < 0.5 ? 1 : -1,
       speed,
       pauseUntil: 0,
-      stationary: stage === 0 || (creature === 'butterfly' && stage === 3) || (creature === 'robot' && stage === 4),
+      stationary: stage === 0
+        || (creature === 'butterfly' && stage === 3)
+        || (creature === 'robot' && stage === 4)
+        || (creature === 'libelle' && stage === 3)
+        || (creature === 'einhornkatze' && (stage === 2 || stage === 3)),
     });
   });
 
