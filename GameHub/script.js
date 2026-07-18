@@ -2972,9 +2972,7 @@ async function openFriendsFlow() {
 
   async function refreshMembers() {
     const res = await callGiftRpc('friends_room_snapshot', { p_code: state.code });
-    console.log('[friends] snapshot res:', res);
     if (!res.ok) {
-      console.warn('[friends] snapshot failed:', res.error);
       state.members = [];
       return;
     }
@@ -3005,22 +3003,19 @@ async function openFriendsFlow() {
 
   function startRealtime() {
     const client = window.supabaseClient;
-    if (!client) { console.warn('[friends] no supabaseClient'); return; }
+    if (!client) return;
     // Auth-Token an den Realtime-Layer geben (falls Session-Refresh).
     try {
       if (window.__accessToken && client.realtime?.setAuth) {
         client.realtime.setAuth(window.__accessToken);
       }
-    } catch (e) {
-      console.warn('[friends] setAuth failed:', e.message);
-    }
+    } catch (e) { /* noop */ }
     // Presence statt postgres_changes — bei uns delivert postgres_changes
     // nicht zuverlässig (Symptom: SUBSCRIBED, aber keine Events). Presence
     // ist reine WebSocket-Kommunikation zwischen Clients, umgeht RLS und
     // Publications komplett. Der Server-Complete-RPC prüft weiterhin die
     // DB-Presence-Rows (via Heartbeat), damit das cheat-sicher bleibt.
     const channelName = `friends-room-${me.cluster_id}-${state.code}`;
-    console.log('[friends] subscribing presence channel:', channelName);
     channel = client.channel(channelName, {
       config: { presence: { key: me.id } }
     });
@@ -3049,22 +3044,18 @@ async function openFriendsFlow() {
 
     channel
       .on('presence', { event: 'sync' }, () => {
-        console.log('[friends] presence sync');
         applyPresenceState();
         if (state.view === 'waiting') { render(); checkComplete(); }
       })
-      .on('presence', { event: 'join' }, ({ newPresences }) => {
-        console.log('[friends] presence join:', newPresences);
+      .on('presence', { event: 'join' }, () => {
         applyPresenceState();
         if (state.view === 'waiting') { render(); checkComplete(); }
       })
-      .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-        console.log('[friends] presence leave:', leftPresences);
+      .on('presence', { event: 'leave' }, () => {
         applyPresenceState();
         if (state.view === 'waiting') render();
       })
-      .subscribe(async (status, err) => {
-        console.log('[friends] subscribe status:', status, err || '');
+      .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({
             user_id:      me.id,
@@ -3099,8 +3090,6 @@ async function openFriendsFlow() {
   }
 
   async function checkComplete() {
-    console.log('[friends] checkComplete called, members:', state.members.length,
-                'completedShown:', state.completedShown, 'view:', state.view);
     if (state.completedShown) return;
     if (state.members.length < 3) return;
     if (closedCleanupDone) return;
@@ -3120,7 +3109,6 @@ async function openFriendsFlow() {
     let res = null;
     for (let attempt = 1; attempt <= 5; attempt++) {
       res = await callGiftRpc('friends_room_complete', { p_code: state.code });
-      console.log(`[friends] complete res (try ${attempt}):`, res);
       if (res.ok) break;
       if (res.error === 'not_enough_users') {
         await new Promise(r => setTimeout(r, 1000));
