@@ -3066,12 +3066,14 @@ async function openFriendsFlow() {
   async function checkComplete() {
     if (state.completedShown) return;
     if (state.members.length < 3) return;
+    if (closedCleanupDone) return;
     state.completedShown = true;
     state.view = 'completing';
     render();
 
     // 1 s Pause, damit User „Ihr habt es geschafft" liest
     await new Promise(r => setTimeout(r, 1000));
+    if (closedCleanupDone) return;
 
     const res = await callGiftRpc('friends_room_complete', { p_code: state.code });
     console.log('[friends] complete res:', res);
@@ -3201,9 +3203,15 @@ function friendsFlowShellHTML(s) {
 
   if (s.view === 'waiting' || s.view === 'completing') {
     const slots = [0, 1, 2].map(i => renderFriendsSlot(s.members[i])).join('');
+    const roomFull = s.members.length >= 3;
+    // Leave-Button ausblenden sobald 3/3 — sonst race: User klickt
+    // versehentlich Verlassen während Complete-Flow schon läuft und
+    // reißt seinen eigenen Growth-Reward mit.
     const bottom = s.view === 'completing'
       ? `<p class="legi-friends-hero">Ihr habt es geschafft!</p>`
-      : `<button class="legi-friends-leave-btn">Raum verlassen</button>`;
+      : roomFull
+        ? `<p class="legi-friends-hero-small">Ihr seid vollständig — gleich geht's los…</p>`
+        : `<button class="legi-friends-leave-btn">Raum verlassen</button>`;
     // Wenn der Server keine Member zurückliefert (auch nicht self),
     // ist die Verbindung ins Wanken geraten — visueller Hinweis.
     const warning = (s.view === 'waiting' && s.members.length === 0)
