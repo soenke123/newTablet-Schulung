@@ -309,8 +309,12 @@ function buildGameCard(game, data, shopData) {
   const maxed     = data.creature && data.growth >= GROWTH_MAX;
   const isBackupTarget = !!shopData.pendingBackup && !!data.creature && access === 'available';
 
+  // Pending-Gift-Blink: revealed Legi mit wartendem Geschenk pulsiert
+  // regenbogen (dieselbe .game-card--legi-ready-Klasse wie ready_to_reveal).
+  const giftBlink = game.clusterLegi && access === 'available' && giftPending();
+
   const card = document.createElement('div');
-  card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${access === 'ready_to_reveal' ? ' game-card--cluster-locked game-card--legi-ready' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
+  card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${access === 'ready_to_reveal' ? ' game-card--cluster-locked game-card--legi-ready' : ''}${giftBlink ? ' game-card--legi-ready' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
   card.innerHTML = buildCardHTML(game, data, shopData);
 
   attachCardListeners(card, game, data, isBackupTarget);
@@ -2483,15 +2487,40 @@ function showSealEggOpeningAnimation(def, creature, onClose) {
 }
 
 // ─── Team-Legi Aufgaben-Modal ───────────────────────────────
-// Statisch definierte Aufgabenliste. Mechanik folgt in eigener
-// Iteration — hier nur die UI-Struktur.
+// LEGI_TASKS: `interactive` markiert Aufgaben mit implementierter
+// Mechanik (öffnen einen eigenen Sub-View im selben Modal-Container).
 const LEGI_TASKS = [
-  { key: 'gift',     icon: '🎁', label: 'Andere beschenken',    status: 'active', hint: 'bald verfügbar' },
+  { key: 'gift',     icon: '🎁', label: 'Andere beschenken',    status: 'active', hint: '50 🪙 – schenk eine Stufe', interactive: true },
   { key: 'friends',  icon: '🤝', label: 'Freunde finden',       status: 'active', hint: 'bald verfügbar' },
   { key: 'win',      icon: '🏆', label: 'Gemeinsam siegen',     status: 'active', hint: 'bald verfügbar' },
   { key: 'locked_1', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
   { key: 'locked_2', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
 ];
+
+// Helper: gibt true zurück, wenn irgendein pending (unaccepted) Gift
+// für den aktuellen User existiert. Beeinflusst den Hub-Card-Blink
+// und die Row-Highlight-Klasse im Task-Modal.
+function giftPending() {
+  const tasks = window.__giftTasks;
+  if (!tasks) return false;
+  for (const key in tasks) {
+    const t = tasks[key];
+    if (t && !t.accepted_at) return true;
+  }
+  return false;
+}
+window.giftPending = giftPending;
+
+// Renderer für Task-Row-Status-Badge (rechte Seite jeder Row).
+function renderLegiTaskBadge(taskKey) {
+  const tasks = window.__giftTasks || {};
+  const state = tasks[taskKey];
+  if (!state) return '';
+  if (state.accepted_at) {
+    return `<span class="legi-task__status-badge legi-task__status-badge--done">✓ Stufe erhalten</span>`;
+  }
+  return `<span class="legi-task__status-badge legi-task__status-badge--pending">🎁 wartet</span>`;
+}
 
 function openLegiTaskModal() {
   const overlay = document.getElementById('legiTaskModal');
@@ -2506,14 +2535,25 @@ function openLegiTaskModal() {
   const progressPct = Math.min((data.growth / GROWTH_MAX) * 100, 100);
   const displayName = CREATURE_NAMES[creature] ?? creature;
 
-  const taskItems = LEGI_TASKS.map(t => `
-    <div class="legi-task legi-task--${t.status}">
-      <span class="legi-task__icon">${t.status === 'locked' ? '🔒' : t.icon}</span>
-      <div class="legi-task__body">
-        <div class="legi-task__label">${escapeHtml(t.label)}</div>
-        <div class="legi-task__hint">${escapeHtml(t.hint)}</div>
-      </div>
-    </div>`).join('');
+  const taskItems = LEGI_TASKS.map(t => {
+    const badge = renderLegiTaskBadge(t.key);
+    const pending = window.__giftTasks?.[t.key] && !window.__giftTasks[t.key].accepted_at;
+    const cls = [
+      'legi-task',
+      `legi-task--${t.status}`,
+      t.interactive ? 'legi-task--interactive' : '',
+      pending ? 'legi-task--gift-pending' : ''
+    ].filter(Boolean).join(' ');
+    return `
+      <div class="${cls}" data-task-key="${escapeHtml(t.key)}">
+        <span class="legi-task__icon">${t.status === 'locked' ? '🔒' : t.icon}</span>
+        <div class="legi-task__body">
+          <div class="legi-task__label">${escapeHtml(t.label)}</div>
+          <div class="legi-task__hint">${escapeHtml(t.hint)}</div>
+        </div>
+        ${badge}
+      </div>`;
+  }).join('');
 
   content.innerHTML = `
     <h2 class="bonbon-modal__title">Der Weg zur Legende</h2>
@@ -2532,9 +2572,336 @@ function openLegiTaskModal() {
       </div>
     </div>
   `;
+
+  // Klick-Handler nur für interaktive Rows anhängen.
+  for (const t of LEGI_TASKS) {
+    if (!t.interactive) continue;
+    const row = content.querySelector(`.legi-task[data-task-key="${t.key}"]`);
+    if (!row) continue;
+    row.addEventListener('click', () => {
+      if (t.key === 'gift') openGiftFlow();
+    });
+  }
+
   overlay.hidden = false;
 }
 window.openLegiTaskModal = openLegiTaskModal;
+
+// ─── Gift-Flow („Andere beschenken") ────────────────────────
+// State-Machine im selben #legiTaskModalContent-Container. Sub-Views:
+//   idle       — Verschenken-Button
+//   loading    — Kandidaten werden geladen
+//   candidates — 1–3 Namen zur Auswahl
+//   confirm    — Ein Name gewählt, „Ja, verschenken" bestätigen
+//   sending    — send_gift-RPC läuft
+//   sent       — Erfolg, „Nochmal verschenken" oder zurück
+//   empty      — 0 eligible Peers cluster-weit
+async function openGiftFlow() {
+  const content = document.getElementById('legiTaskModalContent');
+  if (!content) return;
+
+  const state = {
+    view: 'idle',
+    candidates: [],       // {user_id, display_name, avatar_id}
+    selected: null,
+    totalRemaining: null, // aus list_gift_candidates
+    error: null,          // string oder null
+    lastSentName: null    // für die sent-View
+  };
+
+  const TASK_KEY = 'gift';
+
+  function render() {
+    content.innerHTML = giftFlowShellHTML(state);
+    wireCommonEvents();
+    wireViewEvents();
+    bindAcceptButton();
+  }
+
+  function wireCommonEvents() {
+    const backBtn = content.querySelector('.legi-gift-back');
+    if (backBtn) backBtn.addEventListener('click', () => openLegiTaskModal());
+  }
+
+  function wireViewEvents() {
+    if (state.view === 'idle') {
+      const startBtn = content.querySelector('.legi-gift-start-btn');
+      if (startBtn) startBtn.addEventListener('click', () => startFetch());
+    }
+    if (state.view === 'candidates') {
+      content.querySelectorAll('.legi-gift-candidate').forEach(el => {
+        el.addEventListener('click', () => {
+          const uid = el.dataset.userId;
+          const cand = state.candidates.find(c => c.user_id === uid);
+          if (!cand) return;
+          state.selected = cand;
+          state.view = 'confirm';
+          render();
+        });
+      });
+    }
+    if (state.view === 'confirm') {
+      const yes = content.querySelector('.legi-gift-confirm-yes');
+      const no  = content.querySelector('.legi-gift-confirm-no');
+      if (yes) yes.addEventListener('click', () => confirmSend());
+      if (no)  no.addEventListener('click', () => {
+        state.selected = null;
+        state.view = state.candidates.length > 0 ? 'candidates' : 'idle';
+        render();
+      });
+    }
+    if (state.view === 'sent' || state.view === 'empty') {
+      const again = content.querySelector('.legi-gift-again-btn');
+      if (again) again.addEventListener('click', () => startFetch());
+    }
+  }
+
+  async function startFetch() {
+    state.view = 'loading';
+    state.error = null;
+    state.selected = null;
+    render();
+    try {
+      const res = await callGiftRpc('list_gift_candidates', { p_task_key: TASK_KEY });
+      if (!res.ok) throw new Error(res.error || 'list_failed');
+      state.candidates = res.candidates || [];
+      state.totalRemaining = res.total_remaining ?? state.candidates.length;
+      if (state.totalRemaining === 0) {
+        state.view = 'empty';
+      } else {
+        state.view = 'candidates';
+      }
+    } catch (e) {
+      state.error = giftErrorMessage(e.message);
+      state.view = 'idle';
+    }
+    render();
+  }
+
+  async function confirmSend() {
+    if (!state.selected) return;
+    const recipient = state.selected;
+    state.view = 'sending';
+    render();
+    try {
+      const res = await callGiftRpc('send_gift', {
+        p_recipient_id: recipient.user_id,
+        p_task_key: TASK_KEY
+      });
+      if (!res.ok) {
+        if (res.error === 'already_gifted') {
+          // Race: Empfänger:in aus lokaler Liste entfernen, weitermachen.
+          state.candidates = state.candidates.filter(c => c.user_id !== recipient.user_id);
+          state.selected = null;
+          if (state.candidates.length > 0) {
+            state.view = 'candidates';
+            state.error = `${recipient.display_name} wurde gerade schon beschenkt — wähle eine andere Person.`;
+          } else {
+            state.view = 'idle';
+            state.error = 'Alle drei wurden gerade schon beschenkt. Klicke erneut auf Verschenken für neue Namen.';
+          }
+          render();
+          return;
+        }
+        throw new Error(res.error || 'send_failed');
+      }
+      // Erfolg: Coins clientseitig abziehen (spentCoins-Pattern wie im Shop).
+      const sd = loadShopData();
+      sd.spentCoins = (sd.spentCoins ?? 0) + 50;
+      saveShopData(sd);
+      renderCoinDisplay(loadAllData());
+      state.lastSentName = recipient.display_name;
+      state.selected = null;
+      state.candidates = [];
+      state.view = 'sent';
+      state.error = null;
+    } catch (e) {
+      state.error = giftErrorMessage(e.message);
+      state.view = 'idle';
+    }
+    render();
+  }
+
+  // Vor-Check: reichen die Coins? Sanity-UX, keine Sicherheitsprüfung.
+  function coinBalance() {
+    const sd = loadShopData();
+    return getTotalCoins(loadAllData()) - (sd.spentCoins ?? 0);
+  }
+
+  function giftFlowShellHTML(s) {
+    const balance = coinBalance();
+    const enoughCoins = balance >= 50;
+    return `
+      <div class="legi-gift-header">
+        <button class="legi-gift-back" title="Zurück zu den Aufgaben">← Zurück</button>
+        <h2 class="bonbon-modal__title" style="margin:0;">🎁 Andere beschenken</h2>
+      </div>
+      <div class="legi-gift-flow">
+        <div class="legi-gift-side legi-gift-side--give">
+          <h3 class="legi-gift-side__title">Verschenken</h3>
+          ${renderGiveSide(s, enoughCoins, balance)}
+        </div>
+        <div class="legi-gift-side legi-gift-side--receive">
+          <h3 class="legi-gift-side__title">Empfangen</h3>
+          ${renderReceiveSide()}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderGiveSide(s, enoughCoins, balance) {
+    const errorHtml = s.error
+      ? `<p class="legi-gift-error">${escapeHtml(s.error)}</p>` : '';
+
+    if (s.view === 'loading' || s.view === 'sending') {
+      const label = s.view === 'sending' ? 'Geschenk wird verschickt…' : 'Suche Empfänger:innen…';
+      return `${errorHtml}<p class="legi-gift-loading">${label}</p>`;
+    }
+
+    if (s.view === 'empty') {
+      return `
+        <p class="legi-gift-intro">🎉 Alle in deinem Kurs haben diese Stufe schon erhalten!</p>
+        <button class="legi-gift-again-btn">Nochmal prüfen</button>`;
+    }
+
+    if (s.view === 'sent') {
+      return `
+        <p class="legi-gift-success">🎁 Geschenk an <b>${escapeHtml(s.lastSentName || '')}</b> verschickt!</p>
+        <button class="legi-gift-again-btn" ${enoughCoins ? '' : 'disabled'}>
+          Nochmal verschenken (50 🪙)
+        </button>
+        ${enoughCoins ? '' : '<p class="legi-gift-hint">Du hast nicht genug Münzen für ein weiteres Geschenk.</p>'}`;
+    }
+
+    if (s.view === 'candidates') {
+      const list = s.candidates.map(c => `
+        <button class="legi-gift-candidate" data-user-id="${escapeHtml(c.user_id)}">
+          <span class="legi-gift-candidate__name">${escapeHtml(c.display_name || 'Unbekannt')}</span>
+        </button>`).join('');
+      return `
+        ${errorHtml}
+        <p class="legi-gift-intro">Wähle eine Person aus, die eine Stufe geschenkt bekommen soll:</p>
+        <div class="legi-gift-candidates">${list}</div>
+        <p class="legi-gift-hint">Kosten: 50 🪙 — erst beim Bestätigen abgezogen.</p>`;
+    }
+
+    if (s.view === 'confirm') {
+      const name = s.selected?.display_name || 'diese Person';
+      return `
+        <p class="legi-gift-intro">Du schenkst <b>${escapeHtml(name)}</b> eine Entwicklungsstufe der Einhornkatze.</p>
+        <p class="legi-gift-cost">Kosten: <b>50 🪙</b></p>
+        <div class="legi-gift-confirm-actions">
+          <button class="legi-gift-confirm-yes" ${enoughCoins ? '' : 'disabled'}>Ja, verschenken</button>
+          <button class="legi-gift-confirm-no">Andere wählen</button>
+        </div>
+        ${enoughCoins ? '' : '<p class="legi-gift-error">Du hast leider nicht genug Münzen.</p>'}`;
+    }
+
+    // idle
+    return `
+      ${errorHtml}
+      <p class="legi-gift-intro">
+        Für <b>50 🪙</b> schenkst du einer anderen Person aus deinem Kurs eine
+        Wachstumsstufe der Einhornkatze. Diese Stufe kann nur durch ein Geschenk
+        von jemand anderem freigeschaltet werden.
+      </p>
+      <p class="legi-gift-balance">Dein Guthaben: <b>${balance} 🪙</b></p>
+      <button class="legi-gift-start-btn" ${enoughCoins ? '' : 'disabled'}>
+        50 🪙 verschenken
+      </button>
+      ${enoughCoins ? '' : '<p class="legi-gift-hint">Sammle mehr Münzen, um jemanden zu beschenken.</p>'}`;
+  }
+
+  function renderReceiveSide() {
+    const gift = window.__giftTasks?.[TASK_KEY];
+    if (!gift) {
+      return `<p class="legi-gift-intro">Stufe noch nicht erhalten. Warte, bis dich jemand aus deinem Kurs beschenkt.</p>`;
+    }
+    if (gift.accepted_at) {
+      return `
+        <p class="legi-gift-success">✓ Stufe erhalten</p>
+        <p class="legi-gift-hint">Danke, <b>${escapeHtml(gift.giver_display_name || 'Kursmitglied')}</b>!</p>`;
+    }
+    return `
+      <p class="legi-gift-pending">🎁 <b>${escapeHtml(gift.giver_display_name || 'Jemand')}</b> hat dir eine Stufe geschenkt!</p>
+      <button class="legi-gift-accept-btn">Annehmen</button>`;
+  }
+
+  // Annehmen-Button (rechte Seite) wird beim Rendern des Modals separat gebunden,
+  // damit re-render nach accept sofort greift.
+  function bindAcceptButton() {
+    const btn = content.querySelector('.legi-gift-accept-btn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Nehme an…';
+      try {
+        const res = await callGiftRpc('accept_gift', { p_task_key: TASK_KEY });
+        if (!res.ok && res.error !== 'no_pending_gift') {
+          throw new Error(res.error || 'accept_failed');
+        }
+        // Lokalen Cache aktualisieren + Server-State neu laden (Growth-Wert)
+        if (window.__giftTasks?.[TASK_KEY]) {
+          window.__giftTasks[TASK_KEY].accepted_at = new Date().toISOString();
+        }
+        await window.loadServerState?.();
+        renderCoinDisplay(loadAllData());
+        renderHub();
+        render();
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Annehmen';
+        alert('Konnte das Geschenk nicht annehmen: ' + giftErrorMessage(e.message));
+      }
+    });
+  }
+
+  render();
+}
+window.openGiftFlow = openGiftFlow;
+
+// Generischer Wrapper für die Gift-RPCs — spart Boilerplate + einheit-
+// liches Error-Handling.
+async function callGiftRpc(name, body) {
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) {
+    return { ok: false, error: 'no_session' };
+  }
+  const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    method: 'POST',
+    headers: {
+      apikey: window.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(body || {})
+  });
+  if (!res.ok) return { ok: false, error: `http_${res.status}` };
+  try {
+    return await res.json();
+  } catch (e) {
+    return { ok: false, error: 'bad_json' };
+  }
+}
+
+function giftErrorMessage(code) {
+  const map = {
+    no_session:               'Bitte neu anmelden.',
+    no_cluster:               'Du bist keinem Kurs zugeordnet.',
+    no_grant:                 'Dein Kurs hat die Einhornkatze noch nicht freigeschaltet.',
+    recipient_no_grant:       'Diese Person kann noch keine Geschenke bekommen.',
+    recipient_not_in_cluster: 'Diese Person ist nicht mehr in deinem Kurs.',
+    self_gift:                'Sich selbst kann man nicht beschenken.',
+    invalid_task_key:         'Interner Fehler (invalid_task_key).',
+    no_pending_gift:          'Es gibt kein wartendes Geschenk für dich.'
+  };
+  if (map[code]) return map[code];
+  if (typeof code === 'string' && code.startsWith('http_')) {
+    return `Netzwerkfehler (${code}). Probier es gleich nochmal.`;
+  }
+  return code || 'Unbekannter Fehler.';
+}
 
 // ─── Recovery-Hook für Late-Joiner-Reveal-Bug ───────────────
 // Wenn der Cluster unlocked ist, aber der User weder eine Kreatur

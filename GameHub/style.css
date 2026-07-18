@@ -3744,3 +3744,217 @@ input[type="password"]::-webkit-textfield-decoration-container {
   .legi-task-modal { grid-template-columns: 1fr; }
 }
 
+/* ── Task-Row-Erweiterungen: klickbar, Status-Badge, Pending-Puls ── */
+.legi-task {
+  justify-content: space-between;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.legi-task--interactive {
+  cursor: pointer;
+}
+.legi-task--interactive:hover {
+  background: rgba(180, 119, 255, 0.1);
+  transform: translateY(-1px);
+}
+.legi-task__status-badge {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.legi-task__status-badge--done {
+  background: rgba(102, 209, 107, 0.18);
+  color: #a8e6a3;
+  border: 1px solid rgba(102, 209, 107, 0.5);
+}
+.legi-task__status-badge--pending {
+  background: rgba(255, 169, 64, 0.18);
+  color: #ffcf7a;
+  border: 1px solid rgba(255, 169, 64, 0.5);
+}
+.legi-task--gift-pending {
+  animation: legi-rainbow-pulse 2.4s ease-in-out infinite;
+  border-color: transparent !important;
+}
+
+/* ── Gift-Flow (Sub-View im Task-Modal) ── */
+.legi-gift-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.legi-gift-back {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--clr-cream, #fef6e4);
+  border: 1px solid rgba(180, 119, 255, 0.35);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.legi-gift-back:hover {
+  background: rgba(180, 119, 255, 0.18);
+}
+.legi-gift-flow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  padding: 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(180, 119, 255, 0.3);
+}
+.legi-gift-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 220px;
+}
+.legi-gift-side--give {
+  border-right: 1px solid rgba(180, 119, 255, 0.2);
+  padding-right: 22px;
+}
+.legi-gift-side__title {
+  margin: 0;
+  color: var(--clr-cream, #fef6e4);
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+}
+.legi-gift-intro,
+.legi-gift-hint,
+.legi-gift-balance,
+.legi-gift-cost {
+  margin: 0;
+  color: var(--clr-cream, #fef6e4);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.legi-gift-hint {
+  color: var(--clr-cream-dim, #cbb59a);
+  font-size: 0.78rem;
+}
+.legi-gift-balance b,
+.legi-gift-cost b {
+  color: #ffcf7a;
+}
+.legi-gift-loading {
+  color: var(--clr-cream-dim, #cbb59a);
+  font-style: italic;
+  padding: 20px 0;
+  text-align: center;
+}
+.legi-gift-error {
+  margin: 0;
+  color: #ff9aa2;
+  font-size: 0.85rem;
+  background: rgba(255, 91, 107, 0.12);
+  border: 1px solid rgba(255, 91, 107, 0.35);
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.legi-gift-success {
+  margin: 0;
+  color: #a8e6a3;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.legi-gift-pending {
+  margin: 0;
+  color: var(--clr-cream, #fef6e4);
+  font-size: 0.95rem;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 169, 64, 0.12);
+  border: 1px solid rgba(255, 169, 64, 0.4);
+}
+.legi-gift-start-btn,
+.legi-gift-again-btn,
+.legi-gift-accept-btn,
+.legi-gift-confirm-yes,
+.legi-gift-confirm-no {
+  align-self: flex-start;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.legi-gift-start-btn,
+.legi-gift-again-btn,
+.legi-gift-confirm-yes {
+  background: linear-gradient(90deg, #ff85c1, #b477ff);
+  color: #1a0930;
+}
+.legi-gift-accept-btn {
+  background: linear-gradient(90deg, #66d16b, #4fb3ff);
+  color: #0f2a0f;
+}
+.legi-gift-confirm-no {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--clr-cream, #fef6e4);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.legi-gift-start-btn:hover:not([disabled]),
+.legi-gift-again-btn:hover:not([disabled]),
+.legi-gift-accept-btn:hover:not([disabled]),
+.legi-gift-confirm-yes:hover:not([disabled]),
+.legi-gift-confirm-no:hover:not([disabled]) {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+.legi-gift-start-btn[disabled],
+.legi-gift-again-btn[disabled],
+.legi-gift-confirm-yes[disabled],
+.legi-gift-accept-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.legi-gift-confirm-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.legi-gift-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.legi-gift-candidate {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(180, 119, 255, 0.3);
+  color: var(--clr-cream, #fef6e4);
+  font-family: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.legi-gift-candidate:hover {
+  background: rgba(180, 119, 255, 0.18);
+  transform: translateY(-1px);
+}
+.legi-gift-candidate__name {
+  font-weight: 700;
+}
+
+@media (max-width: 560px) {
+  .legi-gift-flow { grid-template-columns: 1fr; }
+  .legi-gift-side--give { border-right: none; padding-right: 0; border-bottom: 1px solid rgba(180, 119, 255, 0.2); padding-bottom: 22px; }
+}
+

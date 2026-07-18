@@ -1396,6 +1396,7 @@ window.syncGameStateToServer  = syncGameStateToServer;
 window.pushPendingState       = pushPendingState;
 window.loadServerShop         = loadServerShop;
 window.syncShopStateToServer  = syncShopStateToServer;
+window.loadGiftTasks          = loadGiftTasks;
 
 /* ─── Ei/Kreatur-Anzeige auf Spielseiten ─── */
 /* Nutzt feste Element-IDs: eggVisual, eggStageLabel, eggProgressFill */
@@ -1858,6 +1859,45 @@ function applyMergedShopState(merged) {
     }
     if (changed) saveStorage(STORAGE_KEY, all);
   } catch (e) { console.warn('[creatures] nest hatched restore failed:', e.message); }
+}
+
+/* Boot-Sync für Einhornkatze-Task-Gifts. Befüllt window.__giftTasks als
+   Objekt { [task_key]: {giver_id, giver_display_name, sent_at, accepted_at} }
+   für den aktuellen User im aktuellen Cluster. Auf Task-Key-Basis
+   normalisiert, weil pro (user, cluster, task) höchstens ein Gift existiert. */
+async function loadGiftTasks() {
+  window.__giftTasks = window.__giftTasks || {};
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return;
+  try {
+    const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/get_my_gift_tasks`, {
+      method: 'POST',
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: '{}'
+    });
+    if (!res.ok) throw new Error(`get_my_gift_tasks ${res.status}`);
+    const result = await res.json();
+    if (!result?.ok) throw new Error(`RPC ${result?.error || 'unknown'}`);
+    const map = {};
+    for (const t of (result.tasks || [])) {
+      if (!t?.task_key) continue;
+      map[t.task_key] = {
+        giver_id:           t.giver_id,
+        giver_display_name: t.giver_display_name,
+        sent_at:            t.sent_at,
+        accepted_at:        t.accepted_at
+      };
+    }
+    window.__giftTasks = map;
+  } catch (e) {
+    console.warn('[creatures] loadGiftTasks failed:', e.message);
+  }
 }
 
 function renderBoostIndicators(containerId, gameId) {
