@@ -3119,13 +3119,20 @@ async function openFriendsFlow() {
   };
   overlay.addEventListener('click', onOverlayClick);
 
-  // Tab-Hide: fire-and-forget leave (best effort). Zurückkehren zum Tab
-  // startet keinen auto-rejoin — User muss aktiv neu joinen.
+  // Tab-Hide: KEIN sofortiges leave — würde Multi-Tab-Testing kaputt
+  // machen und im Echtbetrieb bei Handy-Sperre den User rausfliegen
+  // lassen. Stattdessen: Heartbeat pausieren; bei visible wieder
+  // starten + einmal manuell heartbeaten. Wenn der User >30s weg ist,
+  // greift der Server-Stale-Filter (last_seen_at > now()-30s) und die
+  // Row wird für andere unsichtbar.
   function onVisibility() {
-    if (document.visibilityState === 'hidden' && state.code && !closedCleanupDone) {
-      callGiftRpc('friends_room_leave', { p_code: state.code });
-      cleanupSubscription();
-      closedCleanupDone = true;
+    if (closedCleanupDone) return;
+    if (document.visibilityState === 'hidden') {
+      if (hbInterval) { clearInterval(hbInterval); hbInterval = null; }
+    } else if (document.visibilityState === 'visible' && state.code && !hbInterval) {
+      callGiftRpc('friends_room_heartbeat', { p_code: state.code });
+      startHeartbeat();
+      refreshMembers().then(() => { if (state.view === 'waiting') render(); });
     }
   }
   document.addEventListener('visibilitychange', onVisibility);
