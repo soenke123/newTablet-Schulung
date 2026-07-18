@@ -3958,3 +3958,133 @@ input[type="password"]::-webkit-textfield-decoration-container {
   .legi-gift-side--give { border-right: none; padding-right: 0; border-bottom: 1px solid rgba(180, 119, 255, 0.2); padding-bottom: 22px; }
 }
 
+/* ─── Friends-Flow („Freunde finden") ─────────────────────── */
+.legi-friends-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px 4px 4px;
+}
+.legi-friends-code-input {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 1.7rem;
+  letter-spacing: 0.45em;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 215, 0, 0.55);
+  border-radius: 12px;
+  color: #ffe1a3;
+  box-sizing: border-box;
+}
+.legi-friends-code-input:focus {
+  outline: none;
+  border-color: #ffd700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+}
+.legi-friends-join-btn,
+.legi-friends-leave-btn,
+.legi-friends-retry-btn {
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #f0b429, #d4a830);
+  color: #1a0e05;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.legi-friends-join-btn:hover:not(:disabled),
+.legi-friends-retry-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(240, 180, 41, 0.4);
+}
+.legi-friends-join-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.legi-friends-leave-btn {
+  background: rgba(0, 0, 0, 0.4);
+  color: #eee;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  align-self: center;
+}
+.legi-friends-code-label {
+  text-align: center;
+  color: rgba(255, 215, 0, 0.85);
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  margin: 0;
+}
+.legi-friends-slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.legi-friends-slot {
+  aspect-ratio: 1;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: 2px dashed rgba(255, 215, 0, 0.35);
+  background: rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.legi-friends-slot--empty {
+  color: rgba(255, 215, 0, 0.4);
+  font-size: 2rem;
+}
+.legi-friends-slot--filled {
+  border-style: solid;
+  border-color: rgba(255, 215, 0, 0.75);
+  animation: friendsSlotPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.legi-friends-slot--self {
+  border-color: #ffd700;
+  box-shadow: 0 0 14px rgba(255, 215, 0, 0.55);
+}
+.legi-friends-slot__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.35);
+}
+.legi-friends-slot__name {
+  font-size: 0.9rem;
+  text-align: center;
+  color: #ffe1a3;
+  line-height: 1.2;
+  word-break: break-word;
+}
+.legi-friends-hero {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffd700;
+  text-shadow: 0 0 18px #ffd700, 0 0 36px #ff6400;
+  margin: 8px 0;
+  animation: creatureLevelUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes friendsSlotPop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@media (max-width: 560px) {
+  .legi-friends-slots { gap: 8px; }
+  .legi-friends-slot__avatar { width: 44px; height: 44px; }
+  .legi-friends-slot__name { font-size: 0.8rem; }
+  .legi-friends-code-input { font-size: 1.4rem; letter-spacing: 0.3em; }
+}
+

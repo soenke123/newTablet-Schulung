@@ -2491,7 +2491,7 @@ function showSealEggOpeningAnimation(def, creature, onClose) {
 // Mechanik (öffnen einen eigenen Sub-View im selben Modal-Container).
 const LEGI_TASKS = [
   { key: 'gift',     icon: '🎁', label: 'Andere beschenken',    status: 'active', hint: '50 🪙 – schenk eine Stufe', interactive: true },
-  { key: 'friends',  icon: '🤝', label: 'Freunde finden',       status: 'active', hint: 'bald verfügbar' },
+  { key: 'friends',  icon: '🤝', label: 'Freunde finden',       status: 'active', hint: '3 mit gleichem Code', interactive: true },
   { key: 'win',      icon: '🏆', label: 'Gemeinsam siegen',     status: 'active', hint: 'bald verfügbar' },
   { key: 'locked_1', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
   { key: 'locked_2', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
@@ -2579,7 +2579,8 @@ function openLegiTaskModal() {
     const row = content.querySelector(`.legi-task[data-task-key="${t.key}"]`);
     if (!row) continue;
     row.addEventListener('click', () => {
-      if (t.key === 'gift') openGiftFlow();
+      if (t.key === 'gift')    openGiftFlow();
+      if (t.key === 'friends') openFriendsFlow();
     });
   }
 
@@ -2859,6 +2860,359 @@ async function openGiftFlow() {
   render();
 }
 window.openGiftFlow = openGiftFlow;
+
+// ─── Friends-Flow („Freunde finden") ────────────────────────
+// State-Machine im gleichen #legiTaskModalContent-Container. Views:
+//   code_input — 6-stellige Ziffern-Eingabe
+//   joining    — friends_room_join RPC läuft
+//   waiting    — Raum offen, 3 Slots (self + andere/leer), Live-Refresh
+//   completing — 3/3 erreicht, „Ihr habt es geschafft" (1 s Pause)
+//   completed  — friends_room_complete durch + Level-Up-Banner
+//   error      — inline Error mit Retry
+//
+// Realtime via Postgres-Changes auf friends_room_presence. Wegen der
+// Ein-Filter-Beschränkung der Supabase-Subscription filtern wir nur
+// auf cluster_id serverseitig; auf code wird clientseitig gefiltert.
+// Heartbeat alle 6 s hält last_seen_at frisch. Ein Client-side
+// stale-Ticker (5 s) rendert tote Slots weg, falls kein Realtime-
+// Event kommt.
+async function openFriendsFlow() {
+  const content = document.getElementById('legiTaskModalContent');
+  const overlay = document.getElementById('legiTaskModal');
+  if (!content || !overlay) return;
+
+  const me = window.getSessionUser?.();
+  if (!me || !me.cluster_id) {
+    content.innerHTML = `
+      <div class="legi-friends-body">
+        <p class="legi-gift-error">Du brauchst einen Kurs, um Freunde zu finden.</p>
+      </div>`;
+    return;
+  }
+
+  const state = {
+    view: 'code_input',
+    code: '',
+    members: [],       // {user_id, display_name, avatar_id, last_seen_at, isSelf}
+    error: null,
+    completedShown: false,
+  };
+
+  const HB_MS    = 6000;
+  const STALE_MS = 30000;
+  let hbInterval  = null;
+  let staleTicker = null;
+  let channel     = null;
+  let closedCleanupDone = false;
+
+  function render() {
+    content.innerHTML = friendsFlowShellHTML(state);
+    wireEvents();
+  }
+
+  function wireEvents() {
+    const back = content.querySelector('.legi-friends-back');
+    if (back) back.addEventListener('click', () => cleanupAndReturn());
+
+    if (state.view === 'code_input') {
+      const input = content.querySelector('.legi-friends-code-input');
+      const btn   = content.querySelector('.legi-friends-join-btn');
+      if (input) {
+        input.addEventListener('input', e => {
+          state.code = e.target.value.replace(/\D/g, '').slice(0, 6);
+          e.target.value = state.code;
+          if (btn) btn.disabled = state.code.length !== 6;
+        });
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter' && state.code.length === 6) doJoin();
+        });
+        setTimeout(() => input.focus(), 20);
+      }
+      if (btn) btn.addEventListener('click', () => doJoin());
+    }
+
+    if (state.view === 'waiting') {
+      const leave = content.querySelector('.legi-friends-leave-btn');
+      if (leave) leave.addEventListener('click', () => cleanupAndReturn());
+    }
+
+    if (state.view === 'error') {
+      const retry = content.querySelector('.legi-friends-retry-btn');
+      if (retry) retry.addEventListener('click', () => {
+        state.view = 'code_input';
+        state.error = null;
+        render();
+      });
+    }
+  }
+
+  async function doJoin() {
+    if (state.code.length !== 6) return;
+    state.view = 'joining';
+    state.error = null;
+    render();
+
+    const res = await callGiftRpc('friends_room_join', { p_code: state.code });
+    if (!res.ok) {
+      state.error = friendsErrorMessage(res.error);
+      state.view = 'error';
+      render();
+      return;
+    }
+
+    await refreshMembers();
+    startRealtime();
+    startHeartbeat();
+    startStaleTicker();
+
+    state.view = 'waiting';
+    render();
+    checkComplete();
+  }
+
+  async function refreshMembers() {
+    const res = await callGiftRpc('friends_room_snapshot', { p_code: state.code });
+    if (!res.ok) {
+      // not_in_room o.ä. — Raum ist gerade weg, wir zeigen leere Slots
+      state.members = [];
+      return;
+    }
+    const now = Date.now();
+    state.members = (res.members || [])
+      .filter(m => now - Date.parse(m.last_seen_at) < STALE_MS)
+      .map(m => ({
+        user_id:      m.user_id,
+        display_name: m.display_name,
+        avatar_id:    m.avatar_id,
+        last_seen_at: m.last_seen_at,
+        isSelf:       m.user_id === me.id,
+      }));
+    // Self immer Slot 1
+    state.members.sort((a, b) => (b.isSelf ? 1 : 0) - (a.isSelf ? 1 : 0));
+  }
+
+  function startRealtime() {
+    const client = window.supabaseClient;
+    if (!client) return;
+    const channelName = `friends-room-${me.cluster_id}-${state.code}`;
+    channel = client
+      .channel(channelName)
+      .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'friends_room_presence',
+            filter: `cluster_id=eq.${me.cluster_id}` },
+          payload => {
+            const codeNew = payload.new?.code;
+            const codeOld = payload.old?.code;
+            if (codeNew !== state.code && codeOld !== state.code) return;
+            refreshMembers().then(() => {
+              if (state.view === 'waiting') {
+                render();
+                checkComplete();
+              }
+            });
+          })
+      .subscribe();
+  }
+
+  function startHeartbeat() {
+    hbInterval = setInterval(async () => {
+      await callGiftRpc('friends_room_heartbeat', { p_code: state.code });
+    }, HB_MS);
+  }
+
+  function startStaleTicker() {
+    staleTicker = setInterval(() => {
+      const before = state.members.length;
+      const now = Date.now();
+      state.members = state.members.filter(m =>
+        now - Date.parse(m.last_seen_at) < STALE_MS);
+      if (state.members.length !== before && state.view === 'waiting') {
+        render();
+      }
+    }, 5000);
+  }
+
+  async function checkComplete() {
+    if (state.completedShown) return;
+    if (state.members.length < 3) return;
+    state.completedShown = true;
+    state.view = 'completing';
+    render();
+
+    // 1 s Pause, damit User „Ihr habt es geschafft" liest
+    await new Promise(r => setTimeout(r, 1000));
+
+    const res = await callGiftRpc('friends_room_complete', { p_code: state.code });
+    if (!res.ok && res.error !== 'not_in_room') {
+      console.warn('[friends] complete failed:', res.error);
+    }
+
+    await window.loadGiftTasks?.();
+    await window.loadServerState?.();
+    if (typeof renderHub === 'function') renderHub();
+
+    triggerFriendsHeroBanner();
+
+    state.view = 'completed';
+    render();
+
+    cleanupSubscription();
+    await callGiftRpc('friends_room_leave', { p_code: state.code });
+
+    // Nach kurzer Erfolgs-Anzeige zurück ins Task-Modal
+    setTimeout(() => {
+      if (!overlay.hidden) openLegiTaskModal();
+    }, 2500);
+  }
+
+  function triggerFriendsHeroBanner() {
+    const banner = document.createElement('div');
+    banner.className = 'levelup-banner levelup-banner--final';
+    banner.textContent = 'Freundschaftsstufe erreicht!';
+    document.body.appendChild(banner);
+    banner.addEventListener('animationend', () => banner.remove(), { once: true });
+    // Fallback, falls animationend nicht feuert
+    setTimeout(() => banner.remove(), 3000);
+  }
+
+  function cleanupSubscription() {
+    if (hbInterval)  { clearInterval(hbInterval);  hbInterval  = null; }
+    if (staleTicker) { clearInterval(staleTicker); staleTicker = null; }
+    if (channel && window.supabaseClient) {
+      try { window.supabaseClient.removeChannel(channel); } catch (e) {}
+      channel = null;
+    }
+    document.removeEventListener('visibilitychange', onVisibility);
+  }
+
+  async function cleanupAndReturn() {
+    if (closedCleanupDone) return;
+    closedCleanupDone = true;
+    cleanupSubscription();
+    if (state.code) {
+      await callGiftRpc('friends_room_leave', { p_code: state.code });
+    }
+    openLegiTaskModal();
+  }
+
+  // Modal-Close-Button + Overlay-Klick: eigenen once-Cleanup zusätzlich zum
+  // bestehenden hidden=true-Handler registrieren, damit Presence-Row auch
+  // beim X-Klick weggeht.
+  const closeBtn = document.getElementById('legiTaskModalClose');
+  const onClose = () => {
+    if (closedCleanupDone) return;
+    closedCleanupDone = true;
+    cleanupSubscription();
+    if (state.code) callGiftRpc('friends_room_leave', { p_code: state.code });
+  };
+  if (closeBtn) closeBtn.addEventListener('click', onClose, { once: true });
+  const onOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+      overlay.removeEventListener('click', onOverlayClick);
+    }
+  };
+  overlay.addEventListener('click', onOverlayClick);
+
+  // Tab-Hide: fire-and-forget leave (best effort). Zurückkehren zum Tab
+  // startet keinen auto-rejoin — User muss aktiv neu joinen.
+  function onVisibility() {
+    if (document.visibilityState === 'hidden' && state.code && !closedCleanupDone) {
+      callGiftRpc('friends_room_leave', { p_code: state.code });
+      cleanupSubscription();
+      closedCleanupDone = true;
+    }
+  }
+  document.addEventListener('visibilitychange', onVisibility);
+
+  render();
+}
+window.openFriendsFlow = openFriendsFlow;
+
+function friendsFlowShellHTML(s) {
+  const header = `
+    <div class="legi-gift-header">
+      <button class="legi-friends-back" title="Zurück zu den Aufgaben">← Zurück</button>
+      <h2 class="bonbon-modal__title" style="margin:0;">🤝 Freunde finden</h2>
+    </div>`;
+
+  if (s.view === 'code_input') {
+    return `${header}
+      <div class="legi-friends-body">
+        <p class="legi-gift-intro">
+          Sprecht euch mit zwei Kursmitgliedern ab und gebt alle den gleichen 6-stelligen
+          Code ein. Sobald ihr zu dritt im Raum seid, habt ihr die Aufgabe geschafft.
+        </p>
+        <input class="legi-friends-code-input" type="tel" inputmode="numeric"
+               maxlength="6" placeholder="6-stelliger Code" autocomplete="off">
+        <button class="legi-friends-join-btn" disabled>Finden</button>
+      </div>`;
+  }
+
+  if (s.view === 'joining') {
+    return `${header}
+      <div class="legi-friends-body">
+        <p class="legi-gift-loading">Betrete Raum…</p>
+      </div>`;
+  }
+
+  if (s.view === 'waiting' || s.view === 'completing') {
+    const slots = [0, 1, 2].map(i => renderFriendsSlot(s.members[i])).join('');
+    const bottom = s.view === 'completing'
+      ? `<p class="legi-friends-hero">Ihr habt es geschafft!</p>`
+      : `<button class="legi-friends-leave-btn">Raum verlassen</button>`;
+    return `${header}
+      <div class="legi-friends-body">
+        <p class="legi-friends-code-label">Code: <b>${escapeHtml(s.code)}</b> — ${s.members.length}/3</p>
+        <div class="legi-friends-slots">${slots}</div>
+        ${bottom}
+      </div>`;
+  }
+
+  if (s.view === 'completed') {
+    return `${header}
+      <div class="legi-friends-body">
+        <p class="legi-friends-hero">🎉 Freundschaftsstufe erreicht!</p>
+      </div>`;
+  }
+
+  return `${header}
+    <div class="legi-friends-body">
+      <p class="legi-gift-error">${escapeHtml(s.error || 'Unbekannter Fehler.')}</p>
+      <button class="legi-friends-retry-btn">Noch einmal versuchen</button>
+    </div>`;
+}
+
+function renderFriendsSlot(member) {
+  if (!member) {
+    return `<div class="legi-friends-slot legi-friends-slot--empty">…</div>`;
+  }
+  const avatarUrl = window.getAvatarUrl
+    ? window.getAvatarUrl(member.avatar_id || 'default', '../')
+    : '';
+  const selfClass = member.isSelf ? ' legi-friends-slot--self' : '';
+  return `
+    <div class="legi-friends-slot legi-friends-slot--filled${selfClass}">
+      <img class="legi-friends-slot__avatar" src="${escapeHtml(avatarUrl)}" alt="" />
+      <span class="legi-friends-slot__name">${escapeHtml(member.display_name || '…')}</span>
+    </div>`;
+}
+
+function friendsErrorMessage(code) {
+  const map = {
+    no_session:       'Bitte neu anmelden.',
+    invalid_code:     'Der Code muss aus genau 6 Ziffern bestehen.',
+    no_cluster:       'Du bist keinem Kurs zugeordnet.',
+    no_grant:         'Dein Kurs hat die Einhornkatze noch nicht freigeschaltet.',
+    not_in_room:      'Du bist nicht mehr im Raum — bitte neu beitreten.',
+    not_enough_users: 'Es sind noch nicht genug Leute im Raum.',
+  };
+  if (map[code]) return map[code];
+  if (typeof code === 'string' && code.startsWith('http_')) {
+    return `Netzwerkfehler (${code}). Probier es gleich nochmal.`;
+  }
+  return code || 'Unbekannter Fehler.';
+}
 
 // Generischer Wrapper für die Gift-RPCs — spart Boilerplate + einheit-
 // liches Error-Handling.
