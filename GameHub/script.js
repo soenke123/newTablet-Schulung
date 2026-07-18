@@ -2995,6 +2995,17 @@ async function openFriendsFlow() {
   function startRealtime() {
     const client = window.supabaseClient;
     if (!client) { console.warn('[friends] no supabaseClient'); return; }
+    // Auth-Token explizit auf den Realtime-Layer setzen — sonst
+    // fällt Realtime nach Session-Refresh auf anon zurück und RLS
+    // blockiert alle Events (Symptom: subscribed=OK, aber nie ein Event).
+    try {
+      if (window.__accessToken && client.realtime?.setAuth) {
+        client.realtime.setAuth(window.__accessToken);
+        console.log('[friends] realtime auth set');
+      }
+    } catch (e) {
+      console.warn('[friends] setAuth failed:', e.message);
+    }
     const channelName = `friends-room-${me.cluster_id}-${state.code}`;
     console.log('[friends] subscribing channel:', channelName);
     // Kein server-side filter — UUID-Filter machen bei Supabase Realtime
