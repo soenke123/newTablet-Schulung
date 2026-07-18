@@ -2972,8 +2972,9 @@ async function openFriendsFlow() {
 
   async function refreshMembers() {
     const res = await callGiftRpc('friends_room_snapshot', { p_code: state.code });
+    console.log('[friends] snapshot res:', res);
     if (!res.ok) {
-      // not_in_room o.ä. — Raum ist gerade weg, wir zeigen leere Slots
+      console.warn('[friends] snapshot failed:', res.error);
       state.members = [];
       return;
     }
@@ -2993,14 +2994,16 @@ async function openFriendsFlow() {
 
   function startRealtime() {
     const client = window.supabaseClient;
-    if (!client) return;
+    if (!client) { console.warn('[friends] no supabaseClient'); return; }
     const channelName = `friends-room-${me.cluster_id}-${state.code}`;
+    console.log('[friends] subscribing channel:', channelName);
     channel = client
       .channel(channelName)
       .on('postgres_changes',
           { event: '*', schema: 'public', table: 'friends_room_presence',
             filter: `cluster_id=eq.${me.cluster_id}` },
           payload => {
+            console.log('[friends] realtime event:', payload.eventType, payload.new || payload.old);
             const codeNew = payload.new?.code;
             const codeOld = payload.old?.code;
             if (codeNew !== state.code && codeOld !== state.code) return;
@@ -3011,7 +3014,9 @@ async function openFriendsFlow() {
               }
             });
           })
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log('[friends] subscribe status:', status, err || '');
+      });
   }
 
   function startHeartbeat() {
