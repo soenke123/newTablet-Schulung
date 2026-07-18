@@ -3078,7 +3078,11 @@ async function openFriendsFlow() {
     render();
 
     cleanupSubscription();
-    await callGiftRpc('friends_room_leave', { p_code: state.code });
+    // KEIN leave hier — sonst race: der schnellste User löscht seine
+    // Row bevor die anderen ihren complete-RPC machen können →
+    // active < 3 → error not_enough_users → kein Growth für sie.
+    // Der Server-Stale-Filter (30s ohne Heartbeat) räumt die Row auf,
+    // in der Zwischenzeit haben alle anderen Zeit für ihren complete.
 
     // Nach kurzer Erfolgs-Anzeige zurück ins Task-Modal
     setTimeout(() => {
