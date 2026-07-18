@@ -3048,6 +3048,7 @@ async function openFriendsFlow() {
     await new Promise(r => setTimeout(r, 1000));
 
     const res = await callGiftRpc('friends_room_complete', { p_code: state.code });
+    console.log('[friends] complete res:', res);
     if (!res.ok && res.error !== 'not_in_room') {
       console.warn('[friends] complete failed:', res.error);
     }
