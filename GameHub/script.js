@@ -2997,16 +2997,23 @@ async function openFriendsFlow() {
     if (!client) { console.warn('[friends] no supabaseClient'); return; }
     const channelName = `friends-room-${me.cluster_id}-${state.code}`;
     console.log('[friends] subscribing channel:', channelName);
+    // Kein server-side filter — UUID-Filter machen bei Supabase Realtime
+    // Probleme (Events kommen nicht durch). RLS-Policy 0038 begrenzt die
+    // sichtbaren Rows ohnehin auf den eigenen Cluster; wir filtern
+    // clientseitig nur noch auf cluster_id + code.
     channel = client
       .channel(channelName)
       .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'friends_room_presence',
-            filter: `cluster_id=eq.${me.cluster_id}` },
+          { event: '*', schema: 'public', table: 'friends_room_presence' },
           payload => {
             console.log('[friends] realtime event:', payload.eventType, payload.new || payload.old);
-            const codeNew = payload.new?.code;
-            const codeOld = payload.old?.code;
-            if (codeNew !== state.code && codeOld !== state.code) return;
+            const rowNew = payload.new || {};
+            const rowOld = payload.old || {};
+            const clusterMatch = rowNew.cluster_id === me.cluster_id
+                              || rowOld.cluster_id === me.cluster_id;
+            const codeMatch = rowNew.code === state.code
+                           || rowOld.code === state.code;
+            if (!clusterMatch || !codeMatch) return;
             refreshMembers().then(() => {
               if (state.view === 'waiting') {
                 render();
