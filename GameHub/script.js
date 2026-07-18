@@ -3026,13 +3026,21 @@ async function openFriendsFlow() {
   }
 
   function startStaleTicker() {
-    staleTicker = setInterval(() => {
+    staleTicker = setInterval(async () => {
       const before = state.members.length;
       const now = Date.now();
       state.members = state.members.filter(m =>
         now - Date.parse(m.last_seen_at) < STALE_MS);
+      // Wenn kein Realtime-Event kam und wir dabei alles verloren
+      // haben (oder nie was hatten), einmal snapshot re-fetchen —
+      // Selbstheilungs-Fallback bei zwischenzeitlichen Verbindungs-
+      // störungen (mobile Netze, Screen-Wechsel).
+      if (state.view === 'waiting' && state.members.length === 0) {
+        await refreshMembers();
+      }
       if (state.members.length !== before && state.view === 'waiting') {
         render();
+        checkComplete();
       }
     }, 5000);
   }
@@ -3174,10 +3182,16 @@ function friendsFlowShellHTML(s) {
     const bottom = s.view === 'completing'
       ? `<p class="legi-friends-hero">Ihr habt es geschafft!</p>`
       : `<button class="legi-friends-leave-btn">Raum verlassen</button>`;
+    // Wenn der Server keine Member zurückliefert (auch nicht self),
+    // ist die Verbindung ins Wanken geraten — visueller Hinweis.
+    const warning = (s.view === 'waiting' && s.members.length === 0)
+      ? `<p class="legi-friends-warning">Verbindung wackelt — bleib im Modal, es wird gleich wieder aktualisiert.</p>`
+      : '';
     return `${header}
       <div class="legi-friends-body">
         <p class="legi-friends-code-label">Code: <b>${escapeHtml(s.code)}</b> — ${s.members.length}/3</p>
         <div class="legi-friends-slots">${slots}</div>
+        ${warning}
         ${bottom}
       </div>`;
   }
