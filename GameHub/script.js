@@ -2995,45 +2995,73 @@ async function openFriendsFlow() {
   function startRealtime() {
     const client = window.supabaseClient;
     if (!client) { console.warn('[friends] no supabaseClient'); return; }
-    // Auth-Token explizit auf den Realtime-Layer setzen — sonst
-    // fällt Realtime nach Session-Refresh auf anon zurück und RLS
-    // blockiert alle Events (Symptom: subscribed=OK, aber nie ein Event).
+    // Auth-Token an den Realtime-Layer geben (falls Session-Refresh).
     try {
       if (window.__accessToken && client.realtime?.setAuth) {
         client.realtime.setAuth(window.__accessToken);
-        console.log('[friends] realtime auth set');
       }
     } catch (e) {
       console.warn('[friends] setAuth failed:', e.message);
     }
+    // Presence statt postgres_changes — bei uns delivert postgres_changes
+    // nicht zuverlässig (Symptom: SUBSCRIBED, aber keine Events). Presence
+    // ist reine WebSocket-Kommunikation zwischen Clients, umgeht RLS und
+    // Publications komplett. Der Server-Complete-RPC prüft weiterhin die
+    // DB-Presence-Rows (via Heartbeat), damit das cheat-sicher bleibt.
     const channelName = `friends-room-${me.cluster_id}-${state.code}`;
-    console.log('[friends] subscribing channel:', channelName);
-    // Kein server-side filter — UUID-Filter machen bei Supabase Realtime
-    // Probleme (Events kommen nicht durch). RLS-Policy 0038 begrenzt die
-    // sichtbaren Rows ohnehin auf den eigenen Cluster; wir filtern
-    // clientseitig nur noch auf cluster_id + code.
-    channel = client
-      .channel(channelName)
-      .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'friends_room_presence' },
-          payload => {
-            console.log('[friends] realtime event:', payload.eventType, payload.new || payload.old);
-            const rowNew = payload.new || {};
-            const rowOld = payload.old || {};
-            const clusterMatch = rowNew.cluster_id === me.cluster_id
-                              || rowOld.cluster_id === me.cluster_id;
-            const codeMatch = rowNew.code === state.code
-                           || rowOld.code === state.code;
-            if (!clusterMatch || !codeMatch) return;
-            refreshMembers().then(() => {
-              if (state.view === 'waiting') {
-                render();
-                checkComplete();
-              }
-            });
-          })
-      .subscribe((status, err) => {
+    console.log('[friends] subscribing presence channel:', channelName);
+    channel = client.channel(channelName, {
+      config: { presence: { key: me.id } }
+    });
+
+    const applyPresenceState = () => {
+      const raw = channel.presenceState() || {};
+      // presenceState: { <key>: [ { …payload }, … ] } — je Key kann mehrere
+      // Presences enthalten (Multi-Tab pro User). Wir nehmen die neueste.
+      const nowIso = new Date().toISOString();
+      const list = [];
+      for (const key of Object.keys(raw)) {
+        const arr = raw[key];
+        if (!Array.isArray(arr) || arr.length === 0) continue;
+        const p = arr[arr.length - 1];
+        list.push({
+          user_id:      p.user_id || key,
+          display_name: p.display_name || '…',
+          avatar_id:    p.avatar_id,
+          last_seen_at: p.joined_at || nowIso,
+          isSelf:       (p.user_id || key) === me.id,
+        });
+      }
+      list.sort((a, b) => (b.isSelf ? 1 : 0) - (a.isSelf ? 1 : 0));
+      state.members = list;
+    };
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        console.log('[friends] presence sync');
+        applyPresenceState();
+        if (state.view === 'waiting') { render(); checkComplete(); }
+      })
+      .on('presence', { event: 'join' }, ({ newPresences }) => {
+        console.log('[friends] presence join:', newPresences);
+        applyPresenceState();
+        if (state.view === 'waiting') { render(); checkComplete(); }
+      })
+      .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+        console.log('[friends] presence leave:', leftPresences);
+        applyPresenceState();
+        if (state.view === 'waiting') render();
+      })
+      .subscribe(async (status, err) => {
         console.log('[friends] subscribe status:', status, err || '');
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            user_id:      me.id,
+            display_name: me.display_name,
+            avatar_id:    me.avatar_id,
+            joined_at:    new Date().toISOString(),
+          });
+        }
       });
   }
 
@@ -3064,6 +3092,8 @@ async function openFriendsFlow() {
   }
 
   async function checkComplete() {
+    console.log('[friends] checkComplete called, members:', state.members.length,
+                'completedShown:', state.completedShown, 'view:', state.view);
     if (state.completedShown) return;
     if (state.members.length < 3) return;
     if (closedCleanupDone) return;
@@ -3075,10 +3105,25 @@ async function openFriendsFlow() {
     await new Promise(r => setTimeout(r, 1000));
     if (closedCleanupDone) return;
 
-    const res = await callGiftRpc('friends_room_complete', { p_code: state.code });
-    console.log('[friends] complete res:', res);
-    if (!res.ok && res.error !== 'not_in_room') {
-      console.warn('[friends] complete failed:', res.error);
+    // Presence ist schneller als DB — der Complete-RPC prüft aber die
+    // DB. Wenn andere User ihre friends_room_join-RPC noch nicht durch
+    // haben, gibt der Server 'not_enough_users' zurück. Bis zu 5x
+    // retryen (mit je 1s Pause), bis der Server auch 3 aktive Rows
+    // sieht.
+    let res = null;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      res = await callGiftRpc('friends_room_complete', { p_code: state.code });
+      console.log(`[friends] complete res (try ${attempt}):`, res);
+      if (res.ok) break;
+      if (res.error === 'not_enough_users') {
+        await new Promise(r => setTimeout(r, 1000));
+        if (closedCleanupDone) return;
+        continue;
+      }
+      break;
+    }
+    if (!res || (!res.ok && res.error !== 'not_in_room')) {
+      console.warn('[friends] complete failed after retries:', res && res.error);
     }
 
     await window.loadGiftTasks?.();
