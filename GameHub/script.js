@@ -2979,7 +2979,10 @@ async function openFriendsFlow() {
       return;
     }
     const now = Date.now();
-    state.members = (res.members || [])
+    // DB-Snapshot ist die Wahrheit — wenn er mehr Members hat als
+    // Presence (weil Presence-Event verloren ging oder Session-Refresh
+    // die Verbindung gestört hat), gewinnt der Snapshot.
+    const snapshotMembers = (res.members || [])
       .filter(m => now - Date.parse(m.last_seen_at) < STALE_MS)
       .map(m => ({
         user_id:      m.user_id,
@@ -2988,8 +2991,16 @@ async function openFriendsFlow() {
         last_seen_at: m.last_seen_at,
         isSelf:       m.user_id === me.id,
       }));
-    // Self immer Slot 1
-    state.members.sort((a, b) => (b.isSelf ? 1 : 0) - (a.isSelf ? 1 : 0));
+    if (snapshotMembers.length >= state.members.length) {
+      state.members = snapshotMembers;
+      state.members.sort((a, b) => (b.isSelf ? 1 : 0) - (a.isSelf ? 1 : 0));
+    }
+    // Auch nach Snapshot Complete triggern, falls DB 3+ zeigt und
+    // Presence stuck war.
+    if (state.view === 'waiting' && state.members.length >= 3) {
+      render();
+      checkComplete();
+    }
   }
 
   function startRealtime() {
@@ -3074,14 +3085,10 @@ async function openFriendsFlow() {
   function startStaleTicker() {
     staleTicker = setInterval(async () => {
       const before = state.members.length;
-      const now = Date.now();
-      state.members = state.members.filter(m =>
-        now - Date.parse(m.last_seen_at) < STALE_MS);
-      // Wenn kein Realtime-Event kam und wir dabei alles verloren
-      // haben (oder nie was hatten), einmal snapshot re-fetchen —
-      // Selbstheilungs-Fallback bei zwischenzeitlichen Verbindungs-
-      // störungen (mobile Netze, Screen-Wechsel).
-      if (state.view === 'waiting' && state.members.length === 0) {
+      // Wenn Raum noch nicht voll (Presence-Feedback unvollständig),
+      // regelmäßig DB-Snapshot als Sync-Fallback ziehen. refreshMembers
+      // triggert selbst render + checkComplete falls dabei 3+ herauskommen.
+      if (state.view === 'waiting' && state.members.length < 3) {
         await refreshMembers();
       }
       if (state.members.length !== before && state.view === 'waiting') {
