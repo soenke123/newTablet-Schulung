@@ -42,7 +42,7 @@ const selectedIds = new Set();
 // Wenn dort ergänzt wird → hier nachziehen. Bewusst duplizierte Wahrheit,
 // damit der Admin-Panel ohne GameHub-Import laufen kann.
 const LEGENDARY_CREATURES = new Set([
-  'robot', 'pfau', 'chinDrache', 'schnabeltier'
+  'robot', 'pfau', 'chinDrache', 'schnabeltier', 'einhornkatze'
 ]);
 
 // ─── REST helper ──────────────────────────────────────────────
