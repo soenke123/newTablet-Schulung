@@ -1612,9 +1612,10 @@ function renderCoinBank(containerId, coinsGained) {
 }
 
 /* ─── Bonbon-Bank (Season 3, unter der Coin-Bank) ────────────
-   Zeigt Basis-Bonbons + optional Tages-Bonus. Klein, Regenbogen-Text.
-   result-Objekt kommt aus award_game_bonbons-RPC bzw. window.__lastBonbonResult.
-   Rendert nichts wenn result.enabled=false oder awarded=0. */
+   Zeigt Basis-Bonbons + optional Tages-Bonus als eigene "Karte" analog
+   zur Coin-Bank. Styles werden INLINE eingebettet, weil Games GameHub/style.css
+   nicht laden — jedes Game hätte sonst ungestylten Fallback.
+   result-Objekt kommt aus award_game_bonbons-RPC bzw. window.__lastBonbonResult. */
 function renderBonbonBank(containerId, result) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -1622,16 +1623,121 @@ function renderBonbonBank(containerId, result) {
   if (!result || !result.ok) return;
   const base  = result.base  || 0;
   const bonus = result.bonus || 0;
-  if (base + bonus <= 0) return;
+  const total = base + bonus;
+  if (total <= 0) return;
+
+  // Nur EINMAL pro Page Styles einbetten (auch wenn Bank mehrfach gerendert wird).
+  if (!document.getElementById('bonbonBankStyles')) {
+    const style = document.createElement('style');
+    style.id = 'bonbonBankStyles';
+    style.textContent = `
+      @keyframes bonbonRainbowShift {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 200% 50%; }
+      }
+      @keyframes bonbonBankIn {
+        from { opacity: 0; transform: translateY(-6px) scale(.92); }
+        to   { opacity: 1; transform: translateY(0)   scale(1); }
+      }
+      @keyframes bonbonBonusPulse {
+        0%,100% { transform: scale(1);   filter: drop-shadow(0 0 3px rgba(255,200,80,.35)); }
+        50%     { transform: scale(1.05); filter: drop-shadow(0 0 8px rgba(255,200,80,.7)); }
+      }
+      .bonbon-bank {
+        margin: 12px auto 0;
+        padding: 12px 18px 14px;
+        max-width: 320px;
+        background: linear-gradient(180deg, rgba(58,35,80,.85) 0%, rgba(30,20,55,.85) 100%);
+        border-radius: 16px;
+        text-align: center;
+        color: #fef6e4;
+        font-family: 'Nunito', system-ui, sans-serif;
+        box-shadow: 0 6px 18px rgba(0,0,0,.32), 0 0 0 1px rgba(212,168,48,.35), 0 0 22px rgba(140,80,220,.18);
+        position: relative;
+        overflow: hidden;
+        animation: bonbonBankIn .35s cubic-bezier(.34,1.56,.64,1) both;
+      }
+      .bonbon-bank::before {
+        content: '';
+        position: absolute; inset: 0;
+        border-radius: 16px;
+        padding: 2px;
+        background: linear-gradient(90deg,#ff4d4d,#ff9a3c,#ffd93d,#6ee06e,#4ecdff,#a480ff,#ff77e5,#ff4d4d);
+        background-size: 200% 100%;
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+                mask-composite: exclude;
+        animation: bonbonRainbowShift 6s linear infinite;
+        pointer-events: none;
+      }
+      .bonbon-bank__head {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        font-family: 'Cinzel', 'Nunito', serif;
+        font-weight: 800; font-size: .82rem;
+        letter-spacing: .12em;
+        color: #ffd76a;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .bonbon-bank__head-icon { font-size: 1.15rem; filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+      .bonbon-bank__amount-row {
+        display: flex; align-items: baseline; justify-content: center; gap: 6px;
+      }
+      .bonbon-bank__amount {
+        font-family: 'Cinzel', 'Nunito', serif;
+        font-weight: 800; font-size: 1.9rem;
+        background: linear-gradient(90deg,#ff4d4d,#ff9a3c,#ffd93d,#6ee06e,#4ecdff,#a480ff,#ff77e5,#ff4d4d);
+        background-size: 200% 100%;
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+        animation: bonbonRainbowShift 6s linear infinite;
+        line-height: 1;
+      }
+      .bonbon-bank__amount-suffix {
+        font-size: 1.4rem;
+        line-height: 1;
+      }
+      .bonbon-bank__breakdown {
+        margin-top: 6px;
+        font-size: .78rem;
+        color: rgba(254,246,228,.72);
+      }
+      .bonbon-bank__bonus-chip {
+        display: inline-flex; align-items: center; gap: 6px;
+        margin-top: 10px;
+        padding: 5px 12px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(255,215,80,.22), rgba(255,140,60,.18));
+        border: 1px solid rgba(255,215,80,.65);
+        color: #ffe9a3;
+        font-weight: 800; font-size: .82rem;
+        letter-spacing: .04em;
+        animation: bonbonBonusPulse 2.2s ease-in-out infinite;
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
   const wrap = document.createElement('div');
   wrap.className = 'bonbon-bank';
-  let html = '<div class="bonbon-bank__label">🍬 Bonbons</div>' +
-             '<div class="bonbon-bank__earned">+' + base + ' 🍬</div>';
-  if (bonus > 0) {
-    html += '<div class="bonbon-bank__bonus">+' + bonus + ' 🍬 Tages-Bonus!</div>';
-  }
-  wrap.innerHTML = html;
+  const breakdown = bonus > 0
+    ? `<div class="bonbon-bank__breakdown">${base} Basis + ${bonus} Tages-Bonus</div>`
+    : `<div class="bonbon-bank__breakdown">deine Bonbons für diese Runde</div>`;
+  const bonusChip = bonus > 0
+    ? `<div class="bonbon-bank__bonus-chip">✨ +${bonus} Tages-Bonus!</div>`
+    : '';
+  wrap.innerHTML =
+    `<div class="bonbon-bank__head">` +
+      `<span class="bonbon-bank__head-icon">🍬</span>` +
+      `<span>Regenbogen-Bonbons</span>` +
+      `<span class="bonbon-bank__head-icon">🍬</span>` +
+    `</div>` +
+    `<div class="bonbon-bank__amount-row">` +
+      `<span class="bonbon-bank__amount">+${total}</span>` +
+      `<span class="bonbon-bank__amount-suffix">🍬</span>` +
+    `</div>` +
+    breakdown +
+    bonusChip;
   el.appendChild(wrap);
 }
 
@@ -1807,17 +1913,64 @@ async function callBonbonRPC(name, body) {
   }
 }
 
+/* Europe/Berlin-Datum als 'YYYY-MM-DD'. Muss mit Server-Datumsberechnung
+   (now() at time zone 'Europe/Berlin') übereinstimmen — sonst zeigt der
+   Hub-Kachel-Hint fälschlich +20 nach der ersten Runde noch weiter. */
+function getBerlinTodayIso() {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Berlin',
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const y = parts.find(p => p.type === 'year').value;
+    const m = parts.find(p => p.type === 'month').value;
+    const d = parts.find(p => p.type === 'day').value;
+    return `${y}-${m}-${d}`;
+  } catch (e) {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+/* Lokaler Marker in localStorage: überlebt Navigation vom Game zum Hub,
+   falls die awardGameBonbons-Response nicht mehr am Client ankommt (der
+   Server-Insert passiert aber trotzdem). Beim Hub-Boot mergen wir das
+   mit dem Server-Cache. Alt-datierte Einträge werden verworfen. */
+const BONBON_LOCAL_CLAIMS_KEY = 'lernwelt_bonbon_daily_claims';
+function _writeLocalDailyClaim(gameId, today) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(BONBON_LOCAL_CLAIMS_KEY) || '{}');
+    stored[gameId] = today;
+    localStorage.setItem(BONBON_LOCAL_CLAIMS_KEY, JSON.stringify(stored));
+  } catch (e) {}
+}
+function _readLocalDailyClaims(today) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(BONBON_LOCAL_CLAIMS_KEY) || '{}');
+    const fresh  = {};
+    for (const k in stored) if (stored[k] === today) fresh[k] = stored[k];
+    // Aufräumen: alte Einträge droppen, damit der Blob nicht mit Kacheln
+    // von letzter Woche wächst.
+    if (JSON.stringify(fresh) !== JSON.stringify(stored)) {
+      localStorage.setItem(BONBON_LOCAL_CLAIMS_KEY, JSON.stringify(fresh));
+    }
+    return fresh;
+  } catch (e) { return {}; }
+}
+
 async function awardGameBonbons(gameId, correct, maxRounds) {
   const result = await callBonbonRPC('award_game_bonbons', {
     p_game_id: gameId, p_correct: correct, p_max_rounds: maxRounds
   });
   if (result && result.ok && !result.skipped) {
     window.__lastBonbonResult = { gameId, ...result };
-    // Daily-Claim-Cache aktualisieren (Kachel gilt heute als verbraucht)
+    // Daily-Claim-Cache: In-Memory für die aktuelle Page + LocalStorage-Marker,
+    // damit der Hub nach Navigation zurück den aktuellen Zustand sieht,
+    // auch wenn der Hub-Boot-Fetch race-t.
     if (result.bonus > 0) {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getBerlinTodayIso();
       window.__bonbonDailyClaims = window.__bonbonDailyClaims || {};
       window.__bonbonDailyClaims[gameId] = today;
+      _writeLocalDailyClaim(gameId, today);
     }
     // Cluster-Fortschritt refreshen (Hub-Anzeige, Bonbon-Modal)
     if (typeof window.refreshBonbonStatus === 'function') {
@@ -1829,10 +1982,13 @@ async function awardGameBonbons(gameId, correct, maxRounds) {
 
 async function fetchDailyBonbonStatus() {
   const result = await callBonbonRPC('get_daily_bonbon_status', {});
-  if (result && result.ok) {
-    window.__bonbonDailyClaims = result.claims || {};
-    window.__bonbonToday = result.today;
-  }
+  // Server-Antwort + lokale Marker (falls awardGameBonbons vor Navigation
+  // nicht mehr ankam) mergen. Server hat Vorrang bei Konflikt.
+  const today  = (result && result.ok) ? result.today : getBerlinTodayIso();
+  const server = (result && result.ok) ? (result.claims || {}) : {};
+  const local  = _readLocalDailyClaims(today);
+  window.__bonbonDailyClaims = { ...local, ...server };
+  window.__bonbonToday       = today;
   return result;
 }
 
@@ -1840,6 +1996,7 @@ async function resetDailyBonbonClaims() {
   const result = await callBonbonRPC('reset_daily_bonbon_claims', {});
   if (result && result.ok) {
     window.__bonbonDailyClaims = {};
+    try { localStorage.removeItem(BONBON_LOCAL_CLAIMS_KEY); } catch (e) {}
   }
   return result;
 }

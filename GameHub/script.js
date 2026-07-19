@@ -78,9 +78,6 @@ const SHOP_ITEMS = [
   { id: 'mythischesEi', icon: '🥚', name: 'Episches Ei',      description: 'Öffnet einen neuen Kreatur-Slot. 60 % Chance auf ein episches Tier!',   price: 80, eggItem: true, eggType: 'mythic'    },
   { id: 'legendaresEi', icon: '🥚', name: 'Legendäres Ei',   description: 'Öffnet einen neuen Kreatur-Slot. 100 % Chance auf ein episches Tier!',  price: 140, eggItem: true, eggType: 'legendary' },
   { id: 'atariHint', icon: '📡', name: 'Hinweis zum verlorenen Ei', description: 'Enthüllt die Spur einer verborgenen Kreatur. Nur für die Mutigen.', price: 200, consumable: false, atariHintItem: true },
-  // ── Season 3: Bonbon-Ökonomie (Migration 0044) ─────────────────
-  { id: 'resetKarte',        icon: '🔄', name: 'Reset-Karte',       description: 'Alle Kacheln geben beim nächsten Spielen wieder den täglichen +20-Bonbon-Bonus.', price: 300, consumable: true, bonbonItem: true, seasonMin: 3 },
-  { id: 'freundschaftskeks', icon: '🍪', name: 'Freundschaftskeks', description: 'Schenkt einem zufälligen Kurs-Kollegen 20 Bonbons. Zählen zum Kurs-Ziel. Maximal 5×.', price: 50,  consumable: true, bonbonItem: true, seasonMin: 3, cap: 5, giftItem: true },
 ];
 
 // Atari2 · Enter 1-5-0-7
@@ -468,9 +465,12 @@ function buildCardHTML(game, data, shopData) {
   // Migration 0044: +20 Bonbon-Tages-Bonus-Hint. Nur wenn Season 3
   // aktiv, User noch keinen Legi-Grant hat und Kachel heute noch nicht
   // geclaimt wurde. Daily-Claims-Cache kommt aus fetchDailyBonbonStatus.
+  // todayStr = server-authoritatives Datum (Europe/Berlin) — Client-UTC
+  // würde bei Datumsgrenzen falsche +20-Anzeige produzieren.
   const bonbonStatus = window.__bonbonStatus || {};
   const dailyClaims  = window.__bonbonDailyClaims || {};
-  const todayStr     = new Date().toISOString().slice(0, 10);
+  const todayStr     = window.__bonbonToday
+                    || (typeof getBerlinTodayIso === 'function' ? getBerlinTodayIso() : new Date().toISOString().slice(0, 10));
   const bonbonAvailable = !isLegi
     && bonbonStatus.enabled
     && !bonbonStatus.unlocked
@@ -1074,6 +1074,9 @@ const SHOP_ITEMS_P2 = [
 // ── Season 3 Shop-Items (Regenbogen-Bonbons — Items folgen) ───────────
 const SHOP_ITEMS_P3 = [
   { id: 'lockmittel', icon: '🧲', name: 'Lockmittel', description: 'Setze es bei einem schlummernden Ei ein: Zu 90 % droppt beim ersten Spiel ein Season-3-Monster!', price: 20, consumable: true },
+  // Bonbon-Ökonomie (Migration 0044)
+  { id: 'resetKarte',        icon: '🔄', name: 'Reset-Karte',       description: 'Alle Kacheln geben beim nächsten Spielen wieder den täglichen +20-Bonbon-Bonus.', price: 300, consumable: true, bonbonItem: true },
+  { id: 'freundschaftskeks', icon: '🍪', name: 'Freundschaftskeks', description: 'Schenkt einem zufälligen Kurs-Kollegen 20 Bonbons. Zählen zum Kurs-Ziel. Maximal 5×.', price: 50,  consumable: true, bonbonItem: true, cap: 5, giftItem: true },
 ];
 
 function openShopModal() {
@@ -1312,7 +1315,7 @@ async function activateResetKarte() {
   if (!confirm('Reset-Karte einsetzen? Alle Kacheln bekommen wieder ihren +20 Bonbon-Bonus für heute.')) return;
   const res = await window.resetDailyBonbonClaims();
   if (!res || !res.ok) {
-    alert('Reset fehlgeschlagen — bitte später erneut versuchen.');
+    showGiftInfoModal('Reset fehlgeschlagen', 'Bitte versuche es später erneut.');
     return;
   }
   const sd2 = loadShopData();
@@ -1320,7 +1323,7 @@ async function activateResetKarte() {
   saveShopData(sd2);
   renderHub();
   renderShop(loadAllData());
-  alert(`🌈 Bonbon-Bonus zurückgesetzt! ${res.cleared} Kacheln neu bereit.`);
+  showGiftInfoModal('🌈 Bonbon-Bonus zurückgesetzt', `${res.cleared} Kacheln geben beim nächsten Play wieder +20 Bonbons.`);
 }
 
 function confirmRelease(gameId) {
@@ -1486,7 +1489,7 @@ function buyItem(itemId) {
   if (item.giftItem) {
     const cap = item.cap || 5;
     if ((shopData.freundschaftskeksCount ?? 0) >= cap) {
-      alert(`Du hast dein Limit erreicht (${cap} Freundschaftskekse pro Kurs).`);
+      showGiftInfoModal('Limit erreicht', `Du hast schon ${cap}× Freundschaftskekse in diesem Kurs verschenkt.`);
       return;
     }
     _charge(shopData, item);
@@ -1498,20 +1501,22 @@ function buyItem(itemId) {
         sd.freundschaftskeksCount = (sd.freundschaftskeksCount ?? 0) + 1;
         sd.freundschaftskeksSpent = (sd.freundschaftskeksSpent ?? 0) + 1;
         saveShopData(sd);
-        alert(`🎁 Du hast ${res.peer_display_name} 20 Bonbons geschenkt!\n\n(${res.gifts_count}/${res.cap} verschenkt)`);
+        renderHub();
+        renderShop(loadAllData());
+        showGiftSuccessModal(res.peer_display_name, 20, res.gifts_count, res.cap);
       } else {
         // Refund: spentCoins zurückrollen
         const sd = loadShopData();
         sd.spentCoins = Math.max(0, sd.spentCoins - item.price);
         saveShopData(sd);
+        renderHub();
+        renderShop(loadAllData());
         const err = res?.error || 'unbekannt';
-        const msg = err === 'cap_exceeded'      ? 'Limit erreicht.'
-                  : err === 'no_eligible_peer' ? 'Keine anderen Kurs-Kollegen gefunden — Coins erstattet.'
-                  : `Fehler: ${err} — Coins erstattet.`;
-        alert(msg);
+        const msg = err === 'cap_exceeded'      ? 'Du hast dein Limit für diesen Kurs erreicht.'
+                  : err === 'no_eligible_peer' ? 'Es sind noch keine anderen Kurs-Kollegen aktiv. Coins wurden erstattet.'
+                  : `Etwas ist schiefgelaufen (${err}). Coins wurden erstattet.`;
+        showGiftInfoModal('Verschenken nicht möglich', msg);
       }
-      renderHub();
-      renderShop(loadAllData());
     })();
     return;
   }
@@ -1559,6 +1564,198 @@ function tryApplyWachstumstrank(gameId) {
   saveShopData(sd);
   saveGameData(gameId, data);
   renderHub();
+}
+
+/* ─────────────────────────────────────────────────
+   FREUNDSCHAFTSKEKS — Erfolgs- und Info-Modal (Migration 0044)
+   ───────────────────────────────────────────────── */
+function _closeGiftModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.opacity = '0';
+  setTimeout(() => el.remove(), 250);
+}
+
+function showGiftSuccessModal(peerName, amount, giftsCount, cap) {
+  const id = 'giftSuccessOverlay';
+  document.getElementById(id)?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = id;
+  overlay.innerHTML = `
+    <style>
+      #${id} {
+        position:fixed;inset:0;z-index:10000;
+        background:radial-gradient(ellipse at center, rgba(60,25,90,.85) 0%, rgba(10,5,25,.92) 70%);
+        display:flex;align-items:center;justify-content:center;
+        opacity:0;transition:opacity .35s ease;
+        font-family:var(--font-body, 'Nunito', sans-serif);
+      }
+      @keyframes _gift-card-in {
+        from { opacity:0; transform:scale(.7) translateY(20px); }
+        to   { opacity:1; transform:scale(1)  translateY(0); }
+      }
+      @keyframes _gift-bounce {
+        0%,100% { transform:translateY(0) rotate(-4deg); }
+        50%     { transform:translateY(-12px) rotate(4deg); }
+      }
+      @keyframes _gift-rainbow-shift {
+        0%   { background-position:   0% 50%; }
+        100% { background-position: 200% 50%; }
+      }
+      @keyframes _gift-sparkle {
+        0%   { opacity:0; transform:translateY(0) scale(.4); }
+        30%  { opacity:1; }
+        100% { opacity:0; transform:translateY(-90px) scale(1.4); }
+      }
+      #${id} .gift-card {
+        position:relative;
+        max-width:420px;width:calc(100vw - 40px);
+        padding:30px 32px 26px;
+        background:linear-gradient(180deg, rgba(58,35,80,.98) 0%, rgba(30,20,55,.98) 100%);
+        border:2px solid #d4a830;
+        border-radius:20px;
+        box-shadow:0 0 40px rgba(212,168,48,.45), 0 20px 60px rgba(0,0,0,.55);
+        text-align:center;
+        animation:_gift-card-in .4s cubic-bezier(.34,1.56,.64,1) both;
+      }
+      #${id} .gift-icon {
+        font-size:5.2rem;line-height:1;
+        display:inline-block;
+        animation:_gift-bounce 1.4s ease-in-out infinite;
+        filter:drop-shadow(0 6px 12px rgba(255,180,40,.5));
+      }
+      #${id} .gift-title {
+        font-family:var(--font-display, 'Cinzel', serif);
+        font-weight:800;font-size:1.5rem;
+        color:#ffd76a;
+        margin:14px 0 6px;
+        letter-spacing:.03em;
+      }
+      #${id} .gift-body {
+        color:var(--clr-cream, #fef6e4);
+        font-size:1.05rem;line-height:1.55;
+        margin:8px 0 4px;
+      }
+      #${id} .gift-body strong { color:#fff; }
+      #${id} .gift-rainbow {
+        font-weight:800;
+        background:linear-gradient(90deg,#ff4d4d,#ff9a3c,#ffd93d,#6ee06e,#4ecdff,#a480ff,#ff77e5,#ff4d4d);
+        background-size:200% 100%;
+        -webkit-background-clip:text;background-clip:text;color:transparent;
+        animation:_gift-rainbow-shift 5s linear infinite;
+      }
+      #${id} .gift-caption {
+        color:rgba(254,246,228,.65);
+        font-size:.85rem;
+        margin-top:12px;
+      }
+      #${id} .gift-btn {
+        margin-top:22px;
+        background:linear-gradient(90deg,#ff9a3c,#ffd93d,#6ee06e,#4ecdff,#a480ff,#ff77e5);
+        background-size:200% 100%;
+        color:#1a0930;
+        border:none;
+        border-radius:999px;
+        padding:12px 30px;
+        font-family:var(--font-body, 'Nunito', sans-serif);
+        font-weight:800;font-size:1rem;
+        cursor:pointer;
+        animation:_gift-rainbow-shift 6s linear infinite;
+        text-shadow:0 1px 2px rgba(255,255,255,.35);
+        box-shadow:0 6px 18px rgba(0,0,0,.35);
+        transition:transform .15s;
+      }
+      #${id} .gift-btn:hover { transform:translateY(-2px); }
+      #${id} .gift-sparkles {
+        position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:20px;
+      }
+      #${id} .gift-sparkles span {
+        position:absolute;bottom:20%;font-size:1rem;
+        animation:_gift-sparkle 1.6s ease-out infinite;
+      }
+    </style>
+    <div class="gift-card">
+      <div class="gift-sparkles">
+        ${['🍬','✨','🍬','✨','🍬','✨'].map((s,i)=>`<span style="left:${8+i*15}%;animation-delay:${(i*.15).toFixed(2)}s;">${s}</span>`).join('')}
+      </div>
+      <div class="gift-icon">🎁</div>
+      <div class="gift-title">Geschenk verschickt!</div>
+      <div class="gift-body">
+        <strong>${escapeHtml(peerName || 'Ein Kurs-Kollege')}</strong> hat<br>
+        <span class="gift-rainbow">${amount} 🍬 Bonbons</span> von dir bekommen.
+      </div>
+      <div class="gift-caption">${giftsCount}/${cap} Freundschaftskekse in diesem Kurs verschenkt</div>
+      <button class="gift-btn" type="button">Weiter</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+  const close = () => _closeGiftModal(id);
+  overlay.querySelector('.gift-btn').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+}
+
+function showGiftInfoModal(title, message) {
+  const id = 'giftInfoOverlay';
+  document.getElementById(id)?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = id;
+  overlay.innerHTML = `
+    <style>
+      #${id} {
+        position:fixed;inset:0;z-index:10000;
+        background:rgba(10,5,25,.82);
+        display:flex;align-items:center;justify-content:center;
+        opacity:0;transition:opacity .3s ease;
+        font-family:var(--font-body, 'Nunito', sans-serif);
+      }
+      @keyframes _giftinfo-in {
+        from { opacity:0; transform:scale(.85); }
+        to   { opacity:1; transform:scale(1); }
+      }
+      #${id} .gi-card {
+        max-width:380px;width:calc(100vw - 40px);
+        padding:26px 28px 22px;
+        background:linear-gradient(180deg, rgba(48,30,70,.98) 0%, rgba(24,16,45,.98) 100%);
+        border:2px solid #7a5a10;
+        border-radius:18px;
+        box-shadow:0 12px 40px rgba(0,0,0,.55);
+        text-align:center;
+        animation:_giftinfo-in .3s ease-out both;
+      }
+      #${id} .gi-icon { font-size:2.6rem;line-height:1; }
+      #${id} .gi-title {
+        font-family:var(--font-display, 'Cinzel', serif);
+        font-weight:800;font-size:1.15rem;
+        color:#e8c67a;
+        margin:10px 0 6px;
+      }
+      #${id} .gi-body {
+        color:var(--clr-cream-dim, rgba(254,246,228,.85));
+        font-size:.95rem;line-height:1.55;
+        margin:6px 0 0;
+      }
+      #${id} .gi-btn {
+        margin-top:20px;
+        background:var(--clr-surface2, #2a1f4a);
+        color:var(--clr-cream, #fef6e4);
+        border:1px solid var(--clr-border, rgba(255,255,255,.15));
+        border-radius:999px;
+        padding:10px 26px;font-weight:700;cursor:pointer;
+      }
+    </style>
+    <div class="gi-card">
+      <div class="gi-icon">🍪</div>
+      <div class="gi-title">${escapeHtml(title)}</div>
+      <div class="gi-body">${escapeHtml(message)}</div>
+      <button class="gi-btn" type="button">OK</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+  const close = () => _closeGiftModal(id);
+  overlay.querySelector('.gi-btn').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 }
 
 /* ─────────────────────────────────────────────────
