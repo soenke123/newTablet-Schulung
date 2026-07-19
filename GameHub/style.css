@@ -2148,6 +2148,20 @@ body.s2-active .hud-kristalle { display: flex; }
     align-self: center;
   }
 
+  /* Mobile: alle Bonus-Elemente in einer horizontalen Reihe unter dem Play-Button. */
+  .game-card__hints {
+    position: relative;
+    top: auto;
+    right: auto;
+    grid-column: 2;
+    grid-row: 4;
+    flex-direction: row;
+    align-items: center;
+    justify-self: start;
+    gap: 6px;
+    max-width: 100%;
+  }
+
   /* Textlastige Elemente ausblenden */
   .game-card__points,
   .game-card__stage-label,
@@ -4307,22 +4321,26 @@ input[type="password"]::-webkit-textfield-decoration-container {
   filter: drop-shadow(0 0 4px rgba(255, 200, 60, 0.4));
 }
 
-/* Wrapper für Coin- + Bonbon-Hint. Beide sitzen nebeneinander in der oberen
-   rechten Ecke, statt vertikal gestapelt (bei schmalen Handy-Kacheln fiel
-   der Bonbon-Hint sonst am unteren Rand raus). Reihenfolge im DOM:
-   Bonbon links, Coin rechts (Coin bleibt an gewohnter Kachel-Position). */
+/* Wrapper für Trank-Button + Coin-Hint + Bonbon-Hint.
+   Desktop: vertikal gestapelt oben rechts (an gewohnter Trank-Position).
+   Mobile:  siehe @media unten — unter dem Play-Button horizontal in Reihe.
+   Coin und Trank sind exklusiv (Trank nur bei !maxed, Coin nur bei maxed),
+   deshalb max 2 gleichzeitig sichtbar (z.B. Trank + Bonbon oder Coin + Bonbon). */
 .game-card__hints {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 8px;
+  right: 8px;
   display: flex;
-  flex-direction: row;
-  gap: 6px;
-  z-index: 3;
-  max-width: calc(100% - 20px);
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  z-index: 5;
+  max-width: calc(100% - 16px);
   pointer-events: none;
 }
-.game-card__hints .game-card__bonus-hint {
+.game-card__hints > * { pointer-events: auto; }
+.game-card__hints .game-card__bonus-hint,
+.game-card__hints .game-card__trank-btn {
   position: static;
   top: auto;
   right: auto;

@@ -478,10 +478,17 @@ function buildCardHTML(game, data, shopData) {
   const bonbonHint = bonbonAvailable
     ? `<div class="game-card__bonus-hint game-card__bonus-hint--bonbon" title="Tages-Bonus: +20 Bonbons bei der ersten Runde heute">+20<span class="game-card__bonus-hint-coin">🍬</span></div>`
     : '';
-  // Wrapper hält Coin- und Bonbon-Hint nebeneinander (mobile-freundlich).
-  // Reihenfolge: Bonbon links, Coin rechts — Coin bleibt an gewohnter Position.
-  const hintsWrap = (bonusHint || bonbonHint)
-    ? `<div class="game-card__hints">${bonbonHint}${bonusHint}</div>`
+  // Wachstumstrank in denselben Wrapper wie die Bonus-Hints — sonst überlappen
+  // sie auf Desktop (beide sitzen absolute top:8/right:8) und driften auf Mobile
+  // in unterschiedliche Grid-Zellen.
+  const trankBtn = canUseTrank
+    ? `<button class="game-card__trank-btn" title="Wachstumstrank anwenden">🧪</button>`
+    : '';
+  // Desktop: column (übereinander) oben rechts. Mobile: row unter dem Play-Btn.
+  // Reihenfolge im DOM: Trank oben, Bonbon Mitte, Coin unten (Coin+Trank sind
+  // exklusiv — nie beide gleichzeitig, weil Trank nur bei !maxed und Coin nur bei maxed).
+  const hintsWrap = (trankBtn || bonusHint || bonbonHint)
+    ? `<div class="game-card__hints">${trankBtn}${bonbonHint}${bonusHint}</div>`
     : '';
 
   return `
@@ -513,7 +520,6 @@ function buildCardHTML(game, data, shopData) {
   return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button>${useBtns}</div>`;
 })()}
     ${data.creature ? `<button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>` : ''}
-    ${canUseTrank ? `<button class="game-card__trank-btn" title="Wachstumstrank anwenden">🧪</button>` : ''}
   `;
 }
 
@@ -1277,10 +1283,15 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
   const btnText = isActive ? '⚡ Aktiv' : (giftCapReached ? '5/5 verbraucht' : 'Kaufen');
   const noEligible = item.upgradeItem && !hasMaxedCreature;
   // Migration 0044: Anzeige-Varianten für Bonbon-Items.
-  const showResetActivate = item.id === 'resetKarte' && ownedCount > 0 && !soldOut;
+  // Reset-Karte hat einen Server-Cap von 1× pro Tag (Migration 0045).
+  const resetUsedToday    = item.id === 'resetKarte' && !!window.__bonbonResetUsedToday;
+  const showResetActivate = item.id === 'resetKarte' && ownedCount > 0 && !soldOut && !resetUsedToday;
+  const resetActivateText = 'Einsetzen';
   const ownedLabel = item.giftItem
     ? `${giftsCount}/${item.cap || 5} verschenkt`
-    : (isStackable && ownedCount > 0 ? `${ownedCount}× besitz` : '');
+    : item.id === 'resetKarte' && ownedCount > 0
+      ? `${ownedCount}× im Bestand${resetUsedToday ? ' · heute schon eingesetzt' : ''}`
+      : (isStackable && ownedCount > 0 ? `${ownedCount}× besitz` : '');
 
   const li = document.createElement('div');
   li.className = `shop-list-item ${typeClass}${soldOut ? ' shop-list-item--soldout' : ''}`.trim();
@@ -1293,7 +1304,7 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
     </div>
     <div class="shop-list-item__buy-col">
       ${!soldOut ? `<button class="shop-list-item__btn"${btnDisabled ? ' disabled' : ''}>${btnText}</button>` : ''}
-      ${showResetActivate ? `<button class="shop-list-item__btn shop-list-item__btn--activate">🌈 Einsetzen</button>` : ''}
+      ${showResetActivate ? `<button class="shop-list-item__btn shop-list-item__btn--activate">🌈 ${resetActivateText}</button>` : ''}
       ${ownedLabel ? `<div class="shop-item-owned">${ownedLabel}</div>` : ''}
       ${soldOut && !item.atariHintItem ? `<div class="shop-soldout-ribbon${item.backupItem ? ' shop-soldout-ribbon--backup' : item.sealItem ? ' shop-soldout-ribbon--seal' : ''}"></div>` : ''}
     </div>
@@ -1316,10 +1327,21 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
 async function activateResetKarte() {
   const sd = loadShopData();
   if (getConsumableCount(sd, 'resetKarte') <= 0) return;
-  if (!confirm('Reset-Karte einsetzen? Alle Kacheln bekommen wieder ihren +20 Bonbon-Bonus für heute.')) return;
+  if (window.__bonbonResetUsedToday) {
+    showGiftInfoModal('Heute schon eingesetzt', 'Du hast heute bereits eine Reset-Karte benutzt. Morgen wieder möglich.');
+    return;
+  }
+  if (!confirm('Reset-Karte einsetzen? Alle Kacheln bekommen wieder ihren +20 Bonbon-Bonus für heute. Maximal 1× pro Tag.')) return;
   const res = await window.resetDailyBonbonClaims();
   if (!res || !res.ok) {
-    showGiftInfoModal('Reset fehlgeschlagen', 'Bitte versuche es später erneut.');
+    if (res && res.error === 'reset_limit_daily') {
+      // Server-Cap: Client-Cache war stale. Cache synchronisieren + Info.
+      window.__bonbonResetUsedToday = true;
+      renderShop(loadAllData());
+      showGiftInfoModal('Heute schon eingesetzt', 'Du hast heute bereits eine Reset-Karte benutzt. Morgen wieder möglich.');
+    } else {
+      showGiftInfoModal('Reset fehlgeschlagen', 'Bitte versuche es später erneut.');
+    }
     return;
   }
   const sd2 = loadShopData();
@@ -2036,8 +2058,11 @@ function buildNestCard(nest, allData, shopData) {
   const bonbonHint = bonbonAvailable
     ? `<div class="game-card__bonus-hint game-card__bonus-hint--bonbon" title="Tages-Bonus: +20 Bonbons bei der ersten Runde heute">+20<span class="game-card__bonus-hint-coin">🍬</span></div>`
     : '';
-  const hintsWrap = (bonusHint || bonbonHint)
-    ? `<div class="game-card__hints">${bonbonHint}${bonusHint}</div>`
+  const trankBtn = canUseTrank
+    ? `<button class="game-card__trank-btn" title="Wachstumstrank anwenden">🧪</button>`
+    : '';
+  const hintsWrap = (trankBtn || bonusHint || bonbonHint)
+    ? `<div class="game-card__hints">${trankBtn}${bonbonHint}${bonusHint}</div>`
     : '';
 
   let playBtn;
@@ -2083,7 +2108,6 @@ function buildNestCard(nest, allData, shopData) {
       return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button>${useBtns}</div>`;
     })()}
     <button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>
-    ${canUseTrank ? `<button class="game-card__trank-btn" title="Wachstumstrank anwenden">🧪</button>` : ''}
   `;
 
   attachNestCardListeners(card, nest, nestData, hasCreature, canPlay);

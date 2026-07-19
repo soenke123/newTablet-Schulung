@@ -1987,15 +1987,17 @@ async function fetchDailyBonbonStatus() {
   const today  = (result && result.ok) ? result.today : getBerlinTodayIso();
   const server = (result && result.ok) ? (result.claims || {}) : {};
   const local  = _readLocalDailyClaims(today);
-  window.__bonbonDailyClaims = { ...local, ...server };
-  window.__bonbonToday       = today;
+  window.__bonbonDailyClaims    = { ...local, ...server };
+  window.__bonbonToday          = today;
+  window.__bonbonResetUsedToday = !!(result && result.ok && result.reset_used_today);
   return result;
 }
 
 async function resetDailyBonbonClaims() {
   const result = await callBonbonRPC('reset_daily_bonbon_claims', {});
   if (result && result.ok) {
-    window.__bonbonDailyClaims = {};
+    window.__bonbonDailyClaims    = {};
+    window.__bonbonResetUsedToday = true;
     try { localStorage.removeItem(BONBON_LOCAL_CLAIMS_KEY); } catch (e) {}
   }
   return result;
