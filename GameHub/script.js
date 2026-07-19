@@ -78,6 +78,9 @@ const SHOP_ITEMS = [
   { id: 'mythischesEi', icon: '🥚', name: 'Episches Ei',      description: 'Öffnet einen neuen Kreatur-Slot. 60 % Chance auf ein episches Tier!',   price: 80, eggItem: true, eggType: 'mythic'    },
   { id: 'legendaresEi', icon: '🥚', name: 'Legendäres Ei',   description: 'Öffnet einen neuen Kreatur-Slot. 100 % Chance auf ein episches Tier!',  price: 140, eggItem: true, eggType: 'legendary' },
   { id: 'atariHint', icon: '📡', name: 'Hinweis zum verlorenen Ei', description: 'Enthüllt die Spur einer verborgenen Kreatur. Nur für die Mutigen.', price: 200, consumable: false, atariHintItem: true },
+  // ── Season 3: Bonbon-Ökonomie (Migration 0044) ─────────────────
+  { id: 'resetKarte',        icon: '🔄', name: 'Reset-Karte',       description: 'Alle Kacheln geben beim nächsten Spielen wieder den täglichen +20-Bonbon-Bonus.', price: 300, consumable: true, bonbonItem: true, seasonMin: 3 },
+  { id: 'freundschaftskeks', icon: '🍪', name: 'Freundschaftskeks', description: 'Schenkt einem zufälligen Kurs-Kollegen 20 Bonbons. Zählen zum Kurs-Ziel. Maximal 5×.', price: 50,  consumable: true, bonbonItem: true, seasonMin: 3, cap: 5, giftItem: true },
 ];
 
 // Atari2 · Enter 1-5-0-7
@@ -462,8 +465,23 @@ function buildCardHTML(game, data, shopData) {
     ? `<div class="game-card__bonus-hint" title="${bonusCoins === 10 ? 'Vollendungs-Bonus' : 'Ausgewachsen-Bonus'}: +${bonusCoins} Münzen pro Runde">+${bonusCoins}<span class="game-card__bonus-hint-coin">🪙</span></div>`
     : '';
 
+  // Migration 0044: +20 Bonbon-Tages-Bonus-Hint. Nur wenn Season 3
+  // aktiv, User noch keinen Legi-Grant hat und Kachel heute noch nicht
+  // geclaimt wurde. Daily-Claims-Cache kommt aus fetchDailyBonbonStatus.
+  const bonbonStatus = window.__bonbonStatus || {};
+  const dailyClaims  = window.__bonbonDailyClaims || {};
+  const todayStr     = new Date().toISOString().slice(0, 10);
+  const bonbonAvailable = !isLegi
+    && bonbonStatus.enabled
+    && !bonbonStatus.unlocked
+    && dailyClaims[game.id] !== todayStr;
+  const bonbonHint = bonbonAvailable
+    ? `<div class="game-card__bonus-hint game-card__bonus-hint--bonbon" title="Tages-Bonus: +20 Bonbons bei der ersten Runde heute">+20<span class="game-card__bonus-hint-coin">🍬</span></div>`
+    : '';
+
   return `
     ${bonusHint}
+    ${bonbonHint}
     <h3 class="game-card__title">${titleText}</h3>
     ${specialBadge}
     <div class="game-card__creature-wrap${hasCreature ? ' creature-preview' : ''}"
@@ -1221,7 +1239,7 @@ function _buildAtariHintItemElement(item, shopData) {
   return li;
 }
 
-const _SHOP_STACKABLE  = ['wachstumstrank', 'wachstumsBooster', 'coinsx3', 'glucksklee', 'lockmittel'];
+const _SHOP_STACKABLE  = ['wachstumstrank', 'wachstumsBooster', 'coinsx3', 'glucksklee', 'lockmittel', 'resetKarte', 'freundschaftskeks'];
 
 function _buildStandardShopItemElement(item, shopData, allData, available, s2Open, soldOut) {
   const isStackable = _SHOP_STACKABLE.includes(item.id);
@@ -1238,7 +1256,10 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
         return d?.creature && d.growth >= GROWTH_MAX && d.growth < GROWTH_S6;
       })
     : true;
-  const btnDisabled = soldOut || isActive || !canAfford || !hasMaxedCreature;
+  // Migration 0044: Freundschaftskeks hat einen Cap (5× pro Cluster).
+  const giftsCount   = item.giftItem ? (shopData.freundschaftskeksCount ?? 0) : 0;
+  const giftCapReached = item.giftItem && giftsCount >= (item.cap || 5);
+  const btnDisabled = soldOut || isActive || !canAfford || !hasMaxedCreature || giftCapReached;
 
   let typeClass = '';
   if (item.bookItem)           typeClass = 'shop-list-item--book';
@@ -1246,8 +1267,13 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
   else if (item.eggItem)       typeClass = `shop-list-item--egg-${item.eggType}`;
   else if (isActive)           typeClass = 'shop-list-item--active';
 
-  const btnText = isActive ? '⚡ Aktiv' : 'Kaufen';
+  const btnText = isActive ? '⚡ Aktiv' : (giftCapReached ? '5/5 verbraucht' : 'Kaufen');
   const noEligible = item.upgradeItem && !hasMaxedCreature;
+  // Migration 0044: Anzeige-Varianten für Bonbon-Items.
+  const showResetActivate = item.id === 'resetKarte' && ownedCount > 0 && !soldOut;
+  const ownedLabel = item.giftItem
+    ? `${giftsCount}/${item.cap || 5} verschenkt`
+    : (isStackable && ownedCount > 0 ? `${ownedCount}× besitz` : '');
 
   const li = document.createElement('div');
   li.className = `shop-list-item ${typeClass}${soldOut ? ' shop-list-item--soldout' : ''}`.trim();
@@ -1260,7 +1286,8 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
     </div>
     <div class="shop-list-item__buy-col">
       ${!soldOut ? `<button class="shop-list-item__btn"${btnDisabled ? ' disabled' : ''}>${btnText}</button>` : ''}
-      ${isStackable && ownedCount > 0 ? `<div class="shop-item-owned">${ownedCount}× besitz</div>` : ''}
+      ${showResetActivate ? `<button class="shop-list-item__btn shop-list-item__btn--activate">🌈 Einsetzen</button>` : ''}
+      ${ownedLabel ? `<div class="shop-item-owned">${ownedLabel}</div>` : ''}
       ${soldOut && !item.atariHintItem ? `<div class="shop-soldout-ribbon${item.backupItem ? ' shop-soldout-ribbon--backup' : item.sealItem ? ' shop-soldout-ribbon--seal' : ''}"></div>` : ''}
     </div>
     ${noEligible ? `<div class="shop-list-item__no-eligible">Kein Monster auf Stufe 5</div>` : ''}
@@ -1268,7 +1295,32 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
   if (!soldOut && !btnDisabled) {
     li.querySelector('.shop-list-item__btn').addEventListener('click', () => buyItem(item.id));
   }
+  if (showResetActivate) {
+    li.querySelector('.shop-list-item__btn--activate').addEventListener('click', () => activateResetKarte());
+  }
   return li;
+}
+
+/* ─── Reset-Karte einsetzen (Migration 0044) ────────────────
+   Löscht alle Daily-Bonbon-Bonus-Marker des Users → alle Kacheln
+   geben beim nächsten Play wieder +20 Bonbons.
+   Vertrauensmodell: Server macht harmloses DELETE, Client bucht
+   den Verbrauch (Spent++). Refund bei RPC-Fehler. */
+async function activateResetKarte() {
+  const sd = loadShopData();
+  if (getConsumableCount(sd, 'resetKarte') <= 0) return;
+  if (!confirm('Reset-Karte einsetzen? Alle Kacheln bekommen wieder ihren +20 Bonbon-Bonus für heute.')) return;
+  const res = await window.resetDailyBonbonClaims();
+  if (!res || !res.ok) {
+    alert('Reset fehlgeschlagen — bitte später erneut versuchen.');
+    return;
+  }
+  const sd2 = loadShopData();
+  sd2.resetKarteSpent = (sd2.resetKarteSpent ?? 0) + 1;
+  saveShopData(sd2);
+  renderHub();
+  renderShop(loadAllData());
+  alert(`🌈 Bonbon-Bonus zurückgesetzt! ${res.cleared} Kacheln neu bereit.`);
 }
 
 function confirmRelease(gameId) {
@@ -1426,6 +1478,41 @@ function buyItem(itemId) {
     saveShopData(shopData);
     renderHub();
     renderShop(loadAllData());
+    return;
+  }
+
+  // Migration 0044: Freundschaftskeks — Kauf = sofortige Aktivierung (RPC → Peer).
+  // Cap 5 pro (giver, cluster). Client-Cap-Check hier, Server-Cap-Check im RPC.
+  if (item.giftItem) {
+    const cap = item.cap || 5;
+    if ((shopData.freundschaftskeksCount ?? 0) >= cap) {
+      alert(`Du hast dein Limit erreicht (${cap} Freundschaftskekse pro Kurs).`);
+      return;
+    }
+    _charge(shopData, item);
+    saveShopData(shopData);
+    (async () => {
+      const res = await window.giftBonbonsToPeer(20);
+      if (res && res.ok) {
+        const sd = loadShopData();
+        sd.freundschaftskeksCount = (sd.freundschaftskeksCount ?? 0) + 1;
+        sd.freundschaftskeksSpent = (sd.freundschaftskeksSpent ?? 0) + 1;
+        saveShopData(sd);
+        alert(`🎁 Du hast ${res.peer_display_name} 20 Bonbons geschenkt!\n\n(${res.gifts_count}/${res.cap} verschenkt)`);
+      } else {
+        // Refund: spentCoins zurückrollen
+        const sd = loadShopData();
+        sd.spentCoins = Math.max(0, sd.spentCoins - item.price);
+        saveShopData(sd);
+        const err = res?.error || 'unbekannt';
+        const msg = err === 'cap_exceeded'      ? 'Limit erreicht.'
+                  : err === 'no_eligible_peer' ? 'Keine anderen Kurs-Kollegen gefunden — Coins erstattet.'
+                  : `Fehler: ${err} — Coins erstattet.`;
+        alert(msg);
+      }
+      renderHub();
+      renderShop(loadAllData());
+    })();
     return;
   }
 

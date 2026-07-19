@@ -1021,6 +1021,7 @@
     }
 
     renderCoinBank('coinBankContainer', coinsGained);
+    window.awardBonbonsAndRender?.(GAME_ID, normalized, 10, 'coinBankContainer');
     renderResultItemButton('resultItemBtnWrap', GAME_ID, () => {
       endScreen.classList.remove("show");
       resetGame();

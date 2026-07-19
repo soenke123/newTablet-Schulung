@@ -1694,6 +1694,7 @@ function showEnd() {
   var finalScore = S.score + bonus;
   var maxPts = S.total * 2 + 3;
   var normalizedScore = Math.round(finalScore / maxPts * 10);
+  window._qtLastNormScore = normalizedScore;
 
   // Hub-Integration
   if (gd && typeof computeRoundResult === 'function') {
@@ -1994,6 +1995,7 @@ function populateWinHub() {
   var creEl = document.getElementById('win-creature');
   if (creEl) creEl.innerHTML = gd.creature ? getCreatureHTML(gd.creature, stage) : '<span style="font-size:3rem">&#129424;</span>';
   if (typeof renderCoinBank === 'function') renderCoinBank('win-coins', coinsGained);
+  window.awardBonbonsAndRender?.(gameId, window._qtLastNormScore ?? 0, 10, 'win-coins');
   var stageName = ['Ei','Stufe 1','Stufe 2','Stufe 3','Stufe 4','Stufe 5'][stage] || '';
   var lbl = document.getElementById('win-creature-label');
   if (lbl) lbl.textContent = gd.creature

@@ -4259,3 +4259,86 @@ input[type="password"]::-webkit-textfield-decoration-container {
   text-align: center;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   Migration 0044 — Bonbon-Bank + Hub-Kachel Bonbon-Hint
+   ══════════════════════════════════════════════════════════════ */
+
+/* Regenbogen-Verlauf für Bonbon-Text — als Reusable-Snippet-Property */
+@keyframes bonbonRainbowShift {
+  0%   { background-position:   0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* Bonbon-Bank (klein, unter der Coin-Bank auf dem Ergebnis-Screen) */
+.bonbon-bank {
+  margin: 8px auto 0;
+  padding: 6px 14px;
+  max-width: 260px;
+  text-align: center;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.bonbon-bank__label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+  margin-bottom: 2px;
+}
+.bonbon-bank__earned,
+.bonbon-bank__bonus {
+  font-weight: 800;
+  font-size: 1.05rem;
+  background: linear-gradient(
+    90deg,
+    #ff4d4d, #ff9a3c, #ffd93d, #6ee06e, #4ecdff, #a480ff, #ff77e5, #ff4d4d
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+  animation: bonbonRainbowShift 6s linear infinite;
+  line-height: 1.3;
+}
+.bonbon-bank__bonus {
+  font-size: 0.95rem;
+  animation-duration: 3s;
+  filter: drop-shadow(0 0 4px rgba(255, 200, 60, 0.4));
+}
+
+/* Hub-Kachel: „+20 🍬" Tages-Bonus-Hint (neben dem Coin-Bonus-Hint).
+   Positioniert unter dem coin-bonus (top:38 statt 10). */
+.game-card__bonus-hint--bonbon {
+  top: 38px;
+  color: transparent;
+  background:
+    linear-gradient(
+      90deg,
+      #ff4d4d, #ff9a3c, #ffd93d, #6ee06e, #4ecdff, #a480ff, #ff77e5, #ff4d4d
+    );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  animation: bonbonRainbowShift 5s linear infinite, bonusCoinPulse 2s ease-in-out infinite;
+}
+.game-card__bonus-hint--bonbon .game-card__bonus-hint-coin {
+  color: initial;
+  -webkit-text-fill-color: initial;
+  background: none;
+}
+
+/* Shop-Item: „🌈 Einsetzen"-Button für Reset-Karte (zusätzlich zum Kaufen-Button) */
+.shop-list-item__btn--activate {
+  margin-top: 6px;
+  background: linear-gradient(
+    90deg,
+    #ff4d4d, #ff9a3c, #ffd93d, #6ee06e, #4ecdff, #a480ff, #ff77e5, #ff4d4d
+  );
+  background-size: 200% 100%;
+  color: #fff;
+  border: none;
+  animation: bonbonRainbowShift 6s linear infinite;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}

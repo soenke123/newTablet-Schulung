@@ -1548,6 +1548,7 @@ function renderWinHubWidgets() {
       + (CREATURE_NAMES[pfGameData.creature] || '') + ' · ' + (GROWTH_LABELS[stage] || '') + '</div>';
   }
   renderCoinBank('pf-coin-bank', lastCoinsGained);
+  window.awardBonbonsAndRender?.(pfGameId, state.score, PF_MAX_SCORE, 'pf-coin-bank');
   renderResultItemButton('pf-result-item', pfGameId, () => location.reload());
 }
 

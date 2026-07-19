@@ -588,6 +588,7 @@ function showResult(){
     startQuiz();
   });
   renderCoinBank('coinBankContainer', lastCoinsGained);
+  window.awardBonbonsAndRender?.(quizGameId, ST.score, TOTAL, 'coinBankContainer');
 }
 
 function restartQuiz(){ST=dfltState();save();showPage('start-screen');}

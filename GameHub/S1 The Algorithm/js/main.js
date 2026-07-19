@@ -38,6 +38,7 @@ const ALG_EGG_TYPE  = _urlParams.get('egg') || null;
 const ALG_MAX_SCORE = 10;
 let _algGameData    = null;
 let _algCoinsGained = 0;
+let _algLastScore   = 0;
 let _algHubSaved    = false;
 
 function spawnEndlessParticle() {
@@ -104,6 +105,7 @@ function saveAlgorithmHubData(score) {
     }
   }
   _algCoinsGained += computeRoundResult(gd, s, ALG_MAX_SCORE, sd, isFirst);
+  _algLastScore = s;
 
   gd.points      = (gd.points      || 0) + s;
   gd.roundsPlayed = (gd.roundsPlayed || 0) + 1;
@@ -143,6 +145,7 @@ function renderAlgHubWidgets(type) {
   }
 
   renderCoinBank(pre + '-coin-bank', _algCoinsGained);
+  window.awardBonbonsAndRender?.(ALG_GAME_ID, _algLastScore, ALG_MAX_SCORE, pre + '-coin-bank');
   renderResultItemButton(pre + '-result-item', ALG_GAME_ID, () => location.reload());
 }
 

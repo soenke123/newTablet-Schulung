@@ -1481,6 +1481,12 @@ function loadShopData() {
       lockmittel:            d.lockmittelCount       !== undefined ? !!(d.lockmittel)        : false,
       lockmittelCount:       toCount(d.lockmittel, d.lockmittelCount),
       lockmittelSpent:       d.lockmittelSpent       ?? 0,
+      // Migration 0044: Reset-Karte (300c) + Freundschaftskeks (50c, 5×-Cap).
+      // Reset-Karte hat kein Aktiv-Bool — Aktivierung ruft direkt reset_daily_bonbon_claims RPC.
+      resetKarteCount:         d.resetKarteCount         ?? 0,
+      resetKarteSpent:         d.resetKarteSpent         ?? 0,
+      freundschaftskeksCount:  d.freundschaftskeksCount  ?? 0,
+      freundschaftskeksSpent:  d.freundschaftskeksSpent  ?? 0,
       nests:                 d.nests                 ?? [],
       pendingEggNestId:      d.pendingEggNestId      ?? null,
       seenCreatures:         d.seenCreatures         ?? {},
@@ -1504,7 +1510,7 @@ function loadShopData() {
       sealProgress:          d.sealProgress          ?? {},
     };
   } catch(e) {
-    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumstrankSpent: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, wachstumsBoosterSpent: 0, coinsx3: false, coinsx3Count: 0, coinsx3Spent: 0, glucksklee: false, gluckskleeCount: 0, gluckskleeSpent: 0, lockmittel: false, lockmittelCount: 0, lockmittelSpent: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [] };
+    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumstrankSpent: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, wachstumsBoosterSpent: 0, coinsx3: false, coinsx3Count: 0, coinsx3Spent: 0, glucksklee: false, gluckskleeCount: 0, gluckskleeSpent: 0, lockmittel: false, lockmittelCount: 0, lockmittelSpent: 0, resetKarteCount: 0, resetKarteSpent: 0, freundschaftskeksCount: 0, freundschaftskeksSpent: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [], sealProgress: {} };
   }
 }
 
@@ -1569,6 +1575,12 @@ function renderCoinBank(containerId, coinsGained) {
       : '');
   el.appendChild(wrap);
 
+  // Migration 0044: Slot für Bonbon-Bank anlegen (auto-populated durch
+  // awardBonbonsAndRender). Kein Layout-Impact wenn leer.
+  const bonbonSlot = document.createElement('div');
+  bonbonSlot.id = containerId + '-bonbons';
+  el.appendChild(bonbonSlot);
+
   if (gained <= 0) return;
 
   setTimeout(function() {
@@ -1597,6 +1609,30 @@ function renderCoinBank(containerId, coinsGained) {
       if (earnedEl) earnedEl.classList.add('coin-bank__earned--fade');
     }
   }, 600);
+}
+
+/* ─── Bonbon-Bank (Season 3, unter der Coin-Bank) ────────────
+   Zeigt Basis-Bonbons + optional Tages-Bonus. Klein, Regenbogen-Text.
+   result-Objekt kommt aus award_game_bonbons-RPC bzw. window.__lastBonbonResult.
+   Rendert nichts wenn result.enabled=false oder awarded=0. */
+function renderBonbonBank(containerId, result) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  if (!result || !result.ok) return;
+  const base  = result.base  || 0;
+  const bonus = result.bonus || 0;
+  if (base + bonus <= 0) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'bonbon-bank';
+  let html = '<div class="bonbon-bank__label">🍬 Bonbons</div>' +
+             '<div class="bonbon-bank__earned">+' + base + ' 🍬</div>';
+  if (bonus > 0) {
+    html += '<div class="bonbon-bank__bonus">+' + bonus + ' 🍬 Tages-Bonus!</div>';
+  }
+  wrap.innerHTML = html;
+  el.appendChild(wrap);
 }
 
 /* Rendert den Item-Nutzen-Button auf dem Ergebnis-Screen.
@@ -1744,6 +1780,111 @@ async function syncShopStateToServer(shopData) {
   if (!result?.ok) throw new Error(`RPC ${result?.error || 'unknown'}`);
   return result.state || null;
 }
+
+/* ─── Bonbon-RPCs (Migration 0044) ──────────────────────────
+   Werden von Spielen (award), Shop-Aktivierungen (reset, gift)
+   und Hub-Boot (status) aufgerufen. Fehler werden geschluckt
+   → null zurückgeben, Aufrufer muss defensiv handeln. */
+async function callBonbonRPC(name, body) {
+  const token = getAccessToken();
+  if (!token || !window.SUPABASE_URL) return null;
+  try {
+    const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      method: 'POST',
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(body || {})
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    console.warn(`[creatures] ${name} failed:`, e.message);
+    return null;
+  }
+}
+
+async function awardGameBonbons(gameId, correct, maxRounds) {
+  const result = await callBonbonRPC('award_game_bonbons', {
+    p_game_id: gameId, p_correct: correct, p_max_rounds: maxRounds
+  });
+  if (result && result.ok && !result.skipped) {
+    window.__lastBonbonResult = { gameId, ...result };
+    // Daily-Claim-Cache aktualisieren (Kachel gilt heute als verbraucht)
+    if (result.bonus > 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      window.__bonbonDailyClaims = window.__bonbonDailyClaims || {};
+      window.__bonbonDailyClaims[gameId] = today;
+    }
+    // Cluster-Fortschritt refreshen (Hub-Anzeige, Bonbon-Modal)
+    if (typeof window.refreshBonbonStatus === 'function') {
+      window.refreshBonbonStatus();
+    }
+  }
+  return result;
+}
+
+async function fetchDailyBonbonStatus() {
+  const result = await callBonbonRPC('get_daily_bonbon_status', {});
+  if (result && result.ok) {
+    window.__bonbonDailyClaims = result.claims || {};
+    window.__bonbonToday = result.today;
+  }
+  return result;
+}
+
+async function resetDailyBonbonClaims() {
+  const result = await callBonbonRPC('reset_daily_bonbon_claims', {});
+  if (result && result.ok) {
+    window.__bonbonDailyClaims = {};
+  }
+  return result;
+}
+
+async function giftBonbonsToPeer(amount) {
+  const result = await callBonbonRPC('gift_bonbons_to_peer', {
+    p_amount: amount ?? 20
+  });
+  if (result && result.ok && typeof window.refreshBonbonStatus === 'function') {
+    window.refreshBonbonStatus();
+  }
+  return result;
+}
+
+window.awardGameBonbons        = awardGameBonbons;
+window.renderBonbonBank        = renderBonbonBank;
+window.fetchDailyBonbonStatus  = fetchDailyBonbonStatus;
+window.resetDailyBonbonClaims  = resetDailyBonbonClaims;
+window.giftBonbonsToPeer       = giftBonbonsToPeer;
+
+/* Bequemer One-Shot-Helper für Spiele: nach renderCoinBank aufrufen.
+   Rendert die Bonbon-Anzeige in den Bonbon-Slot, den renderCoinBank
+   automatisch neben sich angelegt hat. Fehler werden geschluckt.
+
+   Games übergeben ihre native (correct, maxRounds) — dieser Helper
+   normalisiert auf die 0-10-hubPoints-Skala, weil der Server nur
+   maxRounds ∈ [1, 20] akzeptiert. Fokusflow (max=1000) o.ä. würden
+   sonst am Server-Bounds-Check scheitern. */
+async function awardBonbonsAndRender(gameId, correct, maxRounds, coinContainerId) {
+  try {
+    let normCorrect = Math.max(0, Math.min(correct || 0, maxRounds || 1));
+    let normMax     = Math.max(1, maxRounds || 1);
+    if (normMax > 20) {
+      // Auf 0-10 downscalen (hubPoints-Standard aller Games).
+      normCorrect = Math.min(10, Math.round(normCorrect / normMax * 10));
+      normMax     = 10;
+    }
+    const result = await awardGameBonbons(gameId, normCorrect, normMax);
+    if (!result || !result.ok) return;
+    renderBonbonBank(coinContainerId + '-bonbons', result);
+  } catch (e) {
+    console.warn('[creatures] awardBonbonsAndRender failed:', e.message);
+  }
+}
+window.awardBonbonsAndRender = awardBonbonsAndRender;
 
 /* Beim Hub-Boot: Server-State holen und lokal überschreiben.
    Merged wird server-seitig — hier kommt fertig gemergter Blob rein. */

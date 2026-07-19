@@ -1143,6 +1143,7 @@
                     + (CREATURE_NAMES[ffGameData.creature] || '') + ' · ' + (GROWTH_LABELS[stage] || '') + '</div>';
             }
             renderCoinBank('ff-coin-bank', lastCoinsGained);
+            window.awardBonbonsAndRender?.(ffGameId, Math.min(totalScore, FF_MAX_SCORE), FF_MAX_SCORE, 'ff-coin-bank');
             renderResultItemButton('ff-result-item', ffGameId, () => location.reload());
         }
 

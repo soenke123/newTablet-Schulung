@@ -4000,6 +4000,7 @@ function showWin1() {
   if (w1img) w1img.innerHTML = gd.creature ? getCreatureHTML(gd.creature, stageW1) : '';
   populateWinHub(1);
   renderCoinBank('win1-coins', coinsW1);
+  window.awardBonbonsAndRender?.(gameId, growthTotal1, 240, 'win1-coins');
 
   win1Applied = true;
   document.getElementById('win1').classList.add('active');
@@ -4059,6 +4060,7 @@ function showWin2() {
   if (w2img) w2img.innerHTML = gd.creature ? getCreatureHTML(gd.creature, stageW2) : '';
   populateWinHub(2);
   renderCoinBank('win2-coins', coinsW2);
+  window.awardBonbonsAndRender?.(gameId, growthTotal2, maxP3 + 70, 'win2-coins');
 
   document.getElementById('win2').classList.add('active');
   startConfetti();

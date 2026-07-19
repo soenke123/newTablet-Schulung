@@ -4205,6 +4205,7 @@ function showEnd() {
     const lbl = document.getElementById('win-creature-label');
     if (lbl && gd.creature) lbl.textContent = (CREATURE_NAMES?.[gd.creature] ?? '') + ' – ' + stageName;
     renderCoinBank('win-coins', coinsGained);
+    window.awardBonbonsAndRender?.(gameId, raw, 90, 'win-coins');
     renderResultItemButton('win-item-btn-wrap', gameId, () => { resetGame(); });
     updateCompanion();
   }

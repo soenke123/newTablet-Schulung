@@ -322,6 +322,7 @@
       await window.loadGiftTasks?.();
       await window.loadWinTaskStatus?.();
       await window.syncHighscores?.();
+      await window.fetchDailyBonbonStatus?.();
 
       // Late-Joiner-Reveal-Recovery: legiRevealed=true stehen lassen wäre
       // ein inkonsistenter Zustand, wenn die Kreatur nie im game_state
@@ -392,6 +393,7 @@
         await window.refreshUnlockedFromServer?.();
         await window.loadServerState?.();
         await window.syncHighscores?.();
+        await window.fetchDailyBonbonStatus?.();
         window.repairLegiRevealMarker?.();
         renderHub();
       });
