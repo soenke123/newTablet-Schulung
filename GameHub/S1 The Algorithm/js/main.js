@@ -83,12 +83,12 @@ function saveAlgorithmHubData(score) {
     } else if (sd.lockmittel) {
       gd.creature = determineCreatureWithLockmittel(s, ALG_GAME_ID);
       sd.lockmittel = false;
-      sd.lockmittelCount = Math.max(0, (sd.lockmittelCount || 0) - 1);
+      sd.lockmittelSpent = (sd.lockmittelSpent || 0) + 1;
       saveShopData(sd);
     } else if (sd.glucksklee) {
       gd.creature = determineCreatureWithGlucksklee(s, ALG_GAME_ID);
       sd.glucksklee = false;
-      sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
+      sd.gluckskleeSpent = (sd.gluckskleeSpent || 0) + 1;
       saveShopData(sd);
     } else {
       gd.creature = determineCreature(s, true, ALG_GAME_ID);
@@ -111,8 +111,9 @@ function saveAlgorithmHubData(score) {
   // Items VOR saveGameData clearen: bei Nest-IDs spiegelt saveGameData intern
   // gd → sd.nests[i].hatched. Danach sd (Snapshot mit alten Werten) speichern
   // würde die Spiegelung plätten.
-  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-  if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+  // Migration 0042: Verbrauch = Bool clearen + Spent++ (max-Merge-fest).
+  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; sd.wachstumsBoosterSpent = (sd.wachstumsBoosterSpent || 0) + 1; saveShopData(sd); }
+  if (sd.coinsx3)          { sd.coinsx3 = false;          sd.coinsx3Spent          = (sd.coinsx3Spent          || 0) + 1; saveShopData(sd); }
 
   saveGameData(ALG_GAME_ID, gd);
   _algGameData = gd;

@@ -1114,15 +1114,16 @@
             // Nest-IDs gd → sd.nests[i].hatched intern. Danach sd (Snapshot
             // mit alten nest.hatched-Werten) zu speichern würde die Spiegelung
             // plätten und der Coin-Zuwachs geht beim nächsten Sync verloren.
-            if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-            if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+            // Migration 0042: Verbrauch = Bool clearen + Spent++ (max-Merge-fest).
+            if (sd.wachstumsBooster) { sd.wachstumsBooster = false; sd.wachstumsBoosterSpent = (sd.wachstumsBoosterSpent || 0) + 1; saveShopData(sd); }
+            if (sd.coinsx3)          { sd.coinsx3 = false;          sd.coinsx3Spent          = (sd.coinsx3Spent          || 0) + 1; saveShopData(sd); }
             if (isFirst && sd.lockmittel) {
                 sd.lockmittel = false;
-                sd.lockmittelCount = Math.max(0, (sd.lockmittelCount || 0) - 1);
+                sd.lockmittelSpent = (sd.lockmittelSpent || 0) + 1;
                 saveShopData(sd);
             } else if (isFirst && sd.glucksklee) {
                 sd.glucksklee = false;
-                sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
+                sd.gluckskleeSpent = (sd.gluckskleeSpent || 0) + 1;
                 saveShopData(sd);
             }
 

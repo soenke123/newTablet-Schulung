@@ -1464,15 +1464,23 @@ function loadShopData() {
       purchased:             d.purchased             ?? [],
       wachstumstrank:        d.wachstumstrank        ?? false,
       wachstumstrankCount:   d.wachstumstrankCount   ?? 0,
+      // Migration 0042: Spent-Counter analog spentKristalle. Anzeige/Guards
+      // via getConsumableCount(sd,id) = max(0, Count − Spent). Ohne dieses
+      // Trennmodell frisst der server-seitige max-Merge jeden Client-Decrement.
+      wachstumstrankSpent:   d.wachstumstrankSpent   ?? 0,
       // bool = "active for the next game" (set when Nutzen is clicked, cleared after use)
       wachstumsBooster:      d.wachstumsBoosterCount !== undefined ? !!(d.wachstumsBooster) : false,
       wachstumsBoosterCount: toCount(d.wachstumsBooster, d.wachstumsBoosterCount),
+      wachstumsBoosterSpent: d.wachstumsBoosterSpent ?? 0,
       coinsx3:               d.coinsx3Count          !== undefined ? !!(d.coinsx3)          : false,
       coinsx3Count:          toCount(d.coinsx3, d.coinsx3Count),
+      coinsx3Spent:          d.coinsx3Spent          ?? 0,
       glucksklee:            d.gluckskleeCount       !== undefined ? !!(d.glucksklee)        : false,
       gluckskleeCount:       toCount(d.glucksklee, d.gluckskleeCount),
+      gluckskleeSpent:       d.gluckskleeSpent       ?? 0,
       lockmittel:            d.lockmittelCount       !== undefined ? !!(d.lockmittel)        : false,
       lockmittelCount:       toCount(d.lockmittel, d.lockmittelCount),
+      lockmittelSpent:       d.lockmittelSpent       ?? 0,
       nests:                 d.nests                 ?? [],
       pendingEggNestId:      d.pendingEggNestId      ?? null,
       seenCreatures:         d.seenCreatures         ?? {},
@@ -1496,8 +1504,17 @@ function loadShopData() {
       sealProgress:          d.sealProgress          ?? {},
     };
   } catch(e) {
-    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, coinsx3: false, coinsx3Count: 0, glucksklee: false, gluckskleeCount: 0, lockmittel: false, lockmittelCount: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [] };
+    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumstrankSpent: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, wachstumsBoosterSpent: 0, coinsx3: false, coinsx3Count: 0, coinsx3Spent: 0, glucksklee: false, gluckskleeCount: 0, gluckskleeSpent: 0, lockmittel: false, lockmittelCount: 0, lockmittelSpent: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [] };
   }
+}
+
+/* Migration 0042: effektive Anzahl eines Consumables.
+   id ∈ {wachstumstrank, wachstumsBooster, coinsx3, glucksklee, lockmittel}
+   Count = alle je erhaltenen (grant), Spent = alle je genutzten.
+   Beide monoton wachsend, damit max-Merge sicher ist. */
+function getConsumableCount(sd, id) {
+  if (!sd) sd = loadShopData();
+  return Math.max(0, (sd[id + 'Count'] || 0) - (sd[id + 'Spent'] || 0));
 }
 
 /* Gibt zurück welches Item für diesen Slot nutzbar ist (und ob eins im Besitz ist).
@@ -1506,12 +1523,12 @@ function getActiveItemsForSlot(data, sd) {
   if (!sd) sd = loadShopData();
   const items = [];
   if (!data || !data.creature) {
-    if (sd.gluckskleeCount > 0) items.push({ id: 'glucksklee', icon: '🍀', name: 'Glücksklee', countKey: 'gluckskleeCount' });
-    if (sd.lockmittelCount > 0) items.push({ id: 'lockmittel', icon: '🧲', name: 'Lockmittel', countKey: 'lockmittelCount' });
+    if (getConsumableCount(sd, 'glucksklee') > 0) items.push({ id: 'glucksklee', icon: '🍀', name: 'Glücksklee' });
+    if (getConsumableCount(sd, 'lockmittel') > 0) items.push({ id: 'lockmittel', icon: '🧲', name: 'Lockmittel' });
   } else if (data.growth >= GROWTH_MAX) {
-    if (sd.coinsx3Count > 0) items.push({ id: 'coinsx3', icon: '🎰', name: 'Coins ×3', countKey: 'coinsx3Count' });
+    if (getConsumableCount(sd, 'coinsx3') > 0) items.push({ id: 'coinsx3', icon: '🎰', name: 'Coins ×3' });
   } else {
-    if (sd.wachstumsBoosterCount > 0) items.push({ id: 'wachstumsBooster', icon: '⚡', name: 'Wachstums-Booster', countKey: 'wachstumsBoosterCount' });
+    if (getConsumableCount(sd, 'wachstumsBooster') > 0) items.push({ id: 'wachstumsBooster', icon: '⚡', name: 'Wachstums-Booster' });
   }
   return items;
 }
@@ -1600,8 +1617,11 @@ function renderResultItemButton(containerId, gameId, onActivate) {
     btn.title = item.name + ' einsetzen';
     btn.addEventListener('click', () => {
       const sd = loadShopData();
-      if ((sd[item.countKey] ?? 0) <= 0) return;
-      sd[item.countKey]--;
+      // Migration 0042: Aktivierung setzt NUR das Bool. Verbrauch (Spent++)
+      // passiert beim Bool-Clearing im Spiel — sonst würde ein Abbruch das
+      // Item verbrennen und refundAbandonedItems müsste Spent revertieren
+      // (was der max-Merge sofort zurückplätten würde).
+      if (getConsumableCount(sd, item.id) <= 0) return;
       sd[item.id] = true;
       saveShopData(sd);
       if (typeof onActivate === 'function') onActivate();

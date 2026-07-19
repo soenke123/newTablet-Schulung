@@ -355,15 +355,16 @@ function saveToHub() {
   // sd (Snapshot von oben, mit alten nest.hatched-Werten) danach speichern,
   // plätten wir die frische Spiegelung. Reihenfolge umgedreht → saveGameData
   // liest cleared-sd frisch und die Spiegelung überlebt.
-  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-  if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+  // Migration 0042: Verbrauch = Bool clearen + Spent++ (max-Merge-fest).
+  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; sd.wachstumsBoosterSpent = (sd.wachstumsBoosterSpent || 0) + 1; saveShopData(sd); }
+  if (sd.coinsx3)          { sd.coinsx3 = false;          sd.coinsx3Spent          = (sd.coinsx3Spent          || 0) + 1; saveShopData(sd); }
   if (isFirst && sd.lockmittel) {
     sd.lockmittel = false;
-    sd.lockmittelCount = Math.max(0, (sd.lockmittelCount || 0) - 1);
+    sd.lockmittelSpent = (sd.lockmittelSpent || 0) + 1;
     saveShopData(sd);
   } else if (isFirst && sd.glucksklee) {
     sd.glucksklee = false;
-    sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
+    sd.gluckskleeSpent = (sd.gluckskleeSpent || 0) + 1;
     saveShopData(sd);
   }
 

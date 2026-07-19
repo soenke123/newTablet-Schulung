@@ -132,15 +132,16 @@ if (isFirst) {
     gd.creature = sd.glucksklee
       ? determineCreatureWithGlucksklee(normalizedScore, gameId)
       : determineCreature(normalizedScore, true, gameId);
-    if (sd.glucksklee) { sd.glucksklee = false; saveShopData(sd); }
+    if (sd.glucksklee) { sd.glucksklee = false; sd.gluckskleeSpent = (sd.gluckskleeSpent || 0) + 1; saveShopData(sd); }
   }
   gd.growth = 0; // sauber initialisieren, damit computeRoundResult drauf aufsetzt
 }
 
 // Wachstum & Coins — auch in Runde 1
 coinsGained = computeRoundResult(gd, rawScore, maxScore, sd);
-if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+// Migration 0042: Verbrauch = Bool clearen + xxxSpent++ (max-Merge-fest).
+if (sd.wachstumsBooster) { sd.wachstumsBooster = false; sd.wachstumsBoosterSpent = (sd.wachstumsBoosterSpent || 0) + 1; saveShopData(sd); }
+if (sd.coinsx3)          { sd.coinsx3 = false;          sd.coinsx3Spent          = (sd.coinsx3Spent          || 0) + 1; saveShopData(sd); }
 
 gd.points      += normalizedScore;
 gd.roundsPlayed += 1;
@@ -485,10 +486,12 @@ sd.glucksklee        // 🍀 — Epic-Chance erhöht bei nächstem determineCrea
 
 ```javascript
 // In computeRoundResult werden Booster automatisch NICHT verbraucht!
-// Das Spiel muss das manuell tun:
-if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
-if (sd.glucksklee)        { sd.glucksklee = false;        saveShopData(sd); }
+// Das Spiel muss das manuell tun. Migration 0042: Bool + xxxSpent++
+// (spent-counter wird server-seitig max-gemergt → tabsicher).
+if (sd.wachstumsBooster) { sd.wachstumsBooster = false; sd.wachstumsBoosterSpent = (sd.wachstumsBoosterSpent || 0) + 1; saveShopData(sd); }
+if (sd.coinsx3)          { sd.coinsx3 = false;          sd.coinsx3Spent          = (sd.coinsx3Spent          || 0) + 1; saveShopData(sd); }
+if (sd.glucksklee)       { sd.glucksklee = false;       sd.gluckskleeSpent       = (sd.gluckskleeSpent       || 0) + 1; saveShopData(sd); }
+if (sd.lockmittel)       { sd.lockmittel = false;       sd.lockmittelSpent       = (sd.lockmittelSpent       || 0) + 1; saveShopData(sd); }
 ```
 
 ---

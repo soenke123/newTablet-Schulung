@@ -3968,13 +3968,14 @@ function showWin1() {
         : sd0.glucksklee
           ? determineCreatureWithGlucksklee(creatureEquiv, gameId)
           : determineCreature(creatureEquiv, true, gameId);
+      // Migration 0042: Verbrauch = Bool clearen + Spent++.
       if (sd0.lockmittel) {
         sd0.lockmittel = false;
-        sd0.lockmittelCount = Math.max(0, (sd0.lockmittelCount || 0) - 1);
+        sd0.lockmittelSpent = (sd0.lockmittelSpent || 0) + 1;
         saveShopData(sd0);
       } else if (sd0.glucksklee) {
         sd0.glucksklee = false;
-        sd0.gluckskleeCount = Math.max(0, (sd0.gluckskleeCount || 0) - 1);
+        sd0.gluckskleeSpent = (sd0.gluckskleeSpent || 0) + 1;
         saveShopData(sd0);
       }
     }
@@ -3988,8 +3989,8 @@ function showWin1() {
   // Items VOR saveGameData clearen: bei Nest-IDs spiegelt saveGameData intern
   // gd → sd.nests[i].hatched. Danach sd (Snapshot mit alten Werten) speichern
   // würde die Spiegelung plätten.
-  if (sd1.wachstumsBooster) { sd1.wachstumsBooster = false; saveShopData(sd1); }
-  if (sd1.coinsx3)          { sd1.coinsx3 = false;          saveShopData(sd1); }
+  if (sd1.wachstumsBooster) { sd1.wachstumsBooster = false; sd1.wachstumsBoosterSpent = (sd1.wachstumsBoosterSpent || 0) + 1; saveShopData(sd1); }
+  if (sd1.coinsx3)          { sd1.coinsx3 = false;          sd1.coinsx3Spent          = (sd1.coinsx3Spent          || 0) + 1; saveShopData(sd1); }
 
   saveGameData(gameId, gd);
   updateGameEggDisplay(gd, 4, true);

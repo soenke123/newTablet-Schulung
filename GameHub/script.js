@@ -199,11 +199,16 @@ function saveAllData(data) {
 function refundAbandonedItems() {
   const sd = loadShopData();
   let changed = false;
-  if (sd.wachstumstrank)   { sd.wachstumstrank = false;   sd.wachstumstrankCount   = (sd.wachstumstrankCount   || 0) + 1; changed = true; }
-  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; sd.wachstumsBoosterCount = (sd.wachstumsBoosterCount || 0) + 1; changed = true; }
-  if (sd.coinsx3)           { sd.coinsx3 = false;           sd.coinsx3Count          = (sd.coinsx3Count || 0) + 1;           changed = true; }
-  if (sd.glucksklee)        { sd.glucksklee = false;         sd.gluckskleeCount       = (sd.gluckskleeCount || 0) + 1;        changed = true; }
-  if (sd.lockmittel)        { sd.lockmittel = false;         sd.lockmittelCount       = (sd.lockmittelCount || 0) + 1;        changed = true; }
+  // Migration 0042: Aktivierung setzt nur noch das Bool, dekrementiert
+  // aber keinen Count. Abbrechen = einfach Bool clearen; ein Refund auf
+  // Count/Spent wäre max-Merge-fest und würde den Verbrauch nicht rückwärts
+  // korrigieren. Der Verbrauch (Spent++) passiert erst bei Bool-Clearing
+  // im Spiel selbst.
+  if (sd.wachstumstrank)   { sd.wachstumstrank = false;   changed = true; }
+  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; changed = true; }
+  if (sd.coinsx3)          { sd.coinsx3 = false;          changed = true; }
+  if (sd.glucksklee)       { sd.glucksklee = false;       changed = true; }
+  if (sd.lockmittel)       { sd.lockmittel = false;       changed = true; }
   if (changed) saveShopData(sd);
 }
 
@@ -329,10 +334,10 @@ function attachCardListeners(card, game, data, isBackupTarget) {
       e.stopPropagation();
       const btn = e.currentTarget;
       const sd = loadShopData();
-      const countKey = btn.dataset.countKey;
-      const itemId   = btn.dataset.item;
-      if (!countKey || (sd[countKey] ?? 0) <= 0) return;
-      sd[countKey]--;
+      const itemId = btn.dataset.item;
+      // Migration 0042: Aktivierung setzt nur bool, Verbrauch (Spent++) erst
+      // beim Bool-Clearing im Spiel.
+      if (!itemId || getConsumableCount(sd, itemId) <= 0) return;
       sd[itemId] = true;
       saveShopData(sd);
       window.location.href = game.url + '?id=' + game.id;
@@ -433,7 +438,7 @@ function buildCardHTML(game, data, shopData) {
   const maxed        = hasCreature && data.growth >= GROWTH_MAX;
   const isLegi       = !!game.clusterLegi;
   // Kein Wachstumstrank am Team-Legendär — er wächst durch Aufgaben, nicht Tränke.
-  const canUseTrank  = hasCreature && !maxed && !isLegi && (shopData?.wachstumstrankCount ?? 0) > 0;
+  const canUseTrank  = hasCreature && !maxed && !isLegi && getConsumableCount(shopData, 'wachstumstrank') > 0;
   // Legi-Titel überschreibt das GAMES_CONFIG '???' mit dem echten Kreatur-Namen.
   const titleText    = isLegi && hasCreature
     ? `${game.icon} ${escapeHtml(CREATURE_NAMES[data.creature] ?? data.creature)}`
@@ -478,10 +483,10 @@ function buildCardHTML(game, data, shopData) {
   if (items.length === 0) return `<button class="game-card__btn">Spielen!</button>`;
   if (items.length === 1) {
     const it = items[0];
-    return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" data-count-key="${it.countKey}" title="${it.name} einsetzen">nutze ${it.icon}</button></div>`;
+    return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" title="${it.name} einsetzen">nutze ${it.icon}</button></div>`;
   }
   const useBtns = items.map(it =>
-    `<button class="game-card__use-btn game-card__use-btn--icon" data-item="${it.id}" data-count-key="${it.countKey}" title="${it.name} einsetzen">${it.icon}</button>`
+    `<button class="game-card__use-btn game-card__use-btn--icon" data-item="${it.id}" title="${it.name} einsetzen">${it.icon}</button>`
   ).join('');
   return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button>${useBtns}</div>`;
 })()}
@@ -1217,11 +1222,11 @@ function _buildAtariHintItemElement(item, shopData) {
 }
 
 const _SHOP_STACKABLE  = ['wachstumstrank', 'wachstumsBooster', 'coinsx3', 'glucksklee', 'lockmittel'];
-const _SHOP_COUNT_KEYS = { wachstumstrank: 'wachstumstrankCount', wachstumsBooster: 'wachstumsBoosterCount', coinsx3: 'coinsx3Count', glucksklee: 'gluckskleeCount', lockmittel: 'lockmittelCount' };
 
 function _buildStandardShopItemElement(item, shopData, allData, available, s2Open, soldOut) {
   const isStackable = _SHOP_STACKABLE.includes(item.id);
-  const ownedCount  = isStackable ? (shopData[_SHOP_COUNT_KEYS[item.id]] ?? 0) : 0;
+  // Migration 0042: Anzeige = effektiver Rest = Count − Spent (via Helper).
+  const ownedCount  = isStackable ? getConsumableCount(shopData, item.id) : 0;
   const isActive    = !isStackable && !!item.consumable && !!shopData[item.id];
   const canAfford   = item.currency === 'kristall'
     ? getAvailableKristalle(shopData) >= item.price
@@ -1451,7 +1456,7 @@ function tryApplyWachstumstrank(gameId) {
   // durchrutscht.
   if (game?.clusterLegi) return;
   const sd = loadShopData();
-  if ((sd.wachstumstrankCount ?? 0) <= 0) return;
+  if (getConsumableCount(sd, 'wachstumstrank') <= 0) return;
   const allData = loadAllData();
   const data = allData[gameId];
   if (!data || !data.creature || data.growth >= GROWTH_MAX) return;
@@ -1462,7 +1467,8 @@ function tryApplyWachstumstrank(gameId) {
   // würde das nachgelagerte saveShopData(sd) mit dem stale sd (ohne
   // frischen Mirror) den hatched-Wert clobbern → auf Zweitgerät fehlt der
   // Fortschritt, obwohl er lokal korrekt in lernwelt_v3 steht.
-  sd.wachstumstrankCount--;
+  // Migration 0042: spent-Counter statt count-decrement (max-Merge-fest).
+  sd.wachstumstrankSpent = (sd.wachstumstrankSpent ?? 0) + 1;
   saveShopData(sd);
   saveGameData(gameId, data);
   renderHub();
@@ -1712,7 +1718,7 @@ function buildNestCard(nest, allData, shopData) {
   // aber keine gameUrl → playNest() returnt still und der Klick tut nichts.
   const canPlay     = !!nest.gameId;
   const nestMaxed   = hasCreature && nestData.growth >= GROWTH_MAX;
-  const canUseTrank = hasCreature && !nestMaxed && (shopData.wachstumstrankCount ?? 0) > 0;
+  const canUseTrank = hasCreature && !nestMaxed && getConsumableCount(shopData, 'wachstumstrank') > 0;
   const isAtariEgg  = !hasCreature && nest.eggType === 'atari';
   const isPfauEgg   = !hasCreature && nest.eggType === 'pfau';
 
@@ -1763,10 +1769,10 @@ function buildNestCard(nest, allData, shopData) {
       if (!nestActiveItems.length) return playBtn;
       if (nestActiveItems.length === 1) {
         const it = nestActiveItems[0];
-        return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" data-count-key="${it.countKey}" title="${it.name} einsetzen">nutze ${it.icon}</button></div>`;
+        return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" title="${it.name} einsetzen">nutze ${it.icon}</button></div>`;
       }
       const useBtns = nestActiveItems.map(it =>
-        `<button class="game-card__use-btn game-card__use-btn--icon" data-item="${it.id}" data-count-key="${it.countKey}" title="${it.name} einsetzen">${it.icon}</button>`
+        `<button class="game-card__use-btn game-card__use-btn--icon" data-item="${it.id}" title="${it.name} einsetzen">${it.icon}</button>`
       ).join('');
       return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button>${useBtns}</div>`;
     })()}
@@ -1788,10 +1794,9 @@ function attachNestCardListeners(card, nest, nestData, hasCreature, canPlay) {
         e.stopPropagation();
         const btn = e.currentTarget;
         const sd = loadShopData();
-        const countKey = btn.dataset.countKey;
-        const itemId   = btn.dataset.item;
-        if (!countKey || (sd[countKey] ?? 0) <= 0) return;
-        sd[countKey]--;
+        const itemId = btn.dataset.item;
+        // Migration 0042: Aktivierung setzt nur bool, Spent++ beim Bool-Clearing im Spiel.
+        if (!itemId || getConsumableCount(sd, itemId) <= 0) return;
         sd[itemId] = true;
         saveShopData(sd);
         if (!nest.gameUrl) return;

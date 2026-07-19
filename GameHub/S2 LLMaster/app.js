@@ -3591,13 +3591,14 @@ function showMilestoneModal() {
           : sd.glucksklee
             ? determineCreatureWithGlucksklee(norm0, gameId)
             : determineCreature(norm0, true, gameId));
+    // Migration 0042: Verbrauch = Bool clearen + Spent++.
     if (sd.lockmittel) {
       sd.lockmittel = false;
-      sd.lockmittelCount = Math.max(0, (sd.lockmittelCount || 0) - 1);
+      sd.lockmittelSpent = (sd.lockmittelSpent || 0) + 1;
       saveShopData(sd);
     } else if (sd.glucksklee) {
       sd.glucksklee = false;
-      sd.gluckskleeCount = Math.max(0, (sd.gluckskleeCount || 0) - 1);
+      sd.gluckskleeSpent = (sd.gluckskleeSpent || 0) + 1;
       saveShopData(sd);
     }
     const growthBefore = gd.growth;
@@ -3605,8 +3606,8 @@ function showMilestoneModal() {
     computeRoundResult(gd, norm0, 10, sd);
     gd.growth = growthBefore;
     gd.coins  = coinsBefore;
-    if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-    if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+    if (sd.wachstumsBooster) { sd.wachstumsBooster = false; sd.wachstumsBoosterSpent = (sd.wachstumsBoosterSpent || 0) + 1; saveShopData(sd); }
+    if (sd.coinsx3)          { sd.coinsx3 = false;          sd.coinsx3Spent          = (sd.coinsx3Spent          || 0) + 1; saveShopData(sd); }
     saveGameData(gameId, gd);
   }
   // Kreatur im Milestone-Modal anzeigen
@@ -4189,8 +4190,8 @@ function showEnd() {
       // Items VOR saveGameData clearen: bei Nest-IDs spiegelt saveGameData intern
       // gd → sd.nests[i].hatched. Danach sd (Snapshot mit alten Werten) speichern
       // würde die Spiegelung plätten.
-      if (sd.wachstumsBooster) { sd.wachstumsBooster = false; saveShopData(sd); }
-      if (sd.coinsx3)           { sd.coinsx3 = false;          saveShopData(sd); }
+      if (sd.wachstumsBooster) { sd.wachstumsBooster = false; sd.wachstumsBoosterSpent = (sd.wachstumsBoosterSpent || 0) + 1; saveShopData(sd); }
+      if (sd.coinsx3)          { sd.coinsx3 = false;          sd.coinsx3Spent          = (sd.coinsx3Spent          || 0) + 1; saveShopData(sd); }
     }
     const norm = Math.round(Math.min(raw, 90) / 90 * 10);
     gd.points       += norm;
