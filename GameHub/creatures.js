@@ -1961,6 +1961,17 @@ async function awardGameBonbons(gameId, correct, maxRounds) {
   const result = await callBonbonRPC('award_game_bonbons', {
     p_game_id: gameId, p_correct: correct, p_max_rounds: maxRounds
   });
+  // Debug-Log für Diagnose: bei „gar keine Bonbons" zeigt die Konsole
+  // WARUM (skipped-Reason vom Server, Netzwerk-Fehler, o.ä.).
+  if (!result) {
+    console.warn('[bonbons] award_game_bonbons: kein Response (Netzwerk/Token fehlt?)', { gameId, correct, maxRounds });
+  } else if (!result.ok) {
+    console.warn('[bonbons] award_game_bonbons rejected:', result, { gameId, correct, maxRounds });
+  } else if (result.skipped) {
+    console.info('[bonbons] award_game_bonbons skipped:', result.skipped, { gameId, correct, maxRounds });
+  } else {
+    console.info('[bonbons] +' + (result.awarded || 0) + ' 🍬', { gameId, base: result.base, bonus: result.bonus, total: result.bonbons_total });
+  }
   if (result && result.ok && !result.skipped) {
     window.__lastBonbonResult = { gameId, ...result };
     // Daily-Claim-Cache: In-Memory für die aktuelle Page + LocalStorage-Marker,

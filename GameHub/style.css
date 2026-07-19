@@ -2116,14 +2116,15 @@ body.s2-active .hud-kristalle { display: flex; }
   }
 
   .game-card__release {
-    grid-column: 2;
-    grid-row: 4;
-    position: relative;
-    top: auto;
-    left: auto;
-    bottom: auto;
-    right: auto;
-    justify-self: end;
+    /* Zurück zu absolute — teilt sich sonst grid-row 4 mit .game-card__hints
+       und überlappt bei drei Kindern (Trank/Coin/Bonbon). */
+    grid-column: unset;
+    grid-row: unset;
+    justify-self: unset;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 6;
   }
 
   .game-card__trank-btn {

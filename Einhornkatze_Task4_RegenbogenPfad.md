@@ -79,6 +79,26 @@ Antwort-Zuordnung in dieser Datei fix: ☀️ / 🌙 / 🌈. **Im Spiel sollten 
 
 ---
 
+## 5a. Szenen-Überschriften
+
+Jede Frage bekommt eine **kurze Überschrift** über dem Szenenbild (nicht in der Sprechblase — die bleibt der Katze vorbehalten). Setzt den Kontext, damit das Bild sofort lesbar wird.
+
+| # | Überschrift (über dem Bild) |
+|---|---|
+| 1 | Deine Oma will das Video vom letzten Familienfest sehen. Aber die Datei ist zu groß. |
+| 2 | Ein Post in deinem Feed. Große Zahl, dramatischer Text. |
+| 3 | Eine App fragt nach Zugriff. Der eine Knopf leuchtet, der andere ist kaum zu sehen. |
+| 4 | Du scrollst. Immer dasselbe. Immer dieselbe Meinung. |
+| 5 | Ein Influencer-Post: perfekter Morgen, Yoga, Sonnenlicht. 2 Millionen Likes. |
+| 6 | Du stehst mit einem Freund im Park. Plötzlich hebt er das Handy — Selfie für die Story. Du hast nicht gefragt bekommen. |
+| 7 | 23:47 Uhr. Nur du und das Licht des Displays. |
+| 8 | Wochenrückblick: 42 Stunden am Handy. |
+| 9 | Die Katze schaut dich an. Am Himmel bricht ein Regenbogen auf. |
+
+**Bildquelle:** Die Hintergrund-PNGs liegen im Ordner `data/Katzen reveal fragen/`.
+
+---
+
 ## 6. Skalen-Logik & Tiebreaker
 
 - Jede Antwort füllt genau eine der drei Skalen um +1.
