@@ -2151,18 +2151,27 @@ body.s2-active .hud-kristalle { display: flex; }
   }
 
   /* Hints nehmen die volle Content-Spalte ein und ordnen Trank/Bonbon/Coin
-     horizontal. Release sitzt in eigener Grid-Spalte rechts daneben. */
-  .game-card__hints {
+     horizontal. Release sitzt in eigener Grid-Spalte rechts daneben.
+     WICHTIG: Doppelter Selektor `.game-card .game-card__hints`, weil die
+     Basis-Regel `.game-card__hints` weiter unten in der Datei steht (nach
+     dieser Media-Query) — bei gleicher Spezifität würde sie sonst per
+     Source-Order gewinnen und hier `position: absolute; flex-direction:
+     column;` zurücksetzen (→ Hints stapeln sich oben-rechts über dem
+     Release-Button). */
+  .game-card .game-card__hints {
     position: relative;
     top: auto;
     right: auto;
     grid-column: 2;
     grid-row: 4;
+    display: flex;
     flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
     justify-self: start;
     gap: 6px;
     max-width: 100%;
+    width: 100%;
   }
 
   /* Textlastige Elemente ausblenden */
