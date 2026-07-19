@@ -2545,11 +2545,13 @@ function openLegiTaskModal() {
   const taskItems = LEGI_TASKS.map(t => {
     const badge = renderLegiTaskBadge(t.key);
     const pending = window.__giftTasks?.[t.key] && !window.__giftTasks[t.key].accepted_at;
+    const winReady = t.key === 'win' && window.__winTaskReady === true;
     const cls = [
       'legi-task',
       `legi-task--${t.status}`,
       t.interactive ? 'legi-task--interactive' : '',
-      pending ? 'legi-task--gift-pending' : ''
+      pending ? 'legi-task--gift-pending' : '',
+      winReady ? 'legi-task--win-ready' : ''
     ].filter(Boolean).join(' ');
     return `
       <div class="${cls}" data-task-key="${escapeHtml(t.key)}">

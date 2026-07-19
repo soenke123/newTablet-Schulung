@@ -3775,7 +3775,8 @@ input[type="password"]::-webkit-textfield-decoration-container {
   color: #ffcf7a;
   border: 1px solid rgba(255, 169, 64, 0.5);
 }
-.legi-task--gift-pending {
+.legi-task--gift-pending,
+.legi-task--win-ready {
   animation: legi-rainbow-pulse 2.4s ease-in-out infinite;
   border-color: transparent !important;
 }
