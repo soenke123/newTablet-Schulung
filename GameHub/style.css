@@ -2116,15 +2116,16 @@ body.s2-active .hud-kristalle { display: flex; }
   }
 
   .game-card__release {
-    /* Zurück zu absolute — teilt sich sonst grid-row 4 mit .game-card__hints
-       und überlappt bei drei Kindern (Trank/Coin/Bonbon). */
-    grid-column: unset;
-    grid-row: unset;
-    justify-self: unset;
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    z-index: 6;
+    /* Freilassen bleibt rechts in derselben Row wie die Hints — teilt sich
+       die Zelle mit .game-card__hints (start/end). Reihe: [Hints...] [Release]. */
+    grid-column: 2;
+    grid-row: 4;
+    position: relative;
+    top: auto;
+    left: auto;
+    bottom: auto;
+    right: auto;
+    justify-self: end;
   }
 
   .game-card__trank-btn {
@@ -2149,7 +2150,10 @@ body.s2-active .hud-kristalle { display: flex; }
     align-self: center;
   }
 
-  /* Mobile: alle Bonus-Elemente in einer horizontalen Reihe unter dem Play-Button. */
+  /* Mobile: Trank/Coin/Bonbon horizontal links unter dem Play-Button.
+     .game-card__release liegt rechts in derselben Zelle (justify-self: end).
+     max-width reserviert Platz für den Freilassen-Button, damit die Hints
+     nicht drunter laufen. */
   .game-card__hints {
     position: relative;
     top: auto;
@@ -2160,7 +2164,7 @@ body.s2-active .hud-kristalle { display: flex; }
     align-items: center;
     justify-self: start;
     gap: 6px;
-    max-width: 100%;
+    max-width: calc(100% - 44px);
   }
 
   /* Textlastige Elemente ausblenden */
