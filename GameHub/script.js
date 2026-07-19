@@ -2492,7 +2492,7 @@ function showSealEggOpeningAnimation(def, creature, onClose) {
 const LEGI_TASKS = [
   { key: 'gift',     icon: '🎁', label: 'Andere beschenken',    status: 'active', hint: '50 🪙 – schenk eine Stufe', interactive: true },
   { key: 'friends',  icon: '🤝', label: 'Freunde finden',       status: 'active', hint: '3 mit gleichem Code', interactive: true },
-  { key: 'win',      icon: '🏆', label: 'Gemeinsam siegen',     status: 'active', hint: 'bald verfügbar' },
+  { key: 'win',      icon: '🏆', label: 'Gemeinsam siegen',     status: 'active', hint: 'Alle Monster im Kurs vollenden', interactive: true },
   { key: 'locked_1', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
   { key: 'locked_2', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
 ];
@@ -2581,6 +2581,7 @@ function openLegiTaskModal() {
     row.addEventListener('click', () => {
       if (t.key === 'gift')    openGiftFlow();
       if (t.key === 'friends') openFriendsFlow();
+      if (t.key === 'win')     openWinFlow();
     });
   }
 
@@ -3303,6 +3304,292 @@ function friendsErrorMessage(code) {
     no_grant:         'Dein Kurs hat die Einhornkatze noch nicht freigeschaltet.',
     not_in_room:      'Du bist nicht mehr im Raum — bitte neu beitreten.',
     not_enough_users: 'Es sind noch nicht genug Leute im Raum.',
+  };
+  if (map[code]) return map[code];
+  if (typeof code === 'string' && code.startsWith('http_')) {
+    return `Netzwerkfehler (${code}). Probier es gleich nochmal.`;
+  }
+  return code || 'Unbekannter Fehler.';
+}
+
+// ─── Win-Flow („Gemeinsam siegen") ──────────────────────────
+// Cluster-weite Kreatur-Sammlung. Alle 25 non-Legi-Kreaturen müssen
+// von mind. 1 Cluster-Mitglied auf Stufe 5 (growth ≥ 100) gebracht
+// worden sein. Ist die Sammlung komplett, kann jeder aktive User
+// einmal seine eigene Einhornkatze eine Stufe weiter freischalten.
+// Aggregation liefert Server via get_cluster_creature_collection —
+// Refresh nur beim Öffnen des Flows (kein Realtime).
+//
+// Views:
+//   loading  — RPC läuft
+//   grid     — Kreatur-Grid mit Tabs (Alle | S1 | S2 | S3)
+//   detail   — einzelne Kreatur mit Vollender-Liste (Namen bei ≤3)
+//   claiming — claim_win_reward-RPC läuft
+//   claimed  — Erfolg, Banner + Rückkehr zur Task-Liste
+//   error    — RPC-Fehler mit Retry
+async function openWinFlow() {
+  const content = document.getElementById('legiTaskModalContent');
+  const overlay = document.getElementById('legiTaskModal');
+  if (!content || !overlay) return;
+
+  const state = {
+    view: 'loading',
+    creatures: [],           // [{creature, season, max_stage, has_max, holder_count, holders}]
+    hasAll: false,
+    alreadyClaimed: false,
+    total: 25,
+    activeTab: 'all',        // 'all' | 1 | 2 | 3
+    detailCreature: null,    // Kreatur-Key im detail-View
+    error: null,
+  };
+
+  function render() {
+    content.innerHTML = winFlowShellHTML(state);
+    wireEvents();
+  }
+
+  function wireEvents() {
+    const back = content.querySelector('.legi-win-back');
+    if (back) back.addEventListener('click', () => openLegiTaskModal());
+
+    if (state.view === 'error') {
+      const retry = content.querySelector('.legi-win-retry-btn');
+      if (retry) retry.addEventListener('click', () => fetchCollection());
+    }
+
+    if (state.view === 'grid') {
+      content.querySelectorAll('.legi-win-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = btn.dataset.tab;
+          state.activeTab = val === 'all' ? 'all' : +val;
+          render();
+        });
+      });
+      content.querySelectorAll('.legi-win-slot').forEach(slot => {
+        slot.addEventListener('click', () => {
+          state.detailCreature = slot.dataset.creature;
+          state.view = 'detail';
+          render();
+        });
+      });
+      const claim = content.querySelector('.legi-win-claim-btn');
+      if (claim) claim.addEventListener('click', () => doClaim());
+    }
+
+    if (state.view === 'detail') {
+      const detailBack = content.querySelector('.legi-win-detail-back');
+      if (detailBack) detailBack.addEventListener('click', () => {
+        state.detailCreature = null;
+        state.view = 'grid';
+        render();
+      });
+    }
+  }
+
+  async function fetchCollection() {
+    state.view = 'loading';
+    state.error = null;
+    render();
+    const res = await callGiftRpc('get_cluster_creature_collection', {});
+    if (!res.ok) {
+      state.error = winErrorMessage(res.error);
+      state.view = 'error';
+      render();
+      return;
+    }
+    state.creatures = res.creatures || [];
+    state.hasAll = !!res.has_all_creatures;
+    state.alreadyClaimed = !!res.already_claimed;
+    state.total = res.total || 25;
+    state.view = 'grid';
+    render();
+  }
+
+  async function doClaim() {
+    state.view = 'claiming';
+    render();
+    const res = await callGiftRpc('claim_win_reward', {});
+    if (!res.ok && res.error !== 'already_claimed') {
+      state.error = winErrorMessage(res.error);
+      state.view = 'error';
+      render();
+      return;
+    }
+    // Growth via server-side Update — Client-State neu laden.
+    await window.loadGiftTasks?.();
+    await window.loadServerState?.();
+    if (typeof renderHub === 'function') renderHub();
+
+    triggerWinHeroBanner();
+
+    state.alreadyClaimed = true;
+    state.view = 'claimed';
+    render();
+
+    // Nach kurzer Erfolgs-Anzeige zurück ins Task-Modal (analog Friends).
+    setTimeout(() => {
+      if (!overlay.hidden) openLegiTaskModal();
+    }, 2500);
+  }
+
+  function triggerWinHeroBanner() {
+    const banner = document.createElement('div');
+    banner.className = 'levelup-banner levelup-banner--final';
+    banner.textContent = 'Sammel-Aufgabe erfüllt!';
+    document.body.appendChild(banner);
+    banner.addEventListener('animationend', () => banner.remove(), { once: true });
+    setTimeout(() => banner.remove(), 3000);
+  }
+
+  fetchCollection();
+}
+window.openWinFlow = openWinFlow;
+
+function winFlowShellHTML(s) {
+  const header = `
+    <div class="legi-gift-header">
+      <button class="legi-win-back" title="Zurück zu den Aufgaben">← Zurück</button>
+      <h2 class="bonbon-modal__title" style="margin:0;">🏆 Gemeinsam siegen</h2>
+    </div>`;
+
+  if (s.view === 'loading') {
+    return `${header}
+      <div class="legi-win-body">
+        <p class="legi-gift-loading">Sammlung wird geladen…</p>
+      </div>`;
+  }
+
+  if (s.view === 'error') {
+    return `${header}
+      <div class="legi-win-body">
+        <p class="legi-gift-error">${escapeHtml(s.error || 'Unbekannter Fehler.')}</p>
+        <button class="legi-win-retry-btn">Noch einmal versuchen</button>
+      </div>`;
+  }
+
+  if (s.view === 'claiming') {
+    return `${header}
+      <div class="legi-win-body">
+        <p class="legi-gift-loading">Stufe wird freigeschaltet…</p>
+      </div>`;
+  }
+
+  if (s.view === 'claimed') {
+    return `${header}
+      <div class="legi-win-body">
+        <p class="legi-friends-hero">🎉 Sammel-Aufgabe erfüllt!</p>
+      </div>`;
+  }
+
+  if (s.view === 'detail') {
+    return `${header}${renderWinDetail(s)}`;
+  }
+
+  // grid
+  return `${header}${renderWinGrid(s)}`;
+}
+
+function renderWinGrid(s) {
+  const tabs = ['all', 1, 2, 3].map(val => {
+    const active = s.activeTab === val ? ' book-tab--active' : '';
+    const label = val === 'all' ? 'Alle' : `S${val}`;
+    return `<button class="book-tab legi-win-tab${active}" data-tab="${val}">${label}</button>`;
+  }).join('');
+
+  const filtered = s.creatures.filter(c => s.activeTab === 'all' || c.season === s.activeTab);
+  const foundAll = s.creatures.filter(c => c.has_max).length;
+
+  const slots = filtered.map(c => renderWinSlot(c)).join('');
+
+  const bottomButton = (s.hasAll && !s.alreadyClaimed)
+    ? `<button class="legi-win-claim-btn">🌈 Nächste Stufe freischalten</button>`
+    : s.alreadyClaimed
+      ? `<p class="legi-win-claimed-note">✓ Du hast die Stufe bereits abgeholt.</p>`
+      : '';
+
+  return `
+    <div class="legi-win-body">
+      <p class="legi-win-intro">
+        Der ganze Kurs muss jedes Monster einmal auf die höchste Stufe bringen.
+        Klicke auf ein Feld, um zu sehen, wer es schon vollendet hat.
+      </p>
+      <div class="book-tabs legi-win-tabs">${tabs}</div>
+      <p class="book-modal__count">${foundAll} / ${s.total} vollendet</p>
+      <div class="book-grid book-grid--normals legi-win-grid">${slots}</div>
+      <div class="legi-win-footer">${bottomButton}</div>
+    </div>`;
+}
+
+function renderWinSlot(c) {
+  const name = (typeof BOOK_NAMES !== 'undefined' && BOOK_NAMES[c.creature])
+    ? BOOK_NAMES[c.creature]
+    : (CREATURE_NAMES[c.creature] ?? c.creature);
+  if (c.max_stage <= 0) {
+    return `<div class="book-slot book-slot--unseen legi-win-slot" data-creature="${escapeHtml(c.creature)}" title="${escapeHtml(name)} – noch nicht entdeckt">
+      <span class="book-slot__unknown">?</span>
+    </div>`;
+  }
+  // Server liefert 0..5 als max_stage. getCreatureHTML erwartet Stage
+  // im gleichen Range wie das Buch der Monster (siehe openBookModal).
+  const stage = Math.min(c.max_stage, 5);
+  const dimmed = c.has_max ? '' : ' legi-win-slot--dimmed';
+  const check = c.has_max
+    ? '<span class="book-slot__check book-slot__check--gold">✦</span>'
+    : '';
+  return `<div class="book-slot book-slot--seen legi-win-slot${dimmed}" data-creature="${escapeHtml(c.creature)}" title="${escapeHtml(name)}">
+    <div class="book-slot__img">${getCreatureHTML(c.creature, stage)}</div>
+    ${check}
+  </div>`;
+}
+
+function renderWinDetail(s) {
+  const c = s.creatures.find(x => x.creature === s.detailCreature);
+  if (!c) {
+    return `<div class="legi-win-body"><p>Monster nicht gefunden.</p></div>`;
+  }
+  const name = (typeof BOOK_NAMES !== 'undefined' && BOOK_NAMES[c.creature])
+    ? BOOK_NAMES[c.creature]
+    : (CREATURE_NAMES[c.creature] ?? c.creature);
+  const seasonLabel = `Season ${c.season}`;
+  const stage = Math.max(0, Math.min(c.max_stage, 5));
+  const stageLabel = (typeof GROWTH_LABELS !== 'undefined' && GROWTH_LABELS[stage])
+    ? GROWTH_LABELS[stage]
+    : '';
+
+  let holdersHtml;
+  if (!c.has_max) {
+    holdersHtml = `<p class="legi-win-detail-note">Noch niemand im Kurs hat dieses Monster vollendet.</p>`;
+  } else if (Array.isArray(c.holders) && c.holders.length > 0) {
+    const list = c.holders.map(n => `<li>${escapeHtml(n)}</li>`).join('');
+    holdersHtml = `
+      <p class="legi-win-detail-note">Vollendet von:</p>
+      <ul class="legi-win-holders">${list}</ul>`;
+  } else {
+    holdersHtml = `<p class="legi-win-detail-note">Mehr als 3 Personen haben dieses Monster vollendet.</p>`;
+  }
+
+  return `
+    <div class="legi-win-body legi-win-detail">
+      <button class="legi-win-detail-back">← Zurück zur Übersicht</button>
+      <div class="legi-win-detail-sprite">${getCreatureHTML(c.creature, stage)}</div>
+      <div class="legi-win-detail-name">${escapeHtml(name)}</div>
+      <div class="legi-win-detail-meta">
+        <span class="legi-win-detail-season">${seasonLabel}</span>
+        ${stageLabel ? `<span class="legi-win-detail-stage">${escapeHtml(stageLabel)}</span>` : ''}
+        ${c.has_max ? `<span class="legi-win-detail-check">✦ Vollendet</span>` : ''}
+      </div>
+      ${holdersHtml}
+    </div>`;
+}
+
+function winErrorMessage(code) {
+  const map = {
+    no_session:            'Bitte neu anmelden.',
+    not_authenticated:     'Bitte neu anmelden.',
+    no_cluster:            'Du bist keinem Kurs zugeordnet.',
+    no_grant:              'Dein Kurs hat die Einhornkatze noch nicht freigeschaltet.',
+    collection_incomplete: 'Es fehlen noch Monster im Kurs.',
+    already_claimed:       'Du hast die Stufe bereits abgeholt.',
   };
   if (map[code]) return map[code];
   if (typeof code === 'string' && code.startsWith('http_')) {

@@ -4102,3 +4102,159 @@ input[type="password"]::-webkit-textfield-decoration-container {
   .legi-friends-code-input { font-size: 1.4rem; letter-spacing: 0.3em; }
 }
 
+/* ─── Win-Flow („Gemeinsam siegen") ─────────────────────── */
+.legi-win-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 4px 4px;
+}
+.legi-win-intro {
+  color: var(--clr-cream, #fef6e4);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  margin: 0;
+}
+.legi-win-tabs {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.legi-win-grid {
+  gap: 10px;
+  justify-content: center;
+}
+.legi-win-slot {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.legi-win-slot:hover  { transform: scale(1.06); }
+.legi-win-slot:active { transform: scale(0.97); }
+.legi-win-slot--dimmed .book-slot__img {
+  opacity: 0.55;
+  filter: grayscale(0.35);
+}
+.legi-win-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+.legi-win-claim-btn {
+  padding: 14px 32px;
+  border: none;
+  border-radius: 999px;
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #2a1250;
+  background: linear-gradient(90deg, #ff5b6b, #ffa940, #ffeb3b, #66d16b, #4fb3ff, #b477ff);
+  background-size: 300% 100%;
+  cursor: pointer;
+  animation: reveal-btn-shimmer 4s linear infinite;
+  box-shadow: 0 8px 22px rgba(180, 119, 255, 0.35), 0 0 30px rgba(255, 255, 255, 0.25);
+  transition: transform 0.15s ease;
+}
+.legi-win-claim-btn:hover  { transform: scale(1.05); }
+.legi-win-claim-btn:active { transform: scale(0.98); }
+.legi-win-claimed-note {
+  text-align: center;
+  color: rgba(255, 215, 0, 0.9);
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  margin: 4px 0;
+}
+.legi-win-retry-btn {
+  align-self: center;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 999px;
+  background: var(--clr-cream, #fef6e4);
+  color: #2a1250;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  cursor: pointer;
+}
+.legi-win-detail {
+  align-items: center;
+  text-align: center;
+}
+.legi-win-detail-back {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--clr-cream, #fef6e4);
+  font-family: 'Cinzel', serif;
+  cursor: pointer;
+}
+.legi-win-detail-sprite {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+}
+.legi-win-detail-sprite img,
+.legi-win-detail-sprite svg {
+  max-width: 220px;
+  max-height: 220px;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35));
+}
+.legi-win-detail-name {
+  font-family: 'Cinzel', serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--clr-cream, #fef6e4);
+  margin-top: 4px;
+}
+.legi-win-detail-meta {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 6px 0 4px;
+}
+.legi-win-detail-season,
+.legi-win-detail-stage,
+.legi-win-detail-check {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-family: 'Cinzel', serif;
+}
+.legi-win-detail-season {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--clr-cream, #fef6e4);
+}
+.legi-win-detail-stage {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--clr-cream-dim, #cbb59a);
+}
+.legi-win-detail-check {
+  background: rgba(255, 215, 0, 0.16);
+  color: #ffd700;
+  font-weight: 700;
+}
+.legi-win-detail-note {
+  margin-top: 10px;
+  color: var(--clr-cream, #fef6e4);
+  font-size: 0.95rem;
+}
+.legi-win-holders {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+.legi-win-holders li {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--clr-cream, #fef6e4);
+  font-weight: 600;
+  min-width: 140px;
+  text-align: center;
+}
+
