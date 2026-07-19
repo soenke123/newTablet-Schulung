@@ -3391,6 +3391,7 @@ async function openWinFlow() {
     state.error = null;
     render();
     const res = await callGiftRpc('get_cluster_creature_collection', {});
+    console.log('[win-task] server response:', res);
     if (!res.ok) {
       state.error = winErrorMessage(res.error);
       state.view = 'error';
@@ -3401,6 +3402,10 @@ async function openWinFlow() {
     state.hasAll = !!res.has_all_creatures;
     state.alreadyClaimed = !!res.already_claimed;
     state.total = res.total || 25;
+    // Debug: welche Kreaturen liefert der Server ohne has_seen zurück?
+    const missing = state.creatures.filter(c => !c.has_seen);
+    console.log('[win-task] not seen (?-slots):', missing.map(c => c.creature));
+    console.log('[win-task] has_seen field present?', state.creatures[0] && 'has_seen' in state.creatures[0]);
     state.view = 'grid';
     render();
   }
@@ -3524,14 +3529,15 @@ function renderWinSlot(c) {
   const name = (typeof BOOK_NAMES !== 'undefined' && BOOK_NAMES[c.creature])
     ? BOOK_NAMES[c.creature]
     : (CREATURE_NAMES[c.creature] ?? c.creature);
-  if (c.max_stage <= 0) {
+  // has_seen (Server): mind. ein Cluster-User führt die Kreatur — auch
+  // wenn max_stage noch 0 ist (z.B. Nest-Slot mit seenCreatures[c]=0).
+  // Nur wenn niemand die Kreatur kennt, kommt das ?-Fragezeichen.
+  if (!c.has_seen) {
     return `<div class="book-slot book-slot--unseen legi-win-slot" data-creature="${escapeHtml(c.creature)}" title="${escapeHtml(name)} – noch nicht entdeckt">
       <span class="book-slot__unknown">?</span>
     </div>`;
   }
-  // Server liefert 0..5 als max_stage. getCreatureHTML erwartet Stage
-  // im gleichen Range wie das Buch der Monster (siehe openBookModal).
-  const stage = Math.min(c.max_stage, 5);
+  const stage = Math.max(0, Math.min(c.max_stage || 0, 5));
   const dimmed = c.has_max ? '' : ' legi-win-slot--dimmed';
   const check = c.has_max
     ? '<span class="book-slot__check book-slot__check--gold">✦</span>'
@@ -3557,7 +3563,9 @@ function renderWinDetail(s) {
     : '';
 
   let holdersHtml;
-  if (!c.has_max) {
+  if (!c.has_seen) {
+    holdersHtml = `<p class="legi-win-detail-note">Noch niemand im Kurs hat dieses Monster entdeckt.</p>`;
+  } else if (!c.has_max) {
     holdersHtml = `<p class="legi-win-detail-note">Noch niemand im Kurs hat dieses Monster vollendet.</p>`;
   } else if (Array.isArray(c.holders) && c.holders.length > 0) {
     const list = c.holders.map(n => `<li>${escapeHtml(n)}</li>`).join('');
