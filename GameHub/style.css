@@ -2046,10 +2046,13 @@ body.s2-active .hud-kristalle { display: flex; }
     padding-top: 0;
   }
 
-  /* Karte: horizontales Grid (Bild links, Inhalt rechts) */
+  /* Karte: horizontales Grid (Bild links, Inhalt rechts).
+     Spalte 3 (auto) fasst nur den Freilassen-Button in Row 4 — bleibt
+     bei fehlender Kreatur 0 breit. Row 4 hat damit sauber getrennte
+     Zellen für Hints (links) und Release (rechts), kein Overlap. */
   .game-card {
     display: grid;
-    grid-template-columns: 140px 1fr;
+    grid-template-columns: 140px 1fr auto;
     grid-template-rows: auto auto auto auto;
     column-gap: 12px;
     row-gap: 5px;
@@ -2082,22 +2085,24 @@ body.s2-active .hud-kristalle { display: flex; }
     height: 140px;
   }
 
-  /* Rechte Spalte: Titel, Fortschritt, Button */
+  /* Rechte Spalte: Titel, Fortschritt, Button — spannen col 2 + col 3,
+     damit der Play-Button die volle Breite behält, auch wenn Row 4 die
+     Release-Spalte nutzt. */
   .game-card__title {
-    grid-column: 2;
+    grid-column: 2 / -1;
     grid-row: 1;
     text-align: left;
     font-size: 0.88rem;
   }
 
   .game-card__progress {
-    grid-column: 2;
+    grid-column: 2 / -1;
     grid-row: 2;
     margin-top: 0; /* auto-margin nur im Desktop-Flex-Layout */
   }
 
   .game-card__btn {
-    grid-column: 2;
+    grid-column: 2 / -1;
     grid-row: 3;
     padding: 10px 16px;
     font-size: 0.9rem;
@@ -2105,7 +2110,7 @@ body.s2-active .hud-kristalle { display: flex; }
 
   /* action-row (btn + use-item) sitzt an gleicher Grid-Position */
   .game-card__action-row {
-    grid-column: 2;
+    grid-column: 2 / -1;
     grid-row: 3;
   }
   .game-card__action-row .game-card__btn,
@@ -2115,10 +2120,10 @@ body.s2-active .hud-kristalle { display: flex; }
     font-size: 0.85rem;
   }
 
+  /* Row 4: Hints ganz links (col 2), Freilassen rechts in eigener col 3.
+     Reihenfolge visuell: [🧪 Trank] [+20🍬] [+5/10🪙] … [🕊️ Release]. */
   .game-card__release {
-    /* Freilassen bleibt rechts in derselben Row wie die Hints — teilt sich
-       die Zelle mit .game-card__hints (start/end). Reihe: [Hints...] [Release]. */
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 4;
     position: relative;
     top: auto;
@@ -2126,15 +2131,13 @@ body.s2-active .hud-kristalle { display: flex; }
     bottom: auto;
     right: auto;
     justify-self: end;
+    align-self: center;
   }
 
   .game-card__trank-btn {
     position: relative;
     top: auto;
     right: auto;
-    grid-column: 2;
-    grid-row: 4;
-    justify-self: start;
     align-self: center;
     font-size: 1.1rem;
     padding: 4px 6px;
@@ -2144,16 +2147,11 @@ body.s2-active .hud-kristalle { display: flex; }
     position: relative;
     top: auto;
     right: auto;
-    grid-column: 2;
-    grid-row: 4;
-    justify-self: start;
     align-self: center;
   }
 
-  /* Mobile: Trank/Coin/Bonbon horizontal links unter dem Play-Button.
-     .game-card__release liegt rechts in derselben Zelle (justify-self: end).
-     max-width reserviert Platz für den Freilassen-Button, damit die Hints
-     nicht drunter laufen. */
+  /* Hints nehmen die volle Content-Spalte ein und ordnen Trank/Bonbon/Coin
+     horizontal. Release sitzt in eigener Grid-Spalte rechts daneben. */
   .game-card__hints {
     position: relative;
     top: auto;
@@ -2164,7 +2162,7 @@ body.s2-active .hud-kristalle { display: flex; }
     align-items: center;
     justify-self: start;
     gap: 6px;
-    max-width: calc(100% - 44px);
+    max-width: 100%;
   }
 
   /* Textlastige Elemente ausblenden */
@@ -2174,6 +2172,13 @@ body.s2-active .hud-kristalle { display: flex; }
   .legendary-badge,
   .rare-badge {
     display: none;
+  }
+
+  /* Nest-only Auto-place-Elemente in col 2 halten, damit sie nicht in die
+     schmale Release-Spalte (col 3) rutschen und dort das Layout aufblähen. */
+  .nest-card__subtitle,
+  .nest-card__hint {
+    grid-column: 2 / -1;
   }
 
   .result-buttons { flex-direction: column; width: 100%; }
