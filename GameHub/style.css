@@ -4307,10 +4307,29 @@ input[type="password"]::-webkit-textfield-decoration-container {
   filter: drop-shadow(0 0 4px rgba(255, 200, 60, 0.4));
 }
 
-/* Hub-Kachel: „+20 🍬" Tages-Bonus-Hint (neben dem Coin-Bonus-Hint).
-   Positioniert unter dem coin-bonus (top:38 statt 10). */
+/* Wrapper für Coin- + Bonbon-Hint. Beide sitzen nebeneinander in der oberen
+   rechten Ecke, statt vertikal gestapelt (bei schmalen Handy-Kacheln fiel
+   der Bonbon-Hint sonst am unteren Rand raus). Reihenfolge im DOM:
+   Bonbon links, Coin rechts (Coin bleibt an gewohnter Kachel-Position). */
+.game-card__hints {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  z-index: 3;
+  max-width: calc(100% - 20px);
+  pointer-events: none;
+}
+.game-card__hints .game-card__bonus-hint {
+  position: static;
+  top: auto;
+  right: auto;
+}
+
+/* Bonbon-Variante: Regenbogen-Text mit rainbow-border, statt Gold-Coin-Look. */
 .game-card__bonus-hint--bonbon {
-  top: 38px;
   color: transparent;
   background:
     linear-gradient(

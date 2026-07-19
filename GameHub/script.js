@@ -478,10 +478,14 @@ function buildCardHTML(game, data, shopData) {
   const bonbonHint = bonbonAvailable
     ? `<div class="game-card__bonus-hint game-card__bonus-hint--bonbon" title="Tages-Bonus: +20 Bonbons bei der ersten Runde heute">+20<span class="game-card__bonus-hint-coin">🍬</span></div>`
     : '';
+  // Wrapper hält Coin- und Bonbon-Hint nebeneinander (mobile-freundlich).
+  // Reihenfolge: Bonbon links, Coin rechts — Coin bleibt an gewohnter Position.
+  const hintsWrap = (bonusHint || bonbonHint)
+    ? `<div class="game-card__hints">${bonbonHint}${bonusHint}</div>`
+    : '';
 
   return `
-    ${bonusHint}
-    ${bonbonHint}
+    ${hintsWrap}
     <h3 class="game-card__title">${titleText}</h3>
     ${specialBadge}
     <div class="game-card__creature-wrap${hasCreature ? ' creature-preview' : ''}"
@@ -2018,6 +2022,24 @@ function buildNestCard(nest, allData, shopData) {
     ? `<div class="game-card__bonus-hint" title="${bonusCoins === 10 ? 'Vollendungs-Bonus' : 'Ausgewachsen-Bonus'}: +${bonusCoins} Münzen pro Runde">+${bonusCoins}<span class="game-card__bonus-hint-coin">🪙</span></div>`
     : '';
 
+  // Migration 0044: Nest-Kacheln zählen als eigene Kachel im Daily-Bonbon-System
+  // (Server tracked pro nest.nestId). Hint nur anzeigen wenn Nest ein Spiel hat
+  // und heute noch nicht geclaimt wurde.
+  const bonbonStatus = window.__bonbonStatus || {};
+  const dailyClaims  = window.__bonbonDailyClaims || {};
+  const todayStr     = window.__bonbonToday
+                    || (typeof getBerlinTodayIso === 'function' ? getBerlinTodayIso() : new Date().toISOString().slice(0, 10));
+  const bonbonAvailable = canPlay
+    && bonbonStatus.enabled
+    && !bonbonStatus.unlocked
+    && dailyClaims[nest.nestId] !== todayStr;
+  const bonbonHint = bonbonAvailable
+    ? `<div class="game-card__bonus-hint game-card__bonus-hint--bonbon" title="Tages-Bonus: +20 Bonbons bei der ersten Runde heute">+20<span class="game-card__bonus-hint-coin">🍬</span></div>`
+    : '';
+  const hintsWrap = (bonusHint || bonbonHint)
+    ? `<div class="game-card__hints">${bonbonHint}${bonusHint}</div>`
+    : '';
+
   let playBtn;
   if (canPlay) {
     playBtn = `<button class="game-card__btn">Spielen!</button>`;
@@ -2032,7 +2054,7 @@ function buildNestCard(nest, allData, shopData) {
   const card = document.createElement('div');
   card.className = `game-card nest-game-card${hasCreature ? ' has-creature' : ''}${epic ? ' game-card--epic' : ''}${legendary ? ' game-card--legendary' : ''}${isAtariEgg ? ' nest-card--atari' : ''}${isPfauEgg ? ' nest-card--pfau' : ''}${isPending ? ' nest-card--pending' : ''}${nestMaxed ? ' creature-maxed' : ''}`;
   card.innerHTML = `
-    ${bonusHint}
+    ${hintsWrap}
     <h3 class="game-card__title">🥚 ${eggTypeName}</h3>
     <p class="nest-card__subtitle">
       ${linkedGame ? `${linkedGame.icon} ${linkedGame.title}` : '<em>Spiel noch nicht gewählt</em>'}
