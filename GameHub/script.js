@@ -309,9 +309,11 @@ function buildGameCard(game, data, shopData) {
   const maxed     = data.creature && data.growth >= GROWTH_MAX;
   const isBackupTarget = !!shopData.pendingBackup && !!data.creature && access === 'available';
 
-  // Pending-Gift-Blink: revealed Legi mit wartendem Geschenk pulsiert
-  // regenbogen (dieselbe .game-card--legi-ready-Klasse wie ready_to_reveal).
-  const giftBlink = game.clusterLegi && access === 'available' && giftPending();
+  // Pending-Gift-Blink: revealed Legi mit wartendem Geschenk oder
+  // vollendeter Cluster-Sammlung (Task 3) pulsiert regenbogen
+  // (dieselbe .game-card--legi-ready-Klasse wie ready_to_reveal).
+  const giftBlink = game.clusterLegi && access === 'available'
+    && (giftPending() || window.__winTaskReady === true);
 
   const card = document.createElement('div');
   card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${access === 'ready_to_reveal' ? ' game-card--cluster-locked game-card--legi-ready' : ''}${giftBlink ? ' game-card--legi-ready' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
@@ -3402,10 +3404,8 @@ async function openWinFlow() {
     state.hasAll = !!res.has_all_creatures;
     state.alreadyClaimed = !!res.already_claimed;
     state.total = res.total || 25;
-    // Debug: welche Kreaturen liefert der Server ohne has_seen zurück?
-    const missing = state.creatures.filter(c => !c.has_seen);
-    console.log('[win-task] not seen (?-slots):', missing.map(c => c.creature));
-    console.log('[win-task] has_seen field present?', state.creatures[0] && 'has_seen' in state.creatures[0]);
+    // Hub-Blink-Status im gleichen Zug aktualisieren.
+    window.__winTaskReady = state.hasAll && !state.alreadyClaimed;
     state.view = 'grid';
     render();
   }
@@ -3421,6 +3421,7 @@ async function openWinFlow() {
       return;
     }
     // Growth via server-side Update — Client-State neu laden.
+    window.__winTaskReady = false;
     await window.loadGiftTasks?.();
     await window.loadServerState?.();
     if (typeof renderHub === 'function') renderHub();

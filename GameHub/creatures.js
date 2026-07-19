@@ -1900,6 +1900,35 @@ async function loadGiftTasks() {
   }
 }
 
+/* Boot-Sync für Task-3 „Gemeinsam siegen". Setzt window.__winTaskReady
+   auf true, wenn der Cluster alle 25 Monster hat und der User selbst
+   noch nicht geclaimt hat — dann pulsiert die Legi-Kachel im Hub. */
+async function loadWinTaskStatus() {
+  window.__winTaskReady = false;
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return;
+  try {
+    const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/get_cluster_creature_collection`, {
+      method: 'POST',
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: '{}'
+    });
+    if (!res.ok) throw new Error(`get_cluster_creature_collection ${res.status}`);
+    const result = await res.json();
+    if (!result?.ok) return;
+    window.__winTaskReady = !!result.has_all_creatures && !result.already_claimed;
+  } catch (e) {
+    console.warn('[creatures] loadWinTaskStatus failed:', e.message);
+  }
+}
+window.loadWinTaskStatus = loadWinTaskStatus;
+
 function renderBoostIndicators(containerId, gameId) {
   const el = document.getElementById(containerId);
   if (!el) return;
