@@ -44,6 +44,7 @@
 
   const DEFAULT_AVATAR_ID = 'default';
   const SHOP_KEY          = 'lernwelt_shop_v1';   // muss zu creatures.js passen
+  const GAME_STATE_KEY    = 'lernwelt_v3';        // muss zu creatures.js:STORAGE_KEY passen
   const UNLOCKS_KEY       = 'lernwelt_avatar_unlocks';
 
   const AVATAR_GROUPS = [
@@ -207,8 +208,12 @@
     { id: 'ehk_2',    group: 'legi', creature: 'einhornkatze', stage: 2, file: 'Einhornkatze2_avatar.png', label: 'Einhornkatze Klein' },
     { id: 'ehk_3',    group: 'legi', creature: 'einhornkatze', stage: 3, file: 'Einhornkatze3_avatar.png', label: 'Einhornkatze Jung' },
     { id: 'ehk_4',    group: 'legi', creature: 'einhornkatze', stage: 4, file: 'Einhornkatze4_avatar.png', label: 'Einhornkatze Ausgewachsen' },
-    { id: 'ehk_5',    group: 'legi', creature: 'einhornkatze', stage: 5, file: 'Einhornkatze5_avatar.png', label: 'Einhornkatze Groß' },
-    { id: 'ehk_6',    group: 'legi', creature: 'einhornkatze', stage: 6, file: 'Einhornkatze6_avatar.png', label: 'Einhornkatze Vollendet' }
+    { id: 'ehk_5',       group: 'legi', creature: 'einhornkatze', stage: 5, variant: 'rainbow', file: 'Einhornkatze5_avatar.png',      label: 'Einhornkatze Groß (Regenbogen)' },
+    { id: 'ehk_5_light', group: 'legi', creature: 'einhornkatze', stage: 5, variant: 'light',   file: 'Einhornkatze5Light_avatar.png', label: 'Einhornkatze Groß (Licht)' },
+    { id: 'ehk_5_dark',  group: 'legi', creature: 'einhornkatze', stage: 5, variant: 'dark',    file: 'Einhornkatze5Dark_avatar.png',  label: 'Einhornkatze Groß (Nacht)' },
+    { id: 'ehk_6',       group: 'legi', creature: 'einhornkatze', stage: 6, variant: 'rainbow', file: 'Einhornkatze6_avatar.png',      label: 'Einhornkatze Vollendet (Regenbogen)' },
+    { id: 'ehk_6_light', group: 'legi', creature: 'einhornkatze', stage: 6, variant: 'light',   file: 'Einhornkatze6Light_avatar.png', label: 'Einhornkatze Vollendet (Licht)' },
+    { id: 'ehk_6_dark',  group: 'legi', creature: 'einhornkatze', stage: 6, variant: 'dark',    file: 'Einhornkatze6Dark_avatar.png',  label: 'Einhornkatze Vollendet (Nacht)' }
   ];
 
   const _byId = new Map(AVATARS.map(a => [a.id, a]));
@@ -254,20 +259,46 @@
     return loadShopRaw().seenCreatures || {};
   }
 
+  /* Liest die einmalig gewählte Einhornkatzen-Variante aus dem
+     GameHub-localStorage. Wird über loadServerState (creatures.js)
+     serverseitig in game_state[game16].variant gecacht. Für Landing/
+     profil.html: wenn nicht vorhanden → null (keine Variant-Avatare
+     freigeschaltet, aber auch keine Regression, weil vor Task 4 gar
+     keine Stage-≥5-Katze existiert). */
+  function getKatzeVariant() {
+    try {
+      const raw = localStorage.getItem(GAME_STATE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      const v = data && data.game16 && data.game16.variant;
+      return (v === 'rainbow' || v === 'light' || v === 'dark') ? v : null;
+    } catch { return null; }
+  }
+
   /* ─── Unlock-Ableitung ───────────────────────────────────────
      Eier sind immer freigeschaltet. Für Kreaturen-Avatare:
      seenCreatures speichert 0-indizierten Stage-Index (siehe
      getGrowthStage in creatures.js). Bild-Stage im Katalog ist
-     1-indiziert (Dateiname). Freigeschaltet wenn seen >= stage-1. */
+     1-indiziert (Dateiname). Freigeschaltet wenn seen >= stage-1.
+
+     Einhornkatze Stage ≥5: variant-scoped. Nur der Avatar der eigenen
+     Variante wird freigeschaltet — die anderen zwei nie. Wenn variant
+     noch nicht gewählt ist (Task 4 nicht durch): kein Stage-≥5-Avatar. */
   function computeUnlockedAvatarIds() {
     const seen = getSeenCreatures();
+    const variant = getKatzeVariant();
     const unlocked = new Set();
     for (const a of AVATARS) {
       if (a.group === 'egg') { unlocked.add(a.id); continue; }
       const maxIdx = seen[a.creature];
-      if (typeof maxIdx === 'number' && maxIdx >= (a.stage - 1)) {
-        unlocked.add(a.id);
+      if (typeof maxIdx !== 'number' || maxIdx < (a.stage - 1)) continue;
+
+      // Einhornkatze Stage ≥5: variant-scoped Filter.
+      if (a.creature === 'einhornkatze' && a.stage >= 5) {
+        if (!variant || a.variant !== variant) continue;
       }
+
+      unlocked.add(a.id);
     }
     return unlocked;
   }

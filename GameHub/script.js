@@ -444,7 +444,7 @@ function buildCardHTML(game, data, shopData) {
     ? `${game.icon} ${escapeHtml(CREATURE_NAMES[data.creature] ?? data.creature)}`
     : `${game.icon} ${game.title}`;
   const imgContent   = hasCreature
-    ? `<div class="hub-creature-display">${getCreatureHTML(data.creature, stage)}</div>`
+    ? `<div class="hub-creature-display">${getCreatureHTML(data.creature, stage, data.variant)}</div>`
     : eggStage0();
   const progressPct  = hasCreature ? Math.min(data.growth / GROWTH_MAX * 100, 100) : 0;
   const specialBadge = hasCreature && isRare(data.creature)
@@ -539,7 +539,7 @@ function renderGallery(allData) {
       walker.className        = 'gallery-walker';
       walker.dataset.creature = d.creature;
       walker.title            = `${CREATURE_NAMES[d.creature]} (${GROWTH_LABELS[stage]})`;
-      walker.innerHTML        = getCreatureHTML(d.creature, stage);
+      walker.innerHTML        = getCreatureHTML(d.creature, stage, d.variant);
       walker.addEventListener('click', () => {
         showCreatureModal(d);
       });
@@ -556,7 +556,7 @@ function renderGallery(allData) {
       walker.className        = 'gallery-walker';
       walker.dataset.creature = d.creature;
       walker.title            = `${CREATURE_NAMES[d.creature]} (${GROWTH_LABELS[stage]}) · Nest`;
-      walker.innerHTML        = getCreatureHTML(d.creature, stage);
+      walker.innerHTML        = getCreatureHTML(d.creature, stage, d.variant);
       walker.addEventListener('click', () => {
         showCreatureModal(d);
       });
@@ -587,7 +587,7 @@ function showCreatureModal(data) {
 
   content.innerHTML = `
     <div style="text-align:center;">
-      <div class="modal-creature-img">${getCreatureHTML(data.creature, stage)}</div>
+      <div class="modal-creature-img">${getCreatureHTML(data.creature, stage, data.variant)}</div>
       ${specialLabel}
       <h2 style="font-family:var(--font-display);color:var(--clr-gold);font-size:1.5rem;margin:12px 0 4px;">${name}</h2>
       <p style="color:var(--clr-amber);font-size:0.82rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">${GROWTH_LABELS[stage]}</p>
@@ -1381,7 +1381,7 @@ function confirmRelease(gameId) {
   content.innerHTML = `
     <div style="text-align:center;">
       ${hasC
-        ? `<div class="modal-creature-img">${getCreatureHTML(data.creature, stage)}</div>`
+        ? `<div class="modal-creature-img">${getCreatureHTML(data.creature, stage, data.variant)}</div>`
         : `<div style="font-size:3rem;margin:0 auto 12px;">🥚</div>`}
       <h2 style="font-family:var(--font-display);color:var(--clr-gold);font-size:1.25rem;margin:12px 0 10px;">Freilassen?</h2>
       <p style="color:var(--clr-cream-dim);line-height:1.65;margin-bottom:22px;">
@@ -2078,7 +2078,7 @@ function buildNestCard(nest, allData, shopData) {
   const isPfauEgg   = !hasCreature && nest.eggType === 'pfau';
 
   const imgContent = hasCreature
-    ? `<div class="hub-creature-display">${getCreatureHTML(nestData.creature, stage)}</div>`
+    ? `<div class="hub-creature-display">${getCreatureHTML(nestData.creature, stage, nestData.variant)}</div>`
     : eggStage0();
 
   const specialBadge = epic ? `<span class="epic-badge">✦ Episch ✦</span>`
@@ -2219,7 +2219,7 @@ function confirmReleaseNest(nestId) {
   content.innerHTML = `
     <div style="text-align:center;">
       ${hasC
-        ? `<div class="modal-creature-img">${getCreatureHTML(nestData.creature, stage)}</div>`
+        ? `<div class="modal-creature-img">${getCreatureHTML(nestData.creature, stage, nestData.variant)}</div>`
         : `<div style="font-size:3rem;margin:0 auto 12px;">🥚</div>`}
       <h2 style="font-family:var(--font-display);color:var(--clr-gold);font-size:1.25rem;margin:12px 0 10px;">${legendary ? 'Zurück zum Ei?' : 'Freilassen?'}</h2>
       <p style="color:var(--clr-cream-dim);line-height:1.65;margin-bottom:22px;">
@@ -2875,7 +2875,7 @@ const LEGI_TASKS = [
   { key: 'gift',     icon: '🎁', label: 'Andere beschenken',    status: 'active', hint: '50 🪙 – schenk eine Stufe', interactive: true },
   { key: 'friends',  icon: '🤝', label: 'Freunde finden',       status: 'active', hint: '3 mit gleichem Code', interactive: true },
   { key: 'win',      icon: '🏆', label: 'Gemeinsam siegen',     status: 'active', hint: 'Alle Monster im Kurs vollenden', interactive: true },
-  { key: 'locked_1', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
+  { key: 'path',     icon: '🌈', label: 'Deine Farbe finden',   status: 'active', hint: 'Der Regenbogen-Pfad', interactive: true },
   { key: 'locked_2', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
 ];
 
@@ -2913,27 +2913,57 @@ function openLegiTaskModal() {
   if (!legiGame) return;
   const data = loadAllData()[legiGame.id] || defaultGameData();
   const creature = data.creature || 'einhornkatze';
+  const variant  = data.variant || null;
   const stage    = getGrowthStage(data.growth);
   const progressPct = Math.min((data.growth / GROWTH_MAX) * 100, 100);
   const displayName = CREATURE_NAMES[creature] ?? creature;
 
+  // Task 4 (path) ist erst freigeschaltet, wenn Tasks 1-3 accepted sind.
+  // Nach Reveal (variant gesetzt) bekommt die Row eine „done"-Badge und
+  // Klick öffnet die Read-Only-Übersicht.
+  const gt          = window.__giftTasks || {};
+  const giftDone    = !!(gt.gift    && gt.gift.accepted_at);
+  const friendsDone = !!(gt.friends && gt.friends.accepted_at);
+  const winDone     = !!(gt.win     && gt.win.accepted_at);
+  const pathUnlocked = giftDone && friendsDone && winDone;
+  const pathDone     = !!variant;
+
   const taskItems = LEGI_TASKS.map(t => {
-    const badge = renderLegiTaskBadge(t.key);
+    // Gate + Done-Zustand für path dynamisch überschreiben.
+    let effStatus = t.status;
+    let effHint   = t.hint;
+    let effIcon   = t.icon;
+    let effInteractive = t.interactive;
+    if (t.key === 'path') {
+      if (pathDone) {
+        effStatus = 'active';
+        effHint   = 'Fertig — Übersicht ansehen';
+      } else if (!pathUnlocked) {
+        effStatus = 'locked';
+        effHint   = 'Erst wenn Aufgabe 1, 2 und 3 geschafft sind.';
+        effInteractive = false;
+      }
+    }
+
+    const badge = t.key === 'path' && pathDone
+      ? `<span class="legi-task__status-badge legi-task__status-badge--done">✓ ${escapeHtml(variantLabel(variant))}</span>`
+      : renderLegiTaskBadge(t.key);
     const pending = window.__giftTasks?.[t.key] && !window.__giftTasks[t.key].accepted_at;
     const winReady = t.key === 'win' && window.__winTaskReady === true;
     const cls = [
       'legi-task',
-      `legi-task--${t.status}`,
-      t.interactive ? 'legi-task--interactive' : '',
+      `legi-task--${effStatus}`,
+      effInteractive ? 'legi-task--interactive' : '',
       pending ? 'legi-task--gift-pending' : '',
-      winReady ? 'legi-task--win-ready' : ''
+      winReady ? 'legi-task--win-ready' : '',
+      t.key === 'path' && pathDone ? 'legi-task--path-done' : ''
     ].filter(Boolean).join(' ');
     return `
       <div class="${cls}" data-task-key="${escapeHtml(t.key)}">
-        <span class="legi-task__icon">${t.status === 'locked' ? '🔒' : t.icon}</span>
+        <span class="legi-task__icon">${effStatus === 'locked' ? '🔒' : effIcon}</span>
         <div class="legi-task__body">
           <div class="legi-task__label">${escapeHtml(t.label)}</div>
-          <div class="legi-task__hint">${escapeHtml(t.hint)}</div>
+          <div class="legi-task__hint">${escapeHtml(effHint)}</div>
         </div>
         ${badge}
       </div>`;
@@ -2944,7 +2974,7 @@ function openLegiTaskModal() {
     <p class="bonbon-modal__intro">Mit jeder gelösten Aufgabe wächst sie ein Stück näher an ihre legendäre Form.</p>
     <div class="legi-task-modal">
       <div class="legi-task-modal__monster">
-        <div class="legi-task-modal__sprite">${getCreatureHTML(creature, stage)}</div>
+        <div class="legi-task-modal__sprite">${getCreatureHTML(creature, stage, variant)}</div>
         <p class="legi-task-modal__name">${escapeHtml(displayName)}</p>
         <p class="legi-task-modal__stage">Stufe ${stage + 1}</p>
         <div class="legi-task-modal__progress">
@@ -2960,12 +2990,18 @@ function openLegiTaskModal() {
   // Klick-Handler nur für interaktive Rows anhängen.
   for (const t of LEGI_TASKS) {
     if (!t.interactive) continue;
+    // path-Row ist trotz interactive:true gelockt, solange 1-3 nicht durch sind.
+    if (t.key === 'path' && !pathUnlocked && !pathDone) continue;
     const row = content.querySelector(`.legi-task[data-task-key="${t.key}"]`);
     if (!row) continue;
     row.addEventListener('click', () => {
       if (t.key === 'gift')    openGiftFlow();
       if (t.key === 'friends') openFriendsFlow();
       if (t.key === 'win')     openWinFlow();
+      if (t.key === 'path') {
+        if (pathDone) openPathReviewView();
+        else          openPathFlow();
+      }
     });
   }
 
@@ -3842,6 +3878,605 @@ async function openWinFlow() {
 }
 window.openWinFlow = openWinFlow;
 
+// ═══════════════════════════════════════════════════════════════
+// Task 4 — Der Regenbogen-Pfad
+// ═══════════════════════════════════════════════════════════════
+// Solo-Story-Choice-Adventure. 9 Fragen, drei unsichtbare Skalen
+// (sun/moon/rainbow). Am Ende wählt der Spieler seine Katzen-
+// Variante (rainbow/light/dark) — unumkehrbar. Persistenz in
+// user_legi_path (Migration 0049).
+
+const KATZE_PATH_QUESTIONS = [
+  { headline: 'Deine Oma will das Video vom letzten Familienfest sehen. Aber die Datei ist zu groß.',
+    question: 'Deine Oma will das Video vom Familienfest sehen. Es ist viel zu groß. Was tust du?',
+    answers: [
+      { text: 'Ich mach’s klein und schreib ihr, wie sie’s öffnet.', scale: 'sun' },
+      { text: 'Ich frag mich, ob sie’s überhaupt lernen will.',            scale: 'moon' },
+      { text: 'Ich schneid ihr die schönsten Momente raus.',                    scale: 'rainbow' }
+    ]},
+  { headline: 'Ein Post in deinem Feed. Große Zahl, dramatischer Text.',
+    question: 'Diese Zahl — was macht sie mit dir?',
+    answers: [
+      { text: 'Ich teile sie, das müssen mehr Leute sehen.',       scale: 'sun' },
+      { text: 'Ich such die Studie, bevor ich das glaube.',        scale: 'moon' },
+      { text: 'Ich frag Freundinnen, ob sie sich so fühlen.',      scale: 'rainbow' }
+    ]},
+  { headline: 'Eine App fragt nach Zugriff. Der eine Knopf leuchtet, der andere ist kaum zu sehen.',
+    question: 'Der eine Knopf schreit dich an. Der andere versteckt sich.',
+    answers: [
+      { text: 'Ich lass es zu, vielleicht bringt’s was.',         scale: 'sun' },
+      { text: 'Ich klick „Ablehnen", das ist manipulativ.',            scale: 'moon' },
+      { text: 'Ich lese erst genau, was da wirklich steht.',           scale: 'rainbow' }
+    ]},
+  { headline: 'Du scrollst. Immer dasselbe. Immer dieselbe Meinung.',
+    question: 'Dein Feed zeigt dir nur noch eine Seite. Fühlt sich vertraut an.',
+    answers: [
+      { text: 'Ich vertraue dem — der Algorithmus kennt mich.',    scale: 'sun' },
+      { text: 'Ich pausier alles, das rauscht mich zu.',           scale: 'moon' },
+      { text: 'Ich such bewusst nach Gegenmeinungen.',             scale: 'rainbow' }
+    ]},
+  { headline: 'Ein Influencer-Post: perfekter Morgen, Yoga, Sonnenlicht. 2 Millionen Likes.',
+    question: 'So harmonisch und gut gelaunt. Was fühlst du?',
+    answers: [
+      { text: 'Ich freu mich für sie.',                                                                          scale: 'sun' },
+      { text: 'Ich weiß, das wurde 30-mal aufgenommen, und dass nicht jeder Morgen so bei ihr ist.',             scale: 'moon' },
+      { text: 'Ich klau mir eine Idee für meinen Morgen.',                                                       scale: 'rainbow' }
+    ]},
+  { headline: 'Du stehst mit einem Freund im Park. Plötzlich hebt er das Handy — Selfie für die Story. Du hast nicht gefragt bekommen.',
+    question: 'Er will dich in seine Story stellen. Ohne zu fragen.',
+    answers: [
+      { text: 'Klar, mach ruhig.',              scale: 'sun' },
+      { text: 'Nein, nicht öffentlich.',        scale: 'moon' },
+      { text: 'Zeig mir kurz, was du postest.', scale: 'rainbow' }
+    ]},
+  { headline: '23:47 Uhr. Nur du und das Licht des Displays.',
+    question: 'Noch eins — oder Schluss für heute?',
+    answers: [
+      { text: 'Handy weg, morgen ist auch ein Tag.',              scale: 'sun' },
+      { text: 'Es ist eh schon zu spät. Noch ein Video schadet nicht.', scale: 'moon' },
+      { text: 'Nur noch dieses Thema zu Ende, dann Schluss.',     scale: 'rainbow' }
+    ]},
+  { headline: 'Wochenrückblick: 42 Stunden am Handy.',
+    question: 'Mehr als geplant. Wieder mal.',
+    answers: [
+      { text: 'Nächste Woche schaff ich weniger, versprochen.',                     scale: 'sun' },
+      { text: 'Ich lösch heute Abend die App, die am meisten frisst.',              scale: 'moon' },
+      { text: 'Ich guck, welche Stunden okay waren und welche mich frustriert haben.', scale: 'rainbow' }
+    ]},
+  { headline: 'Die Katze schaut dich an. Am Himmel bricht ein Regenbogen auf.',
+    question: 'Ganz zum Schluss: Welche Farbe passt zu dir?',
+    answers: [
+      { text: 'Alles was hell ist — warm, klar, offen.',              scale: 'sun' },
+      { text: 'Alles was dunkel ist — tief, ruhig, geheimnisvoll.',   scale: 'moon' },
+      { text: 'Alle Farben des Regenbogens — bunt und vielseitig.',   scale: 'rainbow' }
+    ]}
+];
+
+function katzePathSceneImage(step) {
+  return `../data/Katzen reveal Fragen/Frage ${step}.png`;
+}
+
+// Eigene Variante aus dem game_state-Blob (für Sprite-Rendering, wenn kein
+// data-Objekt zur Hand ist). Fremde Katzen-Sprites (Highscore, Book fremder
+// User) rendern weiterhin Rainbow-Default — variant ist nicht cross-user
+// verfügbar ohne extra RPC-Call.
+function getOwnKatzeVariant() {
+  try {
+    const all = loadAllData();
+    return (all && all.game16 && all.game16.variant) || null;
+  } catch { return null; }
+}
+
+function scaleToVariant(scale) {
+  if (scale === 'sun')  return 'light';
+  if (scale === 'moon') return 'dark';
+  return 'rainbow';
+}
+
+function variantLabel(v) {
+  if (v === 'light')   return 'Licht';
+  if (v === 'dark')    return 'Nacht';
+  if (v === 'rainbow') return 'Regenbogen';
+  return '';
+}
+
+function variantEmoji(v) {
+  if (v === 'light')   return '☀️';
+  if (v === 'dark')    return '🌙';
+  if (v === 'rainbow') return '🌈';
+  return '';
+}
+
+// Skalen-Auszählung + Tiebreaker: bei Gleichstand entscheidet die letzte
+// Antwort (Farbfrage 9). Wenn Frage 9 keinem der Sieger-Skalen zugeordnet
+// ist (z.B. 2-2-2 → 3-2-2 wäre Frage9-Skala), gewinnt Frage-9-Skala sowieso.
+function computeVariant(answers) {
+  const counts = { sun: 0, moon: 0, rainbow: 0 };
+  for (const a of answers) if (counts[a] != null) counts[a]++;
+  let max = -1;
+  for (const s of ['sun','moon','rainbow']) if (counts[s] > max) max = counts[s];
+  const winners = ['sun','moon','rainbow'].filter(s => counts[s] === max);
+  if (winners.length === 1) return scaleToVariant(winners[0]);
+  const last = answers[answers.length - 1];
+  return scaleToVariant(winners.includes(last) ? last : winners[0]);
+}
+
+// Deterministischer Shuffle. Seed = step+1 → jedes Reload liefert die
+// gleiche Antwort-Reihenfolge, auch cross-device.
+function seededShuffle(arr, seed) {
+  const a = arr.slice();
+  let s = (seed * 2654435761) >>> 0;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (s ^ (s << 13)) >>> 0;
+    s = (s ^ (s >>> 17)) >>> 0;
+    s = (s ^ (s << 5))  >>> 0;
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+async function callPathRpc(name, body) {
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return { ok: false, error: 'no_session' };
+  try {
+    const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      method: 'POST',
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(body || {})
+    });
+    if (!res.ok) return { ok: false, error: `http_${res.status}` };
+    return await res.json();
+  } catch (e) {
+    return { ok: false, error: e.message || 'network' };
+  }
+}
+
+function ensurePathStyles() {
+  if (document.getElementById('katze-path-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'katze-path-styles';
+  s.textContent = `
+    .legi-path-header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 10px; padding: 0 4px;
+    }
+    .legi-path-header .bonbon-modal__title { font-size: 1.15rem; line-height: 1.25; }
+    .legi-path-back {
+      background: rgba(255,255,255,0.15); color: inherit; border: 0;
+      padding: 6px 12px; border-radius: 999px; cursor: pointer;
+      font: inherit; font-weight: 600;
+    }
+    .legi-path-back:hover { background: rgba(255,255,255,0.28); }
+    .legi-path-step {
+      font-size: 0.85rem; opacity: 0.75; white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Intro */
+    .legi-path-intro { text-align: center; padding: 16px 8px 8px; }
+    .legi-path-intro__lead { font-size: 1.1rem; margin-bottom: 12px; }
+    .legi-path-intro__warn {
+      margin-top: 20px; padding: 10px 14px;
+      background: rgba(255, 200, 90, 0.14);
+      border-left: 3px solid #f0b04a;
+      border-radius: 6px; text-align: left; font-size: 0.95rem;
+    }
+    .legi-path-start {
+      margin-top: 22px; padding: 12px 28px;
+      background: linear-gradient(135deg, #ff8fce, #a56cff, #64b8ff);
+      color: white; border: 0; border-radius: 999px; font: inherit;
+      font-weight: 700; font-size: 1.05rem; cursor: pointer;
+      box-shadow: 0 4px 18px rgba(140, 100, 255, 0.35);
+    }
+    .legi-path-start:hover { transform: translateY(-1px); }
+
+    /* Scene */
+    .legi-path-scene {
+      position: relative; width: 100%; aspect-ratio: 16/9;
+      background-size: cover; background-position: center;
+      background-color: #1a1030; border-radius: 12px; overflow: hidden;
+      margin: 8px 0 12px;
+    }
+    .legi-path-cat {
+      position: absolute; bottom: 6px; left: 8px;
+      height: 42%; width: auto; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+      pointer-events: none;
+    }
+    .legi-path-bubble {
+      position: absolute; bottom: 12%; left: 24%; right: 6%;
+      background: rgba(255,255,255,0.96); color: #2b1a4a;
+      padding: 10px 14px; border-radius: 14px;
+      font-size: 0.98rem; line-height: 1.35; font-weight: 500;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    }
+    .legi-path-bubble::before {
+      content: ''; position: absolute; left: -8px; bottom: 20%;
+      width: 16px; height: 16px; background: rgba(255,255,255,0.96);
+      transform: rotate(45deg); border-radius: 2px;
+    }
+
+    /* Answers */
+    .legi-path-answers {
+      display: grid; gap: 10px; margin-top: 4px;
+      grid-template-columns: 1fr;
+    }
+    .legi-path-answer {
+      padding: 12px 14px; text-align: left;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 10px; color: inherit; font: inherit;
+      cursor: pointer; transition: transform .1s ease, background .15s ease;
+      line-height: 1.35;
+    }
+    .legi-path-answer:hover {
+      background: rgba(255,255,255,0.16);
+      transform: translateX(3px);
+    }
+    .legi-path-answers--color .legi-path-answer--sun {
+      background: linear-gradient(135deg, rgba(255,220,120,0.28), rgba(255,180,80,0.22));
+      border-color: rgba(255,200,90,0.45);
+    }
+    .legi-path-answers--color .legi-path-answer--moon {
+      background: linear-gradient(135deg, rgba(90,110,200,0.28), rgba(40,50,110,0.28));
+      border-color: rgba(120,140,220,0.5);
+    }
+    .legi-path-answers--color .legi-path-answer--rainbow {
+      background: linear-gradient(135deg, rgba(255,120,180,0.24), rgba(140,120,255,0.24), rgba(120,180,255,0.24));
+      border-color: rgba(210,150,255,0.5);
+    }
+
+    .legi-path-error {
+      margin-top: 12px; padding: 8px 12px;
+      background: rgba(255, 90, 90, 0.16);
+      border-left: 3px solid #f26060;
+      border-radius: 6px; font-size: 0.9rem;
+    }
+
+    /* Summary */
+    .legi-path-summary { text-align: center; padding: 8px 4px 4px; }
+    .legi-path-bars {
+      display: flex; justify-content: center; gap: 40px;
+      align-items: flex-end; height: 180px;
+      margin: 20px 0 24px;
+    }
+    .legi-path-bar {
+      position: relative; width: 56px; height: 100%;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .legi-path-bar-fill {
+      width: 100%; border-radius: 10px 10px 4px 4px;
+      transition: height .8s cubic-bezier(.5,.1,.3,1.2);
+      box-shadow: inset 0 -6px 12px rgba(0,0,0,0.15);
+    }
+    .legi-path-bar--sun .legi-path-bar-fill {
+      background: linear-gradient(180deg, #ffe082, #f5a623);
+    }
+    .legi-path-bar--moon .legi-path-bar-fill {
+      background: linear-gradient(180deg, #7b8cd4, #2b3670);
+    }
+    .legi-path-bar--rainbow .legi-path-bar-fill {
+      background: linear-gradient(180deg, #ff7ec6, #b47cff, #64b8ff);
+    }
+    .legi-path-bar-label {
+      position: absolute; top: -28px; left: 0; right: 0; text-align: center;
+      font-size: 1.5rem;
+    }
+    .legi-path-bar-count {
+      position: absolute; bottom: -26px; left: 0; right: 0; text-align: center;
+      font-size: 0.95rem; font-weight: 700; font-variant-numeric: tabular-nums;
+    }
+    .legi-path-disclaimer {
+      font-size: 0.88rem; opacity: 0.72; line-height: 1.4;
+      max-width: 460px; margin: 0 auto 18px;
+    }
+    .legi-path-reveal-btn {
+      padding: 14px 26px;
+      background: linear-gradient(135deg, #ff8fce, #a56cff, #64b8ff);
+      color: white; border: 0; border-radius: 999px; font: inherit;
+      font-weight: 700; font-size: 1.02rem; cursor: pointer;
+      box-shadow: 0 6px 22px rgba(140, 100, 255, 0.4);
+    }
+    .legi-path-reveal-btn:hover { transform: translateY(-1px); }
+    .legi-path-reveal-btn:disabled { opacity: 0.55; cursor: wait; }
+
+    /* Review */
+    .legi-path-review-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 999px;
+      background: rgba(255,255,255,0.12); font-weight: 600;
+      margin: 12px auto;
+    }
+    .legi-path-review-sprite {
+      display: block; margin: 8px auto 4px; max-width: 180px;
+    }
+    .legi-path-review-sprite img { width: 100%; height: auto; }
+
+    /* Path-Row Done im Task-Modal */
+    .legi-task--path-done .legi-task__icon { filter: drop-shadow(0 0 6px rgba(255, 200, 100, 0.6)); }
+  `;
+  document.head.appendChild(s);
+}
+
+async function openPathFlow() {
+  const content = document.getElementById('legiTaskModalContent');
+  const overlay = document.getElementById('legiTaskModal');
+  if (!content || !overlay) return;
+  ensurePathStyles();
+  overlay.hidden = false;
+
+  const gd = loadAllData().game16 || defaultGameData();
+  const state = {
+    view:    'intro',
+    step:    (gd.pathProgress && gd.pathProgress.step)    || 0,
+    answers: (gd.pathProgress && gd.pathProgress.answers) || [],
+    busy:    false,
+    error:   null
+  };
+
+  // F5-Restore-Logik
+  if (gd.variant) {
+    // Sollte nicht passieren, weil openPathReviewView vorher greift.
+    return openPathReviewView();
+  } else if (state.step >= 9) {
+    state.view = 'summary';
+  } else if (state.step > 0) {
+    state.view = 'question';
+  } else {
+    state.view = 'intro';
+  }
+
+  function render() {
+    if (state.view === 'intro')    content.innerHTML = renderPathIntro();
+    if (state.view === 'question') content.innerHTML = renderPathQuestion(state);
+    if (state.view === 'summary')  content.innerHTML = renderPathSummary(state);
+    wireEvents();
+  }
+
+  function wireEvents() {
+    const back = content.querySelector('.legi-path-back');
+    if (back) back.addEventListener('click', () => openLegiTaskModal());
+
+    if (state.view === 'intro') {
+      const start = content.querySelector('.legi-path-start');
+      if (start) start.addEventListener('click', () => {
+        state.view = 'question';
+        render();
+      });
+    }
+
+    if (state.view === 'question') {
+      content.querySelectorAll('.legi-path-answer').forEach(btn => {
+        btn.addEventListener('click', () => onAnswerClick(btn.dataset.scale));
+      });
+    }
+
+    if (state.view === 'summary') {
+      const btn = content.querySelector('.legi-path-reveal-btn');
+      if (btn) btn.addEventListener('click', onRevealClick);
+    }
+  }
+
+  async function onAnswerClick(scale) {
+    if (state.busy) return;
+    if (!['sun','moon','rainbow'].includes(scale)) return;
+
+    const nextAnswers = state.answers.concat([scale]);
+    const nextStep    = state.step + 1;
+
+    state.busy = true;
+    state.error = null;
+    const res = await callPathRpc('save_katze_path_progress', {
+      p_answers: nextAnswers,
+      p_step:    nextStep
+    });
+    state.busy = false;
+
+    if (!res || !res.ok) {
+      state.error = 'Konnte nicht speichern — bitte nochmal versuchen.';
+      render();
+      return;
+    }
+
+    state.answers = nextAnswers;
+    state.step    = nextStep;
+
+    // localStorage-Blob spiegeln (F5-Fest, aber ohne game_state-Push)
+    try {
+      const all = loadAllData();
+      if (!all.game16) all.game16 = defaultGameData();
+      all.game16.pathProgress = { answers: nextAnswers, step: nextStep };
+      saveGameData('game16', all.game16);
+    } catch (e) {}
+
+    if (nextStep >= 9) state.view = 'summary';
+    render();
+  }
+
+  async function onRevealClick() {
+    if (state.busy) return;
+    const variant = computeVariant(state.answers);
+
+    state.busy = true;
+    state.error = null;
+    // Disable Button visuell während des RPC
+    const btn = content.querySelector('.legi-path-reveal-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Einen Moment…'; }
+
+    const res = await callPathRpc('set_katze_variant', { p_variant: variant });
+    state.busy = false;
+
+    if (!res || !res.ok) {
+      state.error = 'Konnte nicht speichern — bitte nochmal versuchen.';
+      render();
+      return;
+    }
+
+    // Server-authoritatives variant übernehmen (bei idempotentem no-op stünde
+    // dort evtl. ein früherer Wert — ausschließen wollen wir Client-Overwrite).
+    const finalVariant = res.variant || variant;
+    const finalGrowth  = typeof res.growth === 'number' ? res.growth : 21;
+
+    try {
+      const all = loadAllData();
+      if (!all.game16) all.game16 = defaultGameData();
+      all.game16.variant  = finalVariant;
+      all.game16.growth   = Math.max(all.game16.growth || 0, finalGrowth);
+      all.game16.creature = all.game16.creature || 'einhornkatze';
+      saveGameData('game16', all.game16);
+    } catch (e) {}
+
+    // Modal schließen, Reveal-Animation starten
+    overlay.hidden = true;
+    showKatzeVariantReveal(finalVariant);
+  }
+
+  render();
+}
+window.openPathFlow = openPathFlow;
+
+function renderPathIntro() {
+  return `
+    <div class="legi-path-header">
+      <button class="legi-path-back" title="Zurück">← Zurück</button>
+      <h2 class="bonbon-modal__title" style="margin:0;">🌈 Deine Farbe finden</h2>
+      <span></span>
+    </div>
+    <div class="legi-path-intro">
+      <p class="legi-path-intro__lead">Ein Adventure mit deiner Einhornkatze.</p>
+      <p>Neun Fragen. Deine Antworten formen, welche Katze sie am Ende wird — <strong>Regenbogen</strong>, <strong>Licht</strong> oder <strong>Nacht</strong>.</p>
+      <p class="legi-path-intro__warn">⚠️ Deine Wahl ist unumkehrbar. Kein Zurück-Button — sei ehrlich.</p>
+      <button class="legi-path-start">Los geht’s</button>
+    </div>`;
+}
+
+function renderPathQuestion(state) {
+  const q = KATZE_PATH_QUESTIONS[state.step];
+  if (!q) return '';
+  const isLast = (state.step === 8);
+  const answers = seededShuffle(q.answers, state.step + 1);
+  const imgSrc  = katzePathSceneImage(state.step + 1);
+  const errBlock = state.error
+    ? `<p class="legi-path-error">${escapeHtml(state.error)}</p>` : '';
+
+  const answerBtns = answers.map(a => {
+    const scaleClass = isLast ? `legi-path-answer--${a.scale}` : '';
+    return `<button class="legi-path-answer ${scaleClass}" data-scale="${escapeHtml(a.scale)}">${escapeHtml(a.text)}</button>`;
+  }).join('');
+
+  // CSS-url-safe: einfache Anführungszeichen escapen
+  const bgUrl = imgSrc.replace(/'/g, "%27");
+
+  return `
+    <div class="legi-path-header">
+      <h2 class="bonbon-modal__title" style="margin:0;">${escapeHtml(q.headline)}</h2>
+      <span class="legi-path-step">Frage ${state.step + 1} / 9</span>
+    </div>
+    <div class="legi-path-scene" style="background-image:url('${bgUrl}')">
+      <img class="legi-path-cat" src="../data/Einhornkatze4.png" alt="Einhornkatze">
+      <div class="legi-path-bubble">${escapeHtml(q.question)}</div>
+    </div>
+    <div class="legi-path-answers ${isLast ? 'legi-path-answers--color' : ''}">
+      ${answerBtns}
+    </div>
+    ${errBlock}`;
+}
+
+function renderPathSummary(state) {
+  const counts = { sun: 0, moon: 0, rainbow: 0 };
+  for (const a of state.answers) if (counts[a] != null) counts[a]++;
+  const maxC = Math.max(counts.sun, counts.moon, counts.rainbow, 1);
+  const barH = c => Math.round(15 + (c / maxC) * 85);   // 15%–100%
+  const errBlock = state.error
+    ? `<p class="legi-path-error">${escapeHtml(state.error)}</p>` : '';
+
+  return `
+    <div class="legi-path-header">
+      <button class="legi-path-back" title="Zurück">← Zurück</button>
+      <h2 class="bonbon-modal__title" style="margin:0;">🌈 Deine Katze wächst</h2>
+      <span></span>
+    </div>
+    <div class="legi-path-summary">
+      <div class="legi-path-bars">
+        <div class="legi-path-bar legi-path-bar--sun">
+          <span class="legi-path-bar-label">☀️</span>
+          <div class="legi-path-bar-fill" style="height:${barH(counts.sun)}%"></div>
+        </div>
+        <div class="legi-path-bar legi-path-bar--moon">
+          <span class="legi-path-bar-label">🌙</span>
+          <div class="legi-path-bar-fill" style="height:${barH(counts.moon)}%"></div>
+        </div>
+        <div class="legi-path-bar legi-path-bar--rainbow">
+          <span class="legi-path-bar-label">🌈</span>
+          <div class="legi-path-bar-fill" style="height:${barH(counts.rainbow)}%"></div>
+        </div>
+      </div>
+      <p class="legi-path-disclaimer">
+        Das ist ein Spiel-Ergebnis, kein psychologisches Profil.
+        Deine Einhornkatze passt sich deinen Antworten an — nicht deiner Persönlichkeit.
+      </p>
+      <button class="legi-path-reveal-btn">Einhornkatze wächst weiter und passt sich dir an</button>
+      ${errBlock}
+    </div>`;
+}
+
+function openPathReviewView() {
+  const content = document.getElementById('legiTaskModalContent');
+  const overlay = document.getElementById('legiTaskModal');
+  if (!content || !overlay) return;
+  ensurePathStyles();
+  overlay.hidden = false;
+
+  const gd = loadAllData().game16 || defaultGameData();
+  const variant = gd.variant || 'rainbow';
+  const answers = (gd.pathProgress && gd.pathProgress.answers) || [];
+  const counts = { sun: 0, moon: 0, rainbow: 0 };
+  for (const a of answers) if (counts[a] != null) counts[a]++;
+  const maxC = Math.max(counts.sun, counts.moon, counts.rainbow, 1);
+  const barH = c => Math.round(15 + (c / maxC) * 85);
+  const stage   = getGrowthStage(gd.growth || 21);
+
+  content.innerHTML = `
+    <div class="legi-path-header">
+      <button class="legi-path-back" title="Zurück">← Zurück</button>
+      <h2 class="bonbon-modal__title" style="margin:0;">🌈 Deine Farbe</h2>
+      <span></span>
+    </div>
+    <div class="legi-path-summary">
+      <div class="legi-path-review-sprite">${getCreatureHTML('einhornkatze', stage, variant)}</div>
+      <div class="legi-path-review-chip">${variantEmoji(variant)} ${escapeHtml(variantLabel(variant))}-Einhornkatze</div>
+      <div class="legi-path-bars">
+        <div class="legi-path-bar legi-path-bar--sun">
+          <span class="legi-path-bar-label">☀️</span>
+          <div class="legi-path-bar-fill" style="height:${barH(counts.sun)}%"></div>
+          <span class="legi-path-bar-count">${counts.sun}</span>
+        </div>
+        <div class="legi-path-bar legi-path-bar--moon">
+          <span class="legi-path-bar-label">🌙</span>
+          <div class="legi-path-bar-fill" style="height:${barH(counts.moon)}%"></div>
+          <span class="legi-path-bar-count">${counts.moon}</span>
+        </div>
+        <div class="legi-path-bar legi-path-bar--rainbow">
+          <span class="legi-path-bar-label">🌈</span>
+          <div class="legi-path-bar-fill" style="height:${barH(counts.rainbow)}%"></div>
+          <span class="legi-path-bar-count">${counts.rainbow}</span>
+        </div>
+      </div>
+      <p class="legi-path-disclaimer" style="margin-top:38px;">
+        Deine Wahl ist final — die Katze bleibt in dieser Variante.
+      </p>
+    </div>`;
+
+  const back = content.querySelector('.legi-path-back');
+  if (back) back.addEventListener('click', () => openLegiTaskModal());
+}
+window.openPathReviewView = openPathReviewView;
+
 function winFlowShellHTML(s) {
   const header = `
     <div class="legi-gift-header">
@@ -4290,6 +4925,193 @@ function showLegiRevealAnimation() {
 }
 window.showLegiRevealAnimation = showLegiRevealAnimation;
 
+// ─── Task 4: Katzen-Variant-Reveal-Animation ─────────────────
+// Klont die Struktur von showLegiRevealAnimation, aber statt Ei → Katze
+// wackelt Stage-4-Rainbow-Katze, wandelt sich zur finalen Variante
+// (rainbow/light/dark) mit passendem Hintergrund. Server-Persistenz ist
+// zu diesem Zeitpunkt bereits durch set_katze_variant erledigt.
+function showKatzeVariantReveal(variant) {
+  if (!['rainbow', 'light', 'dark'].includes(variant)) variant = 'rainbow';
+
+  // Sprite-Datei für Stage-4-Rainbow (Startbild) und Stage-4-Variant (Ende)
+  const startImg = 'data/Einhornkatze4.png';
+  const endImg = variant === 'light' ? 'data/Einhornkatze5Light.png'
+              : variant === 'dark'  ? 'data/Einhornkatze5Dark.png'
+              :                        'data/Einhornkatze5.png';
+
+  const bgStart  = 'radial-gradient(ellipse at center, #4a2560 0%, #1a0930 65%, #000 100%)';
+  const bgEnd    =
+      variant === 'light' ? 'radial-gradient(ellipse at center, #ffd97a 0%, #ff9d4a 40%, #5a3608 100%)'
+    : variant === 'dark'  ? 'radial-gradient(ellipse at center, #1e2f66 0%, #0a0e2a 55%, #000 100%)'
+    :                       'radial-gradient(ellipse at center, #4a2560 0%, #1a0930 65%, #000 100%)';
+
+  const titleText =
+      variant === 'light' ? 'Deine Licht-Einhornkatze'
+    : variant === 'dark'  ? 'Deine Nacht-Einhornkatze'
+    :                       'Deine Regenbogen-Einhornkatze';
+
+  const subText =
+      variant === 'light' ? 'Warm, offen, vertrauensvoll.'
+    : variant === 'dark'  ? 'Tief, still, geheimnisvoll.'
+    :                       'Neugierig, ausgleichend, vielseitig.';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'katzeRevealOverlay';
+  overlay.innerHTML = `
+    <style>
+      #katzeRevealOverlay {
+        position:fixed;inset:0;z-index:10001;
+        background:${bgStart};
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        opacity:0;transition:opacity 0.6s, background 1.6s ease-in-out;
+      }
+      #katzeRevealOverlay.to-final { background:${bgEnd}; }
+      @keyframes _kr-shake {
+        0%,100%{transform:rotate(0)} 15%{transform:rotate(-9deg)} 30%{transform:rotate(9deg)}
+        45%{transform:rotate(-9deg)} 60%{transform:rotate(9deg)} 75%{transform:rotate(-6deg)} 90%{transform:rotate(6deg)}
+      }
+      @keyframes _kr-glow {
+        0%{filter:brightness(1) drop-shadow(0 0 0 rgba(255,255,255,0))}
+        100%{filter:brightness(2.4) drop-shadow(0 0 60px #fff) drop-shadow(0 0 100px #ff85c1)}
+      }
+      @keyframes _kr-flash { 0%{opacity:0} 40%{opacity:1} 100%{opacity:0} }
+      @keyframes _kr-appear {
+        from{opacity:0;transform:scale(0.15) translateY(50px)}
+        to{opacity:1;transform:scale(1) translateY(0)}
+      }
+      @keyframes _kr-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+      @keyframes _kr-title {
+        from{opacity:0;letter-spacing:0.5em}
+        to{opacity:1;letter-spacing:0.06em}
+      }
+      @keyframes _kr-particles {
+        0%{opacity:0;transform:translateY(0) scale(0)}
+        20%{opacity:1}
+        100%{opacity:0;transform:translateY(-90px) scale(1.6)}
+      }
+      @keyframes _kr-halo-rotate {
+        0%{transform:translate(-50%,-50%) rotate(0)}
+        100%{transform:translate(-50%,-50%) rotate(360deg)}
+      }
+      #_kr-cat {
+        width:220px;height:220px;object-fit:contain;display:block;
+        filter:drop-shadow(0 8px 24px rgba(255,133,193,0.35));
+      }
+      #_kr-cat.shaking { animation:_kr-shake 0.55s ease-in-out; }
+      #_kr-cat.glowing { animation:_kr-glow 0.9s ease-in forwards; }
+      #_kr-flash { position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:1; }
+      #_kr-flash.go { animation:_kr-flash 0.7s ease-out forwards; }
+      #_kr-halo {
+        position:fixed;top:50%;left:50%;width:400px;height:400px;
+        background:${variant === 'light'
+                    ? 'radial-gradient(circle, #fff4c4 0%, #ffb84a 60%, transparent 80%)'
+                    : variant === 'dark'
+                    ? 'radial-gradient(circle, #7a8ad4 0%, #2b3670 55%, transparent 80%)'
+                    : 'conic-gradient(#ff5b6b,#ffa940,#ffeb3b,#66d16b,#4fb3ff,#b477ff,#ff5b6b)'};
+        border-radius:50%;opacity:0;filter:blur(28px);
+        transform:translate(-50%,-50%);pointer-events:none;
+        transition:opacity 0.8s;
+      }
+      #_kr-halo.show { opacity:0.55; animation:_kr-halo-rotate 10s linear infinite; }
+      #_kr-initial { display:flex;flex-direction:column;align-items:center;gap:22px;z-index:2; }
+      #_kr-caption {
+        color:rgba(255,255,255,0.7);font-family:Cinzel,serif;
+        font-size:0.85rem;letter-spacing:0.14em;
+      }
+      #_kr-final { display:none;flex-direction:column;align-items:center;gap:18px;z-index:2; }
+      #_kr-final.show {
+        display:flex;
+        animation:_kr-appear 1s cubic-bezier(0.34,1.56,0.64,1) both,_kr-float 3s ease-in-out 1s infinite;
+      }
+      #_kr-final .creature-slot { width:340px;height:340px;display:flex;align-items:center;justify-content:center; }
+      #_kr-final .creature-slot img { width:100%;height:100%;object-fit:contain; }
+      ._kr-title {
+        color:#ffe1f4;font-family:Cinzel,serif;font-size:1.55rem;font-weight:800;
+        text-align:center;
+        text-shadow:0 0 20px #ff85c1,0 0 40px #b477ff;
+        animation:_kr-title 1s 0.4s both;
+      }
+      ._kr-sub {
+        color:rgba(255,235,244,0.8);font-family:Nunito,sans-serif;font-size:1rem;text-align:center;
+        max-width:420px;line-height:1.4;
+        animation:_kr-appear 0.9s 0.7s both;
+      }
+      ._kr-particle { position:fixed;font-size:1.9rem;pointer-events:none;animation:_kr-particles 2.2s ease-out both; }
+      #_kr-close {
+        position:absolute;bottom:36px;padding:13px 34px;font-family:Cinzel,serif;font-size:1rem;font-weight:800;
+        color:#2a1250;background:linear-gradient(90deg,#ff85c1,#b477ff);border:none;border-radius:999px;cursor:pointer;
+        box-shadow:0 0 26px rgba(255,133,193,0.55);
+        opacity:0;transition:opacity 0.4s;pointer-events:none;
+      }
+      #_kr-close.show { opacity:1;pointer-events:auto; }
+    </style>
+    <div id="_kr-halo"></div>
+    <div id="_kr-flash"></div>
+    <div id="_kr-initial">
+      <img id="_kr-cat" src="${startImg}" alt="" />
+      <span id="_kr-caption">DIE KATZE WANDELT SICH…</span>
+    </div>
+    <div id="_kr-final">
+      <div class="creature-slot"><img src="${endImg}" alt="" style="width:100%;height:100%;object-fit:contain;"></div>
+      <div class="_kr-title">${escapeHtml(titleText)}</div>
+      <div class="_kr-sub">${escapeHtml(subText)}</div>
+    </div>
+    <button id="_kr-close">Weiter zum Hub →</button>
+  `;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+  const catImg   = overlay.querySelector('#_kr-cat');
+  const flash    = overlay.querySelector('#_kr-flash');
+  const halo     = overlay.querySelector('#_kr-halo');
+  const initial  = overlay.querySelector('#_kr-initial');
+  const final_   = overlay.querySelector('#_kr-final');
+  const closeBtn = overlay.querySelector('#_kr-close');
+
+  const shake = () => { catImg.classList.remove('shaking'); void catImg.offsetWidth; catImg.classList.add('shaking'); };
+  setTimeout(shake, 700);
+  setTimeout(shake, 1500);
+  setTimeout(shake, 2300);
+  setTimeout(() => { halo.classList.add('show'); }, 2500);
+  setTimeout(() => { catImg.classList.remove('shaking'); catImg.classList.add('glowing'); }, 2900);
+  setTimeout(() => {
+    flash.classList.add('go');
+    // Hintergrund-Wechsel zum Variant-Look während des Flashs
+    overlay.classList.add('to-final');
+    const emojis = variant === 'light'
+      ? ['☀️','✨','🌻','💛','🌟','🕊️']
+      : variant === 'dark'
+      ? ['🌙','✨','🌌','⭐','🔮','🌠']
+      : ['🌈','✨','🍬','💫','⭐','🎀','💎'];
+    for (let i = 0; i < 22; i++) {
+      const p = document.createElement('span');
+      p.className = '_kr-particle';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      p.style.left = (8 + Math.random() * 84) + '%';
+      p.style.top  = (12 + Math.random() * 74) + '%';
+      p.style.animationDelay = (Math.random() * 0.5) + 's';
+      overlay.appendChild(p);
+    }
+  }, 3500);
+  setTimeout(() => {
+    initial.style.display = 'none';
+    final_.classList.add('show');
+    closeBtn.classList.add('show');
+  }, 4200);
+
+  closeBtn.addEventListener('click', async () => {
+    closeBtn.disabled = true;
+    // Frischer Server-State (bringt growth=21 wenn nicht schon lokal)
+    try { await window.loadServerState?.(); } catch (e) {}
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+      overlay.remove();
+      renderHub();
+    }, 500);
+  });
+}
+window.showKatzeVariantReveal = showKatzeVariantReveal;
+
 function applyBackupSwap(gameId) {
   const sd = loadShopData();
   if (!sd.pendingBackup) return;
@@ -4354,8 +5176,9 @@ function openBookModal() {
         <span class="book-slot__unknown">?</span>
       </div>`;
     }
+    const bookVariant = creature === 'einhornkatze' ? getOwnKatzeVariant() : null;
     return `<div class="book-slot book-slot--seen${specialClass}" data-creature="${creature}" title="${BOOK_NAMES[creature] ?? CREATURE_NAMES[creature]}">
-      <div class="book-slot__img">${getCreatureHTML(creature, maxStage)}</div>
+      <div class="book-slot__img">${getCreatureHTML(creature, maxStage, bookVariant)}</div>
       ${isVollendet ? '<span class="book-slot__check book-slot__check--gold">✦</span>' : isFinal ? '<span class="book-slot__check">✓</span>' : ''}
     </div>`;
   };
@@ -4461,11 +5284,12 @@ function showBookDetail(creature, maxStage) {
       ? `<span class="legendary-badge" style="margin:2px 0 4px;">✦ Legendäres Tier ✦</span>`
       : '';
 
+    const detailVariant = creature === 'einhornkatze' ? getOwnKatzeVariant() : null;
     content.innerHTML = `
       <div class="book-detail">
         <button class="book-detail__back" id="bookBack">← Übersicht</button>
         <div class="book-detail__img-wrap" id="bookDetailImg">
-          <div class="book-detail__img">${getCreatureHTML(creature, stage)}</div>
+          <div class="book-detail__img">${getCreatureHTML(creature, stage, detailVariant)}</div>
         </div>
         <div class="book-detail__name">${BOOK_NAMES[creature] ?? CREATURE_NAMES[creature]}</div>
         ${specialBadge}
@@ -4507,10 +5331,11 @@ function openBackupConfirmModal(creature, stage, maxStage) {
   if (!content) return;
   const sd = loadShopData();
   const hasKristall = getAvailableKristalle(sd) >= 2;
+  const backupVariant = creature === 'einhornkatze' ? getOwnKatzeVariant() : null;
   content.innerHTML = `
     <div class="backup-confirm">
       <h2 class="backup-confirm__title">💾 Backup laden?</h2>
-      <div class="backup-confirm__img">${getCreatureHTML(creature, stage)}</div>
+      <div class="backup-confirm__img">${getCreatureHTML(creature, stage, backupVariant)}</div>
       <p class="backup-confirm__name">${BOOK_NAMES[creature] ?? CREATURE_NAMES[creature]} · ${GROWTH_LABELS[stage]}</p>
       <p class="backup-confirm__text">
         Möchtest du von diesem Monster ein Backup laden?<br>

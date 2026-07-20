@@ -832,11 +832,16 @@ const CREATURE_IMAGES = {
   einhornkatze:['Einhornkatze1',   'Einhornkatze2',   'Einhornkatze3',   'Einhornkatze4',   'Einhornkatze5',   'Einhornkatze6'   ],
 };
 
-function getCreatureHTML(creature, stage) {
+function getCreatureHTML(creature, stage, variant) {
   const base = (window.CREATURE_IMAGE_BASE !== undefined) ? window.CREATURE_IMAGE_BASE : 'data/';
   const imgs = CREATURE_IMAGES[creature];
   const s    = Math.max(0, Math.min(stage ?? 0, (imgs?.length ?? GROWTH_STAGES) - 1));
-  const key  = imgs?.[s] ?? 'drache1';
+  let key    = imgs?.[s] ?? 'drache1';
+  // Einhornkatze Stage ≥4 (Sprite 5+): Variant-Suffix an Dateinamen anhängen.
+  // Rainbow bleibt Default (kein Suffix), Light/Dark bekommen Suffix.
+  if (creature === 'einhornkatze' && s >= 4 && (variant === 'light' || variant === 'dark')) {
+    key = key + (variant === 'light' ? 'Light' : 'Dark');
+  }
   const alt  = CREATURE_NAMES[creature] ?? creature;
   const img  = `<img src="${base}${key}.png" alt="${alt}" class="creature-img" data-stage="${s}">`;
   if (isPfau(creature)) {
@@ -1310,6 +1315,35 @@ async function loadServerState() {
       };
       applied++;
     }
+    // Task 4 (Regenbogen-Pfad): Progress + Variante aus user_legi_path ziehen.
+    // In game16 einmergen, damit UI (Hub-Kachel, Sprite-Rendering) sie sieht.
+    try {
+      const pathRes = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/get_my_katze_path`, {
+        method: 'POST',
+        headers: {
+          apikey: window.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: '{}'
+      });
+      if (pathRes.ok) {
+        const path = await pathRes.json();
+        if (path && path.ok) {
+          if (!all.game16) all.game16 = { points: 0, roundsPlayed: 0, creature: null, growth: 0, coins: 0 };
+          all.game16.pathProgress = {
+            answers: Array.isArray(path.answers) ? path.answers : [],
+            step:    typeof path.step === 'number' ? path.step : 0
+          };
+          all.game16.variant      = path.variant || null;
+          all.game16.pathDoneAt   = path.completed_at || null;
+        }
+      }
+    } catch (pathErr) {
+      console.warn('[creatures] katze_path load failed:', pathErr.message);
+    }
+
     saveStorage(STORAGE_KEY, all);
     console.log(`[creatures] server-state geladen: ${applied}/${rows.length} games`);
   } catch (e) {
@@ -1411,7 +1445,7 @@ function updateGameEggDisplay(data, crackStage, doShake = false, liveGrowth = nu
   if (hasCreature) {
     const growth = liveGrowth !== null ? liveGrowth : data.growth;
     const stage  = getGrowthStage(growth);
-    eggEl.innerHTML = getCreatureHTML(data.creature, stage);
+    eggEl.innerHTML = getCreatureHTML(data.creature, stage, data.variant);
     if (labelEl) labelEl.textContent = `${CREATURE_NAMES[data.creature]} · ${GROWTH_LABELS[stage]}`;
     if (fillEl) fillEl.style.width = Math.min(growth / GROWTH_MAX * 100, 100) + '%';
   } else {
