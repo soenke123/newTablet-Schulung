@@ -4086,12 +4086,12 @@ function ensurePathStyles() {
       margin: 8px 0 12px;
     }
     .legi-path-cat {
-      position: absolute; bottom: 6px; right: 8px;
-      height: 84%; width: auto; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+      position: absolute; bottom: 4px; right: -2%;
+      height: 63%; width: auto; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
       pointer-events: none;
     }
     .legi-path-bubble {
-      position: absolute; bottom: 12%; left: 6%; right: 24%;
+      position: absolute; bottom: 14%; left: 6%; right: 32%;
       background: rgba(255,255,255,0.96); color: #2b1a4a;
       padding: 10px 14px; border-radius: 14px;
       font-size: 0.98rem; line-height: 1.35; font-weight: 500;

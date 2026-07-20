@@ -1306,6 +1306,13 @@ async function loadServerState() {
     for (const r of rows) {
       // Pending → localStorage ist neuer (Push steht noch aus), nicht überschreiben.
       if (pending[r.game_id]) continue;
+      // Custom, nicht-schema-Felder (game16: variant, pathProgress, pathDoneAt)
+      // MÜSSEN über den Overwrite gerettet werden. Sonst wischt loadServerState
+      // sie weg und wenn der spätere get_my_katze_path-Call wackelt (Netzwerk,
+      // Migration noch nicht deployed), sieht der Hub eine "neue" Katze ohne
+      // Variante → Task 4 wird wieder als offen angezeigt und Kachel kippt
+      // auf Rainbow-Default zurück.
+      const prev = all[r.game_id] || {};
       all[r.game_id] = {
         points:       r.points        ?? 0,
         roundsPlayed: r.rounds_played ?? 0,
@@ -1313,6 +1320,9 @@ async function loadServerState() {
         growth:       r.growth        ?? 0,
         coins:        r.coins         ?? 0
       };
+      if (prev.variant)      all[r.game_id].variant      = prev.variant;
+      if (prev.pathProgress) all[r.game_id].pathProgress = prev.pathProgress;
+      if (prev.pathDoneAt)   all[r.game_id].pathDoneAt   = prev.pathDoneAt;
       applied++;
     }
     // Task 4 (Regenbogen-Pfad): Progress + Variante aus user_legi_path ziehen.
