@@ -2024,11 +2024,26 @@ async function giftBonbonsToPeer(amount) {
   return result;
 }
 
+// Cluster-Joker-Kauf. Server-First: erst Cap + Task-Guard checken +
+// INSERT, dann darf der Aufrufer die Coins ziehen. Bei Fehler kommt
+// { ok:false, error:'cap_reached'|'task_already_solved'|'no_cluster' }
+// zurück — kein Client-State ändert sich.
+async function buyClusterJoker(jokerType) {
+  const result = await callBonbonRPC('buy_cluster_joker', {
+    p_joker_type: jokerType || 'win_gemeinsam'
+  });
+  if (result && result.ok && typeof window.refreshClusterJokerStatus === 'function') {
+    window.refreshClusterJokerStatus();
+  }
+  return result;
+}
+
 window.awardGameBonbons        = awardGameBonbons;
 window.renderBonbonBank        = renderBonbonBank;
 window.fetchDailyBonbonStatus  = fetchDailyBonbonStatus;
 window.resetDailyBonbonClaims  = resetDailyBonbonClaims;
 window.giftBonbonsToPeer       = giftBonbonsToPeer;
+window.buyClusterJoker         = buyClusterJoker;
 
 /* Bequemer One-Shot-Helper für Spiele: nach renderCoinBank aufrufen.
    Rendert die Bonbon-Anzeige in den Bonbon-Slot, den renderCoinBank

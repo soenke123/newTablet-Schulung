@@ -1087,6 +1087,9 @@ const SHOP_ITEMS_P3 = [
   // Bonbon-Ökonomie (Migration 0044)
   { id: 'resetKarte',        icon: '🔄', name: 'Reset-Karte',       description: 'Alle Kacheln geben beim nächsten Spielen wieder den täglichen +20-Bonbon-Bonus.', price: 300, consumable: true, bonbonItem: true },
   { id: 'freundschaftskeks', icon: '🍪', name: 'Freundschaftskeks', description: 'Schenkt einem zufälligen Kurs-Kollegen 20 Bonbons. Zählen zum Kurs-Ziel. Maximal 5×.', price: 50,  consumable: true, bonbonItem: true, cap: 5, giftItem: true },
+  // Team-Joker (Migration 0047) — bewusst NICHT in loadShopData-Whitelist,
+  // Bestand kommt aus window.__clusterJokerStatus (Server-Aggregat).
+  { id: 'jokerGemeinsam', icon: '🃏', name: 'Joker: gemeinsam gewinnen', description: 'Ein Monster weniger nötig für „Gemeinsam siegen". Maximal 2 pro Kurs.', price: 500, consumable: true, clusterScoped: true },
 ];
 
 function openShopModal() {
@@ -1258,7 +1261,7 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
   const isStackable = _SHOP_STACKABLE.includes(item.id);
   // Migration 0042: Anzeige = effektiver Rest = Count − Spent (via Helper).
   const ownedCount  = isStackable ? getConsumableCount(shopData, item.id) : 0;
-  const isActive    = !isStackable && !!item.consumable && !!shopData[item.id];
+  const isActive    = !isStackable && !!item.consumable && !!shopData[item.id] && !item.clusterScoped;
   const canAfford   = item.currency === 'kristall'
     ? getAvailableKristalle(shopData) >= item.price
     : available >= item.price;
@@ -1272,7 +1275,12 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
   // Migration 0044: Freundschaftskeks hat einen Cap (5× pro Cluster).
   const giftsCount   = item.giftItem ? (shopData.freundschaftskeksCount ?? 0) : 0;
   const giftCapReached = item.giftItem && giftsCount >= (item.cap || 5);
-  const btnDisabled = soldOut || isActive || !canAfford || !hasMaxedCreature || giftCapReached;
+  // Migration 0047: Cluster-Joker — Bestand + Cap kommen aus Server-Aggregat.
+  const clusterUsed     = item.clusterScoped ? (window.__clusterJokerStatus?.used ?? 0) : 0;
+  const clusterCap      = item.clusterScoped ? (window.__clusterJokerStatus?.cap ?? 2) : 0;
+  const clusterSoldOut  = item.clusterScoped && clusterUsed >= clusterCap;
+  const winTaskDone     = item.clusterScoped && window.__winTaskReady === true;
+  const btnDisabled = soldOut || isActive || !canAfford || !hasMaxedCreature || giftCapReached || clusterSoldOut || winTaskDone;
 
   let typeClass = '';
   if (item.bookItem)           typeClass = 'shop-list-item--book';
@@ -1280,7 +1288,11 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
   else if (item.eggItem)       typeClass = `shop-list-item--egg-${item.eggType}`;
   else if (isActive)           typeClass = 'shop-list-item--active';
 
-  const btnText = isActive ? '⚡ Aktiv' : (giftCapReached ? '5/5 verbraucht' : 'Kaufen');
+  const btnText = isActive
+    ? '⚡ Aktiv'
+    : (giftCapReached ? '5/5 verbraucht'
+      : (clusterSoldOut ? `${clusterUsed}/${clusterCap} im Kurs`
+        : (winTaskDone ? 'Nicht mehr nötig' : 'Kaufen')));
   const noEligible = item.upgradeItem && !hasMaxedCreature;
   // Migration 0044: Anzeige-Varianten für Bonbon-Items.
   // Reset-Karte hat einen Server-Cap von 1× pro Tag (Migration 0045).
@@ -1289,9 +1301,11 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
   const resetActivateText = 'Einsetzen';
   const ownedLabel = item.giftItem
     ? `${giftsCount}/${item.cap || 5} verschenkt`
-    : item.id === 'resetKarte' && ownedCount > 0
-      ? `${ownedCount}× im Bestand${resetUsedToday ? ' · heute schon eingesetzt' : ''}`
-      : (isStackable && ownedCount > 0 ? `${ownedCount}× besitz` : '');
+    : item.clusterScoped
+      ? `Kurs: ${clusterUsed}/${clusterCap} gekauft`
+      : item.id === 'resetKarte' && ownedCount > 0
+        ? `${ownedCount}× im Bestand${resetUsedToday ? ' · heute schon eingesetzt' : ''}`
+        : (isStackable && ownedCount > 0 ? `${ownedCount}× besitz` : '');
 
   const li = document.createElement('div');
   li.className = `shop-list-item ${typeClass}${soldOut ? ' shop-list-item--soldout' : ''}`.trim();
@@ -1543,6 +1557,37 @@ function buyItem(itemId) {
                   : `Etwas ist schiefgelaufen (${err}). Coins wurden erstattet.`;
         showGiftInfoModal('Verschenken nicht möglich', msg);
       }
+    })();
+    return;
+  }
+
+  // Migration 0047: Cluster-Joker — Server-First. Erst Cap + Task-Guard
+  // + INSERT auf Server, dann Coins ziehen. Kein Refund-Pfad, weil bei
+  // Server-Fehler nichts am Client-State geändert wurde.
+  if (item.clusterScoped) {
+    (async () => {
+      const res = await window.buyClusterJoker('win_gemeinsam');
+      if (!res || !res.ok) {
+        const errMap = {
+          cap_reached:         'Der Kurs hat die maximale Zahl an Jokern erreicht.',
+          task_already_solved: 'Die Sammel-Aufgabe ist bereits erfüllt — kein Joker mehr nötig.',
+          no_cluster:          'Du bist keinem Kurs zugeordnet.',
+          not_authenticated:   'Bitte neu einloggen.'
+        };
+        const msg = errMap[res?.error] || 'Joker konnte nicht gekauft werden.';
+        showGiftInfoModal('Joker-Kauf', msg);
+        renderShop(loadAllData()); // Cache könnte veraltet sein
+        return;
+      }
+      const sd = loadShopData();
+      _charge(sd, item);
+      saveShopData(sd);
+      renderHub();
+      renderShop(loadAllData());
+      const stufe = res.used === 1
+        ? 'Ein Monster weniger nötig — 24 statt 25!'
+        : 'Zwei Monster weniger nötig — 23 statt 25!';
+      showGiftInfoModal('🃏 Joker gekauft!', stufe);
     })();
     return;
   }
@@ -3677,6 +3722,9 @@ async function openWinFlow() {
     hasAll: false,
     alreadyClaimed: false,
     total: 25,
+    clusterJokers: 0,        // Migration 0047: Anzahl gekaufter Joker im Cluster
+    totalRequired: 25,       // = total − clusterJokers
+    jokerBuyers: [],         // [{display_name}]
     activeTab: 'all',        // 'all' | 1 | 2 | 3
     detailCreature: null,    // Kreatur-Key im detail-View
     error: null,
@@ -3741,6 +3789,12 @@ async function openWinFlow() {
     state.hasAll = !!res.has_all_creatures;
     state.alreadyClaimed = !!res.already_claimed;
     state.total = res.total || 25;
+    // Migration 0047: Joker-Toleranz-Werte aus Server-Response.
+    state.clusterJokers = res.cluster_jokers ?? 0;
+    state.totalRequired = res.total_required ?? state.total;
+    // Käufer-Namen aus separater Joker-Status-RPC (parallel).
+    const jokerStatus = await window.refreshClusterJokerStatus?.();
+    state.jokerBuyers = jokerStatus?.buyers || [];
     // Hub-Blink-Status im gleichen Zug aktualisieren.
     window.__winTaskReady = state.hasAll && !state.alreadyClaimed;
     state.view = 'grid';
@@ -3850,14 +3904,24 @@ function renderWinGrid(s) {
       ? `<p class="legi-win-claimed-note">✓ Du hast die Stufe bereits abgeholt.</p>`
       : '';
 
+  const jokerList = (s.jokerBuyers && s.jokerBuyers.length > 0)
+    ? `<p class="legi-win-joker-list">
+         🃏 ${s.jokerBuyers.map(b => `<strong>${escapeHtml(b.display_name)}</strong> hat einen Joker gekauft`).join(' &middot; ')}
+       </p>`
+    : '';
+  const jokerSuffix = s.clusterJokers > 0
+    ? ` <span class="legi-win-count-joker">(-${s.clusterJokers})</span>`
+    : '';
+
   return `
     <div class="legi-win-body">
       <p class="legi-win-intro">
         Der ganze Kurs muss jedes Monster einmal auf die höchste Stufe bringen.
         Klicke auf ein Feld, um zu sehen, wer es schon vollendet hat.
       </p>
+      ${jokerList}
       <div class="book-tabs legi-win-tabs">${tabs}</div>
-      <p class="book-modal__count">${foundAll} / ${s.total} vollendet</p>
+      <p class="book-modal__count">${foundAll} / ${s.total} vollendet${jokerSuffix}</p>
       <div class="book-grid book-grid--normals legi-win-grid">${slots}</div>
       <div class="legi-win-footer">${bottomButton}</div>
     </div>`;

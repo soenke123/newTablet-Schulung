@@ -4149,6 +4149,27 @@ input[type="password"]::-webkit-textfield-decoration-container {
   line-height: 1.45;
   margin: 0;
 }
+/* Migration 0047: Joker-Käufer-Zeile + Counter-Suffix in Gold/Amber */
+.legi-win-joker-list {
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(244, 180, 0, 0.10);
+  border-left: 3px solid #f4b400;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--clr-cream, #fef6e4);
+}
+.legi-win-joker-list strong {
+  color: #f4b400;
+  font-weight: 700;
+}
+.legi-win-count-joker {
+  color: #f4b400;
+  font-weight: 800;
+  margin-left: 4px;
+  text-shadow: 0 0 6px rgba(244, 180, 0, 0.35);
+}
 .legi-win-tabs {
   justify-content: center;
   flex-wrap: wrap;

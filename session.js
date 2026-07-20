@@ -58,6 +58,8 @@
   window.getSessionUser = () => window.__session;
   window.__bonbonStatus = null;
   window.getBonbonStatus = () => window.__bonbonStatus;
+  window.__clusterJokerStatus = null;
+  window.getClusterJokerStatus = () => window.__clusterJokerStatus;
 
   // localStorage-Cleanup bei User-Wechsel oder Logout.
   // Räumt alles Lernwelt-spezifische — verhindert, dass User B
@@ -180,6 +182,39 @@
   }
   window.refreshBonbonStatus = refreshBonbonStatus;
 
+  // Cluster-Joker-Status (S3-Team-Item „Joker für gemeinsam gewinnen").
+  // Liefert used/cap/own_purchases/buyers[] für den aktuellen Cluster.
+  async function fetchClusterJokerStatus(accessToken) {
+    if (!accessToken || !window.SUPABASE_URL) return null;
+    try {
+      const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/get_cluster_joker_status`, {
+        method: 'POST',
+        headers: {
+          apikey: window.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: '{}'
+      });
+      if (!res.ok) throw new Error(`joker-status ${res.status}`);
+      const data = await res.json();
+      return data && data.ok ? data : null;
+    } catch (e) {
+      console.warn('[SESSION] cluster-joker-status fetch failed:', e.message);
+      return null;
+    }
+  }
+
+  async function refreshClusterJokerStatus() {
+    if (!window.__accessToken) return null;
+    const s = await fetchClusterJokerStatus(window.__accessToken);
+    window.__clusterJokerStatus = s;
+    window.dispatchEvent(new CustomEvent('lernwelt:cluster-joker-changed', { detail: { status: s } }));
+    return s;
+  }
+  window.refreshClusterJokerStatus = refreshClusterJokerStatus;
+
   // Raw fetch statt supabase-js-Query-Builder — vermeidet interne SDK-Locks,
   // die zwischen Tabs streiten und Queries dauerhaft hängen lassen können.
   //
@@ -211,6 +246,7 @@
     if (!authSession) {
       window.__session = null;
       window.__bonbonStatus = null;
+      window.__clusterJokerStatus = null;
       try { localStorage.removeItem('lernwelt_season'); } catch(e) {}
       console.log('[SESSION] kein authSession → __session = null');
       return;
@@ -261,6 +297,7 @@
     // beim ersten Rendern. Kein blocking der Session — schlägt der Fetch
     // fehl, ist der Cache halt null und die Anzeige zeigt 0/hidden.
     window.__bonbonStatus = await fetchBonbonStatus(authSession.access_token);
+    window.__clusterJokerStatus = await fetchClusterJokerStatus(authSession.access_token);
   }
 
   // Auth-State-Handler: das ist der einzige Ort wo wir authSession bekommen.

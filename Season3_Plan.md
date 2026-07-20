@@ -205,6 +205,9 @@ cluster_pool_milestone_grants(
 - **Cluster-Beitrags-Booster?** (temporär höherer Drop-Anteil in den Pool)
 - **Season-3-Avatar-Items** (Badges/Rahmen für "Kurs hat es geschafft"-Träger)
 
+### Umgesetzt
+- **🃏 Joker für gemeinsam gewinnen** (Migration 0047, 2026-07-20) — 500 Coins, S3-Coin-Tab. Max 2 pro Cluster. Jeder gekaufte Joker senkt die Anforderung des `win`-Tasks um 1 (statt 25/25 reichen 24/25 bzw. 23/25). Kein Monster wird festgelegt; Server prüft `count(has_max) >= 25 − cluster_jokers`. Kauf ist gesperrt, sobald Cluster die (angepasste) Anforderung erfüllt hat. Käufer werden im Win-Flow unter dem Erklärungstext namentlich genannt („🃏 Anna hat einen Joker gekauft"), Counter zeigt `(-1)` / `(-2)` in Gold/Amber `#f4b400`.
+
 ### Coin-Sink nach Legi-Freischaltung
 - Was tun mit überschüssigen Ressourcen, wenn Ziel schon erreicht ist?
 - Empfehlung: **Ressourcen-Drop stoppt automatisch nach Team-Ziel-Erreichung**, User farmen weiter Coins für persönliche Sammlung
