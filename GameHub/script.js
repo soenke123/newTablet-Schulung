@@ -5705,29 +5705,35 @@ function _injectAtariStyles() {
 const THEME_PREF_KEY_LEGACY         = 'lernwelt_theme_pref';
 const THEME_UNLOCK_ORDER_KEY_LEGACY = 'lernwelt_theme_unlock_order';
 
-// Theme-ID → Trigger-Kreatur (max growth schaltet das Theme frei)
+// Theme-ID → Trigger. { creature } reicht für die Standard-Themes;
+// { creature, variant } für Einhornkatze-Themes (Migration 0049 setzt
+// game16.variant nach Task 4 Wahl auf 'dark' | 'light' | 'rainbow').
 const THEME_TRIGGERS = {
-  pfau:         'pfau',
-  atari:        'robot',
-  chindrache:   'chinDrache',
-  schnabeltier: 'schnabeltier',
+  pfau:         { creature: 'pfau' },
+  atari:        { creature: 'robot' },
+  chindrache:   { creature: 'chinDrache' },
+  schnabeltier: { creature: 'schnabeltier' },
+  overvolt:     { creature: 'einhornkatze', variant: 'dark' },
+  solaris:      { creature: 'einhornkatze', variant: 'light' },
+  bubblegum:    { creature: 'einhornkatze', variant: 'rainbow' },
 };
 
 function _liveMaxedThemes(allData, sd) {
-  const hasMaxed = (creature) => {
+  const hasMaxed = (creature, variant) => {
+    const match = (d) => d?.creature === creature
+                     && d.growth >= GROWTH_MAX
+                     && (!variant || d.variant === variant);
     for (const g of GAMES_CONFIG) {
-      const d = allData[g.id];
-      if (d?.creature === creature && d.growth >= GROWTH_MAX) return true;
+      if (match(allData[g.id])) return true;
     }
     for (const n of (sd.nests || [])) {
-      const d = allData[n.nestId];
-      if (d?.creature === creature && d.growth >= GROWTH_MAX) return true;
+      if (match(allData[n.nestId])) return true;
     }
     return false;
   };
   const out = [];
-  for (const [theme, creature] of Object.entries(THEME_TRIGGERS)) {
-    if (hasMaxed(creature)) out.push(theme);
+  for (const [theme, spec] of Object.entries(THEME_TRIGGERS)) {
+    if (hasMaxed(spec.creature, spec.variant)) out.push(theme);
   }
   return out;
 }
@@ -5804,11 +5810,17 @@ function applyThemeFromPreference(allData) {
   if (active !== 'pfau')         _deactivatePfauTheme();
   if (active !== 'chindrache')   _deactivateChinDracheTheme();
   if (active !== 'schnabeltier') _deactivateSchnabeltierTheme();
+  if (active !== 'overvolt')     _deactivateOvervoltTheme();
+  if (active !== 'solaris')      _deactivateSolarisTheme();
+  if (active !== 'bubblegum')    _deactivateBubblegumTheme();
 
   if      (active === 'atari')        _activateAtariTheme();
   else if (active === 'pfau')         _activatePfauTheme();
   else if (active === 'chindrache')   _activateChinDracheTheme();
   else if (active === 'schnabeltier') _activateSchnabeltierTheme();
+  else if (active === 'overvolt')     _activateOvervoltTheme();
+  else if (active === 'solaris')      _activateSolarisTheme();
+  else if (active === 'bubblegum')    _activateBubblegumTheme();
 
   _updateThemeCycleBtn(unlocked, active);
 }
@@ -5831,8 +5843,8 @@ function _updateThemeCycleBtn(unlocked, active) {
   if (!btn) return;
   btn.hidden = unlocked.length < 2;
   if (unlocked.length < 2) return;
-  const icons = { default: '🌟', pfau: '🦚', atari: '💾', chindrache: '🐉', schnabeltier: '🦆' };
-  const names = { default: 'Standard', pfau: 'Pfau', atari: 'Atari', chindrache: 'Drache', schnabeltier: 'Schnabeltier' };
+  const icons = { default: '🌟', pfau: '🦚', atari: '💾', chindrache: '🐉', schnabeltier: '🦆', overvolt: '⚡', solaris: '☀️', bubblegum: '🌈' };
+  const names = { default: 'Standard', pfau: 'Pfau', atari: 'Atari', chindrache: 'Drache', schnabeltier: 'Schnabeltier', overvolt: 'Overvolt', solaris: 'Solaris', bubblegum: 'Bubblegum' };
   btn.innerHTML = `${icons[active] || '🎨'}<span class="theme-cycle-btn__label"> ${names[active] || ''}</span>`;
   btn.title = 'Theme wechseln';
 }
@@ -7594,3 +7606,1304 @@ body.schnabeltier-theme .hub-auth-menu #hubAdminLink { color: #7df9ff !important
 `;
   document.head.appendChild(s);
 }
+
+
+/* ─────────────────────────────────────────────────
+   18. OVERVOLT — DARK EINHORNKATZE THEME
+   Aktiv wenn game16.creature='einhornkatze' + variant='dark'
+   auf max. Wachstum. Screen-Flash + verzweigte Fork-Blitze
+   aus verschiedenen Ecken. Buttons in Void-DNA + Corona-Pulse.
+   ───────────────────────────────────────────────── */
+let _overvoltThemeActive  = false;
+let _overvoltStormTimer   = null;
+
+function _activateOvervoltTheme() {
+  if (_overvoltThemeActive) return;
+  _overvoltThemeActive = true;
+  _injectOvervoltThemeStyles();
+  document.body.classList.add('overvolt-theme');
+  _startOvervoltStorm();
+}
+
+function _deactivateOvervoltTheme() {
+  if (!_overvoltThemeActive) return;
+  _overvoltThemeActive = false;
+  document.body.classList.remove('overvolt-theme');
+  _stopOvervoltStorm();
+}
+
+// Zwischen 2.8s und 7.2s pausiert der Sturm — nicht periodisch, sondern
+// leicht zufällig, damit's nicht wie ein Metronom wirkt.
+function _startOvervoltStorm() {
+  if (_overvoltStormTimer !== null) return;
+  const tick = () => {
+    _spawnOvervoltStrike();
+    _overvoltStormTimer = setTimeout(tick, 2800 + Math.random() * 4400);
+  };
+  _overvoltStormTimer = setTimeout(tick, 800 + Math.random() * 1600);
+}
+
+function _stopOvervoltStorm() {
+  if (_overvoltStormTimer !== null) { clearTimeout(_overvoltStormTimer); _overvoltStormTimer = null; }
+  document.querySelectorAll('.lw-overvolt-strike, .lw-overvolt-flash').forEach(el => el.remove());
+}
+
+// SVG-Zickzack-Blitz mit 2-3 Forks, zufällige Startposition am Bildrand.
+// Der Screen-Flash pulst synchron mit dem Einschlag.
+function _spawnOvervoltStrike() {
+  const flash = document.createElement('div');
+  flash.className = 'lw-overvolt-flash';
+  document.body.appendChild(flash);
+  flash.addEventListener('animationend', () => flash.remove(), { once: true });
+
+  const strike = document.createElement('div');
+  strike.className = 'lw-overvolt-strike';
+
+  // Zufällige Richtung: 0 = oben, 1 = rechts oben, 2 = links oben, 3 = oben zentral
+  const from = Math.floor(Math.random() * 4);
+  const positions = {
+    0: 'top:-6vh;left:'  + (10 + Math.random() * 80) + 'vw;width:6vw;height:64vh;',
+    1: 'top:-4vh;right:' + (4  + Math.random() * 20) + 'vw;width:8vw;height:56vh;transform:rotate(18deg);',
+    2: 'top:-4vh;left:'  + (4  + Math.random() * 20) + 'vw;width:8vw;height:56vh;transform:rotate(-18deg);',
+    3: 'top:-6vh;left:'  + (35 + Math.random() * 30) + 'vw;width:8vw;height:70vh;',
+  };
+  strike.style.cssText = 'position:fixed;pointer-events:none;z-index:9500;' + positions[from];
+
+  // 8 kleine Variationen von Zickzack-Paths — jeweils Haupt-Blitz + 2-3 Forks.
+  const variants = [
+    { main: 'M50 0 L38 14 L58 22 L36 40 L52 50 L30 74 L48 82 L34 100',
+      forks: ['M58 22 L74 30 L66 42', 'M52 50 L68 56 L60 68', 'M48 82 L62 88 L58 96'] },
+    { main: 'M50 0 L60 18 L42 26 L60 44 L44 56 L64 70 L46 84 L58 100',
+      forks: ['M42 26 L26 34 L34 46', 'M44 56 L28 62 L36 72'] },
+    { main: 'M50 0 L44 12 L58 20 L40 34 L56 42 L38 60 L54 68 L40 82 L52 100',
+      forks: ['M58 20 L74 24', 'M56 42 L72 48 L64 60', 'M52 100 L64 96 L60 108'] },
+    { main: 'M50 0 L54 16 L38 22 L52 38 L36 46 L54 60 L38 74 L52 88 L38 100',
+      forks: ['M38 22 L24 26 L30 38', 'M38 74 L22 78'] },
+    { main: 'M50 0 L46 14 L60 20 L46 32 L60 42 L44 58 L62 68 L48 82 L60 100',
+      forks: ['M60 20 L74 22 L70 32', 'M60 42 L76 46', 'M62 68 L78 74 L72 84'] },
+    { main: 'M50 0 L38 10 L52 18 L34 28 L50 38 L34 52 L52 62 L36 78 L50 100',
+      forks: ['M52 18 L68 22', 'M50 38 L66 42 L60 52', 'M50 100 L38 92'] },
+    { main: 'M50 0 L54 12 L40 20 L56 30 L40 42 L56 56 L38 68 L54 82 L40 100',
+      forks: ['M40 20 L26 24 L32 34', 'M40 42 L24 46', 'M38 68 L22 72 L28 82'] },
+    { main: 'M50 0 L44 16 L60 22 L42 36 L58 46 L42 62 L60 74 L44 88 L58 100',
+      forks: ['M60 22 L76 26', 'M60 74 L76 78 L70 90'] },
+  ];
+  const v = variants[Math.floor(Math.random() * variants.length)];
+  const forkHTML = v.forks.map(f => `<path class="branch" d="${f}"/>`).join('');
+  strike.innerHTML = `
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+      <path class="main" d="${v.main}"/>
+      ${forkHTML}
+    </svg>`;
+  document.body.appendChild(strike);
+  strike.addEventListener('animationend', () => strike.remove(), { once: true });
+}
+
+function _injectOvervoltThemeStyles() {
+  if (document.getElementById('lw-overvolt-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'lw-overvolt-styles';
+  s.textContent = `
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+/* ════════════════════════════════════════════════
+   OVERVOLT — DARK EINHORNKATZE (Gewitter-Theme)
+   ════════════════════════════════════════════════ */
+
+/* ── Screen-Flash bei Einschlag ── */
+.lw-overvolt-flash {
+  position: fixed; inset: 0;
+  z-index: 9490;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(200,220,255,0.4) 45%, transparent 75%);
+  opacity: 0;
+  animation: overvoltFlash 1.6s ease-out forwards;
+}
+@keyframes overvoltFlash {
+  0%   { opacity: 0.15; }
+  6%   { opacity: 1;    }
+  12%  { opacity: 0.05; }
+  20%  { opacity: 0.9;  }
+  28%  { opacity: 0.3;  }
+  100% { opacity: 0;    }
+}
+
+/* ── Zickzack-Blitz mit Fork-Verzweigungen ── */
+.lw-overvolt-strike {
+  animation: overvoltStrikeFade 1.6s ease-out forwards;
+}
+.lw-overvolt-strike svg {
+  width: 100%; height: 100%;
+  overflow: visible;
+}
+.lw-overvolt-strike svg path {
+  fill: none;
+  stroke: #ffffff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px rgba(220,235,255,1))
+          drop-shadow(0 0 14px rgba(160,200,255,0.75));
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+}
+.lw-overvolt-strike svg path.main   { stroke-width: 2.6; animation: overvoltDraw 1.6s ease-out forwards; }
+.lw-overvolt-strike svg path.branch { stroke-width: 1.4; animation: overvoltDraw 1.6s ease-out forwards; opacity: 0.85; }
+@keyframes overvoltDraw {
+  0%   { stroke-dashoffset: 400; opacity: 0; }
+  6%   { stroke-dashoffset: 0;   opacity: 1; }
+  12%  { stroke-dashoffset: 0;   opacity: 0.1; }
+  20%  { stroke-dashoffset: 0;   opacity: 1; }
+  28%  { stroke-dashoffset: 0;   opacity: 0; }
+  100% { stroke-dashoffset: 0;   opacity: 0; }
+}
+@keyframes overvoltStrikeFade { to { opacity: 0; } }
+
+/* ── Basis-BG + CSS-Vars ── */
+body.overvolt-theme {
+  --clr-bg:        #05060a;
+  --clr-surface:   #0d1018;
+  --clr-surface2:  #14192a;
+  --clr-border:    rgba(210,230,255,0.35);
+  --clr-gold:      #d2e6ff;
+  --clr-gold-dim:  #8ea8d6;
+  --clr-amber:     #a8c4e8;
+  --clr-cream:     #eaf1ff;
+  --clr-cream-dim: #a0aec8;
+  background-color: #05060a !important;
+  background-image:
+    radial-gradient(ellipse at 20% 10%, rgba(80,120,200,0.12) 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 90%, rgba(120,80,180,0.08) 0%, transparent 40%) !important;
+  color: #eaf1ff;
+}
+
+/* Subtile Gewitter-Vignette + Wolken-Andeutung */
+body.overvolt-theme::before {
+  content:''; position: fixed; inset: 0; z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0.55) 0%, transparent 65%),
+    radial-gradient(ellipse at 50% -10%, rgba(30,40,80,0.35) 0%, transparent 40%);
+}
+
+/* Header */
+body.overvolt-theme .hub-header::after {
+  background: linear-gradient(to right, transparent, #d2e6ff, transparent) !important;
+  box-shadow: 0 0 12px rgba(210,230,255,0.5);
+}
+body.overvolt-theme .hub-header__rune { filter: hue-rotate(190deg) brightness(1.4); }
+body.overvolt-theme h1 {
+  color: #ffffff !important;
+  font-family: 'Orbitron', sans-serif !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(210,230,255,0.7), 0 0 40px rgba(120,170,255,0.3) !important;
+}
+body.overvolt-theme h2 {
+  color: #d2e6ff !important;
+  text-shadow: 0 0 10px rgba(210,230,255,0.4) !important;
+}
+body.overvolt-theme .hub-header__subtitle {
+  color: #a0b8d8 !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+}
+body.overvolt-theme .hub-section-title {
+  color: #d2e6ff !important;
+  font-family: 'Orbitron', sans-serif !important;
+  text-shadow: 0 0 8px rgba(210,230,255,0.35) !important;
+}
+
+/* HUD */
+body.overvolt-theme .hud-bar {
+  background: rgba(5,8,14,0.95) !important;
+  border-bottom: 1px solid rgba(210,230,255,0.22) !important;
+  box-shadow: 0 2px 20px rgba(120,170,255,0.08) !important;
+}
+body.overvolt-theme .hud-coins__amount {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(210,230,255,0.6);
+}
+body.overvolt-theme .hud-btn {
+  background: rgba(15,20,32,0.85) !important;
+  border: 1px solid rgba(210,230,255,0.35) !important;
+  color: #eaf1ff !important;
+  border-radius: 999px !important;
+}
+body.overvolt-theme .hud-btn:hover {
+  background: rgba(210,230,255,0.1) !important;
+  box-shadow: 0 0 14px rgba(210,230,255,0.35) !important;
+}
+
+/* Game Cards */
+body.overvolt-theme .game-card {
+  background: linear-gradient(180deg, #0f1420, #080a12) !important;
+  border-color: rgba(210,230,255,0.28) !important;
+  box-shadow:
+    0 4px 22px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(210,230,255,0.08) !important;
+}
+body.overvolt-theme .game-card:hover:not(.game-card--locked) {
+  border-color: rgba(210,230,255,0.6) !important;
+  box-shadow:
+    0 0 28px rgba(140,190,255,0.25),
+    0 6px 30px rgba(0,0,0,0.75) !important;
+}
+body.overvolt-theme .game-card__title {
+  color: #ffffff !important;
+  font-family: 'Orbitron', sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 8px rgba(210,230,255,0.4);
+}
+body.overvolt-theme .game-card__stage-label { color: #a0b8d8 !important; }
+body.overvolt-theme .game-card__points {
+  color: #a0b8d8 !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+body.overvolt-theme .game-card__progress {
+  background: rgba(210,230,255,0.08) !important;
+  border: 1px solid rgba(210,230,255,0.18) !important;
+}
+body.overvolt-theme .game-card__progress-fill {
+  background: linear-gradient(to right, #3a5488, #d2e6ff) !important;
+  box-shadow: 0 0 10px rgba(210,230,255,0.5);
+}
+body.overvolt-theme .game-card__btn,
+body.overvolt-theme .game-card__use-btn {
+  background: transparent !important;
+  border: 1.5px solid #ffffff !important;
+  color: #ffffff !important;
+  font-family: 'Orbitron', sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase;
+  border-radius: 999px !important;
+  animation: overvoltBtnPulse 2.6s ease-in-out infinite;
+}
+@keyframes overvoltBtnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200,225,255,0.7), 0 0 18px rgba(200,225,255,0); }
+  60%      { box-shadow: 0 0 0 8px rgba(200,225,255,0),   0 0 26px rgba(200,225,255,0.5); }
+}
+body.overvolt-theme .game-card__btn:hover:not(:disabled),
+body.overvolt-theme .game-card__use-btn:hover:not(:disabled) {
+  background: rgba(210,230,255,0.12) !important;
+  box-shadow: 0 0 22px rgba(210,230,255,0.4) !important;
+}
+body.overvolt-theme .game-card__release {
+  color: #a0b8d8 !important;
+  border-color: rgba(210,230,255,0.28) !important;
+}
+body.overvolt-theme .game-card__release:hover {
+  color: #ffffff !important;
+  background: rgba(210,230,255,0.08) !important;
+}
+
+/* Gallery */
+body.overvolt-theme .gallery-bar {
+  background: linear-gradient(180deg, #0d1018, #060810) !important;
+  border-top: 1px solid rgba(210,230,255,0.18) !important;
+  border-bottom: 1px solid rgba(210,230,255,0.18) !important;
+}
+body.overvolt-theme .gallery-slot {
+  border-color: rgba(210,230,255,0.28) !important;
+  background: #0d1018 !important;
+}
+body.overvolt-theme .gallery-slot:hover {
+  border-color: rgba(210,230,255,0.65) !important;
+  box-shadow: 0 0 18px rgba(210,230,255,0.3) !important;
+}
+
+/* Creature-Modal */
+body.overvolt-theme .modal-box {
+  background: linear-gradient(180deg, #0f1420, #050710) !important;
+  border: 1px solid rgba(210,230,255,0.35) !important;
+  box-shadow: 0 0 60px rgba(120,170,255,0.18), 0 24px 80px rgba(0,0,0,0.95) !important;
+}
+body.overvolt-theme .modal-close {
+  color: #ffffff !important;
+  border-color: rgba(210,230,255,0.4) !important;
+  background: transparent !important;
+}
+
+/* Shop-Modal */
+body.overvolt-theme .shop-modal-box {
+  background: linear-gradient(180deg, #0f1420, #050710) !important;
+  border: 1px solid rgba(210,230,255,0.32) !important;
+  box-shadow: 0 0 60px rgba(120,170,255,0.15), 0 24px 80px rgba(0,0,0,0.95) !important;
+}
+body.overvolt-theme .shop-modal-title {
+  color: #ffffff !important;
+  font-family: 'Orbitron', sans-serif !important;
+  text-shadow: 0 0 14px rgba(210,230,255,0.5) !important;
+}
+body.overvolt-theme .shop-coin-badge { color: #ffffff !important; }
+body.overvolt-theme .shop-list-item {
+  background: #0d1220 !important;
+  border-color: rgba(210,230,255,0.2) !important;
+}
+body.overvolt-theme .shop-list-item__name  { color: #ffffff !important; }
+body.overvolt-theme .shop-list-item__desc  { color: #a0b8d8 !important; }
+body.overvolt-theme .shop-list-item__price { color: #a0b8d8 !important; }
+body.overvolt-theme .shop-list-item__btn {
+  background: transparent !important;
+  border: 1.5px solid #ffffff !important;
+  color: #ffffff !important;
+  font-family: 'Orbitron', sans-serif !important;
+  border-radius: 999px !important;
+}
+body.overvolt-theme .shop-list-item__btn:hover:not(:disabled) {
+  background: rgba(210,230,255,0.12) !important;
+  box-shadow: 0 0 16px rgba(210,230,255,0.4) !important;
+}
+body.overvolt-theme .shop-modal-close {
+  color: #ffffff !important;
+  border-color: rgba(210,230,255,0.35) !important;
+  background: transparent !important;
+}
+
+/* Badges */
+body.overvolt-theme .legendary-badge {
+  background: linear-gradient(135deg, #1a2440, #0e1830) !important;
+  border-color: rgba(210,230,255,0.6) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 18px rgba(210,230,255,0.35) !important;
+}
+body.overvolt-theme .epic-badge {
+  background: linear-gradient(135deg, #14203a, #0a1424) !important;
+  border-color: rgba(210,230,255,0.45) !important;
+  color: #d2e6ff !important;
+  box-shadow: 0 0 12px rgba(210,230,255,0.22) !important;
+}
+body.overvolt-theme .rare-badge {
+  background: linear-gradient(135deg, #101828, #0a1220) !important;
+  border-color: rgba(210,230,255,0.32) !important;
+  color: #a0b8d8 !important;
+  box-shadow: 0 0 10px rgba(210,230,255,0.15) !important;
+}
+
+/* Scrollbar */
+body.overvolt-theme ::-webkit-scrollbar-track { background: #060810 !important; }
+body.overvolt-theme ::-webkit-scrollbar-thumb {
+  background: #3a5488 !important;
+  border-color: #060810 !important;
+}
+
+/* Season 2 Modal */
+body.overvolt-theme .s2-panel {
+  background: linear-gradient(180deg, #0a0f1c, #05060a) !important;
+  border-color: rgba(210,230,255,0.4) !important;
+  box-shadow: 0 0 50px rgba(120,170,255,0.2) !important;
+}
+body.overvolt-theme .s2-banner {
+  background: linear-gradient(160deg, #05060a 0%, #0d1220 55%, #05060a 100%) !important;
+  border-bottom-color: rgba(210,230,255,0.4) !important;
+}
+body.overvolt-theme .s2-banner::before {
+  background: radial-gradient(ellipse at 50% 0%, rgba(210,230,255,0.15) 0%, transparent 65%) !important;
+}
+body.overvolt-theme .s2-badge {
+  background: #ffffff !important;
+  color: #05060a !important;
+}
+body.overvolt-theme .s2-banner__title {
+  color: #ffffff !important;
+  text-shadow: 0 0 30px rgba(210,230,255,0.7), 0 0 60px rgba(120,170,255,0.3) !important;
+}
+body.overvolt-theme .s2-banner__sub {
+  color: rgba(210,230,255,0.75) !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+}
+body.overvolt-theme .s2-body { background: rgba(10,15,28,0.98) !important; }
+
+/* Auth-Pill + Profil-Menü */
+body.overvolt-theme .hub-auth { border-left-color: rgba(210,230,255,0.28) !important; }
+body.overvolt-theme .hub-auth-btn {
+  color: #ffffff !important;
+  font-family: 'Orbitron', sans-serif !important;
+  letter-spacing: 0.06em;
+}
+body.overvolt-theme .hub-auth-avatar { background: rgba(210,230,255,0.1) !important; }
+body.overvolt-theme .hub-auth-menu {
+  background: linear-gradient(180deg, #0f1420, #060810) !important;
+  border-color: rgba(210,230,255,0.4) !important;
+  box-shadow: 0 0 24px rgba(210,230,255,0.22) !important;
+}
+body.overvolt-theme .hub-auth-menu > * + * { border-top-color: rgba(210,230,255,0.15) !important; }
+body.overvolt-theme .hub-auth-menu button,
+body.overvolt-theme .hub-auth-menu a {
+  color: #eaf1ff !important;
+  font-family: 'Orbitron', sans-serif !important;
+  letter-spacing: 0.04em;
+}
+body.overvolt-theme .hub-auth-menu button:hover,
+body.overvolt-theme .hub-auth-menu a:hover { background: rgba(210,230,255,0.12) !important; }
+body.overvolt-theme .hub-auth-menu #hubAdminLink { color: #d2e6ff !important; }
+`;
+  document.head.appendChild(s);
+}
+
+
+/* ─────────────────────────────────────────────────
+   19. SOLARIS — LIGHT EINHORNKATZE THEME
+   Aktiv wenn game16.creature='einhornkatze' + variant='light'
+   auf max. Wachstum. Warme Goldtöne, pulsierende Sonnenscheibe
+   oben rechts + zufällige Glimmer-Punkte im Hintergrund.
+   ───────────────────────────────────────────────── */
+let _solarisThemeActive = false;
+let _solarisGlimmerTimer = null;
+let _solarisAuraEl = null;
+
+function _activateSolarisTheme() {
+  if (_solarisThemeActive) return;
+  _solarisThemeActive = true;
+  _injectSolarisThemeStyles();
+  document.body.classList.add('solaris-theme');
+  _mountSolarisAura();
+  _startSolarisGlimmer();
+}
+
+function _deactivateSolarisTheme() {
+  if (!_solarisThemeActive) return;
+  _solarisThemeActive = false;
+  document.body.classList.remove('solaris-theme');
+  _unmountSolarisAura();
+  _stopSolarisGlimmer();
+}
+
+function _mountSolarisAura() {
+  if (_solarisAuraEl) return;
+  const el = document.createElement('div');
+  el.className = 'lw-solaris-aura';
+  el.innerHTML = `<div class="lw-solaris-sun"></div><div class="lw-solaris-rays"></div>`;
+  document.body.appendChild(el);
+  _solarisAuraEl = el;
+}
+
+function _unmountSolarisAura() {
+  _solarisAuraEl?.remove();
+  _solarisAuraEl = null;
+}
+
+// Kleine goldene Glimmer-Sparks, aufsteigend, driftend — analog zu
+// Atari-Code-Fragments, aber deutlich sanfter.
+const SOLARIS_GLIMMER_INTERVAL_MS = 1100;
+function _startSolarisGlimmer() {
+  if (_solarisGlimmerTimer !== null) return;
+  _spawnSolarisGlimmer();
+  _solarisGlimmerTimer = setInterval(_spawnSolarisGlimmer, SOLARIS_GLIMMER_INTERVAL_MS);
+}
+function _stopSolarisGlimmer() {
+  if (_solarisGlimmerTimer !== null) { clearInterval(_solarisGlimmerTimer); _solarisGlimmerTimer = null; }
+  document.querySelectorAll('.lw-solaris-glimmer').forEach(el => el.remove());
+}
+function _spawnSolarisGlimmer() {
+  const el = document.createElement('div');
+  el.className = 'lw-solaris-glimmer';
+  const size  = 4 + Math.random() * 8;
+  const drift = (Math.random() - 0.5) * 60;
+  const dur   = 5 + Math.random() * 5;
+  el.style.cssText = `
+    left:${3 + Math.random() * 94}vw;
+    top:${20 + Math.random() * 70}vh;
+    width:${size}px;height:${size}px;
+    --drift:${drift}px;
+    animation-duration:${dur}s;`;
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
+
+function _injectSolarisThemeStyles() {
+  if (document.getElementById('lw-solaris-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'lw-solaris-styles';
+  s.textContent = `
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,700;1,700&family=Marcellus&display=swap');
+
+/* ════════════════════════════════════════════════
+   SOLARIS — LIGHT EINHORNKATZE (Sonnen-Theme)
+   ════════════════════════════════════════════════ */
+
+/* ── Sonnen-Aura oben rechts + rotierende Strahlen ── */
+.lw-solaris-aura {
+  position: fixed;
+  top: -22vw; right: -22vw;
+  width: 60vw; height: 60vw;
+  z-index: 0;
+  pointer-events: none;
+}
+.lw-solaris-sun {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle,
+    rgba(255,255,255,0.85) 0%,
+    rgba(255,220,120,0.55) 30%,
+    rgba(255,180,60,0.15) 55%,
+    transparent 70%);
+  border-radius: 50%;
+  animation: solarisSunPulse 5s ease-in-out infinite;
+  filter: blur(4px);
+}
+@keyframes solarisSunPulse {
+  0%, 100% { transform: scale(1);    opacity: 0.9; }
+  50%      { transform: scale(1.08); opacity: 1;   }
+}
+.lw-solaris-rays {
+  position: absolute; inset: 0;
+  background: conic-gradient(from 0deg,
+    rgba(255,255,255,0.28) 0deg, transparent 10deg,
+    rgba(255,255,255,0.28) 22deg, transparent 32deg,
+    rgba(255,255,255,0.28) 44deg, transparent 54deg,
+    rgba(255,255,255,0.28) 66deg, transparent 76deg,
+    rgba(255,255,255,0.28) 88deg, transparent 98deg,
+    rgba(255,255,255,0.28) 110deg, transparent 120deg,
+    rgba(255,255,255,0.28) 132deg, transparent 142deg,
+    rgba(255,255,255,0.28) 154deg, transparent 164deg,
+    rgba(255,255,255,0.28) 176deg, transparent 186deg,
+    rgba(255,255,255,0.28) 198deg, transparent 208deg,
+    rgba(255,255,255,0.28) 220deg, transparent 230deg,
+    rgba(255,255,255,0.28) 242deg, transparent 252deg,
+    rgba(255,255,255,0.28) 264deg, transparent 274deg,
+    rgba(255,255,255,0.28) 286deg, transparent 296deg,
+    rgba(255,255,255,0.28) 308deg, transparent 318deg,
+    rgba(255,255,255,0.28) 330deg, transparent 340deg,
+    rgba(255,255,255,0.28) 352deg, transparent 360deg);
+  border-radius: 50%;
+  mix-blend-mode: overlay;
+  animation: solarisRaySpin 90s linear infinite;
+  mask-image: radial-gradient(circle, transparent 30%, black 55%);
+  -webkit-mask-image: radial-gradient(circle, transparent 30%, black 55%);
+}
+@keyframes solarisRaySpin { to { transform: rotate(360deg); } }
+
+/* ── Aufsteigende Glimmer-Sparks ── */
+.lw-solaris-glimmer {
+  position: fixed;
+  z-index: 8;
+  pointer-events: none;
+  background: radial-gradient(circle, #ffffff 0%, #ffe17a 55%, transparent 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 12px 2px rgba(255,220,120,0.9);
+  animation: solarisGlimmerFloat ease-out forwards;
+  opacity: 0;
+}
+@keyframes solarisGlimmerFloat {
+  0%   { transform: translateY(0) translateX(0);            opacity: 0; }
+  15%  { opacity: 1; }
+  50%  { opacity: 0.85; }
+  100% { transform: translateY(-40vh) translateX(var(--drift,0px)); opacity: 0; }
+}
+
+/* ── Basis-BG ── */
+body.solaris-theme {
+  --clr-bg:        #fff2b8;
+  --clr-surface:   #fff8dc;
+  --clr-surface2:  #ffe486;
+  --clr-border:    rgba(169,74,0,0.28);
+  --clr-gold:      #b85800;
+  --clr-gold-dim:  #7a3a00;
+  --clr-amber:     #d97a10;
+  --clr-cream:     #4a2200;
+  --clr-cream-dim: #7a3a00;
+  background-color: #fff2b8 !important;
+  background-image:
+    radial-gradient(ellipse at 30% 25%, #fff5c9 0%, #ffcc4a 40%, #d97a10 100%) !important;
+  color: #4a2200;
+}
+
+/* Sanfter warmer Overlay-Schleier */
+body.solaris-theme::before {
+  content:''; position: fixed; inset: 0; z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(217,122,16,0.28) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 0%,   rgba(255,255,255,0.35) 0%, transparent 45%);
+}
+
+/* Header */
+body.solaris-theme .hub-header::after {
+  background: linear-gradient(to right, transparent, #b85800, transparent) !important;
+  box-shadow: 0 0 12px rgba(184,88,0,0.4);
+}
+body.solaris-theme .hub-header__rune { filter: hue-rotate(-30deg) saturate(1.3); }
+body.solaris-theme h1 {
+  color: #6b2b00 !important;
+  font-family: 'Cormorant Garamond', serif !important;
+  font-style: italic;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  text-shadow: 0 2px 12px rgba(255,255,255,0.6), 0 0 30px rgba(255,220,120,0.5) !important;
+}
+body.solaris-theme h2 {
+  color: #8a3a00 !important;
+  font-family: 'Cormorant Garamond', serif !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4) !important;
+}
+body.solaris-theme .hub-header__subtitle {
+  color: #7a3a00 !important;
+  font-family: 'Marcellus', serif !important;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+}
+body.solaris-theme .hub-section-title {
+  color: #8a3a00 !important;
+  font-family: 'Cormorant Garamond', serif !important;
+  font-weight: 700 !important;
+  font-style: italic;
+}
+
+/* HUD */
+body.solaris-theme .hud-bar {
+  background: rgba(255,244,196,0.85) !important;
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(184,88,0,0.28) !important;
+  box-shadow: 0 2px 20px rgba(255,180,60,0.18) !important;
+}
+body.solaris-theme .hud-coins__amount {
+  color: #b85800;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+}
+body.solaris-theme .hud-btn {
+  background: rgba(255,244,196,0.7) !important;
+  border: 1px solid rgba(184,88,0,0.35) !important;
+  color: #6b2b00 !important;
+  border-radius: 999px !important;
+}
+body.solaris-theme .hud-btn:hover {
+  background: rgba(255,220,120,0.65) !important;
+  box-shadow: 0 0 14px rgba(255,180,60,0.5) !important;
+}
+
+/* Game Cards */
+body.solaris-theme .game-card {
+  background: linear-gradient(180deg, rgba(255,248,220,0.85), rgba(255,232,168,0.75)) !important;
+  border-color: rgba(184,88,0,0.35) !important;
+  backdrop-filter: blur(3px);
+  box-shadow:
+    0 4px 22px rgba(217,122,16,0.25),
+    0 0 0 1px rgba(255,255,255,0.35) inset !important;
+}
+body.solaris-theme .game-card:hover:not(.game-card--locked) {
+  border-color: rgba(184,88,0,0.6) !important;
+  box-shadow:
+    0 0 28px rgba(255,190,77,0.55),
+    0 6px 30px rgba(217,122,16,0.35) !important;
+}
+body.solaris-theme .game-card__title {
+  color: #6b2b00 !important;
+  font-family: 'Cormorant Garamond', serif !important;
+  font-weight: 700 !important;
+  font-style: italic;
+}
+body.solaris-theme .game-card__stage-label { color: #8a3a00 !important; }
+body.solaris-theme .game-card__points {
+  color: #8a3a00 !important;
+  font-family: 'Marcellus', serif !important;
+}
+body.solaris-theme .game-card__progress {
+  background: rgba(255,255,255,0.5) !important;
+  border: 1px solid rgba(184,88,0,0.28) !important;
+}
+body.solaris-theme .game-card__progress-fill {
+  background: linear-gradient(to right, #ffe486, #d97a10) !important;
+  box-shadow: 0 0 10px rgba(255,180,60,0.7);
+}
+body.solaris-theme .game-card__btn,
+body.solaris-theme .game-card__use-btn {
+  background: linear-gradient(180deg, #ffe486, #d97a10) !important;
+  border: 1px solid rgba(184,88,0,0.5) !important;
+  color: #3b1a00 !important;
+  font-family: 'Marcellus', serif !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.06em !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+  box-shadow: 0 4px 16px rgba(217,122,16,0.4) !important;
+}
+body.solaris-theme .game-card__btn:hover:not(:disabled),
+body.solaris-theme .game-card__use-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fff2b8, #ff9d1a) !important;
+  box-shadow: 0 6px 24px rgba(217,122,16,0.55) !important;
+}
+body.solaris-theme .game-card__release {
+  color: #8a3a00 !important;
+  border-color: rgba(184,88,0,0.32) !important;
+}
+body.solaris-theme .game-card__release:hover {
+  color: #b85800 !important;
+  background: rgba(255,220,120,0.35) !important;
+}
+
+/* Gallery */
+body.solaris-theme .gallery-bar {
+  background: linear-gradient(180deg, rgba(255,248,220,0.85), rgba(255,236,158,0.85)) !important;
+  border-top: 1px solid rgba(184,88,0,0.22) !important;
+  border-bottom: 1px solid rgba(184,88,0,0.22) !important;
+}
+body.solaris-theme .gallery-slot {
+  border-color: rgba(184,88,0,0.32) !important;
+  background: rgba(255,248,220,0.65) !important;
+}
+body.solaris-theme .gallery-slot:hover {
+  border-color: rgba(184,88,0,0.7) !important;
+  box-shadow: 0 0 18px rgba(255,180,60,0.55) !important;
+}
+
+/* Creature-Modal */
+body.solaris-theme .modal-box {
+  background: linear-gradient(180deg, #fff8dc, #ffe486) !important;
+  border: 1px solid rgba(184,88,0,0.45) !important;
+  box-shadow: 0 0 60px rgba(255,190,77,0.35), 0 24px 80px rgba(122,58,0,0.35) !important;
+}
+body.solaris-theme .modal-close {
+  color: #6b2b00 !important;
+  border-color: rgba(184,88,0,0.5) !important;
+  background: rgba(255,255,255,0.35) !important;
+}
+
+/* Shop-Modal */
+body.solaris-theme .shop-modal-box {
+  background: linear-gradient(180deg, #fff8dc, #ffe486) !important;
+  border: 1px solid rgba(184,88,0,0.42) !important;
+  box-shadow: 0 0 60px rgba(255,190,77,0.35), 0 24px 80px rgba(122,58,0,0.35) !important;
+}
+body.solaris-theme .shop-modal-title {
+  color: #6b2b00 !important;
+  font-family: 'Cormorant Garamond', serif !important;
+  font-style: italic;
+  text-shadow: 0 2px 12px rgba(255,255,255,0.55) !important;
+}
+body.solaris-theme .shop-coin-badge { color: #b85800 !important; }
+body.solaris-theme .shop-list-item {
+  background: rgba(255,244,196,0.72) !important;
+  border-color: rgba(184,88,0,0.2) !important;
+}
+body.solaris-theme .shop-list-item__name  { color: #6b2b00 !important; }
+body.solaris-theme .shop-list-item__desc  { color: #8a3a00 !important; }
+body.solaris-theme .shop-list-item__price { color: #8a3a00 !important; }
+body.solaris-theme .shop-list-item__btn {
+  background: linear-gradient(180deg, #ffe486, #d97a10) !important;
+  border: 1px solid rgba(184,88,0,0.5) !important;
+  color: #3b1a00 !important;
+  font-family: 'Marcellus', serif !important;
+}
+body.solaris-theme .shop-list-item__btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fff2b8, #ff9d1a) !important;
+  box-shadow: 0 4px 16px rgba(217,122,16,0.5) !important;
+}
+body.solaris-theme .shop-modal-close {
+  color: #6b2b00 !important;
+  border-color: rgba(184,88,0,0.4) !important;
+  background: rgba(255,255,255,0.35) !important;
+}
+
+/* Badges */
+body.solaris-theme .legendary-badge {
+  background: linear-gradient(135deg, #fff2b8, #d97a10) !important;
+  border-color: rgba(184,88,0,0.6) !important;
+  color: #3b1a00 !important;
+  box-shadow: 0 0 18px rgba(255,190,77,0.55) !important;
+}
+body.solaris-theme .epic-badge {
+  background: linear-gradient(135deg, #ffe486, #f0a020) !important;
+  border-color: rgba(184,88,0,0.45) !important;
+  color: #3b1a00 !important;
+  box-shadow: 0 0 12px rgba(255,180,60,0.35) !important;
+}
+body.solaris-theme .rare-badge {
+  background: linear-gradient(135deg, #fff5c9, #ffcc4a) !important;
+  border-color: rgba(184,88,0,0.32) !important;
+  color: #6b2b00 !important;
+  box-shadow: 0 0 10px rgba(255,190,77,0.28) !important;
+}
+
+/* Scrollbar */
+body.solaris-theme ::-webkit-scrollbar-track { background: #fff2b8 !important; }
+body.solaris-theme ::-webkit-scrollbar-thumb {
+  background: #d97a10 !important;
+  border-color: #fff2b8 !important;
+}
+
+/* Season 2 Modal */
+body.solaris-theme .s2-panel {
+  background: linear-gradient(180deg, #fff8dc, #ffe486) !important;
+  border-color: rgba(184,88,0,0.5) !important;
+  box-shadow: 0 0 50px rgba(255,190,77,0.4) !important;
+}
+body.solaris-theme .s2-banner {
+  background: linear-gradient(160deg, #ffe486 0%, #fff8dc 55%, #ffcc4a 100%) !important;
+  border-bottom-color: rgba(184,88,0,0.4) !important;
+}
+body.solaris-theme .s2-banner::before {
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.55) 0%, transparent 65%) !important;
+}
+body.solaris-theme .s2-badge {
+  background: #b85800 !important;
+  color: #fff8dc !important;
+}
+body.solaris-theme .s2-banner__title {
+  color: #6b2b00 !important;
+  font-family: 'Cormorant Garamond', serif !important;
+  font-style: italic;
+  text-shadow: 0 2px 20px rgba(255,255,255,0.6), 0 0 40px rgba(255,190,77,0.5) !important;
+}
+body.solaris-theme .s2-banner__sub {
+  color: rgba(107,43,0,0.85) !important;
+  font-family: 'Marcellus', serif !important;
+}
+body.solaris-theme .s2-body { background: rgba(255,244,196,0.95) !important; }
+
+/* Auth-Pill + Profil-Menü */
+body.solaris-theme .hub-auth { border-left-color: rgba(184,88,0,0.3) !important; }
+body.solaris-theme .hub-auth-btn {
+  color: #6b2b00 !important;
+  font-family: 'Cormorant Garamond', serif !important;
+  font-weight: 700;
+  font-style: italic;
+}
+body.solaris-theme .hub-auth-avatar { background: rgba(184,88,0,0.12) !important; }
+body.solaris-theme .hub-auth-menu {
+  background: linear-gradient(180deg, #fff8dc, #ffe486) !important;
+  border-color: rgba(184,88,0,0.42) !important;
+  box-shadow: 0 0 24px rgba(255,190,77,0.4) !important;
+}
+body.solaris-theme .hub-auth-menu > * + * { border-top-color: rgba(184,88,0,0.15) !important; }
+body.solaris-theme .hub-auth-menu button,
+body.solaris-theme .hub-auth-menu a {
+  color: #4a2200 !important;
+  font-family: 'Marcellus', serif !important;
+}
+body.solaris-theme .hub-auth-menu button:hover,
+body.solaris-theme .hub-auth-menu a:hover { background: rgba(255,220,120,0.35) !important; }
+body.solaris-theme .hub-auth-menu #hubAdminLink { color: #b85800 !important; }
+`;
+  document.head.appendChild(s);
+}
+
+
+/* ─────────────────────────────────────────────────
+   20. BUBBLEGUM — RAINBOW EINHORNKATZE THEME
+   Aktiv wenn game16.creature='einhornkatze' + variant='rainbow'
+   auf max. Wachstum. Rosa Basis, animierte Rainbow-Textfarben,
+   Rainbow-Borders um Cards, aufsteigende Sparkles im Hintergrund.
+   ───────────────────────────────────────────────── */
+let _bubblegumThemeActive  = false;
+let _bubblegumSparkleTimer = null;
+
+const _BUBBLEGUM_SPARKLES = ['✦', '✧', '★', '✿', '❁', '⋆', '❋'];
+const _BUBBLEGUM_COLORS   = ['#ff1493', '#ff8500', '#ffee00', '#00d67e', '#00b7ff', '#b400ff', '#ff69b4'];
+
+function _activateBubblegumTheme() {
+  if (_bubblegumThemeActive) return;
+  _bubblegumThemeActive = true;
+  _injectBubblegumThemeStyles();
+  document.body.classList.add('bubblegum-theme');
+  _startBubblegumSparkles();
+}
+
+function _deactivateBubblegumTheme() {
+  if (!_bubblegumThemeActive) return;
+  _bubblegumThemeActive = false;
+  document.body.classList.remove('bubblegum-theme');
+  _stopBubblegumSparkles();
+}
+
+const BUBBLEGUM_SPARKLE_INTERVAL_MS = 700;
+function _startBubblegumSparkles() {
+  if (_bubblegumSparkleTimer !== null) return;
+  _spawnBubblegumSparkle();
+  _bubblegumSparkleTimer = setInterval(_spawnBubblegumSparkle, BUBBLEGUM_SPARKLE_INTERVAL_MS);
+}
+function _stopBubblegumSparkles() {
+  if (_bubblegumSparkleTimer !== null) { clearInterval(_bubblegumSparkleTimer); _bubblegumSparkleTimer = null; }
+  document.querySelectorAll('.lw-bubblegum-sparkle').forEach(el => el.remove());
+}
+function _spawnBubblegumSparkle() {
+  const el = document.createElement('div');
+  el.className = 'lw-bubblegum-sparkle';
+  el.textContent = _BUBBLEGUM_SPARKLES[Math.floor(Math.random() * _BUBBLEGUM_SPARKLES.length)];
+  const color   = _BUBBLEGUM_COLORS[Math.floor(Math.random() * _BUBBLEGUM_COLORS.length)];
+  const size    = 14 + Math.random() * 22;
+  const drift   = (Math.random() - 0.5) * 100;
+  const dur     = 6 + Math.random() * 5;
+  const spin    = (Math.random() < 0.5 ? -1 : 1) * (180 + Math.random() * 360);
+  el.style.cssText = `
+    left:${2 + Math.random() * 96}vw;
+    top:${100 + Math.random() * 10}vh;
+    font-size:${size}px;
+    color:${color};
+    text-shadow:0 0 8px ${color}80, 0 0 16px ${color}55;
+    --drift:${drift}px;
+    --spin:${spin}deg;
+    animation-duration:${dur}s;`;
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
+
+function _injectBubblegumThemeStyles() {
+  if (document.getElementById('lw-bubblegum-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'lw-bubblegum-styles';
+  s.textContent = `
+@import url('https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka:wght@500;700&family=Nunito:wght@700;800&display=swap');
+
+/* ════════════════════════════════════════════════
+   BUBBLEGUM — RAINBOW EINHORNKATZE (Kirmes-Theme)
+   ════════════════════════════════════════════════ */
+
+/* ── Aufsteigende Sparkles ── */
+.lw-bubblegum-sparkle {
+  position: fixed;
+  z-index: 8;
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+  opacity: 0;
+  animation-name: bubblegumSparkleFloat;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@keyframes bubblegumSparkleFloat {
+  0%   { transform: translateY(0) translateX(0) rotate(0deg);                          opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { opacity: 1; }
+  100% { transform: translateY(-115vh) translateX(var(--drift,0px)) rotate(var(--spin,360deg)); opacity: 0; }
+}
+
+/* ── Rainbow-Text-Shift (für Titel + Buttons) ── */
+@keyframes bubblegumRainbowShift {
+  from { background-position: 0% 0%; }
+  to   { background-position: 200% 0%; }
+}
+
+/* ── Rainbow-Border-Runner (für Cards) ── */
+@keyframes bubblegumBorderSpin {
+  from { background-position: 0% 0%; }
+  to   { background-position: 200% 0%; }
+}
+
+/* ── Basis-BG ── */
+body.bubblegum-theme {
+  --clr-bg:        #ffd6ec;
+  --clr-surface:   #ffffff;
+  --clr-surface2:  #ffe0f1;
+  --clr-border:    rgba(255,20,147,0.35);
+  --clr-gold:      #ff1493;
+  --clr-gold-dim:  #b40068;
+  --clr-amber:     #ff69b4;
+  --clr-cream:     #4a0033;
+  --clr-cream-dim: #7a1a55;
+  background-color: #ffd6ec !important;
+  background-image:
+    radial-gradient(circle at 30% 20%, #ffe0f1 0%, #ffb3d9 35%, #ff87c1 100%) !important;
+  color: #4a0033;
+  font-family: 'Nunito', sans-serif;
+}
+body.bubblegum-theme::before {
+  content:''; position: fixed; inset: 0; z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(2px 2px at 12% 30%, rgba(255,255,255,0.9) 100%, transparent),
+    radial-gradient(2px 2px at 88% 15%, rgba(255,255,255,0.9) 100%, transparent),
+    radial-gradient(2px 2px at 55% 60%, rgba(255,255,255,0.8) 100%, transparent),
+    radial-gradient(2px 2px at 25% 80%, rgba(255,255,255,0.85) 100%, transparent),
+    radial-gradient(2px 2px at 75% 85%, rgba(255,255,255,0.75) 100%, transparent);
+}
+
+/* Header */
+body.bubblegum-theme .hub-header::after {
+  background: linear-gradient(to right, transparent, #ff1493, #b400ff, transparent) !important;
+  box-shadow: 0 0 12px rgba(255,20,147,0.5);
+}
+body.bubblegum-theme .hub-header__rune { filter: hue-rotate(300deg) saturate(1.4); }
+body.bubblegum-theme h1 {
+  font-family: 'Bungee', sans-serif !important;
+  font-size: 2.6rem !important;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #ff1493, #ff8500, #ffee00, #00d67e, #00b7ff, #b400ff, #ff1493) !important;
+  background-size: 200% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  animation: bubblegumRainbowShift 5s linear infinite;
+  text-shadow: none !important;
+  filter: drop-shadow(0 3px 0 rgba(255,255,255,0.4));
+}
+body.bubblegum-theme h2 {
+  font-family: 'Bungee', sans-serif !important;
+  color: #b40068 !important;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.35) !important;
+}
+body.bubblegum-theme .hub-header__subtitle {
+  color: #7a1a55 !important;
+  font-family: 'Fredoka', sans-serif !important;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+body.bubblegum-theme .hub-section-title {
+  font-family: 'Bungee', sans-serif !important;
+  color: #b40068 !important;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.35) !important;
+}
+
+/* HUD */
+body.bubblegum-theme .hud-bar {
+  background: rgba(255,255,255,0.85) !important;
+  backdrop-filter: blur(6px);
+  border-bottom: 2px solid #ff1493 !important;
+  box-shadow: 0 4px 20px rgba(255,20,147,0.2) !important;
+}
+body.bubblegum-theme .hud-coins__amount {
+  color: #ff1493;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.6);
+}
+body.bubblegum-theme .hud-btn {
+  background: #ffffff !important;
+  border: 2px solid #ff1493 !important;
+  color: #b40068 !important;
+  font-family: 'Fredoka', sans-serif !important;
+  font-weight: 700 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 3px 0 rgba(255,20,147,0.4) !important;
+}
+body.bubblegum-theme .hud-btn:hover {
+  background: #ffe0f1 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 rgba(255,20,147,0.5) !important;
+}
+
+/* Game Cards mit animiertem Rainbow-Border */
+body.bubblegum-theme .game-card {
+  background: #ffffff !important;
+  border: 3px solid transparent !important;
+  background-clip: padding-box !important;
+  position: relative;
+  box-shadow: 0 6px 0 rgba(255,135,193,0.7), 0 8px 24px rgba(255,20,147,0.15) !important;
+  overflow: visible !important;
+}
+body.bubblegum-theme .game-card::before {
+  content: '';
+  position: absolute; inset: -3px;
+  background: linear-gradient(90deg, #ff1493, #ffee00, #00d67e, #00b7ff, #b400ff, #ff1493);
+  background-size: 200% 100%;
+  border-radius: inherit;
+  z-index: -1;
+  animation: bubblegumBorderSpin 4s linear infinite;
+}
+body.bubblegum-theme .game-card:hover:not(.game-card--locked) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 0 rgba(255,135,193,0.7), 0 10px 30px rgba(255,20,147,0.25) !important;
+}
+body.bubblegum-theme .game-card__title {
+  color: #b40068 !important;
+  font-family: 'Bungee', sans-serif !important;
+  letter-spacing: 0.01em;
+}
+body.bubblegum-theme .game-card__stage-label { color: #b400ff !important; font-family: 'Fredoka', sans-serif !important; font-weight: 700 !important; }
+body.bubblegum-theme .game-card__points {
+  color: #7a1a55 !important;
+  font-family: 'Fredoka', sans-serif !important;
+  font-weight: 700 !important;
+}
+body.bubblegum-theme .game-card__progress {
+  background: rgba(255,214,236,0.6) !important;
+  border: 1px solid rgba(255,20,147,0.3) !important;
+}
+body.bubblegum-theme .game-card__progress-fill {
+  background: linear-gradient(to right, #ff87c1, #ff1493, #b400ff) !important;
+  box-shadow: 0 0 10px rgba(255,20,147,0.6);
+}
+body.bubblegum-theme .game-card__btn,
+body.bubblegum-theme .game-card__use-btn {
+  background: #ff1493 !important;
+  border: 0 !important;
+  color: #ffffff !important;
+  font-family: 'Bungee', sans-serif !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase;
+  box-shadow: 0 5px 0 #b40068 !important;
+}
+body.bubblegum-theme .game-card__btn:hover:not(:disabled),
+body.bubblegum-theme .game-card__use-btn:hover:not(:disabled) {
+  background: #ff69b4 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 7px 0 #b40068, 0 8px 20px rgba(255,20,147,0.5) !important;
+}
+body.bubblegum-theme .game-card__release {
+  color: #b400ff !important;
+  border-color: rgba(180,0,255,0.35) !important;
+  font-family: 'Fredoka', sans-serif !important;
+}
+body.bubblegum-theme .game-card__release:hover {
+  color: #ffffff !important;
+  background: #b400ff !important;
+}
+
+/* Gallery */
+body.bubblegum-theme .gallery-bar {
+  background: rgba(255,255,255,0.75) !important;
+  backdrop-filter: blur(4px);
+  border-top: 2px solid #ff1493 !important;
+  border-bottom: 2px solid #ff1493 !important;
+}
+body.bubblegum-theme .gallery-slot {
+  border-color: rgba(255,20,147,0.4) !important;
+  background: rgba(255,255,255,0.8) !important;
+  border-radius: 14px !important;
+}
+body.bubblegum-theme .gallery-slot:hover {
+  border-color: #ff1493 !important;
+  box-shadow: 0 0 20px rgba(255,20,147,0.5) !important;
+  transform: translateY(-2px);
+}
+
+/* Creature-Modal */
+body.bubblegum-theme .modal-box {
+  background: #ffffff !important;
+  border: 3px solid #ff1493 !important;
+  box-shadow: 0 0 60px rgba(255,20,147,0.35), 0 24px 80px rgba(180,0,104,0.35) !important;
+}
+body.bubblegum-theme .modal-close {
+  color: #b40068 !important;
+  border-color: #ff1493 !important;
+  background: #ffe0f1 !important;
+  font-family: 'Bungee', sans-serif !important;
+}
+
+/* Shop-Modal */
+body.bubblegum-theme .shop-modal-box {
+  background: #ffffff !important;
+  border: 3px solid #ff1493 !important;
+  box-shadow: 0 0 60px rgba(255,20,147,0.32), 0 24px 80px rgba(180,0,104,0.35) !important;
+}
+body.bubblegum-theme .shop-modal-title {
+  color: #b40068 !important;
+  font-family: 'Bungee', sans-serif !important;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.6) !important;
+}
+body.bubblegum-theme .shop-coin-badge { color: #ff1493 !important; }
+body.bubblegum-theme .shop-list-item {
+  background: #ffe0f1 !important;
+  border-color: rgba(255,20,147,0.3) !important;
+  border-radius: 12px !important;
+}
+body.bubblegum-theme .shop-list-item__name {
+  color: #b40068 !important;
+  font-family: 'Bungee', sans-serif !important;
+  font-size: 0.9rem !important;
+}
+body.bubblegum-theme .shop-list-item__desc { color: #7a1a55 !important; font-family: 'Fredoka', sans-serif !important; font-weight: 500 !important; }
+body.bubblegum-theme .shop-list-item__price { color: #b40068 !important; font-family: 'Fredoka', sans-serif !important; font-weight: 700 !important; }
+body.bubblegum-theme .shop-list-item__btn {
+  background: #ff1493 !important;
+  border: 0 !important;
+  color: #ffffff !important;
+  font-family: 'Bungee', sans-serif !important;
+  box-shadow: 0 4px 0 #b40068 !important;
+}
+body.bubblegum-theme .shop-list-item__btn:hover:not(:disabled) {
+  background: #ff69b4 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 0 #b40068 !important;
+}
+body.bubblegum-theme .shop-modal-close {
+  color: #b40068 !important;
+  border-color: #ff1493 !important;
+  background: #ffe0f1 !important;
+}
+
+/* Badges */
+body.bubblegum-theme .legendary-badge {
+  background: linear-gradient(135deg, #ff1493, #b400ff) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 20px rgba(255,20,147,0.55), 0 3px 0 rgba(180,0,104,0.5) !important;
+}
+body.bubblegum-theme .epic-badge {
+  background: linear-gradient(135deg, #b400ff, #00b7ff) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(180,0,255,0.45), 0 3px 0 rgba(90,0,150,0.4) !important;
+}
+body.bubblegum-theme .rare-badge {
+  background: linear-gradient(135deg, #00b7ff, #00d67e) !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(0,183,255,0.4), 0 3px 0 rgba(0,110,140,0.35) !important;
+}
+
+/* Scrollbar */
+body.bubblegum-theme ::-webkit-scrollbar-track { background: #ffe0f1 !important; }
+body.bubblegum-theme ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ff1493, #b400ff) !important;
+  border-color: #ffe0f1 !important;
+}
+
+/* Season 2 Modal */
+body.bubblegum-theme .s2-panel {
+  background: #ffffff !important;
+  border: 3px solid #ff1493 !important;
+  box-shadow: 0 0 50px rgba(255,20,147,0.4) !important;
+}
+body.bubblegum-theme .s2-banner {
+  background: linear-gradient(160deg, #ffe0f1 0%, #ffb3d9 55%, #ff87c1 100%) !important;
+  border-bottom-color: #ff1493 !important;
+}
+body.bubblegum-theme .s2-banner::before {
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.55) 0%, transparent 65%) !important;
+}
+body.bubblegum-theme .s2-badge {
+  background: #ff1493 !important;
+  color: #ffffff !important;
+  font-family: 'Bungee', sans-serif !important;
+}
+body.bubblegum-theme .s2-banner__title {
+  font-family: 'Bungee', sans-serif !important;
+  background: linear-gradient(90deg, #ff1493, #ff8500, #ffee00, #00d67e, #00b7ff, #b400ff, #ff1493) !important;
+  background-size: 200% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  animation: bubblegumRainbowShift 5s linear infinite;
+  text-shadow: none !important;
+}
+body.bubblegum-theme .s2-banner__sub {
+  color: rgba(122,26,85,0.85) !important;
+  font-family: 'Fredoka', sans-serif !important;
+  font-weight: 700 !important;
+}
+body.bubblegum-theme .s2-body { background: rgba(255,244,250,0.98) !important; }
+
+/* Auth-Pill + Profil-Menü */
+body.bubblegum-theme .hub-auth { border-left-color: rgba(255,20,147,0.35) !important; }
+body.bubblegum-theme .hub-auth-btn {
+  color: #b40068 !important;
+  font-family: 'Fredoka', sans-serif !important;
+  font-weight: 700;
+}
+body.bubblegum-theme .hub-auth-avatar { background: rgba(255,20,147,0.15) !important; }
+body.bubblegum-theme .hub-auth-menu {
+  background: #ffffff !important;
+  border: 2px solid #ff1493 !important;
+  box-shadow: 0 0 24px rgba(255,20,147,0.4) !important;
+}
+body.bubblegum-theme .hub-auth-menu > * + * { border-top-color: rgba(255,20,147,0.2) !important; }
+body.bubblegum-theme .hub-auth-menu button,
+body.bubblegum-theme .hub-auth-menu a {
+  color: #4a0033 !important;
+  font-family: 'Fredoka', sans-serif !important;
+  font-weight: 700 !important;
+}
+body.bubblegum-theme .hub-auth-menu button:hover,
+body.bubblegum-theme .hub-auth-menu a:hover { background: rgba(255,20,147,0.12) !important; }
+body.bubblegum-theme .hub-auth-menu #hubAdminLink { color: #ff1493 !important; }
+`;
+  document.head.appendChild(s);
+}
+
+

@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Einhornkatze – Color-Themes Showroom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Orbitron:wght@500;700;900&family=IBM+Plex+Mono:wght@400;600&family=UnifrakturCook:wght@700&family=Rubik+Mono+One&family=Playfair+Display:ital,wght@0,700;1,700&family=Cormorant+Garamond:ital,wght@0,700;1,700&family=Marcellus&family=Bungee&family=Bungee+Shade&family=Fredoka:wght@500;700&family=Chewy&family=Pacifico&family=Comic+Neue:wght@700&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page-bg: #0f1017;
+    --page-fg: #e7e9f0;
+    --panel-bg: #171927;
+    --panel-border: #2a2e44;
+    --muted: #8a90a8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--page-bg); color: var(--page-fg); font-family: 'Nunito', system-ui, sans-serif; }
+  .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(28px, 4vw, 44px);
+    margin: 0 0 8px;
+    letter-spacing: 0.02em;
+  }
+  .lead {
+    color: var(--muted);
+    max-width: 780px;
+    margin: 0 0 40px;
+    line-height: 1.55;
+  }
+  h2.section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 24px;
+    margin: 56px 0 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  h2.section-title .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .section-desc {
+    color: var(--muted);
+    margin: 0 0 20px;
+    max-width: 780px;
+    line-height: 1.55;
+  }
+
+  .variants {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  @media (max-width: 1000px) {
+    .variants { grid-template-columns: 1fr; }
+  }
+
+  .variant {
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--panel-bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stage {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .stage-content {
+    position: relative;
+    z-index: 3;
+    height: 100%;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .stage-title {
+    font-size: 26px;
+    line-height: 1.1;
+    margin: 0;
+  }
+  .stage-sub {
+    font-size: 13px;
+    opacity: 0.75;
+    margin: 4px 0 0;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .mini-card {
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .mini-card .cat {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .mini-card .meta { flex: 1; min-width: 0; }
+  .mini-card .meta strong { display: block; font-size: 15px; }
+  .mini-card .meta span { font-size: 12px; opacity: 0.7; }
+
+  .btn {
+    align-self: flex-start;
+    border: 0;
+    padding: 12px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .hud {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    align-self: flex-start;
+  }
+
+  .caption {
+    padding: 18px 20px 20px;
+    border-top: 1px solid var(--panel-border);
+    display: grid;
+    gap: 8px;
+  }
+  .caption h4 {
+    margin: 0;
+    font-size: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .caption .code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .caption p {
+    margin: 0;
+    color: #c7cbd8;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .swatches {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .sw {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .fonts {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* Marker für bereits ausgewählte Varianten */
+  .variant.picked {
+    position: relative;
+    border-color: #64d987;
+    box-shadow: 0 0 0 1px #64d987, 0 8px 32px rgba(100,217,135,0.15);
+  }
+  .variant.picked::after {
+    content: '✓ AUSGEWÄHLT';
+    position: absolute;
+    top: 12px; right: 12px;
+    z-index: 10;
+    background: #64d987;
+    color: #062a12;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    padding: 5px 9px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+
+
+  /* ═════════════════════════════════════════════════════════
+     Gemeinsame Basis für alle Dark-Themes:
+     - Screen-Flash (Storm-Effekt, wie in Nyx — bleibt)
+     - Fork-Lightning-SVG (zackig, verzweigt, mit Ecken)
+     ═════════════════════════════════════════════════════════ */
+  .dark-base { background: #05060a; color: #f5f6fb; }
+  .dark-base .flash {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.85), rgba(200,220,255,0.4) 45%, transparent 75%);
+    opacity: 0;
+    z-index: 2;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    animation: storm-flash 7s infinite;
+  }
+  .dark-base .flash.b { animation-delay: 3.4s; animation-duration: 8.6s; }
+  @keyframes storm-flash {
+    0%, 86%, 100% { opacity: 0; }
+    87%  { opacity: 0.15; }
+    88%  { opacity: 1;    }
+    89%  { opacity: 0.05; }
+    90%  { opacity: 0.9;  }
+    91%  { opacity: 0.3;  }
+    93%  { opacity: 0;    }
+  }
+  /* Fork-Lightning-SVG: Haupt-Zickzack + 2-3 abzweigende Nebenblitze.
+     stroke-dasharray-Trick zeichnet den Blitz beim Einschlag "durch". */
+  .dark-base .fork-svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    z-index: 2;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .dark-base .fork-svg path {
+    fill: none;
+    stroke: #ffffff;
+    filter: drop-shadow(0 0 3px rgba(220,235,255,1)) drop-shadow(0 0 12px rgba(160,200,255,0.7));
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .dark-base .fork-svg .main   { stroke-width: 2.4; stroke-dasharray: 400; stroke-dashoffset: 400; animation: fork-strike 7s infinite; }
+  .dark-base .fork-svg .branch { stroke-width: 1.4; stroke-dasharray: 200; stroke-dashoffset: 200; animation: fork-strike 7s infinite; opacity: 0.85; }
+  @keyframes fork-strike {
+    0%, 86%, 100% { stroke-dashoffset: 400; opacity: 0; }
+    87.5%         { stroke-dashoffset: 0;   opacity: 1; }
+    89%           { stroke-dashoffset: 0;   opacity: 0.1; }
+    90%           { stroke-dashoffset: 0;   opacity: 1; }
+    92%           { stroke-dashoffset: 0;   opacity: 0; }
+  }
+  /* Verspielt-Button-Basis (Void-DNA): transparent, weißer Rand,
+     Orbitron/Uppercase — pro Variante etwas draufgesetzt. */
+  .dark-base .btn {
+    position: relative;
+    background: transparent;
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 12px 22px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .dark-base .btn::before,
+  .dark-base .btn::after {
+    content: '';
+    display: inline-block;
+    width: 10px; height: 14px;
+    background: currentColor;
+    clip-path: polygon(55% 0, 20% 55%, 55% 55%, 30% 100%, 90% 40%, 55% 40%, 80% 0);
+  }
+
+
+  /* ═════════════════════════════════════════════════════════
+     DARK · V1 — THUNDERFORGE
+     Verzweigter Haupt-Blitz + 2 Forks, brutalistisches Typeface,
+     Button mit Doppel-Blitz-Glyphe und leichtem Skew.
+     ═════════════════════════════════════════════════════════ */
+  .theme-dark-forge { }
+  .theme-dark-forge .stage-title {
+    font-family: 'Rubik Mono One', sans-serif;
+    text-transform: uppercase;
+    font-size: 34px;
+    letter-spacing: -0.01em;
+    line-height: 0.95;
+    text-shadow:
+      2px 0 0 rgba(255,255,255,0.15),
+      0 0 24px rgba(210,230,255,0.35);
+  }
+  .theme-dark-forge .stage-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    color: #b6c4d8;
+  }
+  .theme-dark-forge .mini-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-left: 3px solid #fff;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  }
+  .theme-dark-forge .mini-card .cat {
+    background: #000;
+    border: 1px solid #fff;
+    color: #fff;
+    font-family: 'Rubik Mono One', sans-serif;
+    font-size: 22px;
+    box-shadow: 0 0 14px rgba(210,230,255,0.5);
+  }
+  .theme-dark-forge .btn {
+    border: 2px solid #fff;
+    transform: skewX(-8deg);
+    padding: 12px 26px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.25) inset;
+    transition: box-shadow 0.2s;
+  }
+  .theme-dark-forge .btn span {
+    display: inline-block;
+    transform: skewX(8deg);
+  }
+  .theme-dark-forge .btn::before,
+  .theme-dark-forge .btn::after { transform: skewX(8deg); }
+  .theme-dark-forge .btn:hover  { box-shadow: 0 0 24px rgba(255,255,255,0.35); }
+  .theme-dark-forge .hud {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    font-family: 'IBM Plex Mono', monospace;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 100%, 8px 100%);
+  }
+
+
+  /* ═════════════════════════════════════════════════════════
+     DARK · V2 — OVERVOLT
+     Blitze aus verschiedenen Ecken, elektrisierte Card-Ränder,
+     Button mit pulsierender Corona.
+     ═════════════════════════════════════════════════════════ */
+  .theme-dark-overvolt { }
+  .theme-dark-overvolt .stage-title {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 30px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: linear-gradient(180deg, #ffffff 0%, #c8dcff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .theme-dark-overvolt .stage-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    color: #a8bdd8;
+  }
+  .theme-dark-overvolt .mini-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(210,230,255,0.35);
+    box-shadow:
+      0 0 0 1px rgba(210,230,255,0.15) inset,
+      0 0 22px rgba(120,170,255,0.15);
+    animation: overvolt-crackle 3.5s ease-in-out infinite;
+  }
+  @keyframes overvolt-crackle {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(210,230,255,0.15) inset, 0 0 22px rgba(120,170,255,0.15); }
+    50%      { box-shadow: 0 0 0 1px rgba(255,255,255,0.4)  inset, 0 0 34px rgba(180,210,255,0.45); }
+  }
+  .theme-dark-overvolt .mini-card .cat {
+    background: #000;
+    border: 1px solid #fff;
+    color: #fff;
+    box-shadow: 0 0 16px rgba(210,230,255,0.7);
+  }
+  .theme-dark-overvolt .btn {
+    border: 1.5px solid #fff;
+    padding: 11px 22px;
+    border-radius: 999px;
+    animation: overvolt-btn-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes overvolt-btn-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(200,225,255,0.8), 0 0 20px rgba(200,225,255,0); }
+    60%      { box-shadow: 0 0 0 8px rgba(200,225,255,0),   0 0 28px rgba(200,225,255,0.5); }
+  }
+  .theme-dark-overvolt .hud {
+    background: rgba(210,230,255,0.08);
+    border: 1px solid rgba(210,230,255,0.5);
+    color: #d2e6ff;
+    font-family: 'IBM Plex Mono', monospace;
+    border-radius: 999px;
+    padding: 6px 14px;
+  }
+
+
+  /* ═════════════════════════════════════════════════════════
+     DARK · V3 — OBSIDIAN
+     Ein großer fraktaler Blitz + polygonale Kristall-Facetten
+     im Hintergrund. Ruhig-mystisch. Button als Kristallsplitter.
+     ═════════════════════════════════════════════════════════ */
+  .theme-dark-obsidian {
+    background:
+      radial-gradient(ellipse at 50% 50%, #131624 0%, #05060a 70%);
+  }
+  .theme-dark-obsidian .facets {
+    position: absolute; inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .theme-dark-obsidian .facets svg {
+    width: 100%; height: 100%;
+  }
+  .theme-dark-obsidian .facets path {
+    fill: none;
+    stroke: rgba(255,255,255,0.14);
+    stroke-width: 0.6;
+  }
+  .theme-dark-obsidian .facets path.hi {
+    stroke: rgba(255,255,255,0.35);
+    animation: facet-glow 5s ease-in-out infinite;
+  }
+  @keyframes facet-glow {
+    0%, 100% { opacity: 0.35; }
+    50%      { opacity: 1; }
+  }
+  .theme-dark-obsidian .stage-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    font-size: 34px;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 22px rgba(255,255,255,0.35);
+  }
+  .theme-dark-obsidian .stage-sub {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    color: #cfd7e6;
+    text-transform: none;
+  }
+  .theme-dark-obsidian .mini-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01));
+    border: 1px solid rgba(255,255,255,0.2);
+    clip-path: polygon(0 8px, 8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  }
+  .theme-dark-obsidian .mini-card .cat {
+    background: #000;
+    color: #fff;
+    border: 1px solid #fff;
+    clip-path: polygon(50% 0, 100% 30%, 100% 70%, 50% 100%, 0 70%, 0 30%);
+    border-radius: 0;
+  }
+  .theme-dark-obsidian .btn {
+    border: 1.5px solid #fff;
+    padding: 12px 28px;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    background: rgba(255,255,255,0.04);
+    transition: background 0.25s;
+  }
+  .theme-dark-obsidian .btn:hover { background: rgba(255,255,255,0.14); }
+  .theme-dark-obsidian .hud {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    font-family: 'IBM Plex Mono', monospace;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  }
+
+
+  /* ═════════════════════════════════════════════════════════
+     SONNE · V1 — GOLDEN HOUR
+     Warmes Gold-Gradient + rotierende Sonnenstrahlen.
+     ═════════════════════════════════════════════════════════ */
+  .theme-sun-golden {
+    background:
+      radial-gradient(circle at 50% 40%, #fff2b8 0%, #ffcc4a 35%, #f47a1f 100%);
+    color: #3b1f00;
+    font-family: 'Playfair Display', serif;
+  }
+  .theme-sun-golden .rays {
+    position: absolute;
+    top: 30%; left: 50%;
+    width: 140%; height: 140%;
+    background: conic-gradient(from 0deg,
+      rgba(255,255,255,0.35) 0deg, transparent 12deg,
+      rgba(255,255,255,0.35) 25deg, transparent 37deg,
+      rgba(255,255,255,0.35) 50deg, transparent 62deg,
+      rgba(255,255,255,0.35) 75deg, transparent 87deg,
+      rgba(255,255,255,0.35) 100deg, transparent 112deg,
+      rgba(255,255,255,0.35) 125deg, transparent 137deg,
+      rgba(255,255,255,0.35) 150deg, transparent 162deg,
+      rgba(255,255,255,0.35) 175deg, transparent 187deg,
+      rgba(255,255,255,0.35) 200deg, transparent 212deg,
+      rgba(255,255,255,0.35) 225deg, transparent 237deg,
+      rgba(255,255,255,0.35) 250deg, transparent 262deg,
+      rgba(255,255,255,0.35) 275deg, transparent 287deg,
+      rgba(255,255,255,0.35) 300deg, transparent 312deg,
+      rgba(255,255,255,0.35) 325deg, transparent 337deg,
+      rgba(255,255,255,0.35) 350deg, transparent 360deg);
+    transform: translate(-50%, -50%);
+    animation: sun-rotate 80s linear infinite;
+    z-index: 1;
+    mix-blend-mode: overlay;
+  }
+  @keyframes sun-rotate { to { transform: translate(-50%, -50%) rotate(360deg); } }
+  .theme-sun-golden .stage-title {
+    font-style: italic;
+    text-shadow: 0 2px 12px rgba(255,255,255,0.5);
+  }
+  .theme-sun-golden .mini-card {
+    background: rgba(255,255,255,0.35);
+    border: 1px solid rgba(255,255,255,0.7);
+    backdrop-filter: blur(2px);
+  }
+  .theme-sun-golden .mini-card .cat {
+    background: linear-gradient(135deg, #fff8dc, #ffcc4a);
+    color: #7a3a00;
+  }
+  .theme-sun-golden .btn {
+    background: linear-gradient(180deg, #ffe486, #d97a10);
+    color: #3b1f00;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    box-shadow: 0 6px 22px rgba(217,122,16,0.5);
+  }
+  .theme-sun-golden .hud {
+    background: rgba(255,255,255,0.35);
+    border: 1px solid rgba(255,255,255,0.6);
+    color: #3b1f00;
+  }
+
+
+  /* ═════════════════════════════════════════════════════════
+     SONNE · V2 — SUNFIRE / EMBER
+     Hellgelb + Orange-Kontrast, aufsteigende Funken.
+     ═════════════════════════════════════════════════════════ */
+  .theme-sun-fire {
+    background:
+      linear-gradient(180deg, #fff5c9 0%, #ffb347 60%, #ff6b1a 100%);
+    color: #4a1a00;
+    font-family: 'Marcellus', serif;
+    position: relative;
+  }
+  .theme-sun-fire .embers {
+    position: absolute; inset: 0;
+    overflow: hidden;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .theme-sun-fire .ember {
+    position: absolute;
+    bottom: -10px;
+    width: 6px; height: 6px;
+    background: radial-gradient(circle, #fff3a0 0%, #ff8a2b 60%, transparent 100%);
+    border-radius: 50%;
+    animation: ember-rise 6s linear infinite;
+    filter: blur(0.3px);
+  }
+  .theme-sun-fire .ember:nth-child(1)  { left: 10%; animation-delay:  0s;   animation-duration: 5s; }
+  .theme-sun-fire .ember:nth-child(2)  { left: 22%; animation-delay:  1.2s; animation-duration: 6s; }
+  .theme-sun-fire .ember:nth-child(3)  { left: 35%; animation-delay:  0.5s; animation-duration: 7s; }
+  .theme-sun-fire .ember:nth-child(4)  { left: 48%; animation-delay:  2s;   animation-duration: 5.5s; }
+  .theme-sun-fire .ember:nth-child(5)  { left: 60%; animation-delay:  3s;   animation-duration: 6.5s; }
+  .theme-sun-fire .ember:nth-child(6)  { left: 72%; animation-delay:  1.8s; animation-duration: 5.2s; }
+  .theme-sun-fire .ember:nth-child(7)  { left: 85%; animation-delay:  2.7s; animation-duration: 6.8s; }
+  .theme-sun-fire .ember:nth-child(8)  { left: 92%; animation-delay:  4s;   animation-duration: 5.7s; width: 4px; height: 4px; }
+  .theme-sun-fire .ember:nth-child(9)  { left: 15%; animation-delay:  3.6s; animation-duration: 7.5s; width: 8px; height: 8px; }
+  .theme-sun-fire .ember:nth-child(10) { left: 55%; animation-delay:  0.8s; animation-duration: 6.2s; width: 4px; height: 4px; }
+  @keyframes ember-rise {
+    0%   { transform: translateY(0) translateX(0);            opacity: 0; }
+    10%  { opacity: 1; }
+    50%  { transform: translateY(-50vh) translateX(20px);     opacity: 0.9; }
+    100% { transform: translateY(-100%) translateX(-15px);    opacity: 0; }
+  }
+  .theme-sun-fire .stage-title {
+    font-size: 30px;
+    letter-spacing: 0.03em;
+    text-shadow: 0 3px 0 rgba(255,255,255,0.4);
+  }
+  .theme-sun-fire .mini-card {
+    background: rgba(255,240,200,0.45);
+    border: 1px solid rgba(255,150,50,0.5);
+  }
+  .theme-sun-fire .mini-card .cat {
+    background: linear-gradient(135deg, #fff59d, #ff8a2b);
+    color: #4a1a00;
+    box-shadow: 0 0 22px rgba(255,138,43,0.7);
+  }
+  .theme-sun-fire .btn {
+    background: linear-gradient(180deg, #ff9d3a, #d94a00);
+    color: #fff;
+    font-family: 'Marcellus', serif;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    box-shadow: 0 6px 22px rgba(217,74,0,0.6);
+  }
+  .theme-sun-fire .hud {
+    background: rgba(255,255,255,0.4);
+    border: 1px solid rgba(217,74,0,0.4);
+    color: #4a1a00;
+  }
+
+
+  /* ═════════════════════════════════════════════════════════
+     SONNE · V3 — SOLARIS / AURA
+     Warme Sonnenscheibe mit pulsierender Aura + Glimmer.
+     ═════════════════════════════════════════════════════════ */
+  .theme-sun-solaris {
+    background:
+      radial-gradient(circle at 70% 20%, #ffec9e 0%, #ffbe4d 20%, #a94a00 80%);
+    color: #2d0f00;
+    font-family: 'Cormorant Garamond', serif;
+    position: relative;
+  }
+  .theme-sun-solaris .aura {
+    position: absolute;
+    top: -10%; right: -10%;
+    width: 60%; aspect-ratio: 1;
+    background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,220,120,0.6) 40%, transparent 70%);
+    border-radius: 50%;
+    animation: aura-pulse 4s ease-in-out infinite;
+    z-index: 1;
+    filter: blur(3px);
+  }
+  @keyframes aura-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50%      { transform: scale(1.15); opacity: 1; }
+  }
+  .theme-sun-solaris .glimmer {
+    position: absolute; inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .theme-sun-solaris .g {
+    position: absolute;
+    width: 8px; height: 8px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px 2px #ffe17a;
+    animation: g-twinkle 3s ease-in-out infinite;
+  }
+  .theme-sun-solaris .g:nth-child(1) { top: 18%; left: 22%; animation-delay: 0s; }
+  .theme-sun-solaris .g:nth-child(2) { top: 55%; left: 68%; animation-delay: 0.8s; }
+  .theme-sun-solaris .g:nth-child(3) { top: 72%; left: 30%; animation-delay: 1.6s; }
+  .theme-sun-solaris .g:nth-child(4) { top: 40%; left: 12%; animation-delay: 2.2s; }
+  .theme-sun-solaris .g:nth-child(5) { top: 85%; left: 80%; animation-delay: 1.1s; }
+  @keyframes g-twinkle {
+    0%, 100% { transform: scale(0); opacity: 0; }
+    50%      { transform: scale(1.4); opacity: 1; }
+  }
+  .theme-sun-solaris .stage-title {
+    font-weight: 700;
+    font-style: italic;
+    font-size: 30px;
+    text-shadow: 0 2px 0 rgba(255,255,255,0.4);
+  }
+  .theme-sun-solaris .mini-card {
+    background: rgba(255,255,255,0.35);
+    border: 1px solid rgba(169,74,0,0.35);
+    backdrop-filter: blur(3px);
+  }
+  .theme-sun-solaris .mini-card .cat {
+    background: radial-gradient(circle, #fff8dc, #ffbe4d);
+    color: #7a3a00;
+    box-shadow: 0 0 18px rgba(255,190,77,0.9);
+  }
+  .theme-sun-solaris .btn {
+    background: linear-gradient(180deg, #fff2b8, #a94a00);
+    color: #2d0f00;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    box-shadow: 0 8px 28px rgba(169,74,0,0.5);
+  }
+  .theme-sun-solaris .hud {
+    background: rgba(255,255,255,0.3);
+    border: 1px solid rgba(169,74,0,0.3);
+    color: #2d0f00;
+  }
+
+
+  /* ═════════════════════════════════════════════════════════
+     REGENBOGEN · V1 — CANDY POP
+     Rosa Basis, Regenbogen-Borders, alles bouncy.
+     ═════════════════════════════════════════════════════════ */
+  .theme-rainbow-candy {
+    background:
+      radial-gradient(circle at 30% 20%, #ffd6ec 0%, #ffb3d9 30%, #ff87c1 100%);
+    color: #4a0033;
+    font-family: 'Bungee', sans-serif;
+    position: relative;
+  }
+  .theme-rainbow-candy::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(3px 3px at 12% 30%, #fff 100%, transparent),
+      radial-gradient(3px 3px at 88% 15%, #fff 100%, transparent),
+      radial-gradient(2px 2px at 55% 60%, #fff 100%, transparent),
+      radial-gradient(3px 3px at 25% 80%, #fff 100%, transparent),
+      radial-gradient(2px 2px at 75% 85%, #fff 100%, transparent);
+    animation: candy-bounce 3s ease-in-out infinite alternate;
+    z-index: 1;
+  }
+  @keyframes candy-bounce {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-8px); }
+  }
+  .theme-rainbow-candy .stage-title {
+    text-transform: uppercase;
+    font-size: 28px;
+    background: linear-gradient(90deg, #ff1493, #ff8500, #ffee00, #00d67e, #00b7ff, #b400ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: rainbow-shift 4s linear infinite;
+    background-size: 200% 100%;
+  }
+  @keyframes rainbow-shift {
+    from { background-position: 0% 0%; }
+    to   { background-position: 200% 0%; }
+  }
+  .theme-rainbow-candy .mini-card {
+    background: #fff;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+    box-shadow: 0 6px 0 #ff87c1;
+  }
+  .theme-rainbow-candy .mini-card::before {
+    content: '';
+    position: absolute; inset: -3px;
+    background: linear-gradient(90deg, #ff1493, #ffee00, #00d67e, #00b7ff, #b400ff, #ff1493);
+    background-size: 200% 100%;
+    border-radius: inherit;
+    z-index: -1;
+    animation: rainbow-shift 3s linear infinite;
+  }
+  .theme-rainbow-candy .mini-card .cat {
+    background: linear-gradient(135deg, #ff87c1, #ffee00);
+    color: #4a0033;
+  }
+  .theme-rainbow-candy .btn {
+    background: #ff1493;
+    color: #fff;
+    font-family: 'Bungee', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 5px 0 #b40068;
+    transform: translateY(0);
+    animation: btn-bounce 2s ease-in-out infinite;
+  }
+  @keyframes btn-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+  .theme-rainbow-candy .hud {
+    background: rgba(255,255,255,0.85);
+    color: #4a0033;
+    border: 2px solid #ff1493;
+    font-family: 'Bungee', sans-serif;
+  }
+
+
+  /* ═════════════════════════════════════════════════════════
+     REGENBOGEN · V2 — PRISM
+     Animierter Rainbow-Conic-Gradient, chromatische Ränder.
+     ═════════════════════════════════════════════════════════ */
+  .theme-rainbow-prism {
+    background:
+      conic-gradient(from 0deg at 50% 50%,
+        #ff5ec4, #ff8a4d, #ffde59, #6be395, #4ec2ff, #a869ff, #ff5ec4);
+    background-size: 100% 100%;
+    color: #22002f;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    position: relative;
+    animation: prism-spin 20s linear infinite;
+  }
+  @keyframes prism-spin {
+    to { filter: hue-rotate(360deg); }
+  }
+  .theme-rainbow-prism::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 60%, transparent 20%, rgba(255,255,255,0.7) 90%);
+    z-index: 1;
+    pointer-events: none;
+  }
+  .theme-rainbow-prism .stage-title {
+    font-size: 30px;
+    text-shadow:
+      2px 0 0 rgba(255,50,180,0.7),
+     -2px 0 0 rgba(50,180,255,0.7);
+    letter-spacing: -0.01em;
+  }
+  .theme-rainbow-prism .mini-card {
+    background: rgba(255,255,255,0.9);
+    border: 2px solid #fff;
+    box-shadow:
+      3px 3px 0 rgba(255,80,200,0.7),
+      6px 6px 0 rgba(80,180,255,0.5);
+  }
+  .theme-rainbow-prism .mini-card .cat {
+    background: conic-gradient(from 0deg, #ff5ec4, #ffde59, #6be395, #4ec2ff, #a869ff, #ff5ec4);
+    color: #fff;
+  }
+  .theme-rainbow-prism .btn {
+    background: #22002f;
+    color: #fff;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    border: 2px solid #fff;
+    box-shadow:
+      3px 3px 0 rgba(255,80,200,1),
+      6px 6px 0 rgba(80,180,255,0.8);
+  }
+  .theme-rainbow-prism .hud {
+    background: #fff;
+    color: #22002f;
+    border: 2px solid #22002f;
+    font-family: 'Fredoka', sans-serif;
+  }
+
+
+  /* ═════════════════════════════════════════════════════════
+     REGENBOGEN · V3 — UNICORN DREAM
+     Rosa/Pastell dominiert, sanfter Rainbow-Flow, Sparkle-Overlay.
+     ═════════════════════════════════════════════════════════ */
+  .theme-rainbow-unicorn {
+    background:
+      linear-gradient(135deg,
+        #ffe0f1 0%,
+        #f7c8ff 25%,
+        #c7d9ff 50%,
+        #b6f5ea 75%,
+        #ffe6b3 100%);
+    background-size: 300% 300%;
+    animation: unicorn-flow 12s ease-in-out infinite;
+    color: #5a1a5e;
+    font-family: 'Pacifico', cursive;
+    position: relative;
+  }
+  @keyframes unicorn-flow {
+    0%, 100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+  }
+  .theme-rainbow-unicorn .sparkles {
+    position: absolute; inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .theme-rainbow-unicorn .sp {
+    position: absolute;
+    font-size: 18px;
+    animation: sparkle-spin 4s linear infinite;
+    color: #fff;
+    text-shadow: 0 0 8px rgba(255,255,255,0.9);
+  }
+  .theme-rainbow-unicorn .sp:nth-child(1) { top: 15%; left: 15%; animation-delay: 0s;    font-size: 22px; }
+  .theme-rainbow-unicorn .sp:nth-child(2) { top: 30%; left: 75%; animation-delay: 1.2s;  font-size: 16px; }
+  .theme-rainbow-unicorn .sp:nth-child(3) { top: 60%; left: 25%; animation-delay: 2.4s;  font-size: 20px; }
+  .theme-rainbow-unicorn .sp:nth-child(4) { top: 78%; left: 65%; animation-delay: 0.6s;  font-size: 14px; }
+  .theme-rainbow-unicorn .sp:nth-child(5) { top: 45%; left: 50%; animation-delay: 1.8s;  font-size: 18px; }
+  @keyframes sparkle-spin {
+    0%, 100% { transform: rotate(0deg) scale(0);   opacity: 0; }
+    50%      { transform: rotate(180deg) scale(1); opacity: 1; }
+  }
+  .theme-rainbow-unicorn .stage-title {
+    font-size: 34px;
+    background: linear-gradient(90deg, #ff5ec4, #a869ff, #4ec2ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .theme-rainbow-unicorn .stage-sub {
+    font-family: 'Comic Neue', cursive;
+    color: #7a2b8a;
+  }
+  .theme-rainbow-unicorn .mini-card {
+    background: rgba(255,255,255,0.7);
+    border: 2px dashed #ff87c1;
+    backdrop-filter: blur(4px);
+  }
+  .theme-rainbow-unicorn .mini-card .cat {
+    background: linear-gradient(135deg, #ffe0f1, #b6f5ea);
+    color: #5a1a5e;
+  }
+  .theme-rainbow-unicorn .mini-card .meta strong,
+  .theme-rainbow-unicorn .mini-card .meta span {
+    font-family: 'Comic Neue', cursive;
+  }
+  .theme-rainbow-unicorn .btn {
+    background: linear-gradient(90deg, #ff87c1, #a869ff);
+    color: #fff;
+    font-family: 'Pacifico', cursive;
+    font-weight: 400;
+    box-shadow: 0 6px 22px rgba(168,105,255,0.5);
+  }
+  .theme-rainbow-unicorn .hud {
+    background: rgba(255,255,255,0.7);
+    color: #5a1a5e;
+    border: 2px solid rgba(255,135,193,0.7);
+    font-family: 'Comic Neue', cursive;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Einhornkatze · Color-Themes Showroom</h1>
+  <p class="lead">
+    Drei neue Themes für die Einhornkatze-Legendaries — Dark, Sonne, Regenbogen —
+    mit je drei Variationen. Alle Animationen laufen live. Auswahlvorschlag: pro Katze
+    eine Variante picken (oder Elemente kombinieren), dann bauen wir das echte Theme
+    analog zu Pfau / Atari / ChinDrache / Schnabeltier.
+  </p>
+
+  <!-- ────────────────────── DARK ────────────────────── -->
+  <h2 class="section-title">Dark <span class="tag">DARK · EINHORNKATZE · V4–V6</span></h2>
+  <p class="section-desc">
+    Zweite Runde: Screen-Flash (wie Nyx) bleibt in allen dreien, dazu jetzt echte
+    verzweigte Zickzack-Blitze mit Ecken und Forks. Buttons in der Void-DNA
+    (transparent, weißer Rand, Orbitron), aber verspielter — jeweils mit ⚡-Glyphe
+    und einem eigenen Signature-Twist.
+  </p>
+  <div class="variants">
+
+    <!-- DARK V4 THUNDERFORGE -->
+    <div class="variant">
+      <div class="stage dark-base theme-dark-forge">
+        <div class="flash"></div>
+        <div class="flash b"></div>
+        <svg class="fork-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <!-- Haupt-Blitz: langer Zickzack von oben nach unten -->
+          <path class="main" d="M52 -4 L44 14 L58 19 L40 34 L54 40 L36 58 L52 63 L34 82 L50 90 L38 108"/>
+          <!-- Fork rechts oben -->
+          <path class="branch" d="M58 19 L72 24 L66 34 L78 40"/>
+          <!-- Fork links Mitte -->
+          <path class="branch" d="M36 58 L22 66 L28 74"/>
+          <!-- Fork rechts unten -->
+          <path class="branch" d="M50 90 L64 94 L60 104"/>
+        </svg>
+        <div class="stage-content">
+          <div>
+            <h3 class="stage-title">Thunder<br>forge</h3>
+            <p class="stage-sub">Schmiedet aus Sturm</p>
+          </div>
+          <div class="hud">// STORM 0x1F</div>
+          <div class="mini-card">
+            <div class="cat">✦</div>
+            <div class="meta"><strong>Dunkelklaue</strong><span>Legendär · Stufe V</span></div>
+          </div>
+          <button class="btn"><span>Entfesseln</span></button>
+        </div>
+      </div>
+      <div class="caption">
+        <h4>V4 · Thunderforge <span class="code">theme-dark-forge</span></h4>
+        <p>Hauptzickzack mit 3 Forks, Screen-Flash zum Einschlag. Rubik Mono für den brutalistischen Titel. Button geshearet (skew) mit Doppel-Blitz — kantig-verspielt.</p>
+        <div class="swatches">
+          <div class="sw" style="background:#05060a"></div>
+          <div class="sw" style="background:#ffffff"></div>
+          <div class="sw" style="background:#d2e6ff"></div>
+        </div>
+        <div class="fonts">Rubik Mono One · Orbitron · IBM Plex Mono</div>
+      </div>
+    </div>
+
+    <!-- DARK V5 OVERVOLT -->
+    <div class="variant">
+      <div class="stage dark-base theme-dark-overvolt">
+        <div class="flash"></div>
+        <div class="flash b"></div>
+        <svg class="fork-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <!-- Blitz aus oben-links -->
+          <path class="main" d="M-4 8 L14 18 L8 28 L26 34 L18 48 L38 54"/>
+          <path class="branch" d="M14 18 L24 12 L20 22"/>
+          <path class="branch" d="M26 34 L34 26"/>
+          <!-- Blitz aus oben-rechts -->
+          <path class="main" d="M104 4 L84 18 L94 26 L76 38 L88 46 L70 58"/>
+          <path class="branch" d="M84 18 L74 10"/>
+          <path class="branch" d="M76 38 L64 32"/>
+          <!-- Blitz aus unten-rechts -->
+          <path class="main" d="M104 96 L86 84 L92 76 L74 68"/>
+          <path class="branch" d="M86 84 L94 90"/>
+        </svg>
+        <div class="stage-content">
+          <div>
+            <h3 class="stage-title">Overvolt</h3>
+            <p class="stage-sub">Hochspannung überall</p>
+          </div>
+          <div class="hud">⚡ 240V · KRISE</div>
+          <div class="mini-card">
+            <div class="cat">✧</div>
+            <div class="meta"><strong>Blitzherz</strong><span>Legendär · Stufe V</span></div>
+          </div>
+          <button class="btn">Zünden</button>
+        </div>
+      </div>
+      <div class="caption">
+        <h4>V5 · Overvolt <span class="code">theme-dark-overvolt</span></h4>
+        <p>Drei Blitze aus verschiedenen Ecken einschlagend, Cards knistern (pulsierender Glow), Button-Corona pulsiert. Chaotischer und energetischer als V4.</p>
+        <div class="swatches">
+          <div class="sw" style="background:#05060a"></div>
+          <div class="sw" style="background:#ffffff"></div>
+          <div class="sw" style="background:#c8dcff"></div>
+        </div>
+        <div class="fonts">Orbitron · IBM Plex Mono</div>
+      </div>
+    </div>
+
+    <!-- DARK V6 OBSIDIAN -->
+    <div class="variant">
+      <div class="stage dark-base theme-dark-obsidian">
+        <div class="flash"></div>
+        <div class="facets">
+          <svg viewBox="0 0 100 125" preserveAspectRatio="none">
+            <!-- Polygonale Facetten wie ein Kristallnetz -->
+            <path d="M0 40 L28 22 L56 34 L82 18 L100 32"/>
+            <path d="M0 70 L22 58 L48 74 L74 62 L100 78"/>
+            <path d="M28 22 L48 74"/>
+            <path d="M56 34 L74 62"/>
+            <path class="hi" d="M82 18 L100 78"/>
+            <path class="hi" d="M22 58 L56 34"/>
+            <path d="M0 100 L30 92 L60 108 L100 96"/>
+          </svg>
+        </div>
+        <svg class="fork-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <!-- Ein einziger großer, stark verzweigter Blitz -->
+          <path class="main" d="M50 -4 L44 12 L56 18 L42 32 L54 38 L46 52 L58 58 L48 74 L60 82 L50 104"/>
+          <path class="branch" d="M56 18 L70 22 L64 32 L76 38"/>
+          <path class="branch" d="M54 38 L68 42 L62 50"/>
+          <path class="branch" d="M46 52 L32 56 L36 66 L26 72"/>
+          <path class="branch" d="M60 82 L72 86 L68 94"/>
+        </svg>
+        <div class="stage-content">
+          <div>
+            <h3 class="stage-title">Obsidian</h3>
+            <p class="stage-sub">Kristall in der Dunkelheit</p>
+          </div>
+          <div class="hud">✧ Facette IV</div>
+          <div class="mini-card">
+            <div class="cat">✵</div>
+            <div class="meta"><strong>Nachtscherbe</strong><span>Legendär · Stufe V</span></div>
+          </div>
+          <button class="btn">Erwecken</button>
+        </div>
+      </div>
+      <div class="caption">
+        <h4>V6 · Obsidian <span class="code">theme-dark-obsidian</span></h4>
+        <p>Ein großer fraktaler Blitz mit vielen Forks, dazu subtile polygonale Kristall-Facetten im Hintergrund die pulsieren. Mystisch statt elektrisch. Button + Card als Kristallsplitter geclippt.</p>
+        <div class="swatches">
+          <div class="sw" style="background:#131624"></div>
+          <div class="sw" style="background:#ffffff"></div>
+          <div class="sw" style="background:#cfd7e6"></div>
+        </div>
+        <div class="fonts">Cinzel · Cormorant Garamond · IBM Plex Mono</div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ────────────────────── SONNE ────────────────────── -->
+  <h2 class="section-title">Sonne <span class="tag">SONNEN · EINHORNKATZE</span></h2>
+  <p class="section-desc">
+    Gelb-hell mit einer warmen Kontrastfarbe (Orange / Terracotta). Hintergrund-Bewegungen
+    sollen wie Sonnenlicht-Magie wirken — Strahlen, Funken, Aura.
+  </p>
+  <div class="variants">
+
+    <!-- SUN V1 GOLDEN -->
+    <div class="variant">
+      <div class="stage theme-sun-golden">
+        <div class="rays"></div>
+        <div class="stage-content">
+          <div>
+            <h3 class="stage-title">Helios</h3>
+            <p class="stage-sub">Goldene Stunde</p>
+          </div>
+          <div class="hud">☀ 42 · Mittag</div>
+          <div class="mini-card">
+            <div class="cat">☀</div>
+            <div class="meta"><strong>Sonnenmähne</strong><span>Legendär · Stufe V</span></div>
+          </div>
+          <button class="btn">Erstrahlen</button>
+        </div>
+      </div>
+      <div class="caption">
+        <h4>V1 · Golden Hour <span class="code">theme-sun-golden</span></h4>
+        <p>Radial-Gradient mit rotierenden Sonnenstrahlen. Ruhig, klassisch, elegant. Playfair-Italic für den warmen, edlen Ton.</p>
+        <div class="swatches">
+          <div class="sw" style="background:#fff2b8"></div>
+          <div class="sw" style="background:#ffcc4a"></div>
+          <div class="sw" style="background:#f47a1f"></div>
+        </div>
+        <div class="fonts">Playfair Display · Nunito</div>
+      </div>
+    </div>
+
+    <!-- SUN V2 SUNFIRE -->
+    <div class="variant">
+      <div class="stage theme-sun-fire">
+        <div class="embers">
+          <div class="ember"></div><div class="ember"></div><div class="ember"></div><div class="ember"></div>
+          <div class="ember"></div><div class="ember"></div><div class="ember"></div><div class="ember"></div>
+          <div class="ember"></div><div class="ember"></div>
+        </div>
+        <div class="stage-content">
+          <div>
+            <h3 class="stage-title">Sonnenfeuer</h3>
+            <p class="stage-sub">Funken steigen auf</p>
+          </div>
+          <div class="hud">🔥 88 · Glut</div>
+          <div class="mini-card">
+            <div class="cat">✺</div>
+            <div class="meta"><strong>Feuerkralle</strong><span>Legendär · Stufe V</span></div>
+          </div>
+          <button class="btn">Entfachen</button>
+        </div>
+      </div>
+      <div class="caption">
+        <h4>V2 · Sunfire / Ember <span class="code">theme-sun-fire</span></h4>
+        <p>Warmer Gelb-Orange-Verlauf mit aufsteigenden Funken-Partikeln. Sehr lebendig, „magisch" durch die Bewegung von unten nach oben.</p>
+        <div class="swatches">
+          <div class="sw" style="background:#fff5c9"></div>
+          <div class="sw" style="background:#ffb347"></div>
+          <div class="sw" style="background:#ff6b1a"></div>
+        </div>
+        <div class="fonts">Marcellus · Nunito</div>
+      </div>
+    </div>
+
+    <!-- SUN V3 SOLARIS -->
+    <div class="variant picked">
+      <div class="stage theme-sun-solaris">
+        <div class="aura"></div>
+        <div class="glimmer">
+          <div class="g"></div><div class="g"></div><div class="g"></div><div class="g"></div><div class="g"></div>
+        </div>
+        <div class="stage-content">
+          <div>
+            <h3 class="stage-title">Solaris</h3>
+            <p class="stage-sub">Aura des Tages</p>
+          </div>
+          <div class="hud">✦ 33 · Aura</div>
+          <div class="mini-card">
+            <div class="cat">✧</div>
+            <div class="meta"><strong>Lichthymne</strong><span>Legendär · Stufe V</span></div>
+          </div>
+          <button class="btn">Anrufen</button>
+        </div>
+      </div>
+      <div class="caption">
+        <h4>V3 · Solaris / Aura <span class="code">theme-sun-solaris</span></h4>
+        <p>Pulsierende Sonnenscheibe oben rechts + zufällige Glimmer-Punkte. Kombiniert Ruhe (Aura) mit funkelnden Momenten. Serif-Italic.</p>
+        <div class="swatches">
+          <div class="sw" style="background:#ffec9e"></div>
+          <div class="sw" style="background:#ffbe4d"></div>
+          <div class="sw" style="background:#a94a00"></div>
+        </div>
+        <div class="fonts">Cormorant Garamond · Nunito</div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ────────────────────── REGENBOGEN ────────────────────── -->
+  <h2 class="section-title">Regenbogen <span class="tag">REGENBOGEN · EINHORNKATZE</span></h2>
+  <p class="section-desc">
+    Rosa + Regenbogen. Darf überdreht und bunt sein — je auffälliger, desto besser.
+  </p>
+  <div class="variants">
+
+    <!-- RAINBOW V1 CANDY -->
+    <div class="variant picked">
+      <div class="stage theme-rainbow-candy">
+        <div class="stage-content">
+          <div>
+            <h3 class="stage-title">Bubblegum</h3>
+            <p class="stage-sub">Pop! Pop! Pop!</p>
+          </div>
+          <div class="hud">🍬 99 · Zucker</div>
+          <div class="mini-card">
+            <div class="cat">★</div>
+            <div class="meta"><strong>Zuckerpfote</strong><span>Legendär · Stufe V</span></div>
+          </div>
+          <button class="btn">MIAU!</button>
+        </div>
+      </div>
+      <div class="caption">
+        <h4>V1 · Candy Pop <span class="code">theme-rainbow-candy</span></h4>
+        <p>Rosa Basis, animierter Rainbow-Border um Cards, bouncy Buttons, Rainbow-Text-Shift. Süß und laut ohne aufdringlich zu sein.</p>
+        <div class="swatches">
+          <div class="sw" style="background:#ff87c1"></div>
+          <div class="sw" style="background:#ff1493"></div>
+          <div class="sw" style="background:linear-gradient(90deg,#ff1493,#00d67e,#00b7ff)"></div>
+        </div>
+        <div class="fonts">Bungee · Nunito</div>
+      </div>
+    </div>
+
+    <!-- RAINBOW V2 PRISM -->
+    <div class="variant">
+      <div class="stage theme-rainbow-prism">
+        <div class="stage-content">
+          <div>
+            <h3 class="stage-title">Prisma</h3>
+            <p class="stage-sub">Alle Farben, alle Winkel</p>
+          </div>
+          <div class="hud">◆ 77 · Spektrum</div>
+          <div class="mini-card">
+            <div class="cat">✦</div>
+            <div class="meta"><strong>Kristallmähne</strong><span>Legendär · Stufe V</span></div>
+          </div>
+          <button class="btn">SPIELEN</button>
+        </div>
+      </div>
+      <div class="caption">
+        <h4>V2 · Prism <span class="code">theme-rainbow-prism</span></h4>
+        <p>Kompletter Rainbow-Conic-Gradient als Hintergrund, hue-rotate im Loop, chromatische Text-Kanten. Am „überdrehtesten".</p>
+        <div class="swatches">
+          <div class="sw" style="background:conic-gradient(from 0deg,#ff5ec4,#ffde59,#6be395,#4ec2ff,#a869ff,#ff5ec4)"></div>
+          <div class="sw" style="background:#22002f"></div>
+          <div class="sw" style="background:#ffffff"></div>
+        </div>
+        <div class="fonts">Fredoka · Nunito</div>
+      </div>
+    </div>
+
+    <!-- RAINBOW V3 UNICORN DREAM -->
+    <div class="variant">
+      <div class="stage theme-rainbow-unicorn">
+        <div class="sparkles">
+          <div class="sp">✦</div><div class="sp">✧</div><div class="sp">✦</div><div class="sp">✧</div><div class="sp">✦</div>
+        </div>
+        <div class="stage-content">
+          <div>
+            <h3 class="stage-title">Traumtänzer</h3>
+            <p class="stage-sub">Sanfte Regenbogenreise</p>
+          </div>
+          <div class="hud">✨ 55 · Traum</div>
+          <div class="mini-card">
+            <div class="cat">✿</div>
+            <div class="meta"><strong>Pastellherz</strong><span>Legendär · Stufe V</span></div>
+          </div>
+          <button class="btn">Träumen</button>
+        </div>
+      </div>
+      <div class="caption">
+        <h4>V3 · Unicorn Dream <span class="code">theme-rainbow-unicorn</span></h4>
+        <p>Pastell-Rainbow-Flow im Hintergrund, rotierende Sparkles. Rosa/Lila dominiert. Playful, träumerisch, weniger schrill als V2.</p>
+        <div class="swatches">
+          <div class="sw" style="background:#ffe0f1"></div>
+          <div class="sw" style="background:#f7c8ff"></div>
+          <div class="sw" style="background:#b6f5ea"></div>
+        </div>
+        <div class="fonts">Pacifico · Comic Neue · Nunito</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>
