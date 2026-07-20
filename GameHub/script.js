@@ -3922,8 +3922,8 @@ const KATZE_PATH_QUESTIONS = [
       { text: 'Ich weiß, das wurde 30-mal aufgenommen, und dass nicht jeder Morgen so bei ihr ist.',             scale: 'moon' },
       { text: 'Ich klau mir eine Idee für meinen Morgen.',                                                       scale: 'rainbow' }
     ]},
-  { headline: 'Du stehst mit einem Freund im Park. Plötzlich hebt er das Handy — Selfie für die Story. Du hast nicht gefragt bekommen.',
-    question: 'Er will dich in seine Story stellen. Ohne zu fragen.',
+  { headline: 'Du stehst mit einer Freundin im Park. Plötzlich hebt sie das Handy — Selfie für die Story. Du wurdest nicht gefragt.',
+    question: 'Sie will dich in ihre Story stellen. Ohne zu fragen.',
     answers: [
       { text: 'Klar, mach ruhig.',              scale: 'sun' },
       { text: 'Nein, nicht öffentlich.',        scale: 'moon' },
@@ -4087,7 +4087,7 @@ function ensurePathStyles() {
     }
     .legi-path-cat {
       position: absolute; bottom: 6px; right: 8px;
-      height: 42%; width: auto; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+      height: 84%; width: auto; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
       pointer-events: none;
     }
     .legi-path-bubble {

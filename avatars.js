@@ -264,15 +264,33 @@
      serverseitig in game_state[game16].variant gecacht. Für Landing/
      profil.html: wenn nicht vorhanden → null (keine Variant-Avatare
      freigeschaltet, aber auch keine Regression, weil vor Task 4 gar
-     keine Stage-≥5-Katze existiert). */
-  function getKatzeVariant() {
+     keine Stage-≥5-Katze existiert).
+
+     WICHTIG: lernwelt_v3 ist base64+Prüfsummen-Format (siehe
+     saveStorage in creatures.js). Deshalb dasselbe Read-Pattern wie
+     loadShopRaw benutzen, nicht plain JSON.parse. */
+  function loadGameStateRaw() {
     try {
       const raw = localStorage.getItem(GAME_STATE_KEY);
-      if (!raw) return null;
-      const data = JSON.parse(raw);
-      const v = data && data.game16 && data.game16.variant;
-      return (v === 'rainbow' || v === 'light' || v === 'dark') ? v : null;
-    } catch { return null; }
+      if (!raw) return {};
+      let parsed;
+      try {
+        parsed = JSON.parse(atob(raw));
+      } catch {
+        parsed = JSON.parse(raw);
+        return parsed || {};
+      }
+      if (parsed && typeof parsed === 'object' && 'h' in parsed && 'd' in parsed) {
+        if (parsed.h !== hashString(JSON.stringify(parsed.d))) return {};
+        return parsed.d;
+      }
+      return parsed || {};
+    } catch { return {}; }
+  }
+  function getKatzeVariant() {
+    const data = loadGameStateRaw();
+    const v = data && data.game16 && data.game16.variant;
+    return (v === 'rainbow' || v === 'light' || v === 'dark') ? v : null;
   }
 
   /* ─── Unlock-Ableitung ───────────────────────────────────────
