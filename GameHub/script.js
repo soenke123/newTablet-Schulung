@@ -3953,7 +3953,9 @@ const KATZE_PATH_QUESTIONS = [
 ];
 
 function katzePathSceneImage(step) {
-  return `../data/Katzen reveal Fragen/Frage ${step}.png`;
+  // Pfad relativ zur Hub-URL (GameHub/index.html) — NICHT ../data/,
+  // das nur die Sub-Game-Ordner benutzen.
+  return `data/Katzen reveal Fragen/Frage ${step}.png`;
 }
 
 // Eigene Variante aus dem game_state-Blob (für Sprite-Rendering, wenn kein
@@ -4084,19 +4086,19 @@ function ensurePathStyles() {
       margin: 8px 0 12px;
     }
     .legi-path-cat {
-      position: absolute; bottom: 6px; left: 8px;
+      position: absolute; bottom: 6px; right: 8px;
       height: 42%; width: auto; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
       pointer-events: none;
     }
     .legi-path-bubble {
-      position: absolute; bottom: 12%; left: 24%; right: 6%;
+      position: absolute; bottom: 12%; left: 6%; right: 24%;
       background: rgba(255,255,255,0.96); color: #2b1a4a;
       padding: 10px 14px; border-radius: 14px;
       font-size: 0.98rem; line-height: 1.35; font-weight: 500;
       box-shadow: 0 6px 20px rgba(0,0,0,0.35);
     }
     .legi-path-bubble::before {
-      content: ''; position: absolute; left: -8px; bottom: 20%;
+      content: ''; position: absolute; right: -8px; bottom: 20%;
       width: 16px; height: 16px; background: rgba(255,255,255,0.96);
       transform: rotate(45deg); border-radius: 2px;
     }
@@ -4349,7 +4351,7 @@ function renderPathIntro() {
     </div>
     <div class="legi-path-intro">
       <p class="legi-path-intro__lead">Ein Adventure mit deiner Einhornkatze.</p>
-      <p>Neun Fragen. Deine Antworten formen, welche Katze sie am Ende wird — <strong>Regenbogen</strong>, <strong>Licht</strong> oder <strong>Nacht</strong>.</p>
+      <p>Neun Fragen. Deine Antworten formen, welche Katze sie am Ende wird.</p>
       <p class="legi-path-intro__warn">⚠️ Deine Wahl ist unumkehrbar. Kein Zurück-Button — sei ehrlich.</p>
       <button class="legi-path-start">Los geht’s</button>
     </div>`;
@@ -4378,7 +4380,7 @@ function renderPathQuestion(state) {
       <span class="legi-path-step">Frage ${state.step + 1} / 9</span>
     </div>
     <div class="legi-path-scene" style="background-image:url('${bgUrl}')">
-      <img class="legi-path-cat" src="../data/Einhornkatze4.png" alt="Einhornkatze">
+      <img class="legi-path-cat" src="data/Einhornkatze4.png" alt="Einhornkatze">
       <div class="legi-path-bubble">${escapeHtml(q.question)}</div>
     </div>
     <div class="legi-path-answers ${isLast ? 'legi-path-answers--color' : ''}">
