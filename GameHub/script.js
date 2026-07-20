@@ -5693,49 +5693,110 @@ function _injectAtariStyles() {
 
 /* ─────────────────────────────────────────────────
    13. THEME-WECHSEL
+   ─────────────────────────────────────────────────
+   Migration 0050: Themes persistieren in shop_state
+   (sd.unlockedThemes + sd.activeTheme). Live-Check
+   bleibt als Trigger für Erst-Unlock, wird aber
+   sofort in sd.unlockedThemes persistiert — d.h.
+   einmal Monster gemaxed = Theme dauerhaft frei,
+   auch nach Freilassen. Alte localStorage-Keys
+   dienen nur noch dem einmaligen Backfill.
    ───────────────────────────────────────────────── */
-const THEME_PREF_KEY         = 'lernwelt_theme_pref';
-const THEME_UNLOCK_ORDER_KEY = 'lernwelt_theme_unlock_order';
+const THEME_PREF_KEY_LEGACY         = 'lernwelt_theme_pref';
+const THEME_UNLOCK_ORDER_KEY_LEGACY = 'lernwelt_theme_unlock_order';
 
-function _getUnlockedThemes(allData) {
-  const sd = loadShopData();
-  const themes = ['default'];
+// Theme-ID → Trigger-Kreatur (max growth schaltet das Theme frei)
+const THEME_TRIGGERS = {
+  pfau:         'pfau',
+  atari:        'robot',
+  chindrache:   'chinDrache',
+  schnabeltier: 'schnabeltier',
+};
 
+function _liveMaxedThemes(allData, sd) {
   const hasMaxed = (creature) => {
     for (const g of GAMES_CONFIG) {
       const d = allData[g.id];
       if (d?.creature === creature && d.growth >= GROWTH_MAX) return true;
     }
-    for (const n of sd.nests) {
+    for (const n of (sd.nests || [])) {
       const d = allData[n.nestId];
       if (d?.creature === creature && d.growth >= GROWTH_MAX) return true;
     }
     return false;
   };
+  const out = [];
+  for (const [theme, creature] of Object.entries(THEME_TRIGGERS)) {
+    if (hasMaxed(creature)) out.push(theme);
+  }
+  return out;
+}
 
-  if (hasMaxed('pfau'))        themes.push('pfau');
-  if (hasMaxed('robot'))       themes.push('atari');
-  if (hasMaxed('chinDrache'))  themes.push('chindrache');
-  if (hasMaxed('schnabeltier')) themes.push('schnabeltier');
-  return themes;
+function _readLegacyThemePrefs() {
+  let unlocked = [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(THEME_UNLOCK_ORDER_KEY_LEGACY) || '[]');
+    if (Array.isArray(raw)) unlocked = raw.filter(t => typeof t === 'string');
+  } catch(e) {}
+  const active = localStorage.getItem(THEME_PREF_KEY_LEGACY) || null;
+  return { unlocked, active };
+}
+
+function _getUnlockedThemes(allData) {
+  const sd = loadShopData();
+  const set = new Set(['default']);
+
+  // Persistent (Server-synced, monoton)
+  for (const t of (sd.unlockedThemes || [])) set.add(t);
+  // Live (aktuell gemaxede Trigger-Kreatur)
+  for (const t of _liveMaxedThemes(allData, sd)) set.add(t);
+  // Legacy-Backfill (localStorage von vor Migration 0050)
+  for (const t of _readLegacyThemePrefs().unlocked) set.add(t);
+
+  return Array.from(set);
 }
 
 function applyThemeFromPreference(allData) {
-  const unlocked = _getUnlockedThemes(allData);
+  const sd = loadShopData();
+  const persisted = new Set(sd.unlockedThemes || []);
 
-  // Neu freigeschaltete Themes werden automatisch aktiv (letztes gewinnt)
-  const order = JSON.parse(localStorage.getItem(THEME_UNLOCK_ORDER_KEY) || '[]');
-  let orderChanged = false;
-  for (const theme of unlocked) {
-    if (theme !== 'default' && !order.includes(theme)) {
-      order.push(theme);
-      orderChanged = true;
-      localStorage.setItem(THEME_PREF_KEY, theme);
+  // Auto-Select darf NUR triggern, wenn auf DIESEM Device jetzt gerade ein
+  // Monster gemaxed wird — sonst würde ein Cross-Device-Sync (Server bringt
+  // neues Theme mit, das lokal nie live war) die vom User bewusst gesetzte
+  // activeTheme immer wieder überschreiben.
+  const liveThemes = _liveMaxedThemes(allData, sd);
+  const newlyOnThisDevice = liveThemes.filter(t => !persisted.has(t));
+
+  // Persistieren tun wir aber ALLES was neu unlocked ist (Live + Legacy).
+  const unlocked = _getUnlockedThemes(allData);
+  let sdDirty = false;
+  for (const t of unlocked) {
+    if (t !== 'default' && !persisted.has(t)) {
+      persisted.add(t);
+      sdDirty = true;
     }
   }
-  if (orderChanged) localStorage.setItem(THEME_UNLOCK_ORDER_KEY, JSON.stringify(order));
 
-  const pref = localStorage.getItem(THEME_PREF_KEY);
+  // Legacy-activeTheme einmalig übernehmen, falls sd.activeTheme leer ist.
+  if (!sd.activeTheme) {
+    const legacyActive = _readLegacyThemePrefs().active;
+    if (legacyActive && persisted.has(legacyActive)) {
+      sd.activeTheme = legacyActive;
+      sdDirty = true;
+    }
+  }
+
+  if (newlyOnThisDevice.length > 0) {
+    sd.activeTheme = newlyOnThisDevice[newlyOnThisDevice.length - 1];
+    sdDirty = true;
+  }
+
+  if (sdDirty) {
+    sd.unlockedThemes = Array.from(persisted);
+    saveShopData(sd);
+  }
+
+  const pref = sd.activeTheme;
   const active = (pref && unlocked.includes(pref)) ? pref : 'default';
 
   // Zuerst alle deaktivieren, dann das aktive einschalten
@@ -5756,10 +5817,12 @@ function cycleTheme() {
   const allData = loadAllData();
   const unlocked = _getUnlockedThemes(allData);
   if (unlocked.length < 2) return;
-  const pref = localStorage.getItem(THEME_PREF_KEY);
+  const sd = loadShopData();
+  const pref = sd.activeTheme;
   const cur = (pref && unlocked.includes(pref)) ? pref : unlocked[unlocked.length - 1];
   const next = unlocked[(unlocked.indexOf(cur) + 1) % unlocked.length];
-  localStorage.setItem(THEME_PREF_KEY, next);
+  sd.activeTheme = next;
+  saveShopData(sd);
   applyThemeFromPreference(allData);
 }
 

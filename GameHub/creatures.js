@@ -1552,9 +1552,12 @@ function loadShopData() {
       // geöffnet — verhindert Legi-Duplikate durch Merge-Reappear.
       openedSealTypes:       d.openedSealTypes       ?? [],
       sealProgress:          d.sealProgress          ?? {},
+      // Migration 0050: Color-Themes persistent + cross-device.
+      unlockedThemes:        d.unlockedThemes        ?? [],
+      activeTheme:           d.activeTheme           ?? null,
     };
   } catch(e) {
-    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumstrankSpent: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, wachstumsBoosterSpent: 0, coinsx3: false, coinsx3Count: 0, coinsx3Spent: 0, glucksklee: false, gluckskleeCount: 0, gluckskleeSpent: 0, lockmittel: false, lockmittelCount: 0, lockmittelSpent: 0, resetKarteCount: 0, resetKarteSpent: 0, freundschaftskeksCount: 0, freundschaftskeksSpent: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [], sealProgress: {} };
+    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumstrankSpent: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, wachstumsBoosterSpent: 0, coinsx3: false, coinsx3Count: 0, coinsx3Spent: 0, glucksklee: false, gluckskleeCount: 0, gluckskleeSpent: 0, lockmittel: false, lockmittelCount: 0, lockmittelSpent: 0, resetKarteCount: 0, resetKarteSpent: 0, freundschaftskeksCount: 0, freundschaftskeksSpent: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [], sealProgress: {}, unlockedThemes: [], activeTheme: null };
   }
 }
 
