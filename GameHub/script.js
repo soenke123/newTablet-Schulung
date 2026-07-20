@@ -312,7 +312,7 @@ function buildGameCard(game, data, shopData) {
   const epic      = data.creature && isEpic(data.creature);
   const legendary = data.creature && isLegendary(data.creature);
   const maxed     = data.creature && data.growth >= GROWTH_MAX;
-  const isBackupTarget = !!shopData.pendingBackup && !!data.creature && access === 'available';
+  const isBackupTarget = !!shopData.pendingBackup && !!data.creature && access === 'available' && !game.clusterLegi;
 
   // Pending-Gift-Blink: revealed Legi mit wartendem Geschenk oder
   // vollendeter Cluster-Sammlung (Task 3) pulsiert regenbogen
@@ -4293,6 +4293,8 @@ window.showLegiRevealAnimation = showLegiRevealAnimation;
 function applyBackupSwap(gameId) {
   const sd = loadShopData();
   if (!sd.pendingBackup) return;
+  const game = GAMES_CONFIG.find(g => g.id === gameId);
+  if (game?.clusterLegi) return;
   const allData = loadAllData();
   const { creature, stage } = sd.pendingBackup;
   allData[gameId].creature = creature;
