@@ -3871,7 +3871,7 @@ function renderWinSlot(c) {
   // wenn max_stage noch 0 ist (z.B. Nest-Slot mit seenCreatures[c]=0).
   // Nur wenn niemand die Kreatur kennt, kommt das ?-Fragezeichen.
   if (!c.has_seen) {
-    return `<div class="book-slot book-slot--unseen legi-win-slot" data-creature="${escapeHtml(c.creature)}" title="${escapeHtml(name)} – noch nicht entdeckt">
+    return `<div class="book-slot book-slot--unseen" title="Noch nicht entdeckt">
       <span class="book-slot__unknown">?</span>
     </div>`;
   }
