@@ -3506,15 +3506,28 @@ input[type="password"]::-webkit-textfield-decoration-container {
 }
 .rainbow-arc--small .rainbow-arc__label { font-size: 22px; }
 .rainbow-arc--large .rainbow-arc__label { font-size: 20px; }
-.rainbow-arc__marker {
-  fill: rgba(255, 255, 255, 0.25);
-  stroke: rgba(255, 255, 255, 0.35);
-  stroke-width: 0.6;
+/* Radiale Divider-Striche — teilen den Regenbogen in Meilenstein-Sektoren.
+   Nicht erreicht = dunkel-transparent, erreicht+ungeclaimt = pulsiert,
+   geclaimt = solide voll. */
+.rainbow-arc__divider {
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0.55;
 }
-.rainbow-arc__marker--reached {
-  fill: #ffeb3b;
-  stroke: #ffb500;
-  filter: drop-shadow(0 0 3px rgba(255, 200, 60, 0.85));
+.rainbow-arc__divider--pending {
+  opacity: 1;
+  stroke-width: 3.4;
+  filter: drop-shadow(0 0 4px currentColor);
+  animation: rainbow-divider-pulse 1.2s ease-in-out infinite;
+}
+.rainbow-arc__divider--claimed {
+  opacity: 1;
+  stroke-width: 3.4;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
+}
+@keyframes rainbow-divider-pulse {
+  0%, 100% { opacity: 0.7; stroke-width: 3; }
+  50%      { opacity: 1;   stroke-width: 4.2; }
 }
 
 /* Cluster-Locked Legi-Kachel — nur Regenbogen + Zahl + Button.
@@ -3608,6 +3621,118 @@ input[type="password"]::-webkit-textfield-decoration-container {
   padding: 40px 12px;
   text-align: center;
   color: var(--clr-cream-dim, #cbb59a);
+}
+
+/* Bonbon-Meilenstein-Chain-Modal — sequentieller Reveal-Screen.
+   --milestone-color wird inline vom Renderer gesetzt. */
+.bonbon-milestone-modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 32px 24px 12px;
+  text-align: center;
+  overflow: hidden;
+  --milestone-color: #b477ff;
+}
+.bonbon-milestone-modal__halo {
+  position: absolute;
+  top: -80px; left: 50%;
+  width: 260px; height: 260px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, var(--milestone-color) 0%, transparent 68%);
+  opacity: 0.4;
+  filter: blur(28px);
+  pointer-events: none;
+  z-index: 0;
+  animation: milestone-halo-pulse 3s ease-in-out infinite;
+}
+@keyframes milestone-halo-pulse {
+  0%, 100% { opacity: 0.3; transform: translateX(-50%) scale(1); }
+  50%      { opacity: 0.5; transform: translateX(-50%) scale(1.08); }
+}
+.bonbon-milestone-modal__icon {
+  position: relative;
+  z-index: 1;
+  font-size: 4.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 14px var(--milestone-color));
+  animation: milestone-icon-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes milestone-icon-pop {
+  from { opacity: 0; transform: scale(0.4) rotate(-8deg); }
+  to   { opacity: 1; transform: scale(1)   rotate(0); }
+}
+.bonbon-milestone-modal__title {
+  position: relative; z-index: 1;
+  margin: 0;
+  font-family: 'Cinzel', serif;
+  font-size: 1.55rem;
+  color: var(--clr-cream, #fef6e4);
+}
+.bonbon-milestone-modal__body {
+  position: relative; z-index: 1;
+  margin: 0;
+  max-width: 460px;
+  color: var(--clr-cream, #fef6e4);
+  line-height: 1.55;
+  font-size: 1rem;
+}
+.bonbon-milestone-modal__body strong {
+  color: var(--milestone-color);
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.25));
+}
+.bonbon-milestone-modal__actions {
+  position: relative; z-index: 1;
+  margin-top: 6px;
+}
+.bonbon-milestone-modal__next {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 999px;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #2a1250;
+  background: linear-gradient(90deg, var(--milestone-color), #fef6e4);
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), 0 0 22px var(--milestone-color);
+  transition: transform 0.15s ease;
+}
+.bonbon-milestone-modal__next:hover:not(:disabled)  { transform: scale(1.04); }
+.bonbon-milestone-modal__next:active:not(:disabled) { transform: scale(0.97); }
+.bonbon-milestone-modal__next:disabled { opacity: 0.55; cursor: default; }
+
+/* Meilenstein-gesperrte Shop-Items — ausgegraut + Hinweis. */
+.shop-list-item--milestone-locked,
+.shop-list-item--milestone-hidden {
+  filter: grayscale(0.75);
+  opacity: 0.7;
+}
+.shop-list-item--milestone-locked:hover,
+.shop-list-item--milestone-hidden:hover {
+  background: transparent;
+}
+.shop-list-item--milestone-hidden .shop-list-item__icon {
+  opacity: 0.55;
+}
+.shop-list-item--milestone-hidden .shop-list-item__name {
+  color: var(--clr-cream-dim, #cbb59a);
+  letter-spacing: 0.14em;
+}
+.shop-list-item__milestone-hint {
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(180, 119, 255, 0.12);
+  border: 1px solid rgba(180, 119, 255, 0.35);
+  color: var(--clr-cream, #fef6e4);
+  font-size: 0.82rem;
+  display: inline-block;
+}
+.shop-list-item__milestone-hint strong {
+  color: #ffd166;
 }
 
 /* Fortschritts-Anzeige im Modal (großer SVG-Regenbogen + Stats) */

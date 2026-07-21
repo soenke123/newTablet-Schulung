@@ -146,6 +146,23 @@
 
   window.waitForSession = () => bootPromise;
 
+  // Meilenstein-Konstante — muss synchron mit Server (Migration 0052)
+  // und BONBON_MILESTONE_META im Hub bleiben.
+  const BONBON_MILESTONES = [10, 20, 30, 50, 75, 100];
+
+  // Client-Ableitung: unlocked = pct >= milestone, pending = unlocked \ claimed.
+  function enrichBonbonStatus(data) {
+    if (!data || !data.enabled) return data;
+    const pct = Number(data.pct ?? 0);
+    const claimed = Array.isArray(data.milestones_claimed) ? data.milestones_claimed.slice() : [];
+    const unlocked = BONBON_MILESTONES.filter(m => pct >= m);
+    const claimedSet = new Set(claimed);
+    const pending = unlocked.filter(m => !claimedSet.has(m));
+    data.milestones_unlocked = unlocked;
+    data.milestones_pending  = pending;
+    return data;
+  }
+
   // Bonbon-Status per RPC ziehen. Wenn User keine S3-Season hat,
   // liefert die RPC { enabled:false } — merken wir uns trotzdem im
   // Cache, damit renderBonbonDisplay eine klare Antwort hat.
@@ -164,12 +181,39 @@
       });
       if (!res.ok) throw new Error(`bonbon-status ${res.status}`);
       const data = await res.json();
-      return data && data.ok ? data : null;
+      return data && data.ok ? enrichBonbonStatus(data) : null;
     } catch (e) {
       console.warn('[SESSION] bonbon-status fetch failed:', e.message);
       return null;
     }
   }
+
+  // Meilenstein-Claim (10/20/30/50/75/100). Server garantiert Idempotenz.
+  // Antwort-Shape: { ok, milestone, granted?, already_claimed?, error? }
+  async function claimBonbonMilestone(milestone) {
+    if (!window.__accessToken || !window.SUPABASE_URL) {
+      return { ok: false, error: 'no_token' };
+    }
+    try {
+      const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/claim_bonbon_milestone`, {
+        method: 'POST',
+        headers: {
+          apikey: window.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${window.__accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({ p_milestone: milestone })
+      });
+      if (!res.ok) throw new Error(`claim ${res.status}`);
+      return await res.json();
+    } catch (e) {
+      console.warn('[SESSION] claim_bonbon_milestone failed:', e.message);
+      return { ok: false, error: 'network' };
+    }
+  }
+  window.claimBonbonMilestone = claimBonbonMilestone;
+  window.__BONBON_MILESTONES = BONBON_MILESTONES;
 
   // Public helper: kann von Hub/Spielen aufgerufen werden nach add_bonbons,
   // um den lokalen Cache aufzufrischen. Feuert 'lernwelt:bonbon-changed'.

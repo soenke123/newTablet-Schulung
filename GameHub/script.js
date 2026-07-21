@@ -320,8 +320,14 @@ function buildGameCard(game, data, shopData) {
   const giftBlink = game.clusterLegi && access === 'available'
     && (giftPending() || window.__winTaskReady === true);
 
+  // Meilenstein-Blink: cluster_locked + irgendein Meilenstein < 100 % pending.
+  // Der 100er wird beim Reveal separat geclaimed und nutzt schon ready_to_reveal.
+  const milestoneBlink = game.clusterLegi
+    && (access === 'cluster_locked' || access === 'ready_to_reveal')
+    && bonbonMilestoneChainable();
+
   const card = document.createElement('div');
-  card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${access === 'ready_to_reveal' ? ' game-card--cluster-locked game-card--legi-ready' : ''}${giftBlink ? ' game-card--legi-ready' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
+  card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${access === 'ready_to_reveal' ? ' game-card--cluster-locked game-card--legi-ready' : ''}${giftBlink ? ' game-card--legi-ready' : ''}${milestoneBlink ? ' game-card--legi-ready' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
   card.innerHTML = buildCardHTML(game, data, shopData);
 
   attachCardListeners(card, game, data, isBackupTarget);
@@ -353,7 +359,11 @@ function attachCardListeners(card, game, data, isBackupTarget) {
     if (isBackupTarget) { applyBackupSwap(game.id); return; }
     const access = getGameAccess(game.id);
     if (access === 'locked') return;
-    if (access === 'cluster_locked' || access === 'ready_to_reveal') { openBonbonModal(); return; }
+    if (access === 'cluster_locked' || access === 'ready_to_reveal') {
+      if (bonbonMilestoneChainable()) { openBonbonMilestoneChain(); return; }
+      openBonbonModal();
+      return;
+    }
     if (game.clusterLegi && access === 'available') { openLegiTaskModal(); return; }
     if (access === 'password') { showPasswordPrompt(game.id); return; }
     const sd = loadShopData();
@@ -426,7 +436,7 @@ function buildCardHTML(game, data, shopData) {
       : Math.max(0, Math.min(100, Math.round(collected / target * 100)));
     return `
       <div class="game-card__cluster-locked-body">
-        ${buildRainbowSVG(pct, 'small', { showLabel: true })}
+        ${buildRainbowSVG(pct, 'small', { showLabel: true, claimed: status.milestones_claimed || [] })}
         <div class="game-card__points" style="opacity:0.7;">🍬 ${collected} / ${target}</div>
       </div>
       <button class="game-card__btn">Fortschritt ansehen</button>
@@ -659,16 +669,134 @@ async function openBonbonModal() {
 }
 window.openBonbonModal = openBonbonModal;
 
+// Meilenstein-Chain: sequenzielles Modal für alle noch nicht geclaimten
+// Bonbon-Meilensteine (< 100 %). Der 100er wird beim Katzen-Reveal
+// separat geclaimed — dort keine Chain-Zwischenkarte.
+const BONBON_MILESTONE_META = {
+   10: { icon: '🧲', title: '10 % erreicht!',  body: 'Ihr habt euer erstes Zehntel gesammelt. Das <strong>Lockmittel</strong> ist ab jetzt im Shop kauffähig — damit könnt ihr euer Kreatur-Ei absichern.' },
+   20: { icon: '🎁', title: '20 % erreicht!',  body: 'Ihr habt schon ein Fünftel geschafft! Für deinen Beitrag bekommst du sofort: <strong>5× Wachstumstrank</strong>, <strong>5× 3× Münzen</strong> und <strong>1× Lockmittel</strong> in dein Inventar.' },
+   30: { icon: '🍪', title: '30 % erreicht!',  body: 'Ein Drittel des Weges liegt hinter euch. Der <strong>Freundschaftskeks</strong> ist ab jetzt im Shop kauffähig — er verschenkt Bonbons an Kurs-Mitschüler.' },
+   50: { icon: '💎', title: '50 % erreicht!',  body: 'Halbzeit! Für deinen Beitrag bekommst du sofort: <strong>30 Münzen</strong> und <strong>20 Kristalle</strong>.' },
+   75: { icon: '🔄', title: '75 % erreicht!',  body: 'Drei Viertel! Ihr seid fast am Ziel. Die <strong>Reset-Karte</strong> ist ab jetzt im Shop kauffähig — sie stellt euren täglichen Bonbon-Bonus wieder her.' }
+};
+
+function bonbonMilestoneChainable() {
+  const pending = window.__bonbonStatus?.milestones_pending;
+  if (!Array.isArray(pending) || pending.length === 0) return false;
+  return pending.some(m => m < 100);
+}
+
+let __bonbonMilestoneChain = { pending: [], idx: 0 };
+
+async function openBonbonMilestoneChain() {
+  const overlay = document.getElementById('bonbonModal');
+  const content = document.getElementById('bonbonModalContent');
+  if (!overlay || !content) return;
+
+  content.innerHTML = '<div class="bonbon-modal-loading">Lade Fortschritt…</div>';
+  overlay.hidden = false;
+  await window.refreshBonbonStatus?.();
+  const status = window.__bonbonStatus || {};
+  const pending = (Array.isArray(status.milestones_pending) ? status.milestones_pending : [])
+    .filter(m => m < 100)
+    .sort((a, b) => a - b);
+  if (pending.length === 0) {
+    // Zwischenzeitlich schon geclaimed — direkt Standard-Übersicht zeigen.
+    content.innerHTML = buildBonbonModalHTML(status);
+    bindBonbonRevealBtn(overlay);
+    return;
+  }
+  __bonbonMilestoneChain = { pending, idx: 0 };
+  content.innerHTML = renderBonbonMilestoneStep(pending[0]);
+  bindBonbonMilestoneAdvance();
+}
+window.openBonbonMilestoneChain = openBonbonMilestoneChain;
+
+function renderBonbonMilestoneStep(milestone) {
+  const meta = BONBON_MILESTONE_META[milestone]
+    || { icon: '🌈', title: `${milestone} % erreicht!`, body: '' };
+  const color = BONBON_MILESTONE_COLORS[milestone] || '#b477ff';
+  return `
+    <div class="bonbon-milestone-modal" style="--milestone-color:${color};">
+      <div class="bonbon-milestone-modal__halo"></div>
+      <div class="bonbon-milestone-modal__icon">${meta.icon}</div>
+      <h2 class="bonbon-milestone-modal__title">🎉 ${meta.title}</h2>
+      <p class="bonbon-milestone-modal__body">${meta.body}</p>
+      <div class="bonbon-milestone-modal__actions">
+        <button class="bonbon-milestone-modal__next" id="bonbonMilestoneNext">Weiter →</button>
+      </div>
+    </div>`;
+}
+
+function bindBonbonMilestoneAdvance() {
+  const btn = document.getElementById('bonbonMilestoneNext');
+  if (!btn) return;
+  btn.addEventListener('click', handleBonbonMilestoneAdvance, { once: true });
+}
+
+function bindBonbonRevealBtn(overlay) {
+  const revealBtn = document.getElementById('bonbonRevealBtn');
+  if (!revealBtn) return;
+  revealBtn.addEventListener('click', () => {
+    overlay.hidden = true;
+    showLegiRevealAnimation();
+  });
+}
+
+async function handleBonbonMilestoneAdvance() {
+  const chain = __bonbonMilestoneChain;
+  const current = chain.pending[chain.idx];
+  const btn = document.getElementById('bonbonMilestoneNext');
+  if (btn) { btn.disabled = true; btn.textContent = 'Lade…'; }
+
+  await window.claimBonbonMilestone?.(current);
+  // 20 % + 50 % ändern shop_state serverseitig → localStorage nachziehen.
+  if (current === 20 || current === 50) {
+    try { await window.loadServerShop?.(); } catch (e) { console.warn('[milestone] loadServerShop failed', e); }
+  }
+  await window.refreshBonbonStatus?.();
+
+  chain.idx += 1;
+  const overlay = document.getElementById('bonbonModal');
+  const content = document.getElementById('bonbonModalContent');
+
+  if (chain.idx < chain.pending.length) {
+    content.innerHTML = renderBonbonMilestoneStep(chain.pending[chain.idx]);
+    bindBonbonMilestoneAdvance();
+    return;
+  }
+
+  // Chain-Ende. Wenn Cluster inzwischen 100 % + User noch nicht revealed:
+  // in den Bonbon-Modal mit „Kreatur befreien"-Button wechseln.
+  // Sonst: Regenbogen-Detail-Übersicht.
+  const status = window.__bonbonStatus || {};
+  content.innerHTML = buildBonbonModalHTML(status);
+  bindBonbonRevealBtn(overlay);
+  renderHub();
+}
+
 // Baut den halbkreisförmigen SVG-Regenbogen. Grauer Basis-Bogen +
 // bunter Overlay-Bogen, radial aufgespannt: clipPath ist ein Kreis-
 // Sektor um (100, 100), der von 180° (links) mit dem Fortschritt zu
 // 0° (rechts) rotiert — wie ein aufklappender Fächer.
-// Milestones = optionaler Marker-Array {percent, reached}.
+// opts.claimed = int[] Meilensteine (10/20/30/50/75/100), die User schon geclaimed hat.
+// Divider-Striche liegen radial über dem Regenbogen und teilen die
+// Kreissektoren. Farbe pro Milestone; unreached = grau, pending = pulsierend.
+const BONBON_MILESTONE_COLORS = {
+   10: '#ff5b6b',
+   20: '#ffa940',
+   30: '#ffeb3b',
+   50: '#66d16b',
+   75: '#4fb3ff',
+  100: '#b477ff'
+};
+
 function buildRainbowSVG(pct, size = 'small', opts = {}) {
   const p = Math.max(0, Math.min(100, pct || 0));
   const clipId = 'rainbow-clip-' + Math.random().toString(36).slice(2, 8);
   const showLabel = opts.showLabel !== false;
-  const milestones = Array.isArray(opts.milestones) ? opts.milestones : [];
+  const claimed = Array.isArray(opts.claimed) ? opts.claimed : [];
+  const claimedSet = new Set(claimed);
 
   // Sektor-Path für clipPath: vom Zentrum (100,100) zum linken Startpunkt
   // (10,100), Kreisbogen mit Radius 90 im Uhrzeigersinn (sweep=1) zum
@@ -697,15 +825,24 @@ function buildRainbowSVG(pct, size = 'small', opts = {}) {
     ['M 70 100 A 30 30 0 0 1 130 100', '#b477ff'],
   ].map(([d, c]) => `<path d="${d}" stroke="${c}" stroke-width="10" fill="none" stroke-linecap="butt" />`).join('');
 
-  const markers = milestones.map(m => {
-    // Milestone-Marker sitzen auf dem Bogen selbst (mittlerer Radius 55)
-    // und rotieren mit — bei 25 % sitzt der Marker links oben, bei 100 %
-    // rechts. Gleicher Winkel-Mapping wie das clipPath.
-    const angle = Math.PI * (1 - m.percent / 100);
-    const mx = cx + 55 * Math.cos(angle);
-    const my = cy - 55 * Math.sin(angle);
-    const cls = m.reached ? 'rainbow-arc__marker rainbow-arc__marker--reached' : 'rainbow-arc__marker';
-    return `<circle cx="${mx.toFixed(2)}" cy="${my.toFixed(2)}" r="3" class="${cls}" />`;
+  // Radiale Divider — 6 Meilensteine (10/20/30/50/75/100 %), Innenradius
+  // 25 (innerhalb des innersten Streifens), Außenradius 85 (Ende des
+  // äußeren Streifens). Farbe je nach Zustand: nicht erreicht = dunkel,
+  // erreicht+ungeclaimt = pulsierend, geclaimt = solide voll.
+  const rIn = 25, rOut = 85;
+  const dividers = [10, 20, 30, 50, 75, 100].map(m => {
+    const a = Math.PI * (1 - m / 100);
+    const x1 = (cx + rIn  * Math.cos(a)).toFixed(2);
+    const y1 = (cy - rIn  * Math.sin(a)).toFixed(2);
+    const x2 = (cx + rOut * Math.cos(a)).toFixed(2);
+    const y2 = (cy - rOut * Math.sin(a)).toFixed(2);
+    const reached = p >= m;
+    const isClaimed = claimedSet.has(m);
+    let cls = 'rainbow-arc__divider';
+    if (reached && isClaimed) cls += ' rainbow-arc__divider--claimed';
+    else if (reached)         cls += ' rainbow-arc__divider--pending';
+    const color = reached ? BONBON_MILESTONE_COLORS[m] : '#1a1822';
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${cls}" stroke="${color}" />`;
   }).join('');
 
   const label = showLabel
@@ -721,7 +858,7 @@ function buildRainbowSVG(pct, size = 'small', opts = {}) {
         </defs>
         <g class="rainbow-arc__base">${grayStripes}</g>
         <g class="rainbow-arc__fill" clip-path="url(#${clipId})">${colorStripes}</g>
-        ${markers}
+        <g class="rainbow-arc__dividers">${dividers}</g>
         ${label}
       </svg>
     </div>`;
@@ -733,11 +870,11 @@ function buildBonbonModalHTML(status) {
   const pct       = Math.max(0, Math.min(100, Math.round(collected / target * 100)));
   const own       = status.own_amount ?? 0;
   const unlocked  = !!status.unlocked;
-  const milestones = Array.isArray(status.milestones) ? status.milestones : [];
+  const claimed   = Array.isArray(status.milestones_claimed) ? status.milestones_claimed : [];
 
   const rainbowBlock = `
     <div class="bonbon-rainbow">
-      ${buildRainbowSVG(pct, 'large', { milestones, showLabel: true })}
+      ${buildRainbowSVG(pct, 'large', { claimed, showLabel: true })}
       <div class="bonbon-rainbow__stats">
         <div><strong>${collected}</strong> / ${target} 🍬 gesammelt</div>
         <div class="bonbon-rainbow__own">Du hast <strong>${own}</strong> beigetragen</div>
@@ -1082,14 +1219,17 @@ const SHOP_ITEMS_P2 = [
 ];
 
 // ── Season 3 Shop-Items (Regenbogen-Bonbons — Items folgen) ───────────
+// bonbonMilestone: Meilenstein-Prozent, ab dem das Item im Shop kauffähig
+// wird. Vorher grau + Hinweis. jokerGemeinsam zusätzlich hiddenUntilUnlocked:
+// wird als „?" angezeigt, bis 100 % erreicht (Migration 0052).
 const SHOP_ITEMS_P3 = [
-  { id: 'lockmittel', icon: '🧲', name: 'Lockmittel', description: 'Setze es bei einem schlummernden Ei ein: Zu 90 % droppt beim ersten Spiel ein Season-3-Monster!', price: 20, consumable: true },
+  { id: 'lockmittel', icon: '🧲', name: 'Lockmittel', description: 'Setze es bei einem schlummernden Ei ein: Zu 90 % droppt beim ersten Spiel ein Season-3-Monster!', price: 20, consumable: true, bonbonMilestone: 10 },
   // Bonbon-Ökonomie (Migration 0044)
-  { id: 'freundschaftskeks', icon: '🍪', name: 'Freundschaftskeks', description: 'Schenkt einem zufälligen Kurs-Kollegen 20 Bonbons. Zählen zum Kurs-Ziel. Maximal 5×.', price: 50,  consumable: true, bonbonItem: true, cap: 5, giftItem: true },
-  { id: 'resetKarte',        icon: '🔄', name: 'Reset-Karte',       description: 'Alle Kacheln geben beim nächsten Spielen wieder den täglichen +20-Bonbon-Bonus.', price: 300, consumable: true, bonbonItem: true },
+  { id: 'freundschaftskeks', icon: '🍪', name: 'Freundschaftskeks', description: 'Schenkt einem zufälligen Kurs-Kollegen 20 Bonbons. Zählen zum Kurs-Ziel. Maximal 5×.', price: 50,  consumable: true, bonbonItem: true, cap: 5, giftItem: true, bonbonMilestone: 30 },
+  { id: 'resetKarte',        icon: '🔄', name: 'Reset-Karte',       description: 'Alle Kacheln geben beim nächsten Spielen wieder den täglichen +20-Bonbon-Bonus.', price: 300, consumable: true, bonbonItem: true, bonbonMilestone: 75 },
   // Team-Joker (Migration 0047) — bewusst NICHT in loadShopData-Whitelist,
   // Bestand kommt aus window.__clusterJokerStatus (Server-Aggregat).
-  { id: 'jokerGemeinsam', icon: '🃏', name: 'Joker: gemeinsam gewinnen', description: 'Ein Monster weniger nötig für „Gemeinsam siegen". Maximal 2 pro Kurs.', price: 500, consumable: true, clusterScoped: true },
+  { id: 'jokerGemeinsam', icon: '🃏', name: 'Joker: gemeinsam gewinnen', description: 'Ein Monster weniger nötig für „Gemeinsam siegen". Maximal 2 pro Kurs.', price: 500, consumable: true, clusterScoped: true, bonbonMilestone: 100, hiddenUntilUnlocked: true },
 ];
 
 function openShopModal() {
@@ -1179,6 +1319,18 @@ function _renderShopBadges(shopData, available, s2Open) {
 function _buildShopItem(item, shopData, allData, available, s2Open) {
   if (item.lootboxItem) return _buildLootboxItemElement(item, shopData);
 
+  // Bonbon-Meilenstein-Lock (Migration 0052): S3-Items sind bis zum
+  // Erreichen ihres Milestones gesperrt. hiddenUntilUnlocked-Items
+  // werden bis dahin als „?"-Placeholder angezeigt.
+  if (item.bonbonMilestone) {
+    const claimed = window.__bonbonStatus?.milestones_claimed || [];
+    if (!claimed.includes(item.bonbonMilestone)) {
+      return item.hiddenUntilUnlocked
+        ? _buildBonbonHiddenPlaceholder(item)
+        : _buildBonbonLockedItemElement(item);
+    }
+  }
+
   const soldOut = (item.bookItem || item.atariHintItem || item.backupItem || item.sealItem)
     ? shopData.purchased.includes(item.id)
     : item.eggItem
@@ -1188,6 +1340,40 @@ function _buildShopItem(item, shopData, allData, available, s2Open) {
   if (item.atariHintItem && soldOut) return _buildAtariHintItemElement(item, shopData);
 
   return _buildStandardShopItemElement(item, shopData, allData, available, s2Open, soldOut);
+}
+
+function _buildBonbonLockedItemElement(item) {
+  const li = document.createElement('div');
+  li.className = 'shop-list-item shop-list-item--milestone-locked';
+  li.innerHTML = `
+    <div class="shop-list-item__icon">${item.icon}</div>
+    <div class="shop-list-item__info">
+      <div class="shop-list-item__name">${item.name}</div>
+      <p class="shop-list-item__desc">${item.description}</p>
+      <div class="shop-list-item__milestone-hint">🔒 Wird bei <strong>${item.bonbonMilestone} %</strong> Bonbons freigeschaltet</div>
+    </div>
+    <div class="shop-list-item__buy-col">
+      <button class="shop-list-item__btn" disabled>Gesperrt</button>
+    </div>
+  `;
+  return li;
+}
+
+function _buildBonbonHiddenPlaceholder(item) {
+  const li = document.createElement('div');
+  li.className = 'shop-list-item shop-list-item--milestone-hidden';
+  li.innerHTML = `
+    <div class="shop-list-item__icon">❓</div>
+    <div class="shop-list-item__info">
+      <div class="shop-list-item__name">???</div>
+      <p class="shop-list-item__desc">Ein geheimnisvolles Item wartet auf euch.</p>
+      <div class="shop-list-item__milestone-hint">🌈 Wird bei <strong>${item.bonbonMilestone} %</strong> Bonbons freigeschaltet</div>
+    </div>
+    <div class="shop-list-item__buy-col">
+      <button class="shop-list-item__btn" disabled>?</button>
+    </div>
+  `;
+  return li;
 }
 
 function _buildLootboxItemElement(item, shopData) {
@@ -4915,6 +5101,16 @@ function showLegiRevealAnimation() {
       await window.syncShopStateToServer?.(sd);
     } catch (e) {
       console.warn('[legi-reveal] shop-sync failed:', e.message);
+    }
+
+    // 3) 100 %-Milestone einbuchen (schaltet Joker im Shop frei).
+    //    Server-seitig idempotent — Späteinsteiger, die den Cluster
+    //    schon auf 100 % vorfinden, ziehen ihren Grant genau hier.
+    try {
+      await window.claimBonbonMilestone?.(100);
+      await window.refreshBonbonStatus?.();
+    } catch (e) {
+      console.warn('[legi-reveal] claim milestone 100 failed:', e.message);
     }
 
     // 3) Frisches game_state ziehen (bringt creature='einhornkatze').
