@@ -2551,6 +2551,36 @@ body.s2-active .hud-kristalle { display: flex; }
   object-fit: contain;
 }
 
+/* Season-3-Banner: hellblauer Glow hinter der transparenten Silhouette */
+.s3-preview {
+  overflow: visible;
+  position: relative;
+}
+.s3-preview::before {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  background: radial-gradient(ellipse at center,
+              rgba(140,210,255,0.55) 0%,
+              rgba(120,190,255,0.30) 35%,
+              rgba(120,190,255,0.10) 60%,
+              transparent 78%);
+  filter: blur(14px);
+  z-index: 0;
+  pointer-events: none;
+  animation: s3Glow 4.5s ease-in-out infinite;
+}
+.s3-preview__img {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 0 10px rgba(140,210,255,0.75))
+          drop-shadow(0 0 22px rgba(120,190,255,0.55));
+}
+@keyframes s3Glow {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.05); }
+}
+
 /* ── Kompakte Liste ─────────────────────────────── */
 .s2-list {
   flex: 1;
