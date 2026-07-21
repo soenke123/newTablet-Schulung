@@ -1085,8 +1085,8 @@ const SHOP_ITEMS_P2 = [
 const SHOP_ITEMS_P3 = [
   { id: 'lockmittel', icon: '🧲', name: 'Lockmittel', description: 'Setze es bei einem schlummernden Ei ein: Zu 90 % droppt beim ersten Spiel ein Season-3-Monster!', price: 20, consumable: true },
   // Bonbon-Ökonomie (Migration 0044)
-  { id: 'resetKarte',        icon: '🔄', name: 'Reset-Karte',       description: 'Alle Kacheln geben beim nächsten Spielen wieder den täglichen +20-Bonbon-Bonus.', price: 300, consumable: true, bonbonItem: true },
   { id: 'freundschaftskeks', icon: '🍪', name: 'Freundschaftskeks', description: 'Schenkt einem zufälligen Kurs-Kollegen 20 Bonbons. Zählen zum Kurs-Ziel. Maximal 5×.', price: 50,  consumable: true, bonbonItem: true, cap: 5, giftItem: true },
+  { id: 'resetKarte',        icon: '🔄', name: 'Reset-Karte',       description: 'Alle Kacheln geben beim nächsten Spielen wieder den täglichen +20-Bonbon-Bonus.', price: 300, consumable: true, bonbonItem: true },
   // Team-Joker (Migration 0047) — bewusst NICHT in loadShopData-Whitelist,
   // Bestand kommt aus window.__clusterJokerStatus (Server-Aggregat).
   { id: 'jokerGemeinsam', icon: '🃏', name: 'Joker: gemeinsam gewinnen', description: 'Ein Monster weniger nötig für „Gemeinsam siegen". Maximal 2 pro Kurs.', price: 500, consumable: true, clusterScoped: true },
