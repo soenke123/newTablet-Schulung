@@ -519,7 +519,7 @@ function buildCardHTML(game, data, shopData) {
   ).join('');
   return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button>${useBtns}</div>`;
 })()}
-    ${data.creature ? `<button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>` : ''}
+    ${data.creature && !isLegi ? `<button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>` : ''}
   `;
 }
 
@@ -1368,6 +1368,7 @@ async function activateResetKarte() {
 
 function confirmRelease(gameId) {
   const game    = GAMES_CONFIG.find(g => g.id === gameId);
+  if (game?.clusterLegi) return;
   const allData = loadAllData();
   const data    = allData[gameId];
   const overlay = document.getElementById('modalOverlay');
@@ -1403,6 +1404,8 @@ function confirmRelease(gameId) {
 }
 
 function releaseCreature(gameId) {
+  const game = GAMES_CONFIG.find(g => g.id === gameId);
+  if (game?.clusterLegi) return;
   const allData        = loadAllData();
   updateSeenCreatures(allData);
   const keepCoins      = allData[gameId]?.coins || 0;
