@@ -5699,11 +5699,14 @@ function _injectAtariStyles() {
    bleibt als Trigger für Erst-Unlock, wird aber
    sofort in sd.unlockedThemes persistiert — d.h.
    einmal Monster gemaxed = Theme dauerhaft frei,
-   auch nach Freilassen. Alte localStorage-Keys
-   dienen nur noch dem einmaligen Backfill.
+   auch nach Freilassen.
+
+   KEIN localStorage-Backfill mehr (Migration 0051):
+   die alten Keys sind browser-weit, nicht per-User,
+   und haben Cross-Account-Contamination verursacht.
+   Historischer Backfill für Bestandsuser läuft
+   server-seitig aus sd.seenCreatures.
    ───────────────────────────────────────────────── */
-const THEME_PREF_KEY_LEGACY         = 'lernwelt_theme_pref';
-const THEME_UNLOCK_ORDER_KEY_LEGACY = 'lernwelt_theme_unlock_order';
 
 // Theme-ID → Trigger. { creature } reicht für die Standard-Themes;
 // { creature, variant } für Einhornkatze-Themes (Migration 0049 setzt
@@ -5738,26 +5741,14 @@ function _liveMaxedThemes(allData, sd) {
   return out;
 }
 
-function _readLegacyThemePrefs() {
-  let unlocked = [];
-  try {
-    const raw = JSON.parse(localStorage.getItem(THEME_UNLOCK_ORDER_KEY_LEGACY) || '[]');
-    if (Array.isArray(raw)) unlocked = raw.filter(t => typeof t === 'string');
-  } catch(e) {}
-  const active = localStorage.getItem(THEME_PREF_KEY_LEGACY) || null;
-  return { unlocked, active };
-}
-
 function _getUnlockedThemes(allData) {
   const sd = loadShopData();
   const set = new Set(['default']);
 
-  // Persistent (Server-synced, monoton)
+  // Persistent (Server-synced, monoton — u.a. seenCreatures-Backfill aus Mig. 0051)
   for (const t of (sd.unlockedThemes || [])) set.add(t);
-  // Live (aktuell gemaxede Trigger-Kreatur)
+  // Live (aktuell gemaxede Trigger-Kreatur — Erst-Unlock-Signal)
   for (const t of _liveMaxedThemes(allData, sd)) set.add(t);
-  // Legacy-Backfill (localStorage von vor Migration 0050)
-  for (const t of _readLegacyThemePrefs().unlocked) set.add(t);
 
   return Array.from(set);
 }
@@ -5773,21 +5764,12 @@ function applyThemeFromPreference(allData) {
   const liveThemes = _liveMaxedThemes(allData, sd);
   const newlyOnThisDevice = liveThemes.filter(t => !persisted.has(t));
 
-  // Persistieren tun wir aber ALLES was neu unlocked ist (Live + Legacy).
+  // Persistieren tun wir alle Live-Themes.
   const unlocked = _getUnlockedThemes(allData);
   let sdDirty = false;
   for (const t of unlocked) {
     if (t !== 'default' && !persisted.has(t)) {
       persisted.add(t);
-      sdDirty = true;
-    }
-  }
-
-  // Legacy-activeTheme einmalig übernehmen, falls sd.activeTheme leer ist.
-  if (!sd.activeTheme) {
-    const legacyActive = _readLegacyThemePrefs().active;
-    if (legacyActive && persisted.has(legacyActive)) {
-      sd.activeTheme = legacyActive;
       sdDirty = true;
     }
   }
