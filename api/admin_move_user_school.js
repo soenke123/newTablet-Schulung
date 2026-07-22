@@ -8,13 +8,14 @@
 // cluster_id wird auf NULL gesetzt, weil Cluster schul-gebunden sind.
 // Alle Coins/Kreaturen/Highscores bleiben erhalten.
 //
-// Env-Vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// Env-Vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, FAKE_EMAIL_DOMAIN
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
 import { readJsonBody } from './_utils.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const FAKE_EMAIL_DOMAIN = process.env.FAKE_EMAIL_DOMAIN ?? 'tablet-schulung.fake';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -68,7 +69,7 @@ export default async function handler(req, res) {
 
   // Ziel-Schule existiert?
   const { data: school, error: schoolErr } = await admin
-    .from('schools').select('id, name').eq('id', targetSchoolId).maybeSingle();
+    .from('schools').select('id, slug, name').eq('id', targetSchoolId).maybeSingle();
   if (schoolErr) {
     console.error('[admin_move_user_school] school lookup failed:', schoolErr);
     return res.status(500).json({ ok: false, error: 'school_lookup_failed', message: schoolErr.message });
@@ -109,6 +110,32 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'update_failed', message: updErr.message });
   }
 
-  console.log(`[admin_move_user_school] caller=${callerId} moved ${targetUserId} → school=${school.name}`);
-  return res.status(200).json({ ok: true, moved_to: { school_id: targetSchoolId, school_name: school.name } });
+  // WICHTIG: auth.users.email mitziehen, sonst Login broken. Die
+  // Login-Email basiert auf `${account_name}@${school.slug}.${FAKE_EMAIL_DOMAIN}`
+  // (siehe signup.js:197). Ohne Email-Update landet der User nach dem
+  // Move zwar korrekt in Hogwarts (profiles.school_id), kann sich aber
+  // nur noch mit MPS als Schul-Auswahl einloggen.
+  const newEmail = `${target.account_name}@${school.slug}.${FAKE_EMAIL_DOMAIN}`;
+  const { error: emailErr } = await admin.auth.admin.updateUserById(targetUserId, {
+    email: newEmail,
+  });
+  if (emailErr) {
+    // Nicht rollback — profile ist schon in Ziel-Schule, konsistenter ist,
+    // den Move als "teilweise ok" zu melden. Sönke kann dann manuell die
+    // Email im Supabase-Dashboard fixen. Sichtbar im Response.
+    console.error('[admin_move_user_school] auth email update failed:', emailErr);
+    return res.status(200).json({
+      ok: true,
+      moved_to: { school_id: targetSchoolId, school_name: school.name },
+      warning: 'auth_email_update_failed',
+      warning_message: `Profil verschoben, aber Login-Email konnte nicht auf ${newEmail} gesetzt werden: ${emailErr.message}. Login wird noch mit alter Schul-Auswahl funktionieren.`,
+    });
+  }
+
+  console.log(`[admin_move_user_school] caller=${callerId} moved ${targetUserId} → school=${school.name} email=${newEmail}`);
+  return res.status(200).json({
+    ok: true,
+    moved_to: { school_id: targetSchoolId, school_name: school.name },
+    new_login_email: newEmail,
+  });
 }
