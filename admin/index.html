@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin · Lernwelt</title>
-  <link rel="stylesheet" href="style.css?v=20260721" />
+  <link rel="stylesheet" href="style.css?v=20260722" />
 </head>
 <body>
   <div id="bootMask" class="boot-mask">Lade …</div>
@@ -13,7 +13,17 @@
     <div class="topbar-inner">
       <div class="brand">
         <span class="brand-title">Lernwelt · Admin</span>
-        <span class="brand-sub" id="brandSchool">—</span>
+        <div class="school-switcher" id="schoolSwitcher" hidden>
+          <button type="button" class="school-switcher-btn" id="schoolSwitcherBtn" disabled>
+            <span id="schoolSwitcherLabel">—</span>
+            <span class="chev" id="schoolSwitcherChev" hidden>▾</span>
+          </button>
+          <div class="school-switcher-menu" id="schoolSwitcherMenu" hidden>
+            <div id="schoolSwitcherList"></div>
+            <hr />
+            <button type="button" id="schoolAddBtn">+ Neue Schule…</button>
+          </div>
+        </div>
       </div>
 
       <div class="user-pill" id="userPill" hidden>
@@ -35,6 +45,7 @@
     <button type="button" class="tab active" data-tab="dashboard">Dashboard</button>
     <button type="button" class="tab" data-tab="clusters">Cluster (Kurs)</button>
     <button type="button" class="tab" data-tab="users">User</button>
+    <button type="button" class="tab" data-tab="admins" id="tabAdmins" hidden>Admins (alle Schulen)</button>
   </nav>
 
   <main class="content" id="content" hidden>
@@ -106,6 +117,41 @@
             </thead>
             <tbody id="clusterTbody">
               <tr><td colspan="8" class="empty">Lade …</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Admins-Tab (nur Volladmin) ────────────────────── -->
+    <section class="panel" id="panel-admins" hidden>
+      <div class="panel-head">
+        <h2>Admins <span style="color:var(--a-muted);font-weight:400;font-size:0.7em">(alle Schulen)</span></h2>
+        <p class="panel-sub">Schul-übergreifende Verwaltung aller Admin-Accounts. Verschiebe Admins zwischen Schulen oder ändere Rollen.</p>
+      </div>
+
+      <div class="card">
+        <div class="filter-row">
+          <label>Suche
+            <input type="search" id="adminSearch" placeholder="Accountname, Anzeigename, Schule" />
+          </label>
+          <button type="button" class="btn" id="adminReload">Neu laden</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="dtable" id="adminTable">
+            <thead>
+              <tr>
+                <th>Account</th>
+                <th>Anzeigename</th>
+                <th>Rolle</th>
+                <th>Schule</th>
+                <th>Cluster</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="adminTbody">
+              <tr><td colspan="6" class="empty">Lade …</td></tr>
             </tbody>
           </table>
         </div>
@@ -296,10 +342,73 @@
     </div>
   </div>
 
+  <!-- ─── Schule-Anlegen-Modal (Volladmin) ─────────────────── -->
+  <div class="modal-overlay" id="schoolCreateModal" hidden>
+    <div class="modal-box">
+      <button type="button" class="modal-close" id="schoolCreateClose">×</button>
+      <h3>Neue Schule anlegen</h3>
+      <p class="modal-hint">Slug wird für die Fake-Mail-Domain benutzt (z. B. „hogwarts" → <code>@hogwarts.tablet-schulung.fake</code>).</p>
+      <form id="schoolCreateForm" class="grid-form">
+        <label>Name
+          <input type="text" id="scName" required maxlength="60" placeholder="z. B. Hogwarts" />
+        </label>
+        <label>Slug
+          <input type="text" id="scSlug" required maxlength="32" pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                 placeholder="z. B. hogwarts oder st-marien" />
+          <small class="field-hint">lowercase, nur Buchstaben/Ziffern/Bindestriche.</small>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn primary" id="scSubmit">Schule anlegen</button>
+          <span class="form-feedback" id="scFeedback"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ─── Rolle-Ändern-Modal ───────────────────────────────── -->
+  <div class="modal-overlay" id="roleChangeModal" hidden>
+    <div class="modal-box">
+      <button type="button" class="modal-close" id="roleChangeClose">×</button>
+      <h3 id="roleChangeTitle">Rolle ändern</h3>
+      <p class="modal-hint">Admin-Accounts sind unsichtbare Beobachter — sie tauchen nicht in Ranglisten auf, sammeln keine Bonbons und bekommen keinen Cluster-Bonus.</p>
+      <form id="roleChangeForm" class="grid-form">
+        <label>Neue Rolle
+          <select id="rcRole" required>
+            <option value="student">Schüler:in</option>
+            <option value="schuladmin">Schuladmin</option>
+            <option value="volladmin" id="rcVolladminOption">Volladmin</option>
+          </select>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn primary" id="rcSubmit">Rolle setzen</button>
+          <span class="form-feedback" id="rcFeedback"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ─── User-Schule-Verschieben-Modal (Volladmin) ────────── -->
+  <div class="modal-overlay" id="moveSchoolModal" hidden>
+    <div class="modal-box">
+      <button type="button" class="modal-close" id="moveSchoolClose">×</button>
+      <h3 id="moveSchoolTitle">User in andere Schule verschieben</h3>
+      <p class="modal-hint">Cluster-Zuweisung wird beim Wechsel entfernt (Cluster sind schul-gebunden). Alle Coins, Kreaturen und Highscores bleiben erhalten.</p>
+      <form id="moveSchoolForm" class="grid-form">
+        <label>Ziel-Schule
+          <select id="msTargetSchool" required></select>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn primary" id="msSubmit">Verschieben</button>
+          <span class="form-feedback" id="msFeedback"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="../supabase-config.js?v=20260721"></script>
-  <script src="../session.js?v=20260721"></script>
+  <script src="../supabase-config.js?v=20260722"></script>
+  <script src="../session.js?v=20260722"></script>
   <script src="../avatars.js?v=20260721"></script>
-  <script src="app.js?v=20260721"></script>
+  <script src="app.js?v=20260722"></script>
 </body>
 </html>

@@ -61,16 +61,33 @@ export default async function handler(req, res) {
 
   // 2) Caller ist Admin?
   const { data: profile, error: profErr } = await admin
-    .from('profiles').select('is_admin').eq('id', callerId).maybeSingle();
+    .from('profiles').select('is_admin, is_superadmin, school_id').eq('id', callerId).maybeSingle();
   if (profErr) {
     console.error('[admin_reset_password] profile lookup failed:', profErr);
     return res.status(500).json({ ok: false, error: 'profile_lookup_failed', message: profErr.message });
   }
-  if (!profile?.is_admin) {
+  if (!profile?.is_admin && !profile?.is_superadmin) {
     return res.status(403).json({ ok: false, error: 'not_admin' });
   }
 
-  // 3) Password setzen
+  // 3) Schul-Isolation (Volladmin darf alle Schulen)
+  if (!profile.is_superadmin) {
+    const { data: target, error: tErr } = await admin
+      .from('profiles').select('school_id').eq('id', targetUserId).maybeSingle();
+    if (tErr) {
+      console.error('[admin_reset_password] target lookup failed:', tErr);
+      return res.status(500).json({ ok: false, error: 'target_lookup_failed', message: tErr.message });
+    }
+    if (!target) {
+      return res.status(404).json({ ok: false, error: 'target_not_found' });
+    }
+    if (target.school_id !== profile.school_id) {
+      return res.status(403).json({ ok: false, error: 'cross_school_forbidden',
+        message: 'Ziel-User gehört nicht zu deiner Schule.' });
+    }
+  }
+
+  // 4) Password setzen
   const { error: updErr } = await admin.auth.admin.updateUserById(targetUserId, {
     password: newPassword
   });

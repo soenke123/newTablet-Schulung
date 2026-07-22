@@ -65,17 +65,18 @@ export default async function handler(req, res) {
 
   // 2) Caller ist Admin? + School holen
   const { data: caller, error: callerErr } = await admin
-    .from('profiles').select('is_admin, school_id').eq('id', callerId).maybeSingle();
+    .from('profiles').select('is_admin, is_superadmin, school_id').eq('id', callerId).maybeSingle();
   if (callerErr) {
     console.error('[admin_delete_cluster] caller lookup failed:', callerErr);
     return res.status(500).json({ ok: false, error: 'profile_lookup_failed', message: callerErr.message });
   }
-  if (!caller?.is_admin) {
+  if (!caller?.is_admin && !caller?.is_superadmin) {
     return res.status(403).json({ ok: false, error: 'not_admin' });
   }
   const callerSchool = caller.school_id;
+  const isVolladmin  = !!caller.is_superadmin;
 
-  // 3) Cluster laden → Schul-Isolation
+  // 3) Cluster laden → Schul-Isolation (Volladmin darf schul-übergreifend)
   const { data: cluster, error: clusterErr } = await admin
     .from('clusters').select('id, name, school_id').eq('id', clusterId).maybeSingle();
   if (clusterErr) {
@@ -85,17 +86,19 @@ export default async function handler(req, res) {
   if (!cluster) {
     return res.status(404).json({ ok: false, error: 'cluster_not_found' });
   }
-  if (cluster.school_id !== callerSchool) {
+  if (!isVolladmin && cluster.school_id !== callerSchool) {
     console.warn('[admin_delete_cluster] cross-school delete blocked:', clusterId);
     return res.status(403).json({ ok: false, error: 'cross_school_forbidden' });
   }
+  // Volladmin: nutze die Cluster-Schule als Scope, Schuladmin: seine eigene.
+  const scopedSchool = isVolladmin ? cluster.school_id : callerSchool;
 
   // 4) Optional: alle Cluster-Mitglieder als Auth-User löschen
   const failed = [];
   let usersDeleted = 0;
   if (deleteUsers) {
     const { data: members, error: memErr } = await admin
-      .from('profiles').select('id, account_name').eq('cluster_id', clusterId).eq('school_id', callerSchool);
+      .from('profiles').select('id, account_name').eq('cluster_id', clusterId).eq('school_id', scopedSchool);
     if (memErr) {
       console.error('[admin_delete_cluster] members lookup failed:', memErr);
       return res.status(500).json({ ok: false, error: 'members_lookup_failed', message: memErr.message });
@@ -118,7 +121,7 @@ export default async function handler(req, res) {
 
   // 5) Cluster löschen (profiles.cluster_id → automatisch NULL bei überlebenden Usern)
   const { error: dropErr } = await admin
-    .from('clusters').delete().eq('id', clusterId).eq('school_id', callerSchool);
+    .from('clusters').delete().eq('id', clusterId).eq('school_id', scopedSchool);
   if (dropErr) {
     console.error('[admin_delete_cluster] cluster delete failed:', dropErr);
     return res.status(500).json({ ok: false, error: 'cluster_delete_failed', message: dropErr.message,

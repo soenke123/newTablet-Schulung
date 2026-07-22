@@ -12,9 +12,13 @@
 const bootMask = document.getElementById('bootMask');
 let currentSchoolId = null;
 let currentUserId   = null;   // eingeloggter Admin — für Self-Delete-Schutz
+let isVolladmin     = false;  // is_superadmin? — schaltet School-Switcher + Admins-Tab frei
+let ownSchoolId     = null;   // Schule des Admins (für Schuladmin-Fallback bei Switcher-Reset)
+let allSchools      = [];     // [{id, slug, name, active}], nur für Volladmin gefüllt
 let clusterCache    = [];     // {id, name, season, opens_at, closes_at, bonus?}
 let gamesBySeason   = null;   // { 1: ['game1', ...], 2: [...] }, lazy geladen
 let userCache       = [];     // profiles rows (angereichert mit progress-Daten wenn geladen)
+let adminCache      = [];     // profiles rows aller Admins (Volladmin-Reiter)
 let progressLoaded  = false;  // game_state/wallets/user_collectibles einmal nachgeladen?
 
 // UI-State — überlebt Session-Reload für konsistente Ansicht
@@ -117,19 +121,24 @@ function validateClusterWindow(opensAt, closesAt) {
     location.replace('../index.html');
     return;
   }
-  if (!s.is_admin) {
+  if (!s.is_admin && !s.is_superadmin) {
     console.warn('[admin] kein Admin → Landing');
     location.replace('../index.html');
     return;
   }
 
-  currentSchoolId = s.school_id;
-  currentUserId   = s.id;
+  isVolladmin      = !!s.is_superadmin;
+  ownSchoolId      = s.school_id;
+  currentSchoolId  = s.school_id;
+  currentUserId    = s.id;
   document.getElementById('userPillName').textContent = s.display_name || s.account_name;
-  document.getElementById('brandSchool').textContent  = await schoolLabel(s.school_id);
   document.getElementById('userPill').hidden          = false;
   document.getElementById('tabnav').hidden            = false;
   document.getElementById('content').hidden           = false;
+
+  if (isVolladmin) {
+    document.getElementById('tabAdmins').hidden = false;
+  }
 
   wireUserMenu();
   wireTabs();
@@ -143,6 +152,13 @@ function validateClusterWindow(opensAt, closesAt) {
   wireDeleteModal();
   wireDetailModal();
   wireDashboard();
+  wireSchoolSwitcher();
+  wireSchoolCreateModal();
+  wireRoleChangeModal();
+  wireMoveSchoolModal();
+  wireAdminsTab();
+
+  await initSchoolSwitcher();  // lädt alle Schulen (nur Volladmin) und rendert Header-Label
 
   await loadClusters();  // erst Cluster (User-Dropdowns brauchen sie)
   await loadUsers();
@@ -183,7 +199,7 @@ function wireUserMenu() {
 }
 
 // ─── Tabs ────────────────────────────────────────────────────
-const TAB_PANELS = ['dashboard', 'clusters', 'users'];
+const TAB_PANELS = ['dashboard', 'clusters', 'users', 'admins'];
 
 function wireTabs() {
   document.querySelectorAll('.tab').forEach(tab => {
@@ -198,6 +214,9 @@ function wireTabs() {
       // eigenen initialen Load in init().
       if (target === 'dashboard' && !dashboardLoaded) {
         loadDashboard(currentSchoolId);
+      }
+      if (target === 'admins') {
+        loadAdmins();
       }
     });
   });
@@ -1081,7 +1100,7 @@ async function loadUsers() {
   const tbody = document.getElementById('userTbody');
   try {
     const rows = await api('GET',
-      `profiles?select=id,account_name,display_name,display_name_locked,status,cluster_id,is_admin,avatar_id,created_at`
+      `profiles?select=id,account_name,display_name,display_name_locked,status,cluster_id,is_admin,is_superadmin,avatar_id,created_at`
       + `&school_id=eq.${currentSchoolId}`);
     userCache = rows;
 
@@ -1258,8 +1277,11 @@ function renderUsers() {
   tbody.querySelectorAll('.js-detail').forEach(btn => {
     btn.addEventListener('click', () => openUserDetail(btn.dataset.userId));
   });
-  tbody.querySelectorAll('.js-admin-toggle').forEach(btn => {
-    btn.addEventListener('click', () => toggleAdminFlag(btn.dataset.userId));
+  tbody.querySelectorAll('.js-role-change').forEach(btn => {
+    btn.addEventListener('click', () => openRoleChange(btn.dataset.userId));
+  });
+  tbody.querySelectorAll('.js-move-school').forEach(btn => {
+    btn.addEventListener('click', () => openMoveSchool(btn.dataset.userId));
   });
 
   // Zeilen-Dropdown öffnen/schließen. Klick außerhalb schließt via document-Handler unten.
@@ -1347,7 +1369,7 @@ function renderCell(u, col) {
     }
     case 'status': {
       let badge = `<span class="badge ${u.status}">${u.status}</span>`;
-      if (u.is_admin) badge += ' <span class="badge admin">admin</span>';
+      badge += ' ' + roleBadge(u);
       return `<td>${badge}</td>`;
     }
     case 'cluster': {
@@ -1362,7 +1384,7 @@ function renderCell(u, col) {
     case 'display_name_locked':
       return `<td>${u.display_name_locked ? '🔒 gesperrt' : '—'}</td>`;
     case 'is_admin':
-      return `<td>${u.is_admin ? '<span class="badge admin">admin</span>' : '<span class="badge">schüler</span>'}</td>`;
+      return `<td>${roleBadge(u)}</td>`;
     // Progress-Metriken
     case 'coins':
       return `<td><span class="metric"><span class="metric-icon">🪙</span>${u._progress?.coins ?? '—'}</span></td>`;
@@ -1389,7 +1411,13 @@ function renderCell(u, col) {
 function renderAdminActions(u) {
   const isSelf = u.id === currentUserId;
   const lockLabel  = u.display_name_locked ? '🔒 Entsperren' : '🔓 Sperren';
-  const adminLabel = u.is_admin ? 'Admin entziehen' : 'Zum Admin machen';
+  // Volladmins darf nur ein Volladmin anfassen; sonst Button ausgraut.
+  const roleDisabled = isSelf || (u.is_superadmin && !isVolladmin);
+  // Admins löschen ist tabu (Rollen-Änderung erst → dann löschen).
+  const isAdminRow = u.is_admin || u.is_superadmin;
+  const moveBtn = isVolladmin
+    ? `<button type="button" class="js-move-school" data-user-id="${u.id}">In andere Schule verschieben</button>`
+    : '';
   return `<td>
     <div class="row-actions" data-user-id="${u.id}">
       <button type="button" class="row-actions__btn js-row-actions-btn">Aktionen</button>
@@ -1397,12 +1425,20 @@ function renderAdminActions(u) {
         <button type="button" class="js-rename"       data-user-id="${u.id}">Umbenennen</button>
         <button type="button" class="js-pw-reset"     data-user-id="${u.id}">Passwort setzen</button>
         <button type="button" class="js-lock-toggle"  data-user-id="${u.id}">${lockLabel}</button>
-        <button type="button" class="js-admin-toggle" data-user-id="${u.id}" ${isSelf ? 'disabled' : ''}>${adminLabel}</button>
+        <button type="button" class="js-role-change"  data-user-id="${u.id}" ${roleDisabled ? 'disabled' : ''}>Rolle ändern</button>
+        ${moveBtn}
         <hr />
-        <button type="button" class="danger js-delete" data-user-id="${u.id}" ${isSelf ? 'disabled' : ''}>Löschen</button>
+        <button type="button" class="danger js-delete" data-user-id="${u.id}" ${(isSelf || isAdminRow) ? 'disabled' : ''}>Löschen</button>
       </div>
     </div>
   </td>`;
+}
+
+// Rendert den passenden Rollen-Badge für einen User-Row.
+function roleBadge(u) {
+  if (u.is_superadmin) return '<span class="badge volladmin">Volladmin</span>';
+  if (u.is_admin)      return '<span class="badge schuladmin">Schuladmin</span>';
+  return '<span class="badge">Schüler</span>';
 }
 function renderProgressActions(u) {
   return `<td><div class="actions">
@@ -1533,20 +1569,31 @@ async function resetPassword(userId) {
   }
 }
 
-async function toggleAdminFlag(userId) {
+// Rolle serverseitig setzen. Aufgerufen aus dem Rollen-Modal.
+// Aktualisiert userCache + adminCache je nach Vorher/Nachher-Zustand,
+// damit die Ansichten sofort stimmen.
+async function applyRoleChange(userId, role) {
+  const token = window.__accessToken;
+  const res = await fetch('/api/admin_promote_user', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, role })
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body?.ok) throw new Error(body?.message || body?.error || `HTTP ${res.status}`);
+
+  const flags = body.flags || { is_admin: false, is_superadmin: false };
   const u = userCache.find(x => x.id === userId);
-  if (!u) return;
-  const next = !u.is_admin;
-  const label = next ? 'zum Admin machen' : 'Admin-Rechte entziehen';
-  if (!confirm(`"${u.account_name}" wirklich ${label}?`)) return;
-  try {
-    await api('PATCH', `profiles?id=eq.${userId}`, { is_admin: next });
-    u.is_admin = next;
-    renderUsers();
-    showToast(next ? `${u.account_name} ist jetzt Admin.` : `${u.account_name} ist kein Admin mehr.`);
-  } catch (err) {
-    showToast('Admin-Toggle fehlgeschlagen: ' + err.message, 'error');
+  if (u) { u.is_admin = flags.is_admin; u.is_superadmin = flags.is_superadmin; }
+  const au = adminCache.find(x => x.id === userId);
+  if (au) { au.is_admin = flags.is_admin; au.is_superadmin = flags.is_superadmin; }
+  // Wenn Ex-Admin: aus adminCache raus. Wenn Neu-Admin: nachladen.
+  if (!flags.is_admin && !flags.is_superadmin) {
+    adminCache = adminCache.filter(x => x.id !== userId);
+  } else if (!au) {
+    // war vorher kein Admin — bei Bedarf beim nächsten Admins-Tab-Load frisch ziehen
   }
+  return body;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1650,11 +1697,20 @@ function wireDeleteModal() {
 function openDeleteModal(ids) {
   // Self-Delete verhindern (Bulk-Bar deaktiviert eigene Checkbox — hier zur Sicherheit filtern)
   ids = ids.filter(id => id !== currentUserId);
+  // Admins können nicht gelöscht werden — vorher Rolle auf Schüler ändern.
+  const adminIds = ids.filter(id => {
+    const u = userCache.find(x => x.id === id);
+    return u && (u.is_admin || u.is_superadmin);
+  });
+  if (adminIds.length > 0) {
+    showToast(`${adminIds.length === 1 ? 'Ein Admin' : `${adminIds.length} Admins`} in der Auswahl. Rolle zuerst auf Schüler:in ändern, dann löschen.`, 'error');
+    ids = ids.filter(id => !adminIds.includes(id));
+  }
   if (ids.length === 0) return;
 
   deleteTargetIds = ids;
   const users = ids.map(id => userCache.find(u => u.id === id)).filter(Boolean);
-  const adminCount = users.filter(u => u.is_admin).length;
+  const adminCount = 0;  // Admins bereits ausgefiltert
   const n = users.length;
 
   const title = n === 1 ? `User „${users[0].account_name}" löschen?` : `${n} User löschen?`;
@@ -1851,4 +1907,398 @@ function showToast(message, kind) {
     el.style.opacity = '0';
     setTimeout(() => el.remove(), 260);
   }, 3000);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   School-Switcher (Header-Dropdown)
+   ══════════════════════════════════════════════════════════════ */
+
+async function initSchoolSwitcher() {
+  const wrap = document.getElementById('schoolSwitcher');
+  const btn  = document.getElementById('schoolSwitcherBtn');
+  const chev = document.getElementById('schoolSwitcherChev');
+  wrap.hidden = false;
+
+  if (isVolladmin) {
+    try {
+      allSchools = await api('GET', 'schools?select=id,slug,name,active&order=name.asc');
+    } catch (err) {
+      console.warn('[admin] Schulliste laden fehlgeschlagen:', err.message);
+      allSchools = [];
+    }
+    btn.disabled = false;
+    chev.hidden  = false;
+    renderSchoolSwitcherMenu();
+  } else {
+    // Schuladmin sieht nur seine Schule als Label, keine Interaktion.
+    allSchools = [];
+    btn.disabled = true;
+  }
+  await updateSchoolSwitcherLabel();
+}
+
+async function updateSchoolSwitcherLabel() {
+  const label = document.getElementById('schoolSwitcherLabel');
+  if (isVolladmin && allSchools.length > 0) {
+    const s = allSchools.find(x => x.id === currentSchoolId);
+    label.textContent = s ? s.name : '(unbekannte Schule)';
+  } else {
+    label.textContent = await schoolLabel(currentSchoolId);
+  }
+}
+
+function renderSchoolSwitcherMenu() {
+  const list = document.getElementById('schoolSwitcherList');
+  if (allSchools.length === 0) {
+    list.innerHTML = '<div style="padding:8px;color:var(--a-muted);font-size:12px;">Keine Schulen</div>';
+    return;
+  }
+  list.innerHTML = allSchools.map(s => `
+    <button type="button" class="${s.id === currentSchoolId ? 'active' : ''}"
+            data-school-id="${s.id}">
+      ${escapeHtml(s.name)}${!s.active ? ' <small>(inaktiv)</small>' : ''}
+    </button>
+  `).join('');
+  list.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      const id = b.dataset.schoolId;
+      document.getElementById('schoolSwitcherMenu').hidden = true;
+      if (id === currentSchoolId) return;
+      switchSchool(id);
+    });
+  });
+}
+
+function wireSchoolSwitcher() {
+  const btn  = document.getElementById('schoolSwitcherBtn');
+  const menu = document.getElementById('schoolSwitcherMenu');
+  const addBtn = document.getElementById('schoolAddBtn');
+
+  btn.addEventListener('click', e => {
+    if (btn.disabled) return;
+    e.stopPropagation();
+    menu.hidden = !menu.hidden;
+  });
+  document.addEventListener('click', () => menu.hidden = true);
+  menu.addEventListener('click', e => e.stopPropagation());
+
+  addBtn.addEventListener('click', () => {
+    menu.hidden = true;
+    openSchoolCreate();
+  });
+}
+
+async function switchSchool(newSchoolId) {
+  currentSchoolId = newSchoolId;
+  await updateSchoolSwitcherLabel();
+  renderSchoolSwitcherMenu();
+
+  // Alles neu laden. Caches wegwerfen, User-Auswahl fallen lassen.
+  clusterCache = [];
+  userCache = [];
+  selectedIds.clear();
+  progressLoaded = false;
+  dashboardLoaded = false;
+
+  await loadClusters();
+  await loadUsers();
+  loadDashboard(currentSchoolId);  // fire-and-forget
+  showToast(`Kontext: ${document.getElementById('schoolSwitcherLabel').textContent}`);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Schule-Anlegen-Modal
+   ══════════════════════════════════════════════════════════════ */
+
+function wireSchoolCreateModal() {
+  const overlay = document.getElementById('schoolCreateModal');
+  const close   = document.getElementById('schoolCreateClose');
+  const form    = document.getElementById('schoolCreateForm');
+
+  const doClose = () => { overlay.hidden = true; };
+  close.addEventListener('click', doClose);
+  overlay.addEventListener('click', e => { if (e.target === overlay) doClose(); });
+
+  // Auto-Slug aus Namen: leerzeichen → hyphen, lowercase, restliche removed.
+  const nameInp = document.getElementById('scName');
+  const slugInp = document.getElementById('scSlug');
+  let slugTouched = false;
+  slugInp.addEventListener('input', () => { slugTouched = true; });
+  nameInp.addEventListener('input', () => {
+    if (slugTouched) return;
+    slugInp.value = nameInp.value
+      .toLowerCase()
+      .replace(/[äöüß]/g, m => ({ä:'ae',ö:'oe',ü:'ue',ß:'ss'})[m])
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fb  = document.getElementById('scFeedback');
+    const btn = document.getElementById('scSubmit');
+    fb.className = 'form-feedback';
+    fb.textContent = '';
+    btn.disabled = true;
+    try {
+      const token = window.__accessToken;
+      const res = await fetch('/api/admin_create_school', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: nameInp.value.trim(),
+          slug: slugInp.value.trim()
+        })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body?.ok) throw new Error(body?.message || body?.error || `HTTP ${res.status}`);
+
+      allSchools.push(body.school);
+      allSchools.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+      renderSchoolSwitcherMenu();
+      overlay.hidden = true;
+      form.reset();
+      slugTouched = false;
+      showToast(`Schule „${body.school.name}" angelegt.`);
+    } catch (err) {
+      fb.textContent = err.message;
+      fb.classList.add('error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+function openSchoolCreate() {
+  const overlay = document.getElementById('schoolCreateModal');
+  document.getElementById('scName').value = '';
+  document.getElementById('scSlug').value = '';
+  document.getElementById('scFeedback').textContent = '';
+  overlay.hidden = false;
+  setTimeout(() => document.getElementById('scName').focus(), 30);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Rolle-Ändern-Modal
+   ══════════════════════════════════════════════════════════════ */
+
+let roleChangeTargetId = null;
+
+function wireRoleChangeModal() {
+  const overlay = document.getElementById('roleChangeModal');
+  const close   = document.getElementById('roleChangeClose');
+  const form    = document.getElementById('roleChangeForm');
+
+  const doClose = () => { overlay.hidden = true; roleChangeTargetId = null; };
+  close.addEventListener('click', doClose);
+  overlay.addEventListener('click', e => { if (e.target === overlay) doClose(); });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!roleChangeTargetId) return;
+    const fb  = document.getElementById('rcFeedback');
+    const btn = document.getElementById('rcSubmit');
+    fb.className = 'form-feedback';
+    fb.textContent = '';
+    btn.disabled = true;
+    try {
+      const role = document.getElementById('rcRole').value;
+      await applyRoleChange(roleChangeTargetId, role);
+      overlay.hidden = true;
+      roleChangeTargetId = null;
+      renderUsers();
+      if (adminCache.length > 0 || role !== 'student') {
+        // Admins-Tab live halten
+        renderAdmins();
+      }
+      showToast(`Rolle gesetzt: ${role}`);
+    } catch (err) {
+      fb.textContent = err.message;
+      fb.classList.add('error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+function openRoleChange(userId) {
+  // Ziel kann aus userCache oder adminCache kommen (letzterer für Admin-Tab).
+  const u = userCache.find(x => x.id === userId) || adminCache.find(x => x.id === userId);
+  if (!u) return;
+  roleChangeTargetId = userId;
+
+  const currentRole = u.is_superadmin ? 'volladmin' : (u.is_admin ? 'schuladmin' : 'student');
+  document.getElementById('roleChangeTitle').textContent =
+    `Rolle für „${u.display_name || u.account_name}" ändern`;
+
+  const roleSel = document.getElementById('rcRole');
+  const vollOpt = document.getElementById('rcVolladminOption');
+  vollOpt.hidden   = !isVolladmin;
+  vollOpt.disabled = !isVolladmin;
+  roleSel.value = currentRole;
+
+  document.getElementById('rcFeedback').textContent = '';
+  document.getElementById('roleChangeModal').hidden = false;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   User-Schule-Verschieben-Modal (Volladmin)
+   ══════════════════════════════════════════════════════════════ */
+
+let moveSchoolTargetId = null;
+
+function wireMoveSchoolModal() {
+  const overlay = document.getElementById('moveSchoolModal');
+  const close   = document.getElementById('moveSchoolClose');
+  const form    = document.getElementById('moveSchoolForm');
+
+  const doClose = () => { overlay.hidden = true; moveSchoolTargetId = null; };
+  close.addEventListener('click', doClose);
+  overlay.addEventListener('click', e => { if (e.target === overlay) doClose(); });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!moveSchoolTargetId) return;
+    const fb  = document.getElementById('msFeedback');
+    const btn = document.getElementById('msSubmit');
+    fb.className = 'form-feedback';
+    fb.textContent = '';
+    btn.disabled = true;
+    try {
+      const targetSchoolId = document.getElementById('msTargetSchool').value;
+      const token = window.__accessToken;
+      const res = await fetch('/api/admin_move_user_school', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: moveSchoolTargetId, target_school_id: targetSchoolId })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body?.ok) throw new Error(body?.message || body?.error || `HTTP ${res.status}`);
+
+      // Aus User-Ansicht der aktuellen Schule entfernen
+      userCache = userCache.filter(x => x.id !== moveSchoolTargetId);
+      // Admin-Cache aktualisieren, falls betroffen
+      const au = adminCache.find(x => x.id === moveSchoolTargetId);
+      if (au) { au.school_id = targetSchoolId; au.cluster_id = null; }
+      overlay.hidden = true;
+      moveSchoolTargetId = null;
+      renderUsers();
+      renderAdmins();
+      showToast(`Verschoben nach „${body.moved_to?.school_name || 'Ziel-Schule'}".`);
+    } catch (err) {
+      fb.textContent = err.message;
+      fb.classList.add('error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+function openMoveSchool(userId) {
+  if (!isVolladmin) return;
+  const u = userCache.find(x => x.id === userId) || adminCache.find(x => x.id === userId);
+  if (!u) return;
+  moveSchoolTargetId = userId;
+  document.getElementById('moveSchoolTitle').textContent =
+    `„${u.display_name || u.account_name}" in andere Schule verschieben`;
+
+  const sel = document.getElementById('msTargetSchool');
+  sel.innerHTML = allSchools
+    .filter(s => s.id !== u.school_id)
+    .map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`)
+    .join('');
+  if (sel.options.length === 0) {
+    sel.innerHTML = '<option value="">— keine andere Schule verfügbar —</option>';
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+  }
+
+  document.getElementById('msFeedback').textContent = '';
+  document.getElementById('moveSchoolModal').hidden = false;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Admins-Tab (Volladmin-only Übersicht aller Admins)
+   ══════════════════════════════════════════════════════════════ */
+
+function wireAdminsTab() {
+  const search = document.getElementById('adminSearch');
+  const reload = document.getElementById('adminReload');
+  if (!search || !reload) return;  // Tab-Elemente sind für Schuladmin nicht relevant
+  search.addEventListener('input', renderAdmins);
+  reload.addEventListener('click', loadAdmins);
+}
+
+async function loadAdmins() {
+  if (!isVolladmin) return;
+  const tbody = document.getElementById('adminTbody');
+  try {
+    const rows = await api('GET',
+      `profiles?select=id,account_name,display_name,school_id,cluster_id,is_admin,is_superadmin`
+      + `&or=(is_admin.eq.true,is_superadmin.eq.true)`
+      + `&order=is_superadmin.desc,account_name.asc`);
+    adminCache = rows;
+    renderAdmins();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function renderAdmins() {
+  const tbody = document.getElementById('adminTbody');
+  if (!tbody) return;
+  const q = (document.getElementById('adminSearch')?.value || '').trim().toLowerCase();
+
+  const schoolById = {};
+  for (const s of allSchools) schoolById[s.id] = s.name;
+  const clusterById = {};
+  for (const c of clusterCache) clusterById[c.id] = `${c.name} · S${c.season}`;
+
+  let rows = adminCache.slice();
+  if (q) rows = rows.filter(r =>
+    (r.account_name || '').toLowerCase().includes(q) ||
+    (r.display_name || '').toLowerCase().includes(q) ||
+    (schoolById[r.school_id] || '').toLowerCase().includes(q));
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Keine Admins gefunden.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(u => {
+    const isSelf = u.id === currentUserId;
+    return `<tr>
+      <td>${escapeHtml(u.account_name)}</td>
+      <td>${escapeHtml(u.display_name || '—')}</td>
+      <td>${roleBadge(u)}</td>
+      <td>${escapeHtml(schoolById[u.school_id] || '—')}</td>
+      <td>${escapeHtml(clusterById[u.cluster_id] || '—')}</td>
+      <td>
+        <div class="row-actions">
+          <button type="button" class="row-actions__btn js-row-actions-btn">Aktionen</button>
+          <div class="row-actions__menu" hidden>
+            <button type="button" class="js-role-change" data-user-id="${u.id}" ${isSelf ? 'disabled' : ''}>Rolle ändern</button>
+            <button type="button" class="js-move-school" data-user-id="${u.id}">In andere Schule verschieben</button>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('.js-row-actions-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const menu = btn.nextElementSibling;
+      const wasOpen = !menu.hidden;
+      document.querySelectorAll('.row-actions__menu').forEach(m => m.hidden = true);
+      menu.hidden = wasOpen;
+    });
+  });
+  tbody.querySelectorAll('.js-role-change').forEach(b => {
+    b.addEventListener('click', () => openRoleChange(b.dataset.userId));
+  });
+  tbody.querySelectorAll('.js-move-school').forEach(b => {
+    b.addEventListener('click', () => openMoveSchool(b.dataset.userId));
+  });
 }

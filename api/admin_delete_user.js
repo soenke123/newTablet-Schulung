@@ -70,15 +70,16 @@ export default async function handler(req, res) {
 
   // 2) Caller ist Admin? + School holen
   const { data: caller, error: callerErr } = await admin
-    .from('profiles').select('is_admin, school_id').eq('id', callerId).maybeSingle();
+    .from('profiles').select('is_admin, is_superadmin, school_id').eq('id', callerId).maybeSingle();
   if (callerErr) {
     console.error('[admin_delete_user] caller lookup failed:', callerErr);
     return res.status(500).json({ ok: false, error: 'profile_lookup_failed', message: callerErr.message });
   }
-  if (!caller?.is_admin) {
+  if (!caller?.is_admin && !caller?.is_superadmin) {
     return res.status(403).json({ ok: false, error: 'not_admin' });
   }
   const callerSchool = caller.school_id;
+  const isVolladmin  = !!caller.is_superadmin;
 
   // 3) Self-Delete-Schutz
   if (userIds.includes(callerId)) {
@@ -86,20 +87,32 @@ export default async function handler(req, res) {
       message: 'Der eigene Admin-Account kann nicht gelöscht werden.' });
   }
 
-  // 4) Schul-Isolation: alle Ziele müssen zur selben Schule gehören
+  // 4) Schul-Isolation (Volladmin darf schul-übergreifend) + Admin-Guard
+  //    Admins können NICHT über diesen Endpunkt gelöscht werden — vorher via
+  //    admin_promote_user auf 'student' zurückstufen. Das schützt vor
+  //    versehentlichem Admin-Lockout.
   const { data: targets, error: targetsErr } = await admin
-    .from('profiles').select('id, account_name, school_id').in('id', userIds);
+    .from('profiles').select('id, account_name, school_id, is_admin, is_superadmin').in('id', userIds);
   if (targetsErr) {
     console.error('[admin_delete_user] targets lookup failed:', targetsErr);
     return res.status(500).json({ ok: false, error: 'targets_lookup_failed', message: targetsErr.message });
   }
   const foundIds = new Set((targets || []).map(t => t.id));
   const missing = userIds.filter(id => !foundIds.has(id));
-  const wrongSchool = (targets || []).filter(t => t.school_id !== callerSchool);
-  if (wrongSchool.length > 0) {
-    console.warn('[admin_delete_user] cross-school delete blocked:', wrongSchool.map(t => t.id));
-    return res.status(403).json({ ok: false, error: 'cross_school_forbidden',
-      message: 'Ein oder mehrere Ziele gehören nicht zu deiner Schule.' });
+
+  const adminTargets = (targets || []).filter(t => t.is_admin || t.is_superadmin);
+  if (adminTargets.length > 0) {
+    return res.status(400).json({ ok: false, error: 'admin_delete_forbidden',
+      message: `${adminTargets.length === 1 ? 'Ein Admin-Account' : `${adminTargets.length} Admin-Accounts`} in der Auswahl. Zuerst Rolle auf Schüler:in ändern, dann löschen.` });
+  }
+
+  if (!isVolladmin) {
+    const wrongSchool = (targets || []).filter(t => t.school_id !== callerSchool);
+    if (wrongSchool.length > 0) {
+      console.warn('[admin_delete_user] cross-school delete blocked:', wrongSchool.map(t => t.id));
+      return res.status(403).json({ ok: false, error: 'cross_school_forbidden',
+        message: 'Ein oder mehrere Ziele gehören nicht zu deiner Schule.' });
+    }
   }
 
   // 5) Iteriert deleteUser. Cascade räumt alles nachgelagerte.
