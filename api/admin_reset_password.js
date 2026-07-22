@@ -70,10 +70,10 @@ export default async function handler(req, res) {
     return res.status(403).json({ ok: false, error: 'not_admin' });
   }
 
-  // 3) Schul-Isolation (Volladmin darf alle Schulen)
+  // 3) Schul-Isolation + Volladmin-Schutz für Schuladmins
   if (!profile.is_superadmin) {
     const { data: target, error: tErr } = await admin
-      .from('profiles').select('school_id').eq('id', targetUserId).maybeSingle();
+      .from('profiles').select('school_id, is_superadmin').eq('id', targetUserId).maybeSingle();
     if (tErr) {
       console.error('[admin_reset_password] target lookup failed:', tErr);
       return res.status(500).json({ ok: false, error: 'target_lookup_failed', message: tErr.message });
@@ -84,6 +84,10 @@ export default async function handler(req, res) {
     if (target.school_id !== profile.school_id) {
       return res.status(403).json({ ok: false, error: 'cross_school_forbidden',
         message: 'Ziel-User gehört nicht zu deiner Schule.' });
+    }
+    if (target.is_superadmin) {
+      return res.status(403).json({ ok: false, error: 'cannot_touch_volladmin',
+        message: 'Ein Schuladmin kann kein Volladmin-Passwort setzen.' });
     }
   }
 

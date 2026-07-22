@@ -21,3 +21,28 @@ export async function readJsonBody(req) {
     return null;
   }
 }
+
+// Löscht alle Fortschritts-Rows eines Users. Wird von admin_promote_user
+// (Student → Admin) und admin_reset_user_progress verwendet. Grants dafür
+// stehen in Migration 0054.
+export const PROGRESS_TABLES = [
+  'game_state',
+  'wallets',
+  'user_collectibles',
+  'user_unlocked_games',
+  'game_highscores',
+  'user_legi_grants',
+  'cluster_bonus_grants',
+  'user_bonbon_milestone_grants',
+  'bonbon_daily_claims',
+  'user_legi_task_gifts',
+];
+
+export async function wipeUserProgress(admin, userId) {
+  for (const t of PROGRESS_TABLES) {
+    const { error } = await admin.from(t).delete().eq('user_id', userId);
+    if (error) {
+      throw new Error(`${t}: ${error.message}`);
+    }
+  }
+}

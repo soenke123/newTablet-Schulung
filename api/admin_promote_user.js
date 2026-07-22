@@ -21,7 +21,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
-import { readJsonBody } from './_utils.js';
+import { readJsonBody, wipeUserProgress } from './_utils.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -153,30 +153,4 @@ export default async function handler(req, res) {
 
   console.log(`[admin_promote_user] caller=${callerId} target=${targetUserId} → ${role} (wiped=${progressWiped})`);
   return res.status(200).json({ ok: true, role, flags: newFlags, progress_wiped: progressWiped });
-}
-
-
-// Löscht alle Fortschritts-Rows eines Users. Nutzt service_role und
-// benötigt entsprechende Grants (Migration 0054). Reihenfolge egal —
-// alle Rows sind per user_id-FK verknüpft, keine gegenseitigen
-// Abhängigkeiten.
-async function wipeUserProgress(admin, userId) {
-  const tables = [
-    'game_state',
-    'wallets',
-    'user_collectibles',
-    'user_unlocked_games',
-    'game_highscores',
-    'user_legi_grants',
-    'cluster_bonus_grants',
-    'user_bonbon_milestone_grants',
-    'bonbon_daily_claims',
-    'user_legi_task_gifts',
-  ];
-  for (const t of tables) {
-    const { error } = await admin.from(t).delete().eq('user_id', userId);
-    if (error) {
-      throw new Error(`${t}: ${error.message}`);
-    }
-  }
 }

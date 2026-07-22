@@ -17,6 +17,7 @@ let ownSchoolId     = null;   // Schule des Admins (für Schuladmin-Fallback bei
 let allSchools      = [];     // [{id, slug, name, active}], nur für Volladmin gefüllt
 let clusterCache    = [];     // {id, name, season, opens_at, closes_at, bonus?}
 let gamesBySeason   = null;   // { 1: ['game1', ...], 2: [...] }, lazy geladen
+let gameTitleById   = null;   // { game1: 'Zahlenduell', ... }, lazy geladen aus games-Tabelle
 let userCache       = [];     // profiles rows (angereichert mit progress-Daten wenn geladen)
 let adminCache      = [];     // profiles rows aller Admins (Volladmin-Reiter)
 let progressLoaded  = false;  // game_state/wallets/user_collectibles einmal nachgeladen?
@@ -490,13 +491,21 @@ let bonusClusterId = null;
 
 async function ensureGamesBySeason() {
   if (gamesBySeason) return gamesBySeason;
-  const rows = await api('GET', `games?select=id,season&active=eq.true&order=season.asc`);
+  const rows = await api('GET', `games?select=id,season,title&active=eq.true&order=season.asc`);
   gamesBySeason = {};
+  gameTitleById = {};
   for (const g of rows) {
     if (!gamesBySeason[g.season]) gamesBySeason[g.season] = [];
     gamesBySeason[g.season].push(g.id);
+    if (g.title) gameTitleById[g.id] = g.title;
   }
   return gamesBySeason;
+}
+
+// Liefert den Spielnamen zu einer game-ID, Fallback auf die ID selbst.
+// Nutzt gameTitleById, das per ensureGamesBySeason() befüllt wird.
+function gameTitle(gameId) {
+  return (gameTitleById && gameTitleById[gameId]) || gameId;
 }
 
 function wireClusterBonusModal() {
@@ -1274,6 +1283,9 @@ function renderUsers() {
   tbody.querySelectorAll('.js-delete').forEach(btn => {
     btn.addEventListener('click', () => openDeleteModal([btn.dataset.userId]));
   });
+  tbody.querySelectorAll('.js-reset-progress').forEach(btn => {
+    btn.addEventListener('click', () => resetUserProgress(btn.dataset.userId));
+  });
   tbody.querySelectorAll('.js-detail').forEach(btn => {
     btn.addEventListener('click', () => openUserDetail(btn.dataset.userId));
   });
@@ -1352,7 +1364,17 @@ function renderUserRow(u, cols) {
   return `<tr class="${checked ? 'row-selected' : ''}">${selectCell}${cells}</tr>`;
 }
 
+// Ein Volladmin ist für Schuladmins tabu — sie dürfen ihn weder umbenennen,
+// noch Passwort/Cluster/Rolle ändern. Serverseitig durch RLS + API-Guards
+// abgesichert; das Frontend graut die UI-Elemente aus, damit der Schuladmin
+// nicht ins Leere klickt und einen Server-Fehler kassiert.
+function isProtectedFromCaller(u) {
+  return u.is_superadmin && !isVolladmin;
+}
+
 function renderCell(u, col) {
+  const isSelf     = u.id === currentUserId;
+  const isProtected = isProtectedFromCaller(u);
   switch (col.key) {
     case 'account_name':
       return `<td>${escapeHtml(u.account_name)}</td>`;
@@ -1373,7 +1395,9 @@ function renderCell(u, col) {
         .concat(clusterCache.map(c =>
           `<option value="${c.id}" ${c.id === u.cluster_id ? 'selected' : ''}>${escapeHtml(c.name)} · S${c.season}</option>`
         )).join('');
-      return `<td><select class="js-cluster-select" data-user-id="${u.id}">${opts}</select></td>`;
+      const disabled = (isSelf || isProtected) ? 'disabled' : '';
+      const title    = isProtected ? 'title="Volladmin kann nur von einem Volladmin geändert werden"' : '';
+      return `<td><select class="js-cluster-select" data-user-id="${u.id}" ${disabled} ${title}>${opts}</select></td>`;
     }
     case 'created_at':
       return `<td>${fmtDT(u.created_at)}</td>`;
@@ -1405,12 +1429,15 @@ function renderCell(u, col) {
 }
 
 function renderAdminActions(u) {
-  const isSelf = u.id === currentUserId;
+  const isSelf     = u.id === currentUserId;
+  const isProtected = isProtectedFromCaller(u);
   const lockLabel  = u.display_name_locked ? '🔒 Entsperren' : '🔓 Sperren';
-  // Volladmins darf nur ein Volladmin anfassen; sonst Button ausgraut.
-  const roleDisabled = isSelf || (u.is_superadmin && !isVolladmin);
+  // Volladmins darf nur ein Volladmin anfassen; sonst alle Buttons ausgraut.
+  const roleDisabled  = isSelf || isProtected;
+  const editDisabled  = isSelf || isProtected;   // Umbenennen, Lock-Toggle, PW-Reset
   // Admins löschen ist tabu (Rollen-Änderung erst → dann löschen).
   const isAdminRow = u.is_admin || u.is_superadmin;
+  const protectedTitle = isProtected ? 'title="Nur ein Volladmin kann einen Volladmin ändern"' : '';
   const moveBtn = isVolladmin
     ? `<button type="button" class="js-move-school" data-user-id="${u.id}">In andere Schule verschieben</button>`
     : '';
@@ -1418,10 +1445,11 @@ function renderAdminActions(u) {
     <div class="row-actions" data-user-id="${u.id}">
       <button type="button" class="row-actions__btn js-row-actions-btn">Aktionen</button>
       <div class="row-actions__menu" hidden>
-        <button type="button" class="js-rename"       data-user-id="${u.id}">Umbenennen</button>
-        <button type="button" class="js-pw-reset"     data-user-id="${u.id}">Passwort setzen</button>
-        <button type="button" class="js-lock-toggle"  data-user-id="${u.id}">${lockLabel}</button>
-        <button type="button" class="js-role-change"  data-user-id="${u.id}" ${roleDisabled ? 'disabled' : ''}>Rolle ändern</button>
+        <button type="button" class="js-rename"       data-user-id="${u.id}" ${editDisabled ? 'disabled' : ''} ${protectedTitle}>Umbenennen</button>
+        <button type="button" class="js-pw-reset"     data-user-id="${u.id}" ${editDisabled ? 'disabled' : ''} ${protectedTitle}>Passwort setzen</button>
+        <button type="button" class="js-lock-toggle"  data-user-id="${u.id}" ${editDisabled ? 'disabled' : ''} ${protectedTitle}>${lockLabel}</button>
+        <button type="button" class="js-role-change"  data-user-id="${u.id}" ${roleDisabled ? 'disabled' : ''} ${protectedTitle}>Rolle ändern</button>
+        <button type="button" class="js-reset-progress" data-user-id="${u.id}" ${editDisabled || isAdminRow ? 'disabled' : ''} ${protectedTitle}>Fortschritt zurücksetzen</button>
         ${moveBtn}
         <hr />
         <button type="button" class="danger js-delete" data-user-id="${u.id}" ${(isSelf || isAdminRow) ? 'disabled' : ''}>Löschen</button>
@@ -1541,6 +1569,64 @@ async function renameUser(userId) {
     renderUsers();
   } catch (err) {
     showToast('Umbenennen fehlgeschlagen: ' + err.message, 'error');
+  }
+}
+
+// Setzt einen Schüler-Account auf Frisch-Zustand zurück (alles außer
+// Account-Name, Passwort, Cluster, Schule). Bestätigung durch Tippen
+// des Accountnamens — nicht rückgängig zu machen.
+async function resetUserProgress(userId) {
+  const u = userCache.find(x => x.id === userId);
+  if (!u) return;
+  if (u.is_admin || u.is_superadmin) {
+    showToast('Admin-Accounts haben keinen Fortschritt zum Zurücksetzen.', 'error');
+    return;
+  }
+  const answer = prompt(
+    `Fortschritt von „${u.display_name || u.account_name}" komplett zurücksetzen?\n\n` +
+    `Alle Coins, Kristalle, Kreaturen, Nester, Highscores und Meilensteine werden gelöscht.\n` +
+    `Cluster-Starthilfe wird bei einem Cluster automatisch neu ausgeschüttet.\n\n` +
+    `Zum Bestätigen den Accountnamen tippen: ${u.account_name}`,
+    ''
+  );
+  if (answer === null) return;
+  if (answer.trim() !== u.account_name) {
+    showToast('Accountname stimmt nicht — abgebrochen.', 'error');
+    return;
+  }
+  try {
+    const token = window.__accessToken;
+    const res = await fetch('/api/admin_reset_user_progress', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body?.ok) throw new Error(body?.message || body?.error || `HTTP ${res.status}`);
+
+    // Progress-Cache invalidieren → beim nächsten Render 0-Werte anzeigen.
+    if (u._progress) {
+      u._progress.coins       = 0;
+      u._progress.kristalle   = 0;
+      u._progress.creatures   = 0;
+      u._progress.legendaries = 0;
+      u._progress.lastActive  = null;
+    }
+    progressLoaded = false;  // erzwinge Reload beim nächsten Progress-View
+    renderUsers();
+
+    const parts = [`${u.account_name} zurückgesetzt`];
+    const bonus = body.bonus_applied;
+    if (bonus?.granted) {
+      const sub = [];
+      if (bonus.coins_added)    sub.push(`+${bonus.coins_added} 🪙`);
+      if (bonus.babies_placed)  sub.push(`${bonus.babies_placed} Baby-Monster`);
+      if (bonus.games_unlocked) sub.push(`${bonus.games_unlocked} Spiele frei`);
+      if (sub.length > 0) parts.push(`Starthilfe: ${sub.join(', ')}`);
+    }
+    showToast(parts.join(' · '));
+  } catch (err) {
+    showToast('Zurücksetzen fehlgeschlagen: ' + err.message, 'error');
   }
 }
 
@@ -1817,12 +1903,14 @@ async function openUserDetail(userId) {
       api('GET', `game_state?select=game_id,creature,growth,points,rounds_played,coins,updated_at&user_id=eq.${userId}&order=updated_at.desc`),
       api('GET', `user_collectibles?select=value&user_id=eq.${userId}&key=eq.shop_state`)
     ]);
+    // Spielnamen-Lookup sicherstellen — sonst zeigen wir die ID.
+    await ensureGamesBySeason().catch(() => {});
 
     const gsRows = gameStates.length === 0
       ? '<tr><td colspan="7" class="empty">Noch keine Spielrunden.</td></tr>'
       : gameStates.map(gs => `
           <tr>
-            <td>${escapeHtml(gs.game_id)}</td>
+            <td>${escapeHtml(gameTitle(gs.game_id))}</td>
             <td>${gs.creature ? (LEGENDARY_CREATURES.has(gs.creature) ? '<span class="metric-legendary">✨ ' + escapeHtml(gs.creature) + '</span>' : escapeHtml(gs.creature)) : '—'}</td>
             <td>${gs.growth ?? 0}</td>
             <td>${gs.points ?? 0}</td>
