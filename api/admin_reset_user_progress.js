@@ -14,12 +14,15 @@
 // Flow:
 //   1) JWT verifizieren
 //   2) Caller ist Admin?
-//   3) Target lookup + Guards:
-//        - Admin-Accounts: verboten (kein Fortschritt zum Wipen)
-//        - Self-Reset: verboten
-//        - Schuladmin: nur eigene Schule + kein Volladmin
+//   3) Target lookup + Rollen-Guards:
+//        - Self-Reset: erlaubt (praktisch zum Testen)
+//        - Ziel = Volladmin und nicht self: verboten
+//          (auch für Volladmin-Caller — Volladmins resetten nur sich selbst)
+//        - Ziel = Schuladmin und nicht self: nur Volladmin-Caller
+//        - Ziel = Schüler und nicht self: Schul-Isolation für Schuladmin-Caller
 //   4) wipeUserProgress (dieselbe Utility wie beim Promote)
-//   5) apply_cluster_bonus (best-effort) falls Cluster gesetzt
+//   5) apply_cluster_bonus (best-effort) falls Cluster gesetzt.
+//      RPC blockt Admin-Targets intern → Admin-Self-Reset triggert keine Ausschüttung.
 //
 // Env-Vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // ══════════════════════════════════════════════════════════════
@@ -74,11 +77,6 @@ export default async function handler(req, res) {
     return res.status(403).json({ ok: false, error: 'not_admin' });
   }
 
-  if (targetUserId === callerId) {
-    return res.status(400).json({ ok: false, error: 'self_reset_forbidden',
-      message: 'Der eigene Account kann nicht zurückgesetzt werden.' });
-  }
-
   const { data: target, error: targetErr } = await admin
     .from('profiles')
     .select('id, account_name, school_id, cluster_id, is_admin, is_superadmin')
@@ -90,13 +88,18 @@ export default async function handler(req, res) {
   if (!target) {
     return res.status(404).json({ ok: false, error: 'target_not_found' });
   }
-  if (target.is_admin || target.is_superadmin) {
-    return res.status(400).json({ ok: false, error: 'admin_reset_forbidden',
-      message: 'Admin-Accounts haben keinen Fortschritt zum Zurücksetzen.' });
-  }
 
-  if (!caller.is_superadmin) {
-    if (target.school_id !== caller.school_id) {
+  const isSelf = targetUserId === callerId;
+  if (!isSelf) {
+    if (target.is_superadmin) {
+      return res.status(403).json({ ok: false, error: 'cannot_reset_volladmin',
+        message: 'Ein Volladmin kann nur sich selbst zurücksetzen.' });
+    }
+    if (target.is_admin && !caller.is_superadmin) {
+      return res.status(403).json({ ok: false, error: 'cannot_reset_schuladmin',
+        message: 'Ein Schuladmin kann nur sich selbst zurücksetzen — andere Schuladmins darf nur ein Volladmin.' });
+    }
+    if (!caller.is_superadmin && target.school_id !== caller.school_id) {
       return res.status(403).json({ ok: false, error: 'cross_school_forbidden',
         message: 'Ziel-User gehört nicht zu deiner Schule.' });
     }

@@ -1435,6 +1435,8 @@ function renderAdminActions(u) {
   // Volladmins darf nur ein Volladmin anfassen; sonst alle Buttons ausgraut.
   const roleDisabled  = isSelf || isProtected;
   const editDisabled  = isSelf || isProtected;   // Umbenennen, Lock-Toggle, PW-Reset
+  const resetDisabled = !canResetTarget(u);
+  const resetTitle    = resetDisabled ? 'title="Volladmin nur self; Schuladmin darf nur ein Volladmin resetten."' : '';
   // Admins löschen ist tabu (Rollen-Änderung erst → dann löschen).
   const isAdminRow = u.is_admin || u.is_superadmin;
   const protectedTitle = isProtected ? 'title="Nur ein Volladmin kann einen Volladmin ändern"' : '';
@@ -1449,13 +1451,25 @@ function renderAdminActions(u) {
         <button type="button" class="js-pw-reset"     data-user-id="${u.id}" ${editDisabled ? 'disabled' : ''} ${protectedTitle}>Passwort setzen</button>
         <button type="button" class="js-lock-toggle"  data-user-id="${u.id}" ${editDisabled ? 'disabled' : ''} ${protectedTitle}>${lockLabel}</button>
         <button type="button" class="js-role-change"  data-user-id="${u.id}" ${roleDisabled ? 'disabled' : ''} ${protectedTitle}>Rolle ändern</button>
-        <button type="button" class="js-reset-progress" data-user-id="${u.id}" ${editDisabled || isAdminRow ? 'disabled' : ''} ${protectedTitle}>Fortschritt zurücksetzen</button>
+        <button type="button" class="js-reset-progress" data-user-id="${u.id}" ${resetDisabled ? 'disabled' : ''} ${resetTitle}>Fortschritt zurücksetzen</button>
         ${moveBtn}
         <hr />
         <button type="button" class="danger js-delete" data-user-id="${u.id}" ${(isSelf || isAdminRow) ? 'disabled' : ''}>Löschen</button>
       </div>
     </div>
   </td>`;
+}
+
+// Reset-Regeln:
+//   - Sich selbst darf jeder Admin resetten (zum Testen).
+//   - Fremde Volladmins: niemand (auch andere Volladmins nicht).
+//   - Fremde Schuladmins: nur Volladmin-Caller.
+//   - Fremde Schüler: alle Admins, Schul-Iso über RLS/Backend.
+function canResetTarget(u) {
+  if (u.id === currentUserId) return true;
+  if (u.is_superadmin)        return false;
+  if (u.is_admin)             return isVolladmin;
+  return true;
 }
 
 // Rendert den passenden Rollen-Badge für einen User-Row.
@@ -1572,18 +1586,22 @@ async function renameUser(userId) {
   }
 }
 
-// Setzt einen Schüler-Account auf Frisch-Zustand zurück (alles außer
-// Account-Name, Passwort, Cluster, Schule). Bestätigung durch Tippen
-// des Accountnamens — nicht rückgängig zu machen.
+// Setzt einen Account auf Frisch-Zustand zurück (alles außer Account-Name,
+// Passwort, Rolle, Cluster, Schule). Bestätigung durch Tippen des Accountnamens.
+// Self-Reset ist erlaubt und triggert danach einen Full-Reload, damit der
+// lokale localStorage-State mit dem gewipten Server-State wieder gleichzieht.
 async function resetUserProgress(userId) {
-  const u = userCache.find(x => x.id === userId);
+  // userCache oder adminCache — Reset ist aus beiden Tabs erreichbar.
+  const u = userCache.find(x => x.id === userId) || adminCache.find(x => x.id === userId);
   if (!u) return;
-  if (u.is_admin || u.is_superadmin) {
-    showToast('Admin-Accounts haben keinen Fortschritt zum Zurücksetzen.', 'error');
+  if (!canResetTarget(u)) {
+    showToast('Für diese Rolle ist der Reset nicht erlaubt.', 'error');
     return;
   }
+  const isSelf = u.id === currentUserId;
+  const targetLabel = isSelf ? 'DEINEN Fortschritt' : `Fortschritt von „${u.display_name || u.account_name}"`;
   const answer = prompt(
-    `Fortschritt von „${u.display_name || u.account_name}" komplett zurücksetzen?\n\n` +
+    `${targetLabel} komplett zurücksetzen?\n\n` +
     `Alle Coins, Kristalle, Kreaturen, Nester, Highscores und Meilensteine werden gelöscht.\n` +
     `Cluster-Starthilfe wird bei einem Cluster automatisch neu ausgeschüttet.\n\n` +
     `Zum Bestätigen den Accountnamen tippen: ${u.account_name}`,
@@ -1603,6 +1621,15 @@ async function resetUserProgress(userId) {
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok || !body?.ok) throw new Error(body?.message || body?.error || `HTTP ${res.status}`);
+
+    if (isSelf) {
+      // Server-State ist weg — lokaler Cache in localStorage ist jetzt Fake.
+      // Sauberer Neuanfang durch clearLocalGameState + Reload.
+      window.clearLocalGameState?.();
+      showToast('Dein Fortschritt wurde zurückgesetzt — lade neu …');
+      setTimeout(() => location.reload(), 800);
+      return;
+    }
 
     // Progress-Cache invalidieren → beim nächsten Render 0-Werte anzeigen.
     if (u._progress) {
@@ -2352,6 +2379,7 @@ function renderAdmins() {
 
   tbody.innerHTML = rows.map(u => {
     const isSelf = u.id === currentUserId;
+    const resetDisabled = !canResetTarget(u);
     return `<tr>
       <td>${escapeHtml(u.account_name)}</td>
       <td>${escapeHtml(u.display_name || '—')}</td>
@@ -2364,6 +2392,7 @@ function renderAdmins() {
           <div class="row-actions__menu" hidden>
             <button type="button" class="js-role-change" data-user-id="${u.id}" ${isSelf ? 'disabled' : ''}>Rolle ändern</button>
             <button type="button" class="js-move-school" data-user-id="${u.id}">In andere Schule verschieben</button>
+            <button type="button" class="js-reset-progress" data-user-id="${u.id}" ${resetDisabled ? 'disabled' : ''}>Fortschritt zurücksetzen</button>
           </div>
         </div>
       </td>
@@ -2381,6 +2410,9 @@ function renderAdmins() {
   });
   tbody.querySelectorAll('.js-move-school').forEach(b => {
     b.addEventListener('click', () => openMoveSchool(b.dataset.userId));
+  });
+  tbody.querySelectorAll('.js-reset-progress').forEach(b => {
+    b.addEventListener('click', () => resetUserProgress(b.dataset.userId));
   });
 }
 
