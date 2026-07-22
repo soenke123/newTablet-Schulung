@@ -1128,7 +1128,7 @@ async function loadUsers() {
 async function loadProgressData() {
   try {
     const [wallets, gameStates, shopStates] = await Promise.all([
-      api('GET', `wallets?select=user_id,coins,updated_at`),
+      api('GET', `wallets?select=user_id,coins,bonbons,updated_at`),
       api('GET', `game_state?select=user_id,creature,updated_at`),
       api('GET', `user_collectibles?select=user_id,value&key=eq.shop_state`)
     ]);
@@ -1180,6 +1180,7 @@ async function loadProgressData() {
       const available   = Math.max(0, walletCoins + banked - spent);
       u._progress = {
         coins:        available,
+        bonbons:      w?.bonbons ?? 0,
         kristalle:    sc.kristalle ?? 0,
         creatures:    gs ? gs.creatures.size : 0,
         legendaries:  gs ? gs.legendaries    : 0,
@@ -1211,6 +1212,7 @@ const VIEW_COLUMNS = {
     { label: 'Anzeigename',  key: 'display_name'    },
     { label: '🪙 Coins',     key: 'coins'           },
     { label: '💎 Kristalle', key: 'kristalle'       },
+    { label: '🍬 Bonbons',   key: 'bonbons'         },
     { label: 'Kreaturen',    key: 'creatures'       },
     { label: 'Legies',       key: 'legendaries'     },
     { label: 'Zuletzt aktiv',key: 'lastActive'      },
@@ -1337,6 +1339,7 @@ function sortRows(rows, sort) {
         return c ? `${c.name} S${c.season}` : '';
       }
       case 'coins':       return u._progress?.coins       ?? 0;
+      case 'bonbons':     return u._progress?.bonbons     ?? 0;
       case 'kristalle':   return u._progress?.kristalle   ?? 0;
       case 'creatures':   return u._progress?.creatures   ?? 0;
       case 'legendaries': return u._progress?.legendaries ?? 0;
@@ -1408,6 +1411,8 @@ function renderCell(u, col) {
     // Progress-Metriken
     case 'coins':
       return `<td><span class="metric"><span class="metric-icon">🪙</span>${u._progress?.coins ?? '—'}</span></td>`;
+    case 'bonbons':
+      return `<td><span class="metric"><span class="metric-icon">🍬</span>${u._progress?.bonbons ?? '—'}</span></td>`;
     case 'kristalle':
       return `<td><span class="metric"><span class="metric-icon">💎</span>${u._progress?.kristalle ?? '—'}</span></td>`;
     case 'creatures':
