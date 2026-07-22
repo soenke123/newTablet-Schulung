@@ -445,7 +445,7 @@ html, body {
 
 /* ─── Modal ──────────────────────────────────────────────── */
 .modal-overlay {
-  position: fixed; inset: 0; z-index: 90;
+  position: fixed; inset: 0; z-index: 200;
   background: rgba(0,0,0,0.7);
   display: flex; align-items: center; justify-content: center;
   padding: 20px;
@@ -768,12 +768,13 @@ html, body {
 .row-actions__btn::after { content: '▾'; font-size: 10px; opacity: 0.7; }
 
 .row-actions__menu {
-  position: absolute;
-  right: 0; top: calc(100% + 4px);
-  min-width: 180px;
+  position: fixed;
+  min-width: 200px;
+  z-index: 80;
   background: var(--a-surface-2);
   border: 1px solid var(--a-border);
   border-radius: var(--a-radius-sm);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   padding: 4px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   z-index: 20;

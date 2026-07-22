@@ -119,7 +119,26 @@ export default async function handler(req, res) {
     }
   }
 
-  // 4) Update
+  // 4) Bei Non-Admin → Admin: Fortschritt löschen. Admin-Accounts sind
+  //    unsichtbare Beobachter — mit alten Coins/Kreaturen im Rücken
+  //    würden sie sonst in Boards seltsam auftauchen (auch wenn die
+  //    Boards filtern, ist die Datenlage sauberer wenn's leer ist).
+  //    Nur bei Upgrade wischen — bei Downgrade (Admin → Student) gibt's
+  //    nichts zu löschen, weil Admin gar keinen Fortschritt sammelt.
+  const wasAdmin = !!(target.is_admin || target.is_superadmin);
+  const willBeAdmin = newFlags.is_admin || newFlags.is_superadmin;
+  let progressWiped = false;
+  if (!wasAdmin && willBeAdmin) {
+    try {
+      await wipeUserProgress(admin, targetUserId);
+      progressWiped = true;
+    } catch (wipeErr) {
+      console.error('[admin_promote_user] progress wipe failed:', wipeErr);
+      return res.status(500).json({ ok: false, error: 'progress_wipe_failed', message: wipeErr.message });
+    }
+  }
+
+  // 5) Rolle setzen
   const { error: updErr } = await admin
     .from('profiles')
     .update({
@@ -132,6 +151,32 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'update_failed', message: updErr.message });
   }
 
-  console.log(`[admin_promote_user] caller=${callerId} target=${targetUserId} → ${role}`);
-  return res.status(200).json({ ok: true, role, flags: newFlags });
+  console.log(`[admin_promote_user] caller=${callerId} target=${targetUserId} → ${role} (wiped=${progressWiped})`);
+  return res.status(200).json({ ok: true, role, flags: newFlags, progress_wiped: progressWiped });
+}
+
+
+// Löscht alle Fortschritts-Rows eines Users. Nutzt service_role und
+// benötigt entsprechende Grants (Migration 0054). Reihenfolge egal —
+// alle Rows sind per user_id-FK verknüpft, keine gegenseitigen
+// Abhängigkeiten.
+async function wipeUserProgress(admin, userId) {
+  const tables = [
+    'game_state',
+    'wallets',
+    'user_collectibles',
+    'user_unlocked_games',
+    'game_highscores',
+    'user_legi_grants',
+    'cluster_bonus_grants',
+    'user_bonbon_milestone_grants',
+    'bonbon_daily_claims',
+    'user_legi_task_gifts',
+  ];
+  for (const t of tables) {
+    const { error } = await admin.from(t).delete().eq('user_id', userId);
+    if (error) {
+      throw new Error(`${t}: ${error.message}`);
+    }
+  }
 }

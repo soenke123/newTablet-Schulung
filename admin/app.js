@@ -1288,11 +1288,7 @@ function renderUsers() {
   tbody.querySelectorAll('.js-row-actions-btn').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
-      const menu = btn.nextElementSibling;
-      const wasOpen = !menu.hidden;
-      // Alle anderen schließen
-      document.querySelectorAll('.row-actions__menu').forEach(m => m.hidden = true);
-      menu.hidden = wasOpen;
+      toggleRowActionsMenu(btn);
     });
   });
 
@@ -2289,10 +2285,7 @@ function renderAdmins() {
   tbody.querySelectorAll('.js-row-actions-btn').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
-      const menu = btn.nextElementSibling;
-      const wasOpen = !menu.hidden;
-      document.querySelectorAll('.row-actions__menu').forEach(m => m.hidden = true);
-      menu.hidden = wasOpen;
+      toggleRowActionsMenu(btn);
     });
   });
   tbody.querySelectorAll('.js-role-change').forEach(b => {
@@ -2301,4 +2294,29 @@ function renderAdmins() {
   tbody.querySelectorAll('.js-move-school').forEach(b => {
     b.addEventListener('click', () => openMoveSchool(b.dataset.userId));
   });
+}
+
+// Öffnet/schließt das Aktionen-Menü einer Row. Menu ist per CSS
+// position:fixed — Position muss beim Öffnen dynamisch aus der
+// Button-Rect kommen, sonst clippt es in der table-wrap-Overflow.
+function toggleRowActionsMenu(btn) {
+  const menu = btn.nextElementSibling;
+  const wasOpen = !menu.hidden;
+  document.querySelectorAll('.row-actions__menu').forEach(m => { m.hidden = true; });
+  if (wasOpen) return;
+
+  const rect = btn.getBoundingClientRect();
+  menu.hidden = false;
+  const menuW = Math.max(menu.offsetWidth, 200);
+  const menuH = menu.offsetHeight;
+  // Rechts-alignen — Menü-rechter-Rand am Button-rechten-Rand.
+  let left = rect.right - menuW;
+  if (left < 8) left = 8;
+  let top = rect.bottom + 4;
+  // Wenn unten kein Platz mehr ist → nach oben klappen.
+  if (top + menuH > window.innerHeight - 8) {
+    top = Math.max(8, rect.top - menuH - 4);
+  }
+  menu.style.top  = top  + 'px';
+  menu.style.left = left + 'px';
 }
