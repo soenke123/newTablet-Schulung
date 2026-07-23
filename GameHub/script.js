@@ -165,11 +165,17 @@ function updateSeenCreatures(allData) {
     //    dann via Block (1) mit now(). Ohne diesen Backfill bleiben alte
     //    Kreatur-Avatare für immer unsichtbar in getNewAvatarIds — weil
     //    "for (const id in stamps)" nur iteriert was drin ist.
-    if (window.AVATARS && stage >= 0) {
+    //
+    //    Wichtig: seenStage = je erreichte Höchststufe, nicht der aktuelle
+    //    growth-Stage. Sonst würden Kreaturen, deren game_state.growth
+    //    zurückgesetzt wurde oder deren Slot leer ist, die längst unlocked
+    //    Avatare nicht mehr backfillen.
+    const seenStage = Math.max(stage, prev);
+    if (window.AVATARS && seenStage >= 0) {
       for (const a of window.AVATARS) {
         if (a.creature !== data.creature) continue;
         const idx = a.stage - 1;
-        if (idx > stage) continue;   // noch nicht unlocked
+        if (idx > seenStage) continue;   // noch nicht unlocked
         if (sd.avatarUnlocks[a.id] == null) {
           sd.avatarUnlocks[a.id] = 0;
           changed = true;
