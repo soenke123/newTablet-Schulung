@@ -142,22 +142,20 @@ function updateSeenCreatures(allData) {
     if (stage > prev) {
       sd.seenCreatures[data.creature] = stage;
       changed = true;
-    }
 
-    // Avatar-Unlock-Stempel: läuft AUCH wenn stage === prev, damit fehlende
-    // oder auf 0 backdatierte Stempel (z.B. weil profil.html oder Landing sie
-    // vor dem echten Unlock backdatiert hat) nachträglich auf now() gehoben
-    // werden. Ohne diese Nachhol-Logik gibt es keinen NEW-Dot für Avatare,
-    // deren Unlock erst nach einem früheren Landing-/Profil-Boot passiert ist.
-    // avatars.js verwendet 1-indizierte a.stage, seenCreatures 0-indiziert.
-    if (window.AVATARS) {
-      for (const a of window.AVATARS) {
-        if (a.creature !== data.creature) continue;
-        const idx = a.stage - 1;
-        if (idx > stage) continue;   // ist noch nicht unlocked
-        if (sd.avatarUnlocks[a.id] == null || sd.avatarUnlocks[a.id] === 0) {
-          sd.avatarUnlocks[a.id] = now;
-          changed = true;
+      // Neu freigeschaltete Avatare für diese Kreatur/Stufe stempeln.
+      // Nur hier weiß der Client zuverlässig "Unlock passiert JETZT"
+      // — deshalb ist das der einzige Ort, wo now() korrekt ist.
+      // avatars.js verwendet 1-indizierte a.stage, seenCreatures 0-indiziert.
+      if (window.AVATARS) {
+        for (const a of window.AVATARS) {
+          if (a.creature !== data.creature) continue;
+          const idx = a.stage - 1;
+          if (idx <= prev) continue;   // war schon vorher unlocked
+          if (idx > stage) continue;   // ist noch nicht unlocked
+          if (sd.avatarUnlocks[a.id] == null || sd.avatarUnlocks[a.id] === 0) {
+            sd.avatarUnlocks[a.id] = now;
+          }
         }
       }
     }
