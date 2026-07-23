@@ -55,7 +55,7 @@ const GAMES_CONFIG = [
   { id: 'game12', season: 2, title: 'Quellen-Tinder',      icon: '🃏', url: 'S2 Quellen Tinder/index.html'      },
   { id: 'game15', season: 2, title: 'LLMaster',            icon: '💬', url: 'S2 LLMaster/index.html'             },
   { id: 'game14', season: 2, title: 'Reinforce Yourself!', icon: '🤖', url: 'S2 Reinforce Yourself!/index.html'  },
-  { id: 'game16', season: 3, title: '???',                 icon: '🌈', url: 'S3 LegiTrainer/index.html', clusterLegi: true },
+  { id: 'game16', season: 3, title: '???',                 icon: '🌈', url: '#', clusterLegi: true },
 ];
 
 const SEASONS_CONFIG = [
@@ -3065,7 +3065,7 @@ const LEGI_TASKS = [
   { key: 'friends',  icon: '🤝', label: 'Freunde finden',       status: 'active', hint: '3 mit gleichem Code', interactive: true },
   { key: 'win',      icon: '🏆', label: 'Gemeinsam siegen',     status: 'active', hint: 'Alle Monster im Kurs vollenden', interactive: true },
   { key: 'path',     icon: '🌈', label: 'Deine Farbe finden',   status: 'active', hint: 'Der Regenbogen-Pfad', interactive: true },
-  { key: 'locked_2', icon: '❔', label: 'Weitere Aufgabe folgt', status: 'locked', hint: 'bleibt geheim'   },
+  { key: 'virus',    icon: '🧩', label: 'Der Virus-Kodex',      status: 'active', hint: 'Löse das Rätsel und vollende deine Kreatur', interactive: true },
 ];
 
 // Helper: gibt true zurück, wenn irgendein pending (unaccepted) Gift
@@ -3117,8 +3117,15 @@ function openLegiTaskModal() {
   const pathUnlocked = giftDone && friendsDone && winDone;
   const pathDone     = !!variant;
 
+  // Task 5 (virus): erst freigeschaltet wenn Path durch. Progress + Done aus
+  // window.__virusProgress (Boot-Sync via loadVirusProgress).
+  const vp             = window.__virusProgress || { solved_levels: [], task_completed_at: null };
+  const virusUnlocked  = pathDone;
+  const virusDone      = !!vp.task_completed_at;
+  const virusSolvedN   = Array.isArray(vp.solved_levels) ? vp.solved_levels.length : 0;
+
   const taskItems = LEGI_TASKS.map(t => {
-    // Gate + Done-Zustand für path dynamisch überschreiben.
+    // Gate + Done-Zustand für path/virus dynamisch überschreiben.
     let effStatus = t.status;
     let effHint   = t.hint;
     let effIcon   = t.icon;
@@ -3133,10 +3140,28 @@ function openLegiTaskModal() {
         effInteractive = false;
       }
     }
+    if (t.key === 'virus') {
+      if (virusDone) {
+        effHint = 'Vollendet — jetzt zum Spaß spielen';
+      } else if (!virusUnlocked) {
+        effStatus = 'locked';
+        effHint   = 'Erst wenn du deine Farbe gefunden hast.';
+        effInteractive = false;
+      } else if (virusSolvedN > 0) {
+        effHint = `${virusSolvedN} von 3 Rätseln gelöst`;
+      }
+    }
 
-    const badge = t.key === 'path' && pathDone
-      ? `<span class="legi-task__status-badge legi-task__status-badge--done">✓ ${escapeHtml(variantLabel(variant))}</span>`
-      : renderLegiTaskBadge(t.key);
+    let badge = '';
+    if (t.key === 'path' && pathDone) {
+      badge = `<span class="legi-task__status-badge legi-task__status-badge--done">✓ ${escapeHtml(variantLabel(variant))}</span>`;
+    } else if (t.key === 'virus' && virusDone) {
+      badge = `<span class="legi-task__status-badge legi-task__status-badge--done">✓ Vollendet</span>`;
+    } else if (t.key === 'virus' && virusUnlocked && virusSolvedN > 0) {
+      badge = `<span class="legi-task__status-badge legi-task__status-badge--pending">${virusSolvedN}/3</span>`;
+    } else {
+      badge = renderLegiTaskBadge(t.key);
+    }
     const pending = window.__giftTasks?.[t.key] && !window.__giftTasks[t.key].accepted_at;
     const winReady = t.key === 'win' && window.__winTaskReady === true;
     const cls = [
@@ -3145,7 +3170,8 @@ function openLegiTaskModal() {
       effInteractive ? 'legi-task--interactive' : '',
       pending ? 'legi-task--gift-pending' : '',
       winReady ? 'legi-task--win-ready' : '',
-      t.key === 'path' && pathDone ? 'legi-task--path-done' : ''
+      t.key === 'path' && pathDone ? 'legi-task--path-done' : '',
+      t.key === 'virus' && virusDone ? 'legi-task--virus-done' : ''
     ].filter(Boolean).join(' ');
     return `
       <div class="${cls}" data-task-key="${escapeHtml(t.key)}">
@@ -3180,7 +3206,9 @@ function openLegiTaskModal() {
   for (const t of LEGI_TASKS) {
     if (!t.interactive) continue;
     // path-Row ist trotz interactive:true gelockt, solange 1-3 nicht durch sind.
-    if (t.key === 'path' && !pathUnlocked && !pathDone) continue;
+    if (t.key === 'path'  && !pathUnlocked && !pathDone) continue;
+    // virus-Row ist gelockt bis path durch ist.
+    if (t.key === 'virus' && !virusUnlocked) continue;
     const row = content.querySelector(`.legi-task[data-task-key="${t.key}"]`);
     if (!row) continue;
     row.addEventListener('click', () => {
@@ -3191,12 +3219,71 @@ function openLegiTaskModal() {
         if (pathDone) openPathReviewView();
         else          openPathFlow();
       }
+      if (t.key === 'virus')   openVirusFlow();
     });
   }
 
   overlay.hidden = false;
 }
 window.openLegiTaskModal = openLegiTaskModal;
+
+// ─── Virus-Flow („Der Virus-Kodex", Task 5) ─────────────────
+// Info-View mit Progress-Anzeige + Starten-Button. Weiterleitung
+// zum Standalone-Puzzle S3 Virus Protocol; Rückkehr via Back-to-Hub-
+// Button oder Redirect nach „Kreatur vollenden" mit ?legiComplete=1.
+function openVirusFlow() {
+  const content = document.getElementById('legiTaskModalContent');
+  const overlay = document.getElementById('legiTaskModal');
+  if (!content || !overlay) return;
+  overlay.hidden = false;
+
+  const vp        = window.__virusProgress || { solved_levels: [], task_completed_at: null };
+  const solvedN   = Array.isArray(vp.solved_levels) ? vp.solved_levels.length : 0;
+  const done      = !!vp.task_completed_at;
+  const progressPct = Math.round((solvedN / 3) * 100);
+
+  const statusLine = done
+    ? '<div class="legi-virus-status legi-virus-status--done">✓ Alle 3 Rätsel gelöst und Kreatur vollendet.</div>'
+    : solvedN === 0
+      ? '<div class="legi-virus-status">Noch nichts gelöst. Bereit für Level 1?</div>'
+      : `<div class="legi-virus-status">${solvedN} von 3 Rätseln gelöst.</div>`;
+
+  const btnLabel = done
+    ? '↻ Nochmal spielen'
+    : solvedN === 0 ? '🧩 Starten' : '🧩 Weiterspielen';
+
+  content.innerHTML = `
+    <div class="legi-virus-header">
+      <button class="legi-virus-back" title="Zurück">← Zurück</button>
+      <h2 class="bonbon-modal__title" style="margin:0;">🧩 Der Virus-Kodex</h2>
+      <span></span>
+    </div>
+    <div class="legi-virus-body">
+      <p class="legi-virus-intro">
+        Drei knifflige Rätsel warten auf dich. Verschiebe die Wörter,
+        schreibe die Regeln um — und finde den Weg zum Ziel.
+        Sind alle drei Rätsel gelöst, kannst du deine Einhornkatze vollenden.
+      </p>
+      <div class="legi-virus-progress">
+        <div class="legi-virus-progress__track">
+          <div class="legi-virus-progress__fill" style="width:${progressPct}%"></div>
+        </div>
+        <div class="legi-virus-progress__label">${solvedN} / 3</div>
+      </div>
+      ${statusLine}
+      <button class="legi-virus-start${done ? '' : ' legi-virus-start--primary'}">${escapeHtml(btnLabel)}</button>
+    </div>
+  `;
+
+  const back = content.querySelector('.legi-virus-back');
+  if (back) back.addEventListener('click', () => openLegiTaskModal());
+
+  const start = content.querySelector('.legi-virus-start');
+  if (start) start.addEventListener('click', () => {
+    window.location.href = 'S3 Virus Protocol/index.html';
+  });
+}
+window.openVirusFlow = openVirusFlow;
 
 // ─── Gift-Flow („Andere beschenken") ────────────────────────
 // State-Machine im selben #legiTaskModalContent-Container. Sub-Views:
@@ -5312,6 +5399,198 @@ function showKatzeVariantReveal(variant) {
   });
 }
 window.showKatzeVariantReveal = showKatzeVariantReveal;
+
+// ─── Task-5-Vollenden: Stage-5 → Stage-6 (Vollendet) ────────
+// Wird vom Hub aufgerufen, wenn User via ?legiComplete=1 aus dem
+// Virus-Protocol-Spiel zurückkehrt. Klon der Struktur von
+// showKatzeVariantReveal, aber Startsprite = Stufe 5 (Ausgewachsen),
+// Endsprite = Stufe 6 (Vollendet), variant-spezifisch.
+// Server-Persistenz (growth=100, task_completed_at) ist bereits durch
+// complete_virus_task erledigt.
+function showVirusCompletionAnimation(variant) {
+  if (!['rainbow', 'light', 'dark'].includes(variant)) variant = 'rainbow';
+
+  // Sprite Stufe 5 (Start) → Stufe 6 (End), jeweils variant-spezifisch.
+  const startImg = variant === 'light' ? 'data/Einhornkatze5Light.png'
+                : variant === 'dark'  ? 'data/Einhornkatze5Dark.png'
+                :                        'data/Einhornkatze5.png';
+  const endImg   = variant === 'light' ? 'data/Einhornkatze6Light.png'
+                : variant === 'dark'  ? 'data/Einhornkatze6Dark.png'
+                :                        'data/Einhornkatze6.png';
+
+  const bgStart =
+      variant === 'light' ? 'radial-gradient(ellipse at center, #ffd97a 0%, #ff9d4a 40%, #5a3608 100%)'
+    : variant === 'dark'  ? 'radial-gradient(ellipse at center, #1e2f66 0%, #0a0e2a 55%, #000 100%)'
+    :                       'radial-gradient(ellipse at center, #4a2560 0%, #1a0930 65%, #000 100%)';
+  const bgEnd =
+      variant === 'light' ? 'radial-gradient(ellipse at center, #ffffff 0%, #ffd97a 45%, #ff9d4a 100%)'
+    : variant === 'dark'  ? 'radial-gradient(ellipse at center, #7a8ad4 0%, #1e2f66 55%, #000 100%)'
+    :                       'conic-gradient(from 0deg at 50% 50%, #ff5b6b, #ffa940, #ffeb3b, #66d16b, #4fb3ff, #b477ff, #ff5b6b)';
+
+  const titleText   = 'Vollendet!';
+  const subText =
+      variant === 'light' ? 'Ihre finale Form leuchtet wie die Sonne.'
+    : variant === 'dark'  ? 'Ihre finale Form flüstert wie die Nacht.'
+    :                       'Ihre finale Form schimmert wie ein Regenbogen.';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'virusCompletionOverlay';
+  overlay.innerHTML = `
+    <style>
+      #virusCompletionOverlay {
+        position:fixed;inset:0;z-index:10001;
+        background:${bgStart};
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        opacity:0;transition:opacity 0.6s, background 1.6s ease-in-out;
+      }
+      #virusCompletionOverlay.to-final { background:${bgEnd}; }
+      @keyframes _vc-shake {
+        0%,100%{transform:rotate(0)} 15%{transform:rotate(-10deg)} 30%{transform:rotate(10deg)}
+        45%{transform:rotate(-10deg)} 60%{transform:rotate(10deg)} 75%{transform:rotate(-7deg)} 90%{transform:rotate(7deg)}
+      }
+      @keyframes _vc-glow {
+        0%{filter:brightness(1) drop-shadow(0 0 0 rgba(255,255,255,0))}
+        100%{filter:brightness(2.6) drop-shadow(0 0 70px #fff) drop-shadow(0 0 120px #ffdd88)}
+      }
+      @keyframes _vc-flash { 0%{opacity:0} 40%{opacity:1} 100%{opacity:0} }
+      @keyframes _vc-appear {
+        from{opacity:0;transform:scale(0.15) translateY(50px)}
+        to{opacity:1;transform:scale(1) translateY(0)}
+      }
+      @keyframes _vc-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-16px)} }
+      @keyframes _vc-title {
+        from{opacity:0;letter-spacing:0.6em}
+        to{opacity:1;letter-spacing:0.08em}
+      }
+      @keyframes _vc-particles {
+        0%{opacity:0;transform:translateY(0) scale(0)}
+        20%{opacity:1}
+        100%{opacity:0;transform:translateY(-110px) scale(1.8)}
+      }
+      @keyframes _vc-halo-rotate {
+        0%{transform:translate(-50%,-50%) rotate(0)}
+        100%{transform:translate(-50%,-50%) rotate(360deg)}
+      }
+      #_vc-cat {
+        width:240px;height:240px;object-fit:contain;display:block;
+        filter:drop-shadow(0 8px 24px rgba(255,220,150,0.4));
+      }
+      #_vc-cat.shaking { animation:_vc-shake 0.55s ease-in-out; }
+      #_vc-cat.glowing { animation:_vc-glow 1.0s ease-in forwards; }
+      #_vc-flash { position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:1; }
+      #_vc-flash.go { animation:_vc-flash 0.7s ease-out forwards; }
+      #_vc-halo {
+        position:fixed;top:50%;left:50%;width:460px;height:460px;
+        background:${variant === 'light'
+                    ? 'radial-gradient(circle, #fff4c4 0%, #ffb84a 60%, transparent 80%)'
+                    : variant === 'dark'
+                    ? 'radial-gradient(circle, #7a8ad4 0%, #2b3670 55%, transparent 80%)'
+                    : 'conic-gradient(#ff5b6b,#ffa940,#ffeb3b,#66d16b,#4fb3ff,#b477ff,#ff5b6b)'};
+        border-radius:50%;opacity:0;filter:blur(30px);
+        transform:translate(-50%,-50%);pointer-events:none;
+        transition:opacity 0.8s;
+      }
+      #_vc-halo.show { opacity:0.65; animation:_vc-halo-rotate 8s linear infinite; }
+      #_vc-initial { display:flex;flex-direction:column;align-items:center;gap:22px;z-index:2; }
+      #_vc-caption {
+        color:rgba(255,255,255,0.75);font-family:Cinzel,serif;
+        font-size:0.9rem;letter-spacing:0.16em;
+      }
+      #_vc-final { display:none;flex-direction:column;align-items:center;gap:18px;z-index:2; }
+      #_vc-final.show {
+        display:flex;
+        animation:_vc-appear 1s cubic-bezier(0.34,1.56,0.64,1) both,_vc-float 3s ease-in-out 1s infinite;
+      }
+      #_vc-final .creature-slot { width:360px;height:360px;display:flex;align-items:center;justify-content:center; }
+      #_vc-final .creature-slot img { width:100%;height:100%;object-fit:contain; }
+      ._vc-title {
+        color:#fff5d6;font-family:Cinzel,serif;font-size:1.8rem;font-weight:800;
+        text-align:center;
+        text-shadow:0 0 24px #ffdd88,0 0 48px #ff85c1;
+        animation:_vc-title 1s 0.4s both;
+      }
+      ._vc-sub {
+        color:rgba(255,245,220,0.9);font-family:Nunito,sans-serif;font-size:1rem;text-align:center;
+        max-width:440px;line-height:1.4;
+        animation:_vc-appear 0.9s 0.7s both;
+      }
+      ._vc-particle { position:fixed;font-size:2.0rem;pointer-events:none;animation:_vc-particles 2.4s ease-out both; }
+      #_vc-close {
+        position:absolute;bottom:36px;padding:13px 34px;font-family:Cinzel,serif;font-size:1rem;font-weight:800;
+        color:#2a1250;background:linear-gradient(90deg,#ffdd88,#ff85c1,#b477ff);border:none;border-radius:999px;cursor:pointer;
+        box-shadow:0 0 30px rgba(255,220,150,0.6);
+        opacity:0;transition:opacity 0.4s;pointer-events:none;
+      }
+      #_vc-close.show { opacity:1;pointer-events:auto; }
+    </style>
+    <div id="_vc-halo"></div>
+    <div id="_vc-flash"></div>
+    <div id="_vc-initial">
+      <img id="_vc-cat" src="${startImg}" alt="" />
+      <span id="_vc-caption">SIE ERREICHT IHRE FINALE FORM…</span>
+    </div>
+    <div id="_vc-final">
+      <div class="creature-slot"><img src="${endImg}" alt="" style="width:100%;height:100%;object-fit:contain;"></div>
+      <div class="_vc-title">${escapeHtml(titleText)}</div>
+      <div class="_vc-sub">${escapeHtml(subText)}</div>
+    </div>
+    <button id="_vc-close">Weiter →</button>
+  `;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+  const catImg   = overlay.querySelector('#_vc-cat');
+  const flash    = overlay.querySelector('#_vc-flash');
+  const halo     = overlay.querySelector('#_vc-halo');
+  const initial  = overlay.querySelector('#_vc-initial');
+  const final_   = overlay.querySelector('#_vc-final');
+  const closeBtn = overlay.querySelector('#_vc-close');
+
+  const shake = () => { catImg.classList.remove('shaking'); void catImg.offsetWidth; catImg.classList.add('shaking'); };
+  setTimeout(shake, 700);
+  setTimeout(shake, 1500);
+  setTimeout(shake, 2300);
+  setTimeout(() => { halo.classList.add('show'); }, 2500);
+  setTimeout(() => { catImg.classList.remove('shaking'); catImg.classList.add('glowing'); }, 2900);
+  setTimeout(() => {
+    flash.classList.add('go');
+    overlay.classList.add('to-final');
+    const emojis = variant === 'light'
+      ? ['☀️','✨','🌻','💛','🌟','🕊️','👑','💫']
+      : variant === 'dark'
+      ? ['🌙','✨','🌌','⭐','🔮','🌠','👑','💫']
+      : ['🌈','✨','🍬','💫','⭐','🎀','💎','👑'];
+    for (let i = 0; i < 26; i++) {
+      const p = document.createElement('span');
+      p.className = '_vc-particle';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      p.style.left = (6 + Math.random() * 88) + '%';
+      p.style.top  = (10 + Math.random() * 76) + '%';
+      p.style.animationDelay = (Math.random() * 0.6) + 's';
+      overlay.appendChild(p);
+    }
+  }, 3500);
+  setTimeout(() => {
+    initial.style.display = 'none';
+    final_.classList.add('show');
+    closeBtn.classList.add('show');
+  }, 4200);
+
+  closeBtn.addEventListener('click', async () => {
+    closeBtn.disabled = true;
+    // Frischer Server-State (bringt growth=100 wenn nicht schon lokal)
+    try { await window.loadServerState?.(); } catch (e) {}
+    try { await window.loadVirusProgress?.(); } catch (e) {}
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+      overlay.remove();
+      renderHub();
+      // Zurück ins Legi-Task-Modal, wo die vollendete Kreatur sichtbar ist.
+      openLegiTaskModal();
+    }, 500);
+  });
+}
+window.showVirusCompletionAnimation = showVirusCompletionAnimation;
 
 function applyBackupSwap(gameId) {
   const sd = loadShopData();

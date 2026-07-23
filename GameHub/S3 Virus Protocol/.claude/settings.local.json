@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node verify.mjs 0)",
+      "Bash(node verify.mjs)",
+      "Bash(node verify.mjs 1)",
+      "Bash(node verify.mjs 2)",
+      "Bash(node -e ' *)",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Read(//c/Program Files \\(x86\\)/Microsoft/Edge/Application/**)",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless --disable-gpu --no-sandbox --run-all-compositor-stages-before-draw --virtual-time-budget=3000 --screenshot=screenshot.png --window-size=900,720 \"file:///C:/Users/snke/OneDrive/ClaudeProjekte/MPS%20TabletSchlung/Spiele%20inProgress/Baba%20ist%20You/index.html\")",
+      "Bash(node *)",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless --disable-gpu --no-sandbox --run-all-compositor-stages-before-draw --virtual-time-budget=3000 --screenshot=\"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Spiele inProgress/Baba ist You/intro-check.png\" --window-size=900,900 \"file:///C:/Users/snke/OneDrive/ClaudeProjekte/MPS%20TabletSchlung/Spiele%20inProgress/Baba%20ist%20You/index.html\")",
+      "PowerShell(Rename-Item *)"
+    ]
+  }
+}

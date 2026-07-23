@@ -1,0 +1,1240 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f7f3ea">
+<title>Virus Protocol — Level Editor</title>
+<style>
+:root {
+  --paper: #f7f3ea;
+  --paper-dark: #ebe4d3;
+  --ink: #2c2820;
+  --ink-soft: #6b5f4a;
+  --accent: #c94f3a;
+  --success: #4a7c3a;
+  --custom: #b8408a;
+  --tile: 44px;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Kalam', 'Comic Sans MS', 'Segoe Print', system-ui, cursive, sans-serif;
+  min-height: 100vh;
+}
+body {
+  display: flex; flex-direction: column;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(0,0,0,.025) 0, transparent 45%),
+    radial-gradient(ellipse at 70% 80%, rgba(0,0,0,.025) 0, transparent 45%),
+    var(--paper);
+}
+
+header {
+  padding: 10px 16px;
+  border-bottom: 1.5px dashed rgba(0,0,0,.12);
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+}
+.title {
+  font-size: 22px; font-weight: 700; letter-spacing: .5px;
+  display: flex; align-items: center; gap: 8px;
+}
+.title-mark { width: 26px; height: 26px; }
+.title .sub { color: var(--accent); }
+.field {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px;
+}
+.field label { color: var(--ink-soft); font-weight: 700; }
+.field input {
+  padding: 5px 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  background: white;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+}
+.field input[type="number"] { width: 56px; }
+.field input.wide { width: 200px; }
+
+.btn {
+  padding: 6px 12px;
+  border: 2px solid var(--ink);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  box-shadow: 1.5px 1.5px 0 rgba(0,0,0,.15);
+}
+.btn:active { transform: translate(1px,1px); box-shadow: none; }
+.btn.primary { background: var(--success); color: white; }
+.btn.danger  { background: var(--accent); color: white; }
+
+main {
+  display: flex; flex: 1;
+  gap: 12px;
+  padding: 12px;
+  min-height: 0;
+}
+.palette {
+  width: 220px; flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 10px;
+  overflow-y: auto;
+  max-height: calc(100vh - 100px);
+}
+.palette h3 {
+  margin: 0; padding: 0;
+  font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--ink-soft);
+  border-bottom: 1px dashed rgba(0,0,0,.15);
+  padding-bottom: 3px;
+}
+.pal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.pal-btn {
+  aspect-ratio: 1;
+  border: 1.5px solid rgba(0,0,0,.3);
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 3px;
+  position: relative;
+  transition: transform .1s;
+}
+.pal-btn:hover { transform: scale(1.05); }
+.pal-btn.active {
+  border-color: var(--accent);
+  border-width: 2.5px;
+  box-shadow: 0 0 0 2px rgba(201,79,58,.25);
+}
+.pal-btn svg { width: 100%; height: 100%; pointer-events: none; }
+.pal-btn.text {
+  font-size: 10px; font-weight: 800; line-height: 1;
+  text-transform: uppercase; padding: 2px;
+  text-align: center; word-break: break-all;
+}
+.pal-btn.text.noun { background: #fff3d4; color: #6b4c1a; }
+.pal-btn.text.is   { background: #f2eae0; color: #4a4438; font-style: italic; }
+.pal-btn.text.prop { background: #dff0d8; color: #2a5a1a; }
+.pal-btn.eraser { background: #ffe7d6; font-size: 20px; }
+.pal-btn.custom-tool {
+  background: linear-gradient(135deg, #ffe0f0 50%, #f0e0ff 50%);
+  font-size: 20px; font-weight: 700; color: var(--custom);
+}
+
+.custom-input {
+  display: flex; gap: 4px;
+  padding: 6px; background: #ffe0f0;
+  border-radius: 6px;
+  border: 1.5px dashed var(--custom);
+}
+.custom-input input {
+  flex: 1; min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--custom);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.stage-wrap {
+  flex: 1;
+  display: flex; align-items: flex-start; justify-content: center;
+  overflow: auto;
+  padding: 8px;
+}
+#stage {
+  position: relative;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(180,160,120,.05),
+      rgba(180,160,120,.05) 6px,
+      transparent 6px,
+      transparent 12px
+    ),
+    #fefaf1;
+  border: 2px solid rgba(0,0,0,.18);
+  border-radius: 10px;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.1), inset 0 0 12px rgba(140,100,50,.06);
+}
+.cell {
+  position: absolute;
+  width: var(--tile); height: var(--tile);
+  border: 1px dashed rgba(0,0,0,.08);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  padding: 2px;
+}
+.cell:hover { background: rgba(201,79,58,.08); }
+.cell .stack {
+  position: relative;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+.cell-ent {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 2px;
+}
+.cell-ent svg { width: 100%; height: 100%; }
+.cell-ent.text .box {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  background: white;
+  font-weight: 800;
+  font-size: calc(var(--tile) * .22);
+  line-height: .95;
+  text-align: center;
+  padding: 2px;
+  text-transform: uppercase;
+  white-space: pre-line;
+  word-break: break-all;
+  overflow: hidden;
+  color: var(--ink);
+}
+.cell-ent.text.noun .box { background: #fff3d4; color: #6b4c1a; }
+.cell-ent.text.is   .box { background: #f2eae0; color: #4a4438; font-style: italic; }
+.cell-ent.text.prop .box { background: #dff0d8; color: #2a5a1a; }
+.cell-ent.custom .box {
+  background: linear-gradient(135deg, #ffe0f0 50%, #f0e0ff 50%);
+  color: var(--custom);
+  border: 1.5px dashed var(--custom);
+  font-weight: 700;
+  font-size: calc(var(--tile) * .18);
+}
+.cell-count {
+  position: absolute;
+  top: 0; right: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 9px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  z-index: 10;
+  pointer-events: none;
+}
+.cell[draggable="true"] { cursor: grab; }
+.cell.dragging { opacity: .35; cursor: grabbing; }
+.cell.drag-over { background: rgba(74,124,58,.18); box-shadow: inset 0 0 0 2px var(--success); }
+.cell.pickup-source { background: rgba(201,79,58,.18); box-shadow: inset 0 0 0 2px var(--accent); }
+.pal-btn.move-tool { background: #d8ecf9; color: #2f4570; font-size: 20px; font-weight: 700; }
+.pal-btn.select-tool { background: #e6dff5; color: #4a3a7a; font-size: 20px; font-weight: 700; }
+
+.cell.selected {
+  background: rgba(74,90,144,.16);
+  box-shadow: inset 0 0 0 2px #4a5a90;
+}
+.cell.select-preview {
+  background: rgba(74,90,144,.08);
+  box-shadow: inset 0 0 0 1.5px rgba(74,90,144,.6);
+}
+.cell.move-preview {
+  background: rgba(74,124,58,.20);
+  box-shadow: inset 0 0 0 2px var(--success);
+}
+.select-rect {
+  position: absolute;
+  border: 1.5px dashed #4a5a90;
+  background: rgba(74,90,144,.08);
+  pointer-events: none;
+  z-index: 20;
+  border-radius: 3px;
+}
+#stage.tool-select { cursor: crosshair; }
+#stage.tool-select .cell.selected { cursor: move; }
+#stage.tool-select .cell { user-select: none; }
+
+.tool-info {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: rgba(255,255,255,.5);
+  border-top: 1px dashed rgba(0,0,0,.12);
+  display: flex; gap: 16px; flex-wrap: wrap;
+}
+.tool-info b { color: var(--ink); }
+
+#downloadOut {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(30,20,10,.6);
+  z-index: 100;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+#downloadOut.show { display: flex; }
+#downloadOut .modal {
+  background: var(--paper);
+  padding: 20px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  max-width: 90vw; max-height: 90vh;
+  display: flex; flex-direction: column;
+  gap: 10px;
+}
+#downloadOut textarea {
+  width: 640px; max-width: 80vw;
+  height: 400px; max-height: 60vh;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  padding: 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  background: white;
+  resize: both;
+}
+#downloadOut .actions { display: flex; gap: 8px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<!-- SVG symbols copied verbatim from index.html for icon parity -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="icon-VIRUS" viewBox="0 0 40 40">
+      <g stroke="#2c2820" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 5 L22 10 M20 35 L18 30 M5 20 L10 22 M35 20 L30 18 M9 9 L12 13 M31 9 L28 13 M9 31 L12 27 M31 31 L28 27" stroke-width="2"/>
+        <circle cx="20" cy="21" r="11" fill="#7ec87e"/>
+        <circle cx="16" cy="19" r="2" fill="#2c2820"/>
+        <circle cx="24" cy="19" r="2" fill="#2c2820"/>
+        <circle cx="16.6" cy="18.4" r=".6" fill="white"/>
+        <circle cx="24.6" cy="18.4" r=".6" fill="white"/>
+        <path d="M15 25 Q17.5 27 20 25.5 Q22.5 27 25 25" fill="none" stroke-width="1.6"/>
+      </g>
+    </symbol>
+    <symbol id="icon-FIREWALL" viewBox="0 0 40 40">
+      <g stroke="#2c2820" stroke-width="1.2" stroke-linejoin="round">
+        <rect x="4" y="18" width="32" height="18" fill="#c86840"/>
+        <path d="M4 22 H36 M4 27 H36 M4 32 H36 M10 18 V22 M18 22 V27 M26 27 V32 M14 22 V27 M22 27 V32 M8 27 V32 M30 22 V27 M12 32 V36 M20 32 V36 M28 32 V36" stroke-width="1"/>
+        <g class="flame">
+          <path d="M14 18 Q13 12 17 10 Q16 14 19 12 Q17 8 22 6 Q21 12 25 10 Q24 14 27 12 Q26 16 24 18 Z" fill="#f4a848" stroke="#a04020"/>
+          <path d="M18 17 Q17 13 20 11 Q19 15 22 14 Q21 17 20 17 Z" fill="#ffdc80"/>
+        </g>
+      </g>
+    </symbol>
+    <symbol id="icon-SYSTEM" viewBox="0 0 40 40">
+      <g stroke="#2c2820" stroke-width="1.3" stroke-linejoin="round">
+        <rect x="7" y="5" width="26" height="30" rx="2" fill="#dcd0b8"/>
+        <rect x="10" y="9" width="20" height="4" fill="#8a8070"/>
+        <rect x="10" y="15" width="20" height="4" fill="#8a8070"/>
+        <rect x="10" y="21" width="20" height="4" fill="#8a8070"/>
+        <rect x="10" y="27" width="20" height="4" fill="#8a8070"/>
+        <circle class="led" cx="28" cy="11" r="1.4" fill="#5ac850"/>
+        <circle cx="28" cy="17" r="1.2" fill="#c94f3a"/>
+        <circle cx="28" cy="23" r="1.2" fill="#c94f3a"/>
+        <circle cx="28" cy="29" r="1.2" fill="#c94f3a"/>
+      </g>
+    </symbol>
+    <symbol id="icon-WLAN" viewBox="0 0 40 40">
+      <g stroke="#2c2820" stroke-width="1.5" fill="none" stroke-linecap="round">
+        <path class="wave3" d="M6 22 Q20 8 34 22" stroke-width="2.4"/>
+        <path class="wave2" d="M10 25 Q20 15 30 25" stroke-width="2.4"/>
+        <path class="wave1" d="M14 28 Q20 22 26 28" stroke-width="2.4"/>
+        <circle cx="20" cy="32" r="1.8" fill="#2c2820"/>
+      </g>
+      <g class="lock-overlay" stroke="#2c2820" stroke-width="1.2" fill="#d4a13a">
+        <rect x="15" y="20" width="10" height="9" rx="1"/>
+        <path d="M17 20 v-3 a3 3 0 0 1 6 0 v3" fill="none" stroke-width="1.5"/>
+        <circle cx="20" cy="24" r="1" fill="#2c2820"/>
+      </g>
+    </symbol>
+    <symbol id="icon-KEY" viewBox="0 0 40 40">
+      <g stroke="#2c2820" stroke-width="1.4" stroke-linejoin="round">
+        <circle cx="12" cy="20" r="6" fill="#f0c840"/>
+        <circle cx="12" cy="20" r="2" fill="#2c2820"/>
+        <path d="M18 20 L34 20 L34 24 L31 24 L31 22 L28 22 L28 26 L25 26 L25 22 L18 22 Z" fill="#f0c840"/>
+      </g>
+    </symbol>
+    <symbol id="icon-APP" viewBox="0 0 40 40">
+      <g stroke="#2c2820" stroke-width="1.4" stroke-linejoin="round">
+        <rect x="7" y="7" width="26" height="26" rx="4" fill="#9080d4"/>
+        <rect x="10" y="10" width="20" height="6" rx="1" fill="#f0edf8"/>
+        <circle cx="13" cy="13" r="1.2" fill="#c94f3a"/>
+        <circle cx="17" cy="13" r="1.2" fill="#d4a13a"/>
+        <circle cx="21" cy="13" r="1.2" fill="#5ac850"/>
+        <rect x="10" y="19" width="20" height="4" fill="#f0edf8"/>
+        <rect x="10" y="25" width="14" height="4" fill="#f0edf8"/>
+      </g>
+    </symbol>
+    <symbol id="icon-HARDWARE" viewBox="0 0 40 40">
+      <g stroke="#2c2820" stroke-width="1.4" stroke-linejoin="round">
+        <rect x="9" y="9" width="22" height="22" rx="2" fill="#5a5040"/>
+        <rect x="14" y="14" width="12" height="12" rx="1" fill="#8a7a5a"/>
+        <path d="M14 6 v3 M18 6 v3 M22 6 v3 M26 6 v3 M14 31 v3 M18 31 v3 M22 31 v3 M26 31 v3 M6 14 h3 M6 18 h3 M6 22 h3 M6 26 h3 M31 14 h3 M31 18 h3 M31 22 h3 M31 26 h3" stroke-width="1.8"/>
+      </g>
+    </symbol>
+    <symbol id="icon-CACHE" viewBox="0 0 40 40">
+      <g stroke="#2c2820" stroke-width="1.3" stroke-linejoin="round">
+        <rect x="7" y="24" width="26" height="10" fill="#c8a878"/>
+        <rect x="9" y="15" width="22" height="9" fill="#d8b888"/>
+        <rect x="11" y="7" width="18" height="8" fill="#e0c898"/>
+        <line x1="7" y1="29" x2="33" y2="29"/>
+        <line x1="9" y1="19" x2="31" y2="19"/>
+        <line x1="11" y1="11" x2="29" y2="11"/>
+      </g>
+    </symbol>
+    <symbol id="icon-CODE" viewBox="0 0 40 40">
+      <g stroke="#2c2820" stroke-width="1.3" stroke-linejoin="round">
+        <rect x="5" y="8" width="30" height="24" rx="3" fill="#2f4570"/>
+        <rect x="5" y="8" width="30" height="5" fill="#3f5590"/>
+        <circle cx="8.5" cy="10.5" r=".9" fill="#e05050" stroke="none"/>
+        <circle cx="11.5" cy="10.5" r=".9" fill="#e0c050" stroke="none"/>
+        <circle cx="14.5" cy="10.5" r=".9" fill="#50c050" stroke="none"/>
+        <path d="M14 18 L9 22 L14 26" fill="none" stroke="#8ac0f0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M26 18 L31 22 L26 26" fill="none" stroke="#8ac0f0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M22 16 L18 28" stroke="#f0c860" stroke-width="1.8" stroke-linecap="round"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<header>
+  <div class="title">
+    <svg class="title-mark" viewBox="0 0 40 40"><use href="#icon-VIRUS"/></svg>
+    Virus <span class="sub">Protocol</span> — Editor
+  </div>
+  <div class="field">
+    <label>Name</label>
+    <input id="lvlName" class="wide" type="text" placeholder="Mein Level" value="Neues Level">
+  </div>
+  <div class="field">
+    <label>Breite</label>
+    <input id="lvlW" type="number" min="4" max="30" value="12">
+    <label>Höhe</label>
+    <input id="lvlH" type="number" min="4" max="30" value="10">
+    <button class="btn" id="applySize">Anwenden</button>
+  </div>
+  <div class="field" style="margin-left:auto">
+    <button class="btn" id="fillBorder" title="Rahmen mit HARDWARE füllen">▢ Rahmen</button>
+    <button class="btn danger" id="clearAll">Leeren</button>
+    <button class="btn" id="testBtn" style="background:#f2eae0" title="Level in index.html testen (öffnet neuen Tab)">▶ Test</button>
+    <button class="btn primary" id="downloadBtn">↓ Download .md</button>
+  </div>
+</header>
+
+<main>
+  <aside class="palette" id="palette">
+    <h3>Werkzeuge</h3>
+    <div class="pal-grid" id="palTools"></div>
+
+    <h3>Entities</h3>
+    <div class="pal-grid" id="palEntities"></div>
+
+    <h3>Text: Nomen</h3>
+    <div class="pal-grid" id="palNouns"></div>
+
+    <h3>Text: Regel</h3>
+    <div class="pal-grid" id="palOps"></div>
+
+    <h3>Text: Eigenschaft</h3>
+    <div class="pal-grid" id="palProps"></div>
+
+    <h3>Custom-Block</h3>
+    <div class="custom-input">
+      <input type="text" id="customLabel" placeholder="Name (z.B. Router)" maxlength="12">
+    </div>
+    <div style="font-size:11px;color:var(--ink-soft);padding:0 6px;font-style:italic">
+      Label eingeben, dann Custom-Werkzeug wählen und platzieren.
+    </div>
+  </aside>
+
+  <div class="stage-wrap">
+    <div id="stage"></div>
+  </div>
+</main>
+
+<div class="tool-info">
+  <span><b>Aktiv:</b> <span id="activeTool">–</span></span>
+  <span>Klick auf Zelle → platzieren</span>
+  <span>Radiergummi → Zelle leeren</span>
+  <span><b>✥ Move</b> → 1. Klick aufnehmen, 2. Klick ablegen</span>
+  <span><b>⬚ Select</b> → Rechteck aufziehen, dann Auswahl ziehen (Shift = zur Auswahl hinzufügen, Esc = leeren, Entf = löschen)</span>
+  <span>Drag &amp; Drop → obersten Block direkt zwischen Zellen ziehen</span>
+  <span>Mehrere Blöcke pro Zelle möglich (werden gestapelt)</span>
+  <span><b>Z</b> (oder <b>Strg+Z</b>) → letzte Änderung rückgängig</span>
+</div>
+
+<div id="downloadOut">
+  <div class="modal">
+    <div style="font-weight:700;font-size:16px">Level-Datei (kopieren oder herunterladen)</div>
+    <textarea id="mdOut" readonly></textarea>
+    <div class="actions">
+      <button class="btn" id="copyBtn">Kopieren</button>
+      <button class="btn primary" id="saveBtn">↓ Als .md speichern</button>
+      <button class="btn danger" id="closeOut">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// -----------------------------------------------------------------------------
+// KONSTANTEN — müssen mit index.html kompatibel bleiben.
+// -----------------------------------------------------------------------------
+const NOUNS = ['VIRUS','FIREWALL','SYSTEM','WLAN','KEY','APP','HARDWARE','CACHE','CODE'];
+const PROPS = ['YOU','WIN','DEFEAT','STOP','PUSH','OPEN','LOCKED'];
+const OPS   = ['IS','MAKE'];
+
+// Zweizeilige Anzeige für längere Textsteine im Editor-Grid.
+const TEXT_LABEL = {
+  VIRUS:'VIR\nUS', FIREWALL:'FIRE\nWALL', SYSTEM:'SYS\nTEM',
+  WLAN:'WL\nAN', HARDWARE:'HARD\nWARE', CACHE:'CA\nCHE', CODE:'CO\nDE',
+  DEFEAT:'DEF\nEAT', STOP:'ST\nOP', PUSH:'PU\nSH', OPEN:'OP\nEN',
+  LOCKED:'LOC\nKED', MAKE:'MA\nKE',
+};
+
+// -----------------------------------------------------------------------------
+// EDITOR-STATE
+// Grid speichert pro Zelle ein Array von Blöcken.
+// Block = { kind: 'VIRUS' | 'T_VIRUS' | ..., custom?: { label } }
+// Custom-Blöcke haben kind='__CUSTOM__' und ein Label.
+// -----------------------------------------------------------------------------
+const editor = {
+  w: 12,
+  h: 10,
+  grid: [],           // Array of Array of blocks (row-major)
+  tool: null,         // {type:'place', kind:'VIRUS'} | {type:'erase'} | {type:'custom', label:'…'} | {type:'move'} | {type:'select'}
+  pickup: null,       // {x, y} — Zelle, aus der beim Move-Tool ein Block „aufgenommen“ wurde (wartet auf Ablage-Klick)
+  selection: new Set(),   // Set of "x,y" — beim Select-Tool markierte Zellen (ganze Stacks werden gemeinsam bewegt)
+};
+
+let currentTile = 44;   // Wird von renderStage() gesetzt; wird für Pixel↔Zelle-Umrechnung beim Select-Tool gebraucht.
+
+function makeEmptyGrid(w, h) {
+  return Array.from({ length: w * h }, () => []);
+}
+function cellAt(x, y) { return editor.grid[y * editor.w + x]; }
+
+// -----------------------------------------------------------------------------
+// UNDO — Snapshot-Stack. Vor jeder Grid-Mutation pushUndo() aufrufen;
+// Strg+Z / Z stellt den letzten Zustand wieder her.
+// -----------------------------------------------------------------------------
+const UNDO_LIMIT = 100;
+const undoStack = [];
+
+function snapshotGrid() {
+  return editor.grid.map(cell => cell.map(b =>
+    b.custom ? { kind: b.kind, custom: { label: b.custom.label } } : { kind: b.kind }
+  ));
+}
+function pushUndo() {
+  undoStack.push({ w: editor.w, h: editor.h, grid: snapshotGrid() });
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+}
+function performUndo() {
+  const snap = undoStack.pop();
+  if (!snap) return;
+  editor.w = snap.w;
+  editor.h = snap.h;
+  editor.grid = snap.grid;
+  editor.pickup = null;
+  editor.selection.clear();
+  const wInput = document.getElementById('lvlW');
+  const hInput = document.getElementById('lvlH');
+  if (wInput) wInput.value = editor.w;
+  if (hInput) hInput.value = editor.h;
+  renderStage();
+}
+
+// -----------------------------------------------------------------------------
+// PALETTE
+// -----------------------------------------------------------------------------
+const palTools     = document.getElementById('palTools');
+const palEntities  = document.getElementById('palEntities');
+const palNouns     = document.getElementById('palNouns');
+const palOps       = document.getElementById('palOps');
+const palProps     = document.getElementById('palProps');
+const activeToolEl = document.getElementById('activeTool');
+const customLabelInput = document.getElementById('customLabel');
+
+function makePalBtn(cls, contentHTML, onClick, tooltip) {
+  const b = document.createElement('button');
+  b.className = 'pal-btn ' + cls;
+  b.innerHTML = contentHTML;
+  if (tooltip) b.title = tooltip;
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.pal-btn.active').forEach(n => n.classList.remove('active'));
+    b.classList.add('active');
+    onClick();
+  });
+  return b;
+}
+
+function setTool(tool, label) {
+  const hadPickup = !!editor.pickup;
+  const hadSelection = editor.selection.size > 0;
+  editor.pickup = null;
+  // Auswahl beim Werkzeugwechsel verwerfen — verhindert versehentliche Multi-Move-Aktionen mit anderen Tools.
+  if (!tool || tool.type !== 'select') editor.selection.clear();
+  editor.tool = tool;
+  activeToolEl.textContent = label;
+  if (hadPickup || hadSelection) renderStage();
+}
+
+// Werkzeuge: Radiergummi + Move + Custom
+palTools.appendChild(makePalBtn('eraser', '✕',
+  () => setTool({ type:'erase' }, 'Radiergummi'),
+  'Zelle leeren'));
+palTools.appendChild(makePalBtn('move-tool', '✥',
+  () => setTool({ type:'move' }, 'Bewegen (1. Klick = aufnehmen, 2. Klick = ablegen)'),
+  'Bewegen: 1. Klick nimmt oberen Block, 2. Klick legt ab. Alternativ: Drag & Drop.'));
+palTools.appendChild(makePalBtn('select-tool', '⬚',
+  () => setTool({ type:'select' }, 'Auswählen (Rechteck aufziehen, dann Auswahl ziehen)'),
+  'Rechteck aufziehen → mehrere Zellen wählen; dann Auswahl per Drag verschieben (mit Shift zur Auswahl hinzufügen, Esc = leeren, Entf = löschen).'));
+palTools.appendChild(makePalBtn('custom-tool', '✎',
+  () => {
+    const label = customLabelInput.value.trim();
+    if (!label) {
+      alert('Bitte zuerst einen Namen im Custom-Feld eingeben.');
+      return;
+    }
+    setTool({ type:'custom', label }, `Custom: "${label}"`);
+  },
+  'Custom-Block platzieren (Label unten eingeben)'));
+
+// Entities
+for (const kind of NOUNS) {
+  palEntities.appendChild(makePalBtn(
+    '',
+    `<svg viewBox="0 0 40 40"><use href="#icon-${kind}"/></svg>`,
+    () => setTool({ type:'place', kind }, kind),
+    kind
+  ));
+}
+// Nomen-Text
+for (const noun of NOUNS) {
+  palNouns.appendChild(makePalBtn(
+    'text noun',
+    noun,
+    () => setTool({ type:'place', kind:'T_'+noun }, 'Text: '+noun),
+    'T_'+noun
+  ));
+}
+// Regel-Verben (IS, MAKE)
+for (const op of OPS) {
+  palOps.appendChild(makePalBtn(
+    'text is', op,
+    () => setTool({ type:'place', kind:'T_'+op }, 'Text: '+op),
+    'T_'+op
+  ));
+}
+// Eigenschaften
+for (const p of PROPS) {
+  palProps.appendChild(makePalBtn(
+    'text prop', p,
+    () => setTool({ type:'place', kind:'T_'+p }, 'Text: '+p),
+    'T_'+p
+  ));
+}
+
+// -----------------------------------------------------------------------------
+// STAGE
+// -----------------------------------------------------------------------------
+const stage = document.getElementById('stage');
+
+function renderStage() {
+  // Adaptive Kachelgröße — je größer das Grid, desto kleiner die Kachel
+  const maxTilePx = 56;
+  const minTilePx = 28;
+  const availW = window.innerWidth - 260;
+  const availH = window.innerHeight - 180;
+  const t = Math.max(minTilePx, Math.min(maxTilePx,
+    Math.floor(Math.min(availW / editor.w, availH / editor.h))));
+  document.documentElement.style.setProperty('--tile', t + 'px');
+  currentTile = t;
+
+  const selectMode = editor.tool && editor.tool.type === 'select';
+  stage.classList.toggle('tool-select', selectMode);
+
+  stage.style.width  = (editor.w * t) + 'px';
+  stage.style.height = (editor.h * t) + 'px';
+  stage.innerHTML = '';
+
+  for (let y = 0; y < editor.h; y++) {
+    for (let x = 0; x < editor.w; x++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.style.left = (x * t) + 'px';
+      cell.style.top  = (y * t) + 'px';
+      cell.dataset.x = x;
+      cell.dataset.y = y;
+      cell.addEventListener('click', () => handleCellClick(x, y));
+      cell.addEventListener('contextmenu', (e) => { e.preventDefault(); eraseCell(x, y); });
+
+      // Drop-Ziel für Drag & Drop (jede Zelle darf Ziel sein).
+      cell.addEventListener('dragover', (e) => {
+        if (!e.dataTransfer.types.includes('application/x-baba-move')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        cell.classList.add('drag-over');
+      });
+      cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+      cell.addEventListener('drop', (e) => {
+        cell.classList.remove('drag-over');
+        const data = e.dataTransfer.getData('application/x-baba-move');
+        if (!data) return;
+        e.preventDefault();
+        const [fx, fy] = data.split(',').map(Number);
+        moveTopBlock(fx, fy, x, y);
+      });
+
+      const blocks = cellAt(x, y);
+      if (blocks.length > 0) {
+        const stackDiv = document.createElement('div');
+        stackDiv.className = 'stack';
+        // Zeige den obersten Block groß; die anderen als kleine Ziffer.
+        const top = blocks[blocks.length - 1];
+        stackDiv.appendChild(makeBlockNode(top));
+        if (blocks.length > 1) {
+          const cnt = document.createElement('div');
+          cnt.className = 'cell-count';
+          cnt.textContent = blocks.length;
+          cell.appendChild(cnt);
+        }
+        cell.appendChild(stackDiv);
+
+        // Native HTML5-Drag nur bei Nicht-Select-Werkzeugen — sonst kollidiert es mit dem Rechteck-Ziehen.
+        if (!selectMode) {
+          cell.draggable = true;
+          cell.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('application/x-baba-move', `${x},${y}`);
+            e.dataTransfer.effectAllowed = 'move';
+            cell.classList.add('dragging');
+          });
+          cell.addEventListener('dragend', () => cell.classList.remove('dragging'));
+        }
+      }
+
+      // Highlight: Pickup-Quelle beim Move-Tool
+      if (editor.pickup && editor.pickup.x === x && editor.pickup.y === y) {
+        cell.classList.add('pickup-source');
+      }
+      // Highlight: dauerhaft ausgewählte Zellen beim Select-Tool
+      if (selectMode && editor.selection.has(`${x},${y}`)) {
+        cell.classList.add('selected');
+      }
+
+      stage.appendChild(cell);
+    }
+  }
+}
+
+function moveTopBlock(fromX, fromY, toX, toY) {
+  if (fromX === toX && fromY === toY) return;
+  const from = cellAt(fromX, fromY);
+  if (from.length === 0) return;
+  pushUndo();
+  const block = from.pop();
+  cellAt(toX, toY).push(block);
+  renderStage();
+}
+
+function makeBlockNode(block) {
+  const div = document.createElement('div');
+  div.className = 'cell-ent';
+  if (block.kind === '__CUSTOM__') {
+    div.classList.add('text', 'custom');
+    const box = document.createElement('div');
+    box.className = 'box';
+    box.textContent = block.custom.label;
+    div.appendChild(box);
+    return div;
+  }
+  if (block.kind.startsWith('T_')) {
+    div.classList.add('text');
+    const label = block.kind.slice(2);
+    if (OPS.includes(label)) div.classList.add('is');
+    else if (PROPS.includes(label)) div.classList.add('prop');
+    else div.classList.add('noun');
+    const box = document.createElement('div');
+    box.className = 'box';
+    box.textContent = TEXT_LABEL[label] || label;
+    div.appendChild(box);
+  } else {
+    div.innerHTML = `<svg viewBox="0 0 40 40"><use href="#icon-${block.kind}"/></svg>`;
+  }
+  return div;
+}
+
+function handleCellClick(x, y) {
+  if (!editor.tool) {
+    alert('Bitte zuerst ein Werkzeug in der Palette wählen.');
+    return;
+  }
+  const t = editor.tool;
+  // Select-Tool wird komplett über mousedown/-move/-up abgewickelt (siehe unten).
+  if (t.type === 'select') return;
+  if (t.type === 'erase') {
+    eraseCell(x, y);
+  } else if (t.type === 'place') {
+    pushUndo();
+    cellAt(x, y).push({ kind: t.kind });
+    renderStage();
+  } else if (t.type === 'custom') {
+    pushUndo();
+    cellAt(x, y).push({ kind: '__CUSTOM__', custom: { label: t.label } });
+    renderStage();
+  } else if (t.type === 'move') {
+    if (!editor.pickup) {
+      // Aufnehmen: nur wenn die Zelle etwas enthält.
+      if (cellAt(x, y).length === 0) return;
+      editor.pickup = { x, y };
+      renderStage();
+    } else {
+      // Ablegen: obersten Block der Quellzelle in die Zielzelle verschieben.
+      // Klick auf dieselbe Zelle → Pickup abbrechen (kein Move).
+      const from = editor.pickup;
+      editor.pickup = null;
+      if (from.x === x && from.y === y) {
+        renderStage();
+        return;
+      }
+      moveTopBlock(from.x, from.y, x, y);
+    }
+  }
+}
+
+function eraseCell(x, y) {
+  const c = cellAt(x, y);
+  if (c.length === 0) return;
+  pushUndo();
+  c.pop(); // Nur obersten Block entfernen — mehrfach klicken leert komplett
+  renderStage();
+}
+
+// -----------------------------------------------------------------------------
+// SELECT-TOOL — Rechteck-Auswahl mehrerer Zellen + Gruppen-Verschiebung.
+//
+// Ablauf:
+//   1) Select-Tool aktivieren.
+//   2) Mit gedrückter linker Maustaste über leere/nicht-selektierte Zellen
+//      ziehen → Rechteck spannt auf, alle berührten Zellen werden markiert.
+//      Mit gedrücktem Shift wird zur bestehenden Auswahl hinzugefügt statt
+//      sie zu ersetzen.
+//   3) Mit gedrückter linker Maustaste auf eine bereits selektierte Zelle
+//      ziehen → gesamte Auswahl wird mitgezogen. Beim Ablegen werden alle
+//      Stacks um dieselbe Zelldistanz verschoben (an Zielzellen angehängt).
+//   4) Esc leert die Auswahl, Entf/Backspace löscht Inhalte aller selektierten
+//      Zellen.
+// -----------------------------------------------------------------------------
+let dragOp = null;         // {mode:'rect'|'move', startPx, currentPx, startCell, delta, addMode, prevSelection}
+let selectRectEl = null;   // DOM-Node für das gestrichelte Auswahlrechteck.
+
+function stagePxFromEvent(e) {
+  const r = stage.getBoundingClientRect();
+  return { px: e.clientX - r.left, py: e.clientY - r.top };
+}
+function cellFromPx(px, py) {
+  return { x: Math.floor(px / currentTile), y: Math.floor(py / currentTile) };
+}
+function inBounds(x, y) { return x >= 0 && y >= 0 && x < editor.w && y < editor.h; }
+
+stage.addEventListener('mousedown', (e) => {
+  if (!editor.tool || editor.tool.type !== 'select') return;
+  if (e.button !== 0) return;
+  const { px, py } = stagePxFromEvent(e);
+  const { x, y } = cellFromPx(px, py);
+  if (!inBounds(x, y)) return;
+  e.preventDefault();
+
+  const clickedSelected = editor.selection.has(`${x},${y}`);
+  if (clickedSelected && !e.shiftKey) {
+    // Auswahl verschieben.
+    dragOp = {
+      mode: 'move',
+      startPx: { x: px, y: py },
+      startCell: { x, y },
+      delta: { dx: 0, dy: 0 },
+    };
+  } else {
+    // Rechteck ziehen. Ohne Shift wird die bisherige Auswahl ersetzt.
+    if (!e.shiftKey) {
+      editor.selection.clear();
+      stage.querySelectorAll('.cell.selected').forEach(c => c.classList.remove('selected'));
+    }
+    dragOp = {
+      mode: 'rect',
+      startPx: { x: px, y: py },
+      currentPx: { x: px, y: py },
+      addMode: e.shiftKey,
+      prevSelection: new Set(editor.selection),
+    };
+    updateSelectRectVisual();
+    updateRectPreview();
+  }
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!dragOp) return;
+  const { px, py } = stagePxFromEvent(e);
+  if (dragOp.mode === 'rect') {
+    dragOp.currentPx = { x: px, y: py };
+    updateSelectRectVisual();
+    updateRectPreview();
+  } else if (dragOp.mode === 'move') {
+    const curCell = cellFromPx(px, py);
+    const dx = curCell.x - dragOp.startCell.x;
+    const dy = curCell.y - dragOp.startCell.y;
+    if (dx !== dragOp.delta.dx || dy !== dragOp.delta.dy) {
+      dragOp.delta = { dx, dy };
+      updateMovePreview();
+    }
+  }
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (!dragOp) return;
+  if (dragOp.mode === 'rect') {
+    finalizeRectSelection();
+    removeSelectRectVisual();
+  } else if (dragOp.mode === 'move') {
+    const { dx, dy } = dragOp.delta;
+    clearMovePreview();
+    if (dx !== 0 || dy !== 0) commitGroupMove(dx, dy);
+  }
+  dragOp = null;
+  renderStage();
+});
+
+function updateSelectRectVisual() {
+  if (!dragOp || dragOp.mode !== 'rect') return;
+  if (!selectRectEl) {
+    selectRectEl = document.createElement('div');
+    selectRectEl.className = 'select-rect';
+    stage.appendChild(selectRectEl);
+  } else if (selectRectEl.parentNode !== stage) {
+    // Nach renderStage() ist der Overlay-Node verschwunden — neu anhängen.
+    stage.appendChild(selectRectEl);
+  }
+  const x1 = Math.min(dragOp.startPx.x, dragOp.currentPx.x);
+  const y1 = Math.min(dragOp.startPx.y, dragOp.currentPx.y);
+  const x2 = Math.max(dragOp.startPx.x, dragOp.currentPx.x);
+  const y2 = Math.max(dragOp.startPx.y, dragOp.currentPx.y);
+  selectRectEl.style.left   = x1 + 'px';
+  selectRectEl.style.top    = y1 + 'px';
+  selectRectEl.style.width  = (x2 - x1) + 'px';
+  selectRectEl.style.height = (y2 - y1) + 'px';
+}
+function removeSelectRectVisual() {
+  if (selectRectEl && selectRectEl.parentNode) selectRectEl.parentNode.removeChild(selectRectEl);
+  selectRectEl = null;
+  stage.querySelectorAll('.cell.select-preview').forEach(c => c.classList.remove('select-preview'));
+}
+
+function rectCellRange() {
+  const x1 = Math.min(dragOp.startPx.x, dragOp.currentPx.x);
+  const y1 = Math.min(dragOp.startPx.y, dragOp.currentPx.y);
+  const x2 = Math.max(dragOp.startPx.x, dragOp.currentPx.x);
+  const y2 = Math.max(dragOp.startPx.y, dragOp.currentPx.y);
+  const cx1 = Math.max(0, Math.floor(x1 / currentTile));
+  const cy1 = Math.max(0, Math.floor(y1 / currentTile));
+  // -0.001, damit ein Rechteck, das exakt auf einer Zellgrenze endet, die
+  // dahinter liegende Zelle nicht mitzieht.
+  const cx2 = Math.min(editor.w - 1, Math.floor(Math.max(x2 - 0.001, x1) / currentTile));
+  const cy2 = Math.min(editor.h - 1, Math.floor(Math.max(y2 - 0.001, y1) / currentTile));
+  return { cx1, cy1, cx2, cy2 };
+}
+
+function updateRectPreview() {
+  stage.querySelectorAll('.cell.select-preview').forEach(c => c.classList.remove('select-preview'));
+  const { cx1, cy1, cx2, cy2 } = rectCellRange();
+  for (let y = cy1; y <= cy2; y++) {
+    for (let x = cx1; x <= cx2; x++) {
+      const cellEl = stage.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+      if (cellEl) cellEl.classList.add('select-preview');
+    }
+  }
+}
+
+function finalizeRectSelection() {
+  const { cx1, cy1, cx2, cy2 } = rectCellRange();
+  if (!dragOp.addMode) editor.selection = new Set(dragOp.prevSelection);
+  for (let y = cy1; y <= cy2; y++)
+    for (let x = cx1; x <= cx2; x++)
+      editor.selection.add(`${x},${y}`);
+}
+
+function updateMovePreview() {
+  clearMovePreview();
+  const { dx, dy } = dragOp.delta;
+  if (dx === 0 && dy === 0) return;
+  for (const key of editor.selection) {
+    const [x, y] = key.split(',').map(Number);
+    const nx = x + dx, ny = y + dy;
+    if (!inBounds(nx, ny)) continue;
+    const cellEl = stage.querySelector(`.cell[data-x="${nx}"][data-y="${ny}"]`);
+    if (cellEl) cellEl.classList.add('move-preview');
+  }
+}
+function clearMovePreview() {
+  stage.querySelectorAll('.cell.move-preview').forEach(c => c.classList.remove('move-preview'));
+}
+
+function commitGroupMove(dx, dy) {
+  const cells = [...editor.selection].map(k => k.split(',').map(Number));
+  // Sicherheitsnetz: nichts darf aus dem Level fallen.
+  for (const [x, y] of cells) {
+    if (!inBounds(x + dx, y + dy)) {
+      alert('Auswahl passt so nicht ins Level (Rand erreicht). Verschiebung abgebrochen.');
+      return;
+    }
+  }
+  pushUndo();
+  // Erst alle Quellen leeren, dann an den Zielen anfügen — so überschreibt
+  // eine Zielzelle, die selbst Quelle war, sich nicht selbst.
+  const grabbed = cells.map(([x, y]) => cellAt(x, y).splice(0));
+  const newSel = new Set();
+  cells.forEach(([x, y], i) => {
+    const nx = x + dx, ny = y + dy;
+    cellAt(nx, ny).push(...grabbed[i]);
+    newSel.add(`${nx},${ny}`);
+  });
+  editor.selection = newSel;
+}
+
+// Esc leert Auswahl, Entf/Backspace löscht Inhalt aller ausgewählten Zellen.
+// Strg+Z (oder Z) macht die letzte Grid-Änderung rückgängig.
+window.addEventListener('keydown', (e) => {
+  const a = document.activeElement;
+  if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+  const key = e.key.toLowerCase();
+  if (key === 'z' && !e.altKey && !e.shiftKey) {
+    e.preventDefault();
+    performUndo();
+    return;
+  }
+  if (e.key === 'Escape') {
+    if (dragOp) { dragOp = null; removeSelectRectVisual(); clearMovePreview(); }
+    if (editor.selection.size > 0 || editor.pickup) {
+      editor.selection.clear();
+      editor.pickup = null;
+      renderStage();
+    }
+  } else if ((e.key === 'Delete' || e.key === 'Backspace') && editor.selection.size > 0) {
+    e.preventDefault();
+    pushUndo();
+    for (const key of editor.selection) {
+      const [x, y] = key.split(',').map(Number);
+      cellAt(x, y).length = 0;
+    }
+    editor.selection.clear();
+    renderStage();
+  }
+});
+
+// -----------------------------------------------------------------------------
+// GRÖSSE ÄNDERN
+// Behält bestehende Inhalte innerhalb der neuen Grenzen bei.
+// -----------------------------------------------------------------------------
+document.getElementById('applySize').addEventListener('click', () => {
+  const w = clamp(parseInt(document.getElementById('lvlW').value, 10) || editor.w, 4, 30);
+  const h = clamp(parseInt(document.getElementById('lvlH').value, 10) || editor.h, 4, 30);
+  if (w === editor.w && h === editor.h) return;
+  pushUndo();
+  const newGrid = makeEmptyGrid(w, h);
+  for (let y = 0; y < Math.min(h, editor.h); y++)
+    for (let x = 0; x < Math.min(w, editor.w); x++)
+      newGrid[y * w + x] = cellAt(x, y);
+  editor.w = w; editor.h = h; editor.grid = newGrid;
+  editor.selection.clear();
+  document.getElementById('lvlW').value = w;
+  document.getElementById('lvlH').value = h;
+  renderStage();
+});
+
+document.getElementById('clearAll').addEventListener('click', () => {
+  if (!confirm('Wirklich das ganze Level leeren?')) return;
+  pushUndo();
+  editor.grid = makeEmptyGrid(editor.w, editor.h);
+  editor.selection.clear();
+  renderStage();
+});
+
+document.getElementById('fillBorder').addEventListener('click', () => {
+  const kind = 'HARDWARE';
+  pushUndo();
+  for (let x = 0; x < editor.w; x++) {
+    ensureContains(cellAt(x, 0), kind);
+    ensureContains(cellAt(x, editor.h - 1), kind);
+  }
+  for (let y = 1; y < editor.h - 1; y++) {
+    ensureContains(cellAt(0, y), kind);
+    ensureContains(cellAt(editor.w - 1, y), kind);
+  }
+  renderStage();
+});
+
+function ensureContains(cell, kind) {
+  if (!cell.some(b => b.kind === kind)) cell.push({ kind });
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// -----------------------------------------------------------------------------
+// EXPORT — Markdown mit ASCII-Vorschau + JSON-Datenblock.
+// -----------------------------------------------------------------------------
+const ENT_SYMBOL = {
+  VIRUS:'V', FIREWALL:'F', SYSTEM:'S', WLAN:'W',
+  KEY:'K', APP:'A', HARDWARE:'H', CACHE:'C', CODE:'#',
+};
+function shortSymbol(block) {
+  if (block.kind === '__CUSTOM__') return '?';
+  if (block.kind.startsWith('T_')) {
+    const l = block.kind.slice(2);
+    if (l === 'IS')   return '=';
+    if (l === 'MAKE') return '~';
+    if (l === 'CODE') return ',';
+    return l[0].toLowerCase(); // Nomen/Prop: kleiner Buchstabe
+  }
+  return ENT_SYMBOL[block.kind] || block.kind[0];
+}
+
+function makeAsciiGrid() {
+  const lines = [];
+  const border = '+' + '---+'.repeat(editor.w);
+  for (let y = 0; y < editor.h; y++) {
+    lines.push(border);
+    let row = '|';
+    for (let x = 0; x < editor.w; x++) {
+      const blocks = cellAt(x, y);
+      let symbol = ' ';
+      if (blocks.length === 1) symbol = shortSymbol(blocks[0]);
+      else if (blocks.length > 1) symbol = String(blocks.length);
+      row += ' ' + symbol + ' |';
+    }
+    lines.push(row);
+  }
+  lines.push(border);
+  return lines.join('\n');
+}
+
+function buildMarkdown() {
+  const name = document.getElementById('lvlName').value.trim() || 'Unbenanntes Level';
+
+  const entities = [];
+  const text = [];
+  const custom = [];
+  for (let y = 0; y < editor.h; y++)
+    for (let x = 0; x < editor.w; x++)
+      for (const b of cellAt(x, y)) {
+        if (b.kind === '__CUSTOM__') custom.push({ x, y, label: b.custom.label });
+        else if (b.kind.startsWith('T_')) text.push({ kind: b.kind, x, y });
+        else entities.push({ kind: b.kind, x, y });
+      }
+
+  const data = { name, w: editor.w, h: editor.h, entities, text, custom };
+
+  let md = `# Level: ${name}\n\n`;
+  md += `- **Größe:** ${editor.w} × ${editor.h}\n`;
+  md += `- **Entities:** ${entities.length} · **Text:** ${text.length} · **Custom:** ${custom.length}\n\n`;
+
+  md += `## ASCII-Vorschau\n\n`;
+  md += '```\n' + makeAsciiGrid() + '\n```\n\n';
+
+  md += `**Legende:** Großbuchstabe = Entity (V=VIRUS, F=FIREWALL, S=SYSTEM, W=WLAN, K=KEY, A=APP, H=HARDWARE, C=CACHE, #=CODE), `;
+  md += `kleiner Buchstabe = Text-Block, \`=\` = T_IS, \`~\` = T_MAKE, \`,\` = T_CODE, \`?\` = Custom-Block, Zahl = mehrere Blöcke auf einer Zelle.\n\n`;
+
+  if (custom.length > 0) {
+    md += `## Custom-Blöcke\n\n`;
+    md += `Diese Blöcke sind Platzhalter — bitte mit dem Entwickler klären, was sie tun sollen (Text? Entity? Welche Grafik?):\n\n`;
+    for (const c of custom) {
+      md += `- (${c.x}, ${c.y}) → **"${c.label}"**\n`;
+    }
+    md += '\n';
+  }
+
+  md += `## Daten (JSON, für Import ins Spiel)\n\n`;
+  md += '```json\n' + JSON.stringify(data, null, 2) + '\n```\n';
+
+  return { md, name };
+}
+
+const dlOut  = document.getElementById('downloadOut');
+const mdOut  = document.getElementById('mdOut');
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const { md } = buildMarkdown();
+  mdOut.value = md;
+  dlOut.classList.add('show');
+});
+document.getElementById('closeOut').addEventListener('click', () => dlOut.classList.remove('show'));
+document.getElementById('copyBtn').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(mdOut.value);
+    document.getElementById('copyBtn').textContent = '✓ Kopiert';
+    setTimeout(() => document.getElementById('copyBtn').textContent = 'Kopieren', 1500);
+  } catch {
+    mdOut.select();
+    document.execCommand('copy');
+  }
+});
+document.getElementById('saveBtn').addEventListener('click', () => {
+  const { md, name } = buildMarkdown();
+  const safeName = name.replace(/[^\wäöüÄÖÜß-]+/g, '_').replace(/^_+|_+$/g, '') || 'level';
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = safeName + '.md';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// -----------------------------------------------------------------------------
+// TEST — Level direkt in index.html spielen. Serialisiert nach localStorage,
+// öffnet index.html?test=1 in neuem Tab. Custom-Blöcke werden ignoriert (die
+// Engine kennt sie nicht) — der Editor warnt vorher.
+// -----------------------------------------------------------------------------
+const TEST_STORAGE_KEY = 'baba-it-testlevel';
+document.getElementById('testBtn').addEventListener('click', () => {
+  const name = document.getElementById('lvlName').value.trim() || 'Test-Level';
+
+  const entities = [];
+  const text = [];
+  let customCount = 0;
+  for (let y = 0; y < editor.h; y++)
+    for (let x = 0; x < editor.w; x++)
+      for (const b of cellAt(x, y)) {
+        if (b.kind === '__CUSTOM__') { customCount++; continue; }
+        if (b.kind.startsWith('T_')) text.push({ kind: b.kind, x, y });
+        else entities.push({ kind: b.kind, x, y });
+      }
+
+  if (customCount > 0) {
+    if (!confirm(`${customCount} Custom-Block(e) werden im Test ignoriert (Engine kennt sie nicht). Trotzdem testen?`)) return;
+  }
+
+  const level = { name, w: editor.w, h: editor.h, entities, text };
+  try {
+    localStorage.setItem(TEST_STORAGE_KEY, JSON.stringify(level));
+  } catch (err) {
+    alert('Konnte Level nicht in localStorage speichern: ' + err.message);
+    return;
+  }
+  window.open('index.html?test=1&t=' + Date.now(), '_blank');
+});
+
+// -----------------------------------------------------------------------------
+// BOOT
+// -----------------------------------------------------------------------------
+window.addEventListener('resize', renderStage);
+editor.grid = makeEmptyGrid(editor.w, editor.h);
+renderStage();
+</script>
+</body>
+</html>

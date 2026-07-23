@@ -320,6 +320,7 @@
       await window.loadServerShop?.();
       await window.loadGiftTasks?.();
       await window.loadWinTaskStatus?.();
+      await window.loadVirusProgress?.();
       await window.syncHighscores?.();
       await window.fetchDailyBonbonStatus?.();
 
@@ -332,6 +333,20 @@
       // seenCreatures wird von renderHub aktuell gehalten → jetzt erst
       // sind NEW-Badges zuverlässig berechenbar (nicht schon bei renderHubAuth).
       refreshHubAvatarNewBadges();
+
+      // Rückkehr aus S3 Virus Protocol nach „Kreatur vollenden": Animation
+      // triggern, URL cleanen. Variante aus game_state[game16] lesen.
+      try {
+        const _params = new URLSearchParams(location.search);
+        if (_params.get('legiComplete') === '1'
+            && window.__virusProgress?.task_completed_at
+            && typeof window.showVirusCompletionAnimation === 'function') {
+          const _all = (typeof loadAllData === 'function') ? loadAllData() : {};
+          const _variant = _all?.game16?.variant || 'rainbow';
+          history.replaceState({}, '', location.pathname);
+          window.showVirusCompletionAnimation(_variant);
+        }
+      } catch (e) { console.warn('[hub] virus completion trigger failed:', e); }
 
       // Season 2 Announcement — einmal pro Sitzung zeigen
       // (nur wenn Season 3 noch nicht aktiv; sonst zeigt S3 den Neu-Banner)
@@ -391,6 +406,7 @@
         await window.pushPendingState?.();
         await window.refreshUnlockedFromServer?.();
         await window.loadServerState?.();
+        await window.loadVirusProgress?.();
         await window.syncHighscores?.();
         await window.fetchDailyBonbonStatus?.();
         window.repairLegiRevealMarker?.();

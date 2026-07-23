@@ -2322,6 +2322,41 @@ async function loadWinTaskStatus() {
 }
 window.loadWinTaskStatus = loadWinTaskStatus;
 
+/* Boot-Sync für Task-5 „Virus Protocol". Befüllt window.__virusProgress
+   mit { solved_levels: number[], last_level: number, task_completed_at: string|null }
+   des aktuellen Users. USER-SCOPED — Cluster-Wechsel beeinflusst den Cache nicht. */
+async function loadVirusProgress() {
+  window.__virusProgress = { solved_levels: [], last_level: 0, task_completed_at: null };
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return null;
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return null;
+  try {
+    const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/get_my_virus_progress`, {
+      method: 'POST',
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: '{}'
+    });
+    if (!res.ok) throw new Error(`get_my_virus_progress ${res.status}`);
+    const result = await res.json();
+    if (!result?.ok) throw new Error(`RPC ${result?.error || 'unknown'}`);
+    window.__virusProgress = {
+      solved_levels:     Array.isArray(result.solved_levels) ? result.solved_levels : [],
+      last_level:        typeof result.last_level === 'number' ? result.last_level : 0,
+      task_completed_at: result.task_completed_at || null
+    };
+    return window.__virusProgress;
+  } catch (e) {
+    console.warn('[creatures] loadVirusProgress failed:', e.message);
+    return null;
+  }
+}
+window.loadVirusProgress = loadVirusProgress;
+
 function renderBoostIndicators(containerId, gameId) {
   const el = document.getElementById(containerId);
   if (!el) return;
