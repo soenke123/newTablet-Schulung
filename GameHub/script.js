@@ -139,14 +139,13 @@ function updateSeenCreatures(allData) {
     if (!data?.creature) return;
     const stage = getGrowthStage(data.growth);
     const prev  = sd.seenCreatures[data.creature] ?? -1;
+
+    // 1) now()-Stempel NUR bei echtem Stufe-Aufstieg — sonst würde jeder
+    //    Boot alte Avatare als NEU markieren.
     if (stage > prev) {
       sd.seenCreatures[data.creature] = stage;
       changed = true;
 
-      // Neu freigeschaltete Avatare für diese Kreatur/Stufe stempeln.
-      // Nur hier weiß der Client zuverlässig "Unlock passiert JETZT"
-      // — deshalb ist das der einzige Ort, wo now() korrekt ist.
-      // avatars.js verwendet 1-indizierte a.stage, seenCreatures 0-indiziert.
       if (window.AVATARS) {
         for (const a of window.AVATARS) {
           if (a.creature !== data.creature) continue;
@@ -156,6 +155,24 @@ function updateSeenCreatures(allData) {
           if (sd.avatarUnlocks[a.id] == null || sd.avatarUnlocks[a.id] === 0) {
             sd.avatarUnlocks[a.id] = now;
           }
+        }
+      }
+    }
+
+    // 2) Backfill-Stempel für ALLE bereits unlocked Avatare, die noch keinen
+    //    Eintrag haben. Wert = 0 (backdatiert = niemals NEW), aber damit
+    //    landen sie im stamps-Object. Zukünftige echte Aufstiege überschreiben
+    //    dann via Block (1) mit now(). Ohne diesen Backfill bleiben alte
+    //    Kreatur-Avatare für immer unsichtbar in getNewAvatarIds — weil
+    //    "for (const id in stamps)" nur iteriert was drin ist.
+    if (window.AVATARS && stage >= 0) {
+      for (const a of window.AVATARS) {
+        if (a.creature !== data.creature) continue;
+        const idx = a.stage - 1;
+        if (idx > stage) continue;   // noch nicht unlocked
+        if (sd.avatarUnlocks[a.id] == null) {
+          sd.avatarUnlocks[a.id] = 0;
+          changed = true;
         }
       }
     }
