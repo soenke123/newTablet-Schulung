@@ -358,42 +358,43 @@
     try { localStorage.setItem(UNLOCKS_KEY, JSON.stringify(obj)); } catch {}
   }
 
-  // Fügt fehlende Timestamps mit 0 (backdatiert = nie NEW) hinzu.
-  // Wird auf jeder Seite beim Boot aufgerufen. Neue "echte" Unlocks
-  // werden NICHT hier gestempelt — dafür ist updateSeenCreatures
-  // im GameHub verantwortlich (das ist die einzige Stelle, wo wir
-  // wirklich wissen, dass jetzt gerade ein Unlock passiert ist).
+  // Legacy-Kompatibilität — der alte 0-Backdate hatte keinen praktischen
+  // Effekt auf die NEW-Berechnung (0 > cutoff ist immer false, identisch zu
+  // undefined), konnte aber via Legacy-Key-Write die Sync-Reihenfolge mit
+  // shopData durcheinanderbringen. Jetzt: no-op, gibt nur die stamps zurück.
   function refreshUnlockTimestamps(unlockedSet) {
-    if (!unlockedSet) unlockedSet = computeUnlockedAvatarIds();
-    const stamps = getUnlockTimestamps();
-    let changed = false;
-    for (const id of unlockedSet) {
-      if (stamps[id] != null) continue;
-      // Backdatiert — nie als NEW markiert. Eier sowieso 0.
-      stamps[id] = 0;
-      changed = true;
-    }
-    if (changed) saveUnlockTimestamps(stamps);
-    return stamps;
+    return getUnlockTimestamps();
   }
 
-  function getNewAvatarIds(seenAtISO) {
+  // Gemeinsame Basis, damit hasAnyNewAvatars und getNewAvatarIds NIE
+  // divergieren können (identische stamps + cutoff → identisches Ergebnis).
+  // Optional: debug-Logs via localStorage.setItem('lernwelt_debug_new', '1').
+  function _computeNewAvatarSet(seenAtISO) {
     const stamps = getUnlockTimestamps();
     const cutoff = seenAtISO ? new Date(seenAtISO).getTime() : 0;
     const news = new Set();
     for (const id in stamps) {
       if (stamps[id] > cutoff) news.add(id);
     }
+    try {
+      if (localStorage.getItem('lernwelt_debug_new') === '1') {
+        console.log('[NEW]', {
+          cutoff: seenAtISO,
+          cutoffMs: cutoff,
+          stampsCount: Object.keys(stamps).length,
+          newCount: news.size,
+          news: Array.from(news),
+          stampsSample: Object.fromEntries(
+            Object.entries(stamps).slice(0, 12)
+          )
+        });
+      }
+    } catch (e) {}
     return news;
   }
-  function hasAnyNewAvatars(seenAtISO) {
-    const stamps = getUnlockTimestamps();
-    const cutoff = seenAtISO ? new Date(seenAtISO).getTime() : 0;
-    for (const id in stamps) {
-      if (stamps[id] > cutoff) return true;
-    }
-    return false;
-  }
+
+  function getNewAvatarIds(seenAtISO)  { return _computeNewAvatarSet(seenAtISO); }
+  function hasAnyNewAvatars(seenAtISO) { return _computeNewAvatarSet(seenAtISO).size > 0; }
 
   // Export
   window.DEFAULT_AVATAR_ID       = DEFAULT_AVATAR_ID;
