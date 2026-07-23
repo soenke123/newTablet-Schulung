@@ -378,16 +378,28 @@
     }
     try {
       if (localStorage.getItem('lernwelt_debug_new') === '1') {
-        console.log('[NEW]', {
-          cutoff: seenAtISO,
-          cutoffMs: cutoff,
-          stampsCount: Object.keys(stamps).length,
+        // Alle stamps sortiert nach Zeitpunkt (jüngste zuerst), inkl. Vergleich
+        // zum cutoff — damit man in einem Blick sieht welcher Stempel warum
+        // nicht als NEW zählt.
+        const entries = Object.entries(stamps).map(([id, ts]) => ({
+          id,
+          ts,
+          isoTs: ts > 0 ? new Date(Number(ts)).toISOString() : '(0/backdated)',
+          isNew: ts > cutoff,
+          delta_ms: Number(ts) - cutoff
+        })).sort((a, b) => (Number(b.ts) || 0) - (Number(a.ts) || 0));
+
+        console.log('[NEW] context', {
+          cutoff_iso: seenAtISO,
+          cutoff_ms: cutoff,
+          stampsCount: entries.length,
           newCount: news.size,
-          news: Array.from(news),
-          stampsSample: Object.fromEntries(
-            Object.entries(stamps).slice(0, 12)
-          )
+          news: Array.from(news)
         });
+        console.log('[NEW] stamps (sorted)', entries);
+        console.log('[NEW] seenCreatures', getSeenCreatures());
+        console.log('[NEW] katzeVariant', getKatzeVariant());
+        console.log('[NEW] unlockedIds', Array.from(computeUnlockedAvatarIds()));
       }
     } catch (e) {}
     return news;
