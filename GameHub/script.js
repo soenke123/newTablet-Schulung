@@ -5581,6 +5581,32 @@ function showVirusCompletionAnimation(variant) {
     // Frischer Server-State (bringt growth=100 wenn nicht schon lokal)
     try { await window.loadServerState?.(); } catch (e) {}
     try { await window.loadVirusProgress?.(); } catch (e) {}
+
+    // Defensiver Stempel: variant-spezifische Stage-6-Avatar-ID mit now()
+    // markieren, damit der NEW-Dot am Profil garantiert erscheint —
+    // unabhängig davon, ob updateSeenCreatures im nachfolgenden renderHub
+    // die seenCreatures.einhornkatze-Stufe schon auf 5 stehen sieht oder
+    // nicht (Race gegen loadServerShop / refreshUnlockTimestamps).
+    try {
+      const sd = loadShopData();
+      sd.avatarUnlocks = sd.avatarUnlocks || {};
+      const stage6Id = variant === 'light' ? 'ehk_6_light'
+                     : variant === 'dark'  ? 'ehk_6_dark'
+                     :                        'ehk_6';
+      const stage5Id = variant === 'light' ? 'ehk_5_light'
+                     : variant === 'dark'  ? 'ehk_5_dark'
+                     :                        'ehk_5';
+      const now = Date.now();
+      let changed = false;
+      for (const id of [stage5Id, stage6Id]) {
+        if (sd.avatarUnlocks[id] == null || sd.avatarUnlocks[id] === 0) {
+          sd.avatarUnlocks[id] = now;
+          changed = true;
+        }
+      }
+      if (changed) saveShopData(sd);
+    } catch (e) { console.warn('[legi] avatarUnlocks stempel failed:', e); }
+
     overlay.style.opacity = '0';
     setTimeout(() => {
       overlay.remove();
