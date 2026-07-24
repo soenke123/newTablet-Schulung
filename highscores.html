@@ -456,19 +456,14 @@
       hubWrap.innerHTML  = '';
 
       const build = (board, wrap) => {
+        // Season-Gate: Boards höherer Seasons sind komplett unsichtbar.
+        if (board.season && board.season > season) return;
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'board-chip';
         if (board === currentBoard) btn.classList.add('active');
-        // Season-Gate für Games und für Hub-Boards mit board.season
-        const locked = board.season && board.season > season;
-        if (locked) {
-          btn.disabled = true;
-          btn.title = `Board freigeschaltet ab Season ${board.season}`;
-        }
         btn.innerHTML = `<span>${board.icon}</span><span>${board.label}</span>`;
         btn.addEventListener('click', () => {
-          if (locked) return;
           currentBoard = board;
           renderChips(season);
           loadAndRenderBoard();
