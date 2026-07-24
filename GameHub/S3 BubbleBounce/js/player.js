@@ -24,8 +24,25 @@
     // Input
     dragId: null,
     lastPX: 0,
-    keyDir: 0
+    keyDir: 0,
+    // Swipe-Up-Dash: startY/startTime werden bei pointerdown gesetzt,
+    // pointermove prüft nur innerhalb des Fensters, ob eine schnelle
+    // Aufwärts-Geste erkannt wird. Nach dem Trigger (oder Ablauf) bleibt
+    // das Drag als reine Horizontal-Steuerung erhalten.
+    swipeStartX: 0,
+    swipeStartY: 0,
+    swipeStartTime: 0,
+    swipeWindowOpen: false
   };
+
+  // Schneller Aufwärts-Swipe als alternative Dash-Geste:
+  // - dy nach oben ≥ 60 px in ≤ 250 ms
+  // - vertikale Bewegung muss horizontale klar dominieren (1.3×)
+  // Danach ist das Swipe-Fenster für diesen Drag geschlossen — der
+  // gleiche Drag darf nicht mehrere Dashes triggern.
+  const SWIPE_MIN_DY_PX = 60;
+  const SWIPE_MAX_MS    = 250;
+  const SWIPE_MIN_RATIO = 1.3;
 
   function newMon(){
     const { W } = view;
@@ -156,13 +173,36 @@
       if (state.dragId === null){
         state.dragId = ev.pointerId;
         state.lastPX = x;
+        // Swipe-Fenster oeffnen fuer Aufwaerts-Wisch-Dash.
+        state.swipeStartX     = x;
+        state.swipeStartY     = y;
+        state.swipeStartTime  = performance.now();
+        state.swipeWindowOpen = true;
       }
     });
 
     canvas.addEventListener('pointermove', ev => {
       if (ev.pointerId !== state.dragId) return;
       if (FE.main.getState() !== FE.main.ST.PLAY) return;
-      const { x } = localXY(ev);
+      const { x, y } = localXY(ev);
+
+      // Swipe-Up-Detection (laeuft PARALLEL zur horizontalen Steuerung).
+      // Nur innerhalb des Zeitfensters aktiv; sobald der Dash getriggert
+      // oder das Fenster abgelaufen ist, faellt es raus.
+      if (state.swipeWindowOpen){
+        const elapsed = performance.now() - state.swipeStartTime;
+        if (elapsed > SWIPE_MAX_MS){
+          state.swipeWindowOpen = false;
+        } else {
+          const dyUp  = state.swipeStartY - y;              // positiv = nach oben
+          const dxAbs = Math.abs(x - state.swipeStartX);
+          if (dyUp > SWIPE_MIN_DY_PX && dyUp > dxAbs * SWIPE_MIN_RATIO){
+            doDash();
+            state.swipeWindowOpen = false;
+          }
+        }
+      }
+
       const dx = x - state.lastPX;
       state.lastPX = x;
       state.mon.x += dx * SENS;
@@ -170,7 +210,12 @@
       ev.preventDefault();
     }, { passive: false });
 
-    function endDrag(ev){ if (ev.pointerId === state.dragId) state.dragId = null; }
+    function endDrag(ev){
+      if (ev.pointerId === state.dragId){
+        state.dragId = null;
+        state.swipeWindowOpen = false;
+      }
+    }
     window.addEventListener('pointerup', endDrag);
     window.addEventListener('pointercancel', endDrag);
 
