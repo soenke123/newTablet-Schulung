@@ -2358,6 +2358,12 @@ async function loadVirusProgress() {
       last_level:        typeof result.last_level === 'number' ? result.last_level : 0,
       task_completed_at: result.task_completed_at || null
     };
+    // Vollendungs-Bonus einfordern (idempotent, Server-Guard).
+    // Läuft auch als Backfill für Späteinsteiger, die schon vor Migration 0058
+    // vollendet hatten. Ergebnis wird von showVirusCompletionAnimation ausgelesen.
+    if (window.__virusProgress.task_completed_at) {
+      try { await claimEinhornkatzeCompletionBonus(); } catch (e) {}
+    }
     return window.__virusProgress;
   } catch (e) {
     console.warn('[creatures] loadVirusProgress failed:', e.message);
@@ -2365,6 +2371,51 @@ async function loadVirusProgress() {
   }
 }
 window.loadVirusProgress = loadVirusProgress;
+
+/* Vollendungs-Bonus für die Einhornkatze (2000 Coins + 200 Kristalle).
+   Server (claim_einhornkatze_completion_bonus) prüft growth ≥ 100 und
+   ist idempotent per Grant-Marker-Tabelle. Nach frischer Ausschüttung
+   holt der Client den shop_state via loadServerShop nach.
+   Ergebnis in window.__einhornkatzeCompletionBonus:
+     { justGranted: true|false, coins: 2000, kristalle: 200 }
+   oder null bei Fehler / noch nicht vollendet. */
+async function claimEinhornkatzeCompletionBonus() {
+  window.__einhornkatzeCompletionBonus = window.__einhornkatzeCompletionBonus || null;
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return null;
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return null;
+  try {
+    const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/claim_einhornkatze_completion_bonus`, {
+      method: 'POST',
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: '{}'
+    });
+    if (!res.ok) throw new Error(`claim_einhornkatze_completion_bonus ${res.status}`);
+    const result = await res.json();
+    if (!result?.ok) return null;
+    const justGranted = result.granted === true;
+    window.__einhornkatzeCompletionBonus = {
+      justGranted,
+      coins:     typeof result.coins === 'number' ? result.coins : 2000,
+      kristalle: typeof result.kristalle === 'number' ? result.kristalle : 200
+    };
+    // Frisch ausgeschüttet → shop_state nachziehen, damit UI die neuen
+    // Coins/Kristalle direkt anzeigt (bankedCoins wandert in getTotalCoins).
+    if (justGranted && typeof window.loadServerShop === 'function') {
+      try { await window.loadServerShop(); } catch (e) {}
+    }
+    return window.__einhornkatzeCompletionBonus;
+  } catch (e) {
+    console.warn('[creatures] claimEinhornkatzeCompletionBonus failed:', e.message);
+    return null;
+  }
+}
+window.claimEinhornkatzeCompletionBonus = claimEinhornkatzeCompletionBonus;
 
 function renderBoostIndicators(containerId, gameId) {
   const el = document.getElementById(containerId);

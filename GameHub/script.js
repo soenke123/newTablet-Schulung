@@ -5538,6 +5538,17 @@ function showVirusCompletionAnimation(variant) {
         max-width:440px;line-height:1.4;
         animation:_vc-appear 0.9s 0.7s both;
       }
+      ._vc-bonus {
+        display:flex;gap:22px;align-items:center;justify-content:center;
+        padding:12px 22px;margin-top:6px;
+        background:linear-gradient(90deg,rgba(255,221,136,0.18),rgba(255,133,193,0.18),rgba(180,119,255,0.18));
+        border:1px solid rgba(255,221,136,0.55);border-radius:999px;
+        font-family:Cinzel,serif;font-size:1.05rem;color:#fff5d6;
+        text-shadow:0 0 12px rgba(255,221,136,0.55);
+        animation:_vc-appear 0.9s 1.0s both;
+      }
+      ._vc-bonus b { font-weight:800;letter-spacing:0.04em; }
+      ._vc-bonus span { display:inline-flex;align-items:center;gap:8px; }
       ._vc-particle { position:fixed;font-size:2.0rem;pointer-events:none;animation:_vc-particles 2.4s ease-out both; }
       #_vc-close {
         position:absolute;bottom:36px;padding:13px 34px;font-family:Cinzel,serif;font-size:1rem;font-weight:800;
@@ -5557,6 +5568,11 @@ function showVirusCompletionAnimation(variant) {
       <div class="creature-slot"><img src="${endImg}" alt="" style="width:100%;height:100%;object-fit:contain;"></div>
       <div class="_vc-title">${escapeHtml(titleText)}</div>
       <div class="_vc-sub">${escapeHtml(subText)}</div>
+      <div class="_vc-bonus">
+        <span>🎁 <b>Bonus:</b></span>
+        <span>🪙 <b>+2000</b></span>
+        <span>💎 <b>+200</b></span>
+      </div>
     </div>
     <button id="_vc-close">Weiter →</button>
   `;
