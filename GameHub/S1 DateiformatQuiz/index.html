@@ -60,8 +60,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .badge.sc{color:var(--accent);}
 .badge.fire{border-color:var(--streak);color:var(--streak);box-shadow:0 0 14px rgba(251,191,36,.2);}
 .badge.pop{animation:badgePop .4s cubic-bezier(.34,1.56,.64,1);}
-.quiz-restart-btn{width:100%;padding:11px;margin-top:10px;background:transparent;border:1.5px solid var(--border);border-radius:13px;color:var(--muted);font-family:'Outfit',sans-serif;font-weight:600;font-size:.85rem;cursor:pointer;transition:border-color .2s,color .2s;}
-.quiz-restart-btn:hover{border-color:var(--wrong);color:var(--wrong);}
 /* INLINE PLANT */
 .inline-plant{grid-area:plant;display:flex;flex-direction:column;align-items:center;margin-bottom:14px;}
 .ipl{font-size:.68rem;color:var(--muted);font-family:'Outfit',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;}
@@ -231,7 +229,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
         <div id="expl-text"></div>
       </div>
       <button class="next-btn" id="next-btn" onclick="goNext()">Weiter →</button>
-      <button class="quiz-restart-btn" onclick="restartQuiz()">↺ Quiz neu starten</button>
     </main>
   </div>
 </div>
