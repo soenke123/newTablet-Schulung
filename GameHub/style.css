@@ -2319,19 +2319,18 @@ body.s2-active .hud-kristalle { display: flex; }
 
 /* ── Info-Button (ⓘ) im Buch der Monster ─────────── */
 .book-info-btn {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  vertical-align: middle;
+  margin-left: 10px;
+  padding: 0;
+  width: 34px;
+  height: 34px;
   background: transparent;
   border: none;
   color: var(--clr-gold);
-  font-size: 1.35rem;
+  font-size: 1.7rem;
   line-height: 1;
   cursor: pointer;
   border-radius: 50%;

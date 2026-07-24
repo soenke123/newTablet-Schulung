@@ -5786,8 +5786,7 @@ function openBookModal() {
 
   content.innerHTML = `
     <div class="book-modal-inner">
-      <button class="book-info-btn" id="bookInfoBtn" title="Wie schaltest du Monster frei?" aria-label="Info: Monster freischalten">ⓘ</button>
-      <h2 class="book-modal__title">📜 Buch der Monster</h2>
+      <h2 class="book-modal__title">📜 Buch der Monster<button class="book-info-btn" id="bookInfoBtn" title="Wie schaltest du Monster frei?" aria-label="Info: Monster freischalten">ⓘ</button></h2>
       ${tabsHtml}
       <p class="book-modal__count">${found} / ${total} entdeckt</p>
       <div class="book-grid book-grid--normals">${normals.map(makeSlot).join('')}${s2NormalsHtml}</div>
