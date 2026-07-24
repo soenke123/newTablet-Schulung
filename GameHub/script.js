@@ -4823,6 +4823,16 @@ function winFlowShellHTML(s) {
   return `${header}${renderWinGrid(s)}`;
 }
 
+// Reihenfolge & Gruppierung identisch zum Buch der Monster (openBookModal,
+// Z. 5732-5743) — nur ohne 'einhornkatze' (die wächst über die Tasks selbst,
+// steht deshalb nicht in der Sammel-Aufgabe).
+const WIN_BOOK_ORDER = {
+  normals: ['snail','fish','chicken','salamander','falkeneule','triceratops','dragon','frosch','pinguin','raptor','krabbe','hai'],
+  rares:   ['biene','oktopus','ente','libelle'],
+  epics:   ['butterfly','snaildragon','turtle','chamaeleon','hippogreif'],
+  legies:  ['robot','pfau','chinDrache','schnabeltier'],
+};
+
 function renderWinGrid(s) {
   const tabs = ['all', 1, 2, 3].map(val => {
     const active = s.activeTab === val ? ' book-tab--active' : '';
@@ -4830,10 +4840,37 @@ function renderWinGrid(s) {
     return `<button class="book-tab legi-win-tab${active}" data-tab="${val}">${label}</button>`;
   }).join('');
 
-  const filtered = s.creatures.filter(c => s.activeTab === 'all' || c.season === s.activeTab);
+  const byKey = new Map(s.creatures.map(c => [c.creature, c]));
   const foundAll = s.creatures.filter(c => c.has_max).length;
 
-  const slots = filtered.map(c => renderWinSlot(c)).join('');
+  const inTab = (key) => {
+    if (s.activeTab === 'all') return true;
+    const c = byKey.get(key);
+    return !!c && c.season === s.activeTab;
+  };
+  const rowHtml = (keys) => keys
+    .filter(inTab)
+    .map(k => byKey.get(k))
+    .filter(Boolean)
+    .map(renderWinSlot)
+    .join('');
+
+  const normalsHtml = rowHtml(WIN_BOOK_ORDER.normals);
+  const raresHtml   = rowHtml(WIN_BOOK_ORDER.rares);
+  const epicsHtml   = rowHtml(WIN_BOOK_ORDER.epics);
+  const legiesHtml  = rowHtml(WIN_BOOK_ORDER.legies);
+
+  // Divider nur zwischen nicht-leeren Sektionen (unter S3-Tab bleiben z.B.
+  // Rare/Legi-Zeilen leer, wenn S3 dort nichts hat — dann kein Doppel-Divider).
+  const sections = [
+    { html: normalsHtml, grid: 'book-grid book-grid--normals legi-win-grid' },
+    { html: raresHtml,   grid: 'book-grid book-grid--centered legi-win-grid' },
+    { html: epicsHtml,   grid: 'book-grid book-grid--centered legi-win-grid' },
+    { html: legiesHtml,  grid: 'book-grid book-grid--centered legi-win-grid' },
+  ].filter(sec => sec.html.length > 0);
+  const gridsHtml = sections
+    .map(sec => `<div class="${sec.grid}">${sec.html}</div>`)
+    .join('<div class="book-divider"></div>');
 
   const bottomButton = (s.hasAll && !s.alreadyClaimed)
     ? `<button class="legi-win-claim-btn">🌈 Nächste Stufe freischalten</button>`
@@ -4859,7 +4896,7 @@ function renderWinGrid(s) {
       ${jokerList}
       <div class="book-tabs legi-win-tabs">${tabs}</div>
       <p class="book-modal__count">${foundAll} / ${s.total} vollendet${jokerSuffix}</p>
-      <div class="book-grid book-grid--normals legi-win-grid">${slots}</div>
+      ${gridsHtml}
       <div class="legi-win-footer">${bottomButton}</div>
     </div>`;
 }
@@ -4868,11 +4905,20 @@ function renderWinSlot(c) {
   const name = (typeof BOOK_NAMES !== 'undefined' && BOOK_NAMES[c.creature])
     ? BOOK_NAMES[c.creature]
     : (CREATURE_NAMES[c.creature] ?? c.creature);
+  // Rarity-Klassen analog zum Buch der Monster (openBookModal),
+  // damit die farbige Umrandung 1:1 gleich aussieht.
+  const rare = isRare(c.creature);
+  const epic = isEpic(c.creature);
+  const leg  = isLegendary(c.creature);
+  const specialClass       = rare ? ' book-slot--rare' : epic ? ' book-slot--epic' : leg ? ' book-slot--legendary' : '';
+  const specialUnseenClass = rare ? ' book-slot--rare-unseen'
+    : epic ? ' book-slot--epic-unseen'
+    : leg  ? ' book-slot--legendary-unseen' : '';
   // has_seen (Server): mind. ein Cluster-User führt die Kreatur — auch
   // wenn max_stage noch 0 ist (z.B. Nest-Slot mit seenCreatures[c]=0).
   // Nur wenn niemand die Kreatur kennt, kommt das ?-Fragezeichen.
   if (!c.has_seen) {
-    return `<div class="book-slot book-slot--unseen" title="Noch nicht entdeckt">
+    return `<div class="book-slot book-slot--unseen${specialUnseenClass}" title="Noch nicht entdeckt">
       <span class="book-slot__unknown">?</span>
     </div>`;
   }
@@ -4881,7 +4927,7 @@ function renderWinSlot(c) {
   const check = c.has_max
     ? '<span class="book-slot__check book-slot__check--gold">✦</span>'
     : '';
-  return `<div class="book-slot book-slot--seen legi-win-slot${dimmed}" data-creature="${escapeHtml(c.creature)}" title="${escapeHtml(name)}">
+  return `<div class="book-slot book-slot--seen legi-win-slot${specialClass}${dimmed}" data-creature="${escapeHtml(c.creature)}" title="${escapeHtml(name)}">
     <div class="book-slot__img">${getCreatureHTML(c.creature, stage)}</div>
     ${check}
   </div>`;
