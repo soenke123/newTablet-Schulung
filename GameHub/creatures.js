@@ -439,6 +439,7 @@ const GAME_SEASON_RARE = {
   game1: ['biene','oktopus'], game3: ['biene','oktopus'], game7: ['biene','oktopus'], game8: ['biene','oktopus'],
   game5: ['biene','oktopus'], game9: ['biene','oktopus'], game10: ['biene','oktopus'], game11: ['biene','oktopus'],
   game6: ['ente'], game12: ['ente'], game15: ['ente'], game14: ['ente'],
+  game17: ['libelle'],
 };
 
 /* ─── Epische Tiere ─── */

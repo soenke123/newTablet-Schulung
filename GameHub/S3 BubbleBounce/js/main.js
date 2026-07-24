@@ -164,6 +164,13 @@
       // Live-Score-Anzeige (Höhe + laufender Bonus)
       game.score = Math.max(0, Math.floor(game.climb / 28) + FE.platforms.state.bonus);
 
+      // Hub-Companion (Hintergrund-Feed-Post) waechst mit dem Score mit.
+      // Cheap: FE.hub setzt nur den Wert, das Sprite wird erst getauscht
+      // wenn getGrowthStage(new) != getGrowthStage(old).
+      if (FE.hub && typeof FE.hub.setLivePreview === 'function') {
+        FE.hub.setLivePreview(game.score);
+      }
+
       FE.platforms.updateFX(dt);
       FE.platforms.fillAhead(game.camY, game.climb, game.elapsed);
       FE.platforms.cull(game.camY);

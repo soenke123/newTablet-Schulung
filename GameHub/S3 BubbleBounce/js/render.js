@@ -100,13 +100,19 @@
   const companionSprite = { key: null, img: null };
 
   function ensureCompanionSprite(){
-    const gd = FE.hub && FE.hub.state && FE.hub.state.gd;
+    const hubState = FE.hub && FE.hub.state;
+    const gd = hubState && hubState.gd;
     // CREATURE_IMAGES / getGrowthStage / getEggSVG sind in creatures.js
     // als top-level `const` bzw. `function` deklariert — im klassischen
     // Script-Scope global erreichbar, aber `const` liegt NICHT auf window.
     // Zugriff daher direkt mit typeof-Guard (kein window.-Prefix).
+    // liveGrowth (mid-run Vorschau) hat Vorrang vor gd.growth — sonst
+    // wachst der Hintergrund-Begleiter erst nach GameOver mit.
+    const growthSource = (hubState && hubState.liveGrowth != null)
+      ? hubState.liveGrowth
+      : (gd ? (gd.growth || 0) : 0);
     const stage = (gd && typeof getGrowthStage === 'function')
-      ? getGrowthStage(gd.growth || 0) : 0;
+      ? getGrowthStage(growthSource) : 0;
     const wantKey = (gd && gd.creature ? gd.creature : 'egg') + ':' + stage;
     if (companionSprite.key === wantKey) return;
     companionSprite.key = wantKey;

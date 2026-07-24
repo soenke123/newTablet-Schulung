@@ -13,8 +13,24 @@
   const state = {
     gd: null,
     hubSaved: false,
-    lastResult: null
+    lastResult: null,
+    // liveGrowth: mid-run Vorschau des Growth-Werts (aktueller Score in
+    // Growth-Punkte umgerechnet + gd.growth). render.js nutzt das, um die
+    // Kreatur im Hintergrund live wachsen zu lassen. Nach commitRun/reset
+    // wieder null, damit die tatsächliche gd.growth den Ausschlag gibt.
+    liveGrowth: null
   };
+
+  function setLivePreview(rawScore){
+    const gd = state.gd;
+    if (!gd) return;
+    const capped = Math.max(0, Math.min(Number(rawScore) || 0, MAX_SCORE));
+    const gain = (typeof computeSessionGrowth === 'function')
+      ? computeSessionGrowth(capped, MAX_SCORE) : 0;
+    const cap  = (typeof GROWTH_MAX === 'number') ? GROWTH_MAX : 21;
+    state.liveGrowth = Math.min((gd.growth || 0) + gain, cap);
+  }
+  function clearLivePreview(){ state.liveGrowth = null; }
 
   function readGd(){
     if (typeof getGameData !== 'function') return null;
@@ -121,6 +137,9 @@
       creature:    gd.creature,
       growthStage: getGrowthStage(gd.growth)
     };
+    // Aktive Items sind verbraucht → Boost-Bar refreshen, damit die
+    // Icons verschwinden.
+    refreshBoostBar();
     return state.lastResult;
   }
 
@@ -170,12 +189,20 @@
   function resetForNewRun(){
     state.hubSaved   = false;
     state.lastResult = null;
+    state.liveGrowth = null;
     hideEndscreen();
+  }
+
+  function refreshBoostBar(){
+    if (typeof renderBoostIndicators === 'function') {
+      renderBoostIndicators('bb-boost-bar', gameId);
+    }
   }
 
   function boot(){
     state.gd = readGd();
     renderMenuCompanion();
+    refreshBoostBar();
     // Nochmal-Button im Endscreen.
     const again = document.getElementById('bb-es-again');
     if (again) {
@@ -195,6 +222,9 @@
     resetForNewRun,
     showMenu,
     hideMenu,
+    setLivePreview,
+    clearLivePreview,
+    refreshBoostBar,
     boot,
     state
   };
