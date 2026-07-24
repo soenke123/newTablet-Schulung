@@ -11,3 +11,106 @@ html,body{
   box-shadow:0 0 60px rgba(30,20,40,.25);overflow:hidden;
 }
 canvas{display:block;width:100%;height:100%;touch-action:none;}
+
+/* ═══ Hub-Overlays ═══════════════════════════════════════════════════
+   Back-Button (fix oben-links), Menue-Begleiter (unter dem Menue-Titel
+   auf dem MENU-Screen) und HTML-Endscreen. Alle mit hoher z-Order
+   ueber dem Canvas. */
+
+#bb-back{
+  position:fixed;top:12px;left:12px;z-index:50;
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:999px;
+  background:rgba(42,36,57,.65);color:#fff;text-decoration:none;
+  font:600 14px 'Fredoka',system-ui,sans-serif;letter-spacing:.02em;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  box-shadow:0 4px 14px rgba(0,0,0,.25);
+  transition:transform .15s ease, background .15s ease;
+}
+#bb-back:hover,#bb-back:active{background:rgba(42,36,57,.85);transform:translateY(-1px);}
+
+/* Menue-Companion: schwebt mittig-unten ueber dem Canvas, pointer-events
+   aus, damit Taps zum Spielstart durchgehen. */
+#bb-menu-companion{
+  position:fixed;left:50%;bottom:14%;transform:translateX(-50%);
+  z-index:40;pointer-events:none;text-align:center;
+  color:#2A2439;text-shadow:0 1px 4px rgba(255,255,255,.6);
+}
+.bb-menu-companion__img{
+  width:120px;height:120px;margin:0 auto 6px;
+  display:flex;align-items:center;justify-content:center;
+  filter:drop-shadow(0 6px 12px rgba(30,20,40,.35));
+}
+.bb-menu-companion__img img,
+.bb-menu-companion__img svg{max-width:100%;max-height:100%;}
+.bb-menu-companion__name{
+  font:600 13px 'Fredoka',system-ui,sans-serif;
+  background:rgba(255,255,255,.55);border-radius:999px;
+  padding:4px 12px;display:inline-block;
+}
+
+/* Endscreen-Overlay */
+#bb-endscreen{
+  position:fixed;inset:0;z-index:60;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(20,15,30,.55);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  padding:16px;overflow-y:auto;
+}
+#bb-endscreen[hidden]{display:none;}
+.bb-es-inner{
+  width:min(360px,100%);
+  background:linear-gradient(180deg,#FFF3E5 0%,#FFDDEA 60%,#F3D9F1 100%);
+  border-radius:22px;padding:22px 20px 20px;
+  box-shadow:0 20px 60px rgba(0,0,0,.35),0 0 0 2px rgba(255,255,255,.4) inset;
+  color:#2A2439;text-align:center;
+}
+.bb-es-title{
+  font:700 20px 'Fredoka',system-ui,sans-serif;letter-spacing:.02em;
+  color:#5B3B7A;margin-bottom:10px;
+}
+.bb-es-creature{
+  width:130px;height:130px;margin:0 auto 8px;
+  display:flex;align-items:center;justify-content:center;
+  filter:drop-shadow(0 6px 12px rgba(30,20,40,.25));
+}
+.bb-es-creature img,.bb-es-creature svg{max-width:100%;max-height:100%;}
+.bb-es-name{
+  font:600 13px 'Fredoka',system-ui,sans-serif;color:#4A3B5E;
+  margin-bottom:14px;min-height:1.2em;
+}
+.bb-es-scoreblock{
+  background:rgba(255,255,255,.55);border-radius:14px;
+  padding:10px 14px;margin-bottom:12px;
+}
+.bb-es-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font:600 14px 'Fredoka',system-ui,sans-serif;padding:3px 0;
+}
+.bb-es-row--accent{
+  color:#5B3B7A;font-weight:700;font-size:15px;
+  border-top:1px dashed rgba(90,60,120,.25);padding-top:8px;margin-top:4px;
+}
+.bb-es-coins{margin:8px 0;}
+.bb-es-coins:empty{display:none;}
+.bb-es-item{margin:6px 0;}
+.bb-es-item:empty{display:none;}
+.bb-es-buttons{
+  display:flex;flex-direction:column;gap:10px;margin-top:14px;
+}
+#bb-es-again,.bb-es-back{
+  display:block;width:100%;padding:12px 16px;border:0;
+  border-radius:999px;font:700 15px 'Fredoka',system-ui,sans-serif;
+  cursor:pointer;text-decoration:none;text-align:center;
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+#bb-es-again{
+  background:linear-gradient(180deg,#7C5CDB,#5A3FB8);color:#fff;
+  box-shadow:0 4px 14px rgba(90,63,184,.4);
+}
+#bb-es-again:hover,#bb-es-again:active{transform:translateY(-1px);box-shadow:0 6px 18px rgba(90,63,184,.5);}
+.bb-es-back{
+  background:rgba(42,36,57,.08);color:#2A2439;border:1px solid rgba(42,36,57,.18);
+}
+.bb-es-back:hover,.bb-es-back:active{background:rgba(42,36,57,.14);}
+

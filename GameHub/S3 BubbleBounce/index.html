@@ -14,7 +14,43 @@
 <body>
 <div id="wrap"><div id="stage"><canvas id="c"></canvas></div></div>
 
+<a id="bb-back" href="../index.html" title="Zurück zum Hub">← Hub</a>
+
+<div id="bb-menu-companion" hidden></div>
+
+<div id="bb-endscreen" hidden>
+  <div class="bb-es-inner">
+    <div class="bb-es-title">Runde beendet</div>
+    <div class="bb-es-creature" id="bb-es-creature"></div>
+    <div class="bb-es-name" id="bb-es-name"></div>
+    <div class="bb-es-scoreblock">
+      <div class="bb-es-row"><span>Score</span><span id="bb-es-score">0</span></div>
+      <div class="bb-es-row"><span>Bestwert</span><span id="bb-es-best">0</span></div>
+      <div class="bb-es-row bb-es-row--accent"><span>Hub-Punkte</span><span><span id="bb-es-hub">0</span> / 10</span></div>
+    </div>
+    <div class="bb-es-coins" id="bb-es-coinbank"></div>
+    <div class="bb-es-item" id="bb-es-item"></div>
+    <div class="bb-es-buttons">
+      <button id="bb-es-again" type="button">Nochmal</button>
+      <a class="bb-es-back" href="../index.html">Zurück zum Hub</a>
+    </div>
+  </div>
+</div>
+
+<!-- Hub-Basis: creatures.js liefert getGameData, saveGameData, computeRoundResult,
+     renderCoinBank, pushHighscore, awardBonbonsAndRender, … Der optionale
+     lernwelt-auth-LS-Eintrag reicht dem Bonbon-RPC (siehe getAccessToken in
+     creatures.js) — session.js wird nicht mitgeladen. Die Highscore-DB-Sync
+     übernimmt der Hub beim nächsten Boot via syncHighscores. -->
+<script>window.CREATURE_IMAGE_BASE = '../data/';</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../../supabase-config.js"></script>
+<script src="../creatures.js"></script>
+
+<!-- FE-Module: Ladeorder ist load-bearing (siehe CLAUDE.md).
+     hub.js hängt sich direkt nach util.js in den FE-Namespace ein. -->
 <script src="js/util.js"></script>
+<script src="js/hub.js"></script>
 <script src="js/categories.js"></script>
 <script src="js/algorithm.js"></script>
 <script src="js/player.js"></script>

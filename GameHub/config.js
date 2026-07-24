@@ -27,4 +27,6 @@ GAME_ACCESS = {
   game12: { status: 'password', passwordHash: '1d75fc98b5dc89c3612274e343f3271776c57ccdd8a7022650d38eea7db7cea3' },
   game15: { status: 'password', passwordHash: '7625ae9cd8c2645149cb2016e7ed931638d49fd51f96b1aef9db7add759c1dd5' },
   game14: { status: 'password', passwordHash: '71391cf2eb6d22058056461195b0134a2933352f21faa98ff9992513ac7e8fb4' },
+  // Season 3 – Schulung 3 (Social Media und Folgen von KI)
+  game17: { status: 'password', passwordHash: '143d9b39f43e4cb468a95238047aa6674d6ef735748170599e9a8a0fc55a0cc7' },
 };

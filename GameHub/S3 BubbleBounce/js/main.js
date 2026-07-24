@@ -50,6 +50,13 @@
   }
 
   function startGame(){
+    // Hub-Overlays wegblenden bevor gerendert wird — sonst blitzt der
+    // Endscreen / Menue-Companion einen Frame über der ersten Runde durch.
+    if (FE.hub) {
+      FE.hub.resetForNewRun();
+      FE.hub.hideMenu();
+    }
+
     const { W, H } = view;
     game.camY = 0;
     game.climb = 0;
@@ -87,6 +94,11 @@
       game.newBest = true;
       saveHigh(game.score);
     }
+    // Hub-Runde verbuchen: schreibt Kreatur (Erstlauf), Growth, Coins,
+    // roundsPlayed und pusht Bestwert in localStorage → beim naechsten
+    // Hub-Boot in die DB gesynct.
+    if (FE.hub && typeof FE.hub.commitRun === 'function') FE.hub.commitRun(game.score);
+
     sfx.over();
     game.state = ST.STATS;
     game.statsCd = 0.5;
@@ -96,6 +108,10 @@
     if (game.statsCd > 0) return;
     game.state = ST.OVER;
     game.overCd = 0.6;
+    // HTML-Endscreen einblenden — enthält Kreatur, Hub-Punkte, Coin-Bank
+    // und den Nochmal-/Zurueck-Zum-Hub-Block. Der Canvas-drawOver wird
+    // im render() unterdrueckt, solange das Overlay offen ist.
+    if (FE.hub && typeof FE.hub.renderEndscreen === 'function') FE.hub.renderEndscreen(game.highScore);
   }
 
   function update(dt){
@@ -207,7 +223,8 @@
     if (game.state === ST.MENU)   FE.screens.drawMenu(game.highScore);
     if (game.state === ST.STATS)  FE.screens.drawFilterBubble(false);
     if (game.state === ST.PAUSED) FE.screens.drawFilterBubble(true);
-    if (game.state === ST.OVER)   FE.screens.drawOver(game.score, game.highScore, game.newBest, game.overCd <= 0);
+    // OVER wird durch das HTML-Overlay #bb-endscreen abgedeckt — kein
+    // Canvas-drawOver mehr noetig.
   }
 
   let last = performance.now();

@@ -2484,7 +2484,8 @@ window.pushHighscore = pushHighscore;
    Client vergleicht selbst gegen alten localStorage-Wert). */
 const HIGHSCORE_LOCAL_KEYS = {
   game9:  'fokusflow_highscore',
-  game11: 'tippturbo_hs'
+  game11: 'tippturbo_hs',
+  game17: 'bubbleBounceHigh_v1'
 };
 // Algorithm nutzt loadStorage/saveStorage (base64 + Prüfsumme).
 // Wir lesen/schreiben denselben Kanal, sonst matcht das Format nicht.
@@ -2523,7 +2524,7 @@ function writeLocalHighscore(gameId, score) {
 
 async function syncHighscores() {
   if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
-  const gameIds = ['game9', 'game10', 'game11'];
+  const gameIds = ['game9', 'game10', 'game11', 'game17'];
   for (const gid of gameIds) {
     try {
       const server = await pullHighscore(gid);
