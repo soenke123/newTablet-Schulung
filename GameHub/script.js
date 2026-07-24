@@ -546,7 +546,7 @@ function buildCardHTML(game, data, shopData) {
   if (items.length === 0) return `<button class="game-card__btn">Spielen!</button>`;
   if (items.length === 1) {
     const it = items[0];
-    return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" title="${it.name} einsetzen">nutze ${it.icon}</button></div>`;
+    return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" title="${it.name} einsetzen"><span class="game-card__use-btn-label">nutze</span> ${it.icon}</button></div>`;
   }
   const useBtns = items.map(it =>
     `<button class="game-card__use-btn game-card__use-btn--icon" data-item="${it.id}" title="${it.name} einsetzen">${it.icon}</button>`
@@ -2358,7 +2358,7 @@ function buildNestCard(nest, allData, shopData) {
       if (!nestActiveItems.length) return playBtn;
       if (nestActiveItems.length === 1) {
         const it = nestActiveItems[0];
-        return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" title="${it.name} einsetzen">nutze ${it.icon}</button></div>`;
+        return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button><button class="game-card__use-btn" data-item="${it.id}" title="${it.name} einsetzen"><span class="game-card__use-btn-label">nutze</span> ${it.icon}</button></div>`;
       }
       const useBtns = nestActiveItems.map(it =>
         `<button class="game-card__use-btn game-card__use-btn--icon" data-item="${it.id}" title="${it.name} einsetzen">${it.icon}</button>`
@@ -8402,6 +8402,7 @@ body.overvolt-theme .game-card__use-btn:hover:not(:disabled) {
   background: rgba(210,230,255,0.12) !important;
   box-shadow: 0 0 22px rgba(210,230,255,0.4) !important;
 }
+body.overvolt-theme .game-card__use-btn-label { display: none !important; }
 body.overvolt-theme .game-card__release {
   color: #a0b8d8 !important;
   border-color: rgba(210,230,255,0.28) !important;
@@ -9243,6 +9244,7 @@ body.bubblegum-theme .game-card__use-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 7px 0 #b40068, 0 8px 20px rgba(255,20,147,0.5) !important;
 }
+body.bubblegum-theme .game-card__use-btn-label { display: none !important; }
 body.bubblegum-theme .game-card__release {
   color: #b400ff !important;
   border-color: rgba(180,0,255,0.35) !important;
