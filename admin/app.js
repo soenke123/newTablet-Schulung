@@ -1398,7 +1398,9 @@ function renderCell(u, col) {
         .concat(clusterCache.map(c =>
           `<option value="${c.id}" ${c.id === u.cluster_id ? 'selected' : ''}>${escapeHtml(c.name)} · S${c.season}</option>`
         )).join('');
-      const disabled = (isSelf || isProtected) ? 'disabled' : '';
+      // Admins dürfen sich selbst einem Cluster zuordnen (Beobachter-Modus:
+      // Backend filtert Admin-Accounts aus Leaderboards/Bonbon-Pool/Legi-Grants).
+      const disabled = isProtected ? 'disabled' : '';
       const title    = isProtected ? 'title="Volladmin kann nur von einem Volladmin geändert werden"' : '';
       return `<td><select class="js-cluster-select" data-user-id="${u.id}" ${disabled} ${title}>${opts}</select></td>`;
     }
@@ -1522,19 +1524,24 @@ document.addEventListener('click', e => {
 /* ─── User-Aktionen (unverändert aus alter Version) ─── */
 
 async function setUserCluster(userId, clusterId) {
-  const nextStatus = clusterId ? 'active' : 'pending';
+  const u = userCache.find(x => x.id === userId);
+  const isAdminTarget = !!(u && (u.is_admin || u.is_superadmin));
+  // Admin-Beobachter behalten ihren Status (typischerweise 'active').
+  // Nur Schüler-Accounts wechseln zwischen 'pending' und 'active'.
+  const patch = { cluster_id: clusterId };
+  if (!isAdminTarget) patch.status = clusterId ? 'active' : 'pending';
   try {
-    await api('PATCH', `profiles?id=eq.${userId}`, {
-      cluster_id: clusterId,
-      status:     nextStatus
-    });
-    const u = userCache.find(x => x.id === userId);
-    if (u) { u.cluster_id = clusterId; u.status = nextStatus; }
+    await api('PATCH', `profiles?id=eq.${userId}`, patch);
+    if (u) {
+      u.cluster_id = clusterId;
+      if (!isAdminTarget) u.status = patch.status;
+    }
     renderUsers();
     loadClusters();
     // Starthilfe ausschütten (idempotent — schadet nicht, wenn Cluster
-    // keinen Bonus hat oder User bereits Grant besitzt).
-    if (clusterId) applyBonusForUser(userId);
+    // keinen Bonus hat oder User bereits Grant besitzt). Für Admins
+    // liefert die RPC skipped='target_is_admin' zurück.
+    if (clusterId && !isAdminTarget) applyBonusForUser(userId);
   } catch (err) {
     showToast('Cluster-Zuweisung fehlgeschlagen: ' + err.message, 'error');
     renderUsers();

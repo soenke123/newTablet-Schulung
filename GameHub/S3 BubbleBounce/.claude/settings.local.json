@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m http.server 8765)",
+      "Bash(start *)",
+      "Bash(curl *)"
+    ]
+  }
+}
