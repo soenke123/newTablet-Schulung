@@ -71,10 +71,16 @@
       localStorage.removeItem('lernwelt_shop_dirty');
       localStorage.removeItem('lernwelt_avatar_unlocks');
       localStorage.removeItem('lernwelt_season');
-      // Game-Highscores: pro Game eigener Key, gehören zum User → wegräumen
+      // Game-Highscores: pro Game eigener Key, gehören zum User → wegräumen.
+      // Wichtig: syncHighscores() pusht sonst beim naechsten Hub-Boot den
+      // liegen gebliebenen Score des Vorgaengers in den neuen Account.
       localStorage.removeItem('fokusflow_highscore');
       localStorage.removeItem('tippturbo_hs');
       localStorage.removeItem('algorithm_hs_v1');
+      localStorage.removeItem('bubbleBounceHigh_v1');
+      // Virus Protocol (Level-Fortschritt + lastLevel) — server-first, aber
+      // im Race-Fenster vor initServerProgress und im Guest-Fallback sichtbar.
+      localStorage.removeItem('baba-it@v1');
       console.log('[SESSION] localStorage game state + shop + avatars + highscores gelöscht.');
     } catch(e) {}
   }
@@ -104,6 +110,12 @@
     try {
       const v = parseInt(localStorage.getItem('tippturbo_hs') || '0', 10);
       if (v > 0) jobs.push({ gameId: 'game11', score: v });
+    } catch(e) {}
+    // Bubble Bounce: plain int. Redundanz zu commitRun-Push, aber schuetzt
+    // gegen unpushed Scores (Push in commitRun offline fehlgeschlagen etc).
+    try {
+      const v = parseInt(localStorage.getItem('bubbleBounceHigh_v1') || '0', 10);
+      if (v > 0) jobs.push({ gameId: 'game17', score: v });
     } catch(e) {}
     // Algorithm: base64-encoded Blob mit .bestTime — Prüfsumme nicht validieren,
     // hier nur Best-Effort. Bei Format-Wechsel fällt der Push aus.
