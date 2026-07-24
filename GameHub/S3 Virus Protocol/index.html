@@ -1722,7 +1722,7 @@ function renderHeader() {
       btn.title = 'Erst freispielen';
     }
     btn.textContent = (i + 1);
-    if (!locked) btn.addEventListener('click', () => loadLevel(i));
+    if (!locked) btn.addEventListener('click', () => requestLoadLevel(i));
     lvlSelectEl.appendChild(btn);
   }
 }
@@ -1778,6 +1778,32 @@ function undo() {
 
 function reset() {
   loadLevel(game.lvlIdx);
+}
+
+// Bestätigungs-Guards: schützen vor versehentlichem Fortschritts-Verlust,
+// wenn der Spieler mitten im Level auf Reset oder ein anderes Level klickt.
+// Kein Popup, wenn es nichts zu verlieren gibt (frisches Level oder bereits gewonnen/verloren).
+function hasLevelProgress() {
+  return game.history.length > 0 && !game.state.won && !game.state.lost;
+}
+function confirmDestructive(body, onYes) {
+  showOverlay(
+    'Bist du sicher?',
+    body,
+    [
+      { label: 'Ja', primary: true, action: () => { hideOverlay(); onYes(); } },
+      { label: 'Nein', action: () => hideOverlay() },
+    ]
+  );
+}
+function requestReset() {
+  if (!hasLevelProgress()) { reset(); return; }
+  confirmDestructive('Möchtest du das Level wirklich neustarten? Dein Fortschritt in diesem Level geht verloren.', reset);
+}
+function requestLoadLevel(idx) {
+  if (idx === game.lvlIdx) { requestReset(); return; }
+  if (!hasLevelProgress()) { loadLevel(idx); return; }
+  confirmDestructive(`Möchtest du wirklich zu Level ${idx + 1} wechseln? Dein Fortschritt im aktuellen Level geht verloren.`, () => loadLevel(idx));
 }
 
 function onWin() {
@@ -1881,7 +1907,7 @@ document.addEventListener('keydown', (e) => {
   else if (k === 'arrowleft'  || k === 'a') { e.preventDefault(); move('left'); }
   else if (k === 'arrowright' || k === 'd') { e.preventDefault(); move('right'); }
   else if (k === 'z') { undo(); }
-  else if (k === 'r') { reset(); }
+  else if (k === 'r') { requestReset(); }
   else if (k >= '1' && k <= '9') {
     const i = parseInt(k, 10) - 1;
     if (i < LEVELS.length) {
@@ -1891,7 +1917,7 @@ document.addEventListener('keydown', (e) => {
         if (game.progress.solved[j]) maxUnlocked = Math.max(maxUnlocked, j + 1);
       }
       maxUnlocked = Math.min(maxUnlocked, LEVELS.length - 1);
-      if (i <= maxUnlocked || TEST_MODE) loadLevel(i);
+      if (i <= maxUnlocked || TEST_MODE) requestLoadLevel(i);
     }
   }
 });
@@ -1917,7 +1943,7 @@ document.querySelectorAll('.dpad button[data-dir]').forEach(btn => {
   btn.addEventListener('pointercancel', stop);
 });
 document.getElementById('undoBtn').addEventListener('click', undo);
-document.getElementById('resetBtn').addEventListener('click', reset);
+document.getElementById('resetBtn').addEventListener('click', requestReset);
 
 // -----------------------------------------------------------------------------
 // SOLVER (Web Worker, activated via ?verify=1)
