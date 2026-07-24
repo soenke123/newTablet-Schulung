@@ -92,17 +92,70 @@
   //     Nr. 1 für Backdrop-Flackern).
   let backdropCache = null;
 
+  // Companion-Sprite (Kreatur oder Ei) fuer den Hintergrund-Feed.
+  // Lazy geladen: sobald FE.hub bekannt gibt welche Kreatur der User hat,
+  // ziehen wir das PNG (bzw. das Ei-SVG als Data-URL) und invalidieren
+  // den Backdrop-Cache, damit die Kreatur-Variante der Karten neu gebacken
+  // wird. Der Companion wird jeder 4. Post im Feed.
+  const companionSprite = { key: null, img: null };
+
+  function ensureCompanionSprite(){
+    const gd = FE.hub && FE.hub.state && FE.hub.state.gd;
+    // CREATURE_IMAGES / getGrowthStage / getEggSVG sind in creatures.js
+    // als top-level `const` bzw. `function` deklariert — im klassischen
+    // Script-Scope global erreichbar, aber `const` liegt NICHT auf window.
+    // Zugriff daher direkt mit typeof-Guard (kein window.-Prefix).
+    const stage = (gd && typeof getGrowthStage === 'function')
+      ? getGrowthStage(gd.growth || 0) : 0;
+    const wantKey = (gd && gd.creature ? gd.creature : 'egg') + ':' + stage;
+    if (companionSprite.key === wantKey) return;
+    companionSprite.key = wantKey;
+    companionSprite.img = null;
+
+    if (gd && gd.creature && typeof CREATURE_IMAGES !== 'undefined') {
+      const imgs = CREATURE_IMAGES[gd.creature];
+      const s = Math.max(0, Math.min(stage, (imgs?.length ?? 5) - 1));
+      const key = imgs?.[s] ?? null;
+      if (!key) return;
+      const base = (window.CREATURE_IMAGE_BASE !== undefined) ? window.CREATURE_IMAGE_BASE : '../data/';
+      tryLoad(base + key + '.png').then(img => {
+        if (companionSprite.key !== wantKey) return;
+        companionSprite.img = img;
+        backdropCache = null;   // invalidate → neu gebacken beim nächsten Frame
+      });
+    } else if (typeof getEggSVG === 'function') {
+      const svg = getEggSVG(0);
+      const dataUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+      tryLoad(dataUrl).then(img => {
+        if (companionSprite.key !== wantKey) return;
+        companionSprite.img = img;
+        backdropCache = null;
+      });
+    }
+  }
+
   function ensureBackdropCache(){
+    ensureCompanionSprite();
     const cardW = Math.round(view.W * 0.82);
     const cardH = Math.round(view.U * 0.42);
-    const key = cardW + 'x' + cardH;
+    const compHas = companionSprite.img ? '1' : '0';
+    const key = cardW + 'x' + cardH + '|' + companionSprite.key + '|' + compHas;
     if (backdropCache && backdropCache.key === key) return;
-    backdropCache = { key, cardW, cardH, cards: ATMOS.map(a => renderAtmos(cardW, cardH, a)) };
+    backdropCache = {
+      key, cardW, cardH,
+      cards:          ATMOS.map(a => renderAtmos(cardW, cardH, a, null)),
+      companionCards: companionSprite.img
+        ? ATMOS.map(a => renderAtmos(cardW, cardH, a, companionSprite.img))
+        : null
+    };
   }
 
   // Rendert EINE atmosphärische Karte in ein eigenes Canvas.
   // Fertig geblurrt — im Haupt-Loop wird nur noch drawImage aufgerufen.
-  function renderAtmos(cardW, cardH, atmos){
+  // Wenn companionImg gesetzt: die Kreatur/das Ei landet im Bild-Bereich,
+  // leicht transparent über dem Farb-Blob (bleibt "als Info im Post"
+  // erkennbar, aber weiterhin verschwommen).
+  function renderAtmos(cardW, cardH, atmos, companionImg){
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const off = document.createElement('canvas');
     off.width  = Math.max(1, Math.round(cardW * dpr));
@@ -140,6 +193,24 @@
     blob.addColorStop(1, atmos.strip);
     octx.fillStyle = blob;
     octx.fillRect(0, imgY, cardW, imgH);
+
+    // Optional: Companion (Kreatur/Ei) in der Bild-Zone. Sitzt zentriert,
+    // etwas kleiner als die Zone, leicht transparent — bleibt im
+    // Feed-Charakter, wird nicht zum harten UI-Element.
+    if (companionImg){
+      const maxW = imgH * 0.85;
+      const maxH = imgH * 0.85;
+      // Aspect-preserving contain
+      const cr = companionImg.width / companionImg.height;
+      let dw = maxW, dh = maxW / cr;
+      if (dh > maxH){ dh = maxH; dw = maxH * cr; }
+      const dx = cx - dw / 2;
+      const dy = cy - dh / 2;
+      octx.save();
+      octx.globalAlpha = 0.9;
+      octx.drawImage(companionImg, dx, dy, dw, dh);
+      octx.restore();
+    }
 
     // Action-Row unten (drei kleine Rechtecke)
     const actY = imgY + imgH + cardH * 0.045;
@@ -182,7 +253,11 @@
       const yy = (i - 1) * period - dr;
       const slotIndex = baseIndex + i - 1;
       const atmosI = ((slotIndex % ATMOS.length) + ATMOS.length) % ATMOS.length;
-      ctx.drawImage(backdropCache.cards[atmosI], cardX, yy, cardW, cardH);
+      // Jeder 4. Slot bekommt die Kreatur/das Ei als "Info" im Post-Bild.
+      const useCompanion = backdropCache.companionCards
+        && (((slotIndex % 4) + 4) % 4 === 0);
+      const cards = useCompanion ? backdropCache.companionCards : backdropCache.cards;
+      ctx.drawImage(cards[atmosI], cardX, yy, cardW, cardH);
     }
     ctx.restore();
   }

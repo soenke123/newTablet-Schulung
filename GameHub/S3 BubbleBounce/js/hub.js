@@ -5,7 +5,7 @@
   "use strict";
   const FE = window.FE = window.FE || {};
 
-  const MAX_SCORE = 15000;         // 15000 In-Game-Punkte = 10 Hub-Punkte
+  const MAX_SCORE = 25000;         // 25000 In-Game-Punkte = 10 Hub-Punkte
   const params    = new URLSearchParams(window.location.search);
   const gameId    = params.get('id')  || 'game17';
   const eggType   = params.get('egg') || null;

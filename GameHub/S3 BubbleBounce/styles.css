@@ -29,24 +29,28 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 }
 #bb-back:hover,#bb-back:active{background:rgba(42,36,57,.85);transform:translateY(-1px);}
 
-/* Menue-Companion: schwebt mittig-unten ueber dem Canvas, pointer-events
-   aus, damit Taps zum Spielstart durchgehen. */
+/* Menue-Companion: sitzt rechts oben in der stage, neben dem Bubble-
+   Bounce-Titel (der Titel liegt canvas-seitig zentriert bei y=22 %).
+   pointer-events aus, damit Taps zum Spielstart durchgehen. */
 #bb-menu-companion{
-  position:fixed;left:50%;bottom:14%;transform:translateX(-50%);
-  z-index:40;pointer-events:none;text-align:center;
+  position:absolute;top:14%;right:4%;
+  width:min(24%,100px);
+  z-index:10;pointer-events:none;text-align:center;
   color:#2A2439;text-shadow:0 1px 4px rgba(255,255,255,.6);
 }
 .bb-menu-companion__img{
-  width:120px;height:120px;margin:0 auto 6px;
+  width:100%;aspect-ratio:1/1;margin:0 auto 4px;
   display:flex;align-items:center;justify-content:center;
-  filter:drop-shadow(0 6px 12px rgba(30,20,40,.35));
+  filter:drop-shadow(0 4px 10px rgba(30,20,40,.35));
 }
 .bb-menu-companion__img img,
 .bb-menu-companion__img svg{max-width:100%;max-height:100%;}
 .bb-menu-companion__name{
-  font:600 13px 'Fredoka',system-ui,sans-serif;
-  background:rgba(255,255,255,.55);border-radius:999px;
-  padding:4px 12px;display:inline-block;
+  font:600 10px 'Fredoka',system-ui,sans-serif;
+  background:rgba(255,255,255,.6);border-radius:999px;
+  padding:3px 8px;display:inline-block;line-height:1.15;
+  max-width:100%;box-sizing:border-box;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 
 /* Endscreen-Overlay */
