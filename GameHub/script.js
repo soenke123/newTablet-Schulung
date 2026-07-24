@@ -70,15 +70,15 @@ const SEASONS_CONFIG = [
    ───────────────────────────────────────────────── */
 // Atari0 · Enter 7-3-9-1
 const SHOP_ITEMS = [
-  { id: 'wachstumstrank',   icon: '🧪', name: 'Wachstumstrank',    description: 'Gibt einem Tier deiner Wahl sofort +5 Wachstumspunkte.', price: 10, consumable: true },
-  { id: 'wachstumsBooster', icon: '⚡', name: 'Wachstums-Booster', description: 'Im nächsten Spiel wächst dein Tier doppelt so schnell.',  price: 15, consumable: true },
-  { id: 'coinsx3',          icon: '🎰', name: 'Coins ×3',          description: 'Im nächsten Spiel verdienst du dreimal so viele Münzen.', price: 15, consumable: true },
-  { id: 'glucksklee',   icon: '🍀', name: 'Glücksklee',      description: 'Erhöht die Chance auf ein rares Tier der Season auf mind. 20 % und auf ein episches Tier auf mind. 10 %. Aber spiele gut – je mehr richtige Antworten, desto höher steigen beide!', price: 30, consumable: true },
-  { id: 'buchDerMonster',   icon: '📜', name: 'Buch der Monster',  description: 'Enthüllt das Bestiarum der Lernwelt. Alle Wesen, die du je erblickt hast, werden darin verewigt.', price: 30, consumable: false, bookItem: true },
-  { id: 'seltenesEi',   icon: '🥚', name: 'Seltenes Ei',    description: 'Öffnet einen neuen Kreatur-Slot. 30 % Chance auf ein episches Tier!',   price: 40,  eggItem: true, eggType: 'rare'      },
-  { id: 'mythischesEi', icon: '🥚', name: 'Episches Ei',      description: 'Öffnet einen neuen Kreatur-Slot. 60 % Chance auf ein episches Tier!',   price: 80, eggItem: true, eggType: 'mythic'    },
-  { id: 'legendaresEi', icon: '🥚', name: 'Legendäres Ei',   description: 'Öffnet einen neuen Kreatur-Slot. 100 % Chance auf ein episches Tier!',  price: 140, eggItem: true, eggType: 'legendary' },
-  { id: 'atariHint', icon: '📡', name: 'Hinweis zum verlorenen Ei', description: 'Enthüllt die Spur einer verborgenen Kreatur. Nur für die Mutigen.', price: 200, consumable: false, atariHintItem: true },
+  { id: 'wachstumstrank',   icon: '🧪', name: 'Wachstumstrank',    description: 'Gibt einem Tier deiner Wahl sofort +5 Wachstumspunkte.', price: 5, consumable: true },
+  { id: 'wachstumsBooster', icon: '⚡', name: 'Wachstums-Booster', description: 'Im nächsten Spiel wächst dein Tier doppelt so schnell.',  price: 10, consumable: true },
+  { id: 'coinsx3',          icon: '🎰', name: 'Coins ×3',          description: 'Im nächsten Spiel verdienst du dreimal so viele Münzen.', price: 10, consumable: true },
+  { id: 'glucksklee',   icon: '🍀', name: 'Glücksklee',      description: 'Erhöht die Chance auf ein rares Tier der Season auf mind. 20 % und auf ein episches Tier auf mind. 10 %. Aber spiele gut – je mehr richtige Antworten, desto höher steigen beide!', price: 20, consumable: true },
+  { id: 'buchDerMonster',   icon: '📜', name: 'Buch der Monster',  description: 'Enthüllt das Bestiarum der Lernwelt. Alle Wesen, die du je erblickt hast, werden darin verewigt.', price: 25, consumable: false, bookItem: true },
+  { id: 'seltenesEi',   icon: '🥚', name: 'Seltenes Ei',    description: 'Öffnet einen neuen Kreatur-Slot. 30 % Chance auf ein episches Tier!',   price: 30,  eggItem: true, eggType: 'rare'      },
+  { id: 'mythischesEi', icon: '🥚', name: 'Episches Ei',      description: 'Öffnet einen neuen Kreatur-Slot. 60 % Chance auf ein episches Tier!',   price: 70, eggItem: true, eggType: 'mythic'    },
+  { id: 'legendaresEi', icon: '🥚', name: 'Legendäres Ei',   description: 'Öffnet einen neuen Kreatur-Slot. 100 % Chance auf ein episches Tier!',  price: 100, eggItem: true, eggType: 'legendary' },
+  { id: 'atariHint', icon: '📡', name: 'Hinweis zum verlorenen Ei', description: 'Enthüllt die Spur einer verborgenen Kreatur. Nur für die Mutigen.', price: 180, consumable: false, atariHintItem: true },
 ];
 
 // Atari2 · Enter 1-5-0-7
@@ -1231,15 +1231,15 @@ function openLootboxModal(reward) {
 
 // ── Season 2 Shop-Items (nn = noch nicht funktionsfähig) ─────────────────
 const SHOP_ITEMS_P2 = [
-  { id: 'kristall1',          icon: '💎',      name: '1 Kristall',                description: 'Tausche Münzen gegen Kristalle – die seltene Währung der Lernwelt.',  price: 15, kristallItem: true, kristallAmount: 1  },
-  { id: 'kristall3',          icon: '💎💎',   name: '3 Kristalle',               description: 'Ein kleines Bündel Kristalle – günstiger als einzeln kaufen.',             price: 40, kristallItem: true, kristallAmount: 3  },
-  { id: 'kristall10',         icon: '💎💎💎', name: '10 Kristalle',              description: 'Der große Vorrat – der beste Preis pro Kristall.',                          price: 90, kristallItem: true, kristallAmount: 10 },
-  { id: 'lootbox',             icon: '🎁', name: 'Lootbox',               description: 'Gratis um 06:00, 12:00 und 18:00 – oder jederzeit für 3 Kristalle kaufen.',                                                                         price: 3,   currency: 'kristall', lootboxItem: true },
-  { id: 's2Ei',               icon: '🥚', name: 'versiegeltes Ei',              description: 'Hier droppen nur Monster aus Season 2 – Epic, Rare und Normal.',                                                                              price: 8,   currency: 'kristall', eggItem: true, eggType: 's2' },
+  { id: 'kristall1',          icon: '💎',      name: '1 Kristall',                description: 'Tausche Münzen gegen Kristalle – die seltene Währung der Lernwelt.',  price: 10, kristallItem: true, kristallAmount: 1  },
+  { id: 'kristall3',          icon: '💎💎',   name: '3 Kristalle',               description: 'Ein kleines Bündel Kristalle – günstiger als einzeln kaufen.',             price: 25, kristallItem: true, kristallAmount: 3  },
+  { id: 'kristall10',         icon: '💎💎💎', name: '10 Kristalle',              description: 'Der große Vorrat – der beste Preis pro Kristall.',                          price: 60, kristallItem: true, kristallAmount: 10 },
+  { id: 'lootbox',             icon: '🎁', name: 'Lootbox',               description: 'Gratis um 06:00, 12:00 und 18:00 – oder jederzeit für 2 Kristalle kaufen.',                                                                         price: 2,   currency: 'kristall', lootboxItem: true },
+  { id: 's2Ei',               icon: '🥚', name: 'versiegeltes Ei',              description: 'Hier droppen nur Monster aus Season 2 – Epic, Rare und Normal.',                                                                              price: 6,   currency: 'kristall', eggItem: true, eggType: 's2' },
   { id: 'backupDesBuches',    icon: '💾', name: 'Backup des Buches',          description: 'Lade ein beliebiges Monster aus dem Buch der Monster in einen Hub – kostet 2 Kristalle pro Nutzung.',                                                         price: 20,  currency: 'kristall', backupItem: true },
   { id: 'steinDerVollendung', icon: '🧿', name: 'Stein der Vollendung',   description: 'Löst die verborgenen Fesseln eines zufälligen Wesens und öffnet den Weg zu einer Stufe, die niemand für möglich hielt.',                                              price: 10,  currency: 'kristall', consumable: true, upgradeItem: true },
-  { id: 'siegelSuempfe',      icon: '🌿', name: 'Siegel der Sümpfe',         description: 'Ein moosbedecktes Siegel aus den Tiefen der Sümpfe. Nur Kristalle können es öffnen.',                                                                        price: 20,  currency: 'kristall', sealItem: true, sealType: 'swamp'  },
-  { id: 'siegelHimmel',       icon: '🌟', name: 'Siegel des Himmels',        description: 'Ein strahlendes Siegel aus den Höhen. Bezahle mit Kristallen, um zu enthüllen, was sich dahinter verbirgt.',                                                 price: 20,  currency: 'kristall', sealItem: true, sealType: 'heaven' },
+  { id: 'siegelSuempfe',      icon: '🌿', name: 'Siegel der Sümpfe',         description: 'Ein moosbedecktes Siegel aus den Tiefen der Sümpfe. Nur Kristalle können es öffnen.',                                                                        price: 18,  currency: 'kristall', sealItem: true, sealType: 'swamp'  },
+  { id: 'siegelHimmel',       icon: '🌟', name: 'Siegel des Himmels',        description: 'Ein strahlendes Siegel aus den Höhen. Bezahle mit Kristallen, um zu enthüllen, was sich dahinter verbirgt.',                                                 price: 18,  currency: 'kristall', sealItem: true, sealType: 'heaven' },
 ];
 
 // ── Season 3 Shop-Items (Regenbogen-Bonbons — Items folgen) ───────────
@@ -1247,13 +1247,13 @@ const SHOP_ITEMS_P2 = [
 // wird. Vorher grau + Hinweis. jokerGemeinsam zusätzlich hiddenUntilUnlocked:
 // wird als „?" angezeigt, bis 100 % erreicht (Migration 0052).
 const SHOP_ITEMS_P3 = [
-  { id: 'lockmittel', icon: '🧲', name: 'Lockmittel', description: 'Setze es bei einem schlummernden Ei ein: Zu 90 % droppt beim ersten Spiel ein Season-3-Monster!', price: 20, consumable: true, bonbonMilestone: 10 },
+  { id: 'lockmittel', icon: '🧲', name: 'Lockmittel', description: 'Setze es bei einem schlummernden Ei ein: Zu 90 % droppt beim ersten Spiel ein Season-3-Monster!', price: 15, consumable: true, bonbonMilestone: 10 },
   // Bonbon-Ökonomie (Migration 0044)
-  { id: 'freundschaftskeks', icon: '🍪', name: 'Freundschaftskeks', description: 'Schenkt einem zufälligen Kurs-Kollegen 20 Bonbons. Zählen zum Kurs-Ziel. Maximal 5×.', price: 50,  consumable: true, bonbonItem: true, cap: 5, giftItem: true, bonbonMilestone: 30 },
-  { id: 'resetKarte',        icon: '🔄', name: 'Reset-Karte',       description: 'Alle Kacheln geben beim nächsten Spielen wieder den täglichen +20-Bonbon-Bonus.', price: 300, consumable: true, bonbonItem: true, bonbonMilestone: 75 },
+  { id: 'freundschaftskeks', icon: '🍪', name: 'Freundschaftskeks', description: 'Schenkt einem zufälligen Kurs-Kollegen 20 Bonbons. Zählen zum Kurs-Ziel. Maximal 5×.', price: 40,  consumable: true, bonbonItem: true, cap: 5, giftItem: true, bonbonMilestone: 30 },
+  { id: 'resetKarte',        icon: '🔄', name: 'Reset-Karte',       description: 'Alle Kacheln geben beim nächsten Spielen wieder den täglichen +20-Bonbon-Bonus.', price: 250, consumable: true, bonbonItem: true, bonbonMilestone: 75 },
   // Team-Joker (Migration 0047) — bewusst NICHT in loadShopData-Whitelist,
   // Bestand kommt aus window.__clusterJokerStatus (Server-Aggregat).
-  { id: 'jokerGemeinsam', icon: '🃏', name: 'Joker: gemeinsam gewinnen', description: 'Ein Monster weniger nötig für „Gemeinsam siegen". Maximal 2 pro Kurs.', price: 500, consumable: true, clusterScoped: true, bonbonMilestone: 100, hiddenUntilUnlocked: true },
+  { id: 'jokerGemeinsam', icon: '🃏', name: 'Joker: gemeinsam gewinnen', description: 'Ein Monster weniger nötig für „Gemeinsam siegen". Maximal 2 pro Kurs.', price: 400, consumable: true, clusterScoped: true, bonbonMilestone: 100, hiddenUntilUnlocked: true },
 ];
 
 function openShopModal() {
