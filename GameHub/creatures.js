@@ -523,13 +523,14 @@ function determineEpicCreature() {
   return 'turtle';
 }
 
-/* Glücksklee: Epic-Chance = (20 + correct×3) %, Rare-Chance erhöht auf 15 % */
+/* Glücksklee: Epic-Chance = (10 + correct×3) %, Season-Rare-Chance = (20 + correct×3) % */
 function determineCreatureWithGlucksklee(correct, gameId = null) {
-  const chance = (20 + correct * 3) / 100;
-  if (Math.random() < chance) return determineEpicCreature();
-  // Season Rare mit erhöhter Chance; gameId=null verhindert Doppel-Check in determineCreature
+  const epicChance = (10 + correct * 3) / 100;
+  if (Math.random() < epicChance) return determineEpicCreature();
+  // Nur der Rare der jeweiligen Season; gameId=null verhindert Doppel-Check in determineCreature
   const seasonRares = gameId && GAME_SEASON_RARE[gameId];
-  if (seasonRares && Math.random() < 0.15) {
+  const rareChance = (20 + correct * 3) / 100;
+  if (seasonRares && Math.random() < rareChance) {
     return seasonRares[Math.floor(Math.random() * seasonRares.length)];
   }
   return determineCreature(correct, false, null);

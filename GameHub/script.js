@@ -73,7 +73,7 @@ const SHOP_ITEMS = [
   { id: 'wachstumstrank',   icon: '🧪', name: 'Wachstumstrank',    description: 'Gibt einem Tier deiner Wahl sofort +5 Wachstumspunkte.', price: 10, consumable: true },
   { id: 'wachstumsBooster', icon: '⚡', name: 'Wachstums-Booster', description: 'Im nächsten Spiel wächst dein Tier doppelt so schnell.',  price: 15, consumable: true },
   { id: 'coinsx3',          icon: '🎰', name: 'Coins ×3',          description: 'Im nächsten Spiel verdienst du dreimal so viele Münzen.', price: 15, consumable: true },
-  { id: 'glucksklee',   icon: '🍀', name: 'Glücksklee',      description: 'Erhöht die Chance auf ein episches Tier um mindestens 20 %. Aber spiele gut – je mehr richtige Antworten, desto höher steigt sie!', price: 20, consumable: true },
+  { id: 'glucksklee',   icon: '🍀', name: 'Glücksklee',      description: 'Erhöht die Chance auf ein rares Tier der Season auf mind. 20 % und auf ein episches Tier auf mind. 10 %. Aber spiele gut – je mehr richtige Antworten, desto höher steigen beide!', price: 30, consumable: true },
   { id: 'buchDerMonster',   icon: '📜', name: 'Buch der Monster',  description: 'Enthüllt das Bestiarum der Lernwelt. Alle Wesen, die du je erblickt hast, werden darin verewigt.', price: 30, consumable: false, bookItem: true },
   { id: 'seltenesEi',   icon: '🥚', name: 'Seltenes Ei',    description: 'Öffnet einen neuen Kreatur-Slot. 30 % Chance auf ein episches Tier!',   price: 40,  eggItem: true, eggType: 'rare'      },
   { id: 'mythischesEi', icon: '🥚', name: 'Episches Ei',      description: 'Öffnet einen neuen Kreatur-Slot. 60 % Chance auf ein episches Tier!',   price: 80, eggItem: true, eggType: 'mythic'    },
