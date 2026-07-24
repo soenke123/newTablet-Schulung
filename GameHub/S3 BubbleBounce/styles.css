@@ -53,6 +53,18 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 }
 #bb-boost-bar .bonus-coin-badge__coin{margin-left:1px;}
 
+/* Mobile: Hub-Back + Boost-Bar nach unten-links, damit sie nicht mit
+   dem Menue-Companion / Titel / HUD-Score kollidieren. Auf Tablet/PC
+   bleibt das Layout oben-links. */
+@media (max-width: 600px){
+  #bb-back{
+    top:auto;bottom:calc(12px + env(safe-area-inset-bottom));
+  }
+  #bb-boost-bar{
+    top:auto;bottom:calc(54px + env(safe-area-inset-bottom));
+  }
+}
+
 /* Menue-Companion: sitzt rechts oben in der stage, neben dem Bubble-
    Bounce-Titel (der Titel liegt canvas-seitig zentriert bei y=22 %).
    pointer-events aus, damit Taps zum Spielstart durchgehen. */
