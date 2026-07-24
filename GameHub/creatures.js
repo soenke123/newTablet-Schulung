@@ -1555,9 +1555,17 @@ function loadShopData() {
       // Migration 0050: Color-Themes persistent + cross-device.
       unlockedThemes:        d.unlockedThemes        ?? [],
       activeTheme:           d.activeTheme           ?? null,
+      // Migration 0017: Avatar-Unlock-Timestamps (NEW-Dot-Ableitung).
+      // Muss in der Whitelist stehen, sonst schickt pushShopNow den Blob
+      // OHNE avatarUnlocks an sync_shop_state — Server-Merge = Server-Only,
+      // und applyMergedShopState plättet die lokal frisch gestempelten
+      // Timestamps auf den Server-Alt-Stand zurück. Symptom: Landing +
+      // profil.html sehen nach ~400ms plötzlich keine NEW-Dots mehr,
+      // obwohl der Hub gerade noch welche zeigt.
+      avatarUnlocks:         d.avatarUnlocks         ?? {},
     };
   } catch(e) {
-    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumstrankSpent: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, wachstumsBoosterSpent: 0, coinsx3: false, coinsx3Count: 0, coinsx3Spent: 0, glucksklee: false, gluckskleeCount: 0, gluckskleeSpent: 0, lockmittel: false, lockmittelCount: 0, lockmittelSpent: 0, resetKarteCount: 0, resetKarteSpent: 0, freundschaftskeksCount: 0, freundschaftskeksSpent: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [], sealProgress: {}, unlockedThemes: [], activeTheme: null };
+    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumstrankSpent: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, wachstumsBoosterSpent: 0, coinsx3: false, coinsx3Count: 0, coinsx3Spent: 0, glucksklee: false, gluckskleeCount: 0, gluckskleeSpent: 0, lockmittel: false, lockmittelCount: 0, lockmittelSpent: 0, resetKarteCount: 0, resetKarteSpent: 0, freundschaftskeksCount: 0, freundschaftskeksSpent: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [], sealProgress: {}, unlockedThemes: [], activeTheme: null, avatarUnlocks: {} };
   }
 }
 
