@@ -2300,7 +2300,7 @@ body.s2-active .hud-kristalle { display: flex; }
    BUCH DER MONSTER – Modal Grid
    ══════════════════════════════════════════════════ */
 
-.book-modal-inner { text-align: center; }
+.book-modal-inner { text-align: center; position: relative; }
 
 .book-modal__title {
   font-family: var(--font-display);
@@ -2316,6 +2316,79 @@ body.s2-active .hud-kristalle { display: flex; }
   letter-spacing: 1px;
   margin-bottom: 14px;
 }
+
+/* ── Info-Button (ⓘ) im Buch der Monster ─────────── */
+.book-info-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--clr-gold);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease;
+  filter: drop-shadow(0 0 4px rgba(240,180,41,0.35));
+}
+.book-info-btn:hover {
+  transform: scale(1.15);
+  background: rgba(240,180,41,0.12);
+  filter: drop-shadow(0 0 8px rgba(240,180,41,0.6));
+}
+
+/* ── Info-Seite (Rarity-Erklärung) ───────────────── */
+.book-info-page {
+  text-align: left;
+  padding: 4px 2px 8px;
+}
+.book-info-page .book-modal__title {
+  text-align: center;
+  margin-top: 10px;
+}
+.book-info-page__intro {
+  text-align: center;
+  color: var(--clr-cream-dim);
+  font-size: 0.88rem;
+  margin: 6px 0 18px;
+  font-style: italic;
+}
+.book-info-block {
+  background: var(--clr-surface2);
+  border: 1px solid var(--clr-border);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+.book-info-block p {
+  margin: 4px 0 0;
+  color: var(--clr-cream);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.book-info-block__label {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.book-info-block--normal      { border-left-color: var(--clr-cream-dim); }
+.book-info-block--normal .book-info-block__label      { color: var(--clr-cream); }
+.book-info-block--rare        { border-left-color: #3b82f6; box-shadow: inset 3px 0 12px -6px rgba(59,130,246,0.4); }
+.book-info-block--rare .book-info-block__label        { color: #7dabff; }
+.book-info-block--epic        { border-left-color: #a78bfa; box-shadow: inset 3px 0 12px -6px rgba(167,139,250,0.4); }
+.book-info-block--epic .book-info-block__label        { color: #c4b1ff; }
+.book-info-block--legendary   { border-left-color: var(--clr-gold); box-shadow: inset 3px 0 12px -6px rgba(240,180,41,0.4); }
+.book-info-block--legendary .book-info-block__label   { color: var(--clr-gold); }
 
 .book-grid {
   display: grid;

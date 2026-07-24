@@ -5786,6 +5786,7 @@ function openBookModal() {
 
   content.innerHTML = `
     <div class="book-modal-inner">
+      <button class="book-info-btn" id="bookInfoBtn" title="Wie schaltest du Monster frei?" aria-label="Info: Monster freischalten">ⓘ</button>
       <h2 class="book-modal__title">📜 Buch der Monster</h2>
       ${tabsHtml}
       <p class="book-modal__count">${found} / ${total} entdeckt</p>
@@ -5813,6 +5814,36 @@ function openBookModal() {
       showBookDetail(slot.dataset.creature, sd.seenCreatures[slot.dataset.creature]);
     });
   });
+
+  document.getElementById('bookInfoBtn')?.addEventListener('click', showBookInfo);
+}
+
+function showBookInfo() {
+  const content = document.getElementById('modalContent');
+  if (!content) return;
+  content.innerHTML = `
+    <div class="book-info-page">
+      <button class="book-detail__back" id="bookBack">← Übersicht</button>
+      <h2 class="book-modal__title">Wie schaltest du Monster frei?</h2>
+      <p class="book-info-page__intro">Es gibt vier Arten von Monstern — je seltener, desto schwerer zu bekommen.</p>
+      <div class="book-info-block book-info-block--normal">
+        <span class="book-info-block__label">⚪ Normale Monster</span>
+        <p>Erscheinen, wenn du ein Spiel gut spielst. Dein Spiel-Ergebnis entscheidet, welches Monster aus deinem Ei schlüpft.</p>
+      </div>
+      <div class="book-info-block book-info-block--rare">
+        <span class="book-info-block__label">🔵 Rare Monster</span>
+        <p>Können jederzeit zufällig auftauchen — mit etwas Glück. Jede Season hat eigene Rares, die nur in den jeweiligen Season-Spielen schlüpfen können.</p>
+      </div>
+      <div class="book-info-block book-info-block--epic">
+        <span class="book-info-block__label">🟣 Epic Monster</span>
+        <p>Können in allen Spielen auftauchen — aber nur sehr selten. Season-übergreifend.</p>
+      </div>
+      <div class="book-info-block book-info-block--legendary">
+        <span class="book-info-block__label">🟡 Legendary Monster</span>
+        <p>Erscheinen nur, wenn du eine besondere Aufgabe erfüllst. Welche das ist? Das musst du selbst herausfinden.</p>
+      </div>
+    </div>`;
+  document.getElementById('bookBack')?.addEventListener('click', openBookModal);
 }
 
 function showBookDetail(creature, maxStage) {
