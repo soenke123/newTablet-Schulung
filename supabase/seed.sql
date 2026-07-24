@@ -49,9 +49,11 @@ on conflict (id) do update set
   requires_login = excluded.requires_login,
   active         = excluded.active;
 
--- Season 3 — Legi-Trainer (cluster-locked bis Bonbon-Ziel erreicht)
+-- Season 3
 insert into games (id, season, folder, title, icon, password_hash, requires_login, active) values
-  ('game16', 3, 'S3 LegiTrainer', 'Legi-Trainer', '🌈', null, false, true)
+  ('game16', 3, 'S3 LegiTrainer',  'Legi-Trainer',  '🌈', null, false, true),
+  ('game17', 3, 'S3 BubbleBounce', 'Bubble Bounce', '🫧',
+   '143d9b39f43e4cb468a95238047aa6674d6ef735748170599e9a8a0fc55a0cc7', false, true)
 on conflict (id) do update set
   season         = excluded.season,
   folder         = excluded.folder,
