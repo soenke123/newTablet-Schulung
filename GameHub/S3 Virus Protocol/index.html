@@ -1561,10 +1561,19 @@ const modalBtns = document.getElementById('modalBtns');
 function tilePx() {
   const lvl = LEVELS[game.lvlIdx] || LEVELS[0];
   const w = lvl.w, h = lvl.h;
-  const availW = window.innerWidth - 24;
-  // subtract header (~90) + footer (~130) + padding
-  const availH = window.innerHeight - 240;
-  const t = Math.floor(Math.max(28, Math.min(availW / w, availH / h, 64)));
+  // Measure <main> directly instead of guessing header/footer height —
+  // on narrow phones the footer wraps and consumes much more than the
+  // 130px the old constant assumed, and a clamped-minimum tile size
+  // pushed the grid past the viewport (main has overflow:hidden → clipped).
+  const main = document.querySelector('main');
+  const mw = main ? main.clientWidth  : window.innerWidth;
+  const mh = main ? main.clientHeight : window.innerHeight - 240;
+  // Overhead per axis: main padding (4+4) + stage border+padding (2+6+6+2) ≈ 20px.
+  // A little extra buffer avoids sub-pixel rounding pushing us past the edge.
+  const availW = Math.max(0, mw - 24);
+  const availH = Math.max(0, mh - 24);
+  // Floor at 12px so entities stay clickable but the grid always fits.
+  const t = Math.max(12, Math.floor(Math.min(availW / w, availH / h, 64)));
   document.documentElement.style.setProperty('--tile', t + 'px');
   return t;
 }
@@ -2032,6 +2041,10 @@ async function verifyAllLevels() {
 // BOOT
 // -----------------------------------------------------------------------------
 window.addEventListener('resize', () => renderState());
+window.addEventListener('orientationchange', () => renderState());
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => renderState());
+}
 
 const params = new URLSearchParams(location.search);
 let TEST_MODE = false;
