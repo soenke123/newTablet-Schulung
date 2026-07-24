@@ -1534,6 +1534,11 @@ function loadShopData() {
       freundschaftskeksCount:  d.freundschaftskeksCount  ?? 0,
       freundschaftskeksSpent:  d.freundschaftskeksSpent  ?? 0,
       nests:                 d.nests                 ?? [],
+      // Migration 0059: Tombstones für freigelassene Shop-Ei-Nests.
+      // Ohne Whitelist-Eintrag schickt pushShopNow den Blob OHNE
+      // releasedNestIds → Server-Merge kennt keine Deletion → freigelassene
+      // Nests kehren beim nächsten loadServerShop zurück.
+      releasedNestIds:       d.releasedNestIds       ?? [],
       pendingEggNestId:      d.pendingEggNestId      ?? null,
       seenCreatures:         d.seenCreatures         ?? {},
       hackUnlocked:          d.hackUnlocked          ?? false,
@@ -1567,7 +1572,7 @@ function loadShopData() {
       avatarUnlocks:         d.avatarUnlocks         ?? {},
     };
   } catch(e) {
-    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumstrankSpent: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, wachstumsBoosterSpent: 0, coinsx3: false, coinsx3Count: 0, coinsx3Spent: 0, glucksklee: false, gluckskleeCount: 0, gluckskleeSpent: 0, lockmittel: false, lockmittelCount: 0, lockmittelSpent: 0, resetKarteCount: 0, resetKarteSpent: 0, freundschaftskeksCount: 0, freundschaftskeksSpent: 0, nests: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [], sealProgress: {}, unlockedThemes: [], activeTheme: null, avatarUnlocks: {} };
+    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumstrankSpent: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, wachstumsBoosterSpent: 0, coinsx3: false, coinsx3Count: 0, coinsx3Spent: 0, glucksklee: false, gluckskleeCount: 0, gluckskleeSpent: 0, lockmittel: false, lockmittelCount: 0, lockmittelSpent: 0, resetKarteCount: 0, resetKarteSpent: 0, freundschaftskeksCount: 0, freundschaftskeksSpent: 0, nests: [], releasedNestIds: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [], sealProgress: {}, unlockedThemes: [], activeTheme: null, avatarUnlocks: {} };
   }
 }
 

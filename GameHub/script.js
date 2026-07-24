@@ -2483,6 +2483,12 @@ function releaseNest(nestId) {
     sd.pendingEggNestId   = nestId;
     sd.bankedCoins        = (sd.bankedCoins || 0) + nestCoins;
   } else {
+    // Migration 0059: Tombstone in shop_state.releasedNestIds legen,
+    // damit der server-seitige Merge den Nest nicht aus sv wieder-
+    // beleben kann (FULL OUTER JOIN + else-Zweig). Ohne Tombstone
+    // bleibt „ausverkauft" hängen bzw. kehrt die Kreatur zurück.
+    if (!Array.isArray(sd.releasedNestIds)) sd.releasedNestIds = [];
+    if (!sd.releasedNestIds.includes(nestId)) sd.releasedNestIds.push(nestId);
     sd.nests       = sd.nests.filter(n => n.nestId !== nestId);
     sd.bankedCoins = (sd.bankedCoins || 0) + nestCoins;
   }
@@ -2533,6 +2539,9 @@ function cancelPendingEgg() {
     if (nest) {
       const eggItem = SHOP_ITEMS.find(i => i.eggItem && i.eggType === nest.eggType);
       if (eggItem) sd.spentCoins = Math.max(0, sd.spentCoins - eggItem.price);
+      // Migration 0059: Tombstone, sonst kehrt der Nest via Server-Merge zurück.
+      if (!Array.isArray(sd.releasedNestIds)) sd.releasedNestIds = [];
+      if (!sd.releasedNestIds.includes(nestId)) sd.releasedNestIds.push(nestId);
       sd.nests = sd.nests.filter(n => n.nestId !== nestId);
     }
     sd.pendingEggNestId = null;
