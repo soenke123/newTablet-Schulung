@@ -55,8 +55,8 @@ const GAMES_CONFIG = [
   { id: 'game12', season: 2, title: 'Quellen-Tinder',      icon: '🃏', url: 'S2 Quellen Tinder/index.html'      },
   { id: 'game15', season: 2, title: 'LLMaster',            icon: '💬', url: 'S2 LLMaster/index.html'             },
   { id: 'game14', season: 2, title: 'Reinforce Yourself!', icon: '🤖', url: 'S2 Reinforce Yourself!/index.html'  },
-  { id: 'game17', season: 3, title: 'Bubble Bounce',       icon: '🫧', url: 'S3 BubbleBounce/index.html' },
   { id: 'game16', season: 3, title: '???',                 icon: '🌈', url: '#', clusterLegi: true },
+  { id: 'game17', season: 3, title: 'Bubble Bounce',       icon: '🫧', url: 'S3 BubbleBounce/index.html' },
 ];
 
 const SEASONS_CONFIG = [
