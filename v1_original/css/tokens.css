@@ -1,0 +1,78 @@
+/* Designtokens – aus grundkonzept.html v1.2.
+   Alle Farben, Schriften, Schatten, Radien leben hier.
+   Komponenten/Screens dürfen nur diese Tokens nutzen, keine Hex-Werte. */
+
+:root {
+  /* Basis-Hintergründe */
+  --rt-cream:        #fff5e1;
+  --rt-paper:        #fffaf0;
+
+  /* Akzentfarben */
+  --rt-pink:         #ff7eb6;
+  --rt-pink-soft:    #ffb8d6;
+  --rt-purple:       #a78bfa;
+  --rt-purple-soft:  #d4c5ff;
+  --rt-yellow:       #fcd34d;
+  --rt-yellow-soft:  #fff0a8;
+  --rt-mint:         #7eddc1;
+  --rt-mint-soft:    #b6f0dd;
+  --rt-coral:        #ff8a7a;
+  --rt-sky:          #7ecbff;
+  --rt-sky-soft:     #c8e8ff;
+  --rt-lavender-soft: #ddd6fe;
+  --rt-grass:        #a3d977;
+  --rt-grass-dark:   #8ac362;
+
+  /* Text */
+  --rt-brown:        #4a3829;
+  --rt-brown-light:  #8c7869;
+
+  /* Semantische Aliase */
+  --rt-bg:           var(--rt-cream);
+  --rt-surface:      var(--rt-paper);
+  --rt-text:         var(--rt-brown);
+  --rt-text-muted:   var(--rt-brown-light);
+
+  /* Default-neutral (warmes Taupe). Sobald in Phase 0 ein Plattform-Logo
+     gewählt wird, überschreibt js/core/theme.js diese Werte auf :root.
+       primary       = satter Hauptton (CTA-Buttons, Akzente)
+       primary-soft  = sehr helles Pastell (Default-Buttons, Selected-Cards –
+                       hier müssen Logos lesbar bleiben)
+       primary-wash  = kräftigeres Pastell für den Body-Hintergrund-Wash */
+  --rt-primary:      #b08968;
+  --rt-primary-soft: #f4e8d8;
+  --rt-primary-wash: #ead7c2;
+
+  --rt-accent:       var(--rt-purple);
+  --rt-success:      var(--rt-grass);
+  --rt-warning:      var(--rt-yellow);
+  --rt-danger:       var(--rt-coral);
+
+  /* Schriften */
+  --rt-font-display: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  --rt-font-body:    'Nunito', system-ui, sans-serif;
+
+  /* Radien */
+  --rt-radius-sm:    8px;
+  --rt-radius-md:    14px;
+  --rt-radius-lg:    18px;
+  --rt-radius-xl:    24px;
+
+  /* 3D-Karten-Schatten (charakteristischer Vintage-/Playful-Look) */
+  --rt-shadow-sm:    0 3px 0 var(--rt-brown);
+  --rt-shadow-md:    0 6px 0 var(--rt-brown);
+  --rt-shadow-lg:    0 8px 0 var(--rt-brown);
+
+  /* Abstände */
+  --rt-space-1:      4px;
+  --rt-space-2:      8px;
+  --rt-space-3:      12px;
+  --rt-space-4:      16px;
+  --rt-space-5:      24px;
+  --rt-space-6:      32px;
+  --rt-space-8:      48px;
+
+  /* Schichten */
+  --rt-z-nav:        100;
+  --rt-z-modal:      1000;
+}

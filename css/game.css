@@ -1,0 +1,623 @@
+/* ---- Design Tokens ---- */
+:root {
+  --grass:      #7dc26e;
+  --grass-dark: #5fa74f;
+  --wood:       #8b5a2b;
+  --gold:       #f4c542;
+  --gold-dark:  #d9a300;
+  --red:        #e74c3c;
+  --blue:       #4d90fe;
+  --blue-dark:  #3672d1;
+  --green:      #4dbf4d;
+  --green-dark: #3ba03b;
+  --text:       #2b2b2b;
+  --bg:         #e8f4d4;
+  --path:       #d9c48c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ---- Resource Bar ---- */
+#resource-bar {
+  display: flex; gap: 10px; padding: 10px 14px;
+  background: linear-gradient(180deg, #fff9e0, #f4c542);
+  border-bottom: 3px solid var(--wood);
+  align-items: center;
+  z-index: 5;
+  flex-wrap: wrap;
+}
+.res {
+  background: rgba(255,255,255,0.85);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 700; font-size: 15px;
+  display: flex; gap: 6px; align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: background 0.3s;
+}
+.res-icon { font-size: 17px; }
+.res-ruf-good { background: rgba(77,191,77,0.35) !important; }
+.res-ruf-bad  { background: rgba(231,76,60,0.35) !important; }
+
+#res-servercap-wrap.res-cap-warn { background: rgba(244,197,66,0.55); }
+#res-servercap-wrap.res-cap-full {
+  background: rgba(231,76,60,0.55);
+  color: #4a0000;
+  animation: cap-pulse 1.4s ease-in-out infinite;
+}
+@keyframes cap-pulse {
+  0%, 100% { box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  50%      { box-shadow: 0 0 12px rgba(231,76,60,0.7); }
+}
+
+/* Ressourcen-Kachel Pop-Effekt bei Ernte — Scale skaliert mit --pop-scale */
+#res-watchtime, #res-users {
+  display: inline-block;
+  transform-origin: center;
+  --pop-scale: 1.4;
+}
+#res-watchtime.res-pop { animation: res-pop 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+#res-users.res-pop     { animation: res-pop-green 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes res-pop {
+  0%   { transform: scale(1);                color: inherit; }
+  40%  { transform: scale(var(--pop-scale)); color: var(--blue-dark); }
+  100% { transform: scale(1);                color: inherit; }
+}
+@keyframes res-pop-green {
+  0%   { transform: scale(1);                color: inherit; }
+  40%  { transform: scale(var(--pop-scale)); color: var(--green-dark); }
+  100% { transform: scale(1);                color: inherit; }
+}
+
+/* Shop-Button in der Ressourcen-Bar */
+.shop-btn {
+  margin-left: auto;
+  background: linear-gradient(180deg, var(--green), var(--green-dark));
+  color: white; font-weight: 800; font-size: 15px;
+  border: none; border-radius: 999px;
+  padding: 8px 18px; cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: transform 0.1s;
+}
+.shop-btn:hover  { transform: translateY(-1px); }
+.shop-btn:active { transform: translateY(1px); }
+
+/* ---- World (isometrische Wiese) ---- */
+#world {
+  flex: 1; position: relative;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.18), transparent 60%),
+    linear-gradient(180deg, var(--grass) 0%, var(--grass-dark) 100%);
+  overflow: hidden;
+  min-height: 480px;
+}
+/* dezente Wege im Hintergrund */
+#world::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(115deg, transparent 45%, rgba(217,196,140,0.35) 45%, rgba(217,196,140,0.35) 55%, transparent 55%),
+    linear-gradient(65deg,  transparent 45%, rgba(217,196,140,0.35) 45%, rgba(217,196,140,0.35) 55%, transparent 55%);
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* ---- Isometrisches Grid ---- */
+#iso-grid {
+  position: absolute; inset: 0;
+  pointer-events: none; /* Klicks nur auf Gebäude */
+}
+.iso-tile {
+  position: absolute;
+  width: 192px; height: 96px;
+  transform: translate(-50%, -50%);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 64' preserveAspectRatio='none'><polygon points='64,2 126,32 64,62 2,32' fill='rgba(255,255,255,0.10)' stroke='rgba(0,0,0,0.35)' stroke-width='1.2' stroke-dasharray='4,3'/></svg>");
+  background-size: 100% 100%;
+  background-color: transparent;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.iso-tile:hover              { background-color: rgba(255,255,255,0.15); }
+.iso-tile.tile-valid         { background-color: rgba(77,191,77,0.45); }
+.iso-tile.tile-valid:hover   { background-color: rgba(77,191,77,0.65); }
+.iso-tile.tile-invalid       { background-color: rgba(231,76,60,0.35); cursor: not-allowed; }
+.iso-tile.tile-invalid:hover { background-color: rgba(231,76,60,0.5); }
+
+/* ---- Gebäude auf Iso-Grid ---- */
+.building {
+  position: absolute;
+  text-align: center;
+  cursor: pointer;
+  /* Container transparent für Klicks — nur die diamant-Hitbox ist klickbar,
+     damit transparente PNG-Bereiche der 2x2-Farm nicht dahinterliegende
+     Gebäude blockieren. */
+  pointer-events: none;
+  /* Fuß-Mitte des Sprites landet exakt auf tile-Mitte */
+  transform: translate(-50%, -71%);
+  transition: transform 0.15s ease;
+  width: 130px;
+}
+.building:hover  { transform: translate(-50%, -71%) translateY(-4px); }
+.building:active { transform: translate(-50%, -71%) translateY(0); }
+
+/* 2x2-Gebäude: doppelt so breit, gleiche Anker-Logik */
+.building.building-2x2 { width: 360px; }
+
+/* Diamant-Hitbox exakt über der (den) Kachel(n) — nur hier zählen Klicks. */
+.b-hitbox {
+  position: absolute;
+  top: 71%;                  /* auf Höhe der Kachel-Mitte (Anker -71%) */
+  left: 50%;
+  width: 192px;              /* TILE_W */
+  height: 96px;              /* TILE_H */
+  transform: translate(-50%, -50%);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  pointer-events: auto;
+  cursor: pointer;
+  /* Debug: kurz auskommentieren, um die Hitbox sichtbar zu machen */
+  /* background: rgba(255,0,0,0.3); */
+}
+.building-2x2 .b-hitbox {
+  width: 384px;              /* 2x TILE_W */
+  height: 192px;             /* 2x TILE_H */
+}
+
+.b-img {
+  display: block; width: 100%; height: auto;
+  pointer-events: none;
+  filter: drop-shadow(4px 6px 8px rgba(0,0,0,0.28));
+}
+
+.b-label {
+  position: absolute; bottom: -20px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30,30,30,0.75); color: white;
+  padding: 3px 10px; border-radius: 10px;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+
+/* Positionen — großzügig, Isometrik-Feel */
+.b-hq        { top: 6%;  left: 38%; width: 22%; min-width: 180px; max-width: 260px; transform: translateX(-50%); }
+.b-farm      { top: 8%;  right: 4%; width: 28%; min-width: 220px; max-width: 320px; }
+.b-marketing { bottom: 10%; left: 6%; width: 22%; min-width: 180px; max-width: 240px; }
+.b-werbe     { bottom: 6%; right: 12%; width: 22%; min-width: 180px; max-width: 240px; }
+
+/* ---- Serverfarm-Tiere: organisch verteilt auf der Weide-Raute ---- */
+.farm-animals {
+  position: absolute;
+  inset: 0;                    /* volles Building — die Positionen kommen aus --x/--y */
+  pointer-events: none;
+}
+.farm-animal {
+  position: absolute;
+  left: var(--x, 50%);
+  top:  var(--y, 60%);
+  width: 28px;
+  height: auto;
+  /* Fuß-Anker (unten-mitte) — die Tiere stehen auf ihrer x/y-Position */
+  transform: translate(-50%, -100%);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.4));
+  animation: idle-sway 4s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.7s);
+  pointer-events: none;
+  user-select: none;
+}
+/* Wackler muss die Fuß-Verankerung erhalten */
+@keyframes idle-sway {
+  0%, 82%, 100% { transform: translate(-50%, -100%) rotate(0deg); }
+  88%           { transform: translate(-50%, -100%) rotate(-6deg); }
+  94%           { transform: translate(-50%, -100%) rotate(5deg); }
+}
+
+/* Größer bei 1x1-Gebäuden wäre 22px, aber Farmen sind immer 2x2 → 28px passt. */
+.building-2x2 .farm-animal { width: 34px; }
+
+/* ---- Building-UI-Layer (Progress-Ring + Aktions-Button) — über allen
+       Sprites, aber unter Modal (100), Toast (200) und Placement-Bar (60).
+       Wird von Farm UND Marketing-Center benutzt. ---- */
+#building-ui-layer {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+.farm-ui {
+  position: absolute;
+  transform: translate(-50%, -71%);
+  width: 130px;
+  height: 130px;
+  pointer-events: none;
+}
+.farm-ui-2x2 {
+  width: 360px;
+  height: 240px;
+}
+
+/* Radialer Progress-Kreis oben mittig auf der Farm */
+.farm-progress-ring {
+  --p: 0;
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  padding: 4px;
+  background: conic-gradient(var(--blue) calc(var(--p) * 1%), rgba(255,255,255,0.28) 0);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+}
+.farm-progress-ring-inner {
+  width: 100%; height: 100%;
+  background: rgba(255,255,255,0.92);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+}
+.farm-progress-ring.is-full {
+  --p: 100;
+  background: conic-gradient(var(--gold-dark) 100%, var(--gold-dark) 0);
+  animation: ring-full 1.1s ease-in-out infinite;
+}
+@keyframes ring-full {
+  0%, 100% { box-shadow: 0 3px 8px rgba(0,0,0,0.4), 0 0 0 rgba(244,197,66,0); }
+  50%      { box-shadow: 0 3px 8px rgba(0,0,0,0.4), 0 0 18px rgba(244,197,66,0.9); }
+}
+
+/* Ernte-Button unten mittig */
+.farm-harvest-btn {
+  --stacks: 0;
+  position: absolute;
+  bottom: 2%;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+  color: #4a2e00;
+  border: 2px solid rgba(74,46,0,0.35);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+  white-space: nowrap;
+  transition: transform 0.1s;
+  min-height: 32px;
+}
+.farm-harvest-btn:disabled {
+  background: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.55);
+  border-color: rgba(255,255,255,0.2);
+  cursor: default;
+  box-shadow: none;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+.farm-harvest-btn.is-ready {
+  animation: harvest-pulse 1s ease-in-out infinite;
+}
+.farm-harvest-btn.is-ready:hover  { transform: translateX(-50%) translateY(-1px) scale(1.03); }
+.farm-harvest-btn.is-ready:active { transform: translateX(-50%) translateY(1px)  scale(0.98); }
+@keyframes harvest-pulse {
+  0%, 100% { box-shadow: 0 3px 6px rgba(0,0,0,0.25); }
+  50%      { box-shadow: 0 3px 14px rgba(244,197,66,0.95); }
+}
+
+/* Fly-Bubble: Watchtime fließt vom Farm-Feld zur Ressourcen-Bar.
+   Font-size wird per Inline-Style gesetzt (skaliert mit Stack-Anzahl). */
+.wt-fly {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--blue-dark);
+  text-shadow: 0 2px 8px rgba(255,255,255,0.95), 0 0 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+  z-index: 80;
+  animation: wt-fly 0.75s cubic-bezier(.4,.05,.6,1) forwards;
+  --dx: 0px; --dy: 0px;
+  white-space: nowrap;
+}
+.wt-fly-mini {
+  font-size: 22px !important;
+  opacity: 0.75;
+  z-index: 79;
+  animation-duration: 0.7s;
+}
+
+/* ---- Marketing-Center UI (Ring mit Countdown + Collect-Button) ---- */
+.mk-ui {
+  position: absolute;
+  transform: translate(-50%, -71%);
+  width: 130px;
+  height: 130px;
+  pointer-events: none;
+}
+
+.mk-ring {
+  --p: 0;
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  padding: 4px;
+  background: conic-gradient(var(--blue) calc(var(--p) * 1%), rgba(255,255,255,0.28) 0);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+  opacity: 0.35;                              /* dezent wenn keine Kampagne */
+  transition: opacity 0.2s;
+}
+.mk-ring.is-active { opacity: 1; }
+.mk-ring-inner {
+  width: 100%; height: 100%;
+  background: rgba(255,255,255,0.92);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mk-ring-text {
+  font-size: 12px;
+  font-weight: 800;
+  color: #333;
+  line-height: 1;
+}
+
+.mk-collect-btn {
+  position: absolute;
+  bottom: 2%;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  background: linear-gradient(180deg, var(--green), var(--green-dark));
+  color: white;
+  border: 2px solid rgba(0,50,0,0.35);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+  white-space: nowrap;
+  transition: transform 0.1s;
+  min-height: 32px;
+  visibility: hidden;                         /* nur wenn ready > 0 */
+}
+.mk-collect-btn.is-ready {
+  visibility: visible;
+  animation: collect-pulse 1s ease-in-out infinite;
+}
+.mk-collect-btn.is-ready:hover  { transform: translateX(-50%) translateY(-1px) scale(1.03); }
+.mk-collect-btn.is-ready:active { transform: translateX(-50%) translateY(1px)  scale(0.98); }
+@keyframes collect-pulse {
+  0%, 100% { box-shadow: 0 3px 6px rgba(0,0,0,0.25); }
+  50%      { box-shadow: 0 3px 14px rgba(77,191,77,0.95); }
+}
+
+/* User-Fly-Bubble (Ernte-Effekt Richtung 👥-Kachel) */
+.user-fly {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  font-size: 28px;
+  color: var(--green-dark);
+  text-shadow: 0 2px 8px rgba(255,255,255,0.95), 0 0 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+  z-index: 80;
+  animation: wt-fly 0.75s cubic-bezier(.4,.05,.6,1) forwards;
+  --dx: 0px; --dy: 0px;
+  white-space: nowrap;
+}
+@keyframes wt-fly {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.35); }
+  18%  { opacity: 1; transform: translate(-50%, -85%) scale(1.25); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.8); }
+}
+
+/* Badges */
+.b-badge {
+  position: absolute; top: -12px; right: -12px;
+  background: var(--red); color: white;
+  border-radius: 999px; padding: 4px 12px;
+  font-weight: 800; font-size: 13px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  animation: pulse 1.2s ease-in-out infinite;
+  z-index: 3; white-space: nowrap;
+}
+.b-badge-money { background: var(--gold-dark); }
+.b-badge-users { background: var(--blue); }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}
+
+/* Marketing: aktive Kampagne-Fortschritt-Balken unter Gebäude */
+.b-running {
+  position: absolute; bottom: -32px; left: 10%; right: 10%;
+  height: 6px; background: rgba(0,0,0,0.25); border-radius: 3px; overflow: hidden;
+}
+.b-running-fill { height: 100%; background: var(--blue); width: 0%; transition: width 0.2s; }
+
+/* ---- Modal ---- */
+#modal-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 100;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+#modal-backdrop.open { display: flex; }
+#modal {
+  background: white; border-radius: 14px;
+  min-width: 320px; max-width: 560px; width: 100%;
+  padding: 22px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+  max-height: 85vh; overflow-y: auto;
+}
+.modal-title { font-size: 22px; font-weight: 800; margin-bottom: 14px; color: var(--text); }
+.modal-close {
+  background: #ddd; border: none; padding: 10px 18px;
+  border-radius: 8px; margin-top: 14px; cursor: pointer;
+  font-weight: 600; color: #333;
+}
+.modal-close:hover { background: #ccc; }
+
+/* Slider im Werbe-Modal */
+.slider-wrap { margin: 16px 0; }
+.slider-wrap label { font-weight: 600; display: block; margin-bottom: 6px; }
+.slider-wrap input[type=range] { width: 100%; height: 32px; accent-color: var(--red); }
+.slider-info {
+  display: flex; justify-content: space-between;
+  font-size: 13px; margin-top: 8px; color: #555;
+}
+
+/* Modal-Buttons */
+.modal-btn {
+  display: block; width: 100%; padding: 14px;
+  margin: 8px 0;
+  border: none; border-radius: 10px; cursor: pointer;
+  background: linear-gradient(180deg, var(--green), var(--green-dark));
+  color: white; font-weight: 700; font-size: 16px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  transition: transform 0.1s;
+}
+.modal-btn:hover:not(:disabled)  { transform: translateY(-1px); }
+.modal-btn:active:not(:disabled) { transform: translateY(1px); }
+.modal-btn:disabled { background: #ccc; color: #888; cursor: not-allowed; box-shadow: none; }
+.modal-btn.collect  { background: linear-gradient(180deg, var(--gold), var(--gold-dark)); color: #4a2e00; }
+.modal-btn.upgrade  { background: linear-gradient(180deg, var(--blue), var(--blue-dark)); }
+
+/* Kampagnen-Zeilen im Marketing-Modal */
+.campaign-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; border: 1px solid #eee; border-radius: 10px;
+  margin: 8px 0;
+}
+.campaign-row .c-icon { font-size: 32px; }
+.campaign-row .c-info { flex: 1; }
+.campaign-row .c-info b { display: block; font-size: 15px; }
+.campaign-row .c-info small { color: #666; font-size: 12px; }
+.campaign-row button {
+  padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer;
+  background: var(--gold); font-weight: 700; color: #4a2e00;
+}
+.campaign-row button:disabled { background: #ddd; color: #999; cursor: not-allowed; }
+
+/* Fortschritt allgemein */
+.progress { height: 10px; background: #eee; border-radius: 5px; overflow: hidden; margin-top: 8px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #7dc26e); transition: width 0.2s; }
+
+.info-line { color: #555; font-size: 13px; margin: 6px 0; }
+.info-highlight { color: var(--wood); font-weight: 700; }
+
+/* Techtree-Placeholder */
+.tt-node {
+  padding: 12px; border: 1px solid #eee; border-radius: 8px; margin: 6px 0;
+  background: #f9f9f9; color: #999;
+  display: flex; align-items: center; gap: 10px;
+}
+.tt-node .tt-icon { font-size: 22px; }
+
+/* ---- Placement-Bar ---- */
+.placement-bar {
+  display: none;
+  position: absolute; top: 12px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30,30,30,0.85); color: white;
+  padding: 10px 14px 10px 18px; border-radius: 999px;
+  font-weight: 700; font-size: 14px;
+  gap: 12px; align-items: center;
+  z-index: 60; box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+}
+.placement-bar.show { display: inline-flex; }
+.placement-bar button {
+  background: var(--red); color: white; border: none;
+  padding: 6px 14px; border-radius: 999px; cursor: pointer;
+  font-weight: 700; font-size: 13px;
+}
+
+/* ---- Shop-Karten ---- */
+.shop-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px; border: 1px solid #eee; border-radius: 10px;
+  margin: 8px 0; background: #fafafa;
+}
+.shop-card .s-icon { font-size: 34px; }
+.shop-card .s-info { flex: 1; }
+.shop-card .s-info b { display: block; font-size: 16px; }
+.shop-card .s-info small { color: #666; font-size: 12px; }
+.shop-card button {
+  padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer;
+  background: linear-gradient(180deg, var(--green), var(--green-dark));
+  color: white; font-weight: 700; font-size: 14px;
+}
+.shop-card button:disabled { background: #ddd; color: #888; cursor: not-allowed; }
+.shop-hint { color: #555; font-size: 13px; margin-bottom: 10px; }
+
+/* ---- Toast ---- */
+#toast {
+  display: none;
+  position: fixed; bottom: 30px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30,30,30,0.9); color: white;
+  padding: 10px 20px; border-radius: 10px;
+  font-weight: 600; z-index: 200;
+  pointer-events: none; font-size: 14px;
+}
+#toast.show { display: block; animation: toast-in 0.25s; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ---- Effekte ---- */
+.burst {
+  position: absolute; pointer-events: none;
+  font-size: 22px; z-index: 50;
+  animation: burst 0.9s ease-out forwards;
+  --dx: 0px; --dy: -60px;
+}
+@keyframes burst {
+  0%   { opacity: 1; transform: translate(0,0) scale(0.6); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.4); }
+}
+.float-text {
+  position: absolute; pointer-events: none;
+  font-weight: 800; font-size: 18px; color: var(--gold);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  animation: float 1.2s ease-out forwards;
+  z-index: 55;
+}
+.float-text.green { color: var(--green); }
+.float-text.blue  { color: #a0d0ff; }
+@keyframes float {
+  0%   { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -70px); }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 720px) {
+  #world { min-height: 420px; }
+  .b-hq        { width: 26%; min-width: 140px; }
+  .b-farm      { width: 32%; min-width: 180px; }
+  .b-marketing { width: 26%; min-width: 140px; }
+  .b-werbe     { width: 26%; min-width: 140px; }
+  .b-label { font-size: 11px; }
+  .animals { font-size: 18px; }
+}

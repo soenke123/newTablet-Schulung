@@ -4,6 +4,7 @@
   'use strict';
 
   function enter(container) {
+    document.body.classList.add('rt-onboarding-active');
     container.innerHTML = ''
       + '<section class="rt-screen rt-intro">'
       + '  <div class="rt-card rt-intro__card">'
@@ -35,4 +36,4 @@
   function exit() {}
 
   RT.screens.register('intro', { enter: enter, exit: exit });
-})(window.RT);
+})(window.RT3);

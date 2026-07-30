@@ -1,0 +1,69 @@
+/* Reset, Typo, Body-Grundlagen. */
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--rt-font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--rt-text);
+  background: var(--rt-bg);
+  /* --rt-primary-wash ist kräftiger als -soft (auf dem die Logo-Cards sitzen),
+     so dass der Body deutlich vom Theme eingefärbt wird, ohne dass die
+     Selected-Cards die Logo-PNGs überdecken. */
+  background-image:
+    radial-gradient(ellipse at 15% 5%,  var(--rt-primary-wash) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 90%, var(--rt-primary-wash) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 50%, var(--rt-primary-wash) 0%, transparent 78%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--rt-font-display);
+  font-weight: 700;
+  color: var(--rt-text);
+  margin: 0 0 var(--rt-space-3) 0;
+}
+
+h1 { font-size: 2.2rem; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.3rem; }
+
+p { margin: 0 0 var(--rt-space-3) 0; }
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Hauptcontainer für die Spielansicht */
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.rt-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--rt-space-5);
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}

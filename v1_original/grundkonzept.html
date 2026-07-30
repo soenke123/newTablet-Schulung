@@ -1,0 +1,1398 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Platform — Grundkonzept v1.1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream: #fff5e1;
+  --paper: #fffaf0;
+  --pink: #ff7eb6;
+  --pink-soft: #ffb8d6;
+  --purple: #a78bfa;
+  --purple-soft: #d4c5ff;
+  --yellow: #fcd34d;
+  --yellow-soft: #fff0a8;
+  --mint: #7eddc1;
+  --mint-soft: #b6f0dd;
+  --coral: #ff8a7a;
+  --sky: #7ecbff;
+  --sky-soft: #c8e8ff;
+  --grass: #a3d977;
+  --grass-dark: #8ac362;
+  --brown: #4a3829;
+  --brown-light: #8c7869;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--cream);
+  background-image:
+    radial-gradient(circle at 15% 25%, rgba(255,184,214,0.2) 0%, transparent 40%),
+    radial-gradient(circle at 85% 75%, rgba(212,197,255,0.2) 0%, transparent 40%);
+  color: var(--brown); font-family: 'Nunito', sans-serif; font-weight: 700;
+  line-height: 1.6; overflow-x: hidden;
+}
+
+/* ── HERO ── */
+.hero {
+  position: relative; min-height: 75vh; padding: 4rem 2rem;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: var(--paper); border: 3px solid var(--mint);
+  border-radius: 99px; padding: .5rem 1.25rem;
+  font-family: 'Fredoka', sans-serif; font-size: .85rem; color: var(--brown);
+  margin-bottom: 1.5rem; box-shadow: 0 4px 0 var(--mint);
+}
+.hero h1 {
+  font-family: 'Fredoka', sans-serif; font-weight: 700;
+  font-size: clamp(2.6rem, 8vw, 5rem);
+  line-height: 1; margin-bottom: 1rem; color: var(--brown);
+  text-shadow: 4px 4px 0 var(--mint-soft);
+}
+.hero h1 .accent {
+  background: linear-gradient(135deg, var(--mint), var(--sky));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-sub {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: var(--brown); max-width: 700px; margin: 0 auto 2rem; font-weight: 600;
+}
+.hero-statement {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 20px; padding: 1.5rem 1.75rem;
+  max-width: 720px; margin: 0 auto;
+  box-shadow: 0 8px 0 var(--brown);
+}
+.hero-statement strong { color: var(--mint); }
+.hero-statement em { color: var(--coral); font-style: normal; font-weight: 800; }
+
+/* ── NAV ── */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255, 245, 225, 0.95); backdrop-filter: blur(12px);
+  border-bottom: 3px solid var(--brown);
+  padding: .75rem 2rem;
+  display: flex; gap: .25rem; overflow-x: auto;
+}
+.nav a {
+  color: var(--brown-light); text-decoration: none;
+  padding: .4rem .9rem; border-radius: 99px;
+  font-family: 'Fredoka', sans-serif; font-size: .82rem;
+  white-space: nowrap; transition: all .2s;
+}
+.nav a:hover { color: var(--brown); background: var(--paper); }
+.nav a.active { color: var(--paper); background: var(--mint); }
+
+/* ── SECTIONS ── */
+.section { max-width: 1080px; margin: 0 auto; padding: 4rem 2rem; }
+.section-label {
+  font-family: 'Fredoka', sans-serif; font-size: .85rem;
+  color: var(--brown); background: var(--mint-soft);
+  display: inline-block; padding: .3rem .9rem; border-radius: 99px;
+  margin-bottom: .75rem;
+}
+.section-title {
+  font-family: 'Fredoka', sans-serif; font-weight: 600;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  color: var(--brown); margin-bottom: 1rem; line-height: 1.1;
+}
+.section-desc {
+  font-size: 1.05rem; color: var(--brown);
+  max-width: 700px; margin-bottom: 2.5rem; font-weight: 600;
+}
+
+/* ── INSIGHT ── */
+.insight {
+  background: var(--yellow-soft); border: 4px solid var(--brown);
+  border-radius: 20px; padding: 1.5rem 1.75rem; margin: 2rem 0;
+  box-shadow: 0 6px 0 var(--brown);
+  position: relative;
+}
+.insight::before {
+  content: '💡'; position: absolute; top: -20px; left: 20px;
+  width: 48px; height: 48px; background: var(--yellow);
+  border: 4px solid var(--brown); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 1.4rem;
+  transform: rotate(-10deg); animation: jiggle 3s ease-in-out infinite;
+}
+@keyframes jiggle {
+  0%, 100% { transform: rotate(-10deg) translateY(0); }
+  50% { transform: rotate(10deg) translateY(-3px); }
+}
+.insight-text { padding-left: 50px; font-size: .95rem; color: var(--brown); line-height: 1.65; }
+.insight-text strong { color: var(--coral); }
+
+.insight.pink { background: var(--pink-soft); }
+.insight.pink::before { background: var(--pink); content: '💭'; }
+.insight.pink .insight-text strong { color: var(--brown); }
+
+/* ── PHASE 0 ── */
+.p0-flow {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem; margin-bottom: 2rem;
+}
+.p0-step {
+  background: var(--paper); border: 4px solid var(--brown); border-radius: 18px;
+  padding: 1.25rem 1rem; box-shadow: 0 6px 0 var(--brown);
+  position: relative; text-align: center;
+}
+.p0-step:nth-child(1) { background: var(--pink-soft); }
+.p0-step:nth-child(2) { background: var(--mint-soft); }
+.p0-step:nth-child(3) { background: var(--sky-soft); }
+.p0-step:nth-child(4) { background: var(--yellow-soft); }
+.p0-step:nth-child(5) { background: var(--purple-soft); }
+.p0-stepnum {
+  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--coral); color: var(--paper);
+  font-family: 'Fredoka', sans-serif; font-size: .9rem;
+  display: flex; align-items: center; justify-content: center;
+  border: 3px solid var(--paper);
+}
+.p0-stepicon { font-size: 2.4rem; margin: .5rem 0; display: inline-block; animation: bob 2.2s ease-in-out infinite; }
+.p0-steplabel { font-family: 'Fredoka', sans-serif; font-size: .95rem; color: var(--brown); margin-bottom: .25rem; }
+.p0-steptext { font-size: .78rem; color: var(--brown); font-weight: 600; }
+
+.p0-mockup {
+  background: var(--grass);
+  background-image: radial-gradient(circle at 30% 40%, var(--grass-dark) 4px, transparent 5px),
+                    radial-gradient(circle at 70% 60%, var(--grass-dark) 5px, transparent 6px);
+  background-size: 60px 60px;
+  border: 4px solid var(--brown); border-radius: 20px;
+  padding: 2rem;
+  box-shadow: 0 8px 0 var(--brown);
+  text-align: center;
+  position: relative;
+}
+.p0-garage {
+  display: inline-block; background: var(--coral);
+  border: 4px solid var(--brown); border-radius: 18px;
+  padding: 1.5rem 2rem; box-shadow: 0 6px 0 var(--brown);
+  position: relative;
+}
+.p0-garage-icon {
+  font-size: 4.5rem; line-height: 1;
+  animation: bldg-bob 3s ease-in-out infinite;
+}
+@keyframes bldg-bob {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-6px) rotate(1deg); }
+}
+.p0-garage-label {
+  font-family: 'Fredoka', sans-serif; font-size: .9rem;
+  color: var(--paper); margin-top: .5rem;
+}
+.p0-you {
+  position: absolute; bottom: -15px; left: -25px;
+  font-size: 2.5rem;
+  animation: char-bob 2.5s ease-in-out infinite;
+}
+@keyframes char-bob {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-5px) rotate(3deg); }
+}
+
+.p0-tasks {
+  background: var(--paper); border: 4px solid var(--brown); border-radius: 16px;
+  padding: 1.25rem; margin-top: 1.25rem;
+  display: inline-block; min-width: 260px;
+  text-align: left; box-shadow: 0 4px 0 var(--brown);
+}
+.p0-tasks-title {
+  font-family: 'Fredoka', sans-serif; font-size: .85rem;
+  color: var(--brown); margin-bottom: .75rem; text-align: center;
+  background: var(--yellow); border: 2px solid var(--brown);
+  border-radius: 99px; padding: .25rem .75rem;
+}
+.p0-task {
+  display: flex; align-items: center; gap: .6rem;
+  font-size: .82rem; color: var(--brown); font-weight: 700;
+  padding: .35rem 0; border-bottom: 1px dashed rgba(74,56,41,0.2);
+}
+.p0-task:last-child { border-bottom: none; }
+.p0-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--brown);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: .7rem;
+}
+.p0-check.done { background: var(--mint); color: var(--brown); }
+.p0-check.todo { background: var(--paper); }
+.p0-check.locked { background: rgba(74,56,41,0.15); color: var(--brown-light); }
+.p0-task.done { opacity: .65; }
+.p0-task.done .p0-tasktext { text-decoration: line-through; }
+
+.p0-online-btn {
+  margin-top: 1rem; display: inline-block;
+  background: var(--coral); color: var(--paper);
+  border: 4px solid var(--brown); border-radius: 99px;
+  padding: .75rem 1.5rem;
+  font-family: 'Fredoka', sans-serif; font-size: 1rem;
+  box-shadow: 0 5px 0 var(--brown);
+  animation: jiggle 2s ease-in-out infinite;
+}
+
+.p0-trans {
+  background: var(--paper); border: 4px dashed var(--mint);
+  border-radius: 18px; padding: 1.25rem;
+  margin-top: 1.5rem; display: flex; gap: 1rem; align-items: center;
+}
+.p0-trans-icon { font-size: 2rem; flex-shrink: 0; animation: tilt 3s ease-in-out infinite; }
+.p0-trans-text { font-size: .9rem; color: var(--brown); font-weight: 600; }
+.p0-trans-text strong { color: var(--mint); }
+
+/* ── LOOP ── */
+.loop-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+.loop-step {
+  background: var(--paper); border: 4px solid var(--brown); border-radius: 18px;
+  padding: 1.5rem 1rem; text-align: center;
+  box-shadow: 0 6px 0 var(--brown); position: relative;
+}
+.loop-step:nth-child(1) { background: var(--mint-soft); }
+.loop-step:nth-child(2) { background: var(--sky-soft); }
+.loop-step:nth-child(3) { background: var(--yellow-soft); }
+.loop-step:nth-child(4) { background: var(--pink-soft); }
+.loop-num {
+  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--brown); color: var(--paper);
+  font-family: 'Fredoka', sans-serif; font-size: .9rem;
+  display: flex; align-items: center; justify-content: center;
+  border: 3px solid var(--paper);
+}
+.loop-icon { font-size: 2.8rem; margin: .75rem 0 .5rem; display: inline-block; animation: bob 2s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.loop-label { font-family: 'Fredoka', sans-serif; font-size: 1.05rem; color: var(--brown); margin-bottom: .35rem; }
+.loop-text { font-size: .82rem; color: var(--brown); font-weight: 600; }
+
+/* ── RESSOURCEN ── */
+.res-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.res {
+  background: var(--paper); border: 4px solid var(--brown); border-radius: 18px;
+  padding: 1.25rem; box-shadow: 0 6px 0 var(--brown); text-align: center;
+}
+.res:nth-child(1) { background: var(--yellow-soft); }
+.res:nth-child(2) { background: var(--sky-soft); }
+.res:nth-child(3) { background: var(--purple-soft); }
+.res-icon-big { font-size: 2.8rem; display: inline-block; animation: bob 2.5s ease-in-out infinite; }
+.res-name { font-family: 'Fredoka', sans-serif; font-size: 1.1rem; color: var(--brown); margin: .5rem 0 .25rem; }
+.res-job { font-size: .82rem; color: var(--brown); font-weight: 600; }
+.res-bar {
+  margin-top: .75rem; background: rgba(74,56,41,0.1);
+  border: 2px solid var(--brown); border-radius: 99px;
+  height: 14px; overflow: hidden; position: relative;
+}
+.res-bar-fill {
+  height: 100%; background: var(--mint);
+  border-radius: 99px; width: 70%;
+  transition: width .3s;
+}
+.res-bar-text {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-size: .68rem; color: var(--brown); font-family: monospace; font-weight: 800;
+}
+
+/* ── CONSOLIDATION TABLE ── */
+.consol {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 20px; padding: 1.5rem;
+  box-shadow: 0 6px 0 var(--brown); margin-top: 2rem;
+}
+.consol-title {
+  font-family: 'Fredoka', sans-serif; font-size: 1.1rem;
+  color: var(--brown); margin-bottom: 1rem;
+  display: flex; align-items: center; gap: .5rem;
+}
+.consol-row {
+  display: grid; grid-template-columns: 1fr 60px 1fr; align-items: center;
+  gap: .75rem; padding: .75rem 0;
+  border-bottom: 1px dashed rgba(74,56,41,0.15);
+}
+.consol-row:last-child { border-bottom: none; }
+.consol-old {
+  font-family: 'Nunito', sans-serif; font-weight: 700; color: var(--brown-light);
+  text-decoration: line-through; font-size: .85rem;
+}
+.consol-arrow { text-align: center; color: var(--coral); font-size: 1.3rem; }
+.consol-new {
+  font-family: 'Fredoka', sans-serif; color: var(--mint); font-size: .95rem;
+}
+.consol-new.gone { color: var(--brown-light); font-style: italic; }
+@media (max-width: 600px) {
+  .consol-row { grid-template-columns: 1fr; }
+  .consol-arrow { transform: rotate(90deg); }
+}
+
+/* ── BUILDING TYPE SECTION ── */
+.btype-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+}
+@media (max-width: 700px) { .btype-row { grid-template-columns: 1fr; } }
+.btype {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 24px; padding: 1.75rem;
+  box-shadow: 0 8px 0 var(--brown);
+}
+.btype.simple { background: var(--sky-soft); }
+.btype.tech { background: var(--purple-soft); }
+.btype-tag {
+  display: inline-block; font-family: 'Fredoka', sans-serif; font-size: .75rem;
+  padding: .25rem .8rem; border-radius: 99px;
+  border: 2px solid var(--brown); margin-bottom: .75rem;
+  background: var(--paper); color: var(--brown);
+}
+.btype-title { font-family: 'Fredoka', sans-serif; font-size: 1.3rem; color: var(--brown); margin-bottom: .5rem; }
+.btype-sub { font-size: .9rem; color: var(--brown); font-weight: 700; margin-bottom: 1rem; }
+.btype-list { list-style: none; }
+.btype-list li {
+  font-size: .88rem; color: var(--brown); font-weight: 600;
+  padding: .35rem 0; display: flex; gap: .5rem;
+}
+.btype-list li::before { content: '→'; color: var(--coral); font-weight: 900; }
+.btype-examples {
+  background: rgba(255,250,240,0.6); border: 2px solid var(--brown);
+  border-radius: 10px; padding: .75rem 1rem; margin-top: 1rem;
+  font-size: .85rem; color: var(--brown); font-weight: 700;
+}
+.btype-examples strong { color: var(--coral); }
+
+/* ── SIMPLE BUILDINGS ── */
+.bldg-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+.bldg {
+  background: var(--paper); border: 4px solid var(--brown); border-radius: 18px;
+  padding: 1.25rem; box-shadow: 0 6px 0 var(--brown);
+}
+.bldg-head { display: flex; align-items: center; gap: .75rem; margin-bottom: .9rem; }
+.bldg-ico {
+  width: 56px; height: 56px; border-radius: 14px;
+  border: 3px solid var(--brown);
+  display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
+  flex-shrink: 0; box-shadow: 0 3px 0 var(--brown);
+}
+.bldg-ico.simple { background: var(--sky); }
+.bldg-ico.tech { background: var(--purple); }
+.bldg-ico.coral { background: var(--coral); }
+.bldg-name { font-family: 'Fredoka', sans-serif; font-size: 1rem; color: var(--brown); }
+.bldg-job { font-size: .72rem; color: var(--brown-light); font-weight: 700; margin-top: .15rem; }
+.bldg-desc { font-size: .82rem; color: var(--brown); font-weight: 600; margin-bottom: .8rem; line-height: 1.55; }
+.bldg-stats {
+  background: rgba(74,56,41,0.06); border-radius: 10px;
+  padding: .6rem .8rem; font-size: .75rem;
+  display: flex; flex-direction: column; gap: .25rem;
+}
+.bldg-stat { display: flex; justify-content: space-between; font-family: monospace; font-weight: 700; }
+.bldg-stat .label { color: var(--brown-light); }
+.bldg-stat .val { color: var(--brown); }
+.bldg-stat .val.good { color: var(--mint); }
+.bldg-stat .val.cost { color: var(--coral); }
+
+/* ── TECH TREE INSIDE BUILDING ── */
+.tt-card {
+  background: var(--paper); border: 4px solid var(--brown); border-radius: 22px;
+  padding: 1.5rem; box-shadow: 0 8px 0 var(--brown);
+  margin-bottom: 1.5rem;
+}
+.tt-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.tt-head .bldg-ico { width: 60px; height: 60px; font-size: 2rem; }
+.tt-name { font-family: 'Fredoka', sans-serif; font-size: 1.3rem; color: var(--brown); }
+.tt-purpose { font-size: .85rem; color: var(--brown); font-weight: 600; }
+.tt-chain {
+  display: grid; grid-template-columns: 1fr 30px 1fr 30px 1fr;
+  gap: .5rem; align-items: stretch;
+}
+@media (max-width: 700px) {
+  .tt-chain { grid-template-columns: 1fr; gap: .5rem; }
+  .tt-chain .tt-arr { transform: rotate(90deg); text-align: center; }
+}
+.tt-node {
+  background: var(--paper); border: 3px solid var(--brown);
+  border-radius: 14px; padding: .85rem .9rem;
+  box-shadow: 0 3px 0 var(--brown);
+  position: relative;
+}
+.tt-node.unlocked { background: var(--mint-soft); }
+.tt-node.locked { opacity: .55; background: var(--paper); }
+.tt-stufe {
+  font-family: 'Fredoka', sans-serif; font-size: .65rem;
+  background: var(--yellow); color: var(--brown);
+  border: 2px solid var(--brown); border-radius: 99px;
+  padding: .1rem .5rem;
+  position: absolute; top: -10px; left: 10px;
+}
+.tt-node-name {
+  font-family: 'Fredoka', sans-serif; font-size: .9rem;
+  color: var(--brown); margin-top: .2rem; margin-bottom: .35rem;
+}
+.tt-node-effect {
+  font-size: .7rem; color: var(--brown); font-weight: 700;
+  font-family: monospace; line-height: 1.4;
+}
+.tt-arr {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; color: var(--coral); font-weight: 900;
+}
+
+/* ── CYCLE ── */
+.cycle-wrap {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 24px; padding: 2rem;
+  box-shadow: 0 8px 0 var(--brown);
+}
+.cycle-grid {
+  display: grid;
+  grid-template-columns: 1fr 50px 1fr 50px 1fr;
+  align-items: center; gap: .5rem;
+}
+@media (max-width: 750px) {
+  .cycle-grid { grid-template-columns: 1fr; }
+  .cycle-arrow { transform: rotate(90deg); margin: 0 auto; }
+}
+.cycle-node {
+  background: var(--paper); border: 3px solid var(--brown); border-radius: 16px;
+  padding: 1rem; text-align: center; box-shadow: 0 4px 0 var(--brown);
+}
+.cycle-node.money { background: var(--yellow-soft); }
+.cycle-node.bldg { background: var(--sky-soft); }
+.cycle-node.users { background: var(--mint-soft); }
+.cycle-icon { font-size: 2.3rem; margin-bottom: .35rem; animation: tilt 3s ease-in-out infinite; display: inline-block; }
+@keyframes tilt {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+.cycle-name { font-family: 'Fredoka', sans-serif; font-size: 1rem; color: var(--brown); margin-bottom: .25rem; }
+.cycle-action { font-size: .75rem; color: var(--brown); font-weight: 700; }
+.cycle-arrow {
+  font-size: 1.6rem; color: var(--coral); text-align: center;
+  animation: arrow-pulse 1.5s ease-in-out infinite;
+}
+@keyframes arrow-pulse {
+  0%, 100% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(4px) scale(1.1); }
+}
+.cycle-explain {
+  margin-top: 1.5rem; padding-top: 1.5rem;
+  border-top: 2px dashed rgba(74,56,41,0.2);
+  font-size: .9rem; color: var(--brown); font-weight: 600;
+  text-align: center;
+}
+.cycle-explain strong { color: var(--coral); }
+.cycle-bottleneck {
+  margin-top: 1rem; background: var(--coral); color: var(--paper);
+  border: 3px solid var(--brown); border-radius: 99px;
+  padding: .5rem 1rem; font-family: 'Fredoka', sans-serif; font-size: .85rem;
+  display: inline-flex; align-items: center; gap: .5rem;
+}
+
+/* ── DEMO PLOTS ── */
+.demo-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+.demo {
+  background: var(--paper); border: 4px solid var(--brown); border-radius: 20px;
+  padding: 1.25rem; box-shadow: 0 8px 0 var(--brown);
+}
+.demo-label {
+  font-family: 'Fredoka', sans-serif; font-size: .8rem;
+  background: var(--purple-soft); color: var(--brown);
+  display: inline-block; padding: .2rem .7rem; border-radius: 99px;
+  margin-bottom: .75rem;
+}
+.demo-title { font-family: 'Fredoka', sans-serif; font-size: 1.15rem; color: var(--brown); margin-bottom: 1rem; }
+.demo-plot {
+  background: var(--grass);
+  background-image: radial-gradient(circle at 30% 40%, var(--grass-dark) 4px, transparent 5px),
+                    radial-gradient(circle at 70% 60%, var(--grass-dark) 5px, transparent 6px);
+  background-size: 60px 60px;
+  border: 3px solid var(--brown); border-radius: 14px;
+  padding: .75rem; min-height: 200px;
+  display: grid; gap: .4rem;
+}
+.demo-plot.p1 { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); }
+.demo-plot.p2 { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
+.demo-plot.p3 { grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(3, 1fr); }
+.dtile {
+  aspect-ratio: 1; border: 2px solid var(--brown); border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: .85rem; padding: .25rem; text-align: center;
+}
+.dtile.empty { background: rgba(255,250,240,0.4); border-style: dashed; border-color: rgba(74,56,41,0.4); }
+.dtile.hq { background: var(--coral); }
+.dtile.server { background: var(--sky-soft); }
+.dtile.ads { background: var(--yellow); }
+.dtile.marketing { background: var(--pink-soft); }
+.dtile.lab { background: var(--purple-soft); }
+.dtile-name { font-family: 'Fredoka', sans-serif; font-size: .5rem; color: var(--brown); margin-top: .1rem; }
+.demo-goal {
+  margin-top: 1rem; padding: .6rem .9rem;
+  background: var(--mint-soft); border: 2px solid var(--brown); border-radius: 10px;
+  font-size: .8rem; color: var(--brown);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.demo-goal strong { font-family: 'Fredoka', sans-serif; }
+
+/* ── FUN ── */
+.fun-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.25rem;
+}
+.fun-card {
+  background: var(--paper); border: 4px solid var(--brown); border-radius: 20px;
+  padding: 1.5rem; box-shadow: 0 6px 0 var(--brown);
+}
+.fun-card:nth-child(1) { background: var(--pink-soft); }
+.fun-card:nth-child(2) { background: var(--mint-soft); }
+.fun-card:nth-child(3) { background: var(--yellow-soft); }
+.fun-icon { font-size: 2.5rem; margin-bottom: .5rem; display: inline-block; animation: tilt 3s ease-in-out infinite; }
+.fun-title { font-family: 'Fredoka', sans-serif; font-size: 1.1rem; color: var(--brown); margin-bottom: .5rem; }
+.fun-text { font-size: .88rem; color: var(--brown); font-weight: 600; line-height: 1.55; }
+
+/* ── ROADMAP ── */
+.roadmap {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 20px; padding: 1.5rem;
+  box-shadow: 0 8px 0 var(--brown);
+}
+.rm-item {
+  display: flex; gap: 1rem; align-items: flex-start;
+  padding: 1rem 0; border-bottom: 1px dashed rgba(74,56,41,0.2);
+}
+.rm-item:last-child { border-bottom: none; }
+.rm-stage {
+  font-family: 'Fredoka', sans-serif; font-size: .8rem;
+  padding: .35rem .8rem; border-radius: 99px;
+  border: 2px solid var(--brown); flex-shrink: 0; white-space: nowrap;
+  height: fit-content;
+}
+.rm-stage.now { background: var(--mint); color: var(--brown); }
+.rm-stage.next { background: var(--yellow); color: var(--brown); }
+.rm-stage.then { background: var(--pink-soft); color: var(--brown); }
+.rm-stage.later { background: var(--paper); color: var(--brown-light); }
+.rm-content { flex: 1; }
+.rm-title { font-family: 'Fredoka', sans-serif; font-size: 1rem; color: var(--brown); margin-bottom: .2rem; }
+.rm-desc { font-size: .85rem; color: var(--brown); font-weight: 600; }
+.rm-tag {
+  display: inline-block; background: rgba(74,56,41,0.1);
+  border-radius: 99px; padding: .1rem .5rem;
+  font-size: .68rem; color: var(--brown); margin-right: .2rem;
+}
+
+/* ── TIMELINE ── */
+.timeline {
+  background: var(--paper); border: 4px solid var(--brown);
+  border-radius: 20px; padding: 1.5rem;
+  box-shadow: 0 8px 0 var(--brown);
+}
+.tl-item { display: flex; gap: 1rem; padding: .9rem 0; border-bottom: 1px dashed rgba(74,56,41,0.2); }
+.tl-item:last-child { border-bottom: none; }
+.tl-week {
+  font-family: 'Fredoka', sans-serif; font-size: .85rem; color: var(--brown);
+  background: var(--mint-soft); border-radius: 99px; border: 2px solid var(--brown);
+  padding: .25rem .7rem; height: fit-content; white-space: nowrap;
+}
+.tl-title { font-family: 'Fredoka', sans-serif; font-size: 1rem; color: var(--brown); }
+.tl-desc { font-size: .82rem; color: var(--brown); font-weight: 600; margin-top: .2rem; }
+
+footer {
+  text-align: center; padding: 4rem 2rem 3rem;
+  color: var(--brown-light); font-size: .9rem;
+}
+footer p { margin: .25rem 0; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">🌱 Grundkonzept v1.2 · Mit Phase 0 & zentralem Tech-Tree</div>
+  <h1>Der <span class="accent">Kern</span> des Spiels</h1>
+  <p class="hero-sub">
+    Bevor wir Events, Charaktere und Skandale einbauen — funktioniert das pure Bauen + Wachsen?
+    Dieses Dokument zeigt das nackte Grundspiel.
+  </p>
+  <div class="hero-statement">
+    <em>Faustregel:</em> Wenn das Grundspiel ohne alle Schmuckerei <strong>schon Spaß macht</strong>,
+    tragen die späteren Schichten (Events, Charaktere, Aha-Momente) das ganze Spiel weit.
+    Wenn nicht, retten sie es nicht.
+  </div>
+</section>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="#warum" class="active">Warum?</a>
+  <a href="#phase0">🌟 Phase 0</a>
+  <a href="#loop">Loop</a>
+  <a href="#res">4 Ressourcen</a>
+  <a href="#gebaeudetypen">2 Gebäude-Arten</a>
+  <a href="#simple">Simple Gebäude</a>
+  <a href="#tech">Tech-Gebäude</a>
+  <a href="#techtree">Master-Tech-Tree</a>
+  <a href="#kreislauf">Wirtschaft</a>
+  <a href="#wachstum">Wachstum</a>
+  <a href="#spass">Was Spaß macht</a>
+  <a href="#roadmap">Was später</a>
+  <a href="#plan">5-Wochen-Plan</a>
+</nav>
+
+<!-- WARUM -->
+<section class="section" id="warum">
+  <span class="section-label">Die Strategie</span>
+  <h2 class="section-title">Warum erst der Kern?</h2>
+  <p class="section-desc">Wir hatten in v1.0 viele coole Ideen: Events mit Charakteren, das Algo-Labor, 7 Enden. Die bleiben — aber sie kommen <em>danach</em>.</p>
+
+  <div class="insight">
+    <p class="insight-text">
+      Ein guter Aufbau-Spiel-Loop muss <strong>auch ohne Story Spaß machen</strong>. FarmVille, Township, Two Point Hospital —
+      du könntest stundenlang ohne ein einziges Event nur bauen und wachsen. Genau dieses Bauen-Sammeln-Wachsen-Gefühl müssen wir zuerst hinbekommen.
+      Wenn der Kern trägt, machen Events ihn tiefer. Wenn der Kern nicht trägt, helfen auch die schönsten Events nicht.
+    </p>
+  </div>
+</section>
+
+<!-- PHASE 0 -->
+<section class="section" id="phase0">
+  <span class="section-label">🌟 Der Einstieg</span>
+  <h2 class="section-title">Phase 0 — In der Garage</h2>
+  <p class="section-desc">Bevor das eigentliche Spiel beginnt: ein kurzes Onboarding, das sich selbst wie ein Mini-Spiel anfühlt. Charakter-Auswahl, Plattform-Idee, erste freie Tech. Dauer: 3–5 Minuten.</p>
+
+  <div class="p0-flow">
+    <div class="p0-step">
+      <div class="p0-stepnum">1</div>
+      <div class="p0-stepicon">🎭</div>
+      <div class="p0-steplabel">Charakter wählen</div>
+      <div class="p0-steptext">Avatar aus der Tier-Galerie (🐻 🐱 🦊 🦉 🐰 🦄 …)</div>
+    </div>
+    <div class="p0-step">
+      <div class="p0-stepnum">2</div>
+      <div class="p0-stepicon">✏️</div>
+      <div class="p0-steplabel">Sich benennen</div>
+      <div class="p0-steptext">„Wie heißt du, Gründer:in?" — Text-Eingabe</div>
+    </div>
+    <div class="p0-step">
+      <div class="p0-stepnum">3</div>
+      <div class="p0-stepicon">🌟</div>
+      <div class="p0-steplabel">Plattform taufen</div>
+      <div class="p0-steptext">Name + Logo aus 8 Vorlagen für dein Netzwerk</div>
+    </div>
+    <div class="p0-step">
+      <div class="p0-stepnum">4</div>
+      <div class="p0-stepicon">🛠️</div>
+      <div class="p0-steplabel">Solo entwickeln</div>
+      <div class="p0-steptext">4–6 Basis-Features kostenlos coden (du als Solo-Founder)</div>
+    </div>
+    <div class="p0-step">
+      <div class="p0-stepnum">5</div>
+      <div class="p0-stepicon">🚀</div>
+      <div class="p0-steplabel">Online gehen</div>
+      <div class="p0-steptext">Erste Nutzer organisch — bis 1.000 → Investoren!</div>
+    </div>
+  </div>
+
+  <div class="p0-mockup">
+    <div class="p0-garage">
+      <div class="p0-garage-icon">🏠</div>
+      <div class="p0-garage-label">Deine Garage</div>
+      <span class="p0-you">🐻</span>
+    </div>
+    <br>
+    <div class="p0-tasks">
+      <div class="p0-tasks-title">📋 Was du allein entwickelst</div>
+      <div class="p0-task done"><span class="p0-check done">✓</span><span class="p0-tasktext">Nutzer-Profile</span></div>
+      <div class="p0-task done"><span class="p0-check done">✓</span><span class="p0-tasktext">Text-Posts</span></div>
+      <div class="p0-task done"><span class="p0-check done">✓</span><span class="p0-tasktext">Follow-System</span></div>
+      <div class="p0-task"><span class="p0-check todo">◯</span><span class="p0-tasktext">Feed-Algorithmus (Chronologisch)</span></div>
+      <div class="p0-task"><span class="p0-check todo">◯</span><span class="p0-tasktext">Bilder-Upload</span></div>
+      <div class="p0-task"><span class="p0-check locked">🔒</span><span class="p0-tasktext">Direktnachrichten (später)</span></div>
+    </div>
+    <br>
+    <div class="p0-online-btn">🚀 Plattform online stellen!</div>
+  </div>
+
+  <div class="p0-trans">
+    <span class="p0-trans-icon">💰</span>
+    <p class="p0-trans-text">
+      <strong>Der Übergang zu Phase 1:</strong> Sobald deine Plattform <strong>1.000 Nutzer</strong> hat, klopft der erste Investor an.
+      Mini-Pitch-Szene, du bekommst <strong>€1.000 Startkapital</strong> — und schwupps wächst dein Plot, Bauplätze erscheinen,
+      Server-Farmen, Marketing-Studios und Werbeagenturen werden zum Bau freigeschaltet.
+    </p>
+  </div>
+
+  <div class="insight">
+    <p class="insight-text">
+      <strong>Warum Phase 0 brillant ist:</strong> Es ist Tutorial UND Identifikation in einem.
+      Schüler:innen geben ihrer Plattform einen Namen — das macht sie zu <em>ihrer</em> Plattform.
+      Sie entwickeln die ersten Features <em>selbst</em> — sie verstehen, was eine Plattform überhaupt ausmacht.
+      Sie warten auf den ersten Investor — sie erleben den Moment, an dem aus „Bastler" „Unternehmer" wird.
+      Das alles in 3 Minuten, ohne ein einziges Tutorial-Pop-up.
+    </p>
+  </div>
+</section>
+
+<!-- LOOP -->
+<section class="section" id="loop">
+  <span class="section-label">Die Spielschleife</span>
+  <h2 class="section-title">4 Schritte, immer wieder</h2>
+  <p class="section-desc">Nach Phase 0: das ist der ganze Loop. Kein Event, keine Karten, keine Charaktere. Nur diese vier Aktionen — und das Wachstum, das daraus entsteht.</p>
+
+  <div class="loop-row">
+    <div class="loop-step">
+      <div class="loop-num">1</div>
+      <div class="loop-icon">👀</div>
+      <div class="loop-label">Anschauen</div>
+      <div class="loop-text">Geld, Nutzer, Server-Kapazität — alles im grünen Bereich?</div>
+    </div>
+    <div class="loop-step">
+      <div class="loop-num">2</div>
+      <div class="loop-icon">🏗️</div>
+      <div class="loop-label">Bauen oder Techen</div>
+      <div class="loop-text">Neues Gebäude bauen, bestehendes upgraden, oder im Tech-Gebäude forschen.</div>
+    </div>
+    <div class="loop-step">
+      <div class="loop-num">3</div>
+      <div class="loop-icon">📅</div>
+      <div class="loop-label">Zeit springen</div>
+      <div class="loop-text">„Nächster Monat" → alle Gebäude produzieren, Münzen fliegen.</div>
+    </div>
+    <div class="loop-step">
+      <div class="loop-num">4</div>
+      <div class="loop-icon">📈</div>
+      <div class="loop-label">Wachsen</div>
+      <div class="loop-text">Mit den neuen Ressourcen das nächste Gebäude finanzieren.</div>
+    </div>
+  </div>
+</section>
+
+<!-- RESSOURCEN -->
+<section class="section" id="res">
+  <span class="section-label">Was du verfolgst</span>
+  <h2 class="section-title">Die 4 Start-Ressourcen</h2>
+  <p class="section-desc">Vier klare Werte. Mitarbeiter sind zurück — aber als <em>funktionale</em> Ressource (Zahl), nicht als Charaktere. Die Persönlichkeiten kommen in der Expansionsphase.</p>
+
+  <div class="res-row">
+    <div class="res">
+      <span class="res-icon-big">🪙</span>
+      <div class="res-name">Geld</div>
+      <p class="res-job">Bau-Material und Monats-Kosten. Geht aus = Game Over.</p>
+      <div class="res-bar"><div class="res-bar-fill" style="width:60%;background:var(--yellow)"></div><div class="res-bar-text">€600</div></div>
+    </div>
+    <div class="res">
+      <span class="res-icon-big">👥</span>
+      <div class="res-name">Nutzer</div>
+      <p class="res-job">Werden zu Geld (über Werbung). Sind das Wachstumsziel.</p>
+      <div class="res-bar"><div class="res-bar-fill" style="width:45%;background:var(--sky)"></div><div class="res-bar-text">4.500</div></div>
+    </div>
+    <div class="res">
+      <span class="res-icon-big">🛰️</span>
+      <div class="res-name">Server-Kapazität</div>
+      <p class="res-job">Maximum an Nutzern. Voll = Plattform crasht, Nutzer wandern ab.</p>
+      <div class="res-bar"><div class="res-bar-fill" style="width:90%;background:var(--coral)"></div><div class="res-bar-text">9.000 / 10.000</div></div>
+    </div>
+    <div class="res" style="background:var(--mint-soft)">
+      <span class="res-icon-big">👤</span>
+      <div class="res-name">Mitarbeiter</div>
+      <p class="res-job">Werden in Tech-Gebäuden platziert. Forschen dort an neuer Tech.</p>
+      <div class="res-bar"><div class="res-bar-fill" style="width:50%;background:var(--mint)"></div><div class="res-bar-text">3 / 6 belegt</div></div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <p class="insight-text">
+      <strong>Server-Kapazität ist die Schlüssel-Mechanik:</strong>
+      Du siehst eine Fortschrittsleiste der Auslastung. Bei 80% wird's gelb (Performance-Warnung), bei 100% rot (Plattform crasht, Nutzer-Verlust).
+      Das zwingt dich, immer wieder zu Infrastruktur zurückzukehren — und erklärt nebenbei, warum Meta Milliarden in Rechenzentren steckt.
+    </p>
+  </div>
+
+  <div class="insight" style="background:var(--mint-soft);">
+    <p class="insight-text">
+      <strong>Wachstums-Formel:</strong> Neue Nutzer/Mon = <strong>MaxGrow × Zufriedenheit</strong><br><br>
+      <strong>MaxGrow</strong> ist deine Wachstums-Kapazität — wie viele Nutzer pro Monat <em>maximal</em> kommen könnten. Wird durch Marketing erhöht.<br>
+      <strong>Zufriedenheit</strong> (−0.5 bis 1.0) sagt, <em>wie viel davon wirklich ankommt</em>. Steigt durch neue Features (+). Sinkt durch Dark Patterns (−).<br><br>
+      Zufriedenheit = 0 → kein Wachstum, egal wie viel du ins Marketing steckst.<br>
+      Zufriedenheit &lt; 0 → Nutzer verlassen die Plattform.<br>
+      Das Wachstum nähert sich immer dem Markt-Cap an — Marketing und Features verschieben nur, wie schnell und wie weit.
+    </p>
+  </div>
+
+  <div class="consol">
+    <div class="consol-title">⚖️ Was mit den anderen Ressourcen passiert</div>
+    <div class="consol-row">
+      <div class="consol-old">Vertrauen + Gesellschaft</div>
+      <div class="consol-arrow">→</div>
+      <div class="consol-new"><strong>Vertrauen</strong> (subsumiert beides) · kommt mit Events in der Expansionsphase</div>
+    </div>
+    <div class="consol-row">
+      <div class="consol-old">Aufmerksamkeit</div>
+      <div class="consol-arrow">→</div>
+      <div class="consol-new"><strong>Engagement</strong> · kommt mit Events in der Expansionsphase</div>
+    </div>
+    <div class="consol-row">
+      <div class="consol-old">Mitarbeiter</div>
+      <div class="consol-arrow">↩</div>
+      <div class="consol-new"><strong>ist zurück</strong> als 4. Ressource · funktional jetzt, Charaktere in der Expansionsphase</div>
+    </div>
+    <div class="consol-row">
+      <div class="consol-old">Daten</div>
+      <div class="consol-arrow">→</div>
+      <div class="consol-new gone">Implizit (Server-Farmen produzieren sie für Werbung)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ZWEI GEBÄUDE-ARTEN -->
+<section class="section" id="gebaeudetypen">
+  <span class="section-label">Die wichtige Unterscheidung</span>
+  <h2 class="section-title">Zwei Arten von Gebäuden</h2>
+  <p class="section-desc">Nicht alle Gebäude funktionieren gleich. Es gibt zwei klar getrennte Kategorien — beide haben ihre Aufgabe.</p>
+
+  <div class="btype-row">
+
+    <div class="btype simple">
+      <span class="btype-tag">🟦 Typ A</span>
+      <div class="btype-title">Simple Gebäude</div>
+      <p class="btype-sub">Tragen das Wachstum. Erweitern Werte.</p>
+      <ul class="btype-list">
+        <li>Du baust sie oder upgradest sie</li>
+        <li>Erhöhen einen klaren Wert (Kapazität, Slots, Einkommen)</li>
+        <li>Keine Tiefe im Gebäude selbst — sie tun was sie tun</li>
+        <li>Mehrere davon = mehr vom Wert</li>
+      </ul>
+      <div class="btype-examples">
+        <strong>Beispiele:</strong> Hauptquartier, Server-Farm
+      </div>
+    </div>
+
+    <div class="btype tech">
+      <span class="btype-tag">🟪 Typ B</span>
+      <div class="btype-title">Tech-Gebäude</div>
+      <p class="btype-sub">Geben strategische Tiefe. Können forschen.</p>
+      <ul class="btype-list">
+        <li>Du baust sie einmal — dann „lebst" du in ihnen</li>
+        <li>Jedes hat einen eigenen Tech-Tree (Forschung im Gebäude)</li>
+        <li>Klicken öffnet eine Sub-Ansicht: was forscht du als nächstes?</li>
+        <li>Pro Gebäude meist nur eins — Upgrade über Forschung statt Vervielfachung</li>
+      </ul>
+      <div class="btype-examples">
+        <strong>Beispiele:</strong> Marketing-Studio, Werbeagentur, KI-Labor
+      </div>
+    </div>
+
+  </div>
+
+  <div class="insight">
+    <p class="insight-text">
+      <strong>Warum diese Trennung wertvoll ist:</strong> Simple Gebäude geben dir den schnellen Bauen-Bauen-Bauen-Loop (FarmVille-Gefühl).
+      Tech-Gebäude geben dir die strategischen Entscheidungen (welches Forschungs-Pfad?).
+      So bekommst du <em>beides</em> ohne das eine das andere zu überlagern.
+    </p>
+  </div>
+</section>
+
+<!-- SIMPLE GEBÄUDE -->
+<section class="section" id="simple">
+  <span class="section-label">🟦 Typ A</span>
+  <h2 class="section-title">Die Simple Gebäude</h2>
+  <p class="section-desc">Zwei Gebäude, klare Funktion. Bauen, upgraden, fertig.</p>
+
+  <div class="bldg-grid">
+
+    <div class="bldg">
+      <div class="bldg-head">
+        <div class="bldg-ico coral">🏠</div>
+        <div><div class="bldg-name">Hauptquartier</div><div class="bldg-job">Slot-Erweiterung & Basis-Einkommen</div></div>
+      </div>
+      <p class="bldg-desc">Beginnt als Garage. Bei Phasen-Aufstieg wird's größer. Bestimmt, wie viele Slots du auf dem Plot hast und produziert passives Einkommen.</p>
+      <div class="bldg-stats">
+        <div class="bldg-stat"><span class="label">Bau-Kosten</span><span class="val">€0 (Start)</span></div>
+        <div class="bldg-stat"><span class="label">Pro Monat</span><span class="val good">+€50 passiv</span></div>
+        <div class="bldg-stat"><span class="label">Stufe 1</span><span class="val">6 Slots</span></div>
+        <div class="bldg-stat"><span class="label">Stufe 2 (Auto)</span><span class="val">12 Slots</span></div>
+        <div class="bldg-stat"><span class="label">Stufe 3 (Auto)</span><span class="val">20 Slots</span></div>
+      </div>
+    </div>
+
+    <div class="bldg">
+      <div class="bldg-head">
+        <div class="bldg-ico simple">🛰️</div>
+        <div><div class="bldg-name">Server-Farm</div><div class="bldg-job">Server-Kapazität (das Wachstums-Limit)</div></div>
+      </div>
+      <p class="bldg-desc">Setzt das Maximum an Nutzern. Ohne Server: Wachstum gedeckelt. Plattform crasht bei 100% Auslastung. Du kannst mehrere bauen oder upgraden.</p>
+      <div class="bldg-stats">
+        <div class="bldg-stat"><span class="label">Bau-Kosten Stufe 1</span><span class="val cost">€200</span></div>
+        <div class="bldg-stat"><span class="label">Upgrade auf Stufe 2</span><span class="val cost">€400</span></div>
+        <div class="bldg-stat"><span class="label">Upgrade auf Stufe 3</span><span class="val cost">€800</span></div>
+        <div class="bldg-stat"><span class="label">Kapazität pro Stufe</span><span class="val good">+5K / +15K / +50K</span></div>
+        <div class="bldg-stat"><span class="label">Pro Monat (Strom)</span><span class="val cost">−€10/20/50</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="insight pink">
+    <p class="insight-text">
+      <strong>Spielentscheidung:</strong> Mehr Server-Farmen bauen oder bestehende upgraden? Vier Server-Farmen Stufe 1 = 20K Kapazität für €800.
+      Eine Server-Farm Stufe 3 = 70K Kapazität für €1400 + ein Slot frei. Das ist eine echte strategische Wahl — Slots oder Geld?
+    </p>
+  </div>
+</section>
+
+<!-- TECH GEBÄUDE -->
+<section class="section" id="tech">
+  <span class="section-label">🟪 Typ B</span>
+  <h2 class="section-title">Die Tech-Gebäude</h2>
+  <p class="section-desc">Drei Gebäude, die je einen <em>Bereich</em> des Master-Tech-Trees freischalten. Klick aufs Gebäude → du siehst seinen Bereich + die Mitarbeiter-Slots. Hier wird tatsächlich geforscht: Mitarbeiter rein, Forschung läuft, neue Tech freischalten.</p>
+
+  <!-- MARKETING -->
+  <div class="tt-card">
+    <div class="tt-head">
+      <div class="bldg-ico tech" style="background:var(--pink)">📣</div>
+      <div>
+        <div class="tt-name">Marketing-Studio</div>
+        <div class="tt-purpose">Erhöht MaxGrow · Tech: Kampagnen-Typen freischalten</div>
+      </div>
+    </div>
+    <div class="tt-chain">
+      <div class="tt-node unlocked">
+        <span class="tt-stufe">Stufe 1</span>
+        <div class="tt-node-name">Email-Marketing</div>
+        <div class="tt-node-effect">📈 +300 MaxGrow/Mon<br>−€80/Mon</div>
+      </div>
+      <div class="tt-arr">→</div>
+      <div class="tt-node">
+        <span class="tt-stufe">Stufe 2</span>
+        <div class="tt-node-name">Bezahlte Anzeigen</div>
+        <div class="tt-node-effect">📈 +700 MaxGrow/Mon<br>−€200/Mon</div>
+      </div>
+      <div class="tt-arr">→</div>
+      <div class="tt-node locked">
+        <span class="tt-stufe">Stufe 3</span>
+        <div class="tt-node-name">Brand-Kampagne</div>
+        <div class="tt-node-effect">📈 +4.000 MaxGrow/Mon<br>−€1.200/Mon</div>
+      </div>
+    </div>
+    <div style="margin-top:.75rem;font-size:.78rem;color:var(--brown);font-weight:700;background:rgba(255,184,214,0.3);border:2px solid var(--brown);border-radius:10px;padding:.5rem .8rem;">
+      Echtes Wachstum/Mon = <strong>MaxGrow × Zufriedenheit</strong> — Marketing erhöht MaxGrow, Features erhöhen Zufriedenheit.
+    </div>
+  </div>
+
+  <!-- WERBE -->
+  <div class="tt-card">
+    <div class="tt-head">
+      <div class="bldg-ico tech" style="background:var(--yellow)">📢</div>
+      <div>
+        <div class="tt-name">Werbeagentur — Deal Board</div>
+        <div class="tt-purpose">Deals anpflanzen · Worker zuweisen · ernten · neu starten</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:.9rem;">
+
+      <div style="background:var(--yellow-soft);border:3px solid var(--brown);border-radius:14px;padding:.85rem .9rem;box-shadow:0 3px 0 var(--brown);position:relative;">
+        <div style="font-family:'Fredoka',sans-serif;font-size:.65rem;background:var(--yellow);border:2px solid var(--brown);border-radius:99px;padding:.1rem .5rem;display:inline-block;margin-bottom:.35rem;">🟢 Läuft — noch 2 Mon.</div>
+        <div style="font-family:'Fredoka',sans-serif;font-size:.88rem;color:var(--brown);margin-bottom:.3rem;">Video-Kampagne</div>
+        <div style="font-size:.67rem;color:var(--brown);font-weight:700;line-height:1.5;">👤 2 Worker belegt<br>💰 €0.04 × Nutzer</div>
+      </div>
+
+      <div style="background:var(--mint-soft);border:3px solid var(--brown);border-radius:14px;padding:.85rem .9rem;box-shadow:0 3px 0 var(--brown);">
+        <div style="font-family:'Fredoka',sans-serif;font-size:.65rem;background:var(--mint);border:2px solid var(--brown);border-radius:99px;padding:.1rem .5rem;display:inline-block;margin-bottom:.35rem;">🟢 Läuft — noch 1 Mon.</div>
+        <div style="font-family:'Fredoka',sans-serif;font-size:.88rem;color:var(--brown);margin-bottom:.3rem;">Sponsoring-Deal</div>
+        <div style="font-size:.67rem;color:var(--brown);font-weight:700;line-height:1.5;">👤 1 Worker belegt<br>🎁 +400 Nutzer</div>
+      </div>
+
+      <div style="background:rgba(74,56,41,0.05);border:3px dashed rgba(74,56,41,0.3);border-radius:14px;padding:.85rem .9rem;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:.35rem;">
+        <div style="font-size:1.5rem;opacity:.35;">+</div>
+        <div style="font-family:'Fredoka',sans-serif;font-size:.75rem;color:var(--brown-light);text-align:center;">Neuen Deal<br>starten</div>
+      </div>
+
+    </div>
+
+    <div style="font-size:.78rem;color:var(--brown);font-weight:700;background:var(--yellow-soft);border:2px solid var(--brown);border-radius:10px;padding:.6rem .9rem;line-height:1.6;">
+      📋 <strong>Phase 1:</strong> Einnahmen = Formel × Nutzer &nbsp;·&nbsp;
+      <strong>Expansionsphase (KI-Labor):</strong> Einnahmen = Formel × Nutzer × Watchtime<br>
+      🔬 Forschung schaltet neue Deal-Typen frei. Worker die einem Deal zugewiesen sind, sind gebunden bis der Deal ausläuft. Dann: Einnahmen kassieren → neu anpflanzen.
+    </div>
+  </div>
+
+  <!-- KI-LABOR -->
+  <div class="tt-card">
+    <div class="tt-head">
+      <div class="bldg-ico tech" style="background:var(--purple)">🔬</div>
+      <div>
+        <div class="tt-name">KI-Labor</div>
+        <div class="tt-purpose">Stellt den Algorithmus ein · Beeinflusst alle anderen Gebäude</div>
+      </div>
+    </div>
+    <div class="tt-chain">
+      <div class="tt-node unlocked">
+        <span class="tt-stufe">Stufe 1</span>
+        <div class="tt-node-name">Chronologisch</div>
+        <div class="tt-node-effect">Neutral · keine Boni</div>
+      </div>
+      <div class="tt-arr">→</div>
+      <div class="tt-node">
+        <span class="tt-stufe">Stufe 2</span>
+        <div class="tt-node-name">Interessen-Sortierung</div>
+        <div class="tt-node-effect">+20% Werbeumsatz</div>
+      </div>
+      <div class="tt-arr">→</div>
+      <div class="tt-node locked">
+        <span class="tt-stufe">Stufe 3</span>
+        <div class="tt-node-name">Engagement-Optimierung</div>
+        <div class="tt-node-effect">+50% Werbeumsatz<br><em>(Phase C: Slider + Live-Feed)</em></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <p class="insight-text">
+      <strong>Was forschen kostet:</strong> Geld + mindestens 1 Mitarbeiter im Gebäude + 1–3 Monate Zeit.
+      Während der Forschung produziert das Gebäude weiter auf der alten Stufe. Mehr Mitarbeiter im Gebäude = schnellere Forschung.
+    </p>
+  </div>
+</section>
+
+<!-- MASTER TECH TREE -->
+<section class="section" id="techtree">
+  <span class="section-label">Der zentrale Überblick</span>
+  <h2 class="section-title">Der Master-Tech-Tree im HQ</h2>
+  <p class="section-desc">Klick auf das Hauptquartier → du siehst <em>alles</em>, was möglich ist. Eine Roadmap der gesamten Plattform-Entwicklung. So weißt du immer, wofür sich das nächste Gebäude lohnt.</p>
+
+  <div class="tt-card">
+    <div class="tt-head">
+      <div class="bldg-ico coral">🏠</div>
+      <div>
+        <div class="tt-name">HQ — Master-Tech-Tree</div>
+        <div class="tt-purpose">Übersicht aller Forschungs-Pfade · Gebäude schalten Bereiche frei</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-top:1rem;">
+
+      <div style="background:var(--pink-soft);border:3px solid var(--brown);border-radius:14px;padding:1rem;box-shadow:0 4px 0 var(--brown);">
+        <div style="font-family:'Fredoka',sans-serif;font-size:.95rem;color:var(--brown);margin-bottom:.4rem;">📣 Marketing-Bereich</div>
+        <div style="font-size:.75rem;color:var(--brown);font-weight:600;margin-bottom:.5rem;">Mundpropaganda → Bezahlt → Influencer</div>
+        <div style="background:var(--paper);border:2px solid var(--brown);border-radius:99px;padding:.2rem .6rem;font-size:.7rem;display:inline-block;">
+          ✅ Freigeschaltet durch: Marketing-Studio
+        </div>
+      </div>
+
+      <div style="background:var(--yellow-soft);border:3px solid var(--brown);border-radius:14px;padding:1rem;box-shadow:0 4px 0 var(--brown);">
+        <div style="font-family:'Fredoka',sans-serif;font-size:.95rem;color:var(--brown);margin-bottom:.4rem;">📢 Werbe-Bereich</div>
+        <div style="font-size:.75rem;color:var(--brown);font-weight:600;margin-bottom:.5rem;">Banner → Video → Personalisiert</div>
+        <div style="background:var(--paper);border:2px solid var(--brown);border-radius:99px;padding:.2rem .6rem;font-size:.7rem;display:inline-block;">
+          ✅ Freigeschaltet durch: Werbeagentur
+        </div>
+      </div>
+
+      <div style="background:var(--purple-soft);border:3px solid var(--brown);border-radius:14px;padding:1rem;box-shadow:0 4px 0 var(--brown);">
+        <div style="font-family:'Fredoka',sans-serif;font-size:.95rem;color:var(--brown);margin-bottom:.4rem;">🔬 KI-Bereich</div>
+        <div style="font-size:.75rem;color:var(--brown);font-weight:600;margin-bottom:.5rem;">Chronologisch → Interessen → Engagement</div>
+        <div style="background:var(--paper);border:2px solid var(--brown);border-radius:99px;padding:.2rem .6rem;font-size:.7rem;display:inline-block;">
+          ✅ Freigeschaltet durch: KI-Labor
+        </div>
+      </div>
+
+      <div style="background:rgba(74,56,41,0.08);border:3px dashed var(--brown);border-radius:14px;padding:1rem;opacity:.6;">
+        <div style="font-family:'Fredoka',sans-serif;font-size:.95rem;color:var(--brown);margin-bottom:.4rem;">🛡️ Moderations-Bereich</div>
+        <div style="font-size:.75rem;color:var(--brown);font-weight:600;margin-bottom:.5rem;">Community-Regeln → Melde-System → Faktencheck</div>
+        <div style="background:var(--paper);border:2px solid var(--brown);border-radius:99px;padding:.2rem .6rem;font-size:.7rem;display:inline-block;">
+          🔒 Expansionsphase: Moderations-Center
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="insight pink">
+    <p class="insight-text">
+      <strong>Die zwei Sichten:</strong> Im HQ siehst du den <em>Plan</em> (was ist möglich, was schaltet was frei).
+      Im Tech-Gebäude siehst du den <em>aktuellen Forschungsstand</em> (was läuft gerade, welche Mitarbeiter sind dort, wann ist die nächste Stufe fertig).
+      So bekommst du den Überblick UND die Arbeit getrennt — wie bei einer echten Roadmap vs. einem Sprint-Board.
+    </p>
+  </div>
+</section>
+
+<!-- KREISLAUF -->
+<section class="section" id="kreislauf">
+  <span class="section-label">Wie alles zusammenhängt</span>
+  <h2 class="section-title">Der Wirtschaftskreislauf</h2>
+  <p class="section-desc">Drei Pumpen, ein geschlossener Kreislauf — mit einem entscheidenden Engpass.</p>
+
+  <div class="cycle-wrap">
+    <div class="cycle-grid">
+      <div class="cycle-node money">
+        <div class="cycle-icon">🪙</div>
+        <div class="cycle-name">Geld</div>
+        <div class="cycle-action">finanziert Bauen</div>
+      </div>
+      <div class="cycle-arrow">→</div>
+      <div class="cycle-node bldg">
+        <div class="cycle-icon">🏗️</div>
+        <div class="cycle-name">Gebäude</div>
+        <div class="cycle-action">ziehen Nutzer an</div>
+      </div>
+      <div class="cycle-arrow">→</div>
+      <div class="cycle-node users">
+        <div class="cycle-icon">👥</div>
+        <div class="cycle-name">Nutzer</div>
+        <div class="cycle-action">erzeugen Geld</div>
+      </div>
+    </div>
+    <div class="cycle-explain">
+      Geld → Marketing erhöht MaxGrow → Features erhöhen Zufriedenheit → Wachstum = MaxGrow × Zufriedenheit → mehr Nutzer → Werbe-Deals → mehr Geld …
+      <br><br>
+      <span class="cycle-bottleneck">🛰️ Engpass 1: Server-Kapazität</span>
+      <br><br>
+      Ohne genug Server wandern Nutzer ab statt zu bleiben.
+      <br><br>
+      <span class="cycle-bottleneck" style="background:var(--coral);">😊 Engpass 2: Zufriedenheit</span>
+      <br><br>
+      Null Zufriedenheit = null Wachstum, egal wie viel Marketing du betreibst.
+      Negative Zufriedenheit = Nutzer verlassen die Plattform.
+      <strong>Features und Dark Patterns ziehen in entgegengesetzte Richtungen.</strong>
+    </div>
+  </div>
+</section>
+
+<!-- WACHSTUM -->
+<section class="section" id="wachstum">
+  <span class="section-label">Visuelles Wachstum</span>
+  <h2 class="section-title">3 Phasen, ein wachsender Plot</h2>
+  <p class="section-desc">HQ-Upgrade erweitert den Plot. Bei 10K Nutzern: Phase 2. Bei 1 Mio: Phase 3.</p>
+
+  <div class="demo-row">
+
+    <div class="demo">
+      <div class="demo-label">Phase 1 · Start</div>
+      <div class="demo-title">🏠 Garage (6 Slots)</div>
+      <div class="demo-plot p1">
+        <div class="dtile hq">🏠<div class="dtile-name">Garage</div></div>
+        <div class="dtile server">🛰️<div class="dtile-name">Server</div></div>
+        <div class="dtile marketing">📣<div class="dtile-name">Mark.</div></div>
+        <div class="dtile ads">📢<div class="dtile-name">Ads</div></div>
+        <div class="dtile empty"></div>
+        <div class="dtile empty"></div>
+      </div>
+      <div class="demo-goal"><span>Bis</span><strong>10.000 Nutzer</strong></div>
+    </div>
+
+    <div class="demo">
+      <div class="demo-label">Phase 2 · Mitte</div>
+      <div class="demo-title">📈 Bürohaus (12 Slots)</div>
+      <div class="demo-plot p2">
+        <div class="dtile hq">🏢<div class="dtile-name">HQ</div></div>
+        <div class="dtile server">🛰️<div class="dtile-name">Server</div></div>
+        <div class="dtile server">🛰️<div class="dtile-name">Server</div></div>
+        <div class="dtile marketing">📣<div class="dtile-name">Mark.</div></div>
+        <div class="dtile ads">📢<div class="dtile-name">Ads</div></div>
+        <div class="dtile lab">🔬<div class="dtile-name">KI-Lab</div></div>
+        <div class="dtile empty"></div>
+        <div class="dtile empty"></div>
+        <div class="dtile empty"></div>
+        <div class="dtile empty"></div>
+        <div class="dtile empty"></div>
+        <div class="dtile empty"></div>
+      </div>
+      <div class="demo-goal"><span>Bis</span><strong>1 Mio Nutzer</strong></div>
+    </div>
+
+    <div class="demo">
+      <div class="demo-label">Phase 3 · Endspiel</div>
+      <div class="demo-title">🚀 Konzern (20 Slots)</div>
+      <div class="demo-plot p3">
+        <div class="dtile hq">🏬<div class="dtile-name">HQ</div></div>
+        <div class="dtile server">🛰️<div class="dtile-name">Server</div></div>
+        <div class="dtile server">🛰️<div class="dtile-name">Server</div></div>
+        <div class="dtile server">🛰️<div class="dtile-name">Server</div></div>
+        <div class="dtile server">🛰️<div class="dtile-name">Server</div></div>
+        <div class="dtile marketing">📣<div class="dtile-name">Mark.</div></div>
+        <div class="dtile ads">📢<div class="dtile-name">Ads</div></div>
+        <div class="dtile ads">📢<div class="dtile-name">Ads</div></div>
+        <div class="dtile lab">🔬<div class="dtile-name">KI-Lab</div></div>
+        <div class="dtile empty"></div>
+        <div class="dtile empty"></div>
+        <div class="dtile empty"></div>
+        <div class="dtile empty"></div>
+        <div class="dtile empty"></div>
+        <div class="dtile empty"></div>
+      </div>
+      <div class="demo-goal"><span>Ziel</span><strong>10 Mio Nutzer</strong></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- SPASS -->
+<section class="section" id="spass">
+  <span class="section-label">Warum es trotzdem fesselt</span>
+  <h2 class="section-title">Was den Kern Spaß macht</h2>
+  <p class="section-desc">Auch ohne Events, Charaktere und Story zieht der Kern — aus drei Gründen.</p>
+
+  <div class="fun-grid">
+    <div class="fun-card">
+      <span class="fun-icon">📈</span>
+      <div class="fun-title">Wachstumsspirale</div>
+      <p class="fun-text">Anfangs wartet man 5 Monate auf €100. Später kommen €1000 pro Sekunde. Dieses Beschleunigungs-Gefühl ist die Grundmotivation jedes Aufbauspiels.</p>
+    </div>
+    <div class="fun-card">
+      <span class="fun-icon">🧩</span>
+      <div class="fun-title">Optimierungs-Rätsel</div>
+      <p class="fun-text">Mit €1000: Server oder Marketing zuerst? Vier kleine Server oder eine große? Banner-Tech vorantreiben oder Marketing skalieren? Lauter kleine Puzzles, die sich gut anfühlen.</p>
+    </div>
+    <div class="fun-card">
+      <span class="fun-icon">⚠️</span>
+      <div class="fun-title">Server-Crash-Drama</div>
+      <p class="fun-text">Du wächst zu schnell. Server bei 95%. „Soll ich noch ein Marketing bauen oder eine Server-Farm?" Diese ständige Anspannung um die Auslastung ist der eigentliche Spielmotor.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section class="section" id="roadmap">
+  <span class="section-label">Was später dazukommt</span>
+  <h2 class="section-title">Die Aufbau-Roadmap</h2>
+  <p class="section-desc">Reihenfolge der Entwicklung. Erst der Kern muss tragen — dann packen wir Schicht für Schicht drauf.</p>
+
+  <div class="roadmap">
+
+    <div class="rm-item">
+      <span class="rm-stage now">JETZT</span>
+      <div class="rm-content">
+        <div class="rm-title">Phase A · Grundspiel (mit Phase 0 als Tutorial)</div>
+        <div class="rm-desc">
+          <span class="rm-tag">🌟 Phase 0 Onboarding</span><span class="rm-tag">Charakter & Plattform-Name</span><span class="rm-tag">campus</span><span class="rm-tag">2 Simple + 3 Tech Gebäude</span><span class="rm-tag">4 Ressourcen</span><span class="rm-tag">Master-Tech-Tree im HQ</span>
+          <br>Onboarding in der Garage → erste Nutzer → Investoren → Wachstum.
+          Funktionale Mitarbeiter (Zahlen-Slots in Tech-Gebäuden). Noch keine Events, keine Story.
+        </div>
+      </div>
+    </div>
+
+    <div class="rm-item">
+      <span class="rm-stage next">DANACH</span>
+      <div class="rm-content">
+        <div class="rm-title">Expansionsphase · Charaktere & erste Events</div>
+        <div class="rm-desc">
+          <span class="rm-tag">Mika, Hops, Dr. Hoot</span><span class="rm-tag">Mitarbeiter bekommen Gesichter</span><span class="rm-tag">+Vertrauen-Ressource</span><span class="rm-tag">+Engagement-Ressource</span><span class="rm-tag">10 Events</span>
+          <br>Die generischen Mitarbeiter-Slots werden zu Charakteren mit Persönlichkeit, Stimmungen, kleinen Sätzen.
+          Erste Events erscheinen — meist mit Bezug zum Gebäude in dem sie passieren.
+        </div>
+      </div>
+    </div>
+
+    <div class="rm-item">
+      <span class="rm-stage then">DANN</span>
+      <div class="rm-content">
+        <div class="rm-title">Phase C · Algorithmus-Labor & Aha-Momente</div>
+        <div class="rm-desc">
+          <span class="rm-tag">Slider-Ansicht</span><span class="rm-tag">Live-Feed</span><span class="rm-tag">5 Aha-Momente</span>
+          <br>KI-Labor wird vom einfachen Tech-Tree-Gebäude zur tiefen Slider-Ansicht.
+          Hier passieren die designten Aha-Momente zum Algorithmus.
+        </div>
+      </div>
+    </div>
+
+    <div class="rm-item">
+      <span class="rm-stage later">ZUM SCHLUSS</span>
+      <div class="rm-content">
+        <div class="rm-title">Phase D · Enden & Reflexion</div>
+        <div class="rm-desc">
+          <span class="rm-tag">7 Enden</span><span class="rm-tag">Time-lapse</span><span class="rm-tag">Reflexions-Screen</span>
+          <br>Die emotionale Landung. Time-lapse vom Wachstum, Vergleich mit echten Plattformen, Reflexions-Fragen.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="insight">
+    <p class="insight-text">
+      <strong>Wichtig:</strong> Nach jeder Phase testen wir mit echten 16-Jährigen. Wenn Phase A keinen Spaß macht, ändern wir den Kern,
+      bevor wir Expansionsphase bauen. So vermeiden wir, Wochen in eine Schicht zu investieren, die ein kaputtes Fundament nicht retten kann.
+    </p>
+  </div>
+</section>
+
+<!-- PLAN -->
+<section class="section" id="plan">
+  <span class="section-label">Wenn wir morgen starten</span>
+  <h2 class="section-title">5-Wochen-Plan für Phase A</h2>
+  <p class="section-desc">Inklusive Phase 0 Onboarding. Danach Pause, testen, entscheiden ob wir Expansionsphase angehen.</p>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-week">Woche 1</div>
+      <div>
+        <div class="tl-title">🌟 Phase 0 — Onboarding-Flow</div>
+        <div class="tl-desc">Charakter-Auswahl, Selbst-Benennung, Plattform-Naming, Logo-Auswahl. Garage-Ansicht mit Solo-Tech-Liste. „Online gehen"-Button + organisches Nutzer-Wachstum bis 1.000.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 2</div>
+      <div>
+        <div class="tl-title">Investoren-Übergang + campus-Grid + Ressourcen-Anzeige</div>
+        <div class="tl-desc">Investor-Mini-Pitch bei 1.000 Nutzern → €1.000 Startkapital → Plot erweitert sich. 4 Ressourcen oben sichtbar inkl. Server-Kapazitäts-Balken.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 3</div>
+      <div>
+        <div class="tl-title">Simple Gebäude + Nächster-Monat-Loop</div>
+        <div class="tl-desc">HQ + Server-Farm bauen, upgraden. Monatswechsel mit Münzen-Animation. Server-Crash bei Überlastung implementieren.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 4</div>
+      <div>
+        <div class="tl-title">Tech-Gebäude + Master-Tech-Tree im HQ</div>
+        <div class="tl-desc">Marketing-Studio, Werbeagentur, KI-Labor. Mitarbeiter-Slots, Forschungs-Mechanik. HQ-Klick zeigt Master-Tree mit gesperrten/freigeschalteten Bereichen.</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-week">Woche 5</div>
+      <div>
+        <div class="tl-title">Phasen-Übergänge + Balancing + Schüler-Test</div>
+        <div class="tl-desc">10K-Trigger lässt Plot wachsen. Cute Aesthetic. Mit 3–5 Schüler:innen spielen lassen. <strong>Feedback bestimmt nächste Phase.</strong></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>🌱 The Platform — Grundkonzept v1.2 · Mit Phase 0 & zentralem Master-Tech-Tree</p>
+  <p>Ergänzt das volle <code style="background:var(--paper);padding:.1rem .4rem;border-radius:6px;">konzept.html</code> — beschreibt nur was zuerst gebaut wird.</p>
+</footer>
+
+<script>
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav a');
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const a = document.querySelector(`.nav a[href="#${e.target.id}"]`);
+      if (a) a.classList.add('active');
+    }
+  });
+}, { threshold: 0.3, rootMargin: '-80px 0px -50% 0px' });
+sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+/* Profile-Bar + Resource-Bar für den Game-Screen.
+   Tokens werden von onboarding.css bereitgestellt (:root-Block). */
+
+/* === Layout-Wrapper oberhalb der iso-Welt === */
+#rt-game-top {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--rt-primary-wash);
+  border-bottom: 3px solid var(--rt-brown);
+  position: relative;
+  z-index: 6;
+}
+
+/* Shop-Button in der Profile-Bar (mittig zwischen Player und Plattform).
+   Style-analog zur Ursprungsversion: runder Playful-Button mit 3D-Schatten. */
+.rt-shop-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  font-size: 1.5rem;
+  background: var(--rt-primary-soft);
+  border: 3px solid var(--rt-brown);
+  border-radius: var(--rt-radius-md);
+  box-shadow: var(--rt-shadow-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  line-height: 1;
+  color: var(--rt-text);
+  font-family: var(--rt-font-display);
+}
+.rt-shop-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--rt-brown);
+}
+@media (max-width: 600px) {
+  .rt-shop-btn { width: 40px; height: 40px; font-size: 1.25rem; }
+}
+
+/* Alten schwebenden .shop-btn (aus game.css) im v3-Kontext ausblenden —
+   der Shop sitzt jetzt in der Profile-Bar unter #shop-btn. Die Original-
+   .shop-btn-Regel würde noch das grüne Gradient-Design ziehen. */
+#rt-game-top #shop-btn {
+  background: var(--rt-primary-soft);
+  color: var(--rt-text);
+  font-weight: 700;
+  border: 3px solid var(--rt-brown);
+  border-radius: var(--rt-radius-md);
+  box-shadow: var(--rt-shadow-sm);
+  padding: 0;
+  margin: 0;
+}
+
+/* === Iso-Welt: Hintergrund an gewähltes Theme koppeln ===
+   Überschreibt den harten Grass-Gradient aus game.css. */
+#world {
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.22), transparent 60%),
+    linear-gradient(180deg, var(--rt-primary-wash) 0%, var(--rt-primary-soft) 100%);
+}
+#world::before {
+  background:
+    linear-gradient(115deg, transparent 45%, rgba(74, 56, 41, 0.10) 45%, rgba(74, 56, 41, 0.10) 55%, transparent 55%),
+    linear-gradient(65deg,  transparent 45%, rgba(74, 56, 41, 0.10) 45%, rgba(74, 56, 41, 0.10) 55%, transparent 55%);
+  opacity: 0.55;
+}
+
+/* === Profile-Bar (Head+Name links · Plattform+Logo rechts) === */
+.rt-profile-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rt-space-4);
+  padding: var(--rt-space-3) var(--rt-space-5);
+  background: var(--rt-surface);
+  border: 3px solid var(--rt-brown);
+  border-radius: var(--rt-radius-xl);
+  box-shadow: var(--rt-shadow-sm);
+  margin: 0;
+}
+.rt-profile-bar__player,
+.rt-profile-bar__brand {
+  display: flex; align-items: center; gap: var(--rt-space-3); min-width: 0;
+}
+.rt-profile-bar__head {
+  width: 56px; height: 56px; border-radius: 50%; object-fit: cover;
+  flex-shrink: 0;
+  background: var(--rt-primary-soft);
+  border: 3px solid var(--rt-brown);
+  box-shadow: 0 2px 0 var(--rt-brown);
+}
+.rt-profile-bar__name {
+  font-family: var(--rt-font-display); font-weight: 700;
+  font-size: 1.1rem; color: var(--rt-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rt-profile-bar__platform {
+  font-family: var(--rt-font-display); font-weight: 700;
+  font-size: 1.4rem; color: var(--rt-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rt-profile-bar__logo {
+  width: 56px; height: 56px; object-fit: contain; flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .rt-profile-bar { padding: var(--rt-space-2) var(--rt-space-3); gap: var(--rt-space-2); }
+  .rt-profile-bar__head,
+  .rt-profile-bar__logo { width: 44px; height: 44px; }
+  .rt-profile-bar__name     { font-size: 0.95rem; }
+  .rt-profile-bar__platform { font-size: 1.1rem; }
+}
+
+/* === Resource-Bar === */
+.rt-resources {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--rt-space-2);
+  padding: var(--rt-space-2);
+  background: var(--rt-surface);
+  border: 3px solid var(--rt-brown);
+  border-radius: var(--rt-radius-lg);
+  box-shadow: var(--rt-shadow-sm);
+  margin: 0;
+}
+.rt-resource {
+  display: flex;
+  align-items: center;
+  gap: var(--rt-space-2);
+  padding: var(--rt-space-1) var(--rt-space-2);
+  background: var(--rt-primary-soft);
+  border-radius: var(--rt-radius-md);
+  min-width: 0;
+}
+.rt-resource__icon { font-size: 1.3rem; }
+.rt-resource__label { font-size: 0.72rem; color: var(--rt-text-muted); font-weight: 600; }
+.rt-resource__value {
+  font-family: var(--rt-font-display); font-weight: 700; font-size: 0.95rem;
+  position: relative; overflow: visible;
+}
+@media (max-width: 900px) {
+  .rt-resources { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 600px) {
+  .rt-resources { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* === Sparkline (Verlaufsgraph im Hintergrund der Geld/User-Karte) === */
+.rt-resource--chart { position: relative; overflow: hidden; }
+.rt-sparkline {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+.rt-resource--chart > :not(.rt-sparkline) { position: relative; z-index: 1; }
+
+/* === Delta-Popup (+/- Wert fliegt raus) === */
+@keyframes rt-delta-float {
+  0%   { opacity: 1; transform: translate(-50%, 0);     }
+  70%  { opacity: 1; transform: translate(-50%, -18px); }
+  100% { opacity: 0; transform: translate(-50%, -30px); }
+}
+.rt-delta-popup {
+  position: absolute; left: 50%; top: -2px;
+  transform: translate(-50%, 0);
+  font-family: var(--rt-font-display); font-weight: 700; font-size: 0.85rem;
+  white-space: nowrap; pointer-events: none;
+  animation: rt-delta-float 1.3s ease-out forwards;
+  z-index: 50;
+}
+.rt-delta-popup--positive { color: #27ae60; }
+.rt-delta-popup--negative { color: #e74c3c; }
+
+/* === Ruf-Balken === */
+.rt-resource--rep { align-items: stretch; }
+.rt-resource__rep-inner {
+  display: flex; flex-direction: column; justify-content: center;
+  gap: 4px; width: 100%;
+}
+.rt-resource__rep-header { display: flex; justify-content: space-between; align-items: baseline; }
+.rt-rep-value {
+  font-size: 0.75rem; font-weight: 800; color: var(--rt-brown); font-family: monospace;
+}
+.rt-rep-track {
+  position: relative; height: 16px; border-radius: 99px;
+  border: 2px solid var(--rt-brown);
+  background: linear-gradient(to right, #e74c3c 0%, #f59e0b 33.3%, #27ae60 100%);
+  overflow: hidden;
+}
+.rt-rep-empty {
+  position: absolute; right: 0; top: 0;
+  height: 100%; width: 100%;
+  background: var(--rt-primary-soft); opacity: 0.88;
+  transition: width 0.45s ease;
+  z-index: 1;
+}
+.rt-rep-marker {
+  position: absolute; left: calc(33.33% - 1px); top: 0;
+  height: 100%; width: 2px;
+  background: rgba(74, 56, 41, 0.55);
+  z-index: 2;
+}
+
+/* === Server-Bar === */
+.rt-resource--server { align-items: center; }
+.rt-resource__server-inner {
+  display: flex; flex-direction: column; justify-content: center;
+  gap: 4px; flex: 1; min-width: 0;
+}
+.rt-resource__server-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--rt-space-2);
+}
+.rt-resource__server-val { font-size: 0.85rem; white-space: nowrap; }
+.rt-server-bar {
+  display: flex; height: 16px; border-radius: 99px;
+  border: 2px solid var(--rt-brown); overflow: hidden; background: transparent;
+}
+.rt-server-bar__seg { height: 100%; width: 0%; transition: width 0.45s ease; flex-shrink: 0; }
+.rt-server-bar__seg--sw  { background: var(--rt-sky); }
+.rt-server-bar__seg--usr { background: var(--rt-yellow); }
+
+/* Kritischer Zustand */
+@keyframes rt-server-critical {
+  0%, 100% { background: var(--rt-primary-soft); }
+  50%       { background: #fecaca; }
+}
+.rt-resource--critical {
+  animation: rt-server-critical 0.7s ease-in-out infinite;
+  outline: 2px solid #e74c3c; outline-offset: -2px;
+}
+@keyframes rt-money-negative {
+  0%, 100% { background: #fee2e2; }
+  50%       { background: #fca5a5; }
+}
+.rt-resource--money-negative {
+  animation: rt-money-negative 1s ease-in-out infinite;
+  outline: 2px solid #dc2626; outline-offset: -2px;
+}
+.rt-resource--money-negative .rt-resource__value,
+.rt-resource--money-negative .rt-resource__value span { color: #dc2626; font-weight: 700; }

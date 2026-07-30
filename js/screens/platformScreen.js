@@ -19,7 +19,8 @@
   }
 
   function enter(container) {
-    var player = RT.state.get().player;
+    document.body.classList.add('rt-onboarding-active');
+    var player = RT.state.current.player || {};
     selectedLogo = player.platformLogo || null;
 
     var grid = RT.assets.logoList().map(logoCardHTML).join('');
@@ -40,7 +41,7 @@
       + '    </label>'
       + '    <div class="rt-field__label" style="margin-top: var(--rt-space-4);">Logo</div>'
       + '    <div class="rt-logo-grid">' + grid + '</div>'
-        + '  </div>'
+      + '  </div>'
       + '  <div class="rt-onboarding__actions">'
       + '    <button class="rt-btn rt-btn--primary rt-btn--lg" id="rt-confirm" disabled>'
       + '      🛠️ Auf in die Garage'
@@ -57,9 +58,9 @@
         selectedLogo = card.getAttribute('data-logo');
         cards.forEach(function (c) { c.classList.remove('is-selected'); });
         card.classList.add('is-selected');
-        // Live-Preview: das gesamte Farbschema springt sofort auf die Logo-Farbe.
-        // Persistiert wird erst im onConfirm via SET_PLAYER.
         RT.theme.apply(selectedLogo);
+        var def = RT.assets.LOGOS[selectedLogo].defaultName;
+        if (def) { inputEl.value = def; inputEl.select(); }
         updateConfirmState();
       });
       if (card.getAttribute('data-logo') === selectedLogo) {
@@ -88,16 +89,13 @@
   function onConfirm() {
     var name = (inputEl.value || '').trim();
     if (!name || !selectedLogo) return;
-    // State setzen, bevor das Modal rendert – das Modal liest dann
-    // einfach Avatar + Logo + Namen aus dem State.
-    RT.state.dispatch('SET_PLAYER', { platformName: name, platformLogo: selectedLogo });
+    RT.state.setPlayer({ platformName: name, platformLogo: selectedLogo });
+    RT.bus.emit('state:changed');
     showIdentityModal();
   }
 
-  // Bestätigungs-Modal: zeigt die ganze Identität (Figur + Logo + Namen) als
-  // kurzen „so siehst du aus"-Moment, bevor Phase 0 (Garage) startet.
   function showIdentityModal() {
-    var player = RT.state.get().player;
+    var player = RT.state.current.player;
     var bodySrc = RT.assets.avatarSrc(player.avatar, 'body');
     var logoSrc = RT.assets.logoSrc(player.platformLogo);
     var name = RT.ui.escapeHTML(player.name || '');
@@ -131,7 +129,7 @@
     document.body.appendChild(overlay);
     overlay.querySelector('#rt-identity-go').addEventListener('click', function () {
       document.body.removeChild(overlay);
-      RT.screens.show('garage');
+      RT.screens.show('game');
     });
   }
 
@@ -146,4 +144,4 @@
   }
 
   RT.screens.register('platform', { enter: enter, exit: exit });
-})(window.RT);
+})(window.RT3);

@@ -18,7 +18,8 @@
   }
 
   function enter(container) {
-    var player = RT.state.get().player;
+    document.body.classList.add('rt-onboarding-active');
+    var player = RT.state.current.player || {};
     selectedAvatar = player.avatar || null;
 
     var grid = RT.assets.avatarList().map(avatarCardHTML).join('');
@@ -56,6 +57,8 @@
         selectedAvatar = card.getAttribute('data-avatar');
         cards.forEach(function (c) { c.classList.remove('is-selected'); });
         card.classList.add('is-selected');
+        var def = RT.assets.AVATARS[selectedAvatar].defaultName;
+        if (def) { inputEl.value = def; inputEl.select(); }
         updateConfirmState();
       });
       if (card.getAttribute('data-avatar') === selectedAvatar) {
@@ -70,7 +73,6 @@
     confirmBtn.addEventListener('click', onConfirm);
 
     updateConfirmState();
-    // Auto-Fokus aufs Namensfeld auf größeren Screens
     if (window.matchMedia && window.matchMedia('(min-width: 600px)').matches) {
       inputEl.focus();
     }
@@ -85,7 +87,8 @@
   function onConfirm() {
     var name = (inputEl.value || '').trim();
     if (!name || !selectedAvatar) return;
-    RT.state.dispatch('SET_PLAYER', { name: name, avatar: selectedAvatar });
+    RT.state.setPlayer({ name: name, avatar: selectedAvatar });
+    RT.bus.emit('state:changed');
     RT.screens.show('platform');
   }
 
@@ -100,4 +103,4 @@
   }
 
   RT.screens.register('character', { enter: enter, exit: exit });
-})(window.RT);
+})(window.RT3);

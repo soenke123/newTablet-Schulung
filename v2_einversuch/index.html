@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Startup Story v2 — MVP</title>
+  <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top: Ressourcen-Bar -->
+    <div id="resource-bar">
+      <div class="res"><span class="res-icon">👥</span><span id="res-users">0</span> User</div>
+      <div class="res"><span class="res-icon">💰</span><span id="res-money">1.000</span> €</div>
+      <div class="res res-ruf"><span class="res-icon">❤️</span><span id="res-ruf">+2%</span></div>
+    </div>
+
+    <!-- Center: Farm-Grid -->
+    <div id="farm">
+      <div class="building" id="b-hq">
+        <img class="building-img" src="../sprites/buildings/HeadQuarter0.png" alt="Garage">
+        <div class="building-label">Garage</div>
+        <div class="building-progress" id="hq-progress" hidden>
+          <div class="building-progress-fill" id="hq-progress-fill"></div>
+        </div>
+        <div class="building-badge" id="hq-badge" hidden>🎉</div>
+      </div>
+
+      <div class="building building-locked" id="b-ad" hidden>
+        <img class="building-img" src="../sprites/buildings/MarketingArgentur.png" alt="Werbeagentur">
+        <div class="building-label">Werbeagentur</div>
+        <div class="ad-slider-wrap">
+          <label for="ad-slider">Werbe-Intensität: <span id="ad-slider-val">10%</span></label>
+          <input type="range" id="ad-slider" min="0" max="50" value="10">
+        </div>
+        <button class="coin-btn" id="ad-coin" hidden>
+          <span class="coin-icon">💰</span>
+          <span class="coin-value" id="ad-coin-val">+0 €</span>
+        </button>
+        <div class="coin-wait" id="ad-wait">Nächste Münze in <span id="ad-wait-sec">15</span>s</div>
+      </div>
+    </div>
+
+    <!-- Right sidebar: Slots -->
+    <aside id="sidebar">
+      <div class="side-header">Aktive Aufgaben</div>
+      <ul id="slot-list">
+        <li class="slot slot-empty">Nichts läuft</li>
+      </ul>
+    </aside>
+
+    <!-- Bottom: Marketing-Aktion -->
+    <div id="action-bar">
+      <button class="action-btn" id="btn-marketing">
+        <span class="action-icon">🎯</span>
+        <span class="action-label">Freunden erzählen</span>
+        <span class="action-sub" id="marketing-sub">+200 User</span>
+      </button>
+    </div>
+
+    <!-- Modal: HQ-Feature-Auswahl -->
+    <div id="modal-backdrop" hidden>
+      <div id="modal">
+        <div class="modal-title">Was entwickelst du?</div>
+        <div id="feature-list"></div>
+        <button class="modal-close" id="modal-close">Abbrechen</button>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" hidden></div>
+  </div>
+
+  <script src="js/namespace.js"></script>
+  <script src="js/bus.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/clock.js"></script>
+  <script src="js/loop.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
