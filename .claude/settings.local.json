@@ -8,7 +8,30 @@
       "Bash(node --check \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Spiele inProgress/Startup Story/js/core/questlog.js\")",
       "Bash(node --check \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Spiele inProgress/Startup Story/js/core/assets.js\")",
       "Bash(node --check \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Spiele inProgress/Startup Story/js/core/tick.js\")",
-      "PowerShell(Move-Item *)"
+      "PowerShell(Move-Item *)",
+      "Bash(xargs basename *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(start *)",
+      "Bash(node -c js/core/team.js)",
+      "Bash(node -c js/core/state.js)",
+      "Bash(node -c js/core/persistence.js)",
+      "Bash(node -c js/core/slots.js)",
+      "Bash(node -c js/core/slotSidebar.js)",
+      "Bash(node -c js/core/shop.js)",
+      "Bash(node -c js/core/tick.js)",
+      "Bash(node -c js/debug/devtools.js)",
+      "Bash(node -c js/core/techtree.js)",
+      "Bash(node -c js/core/communitycenter.js)",
+      "Bash(node -c js/screens/campusScreen.js)",
+      "Bash(node -c js/core/ui.js)",
+      "Bash(node *)",
+      "Bash(grep -E \"\\\\.\\(html|css|js\\)$\")",
+      "Bash(python -m http.server 8765)",
+      "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8765/v3/index.html)",
+      "Bash(git add *)",
+      "Bash(git reset *)",
+      "Bash(npx --yes playwright --version)"
     ]
   }
 }

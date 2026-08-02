@@ -19,8 +19,10 @@
       +    RT.ui.resourceBarHTML()
       + '</div>'
       + '<div id="world">'
-      + '  <div id="iso-grid"></div>'
-      + '  <div id="building-ui-layer"></div>'
+      + '  <div id="world-camera">'
+      + '    <div id="iso-grid"></div>'
+      + '    <div id="building-ui-layer"></div>'
+      + '  </div>'
       + '  <div id="placement-bar" class="placement-bar">'
       + '    <span id="placement-label">Gebäude platzieren</span>'
       + '    <button id="placement-cancel">Abbrechen</button>'
@@ -41,6 +43,12 @@
 
     // Theme aus State reanwenden (falls vorher Preview ohne Confirm).
     if (RT.theme && RT.theme.applyFromState) RT.theme.applyFromState();
+
+    // Trend-Erklärung nachholen, wenn Phase 2 nicht über das Investor-Modal
+    // erreicht wurde (Debug-Sprung oder Spielstand aus dem Übergang).
+    if (RT.state.currentPhase() >= 2 && !RT.state.current.trendModalSeen) {
+      setTimeout(function () { RT.ui.showTrendIntroModal(); }, 600);
+    }
   }
 
   function exit() {

@@ -108,6 +108,21 @@
 .rt-profile-bar__logo {
   width: 56px; height: 56px; object-fit: contain; flex-shrink: 0;
 }
+
+/* Online-Dot: erst sichtbar nach goLiveUnlocked. Sitzt zwischen Platform-Name und Logo. */
+.rt-profile-bar__online-dot {
+  display: none;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px #14532d, 0 0 12px rgba(34, 197, 94, 0.7);
+  flex-shrink: 0;
+  animation: rt-online-dot-pulse 1.8s ease-in-out infinite;
+}
+.rt-profile-bar.is-online .rt-profile-bar__online-dot { display: inline-block; }
+@keyframes rt-online-dot-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%      { transform: scale(1.2); opacity: 0.85; }
+}
 @media (max-width: 600px) {
   .rt-profile-bar { padding: var(--rt-space-2) var(--rt-space-3); gap: var(--rt-space-2); }
   .rt-profile-bar__head,
@@ -150,6 +165,13 @@
   .rt-resources { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* Phase 0/1: nur Geld · User · Server sichtbar — 3 gleich breite Spalten,
+   damit die Kacheln nicht links kleben. */
+.rt-resources--compact { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 600px) {
+  .rt-resources--compact { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* === Sparkline (Verlaufsgraph im Hintergrund der Geld/User-Karte) === */
 .rt-resource--chart { position: relative; overflow: hidden; }
 .rt-sparkline {
@@ -178,35 +200,183 @@
 .rt-delta-popup--positive { color: #27ae60; }
 .rt-delta-popup--negative { color: #e74c3c; }
 
-/* === Ruf-Balken === */
-.rt-resource--rep { align-items: stretch; }
-.rt-resource__rep-inner {
+/* === Flyerbonus-Chip (unter User-Zahl) === */
+.rt-resource__flyer {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 4px;
+  padding: 2px 8px 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #d1fae5, #a7f3d0);
+  border: 1px solid #34d399;
+  font-size: 0.65rem; font-weight: 700;
+  line-height: 1.2;
+  animation: rt-flyer-pulse 1.4s ease-in-out infinite;
+  max-width: 100%;
+}
+.rt-resource__flyer-tag {
+  color: #065f46; text-transform: uppercase; letter-spacing: 0.3px;
+}
+.rt-resource__flyer-fx  {
+  color: #047857; font-family: var(--rt-font-display);
+}
+@keyframes rt-flyer-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+  50%      { box-shadow: 0 0 0 5px rgba(52, 211, 153, 0.0); }
+}
+
+/* === Trend-Kachel === */
+/* Aufbau von oben nach unten: Kopfzeile (Wert + "?") · Balken · Ernte-Button.
+   Der Button sitzt bewusst UNTER dem Balken, damit der Zusammenhang
+   "dieser Wert produziert diese User" räumlich sichtbar ist. */
+.rt-resource--trend { align-items: stretch; }
+.rt-trend-inner {
   display: flex; flex-direction: column; justify-content: center;
   gap: 4px; width: 100%;
 }
-.rt-resource__rep-header { display: flex; justify-content: space-between; align-items: baseline; }
-.rt-rep-value {
-  font-size: 0.75rem; font-weight: 800; color: var(--rt-brown); font-family: monospace;
+.rt-trend-head {
+  display: flex; align-items: baseline; gap: 6px;
+  background: none; border: none; padding: 0; margin: 0;
+  cursor: pointer; font: inherit; color: inherit; text-align: left;
 }
-.rt-rep-track {
-  position: relative; height: 16px; border-radius: 99px;
+.rt-trend-head .rt-resource__label { flex: 1; }
+.rt-trend-value {
+  font-size: 0.78rem; font-weight: 800; color: var(--rt-brown); font-family: monospace;
+}
+.rt-trend-help {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 1.5px solid var(--rt-brown); opacity: 0.5;
+  font-size: 0.6rem; font-weight: 800; line-height: 1;
+}
+.rt-trend-head:hover .rt-trend-help { opacity: 1; }
+
+.rt-trend-track {
+  position: relative; height: 12px; border-radius: 99px;
   border: 2px solid var(--rt-brown);
-  background: linear-gradient(to right, #e74c3c 0%, #f59e0b 33.3%, #27ae60 100%);
+  background: linear-gradient(to right, #e74c3c 0%, #f59e0b 50%, #27ae60 100%);
   overflow: hidden;
 }
-.rt-rep-empty {
+.rt-trend-empty {
   position: absolute; right: 0; top: 0;
   height: 100%; width: 100%;
   background: var(--rt-primary-soft); opacity: 0.88;
   transition: width 0.45s ease;
   z-index: 1;
 }
-.rt-rep-marker {
-  position: absolute; left: calc(33.33% - 1px); top: 0;
+.rt-trend-marker {
+  position: absolute; left: calc(50% - 1px); top: 0;
   height: 100%; width: 2px;
   background: rgba(74, 56, 41, 0.55);
   z-index: 2;
 }
+
+/* --- Ernte-Button --- */
+.rt-trend-harvest {
+  position: relative; overflow: hidden;
+  display: block; width: 100%;
+  padding: 5px 8px;
+  border: 2px solid var(--rt-brown); border-radius: 8px;
+  background: var(--rt-primary-soft);
+  cursor: pointer; font: inherit;
+  transition: transform 0.1s ease, filter 0.2s ease;
+}
+.rt-trend-harvest:disabled { cursor: default; opacity: 0.55; }
+.rt-trend-harvest:not(:disabled):active { transform: translateY(1px); }
+.rt-trend-harvest__fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 0%; background: rgba(39, 174, 96, 0.35);
+  transition: width 0.4s linear;
+  z-index: 0;
+}
+/* Trennstriche zwischen den Stapeln — zeigen, wann der nächste Schub kommt. */
+.rt-trend-harvest__ticks {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 1;
+}
+.rt-trend-harvest__ticks i {
+  position: absolute; top: 0; bottom: 0;
+  width: 2px; margin-left: -1px;
+  background: var(--rt-brown); opacity: 0.3;
+}
+.rt-trend-harvest__body {
+  position: relative; z-index: 2;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
+}
+.rt-trend-harvest__label {
+  font-size: 0.68rem; font-weight: 800; color: var(--rt-brown);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rt-trend-stacks {
+  font-size: 0.6rem; font-weight: 700; font-family: monospace;
+  color: var(--rt-brown); opacity: 0.7; white-space: nowrap;
+}
+
+/* Voll aufgeladen — der Balken wird golden, glüht und bekommt einen
+   wandernden Glanzstreifen. Das ist der Moment, in dem es sich lohnt. */
+.rt-trend-harvest--full:not(:disabled) {
+  border-color: #b45309;
+  background: linear-gradient(180deg, #fff6d5, #ffe9a8);
+  animation: rt-trend-gold-glow 1.2s ease-in-out infinite;
+}
+.rt-trend-harvest--full .rt-trend-harvest__fill {
+  background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 60%, #d97706 100%);
+}
+.rt-trend-harvest--full .rt-trend-harvest__label,
+.rt-trend-harvest--full .rt-trend-stacks {
+  color: #6b3f05; opacity: 1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+.rt-trend-harvest--full .rt-trend-harvest__ticks i {
+  background: #7c2d12; opacity: 0.28;
+}
+
+/* Glanzstreifen — läuft von links nach rechts über den vollen Balken. */
+.rt-trend-harvest--full::after {
+  content: '';
+  position: absolute; top: -60%; bottom: -60%; left: 0;
+  width: 45px; z-index: 3; pointer-events: none;
+  transform: skewX(-22deg) translateX(-120px);
+  background: linear-gradient(90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 255, 255, 0) 100%);
+  animation: rt-trend-shine 1.9s ease-in-out infinite;
+}
+@keyframes rt-trend-gold-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.75), 0 0 8px 1px rgba(245, 158, 11, 0.45); }
+  50%      { box-shadow: 0 0 0 7px rgba(245, 158, 11, 0.0),  0 0 14px 3px rgba(245, 158, 11, 0.7); }
+}
+@keyframes rt-trend-shine {
+  0%       { transform: skewX(-22deg) translateX(-120px); }
+  55%, 100% { transform: skewX(-22deg) translateX(320px); }
+}
+
+/* Wer Bewegung reduziert haben will, bekommt Gold ohne Animation. */
+@media (prefers-reduced-motion: reduce) {
+  .rt-trend-harvest--full:not(:disabled) { animation: none; box-shadow: 0 0 10px 2px rgba(245, 158, 11, 0.6); }
+  .rt-trend-harvest--full::after { animation: none; opacity: 0; }
+}
+
+/* Negativer Trend — Button wird zur Schadensbegrenzung. */
+.rt-trend-harvest--danger { background: #fee2e2; border-color: #b91c1c; }
+.rt-trend-harvest--danger .rt-trend-harvest__fill { background: rgba(185, 28, 28, 0.28); }
+.rt-trend-harvest--danger .rt-trend-harvest__label,
+.rt-trend-harvest--danger .rt-trend-stacks { color: #7f1d1d; }
+.rt-trend--negative .rt-trend-value { color: #b91c1c; }
+.rt-trend--positive .rt-trend-value { color: #15803d; }
+
+/* --- Fliegende User zwischen Trend- und User-Kachel --- */
+.rt-trend-fly {
+  position: fixed; z-index: 9000;
+  transform: translate(-50%, -50%);
+  padding: 3px 9px; border-radius: 99px;
+  border: 2px solid var(--rt-brown);
+  font-size: 0.8rem; font-weight: 800; font-family: var(--rt-font-display, inherit);
+  pointer-events: none; white-space: nowrap;
+  transition: transform 0.85s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.85s ease-in;
+}
+.rt-trend-fly--in  { background: #dcfce7; color: #15803d; }
+.rt-trend-fly--out { background: #fee2e2; color: #b91c1c; }
 
 /* === Server-Bar === */
 .rt-resource--server { align-items: center; }

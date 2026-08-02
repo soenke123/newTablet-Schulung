@@ -48,8 +48,6 @@ html, body {
   transition: background 0.3s;
 }
 .res-icon { font-size: 17px; }
-.res-ruf-good { background: rgba(77,191,77,0.35) !important; }
-.res-ruf-bad  { background: rgba(231,76,60,0.35) !important; }
 
 #res-servercap-wrap.res-cap-warn { background: rgba(244,197,66,0.55); }
 #res-servercap-wrap.res-cap-full {
@@ -62,23 +60,30 @@ html, body {
   50%      { box-shadow: 0 0 12px rgba(231,76,60,0.7); }
 }
 
-/* Ressourcen-Kachel Pop-Effekt bei Ernte — Scale skaliert mit --pop-scale */
-#res-watchtime, #res-users {
-  display: inline-block;
+/* Ressourcen-Kachel Pop-Effekt bei Ernte — Scale skaliert mit --pop-scale.
+   Zielt auf die Kachel-Container aus resourceBarHTML(), nicht auf die
+   Zahlen-Spans: die werden von bindResourceBar laufend neu geschrieben. */
+.rt-resource {
   transform-origin: center;
   --pop-scale: 1.4;
 }
-#res-watchtime.res-pop { animation: res-pop 0.5s cubic-bezier(.34,1.56,.64,1) both; }
-#res-users.res-pop     { animation: res-pop-green 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+.rt-resource--watchtime.res-pop { animation: res-pop 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+#rt-res-users-card.res-pop      { animation: res-pop-green 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+#rt-res-money-card.res-pop      { animation: res-pop-gold 0.5s cubic-bezier(.34,1.56,.64,1) both; }
 @keyframes res-pop {
-  0%   { transform: scale(1);                color: inherit; }
-  40%  { transform: scale(var(--pop-scale)); color: var(--blue-dark); }
-  100% { transform: scale(1);                color: inherit; }
+  0%   { transform: scale(1);                box-shadow: none; }
+  40%  { transform: scale(var(--pop-scale)); box-shadow: 0 0 22px rgba(90,160,255,0.75); }
+  100% { transform: scale(1);                box-shadow: none; }
 }
 @keyframes res-pop-green {
-  0%   { transform: scale(1);                color: inherit; }
-  40%  { transform: scale(var(--pop-scale)); color: var(--green-dark); }
-  100% { transform: scale(1);                color: inherit; }
+  0%   { transform: scale(1);                box-shadow: none; }
+  40%  { transform: scale(var(--pop-scale)); box-shadow: 0 0 22px rgba(90,200,120,0.75); }
+  100% { transform: scale(1);                box-shadow: none; }
+}
+@keyframes res-pop-gold {
+  0%   { transform: scale(1);                box-shadow: none; }
+  40%  { transform: scale(var(--pop-scale)); box-shadow: 0 0 22px rgba(244,197,66,0.85); }
+  100% { transform: scale(1);                box-shadow: none; }
 }
 
 /* Shop-Button in der Ressourcen-Bar */
@@ -114,6 +119,15 @@ html, body {
   opacity: 0.6;
 }
 
+/* ---- Kamera-Layer: hält iso-grid + building-ui-layer.
+   Bekommt transform: scale/translate für Pinch-Zoom + Pan. ---- */
+#world-camera {
+  position: absolute; inset: 0;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  touch-action: none; /* Pinch/Pan selbst behandeln, nicht der Browser */
+}
+
 /* ---- Isometrisches Grid ---- */
 #iso-grid {
   position: absolute; inset: 0;
@@ -124,9 +138,12 @@ html, body {
   width: 192px; height: 96px;
   transform: translate(-50%, -50%);
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 64' preserveAspectRatio='none'><polygon points='64,2 126,32 64,62 2,32' fill='rgba(255,255,255,0.10)' stroke='rgba(0,0,0,0.35)' stroke-width='1.2' stroke-dasharray='4,3'/></svg>");
+  /* Aktive Felder: kolorierte Tönung aus der Logo-Theme (--rt-primary),
+     überlagert mit dunkler dashed Kontur. Die Farbe passt zur gewählten
+     Plattform (bell = pink, graph = blau, mesh = grün …). */
+  background-color: color-mix(in srgb, var(--rt-primary, #b08968) 35%, transparent);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 64' preserveAspectRatio='none'><polygon points='64,2 126,32 64,62 2,32' fill='transparent' stroke='rgba(30,20,10,0.55)' stroke-width='1.5' stroke-dasharray='5,3'/></svg>");
   background-size: 100% 100%;
-  background-color: transparent;
   pointer-events: auto;
   cursor: pointer;
   transition: background-color 0.15s;
@@ -136,6 +153,17 @@ html, body {
 .iso-tile.tile-valid:hover   { background-color: rgba(77,191,77,0.65); }
 .iso-tile.tile-invalid       { background-color: rgba(231,76,60,0.35); cursor: not-allowed; }
 .iso-tile.tile-invalid:hover { background-color: rgba(231,76,60,0.5); }
+
+/* Gesperrte Kranz-Felder (Phase 2, außerhalb der 4×4 Freizone).
+   Nur angedeutet — dünne helle Linien, keine Farbfüllung, damit die
+   aktive Zone dominiert aber die Ausbauflächen trotzdem sichtbar sind. */
+.iso-tile--locked {
+  background-color: transparent;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 64' preserveAspectRatio='none'><polygon points='64,2 126,32 64,62 2,32' fill='transparent' stroke='rgba(255,255,255,0.55)' stroke-width='1.0' stroke-dasharray='4,4'/></svg>");
+  cursor: default;
+  pointer-events: none;
+}
+.iso-tile--locked:hover { background-color: transparent; }
 
 /* ---- Gebäude auf Iso-Grid ---- */
 .building {
@@ -194,7 +222,6 @@ html, body {
 .b-hq        { top: 6%;  left: 38%; width: 22%; min-width: 180px; max-width: 260px; transform: translateX(-50%); }
 .b-farm      { top: 8%;  right: 4%; width: 28%; min-width: 220px; max-width: 320px; }
 .b-marketing { bottom: 10%; left: 6%; width: 22%; min-width: 180px; max-width: 240px; }
-.b-werbe     { bottom: 6%; right: 12%; width: 22%; min-width: 180px; max-width: 240px; }
 
 /* ---- Serverfarm-Tiere: organisch verteilt auf der Weide-Raute ---- */
 .farm-animals {
@@ -317,16 +344,19 @@ html, body {
 }
 
 /* Fly-Bubble: Watchtime fließt vom Farm-Feld zur Ressourcen-Bar.
-   Font-size wird per Inline-Style gesetzt (skaliert mit Stack-Anzahl). */
+   Font-size wird per Inline-Style gesetzt (skaliert mit Stack-Anzahl).
+   position:fixed + Anker an <body>, weil #world overflow:hidden hat und
+   die Ressourcen-Bar darüber liegt — im World-Container würde die Bubble
+   auf dem Weg nach oben abgeschnitten. */
 .wt-fly {
-  position: absolute;
+  position: fixed;
   transform: translate(-50%, -50%);
   font-weight: 800;
   font-size: 20px;
   color: var(--blue-dark);
   text-shadow: 0 2px 8px rgba(255,255,255,0.95), 0 0 4px rgba(0,0,0,0.5);
   pointer-events: none;
-  z-index: 80;
+  z-index: 4000;
   animation: wt-fly 0.75s cubic-bezier(.4,.05,.6,1) forwards;
   --dx: 0px; --dy: 0px;
   white-space: nowrap;
@@ -338,8 +368,10 @@ html, body {
   animation-duration: 0.7s;
 }
 
-/* ---- Marketing-Center UI (Ring mit Countdown + Collect-Button) ---- */
-.mk-ui {
+/* ---- Marketing-Center UI (Ring mit Countdown + Collect-Button) ----
+   .wb-ui (Werbeagentur) nutzt dasselbe Layout: Ring aus .mk-ring plus den
+   goldenen .farm-harvest-btn als Einsammel-/Wiederbuchen-Button. */
+.mk-ui, .wb-ui {
   position: absolute;
   transform: translate(-50%, -71%);
   width: 130px;
@@ -411,14 +443,29 @@ html, body {
 
 /* User-Fly-Bubble (Ernte-Effekt Richtung 👥-Kachel) */
 .user-fly {
-  position: absolute;
+  position: fixed;
   transform: translate(-50%, -50%);
   font-weight: 800;
   font-size: 28px;
   color: var(--green-dark);
   text-shadow: 0 2px 8px rgba(255,255,255,0.95), 0 0 4px rgba(0,0,0,0.5);
   pointer-events: none;
-  z-index: 80;
+  z-index: 4000;
+  animation: wt-fly 0.75s cubic-bezier(.4,.05,.6,1) forwards;
+  --dx: 0px; --dy: 0px;
+  white-space: nowrap;
+}
+
+/* Geld-Fly-Bubble (Werbeagentur-Ernte Richtung 💰-Kachel) */
+.money-fly {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  font-size: 28px;
+  color: var(--gold-dark);
+  text-shadow: 0 2px 8px rgba(255,255,255,0.95), 0 0 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+  z-index: 4000;
   animation: wt-fly 0.75s cubic-bezier(.4,.05,.6,1) forwards;
   --dx: 0px; --dy: 0px;
   white-space: nowrap;
@@ -470,6 +517,12 @@ html, body {
   box-shadow: 0 12px 40px rgba(0,0,0,0.35);
   max-height: 85vh; overflow-y: auto;
 }
+/* Techtree braucht deutlich mehr Platz für den Baum. */
+#modal.modal-lg {
+  max-width: 1100px;
+  width: 95vw;
+  max-height: 92vh;
+}
 .modal-title { font-size: 22px; font-weight: 800; margin-bottom: 14px; color: var(--text); }
 .modal-close {
   background: #ddd; border: none; padding: 10px 18px;
@@ -499,9 +552,18 @@ html, body {
 }
 .modal-btn:hover:not(:disabled)  { transform: translateY(-1px); }
 .modal-btn:active:not(:disabled) { transform: translateY(1px); }
-.modal-btn:disabled { background: #ccc; color: #888; cursor: not-allowed; box-shadow: none; }
 .modal-btn.collect  { background: linear-gradient(180deg, var(--gold), var(--gold-dark)); color: #4a2e00; }
 .modal-btn.upgrade  { background: linear-gradient(180deg, var(--blue), var(--blue-dark)); }
+/* Abbrechen/Verwerfen — grün würde wie eine Bestätigung aussehen. */
+.modal-btn.danger {
+  background: none; border: 2px solid #d8d8d8;
+  color: #8a8a8a; font-size: 14px; padding: 10px;
+  box-shadow: none;
+}
+.modal-btn.danger:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+/* Muss nach .collect/.upgrade stehen: gleiche Spezifität, sonst gewinnt die
+   Farbvariante und deaktivierte Buttons sehen weiter klickbar aus. */
+.modal-btn:disabled { background: #ccc; color: #888; cursor: not-allowed; box-shadow: none; }
 
 /* Kampagnen-Zeilen im Marketing-Modal */
 .campaign-row {
@@ -519,20 +581,289 @@ html, body {
 }
 .campaign-row button:disabled { background: #ddd; color: #999; cursor: not-allowed; }
 
+/* Werbearten-Zeilen im Werbeagentur-Modal: wie .campaign-row, aber mit
+   zweiter Zeile für die Live-Vorschau von Ertrag und Trend-Malus. */
+.ad-row .ad-preview {
+  display: block;
+  margin-top: 2px;
+  color: var(--wood);
+  font-weight: 700;
+}
+
 /* Fortschritt allgemein */
 .progress { height: 10px; background: #eee; border-radius: 5px; overflow: hidden; margin-top: 8px; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #7dc26e); transition: width 0.2s; }
 
 .info-line { color: #555; font-size: 13px; margin: 6px 0; }
+.info-small { font-size: 11px; color: #888; }
 .info-highlight { color: var(--wood); font-weight: 700; }
 
-/* Techtree-Placeholder */
-.tt-node {
-  padding: 12px; border: 1px solid #eee; border-radius: 8px; margin: 6px 0;
-  background: #f9f9f9; color: #999;
-  display: flex; align-items: center; gap: 10px;
+/* ---- Trend-Info-Modal ---- */
+.trend-modal__big {
+  text-align: center; font-size: 34px; font-weight: 800;
+  font-family: var(--rt-font-display, inherit);
+  margin: 4px 0 10px;
 }
-.tt-node .tt-icon { font-size: 22px; }
+.trend-modal__big--pos     { color: #15803d; }
+.trend-modal__big--neg     { color: #b91c1c; }
+.trend-modal__big--neutral { color: #78716c; }
+.trend-modal__head {
+  margin: 14px 0 6px; font-size: 12px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.4px; color: var(--wood);
+}
+.trend-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding: 6px 8px; border-radius: 6px; font-size: 13px;
+}
+.trend-row:nth-child(odd) { background: rgba(0, 0, 0, 0.035); }
+.trend-row__label { color: #444; }
+.trend-row__ttl   { color: #999; font-size: 11px; }
+.trend-row__val {
+  font-family: monospace; font-weight: 800; white-space: nowrap;
+}
+.trend-row__val--pos { color: #15803d; }
+.trend-row__val--neg { color: #b91c1c; }
+.trend-modal__hint { margin-top: 12px; font-size: 12px; color: #777; }
+
+/* ---- Techtree-Modal (v1-Stil: Cream/Sky/Mint/Yellow + 3D-Schatten) ---- */
+:root {
+  --tt-cream:        #fff5e1;
+  --tt-paper:        #fffaf0;
+  --tt-brown:        #4a3829;
+  --tt-brown-light:  #8c7869;
+  --tt-primary:      #b08968;
+  --tt-primary-soft: #f4e8d8;
+  --tt-sky-soft:     #c8e8ff;
+  --tt-mint-soft:    #b6f0dd;
+  --tt-yellow-soft:  #fff0a8;
+  --tt-lavender-soft:#ddd6fe;
+  --tt-coral:        #ff8a7a;
+  --tt-shadow-hard:  0 3px 0 rgba(74, 56, 41, 0.9);
+  --tt-shadow-hard-lg: 0 5px 0 rgba(74, 56, 41, 0.9);
+}
+
+.rt-tt-hint {
+  color: var(--tt-brown-light); font-size: 13px; font-style: italic;
+  margin: 0 0 12px;
+}
+
+/* Baum-Grid mit SVG-Overlay */
+.rt-tt-grid-wrap {
+  position: relative;
+  padding: 8px 4px 16px;
+  overflow-x: auto;
+}
+.rt-tt-svg {
+  position: absolute; top: 0; left: 0;
+  z-index: 0; pointer-events: none;
+}
+.rt-tt-grid {
+  display: flex; align-items: flex-start; gap: 60px;
+  position: relative; z-index: 1;
+  min-width: min-content;
+}
+.rt-tt-col {
+  display: flex; flex-direction: column; gap: 14px;
+  flex-shrink: 0;
+}
+
+/* Node-Card horizontal (Icon links, Body rechts) */
+.rt-tt-node {
+  display: flex; gap: 10px;
+  padding: 10px 12px;
+  width: 210px; min-height: 78px;
+  background: var(--tt-cream);
+  border: 3px solid var(--tt-brown);
+  border-radius: 14px;
+  box-shadow: var(--tt-shadow-hard);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.rt-tt-node:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--tt-shadow-hard-lg);
+}
+.rt-tt-node--done         { background: var(--tt-mint-soft); }
+.rt-tt-node--in_progress  { background: var(--tt-sky-soft); }
+.rt-tt-node--available    { background: var(--tt-yellow-soft); }
+.rt-tt-node--ready        { background: #fcd34d; animation: rt-tt-pulse 1.1s ease-in-out infinite; }
+.rt-tt-node--locked       { opacity: 0.5; cursor: default; }
+.rt-tt-node--locked:hover { transform: none; box-shadow: var(--tt-shadow-hard); }
+
+@keyframes rt-tt-pulse {
+  0%, 100% { box-shadow: var(--tt-shadow-hard); }
+  50%      { box-shadow: 0 3px 0 rgba(74,56,41,0.9), 0 0 0 6px rgba(252, 211, 77, 0.5); }
+}
+
+.rt-tt-node__ico {
+  width: 34px; height: 34px; flex-shrink: 0;
+  background: var(--tt-paper);
+  border: 2px solid var(--tt-brown);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--tt-brown);
+}
+.rt-tt-node__ico svg { width: 20px; height: 20px; stroke-width: 2.2; }
+.rt-tt-node__body { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rt-tt-node__name { font-weight: 800; font-size: 14px; color: var(--tt-brown); line-height: 1.2; }
+.rt-tt-node__fx   {
+  font-size: 11px; color: var(--tt-brown-light); line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rt-tt-node__meta { margin-top: 2px; }
+
+/* Badges */
+.rt-tt-badge {
+  display: inline-block; font-size: 10px; font-weight: 800;
+  padding: 2px 8px; border-radius: 999px;
+  color: var(--tt-brown);
+}
+.rt-tt-badge--done     { background: #7eddc1; color: white; }
+.rt-tt-badge--progress { background: #7ecbff; color: white; }
+.rt-tt-badge--ready    { background: #fcd34d; color: var(--tt-brown); }
+.rt-tt-badge--collect  { background: #22c55e; color: white; }
+.rt-tt-badge--locked   { background: #ccc; color: #666; }
+
+/* ── Detail-Ansicht ── */
+.rt-tt-back {
+  margin-bottom: 12px;
+}
+.rt-tt-detail {
+  padding: 16px;
+  background: var(--tt-paper);
+  border: 3px solid var(--tt-brown);
+  border-radius: 18px;
+  box-shadow: var(--tt-shadow-hard);
+}
+.rt-tt-detail__cols {
+  display: flex; gap: 16px; align-items: stretch;
+}
+@media (max-width: 560px) {
+  .rt-tt-detail__cols { flex-direction: column; }
+  .rt-tt-detail__right { border-left: none !important; border-top: 2px solid var(--tt-primary-soft); padding-left: 0 !important; padding-top: 12px !important; }
+}
+.rt-tt-detail__main { flex: 1; }
+.rt-tt-detail__header { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+.rt-tt-detail__ico {
+  width: 54px; height: 54px;
+  background: var(--tt-primary-soft);
+  border: 3px solid var(--tt-brown);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--tt-brown);
+}
+.rt-tt-detail__ico svg { width: 30px; height: 30px; stroke-width: 2.2; }
+.rt-tt-detail__name { font-size: 20px; font-weight: 800; color: var(--tt-brown); margin: 0; }
+.rt-tt-detail__fx { font-size: 14px; color: var(--tt-brown); line-height: 1.55; margin: 8px 0 0; }
+
+.rt-tt-detail__right {
+  min-width: 140px;
+  border-left: 2px solid var(--tt-primary-soft);
+  padding-left: 14px;
+}
+.rt-tt-detail__res-head {
+  font-size: 10px; font-weight: 800; color: var(--tt-brown-light);
+  letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px;
+}
+.rt-tt-detail__chips { display: flex; flex-direction: column; gap: 6px; }
+
+.rt-tt-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 700; color: var(--tt-brown);
+  padding: 3px 10px; border-radius: 999px;
+}
+.rt-tt-chip--cost   { background: var(--tt-yellow-soft); }
+.rt-tt-chip--dur    { background: var(--tt-sky-soft); }
+.rt-tt-chip--srv    { background: var(--tt-lavender-soft); }
+.rt-tt-chip--reward { background: var(--tt-mint-soft); }
+
+/* ── Techtree-Tabs (Entwicklung / Marketing / Werbung) ── */
+.rt-tt-tabs {
+  display: flex; gap: 6px;
+  margin-bottom: 12px;
+  border-bottom: 3px solid var(--tt-brown);
+  padding-bottom: 0;
+}
+.rt-tt-tab {
+  font-family: inherit; font-size: 13px; font-weight: 800;
+  color: var(--tt-brown);
+  padding: 8px 14px 10px;
+  background: var(--tt-cream);
+  border: 3px solid var(--tt-brown);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  cursor: pointer;
+  margin-bottom: -3px;
+  transition: transform 0.08s ease, background 0.12s ease;
+}
+.rt-tt-tab:hover { background: var(--tt-yellow-soft); }
+.rt-tt-tab--active {
+  background: var(--tt-paper);
+  transform: translateY(2px);
+}
+
+/* ── Einfache Node-Liste (Marketing/Werbung) ── */
+.rt-tt-simple {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  padding: 8px 4px 16px;
+}
+
+.rt-tt-detail__lock {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 138, 122, 0.15);
+  border-radius: 10px;
+  color: #a63d2f; font-weight: 700; font-size: 13px;
+}
+.rt-tt-detail__note {
+  margin: 12px 0 8px;
+  font-size: 13px; color: var(--tt-brown-light);
+}
+.rt-tt-detail__progress {
+  width: 100%; height: 10px;
+  background: var(--tt-primary-soft);
+  border: 2px solid var(--tt-brown);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+.rt-tt-detail__progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #7ecbff, #4d90fe);
+  transition: width 0.3s ease;
+}
+
+/* Action-Buttons */
+.rt-tt-actions {
+  margin-top: 14px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+}
+.rt-btn-tt {
+  font-family: inherit; font-weight: 800; font-size: 15px;
+  padding: 12px 20px;
+  border: 3px solid var(--tt-brown);
+  border-radius: 14px;
+  background: var(--tt-cream);
+  color: var(--tt-brown);
+  cursor: pointer;
+  box-shadow: var(--tt-shadow-hard);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.rt-btn-tt:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--tt-shadow-hard-lg); }
+.rt-btn-tt:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 rgba(74,56,41,0.9); }
+.rt-btn-tt:disabled { opacity: 0.5; cursor: not-allowed; }
+.rt-btn-tt--primary { background: #fcd34d; }
+.rt-btn-tt--collect { background: #22c55e; color: white; animation: rt-tt-pulse 1.1s ease-in-out infinite; }
+.rt-btn-tt--ghost { background: transparent; box-shadow: none; padding: 6px 14px; font-size: 13px; border-width: 2px; }
+.rt-btn-tt--ghost:hover:not(:disabled) { background: var(--tt-primary-soft); box-shadow: none; transform: none; }
+
+/* Shop-Sektionen (Hardware vs. Gebäude) */
+.shop-section-title {
+  font-weight: 800; font-size: 13px; color: #666; text-transform: uppercase;
+  letter-spacing: 0.5px; margin: 14px 0 4px;
+}
+.shop-section-title:first-child { margin-top: 0; }
 
 /* ---- Placement-Bar ---- */
 .placement-bar {
@@ -606,10 +937,236 @@ html, body {
 }
 .float-text.green { color: var(--green); }
 .float-text.blue  { color: #a0d0ff; }
+.float-text.gold  { color: var(--gold); }
 @keyframes float {
   0%   { opacity: 1; transform: translate(-50%, 0); }
   100% { opacity: 0; transform: translate(-50%, -70px); }
 }
+
+/* ---- Online-Button (schwebt oben mittig im World) ---- */
+.rt-online-btn {
+  position: absolute; top: 20px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  padding: 14px 28px;
+  background: linear-gradient(180deg, #22c55e, #16a34a);
+  color: white; font-weight: 800; font-size: 17px;
+  border: 3px solid #14532d; border-radius: 999px;
+  box-shadow: 0 6px 0 #14532d, 0 12px 24px rgba(0,0,0,0.35);
+  cursor: pointer;
+  animation: rt-online-pulse 1.3s ease-in-out infinite;
+}
+.rt-online-btn:hover  { transform: translateX(-50%) translateY(-2px); }
+.rt-online-btn:active { transform: translateX(-50%) translateY(2px); box-shadow: 0 2px 0 #14532d; }
+@keyframes rt-online-pulse {
+  0%, 100% { box-shadow: 0 6px 0 #14532d, 0 12px 24px rgba(0,0,0,0.35), 0 0 0 0   rgba(34, 197, 94, 0.6); }
+  50%      { box-shadow: 0 6px 0 #14532d, 0 12px 24px rgba(0,0,0,0.35), 0 0 0 12px rgba(34, 197, 94, 0.0); }
+}
+
+/* ---- Launch-Overlay (Terminal-Deploy) ---- */
+.rt-launch-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: rt-launch-fade-in 0.3s ease;
+}
+@keyframes rt-launch-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.rt-launch-screen { width: 100%; max-width: 640px; }
+.rt-launch-terminal {
+  background: #0d1117; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  border: 1px solid #30363d;
+}
+.rt-launch-terminal__bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: #161b22; border-bottom: 1px solid #30363d;
+}
+.rt-launch-terminal__dot {
+  width: 12px; height: 12px; border-radius: 50%; background: #ff5f57;
+}
+.rt-launch-terminal__dot:nth-child(2) { background: #febc2e; }
+.rt-launch-terminal__dot:nth-child(3) { background: #28c840; }
+.rt-launch-terminal__title {
+  margin-left: 12px; color: #8b949e; font-size: 12px;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+}
+.rt-launch-console {
+  padding: 20px 20px 12px; height: 260px; overflow-y: auto;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-size: 14px; line-height: 1.7;
+}
+.rt-launch-line { color: #58a6ff; animation: rt-launch-line-in 0.3s ease; }
+.rt-launch-line--info    { color: #8b949e; }
+.rt-launch-line--success { color: #56d364; }
+.rt-launch-line--launch  { color: #ffea63; font-weight: 700; font-size: 16px; }
+@keyframes rt-launch-line-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.rt-launch-bar-wrap {
+  height: 6px; background: #21262d; margin: 4px 20px 16px; border-radius: 4px; overflow: hidden;
+}
+.rt-launch-bar {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #58a6ff, #56d364);
+  transition: width 0.45s ease;
+}
+.rt-launch-footer {
+  padding: 12px 20px 20px; text-align: center; border-top: 1px solid #30363d;
+}
+.rt-launch-weiter {
+  padding: 12px 32px; font-size: 15px; font-weight: 800;
+  background: linear-gradient(180deg, #22c55e, #16a34a); color: white;
+  border: 2px solid #14532d; border-radius: 10px; cursor: pointer;
+  box-shadow: 0 4px 0 #14532d;
+}
+.rt-launch-weiter:hover  { transform: translateY(-1px); }
+.rt-launch-weiter:active { transform: translateY(2px); box-shadow: 0 2px 0 #14532d; }
+
+/* ── Go-Live-Info-Box (nach Terminal) ── */
+.rt-golive-info,
+.rt-investor-info {
+  width: 100%; max-width: 520px;
+  background: var(--tt-paper, #fff);
+  border: 3px solid var(--tt-brown, #6b4a2b);
+  border-radius: 18px;
+  padding: 24px 24px 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  text-align: center;
+}
+.rt-golive-info__title {
+  font-size: 22px; font-weight: 900; color: var(--tt-brown, #6b4a2b);
+  margin-bottom: 6px;
+}
+.rt-golive-info__sub {
+  font-size: 14px; color: var(--tt-brown-light, #8b6a4b);
+  margin: 0 0 16px;
+}
+.rt-golive-info__box {
+  background: var(--tt-cream, #fff8e8);
+  border: 2px dashed var(--tt-brown, #6b4a2b);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: left;
+  margin-bottom: 16px;
+}
+.rt-golive-info__head {
+  font-size: 13px; font-weight: 800; color: var(--tt-brown, #6b4a2b);
+  margin-bottom: 8px;
+}
+.rt-golive-info__list {
+  margin: 0 0 10px; padding-left: 20px;
+  font-size: 13px; color: var(--tt-brown, #6b4a2b); line-height: 1.55;
+}
+.rt-golive-info__list li { margin-bottom: 4px; }
+.rt-golive-info__goal {
+  margin: 8px 0 0; font-size: 13px;
+  color: var(--tt-brown, #6b4a2b);
+}
+
+/* ── Investor-Modal (2 Seiten, an v1 angelehnt) ── */
+.rt-investor-info { max-width: 620px; text-align: center; }
+.rt-investor-page { display: block; }
+.rt-investor-info__bear {
+  width: 130px; height: 130px; object-fit: contain;
+  margin: 0 auto 10px; display: block;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25));
+}
+.rt-investor-info__bear--sm {
+  width: 90px; height: 90px; margin: 0 12px 0 0;
+  flex-shrink: 0;
+}
+.rt-investor-info__title {
+  font-size: 22px; font-weight: 900;
+  color: var(--tt-brown, #6b4a2b);
+  margin: 0 0 12px;
+}
+.rt-investor-info__quote,
+.rt-investor-info__truth {
+  font-size: 14px; color: var(--tt-brown, #6b4a2b);
+  font-style: italic; line-height: 1.55;
+  background: var(--tt-cream, #fff8e8);
+  border-radius: 10px; padding: 12px 14px;
+  margin: 0 0 12px; text-align: left;
+}
+.rt-investor-info__sig {
+  font-size: 12px; font-weight: 700;
+  color: var(--tt-brown-light, #8b6a4b);
+  margin: 0 0 14px; text-align: right;
+}
+.rt-investor-info__body {
+  display: flex; align-items: flex-start;
+  text-align: left;
+}
+.rt-investor-info__right { flex: 1; min-width: 0; }
+.rt-investor-info__deal {
+  display: flex; flex-direction: column; gap: 6px;
+  margin: 12px 0 12px;
+}
+.rt-investor-info__row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--tt-cream, #fff8e8);
+  font-size: 13px; color: var(--tt-brown, #6b4a2b);
+}
+.rt-investor-info__row--win { background: var(--tt-mint-soft, #bef2d4); }
+.rt-investor-info__whisper {
+  font-size: 12px; color: var(--tt-brown-light, #8b6a4b);
+  font-style: italic; margin: 0 0 12px;
+}
+@media (max-width: 560px) {
+  .rt-investor-info__body { flex-direction: column; align-items: center; }
+  .rt-investor-info__bear--sm { margin: 0 auto 10px; }
+}
+
+/* Feuerwerk: bunte runde Partikel, explodieren nach außen und fallen leicht. */
+.firework-piece {
+  position: absolute; pointer-events: none;
+  width: 10px; height: 10px; border-radius: 50%;
+  z-index: 60;
+  box-shadow: 0 0 8px rgba(255,255,255,0.6);
+  animation: firework 1.2s cubic-bezier(0.15, 0.6, 0.3, 1) forwards;
+  --dx: 0px; --dy: 0px;
+}
+@keyframes firework {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+  40%  { opacity: 1; transform: translate(calc(-50% + var(--dx) * 0.9), calc(-50% + var(--dy) * 0.9)) scale(1.1); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) + 40px)) scale(0.4); }
+}
+
+/* ---- Notification-Badge (gelber pulsierender "!") ---- */
+/* Markiert UI-Elemente mit neuem/ungelesenem Inhalt. Verschwindet bei Klick
+   (State-Flag seenBadges.*). */
+.rt-notif-badge {
+  position: absolute; top: -6px; right: -6px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #fbbf24;
+  border: 2px solid #78350f;
+  color: #78350f;
+  font-family: var(--rt-font-display, sans-serif);
+  font-weight: 900;
+  font-size: 14px;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+  animation: rt-notif-pulse 1.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 20;
+}
+@keyframes rt-notif-pulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(251,191,36,0.55); }
+  50%      { transform: scale(1.12); box-shadow: 0 0 0 8px rgba(251,191,36,0);  }
+}
+/* Anker für Badge-Positionierung (position: relative benötigt). */
+.rt-shop-btn, .rt-tt-tab { position: relative; }
+
+/* HQ-Badge sitzt auf der mk-ui (130×130 anchored am Fuß der Kachel).
+   Ohne Override würde er zu weit rechts-oben schweben — dieser Modifier
+   zieht ihn näher an das HQ-Sprite. */
+.rt-notif-badge--hq { top: 22px; right: 26px; }
 
 /* ---- Responsive ---- */
 @media (max-width: 720px) {
@@ -617,7 +1174,6 @@ html, body {
   .b-hq        { width: 26%; min-width: 140px; }
   .b-farm      { width: 32%; min-width: 180px; }
   .b-marketing { width: 26%; min-width: 140px; }
-  .b-werbe     { width: 26%; min-width: 140px; }
   .b-label { font-size: 11px; }
   .animals { font-size: 18px; }
 }
