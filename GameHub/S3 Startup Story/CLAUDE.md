@@ -1495,7 +1495,32 @@ Der Spielstand hängt am **Account**, nicht am Gerät (Migration 0061, Tabelle `
 | `js/storage.js` | localStorage: Gast-Speicher, Offline-Puffer, Cache. Rein lokal und synchron. |
 | `js/cloud.js` | `RT.cloud` — die Server-Seite. Ohne Login tut das Modul nichts. |
 
-**Server gewinnt beim Laden.** Der Boot in `main.js` ist deshalb asynchron (Splash statt Intro-Flackern) und läuft in dieser Reihenfolge: lokal laden → Session abwarten → **falls dirty: lokal hochschieben** → Serverstand laden → Aufholpass. Der Dirty-Push muss vor dem Laden stehen, sonst überschreibt der Serverstand eine Offline-Runde, bevor sie oben ankommt.
+**Server gewinnt beim Laden.** Der Boot in `main.js` ist deshalb asynchron (Splash statt Intro-Flackern) und läuft in dieser Reihenfolge: Session abwarten → lokal laden → **falls dirty: lokal hochschieben** → Serverstand laden → Aufholpass. Der Dirty-Push muss vor dem Laden stehen, sonst überschreibt der Serverstand eine Offline-Runde, bevor sie oben ankommt.
+
+**Der Server gewinnt auch, wenn er leer ist.** Hat das Konto keinen Spielstand, fängt das Spiel neu an — egal was im localStorage liegt (`storage.dropLocal()` + `state.resetCurrent()`, dann Intro). Was dort läge, wäre ein Gast-Spielstand von vor dem Login oder der Rest eines anderen Kontos; beides darf sich nicht in ein leeres Konto einschleichen. Die vollständige Matrix:
+
+| Server | localStorage | Ergebnis |
+|---|---|---|
+| hat Stand | egal | Serverstand gilt, lokal wird überschrieben |
+| **leer** | hat Stand | **Neuanfang**, lokaler Stand wird verworfen |
+| leer | hat **dirty** Stand | der lokale Stand wurde einen Schritt vorher hochgeschoben — der Server ist dann nicht mehr leer, es geht weiter |
+| Stand mit fremder `save_version` | egal | wie „leer": Neuanfang |
+| **nicht erreichbar** | hat Stand (eigener) | lokal weiterspielen, **aber nichts pushen** |
+| — (Gast) | Stand **aus einem Konto** | **Neuanfang** — ohne Konto nicht spielbar, der Stand bleibt aber liegen |
+| — (Gast) | Gast-Stand | rein lokal wie bisher |
+| eingeloggt als B | Stand von **A** | ignoriert, es zählt B's Konto |
+
+**Der lokale Blob trägt seinen Besitzer.** Im localStorage-**Umschlag** (`{ v, owner, data }`, nicht in `data` — der Blob für den Server bleibt sauber) steht die User-Id. `storage.ownsLocal()` lädt einen Stand nur, wenn `owner` zum aktuellen Konto passt; ein Konto-Stand ist ohne dieses Konto **nicht spielbar**, ein Gast-Stand wandert beim Login **nicht** mit.
+
+⚠️ **`owner` kommt aus dem JWT (`sub`), nicht aus `getSessionUser()`.** `session.js` setzt `__session` auf `null`, sobald der Profil-Fetch scheitert — offline also immer. Über `getSessionUser()` wäre man beim Offline-Start plötzlich „niemand" und verlöre den eigenen Stand. `window.__accessToken` bzw. der persistierte `lernwelt-auth`-Eintrag trägt die Id auch ohne Netz.
+
+⚠️ **Das ist der zweite Riegel neben `clearLocalGameState()`** und deckt genau das ab, was jenes nicht kann: dort wird nur bei explizitem Logout, fehlendem Profil oder erkanntem User-Wechsel geräumt. Läuft ein Token einfach ab, passiert nichts — und ohne `owner` stünde der Konzern des Vorgängers ohne jeden Login offen da.
+
+⚠️ **Ein fremder Stand wird nicht gelöscht, nur ignoriert.** War er dirty, ist der nächste Login die einzige Chance, ihn noch hochzuschieben. Preis dafür: fängt im Gast-Modus jemand ein neues Spiel an, überschreibt der erste Save diesen Rest. Deshalb sagt das Konto-Abzeichen im Gast-Zustand ausdrücklich, dass hier ein Kontostand liegt und er im Konto auf einen wartet (`hasForeignSave()` in `ui.js`).
+
+⚠️ **„Leer" und „nicht erreichbar" müssen zwei verschiedene Antworten sein.** `cloud.load()` liefert deshalb `{ empty:true }` gegen `null` — würden beide `null` liefern, hieße jeder Netzwerk-Wackler beim Boot „dein Konto ist leer", und der Spielstand wäre weg.
+
+⚠️ **Nach einem gescheiterten `load()` wird NICHT gepusht** (`synced`-Flag in `cloud.js`). Der Client weiß dann nicht, ob drüben ein Stand liegt, und `rev` steht auf `null` — der Server nimmt einen Push mit `p_base_rev = null` bereitwillig an. Ein Tablet mit wackligem WLAN hätte so einen alten Gerätestand über den neueren Kontostand gelegt. Einzige Ausnahme ist `push({ force:true })` beim Boot: der Dirty-Marker belegt, dass dieser Stand nie oben war.
 
 **Der Dirty-Marker** (`startupStoryV3_dirty`, eigener localStorage-Key) heißt „der lokale Stand ist nie beim Server angekommen". Gesetzt bei jedem lokalen Save, gelöscht nach jedem erfolgreichen Push — bewusst **ohne** Snapshot-Vergleich: das Spiel tickt jede Sekunde weiter, ein Vergleich würde den Marker praktisch nie löschen.
 

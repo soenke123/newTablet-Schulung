@@ -35,7 +35,14 @@
       // Serveruhr (age_sec aus load_game_save), weil savedAt sonst von der
       // womöglich falsch gestellten Uhr des anderen Geräts käme.
       RT.state.current.savedAt = Date.now();
-      var payload = { v: VERSION, data: RT.state.current };
+      // owner steht im Umschlag, NICHT in data — der Blob, der zum Server
+      // geht, bleibt dadurch genau der Spielstand und trägt keine Id mit
+      // sich, die dort ohnehin aus dem JWT kommt.
+      var payload = {
+        v: VERSION,
+        owner: (RT.cloud && RT.cloud.owner()) || null,
+        data: RT.state.current
+      };
       localStorage.setItem(KEY, JSON.stringify(payload));
     } catch (e) { /* Quota / Private-Mode — ignorieren */ }
   }
@@ -57,12 +64,48 @@
     }, SAVE_DEBOUNCE_MS);
   }
 
+  /* Gehört der Stand im localStorage dem, der gerade am Gerät sitzt?
+
+     ⚠️ Das ist die Antwort auf „ich spiele eingeloggt weit, komme ohne
+     Konto im selben Browser zurück": ein Spielstand aus einem Konto ist
+     OHNE dieses Konto nicht spielbar. Sonst hat jeder, der das Tablet
+     aufklappt, den Konzern des Vorgängers vor sich — ganz ohne Login.
+     `clearLocalGameState()` in session.js deckt das nicht ab: es läuft
+     nur bei explizitem Logout, fehlendem Profil oder erkanntem
+     User-Wechsel. Läuft ein Token einfach ab, passiert dort nichts.
+
+     Umgekehrt gilt dasselbe: ein Gast-Spielstand (owner null) gehört
+     keinem Konto und wird nach dem Login nicht mitgenommen.
+
+     ⚠️ Offline heißt NICHT „kein Konto": owner() liest die Id aus dem
+     JWT, nicht aus dem Profil. Wer mit gültigem Token ohne Netz startet,
+     spielt seinen eigenen Stand normal weiter — daran hängt die Rettung
+     der Offline-Runde.
+
+     ⚠️ Ein fremder Stand wird NICHT gelöscht. War er dirty, ist der
+     nächste Login die einzige verbliebene Chance, ihn noch
+     hochzuschieben; ein Löschen hier wäre endgültig.
+
+     Stände von vor dieser Änderung haben keinen owner und gelten damit
+     als Gast-Stände. Für eingeloggte User heißt das einmalig: lokaler
+     Stand wird verworfen, der Serverstand gilt. Genau richtig — anonyme
+     Blobs sind der Zustand, den diese Prüfung abschafft.              */
+  function ownsLocal(saveOwner) {
+    var me = (RT.cloud && RT.cloud.owner()) || null;
+    var his = saveOwner || null;
+    if (me === his) return true;
+    console.log('[storage] Spielstand gehört ' + (his ? 'einem anderen Konto' : 'keinem Konto') +
+                ' — wird nicht geladen.');
+    return false;
+  }
+
   function load() {
     try {
       var raw = localStorage.getItem(KEY);
       if (!raw) return false;
       var parsed = JSON.parse(raw);
       if (!parsed || parsed.v !== VERSION || !parsed.data) return false;
+      if (!ownsLocal(parsed.owner)) return false;
       // Shallow-Merge: neue Felder in initial bleiben mit ihrem Default erhalten.
       Object.keys(parsed.data).forEach(function (k) {
         RT.state.current[k] = parsed.data[k];
@@ -425,6 +468,23 @@
     });
   }
 
+  /* Den lokalen Stand wegwerfen, ohne den Speicher stillzulegen.
+
+     Unterschied zu wipe(): dort ist danach Schluss (wiped = true, kein
+     Rebound aus dem beforeunload-Flush, der Serverstand wird gelöscht).
+     Hier fängt das Spiel nur von vorn an und speichert sofort wieder —
+     gebraucht beim Boot, wenn der Server für dieses Konto keinen Stand
+     hat und der Gerätestand deshalb nicht gelten darf (js/main.js).
+
+     Der Dirty-Marker muss mit weg: er hieße sonst „diese Reste sind
+     ungepushter Fortschritt", und der nächste Boot schöbe sie in den
+     Account, den wir gerade frisch angefangen haben.                  */
+  function dropLocal() {
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    if (RT.cloud) RT.cloud.clearDirty();
+  }
+
   /* Gibt ein Promise zurück, weil der Serverstand per RPC weg muss und der
      Aufrufer (Debug-Neustart) direkt danach neu lädt. Ohne das Warten
      stirbt der RPC mit der Seite und der nächste Boot zöge den gerade
@@ -465,6 +525,7 @@
     save: save,
     load: load,
     applyServerSave: applyServerSave,
+    dropLocal: dropLocal,
     wipe: wipe,
     init: init
   };

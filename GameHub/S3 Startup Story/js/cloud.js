@@ -35,6 +35,22 @@
   var failed    = false;  // letzter Push ging nicht durch (offline, Netzfehler)
   var lastOkAt  = 0;      // wann der Stand zuletzt wirklich beim Server war
 
+  /* „Wir wissen, was auf dem Server liegt." Gesetzt, sobald load() eine
+     Antwort hatte — auch die Antwort „da ist nichts" zählt, denn auch das
+     ist Wissen. Solange das nicht steht, wird NICHT gepusht.
+
+     ⚠️ Der Grund ist der Fehlerfall: kommt load() nicht durch, weiß der
+     Client nicht, ob der Server einen Stand hat. Ein Push wäre dann ein
+     blindes Überschreiben — und mit rev = null würde der Server ihn sogar
+     annehmen (p_base_rev null erzwingt den Schreibvorgang). Ein Tablet mit
+     wackligem WLAN könnte so einen alten Gerätestand über den neueren
+     Kontostand legen. Genau das darf „Server gewinnt" nicht zulassen.
+
+     Ausnahme: opts.force. Das ist der Boot-Push einer ungepushten
+     Offline-Runde — der einzige Fall, in dem der lokale Stand bewusst
+     Vorrang hat, weil er nachweislich nie beim Server war.            */
+  var synced = false;
+
   /* ─── Status für die Anzeige ───────────────────────────────
      Das Konto-Abzeichen am Avatar (js/ui.js) liest das hier. Vier
      Zustände, absichtlich in dieser Rangfolge:
@@ -90,6 +106,43 @@
     return !!token() && !!window.SUPABASE_URL && !!window.SUPABASE_ANON_KEY;
   }
 
+  /* ─── Wem gehört der Spielstand? ───────────────────────────
+     Die User-Id aus dem JWT (`sub`) — und ausdrücklich NICHT aus
+     window.getSessionUser().
+
+     ⚠️ session.js setzt __session auf null, sobald der Profil-Fetch
+     scheitert (applyAuthSession), und das passiert offline zuverlässig.
+     Das Token liegt dann aber weiter im localStorage und trägt die Id
+     mit sich. Über getSessionUser() wäre man beim Offline-Start also
+     plötzlich „niemand" und verlöre den eigenen Stand.
+
+     storage.js schreibt das Ergebnis in den localStorage-Umschlag und
+     prüft es beim Laden. Ohne diese Marke ist ein Spielstand anonym —
+     und dann spielt ihn jeder weiter, der das Gerät aufklappt.       */
+  var ownerCache = { tok: null, id: null };
+  function owner() {
+    var t = token();
+    if (!t) return null;
+    if (ownerCache.tok === t) return ownerCache.id;
+    var id = null;
+    try {
+      var part = t.split('.')[1];
+      if (part) {
+        // base64url → base64: JWTs benutzen - und _ statt + und /.
+        var b64 = part.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        var claims = JSON.parse(atob(b64));
+        if (claims && claims.sub) id = String(claims.sub);
+      }
+    } catch (e) { id = null; }
+    if (!id && typeof window.getSessionUser === 'function') {
+      var u = window.getSessionUser();
+      if (u && u.id) id = String(u.id);
+    }
+    ownerCache = { tok: t, id: id };
+    return id;
+  }
+
   function rpc(name, body, keepalive) {
     var t = token();
     var opts = {
@@ -128,23 +181,36 @@
   function isDirty()    { try { return localStorage.getItem(DIRTY_KEY) === '1'; } catch (e) { return false; } }
 
   /* ─── Laden ────────────────────────────────────────────────
-     Liefert { save, save_version, rev, age_sec } oder null (kein
-     Serverstand, nicht eingeloggt, Fehler). Bei Fehler bewusst null
-     statt eines Wurfs: der Boot soll dann mit dem lokalen Stand
-     weiterlaufen, nicht abbrechen.                                   */
+     Drei Ausgänge, und die Unterscheidung ist der ganze Punkt:
+
+       { save, save_version, rev, age_sec }  — der Serverstand
+       { empty: true }                       — der Server HAT nichts
+       null                                  — nicht erreichbar / nicht eingeloggt
+
+     ⚠️ „leer" und „unbekannt" dürfen nicht denselben Rückgabewert haben.
+     Auf „leer" fängt das Spiel neu an (js/main.js), auf „unbekannt" spielt
+     es lokal weiter, ohne zu pushen. Würden beide null liefern, hieße jeder
+     Netzwerk-Wackler beim Boot „dein Konto ist leer" — und der Spielstand
+     wäre weg.
+
+     Bei Fehler bewusst null statt eines Wurfs: der Boot soll weiterlaufen,
+     nicht abbrechen.                                                  */
   function load() {
     if (!isServerMode()) return Promise.resolve(null);
     return rpc('load_game_save', { p_game_id: GAME_ID })
       .then(function (r) {
         if (!r || !r.ok) throw new Error((r && r.error) || 'unknown');
-        if (!r.save) {
-          console.log('[cloud] kein Serverstand — lokaler Stand bleibt.');
-          return null;
-        }
-        rev = typeof r.rev === 'number' ? r.rev : null;
-        // In diesem Moment sind Client und Server nachweislich gleich.
+        // Auch das ist eine gültige Antwort und macht uns synced: wir
+        // wissen jetzt, dass für dieses Konto nichts gespeichert ist.
         failed   = false;
         lastOkAt = Date.now();
+        synced   = true;
+        if (!r.save) {
+          rev = null;
+          console.log('[cloud] kein Serverstand für dieses Konto.');
+          return { empty: true };
+        }
+        rev = typeof r.rev === 'number' ? r.rev : null;
         console.log('[cloud] Serverstand geladen, rev=' + rev + ', Abwesenheit=' + r.age_sec + 's');
         return r;
       })
@@ -167,6 +233,8 @@
   function pushNow(opts) {
     opts = opts || {};
     if (!isServerMode() || inflight || abandoned) return Promise.resolve(false);
+    // Nichts schreiben, solange wir nicht wissen, was drüben liegt (siehe synced).
+    if (!synced && !opts.force) return Promise.resolve(false);
 
     var payload = RT.state.current;
 
@@ -181,6 +249,10 @@
         if (r && r.ok) {
           rev = typeof r.rev === 'number' ? r.rev : rev;
           clearDirty();
+          // Nach einem angenommenen Push kennen wir den Serverstand — er ist
+          // ja unserer. Damit darf der 20-s-Takt weiterarbeiten, auch wenn
+          // dieser Push ein force ohne vorheriges load() war.
+          synced   = true;
           failed   = false;
           lastOkAt = Date.now();
           announce();
@@ -227,7 +299,7 @@
   }
 
   function schedule() {
-    if (!isServerMode() || abandoned || timer) return;
+    if (!isServerMode() || abandoned || !synced || timer) return;
     timer = setTimeout(function () {
       timer = null;
       if (!isDirty()) return;
@@ -250,6 +322,13 @@
     clearDirty();
     if (!isServerMode()) return Promise.resolve();
     return rpc('reset_game_save', { p_game_id: GAME_ID })
+      .then(function () {
+        // Der Serverstand ist jetzt nachweislich leer — das ist Wissen wie
+        // jedes andere, also darf wieder gepusht werden. Ohne das würde ein
+        // Neustart ohne anschließenden Reload stillschweigend aufhören zu
+        // speichern.
+        synced = true;
+      })
       .catch(function (e) { console.warn('[cloud] reset fehlgeschlagen:', e.message); });
   }
 
@@ -305,12 +384,14 @@
 
   RT.cloud = {
     isServerMode: isServerMode,
+    owner:        owner,
     status:       status,
     load:         load,
     push:         pushNow,
     flush:        flush,
     reset:        reset,
     markDirty:    markDirty,
+    clearDirty:   clearDirty,
     isDirty:      isDirty,
     init:         init
   };

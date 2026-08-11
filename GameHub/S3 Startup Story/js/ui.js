@@ -1200,6 +1200,18 @@
     return 'vor ' + Math.round(sec / 3600) + ' Stunden';
   }
 
+  /* Liegt hier ein Spielstand, der einem Konto gehört? Der localStorage
+     wird direkt gelesen statt über storage.js: dessen load() hat den Stand
+     ja gerade abgelehnt und trägt die Begründung nicht nach außen. */
+  function hasForeignSave() {
+    try {
+      var raw = localStorage.getItem('startupStoryV3');
+      if (!raw) return false;
+      var p = JSON.parse(raw);
+      return !!(p && p.owner);
+    } catch (e) { return false; }
+  }
+
   function openAccountModal() {
     var st    = accountState();
     var saved = agoLabel(st.lastOkAt);
@@ -1210,6 +1222,16 @@
       lead   = 'Dein Spielstand liegt nur auf <b>diesem Gerät</b>. An einem anderen Tablet '
              + 'fängst du von vorne an, und beim Abmelden ist er weg.';
       note   = 'Melde dich in der Lernwelt an, dann folgt dir dein Konzern überallhin.';
+      // ⚠️ Der Fall, der sonst wie ein Datenverlust aussieht: auf dem Gerät
+      // liegt ein Spielstand aus einem Konto, aber ohne Anmeldung ist er
+      // nicht spielbar (storage.ownsLocal). Ohne diesen Satz steht der
+      // Schüler vor einem leeren Spiel und hält seinen Konzern für weg.
+      if (hasForeignSave()) {
+        lead = 'Auf diesem Gerät liegt ein Spielstand, der zu einem <b>Konto</b> gehört. '
+             + 'Ohne Anmeldung lässt er sich nicht weiterspielen — dein Konzern ist aber '
+             + 'nicht verloren, er wartet in deinem Konto auf dich.';
+        note = 'Melde dich in der Lernwelt an, dann ist er wieder da.';
+      }
       action = { id: 'rt-account-login', label: 'Zur Lernwelt' };
     } else if (st.state === 'conflict') {
       title  = '⚠️ Auf einem anderen Gerät wurde weitergespielt';

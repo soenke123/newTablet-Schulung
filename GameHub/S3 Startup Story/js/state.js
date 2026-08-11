@@ -1319,6 +1319,21 @@
 
     current: JSON.parse(JSON.stringify(initial)),
 
+    /* Zurück auf den Anfangszustand, ohne Reload.
+       Gebraucht beim Boot (js/main.js): hat der Server für dieses Konto
+       KEINEN Spielstand, dann gewinnt er auch damit — ein lokal
+       liegengebliebener Stand darf das Spiel nicht fortsetzen.
+
+       ⚠️ Ersetzt current NICHT, sondern räumt es aus und füllt es neu.
+       Module und Screens dürfen sich die Referenz merken; ein
+       `this.current = …` würde sie auf die Leiche zeigen lassen. */
+    resetCurrent: function () {
+      var fresh = JSON.parse(JSON.stringify(initial));
+      var cur   = this.current;
+      Object.keys(cur).forEach(function (k) { delete cur[k]; });
+      Object.keys(fresh).forEach(function (k) { cur[k] = fresh[k]; });
+    },
+
     defaultInstanceState: defaultInstanceState,
 
     isOccupied: function (col, row) {

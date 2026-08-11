@@ -11,7 +11,11 @@
      2. Session abwarten   — session.js hat ein eigenes 3-s-Sicherheitsnetz
      3. dirty? → pushen    — eine Offline-Runde retten, BEVOR der Server
                              gewinnt. Andersherum wäre sie weg.
-     4. Serverstand laden  — er gewinnt (siehe js/cloud.js)
+     4. Serverstand laden  — er gewinnt, und zwar AUCH WENN ER LEER IST:
+                             dann beginnt das Spiel neu, egal was im
+                             localStorage liegt. Nur wenn der Server gar
+                             nicht antwortet, bleibt der Gerätestand stehen
+                             (siehe js/cloud.js, load() und synced).
      5. Aufholpass         — mit age_sec von der Serveruhr, lokal savedAt  */
 (function (RT) {
   'use strict';
@@ -64,14 +68,46 @@
         return RT.cloud.load();
       })
       .then(function (payload) {
-        if (payload && RT.storage.applyServerSave(payload)) {
+        if (!RT.cloud.isServerMode()) return;      // Gast: lokal bleibt lokal
+
+        if (payload && payload.save && RT.storage.applyServerSave(payload)) {
           server = payload;
           loaded = true;
-        } else if (RT.cloud.isServerMode() && loaded) {
-          // Eingeloggt, aber der Server hat nichts (oder einen Stand mit
-          // fremder Version). Der lokale Stand wird damit zum ersten
-          // Serverstand — force, weil es noch keine rev gibt.
-          RT.cloud.push({ force: true });
+          return;
+        }
+
+        if (!payload) {
+          // Der Server war nicht erreichbar. Wir wissen NICHT, ob er einen
+          // Stand hat — also weder den lokalen wegwerfen noch ihn
+          // hochschieben. Es wird lokal weitergespielt, cloud.js pusht in
+          // dieser Sitzung nichts (synced bleibt false) und der Dirty-Marker
+          // sorgt dafür, dass der nächste Boot es nachholt. Das Konto-
+          // Abzeichen steht derweil auf „offline".
+          console.warn('[main] Serverstand nicht lesbar — lokal weiterspielen, ohne zu pushen.');
+          return;
+        }
+
+        // Ab hier: der Server hat für dieses Konto NICHTS Gültiges —
+        // entweder gar keine Zeile (payload.empty) oder einen Blob mit
+        // fremder save_version, den applyServerSave verworfen hat.
+        //
+        // Dann fängt das Spiel neu an, auch wenn im localStorage noch etwas
+        // liegt. Der Stand gehört dem Konto, nicht dem Gerät: was hier läge,
+        // wäre ein Gast-Spielstand von vor dem Login oder der Rest eines
+        // anderen Kontos — beides darf sich nicht in ein leeres Konto
+        // einschleichen.
+        //
+        // ⚠️ Eine ungepushte Offline-Runde ist davon NICHT betroffen: die ist
+        // dirty und wurde einen Schritt weiter oben bereits hochgeschoben,
+        // der Server ist dann nicht mehr leer. Ist dieser Push gescheitert,
+        // scheitert auch load() und wir sind im Zweig darüber gelandet.
+        if (loaded) {
+          console.log('[main] kein Serverstand — lokaler Stand wird verworfen, Spiel beginnt neu.');
+          RT.storage.dropLocal();
+          RT.state.resetCurrent();
+          loaded       = false;
+          localSavedAt = 0;
+          pushedOwn    = false;
         }
       })
       .catch(function (e) {
