@@ -1384,6 +1384,34 @@ Auf iPads lag die Browserleiste über dem Game-Head, am PC nie. Zwei unabhängig
 
 ⚠️ **Kein `viewport-fit=cover`.** Ohne es hält iOS den Inhalt von allein im sicheren Bereich; mit ihm liefe er unter die Statusleiste und bräuchte überall `env(safe-area-inset-*)`-Polster — also genau der Fehler, der hier repariert wurde, nur selbstgebaut.
 
+### Handy im Hochformat — der Kopf halbiert sich
+
+Auf einem Telefon fraßen Profile-Bar und Ressourcen-Bar zusammen rund die **Hälfte des Bildschirms**: sieben Kacheln zu je 45 % Breite ergaben vier Zeilen, Trend und Server stapelten je drei Elemente übereinander. Für die Iso-Welt — den eigentlichen Bildschirm des Spiels — blieb zu wenig.
+
+Behoben rein über CSS (`@media (max-width: 600px) and (orientation: portrait)`, je ein Block am Ende von `css/resource-bar.css` und `css/events.css`). Gemessen bei 390 px Breite:
+
+| | vorher | nachher |
+|---|---|---|
+| Phase 0/1 (Geld · User · Server) | 175 px | **101 px** |
+| Phase 2 (+ Watchtime · Trend) | 244 px | **119 px** |
+| Phase 3 (+ Modelle · Metadaten) | 443 px | **227 px** |
+
+Drei Eingriffe tragen das:
+
+1. **Die Beschriftungen fallen weg, nicht die Werte.** Das Icon ist im ganzen Spiel dieselbe Kennung (💰 · 👥 · ⏳ · 🧠 · 🗃️ · ⭐ · 🖥️) — in dieser Breite kostet „Watchtime" mehr Platz als die Zahl dahinter.
+2. **Trend und Server werden je eine Zeile statt drei.** Beim Trend gibt der Balken nach, nicht der Ernte-Knopf: der trägt die einzige Handlung der Kachel. Beim Server rückt die Tarifstufe hinter den Balken statt darunter — die Zuordnung „gehört zur Kapazität" bleibt dieselbe.
+3. **Die Kachelbreiten sind so gewählt, dass Geld · User · Watchtime eine Zeile ergeben** (31,5 + 31,5 + 37 %). Phase 3 schiebt Modelle + Metadaten in eine zweite Zeile, Phase 0/1 lässt Geld + User auf die halbe Breite wachsen. Ausgezählt wird nichts — der Flex verteilt, was gerade sichtbar ist.
+
+⚠️ **Die schmale Spalte ist hier die breiteste.** `--slim` heißt auf dem Desktop „das ist ein Zwischenstand, darauf schaut man nicht dauernd"; im Hochformat trägt dieselbe Kachel als einzige zwei Dinge nebeneinander (Zahl + ×-Chip) und braucht deshalb am meisten Platz. Der Klassenname bleibt trotzdem, weil er dort die richtige Aussage macht.
+
+⚠️ **Der ×-Chip darf umbrechen, die Zahl nicht.** Unterhalb von ~360 px passen beide nicht nebeneinander; dann fällt der Chip unter den Wert, statt ihn abzuschneiden. Ein „82,…" wäre der schlechtere Tausch — die Zahl ist die Information, der Chip ist ein Knopf. Deshalb steht dort ein `flex-wrap` und keine zweite Breiten-Schranke: der Umbruch findet den Punkt selbst.
+
+⚠️ **Der Ereignis-Countdown rückt in die untere linke Ecke seines Knopfes.** Die Profile-Bar ist nur noch 4 px gepolstert, `bottom: -13px` läge auf der Ressourcen-Bar darunter. Oben rechts sitzt die Krisen-Zahl desselben Knopfes, oben links stieße er mit dem „!" des Shop-Knopfes zusammen — unten links ist die einzige freie Ecke.
+
+⚠️ **Nur Hochformat, nur bis 600 px.** Im Querformat ist die Breite da, und das Tablet (768 px aufwärts) hatte das Problem nie. Die Blöcke stehen jeweils am **Ende** ihrer Datei, weil sie den `max-width: 600px`-Block darüber überschreiben — gleiche Spezifität, es gewinnt die spätere Regel.
+
+⚠️ **Die Spotlight-Ziele der Erklär-Touren bleiben unberührt** (`.rt-resources`, `.rt-resource--watchtime/--server/--models/--meta/--trend`). Der Spotlight misst das echte Element zur Laufzeit (§10, „Erklär-Touren"), er trägt die flache Zeile also von selbst mit.
+
 ### Zahlen: vollständig bis 1 Mio, danach gekürzt
 
 Eine Regel für das ganze UI, an zwei Stellen umgesetzt — `RT.ledger.fmt.num()` (alle Gebäude-Modale) und `fmtShort()` in `js/ui.js` (Buttons auf dem Feld, Ressourcen-Bar).

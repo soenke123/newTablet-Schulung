@@ -61,6 +61,25 @@
 .rt-ev-strip__val  { font-weight: 700; font-variant-numeric: tabular-nums; }
 .rt-ev-strip__note { opacity: 0.7; }
 
+/* Handy im Hochformat — passend zur reduzierten Zustands-Anzeige
+   (css/resource-bar.css, Block ganz am Ende). */
+@media (max-width: 600px) and (orientation: portrait) {
+  #rt-event-strip { padding: 3px 6px; gap: 4px; }
+  .rt-ev-strip__item { padding: 1px 7px; font-size: 0.62rem; }
+  /* ⚠️ Der Countdown rückt von UNTER den Knopf an seine untere linke Ecke.
+     Die Profile-Bar ist dort nur noch 4 px gepolstert — bei `bottom: -13px`
+     läge die Zahl auf der Ressourcen-Bar darunter. Bei −6 px endet sie genau
+     an der Außenkante der Leiste und kostet damit keine Höhe.
+     Die Ecke ist gewählt, nicht beliebig: oben rechts sitzt die Krisen-Zahl
+     dieses Knopfes, oben links stieße sie mit dem „!" des Shop-Knopfes
+     daneben zusammen — unten links ist die einzige freie Ecke. */
+  .rt-events-btn__clock {
+    top: auto; bottom: -6px; left: -6px; transform: none;
+    font-size: 0.55rem; padding: 0 4px;
+    border: 1px solid var(--ev-krise);
+  }
+}
+
 /* ── Overlay ──────────────────────────────────────────────────────── */
 .rt-ev { position: fixed; inset: 0; z-index: 1400; }
 .rt-ev__bg { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); }

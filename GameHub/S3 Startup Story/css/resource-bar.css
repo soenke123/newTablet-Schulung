@@ -654,3 +654,142 @@
 }
 .rt-resource--money-negative .rt-resource__value,
 .rt-resource--money-negative .rt-resource__value span { color: #dc2626; font-weight: 700; }
+
+/* ═══ Handy im Hochformat — reduzierte Zustands-Anzeige ═══════════════
+   Auf einem Telefon fraß der Kopf (Profile-Bar + Ressourcen-Bar) rund die
+   Hälfte des Bildschirms: sieben Kacheln zu je 45 % Breite ergaben vier
+   Zeilen, Trend und Server jeweils drei gestapelte Elemente. Übrig blieb
+   für die Iso-Welt — den eigentlichen Bildschirm des Spiels — zu wenig.
+
+   Der Umbau nimmt KEINE Werte weg, er legt sie flach: die Beschriftungen
+   fallen weg (das Icon ist die Kennung, dieselbe wie in den Ledger-Kacheln),
+   Trend und Server werden je eine Zeile statt drei, und die Kachelbreiten
+   sind so gewählt, dass Geld · User · Watchtime in EINE Zeile passen.
+
+   Zeilen danach: Phase 0/1 zwei · Phase 2 drei · Phase 3 vier — vorher
+   waren es drei, vier bzw. fünf, jede davon fast doppelt so hoch.
+
+   ⚠️ Nur Hochformat, nur bis 600 px: im Querformat ist die Breite da und
+   das Tablet (768 px aufwärts) hat das Problem gar nicht. Der Block steht
+   ganz am Ende der Datei, weil er den `max-width: 600px`-Block weiter oben
+   überschreibt — gleiche Spezifität, es gewinnt die spätere Regel.        */
+@media (max-width: 600px) and (orientation: portrait) {
+
+  #rt-game-top { padding: 6px 6px; gap: 5px; }
+
+  /* ── Profile-Bar: eine flache Zeile ── */
+  .rt-profile-bar {
+    padding: 4px var(--rt-space-2);
+    gap: var(--rt-space-2);
+    border-width: 2px;
+    border-radius: var(--rt-radius-md);
+  }
+  .rt-profile-bar__head,
+  .rt-profile-bar__logo { width: 32px; height: 32px; border-width: 2px; }
+  .rt-profile-bar__avatar { min-width: 32px; min-height: 32px; }
+  .rt-account-badge {
+    right: -2px; bottom: -2px;
+    width: 16px; height: 16px;
+    border-radius: 5px; font-size: 9px;
+  }
+  /* Der Spielername geht, der Plattformname bleibt: den hat der Spieler
+     selbst vergeben, und er ist die Überschrift des Konzerns. Der eigene
+     Name steht daneben ohnehin als Avatar. */
+  .rt-profile-bar__name     { display: none; }
+  .rt-profile-bar__platform { font-size: 0.95rem; }
+  .rt-profile-bar__online-dot { width: 9px; height: 9px; }
+  .rt-shop-btn        { width: 32px; height: 32px; font-size: 1.05rem; border-width: 2px; }
+  .rt-shop-btn--help  { width: 27px; height: 27px; font-size: 0.8rem; }
+
+  /* ── Ressourcen-Bar ── */
+  .rt-resources {
+    padding: var(--rt-space-1);
+    gap: var(--rt-space-1);
+    border-width: 2px;
+    border-radius: var(--rt-radius-md);
+  }
+  .rt-resource {
+    padding: 3px 5px;
+    gap: 5px;
+    border-radius: var(--rt-radius-sm);
+  }
+  /* Die Beschriftung fällt weg, nicht der Wert. Icons sind im ganzen Spiel
+     dieselbe Kennung (💰 · 👥 · ⏳ · 🧠 · 🗃️ · ⭐ · 🖥️), und in dieser
+     Breite kostet „Watchtime" mehr Platz als die Zahl dahinter. */
+  .rt-resource__label { display: none; }
+  .rt-resource__icon  { font-size: 1rem; }
+  .rt-resource__value { font-size: 0.8rem; }
+
+  /* Breiten so, dass Geld · User · Watchtime zusammen genau eine Zeile
+     ergeben (33 + 33 + 34 %). Phase 3 schiebt Modelle + Metadaten in eine
+     zweite Zeile, wo sie sich zu zweit die volle Breite teilen; in Phase 0/1
+     wachsen Geld + User auf die halbe Breite. Keine Zeile muss dafür
+     ausgezählt werden — der Flex verteilt, was gerade sichtbar ist.
+     ⚠️ Die schmale Spalte ist hier die BREITESTE der drei (37 gegen 31,5 %):
+     sie trägt als einzige zwei Dinge nebeneinander (Zahl + ×-Chip). Der Name
+     `--slim` stammt aus der Desktop-Bar und stimmt hier nicht mehr — er
+     bleibt trotzdem, weil er dort die richtige Aussage macht. */
+  .rt-resource        { flex: 1 1 calc(31.5% - 4px); }
+  .rt-resource--slim  { flex: 1 1 calc(37% - 4px); }
+  .rt-resource--slim .rt-resource__icon { font-size: 0.9rem; }
+
+  /* Der ×-Chip rutscht neben die Zahl statt darunter — als eigene Zeile
+     zöge er die ganze erste Kachelreihe in die Höhe, und er ist der einzige
+     Weg zur Aufschlüsselung des Multiplikators.
+     ⚠️ Die Zeile darf umbrechen, der Wert selbst nicht. Auf schmalen
+     Geräten (ab etwa 360 px abwärts) reicht der Platz für beides
+     nebeneinander nicht — dann fällt der Chip von allein unter die Zahl,
+     statt sie abzuschneiden. Ein „82,…" wäre der schlechtere Tausch: die
+     Zahl ist die Information, der Chip ist ein Knopf.
+     Deshalb hier weder `text-overflow` noch eine zweite Breiten-Schranke —
+     der Umbruch findet den Punkt selbst, an dem es eng wird. */
+  .rt-resource--watchtime > div {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 5px;
+  }
+  .rt-resource--watchtime .rt-resource__value {
+    font-size: 0.75rem; white-space: nowrap;
+  }
+  .rt-resource__wt-mult {
+    margin-top: 0;
+    padding: 0 5px;
+    font-size: 9px;
+    flex-shrink: 0;
+  }
+  .rt-resource__flyer {
+    margin-top: 2px; padding: 1px 7px 2px; font-size: 0.58rem;
+  }
+
+  /* ── Trend: eine Zeile statt drei ──
+     Kopf (⭐ Wert ?) · Balken · Ernte-Knopf nebeneinander. Der Balken ist der
+     Teil, der nachgibt (`flex: 1 1 30px`): der Knopf trägt die einzige
+     Handlung dieser Kachel und behält seine Eigengröße, solange Platz da ist.
+     ⚠️ `0 1 auto` statt `0 0 auto` — auf einem 320-px-Gerät reicht es sonst
+     nicht und der Knopf schiebt sich aus der Kachel heraus. Mit Schrumpf +
+     `min-width: 0` kürzt stattdessen die Beschriftung mit „…". */
+  .rt-resource--trend { flex: 1 1 100%; align-items: center; }
+  .rt-trend-inner     { flex-direction: row; align-items: center; gap: 6px; }
+  .rt-trend-head      { flex: 0 0 auto; gap: 5px; }
+  .rt-trend-value     { font-size: 0.72rem; }
+  .rt-trend-help      { width: 13px; height: 13px; font-size: 0.55rem; }
+  .rt-trend-track     { flex: 1 1 30px; min-width: 30px; height: 9px; }
+  .rt-trend-harvest   { flex: 0 1 auto; width: auto; min-width: 0; padding: 3px 7px; }
+  .rt-trend-harvest__body  { min-width: 0; }
+  .rt-trend-harvest__label { font-size: 0.62rem; min-width: 0; }
+  .rt-trend-stacks         { font-size: 0.55rem; }
+
+  /* ── Server: ebenfalls eine Zeile ──
+     Zahl · Belegungsbalken · Tarifstufe. Die Tarifstufe stand bewusst UNTER
+     dem Balken (sie gehört zur Kapazität, nicht zum Namen der Kachel) — in
+     einer Zeile steht sie dahinter, die Zuordnung bleibt damit dieselbe. */
+  .rt-resource--server { flex: 1 1 100%; }
+  .rt-resource__server-inner {
+    flex-direction: row; align-items: center; gap: 6px;
+  }
+  .rt-resource__server-header { flex: 0 0 auto; }
+  .rt-resource__server-val    { font-size: 0.72rem; }
+  .rt-server-bar { flex: 1 1 30px; min-width: 30px; height: 10px; }
+  .rt-srv-tier {
+    align-self: center; flex: 0 0 auto;
+    padding: 1px 6px; font-size: 0.6rem;
+  }
+}
