@@ -25,9 +25,23 @@ html, body {
   overflow: hidden;
   -webkit-user-select: none; user-select: none;
   -webkit-tap-highlight-color: transparent;
+  /* Kein Gummiband-Scrollen: auf iPad zieht sonst jede Wischgeste am
+     Dokument, und die Ressourcen-Bar rutscht unter die Safari-Leiste. */
+  overscroll-behavior: none;
+  /* Kein Doppeltipp- und kein Pinch-Zoom auf Seitenebene. `user-scalable=no`
+     im Viewport-Tag wird von iOS seit iOS 10 ignoriert — ohne diese Zeile
+     zoomt ein zweiter Finger neben der Welt die ganze Seite, und der
+     Game-Head verschwindet hinter der Browserleiste. Die Welt hat mit
+     `touch-action: none` auf #world-camera ihre eigene, strengere Regel und
+     kann weiter gepincht werden. */
+  touch-action: pan-x pan-y;
 }
 
-#app { display: flex; flex-direction: column; height: 100vh; }
+/* 100dvh statt 100vh: 100vh ist auf iOS der Viewport OHNE Browserleisten,
+   also größer als das, was man wirklich sieht. Die alte Angabe machte #app
+   höher als den sichtbaren Bereich — Repo-Konvention ist dvh mit vh als
+   Rückfall für alte Browser. */
+#app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 
 /* ---- Resource Bar ---- */
 #resource-bar {
@@ -772,13 +786,13 @@ html, body {
   min-width: 320px; max-width: 560px; width: 100%;
   padding: 22px;
   box-shadow: 0 12px 40px rgba(0,0,0,0.35);
-  max-height: 85vh; overflow-y: auto;
+  max-height: 85vh; max-height: 85dvh; overflow-y: auto;
 }
 /* Techtree braucht deutlich mehr Platz für den Baum. */
 #modal.modal-lg {
   max-width: 1100px;
   width: 95vw;
-  max-height: 92vh;
+  max-height: 92vh; max-height: 92dvh;
 }
 /* Werbeagentur und Marketing-Center stellen ihre Angebote zweispaltig auf —
    in 560 px stünden zwei Ledger-Karten nebeneinander nur noch als Zahlen-
@@ -786,7 +800,7 @@ html, body {
 #modal.modal-wide {
   max-width: 940px;
   width: 94vw;
-  max-height: 92vh;
+  max-height: 92vh; max-height: 92dvh;
 }
 .modal-title { font-size: 22px; font-weight: 800; margin-bottom: 14px; color: var(--text); }
 .modal-close {

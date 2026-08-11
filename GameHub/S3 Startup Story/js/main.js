@@ -20,6 +20,33 @@
 (function (RT) {
   'use strict';
 
+  /* Seiten-Zoom sperren (iPad & Co.).
+
+     Symptom: der Game-Head liegt hinter der Browserleiste und ist nicht mehr
+     erreichbar. Ursache ist nicht das Layout, sondern der Seiten-Zoom von
+     Safari: `user-scalable=no` im Viewport-Tag wird seit iOS 10 ignoriert.
+     Ein zweiter Finger neben der Welt — in einem Spiel, das Pinch-Zoom
+     beibringt, passiert das ständig — zoomt also die ganze Seite, und der
+     verschobene visuelle Viewport schiebt die obere Leiste unter die
+     Browserleiste. Am PC gibt es die Geste nicht, deshalb tritt es dort nie
+     auf.
+
+     `touch-action: pan-x pan-y` (game.css) erschlägt den Doppeltipp-Zoom;
+     den Pinch auf Seitenebene stoppt in Safari nur das Abfangen der
+     nicht-standardisierten gesture*-Events. Beides zusammen ist nötig.
+
+     ⚠️ Die Kamera ist davon NICHT betroffen: sie arbeitet mit touch*-Events
+     (js/camera.js), die parallel weiterlaufen. Pinch-Zoom in der Welt bleibt.
+
+     ⚠️ Der Zuhörer hängt am document und nicht am #app — #app wird beim
+     Screen-Wechsel komplett neu gebaut. */
+  function lockPageZoom() {
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (name) {
+      document.addEventListener(name, function (ev) { ev.preventDefault(); },
+                                { passive: false });
+    });
+  }
+
   function bootSplash(container) {
     container.innerHTML =
       '<div class="rt-boot"><div class="rt-boot__spinner"></div>' +
@@ -27,6 +54,7 @@
   }
 
   function boot() {
+    lockPageZoom();
     var container = document.getElementById('app');
     RT.screens.setContainer(container);
     bootSplash(container);

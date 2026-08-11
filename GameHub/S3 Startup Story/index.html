@@ -2,7 +2,11 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <!-- maximum-scale zusätzlich zu user-scalable: iOS ignoriert user-scalable
+       seit iOS 10, ältere Android-Browser lesen dafür maximum-scale. Der
+       eigentliche Riegel gegen den Seiten-Zoom steht in js/main.js
+       (lockPageZoom) und css/game.css (touch-action). -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Startup Story — v3</title>
   <link rel="stylesheet" href="css/game.css">
   <link rel="stylesheet" href="css/onboarding.css">

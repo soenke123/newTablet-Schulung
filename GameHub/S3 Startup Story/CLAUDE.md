@@ -1371,6 +1371,19 @@ Alle Gebäude stehen auf einem 2D-Grid. Start: 2×2. Neue Slots kosten Geld. Gri
 
 Sieht bewusst anders aus als v2's HQ-zentriertes Layout — es gibt einen wachsenden Konzern mit vielen Gebäuden.
 
+### Tablet-Viewport — zwei getrennte Riegel
+
+Auf iPads lag die Browserleiste über dem Game-Head, am PC nie. Zwei unabhängige Ursachen, beide behoben (2026-08-11):
+
+1. **`100vh` ist auf iOS der Viewport OHNE Browserleisten**, also größer als das, was man sieht. `#app` stand deshalb höher als der sichtbare Bereich. Überall `100vh; 100dvh` als Paar — `vh` zuerst als Rückfall für Safari < 15.4. Betroffen waren `#app`, die drei Modal-Größen, die Tour-Karte, das Ereignis-Overlay und `body.rt-onboarding-active #app`.
+2. **Seiten-Zoom.** `user-scalable=no` wird von iOS seit iOS 10 ignoriert. Ein zweiter Finger **neben** der Welt zoomt die ganze Seite, und der verschobene visuelle Viewport schiebt die obere Leiste unter die Browserleiste — in einem Spiel, das Pinch-Zoom beibringt, passiert das ständig. Gesperrt über `touch-action: pan-x pan-y` auf `html, body` (Doppeltipp) **plus** `lockPageZoom()` in `js/main.js`, das die nicht-standardisierten `gesture*`-Events abfängt (Pinch).
+
+⚠️ **Beide Riegel werden gebraucht.** `touch-action` allein stoppt in Safari den Pinch auf Seitenebene nicht, die `gesture*`-Events allein nicht den Doppeltipp.
+
+⚠️ **Die Kamera ist davon nicht betroffen.** `js/camera.js` arbeitet mit `touch*`-Events, die parallel weiterlaufen, und `#world-camera` trägt mit `touch-action: none` ohnehin die strengere Regel. Pinch-Zoom in der Welt bleibt.
+
+⚠️ **Kein `viewport-fit=cover`.** Ohne es hält iOS den Inhalt von allein im sicheren Bereich; mit ihm liefe er unter die Statusleiste und bräuchte überall `env(safe-area-inset-*)`-Polster — also genau der Fehler, der hier repariert wurde, nur selbstgebaut.
+
 ### Zahlen: vollständig bis 1 Mio, danach gekürzt
 
 Eine Regel für das ganze UI, an zwei Stellen umgesetzt — `RT.ledger.fmt.num()` (alle Gebäude-Modale) und `fmtShort()` in `js/ui.js` (Buttons auf dem Feld, Ressourcen-Bar).

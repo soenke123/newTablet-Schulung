@@ -66,8 +66,10 @@
 .rt-ev__bg { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); }
 .rt-ev.is-locked .rt-ev__bg { background: rgba(0, 0, 0, 0.72); cursor: not-allowed; }
 .rt-ev__box {
-  position: absolute; inset: 3vh 50% auto auto; transform: translateX(50%);
-  width: min(1000px, calc(100vw - 20px)); max-height: 94vh;
+  position: absolute; inset: 3vh 50% auto auto; inset: 3dvh 50% auto auto;
+  transform: translateX(50%);
+  width: min(1000px, calc(100vw - 20px));
+  max-height: 94vh; max-height: 94dvh;
   display: flex; flex-direction: column;
   background: var(--rt-panel, #fffaf3);
   border: 2px solid var(--rt-line, #d9c8b0); border-radius: 16px;

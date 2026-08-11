@@ -53,6 +53,7 @@
   position: fixed;
   width: min(460px, calc(100vw - 24px));
   max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
   overflow-y: auto;
   background: var(--rt-surface, #fff);
   border: 3px solid var(--rt-brown, #6b4a2b);
