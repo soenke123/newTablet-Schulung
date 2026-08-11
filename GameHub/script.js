@@ -1828,7 +1828,25 @@ function releaseCreature(gameId) {
   if (game?.clusterLegi) return;
   const allData        = loadAllData();
   updateSeenCreatures(allData);
-  const keepCoins      = allData[gameId]?.coins || 0;
+  let keepCoins        = allData[gameId]?.coins || 0;
+
+  // standalone (Startup Story): die Münzen wandern in die Bank, statt im
+  // Slot liegen zu bleiben. Der Grund ist die Kurve — `coins` IST dort der
+  // Zähler „wie viel hat dieser Durchlauf schon ausgezahlt". Bliebe der
+  // alte Stand stehen, verdiente der nächste Konzern nichts, bis er den
+  // vorigen überholt hat. Der Gesamtbestand ändert sich nicht: wallets.coins
+  // wird serverseitig als sum(game_state.coins) neu gerechnet (Migration
+  // 0031), und die Rangliste zählt bankedCoins genauso mit.
+  //
+  // ⚠️ Reihenfolge: saveShopData ZUERST, saveGameData danach — ein später
+  // geschriebener, veralteter Shop-Blob würde den Nest-Spiegel plätten.
+  if (game?.standalone && keepCoins > 0) {
+    const sd = loadShopData();
+    sd.bankedCoins = (sd.bankedCoins || 0) + keepCoins;
+    saveShopData(sd);
+    keepCoins = 0;
+  }
+
   allData[gameId]      = { ...defaultGameData(), coins: keepCoins };
   // saveGameData statt saveAllData: triggert Server-Sync via sync_game_state.
   saveGameData(gameId, allData[gameId]);

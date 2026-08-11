@@ -2766,8 +2766,9 @@ async function syncStartupStory() {
     return;
   }
 
-  // All-Time-Peak: Serverwert (überlebt jeden Neustart) gegen den
-  // laufenden Run. syncHighscores() hat den lokalen Spiegel kurz vorher
+  // All-Time-Peak — nur für die Bestenliste. Sie fragt „wie groß war deine
+  // Plattform je?", und darauf ändert weder ein Neustart noch eine
+  // Abwanderung etwas. syncHighscores() hat den lokalen Spiegel kurz vorher
   // schon mit dem Server abgeglichen.
   const allTime = Math.max(runPeak, startupUsersFromScore(readLocalHighscore(SS_GAME_ID)));
 
@@ -2778,10 +2779,16 @@ async function syncStartupStory() {
     gd.roundsPlayed = 1;
   }
   if (gd.creature) {
+    // Beide an runPeak, also am Höchststand DIESES Konzerns. Ein Neustart
+    // fängt damit auch bei den Münzen wieder von vorne an — 100 Münzen für
+    // den Weg von 1 Mio auf 10 Mrd User sind kein Betrag, den man einmal
+    // im Leben abholt. Damit der neue Durchlauf bei null anfängt, schiebt
+    // releaseCreature() den alten Stand in die Bank (script.js).
+    //
     // Math.max, damit Wachstumstrank (+5) und Stein der Vollendung
     // (GROWTH_S6) nicht von der Kurve zurückgedreht werden.
     gd.growth = Math.max(gd.growth || 0, Math.floor(startupGrowth(runPeak)));
-    gd.coins  = Math.max(gd.coins  || 0, Math.floor(startupCoins(allTime)));
+    gd.coins  = Math.max(gd.coins  || 0, Math.floor(startupCoins(runPeak)));
   }
 
   const growthGained = gd.growth - before.growth;

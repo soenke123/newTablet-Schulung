@@ -1579,7 +1579,7 @@ Das ist gleichzeitig die Spielregel: **im Spiel sieht man nie, wo man steht.** W
 
 ⚠️ **Das weicht bewusst von der Warnung in Migration 0061 ab.** Dort steht: „Sobald game18 Coins oder eine Kreatur ausschüttet, MUSS das über `sync_game_state` laufen und **nicht aus diesem Blob gelesen** werden." Der erste Teil gilt — geschrieben wird über `sync_game_state`, mitsamt Delta-Deckeln und Schreibtakt. Der zweite Teil ist nicht einlösbar: die Userzahl **existiert nur** in der Client-Simulation, es gibt keine zweite Quelle, aus der sie stattdessen käme.
 
-Damit ist die Ausschüttung so vertrauenswürdig wie der Blob, also gar nicht: wer `startupStoryV3` im localStorage bearbeitet, kann sich 100 Münzen und den ersten Platz der Bestenliste schreiben. Der Schaden ist gedeckelt (100 Münzen einmalig, und zwar für immer — siehe All-Time-Peak), die Bestenliste ist es nicht. Wer das härten will, muss die **Userzahl serverseitig plausibilisieren** (Zuwachs gegen verstrichene Zeit), nicht den Speicherweg wechseln — der Weg über `sync_game_state` ist schon der, den 0061 verlangt.
+Damit ist die Ausschüttung so vertrauenswürdig wie der Blob, also gar nicht: wer `startupStoryV3` im localStorage bearbeitet, kann sich 100 Münzen und den ersten Platz der Bestenliste schreiben. Je Durchlauf sind es höchstens 100 Münzen, aber Durchläufe sind wiederholbar — die Obergrenze ist also die Geduld beim Neustarten, nicht der Deckel. Wer das härten will, muss die **Userzahl serverseitig plausibilisieren** (Zuwachs gegen verstrichene Zeit), nicht den Speicherweg wechseln — der Weg über `sync_game_state` ist schon der, den 0061 verlangt.
 
 ### Was woraus abgeleitet wird
 
@@ -1587,11 +1587,15 @@ Damit ist die Ausschüttung so vertrauenswürdig wie der Blob, also gar nicht: w
 |---|---|---|
 | **Kreatur** | 5 % Epic · 20 % Libelle (S3-Rare) · 75 % gleichverteilt über 12 Normale. Keine Legendaries. | Roll beim Eintritt in Phase 3 |
 | **Wachstum** | `21 · log(u / 1 Mio) / log(100)`, gedeckelt auf `GROWTH_MAX` | `usersPeak` **dieses** Spielstands |
-| **Münzen** | `100 · log(u / 1 Mio) / log(10.000)`, gedeckelt auf 100 | **All-Time**-Peak (`game_highscores`) |
+| **Münzen** | `100 · log(u / 1 Mio) / log(10.000)`, gedeckelt auf 100 | `usersPeak` **dieses** Spielstands |
 
 Die Brutphase ist Phase 0–2, geschlüpft wird bei `PHASE3_USER_THRESHOLD` (1 Mio). Ausgewachsen ist das Monster bei 100 Mio Usern, die 100. Münze fällt bei 10 Mrd.
 
-⚠️ **Die zwei Höchststände sind verschieden, und das ist der Kern.** Wachstum hängt an `state.current.usersPeak`, den `storage.wipe()` mitlöscht — ein neu gestarteter Konzern brütet also wirklich wieder ein Ei aus. Münzen hängen am Bestenlisten-Wert, der per `greatest` gemerged wird und von keinem Reset erreichbar ist. Damit lassen sich die 100 Münzen genau **einmal** verdienen; Neustarten, um sie erneut einzusammeln, läuft ins Leere.
+⚠️ **Beide Kurven hängen am laufenden Durchlauf, nicht an einem All-Time-Wert.** `storage.wipe()` löscht `usersPeak` mit, ein neu gestarteter Konzern brütet also wirklich wieder ein Ei aus **und** verdient wieder Münzen. Der Weg von 1 Mio auf 10 Mrd User ist kein Betrag, den man einmal im Leben abholt — 100 Münzen dafür sind eher wenig.
+
+⚠️ **`gd.coins` ist deshalb der Auszahlungszähler des Durchlaufs, nicht ein Sparkonto.** Beim Freilassen schiebt `releaseCreature()` den Stand nach `shop_state.bankedCoins` und setzt den Slot auf 0 — sonst verdiente der nächste Konzern nichts, bis er den vorigen überholt hat. Der Gesamtbestand bleibt gleich: `wallets.coins` wird serverseitig als `sum(game_state.coins)` neu gerechnet (Migration 0031), und die Münz-Rangliste zählt `bankedCoins` ohnehin mit. Für Nester macht `releaseNest()` seit jeher genau dasselbe.
+
+Der **All-Time-Peak** existiert weiterhin, aber nur noch für die Bestenliste (unten).
 
 ⚠️ **`usersPeak` wird im Tick gepflegt** (`js/loop.js`, `trackUsersPeak()`), nicht an den sechs Stellen, die `s.users` schreiben — und zusätzlich am Ende von `offlineCatchUp()`, weil der Aufholpass User gutschreibt, ohne durch den Tick zu laufen.
 
