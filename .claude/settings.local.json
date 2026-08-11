@@ -14,7 +14,10 @@
       "Bash(git commit *)",
       "Bash(git ls-tree *)",
       "Bash(node *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(git rev-list *)",
+      "Bash(git stash *)",
+      "Bash(mv \"GameHub/S3 Startup Story\" \"/c/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/89c61d52-eba5-471c-9c3c-655141d32dc2/scratchpad/startup-story-src\")"
     ]
   }
 }
