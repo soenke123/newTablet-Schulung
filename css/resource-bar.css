@@ -39,8 +39,21 @@
   transform: translateY(3px);
   box-shadow: 0 1px 0 var(--rt-brown);
 }
+/* Shop + "?" als eine Gruppe in der Mitte der Profile-Bar. */
+.rt-profile-bar__tools {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+}
+/* "?" ruft die Phase-2-Tour erneut auf. Bewusst kleiner als der Shop-Button —
+   er steht daneben und soll sich ihm unterordnen. */
+.rt-shop-btn--help {
+  width: 40px; height: 40px;
+  font-size: 1.1rem; font-weight: 800;
+  background: var(--rt-surface);
+}
 @media (max-width: 600px) {
   .rt-shop-btn { width: 40px; height: 40px; font-size: 1.25rem; }
+  .rt-shop-btn--help { width: 34px; height: 34px; font-size: 0.95rem; }
+  .rt-profile-bar__tools { gap: 4px; }
 }
 
 /* Alten schwebenden .shop-btn (aus game.css) im v3-Kontext ausblenden —
@@ -132,9 +145,15 @@
 }
 
 /* === Resource-Bar === */
+/* Flex statt Grid, seit die Bar phasenabhängig zwischen 3 und 7 Kacheln
+   schwankt (Phase 0/1: Geld·User·Server · Phase 2: + Watchtime·Trend ·
+   Phase 3: + Modelle·Metadaten). Mit festen Spalten müsste jede Phase ihre
+   eigene Spaltenzahl mitführen — versteckte Kacheln verteilen sich im Flex
+   von selbst, und die Umsortierung kostet keine zweite Buchhaltung. */
 .rt-resources {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
   gap: var(--rt-space-2);
   padding: var(--rt-space-2);
   background: var(--rt-surface);
@@ -150,26 +169,45 @@
   padding: var(--rt-space-1) var(--rt-space-2);
   background: var(--rt-primary-soft);
   border-radius: var(--rt-radius-md);
+  flex: 1 1 0;
   min-width: 0;
 }
+/* Die Produktionskette Watchtime → Modelle → Metadaten läuft schmal: es sind
+   Zwischenstände, keine Kennzahlen, auf die man dauernd schaut. Geld, User,
+   Trend und Server behalten die volle Breite. */
+.rt-resource--slim { flex: 0.6 1 0; }
+.rt-resource--slim .rt-resource__icon { font-size: 1.05rem; }
 .rt-resource__icon { font-size: 1.3rem; }
+/* Icon in einer Kopfzeile statt links neben der Kachel (Trend) — muss auf
+   Zeilenhöhe bleiben, nicht die Zeile aufblasen. */
+.rt-resource__icon--inline { font-size: 0.95rem; line-height: 1; }
+
+/* Ressourcen-Farben: dieselben Pastelltöne wie die Ledger-Kacheln in den
+   Modals (--res-*-bg, definiert in game.css). Damit ist Watchtime überall
+   gelb, Trend überall pink und Server überall lila — die Kachel oben und die
+   Kostenzeile im Werbe-Modal zeigen sichtbar dieselbe Ressource.
+   Geld und User bleiben neutral: hinter ihnen liegt der Sparkline-Graph, ein
+   farbiger Grund würde mit dessen Kurve konkurrieren. */
+.rt-resource--watchtime { background: var(--res-watchtime-bg); }
+.rt-resource--trend     { background: var(--res-trend-bg); }
+.rt-resource--server    { background: var(--res-server-bg); }
+.rt-resource--models    { background: var(--res-model-bg); }
+.rt-resource--meta      { background: var(--res-meta-bg); }
 .rt-resource__label { font-size: 0.72rem; color: var(--rt-text-muted); font-weight: 600; }
 .rt-resource__value {
   font-family: var(--rt-font-display); font-weight: 700; font-size: 0.95rem;
   position: relative; overflow: visible;
 }
+/* Schmale Fenster: Mindestbreite erzwingen, dann bricht der Flex von selbst
+   in mehrere Zeilen um. Eine feste Spaltenzahl je Breakpoint gibt es nicht
+   mehr — sie müsste sonst mit der Phase multipliziert werden. */
 @media (max-width: 900px) {
-  .rt-resources { grid-template-columns: repeat(3, 1fr); }
+  .rt-resource        { flex-basis: 30%; }
+  .rt-resource--slim  { flex-basis: 22%; }
 }
 @media (max-width: 600px) {
-  .rt-resources { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* Phase 0/1: nur Geld · User · Server sichtbar — 3 gleich breite Spalten,
-   damit die Kacheln nicht links kleben. */
-.rt-resources--compact { grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 600px) {
-  .rt-resources--compact { grid-template-columns: repeat(2, 1fr); }
+  .rt-resource,
+  .rt-resource--slim  { flex-basis: 45%; }
 }
 
 /* === Sparkline (Verlaufsgraph im Hintergrund der Geld/User-Karte) === */
@@ -250,10 +288,16 @@
 }
 .rt-trend-head:hover .rt-trend-help { opacity: 1; }
 
+/* --rt-trend-zero setzt ui.js aus TREND_MIN/TREND_MAX (trendZeroPct). Die
+   Skala ist unsymmetrisch (−20 … +40), der Nullpunkt liegt also nicht in der
+   Mitte — und weil der Verlauf von rot über gelb nach grün genau dort
+   umschlägt, hängt er an derselben Marke wie der Strich. Der 50-%-Rückfall
+   gilt nur, falls die Variable fehlt. */
 .rt-trend-track {
   position: relative; height: 12px; border-radius: 99px;
   border: 2px solid var(--rt-brown);
-  background: linear-gradient(to right, #e74c3c 0%, #f59e0b 50%, #27ae60 100%);
+  background: linear-gradient(to right,
+              #e74c3c 0%, #f59e0b var(--rt-trend-zero, 50%), #27ae60 100%);
   overflow: hidden;
 }
 .rt-trend-empty {
@@ -264,7 +308,7 @@
   z-index: 1;
 }
 .rt-trend-marker {
-  position: absolute; left: calc(50% - 1px); top: 0;
+  position: absolute; left: calc(var(--rt-trend-zero, 50%) - 1px); top: 0;
   height: 100%; width: 2px;
   background: rgba(74, 56, 41, 0.55);
   z-index: 2;
@@ -389,17 +433,88 @@
   gap: var(--rt-space-2);
 }
 .rt-resource__server-val { font-size: 0.85rem; white-space: nowrap; }
+
+/* Tarifstufe der Serverkosten. Sitzt UNTER dem Kapazitätsbalken statt neben
+   dem "Server"-Label — sie gehört zur Kapazität (dort steigt der Tarif),
+   nicht zum Namen der Kachel. Rechtsbündig, weil der Balken selbst schon
+   die Aufmerksamkeit links hat. */
+.rt-srv-tier {
+  align-self: flex-end;
+  background: var(--rt-paper);
+  border: 1.5px solid var(--rt-brown);
+  border-radius: 99px;
+  padding: 1px 7px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--rt-brown);
+  cursor: pointer;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.rt-srv-tier:hover { filter: brightness(1.06); }
+/* Serverprobleme — dieselbe Warnfarbe wie die kritische Server-Kachel. */
+.rt-srv-tier.is-trouble {
+  background: #fecaca;
+  border-color: #b91c1c;
+  color: #7f1d1d;
+  animation: rt-server-critical 1.2s ease-in-out infinite;
+}
+
+/* Aufschlüsselung im Serverkosten-Modal.
+
+   „Dein Tarif" steht als ZWEI ZEILEN: oben die Überschriften, darunter die
+   eigenen Werte. Vorher waren es vier Label-Wert-Paare in zwei Spalten — vier
+   Begriffe und vier Zahlen im Zickzack, bei denen man erst suchen musste, was
+   wozu gehört, und die sich untereinander nicht vergleichen ließen.
+
+   ⚠️ Die Zuordnung liegt in der SPALTE (Überschrift und Wert gestapelt), nicht
+   in der Zeile. Nur deshalb darf auto-fit auf schmalen Geräten auf zwei
+   Spalten umbrechen — bei einer echten Kopfzeile stünden dort die letzten
+   beiden Werte unter den ersten beiden Überschriften. */
+.rt-srv-now {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+  gap: 10px;
+  margin: 8px 0 4px;
+  padding: 10px 12px;
+  background: var(--tt-paper, #fffaf0);
+  border: 2px solid var(--tt-brown, #4a3829);
+  border-radius: 12px;
+}
+.rt-srv-now > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rt-srv-now__lbl  { font-size: 0.72em; line-height: 1.25; opacity: 0.7; }
+.rt-srv-now__val  { font-size: 1.05em; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rt-srv-table { margin: 4px 0; }
+.rt-srv-row {
+  display: grid; grid-template-columns: 5.5rem 1fr auto;
+  gap: 8px; align-items: baseline;
+  padding: 4px 8px; border-radius: 8px;
+}
+.rt-srv-row.is-current { background: var(--rt-primary-wash, rgba(0,0,0,0.06)); font-weight: 800; }
+.rt-srv-row__name { font-weight: 700; }
+.rt-srv-row__cap  { opacity: 0.7; font-size: 0.85em; }
+.rt-srv-row__rate { font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Eigener heller Grund statt transparent: die Kachel ist seit den Ressourcen-
+   Farben lila, sonst wäre der freie Teil des Balkens nicht mehr vom belegten
+   zu unterscheiden. */
 .rt-server-bar {
   display: flex; height: 16px; border-radius: 99px;
-  border: 2px solid var(--rt-brown); overflow: hidden; background: transparent;
+  border: 2px solid var(--rt-brown); overflow: hidden;
+  background: var(--rt-paper);
 }
+/* Farben = die Ressourcen-Tokens aus game.css, exakt wie im Belegungs-Balken
+   des Farm-Modals (.rt-cap__seg--*). Vorher lagen hier --rt-sky und
+   --rt-yellow: zwei Töne, die im Rest des Spiels für nichts stehen — der
+   Balken zeigte also dieselbe Belegung in einer zweiten, eigenen Farbsprache. */
 .rt-server-bar__seg { height: 100%; width: 0%; transition: width 0.45s ease; flex-shrink: 0; }
-.rt-server-bar__seg--sw  { background: var(--rt-sky); }
-.rt-server-bar__seg--usr { background: var(--rt-yellow); }
+.rt-server-bar__seg--usr   { background: var(--res-users-ink); }
+.rt-server-bar__seg--code  { background: var(--res-server-ink); }
+.rt-server-bar__seg--model { background: var(--res-model-ink); }
 
-/* Kritischer Zustand */
+/* Kritischer Zustand. Ruhepunkt ist die Server-Farbe, nicht der alte
+   Neutralton — sonst pulst die Kachel gegen ihre eigene Grundfarbe. */
 @keyframes rt-server-critical {
-  0%, 100% { background: var(--rt-primary-soft); }
+  0%, 100% { background: var(--res-server-bg); }
   50%       { background: #fecaca; }
 }
 .rt-resource--critical {

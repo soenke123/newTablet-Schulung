@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Startup Story — Ereigniskarten-Prototyp</title>
+<style>
+/* ── Farben aus der Spiel-Palette (warmes Braun + Akzente) ──────────── */
+:root{
+  --bg:#f4ece0; --panel:#fffaf3; --line:#d9c8b0; --ink:#3d2f22; --ink2:#7a6553;
+  --gold:#c8922a; --gold-soft:#f6e6c4;
+  --trend:#8a63d2; --wt:#d8a12a; --user:#3f8fbf; --geld:#3f9160;
+  --krise:#c04a3a; --krise-soft:#f8e0dc;
+  --chance:#3f8f6a; --chance-soft:#dff0e6;
+  --dark:#7a2f2f; --white-p:#2a8f92;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.5 "Segoe UI",system-ui,sans-serif}
+h1{font-size:19px;margin:0}
+h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);
+  margin:0 0 10px;font-weight:700}
+h3{font-size:15px;margin:0 0 4px}
+header{background:var(--panel);border-bottom:2px solid var(--line);padding:12px 18px;
+  display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:20}
+header .sub{color:var(--ink2);font-size:12px}
+header label{font-size:12px;color:var(--ink2);display:flex;gap:5px;align-items:center;
+  cursor:pointer;margin-left:auto}
+.layout{display:grid;grid-template-columns:290px 1fr 330px;gap:14px;padding:14px;
+  align-items:start;max-width:1560px;margin:0 auto}
+@media(max-width:1250px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.panel + .panel{margin-top:12px}
+
+/* ── Spielstand-Regler ──────────────────────────────────────────────── */
+.field{margin-bottom:12px}
+.field label{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);
+  margin-bottom:3px}
+.field label b{color:var(--ink);font-size:13px;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.checks{display:flex;flex-direction:column;gap:5px;margin-bottom:6px}
+.checks label{display:flex;gap:7px;align-items:flex-start;font-size:13px;cursor:pointer;
+  padding:3px 5px;border-radius:5px}
+.checks label:hover{background:#0000000a}
+.checks input{margin-top:3px;flex:none}
+.tag{font-size:10px;padding:1px 5px;border-radius:99px;font-weight:700;flex:none;
+  align-self:center}
+.tag--dark{background:#f3dcdc;color:var(--dark)}
+.tag--white{background:#d8f0f0;color:var(--white-p)}
+.derived{border-top:1px dashed var(--line);margin-top:12px;padding-top:10px;
+  display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:13px}
+.derived span{color:var(--ink2)}
+.derived b{font-variant-numeric:tabular-nums;text-align:right}
+.big{font-size:16px;color:var(--gold)}
+.leiter{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px}
+.leiter span{color:var(--ink2)}
+.leiter b{text-align:right;font-variant-numeric:tabular-nums}
+.neg{color:var(--krise)} .pos{color:var(--chance)}
+
+/* ── Tisch ──────────────────────────────────────────────────────────── */
+.tischkopf{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;
+  gap:10px;flex-wrap:wrap}
+.runde{font-size:13px;color:var(--ink2)}
+button{font:inherit;cursor:pointer;border-radius:7px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);padding:7px 13px}
+button:hover:not(:disabled){border-color:var(--gold)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600}
+button.primary:hover{filter:brightness(1.07)}
+
+.tisch{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start}
+@media(max-width:760px){.tisch{grid-template-columns:1fr}}
+.karte{border:2px solid var(--line);border-radius:12px;background:#fff;min-height:230px;
+  display:flex;flex-direction:column;overflow:hidden;position:relative;transition:transform .12s}
+.karte--rueck{background:
+    repeating-linear-gradient(45deg,#e8d9c0 0 9px,#e2d0b3 9px 18px);
+  align-items:center;justify-content:center;cursor:pointer;color:#00000055;font-size:38px}
+.karte--rueck:hover{transform:translateY(-4px);border-color:var(--gold)}
+.karte--krise{border-color:var(--krise);background:var(--krise-soft)}
+.karte--chance{border-color:var(--chance)}
+.karte--gewaehlt{box-shadow:0 0 0 3px var(--gold-soft)}
+.karte--weg{opacity:.45}
+.karte--klickbar{cursor:pointer}
+.karte--klickbar:hover{transform:translateY(-3px)}
+.zurueck{font-size:11px;color:var(--ink2);text-align:center;margin-top:6px}
+
+/* optionales Kartenbild */
+.k-bild{height:78px;display:flex;align-items:center;justify-content:center;font-size:38px;
+  border-bottom:1px solid #0000001a;flex:none}
+.k-bild--chance{background:linear-gradient(135deg,#dff0e6,#bfe3cf)}
+.k-bild--krise{background:linear-gradient(135deg,#f8e0dc,#efc2b8)}
+
+.k-frist{position:absolute;top:8px;right:8px;z-index:2;font-size:11px;font-weight:700;
+  padding:2px 8px;border-radius:99px;background:#fff;border:1px solid var(--krise);
+  color:var(--krise);white-space:nowrap;box-shadow:0 1px 3px #0002}
+.k-frist--ewig{border-color:var(--ink2);color:var(--ink2)}
+.k-kopf{padding:10px 12px;border-bottom:1px solid #0000001a}
+.k-art{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.k-art--krise{color:var(--krise)} .k-art--chance{color:var(--chance)}
+.k-text{padding:8px 12px 0;font-size:13px;color:var(--ink2);flex:1}
+.ursache{margin:8px 12px;padding:6px 9px;border-radius:6px;background:#00000009;
+  font-size:11px;color:var(--ink2);border-left:3px solid var(--krise)}
+.liegt{margin:8px 12px;padding:6px 9px;border-radius:6px;background:#fff;
+  font-size:12px;border:1px dashed var(--krise);color:var(--krise);font-weight:600}
+.liegt small{display:block;font-weight:400;color:var(--ink2);margin-top:2px}
+.optionen{padding:10px 12px;display:flex;flex-direction:column;gap:7px}
+.opt{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;
+  text-align:left;display:block;width:100%}
+.opt:hover:not(:disabled){background:var(--gold-soft);border-color:var(--gold)}
+.opt-name{font-weight:600;font-size:13px}
+.opt-geld{font-size:17px;font-variant-numeric:tabular-nums;margin:2px 0 0}
+.opt-pct{font-size:11px;color:var(--ink2)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.chip{font-size:11px;padding:1px 6px;border-radius:99px;background:#00000008;
+  border:1px solid #0000001a;white-space:nowrap}
+.chip--trend{background:#efe8fb;border-color:#d5c6f2;color:#5b3fa0}
+.chip--perm{background:#f3dcdc;border-color:#e3bcbc;color:var(--dark);font-weight:600}
+.chip--wt{background:#fbf0d5;border-color:#eddab0;color:#8a6410}
+.chip--user{background:#e2eff7;border-color:#c3ddec;color:#25607f}
+.chip--karte{background:#efe6dc;border-color:#dccdb9;color:#6b533a;font-style:italic}
+.chip--gut{background:#dff0e6;border-color:#bcdfc9;color:#2b6b4b}
+
+/* ── Deck + Listen rechts ───────────────────────────────────────────── */
+.deckkopf{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:13px;
+  margin-bottom:10px}
+.deckkopf span{color:var(--ink2)} .deckkopf b{text-align:right;font-variant-numeric:tabular-nums}
+.risiko{height:8px;border-radius:99px;background:var(--chance);overflow:hidden;margin:6px 0 10px}
+.risiko div{height:100%;background:var(--krise)}
+.zieh{font-size:12px;max-height:330px;overflow:auto}
+.zieh div{display:flex;gap:6px;padding:3px 0;border-bottom:1px dotted var(--line);
+  cursor:pointer;border-radius:4px}
+.zieh div:hover{background:var(--gold-soft)}
+.zieh .ok{color:var(--chance)} .zieh .no{color:#bbb}
+.zieh .kr{color:var(--krise)}
+.zieh .warum{color:var(--ink2);margin-left:auto;text-align:right;font-size:11px}
+.tischliste{font-size:12px}
+.tischliste div{padding:4px 0;border-bottom:1px dotted var(--line)}
+.tischliste b{color:var(--krise)}
+.log{font-size:12px;max-height:300px;overflow:auto}
+.log .eintrag{border-left:3px solid var(--line);padding:4px 0 6px 8px;margin-bottom:6px}
+.log b{display:block}
+.log small{color:var(--ink2)}
+.hinweis{font-size:12px;color:var(--ink2);background:#00000008;border-radius:7px;
+  padding:8px 10px;margin-top:10px}
+code{background:#0000000d;padding:1px 4px;border-radius:4px;font-size:11px}
+
+/* ══ KARTENVORSCHAU — nur im Prototyp ═══════════════════════════════ */
+.vs{position:fixed;inset:0;z-index:50;display:none}
+.vs.an{display:block}
+.vs__hg{position:absolute;inset:0;background:#00000077}
+.vs__box{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:min(440px,calc(100vw - 24px));max-height:92vh;overflow:auto;
+  background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px;
+  box-shadow:0 16px 44px #0006}
+.vs__zu{position:absolute;top:10px;right:12px;z-index:3;border:none;background:#fff9;
+  border-radius:99px;width:28px;height:28px;padding:0;line-height:1}
+.vs .opt{cursor:default}
+.vs .opt:hover{background:#fff;border-color:var(--line)}
+.vs-meta{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px;font-size:12px;
+  color:var(--ink2)}
+.vs-meta h2{margin:0 0 5px;font-size:11px}
+.vs-meta p{margin:0 0 4px}
+.vs-meta ul{margin:0;padding-left:16px}
+.vs-meta li{margin-bottom:3px}
+.vs-meta b{color:var(--ink)}
+.vs-p{font-weight:700;color:var(--gold)}
+.vs-ja{color:var(--chance);font-weight:600} .vs-nein{color:var(--krise);font-weight:600}
+
+/* ══ ERKLÄR-TOUR — Bauart wie im Spiel (js/tour.js): abgedunkelt über
+   einen Riesen-Schatten um ein Loch, das echte UI bleibt live. ══════ */
+.tour{position:fixed;inset:0;z-index:60;display:none}
+.tour.an{display:block}
+.tour__faenger{position:absolute;inset:0;cursor:pointer}
+.tour.voll .tour__faenger{background:#00000099}
+.tour__loch{position:absolute;border-radius:12px;pointer-events:none;
+  box-shadow:0 0 0 9999px #00000099, 0 0 0 3px var(--gold);
+  transition:all .25s cubic-bezier(.4,0,.2,1)}
+.tour.voll .tour__loch{display:none}
+.tour__karte{position:fixed;width:min(430px,calc(100vw - 28px));background:var(--panel);
+  border:2px solid var(--line);border-radius:14px;box-shadow:0 14px 40px #0005;
+  padding:16px;transition:top .25s,left .25s}
+.tour__pfeil{position:fixed;width:0;height:0;border:9px solid transparent;
+  filter:drop-shadow(0 -2px 1px #0002)}
+.tour__karte h3{font-size:17px;margin:0 0 3px}
+.tour__karte p{margin:0;font-size:13px;color:var(--ink2)}
+.tour__zeilen{list-style:none;padding:0;margin:10px 0 0;display:flex;
+  flex-direction:column;gap:5px}
+.tour__zeilen li{display:flex;gap:8px;font-size:13px;align-items:flex-start}
+.tour__zeilen b{flex:none;width:20px;text-align:center}
+.tour__fuss{display:flex;align-items:center;gap:10px;margin-top:14px}
+.tour__punkte{display:flex;gap:5px;margin-right:auto}
+.tour__punkte i{width:7px;height:7px;border-radius:99px;background:var(--line)}
+.tour__punkte i.jetzt{background:var(--gold);width:18px}
+.tour__skip{background:none;border:none;color:var(--ink2);font-size:12px;padding:4px}
+
+/* ── die Illustrationen: alles CSS, keine externen Dateien ─────────── */
+.ill{height:132px;border-radius:10px;margin-bottom:12px;position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--gold-soft),#f2e2c6)}
+.ill--k{background:linear-gradient(135deg,#f8e0dc,#f3d0c8)}
+.ill__mitte{width:58px;height:58px;border-radius:14px;background:#fff;border:2px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;font-size:26px;z-index:2;
+  box-shadow:0 3px 10px #0002}
+.ill__um{position:absolute;font-size:20px;background:#fff;border:1px solid var(--line);
+  border-radius:99px;width:34px;height:34px;display:flex;align-items:center;
+  justify-content:center;box-shadow:0 2px 6px #0002;animation:pulsen 2.6s infinite}
+@keyframes pulsen{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.ill__reihe{display:flex;gap:9px;align-items:flex-end}
+.ill__rueck{width:40px;height:58px;border-radius:7px;border:2px solid #c9b696;
+  background:repeating-linear-gradient(45deg,#e8d9c0 0 6px,#e2d0b3 6px 12px)}
+.ill__rueck.hoch{transform:translateY(-14px);border-color:var(--gold);
+  box-shadow:0 8px 16px #0003}
+.ill__deck{display:flex;gap:3px}
+.ill__deck i{width:13px;height:34px;border-radius:3px;background:var(--chance)}
+.ill__deck i.k{background:var(--krise)}
+.ill__bar{width:150px;height:8px;border-radius:99px;background:var(--chance);
+  overflow:hidden;margin-top:10px}
+.ill__bar i{display:block;height:100%;width:40%;background:var(--krise)}
+.ill__krise{width:98px;height:104px;border-radius:9px;border:2px solid var(--krise);
+  background:#fff;position:relative;display:flex;align-items:center;justify-content:center;
+  font-size:30px}
+.ill__frist{position:absolute;top:-11px;right:-16px;background:#fff;border:1px solid var(--krise);
+  color:var(--krise);border-radius:99px;font-size:11px;font-weight:700;padding:2px 8px;
+  white-space:nowrap}
+.ill__saeulen{display:flex;gap:26px;align-items:flex-end;font-size:11px;text-align:center;
+  color:var(--ink2)}
+.ill__saeulen b{display:block;width:52px;background:var(--gold);border-radius:5px 5px 0 0;
+  color:#fff;font-size:11px;padding:3px 0;margin-bottom:4px}
+.ill__flow{display:flex;align-items:center;gap:13px}
+.ill__pfeilr{font-size:19px;color:var(--ink2)}
+.ill__mini{width:44px;height:62px;border-radius:7px;border:2px solid var(--line);background:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}
+.ill__mini.c{border-color:var(--chance)} .ill__mini.k{border-color:var(--krise)}
+.ill__stapel{position:relative;width:46px;height:64px;flex:none}
+.ill__stapel i{position:absolute;inset:0;border-radius:7px;border:2px solid #c9b696;
+  background:repeating-linear-gradient(45deg,#e8d9c0 0 6px,#e2d0b3 6px 12px)}
+.ill__stapel i:nth-child(2){transform:translate(4px,-4px)}
+.ill__stapel i:nth-child(3){transform:translate(8px,-8px)}
+.ill__stapel b{position:absolute;left:14px;top:-18px;width:44px;height:62px;border-radius:7px;
+  border:2px solid var(--krise);background:#fff;display:flex;align-items:center;
+  justify-content:center;font-size:20px;box-shadow:0 5px 12px #0003}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🃏 Ereigniskarten — Prototyp</h1>
+  <span class="sub">Startup Story · Lategame-Events · Deck-Simulation ohne Spiel</span>
+  <label><input type="checkbox" id="cbBilder" checked> Kartenbilder zeigen</label>
+  <button id="btnTour" title="Erklärung nochmal zeigen">?</button>
+</header>
+
+<!-- ══ KARTENVORSCHAU ════════════════════════════════════════════════ -->
+<div class="vs" id="vorschau">
+  <div class="vs__hg" id="vsHg"></div>
+  <div class="vs__box">
+    <button class="vs__zu" id="vsZu">✕</button>
+    <div id="vsInhalt"></div>
+  </div>
+</div>
+
+<!-- ══ ERKLÄR-TOUR ═══════════════════════════════════════════════════ -->
+<div class="tour" id="tour">
+  <div class="tour__faenger" id="tourFaenger"></div>
+  <div class="tour__loch" id="tourLoch"></div>
+  <div class="tour__pfeil" id="tourPfeil"></div>
+  <div class="tour__karte" id="tourKarte"></div>
+</div>
+
+<div class="layout">
+
+  <!-- ══ LINKS: Spielstand ══════════════════════════════════════════ -->
+  <div>
+    <div class="panel">
+      <h2>Spielstand</h2>
+      <div class="field">
+        <label>User <b id="lblUsers"></b></label>
+        <input type="range" id="rgUsers" min="7" max="9.6" step="0.05" value="7.7">
+      </div>
+      <div class="field">
+        <label>Geld auf der Bank <b id="lblGeld"></b></label>
+        <input type="range" id="rgGeld" min="6" max="10" step="0.05" value="8">
+      </div>
+      <div class="derived">
+        <span>Firmenwert</span><b class="big" id="dvWert"></b>
+        <span>davon aus Usern</span><b id="dvAnteil"></b>
+        <span>Watchtime ×</span><b id="dvWt"></b>
+        <span>Netzwerkeffekt</span><b id="dvNetz"></b>
+        <span>Dauerhafte Schuld</span><b id="dvSchuld"></b>
+        <span>Trend (Ruhewert)</span><b id="dvRuhe"></b>
+        <span>liegende Krisen</span><b id="dvKrisen"></b>
+        <span>Netto-Trend</span><b class="big" id="dvNetto"></b>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Die Prozent-Leiter</h2>
+      <div class="leiter" id="leiter"></div>
+      <div class="hinweis" style="margin-top:8px">Firmenwert = <b>Geld auf der Bank
+        + User × <span id="uwert"></span></b>. Das sind die Beträge, die eine Karte
+        <i>gerade jetzt</i> aufrufen würde. Auf einer aufgedeckten Karte bleibt der Wert
+        eingefroren.</div>
+    </div>
+
+    <div class="panel">
+      <h2>Dark Patterns</h2>
+      <div class="checks" id="chkDark"></div>
+      <h2 style="margin-top:14px">Vertrauens-Features</h2>
+      <div class="checks" id="chkWhite"></div>
+      <h2 style="margin-top:14px">Sonstiges im Baum / Zustand</h2>
+      <div class="checks" id="chkMisc"></div>
+    </div>
+  </div>
+
+  <!-- ══ MITTE: Der Tisch ══════════════════════════════════════════ -->
+  <div>
+    <div class="panel">
+      <div class="tischkopf">
+        <h2 style="margin:0">Der Tisch</h2>
+        <span class="runde" id="rundeInfo"></span>
+        <span style="flex:1"></span>
+        <button id="btnNext" class="primary">Nächste Runde ▸</button>
+        <button id="btnReset">Zurücksetzen</button>
+      </div>
+      <div class="tisch" id="tisch"></div>
+      <div class="hinweis" id="phaseHint"></div>
+    </div>
+  </div>
+
+  <!-- ══ RECHTS: Deck, Tisch-Übersicht, Protokoll ══════════════════ -->
+  <div>
+    <div class="panel">
+      <h2>Das Deck <span style="text-transform:none;letter-spacing:0;font-weight:400">— jede
+        Karte anklickbar</span></h2>
+      <div class="deckkopf" id="deckkopf"></div>
+      <div class="risiko"><div id="risikoBar"></div></div>
+      <div class="zieh" id="ziehbar"></div>
+    </div>
+    <div class="panel">
+      <h2>Liegt auf dem Tisch</h2>
+      <div class="tischliste" id="tischliste"></div>
+    </div>
+    <div class="panel">
+      <h2>Protokoll</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   1. NODES — echte IDs aus js/techtree.js
+   ═══════════════════════════════════════════════════════════════════ */
+const DARK = [
+  {id:'infiniteScroll', name:'Infiniter Scroll',    base:-1.0, wt:1.15},
+  {id:'autoplay',       name:'Autoplay',            base:-1.5, wt:1.15},
+  {id:'ki_profile',     name:'Profilbildung',       base:-1.5},
+  {id:'ki_collab',      name:'Collaborative Filtering', base:-1.0, wt:1.10},
+  {id:'ki_sog',         name:'Aufmerksamkeits-Sog', base:-2.0, wt:1.20}
+];
+const WHITE = [
+  {id:'barrierefrei', name:'Barrierefreiheit',   k:0.25},
+  {id:'moderation',   name:'Moderations-Team',   k:0.35},
+  {id:'api',          name:'Offene Schnittstelle',k:0.40}
+];
+const MISC = [
+  {id:'en_erneuerbar', name:'Erneuerbare Energien (Node)'},
+  {id:'kapa_frei',     name:'Freie Serverkapazität vorhanden'},
+  {id:'farm_unversorgt',name:'Farmen unversorgt (🔌)'}
+];
+
+/* ═══════════════════════════════════════════════════════════════════
+   2. WÄHRUNG
+   Geld steht IMMER als Prozent vom Firmenwert in den Daten und wird
+   erst beim Aufdecken in eine feste Zahl übersetzt.
+   ═══════════════════════════════════════════════════════════════════ */
+const USER_WERT = 2;   // € je User — klein gehalten, damit die Beträge zahlbar bleiben
+
+function firmenwert(){ return S.geld + S.users * USER_WERT; }
+
+function euro(v){
+  const a=Math.abs(v), s=v<0?'−':'';
+  if(a>=1e9) return s+(a/1e9).toFixed(2).replace('.',',')+' Mrd €';
+  if(a>=1e6) return s+Math.round(a/1e6).toLocaleString('de-DE')+' Mio €';
+  if(a>=1e3) return s+Math.round(a/1e3).toLocaleString('de-DE')+' Tsd €';
+  return s+Math.round(a).toLocaleString('de-DE')+' €';
+}
+function users(v){
+  if(v>=1e9) return (v/1e9).toFixed(2).replace('.',',')+' Mrd';
+  if(v>=1e6) return (v/1e6).toFixed(1).replace('.',',')+' Mio';
+  if(v>=1e3) return Math.round(v/1e3)+' Tsd';
+  return Math.round(v);
+}
+function tr(v){ return (v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(1).replace('.',','); }
+function pct(v){ return (v>0?'+':'−')+Math.abs(v).toFixed(v%1?1:0).replace('.',',')+' %'; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   3. DAS DECK
+   art:     'chance' | 'krise'
+   cond:    Ziehbarkeits-Bedingung (nur für nicht-geseedete Karten)
+   condTxt: die Begründung, die rechts in der Deck-Liste steht
+   liegt:   Trend-Malus, solange die Krise offen liegt
+   liegtTxt:zusätzlicher Malus in Worten (wenn er nicht am Trend hängt)
+   runden:  wie viele Runden sie liegt, bevor `ende` greift
+   ende:    'weg'     — sie klingt ab und ist erledigt
+            'zurueck' — sie geht vom Tisch, aber zurück ins Deck (Ursache besteht)
+            'zwang'   — die Frist läuft ab, `zwangOpt` wird zwangsweise vollstreckt
+   bild:    optionaler Pfad, z. B. 'sprites/events/lobbyist.png'
+   opts[]:  { name, geld:%, fx:[chips], seed:[...], loesen, wieder }
+   ═══════════════════════════════════════════════════════════════════ */
+const D = {   // Kurzschreibweise für Chips
+  trend:(v,r)=>({k:'trend', t:'⭐ '+tr(v)+(r?' / '+r+' Runden':'')}),
+  perm: v =>({k:'perm',  t:'🔒 '+tr(v)+' dauerhaft'}),
+  wt:   v =>({k:'wt',    t:'∞ Watchtime ×'+v.toFixed(2).replace('.',',')}),
+  wtl:  p =>({k:'wt',    t:'⏳ Lager '+pct(p)}),
+  user: p =>({k:'user',  t:'👥 User '+pct(p)}),
+  netk: v =>({k:'gut',   t:'∞ networkK +'+v.toFixed(2).replace('.',',')}),
+  meta: p =>({k:'wt',    t:'🗃️ Metadaten '+pct(p)}),
+  platz:t =>({k:'user',  t:'📣 '+t}),
+  karte:t =>({k:'karte', t:'🃏 '+t}),
+  txt:  t =>({k:'',      t:t}),
+  gut:  t =>({k:'gut',   t:t})
+};
+/* Eine geseedete Karte wandert INS DECK und wird danach ganz normal
+   zufällig gezogen. `ab` = frühestens ab so vielen Runden später. */
+const seed=(id,p,ab)=>({id,p:p,ab:ab||1});
+
+const CARDS = {
+
+/* ─── CHANCEN ──────────────────────────────────────────────────── */
+lobby:{ art:'chance', icon:'🎭', name:'Der Lobbyist',
+  text:'Eine politische Gruppe will ihre Themen bevorzugt ausgespielt bekommen.',
+  cond:s=>s.users>=40e6, condTxt:'ab 40 Mio Usern',
+  opts:[
+    {name:'Annehmen', geld:+1, wtMult:1.10, trendBase:-0.5,
+     fx:[D.perm(-0.5), D.wt(1.10)], seed:[seed('shitstorm_lobby',.85,1)]},
+    {name:'Ablehnen', fx:[D.txt('nichts')], seed:[seed('lobby_besser',1,1)]},
+    {name:'Öffentlich machen', trend:+4, fx:[D.trend(4), D.gut('Angebot endgültig weg')]}
+  ]},
+
+lobby_besser:{ art:'chance', icon:'🎭', name:'Das bessere Angebot', nurGeseedet:true,
+  text:'Er kommt mit dem Dreifachen zurück. „Überlegen Sie es sich nochmal."',
+  opts:[
+    {name:'Annehmen', geld:+3, wtMult:1.10, trendBase:-1.0,
+     fx:[D.perm(-1.0), D.wt(1.10)], seed:[seed('shitstorm_lobby',1,1)]},
+    {name:'Endgültig ablehnen', trend:+2,
+     fx:[D.trend(2), D.gut('„du bleibst standhaft, das spricht sich herum"')]}
+  ]},
+
+daten:{ art:'chance', icon:'💰', name:'Daten verkaufen',
+  text:'Ein Werbekonzern will eine Auswertung eures Datenbestands kaufen.',
+  cond:s=>s.users>=40e6, condTxt:'ab 40 Mio Usern',
+  opts:[
+    {name:'Verkaufen', geld:+2,
+     fx:[D.gut('deine Daten bleiben bei dir — du verkaufst eine Kopie')],
+     seed:[seed('shitstorm_daten',.85,1)]},
+    {name:'Nur anonymisiert', geld:+1,
+     fx:[D.gut('weniger Geld, weniger Angriffsfläche')],
+     seed:[seed('shitstorm_daten',.50,1)]},
+    {name:'Ablehnen', fx:[D.txt('nichts')]}
+  ]},
+
+konkurrent:{ art:'chance', icon:'🏢', name:'Konkurrent steht zum Verkauf',
+  text:'Eine kleinere Plattform sucht einen Käufer.',
+  cond:s=>s.users>=40e6, condTxt:'ab 40 Mio Usern',
+  opts:[
+    {name:'Kaufen', geld:-10, userPct:+8,
+     fx:[D.user(8), D.txt('⚠️ ohne freie Kapazität sofort „Serverprobleme"')],
+     dyn:s=>s.misc.kapa_frei?[]:[D.trend(-2,3)]},
+    {name:'Kaufen und zerschlagen', geld:-6, userPct:+4, trend:-2,
+     fx:[D.user(4), D.trend(-2)]},
+    {name:'Ablehnen', fx:[D.txt('nichts')], seed:[seed('konkurrent_stark',.70,2)]}
+  ]},
+
+hilfe:{ art:'chance', icon:'🌱', name:'Hilfsorganisation bittet um Reichweite',
+  text:'Eine Spendenorganisation fragt, ob sie auf eurer Plattform sichtbar sein darf.',
+  cond:s=>s.users>=40e6, condTxt:'ab 40 Mio Usern',
+  opts:[
+    {name:'Prominent platzieren', networkK:0.1,
+     fx:[D.platz('1 Kampagnenplatz / 10 min'), D.netk(0.1)]},
+    {name:'Klein im Feed', trend:+1.5, fx:[D.trend(1.5)]},
+    {name:'Ablehnen', fx:[D.txt('nichts')], seed:[seed('shitstorm_hilfe',.50,1)]}
+  ]},
+
+spende:{ art:'chance', icon:'💰', name:'Spendenaufruf',
+  text:'Nach einer Katastrophe fragen Medien, ob euer Konzern etwas beiträgt.',
+  cond:s=>s.users>=40e6, condTxt:'ab 40 Mio Usern',
+  opts:[
+    {name:'Große Spende', geld:-1, trend:+3, fx:[D.trend(3)]},
+    {name:'Kleine Spende', geld:-0.5, trend:+1.5, fx:[D.trend(1.5)]},
+    {name:'Nichts tun', fx:[D.txt('nichts — und das ist hier in Ordnung')]}
+  ]},
+
+kanal:{ art:'chance', icon:'🎭', name:'Ein zugespitzter Kanal wächst rasant',
+  text:'Sehr scharfe Meinungen, sehr hohe Verweildauer. Soll der Algorithmus ihn hochspülen?',
+  cond:s=>s.users>=40e6, condTxt:'ab 40 Mio Usern',
+  opts:[
+    {name:'Empfehlen', wtMult:1.15, trendBase:-1.0,
+     fx:[D.wt(1.15), D.perm(-1.0)], seed:[seed('shitstorm_radikal',.90,1)]},
+    {name:'Laufen lassen', fx:[D.wtl(+25)], seed:[seed('shitstorm_radikal',.50,1)]},
+    {name:'Sperren', trend:+2, fx:[D.trend(2), D.wtl(-10)]}
+  ]},
+
+/* Das Porträt erscheint in JEDEM Fall — die Frage ist nur, wie du darin
+   vorkommst. „Nichts" ist hier keine Option, das wäre unehrlich. */
+presse:{ art:'chance', icon:'📰', name:'Journalistin bittet um ein Interview',
+  text:'Ein großes Magazin schreibt ein Porträt über deine Plattform. Mit dir oder ohne dich.',
+  cond:s=>s.users>=40e6, condTxt:'ab 40 Mio Usern',
+  opts:[
+    {name:'Offen antworten',
+     dynTrend:s=>s.darkCount>=3?-2:2.5,
+     dyn:s=>s.darkCount>=3
+        ? [D.trend(-2), D.txt('„die Fragen waren andere als erwartet" — 3+ Dark Patterns')]
+        : [D.trend(2.5), D.gut('ein freundliches Porträt')]},
+    {name:'Ausweichen', trend:-1,
+     fx:[D.trend(-1), D.txt('es erscheint trotzdem — dünn und distanziert')]},
+    {name:'Ablehnen', trend:-1.5,
+     fx:[D.trend(-1.5), D.txt('„wollte sich nicht äußern" steht dann da')],
+     seed:[seed('presse_recherche',.50,2)]}
+  ]},
+
+team:{ art:'chance', icon:'👥', name:'Das Team fordert bessere Bedingungen',
+  text:'Die Entwicklung arbeitet seit Monaten am Anschlag.',
+  cond:s=>s.users>=40e6, condTxt:'ab 40 Mio Usern',
+  opts:[
+    {name:'Zustimmen', geld:-2, networkK:0.05, trend:+2, fx:[D.netk(0.05), D.trend(2)]},
+    {name:'Teilweise', geld:-1, fx:[D.txt('vorerst Ruhe')]},
+    {name:'Ablehnen', fx:[D.txt('nichts')], seed:[seed('streik',.60,1)]}
+  ]},
+
+dsgvo_warnung:{ art:'chance', icon:'⚖️', name:'Neue Datenschutzregel angekündigt',
+  text:'Die Aufsicht kündigt schärfere Regeln an. Ihr könnt vorher reagieren.',
+  cond:s=>s.users>=40e6, condTxt:'ab 40 Mio Usern',
+  opts:[
+    {name:'Freiwillig anpassen',
+     fx:[D.meta(-20), D.gut('immun gegen die DSGVO-Strafe')], immun:'dsgvo_strafe'},
+    {name:'Abwarten', fx:[D.txt('nichts — vorerst')],
+     dynSeed:s=>[seed('dsgvo_strafe',(s.nodes.ki_profile||s.nodes.ki_collab)?.70:.50,2)]}
+  ]},
+
+marcus:{ art:'chance', icon:'💰', name:'Marcus will nachlegen',
+  text:'Dein alter Investor bietet eine zweite Runde an — er erwartet dafür Wachstum.',
+  cond:s=>s.users>=40e6, condTxt:'ab 40 Mio Usern',
+  opts:[
+    {name:'Annehmen', geld:+10, seed:[seed('investor_druck',1,3)]},
+    {name:'Ablehnen', fx:[D.txt('nichts')]}
+  ]},
+
+/* ─── KRISEN ───────────────────────────────────────────────────── */
+shitstorm_lobby:{ art:'krise', icon:'🔥', name:'Shitstorm: gekaufte Meinung',
+  nurGeseedet:true, liegt:-6, runden:3, ende:'weg',
+  ursache:'deine Entscheidung beim Lobbyisten',
+  text:'Der Deal ist durchgesickert. #gekauft trendet seit zwei Stunden.',
+  opts:'SHITSTORM'},
+shitstorm_daten:{ art:'krise', icon:'🔥', name:'Shitstorm: Datenverkauf',
+  nurGeseedet:true, liegt:-6, runden:3, ende:'weg',
+  ursache:'deine Entscheidung „Daten verkaufen"',
+  text:'Ein Blog hat den Käufer identifiziert. Die Empörung läuft.',
+  opts:'SHITSTORM'},
+shitstorm_radikal:{ art:'krise', icon:'🔥', name:'Shitstorm: Radikalisierung',
+  nurGeseedet:true, liegt:-6, runden:3, ende:'weg',
+  ursache:'der hochgespülte Kanal',
+  text:'Der Kanal ist eskaliert. Werbekunden fragen nach.',
+  opts:'SHITSTORM'},
+shitstorm_hilfe:{ art:'krise', icon:'🔥', name:'Shitstorm: „kein Herz"',
+  nurGeseedet:true, liegt:-6, runden:3, ende:'weg',
+  ursache:'die abgelehnte Hilfsorganisation',
+  text:'Die Absage wurde öffentlich gemacht.',
+  opts:'SHITSTORM'},
+zweiter_anlauf:{ art:'krise', icon:'🔥', name:'Shitstorm: zweiter Anlauf',
+  nurGeseedet:true, liegt:-6, runden:3, ende:'weg',
+  ursache:'deine Gegenkampagne kam schlecht an',
+  text:'Die Kampagne wirkte gekauft — jetzt geht es erst richtig los.',
+  opts:'SHITSTORM'},
+greenwashing_fliegt_auf:{ art:'krise', icon:'🔥', name:'Greenwashing aufgeflogen',
+  nurGeseedet:true, liegt:-6, runden:3, ende:'weg',
+  ursache:'deine Greenwashing-Kampagne',
+  text:'Recherchen zeigen: an den Servern hat sich nichts geändert.',
+  opts:'SHITSTORM'},
+vertuschung_fliegt_auf:{ art:'krise', icon:'🔥', name:'Vertuschung aufgeflogen',
+  nurGeseedet:true, liegt:-9, runden:3, ende:'weg',
+  ursache:'du hast das Datenleck verschwiegen',
+  text:'Interne Mails sind öffentlich. Das wiegt schwerer als das Leck selbst.',
+  opts:'SHITSTORM'},
+
+presse_recherche:{ art:'krise', icon:'📰', name:'Die Recherche kam trotzdem',
+  nurGeseedet:true, liegt:-4, runden:2, ende:'weg',
+  ursache:'du hast das Interview abgelehnt',
+  text:'Sie haben ohne dich geschrieben — und mit deinen Ex-Mitarbeitern gesprochen.',
+  opts:[
+    {name:'Jetzt doch Stellung nehmen', geld:-1, fx:[D.gut('sofort weg')], loesen:true},
+    {name:'Schweigen', fx:[D.txt('läuft aus')], loesen:false}
+  ]},
+
+jugendschutz:{ art:'krise', icon:'⚖️', name:'Verurteilt: Jugendschutz',
+  liegt:-3, runden:3, ende:'zwang', zwangOpt:0, zwangFaktor:2,
+  zwangTxt:'Frist abgelaufen — die Strafe wird vollstreckt, doppelt.',
+  cond:s=>s.darkWt.length>0 && s.users>=40e6,
+  condTxt:'braucht Autoplay / Infiniter Scroll / Aufmerksamkeits-Sog',
+  ursacheDyn:s=>s.darkWt.map(d=>d.name).join(' · '),
+  text:'Ein Gericht sieht die Sogwirkung eurer Oberfläche als jugendgefährdend an.',
+  opts:[
+    {name:'Strafe zahlen', geld:-5, fx:[D.gut('Sache erledigt')], loesen:true},
+    {name:'Berufung', geld:-2,
+     fx:[D.txt('die Frist läuft weiter — danach wird doppelt vollstreckt')], loesen:false},
+    {name:'Feature abschalten', abschalten:true,
+     fx:[D.gut('Dark Pattern wird deaktiviert'), D.txt('Watchtime fällt, trendBase kommt zurück')],
+     loesen:true}
+  ]},
+
+bots:{ art:'krise', icon:'🤖', name:'Bot-Netzwerke',
+  liegt:-4, runden:3, ende:'zurueck',
+  cond:s=>!s.nodes.moderation && s.users>=40e6,
+  condTxt:'kein Moderations-Team, ab 40 Mio',
+  ursache:'fehlendes Moderations-Team',
+  text:'Zehntausende Konten verbreiten koordiniert extreme Inhalte.',
+  opts:[
+    {name:'Bots löschen', userPct:-10, fx:[D.user(-10), D.txt('die Bots zählten als User')],
+     loesen:true, wieder:4},
+    {name:'Externe Firma beauftragen', geld:-3,
+     fx:[D.txt('Ruhe für 8 Runden — dann sind sie zurück')], loesen:true, wieder:8},
+    // Bots vermehren sich. Aussitzen ist die einzige Option, bei der der
+    // Malus WÄCHST, statt nur zu laufen — sonst wäre Ignorieren gratis.
+    {name:'Ignorieren', fx:[D.trend(-4), D.txt('und jede Runde −2,0 schlimmer')],
+     loesen:false, proRunde:{liegt:-2}}
+  ]},
+
+umwelt:{ art:'krise', icon:'🌍', name:'Umweltkritik',
+  liegt:-2.5, runden:4, ende:'zurueck',
+  cond:s=>s.users>=50e6 && !s.nodes.en_erneuerbar,
+  condTxt:'große Serverlast ohne Erneuerbare Energien',
+  ursache:'Tarifstufe High/Massiv ohne Erneuerbare Energien',
+  text:'Eine Studie rechnet den Stromverbrauch eurer Farmen öffentlich vor.',
+  opts:[
+    {name:'Umstellen', geld:-5, erneuerbar:true,
+     fx:[D.gut('Erneuerbare Energien stehen — die Karte ist raus')], loesen:true},
+    {name:'Greenwashing-Kampagne', geld:-1, fx:[D.txt('Ruhe für 5 Runden')],
+     loesen:true, wieder:5, seed:[seed('greenwashing_fliegt_auf',.50,3)]},
+    {name:'Aussitzen', fx:[D.txt('läuft aus — kommt wieder, solange nichts umgestellt ist')],
+     loesen:false}
+  ]},
+
+datenleck:{ art:'krise', icon:'🔓', name:'Datenleck',
+  liegt:-5, runden:3, ende:'weg',
+  cond:s=>s.nodes.ki_profile && !s.nodes.api && s.users>=40e6,
+  condTxt:'Profilbildung ohne Offene Schnittstelle',
+  ursache:'Profilbildung ohne geprüfte Schnittstellen',
+  text:'Ein ungesicherter Server hat Profildaten offen im Netz stehen lassen.',
+  opts:[
+    {name:'Öffentlich informieren', geld:-2,
+     fx:[D.meta(-60), D.gut('sofort weg')], loesen:true},
+    {name:'Vertuschen', fx:[D.meta(-60), D.gut('sofort weg')], loesen:true,
+     seed:[seed('vertuschung_fliegt_auf',.50,2)]}
+  ]},
+
+dsgvo_strafe:{ art:'krise', icon:'⚖️', name:'DSGVO-Strafe', nurGeseedet:true,
+  liegt:-2, runden:2, ende:'zwang', zwangOpt:0, zwangFaktor:1,
+  zwangTxt:'Das Bußgeld wird eingezogen.',
+  ursache:'du hast bei der Ankündigung abgewartet',
+  text:'Das Bußgeld ist rechtskräftig. Es gibt nichts zu verhandeln.',
+  opts:[
+    {name:'Zur Kenntnis genommen', geld:-5, fx:[D.txt('ein Knopf, kein Ausweg')], loesen:true},
+    {name:'Ratenzahlung', trend:-2,
+     fx:[D.trend(-2,3), D.txt('immer drückbar, auch bei leerer Bank')], loesen:true}
+  ]},
+
+streik:{ art:'krise', icon:'👥', name:'Streik', nurGeseedet:true,
+  liegt:0, liegtTxt:'alle Entwicklungs-Plätze stehen still', runden:3, ende:'weg',
+  ursache:'du hast die Forderungen abgelehnt',
+  text:'Die Entwicklung legt die Arbeit nieder. Alle Entwicklungs-Plätze stehen still.',
+  opts:[
+    {name:'Nachgeben', geld:-2, fx:[D.gut('sofort weg')], loesen:true},
+    {name:'Aussitzen', fx:[D.txt('3 Runden ohne Entwicklung')], loesen:false}
+  ]},
+
+konkurrent_stark:{ art:'krise', icon:'🏢', name:'Der Konkurrent wird stark',
+  nurGeseedet:true, liegt:0, liegtTxt:'−2 % User pro Runde', runden:4, ende:'weg',
+  ursache:'du hast den Kauf abgelehnt',
+  text:'Er hat frisches Geld bekommen und wirbt eure User ab.',
+  opts:[
+    {name:'Jetzt teurer kaufen', geld:-15, userPct:+8, fx:[D.user(8)], loesen:true},
+    {name:'Preiskampf', geld:-2, fx:[D.txt('Werbeerlöse −40 % / 10 min')], loesen:true},
+    {name:'Aussitzen', fx:[D.user(-2), D.txt('−2 % User pro Runde, 4 Runden')],
+     loesen:false, proRunde:{userPct:-2}}
+  ]},
+
+zensur:{ art:'krise', icon:'🎭', name:'Eine Regierung fordert Löschungen',
+  liegt:-2, runden:3, ende:'zwang', zwangOpt:1, zwangFaktor:1,
+  zwangTxt:'Keine Antwort ist auch eine Antwort — das Land sperrt euch.',
+  cond:s=>s.users>=100e6, condTxt:'ab 100 Mio Usern',
+  ursache:'— Pech. Das trifft jede große Plattform.',
+  text:'Ein Staat verlangt, Beiträge einer Oppositionsbewegung zu entfernen.',
+  opts:[
+    {name:'Nachgeben', trendBase:-1.0, fx:[D.perm(-1.0)], loesen:true},
+    {name:'Verweigern', userPct:-12, trend:+3,
+     fx:[D.user(-12), D.trend(3), D.txt('das Land sperrt euch')], loesen:true}
+  ]},
+
+serverausfall:{ art:'krise', icon:'💥', name:'Serverausfall',
+  liegt:0, liegtTxt:'halbe Watchtime-Produktion', runden:2, ende:'zurueck',
+  cond:s=>s.misc.farm_unversorgt, condTxt:'braucht unversorgte Farmen',
+  ursache:'unversorgte Serverfarmen',
+  text:'Eine Farm ist ausgefallen. Die Produktion bricht ein.',
+  opts:[
+    {name:'Sofort reparieren', geld:-2, fx:[D.gut('sofort weg')], loesen:true, wieder:3},
+    {name:'Aussitzen', fx:[D.wtl(-50), D.txt('2 Runden halbe Produktion')], loesen:false}
+  ]},
+
+investor_druck:{ art:'krise', icon:'💼', name:'Marcus will Zahlen sehen',
+  nurGeseedet:true, liegt:-2, runden:3, ende:'weg',
+  ursache:'du hast sein Geld genommen',
+  text:'„Ich sehe kein Wachstum. Wir hatten eine Abmachung."',
+  opts:[
+    {name:'Anteile zurückkaufen', geld:-10, fx:[D.gut('er ist raus')], loesen:true},
+    {name:'Vertrösten', fx:[D.txt('bleibt 3 Runden')], loesen:false}
+  ]}
+};
+
+/* Der Shitstorm-Optionssatz — sieben Karten teilen ihn sich. */
+const SHITSTORM_OPTS = [
+  {name:'Entschuldigen', geld:-1, fx:[D.gut('sofort weg')], loesen:true},
+  {name:'Gegenkampagne', geld:-3, fx:[D.gut('sofort weg')], loesen:true,
+   seed:[seed('zweiter_anlauf',.50,1)]},
+  {name:'Aussitzen', fx:[D.txt('läuft die vollen 3 Runden')], loesen:false}
+];
+Object.keys(CARDS).forEach(id=>{
+  CARDS[id].id = id;
+  if(CARDS[id].opts === 'SHITSTORM') CARDS[id].opts = SHITSTORM_OPTS;
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   4. ZUSTAND
+   ═══════════════════════════════════════════════════════════════════ */
+let S, tisch, runde, imDeck, benutzt, gesperrtBis, immun,
+    wtMultEvent, netkEvent, baseEvent, logs, phase, zeigeBilder=true;
+
+function reset(){
+  S = { users:40e6, geld:100e6, nodes:{}, misc:{} };
+  DARK.forEach(d=>S.nodes[d.id]=false);
+  WHITE.forEach(w=>S.nodes[w.id]=false);
+  MISC.forEach(m=>{ S.misc[m.id]=false; S.nodes[m.id]=false; });
+  tisch=[null,null,null]; runde=1;
+  imDeck={};        // geseedete Karten, die jetzt im Deck liegen: id → abRunde
+  benutzt={};       // endgültig raus
+  gesperrtBis={};   // id → Runde, ab der sie wieder ziehbar ist
+  immun={};
+  wtMultEvent=1; netkEvent=0; baseEvent=0; logs=[]; phase='wahl';
+  document.querySelectorAll('.checks input').forEach(b=>b.checked=false);
+  liesRegler(); zieheAuf(); render(); renderLog();
+}
+
+/* Abgeleitete Werte — nichts davon wird gespeichert. */
+function abgeleitet(){
+  S.darkCount = DARK.filter(d=>S.nodes[d.id]).length;
+  S.darkWt    = DARK.filter(d=>S.nodes[d.id] && d.wt);          // die mit Sogwirkung
+  S.schuld    = DARK.filter(d=>S.nodes[d.id]).reduce((a,d)=>a+d.base,0) + baseEvent;
+  S.wtMult    = DARK.filter(d=>S.nodes[d.id]&&d.wt).reduce((a,d)=>a*d.wt,1) * wtMultEvent;
+  S.k         = 2 + WHITE.filter(w=>S.nodes[w.id]).reduce((a,w)=>a+w.k,0) + netkEvent;
+  S.netz      = netzwerkeffekt(S.users, S.k);
+  S.ruhe      = S.netz + S.schuld;
+  S.krisenMalus = liegende().reduce((a,c)=>a+liegtWert(c),0);
+  S.netto     = S.ruhe + S.krisenMalus;
+}
+function liegende(){ return tisch.filter(c=>c && c.liegend); }
+/* Der laufende Malus einer liegenden Krise — plus dem, was sie sich über
+   die Runden dazuverdient hat (Bots vermehren sich). */
+function liegtWert(c){ return (c.def.liegt||0) + (c.zusatz||0); }
+function netzwerkeffekt(u,k){
+  if(u<=10000) return 0;
+  let v = k*Math.log10(u/10000);
+  const peak = k*Math.log10(1e9/10000);
+  if(u>1e9){ const f=Math.max(0,1-Math.pow((u-1e9)/2e9,2)); v = peak*f; }
+  return Math.max(0, Math.min(v, peak));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   5. DAS DECK — was liegt gerade drin?
+   Eine Karte ist im Deck, wenn sie weder gespielt noch gesperrt ist und
+   ihre Bedingung erfüllt ist. Geseedete Karten kommen erst hinein,
+   wenn eine Entscheidung sie dorthin gelegt hat — danach werden sie
+   ganz normal zufällig gezogen.
+   ═══════════════════════════════════════════════════════════════════ */
+function deckListe(){
+  const out=[];
+  Object.keys(CARDS).forEach(id=>{
+    const d=CARDS[id];
+    if(benutzt[id]) return;
+    if(gesperrtBis[id] && gesperrtBis[id]>runde) return;
+    if(tisch.some(c=>c && c.def.id===id)) return;
+    if(d.nurGeseedet){ if(!imDeck[id] || imDeck[id]>runde) return; }
+    else if(d.cond && !d.cond(S)) return;
+    out.push(id);
+  });
+  return out;
+}
+
+function zieheAuf(){
+  abgeleitet();
+  const pool = deckListe();
+  for(let i=0;i<3;i++){
+    if(tisch[i]) continue;                       // liegende Krise blockiert den Platz
+    if(!pool.length) continue;
+    const id = pool.splice(Math.floor(Math.random()*pool.length),1)[0];
+    tisch[i] = { def:CARDS[id], verdeckt:true, liegend:false, weg:false, gewaehlt:false,
+                 alter:0, betraege:betraegeFuer(CARDS[id]) };
+  }
+}
+
+/* Beträge werden beim Auflegen EINGEFROREN — sie dürfen sich nicht
+   ändern, während der Spieler die Karte liest. */
+function betraegeFuer(def){
+  const w = firmenwert(), out = {};
+  (Array.isArray(def.opts)?def.opts:[]).forEach((o,i)=>{ if(o.geld) out[i] = w*o.geld/100; });
+  return out;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   6. ENTSCHEIDEN
+   ═══════════════════════════════════════════════════════════════════ */
+function waehle(i){
+  if(phase!=='wahl') return;
+  const c = tisch[i]; if(!c) return;
+  tisch.forEach((k,j)=>{ if(k) k.gewaehlt = (i===j); });
+  c.verdeckt=false;
+  phase='entscheidung';
+  render();
+}
+
+/* Wendet eine Option an und liefert die Protokollzeilen. */
+function wendeAn(def, o, betrag){
+  const zeilen=[];
+  if(betrag){ S.geld = Math.max(0, S.geld + betrag); zeilen.push(euro(betrag)); }
+  if(o.userPct){ S.users = Math.max(1000, S.users*(1+o.userPct/100)); zeilen.push('👥 '+pct(o.userPct)); }
+  if(o.trendBase){ baseEvent += o.trendBase; zeilen.push('🔒 '+tr(o.trendBase)+' dauerhaft'); }
+  if(o.wtMult){ wtMultEvent *= o.wtMult; zeilen.push('∞ Watchtime ד'+o.wtMult.toFixed(2).replace('.',',')); }
+  if(o.networkK){ netkEvent += o.networkK; zeilen.push('∞ networkK +'+o.networkK); }
+  if(o.erneuerbar){ S.nodes.en_erneuerbar=true; S.misc.en_erneuerbar=true;
+    const b=document.getElementById('c_en_erneuerbar'); if(b) b.checked=true;
+    zeilen.push('✅ Erneuerbare Energien stehen'); }
+  const tv = o.dynTrend ? o.dynTrend(S) : o.trend;
+  if(tv) zeilen.push('⭐ '+tr(tv)+' befristet');
+  if(o.abschalten && S.darkWt.length){
+    const weg = S.darkWt[0];
+    S.nodes[weg.id]=false;
+    const b=document.getElementById('c_'+weg.id); if(b) b.checked=false;
+    zeilen.push('⛔ '+weg.name+' deaktiviert (Watchtime ÷'+weg.wt+', '+tr(-weg.base)+' zurück)');
+  }
+  if(o.immun) immun[o.immun]=true;
+
+  // Karten INS DECK legen — gezogen werden sie danach zufällig
+  const seeds = o.dynSeed ? o.dynSeed(S) : (o.seed||[]);
+  seeds.forEach(sd=>{
+    if(immun[sd.id]){ zeilen.push('🛡 '+CARDS[sd.id].name+' abgewehrt'); return; }
+    const trifft = Math.random() < sd.p;
+    zeilen.push('🃏 '+CARDS[sd.id].name+' ('+Math.round(sd.p*100)+' %) → '
+      + (trifft ? 'liegt ab Runde '+(runde+sd.ab)+' im Deck' : 'kommt nicht ins Deck'));
+    if(trifft){ delete benutzt[sd.id]; imDeck[sd.id] = runde+sd.ab; }
+  });
+  return zeilen;
+}
+
+function entscheide(i, oi){
+  const karte = tisch[i], def = karte.def, o = def.opts[oi];
+  const zeilen = wendeAn(def, o, karte.betraege[oi]);
+
+  if(def.art==='krise' && !o.loesen){
+    // Die Frist läuft ab dem ersten Aussitzen. Sie noch einmal auszusitzen
+    // darf die Uhr NICHT zurückdrehen, sonst liegt die Karte ewig.
+    const rest = karte.liegend ? def.runden - karte.alter : def.runden;
+    if(!karte.liegend){ karte.liegend = true; karte.alter = 0; }
+    karte.gewaehlt = false;
+    karte.proRunde = o.proRunde || def.proRunde || null;   // Eskalation je Runde
+    zeilen.push('⏳ liegt noch '+rest+' '+(rest===1?'Runde':'Runden')+' auf dem Tisch');
+  } else {
+    karte.weg = true;
+    if(o.wieder){ gesperrtBis[def.id] = runde + o.wieder;
+      zeilen.push('↩︎ kommt in '+o.wieder+' Runden zurück ins Deck'); }
+    else benutzt[def.id] = true;
+  }
+
+  log(def, o, zeilen);
+  syncRegler();
+  phase='fertig';
+  render();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   7. RUNDENWECHSEL
+   Nicht gewählte Karten wandern ZURÜCK INS DECK — sie werden nicht
+   aufgedeckt. Nur liegende Krisen bleiben sichtbar auf dem Tisch.
+   ═══════════════════════════════════════════════════════════════════ */
+function naechsteRunde(){
+  runde++;
+  tisch = tisch.map(c=>{
+    if(!c || c.weg) return null;
+    if(!c.liegend) return null;              // ungewählt → zurück ins Deck
+    c.alter++;
+    const pr = c.proRunde;
+    if(pr && pr.userPct){
+      S.users = Math.max(1000, S.users*(1+pr.userPct/100));
+      logText('📉 '+c.def.name+': '+pct(pr.userPct)+' User');
+    }
+    if(pr && pr.liegt){
+      c.zusatz = (c.zusatz||0) + pr.liegt;
+      logText('📈 '+c.def.name+' wird schlimmer: ⭐ '+tr(liegtWert(c))+' laufend');
+    }
+    if(c.alter >= c.def.runden){ beendeKrise(c); return null; }
+    return c;
+  });
+  phase='wahl';
+  syncRegler(); zieheAuf(); render();
+}
+
+function beendeKrise(c){
+  const def = c.def;
+  if(def.ende==='zwang'){
+    const o = def.opts[def.zwangOpt];
+    const betrag = c.betraege[def.zwangOpt] ? c.betraege[def.zwangOpt]*(def.zwangFaktor||1) : 0;
+    const zeilen = wendeAn(def, o, betrag);
+    zeilen.unshift('⚖️ '+(def.zwangTxt||'Frist abgelaufen.'));
+    logs.unshift({r:runde, kopf:'⌛ '+def.name+' → Zwang: „'+o.name+'"', zeilen});
+    benutzt[def.id]=true;
+  } else if(def.ende==='zurueck'){
+    gesperrtBis[def.id] = runde+2;
+    logText('⌛ '+def.name+' ist vom Tisch — die Ursache besteht weiter, sie geht zurück ins Deck.');
+  } else {
+    benutzt[def.id]=true;
+    logText('⌛ '+def.name+' ist ausgelaufen.');
+  }
+  renderLog();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   8. PROTOKOLL
+   ═══════════════════════════════════════════════════════════════════ */
+function log(def,o,zeilen){
+  logs.unshift({r:runde, kopf:def.icon+' '+def.name+' → „'+o.name+'"', zeilen});
+  renderLog();
+}
+function logText(t){ logs.unshift({r:runde, kopf:t, zeilen:[]}); renderLog(); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   9. RENDERING
+   ═══════════════════════════════════════════════════════════════════ */
+const $ = s=>document.querySelector(s);
+
+function liesRegler(){
+  S.users = Math.pow(10, +$('#rgUsers').value);
+  S.geld  = Math.pow(10, +$('#rgGeld').value);
+}
+/* Nach einer Entscheidung müssen die Regler dem Zustand folgen, sonst
+   überschreibt der nächste Reglerzug die Auswirkung wieder. */
+function syncRegler(){
+  const setz=(el,v)=>{ const r=$(el);
+    r.value = Math.min(+r.max, Math.max(+r.min, Math.log10(Math.max(1,v)))); };
+  setz('#rgUsers', S.users); setz('#rgGeld', S.geld);
+}
+
+function render(){
+  abgeleitet();
+  $('#lblUsers').textContent = users(S.users);
+  $('#lblGeld').textContent  = euro(S.geld);
+  const w = firmenwert();
+  $('#dvWert').textContent   = euro(w);
+  $('#dvAnteil').textContent = Math.round(S.users*USER_WERT/w*100)+' %';
+  $('#dvWt').textContent     = '×'+S.wtMult.toFixed(2).replace('.',',');
+  $('#dvNetz').textContent   = tr(S.netz);
+  $('#dvSchuld').textContent = tr(S.schuld);
+  $('#dvRuhe').textContent   = tr(S.ruhe);
+  $('#dvKrisen').textContent = S.krisenMalus?tr(S.krisenMalus):'—';
+  $('#dvNetto').textContent  = tr(S.netto);
+  $('#dvNetto').className    = 'big '+(S.netto<0?'neg':'pos');
+  $('#dvSchuld').className   = S.schuld<0?'neg':'';
+  $('#dvKrisen').className   = S.krisenMalus?'neg':'';
+  $('#uwert').textContent    = USER_WERT+' €';
+
+  $('#rundeInfo').textContent = 'Runde '+runde+' · alle 5 Minuten';
+  $('#btnNext').textContent = phase==='fertig' ? 'Nächste Runde ▸' : 'Passen — Runde überspringen';
+  $('#phaseHint').innerHTML =
+    phase==='wahl'        ? 'Eine Karte anklicken. Was du <b>nicht</b> wählst, geht ungesehen zurück ins Deck — auch die Krisen, die dort liegen könnten.'
+  : phase==='entscheidung'? 'Triff die Entscheidung. Die Beträge sind beim Auflegen eingefroren.'
+  : 'Erledigt. Die beiden anderen Karten gehen zurück ins Deck. Liegende Krisen bleiben mit ihrer Frist stehen.';
+
+  $('#leiter').innerHTML = [0.5,1,2,3,5,10,15].map(p=>
+    '<span>'+p.toString().replace('.',',')+' %</span><b>'+euro(w*p/100)+'</b>').join('');
+
+  renderTisch(); renderDeck(); renderTischliste(); renderChecks();
+}
+
+function chipHtml(c){ return '<span class="chip'+(c.k?' chip--'+c.k:'')+'">'+c.t+'</span>'; }
+
+/* Folgekarten stehen NICHT von Hand in den Chips, sondern werden aus
+   o.seed / o.dynSeed erzeugt — so kann keine Wahrscheinlichkeit im Text
+   von der im Code abweichen. Im Spiel bleibt das später verdeckt. */
+function seedChips(o){
+  const sd = o.dynSeed ? o.dynSeed(S) : (o.seed||[]);
+  return sd.map(s=>{
+    const p = Math.round(s.p*100);
+    return { k:'karte', t: immun[s.id] ? '🛡 abgewehrt: '+CARDS[s.id].name
+              : '🃏 '+(p>=100?'sicher':p+' % Risiko')+' → '+CARDS[s.id].name };
+  });
+}
+
+/* Eine Options-Zeile. klickbar=false ⇒ reine Ansicht (Vorschau rechts). */
+function optHtml(o, oi, betrag, kartenIndex){
+  const bezahlbar = !betrag || betrag>0 || S.geld >= -betrag;
+  const klickbar = kartenIndex!==null;
+  // fx (fest) und dyn (zustandsabhängig) ergänzen sich, sie ersetzen
+  // sich nicht — sonst verliert eine Option mit beidem ihre festen Chips.
+  const chips = (o.fx||[]).concat(o.dyn?o.dyn(S):[]).concat(seedChips(o))
+                  .map(chipHtml).join('');
+  return '<button class="opt" '+((klickbar&&!bezahlbar)?'disabled':'')
+    + (klickbar?' data-k="'+kartenIndex+'" data-o="'+oi+'"':' data-nur-ansicht="1"')+'>'
+    + '<div class="opt-name">'+o.name+'</div>'
+    + (betrag ? '<div class="opt-geld '+(betrag<0?'neg':'pos')+'">'+euro(betrag)+'</div>'
+              + '<div class="opt-pct">≈ '+pct(o.geld)+' vom Firmenwert'
+              + ((klickbar&&!bezahlbar)?' — Bank zu leer':'') +'</div>' : '')
+    + (chips?'<div class="chips">'+chips+'</div>':'')
+    + '</button>';
+}
+
+/* Optionales Kartenbild. Echte Grafik einhängen: bild:'sprites/events/x.png' */
+function bildHtml(def){
+  if(!zeigeBilder) return '';
+  const st = def.bild
+    ? 'background-image:url('+def.bild+');background-size:cover;background-position:center'
+    : '';
+  return '<div class="k-bild k-bild--'+def.art+'" style="'+st+'">'+(def.bild?'':def.icon)+'</div>';
+}
+
+function renderTisch(){
+  const el = $('#tisch'); el.innerHTML='';
+  tisch.forEach((c,i)=>{
+    const d = document.createElement('div');
+    if(!c){ d.className='karte'; d.style.opacity=.3; el.appendChild(d); return; }
+    if(c.verdeckt){
+      d.className='karte karte--rueck'+(phase==='wahl'?'':' karte--weg');
+      d.innerHTML='🂠'+(phase!=='wahl'?'<div class="zurueck">→ zurück ins Deck</div>':'');
+      if(phase==='wahl') d.onclick=()=>waehle(i);
+      el.appendChild(d); return;
+    }
+    const krise = c.def.art==='krise';
+    const anfassbar = krise && c.liegend && phase==='wahl';
+    d.className = 'karte karte--'+(krise?'krise':'chance')
+                + (c.gewaehlt?' karte--gewaehlt':'') + (c.weg?' karte--weg':'')
+                + (anfassbar?' karte--klickbar':'');
+    let h = '';
+
+    // Frist-Anzeige in der Ecke
+    if(krise && c.liegend){
+      const rest = c.def.runden - c.alter;
+      h += '<div class="k-frist">⏳ noch '+rest+' '+(rest===1?'Runde':'Runden')+'</div>';
+    }
+    h += bildHtml(c.def)
+      + '<div class="k-kopf">'
+      + '<div class="k-art k-art--'+(krise?'krise':'chance')+'">'+(krise?'Krise':'Chance')+'</div>'
+      + '<h3>'+c.def.icon+' '+c.def.name+'</h3></div>'
+      + '<div class="k-text">'+c.def.text+'</div>';
+    if(krise){
+      const u = c.def.ursacheDyn ? c.def.ursacheDyn(S) : c.def.ursache;
+      h += '<div class="ursache"><b>Ausgelöst durch:</b> '+u+'</div>';
+      if(c.liegend){
+        const ende = c.def.ende==='zwang' ? 'dann: '+(c.def.zwangTxt||'wird vollstreckt')
+                   : c.def.ende==='zurueck' ? 'dann: zurück ins Deck, solange die Ursache besteht'
+                   : 'dann: erledigt';
+        const w = liegtWert(c);
+        h += '<div class="liegt">Liegt: '
+           + (w ? '⭐ '+tr(w)+' laufend' : c.def.liegtTxt||'—')
+           + (w && c.def.liegtTxt ? ' · '+c.def.liegtTxt : '')
+           + (c.zusatz ? ' · verschärft um '+tr(c.zusatz) : '')
+           + '<small>'+ende+'</small></div>';
+      }
+    }
+    if(c.gewaehlt && phase==='entscheidung'){
+      h += '<div class="optionen">'
+        + c.def.opts.map((o,oi)=>optHtml(o,oi,c.betraege[oi],i)).join('')
+        + '</div>';
+    } else if(anfassbar){
+      h += '<div class="zurueck" style="padding-bottom:10px">anklicken, um sie jetzt anzugehen</div>';
+    }
+    d.innerHTML = h;
+    if(anfassbar) d.onclick = ()=>waehle(i);
+    el.appendChild(d);
+  });
+  el.querySelectorAll('.opt').forEach(b=>{
+    b.onclick=(e)=>{ e.stopPropagation(); entscheide(+b.dataset.k, +b.dataset.o); };
+  });
+}
+
+function renderDeck(){
+  const liste = deckListe();
+  const kr = liste.filter(id=>CARDS[id].art==='krise').length;
+  const ch = liste.length - kr;
+  const risiko = liste.length ? Math.round(kr/liste.length*100) : 0;
+  $('#deckkopf').innerHTML =
+      '<span>Karten im Deck</span><b>'+liste.length+'</b>'
+    + '<span>davon Chancen</span><b class="pos">'+ch+'</b>'
+    + '<span>davon Krisen</span><b class="neg">'+kr+'</b>'
+    + '<span>Risiko je Zug</span><b class="'+(risiko>40?'neg':'')+'">'+risiko+' %</b>';
+  $('#risikoBar').style.width = risiko+'%';
+
+  const el=$('#ziehbar'); el.innerHTML='';
+  const rang = id => (liste.includes(id)?0:1);
+  Object.keys(CARDS).sort((a,b)=>rang(a)-rang(b)).forEach(id=>{
+    const d=CARDS[id], drin=liste.includes(id);
+    let warum;
+    if(tisch.some(c=>c&&c.def.id===id)) warum='liegt auf dem Tisch';
+    else if(benutzt[id]) warum='gespielt — kommt nicht wieder';
+    else if(gesperrtBis[id] && gesperrtBis[id]>runde) warum='zurück ab Runde '+gesperrtBis[id];
+    else if(d.nurGeseedet && !imDeck[id]) warum='nur als Folgekarte';
+    else if(d.nurGeseedet && imDeck[id]>runde) warum='im Deck ab Runde '+imDeck[id];
+    else if(d.cond && !d.cond(S)) warum=d.condTxt||'Bedingung fehlt';
+    else warum = d.art==='krise' ? (d.condTxt||'im Deck') : 'im Deck';
+    el.insertAdjacentHTML('beforeend',
+      '<div data-id="'+id+'" title="ansehen">'
+      + '<span class="'+(drin?(d.art==='krise'?'kr':'ok'):'no')+'">'+(drin?'✓':'·')+'</span>'
+      + '<span class="'+(drin?'':'no')+'">'+d.icon+' '+d.name+'</span>'
+      + '<span class="warum">'+warum+'</span></div>');
+  });
+  el.querySelectorAll('[data-id]').forEach(r=>r.onclick=()=>zeigeVorschau(r.dataset.id));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Kartenvorschau — jede Karte anschauen, ohne sie zu spielen.
+   Nur im Prototyp: sie zeigt zusätzlich, WOHER die Karte kommt und
+   welche Folgekarten sie mit welcher Wahrscheinlichkeit auslöst.
+   ═══════════════════════════════════════════════════════════════════ */
+/* Rückwärts-Suche: welche Entscheidung legt diese Karte ins Deck? */
+function quellen(id){
+  const out=[];
+  Object.keys(CARDS).forEach(qid=>{
+    (CARDS[qid].opts||[]).forEach(o=>{
+      const sd = o.dynSeed ? o.dynSeed(S) : (o.seed||[]);
+      sd.filter(s=>s.id===id).forEach(s=>out.push(
+        {von:CARDS[qid], opt:o.name, p:Math.round(s.p*100), ab:s.ab}));
+    });
+  });
+  return out;
+}
+
+function zeigeVorschau(id){
+  const d = CARDS[id], krise = d.art==='krise';
+  const betraege = betraegeFuer(d);
+  const q = quellen(id);
+  const lebenslauf = krise
+    ? 'liegt '+d.runden+' '+(d.runden===1?'Runde':'Runden')+' · dann '
+      + (d.ende==='zwang' ? '<b class="neg">Zwangsvollstreckung</b>'
+       : d.ende==='zurueck' ? 'zurück ins Deck, solange die Ursache besteht'
+       : 'erledigt')
+    : 'einmalig — nach der Entscheidung ist sie aus dem Spiel';
+
+  let h = '<div class="karte karte--'+(krise?'krise':'chance')+'" style="min-height:0">'
+    + bildHtml(d)
+    + '<div class="k-kopf"><div class="k-art k-art--'+(krise?'krise':'chance')+'">'
+    + (krise?'Krise':'Chance')+'</div><h3>'+d.icon+' '+d.name+'</h3></div>'
+    + '<div class="k-text" style="padding-bottom:8px">'+d.text+'</div>';
+  if(krise){
+    const u = d.ursacheDyn ? d.ursacheDyn(S) : d.ursache;
+    h += '<div class="ursache"><b>Ausgelöst durch:</b> '+u+'</div>'
+      + '<div class="liegt">Liegt: '
+      + (d.liegt ? '⭐ '+tr(d.liegt)+' laufend' : d.liegtTxt||'—')
+      + (d.liegt && d.liegtTxt ? ' · '+d.liegtTxt : '')
+      + '<small>'+lebenslauf+'</small></div>';
+  }
+  h += '<div class="optionen">'
+    + d.opts.map((o,oi)=>optHtml(o,oi,betraege[oi],null)).join('')
+    + '</div></div>';
+
+  // Herkunft + Lebenslauf als Prototyp-Anhang unter der Karte
+  h += '<div class="vs-meta"><h2>Wie kommt sie ins Deck?</h2>';
+  if(d.nurGeseedet){
+    h += q.length
+      ? '<ul>'+q.map(x=>'<li>'+x.von.icon+' <b>'+x.von.name+'</b> → „'+x.opt+'"'
+          + ' <span class="vs-p">'+(x.p>=100?'sicher':x.p+' %')+'</span>'
+          + ', ab '+x.ab+' '+(x.ab===1?'Runde':'Runden')+' später</li>').join('')+'</ul>'
+      : '<p>Nur als Folgekarte — aber derzeit legt sie niemand.</p>';
+  } else {
+    h += '<p>Sie liegt von Anfang an im Deck, sobald gilt: <b>'+(d.condTxt||'immer')+'</b>'
+       + (d.cond ? (d.cond(S)?' <span class="vs-ja">✓ erfüllt</span>'
+                            :' <span class="vs-nein">✗ gerade nicht erfüllt</span>') : '')+'</p>';
+    if(q.length) h += '<p>Zusätzlich gelegt durch: '
+      + q.map(x=>x.von.name+' → „'+x.opt+'"').join(' · ')+'</p>';
+  }
+  h += '<h2 style="margin-top:12px">Lebenslauf</h2><p>'+lebenslauf+'</p>';
+
+  const folgen = [];
+  d.opts.forEach(o=>{
+    const sd = o.dynSeed ? o.dynSeed(S) : (o.seed||[]);
+    sd.forEach(s=>folgen.push({opt:o.name, k:CARDS[s.id], p:Math.round(s.p*100), ab:s.ab}));
+  });
+  if(folgen.length){
+    h += '<h2 style="margin-top:12px">Was sie auslösen kann</h2><ul>'
+      + folgen.map(f=>'<li>„'+f.opt+'" → '+f.k.icon+' <b>'+f.k.name+'</b> '
+        + '<span class="vs-p">'+(f.p>=100?'sicher':f.p+' %')+'</span>'
+        + ', ab '+f.ab+' '+(f.ab===1?'Runde':'Runden')+' später</li>').join('')+'</ul>';
+  }
+  h += '</div>';
+
+  $('#vsInhalt').innerHTML = h;
+  $('#vorschau').classList.add('an');
+}
+function schliesseVorschau(){ $('#vorschau').classList.remove('an'); }
+
+function renderTischliste(){
+  const l = liegende();
+  $('#tischliste').innerHTML = l.length ? l.map(c=>{
+    const rest = c.def.runden - c.alter;
+    return '<div>'+c.def.icon+' <b>'+c.def.name+'</b><br>'
+      + (c.def.liegt?'⭐ '+tr(c.def.liegt)+' laufend':'')
+      + (c.def.liegtTxt?(c.def.liegt?' · ':'')+c.def.liegtTxt:'')
+      + ' · noch '+rest+' '+(rest===1?'Runde':'Runden')+'</div>';
+  }).join('') : '<small style="color:#999">nichts liegt — alle drei Plätze sind frei</small>';
+}
+
+function renderLog(){
+  $('#log').innerHTML = logs.map(l=>
+    '<div class="eintrag"><b>R'+l.r+' · '+l.kopf+'</b>'
+    + l.zeilen.map(z=>'<small>'+z+'</small><br>').join('') + '</div>').join('')
+    || '<small style="color:#999">noch nichts entschieden</small>';
+}
+
+function renderChecks(){
+  if($('#chkDark').children.length) return;   // nur einmal bauen
+  const bau=(el,list,tag)=>{
+    list.forEach(n=>{
+      const id='c_'+n.id;
+      el.insertAdjacentHTML('beforeend',
+        '<label><input type="checkbox" id="'+id+'"><span>'+n.name+'</span>'
+        + (tag?'<span class="tag tag--'+tag+'">'
+             +(n.base?tr(n.base):'k +'+n.k.toFixed(2).replace('.',','))+'</span>':'')+'</label>');
+      setTimeout(()=>{
+        document.getElementById(id).onchange = e=>{
+          S.nodes[n.id]=e.target.checked;
+          if(S.misc.hasOwnProperty(n.id)) S.misc[n.id]=e.target.checked;
+          render();
+        };
+      },0);
+    });
+  };
+  bau($('#chkDark'), DARK, 'dark');
+  bau($('#chkWhite'), WHITE, 'white');
+  bau($('#chkMisc'), MISC, null);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   10. ERKLÄR-TOUR
+   Dieselbe Bauart wie die Phasen-Touren im Spiel (§10): das ECHTE UI
+   bleibt sichtbar und live, drumherum wird abgedunkelt. Wenig Text,
+   ein Bild, und der inhaltliche Grund statt einer Bedienungsanleitung.
+   ═══════════════════════════════════════════════════════════════════ */
+const TOUR = [
+  { ziel:null,
+    ill:'<div class="ill">'
+      + '<span class="ill__um" style="left:22%;top:16%">📰</span>'
+      + '<span class="ill__um" style="right:22%;top:16%;animation-delay:.5s">⚖️</span>'
+      + '<span class="ill__um" style="left:16%;bottom:16%;animation-delay:1s">🏛️</span>'
+      + '<span class="ill__um" style="right:16%;bottom:16%;animation-delay:1.5s">🔥</span>'
+      + '<div class="ill__mitte">🌐</div></div>',
+    titel:'Die Welt schaut zurück',
+    text:'Deine Plattform ist groß geworden. Ab hier ist sie nicht mehr nur dein Geschäft.',
+    zeilen:[['👥','40 Millionen Menschen nutzen sie täglich'],
+            ['💬','Presse, Gerichte und Politik reden mit'],
+            ['⏱️','Alle 5 Minuten musst du dich entscheiden']],
+    cta:'Weiter' },
+
+  { ziel:'#tisch',
+    ill:'<div class="ill"><div class="ill__reihe">'
+      + '<div class="ill__rueck"></div><div class="ill__rueck hoch"></div>'
+      + '<div class="ill__rueck"></div></div></div>',
+    titel:'Drei Karten. Du nimmst eine.',
+    text:'Was du nicht anfasst, wandert ungesehen zurück ins Deck — du erfährst nie, was es war.',
+    zeilen:[['🃏','Chance oder Krise — verdeckt sieht man das nicht'],
+            ['🎲','Eine falsche Karte zu ziehen ist Pech, kein Fehler']],
+    cta:'Weiter' },
+
+  { ziel:null,
+    ill:'<div class="ill"><div class="ill__flow">'
+      + '<div class="ill__mini c">🎭</div><span class="ill__pfeilr">➜</span>'
+      + '<div class="ill__stapel"><i></i><i></i><i></i><b>🔥</b></div>'
+      + '</div></div>',
+    titel:'Jede Entscheidung legt neue Karten ins Deck',
+    text:'Krisen kommen nicht aus dem Nichts. Auf jeder steht, wodurch sie ausgelöst wurde.',
+    zeilen:[['🎭','Der Deal mit dem Lobbyisten → Shitstorm'],
+            ['🤖','Kein Moderations-Team → Bot-Netzwerke'],
+            ['📈','Je öfter du schlecht entscheidest, desto voller wird es']],
+    cta:'Weiter' },
+
+  { ziel:'#tisch',
+    ill:'<div class="ill ill--k"><div class="ill__reihe">'
+      + '<div class="ill__rueck"></div>'
+      + '<div class="ill__krise" style="width:52px;height:76px;font-size:22px">🔥'
+      + '<span class="ill__frist">⏳ 2</span></div>'
+      + '<div class="ill__rueck"></div></div></div>',
+    titel:'Eine Krise, die du aussitzt, bleibt liegen',
+    text:'Sie belegt einen der drei Plätze — solange sie da ist, ziehst du eine Karte weniger.',
+    zeilen:[['⭐','Ihr Malus läuft die ganze Zeit mit'],
+            ['⏳','In der Ecke steht, wie lange noch'],
+            ['⚖️','Ein Urteil wird nach der Frist vollstreckt — doppelt']],
+    cta:'Weiter' },
+
+  { ziel:null,
+    ill:'<div class="ill"><div class="ill__saeulen">'
+      + '<div><b style="height:26px">5 %</b>klein<br><small>2 Mio €</small></div>'
+      + '<div><b style="height:58px">5 %</b>groß<br><small>25 Mio €</small></div>'
+      + '<div><b style="height:92px">5 %</b>riesig<br><small>140 Mio €</small></div>'
+      + '</div></div>',
+    titel:'Was so etwas kostet',
+    text:'Strafen und Angebote hängen an der Größe deines Konzerns — nicht an einer festen Zahl.',
+    zeilen:[['💶','Auf der Karte steht immer ein klarer Betrag'],
+            ['🏦','Bezahlt wird auf einen Schlag, vom Konto']],
+    cta:'Erste Runde 🃏' }
+];
+
+let tourI = -1;
+function tourStart(){ tourI = -1; $('#tour').classList.add('an'); tourWeiter(); }
+function tourWeiter(){
+  tourI++;
+  if(tourI >= TOUR.length){ tourEnde(); return; }
+  tourZeichne(TOUR[tourI]);
+}
+function tourEnde(){
+  $('#tour').classList.remove('an');
+  try{ localStorage.setItem('ek_tour_gesehen_v2','1'); }catch(e){}
+}
+function tourZeichne(st){
+  const tour=$('#tour'), loch=$('#tourLoch'), karte=$('#tourKarte'), pfeil=$('#tourPfeil');
+  const el = st.ziel ? $(st.ziel) : null;
+  karte.innerHTML = st.ill
+    + '<h3>'+st.titel+'</h3><p>'+st.text+'</p>'
+    + '<ul class="tour__zeilen">'
+    + st.zeilen.map(z=>'<li><b>'+z[0]+'</b><span>'+z[1]+'</span></li>').join('')
+    + '</ul><div class="tour__fuss"><div class="tour__punkte">'
+    + TOUR.map((_,i)=>'<i class="'+(i===tourI?'jetzt':'')+'"></i>').join('')
+    + '</div><button class="tour__skip" id="tourSkip">überspringen</button>'
+    + '<button class="primary" id="tourNext">'+st.cta+'</button></div>';
+  $('#tourNext').onclick = e=>{ e.stopPropagation(); tourWeiter(); };
+  $('#tourSkip').onclick = e=>{ e.stopPropagation(); tourEnde(); };
+
+  if(!el){                                   // Vollbild-Dimm, Karte mittig
+    tour.classList.add('voll');
+    pfeil.style.display='none';
+    karte.style.left = Math.max(14,(innerWidth-karte.offsetWidth)/2)+'px';
+    karte.style.top  = Math.max(14,(innerHeight-karte.offsetHeight)/2)+'px';
+    return;
+  }
+  tour.classList.remove('voll');
+  el.scrollIntoView({block:'center',behavior:'smooth'});
+  // nach dem Scrollen messen, sonst sitzt das Loch auf der alten Position
+  setTimeout(()=>{
+    const r = el.getBoundingClientRect(), luft = 10;
+    loch.style.left=(r.left-luft)+'px';  loch.style.top=(r.top-luft)+'px';
+    loch.style.width=(r.width+2*luft)+'px'; loch.style.height=(r.height+2*luft)+'px';
+
+    const kh = karte.offsetHeight, kw = karte.offsetWidth;
+    const drunter = r.bottom + 22 + kh < innerHeight;
+    const top = drunter ? r.bottom + 22 : Math.max(14, r.top - kh - 22);
+    let left = r.left + r.width/2 - kw/2;
+    left = Math.min(innerWidth - kw - 14, Math.max(14, left));
+    karte.style.top = top+'px'; karte.style.left = left+'px';
+
+    pfeil.style.display='block';
+    pfeil.style.left = Math.min(left+kw-24, Math.max(left+14, r.left+r.width/2-9))+'px';
+    if(drunter){
+      pfeil.style.top = (top-18)+'px';
+      pfeil.style.borderColor = 'transparent transparent var(--line) transparent';
+    } else {
+      pfeil.style.top = (top+kh)+'px';
+      pfeil.style.borderColor = 'var(--line) transparent transparent transparent';
+    }
+  }, 260);
+}
+$('#tourFaenger').onclick = tourWeiter;
+$('#btnTour').onclick = tourStart;
+
+/* ═══════════════════════════════════════════════════════════════════ */
+$('#rgUsers').oninput = ()=>{ liesRegler(); render(); };
+$('#rgGeld').oninput  = ()=>{ liesRegler(); render(); };
+$('#btnNext').onclick = naechsteRunde;
+$('#btnReset').onclick= reset;
+$('#cbBilder').onchange = e=>{ zeigeBilder=e.target.checked; render(); };
+$('#vsZu').onclick = schliesseVorschau;
+$('#vsHg').onclick = schliesseVorschau;
+addEventListener('keydown', e=>{ if(e.key==='Escape') schliesseVorschau(); });
+reset();
+renderLog();
+/* Beim ersten Besuch läuft die Tour von allein — das „gesehen"-Flag wird
+   wie im Spiel erst beim BEENDEN gesetzt, nicht beim Öffnen. */
+let gesehen=false; try{ gesehen = localStorage.getItem('ek_tour_gesehen_v2')==='1'; }catch(e){}
+if(!gesehen) setTimeout(tourStart, 400);
+</script>
+</body>
+</html>

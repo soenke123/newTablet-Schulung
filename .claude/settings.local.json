@@ -31,7 +31,17 @@
       "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8765/v3/index.html)",
       "Bash(git add *)",
       "Bash(git reset *)",
-      "Bash(npx --yes playwright --version)"
+      "Bash(npx --yes playwright --version)",
+      "Bash(python -)",
+      "Bash(grep -n '^\\\\s*\\\\\\\\' js/ui.js)",
+      "Bash(grep -c '^\\\\s*\\\\\\\\' js/ui.js)",
+      "Bash(awk 'match\\($0,/^[ \\\\t]*\\\\\\\\/\\){c++; if\\(c<10\\) print NR\": \"$0} END{print \"total: \"c+0}' js/ui.js)",
+      "Bash(npm ls *)",
+      "Bash(npx --no-install eslint --version)",
+      "PowerShell(node --check \"js/ui.js\"; if \\($?\\) { \"ui.js OK\" })",
+      "Bash(grep -n -- \"die −8,0\\\\|−4,1\\\\|+20,0 ist exakt\\\\|TREND_MAX. =\\\\|TREND_MAX\\\\` = +20\" CLAUDE.md phase3.md)",
+      "Bash(sed -i 's/querySelectorAll: function\\(\\){return \\\\[\\\\];},/querySelectorAll: function\\(\\){return [];}, getElementById: function\\(\\){return null;},/' C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Spiele-inProgress-Startup-Story/d591b81f-ad57-4704-898e-504c4f96fb11/scratchpad/tick.js)",
+      "Bash(ROOT='C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Spiele inProgress/Startup Story' node C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Spiele-inProgress-Startup-Story/d591b81f-ad57-4704-898e-504c4f96fb11/scratchpad/tick.js)"
     ]
   }
 }

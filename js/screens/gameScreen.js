@@ -17,6 +17,10 @@
       + '<div id="rt-game-top">'
       +    RT.ui.profileBarHTML(player)
       +    RT.ui.resourceBarHTML()
+      // Krisen-Leiste (Phase 4): was gerade durch Ereigniskarten an der
+      // Plattform zerrt, steht im Hauptbild statt in einem Modal. Leer
+      // blendet sie sich per CSS (:empty) selbst aus.
+      + '  <div id="rt-event-strip"></div>'
       + '</div>'
       + '<div id="world">'
       + '  <div id="world-camera">'
@@ -44,11 +48,14 @@
     // Theme aus State reanwenden (falls vorher Preview ohne Confirm).
     if (RT.theme && RT.theme.applyFromState) RT.theme.applyFromState();
 
-    // Trend-Erklärung nachholen, wenn Phase 2 nicht über das Investor-Modal
-    // erreicht wurde (Debug-Sprung oder Spielstand aus dem Übergang).
-    if (RT.state.currentPhase() >= 2 && !RT.state.current.trendModalSeen) {
-      setTimeout(function () { RT.ui.showTrendIntroModal(); }, 600);
-    }
+    // Erklär-Tour zur aktuellen Phase, falls noch nicht gesehen: am
+    // Spielanfang die Intro-Tour, in Phase 1 die Go-Live-Karte, ab Phase 2
+    // die Trend/Watchtime-Tour, ab Phase 3 die KI-Labor-Tour (die kommen
+    // normalerweise schon aus der Launch-Sequenz bzw. dem Investor-/
+    // Marcus-Modal — das hier ist nur der Nachhol-Pfad).
+    // Die Verzögerung ist nötig: der Spotlight misst echte Elemente, die
+    // erst nach dem ersten Refresh von Grid und Ressourcen-Bar stehen.
+    setTimeout(function () { RT.tour.startIfNew(); }, 600);
   }
 
   function exit() {
