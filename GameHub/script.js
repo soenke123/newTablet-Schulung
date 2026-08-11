@@ -56,6 +56,7 @@ const GAMES_CONFIG = [
   { id: 'game15', season: 2, title: 'LLMaster',            icon: '💬', url: 'S2 LLMaster/index.html'             },
   { id: 'game14', season: 2, title: 'Reinforce Yourself!', icon: '🤖', url: 'S2 Reinforce Yourself!/index.html'  },
   { id: 'game16', season: 3, title: '???',                 icon: '🌈', url: '#', clusterLegi: true },
+  { id: 'game18', season: 3, title: 'Startup Story',       icon: '🚀', url: 'S3 Startup Story/index.html' },
   { id: 'game17', season: 3, title: 'Bubble Bounce',       icon: '🫧', url: 'S3 BubbleBounce/index.html' },
 ];
 
