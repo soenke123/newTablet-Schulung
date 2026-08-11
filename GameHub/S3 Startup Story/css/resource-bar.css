@@ -1,0 +1,533 @@
+/* Profile-Bar + Resource-Bar für den Game-Screen.
+   Tokens werden von onboarding.css bereitgestellt (:root-Block). */
+
+/* === Layout-Wrapper oberhalb der iso-Welt === */
+#rt-game-top {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--rt-primary-wash);
+  border-bottom: 3px solid var(--rt-brown);
+  position: relative;
+  z-index: 6;
+}
+
+/* Shop-Button in der Profile-Bar (mittig zwischen Player und Plattform).
+   Style-analog zur Ursprungsversion: runder Playful-Button mit 3D-Schatten. */
+.rt-shop-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  font-size: 1.5rem;
+  background: var(--rt-primary-soft);
+  border: 3px solid var(--rt-brown);
+  border-radius: var(--rt-radius-md);
+  box-shadow: var(--rt-shadow-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  line-height: 1;
+  color: var(--rt-text);
+  font-family: var(--rt-font-display);
+}
+.rt-shop-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--rt-brown);
+}
+/* Shop + "?" als eine Gruppe in der Mitte der Profile-Bar. */
+.rt-profile-bar__tools {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+}
+/* "?" ruft die Phase-2-Tour erneut auf. Bewusst kleiner als der Shop-Button —
+   er steht daneben und soll sich ihm unterordnen. */
+.rt-shop-btn--help {
+  width: 40px; height: 40px;
+  font-size: 1.1rem; font-weight: 800;
+  background: var(--rt-surface);
+}
+@media (max-width: 600px) {
+  .rt-shop-btn { width: 40px; height: 40px; font-size: 1.25rem; }
+  .rt-shop-btn--help { width: 34px; height: 34px; font-size: 0.95rem; }
+  .rt-profile-bar__tools { gap: 4px; }
+}
+
+/* Alten schwebenden .shop-btn (aus game.css) im v3-Kontext ausblenden —
+   der Shop sitzt jetzt in der Profile-Bar unter #shop-btn. Die Original-
+   .shop-btn-Regel würde noch das grüne Gradient-Design ziehen. */
+#rt-game-top #shop-btn {
+  background: var(--rt-primary-soft);
+  color: var(--rt-text);
+  font-weight: 700;
+  border: 3px solid var(--rt-brown);
+  border-radius: var(--rt-radius-md);
+  box-shadow: var(--rt-shadow-sm);
+  padding: 0;
+  margin: 0;
+}
+
+/* === Iso-Welt: Hintergrund an gewähltes Theme koppeln ===
+   Überschreibt den harten Grass-Gradient aus game.css. */
+#world {
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.22), transparent 60%),
+    linear-gradient(180deg, var(--rt-primary-wash) 0%, var(--rt-primary-soft) 100%);
+}
+#world::before {
+  background:
+    linear-gradient(115deg, transparent 45%, rgba(74, 56, 41, 0.10) 45%, rgba(74, 56, 41, 0.10) 55%, transparent 55%),
+    linear-gradient(65deg,  transparent 45%, rgba(74, 56, 41, 0.10) 45%, rgba(74, 56, 41, 0.10) 55%, transparent 55%);
+  opacity: 0.55;
+}
+
+/* === Profile-Bar (Head+Name links · Plattform+Logo rechts) === */
+.rt-profile-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rt-space-4);
+  padding: var(--rt-space-3) var(--rt-space-5);
+  background: var(--rt-surface);
+  border: 3px solid var(--rt-brown);
+  border-radius: var(--rt-radius-xl);
+  box-shadow: var(--rt-shadow-sm);
+  margin: 0;
+}
+.rt-profile-bar__player,
+.rt-profile-bar__brand {
+  display: flex; align-items: center; gap: var(--rt-space-3); min-width: 0;
+}
+.rt-profile-bar__head {
+  width: 56px; height: 56px; border-radius: 50%; object-fit: cover;
+  flex-shrink: 0;
+  background: var(--rt-primary-soft);
+  border: 3px solid var(--rt-brown);
+  box-shadow: 0 2px 0 var(--rt-brown);
+}
+.rt-profile-bar__name {
+  font-family: var(--rt-font-display); font-weight: 700;
+  font-size: 1.1rem; color: var(--rt-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rt-profile-bar__platform {
+  font-family: var(--rt-font-display); font-weight: 700;
+  font-size: 1.4rem; color: var(--rt-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rt-profile-bar__logo {
+  width: 56px; height: 56px; object-fit: contain; flex-shrink: 0;
+}
+
+/* Online-Dot: erst sichtbar nach goLiveUnlocked. Sitzt zwischen Platform-Name und Logo. */
+.rt-profile-bar__online-dot {
+  display: none;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px #14532d, 0 0 12px rgba(34, 197, 94, 0.7);
+  flex-shrink: 0;
+  animation: rt-online-dot-pulse 1.8s ease-in-out infinite;
+}
+.rt-profile-bar.is-online .rt-profile-bar__online-dot { display: inline-block; }
+@keyframes rt-online-dot-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%      { transform: scale(1.2); opacity: 0.85; }
+}
+@media (max-width: 600px) {
+  .rt-profile-bar { padding: var(--rt-space-2) var(--rt-space-3); gap: var(--rt-space-2); }
+  .rt-profile-bar__head,
+  .rt-profile-bar__logo { width: 44px; height: 44px; }
+  .rt-profile-bar__name     { font-size: 0.95rem; }
+  .rt-profile-bar__platform { font-size: 1.1rem; }
+}
+
+/* === Resource-Bar === */
+/* Flex statt Grid, seit die Bar phasenabhängig zwischen 3 und 7 Kacheln
+   schwankt (Phase 0/1: Geld·User·Server · Phase 2: + Watchtime·Trend ·
+   Phase 3: + Modelle·Metadaten). Mit festen Spalten müsste jede Phase ihre
+   eigene Spaltenzahl mitführen — versteckte Kacheln verteilen sich im Flex
+   von selbst, und die Umsortierung kostet keine zweite Buchhaltung. */
+.rt-resources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--rt-space-2);
+  padding: var(--rt-space-2);
+  background: var(--rt-surface);
+  border: 3px solid var(--rt-brown);
+  border-radius: var(--rt-radius-lg);
+  box-shadow: var(--rt-shadow-sm);
+  margin: 0;
+}
+.rt-resource {
+  display: flex;
+  align-items: center;
+  gap: var(--rt-space-2);
+  padding: var(--rt-space-1) var(--rt-space-2);
+  background: var(--rt-primary-soft);
+  border-radius: var(--rt-radius-md);
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* Die Produktionskette Watchtime → Modelle → Metadaten läuft schmal: es sind
+   Zwischenstände, keine Kennzahlen, auf die man dauernd schaut. Geld, User,
+   Trend und Server behalten die volle Breite. */
+.rt-resource--slim { flex: 0.6 1 0; }
+.rt-resource--slim .rt-resource__icon { font-size: 1.05rem; }
+.rt-resource__icon { font-size: 1.3rem; }
+/* Icon in einer Kopfzeile statt links neben der Kachel (Trend) — muss auf
+   Zeilenhöhe bleiben, nicht die Zeile aufblasen. */
+.rt-resource__icon--inline { font-size: 0.95rem; line-height: 1; }
+
+/* Ressourcen-Farben: dieselben Pastelltöne wie die Ledger-Kacheln in den
+   Modals (--res-*-bg, definiert in game.css). Damit ist Watchtime überall
+   gelb, Trend überall pink und Server überall lila — die Kachel oben und die
+   Kostenzeile im Werbe-Modal zeigen sichtbar dieselbe Ressource.
+   Geld und User bleiben neutral: hinter ihnen liegt der Sparkline-Graph, ein
+   farbiger Grund würde mit dessen Kurve konkurrieren. */
+.rt-resource--watchtime { background: var(--res-watchtime-bg); }
+.rt-resource--trend     { background: var(--res-trend-bg); }
+.rt-resource--server    { background: var(--res-server-bg); }
+.rt-resource--models    { background: var(--res-model-bg); }
+.rt-resource--meta      { background: var(--res-meta-bg); }
+.rt-resource__label { font-size: 0.72rem; color: var(--rt-text-muted); font-weight: 600; }
+.rt-resource__value {
+  font-family: var(--rt-font-display); font-weight: 700; font-size: 0.95rem;
+  position: relative; overflow: visible;
+}
+/* Schmale Fenster: Mindestbreite erzwingen, dann bricht der Flex von selbst
+   in mehrere Zeilen um. Eine feste Spaltenzahl je Breakpoint gibt es nicht
+   mehr — sie müsste sonst mit der Phase multipliziert werden. */
+@media (max-width: 900px) {
+  .rt-resource        { flex-basis: 30%; }
+  .rt-resource--slim  { flex-basis: 22%; }
+}
+@media (max-width: 600px) {
+  .rt-resource,
+  .rt-resource--slim  { flex-basis: 45%; }
+}
+
+/* === Sparkline (Verlaufsgraph im Hintergrund der Geld/User-Karte) === */
+.rt-resource--chart { position: relative; overflow: hidden; }
+.rt-sparkline {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+.rt-resource--chart > :not(.rt-sparkline) { position: relative; z-index: 1; }
+
+/* === Delta-Popup (+/- Wert fliegt raus) === */
+@keyframes rt-delta-float {
+  0%   { opacity: 1; transform: translate(-50%, 0);     }
+  70%  { opacity: 1; transform: translate(-50%, -18px); }
+  100% { opacity: 0; transform: translate(-50%, -30px); }
+}
+.rt-delta-popup {
+  position: absolute; left: 50%; top: -2px;
+  transform: translate(-50%, 0);
+  font-family: var(--rt-font-display); font-weight: 700; font-size: 0.85rem;
+  white-space: nowrap; pointer-events: none;
+  animation: rt-delta-float 1.3s ease-out forwards;
+  z-index: 50;
+}
+.rt-delta-popup--positive { color: #27ae60; }
+.rt-delta-popup--negative { color: #e74c3c; }
+
+/* === Flyerbonus-Chip (unter User-Zahl) === */
+.rt-resource__flyer {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 4px;
+  padding: 2px 8px 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #d1fae5, #a7f3d0);
+  border: 1px solid #34d399;
+  font-size: 0.65rem; font-weight: 700;
+  line-height: 1.2;
+  animation: rt-flyer-pulse 1.4s ease-in-out infinite;
+  max-width: 100%;
+}
+.rt-resource__flyer-tag {
+  color: #065f46; text-transform: uppercase; letter-spacing: 0.3px;
+}
+.rt-resource__flyer-fx  {
+  color: #047857; font-family: var(--rt-font-display);
+}
+@keyframes rt-flyer-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+  50%      { box-shadow: 0 0 0 5px rgba(52, 211, 153, 0.0); }
+}
+
+/* === Trend-Kachel === */
+/* Aufbau von oben nach unten: Kopfzeile (Wert + "?") · Balken · Ernte-Button.
+   Der Button sitzt bewusst UNTER dem Balken, damit der Zusammenhang
+   "dieser Wert produziert diese User" räumlich sichtbar ist. */
+.rt-resource--trend { align-items: stretch; }
+.rt-trend-inner {
+  display: flex; flex-direction: column; justify-content: center;
+  gap: 4px; width: 100%;
+}
+.rt-trend-head {
+  display: flex; align-items: baseline; gap: 6px;
+  background: none; border: none; padding: 0; margin: 0;
+  cursor: pointer; font: inherit; color: inherit; text-align: left;
+}
+.rt-trend-head .rt-resource__label { flex: 1; }
+.rt-trend-value {
+  font-size: 0.78rem; font-weight: 800; color: var(--rt-brown); font-family: monospace;
+}
+.rt-trend-help {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 1.5px solid var(--rt-brown); opacity: 0.5;
+  font-size: 0.6rem; font-weight: 800; line-height: 1;
+}
+.rt-trend-head:hover .rt-trend-help { opacity: 1; }
+
+/* --rt-trend-zero setzt ui.js aus TREND_MIN/TREND_MAX (trendZeroPct). Die
+   Skala ist unsymmetrisch (−20 … +40), der Nullpunkt liegt also nicht in der
+   Mitte — und weil der Verlauf von rot über gelb nach grün genau dort
+   umschlägt, hängt er an derselben Marke wie der Strich. Der 50-%-Rückfall
+   gilt nur, falls die Variable fehlt. */
+.rt-trend-track {
+  position: relative; height: 12px; border-radius: 99px;
+  border: 2px solid var(--rt-brown);
+  background: linear-gradient(to right,
+              #e74c3c 0%, #f59e0b var(--rt-trend-zero, 50%), #27ae60 100%);
+  overflow: hidden;
+}
+.rt-trend-empty {
+  position: absolute; right: 0; top: 0;
+  height: 100%; width: 100%;
+  background: var(--rt-primary-soft); opacity: 0.88;
+  transition: width 0.45s ease;
+  z-index: 1;
+}
+.rt-trend-marker {
+  position: absolute; left: calc(var(--rt-trend-zero, 50%) - 1px); top: 0;
+  height: 100%; width: 2px;
+  background: rgba(74, 56, 41, 0.55);
+  z-index: 2;
+}
+
+/* --- Ernte-Button --- */
+.rt-trend-harvest {
+  position: relative; overflow: hidden;
+  display: block; width: 100%;
+  padding: 5px 8px;
+  border: 2px solid var(--rt-brown); border-radius: 8px;
+  background: var(--rt-primary-soft);
+  cursor: pointer; font: inherit;
+  transition: transform 0.1s ease, filter 0.2s ease;
+}
+.rt-trend-harvest:disabled { cursor: default; opacity: 0.55; }
+.rt-trend-harvest:not(:disabled):active { transform: translateY(1px); }
+.rt-trend-harvest__fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 0%; background: rgba(39, 174, 96, 0.35);
+  transition: width 0.4s linear;
+  z-index: 0;
+}
+/* Trennstriche zwischen den Stapeln — zeigen, wann der nächste Schub kommt. */
+.rt-trend-harvest__ticks {
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 1;
+}
+.rt-trend-harvest__ticks i {
+  position: absolute; top: 0; bottom: 0;
+  width: 2px; margin-left: -1px;
+  background: var(--rt-brown); opacity: 0.3;
+}
+.rt-trend-harvest__body {
+  position: relative; z-index: 2;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
+}
+.rt-trend-harvest__label {
+  font-size: 0.68rem; font-weight: 800; color: var(--rt-brown);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rt-trend-stacks {
+  font-size: 0.6rem; font-weight: 700; font-family: monospace;
+  color: var(--rt-brown); opacity: 0.7; white-space: nowrap;
+}
+
+/* Voll aufgeladen — der Balken wird golden, glüht und bekommt einen
+   wandernden Glanzstreifen. Das ist der Moment, in dem es sich lohnt. */
+.rt-trend-harvest--full:not(:disabled) {
+  border-color: #b45309;
+  background: linear-gradient(180deg, #fff6d5, #ffe9a8);
+  animation: rt-trend-gold-glow 1.2s ease-in-out infinite;
+}
+.rt-trend-harvest--full .rt-trend-harvest__fill {
+  background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 60%, #d97706 100%);
+}
+.rt-trend-harvest--full .rt-trend-harvest__label,
+.rt-trend-harvest--full .rt-trend-stacks {
+  color: #6b3f05; opacity: 1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+.rt-trend-harvest--full .rt-trend-harvest__ticks i {
+  background: #7c2d12; opacity: 0.28;
+}
+
+/* Glanzstreifen — läuft von links nach rechts über den vollen Balken. */
+.rt-trend-harvest--full::after {
+  content: '';
+  position: absolute; top: -60%; bottom: -60%; left: 0;
+  width: 45px; z-index: 3; pointer-events: none;
+  transform: skewX(-22deg) translateX(-120px);
+  background: linear-gradient(90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 255, 255, 0) 100%);
+  animation: rt-trend-shine 1.9s ease-in-out infinite;
+}
+@keyframes rt-trend-gold-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.75), 0 0 8px 1px rgba(245, 158, 11, 0.45); }
+  50%      { box-shadow: 0 0 0 7px rgba(245, 158, 11, 0.0),  0 0 14px 3px rgba(245, 158, 11, 0.7); }
+}
+@keyframes rt-trend-shine {
+  0%       { transform: skewX(-22deg) translateX(-120px); }
+  55%, 100% { transform: skewX(-22deg) translateX(320px); }
+}
+
+/* Wer Bewegung reduziert haben will, bekommt Gold ohne Animation. */
+@media (prefers-reduced-motion: reduce) {
+  .rt-trend-harvest--full:not(:disabled) { animation: none; box-shadow: 0 0 10px 2px rgba(245, 158, 11, 0.6); }
+  .rt-trend-harvest--full::after { animation: none; opacity: 0; }
+}
+
+/* Negativer Trend — Button wird zur Schadensbegrenzung. */
+.rt-trend-harvest--danger { background: #fee2e2; border-color: #b91c1c; }
+.rt-trend-harvest--danger .rt-trend-harvest__fill { background: rgba(185, 28, 28, 0.28); }
+.rt-trend-harvest--danger .rt-trend-harvest__label,
+.rt-trend-harvest--danger .rt-trend-stacks { color: #7f1d1d; }
+.rt-trend--negative .rt-trend-value { color: #b91c1c; }
+.rt-trend--positive .rt-trend-value { color: #15803d; }
+
+/* --- Fliegende User zwischen Trend- und User-Kachel --- */
+.rt-trend-fly {
+  position: fixed; z-index: 9000;
+  transform: translate(-50%, -50%);
+  padding: 3px 9px; border-radius: 99px;
+  border: 2px solid var(--rt-brown);
+  font-size: 0.8rem; font-weight: 800; font-family: var(--rt-font-display, inherit);
+  pointer-events: none; white-space: nowrap;
+  transition: transform 0.85s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.85s ease-in;
+}
+.rt-trend-fly--in  { background: #dcfce7; color: #15803d; }
+.rt-trend-fly--out { background: #fee2e2; color: #b91c1c; }
+
+/* === Server-Bar === */
+.rt-resource--server { align-items: center; }
+.rt-resource__server-inner {
+  display: flex; flex-direction: column; justify-content: center;
+  gap: 4px; flex: 1; min-width: 0;
+}
+.rt-resource__server-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--rt-space-2);
+}
+.rt-resource__server-val { font-size: 0.85rem; white-space: nowrap; }
+
+/* Tarifstufe der Serverkosten. Sitzt UNTER dem Kapazitätsbalken statt neben
+   dem "Server"-Label — sie gehört zur Kapazität (dort steigt der Tarif),
+   nicht zum Namen der Kachel. Rechtsbündig, weil der Balken selbst schon
+   die Aufmerksamkeit links hat. */
+.rt-srv-tier {
+  align-self: flex-end;
+  background: var(--rt-paper);
+  border: 1.5px solid var(--rt-brown);
+  border-radius: 99px;
+  padding: 1px 7px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--rt-brown);
+  cursor: pointer;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.rt-srv-tier:hover { filter: brightness(1.06); }
+/* Serverprobleme — dieselbe Warnfarbe wie die kritische Server-Kachel. */
+.rt-srv-tier.is-trouble {
+  background: #fecaca;
+  border-color: #b91c1c;
+  color: #7f1d1d;
+  animation: rt-server-critical 1.2s ease-in-out infinite;
+}
+
+/* Aufschlüsselung im Serverkosten-Modal.
+
+   „Dein Tarif" steht als ZWEI ZEILEN: oben die Überschriften, darunter die
+   eigenen Werte. Vorher waren es vier Label-Wert-Paare in zwei Spalten — vier
+   Begriffe und vier Zahlen im Zickzack, bei denen man erst suchen musste, was
+   wozu gehört, und die sich untereinander nicht vergleichen ließen.
+
+   ⚠️ Die Zuordnung liegt in der SPALTE (Überschrift und Wert gestapelt), nicht
+   in der Zeile. Nur deshalb darf auto-fit auf schmalen Geräten auf zwei
+   Spalten umbrechen — bei einer echten Kopfzeile stünden dort die letzten
+   beiden Werte unter den ersten beiden Überschriften. */
+.rt-srv-now {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+  gap: 10px;
+  margin: 8px 0 4px;
+  padding: 10px 12px;
+  background: var(--tt-paper, #fffaf0);
+  border: 2px solid var(--tt-brown, #4a3829);
+  border-radius: 12px;
+}
+.rt-srv-now > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rt-srv-now__lbl  { font-size: 0.72em; line-height: 1.25; opacity: 0.7; }
+.rt-srv-now__val  { font-size: 1.05em; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rt-srv-table { margin: 4px 0; }
+.rt-srv-row {
+  display: grid; grid-template-columns: 5.5rem 1fr auto;
+  gap: 8px; align-items: baseline;
+  padding: 4px 8px; border-radius: 8px;
+}
+.rt-srv-row.is-current { background: var(--rt-primary-wash, rgba(0,0,0,0.06)); font-weight: 800; }
+.rt-srv-row__name { font-weight: 700; }
+.rt-srv-row__cap  { opacity: 0.7; font-size: 0.85em; }
+.rt-srv-row__rate { font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Eigener heller Grund statt transparent: die Kachel ist seit den Ressourcen-
+   Farben lila, sonst wäre der freie Teil des Balkens nicht mehr vom belegten
+   zu unterscheiden. */
+.rt-server-bar {
+  display: flex; height: 16px; border-radius: 99px;
+  border: 2px solid var(--rt-brown); overflow: hidden;
+  background: var(--rt-paper);
+}
+/* Farben = die Ressourcen-Tokens aus game.css, exakt wie im Belegungs-Balken
+   des Farm-Modals (.rt-cap__seg--*). Vorher lagen hier --rt-sky und
+   --rt-yellow: zwei Töne, die im Rest des Spiels für nichts stehen — der
+   Balken zeigte also dieselbe Belegung in einer zweiten, eigenen Farbsprache. */
+.rt-server-bar__seg { height: 100%; width: 0%; transition: width 0.45s ease; flex-shrink: 0; }
+.rt-server-bar__seg--usr   { background: var(--res-users-ink); }
+.rt-server-bar__seg--code  { background: var(--res-server-ink); }
+.rt-server-bar__seg--model { background: var(--res-model-ink); }
+
+/* Kritischer Zustand. Ruhepunkt ist die Server-Farbe, nicht der alte
+   Neutralton — sonst pulst die Kachel gegen ihre eigene Grundfarbe. */
+@keyframes rt-server-critical {
+  0%, 100% { background: var(--res-server-bg); }
+  50%       { background: #fecaca; }
+}
+.rt-resource--critical {
+  animation: rt-server-critical 0.7s ease-in-out infinite;
+  outline: 2px solid #e74c3c; outline-offset: -2px;
+}
+@keyframes rt-money-negative {
+  0%, 100% { background: #fee2e2; }
+  50%       { background: #fca5a5; }
+}
+.rt-resource--money-negative {
+  animation: rt-money-negative 1s ease-in-out infinite;
+  outline: 2px solid #dc2626; outline-offset: -2px;
+}
+.rt-resource--money-negative .rt-resource__value,
+.rt-resource--money-negative .rt-resource__value span { color: #dc2626; font-weight: 700; }

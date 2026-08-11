@@ -1,0 +1,285 @@
+/* Ereigniskarten (Phase 4) — eigenes Overlay statt des Standard-Modals,
+   weil es sich verweigern können muss: solange eine Karte gewählt werden
+   soll, gibt es weder Schließen-Knopf noch Klick auf den Hintergrund.
+
+   Farben kommen aus dem Logo-Theme (--rt-primary…, js/theme.js), damit
+   alle acht Plattform-Themes tragen. Rot/Grün für Krise/Chance sind fest:
+   sie sagen etwas über die Karte, nicht über die Marke. */
+
+:root {
+  --ev-krise:      #c04a3a;
+  --ev-krise-soft: #f8e0dc;
+  --ev-chance:     #3f8f6a;
+  --ev-chance-soft:#dff0e6;
+  --ev-dark:       #7a2f2f;
+}
+
+/* ── Button neben dem Shop ────────────────────────────────────────── */
+.rt-events-btn { position: relative; }
+.rt-events-btn.is-due { animation: rt-ev-pulse 1.1s ease-in-out infinite; }
+@keyframes rt-ev-pulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(192, 74, 58, 0.55); }
+  50%      { transform: scale(1.07); box-shadow: 0 0 0 10px rgba(192, 74, 58, 0); }
+}
+/* Countdown unter dem Symbol. Absolut positioniert, damit der Button
+   dieselbe Größe behält wie der Shop daneben. */
+.rt-events-btn__clock {
+  position: absolute; left: 50%; bottom: -13px; transform: translateX(-50%);
+  font-size: 0.6rem; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--rt-ink, #3d2f22); background: rgba(255, 255, 255, 0.9);
+  border-radius: 99px; padding: 0 5px; white-space: nowrap;
+  font-variant-numeric: tabular-nums; pointer-events: none;
+}
+.rt-events-btn.is-due .rt-events-btn__clock { color: #fff; background: var(--ev-krise); }
+/* Zahl liegender Krisen — der Dauerhinweis, wenn gerade kein Zug ansteht. */
+.rt-events-btn__crises {
+  position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px;
+  border-radius: 99px; background: var(--ev-krise); color: #fff;
+  font-size: 0.65rem; font-weight: 700; line-height: 17px; text-align: center;
+  padding: 0 4px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Krisen-Leiste unter der Ressourcen-Bar ───────────────────────── */
+/* Der wichtigste Teil der Sichtbarkeit: was gerade an der Plattform
+   zerrt, steht im Hauptbild und nicht in einem Modal, das man aufmachen
+   muss. Leer wird die Leiste ausgeblendet, damit sie keinen Platz frisst. */
+#rt-event-strip {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  padding: 5px 10px; background: rgba(192, 74, 58, 0.08);
+  border-bottom: 1px solid rgba(192, 74, 58, 0.25);
+}
+#rt-event-strip:empty { display: none; }
+.rt-ev-strip__item {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #fff; border: 1px solid var(--ev-krise); border-radius: 99px;
+  padding: 2px 9px; font-size: 0.72rem; color: var(--ev-dark); cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.rt-ev-strip__item:hover { background: var(--ev-krise-soft); }
+.rt-ev-strip__item.is-good { border-color: var(--ev-chance); color: #2b6b4b; }
+.rt-ev-strip__item.is-good:hover { background: var(--ev-chance-soft); }
+.rt-ev-strip__val  { font-weight: 700; font-variant-numeric: tabular-nums; }
+.rt-ev-strip__note { opacity: 0.7; }
+
+/* ── Overlay ──────────────────────────────────────────────────────── */
+.rt-ev { position: fixed; inset: 0; z-index: 1400; }
+.rt-ev__bg { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); }
+.rt-ev.is-locked .rt-ev__bg { background: rgba(0, 0, 0, 0.72); cursor: not-allowed; }
+.rt-ev__box {
+  position: absolute; inset: 3vh 50% auto auto; transform: translateX(50%);
+  width: min(1000px, calc(100vw - 20px)); max-height: 94vh;
+  display: flex; flex-direction: column;
+  background: var(--rt-panel, #fffaf3);
+  border: 2px solid var(--rt-line, #d9c8b0); border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45); overflow: hidden;
+}
+.rt-ev__head {
+  display: flex; align-items: center; gap: 12px; flex: none;
+  padding: 12px 16px; border-bottom: 2px solid var(--rt-line, #d9c8b0);
+  background: var(--rt-primary-wash, #f6e6c4);
+}
+.rt-ev__title { font-size: 1.05rem; font-weight: 700; }
+.rt-ev__round { font-size: 0.82rem; color: #7a6553; margin-right: auto; }
+.rt-ev__round b { font-variant-numeric: tabular-nums; }
+.rt-ev__wait  { color: var(--ev-krise); }
+.rt-ev__close {
+  border: none; background: rgba(0, 0, 0, 0.06); border-radius: 99px;
+  width: 30px; height: 30px; font-size: 0.95rem; cursor: pointer; line-height: 1;
+}
+.rt-ev__body { padding: 14px 16px 18px; overflow-y: auto; }
+
+/* ── Der Tisch ────────────────────────────────────────────────────── */
+.rt-ev-table {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: start;
+}
+@media (max-width: 780px) { .rt-ev-table { grid-template-columns: 1fr; } }
+
+.rt-ev-card {
+  border: 2px solid var(--rt-line, #d9c8b0); border-radius: 13px; background: #fff;
+  min-height: 230px; display: flex; flex-direction: column;
+  overflow: hidden; position: relative; transition: transform 0.12s;
+}
+.rt-ev-card--empty    { opacity: 0.25; }
+.rt-ev-card--back {
+  background: repeating-linear-gradient(45deg, #e8d9c0 0 9px, #e2d0b3 9px 18px);
+  align-items: center; justify-content: center; cursor: pointer; gap: 6px;
+}
+.rt-ev-card--back:hover { transform: translateY(-5px); border-color: var(--rt-primary, #c8922a); }
+.rt-ev-card--back.is-out { opacity: 0.45; cursor: default; }
+.rt-ev-card--back.is-out:hover { transform: none; }
+.rt-ev-card__back { font-size: 2.4rem; color: rgba(0, 0, 0, 0.32); }
+.rt-ev-card__hint { font-size: 0.7rem; color: #7a6553; text-align: center; }
+.rt-ev-card__hint--inline { padding: 0 12px 12px; }
+
+.rt-ev-card--krise  { border-color: var(--ev-krise);  background: var(--ev-krise-soft); }
+.rt-ev-card--chance { border-color: var(--ev-chance); }
+.rt-ev-card.is-picked { box-shadow: 0 0 0 3px var(--rt-primary-soft, #f6e6c4); }
+.rt-ev-card.is-done   { opacity: 0.5; }
+.rt-ev-card.is-clickable { cursor: pointer; }
+.rt-ev-card.is-clickable:hover { transform: translateY(-3px); }
+
+.rt-ev-card__img {
+  height: 78px; flex: none; display: flex; align-items: center; justify-content: center;
+  font-size: 2.3rem; border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+.rt-ev-card__img--chance { background: linear-gradient(135deg, #dff0e6, #bfe3cf); }
+.rt-ev-card__img--krise  { background: linear-gradient(135deg, #f8e0dc, #efc2b8); }
+
+.rt-ev-card__frist {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 99px;
+  background: #fff; border: 1px solid var(--ev-krise); color: var(--ev-krise);
+  white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.rt-ev-card__head { padding: 9px 12px; border-bottom: 1px solid rgba(0, 0, 0, 0.1); }
+.rt-ev-card__head h3 { margin: 2px 0 0; font-size: 0.95rem; }
+.rt-ev-card__art {
+  font-size: 0.6rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+}
+.rt-ev-card__art--krise  { color: var(--ev-krise); }
+.rt-ev-card__art--chance { color: var(--ev-chance); }
+.rt-ev-card__text { padding: 8px 12px 0; font-size: 0.8rem; color: #7a6553; flex: 1; }
+.rt-ev-card__cause {
+  margin: 8px 12px; padding: 6px 9px; border-radius: 6px; background: rgba(0, 0, 0, 0.04);
+  font-size: 0.68rem; color: #7a6553; border-left: 3px solid var(--ev-krise);
+}
+.rt-ev-card__lying {
+  margin: 8px 12px; padding: 6px 9px; border-radius: 6px; background: #fff;
+  font-size: 0.73rem; border: 1px dashed var(--ev-krise); color: var(--ev-krise);
+  font-weight: 600;
+}
+.rt-ev-card__lying small { display: block; font-weight: 400; color: #7a6553; margin-top: 2px; }
+
+.rt-ev-card__opts { padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; }
+.rt-ev-opt {
+  border: 1px solid var(--rt-line, #d9c8b0); border-radius: 9px; padding: 8px 10px;
+  background: #fff; text-align: left; display: block; width: 100%;
+  font: inherit; color: inherit; cursor: pointer;
+}
+.rt-ev-opt:hover:not(:disabled) {
+  background: var(--rt-primary-wash, #f6e6c4); border-color: var(--rt-primary, #c8922a);
+}
+.rt-ev-opt:disabled { opacity: 0.45; cursor: not-allowed; }
+.rt-ev-opt__name  { font-weight: 600; font-size: 0.83rem; }
+.rt-ev-opt__money { font-size: 1.05rem; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.rt-ev-opt__money.is-neg { color: var(--ev-krise); }
+.rt-ev-opt__money.is-pos { color: var(--ev-chance); }
+.rt-ev-opt__pct   { font-size: 0.66rem; color: #7a6553; }
+
+.rt-ev-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.rt-ev-chip {
+  font-size: 0.66rem; padding: 1px 6px; border-radius: 99px;
+  background: rgba(0, 0, 0, 0.04); border: 1px solid rgba(0, 0, 0, 0.1); white-space: nowrap;
+}
+.rt-ev-chip--trend { background: #efe8fb; border-color: #d5c6f2; color: #5b3fa0; }
+.rt-ev-chip--perm  { background: #f3dcdc; border-color: #e3bcbc; color: var(--ev-dark); font-weight: 600; }
+.rt-ev-chip--wt    { background: #fbf0d5; border-color: #eddab0; color: #8a6410; }
+.rt-ev-chip--user  { background: #e2eff7; border-color: #c3ddec; color: #25607f; }
+.rt-ev-chip--gut   { background: #dff0e6; border-color: #bcdfc9; color: #2b6b4b; }
+
+.rt-ev-hint {
+  margin-top: 12px; font-size: 0.75rem; color: #7a6553;
+  background: rgba(0, 0, 0, 0.04); border-radius: 8px; padding: 8px 11px;
+}
+
+/* ── „Läuft gerade" + Protokoll ───────────────────────────────────── */
+.rt-ev-sec { margin-top: 16px; }
+.rt-ev-sec h4 {
+  margin: 0 0 7px; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #7a6553; font-weight: 700;
+}
+.rt-ev-status { display: flex; flex-direction: column; gap: 4px; }
+.rt-ev-status--empty { font-size: 0.75rem; color: #9c8a78; font-style: italic; }
+.rt-ev-status__row {
+  display: grid; grid-template-columns: 20px 1fr auto auto; gap: 8px; align-items: center;
+  padding: 5px 9px; border-radius: 8px; font-size: 0.76rem;
+  background: rgba(0, 0, 0, 0.03); border-left: 3px solid var(--rt-line, #d9c8b0);
+}
+.rt-ev-status__row.is-bad  { border-left-color: var(--ev-krise);  background: rgba(192, 74, 58, 0.07); }
+.rt-ev-status__row.is-good { border-left-color: var(--ev-chance); background: rgba(63, 143, 106, 0.08); }
+.rt-ev-status__val  { font-weight: 700; font-variant-numeric: tabular-nums; }
+.rt-ev-status__note { color: #7a6553; font-size: 0.68rem; white-space: nowrap; }
+
+.rt-ev-log { max-height: 190px; overflow-y: auto; font-size: 0.72rem; }
+.rt-ev-log--empty { color: #9c8a78; font-style: italic; }
+.rt-ev-log__row {
+  border-left: 3px solid var(--rt-line, #d9c8b0); padding: 3px 0 5px 8px; margin-bottom: 5px;
+}
+.rt-ev-log__row b     { display: block; font-size: 0.74rem; }
+.rt-ev-log__row small { display: block; color: #7a6553; }
+
+/* ── Illustrationen der Phase-4-Tour ──────────────────────────────── */
+/* Alles CSS, keine externen Dateien — dieselbe Linie wie die übrigen
+   Touren, die ihre Bilder auch aus Sprites und Kacheln zusammensetzen. */
+.rt-tour-ev-ill {
+  height: 128px; border-radius: 10px; margin-bottom: 11px; position: relative;
+  overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--rt-primary-wash, #f6e6c4), #f2e2c6);
+}
+.rt-tour-ev-ill.is-bad { background: linear-gradient(135deg, #f8e0dc, #f3d0c8); }
+.rt-tour-ev-core {
+  width: 56px; height: 56px; border-radius: 14px; background: #fff;
+  border: 2px solid var(--rt-primary, #c8922a); display: flex; align-items: center;
+  justify-content: center; font-size: 1.6rem; z-index: 2;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.14);
+}
+.rt-tour-ev-orbit {
+  position: absolute; font-size: 1.2rem; background: #fff;
+  border: 1px solid var(--rt-line, #d9c8b0); border-radius: 99px;
+  width: 33px; height: 33px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14); animation: rt-tour-ev-beat 2.6s infinite;
+}
+@keyframes rt-tour-ev-beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+
+.rt-tour-ev-row { display: flex; gap: 9px; align-items: flex-end; }
+.rt-tour-ev-back {
+  width: 40px; height: 58px; border-radius: 7px; border: 2px solid #c9b696;
+  background: repeating-linear-gradient(45deg, #e8d9c0 0 6px, #e2d0b3 6px 12px);
+}
+.rt-tour-ev-back.is-up {
+  transform: translateY(-14px); border-color: var(--rt-primary, #c8922a);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+.rt-tour-ev-crisis {
+  width: 52px; height: 76px; border-radius: 9px; border: 2px solid var(--ev-krise);
+  background: #fff; position: relative; display: flex; align-items: center;
+  justify-content: center; font-size: 1.4rem;
+}
+.rt-tour-ev-crisis i {
+  position: absolute; top: -10px; right: -14px; background: #fff; font-style: normal;
+  border: 1px solid var(--ev-krise); color: var(--ev-krise); border-radius: 99px;
+  font-size: 0.62rem; font-weight: 700; padding: 1px 7px; white-space: nowrap;
+}
+
+.rt-tour-ev-flow  { display: flex; align-items: center; gap: 13px; }
+.rt-tour-ev-arrow { font-size: 1.2rem; color: #7a6553; }
+.rt-tour-ev-mini {
+  width: 44px; height: 62px; border-radius: 7px; border: 2px solid var(--rt-line, #d9c8b0);
+  background: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex: none;
+}
+.rt-tour-ev-mini.is-chance { border-color: var(--ev-chance); }
+.rt-tour-ev-stack { position: relative; width: 46px; height: 64px; flex: none; }
+.rt-tour-ev-stack i {
+  position: absolute; inset: 0; border-radius: 7px; border: 2px solid #c9b696;
+  background: repeating-linear-gradient(45deg, #e8d9c0 0 6px, #e2d0b3 6px 12px);
+}
+.rt-tour-ev-stack i:nth-child(2) { transform: translate(4px, -4px); }
+.rt-tour-ev-stack i:nth-child(3) { transform: translate(8px, -8px); }
+.rt-tour-ev-stack b {
+  position: absolute; left: 14px; top: -18px; width: 44px; height: 62px; border-radius: 7px;
+  border: 2px solid var(--ev-krise); background: #fff; display: flex;
+  align-items: center; justify-content: center; font-size: 1.2rem;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2);
+}
+
+.rt-tour-ev-bars {
+  display: flex; gap: 24px; align-items: flex-end; font-size: 0.65rem;
+  text-align: center; color: #7a6553;
+}
+.rt-tour-ev-bars b {
+  display: block; width: 52px; background: var(--rt-primary, #c8922a); border-radius: 5px 5px 0 0;
+  color: #fff; font-size: 0.65rem; padding: 3px 0; margin-bottom: 4px;
+}
+.rt-tour-ev-bars span { display: block; }
+.rt-tour-ev-bars small { display: block; font-weight: 700; color: #3d2f22; }

@@ -1,0 +1,2278 @@
+/* ---- Design Tokens ---- */
+:root {
+  --grass:      #7dc26e;
+  --grass-dark: #5fa74f;
+  --wood:       #8b5a2b;
+  --gold:       #f4c542;
+  --gold-dark:  #d9a300;
+  --red:        #e74c3c;
+  --blue:       #4d90fe;
+  --blue-dark:  #3672d1;
+  --green:      #4dbf4d;
+  --green-dark: #3ba03b;
+  --text:       #2b2b2b;
+  --bg:         #e8f4d4;
+  --path:       #d9c48c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ---- Resource Bar ---- */
+#resource-bar {
+  display: flex; gap: 10px; padding: 10px 14px;
+  background: linear-gradient(180deg, #fff9e0, #f4c542);
+  border-bottom: 3px solid var(--wood);
+  align-items: center;
+  z-index: 5;
+  flex-wrap: wrap;
+}
+.res {
+  background: rgba(255,255,255,0.85);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 700; font-size: 15px;
+  display: flex; gap: 6px; align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: background 0.3s;
+}
+.res-icon { font-size: 17px; }
+
+#res-servercap-wrap.res-cap-warn { background: rgba(244,197,66,0.55); }
+#res-servercap-wrap.res-cap-full {
+  background: rgba(231,76,60,0.55);
+  color: #4a0000;
+  animation: cap-pulse 1.4s ease-in-out infinite;
+}
+@keyframes cap-pulse {
+  0%, 100% { box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  50%      { box-shadow: 0 0 12px rgba(231,76,60,0.7); }
+}
+
+/* Ressourcen-Kachel Pop-Effekt bei Ernte — Scale skaliert mit --pop-scale.
+   Zielt auf die Kachel-Container aus resourceBarHTML(), nicht auf die
+   Zahlen-Spans: die werden von bindResourceBar laufend neu geschrieben. */
+.rt-resource {
+  transform-origin: center;
+  --pop-scale: 1.4;
+}
+.rt-resource--watchtime.res-pop { animation: res-pop 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+#rt-res-users-card.res-pop      { animation: res-pop-green 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+#rt-res-money-card.res-pop      { animation: res-pop-gold 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes res-pop {
+  0%   { transform: scale(1);                box-shadow: none; }
+  40%  { transform: scale(var(--pop-scale)); box-shadow: 0 0 22px rgba(90,160,255,0.75); }
+  100% { transform: scale(1);                box-shadow: none; }
+}
+@keyframes res-pop-green {
+  0%   { transform: scale(1);                box-shadow: none; }
+  40%  { transform: scale(var(--pop-scale)); box-shadow: 0 0 22px rgba(90,200,120,0.75); }
+  100% { transform: scale(1);                box-shadow: none; }
+}
+@keyframes res-pop-gold {
+  0%   { transform: scale(1);                box-shadow: none; }
+  40%  { transform: scale(var(--pop-scale)); box-shadow: 0 0 22px rgba(244,197,66,0.85); }
+  100% { transform: scale(1);                box-shadow: none; }
+}
+
+/* Shop-Button in der Ressourcen-Bar */
+.shop-btn {
+  margin-left: auto;
+  background: linear-gradient(180deg, var(--green), var(--green-dark));
+  color: white; font-weight: 800; font-size: 15px;
+  border: none; border-radius: 999px;
+  padding: 8px 18px; cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: transform 0.1s;
+}
+.shop-btn:hover  { transform: translateY(-1px); }
+.shop-btn:active { transform: translateY(1px); }
+
+/* ---- World (isometrische Wiese) ---- */
+#world {
+  flex: 1; position: relative;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.18), transparent 60%),
+    linear-gradient(180deg, var(--grass) 0%, var(--grass-dark) 100%);
+  overflow: hidden;
+  min-height: 480px;
+}
+/* dezente Wege im Hintergrund */
+#world::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(115deg, transparent 45%, rgba(217,196,140,0.35) 45%, rgba(217,196,140,0.35) 55%, transparent 55%),
+    linear-gradient(65deg,  transparent 45%, rgba(217,196,140,0.35) 45%, rgba(217,196,140,0.35) 55%, transparent 55%);
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* ---- Kamera-Layer: hält iso-grid + building-ui-layer.
+   Bekommt transform: scale/translate für Pinch-Zoom + Pan. ---- */
+#world-camera {
+  position: absolute; inset: 0;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  touch-action: none; /* Pinch/Pan selbst behandeln, nicht der Browser */
+}
+
+/* ---- Isometrisches Grid ---- */
+#iso-grid {
+  position: absolute; inset: 0;
+  pointer-events: none; /* Klicks nur auf Gebäude */
+}
+.iso-tile {
+  position: absolute;
+  width: 192px; height: 96px;
+  transform: translate(-50%, -50%);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  /* Aktive Felder: kolorierte Tönung aus der Logo-Theme (--rt-primary),
+     überlagert mit dunkler dashed Kontur. Die Farbe passt zur gewählten
+     Plattform (bell = pink, graph = blau, mesh = grün …). */
+  background-color: color-mix(in srgb, var(--rt-primary, #b08968) 35%, transparent);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 64' preserveAspectRatio='none'><polygon points='64,2 126,32 64,62 2,32' fill='transparent' stroke='rgba(30,20,10,0.55)' stroke-width='1.5' stroke-dasharray='5,3'/></svg>");
+  background-size: 100% 100%;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.iso-tile:hover              { background-color: rgba(255,255,255,0.15); }
+.iso-tile.tile-valid         { background-color: rgba(77,191,77,0.45); }
+.iso-tile.tile-valid:hover   { background-color: rgba(77,191,77,0.65); }
+.iso-tile.tile-invalid       { background-color: rgba(231,76,60,0.35); cursor: not-allowed; }
+.iso-tile.tile-invalid:hover { background-color: rgba(231,76,60,0.5); }
+
+/* Gesperrte Kranz-Felder (Phase 2, außerhalb der 4×4 Freizone).
+   Nur angedeutet — dünne helle Linien, keine Farbfüllung, damit die
+   aktive Zone dominiert aber die Ausbauflächen trotzdem sichtbar sind. */
+.iso-tile--locked {
+  background-color: transparent;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 64' preserveAspectRatio='none'><polygon points='64,2 126,32 64,62 2,32' fill='transparent' stroke='rgba(255,255,255,0.55)' stroke-width='1.0' stroke-dasharray='4,4'/></svg>");
+  cursor: default;
+  pointer-events: none;
+}
+.iso-tile--locked:hover { background-color: transparent; }
+
+/* Kaufbare Felder: rechtwinklig angrenzend an eigenes Gelände. Goldene
+   Kontur + "+"-Plakette, damit sie sich klar von den gesperrten Kranz-
+   Feldern absetzen. Klick öffnet die Kauf-Nachfrage. */
+.iso-tile--buy {
+  background-color: rgba(255,209,102,0.10);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 64' preserveAspectRatio='none'><polygon points='64,2 126,32 64,62 2,32' fill='transparent' stroke='rgba(255,196,60,0.95)' stroke-width='2' stroke-dasharray='6,4'/></svg>");
+  pointer-events: auto;
+  cursor: pointer;
+}
+.iso-tile--buy:hover { background-color: rgba(255,209,102,0.30); }
+.iso-tile--buy::after {
+  content: '+';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 34px; height: 34px; margin: -17px 0 0 -17px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: 800; line-height: 1;
+  color: #ffd166;
+  /* Kein Kreis drumherum — der dunkle Schatten hält das "+" trotzdem
+     auf hellem Rasen lesbar. */
+  text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+  pointer-events: none;
+  transition: transform 0.12s;
+}
+.iso-tile--buy:hover::after { color: #ffe08a; transform: scale(1.15); }
+
+/* ---- Gebäude auf Iso-Grid ---- */
+.building {
+  position: absolute;
+  text-align: center;
+  cursor: pointer;
+  /* Container transparent für Klicks — nur die diamant-Hitbox ist klickbar,
+     damit transparente PNG-Bereiche der 2x2-Farm nicht dahinterliegende
+     Gebäude blockieren. */
+  pointer-events: none;
+  /* Fuß-Mitte des Sprites landet exakt auf tile-Mitte */
+  transform: translate(-50%, -71%);
+  transition: transform 0.15s ease;
+  width: 130px;
+}
+.building:hover  { transform: translate(-50%, -71%) translateY(-4px); }
+.building:active { transform: translate(-50%, -71%) translateY(0); }
+
+/* 2x2-Gebäude: doppelt so breit, gleiche Anker-Logik */
+.building.building-2x2 { width: 360px; }
+
+/* Diamant-Hitbox exakt über der (den) Kachel(n) — nur hier zählen Klicks. */
+.b-hitbox {
+  position: absolute;
+  top: 71%;                  /* auf Höhe der Kachel-Mitte (Anker -71%) */
+  left: 50%;
+  width: 192px;              /* TILE_W */
+  height: 96px;              /* TILE_H */
+  transform: translate(-50%, -50%);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  pointer-events: auto;
+  cursor: pointer;
+  /* Debug: kurz auskommentieren, um die Hitbox sichtbar zu machen */
+  /* background: rgba(255,0,0,0.3); */
+}
+.building-2x2 .b-hitbox {
+  width: 384px;              /* 2x TILE_W */
+  height: 192px;             /* 2x TILE_H */
+}
+
+.b-img {
+  display: block; width: 100%; height: auto;
+  pointer-events: none;
+  filter: drop-shadow(4px 6px 8px rgba(0,0,0,0.28));
+}
+/* Platzhalter für Gebäude, deren Sprite noch fehlt (aktuell das Strom- &
+   Wasserwerk). Aspect-ratio 1:1, damit es dieselbe Fläche einnimmt wie ein
+   Sprite und das Grid nicht verrutscht. */
+.b-img--emoji {
+  aspect-ratio: 1 / 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 52px; line-height: 1;
+}
+
+/* Unversorgte Serverfarmen. Gedrosselt fahl, auf Sparflamme grau und ohne
+   Bewegung — der Zustand muss am Gebäude zu erkennen sein, sonst steht
+   irgendwo im Grid eine Farm still und man sucht sie. */
+.building.is-throttled .b-img,
+.building.is-throttled .farm-animals { filter: saturate(0.55) brightness(0.9); }
+.building.is-dark .b-img,
+.building.is-dark .farm-animals      { filter: grayscale(1) brightness(0.72); }
+.building.is-dark .farm-animals *    { animation: none !important; }
+
+.b-label {
+  position: absolute; bottom: -20px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30,30,30,0.75); color: white;
+  padding: 3px 10px; border-radius: 10px;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+
+/* Positionen — großzügig, Isometrik-Feel */
+.b-hq        { top: 6%;  left: 38%; width: 22%; min-width: 180px; max-width: 260px; transform: translateX(-50%); }
+.b-farm      { top: 8%;  right: 4%; width: 28%; min-width: 220px; max-width: 320px; }
+.b-marketing { bottom: 10%; left: 6%; width: 22%; min-width: 180px; max-width: 240px; }
+
+/* ---- Serverfarm-Tiere: organisch verteilt auf der Weide-Raute ---- */
+.farm-animals {
+  position: absolute;
+  inset: 0;                    /* volles Building — die Positionen kommen aus --x/--y */
+  pointer-events: none;
+}
+.farm-animal {
+  position: absolute;
+  left: var(--x, 50%);
+  top:  var(--y, 60%);
+  width: 28px;
+  height: auto;
+  /* Fuß-Anker (unten-mitte) — die Tiere stehen auf ihrer x/y-Position */
+  transform: translate(-50%, -100%);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.4));
+  animation: idle-sway 4s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.7s);
+  pointer-events: none;
+  user-select: none;
+}
+/* Wackler muss die Fuß-Verankerung erhalten */
+@keyframes idle-sway {
+  0%, 82%, 100% { transform: translate(-50%, -100%) rotate(0deg); }
+  88%           { transform: translate(-50%, -100%) rotate(-6deg); }
+  94%           { transform: translate(-50%, -100%) rotate(5deg); }
+}
+
+/* Größer bei 1x1-Gebäuden wäre 22px, aber Farmen sind immer 2x2 → 28px passt. */
+.building-2x2 .farm-animal { width: 34px; }
+
+/* ---- Building-UI-Layer (Progress-Ring + Aktions-Button) — über allen
+       Sprites, aber unter Modal (100), Toast (200) und Placement-Bar (60).
+       Wird von Farm UND Marketing-Center benutzt. ---- */
+#building-ui-layer {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+.farm-ui {
+  position: absolute;
+  transform: translate(-50%, -71%);
+  width: 130px;
+  height: 130px;
+  pointer-events: none;
+}
+.farm-ui-2x2 {
+  width: 360px;
+  height: 240px;
+}
+
+/* Radialer Progress-Kreis oben mittig auf der Farm.
+   Farbe = die Ressource, die hier entsteht (--res-watchtime-ink, gelb).
+   Siehe .mk-ring für die Farb-Regel über alle Gebäude hinweg.
+
+   top ist bewusst nach innen gerückt (30 % des Wegs von 6 % zur Bildmitte):
+   die UI-Box ist höher als das Sprite, weiter oben lag der Ring über dem
+   Nachbargebäude statt über der eigenen Farm. */
+.farm-progress-ring {
+  --p: 0;
+  --ring-col: var(--res-watchtime-ink);
+  position: absolute;
+  top: 19%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  padding: 4px;
+  background: conic-gradient(var(--ring-col) calc(var(--p) * 1%), rgba(255,255,255,0.28) 0);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+}
+.farm-progress-ring-inner {
+  position: relative;          /* Anker für den inneren Metadaten-Ring */
+  width: 100%; height: 100%;
+  background: rgba(255,255,255,0.92);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+}
+/* Voller Stapel = der Ring hat nichts mehr zu zeigen und verschwindet.
+   Das Signal "hier liegt was" trägt der goldene Ernte-Button darunter, der
+   ohnehin pulsiert und die Menge nennt — ein zweiter voller Kreis daneben
+   wäre nur Doppelung und würde das Gebäude verdecken. */
+.farm-progress-ring.is-full { visibility: hidden; }
+
+/* Innerer Ring: Metadaten aus den User-Modellen (Phase 3). Er sitzt im Loch
+   des Watchtime-Rings, weil beide zur selben Farm gehören und mit demselben
+   Klick geerntet werden — zwei Ringe nebeneinander läsen sich als zwei
+   getrennte Gebäude-Funktionen.
+
+   Beide laufen auf DERSELBEN Uhr. Ist der Stapel voll, verschwinden deshalb
+   auch beide: der äußere Ring bekommt .is-full, und weil visibility vererbt
+   wird, geht der innere mit. Genau so soll es sein — das Signal „hier liegt
+   was" trägt der Ernte-Knopf darunter.
+
+   ⚠️ Hier stand eine Regel, die den inneren Ring bei vollem äußeren wieder
+   sichtbar geschaltet hat. Die stammte aus der Zeit getrennter Uhren und war
+   seit der Zusammenlegung falsch — sie hat den Metadaten-Ring bei vollem
+   Stapel stehen lassen. Sie gewann auch das Duell gegen die is-full-Regel
+   darunter, weil drei Klassen mehr wiegen als zwei. */
+.farm-progress-ring--meta {
+  /* --p wird NICHT gesetzt: CSS-Variablen werden vererbt, der innere Ring
+     übernimmt also den Wert, den JS auf den äußeren schreibt. Damit können
+     die beiden Stände gar nicht auseinanderlaufen — sie hängen ohnehin am
+     selben Stapel-Zähler. Ein eigenes --p hier würde die Vererbung brechen
+     und den Ring bei 0 stehen lassen. */
+  --ring-col: var(--res-meta-ink);
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(var(--ring-col) calc(var(--p) * 1%), rgba(255,255,255,0.28) 0);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* Farm ohne User: der Watchtime-Ring hat nichts anzuzeigen und wird
+   durchsichtig gestellt — der Metadaten-Ring hängt IN ihm und würde bei
+   visibility:hidden miterben. Die Geometrie bleibt gleich, damit der innere
+   Ring an derselben Stelle sitzt wie sonst. */
+.farm-progress-ring--wt-off,
+.farm-progress-ring--wt-off > .farm-progress-ring-inner {
+  background: none;
+  box-shadow: none;
+}
+
+/* User-Modelle auf der Weide: dasselbe Tier, aber sichtbar kein Lebewesen.
+   Der Orange-Schimmer ist derselbe Ton wie ihr Segment im Belegungs-Balken
+   (--res-model-ink) — die Farbe ist über beide Ansichten hinweg dieselbe
+   Aussage, nicht zweimal zufällig ähnlich. */
+.farm-animal.farm-model {
+  filter: drop-shadow(0 0 5px rgba(249, 115, 22, 0.85))
+          drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+}
+
+/* Ernte-Button unten mittig */
+.farm-harvest-btn {
+  --stacks: 0;
+  position: absolute;
+  bottom: 2%;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+  color: #4a2e00;
+  border: 2px solid rgba(74,46,0,0.35);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+  white-space: nowrap;
+  transition: transform 0.1s;
+  min-height: 32px;
+}
+.farm-harvest-btn:disabled {
+  background: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.55);
+  border-color: rgba(255,255,255,0.2);
+  cursor: default;
+  box-shadow: none;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+.farm-harvest-btn.is-ready {
+  animation: harvest-pulse 1s ease-in-out infinite;
+}
+
+/* Inline-Icon fürs Strom-/Wasser-System (RT.assets.iconHtml('stromWasser')).
+   Ersetzt das 🔌/⚡-Emoji überall dort, wo Ziel-Element innerHTML rendert —
+   Buttons, Chips, Modal-Titel. Größe in em: skaliert automatisch mit der
+   umgebenden Schrift, egal ob 13px-Button oder 0.68rem-Chip.
+
+   ⚠️ Nicht 1em wie ein Emoji. Das Motiv zeigt ZWEI Objekte nebeneinander
+   (Stecker + Wasserhahn) und braucht deshalb das Doppelte der Schrifthöhe,
+   um überhaupt als etwas erkennbar zu sein — bei 1em auf einem 13px-Knopf
+   war es ein blauer Fleck. */
+.rt-icon-sw {
+  display: inline-block;
+  height: 2em;
+  width: 2em;
+  object-fit: contain;
+  vertical-align: -0.7em;
+}
+
+/* ── Serverkosten: Versorgungs-Knopf ─────────────────────────────────────
+   Sitzt ÜBER dem Ernte-Knopf, nicht daneben — beide können gleichzeitig
+   dastehen, und dann muss klar sein, welcher welcher ist. Blau statt gold:
+   Gold ist im ganzen Spiel „hier gibt es etwas", hier wird bezahlt. */
+.farm-upkeep-btn {
+  position: absolute;
+  bottom: 26%;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  background: linear-gradient(180deg, #7dd3fc, #0284c7);
+  color: #04283d;
+  border: 2px solid rgba(4,40,61,0.35);
+  border-radius: 999px;
+  /* Schmaler Rand als beim Ernte-Knopf (6px 14px): der Platz, der hier gespart
+     wird, geht ins Icon. Der Knopf soll NICHT breiter werden als der Ernte-
+     Knopf darunter — zwei verschieden breite Pillen übereinander sehen aus wie
+     ein Fehler, und der Ernte-Knopf ist der, der die Breite vorgibt. */
+  padding: 2px 8px;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+  white-space: nowrap;
+  transition: transform 0.1s;
+  animation: upkeep-pulse 1.4s ease-in-out infinite;
+}
+/* Auf dem Knopf ist das Icon die eigentliche Beschriftung — der Betrag daneben
+   sagt nur, wie viel. Es darf deshalb den ganzen Platz nehmen, den der schmale
+   Rand freimacht, und ragt in der Höhe bewusst über die Textzeile hinaus
+   (negative margin), damit die Pille dabei flach bleibt. */
+.farm-upkeep-btn .rt-icon-sw {
+  height: 3.2em;
+  width: 3.2em;
+  vertical-align: middle;
+  margin: -0.55em 3px -0.55em 0;
+}
+.farm-upkeep-btn:hover  { transform: translateX(-50%) translateY(-1px) scale(1.03); }
+.farm-upkeep-btn:active { transform: translateX(-50%) translateY(1px)  scale(0.98); }
+/* Sparflamme — ab hier ist es kein Hinweis mehr, sondern ein Problem. */
+.farm-upkeep-btn.is-dark {
+  background: linear-gradient(180deg, #fca5a5, #dc2626);
+  color: #fff;
+  border-color: rgba(120,10,10,0.45);
+}
+@keyframes upkeep-pulse {
+  0%, 100% { box-shadow: 0 3px 6px rgba(0,0,0,0.25); }
+  50%      { box-shadow: 0 3px 14px rgba(56,189,248,0.9); }
+}
+/* Am Werk: keine Dauer-Animation. Der Knopf steht dort immer (anteilig zahlen
+   ist erlaubt) — ein dauerpulsender Knopf wäre ein Dauer-Alarm. Erst wenn
+   wirklich eine Farm fällig ist, meldet er sich. */
+.farm-upkeep-btn--plant {
+  bottom: 2%;
+  animation: none;
+}
+.farm-upkeep-btn--plant.is-due { animation: upkeep-pulse 1.4s ease-in-out infinite; }
+.farm-harvest-btn.is-ready:hover  { transform: translateX(-50%) translateY(-1px) scale(1.03); }
+.farm-harvest-btn.is-ready:active { transform: translateX(-50%) translateY(1px)  scale(0.98); }
+@keyframes harvest-pulse {
+  0%, 100% { box-shadow: 0 3px 6px rgba(0,0,0,0.25); }
+  50%      { box-shadow: 0 3px 14px rgba(244,197,66,0.95); }
+}
+
+/* ── Serverkosten: Zyklen-Badge im Farm-Modal-Titel ──────────────────────
+   Absteigender Countdown, wie viele Produktions-Zyklen bis zur nächsten
+   Versorgungs-Zahlung übrig sind (25/25 frisch → 15/25 nach 10 verbrauchten).
+   Ein Mini-Ring statt nur Zahlen — derselbe conic-gradient-Trick wie beim
+   Produktions-Ring auf dem Feld, nur klein genug für die Titelzeile.
+   Farbverlauf spiegelt den Versorgungs-Knopf: Blau = normal, Rot = fällig. */
+.farm-upkeep-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+.farm-upkeep-badge__ring {
+  --p: 100;
+  --ring-col: #0284c7;
+  position: relative;
+  display: inline-block;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: conic-gradient(var(--ring-col) calc(var(--p) * 1%), rgba(0,0,0,0.14) 0);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  flex-shrink: 0;
+}
+.farm-upkeep-badge__ring::after {
+  content: '';
+  position: absolute; inset: 3px;
+  border-radius: 50%;
+  background: #fff;
+}
+.farm-upkeep-badge__txt {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: var(--tt-brown-light, #8c7869);
+}
+/* Fällig — derselbe Rot- und Puls-Ton wie .farm-upkeep-btn.is-dark. */
+.farm-upkeep-badge.is-due .farm-upkeep-badge__ring { --ring-col: #dc2626; animation: upkeep-pulse 1.4s ease-in-out infinite; }
+.farm-upkeep-badge.is-due .farm-upkeep-badge__txt  { color: #b91c1c; }
+/* Sparflamme — kein Alarm mehr, sondern Dauerzustand: gedämpft statt rot. */
+.farm-upkeep-badge.is-dark .farm-upkeep-badge__ring { --ring-col: #94a3b8; animation: none; }
+.farm-upkeep-badge.is-dark .farm-upkeep-badge__txt  { color: #64748b; }
+
+/* Fly-Bubble: Watchtime fließt vom Farm-Feld zur Ressourcen-Bar.
+   Font-size wird per Inline-Style gesetzt (skaliert mit Stack-Anzahl).
+   position:fixed + Anker an <body>, weil #world overflow:hidden hat und
+   die Ressourcen-Bar darüber liegt — im World-Container würde die Bubble
+   auf dem Weg nach oben abgeschnitten. */
+.wt-fly {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--blue-dark);
+  text-shadow: 0 2px 8px rgba(255,255,255,0.95), 0 0 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+  z-index: 4000;
+  animation: wt-fly 0.75s cubic-bezier(.4,.05,.6,1) forwards;
+  --dx: 0px; --dy: 0px;
+  white-space: nowrap;
+}
+/* Metadaten-Bubble: gleiche Flugbahn wie .wt-fly, aber im Metadaten-Türkis —
+   sie fliegt zu einer anderen Kachel und darf nicht wie Watchtime aussehen. */
+.meta-fly {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--res-meta-ink);
+  text-shadow: 0 2px 8px rgba(255,255,255,0.95), 0 0 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+  z-index: 4000;
+  animation: wt-fly 0.75s cubic-bezier(.4,.05,.6,1) forwards;
+  --dx: 0px; --dy: 0px;
+  white-space: nowrap;
+}
+.wt-fly-mini {
+  font-size: 22px !important;
+  opacity: 0.75;
+  z-index: 79;
+  animation-duration: 0.7s;
+}
+
+/* ---- Marketing-Center UI (Ring mit Countdown + Collect-Button) ----
+   .wb-ui (Werbeagentur) nutzt dasselbe Layout: Ring aus .mk-ring plus den
+   goldenen .farm-harvest-btn als Einsammel-/Wiederbuchen-Button. */
+.mk-ui, .wb-ui {
+  position: absolute;
+  transform: translate(-50%, -71%);
+  width: 130px;
+  height: 130px;
+  pointer-events: none;
+}
+
+/* FARB-REGEL FÜR ALLE FORTSCHRITTS-RINGE:
+   Der Ring trägt die Farbe der Ressource, die er gerade erzeugt — dieselben
+   Töne wie die Kacheln in der Ressourcen-Bar und die Ledger-Posten in den
+   Modals. Damit sieht man am Feld, WAS dort entsteht, ohne es anzuklicken:
+
+     Geld      grün   → Werbeagentur (fest)
+     Watchtime gelb   → Serverfarm (fest), Watchtime-Nodes im HQ/Büro
+     User      blau   → Marketing-Center mit Reichweiten-Kampagne
+     Trend     rosa   → Marketing-Center mit PR-Kampagne, Feature-Nodes
+     neutral          → Nodes, die nur freischalten (Werbung/Marketing-Reiter)
+
+   Die wechselnden Fälle setzt ui.js per Modifier-Klasse, die festen stehen
+   hier bzw. direkt im Template. */
+/* top wie bei .farm-progress-ring nach innen gerückt, hier nur um 10 % des
+   Wegs zur Mitte — die 1x1-Gebäude sind flacher, der Ring überlappte den
+   Nachbarn entsprechend weniger. */
+.mk-ring {
+  --p: 0;
+  --ring-col: var(--res-none-ink);
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  padding: 4px;
+  background: conic-gradient(var(--ring-col) calc(var(--p) * 1%), rgba(255,255,255,0.28) 0);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+  opacity: 0.35;                              /* dezent wenn keine Kampagne */
+  transition: opacity 0.2s;
+}
+.mk-ring.is-active { opacity: 1; }
+
+.mk-ring--money     { --ring-col: var(--res-money-ink); }
+.mk-ring--users     { --ring-col: var(--res-users-ink); }
+.mk-ring--watchtime { --ring-col: var(--res-watchtime-ink); }
+.mk-ring--trend     { --ring-col: var(--res-trend-ink); }
+.mk-ring--none      { --ring-col: var(--res-none-ink); }
+.mk-ring--model     { --ring-col: var(--res-model-ink); }
+.mk-ring--meta      { --ring-col: var(--res-meta-ink); }
+.mk-ring-inner {
+  width: 100%; height: 100%;
+  background: rgba(255,255,255,0.92);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mk-ring-text {
+  font-size: 12px;
+  font-weight: 800;
+  color: #333;
+  line-height: 1;
+}
+
+.mk-collect-btn {
+  position: absolute;
+  bottom: 2%;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  background: linear-gradient(180deg, var(--green), var(--green-dark));
+  color: white;
+  border: 2px solid rgba(0,50,0,0.35);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+  white-space: nowrap;
+  transition: transform 0.1s;
+  min-height: 32px;
+  visibility: hidden;                         /* nur wenn ready > 0 */
+}
+.mk-collect-btn.is-ready {
+  visibility: visible;
+  animation: collect-pulse 1s ease-in-out infinite;
+}
+.mk-collect-btn.is-ready:hover  { transform: translateX(-50%) translateY(-1px) scale(1.03); }
+.mk-collect-btn.is-ready:active { transform: translateX(-50%) translateY(1px)  scale(0.98); }
+@keyframes collect-pulse {
+  0%, 100% { box-shadow: 0 3px 6px rgba(0,0,0,0.25); }
+  50%      { box-shadow: 0 3px 14px rgba(77,191,77,0.95); }
+}
+
+/* User-Fly-Bubble (Ernte-Effekt Richtung 👥-Kachel) */
+.user-fly {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  font-size: 28px;
+  color: var(--green-dark);
+  text-shadow: 0 2px 8px rgba(255,255,255,0.95), 0 0 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+  z-index: 4000;
+  animation: wt-fly 0.75s cubic-bezier(.4,.05,.6,1) forwards;
+  --dx: 0px; --dy: 0px;
+  white-space: nowrap;
+}
+
+/* Geld-Fly-Bubble (Werbeagentur-Ernte Richtung 💰-Kachel) */
+.money-fly {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  font-size: 28px;
+  color: var(--gold-dark);
+  text-shadow: 0 2px 8px rgba(255,255,255,0.95), 0 0 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+  z-index: 4000;
+  animation: wt-fly 0.75s cubic-bezier(.4,.05,.6,1) forwards;
+  --dx: 0px; --dy: 0px;
+  white-space: nowrap;
+}
+@keyframes wt-fly {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.35); }
+  18%  { opacity: 1; transform: translate(-50%, -85%) scale(1.25); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.8); }
+}
+
+/* Badges */
+.b-badge {
+  position: absolute; top: -12px; right: -12px;
+  background: var(--red); color: white;
+  border-radius: 999px; padding: 4px 12px;
+  font-weight: 800; font-size: 13px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  animation: pulse 1.2s ease-in-out infinite;
+  z-index: 3; white-space: nowrap;
+}
+.b-badge-money { background: var(--gold-dark); }
+.b-badge-users { background: var(--blue); }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}
+
+/* Marketing: aktive Kampagne-Fortschritt-Balken unter Gebäude */
+.b-running {
+  position: absolute; bottom: -32px; left: 10%; right: 10%;
+  height: 6px; background: rgba(0,0,0,0.25); border-radius: 3px; overflow: hidden;
+}
+.b-running-fill { height: 100%; background: var(--blue); width: 0%; transition: width 0.2s; }
+
+/* ---- Modal ---- */
+#modal-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 100;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+#modal-backdrop.open { display: flex; }
+#modal {
+  background: white; border-radius: 14px;
+  min-width: 320px; max-width: 560px; width: 100%;
+  padding: 22px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+  max-height: 85vh; overflow-y: auto;
+}
+/* Techtree braucht deutlich mehr Platz für den Baum. */
+#modal.modal-lg {
+  max-width: 1100px;
+  width: 95vw;
+  max-height: 92vh;
+}
+/* Werbeagentur und Marketing-Center stellen ihre Angebote zweispaltig auf —
+   in 560 px stünden zwei Ledger-Karten nebeneinander nur noch als Zahlen-
+   kolonnen da. */
+#modal.modal-wide {
+  max-width: 940px;
+  width: 94vw;
+  max-height: 92vh;
+}
+.modal-title { font-size: 22px; font-weight: 800; margin-bottom: 14px; color: var(--text); }
+.modal-close {
+  background: #ddd; border: none; padding: 10px 18px;
+  border-radius: 8px; margin-top: 14px; cursor: pointer;
+  font-weight: 600; color: #333;
+}
+.modal-close:hover { background: #ccc; }
+
+/* Beschriftung unter dem Intensitäts-Regler */
+.slider-info {
+  display: flex; justify-content: space-between;
+  font-size: 13px; margin-top: 4px; color: #555;
+}
+
+/* Die drei Deal-Regler nebeneinander: Intensität · Volumen · Personalisierung.
+   Untereinander schoben sie die Werbekarten aus dem Bild — man konnte nicht
+   sehen, was die eigene Einstellung an den Zahlen ändert.
+
+   Gleiche Drittel, weil jede Spalte gleich wichtig ist. Volumen und
+   Personalisierung erscheinen erst mit ihrer Node — bis dahin steht nur die
+   Intensität hier und geht auf volle Breite (= frühere Optik). `min-width`
+   löst die Reihe auf schmalen Schirmen in eine Spalte auf, ohne dass es dafür
+   eine eigene Media-Query braucht. */
+.rt-adcfg {
+  display: flex; flex-wrap: wrap; gap: 14px 18px;
+  margin: 12px 0 16px;
+}
+.rt-adcfg__col {
+  flex: 1 1 210px; min-width: 210px;
+  display: flex; flex-direction: column;
+}
+.rt-adcfg__head { font-weight: 700; margin-bottom: 8px; color: var(--text); }
+/* `margin-top: auto` schiebt die Erklärungen auf eine gemeinsame Grundlinie —
+   die drei Bedienelemente sind unterschiedlich hoch, die Reihe soll trotzdem
+   nicht ausfransen. */
+.rt-adcfg__note {
+  margin-top: auto; padding-top: 8px;
+  font-size: 12.5px; line-height: 1.4; color: #6b6152;
+}
+.rt-adcfg input[type=range] {
+  width: 100%; height: 32px; margin: 0; accent-color: var(--red);
+}
+
+/* Volumen-Stufen. Vier Knöpfe statt eines Reglers — die Stufen sind durch die
+   Nodes ohnehin diskret. Gesperrte bleiben sichtbar und tragen den Namen der
+   fehlenden Node als title, wie die gesperrten Kampagnen.
+
+   2×2 statt Viererreihe: in einem Drittel der Modalbreite wären vier Knöpfe
+   nebeneinander schmaler als ihre Beschriftung. */
+.rt-vol__steps {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+}
+.rt-vol__btn {
+  padding: 9px 4px;
+  border: 2px solid #d8cbb4;
+  border-radius: 10px;
+  background: #fff;
+  font-weight: 800; font-size: 14px; color: var(--text);
+  cursor: pointer;
+}
+.rt-vol__btn.is-active {
+  border-color: var(--res-money-ink, #16a34a);
+  background: var(--res-money-bg, #dcfce7);
+}
+/* Gesperrt heißt hier NICHT "unsichtbar": die Spalte taucht ohnehin erst auf,
+   wenn die erste Anteils-Stufe entwickelt ist — ab da sind die fehlenden
+   Stufen der Wegweiser, was der Werbung-Reiter noch hergibt. */
+.rt-vol__btn.is-locked {
+  opacity: 0.4; cursor: not-allowed;
+  background: repeating-linear-gradient(135deg,
+    #f4efe4 0 6px, #eae2d2 6px 12px);
+}
+
+/* Personalisierung + Dauerbetrieb: zwei Schalter-Zeilen gestapelt in einer
+   Spalte (.rt-targ-stack), statt je einer eigenen Spalte daneben — das war
+   zusammen breiter als Intensität und Volumen. Die Erklärung liegt nicht mehr
+   offen darunter, sondern hinter dem "?" (.rt-targ__help) je Zeile. */
+.rt-targ-stack {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.rt-targ-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+}
+/* Der Schalter selbst nimmt den Rest der Zeile, das "?" bleibt daneben klein. */
+.rt-targ-row .rt-targ { flex: 1 1 auto; }
+.rt-targ__help {
+  flex: none;
+  width: 22px; height: 22px;
+  border: 2px solid var(--tt-brown, #8a6d3b);
+  border-radius: 50%;
+  background: var(--tt-paper, #fff);
+  color: var(--tt-brown, #8a6d3b);
+  font-weight: 800; font-size: 12px;
+  line-height: 1; padding: 0;
+  cursor: pointer;
+}
+/* Die Erklärung: zu, bis der "?"-Knopf sie aufklappt. `flex-basis: 100%`
+   zwingt sie in der umbrechenden .rt-targ-row auf eine eigene Zeile, unter
+   Schalter und Knopf. */
+.rt-targ-row .rt-adcfg__note--tip {
+  display: none;
+  flex: 1 1 100%;
+  margin-top: 0;
+}
+.rt-targ-row .rt-adcfg__note--tip.is-open { display: block; }
+
+/* Targeting-Schalter. Eine Zeile, kein Regler — er hat genau zwei Zustände. */
+.rt-targ {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 2px solid var(--res-meta-ink, #0891b2);
+  border-radius: 12px;
+  background: var(--res-meta-bg, #c3eef5);
+  cursor: pointer;
+}
+.rt-targ input { width: 20px; height: 20px; flex: none; accent-color: var(--res-meta-ink, #0891b2); }
+.rt-targ__title { font-weight: 800; color: var(--text); }
+
+/* Dauerbetrieb — gleiche Bauart, eigene Farbe. Er gehört zur Watchtime-Seite
+   (er entscheidet, wie lange das Lager angezapft wird), Targeting zur
+   Metadaten-Seite; stünden beide in Cyan, läsen sie sich als ein Schalterpaar
+   mit zwei Häkchen statt als zwei getrennte Entscheidungen. */
+.rt-targ--renew {
+  border-color: var(--res-watchtime-ink, #eab308);
+  background: var(--res-watchtime-bg, #fff0a8);
+}
+.rt-targ--renew input { accent-color: var(--res-watchtime-ink, #eab308); }
+
+/* Modal-Buttons */
+.modal-btn {
+  display: block; width: 100%; padding: 14px;
+  margin: 8px 0;
+  border: none; border-radius: 10px; cursor: pointer;
+  background: linear-gradient(180deg, var(--green), var(--green-dark));
+  color: white; font-weight: 700; font-size: 16px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  transition: transform 0.1s;
+}
+.modal-btn:hover:not(:disabled)  { transform: translateY(-1px); }
+.modal-btn:active:not(:disabled) { transform: translateY(1px); }
+.modal-btn.collect  { background: linear-gradient(180deg, var(--gold), var(--gold-dark)); color: #4a2e00; }
+/* Abbrechen/Verwerfen — grün würde wie eine Bestätigung aussehen. */
+.modal-btn.danger {
+  background: none; border: 2px solid #d8d8d8;
+  color: #8a8a8a; font-size: 14px; padding: 10px;
+  box-shadow: none;
+}
+.modal-btn.danger:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
+/* Muss nach .collect stehen: gleiche Spezifität, sonst gewinnt die
+   Farbvariante und deaktivierte Buttons sehen weiter klickbar aus. */
+.modal-btn:disabled { background: #ccc; color: #888; cursor: not-allowed; box-shadow: none; }
+
+/* Fortschritt allgemein */
+.progress { height: 10px; background: #eee; border-radius: 5px; overflow: hidden; margin-top: 8px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), #7dc26e); transition: width 0.2s; }
+
+.info-line { color: #555; font-size: 13px; margin: 6px 0; }
+.info-small { font-size: 11px; color: #888; }
+.info-highlight { color: var(--wood); font-weight: 700; }
+
+/* ---- Trend-Info-Modal ---- */
+.trend-modal__big {
+  text-align: center; font-size: 34px; font-weight: 800;
+  font-family: var(--rt-font-display, inherit);
+  margin: 4px 0 10px;
+}
+.trend-modal__big--pos     { color: #15803d; }
+.trend-modal__big--neg     { color: #b91c1c; }
+.trend-modal__big--neutral { color: #78716c; }
+.trend-modal__head {
+  margin: 14px 0 6px; font-size: 12px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.4px; color: var(--wood);
+}
+.trend-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding: 6px 8px; border-radius: 6px; font-size: 13px;
+}
+.trend-row:nth-child(odd) { background: rgba(0, 0, 0, 0.035); }
+.trend-row__label { color: #444; }
+.trend-row__ttl   { color: #999; font-size: 11px; }
+.trend-row__val {
+  font-family: monospace; font-weight: 800; white-space: nowrap;
+}
+.trend-row__val--pos { color: #15803d; }
+.trend-row__val--neg { color: #b91c1c; }
+/* Wert + Pfeil hängen zusammen und sitzen als Block rechts. Ohne den Wrapper
+   würde space-between die drei Kinder über die ganze Zeile verteilen. */
+.trend-row__right { display: flex; align-items: center; gap: 6px; }
+.trend-row__arrow {
+  width: 15px; height: 15px; flex: none;
+  fill: none; stroke-width: 2.6;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.trend-row__arrow--hold { stroke: var(--tt-brown, #6b4a2b); }
+.trend-row__arrow--perm { stroke: #8f3a20; }
+.trend-row__arrow--fade { stroke: #a0a0a0; }
+.trend-modal__hint { margin-top: 12px; font-size: 12px; color: #777; }
+
+/* ---- Techtree-Modal (v1-Stil: Cream/Sky/Mint/Yellow + 3D-Schatten) ---- */
+:root {
+  --tt-cream:        #fff5e1;
+  --tt-paper:        #fffaf0;
+  --tt-brown:        #4a3829;
+  --tt-brown-light:  #8c7869;
+  --tt-primary:      #b08968;
+  --tt-primary-soft: #f4e8d8;
+  --tt-sky-soft:     #c8e8ff;
+  --tt-mint-soft:    #b6f0dd;
+  --tt-yellow-soft:  #fff0a8;
+  --tt-lavender-soft:#ddd6fe;
+  --tt-coral:        #ff8a7a;
+  --tt-shadow-hard:  0 3px 0 rgba(74, 56, 41, 0.9);
+  --tt-shadow-hard-lg: 0 5px 0 rgba(74, 56, 41, 0.9);
+}
+
+.rt-tt-hint {
+  color: var(--tt-brown-light); font-size: 13px; font-style: italic;
+  margin: 0 0 12px;
+}
+/* Belegte Entwicklungs-Plätze (HQ + Bürogebäude). Steht in derselben Zeile
+   wie der Hinweis, hebt sich aber als Zahl davon ab. */
+.rt-tt-slots {
+  font-style: normal; font-weight: 700;
+  margin-left: 6px; padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(139, 90, 43, 0.10);
+  color: var(--tt-brown, #8b5a2b);
+  white-space: nowrap;
+}
+
+/* ── Baum-Ansicht: feste Reiter, gezogener Baum ──
+   Die Baum-Ansicht ist bewusst KEIN Scroll-Modal. Vorher scrollten #modal
+   und .rt-tt-grid-wrap beide vertikal (overflow-x: auto lässt die y-Achse
+   auf `auto` hochschnappen) — daher die doppelte Scrollleiste. Jetzt gibt es
+   genau einen Ausschnitt mit overflow: hidden, und darin wird gezogen. */
+#modal.modal-tree {
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+/* flex-basis: auto (nicht 0) — der Ausschnitt soll seine Inhaltshöhe
+   anmelden und erst am max-height des Modals gestaucht werden. Mit
+   `flex: 1` bliebe das Modal bei kurzem Baum korrekt klein, würde bei
+   langem Baum aber trotzdem nicht wachsen. */
+#modal.modal-tree #modal-body,
+#modal.modal-tree #rt-tt-root {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column;
+}
+#modal.modal-tree .rt-tt-tabs,
+#modal.modal-tree .rt-tt-hint,
+#modal.modal-tree .modal-title,
+#modal.modal-tree .modal-close { flex: 0 0 auto; }
+/* Fallback-Reiter ohne eigenes Spalten-Layout scrollen weiterhin normal. */
+#modal.modal-tree .rt-tt-simple { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+.rt-tt-viewport {
+  flex: 1 1 auto; min-height: 240px;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  /* Der Browser darf die Geste nicht selbst als Scroll interpretieren,
+     sonst kommt auf dem Tablet kein pointermove an. */
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+.rt-tt-viewport--dragging { cursor: grabbing; }
+
+/* Die verschobene und skalierte Ebene. max-content, damit offsetWidth/Height
+   die echte (unskalierte) Inhaltsgröße liefern — daran hängt das Clamping.
+   transform-origin: 0 0 ist Pflicht, nicht Geschmack: applyView() rechnet den
+   Zoom um die linke obere Ecke, mit dem Standard-Mittelpunkt liefe der Baum
+   beim Zoomen aus dem Ausschnitt. */
+.rt-tt-pan {
+  position: relative;
+  width: max-content;
+  padding: 8px 4px 16px;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* Zoom-Knöpfe: liegen im Ausschnitt, gehören aber nicht zur Zieh-Fläche
+   (pointerdown-Handler filtert sie über .rt-tt-zoom heraus). */
+.rt-tt-zoom {
+  position: absolute; right: 10px; bottom: 10px;
+  z-index: 2;
+  display: flex; gap: 4px;
+}
+.rt-tt-zoom button {
+  width: 34px; height: 34px;
+  font-size: 1.1rem; line-height: 1;
+  font-family: inherit;
+  color: var(--tt-brown);
+  background: var(--tt-cream);
+  border: 2px solid var(--tt-brown);
+  border-radius: 9px;
+  box-shadow: 0 2px 0 rgba(74, 56, 41, 0.55);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.rt-tt-zoom button:active { transform: translateY(2px); box-shadow: none; }
+.rt-tt-svg {
+  position: absolute; top: 0; left: 0;
+  z-index: 0; pointer-events: none;
+  overflow: visible;
+}
+/* Der Spalten-Abstand ist gleichzeitig der Platz für die senkrechten
+   Schenkel der Verbindungslinien. In der dichtesten Lücke (feed/gruppen/
+   videos → Spalte 4) liegen elf Kanäle nebeneinander — bei den früheren
+   60 px wären das gut 5 px Abstand bei 2,5 px Strichstärke. */
+.rt-tt-grid {
+  display: flex; align-items: flex-start; gap: 84px;
+  position: relative; z-index: 1;
+  min-width: min-content;
+}
+/* Der Abstand zwischen zwei Karten ist der Korridor, durch den eine lange
+   Verbindungslinie hindurchläuft (siehe freeBands() in techtree.js). Bei den
+   früheren 14 px blieb nach dem Sicherheitsabstand um die Karten nichts
+   übrig, und die Linien mussten außen um die ganze Spalte herum. */
+.rt-tt-col {
+  display: flex; flex-direction: column; gap: 28px;
+  flex-shrink: 0;
+}
+
+/* Node-Card horizontal (Icon links, Body rechts) */
+.rt-tt-node {
+  display: flex; gap: 10px;
+  padding: 10px 12px;
+  width: 210px; min-height: 92px;
+  background: var(--tt-cream);
+  border: 3px solid var(--tt-brown);
+  border-radius: 14px;
+  box-shadow: var(--tt-shadow-hard);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.rt-tt-node:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--tt-shadow-hard-lg);
+}
+.rt-tt-node--done         { background: var(--tt-mint-soft); }
+.rt-tt-node--in_progress  { background: var(--tt-sky-soft); }
+.rt-tt-node--available    { background: var(--tt-yellow-soft); }
+.rt-tt-node--ready        { background: #fcd34d; animation: rt-tt-pulse 1.1s ease-in-out infinite; }
+.rt-tt-node--locked       { opacity: 0.5; cursor: default; }
+.rt-tt-node--locked:hover { transform: none; box-shadow: var(--tt-shadow-hard); }
+
+@keyframes rt-tt-pulse {
+  0%, 100% { box-shadow: var(--tt-shadow-hard); }
+  50%      { box-shadow: 0 3px 0 rgba(74,56,41,0.9), 0 0 0 6px rgba(252, 211, 77, 0.5); }
+}
+
+.rt-tt-node__ico {
+  width: 34px; height: 34px; flex-shrink: 0;
+  background: var(--tt-paper);
+  border: 2px solid var(--tt-brown);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--tt-brown);
+}
+.rt-tt-node__ico svg { width: 20px; height: 20px; stroke-width: 2.2; }
+.rt-tt-node__body { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rt-tt-node__name { font-weight: 800; font-size: 14px; color: var(--tt-brown); line-height: 1.2; }
+.rt-tt-node__fx   {
+  font-size: 11px; color: var(--tt-brown-light); line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rt-tt-node__meta {
+  margin-top: auto;
+  display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+}
+
+/* Badges */
+.rt-tt-badge {
+  display: inline-block; font-size: 10px; font-weight: 800;
+  padding: 2px 8px; border-radius: 999px;
+  color: var(--tt-brown);
+}
+.rt-tt-badge--done     { background: #7eddc1; color: white; }
+.rt-tt-badge--progress { background: #7ecbff; color: white; }
+.rt-tt-badge--ready    { background: #fcd34d; color: var(--tt-brown); }
+.rt-tt-badge--collect  { background: #22c55e; color: white; }
+.rt-tt-badge--locked   { background: #ccc; color: #666; }
+
+/* ── Ertrags-Chips ──
+   Stehen dort, wo vorher die Dauer stand. Die Farbe gehört zur Ressource,
+   nicht zum Chip — dieselbe Zuordnung wie in den Ledger-Karten, damit
+   "Watchtime-Gelb" überall dasselbe bedeutet. */
+.rt-tt-chip {
+  display: inline-block; font-size: 10px; font-weight: 800;
+  padding: 2px 7px; border-radius: 999px;
+  border: 1.5px solid currentColor;
+  background: rgba(255,255,255,0.6);
+  white-space: nowrap;
+}
+.rt-tt-chip--trend  { color: #b8860b; }
+.rt-tt-chip--wt     { color: #a06a12; }
+.rt-tt-chip--meta   { color: #0e7490; }
+.rt-tt-chip--model  { color: #c2410c; }
+.rt-tt-chip--users  { color: #2f7d5c; }
+.rt-tt-chip--money  { color: #2e6f4e; }
+.rt-tt-chip--unlock { color: #6b5bc4; }
+.rt-tt-chip--time   { color: var(--tt-brown-light, #8b6a4b); }
+/* Dauerhafter Rufschaden — dieselbe Warnfarbe wie die Dark-Pattern-Karte. */
+.rt-tt-chip--perm {
+  color: #a63d2f;
+  background: #ffe0d6;
+}
+
+/* ── Detail-Ansicht ──
+   Die Karte selbst kommt aus RT.ledger (siehe .rt-led-card weiter unten);
+   hier stehen nur noch Zurück-Button, Sperr-Hinweis und Fortschritt. */
+.rt-tt-back {
+  margin-bottom: 12px;
+}
+/* Dark-Pattern-Knoten im Baum: warmer Rotstich statt Holzton. */
+.rt-tt-node--dark {
+  border-color: #d4674a;
+  background: linear-gradient(180deg, #fff4f0 0%, #ffe8e0 100%);
+}
+.rt-tt-node--dark .rt-tt-node__ico { color: #b4492a; }
+.rt-tt-node--dark.rt-tt-node--done { border-color: #b4492a; }
+
+/* ── Vertrauens-Feature (White Pattern) ──
+   Das Gegenstück zur Dark-Pattern-Optik, gleiche Bauart, andere Richtung.
+   Türkis statt Grün: Grün ist im Baum schon der Status „fertig/bezahlbar",
+   ein grüner Akzent würde als Zustand gelesen statt als Art der Node. */
+.rt-tt-node--white {
+  border-color: #2a9d8f;
+  background: linear-gradient(180deg, #f2fbfa 0%, #ddf3f0 100%);
+}
+.rt-tt-node--white .rt-tt-node__ico { color: #1d7a70; }
+.rt-tt-node--white.rt-tt-node--done { border-color: #1d7a70; }
+.rt-tt-chip--network {
+  color: #1d7a70;
+  background: #d6f2ee;
+}
+
+/* ── Freischalter-Knoten (alles mit `unlocks`) ──
+   Diese Nodes öffnen Türen: neue Werbearten, neue Kampagnen, Nodes in einem
+   anderen Reiter. Der violette Akzent legt sich ÜBER den Status-Hintergrund,
+   statt ihn zu ersetzen — welchen Zustand eine Karte hat, bleibt das
+   primäre Signal, "schaltet etwas frei" ist die zweite Ebene. */
+.rt-tt-node--unlock {
+  border-color: #8b7ad8;
+  box-shadow: inset 4px 0 0 #8b7ad8, var(--tt-shadow-hard);
+}
+.rt-tt-node--unlock:hover { box-shadow: inset 4px 0 0 #8b7ad8, var(--tt-shadow-hard-lg); }
+.rt-tt-node--unlock .rt-tt-node__ico {
+  color: #5a48ad;
+  border-color: #8b7ad8;
+}
+.rt-tt-node--unlock.rt-tt-node--available { background: #efeaff; }
+.rt-tt-node--unlock.rt-tt-node--locked    { background: #f3f0fb; }
+
+/* ── Geist-Karte: Voraussetzung aus einem anderen Reiter ──
+   Vier Nodes hängen an einer Node in einem anderen Reiter (z. B. Sprint-
+   Kampagnen an der Teilen-Funktion). Ohne sie hätte die Karte eine
+   Voraussetzung ohne sichtbare Linie — die Verbindung lief ins Nichts. */
+.rt-tt-node--ghost {
+  display: flex; align-items: center; gap: 8px;
+  width: 210px; min-height: 0;
+  padding: 7px 10px;
+  border-style: dashed;
+  border-color: var(--tt-brown-light, #8b6a4b);
+  background: rgba(255,255,255,0.55);
+  box-shadow: none;
+  opacity: 1;
+}
+.rt-tt-node--ghost:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--tt-shadow-hard);
+}
+.rt-tt-node--ghost.rt-tt-node--locked       { opacity: 0.75; cursor: pointer; }
+.rt-tt-node--ghost.rt-tt-node--locked:hover { transform: translateY(-2px); }
+.rt-tt-node--ghost.rt-tt-node--done {
+  border-color: #4bb98d;
+  background: var(--tt-mint-soft);
+}
+.rt-tt-ghost__tab  { font-size: 17px; flex-shrink: 0; line-height: 1; }
+.rt-tt-ghost__body { min-width: 0; }
+.rt-tt-ghost__name {
+  font-weight: 800; font-size: 12px; line-height: 1.2;
+  color: var(--tt-brown);
+}
+.rt-tt-ghost__hint {
+  font-size: 10px; font-weight: 700;
+  color: var(--tt-brown-light, #8b6a4b);
+}
+
+/* Dauerhafter Posten in der Trend-Aufschlüsselung. */
+.trend-row__ttl--perm {
+  background: #ffe0d6;
+  color: #8f3a20;
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-weight: 700;
+}
+/* Der Netzwerkeffekt ist ebenfalls dauerhaft, aber die einzige GUTE dauerhafte
+   Kraft — im Rot der Dark Patterns läse er sich als Warnung. */
+.trend-row__ttl--grow {
+  background: #d6f2ee;
+  color: #1d7a70;
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-weight: 700;
+}
+
+/* ── Netzwerkeffekt-Leiter ──
+   Waagerecht, weil links→rechts hier „wächst" heißt: die Leseeinrichtung IST
+   die Aussage. Auf schmalen Geräten scrollt sie in sich selbst, statt
+   umzubrechen — umgebrochen wäre die Reihenfolge nicht mehr eindeutig. */
+.rt-netz {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.rt-netz__rung {
+  flex: 1 0 auto;
+  min-width: 62px;
+  text-align: center;
+  padding: 6px 4px;
+  border-radius: 8px;
+  border: 2px solid #e2ddd2;
+  background: #faf8f4;
+  position: relative;
+}
+/* Schon erreichte Sprossen sind eingefärbt — die Leiter zeigt damit auch
+   zurück, nicht nur nach vorn. */
+.rt-netz__rung.is-reached { border-color: #9fd8d0; background: #eefaf8; }
+.rt-netz__rung.is-here {
+  border-color: #1d7a70;
+  background: #d6f2ee;
+  box-shadow: 0 0 0 2px rgba(29, 122, 112, 0.18);
+}
+/* Die Sprossen hinter dem Gipfel: die Welt füllt sich, der Effekt fällt
+   wieder. Sandfarben statt türkis — nicht rot, denn es ist kein Schaden und
+   keine Strafe, sondern das Ende der Fahnenstange. */
+.rt-netz__rung.is-past            { border-color: #e6d9bd; background: #fdf8ee; }
+.rt-netz__rung.is-past.is-reached { border-color: #d9bd82; background: #fbf0d9; }
+.rt-netz__rung.is-past .rt-netz__val { color: #a97c2a; }
+.rt-netz__users { font-size: 10px; color: #7a7266; font-weight: 700; }
+.rt-netz__val {
+  font-family: monospace; font-weight: 800; font-size: 14px; color: #1d7a70;
+}
+.rt-netz__rung:not(.is-reached) .rt-netz__val { color: #a9a196; }
+.rt-netz__max  { font-size: 9px; font-weight: 800; color: #b45309; letter-spacing: .4px; }
+.rt-netz__full { font-size: 9px; font-weight: 800; color: #a97c2a; white-space: nowrap; }
+.rt-netz__here { font-size: 9px; font-weight: 800; color: #1d7a70; white-space: nowrap; }
+/* Zwei Leitern untereinander (Erklär-Karte vorher/nachher) — dort ist kein
+   Platz für die Beschriftungen unter den Zahlen. */
+.rt-netz--compact .rt-netz__rung { min-width: 46px; padding: 4px 2px; }
+.rt-netz--compact .rt-netz__val  { font-size: 12px; }
+.rt-netz--compact .rt-netz__here,
+.rt-netz--compact .rt-netz__full,
+.rt-netz--compact .rt-netz__max  { display: none; }
+
+.trend-modal__headval {
+  float: right;
+  font-family: monospace;
+  color: #1d7a70;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.trend-row--total {
+  border-top: 2px solid var(--tt-brown, #6b4a2b);
+  margin-top: 6px; padding-top: 8px;
+}
+
+/* Watchtime-Multiplikator in der Ressourcen-Bar. */
+.rt-resource__wt-mult {
+  display: inline-block; margin-top: 2px;
+  background: var(--tt-mint-soft, #d8f0e4);
+  border: 1px solid var(--tt-brown-light, #8b6a4b);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 12px; font-weight: 800;
+  color: var(--tt-brown, #6b4a2b);
+  cursor: pointer; line-height: 1.4;
+}
+.rt-resource__wt-mult:hover { filter: brightness(1.05); }
+
+/* ── Techtree-Tabs (Entwicklung / Marketing / Werbung) ── */
+.rt-tt-tabs {
+  display: flex; gap: 6px;
+  margin-bottom: 12px;
+  border-bottom: 3px solid var(--tt-brown);
+  padding-bottom: 0;
+}
+.rt-tt-tab {
+  font-family: inherit; font-size: 13px; font-weight: 800;
+  color: var(--tt-brown);
+  padding: 8px 14px 10px;
+  background: var(--tt-cream);
+  border: 3px solid var(--tt-brown);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  cursor: pointer;
+  margin-bottom: -3px;
+  transition: transform 0.08s ease, background 0.12s ease;
+}
+.rt-tt-tab:hover { background: var(--tt-yellow-soft); }
+.rt-tt-tab--active {
+  background: var(--tt-paper);
+  transform: translateY(2px);
+}
+
+/* ── Einfache Node-Liste (Marketing/Werbung) ── */
+.rt-tt-simple {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  padding: 8px 4px 16px;
+}
+
+/* Sitzen jetzt im Aktions-Block der Ledger-Karte — dessen flex-gap regelt den
+   Abstand, eigene Außenabstände würden ihn verdoppeln. */
+.rt-tt-detail__lock {
+  padding: 10px 12px;
+  background: rgba(255, 138, 122, 0.15);
+  border-radius: 10px;
+  color: #a63d2f; font-weight: 700; font-size: 13px;
+}
+.rt-tt-detail__note {
+  margin: 0;
+  font-size: 13px; color: var(--tt-brown-light);
+}
+.rt-tt-detail__progress {
+  width: 100%; height: 10px;
+  background: var(--tt-primary-soft);
+  border: 2px solid var(--tt-brown);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 0;
+}
+.rt-tt-detail__progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #7ecbff, #4d90fe);
+  transition: width 0.3s ease;
+}
+
+/* Action-Buttons */
+.rt-btn-tt {
+  font-family: inherit; font-weight: 800; font-size: 15px;
+  padding: 12px 20px;
+  border: 3px solid var(--tt-brown);
+  border-radius: 14px;
+  background: var(--tt-cream);
+  color: var(--tt-brown);
+  cursor: pointer;
+  box-shadow: var(--tt-shadow-hard);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.rt-btn-tt:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--tt-shadow-hard-lg); }
+.rt-btn-tt:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 rgba(74,56,41,0.9); }
+.rt-btn-tt:disabled { opacity: 0.5; cursor: not-allowed; }
+.rt-btn-tt--primary { background: #fcd34d; }
+.rt-btn-tt--collect { background: #22c55e; color: white; animation: rt-tt-pulse 1.1s ease-in-out infinite; }
+.rt-btn-tt--ghost { background: transparent; box-shadow: none; padding: 6px 14px; font-size: 13px; border-width: 2px; }
+.rt-btn-tt--ghost:hover:not(:disabled) { background: var(--tt-primary-soft); box-shadow: none; transform: none; }
+
+/* ---- Ledger: Kosten und Ertrag ----
+   Ein Bauteil für Werbeagentur, Techtree und Marketing-Center. Erbt die
+   Techtree-Optik, muss deshalb hinter den --tt-*-Tokens stehen.
+
+   Farbe gehört zur RESSOURCE, nicht zur Spalte: Geld ist immer grün, egal ob
+   es gerade Kosten oder Ertrag ist. Ob ein Posten das eine oder das andere
+   ist, sagt schon die Überschrift darüber — das doppelt einzufärben würde
+   zwei Bedeutungen auf dieselbe Farbe legen.
+
+   Die Farbe sitzt im Hintergrund der Kachel, Rahmen und Schrift bleiben für
+   alle gleich braun. Dadurch liest sich die Liste als eine Einheit, und die
+   Ressource erkennt man trotzdem, bevor man das Icon anschaut. */
+:root {
+  --res-money-bg:     #cdeed7;
+  --res-users-bg:     #c8e8ff;
+  --res-server-bg:    #ddd6fe;
+  --res-watchtime-bg: #fff0a8;
+  --res-trend-bg:     #ffd6e7;
+  --res-time-bg:      #ece2d3;
+  /* Phase 3. Die Zuordnung ist nicht beliebig: das Modell-Orange muss vor
+     allem im Belegungs-Balken der Farm bestehen, wo es als dünnes Segment
+     neben dem User-Blau und dem Code-Violett liegt — ein weiterer kühler Ton
+     wäre dort nicht auseinanderzuhalten. Metadaten-Türkis taucht im Balken
+     nie auf und muss nur in der Ressourcen-Bar neben dem Watchtime-Gelb
+     bestehen; dort ist es maximal weit weg. */
+  --res-model-bg:     #ffe0c2;
+  --res-meta-bg:      #c3eef5;
+
+  /* Gesättigte Variante derselben Töne — für Flächen, die auf hellem Grund
+     als Farbe LESBAR sein müssen statt nur getönt: die Fortschritts-Ringe auf
+     den Gebäuden (siehe .mk-ring). Ein Pastellton wäre dort im Konus gegen
+     Weiß kaum vom leeren Rest zu unterscheiden. */
+  --res-money-ink:     #27ae60;
+  --res-users-ink:     #2f8fe0;
+  --res-server-ink:    #7c4ddb;
+  --res-watchtime-ink: #eab308;
+  --res-trend-ink:     #ec4899;
+  --res-model-ink:     #f97316;
+  --res-meta-ink:      #0891b2;
+  /* Für Ringe ohne Ressource (Nodes, die nur freischalten). */
+  --res-none-ink:      #a0937f;
+}
+.rt-led__item--money     { background: var(--res-money-bg); }
+.rt-led__item--users     { background: var(--res-users-bg); }
+.rt-led__item--server    { background: var(--res-server-bg); }
+.rt-led__item--watchtime { background: var(--res-watchtime-bg); }
+.rt-led__item--trend     { background: var(--res-trend-bg); }
+.rt-led__item--time      { background: var(--res-time-bg); }
+.rt-led__item--model     { background: var(--res-model-bg); }
+.rt-led__item--meta      { background: var(--res-meta-bg); }
+
+/* Modals mit Ledger-Karten ziehen ihre Typografie auf den Holzton der Karten.
+   Der Hintergrund bleibt bewusst weiß: die Karten sind --tt-paper, auf Creme
+   würden sie fast verschwinden — genau wie im Techtree stehen sie auf Weiß. */
+#modal.modal-tt { color: var(--tt-brown); }
+#modal.modal-tt .modal-title    { color: var(--tt-brown); }
+#modal.modal-tt .info-line      { color: var(--tt-brown-light); }
+#modal.modal-tt .info-highlight { color: var(--tt-brown); }
+#modal.modal-tt .rt-adcfg__head { color: var(--tt-brown); }
+#modal.modal-tt .rt-adcfg__note { color: var(--tt-brown-light); }
+#modal.modal-tt .slider-info    { color: var(--tt-brown-light); }
+
+/* Abschnittsüberschrift ("Neuen Deal buchen", "📣 Reichweite") — ersetzt die
+   inline-Styles, die vorher an diesen Stellen standen. */
+.rt-led-sec {
+  margin: 18px 0 6px;
+  font-size: 15px; font-weight: 800; color: var(--tt-brown);
+}
+/* Zähler neben einer Sektions-Überschrift — im Marketing-Center die belegten
+   PR-Plätze. Bewusst an der Überschrift und nicht an jeder Karte: die Plätze
+   gelten für die ganze Plattform, nicht für die einzelne Kampagne. */
+.rt-led-sec__chip {
+  margin-left: 8px;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--tt-primary-soft);
+  font-size: 12px; font-weight: 700; color: var(--tt-brown);
+  vertical-align: middle;
+}
+
+/* Angebote nebeneinander statt untereinander. Zwei Anwendungen:
+   – Werbeagentur: die vier Werbearten als direkte Kinder, damit man beim
+     Ziehen am Intensitäts-Slider alle gleichzeitig sieht.
+   – Marketing-Center: zwei .rt-led-grid__col als Kinder, links Reichweite
+     (absolute User), rechts PR (prozentualer Trend).
+   Die Spalten strecken sich bewusst auf gleiche Höhe (Grid-Default): so
+   nebeneinander stehende Karten schließen unten bündig ab, und die Trennlinie
+   im Marketing-Center läuft über die ganze Höhe statt auf halbem Weg
+   aufzuhören.
+
+   Zweispaltig erst ab 861 px Fenster — darunter bleibt alles wie vorher
+   untereinander. Bewusst als min-width geschrieben: eine max-width-Regel
+   hätte höhere Spezifität als das Karten-Stacking bei 520 px und würde es
+   auf dem Handy wieder aushebeln. */
+.rt-led-grid { display: grid; grid-template-columns: 1fr; }
+.rt-led-grid__col { min-width: 0; }
+/* Die Überschrift steht schon direkt unter der Grid-Kante, ihr Standard-
+   Abstand nach oben wäre hier doppelt. */
+.rt-led-grid__col > .rt-led-sec:first-child { margin-top: 0; }
+
+@media (min-width: 861px) {
+  .rt-led-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16px;
+  }
+  /* Trennt Reichweite (links) von PR (rechts) — vorher lag dort eine
+     waagerechte Linie zwischen den beiden Blöcken. */
+  .rt-led-grid--split > .rt-led-grid__col + .rt-led-grid__col {
+    border-left: 2px solid var(--tt-primary-soft);
+    padding-left: 16px;
+  }
+  /* Die Karten werden in der halben Breite schmaler — die Zahlenspalte gibt
+     zuerst nach, der Erklärtext braucht den Platz dringender. */
+  .rt-led-grid .rt-led-card {
+    grid-template-columns: 1fr minmax(126px, 156px);
+    gap: 12px;
+    padding: 10px 12px;
+    margin: 8px 0;
+  }
+  /* Etwas kompakter als eine Karte in voller Breite. Zwei Spalten heißt zwei
+     Zeilen, und der Sinn der Anordnung ist, dass alle Angebote beim Ziehen am
+     Slider gleichzeitig sichtbar bleiben — dafür müssen sie auch senkrecht
+     zusammenrücken. */
+  .rt-led-grid .rt-led { gap: 8px; padding-left: 12px; }
+  .rt-led-grid .rt-led__item { padding: 5px 10px; }
+  .rt-led-grid .rt-led__val { font-size: 16px; }
+  .rt-led-grid .rt-led-card__desc { margin-bottom: 10px; }
+}
+
+/* Zwei Spalten: links WAS das Angebot ist (Icon, Name, Text, Button), rechts
+   WAS ES KOSTET UND BRINGT. Die Zahlenspalte bleibt schmal und linksbündig —
+   untereinander stehende Karten sind dadurch direkt vergleichbar, ohne dass
+   das Auge springen muss. */
+.rt-led-card {
+  display: grid;
+  grid-template-columns: 1fr minmax(150px, 186px);
+  gap: 16px;
+  align-items: stretch;
+  padding: 12px 14px;
+  margin: 10px 0;
+  background: var(--tt-paper);
+  border: 3px solid var(--tt-brown);
+  border-radius: 16px;
+  box-shadow: var(--tt-shadow-hard);
+}
+.rt-led-card__main { min-width: 0; }
+/* Auf schmalen Geräten unter den Text statt daneben. */
+@media (max-width: 520px) {
+  .rt-led-card { grid-template-columns: 1fr; gap: 12px; }
+}
+/* Zuletzt gebuchte Werbeart: der Slider steht schon auf ihrer Intensität. */
+.rt-led-card--last { border-color: var(--gold-dark); background: #fffaf0; }
+/* PR-Kampagnen: bringen Trend statt User — grün abgesetzt. */
+.rt-led-card--pr   { border-color: #4d7c3a; background: #f6fbf4; }
+/* Dark Pattern: unumkehrbar, soll sich auch so anfühlen. */
+.rt-led-card--dark { border-color: #d4674a; background: linear-gradient(180deg, #fff4f0 0%, #ffe8e0 100%); }
+/* Vertrauens-Feature (White Pattern): dauerhaft wie das Dark Pattern, aber in
+   die andere Richtung. Türkis statt Grün, weil Grün im Spiel schon „bezahlbar/
+   fertig" heißt und die Karte sonst als Status-Signal gelesen würde. */
+.rt-led-card--white { border-color: #2a9d8f; background: linear-gradient(180deg, #f0fbf9 0%, #dcf4f0 100%); }
+/* Laufender Deal — hebt sich vom buchbaren Angebot darunter ab. */
+.rt-led-card--live { border-color: #4d90fe; background: #f4f9ff; }
+/* Noch nicht freigeschaltet: bleibt lesbar (die Karte ist der Wegweiser ins
+   HQ), tritt aber sichtbar hinter die buchbaren Angebote zurück. */
+.rt-led-card--locked { border-color: #c9c2b4; background: #f4f2ee; opacity: .62; }
+
+.rt-led-card__head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.rt-led-card__ico {
+  width: 38px; height: 38px; flex-shrink: 0;
+  font-size: 21px; line-height: 1;
+  background: var(--tt-primary-soft);
+  border: 3px solid var(--tt-brown);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--tt-brown);
+}
+.rt-led-card__ico svg { width: 22px; height: 22px; stroke-width: 2.2; }
+.rt-led-card__titles { flex: 1; min-width: 0; }
+.rt-led-card__name { font-size: 16px; font-weight: 800; color: var(--tt-brown); }
+.rt-led-card__chip {
+  display: inline-block; margin-left: 6px; padding: 1px 8px;
+  border-radius: 999px; background: var(--gold); color: #4a2e00;
+  font-size: 10px; font-weight: 800; vertical-align: middle;
+}
+.rt-led-card__sub  { font-size: 12px; color: var(--tt-brown-light); margin-top: 2px; }
+.rt-led-card__desc { font-size: 12.5px; color: var(--tt-brown-light); line-height: 1.45; margin: 0 0 12px; }
+
+.rt-led-card__progress {
+  width: 100%; height: 10px; margin: 0 0 10px;
+  background: var(--tt-primary-soft);
+  border: 2px solid var(--tt-brown);
+  border-radius: 999px; overflow: hidden;
+}
+.rt-led-card__progress-bar {
+  height: 100%; background: linear-gradient(90deg, #7ecbff, #4d90fe);
+  transition: width 0.3s ease;
+}
+
+/* Kosten oben, Ertrag darunter. Die senkrechte Linie trennt Erklärung von
+   Zahlen und läuft über die ganze Kartenhöhe. */
+.rt-led {
+  display: flex; flex-direction: column; gap: 12px;
+  border-left: 2px solid var(--tt-primary-soft);
+  padding-left: 16px;
+}
+/* Die Kachel-Rahmen gruppieren schon sichtbar genug — eine zusätzliche
+   Trennlinie zwischen Kosten und Ertrag wäre eine Kante zu viel. */
+.rt-led__col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.rt-led__head {
+  font-size: 10px; font-weight: 800; color: var(--tt-brown-light);
+  letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px;
+}
+/* Auf schmalen Geräten liegt die Trennlinie waagerecht, sonst hinge sie
+   sinnlos am linken Rand. */
+@media (max-width: 520px) {
+  .rt-led {
+    border-left: none; padding-left: 0;
+    border-top: 2px solid var(--tt-primary-soft); padding-top: 12px;
+  }
+}
+
+/* Die Kachel: für alle Ressourcen identisch gerahmt, nur der Hintergrund
+   wechselt. Volle Spaltenbreite, damit die Kacheln untereinander eine Kante
+   bilden statt unterschiedlich weit zu ragen. */
+.rt-led__item {
+  display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;
+  padding: 7px 11px;
+  border: 2px solid var(--tt-brown);
+  border-radius: 12px;
+  color: var(--tt-brown);
+}
+/* Dauerhafte Kosten (Dark Patterns) — die eine Stelle, an der eine Kachel
+   aus der Reihe tanzen darf: die Wirkung ist unumkehrbar. */
+.rt-led__item--warn {
+  background: #ffdccf; border-color: #b4492a; color: #8f3a20;
+}
+/* Freischaltungen und Sonder-Effekte: keine Ressource, deshalb keine
+   Ressourcen-Farbe. Das sind Sätze statt Zahlen, also auch keine 18px. */
+.rt-led__item--text { background: var(--tt-cream); }
+.rt-led__item--text .rt-led__val {
+  font-size: 12.5px; font-weight: 700; line-height: 1.35;
+}
+
+.rt-led__ico { flex-shrink: 0; font-size: 15px; line-height: 1; }
+/* Darf umbrechen — manche Werte sind ganze Phrasen ("Werbung: Video-Ad-
+   Integration"). Zahlenwerte halten sich selbst zusammen: fmt.money setzt ein
+   geschütztes Leerzeichen vor das €. */
+.rt-led__val {
+  font-family: var(--rt-font-display, inherit);
+  font-size: 18px; font-weight: 800; line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+/* Bricht kontrolliert unter die Zahl statt in der schmalen Spalte irgendwo
+   zu landen — 22px = Icon-Breite + gap, damit es bündig darunter steht. */
+.rt-led__label {
+  flex-basis: 100%;
+  padding-left: 22px;
+  margin-top: -2px;
+  font-size: 11px; font-weight: 700;
+  opacity: 0.7;
+}
+.rt-led__empty { opacity: 0.4; font-weight: 800; font-size: 18px; padding: 4px 0; }
+
+/* Aktionen sitzen unten in der linken Spalte, direkt unter dem Text. Beim
+   Techtree stecken hier je nach Status auch Fortschrittsbalken, Sperr-Hinweis
+   oder Status-Badge statt eines Buttons. */
+.rt-led-card__action { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.rt-led-card__action .rt-btn-tt { width: 100%; }
+
+/* Hülle für Karten mit `actionRight` (Shop): Zahlenspalte und Button teilen
+   sich die rechte Kartenhälfte. Die Trennlinie zieht deshalb von .rt-led
+   hierher — sonst stünde der Button links davon und die Linie endete auf
+   halber Höhe. */
+.rt-led-card__side {
+  display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  border-left: 2px solid var(--tt-primary-soft);
+  padding-left: 16px;
+}
+.rt-led-card__side > .rt-led { border-left: none; padding-left: 0; }
+@media (max-width: 520px) {
+  .rt-led-card__side {
+    border-left: none; padding-left: 0;
+    border-top: 2px solid var(--tt-primary-soft); padding-top: 12px;
+  }
+  .rt-led-card__side > .rt-led { border-top: none; padding-top: 0; }
+}
+
+/* Karte ohne Zahlenspalte (Ausbau-Karten, die nur ankündigen: Höchststufe,
+   Investor-Geschenk). Ohne das behielte sie die schmale zweite Spalte und
+   hätte rechts ein leeres Loch. */
+.rt-led-card--solo { grid-template-columns: 1fr; }
+
+/* Nebenkarte: gleiche Bauart, eine Stufe leiser. Für Modale, in denen eine
+   Karte der Grund ist, warum sie offen sind (die Belegung der Serverfarm),
+   und die zweite nur die Option daneben (der Ausbau). Gleich große Karten
+   ließen beides gleich wichtig aussehen. */
+.rt-led-card--compact {
+  grid-template-columns: 1fr minmax(118px, 148px);
+  gap: 12px; padding: 9px 12px;
+}
+.rt-led-card--compact .rt-led-card__ico {
+  width: 30px; height: 30px; font-size: 17px;
+  border-width: 2px; border-radius: 10px;
+}
+.rt-led-card--compact .rt-led-card__head { gap: 8px; margin-bottom: 6px; }
+.rt-led-card--compact .rt-led-card__name { font-size: 14px; }
+.rt-led-card--compact .rt-led-card__desc { font-size: 12px; margin-bottom: 8px; }
+.rt-led-card--compact .rt-led          { gap: 8px; padding-left: 12px; }
+.rt-led-card--compact .rt-led__item    { padding: 5px 9px; }
+.rt-led-card--compact .rt-led__val     { font-size: 15px; }
+.rt-led-card--compact .rt-btn-tt       { padding: 8px 14px; font-size: 13px; }
+
+/* ---- Belegungs-Balken der Serverfarm ----
+   Zeigt die EXAKTE Verteilung: User, Programmcode, freier Platz. Bewusst
+   nicht die acht Slots vom Feld — die sind gerundete Deko (ein Tier steht je
+   nach Stufe für 500 oder 50 Mio User) und würden hier Zahlen verschlucken.
+
+   Farben sind die Ressourcen-Töne in der gesättigten ink-Variante: User blau
+   wie die User-Kachel, Code violett wie die Serverkapazität — es IST die
+   Kapazität, die der Techtree reserviert. */
+.rt-cap { margin: 0 0 12px; }
+.rt-cap__top {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 5px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--tt-brown-light);
+}
+.rt-cap__top b {
+  font-family: var(--rt-font-display, inherit);
+  font-size: 15px; letter-spacing: 0; color: var(--tt-brown);
+}
+.rt-cap__bar {
+  position: relative; display: flex;
+  width: 100%; height: 18px;
+  background: var(--tt-primary-soft);
+  border: 3px solid var(--tt-brown);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.rt-cap__seg { height: 100%; transition: width 0.3s ease; }
+.rt-cap__seg--users { background: var(--res-users-ink); }
+.rt-cap__seg--code  { background: var(--res-server-ink); }
+.rt-cap__seg--models { background: var(--res-model-ink); }
+/* Nur bei Überbelegung: markiert, wo die Kapazität endet — alles rechts davon
+   ist Überhang. Im laufenden Spiel unerreichbar, aber dann auch erklärt. */
+.rt-cap__cap { position: absolute; top: 0; bottom: 0; width: 3px; background: #b4492a; }
+
+.rt-cap__keys { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 7px; }
+.rt-cap__key {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  font-size: 11.5px; font-weight: 700; color: var(--tt-brown-light);
+}
+.rt-cap__key::before {
+  content: ''; align-self: center; flex-shrink: 0;
+  width: 9px; height: 9px; border-radius: 3px;
+  border: 2px solid var(--tt-brown);
+}
+.rt-cap__key b {
+  font-family: var(--rt-font-display, inherit);
+  font-size: 15px; font-weight: 800; color: var(--tt-brown);
+}
+.rt-cap__key--users::before { background: var(--res-users-ink); }
+.rt-cap__key--code::before  { background: var(--res-server-ink); }
+.rt-cap__key--models::before { background: var(--res-model-ink); }
+.rt-cap__key--free::before  { background: var(--tt-primary-soft); }
+.rt-cap__key--over          { color: #8f3a20; }
+.rt-cap__key--over::before  { background: #b4492a; border-color: #8f3a20; }
+.rt-cap__key--over b        { color: #8f3a20; }
+
+/* Der Fortschrittsbalken der Karte zeigt hier den Watchtime-Stapel und trägt
+   deshalb dessen Farbe — genau wie der Ring auf dem Feld. Das Blau der
+   Standard-Karte gehört zu Laufzeiten (laufender Deal), nicht zu Watchtime. */
+#farm-stack-fill { background: linear-gradient(90deg, #fde68a, var(--res-watchtime-ink)); }
+
+/* Sitzt direkt über dem Fortschrittsbalken der Karte und beschriftet ihn. */
+.rt-cap__stack {
+  margin-bottom: 6px;
+  font-size: 12px; font-weight: 700; color: var(--tt-brown-light);
+}
+
+/* Vorher → nachher beim Ausbau: die eine Zahl, um die es geht. */
+.rt-cap__step {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 12px;
+  font-family: var(--rt-font-display, inherit);
+  font-size: 15px; font-weight: 800; color: var(--tt-brown-light);
+}
+.rt-cap__step b    { font-size: 19px; color: var(--tt-brown); }
+.rt-cap__step span { opacity: 0.55; }
+.rt-led-card--compact .rt-cap__step   { font-size: 13px; margin-bottom: 9px; }
+.rt-led-card--compact .rt-cap__step b { font-size: 16px; }
+
+/* Badge in Detail-/Kartengröße statt Baum-Größe. Ersetzt die inline-Styles,
+   die vorher an den Detail-Badges hingen. */
+.rt-tt-badge--lg {
+  font-size: 0.9rem; padding: 8px 16px;
+  text-align: center;
+}
+
+/* Tablet/Handy: Spalten untereinander, Trennlinie wird waagerecht. */
+@media (max-width: 560px) {
+  .rt-led { grid-template-columns: 1fr; gap: 8px; }
+  .rt-led__col--gain {
+    border-left: none;
+    border-top: 2px solid var(--tt-primary-soft);
+    padding-left: 0; padding-top: 8px;
+  }
+}
+
+/* Die erste Sektion steht direkt unter dem Hinweistext und braucht den
+   Standard-Abstand von .rt-led-sec nicht noch einmal. */
+.rt-led-sec--first { margin-top: 10px; }
+
+/* ---- Placement-Bar ---- */
+.placement-bar {
+  display: none;
+  position: absolute; top: 12px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30,30,30,0.85); color: white;
+  padding: 10px 14px 10px 18px; border-radius: 999px;
+  font-weight: 700; font-size: 14px;
+  gap: 12px; align-items: center;
+  z-index: 60; box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+}
+.placement-bar.show { display: inline-flex; }
+.placement-bar button {
+  background: var(--red); color: white; border: none;
+  padding: 6px 14px; border-radius: 999px; cursor: pointer;
+  font-weight: 700; font-size: 13px;
+}
+
+/* ---- Shop-Karten ----
+   Dieselbe Ledger-Karte wie in Werbeagentur, Marketing-Center und Techtree —
+   der Shop ist der Ort, an dem man die teuersten Entscheidungen des Spiels
+   trifft, und sah vorher als einziger nach Systemdialog aus.
+
+   Zwei Unterschiede zur normalen Karte, beide aus derselben Ursache: der Shop
+   ist eine LISTE. Alle Angebote sollen gleichzeitig sichtbar sein, also bleibt
+   jeder Eintrag eine schmale Zeile — Text ohne Absatz darunter (der Button
+   sitzt rechts, siehe `actionRight`) und durchweg kleinere Maße. */
+.rt-led-card--shop {
+  grid-template-columns: 1fr minmax(128px, 152px);
+  gap: 12px; padding: 10px 12px; margin: 8px 0;
+}
+.rt-led-card--shop .rt-led-card__ico {
+  width: 46px; height: 46px; padding: 3px;
+  font-size: 22px; border-width: 2px; border-radius: 12px;
+}
+/* Gebäude zeigen ihr echtes Sprite statt eines Emojis — dasselbe Bild, das
+   gleich auf dem Grid steht. Hardware hat keins und bleibt beim Icon. */
+.rt-led-card--shop .rt-led-card__ico img {
+  width: 100%; height: 100%; display: block; object-fit: contain;
+}
+/* Rechts stehen zwei Elemente übereinander (Preis, Button), links nur eine
+   Zeile — ohne das Zentrieren klebte der Name an der Oberkante und jede Zeile
+   hätte unten links ein Loch. */
+.rt-led-card--shop .rt-led-card__main {
+  display: flex; flex-direction: column; justify-content: center;
+}
+.rt-led-card--shop .rt-led-card__head { gap: 10px; margin-bottom: 0; }
+.rt-led-card--shop .rt-led-card__name { font-size: 15px; }
+/* Der Ein-Satz-Text gehört unter den Namen, nicht unter das Icon — sonst
+   entsteht links eine zweite Spaltenkante. Deshalb sitzt er in __titles und
+   nicht in __desc. */
+.rt-led-card--shop .rt-led-card__sub {
+  font-size: 12px; line-height: 1.4; margin-top: 3px;
+}
+.rt-led-card--shop .rt-led__head  { display: none; }
+.rt-led-card--shop .rt-led__item  { padding: 6px 10px; }
+.rt-led-card--shop .rt-led__val   { font-size: 16px; }
+/* Preis und Button rücken zusammen — sie sind eine Einheit, kein Paar aus
+   Angabe und Aktion. Die Einrückung bleibt der Standard aus __side, sonst
+   müsste sie in der Handy-Regel dort noch einmal zurückgenommen werden. */
+.rt-led-card--shop .rt-led-card__side { gap: 8px; }
+.rt-led-card--shop .rt-btn-tt     { padding: 8px 12px; font-size: 13px; }
+/* Schon gekauft (Rechner): Karte bleibt stehen, damit die Hardware-Sektion
+   nicht leer wird, tritt aber zurück. */
+.rt-led-card--owned { opacity: 0.6; }
+
+/* Shop-Liste zweispaltig (2026-08-09) — ohne Ertrag-Spalte sind die Karten
+   schmal genug, dass zwei nebeneinander passen, und bei sieben, acht
+   Gebäuden ist eine einzelne Kolonne unnötig viel Scrollen. Dieselbe
+   Schwelle wie `.rt-led-grid` weiter oben (861 px), aus demselben Grund: die
+   Karte selbst braucht mindestens ~260 px, sonst quetscht sich Preis + Button
+   zusammen.
+   Section-Überschriften (`.rt-led-sec`, "🖥️ Hardware" / "🏗️ Gebäude") sind
+   direkte Kinder desselben Grids und spannen deshalb explizit beide Spalten
+   — ohne das würde "Gebäude" mitten in die linke Spalte rutschen, während
+   rechts noch eine Hardware-Karte offen ist. */
+.rt-shop-grid { display: grid; grid-template-columns: 1fr; }
+.rt-shop-grid > .rt-led-sec { grid-column: 1 / -1; }
+
+@media (min-width: 861px) {
+  .rt-shop-grid { grid-template-columns: 1fr 1fr; gap: 0 14px; }
+}
+
+/* ---- Feldkauf-Nachfrage ---- */
+.tile-buy { text-align: center; padding: 6px 0 2px; }
+.tile-buy-q     { font-size: 15px; color: #444; margin: 0 0 10px; }
+.tile-buy-price { font-size: 30px; font-weight: 800; color: var(--green-dark, #2e7d32); }
+.tile-buy-meta  { display: block; color: #888; font-size: 12px; margin-top: 4px; }
+.tile-buy-actions { display: flex; gap: 10px; margin-top: 18px; }
+.tile-buy-btn {
+  flex: 1; padding: 12px 16px; border: none; border-radius: 8px; cursor: pointer;
+  background: linear-gradient(180deg, var(--green), var(--green-dark));
+  color: white; font-weight: 700; font-size: 15px;
+}
+.tile-buy-btn:disabled { background: #ddd; color: #888; cursor: not-allowed; }
+.tile-buy-btn--ghost {
+  background: #f0f0f0; color: #555; border: 1px solid #ddd;
+}
+
+/* ---- Toast ---- */
+#toast {
+  display: none;
+  position: fixed; bottom: 30px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30,30,30,0.9); color: white;
+  padding: 10px 20px; border-radius: 10px;
+  font-weight: 600; z-index: 200;
+  pointer-events: none; font-size: 14px;
+}
+#toast.show { display: block; animation: toast-in 0.25s; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ---- Effekte ---- */
+.burst {
+  position: absolute; pointer-events: none;
+  font-size: 22px; z-index: 50;
+  animation: burst 0.9s ease-out forwards;
+  --dx: 0px; --dy: -60px;
+}
+@keyframes burst {
+  0%   { opacity: 1; transform: translate(0,0) scale(0.6); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.4); }
+}
+.float-text {
+  position: absolute; pointer-events: none;
+  font-weight: 800; font-size: 18px; color: var(--gold);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  animation: float 1.2s ease-out forwards;
+  z-index: 55;
+}
+.float-text.green { color: var(--green); }
+.float-text.blue  { color: #a0d0ff; }
+.float-text.gold  { color: var(--gold); }
+@keyframes float {
+  0%   { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -70px); }
+}
+
+/* ---- Online-Button (schwebt oben mittig im World) ---- */
+.rt-online-btn {
+  position: absolute; top: 20px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  padding: 14px 28px;
+  background: linear-gradient(180deg, #22c55e, #16a34a);
+  color: white; font-weight: 800; font-size: 17px;
+  border: 3px solid #14532d; border-radius: 999px;
+  box-shadow: 0 6px 0 #14532d, 0 12px 24px rgba(0,0,0,0.35);
+  cursor: pointer;
+  animation: rt-online-pulse 1.3s ease-in-out infinite;
+}
+.rt-online-btn:hover  { transform: translateX(-50%) translateY(-2px); }
+.rt-online-btn:active { transform: translateX(-50%) translateY(2px); box-shadow: 0 2px 0 #14532d; }
+@keyframes rt-online-pulse {
+  0%, 100% { box-shadow: 0 6px 0 #14532d, 0 12px 24px rgba(0,0,0,0.35), 0 0 0 0   rgba(34, 197, 94, 0.6); }
+  50%      { box-shadow: 0 6px 0 #14532d, 0 12px 24px rgba(0,0,0,0.35), 0 0 0 12px rgba(34, 197, 94, 0.0); }
+}
+
+/* ---- Launch-Overlay (Terminal-Deploy) ---- */
+.rt-launch-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: rt-launch-fade-in 0.3s ease;
+}
+@keyframes rt-launch-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.rt-launch-screen { width: 100%; max-width: 640px; }
+.rt-launch-terminal {
+  background: #0d1117; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  border: 1px solid #30363d;
+}
+.rt-launch-terminal__bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: #161b22; border-bottom: 1px solid #30363d;
+}
+.rt-launch-terminal__dot {
+  width: 12px; height: 12px; border-radius: 50%; background: #ff5f57;
+}
+.rt-launch-terminal__dot:nth-child(2) { background: #febc2e; }
+.rt-launch-terminal__dot:nth-child(3) { background: #28c840; }
+.rt-launch-terminal__title {
+  margin-left: 12px; color: #8b949e; font-size: 12px;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+}
+.rt-launch-console {
+  padding: 20px 20px 12px; height: 260px; overflow-y: auto;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-size: 14px; line-height: 1.7;
+}
+.rt-launch-line { color: #58a6ff; animation: rt-launch-line-in 0.3s ease; }
+.rt-launch-line--info    { color: #8b949e; }
+.rt-launch-line--success { color: #56d364; }
+.rt-launch-line--launch  { color: #ffea63; font-weight: 700; font-size: 16px; }
+@keyframes rt-launch-line-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.rt-launch-bar-wrap {
+  height: 6px; background: #21262d; margin: 4px 20px 16px; border-radius: 4px; overflow: hidden;
+}
+.rt-launch-bar {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #58a6ff, #56d364);
+  transition: width 0.45s ease;
+}
+.rt-launch-footer {
+  padding: 12px 20px 20px; text-align: center; border-top: 1px solid #30363d;
+}
+.rt-launch-weiter {
+  padding: 12px 32px; font-size: 15px; font-weight: 800;
+  background: linear-gradient(180deg, #22c55e, #16a34a); color: white;
+  border: 2px solid #14532d; border-radius: 10px; cursor: pointer;
+  box-shadow: 0 4px 0 #14532d;
+}
+.rt-launch-weiter:hover  { transform: translateY(-1px); }
+.rt-launch-weiter:active { transform: translateY(2px); box-shadow: 0 2px 0 #14532d; }
+
+/* ── Go-Live-Info-Box (nach Terminal) ── */
+.rt-golive-info,
+.rt-investor-info {
+  width: 100%; max-width: 520px;
+  background: var(--tt-paper, #fff);
+  border: 3px solid var(--tt-brown, #6b4a2b);
+  border-radius: 18px;
+  padding: 24px 24px 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  text-align: center;
+}
+.rt-golive-info__title {
+  font-size: 22px; font-weight: 900; color: var(--tt-brown, #6b4a2b);
+  margin-bottom: 6px;
+}
+.rt-golive-info__sub {
+  font-size: 14px; color: var(--tt-brown-light, #8b6a4b);
+  margin: 0 0 16px;
+}
+.rt-golive-info__box {
+  background: var(--tt-cream, #fff8e8);
+  border: 2px dashed var(--tt-brown, #6b4a2b);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: left;
+  margin-bottom: 16px;
+}
+.rt-golive-info__head {
+  font-size: 13px; font-weight: 800; color: var(--tt-brown, #6b4a2b);
+  margin-bottom: 8px;
+}
+.rt-golive-info__list {
+  margin: 0 0 10px; padding-left: 20px;
+  font-size: 13px; color: var(--tt-brown, #6b4a2b); line-height: 1.55;
+}
+.rt-golive-info__list li { margin-bottom: 4px; }
+.rt-golive-info__goal {
+  margin: 8px 0 0; font-size: 13px;
+  color: var(--tt-brown, #6b4a2b);
+}
+
+/* Vorher-Nachher-Gegenüberstellung im Logo-Redesign-Modal. */
+.rt-logo-reveal {
+  display: flex; align-items: center; justify-content: center;
+  gap: 14px; margin-bottom: 16px;
+}
+.rt-logo-reveal__side {
+  margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.rt-logo-reveal__side img {
+  width: 92px; height: 92px; object-fit: contain;
+  background: #fff; border-radius: 14px; padding: 8px;
+  border: 2px solid var(--tt-brown-light, #8b6a4b);
+  opacity: 0.55; filter: grayscale(0.35);
+}
+.rt-logo-reveal__side figcaption {
+  font-size: 12px; font-weight: 700;
+  color: var(--tt-brown-light, #8b6a4b);
+}
+.rt-logo-reveal__side--new img {
+  opacity: 1; filter: none;
+  border-color: var(--tt-brown, #6b4a2b);
+  box-shadow: 0 4px 16px rgba(107, 74, 43, 0.28);
+  animation: rt-logo-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 260ms both;
+}
+.rt-logo-reveal__side--new figcaption { color: var(--tt-brown, #6b4a2b); }
+.rt-logo-reveal__arrow {
+  font-size: 26px; font-weight: 900;
+  color: var(--tt-brown-light, #8b6a4b);
+  margin-bottom: 18px;
+}
+@keyframes rt-logo-pop {
+  from { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.08); }
+  to   { transform: scale(1); opacity: 1; }
+}
+@media (max-width: 480px) {
+  .rt-logo-reveal__side img { width: 72px; height: 72px; }
+}
+
+/* ── Investor-Modal (2 Seiten, an v1 angelehnt) ── */
+.rt-investor-info { max-width: 620px; text-align: center; }
+.rt-investor-page { display: block; }
+.rt-investor-info__bear {
+  width: 130px; height: 130px; object-fit: contain;
+  margin: 0 auto 10px; display: block;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25));
+}
+.rt-investor-info__bear--sm {
+  width: 90px; height: 90px; margin: 0 12px 0 0;
+  flex-shrink: 0;
+}
+.rt-investor-info__title {
+  font-size: 22px; font-weight: 900;
+  color: var(--tt-brown, #6b4a2b);
+  margin: 0 0 12px;
+}
+.rt-investor-info__quote,
+.rt-investor-info__truth {
+  font-size: 14px; color: var(--tt-brown, #6b4a2b);
+  font-style: italic; line-height: 1.55;
+  background: var(--tt-cream, #fff8e8);
+  border-radius: 10px; padding: 12px 14px;
+  margin: 0 0 12px; text-align: left;
+}
+.rt-investor-info__sig {
+  font-size: 12px; font-weight: 700;
+  color: var(--tt-brown-light, #8b6a4b);
+  margin: 0 0 14px; text-align: right;
+}
+.rt-investor-info__body {
+  display: flex; align-items: flex-start;
+  text-align: left;
+}
+.rt-investor-info__right { flex: 1; min-width: 0; }
+.rt-investor-info__deal {
+  display: flex; flex-direction: column; gap: 6px;
+  margin: 12px 0 12px;
+}
+.rt-investor-info__row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--tt-cream, #fff8e8);
+  font-size: 13px; color: var(--tt-brown, #6b4a2b);
+}
+.rt-investor-info__row--win { background: var(--tt-mint-soft, #bef2d4); }
+.rt-investor-info__whisper {
+  font-size: 12px; color: var(--tt-brown-light, #8b6a4b);
+  font-style: italic; margin: 0 0 12px;
+}
+@media (max-width: 560px) {
+  .rt-investor-info__body { flex-direction: column; align-items: center; }
+  .rt-investor-info__bear--sm { margin: 0 auto 10px; }
+}
+
+/* Feuerwerk: bunte runde Partikel, explodieren nach außen und fallen leicht. */
+.firework-piece {
+  position: absolute; pointer-events: none;
+  width: 10px; height: 10px; border-radius: 50%;
+  z-index: 60;
+  box-shadow: 0 0 8px rgba(255,255,255,0.6);
+  animation: firework 1.2s cubic-bezier(0.15, 0.6, 0.3, 1) forwards;
+  --dx: 0px; --dy: 0px;
+}
+@keyframes firework {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+  40%  { opacity: 1; transform: translate(calc(-50% + var(--dx) * 0.9), calc(-50% + var(--dy) * 0.9)) scale(1.1); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) + 40px)) scale(0.4); }
+}
+
+/* ---- Notification-Badge (gelber pulsierender "!") ---- */
+/* Markiert UI-Elemente mit neuem/ungelesenem Inhalt. Verschwindet bei Klick
+   (State-Flag seenBadges.*). */
+.rt-notif-badge {
+  position: absolute; top: -6px; right: -6px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #fbbf24;
+  border: 2px solid #78350f;
+  color: #78350f;
+  font-family: var(--rt-font-display, sans-serif);
+  font-weight: 900;
+  font-size: 14px;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+  animation: rt-notif-pulse 1.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 20;
+}
+@keyframes rt-notif-pulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(251,191,36,0.55); }
+  50%      { transform: scale(1.12); box-shadow: 0 0 0 8px rgba(251,191,36,0);  }
+}
+/* Anker für Badge-Positionierung (position: relative benötigt). */
+.rt-shop-btn, .rt-tt-tab { position: relative; }
+
+/* HQ-Badge sitzt auf der mk-ui (130×130 anchored am Fuß der Kachel).
+   Ohne Override würde er zu weit rechts-oben schweben — dieser Modifier
+   zieht ihn näher an das HQ-Sprite. */
+.rt-notif-badge--hq { top: 22px; right: 26px; }
+
+/* ---- Responsive ---- */
+@media (max-width: 720px) {
+  #world { min-height: 420px; }
+  .b-hq        { width: 26%; min-width: 140px; }
+  .b-farm      { width: 32%; min-width: 180px; }
+  .b-marketing { width: 26%; min-width: 140px; }
+  .b-label { font-size: 11px; }
+  .animals { font-size: 18px; }
+}
