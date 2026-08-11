@@ -47,11 +47,13 @@ Migrationen 0001–0061 liegen in `supabase/migrations/`. Schema/Seed, RLS, Sess
 
 **Blob-Spielstände (`user_game_saves`, Migration 0061):** dritter Persistenz-Weg neben `game_state` (feste Spalten) und `shop_state` (jsonb mit feldweisem Merge) — ein **opaker Blob je (User, Spiel)** für Simulationsspiele, die ihren ganzen Zustand mitschleppen. RPCs `load_game_save` / `sync_game_save` / `reset_game_save`. **Kein Merge:** zwei divergierte Simulationsstände lassen sich nicht verschmelzen, deshalb gewinnt der Server beim Laden und eine `rev`-Spalte verhindert, dass ein zweites Gerät blind darüberschreibt. `load_game_save` liefert zusätzlich `age_sec` (Serveruhr) für Offline-Aufholpässe. Erster Nutzer: Startup Story (game18), Modul `GameHub/S3 Startup Story/js/cloud.js`; die Tabelle ist bewusst generisch, „The Algorithm" könnte sie unverändert mitbenutzen.
 
+**Startup Story = abgeleitete Hub-Integration:** game18 ist das einzige Spiel ohne Runden — es meldet nichts, sondern der Hub liest den Blob und rechnet Kreatur, Wachstum und Coins selbst aus (`syncStartupStory()` in `creatures.js`, gezeigt als Reveal-Sequenz in `script.js`). Wachstum hängt am Peak des laufenden Spielstands, Coins am All-Time-Peak aus `game_highscores` — dadurch lassen sich die 100 Coins genau einmal verdienen. `standalone: true` in `GAMES_CONFIG` schaltet Nester, Backup-Tausch und Runden-Items ab; Wachstumstrank und Stein der Vollendung bleiben. Details in `GameHub/S3 Startup Story/CLAUDE.md` §10.6.
+
 **Coin-Modell:** Client-Anzeige summiert `game_state.coins` (pro Spiel) + `shop_state.bankedCoins` + `nests[].coins` — siehe `getTotalCoins()` in `script.js`. `wallets.coins` ist redundanter Gesamtstand, wird automatisch gepflegt.
 
 **Cluster-Starthilfe (Migration 0020):** Pro Cluster im Admin-Panel konfigurierbarer Bonus — Startcoins (→ `bankedCoins`) und Season-Spiele freischalten mit zufälligem Baby-Monster pro Slot. Rarity-Roll: 85 % Normal / 10 % Rare / 5 % Epic / 0 % Legendary. Ausschüttung via `apply_cluster_bonus`-RPC bei Signup und bei manueller Cluster-Zuweisung. Grants pro (user, cluster) idempotent, Cluster-Wechsel = additiver Bonus. Deaktivieren wirkt nur für künftige Ausschüttungen.
 
-**Noch offen:** PDF-Storage-Anbindung. Season 3 (Kreaturen + Games). Für Startup Story (game18) fehlen noch Kreatur-/Coin-Integration, Bestenliste und Admin-Detailansicht — der Spielstand selbst liegt seit Migration 0061 in der DB. Diverse UI-ToDos: FokusFlow-Max-Score, Algorithm-Balancing, Theme in DB.
+**Noch offen:** PDF-Storage-Anbindung. Season 3 (Kreaturen + Games). Für Startup Story (game18) fehlt noch die Admin-Detailansicht. Diverse UI-ToDos: FokusFlow-Max-Score, Algorithm-Balancing, Theme in DB.
 
 ## Architecture
 

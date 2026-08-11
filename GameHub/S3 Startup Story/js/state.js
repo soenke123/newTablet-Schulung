@@ -1132,6 +1132,14 @@
   var initial = {
     money: 1500,
     users: 0,
+    // Höchststand der Userzahl in DIESEM Spielstand. Das Spiel selbst nutzt
+    // ihn nicht — er gehört der Lernwelt: der Hub leitet daraus Wachstum und
+    // Coins des Monsters ab (GameHub/creatures.js, syncStartupStory) und
+    // schiebt ihn in die Bestenliste. Er steht hier und nicht im Hub, weil
+    // nur das Spiel den Verlauf sieht; ein Hub-Besuch sähe immer nur den
+    // Stand des Moments, und ein Absacken vor der Rückkehr fräße den Peak.
+    // wipe() löscht ihn mit — ein Neustart soll wieder von vorne wachsen.
+    usersPeak: 0,
     watchtime: 0,
     // Metadaten (ab Phase 3): globales Lager, gefüllt aus den User-Modellen in
     // den Farmen. Dieselbe Begründung wie beim Watchtime-Lager (CLAUDE.md §5):

@@ -286,12 +286,12 @@
   <!-- Supabase SDK + Session-Layer (muss VOR config.js/script.js kommen) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="../supabase-config.js"></script>
-  <script src="../session.js?v=20260724b"></script>
+  <script src="../session.js?v=20260811"></script>
   <script src="../avatars.js?v=20260724b"></script>
 
   <script src="config.js?v=20260724b"></script>
-  <script src="creatures.js?v=20260724c"></script>
-  <script src="script.js?v=20260724c"></script>
+  <script src="creatures.js?v=20260811"></script>
+  <script src="script.js?v=20260811"></script>
   <script>
     // Hub-spezifischer Code
     // Atari1 · Enter 4-8-2-6
@@ -323,6 +323,12 @@
       await window.loadVirusProgress?.();
       await window.syncHighscores?.();
       await window.fetchDailyBonbonStatus?.();
+      // Nach syncHighscores: die Startup-Story-Ableitung liest den
+      // All-Time-Höchststand aus dem Bestenlisten-Spiegel im localStorage,
+      // den syncHighscores gerade mit dem Server abgeglichen hat. Vorher
+      // aufgerufen sähe sie auf einem neuen Gerät eine 0 und zahlte die
+      // Münzen ein zweites Mal aus.
+      await window.syncStartupStory?.();
 
       // Late-Joiner-Reveal-Recovery: legiRevealed=true stehen lassen wäre
       // ein inkonsistenter Zustand, wenn die Kreatur nie im game_state
@@ -409,6 +415,7 @@
         await window.loadVirusProgress?.();
         await window.syncHighscores?.();
         await window.fetchDailyBonbonStatus?.();
+        await window.syncStartupStory?.();
         window.repairLegiRevealMarker?.();
         renderHub();
       });

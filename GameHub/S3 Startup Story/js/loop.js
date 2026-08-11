@@ -170,7 +170,12 @@
       s.lastFlyerTick = 0;
     }
 
-    // 5) Phase-3-Meilenstein. Einmal pro Tick statt an jeder User-Quelle:
+    // 5) Peak für die Lernwelt. Ein Choke-Point statt sechs, aus demselben
+    // Grund wie beim Phase-3-Meilenstein darunter: die Userzahl ändert sich
+    // ausschließlich über Wege, die durch den Tick laufen.
+    trackUsersPeak();
+
+    // 6) Phase-3-Meilenstein. Einmal pro Tick statt an jeder User-Quelle:
     // in die Nähe von PHASE3_USER_THRESHOLD kommt man ausschließlich über
     // Trend-Ernte und Kampagnen — beide laufen über den Tick, und ein
     // einzelner Tick Verzögerung ist bei der Zahl nicht wahrnehmbar.
@@ -179,8 +184,16 @@
     maybeAnnounceNetwork();
     maybeAnnounceSaturation();
 
-    // 6) Ereigniskarten — die Runden-Uhr. Sie prüft selbst, ob Phase 4 läuft.
+    // 7) Ereigniskarten — die Runden-Uhr. Sie prüft selbst, ob Phase 4 läuft.
     if (RT.events && RT.events.tick) RT.events.tick();
+  }
+
+  /* Höchststand der Userzahl mitschreiben — siehe state.js, `usersPeak`.
+     Der Aufholpass ruft es selbst noch einmal, weil er User gutschreibt,
+     ohne durch tick() zu laufen. */
+  function trackUsersPeak() {
+    var s = RT.state.current;
+    if (s.users > (s.usersPeak || 0)) s.usersPeak = s.users;
   }
 
   // Trend-Tick.
@@ -555,6 +568,10 @@
       s.trendCycleTime = 0;
       report.usersLost = drop;
     }
+
+    // Der Aufholpass schreibt User gut, ohne durch tick() zu laufen — der
+    // Peak für die Lernwelt muss deshalb hier selbst nachgezogen werden.
+    trackUsersPeak();
 
     RT.bus.emit('state:changed');
     return report;

@@ -185,6 +185,52 @@
   box-shadow: var(--rt-shadow-sm);
 }
 .rt-account-modal__btn:active { transform: translateY(2px); box-shadow: none; }
+
+/* Neustart. Rot, weil es die einzige Aktion im Modal ist, die etwas
+   wegnimmt — und deutlich abgesetzt, damit sie nicht als Antwort auf den
+   Verbindungs-Zustand darüber gelesen wird. */
+.rt-account-modal__btn--danger {
+  background: #e05252;
+  color: #fff;
+}
+.rt-account-modal__btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+}
+.rt-account-danger {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 2px dashed rgba(0, 0, 0, 0.18);
+}
+.rt-account-danger__label {
+  font-family: var(--rt-font-display); font-weight: 800;
+  font-size: 0.95rem;
+}
+.rt-account-danger__note {
+  margin-top: 4px;
+  font-size: 0.85rem; line-height: 1.45; opacity: 0.75;
+}
+
+/* Was der Neustart kostet, in Zahlen aus dem laufenden Spielstand.
+   Eine Rückfrage ohne diese Liste ist nur ein Hindernis, keine Information. */
+.rt-account-loss {
+  margin-top: 12px;
+  border: 3px solid var(--rt-brown);
+  border-radius: var(--rt-radius-md);
+  background: var(--rt-primary-wash, rgba(0, 0, 0, 0.04));
+  overflow: hidden;
+}
+.rt-account-loss__row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--rt-space-3);
+  padding: 8px 12px;
+  font-size: 0.95rem;
+}
+.rt-account-loss__row + .rt-account-loss__row {
+  border-top: 2px dashed rgba(0, 0, 0, 0.12);
+}
+.rt-account-loss__row b { font-family: var(--rt-font-display); font-weight: 800; }
 .rt-profile-bar__name {
   font-family: var(--rt-font-display); font-weight: 700;
   font-size: 1.1rem; color: var(--rt-text);

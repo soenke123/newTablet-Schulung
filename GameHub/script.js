@@ -56,7 +56,14 @@ const GAMES_CONFIG = [
   { id: 'game15', season: 2, title: 'LLMaster',            icon: '💬', url: 'S2 LLMaster/index.html'             },
   { id: 'game14', season: 2, title: 'Reinforce Yourself!', icon: '🤖', url: 'S2 Reinforce Yourself!/index.html'  },
   { id: 'game16', season: 3, title: '???',                 icon: '🌈', url: '#', clusterLegi: true },
-  { id: 'game18', season: 3, title: 'Startup Story',       icon: '🚀', url: 'S3 Startup Story/index.html' },
+  // standalone: das Spiel steht für sich. Es hat keine Runden, sondern läuft
+  // durch — das Ei brütet über Phase 0–2, danach wächst das Monster an der
+  // Userzahl. Der Hub leitet alles aus dem Spielstands-Blob ab
+  // (creatures.js, syncStartupStory) statt es gemeldet zu bekommen.
+  // Daran hängen die Ausnahmen: keine Nester, kein Backup-Tausch, keine
+  // Runden-Items. Wachstumstrank und Stein der Vollendung wirken weiter —
+  // beide greifen im Hub am Monster an, nicht im Spiel.
+  { id: 'game18', season: 3, title: 'Startup Story',       icon: '🚀', url: 'S3 Startup Story/index.html', standalone: true },
   { id: 'game17', season: 3, title: 'Bubble Bounce',       icon: '🫧', url: 'S3 BubbleBounce/index.html' },
 ];
 
@@ -204,6 +211,33 @@ function getTotalCoins(allData) {
   return total;
 }
 
+/* ─── Startup Story: Userzahl für die Kachel ───────────────────
+   Bevorzugt der Stand, den syncStartupStory() gerade aus dem Blob gelesen
+   hat. Ist er nicht da (Server nicht erreichbar, Boot noch nicht durch),
+   fällt die Anzeige auf den Bestenlisten-Spiegel im localStorage zurück —
+   der ist zwar der ALL-TIME-Höchststand und nicht der aktuelle, aber eine
+   ehrliche Zahl schlägt einen Strich.
+
+   ⚠️ Die Userzahl steht bewusst NICHT in game_state.points. sync_game_state
+   deckelt den Zuwachs dort auf 300 je Aufruf (MAX_POINTS_DELTA, Migration
+   0031) — ein Sprung auf Millionen würde als Cheat gewertet und der ganze
+   Sync abgelehnt, samt Kreatur und Münzen. */
+function startupCardUsers() {
+  if (typeof window.__startupUsers === 'number') return window.__startupUsers;
+  return startupUsersFromScore(readLocalHighscore('game18'));
+}
+
+function formatStartupUsers(n) {
+  const u = Math.max(0, Math.floor(Number(n) || 0));
+  const short = (v, unit) => {
+    const r = Math.round(v * 10) / 10;
+    return (r % 1 === 0 ? String(r) : r.toFixed(1).replace('.', ',')) + ' ' + unit;
+  };
+  if (u >= 1e9) return short(u / 1e9, 'Mrd');
+  if (u >= 1e6) return short(u / 1e6, 'Mio');
+  return u.toLocaleString('de-DE');
+}
+
 function loadAllData() {
   try {
     const data = loadStorage(STORAGE_KEY);
@@ -279,6 +313,11 @@ function renderHub() {
   // updateSeenCreatures oben hat vielleicht gerade eine neue Wachstums-
   // stufe registriert (z.B. nach Trank oder Rundenrückkehr).
   window.refreshHubAvatarNewBadges?.();
+
+  // Zuletzt: die Kachel steht schon auf dem Endstand, wenn die Sequenz
+  // darüber läuft. Sie schaltet sich selbst scharf (einmaliger Marker) und
+  // ist ein No-Op, wenn syncStartupStory nichts gefunden hat.
+  maybeShowStartupReveal();
 }
 
 function renderGamesGrid(allData, shopData) {
@@ -337,7 +376,11 @@ function buildGameCard(game, data, shopData) {
   const epic      = data.creature && isEpic(data.creature);
   const legendary = data.creature && isLegendary(data.creature);
   const maxed     = data.creature && data.growth >= GROWTH_MAX;
-  const isBackupTarget = !!shopData.pendingBackup && !!data.creature && access === 'available' && !game.clusterLegi;
+  // standalone (Startup Story): das Monster hängt an der Userzahl des eigenen
+  // Spielstands. Ein eingetauschtes Backup-Tier stünde sofort im Widerspruch
+  // zu der Kurve, die es beim nächsten Hub-Besuch wieder überschreibt.
+  const isBackupTarget = !!shopData.pendingBackup && !!data.creature && access === 'available'
+    && !game.clusterLegi && !game.standalone;
 
   // Pending-Gift-Blink: revealed Legi mit wartendem Geschenk oder
   // vollendeter Cluster-Sammlung (Task 3) pulsiert regenbogen
@@ -392,7 +435,10 @@ function attachCardListeners(card, game, data, isBackupTarget) {
     if (game.clusterLegi && access === 'available') { openLegiTaskModal(); return; }
     if (access === 'password') { showPasswordPrompt(game.id); return; }
     const sd = loadShopData();
-    if (sd.pendingEggNestId) {
+    // Nester laufen unter einer eigenen Id durch ein Spiel und erwarten am
+    // Rundenende ein Ergebnis. Startup Story hat weder Runden noch liest es
+    // die Id aus der URL — ein Ei ginge dort für immer verloren.
+    if (sd.pendingEggNestId && !game.standalone) {
       const nest = sd.nests.find(n => n.nestId === sd.pendingEggNestId);
       if (nest) {
         nest.gameId  = game.id;
@@ -478,9 +524,13 @@ function buildCardHTML(game, data, shopData) {
   const titleText    = isLegi && hasCreature
     ? `${game.icon} ${escapeHtml(CREATURE_NAMES[data.creature] ?? data.creature)}`
     : `${game.icon} ${game.title}`;
+  // Startup Story brütet über die Phasen 0–2 statt über eine Runde. Die
+  // Riss-Stufe zeigt, wie weit — das ist der einzige Fortschritts-Hinweis,
+  // den es vor dem Schlüpfen überhaupt gibt (im Spiel sieht man ihn nie).
+  const broodStage   = game.standalone ? Math.min(3, window.__startupPhase ?? 0) : 0;
   const imgContent   = hasCreature
     ? `<div class="hub-creature-display">${getCreatureHTML(data.creature, stage, data.variant)}</div>`
-    : eggStage0();
+    : (broodStage > 0 ? getEggSVG(broodStage) : eggStage0());
   const progressPct  = hasCreature ? Math.min(data.growth / GROWTH_MAX * 100, 100) : 0;
   const specialBadge = hasCreature && isRare(data.creature)
     ? `<span class="rare-badge">✦ Selten ✦</span>`
@@ -492,7 +542,10 @@ function buildCardHTML(game, data, shopData) {
   // Team-Legendär verdient keine Münzen (spielt keine Runden) und lässt
   // keine Shop-Items (Booster, Coins×3, Glücksklee, Trank) zu — Growth
   // kommt ausschließlich durch die Trainings-Aufgaben.
-  const bonusCoins = (!isLegi && hasCreature) ? getGrowthBonusCoins(data.growth || 0) : 0;
+  // standalone genauso wenig wie das Team-Legendär: der Bonus wird in
+  // computeRoundResult() ausgeschüttet, und Startup Story spielt keine
+  // Runden. Seine Münzen kommen ausschließlich aus der Userzahl-Kurve.
+  const bonusCoins = (!isLegi && !game.standalone && hasCreature) ? getGrowthBonusCoins(data.growth || 0) : 0;
   const bonusHint = bonusCoins > 0
     ? `<div class="game-card__bonus-hint" title="${bonusCoins === 10 ? 'Vollendungs-Bonus' : 'Ausgewachsen-Bonus'}: +${bonusCoins} Münzen pro Runde">+${bonusCoins}<span class="game-card__bonus-hint-coin">🪙</span></div>`
     : '';
@@ -511,7 +564,7 @@ function buildCardHTML(game, data, shopData) {
     && !bonbonStatus.unlocked
     && dailyClaims[game.id] !== todayStr;
   const bonbonHint = bonbonAvailable
-    ? `<div class="game-card__bonus-hint game-card__bonus-hint--bonbon" title="Tages-Bonus: +20 Bonbons bei der ersten Runde heute">+20<span class="game-card__bonus-hint-coin">🍬</span></div>`
+    ? `<div class="game-card__bonus-hint game-card__bonus-hint--bonbon" title="Tages-Bonus: +20 Bonbons ${game.standalone ? 'bei der ersten Rückkehr mit Fortschritt heute' : 'bei der ersten Runde heute'}">+20<span class="game-card__bonus-hint-coin">🍬</span></div>`
     : '';
   // Wachstumstrank in denselben Wrapper wie die Bonus-Hints — sonst überlappen
   // sie auf Desktop (beide sitzen absolute top:8/right:8) und driften auf Mobile
@@ -534,16 +587,28 @@ function buildCardHTML(game, data, shopData) {
          title="${hasCreature ? 'Klicken für Details' : ''}">
       ${imgContent}
     </div>
-    ${!hasCreature ? `<p class="game-card__stage-label">Ei schlummert…</p>` : ''}
+    ${!hasCreature ? `<p class="game-card__stage-label">${game.standalone ? 'Das Ei brütet…' : 'Ei schlummert…'}</p>` : ''}
     <div class="game-card__progress">
       <div class="game-card__progress-fill" style="width:${progressPct}%"></div>
     </div>
     <div class="game-card__points">
-      ⭐ Gesamt: <strong>${data.points}</strong>
-      &nbsp;·&nbsp; 🔄 Runden: <strong>${data.roundsPlayed}</strong>
+      ${game.standalone
+        ? `👥 User: <strong>${formatStartupUsers(startupCardUsers())}</strong>`
+        : `⭐ Gesamt: <strong>${data.points}</strong>
+      &nbsp;·&nbsp; 🔄 Runden: <strong>${data.roundsPlayed}</strong>`}
     </div>
     ${(function(){
-  const items = isLegi ? [] : getActiveItemsForSlot(data, shopData);
+  // Im Ei-Modus wäre der normale „Spielen!"-Knopf eine Falle: überall sonst
+  // legt er das wartende Ei in dieses Spiel, hier startet er nur den Konzern.
+  // Lieber ehrlich gesperrt als stillschweigend etwas anderes tun.
+  if (game.standalone && shopData.pendingEggNestId) {
+    return `<button class="game-card__btn" disabled style="opacity:0.4;cursor:default;"
+             title="Startup Story brütet sein eigenes Ei aus — Nest-Eier passen hier nicht.">Kein Nest-Platz</button>`;
+  }
+  // standalone: Booster, Coins ×3, Glücksklee und Lockmittel hängen alle am
+  // Rundenergebnis — das es hier nicht gibt. Sie würden beim Betreten des
+  // Spiels verbraucht und wirkungslos verpuffen.
+  const items = (isLegi || game.standalone) ? [] : getActiveItemsForSlot(data, shopData);
   if (items.length === 0) return `<button class="game-card__btn">Spielen!</button>`;
   if (items.length === 1) {
     const it = items[0];
@@ -1577,6 +1642,146 @@ async function activateResetKarte() {
   showGiftInfoModal('🌈 Bonbon-Bonus zurückgesetzt', `${res.cleared} Kacheln geben beim nächsten Play wieder +20 Bonbons.`);
 }
 
+/* ─────────────────────────────────────────────────
+   8c. STARTUP STORY — RÜCKKEHR-SEQUENZ
+   ─────────────────────────────────────────────────
+   Der einzige Ort, an dem Startup Story seine Belohnung zeigt. Im Spiel
+   selbst sieht man weder Ei noch Monster noch Münzen — das ist die
+   Spielregel und nicht ein fehlendes Feature: die Frage „wie weit ist
+   mein Tier?" soll den Grund liefern, ins Hub zurückzugehen.
+
+   Die Daten setzt syncStartupStory() (creatures.js) beim Boot in
+   window.__startupReveal. Gezeigt wird die Strecke seit dem LETZTEN
+   Hub-Besuch am Stück — wer drei Wachstumsstufen am Stück geschafft hat,
+   sieht drei Stufen. */
+function maybeShowStartupReveal() {
+  const rv = window.__startupReveal;
+  if (!rv) return;
+  window.__startupReveal = null;
+  if (rv.released) showStartupReleasedModal();
+  else             showStartupRevealModal(rv);
+}
+
+function showStartupReleasedModal() {
+  const overlay = document.getElementById('modalOverlay');
+  const content = document.getElementById('modalContent');
+  if (!overlay || !content) return;
+  content.innerHTML = `
+    <div style="text-align:center;">
+      <div style="font-size:3rem;margin:0 auto 12px;">🕊️</div>
+      <h2 style="font-family:var(--font-display);color:var(--clr-gold);font-size:1.25rem;margin:12px 0 10px;">Dein Monster ist frei</h2>
+      <p style="color:var(--clr-cream-dim);line-height:1.65;margin-bottom:22px;">
+        Der Konzern in <em>Startup Story</em> wurde neu gestartet — damit ist auch dein
+        Tier fortgezogen. Ein neues Ei liegt schon bereit.<br>
+        Deine Münzen und dein Bestenlisten-Eintrag sind geblieben.
+      </p>
+      <button onclick="document.getElementById('modalOverlay').hidden=true"
+        style="background:var(--clr-gold);color:#2b1a06;border:none;border-radius:var(--radius-md);padding:10px 26px;font-family:var(--font-body);font-weight:800;font-size:0.9rem;cursor:pointer;">
+        Alles klar
+      </button>
+    </div>`;
+  overlay.hidden = false;
+}
+
+function showStartupRevealModal(rv) {
+  const overlay = document.getElementById('modalOverlay');
+  const content = document.getElementById('modalContent');
+  if (!overlay || !content) return;
+
+  const creature   = rv.after.creature;
+  const hatchedNow = !rv.before.creature && !!creature;
+  const fromStage  = rv.before.creature ? getGrowthStage(rv.before.growth) : -1;
+  const toStage    = creature ? getGrowthStage(rv.after.growth) : -1;
+
+  // Schritt-Liste. Wachstum, das innerhalb einer Stufe bleibt, bekommt
+  // trotzdem ein Bild — sonst spränge die Sequenz bei kleinen Zuwächsen
+  // direkt zu den Münzen und der Fortschrittsbalken bliebe unbemerkt.
+  const steps = [];
+  if (hatchedNow) steps.push({ kind: 'egg' });
+  if (creature) {
+    if (hatchedNow)               for (let s = 0; s <= toStage; s++) steps.push({ kind: 'grow', stage: s });
+    else if (toStage > fromStage) for (let s = fromStage + 1; s <= toStage; s++) steps.push({ kind: 'grow', stage: s });
+    else if (rv.growthGained > 0) steps.push({ kind: 'grow', stage: toStage });
+  }
+  steps.push({ kind: 'coins' });
+
+  let i = 0;
+  const next = () => { i++; (i < steps.length) ? draw() : overlay.hidden = true; };
+  const isLast = () => i === steps.length - 1;
+
+  function shell(inner, btnLabel) {
+    content.innerHTML = `
+      <div style="text-align:center;">
+        ${inner}
+        <button id="ssRevealNext"
+          style="margin-top:18px;background:var(--clr-gold);color:#2b1a06;border:none;border-radius:var(--radius-md);padding:10px 26px;font-family:var(--font-body);font-weight:800;font-size:0.9rem;cursor:pointer;">
+          ${btnLabel}
+        </button>
+      </div>`;
+    document.getElementById('ssRevealNext').addEventListener('click', next);
+  }
+
+  function draw() {
+    const step = steps[i];
+
+    if (step.kind === 'egg') {
+      shell(`
+        <h2 style="font-family:var(--font-display);color:var(--clr-gold);font-size:1.25rem;margin:0 0 14px;">Da tut sich was…</h2>
+        <div id="ssRevealEgg" class="modal-creature-img">${getEggSVG(0)}</div>
+        <p style="color:var(--clr-cream-dim);line-height:1.6;margin-top:12px;">Deine Plattform hat die erste Million erreicht.</p>
+      `, 'Weiter');
+      // Risse durchlaufen, dann stehen lassen — die Auflösung ist der
+      // nächste Schritt und gehört dem Spieler, nicht einem Timer.
+      let f = 0;
+      const timer = setInterval(() => {
+        f++;
+        const el = document.getElementById('ssRevealEgg');
+        if (!el) { clearInterval(timer); return; }
+        el.innerHTML = getEggSVG(f);
+        if (f >= 4) clearInterval(timer);
+      }, 420);
+      return;
+    }
+
+    if (step.kind === 'grow') {
+      const final = step.stage >= GROWTH_STAGES - 1;
+      const badge = isRare(creature)      ? `<span class="rare-badge">✦ Selten ✦</span>`
+                  : isEpic(creature)      ? `<span class="epic-badge">✦ Episch ✦</span>` : '';
+      const head  = (hatchedNow && step.stage === 0) ? 'Es ist geschlüpft!' : 'Dein Monster wächst!';
+      const pct   = Math.min((rv.after.growth || 0) / GROWTH_MAX * 100, 100);
+      shell(`
+        <h2 style="font-family:var(--font-display);color:var(--clr-gold);font-size:1.25rem;margin:0 0 6px;">${head}</h2>
+        ${badge}
+        <div id="ssRevealCreature" class="modal-creature-img">${getCreatureHTML(creature, step.stage, rv.after.variant)}</div>
+        <p style="color:var(--clr-cream);font-weight:700;margin:10px 0 4px;">
+          ${escapeHtml(CREATURE_NAMES[creature] ?? creature)} · ${GROWTH_LABELS[step.stage]}
+        </p>
+        <div class="game-card__progress" style="max-width:220px;margin:0 auto;">
+          <div class="game-card__progress-fill" style="width:${pct}%"></div>
+        </div>
+      `, isLast() ? 'Fertig' : 'Weiter');
+      if (!(hatchedNow && step.stage === 0)) triggerCreatureLevelUp(final, 'ssRevealCreature');
+      return;
+    }
+
+    // Münzen + Bonbons. renderCoinBank legt den Bonbon-Slot selbst an,
+    // awardBonbonsAndRender füllt ihn — dieselbe Paarung wie am Rundenende
+    // jedes anderen Spiels.
+    shell(`
+      <h2 style="font-family:var(--font-display);color:var(--clr-gold);font-size:1.25rem;margin:0 0 14px;">Deine Ausbeute</h2>
+      <div id="ssRevealCoins"></div>
+    `, 'Fertig');
+    renderCoinBank('ssRevealCoins', rv.coinsGained || 0);
+    // p_correct = gewonnene Wachstumspunkte (0–10). Ohne Fortschritt käme
+    // die Sequenz gar nicht erst hierher, also druckt wiederholtes
+    // Hub-Auf-und-Ab keine Bonbons.
+    awardBonbonsAndRender('game18', Math.min(10, rv.growthGained || 0), 10, 'ssRevealCoins');
+  }
+
+  draw();
+  overlay.hidden = false;
+}
+
 function confirmRelease(gameId) {
   const game    = GAMES_CONFIG.find(g => g.id === gameId);
   if (game?.clusterLegi) return;
@@ -1599,9 +1804,13 @@ function confirmRelease(gameId) {
       <p style="color:var(--clr-cream-dim);line-height:1.65;margin-bottom:22px;">
         Möchtest du <strong style="color:var(--clr-cream);">${name}</strong> wirklich freilassen?<br>
         <em>${game.title}</em> beginnt danach mit einem neuen Ei.
+        ${game.standalone ? `<br><br><strong style="color:var(--clr-red);">Achtung:</strong>
+        <span style="color:var(--clr-cream);">Damit wird auch dein ganzer Konzern gelöscht</span> —
+        User, Geld, Gebäude und Features. Das lässt sich nicht rückgängig machen.
+        Deine Münzen und dein Bestenlisten-Eintrag bleiben.` : ''}
       </p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-        <button onclick="releaseCreature('${gameId}')"
+        <button onclick="${game.standalone ? `releaseStandaloneCreature('${gameId}')` : `releaseCreature('${gameId}')`}"
           style="background:var(--clr-red);color:#fff;border:none;border-radius:var(--radius-md);padding:10px 22px;font-family:var(--font-body);font-weight:800;font-size:0.9rem;cursor:pointer;">
           🕊️ Freilassen
         </button>
@@ -1625,6 +1834,35 @@ function releaseCreature(gameId) {
   saveGameData(gameId, allData[gameId]);
   document.getElementById('modalOverlay').hidden = true;
   renderHub();
+}
+
+/* Freilassen bei Startup Story: Tier weg UND Spielstand weg. Beides gehört
+   zusammen, weil das Monster nichts anderes ist als die Userzahl des
+   Konzerns — ein Ei im Hub neben einem weiterlaufenden Konzern wäre sofort
+   wieder ein ausgewachsenes Monster.
+
+   ⚠️ reset_game_save steht NUR hier und nicht in syncStartupStory: dort ist
+   der leere Blob bloß eine Beobachtung (das Spiel wurde woanders neu
+   gestartet), hier ist das Löschen die ausdrückliche Ansage des Spielers.
+   Der Unterschied zählt — auf einem zweiten Gerät könnte längst ein neuer
+   Konzern stehen, den eine beobachtende Löschung mitnähme.
+
+   Der Bestenlisten-Eintrag bleibt bewusst stehen: „höchste je erreichte
+   Userzahl" heißt je, nicht „im aktuellen Spielstand". */
+async function releaseStandaloneCreature(gameId) {
+  const btn = document.querySelector('#modalContent button');
+  if (btn) { btn.disabled = true; btn.textContent = 'Wird gelöscht…'; }
+
+  await window.callBonbonRPC?.('reset_game_save', { p_game_id: gameId });
+  try {
+    localStorage.removeItem('startupStoryV3');
+    localStorage.removeItem('startupStoryV3_dirty');
+  } catch (e) {}
+
+  // Die Kachel zeigt sonst bis zum nächsten Boot die alte Userzahl weiter.
+  window.__startupUsers = 0;
+  window.__startupPhase = 0;
+  releaseCreature(gameId);
 }
 
 function _isPurchased(shopData, itemId) {

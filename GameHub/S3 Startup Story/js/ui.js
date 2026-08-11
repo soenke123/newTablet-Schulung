@@ -962,9 +962,9 @@
     // gebundener Handler hinge nach einem Re-Entry an einem Knopf, der gar
     // nicht mehr im Dokument steht.
     document.addEventListener('click', function (e) {
-      if (e.target && e.target.closest && e.target.closest('#rt-account-btn')) {
-        openAccountModal();
-      }
+      if (!e.target || !e.target.closest) return;
+      if (e.target.closest('#rt-account-btn')) openAccountModal();
+      if (e.target.closest('#rt-hub-btn'))     leaveToHub();
     });
     updateAccountBadge();
     RT.bus.on('cloud:status', updateAccountBadge);
@@ -1258,6 +1258,19 @@
                  ? '<button class="rt-account-modal__btn" id="' + action.id + '" type="button">'
                    + action.label + '</button>'
                  : '')
+             // ─── Neu anfangen ────────────────────────────────────
+             // Sitzt hier und nicht im Shop: das Konto-Abzeichen ist der
+             // einzige Ort im Spiel, an dem es um den Spielstand als Ganzes
+             // geht — und ein Neustart ist genau das. Abgesetzt hinter einer
+             // Trennlinie, damit er nicht wie eine der Antworten auf den
+             // Verbindungs-Zustand darüber aussieht.
+             + '<div class="rt-account-danger">'
+             + '  <div class="rt-account-danger__label">Von vorne anfangen</div>'
+             + '  <p class="rt-account-danger__note">Löscht deinen Konzern vollständig — '
+             + '     auf diesem Gerät und im Konto. Das lässt sich nicht rückgängig machen.</p>'
+             + '  <button class="rt-account-modal__btn rt-account-modal__btn--danger"'
+             + '          id="rt-account-restart" type="button">🗑 Spiel neu starten</button>'
+             + '</div>'
              + '</div>';
 
     // context bewusst null: das ist eine Erklärung, kein lebendes Modal.
@@ -1269,6 +1282,110 @@
     if (btn) btn.addEventListener('click', function () { window.location.href = '../index.html'; });
     btn = el.modalBody.querySelector('#rt-account-reload');
     if (btn) btn.addEventListener('click', function () { location.reload(); });
+    btn = el.modalBody.querySelector('#rt-account-restart');
+    if (btn) btn.addEventListener('click', openRestartModal);
+  }
+
+  /* ─── Zurück in die Lernwelt ───────────────────────────────
+     Erst speichern, dann gehen. Der Hub liest den Spielstand als Blob und
+     leitet daraus Ei, Monster und Münzen ab — läge dort noch der Stand von
+     vor bis zu 20 Sekunden (PUSH_INTERVAL_MS in js/cloud.js), hinkte die
+     Belohnungs-Sequenz eine Sitzung hinterher.
+
+     ⚠️ Das Warten ist gedeckelt und der Ausgang egal: ein Push kann
+     rate_limit bekommen oder schon inflight sein, und offline scheitert er
+     ohnehin. Den Spieler dafür im Spiel festzuhalten wäre der schlechtere
+     Handel — er verliert höchstens ein paar Sekunden Wachstum, die beim
+     nächsten Hub-Besuch nachkommen.                                     */
+  var HUB_PUSH_WAIT_MS = 1500;
+
+  function leaveToHub() {
+    var btn = document.getElementById('rt-hub-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+
+    // Lokal sofort durchschreiben — das ist der Blob, den der Hub im
+    // Gast-Modus liest, und er kennt keinen Push.
+    try { RT.storage.save(); } catch (e) {}
+
+    var go = function () { window.location.href = '../index.html'; };
+    if (!RT.cloud || !RT.cloud.isServerMode()) { go(); return; }
+
+    var done = false;
+    var once = function () { if (!done) { done = true; go(); } };
+    setTimeout(once, HUB_PUSH_WAIT_MS);
+    RT.cloud.push().then(once, once);
+  }
+
+  /* ─── Neustart, zweiter Schritt ────────────────────────────
+     Bewusst ein eigener Modal-Schritt statt `confirm()`: der Browser-Dialog
+     kann nicht sagen, WAS verloren geht, und auf Tablets sieht er aus wie
+     eine Systemmeldung, die man wegtippt. Hier steht der eigene Konzern in
+     Zahlen daneben — das ist die Rückfrage, die wirklich zählt.
+
+     ⚠️ Der Abbrechen-Weg führt zurück ins Konto-Modal und nicht ins Spiel:
+     wer hier landet, wollte etwas am Spielstand tun.                    */
+  function openRestartModal() {
+    var s = RT.state.current;
+    var F = RT.ledger.fmt;
+    var st = accountState();
+
+    var html = '<div class="rt-account-modal">'
+             + '<p class="rt-account-modal__lead">Das hier ist dann weg:</p>'
+             + '<div class="rt-account-loss">'
+             + '  <div class="rt-account-loss__row"><span>👥 User</span><b>'
+             +      F.num(s.users || 0) + '</b></div>'
+             + '  <div class="rt-account-loss__row"><span>💰 Geld</span><b>'
+             +      F.money(s.money || 0) + '</b></div>'
+             + '  <div class="rt-account-loss__row"><span>🏗 Gebäude</span><b>'
+             +      F.num((s.placedBuildings || []).length) + '</b></div>'
+             + '  <div class="rt-account-loss__row"><span>🧩 Features</span><b>'
+             +      F.num(completedNodeCount()) + '</b></div>'
+             // Die einzige Zeile, die nicht aus diesem Spiel kommt. Sie steht
+             // trotzdem hier: der Neustart löscht auch das Tier in der
+             // Lernwelt, und das ist für die meisten Spieler der teurere
+             // Verlust. Das Freilassen selbst macht der Hub beim nächsten
+             // Besuch (er erkennt den leeren Spielstand von allein).
+             + '  <div class="rt-account-loss__row"><span>🥚 Monster in der Lernwelt</span>'
+             + '    <b>wird freigelassen</b></div>'
+             + '</div>'
+             + '<p class="rt-account-modal__note">'
+             + (st.state === 'guest'
+                 ? 'Der Spielstand auf diesem Gerät wird gelöscht.'
+                 : 'Der Spielstand wird auf diesem Gerät <b>und in deinem Konto</b> gelöscht — '
+                   + 'auch auf allen anderen Geräten.')
+             + ' Danach fängst du wieder bei der ersten Zeile Code an.</p>'
+             + '<button class="rt-account-modal__btn rt-account-modal__btn--danger"'
+             + '        id="rt-account-restart-go" type="button">Ja, alles löschen</button>'
+             + '<button class="rt-account-modal__btn" id="rt-account-restart-no"'
+             + '        type="button">Abbrechen</button>'
+             + '</div>';
+
+    openModal('🗑 Wirklich komplett neu anfangen?', html, null);
+
+    var no = el.modalBody.querySelector('#rt-account-restart-no');
+    if (no) no.addEventListener('click', openAccountModal);
+
+    var go = el.modalBody.querySelector('#rt-account-restart-go');
+    if (go) go.addEventListener('click', function () {
+      // Beide Knöpfe sofort tot: wipe() ist async (Server-RPC), und ein
+      // zweiter Klick in dieser Zeit würde einen zweiten Reset absetzen.
+      go.disabled = true;
+      go.textContent = 'Wird gelöscht …';
+      if (no) no.disabled = true;
+      // Erst wenn der Serverstand wirklich weg ist, neu laden — sonst stirbt
+      // der RPC mit der Seite und der nächste Boot zieht den gerade
+      // gelöschten Stand wieder herunter (siehe storage.wipe).
+      RT.storage.wipe().then(function () { location.reload(); });
+    });
+  }
+
+  function completedNodeCount() {
+    var tt = (RT.state.current && RT.state.current.techtree) || {};
+    var n = 0;
+    for (var k in tt) {
+      if (Object.prototype.hasOwnProperty.call(tt, k) && tt[k] && tt[k].status === 'done') n++;
+    }
+    return n;
   }
 
   function updateAllFarmFields() {
@@ -1639,7 +1756,8 @@
           var res = RT.actions.bookAdDeal(btn.getAttribute('data-inst'),
                                           btn.getAttribute('data-ad'), pct / 100,
                                           bSel.volume, bSel.targeting, bSel.autoRenew);
-          if (!res.ok) toast(res.msg || 'Deal kann nicht starten');
+          if (res.ok) closeModal();
+          else toast(res.msg || 'Deal kann nicht starten');
         });
       })(adBtns[ai]);
     }
@@ -1651,7 +1769,8 @@
         btn.addEventListener('click', function () {
           var res = RT.actions.startConversion(btn.getAttribute('data-inst'),
                                                btn.getAttribute('data-conv'));
-          if (!res.ok) toast(res.msg || 'Umwandlung kann nicht starten');
+          if (res.ok) closeModal();
+          else toast(res.msg || 'Umwandlung kann nicht starten');
         });
       })(convBtns[ti]);
     }
@@ -1707,7 +1826,8 @@
           // ohne Regler haben keinen Slider und übergeben undefined — dort gilt
           // dann der feste Wert aus der Definition.
           var ok = RT.actions.startCampaign(iid, cid, campaignSliderTrend(cid));
-          if (!ok) toast('Kampagne kann nicht gestartet werden.');
+          if (ok) closeModal();
+          else toast('Kampagne kann nicht gestartet werden.');
         });
       })(campBtns[i]);
     }
@@ -3947,6 +4067,14 @@
       // Shop + "?" bleiben eine Einheit in der Mitte — sonst zieht
       // space-between den Shop-Button aus der Mitte, sobald das "?" dazukommt.
       + '  <div class="rt-profile-bar__tools">'
+      // Rückweg in die Lernwelt. Er muss hier stehen und für JEDEN Konto-
+      // zustand: der einzige Weg zurück lag vorher im Gast-Zweig des Konto-
+      // Modals, ein angemeldeter Spieler kam also gar nicht mehr heraus. Und
+      // im Hub wartet die Belohnung — Ei, Monster, Münzen zeigt ausschließlich
+      // die Lernwelt (GameHub/creatures.js, syncStartupStory).
+      + '    <button class="rt-shop-btn rt-shop-btn--help" id="rt-hub-btn" type="button"'
+      + '            title="Zurück zur Lernwelt"'
+      + '            aria-label="Zurück zur Lernwelt">🏠</button>'
       + '    <button class="rt-shop-btn" id="shop-btn" aria-label="Shop">🛒'
       + '      <span class="rt-notif-badge" id="rt-shop-badge" style="display:none">!</span>'
       + '    </button>'

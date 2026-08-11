@@ -523,6 +523,61 @@ function determineEpicCreature() {
   return 'turtle';
 }
 
+/* ─── Startup Story (game18) — Kreatur ohne Score ──────────────
+   Das einzige Spiel ohne Runden und ohne Punktzahl: die Brutphase ist
+   Phase 0–2, geschlüpft wird beim Eintritt in Phase 3. Es gibt also
+   nichts, woran determineCreature() seine Score-Leiter hängen könnte —
+   der Roll ist reiner Zufall über alle Nicht-Legendären.
+
+   Deshalb steht game18 auch NICHT in GAME_SEASON_RARE: die 8-%-Season-
+   Rare-Regel dort gehört determineCreature(), und dieser Weg läuft
+   vollständig daran vorbei. Ein Eintrag wäre toter Code, der beim
+   nächsten Lesen wie ein zweiter, widersprüchlicher Kanal aussieht. */
+const STARTUP_NORMALS = [
+  'snail', 'fish', 'chicken', 'salamander', 'falkeneule', 'triceratops', 'dragon',
+  'frosch', 'pinguin', 'raptor', 'krabbe', 'hai'
+];
+
+function determineStartupCreature() {
+  const r = Math.random();
+  if (r < 0.05) return determineEpicCreature();   // 5 %  Epic
+  if (r < 0.25) return 'libelle';                 // 20 % Season-3-Rare
+  return STARTUP_NORMALS[Math.floor(Math.random() * STARTUP_NORMALS.length)];
+}
+
+/* ─── Startup Story — Wachstums- und Coin-Kurve ────────────────
+   Beide logarithmisch über die Userzahl, weil das Spiel selbst
+   exponentiell wächst: linear gerechnet stünde das Monster die halbe
+   Phase 3 still und schösse dann in Sekunden durch.
+
+   Wachstum   1 Mio → 0  ·  10 Mio → 10,5  ·  100 Mio → 21 (ausgewachsen)
+   Coins      1 Mio → 0  ·  10 Mio → 25    ·  100 Mio → 50  ·  1 Mrd → 75
+                                                            ·  10 Mrd → 100
+
+   Die Startmarke ist PHASE3_USER_THRESHOLD aus dem Spiel (js/loop.js) —
+   genau der Moment, in dem das Ei schlüpft. Wer sie dort ändert, muss
+   sie hier mitziehen, sonst wächst ein frisch geschlüpftes Monster
+   sofort ein Stück oder bleibt eine Weile bei null stehen. */
+const SS_HATCH_USERS   = 1e6;
+const SS_GROWN_USERS   = 1e8;
+const SS_ENDGAME_USERS = 1e10;
+
+function _ssCurve(users, topUsers, topValue) {
+  const u = Number(users) || 0;
+  if (u <= SS_HATCH_USERS) return 0;
+  const span = Math.log(topUsers / SS_HATCH_USERS);
+  const pos  = Math.log(u / SS_HATCH_USERS);
+  // Epsilon, weil die Aufrufer abrunden: 1 Mrd User ergibt rechnerisch
+  // genau 75 Münzen, in Gleitkomma aber 74,99999999999999 — und damit
+  // 74. Der Zuschlag ist kleiner als jede Anzeigeauflösung und richtet
+  // ausschließlich diese Kante gerade.
+  const v = topValue * pos / span + 1e-9;
+  return Math.max(0, Math.min(topValue, v));
+}
+
+function startupGrowth(users) { return _ssCurve(users, SS_GROWN_USERS,   GROWTH_MAX); }
+function startupCoins(users)  { return _ssCurve(users, SS_ENDGAME_USERS, 100); }
+
 /* Glücksklee: Epic-Chance = (10 + correct×3) %, Season-Rare-Chance = (20 + correct×3) % */
 function determineCreatureWithGlucksklee(correct, gameId = null) {
   const epicChance = (10 + correct * 3) / 100;
@@ -2543,8 +2598,18 @@ window.pushHighscore = pushHighscore;
 const HIGHSCORE_LOCAL_KEYS = {
   game9:  'fokusflow_highscore',
   game11: 'tippturbo_hs',
-  game17: 'bubbleBounceHigh_v1'
+  game17: 'bubbleBounceHigh_v1',
+  // Startup Story: höchste je erreichte Userzahl, in HUNDERTERN.
+  // game_highscores.best_score ist int — 10 Mrd User (das Kurvenende)
+  // liefen über. Durch 100 geteilt sind das 100 Mio, und die Grenze
+  // läge erst bei 214 Mrd Usern. Wer die Zahl anfasst, muss sie in
+  // startupUsersFromScore() und im Formatter in highscores.html
+  // mitziehen.
+  game18: 'startupUsers_hs_v1'
 };
+const SS_SCORE_UNIT = 100;
+function startupScoreFromUsers(users) { return Math.floor(Math.max(0, Number(users) || 0) / SS_SCORE_UNIT); }
+function startupUsersFromScore(score) { return Math.max(0, Number(score) || 0) * SS_SCORE_UNIT; }
 // Algorithm nutzt loadStorage/saveStorage (base64 + Prüfsumme).
 // Wir lesen/schreiben denselben Kanal, sonst matcht das Format nicht.
 function readAlgBestTime() {
@@ -2582,7 +2647,7 @@ function writeLocalHighscore(gameId, score) {
 
 async function syncHighscores() {
   if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
-  const gameIds = ['game9', 'game10', 'game11', 'game17'];
+  const gameIds = ['game9', 'game10', 'game11', 'game17', 'game18'];
   for (const gid of gameIds) {
     try {
       const server = await pullHighscore(gid);
@@ -2597,3 +2662,146 @@ async function syncHighscores() {
 }
 
 window.syncHighscores = syncHighscores;
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Startup Story (game18) — der Hub leitet ab, das Spiel meldet nicht
+   ═══════════════════════════════════════════════════════════════
+   Jedes andere Spiel ruft am Rundenende saveGameData() auf. Startup
+   Story hat keine Runden: es ist ein Farming-Spiel ohne Ende, ohne
+   Score und ohne Abschluss-Screen. Es meldet deshalb gar nichts —
+   der Hub liest beim Boot seinen Spielstands-Blob (user_game_saves,
+   Migration 0061) und rechnet Kreatur, Wachstum und Münzen selbst aus.
+
+   Das ist gleichzeitig die Spielregel: im Spiel sieht man nie, wo man
+   im Brut- oder Wachstumsprozess steht. Erst der Weg zurück in die
+   Lernwelt zeigt es — als Sequenz im Reveal-Modal (script.js).
+
+   ── Die drei Ausgänge beim Blob-Lesen ─────────────────────────
+   Blob da        → ableiten
+   leer           → es gibt keinen Spielstand mehr (Neustart im Spiel
+                    oder noch nie gespielt) → Monster freilassen
+   nicht lesbar   → NICHTS anfassen. Ein Serverfehler darf kein
+                    Monster kosten.
+
+   ── Die zwei Höchststände ─────────────────────────────────────
+   Wachstum hängt an blob.usersPeak — dem Peak DIESES Spielstands.
+   storage.wipe() löscht ihn mit, ein neu gestartetes Spiel wächst
+   also wirklich wieder von vorne.
+
+   Münzen hängen am ALL-TIME-Peak (game_highscores, per greatest
+   gemerged und von keinem Reset erreichbar). Damit lassen sich die
+   100 Münzen genau einmal verdienen: Neustarten, um sie erneut
+   einzusammeln, funktioniert nicht, weil der Bezugswert nie sinkt.
+   Denselben Wert zeigt die Bestenliste — eine Zahl, zwei Zwecke.  */
+const SS_GAME_ID   = 'game18';
+const SS_LOCAL_KEY = 'startupStoryV3';
+
+/* Der Spielstand als rohes Objekt, oder null wenn unlesbar.
+   `{ empty: true }` heißt „es gibt keinen" — das ist eine Aussage,
+   kein Fehler, und wird ausdrücklich anders behandelt als null. */
+async function readStartupBlob() {
+  if (typeof window.isLoggedIn === 'function' && window.isLoggedIn()) {
+    // ⚠️ Ohne Token NICHT auf den localStorage ausweichen. Der Stand
+    // gehört dem Konto, und clearLocalGameState() räumt beim User-Wechsel
+    // genau diesen Key weg — ein abgelaufener Token sähe dann einen leeren
+    // Spielstand und ließe das Monster frei. „Kein Token" heißt hier
+    // „nicht lesbar", nicht „nicht vorhanden".
+    if (!getAccessToken()) return null;
+    const r = await callBonbonRPC('load_game_save', { p_game_id: SS_GAME_ID });
+    if (!r || r.ok !== true) return null;              // nicht erreichbar
+    return r.save ? r.save : { empty: true };
+  }
+  // Gast: derselbe Blob liegt im localStorage (js/storage.js, KEY).
+  try {
+    const raw = localStorage.getItem(SS_LOCAL_KEY);
+    if (!raw) return { empty: true };
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.data) return { empty: true };
+    // Dieselbe Eigentums-Prüfung wie RT.storage.ownsLocal(): ein Stand mit
+    // Besitzer gehört einem Konto und ist für den Gast kein Spielstand.
+    if (parsed.owner) return { empty: true };
+    return parsed.data;
+  } catch (e) {
+    return { empty: true };   // kaputter Eintrag = kein Spielstand
+  }
+}
+
+/* Phase aus den vier Flags, gleiche Reihenfolge wie RT.state.currentPhase().
+   Der Hub braucht sie nur für die Riss-Stufe des Eis auf der Kachel. */
+function startupPhase(blob) {
+  if (!blob || blob.empty)          return 0;
+  if (!blob.goLiveUnlocked)         return 0;
+  if (!blob.investorTriggered)      return 1;
+  if (!blob.phase3Triggered)        return 2;
+  if (!blob.phase4Triggered)        return 3;
+  return 4;
+}
+
+async function syncStartupStory() {
+  const blob = await readStartupBlob();
+  if (!blob) return;                       // unlesbar → nichts tun
+
+  const hatched = !blob.empty && !!blob.phase3Triggered;
+  const runPeak = blob.empty ? 0 : Math.max(Number(blob.usersPeak) || 0, Number(blob.users) || 0);
+
+  // Für die Kachel: Brut-Fortschritt und Userzahl ohne zweiten Blob-Read.
+  window.__startupPhase = startupPhase(blob);
+  window.__startupUsers = runPeak;
+
+  const all = loadStorage(STORAGE_KEY);
+  const gd  = all[SS_GAME_ID] || defaultGameData();
+
+  // Neustart-Erkennung ohne Marker: das Spiel schreibt nie nach
+  // lernwelt_v3, also ist der leere Blob das Signal. Selbstheilend und
+  // cross-device korrekt — auch das zweite Tablet räumt auf.
+  //
+  // ⚠️ Hier NICHT reset_game_save aufrufen. Der Spielstand ist ohnehin
+  // schon weg, und ein zweites Gerät könnte inzwischen einen neuen Run
+  // begonnen haben, den wir damit löschen würden. Das Zurücksetzen
+  // gehört ausschließlich zum bewussten Freilassen im Hub.
+  if (gd.creature && !hatched) {
+    window.__startupReveal = { released: true };
+    window.releaseCreature?.(SS_GAME_ID);
+    return;
+  }
+
+  // All-Time-Peak: Serverwert (überlebt jeden Neustart) gegen den
+  // laufenden Run. syncHighscores() hat den lokalen Spiegel kurz vorher
+  // schon mit dem Server abgeglichen.
+  const allTime = Math.max(runPeak, startupUsersFromScore(readLocalHighscore(SS_GAME_ID)));
+
+  const before = { creature: gd.creature, growth: gd.growth || 0, coins: gd.coins || 0 };
+
+  if (hatched && !gd.creature) {
+    gd.creature     = determineStartupCreature();
+    gd.roundsPlayed = 1;
+  }
+  if (gd.creature) {
+    // Math.max, damit Wachstumstrank (+5) und Stein der Vollendung
+    // (GROWTH_S6) nicht von der Kurve zurückgedreht werden.
+    gd.growth = Math.max(gd.growth || 0, Math.floor(startupGrowth(runPeak)));
+    gd.coins  = Math.max(gd.coins  || 0, Math.floor(startupCoins(allTime)));
+  }
+
+  const growthGained = gd.growth - before.growth;
+  const coinsGained  = gd.coins  - before.coins;
+  const changed      = growthGained > 0 || coinsGained > 0 || gd.creature !== before.creature;
+
+  if (changed) {
+    saveGameData(SS_GAME_ID, gd);
+    window.__startupReveal = { before, after: { ...gd }, growthGained, coinsGained };
+  }
+
+  // Bestenliste: nur bei echtem Zuwachs anfassen. upsert_highscore
+  // merged serverseitig ohnehin per greatest, aber ein RPC je Hub-Aufruf
+  // ohne neuen Wert wäre reine Last.
+  const score = startupScoreFromUsers(allTime);
+  if (score > readLocalHighscore(SS_GAME_ID)) {
+    writeLocalHighscore(SS_GAME_ID, score);
+    await pushHighscore(SS_GAME_ID, score);
+  }
+}
+
+window.syncStartupStory  = syncStartupStory;
+window.startupUsersFromScore = startupUsersFromScore;

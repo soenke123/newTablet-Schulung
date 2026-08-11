@@ -1555,7 +1555,70 @@ Ein Klick öffnet eine kurze Erklärung — im Gast-Fall mit „Zur Lernwelt", i
 
 ⚠️ **Der Klick-Handler ist delegiert und das Abzeichen wird nicht in `el` gecacht.** `gameScreen.enter()` baut die Profile-Bar bei jedem Betreten neu, `RT.ui.init()` läuft aber nur einmal — eine direkt gebundene Referenz zeigte danach auf einen Knopf außerhalb des Dokuments.
 
-**Noch nicht drin:** Kreatur, Coins, Highscore und die Admin-Detailansicht für game18. Wenn das kommt, läuft es über `sync_game_state` / `submit_game_result` und **nicht** aus diesem Blob — der ist Client-Simulation und serverseitig nicht validierbar.
+### Neustart — der Notausgang im Konto-Modal
+
+Unter der Zustands-Erklärung sitzt, hinter einer Trennlinie abgesetzt, ein roter **„🗑 Spiel neu starten"**. Er ist der einzige Weg für den Spieler, von vorn anzufangen; bis dahin gab es das nur im Debug-Overlay.
+
+**Er sitzt hier, weil das Konto-Abzeichen der einzige Ort im Spiel ist, an dem es um den Spielstand als Ganzes geht.** Im Shop stünde er neben Gebäuden, in der Ressourcen-Bar neben Zahlen — beides Orte, an denen man ihn versehentlich trifft.
+
+**Zwei Schritte, und der zweite zeigt Zahlen.** Der Klick öffnet einen eigenen Modal-Schritt (`openRestartModal()`) mit User, Geld, Gebäuden und fertigen Features aus dem laufenden Stand, dazu die Ansage, dass auch der **Kontostand auf allen Geräten** gelöscht wird (im Gast-Fall entsprechend nur das Gerät). Abbrechen führt zurück ins Konto-Modal, nicht ins Spiel.
+
+⚠️ **Bewusst kein `confirm()`.** Der Browser-Dialog kann nicht sagen, was verloren geht, und sieht auf Tablets aus wie eine Systemmeldung, die man wegtippt. Der Debug-Neustart darf `confirm()` behalten — dort ist der Adressat ein Entwickler.
+
+⚠️ **Beide Knöpfe werden beim Bestätigen sofort deaktiviert.** `RT.storage.wipe()` ist async (Server-RPC); ein zweiter Klick in dieser Zeit setzte einen zweiten Reset ab. Neu geladen wird erst nach dem RPC — sonst stirbt er mit der Seite und der nächste Boot zieht den gerade gelöschten Stand wieder herunter.
+
+**Noch nicht drin:** die Admin-Detailansicht für game18.
+
+---
+
+## 10.6 Lernwelt-Anbindung — der Hub leitet ab, das Spiel meldet nicht
+
+Jedes andere Spiel ruft am Rundenende `saveGameData()` auf. Startup Story hat keine Runden, keinen Score und keinen Abschluss-Screen — es gäbe schlicht keinen Moment, in dem es etwas zu melden hätte. Deshalb **meldet es gar nichts**: der Hub liest beim Boot den Blob aus 10.5 und rechnet Kreatur, Wachstum und Münzen selbst aus (`GameHub/creatures.js`, `syncStartupStory()`).
+
+Das ist gleichzeitig die Spielregel: **im Spiel sieht man nie, wo man steht.** Weder Ei noch Monster noch Münzen tauchen hier auf. Erst der Weg zurück in die Lernwelt zeigt es, als Sequenz im Reveal-Modal (`GameHub/script.js`, `showStartupRevealModal`). Die Frage „wie weit ist mein Tier?" ist damit der Grund, ins Hub zurückzugehen — und der 🏠-Knopf in der Profile-Bar ist der Weg dorthin.
+
+⚠️ **Das weicht bewusst von der Warnung in Migration 0061 ab.** Dort steht: „Sobald game18 Coins oder eine Kreatur ausschüttet, MUSS das über `sync_game_state` laufen und **nicht aus diesem Blob gelesen** werden." Der erste Teil gilt — geschrieben wird über `sync_game_state`, mitsamt Delta-Deckeln und Schreibtakt. Der zweite Teil ist nicht einlösbar: die Userzahl **existiert nur** in der Client-Simulation, es gibt keine zweite Quelle, aus der sie stattdessen käme.
+
+Damit ist die Ausschüttung so vertrauenswürdig wie der Blob, also gar nicht: wer `startupStoryV3` im localStorage bearbeitet, kann sich 100 Münzen und den ersten Platz der Bestenliste schreiben. Der Schaden ist gedeckelt (100 Münzen einmalig, und zwar für immer — siehe All-Time-Peak), die Bestenliste ist es nicht. Wer das härten will, muss die **Userzahl serverseitig plausibilisieren** (Zuwachs gegen verstrichene Zeit), nicht den Speicherweg wechseln — der Weg über `sync_game_state` ist schon der, den 0061 verlangt.
+
+### Was woraus abgeleitet wird
+
+| Größe | Formel | Bezugswert |
+|---|---|---|
+| **Kreatur** | 5 % Epic · 20 % Libelle (S3-Rare) · 75 % gleichverteilt über 12 Normale. Keine Legendaries. | Roll beim Eintritt in Phase 3 |
+| **Wachstum** | `21 · log(u / 1 Mio) / log(100)`, gedeckelt auf `GROWTH_MAX` | `usersPeak` **dieses** Spielstands |
+| **Münzen** | `100 · log(u / 1 Mio) / log(10.000)`, gedeckelt auf 100 | **All-Time**-Peak (`game_highscores`) |
+
+Die Brutphase ist Phase 0–2, geschlüpft wird bei `PHASE3_USER_THRESHOLD` (1 Mio). Ausgewachsen ist das Monster bei 100 Mio Usern, die 100. Münze fällt bei 10 Mrd.
+
+⚠️ **Die zwei Höchststände sind verschieden, und das ist der Kern.** Wachstum hängt an `state.current.usersPeak`, den `storage.wipe()` mitlöscht — ein neu gestarteter Konzern brütet also wirklich wieder ein Ei aus. Münzen hängen am Bestenlisten-Wert, der per `greatest` gemerged wird und von keinem Reset erreichbar ist. Damit lassen sich die 100 Münzen genau **einmal** verdienen; Neustarten, um sie erneut einzusammeln, läuft ins Leere.
+
+⚠️ **`usersPeak` wird im Tick gepflegt** (`js/loop.js`, `trackUsersPeak()`), nicht an den sechs Stellen, die `s.users` schreiben — und zusätzlich am Ende von `offlineCatchUp()`, weil der Aufholpass User gutschreibt, ohne durch den Tick zu laufen.
+
+### Neustart und Freilassen — zwei Richtungen, eine Regel
+
+- **Neustart im Spiel** löscht den Blob. Der Hub sieht beim nächsten Besuch einen leeren Spielstand neben einer vorhandenen Kreatur und lässt sie frei. Kein Marker, kein Flag — der leere Blob **ist** das Signal, und damit räumt auch ein zweites Tablet korrekt auf.
+- **Freilassen im Hub** löscht umgekehrt den Blob (`reset_game_save`) — das Monster ist nichts anderes als die Userzahl des Konzerns.
+
+⚠️ **`reset_game_save` steht nur im Hub-Knopf, nicht in der Neustart-Erkennung.** Dort ist der leere Blob bloß eine Beobachtung; auf einem zweiten Gerät könnte längst ein neuer Konzern stehen, den eine beobachtende Löschung mitnähme.
+
+⚠️ **Der Blob-Read kennt drei Ausgänge, nicht zwei:** Blob da → ableiten · leer → Kreatur freilassen · **nicht erreichbar → nichts anfassen**. Ein Serverfehler darf kein Monster kosten.
+
+### Was im Hub nicht gilt
+
+`standalone: true` in `GAMES_CONFIG` (`GameHub/script.js`) ist der eine Schalter für alle Ausnahmen: **keine Nester** (ein Nest liefe unter fremder Id durch ein Spiel, das weder Runden hat noch die Id aus der URL liest), **kein Backup-Tausch** und **keine Runden-Items** (Booster, Coins ×3, Glücksklee, Lockmittel greifen alle am Rundenergebnis an). Kein Begleiter-Widget im Spiel.
+
+**Wachstumstrank und Stein der Vollendung wirken weiter** — beide greifen im Hub am Monster an, nicht im Spiel. Die Kurve schreibt deshalb per `Math.max`, sonst drehte sie den Trank beim nächsten Hub-Besuch zurück.
+
+### Bestenliste
+
+Höchste je erreichte Userzahl, in `highscores.html` als eigenes Board. Gespeichert wird sie in **Hundertern** (`SS_SCORE_UNIT`): `game_highscores.best_score` ist ein `int`, und 10 Mrd liefen über. Wer den Faktor ändert, muss `startupUsersFromScore()` in `creatures.js` und `fmtStartupUsers()` in `highscores.html` gemeinsam anfassen.
+
+⚠️ **Die Userzahl darf nicht in `game_state.points`.** `sync_game_state` deckelt den Zuwachs dort auf 300 je Aufruf (`MAX_POINTS_DELTA`, Migration 0031) — ein Sprung auf Millionen gälte als Cheat und der ganze Sync würde abgelehnt, samt Kreatur und Münzen.
+
+### Bonbons
+
+Basis = gewonnene Wachstumspunkte (0–10) plus der übliche +20-Tagesbonus, ausgeschüttet im letzten Schritt der Reveal-Sequenz. Die Sequenz läuft nur bei echtem Fortschritt — wiederholtes Hub-Auf-und-Ab druckt also keine Bonbons.
 
 ---
 

@@ -78,6 +78,7 @@
       localStorage.removeItem('tippturbo_hs');
       localStorage.removeItem('algorithm_hs_v1');
       localStorage.removeItem('bubbleBounceHigh_v1');
+      localStorage.removeItem('startupUsers_hs_v1');
       // Virus Protocol (Level-Fortschritt + lastLevel) — server-first, aber
       // im Race-Fenster vor initServerProgress und im Guest-Fallback sichtbar.
       localStorage.removeItem('baba-it@v1');
@@ -122,6 +123,12 @@
     try {
       const v = parseInt(localStorage.getItem('bubbleBounceHigh_v1') || '0', 10);
       if (v > 0) jobs.push({ gameId: 'game17', score: v });
+    } catch(e) {}
+    // Startup Story: hoechste je erreichte Userzahl in Hundertern (siehe
+    // HIGHSCORE_LOCAL_KEYS in GameHub/creatures.js). Plain int.
+    try {
+      const v = parseInt(localStorage.getItem('startupUsers_hs_v1') || '0', 10);
+      if (v > 0) jobs.push({ gameId: 'game18', score: v });
     } catch(e) {}
     // Algorithm: base64-encoded Blob mit .bestTime — Prüfsumme nicht validieren,
     // hier nur Best-Effort. Bei Format-Wechsel fällt der Push aus.

@@ -387,7 +387,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="supabase-config.js"></script>
-  <script src="session.js?v=20260721"></script>
+  <script src="session.js?v=20260811"></script>
   <script src="avatars.js?v=20260709"></script>
   <script>
     'use strict';
@@ -402,7 +402,8 @@
       { key: 'game9',  label: 'Fokusflow',         icon: '🎯', season: 1, kind: 'game', formatter: fmtPoints },
       { key: 'game10', label: 'The Algorithm',     icon: '⚙️', season: 1, kind: 'game', formatter: fmtAlgorithm },
       { key: 'game11', label: 'Tipp-Turbo Kids',   icon: '⌨️', season: 1, kind: 'game', formatter: fmtPoints },
-      { key: 'game17', label: 'Bubble Bounce',     icon: '🫧', season: 3, kind: 'game', formatter: fmtPoints }
+      { key: 'game17', label: 'Bubble Bounce',     icon: '🫧', season: 3, kind: 'game', formatter: fmtPoints },
+      { key: 'game18', label: 'Startup Story',     icon: '🚀', season: 3, kind: 'game', formatter: fmtStartupUsers }
     ];
     const HUB_BOARDS = [
       { key: 'coins',       label: 'Münzen',              icon: '🪙', kind: 'hub', formatter: fmtCoins },
@@ -429,6 +430,24 @@
         primary:   `${entry.primary_score} gesehen`,
         secondary: `${entry.secondary_score} voll ausgebildet`
       };
+    }
+    // Startup Story: best_score = höchste je erreichte Userzahl in HUNDERTERN.
+    // Skaliert, weil best_score ein int ist und das Kurvenende bei 10 Mrd
+    // Usern liegt. Der Faktor steht in GameHub/creatures.js (SS_SCORE_UNIT) —
+    // beide Stellen gehören zusammen.
+    //
+    // Gezählt wird der je erreichte Höchststand, nicht der aktuelle: ein
+    // Neustart oder abgewanderte User drücken den Eintrag nicht.
+    function fmtStartupUsers(entry) {
+      const users = (Number(entry.best_score) || 0) * 100;
+      const short = (v, unit) => {
+        const r = Math.round(v * 10) / 10;
+        return (r % 1 === 0 ? String(r) : r.toFixed(1).replace('.', ',')) + ' ' + unit;
+      };
+      const txt = users >= 1e9 ? short(users / 1e9, 'Mrd')
+                : users >= 1e6 ? short(users / 1e6, 'Mio')
+                : users.toLocaleString('de-DE');
+      return { primary: `${txt} User`, secondary: '' };
     }
     // Algorithm: best_score = Ingame-Minuten seit 15:00 → Uhrzeit-String
     function fmtAlgorithm(entry) {
