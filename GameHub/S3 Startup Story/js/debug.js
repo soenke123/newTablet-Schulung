@@ -126,8 +126,10 @@
 
     overlay.querySelector('#rt-dbg-restart').onclick = function () {
       if (!confirm('Kompletter Neustart — Spielstand geht verloren. Sicher?')) return;
-      RT.storage.wipe();
-      location.reload();
+      // wipe() löscht auch den Serverstand (RPC) und ist deshalb async.
+      // Vor dem Reload abwarten, sonst stirbt der RPC mit der Seite und der
+      // nächste Boot lädt den gerade gelöschten Stand wieder herunter.
+      RT.storage.wipe().then(function () { location.reload(); });
     };
     overlay.querySelector('#rt-dbg-phase2').onclick = function () {
       if (!confirm('Zum Anfang von Phase 2 springen? Aktueller Spielstand geht verloren.')) return;

@@ -222,7 +222,9 @@ Der einzige **laufende** Kostenposten im Spiel, ab Phase 2. Er hängt an der **g
 
 Umrechnung: eine Zahlung deckt `SERVER_UPKEEP_CYCLES` = 25 Produktionszyklen, 1.000 Kapazität produzieren je Zyklus 1.000 Watchtime — also `€/wt = Tarif / (Einheit × Zyklen)`.
 
-**Bezahlt und verbraucht wird je produziertem Zyklus, nicht je Sekunde.** Eine Farm mit vollem Stapel produziert nicht und kostet auch nichts. Das macht die Serverkosten zum *Preis für Watchtime* statt zu einer Uhr, die auch über Nacht tickt — und es ist der Grund, warum der Offline-Aufholpass höchstens `WATCHTIME_STACK_MAX` Zyklen abrechnet. Eine rückwirkende Rechnung über acht Stunden wäre die Strafe fürs Wiederkommen.
+**Bezahlt und verbraucht wird je produziertem Zyklus, nicht je Sekunde.** Eine Farm mit vollem Stapel produziert nicht und kostet auch nichts. Das macht die Serverkosten zum *Preis für Watchtime* statt zu einer Uhr, die auch über Nacht tickt — und es ist der Grund, warum der Offline-Aufholpass höchstens die Zyklen abrechnet, die er selbst produziert hat — also die des `OFFLINE_CATCHUP_SEC`-Fensters, gedeckelt auf `serverUpkeepCrawlAt()` (§8). Eine rückwirkende Rechnung über acht Stunden wäre die Strafe fürs Wiederkommen.
+
+⚠️ **Gezählt werden Stapel UND Überschuss**, nicht nur der Stapel. Sonst wäre die offline automatisch geerntete Watchtime gratis erzeugt — und damit ausgerechnet die Menge, die den Rückkomm-Effekt trägt, der einzige Posten im Spiel ohne Betriebskosten.
 
 **Ablauf:** Nach 25 Zyklen erscheint das 🔌-Symbol an der Farm und sie läuft **halb so schnell**. Nach weiteren 5 Zyklen geht sie auf **Sparflamme** (20 %). Ein Klick auf das Symbol setzt sie auf 0 zurück; bezahlt wird **anteilig** nach verbrauchten Zyklen.
 
@@ -309,7 +311,7 @@ Er ist am 2026-08-06 dazugekommen, weil zwei gemessene Probleme dieselbe Ursache
 
 Eine zweite Agentur bringt auf der Anteils-Stufe kaum mehr Geld (das Einkommen hängt an der Produktion, nicht an der Zahl der Deals), kostet aber vollen zusätzlichen Trend. **Ab ~6 Agenturen kippt die Plattform ins Minus.** Das ist die wichtigste Botschaft an den Spieler, und sie steht heute nirgends im UI.
 
-⚠️ **Der Offline-Aufholpass braucht seitdem eine ausdrückliche Obergrenze** von `AD_CYCLES_MAX` Zyklen (`offlineCatchUp`). Vorher ergab sie sich von selbst — ein Deal war nach fünf Zyklen zu Ende. Ein `autoRenew`-Deal hat dieses natürliche Ende nicht; über acht Stunden wären das ~2.900 Video-Zyklen. Zusätzlich wird die Rest-Zeit auf einen angefangenen Zyklus gekappt, sonst setzt der erste Live-Tick den übrigen Zeit-Puffer sofort in weitere Zyklen um.
+⚠️ **Der Offline-Aufholpass braucht seitdem eine ausdrückliche Obergrenze** (`offlineCatchUp`). Vorher ergab sie sich von selbst — ein Deal war nach fünf Zyklen zu Ende. Ein `autoRenew`-Deal hat dieses natürliche Ende nicht; über acht Stunden wären das ~2.900 Video-Zyklen. Die Grenze ist heute das Offline-Fenster, mindestens aber `AD_CYCLES_MAX` Zyklen: `max(AD_CYCLES_MAX, ceil(OFFLINE_CATCHUP_SEC / duration))`. Banner (10 s) kommt damit auf 12 Zyklen, Video (25 s) auf 5 — ohne das Minimum stünde ausgerechnet die Werbeart mit den längsten Zyklen schlechter da als vor der Umstellung. Zusätzlich wird die Rest-Zeit auf einen angefangenen Zyklus gekappt, sonst setzt der erste Live-Tick den übrigen Zeit-Puffer sofort in weitere Zyklen um.
 
 **Die erste Werbeagentur kauft der Spieler selbst** — 15.000 € im Shop, ab Phase 2. Sie gehört bewusst **nicht** zum Investor-Deal: Phase 2 beginnt damit, dass Watchtime da ist und noch nichts sie in Geld verwandelt. Der Debug-Seed (Phase-2-Sprung) stellt genau diese Belegung her — HQ + eine Huhn-Farm, keine Agentur.
 
@@ -899,7 +901,19 @@ Beide Anteile werden aus dem Techtree **abgeleitet**, nicht gespeichert (`trendB
 
 Beide Richtungen teilen sich `trendCycleTime` — es gibt nur eine Uhr, und die Trend-Richtung entscheidet, was beim Schlag passiert.
 
-**Offline** (`actions.offlineCatchUp`, aufgerufen aus `main.js`): Watchtime- und Trend-Stapel werden um die Abwesenheit vorgespult — aber höchstens um die jeweilige Stapel-Obergrenze. Dieselbe Regel in beide Richtungen: auch negativer Trend kostet maximal 5 Zyklen.
+**Offline** (`actions.offlineCatchUp`, aufgerufen aus `main.js`): die Abwesenheit wird auf `OFFLINE_CATCHUP_SEC` = **120 s** gedeckelt und in diesem Fenster nachgerechnet. Eine Nacht bringt damit dasselbe wie zwei Minuten.
+
+**Die Stapelgrenzen bleiben unangetastet, der Überschuss wird geerntet.** Watchtime- und Trend-Stapel füllen sich wie bisher bis 5; alles darüber landet direkt im Watchtime-Lager bzw. als User auf dem Konto. Der Grund ist eine Rollenverteilung: „max 5 Stapel, dann steht die Produktion" ist eine **Live**-Regel, sie erzwingt das Ernten. Offline kann niemand ernten — dort wäre sie keine Entscheidung mehr, sondern nur eine Deckelung, und genau die hat den Rückkomm-Moment gekostet, von dem ein Idle-Spiel lebt.
+
+⚠️ **Der Trend-Überschuss läuft durch `freeUserCapacity()`.** Was nicht mehr in die Serverkapazität passt, verfällt. Der Aufholpass darf die Aussage „Serverkapazität ist der Engpass" nicht umgehen.
+
+⚠️ **Nach unten gilt das Fenster NICHT: negativer Trend kostet weiterhin höchstens `TREND_STACK_MAX` = 5 Zyklen.** Die Asymmetrie ist gewollt — das Fenster ist eine Belohnung fürs Wiederkommen und darf nicht ausgerechnet den härter treffen, der ohnehin schon im Minus steht.
+
+⚠️ **Die Reihenfolge im Aufholpass ist seitdem eine Balance-Größe.** Erst die Farmen, dann die Werbedeals: die offline produzierte Watchtime liegt dadurch wirklich im Lager und speist die Agenturen. Ein Dauerbetrieb-Deal wird über eine Abwesenheit spürbar ergiebiger als vorher, und das ist die Stelle, an der ein deutlich größeres Fenster zuerst kippen würde — **wer `OFFLINE_CATCHUP_SEC` anhebt, prüft hier**, nicht bei der Watchtime.
+
+**Der Ereigniskarten-Takt bleibt außen vor** (§9.5): auch im Fenster wird höchstens eine Runde gezogen.
+
+⚠️ **Die gemeldete Abwesenheit im Rückkehr-Fenster ist die ECHTE, nicht das Fenster.** „8 Stunden weg, das kam dabei heraus" ist die ehrliche Aussage; dass nur die ersten zwei Minuten zählen, ist eine Spielregel und gehört nicht in eine geschönte Zahl.
 
 **Wodurch steigt der Trend?** Der **Netzwerkeffekt** (dauerhaft, wächst mit der Plattform, s. o.), Grundinteresse (verebbt), eingesammelte Techtree-Nodes (60 s Rückenwind), **Vertrauens-Features** (dauerhaft, über die Steigung) und die **Anziehungskraft im Marketing-Center** (Creator-Beteiligung / Marken-Profile, beliebig oft, Sektion 7.2).
 **Wodurch sinkt er?** Laufende Werbedeals (`trend50 × (i/0.5)²` je Agentur, siehe Sektion 6) und **Serverprobleme** (siehe unten); später Metadaten-Verkauf, aggressive Kampagnen, Shitstorm-Events.
@@ -1470,6 +1484,56 @@ Ein **„?"-Button neben dem Shop** startet die zur Phase passende Tour jederzei
 
 ---
 
+## 10.5 Persistenz — wo der Spielstand liegt
+
+Der Spielstand hängt am **Account**, nicht am Gerät (Migration 0061, Tabelle `user_game_saves`). Gespeichert wird `RT.state.current` als **kompletter, ungefilterter Blob** — Geld, User, Watchtime, Metadaten, Modelle, `placedBuildings` samt aller Gebäude-States (laufende Deals inkl. `volume`/`autoRenew`/`grossWt`, Kampagnen mit PR-Platz, Farm-Stapel, `upkeepCycles`), `techtree`, `trendMods`, `events`, `ownedTiles`, `purchases`, `seenBadges`, sämtliche Tour-Flags und `player`.
+
+⚠️ **Es gibt bewusst keine Feldauswahl.** Ein vergessenes Feld wäre stiller Fortschrittsverlust, und die Liste oben wächst mit jeder Phase weiter.
+
+| Datei | Rolle |
+|---|---|
+| `js/storage.js` | localStorage: Gast-Speicher, Offline-Puffer, Cache. Rein lokal und synchron. |
+| `js/cloud.js` | `RT.cloud` — die Server-Seite. Ohne Login tut das Modul nichts. |
+
+**Server gewinnt beim Laden.** Der Boot in `main.js` ist deshalb asynchron (Splash statt Intro-Flackern) und läuft in dieser Reihenfolge: lokal laden → Session abwarten → **falls dirty: lokal hochschieben** → Serverstand laden → Aufholpass. Der Dirty-Push muss vor dem Laden stehen, sonst überschreibt der Serverstand eine Offline-Runde, bevor sie oben ankommt.
+
+**Der Dirty-Marker** (`startupStoryV3_dirty`, eigener localStorage-Key) heißt „der lokale Stand ist nie beim Server angekommen". Gesetzt bei jedem lokalen Save, gelöscht nach jedem erfolgreichen Push — bewusst **ohne** Snapshot-Vergleich: das Spiel tickt jede Sekunde weiter, ein Vergleich würde den Marker praktisch nie löschen.
+
+**Takt:** höchstens alle 20 s ein Push, dazu sofort bei `pagehide` / `visibilitychange` (mit `keepalive`) und an den Meilensteinen `goLiveUnlocked`, `investorTriggered`, `phase3Triggered`, `phase4Triggered`. `storage.js` speichert weiterhin jede Sekunde lokal — ein RPC in diesem Takt wäre absurd.
+
+⚠️ **`savedAt` gehört `storage.writeLocal()`, der Push fasst es nicht an.** Sonst verlöre der Boot-Push einer Offline-Runde genau die Information, aus der der Aufholpass die Abwesenheit rechnet. Für einen **fremden** Serverstand zählt ohnehin nicht `savedAt`, sondern `age_sec` aus `load_game_save` — die Serveruhr, weil `savedAt` sonst von der womöglich falsch gestellten Uhr des anderen Geräts käme.
+
+⚠️ **`rev` (Optimistic Concurrency).** Der Client schickt die Revision, die er beim Laden gesehen hat. Passt sie nicht, hat ein zweites Gerät inzwischen geschrieben: dieser Tab **stellt das Schreiben ein**, löscht seinen Dirty-Marker und sagt es per Toast. Wer zuletzt geladen hat, spielt gerade wirklich. Das Löschen des Markers ist dabei die Pointe — ohne es schöbe der nächste Boot genau diesen überholten Stand als „ungepushte Offline-Runde" nach oben.
+
+⚠️ **`RT.storage.wipe()` ist async**, weil es den Serverstand per RPC mitlöscht. Der Debug-Neustart muss darauf warten, sonst stirbt der RPC mit der Seite und der nächste Boot lädt den gerade gelöschten Stand wieder herunter.
+
+⚠️ **`clearLocalGameState()` in `session.js` muss `startupStoryV3` kennen.** Sonst erbt auf einem geteilten Tablet der nächste Schüler den Konzern des vorigen — und der Dirty-Marker schöbe ihn beim nächsten Boot in dessen Account.
+
+### Das Konto-Abzeichen — sichtbar machen, wo der Stand liegt
+
+Ein kleines Abzeichen unten rechts am **Avatar-Kopf** in der Profile-Bar, aus `RT.cloud.status()`. Vier Zustände:
+
+| Zustand | Abzeichen | Bedeutung |
+|---|---|---|
+| `account` | ☁ blau | Stand liegt im Konto, auf jedem Gerät da |
+| `offline` | ⇅ bernstein | Letzter Push ging nicht durch — wird nachgeholt |
+| `conflict` | ! rot, pulsiert | Anderes Gerät hat weitergespielt, Seite neu laden |
+| `guest` | ☁ grau, durchgestrichen | Stand nur auf diesem Gerät |
+
+⚠️ **Es sitzt links beim Spieler und ist bewusst nicht grün und nicht rund.** Rechts in derselben Leiste steht schon `rt-profile-bar__online-dot` — ein grüner, pulsierender Punkt, der „**deine Plattform** ist live" bedeutet (`goLiveUnlocked`). Zwei gleich aussehende Signale mit verschiedener Aussage in einer Leiste wären die perfekte Verwechslung.
+
+⚠️ **Nur `conflict` pulsiert.** Es ist der einzige Zustand, der etwas vom Spieler will. `guest` ist zwar der folgenreichste, aber ein dauerpulsierendes Abzeichen für einen Zustand, den man im Spiel nicht ändern kann, wäre reine Nörgelei.
+
+⚠️ **`rate_limit` setzt NICHT auf `offline`.** Ein Sofort-Push kurz nach dem Takt-Push läuft regelmäßig in die 3-Sekunden-Wand; als Fehlerzustand gelesen würde das Abzeichen dabei flackern.
+
+Ein Klick öffnet eine kurze Erklärung — im Gast-Fall mit „Zur Lernwelt", im Konflikt-Fall mit „Neu laden". Das Modal läuft mit `context = null`, damit `refreshModal()` bei `state:changed` nicht versucht, einen Typ neu zu bauen, den es nicht kennt.
+
+⚠️ **Der Klick-Handler ist delegiert und das Abzeichen wird nicht in `el` gecacht.** `gameScreen.enter()` baut die Profile-Bar bei jedem Betreten neu, `RT.ui.init()` läuft aber nur einmal — eine direkt gebundene Referenz zeigte danach auf einen Knopf außerhalb des Dokuments.
+
+**Noch nicht drin:** Kreatur, Coins, Highscore und die Admin-Detailansicht für game18. Wenn das kommt, läuft es über `sync_game_state` / `submit_game_result` und **nicht** aus diesem Blob — der ist Client-Simulation und serverseitig nicht validierbar.
+
+---
+
 ## 11. MVP-Scope für v3
 
 Was wir zuerst bauen (in `v3/`-Ordner, parallel zu `v2/`):
@@ -1501,7 +1565,8 @@ Was wir zuerst bauen (in `v3/`-Ordner, parallel zu `v2/`):
 - Trend-Events (Shitstorm/Viral)
 - Story/Investoren
 - Programme auf Farmen
-- Save/Load
+- ~~Save/Load~~ — **umgesetzt** (Migration 0061), siehe §10.5
+- Kreatur/Coins/Highscore für game18 im Hub, Admin-Detailansicht
 
 ---
 

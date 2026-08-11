@@ -107,7 +107,84 @@
   background: var(--rt-primary-soft);
   border: 3px solid var(--rt-brown);
   box-shadow: 0 2px 0 var(--rt-brown);
+  display: block;
 }
+
+/* Avatar wird zum Knopf, damit das Konto-Abzeichen antippbar ist.
+   Sieht unverändert aus — kein Rahmen, kein Hintergrund. */
+.rt-profile-bar__avatar {
+  position: relative;
+  padding: 0; border: none; background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 0;
+  /* Trägt das Abzeichen auch dann, wenn kein Avatar-Bild da ist —
+     profileBarHTML rendert das <img> nur bedingt. */
+  min-width: 56px; min-height: 56px;
+}
+.rt-profile-bar__avatar:active { transform: translateY(1px); }
+
+/* Konto-Abzeichen: wo liegt der Spielstand?
+   Sitzt unten rechts auf dem Avatar — also LINKS in der Leiste. Rechts
+   bei der Plattform steht schon der grüne Online-Punkt („deine Plattform
+   ist live"); zwei gleich aussehende Signale mit verschiedener Bedeutung
+   wären die perfekte Verwechslung. Deshalb hier weder rund-grün noch
+   pulsierend, sondern ein eckiges Abzeichen mit Zeichen darin. */
+.rt-account-badge {
+  position: absolute;
+  right: -3px; bottom: -3px;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 7px;
+  border: 2px solid var(--rt-brown);
+  font-size: 12px; font-weight: 800; line-height: 1;
+  color: #fff;
+  background: #94a3b8;
+  box-shadow: 0 1px 0 var(--rt-brown);
+}
+.rt-account-badge.is-account  { background: #5b8def; }   /* ruhig, nicht grün */
+.rt-account-badge.is-offline  { background: #e0a33a; }
+.rt-account-badge.is-conflict { background: #e05252; }
+.rt-account-badge.is-guest    { background: #94a3b8; }
+
+/* Gast: dieselbe Wolke, durchgestrichen. Der Strich ist die Aussage —
+   „es gibt hier kein Konto", nicht „Fehler". */
+.rt-account-badge.is-guest::after {
+  content: '';
+  position: absolute;
+  left: 1px; right: 1px; top: 50%;
+  height: 2px;
+  background: #fff;
+  transform: rotate(-45deg);
+  border-radius: 2px;
+}
+
+/* Konflikt ist der einzige Zustand, der etwas VOM SPIELER will
+   (neu laden) — nur der darf sich melden. */
+.rt-account-badge.is-conflict { animation: rt-account-pulse 1.6s ease-in-out infinite; }
+@keyframes rt-account-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+
+.rt-account-modal__lead { font-size: 1rem; line-height: 1.5; }
+.rt-account-modal__note {
+  margin-top: 10px;
+  font-size: 0.9rem; opacity: 0.75;
+}
+.rt-account-modal__btn {
+  margin-top: 16px;
+  width: 100%;
+  padding: 11px 16px;
+  border: 3px solid var(--rt-brown);
+  border-radius: var(--rt-radius-md);
+  background: var(--rt-primary-soft);
+  color: var(--rt-text);
+  font-family: var(--rt-font-display); font-weight: 800; font-size: 1rem;
+  cursor: pointer;
+  box-shadow: var(--rt-shadow-sm);
+}
+.rt-account-modal__btn:active { transform: translateY(2px); box-shadow: none; }
 .rt-profile-bar__name {
   font-family: var(--rt-font-display); font-weight: 700;
   font-size: 1.1rem; color: var(--rt-text);

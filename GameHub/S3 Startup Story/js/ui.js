@@ -957,6 +957,18 @@
     });
     el.placementCancel.addEventListener('click', exitPlacement);
 
+    // Delegiert statt direkt am Knopf: gameScreen.enter() baut die Profile-Bar
+    // bei jedem Betreten neu, RT.ui.init() läuft aber nur einmal. Ein direkt
+    // gebundener Handler hinge nach einem Re-Entry an einem Knopf, der gar
+    // nicht mehr im Dokument steht.
+    document.addEventListener('click', function (e) {
+      if (e.target && e.target.closest && e.target.closest('#rt-account-btn')) {
+        openAccountModal();
+      }
+    });
+    updateAccountBadge();
+    RT.bus.on('cloud:status', updateAccountBadge);
+
     RT.bus.on('state:changed', onStateChanged);
     RT.bus.on('effect',        onEffect);
     RT.bus.on('tick',          frameTick);
@@ -1117,6 +1129,11 @@
     var pb = document.querySelector('.rt-profile-bar');
     if (pb) pb.classList.toggle('is-online', !!s.goLiveUnlocked);
 
+    // Konto-Abzeichen mitziehen. Es hängt zwar am 'cloud:status'-Ereignis,
+    // aber die Profile-Bar kann seitdem neu gebaut worden sein — dann steht
+    // dort ein Abzeichen ohne Zustand.
+    updateAccountBadge();
+
     // Modal ggf. aktualisieren
     if (modalContext) refreshModal();
   }
@@ -1127,6 +1144,109 @@
     updateAllFarmFields();
     // Modal live-Werte
     if (modalContext) refreshModalLive();
+  }
+
+  /* ─── Konto-Abzeichen am Avatar ────────────────────────────
+     Zeigt, wo der Spielstand liegt. Die Zustände kommen aus
+     RT.cloud.status(); das Abzeichen selbst weiß nichts über RPCs.
+
+     ⚠️ Es sitzt links beim Spieler, nicht rechts bei der Plattform —
+     dort steht der grüne Online-Punkt für „deine Plattform ist live".
+     Deshalb auch bewusst KEIN Grün für „angemeldet": die eine Farbe in
+     dieser Leiste gehört schon einer anderen Aussage.                  */
+  var ACCOUNT_STATES = {
+    account: {
+      mod: 'is-account', glyph: '☁',
+      title: 'Angemeldet — dein Spielstand liegt in deinem Konto.'
+    },
+    offline: {
+      mod: 'is-offline', glyph: '⇅',
+      title: 'Keine Verbindung — dein Fortschritt wird gespeichert, sobald sie zurück ist.'
+    },
+    conflict: {
+      mod: 'is-conflict', glyph: '!',
+      title: 'Auf einem anderen Gerät wurde weitergespielt. Bitte die Seite neu laden.'
+    },
+    guest: {
+      mod: 'is-guest', glyph: '☁',
+      title: 'Nicht angemeldet — dein Spielstand liegt nur auf diesem Gerät.'
+    }
+  };
+
+  function accountState() {
+    return (RT.cloud && RT.cloud.status)
+      ? RT.cloud.status()
+      : { state: 'guest', lastOkAt: 0 };
+  }
+
+  // Jedes Mal frisch aus dem DOM geholt, nicht in `el` gecacht: die
+  // Profile-Bar wird bei jedem Betreten des Spiel-Screens neu gebaut.
+  function updateAccountBadge() {
+    var badge = document.getElementById('rt-account-badge');
+    if (!badge) return;
+    var st  = accountState();
+    var def = ACCOUNT_STATES[st.state] || ACCOUNT_STATES.guest;
+    badge.className   = 'rt-account-badge ' + def.mod;
+    badge.textContent = def.glyph;
+    var btn = document.getElementById('rt-account-btn');
+    if (btn) btn.title = def.title;
+  }
+
+  function agoLabel(ts) {
+    if (!ts) return null;
+    var sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (sec < 60)   return 'vor ' + sec + ' Sekunden';
+    if (sec < 3600) return 'vor ' + Math.round(sec / 60) + ' Minuten';
+    return 'vor ' + Math.round(sec / 3600) + ' Stunden';
+  }
+
+  function openAccountModal() {
+    var st    = accountState();
+    var saved = agoLabel(st.lastOkAt);
+    var title, lead, note = '', action = null;
+
+    if (st.state === 'guest') {
+      title  = '☁ Du spielst als Gast';
+      lead   = 'Dein Spielstand liegt nur auf <b>diesem Gerät</b>. An einem anderen Tablet '
+             + 'fängst du von vorne an, und beim Abmelden ist er weg.';
+      note   = 'Melde dich in der Lernwelt an, dann folgt dir dein Konzern überallhin.';
+      action = { id: 'rt-account-login', label: 'Zur Lernwelt' };
+    } else if (st.state === 'conflict') {
+      title  = '⚠️ Auf einem anderen Gerät wurde weitergespielt';
+      lead   = 'Damit dort nichts verloren geht, speichert dieses Fenster nicht mehr. '
+             + 'Was du hier gerade siehst, ist nicht mehr der neueste Stand.';
+      note   = 'Lade die Seite neu — dann bekommst du den aktuellen Spielstand.';
+      action = { id: 'rt-account-reload', label: 'Neu laden' };
+    } else if (st.state === 'offline') {
+      title  = '⇅ Gerade keine Verbindung';
+      lead   = 'Dein Fortschritt liegt sicher auf diesem Gerät und wird ins Konto '
+             + 'übertragen, sobald die Verbindung zurück ist. Du kannst einfach weiterspielen.';
+      note   = saved ? 'Zuletzt im Konto gesichert: ' + saved + '.' : '';
+    } else {
+      title  = '☁ Angemeldet';
+      lead   = 'Dein Spielstand liegt in deinem Konto — du kannst an jedem Gerät '
+             + 'weiterspielen, an dem du dich anmeldest.';
+      note   = saved ? 'Zuletzt gesichert: ' + saved + '.' : '';
+    }
+
+    var html = '<div class="rt-account-modal">'
+             + '<p class="rt-account-modal__lead">' + lead + '</p>'
+             + (note ? '<p class="rt-account-modal__note">' + note + '</p>' : '')
+             + (action
+                 ? '<button class="rt-account-modal__btn" id="' + action.id + '" type="button">'
+                   + action.label + '</button>'
+                 : '')
+             + '</div>';
+
+    // context bewusst null: das ist eine Erklärung, kein lebendes Modal.
+    // Mit einem context würde refreshModal() bei jedem state:changed
+    // versuchen, den Inhalt neu zu bauen — den es gar nicht kennt.
+    openModal(title, html, null);
+
+    var btn = el.modalBody.querySelector('#rt-account-login');
+    if (btn) btn.addEventListener('click', function () { window.location.href = '../index.html'; });
+    btn = el.modalBody.querySelector('#rt-account-reload');
+    if (btn) btn.addEventListener('click', function () { location.reload(); });
   }
 
   function updateAllFarmFields() {
@@ -3790,7 +3910,16 @@
     return ''
       + '<div class="rt-profile-bar">'
       + '  <div class="rt-profile-bar__player">'
-      +      (head ? '<img class="rt-profile-bar__head" src="' + head + '" alt="">' : '')
+      // Konto-Abzeichen unten rechts am Avatar-Kopf. Es sitzt bewusst LINKS
+      // beim Spieler und nicht rechts bei der Plattform: dort steht schon der
+      // grüne Online-Punkt, und der bedeutet „deine Plattform ist live". Zwei
+      // grüne Punkte in einer Leiste mit zwei verschiedenen Bedeutungen wären
+      // die perfekte Verwechslung — deshalb andere Seite, andere Form.
+      + '    <button class="rt-profile-bar__avatar" id="rt-account-btn" type="button"'
+      + '            aria-label="Speicher-Status">'
+      +        (head ? '<img class="rt-profile-bar__head" src="' + head + '" alt="">' : '')
+      + '      <span class="rt-account-badge" id="rt-account-badge"></span>'
+      + '    </button>'
       + '    <span class="rt-profile-bar__name">' + name + '</span>'
       + '  </div>'
       // Shop + "?" bleiben eine Einheit in der Mitte — sonst zieht

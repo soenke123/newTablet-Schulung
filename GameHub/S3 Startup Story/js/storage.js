@@ -1,5 +1,11 @@
 /* LocalStorage-Persistence. Throttled Save an state:changed, synchroner
-   Flush bei beforeunload. Wird später durch Server-Persistence ersetzt. */
+   Flush bei beforeunload.
+
+   Seit Migration 0061 ist localStorage NICHT mehr die Wahrheit, sondern
+   dreierlei: Gast-Speicher (ohne Login), Offline-Puffer und Cache. Die
+   Wahrheit für eingeloggte User liegt in user_game_saves — siehe
+   js/cloud.js. Dieses Modul bleibt bewusst rein lokal und synchron; es
+   setzt nur den Dirty-Marker, den cloud.js auswertet.                   */
 (function (RT) {
   'use strict';
 
@@ -20,15 +26,27 @@
   var TICK_SAVE_MS = 5000;
   var lastTickSave = 0;
 
-  function save() {
+  function writeLocal() {
     // Nach wipe() (z. B. Debug-Neustart) kein Rebound aus dem beforeunload-Flush.
     if (wiped) return;
     try {
-      // Zeitstempel mitschreiben — daraus berechnet main.js den Offline-Aufholpass.
+      // Zeitstempel mitschreiben — daraus berechnet main.js den Offline-
+      // Aufholpass, WENN kein Serverstand da ist. Mit Login gewinnt die
+      // Serveruhr (age_sec aus load_game_save), weil savedAt sonst von der
+      // womöglich falsch gestellten Uhr des anderen Geräts käme.
       RT.state.current.savedAt = Date.now();
       var payload = { v: VERSION, data: RT.state.current };
       localStorage.setItem(KEY, JSON.stringify(payload));
     } catch (e) { /* Quota / Private-Mode — ignorieren */ }
+  }
+
+  function save() {
+    if (wiped) return;
+    writeLocal();
+    // „Der lokale Stand ist nie beim Server angekommen." Der Push selbst
+    // läuft über den eigenen Takt in cloud.js, nicht hier — ein RPC je
+    // Sekunde wäre absurd.
+    if (RT.cloud && RT.cloud.isServerMode()) RT.cloud.markDirty();
   }
 
   function scheduleSave() {
@@ -52,6 +70,37 @@
       migrate();
       return true;
     } catch (e) { return false; }
+  }
+
+  /* Serverstand übernehmen (js/cloud.js → load_game_save). Läuft durch
+     dieselben zwei Schritte wie load(): Shallow-Merge, damit neue Felder
+     aus `initial` ihren Default behalten, danach migrate().
+
+     ⚠️ Die Versionsprüfung ist dieselbe wie beim lokalen Stand — ein Blob
+     mit anderer VERSION wird verworfen, nicht migriert. Sonst wäre der
+     Server der einzige Ort, an dem ein VERSION-Bump nicht greift.        */
+  function applyServerSave(payload) {
+    if (!payload || !payload.save) return false;
+    if (payload.save_version !== VERSION) {
+      console.warn('[storage] Serverstand hat Version ' + payload.save_version +
+                   ' (erwartet ' + VERSION + ') — verworfen.');
+      return false;
+    }
+    try {
+      Object.keys(payload.save).forEach(function (k) {
+        RT.state.current[k] = payload.save[k];
+      });
+      migrate();
+      // Einmal lokal durchschreiben, damit ein Absturz oder ein Wechsel in
+      // den Gast-Modus nicht auf den alten Gerätestand zurückfällt.
+      // writeLocal() statt save(): der Stand kommt gerade VOM Server, er
+      // ist also nicht dirty.
+      writeLocal();
+      return true;
+    } catch (e) {
+      console.warn('[storage] applyServerSave fehlgeschlagen:', e.message);
+      return false;
+    }
   }
 
   // Kleine Anpassungen an geladenen Ständen, die keinen VERSION-Bump (und
@@ -376,10 +425,16 @@
     });
   }
 
+  /* Gibt ein Promise zurück, weil der Serverstand per RPC weg muss und der
+     Aufrufer (Debug-Neustart) direkt danach neu lädt. Ohne das Warten
+     stirbt der RPC mit der Seite und der nächste Boot zöge den gerade
+     gelöschten Stand wieder herunter — der Neustart wäre wirkungslos. */
   function wipe() {
     wiped = true;
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
     try { localStorage.removeItem(KEY); } catch (e) {}
+    if (RT.cloud) return RT.cloud.reset();
+    return Promise.resolve();
   }
 
   // Vom Tick aufgerufen, aber höchstens alle TICK_SAVE_MS — ein Save je
@@ -405,5 +460,12 @@
     });
   }
 
-  RT.storage = { save: save, load: load, wipe: wipe, init: init };
+  RT.storage = {
+    VERSION: VERSION,          // cloud.js schickt sie als save_version mit
+    save: save,
+    load: load,
+    applyServerSave: applyServerSave,
+    wipe: wipe,
+    init: init
+  };
 })(window.RT3);

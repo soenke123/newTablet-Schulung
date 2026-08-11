@@ -1,18 +1,109 @@
-/* Bootstrap. Lädt gespeicherten Spielstand aus localStorage; wenn Player
-   schon gesetzt ist, geht's direkt ins Game, sonst normaler Intro-Flow. */
+/* Bootstrap.
+
+   Der Boot ist asynchron, seit der Spielstand am Account hängt (Migration
+   0061). Die Entscheidung „Intro oder direkt ins Spiel" darf erst fallen,
+   wenn feststeht, welcher Stand gilt — sonst blitzt bei jedem Start kurz
+   der Intro-Screen auf und wird eine Sekunde später ersetzt. Solange
+   gelesen wird, steht ein schlichter Ladehinweis im #app.
+
+   Reihenfolge und ihre Gründe:
+     1. lokal laden        — Gast und Offline können sofort weiterspielen
+     2. Session abwarten   — session.js hat ein eigenes 3-s-Sicherheitsnetz
+     3. dirty? → pushen    — eine Offline-Runde retten, BEVOR der Server
+                             gewinnt. Andersherum wäre sie weg.
+     4. Serverstand laden  — er gewinnt (siehe js/cloud.js)
+     5. Aufholpass         — mit age_sec von der Serveruhr, lokal savedAt  */
 (function (RT) {
   'use strict';
-  function boot() {
-    RT.screens.setContainer(document.getElementById('app'));
 
-    var loaded = RT.storage.load();
+  function bootSplash(container) {
+    container.innerHTML =
+      '<div class="rt-boot"><div class="rt-boot__spinner"></div>' +
+      '<div class="rt-boot__text">Spielstand wird geladen …</div></div>';
+  }
+
+  function boot() {
+    var container = document.getElementById('app');
+    RT.screens.setContainer(container);
+    bootSplash(container);
+
+    var loaded = false;
+    var server = null;
+    // Der lokale Zeitstempel VOR allem Server-Verkehr. Er ist die einzige
+    // Quelle für die Abwesenheit, wenn der eigene Stand hochgeschoben wurde
+    // (siehe start()).
+    var localSavedAt = 0;
+    var pushedOwn    = false;
+
+    var ready = Promise.resolve();
+    if (typeof window.waitForSession === 'function') {
+      ready = window.waitForSession().catch(function () {});
+    }
+
+    ready
+      .then(function () {
+        // ⚠️ Der lokale Stand wird erst NACH der Session gelesen, nicht davor.
+        // session.js räumt bei Logout und User-Wechsel den localStorage leer
+        // (clearLocalGameState) — und das passiert erst, wenn das Auth-Event
+        // da ist. Wer vorher liest, hält auf einem geteilten Tablet den
+        // Spielstand des vorigen Schülers in der Hand und schöbe ihn gleich
+        // darauf in den frisch eingeloggten Account.
+        loaded       = RT.storage.load();
+        localSavedAt = RT.state.current.savedAt || 0;
+
+        if (!RT.cloud.isServerMode()) return null;
+        // Ungepushter lokaler Stand (Offline-Runde, abgestürzter Tab) muss
+        // hoch, bevor der Serverstand ihn überschreibt.
+        if (!RT.cloud.isDirty() || !loaded) return null;
+        console.log('[main] ungepushter lokaler Stand — wird zuerst hochgeschoben.');
+        pushedOwn = true;
+        return RT.cloud.push({ force: true });
+      })
+      .then(function () {
+        if (!RT.cloud.isServerMode()) return null;
+        return RT.cloud.load();
+      })
+      .then(function (payload) {
+        if (payload && RT.storage.applyServerSave(payload)) {
+          server = payload;
+          loaded = true;
+        } else if (RT.cloud.isServerMode() && loaded) {
+          // Eingeloggt, aber der Server hat nichts (oder einen Stand mit
+          // fremder Version). Der lokale Stand wird damit zum ersten
+          // Serverstand — force, weil es noch keine rev gibt.
+          RT.cloud.push({ force: true });
+        }
+      })
+      .catch(function (e) {
+        console.warn('[main] Server-Boot fehlgeschlagen:', e.message);
+      })
+      .then(function () {
+        start(loaded, server, pushedOwn, localSavedAt);
+      });
+  }
+
+  function start(loaded, server, pushedOwn, localSavedAt) {
     RT.storage.init();
+    if (RT.cloud) RT.cloud.init();
     RT.debug.init();
 
-    // Abwesenheit nachholen, bevor der erste Frame steht (max. 5 Zyklen je System).
+    // Abwesenheit nachholen, bevor der erste Frame steht.
+    //
+    // ⚠️ Bei einem FREMDEN Serverstand zählt age_sec und nicht savedAt:
+    // savedAt kommt von der Uhr des Geräts, das zuletzt gespeichert hat. Ein
+    // Tablet mit falsch gestellter Uhr könnte das Aufhol-Fenster sonst
+    // wiederholt abgreifen oder ganz verlieren.
+    //
+    // ⚠️ Haben wir aber gerade unseren EIGENEN Stand hochgeschoben (Offline-
+    // Runde), ist age_sec ≈ 0 — der Serverstand ist ja Sekunden alt. Die echte
+    // Abwesenheit steht dann nur noch im lokalen savedAt von vor dem Push.
     var offline = null;
-    if (loaded && RT.state.current.savedAt) {
-      offline = RT.actions.offlineCatchUp(Date.now() - RT.state.current.savedAt);
+    if (loaded) {
+      var useServerClock = server && !pushedOwn;
+      var elapsedMs = useServerClock
+        ? (server.age_sec || 0) * 1000
+        : (localSavedAt ? Date.now() - localSavedAt : 0);
+      offline = RT.actions.offlineCatchUp(elapsedMs);
     }
 
     if (loaded && RT.state.current.player && RT.state.current.player.name) {
@@ -23,18 +114,58 @@
     }
   }
 
-  // Kurze Rückmeldung, was während der Abwesenheit passiert ist.
+  /* „Während du weg warst" — als eigenes Overlay und nicht über RT.ui's
+     einzigen Modal-Slot. Beim Wiederkommen kann sich sonst der Kartentisch
+     (Phase 4) oder eine Erklär-Tour um dieselbe Fläche streiten, und der
+     frühere Toast kam mit 900 ms Verzögerung genau in dieses Getümmel. */
   function reportOffline(r) {
     if (!r) return;
-    var parts = [];
-    if (r.trendStacks > 0) parts.push('Trend +' + r.trendStacks + ' Stapel');
-    if (r.watchtime   > 0) parts.push('Watchtime angesammelt');
-    if (r.usersLost   > 0) parts.push('−' + r.usersLost + ' User abgewandert');
-    if (!parts.length) return;
-    setTimeout(function () {
-      RT.bus.emit('toast', '⏱ Während du weg warst: ' + parts.join(' · '));
-    }, 900);
+    var f = RT.ledger.fmt;
+    var rows = [];
+    if (r.watchtime   > 0) rows.push(['⏳', 'Watchtime produziert', f.num(r.watchtime)]);
+    if (r.wtStacks    > 0) rows.push(['🌾', 'Farmen zum Ernten bereit', r.wtStacks + ' Stapel']);
+    if (r.metadata    > 0) rows.push(['🗃️', 'Metadaten gesammelt', f.num(r.metadata)]);
+    if (r.adMoney     > 0) rows.push(['💰', 'Werbedeals eingespielt', f.money(r.adMoney)]);
+    if (r.usersGained > 0) rows.push(['👥', 'neue User', f.num(r.usersGained)]);
+    if (r.trendStacks > 0) rows.push(['⭐', 'Trend-Schübe zum Einsammeln', r.trendStacks]);
+    if (r.usersLost   > 0) rows.push(['📉', 'User abgewandert', '−' + f.num(r.usersLost)]);
+    if (!rows.length) return;
+
+    var html =
+      '<div class="rt-offline__box">' +
+        '<div class="rt-offline__head">⏱ Während du weg warst</div>' +
+        '<div class="rt-offline__sub">' + awayLabel(r.seconds) + ' offline</div>' +
+        '<div class="rt-offline__rows">' +
+          rows.map(function (row) {
+            return '<div class="rt-offline__row"><span class="rt-offline__icon">' + row[0] +
+                   '</span><span class="rt-offline__label">' + row[1] +
+                   '</span><span class="rt-offline__val">' + row[2] + '</span></div>';
+          }).join('') +
+        '</div>' +
+        '<button class="rt-offline__ok" type="button">Weiter</button>' +
+      '</div>';
+
+    var el = document.createElement('div');
+    el.className = 'rt-offline';
+    el.innerHTML = html;
+    document.body.appendChild(el);
+    function close() { if (el.parentNode) el.parentNode.removeChild(el); }
+    el.querySelector('.rt-offline__ok').addEventListener('click', close);
+    el.addEventListener('click', function (e) { if (e.target === el) close(); });
   }
+
+  // Die gemeldete Zeit ist die ECHTE Abwesenheit, nicht das Aufhol-Fenster.
+  // „8 Stunden weg, das kam dabei heraus" ist die ehrliche Aussage — dass
+  // nur die ersten zwei Minuten zählen, steht als Regel im Spiel und nicht
+  // in einer geschönten Zahl.
+  function awayLabel(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    if (sec < 90)   return sec + ' Sekunden';
+    if (sec < 5400) return Math.round(sec / 60) + ' Minuten';
+    if (sec < 172800) return Math.round(sec / 3600) + ' Stunden';
+    return Math.round(sec / 86400) + ' Tage';
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {

@@ -26,6 +26,13 @@
 
   <script src="https://cdn.jsdelivr.net/npm/feather-icons@4.29.2/dist/feather.min.js"></script>
 
+  <!-- Session-Layer: muss VOR den Spiel-Skripten stehen, damit
+       window.__accessToken und waitForSession() beim Boot da sind.
+       Reihenfolge wie in den anderen Season-3-Spielen. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../../supabase-config.js"></script>
+  <script src="../../session.js"></script>
+
   <script src="js/namespace.js"></script>
   <script src="js/bus.js"></script>
   <script src="js/state.js"></script>
@@ -41,6 +48,7 @@
   <script src="js/tour.js"></script>
   <script src="js/events.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/cloud.js"></script>
   <script src="js/debug.js"></script>
 
   <!-- Screens registrieren sich beim Laden selbst. -->

@@ -544,6 +544,24 @@
   var WATCHTIME_CYCLE_SEC        = 8;   // Zeit für 1 Stapel
   var WATCHTIME_PER_USER_PER_CYCLE = 1; // 1 Watchtime pro User pro Zyklus
 
+  // Wie weit eine Abwesenheit nachgerechnet wird (RT.actions.offlineCatchUp).
+  //
+  // Vorher gab es diese Zahl nicht: der Aufholpass war an die Stapelgrenzen
+  // gefesselt und brachte je System 40 s (Watchtime), 60 s (Trend) bzw. einen
+  // Deal weit. Wer über Nacht zumachte, kam auf eine halbe Minute Ertrag
+  // zurück — der Rückkomm-Moment, von dem ein Idle-Spiel lebt, fand nicht statt.
+  //
+  // ⚠️ Die Stapelgrenzen bleiben davon UNBERÜHRT. „Max 5 Stapel, dann steht die
+  // Produktion" ist eine Live-Balance-Regel (sie erzwingt das Ernten); offline
+  // kann niemand ernten, deshalb wird der Überschuss automatisch abgeholt und
+  // landet direkt im Lager bzw. bei den Usern. Wer die Stapelgrenze anhebt,
+  // ändert das Spiel — wer diese Zahl anhebt, nur die Rückkehr.
+  //
+  // ⚠️ Der Wert wirkt am stärksten auf Dauerbetrieb-Deals: offline produzierte
+  // Watchtime landet jetzt wirklich im Lager und speist die Agenturen. Das ist
+  // die Stelle, an der ein deutlich größeres Fenster zuerst kippen würde.
+  var OFFLINE_CATCHUP_SEC        = 120;
+
   // --- Phase 3: User-Modelle & Metadaten ---
   // Ein User-Modell ist KEIN Bewohner eines Slots, sondern schlicht
   // 1 Server-Kapazität — genau wie ein User. Es hat damit auch keine Tierart
@@ -1261,6 +1279,7 @@
     ENERGY_PLANT_MAX:             ENERGY_PLANT_MAX,
     WATCHTIME_STACK_MAX:          WATCHTIME_STACK_MAX,
     WATCHTIME_CYCLE_SEC:          WATCHTIME_CYCLE_SEC,
+    OFFLINE_CATCHUP_SEC:          OFFLINE_CATCHUP_SEC,
     WATCHTIME_PER_USER_PER_CYCLE: WATCHTIME_PER_USER_PER_CYCLE,
     METADATA_STACK_MAX:           METADATA_STACK_MAX,
     METADATA_PER_MODEL:           METADATA_PER_MODEL,
@@ -2666,11 +2685,20 @@
 
     // User, die die aktuell gebunkerten Stapel einbringen würden.
     // Linear pro Stapel — 5 Stapel bei +3 % sind +15 %, nicht 1,03^5.
-    trendUsersReady: function () {
-      var t  = this.trendValue();
-      var st = this.current.trendStacks || 0;
+    // Was `st` Trend-Schübe an Usern einbringen. Steht getrennt von
+    // trendUsersReady(), weil der Offline-Aufholpass mit einer Stapelzahl
+    // rechnet, die gar nicht in state.current steht — alles über
+    // TREND_STACK_MAX hinaus wird dort direkt gutgeschrieben statt gestapelt.
+    // Zwei Kopien derselben Formel wären genau die Sorte Duplikat, die beim
+    // nächsten Balance-Pass auseinanderläuft.
+    trendUsersFor: function (st) {
+      var t = this.trendValue();
       if (t <= 0 || st <= 0) return 0;
       return Math.max(st, Math.floor(this.current.users * t / 100 * st));
+    },
+
+    trendUsersReady: function () {
+      return this.trendUsersFor(this.current.trendStacks || 0);
     },
 
     trendShieldActive: function () { return Date.now() <  (this.current.trendShieldUntil   || 0); },

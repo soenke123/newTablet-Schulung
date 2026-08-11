@@ -33,7 +33,7 @@ Die Plattform ist von Frontend-only (localStorage) auf **Supabase-Backend + Verc
 
 **Aktueller Stand: Schritte 1–4 durch. Admin-Panel produktiv. Cluster-Starthilfe (Migration 0020) neu dazugekommen.**
 
-Migrationen 0001–0020 liegen in `supabase/migrations/`. Schema/Seed, RLS, Session-Layer, Signup, State-Persistenz, Shop-Sync, Highscores und Cluster-Bonus sind alle umgesetzt.
+Migrationen 0001–0061 liegen in `supabase/migrations/`. Schema/Seed, RLS, Session-Layer, Signup, State-Persistenz, Shop-Sync, Highscores, Cluster-Bonus, Multi-School und Blob-Spielstände sind umgesetzt.
 
 **Frontend-Session-Layer** (`session.js` im Repo-Root): stellt `window.supabaseClient`, `getUserSeason()`, `isLoggedIn()`, `getSessionUser()`, `waitForSession()`, `window.__accessToken` (JWT für direkte REST-Aufrufe) und ein `lernwelt:session-changed`-Event bereit. Die eigentliche Profil-Query läuft per direktem `fetch` gegen `/rest/v1/user_session`, nicht über die SDK-Query-Builder — die SDK hatte cross-tab-Lock-Probleme.
 
@@ -45,11 +45,13 @@ Migrationen 0001–0020 liegen in `supabase/migrations/`. Schema/Seed, RLS, Sess
 - `submit_game_result`-RPC (Migration 0005) persistiert Score-Submissions inkl. Coins.
 - `loadServerShop`/`syncShopStateToServer` (Migration 0011) synchronisieren den Shop-State-Blob (`nests`, `bankedCoins`, `seenCreatures`, `avatarUnlocks`, …) via `user_collectibles.key='shop_state'`.
 
+**Blob-Spielstände (`user_game_saves`, Migration 0061):** dritter Persistenz-Weg neben `game_state` (feste Spalten) und `shop_state` (jsonb mit feldweisem Merge) — ein **opaker Blob je (User, Spiel)** für Simulationsspiele, die ihren ganzen Zustand mitschleppen. RPCs `load_game_save` / `sync_game_save` / `reset_game_save`. **Kein Merge:** zwei divergierte Simulationsstände lassen sich nicht verschmelzen, deshalb gewinnt der Server beim Laden und eine `rev`-Spalte verhindert, dass ein zweites Gerät blind darüberschreibt. `load_game_save` liefert zusätzlich `age_sec` (Serveruhr) für Offline-Aufholpässe. Erster Nutzer: Startup Story (game18), Modul `GameHub/S3 Startup Story/js/cloud.js`; die Tabelle ist bewusst generisch, „The Algorithm" könnte sie unverändert mitbenutzen.
+
 **Coin-Modell:** Client-Anzeige summiert `game_state.coins` (pro Spiel) + `shop_state.bankedCoins` + `nests[].coins` — siehe `getTotalCoins()` in `script.js`. `wallets.coins` ist redundanter Gesamtstand, wird automatisch gepflegt.
 
 **Cluster-Starthilfe (Migration 0020):** Pro Cluster im Admin-Panel konfigurierbarer Bonus — Startcoins (→ `bankedCoins`) und Season-Spiele freischalten mit zufälligem Baby-Monster pro Slot. Rarity-Roll: 85 % Normal / 10 % Rare / 5 % Epic / 0 % Legendary. Ausschüttung via `apply_cluster_bonus`-RPC bei Signup und bei manueller Cluster-Zuweisung. Grants pro (user, cluster) idempotent, Cluster-Wechsel = additiver Bonus. Deaktivieren wirkt nur für künftige Ausschüttungen.
 
-**Noch offen:** PDF-Storage-Anbindung. Season 3 (Kreaturen + Games). Diverse UI-ToDos: FokusFlow-Max-Score, Algorithm-Balancing, Theme in DB.
+**Noch offen:** PDF-Storage-Anbindung. Season 3 (Kreaturen + Games). Für Startup Story (game18) fehlen noch Kreatur-/Coin-Integration, Bestenliste und Admin-Detailansicht — der Spielstand selbst liegt seit Migration 0061 in der DB. Diverse UI-ToDos: FokusFlow-Max-Score, Algorithm-Balancing, Theme in DB.
 
 ## Architecture
 

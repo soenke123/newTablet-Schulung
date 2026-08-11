@@ -81,6 +81,12 @@
       // Virus Protocol (Level-Fortschritt + lastLevel) — server-first, aber
       // im Race-Fenster vor initServerProgress und im Guest-Fallback sichtbar.
       localStorage.removeItem('baba-it@v1');
+      // Startup Story: kompletter Spielstand-Blob + Dirty-Marker. Ohne das
+      // erbt Schüler B auf demselben Tablet den Konzern von Schüler A — und
+      // schlimmer: der Dirty-Marker würde A's Stand beim nächsten Boot in
+      // B's Account hochschieben.
+      localStorage.removeItem('startupStoryV3');
+      localStorage.removeItem('startupStoryV3_dirty');
       console.log('[SESSION] localStorage game state + shop + avatars + highscores gelöscht.');
     } catch(e) {}
   }

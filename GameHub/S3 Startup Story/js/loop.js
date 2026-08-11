@@ -377,47 +377,89 @@
     if (!(elapsedMs > 1000))            return null;
     if (RT.state.currentPhase() < 2)    return null;
 
+    // Die Abwesenheit wird auf OFFLINE_CATCHUP_SEC gedeckelt — eine Nacht
+    // bringt dasselbe wie zwei Minuten. `report.seconds` bleibt die ECHTE
+    // Abwesenheit, weil das Rückkehr-Fenster sie so nennt.
     var elapsedSec = elapsedMs / 1000;
-    var report = { seconds: Math.floor(elapsedSec), watchtime: 0, trendStacks: 0,
-                   usersLost: 0, adMoney: 0 };
+    var budgetSec  = Math.min(elapsedSec, RT.state.OFFLINE_CATCHUP_SEC);
+    var report = { seconds: Math.floor(elapsedSec),
+                   watchtime: 0, metadata: 0, wtStacks: 0,
+                   trendStacks: 0, usersGained: 0, usersLost: 0, adMoney: 0 };
 
-    var wtCycles = Math.floor(elapsedSec / RT.state.WATCHTIME_CYCLE_SEC);
+    var wtCycles = Math.floor(budgetSec / RT.state.WATCHTIME_CYCLE_SEC);
     if (wtCycles > 0) {
       var farms = RT.state.instancesByType('farm');
       for (var i = 0; i < farms.length; i++) {
-        var fs = farms[i].state;
+        var farm = farms[i];
+        var fs   = farm.state;
         // Gleiche Regel wie im Tick: Modelle allein halten den Stapel am Leben.
-        if (RT.state.usersInFarm(farms[i]) <= 0 &&
-            RT.state.modelsInFarm(farms[i]) <= 0) continue;
-        var before = fs.stacks;
-        fs.stacks    = Math.min(RT.state.WATCHTIME_STACK_MAX, fs.stacks + wtCycles);
+        if (RT.state.usersInFarm(farm) <= 0 &&
+            RT.state.modelsInFarm(farm) <= 0) continue;
+
+        var before  = fs.stacks;
+        fs.stacks    = Math.min(RT.state.WATCHTIME_STACK_MAX, before + wtCycles);
         fs.cycleTime = 0;
-        report.watchtime += fs.stacks - before;
+        var stacked = fs.stacks - before;
+        var surplus = wtCycles - stacked;
+        report.wtStacks += stacked;
+
+        // ⚠️ Der Überschuss über die Stapelgrenze hinaus wird DIREKT
+        // gutgeschrieben, statt zu verfallen. Die Grenze „max 5 Stapel, dann
+        // steht die Produktion" ist eine Live-Regel: sie erzwingt das Ernten.
+        // Offline kann niemand ernten, also wäre sie dort keine Entscheidung,
+        // sondern nur eine Deckelung — und genau die hat den Rückkomm-Moment
+        // gekostet. Gerechnet wird mit derselben Formel wie harvestFarm(),
+        // inklusive watchtimeMult(): der Multiplikator greift beim Ernten.
+        if (surplus > 0) {
+          var offUsers = RT.state.usersInFarm(farm);
+          var offWt = Math.floor(surplus * offUsers * RT.state.WATCHTIME_PER_USER_PER_CYCLE
+                                 * RT.state.watchtimeMult());
+          if (offWt > 0) { s.watchtime += offWt; report.watchtime += offWt; }
+          // ⚠️ Die Metadaten MÜSSEN mit. Sie hängen am selben Stapel
+          // (harvestFarmMetadata); rechnete nur die Watchtime den Überschuss,
+          // liefen die beiden Pfade für Farmen mit Modellen auseinander.
+          if (RT.state.currentPhase() >= 3) {
+            var offMetaGain = Math.floor(surplus * RT.state.metadataPerCycle(farm));
+            if (offMetaGain > 0) {
+              s.metadata = (s.metadata || 0) + offMetaGain;
+              report.metadata += offMetaGain;
+            }
+          }
+        }
+
         // ⚠️ Serverkosten laufen NICHT über die ganze Abwesenheit weiter,
         // sondern nur über die Zyklen, die der Aufholpass wirklich produziert
-        // hat — höchstens WATCHTIME_STACK_MAX. Eine rückwirkende Rechnung über
+        // hat — also über wtCycles, Stapel UND Überschuss. Sonst wäre der
+        // Überschuss gratis erzeugte Watchtime. Der Deckel auf
+        // serverUpkeepCrawlAt() bleibt: mehr als „bis Sparflamme" kann eine
+        // Abwesenheit weiterhin nicht kosten. Eine rückwirkende Rechnung über
         // acht Stunden wäre die Strafe fürs Wiederkommen, und sie stünde quer
         // zu der Regel, dass bezahlt wird, was produziert wurde.
-        fs.upkeepCycles = Math.min((fs.upkeepCycles || 0) + (fs.stacks - before),
+        fs.upkeepCycles = Math.min((fs.upkeepCycles || 0) + wtCycles,
                                    RT.state.serverUpkeepCrawlAt());
       }
     }
-
-    // Metadaten brauchen keinen eigenen Aufholpass: sie hängen am selben
-    // Stapel wie die Watchtime, der oben schon vorgespult wurde.
 
     // Laufende Werbedeals nachziehen — höchstens EINEN Deal weit. Jeder
     // simulierte Zyklus wird wie im Live-Betrieb vorab mit Watchtime bezahlt;
     // reicht sie nicht, bricht der Deal genauso ab. Offline erntet niemand die
     // Farmen ab, es steht also nur das gespeicherte Lager zur Verfügung.
     //
-    // ⚠️ Die Obergrenze von AD_CYCLES_MAX Zyklen muss seit dem Dauerbetrieb
-    // AUSDRÜCKLICH dastehen. Vorher ergab sie sich von selbst — ein Deal war
-    // nach fünf Zyklen zu Ende, und mehr konnte der Aufholpass gar nicht
-    // rechnen. Ein autoRenew-Deal hat dieses natürliche Ende nicht: über eine
-    // Nacht wären das ~2.900 Video-Zyklen, also Geld drucken im Schlaf.
-    // Dieselbe Regel wie bei Watchtime- und Trend-Stapeln — Abwesenheit
-    // bringt höchstens eine Stapel-Länge (siehe Kopf dieser Funktion).
+    // ⚠️ Eine Obergrenze muss seit dem Dauerbetrieb AUSDRÜCKLICH dastehen.
+    // Vorher ergab sie sich von selbst — ein Deal war nach fünf Zyklen zu Ende,
+    // und mehr konnte der Aufholpass gar nicht rechnen. Ein autoRenew-Deal hat
+    // dieses natürliche Ende nicht: über eine Nacht wären das ~2.900
+    // Video-Zyklen, also Geld drucken im Schlaf.
+    //
+    // Die Grenze ist jetzt das Offline-Fenster, mindestens aber AD_CYCLES_MAX
+    // Zyklen — sonst stünde eine Werbeart mit langen Zyklen (Video: 25 s)
+    // schlechter da als vor der Umstellung. Banner (10 s) kommt damit auf 12
+    // statt 5 Zyklen, Video auf 5 wie bisher.
+    //
+    // ⚠️ Die Reihenfolge im Aufholpass bekommt dadurch Gewicht: die Farmen
+    // haben oben ihren Überschuss schon INS LAGER gelegt, die Deals können ihn
+    // hier also verbrauchen. Genau das ist der Rückkomm-Effekt — und die
+    // Stelle, an der ein deutlich größeres Fenster zuerst kippen würde.
     var werben = RT.state.instancesByType('werbe');
     for (var w = 0; w < werben.length; w++) {
       var wInst = werben[w];
@@ -426,8 +468,9 @@
       var adType = RT.state.adTypeById(wSt.deal.typeId);
       if (!adType) { wSt.deal = null; RT.state.removeTrendMod(adTrendModId(wInst.instanceId)); continue; }
 
-      var budget = elapsedSec + (wSt.deal.cycleTime || 0);
-      var offLeft = RT.state.AD_CYCLES_MAX;   // harte Obergrenze, siehe oben
+      var budget = budgetSec + (wSt.deal.cycleTime || 0);
+      var offLeft = Math.max(RT.state.AD_CYCLES_MAX,
+                             Math.ceil(RT.state.OFFLINE_CATCHUP_SEC / adType.duration));
       while (wSt.deal && budget >= adType.duration && offLeft > 0) {
         if (!wSt.deal.charged) {
           // Dieselben beiden Posten wie im Live-Tick — sonst liefen die Pfade
@@ -472,19 +515,38 @@
     }
 
     var trend   = RT.state.trendValue();
-    var tCycles = Math.min(RT.state.TREND_STACK_MAX,
-                           Math.floor(elapsedSec / RT.state.TREND_CYCLE_SEC));
+    var tCycles = Math.floor(budgetSec / RT.state.TREND_CYCLE_SEC);
     if (tCycles > 0 && trend > 0) {
       var stBefore = s.trendStacks || 0;
       s.trendStacks    = Math.min(RT.state.TREND_STACK_MAX, stBefore + tCycles);
       s.trendCycleTime = 0;
       report.trendStacks = s.trendStacks - stBefore;
+
+      // Überschuss über die Stapelgrenze: direkt gutschreiben, dieselbe
+      // Begründung wie bei der Watchtime oben. Gerechnet über
+      // trendUsersFor() — die Formel, die auch collectTrend() benutzt —
+      // und mit demselben Kapazitätsdeckel: der Aufholpass darf die Aussage
+      // „Serverkapazität ist der Engpass" nicht umgehen. Was nicht mehr
+      // hineinpasst, verfällt; das Rückkehr-Fenster zeigt nur, was ankam.
+      var tSurplus = tCycles - report.trendStacks;
+      if (tSurplus > 0) {
+        var want = RT.state.trendUsersFor(tSurplus);
+        var free = RT.state.freeUserCapacity();
+        var add  = Math.max(0, Math.min(want, free));
+        if (add > 0) { s.users += add; report.usersGained = add; }
+      }
     } else if (tCycles > 0 && trend < 0) {
       // Zyklusweise über dieselbe Funktion wie im Live-Betrieb — damit können
-      // die beiden Pfade nicht auseinanderlaufen. tCycles ist oben schon auf
-      // TREND_STACK_MAX gedeckelt: auch eine ganze Nacht kostet nur 5 Zyklen.
+      // die beiden Pfade nicht auseinanderlaufen.
+      //
+      // ⚠️ Der Verlust bleibt bei TREND_STACK_MAX Zyklen, obwohl das
+      // Offline-Fenster größer ist. Die Asymmetrie ist gewollt: das Fenster
+      // ist eine Belohnung fürs Wiederkommen und darf nicht ausgerechnet den
+      // härter treffen, der ohnehin schon im Minus steht. Auch eine ganze
+      // Nacht kostet damit weiterhin nur 5 Zyklen.
+      var negCycles = Math.min(tCycles, RT.state.TREND_STACK_MAX);
       var drop = 0;
-      for (var c = 0; c < tCycles; c++) {
+      for (var c = 0; c < negCycles; c++) {
         var l = trendCycleLoss(s);
         if (l <= 0) break;
         s.users -= l;
