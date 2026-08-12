@@ -290,13 +290,19 @@
   <script src="../avatars.js?v=20260724b"></script>
 
   <script src="config.js?v=20260724b"></script>
-  <script src="creatures.js?v=20260811"></script>
-  <script src="script.js?v=20260811"></script>
+  <script src="creatures.js?v=20260812"></script>
+  <script src="script.js?v=20260812"></script>
   <script>
     // Hub-spezifischer Code
     // Atari1 · Enter 4-8-2-6
     document.addEventListener('DOMContentLoaded', async () => {
       if (typeof migrateUnlocked === 'function') migrateUnlocked();
+
+      // Kreaturbilder sind groß (bis ~700 KB). Ohne diesen Anstoß beginnt der
+      // Download erst nach dem kompletten Server-Sync weiter unten — auf dem
+      // Tablet sind das mehrere Sekunden leere Kacheln. Der localStorage weiß
+      // schon jetzt, welche Tiere der User hat, also parallel laden lassen.
+      window.warmCreatureImages?.();
 
       // Session-Bootstrap abwarten, damit getUserSeason() den echten Wert liefert
       await (window.waitForSession?.() ?? Promise.resolve());
@@ -397,7 +403,13 @@
         if (e.target === e.currentTarget) document.getElementById('legiTaskModal').hidden = true;
       });
 
-      document.getElementById('bookBtn')?.addEventListener('click', openBookModal);
+      // Das Buch zeigt bis zu 25 Kreaturen auf einmal — zu viel, um es auf
+      // Verdacht zu laden. Bei Berührung/Hover ist die Absicht klar, und der
+      // Vorsprung reicht meist bis zum Öffnen.
+      const bookBtn = document.getElementById('bookBtn');
+      bookBtn?.addEventListener('pointerenter', () => window.warmBookImages?.(), { once: true });
+      bookBtn?.addEventListener('touchstart',   () => window.warmBookImages?.(), { once: true, passive: true });
+      bookBtn?.addEventListener('click', openBookModal);
       document.getElementById('shopBtn')?.addEventListener('click', openShopModal);
       document.getElementById('shopModalClose')?.addEventListener('click', closeShopModal);
       document.getElementById('themeCycleBtn')?.addEventListener('click', cycleTheme);

@@ -889,7 +889,22 @@ const CREATURE_IMAGES = {
   einhornkatze:['Einhornkatze1',   'Einhornkatze2',   'Einhornkatze3',   'Einhornkatze4',   'Einhornkatze5',   'Einhornkatze6'   ],
 };
 
-function getCreatureHTML(creature, stage, variant) {
+/* ─────────────────────────────────────────────────
+   BILD-VORBUFFER
+   Die Kreatur-PNGs sind groß (Stufe 5/6 bis ~700 KB). Auf Handy und
+   Tablet fällt das doppelt auf:
+   1. Jeder Re-Render wirft die <img> weg und baut sie neu. Der Browser
+      muss dann neu dekodieren — dazwischen liegt ein leerer Frame, das
+      ist das Flackern beim Klicken. Ein festgehaltenes Image-Objekt hält
+      die dekodierte Bitmap am Leben, damit iOS sie unter Speicherdruck
+      nicht wegwirft.
+   2. Am Hub-Boot starten die Downloads erst nach dem Server-Sync
+      (~9 Roundtrips). warmCreatureImages() darf deshalb schon vorher
+      laufen — der localStorage weiß bereits, welche Tiere der User hat.
+   ───────────────────────────────────────────────── */
+const _imgCache = new Map();   // url → HTMLImageElement (starke Referenz!)
+
+function creatureImageURL(creature, stage, variant) {
   const base = (window.CREATURE_IMAGE_BASE !== undefined) ? window.CREATURE_IMAGE_BASE : 'data/';
   const imgs = CREATURE_IMAGES[creature];
   const s    = Math.max(0, Math.min(stage ?? 0, (imgs?.length ?? GROWTH_STAGES) - 1));
@@ -899,8 +914,124 @@ function getCreatureHTML(creature, stage, variant) {
   if (creature === 'einhornkatze' && s >= 4 && (variant === 'light' || variant === 'dark')) {
     key = key + (variant === 'light' ? 'Light' : 'Dark');
   }
+  return { url: `${base}${key}.png`, stage: s };
+}
+
+// Lädt + dekodiert ein Bild und behält es im Cache. Mehrfachaufrufe für
+// dieselbe URL teilen sich denselben Ladevorgang.
+function preloadImageURL(url) {
+  if (!url) return Promise.resolve();
+  const hit = _imgCache.get(url);
+  if (hit) return hit._lwReady;
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = url;
+  // decode() wartet auf Download UND Dekodierung. Fehler (404, offline)
+  // dürfen den Vorbuffer nicht abreißen lassen.
+  img._lwReady = (typeof img.decode === 'function'
+    ? img.decode()
+    : new Promise(res => { img.onload = res; img.onerror = res; })
+  ).catch(() => {});
+  _imgCache.set(url, img);
+  return img._lwReady;
+}
+
+function preloadCreatureImage(creature, stage, variant) {
+  if (!creature || !CREATURE_IMAGES[creature]) return Promise.resolve();
+  return preloadImageURL(creatureImageURL(creature, stage, variant).url);
+}
+
+// Niedrige Priorität: eins nach dem anderen, in Leerlauf-Fenstern. So
+// konkurriert der Nachschub nicht mit dem, was gerade sichtbar ist —
+// wichtig im Schul-WLAN mit 30 Tablets am selben AP.
+const _preloadQueue = [];
+let   _preloadBusy  = false;
+
+function queueCreatureImages(specs) {
+  for (const sp of specs) {
+    if (!sp || !sp.creature || !CREATURE_IMAGES[sp.creature]) continue;
+    const { url } = creatureImageURL(sp.creature, sp.stage, sp.variant);
+    if (_imgCache.has(url) || _preloadQueue.includes(url)) continue;
+    _preloadQueue.push(url);
+  }
+  _drainPreloadQueue();
+}
+
+function _drainPreloadQueue() {
+  if (_preloadBusy) return;
+  const url = _preloadQueue.shift();
+  if (!url) return;
+  _preloadBusy = true;
+  preloadImageURL(url).then(() => {
+    _preloadBusy = false;
+    const idle = window.requestIdleCallback || (cb => setTimeout(cb, 150));
+    idle(() => _drainPreloadQueue());
+  });
+}
+
+// Datensparmodus / langsame Verbindung: dann nur das Nötigste laden.
+function _preloadBudgetOk() {
+  const c = navigator.connection;
+  if (!c) return true;
+  if (c.saveData) return false;
+  return !['slow-2g', '2g'].includes(c.effectiveType);
+}
+
+// Stufe 1 (sofort, parallel): alles, was der Hub gleich anzeigt.
+// Stufe 2 (Leerlauf): die jeweils nächste Wachstumsstufe — die braucht
+// der Reveal direkt nach der Runde, und genau dort ist Warten am
+// unangenehmsten.
+function warmCreatureImages(allData) {
+  let all = allData;
+  try {
+    if (!all) all = (typeof loadAllData === 'function') ? loadAllData() : {};
+  } catch (e) { return; }
+
+  const nextStages = [];
+  const seen = new Set();
+
+  // allData ist nach Spiel-Id UND Nest-Id gekeyt; Meta-Keys wie _unlocked
+  // haben kein .creature und fallen hier automatisch raus.
+  for (const key of Object.keys(all || {})) {
+    const d = all[key];
+    if (!d || typeof d !== 'object' || !d.creature) continue;
+    const stage = getGrowthStage(d.growth || 0);
+    const { url } = creatureImageURL(d.creature, stage, d.variant);
+    if (seen.has(url)) continue;
+    seen.add(url);
+    preloadImageURL(url);
+    if (stage + 1 < GROWTH_STAGES) {
+      nextStages.push({ creature: d.creature, stage: stage + 1, variant: d.variant });
+    }
+  }
+
+  if (_preloadBudgetOk()) queueCreatureImages(nextStages);
+  return seen.size;
+}
+
+// Buch der Monster: ~25 Kreaturen auf einmal. Das lohnt sich nicht auf
+// Verdacht — deshalb erst bei Absicht (Hover/Touch auf den Buch-Button)
+// und nur mit Bandbreiten-Budget.
+function warmBookImages(shopData) {
+  if (!_preloadBudgetOk()) return;
+  let sd = shopData;
+  try { if (!sd) sd = (typeof loadShopData === 'function') ? loadShopData() : null; } catch (e) { return; }
+  const seenCreatures = sd?.seenCreatures || {};
+  const specs = [];
+  for (const creature of Object.keys(seenCreatures)) {
+    const maxStage = Number(seenCreatures[creature]?.maxStage ?? seenCreatures[creature] ?? 0);
+    specs.push({ creature, stage: maxStage });
+  }
+  queueCreatureImages(specs);
+}
+
+function getCreatureHTML(creature, stage, variant) {
+  const { url, stage: s } = creatureImageURL(creature, stage, variant);
   const alt  = CREATURE_NAMES[creature] ?? creature;
-  const img  = `<img src="${base}${key}.png" alt="${alt}" class="creature-img" data-stage="${s}">`;
+  // decoding="sync": das Bild liegt nach dem Vorbuffer schon dekodiert im
+  // Speicher. Ohne sync schiebt der Browser die Darstellung um mindestens
+  // einen Frame — genau der leere Frame, der beim Re-Render blitzt.
+  const img  = `<img src="${url}" alt="${alt}" class="creature-img" data-stage="${s}" decoding="sync" draggable="false">`;
   if (isPfau(creature)) {
     return `<div class="pfau-frame">${img}</div>`;
   }
@@ -1498,6 +1629,10 @@ window.pushPendingState       = pushPendingState;
 window.loadServerShop         = loadServerShop;
 window.syncShopStateToServer  = syncShopStateToServer;
 window.loadGiftTasks          = loadGiftTasks;
+window.preloadImageURL        = preloadImageURL;
+window.preloadCreatureImage   = preloadCreatureImage;
+window.warmCreatureImages     = warmCreatureImages;
+window.warmBookImages         = warmBookImages;
 
 /* ─── Ei/Kreatur-Anzeige auf Spielseiten ─── */
 /* Nutzt feste Element-IDs: eggVisual, eggStageLabel, eggProgressFill */
@@ -1512,11 +1647,19 @@ function updateGameEggDisplay(data, crackStage, doShake = false, liveGrowth = nu
   if (hasCreature) {
     const growth = liveGrowth !== null ? liveGrowth : data.growth;
     const stage  = getGrowthStage(growth);
-    eggEl.innerHTML = getCreatureHTML(data.creature, stage, data.variant);
+    // Diese Funktion läuft nach jeder Runde, oft mit unverändertem Bild.
+    // Ein neues innerHTML würde das <img> wegwerfen und neu dekodieren
+    // lassen — sichtbar als Flackern. Nur bei echtem Wechsel neu bauen.
+    const sig = `${data.creature}|${stage}|${data.variant ?? ''}`;
+    if (eggEl.dataset.creatureSig !== sig) {
+      eggEl.innerHTML = getCreatureHTML(data.creature, stage, data.variant);
+      eggEl.dataset.creatureSig = sig;
+    }
     if (labelEl) labelEl.textContent = `${CREATURE_NAMES[data.creature]} · ${GROWTH_LABELS[stage]}`;
     if (fillEl) fillEl.style.width = Math.min(growth / GROWTH_MAX * 100, 100) + '%';
   } else {
     eggEl.innerHTML = getEggSVG(crackStage);
+    delete eggEl.dataset.creatureSig;   // Ei → Kreatur muss wieder greifen
     const eggLabels = ['Ei schlummert…','Etwas bewegt sich…','Das Ei bricht auf!','Augen tauchen auf!','Die Kreatur schlüpft!'];
     if (labelEl) labelEl.textContent = eggLabels[Math.min(crackStage, 4)];
     if (fillEl) fillEl.style.width = (crackStage / 4 * 100) + '%';

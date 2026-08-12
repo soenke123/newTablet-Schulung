@@ -291,6 +291,10 @@ function renderHub() {
   updateSeenCreatures(allData);
   checkPfauUnlock();
 
+  // Vor dem Rendern: Bilder in den Cache holen bzw. dort halten. Läuft
+  // dedupliziert, ist ab dem zweiten Aufruf also fast gratis.
+  window.warmCreatureImages?.(allData, shopData);
+
   renderGamesGrid(allData, shopData);
   renderGallery(allData);
   renderCoinDisplay(allData);
@@ -370,6 +374,13 @@ function buildSeasonSection(season, allData, shopData) {
   return section;
 }
 
+// Knoten-Caches für die drei Bereiche, die Kreaturbilder zeigen. Key ist die
+// Slot-Id, Wert { sig, node } — sig ist das komplette Renderergebnis, damit
+// „unverändert" nicht geraten, sondern verglichen wird.
+const _cardNodeCache   = new Map();   // game.id  → Spielkarte
+const _nestNodeCache   = new Map();   // nest.nestId → Nest-Karte
+const _walkerNodeCache = new Map();   // slot-Id  → Galerie-Läufer
+
 function buildGameCard(game, data, shopData) {
   const access    = getGameAccess(game.id);
   const rare      = data.creature && isRare(data.creature);
@@ -394,11 +405,22 @@ function buildGameCard(game, data, shopData) {
     && (access === 'cluster_locked' || access === 'ready_to_reveal')
     && bonbonMilestoneChainable();
 
+  const cls = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${access === 'ready_to_reveal' ? ' game-card--cluster-locked game-card--legi-ready' : ''}${giftBlink ? ' game-card--legi-ready' : ''}${milestoneBlink ? ' game-card--legi-ready' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
+  const html = buildCardHTML(game, data, shopData);
+
+  // renderHub() läuft nach fast jedem Klick. Eine unveränderte Karte neu zu
+  // bauen heißt: <img> wegwerfen, neu anlegen, neu dekodieren — auf iPad und
+  // Handy sichtbar als Flackern. Ist das Renderergebnis identisch, geben wir
+  // denselben Knoten zurück; er behält Bild und Listener.
+  const cached = _cardNodeCache.get(game.id);
+  if (cached && cached.sig === cls + ' ' + html) return cached.node;
+
   const card = document.createElement('div');
-  card.className = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${access === 'ready_to_reveal' ? ' game-card--cluster-locked game-card--legi-ready' : ''}${giftBlink ? ' game-card--legi-ready' : ''}${milestoneBlink ? ' game-card--legi-ready' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
-  card.innerHTML = buildCardHTML(game, data, shopData);
+  card.className = cls;
+  card.innerHTML = html;
 
   attachCardListeners(card, game, data, isBackupTarget);
+  _cardNodeCache.set(game.id, { sig: cls + ' ' + html, node: card });
   return card;
 }
 
@@ -459,7 +481,9 @@ function attachCardListeners(card, game, data, isBackupTarget) {
     card.querySelector('.creature-preview')?.addEventListener('click', e => {
       e.stopPropagation();
       if (isBackupTarget) { applyBackupSwap(game.id); return; }
-      showCreatureModal(data);
+      // Frisch lesen statt aus der Closure: der Knoten überlebt Re-Renders
+      // (siehe _cardNodeCache), die Closure-Daten wären dann von gestern.
+      showCreatureModal(getGameData(game.id));
     });
   }
 
@@ -631,38 +655,39 @@ function renderGallery(allData) {
   slots.innerHTML = '';
   let count = 0;
 
+  // Wie bei den Spielkarten: unveränderte Läufer behalten ihren Knoten, sonst
+  // dekodiert der Browser bei jedem renderHub() alle Kreaturbilder neu.
+  const addWalker = (slotId, d, suffix) => {
+    const stage = getGrowthStage(d.growth);
+    const title = `${CREATURE_NAMES[d.creature]} (${GROWTH_LABELS[stage]})${suffix}`;
+    const sig   = `${d.creature}|${stage}|${d.variant ?? ''}|${title}`;
+    const cached = _walkerNodeCache.get(slotId);
+    if (cached && cached.sig === sig) {
+      slots.appendChild(cached.node);
+      count++;
+      return;
+    }
+    const walker = document.createElement('div');
+    walker.className        = 'gallery-walker';
+    walker.dataset.creature = d.creature;
+    walker.title            = title;
+    walker.innerHTML        = getCreatureHTML(d.creature, stage, d.variant);
+    walker.addEventListener('click', () => {
+      showCreatureModal(getGameData(slotId));
+    });
+    _walkerNodeCache.set(slotId, { sig, node: walker });
+    slots.appendChild(walker);
+    count++;
+  };
+
   for (const g of GAMES_CONFIG) {
     const d = allData[g.id];
-    if (d && d.creature) {
-      const stage  = getGrowthStage(d.growth);
-      const walker = document.createElement('div');
-      walker.className        = 'gallery-walker';
-      walker.dataset.creature = d.creature;
-      walker.title            = `${CREATURE_NAMES[d.creature]} (${GROWTH_LABELS[stage]})`;
-      walker.innerHTML        = getCreatureHTML(d.creature, stage, d.variant);
-      walker.addEventListener('click', () => {
-        showCreatureModal(d);
-      });
-      slots.appendChild(walker);
-      count++;
-    }
+    if (d && d.creature) addWalker(g.id, d, '');
   }
 
   for (const nest of loadShopData().nests) {
     const d = allData[nest.nestId];
-    if (d && d.creature) {
-      const stage  = getGrowthStage(d.growth);
-      const walker = document.createElement('div');
-      walker.className        = 'gallery-walker';
-      walker.dataset.creature = d.creature;
-      walker.title            = `${CREATURE_NAMES[d.creature]} (${GROWTH_LABELS[stage]}) · Nest`;
-      walker.innerHTML        = getCreatureHTML(d.creature, stage, d.variant);
-      walker.addEventListener('click', () => {
-        showCreatureModal(d);
-      });
-      slots.appendChild(walker);
-      count++;
-    }
+    if (d && d.creature) addWalker(nest.nestId, d, ' · Nest');
   }
 
   bar.style.display = count > 0 ? 'block' : 'none';
@@ -2591,9 +2616,8 @@ function buildNestCard(nest, allData, shopData) {
 
   const nestActiveItems = canPlay ? getActiveItemsForSlot(nestData, shopData) : [];
 
-  const card = document.createElement('div');
-  card.className = `game-card nest-game-card${hasCreature ? ' has-creature' : ''}${epic ? ' game-card--epic' : ''}${legendary ? ' game-card--legendary' : ''}${isAtariEgg ? ' nest-card--atari' : ''}${isPfauEgg ? ' nest-card--pfau' : ''}${isPending ? ' nest-card--pending' : ''}${nestMaxed ? ' creature-maxed' : ''}`;
-  card.innerHTML = `
+  const cls = `game-card nest-game-card${hasCreature ? ' has-creature' : ''}${epic ? ' game-card--epic' : ''}${legendary ? ' game-card--legendary' : ''}${isAtariEgg ? ' nest-card--atari' : ''}${isPfauEgg ? ' nest-card--pfau' : ''}${isPending ? ' nest-card--pending' : ''}${nestMaxed ? ' creature-maxed' : ''}`;
+  const html = `
     ${hintsWrap}
     <h3 class="game-card__title">🥚 ${eggTypeName}</h3>
     <p class="nest-card__subtitle">
@@ -2625,7 +2649,17 @@ function buildNestCard(nest, allData, shopData) {
     <button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>
   `;
 
+  // Siehe buildGameCard: unveränderte Karte = derselbe Knoten, kein
+  // Neu-Dekodieren des Kreaturbilds.
+  const cached = _nestNodeCache.get(nest.nestId);
+  if (cached && cached.sig === cls + ' ' + html) return cached.node;
+
+  const card = document.createElement('div');
+  card.className = cls;
+  card.innerHTML = html;
+
   attachNestCardListeners(card, nest, nestData, hasCreature, canPlay);
+  _nestNodeCache.set(nest.nestId, { sig: cls + ' ' + html, node: card });
   return card;
 }
 
@@ -2652,7 +2686,7 @@ function attachNestCardListeners(card, nest, nestData, hasCreature, canPlay) {
   if (hasCreature) {
     card.querySelector('.creature-preview')?.addEventListener('click', e => {
       e.stopPropagation();
-      showCreatureModal(nestData);
+      showCreatureModal(getGameData(nest.nestId));
     });
   }
   card.querySelector('.game-card__trank-btn')?.addEventListener('click', e => {
