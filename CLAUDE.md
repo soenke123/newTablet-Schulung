@@ -53,7 +53,9 @@ Migrationen 0001–0061 liegen in `supabase/migrations/`. Schema/Seed, RLS, Sess
 
 **Cluster-Starthilfe (Migration 0020):** Pro Cluster im Admin-Panel konfigurierbarer Bonus — Startcoins (→ `bankedCoins`) und Season-Spiele freischalten mit zufälligem Baby-Monster pro Slot. Rarity-Roll: 85 % Normal / 10 % Rare / 5 % Epic / 0 % Legendary. Ausschüttung via `apply_cluster_bonus`-RPC bei Signup und bei manueller Cluster-Zuweisung. Grants pro (user, cluster) idempotent, Cluster-Wechsel = additiver Bonus. Deaktivieren wirkt nur für künftige Ausschüttungen.
 
-**Noch offen:** PDF-Storage-Anbindung. Season 3 (Kreaturen + Games). Für Startup Story (game18) fehlt noch die Admin-Detailansicht. Diverse UI-ToDos: FokusFlow-Max-Score, Algorithm-Balancing, Theme in DB.
+**Admin-Ansicht für Startup Story:** User-Tab → Fortschritt → Umschalter „Hub / 🚀 Startup Story". Die Tabelle zeigt für alle User auf einmal Phase, User, Peak, Geld, Watchtime, Trend, Serverkapazität, Modelle/Metadaten, Techtree-Anteil und Dark Patterns; „Details" öffnet Farmen, laufende Deals/Kampagnen und die Trend-Aufschlüsselung. Gerechnet wird **mit den Spiel-Modulen selbst** (`admin/app.js` lädt `namespace/bus/ledger/state/techtree/events.js` nach und setzt ihnen den Blob als `RT3.state.current` vor) — sonst liefen Admin-Panel und Balance auseinander. Details in `GameHub/S3 Startup Story/CLAUDE.md` §10.7.
+
+**Noch offen:** PDF-Storage-Anbindung. Season 3 (Kreaturen + Games). Diverse UI-ToDos: FokusFlow-Max-Score, Algorithm-Balancing, Theme in DB.
 
 ## Architecture
 

@@ -21,21 +21,32 @@ let gameTitleById   = null;   // { game1: 'Zahlenduell', ... }, lazy geladen aus
 let userCache       = [];     // profiles rows (angereichert mit progress-Daten wenn geladen)
 let adminCache      = [];     // profiles rows aller Admins (Volladmin-Reiter)
 let progressLoaded  = false;  // game_state/wallets/user_collectibles einmal nachgeladen?
+let startupLoaded   = false;  // user_game_saves (game18) einmal nachgeladen?
 
 // UI-State — überlebt Session-Reload für konsistente Ansicht
 const uiState = loadUiState();
 
 function loadUiState() {
-  const fallback = { view: 'admin', sort: { key: 'created_at', dir: 'desc' } };
+  const fallback = { view: 'admin', progressSrc: 'hub', sort: { key: 'created_at', dir: 'desc' } };
   try {
     const raw = sessionStorage.getItem('admin_ui_state');
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
     // Alte View-Namen abfangen (Migration nach Account-View-Wegfall)
     if (parsed.view !== 'admin' && parsed.view !== 'progress') parsed.view = 'admin';
+    if (parsed.progressSrc !== 'hub' && parsed.progressSrc !== 'startup') parsed.progressSrc = 'hub';
     return parsed;
   } catch(e) { return fallback; }
 }
+
+// Welche Spalten-Definition gerade gilt. Die Fortschritts-Ansicht hat zwei
+// Datenquellen (Hub-Sammelstand vs. Startup-Story-Spielstand); alles andere
+// hängt allein an uiState.view.
+function viewKey() {
+  if (uiState.view === 'progress' && uiState.progressSrc === 'startup') return 'startup';
+  return uiState.view;
+}
+
 function saveUiState() {
   try { sessionStorage.setItem('admin_ui_state', JSON.stringify(uiState)); } catch(e) {}
 }
@@ -149,6 +160,7 @@ function validateClusterWindow(opensAt, closesAt) {
   wireClusterBonusModal();
   wireUserFilters();
   wireViewSwitch();
+  wireProgressSourceSwitch();
   wireBulkBar();
   wireDeleteModal();
   wireDetailModal();
@@ -1082,6 +1094,7 @@ function wireUserFilters() {
   document.getElementById('userSearch').addEventListener('input', renderUsers);
   document.getElementById('userReload').addEventListener('click', async () => {
     progressLoaded = false;  // erzwinge Neuladen der Progress-Daten
+    startupLoaded  = false;
     await loadUsers();
   });
 }
@@ -1093,16 +1106,55 @@ function wireViewSwitch() {
     b.classList.toggle('active', b.dataset.view === uiState.view);
     b.addEventListener('click', async () => {
       uiState.view = b.dataset.view;
-      saveUiState();
       switchEl.querySelectorAll('.view-btn').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
-      // Fortschritts-Daten erst on-demand
-      if (uiState.view === 'progress' && !progressLoaded) {
-        await loadProgressData();
-      }
+      clampSortToView();
+      saveUiState();
+      syncProgressSourceUI();
+      await ensureViewData();
       renderUsers();
     });
   });
+  syncProgressSourceUI();
+}
+
+// Die zweite Umschaltung — nur in der Fortschritts-Ansicht sichtbar.
+function wireProgressSourceSwitch() {
+  const switchEl = document.getElementById('progressSourceSwitch');
+  switchEl.querySelectorAll('.view-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.src === uiState.progressSrc);
+    b.addEventListener('click', async () => {
+      uiState.progressSrc = b.dataset.src;
+      switchEl.querySelectorAll('.view-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      // Die Sortierung zeigt sonst auf eine Spalte, die es hier nicht gibt.
+      clampSortToView();
+      saveUiState();
+      await ensureViewData();
+      renderUsers();
+    });
+  });
+}
+
+function syncProgressSourceUI() {
+  document.getElementById('progressSourceLabel').hidden = uiState.view !== 'progress';
+}
+
+// Sortier-Schlüssel auf die Spalten der aktuellen Ansicht begrenzen.
+function clampSortToView() {
+  const cols = VIEW_COLUMNS[viewKey()] || VIEW_COLUMNS.admin;
+  if (cols.some(c => c.key === uiState.sort.key)) return;
+  uiState.sort = { key: 'account_name', dir: 'asc' };
+}
+
+// Lädt die Daten nach, die die aktuelle Ansicht braucht — jeweils einmal.
+async function ensureViewData() {
+  if (uiState.view !== 'progress') return;
+  if (viewKey() === 'startup') {
+    if (!startupLoaded) await loadStartupData();
+  } else if (!progressLoaded) {
+    await loadProgressData();
+  }
 }
 
 async function loadUsers() {
@@ -1114,9 +1166,7 @@ async function loadUsers() {
     userCache = rows;
 
     // Bei aktiver Progress-View direkt mitziehen
-    if (uiState.view === 'progress' && !progressLoaded) {
-      await loadProgressData();
-    }
+    await ensureViewData();
 
     renderUsers();
   } catch (err) {
@@ -1194,6 +1244,186 @@ async function loadProgressData() {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   Startup Story (game18) — Spielstand-Auswertung
+   ══════════════════════════════════════════════════════════════
+   Der Spielstand liegt als opaker Blob in user_game_saves
+   (Migration 0061). Was er BEDEUTET — Phase, Serverkapazität,
+   Trend, Watchtime-Faktor, Techtree-Fortschritt — steht
+   ausschließlich in den Spiel-Modulen und ändert sich mit jedem
+   Balance-Pass. Statt diese Formeln hier nachzubauen, lädt das
+   Panel die Module nach und setzt ihnen den Blob als
+   `RT3.state.current` vor; gerechnet wird dann mit denselben
+   Gettern, die auch im Spiel rechnen.
+
+   ⚠️ Nur LESENDE Getter aufrufen. setTrendMod, pushSparkSample,
+      markSeen & Co. schreiben in `current` — und weil
+      Object.assign die verschachtelten Objekte per Referenz
+      übernimmt, landete das im geladenen Blob.
+   ⚠️ Die fünf Module sind reine Definitions-Module: kein
+      DOM-Zugriff beim Laden, keine Timer. Nur techtree.js hängt
+      sich an `state:changed` — ein Ereignis, das hier nie feuert. */
+
+const SS_GAME_ID = 'game18';
+const SS_ENGINE_FILES = [
+  'namespace.js', 'bus.js', 'ledger.js', 'state.js', 'techtree.js', 'events.js'
+].map(f => `../GameHub/S3 Startup Story/js/${f}?v=20260812`);
+
+let ssEnginePromise = null;
+function ensureStartupEngine() {
+  if (ssEnginePromise) return ssEnginePromise;
+  // Streng nacheinander — state.js braucht bus.js, techtree.js braucht beides.
+  ssEnginePromise = SS_ENGINE_FILES.reduce((chain, src) => chain.then(() => new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src;
+    el.onload  = resolve;
+    el.onerror = () => reject(new Error('Spiel-Modul nicht ladbar: ' + src));
+    document.head.appendChild(el);
+  })), Promise.resolve());
+  return ssEnginePromise;
+}
+
+// Spielstände der aktuellen Schule nachladen und auswerten.
+// ⚠️ Der ganze Blob, keine Feldauswahl: die Getter lesen quer durch den
+// State, und ein vergessenes Feld fiele nicht als Fehler auf, sondern als
+// stillschweigend falsche Zahl.
+async function loadStartupData() {
+  try {
+    await ensureStartupEngine();
+    const ids = userCache.map(u => u.id);
+    const rows = [];
+    // Die RLS-Policy ugs_admin_select_all ist NICHT schul-gebunden — ohne
+    // Filter zöge ein Schuladmin die Spielstände aller Schulen. In Häppchen,
+    // damit die URL nicht über das Header-Limit des Gateways wächst.
+    for (let i = 0; i < ids.length; i += 50) {
+      const chunk = ids.slice(i, i + 50);
+      if (!chunk.length) break;
+      rows.push(...await api('GET',
+        `user_game_saves?select=user_id,save,save_version,rev,updated_at`
+        + `&game_id=eq.${SS_GAME_ID}&user_id=in.(${chunk.join(',')})`));
+    }
+
+    const byUser = {};
+    for (const r of rows) byUser[r.user_id] = r;
+    for (const u of userCache) {
+      const row = byUser[u.id];
+      u._ss = row ? analyzeStartupSave(row) : null;
+    }
+    startupLoaded = true;
+  } catch (err) {
+    console.warn('[admin] loadStartupData failed:', err.message);
+    showToast('Startup-Story-Spielstände konnten nicht geladen werden: ' + err.message, 'error');
+  }
+}
+
+/* Blob in die Engine legen. `RT3.state.current` ist EIN Objekt, das jede
+   Auswertung neu überschreibt — wer später noch rechnen will (Detail-Modal),
+   muss den Stand vorher zurückholen. Erst die Vorgaben des Spiels, dann der
+   Blob darüber: ein alter Stand kennt neue Felder nicht, die Getter lesen
+   sie trotzdem. */
+function ssApply(blob) {
+  const S = window.RT3.state;
+  S.resetCurrent();
+  Object.assign(S.current, blob || {});
+  return S;
+}
+
+// Ein Spielstand → die Kennzahlen, die Tabelle und Detail-Modal zeigen.
+function analyzeStartupSave(row) {
+  const RT = window.RT3;
+  const S  = ssApply(row.save);
+
+  const farms  = S.instancesByType('farm');
+  const fills  = S.farmFills();
+  const fillBy = {};
+  for (const f of fills) fillBy[f.instanceId] = f;
+
+  let wtPerSec = 0, upkeepDue = 0;
+  for (const f of farms) {
+    wtPerSec += S.watchtimePerSec(f);
+    if (S.farmUpkeepDue(f)) upkeepDue++;
+  }
+
+  // Techtree: was der Spielstand von den 57 Nodes hat. Sichtbarkeit nach
+  // Phase spielt hier bewusst keine Rolle — gefragt ist der Anteil am
+  // ganzen Baum, nicht am gerade erreichbaren Teil.
+  const NODES = RT.techtree.NODES;
+  const tt = S.current.techtree || {};
+  const tree = { total: 0, done: 0, running: 0, darkTotal: 0, darkDone: 0, whiteTotal: 0, whiteDone: 0,
+                 byTab: {}, doneNames: [], darkNames: [], whiteNames: [], runningNames: [] };
+  for (const id of Object.keys(NODES)) {
+    const def = NODES[id];
+    const st  = tt[id] && tt[id].status;
+    const tab = tree.byTab[def.tab] || (tree.byTab[def.tab] = { total: 0, done: 0 });
+    tree.total++; tab.total++;
+    if (def.darkPattern) tree.darkTotal++;
+    if (def.networkK)    tree.whiteTotal++;
+    if (st === 'done') {
+      tree.done++; tab.done++;
+      tree.doneNames.push(def.name);
+      if (def.darkPattern) { tree.darkDone++;  tree.darkNames.push(def.name);  }
+      if (def.networkK)    { tree.whiteDone++; tree.whiteNames.push(def.name); }
+    } else if (st === 'in_progress' || st === 'ready') {
+      tree.running++;
+      tree.runningNames.push(def.name);
+    }
+  }
+
+  const buildings = {};
+  for (const b of (S.current.placedBuildings || [])) buildings[b.id] = (buildings[b.id] || 0) + 1;
+
+  return {
+    // ⚠️ Der rohe Blob, NICHT S.current — das Objekt gehört der Engine und
+    // trägt beim nächsten Aufruf den Stand des nächsten Users.
+    blob: row.save || {},
+    updatedAt:   row.updated_at,
+    saveVersion: row.save_version,
+    rev:         row.rev,
+    phase:       S.currentPhase(),
+    users:       Math.floor(S.current.users || 0),
+    usersPeak:   Math.floor(S.current.usersPeak || 0),
+    money:       Math.floor(S.current.money || 0),
+    watchtime:   Math.floor(S.current.watchtime || 0),
+    metadata:    Math.floor(S.current.metadata || 0),
+    models:      Math.floor(S.current.models || 0),
+    // Trend ist eine Momentaufnahme: die befristeten Modifikatoren sind seit
+    // dem letzten Speichern weiter abgeklungen. Der Ruhewert daneben ist der
+    // stabile Teil und deshalb die aussagekräftigere Zahl.
+    trend:       S.trendValue(),
+    trendBase:   S.trendBaseValue(),
+    network:     S.networkEffect(),
+    capacity:    S.serverCapacityTotal(),
+    programm:    S.programmCapacity(),
+    freeCap:     S.freeUserCapacity(),
+    upkeepTier:  S.serverUpkeepTier(),
+    upkeepDue,
+    wtMult:      S.watchtimeMult(),
+    wtPerSec,
+    farms:       farms.map(f => ({
+      instanceId: f.instanceId,
+      stufe:      S.tierStufe(f.state.tierId),
+      tier:       S.tierById(f.state.tierId),
+      cap:        S.farmCapacity(f),
+      fill:       fillBy[f.instanceId] || { users: 0, programm: 0, models: 0 },
+      stacks:     f.state.stacks || 0,
+      upkeep:     f.state.upkeepCycles || 0,
+      due:        S.farmUpkeepDue(f),
+      speed:      S.farmSpeedFactor(f)
+    })),
+    buildings,
+    tiles: (S.current.ownedTiles || []).length,
+    tree
+  };
+}
+
+// Zahlen wie im Spiel: bis 999.999 vollständig, darüber gekürzt.
+function ssNum(n)   { return window.RT3?.ledger?.fmt.num(n) ?? String(Math.round(n || 0)); }
+function ssMoney(n) { return window.RT3?.ledger?.fmt.money(n) ?? String(Math.round(n || 0)) + ' €'; }
+function ssTrend(v) {
+  const n = Math.round((v || 0) * 10) / 10;
+  return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(1).replace('.', ',');
+}
+
 // ─── Rendern ─────────────────────────────────────────────────
 // Spalten-Definitionen je View. label = th-Text, key = data-sort-key (null = nicht sortierbar).
 const VIEW_COLUMNS = {
@@ -1217,6 +1447,23 @@ const VIEW_COLUMNS = {
     { label: 'Legies',       key: 'legendaries'     },
     { label: 'Zuletzt aktiv',key: 'lastActive'      },
     { label: 'Aktion',       key: null              }
+  ],
+  // Startup Story (game18) — jede Spalte kommt aus dem Spielstand-Blob.
+  startup: [
+    { label: 'Account',      key: 'account_name'    },
+    { label: 'Anzeigename',  key: 'display_name'    },
+    { label: 'Phase',        key: 'ss_phase'        },
+    { label: '👥 User',      key: 'ss_users'        },
+    { label: '📈 Peak',      key: 'ss_peak'         },
+    { label: '💰 Geld',      key: 'ss_money'        },
+    { label: '⏳ Watchtime', key: 'ss_watchtime'    },
+    { label: '⭐ Trend',     key: 'ss_trend'        },
+    { label: '🖥️ Server',    key: 'ss_capacity'     },
+    { label: '🧠 KI',        key: 'ss_models'       },
+    { label: '🧩 Techtree',  key: 'ss_tree'         },
+    { label: '🔴 Dark',      key: 'ss_dark'         },
+    { label: 'Zuletzt',      key: 'ss_updated'      },
+    { label: 'Aktion',       key: null              }
   ]
 };
 
@@ -1225,7 +1472,7 @@ function renderUsers() {
   const tbody  = document.getElementById('userTbody');
   const status = document.getElementById('userStatusFilter').value;
   const q      = document.getElementById('userSearch').value.trim().toLowerCase();
-  const cols   = VIEW_COLUMNS[uiState.view] || VIEW_COLUMNS.admin;
+  const cols   = VIEW_COLUMNS[viewKey()] || VIEW_COLUMNS.admin;
 
   // Header
   const selectableIds = userCache.filter(u => u.id !== currentUserId).map(u => u.id);
@@ -1291,6 +1538,9 @@ function renderUsers() {
   tbody.querySelectorAll('.js-detail').forEach(btn => {
     btn.addEventListener('click', () => openUserDetail(btn.dataset.userId));
   });
+  tbody.querySelectorAll('.js-ss-detail').forEach(btn => {
+    btn.addEventListener('click', () => openStartupDetail(btn.dataset.userId));
+  });
   tbody.querySelectorAll('.js-role-change').forEach(btn => {
     btn.addEventListener('click', () => openRoleChange(btn.dataset.userId));
   });
@@ -1344,6 +1594,18 @@ function sortRows(rows, sort) {
       case 'creatures':   return u._progress?.creatures   ?? 0;
       case 'legendaries': return u._progress?.legendaries ?? 0;
       case 'lastActive':  return u._progress?.lastActive  ?? '';
+      // Startup Story — ohne Spielstand ans Ende der Zahlen-Sortierung (-1).
+      case 'ss_phase':     return u._ss ? u._ss.phase      : -1;
+      case 'ss_users':     return u._ss ? u._ss.users      : -1;
+      case 'ss_peak':      return u._ss ? u._ss.usersPeak  : -1;
+      case 'ss_money':     return u._ss ? u._ss.money      : -1;
+      case 'ss_watchtime': return u._ss ? u._ss.watchtime  : -1;
+      case 'ss_trend':     return u._ss ? u._ss.trend      : -999;
+      case 'ss_capacity':  return u._ss ? u._ss.capacity   : -1;
+      case 'ss_models':    return u._ss ? u._ss.models     : -1;
+      case 'ss_tree':      return u._ss ? u._ss.tree.done  : -1;
+      case 'ss_dark':      return u._ss ? u._ss.tree.darkDone : -1;
+      case 'ss_updated':   return u._ss ? u._ss.updatedAt  : '';
       case 'display_name_locked': return u.display_name_locked ? 1 : 0;
       case 'is_admin':    return u.is_admin ? 1 : 0;
       default:            return u[key] ?? '';
@@ -1425,15 +1687,75 @@ function renderCell(u, col) {
     }
     case 'lastActive':
       return `<td>${u._progress?.lastActive ? fmtRelative(u._progress.lastActive) : '—'}</td>`;
+    // Startup-Story-Metriken. Ohne Spielstand bleibt die ganze Zeile leer —
+    // „hat noch nie gespielt" ist etwas anderes als „steht bei 0".
+    case 'ss_phase': {
+      if (!u._ss) return ssEmpty();
+      const p = u._ss.phase;
+      return `<td><span class="ss-phase ss-phase--${p}">Phase ${p}</span></td>`;
+    }
+    case 'ss_users':
+      return u._ss ? `<td class="num">${ssNum(u._ss.users)}</td>` : ssEmpty();
+    case 'ss_peak':
+      return u._ss ? `<td class="num">${ssNum(u._ss.usersPeak)}</td>` : ssEmpty();
+    case 'ss_money':
+      return u._ss ? `<td class="num">${ssMoney(u._ss.money)}</td>` : ssEmpty();
+    case 'ss_watchtime':
+      return u._ss ? `<td class="num">${ssNum(u._ss.watchtime)}${
+        u._ss.wtMult > 1 ? `<span class="ss-sub">×${u._ss.wtMult.toFixed(2).replace('.', ',')}</span>` : ''
+      }</td>` : ssEmpty();
+    case 'ss_trend': {
+      if (!u._ss) return ssEmpty();
+      const t = u._ss.trend;
+      const cls = t > 0 ? 'ss-up' : t < 0 ? 'ss-down' : '';
+      // Der Ruhewert darunter ist der Teil, der nicht abklingt.
+      return `<td class="num"><span class="${cls}">${ssTrend(t)}</span>`
+           + `<span class="ss-sub" title="Ruhewert: Grundinteresse + Netzwerkeffekt − Dark-Pattern-Schuld">`
+           + `Ruhe ${ssTrend(u._ss.trendBase)}</span></td>`;
+    }
+    case 'ss_capacity': {
+      if (!u._ss) return ssEmpty();
+      const s = u._ss;
+      const warn = s.upkeepDue > 0
+        ? `<span class="ss-warn" title="${s.upkeepDue} Farm(en) unversorgt — gedrosselt">🔌 ${s.upkeepDue}</span>` : '';
+      return `<td class="num">${ssNum(s.capacity)}`
+           + `<span class="ss-sub">${s.farms.length} Farm${s.farms.length === 1 ? '' : 'en'} · ${s.upkeepTier.name} ${warn}</span></td>`;
+    }
+    case 'ss_models': {
+      if (!u._ss) return ssEmpty();
+      if (u._ss.phase < 3) return '<td class="num ss-muted">—</td>';
+      return `<td class="num">🧠 ${ssNum(u._ss.models)}<span class="ss-sub">🗃️ ${ssNum(u._ss.metadata)}</span></td>`;
+    }
+    case 'ss_tree': {
+      if (!u._ss) return ssEmpty();
+      const t = u._ss.tree;
+      const pct = t.total ? Math.round(t.done / t.total * 100) : 0;
+      const running = t.running ? `<span class="ss-sub">${t.running} in Arbeit</span>` : '';
+      return `<td class="num" title="${escapeHtml(Object.keys(t.byTab).map(k => `${k}: ${t.byTab[k].done}/${t.byTab[k].total}`).join(' · '))}">`
+           + `<div class="ss-bar"><span style="width:${pct}%"></span></div>`
+           + `${t.done}/${t.total} · ${pct} %${running}</td>`;
+    }
+    case 'ss_dark': {
+      if (!u._ss) return ssEmpty();
+      const t = u._ss.tree;
+      return `<td class="num"><span class="${t.darkDone ? 'ss-down' : ''}">${t.darkDone}/${t.darkTotal}</span>`
+           + `<span class="ss-sub" title="Vertrauens-Features">🌱 ${t.whiteDone}/${t.whiteTotal}</span></td>`;
+    }
+    case 'ss_updated':
+      return u._ss ? `<td>${fmtRelative(u._ss.updatedAt)}</td>` : ssEmpty();
     default: {
       // Erst Spezial-Spalten (nicht-Aktion), dann View-basierte Aktion.
-      if (col.label === 'Avatar')      return `<td>${renderAvatarThumb(u.avatar_id)}</td>`;
-      if (uiState.view === 'admin')    return renderAdminActions(u);
-      if (uiState.view === 'progress') return renderProgressActions(u);
+      if (col.label === 'Avatar')     return `<td>${renderAvatarThumb(u.avatar_id)}</td>`;
+      if (viewKey() === 'admin')      return renderAdminActions(u);
+      if (viewKey() === 'startup')    return renderStartupActions(u);
+      if (viewKey() === 'progress')   return renderProgressActions(u);
       return '<td>—</td>';
     }
   }
 }
+
+// „Noch nie gespielt" — eine leere Zelle, kein 0-Wert.
+function ssEmpty() { return '<td class="ss-muted">—</td>'; }
 
 function renderAdminActions(u) {
   const isSelf     = u.id === currentUserId;
@@ -1488,6 +1810,12 @@ function roleBadge(u) {
 function renderProgressActions(u) {
   return `<td><div class="actions">
     <button class="btn small js-detail" data-user-id="${u.id}">Details</button>
+  </div></td>`;
+}
+
+function renderStartupActions(u) {
+  return `<td><div class="actions">
+    <button class="btn small js-ss-detail" data-user-id="${u.id}" ${u._ss ? '' : 'disabled'}>Details</button>
   </div></td>`;
 }
 
@@ -1981,6 +2309,133 @@ async function openUserDetail(userId) {
   }
 }
 
+/* ─── Startup-Story-Detail ───────────────────────────────────── */
+
+function openStartupDetail(userId) {
+  const u = userCache.find(x => x.id === userId);
+  if (!u || !u._ss) return;
+  const s = u._ss;
+  const S = ssApply(s.blob);   // Stand zurückholen — siehe ssApply()
+  const c = S.current;
+
+  document.getElementById('userDetailTitle').textContent =
+    `${u.display_name || u.account_name} · 🚀 ${c.player?.platformName || 'Startup Story'}`;
+  document.getElementById('userDetailModal').hidden = false;
+
+  const tile = (label, value, sub) =>
+    `<div class="ss-tile"><span class="ss-tile__label">${label}</span>`
+    + `<strong>${value}</strong>${sub ? `<span class="ss-tile__sub">${sub}</span>` : ''}</div>`;
+
+  const tiles = [
+    tile('Phase', `Phase ${s.phase}`, `Grid ${20 + s.tiles} Felder`),
+    tile('👥 User', ssNum(s.users), `Peak ${ssNum(s.usersPeak)}`),
+    tile('💰 Geld', ssMoney(s.money), null),
+    tile('⏳ Watchtime', ssNum(s.watchtime),
+         `${ssNum(Math.round(s.wtPerSec))}/s · ×${s.wtMult.toFixed(2).replace('.', ',')}`),
+    tile('⭐ Trend', ssTrend(s.trend), `Ruhewert ${ssTrend(s.trendBase)} · 🌐 ${ssTrend(s.network)}`),
+    tile('🖥️ Server', ssNum(s.capacity),
+         `${ssNum(s.freeCap)} frei · Code ${ssNum(s.programm)} · Tarif ${s.upkeepTier.name}`),
+    s.phase >= 3 ? tile('🧠 Modelle', ssNum(s.models),
+         `🗃️ ${ssNum(s.metadata)} · Abdeckung ${(S.modelCoverage() * 100).toFixed(1).replace('.', ',')} %`) : '',
+    tile('🧩 Techtree', `${s.tree.done}/${s.tree.total}`,
+         `🔴 ${s.tree.darkDone}/${s.tree.darkTotal} · 🌱 ${s.tree.whiteDone}/${s.tree.whiteTotal}`)
+  ].join('');
+
+  // Trend-Aufschlüsselung — dieselbe Liste wie im Trend-Modal des Spiels.
+  // activeTrendMods() enthält Grundinteresse, Ruhewert-Posten (permanent)
+  // und die befristeten Modifikatoren bereits zusammen.
+  const trendRows = S.activeTrendMods().map(m => {
+    const art = m.network ? 'dauerhaft, wächst mit der Plattform'
+              : m.permanent ? 'dauerhaft'
+              : m.fading ? 'klingt ab' : 'befristet';
+    return `<tr><td>${escapeHtml(m.label)}</td><td class="num">${ssTrend(m.value)}</td><td>${art}</td></tr>`;
+  }).join('') || '<tr><td colspan="3" class="empty">keine Posten</td></tr>';
+
+  const farmRows = s.farms.length === 0
+    ? '<tr><td colspan="7" class="empty">Noch keine Serverfarm.</td></tr>'
+    : s.farms.map(f => `
+        <tr>
+          <td>${f.tier ? f.tier.icon : ''} Stufe ${f.stufe}</td>
+          <td class="num">${ssNum(f.cap)}</td>
+          <td class="num">${ssNum(f.fill.users)}</td>
+          <td class="num">${ssNum(f.fill.programm)}</td>
+          <td class="num">${ssNum(f.fill.models)}</td>
+          <td class="num">${f.stacks}/5</td>
+          <td>${f.due ? `<span class="ss-warn">🔌 ${f.upkeep} Zyklen · ${Math.round(f.speed * 100)} %</span>`
+                      : `${f.upkeep} Zyklen`}</td>
+        </tr>`).join('');
+
+  // Werbeagenturen, Marketing-Center und KI-Labore: was gerade läuft.
+  const runRows = [];
+  for (const b of S.instancesByType('werbe')) {
+    const d = b.state.deal;
+    runRows.push(`<tr><td>📢 Werbeagentur</td><td>${d
+      ? `${escapeHtml(S.adTypeById(d.typeId)?.name || d.typeId)} · ${Math.round((d.intensity || 0) * 100)} % · `
+        + `Zyklus ${d.cycle || 0}/${window.RT3.state.AD_CYCLES_MAX}${d.autoRenew ? ' ↻' : ''}`
+      : '<span class="ss-muted">kein Deal</span>'}</td>
+      <td class="num">${ssMoney(b.state.moneyReady || 0)}</td></tr>`);
+  }
+  for (const b of S.instancesByType('marketing')) {
+    const a = b.state.active;
+    runRows.push(`<tr><td>📣 Marketing-Center</td><td>${a
+      ? escapeHtml(S.campaignById(a.campaignId)?.name || a.campaignId)
+      : '<span class="ss-muted">keine Kampagne</span>'}</td>
+      <td class="num">${a && a.prSlot ? 'Platz ' + a.prSlot : ssNum(b.state.ready || 0) + ' User'}</td></tr>`);
+  }
+  for (const b of S.instancesByType('kilabor')) {
+    const conv = b.state.conv;
+    runRows.push(`<tr><td>🧪 KI-Labor</td><td>${conv
+      ? escapeHtml(S.convTypeById(conv.typeId)?.name || conv.typeId)
+      : '<span class="ss-muted">idle</span>'}</td>
+      <td class="num">${ssNum(b.state.modelsReady || 0)} 🧠</td></tr>`);
+  }
+  const runTable = runRows.length === 0 ? '' : `
+    <h4 class="ss-h4">Konverter &amp; Kampagnen</h4>
+    <table class="dtable"><thead><tr><th>Gebäude</th><th>Läuft</th><th>Wartet</th></tr></thead>
+    <tbody>${runRows.join('')}</tbody></table>`;
+
+  const tabLabel = { entwicklung: 'Entwicklung', marketing: 'Marketing', werbung: 'Werbung', ki: 'KI' };
+  const treeBars = Object.keys(s.tree.byTab).map(k => {
+    const t = s.tree.byTab[k];
+    const pct = t.total ? Math.round(t.done / t.total * 100) : 0;
+    return `<div class="ss-treebar"><span class="ss-treebar__label">${tabLabel[k] || k}</span>
+      <div class="ss-bar"><span style="width:${pct}%"></span></div>
+      <span class="ss-treebar__num">${t.done}/${t.total}</span></div>`;
+  }).join('');
+
+  const nameList = (title, names, cls) => names.length
+    ? `<p class="ss-list"><strong>${title}</strong> <span class="${cls || ''}">${names.map(escapeHtml).join(' · ')}</span></p>`
+    : '';
+
+  const buildingSummary = Object.keys(s.buildings)
+    .map(id => `${id} ×${s.buildings[id]}`).join(' · ');
+
+  document.getElementById('userDetailBody').innerHTML = `
+    <div class="ss-tiles">${tiles}</div>
+    <p class="ss-meta">Gebäude: ${escapeHtml(buildingSummary)} · Entwicklungs-Plätze ${S.devSlotsTotal()}
+       · Kampagnenplätze ${S.prSlotsUsed().length}/${S.prSlotsTotal()}
+       · gespeichert ${fmtDT(s.updatedAt)} (rev ${s.rev}, Format ${s.saveVersion})</p>
+
+    <h4 class="ss-h4">Serverfarmen</h4>
+    <table class="dtable"><thead><tr>
+      <th>Stufe</th><th>Kapazität</th><th>User</th><th>Code</th><th>Modelle</th><th>Stapel</th><th>Versorgung</th>
+    </tr></thead><tbody>${farmRows}</tbody></table>
+
+    ${runTable}
+
+    <h4 class="ss-h4">Techtree</h4>
+    ${treeBars}
+    ${nameList('In Arbeit:', s.tree.runningNames)}
+    ${nameList('🔴 Dark Patterns:', s.tree.darkNames, 'ss-down')}
+    ${nameList('🌱 Vertrauens-Features:', s.tree.whiteNames, 'ss-up')}
+
+    <h4 class="ss-h4">Trend-Aufschlüsselung</h4>
+    <table class="dtable"><thead><tr><th>Posten</th><th>Wert</th><th>Art</th></tr></thead>
+    <tbody>${trendRows}</tbody></table>
+    <p class="ss-meta">⚠️ Befristete Posten klingen weiter ab, seit zuletzt gespeichert wurde —
+       die Momentaufnahme ist also der Stand von jetzt, nicht der vom Spielende.</p>`;
+}
+
 /* ─── Utilities ─────────────────────────────────────────────── */
 
 // escapeHtml lebt in session.js als window.escapeHtml.
@@ -2121,6 +2576,7 @@ async function switchSchool(newSchoolId) {
   userCache = [];
   selectedIds.clear();
   progressLoaded = false;
+  startupLoaded  = false;
   dashboardLoaded = false;
 
   await loadClusters();

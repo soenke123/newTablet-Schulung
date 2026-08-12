@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin · Lernwelt</title>
-  <link rel="stylesheet" href="style.css?v=20260723" />
+  <link rel="stylesheet" href="style.css?v=20260812" />
 </head>
 <body>
   <div id="bootMask" class="boot-mask">Lade …</div>
@@ -171,6 +171,12 @@
             <div class="view-switch" id="userViewSwitch" role="tablist">
               <button type="button" class="view-btn active" data-view="admin">Verwaltung</button>
               <button type="button" class="view-btn"        data-view="progress">Fortschritt</button>
+            </div>
+          </label>
+          <label id="progressSourceLabel" hidden>Daten
+            <div class="view-switch" id="progressSourceSwitch" role="tablist">
+              <button type="button" class="view-btn active" data-src="hub">Hub</button>
+              <button type="button" class="view-btn"        data-src="startup">🚀 Startup Story</button>
             </div>
           </label>
           <label>Status
@@ -409,6 +415,6 @@
   <script src="../supabase-config.js?v=20260723"></script>
   <script src="../session.js?v=20260811"></script>
   <script src="../avatars.js?v=20260721"></script>
-  <script src="app.js?v=20260723"></script>
+  <script src="app.js?v=20260812"></script>
 </body>
 </html>

@@ -595,6 +595,83 @@ html, body {
 .metric-icon { opacity: 0.7; font-size: 12px; }
 .metric-legendary { color: var(--a-gold); font-weight: 600; }
 
+/* ─── Startup-Story-Ansicht ───────────────────────────── */
+/* Die Tabelle trägt hier 14 Spalten. Zahlen deshalb kompakt, mit einer
+   zweiten Zeile für den Kontext (Peak, Tarif, Multiplikator) statt einer
+   eigenen Spalte dafür. */
+.dtable td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ss-sub {
+  display: block;
+  font-size: 10px;
+  color: var(--a-muted);
+  font-weight: 400;
+}
+.ss-muted { color: var(--a-muted); }
+.ss-up    { color: var(--a-success); }
+.ss-down  { color: var(--a-danger); }
+.ss-warn  { color: var(--a-danger); white-space: nowrap; }
+
+.ss-phase {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--a-border);
+  background: var(--a-surface-2);
+  color: var(--a-muted);
+  white-space: nowrap;
+}
+.ss-phase--2 { color: var(--a-text);    border-color: rgba(212,168,48,0.35); }
+.ss-phase--3 { color: var(--a-gold);    border-color: var(--a-gold); background: var(--a-gold-soft); }
+.ss-phase--4 { color: #1c130a;          border-color: var(--a-gold); background: var(--a-gold); }
+
+.ss-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--a-surface-2);
+  border: 1px solid var(--a-border);
+  overflow: hidden;
+  margin-bottom: 3px;
+  min-width: 60px;
+}
+.ss-bar > span { display: block; height: 100%; background: var(--a-gold); }
+
+/* ─── Startup-Story-Detail ────────────────────────────── */
+.ss-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.ss-tile {
+  background: var(--a-surface-2);
+  border: 1px solid var(--a-border);
+  border-radius: var(--a-radius-sm);
+  padding: 8px 10px;
+}
+.ss-tile__label { display: block; font-size: 10px; color: var(--a-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.ss-tile strong  { font-size: 16px; font-variant-numeric: tabular-nums; }
+.ss-tile__sub    { display: block; font-size: 10px; color: var(--a-muted); margin-top: 2px; }
+
+.ss-h4   { margin: 18px 0 6px; font-size: 13px; color: var(--a-gold); }
+.ss-meta { font-size: 11px; color: var(--a-muted); margin: 8px 0 0; }
+.ss-list { font-size: 12px; margin: 4px 0; }
+.ss-treebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.ss-treebar__label { width: 90px; color: var(--a-muted); }
+.ss-treebar .ss-bar { flex: 1; margin-bottom: 0; }
+.ss-treebar__num { width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
+
 /* ─── Weites Modal für Detail-View ────────────────────── */
 .modal-box.modal-wide { max-width: 780px; }
 .modal-wide .dtable { font-size: 12px; }

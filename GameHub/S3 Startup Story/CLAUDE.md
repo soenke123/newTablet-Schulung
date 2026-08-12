@@ -1608,7 +1608,7 @@ Unter der Zustands-Erklärung sitzt, hinter einer Trennlinie abgesetzt, ein rote
 
 ⚠️ **Beide Knöpfe werden beim Bestätigen sofort deaktiviert.** `RT.storage.wipe()` ist async (Server-RPC); ein zweiter Klick in dieser Zeit setzte einen zweiten Reset ab. Neu geladen wird erst nach dem RPC — sonst stirbt er mit der Seite und der nächste Boot zieht den gerade gelöschten Stand wieder herunter.
 
-**Noch nicht drin:** die Admin-Detailansicht für game18.
+Die Admin-Seite des Spielstands steht in §10.7.
 
 ---
 
@@ -1667,6 +1667,28 @@ Basis = gewonnene Wachstumspunkte (0–10) plus der übliche +20-Tagesbonus, aus
 
 ---
 
+## 10.7 Admin-Ansicht — das Panel rechnet mit den Spiel-Modulen
+
+Im Admin-Panel unter **User → Fortschritt** steht ein zweiter Umschalter: **Hub** (Coins, Kristalle, Kreaturen — der Sammelstand aus allen Spielen) oder **🚀 Startup Story** (der Spielstand aus `user_game_saves`). Die Startup-Ansicht ist eine Tabelle über **alle** User: Phase · User · Peak · Geld · Watchtime (mit ×-Faktor) · Trend (mit Ruhewert) · Serverkapazität (mit Farmzahl, Tarifstufe und Drossel-Warnung) · Modelle/Metadaten · Techtree-Anteil · Dark Patterns gegen Vertrauens-Features · zuletzt gespeichert. „Details" öffnet dazu Farmen einzeln, laufende Deals und Kampagnen und die vollständige Trend-Aufschlüsselung.
+
+**Das Panel baut keine Formel nach, es lädt das Spiel.** `admin/app.js` zieht beim ersten Öffnen der Ansicht `namespace.js`, `bus.js`, `ledger.js`, `state.js`, `techtree.js` und `events.js` nach und legt den Blob per `ssApply()` als `RT3.state.current` ab; jede Zahl kommt danach aus demselben Getter, aus dem sie auch im Spiel kommt (`currentPhase()`, `serverCapacityTotal()`, `trendValue()`, `watchtimeMult()`, `farmFills()` …).
+
+Der Grund ist die Halbwertszeit der Alternative: Phase-Schwellen, Tarifstufen, der Netzwerkeffekt und die Zahl der Nodes ändern sich mit **jedem** Balance-Pass. Eine zweite Implementierung im Admin-Panel wäre nach dem ersten davon still falsch — und im Panel fällt das niemandem auf, weil dort keiner spielt.
+
+⚠️ **Nur lesende Getter aufrufen.** `setTrendMod`, `pushSparkSample`, `markSeen` & Co. schreiben in `current` — und weil `ssApply()` die verschachtelten Objekte per Referenz übernimmt, landete das im geladenen Blob.
+
+⚠️ **`RT3.state.current` ist EIN Objekt.** Jede Auswertung überschreibt es; die Tabelle wertet alle User nacheinander aus. Deshalb hält der Cache je User den **rohen Blob** und nicht `current` — sonst zeigten am Ende alle Zeilen den Stand des zuletzt ausgewerteten Users. Wer nach der Tabelle noch rechnen will (Detail-Modal), ruft `ssApply()` erneut auf.
+
+⚠️ **Die sechs geladenen Module sind reine Definitions-Module** — kein DOM-Zugriff beim Laden, keine Timer. Nur `techtree.js` hängt sich an `state:changed`, ein Ereignis, das im Panel nie feuert. Wer das ändert, macht den Nachlade-Weg kaputt.
+
+⚠️ **Der Trend ist eine Momentaufnahme von jetzt, nicht vom Spielende.** Die befristeten Modifikatoren klingen über absolute Zeitstempel ab (§8), rechnen also gegen die aktuelle Uhr weiter. Der **Ruhewert** daneben ist der stabile Teil und für den Admin die aussagekräftigere Zahl; das Detail-Modal sagt das ausdrücklich dazu.
+
+⚠️ **Die RLS-Policy `ugs_admin_select_all` ist nicht schul-gebunden** (Migration 0061: `using (is_admin())`). Das Panel filtert deshalb selbst auf die User der aktuellen Schule, in Häppchen zu 50 IDs — ohne den Filter zöge ein Schuladmin die Spielstände aller Schulen.
+
+⚠️ **„Fortschritt zurücksetzen" räumt `user_game_saves` NICHT mit ab.** `PROGRESS_TABLES` in `api/_utils.js` kennt die Tabelle nicht; ein zurückgesetzter Account startet in der Lernwelt bei null, sein Konzern steht aber unverändert da — und der nächste Hub-Besuch leitet Kreatur und Münzen sofort wieder daraus ab.
+
+---
+
 ## 11. MVP-Scope für v3
 
 Was wir zuerst bauen (in `v3/`-Ordner, parallel zu `v2/`):
@@ -1699,7 +1721,8 @@ Was wir zuerst bauen (in `v3/`-Ordner, parallel zu `v2/`):
 - Story/Investoren
 - Programme auf Farmen
 - ~~Save/Load~~ — **umgesetzt** (Migration 0061), siehe §10.5
-- Kreatur/Coins/Highscore für game18 im Hub, Admin-Detailansicht
+- ~~Admin-Ansicht~~ — **umgesetzt**, siehe §10.7
+- Kreatur/Coins/Highscore für game18 im Hub
 
 ---
 
