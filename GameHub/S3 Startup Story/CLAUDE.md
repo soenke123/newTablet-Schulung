@@ -1384,6 +1384,25 @@ Auf iPads lag die Browserleiste über dem Game-Head, am PC nie. Zwei unabhängig
 
 ⚠️ **Kein `viewport-fit=cover`.** Ohne es hält iOS den Inhalt von allein im sicheren Bereich; mit ihm liefe er unter die Statusleiste und bräuchte überall `env(safe-area-inset-*)`-Polster — also genau der Fehler, der hier repariert wurde, nur selbstgebaut.
 
+### Flackernde Bilder auf dem iPad — ein <img> wird nie neu gebaut
+
+Zwei Meldungen mit derselben Ursache (behoben 2026-08-12): das Serverkosten-Icon in der Ressourcen-Bar zuckte dauernd, und die Farm-Sprites verschwanden nach jedem Klick für einen Moment. Beides passierte nur auf dem iPad — Safari dekodiert ein frisch eingehängtes `<img>` neu, auch wenn die Datei längst im Cache liegt. Am PC ist derselbe Vorgang unsichtbar.
+
+Dahinter standen zwei Muster, die beide „jedes Mal alles neu" machten:
+
+1. **`btn.innerHTML = iconHtml(...) + text`** — die drei Knöpfe mit dem Strom-/Wasser-Icon (Tarifstufe in der Ressourcen-Bar, Versorgungs-Knopf an der Farm, Sammelknopf am Werk) bauten ihr Bild bei jeder Aktualisierung mit. Jetzt steht das Icon fest im Markup und nur das Label daneben wird geschrieben (`setIconLabel()` in `js/ui.js`, für die Ressourcen-Bar direkt im Markup + `refs.srvTierLabel`).
+2. **`buildIsoGrid()` warf das ganze Grid weg** (`innerHTML = ''`) und baute ~420 Kacheln, alle Gebäude und die komplette UI-Ebene neu — bei **jedem** `state:changed`, also im Sekundentakt und zusätzlich nach jedem Klick. Jetzt hält jeder Knoten seinen Platz in einer Map (`gridNodes`, Schlüssel = `"col,row"` bzw. `instanceId`), `gridNode()` legt ihn einmalig an und `pruneGridNodes()` räumt am Ende weg, was in diesem Durchlauf nicht mehr vorkam.
+
+⚠️ **Die `create`-Rückrufe von `gridNode()` sind einmalig — dort gehören Struktur und Klick-Listener hin, alles Wechselnde in den Aufrufer danach.** Wer eine Positions- oder Zustandszeile in den Rückruf schiebt, baut einen Fehler, der erst beim zweiten Render auffällt.
+
+⚠️ **Das Gebäude bekommt seine Klassen per `classList`, nicht per `className`.** `is-throttled` / `is-dark` (unversorgte Farmen) hängen an demselben Element und kämen sonst bei jedem Durchlauf kurz abhanden.
+
+⚠️ **Die Maps hängen an konkreten Container-Elementen.** `gameScreen.enter()` baut den Screen bei einem Re-Entry neu — deshalb vergleicht `buildIsoGrid()` `#iso-grid` und `#building-ui-layer` mit dem letzten Stand und verwirft die Maps, wenn sie nicht mehr passen.
+
+⚠️ **Nebeneffekt, der eigentlich der Hauptgewinn ist:** die Tiere auf der Weide werden jetzt wirklich nur noch bei geänderter Signatur neu gezeichnet. Die Diff-Prüfung in `updateFarmAnimals()` gab es schon lange, sie lief nur ins Leere, weil der `[data-animals]`-Container selbst jede Sekunde neu war.
+
+⚠️ **Dieselbe Regel gilt für jede neue Anzeige mit Bild, die im Takt aktualisiert wird.** Sobald ein `<img>` in einem `innerHTML` steht, das öfter als einmal geschrieben wird, flackert es auf iOS. Einmalige Stellen — Modal-Titel, Erklär-Karten, Effekt-Partikel — sind unbedenklich.
+
 ### Handy im Hochformat — der Kopf halbiert sich
 
 Auf einem Telefon fraßen Profile-Bar und Ressourcen-Bar zusammen rund die **Hälfte des Bildschirms**: sieben Kacheln zu je 45 % Breite ergaben vier Zeilen, Trend und Server stapelten je drei Elemente übereinander. Für die Iso-Welt — den eigentlichen Bildschirm des Spiels — blieb zu wenig.
@@ -1427,6 +1446,34 @@ Eine Regel für das ganze UI, an zwei Stellen umgesetzt — `RT.ledger.fmt.num()
 ⚠️ **Gerundete Posten summieren sich dadurch sichtbar nicht mehr exakt** (Belegungs-Balken: 2,3 Mio + 1,2 Mio gegen 3,4 Mio Kapazität). Bewusst in Kauf genommen; wer das nicht will, braucht eine eigene Formatierung für den Balken, nicht eine andere Regel für alle.
 
 ⚠️ **Die Schwellen liegen knapp unter der runden Zahl** (999.950 statt 1.000.000). Sonst rundet 999.999 auf eine Nachkommastelle zu „1000k" statt zu „1 Mio".
+
+### Fehlende Ressourcen — blasse Kachel und benannter Knopf
+
+Kaufen kann man an sieben Stellen (Shop, Feldkauf, Farm-Ausbau, Techtree-Node, Werbedeal, Kampagne, KI-Labor-Umwandlung), und bis zum 2026-08-12 hat jede für sich beantwortet, warum es gerade nicht geht. Der Shop sagte „Zu teuer" auch dann, wenn in Wahrheit die Metadaten fehlten; die Werbeagentur kannte den richtigen Grund und versteckte ihn in einem `title`, den auf dem Tablet niemand sieht; der Techtree-Detail prüfte die **Serverkapazität gar nicht** und ließ einen grünen „▶ Entwickeln" stehen, den erst `startTechNode()` beim Klick ablehnte.
+
+Seitdem gibt es **zwei Signale aus einer Rechnung**:
+
+1. **Der Knopf nennt die Ressource** — `Zu wenig 💰` · `Zu wenig 🗃️` · `Zu wenig ⏳` · `Zu wenig 🖥️`, bei mehreren Lücken `Zu wenig 💰 🗃️`.
+2. **Die unterdeckte Kostenkachel wird blass** — sie bleibt an ihrem Platz und behält ihre Zahl, verliert aber ihre Ressourcenfarbe. In einer sonst normal eingefärbten Spalte ist das eindeutig, ohne dass irgendwo Text dazukommt.
+
+`RT.ledger.cover(cost)` (`js/ledger.js`) ist die eine Rechnung dahinter: ein Kostenposten bringt neben `value` (Anzeigetext) ein `need` (Zahl) mit, `cover()` markiert die unterdeckten und liefert die Knopfbeschriftung zurück. **Knopf und Kachel können dadurch nicht auseinanderlaufen** — genau das war der Fehler, den die sieben Einzellösungen produziert haben.
+
+Vier Regeln:
+
+1. **Blass heißt: eine Zahl ist zu klein.** Alles andere gehört auf den Knopf und färbt nichts ein — „Kein freier Platz", „Alle Plätze belegt", „Passt hier nicht", „Schon gebaut", „Es läuft schon ein Deal".
+2. **Gesperrte und laufende Karten markieren nichts.** Bei einer Node hinter einer fehlenden Voraussetzung wäre eine blasse Geldkachel Rauschen; bei einem laufenden Deal ist der Zyklus längst bezahlt. Deshalb rufen die Aufrufstellen `cover()` **bedingt** auf.
+3. **Ohne `need` wird nie markiert.** Zeit und Trend haben kein Konto, gegen das man sie prüfen könnte — sie bleiben immer farbig.
+4. **🖥️ prüft gegen `freeUserCapacity()`**, nicht gegen ein Guthaben. Gegen die Gesamtkapazität zu prüfen würde eine Node durchwinken, für die längst kein Platz mehr ist.
+
+⚠️ **Bewusst kein Rot.** Das gehört `.rt-led__item--warn` (Dark Patterns) und bedeutet dort „unumkehrbarer Schaden". Zwei rote Kacheln mit verschiedener Aussage in derselben Spalte wären die perfekte Verwechslung.
+
+⚠️ **Die blasse Kachel ist zum Papierton hin ausgewaschen, nicht abgedunkelt.** Ein mittleres Grau lag zu nah an `--res-time-bg` — die Zeit-Kachel ist ohnehin fast farblos und wird nie markiert, beide waren in derselben Spalte kaum auseinanderzuhalten. So ist die unterdeckte Kachel die **hellste** der Spalte.
+
+⚠️ **In der Werbeagentur und im KI-Labor ist die Deckung eine laufende Zahl** — auf einer Anteils-Stufe sogar ein Prozentsatz des Lagers. Beschriftung und Kachel laufen dort im Sekundentakt mit (`markShortTiles()` in `js/ui.js`), statt die Karte neu zu bauen: ein Neuaufbau würde den Intensitäts-Regler den Finger kosten. Wenn das im Spiel zappelt, ist der Knopf dafür eine kleine Hysterese (blass erst ab ~5 % Unterdeckung), **nicht** das Weglassen der Markierung.
+
+⚠️ **`markShortTiles()` sucht nur in der KOSTEN-Spalte.** In der Ertrags-Spalte stehen dieselben Ressourcen-Klassen — ein Werbedeal bringt 💰 und kostet ⏳ —, und eine blasse Ertrags-Kachel wäre schlicht gelogen.
+
+⚠️ **Der Feldkauf hat keine Ledger-Karte** und damit keine blasse Kachel; dort steht der Preis als große Zahl allein. Die Beschriftung folgt trotzdem der gemeinsamen Form, damit „Zu wenig 💰" im ganzen Spiel dasselbe heißt. Dieselbe Regel gilt für die Toasts der Versorgungs-Knöpfe (`js/loop.js`).
 
 ### Erklär-Touren — Neues wird gezeigt, nicht beschrieben
 

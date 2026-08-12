@@ -19,7 +19,8 @@
       "Bash(git stash *)",
       "Bash(mv \"GameHub/S3 Startup Story\" \"/c/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/89c61d52-eba5-471c-9c3c-655141d32dc2/scratchpad/startup-story-src\")",
       "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless --disable-gpu --allow-file-access-from-files --virtual-time-budget=4000 --dump-dom \"file:///C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/5e11c183-140b-4fd7-87e9-201e944f1614/scratchpad/imgtest.html\")",
-      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless --disable-gpu --allow-file-access-from-files --virtual-time-budget=5000 --dump-dom \"file:///C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/5e11c183-140b-4fd7-87e9-201e944f1614/scratchpad/hubtest.html\")"
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless --disable-gpu --allow-file-access-from-files --virtual-time-budget=5000 --dump-dom \"file:///C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/5e11c183-140b-4fd7-87e9-201e944f1614/scratchpad/hubtest.html\")",
+      "Bash(/c/Users/snke/AppData/Local/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-win64/chrome-headless-shell.exe --headless --disable-gpu --allow-file-access-from-files --window-size=820,1400 --screenshot=C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f01556f9-460b-4106-8e37-b4a4934d90c2/scratchpad/preview.png --virtual-time-budget=2000 file:///C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f01556f9-460b-4106-8e37-b4a4934d90c2/scratchpad/preview.html)"
     ]
   }
 }

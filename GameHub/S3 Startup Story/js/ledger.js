@@ -84,7 +84,8 @@
     var cls = 'rt-led__item'
             + (it.res  ? ' rt-led__item--' + it.res : '')
             + (it.text ? ' rt-led__item--text' : '')
-            + (it.warn ? ' rt-led__item--warn' : '');
+            + (it.warn ? ' rt-led__item--warn' : '')
+            + (it.short ? ' rt-led__item--short' : '');
     var idAttr = it.id ? ' data-led-val="' + esc(it.id) + '"' : '';
     return ''
       + '<div class="' + cls + '">'
@@ -106,6 +107,68 @@
       + '  <div class="rt-led__head">' + head + '</div>'
       + body
       + '</div>';
+  }
+
+  // ── Deckung: welcher Kostenposten ist gerade nicht bezahlbar ────────────
+  // Jede Kauffläche im Spiel stellt dieselbe Frage, und bis zum 2026-08-12 hat
+  // sie jede für sich beantwortet: der Shop sagte „Zu teuer" auch dann, wenn in
+  // Wahrheit die Metadaten fehlten, die Werbeagentur kannte den richtigen Grund
+  // und versteckte ihn in einem `title`, und der Techtree-Detail prüfte die
+  // Serverkapazität gar nicht — der Knopf war grün und `startTechNode` sagte
+  // erst beim Klick ab.
+  //
+  // Hier steht die eine Rechnung, aus der BEIDE Signale kommen: die blasse
+  // Kachel in der Kostenspalte und die Beschriftung des Knopfs daneben. Sie
+  // können dadurch nicht auseinanderlaufen.
+  //
+  // Ein Kostenposten bringt dafür neben `value` (Anzeigetext) ein `need`
+  // (Zahl) mit. Ohne `need` wird nie markiert — Zeit und Trend haben kein
+  // Konto, gegen das man sie prüfen könnte.
+  var HAVE = {
+    money:     function (s) { return s.money    || 0; },
+    meta:      function (s) { return s.metadata || 0; },
+    watchtime: function (s) { return s.watchtime || 0; },
+    model:     function (s) { return s.models   || 0; },
+    // ⚠️ Serverplatz ist kein Guthaben, sondern der freie REST der Kapazität —
+    // was User, fertige Features und Modelle übrig lassen. Gegen die
+    // Gesamtkapazität zu prüfen würde eine Node durchwinken, für die längst
+    // kein Platz mehr ist.
+    server:    function ()  { return RT.state.freeUserCapacity(); }
+  };
+  var RES_ICON = {
+    money: '💰', meta: '🗃️', watchtime: '⏳', model: '🧠', server: '🖥️'
+  };
+
+  // Markiert die unterdeckten Posten in `cost` (in place — jede Aufrufstelle
+  // baut ihr Array ohnehin frisch) und liefert die Knopfbeschriftung dazu.
+  //
+  //   var d = RT.ledger.cover(cost);
+  //   ... (d.ok ? '' : 'disabled') ... (d.ok ? '▶ Buchen' : d.label)
+  //
+  // Die Reihenfolge der Icons in der Beschriftung ist die der Kostenspalte —
+  // die ist an jeder Fläche bewusst gesetzt (Geld zuerst, dann die zweite
+  // Währung), und zwei verschiedene Reihenfolgen für dieselbe Karte wären
+  // genau die Art Unterschied, die man nicht bewusst wahrnimmt, aber merkt.
+  function cover(cost) {
+    var s = RT.state.current;
+    var icons = [];
+    for (var i = 0; i < (cost || []).length; i++) {
+      var it = cost[i];
+      if (!it || typeof it.need !== 'number' || !isFinite(it.need)) continue;
+      var have = HAVE[it.res];
+      if (!have) continue;
+      // Der Istwert bleibt am Posten hängen: die Detail-Ansichten schreiben
+      // daraus ihren „benötigt X, vorhanden Y"-Satz, ohne die Zuordnung
+      // Ressource → Konto ein zweites Mal zu kennen.
+      it.have  = have(s);
+      it.short = it.have < it.need;
+      if (it.short && icons.indexOf(RES_ICON[it.res]) < 0) icons.push(RES_ICON[it.res]);
+    }
+    return {
+      ok:    icons.length === 0,
+      icons: icons,
+      label: icons.length ? 'Zu wenig ' + icons.join(' ') : ''
+    };
   }
 
   // ── Die Karte ───────────────────────────────────────────────────────────
@@ -196,5 +259,5 @@
          + '</div>';
   }
 
-  RT.ledger = { fmt: fmt, card: card, item: itemHtml };
+  RT.ledger = { fmt: fmt, card: card, item: itemHtml, cover: cover };
 })(window.RT3);

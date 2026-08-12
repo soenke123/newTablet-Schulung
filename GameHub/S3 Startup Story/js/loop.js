@@ -813,7 +813,7 @@
 
       var cost = Math.ceil(RT.state.serverUpkeepDueCost(inst));
       if (s.money < cost) {
-        return { ok: false, msg: 'Zu teuer — ' + fmtInt(cost) + ' € für Strom, Wasser und Wartung' };
+        return { ok: false, msg: 'Zu wenig 💰 — ' + fmtInt(cost) + ' € für Strom, Wasser und Wartung' };
       }
       s.money -= cost;
       inst.state.upkeepCycles = 0;
@@ -840,7 +840,7 @@
       for (i = 0; i < farms.length; i++) total += RT.state.serverUpkeepDueCost(farms[i]);
       total = Math.ceil(total);
       if (s.money < total) {
-        return { ok: false, msg: 'Zu teuer — ' + fmtInt(total) + ' € für alle Farmen' };
+        return { ok: false, msg: 'Zu wenig 💰 — ' + fmtInt(total) + ' € für alle Farmen' };
       }
       s.money -= total;
       for (i = 0; i < farms.length; i++) farms[i].state.upkeepCycles = 0;
@@ -1187,7 +1187,7 @@
       if (!type)                                return { ok: false, msg: 'Unbekannter Gebäudetyp' };
       if (!RT.state.canPlace(typeId, col, row)) return { ok: false, msg: 'Kein Platz' };
       var cost = RT.state.buildingCost(typeId);
-      if (s.money < cost)                       return { ok: false, msg: 'Zu teuer' };
+      if (s.money < cost)                       return { ok: false, msg: 'Zu wenig 💰' };
 
       s.money -= cost;
       var instanceId = RT.state.newInstanceId(typeId);
@@ -1216,7 +1216,7 @@
       var s = RT.state.current;
       if (!RT.state.isTilePurchasable(col, row)) return { ok: false, msg: 'Dieses Feld grenzt nicht an dein Gelände' };
       var cost = RT.state.nextTileCost();
-      if (s.money < cost)                        return { ok: false, msg: 'Zu teuer' };
+      if (s.money < cost)                        return { ok: false, msg: 'Zu wenig 💰' };
 
       s.money -= cost;
       if (!Array.isArray(s.ownedTiles)) s.ownedTiles = [];
@@ -1233,7 +1233,7 @@
       var item = catalog[itemId];
       if (!item)                        return { ok: false, msg: 'Unbekanntes Item' };
       if (s.purchases[itemId])          return { ok: false, msg: 'Schon gekauft' };
-      if (s.money < item.price)         return { ok: false, msg: 'Zu teuer' };
+      if (s.money < item.price)         return { ok: false, msg: 'Zu wenig 💰' };
       s.money -= item.price;
       s.purchases[itemId] = true;
       if (itemId === 'rechner') {
@@ -1287,7 +1287,7 @@
       var status = RT.techtree.nodeStatus(nodeId);
       if (status === 'done')        return { ok: false, msg: 'Schon fertig' };
       if (status === 'locked')      return { ok: false, msg: 'Voraussetzung fehlt' };
-      if (s.money < def.cost)       return { ok: false, msg: 'Zu teuer' };
+      if (s.money < def.cost)       return { ok: false, msg: 'Zu wenig 💰' };
 
       // Metadaten-Kosten (Phase 3). Sie sind der Grund, warum die KI-Achse
       // sich selbst finanzieren muss: wer sie vertiefen will, muss die

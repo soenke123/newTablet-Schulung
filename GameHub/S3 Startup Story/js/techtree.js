@@ -1549,11 +1549,81 @@
   }
 
   // ── Rendering: Detail-Ansicht ─────────────────────────────────────────
+  // Der eine Satz unter einem gesperrten Knopf: was fehlt, wie viel — und
+  // woher es käme. Er steht nur in der Detail-Ansicht: hier ist Platz für
+  // einen Satz, und wer eine Node aufmacht, will wissen, woran es hängt. In
+  // den Listenzeilen des Shops wäre derselbe Satz eine zweite Zeile an jeder
+  // Karte, obwohl die Frage dort nur „Preis? Ja/Nein" lautet.
+  var SHORT_TEXT = {
+    money:     { name: 'Geld',            have: 'vorhanden' },
+    meta:      { name: 'Metadaten',       have: 'vorhanden',
+                 hint: 'Metadaten entstehen aus den User-Modellen in deinen Serverfarmen.' },
+    server:    { name: 'Serverkapazität', have: 'frei',
+                 hint: 'Kapazität kommt aus deinen Serverfarmen — bauen oder ausbauen.' },
+    watchtime: { name: 'Watchtime',       have: 'vorhanden',
+                 hint: 'Watchtime produzieren deine Serverfarmen — ernten oder ausbauen.' }
+  };
+  function shortfallNote(cost) {
+    var F = RT.ledger.fmt;
+    var out = [], hints = [];
+    for (var i = 0; i < cost.length; i++) {
+      var it = cost[i];
+      if (!it.short) continue;
+      var t = SHORT_TEXT[it.res];
+      if (!t) continue;
+      var f = (it.res === 'money') ? F.money : F.num;
+      out.push('Zu wenig ' + t.name + ' — benötigt: ' + f(it.need) +
+               ', ' + t.have + ': ' + f(Math.floor(it.have)) + '.');
+      if (t.hint && hints.indexOf(t.hint) < 0) hints.push(t.hint);
+    }
+    return out.concat(hints).join(' ');
+  }
+
   function detailContentHtml(nodeId) {
     var def = NODES[nodeId];
     if (!def) return '';
-    var s  = RT.state.current;
     var st = nodeStatus(nodeId);
+    var F  = RT.ledger.fmt;
+
+    // Kosten VOR der Aktion: aus ihnen kommen beide Signale — die blasse
+    // Kachel in der Spalte rechts und die Beschriftung des Knopfs. Vorher
+    // stand die Kostenspalte weiter unten und der Knopf prüfte auf eigene
+    // Faust; die Serverkapazität hat er dabei schlicht übersehen, sodass ein
+    // grüner „▶ Entwickeln" erst beim Klick von startTechNode abgelehnt wurde.
+    //
+    // Kosten links, Ertrag rechts — dieselbe Aufteilung wie in Werbeagentur
+    // und Marketing-Center. Zeit und Serverbedarf zählen als Kosten: beides
+    // ist etwas, das die Node verbraucht, bevor sie etwas abwirft.
+    // Ohne Beschriftungen an den Zahlen: die Icons sind dieselben wie in der
+    // Ressourcen-Bar oben. Wie lange ein Trend-Bonus anliegt und dass der
+    // Watchtime-Multiplikator bleibt, steht im Beschreibungstext links.
+    var cost = [];
+    cost.push(def.cost > 0
+      ? { res: 'money', icon: '💰', value: F.money(def.cost), need: def.cost }
+      : { res: 'money', icon: '💰', value: 'kostenlos' });
+    // Metadaten direkt hinter dem Geld: sie sind die zweite Währung, nicht
+    // ein Nebenposten wie Zeit und Server.
+    if (def.metadata > 0) {
+      cost.push({ res: 'meta', icon: '🗃️', value: F.num(def.metadata), need: def.metadata });
+    }
+    cost.push({ res: 'time', icon: '⏱', value: F.sec(def.durationSec) });
+    if (def.server > 0) {
+      cost.push({ res: 'server', icon: '🖥', value: F.num(def.server), need: def.server });
+    }
+    // Dark Patterns verschieben den Ruhewert des Trends unumkehrbar — deshalb
+    // stehen sie als Warnung in den Kosten, nicht als Fußnote am Ertrag. Das
+    // ist die eine Zeile, die eine Beschriftung behält: "dauerhaft" ist der
+    // ganze Unterschied zum befristeten Bonus in der Ertrags-Spalte.
+    if (def.trendBase) {
+      cost.push({ icon: '⚠️', value: F.trend(def.trendBase) + ' %',
+                  label: 'dauerhaft', warn: true });
+    }
+
+    // ⚠️ Nur eine erreichbare Node wird auf Deckung geprüft. Bei einer
+    // gesperrten wäre eine blasse Geldkachel Rauschen — der Knopf sagt dort
+    // „🔒 Gesperrt", und was fehlt, ist die Voraussetzung, nicht das Konto.
+    // Bei laufenden und fertigen Nodes ist ohnehin längst bezahlt.
+    var need = (st === 'available') ? RT.ledger.cover(cost) : { ok: true, label: '' };
 
     var actionHtml = '';
     if (st === 'done') {
@@ -1581,10 +1651,6 @@
       // Werbung laufen parallel und brauchen kein Gebäude.
       var isEntw     = (def.tab === 'entwicklung');
       var freeSlot   = isEntw ? freeDevBuilding(viewState.buildingId) : true;
-      var affordable = s.money >= def.cost;
-      // Metadaten sind eine eigene Währung und bekommen deshalb eine eigene
-      // Absage: „zu teuer" würde auf das Konto zeigen, wo nichts fehlt.
-      var metaOk     = (s.metadata || 0) >= (def.metadata || 0);
       if (!freeSlot) {
         var note = anyDevReady()
           ? 'Alle Entwicklungs-Plätze sind belegt — eine Entwicklung ist fertig und wartet aufs Abholen.'
@@ -1597,53 +1663,17 @@
         actionHtml = ''
           + '<p class="rt-tt-detail__note">' + note + '</p>'
           + '<button class="rt-btn-tt" disabled>Kein freier Platz</button>';
-      } else if (!affordable) {
+      } else if (!need.ok) {
         actionHtml = ''
-          + '<p class="rt-tt-detail__note">Zu wenig Geld — benötigt: ' + RT.ledger.fmt.money(def.cost) + '</p>'
-          + '<button class="rt-btn-tt" disabled>Zu teuer</button>';
-      } else if (!metaOk) {
-        actionHtml = ''
-          + '<p class="rt-tt-detail__note">Zu wenig Metadaten — benötigt: '
-          +   RT.ledger.fmt.num(def.metadata) + ' 🗃️, vorhanden: '
-          +   RT.ledger.fmt.num(Math.floor(s.metadata || 0)) + '. '
-          +   'Metadaten entstehen aus den User-Modellen in deinen Serverfarmen.</p>'
-          + '<button class="rt-btn-tt" disabled>Zu wenig Metadaten</button>';
+          + '<p class="rt-tt-detail__note">' + shortfallNote(cost) + '</p>'
+          + '<button class="rt-btn-tt" disabled>' + need.label + '</button>';
       } else {
         var label = isEntw ? '▶ Entwickeln' : '▶ Starten';
         actionHtml = '<button class="rt-btn-tt rt-btn-tt--primary" data-develop="' + nodeId + '">' + label + '</button>';
       }
     }
 
-    // Kosten links, Ertrag rechts — dieselbe Aufteilung wie in Werbeagentur
-    // und Marketing-Center. Zeit und Serverbedarf zählen als Kosten: beides
-    // ist etwas, das die Node verbraucht, bevor sie etwas abwirft.
-    // Ohne Beschriftungen an den Zahlen: die Icons sind dieselben wie in der
-    // Ressourcen-Bar oben. Wie lange ein Trend-Bonus anliegt und dass der
-    // Watchtime-Multiplikator bleibt, steht im Beschreibungstext links.
-    var F = RT.ledger.fmt;
-    var cost = [];
     var gain = [];
-
-    cost.push(def.cost > 0
-      ? { res: 'money', icon: '💰', value: F.money(def.cost) }
-      : { res: 'money', icon: '💰', value: 'kostenlos' });
-    // Metadaten direkt hinter dem Geld: sie sind die zweite Währung, nicht
-    // ein Nebenposten wie Zeit und Server.
-    if (def.metadata > 0) {
-      cost.push({ res: 'meta', icon: '🗃️', value: F.num(def.metadata) });
-    }
-    cost.push({ res: 'time', icon: '⏱', value: F.sec(def.durationSec) });
-    if (def.server > 0) {
-      cost.push({ res: 'server', icon: '🖥', value: F.num(def.server) });
-    }
-    // Dark Patterns verschieben den Ruhewert des Trends unumkehrbar — deshalb
-    // stehen sie als Warnung in den Kosten, nicht als Fußnote am Ertrag. Das
-    // ist die eine Zeile, die eine Beschriftung behält: "dauerhaft" ist der
-    // ganze Unterschied zum befristeten Bonus in der Ertrags-Spalte.
-    if (def.trendBase) {
-      cost.push({ icon: '⚠️', value: F.trend(def.trendBase) + ' %',
-                  label: 'dauerhaft', warn: true });
-    }
 
     if (def.trendBonus) {
       gain.push({ res: 'trend', icon: '⭐', value: F.trend(def.trendBonus) + ' %' });

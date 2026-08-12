@@ -1515,6 +1515,33 @@ html, body {
 .rt-led__item--model     { background: var(--res-model-bg); }
 .rt-led__item--meta      { background: var(--res-meta-bg); }
 
+/* Unterdeckt — der Posten, an dem der Kauf gerade scheitert (RT.ledger.cover).
+   Die Kachel bleibt an ihrem Platz und behält ihre Zahl; sie verliert nur ihre
+   Ressourcenfarbe. In einer sonst normal eingefärbten Spalte ist das
+   eindeutig, ohne dass irgendwo Text dazukommt — und es braucht keine neue
+   Farbe im Spiel, sondern zeigt eine, die fehlt.
+
+   ⚠️ Bewusst kein Rot. Das gehört .rt-led__item--warn (Dark Patterns, weiter
+   unten) und bedeutet dort „unumkehrbarer Schaden" — zwei rote Kacheln mit
+   verschiedener Aussage in derselben Spalte wären die perfekte Verwechslung.
+
+   Die Regel steht NACH den Ressourcenfarben: gleiche Spezifität, es gewinnt
+   die spätere. */
+/* ⚠️ Ausgewaschen zum Papierton hin, NICHT abgedunkelt. Ein mittleres Grau
+   lag zu nah an --res-time-bg (die Zeit-Kachel ist ohnehin fast farblos und
+   wird nie markiert) — die beiden waren in derselben Spalte kaum zu
+   unterscheiden. So ist die unterdeckte Kachel die hellste der Spalte und
+   tritt eindeutig zurück, statt sich unter die neutralen zu mischen. */
+.rt-led__item--short {
+  background: #f4f1ea;
+  border-color: #c9bfb2;
+  color: var(--tt-brown-light);
+}
+/* Die Zahl ist die Information und bleibt lesbar — blass heißt hier
+   „farblos", nicht „ausgeblendet". Nur das Ressourcen-Icon nimmt sich zurück,
+   damit die Kachel als Ganzes hinter die bezahlbaren zurücktritt. */
+.rt-led__item--short .rt-led__ico { opacity: 0.55; }
+
 /* Modals mit Ledger-Karten ziehen ihre Typografie auf den Holzton der Karten.
    Der Hintergrund bleibt bewusst weiß: die Karten sind --tt-paper, auf Creme
    würden sie fast verschwinden — genau wie im Techtree stehen sie auf Weiß. */

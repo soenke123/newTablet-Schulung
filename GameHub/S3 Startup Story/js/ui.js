@@ -55,6 +55,22 @@
   function fmtPctPlain(f) {
     return String(Math.round(f * 1000) / 10).replace('.', ',') + ' %';
   }
+  // Knopf mit Bild-Icon beschriften, OHNE das <img> anzufassen.
+  //
+  // ⚠️ `btn.innerHTML = iconHtml(...) + text` sieht harmlos aus, baut aber bei
+  // JEDEM Aufruf ein frisches <img>. Diese Knöpfe werden im Sekundentakt
+  // aktualisiert, und auf iPads blitzt das Icon dabei sichtbar weg — Safari
+  // dekodiert das Bild neu, auch wenn es im Cache liegt. Also: Icon einmal
+  // anlegen, danach nur noch den Text daneben schreiben.
+  function setIconLabel(target, iconId, text) {
+    var lbl = target.querySelector('[data-icon-label]');
+    if (!lbl) {
+      target.innerHTML = RT.assets.iconHtml(iconId) + ' <span data-icon-label></span>';
+      lbl = target.querySelector('[data-icon-label]');
+    }
+    if (lbl.textContent !== text) lbl.textContent = text;
+  }
+
   // Selbst gewählte Namen (Plattform, Spieler) landen per innerHTML in Modals —
   // die zweite IIFE weiter unten hat ihr eigenes escapeHTML, das hier ist das
   // Gegenstück für diesen Modul-Scope.
@@ -83,10 +99,102 @@
     return false;
   }
 
+  // ---- DOM-Wiederverwendung des Iso-Grids ----
+  //
+  // buildIsoGrid() läuft bei JEDEM state:changed, also im Sekundentakt und
+  // zusätzlich nach jedem Klick. Vorher warf es dabei alles per innerHTML=''
+  // weg und baute ~420 Kacheln, alle Gebäude und die komplette UI-Ebene neu.
+  // Auf iPads sah man genau das: die Häuser waren für einen Moment weg, weil
+  // ein frisches <img> erst wieder dekodiert werden muss — Cache hin oder her.
+  //
+  // Deshalb behält jeder Knoten seinen Platz in einer Map und wird nur noch
+  // aktualisiert. Was in einem Durchlauf nicht mehr vorkommt (abgerissenes
+  // Gebäude, Kachel außerhalb des Kranzes, Phase-abhängige UI), räumt
+  // pruneGridNodes() am Ende weg.
+  //
+  // ⚠️ Die Maps hängen an konkreten Container-Elementen. gameScreen.enter()
+  // baut den Screen bei einem Re-Entry neu — dann zeigen sie auf abgehängte
+  // Knoten und müssen verworfen werden (gridHost-Vergleich unten).
+  var gridNodes = { tile: {}, bld: {}, farmUi: {}, devUi: {}, mkUi: {}, wbUi: {}, labUi: {}, plantUi: {} };
+  var gridSeen  = {};
+  var gridHost  = null;
+  var gridUiHost = null;
+
+  function resetGridNodes() {
+    for (var kind in gridNodes) gridNodes[kind] = {};
+  }
+
+  // Liefert den vorhandenen Knoten oder legt ihn einmalig an. `create` wird
+  // nur beim ersten Mal aufgerufen — dort gehören Struktur und Listener hin,
+  // alles Wechselnde in den Aufrufer danach.
+  function gridNode(kind, key, parent, create) {
+    var map  = gridNodes[kind];
+    var node = map[key];
+    if (!node) {
+      node = create();
+      map[key] = node;
+      parent.appendChild(node);
+    }
+    gridSeen[kind + '|' + key] = true;
+    return node;
+  }
+
+  function pruneGridNodes() {
+    for (var kind in gridNodes) {
+      var map = gridNodes[kind];
+      for (var key in map) {
+        if (gridSeen[kind + '|' + key]) continue;
+        var node = map[key];
+        if (node.parentNode) node.parentNode.removeChild(node);
+        delete map[key];
+      }
+    }
+  }
+
+  // Sprite eines Gebäudes nachziehen, ohne das <img> zu ersetzen. Ein neu
+  // gesetztes src auf denselben Wert löst keinen Ladevorgang aus, ein neues
+  // Element schon — deshalb wird hier verglichen statt gebaut.
+  function syncBuildingArt(b, inst, sprite, alt) {
+    var img = b.querySelector('img.b-img');
+    if (sprite) {
+      if (!img) {
+        // Vorher Emoji-Platzhalter, jetzt gibt es ein Sprite.
+        var ph = b.querySelector('.b-img');
+        if (ph) ph.parentNode.removeChild(ph);
+        img = document.createElement('img');
+        img.className = 'b-img';
+        img.setAttribute('draggable', 'false');
+        b.insertBefore(img, b.firstChild);
+      }
+      if (img.getAttribute('src') !== sprite) img.setAttribute('src', sprite);
+      if (img.getAttribute('alt') !== alt)    img.setAttribute('alt', alt || '');
+      return;
+    }
+    // Kein Sprite → Emoji-Platzhalter (aktuell nur das Strom- & Wasserwerk).
+    if (img) img.parentNode.removeChild(img);
+    if (!b.querySelector('.b-img--emoji')) {
+      var ph2 = document.createElement('div');
+      ph2.className = 'b-img b-img--emoji';
+      ph2.setAttribute('role', 'img');
+      ph2.setAttribute('aria-label', alt || '');
+      ph2.textContent = (RT.state.BUILDING_TYPES[inst.id] || {}).icon || '🏢';
+      b.insertBefore(ph2, b.firstChild);
+    }
+  }
+
   function buildIsoGrid() {
     var grid = document.getElementById('iso-grid');
     if (!grid) return;
-    grid.innerHTML = '';
+
+    var uiLayerEl = document.getElementById('building-ui-layer');
+    if (grid !== gridHost || uiLayerEl !== gridUiHost) {
+      // Neuer Screen-Aufbau: die alten Knoten hängen an einem Container, der
+      // nicht mehr im Dokument steht.
+      resetGridNodes();
+      gridHost   = grid;
+      gridUiHost = uiLayerEl;
+    }
+    gridSeen = {};
 
     var world = el.world;
     var w = world.clientWidth;
@@ -113,18 +221,34 @@
       for (var c = gs.minCol; c <= gs.maxCol; c++) {
         var tx = (c - r) * TILE_W / 2 + offsetX;
         var ty = (c + r) * TILE_H / 2 + offsetY;
-        var tile = document.createElement('div');
         var isOwned = RT.state.isTileOwned(c, r);
         var isBuy   = !isOwned && RT.state.isTilePurchasable(c, r);
-        tile.className = isOwned ? 'iso-tile'
-                       : (isBuy ? 'iso-tile iso-tile--buy' : 'iso-tile iso-tile--locked');
-        tile.dataset.col = c;
-        tile.dataset.row = r;
+        var kind    = isOwned ? 'own' : (isBuy ? 'buy' : 'locked');
+
+        var tile = gridNode('tile', c + ',' + r, grid, (function (cc, rr) {
+          return function () {
+            var t = document.createElement('div');
+            t.dataset.col = cc;
+            t.dataset.row = rr;
+            return t;
+          };
+        })(c, r));
+
+        // Eine Kachel wechselt ihre Sorte (gekauft, kaufbar, gesperrt) —
+        // dann muss auch der passende Klick-Handler wechseln. Beide sind
+        // benannte Funktionen, removeEventListener greift also.
+        if (tile._tileKind !== kind) {
+          if (tile._tileKind === 'own')      tile.removeEventListener('click', onTileClick);
+          else if (tile._tileKind === 'buy') tile.removeEventListener('click', onBuyTileClick);
+          if (isOwned)    tile.addEventListener('click', onTileClick);
+          else if (isBuy) tile.addEventListener('click', onBuyTileClick);
+          tile._tileKind = kind;
+          // Placement-Highlights setzt updateTileHighlights direkt danach neu.
+          tile.className = isOwned ? 'iso-tile'
+                         : (isBuy ? 'iso-tile iso-tile--buy' : 'iso-tile iso-tile--locked');
+        }
         tile.style.left = tx + 'px';
         tile.style.top  = ty + 'px';
-        if (isOwned)     tile.addEventListener('click', onTileClick);
-        else if (isBuy)  tile.addEventListener('click', onBuyTileClick);
-        grid.appendChild(tile);
       }
     }
 
@@ -154,40 +278,38 @@
       var by = (inst.col + inst.row) * TILE_H / 2 + offsetY + extraY;
       var zFront = inst.col + inst.row + (inst.size === 2 ? 2 : 0);
 
-      var b = document.createElement('div');
-      b.className = 'building' + (inst.size === 2 ? ' building-2x2' : '');
-      b.setAttribute('data-b', inst.id);
-      b.setAttribute('data-instance-id', inst.instanceId);
+      // Gebäude ohne Sprite fallen auf ihr Emoji zurück (aktuell nur das
+      // Strom- & Wasserwerk). So lässt sich ein Gebäudetyp fertig bauen und
+      // spielen, während der Sprite noch entsteht — syncBuildingArt kennt
+      // beide Fälle und wechselt notfalls zwischen ihnen.
+      var b = gridNode('bld', inst.instanceId, grid, (function (instance) {
+        return function () {
+          var node = document.createElement('div');
+          node.setAttribute('data-b', instance.id);
+          node.setAttribute('data-instance-id', instance.instanceId);
+          node.innerHTML = (instance.id === 'farm'
+            ? '<div class="farm-animals" data-animals></div>'
+            : '') + '<div class="b-hitbox"></div>';
+          node.addEventListener('click', onBuildingClick);
+          return node;
+        };
+      })(inst));
+
+      // classList statt className: is-throttled/is-dark hängen hier drauf
+      // (updateFarmAnimals) und dürfen nicht bei jedem Durchlauf wegfallen.
+      b.classList.add('building');
+      b.classList.toggle('building-2x2', inst.size === 2);
       b.style.left = bx + 'px';
       b.style.top  = by + 'px';
       b.style.zIndex = String(10 + zFront);
-
-      // Gebäude ohne Sprite fallen auf ihr Emoji zurück (aktuell nur das
-      // Strom- & Wasserwerk). So lässt sich ein Gebäudetyp fertig bauen und
-      // spielen, während der Sprite noch entsteht.
-      var imgHtml = sprite
-        ? '<img class="b-img" src="' + sprite + '" alt="' + alt + '" draggable="false">'
-        : '<div class="b-img b-img--emoji" role="img" aria-label="' + alt + '">'
-          + ((RT.state.BUILDING_TYPES[inst.id] || {}).icon || '🏢') + '</div>';
-
-      if (inst.id === 'farm') {
-        b.innerHTML = imgHtml +
-          '<div class="farm-animals" data-animals></div>' +
-          '<div class="b-hitbox"></div>';
-      } else {
-        b.innerHTML = imgHtml +
-          '<div class="b-hitbox"></div>';
-      }
-      b.addEventListener('click', onBuildingClick);
-      grid.appendChild(b);
+      syncBuildingArt(b, inst, sprite, alt);
 
       if (inst.id === 'farm') updateFarmAnimals(b, inst);
     }
 
     // Separates UI-Layer über allen Buildings: Progress-Ring + Aktions-Button.
-    var uiLayer = document.getElementById('building-ui-layer');
+    var uiLayer = uiLayerEl;
     if (uiLayer) {
-      uiLayer.innerHTML = '';
       // Farm-Ernte-UI (Ring + Harvest-Button) erst ab Phase 2 relevant —
       // Watchtime tickt vorher nicht, also kein Sinn im Kreis.
       var phaseNow = RT.state.currentPhase ? RT.state.currentPhase() : 2;
@@ -198,43 +320,40 @@
         var fbx = (f.col - f.row) * TILE_W / 2 + offsetX;
         var fby = (f.col + f.row) * TILE_H / 2 + offsetY + fExtraY;
 
-        var ui = document.createElement('div');
+        var ui = gridNode('farmUi', f.instanceId, uiLayer, (function (farm) {
+          return function () {
+            var node = document.createElement('div');
+            node.setAttribute('data-instance-id', farm.instanceId);
+            // Zwei ineinanderliegende Ringe: außen Watchtime (Tiere), innen
+            // Metadaten (User-Modelle). Der innere hängt im Loch des äußeren
+            // und wird nur eingeblendet, wenn diese Farm Modelle hat.
+            node.innerHTML =
+              '<div class="farm-progress-ring" data-progress>' +
+                '<div class="farm-progress-ring-inner">' +
+                  '<div class="farm-progress-ring--meta" data-progress-meta style="display:none">' +
+                    '<div class="farm-progress-ring-inner"></div>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+              '<button class="farm-harvest-btn" data-harvest type="button"></button>' +
+              '<button class="farm-upkeep-btn" data-upkeep type="button"></button>';
+            var hBtn = node.querySelector('[data-harvest]');
+            hBtn.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              harvestFromField(farm.instanceId, hBtn);
+            });
+            node.querySelector('[data-upkeep]').addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              var res = RT.actions.payServerUpkeep(farm.instanceId);
+              if (!res.ok) { toast(res.msg || 'Geht nicht'); return; }
+            });
+            return node;
+          };
+        })(f));
         ui.className = 'farm-ui' + (f.size === 2 ? ' farm-ui-2x2' : '');
-        ui.setAttribute('data-instance-id', f.instanceId);
         ui.style.left = fbx + 'px';
         ui.style.top  = fby + 'px';
-        // Zwei ineinanderliegende Ringe: außen Watchtime (Tiere), innen
-        // Metadaten (User-Modelle). Der innere hängt im Loch des äußeren und
-        // wird nur eingeblendet, wenn diese Farm überhaupt Modelle hat.
-        ui.innerHTML =
-          '<div class="farm-progress-ring" data-progress>' +
-            '<div class="farm-progress-ring-inner">' +
-              '<div class="farm-progress-ring--meta" data-progress-meta style="display:none">' +
-                '<div class="farm-progress-ring-inner"></div>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-          '<button class="farm-harvest-btn" data-harvest type="button"></button>' +
-          '<button class="farm-upkeep-btn" data-upkeep type="button"></button>';
-        uiLayer.appendChild(ui);
         updateFarmUi(ui, f);
-
-        var harvestBtn = ui.querySelector('[data-harvest]');
-        (function (iid, btn) {
-          btn.addEventListener('click', function (ev) {
-            ev.stopPropagation();
-            harvestFromField(iid, btn);
-          });
-        })(f.instanceId, harvestBtn);
-
-        var upkeepBtn = ui.querySelector('[data-upkeep]');
-        (function (iid) {
-          upkeepBtn.addEventListener('click', function (ev) {
-            ev.stopPropagation();
-            var res = RT.actions.payServerUpkeep(iid);
-            if (!res.ok) { toast(res.msg || 'Geht nicht'); return; }
-          });
-        })(f.instanceId);
       }
 
       // Entwicklungs-UI: Ring während der Entwicklung + pulsierender
@@ -248,44 +367,47 @@
         var hqbx = (dev.col - dev.row) * TILE_W / 2 + offsetX;
         var hqby = (dev.col + dev.row) * TILE_H / 2 + offsetY + hqExtraY;
 
-        var hqui = document.createElement('div');
-        hqui.className = 'mk-ui'; // Wiederverwendung des Marketing-UI-Layouts
-        hqui.setAttribute('data-hq-ui', dev.instanceId);
+        var hqui = gridNode('devUi', dev.instanceId, uiLayer, (function (devInst) {
+          return function () {
+            var node = document.createElement('div');
+            node.className = 'mk-ui'; // Wiederverwendung des Marketing-UI-Layouts
+            node.setAttribute('data-hq-ui', devInst.instanceId);
+            // Das "!"-Badge gehört zum HQ — es markiert neue Techtree-Inhalte
+            // nach einem Phasen-Wechsel, nicht das einzelne Gebäude. Es steht
+            // fest im Markup und wird unten nur ein-/ausgeblendet.
+            node.innerHTML =
+              '<div class="mk-ring" data-hq-ring>' +
+                '<div class="mk-ring-inner"><span class="mk-ring-text" data-hq-ring-text></span></div>' +
+              '</div>' +
+              '<button class="mk-collect-btn" data-hq-collect type="button"></button>' +
+              (devInst.id === 'hq'
+                ? '<span class="rt-notif-badge rt-notif-badge--hq" style="display:none">!</span>'
+                : '');
+            node.querySelector('[data-hq-collect]').addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              var slotNode = RT.techtree.nodesAtBuilding(devInst.instanceId).ready;
+              if (!slotNode) return;
+              var res = RT.actions.completeTechNode(slotNode.id);
+              if (!res.ok) { toast(res.msg || 'Kann nicht abgeschlossen werden'); return; }
+              // Feuerwerk über dem Gebäude, das entwickelt hat + Node-Name
+              var host = document.querySelector('.building[data-instance-id="' + devInst.instanceId + '"]');
+              if (host && el.world) {
+                var r  = host.getBoundingClientRect();
+                var wr = el.world.getBoundingClientRect();
+                var cx = r.left + r.width / 2 - wr.left;
+                var cy = r.top  + r.height * 0.3 - wr.top;
+                spawnFireworks(cx, cy);
+                spawnFloatText(cx, cy, '✓ ' + slotNode.def.name, 'green');
+              }
+            });
+            return node;
+          };
+        })(dev));
         hqui.style.left = hqbx + 'px';
         hqui.style.top  = hqby + 'px';
-        // Das "!"-Badge gehört zum HQ — es markiert neue Techtree-Inhalte nach
-        // einem Phasen-Wechsel, nicht das einzelne Gebäude.
-        var hqBadgeHtml = (dev.id === 'hq' && shouldShowBadge('hq'))
-          ? '<span class="rt-notif-badge rt-notif-badge--hq">!</span>' : '';
-        hqui.innerHTML =
-          '<div class="mk-ring" data-hq-ring>' +
-            '<div class="mk-ring-inner"><span class="mk-ring-text" data-hq-ring-text></span></div>' +
-          '</div>' +
-          '<button class="mk-collect-btn" data-hq-collect type="button"></button>' +
-          hqBadgeHtml;
-        uiLayer.appendChild(hqui);
+        var hqBadge = hqui.querySelector('.rt-notif-badge--hq');
+        if (hqBadge) hqBadge.style.display = (dev.id === 'hq' && shouldShowBadge('hq')) ? '' : 'none';
         updateDevUi(hqui, dev);
-
-        var hqCollectBtn = hqui.querySelector('[data-hq-collect]');
-        (function (devInst, btn) {
-          btn.addEventListener('click', function (ev) {
-            ev.stopPropagation();
-            var slotNode = RT.techtree.nodesAtBuilding(devInst.instanceId).ready;
-            if (!slotNode) return;
-            var res = RT.actions.completeTechNode(slotNode.id);
-            if (!res.ok) { toast(res.msg || 'Kann nicht abgeschlossen werden'); return; }
-            // Feuerwerk über dem Gebäude, das entwickelt hat + Node-Name
-            var host = document.querySelector('.building[data-instance-id="' + devInst.instanceId + '"]');
-            if (host && el.world) {
-              var r  = host.getBoundingClientRect();
-              var wr = el.world.getBoundingClientRect();
-              var cx = r.left + r.width / 2 - wr.left;
-              var cy = r.top  + r.height * 0.3 - wr.top;
-              spawnFireworks(cx, cy);
-              spawnFloatText(cx, cy, '✓ ' + slotNode.def.name, 'green');
-            }
-          });
-        })(dev, hqCollectBtn);
       }
 
       // Marketing-UI: gleiche Struktur wie Farm — Ring mit Countdown + Collect-Button
@@ -296,26 +418,27 @@
         var mbx = (m.col - m.row) * TILE_W / 2 + offsetX;
         var mby = (m.col + m.row) * TILE_H / 2 + offsetY + mExtraY;
 
-        var mui = document.createElement('div');
-        mui.className = 'mk-ui';
-        mui.setAttribute('data-instance-id', m.instanceId);
+        var mui = gridNode('mkUi', m.instanceId, uiLayer, (function (mk) {
+          return function () {
+            var node = document.createElement('div');
+            node.className = 'mk-ui';
+            node.setAttribute('data-instance-id', mk.instanceId);
+            node.innerHTML =
+              '<div class="mk-ring" data-ring>' +
+                '<div class="mk-ring-inner"><span class="mk-ring-text" data-ring-text></span></div>' +
+              '</div>' +
+              '<button class="mk-collect-btn" data-collect type="button"></button>';
+            var cBtn = node.querySelector('[data-collect]');
+            cBtn.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              collectFromField(mk.instanceId, cBtn);
+            });
+            return node;
+          };
+        })(m));
         mui.style.left = mbx + 'px';
         mui.style.top  = mby + 'px';
-        mui.innerHTML =
-          '<div class="mk-ring" data-ring>' +
-            '<div class="mk-ring-inner"><span class="mk-ring-text" data-ring-text></span></div>' +
-          '</div>' +
-          '<button class="mk-collect-btn" data-collect type="button"></button>';
-        uiLayer.appendChild(mui);
         updateMarketingUi(mui, m);
-
-        var collectBtn = mui.querySelector('[data-collect]');
-        (function (iid, btn) {
-          btn.addEventListener('click', function (ev) {
-            ev.stopPropagation();
-            collectFromField(iid, btn);
-          });
-        })(m.instanceId, collectBtn);
       }
 
       // Werbeagentur-UI: Ring zeigt den laufenden Deal-Zyklus, der Gold-Button
@@ -327,27 +450,28 @@
         var wbx = (wb.col - wb.row) * TILE_W / 2 + offsetX;
         var wby = (wb.col + wb.row) * TILE_H / 2 + offsetY + wExtraY;
 
-        var wui = document.createElement('div');
-        wui.className = 'wb-ui';
-        wui.setAttribute('data-instance-id', wb.instanceId);
+        var wui = gridNode('wbUi', wb.instanceId, uiLayer, (function (agency) {
+          return function () {
+            var node = document.createElement('div');
+            node.className = 'wb-ui';
+            node.setAttribute('data-instance-id', agency.instanceId);
+            // Werbeagentur erzeugt immer Geld → Ring fest grün, kein Wechsel.
+            node.innerHTML =
+              '<div class="mk-ring mk-ring--money" data-ring>' +
+                '<div class="mk-ring-inner"><span class="mk-ring-text" data-ring-text></span></div>' +
+              '</div>' +
+              '<button class="farm-harvest-btn" data-collect type="button"></button>';
+            var cBtn = node.querySelector('[data-collect]');
+            cBtn.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              collectMoneyFromField(agency.instanceId, cBtn);
+            });
+            return node;
+          };
+        })(wb));
         wui.style.left = wbx + 'px';
         wui.style.top  = wby + 'px';
-        // Werbeagentur erzeugt immer Geld → Ring fest grün, kein Wechsel.
-        wui.innerHTML =
-          '<div class="mk-ring mk-ring--money" data-ring>' +
-            '<div class="mk-ring-inner"><span class="mk-ring-text" data-ring-text></span></div>' +
-          '</div>' +
-          '<button class="farm-harvest-btn" data-collect type="button"></button>';
-        uiLayer.appendChild(wui);
         updateWerbeUi(wui, wb);
-
-        var wbBtn = wui.querySelector('[data-collect]');
-        (function (iid, btn) {
-          btn.addEventListener('click', function (ev) {
-            ev.stopPropagation();
-            collectMoneyFromField(iid, btn);
-          });
-        })(wb.instanceId, wbBtn);
       }
 
       // KI-Labor-UI: dieselbe Bauart wie die Werbeagentur, nur produziert es
@@ -358,27 +482,27 @@
         var lbx  = (lab.col - lab.row) * TILE_W / 2 + offsetX;
         var lby  = (lab.col + lab.row) * TILE_H / 2 + offsetY;
 
-        var lui = document.createElement('div');
-        lui.className = 'wb-ui';
-        lui.setAttribute('data-instance-id', lab.instanceId);
+        var lui = gridNode('labUi', lab.instanceId, uiLayer, (function (labo) {
+          return function () {
+            var node = document.createElement('div');
+            node.className = 'wb-ui';
+            node.setAttribute('data-instance-id', labo.instanceId);
+            node.innerHTML =
+              '<div class="mk-ring mk-ring--model" data-ring>' +
+                '<div class="mk-ring-inner"><span class="mk-ring-text" data-ring-text></span></div>' +
+              '</div>' +
+              '<button class="farm-harvest-btn" data-collect-models type="button"></button>';
+            node.querySelector('[data-collect-models]').addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              var got = RT.actions.collectModels(labo.instanceId);
+              if (got > 0) toast('🧠 ' + fmtNum(got) + ' User-Modelle sind eingezogen');
+            });
+            return node;
+          };
+        })(lab));
         lui.style.left = lbx + 'px';
         lui.style.top  = lby + 'px';
-        lui.innerHTML =
-          '<div class="mk-ring mk-ring--model" data-ring>' +
-            '<div class="mk-ring-inner"><span class="mk-ring-text" data-ring-text></span></div>' +
-          '</div>' +
-          '<button class="farm-harvest-btn" data-collect-models type="button"></button>';
-        uiLayer.appendChild(lui);
         updateKiLaborUi(lui, lab);
-
-        var labBtn = lui.querySelector('[data-collect-models]');
-        (function (iid, btn) {
-          btn.addEventListener('click', function (ev) {
-            ev.stopPropagation();
-            var got = RT.actions.collectModels(iid);
-            if (got > 0) toast('🧠 ' + fmtNum(got) + ' User-Modelle sind eingezogen');
-          });
-        })(lab.instanceId, labBtn);
       }
 
       // Strom- & Wasserwerk: nur ein Knopf, kein Ring. Es produziert nichts,
@@ -390,23 +514,30 @@
         var pbx = (pl.col - pl.row) * TILE_W / 2 + offsetX;
         var pby = (pl.col + pl.row) * TILE_H / 2 + offsetY;
 
-        var pui = document.createElement('div');
-        pui.className = 'wb-ui';
-        pui.setAttribute('data-instance-id', pl.instanceId);
+        var pui = gridNode('plantUi', pl.instanceId, uiLayer, (function (plant) {
+          return function () {
+            var node = document.createElement('div');
+            node.className = 'wb-ui';
+            node.setAttribute('data-instance-id', plant.instanceId);
+            node.innerHTML =
+              '<button class="farm-upkeep-btn farm-upkeep-btn--plant" data-upkeep-all type="button"></button>';
+            node.querySelector('[data-upkeep-all]').addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              var res = RT.actions.payServerUpkeepAll();
+              if (!res.ok) toast(res.msg || 'Geht nicht');
+            });
+            return node;
+          };
+        })(pl));
         pui.style.left = pbx + 'px';
         pui.style.top  = pby + 'px';
-        pui.innerHTML =
-          '<button class="farm-upkeep-btn farm-upkeep-btn--plant" data-upkeep-all type="button"></button>';
-        uiLayer.appendChild(pui);
         updateEnergyPlantUi(pui);
-
-        pui.querySelector('[data-upkeep-all]').addEventListener('click', function (ev) {
-          ev.stopPropagation();
-          var res = RT.actions.payServerUpkeepAll();
-          if (!res.ok) toast(res.msg || 'Geht nicht');
-        });
       }
     }
+
+    // Was in diesem Durchlauf nicht mehr vorkam, fliegt raus — abgerissene
+    // Gebäude, Kacheln außerhalb des Kranzes, phasenabhängige UI.
+    pruneGridNodes();
   }
 
   // Der Knopf am Werk zeigt, was ALLE abgedeckten Farmen zusammen kosten.
@@ -431,7 +562,7 @@
       if (RT.state.farmUpkeepDue(farms[i])) anyDue = true;
     }
     btn.style.display = '';
-    btn.innerHTML     = RT.assets.iconHtml('stromWasser') + ' ' + fmtMoney(Math.ceil(total));
+    setIconLabel(btn, 'stromWasser', fmtMoney(Math.ceil(total)));
     btn.classList.toggle('is-due', anyDue);
     btn.disabled = false;
   }
@@ -576,7 +707,7 @@
       if (due) {
         var upCost = Math.ceil(RT.state.serverUpkeepDueCost(inst));
         upBtn.style.display = '';
-        upBtn.innerHTML     = RT.assets.iconHtml('stromWasser') + ' ' + fmtMoney(upCost);
+        setIconLabel(upBtn, 'stromWasser', fmtMoney(upCost));
         upBtn.classList.toggle('is-dark',
           RT.state.farmSpeedFactor(inst) <= RT.state.SERVER_UPKEEP_CRAWL);
         upBtn.disabled = false;
@@ -1059,9 +1190,13 @@
         '<small class="tile-buy-meta">' + nr + '. Feld · Kasse: ' + fmtMoney(s.money) + '</small>' +
         '<div class="tile-buy-actions">' +
           '<button class="tile-buy-btn tile-buy-btn--ghost" id="tile-buy-cancel" type="button">Abbrechen</button>' +
+          // Keine Ledger-Karte und deshalb keine blasse Kachel — der Preis
+          // steht hier als große Zahl allein da. Die Beschriftung folgt
+          // trotzdem der gemeinsamen Form, damit „Zu wenig 💰" im ganzen
+          // Spiel dasselbe heißt.
           '<button class="tile-buy-btn" id="tile-buy-ok" type="button" ' +
             'data-col="' + col + '" data-row="' + row + '" ' + (can ? '' : 'disabled') + '>' +
-            (can ? 'Kaufen' : 'Zu teuer') +
+            (can ? 'Kaufen' : 'Zu wenig 💰') +
           '</button>' +
         '</div>' +
       '</div>';
@@ -1480,7 +1615,7 @@
   function refreshModal() {
     if (!modalContext) return;
     if (modalContext.type === 'trend') { el.modalBody.innerHTML = trendInfoHtml(); return; }
-    // Feldkauf: Preis steht fest, aber "Zu teuer" hängt am Kontostand.
+    // Feldkauf: Preis steht fest, aber die Absage hängt am Kontostand.
     if (modalContext.type === 'tilebuy') {
       el.modalBody.innerHTML = tileBuyHtml(modalContext.col, modalContext.row);
       wireModalButtons();
@@ -1500,6 +1635,25 @@
     else if (modalContext.type === 'marketing') renderMarketingBody(inst);
     else if (modalContext.type === 'kilabor')   renderKiLaborBody(inst);
   }
+  // Zieht die blassen Kacheln EINER Ledger-Karte nach, ohne sie neu zu bauen.
+  // Gebraucht in den Modalen, die ihre Knöpfe im Sekundentakt aktualisieren
+  // (Werbeagentur, KI-Labor): dort ist die Deckung eine laufende Zahl, ein
+  // Neuaufbau der Karte würde aber den Intensitäts-Regler den Finger kosten.
+  //
+  // Gesucht wird ausschließlich in der KOSTEN-Spalte — in der Ertrags-Spalte
+  // stehen dieselben Ressourcen-Klassen (ein Werbedeal bringt 💰 und kostet ⏳),
+  // und eine blasse Ertrags-Kachel wäre schlicht gelogen.
+  function markShortTiles(btn, costItems) {
+    var card = (btn && btn.closest) ? btn.closest('.rt-led-card') : null;
+    if (!card) return;
+    for (var i = 0; i < costItems.length; i++) {
+      var it = costItems[i];
+      if (!it.res) continue;
+      var tile = card.querySelector('.rt-led__col--cost .rt-led__item--' + it.res);
+      if (tile) tile.classList.toggle('rt-led__item--short', !!it.short);
+    }
+  }
+
   function refreshModalLive() {
     if (!modalContext) return;
     // Trend-Modal komplett neu zeichnen — die Werte laufen kontinuierlich.
@@ -1540,7 +1694,10 @@
         }
       }
 
-      // Buchen-Buttons: Watchtime kann sich jederzeit ändern.
+      // Buchen-Buttons: Watchtime kann sich jederzeit ändern. Beschriftung UND
+      // blasse Kachel laufen hier im Sekundentakt mit — auf einer Anteils-Stufe
+      // ist die Deckung eine laufende Zahl, und „gerade reicht's nicht, gleich
+      // schon" ist genau die Aussage, die der Spieler braucht.
       var adBtnsLive = document.querySelectorAll('[data-ad]');
       var liveSel    = werbeSelection(ws);
       for (var bi = 0; bi < adBtnsLive.length; bi++) {
@@ -1550,13 +1707,21 @@
         // Gegen die eingestellte Stufe prüfen, nicht gegen den Grundpreis:
         // auf einer Anteils-Stufe blieben die Knöpfe sonst aktiv, bis der
         // Deal beim Buchen scheitert.
-        var needWtLive   = RT.state.adWatchtimePerCycle(aDef.id, liveSel.volume);
-        var needMetaLive = RT.state.adMetadataPerCycle(aDef.id, liveSel.volume, liveSel.targeting);
-        var blocked = ws.deal ? 'Es läuft schon ein Deal'
-                    : (RT.state.current.watchtime < needWtLive ? 'Zu wenig Watchtime'
-                    : ((RT.state.current.metadata || 0) < needMetaLive ? 'Zu wenig Metadaten' : ''));
-        b.disabled = !!blocked;
-        if (blocked) b.setAttribute('title', blocked); else b.removeAttribute('title');
+        var liveCost = [
+          { res: 'watchtime', need: RT.state.adWatchtimePerCycle(aDef.id, liveSel.volume) },
+          { res: 'meta',      need: RT.state.adMetadataPerCycle(aDef.id, liveSel.volume,
+                                                                liveSel.targeting) }
+        ];
+        var liveNeed = RT.ledger.cover(liveCost);
+        // Läuft schon ein Deal, ist die Deckung nicht die Frage — dann bleibt
+        // die Spalte farbig und nur der Knopf trägt den Grund.
+        if (ws.deal) for (var k = 0; k < liveCost.length; k++) liveCost[k].short = false;
+        b.disabled = !!ws.deal || !liveNeed.ok;
+        b.textContent = ws.deal ? 'Es läuft schon ein Deal'
+                      : (liveNeed.label ||
+                         (aDef.id === (ws.lastDeal && ws.lastDeal.typeId) ? '▶ Erneut buchen'
+                                                                          : '▶ Buchen'));
+        markShortTiles(b, liveCost);
       }
     }
     // KI-Labor: Restzeit, Zyklus-Balken und Einsammel-Knopf laufen zwischen
@@ -1598,6 +1763,13 @@
         // die User wachsen weiter und nehmen ihn dem Labor weg.
         cb.textContent = cBlocked || 'Umwandlung starten';
         if (cBlocked) cb.setAttribute('title', cBlocked); else cb.removeAttribute('title');
+        // Blasse Kachel dazu — aber nur, wenn wirklich die Watchtime fehlt.
+        // „Serverkapazität voll" und „es läuft schon eine Umwandlung" sind
+        // keine Ressourcen-Frage und lassen die Spalte farbig.
+        var cCost = [{ res: 'watchtime',
+                       need: ls.conv ? undefined : RT.state.convWatchtimePerCycle(cDef.id) }];
+        RT.ledger.cover(cCost);
+        markShortTiles(cb, cCost);
       }
     }
 
@@ -1801,7 +1973,7 @@
     var upgradeBtn = document.getElementById('farm-upgrade-btn');
     if (upgradeBtn) upgradeBtn.addEventListener('click', function () {
       var ok = RT.actions.upgradeFarm(upgradeBtn.getAttribute('data-inst'));
-      if (!ok) toast('Nicht genug Geld für den Ausbau.');
+      if (!ok) toast('Zu wenig 💰 für den Ausbau');
     });
 
     var mkCollect = document.getElementById('mk-collect-btn');
@@ -2090,7 +2262,12 @@
     } else {
       var cost    = RT.state.TIER_UPGRADE_COST[fs.tierId];
       var nextCap = next.users * RT.state.FARM_CAPACITY_ANIMALS;
-      var canUp   = s.money >= cost;
+      // Der Investor-Sprung (Küken→Huhn) kostet nichts — `need` bleibt weg,
+      // damit eine leere Kasse die „kostenlos"-Kachel nicht blass färbt.
+      var upCost  = [{ res: 'money', icon: '💰',
+                       value: cost > 0 ? F.money(cost) : 'kostenlos',
+                       need:  cost > 0 ? cost : undefined }];
+      var upNeed  = RT.ledger.cover(upCost);
       // Kompakt und ohne Erklärtext: die Belegung ist der Grund, warum das
       // Modal offen ist, der Ausbau die Option daneben. Zwei gleich große
       // Karten hätten beides gleich wichtig aussehen lassen.
@@ -2101,7 +2278,7 @@
         chip:  'aktuell Stufe ' + stufe,
         body:  '<div class="rt-cap__step">' + F.num(cap) + ' <span>→</span> <b>' + F.num(nextCap) +
                '</b> Kapazität</div>',
-        cost: [{ res: 'money', icon: '💰', value: cost > 0 ? F.money(cost) : 'kostenlos' }],
+        cost: upCost,
         // Nur die Kapazität. Mehr Watchtime ist keine eigene Wirkung des
         // Ausbaus, sondern die Folge daraus, dass mehr User Platz haben — sie
         // hier danebenzustellen hätte denselben Gewinn zweimal versprochen.
@@ -2110,8 +2287,9 @@
         // zweimal (Balken-Kopf und die Zeile "16.000 → 80.000 Kapazität").
         gain: [{ res: 'server', icon: '🖥️', value: '+' + F.num(nextCap - cap) }],
         action: '<button class="rt-btn-tt rt-btn-tt--primary" id="farm-upgrade-btn" data-inst="' + iid +
-                '"' + (canUp ? '' : ' disabled title="Zu wenig Geld"') + '>⬆️ Auf Stufe ' + (stufe + 1) +
-                ' ausbauen</button>'
+                '"' + (upNeed.ok ? '' : ' disabled') + '>' +
+                (upNeed.ok ? '⬆️ Auf Stufe ' + (stufe + 1) + ' ausbauen' : upNeed.label) +
+                '</button>'
       });
     }
 
@@ -2235,7 +2413,10 @@
         ? 'Erst die fertigen Modelle einsammeln'
         : 'Serverkapazität voll';
     }
-    return (RT.state.current.watchtime || 0) >= cost ? '' : 'Zu wenig Watchtime';
+    // Über cover() statt eines eigenen Vergleichs: dieselbe Beschriftung wie
+    // an jeder anderen Kauffläche („Zu wenig ⏳"), und die Zuordnung
+    // Ressource → Konto steht nur einmal im Spiel.
+    return RT.ledger.cover([{ res: 'watchtime', need: cost }]).label;
   }
 
   function renderKiLaborBodyHtml(inst) {
@@ -2343,6 +2524,19 @@
         modelVal += ' (' + fmtPctPlain(t.coverage * RT.state.modelYieldMult()) + ')';
       }
       var gain = [{ res: 'model', icon: '🧠', value: modelVal }];
+      // ⚠️ Keine Beschriftungen an den Zellen — hier stand vorher je ein
+      // `qualifier: 'je Zyklus'`, ein Feld, das RT.ledger.card() gar nicht
+      // kennt und kommentarlos schluckt. Die Regel „die Zahlen gelten je
+      // Zyklus" steht jetzt einmal oben im Modal, genau wie in der
+      // Werbeagentur.
+      //
+      // `need` nur, solange keine Umwandlung läuft: sonst wäre die Kachel
+      // blass, obwohl die Watchtime des laufenden Zyklus längst bezahlt ist
+      // und der Knopf ohnehin „Es läuft schon eine Umwandlung" sagt.
+      var convCost = [{ res: 'watchtime', icon: '⏳', value: F.num(cost),
+                        need: st.conv ? undefined : cost },
+                      { res: 'time', icon: '⏱', value: F.sec(t.duration) }];
+      RT.ledger.cover(convCost);
       html += RT.ledger.card({
         variant: 'shop' + (st.lastConv === t.id ? ' last' : ''),
         icon:  t.icon,
@@ -2350,13 +2544,7 @@
         // Die Gesamtbilanz gehört in die Unterzeile, nicht in ein `note`-Feld —
         // das kennt RT.ledger.card() nicht und schluckt es kommentarlos.
         sub:   t.desc + ' · ' + maxC + ' Zyklen ≈ ' + F.num(perCyc * maxC) + ' Modelle',
-        // ⚠️ Keine Beschriftungen an den Zellen — hier stand vorher je ein
-        // `qualifier: 'je Zyklus'`, ein Feld, das RT.ledger.card() gar nicht
-        // kennt und kommentarlos schluckt. Die Regel „die Zahlen gelten je
-        // Zyklus" steht jetzt einmal oben im Modal, genau wie in der
-        // Werbeagentur.
-        cost:  [{ res: 'watchtime', icon: '⏳', value: F.num(cost) },
-                { res: 'time', icon: '⏱', value: F.sec(t.duration) }],
+        cost:  convCost,
         gain:  gain,
         // Der Knopf gehört unter den Text, nicht unter die Zahlenspalte: das
         // Labor ist wie die Werbeagentur ein Modal, das EIN Angebot füllt und
@@ -2462,16 +2650,17 @@
     var cardsHtml = '';
     for (var i = 0; i < unlocked.length; i++) {
       var a = unlocked[i];
-      // Beide Posten gegen die gewählte Stufe prüfen, nicht gegen den
-      // Grundpreis der Werbeart — auf einer Anteils-Stufe hat der mit dem,
-      // was der Zyklus kostet, gar nichts mehr zu tun.
-      var needWt   = RT.state.adWatchtimePerCycle(a.id, sel.volume);
-      var needMeta = RT.state.adMetadataPerCycle(a.id, sel.volume, sel.targeting);
-      var why = ws.deal ? 'Es läuft schon ein Deal'
-              : (RT.state.current.watchtime < needWt ? 'Zu wenig Watchtime'
-              : ((RT.state.current.metadata || 0) < needMeta ? 'Zu wenig Metadaten' : ''));
       var isLast = a.id === lastId;
+      // Die Posten prüfen sich über adLedgerItems selbst — dort stehen sie
+      // gegen die GEWÄHLTE Stufe, nicht gegen den Grundpreis der Werbeart (auf
+      // einer Anteils-Stufe hat der mit dem, was der Zyklus kostet, nichts
+      // mehr zu tun). Vorher wurde dieselbe Prüfung hier ein zweites Mal
+      // gerechnet und landete nur in einem `title`, den auf dem Tablet
+      // niemand sieht.
       var items  = adLedgerItems(a.id, pct / 100, true, sel.volume, sel.targeting);
+      var adNeed = ws.deal ? { ok: true, label: '' } : RT.ledger.cover(items.cost);
+      var label  = ws.deal ? 'Es läuft schon ein Deal'
+                 : (adNeed.label || (isLast ? '▶ Erneut buchen' : '▶ Buchen'));
       cardsHtml += RT.ledger.card({
         variant: isLast ? 'last' : '',
         icon:  a.icon,
@@ -2481,8 +2670,8 @@
         cost:  items.cost,
         gain:  items.gain,
         action: '<button class="rt-btn-tt rt-btn-tt--primary" data-ad="' + a.id +
-                '" data-inst="' + iid + '"' + (why ? ' disabled title="' + why + '"' : '') + '>' +
-                (isLast ? '▶ Erneut buchen' : '▶ Buchen') + '</button>'
+                '" data-inst="' + iid + '"' +
+                (ws.deal || !adNeed.ok ? ' disabled' : '') + '>' + label + '</button>'
       });
     }
 
@@ -2691,14 +2880,20 @@
     if (RT.state.adStep(RT.state.clampAdVolume(volume)).pct) {
       wtLabel += ' (' + RT.state.adStepLabel(typeId, volume) + ')';
     }
+    // `need` nur für ANGEBOTE (`live`): beim laufenden Deal ist der Zyklus
+    // längst bezahlt, dort wäre eine blasse Kachel schlicht falsch.
     var cost = [
-      { res: 'watchtime', icon: '⏳', value: wtLabel }
+      { res: 'watchtime', icon: '⏳', value: wtLabel,
+        need: live ? RT.state.adWatchtimePerCycle(typeId, volume) : undefined }
     ];
     // Die Metadaten-Zeile taucht nur bei personalisierten Deals auf. Weil sie
     // dadurch erscheint und verschwindet, patcht der Intensitäts-Slider sie
     // nicht — das Umschalten baut die Karten ohnehin neu.
     var meta = RT.state.adMetadataPerCycle(typeId, volume, targeting);
-    if (meta > 0) cost.push({ res: 'meta', icon: '🗃️', value: F.num(meta) });
+    if (meta > 0) {
+      cost.push({ res: 'meta', icon: '🗃️', value: F.num(meta),
+                  need: live ? meta : undefined });
+    }
     cost.push({ res: 'time', icon: '⏱', value: F.sec(a.duration) });
     cost.push({ res: 'trend', icon: '⭐',
                 value: F.trend(-RT.state.adTrendMalus(typeId, intensity, volume)) + ' %',
@@ -2777,9 +2972,21 @@
     setLedgerVal('mk-' + campaignId + '-cost',  F.money(net));
     setLedgerVal('mk-' + campaignId + '-cut',   '−' + F.money(gross - net));
     setLedgerVal('mk-' + campaignId + '-trend', F.trend(trend) + ' %');
+
+    // Deckung am Regler mitziehen. Die Regler-Kampagne (Creator-Beteiligung)
+    // kostet ausschließlich Geld — deshalb reicht hier der direkte Vergleich
+    // statt eines cover()-Laufs über eine Kostenspalte, die es im DOM gar
+    // nicht mehr als Array gibt.
+    var poor = RT.state.current.money < net;
+    var cell = document.querySelector('[data-led-val="mk-' + campaignId + '-cost"]');
+    var tile = cell && cell.closest ? cell.closest('.rt-led__item') : null;
+    if (tile) tile.classList.toggle('rt-led__item--short', poor);
     var btn = document.querySelector('.mk-start-btn[data-c="' + campaignId + '"]');
     if (btn && !btn.hasAttribute('data-locked')) {
-      btn.disabled = RT.state.current.money < net;
+      btn.disabled = poor;
+      // Der Knopf TRÄGT den Grund — ohne das Nachziehen stünde beim Ziehen auf
+      // eine teurere Stufe weiter „▶ Starten" auf einem gesperrten Knopf.
+      btn.textContent = poor ? 'Zu wenig 💰' : '▶ Starten';
     }
   }
   // Beschriftung der laufenden Kampagne. Bei einer Regler-Kampagne gehört die
@@ -2839,9 +3046,6 @@
       // anderen Preis, als auf der Karte steht.
       var gross     = RT.state.campaignCostGross(c.id, trendVal);
       var money     = RT.state.campaignCost(c.id, trendVal);
-      var canStart = unlocked && !mkS.active && s.money >= money
-                     && (s.metadata || 0) >= metaCost
-                     && (!isTrend || prFree);
       var F = RT.ledger.fmt;
       // Prozentuale Kampagnen zeigen die Stückzahl, die JETZT herauskäme, mit
       // dem Prozentsatz als Beschriftung. Nur der Prozentsatz wäre nicht mit
@@ -2859,6 +3063,7 @@
       }
 
       var cost = [{ res: 'money', icon: '💰', value: F.money(money),
+                    need: money,
                     id: hasSlider ? 'mk-' + c.id + '-cost' : undefined }];
       // Die Marktplatz-Provision trägt als einzige Kachel ihr eigenes Icon
       // statt einer Beschriftung — sie ist ein Abzug auf die Zeile darüber, und
@@ -2872,9 +3077,17 @@
       // sieht der Spieler sie nur wachsen und hält es für einen Fehler.
       if (metaCost > 0) {
         cost.push({ res: 'meta', icon: '🗃️', value: F.num(metaCost),
+                    need: metaCost,
                     label: c.metadataPerUser ? c.metadataPerUser + ' je User' : '' });
       }
       cost.push({ res: 'time', icon: '⏱', value: F.sec(c.duration) });
+
+      // ⚠️ Nicht prüfen, wenn die Karte gesperrt ist oder schon eine Kampagne
+      // läuft: dort ist der Grund kein Konto, und eine blasse Kachel neben
+      // „🔒 … erforschen" wäre Rauschen.
+      var mkNeed = (unlocked && !mkS.active) ? RT.ledger.cover(cost)
+                                             : { ok: true, label: '' };
+      var canStart = unlocked && !mkS.active && mkNeed.ok && (!isTrend || prFree);
 
       var action;
       if (unlocked && isTrend && !prFree && !mkS.active) {
@@ -2889,7 +3102,8 @@
         action = '<button class="rt-btn-tt rt-btn-tt--primary mk-start-btn" data-c="' + c.id +
                  '" data-inst="' + iid + '" ' +
                  (mkS.active ? 'data-locked ' : '') +
-                 (canStart ? '' : 'disabled') + '>▶ Starten</button>';
+                 (canStart ? '' : 'disabled') + '>' +
+                 (mkNeed.label || '▶ Starten') + '</button>';
       } else {
         var node = (RT.techtree && RT.techtree.NODES) ? RT.techtree.NODES[c.unlockedBy] : null;
         action = '<button class="rt-btn-tt" data-locked disabled>🔒 ' +
@@ -3049,17 +3263,27 @@
     // Eine Ledger-Karte pro Angebot, Variante `shop`: schmale Zeile, Preis
     // und Kauf-Button rechts. Keine Ertrag-Spalte — siehe die Begründung
     // oben; `gain: false` macht die Karte einspaltig.
+    // `cost` kommt als fertiges Array herein, damit die Aufrufstelle vorher
+    // RT.ledger.cover() darauf laufen lassen und die Beschriftung ihres Knopfs
+    // aus derselben Rechnung ziehen kann. Ein blanker Preis hier hätte zwei
+    // getrennte Prüfungen bedeutet — genau das, was der Shop vorher hatte.
     function shopCard(opts) {
       return RT.ledger.card({
         variant: 'shop' + (opts.owned ? ' owned' : ''),
         icon:   opts.icon,
         title:  opts.title,
         sub:    opts.desc,
-        cost:   [{ res: 'money', icon: '💰', value: F.money(opts.cost) }],
+        cost:   opts.cost,
         gain:   false,
         action: opts.action,
         actionRight: true
       });
+    }
+    // Ein Angebot im Shop kostet nur Geld — die Kostenspalte ist eine einzige
+    // Kachel. Trotzdem über cover(): der Knopftext („Zu wenig 💰") und die
+    // blasse Kachel kommen so auch hier aus derselben Rechnung wie überall.
+    function moneyCost(amount) {
+      return [{ res: 'money', icon: '💰', value: F.money(amount), need: amount }];
     }
 
     // Hardware-Sektion. Der Rechner ist eine einmalige Voraussetzung fürs
@@ -3069,19 +3293,21 @@
     var hardwareHtml = '';
     if (phase < 2) {
       var rechnerBought = !!s.purchases.rechner;
-      var rechnerPrice  = 600;
-      var rechnerCan    = s.money >= rechnerPrice && !rechnerBought;
-      var rechnerLabel  = rechnerBought ? 'Gekauft ✓' : (s.money < rechnerPrice ? 'Zu teuer' : 'Kaufen');
+      var rechnerCost   = moneyCost(600);
+      // Ein gekaufter Rechner ist bezahlt — die Kachel darf dann nicht blass
+      // werden, nur weil die Kasse inzwischen leer ist.
+      var rechnerNeed   = rechnerBought ? { ok: true, label: '' } : RT.ledger.cover(rechnerCost);
       hardwareHtml =
         '<div class="rt-led-sec rt-led-sec--first">🖥️ Hardware</div>' +
         shopCard({
           icon:  '💻',
           title: 'Rechner',
           desc:  'Ohne ihn läuft im HQ keine Frontend-Entwicklung.',
-          cost:  rechnerPrice,
+          cost:  rechnerCost,
           owned: rechnerBought,
           action: '<button class="rt-btn-tt rt-btn-tt--primary shop-buy-btn" data-hw="rechner" ' +
-                  (rechnerCan ? '' : 'disabled') + '>' + rechnerLabel + '</button>'
+                  (rechnerBought || !rechnerNeed.ok ? 'disabled' : '') + '>' +
+                  (rechnerBought ? 'Gekauft ✓' : (rechnerNeed.label || 'Kaufen')) + '</button>'
         });
     }
 
@@ -3104,18 +3330,21 @@
     for (var i = 0; i < types.length; i++) {
       var tid = types[i];
       var t   = RT.state.BUILDING_TYPES[tid];
-      var cost = RT.state.buildingCost(tid);
-      var canAfford = s.money >= cost;
-      var fitsHere  = !shopPreTile || RT.state.canPlace(tid, shopPreTile.col, shopPreTile.row);
       // Ein Werk versorgt die ganze Plattform — ein zweites hätte schlicht
       // nichts zu tun.
       var capped    = (tid === 'energie' &&
                        RT.state.instancesByType('energie').length >= RT.state.ENERGY_PLANT_MAX);
-      var disabled  = !canAfford || capped || (shopPreTile && !fitsHere);
+      var fitsHere  = !shopPreTile || RT.state.canPlace(tid, shopPreTile.col, shopPreTile.row);
+      var tCost     = moneyCost(RT.state.buildingCost(tid));
+      // ⚠️ „Schon gebaut" und „Passt hier nicht" sind keine Ressourcen-Frage —
+      // dort bleibt die Kachel farbig und nur der Knopf trägt den Grund. Blass
+      // heißt im ganzen Spiel: eine Zahl ist zu klein.
+      var tNeed     = (capped || !fitsHere) ? { ok: true, label: '' } : RT.ledger.cover(tCost);
+      var disabled  = capped || !fitsHere || !tNeed.ok;
       var label;
       if (capped)                        label = 'Schon gebaut';
-      else if (!canAfford)               label = 'Zu teuer';
       else if (shopPreTile && !fitsHere) label = 'Passt hier nicht';
+      else if (!tNeed.ok)                label = tNeed.label;
       else                               label = shopPreTile ? 'Hier bauen' : 'Kaufen';
 
       // Ab Phase 2: neue Farmen starten als Huhn — im Shop trotzdem als
@@ -3126,7 +3355,7 @@
         icon:  shopIconHtml(tid),
         title: displayName,
         desc:  SHOP_DESC[tid] || '',
-        cost:  cost,
+        cost:  tCost,
         action: '<button class="rt-btn-tt rt-btn-tt--primary shop-buy-btn" data-t="' + tid + '" ' +
                 (disabled ? 'disabled' : '') + '>' + label + '</button>'
       });
@@ -4261,7 +4490,13 @@
       // neben "Server": sie gehört zur Kapazität, die der Balken zeigt, nicht
       // zum Label der Kachel. Klick öffnet die Aufschlüsselung aller fünf
       // Stufen samt der nächsten Grenze.
-      + '      <button class="rt-srv-tier" id="rt-srv-tier" type="button" style="display:none"></button>'
+      // Icon fest im Markup, Text in einem eigenen Span: der Knopf wird im
+      // Sekundentakt aktualisiert, und ein dabei neu gebautes <img> flackert
+      // auf iPads (siehe setIconLabel im UI-Modul darüber).
+      + '      <button class="rt-srv-tier" id="rt-srv-tier" type="button" style="display:none">'
+      +          RT.assets.iconHtml('stromWasser')
+      + '        <span id="rt-srv-tier-label"></span>'
+      + '      </button>'
       + '    </div>'
       + '  </div>'
       + '</div>';
@@ -4303,7 +4538,8 @@
       serverSegSw:    container.querySelector('#rt-server-seg-code'),
       serverSegModel: container.querySelector('#rt-server-seg-model'),
       serverCard:     container.querySelector('.rt-resource--server'),
-      srvTier:        container.querySelector('#rt-srv-tier')
+      srvTier:        container.querySelector('#rt-srv-tier'),
+      srvTierLabel:   container.querySelector('#rt-srv-tier-label')
     };
 
     if (refs.srvTier) {
@@ -4399,7 +4635,13 @@
         if (phaseSrv >= 2 && cap > 0) {
           var srvT = RT.state.serverUpkeepTier();
           refs.srvTier.style.display = '';
-          refs.srvTier.innerHTML     = RT.assets.iconHtml('stromWasser') + ' ' + srvT.name;
+          // ⚠️ Kein innerHTML mit dem Icon: dieser Block läuft bei jedem
+          // state:changed, und ein jedes Mal neu gebautes <img> flackerte auf
+          // iPads sichtbar. Icon steht fest im Markup, hier wandert nur der
+          // Name der Tarifstufe ins Label.
+          if (refs.srvTierLabel && refs.srvTierLabel.textContent !== srvT.name) {
+            refs.srvTierLabel.textContent = srvT.name;
+          }
           refs.srvTier.title         = 'Serverkosten: ' + srvT.name + ' — '
                                      + srvT.rate + ' € je ' + formatNumber(RT.state.serverUpkeepUnit())
                                      + ' Kapazität. Antippen für die Stufen.';
