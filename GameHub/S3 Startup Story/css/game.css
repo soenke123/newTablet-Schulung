@@ -1969,6 +1969,24 @@ html, body {
    nicht leer wird, tritt aber zurück. */
 .rt-led-card--owned { opacity: 0.6; }
 
+/* Der eine nächste Zug — aktuell nur die erste Werbeagentur in Phase 2, ohne
+   die es kein Einkommen gibt (js/state.js, buildingLocked). Gelb wie der
+   "!"-Badge auf dem Shop-Knopf, damit beide erkennbar dieselbe Ansage sind.
+
+   ⚠️ Kein Grün: das heißt im Ledger „bezahlbar/fertig" und würde als Zustand
+   gelesen, nicht als Aufforderung. */
+.rt-led-card--urgent {
+  border-color: #d99b20;
+  background: linear-gradient(180deg, #fffaf0 0%, #fdf1d8 100%);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.28);
+}
+/* Der Badge sitzt in der Icon-Kachel und braucht deren Ecke als Anker. */
+.rt-led-card__ico { position: relative; }
+.rt-notif-badge--card {
+  top: -8px; right: -8px;
+  width: 20px; height: 20px; font-size: 13px; line-height: 16px;
+}
+
 /* Shop-Liste zweispaltig (2026-08-09) — ohne Ertrag-Spalte sind die Karten
    schmal genug, dass zwei nebeneinander passen, und bei sieben, acht
    Gebäuden ist eine einzelne Kolonne unnötig viel Scrollen. Dieselbe

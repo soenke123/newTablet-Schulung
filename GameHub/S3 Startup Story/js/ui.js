@@ -93,7 +93,15 @@
       if (phase === 1) return !s.seenBadges.hq_phase1;
       return false;
     }
-    if (uiKey === 'shop')          return !s.seenBadges.shop;
+    // Der Shop-Badge hat zwei Gründe, und der zweite hängt NICHT am
+    // „schon mal geöffnet": Phase 2 beginnt ohne Werbeagentur, und ohne sie
+    // gibt es kein Einkommen (RT.state.buildingLocked). Der Badge steht
+    // deshalb, bis die erste Agentur gebaut ist — er räumt sich damit selbst
+    // ab und braucht kein eigenes seenBadges-Feld (und keine Migration).
+    if (uiKey === 'shop') {
+      if (RT.state.currentPhase() >= 2 && !RT.state.hasAgency()) return true;
+      return !s.seenBadges.shop;
+    }
     if (uiKey === 'tab_marketing') return !s.seenBadges.tab_marketing;
     if (uiKey === 'tab_werbung')   return !s.seenBadges.tab_werbung;
     return false;
@@ -3269,7 +3277,8 @@
     // getrennte Prüfungen bedeutet — genau das, was der Shop vorher hatte.
     function shopCard(opts) {
       return RT.ledger.card({
-        variant: 'shop' + (opts.owned ? ' owned' : ''),
+        variant: 'shop' + (opts.owned ? ' owned' : '') +
+                 (opts.variant ? ' ' + opts.variant : ''),
         icon:   opts.icon,
         title:  opts.title,
         sub:    opts.desc,
@@ -3318,7 +3327,17 @@
     var buildingsHtml = '<div class="rt-led-sec' +
                         (hardwareHtml ? '' : ' rt-led-sec--first') + '">🏗️ Gebäude</div>';
     var types = ['farm'];
-    if (phase >= 2) types = ['farm', 'werbe', 'marketing', 'buero'];
+    // ⚠️ Die Werbeagentur steht in Phase 2 GANZ OBEN, solange keine steht —
+    // sie ist dort keine Option unter vieren, sondern der nächste Zug (siehe
+    // RT.state.buildingLocked). Sobald eine gebaut ist, kehrt die gewohnte
+    // Reihenfolge zurück; ein Shop, der seine Zeilen dauerhaft umsortiert,
+    // wäre schwerer zu bedienen als einer mit fester Ordnung.
+    var needsAgency = phase >= 2 && !RT.state.hasAgency();
+    if (phase >= 2) {
+      types = needsAgency
+        ? ['werbe', 'farm', 'marketing', 'buero']
+        : ['farm', 'werbe', 'marketing', 'buero'];
+    }
     // Das KI-Labor ist der EINSTIEG in Phase 3, nicht ihre Belohnung: die
     // Nodes im KI-Reiter setzen das Gebäude voraus (requiresBuilding), nicht
     // umgekehrt. Es steht deshalb ohne Freischaltung im Shop.
@@ -3334,15 +3353,20 @@
       // nichts zu tun.
       var capped    = (tid === 'energie' &&
                        RT.state.instancesByType('energie').length >= RT.state.ENERGY_PLANT_MAX);
+      // Marketing und Büro produzieren nichts — ohne Werbeagentur führt ihr
+      // Kauf in eine Sackgasse ohne Einkommen (RT.state.buildingLocked).
+      var locked    = RT.state.buildingLocked(tid);
       var fitsHere  = !shopPreTile || RT.state.canPlace(tid, shopPreTile.col, shopPreTile.row);
       var tCost     = moneyCost(RT.state.buildingCost(tid));
-      // ⚠️ „Schon gebaut" und „Passt hier nicht" sind keine Ressourcen-Frage —
-      // dort bleibt die Kachel farbig und nur der Knopf trägt den Grund. Blass
-      // heißt im ganzen Spiel: eine Zahl ist zu klein.
-      var tNeed     = (capped || !fitsHere) ? { ok: true, label: '' } : RT.ledger.cover(tCost);
-      var disabled  = capped || !fitsHere || !tNeed.ok;
+      // ⚠️ „Schon gebaut", „Passt hier nicht" und die fehlende Werbeagentur
+      // sind keine Ressourcen-Frage — dort bleibt die Kachel farbig und nur
+      // der Knopf trägt den Grund. Blass heißt im ganzen Spiel: eine Zahl ist
+      // zu klein.
+      var tNeed     = (capped || locked || !fitsHere) ? { ok: true, label: '' } : RT.ledger.cover(tCost);
+      var disabled  = capped || locked || !fitsHere || !tNeed.ok;
       var label;
       if (capped)                        label = 'Schon gebaut';
+      else if (locked)                   label = 'Erst 📢 Werbeagentur';
       else if (shopPreTile && !fitsHere) label = 'Passt hier nicht';
       else if (!tNeed.ok)                label = tNeed.label;
       else                               label = shopPreTile ? 'Hier bauen' : 'Kaufen';
@@ -3351,14 +3375,35 @@
       // "Serverfarm" mit dem Gebäude-Sprite (nicht dem Tier-Icon).
       var displayName = (tid === 'farm' && phase < 2) ? 'kleine Serverfarm' : t.name;
 
+      // Solange die erste Agentur fehlt, trägt ihre Karte denselben gelben "!"
+      // wie der Shop-Knopf darüber — der Badge führt damit vom Knopf bis zur
+      // Zeile durch, statt am Modal-Rand aufzuhören.
+      var urgent = (tid === 'werbe' && needsAgency);
+
       buildingsHtml += shopCard({
-        icon:  shopIconHtml(tid),
+        icon:  shopIconHtml(tid) +
+               (urgent ? '<span class="rt-notif-badge rt-notif-badge--card">!</span>' : ''),
         title: displayName,
-        desc:  SHOP_DESC[tid] || '',
-        cost:  tCost,
+        desc:  urgent
+                 ? '<b>Dein nächster Schritt.</b> ' + SHOP_DESC[tid]
+                 : (SHOP_DESC[tid] || ''),
+        variant: (urgent ? 'urgent' : '') + (locked ? ' locked' : ''),
         action: '<button class="rt-btn-tt rt-btn-tt--primary shop-buy-btn" data-t="' + tid + '" ' +
-                (disabled ? 'disabled' : '') + '>' + label + '</button>'
+                (disabled ? 'disabled' : '') + '>' + label + '</button>',
+        cost:  tCost
       });
+    }
+
+    // Warum zwei Karten gesperrt sind, gehört über die Liste und nicht auf den
+    // Knopf: der trägt nur den Grund in drei Wörtern, die Begründung braucht
+    // einen Satz. Ohne ihn liest sich die Sperre wie ein Fehler.
+    if (needsAgency) {
+      hint = '📢 <b>Zuerst die Werbeagentur.</b> Sie ist das einzige Gebäude, das ' +
+             'deine <b>Watchtime zu Geld</b> macht — ohne sie verdienst du nichts mehr. ' +
+             'Marketing-Center und Bürogebäude bleiben so lange gesperrt.' +
+             (shopPreTile
+               ? ' Gebaut wird auf Feld <b>(' + shopPreTile.col + ', ' + shopPreTile.row + ')</b>.'
+               : '');
     }
 
     // Zweispaltig ab genug Breite (`.rt-shop-grid`, CSS) — bei sieben, acht
@@ -4680,8 +4725,9 @@
       // Shop-Badge live togglen (nicht im Grid, sondern in der Profile-Bar).
       var shopBadge = document.getElementById('rt-shop-badge');
       if (shopBadge) {
-        var showShop = RT.state.badgeVisible && RT.state.badgeVisible('shop');
-        shopBadge.style.display = showShop ? '' : 'none';
+        // ⚠️ shouldShowBadge() statt RT.state.badgeVisible(): der Phase-2-Grund
+        // (keine Werbeagentur) steht dort und nicht in seenBadges.
+        shopBadge.style.display = shouldShowBadge('shop') ? '' : 'none';
       }
     }
 

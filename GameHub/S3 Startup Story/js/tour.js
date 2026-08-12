@@ -416,14 +416,20 @@
         title:  '🏗️ Drei neue Gebäude',
         body: ''
           + '<div class="rt-tour-blds">'
-          + bldHTML('werbe',     'Werbeagentur',
+          + bldHTML('werbe',     'Werbeagentur <b class="rt-tour-bld__first">zuerst</b>',
                     'macht <b>Watchtime zu Geld</b> — kostet <b>Trend</b>.')
           + bldHTML('marketing', 'Marketing-Center',
                     'macht <b>Geld zu Usern</b> — oder kauft <b>Trend</b> zurück.')
           + bldHTML('buero',     'Bürogebäude',
                     'entwickelt <b>parallel</b> zum HQ.')
           + '</div>'
-          + '<p class="rt-tour-hint">Alle drei findest du im 🛒 <b>Shop</b>.</p>',
+          // ⚠️ Die Reihenfolge steht hier und nicht nur als Sperre im Shop:
+          // die Werbeagentur ist die einzige Geldquelle des Spiels, und wer
+          // sein Investment vorher in Marketing und Büro steckt, hat kein
+          // Einkommen mehr (js/state.js, buildingLocked). Der Shop lässt die
+          // beiden deshalb erst danach zu — gesagt werden muss es trotzdem.
+          + '<p class="rt-tour-hint">Alle drei findest du im 🛒 <b>Shop</b> — '
+          + 'die anderen beiden schaltet die <b>Werbeagentur</b> frei.</p>',
         wide: true,
         cta:  'Starte dein Wachstum 🚀'
       }

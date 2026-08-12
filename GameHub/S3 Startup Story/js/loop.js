@@ -1185,6 +1185,9 @@
       var s = RT.state.current;
       var type = RT.state.BUILDING_TYPES[typeId];
       if (!type)                                return { ok: false, msg: 'Unbekannter Gebäudetyp' };
+      // Marketing und Büro produzieren nichts — ohne Werbeagentur wäre das der
+      // Weg in eine Sackgasse ohne Einkommen (RT.state.buildingLocked).
+      if (RT.state.buildingLocked(typeId))      return { ok: false, msg: 'Erst eine 📢 Werbeagentur bauen' };
       if (!RT.state.canPlace(typeId, col, row)) return { ok: false, msg: 'Kein Platz' };
       var cost = RT.state.buildingCost(typeId);
       if (s.money < cost)                       return { ok: false, msg: 'Zu wenig 💰' };

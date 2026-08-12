@@ -1325,6 +1325,32 @@
       return t ? t.cost : 0;
     },
 
+    // ── Die erste Werbeagentur ist Pflicht, bevor es weitergeht ─────────────
+    //
+    // Phase 2 beginnt mit 50.000 € vom Investor und OHNE Werbeagentur — sie ist
+    // die einzige Quelle im Spiel, die Watchtime zu Geld macht (§6). Marketing
+    // und Büro kosten je 15.000 € und produzieren NICHTS: wer sie zuerst kauft,
+    // steht ohne Einkommen da und kann sich die Agentur nie mehr leisten. Das
+    // ist die einzige Sackgasse im Spiel, aus der kein Warten mehr herausführt.
+    //
+    // ⚠️ Die Farm bleibt bewusst frei kaufbar. Sie produziert Watchtime, ist
+    // mit 5.000 € die kleine Portion und damit nie die Ursache der Sackgasse.
+    // Auch Felder bleiben frei — wer dort alles verbaut, hat immer noch die
+    // Agentur zur Auswahl, solange sie im Shop ganz oben steht.
+    AGENCY_GATED_TYPES: ['marketing', 'buero'],
+
+    hasAgency: function () {
+      return this.instancesByType('werbe').length > 0;
+    },
+
+    // true = dieser Gebäudetyp ist gesperrt, weil die erste Werbeagentur fehlt.
+    // Keine Ressourcen-Frage: die Kostenkachel bleibt farbig, der Grund steht
+    // auf dem Knopf (§10, „Fehlende Ressourcen").
+    buildingLocked: function (typeId) {
+      if (this.AGENCY_GATED_TYPES.indexOf(typeId) < 0) return false;
+      return !this.hasAgency();
+    },
+
     current: JSON.parse(JSON.stringify(initial)),
 
     /* Zurück auf den Anfangszustand, ohne Reload.

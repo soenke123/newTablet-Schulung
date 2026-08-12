@@ -315,6 +315,20 @@ Eine zweite Agentur bringt auf der Anteils-Stufe kaum mehr Geld (das Einkommen h
 
 **Die erste Werbeagentur kauft der Spieler selbst** — 15.000 € im Shop, ab Phase 2. Sie gehört bewusst **nicht** zum Investor-Deal: Phase 2 beginnt damit, dass Watchtime da ist und noch nichts sie in Geld verwandelt. Der Debug-Seed (Phase-2-Sprung) stellt genau diese Belegung her — HQ + eine Huhn-Farm, keine Agentur.
 
+⚠️ **Marketing-Center und Bürogebäude sind gesperrt, bis sie steht** (`RT.state.buildingLocked()`, 2026-08-12). Das ist die einzige harte Kaufsperre im Spiel, und sie schließt die einzige **Sackgasse**: die 50.000 € vom Investor reichen für drei der vier Gebäude, aber Marketing und Büro produzieren nichts. Wer sie zuerst kauft, hat kein Einkommen mehr, kann sich die 15.000 € für die Agentur nie wieder erarbeiten — und im Gegensatz zu jedem anderen Fehlkauf hilft auch Warten nicht.
+
+Drei Signale, aus derselben Bedingung (`RT.state.hasAgency()`), alle **selbsträumend** — kein `seenBadges`-Feld, keine Migration:
+
+| Wo | Was |
+|---|---|
+| Shop-Knopf | der gelbe „!" kommt in Phase 2 zurück, bis eine Agentur steht |
+| Shop-Liste | Werbeagentur rückt auf Platz 1, trägt denselben „!" und den Hinweis „Dein nächster Schritt"; die anderen beiden sind blass mit „Erst 📢 Werbeagentur" auf dem Knopf |
+| Phase-2-Tour | Karte 4 markiert die Agentur mit „zuerst" und sagt, dass sie die beiden anderen freischaltet |
+
+⚠️ **Die Serverfarm bleibt frei kaufbar, und die Grid-Felder auch.** Beides ist die kleine Portion (5.000 € / 3.000 €) und nie die Ursache der Sackgasse; eine Sperre dort wäre Bevormundung statt Rettung.
+
+⚠️ **Die Sperre steht in `actions.placeBuilding()`, nicht nur am Shop-Knopf** — der Placement-Modus ist ein zweiter Weg zu derselben Aktion, und der Knopf ist bereits die Anzeige, nicht die Regel.
+
 ### Die vier Werbearten
 
 Definiert in `AD_TYPES` (`js/state.js`). **Nur Banner ist von Anfang an buchbar** — die anderen drei schaltet der Werbung-Reiter im Techtree frei (`unlockedBy`, siehe Sektion 9).

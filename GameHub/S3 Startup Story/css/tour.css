@@ -328,6 +328,13 @@
   display: block; margin: 4px 0 3px;
   font-size: 0.75rem; font-weight: 800; color: var(--rt-text, #4a3829);
 }
+/* „zuerst" an der Werbeagentur — gelb wie der "!"-Badge im Shop, damit die
+   Tour und die Sperre dort erkennbar dieselbe Ansage machen. */
+.rt-tour-bld__first {
+  display: inline-block; margin-left: 4px; padding: 0 6px;
+  border-radius: 999px; background: #fbbf24; color: #78350f;
+  font-size: 0.62rem; font-weight: 900; vertical-align: middle;
+}
 .rt-tour-bld__desc {
   display: block; font-size: 0.7rem; line-height: 1.35;
   color: var(--rt-brown, #6b4a2b);
