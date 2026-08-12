@@ -566,7 +566,7 @@ Umbau des früheren **Creator-Fonds** (2026-08-09, feste Buchung 40.000 € → 
 
 ```
 trend  = campaignTrendAtStep()            5 Stufen von +1,0 bis +3,0
-brutto = costBase + costPerTrend × trend   (4.000 € + 12.000 € je Trend-Punkt)
+brutto = costBase + costPerTrend × trend   (7.000 € + 21.000 € je Trend-Punkt)
 netto  = brutto × (1 − creatorCut())       Marktplatz-Provision, §9
 ```
 
@@ -577,6 +577,8 @@ netto  = brutto × (1 − creatorCut())       Marktplatz-Provision, §9
 | mittel | +2,0 | 49.000 € | 272 |
 | hoch | +2,5 | 59.500 € | 264 |
 | **sehr hoch** | **+3,0** | **70.000 €** | **259 — der geeichte Anker** |
+
+⚠️ **Auf der Karte steht der NETTO-Preis, brutto nur als Kleinzeile darunter** („56.000 € · statt 70.000 €", geändert 2026-08-12). Vorher war die Marktplatz-Provision eine zweite 💰-Kachel mit „−14.000 €" unter dem Preis — und wurde gelesen, wie zwei Zahlen untereinander nun einmal gelesen werden: als Posten, den man noch abziehen muss. Der Wert darüber **war** aber schon netto. **Regel: in der Kostenspalte steht ausschließlich, was abgebucht wird.** Ein Rabatt gehört als Beschriftung an die Zahl, nicht als eigene Zeile daneben. Erklärt wird er im Kartentext links (`.rt-led-card__note`) — die frühere Info-Zeile unter der ganzen Spalte war eine Fußnote, die niemand mit den Zahlen darüber zusammengebracht hat.
 
 ⚠️ **Am Regler stehen die Stufennamen, nicht die Trend-Zahl.** Die Beteiligung ist eine Entscheidung über die eigene Haltung, keine Rechenaufgabe — „sehr niedrig … sehr hoch" ist die Frage, die der Spieler beantworten soll. Der Trend-Wert steht trotzdem auf der Karte, nämlich auf der **Ertrags-Kachel**, wo ihn auch jede andere Kampagne zeigt. Fünf Stufen, weil der Regler einrasten soll: ein stufenloser Schieber lädt zum Feilschen um Zehntel ein, und genau das ist hier nicht die Entscheidung.
 

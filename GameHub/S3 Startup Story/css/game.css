@@ -1676,6 +1676,16 @@ html, body {
 }
 .rt-led-card__sub  { font-size: 12px; color: var(--tt-brown-light); margin-top: 2px; }
 .rt-led-card__desc { font-size: 12.5px; color: var(--tt-brown-light); line-height: 1.45; margin: 0 0 12px; }
+/* Zusatzzeile im Kartentext: eine Erklärung zu EINER Zahl in der Spalte rechts
+   (heute nur die Marktplatz-Provision der Creator-Beteiligung). Sie setzt sich
+   ab, ohne eine eigene Kachel zu werden — genau das war die Verwechslung, die
+   sie ersetzt: eine zweite 💰-Zeile las sich wie ein zweiter Posten. */
+.rt-led-card__note {
+  display: block; margin-top: 6px; padding-left: 8px;
+  /* Der Balken muss auf dem Cremeton der Karte stehen — --tt-primary-soft wäre
+     dort praktisch unsichtbar. Über --rt-primary trägt er das Logo-Theme mit. */
+  border-left: 3px solid var(--rt-primary, var(--tt-primary));
+}
 
 .rt-led-card__progress {
   width: 100%; height: 10px; margin: 0 0 10px;
@@ -1751,6 +1761,10 @@ html, body {
   font-size: 11px; font-weight: 700;
   opacity: 0.7;
 }
+/* Ein leerer Platzhalter (labelId ohne Text) darf keine Zeile kosten: die
+   Kachel der Creator-Beteiligung trägt ihn dauerhaft, damit der Regler ihn
+   beschreiben kann, auch wenn gerade keine Marktplatz-Provision anliegt. */
+.rt-led__label:empty { display: none; }
 .rt-led__empty { opacity: 0.4; font-weight: 800; font-size: 18px; padding: 4px 0; }
 
 /* Aktionen sitzen unten in der linken Spalte, direkt unter dem Text. Beim

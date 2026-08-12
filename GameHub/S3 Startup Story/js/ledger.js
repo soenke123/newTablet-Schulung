@@ -87,11 +87,17 @@
             + (it.warn ? ' rt-led__item--warn' : '')
             + (it.short ? ' rt-led__item--short' : '');
     var idAttr = it.id ? ' data-led-val="' + esc(it.id) + '"' : '';
+    // `labelId` patcht die Kleinzeile genauso wie `id` den Wert darüber. Die
+    // Creator-Beteiligung braucht das: dort steht der Bruttopreis („statt
+    // 70.000 €") in der Beschriftung und wandert beim Ziehen am Regler mit.
+    var lblId  = it.labelId ? ' data-led-val="' + esc(it.labelId) + '"' : '';
     return ''
       + '<div class="' + cls + '">'
       + '<span class="rt-led__ico">' + (it.icon || '') + '</span>'
       + '<span class="rt-led__val"' + idAttr + '>' + (it.value || '') + '</span>'
-      + (it.label ? '<span class="rt-led__label">' + esc(it.label) + '</span>' : '')
+      + (it.label || it.labelId
+          ? '<span class="rt-led__label"' + lblId + '>' + esc(it.label || '') + '</span>'
+          : '')
       + '</div>';
   }
 

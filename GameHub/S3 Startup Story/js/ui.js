@@ -2974,7 +2974,9 @@
       lbl.innerHTML = 'Beteiligung: <b>' + escapeHTML(creatorStepLabel(campaignId, step)) + '</b>';
     }
     setLedgerVal('mk-' + campaignId + '-cost',  F.money(net));
-    setLedgerVal('mk-' + campaignId + '-cut',   '−' + F.money(gross - net));
+    // Leer, sobald keine Provision anliegt — sonst bliebe beim Ziehen ein
+    // „statt …" stehen, das denselben Betrag nennt wie die Zeile darüber.
+    setLedgerVal('mk-' + campaignId + '-gross', gross > net ? 'statt ' + F.money(gross) : '');
     setLedgerVal('mk-' + campaignId + '-trend', F.trend(trend) + ' %');
 
     // Deckung am Regler mitziehen. Die Regler-Kampagne (Creator-Beteiligung)
@@ -3066,17 +3068,22 @@
         gain = [{ res: 'users', icon: '👥', value: '+' + F.num(c.users) }];
       }
 
+      // ⚠️ Die Marktplatz-Provision ist KEINE eigene Kachel. Bis zum 2026-08-12
+      // stand sie als zweite 💰-Zeile darunter („−14.000 €") — und wurde
+      // gelesen, wie zwei Zahlen untereinander nun einmal gelesen werden:
+      // als Posten, den man noch abziehen muss. Der Wert darüber war aber
+      // längst der Nettopreis; 56.000 − 14.000 war schlicht falsch gerechnet.
+      // Jetzt steht der Bruttopreis als Kleinzeile („statt 70.000 €") unter dem
+      // Preis, wie an jedem Preisschild mit Rabatt, und die Erklärung dazu im
+      // Kartentext links. Es bleibt EINE Zahl, die man bezahlt.
       var cost = [{ res: 'money', icon: '💰', value: F.money(money),
                     need: money,
-                    id: hasSlider ? 'mk-' + c.id + '-cost' : undefined }];
-      // Die Marktplatz-Provision trägt als einzige Kachel ihr eigenes Icon
-      // statt einer Beschriftung — sie ist ein Abzug auf die Zeile darüber, und
-      // zwei 💰-Kacheln untereinander läsen sich sonst als zwei Posten, die man
-      // addieren muss.
-      if (hasSlider && gross > money) {
-        cost.push({ res: 'money', icon: '🛍️', value: '−' + F.money(gross - money),
-                    id: 'mk-' + c.id + '-cut' });
-      }
+                    id: hasSlider ? 'mk-' + c.id + '-cost' : undefined,
+                    label: gross > money ? 'statt ' + F.money(gross) : '',
+                    // Der Platzhalter muss auch dann im DOM stehen, wenn gerade
+                    // keine Provision anliegt: sonst hätte der Regler beim
+                    // Ziehen nichts zum Beschreiben, falls sie einsetzt.
+                    labelId: hasSlider ? 'mk-' + c.id + '-gross' : undefined }];
       // Bei einem Preis JE USER dazuschreiben, woher die Zahl kommt — sonst
       // sieht der Spieler sie nur wachsen und hält es für einen Fehler.
       if (metaCost > 0) {
@@ -3139,11 +3146,24 @@
              + '</div>';
       }
 
+      // Die Provision wird im Kartentext erklärt und nicht in der Zahlenspalte:
+      // dort steht, WAS man zahlt, hier steht, WARUM es weniger ist. Der Satz
+      // erscheint nur, wenn gerade wirklich etwas zurückkommt — bei Trend 0
+      // zahlt der Marktplatz nichts, und ein Hinweis auf einen Rabatt, den es
+      // in diesem Moment nicht gibt, wäre schlimmer als gar keiner.
+      var desc = c.desc || '';
+      if (hasSlider && gross > money) {
+        desc += '<span class="rt-led-card__note">🛍️ Einen Teil bekommst du als '
+              + 'Provision aus dem Marktplatz zurück — aktuell <b>'
+              + Math.round(RT.state.creatorCut() * 100) + ' %</b>, je nach Trend. '
+              + 'Deine Creator erhalten trotzdem den vollen Betrag.</span>';
+      }
+
       return RT.ledger.card({
         variant: (isTrend ? 'pr ' : '') + (unlocked ? '' : 'locked'),
         icon:  c.icon,
         title: c.name,
-        desc:  c.desc || '',
+        desc:  desc,
         body: body,
         cost: cost,
         gain: gain,
@@ -3200,14 +3220,12 @@
               'Forschung dieser Kette öffnet einen Platz.</div>'
             : '') +
           prHtml +
-          // Die Provision ist die einzige Stelle im Spiel, an der Trend
-          // unmittelbar Geld wert ist — das gehört erklärt, sobald die Node steht.
-          (RT.state.nodeDone('marketplace')
-            ? '<div class="info-line info-small">🛍️ <b>Marktplatz:</b> aktuell kommen ' +
-              '<b>' + Math.round(RT.state.creatorCut() * 100) + ' %</b> der Creator-Beteiligung ' +
-              'als Provision zurück. Die Creator bekommen weiterhin den vollen Betrag — ' +
-              'billiger wird es nur für dich, und nur solange der Trend hoch ist.</div>'
-            : '') +
+          // ⚠️ Hier stand bis zum 2026-08-12 die Marktplatz-Erklärung als eigene
+          // Info-Zeile unter der Spalte. Sie ist in den Kartentext der
+          // Creator-Beteiligung gewandert (campCard): die Provision betrifft
+          // genau diese eine Kampagne, und neben dem Preis, den sie senkt, ist
+          // sie eine Erklärung — unter der Spalte war sie eine Fußnote, die
+          // niemand mit den zwei Zahlen darüber zusammengebracht hat.
         '</div>' +
       '</div>'
     );
