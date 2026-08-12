@@ -1482,7 +1482,14 @@ html, body {
   --res-server-bg:    #ddd6fe;
   --res-watchtime-bg: #fff0a8;
   --res-trend-bg:     #ffd6e7;
-  --res-time-bg:      #ece2d3;
+  /* Zeit ist die einzige Kostenart ohne Konto und wird deshalb nie als
+     unterdeckt markiert (§ .rt-led__item--short). Sie lag lange bei #ece2d3
+     und damit auf DERSELBEN Achse wie die unterdeckte Kachel: gleiche
+     Farbfamilie, 6 Punkte Helligkeit auseinander (L88 gegen L94). Das war
+     nicht auseinanderzuhalten. Jetzt L82 — Zeit tritt weiter zurück als jede
+     Buntfarbe, ist aber sichtbar ein Ton und kein ausgewaschener Rest.
+     ⚠️ Nicht heller ziehen, ohne die short-Kachel mitzunehmen. */
+  --res-time-bg:      #e0d3c0;
   /* Phase 3. Die Zuordnung ist nicht beliebig: das Modell-Orange muss vor
      allem im Belegungs-Balken der Farm bestehen, wo es als dünnes Segment
      neben dem User-Blau und dem Code-Violett liegt — ein weiterer kühler Ton
@@ -1515,32 +1522,9 @@ html, body {
 .rt-led__item--model     { background: var(--res-model-bg); }
 .rt-led__item--meta      { background: var(--res-meta-bg); }
 
-/* Unterdeckt — der Posten, an dem der Kauf gerade scheitert (RT.ledger.cover).
-   Die Kachel bleibt an ihrem Platz und behält ihre Zahl; sie verliert nur ihre
-   Ressourcenfarbe. In einer sonst normal eingefärbten Spalte ist das
-   eindeutig, ohne dass irgendwo Text dazukommt — und es braucht keine neue
-   Farbe im Spiel, sondern zeigt eine, die fehlt.
-
-   ⚠️ Bewusst kein Rot. Das gehört .rt-led__item--warn (Dark Patterns, weiter
-   unten) und bedeutet dort „unumkehrbarer Schaden" — zwei rote Kacheln mit
-   verschiedener Aussage in derselben Spalte wären die perfekte Verwechslung.
-
-   Die Regel steht NACH den Ressourcenfarben: gleiche Spezifität, es gewinnt
-   die spätere. */
-/* ⚠️ Ausgewaschen zum Papierton hin, NICHT abgedunkelt. Ein mittleres Grau
-   lag zu nah an --res-time-bg (die Zeit-Kachel ist ohnehin fast farblos und
-   wird nie markiert) — die beiden waren in derselben Spalte kaum zu
-   unterscheiden. So ist die unterdeckte Kachel die hellste der Spalte und
-   tritt eindeutig zurück, statt sich unter die neutralen zu mischen. */
-.rt-led__item--short {
-  background: #f4f1ea;
-  border-color: #c9bfb2;
-  color: var(--tt-brown-light);
-}
-/* Die Zahl ist die Information und bleibt lesbar — blass heißt hier
-   „farblos", nicht „ausgeblendet". Nur das Ressourcen-Icon nimmt sich zurück,
-   damit die Kachel als Ganzes hinter die bezahlbaren zurücktritt. */
-.rt-led__item--short .rt-led__ico { opacity: 0.55; }
+/* Die unterdeckte Kachel (.rt-led__item--short) stand früher hier. Sie musste
+   hinter .rt-led__item wandern, weil sie den RAHMEN ändert und die Basisregel
+   ihn per Kurzschreibweise setzt — siehe dort. */
 
 /* Modals mit Ledger-Karten ziehen ihre Typografie auf den Holzton der Karten.
    Der Hintergrund bleibt bewusst weiß: die Karten sind --tt-paper, auf Creme
@@ -1736,6 +1720,40 @@ html, body {
 .rt-led__item--warn {
   background: #ffdccf; border-color: #b4492a; color: #8f3a20;
 }
+
+/* Unterdeckt — der Posten, an dem der Kauf gerade scheitert (RT.ledger.cover).
+   Die Kachel bleibt an ihrem Platz und behält ihre Zahl; sie verliert nur ihre
+   Ressourcenfarbe. In einer sonst normal eingefärbten Spalte ist das
+   eindeutig, ohne dass irgendwo Text dazukommt — und es braucht keine neue
+   Farbe im Spiel, sondern zeigt eine, die fehlt.
+
+   ⚠️ Bewusst kein Rot. Das gehört .rt-led__item--warn (direkt darüber) und
+   bedeutet dort „unumkehrbarer Schaden" — zwei rote Kacheln mit verschiedener
+   Aussage in derselben Spalte wären die perfekte Verwechslung.
+
+   ⚠️ Der gestrichelte Rahmen ist das eigentliche Signal, nicht die Blässe.
+   Vorher liefen „fehlt" und die Zeit-Kachel beide über die Helligkeit (L94
+   gegen L88, gleiche Farbfamilie) und waren nicht auseinanderzuhalten. Zeit
+   ist seitdem ein deutlicher Sandton (--res-time-bg, L82), und „fehlt" hat
+   die Achse gewechselt: durchbrochener Rahmen statt nur hell. Das trägt
+   zusätzlich bei Rot-Grün-Schwäche, wo zwei helle Beigetöne identisch sind.
+
+   ⚠️ Die Regel MUSS hinter .rt-led__item stehen. Die Basisregel setzt
+   `border: 2px solid` als Kurzschreibweise und würde bei gleicher
+   Spezifität Stil und Farbe des Rahmens wieder überschreiben — genau das ist
+   dem früheren `border-color` hier passiert, es war jahrelang wirkungslos.
+   Für den Hintergrund gilt weiter: hinter den Ressourcenfarben, also passt
+   diese Position für beides. */
+.rt-led__item--short {
+  background: #fdfaf4;
+  border-color: #c1b6a6;
+  border-style: dashed;
+  color: var(--tt-brown-light);
+}
+/* Die Zahl ist die Information und bleibt lesbar — blass heißt hier
+   „farblos", nicht „ausgeblendet". Nur das Ressourcen-Icon nimmt sich zurück,
+   damit die Kachel als Ganzes hinter die bezahlbaren zurücktritt. */
+.rt-led__item--short .rt-led__ico { opacity: 0.55; }
 /* Freischaltungen und Sonder-Effekte: keine Ressource, deshalb keine
    Ressourcen-Farbe. Das sind Sätze statt Zahlen, also auch keine 18px. */
 .rt-led__item--text { background: var(--tt-cream); }

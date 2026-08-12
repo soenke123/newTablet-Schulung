@@ -1470,7 +1470,7 @@ Kaufen kann man an sieben Stellen (Shop, Feldkauf, Farm-Ausbau, Techtree-Node, W
 Seitdem gibt es **zwei Signale aus einer Rechnung**:
 
 1. **Der Knopf nennt die Ressource** — `Zu wenig 💰` · `Zu wenig 🗃️` · `Zu wenig ⏳` · `Zu wenig 🖥️`, bei mehreren Lücken `Zu wenig 💰 🗃️`.
-2. **Die unterdeckte Kostenkachel wird blass** — sie bleibt an ihrem Platz und behält ihre Zahl, verliert aber ihre Ressourcenfarbe. In einer sonst normal eingefärbten Spalte ist das eindeutig, ohne dass irgendwo Text dazukommt.
+2. **Die unterdeckte Kostenkachel wird blass und bekommt einen gestrichelten Rahmen** — sie bleibt an ihrem Platz und behält ihre Zahl, verliert aber ihre Ressourcenfarbe. In einer sonst normal eingefärbten Spalte ist das eindeutig, ohne dass irgendwo Text dazukommt.
 
 `RT.ledger.cover(cost)` (`js/ledger.js`) ist die eine Rechnung dahinter: ein Kostenposten bringt neben `value` (Anzeigetext) ein `need` (Zahl) mit, `cover()` markiert die unterdeckten und liefert die Knopfbeschriftung zurück. **Knopf und Kachel können dadurch nicht auseinanderlaufen** — genau das war der Fehler, den die sieben Einzellösungen produziert haben.
 
@@ -1483,7 +1483,13 @@ Vier Regeln:
 
 ⚠️ **Bewusst kein Rot.** Das gehört `.rt-led__item--warn` (Dark Patterns) und bedeutet dort „unumkehrbarer Schaden". Zwei rote Kacheln mit verschiedener Aussage in derselben Spalte wären die perfekte Verwechslung.
 
-⚠️ **Die blasse Kachel ist zum Papierton hin ausgewaschen, nicht abgedunkelt.** Ein mittleres Grau lag zu nah an `--res-time-bg` — die Zeit-Kachel ist ohnehin fast farblos und wird nie markiert, beide waren in derselben Spalte kaum auseinanderzuhalten. So ist die unterdeckte Kachel die **hellste** der Spalte.
+⚠️ **Die blasse Kachel ist zum Papierton hin ausgewaschen, nicht abgedunkelt.** Ein mittleres Grau lag zu nah an `--res-time-bg`, und die Zeit-Kachel wird nie markiert — beide waren in derselben Spalte kaum auseinanderzuhalten. So ist die unterdeckte Kachel die **hellste** der Spalte.
+
+⚠️ **Blässe allein trägt das aber nicht, deshalb der gestrichelte Rahmen** (2026-08-13). Zeit und „fehlt" lagen beide auf der **Helligkeits**-Achse und in derselben Farbfamilie: `#ece2d3` (L88) gegen `#f4f1ea` (L94), sechs Punkte auseinander. Zwei Änderungen zusammen lösen das — Zeit ist jetzt ein deutlicher Sandton (`#e0d3c0`, L82), und „fehlt" hat die Achse gewechselt: **durchbrochener Rahmen statt nur hell.** Das ist gleichzeitig das einzige Signal der Reihe, das bei Farbfehlsichtigkeit trägt, wo zwei helle Beigetöne identisch aussehen.
+
+⚠️ **Eine neue Buntfarbe für Zeit war die verworfene Alternative — der Farbkreis ist voll.** Acht Ressourcen belegen ihn (19° warn · 30° Modelle · 50° Watchtime · 143° Geld · 189° Metadaten · 205° User · 255° Server · 333° Trend); frei sind nur Salbeigrün (~85°) und Pflaume (~290°). Beide fallen aus, weil Zeit in den Kostenspalten **direkt neben** ihren Konkurrenten steht: im Techtree zwischen 🗃️ Metadaten und 🖥 Server (Pflaume neben Violett), im KI-Labor direkt unter ⏳ Watchtime (Salbei neben Gelb) — und Grün heißt im Techtree ohnehin schon „bezahlbar/fertig". **Wer eine neunte Ressource einführt, hat kein freies Feld mehr und muss über Struktur gehen, nicht über den Farbton.**
+
+⚠️ **`.rt-led__item--short` MUSS hinter `.rt-led__item` stehen.** Die Basisregel setzt `border: 2px solid var(--tt-brown)` als Kurzschreibweise; bei gleicher Spezifität (beides eine Klasse) gewinnt die spätere und überschreibt Stil **und** Farbe des Rahmens. Genau das ist dem früheren `border-color: #c9bfb2` passiert — es stand vor der Basisregel und war wirkungslos, die vermeintlich blasse Kachel trug den normalen braunen Rahmen. Der Block ist deshalb 2026-08-13 zu `--warn` gewandert; für den Hintergrund gilt weiter „hinter den Ressourcenfarben", und diese Position erfüllt beides.
 
 ⚠️ **In der Werbeagentur und im KI-Labor ist die Deckung eine laufende Zahl** — auf einer Anteils-Stufe sogar ein Prozentsatz des Lagers. Beschriftung und Kachel laufen dort im Sekundentakt mit (`markShortTiles()` in `js/ui.js`), statt die Karte neu zu bauen: ein Neuaufbau würde den Intensitäts-Regler den Finger kosten. Wenn das im Spiel zappelt, ist der Knopf dafür eine kleine Hysterese (blass erst ab ~5 % Unterdeckung), **nicht** das Weglassen der Markierung.
 
