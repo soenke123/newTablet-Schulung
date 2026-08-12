@@ -2793,7 +2793,19 @@
 
     // Notification-Badge sichtbar? Ein Badge (Key aus seenBadges) zeigt, dass
     // an einem UI-Element neuer Inhalt wartet. Bei Klick wird er dauerhaft weg.
+    //
+    // ⚠️ Der Shop-Badge hat einen ZWEITEN Grund, der nicht am „schon mal
+    // geöffnet" hängt: Phase 2 beginnt ohne Werbeagentur, und ohne sie gibt es
+    // kein Einkommen (buildingLocked oben). Er steht deshalb wieder, bis die
+    // erste Agentur gebaut ist — selbsträumend, ohne eigenes seenBadges-Feld
+    // und ohne Migration.
+    //
+    // ⚠️ Die Regel steht HIER und nicht in ui.js: die Datei hat zwei getrennte
+    // IIFEs (Grid/Modale bis Z. 4250, Ressourcen-Bar und Profile-Bar danach),
+    // und der Shop-Knopf wird aus der zweiten aktualisiert. Eine Hilfsfunktion
+    // in der ersten ist dort schlicht nicht sichtbar.
     badgeVisible: function (key) {
+      if (key === 'shop' && this.currentPhase() >= 2 && !this.hasAgency()) return true;
       return !this.current.seenBadges[key];
     },
     markSeen: function (key) {

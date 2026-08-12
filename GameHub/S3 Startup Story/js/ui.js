@@ -93,15 +93,11 @@
       if (phase === 1) return !s.seenBadges.hq_phase1;
       return false;
     }
-    // Der Shop-Badge hat zwei Gründe, und der zweite hängt NICHT am
-    // „schon mal geöffnet": Phase 2 beginnt ohne Werbeagentur, und ohne sie
-    // gibt es kein Einkommen (RT.state.buildingLocked). Der Badge steht
-    // deshalb, bis die erste Agentur gebaut ist — er räumt sich damit selbst
-    // ab und braucht kein eigenes seenBadges-Feld (und keine Migration).
-    if (uiKey === 'shop') {
-      if (RT.state.currentPhase() >= 2 && !RT.state.hasAgency()) return true;
-      return !s.seenBadges.shop;
-    }
+    // ⚠️ Der Shop-Badge geht über RT.state.badgeVisible() und nicht über
+    // s.seenBadges: dort steckt der zweite Grund (Phase 2 ohne Werbeagentur).
+    // Die Profile-Bar in der zweiten IIFE dieser Datei fragt dieselbe Stelle —
+    // eine Kopie hier wäre genau die Art Doppelung, die auseinanderläuft.
+    if (uiKey === 'shop')          return RT.state.badgeVisible('shop');
     if (uiKey === 'tab_marketing') return !s.seenBadges.tab_marketing;
     if (uiKey === 'tab_werbung')   return !s.seenBadges.tab_werbung;
     return false;
@@ -4725,9 +4721,8 @@
       // Shop-Badge live togglen (nicht im Grid, sondern in der Profile-Bar).
       var shopBadge = document.getElementById('rt-shop-badge');
       if (shopBadge) {
-        // ⚠️ shouldShowBadge() statt RT.state.badgeVisible(): der Phase-2-Grund
-        // (keine Werbeagentur) steht dort und nicht in seenBadges.
-        shopBadge.style.display = shouldShowBadge('shop') ? '' : 'none';
+        var showShop = RT.state.badgeVisible && RT.state.badgeVisible('shop');
+        shopBadge.style.display = showShop ? '' : 'none';
       }
     }
 
