@@ -1332,7 +1332,7 @@ Dazu das **Protokoll** im Modal — was jede Entscheidung konkret bewirkt hat, i
 
 ### Zeit und Spielstand
 
-`nextAt` ist ein **absoluter Zeitstempel**; die Uhr stimmt nach einer Pause von allein, ohne Nachrechnen. `nextAt = 0` heißt „sofort fällig" — das nutzt nur noch der Debug-Knopf „Runde jetzt".
+`nextAt` ist ein **absoluter Zeitstempel**; die Uhr stimmt nach einer Pause von allein, ohne Nachrechnen. `nextAt = 0` heißt „sofort fällig" — das setzt nur noch `maybeTriggerPhase4()` (siehe unten). Der Debug-Knopf „Runde jetzt", der es früher benutzt hat, ist mit dem Umbau des Debug-Tools weggefallen (§10.5).
 
 ⚠️ **Der Vorlauf wird an zwei Stellen gesetzt, und beide werden gebraucht.** `maybeTriggerPhase4()` (loop.js) setzt ihn im Moment des Auslösens, weil der Ereignis-Tick **im selben Durchlauf** ein paar Zeilen weiter läuft — mit dem frischen `nextAt = 0` lag der Kartentisch sonst über dem Gratulations-Modal, also vor jeder Erklärung. Das Modal setzt ihn beim Schließen erneut, damit die zwei Minuten vollständig **nach** der Tour liegen.
 
@@ -1676,6 +1676,27 @@ Unter der Zustands-Erklärung sitzt, hinter einer Trennlinie abgesetzt, ein rote
 ⚠️ **Bewusst kein `confirm()`.** Der Browser-Dialog kann nicht sagen, was verloren geht, und sieht auf Tablets aus wie eine Systemmeldung, die man wegtippt. Der Debug-Neustart darf `confirm()` behalten — dort ist der Adressat ein Entwickler.
 
 ⚠️ **Beide Knöpfe werden beim Bestätigen sofort deaktiviert.** `RT.storage.wipe()` ist async (Server-RPC); ein zweiter Klick in dieser Zeit setzte einen zweiten Reset ab. Neu geladen wird erst nach dem RPC — sonst stirbt er mit der Seite und der nächste Boot zieht den gerade gelöschten Stand wieder herunter.
+
+### Das Debug-Tool — hinter Passwort und abgemeldet
+
+W+I öffnet seit dem Live-Betrieb keine Werkzeugkiste mehr, sondern eine **Passwort-Abfrage**; erst danach kommen die vier Phasen-Sprünge (Neustart · 2 · 3 · 4). Geld, Metadaten, Trend und der Ereignis-Takt sind raus — das waren Balance-Werkzeuge, und im Betrieb sind sie schlicht Cheats.
+
+⚠️ **Das Passwort ist ein Riegel gegen Neugier, kein Schutz.** Der Hash (salted SHA-256, von Hand in `debug.js` — `crypto.subtle` gibt es nur im secure context, also nicht bei `file://`) steht im ausgelieferten Code und lässt sich offline durchprobieren, und wer die Konsole öffnet, braucht das Overlay ohnehin nicht. Echter Schutz ginge nur serverseitig, über ein Debug-Flag am Account.
+
+**Wer sich freischaltet, wird abgemeldet und spielt rein lokal weiter.** Der Grund steht in §10.6: ein gesprungener Spielstand käme über `user_game_saves` auf jedes Gerät des Schülers, und der Hub leitet aus genau diesem Blob Kreatur, Wachstum und Münzen ab. Vier Schritte, jeder mit einem Grund:
+
+1. `RT.cloud.flush(false)` — den **echten** Stand hochschieben, solange es noch geht (sonst bis zu 20 s Push-Takt verloren)
+2. `supabaseClient.auth.signOut()` — die Session ist weg, damit auch die des Hubs und aller anderen Tabs
+3. `RT.cloud.disableForDebug()` — legt das Modul still: kein Push, kein Laden, kein Dirty-Marker, **kein Besitzer** am lokalen Stand
+4. `RT.storage.save()` — den laufenden Stand einmal als Gast-Stand schreiben
+
+⚠️ **Der Riegel steht zusätzlich zum Abmelden, nicht statt seiner.** `window.__accessToken` und der persistierte `lernwelt-auth`-Eintrag hängen im Moment des SignOut noch einen Wimpernschlag nach, und `token()` liest beide.
+
+⚠️ **`owner()` muss im Debug-Modus `null` liefern**, sonst trägt der lokale Blob die Id des echten Kontos — und der Phasensprung, der die Seite neu lädt, fände seinen eigenen Stand nicht wieder (`ownsLocal()` verwirft ihn). Umgekehrt ist genau das der Schutz: nach dem nächsten Login ist der Debug-Stand ein fremder Gast-Stand und wird ignoriert.
+
+⚠️ **Ein gescheiterter SignOut (offline) ist harmlos.** Der Riegel steht trotzdem, dieser Tab schreibt nichts mehr nach oben, und der nächste Boot holt den Serverstand — der Debug-Sprung ist dann weg, der echte Stand unversehrt.
+
+**Zurück ins Konto geht nur über Neuladen und Anmelden**, mit Absicht: einen Weg zurück im laufenden Tab gäbe es nur um den Preis, dass der Debug-Stand doch wieder neben einer gültigen Session steht. Sichtbar ist der Zustand am Konto-Abzeichen, das von selbst auf „Gast" springt (`cloud:status`).
 
 Die Admin-Seite des Spielstands steht in §10.7.
 

@@ -837,9 +837,9 @@
     // diese Zeile hinge der Spielstand mit pending=true fest und es käme
     // nie wieder eine Karte.
     if (e.pending) { if (!_overlay) open(); return; }
-    // nextAt = 0 heißt „sofort fällig" — das nutzt der Debug-Knopf „Runde
-    // jetzt". Der reguläre Weg setzt beim Schließen des Phase-4-Modals
-    // stattdessen FIRST_ROUND_SEC in die Zukunft.
+    // nextAt = 0 heißt „sofort fällig" — das setzt maybeTriggerPhase4()
+    // im Moment des Auslösens. Der reguläre Weg setzt beim Schließen des
+    // Phase-4-Modals stattdessen FIRST_ROUND_SEC in die Zukunft.
     if (Date.now() < (e.nextAt || 0)) return;
     nextRound();
     // Leergelaufenes Deck: nichts aufmachen, die Uhr läuft weiter. Der

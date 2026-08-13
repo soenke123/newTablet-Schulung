@@ -51,6 +51,17 @@
      Vorrang hat, weil er nachweislich nie beim Server war.            */
   var synced = false;
 
+  /* Debug-Modus: der Riegel, der das Modul stilllegt (js/debug.js).
+     Er meldet den Spieler ab und spielt danach rein lokal weiter — der
+     Serverstand des Kontos darf davon nichts mitbekommen.
+
+     ⚠️ Der Riegel steht zusätzlich zum Abmelden, nicht statt seiner.
+     window.__accessToken und der persistierte `lernwelt-auth`-Eintrag
+     hängen im Moment des signOut noch einen Wimpernschlag nach, und
+     token() liest beide. Ein Push in genau diesem Fenster schriebe den
+     Debug-Stand in den echten Account.                                 */
+  var debugDetached = false;
+
   /* ─── Status für die Anzeige ───────────────────────────────
      Das Konto-Abzeichen am Avatar (js/ui.js) liest das hier. Vier
      Zustände, absichtlich in dieser Rangfolge:
@@ -103,6 +114,7 @@
   }
 
   function isServerMode() {
+    if (debugDetached) return false;
     return !!token() && !!window.SUPABASE_URL && !!window.SUPABASE_ANON_KEY;
   }
 
@@ -121,6 +133,12 @@
      und dann spielt ihn jeder weiter, der das Gerät aufklappt.       */
   var ownerCache = { tok: null, id: null };
   function owner() {
+    // Im Debug-Modus ist der lokale Stand ausdrücklich ein GAST-Stand: er
+    // trägt keine Id, gehört keinem Konto und wird nach dem nächsten Login
+    // von ownsLocal() verworfen. Ohne das läge ein Debug-Spielstand unter
+    // der Id des echten Kontos im localStorage — und der Phasensprung, der
+    // die Seite neu lädt, fände seinen eigenen Stand nicht wieder.
+    if (debugDetached) return null;
     var t = token();
     if (!t) return null;
     if (ownerCache.tok === t) return ownerCache.id;
@@ -307,10 +325,34 @@
     }, PUSH_INTERVAL_MS);
   }
 
+  /* Gibt das Promise des Pushs zurück (bzw. ein aufgelöstes, wenn es
+     nichts zu tun gibt). Die Unload-Pfade ignorieren das wie bisher —
+     gebraucht wird es vom Debug-Modus, der den echten Stand ERST oben
+     wissen will, bevor er den Spieler abmeldet.                       */
   function flush(keepalive) {
-    if (!isDirty()) return;
+    if (!isDirty()) return Promise.resolve(false);
     if (timer) { clearTimeout(timer); timer = null; }
-    pushNow({ keepalive: !!keepalive });
+    return pushNow({ keepalive: !!keepalive });
+  }
+
+  /* ─── Debug-Modus: Modul stilllegen ────────────────────────
+     Ab hier gilt für alles, was dieses Modul tut, „nicht angemeldet":
+     kein Push, kein Laden, kein Dirty-Marker, kein Besitzer am lokalen
+     Stand. Es gibt bewusst KEINEN Weg zurück — wer wieder ins Konto
+     will, lädt die Seite neu und meldet sich an.
+
+     ⚠️ Der Dirty-Marker muss weg. Er stünde sonst für einen Stand, den
+     dieser Tab gerade zum Gast-Stand erklärt hat, und der nächste Boot
+     nach einem Login schöbe ihn als „ungepushte Offline-Runde" hoch.
+     (ownsLocal() fängt das zwar auch ab — aber auf zwei Beinen.)      */
+  function disableForDebug() {
+    if (debugDetached) return;
+    debugDetached = true;
+    if (timer) { clearTimeout(timer); timer = null; }
+    synced = false;
+    clearDirty();
+    console.warn('[cloud] Debug-Modus — ab jetzt nur noch lokal.');
+    announce();
   }
 
   /* Serverstand löschen — Debug-Neustart. Ohne das zieht der nächste
@@ -393,6 +435,7 @@
     markDirty:    markDirty,
     clearDirty:   clearDirty,
     isDirty:      isDirty,
+    disableForDebug: disableForDebug,
     init:         init
   };
 })(window.RT3);
