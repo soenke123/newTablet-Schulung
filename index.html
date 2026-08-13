@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tablet Schulung</title>
+  <link rel="icon" type="image/png" href="Logo.png" />
+  <link rel="apple-touch-icon" href="Logo.png" />
   <style>
     :root {
       --bg: #1a0e05;
@@ -76,6 +78,21 @@
 
     header {
       margin-bottom: 3rem;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(0.8rem, 2vw, 1.4rem);
+      flex-wrap: wrap;
+    }
+
+    .site-logo {
+      width: clamp(56px, 9vw, 96px);
+      height: auto;
+      flex-shrink: 0;
+      filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
     }
 
     .season-label {
@@ -806,7 +823,10 @@
   <main>
 
     <header>
-      <h1 id="pageTitle">Tablet Schulung</h1>
+      <div class="title-row">
+        <img class="site-logo" src="Logo.png" alt="" />
+        <h1 id="pageTitle">Tablet Schulung</h1>
+      </div>
       <div class="season-label" id="seasonLabel" hidden></div>
     </header>
 
