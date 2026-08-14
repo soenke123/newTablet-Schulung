@@ -6,7 +6,7 @@
        oberfläche, keine Spielfläche mit fixem Layout. Zoom ist eine
        Hilfe, kein Störfall. -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Zukunftsboard — Lernwelt</title>
+  <title>Reality Check — Lernwelt</title>
   <link rel="icon" type="image/png" sizes="64x64" href="../../icons/favicon-64.png" />
   <link rel="icon" type="image/png" sizes="256x256" href="../../icons/favicon-256.png" />
   <link rel="apple-touch-icon" href="../../icons/icon-192.png" />
@@ -19,7 +19,7 @@
 <header class="bd-head">
   <a class="bd-hub-btn" href="../index.html">← Hub</a>
   <div class="bd-head__title">
-    <h1>🧭 Zukunftsboard</h1>
+    <h1>🧭 Reality Check</h1>
     <p class="bd-head__sub" id="bdCourse">…</p>
   </div>
   <div class="bd-head__right">
@@ -33,7 +33,7 @@
 
 <!-- ── Phasen ────────────────────────────────────────────────
      Zeigt nicht nur an, wo der Kurs steht, sondern schaltet auch um:
-     Phase 1 zeigt die Post-Its, Phase 2 die Fakten. Was noch nicht
+     Phase 1 zeigt die Post-Its, Phase 2 die Recherchen. Was noch nicht
      freigeschaltet ist, bleibt gesperrt. Phase 3 hat keinen eigenen
      Inhalt — sie ist ein Zustand, kein Fach — und ist deshalb ein
      <div> und kein Knopf. -->
@@ -46,8 +46,8 @@
   </button>
   <button type="button" class="bd-phase" data-phase="2">
     <span class="bd-phase__no">2</span>
-    <span class="bd-phase__name">Belegen</span>
-    <span class="bd-phase__what">Fakten</span>
+    <span class="bd-phase__name">Recherchieren</span>
+    <span class="bd-phase__what">Recherchen</span>
     <span class="bd-phase__count"></span>
   </button>
   <div class="bd-phase bd-phase--static" data-phase="3">
@@ -91,7 +91,7 @@
   <!-- Die Tafel: weiße Fläche mit feinem Raster, auf die geklebt wird.
        Die Klasse sitzt hier und nicht im Skript, weil sie zur Bühne
        gehört und nicht zum Inhalt — was darin liegt (Wolke oder
-       Fakten-Raster), wechselt, die Tafel bleibt. -->
+       Recherche-Raster), wechselt, die Tafel bleibt. -->
   <section id="bdBoard" class="bd-surface" hidden></section>
   <section id="bdTable" hidden></section>
 </main>
@@ -120,7 +120,7 @@
               placeholder="Schreib in einem Satz, worum es geht."></textarea>
     <div class="bd-counter"><span id="bdTextCount">0</span>/200</div>
 
-    <!-- Quellen-Schritt: nur bei Fakten. Drei getrennte Pflichtfelder —
+    <!-- Quellen-Schritt: nur bei Recherchen. Drei getrennte Pflichtfelder —
          die Felder sollen erklären, was eine Quelle ausmacht. -->
     <fieldset class="bd-source" id="bdSource" hidden>
       <legend>4 · Deine Quelle <span class="bd-source__req">alle drei Felder werden gebraucht</span></legend>

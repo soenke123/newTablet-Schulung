@@ -23,7 +23,7 @@ function getGameAccess(gameId) {
   // Season 1 = öffentlicher Baseline (auch für Nicht-Eingeloggte spielbar).
   // Erst ab Season 2 gilt die Session-Season als Gate.
   //
-  // Ausnahme für collab: das Zukunftsboard moderiert ein Admin, und Admins
+  // Ausnahme für collab: Reality Check moderiert ein Admin, und Admins
   // hängen in keinem Kurs — sie haben Season 0. Ohne diese Zeile stünde die
   // Lehrkraft vor der Kachel, die sie selbst steuern soll. is_admin deckt
   // beide Admin-Rollen ab (Volladmin hat laut Migration 0053 auch is_admin).
@@ -78,10 +78,10 @@ const GAMES_CONFIG = [
   // Rundenbonus aus (siehe isRoundless).
   // Ein Monster ist vorgesehen (games-Eintrag existiert), aber die
   // Wachstums- und Coin-Regel steht noch aus. Bis dahin bleibt das Ei liegen.
-  { id: 'game19', season: 3, title: 'Zukunftsboard',       icon: '🧭', url: 'S3 Zukunftsboard/index.html', collab: true },
+  { id: 'game19', season: 3, title: 'Reality Check',       icon: '🧭', url: 'S3 Zukunftsboard/index.html', collab: true },
 ];
 
-// „Kachel ohne Runden": Startup Story (standalone) und Zukunftsboard
+// „Kachel ohne Runden": Startup Story (standalone) und Reality Check
 // (collab) melden beide kein Rundenergebnis. Alles, was eine Runde
 // voraussetzt — Nest-Eier, Runden-Items, Backup-Tausch, Rundenbonus —
 // muss für beide aus sein, sonst verpufft es wirkungslos oder geht verloren.
@@ -356,7 +356,7 @@ function renderGamesGrid(allData, shopData) {
   // Season 1 ist Baseline und immer sichtbar. Höhere Seasons erscheinen
   // erst, sobald der User dorthin freigeschaltet ist. Reihenfolge: neueste oben.
   const userSeason = Math.max(getUserSeason(), 1);
-  // Admins moderieren das Zukunftsboard, hängen dabei aber in keinem Kurs
+  // Admins moderieren Reality Check, hängen dabei aber in keinem Kurs
   // und haben deshalb Season 0. Ohne diese Ausnahme wäre die Season-Sektion
   // gar nicht da und die Kachel für die Lehrkraft unerreichbar — die
   // Ausnahme in getGameAccess allein reicht nicht.
@@ -489,7 +489,7 @@ function attachCardListeners(card, game, data, isBackupTarget) {
     if (access === 'password') { showPasswordPrompt(game.id); return; }
     const sd = loadShopData();
     // Nester laufen unter einer eigenen Id durch ein Spiel und erwarten am
-    // Rundenende ein Ergebnis. Startup Story und das Zukunftsboard haben
+    // Rundenende ein Ergebnis. Startup Story und Reality Check haben
     // weder Runden noch lesen sie die Id aus der URL — ein Ei ginge dort
     // für immer verloren.
     if (sd.pendingEggNestId && !isRoundless(game)) {
@@ -601,7 +601,7 @@ function buildCardHTML(game, data, shopData) {
   // standalone und collab genauso wenig wie das Team-Legendär: der Bonus
   // wird in computeRoundResult() ausgeschüttet, und beide spielen keine
   // Runden. Startup Storys Münzen kommen aus der Userzahl-Kurve, das
-  // Zukunftsboard schüttet (noch) gar nichts aus.
+  // Reality Check schüttet (noch) gar nichts aus.
   const bonusCoins = (!isLegi && !isRoundless(game) && hasCreature) ? getGrowthBonusCoins(data.growth || 0) : 0;
   const bonusHint = bonusCoins > 0
     ? `<div class="game-card__bonus-hint" title="${bonusCoins === 10 ? 'Vollendungs-Bonus' : 'Ausgewachsen-Bonus'}: +${bonusCoins} Münzen pro Runde">+${bonusCoins}<span class="game-card__bonus-hint-coin">🪙</span></div>`
@@ -617,7 +617,7 @@ function buildCardHTML(game, data, shopData) {
   const todayStr     = window.__bonbonToday
                     || (typeof getBerlinTodayIso === 'function' ? getBerlinTodayIso() : new Date().toISOString().slice(0, 10));
   // collab ist hier ausgenommen (standalone NICHT — Startup Story holt den
-  // Tages-Bonus bei der ersten Rückkehr mit Fortschritt): das Zukunftsboard
+  // Tages-Bonus bei der ersten Rückkehr mit Fortschritt): Reality Check
   // schickt überhaupt keine Submission, der Hinweis wäre ein Versprechen,
   // das die Kachel nicht einlösen kann.
   const bonbonAvailable = !isLegi
@@ -669,7 +669,7 @@ function buildCardHTML(game, data, shopData) {
   // Lieber ehrlich gesperrt als stillschweigend etwas anderes tun.
   if (isRoundless(game) && shopData.pendingEggNestId) {
     return `<button class="game-card__btn" disabled style="opacity:0.4;cursor:default;"
-             title="${game.collab ? 'Das Zukunftsboard ist ein Arbeitsraum, kein Spiel — Nest-Eier schlüpfen hier nicht.' : 'Startup Story brütet sein eigenes Ei aus — Nest-Eier passen hier nicht.'}">Kein Nest-Platz</button>`;
+             title="${game.collab ? 'Reality Check ist ein Arbeitsraum, kein Spiel — Nest-Eier schlüpfen hier nicht.' : 'Startup Story brütet sein eigenes Ei aus — Nest-Eier passen hier nicht.'}">Kein Nest-Platz</button>`;
   }
   // standalone/collab: Booster, Coins ×3, Glücksklee und Lockmittel hängen
   // alle am Rundenergebnis — das es hier nicht gibt. Sie würden beim

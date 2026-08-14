@@ -1,4 +1,4 @@
-/* Server-Anbindung des Zukunftsboards (Migration 0062).
+/* Server-Anbindung von Reality Check (Migration 0062).
 
    Direkter fetch statt supabase-js-Query-Builder — genau wie in
    session.js und Startup Storys cloud.js. Das SDK hält interne Locks,

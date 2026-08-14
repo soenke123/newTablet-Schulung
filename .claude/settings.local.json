@@ -36,7 +36,9 @@
       "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless=new --disable-gpu --hide-scrollbars --virtual-time-budget=8000 --window-size=820,1150 --screenshot=/c/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f72f0044-3664-48c4-aba8-5f2eb674be8e/scratchpad/shot-form.png 'file:///C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f72f0044-3664-48c4-aba8-5f2eb674be8e/scratchpad/board-preview.html#form')",
       "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless=new --disable-gpu --hide-scrollbars --virtual-time-budget=8000 --window-size=820,520 --screenshot=/c/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f72f0044-3664-48c4-aba8-5f2eb674be8e/scratchpad/shot-form2.png 'file:///C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f72f0044-3664-48c4-aba8-5f2eb674be8e/scratchpad/board-preview.html#form')",
       "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless=new --disable-gpu --virtual-time-budget=3000 --dump-dom file:///C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f72f0044-3664-48c4-aba8-5f2eb674be8e/scratchpad/c.html)",
-      "Bash(grep -oE \"Gemessen wird mit .{0,180}\")"
+      "Bash(grep -oE \"Gemessen wird mit .{0,180}\")",
+      "PowerShell(Select-String -Path \"GameHub\\\\script.js\",\"GameHub\\\\creatures.js\",\"admin\\\\app.js\",\"admin\\\\index.html\",\"index.html\" -Pattern \"Zukunftsboard\" | ForEach-Object { \"$\\($_.Filename\\):$\\($_.LineNumber\\): $\\($_.Line.Trim\\(\\)\\)\" })",
+      "PowerShell(node --check \"GameHub\\\\S3 Zukunftsboard\\\\js\\\\board.js\"; if \\($?\\) { \"board.js OK\" }; node --check \"GameHub\\\\script.js\"; if \\($?\\) { \"script.js OK\" })"
     ]
   }
 }

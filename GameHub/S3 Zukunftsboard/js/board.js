@@ -1,4 +1,8 @@
-/* Zukunftsboard — Oberfläche.
+/* Reality Check — Oberfläche.
+
+   Ordner, Spiel-ID (game19) und der interne kind-Wert 'fakt' heißen aus
+   Migrations-Gründen weiter wie früher; umbenannt ist nur, was die SuS
+   lesen.
 
    Grundregel: der Server entscheidet. Phase, Eigentum, Kontingent und
    Quellen-Vollständigkeit prüft board_upsert_note (Migration 0062)
@@ -34,16 +38,21 @@
   ];
 
   /* Die Phasen sind auch die beiden Fächer des Boards: in Phase 1 liegen
-     die Post-Its, in Phase 2 die Fakten. Man sieht immer genau eines von
-     beiden — deshalb tragen die Texte hier zusätzlich, WAS man gerade
-     vor sich hat. */
+     die Post-Its, in Phase 2 die Recherchen. Man sieht immer genau eines
+     von beiden — deshalb tragen die Texte hier zusätzlich, WAS man gerade
+     vor sich hat.
+
+     Gegenwart, nicht Zukunft: gefragt ist, was KI und Social Media JETZT
+     mit uns machen. Und was in Phase 2 dazukommt, heißt „Recherche" und
+     nicht „Fakt" — man kann im Netz auch Müll finden, das Wort darf das
+     Urteil nicht vorwegnehmen. Ob eine Recherche trägt, klärt Phase 3. */
   const PHASE_HINT = {
-    1: 'Phase 1 · Sammeln — Was könnten KI, Social Media und Handy-Games bewirken? Halte Chancen, Risiken und Vermutungen fest. Du hast 8 Post-Its.',
-    2: 'Phase 2 · Belegen — Such dir einen Punkt aus und finde einen echten Fakt dazu. Einer ist Pflicht, zwei sind möglich — jeweils mit vollständiger Quelle.',
+    1: 'Phase 1 · Sammeln — Was bewirken KI, Social Media und Handy-Games gerade bei uns? Halte Chancen, Risiken und Vermutungen fest. Du hast 8 Post-Its.',
+    2: 'Phase 2 · Recherchieren — Such dir einen Punkt aus und finde heraus, was wirklich dazu bekannt ist. Eine Recherche ist Pflicht, zwei sind möglich — jeweils mit vollständiger Quelle.',
     3: 'Phase 3 · Besprechen — Das Board ist eingefroren. Jetzt schauen wir gemeinsam drauf.'
   };
 
-  const KIND_LABEL = { idee: 'Post-It', fakt: 'Fakt' };
+  const KIND_LABEL = { idee: 'Post-It', fakt: 'Recherche' };
 
   const ERROR_TEXT = {
     not_authenticated:     'Du bist nicht mehr angemeldet. Lade die Seite neu.',
@@ -51,7 +60,7 @@
     no_cluster:            'Du gehörst noch zu keinem Kurs — ohne Kurs gibt es kein Board.',
     no_profile:            'Zu deinem Konto fehlt ein Profil. Melde dich bei deiner Lehrkraft.',
     account_not_active:    'Dein Konto ist noch nicht freigeschaltet.',
-    season_locked:         'Das Zukunftsboard gehört zu Season 3 und ist für deinen Kurs noch nicht offen.',
+    season_locked:         'Reality Check gehört zu Season 3 und ist für deinen Kurs noch nicht offen.',
     phase_locked:          'In dieser Phase lässt sich das nicht mehr ändern.',
     quota_exceeded:        'Du hast schon alle Karten dieser Art vergeben.',
     not_owner:             'Das ist nicht deine Karte.',
@@ -63,7 +72,7 @@
     invalid_source_date:   'Das Veröffentlichungsdatum fehlt oder liegt in der Zukunft.',
     invalid_topics:        'Dieses Thema gibt es nicht.',
     own_note:              'Deinem eigenen Beitrag kannst du nicht zustimmen.',
-    fact_not_likable:      'Fakten sind belegt, nicht gemeint — Zustimmung gibt es nur auf Post-Its.',
+    fact_not_likable:      'Bei einer Recherche zählt die Quelle, nicht die Mehrheit — Zustimmung gibt es nur auf Post-Its.',
     network:               'Keine Verbindung zum Server. Versuch es gleich nochmal.'
   };
 
@@ -81,7 +90,7 @@
     clusterId: null,   // nur Admins wählen aktiv; Schüler bleiben auf null
     view:      'board',
     cat:       'persoenlich',   // sichtbare Kategorie in der Wolken-Ansicht
-    viewPhase: 1,               // welches Fach man ansieht: 1 = Post-Its, 2 = Fakten
+    viewPhase: 1,               // welches Fach man ansieht: 1 = Post-Its, 2 = Recherchen
     viewPhaseSaved: false,      // lag beim Start schon eine Wahl im sessionStorage?
     lastPhase: null,            // letzte Kurs-Phase — zum Mitziehen beim Wechsel
     slide:     0,               // Richtung der Einblendung beim Wechsel
@@ -150,7 +159,7 @@
 
   /* ── Rechte — dieselbe Logik wie serverseitig (0062/0064) ─
      Neu anlegen darf man nur in der Phase, der die Kartenart gehört:
-     Post-Its in Phase 1, Fakten ab Phase 2. Ändern und Löschen sind
+     Post-Its in Phase 1, Recherchen ab Phase 2. Ändern und Löschen sind
      davon getrennt — ein Post-It bleibt auch in Phase 2 noch
      korrigierbar, man sieht es ja im Rückblick weiter. Was fertig ist,
      nachbessern zu dürfen, ist etwas anderes, als nachträglich Neues
@@ -170,13 +179,13 @@
     return note.kind === 'fakt' ? phase() >= 2 : true;
   }
 
-  /* Zustimmung gibt es nur auf Post-Its. Ein Fakt steht oder fällt mit
-     seiner Quelle — ob er einem gefällt, ändert daran nichts. */
+  /* Zustimmung gibt es nur auf Post-Its. Eine Recherche steht oder fällt
+     mit ihrer Quelle — ob sie einem gefällt, ändert daran nichts. */
   function canLike(note) {
     return note.kind !== 'fakt' && !note.is_mine;
   }
 
-  /* ── Fächer: Phase 1 = Post-Its, Phase 2 = Fakten ────────
+  /* ── Fächer: Phase 1 = Post-Its, Phase 2 = Recherchen ────
      Sichtbar ist immer genau eines. Welches, sagt state.viewPhase —
      umschaltbar über die Phasenleiste, aber nur so weit, wie der Kurs
      schon ist. */
@@ -193,7 +202,7 @@
   }
 
   // Alle Karten des sichtbaren Fachs — die Grundlage für Wolke,
-  // Fakten-Raster, Tabelle und die Zähler in der Leiste.
+  // Recherche-Raster, Tabelle und die Zähler in der Leiste.
   function visibleNotes() {
     return (state.data?.notes || []).filter(n => n.kind === viewKind());
   }
@@ -229,14 +238,14 @@
     if (!state.clusterId) state.clusterId = res.cluster_id;
 
     /* Schaltet die Lehrkraft auf Phase 2, sollen alle Tablets auch bei
-       den Fakten landen — sonst sitzt der halbe Kurs weiter vor den
+       den Recherchen landen — sonst sitzt der halbe Kurs weiter vor den
        Post-Its und wundert sich, wo der Plus-Knopf hin ist. Beim Sprung
        auf Phase 3 wird nicht umgeschaltet: dort gibt es kein eigenes
        Fach, und wer gerade etwas ansieht, soll es behalten. */
     const p = res.phase ?? 1;
     if (state.lastPhase === null) {
       // Erster Ladevorgang: wer neu dazukommt, während der Kurs schon
-      // bei den Fakten ist, soll auch dort landen — es sei denn, er hat
+      // bei den Recherchen ist, soll auch dort landen — es sei denn, er hat
       // in diesem Tab schon selbst umgeschaltet.
       if (!state.viewPhaseSaved) setViewPhase(Math.min(p, 2), { silent: true });
     } else if (p !== state.lastPhase && p <= 2) {
@@ -347,14 +356,14 @@
       el.setAttribute('aria-pressed', String(n === state.viewPhase));
       el.title = locked
         ? 'Diese Phase hat deine Lehrkraft noch nicht freigeschaltet.'
-        : (n === 1 ? 'Die Post-Its des Kurses ansehen' : 'Die belegten Fakten ansehen');
+        : (n === 1 ? 'Die Post-Its des Kurses ansehen' : 'Die Recherchen des Kurses ansehen');
     });
   }
 
   function renderHint() {
     const h = $('bdHint');
     const p = phase(), v = state.viewPhase;
-    const fach = v === 1 ? 'die Post-Its' : 'die belegten Fakten';
+    const fach = v === 1 ? 'die Post-Its' : 'die Recherchen';
 
     h.textContent =
       p >= 3
@@ -378,7 +387,7 @@
     }
     $('bdQuota').innerHTML = state.viewPhase === 1
       ? `Post-Its <strong>${me.ideas_used ?? 0}/${me.ideas_max ?? 8}</strong>`
-      : `Fakten <strong>${me.facts_used ?? 0}/${me.facts_max ?? 2}</strong>`;
+      : `Recherchen <strong>${me.facts_used ?? 0}/${me.facts_max ?? 2}</strong>`;
   }
 
   /* Voll? Dann bleibt der Plus-Knopf sichtbar, aber tot — verschwinden
@@ -434,8 +443,8 @@
     // Bewusst ohne role="button": die Karte ist zwar antippbar, aber
     // role="button" macht ihren Inhalt für Screenreader zu reiner
     // Dekoration — und der Inhalt ist hier die ganze Information.
-    // Der Daumen gilt nur dort, wo man zustimmen kann. Auf einem Fakt
-    // wäre er ein Versprechen, das der Doppeltipp nicht hält.
+    // Der Daumen gilt nur dort, wo man zustimmen kann. Auf einer
+    // Recherche wäre er ein Versprechen, das der Doppeltipp nicht hält.
     const liked = !!note.liked_by_me && note.kind !== 'fakt';
 
     return `<article class="bd-cn bd-cn--${esc(note.stance)}${note.is_mine ? ' bd-cn--mine' : ''}${liked ? ' bd-cn--liked' : ''}"
@@ -449,8 +458,8 @@
 
   /* Karten des sichtbaren Fachs in einer Kategorie. Post-Its nach
      Zustimmung — die Platzierung in der Wolke läuft von innen nach
-     außen, wer zuerst drankommt, landet in der Mitte. Fakten stehen im
-     Raster und dort schlicht nach Alter; eine Reihenfolge nach
+     außen, wer zuerst drankommt, landet in der Mitte. Recherchen stehen
+     im Raster und dort schlicht nach Alter; eine Reihenfolge nach
      Zustimmung gäbe es dort ohnehin nicht mehr. */
   function notesOf(catId) {
     const list = visibleNotes().filter(n => n.category === catId);
@@ -509,8 +518,8 @@
       const full = quotaFull();
       add.disabled = full;
       add.title = full
-        ? (kind === 'fakt' ? 'Deine 2 Fakten sind vergeben.' : 'Deine 8 Post-Its sind vergeben.')
-        : `Neue${kind === 'fakt' ? 'n Fakt' : 's Post-It'} in „${cat.label}“`;
+        ? (kind === 'fakt' ? 'Deine 2 Recherchen sind vergeben.' : 'Deine 8 Post-Its sind vergeben.')
+        : `Neue${kind === 'fakt' ? ' Recherche' : 's Post-It'} in „${cat.label}“`;
       add.setAttribute('aria-label', add.title);
       add.classList.toggle('bd-catadd--fact', kind === 'fakt');
     }
@@ -531,7 +540,7 @@
       return;
     }
 
-    /* Fakten stehen im festen Raster, nicht in der Wolke: eine
+    /* Recherchen stehen im festen Raster, nicht in der Wolke: eine
        Quellenangabe will gelesen und nicht gepackt werden — und ohne
        Zustimmung gäbe es auch keine Größe, die etwas erzählt. */
     if (viewKind() === 'fakt') {
@@ -557,8 +566,8 @@
 
   function emptyText() {
     if (viewKind() === 'fakt') {
-      return 'Für diesen Bereich gibt es noch keinen belegten Fakt. ' +
-             (canAdd('fakt') ? 'Trag den ersten ein — mit Link, Autorin oder Autor und Datum.' : '');
+      return 'Für diesen Bereich gibt es noch keine Recherche. ' +
+             (canAdd('fakt') ? 'Trag die erste ein — mit Link, Autorin oder Autor und Datum.' : '');
     }
     return 'Hier steht noch nichts. ' +
            (canAdd('idee') ? 'Schreib das erste Post-It für diesen Bereich.' : '');
@@ -808,7 +817,7 @@
       ? `<div class="bd-table-wrap"><table class="bd-table">
            <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`
       : `<p class="bd-cloud-sec__empty">${
-           viewKind() === 'fakt' ? 'Noch keine belegten Fakten im Kurs.' : 'Noch keine Post-Its im Kurs.'
+           viewKind() === 'fakt' ? 'Noch keine Recherchen im Kurs.' : 'Noch keine Post-Its im Kurs.'
          }</p>`;
   }
 
@@ -848,8 +857,8 @@
     };
 
     $('bdModalTitle').textContent = note
-      ? (kind === 'fakt' ? 'Fakt bearbeiten' : 'Post-It bearbeiten')
-      : (kind === 'fakt' ? 'Neuer Fakt'      : 'Neues Post-It');
+      ? (kind === 'fakt' ? 'Recherche bearbeiten' : 'Post-It bearbeiten')
+      : (kind === 'fakt' ? 'Neue Recherche'       : 'Neues Post-It');
 
     const c = catOf(cat);
     $('bdModalCat').innerHTML =
@@ -1005,7 +1014,7 @@
 
     $('bdDetailStance').innerHTML =
       `<span class="bd-pill bd-pill--${esc(note.stance)}">${st.icon} ${esc(st.label)}</span>` +
-      (note.kind === 'fakt' ? '<span class="bd-pill bd-pill--fakt">📎 Fakt</span>' : '');
+      (note.kind === 'fakt' ? '<span class="bd-pill bd-pill--fakt">📎 Recherche</span>' : '');
 
     $('bdDetailText').textContent = note.text;
 
@@ -1023,8 +1032,8 @@
     }).join('');
 
     const likes = Number(note.likes || 0);
-    // Bei einem Fakt steht keine Zustimmungszeile: er ist belegt, nicht
-    // gemeint — was zählt, ist die Quelle darüber.
+    // Bei einer Recherche steht keine Zustimmungszeile: was zählt, ist
+    // die Quelle darüber, nicht wie viele sie mögen.
     const likeRow = note.kind === 'fakt' ? '' :
       `<div class="bd-detail__row"><span>Zustimmung</span><strong>👍 ${likes}${
          note.is_mine && likes > 0 ? ' <span class="bd-detail__none">— so viele stimmen dir zu</span>' : ''
@@ -1146,7 +1155,7 @@
       const note = state.data?.notes.find(n => n.id === card.dataset.note);
       if (!note) return;
 
-      // Wo nicht zugestimmt werden kann — eigene Karte, oder ein Fakt —
+      // Wo nicht zugestimmt werden kann — eigene Karte, oder Recherche —
       // gibt es nichts zu verzögern: direkt öffnen. Niemand soll auf
       // eine Wirkung warten, die es nicht gibt.
       if (!canLike(note)) { clearTap(); openDetail(note.id); return; }
@@ -1337,7 +1346,7 @@
 
     const s = window.getSessionUser && window.getSessionUser();
     if (!s) {
-      showStatus('Das Zukunftsboard gehört deinem Kurs — dafür musst du angemeldet sein.', true);
+      showStatus('Reality Check gehört deinem Kurs — dafür musst du angemeldet sein.', true);
       return;
     }
 

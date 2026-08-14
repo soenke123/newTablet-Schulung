@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   Zukunftsboard — „Whiteboard"
+   Reality Check — „Whiteboard"
 
    Die Kachel trägt bewusst NICHT das Fantasy-Kleid des Hubs. Ein
    Board, auf dem eine Klasse ihre Chancen und Risiken sammelt, soll
@@ -13,7 +13,7 @@
       aus — deshalb ist der Bedien-Akzent (aktive Phase, Plus-Knopf,
       Speichern) neutrales Anthrazit und keine vierte Farbe, die
       mit den Aussagen um Aufmerksamkeit konkurriert.
-   2. Fakten sind kein Zettel. Sie stehen gerade, sind weiß statt
+   2. Eine Recherche ist kein Zettel. Sie steht gerade, ist weiß statt
       pastell, haben eine blaue Kopfkante und rechte Winkel. Der
       Unterschied muss vor dem Lesen sichtbar sein.
    ═══════════════════════════════════════════════════════════ */
@@ -51,7 +51,7 @@
   --clr-yellow-line: #e8cf82;
   --clr-yellow-ink:  #5c451a;
 
-  /* Fakten und Warnungen */
+  /* Recherchen und Warnungen */
   --clr-blue:      #2a6ab8;
   --clr-blue-line: #cfe0f2;
   --clr-blue-soft: #eaf2fb;
@@ -148,7 +148,7 @@ button.bd-phase:hover:not(:disabled) { background: var(--clr-surface2); color: v
 }
 /* Was in diesem Fach liegt — die eigentliche Ansage des Umschalters.
    Der Phasenname allein sagt noch nicht, dass man hier Post-Its
-   oder Fakten zu sehen bekommt. */
+   oder Recherchen zu sehen bekommt. */
 .bd-phase__what {
   font-weight: 700; font-size: .76rem; opacity: .8;
   padding-left: 8px; border-left: 1px solid var(--clr-line);
@@ -290,7 +290,7 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); col
 }
 .bd-catadd:hover:not(:disabled) { transform: scale(1.08); filter: brightness(1.35); }
 .bd-catadd:disabled { opacity: .32; cursor: not-allowed; box-shadow: none; }
-/* Fakten sind blau — im Formular, in der Tabelle, und hier am Knopf. */
+/* Recherchen sind blau — im Formular, in der Tabelle, und hier am Knopf. */
 .bd-catadd--fact {
   background: var(--clr-blue); border-color: var(--clr-blue); color: #fff;
   box-shadow: 0 2px 8px rgba(42,106,184,0.30);
@@ -442,8 +442,8 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); col
 .bd-source-cite__body { color: var(--clr-ink-2); }
 .bd-source-cite a { color: var(--clr-blue); }
 
-/* ── Fakten-Raster (Phase 2) ──────────────────────────────
-   Fakten stehen im festen Raster statt in der Wolke: eine
+/* ── Recherche-Raster (Phase 2) ───────────────────────────
+   Recherchen stehen im festen Raster statt in der Wolke: eine
    Quellenangabe will gelesen und nicht gepackt werden — und ohne
    Zustimmung gäbe es auch keine Größe, die etwas erzählen könnte.
 
@@ -689,7 +689,7 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
   .bd-head h1 { font-size: 1.05rem; }
   /* Drei volle Reiter passen nicht nebeneinander. Der Phasenname
      weicht, die Nummer bleibt — und was im Fach liegt („Post-Its",
-     „Fakten") erst recht, das ist die eigentliche Ansage. Phase 3
+     „Recherchen") erst recht, das ist die eigentliche Ansage. Phase 3
      schaltet nichts um und behält deshalb ihren Namen. */
   .bd-phases { gap: 6px; padding: 12px 12px 2px; }
   .bd-phase { padding: 6px 12px; gap: 6px; font-size: .85rem; }
