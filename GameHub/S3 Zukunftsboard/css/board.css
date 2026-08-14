@@ -178,7 +178,22 @@ body {
   display: flex; justify-content: space-between; align-items: center;
   gap: 8px; margin-top: 8px; font-size: .8rem; color: var(--clr-cream-dim);
 }
-.bd-note__actions { display: flex; gap: 4px; }
+.bd-note__actions { display: flex; gap: 4px; align-items: center; }
+.bd-note__tags { display: flex; gap: 5px; align-items: center; }
+.bd-topic { font-size: .95rem; line-height: 1; cursor: help; }
+
+/* Zustimmung. Kein reines Icon — die Zahl gehört daneben, sonst muss
+   man raten, ob überhaupt jemand zugestimmt hat. */
+.bd-like {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 999px; font-size: .8rem; font-weight: 800;
+  border: 1px solid var(--clr-border); background: var(--clr-surface);
+  color: var(--clr-cream-dim); font-family: var(--font-body); cursor: pointer;
+}
+.bd-like:hover:not(:disabled) { border-color: var(--clr-gold); color: var(--clr-cream); }
+.bd-like:disabled { opacity: .5; cursor: wait; }
+.bd-like--on { background: var(--clr-gold); border-color: var(--clr-gold); color: #2b1a0d; }
+.bd-like--own { cursor: default; background: transparent; border-style: dashed; }
 .bd-note__act {
   border: 0; background: transparent; cursor: pointer; font-size: .95rem;
   padding: 2px 5px; border-radius: 6px; color: var(--clr-cream);
@@ -214,6 +229,8 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
 .bd-table th:hover { filter: brightness(1.15); }
 .bd-table tbody tr:hover { background: rgba(240,180,41,0.05); }
 .bd-table .bd-pill { white-space: nowrap; }
+.bd-td-topics { white-space: nowrap; font-size: .85rem; }
+.bd-td-likes  { text-align: center; font-weight: 800; color: var(--clr-gold); }
 
 .bd-pill {
   display: inline-block; padding: 2px 8px; border-radius: 999px;
@@ -248,6 +265,8 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
   color: var(--clr-cream); font-family: var(--font-body); font-weight: 700; font-size: .85rem;
 }
 .bd-choice button[aria-pressed="true"] { border-color: var(--clr-gold); background: var(--clr-gold); color: #2b1a0d; }
+.bd-choice--topics button[aria-pressed="true"] { background: var(--clr-blue); border-color: var(--clr-blue); color: #10243a; }
+.bd-optional { font-weight: 600; font-size: .78rem; color: var(--clr-cream-dim); }
 .bd-choice--stance button[aria-pressed="true"][data-val="chance"]    { background: var(--clr-green);  border-color: var(--clr-green);  color: #06280f; }
 .bd-choice--stance button[aria-pressed="true"][data-val="risiko"]    { background: var(--clr-red);    border-color: var(--clr-red);    color: #2b0606; }
 .bd-choice--stance button[aria-pressed="true"][data-val="vermutung"] { background: var(--clr-yellow); border-color: var(--clr-yellow); color: #2b2206; }

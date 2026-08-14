@@ -112,8 +112,13 @@
       p_source_url:    note.source_url    ?? null,
       p_source_author: note.source_author ?? null,
       p_source_date:   note.source_date   ?? null,
-      p_cluster_id:    note.cluster_id    ?? null
+      p_cluster_id:    note.cluster_id    ?? null,
+      p_topics:        note.topics        ?? []
     }),
+
+    // Umschalter: der Server weiß, ob schon zugestimmt wurde, und
+    // antwortet mit dem Ergebnis { liked, likes }.
+    toggleLike: noteId => rpc('board_toggle_like', { p_note_id: noteId }),
 
     remove:   id                 => rpc('board_delete_note', { p_id: id }),
     setPhase: (clusterId, phase) => rpc('board_set_phase', { p_cluster_id: clusterId, p_phase: phase }),

@@ -25,9 +25,16 @@
     { id: 'risiko',    icon: '🔴', label: 'Risiko'    },
     { id: 'vermutung', icon: '🟡', label: 'Vermutung' }
   ];
+  // Freiwillige Mehrfachauswahl — eine Aussage kann auf mehrere
+  // Technologien zeigen oder auf keine bestimmte.
+  const TOPICS = [
+    { id: 'ki',          icon: '🤖', label: 'KI'           },
+    { id: 'socialmedia', icon: '📱', label: 'Social Media' },
+    { id: 'gaming',      icon: '🎮', label: 'Gaming'       }
+  ];
 
   const PHASE_HINT = {
-    1: 'Phase 1 · Sammeln — Was könnten KI, Social Media und Handy-Games bewirken? Halte Chancen, Risiken und Vermutungen fest. Du hast 8 Karten.',
+    1: 'Phase 1 · Sammeln — Was könnten KI, Social Media und Handy-Games bewirken? Halte Chancen, Risiken und Vermutungen fest. Du hast 8 Post-Its.',
     2: 'Phase 2 · Belegen — Such dir einen Punkt aus und finde einen echten Fakt dazu. Einer ist Pflicht, zwei sind möglich — jeweils mit vollständiger Quelle.',
     3: 'Phase 3 · Besprechen — Das Board ist eingefroren. Jetzt schauen wir gemeinsam drauf.'
   };
@@ -48,6 +55,8 @@
     invalid_source_url:    'Der Link muss vollständig sein und mit https:// beginnen.',
     invalid_source_author: 'Trag ein, wer den Text geschrieben hat.',
     invalid_source_date:   'Das Veröffentlichungsdatum fehlt oder liegt in der Zukunft.',
+    invalid_topics:        'Dieses Thema gibt es nicht.',
+    own_note:              'Deinem eigenen Beitrag kannst du nicht zustimmen.',
     network:               'Keine Verbindung zum Server. Versuch es gleich nochmal.'
   };
 
@@ -77,6 +86,10 @@
 
   const catOf    = id => CATEGORIES.find(c => c.id === id) || { icon: '•', label: id };
   const stanceOf = id => STANCES.find(s => s.id === id)    || { icon: '•', label: id };
+  const topicOf  = id => TOPICS.find(t => t.id === id)     || { icon: '•', label: id };
+  // Reihenfolge kommt kanonisch vom Server (board_upsert_note sortiert),
+  // hier nur noch absichern, falls das Feld mal fehlt.
+  const topicsOf = note => Array.isArray(note.topics) ? note.topics : [];
 
   function todayIso() {
     const d = new Date();
@@ -192,7 +205,10 @@
     return JSON.stringify([
       d.cluster_id, d.phase, d.is_admin, state.view, state.sort,
       d.me?.ideas_used, d.me?.facts_used,
-      d.notes.map(n => [n.id, n.updated_at])
+      // likes gehören in die Signatur: sonst bliebe eine Zustimmung aus
+      // einem anderen Tablet unsichtbar, weil updated_at sich dabei
+      // nicht ändert — und der eigene Klick würde ebenso verschluckt.
+      d.notes.map(n => [n.id, n.updated_at, n.likes, n.liked_by_me])
     ]);
   }
 
@@ -252,7 +268,7 @@
       return;
     }
     $('bdQuota').innerHTML =
-      `Postis <strong>${me.ideas_used ?? 0}/${me.ideas_max ?? 8}</strong>` +
+      `Post-Its <strong>${me.ideas_used ?? 0}/${me.ideas_max ?? 8}</strong>` +
       ` · Fakten <strong>${me.facts_used ?? 0}/${me.facts_max ?? 2}</strong>`;
   }
 
@@ -271,7 +287,7 @@
     factBtn.hidden = !canWrite('fakt');
     ideaBtn.disabled = ideaFull;
     factBtn.disabled = factFull;
-    ideaBtn.title = ideaFull ? 'Deine 8 Postis sind vergeben.' : '';
+    ideaBtn.title = ideaFull ? 'Deine 8 Post-Its sind vergeben.' : '';
     factBtn.title = factFull ? 'Deine 2 Fakten sind vergeben.' : '';
 
     box.hidden = ideaBtn.hidden && factBtn.hidden;
@@ -282,16 +298,36 @@
     const cat = catOf(note.category);
     const cite = formatSource(note);
     const acts = canEdit(note)
-      ? `<span class="bd-note__actions">
-           <button class="bd-note__act" data-edit="${esc(note.id)}" title="Bearbeiten">✏️</button>
-           <button class="bd-note__act" data-del="${esc(note.id)}" title="Löschen">🗑️</button>
-         </span>`
+      ? `<button class="bd-note__act" data-edit="${esc(note.id)}" title="Bearbeiten">✏️</button>
+         <button class="bd-note__act" data-del="${esc(note.id)}" title="Löschen">🗑️</button>`
       : '';
+
+    // In der Übersicht steht das Thema als Icon — der Text würde die
+    // schmalen Spalten sprengen. Der volle Name hängt im title.
+    const topics = topicsOf(note).map(t => {
+      const info = topicOf(t);
+      return `<span class="bd-topic" title="${esc(info.label)}">${info.icon}</span>`;
+    }).join('');
+
+    const likes = Number(note.likes || 0);
+    // Der eigenen Karte kann man nicht zustimmen — dort steht die Zahl
+    // ohne Knopf, damit die Karte trotzdem zeigt, wie sie ankommt.
+    const like = note.is_mine
+      ? (likes > 0
+          ? `<span class="bd-like bd-like--own" title="So viele stimmen dir zu">👍 ${likes}</span>`
+          : '')
+      : `<button class="bd-like${note.liked_by_me ? ' bd-like--on' : ''}" data-like="${esc(note.id)}"
+                 title="${note.liked_by_me ? 'Zustimmung zurückziehen' : 'Ich stimme zu'}"
+                 aria-pressed="${!!note.liked_by_me}">👍 ${likes}</button>`;
+
     return `
       <article class="bd-note bd-note--${esc(note.stance)}${note.is_mine ? ' bd-note--mine' : ''}">
         <div class="bd-note__top">
           <span>${st.icon} ${esc(st.label)}</span>
-          ${note.kind === 'fakt' ? '<span class="bd-note__kind">📎 Fakt</span>' : `<span>${cat.icon}</span>`}
+          <span class="bd-note__tags">
+            ${topics}
+            ${note.kind === 'fakt' ? '<span class="bd-note__kind">📎 Fakt</span>' : `<span>${cat.icon}</span>`}
+          </span>
         </div>
         <div class="bd-note__text">${esc(note.text)}</div>
         ${cite ? `<div class="bd-source-cite">
@@ -300,7 +336,7 @@
                   </div>` : ''}
         <div class="bd-note__foot">
           <span>— ${esc(note.author || 'Unbekannt')}</span>
-          ${acts}
+          <span class="bd-note__actions">${like}${acts}</span>
         </div>
       </article>`;
   }
@@ -339,26 +375,34 @@
   const TABLE_COLS = [
     { key: 'category',   label: 'Bereich'  },
     { key: 'stance',     label: 'Typ'      },
+    { key: 'topics',     label: 'Thema'    },
     { key: 'kind',       label: 'Art'      },
     { key: 'text',       label: 'Text'     },
     { key: 'source',     label: 'Quelle'   },
     { key: 'author',     label: 'Von'      },
+    { key: 'likes',      label: '👍'       },
     { key: 'created_at', label: 'Wann'     }
   ];
 
   function sortValue(note, key) {
     if (key === 'category') return catOf(note.category).label;
     if (key === 'stance')   return stanceOf(note.stance).label;
-    if (key === 'kind')     return note.kind === 'fakt' ? 'Fakt' : 'Posti';
+    if (key === 'kind')     return note.kind === 'fakt' ? 'Fakt' : 'Post-It';
     if (key === 'source')   return note.source_author || '';
+    if (key === 'topics')   return topicsOf(note).map(t => topicOf(t).label).join(', ');
+    if (key === 'likes')    return Number(note.likes || 0);
     return note[key] || '';
   }
 
   function renderTable() {
     const rows = state.data.notes.slice().sort((a, b) => {
-      const av = String(sortValue(a, state.sort.col)).toLowerCase();
-      const bv = String(sortValue(b, state.sort.col)).toLowerCase();
-      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      const av = sortValue(a, state.sort.col);
+      const bv = sortValue(b, state.sort.col);
+      // Zustimmungen sind Zahlen — als Text sortiert stünde 10 vor 2.
+      const cmp = (typeof av === 'number' && typeof bv === 'number')
+        ? av - bv
+        : (String(av).toLowerCase() < String(bv).toLowerCase() ? -1
+          : String(av).toLowerCase() > String(bv).toLowerCase() ?  1 : 0);
       return state.sort.dir === 'asc' ? cmp : -cmp;
     });
 
@@ -370,13 +414,17 @@
     const body = rows.map(n => {
       const st = stanceOf(n.stance);
       const cite = formatSource(n);
+      // In der Tabelle ist Platz — hier steht das Thema ausgeschrieben.
+      const topics = topicsOf(n).map(t => `${topicOf(t).icon} ${esc(topicOf(t).label)}`).join('<br>');
       return `<tr>
         <td>${catOf(n.category).icon} ${esc(catOf(n.category).label)}</td>
         <td><span class="bd-pill bd-pill--${esc(n.stance)}">${esc(st.label)}</span></td>
-        <td>${n.kind === 'fakt' ? '📎 Fakt' : 'Posti'}</td>
+        <td class="bd-td-topics">${topics || '—'}</td>
+        <td>${n.kind === 'fakt' ? '📎 Fakt' : 'Post-It'}</td>
         <td>${esc(n.text)}</td>
         <td>${cite || '—'}</td>
         <td>${esc(n.author || '—')}</td>
+        <td class="bd-td-likes">${Number(n.likes || 0) || '—'}</td>
         <td>${formatDate(n.created_at)}</td>
       </tr>`;
     }).join('');
@@ -412,18 +460,22 @@
       id:       note?.id ?? null,
       kind:     kind,
       category: note?.category ?? null,
-      stance:   note?.stance ?? null
+      stance:   note?.stance ?? null,
+      topics:   note ? topicsOf(note).slice() : []
     };
 
     $('bdModalTitle').textContent = note
-      ? (kind === 'fakt' ? 'Fakt bearbeiten' : 'Posti bearbeiten')
-      : (kind === 'fakt' ? 'Neuer Fakt'      : 'Neues Posti');
+      ? (kind === 'fakt' ? 'Fakt bearbeiten' : 'Post-It bearbeiten')
+      : (kind === 'fakt' ? 'Neuer Fakt'      : 'Neues Post-It');
 
     $('bdCatChoice').innerHTML = CATEGORIES.map(c =>
       `<button type="button" data-val="${c.id}" aria-pressed="${c.id === state.editing.category}">${c.icon} ${esc(c.label)}</button>`
     ).join('');
     $('bdStanceChoice').innerHTML = STANCES.map(s =>
       `<button type="button" data-val="${s.id}" aria-pressed="${s.id === state.editing.stance}">${s.icon} ${esc(s.label)}</button>`
+    ).join('');
+    $('bdTopicChoice').innerHTML = TOPICS.map(t =>
+      `<button type="button" data-val="${t.id}" aria-pressed="${state.editing.topics.includes(t.id)}">${t.icon} ${esc(t.label)}</button>`
     ).join('');
 
     $('bdText').value = note?.text ?? '';
@@ -487,6 +539,7 @@
       kind:          e.kind,
       category:      e.category,
       stance:        e.stance,
+      topics:        e.topics.slice(),
       text:          $('bdText').value.trim(),
       source_url:    isFact ? $('bdSrcUrl').value.trim()    : null,
       source_author: isFact ? $('bdSrcAuthor').value.trim() : null,
@@ -534,6 +587,18 @@
       validate();
     });
 
+    // Themen sind Mehrfachauswahl: jeder Klick schaltet einzeln um,
+    // keiner hebt die anderen auf. Keine Pflicht — validate() prüft
+    // die Auswahl deshalb gar nicht.
+    $('bdTopicChoice').addEventListener('click', ev => {
+      const b = ev.target.closest('button'); if (!b || !state.editing) return;
+      const id = b.dataset.val;
+      const i  = state.editing.topics.indexOf(id);
+      if (i >= 0) state.editing.topics.splice(i, 1);
+      else        state.editing.topics.push(id);
+      b.setAttribute('aria-pressed', String(i < 0));
+    });
+
     $('bdText').addEventListener('input', () => {
       $('bdTextCount').textContent = $('bdText').value.length;
       validate();
@@ -562,6 +627,23 @@
     $('bdBoard').addEventListener('click', async ev => {
       const editBtn = ev.target.closest('[data-edit]');
       const delBtn  = ev.target.closest('[data-del]');
+      const likeBtn = ev.target.closest('[data-like]');
+
+      if (likeBtn) {
+        const note = state.data.notes.find(n => n.id === likeBtn.dataset.like);
+        if (!note) return;
+        likeBtn.disabled = true;
+        const res = await window.BoardAPI.toggleLike(note.id);
+        if (!res || !res.ok) { likeBtn.disabled = false; toast(errText(res?.error), true); return; }
+        // Antwort direkt in den lokalen Stand übernehmen und neu zeichnen,
+        // statt auf den nächsten Poll zu warten — ein Klick muss sofort
+        // sichtbar sein. likes steckt in der Signatur, render() greift also.
+        note.likes       = res.likes;
+        note.liked_by_me = res.liked;
+        render();
+        return;
+      }
+
       if (editBtn) {
         const note = state.data.notes.find(n => n.id === editBtn.dataset.edit);
         if (note) openModal(note.kind, note);

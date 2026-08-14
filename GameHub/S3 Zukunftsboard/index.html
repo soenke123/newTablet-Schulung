@@ -61,7 +61,7 @@
 
 <!-- ── Aktionen ──────────────────────────────────────────── -->
 <div class="bd-actions" id="bdActions" hidden>
-  <button type="button" id="bdNewIdea" class="bd-btn bd-btn--big">＋ Neues Posti</button>
+  <button type="button" id="bdNewIdea" class="bd-btn bd-btn--big">＋ Neues Post-It</button>
   <button type="button" id="bdNewFact" class="bd-btn bd-btn--big bd-btn--fact">＋ Neuer Fakt</button>
 </div>
 
@@ -75,7 +75,7 @@
 <!-- ── Erfassungs-Modal ──────────────────────────────────── -->
 <div class="bd-modal-backdrop" id="bdModal" hidden>
   <div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bdModalTitle">
-    <h2 id="bdModalTitle">Neues Posti</h2>
+    <h2 id="bdModalTitle">Neues Post-It</h2>
 
     <label class="bd-field-label">1 · In welchen Bereich gehört das?</label>
     <div class="bd-choice" id="bdCatChoice"></div>
@@ -83,7 +83,14 @@
     <label class="bd-field-label">2 · Was ist es?</label>
     <div class="bd-choice bd-choice--stance" id="bdStanceChoice"></div>
 
-    <label class="bd-field-label" for="bdText">3 · Dein Text</label>
+    <!-- Mehrfachauswahl, freiwillig: eine Aussage kann auf mehrere
+         Technologien zeigen — oder auf gar keine bestimmte. -->
+    <label class="bd-field-label">3 · Worum geht es?
+      <span class="bd-optional">mehrere möglich · darf auch leer bleiben</span>
+    </label>
+    <div class="bd-choice bd-choice--topics" id="bdTopicChoice"></div>
+
+    <label class="bd-field-label" for="bdText">4 · Dein Text</label>
     <textarea id="bdText" maxlength="200" rows="3"
               placeholder="Schreib in einem Satz, worum es geht."></textarea>
     <div class="bd-counter"><span id="bdTextCount">0</span>/200</div>
@@ -91,7 +98,7 @@
     <!-- Quellen-Schritt: nur bei Fakten. Drei getrennte Pflichtfelder —
          die Felder sollen erklären, was eine Quelle ausmacht. -->
     <fieldset class="bd-source" id="bdSource" hidden>
-      <legend>4 · Deine Quelle <span class="bd-source__req">alle drei Felder werden gebraucht</span></legend>
+      <legend>5 · Deine Quelle <span class="bd-source__req">alle drei Felder werden gebraucht</span></legend>
 
       <label class="bd-field-label" for="bdSrcUrl">🔗 Link zur Seite</label>
       <input type="url" id="bdSrcUrl" placeholder="https://www.tagesschau.de/…" inputmode="url">
