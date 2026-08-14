@@ -26,6 +26,14 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Das hidden-Attribut muss gewinnen. Ohne diese Zeile schlägt jede eigene
+   Klassenregel mit `display: flex` das `display: none`, das der Browser
+   für [hidden] mitbringt — und Modal, Admin-Leiste, Phasenzeile und
+   Aktionsknöpfe stehen beim Laden offen, ohne dass man sie wegklicken
+   kann (hidden = true wird gesetzt, wirkt aber nicht).
+   Die ganze Sichtbarkeitssteuerung dieser Seite läuft über hidden. */
+[hidden] { display: none !important; }
+
 body {
   font-family: var(--font-body);
   background-color: var(--clr-bg);
