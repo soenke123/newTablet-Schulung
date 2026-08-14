@@ -138,88 +138,136 @@ body {
 .bd-status { text-align: center; color: var(--clr-cream-dim); padding: 40px 18px; }
 .bd-status--error { color: var(--clr-red); font-weight: 700; }
 
-.bd-columns {
-  display: grid; gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-}
-.bd-col {
-  background: rgba(43,26,13,0.55);
-  border: 1px solid var(--clr-border); border-radius: 12px;
-  padding: 12px; min-width: 0;
-}
-.bd-col__head {
-  font-family: var(--font-display); font-size: 1rem; color: var(--clr-gold);
-  border-bottom: 1px solid var(--clr-border); padding-bottom: 8px; margin-bottom: 10px;
-  display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
-}
-.bd-col__count { font-family: var(--font-body); font-size: .8rem; color: var(--clr-cream-dim); }
-.bd-col__empty { color: var(--clr-cream-dim); font-size: .85rem; font-style: italic; padding: 6px 0; }
+/* ═══════════════════════════════════════════════════════════
+   Wolken-Ansicht
 
-/* ── Karten ───────────────────────────────────────────── */
-.bd-note {
-  border-radius: 10px; padding: 10px 12px; margin-bottom: 10px;
-  border-left: 5px solid var(--clr-cream-dim);
-  background: var(--clr-surface2); word-break: break-word;
-}
-.bd-note--chance    { border-left-color: var(--clr-green);  background: rgba(62,207,106,0.10); }
-.bd-note--risiko    { border-left-color: var(--clr-red);    background: rgba(232,85,85,0.10); }
-.bd-note--vermutung { border-left-color: var(--clr-yellow); background: rgba(232,195,74,0.10); }
-.bd-note--mine { box-shadow: inset 0 0 0 1px rgba(240,180,41,0.45); }
+   Der Inhalt steht im Vordergrund: keine Kategorie-Symbole auf den
+   Karten, keine Namen, keine Werkzeugleiste. Was eine Karte ist —
+   Chance, Risiko oder Vermutung — sagt allein der farbige Rahmen.
+   Alles Weitere steht im Detail, einen Klick entfernt.
+   ═══════════════════════════════════════════════════════════ */
 
-.bd-note__top {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 8px; font-size: .72rem; letter-spacing: .04em;
-  text-transform: uppercase; color: var(--clr-cream-dim); margin-bottom: 6px;
-}
-.bd-note__kind { color: var(--clr-blue); font-weight: 800; }
-.bd-note__text { font-size: .98rem; line-height: 1.45; }
+.bd-clouds { display: flex; flex-direction: column; gap: 30px; }
 
-.bd-note__foot {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 8px; margin-top: 8px; font-size: .8rem; color: var(--clr-cream-dim);
+.bd-cloud-sec__head {
+  display: flex; align-items: baseline; gap: 10px;
+  font-family: var(--font-display); font-size: 1.05rem;
+  letter-spacing: .04em; color: var(--clr-gold);
+  padding-bottom: 7px; margin-bottom: 6px;
+  border-bottom: 1px solid var(--clr-border);
 }
-.bd-note__actions { display: flex; gap: 4px; align-items: center; }
-.bd-note__tags { display: flex; gap: 5px; align-items: center; }
-.bd-topic { font-size: .95rem; line-height: 1; cursor: help; }
+.bd-cloud-sec__icon  { font-size: .95rem; opacity: .75; }
+.bd-cloud-sec__count {
+  margin-left: auto; font-family: var(--font-body);
+  font-size: .78rem; font-weight: 700; color: var(--clr-cream-dim);
+}
+.bd-cloud-sec__empty {
+  color: var(--clr-cream-dim); font-size: .85rem; font-style: italic; padding: 10px 0 4px;
+}
 
-/* Zustimmung. Kein reines Icon — die Zahl gehört daneben, sonst muss
-   man raten, ob überhaupt jemand zugestimmt hat. */
+/* Die Höhe setzt das Skript, sobald es die Karten platziert hat. */
+.bd-cloud { position: relative; width: 100%; }
+
+/* Notfall-Layout, falls die Platzierung scheitert: lieber nebeneinander
+   als unsichtbar. Setzt das Skript selbst per Klasse. */
+.bd-cloud--plain { display: flex; flex-wrap: wrap; gap: 10px; height: auto !important; }
+.bd-cloud--plain .bd-cn { position: static; }
+
+/* ── Karte ────────────────────────────────────────────── */
+.bd-cn {
+  position: absolute; left: 0; top: 0;
+  display: flex; flex-direction: column; gap: .35em;
+  padding: .55em .7em;
+  border: 2px solid var(--clr-cream-dim);
+  border-radius: .5em;
+  background: var(--clr-surface2);
+  color: var(--clr-cream);
+  cursor: pointer; word-break: break-word; hyphens: auto;
+  /* left/top mit weicher Bewegung: beim ersten Zeichnen passiert nichts
+     (neue Elemente haben keinen Vorzustand, den man animieren könnte),
+     aber wenn das Tablet gedreht wird, gleitet die Wolke in ihre neue
+     Anordnung, statt umzuspringen. */
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease,
+              left .35s ease, top .35s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bd-cn { transition: none; }
+}
+.bd-cn:hover, .bd-cn:focus-visible {
+  z-index: 5; outline: none;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.55);
+  border-color: var(--clr-gold);
+}
+
+/* Der farbige Rahmen ist die einzige Typ-Auszeichnung. */
+.bd-cn--chance    { border-color: var(--clr-green);  background: rgba(62,207,106,0.13); }
+.bd-cn--risiko    { border-color: var(--clr-red);    background: rgba(232,85,85,0.13); }
+.bd-cn--vermutung { border-color: var(--clr-yellow); background: rgba(232,195,74,0.13); }
+
+/* Eigene Karten: nur ein leiser goldener Saum, kein zweites Signal —
+   der Rahmen gehört dem Typ. */
+.bd-cn--mine { box-shadow: 0 0 0 1px rgba(240,180,41,0.5); }
+.bd-cn--mine:hover, .bd-cn--mine:focus-visible { box-shadow: 0 0 0 1px rgba(240,180,41,0.7), 0 6px 22px rgba(0,0,0,0.55); }
+
+/* Hochkant. Gedreht wird um die Mitte — das Skript rechnet die
+   Platzierung genau darauf aus. */
+.bd-cn--rot { transform: rotate(-90deg); transform-origin: 50% 50%; }
+.bd-cn--rot:hover, .bd-cn--rot:focus-visible { transform: rotate(-90deg) scale(1.04); }
+.bd-cn:not(.bd-cn--rot):hover, .bd-cn:not(.bd-cn--rot):focus-visible { transform: scale(1.04); }
+
+.bd-cn__top  { display: flex; align-items: center; gap: .3em; font-size: .8em; line-height: 1; }
+.bd-cn__fact { color: var(--clr-blue); }
+.bd-cn__text { font-size: 1em; line-height: 1.32; font-weight: 600; }
+.bd-cn__foot { display: flex; justify-content: flex-end; align-items: center; min-height: 1px; }
+.bd-cn__foot:empty { display: none; }
+
+.bd-topic { line-height: 1; cursor: help; }
+
+/* ── Zustimmung ───────────────────────────────────────────
+   Zurückhaltend, solange niemand zugestimmt hat — die Zahl erscheint
+   erst, wenn es eine gibt. Sonst steht auf jeder Karte eine 0 und die
+   Wolke ist voller Nullen. */
 .bd-like {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 9px; border-radius: 999px; font-size: .8rem; font-weight: 800;
-  border: 1px solid var(--clr-border); background: var(--clr-surface);
+  display: inline-flex; align-items: center; gap: .25em;
+  padding: .15em .5em; border-radius: 999px;
+  font-size: .72em; font-weight: 800; line-height: 1.4;
+  border: 1px solid var(--clr-border); background: rgba(0,0,0,0.25);
   color: var(--clr-cream-dim); font-family: var(--font-body); cursor: pointer;
 }
 .bd-like:hover:not(:disabled) { border-color: var(--clr-gold); color: var(--clr-cream); }
 .bd-like:disabled { opacity: .5; cursor: wait; }
-.bd-like--on { background: var(--clr-gold); border-color: var(--clr-gold); color: #2b1a0d; }
+.bd-like--on  { background: var(--clr-gold); border-color: var(--clr-gold); color: #2b1a0d; }
 .bd-like--own { cursor: default; background: transparent; border-style: dashed; }
-.bd-note__act {
-  border: 0; background: transparent; cursor: pointer; font-size: .95rem;
-  padding: 2px 5px; border-radius: 6px; color: var(--clr-cream);
-}
-.bd-note__act:hover { background: rgba(0,0,0,0.25); }
 
 /* Quellenangabe — soll aussehen wie eine Quellenangabe im Heft. */
 .bd-source-cite {
-  margin-top: 8px; padding-top: 8px;
+  margin-top: .4em; padding-top: .4em;
   border-top: 1px dashed var(--clr-border);
-  font-size: .82rem; line-height: 1.4; color: var(--clr-cream-dim);
+  font-size: .72em; line-height: 1.4; color: var(--clr-cream-dim);
+  font-weight: 400;
 }
 .bd-source-cite__label {
   display: block; text-transform: uppercase; letter-spacing: .06em;
-  font-size: .68rem; margin-bottom: 2px;
+  font-size: .85em; margin-bottom: 2px;
 }
 .bd-source-cite__body { color: var(--clr-cream); }
 .bd-source-cite a { color: var(--clr-blue); }
 
-/* Fakten-Block in Phase 3 */
-.bd-facts { margin-bottom: 22px; }
+/* ── Fakten-Block ─────────────────────────────────────────
+   Ab Phase 2 oben, aber als festes Raster statt als Wolke: eine
+   Quellenangabe will gelesen und nicht gepackt werden. */
+.bd-facts { margin-bottom: 30px; }
 .bd-facts__head {
   font-family: var(--font-display); color: var(--clr-gold);
-  font-size: 1.15rem; margin-bottom: 10px;
+  font-size: 1.05rem; letter-spacing: .04em;
+  padding-bottom: 7px; margin-bottom: 12px;
+  border-bottom: 1px solid var(--clr-border);
+  display: flex; align-items: baseline; gap: 10px;
 }
-.bd-facts__grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.bd-facts__head span { margin-left: auto; font-family: var(--font-body); font-size: .78rem; color: var(--clr-cream-dim); }
+.bd-facts__grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+.bd-facts__grid .bd-cn { position: static; font-size: 1rem; }
+.bd-facts__grid .bd-cn:hover, .bd-facts__grid .bd-cn:focus-visible { transform: none; }
 
 /* ── Tabelle ──────────────────────────────────────────── */
 .bd-table-wrap { overflow-x: auto; border: 1px solid var(--clr-border); border-radius: 12px; }
@@ -239,6 +287,7 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
 .bd-pill--chance    { background: rgba(62,207,106,0.2);  color: var(--clr-green); }
 .bd-pill--risiko    { background: rgba(232,85,85,0.2);   color: var(--clr-red); }
 .bd-pill--vermutung { background: rgba(232,195,74,0.2);  color: var(--clr-yellow); }
+.bd-pill--fakt      { background: rgba(91,164,232,0.2);  color: var(--clr-blue); }
 
 /* ── Modal ────────────────────────────────────────────── */
 .bd-modal-backdrop {
@@ -287,7 +336,39 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
 .bd-help code { background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; }
 
 .bd-error { color: var(--clr-red); font-weight: 700; margin-top: 14px; }
-.bd-modal__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.bd-modal__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+
+/* ── Karten-Detail ────────────────────────────────────────
+   Hier steht groß, was auf der Karte klein war — und alles, was die
+   Wolke bewusst weglässt. Der farbige Rand nimmt den Typ der Karte auf,
+   damit man beim Öffnen nicht die Orientierung verliert. */
+.bd-modal--detail { border-width: 2px; max-width: 560px; }
+.bd-detail--chance    { border-color: var(--clr-green); }
+.bd-detail--risiko    { border-color: var(--clr-red); }
+.bd-detail--vermutung { border-color: var(--clr-yellow); }
+
+.bd-detail__stance { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.bd-detail__text {
+  font-size: 1.5rem; line-height: 1.4; font-weight: 700;
+  color: var(--clr-cream); word-break: break-word;
+}
+.bd-detail__cite { margin-top: 16px; padding-top: 12px; font-size: .85rem; }
+
+.bd-detail__meta {
+  margin-top: 18px; padding-top: 14px;
+  border-top: 1px solid var(--clr-border); font-size: .88rem;
+}
+.bd-detail__row {
+  display: flex; gap: 12px; align-items: baseline;
+  padding: 4px 0; flex-wrap: wrap;
+}
+.bd-detail__row > span   { min-width: 96px; color: var(--clr-cream-dim); }
+.bd-detail__row strong   { color: var(--clr-cream); font-weight: 700; }
+.bd-detail__topic + .bd-detail__topic { margin-left: 10px; }
+
+@media (max-width: 640px) {
+  .bd-detail__text { font-size: 1.25rem; }
+}
 
 /* ── Toast ────────────────────────────────────────────── */
 .bd-toast {

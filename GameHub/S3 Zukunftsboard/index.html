@@ -122,6 +122,23 @@
   </div>
 </div>
 
+<!-- ── Karten-Detail ─────────────────────────────────────────
+     Was die Karte in der Wolke bewusst weglässt: Verfasser:in, Bereich,
+     Quelle — und die Knöpfe zum Bearbeiten und Löschen. -->
+<div class="bd-modal-backdrop" id="bdDetail" hidden>
+  <div class="bd-modal bd-modal--detail" role="dialog" aria-modal="true" aria-labelledby="bdDetailText">
+    <div class="bd-detail__stance" id="bdDetailStance"></div>
+    <p class="bd-detail__text" id="bdDetailText"></p>
+    <div class="bd-source-cite bd-detail__cite" id="bdDetailCite" hidden></div>
+    <div class="bd-detail__meta" id="bdDetailMeta"></div>
+    <div class="bd-modal__actions">
+      <button type="button" id="bdDetailDel"   class="bd-btn bd-btn--danger" hidden>🗑️ Löschen</button>
+      <button type="button" id="bdDetailEdit"  class="bd-btn" hidden>✏️ Bearbeiten</button>
+      <button type="button" id="bdDetailClose" class="bd-btn bd-btn--ghost">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Bestätigungs-Modal (Löschen / Zurücksetzen) ────────── -->
 <div class="bd-modal-backdrop" id="bdConfirm" hidden>
   <div class="bd-modal bd-modal--small" role="dialog" aria-modal="true">

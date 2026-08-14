@@ -74,6 +74,7 @@
     sort:      { col: 'created_at', dir: 'desc' },
     lastSig:   null,
     editing:   null,   // { id|null, kind, category, stance }
+    detailId:  null,   // offene Karten-Ansicht
     confirmFn: null,
     failStreak: 0      // wie viele stille Polls hintereinander fehlschlugen
   };
@@ -243,6 +244,10 @@
       $('bdTable').hidden = false;
       renderTable();
     }
+
+    // Offenes Detail mitziehen: sonst zeigt es nach einer Zustimmung
+    // von einem anderen Tablet noch den alten Zählerstand.
+    if (state.detailId && !$('bdDetail').hidden) renderDetail();
   }
 
   function renderPhases() {
@@ -293,83 +298,275 @@
     box.hidden = ideaBtn.hidden && factBtn.hidden;
   }
 
-  function noteHTML(note) {
-    const st  = stanceOf(note.stance);
-    const cat = catOf(note.category);
-    const cite = formatSource(note);
-    const acts = canEdit(note)
-      ? `<button class="bd-note__act" data-edit="${esc(note.id)}" title="Bearbeiten">✏️</button>
-         <button class="bd-note__act" data-del="${esc(note.id)}" title="Löschen">🗑️</button>`
-      : '';
+  /* ── Karten in der Wolke ─────────────────────────────────
+     Bewusst reduziert: der Text ist die Karte. Kein Kategorie-Icon
+     (die Kategorie ist schon die Überschrift der Wolke), kein Name,
+     keine Knöpfe — die stehen alle im Detail, einen Klick entfernt.
+     Übrig bleiben oben die Themen-Icons und unten rechts die
+     Zustimmung, weil die Zustimmung die Größe der Karte steuert und
+     deshalb sichtbar sein muss.                                     */
 
-    // In der Übersicht steht das Thema als Icon — der Text würde die
-    // schmalen Spalten sprengen. Der volle Name hängt im title.
-    const topics = topicsOf(note).map(t => {
-      const info = topicOf(t);
-      return `<span class="bd-topic" title="${esc(info.label)}">${info.icon}</span>`;
-    }).join('');
+  const LIKE_SIZE_MIN = 0.95;   // rem — Karte ohne Zustimmung
+  const LIKE_SIZE_MAX = 2.15;   // rem — Karte mit den meisten
 
+  /* Größe aus der Zustimmung. Wurzel statt linear: der Sprung von 0 auf 1
+     Zustimmung soll sichtbar sein, der von 8 auf 9 kaum noch — sonst
+     erdrückt eine einzelne Karte die ganze Wolke. */
+  function sizeFor(likes, maxLikes) {
+    if (maxLikes <= 0) return LIKE_SIZE_MIN;
+    const f = Math.sqrt(Math.max(0, Math.min(likes, maxLikes)) / maxLikes);
+    return LIKE_SIZE_MIN + f * (LIKE_SIZE_MAX - LIKE_SIZE_MIN);
+  }
+
+  /* Hochkant nur für kurze Texte: ein gedrehter Halbsatz liest sich
+     noch, ein gedrehter 200-Zeichen-Satz nicht mehr. Die Entscheidung
+     hängt an der id, damit dieselbe Karte nach jedem Poll wieder
+     gleich liegt und die Wolke nicht bei jeder Zustimmung umspringt. */
+  function wantsRotate(note) {
+    if (String(note.text || '').length > 34) return false;
+    let h = 0;
+    const s = String(note.id || '');
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return h % 3 === 0;
+  }
+
+  function likeHTML(note) {
     const likes = Number(note.likes || 0);
     // Der eigenen Karte kann man nicht zustimmen — dort steht die Zahl
     // ohne Knopf, damit die Karte trotzdem zeigt, wie sie ankommt.
-    const like = note.is_mine
-      ? (likes > 0
-          ? `<span class="bd-like bd-like--own" title="So viele stimmen dir zu">👍 ${likes}</span>`
-          : '')
-      : `<button class="bd-like${note.liked_by_me ? ' bd-like--on' : ''}" data-like="${esc(note.id)}"
-                 title="${note.liked_by_me ? 'Zustimmung zurückziehen' : 'Ich stimme zu'}"
-                 aria-pressed="${!!note.liked_by_me}">👍 ${likes}</button>`;
+    if (note.is_mine) {
+      return likes > 0
+        ? `<span class="bd-like bd-like--own" title="So viele stimmen dir zu">👍 ${likes}</span>`
+        : '';
+    }
+    return `<button class="bd-like${note.liked_by_me ? ' bd-like--on' : ''}" data-like="${esc(note.id)}"
+              title="${note.liked_by_me ? 'Zustimmung zurückziehen' : 'Ich stimme zu'}"
+              aria-pressed="${!!note.liked_by_me}">👍${likes > 0 ? ' ' + likes : ''}</button>`;
+  }
 
-    return `
-      <article class="bd-note bd-note--${esc(note.stance)}${note.is_mine ? ' bd-note--mine' : ''}">
-        <div class="bd-note__top">
-          <span>${st.icon} ${esc(st.label)}</span>
-          <span class="bd-note__tags">
-            ${topics}
-            ${note.kind === 'fakt' ? '<span class="bd-note__kind">📎 Fakt</span>' : `<span>${cat.icon}</span>`}
-          </span>
-        </div>
-        <div class="bd-note__text">${esc(note.text)}</div>
-        ${cite ? `<div class="bd-source-cite">
-                    <span class="bd-source-cite__label">Quelle</span>
-                    <span class="bd-source-cite__body">${cite}</span>
-                  </div>` : ''}
-        <div class="bd-note__foot">
-          <span>— ${esc(note.author || 'Unbekannt')}</span>
-          <span class="bd-note__actions">${like}${acts}</span>
-        </div>
+  function topicsHTML(note) {
+    return topicsOf(note).map(t => {
+      const info = topicOf(t);
+      return `<span class="bd-topic" title="${esc(info.label)}">${info.icon}</span>`;
+    }).join('');
+  }
+
+  function cardHTML(note, opts) {
+    const o      = opts || {};
+    const rot    = !!o.rotate;
+    const topics = topicsHTML(note);
+    const head   = topics + (note.kind === 'fakt' ? '<span class="bd-cn__fact" title="Belegter Fakt">📎</span>' : '');
+    // Größere Karten dürfen etwas breiter werden, sonst wird eine
+    // 2-rem-Karte zu einem schmalen hohen Turm. min(…,100%) hält sie
+    // auf schmalen Geräten trotzdem in der Spalte.
+    const style  = o.size
+      ? ` style="font-size:${o.size.toFixed(2)}rem;max-width:min(${Math.round(200 + (o.size - LIKE_SIZE_MIN) * 130)}px,100%)"`
+      : '';
+
+    // Bewusst ohne role="button": die Karte enthält selbst einen Knopf
+    // (Zustimmen), und Inhalt innerhalb von role="button" gilt als
+    // rein darstellend — der Knopf verschwände für Screenreader.
+    // tabindex + Enter/Leertaste reichen hier.
+    return `<article class="bd-cn bd-cn--${esc(note.stance)}${note.is_mine ? ' bd-cn--mine' : ''}${rot ? ' bd-cn--rot' : ''}"
+             data-note="${esc(note.id)}"${rot ? ' data-rot="1"' : ''}${style}
+             tabindex="0" title="Öffnen für Verfasser:in und Details">
+        ${head ? `<div class="bd-cn__top">${head}</div>` : ''}
+        <p class="bd-cn__text">${esc(note.text)}</p>
+        ${o.cite ? `<div class="bd-source-cite"><span class="bd-source-cite__body">${o.cite}</span></div>` : ''}
+        <div class="bd-cn__foot">${likeHTML(note)}</div>
       </article>`;
   }
 
   function renderBoard() {
     const notes = state.data.notes;
     const facts = notes.filter(n => n.kind === 'fakt');
+
+    // Bezugsgröße für die Schriftgrade ist das Maximum über das ganze
+    // Board, nicht je Kategorie. Sonst wäre die einzige Karte einer
+    // stillen Kategorie genauso groß wie der Publikumsliebling.
+    const maxLikes = notes.reduce((m, n) => Math.max(m, Number(n.likes || 0)), 0);
+
     let html = '';
 
     // Ab Phase 2 stehen die Fakten oben — sie sind das Ergebnis der
-    // Recherche und der Anker für das Gespräch in Phase 3.
+    // Recherche und der Anker für das Gespräch in Phase 3. Als festes
+    // Raster, nicht als Wolke: eine Quellenangabe will gelesen werden.
     if (phase() >= 2 && facts.length > 0) {
       html += `<div class="bd-facts">
-                 <h2 class="bd-facts__head">📎 Belegte Fakten (${facts.length})</h2>
-                 <div class="bd-facts__grid">${facts.map(noteHTML).join('')}</div>
+                 <h2 class="bd-facts__head">📎 Belegte Fakten <span>${facts.length}</span></h2>
+                 <div class="bd-facts__grid">${
+                   facts.map(n => cardHTML(n, { cite: formatSource(n) })).join('')
+                 }</div>
                </div>`;
     }
 
-    html += '<div class="bd-columns">';
+    html += '<div class="bd-clouds">';
     for (const cat of CATEGORIES) {
-      const inCat = notes.filter(n => n.category === cat.id && (phase() < 2 || n.kind !== 'fakt'));
-      html += `<div class="bd-col">
-                 <div class="bd-col__head">
-                   <span>${cat.icon} ${esc(cat.label)}</span>
-                   <span class="bd-col__count">${inCat.length}</span>
-                 </div>
-                 ${inCat.length ? inCat.map(noteHTML).join('')
-                                : '<p class="bd-col__empty">Noch nichts hier.</p>'}
-               </div>`;
+      const inCat = notes
+        .filter(n => n.category === cat.id && (phase() < 2 || n.kind !== 'fakt'))
+        // Meistgelikte zuerst: die Platzierung läuft von innen nach
+        // außen, wer zuerst drankommt, landet in der Mitte.
+        .sort((a, b) => (Number(b.likes || 0) - Number(a.likes || 0)) ||
+                        String(a.created_at).localeCompare(String(b.created_at)));
+
+      html += `<section class="bd-cloud-sec">
+                 <h2 class="bd-cloud-sec__head">
+                   <span class="bd-cloud-sec__icon">${cat.icon}</span>
+                   <span>${esc(cat.label)}</span>
+                   <span class="bd-cloud-sec__count">${inCat.length}</span>
+                 </h2>
+                 ${inCat.length
+                   ? `<div class="bd-cloud">${inCat.map(n => cardHTML(n, {
+                       size:   sizeFor(Number(n.likes || 0), maxLikes),
+                       rotate: wantsRotate(n)
+                     })).join('')}</div>`
+                   : '<p class="bd-cloud-sec__empty">Noch nichts hier.</p>'}
+               </section>`;
     }
     html += '</div>';
 
     $('bdBoard').innerHTML = html;
+    layoutClouds();
+  }
+
+  /* ── Wolken-Layout ───────────────────────────────────────
+     Archimedische Spirale von innen nach außen mit Kollisionsprüfung —
+     dasselbe Grundprinzip wie bei einer klassischen Wordcloud, nur mit
+     Karten statt Wörtern. Die Karten liegen absolut; gemessen wird über
+     offsetWidth/offsetHeight, weil das die Maße VOR der Drehung liefert
+     und die Rechnung damit unabhängig vom transform bleibt.          */
+
+  const CLOUD_GAP = 10;
+
+  function overlaps(a, b) {
+    return !(a.x + a.w + CLOUD_GAP <= b.x || b.x + b.w + CLOUD_GAP <= a.x ||
+             a.y + a.h + CLOUD_GAP <= b.y || b.y + b.h + CLOUD_GAP <= a.y);
+  }
+
+  /* Seitenverhältnis der Spirale.
+
+     Eine kreisrunde Spirale in einem breiten Kasten wäre falsch: sie
+     liefe oben und unten ins Leere, während links und rechts Platz
+     frei bleibt. Eine ganz flache wäre aber genauso falsch — bei
+     wenigen Karten muss sich die Wolke nicht über die volle Breite
+     ziehen. Sie würde dann an den Rändern abgeschnitten, und weil die
+     Kandidaten dort alle auf denselben x-Wert geklemmt werden, landen
+     ausgerechnet die großen Karten nicht mehr in der Mitte.
+
+     Also: erst die Fläche schätzen, die die Karten brauchen (Faktor 2,
+     eine gepackte Wolke erreicht gut die halbe Fläche), daraus eine
+     angenehm liegende Wunschgröße ableiten — und nur wenn die breiter
+     wäre als die Spalte, an der Spalte abknicken und in die Höhe gehen. */
+  const CLOUD_ASPECT = 0.45;   // Wunschverhältnis Höhe zu Breite
+
+  function cloudRatio(items, boxW) {
+    const area   = items.reduce((s, it) => s + it.ow * it.oh, 0) * 2;
+    const idealW = Math.min(boxW, Math.sqrt(area / CLOUD_ASPECT));
+    const idealH = area / Math.max(1, idealW);
+    const ratio  = Math.max(0.35, Math.min(1.8, idealH / Math.max(1, idealW)));
+    // In Stufen runden. Die Karten werden nacheinander gesetzt, jede nur
+    // gegen die schon liegenden — eine neue Karte mit wenig Zustimmung
+    // sortiert sich ans Ende und ließe alle anderen dort, wo sie waren.
+    // Ohne das Runden würde aber die Fläche und damit die Ellipse bei
+    // JEDER neuen Karte minimal kippen, und die ganze Wolke ordnete sich
+    // im 5-Sekunden-Takt neu. Mitten in einer Unterrichtsstunde, in der
+    // 30 Leute gleichzeitig schreiben, wäre das unlesbar.
+    return Math.round(ratio / 0.05) * 0.05;
+  }
+
+  function findSpot(w, h, placed, boxW, ratio) {
+    const cx   = boxW / 2;
+    const maxX = Math.max(0, boxW - w);
+    const mid  = Math.min(maxX, Math.max(0, cx - w / 2));
+
+    if (!placed.length) return { x: mid, y: -h / 2, w, h };
+
+    for (let i = 1; i <= 9000; i++) {
+      const a = i * 0.12;          // Winkel — feine Schritte, dichtere Packung
+      const r = 2 * a;             // Radius wächst linear mit dem Winkel
+      let   x = cx + r * Math.cos(a) - w / 2;
+      const y = r * ratio * Math.sin(a) - h / 2;
+      // An den Rand klemmen statt verwerfen: sonst fällt in schmalen
+      // Spalten fast jeder Kandidat weg und die Wolke wird zum Stapel.
+      if (x < 0) x = 0; else if (x > maxX) x = maxX;
+
+      const cand = { x, y, w, h };
+      let hit = false;
+      for (let k = 0; k < placed.length; k++) {
+        if (overlaps(cand, placed[k])) { hit = true; break; }
+      }
+      if (!hit) return cand;
+    }
+
+    // Notausgang: unter alles legen. Passiert praktisch nur, wenn eine
+    // Karte breiter ist als die Spalte — gestapelt ist besser als gar nicht.
+    const bottom = placed.reduce((m, p) => Math.max(m, p.y + p.h), 0);
+    return { x: mid, y: bottom + CLOUD_GAP, w, h };
+  }
+
+  function layoutCloud(box) {
+    const cards = Array.prototype.slice.call(box.children);
+    if (!cards.length) return;
+    const boxW = box.clientWidth;
+    if (!boxW) return;   // unsichtbar — später beim Anzeigen nochmal
+
+    // Erst messen, dann platzieren: das Seitenverhältnis der Spirale
+    // hängt an der Gesamtfläche, die muss vorher feststehen.
+    const items = cards.map(el => {
+      const w   = el.offsetWidth;
+      const h   = el.offsetHeight;
+      const rot = el.dataset.rot === '1';
+      // Gedreht tauschen Breite und Höhe die Rollen. Belegt wird das
+      // gedrehte Rechteck, gesetzt wird das ungedrehte Element.
+      return { el, w, h, ow: rot ? h : w, oh: rot ? w : h };
+    });
+
+    const ratio  = cloudRatio(items, boxW);
+    const placed = [];
+    for (const it of items) {
+      // Nie breiter als die Spalte rechnen — sonst findet findSpot
+      // keinen gültigen x-Wert und alles landet im Notausgang.
+      it.ow   = Math.min(it.ow, boxW);
+      it.spot = findSpot(it.ow, it.oh, placed, boxW, ratio);
+      placed.push(it.spot);
+    }
+
+    const minY = placed.reduce((m, p) => Math.min(m, p.y), Infinity);
+    const maxY = placed.reduce((m, p) => Math.max(m, p.y + p.h), -Infinity);
+
+    // Die Spirale trifft die Mitte nie exakt — je nachdem, wo zufällig
+    // Platz war, hängt die ganze Wolke ein Stück links oder rechts und
+    // lässt auf der anderen Seite eine leere Bahn. Deshalb am Ende das
+    // umschließende Rechteck in der Spalte zentrieren.
+    const minX  = placed.reduce((m, p) => Math.min(m, p.x), Infinity);
+    const maxX  = placed.reduce((m, p) => Math.max(m, p.x + p.w), -Infinity);
+    const shift = Math.round((boxW - (maxX - minX)) / 2 - minX);
+
+    for (const it of items) {
+      it.spot.x += shift;
+    }
+
+    for (const it of items) {
+      // Das Element wird über seinen Mittelpunkt gesetzt: die Drehung
+      // läuft um die Mitte, also muss die Mitte des ungedrehten
+      // Elements auf die Mitte des belegten Rechtecks fallen.
+      it.el.style.left = Math.round(it.spot.x + it.ow / 2 - it.w / 2) + 'px';
+      it.el.style.top  = Math.round(it.spot.y - minY + it.oh / 2 - it.h / 2) + 'px';
+    }
+
+    box.style.height = Math.max(0, Math.round(maxY - minY)) + 'px';
+  }
+
+  function layoutClouds() {
+    document.querySelectorAll('.bd-cloud').forEach(box => {
+      try { layoutCloud(box); }
+      catch (e) {
+        // Lieber untereinander als übereinander: die Karten bleiben
+        // lesbar, auch wenn die Platzierung schiefgeht.
+        console.warn('[BOARD] Wolken-Layout fehlgeschlagen:', e.message);
+        box.classList.add('bd-cloud--plain');
+      }
+    });
   }
 
   const TABLE_COLS = [
@@ -432,7 +629,7 @@
     $('bdTable').innerHTML = rows.length
       ? `<div class="bd-table-wrap"><table class="bd-table">
            <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`
-      : '<p class="bd-col__empty">Noch nichts auf dem Board.</p>';
+      : '<p class="bd-cloud-sec__empty">Noch nichts auf dem Board.</p>';
   }
 
   function renderAdminBar() {
@@ -559,6 +756,79 @@
     await load();
   }
 
+  async function toggleLike(btn) {
+    const note = state.data?.notes.find(n => n.id === btn.dataset.like);
+    if (!note) return;
+    btn.disabled = true;
+    const res = await window.BoardAPI.toggleLike(note.id);
+    if (!res || !res.ok) { btn.disabled = false; toast(errText(res?.error), true); return; }
+    // Antwort direkt in den lokalen Stand übernehmen und neu zeichnen,
+    // statt auf den nächsten Poll zu warten — ein Klick muss sofort
+    // sichtbar sein. likes steckt in der Signatur, render() greift also,
+    // und die Karte wächst sofort auf ihre neue Größe.
+    note.likes       = res.likes;
+    note.liked_by_me = res.liked;
+    render();
+  }
+
+  /* ── Detail einer Karte ──────────────────────────────────
+     Alles, was die Karte in der Wolke nicht zeigt, steht hier: wer sie
+     geschrieben hat, in welche Kategorie sie gehört, die Quelle — und
+     die Knöpfe zum Ändern und Löschen. Das hält die Wolke ruhig und
+     macht trotzdem nichts unerreichbar.                              */
+  function openDetail(id) {
+    state.detailId = id;
+    if (!renderDetail()) return;
+    $('bdDetail').hidden = false;
+    $('bdDetailClose').focus();
+  }
+
+  function closeDetail() {
+    $('bdDetail').hidden = true;
+    state.detailId = null;
+  }
+
+  function renderDetail() {
+    const note = state.data?.notes.find(n => n.id === state.detailId);
+    if (!note) { closeDetail(); return false; }
+
+    const st  = stanceOf(note.stance);
+    const cat = catOf(note.category);
+
+    $('bdDetail').querySelector('.bd-modal').className =
+      `bd-modal bd-modal--detail bd-detail--${note.stance}`;
+
+    $('bdDetailStance').innerHTML =
+      `<span class="bd-pill bd-pill--${esc(note.stance)}">${st.icon} ${esc(st.label)}</span>` +
+      (note.kind === 'fakt' ? '<span class="bd-pill bd-pill--fakt">📎 Fakt</span>' : '');
+
+    $('bdDetailText').textContent = note.text;
+
+    const cite = formatSource(note);
+    $('bdDetailCite').hidden = !cite;
+    if (cite) {
+      $('bdDetailCite').innerHTML =
+        `<span class="bd-source-cite__label">Quelle</span>
+         <span class="bd-source-cite__body">${cite}</span>`;
+    }
+
+    const topics = topicsOf(note).map(t => {
+      const i = topicOf(t);
+      return `<span class="bd-detail__topic">${i.icon} ${esc(i.label)}</span>`;
+    }).join('');
+
+    $('bdDetailMeta').innerHTML =
+      `<div class="bd-detail__row"><span>Bereich</span><strong>${cat.icon} ${esc(cat.label)}</strong></div>
+       ${topics ? `<div class="bd-detail__row"><span>Thema</span><strong>${topics}</strong></div>` : ''}
+       <div class="bd-detail__row"><span>Von</span><strong>${esc(note.author || 'Unbekannt')}${note.is_mine ? ' (du)' : ''}</strong></div>
+       <div class="bd-detail__row"><span>Zustimmung</span><strong>👍 ${Number(note.likes || 0)}</strong></div>`;
+
+    const mayEdit = canEdit(note);
+    $('bdDetailEdit').hidden = !mayEdit;
+    $('bdDetailDel').hidden  = !mayEdit;
+    return true;
+  }
+
   /* ── Bestätigen ──────────────────────────────────────── */
   function confirmAsk(title, text, fn) {
     $('bdConfirmTitle').textContent = title;
@@ -620,46 +890,54 @@
     document.addEventListener('keydown', ev => {
       if (ev.key !== 'Escape') return;
       if (!$('bdModal').hidden)   closeModal();
+      if (!$('bdDetail').hidden)  closeDetail();
       if (!$('bdConfirm').hidden) { $('bdConfirm').hidden = true; state.confirmFn = null; }
     });
 
-    // Karten-Aktionen (Event-Delegation — die Karten werden neu gebaut)
+    // Karten (Event-Delegation — die Karten werden bei jedem Poll neu gebaut)
     $('bdBoard').addEventListener('click', async ev => {
-      const editBtn = ev.target.closest('[data-edit]');
-      const delBtn  = ev.target.closest('[data-del]');
       const likeBtn = ev.target.closest('[data-like]');
-
       if (likeBtn) {
-        const note = state.data.notes.find(n => n.id === likeBtn.dataset.like);
-        if (!note) return;
-        likeBtn.disabled = true;
-        const res = await window.BoardAPI.toggleLike(note.id);
-        if (!res || !res.ok) { likeBtn.disabled = false; toast(errText(res?.error), true); return; }
-        // Antwort direkt in den lokalen Stand übernehmen und neu zeichnen,
-        // statt auf den nächsten Poll zu warten — ein Klick muss sofort
-        // sichtbar sein. likes steckt in der Signatur, render() greift also.
-        note.likes       = res.likes;
-        note.liked_by_me = res.liked;
-        render();
+        // Zustimmen, ohne das Detail zu öffnen: der Knopf liegt auf der
+        // Karte, und die Karte ist selbst klickbar.
+        ev.stopPropagation();
+        await toggleLike(likeBtn);
         return;
       }
+      const card = ev.target.closest('[data-note]');
+      if (card) openDetail(card.dataset.note);
+    });
 
-      if (editBtn) {
-        const note = state.data.notes.find(n => n.id === editBtn.dataset.edit);
-        if (note) openModal(note.kind, note);
-        return;
-      }
-      if (delBtn) {
-        const note = state.data.notes.find(n => n.id === delBtn.dataset.del);
-        if (!note) return;
-        confirmAsk('Karte löschen?', `„${note.text}" wird gelöscht. Das lässt sich nicht rückgängig machen.`,
-          async () => {
-            const res = await window.BoardAPI.remove(note.id);
-            if (!res || !res.ok) { toast(errText(res?.error), true); return; }
-            toast('Gelöscht.');
-            await load();
-          });
-      }
+    // Tastatur: die Karten sind role="button", also müssen Enter und
+    // Leertaste dasselbe tun wie ein Klick.
+    $('bdBoard').addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter' && ev.key !== ' ') return;
+      const card = ev.target.closest('[data-note]');
+      if (!card || ev.target.closest('[data-like]')) return;
+      ev.preventDefault();
+      openDetail(card.dataset.note);
+    });
+
+    // ── Detail-Ansicht ──
+    $('bdDetailClose').addEventListener('click', closeDetail);
+    $('bdDetail').addEventListener('click', ev => { if (ev.target === $('bdDetail')) closeDetail(); });
+    $('bdDetailEdit').addEventListener('click', () => {
+      const note = state.data?.notes.find(n => n.id === state.detailId);
+      if (!note) return;
+      closeDetail();
+      openModal(note.kind, note);
+    });
+    $('bdDetailDel').addEventListener('click', () => {
+      const note = state.data?.notes.find(n => n.id === state.detailId);
+      if (!note) return;
+      closeDetail();
+      confirmAsk('Karte löschen?', `„${note.text}" wird gelöscht. Das lässt sich nicht rückgängig machen.`,
+        async () => {
+          const res = await window.BoardAPI.remove(note.id);
+          if (!res || !res.ok) { toast(errText(res?.error), true); return; }
+          toast('Gelöscht.');
+          await load();
+        });
     });
 
     // Tabellen-Sortierung
@@ -713,6 +991,20 @@
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') load({ quiet: true });
     });
+
+    // Die Wolke ist auf die Spaltenbreite gerechnet — dreht jemand das
+    // Tablet, muss sie neu gepackt werden. Nur neu platzieren, nicht neu
+    // laden: die Karten stehen ja schon im DOM.
+    let resizeT = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeT);
+      resizeT = setTimeout(layoutClouds, 180);
+    });
+
+    // Cinzel und Nunito kommen per @import nach. Bis sie da sind, misst
+    // der Browser die Karten in der Ersatzschrift — danach passen die
+    // Kästen nicht mehr zum Text, also einmal nachrechnen.
+    if (document.fonts?.ready) document.fonts.ready.then(layoutClouds).catch(() => {});
   }
 
   /* ── Boot ────────────────────────────────────────────── */
