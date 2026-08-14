@@ -99,8 +99,16 @@
     editing:   null,   // { id|null, kind, category, stance }
     detailId:  null,   // offene Karten-Ansicht
     confirmFn: null,
+    shuffle:   0,      // Mischzähler für „neu anordnen" — rein lokal
     failStreak: 0      // wie viele stille Polls hintereinander fehlschlugen
   };
+
+  /* Die Wolke hat zwei Ebenen, die einander ins Wort fallen können:
+     Tippen/Wischen auf den Karten (in wire()) und Schieben/Zoomen im
+     Fenster (in wirePort()). Damit die Lupe das Tippen abbestellen
+     kann, ohne dass beide im selben Gültigkeitsbereich liegen müssen,
+     hängen die beiden Abbrecher hier. */
+  const gesture = { cancelTap: () => {}, cancelSwipe: () => {} };
 
   /* ── Kleinkram ───────────────────────────────────────── */
   const $ = id => document.getElementById(id);
@@ -413,25 +421,41 @@
      schon zugestimmt hat — und ein zweiter Doppeltipp nähme die
      Zustimmung wieder weg, ohne dass man es merkt.                  */
 
-  const LIKE_SIZE_MIN = 0.95;   // rem — Karte ohne Zustimmung
-  const LIKE_SIZE_MAX = 2.15;   // rem — Karte mit den meisten
+  const LIKE_SIZE_MIN = 0.88;   // rem — Karte ohne Zustimmung
+  const LIKE_SIZE_MAX = 2.20;   // rem — Karte mit den meisten
+  const LIKE_SPAN_REF = 5;      // ab so vielen Zustimmungen ist die Spanne voll
 
-  /* Größe aus der Zustimmung. Wurzel statt linear: der Sprung von 0 auf 1
-     Zustimmung soll sichtbar sein, der von 8 auf 9 kaum noch — sonst
-     erdrückt eine einzelne Karte die ganze Wolke. */
+  /* Größe aus der Zustimmung.
+
+     Zwei Regeln stecken drin. Erstens ein Exponent unter 1: der Sprung
+     von 0 auf 1 Zustimmung soll sichtbar sein, der von 8 auf 9 kaum
+     noch — sonst erdrückt eine einzelne Karte die ganze Wolke.
+
+     Zweitens wird die Spanne selbst erst mit dem Board größer. Sonst
+     wäre auf einem frischen Board die erste Karte mit einer einzigen
+     Zustimmung sofort doppelt so groß wie alle anderen — eine Aussage
+     über den Kurs, die eine Stimme nicht trägt. Erst ab ~5
+     Zustimmungen auf der Spitzenkarte wird die volle Spanne genutzt. */
   function sizeFor(likes, maxLikes) {
-    if (maxLikes <= 0) return LIKE_SIZE_MIN;
-    const f = Math.sqrt(Math.max(0, Math.min(likes, maxLikes)) / maxLikes);
-    return LIKE_SIZE_MIN + f * (LIKE_SIZE_MAX - LIKE_SIZE_MIN);
+    const l = Math.max(0, Number(likes) || 0);
+    if (maxLikes <= 0 || l <= 0) return LIKE_SIZE_MIN;
+    const span = (LIKE_SIZE_MAX - LIKE_SIZE_MIN) * Math.min(1, maxLikes / LIKE_SPAN_REF);
+    return LIKE_SIZE_MIN + Math.pow(Math.min(l, maxLikes) / maxLikes, 0.65) * span;
   }
 
   function cardHTML(note, opts) {
     const o = opts || {};
-    // Größere Karten dürfen etwas breiter werden, sonst wird eine
-    // 2-rem-Karte zu einem schmalen hohen Turm. min(…,100%) hält sie
-    // auf schmalen Geräten trotzdem in der Spalte.
+    /* Größere Karten dürfen auch breiter werden, sonst wird eine
+       2-rem-Karte zu einem schmalen hohen Turm — und kleine bleiben
+       schmal, damit sie sich am Rand zwischen die großen fügen.
+
+       Bewusst ohne `100%`: die Wolke wird auf einer virtuellen Tafel
+       gepackt, die immer breit genug ist, und danach als Ganzes
+       skaliert. Eine Karte, die sich an die Gerätebreite klemmt, würde
+       auf dem Handy die ganze Spalte füllen — dann bleibt der Spirale
+       kein Platz mehr und die Wolke wird zum Stapel. */
     const style = o.size
-      ? ` style="font-size:${o.size.toFixed(2)}rem;max-width:min(${Math.round(200 + (o.size - LIKE_SIZE_MIN) * 130)}px,100%)"`
+      ? ` style="font-size:${o.size.toFixed(2)}rem;max-width:${Math.round(150 + (o.size - LIKE_SIZE_MIN) * 145)}px"`
       : '';
 
     const hint = note.is_mine
@@ -556,12 +580,33 @@
     // stillen Kategorie genauso groß wie der Publikumsliebling.
     const maxLikes = visibleNotes().reduce((m, n) => Math.max(m, Number(n.likes || 0)), 0);
 
+    /* Drei Schichten, jede mit genau einer Aufgabe:
+       .bd-port  — das Fenster. Feste Höhe, schneidet ab, fängt die
+                   Finger. Hier drin wird geschoben und gezoomt.
+       .bd-stage — die Lupe. Trägt translate+scale, sonst nichts.
+       .bd-cloud — die virtuelle Tafel. Wird in ihrer eigenen Breite
+                   gepackt, ohne von der Gerätebreite zu wissen.
+       Getrennt, weil sonst das Zoomen die Anordnung verändern würde —
+       und eine Wolke, die sich beim Hineinzoomen umsortiert, ist keine
+       Karte mehr, auf der man sich zurechtfindet.                    */
     $('bdBoard').innerHTML =
-      `<div class="bd-cloud${slide}">${inCat.map(n => cardHTML(n, {
-         size: sizeFor(Number(n.likes || 0), maxLikes)
-       })).join('')}</div>`;
+      `<div class="bd-port${slide}" id="bdPort">
+         <div class="bd-stage" id="bdStage">
+           <div class="bd-cloud" id="bdCloud">${inCat.map(n => cardHTML(n, {
+             size: sizeFor(Number(n.likes || 0), maxLikes)
+           })).join('')}</div>
+         </div>
+         <div class="bd-zoom" id="bdZoom">
+           <button type="button" data-zoom="out"     aria-label="Herauszoomen" title="Herauszoomen">−</button>
+           <button type="button" data-zoom="fit"     aria-label="Alles zeigen" title="Alles zeigen">⤢</button>
+           <button type="button" data-zoom="in"      aria-label="Hineinzoomen" title="Hineinzoomen">＋</button>
+           <button type="button" data-zoom="shuffle" aria-label="Neu anordnen"
+                   title="Neu anordnen — nur auf diesem Gerät, niemand sonst merkt etwas davon">⟳</button>
+         </div>
+       </div>`;
 
     layoutClouds();
+    wirePort($('bdPort'));
   }
 
   function emptyText() {
@@ -579,66 +624,96 @@
      Karten statt Wörtern. Alle Karten stehen waagerecht; gedrehte gab
      es einmal, sie kosteten aber mehr Lesbarkeit als sie an Wirkung
      brachten. Die Karten liegen absolut, gemessen wird über
-     offsetWidth/offsetHeight.                                        */
+     offsetWidth/offsetHeight.
 
-  /* Etwas mehr als der reine Sichtabstand: die Zettel hängen leicht
-     schief an der Tafel (CSS, --tilt), und ein um 2,4° gedrehtes
-     Rechteck braucht ein paar Pixel mehr als das achsenparallele, mit
-     dem hier gerechnet wird. 14 px decken die Drehung auch bei den
-     breitesten Karten ab. */
-  const CLOUD_GAP = 14;
+     Gepackt wird NICHT in der Gerätebreite, sondern auf einer
+     virtuellen Tafel, deren Breite sich aus der Kartenfläche ergibt.
+     Der Grund steht in cloudWidth(): auf einem Handy ist eine Karte
+     fast so breit wie der Bildschirm, und eine Spirale, die überall an
+     den Rand stößt, ist keine Wolke mehr, sondern ein Stapel. Was auf
+     den Bildschirm passt, entscheidet danach die Lupe (fitView) — und
+     zur Not die zwei Finger.                                          */
+
+  const CLOUD_GAP   = 10;     // Sichtabstand zwischen zwei Zetteln
+  const CLOUD_PAD   = 12;     // Luft zwischen Wolke und Fensterkante
+  const CLOUD_MIN_W = 380;    // schmalste virtuelle Tafel
+  const CLOUD_MAX_W = 2400;   // breiteste — darüber wächst sie in die Höhe
+  const CLOUD_ASPECT = 0.52;  // Wunschverhältnis Höhe zu Breite
+  const CLOUD_INIT_MIN = 0.45; // so weit wird höchstens herausgezoomt beim Öffnen
+
+  /* Sechs Neigungen im Wechsel. Stehen seit dem Zoom im Skript und
+     nicht mehr im Stylesheet: die Platzierung rechnet mit
+     achsenparallelen Rechtecken und muss den Winkel jeder Karte KENNEN,
+     um ihn einrechnen zu können — ein um 2,4° gedrehter breiter Zettel
+     ist gut 13 px höher als der ungedrehte. Genau das war die Ursache
+     der senkrechten Überlappungen: ein pauschaler Abstand deckt die
+     Drehung einer 300-px-Karte nicht ab. */
+  const TILTS = [-1.8, 1.4, -0.7, 2.2, -2.4, 0.9];
+
+  function tiltFor(id, seed) {
+    let h = 0;
+    const s = String(id);
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 9973;
+    return TILTS[(h + seed) % TILTS.length];
+  }
 
   function overlaps(a, b) {
     return !(a.x + a.w + CLOUD_GAP <= b.x || b.x + b.w + CLOUD_GAP <= a.x ||
              a.y + a.h + CLOUD_GAP <= b.y || b.y + b.h + CLOUD_GAP <= a.y);
   }
 
-  /* Seitenverhältnis der Spirale.
+  /* Breite der virtuellen Tafel.
 
-     Eine kreisrunde Spirale in einem breiten Kasten wäre falsch: sie
-     liefe oben und unten ins Leere, während links und rechts Platz
-     frei bleibt. Eine ganz flache wäre aber genauso falsch — bei
-     wenigen Karten muss sich die Wolke nicht über die volle Breite
-     ziehen. Sie würde dann an den Rändern abgeschnitten, und weil die
-     Kandidaten dort alle auf denselben x-Wert geklemmt werden, landen
-     ausgerechnet die großen Karten nicht mehr in der Mitte.
+     Erst die Fläche schätzen, die die Karten brauchen (Faktor 2,1 —
+     eine gepackte Wolke erreicht knapp die halbe Fläche), daraus eine
+     angenehm liegende Breite ableiten und in Stufen von 20 px runden.
 
-     Also: erst die Fläche schätzen, die die Karten brauchen (Faktor 2,
-     eine gepackte Wolke erreicht gut die halbe Fläche), daraus eine
-     angenehm liegende Wunschgröße ableiten — und nur wenn die breiter
-     wäre als die Spalte, an der Spalte abknicken und in die Höhe gehen. */
-  const CLOUD_ASPECT = 0.45;   // Wunschverhältnis Höhe zu Breite
-
-  function cloudRatio(items, boxW) {
-    const area   = items.reduce((s, it) => s + it.ow * it.oh, 0) * 2;
-    const idealW = Math.min(boxW, Math.sqrt(area / CLOUD_ASPECT));
-    const idealH = area / Math.max(1, idealW);
-    const ratio  = Math.max(0.35, Math.min(1.8, idealH / Math.max(1, idealW)));
-    // In Stufen runden. Die Karten werden nacheinander gesetzt, jede nur
-    // gegen die schon liegenden — eine neue Karte mit wenig Zustimmung
-    // sortiert sich ans Ende und ließe alle anderen dort, wo sie waren.
-    // Ohne das Runden würde aber die Fläche und damit die Ellipse bei
-    // JEDER neuen Karte minimal kippen, und die ganze Wolke ordnete sich
-    // im 5-Sekunden-Takt neu. Mitten in einer Unterrichtsstunde, in der
-    // 30 Leute gleichzeitig schreiben, wäre das unlesbar.
-    return Math.round(ratio / 0.05) * 0.05;
+     Das Runden hat denselben Grund wie früher beim Seitenverhältnis:
+     die Karten werden nacheinander gesetzt, jede nur gegen die schon
+     liegenden. Eine neue Karte ohne Zustimmung sortiert sich ans Ende
+     und lässt alle anderen, wo sie waren — solange die Tafelbreite
+     gleich bleibt. Ohne Stufen kippte sie bei jeder neuen Karte um ein
+     paar Pixel, und die ganze Wolke ordnete sich im 5-Sekunden-Takt
+     neu. Mitten in einer Stunde, in der 30 Leute gleichzeitig
+     schreiben, wäre das unlesbar. */
+  function cloudWidth(items) {
+    const area   = items.reduce((s, it) => s + it.bw * it.bh, 0) * 2.1;
+    const widest = items.reduce((m, it) => Math.max(m, it.bw), 0);
+    const ideal  = Math.sqrt(area / CLOUD_ASPECT);
+    /* Untergrenze: die erste (größte) Karte liegt in der Mitte. Damit
+       daneben überhaupt eine zweite Platz findet, muss die Tafel deren
+       halbe Breite plus eine ganze zweite Karte auf JEDER Seite fassen —
+       also gut das Dreifache der breitesten. Mit weniger legt die
+       Spirale alles untereinander, und genau das war die „Liste" auf
+       schmalen Geräten. */
+    const need = items.length > 1 ? widest * 3 + 4 * CLOUD_GAP : widest + 2 * CLOUD_GAP;
+    const w = Math.max(need, Math.min(CLOUD_MAX_W, Math.max(CLOUD_MIN_W, ideal)));
+    return Math.round(w / 20) * 20;
   }
 
-  function findSpot(w, h, placed, boxW, ratio) {
+  /* Der Platz für eine Karte. Kandidaten außerhalb der Tafelbreite
+     werden VERWORFEN, nicht an den Rand geklemmt — geklemmt landen sie
+     alle auf demselben x-Wert, kollidieren dort miteinander und die
+     Wolke fällt zum Stapel zusammen. Verworfen wächst sie stattdessen
+     nach unten, und das ist genau richtig: die Tafel darf hoch werden,
+     denn man kann sie ja verschieben. */
+  function findSpot(w, h, placed, boxW, ratio, seed) {
     const cx   = boxW / 2;
     const maxX = Math.max(0, boxW - w);
     const mid  = Math.min(maxX, Math.max(0, cx - w / 2));
 
     if (!placed.length) return { x: mid, y: -h / 2, w, h };
 
-    for (let i = 1; i <= 9000; i++) {
-      const a = i * 0.12;          // Winkel — feine Schritte, dichtere Packung
-      const r = 2 * a;             // Radius wächst linear mit dem Winkel
-      let   x = cx + r * Math.cos(a) - w / 2;
+    // Startwinkel aus dem Mischzähler: sonst ordnete „neu anordnen"
+    // exakt dieselbe Wolke wieder an und der Knopf täte scheinbar nichts.
+    const off = seed * 0.9;
+
+    for (let i = 1; i <= 20000; i++) {
+      const a = off + i * 0.07;    // Winkel — feine Schritte, dichtere Packung
+      const r = 1.6 * (i * 0.07);  // Radius wächst linear mit dem Winkel
+      const x = cx + r * Math.cos(a) - w / 2;
       const y = r * ratio * Math.sin(a) - h / 2;
-      // An den Rand klemmen statt verwerfen: sonst fällt in schmalen
-      // Spalten fast jeder Kandidat weg und die Wolke wird zum Stapel.
-      if (x < 0) x = 0; else if (x > maxX) x = maxX;
+      if (x < 0 || x > maxX) continue;
 
       const cand = { x, y, w, h };
       let hit = false;
@@ -648,45 +723,50 @@
       if (!hit) return cand;
     }
 
-    // Notausgang: unter alles legen. Passiert praktisch nur, wenn eine
-    // Karte breiter ist als die Spalte — gestapelt ist besser als gar nicht.
+    // Notausgang: unter alles legen. Sollte mit verworfenen statt
+    // geklemmten Kandidaten nicht mehr vorkommen — bleibt trotzdem
+    // stehen, gestapelt ist besser als übereinander.
     const bottom = placed.reduce((m, p) => Math.max(m, p.y + p.h), 0);
     return { x: mid, y: bottom + CLOUD_GAP, w, h };
   }
 
-  function layoutCloud(box) {
+  function layoutCloud(box, seed) {
     const cards = Array.prototype.slice.call(box.children);
-    if (!cards.length) return;
-    const boxW = box.clientWidth;
-    if (!boxW) return;   // unsichtbar — später beim Anzeigen nochmal
+    if (!cards.length) return null;
 
-    // Erst messen, dann platzieren: das Seitenverhältnis der Spirale
-    // hängt an der Gesamtfläche, die muss vorher feststehen.
-    const items = cards.map(el => ({
-      el,
-      // Nie breiter als die Spalte rechnen — sonst findet findSpot
-      // keinen gültigen x-Wert und alles landet im Notausgang.
-      w: Math.min(el.offsetWidth, boxW),
-      h: el.offsetHeight
-    }));
+    /* Messen auf voller Tafelbreite. Die Karten haben eine feste
+       Höchstbreite in px (siehe cardHTML), sind also von der Tafel
+       unabhängig — solange die Tafel breiter ist als die breiteste
+       Karte. Deshalb erst großzügig aufziehen, dann messen. */
+    box.style.width = CLOUD_MAX_W + 'px';
 
-    const ratio  = cloudRatio(items, boxW);
+    const items = cards.map(el => {
+      const tilt = tiltFor(el.dataset.note || '', seed);
+      el.style.setProperty('--tilt', tilt + 'deg');
+      const w = el.offsetWidth, h = el.offsetHeight;
+      // Das achsenparallele Rechteck der GEDREHTEN Karte. Damit rechnet
+      // die Kollisionsprüfung; die Drehung selbst macht das Stylesheet.
+      const rad = Math.abs(tilt) * Math.PI / 180;
+      const c = Math.cos(rad), s = Math.sin(rad);
+      return { el, w, h, bw: w * c + h * s, bh: w * s + h * c };
+    });
+
+    const boxW  = cloudWidth(items);
+    const area  = items.reduce((s, it) => s + it.bw * it.bh, 0) * 2.1;
+    // Höhe folgt aus Fläche und Breite; das Verhältnis steuert, wie
+    // rund oder flach die Spirale läuft.
+    const ratio = Math.round(Math.max(0.3, Math.min(1.7, area / (boxW * boxW))) / 0.05) * 0.05;
+
     const placed = [];
     for (const it of items) {
-      it.spot = findSpot(it.w, it.h, placed, boxW, ratio);
+      it.spot = findSpot(it.bw, it.bh, placed, boxW, ratio, seed);
       placed.push(it.spot);
     }
 
+    const minX = placed.reduce((m, p) => Math.min(m, p.x), Infinity);
+    const maxX = placed.reduce((m, p) => Math.max(m, p.x + p.w), -Infinity);
     const minY = placed.reduce((m, p) => Math.min(m, p.y), Infinity);
     const maxY = placed.reduce((m, p) => Math.max(m, p.y + p.h), -Infinity);
-
-    // Die Spirale trifft die Mitte nie exakt — je nachdem, wo zufällig
-    // Platz war, hängt die ganze Wolke ein Stück links oder rechts und
-    // lässt auf der anderen Seite eine leere Bahn. Deshalb am Ende das
-    // umschließende Rechteck in der Spalte zentrieren.
-    const minX  = placed.reduce((m, p) => Math.min(m, p.x), Infinity);
-    const maxX  = placed.reduce((m, p) => Math.max(m, p.x + p.w), -Infinity);
-    const shift = Math.round((boxW - (maxX - minX)) / 2 - minX);
 
     /* Frisch gezeichnete Karten sollen an ihrem Platz ERSCHEINEN, nicht
        aus der Ecke dorthin fliegen.
@@ -700,15 +780,18 @@
        jedem Zeichnen, also auch bei jedem Poll, der etwas Neues bringt.
 
        Die Bewegung ist nur für den Fall gedacht, dass DIESELBEN Karten
-       neu angeordnet werden (Tablet gedreht, Fenster verzogen). Also
-       wird sie genau für die Karten kurz abgeschaltet, die zum ersten
-       Mal einen Platz bekommen. */
+       neu angeordnet werden (Tablet gedreht, Fenster verzogen, „neu
+       anordnen" gedrückt). Also wird sie genau für die Karten kurz
+       abgeschaltet, die zum ersten Mal einen Platz bekommen. */
     const fresh = items.filter(it => !it.el.dataset.placed);
     for (const it of fresh) it.el.style.transition = 'none';
 
     for (const it of items) {
-      it.el.style.left = Math.round(it.spot.x + shift) + 'px';
-      it.el.style.top  = Math.round(it.spot.y - minY) + 'px';
+      // Gerechnet wurde mit dem gedrehten Rechteck, gesetzt wird das
+      // ungedrehte — es sitzt mittig darin, die Drehung geht ja um den
+      // Mittelpunkt.
+      it.el.style.left = Math.round(it.spot.x - minX + (it.bw - it.w) / 2) + 'px';
+      it.el.style.top  = Math.round(it.spot.y - minY + (it.bh - it.h) / 2) + 'px';
     }
 
     if (fresh.length) {
@@ -719,17 +802,287 @@
       }
     }
 
-    box.style.height = Math.max(0, Math.round(maxY - minY)) + 'px';
+    // Die Tafel auf ihren Inhalt zuschneiden — daraus rechnet die Lupe
+    // ihren Maßstab. +2 px gegen Rundungsreste, damit keine Karte in
+    // der letzten Zeile neu umbricht.
+    const w = Math.max(1, Math.round(maxX - minX) + 2);
+    const h = Math.max(1, Math.round(maxY - minY) + 2);
+    box.style.width  = w + 'px';
+    box.style.height = h + 'px';
+    return { w, h };
   }
 
-  function layoutClouds() {
-    document.querySelectorAll('.bd-cloud').forEach(box => {
-      try { layoutCloud(box); }
-      catch (e) {
-        // Lieber untereinander als übereinander: die Karten bleiben
-        // lesbar, auch wenn die Platzierung schiefgeht.
-        console.warn('[BOARD] Wolken-Layout fehlgeschlagen:', e.message);
-        box.classList.add('bd-cloud--plain');
+  /* ── Lupe: Maßstab und Ausschnitt ────────────────────────
+     Die Wolke wird in ihrer eigenen Breite gepackt und danach als
+     Ganzes skaliert. Das trennt zwei Fragen sauber: „wie liegen die
+     Karten zueinander" (Layout) und „wie viel davon sehe ich gerade"
+     (Lupe). Auf dem Beamer ist beides dasselbe, auf dem Handy nicht —
+     dort passt der Überblick nur verkleinert, und zum Lesen zieht man
+     mit zwei Fingern auf.                                            */
+  const vp = {
+    scale: 1, fit: 1, tx: 0, ty: 0,
+    w: 0, h: 0,          // Maße der Wolke
+    key: '',             // Bereich+Fach — wechselt der, gilt der Ausschnitt nicht mehr
+    touched: false,      // hat jemand selbst gezoomt oder geschoben?
+    movedAt: 0           // wann zuletzt geschoben — unterdrückt den Klick danach
+  };
+
+  const ZOOM_MAX = 3;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  // Weiter als bis zum vollen Überblick muss niemand herauszoomen —
+  // dahinter kommt nur noch leere Fläche.
+  const minScale = () => vp.fit;
+  // Ohne Fenster gibt es keinen Zoom — im Recherche-Raster und in der
+  // Tabelle stünden sonst noch die Werte der zuletzt gesehenen Wolke
+  // und das Wischen zwischen den Bereichen wäre dort abgeschaltet.
+  const isZoomed = () => !!$('bdPort') && vp.scale > vp.fit * 1.02;
+
+  /* Wem gehört der eine Finger?
+
+     Solange niemand selbst gezoomt hat, blättert er durch die Bereiche —
+     auch wenn die Wolke beim Öffnen nicht ganz aufs Handy passt.
+     Verschieben geht dann mit zwei Fingern, und das ist auch die Geste,
+     die man dafür sucht. Erst wer selbst aufgezogen hat, ist im
+     Erkunden und will mit einem Finger schieben; ⤢ bringt ihn zurück. */
+  const isPanMode = () => vp.touched && isZoomed();
+
+  function applyView() {
+    const stage = $('bdStage'), port = $('bdPort');
+    if (!stage || !port) return;
+    stage.style.transform =
+      `translate(${Math.round(vp.tx)}px,${Math.round(vp.ty)}px) scale(${vp.scale.toFixed(4)})`;
+    // Solange alles hineinpasst, bleibt ein Finger fürs Blättern
+    // zuständig; erst im Zoom wird er zum Schieber.
+    port.classList.toggle('bd-port--zoomed', isPanMode());
+  }
+
+  /* Ausschnitt im Fenster halten. Passt die Wolke ganz hinein, wird sie
+     zentriert — sonst nur so weit begrenzt, dass keine leere Fläche
+     hereinwandert, während auf der anderen Seite Karten verschwinden. */
+  function clampView() {
+    const port = $('bdPort');
+    if (!port) return;
+    const pw = port.clientWidth, ph = port.clientHeight;
+    const cw = vp.w * vp.scale,  ch = vp.h * vp.scale;
+    vp.tx = cw <= pw ? (pw - cw) / 2 : clamp(vp.tx, pw - cw, 0);
+    vp.ty = ch <= ph ? (ph - ch) / 2 : clamp(vp.ty, ph - ch, 0);
+  }
+
+  /* Fensterhöhe und Anfangsmaßstab.
+
+     Die Höhe folgt dem Inhalt: so hoch, wie die Wolke bei voller Breite
+     braucht — aber nie höher als knapp zwei Drittel des Bildschirms,
+     sonst schiebt das Board seine eigene Bedienung aus dem Blick.
+
+     Der Anfangsmaßstab ist der Überblick — außer der wäre so klein,
+     dass nichts mehr zu erkennen ist. Auf einem Handy passen 40 Karten
+     nur bei 15 % auf den Schirm, und ein Feld aus grauen Strichen
+     hilft niemandem. Dann wird stattdessen die Mitte gezeigt, wo die
+     meistgetragenen Karten liegen, und der Rest ist einen Wisch oder
+     einen Druck auf ⤢ entfernt. */
+  function fitView(port, opts) {
+    const availW  = Math.max(80, port.clientWidth - 2 * CLOUD_PAD);
+    const maxH    = Math.max(300, Math.round(window.innerHeight * 0.62));
+    const byWidth = Math.min(1, availW / vp.w);
+
+    // Wird ohnehin ausschnittweise gezeigt, darf das Fenster den ganzen
+    // erlaubten Platz nehmen — sonst bliebe ein flacher Streifen übrig.
+    port.style.height = (byWidth < CLOUD_INIT_MIN
+      ? maxH
+      : clamp(Math.ceil(vp.h * byWidth) + 2 * CLOUD_PAD, 240, maxH)) + 'px';
+
+    const availH = Math.max(80, port.clientHeight - 2 * CLOUD_PAD);
+
+    vp.fit   = Math.min(1, availW / vp.w, availH / vp.h);
+    // ⤢ heißt „alles zeigen" und meint es auch. Beim Öffnen dagegen
+    // gilt die Lesbarkeitsgrenze.
+    vp.scale = (opts && opts.full) ? vp.fit
+                                   : Math.max(vp.fit, Math.min(1, CLOUD_INIT_MIN));
+    // Auf die Mitte setzen — dort liegen die meistgetragenen Karten.
+    // Ohne das begänne ein Ausschnitt in der linken oberen Ecke.
+    vp.tx = (port.clientWidth  - vp.w * vp.scale) / 2;
+    vp.ty = (port.clientHeight - vp.h * vp.scale) / 2;
+    clampView();
+    applyView();
+  }
+
+  function zoomAt(next, px, py) {
+    const s = clamp(next, minScale(), ZOOM_MAX);
+    if (s === vp.scale) return;
+    // Der Punkt unter dem Finger bleibt unter dem Finger.
+    vp.tx = px - (px - vp.tx) * (s / vp.scale);
+    vp.ty = py - (py - vp.ty) * (s / vp.scale);
+    vp.scale = s;
+    vp.touched = true;
+    clampView();
+    applyView();
+  }
+
+  function zoomStep(f) {
+    const port = $('bdPort');
+    if (!port) return;
+    zoomAt(vp.scale * f, port.clientWidth / 2, port.clientHeight / 2);
+  }
+
+  function layoutClouds(opts) {
+    const box  = $('bdCloud');
+    const port = $('bdPort');
+    if (!box || !port) return;
+
+    const key  = state.cat + '|' + viewKind();
+    // Ausschnitt behalten, solange derselbe Bereich zu sehen ist und
+    // jemand ihn selbst eingestellt hat: ein Poll alle 5 Sekunden darf
+    // niemandem die Lupe aus der Hand schlagen.
+    const keep = vp.touched && vp.key === key && !(opts && opts.refit);
+    const old  = { scale: vp.scale, tx: vp.tx, ty: vp.ty };
+
+    try {
+      const size = layoutCloud(box, state.shuffle);
+      if (!size) return;
+      vp.w = size.w; vp.h = size.h; vp.key = key;
+      if (!keep) vp.touched = false;
+
+      fitView(port);
+      if (keep) {
+        vp.scale = clamp(old.scale, minScale(), ZOOM_MAX);
+        vp.tx = old.tx; vp.ty = old.ty;
+        vp.touched = true;
+        clampView();
+        applyView();
+      }
+      port.classList.remove('bd-port--plain');
+    } catch (e) {
+      // Lieber untereinander als übereinander: die Karten bleiben
+      // lesbar, auch wenn die Platzierung schiefgeht.
+      console.warn('[BOARD] Wolken-Layout fehlgeschlagen:', e.message);
+      box.classList.add('bd-cloud--plain');
+      box.style.width = ''; box.style.height = '';
+      port.classList.add('bd-port--plain');
+      port.style.height = '';
+      $('bdStage').style.transform = '';
+    }
+  }
+
+  /* ── Finger und Maus im Fenster ──────────────────────────
+     Zwei Finger schieben und zoomen — immer, auch im Überblick, und
+     mit derselben Geste: der Punkt zwischen den Fingern bleibt zwischen
+     den Fingern.
+
+     Der eine Finger gehört dagegen zunächst dem Blättern zwischen den
+     Bereichen; erst wer selbst aufgezogen hat, schiebt damit den
+     Ausschnitt (isPanMode). Sonst müsste man sich zwischen zwei
+     nützlichen Gesten entscheiden, bevor man weiß, welche man
+     braucht.                                                          */
+  function wirePort(port) {
+    if (!port || port.dataset.wired) return;
+    port.dataset.wired = '1';
+
+    const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const mid  = t => {
+      const r = port.getBoundingClientRect();
+      return { x: (t[0].clientX + t[1].clientX) / 2 - r.left,
+               y: (t[0].clientY + t[1].clientY) / 2 - r.top };
+    };
+
+    let pinch = null, drag = null;
+
+    port.addEventListener('touchstart', ev => {
+      if (ev.touches.length === 2) {
+        const m = mid(ev.touches);
+        pinch = { d: Math.max(1, dist(ev.touches)), s: vp.scale, mx: m.x, my: m.y, tx: vp.tx, ty: vp.ty };
+        drag  = null;
+        // Ein Doppeltipp beginnt wie ein Zwei-Finger-Griff nun einmal
+        // mit einem Finger — beides abbestellen, sonst öffnet sich beim
+        // Aufziehen ein Detail oder es wird ungewollt zugestimmt.
+        gesture.cancelTap();
+        gesture.cancelSwipe();
+      } else if (ev.touches.length === 1 && isPanMode()) {
+        drag = { x: ev.touches[0].clientX, y: ev.touches[0].clientY, tx: vp.tx, ty: vp.ty, on: false };
+      }
+    }, { passive: true });
+
+    port.addEventListener('touchmove', ev => {
+      if (pinch && ev.touches.length === 2) {
+        // cancelable prüfen: hat der Browser die Geste schon als
+        // Seiten-Scrollen übernommen, ist preventDefault wirkungslos und
+        // wirft nur eine Warnung in die Konsole.
+        if (ev.cancelable) ev.preventDefault();
+        const m = mid(ev.touches);
+        const s = clamp(pinch.s * (dist(ev.touches) / pinch.d), minScale(), ZOOM_MAX);
+        // Der Punkt, der beim Aufsetzen zwischen den Fingern lag, bleibt
+        // zwischen den Fingern — dadurch zoomt und schiebt dieselbe Geste.
+        vp.tx = m.x - (pinch.mx - pinch.tx) / pinch.s * s;
+        vp.ty = m.y - (pinch.my - pinch.ty) / pinch.s * s;
+        vp.scale = s;
+        vp.touched = true;
+        vp.movedAt = Date.now();
+        clampView(); applyView();
+        return;
+      }
+      if (drag && ev.touches.length === 1) {
+        const dx = ev.touches[0].clientX - drag.x, dy = ev.touches[0].clientY - drag.y;
+        if (!drag.on && Math.abs(dx) + Math.abs(dy) < 8) return;   // Wackeln ist kein Schieben
+        if (!drag.on) { drag.on = true; gesture.cancelTap(); gesture.cancelSwipe(); }
+        if (ev.cancelable) ev.preventDefault();
+        vp.tx = drag.tx + dx; vp.ty = drag.ty + dy;
+        vp.movedAt = Date.now();
+        clampView(); applyView();
+      }
+    }, { passive: false });
+
+    const end = ev => {
+      if (ev.touches.length < 2) pinch = null;
+      if (ev.touches.length === 0) drag = null;
+    };
+    port.addEventListener('touchend', end,    { passive: true });
+    port.addEventListener('touchcancel', end, { passive: true });
+
+    // Maus: Strg/⌘ + Rad zoomt. Ohne Zusatztaste bleibt das Rad beim
+    // Scrollen der Seite — ein Board, das man nicht mehr verlassen kann,
+    // weil das Rad in der Wolke hängen bleibt, wäre schlimmer.
+    port.addEventListener('wheel', ev => {
+      if (!ev.ctrlKey && !ev.metaKey) return;
+      ev.preventDefault();
+      const r = port.getBoundingClientRect();
+      zoomAt(vp.scale * (ev.deltaY < 0 ? 1.12 : 1 / 1.12), ev.clientX - r.left, ev.clientY - r.top);
+    }, { passive: false });
+
+    // Am Rechner wird mit gedrückter Taste geschoben, sobald es etwas
+    // zu schieben gibt.
+    port.addEventListener('pointerdown', ev => {
+      if (ev.pointerType === 'touch' || ev.button !== 0 || !isPanMode()) return;
+      if (ev.target.closest('.bd-zoom')) return;
+      drag = { x: ev.clientX, y: ev.clientY, tx: vp.tx, ty: vp.ty, on: false, id: ev.pointerId };
+    });
+    port.addEventListener('pointermove', ev => {
+      if (!drag || drag.id !== ev.pointerId) return;
+      const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+      if (!drag.on && Math.abs(dx) + Math.abs(dy) < 6) return;
+      if (!drag.on) { drag.on = true; port.setPointerCapture(ev.pointerId); gesture.cancelTap(); }
+      vp.tx = drag.tx + dx; vp.ty = drag.ty + dy;
+      vp.movedAt = Date.now();
+      clampView(); applyView();
+    });
+    const stopDrag = ev => { if (drag && drag.id === ev.pointerId) drag = null; };
+    port.addEventListener('pointerup', stopDrag);
+    // Ohne das bliebe ein Schieben hängen, wenn der Zeiger das Fenster
+    // verlässt oder das System die Geste abbricht.
+    port.addEventListener('pointercancel', stopDrag);
+
+    $('bdZoom').addEventListener('click', ev => {
+      const b = ev.target.closest('button[data-zoom]'); if (!b) return;
+      ev.stopPropagation();
+      if (b.dataset.zoom === 'in')  zoomStep(1.35);
+      if (b.dataset.zoom === 'out') zoomStep(1 / 1.35);
+      if (b.dataset.zoom === 'fit') { vp.touched = false; fitView(port, { full: true }); }
+      if (b.dataset.zoom === 'shuffle') {
+        // Nur dieses Gerät. Die Anordnung wird hier gerechnet, der
+        // Server kennt bloß Text und Zustimmungen — niemand im Kurs
+        // merkt etwas davon.
+        state.shuffle = (state.shuffle + 1) % 6;
+        vp.touched = false;
+        layoutClouds({ refit: true });
+        toast('Neu angeordnet — nur auf deinem Bildschirm.');
       }
     });
   }
@@ -1150,8 +1503,13 @@
     let tapTimer = null, tapId = null;
 
     function clearTap() { clearTimeout(tapTimer); tapTimer = null; tapId = null; }
+    gesture.cancelTap = clearTap;
 
     async function cardTapped(card) {
+      // Wer gerade geschoben oder gezoomt hat, wollte keine Karte
+      // öffnen — der Finger kam nur zufällig auf einer zum Liegen.
+      if (Date.now() - vp.movedAt < 350) return;
+
       const note = state.data?.notes.find(n => n.id === card.dataset.note);
       if (!note) return;
 
@@ -1197,10 +1555,17 @@
     /* Wischen. Bewusst passiv: preventDefault würde das senkrechte
        Scrollen mit abwürgen. Deshalb entscheidet erst der Fingerabheber,
        ob es ein Wischer war — und nur, wenn die Bewegung deutlich
-       waagerechter war als senkrecht. */
+       waagerechter war als senkrecht.
+
+       Wer selbst hineingezoomt hat, schiebt mit dem Finger, statt zu
+       blättern (isPanMode, siehe wirePort) — sonst käme man aus einem
+       vergrößerten Ausschnitt nicht mehr heraus, ohne den Bereich zu
+       wechseln. */
     let tx = 0, ty = 0, tt = 0;
+    gesture.cancelSwipe = () => { tt = 0; };
+
     $('bdBoard').addEventListener('touchstart', ev => {
-      if (ev.touches.length !== 1) { tt = 0; return; }
+      if (ev.touches.length !== 1 || isPanMode()) { tt = 0; return; }
       tx = ev.touches[0].clientX; ty = ev.touches[0].clientY; tt = Date.now();
     }, { passive: true });
 
@@ -1309,19 +1674,19 @@
       if (document.visibilityState === 'visible') load({ quiet: true });
     });
 
-    // Die Wolke ist auf die Spaltenbreite gerechnet — dreht jemand das
-    // Tablet, muss sie neu gepackt werden. Nur neu platzieren, nicht neu
-    // laden: die Karten stehen ja schon im DOM.
+    // Dreht jemand das Tablet, ändert sich das Fenster — die Anordnung
+    // der Karten zueinander nicht, aber der Maßstab. Neu einpassen,
+    // nicht neu laden: die Karten stehen ja schon im DOM.
     let resizeT = null;
     window.addEventListener('resize', () => {
       clearTimeout(resizeT);
-      resizeT = setTimeout(layoutClouds, 180);
+      resizeT = setTimeout(() => layoutClouds({ refit: true }), 180);
     });
 
-    // Cinzel und Nunito kommen per @import nach. Bis sie da sind, misst
-    // der Browser die Karten in der Ersatzschrift — danach passen die
-    // Kästen nicht mehr zum Text, also einmal nachrechnen.
-    if (document.fonts?.ready) document.fonts.ready.then(layoutClouds).catch(() => {});
+    // Inter kommt per @import nach. Bis sie da ist, misst der Browser
+    // die Karten in der Ersatzschrift — danach passen die Kästen nicht
+    // mehr zum Text, also einmal nachrechnen.
+    if (document.fonts?.ready) document.fonts.ready.then(() => layoutClouds({ refit: true })).catch(() => {});
   }
 
   /* ── Boot ────────────────────────────────────────────── */

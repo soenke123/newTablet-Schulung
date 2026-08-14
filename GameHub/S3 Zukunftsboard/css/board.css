@@ -318,13 +318,75 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); col
   text-align: center; padding: 46px 18px;
 }
 
-/* Die Höhe setzt das Skript, sobald es die Karten platziert hat. */
+/* ── Fenster, Lupe, Tafel ─────────────────────────────────
+   Drei Schichten mit je einer Aufgabe. Das Fenster (.bd-port) ist so
+   groß wie der Platz auf dem Gerät und schneidet ab. Die Lupe
+   (.bd-stage) trägt Maßstab und Ausschnitt. Die Tafel (.bd-cloud) wird
+   in ihrer eigenen Breite gepackt und weiß vom Gerät nichts.
+
+   Der Grund für die Trennung: auf einem Handy ist ein Zettel fast so
+   breit wie der Bildschirm. Packt man die Wolke in dieser Breite, stößt
+   jede Karte an den Rand und die Wolke fällt zur Liste zusammen. Also
+   wird in Ruhe auf einer breiten Tafel gepackt und danach das Ganze
+   verkleinert — was zu klein zum Lesen ist, holt man sich mit zwei
+   Fingern heran. */
+.bd-port {
+  position: relative;
+  overflow: hidden;
+  /* Senkrecht scrollt weiter die Seite — das Board ist länger als der
+     Bildschirm und darf nicht zur Falle werden. Alles andere (wischen,
+     schieben, zoomen) macht das Skript selbst. */
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+/* Hineingezoomt gehört der Finger dem Ausschnitt: dann gibt es etwas zu
+   schieben, und Blättern wäre der falsche Reflex. */
+.bd-port--zoomed { touch-action: none; cursor: grab; }
+.bd-port--zoomed:active { cursor: grabbing; }
+
+.bd-stage {
+  position: absolute; left: 0; top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* Die Maße setzt das Skript, sobald es die Karten platziert hat. */
 .bd-cloud { position: relative; width: 100%; }
 
 /* Notfall-Layout, falls die Platzierung scheitert: lieber nebeneinander
-   als unsichtbar. Setzt das Skript selbst per Klasse. */
-.bd-cloud--plain { display: flex; flex-wrap: wrap; gap: 14px; height: auto !important; }
+   als unsichtbar. Setzt das Skript selbst per Klasse — dann fällt auch
+   die Lupe weg, es gibt ja nichts mehr zu skalieren. */
+.bd-cloud--plain { display: flex; flex-wrap: wrap; gap: 14px; height: auto !important; width: auto !important; }
 .bd-cloud--plain .bd-cn { position: static; }
+.bd-port--plain { overflow: visible; height: auto !important; touch-action: auto; }
+.bd-port--plain .bd-stage { position: static; transform: none !important; }
+.bd-port--plain .bd-zoom { display: none; }
+
+/* ── Lupenknöpfe ──────────────────────────────────────────
+   Unten rechts, damit sie dem Bereichs-Wechsler oben nicht ins Gehege
+   kommen. Bewusst klein und unbunt: sie bedienen die Ansicht, sie
+   sagen nichts über den Inhalt. */
+.bd-zoom {
+  position: absolute; right: 8px; bottom: 8px; z-index: 15;
+  display: flex; gap: 3px; padding: 3px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid var(--clr-line); border-radius: 11px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(28,37,48,0.12);
+}
+.bd-zoom button {
+  width: 34px; height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 8px; background: transparent; cursor: pointer;
+  font-family: var(--font-body); font-size: 1.05rem; line-height: 1;
+  color: var(--clr-ink-2);
+  transition: background .12s ease, color .12s ease;
+}
+.bd-zoom button:hover { background: var(--clr-accent-soft); color: var(--clr-ink); }
+.bd-zoom button[data-zoom="shuffle"] {
+  margin-left: 3px; border-left: 1px solid var(--clr-line-soft); border-radius: 0 8px 8px 0;
+  font-size: 1.15rem;
+}
 
 /* ── Klebezettel ──────────────────────────────────────────
    Fast rechtwinklig (3 px), ein einzelner weicher Schatten nach
@@ -353,17 +415,16 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); col
   .bd-cn { transition: none; }
 }
 
-/* Schieflage aus dem Stylesheet statt aus dem Skript: die Platzierung
-   rechnet mit achsenparallelen Rechtecken, und die paar Grad passen in
-   den Abstand, den CLOUD_GAP ohnehin lässt. Sechs Winkel im Wechsel —
-   genug, dass kein Muster auffällt, und immer derselbe Winkel für
-   dieselbe Position, damit ein Poll die Wolke nicht zittern lässt. */
-.bd-cloud .bd-cn:nth-child(6n+1) { --tilt: -1.8deg; }
-.bd-cloud .bd-cn:nth-child(6n+2) { --tilt:  1.4deg; }
-.bd-cloud .bd-cn:nth-child(6n+3) { --tilt: -0.7deg; }
-.bd-cloud .bd-cn:nth-child(6n+4) { --tilt:  2.2deg; }
-.bd-cloud .bd-cn:nth-child(6n+5) { --tilt: -2.4deg; }
-.bd-cloud .bd-cn:nth-child(6n+6) { --tilt:  0.9deg; }
+/* Die Schieflage kommt aus dem Skript (TILTS in board.js), nicht mehr
+   aus nth-child. Sie MUSS dort stehen, weil die Platzierung mit
+   achsenparallelen Rechtecken rechnet und den Winkel jeder Karte
+   kennen muss, um ihn einzurechnen: ein um 2,4° gedrehter breiter
+   Zettel ist gut 13 px höher als der ungedrehte. Ein pauschaler
+   Abstand deckte das nicht ab — daher kamen die Überlappungen.
+
+   Der Winkel hängt an der Karten-ID, nicht an der Position: sonst
+   wechselte eine Karte ihre Neigung, sobald eine andere davor
+   einsortiert wird, und die Wolke zitterte bei jedem Poll. */
 
 /* Beim Anfassen richtet sich der Zettel gerade auf und kommt nach
    vorn — das liest sich wie „in die Hand nehmen". */
