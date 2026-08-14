@@ -34,6 +34,7 @@
 
   const ERROR_TEXT = {
     not_authenticated:     'Du bist nicht mehr angemeldet. Lade die Seite neu.',
+    session_expired:       'Deine Anmeldung ist abgelaufen. Lade die Seite neu (F5) — dein Board bleibt erhalten.',
     no_cluster:            'Du gehörst noch zu keinem Kurs — ohne Kurs gibt es kein Board.',
     no_profile:            'Zu deinem Konto fehlt ein Profil. Melde dich bei deiner Lehrkraft.',
     account_not_active:    'Dein Konto ist noch nicht freigeschaltet.',
@@ -64,7 +65,8 @@
     sort:      { col: 'created_at', dir: 'desc' },
     lastSig:   null,
     editing:   null,   // { id|null, kind, category, stance }
-    confirmFn: null
+    confirmFn: null,
+    failStreak: 0      // wie viele stille Polls hintereinander fehlschlugen
   };
 
   /* ── Kleinkram ───────────────────────────────────────── */
@@ -143,11 +145,23 @@
       // Beim stillen Poll keinen Ladefehler über ein funktionierendes
       // Board legen — ein Aussetzer im WLAN ist kein Grund, dem Kurs
       // den Inhalt wegzunehmen.
-      if (quiet && state.data) return;
+      if (quiet && state.data) {
+        // Stumm bleiben darf es aber nicht auf Dauer: ein Board, das
+        // aussieht wie immer und in Wahrheit seit Minuten nichts mehr
+        // holt, ist im Unterricht schlimmer als eine Fehlermeldung.
+        state.failStreak++;
+        if (state.failStreak === 3) {
+          toast(res?.error === 'session_expired'
+            ? ERROR_TEXT.session_expired
+            : 'Keine Verbindung — das Board zeigt gerade einen alten Stand.', true);
+        }
+        return;
+      }
       showStatus(errText(res?.error), true);
       return;
     }
 
+    state.failStreak = 0;
     state.data = res;
     state.isAdmin = !!res.is_admin;
     if (!state.clusterId) state.clusterId = res.cluster_id;

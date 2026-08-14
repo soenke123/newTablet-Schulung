@@ -12,9 +12,56 @@
 (function () {
   'use strict';
 
+  /* ── Access-Token ──────────────────────────────────────────
+     session.js steigt bei 'TOKEN_REFRESHED' früh aus (session.js:395)
+     und aktualisiert window.__accessToken dabei NICHT. Für kurze
+     Spielrunden fällt das nicht auf; dieses Board steht aber eine
+     ganze Schulstunde offen, und Supabase-Tokens laufen nach einer
+     Stunde ab — der Boot-Token wäre also garantiert irgendwann tot
+     und jeder Schreibversuch liefe in ein 401.
+
+     Zwei Sicherungen, absichtlich beide:
+       1. Eigener Auth-Listener, der den frischen Token mitnimmt.
+          Ereignisgesteuert, kein Polling, keine SDK-Locks.
+       2. Bei 401 einmal aktiv beim SDK nachfragen und den Aufruf
+          wiederholen — für den Fall, dass das Ereignis verpasst
+          wurde (Tab war ausgeblendet, Listener kam zu spät).
+     Bewusst nur hier und nicht in session.js: der Session-Layer
+     hängt an jeder Seite der Plattform, das ist ein größerer Eingriff
+     als das, worum es gerade geht.                                  */
+  if (window.supabaseClient?.auth?.onAuthStateChange) {
+    window.supabaseClient.auth.onAuthStateChange((event, s) => {
+      if (s?.access_token && s.access_token !== window.__accessToken) {
+        window.__accessToken = s.access_token;
+        console.log('[BOARD] Access-Token aufgefrischt (' + event + ')');
+      }
+    });
+  }
+
   function token() { return window.__accessToken || null; }
 
-  async function rpc(fn, body) {
+  // Holt den aktuellen Token aktiv beim SDK. Nur im 401-Fall benutzt —
+  // getSession() greift auf das interne Auth-Lock zu, und genau davor
+  // weicht der Rest der Plattform aus (siehe CLAUDE.md).
+  async function refreshToken() {
+    try {
+      // Das Lock kann bei mehreren offenen Tabs hängen bleiben (siehe
+      // CLAUDE.md) — ohne Zeitlimit bliebe der Speichern-Knopf dann für
+      // immer deaktiviert. Lieber nach 4 s aufgeben und ehrlich sagen,
+      // dass die Anmeldung erneuert werden muss.
+      const fresh = await Promise.race([
+        window.supabaseClient.auth.getSession().then(r => r?.data?.session?.access_token || null),
+        new Promise(resolve => setTimeout(() => resolve(null), 4000))
+      ]);
+      if (fresh) window.__accessToken = fresh;
+      return fresh;
+    } catch (e) {
+      console.warn('[BOARD] getSession fehlgeschlagen:', e.message);
+      return null;
+    }
+  }
+
+  async function rpc(fn, body, _retried) {
     const t = token();
     if (!t || !window.SUPABASE_URL) return { ok: false, error: 'not_authenticated' };
     try {
@@ -28,9 +75,19 @@
         },
         body: JSON.stringify(body || {})
       });
+
+      // 401 = Token abgelehnt (abgelaufen). Einmal frischen holen und
+      // denselben Aufruf wiederholen. _retried verhindert die Schleife,
+      // wenn der Token auch danach nicht akzeptiert wird.
+      if (res.status === 401 && !_retried) {
+        const fresh = await refreshToken();
+        if (fresh && fresh !== t) return rpc(fn, body, true);
+        return { ok: false, error: 'session_expired' };
+      }
+
       if (!res.ok) {
         console.warn('[BOARD] rpc', fn, res.status, await res.text());
-        return { ok: false, error: 'server_' + res.status };
+        return { ok: false, error: res.status === 401 ? 'session_expired' : 'server_' + res.status };
       }
       return await res.json();
     } catch (e) {
