@@ -796,7 +796,6 @@
       sel.dataset.sig = optsSig;
     }
 
-    $('bdPhasePrev').disabled = phase() <= 1;
     $('bdPhaseNext').disabled = phase() >= 3;
   }
 
@@ -1250,7 +1249,6 @@
       await load();
     };
     $('bdPhaseNext').addEventListener('click', () => setPhase(Math.min(3, phase() + 1)));
-    $('bdPhasePrev').addEventListener('click', () => setPhase(Math.max(1, phase() - 1)));
 
     $('bdReset').addEventListener('click', () => {
       const n = state.data?.notes.length ?? 0;
