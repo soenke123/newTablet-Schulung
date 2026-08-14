@@ -31,17 +31,26 @@
   </div>
 </header>
 
-<!-- ── Phasen-Anzeige ────────────────────────────────────── -->
+<!-- ── Phasen ────────────────────────────────────────────────
+     Zeigt nicht nur an, wo der Kurs steht, sondern schaltet auch um:
+     Phase 1 zeigt die Post-Its, Phase 2 die Fakten. Was noch nicht
+     freigeschaltet ist, bleibt gesperrt. Phase 3 hat keinen eigenen
+     Inhalt — sie ist ein Zustand, kein Fach — und ist deshalb ein
+     <div> und kein Knopf. -->
 <div class="bd-phases" id="bdPhases" hidden>
-  <div class="bd-phase" data-phase="1">
+  <button type="button" class="bd-phase" data-phase="1">
     <span class="bd-phase__no">1</span>
     <span class="bd-phase__name">Sammeln</span>
-  </div>
-  <div class="bd-phase" data-phase="2">
+    <span class="bd-phase__what">Post-Its</span>
+    <span class="bd-phase__count"></span>
+  </button>
+  <button type="button" class="bd-phase" data-phase="2">
     <span class="bd-phase__no">2</span>
     <span class="bd-phase__name">Belegen</span>
-  </div>
-  <div class="bd-phase" data-phase="3">
+    <span class="bd-phase__what">Fakten</span>
+    <span class="bd-phase__count"></span>
+  </button>
+  <div class="bd-phase bd-phase--static" data-phase="3">
     <span class="bd-phase__no">3</span>
     <span class="bd-phase__name">Besprechen</span>
   </div>
@@ -59,29 +68,23 @@
 <!-- ── Hinweiszeile (Auftrag der aktuellen Phase) ─────────── -->
 <p class="bd-hint" id="bdHint" hidden></p>
 
-<!-- ── Aktionen ──────────────────────────────────────────── -->
-<div class="bd-actions" id="bdActions" hidden>
-  <button type="button" id="bdNewIdea" class="bd-btn bd-btn--big">＋ Neues Post-It</button>
-  <button type="button" id="bdNewFact" class="bd-btn bd-btn--big bd-btn--fact">＋ Neuer Fakt</button>
-</div>
-
 <!-- ── Inhalt ────────────────────────────────────────────── -->
 <main class="bd-main">
   <div class="bd-status" id="bdStatus">Lade …</div>
 
-  <!-- Belegte Fakten (ab Phase 2) — stehen über dem Kategorie-Wechsler,
-       weil sie nicht zu einer einzelnen Kategorie gehören. -->
-  <section id="bdFacts" hidden></section>
-
   <!-- Kategorie-Wechsler: oben die sechs Symbole, darunter der Name
        zwischen zwei Pfeilen. Klebt beim Scrollen oben fest, damit man
-       auch weiter unten in der Wolke noch weiterwischen kann. -->
+       auch weiter unten in der Wolke noch weiterwischen kann.
+       Der runde Plus-Knopf sitzt neben dem Namen: was man schreibt,
+       gehört in den Bereich, den man gerade ansieht — die Frage muss
+       im Formular gar nicht mehr gestellt werden. -->
   <nav class="bd-catnav" id="bdCatNav" hidden>
     <div class="bd-catnav__tabs" id="bdCatTabs" role="tablist"></div>
     <div class="bd-catnav__title">
       <button type="button" class="bd-catnav__arrow" id="bdCatPrev" aria-label="Vorheriger Bereich">‹</button>
       <span class="bd-catnav__name" id="bdCatName"></span>
       <button type="button" class="bd-catnav__arrow" id="bdCatNext" aria-label="Nächster Bereich">›</button>
+      <button type="button" class="bd-catadd" id="bdCatAdd" hidden>＋</button>
     </div>
   </nav>
 
@@ -94,20 +97,21 @@
   <div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bdModalTitle">
     <h2 id="bdModalTitle">Neues Post-It</h2>
 
-    <label class="bd-field-label">1 · In welchen Bereich gehört das?</label>
-    <div class="bd-choice" id="bdCatChoice"></div>
+    <!-- Der Bereich steht fest: er kommt von dort, wo der Plus-Knopf
+         gedrückt wurde. Hier nur noch zum Nachlesen, nicht zum Ändern. -->
+    <div class="bd-modal__cat" id="bdModalCat"></div>
 
-    <label class="bd-field-label">2 · Was ist es?</label>
+    <label class="bd-field-label">1 · Was ist es?</label>
     <div class="bd-choice bd-choice--stance" id="bdStanceChoice"></div>
 
     <!-- Mehrfachauswahl, freiwillig: eine Aussage kann auf mehrere
          Technologien zeigen — oder auf gar keine bestimmte. -->
-    <label class="bd-field-label">3 · Worum geht es?
+    <label class="bd-field-label">2 · Worum geht es?
       <span class="bd-optional">mehrere möglich · darf auch leer bleiben</span>
     </label>
     <div class="bd-choice bd-choice--topics" id="bdTopicChoice"></div>
 
-    <label class="bd-field-label" for="bdText">4 · Dein Text</label>
+    <label class="bd-field-label" for="bdText">3 · Dein Text</label>
     <textarea id="bdText" maxlength="200" rows="3"
               placeholder="Schreib in einem Satz, worum es geht."></textarea>
     <div class="bd-counter"><span id="bdTextCount">0</span>/200</div>
@@ -115,7 +119,7 @@
     <!-- Quellen-Schritt: nur bei Fakten. Drei getrennte Pflichtfelder —
          die Felder sollen erklären, was eine Quelle ausmacht. -->
     <fieldset class="bd-source" id="bdSource" hidden>
-      <legend>5 · Deine Quelle <span class="bd-source__req">alle drei Felder werden gebraucht</span></legend>
+      <legend>4 · Deine Quelle <span class="bd-source__req">alle drei Felder werden gebraucht</span></legend>
 
       <label class="bd-field-label" for="bdSrcUrl">🔗 Link zur Seite</label>
       <input type="url" id="bdSrcUrl" placeholder="https://www.tagesschau.de/…" inputmode="url">

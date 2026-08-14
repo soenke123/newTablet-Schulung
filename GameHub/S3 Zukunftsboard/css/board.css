@@ -75,7 +75,11 @@ body {
 }
 .bd-viewswitch button.active { background: var(--clr-gold); color: #2b1a0d; }
 
-/* ── Phasen ───────────────────────────────────────────── */
+/* ── Phasen ───────────────────────────────────────────────
+   Zwei Aussagen in einer Leiste, deshalb zwei getrennte Signale:
+   der goldene Rand sagt, wo der KURS steht, die gefüllte Fläche,
+   was DU gerade ansiehst. Beides kann auseinanderfallen — genau
+   dafür ist der Umschalter da. */
 .bd-phases {
   display: flex; gap: 8px; justify-content: center;
   padding: 14px 18px 4px; flex-wrap: wrap;
@@ -85,18 +89,44 @@ body {
   padding: 7px 16px; border-radius: 999px;
   border: 1px solid var(--clr-border); background: var(--clr-surface);
   color: var(--clr-cream-dim); font-weight: 700; font-size: .9rem;
+  font-family: var(--font-body); text-align: left;
+  transition: background .12s ease, border-color .12s ease, color .12s ease;
 }
+button.bd-phase { cursor: pointer; }
+button.bd-phase:hover:not(:disabled) { background: var(--clr-surface2); color: var(--clr-cream); }
 .bd-phase__no {
   display: inline-flex; align-items: center; justify-content: center;
   width: 22px; height: 22px; border-radius: 50%;
   background: var(--clr-surface2); font-size: .8rem;
 }
-.bd-phase--active {
+/* Was in diesem Fach liegt — die eigentliche Ansage des Umschalters.
+   Der Phasenname allein sagt noch nicht, dass man hier Post-Its
+   oder Fakten zu sehen bekommt. */
+.bd-phase__what {
+  font-weight: 800; font-size: .78rem; opacity: .8;
+  padding-left: 8px; border-left: 1px solid var(--clr-border);
+}
+.bd-phase__count { font-size: .74rem; font-weight: 800; opacity: .75; }
+
+/* Der Kurs steht hier. */
+.bd-phase--running {
   border-color: var(--clr-gold); color: var(--clr-gold);
   box-shadow: 0 0 14px rgba(240,180,41,0.25);
 }
-.bd-phase--active .bd-phase__no { background: var(--clr-gold); color: #2b1a0d; }
-.bd-phase--done { opacity: .55; }
+.bd-phase--running .bd-phase__no { background: var(--clr-gold); color: #2b1a0d; }
+
+/* Das siehst du gerade. */
+.bd-phase--shown {
+  background: var(--clr-gold); border-color: var(--clr-gold); color: #2b1a0d;
+}
+.bd-phase--shown .bd-phase__no  { background: rgba(0,0,0,0.22); color: #2b1a0d; }
+.bd-phase--shown .bd-phase__what { border-left-color: rgba(0,0,0,0.25); opacity: .9; }
+/* muss die allgemeine Hover-Regel oben schlagen — sonst verliert der
+   gewählte Reiter unter dem Mauszeiger seine Füllung */
+button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-gold); color: #2b1a0d; }
+
+/* Noch nicht freigeschaltet. */
+.bd-phase--locked { opacity: .38; cursor: not-allowed; }
 
 /* ── Admin-Leiste ─────────────────────────────────────── */
 .bd-adminbar {
@@ -123,10 +153,6 @@ body {
 .bd-btn:disabled { opacity: .4; cursor: not-allowed; }
 .bd-btn--ghost { background: transparent; color: var(--clr-cream); border-color: var(--clr-border); }
 .bd-btn--danger { background: var(--clr-red); border-color: var(--clr-red); color: #fff; }
-.bd-btn--big { padding: 12px 22px; font-size: 1rem; }
-.bd-btn--fact { background: var(--clr-blue); border-color: var(--clr-blue); color: #10243a; }
-
-.bd-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; padding: 14px 18px 0; }
 
 .bd-hint {
   max-width: 760px; margin: 14px auto 0; padding: 0 18px;
@@ -198,6 +224,28 @@ body {
 }
 .bd-catnav__arrow:hover { color: var(--clr-gold); background: rgba(240,180,41,0.10); }
 
+/* Schreiben beginnt hier — direkt neben dem Bereich, in den es gehört.
+   Rund und gefüllt, damit der Knopf nicht mit den Pfeilen verwechselt
+   wird: die blättern, dieser legt an. */
+.bd-catadd {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; margin-left: 6px;
+  border-radius: 50%; border: 1px solid var(--clr-gold);
+  background: var(--clr-gold); color: #2b1a0d;
+  font-family: var(--font-body); font-size: 1.15rem; font-weight: 800;
+  line-height: 1; cursor: pointer;
+  box-shadow: 0 2px 10px rgba(240,180,41,0.25);
+  transition: transform .12s ease, filter .12s ease;
+}
+.bd-catadd:hover:not(:disabled) { transform: scale(1.08); filter: brightness(1.08); }
+.bd-catadd:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
+/* Fakten sind blau — im Formular, in der Tabelle, und hier am Knopf. */
+.bd-catadd--fact {
+  background: var(--clr-blue); border-color: var(--clr-blue); color: #10243a;
+  box-shadow: 0 2px 10px rgba(91,164,232,0.25);
+}
+
 .bd-cloud-sec__empty {
   color: var(--clr-cream-dim); font-size: .9rem; font-style: italic;
   text-align: center; padding: 40px 18px;
@@ -247,11 +295,7 @@ body {
 .bd-cn--mine { box-shadow: 0 0 0 1px rgba(240,180,41,0.5); }
 .bd-cn--mine:hover, .bd-cn--mine:focus-visible { box-shadow: 0 0 0 1px rgba(240,180,41,0.7), 0 6px 22px rgba(0,0,0,0.55); }
 
-/* Hochkant. Gedreht wird um die Mitte — das Skript rechnet die
-   Platzierung genau darauf aus. */
-.bd-cn--rot { transform: rotate(-90deg); transform-origin: 50% 50%; }
-.bd-cn--rot:hover, .bd-cn--rot:focus-visible { transform: rotate(-90deg) scale(1.04); }
-.bd-cn:not(.bd-cn--rot):hover, .bd-cn:not(.bd-cn--rot):focus-visible { transform: scale(1.04); }
+.bd-cn:hover, .bd-cn:focus-visible { transform: scale(1.04); }
 
 .bd-cn__text { font-size: 1em; line-height: 1.32; font-weight: 600; }
 
@@ -264,7 +308,7 @@ body {
   background: var(--clr-gold); color: #2b1a0d;
   box-shadow: 0 2px 6px rgba(0,0,0,0.45);
 }
-.bd-cn--liked { border-style: solid; }
+.bd-cn--liked { box-shadow: 0 0 0 1px rgba(240,180,41,0.35); }
 
 /* Rückmeldung auf den Doppeltipp. Sitzt am <body>, nicht an der Karte —
    die Wolke wird gleich neu gezeichnet. */
@@ -294,23 +338,16 @@ body {
 .bd-source-cite__body { color: var(--clr-cream); }
 .bd-source-cite a { color: var(--clr-blue); }
 
-/* ── Fakten-Block ─────────────────────────────────────────
-   Ab Phase 2 oben, aber als festes Raster statt als Wolke: eine
-   Quellenangabe will gelesen und nicht gepackt werden. */
-.bd-facts { margin-bottom: 30px; }
-.bd-facts__head {
-  font-family: var(--font-display); color: var(--clr-gold);
-  font-size: 1.05rem; letter-spacing: .04em;
-  padding-bottom: 7px; margin-bottom: 12px;
-  border-bottom: 1px solid var(--clr-border);
-  display: flex; align-items: baseline; gap: 10px;
-}
-.bd-facts__head span { margin-left: auto; font-family: var(--font-body); font-size: .78rem; color: var(--clr-cream-dim); }
-.bd-facts__grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
-/* relative statt static: der Zugestimmt-Punkt hängt absolut in der Karte
-   und bräuchte sonst das Raster als Bezug. */
-.bd-facts__grid .bd-cn { position: relative; font-size: 1rem; }
-.bd-facts__grid .bd-cn:hover, .bd-facts__grid .bd-cn:focus-visible { transform: none; }
+/* ── Fakten-Raster (Phase 2) ──────────────────────────────
+   Fakten stehen im festen Raster statt in der Wolke: eine
+   Quellenangabe will gelesen und nicht gepackt werden — und ohne
+   Zustimmung gäbe es auch keine Größe, die etwas erzählen könnte. */
+.bd-factgrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+/* relative statt absolute: im Raster setzt nicht das Skript die
+   Position, und die Karte braucht trotzdem einen Bezug für alles,
+   was in ihrer Ecke hängt. */
+.bd-factgrid .bd-cn { position: relative; font-size: 1rem; }
+.bd-factgrid .bd-cn:hover, .bd-factgrid .bd-cn:focus-visible { transform: none; }
 
 /* Einblenden beim Bereichswechsel — die Richtung folgt dem Wischer. */
 .bd-cloud--from-right { animation: bd-in-right .26s ease-out; }
@@ -328,7 +365,12 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
 .bd-table th, .bd-table td { padding: 9px 11px; text-align: left; border-bottom: 1px solid var(--clr-border); vertical-align: top; }
 .bd-table th { background: var(--clr-surface2); cursor: pointer; white-space: nowrap; color: var(--clr-gold); }
 .bd-table th:hover { filter: brightness(1.15); }
-.bd-table tbody tr:hover { background: rgba(240,180,41,0.05); }
+/* Auch in der Liste führt die Zeile ins Detail — dieselbe Karte,
+   dieselben Knöpfe wie in der Wolke. */
+.bd-table tbody tr { cursor: pointer; }
+.bd-table tbody tr:hover, .bd-table tbody tr:focus-visible {
+  background: rgba(240,180,41,0.08); outline: none;
+}
 .bd-table .bd-pill { white-space: nowrap; }
 .bd-td-topics { white-space: nowrap; font-size: .85rem; }
 .bd-td-likes  { text-align: center; font-weight: 800; color: var(--clr-gold); }
@@ -355,6 +397,19 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
 .bd-modal--small { max-width: 400px; }
 .bd-modal h2 { font-family: var(--font-display); color: var(--clr-gold); font-size: 1.2rem; margin-bottom: 14px; }
 .bd-modal p { line-height: 1.5; }
+
+/* Der Bereich ist im Formular keine Frage mehr, sondern eine Angabe:
+   er kommt von dort, wo der Plus-Knopf stand. */
+.bd-modal__cat {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 9px 12px; border-radius: 10px;
+  background: var(--clr-surface2); border: 1px solid var(--clr-border);
+}
+.bd-modal__cat-label {
+  text-transform: uppercase; letter-spacing: .06em;
+  font-size: .7rem; font-weight: 800; color: var(--clr-cream-dim);
+}
+.bd-modal__cat strong { color: var(--clr-gold); font-size: .95rem; }
 
 .bd-field-label {
   display: block; margin: 14px 0 6px;
@@ -448,6 +503,14 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
 @media (max-width: 640px) {
   .bd-head { gap: 10px; }
   .bd-head h1 { font-size: 1.15rem; }
+  /* Drei volle Reiter passen nicht nebeneinander. Der Phasenname
+     weicht, die Nummer bleibt — und was im Fach liegt („Post-Its",
+     „Fakten") erst recht, das ist die eigentliche Ansage. Phase 3
+     schaltet nichts um und behält deshalb ihren Namen. */
+  .bd-phases { gap: 6px; padding: 12px 12px 2px; }
+  .bd-phase { padding: 6px 12px; gap: 6px; font-size: .85rem; }
+  button.bd-phase .bd-phase__name { display: none; }
+  .bd-phase__what { padding-left: 0; border-left: 0; }
   .bd-adminbar { margin: 12px 12px 0; }
   .bd-main { padding: 12px; }
   /* muss zur schmaleren Innenkante von .bd-main passen, sonst steht die
