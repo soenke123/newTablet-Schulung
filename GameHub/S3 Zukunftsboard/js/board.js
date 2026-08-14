@@ -62,6 +62,7 @@
 
   const CLUSTER_KEY = 'bd_cluster';
   const VIEW_KEY    = 'bd_view';
+  const CAT_KEY     = 'bd_cat';
   const POLL_MS     = 5000;
 
   /* ── Zustand ─────────────────────────────────────────── */
@@ -71,6 +72,8 @@
     clusters:  [],
     clusterId: null,   // nur Admins wählen aktiv; Schüler bleiben auf null
     view:      'board',
+    cat:       'persoenlich',   // sichtbare Kategorie in der Wolken-Ansicht
+    slide:     0,               // Richtung der Einblendung beim Wechsel
     sort:      { col: 'created_at', dir: 'desc' },
     lastSig:   null,
     editing:   null,   // { id|null, kind, category, stance }
@@ -189,6 +192,8 @@
     s.hidden = false;
     $('bdBoard').hidden = true;
     $('bdTable').hidden = true;
+    $('bdFacts').hidden = true;
+    $('bdCatNav').hidden = true;
     $('bdActions').hidden = true;
     $('bdPhases').hidden  = true;
     $('bdHint').hidden    = true;
@@ -204,7 +209,7 @@
     const d = state.data;
     if (!d) return '';
     return JSON.stringify([
-      d.cluster_id, d.phase, d.is_admin, state.view, state.sort,
+      d.cluster_id, d.phase, d.is_admin, state.view, state.cat, state.sort,
       d.me?.ideas_used, d.me?.facts_used,
       // likes gehören in die Signatur: sonst bliebe eine Zustimmung aus
       // einem anderen Tablet unsichtbar, weil updated_at sich dabei
@@ -238,10 +243,14 @@
     if (state.view === 'board') {
       $('bdTable').hidden = true;
       $('bdBoard').hidden = false;
+      renderFacts();
+      renderCatNav();
       renderBoard();
     } else {
-      $('bdBoard').hidden = true;
-      $('bdTable').hidden = false;
+      $('bdBoard').hidden  = true;
+      $('bdFacts').hidden  = true;
+      $('bdCatNav').hidden = true;
+      $('bdTable').hidden  = false;
       renderTable();
     }
 
@@ -299,12 +308,16 @@
   }
 
   /* ── Karten in der Wolke ─────────────────────────────────
-     Bewusst reduziert: der Text ist die Karte. Kein Kategorie-Icon
-     (die Kategorie ist schon die Überschrift der Wolke), kein Name,
-     keine Knöpfe — die stehen alle im Detail, einen Klick entfernt.
-     Übrig bleiben oben die Themen-Icons und unten rechts die
-     Zustimmung, weil die Zustimmung die Größe der Karte steuert und
-     deshalb sichtbar sein muss.                                     */
+     Auf der Karte steht nur der Text. Kein Kategorie-Icon (die
+     Kategorie ist der Reiter darüber), keine Themen-Symbole, kein
+     Name, keine Zahl, keine Knöpfe — das alles steht im Detail, einen
+     Tipp entfernt. Wie stark eine Aussage getragen wird, sagt die
+     Größe der Karte, nicht eine Ziffer daneben.
+
+     Eine einzige Ausnahme: hat man selbst zugestimmt, sitzt ein
+     kleiner Daumen in der Ecke. Ohne den weiß niemand mehr, wo er
+     schon zugestimmt hat — und ein zweiter Doppeltipp nähme die
+     Zustimmung wieder weg, ohne dass man es merkt.                  */
 
   const LIKE_SIZE_MIN = 0.95;   // rem — Karte ohne Zustimmung
   const LIKE_SIZE_MAX = 2.15;   // rem — Karte mit den meisten
@@ -330,102 +343,126 @@
     return h % 3 === 0;
   }
 
-  function likeHTML(note) {
-    const likes = Number(note.likes || 0);
-    // Der eigenen Karte kann man nicht zustimmen — dort steht die Zahl
-    // ohne Knopf, damit die Karte trotzdem zeigt, wie sie ankommt.
-    if (note.is_mine) {
-      return likes > 0
-        ? `<span class="bd-like bd-like--own" title="So viele stimmen dir zu">👍 ${likes}</span>`
-        : '';
-    }
-    return `<button class="bd-like${note.liked_by_me ? ' bd-like--on' : ''}" data-like="${esc(note.id)}"
-              title="${note.liked_by_me ? 'Zustimmung zurückziehen' : 'Ich stimme zu'}"
-              aria-pressed="${!!note.liked_by_me}">👍${likes > 0 ? ' ' + likes : ''}</button>`;
-  }
-
-  function topicsHTML(note) {
-    return topicsOf(note).map(t => {
-      const info = topicOf(t);
-      return `<span class="bd-topic" title="${esc(info.label)}">${info.icon}</span>`;
-    }).join('');
-  }
-
   function cardHTML(note, opts) {
-    const o      = opts || {};
-    const rot    = !!o.rotate;
-    const topics = topicsHTML(note);
-    const head   = topics + (note.kind === 'fakt' ? '<span class="bd-cn__fact" title="Belegter Fakt">📎</span>' : '');
+    const o   = opts || {};
+    const rot = !!o.rotate;
     // Größere Karten dürfen etwas breiter werden, sonst wird eine
     // 2-rem-Karte zu einem schmalen hohen Turm. min(…,100%) hält sie
     // auf schmalen Geräten trotzdem in der Spalte.
-    const style  = o.size
+    const style = o.size
       ? ` style="font-size:${o.size.toFixed(2)}rem;max-width:min(${Math.round(200 + (o.size - LIKE_SIZE_MIN) * 130)}px,100%)"`
       : '';
 
-    // Bewusst ohne role="button": die Karte enthält selbst einen Knopf
-    // (Zustimmen), und Inhalt innerhalb von role="button" gilt als
-    // rein darstellend — der Knopf verschwände für Screenreader.
-    // tabindex + Enter/Leertaste reichen hier.
-    return `<article class="bd-cn bd-cn--${esc(note.stance)}${note.is_mine ? ' bd-cn--mine' : ''}${rot ? ' bd-cn--rot' : ''}"
+    const hint = note.is_mine
+      ? 'Antippen: deine Karte ansehen, ändern oder löschen'
+      : 'Antippen für Details · Doppeltippen zum Zustimmen';
+
+    // Bewusst ohne role="button": die Karte ist zwar antippbar, aber
+    // role="button" macht ihren Inhalt für Screenreader zu reiner
+    // Dekoration — und der Inhalt ist hier die ganze Information.
+    return `<article class="bd-cn bd-cn--${esc(note.stance)}${note.is_mine ? ' bd-cn--mine' : ''}${rot ? ' bd-cn--rot' : ''}${note.liked_by_me ? ' bd-cn--liked' : ''}"
              data-note="${esc(note.id)}"${rot ? ' data-rot="1"' : ''}${style}
-             tabindex="0" title="Öffnen für Verfasser:in und Details">
-        ${head ? `<div class="bd-cn__top">${head}</div>` : ''}
+             tabindex="0" title="${hint}">
+        ${note.liked_by_me ? '<span class="bd-cn__liked" title="Du hast zugestimmt">👍</span>' : ''}
         <p class="bd-cn__text">${esc(note.text)}</p>
         ${o.cite ? `<div class="bd-source-cite"><span class="bd-source-cite__body">${o.cite}</span></div>` : ''}
-        <div class="bd-cn__foot">${likeHTML(note)}</div>
       </article>`;
   }
 
-  function renderBoard() {
-    const notes = state.data.notes;
-    const facts = notes.filter(n => n.kind === 'fakt');
+  /* Karten einer Kategorie, meistgelikte zuerst — die Platzierung läuft
+     von innen nach außen, wer zuerst drankommt, landet in der Mitte. */
+  function notesOf(catId) {
+    return state.data.notes
+      .filter(n => n.category === catId && (phase() < 2 || n.kind !== 'fakt'))
+      .sort((a, b) => (Number(b.likes || 0) - Number(a.likes || 0)) ||
+                      String(a.created_at).localeCompare(String(b.created_at)));
+  }
 
+  function catIndex() {
+    const i = CATEGORIES.findIndex(c => c.id === state.cat);
+    return i < 0 ? 0 : i;
+  }
+
+  /* Reihum, nicht am Ende anstoßen: beim Wischen soll es weitergehen,
+     nicht plötzlich klemmen. */
+  function gotoCat(delta) {
+    const i = (catIndex() + delta + CATEGORIES.length) % CATEGORIES.length;
+    setCat(CATEGORIES[i].id, delta);
+  }
+
+  function setCat(id, dir) {
+    if (id === state.cat) return;
+    state.cat   = id;
+    state.slide = dir || 0;
+    try { sessionStorage.setItem(CAT_KEY, id); } catch (e) {}
+    render();
+  }
+
+  function renderFacts() {
+    const box   = $('bdFacts');
+    const facts = state.data.notes.filter(n => n.kind === 'fakt');
+
+    // Ab Phase 2 stehen die Fakten über dem Wechsler — sie sind das
+    // Ergebnis der Recherche und der Anker für das Gespräch in Phase 3.
+    // Als festes Raster, nicht als Wolke: eine Quellenangabe will
+    // gelesen werden, nicht gepackt.
+    if (phase() < 2 || !facts.length) { box.hidden = true; box.innerHTML = ''; return; }
+
+    box.hidden = false;
+    box.innerHTML =
+      `<h2 class="bd-facts__head">📎 Belegte Fakten <span>${facts.length}</span></h2>
+       <div class="bd-facts__grid">${
+         facts.map(n => cardHTML(n, { cite: formatSource(n) })).join('')
+       }</div>`;
+  }
+
+  function renderCatNav() {
+    $('bdCatNav').hidden = false;
+
+    $('bdCatTabs').innerHTML = CATEGORIES.map(c => {
+      const n = notesOf(c.id).length;
+      return `<button type="button" role="tab" data-cat="${c.id}"
+                class="bd-cattab${c.id === state.cat ? ' bd-cattab--on' : ''}"
+                aria-selected="${c.id === state.cat}" title="${esc(c.label)}">
+                <span class="bd-cattab__icon">${c.icon}</span>
+                <span class="bd-cattab__count">${n}</span>
+              </button>`;
+    }).join('');
+
+    const cat = catOf(state.cat);
+    const n   = notesOf(state.cat).length;
+    $('bdCatName').innerHTML =
+      `${esc(cat.label)} <span class="bd-catnav__count">${n}</span>`;
+  }
+
+  function renderBoard() {
     // Bezugsgröße für die Schriftgrade ist das Maximum über das ganze
     // Board, nicht je Kategorie. Sonst wäre die einzige Karte einer
     // stillen Kategorie genauso groß wie der Publikumsliebling.
-    const maxLikes = notes.reduce((m, n) => Math.max(m, Number(n.likes || 0)), 0);
+    const maxLikes = state.data.notes.reduce((m, n) => Math.max(m, Number(n.likes || 0)), 0);
+    const inCat    = notesOf(state.cat);
 
-    let html = '';
+    // Hochkant ist ein Gewinn, solange die Wolke in die Breite darf. Auf
+    // einem Handy kostet jede gedrehte Karte so viel Höhe wie ein ganzer
+    // Absatz — dort bleibt alles liegend.
+    const wide = ($('bdBoard').clientWidth || 9999) >= 520;
 
-    // Ab Phase 2 stehen die Fakten oben — sie sind das Ergebnis der
-    // Recherche und der Anker für das Gespräch in Phase 3. Als festes
-    // Raster, nicht als Wolke: eine Quellenangabe will gelesen werden.
-    if (phase() >= 2 && facts.length > 0) {
-      html += `<div class="bd-facts">
-                 <h2 class="bd-facts__head">📎 Belegte Fakten <span>${facts.length}</span></h2>
-                 <div class="bd-facts__grid">${
-                   facts.map(n => cardHTML(n, { cite: formatSource(n) })).join('')
-                 }</div>
-               </div>`;
-    }
+    // Richtung der Einblendung: beim Wischen nach links kommt die neue
+    // Wolke von rechts herein. Wird nach dem Zeichnen zurückgesetzt,
+    // damit ein stiller Poll nicht jedes Mal neu animiert.
+    const slide = state.slide > 0 ? ' bd-cloud--from-right'
+                : state.slide < 0 ? ' bd-cloud--from-left' : '';
+    state.slide = 0;
 
-    html += '<div class="bd-clouds">';
-    for (const cat of CATEGORIES) {
-      const inCat = notes
-        .filter(n => n.category === cat.id && (phase() < 2 || n.kind !== 'fakt'))
-        // Meistgelikte zuerst: die Platzierung läuft von innen nach
-        // außen, wer zuerst drankommt, landet in der Mitte.
-        .sort((a, b) => (Number(b.likes || 0) - Number(a.likes || 0)) ||
-                        String(a.created_at).localeCompare(String(b.created_at)));
+    $('bdBoard').innerHTML = inCat.length
+      ? `<div class="bd-cloud${slide}">${inCat.map(n => cardHTML(n, {
+           size:   sizeFor(Number(n.likes || 0), maxLikes),
+           rotate: wide && wantsRotate(n)
+         })).join('')}</div>`
+      : `<p class="bd-cloud-sec__empty">Hier steht noch nichts. ${
+           canWrite('idee') ? 'Schreib das erste Post-It für diesen Bereich.' : ''
+         }</p>`;
 
-      html += `<section class="bd-cloud-sec">
-                 <h2 class="bd-cloud-sec__head">
-                   <span class="bd-cloud-sec__icon">${cat.icon}</span>
-                   <span>${esc(cat.label)}</span>
-                   <span class="bd-cloud-sec__count">${inCat.length}</span>
-                 </h2>
-                 ${inCat.length
-                   ? `<div class="bd-cloud">${inCat.map(n => cardHTML(n, {
-                       size:   sizeFor(Number(n.likes || 0), maxLikes),
-                       rotate: wantsRotate(n)
-                     })).join('')}</div>`
-                   : '<p class="bd-cloud-sec__empty">Noch nichts hier.</p>'}
-               </section>`;
-    }
-    html += '</div>';
-
-    $('bdBoard').innerHTML = html;
     layoutClouds();
   }
 
@@ -756,19 +793,36 @@
     await load();
   }
 
-  async function toggleLike(btn) {
-    const note = state.data?.notes.find(n => n.id === btn.dataset.like);
-    if (!note) return;
-    btn.disabled = true;
-    const res = await window.BoardAPI.toggleLike(note.id);
-    if (!res || !res.ok) { btn.disabled = false; toast(errText(res?.error), true); return; }
+  async function toggleLike(id) {
+    const note = state.data?.notes.find(n => n.id === id);
+    if (!note || note._busy) return;
+    note._busy = true;
+    const res = await window.BoardAPI.toggleLike(id);
+    note._busy = false;
+    if (!res || !res.ok) { toast(errText(res?.error), true); render(); return; }
     // Antwort direkt in den lokalen Stand übernehmen und neu zeichnen,
-    // statt auf den nächsten Poll zu warten — ein Klick muss sofort
-    // sichtbar sein. likes steckt in der Signatur, render() greift also,
+    // statt auf den nächsten Poll zu warten — ein Tipp muss sofort
+    // wirken. likes steckt in der Signatur, render() greift also,
     // und die Karte wächst sofort auf ihre neue Größe.
     note.likes       = res.likes;
     note.liked_by_me = res.liked;
     render();
+  }
+
+  /* Kurze Rückmeldung am Finger. Muss sein, seit die Karte keine Zahl
+     mehr trägt — sonst bliebe von einem Doppeltipp nur, dass die Karte
+     ein bisschen anders liegt. Hängt bewusst am <body> und nicht an der
+     Karte: die Wolke wird gleich neu gezeichnet, und dabei verschwände
+     alles, was in ihr steckt. */
+  function likeBurst(card, on) {
+    const r = card.getBoundingClientRect();
+    const b = document.createElement('div');
+    b.className = 'bd-burst' + (on ? '' : ' bd-burst--off');
+    b.textContent = on ? '👍' : '↩';
+    b.style.left = (r.left + r.width / 2) + 'px';
+    b.style.top  = (r.top + r.height / 2) + 'px';
+    document.body.appendChild(b);
+    setTimeout(() => b.remove(), 700);
   }
 
   /* ── Detail einer Karte ──────────────────────────────────
@@ -817,11 +871,24 @@
       return `<span class="bd-detail__topic">${i.icon} ${esc(i.label)}</span>`;
     }).join('');
 
+    const likes = Number(note.likes || 0);
     $('bdDetailMeta').innerHTML =
       `<div class="bd-detail__row"><span>Bereich</span><strong>${cat.icon} ${esc(cat.label)}</strong></div>
-       ${topics ? `<div class="bd-detail__row"><span>Thema</span><strong>${topics}</strong></div>` : ''}
+       <div class="bd-detail__row"><span>Thema</span><strong>${topics || '<em class="bd-detail__none">nichts angegeben</em>'}</strong></div>
        <div class="bd-detail__row"><span>Von</span><strong>${esc(note.author || 'Unbekannt')}${note.is_mine ? ' (du)' : ''}</strong></div>
-       <div class="bd-detail__row"><span>Zustimmung</span><strong>👍 ${Number(note.likes || 0)}</strong></div>`;
+       <div class="bd-detail__row"><span>Zustimmung</span><strong>👍 ${likes}${
+         note.is_mine && likes > 0 ? ' <span class="bd-detail__none">— so viele stimmen dir zu</span>' : ''
+       }</strong></div>`;
+
+    // Zustimmen und Zurücknehmen sitzen am selben Knopf — er sagt immer,
+    // was der nächste Druck bewirkt.
+    const likeBtn = $('bdDetailLike');
+    likeBtn.hidden = !!note.is_mine;
+    if (!note.is_mine) {
+      likeBtn.textContent = note.liked_by_me ? '👍 Zustimmung zurücknehmen' : '👍 Ich stimme zu';
+      likeBtn.classList.toggle('bd-btn--like-on', !!note.liked_by_me);
+      likeBtn.setAttribute('aria-pressed', String(!!note.liked_by_me));
+    }
 
     const mayEdit = canEdit(note);
     $('bdDetailEdit').hidden = !mayEdit;
@@ -888,37 +955,108 @@
     });
 
     document.addEventListener('keydown', ev => {
-      if (ev.key !== 'Escape') return;
-      if (!$('bdModal').hidden)   closeModal();
-      if (!$('bdDetail').hidden)  closeDetail();
-      if (!$('bdConfirm').hidden) { $('bdConfirm').hidden = true; state.confirmFn = null; }
-    });
-
-    // Karten (Event-Delegation — die Karten werden bei jedem Poll neu gebaut)
-    $('bdBoard').addEventListener('click', async ev => {
-      const likeBtn = ev.target.closest('[data-like]');
-      if (likeBtn) {
-        // Zustimmen, ohne das Detail zu öffnen: der Knopf liegt auf der
-        // Karte, und die Karte ist selbst klickbar.
-        ev.stopPropagation();
-        await toggleLike(likeBtn);
+      if (ev.key === 'Escape') {
+        if (!$('bdModal').hidden)   closeModal();
+        if (!$('bdDetail').hidden)  closeDetail();
+        if (!$('bdConfirm').hidden) { $('bdConfirm').hidden = true; state.confirmFn = null; }
         return;
       }
-      const card = ev.target.closest('[data-note]');
-      if (card) openDetail(card.dataset.note);
+
+      // Pfeiltasten blättern durch die Bereiche — am Beamer steht man
+      // meist an der Tastatur und nicht am Tablet. Nicht, solange ein
+      // Fenster offen ist oder jemand in einem Feld schreibt.
+      if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+      if (state.view !== 'board') return;
+      if (!$('bdModal').hidden || !$('bdDetail').hidden || !$('bdConfirm').hidden) return;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) return;
+      ev.preventDefault();
+      gotoCat(ev.key === 'ArrowRight' ? 1 : -1);
     });
 
-    // Tastatur: die Karten sind role="button", also müssen Enter und
-    // Leertaste dasselbe tun wie ein Klick.
-    $('bdBoard').addEventListener('keydown', ev => {
-      if (ev.key !== 'Enter' && ev.key !== ' ') return;
-      const card = ev.target.closest('[data-note]');
-      if (!card || ev.target.closest('[data-like]')) return;
-      ev.preventDefault();
-      openDetail(card.dataset.note);
+    /* Karten: einmal tippen öffnet das Detail, zweimal stimmt zu.
+
+       Beides auf demselben Ziel geht nur mit einer kurzen Wartezeit —
+       ein Doppeltipp beginnt nun einmal als einfacher Tipp. Also wird
+       das Öffnen um 260 ms verzögert und abgebrochen, falls ein zweiter
+       Tipp kommt. Auf eigenen Karten entfällt das: dort ist Zustimmen
+       gar nicht möglich, und niemand soll auf eine Wirkung warten, die
+       es nicht gibt.                                                  */
+    const TAP_MS = 260;
+    let tapTimer = null, tapId = null;
+
+    function clearTap() { clearTimeout(tapTimer); tapTimer = null; tapId = null; }
+
+    async function cardTapped(card) {
+      const note = state.data?.notes.find(n => n.id === card.dataset.note);
+      if (!note) return;
+
+      // Eigene Karte: nichts zu verzögern, direkt öffnen. (Zustimmen
+       // sperrt board_toggle_like ohnehin mit 'own_note'.)
+      if (note.is_mine) { clearTap(); openDetail(note.id); return; }
+
+      if (tapId === note.id && tapTimer) {      // zweiter Tipp
+        clearTap();
+        likeBurst(card, !note.liked_by_me);
+        await toggleLike(note.id);
+        return;
+      }
+      clearTap();
+      tapId = note.id;
+      tapTimer = setTimeout(() => { clearTap(); openDetail(note.id); }, TAP_MS);
+    }
+
+    for (const boxId of ['bdBoard', 'bdFacts']) {
+      $(boxId).addEventListener('click', ev => {
+        const card = ev.target.closest('[data-note]');
+        if (card) cardTapped(card);
+      });
+      $(boxId).addEventListener('keydown', ev => {
+        const card = ev.target.closest('[data-note]');
+        if (!card) return;
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); clearTap(); openDetail(card.dataset.note); }
+      });
+    }
+
+    // ── Kategorie-Wechsler ──
+    $('bdCatTabs').addEventListener('click', ev => {
+      const b = ev.target.closest('button[data-cat]'); if (!b) return;
+      const from = catIndex();
+      const to   = CATEGORIES.findIndex(c => c.id === b.dataset.cat);
+      setCat(b.dataset.cat, to > from ? 1 : -1);
     });
+    $('bdCatPrev').addEventListener('click', () => gotoCat(-1));
+    $('bdCatNext').addEventListener('click', () => gotoCat(1));
+
+    /* Wischen. Bewusst passiv: preventDefault würde das senkrechte
+       Scrollen mit abwürgen. Deshalb entscheidet erst der Fingerabheber,
+       ob es ein Wischer war — und nur, wenn die Bewegung deutlich
+       waagerechter war als senkrecht. */
+    let tx = 0, ty = 0, tt = 0;
+    $('bdBoard').addEventListener('touchstart', ev => {
+      if (ev.touches.length !== 1) { tt = 0; return; }
+      tx = ev.touches[0].clientX; ty = ev.touches[0].clientY; tt = Date.now();
+    }, { passive: true });
+
+    $('bdBoard').addEventListener('touchend', ev => {
+      if (!tt || state.view !== 'board') return;
+      const t = ev.changedTouches[0];
+      const dx = t.clientX - tx, dy = t.clientY - ty, dt = Date.now() - tt;
+      tt = 0;
+      if (dt > 800 || Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      clearTap();          // Wischen ist kein Tippen — kein Detail öffnen
+      gotoCat(dx < 0 ? 1 : -1);
+    }, { passive: true });
 
     // ── Detail-Ansicht ──
+    $('bdDetailLike').addEventListener('click', async () => {
+      const id = state.detailId;
+      if (!id) return;
+      $('bdDetailLike').disabled = true;
+      await toggleLike(id);
+      $('bdDetailLike').disabled = false;
+      // render() zieht das offene Detail mit — der Knopf beschriftet
+      // sich also selbst um, und die Karte dahinter wächst schon.
+    });
     $('bdDetailClose').addEventListener('click', closeDetail);
     $('bdDetail').addEventListener('click', ev => { if (ev.target === $('bdDetail')) closeDetail(); });
     $('bdDetailEdit').addEventListener('click', () => {
@@ -1011,7 +1149,11 @@
   async function boot() {
     wire();
 
-    try { state.view = sessionStorage.getItem(VIEW_KEY) || 'board'; } catch (e) {}
+    try {
+      state.view = sessionStorage.getItem(VIEW_KEY) || 'board';
+      const cat  = sessionStorage.getItem(CAT_KEY);
+      if (cat && CATEGORIES.some(c => c.id === cat)) state.cat = cat;
+    } catch (e) {}
 
     if (!window.waitForSession) {
       showStatus('Der Session-Layer fehlt — lade die Seite neu.', true);

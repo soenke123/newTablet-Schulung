@@ -68,6 +68,23 @@
 <!-- ── Inhalt ────────────────────────────────────────────── -->
 <main class="bd-main">
   <div class="bd-status" id="bdStatus">Lade …</div>
+
+  <!-- Belegte Fakten (ab Phase 2) — stehen über dem Kategorie-Wechsler,
+       weil sie nicht zu einer einzelnen Kategorie gehören. -->
+  <section id="bdFacts" hidden></section>
+
+  <!-- Kategorie-Wechsler: oben die sechs Symbole, darunter der Name
+       zwischen zwei Pfeilen. Klebt beim Scrollen oben fest, damit man
+       auch weiter unten in der Wolke noch weiterwischen kann. -->
+  <nav class="bd-catnav" id="bdCatNav" hidden>
+    <div class="bd-catnav__tabs" id="bdCatTabs" role="tablist"></div>
+    <div class="bd-catnav__title">
+      <button type="button" class="bd-catnav__arrow" id="bdCatPrev" aria-label="Vorheriger Bereich">‹</button>
+      <span class="bd-catnav__name" id="bdCatName"></span>
+      <button type="button" class="bd-catnav__arrow" id="bdCatNext" aria-label="Nächster Bereich">›</button>
+    </div>
+  </nav>
+
   <section id="bdBoard" hidden></section>
   <section id="bdTable" hidden></section>
 </main>
@@ -131,7 +148,9 @@
     <p class="bd-detail__text" id="bdDetailText"></p>
     <div class="bd-source-cite bd-detail__cite" id="bdDetailCite" hidden></div>
     <div class="bd-detail__meta" id="bdDetailMeta"></div>
-    <div class="bd-modal__actions">
+    <div class="bd-modal__actions bd-detail__actions">
+      <button type="button" id="bdDetailLike" class="bd-btn bd-btn--like" hidden></button>
+      <span class="bd-detail__spacer"></span>
       <button type="button" id="bdDetailDel"   class="bd-btn bd-btn--danger" hidden>🗑️ Löschen</button>
       <button type="button" id="bdDetailEdit"  class="bd-btn" hidden>✏️ Bearbeiten</button>
       <button type="button" id="bdDetailClose" class="bd-btn bd-btn--ghost">Schließen</button>

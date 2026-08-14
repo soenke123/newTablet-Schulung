@@ -147,22 +147,60 @@ body {
    Alles Weitere steht im Detail, einen Klick entfernt.
    ═══════════════════════════════════════════════════════════ */
 
-.bd-clouds { display: flex; flex-direction: column; gap: 30px; }
-
-.bd-cloud-sec__head {
-  display: flex; align-items: baseline; gap: 10px;
-  font-family: var(--font-display); font-size: 1.05rem;
-  letter-spacing: .04em; color: var(--clr-gold);
-  padding-bottom: 7px; margin-bottom: 6px;
+/* ── Bereichs-Wechsler ───────────────────────────────────
+   Oben die sechs Symbole, darunter der Name zwischen zwei Pfeilen.
+   Klebt beim Scrollen oben fest — sonst wäre in einer hohen Wolke
+   nicht mehr zu sehen, wo man ist und dass man weiterwischen kann. */
+.bd-catnav {
+  position: sticky; top: 0; z-index: 20;
+  margin: 0 -18px 14px; padding: 8px 18px 10px;
+  background: rgba(26,14,5,0.94);
+  backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--clr-border);
 }
-.bd-cloud-sec__icon  { font-size: .95rem; opacity: .75; }
-.bd-cloud-sec__count {
-  margin-left: auto; font-family: var(--font-body);
-  font-size: .78rem; font-weight: 700; color: var(--clr-cream-dim);
+.bd-catnav__tabs { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+
+.bd-cattab {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  width: 52px; padding: 6px 0 4px;   /* Tippziel, nicht nur Symbol */
+  border: 1px solid transparent; border-radius: 10px;
+  background: transparent; cursor: pointer;
+  font-family: var(--font-body); line-height: 1;
+  transition: background .12s ease, border-color .12s ease, transform .12s ease;
 }
+.bd-cattab:hover { background: rgba(240,180,41,0.10); }
+.bd-cattab__icon  { font-size: 1.35rem; filter: grayscale(.55) opacity(.65); transition: filter .12s ease; }
+.bd-cattab__count { font-size: .68rem; font-weight: 800; color: var(--clr-cream-dim); }
+.bd-cattab--on {
+  border-color: var(--clr-gold); background: rgba(240,180,41,0.14);
+}
+.bd-cattab--on .bd-cattab__icon  { filter: none; }
+.bd-cattab--on .bd-cattab__count { color: var(--clr-gold); }
+
+.bd-catnav__title {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin-top: 4px;
+}
+.bd-catnav__name {
+  font-family: var(--font-display); font-size: 1.1rem; letter-spacing: .04em;
+  color: var(--clr-gold); text-align: center; min-width: 11ch;
+}
+.bd-catnav__count {
+  font-family: var(--font-body); font-size: .75rem; font-weight: 700;
+  color: var(--clr-cream-dim); vertical-align: middle;
+}
+/* Die Pfeile sind das sichtbare Versprechen, dass man wischen kann. */
+.bd-catnav__arrow {
+  border: 0; background: transparent; cursor: pointer;
+  color: var(--clr-cream-dim); font-size: 1.6rem; line-height: 1;
+  padding: 0 8px; border-radius: 8px; font-family: var(--font-body);
+}
+.bd-catnav__arrow:hover { color: var(--clr-gold); background: rgba(240,180,41,0.10); }
+
 .bd-cloud-sec__empty {
-  color: var(--clr-cream-dim); font-size: .85rem; font-style: italic; padding: 10px 0 4px;
+  color: var(--clr-cream-dim); font-size: .9rem; font-style: italic;
+  text-align: center; padding: 40px 18px;
 }
 
 /* Die Höhe setzt das Skript, sobald es die Karten platziert hat. */
@@ -215,29 +253,32 @@ body {
 .bd-cn--rot:hover, .bd-cn--rot:focus-visible { transform: rotate(-90deg) scale(1.04); }
 .bd-cn:not(.bd-cn--rot):hover, .bd-cn:not(.bd-cn--rot):focus-visible { transform: scale(1.04); }
 
-.bd-cn__top  { display: flex; align-items: center; gap: .3em; font-size: .8em; line-height: 1; }
-.bd-cn__fact { color: var(--clr-blue); }
 .bd-cn__text { font-size: 1em; line-height: 1.32; font-weight: 600; }
-.bd-cn__foot { display: flex; justify-content: flex-end; align-items: center; min-height: 1px; }
-.bd-cn__foot:empty { display: none; }
 
-.bd-topic { line-height: 1; cursor: help; }
-
-/* ── Zustimmung ───────────────────────────────────────────
-   Zurückhaltend, solange niemand zugestimmt hat — die Zahl erscheint
-   erst, wenn es eine gibt. Sonst steht auf jeder Karte eine 0 und die
-   Wolke ist voller Nullen. */
-.bd-like {
-  display: inline-flex; align-items: center; gap: .25em;
-  padding: .15em .5em; border-radius: 999px;
-  font-size: .72em; font-weight: 800; line-height: 1.4;
-  border: 1px solid var(--clr-border); background: rgba(0,0,0,0.25);
-  color: var(--clr-cream-dim); font-family: var(--font-body); cursor: pointer;
+/* Einziges Zeichen auf der Karte außer dem Text: hast DU zugestimmt.
+   Keine Zahl — wie stark eine Aussage getragen wird, sagt die Größe. */
+.bd-cn__liked {
+  position: absolute; top: -.5em; right: -.4em;
+  font-size: .62em; line-height: 1;
+  padding: .25em .3em; border-radius: 999px;
+  background: var(--clr-gold); color: #2b1a0d;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
 }
-.bd-like:hover:not(:disabled) { border-color: var(--clr-gold); color: var(--clr-cream); }
-.bd-like:disabled { opacity: .5; cursor: wait; }
-.bd-like--on  { background: var(--clr-gold); border-color: var(--clr-gold); color: #2b1a0d; }
-.bd-like--own { cursor: default; background: transparent; border-style: dashed; }
+.bd-cn--liked { border-style: solid; }
+
+/* Rückmeldung auf den Doppeltipp. Sitzt am <body>, nicht an der Karte —
+   die Wolke wird gleich neu gezeichnet. */
+.bd-burst {
+  position: fixed; z-index: 90; pointer-events: none;
+  transform: translate(-50%, -50%); font-size: 2.4rem;
+  animation: bd-burst .7s ease-out forwards;
+}
+.bd-burst--off { font-size: 1.9rem; }
+@keyframes bd-burst {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+  25%  { opacity: 1; transform: translate(-50%, -50%) scale(1.25); }
+  100% { opacity: 0; transform: translate(-50%, -140%) scale(1); }
+}
 
 /* Quellenangabe — soll aussehen wie eine Quellenangabe im Heft. */
 .bd-source-cite {
@@ -266,8 +307,20 @@ body {
 }
 .bd-facts__head span { margin-left: auto; font-family: var(--font-body); font-size: .78rem; color: var(--clr-cream-dim); }
 .bd-facts__grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
-.bd-facts__grid .bd-cn { position: static; font-size: 1rem; }
+/* relative statt static: der Zugestimmt-Punkt hängt absolut in der Karte
+   und bräuchte sonst das Raster als Bezug. */
+.bd-facts__grid .bd-cn { position: relative; font-size: 1rem; }
 .bd-facts__grid .bd-cn:hover, .bd-facts__grid .bd-cn:focus-visible { transform: none; }
+
+/* Einblenden beim Bereichswechsel — die Richtung folgt dem Wischer. */
+.bd-cloud--from-right { animation: bd-in-right .26s ease-out; }
+.bd-cloud--from-left  { animation: bd-in-left  .26s ease-out; }
+@keyframes bd-in-right { from { opacity: 0; transform: translateX(34px); } }
+@keyframes bd-in-left  { from { opacity: 0; transform: translateX(-34px); } }
+@media (prefers-reduced-motion: reduce) {
+  .bd-cloud--from-right, .bd-cloud--from-left { animation: none; }
+  .bd-burst { animation-duration: .01ms; }
+}
 
 /* ── Tabelle ──────────────────────────────────────────── */
 .bd-table-wrap { overflow-x: auto; border: 1px solid var(--clr-border); border-radius: 12px; }
@@ -365,6 +418,18 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
 .bd-detail__row > span   { min-width: 96px; color: var(--clr-cream-dim); }
 .bd-detail__row strong   { color: var(--clr-cream); font-weight: 700; }
 .bd-detail__topic + .bd-detail__topic { margin-left: 10px; }
+.bd-detail__none { color: var(--clr-cream-dim); font-weight: 400; font-style: normal; }
+
+/* Zustimmen sitzt links, weg von Löschen — die beiden sollen sich
+   nicht am selben Daumen begegnen. */
+.bd-detail__actions { justify-content: flex-start; }
+.bd-detail__spacer  { flex: 1 1 auto; }
+.bd-btn--like {
+  background: transparent; color: var(--clr-cream);
+  border-color: var(--clr-border);
+}
+.bd-btn--like:hover:not(:disabled) { border-color: var(--clr-gold); color: var(--clr-gold); }
+.bd-btn--like-on { background: var(--clr-gold); border-color: var(--clr-gold); color: #2b1a0d; }
 
 @media (max-width: 640px) {
   .bd-detail__text { font-size: 1.25rem; }
@@ -385,4 +450,10 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
   .bd-head h1 { font-size: 1.15rem; }
   .bd-adminbar { margin: 12px 12px 0; }
   .bd-main { padding: 12px; }
+  /* muss zur schmaleren Innenkante von .bd-main passen, sonst steht die
+     Leiste 6 px über den Rand hinaus */
+  .bd-catnav { margin: 0 -12px 12px; padding: 6px 12px 8px; }
+  .bd-cattab { width: 46px; }
+  .bd-cattab__icon { font-size: 1.2rem; }
+  .bd-catnav__name { font-size: .98rem; min-width: 9ch; }
 }
