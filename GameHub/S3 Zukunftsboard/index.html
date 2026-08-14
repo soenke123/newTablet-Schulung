@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <!-- Bewusst OHNE maximum-scale: das hier ist eine Lese- und Schreib-
+       oberfläche, keine Spielfläche mit fixem Layout. Zoom ist eine
+       Hilfe, kein Störfall. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zukunftsboard — Lernwelt</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="../../icons/favicon-64.png" />
+  <link rel="icon" type="image/png" sizes="256x256" href="../../icons/favicon-256.png" />
+  <link rel="apple-touch-icon" href="../../icons/icon-192.png" />
+  <link rel="manifest" href="../../site.webmanifest" />
+  <link rel="stylesheet" href="css/board.css">
+</head>
+<body>
+
+<!-- ── Kopf ──────────────────────────────────────────────── -->
+<header class="bd-head">
+  <a class="bd-hub-btn" href="../index.html">← Hub</a>
+  <div class="bd-head__title">
+    <h1>🧭 Zukunftsboard</h1>
+    <p class="bd-head__sub" id="bdCourse">…</p>
+  </div>
+  <div class="bd-head__right">
+    <div class="bd-quota" id="bdQuota"></div>
+    <div class="bd-viewswitch" id="bdViewSwitch" hidden>
+      <button type="button" data-view="board" class="active">Board</button>
+      <button type="button" data-view="table">Tabelle</button>
+    </div>
+  </div>
+</header>
+
+<!-- ── Phasen-Anzeige ────────────────────────────────────── -->
+<div class="bd-phases" id="bdPhases" hidden>
+  <div class="bd-phase" data-phase="1">
+    <span class="bd-phase__no">1</span>
+    <span class="bd-phase__name">Sammeln</span>
+  </div>
+  <div class="bd-phase" data-phase="2">
+    <span class="bd-phase__no">2</span>
+    <span class="bd-phase__name">Belegen</span>
+  </div>
+  <div class="bd-phase" data-phase="3">
+    <span class="bd-phase__no">3</span>
+    <span class="bd-phase__name">Besprechen</span>
+  </div>
+</div>
+
+<!-- ── Admin-Leiste ──────────────────────────────────────── -->
+<div class="bd-adminbar" id="bdAdminBar" hidden>
+  <span class="bd-adminbar__label">🛡️ Moderation</span>
+  <select id="bdClusterSelect" class="bd-select" aria-label="Kurs wählen"></select>
+  <button type="button" id="bdPhasePrev" class="bd-btn bd-btn--ghost">◀ Phase zurück</button>
+  <button type="button" id="bdPhaseNext" class="bd-btn">Nächste Phase ▶</button>
+  <button type="button" id="bdReset" class="bd-btn bd-btn--danger">Board zurücksetzen</button>
+</div>
+
+<!-- ── Hinweiszeile (Auftrag der aktuellen Phase) ─────────── -->
+<p class="bd-hint" id="bdHint" hidden></p>
+
+<!-- ── Aktionen ──────────────────────────────────────────── -->
+<div class="bd-actions" id="bdActions" hidden>
+  <button type="button" id="bdNewIdea" class="bd-btn bd-btn--big">＋ Neues Posti</button>
+  <button type="button" id="bdNewFact" class="bd-btn bd-btn--big bd-btn--fact">＋ Neuer Fakt</button>
+</div>
+
+<!-- ── Inhalt ────────────────────────────────────────────── -->
+<main class="bd-main">
+  <div class="bd-status" id="bdStatus">Lade …</div>
+  <section id="bdBoard" hidden></section>
+  <section id="bdTable" hidden></section>
+</main>
+
+<!-- ── Erfassungs-Modal ──────────────────────────────────── -->
+<div class="bd-modal-backdrop" id="bdModal" hidden>
+  <div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bdModalTitle">
+    <h2 id="bdModalTitle">Neues Posti</h2>
+
+    <label class="bd-field-label">1 · In welchen Bereich gehört das?</label>
+    <div class="bd-choice" id="bdCatChoice"></div>
+
+    <label class="bd-field-label">2 · Was ist es?</label>
+    <div class="bd-choice bd-choice--stance" id="bdStanceChoice"></div>
+
+    <label class="bd-field-label" for="bdText">3 · Dein Text</label>
+    <textarea id="bdText" maxlength="200" rows="3"
+              placeholder="Schreib in einem Satz, worum es geht."></textarea>
+    <div class="bd-counter"><span id="bdTextCount">0</span>/200</div>
+
+    <!-- Quellen-Schritt: nur bei Fakten. Drei getrennte Pflichtfelder —
+         die Felder sollen erklären, was eine Quelle ausmacht. -->
+    <fieldset class="bd-source" id="bdSource" hidden>
+      <legend>4 · Deine Quelle <span class="bd-source__req">alle drei Felder werden gebraucht</span></legend>
+
+      <label class="bd-field-label" for="bdSrcUrl">🔗 Link zur Seite</label>
+      <input type="url" id="bdSrcUrl" placeholder="https://www.tagesschau.de/…" inputmode="url">
+      <p class="bd-help">Die vollständige Adresse aus der Adresszeile — mit <code>https://</code> am Anfang.</p>
+
+      <label class="bd-field-label" for="bdSrcAuthor">✍️ Wer hat es geschrieben?</label>
+      <input type="text" id="bdSrcAuthor" maxlength="120" placeholder="Mustermann, Erika">
+      <p class="bd-help">Nachname, Vorname — oder die Einrichtung, z.&nbsp;B. „Bundeszentrale für politische Bildung".</p>
+
+      <label class="bd-field-label" for="bdSrcDate">📅 Wann wurde es veröffentlicht?</label>
+      <input type="date" id="bdSrcDate">
+      <p class="bd-help">Das Datum des Artikels, nicht das von heute. Es steht meist direkt unter der Überschrift oder ganz unten auf der Seite.</p>
+    </fieldset>
+
+    <p class="bd-error" id="bdModalError" hidden></p>
+
+    <div class="bd-modal__actions">
+      <button type="button" id="bdCancel" class="bd-btn bd-btn--ghost">Abbrechen</button>
+      <button type="button" id="bdSave" class="bd-btn" disabled>Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bestätigungs-Modal (Löschen / Zurücksetzen) ────────── -->
+<div class="bd-modal-backdrop" id="bdConfirm" hidden>
+  <div class="bd-modal bd-modal--small" role="dialog" aria-modal="true">
+    <h2 id="bdConfirmTitle">Sicher?</h2>
+    <p id="bdConfirmText"></p>
+    <div class="bd-modal__actions">
+      <button type="button" id="bdConfirmNo" class="bd-btn bd-btn--ghost">Abbrechen</button>
+      <button type="button" id="bdConfirmYes" class="bd-btn bd-btn--danger">Ja, machen</button>
+    </div>
+  </div>
+</div>
+
+<div class="bd-toast" id="bdToast" hidden></div>
+
+<!-- Session-Layer VOR den eigenen Skripten — window.__accessToken und
+     waitForSession() müssen beim Boot stehen. Reihenfolge wie in den
+     anderen Season-3-Spielen. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../../supabase-config.js"></script>
+<script src="../../session.js"></script>
+
+<script src="js/api.js"></script>
+<script src="js/board.js"></script>
+</body>
+</html>

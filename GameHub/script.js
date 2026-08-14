@@ -22,7 +22,13 @@ function getGameAccess(gameId) {
   const game = GAMES_CONFIG.find(g => g.id === gameId);
   // Season 1 = öffentlicher Baseline (auch für Nicht-Eingeloggte spielbar).
   // Erst ab Season 2 gilt die Session-Season als Gate.
-  if (game && game.season > 1 && game.season > getUserSeason()) return 'locked';
+  //
+  // Ausnahme für collab: das Zukunftsboard moderiert ein Admin, und Admins
+  // hängen in keinem Kurs — sie haben Season 0. Ohne diese Zeile stünde die
+  // Lehrkraft vor der Kachel, die sie selbst steuern soll. is_admin deckt
+  // beide Admin-Rollen ab (Volladmin hat laut Migration 0053 auch is_admin).
+  const adminCollab = !!(game?.collab && isAdminUser());
+  if (game && !adminCollab && game.season > 1 && game.season > getUserSeason()) return 'locked';
   // Cluster-Legi (Season 3): Bonbon-Ziel muss erreicht sein.
   // Drei-Zustände:
   //   - Cluster noch nicht unlocked → 'cluster_locked' (Sammel-Phase)
@@ -65,7 +71,25 @@ const GAMES_CONFIG = [
   // beide greifen im Hub am Monster an, nicht im Spiel.
   { id: 'game18', season: 3, title: 'Startup Story',       icon: '🚀', url: 'S3 Startup Story/index.html', standalone: true },
   { id: 'game17', season: 3, title: 'Bubble Bounce',       icon: '🫧', url: 'S3 BubbleBounce/index.html' },
+  // collab: kein Spiel, sondern ein gemeinsamer Arbeitsraum des Kurses.
+  // Die Daten liegen cluster-weit auf dem Server (Migration 0062), nicht
+  // im Spielstand des einzelnen Users. Wie standalone meldet die Kachel
+  // kein Rundenergebnis — deshalb sind Nester, Runden-Items und der
+  // Rundenbonus aus (siehe isRoundless).
+  // Ein Monster ist vorgesehen (games-Eintrag existiert), aber die
+  // Wachstums- und Coin-Regel steht noch aus. Bis dahin bleibt das Ei liegen.
+  { id: 'game19', season: 3, title: 'Zukunftsboard',       icon: '🧭', url: 'S3 Zukunftsboard/index.html', collab: true },
 ];
+
+// „Kachel ohne Runden": Startup Story (standalone) und Zukunftsboard
+// (collab) melden beide kein Rundenergebnis. Alles, was eine Runde
+// voraussetzt — Nest-Eier, Runden-Items, Backup-Tausch, Rundenbonus —
+// muss für beide aus sein, sonst verpufft es wirkungslos oder geht verloren.
+const isRoundless = game => !!(game?.standalone || game?.collab);
+
+// is_admin deckt beide Admin-Rollen ab: laut Migration 0053 hat auch der
+// Volladmin is_admin = true.
+const isAdminUser = () => !!window.getSessionUser?.()?.is_admin;
 
 const SEASONS_CONFIG = [
   { id: 1, title: 'Season 1 – Regeln, Ordnung, Dateien & Aufmerksamkeit', desc: 'Diese Season knüpft an die Inhalte der ersten Tablet-Schulung an und bringt dein Wissen auf das nächste Level. In sechs spannenden Spielen sicherst und vertiefst du wichtige Grundlagen rund um die Tabletnutzung – von unseren Hausregeln über Dateiformate bis hin zur richtigen Struktur auf deinem Gerät. Und weil deine Aufmerksamkeit eine deiner wichtigsten Ressourcen ist, lernst du außerdem, bewusst mit ihr umzugehen: In zwei Aufmerksamkeitsspielen geht es um Fokus und das Binden von Aufmerksamkeit. Mit Tip Turbo Kids tauchst du zusätzlich in das 10-Finger-Blindschreiben ein – eine Fähigkeit, die dir das Schreiben längerer Texte enorm erleichtert und im Schulalltag wie auch später im Berufsleben unverzichtbar ist.' },
@@ -332,8 +356,15 @@ function renderGamesGrid(allData, shopData) {
   // Season 1 ist Baseline und immer sichtbar. Höhere Seasons erscheinen
   // erst, sobald der User dorthin freigeschaltet ist. Reihenfolge: neueste oben.
   const userSeason = Math.max(getUserSeason(), 1);
+  // Admins moderieren das Zukunftsboard, hängen dabei aber in keinem Kurs
+  // und haben deshalb Season 0. Ohne diese Ausnahme wäre die Season-Sektion
+  // gar nicht da und die Kachel für die Lehrkraft unerreichbar — die
+  // Ausnahme in getGameAccess allein reicht nicht.
+  const collabSeasons = isAdminUser()
+    ? new Set(GAMES_CONFIG.filter(g => g.collab).map(g => g.season))
+    : new Set();
   const visible = SEASONS_CONFIG
-    .filter(s => s.id <= userSeason)
+    .filter(s => s.id <= userSeason || collabSeasons.has(s.id))
     .slice()
     .sort((a, b) => b.id - a.id);
 
@@ -391,7 +422,7 @@ function buildGameCard(game, data, shopData) {
   // Spielstands. Ein eingetauschtes Backup-Tier stünde sofort im Widerspruch
   // zu der Kurve, die es beim nächsten Hub-Besuch wieder überschreibt.
   const isBackupTarget = !!shopData.pendingBackup && !!data.creature && access === 'available'
-    && !game.clusterLegi && !game.standalone;
+    && !game.clusterLegi && !isRoundless(game);
 
   // Pending-Gift-Blink: revealed Legi mit wartendem Geschenk oder
   // vollendeter Cluster-Sammlung (Task 3) pulsiert regenbogen
@@ -458,9 +489,10 @@ function attachCardListeners(card, game, data, isBackupTarget) {
     if (access === 'password') { showPasswordPrompt(game.id); return; }
     const sd = loadShopData();
     // Nester laufen unter einer eigenen Id durch ein Spiel und erwarten am
-    // Rundenende ein Ergebnis. Startup Story hat weder Runden noch liest es
-    // die Id aus der URL — ein Ei ginge dort für immer verloren.
-    if (sd.pendingEggNestId && !game.standalone) {
+    // Rundenende ein Ergebnis. Startup Story und das Zukunftsboard haben
+    // weder Runden noch lesen sie die Id aus der URL — ein Ei ginge dort
+    // für immer verloren.
+    if (sd.pendingEggNestId && !isRoundless(game)) {
       const nest = sd.nests.find(n => n.nestId === sd.pendingEggNestId);
       if (nest) {
         nest.gameId  = game.id;
@@ -566,10 +598,11 @@ function buildCardHTML(game, data, shopData) {
   // Team-Legendär verdient keine Münzen (spielt keine Runden) und lässt
   // keine Shop-Items (Booster, Coins×3, Glücksklee, Trank) zu — Growth
   // kommt ausschließlich durch die Trainings-Aufgaben.
-  // standalone genauso wenig wie das Team-Legendär: der Bonus wird in
-  // computeRoundResult() ausgeschüttet, und Startup Story spielt keine
-  // Runden. Seine Münzen kommen ausschließlich aus der Userzahl-Kurve.
-  const bonusCoins = (!isLegi && !game.standalone && hasCreature) ? getGrowthBonusCoins(data.growth || 0) : 0;
+  // standalone und collab genauso wenig wie das Team-Legendär: der Bonus
+  // wird in computeRoundResult() ausgeschüttet, und beide spielen keine
+  // Runden. Startup Storys Münzen kommen aus der Userzahl-Kurve, das
+  // Zukunftsboard schüttet (noch) gar nichts aus.
+  const bonusCoins = (!isLegi && !isRoundless(game) && hasCreature) ? getGrowthBonusCoins(data.growth || 0) : 0;
   const bonusHint = bonusCoins > 0
     ? `<div class="game-card__bonus-hint" title="${bonusCoins === 10 ? 'Vollendungs-Bonus' : 'Ausgewachsen-Bonus'}: +${bonusCoins} Münzen pro Runde">+${bonusCoins}<span class="game-card__bonus-hint-coin">🪙</span></div>`
     : '';
@@ -583,7 +616,12 @@ function buildCardHTML(game, data, shopData) {
   const dailyClaims  = window.__bonbonDailyClaims || {};
   const todayStr     = window.__bonbonToday
                     || (typeof getBerlinTodayIso === 'function' ? getBerlinTodayIso() : new Date().toISOString().slice(0, 10));
+  // collab ist hier ausgenommen (standalone NICHT — Startup Story holt den
+  // Tages-Bonus bei der ersten Rückkehr mit Fortschritt): das Zukunftsboard
+  // schickt überhaupt keine Submission, der Hinweis wäre ein Versprechen,
+  // das die Kachel nicht einlösen kann.
   const bonbonAvailable = !isLegi
+    && !game.collab
     && bonbonStatus.enabled
     && !bonbonStatus.unlocked
     && dailyClaims[game.id] !== todayStr;
@@ -611,13 +649,17 @@ function buildCardHTML(game, data, shopData) {
          title="${hasCreature ? 'Klicken für Details' : ''}">
       ${imgContent}
     </div>
-    ${!hasCreature ? `<p class="game-card__stage-label">${game.standalone ? 'Das Ei brütet…' : 'Ei schlummert…'}</p>` : ''}
+    ${!hasCreature ? `<p class="game-card__stage-label">${game.standalone ? 'Das Ei brütet…' : game.collab ? 'Belohnung folgt…' : 'Ei schlummert…'}</p>` : ''}
     <div class="game-card__progress">
       <div class="game-card__progress-fill" style="width:${progressPct}%"></div>
     </div>
     <div class="game-card__points">
       ${game.standalone
         ? `👥 User: <strong>${formatStartupUsers(startupCardUsers())}</strong>`
+        : game.collab
+        // Punkte und Runden stünden hier für immer auf 0. Der Kurs ist das,
+        // worum es geht — also sagt die Kachel genau das.
+        ? `🤝 Gemeinsam mit deinem Kurs`
         : `⭐ Gesamt: <strong>${data.points}</strong>
       &nbsp;·&nbsp; 🔄 Runden: <strong>${data.roundsPlayed}</strong>`}
     </div>
@@ -625,14 +667,14 @@ function buildCardHTML(game, data, shopData) {
   // Im Ei-Modus wäre der normale „Spielen!"-Knopf eine Falle: überall sonst
   // legt er das wartende Ei in dieses Spiel, hier startet er nur den Konzern.
   // Lieber ehrlich gesperrt als stillschweigend etwas anderes tun.
-  if (game.standalone && shopData.pendingEggNestId) {
+  if (isRoundless(game) && shopData.pendingEggNestId) {
     return `<button class="game-card__btn" disabled style="opacity:0.4;cursor:default;"
-             title="Startup Story brütet sein eigenes Ei aus — Nest-Eier passen hier nicht.">Kein Nest-Platz</button>`;
+             title="${game.collab ? 'Das Zukunftsboard ist ein Arbeitsraum, kein Spiel — Nest-Eier schlüpfen hier nicht.' : 'Startup Story brütet sein eigenes Ei aus — Nest-Eier passen hier nicht.'}">Kein Nest-Platz</button>`;
   }
-  // standalone: Booster, Coins ×3, Glücksklee und Lockmittel hängen alle am
-  // Rundenergebnis — das es hier nicht gibt. Sie würden beim Betreten des
-  // Spiels verbraucht und wirkungslos verpuffen.
-  const items = (isLegi || game.standalone) ? [] : getActiveItemsForSlot(data, shopData);
+  // standalone/collab: Booster, Coins ×3, Glücksklee und Lockmittel hängen
+  // alle am Rundenergebnis — das es hier nicht gibt. Sie würden beim
+  // Betreten des Spiels verbraucht und wirkungslos verpuffen.
+  const items = (isLegi || isRoundless(game)) ? [] : getActiveItemsForSlot(data, shopData);
   if (items.length === 0) return `<button class="game-card__btn">Spielen!</button>`;
   if (items.length === 1) {
     const it = items[0];

@@ -30,4 +30,8 @@ GAME_ACCESS = {
   // Season 3 – Schulung 3 (Social Media und Folgen von KI)
   game18: { status: 'available' },
   game17: { status: 'password', passwordHash: '143d9b39f43e4cb468a95238047aa6674d6ef735748170599e9a8a0fc55a0cc7' },
+  // Zukunftsboard — Passwort "Zukunft2026". Derselbe Hash steht in
+  // Migration 0062; dieser hier gilt nur für nicht eingeloggte Gäste,
+  // eingeloggte User laufen über unlock_game gegen die games-Tabelle.
+  game19: { status: 'password', passwordHash: 'efc15d7b5561ee4ca922a571af606d8eb67be3706ada4ff23eaf49395484848f' },
 };
