@@ -1,27 +1,67 @@
 /* ═══════════════════════════════════════════════════════════
-   Zukunftsboard — bewusst schlicht.
-   Farben und Schriften kommen vom Hub, damit die Kachel nicht wie
-   eine fremde Website aufmacht. Die eigentliche Gestaltung
-   (Wordclouds, Beamer-Modus) ist ein eigener Schritt.
+   Zukunftsboard — „Whiteboard"
+
+   Die Kachel trägt bewusst NICHT das Fantasy-Kleid des Hubs. Ein
+   Board, auf dem eine Klasse ihre Chancen und Risiken sammelt, soll
+   aussehen wie das, was es nachbildet: eine weiße Tafel im
+   Klassenraum, auf die Klebezettel gehängt werden. Dunkles Braun
+   mit Goldschrift hätte jeden Zettel zur Deko gemacht.
+
+   Zwei Regeln halten das zusammen:
+
+   1. Die Farbe gehört den Zetteln. Grün, Rot und Gelb sagen etwas
+      aus — deshalb ist der Bedien-Akzent (aktive Phase, Plus-Knopf,
+      Speichern) neutrales Anthrazit und keine vierte Farbe, die
+      mit den Aussagen um Aufmerksamkeit konkurriert.
+   2. Fakten sind kein Zettel. Sie stehen gerade, sind weiß statt
+      pastell, haben eine blaue Kopfkante und rechte Winkel. Der
+      Unterschied muss vor dem Lesen sichtbar sein.
    ═══════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Nunito:wght@400;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  --clr-bg:        #1a0e05;
-  --clr-surface:   #2b1a0d;
-  --clr-surface2:  #3a2410;
-  --clr-border:    #6b3f1a;
-  --clr-gold:      #f0b429;
-  --clr-cream:     #f5e6c8;
-  --clr-cream-dim: #c9b38a;
-  --clr-green:     #3ecf6a;
-  --clr-red:       #e85555;
-  --clr-yellow:    #e8c34a;
-  --clr-blue:      #5ba4e8;
+  /* Raum und Flächen */
+  --clr-room:      #e9ecf0;   /* hinter der Tafel */
+  --clr-board:     #ffffff;   /* die Tafel selbst */
+  --clr-chrome:    #ffffff;   /* Kopf, Leisten, Modale */
+  --clr-surface:   #f4f6f8;   /* ruhende Knöpfe, Reiter */
+  --clr-surface2:  #e9edf1;
+  --clr-line:      #d7dce2;
+  --clr-line-soft: #e6eaee;
 
-  --font-display: 'Cinzel', serif;
-  --font-body:    'Nunito', sans-serif;
+  /* Schrift */
+  --clr-ink:       #1c2530;
+  --clr-ink-2:     #445062;
+  --clr-ink-3:     #7c8794;
+
+  /* Bedienung — bewusst unbunt, siehe Regel 1 oben */
+  --clr-accent:      #2b3440;
+  --clr-accent-ink:  #ffffff;
+  --clr-accent-soft: rgba(43,52,64,0.08);
+
+  /* Die drei Zettelfarben: Fläche, Kante, Schrift */
+  --clr-green:      #cdebd0;
+  --clr-green-line: #a3d6a9;
+  --clr-green-ink:  #1d4429;
+  --clr-red:        #f9cdc8;
+  --clr-red-line:   #eda79f;
+  --clr-red-ink:    #642420;
+  --clr-yellow:      #fbe8ad;
+  --clr-yellow-line: #e8cf82;
+  --clr-yellow-ink:  #5c451a;
+
+  /* Fakten und Warnungen */
+  --clr-blue:      #2a6ab8;
+  --clr-blue-line: #cfe0f2;
+  --clr-blue-soft: #eaf2fb;
+  --clr-danger:    #cf4a41;
+
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+
+  --shadow-note:    2px 3px 7px rgba(28,37,48,0.14);
+  --shadow-note-hi: 4px 9px 20px rgba(28,37,48,0.22);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,140 +76,152 @@
 
 body {
   font-family: var(--font-body);
-  background-color: var(--clr-bg);
-  background-image:
-    radial-gradient(ellipse at 20% 20%, rgba(240,180,41,0.05) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 80%, rgba(232,131,10,0.05) 0%, transparent 60%);
-  color: var(--clr-cream);
+  background: var(--clr-room);
+  color: var(--clr-ink);
   min-height: 100vh;
   min-height: 100dvh;
   padding-bottom: 48px;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Sichtbarer Fokus ist auf hellem Grund Pflicht — der goldene Schimmer,
+   der im dunklen Kleid genügte, verschwindet hier einfach. */
+:focus-visible { outline: 2px solid var(--clr-accent); outline-offset: 2px; }
 
 /* ── Kopf ─────────────────────────────────────────────── */
 .bd-head {
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
   padding: 14px 18px;
-  border-bottom: 2px solid var(--clr-border);
-  background: rgba(43,26,13,0.8);
+  background: var(--clr-chrome);
+  border-bottom: 1px solid var(--clr-line);
 }
 .bd-head__title { flex: 1 1 240px; }
-.bd-head h1 { font-family: var(--font-display); font-size: 1.4rem; color: var(--clr-gold); }
-.bd-head__sub { font-size: .9rem; color: var(--clr-cream-dim); }
+.bd-head h1 {
+  font-family: var(--font-display); font-size: 1.2rem; font-weight: 800;
+  letter-spacing: -.01em; color: var(--clr-ink);
+}
+.bd-head__sub { font-size: .85rem; color: var(--clr-ink-3); margin-top: 2px; }
 .bd-head__right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 .bd-hub-btn {
   padding: 8px 14px; border-radius: 8px; text-decoration: none;
-  background: var(--clr-surface2); color: var(--clr-cream);
-  border: 1px solid var(--clr-border); font-weight: 700;
+  background: var(--clr-chrome); color: var(--clr-ink-2);
+  border: 1px solid var(--clr-line); font-weight: 600; font-size: .88rem;
 }
-.bd-hub-btn:hover { background: var(--clr-border); }
+.bd-hub-btn:hover { background: var(--clr-surface); color: var(--clr-ink); }
 
-.bd-quota { font-size: .9rem; color: var(--clr-cream-dim); text-align: right; }
-.bd-quota strong { color: var(--clr-gold); }
+.bd-quota { font-size: .85rem; color: var(--clr-ink-3); text-align: right; line-height: 1.45; }
+.bd-quota strong { color: var(--clr-ink); font-weight: 700; }
 
-.bd-viewswitch { display: flex; border: 1px solid var(--clr-border); border-radius: 8px; overflow: hidden; }
+.bd-viewswitch { display: flex; border: 1px solid var(--clr-line); border-radius: 8px; overflow: hidden; }
 .bd-viewswitch button {
-  padding: 7px 14px; border: 0; cursor: pointer; font-family: var(--font-body);
-  font-weight: 700; background: var(--clr-surface); color: var(--clr-cream-dim);
+  padding: 7px 15px; border: 0; cursor: pointer; font-family: var(--font-body);
+  font-weight: 600; font-size: .85rem; background: var(--clr-surface); color: var(--clr-ink-3);
 }
-.bd-viewswitch button.active { background: var(--clr-gold); color: #2b1a0d; }
+.bd-viewswitch button:hover { background: var(--clr-surface2); color: var(--clr-ink); }
+.bd-viewswitch button.active { background: var(--clr-accent); color: var(--clr-accent-ink); }
 
 /* ── Phasen ───────────────────────────────────────────────
    Zwei Aussagen in einer Leiste, deshalb zwei getrennte Signale:
-   der goldene Rand sagt, wo der KURS steht, die gefüllte Fläche,
-   was DU gerade ansiehst. Beides kann auseinanderfallen — genau
-   dafür ist der Umschalter da. */
+   der Rand sagt, wo der KURS steht, die gefüllte Fläche, was DU
+   gerade ansiehst. Beides kann auseinanderfallen — genau dafür
+   ist der Umschalter da. */
 .bd-phases {
   display: flex; gap: 8px; justify-content: center;
   padding: 14px 18px 4px; flex-wrap: wrap;
+  background: var(--clr-chrome);
 }
 .bd-phase {
   display: flex; align-items: center; gap: 8px;
   padding: 7px 16px; border-radius: 999px;
-  border: 1px solid var(--clr-border); background: var(--clr-surface);
-  color: var(--clr-cream-dim); font-weight: 700; font-size: .9rem;
+  border: 1px solid var(--clr-line); background: var(--clr-surface);
+  color: var(--clr-ink-3); font-weight: 600; font-size: .88rem;
   font-family: var(--font-body); text-align: left;
   transition: background .12s ease, border-color .12s ease, color .12s ease;
 }
 button.bd-phase { cursor: pointer; }
-button.bd-phase:hover:not(:disabled) { background: var(--clr-surface2); color: var(--clr-cream); }
+button.bd-phase:hover:not(:disabled) { background: var(--clr-surface2); color: var(--clr-ink); }
 .bd-phase__no {
   display: inline-flex; align-items: center; justify-content: center;
   width: 22px; height: 22px; border-radius: 50%;
-  background: var(--clr-surface2); font-size: .8rem;
+  background: var(--clr-surface2); font-size: .78rem; font-weight: 700;
 }
 /* Was in diesem Fach liegt — die eigentliche Ansage des Umschalters.
    Der Phasenname allein sagt noch nicht, dass man hier Post-Its
    oder Fakten zu sehen bekommt. */
 .bd-phase__what {
-  font-weight: 800; font-size: .78rem; opacity: .8;
-  padding-left: 8px; border-left: 1px solid var(--clr-border);
+  font-weight: 700; font-size: .76rem; opacity: .8;
+  padding-left: 8px; border-left: 1px solid var(--clr-line);
 }
-.bd-phase__count { font-size: .74rem; font-weight: 800; opacity: .75; }
+.bd-phase__count { font-size: .74rem; font-weight: 700; opacity: .75; }
 
 /* Der Kurs steht hier. */
 .bd-phase--running {
-  border-color: var(--clr-gold); color: var(--clr-gold);
-  box-shadow: 0 0 14px rgba(240,180,41,0.25);
+  border-color: var(--clr-accent); color: var(--clr-accent); background: var(--clr-chrome);
 }
-.bd-phase--running .bd-phase__no { background: var(--clr-gold); color: #2b1a0d; }
+.bd-phase--running .bd-phase__no { background: var(--clr-accent); color: var(--clr-accent-ink); }
 
 /* Das siehst du gerade. */
 .bd-phase--shown {
-  background: var(--clr-gold); border-color: var(--clr-gold); color: #2b1a0d;
+  background: var(--clr-accent); border-color: var(--clr-accent); color: var(--clr-accent-ink);
 }
-.bd-phase--shown .bd-phase__no  { background: rgba(0,0,0,0.22); color: #2b1a0d; }
-.bd-phase--shown .bd-phase__what { border-left-color: rgba(0,0,0,0.25); opacity: .9; }
+.bd-phase--shown .bd-phase__no  { background: rgba(255,255,255,0.22); color: var(--clr-accent-ink); }
+.bd-phase--shown .bd-phase__what { border-left-color: rgba(255,255,255,0.3); opacity: .9; }
 /* muss die allgemeine Hover-Regel oben schlagen — sonst verliert der
    gewählte Reiter unter dem Mauszeiger seine Füllung */
-button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-gold); color: #2b1a0d; }
+button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); color: var(--clr-accent-ink); }
 
 /* Noch nicht freigeschaltet. */
-.bd-phase--locked { opacity: .38; cursor: not-allowed; }
+.bd-phase--locked { opacity: .42; cursor: not-allowed; }
 
 /* ── Admin-Leiste ─────────────────────────────────────── */
 .bd-adminbar {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   margin: 12px 18px 0; padding: 10px 14px;
   border: 1px dashed var(--clr-blue); border-radius: 12px;
-  background: rgba(91,164,232,0.08);
+  background: var(--clr-blue-soft);
 }
-.bd-adminbar__label { font-weight: 800; color: var(--clr-blue); }
+.bd-adminbar__label { font-weight: 800; color: var(--clr-blue); font-size: .9rem; }
 
 .bd-select {
   padding: 7px 10px; border-radius: 8px; font-family: var(--font-body);
-  background: var(--clr-surface2); color: var(--clr-cream);
-  border: 1px solid var(--clr-border); font-weight: 700;
+  background: var(--clr-chrome); color: var(--clr-ink);
+  border: 1px solid var(--clr-line); font-weight: 600;
 }
 
 /* ── Buttons ──────────────────────────────────────────── */
 .bd-btn {
-  padding: 9px 16px; border-radius: 8px; border: 1px solid var(--clr-gold);
-  background: var(--clr-gold); color: #2b1a0d;
-  font-family: var(--font-body); font-weight: 800; cursor: pointer;
+  padding: 9px 16px; border-radius: 8px; border: 1px solid var(--clr-accent);
+  background: var(--clr-accent); color: var(--clr-accent-ink);
+  font-family: var(--font-body); font-weight: 700; font-size: .88rem; cursor: pointer;
+  transition: filter .12s ease, background .12s ease, color .12s ease, border-color .12s ease;
 }
-.bd-btn:hover:not(:disabled) { filter: brightness(1.08); }
-.bd-btn:disabled { opacity: .4; cursor: not-allowed; }
-.bd-btn--ghost { background: transparent; color: var(--clr-cream); border-color: var(--clr-border); }
-.bd-btn--danger { background: var(--clr-red); border-color: var(--clr-red); color: #fff; }
+.bd-btn:hover:not(:disabled) { filter: brightness(1.35); }
+.bd-btn:disabled { opacity: .38; cursor: not-allowed; }
+.bd-btn--ghost {
+  background: var(--clr-chrome); color: var(--clr-ink-2); border-color: var(--clr-line);
+}
+.bd-btn--ghost:hover:not(:disabled) { filter: none; background: var(--clr-surface); color: var(--clr-ink); }
+.bd-btn--danger { background: var(--clr-danger); border-color: var(--clr-danger); color: #fff; }
+.bd-btn--danger:hover:not(:disabled) { filter: brightness(1.08); }
 
 .bd-hint {
-  max-width: 760px; margin: 14px auto 0; padding: 0 18px;
-  text-align: center; color: var(--clr-cream-dim); font-size: .95rem;
+  max-width: 780px; margin: 0 auto; padding: 12px 18px 16px;
+  text-align: center; color: var(--clr-ink-3); font-size: .9rem; line-height: 1.55;
+  background: var(--clr-chrome);
 }
 
 /* ── Inhalt ───────────────────────────────────────────── */
 .bd-main { padding: 18px; }
-.bd-status { text-align: center; color: var(--clr-cream-dim); padding: 40px 18px; }
-.bd-status--error { color: var(--clr-red); font-weight: 700; }
+.bd-status { text-align: center; color: var(--clr-ink-3); padding: 40px 18px; }
+.bd-status--error { color: var(--clr-danger); font-weight: 700; }
 
 /* ═══════════════════════════════════════════════════════════
    Wolken-Ansicht
 
    Der Inhalt steht im Vordergrund: keine Kategorie-Symbole auf den
    Karten, keine Namen, keine Werkzeugleiste. Was eine Karte ist —
-   Chance, Risiko oder Vermutung — sagt allein der farbige Rahmen.
+   Chance, Risiko oder Vermutung — sagt allein die Zettelfarbe.
    Alles Weitere steht im Detail, einen Klick entfernt.
    ═══════════════════════════════════════════════════════════ */
 
@@ -180,9 +232,9 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-gold); color
 .bd-catnav {
   position: sticky; top: 0; z-index: 20;
   margin: 0 -18px 14px; padding: 8px 18px 10px;
-  background: rgba(26,14,5,0.94);
+  background: rgba(255,255,255,0.94);
   backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--clr-border);
+  border-bottom: 1px solid var(--clr-line);
 }
 .bd-catnav__tabs { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
 
@@ -195,34 +247,32 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-gold); color
   font-family: var(--font-body); line-height: 1;
   transition: background .12s ease, border-color .12s ease, transform .12s ease;
 }
-.bd-cattab:hover { background: rgba(240,180,41,0.10); }
-.bd-cattab__icon  { font-size: 1.35rem; filter: grayscale(.55) opacity(.65); transition: filter .12s ease; }
-.bd-cattab__count { font-size: .68rem; font-weight: 800; color: var(--clr-cream-dim); }
-.bd-cattab--on {
-  border-color: var(--clr-gold); background: rgba(240,180,41,0.14);
-}
+.bd-cattab:hover { background: var(--clr-accent-soft); }
+.bd-cattab__icon  { font-size: 1.35rem; filter: grayscale(.6) opacity(.55); transition: filter .12s ease; }
+.bd-cattab__count { font-size: .68rem; font-weight: 700; color: var(--clr-ink-3); }
+.bd-cattab--on { border-color: var(--clr-accent); background: var(--clr-accent-soft); }
 .bd-cattab--on .bd-cattab__icon  { filter: none; }
-.bd-cattab--on .bd-cattab__count { color: var(--clr-gold); }
+.bd-cattab--on .bd-cattab__count { color: var(--clr-ink); }
 
 .bd-catnav__title {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   margin-top: 4px;
 }
 .bd-catnav__name {
-  font-family: var(--font-display); font-size: 1.1rem; letter-spacing: .04em;
-  color: var(--clr-gold); text-align: center; min-width: 11ch;
+  font-family: var(--font-display); font-size: 1.08rem; font-weight: 700;
+  letter-spacing: -.01em; color: var(--clr-ink); text-align: center; min-width: 11ch;
 }
 .bd-catnav__count {
-  font-family: var(--font-body); font-size: .75rem; font-weight: 700;
-  color: var(--clr-cream-dim); vertical-align: middle;
+  font-family: var(--font-body); font-size: .75rem; font-weight: 600;
+  color: var(--clr-ink-3); vertical-align: middle;
 }
 /* Die Pfeile sind das sichtbare Versprechen, dass man wischen kann. */
 .bd-catnav__arrow {
   border: 0; background: transparent; cursor: pointer;
-  color: var(--clr-cream-dim); font-size: 1.6rem; line-height: 1;
+  color: var(--clr-ink-3); font-size: 1.6rem; line-height: 1;
   padding: 0 8px; border-radius: 8px; font-family: var(--font-body);
 }
-.bd-catnav__arrow:hover { color: var(--clr-gold); background: rgba(240,180,41,0.10); }
+.bd-catnav__arrow:hover { color: var(--clr-ink); background: var(--clr-accent-soft); }
 
 /* Schreiben beginnt hier — direkt neben dem Bereich, in den es gehört.
    Rund und gefüllt, damit der Knopf nicht mit den Pfeilen verwechselt
@@ -231,24 +281,41 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-gold); color
   flex: 0 0 auto;
   display: inline-flex; align-items: center; justify-content: center;
   width: 34px; height: 34px; margin-left: 6px;
-  border-radius: 50%; border: 1px solid var(--clr-gold);
-  background: var(--clr-gold); color: #2b1a0d;
-  font-family: var(--font-body); font-size: 1.15rem; font-weight: 800;
+  border-radius: 50%; border: 1px solid var(--clr-accent);
+  background: var(--clr-accent); color: var(--clr-accent-ink);
+  font-family: var(--font-body); font-size: 1.15rem; font-weight: 700;
   line-height: 1; cursor: pointer;
-  box-shadow: 0 2px 10px rgba(240,180,41,0.25);
+  box-shadow: 0 2px 8px rgba(28,37,48,0.20);
   transition: transform .12s ease, filter .12s ease;
 }
-.bd-catadd:hover:not(:disabled) { transform: scale(1.08); filter: brightness(1.08); }
-.bd-catadd:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
+.bd-catadd:hover:not(:disabled) { transform: scale(1.08); filter: brightness(1.35); }
+.bd-catadd:disabled { opacity: .32; cursor: not-allowed; box-shadow: none; }
 /* Fakten sind blau — im Formular, in der Tabelle, und hier am Knopf. */
 .bd-catadd--fact {
-  background: var(--clr-blue); border-color: var(--clr-blue); color: #10243a;
-  box-shadow: 0 2px 10px rgba(91,164,232,0.25);
+  background: var(--clr-blue); border-color: var(--clr-blue); color: #fff;
+  box-shadow: 0 2px 8px rgba(42,106,184,0.30);
+}
+
+/* ── Die Tafel ────────────────────────────────────────────
+   Die Fläche, auf der geklebt wird. Das feine Raster nimmt der
+   weißen Fläche die Leere, ohne mit den Zetteln zu konkurrieren —
+   28 px, damit es bei jeder Kartengröße ruhig bleibt. */
+.bd-surface {
+  background-color: var(--clr-board);
+  background-image:
+    linear-gradient(rgba(28,37,48,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28,37,48,0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+  border: 1px solid var(--clr-line);
+  border-radius: 14px;
+  padding: 22px 18px 26px;
+  min-height: 320px;
+  box-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(28,37,48,0.06);
 }
 
 .bd-cloud-sec__empty {
-  color: var(--clr-cream-dim); font-size: .9rem; font-style: italic;
-  text-align: center; padding: 40px 18px;
+  color: var(--clr-ink-3); font-size: .92rem;
+  text-align: center; padding: 46px 18px;
 }
 
 /* Die Höhe setzt das Skript, sobald es die Karten platziert hat. */
@@ -256,59 +323,96 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-gold); color
 
 /* Notfall-Layout, falls die Platzierung scheitert: lieber nebeneinander
    als unsichtbar. Setzt das Skript selbst per Klasse. */
-.bd-cloud--plain { display: flex; flex-wrap: wrap; gap: 10px; height: auto !important; }
+.bd-cloud--plain { display: flex; flex-wrap: wrap; gap: 14px; height: auto !important; }
 .bd-cloud--plain .bd-cn { position: static; }
 
-/* ── Karte ────────────────────────────────────────────── */
+/* ── Klebezettel ──────────────────────────────────────────
+   Fast rechtwinklig (3 px), ein einzelner weicher Schatten nach
+   rechts unten, leicht schief. Die Schieflage ist der ganze
+   „analoge" Aufwand — mehr Material (Tape, Papierkorn, gerollte
+   Ecken) würde bei 40 Karten auf einem Tablet nur unruhig. */
 .bd-cn {
   position: absolute; left: 0; top: 0;
   display: flex; flex-direction: column; gap: .35em;
-  padding: .55em .7em;
-  border: 2px solid var(--clr-cream-dim);
-  border-radius: .5em;
-  background: var(--clr-surface2);
-  color: var(--clr-cream);
+  padding: .62em .78em;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: var(--clr-surface);
+  color: var(--clr-ink);
+  box-shadow: var(--shadow-note);
   cursor: pointer; word-break: break-word; hyphens: auto;
+  transform: rotate(var(--tilt, 0deg));
   /* left/top mit weicher Bewegung: beim ersten Zeichnen passiert nichts
      (neue Elemente haben keinen Vorzustand, den man animieren könnte),
      aber wenn das Tablet gedreht wird, gleitet die Wolke in ihre neue
      Anordnung, statt umzuspringen. */
-  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease,
+  transition: transform .12s ease, box-shadow .12s ease,
               left .35s ease, top .35s ease;
 }
 @media (prefers-reduced-motion: reduce) {
   .bd-cn { transition: none; }
 }
+
+/* Schieflage aus dem Stylesheet statt aus dem Skript: die Platzierung
+   rechnet mit achsenparallelen Rechtecken, und die paar Grad passen in
+   den Abstand, den CLOUD_GAP ohnehin lässt. Sechs Winkel im Wechsel —
+   genug, dass kein Muster auffällt, und immer derselbe Winkel für
+   dieselbe Position, damit ein Poll die Wolke nicht zittern lässt. */
+.bd-cloud .bd-cn:nth-child(6n+1) { --tilt: -1.8deg; }
+.bd-cloud .bd-cn:nth-child(6n+2) { --tilt:  1.4deg; }
+.bd-cloud .bd-cn:nth-child(6n+3) { --tilt: -0.7deg; }
+.bd-cloud .bd-cn:nth-child(6n+4) { --tilt:  2.2deg; }
+.bd-cloud .bd-cn:nth-child(6n+5) { --tilt: -2.4deg; }
+.bd-cloud .bd-cn:nth-child(6n+6) { --tilt:  0.9deg; }
+
+/* Beim Anfassen richtet sich der Zettel gerade auf und kommt nach
+   vorn — das liest sich wie „in die Hand nehmen". */
 .bd-cn:hover, .bd-cn:focus-visible {
-  z-index: 5; outline: none;
-  box-shadow: 0 6px 22px rgba(0,0,0,0.55);
-  border-color: var(--clr-gold);
+  z-index: 5;
+  transform: rotate(0deg) scale(1.05);
+  box-shadow: var(--shadow-note-hi);
 }
 
-/* Der farbige Rahmen ist die einzige Typ-Auszeichnung. */
-.bd-cn--chance    { border-color: var(--clr-green);  background: rgba(62,207,106,0.13); }
-.bd-cn--risiko    { border-color: var(--clr-red);    background: rgba(232,85,85,0.13); }
-.bd-cn--vermutung { border-color: var(--clr-yellow); background: rgba(232,195,74,0.13); }
+/* Die Zettelfarbe ist die einzige Typ-Auszeichnung. */
+.bd-cn--chance {
+  background: var(--clr-green); border-color: var(--clr-green-line); color: var(--clr-green-ink);
+}
+.bd-cn--risiko {
+  background: var(--clr-red);   border-color: var(--clr-red-line);   color: var(--clr-red-ink);
+}
+.bd-cn--vermutung {
+  background: var(--clr-yellow); border-color: var(--clr-yellow-line); color: var(--clr-yellow-ink);
+}
 
-/* Eigene Karten: nur ein leiser goldener Saum, kein zweites Signal —
-   der Rahmen gehört dem Typ. */
-.bd-cn--mine { box-shadow: 0 0 0 1px rgba(240,180,41,0.5); }
-.bd-cn--mine:hover, .bd-cn--mine:focus-visible { box-shadow: 0 0 0 1px rgba(240,180,41,0.7), 0 6px 22px rgba(0,0,0,0.55); }
-
-.bd-cn:hover, .bd-cn:focus-visible { transform: scale(1.04); }
+/* Eigene Karten: eine zusätzliche Kante, kein zweites Farbsignal —
+   die Fläche gehört dem Typ. Bewusst gedämpft: ein satter Rahmen zöge
+   mehr Blicke auf sich als die größte Karte der Wolke, und die Größe
+   ist die Aussage, nicht die Besitzverhältnisse. */
+.bd-cn--mine { box-shadow: 0 0 0 2px rgba(28,37,48,0.42), var(--shadow-note); }
+.bd-cn--mine:hover, .bd-cn--mine:focus-visible {
+  box-shadow: 0 0 0 2px rgba(28,37,48,0.42), var(--shadow-note-hi);
+}
 
 .bd-cn__text { font-size: 1em; line-height: 1.32; font-weight: 600; }
 
 /* Einziges Zeichen auf der Karte außer dem Text: hast DU zugestimmt.
    Keine Zahl — wie stark eine Aussage getragen wird, sagt die Größe. */
+/* Zugestimmt: ein leiser Saum innen, damit das Zeichen auch dann noch
+   da ist, wenn der Daumen gerade hinter einer überlappenden Karte
+   liegt. Kann nie mit --mine zusammentreffen — der eigenen Karte
+   stimmt man nicht zu. */
+.bd-cn--liked { box-shadow: inset 0 0 0 2px rgba(28,37,48,0.10), var(--shadow-note); }
+.bd-cn--liked:hover, .bd-cn--liked:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(28,37,48,0.10), var(--shadow-note-hi);
+}
+
 .bd-cn__liked {
   position: absolute; top: -.5em; right: -.4em;
   font-size: .62em; line-height: 1;
   padding: .25em .3em; border-radius: 999px;
-  background: var(--clr-gold); color: #2b1a0d;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+  background: var(--clr-accent); color: var(--clr-accent-ink);
+  box-shadow: 0 2px 5px rgba(28,37,48,0.28);
 }
-.bd-cn--liked { box-shadow: 0 0 0 1px rgba(240,180,41,0.35); }
 
 /* Rückmeldung auf den Doppeltipp. Sitzt am <body>, nicht an der Karte —
    die Wolke wird gleich neu gezeichnet. */
@@ -326,30 +430,72 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-gold); color
 
 /* Quellenangabe — soll aussehen wie eine Quellenangabe im Heft. */
 .bd-source-cite {
-  margin-top: .4em; padding-top: .4em;
-  border-top: 1px dashed var(--clr-border);
-  font-size: .72em; line-height: 1.4; color: var(--clr-cream-dim);
+  margin-top: .5em; padding-top: .5em;
+  border-top: 1px solid var(--clr-blue-line);
+  font-size: .72em; line-height: 1.5; color: var(--clr-ink-3);
   font-weight: 400;
 }
 .bd-source-cite__label {
-  display: block; text-transform: uppercase; letter-spacing: .06em;
-  font-size: .85em; margin-bottom: 2px;
+  display: block; text-transform: uppercase; letter-spacing: .08em;
+  font-size: .85em; font-weight: 700; margin-bottom: 2px;
 }
-.bd-source-cite__body { color: var(--clr-cream); }
+.bd-source-cite__body { color: var(--clr-ink-2); }
 .bd-source-cite a { color: var(--clr-blue); }
 
 /* ── Fakten-Raster (Phase 2) ──────────────────────────────
    Fakten stehen im festen Raster statt in der Wolke: eine
    Quellenangabe will gelesen und nicht gepackt werden — und ohne
-   Zustimmung gäbe es auch keine Größe, die etwas erzählen könnte. */
-.bd-factgrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
-/* relative statt absolute: im Raster setzt nicht das Skript die
-   Position, und die Karte braucht trotzdem einen Bezug für alles,
-   was in ihrer Ecke hängt. */
-.bd-factgrid .bd-cn { position: relative; font-size: 1rem; }
-.bd-factgrid .bd-cn:hover, .bd-factgrid .bd-cn:focus-visible { transform: none; }
+   Zustimmung gäbe es auch keine Größe, die etwas erzählen könnte.
 
-/* Einblenden beim Bereichswechsel — die Richtung folgt dem Wischer. */
+   Sie benutzen dieselbe .bd-cn-Karte wie die Post-Its, sollen aber
+   auf den ersten Blick etwas anderes sein: weiß statt pastell, gerade
+   statt schief, rechte Winkel, blaue Kopfkante. Ein Beleg ist kein
+   Zuruf. Die Haltung (Chance/Risiko/Vermutung) geht dabei nicht
+   verloren — sie sitzt als Punkt oben rechts. */
+.bd-factgrid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr)); }
+
+.bd-factgrid .bd-cn {
+  /* relative statt absolute: im Raster setzt nicht das Skript die
+     Position, und die Karte braucht trotzdem einen Bezug für alles,
+     was in ihrer Ecke hängt. */
+  position: relative; font-size: 1rem;
+  padding: 22px 15px 15px;
+  background: var(--clr-chrome);
+  border: 1px solid var(--clr-blue-line);
+  border-radius: 8px;
+  color: var(--clr-ink);
+  box-shadow: 0 1px 3px rgba(28,37,48,0.08);
+  transform: none;
+}
+.bd-factgrid .bd-cn::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 4px;
+  border-radius: 8px 8px 0 0; background: var(--clr-blue);
+}
+/* Die Haltung als Punkt — klein genug, um nicht mit einem Zettel
+   verwechselt zu werden, groß genug, um sie zu sehen. */
+.bd-factgrid .bd-cn::after {
+  content: ''; position: absolute; top: 12px; right: 12px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--clr-line); border: 1px solid rgba(28,37,48,0.12);
+}
+.bd-factgrid .bd-cn--chance::after    { background: var(--clr-green-line); }
+.bd-factgrid .bd-cn--risiko::after    { background: var(--clr-red-line); }
+.bd-factgrid .bd-cn--vermutung::after { background: var(--clr-yellow-line); }
+
+.bd-factgrid .bd-cn:hover, .bd-factgrid .bd-cn:focus-visible {
+  transform: none;
+  box-shadow: 0 4px 14px rgba(28,37,48,0.14);
+  border-color: var(--clr-blue);
+}
+.bd-factgrid .bd-cn--mine { box-shadow: 0 0 0 2px var(--clr-accent); }
+.bd-factgrid .bd-cn--mine:hover, .bd-factgrid .bd-cn--mine:focus-visible {
+  box-shadow: 0 0 0 2px var(--clr-accent), 0 4px 14px rgba(28,37,48,0.14);
+}
+.bd-factgrid .bd-cn__text { font-weight: 600; line-height: 1.45; font-size: .95rem; }
+
+/* Einblenden beim Bereichswechsel — die Richtung folgt dem Wischer.
+   Die Klasse hängt am Wolken- wie am Raster-Kasten; das Skript vergibt
+   für beide Fächer dieselbe. */
 .bd-cloud--from-right { animation: bd-in-right .26s ease-out; }
 .bd-cloud--from-left  { animation: bd-in-left  .26s ease-out; }
 @keyframes bd-in-right { from { opacity: 0; transform: translateX(34px); } }
@@ -360,149 +506,187 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-gold); color
 }
 
 /* ── Tabelle ──────────────────────────────────────────── */
-.bd-table-wrap { overflow-x: auto; border: 1px solid var(--clr-border); border-radius: 12px; }
+.bd-table-wrap {
+  overflow-x: auto; border: 1px solid var(--clr-line); border-radius: 12px;
+  background: var(--clr-chrome);
+}
 table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-size: .9rem; }
-.bd-table th, .bd-table td { padding: 9px 11px; text-align: left; border-bottom: 1px solid var(--clr-border); vertical-align: top; }
-.bd-table th { background: var(--clr-surface2); cursor: pointer; white-space: nowrap; color: var(--clr-gold); }
-.bd-table th:hover { filter: brightness(1.15); }
+.bd-table th, .bd-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--clr-line-soft); vertical-align: top; }
+.bd-table th {
+  background: var(--clr-surface); cursor: pointer; white-space: nowrap;
+  color: var(--clr-ink); font-weight: 700;
+}
+.bd-table th:hover { background: var(--clr-surface2); }
 /* Auch in der Liste führt die Zeile ins Detail — dieselbe Karte,
    dieselben Knöpfe wie in der Wolke. */
 .bd-table tbody tr { cursor: pointer; }
 .bd-table tbody tr:hover, .bd-table tbody tr:focus-visible {
-  background: rgba(240,180,41,0.08); outline: none;
+  background: var(--clr-accent-soft); outline: none;
 }
 .bd-table .bd-pill { white-space: nowrap; }
 .bd-td-topics { white-space: nowrap; font-size: .85rem; }
-.bd-td-likes  { text-align: center; font-weight: 800; color: var(--clr-gold); }
+.bd-td-likes  { text-align: center; font-weight: 800; color: var(--clr-ink); }
 
 .bd-pill {
-  display: inline-block; padding: 2px 8px; border-radius: 999px;
-  font-size: .75rem; font-weight: 800;
+  display: inline-block; padding: 2px 9px; border-radius: 999px;
+  font-size: .75rem; font-weight: 700; border: 1px solid transparent;
 }
-.bd-pill--chance    { background: rgba(62,207,106,0.2);  color: var(--clr-green); }
-.bd-pill--risiko    { background: rgba(232,85,85,0.2);   color: var(--clr-red); }
-.bd-pill--vermutung { background: rgba(232,195,74,0.2);  color: var(--clr-yellow); }
-.bd-pill--fakt      { background: rgba(91,164,232,0.2);  color: var(--clr-blue); }
+.bd-pill--chance    { background: var(--clr-green);  border-color: var(--clr-green-line);  color: var(--clr-green-ink); }
+.bd-pill--risiko    { background: var(--clr-red);    border-color: var(--clr-red-line);    color: var(--clr-red-ink); }
+.bd-pill--vermutung { background: var(--clr-yellow); border-color: var(--clr-yellow-line); color: var(--clr-yellow-ink); }
+.bd-pill--fakt      { background: var(--clr-blue-soft); border-color: var(--clr-blue-line); color: var(--clr-blue); }
 
 /* ── Modal ────────────────────────────────────────────── */
 .bd-modal-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.72);
+  position: fixed; inset: 0; background: rgba(28,37,48,0.45);
+  backdrop-filter: blur(3px);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 24px 14px; overflow-y: auto; z-index: 50;
 }
 .bd-modal {
-  background: var(--clr-surface); border: 2px solid var(--clr-border);
+  background: var(--clr-chrome); border: 1px solid var(--clr-line);
   border-radius: 16px; padding: 20px; width: 100%; max-width: 520px;
+  box-shadow: 0 20px 60px rgba(28,37,48,0.28);
 }
 .bd-modal--small { max-width: 400px; }
-.bd-modal h2 { font-family: var(--font-display); color: var(--clr-gold); font-size: 1.2rem; margin-bottom: 14px; }
-.bd-modal p { line-height: 1.5; }
+.bd-modal h2 {
+  font-family: var(--font-display); color: var(--clr-ink); font-size: 1.2rem;
+  font-weight: 800; letter-spacing: -.01em; margin-bottom: 14px;
+}
+/* Bewusst ohne `color`: `.bd-modal p` wäre spezifischer als `.bd-error`
+   und `.bd-help` und würde beiden ihre Farbe nehmen — die Fehlermeldung
+   stünde in Grau statt in Rot. */
+.bd-modal p { line-height: 1.55; }
 
 /* Der Bereich ist im Formular keine Frage mehr, sondern eine Angabe:
    er kommt von dort, wo der Plus-Knopf stand. */
 .bd-modal__cat {
   display: flex; align-items: baseline; gap: 10px;
   padding: 9px 12px; border-radius: 10px;
-  background: var(--clr-surface2); border: 1px solid var(--clr-border);
+  background: var(--clr-surface); border: 1px solid var(--clr-line);
 }
 .bd-modal__cat-label {
-  text-transform: uppercase; letter-spacing: .06em;
-  font-size: .7rem; font-weight: 800; color: var(--clr-cream-dim);
+  text-transform: uppercase; letter-spacing: .08em;
+  font-size: .7rem; font-weight: 800; color: var(--clr-ink-3);
 }
-.bd-modal__cat strong { color: var(--clr-gold); font-size: .95rem; }
+.bd-modal__cat strong { color: var(--clr-ink); font-size: .95rem; }
 
 .bd-field-label {
-  display: block; margin: 14px 0 6px;
-  font-weight: 800; font-size: .88rem; color: var(--clr-cream);
+  display: block; margin: 16px 0 6px;
+  font-weight: 700; font-size: .88rem; color: var(--clr-ink);
 }
 .bd-choice { display: flex; flex-wrap: wrap; gap: 7px; }
 .bd-choice button {
   padding: 8px 12px; border-radius: 8px; cursor: pointer;
-  border: 1px solid var(--clr-border); background: var(--clr-surface2);
-  color: var(--clr-cream); font-family: var(--font-body); font-weight: 700; font-size: .85rem;
+  border: 1px solid var(--clr-line); background: var(--clr-chrome);
+  color: var(--clr-ink-2); font-family: var(--font-body); font-weight: 600; font-size: .85rem;
 }
-.bd-choice button[aria-pressed="true"] { border-color: var(--clr-gold); background: var(--clr-gold); color: #2b1a0d; }
-.bd-choice--topics button[aria-pressed="true"] { background: var(--clr-blue); border-color: var(--clr-blue); color: #10243a; }
-.bd-optional { font-weight: 600; font-size: .78rem; color: var(--clr-cream-dim); }
-.bd-choice--stance button[aria-pressed="true"][data-val="chance"]    { background: var(--clr-green);  border-color: var(--clr-green);  color: #06280f; }
-.bd-choice--stance button[aria-pressed="true"][data-val="risiko"]    { background: var(--clr-red);    border-color: var(--clr-red);    color: #2b0606; }
-.bd-choice--stance button[aria-pressed="true"][data-val="vermutung"] { background: var(--clr-yellow); border-color: var(--clr-yellow); color: #2b2206; }
+.bd-choice button:hover { background: var(--clr-surface); }
+/* Gewählt heißt: der Knopf trägt die Farbe, die der Zettel bekommt.
+   Das Formular zeigt damit schon, was gleich an der Tafel hängt. */
+.bd-choice button[aria-pressed="true"] {
+  border-color: var(--clr-accent); background: var(--clr-accent); color: var(--clr-accent-ink);
+}
+.bd-choice--topics button[aria-pressed="true"] {
+  background: var(--clr-blue-soft); border-color: var(--clr-blue); color: var(--clr-blue);
+}
+.bd-optional { font-weight: 500; font-size: .78rem; color: var(--clr-ink-3); }
+.bd-choice--stance button[aria-pressed="true"][data-val="chance"]    { background: var(--clr-green);  border-color: var(--clr-green-line);  color: var(--clr-green-ink); }
+.bd-choice--stance button[aria-pressed="true"][data-val="risiko"]    { background: var(--clr-red);    border-color: var(--clr-red-line);    color: var(--clr-red-ink); }
+.bd-choice--stance button[aria-pressed="true"][data-val="vermutung"] { background: var(--clr-yellow); border-color: var(--clr-yellow-line); color: var(--clr-yellow-ink); }
 
 .bd-modal textarea, .bd-modal input {
-  width: 100%; padding: 10px; border-radius: 8px;
-  background: var(--clr-bg); color: var(--clr-cream);
-  border: 1px solid var(--clr-border); font-family: var(--font-body); font-size: .95rem;
+  width: 100%; padding: 10px 12px; border-radius: 8px;
+  background: var(--clr-chrome); color: var(--clr-ink);
+  border: 1px solid var(--clr-line); font-family: var(--font-body); font-size: .95rem;
+}
+.bd-modal textarea:focus, .bd-modal input:focus {
+  outline: none; border-color: var(--clr-accent);
+  box-shadow: 0 0 0 3px var(--clr-accent-soft);
 }
 .bd-modal textarea { resize: vertical; }
-.bd-modal input.bd-invalid, .bd-modal textarea.bd-invalid { border-color: var(--clr-red); background: rgba(232,85,85,0.08); }
-.bd-counter { text-align: right; font-size: .78rem; color: var(--clr-cream-dim); margin-top: 4px; }
+.bd-modal input.bd-invalid, .bd-modal textarea.bd-invalid {
+  border-color: var(--clr-danger); background: #fdf0ef;
+}
+.bd-counter { text-align: right; font-size: .78rem; color: var(--clr-ink-3); margin-top: 4px; }
 
-.bd-source { border: 1px solid var(--clr-border); border-radius: 12px; padding: 12px 14px; margin-top: 18px; }
-.bd-source legend { padding: 0 8px; font-weight: 800; color: var(--clr-blue); }
-.bd-source__req { font-weight: 600; font-size: .78rem; color: var(--clr-cream-dim); }
-.bd-help { font-size: .78rem; color: var(--clr-cream-dim); margin: 5px 0 2px; line-height: 1.4; }
-.bd-help code { background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; }
+.bd-source {
+  border: 1px solid var(--clr-blue-line); border-radius: 12px;
+  padding: 12px 14px; margin-top: 18px; background: var(--clr-blue-soft);
+}
+.bd-source legend { padding: 0 8px; font-weight: 800; color: var(--clr-blue); font-size: .9rem; }
+.bd-source__req { font-weight: 500; font-size: .78rem; color: var(--clr-ink-3); }
+.bd-source input { background: var(--clr-chrome); }
+.bd-help { font-size: .78rem; color: var(--clr-ink-3); margin: 5px 0 2px; line-height: 1.45; }
+.bd-help code { background: rgba(28,37,48,0.07); padding: 1px 4px; border-radius: 4px; }
 
-.bd-error { color: var(--clr-red); font-weight: 700; margin-top: 14px; }
+.bd-error { color: var(--clr-danger); font-weight: 700; margin-top: 14px; }
 .bd-modal__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
 
 /* ── Karten-Detail ────────────────────────────────────────
    Hier steht groß, was auf der Karte klein war — und alles, was die
-   Wolke bewusst weglässt. Der farbige Rand nimmt den Typ der Karte auf,
-   damit man beim Öffnen nicht die Orientierung verliert. */
-.bd-modal--detail { border-width: 2px; max-width: 560px; }
-.bd-detail--chance    { border-color: var(--clr-green); }
-.bd-detail--risiko    { border-color: var(--clr-red); }
-.bd-detail--vermutung { border-color: var(--clr-yellow); }
+   Wolke bewusst weglässt. Der Kopfstreifen nimmt die Farbe der Karte
+   auf, damit man beim Öffnen nicht die Orientierung verliert. */
+.bd-modal--detail { max-width: 560px; overflow: hidden; padding-top: 24px; position: relative; }
+.bd-modal--detail::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 6px; background: var(--clr-line);
+}
+.bd-detail--chance::before    { background: var(--clr-green-line); }
+.bd-detail--risiko::before    { background: var(--clr-red-line); }
+.bd-detail--vermutung::before { background: var(--clr-yellow-line); }
 
 .bd-detail__stance { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .bd-detail__text {
-  font-size: 1.5rem; line-height: 1.4; font-weight: 700;
-  color: var(--clr-cream); word-break: break-word;
+  font-size: 1.5rem; line-height: 1.38; font-weight: 700;
+  color: var(--clr-ink); word-break: break-word; letter-spacing: -.01em;
 }
 .bd-detail__cite { margin-top: 16px; padding-top: 12px; font-size: .85rem; }
 
 .bd-detail__meta {
   margin-top: 18px; padding-top: 14px;
-  border-top: 1px solid var(--clr-border); font-size: .88rem;
+  border-top: 1px solid var(--clr-line); font-size: .88rem;
 }
 .bd-detail__row {
   display: flex; gap: 12px; align-items: baseline;
   padding: 4px 0; flex-wrap: wrap;
 }
-.bd-detail__row > span   { min-width: 96px; color: var(--clr-cream-dim); }
-.bd-detail__row strong   { color: var(--clr-cream); font-weight: 700; }
+.bd-detail__row > span   { min-width: 96px; color: var(--clr-ink-3); }
+.bd-detail__row strong   { color: var(--clr-ink); font-weight: 700; }
 .bd-detail__topic + .bd-detail__topic { margin-left: 10px; }
-.bd-detail__none { color: var(--clr-cream-dim); font-weight: 400; font-style: normal; }
+.bd-detail__none { color: var(--clr-ink-3); font-weight: 400; font-style: normal; }
 
 /* Zustimmen sitzt links, weg von Löschen — die beiden sollen sich
    nicht am selben Daumen begegnen. */
 .bd-detail__actions { justify-content: flex-start; }
 .bd-detail__spacer  { flex: 1 1 auto; }
 .bd-btn--like {
-  background: transparent; color: var(--clr-cream);
-  border-color: var(--clr-border);
+  background: var(--clr-chrome); color: var(--clr-ink-2); border-color: var(--clr-line);
 }
-.bd-btn--like:hover:not(:disabled) { border-color: var(--clr-gold); color: var(--clr-gold); }
-.bd-btn--like-on { background: var(--clr-gold); border-color: var(--clr-gold); color: #2b1a0d; }
+.bd-btn--like:hover:not(:disabled) { filter: none; background: var(--clr-surface); color: var(--clr-ink); }
+.bd-btn--like-on {
+  background: var(--clr-accent); border-color: var(--clr-accent); color: var(--clr-accent-ink);
+}
+.bd-btn--like-on:hover:not(:disabled) { background: var(--clr-accent); color: var(--clr-accent-ink); }
 
 @media (max-width: 640px) {
   .bd-detail__text { font-size: 1.25rem; }
 }
 
-/* ── Toast ────────────────────────────────────────────── */
+/* ── Toast ────────────────────────────────────────────────
+   Dunkel auf hellem Grund: eine Meldung, die kurz auftaucht, muss
+   sich von allem darunter absetzen, nicht darin verschwinden. */
 .bd-toast {
   position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
-  background: var(--clr-surface2); color: var(--clr-cream);
-  border: 1px solid var(--clr-border); border-radius: 10px;
-  padding: 10px 18px; font-weight: 700; z-index: 80;
-  box-shadow: 0 8px 26px rgba(0,0,0,0.5); max-width: calc(100vw - 32px);
+  background: var(--clr-accent); color: var(--clr-accent-ink);
+  border: 1px solid var(--clr-accent); border-radius: 10px;
+  padding: 10px 18px; font-weight: 600; z-index: 80;
+  box-shadow: 0 10px 30px rgba(28,37,48,0.30); max-width: calc(100vw - 32px);
 }
-.bd-toast--error { border-color: var(--clr-red); color: var(--clr-red); }
+.bd-toast--error { background: var(--clr-danger); border-color: var(--clr-danger); color: #fff; }
 
 @media (max-width: 640px) {
   .bd-head { gap: 10px; }
-  .bd-head h1 { font-size: 1.15rem; }
+  .bd-head h1 { font-size: 1.05rem; }
   /* Drei volle Reiter passen nicht nebeneinander. Der Phasenname
      weicht, die Nummer bleibt — und was im Fach liegt („Post-Its",
      „Fakten") erst recht, das ist die eigentliche Ansage. Phase 3
@@ -519,4 +703,7 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
   .bd-cattab { width: 46px; }
   .bd-cattab__icon { font-size: 1.2rem; }
   .bd-catnav__name { font-size: .98rem; min-width: 9ch; }
+  /* Auf schmalen Geräten zählt jeder Punkt Breite — die Tafel behält
+     ihre Fläche, aber nicht mehr ihren Rahmen. */
+  .bd-surface { padding: 16px 10px 20px; border-radius: 10px; }
 }

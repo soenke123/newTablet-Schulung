@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zukunftsboard — Design-Showroom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   SHOWROOM-HÜLLE
+   Bewusst neutral-dunkel gehalten: die Hülle darf mit keiner der drei
+   Varianten um Aufmerksamkeit konkurrieren. Alles, was zum Board
+   gehört, steckt unter .stage — die Themes greifen ausschließlich
+   dort hinein.
+   ═══════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #14161a;
+  color: #e7e9ec;
+  padding-bottom: 80px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sr-top {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  padding: 12px 22px;
+  background: rgba(20,22,26,0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #2b3038;
+}
+.sr-top h1 { font-size: .95rem; font-weight: 800; letter-spacing: -.01em; }
+.sr-top h1 span { color: #7d8794; font-weight: 500; }
+.sr-switch { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.sr-switch button {
+  padding: 8px 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #343a44; background: #1c1f25; color: #aab2bd;
+  font-family: inherit; font-weight: 700; font-size: .85rem;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.sr-switch button:hover { background: #262a31; color: #fff; }
+.sr-switch button.on { background: #f2f4f7; border-color: #f2f4f7; color: #14161a; }
+
+.sr-intro { max-width: 1180px; margin: 26px auto 0; padding: 0 22px; }
+.sr-intro h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
+.sr-intro h2 b { color: #7d8794; font-weight: 800; margin-right: 10px; }
+.sr-intro > p { color: #9aa3ae; margin-top: 8px; max-width: 62ch; line-height: 1.55; font-size: .95rem; }
+
+.sr-specs {
+  display: grid; gap: 10px; margin-top: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+.sr-spec {
+  border: 1px solid #2b3038; border-radius: 12px; padding: 11px 13px;
+  background: #1a1d22;
+}
+.sr-spec dt {
+  font-size: .66rem; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: #6d7681; margin-bottom: 5px;
+}
+.sr-spec dd { font-size: .84rem; line-height: 1.45; color: #d3d8de; }
+
+.sr-swatches { display: flex; gap: 5px; margin-top: 9px; }
+.sr-swatches i {
+  width: 26px; height: 26px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.14);
+}
+
+/* Die Bühne: hier drin gilt das jeweilige Theme. */
+.sr-stagewrap { max-width: 1180px; margin: 22px auto 0; padding: 0 22px; }
+.sr-label {
+  font-size: .68rem; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; color: #6d7681; margin: 30px 0 10px;
+}
+.stage {
+  border-radius: 16px; overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+}
+.variant[hidden] { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   GEMEINSAME BOARD-STRUKTUR
+   Alle drei Varianten teilen dieses Skelett; jedes Theme setzt nur
+   Farben, Radien, Schatten und Schrift darüber. So vergleichst du
+   wirklich die Gestaltung und nicht drei verschiedene Layouts.
+   ═══════════════════════════════════════════════════════════════════ */
+.bd { font-family: var(--font-ui); background: var(--room); color: var(--ink); }
+
+/* ── Kopf ── */
+.bd-head {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 14px 20px;
+  background: var(--chrome); border-bottom: 1px solid var(--chrome-line);
+}
+.bd-hub {
+  padding: 8px 14px; border-radius: var(--r-btn); text-decoration: none;
+  background: var(--btn-ghost-bg); color: var(--ink-2);
+  border: 1px solid var(--line); font-weight: 600; font-size: .85rem;
+}
+.bd-head__title { flex: 1 1 220px; }
+.bd-head h1 {
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 800;
+  letter-spacing: var(--track-title); color: var(--ink);
+}
+.bd-head__sub { font-size: .82rem; color: var(--ink-3); margin-top: 2px; }
+.bd-head__right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.bd-quota { font-size: .82rem; color: var(--ink-3); text-align: right; line-height: 1.4; }
+.bd-quota strong { color: var(--ink); font-weight: 700; }
+
+.bd-viewswitch {
+  display: flex; border: 1px solid var(--line); border-radius: var(--r-btn); overflow: hidden;
+}
+.bd-viewswitch button {
+  padding: 7px 15px; border: 0; cursor: pointer; font-family: inherit;
+  font-weight: 600; font-size: .82rem; background: var(--surface); color: var(--ink-3);
+}
+.bd-viewswitch button.on { background: var(--accent); color: var(--accent-ink); }
+
+/* ── Phasenleiste ── */
+.bd-phases {
+  display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  padding: 14px 20px 2px; background: var(--chrome);
+}
+.bd-phase {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 16px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink-3); font-family: inherit; font-weight: 600; font-size: .85rem;
+  cursor: pointer;
+}
+.bd-phase__no {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 21px; height: 21px; border-radius: 50%;
+  background: var(--chip); font-size: .74rem; font-weight: 700;
+}
+.bd-phase__what {
+  font-weight: 700; font-size: .76rem; opacity: .78;
+  padding-left: 9px; border-left: 1px solid var(--line);
+}
+.bd-phase__count { font-size: .72rem; font-weight: 700; opacity: .7; }
+.bd-phase--running { border-color: var(--accent); color: var(--accent); }
+.bd-phase--running .bd-phase__no { background: var(--accent); color: var(--accent-ink); }
+.bd-phase--shown {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+}
+.bd-phase--shown .bd-phase__no { background: rgba(255,255,255,0.25); color: var(--accent-ink); }
+.bd-phase--shown .bd-phase__what { border-left-color: rgba(255,255,255,0.3); }
+.bd-phase--locked { opacity: .38; }
+
+.bd-hint {
+  max-width: 780px; margin: 0 auto; padding: 12px 20px 16px;
+  text-align: center; color: var(--ink-3); font-size: .88rem; line-height: 1.5;
+  background: var(--chrome);
+}
+
+/* ── Bereichs-Wechsler ── */
+.bd-catnav {
+  padding: 9px 20px 11px;
+  background: var(--chrome); border-bottom: 1px solid var(--chrome-line);
+}
+.bd-catnav__tabs { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.bd-cattab {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 54px; padding: 6px 0 4px;
+  border: 1px solid transparent; border-radius: 10px;
+  background: transparent; cursor: pointer; font-family: inherit; line-height: 1;
+}
+.bd-cattab__icon { font-size: 1.3rem; filter: grayscale(.6) opacity(.55); }
+.bd-cattab__count { font-size: .66rem; font-weight: 700; color: var(--ink-3); }
+.bd-cattab--on { border-color: var(--accent); background: var(--accent-soft); }
+.bd-cattab--on .bd-cattab__icon { filter: none; }
+.bd-cattab--on .bd-cattab__count { color: var(--accent); }
+
+.bd-catnav__title {
+  display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 5px;
+}
+.bd-catnav__name {
+  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
+  letter-spacing: var(--track-title); color: var(--ink); min-width: 11ch; text-align: center;
+}
+.bd-catnav__arrow {
+  border: 0; background: transparent; cursor: pointer; font-family: inherit;
+  color: var(--ink-3); font-size: 1.5rem; line-height: 1; padding: 0 8px; border-radius: 8px;
+}
+.bd-catadd {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; margin-left: 8px;
+  border-radius: 50%; border: 1px solid var(--accent);
+  background: var(--accent); color: var(--accent-ink);
+  font-family: inherit; font-size: 1.15rem; font-weight: 700; line-height: 1; cursor: pointer;
+}
+.bd-catadd--fact { background: var(--fact); border-color: var(--fact); color: #fff; }
+
+/* ── Bühne für die Wolke ── */
+.bd-board {
+  position: relative;
+  padding: 22px 20px 26px;
+  background: var(--board);
+  background-image: var(--board-tex);
+  background-size: var(--board-tex-size, auto);
+  border: var(--board-frame);
+  min-height: 420px;
+}
+.bd-cloud { position: relative; width: 100%; }
+
+/* ── Zettel ── */
+.bd-cn {
+  position: absolute; left: 0; top: 0;
+  display: block; padding: var(--note-pad);
+  background: var(--note-bg);
+  border: var(--note-border);
+  border-radius: var(--r-note);
+  box-shadow: var(--note-shadow);
+  color: var(--note-ink);
+  cursor: pointer; word-break: break-word; hyphens: auto;
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.bd-cn__text { font-size: 1em; line-height: 1.3; font-weight: var(--note-weight); }
+.bd-cn:hover { transform: var(--note-hover); box-shadow: var(--note-shadow-hi); z-index: 6; }
+.bd-cn--chance    { --note-bg: var(--chance-bg);    --note-ink: var(--chance-ink);    border-color: var(--chance-line); }
+.bd-cn--risiko    { --note-bg: var(--risiko-bg);    --note-ink: var(--risiko-ink);    border-color: var(--risiko-line); }
+.bd-cn--vermutung { --note-bg: var(--vermutung-bg); --note-ink: var(--vermutung-ink); border-color: var(--vermutung-line); }
+.bd-cn__liked {
+  position: absolute; top: -.55em; right: -.45em;
+  font-size: .6em; line-height: 1; padding: .25em .32em; border-radius: 999px;
+  background: var(--accent); color: var(--accent-ink);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.bd-cn--vert { transform-origin: center center; }
+
+/* ── Fakten ── */
+.bd-facthead {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  margin: 34px 0 14px; padding-top: 22px; border-top: 1px dashed var(--line);
+}
+.bd-facthead h3 {
+  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+  color: var(--fact); letter-spacing: var(--track-title);
+}
+.bd-facthead p { font-size: .82rem; color: var(--ink-3); }
+.bd-factgrid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); }
+
+.bd-fact {
+  position: relative; overflow: hidden;
+  background: var(--fact-bg);
+  border: var(--fact-border);
+  border-radius: var(--r-fact);
+  box-shadow: var(--fact-shadow);
+  padding: var(--fact-pad);
+  color: var(--ink);
+}
+.bd-fact__tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: .64rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--fact); margin-bottom: 9px;
+}
+.bd-fact__text { font-size: .95rem; line-height: 1.45; font-weight: 600; }
+.bd-fact__cite {
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--fact-line);
+  font-family: var(--font-cite); font-size: .72rem; line-height: 1.5; color: var(--ink-3);
+  font-weight: 400;
+}
+.bd-fact__cite b { color: var(--ink-2); font-weight: 600; }
+.bd-fact__cite a { color: var(--fact); text-decoration: none; }
+
+/* ── Bausteine unter der Bühne ── */
+.bd-parts {
+  display: grid; gap: 16px; padding: 22px 20px 26px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  background: var(--chrome); border-top: 1px solid var(--chrome-line);
+}
+.bd-part__label {
+  font-size: .64rem; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-3); margin-bottom: 9px;
+}
+.bd-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-card); padding: 16px;
+}
+.bd-detail__stance { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 11px; }
+.bd-pill {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: .72rem; font-weight: 700;
+}
+.bd-pill--chance    { background: var(--chance-bg);    color: var(--chance-ink);    border: 1px solid var(--chance-line); }
+.bd-pill--risiko    { background: var(--risiko-bg);    color: var(--risiko-ink);    border: 1px solid var(--risiko-line); }
+.bd-pill--vermutung { background: var(--vermutung-bg); color: var(--vermutung-ink); border: 1px solid var(--vermutung-line); }
+.bd-pill--fakt      { background: var(--fact-bg-soft); color: var(--fact);          border: 1px solid var(--fact-line); }
+.bd-detail__text { font-size: 1.28rem; line-height: 1.35; font-weight: 700; }
+.bd-detail__meta {
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: .84rem;
+}
+.bd-detail__row { display: flex; gap: 12px; padding: 3px 0; }
+.bd-detail__row > span { min-width: 92px; color: var(--ink-3); }
+.bd-detail__row strong { font-weight: 600; }
+
+.bd-btnrow { display: flex; gap: 9px; flex-wrap: wrap; }
+.bd-btn {
+  padding: 9px 16px; border-radius: var(--r-btn); border: 1px solid var(--accent);
+  background: var(--accent); color: var(--accent-ink);
+  font-family: inherit; font-weight: 700; font-size: .86rem; cursor: pointer;
+}
+.bd-btn--ghost { background: var(--btn-ghost-bg); color: var(--ink-2); border-color: var(--line); }
+.bd-btn--danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.bd-btn--like { background: var(--surface); color: var(--ink-2); border-color: var(--line); }
+
+.bd-field-label {
+  display: block; margin: 0 0 6px;
+  font-weight: 700; font-size: .82rem; color: var(--ink);
+}
+.bd-input {
+  width: 100%; padding: 10px 12px; border-radius: var(--r-btn);
+  background: var(--input-bg); color: var(--ink);
+  border: 1px solid var(--line); font-family: inherit; font-size: .9rem;
+}
+.bd-input::placeholder { color: var(--ink-3); }
+.bd-choice { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+.bd-choice button {
+  padding: 8px 12px; border-radius: var(--r-btn); cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+  font-family: inherit; font-weight: 600; font-size: .82rem;
+}
+.bd-choice button.on-chance { background: var(--chance-bg); border-color: var(--chance-line); color: var(--chance-ink); }
+.bd-choice button.on-topic  { background: var(--fact-bg-soft); border-color: var(--fact-line); color: var(--fact); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   VARIANTE A — „Whiteboard"
+   Das Klassenzimmer-Bild, geradeheraus: weiße Tafel mit feinem
+   Raster, Pastellzettel mit leichter Schieflage und weichem Schatten.
+   UI-Akzent ist neutrales Anthrazit — die Farbe gehört den Zetteln,
+   nicht den Knöpfen. Fakten sind eine sachliche weiße Karte mit
+   blauem Kopfbalken: dasselbe Board, aber ersichtlich anderes Papier.
+   ═══════════════════════════════════════════════════════════════════ */
+.v-a {
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-cite: 'Inter', system-ui, sans-serif;
+  --track-title: -.01em;
+
+  --room: #e9ecf0;
+  --chrome: #ffffff;
+  --chrome-line: #dfe3e8;
+  --surface: #f4f6f8;
+  --chip: #e4e8ed;
+  --line: #d7dce2;
+  --input-bg: #ffffff;
+  --btn-ghost-bg: #ffffff;
+
+  --ink: #1c2530;
+  --ink-2: #445062;
+  --ink-3: #7c8794;
+
+  --accent: #2b3440;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(43,52,64,0.08);
+  --danger: #d8564d;
+
+  --board: #ffffff;
+  --board-tex:
+    linear-gradient(rgba(28,37,48,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28,37,48,0.045) 1px, transparent 1px);
+  --board-tex-size: 28px 28px;
+  --board-frame: 1px solid #dfe3e8;
+
+  --chance-bg: #cdebd0;    --chance-line: #a3d6a9;    --chance-ink: #1d4429;
+  --risiko-bg: #f9cdc8;    --risiko-line: #eda79f;    --risiko-ink: #642420;
+  --vermutung-bg: #fbe8ad; --vermutung-line: #e8cf82; --vermutung-ink: #5c451a;
+
+  --fact: #2a6ab8;
+  --fact-line: #cfe0f2;
+  --fact-bg: #ffffff;
+  --fact-bg-soft: #eaf2fb;
+
+  --r-btn: 8px; --r-card: 12px; --r-note: 3px; --r-fact: 10px;
+  --note-pad: .62em .78em;
+  --note-weight: 600;
+  --note-border: 1px solid transparent;
+  --note-shadow: 2px 3px 7px rgba(28,37,48,0.14);
+  --note-shadow-hi: 4px 8px 18px rgba(28,37,48,0.22);
+  --note-hover: scale(1.05) rotate(0deg) !important;
+
+  --fact-border: 1px solid #dbe3ec;
+  --fact-shadow: 0 1px 3px rgba(28,37,48,0.08);
+  --fact-pad: 34px 16px 16px;
+}
+/* Der Kopfbalken macht den Unterschied zum Zettel auf einen Blick. */
+.v-a .bd-fact::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 5px; background: var(--fact);
+}
+.v-a .bd-fact__tag { position: absolute; top: 14px; left: 16px; margin: 0; }
+.v-a .bd-fact__text { margin-top: 2px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   VARIANTE B — „Studio"
+   Digital-ruhig statt analog: warmes Off-White, keine Schieflage,
+   keine Raster, sehr flache Zettel mit Haarlinien-Rand. Die Optik
+   lebt von Weißraum und Typografie — kleine Versal-Labels, enger
+   Schriftschnitt. Fakten sehen aus wie ein Beleg: weiße Karte,
+   blaue Kante links, Metadaten in Monospace.
+   ═══════════════════════════════════════════════════════════════════ */
+.v-b {
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-cite: 'IBM Plex Mono', ui-monospace, monospace;
+  --track-title: -.025em;
+
+  --room: #f2f0ec;
+  --chrome: #faf9f7;
+  --chrome-line: #e7e4de;
+  --surface: #ffffff;
+  --chip: #eeece7;
+  --line: #e3e0d9;
+  --input-bg: #ffffff;
+  --btn-ghost-bg: #ffffff;
+
+  --ink: #16181b;
+  --ink-2: #4a4f56;
+  --ink-3: #8b9098;
+
+  --accent: #16181b;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(22,24,27,0.06);
+  --danger: #c4544c;
+
+  --board: #ffffff;
+  --board-tex: none;
+  --board-frame: 1px solid #e7e4de;
+
+  --chance-bg: #e2f0e6;    --chance-line: #c3e0cc;    --chance-ink: #23543c;
+  --risiko-bg: #fbe3e0;    --risiko-line: #f0cac5;    --risiko-ink: #7a322c;
+  --vermutung-bg: #faeed2; --vermutung-line: #eddcb3; --vermutung-ink: #6a5218;
+
+  --fact: #35609f;
+  --fact-line: #e3e0d9;
+  --fact-bg: #ffffff;
+  --fact-bg-soft: #edf1f8;
+
+  --r-btn: 10px; --r-card: 14px; --r-note: 12px; --r-fact: 12px;
+  --note-pad: .7em .85em;
+  --note-weight: 500;
+  --note-border: 1px solid transparent;
+  --note-shadow: 0 1px 2px rgba(22,24,27,0.05);
+  --note-shadow-hi: 0 6px 20px rgba(22,24,27,0.10);
+  --note-hover: scale(1.03) !important;
+
+  --fact-border: 1px solid #e3e0d9;
+  --fact-shadow: none;
+  --fact-pad: 16px 18px 16px 20px;
+}
+.v-b .bd-cn { transform: none !important; }   /* keine Schieflage */
+.v-b .bd-cn--vert { transform: rotate(-90deg) !important; }
+.v-b .bd-fact { border-left: 3px solid var(--fact); }
+.v-b .bd-fact__cite { letter-spacing: -.01em; }
+.v-b .bd-catnav__name { text-transform: none; }
+.v-b .bd-phase, .v-b .bd-btn, .v-b .bd-viewswitch button { letter-spacing: -.01em; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   VARIANTE C — „Materialtafel"
+   Am weitesten weg vom Bildschirm: Papierkorn auf der Tafel,
+   Zettel mit Farbverlauf, kräftigerer Schieflage, doppeltem Schatten
+   und Klebestreifen oben. Die Schrift bleibt trotzdem clean —
+   analog wirkt hier das Material, nicht die Typo. Fakten sind eine
+   linierte Karteikarte mit blauem Reiter: unverkennbar Archiv,
+   unverkennbar nicht gebastelt.
+   ═══════════════════════════════════════════════════════════════════ */
+.v-c {
+  --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-display: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-cite: 'Source Serif 4', Georgia, serif;
+  --track-title: .005em;
+
+  --room: #cdd3d8;
+  --chrome: #f7f8f9;
+  --chrome-line: #d3d9de;
+  --surface: #eef1f3;
+  --chip: #dfe4e8;
+  --line: #cfd6db;
+  --input-bg: #ffffff;
+  --btn-ghost-bg: #ffffff;
+
+  --ink: #232b31;
+  --ink-2: #4b555d;
+  --ink-3: #7e8890;
+
+  --accent: #1f6f5c;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(31,111,92,0.10);
+  --danger: #c0504a;
+
+  --board: #fdfdfb;
+  --board-tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
+  --board-frame: 6px solid #b9c1c7;
+
+  --chance-bg: #b9e6bd;    --chance-line: #93cf98;    --chance-ink: #17401f;
+  --risiko-bg: #f8bdb6;    --risiko-line: #e79b92;    --risiko-ink: #5c1f19;
+  --vermutung-bg: #fbe396; --vermutung-line: #e6c96d; --vermutung-ink: #55400f;
+
+  --fact: #1f5aa0;
+  --fact-line: #c9d9ea;
+  --fact-bg: #fbfcfe;
+  --fact-bg-soft: #e8f0f9;
+
+  --r-btn: 6px; --r-card: 10px; --r-note: 2px; --r-fact: 4px;
+  --note-pad: .78em .8em .68em;
+  --note-weight: 600;
+  --note-border: 1px solid transparent;
+  --note-shadow: 0 1px 1px rgba(35,43,49,0.16), 3px 6px 12px rgba(35,43,49,0.20);
+  --note-shadow-hi: 0 2px 3px rgba(35,43,49,0.18), 6px 14px 26px rgba(35,43,49,0.28);
+  --note-hover: scale(1.06) rotate(0deg) !important;
+
+  --fact-border: 1px solid #c9d9ea;
+  --fact-shadow: 0 2px 6px rgba(35,43,49,0.13);
+  --fact-pad: 30px 18px 16px;
+}
+/* Verlauf: oben heller, wie Licht auf Papier. */
+.v-c .bd-cn { background-image: linear-gradient(168deg, rgba(255,255,255,0.55), rgba(255,255,255,0) 55%); }
+/* Klebestreifen — milchig, leicht schief, sitzt über der Kante. */
+.v-c .bd-cn::before {
+  content: ''; position: absolute; top: -7px; left: 50%;
+  width: 42px; height: 14px; transform: translateX(-50%) rotate(-1.5deg);
+  background: rgba(255,255,255,0.62);
+  border-left: 1px solid rgba(255,255,255,0.75);
+  border-right: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(35,43,49,0.14);
+}
+.v-c .bd-cn--vert::before { display: none; }
+/* Karteikarte: Linienspiegel + Reiter. */
+.v-c .bd-fact {
+  background-image: repeating-linear-gradient(
+    to bottom, transparent 0 25px, rgba(31,90,160,0.10) 25px 26px);
+  background-position: 0 30px;
+}
+.v-c .bd-fact::before {
+  content: ''; position: absolute; top: 0; left: 18px;
+  width: 54px; height: 9px; border-radius: 0 0 3px 3px; background: var(--fact);
+}
+.v-c .bd-fact__tag { margin-top: 2px; }
+.v-c .bd-fact__cite { font-style: italic; }
+
+/* ── schmale Geräte ── */
+@media (max-width: 640px) {
+  .bd-head h1 { font-size: 1rem; }
+  .bd-board { padding: 18px 12px 22px; }
+  .bd-phase__name { display: none; }
+  .sr-intro h2 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="sr-top">
+  <h1>Zukunftsboard <span>· Design-Showroom</span></h1>
+  <div class="sr-switch" id="srSwitch">
+    <button data-v="a" class="on">A · Whiteboard</button>
+    <button data-v="b">B · Studio</button>
+    <button data-v="c">C · Materialtafel</button>
+  </div>
+</div>
+
+<!-- Drei Varianten, ein Inhalt: dieselben Karten, dieselben Likes,
+     dieselbe Anordnung. Was sich unterscheidet, ist ausschließlich
+     die Gestaltung. -->
+<section class="variant" data-v="a">
+  <div class="sr-intro">
+    <h2><b>A</b>Whiteboard</h2>
+    <p>Das Klassenzimmer-Bild, geradeheraus: weiße Tafel mit feinem Raster, Pastellzettel mit
+       leichter Schieflage und weichem Schatten. Der UI-Akzent ist neutrales Anthrazit —
+       die Farbe gehört den Zetteln, nicht den Knöpfen.</p>
+    <div class="sr-specs">
+      <dl class="sr-spec"><dt>Tafel</dt><dd>Reinweiß, 28-px-Raster, dünner Rahmen</dd></dl>
+      <dl class="sr-spec"><dt>Zettel</dt><dd>Pastell, 3 px Radius, ±2,5° schief, ein Schatten</dd></dl>
+      <dl class="sr-spec"><dt>Fakten</dt><dd>Weiße Karte, blauer Kopfbalken, gerade</dd></dl>
+      <dl class="sr-spec"><dt>Schrift</dt><dd>Inter durchgehend, 600er Zettel</dd></dl>
+      <dl class="sr-spec"><dt>Palette</dt>
+        <dd><div class="sr-swatches">
+          <i style="background:#ffffff"></i><i style="background:#cdebd0"></i>
+          <i style="background:#f9cdc8"></i><i style="background:#fbe8ad"></i>
+          <i style="background:#2a6ab8"></i><i style="background:#2b3440"></i>
+        </div></dd></dl>
+    </div>
+  </div>
+  <div class="sr-stagewrap"><div class="stage bd v-a" data-mount></div></div>
+</section>
+
+<section class="variant" data-v="b" hidden>
+  <div class="sr-intro">
+    <h2><b>B</b>Studio</h2>
+    <p>Digital-ruhig statt analog: warmes Off-White, keine Schieflage, kein Raster, flache Zettel
+       mit Haarlinien-Rand. Die Optik lebt von Weißraum und Typografie. Fakten sehen aus wie ein
+       Beleg — weiße Karte, blaue Kante links, Quelle in Monospace.</p>
+    <div class="sr-specs">
+      <dl class="sr-spec"><dt>Tafel</dt><dd>Weiß auf warmem Off-White, texturlos</dd></dl>
+      <dl class="sr-spec"><dt>Zettel</dt><dd>12 px Radius, gerade, entsättigtes Pastell</dd></dl>
+      <dl class="sr-spec"><dt>Fakten</dt><dd>Weiß, 3 px blaue Kante links, Mono-Quelle</dd></dl>
+      <dl class="sr-spec"><dt>Schrift</dt><dd>Inter eng (−0,025 em) + IBM Plex Mono</dd></dl>
+      <dl class="sr-spec"><dt>Palette</dt>
+        <dd><div class="sr-swatches">
+          <i style="background:#faf9f7"></i><i style="background:#e2f0e6"></i>
+          <i style="background:#fbe3e0"></i><i style="background:#faeed2"></i>
+          <i style="background:#35609f"></i><i style="background:#16181b"></i>
+        </div></dd></dl>
+    </div>
+  </div>
+  <div class="sr-stagewrap"><div class="stage bd v-b" data-mount></div></div>
+</section>
+
+<section class="variant" data-v="c" hidden>
+  <div class="sr-intro">
+    <h2><b>C</b>Materialtafel</h2>
+    <p>Am weitesten weg vom Bildschirm: Papierkorn auf der Tafel, Aluminiumrahmen, Zettel mit
+       Verlauf, kräftigerer Schieflage, doppeltem Schatten und Klebestreifen. Die Schrift bleibt
+       trotzdem clean — analog wirkt hier das Material, nicht die Typo.</p>
+    <div class="sr-specs">
+      <dl class="sr-spec"><dt>Tafel</dt><dd>Papierkorn, 6 px Rahmen, Grünton als Akzent</dd></dl>
+      <dl class="sr-spec"><dt>Zettel</dt><dd>Verlauf, ±3,5° schief, Tape, zwei Schatten</dd></dl>
+      <dl class="sr-spec"><dt>Fakten</dt><dd>Linierte Karteikarte mit blauem Reiter</dd></dl>
+      <dl class="sr-spec"><dt>Schrift</dt><dd>IBM Plex Sans + Source Serif für Quellen</dd></dl>
+      <dl class="sr-spec"><dt>Palette</dt>
+        <dd><div class="sr-swatches">
+          <i style="background:#fdfdfb"></i><i style="background:#b9e6bd"></i>
+          <i style="background:#f8bdb6"></i><i style="background:#fbe396"></i>
+          <i style="background:#1f5aa0"></i><i style="background:#1f6f5c"></i>
+        </div></dd></dl>
+    </div>
+  </div>
+  <div class="sr-stagewrap"><div class="stage bd v-c" data-mount></div></div>
+</section>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   Ein Markup für alle drei Varianten — sonst vergliche man Inhalte
+   statt Gestaltung. Die Wolke wird mit derselben Mechanik gesetzt wie
+   im echten Board: archimedische Spirale mit Kollisionsprüfung,
+   Schriftgrad aus der Wurzel der Zustimmung.
+   ═══════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  const CATS = [
+    { icon: '🧍',  label: 'Persönlich',       n: 14 },
+    { icon: '👥',  label: 'Gesellschaftlich', n: 11 },
+    { icon: '🏛️', label: 'Politisch',        n: 6  },
+    { icon: '📚',  label: 'Wissen & Bildung', n: 9  },
+    { icon: '💶',  label: 'Wirtschaftlich',   n: 4  },
+    { icon: '🌱',  label: 'Umwelt',           n: 3  }
+  ];
+
+  const NOTES = [
+    { t: 'KI schreibt meine Hausaufgaben — gelernt habe ich dabei nichts.', s: 'risiko',    l: 12, mine: false },
+    { t: 'Ich finde endlich Antworten auf Fragen, die mich wirklich interessieren.', s: 'chance', l: 9, mine: false },
+    { t: 'Social Media frisst mir jeden Abend zwei Stunden weg.', s: 'risiko',    l: 8,  mine: true  },
+    { t: 'Mit Übersetzungs-KI rede ich mit Leuten aus aller Welt.', s: 'chance',  l: 7,  mine: false },
+    { t: 'Vielleicht verlernen wir das Rechtschreiben ganz.',      s: 'vermutung', l: 6, mine: false },
+    { t: 'Gaming hält Freundschaften über die Entfernung.',        s: 'chance',   l: 5,  mine: false },
+    { t: 'Ständig erreichbar sein macht Druck.',                   s: 'risiko',   l: 5,  mine: false },
+    { t: 'Ich schlafe schlechter.',                                s: 'risiko',   l: 4,  mine: false },
+    { t: 'Filter zeigen mir nur noch meine eigene Meinung.',       s: 'risiko',   l: 4,  mine: false },
+    { t: 'Lern-Apps erklären mir Mathe geduldiger als jeder Mensch.', s: 'chance', l: 3, mine: false },
+    { t: 'Bald redet jeder mit einer KI statt mit Freunden.',      s: 'vermutung', l: 3, mine: false },
+    { t: 'Kreativ werden geht leichter.',                          s: 'chance',   l: 2,  mine: false },
+    { t: 'Mein Handy kennt mich zu gut.',                          s: 'vermutung', l: 2, mine: false },
+    { t: 'Ich vergleiche mich ständig.',                           s: 'risiko',   l: 1,  mine: false }
+  ];
+
+  const FACTS = [
+    { t: '62 % der 12- bis 19-Jährigen haben schon KI-Anwendungen wie ChatGPT genutzt.',
+      a: 'Medienpädagogischer Forschungsverbund Südwest', w: 'JIM-Studie 2024', d: '28.11.2024', u: 'mpfs.de' },
+    { t: 'Jugendliche verbringen im Schnitt 63 Stunden pro Woche mit dem Smartphone.',
+      a: 'Postbank Jugend-Digitalstudie', w: 'Pressemitteilung', d: '05.09.2024', u: 'postbank.de' },
+    { t: 'Der Stromverbrauch deutscher Rechenzentren stieg 2023 um rund 9 %.',
+      a: 'Bitkom Research', w: 'Rechenzentren in Deutschland', d: '12.03.2024', u: 'bitkom.org' }
+  ];
+
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+  function boardHTML() {
+    const tabs = CATS.map((c, i) => `
+      <button class="bd-cattab${i === 0 ? ' bd-cattab--on' : ''}">
+        <span class="bd-cattab__icon">${c.icon}</span>
+        <span class="bd-cattab__count">${c.n}</span>
+      </button>`).join('');
+
+    const cards = NOTES.map((n, i) => `
+      <article class="bd-cn bd-cn--${n.s}" data-likes="${n.l}" data-i="${i}">
+        ${n.mine ? '<span class="bd-cn__liked">👍</span>' : ''}
+        <p class="bd-cn__text">${esc(n.t)}</p>
+      </article>`).join('');
+
+    const facts = FACTS.map(f => `
+      <article class="bd-fact">
+        <span class="bd-fact__tag">📎 Fakt · belegt</span>
+        <p class="bd-fact__text">${esc(f.t)}</p>
+        <div class="bd-fact__cite">
+          <b>${esc(f.a)}</b>: ${esc(f.w)}. ${esc(f.d)}.<br>
+          <a href="#">${esc(f.u)}</a>
+        </div>
+      </article>`).join('');
+
+    return `
+    <header class="bd-head">
+      <a class="bd-hub" href="#">← Hub</a>
+      <div class="bd-head__title">
+        <h1>🧭 Zukunftsboard</h1>
+        <p class="bd-head__sub">Kurs 9b · Mittwoch-Schulung</p>
+      </div>
+      <div class="bd-head__right">
+        <div class="bd-quota">Post-Its <strong>5/8</strong> · Fakten <strong>1/2</strong></div>
+        <div class="bd-viewswitch">
+          <button class="on">Board</button><button>Tabelle</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="bd-phases">
+      <button class="bd-phase bd-phase--running bd-phase--shown">
+        <span class="bd-phase__no">1</span><span class="bd-phase__name">Sammeln</span>
+        <span class="bd-phase__what">Post-Its</span><span class="bd-phase__count">47</span>
+      </button>
+      <button class="bd-phase bd-phase--locked">
+        <span class="bd-phase__no">2</span><span class="bd-phase__name">Belegen</span>
+        <span class="bd-phase__what">Fakten</span><span class="bd-phase__count">12</span>
+      </button>
+      <div class="bd-phase bd-phase--locked">
+        <span class="bd-phase__no">3</span><span class="bd-phase__name">Besprechen</span>
+      </div>
+    </div>
+    <p class="bd-hint">Phase 1 · Sammeln — Was könnten KI, Social Media und Handy-Games bewirken?
+       Halte Chancen, Risiken und Vermutungen fest. Du hast 8 Post-Its.</p>
+
+    <nav class="bd-catnav">
+      <div class="bd-catnav__tabs">${tabs}</div>
+      <div class="bd-catnav__title">
+        <button class="bd-catnav__arrow">‹</button>
+        <span class="bd-catnav__name">Persönlich</span>
+        <button class="bd-catnav__arrow">›</button>
+        <button class="bd-catadd">＋</button>
+      </div>
+    </nav>
+
+    <div class="bd-board">
+      <div class="bd-cloud" data-cloud>${cards}</div>
+
+      <div class="bd-facthead">
+        <h3>📎 Phase 2 · Fakten</h3>
+        <p>eigenes Fach, festes Raster, keine Zustimmung — so sieht Phase 2 im selben Bereich aus</p>
+      </div>
+      <div class="bd-factgrid">${facts}</div>
+    </div>
+
+    <div class="bd-parts">
+      <div>
+        <div class="bd-part__label">Detail-Overlay</div>
+        <div class="bd-card">
+          <div class="bd-detail__stance">
+            <span class="bd-pill bd-pill--risiko">🔴 Risiko</span>
+            <span class="bd-pill bd-pill--fakt">🤖 KI</span>
+          </div>
+          <p class="bd-detail__text">KI schreibt meine Hausaufgaben — gelernt habe ich dabei nichts.</p>
+          <div class="bd-detail__meta">
+            <div class="bd-detail__row"><span>Von</span><strong>Mira K.</strong></div>
+            <div class="bd-detail__row"><span>Bereich</span><strong>🧍 Persönlich</strong></div>
+            <div class="bd-detail__row"><span>Zustimmung</span><strong>12</strong></div>
+          </div>
+          <div class="bd-btnrow" style="margin-top:14px">
+            <button class="bd-btn bd-btn--like">👍 Zustimmen</button>
+            <button class="bd-btn bd-btn--ghost">Schließen</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="bd-part__label">Formular &amp; Knöpfe</div>
+        <div class="bd-card">
+          <label class="bd-field-label">3 · Dein Text</label>
+          <input class="bd-input" placeholder="Schreib in einem Satz, worum es geht.">
+          <div class="bd-choice">
+            <button class="on-chance">🟢 Chance</button>
+            <button>🔴 Risiko</button>
+            <button>🟡 Vermutung</button>
+          </div>
+          <div class="bd-choice">
+            <button class="on-topic">🤖 KI</button>
+            <button>📱 Social Media</button>
+            <button>🎮 Gaming</button>
+          </div>
+          <div class="bd-btnrow" style="margin-top:16px">
+            <button class="bd-btn">Speichern</button>
+            <button class="bd-btn bd-btn--ghost">Abbrechen</button>
+            <button class="bd-btn bd-btn--danger">🗑️ Löschen</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /* ── Wolken-Layout ────────────────────────────────────────────────
+     Spirale von innen nach außen, größte Karte zuerst: dieselbe
+     Mechanik wie in js/board.js, nur ohne den Server drumherum.     */
+  function layoutCloud(cloud) {
+    const W = cloud.clientWidth;
+    if (!W) return;
+
+    const cards = [...cloud.children];
+    const maxL  = Math.max(...cards.map(c => +c.dataset.likes || 0), 1);
+    const narrow = W < 520;
+
+    cards.forEach(c => {
+      const l = +c.dataset.likes || 0;
+      const size = 0.95 + (2.15 - 0.95) * Math.sqrt(l / maxL);
+      c.style.fontSize = size.toFixed(3) + 'rem';
+      c.style.maxWidth = Math.min(W * 0.7, 22 * size * 16) + 'px';
+      const short = c.textContent.trim().length <= 34;
+      c.classList.toggle('bd-cn--vert', short && !narrow && (+c.dataset.i % 3 === 1));
+    });
+
+    // sortiert platzieren: viel Zustimmung = groß = mittig
+    const order = cards.slice().sort((a, b) => (+b.dataset.likes) - (+a.dataset.likes));
+
+    const boxes = [];
+    let area = 0;
+    order.forEach(c => { area += (c.offsetWidth + 12) * (c.offsetHeight + 12); });
+    const ratio = Math.round((W / Math.max(Math.sqrt(area * 1.35), 1)) / 0.05) * 0.05 || 1;
+
+    order.forEach(c => {
+      const vert = c.classList.contains('bd-cn--vert');
+      const w = (vert ? c.offsetHeight : c.offsetWidth)  + 10;
+      const h = (vert ? c.offsetWidth  : c.offsetHeight) + 10;
+
+      let placed = null;
+      for (let t = 0; t < 4200 && !placed; t += 0.16) {
+        const r  = 3.4 * t;
+        const cx = r * Math.cos(t) * ratio;
+        const cy = r * Math.sin(t) / Math.max(ratio, 0.2) * 0.55;
+        const box = { x: cx - w / 2, y: cy - h / 2, w, h };
+        if (!boxes.some(b => box.x < b.x + b.w && box.x + box.w > b.x &&
+                             box.y < b.y + b.h && box.y + box.h > b.y)) {
+          placed = box;
+        }
+      }
+      if (!placed) placed = { x: 0, y: 0, w, h };
+      boxes.push(placed);
+      c._box = placed;
+      c._vert = vert;
+    });
+
+    const minX = Math.min(...boxes.map(b => b.x));
+    const maxX = Math.max(...boxes.map(b => b.x + b.w));
+    const minY = Math.min(...boxes.map(b => b.y));
+    const maxY = Math.max(...boxes.map(b => b.y + b.h));
+    const offX = (W - (maxX - minX)) / 2 - minX;
+    const offY = -minY + 10;
+
+    order.forEach(c => {
+      const b = c._box;
+      const tilt = ((+c.dataset.i * 37) % 100 / 100 - 0.5) * 2;   // deterministisch
+      if (c._vert) {
+        // über den Mittelpunkt setzen, weil die Drehung um die Mitte läuft
+        c.style.left = (b.x + offX + b.w / 2 - c.offsetWidth / 2) + 'px';
+        c.style.top  = (b.y + offY + b.h / 2 - c.offsetHeight / 2) + 'px';
+        c.style.transform = 'rotate(-90deg)';
+      } else {
+        c.style.left = (b.x + offX + 5) + 'px';
+        c.style.top  = (b.y + offY + 5) + 'px';
+        c.style.transform = `rotate(${(tilt * (cloud.dataset.tilt || 0)).toFixed(2)}deg)`;
+      }
+    });
+
+    cloud.style.height = (maxY - minY + 24) + 'px';
+  }
+
+  /* Schieflage ist Theme-Sache: A leicht, B gar nicht, C deutlich. */
+  const TILT = { a: 2.5, b: 0, c: 3.5 };
+
+  document.querySelectorAll('[data-mount]').forEach(mount => {
+    mount.innerHTML = boardHTML();
+    const v = mount.closest('.variant').dataset.v;
+    mount.querySelector('[data-cloud]').dataset.tilt = TILT[v];
+  });
+
+  function relayoutVisible() {
+    document.querySelectorAll('.variant:not([hidden]) [data-cloud]').forEach(layoutCloud);
+  }
+
+  document.getElementById('srSwitch').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    document.querySelectorAll('#srSwitch button').forEach(b => b.classList.toggle('on', b === btn));
+    document.querySelectorAll('.variant').forEach(s => { s.hidden = s.dataset.v !== btn.dataset.v; });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    requestAnimationFrame(relayoutVisible);
+  });
+
+  let t;
+  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(relayoutVisible, 150); });
+
+  // Fonts erst abwarten — sonst wird mit Fallback-Metriken gemessen.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayoutVisible);
+  relayoutVisible();
+})();
+</script>
+</body>
+</html>

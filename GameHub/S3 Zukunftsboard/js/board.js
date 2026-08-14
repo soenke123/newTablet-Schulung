@@ -572,7 +572,12 @@
      brachten. Die Karten liegen absolut, gemessen wird über
      offsetWidth/offsetHeight.                                        */
 
-  const CLOUD_GAP = 10;
+  /* Etwas mehr als der reine Sichtabstand: die Zettel hängen leicht
+     schief an der Tafel (CSS, --tilt), und ein um 2,4° gedrehtes
+     Rechteck braucht ein paar Pixel mehr als das achsenparallele, mit
+     dem hier gerechnet wird. 14 px decken die Drehung auch bei den
+     breitesten Karten ab. */
+  const CLOUD_GAP = 14;
 
   function overlaps(a, b) {
     return !(a.x + a.w + CLOUD_GAP <= b.x || b.x + b.w + CLOUD_GAP <= a.x ||
@@ -674,9 +679,35 @@
     const maxX  = placed.reduce((m, p) => Math.max(m, p.x + p.w), -Infinity);
     const shift = Math.round((boxW - (maxX - minX)) / 2 - minX);
 
+    /* Frisch gezeichnete Karten sollen an ihrem Platz ERSCHEINEN, nicht
+       aus der Ecke dorthin fliegen.
+
+       Der Verdacht liegt nahe, dass neue Elemente ohnehin nicht
+       animieren — sie haben ja keinen Vorzustand. Das stimmt hier aber
+       nicht: die Messschleife oben liest `offsetWidth`, und das erzwingt
+       eine Style-Berechnung. Damit steht `left: 0` (aus dem
+       Stylesheet) als Ausgangswert fest, und das anschließende Setzen
+       wird zu einer echten Bewegung aus der linken oberen Ecke — bei
+       jedem Zeichnen, also auch bei jedem Poll, der etwas Neues bringt.
+
+       Die Bewegung ist nur für den Fall gedacht, dass DIESELBEN Karten
+       neu angeordnet werden (Tablet gedreht, Fenster verzogen). Also
+       wird sie genau für die Karten kurz abgeschaltet, die zum ersten
+       Mal einen Platz bekommen. */
+    const fresh = items.filter(it => !it.el.dataset.placed);
+    for (const it of fresh) it.el.style.transition = 'none';
+
     for (const it of items) {
       it.el.style.left = Math.round(it.spot.x + shift) + 'px';
       it.el.style.top  = Math.round(it.spot.y - minY) + 'px';
+    }
+
+    if (fresh.length) {
+      void box.offsetHeight;   // Stellung festschreiben, bevor die Bewegung zurückkommt
+      for (const it of fresh) {
+        it.el.style.transition = '';
+        it.el.dataset.placed = '1';
+      }
     }
 
     box.style.height = Math.max(0, Math.round(maxY - minY)) + 'px';
