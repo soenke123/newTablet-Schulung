@@ -434,7 +434,22 @@ body.bd-fill .bd-surface { min-height: 0; }
   border-radius: 3px;
   background: var(--clr-surface);
   color: var(--clr-ink);
-  box-shadow: var(--shadow-note);
+
+  /* Der Kartenschatten besteht aus drei unabhängigen Teilen, und jeder
+     hat seinen eigenen Schalter. Ohne diese Trennung müsste jede
+     Kombination aus Stapel, „meine Karte", „zugestimmt" und :hover
+     einzeln ausgeschrieben werden — das waren schon vor dem Stapel
+     sechs Regeln, mit ihm wären es achtzehn.
+
+     Reihenfolge = Tiefe: zuerst Genanntes liegt vorn.
+       --ring   Besitz/Zustimmung (2 px Kante)
+       --sheets die Blätter unter der Karte (siehe --st1/--st2)
+       --lift   der weiche Schatten, der die Karte von der Tafel hebt */
+  --ring:   0 0 0 0 transparent;
+  --sheets: 0 0 0 0 transparent;
+  --lift:   var(--shadow-note);
+  box-shadow: var(--ring), var(--sheets), var(--lift);
+
   cursor: pointer; word-break: break-word; hyphens: auto;
   transform: rotate(var(--tilt, 0deg));
   /* left/top mit weicher Bewegung: beim ersten Zeichnen passiert nichts
@@ -464,41 +479,89 @@ body.bd-fill .bd-surface { min-height: 0; }
 .bd-cn:hover, .bd-cn:focus-visible {
   z-index: 5;
   transform: rotate(0deg) scale(1.05);
-  box-shadow: var(--shadow-note-hi);
+  --lift: var(--shadow-note-hi);
 }
 
-/* Die Zettelfarbe ist die einzige Typ-Auszeichnung. */
+/* Die Zettelfarbe ist die einzige Typ-Auszeichnung — und sie trägt
+   zusätzlich, wie stark eine Aussage getragen wird: blass = keine
+   Zustimmung, satt = die meiste. Der FARBTON bleibt dabei immer
+   derselbe, ein blasser grüner Zettel ist weiterhin eine Chance.
+   Sättigung ist eine zweite Achse INNERHALB der Zettelfarbe und
+   keine vierte Farbe — Regel 1 oben bleibt unangetastet.
+
+   Die eigentlichen Werte kommen als --cn-fill/--cn-line aus dem
+   Skript (STANCE_RAMP in js/board.js), weil dort zwischen den beiden
+   Enden der Rampe interpoliert wird — derselbe Grund, aus dem auch
+   die Neigungen (TILTS) im Skript stehen und nicht hier.
+
+   Die Werte hinter dem Komma sind der Rückfall für jede Karte OHNE
+   Rampe: das Recherche-Raster, die Notfall-Liste (.bd-cloud--plain)
+   und alles, was cardHTML ohne Größe zeichnet. Sie sind zugleich die
+   Mitte der Rampe — wer sie ändert, sollte STANCE_RAMP mitziehen. */
 .bd-cn--chance {
-  background: var(--clr-green); border-color: var(--clr-green-line); color: var(--clr-green-ink);
+  background: var(--cn-fill, var(--clr-green));
+  border-color: var(--cn-line, var(--clr-green-line));
+  color: var(--clr-green-ink);
 }
 .bd-cn--risiko {
-  background: var(--clr-red);   border-color: var(--clr-red-line);   color: var(--clr-red-ink);
+  background: var(--cn-fill, var(--clr-red));
+  border-color: var(--cn-line, var(--clr-red-line));
+  color: var(--clr-red-ink);
 }
 .bd-cn--vermutung {
-  background: var(--clr-yellow); border-color: var(--clr-yellow-line); color: var(--clr-yellow-ink);
+  background: var(--cn-fill, var(--clr-yellow));
+  border-color: var(--cn-line, var(--clr-yellow-line));
+  color: var(--clr-yellow-ink);
+}
+
+/* ── Der Stapel ───────────────────────────────────────────
+   Das dritte Signal für Zustimmung, neben Größe und Sättigung: stark
+   getragene Karten sehen aus wie mehrere Zettel übereinander. Das ist
+   die Geste, die auf einem echten Board dahintersteckt — wer dasselbe
+   denkt, klebt einen zweiten Zettel dazu.
+
+   Bewusst grob, nur drei Stufen: der Stapel beantwortet „viel oder
+   wenig", keine Rangfolge. Die Feinauflösung leisten Größe und
+   Sättigung, die stufenlos laufen.
+
+   Warum box-shadow und nicht ::before/::after: die Karte trägt ein
+   rotate() und macht damit einen Stacking-Context auf. Ein
+   Pseudo-Element mit z-index:-1 läge darin ÜBER der eigenen
+   Kartenfläche statt dahinter — der „Stapel" würde die Karte
+   verdecken. Schatten dagegen werden immer hinter dem Hintergrund
+   gezeichnet.
+
+   Je Blatt zwei Schatten: einer ohne Spread (die Fläche), dahinter
+   einer mit 1 px Spread (die Kante). Ohne Rampe (--cn-fill nicht
+   gesetzt) sind beide transparent — dann gibt es schlicht kein Blatt,
+   und das Recherche-Raster bleibt unberührt.                        */
+.bd-cn--st1 {
+  --sheets: 5px 6px 0 0 var(--cn-fill, transparent),
+            5px 6px 0 1px var(--cn-line, transparent);
+}
+.bd-cn--st2 {
+  --sheets: 5px 6px 0 0 var(--cn-fill, transparent),
+            5px 6px 0 1px var(--cn-line, transparent),
+            10px 12px 0 0 var(--cn-fill, transparent),
+            10px 12px 0 1px var(--cn-line, transparent);
 }
 
 /* Eigene Karten: eine zusätzliche Kante, kein zweites Farbsignal —
    die Fläche gehört dem Typ. Bewusst gedämpft: ein satter Rahmen zöge
    mehr Blicke auf sich als die größte Karte der Wolke, und die Größe
    ist die Aussage, nicht die Besitzverhältnisse. */
-.bd-cn--mine { box-shadow: 0 0 0 2px rgba(28,37,48,0.42), var(--shadow-note); }
-.bd-cn--mine:hover, .bd-cn--mine:focus-visible {
-  box-shadow: 0 0 0 2px rgba(28,37,48,0.42), var(--shadow-note-hi);
-}
+.bd-cn--mine { --ring: 0 0 0 2px rgba(28,37,48,0.42); }
 
 .bd-cn__text { font-size: 1em; line-height: 1.32; font-weight: 600; }
 
 /* Einziges Zeichen auf der Karte außer dem Text: hast DU zugestimmt.
-   Keine Zahl — wie stark eine Aussage getragen wird, sagt die Größe. */
+   Keine Zahl — wie stark eine Aussage getragen wird, sagen Größe,
+   Sättigung und Stapel. */
 /* Zugestimmt: ein leiser Saum innen, damit das Zeichen auch dann noch
    da ist, wenn der Daumen gerade hinter einer überlappenden Karte
    liegt. Kann nie mit --mine zusammentreffen — der eigenen Karte
    stimmt man nicht zu. */
-.bd-cn--liked { box-shadow: inset 0 0 0 2px rgba(28,37,48,0.10), var(--shadow-note); }
-.bd-cn--liked:hover, .bd-cn--liked:focus-visible {
-  box-shadow: inset 0 0 0 2px rgba(28,37,48,0.10), var(--shadow-note-hi);
-}
+.bd-cn--liked { --ring: inset 0 0 0 2px rgba(28,37,48,0.10); }
 
 .bd-cn__liked {
   position: absolute; top: -.5em; right: -.4em;

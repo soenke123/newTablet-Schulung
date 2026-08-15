@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reality Check — Zustimmung sichtbar machen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   SHOWROOM — zweite Kodierung der Zustimmung
+
+   Frage: Größe + Zentrierung sagen heute, wie stark eine Aussage
+   getragen wird. Weil aber die Textlänge die Fläche mitbestimmt, ist
+   die größte Karte nicht immer die am meisten getragene. Gesucht ist
+   eine ZWEITE, flächenunabhängige Kodierung derselben Zahl.
+
+   Drei Varianten stehen nebeneinander. Damit der Vergleich etwas
+   wert ist, laufen sie auf demselben Datensatz, mit derselben
+   Spiral-Packung und denselben Kartenstilen wie das echte Board.
+   A und B sind pixelgleich angeordnet — nur C braucht mehr Luft.
+   ═══════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #14161a;
+  color: #e7e9ec;
+  padding-bottom: 90px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Hülle ──────────────────────────────────────────────── */
+.sr-top {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  padding: 12px 22px;
+  background: rgba(20,22,26,0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #2b3038;
+}
+.sr-top h1 { font-size: .95rem; font-weight: 800; letter-spacing: -.01em; }
+.sr-top h1 span { color: #7d8794; font-weight: 500; }
+.sr-switch { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.sr-switch button {
+  padding: 8px 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #343a44; background: #1c1f25; color: #aab2bd;
+  font-family: inherit; font-weight: 700; font-size: .85rem;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.sr-switch button:hover { background: #262a31; color: #fff; }
+.sr-switch button.on { background: #f2f4f7; border-color: #f2f4f7; color: #14161a; }
+.sr-switch kbd {
+  font-family: inherit; font-size: .7rem; opacity: .5;
+  margin-left: 6px; font-weight: 800;
+}
+
+.sr-wrap { max-width: 1180px; margin: 0 auto; padding: 26px 22px 0; }
+
+.sr-intro h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
+.sr-intro h2 b { color: #7d8794; font-weight: 800; margin-right: 10px; }
+.sr-intro > p { color: #9aa3ae; margin-top: 8px; max-width: 66ch; line-height: 1.6; font-size: .95rem; }
+
+.sr-specs {
+  display: grid; gap: 10px; margin-top: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.sr-spec { border: 1px solid #2b3038; border-radius: 12px; padding: 11px 13px; background: #1a1d22; }
+.sr-spec dt {
+  font-size: .66rem; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: #6d7681; margin-bottom: 5px;
+}
+.sr-spec dd { font-size: .84rem; line-height: 1.5; color: #d3d8de; }
+.sr-spec--warn { border-color: #4a3a24; background: #221d16; }
+.sr-spec--warn dt { color: #b98a45; }
+
+/* Farbrampe als Legende */
+.sr-ramp { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.sr-ramp__row { display: flex; gap: 3px; align-items: center; }
+.sr-ramp__row i { flex: 1; height: 16px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.18); }
+.sr-ramp__lbl { font-size: .68rem; color: #6d7681; display: flex; justify-content: space-between; margin-top: 2px; }
+
+/* ── Werkzeugleiste über der Tafel ──────────────────────── */
+.sr-tools {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 22px 0 10px;
+}
+.sr-tools__lbl {
+  font-size: .68rem; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: #6d7681; margin-right: 2px;
+}
+.sr-tools button {
+  padding: 6px 13px; border-radius: 8px; cursor: pointer;
+  border: 1px solid #343a44; background: #1c1f25; color: #aab2bd;
+  font-family: inherit; font-weight: 600; font-size: .82rem;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.sr-tools button:hover { background: #262a31; color: #fff; }
+.sr-tools button.on { background: #343a44; border-color: #4a5260; color: #fff; }
+.sr-tools__sep { width: 1px; height: 22px; background: #2b3038; margin: 0 6px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   AB HIER: das echte Board. Werte 1:1 aus css/board.css übernommen,
+   damit der Showroom nicht schöner lügt als die Kachel aussieht.
+   ═══════════════════════════════════════════════════════════════════ */
+.stage {
+  --clr-board:     #ffffff;
+  --clr-line:      #d7dce2;
+  --clr-line-soft: #e6eaee;
+  --clr-ink:       #1c2530;
+  --clr-ink-3:     #7c8794;
+
+  --clr-green-ink:  #1d4429;
+  --clr-red-ink:    #642420;
+  --clr-yellow-ink: #5c451a;
+
+  --shadow-note:    2px 3px 7px rgba(28,37,48,0.14);
+  --shadow-note-hi: 4px 9px 20px rgba(28,37,48,0.22);
+
+  color: var(--clr-ink);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+}
+
+.bd-surface {
+  position: relative;
+  background-color: var(--clr-board);
+  background-image:
+    linear-gradient(rgba(28,37,48,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28,37,48,0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+  border: 1px solid var(--clr-line);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+/* Kopfzeile der Tafel — nur so viel, dass der Ausschnitt sich
+   zuordnen lässt. Der Rest des Boards gehört nicht zur Frage. */
+.bd-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 4px 12px;
+  border-bottom: 1px solid var(--clr-line-soft);
+  margin-bottom: 12px;
+}
+.bd-head__icon { font-size: 1.1rem; }
+.bd-head__name { font-weight: 800; font-size: 1rem; letter-spacing: -.01em; }
+.bd-head__count {
+  font-size: .72rem; font-weight: 800; color: #7c8794;
+  background: #f4f6f8; border-radius: 999px; padding: 3px 8px;
+}
+.bd-head__hint { margin-left: auto; font-size: .76rem; color: var(--clr-ink-3); }
+
+.bd-port { position: relative; overflow: hidden; height: clamp(380px, 62vh, 640px); }
+.bd-stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.bd-cloud { position: relative; }
+
+/* ── Klebezettel ────────────────────────────────────────── */
+.bd-cn {
+  position: absolute; left: 0; top: 0;
+  display: flex; flex-direction: column; gap: .35em;
+  padding: .62em .78em;
+  border: 1px solid var(--cn-line, transparent);
+  border-radius: 3px;
+  background: var(--cn-fill, #f4f6f8);
+  box-shadow: var(--shadow-note);
+  word-break: break-word; hyphens: auto;
+  transform: rotate(var(--tilt, 0deg));
+  transition: left .35s ease, top .35s ease, background .3s ease,
+              border-color .3s ease, box-shadow .3s ease;
+}
+.bd-cn__text { font-size: 1em; line-height: 1.32; font-weight: 600; }
+
+.bd-cn--chance    { color: var(--clr-green-ink); }
+.bd-cn--risiko    { color: var(--clr-red-ink); }
+.bd-cn--vermutung { color: var(--clr-yellow-ink); }
+
+/* Eigene Karte: gedämpfter Ring, kein zweites Farbsignal. */
+.bd-cn--mine { box-shadow: 0 0 0 2px rgba(28,37,48,0.42), var(--shadow-note); }
+
+.bd-cn__liked {
+  position: absolute; top: -.5em; right: -.4em;
+  font-size: .62em; line-height: 1;
+  padding: .25em .3em; border-radius: 999px;
+  background: #2b3440; color: #fff;
+  box-shadow: 0 2px 5px rgba(28,37,48,0.28);
+}
+
+/* ── Variante C: der Stapel ─────────────────────────────────
+   Zwei zusätzliche „Blätter" hinter der Karte. Bewusst über
+   box-shadow und nicht über ::before/::after: ein Pseudo-Element mit
+   z-index:-1 läge INNERHALB des Stacking-Contexts, den das rotate()
+   der Karte aufmacht — es würde also über der eigenen Kartenfläche
+   landen statt dahinter. Schatten werden dagegen immer hinter dem
+   Hintergrund gezeichnet.
+
+   Je Blatt zwei Schatten: einer ohne Spread (die Fläche), einer mit
+   1 px Spread dahinter (die Kante). Zuerst genannt = weiter vorn. */
+.bd-cn--st1 {
+  box-shadow:
+    5px 6px 0 0 var(--cn-fill), 5px 6px 0 1px var(--cn-line),
+    var(--shadow-note);
+}
+.bd-cn--st2 {
+  box-shadow:
+    5px 6px 0 0 var(--cn-fill),   5px 6px 0 1px var(--cn-line),
+    10px 12px 0 0 var(--cn-fill), 10px 12px 0 1px var(--cn-line),
+    var(--shadow-note);
+}
+.bd-cn--mine.bd-cn--st1 {
+  box-shadow:
+    0 0 0 2px rgba(28,37,48,0.42),
+    5px 6px 0 0 var(--cn-fill), 5px 6px 0 1px var(--cn-line),
+    var(--shadow-note);
+}
+.bd-cn--mine.bd-cn--st2 {
+  box-shadow:
+    0 0 0 2px rgba(28,37,48,0.42),
+    5px 6px 0 0 var(--cn-fill),   5px 6px 0 1px var(--cn-line),
+    10px 12px 0 0 var(--cn-fill), 10px 12px 0 1px var(--cn-line),
+    var(--shadow-note);
+}
+
+/* ── Der Problemfall ────────────────────────────────────────
+   Zwei Karten, an denen die Frage hängt: viel Text mit wenig
+   Zustimmung gegen wenig Text mit viel Zustimmung. */
+.mark .bd-cn--probA, .mark .bd-cn--probB { z-index: 8; }
+.mark .bd-cn--probA::after, .mark .bd-cn--probB::after {
+  content: attr(data-mark);
+  position: absolute; left: -3px; right: -3px; top: -3px; bottom: -3px;
+  border: 2px dashed #2f6df0; border-radius: 6px;
+  pointer-events: none;
+  font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  color: #fff; background: transparent;
+  padding: 2px 0 0 0; text-align: center;
+  text-shadow: 0 1px 3px rgba(0,0,0,.6);
+}
+.mark .bd-cn--probA::after {
+  border-color: #2f6df0;
+  background: linear-gradient(to bottom, rgba(47,109,240,.92) 0 17px, transparent 17px);
+}
+.mark .bd-cn--probB::after {
+  border-color: #12996b;
+  background: linear-gradient(to bottom, rgba(18,153,107,.92) 0 17px, transparent 17px);
+}
+
+/* ── Fußnoten ───────────────────────────────────────────── */
+.sr-note {
+  margin-top: 16px; border-left: 3px solid #343a44; padding: 2px 0 2px 14px;
+  color: #9aa3ae; font-size: .88rem; line-height: 1.6; max-width: 72ch;
+}
+.sr-note b { color: #e7e9ec; font-weight: 700; }
+.sr-verdict {
+  margin-top: 26px; border: 1px solid #2b3038; border-radius: 14px;
+  background: #1a1d22; padding: 18px 20px;
+}
+.sr-verdict h3 { font-size: 1rem; font-weight: 800; margin-bottom: 10px; }
+.sr-verdict ul { list-style: none; display: grid; gap: 9px; }
+.sr-verdict li { font-size: .89rem; line-height: 1.55; color: #b9c0c9; padding-left: 22px; position: relative; }
+.sr-verdict li::before {
+  content: attr(data-k); position: absolute; left: 0; top: 0;
+  font-weight: 900; color: #6d7681; font-size: .8rem;
+}
+.sr-verdict li b { color: #e7e9ec; }
+
+@media (max-width: 640px) {
+  .sr-wrap { padding: 20px 12px 0; }
+  .sr-top { padding: 10px 12px; }
+  .sr-switch { margin-left: 0; width: 100%; }
+  .sr-switch button { flex: 1; padding: 8px 6px; font-size: .78rem; }
+  .sr-switch kbd { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="sr-top">
+  <h1>Reality Check <span>· Zustimmung sichtbar machen</span></h1>
+  <nav class="sr-switch" id="srSwitch">
+    <button data-v="size"  class="on">A · Nur Größe <kbd>1</kbd></button>
+    <button data-v="sat">B · + Sättigung <kbd>2</kbd></button>
+    <button data-v="stack">C · + Sättigung + Stapel <kbd>3</kbd></button>
+  </nav>
+</header>
+
+<div class="sr-wrap">
+  <section class="sr-intro">
+    <h2><b id="srLetter">A</b><span id="srTitle">Nur Größe — der heutige Stand</span></h2>
+    <p id="srLead"></p>
+    <dl class="sr-specs" id="srSpecs"></dl>
+  </section>
+
+  <div class="sr-tools">
+    <span class="sr-tools__lbl">Datenlage</span>
+    <button data-d="full" class="on">Nach der Stunde</button>
+    <button data-d="fresh">Frisches Board</button>
+    <span class="sr-tools__sep"></span>
+    <span class="sr-tools__lbl">Prüfen</span>
+    <button data-t="mark">Problemfall markieren</button>
+    <button data-t="shuffle">⟳ Neu anordnen</button>
+  </div>
+
+  <div class="stage" id="srStage">
+    <div class="bd-surface">
+      <div class="bd-head">
+        <span class="bd-head__icon">🧍</span>
+        <span class="bd-head__name">Persönlich</span>
+        <span class="bd-head__count" id="srCount">15</span>
+        <span class="bd-head__hint">Phase 1 · Post-Its</span>
+      </div>
+      <div class="bd-port" id="srPort">
+        <div class="bd-stage" id="srCloudStage">
+          <div class="bd-cloud" id="srCloud"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="sr-note" id="srNote"></p>
+
+  <section class="sr-verdict">
+    <h3>Worauf es bei der Entscheidung ankommt</h3>
+    <ul>
+      <li data-k="1"><b>Flächenunabhängigkeit.</b> Die zweite Kodierung darf nicht wieder von der Textlänge abhängen. Sättigung und Stapel erfüllen das, ein dickerer Rand oder mehr Schatten nicht — die wachsen mit der Karte mit.</li>
+      <li data-k="2"><b>Eine Zahl, zwei Kanäle.</b> Größe, Sättigung und Stapel kommen hier alle aus demselben normierten Wert (inklusive der <code>LIKE_SPAN_REF</code>-Dämpfung). Käme die Farbe aus den rohen Likes, gäbe es Karten, die groß aber blass sind — und das wäre schlimmer als der heutige Zustand.</li>
+      <li data-k="3"><b>Der Farbton bleibt der Aussage.</b> Grün heißt Chance, egal wie blass. Sättigung ist eine zweite Achse <i>innerhalb</i> der Zettelfarbe, keine vierte Farbe — Regel 1 der Optik bleibt unangetastet.</li>
+      <li data-k="4"><b>Frisches Board.</b> Schalte oben auf „Frisches Board": bei zwei, drei Stimmen insgesamt soll noch fast nichts passieren. Die Dämpfung greift für alle drei Kanäle gleichzeitig — der Stapel bleibt dann von selbst flach.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ═══════════════════════════════════════════════════════════
+     1. Datensatz
+
+     Bewusst so gebaut, dass der Problemfall drinsteckt: Karte
+     „probA" hat viel Text und wenig Zustimmung, „probB" wenig Text
+     und viel. In Variante A ist A trotzdem die größere Fläche —
+     genau das ist die Frage, die dieser Showroom beantworten soll.
+     ═══════════════════════════════════════════════════════════ */
+  var NOTES = [
+    { id:'n01', stance:'risiko', likes:12, text:'Ich merke abends gar nicht mehr, wie viel Zeit weg ist.' },
+    { id:'n02', stance:'risiko', likes:2, prob:'A', text:'Wenn ich durch den Feed scrolle, kommen mir mein Zimmer, mein Sport und mein Körper irgendwie schlechter vor als bei allen anderen — obwohl ich genau weiß, dass die Bilder bearbeitet sind.' },
+    { id:'n03', stance:'chance', likes:9, text:'KI erklärt mir Mathe so lange, bis ich es verstehe.' },
+    { id:'n04', stance:'risiko', likes:7, prob:'B', text:'Ich schlafe schlechter.' },
+    { id:'n05', stance:'chance', likes:5, text:'Ich finde Leute mit demselben Hobby.' },
+    { id:'n06', stance:'vermutung', likes:6, text:'Wahrscheinlich merkt der Algorithmus, wenn es mir schlecht geht — und zeigt mir dann genau das.' },
+    { id:'n07', stance:'risiko', likes:4, text:'Ich schaffe es kaum noch, einen längeren Text am Stück zu lesen, ohne zwischendurch aufs Handy zu gucken.' },
+    { id:'n08', stance:'chance', likes:3, text:'Übersetzen in Sekunden.' },
+    { id:'n09', stance:'vermutung', likes:3, text:'Vielleicht kann ich in ein paar Jahren gar nicht mehr erkennen, ob ein Video echt ist.' },
+    { id:'n10', stance:'chance', likes:2, mine:true, text:'Ich lerne Gitarre über Tutorials.' },
+    { id:'n11', stance:'risiko', likes:2, text:'Gruppenchats hören nie auf.' },
+    { id:'n12', stance:'vermutung', likes:1, text:'Ich glaube, ohne Handy wäre mir am Anfang einfach nur langweilig.' },
+    { id:'n13', stance:'chance', likes:1, liked:true, text:'Sprachnachrichten mit Oma.' },
+    { id:'n14', stance:'risiko', likes:0, text:'Ich checke das Handy schon vor dem Aufstehen.' },
+    { id:'n15', stance:'chance', likes:0, text:'Wenn ich etwas nicht verstehe, kann ich nachts um elf fragen, ohne dass sich jemand genervt fühlt.' }
+  ];
+
+  /* ═══════════════════════════════════════════════════════════
+     2. Die eine Zahl
+
+     strength() ist exakt das, was heute schon in sizeFor() steckt,
+     nur herausgezogen: der normierte Wert 0..1, aus dem die Größe
+     folgt. Alle drei Kanäle hängen daran — das ist der Kern des
+     Vorschlags.
+     ═══════════════════════════════════════════════════════════ */
+  var LIKE_SIZE_MIN = 0.88;
+  var LIKE_SIZE_MAX = 2.20;
+  var LIKE_SPAN_REF = 5;
+
+  function strength(likes, maxLikes) {
+    var l = Math.max(0, Number(likes) || 0);
+    if (maxLikes <= 0 || l <= 0) return 0;
+    return Math.pow(Math.min(l, maxLikes) / maxLikes, 0.65) *
+           Math.min(1, maxLikes / LIKE_SPAN_REF);
+  }
+  function sizeFor(t) { return LIKE_SIZE_MIN + t * (LIKE_SIZE_MAX - LIKE_SIZE_MIN); }
+
+  /* ═══════════════════════════════════════════════════════════
+     3. Die Farbrampe
+
+     Je Zettelfarbe zwei Enden: blass (fast Papier) und satt. Der
+     Farbton bleibt über die ganze Rampe derselbe, nur Sättigung und
+     Helligkeit wandern.
+
+     Das blasse Ende hört bewusst VOR Weiß auf. Ein Zettel ohne
+     Zustimmung soll wie ein Zettel aussehen und nicht wie eine
+     deaktivierte Fläche — und schon gar nicht wie eine
+     Recherche-Karte, die im anderen Fach weiß ist.
+
+     Die Mitte der Rampe liegt ungefähr auf den heutigen Werten
+     (#cdebd0 / #f9cdc8 / #fbe8ad). Der Ist-Zustand wird also nicht
+     verschoben, sondern nach beiden Seiten aufgefächert.
+     ═══════════════════════════════════════════════════════════ */
+  var RAMP = {
+    chance:    { fillP:[237,248,238], fillS:[147,211,160], lineP:[215,236,217], lineS:[111,190,128] },
+    risiko:    { fillP:[253,238,236], fillS:[242,164,154], lineP:[247,222,217], lineS:[232,131,118] },
+    vermutung: { fillP:[254,248,230], fillS:[245,210,113], lineP:[244,233,200], lineS:[223,184,69] }
+  };
+  var FLAT = {  // die heutigen Werte, für Variante A
+    chance:    { fill:'#cdebd0', line:'#a3d6a9' },
+    risiko:    { fill:'#f9cdc8', line:'#eda79f' },
+    vermutung: { fill:'#fbe8ad', line:'#e8cf82' }
+  };
+
+  function mix(a, b, t) {
+    return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * t) + ',' +
+                    Math.round(a[1] + (b[1] - a[1]) * t) + ',' +
+                    Math.round(a[2] + (b[2] - a[2]) * t) + ')';
+  }
+
+  /* Stapelstufen. Bewusst grob: drei Zustände, nicht zwölf. Ein
+     Stapel beantwortet „viel oder wenig", keine Rangfolge — die
+     Feinauflösung leisten Größe und Sättigung. */
+  function sheets(t) { return t >= 0.72 ? 2 : t >= 0.40 ? 1 : 0; }
+
+  /* ═══════════════════════════════════════════════════════════
+     4. Packung — 1:1 aus js/board.js
+     ═══════════════════════════════════════════════════════════ */
+  var CLOUD_PAD = 12, CLOUD_MIN_W = 380, CLOUD_MAX_W = 2400;
+  var CLOUD_ASPECT_MIN = 0.35, CLOUD_ASPECT_MAX = 1.60;
+  var TILTS = [-1.8, 1.4, -0.7, 2.2, -2.4, 0.9];
+
+  function tiltFor(id, seed) {
+    var h = 0, s = String(id);
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 9973;
+    return TILTS[(h + seed) % TILTS.length];
+  }
+  function overlaps(a, b, gap) {
+    return !(a.x + a.w + gap <= b.x || b.x + b.w + gap <= a.x ||
+             a.y + a.h + gap <= b.y || b.y + b.h + gap <= a.y);
+  }
+  function cloudWidth(items, aspect, gap) {
+    var area = 0, widest = 0;
+    items.forEach(function (it) { area += it.bw * it.bh; widest = Math.max(widest, it.bw); });
+    var ideal = Math.sqrt(area * 2.1 / aspect);
+    var need  = items.length > 1 ? widest * 3 + 4 * gap : widest + 2 * gap;
+    var w = Math.max(need, Math.min(CLOUD_MAX_W, Math.max(CLOUD_MIN_W, ideal)));
+    return Math.round(w / 20) * 20;
+  }
+  function findSpot(w, h, placed, boxW, ratio, seed, gap) {
+    var cx = boxW / 2, maxX = Math.max(0, boxW - w);
+    var mid = Math.min(maxX, Math.max(0, cx - w / 2));
+    if (!placed.length) return { x: mid, y: -h / 2, w: w, h: h };
+    var off = seed * 0.9;
+    for (var i = 1; i <= 20000; i++) {
+      var a = off + i * 0.07, r = 1.6 * (i * 0.07);
+      var x = cx + r * Math.cos(a) - w / 2;
+      var y = r * ratio * Math.sin(a) - h / 2;
+      if (x < 0 || x > maxX) continue;
+      var cand = { x: x, y: y, w: w, h: h }, hit = false;
+      for (var k = 0; k < placed.length; k++) {
+        if (overlaps(cand, placed[k], gap)) { hit = true; break; }
+      }
+      if (!hit) return cand;
+    }
+    var bottom = placed.reduce(function (m, p) { return Math.max(m, p.y + p.h); }, 0);
+    return { x: mid, y: bottom + gap, w: w, h: h };
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     5. Zustand und Zeichnen
+     ═══════════════════════════════════════════════════════════ */
+  var state = { variant: 'size', data: 'full', mark: false, seed: 0 };
+
+  var cloud = document.getElementById('srCloud');
+  var port  = document.getElementById('srPort');
+  var stage = document.getElementById('srCloudStage');
+
+  function currentNotes() {
+    return NOTES.map(function (n) {
+      var o = {};
+      for (var k in n) o[k] = n[k];
+      // Frisches Board: dieselben Karten, aber erst ein paar Stimmen.
+      if (state.data === 'fresh') o.likes = Math.round(n.likes / 4);
+      return o;
+    }).sort(function (a, b) {
+      return (b.likes - a.likes) || String(a.id).localeCompare(String(b.id));
+    });
+  }
+
+  function render() {
+    var notes = currentNotes();
+    var maxLikes = notes.reduce(function (m, n) { return Math.max(m, n.likes); }, 0);
+    var v = state.variant;
+    // Der Stapel ragt nach rechts unten heraus und braucht mehr Luft
+    // zwischen den Zetteln — sonst legt sich ein Blatt über den
+    // Nachbarn. Das ist ein echter Preis der Variante, kein Detail.
+    var gap = v === 'stack' ? 17 : 10;
+
+    document.getElementById('srCount').textContent = notes.length;
+
+    cloud.innerHTML = notes.map(function (n) {
+      var t    = strength(n.likes, maxLikes);
+      var size = sizeFor(t);
+      var maxW = Math.round(150 + (size - LIKE_SIZE_MIN) * 145);
+
+      var fill, line;
+      if (v === 'size') {
+        fill = FLAT[n.stance].fill; line = FLAT[n.stance].line;
+      } else {
+        var r = RAMP[n.stance];
+        fill = mix(r.fillP, r.fillS, t); line = mix(r.lineP, r.lineS, t);
+      }
+
+      var cls = ['bd-cn', 'bd-cn--' + n.stance];
+      if (n.mine) cls.push('bd-cn--mine');
+      if (v === 'stack') { var s = sheets(t); if (s) cls.push('bd-cn--st' + s); }
+      if (n.prob) cls.push('bd-cn--prob' + n.prob);
+
+      var mark = n.prob === 'A' ? 'viel Text · ' + n.likes + '×'
+               : n.prob === 'B' ? 'wenig Text · ' + n.likes + '×' : '';
+
+      return '<article class="' + cls.join(' ') + '" data-id="' + n.id + '"' +
+             ' data-mark="' + mark + '"' +
+             ' style="font-size:' + size.toFixed(2) + 'rem;max-width:' + maxW + 'px;' +
+             '--cn-fill:' + fill + ';--cn-line:' + line + '">' +
+             (n.liked ? '<span class="bd-cn__liked">👍</span>' : '') +
+             '<p class="bd-cn__text">' + n.text + '</p>' +
+             '</article>';
+    }).join('');
+
+    layout(gap);
+  }
+
+  function layout(gap) {
+    var cards = Array.prototype.slice.call(cloud.children);
+    if (!cards.length) return;
+
+    var portW = port.clientWidth  || 900;
+    var portH = port.clientHeight || 520;
+
+    // Gepackt wird im Format des Feldes — sonst läge die Wolke als
+    // flaches Band in einem hohen Fenster.
+    var aspect = Math.min(CLOUD_ASPECT_MAX,
+                 Math.max(CLOUD_ASPECT_MIN,
+                 Math.round((portH / portW) / 0.05) * 0.05));
+
+    cloud.style.width = CLOUD_MAX_W + 'px';   // frei messen lassen
+
+    var items = cards.map(function (el) {
+      var tilt = tiltFor(el.dataset.id, state.seed);
+      el.style.setProperty('--tilt', tilt + 'deg');
+      var w = el.offsetWidth, h = el.offsetHeight;
+      // Achsenparalleles Rechteck der GEDREHTEN Karte: ein um 2,4°
+      // gedrehter breiter Zettel ist gut 13 px höher als der gerade.
+      var rad = Math.abs(tilt) * Math.PI / 180;
+      var c = Math.cos(rad), s = Math.sin(rad);
+      return { el: el, w: w, h: h, bw: w * c + h * s, bh: w * s + h * c };
+    });
+
+    var boxW = cloudWidth(items, aspect, gap);
+    var placed = [];
+    items.forEach(function (it) {
+      var spot = findSpot(it.bw, it.bh, placed, boxW, aspect, state.seed, gap);
+      placed.push(spot);
+      it.spot = spot;
+    });
+
+    var minY = placed.reduce(function (m, p) { return Math.min(m, p.y); }, Infinity);
+    var maxY = placed.reduce(function (m, p) { return Math.max(m, p.y + p.h); }, -Infinity);
+    var cloudH = maxY - minY + 2 * CLOUD_PAD;
+
+    items.forEach(function (it) {
+      // Ohne Transition setzen: sonst fliegt beim ersten Zeichnen
+      // jede Karte aus der linken oberen Ecke an ihren Platz.
+      var fresh = !it.el.dataset.placed;
+      if (fresh) it.el.style.transition = 'none';
+      // Das ungedrehte Kästchen mittig im gedrehten Rechteck.
+      it.el.style.left = Math.round(it.spot.x + (it.bw - it.w) / 2) + 'px';
+      it.el.style.top  = Math.round(it.spot.y - minY + CLOUD_PAD + (it.bh - it.h) / 2) + 'px';
+      if (fresh) {
+        it.el.offsetWidth;                 // Stil erzwingen
+        it.el.style.transition = '';
+        it.el.dataset.placed = '1';
+      }
+    });
+
+    cloud.style.width  = boxW + 'px';
+    cloud.style.height = cloudH + 'px';
+
+    // Alles zeigen — derselbe Anfangsmaßstab wie im Board. Bei 1
+    // gedeckelt: über 1 hinaus wären die Zettel größer als im echten
+    // Board, und dann verglichen wir eine Schriftgröße, die es nicht gibt.
+    var fit = Math.min(1, (portW - 8) / boxW, (portH - 8) / cloudH);
+    var x = (portW - boxW * fit) / 2;
+    var y = (portH - cloudH * fit) / 2;
+    stage.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) scale(' + fit.toFixed(4) + ')';
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     6. Begleittexte je Variante
+     ═══════════════════════════════════════════════════════════ */
+  function rampHTML(t) {
+    var stances = ['chance', 'risiko', 'vermutung'];
+    return '<div class="sr-ramp">' + stances.map(function (s) {
+      var r = RAMP[s], cells = '';
+      for (var i = 0; i <= 5; i++) {
+        var f = t ? mix(r.fillP, r.fillS, i / 5) : FLAT[s].fill;
+        cells += '<i style="background:' + f + '"></i>';
+      }
+      return '<div class="sr-ramp__row">' + cells + '</div>';
+    }).join('') + '</div><div class="sr-ramp__lbl"><span>keine Zustimmung</span><span>die meiste</span></div>';
+  }
+
+  var COPY = {
+    size: {
+      letter: 'A', title: 'Nur Größe — der heutige Stand',
+      lead: 'Schriftgrad 0,88–2,20 rem aus der Zustimmung, Platzierung von innen nach außen: die meistgetragene Karte liegt in der Mitte. Ein Kanal, und der teilt sich die Fläche mit der Textlänge. Genau da entsteht das Problem — schalte „Problemfall markieren" ein.',
+      specs: [
+        ['Kanäle', 'Schriftgrad · Platz in der Wolke'],
+        ['Unabhängig von der Textlänge?', '<b style="color:#e8927c">Nein.</b> Die Fläche einer Karte ist Schriftgrad × Textmenge. Eine lange Karte mit 2 Stimmen schlägt eine kurze mit 7.'],
+        ['Zettelfläche', rampHTML(false)]
+      ],
+      note: '<b>Der Problemfall:</b> Die blau markierte Karte hat <b>2</b> Zustimmungen, die grün markierte <b>7</b>. Trotzdem belegt die blaue mehr Fläche und zieht mehr Blick auf sich — obwohl der Kurs die grüne dreieinhalbmal so stark trägt. Die Größe stimmt formal (Schriftgrad), aber gelesen wird die Fläche.'
+    },
+    sat: {
+      letter: 'B', title: '+ Sättigung — eine zweite Achse in derselben Farbe',
+      lead: 'Zusätzlich zur Größe wandert die Zettelfarbe von blass nach satt. Der Farbton bleibt: ein blasser grüner Zettel ist immer noch grün, die Aussage Chance/Risiko/Vermutung wird nicht angetastet. Die Sättigung hängt an derselben Zahl wie der Schriftgrad — die beiden Kanäle können also nie widersprüchlich stehen.',
+      specs: [
+        ['Kanäle', 'Schriftgrad · Platz · <b>Sättigung</b>'],
+        ['Unabhängig von der Textlänge?', '<b style="color:#8fd0a0">Ja.</b> Ein blasser und ein satter Zettel liegen bei jeder Größe gleich weit auseinander.'],
+        ['Auflösung', 'Stufenlos. Auch der Unterschied zwischen 5 und 7 Stimmen ist noch sichtbar.'],
+        ['Zettelfläche', rampHTML(true)]
+      ],
+      note: '<b>Jetzt lesbar:</b> Die blau markierte Karte ist immer noch die größere Fläche — aber sie ist deutlich blasser als die kleine grün markierte. Der Widerspruch löst sich auf, ohne dass eine Zahl auf der Karte steht. Beachte auch das <b>blasse Ende</b>: es hört vor Weiß auf, damit ein Zettel ohne Zustimmung nicht wie deaktiviert aussieht.'
+    },
+    stack: {
+      letter: 'C', title: '+ Stapel — „da hängen mehrere dran"',
+      lead: 'Auf die Sättigung kommt ein drittes Signal: stark getragene Karten sehen aus wie mehrere Zettel übereinander. Das ist die metaphorisch stimmigste Variante — auf einem echten Board klebt man einen zweiten Zettel dazu, wenn man dasselbe denkt. Der Preis steht in der Spalte rechts.',
+      specs: [
+        ['Kanäle', 'Schriftgrad · Platz · Sättigung · <b>Blätter</b>'],
+        ['Auflösung', '<b>Grob — 3 Stufen.</b> 0, 1 oder 2 zusätzliche Blätter. Beantwortet „viel oder wenig", keine Rangfolge.'],
+        ['Preis', 'Der Stapel ragt nach rechts unten heraus. Der Abstand zwischen den Zetteln muss von 10 auf 17 px — die Wolke wird spürbar größer und der Überblick-Maßstab kleiner.'],
+        ['Zettelfläche', rampHTML(true)]
+      ],
+      note: '<b>Was zu prüfen ist:</b> Ob die Blätter bei kleinen Karten überhaupt noch etwas aussagen — und ob die Wolke insgesamt unruhig wird, wenn ein Drittel der Zettel gestapelt ist. Vergleiche den Überblick-Maßstab direkt mit B: dieselben 15 Karten, aber mehr Luft dazwischen. Auf einem Handy geht das auf Kosten der Lesbarkeit.'
+    },
+    warn: ['Achtung', 'Der Stapel lässt sich nicht mit ::before/::after bauen — das rotate() der Karte macht einen Stacking-Context auf, in dem z-index:-1 <i>über</i> der eigenen Fläche landet. Deshalb box-shadow, und deshalb keine eigene Neigung je Blatt.']
+  };
+
+  function paint() {
+    var c = COPY[state.variant];
+    document.getElementById('srLetter').textContent = c.letter;
+    document.getElementById('srTitle').textContent  = c.title;
+    document.getElementById('srLead').textContent   = c.lead;
+
+    var specs = c.specs.slice();
+    if (state.variant === 'stack') specs.push(COPY.warn);
+
+    document.getElementById('srSpecs').innerHTML = specs.map(function (s, i) {
+      var warn = (state.variant === 'stack' && i === specs.length - 1) ? ' sr-spec--warn' : '';
+      return '<div class="sr-spec' + warn + '"><dt>' + s[0] + '</dt><dd>' + s[1] + '</dd></div>';
+    }).join('');
+
+    document.getElementById('srNote').innerHTML = c.note;
+
+    Array.prototype.forEach.call(document.querySelectorAll('#srSwitch button'), function (b) {
+      b.classList.toggle('on', b.dataset.v === state.variant);
+    });
+    document.getElementById('srStage').classList.toggle('mark', state.mark);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     7. Bedienung
+     ═══════════════════════════════════════════════════════════ */
+  document.getElementById('srSwitch').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-v]');
+    if (!b) return;
+    state.variant = b.dataset.v;
+    paint(); render();
+  });
+
+  document.querySelector('.sr-tools').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.d) {
+      state.data = b.dataset.d;
+      Array.prototype.forEach.call(this.querySelectorAll('button[data-d]'), function (x) {
+        x.classList.toggle('on', x.dataset.d === state.data);
+      });
+      render();
+    } else if (b.dataset.t === 'mark') {
+      state.mark = !state.mark;
+      b.classList.toggle('on', state.mark);
+      document.getElementById('srStage').classList.toggle('mark', state.mark);
+    } else if (b.dataset.t === 'shuffle') {
+      state.seed++;
+      render();
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var map = { '1': 'size', '2': 'sat', '3': 'stack' };
+    if (map[e.key]) { state.variant = map[e.key]; paint(); render(); }
+  });
+
+  var rz;
+  window.addEventListener('resize', function () {
+    clearTimeout(rz);
+    rz = setTimeout(function () { layout(state.variant === 'stack' ? 17 : 10); }, 150);
+  });
+
+  paint();
+  // Fonts erst abwarten: sonst wird mit der Fallback-Schrift gemessen
+  // und die Wolke sitzt nach dem Nachladen von Inter schief.
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+  else render();
+})();
+</script>
+</body>
+</html>

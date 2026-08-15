@@ -657,8 +657,16 @@
      Auf der Karte steht nur der Text. Kein Kategorie-Icon (die
      Kategorie ist der Reiter darüber), keine Themen-Symbole, kein
      Name, keine Zahl, keine Knöpfe — das alles steht im Detail, einen
-     Tipp entfernt. Wie stark eine Aussage getragen wird, sagt die
-     Größe der Karte, nicht eine Ziffer daneben.
+     Tipp entfernt. Wie stark eine Aussage getragen wird, sagen drei
+     Kanäle und keine Ziffer: die Größe der Karte, die Sättigung ihrer
+     Farbe und der Stapel unter ihr.
+
+     Drei Kanäle für dieselbe Zahl, weil einer davon lügt: die Größe
+     ist ein Schriftgrad, gelesen wird aber die Fläche — und in die
+     geht die Textlänge mit ein. Eine lange Karte mit zwei
+     Zustimmungen belegt mehr Platz als eine kurze mit sieben. Farbe
+     und Stapel sind dagegen von der Textmenge unabhängig und
+     korrigieren genau das.
 
      Eine einzige Ausnahme: hat man selbst zugestimmt, sitzt ein
      kleiner Daumen in der Ecke. Ohne den weiß niemand mehr, wo er
@@ -669,7 +677,14 @@
   const LIKE_SIZE_MAX = 2.20;   // rem — Karte mit den meisten
   const LIKE_SPAN_REF = 5;      // ab so vielen Zustimmungen ist die Spanne voll
 
-  /* Größe aus der Zustimmung.
+  /* ── Die eine Zahl ───────────────────────────────────────
+     Wie stark eine Aussage getragen wird, steht auf DREI Kanälen:
+     Größe, Sättigung und Stapel. Alle drei hängen an diesem einen
+     normierten Wert zwischen 0 und 1 — und das ist keine Sparsamkeit,
+     sondern der Punkt. Käme die Farbe aus den rohen Zustimmungen und
+     die Größe aus einer gedämpften Kurve, gäbe es Karten, die groß
+     aber blass sind. Ein Widerspruch zwischen zwei Kanälen derselben
+     Größe ist schlimmer als ein Kanal weniger.
 
      Zwei Regeln stecken drin. Erstens ein Exponent unter 1: der Sprung
      von 0 auf 1 Zustimmung soll sichtbar sein, der von 8 auf 9 kaum
@@ -679,16 +694,74 @@
      wäre auf einem frischen Board die erste Karte mit einer einzigen
      Zustimmung sofort doppelt so groß wie alle anderen — eine Aussage
      über den Kurs, die eine Stimme nicht trägt. Erst ab ~5
-     Zustimmungen auf der Spitzenkarte wird die volle Spanne genutzt. */
-  function sizeFor(likes, maxLikes) {
+     Zustimmungen auf der Spitzenkarte wird die volle Spanne genutzt.
+     Weil alle drei Kanäle daran hängen, greift diese Dämpfung auch
+     für Farbe und Stapel: auf einem frischen Board bleibt die Wolke
+     von selbst ruhig.                                                */
+  function strength(likes, maxLikes) {
     const l = Math.max(0, Number(likes) || 0);
-    if (maxLikes <= 0 || l <= 0) return LIKE_SIZE_MIN;
-    const span = (LIKE_SIZE_MAX - LIKE_SIZE_MIN) * Math.min(1, maxLikes / LIKE_SPAN_REF);
-    return LIKE_SIZE_MIN + Math.pow(Math.min(l, maxLikes) / maxLikes, 0.65) * span;
+    if (maxLikes <= 0 || l <= 0) return 0;
+    return Math.pow(Math.min(l, maxLikes) / maxLikes, 0.65) *
+           Math.min(1, maxLikes / LIKE_SPAN_REF);
   }
+
+  function sizeFor(t) {
+    return LIKE_SIZE_MIN + t * (LIKE_SIZE_MAX - LIKE_SIZE_MIN);
+  }
+
+  /* ── Kanal 2: die Sättigung ──────────────────────────────
+     Je Zettelfarbe zwei Enden, dazwischen wird linear gemischt. Der
+     Farbton bleibt über die ganze Rampe derselbe — nur Sättigung und
+     Helligkeit wandern. Ein blasser grüner Zettel ist immer noch eine
+     Chance; die Aussage wird nicht angetastet.
+
+     Warum die Werte hier stehen und nicht im Stylesheet: zwischen den
+     Enden muss gerechnet werden, und dafür muss das Skript sie kennen.
+     Derselbe Grund, aus dem auch TILTS hier steht. In board.css bleibt
+     die Mitte der Rampe als Rückfall für Karten ohne Rampe stehen
+     (Recherche-Raster, Notfall-Liste) — wer hier schraubt, sollte
+     dort mitziehen.
+
+     Das blasse Ende hört bewusst VOR Weiß auf. Ein Zettel ohne
+     Zustimmung soll wie ein Zettel aussehen und nicht wie eine
+     ausgegraute Fläche — und schon gar nicht wie eine Recherche-Karte,
+     die im anderen Fach weiß ist.                                    */
+  const STANCE_RAMP = {
+    chance:    { fillP: [237,248,238], fillS: [147,211,160],
+                 lineP: [215,236,217], lineS: [111,190,128] },
+    risiko:    { fillP: [253,238,236], fillS: [242,164,154],
+                 lineP: [247,222,217], lineS: [232,131,118] },
+    vermutung: { fillP: [254,248,230], fillS: [245,210,113],
+                 lineP: [244,233,200], lineS: [223,184,69]  }
+  };
+
+  function mixRGB(a, b, t) {
+    return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * t) + ',' +
+                    Math.round(a[1] + (b[1] - a[1]) * t) + ',' +
+                    Math.round(a[2] + (b[2] - a[2]) * t) + ')';
+  }
+
+  /* ── Kanal 3: der Stapel ─────────────────────────────────
+     Anzahl der Blätter unter der Karte. Bewusst grob — drei Zustände,
+     nicht zwölf: der Stapel beantwortet „viel oder wenig", keine
+     Rangfolge. Die Feinauflösung leisten Größe und Sättigung, die
+     stufenlos laufen. Gezeichnet wird er in board.css (--st1/--st2). */
+  function sheetsFor(t) { return t >= 0.72 ? 2 : t >= 0.40 ? 1 : 0; }
 
   function cardHTML(note, opts) {
     const o = opts || {};
+
+    /* Die drei Kanäle gelten NUR in der Wolke, also nur dort, wo eine
+       Stärke mitkommt. Eine Recherche bekommt weder Größe noch
+       Sättigung noch Blätter: sie steht im festen Raster, ist weiß und
+       bekommt gar keine Zustimmung — eine Quelle trägt oder trägt
+       nicht, das ist keine Mehrheitsfrage. Ohne --cn-fill greift in
+       board.css überall der Rückfall, und die Blätter sind
+       transparent. */
+    const hasStrength = typeof o.strength === 'number';
+    const t    = hasStrength ? o.strength : 0;
+    const size = hasStrength ? sizeFor(t) : 0;
+
     /* Größere Karten dürfen auch breiter werden, sonst wird eine
        2-rem-Karte zu einem schmalen hohen Turm — und kleine bleiben
        schmal, damit sie sich am Rand zwischen die großen fügen.
@@ -698,9 +771,17 @@
        skaliert. Eine Karte, die sich an die Gerätebreite klemmt, würde
        auf dem Handy die ganze Spalte füllen — dann bleibt der Spirale
        kein Platz mehr und die Wolke wird zum Stapel. */
-    const style = o.size
-      ? ` style="font-size:${o.size.toFixed(2)}rem;max-width:${Math.round(150 + (o.size - LIKE_SIZE_MIN) * 145)}px"`
-      : '';
+    let style = '';
+    if (hasStrength) {
+      const ramp = STANCE_RAMP[note.stance] || STANCE_RAMP.vermutung;
+      style = ` style="font-size:${size.toFixed(2)}rem` +
+              `;max-width:${Math.round(150 + (size - LIKE_SIZE_MIN) * 145)}px` +
+              `;--cn-fill:${mixRGB(ramp.fillP, ramp.fillS, t)}` +
+              `;--cn-line:${mixRGB(ramp.lineP, ramp.lineS, t)}"`;
+    }
+
+    // Die Blätter unter der Karte. Nur in der Wolke, siehe oben.
+    const sheets = hasStrength ? sheetsFor(t) : 0;
 
     const hint = note.is_mine
       ? 'Antippen: deine Karte ansehen, ändern oder löschen'
@@ -715,7 +796,7 @@
     // Recherche wäre er ein Versprechen, das der Doppeltipp nicht hält.
     const liked = !!note.liked_by_me && note.kind !== 'fakt';
 
-    return `<article class="bd-cn bd-cn--${esc(note.stance)}${note.is_mine ? ' bd-cn--mine' : ''}${liked ? ' bd-cn--liked' : ''}"
+    return `<article class="bd-cn bd-cn--${esc(note.stance)}${note.is_mine ? ' bd-cn--mine' : ''}${liked ? ' bd-cn--liked' : ''}${sheets ? ` bd-cn--st${sheets}` : ''}"
              data-note="${esc(note.id)}"${style}
              tabindex="0" title="${hint}">
         ${liked ? '<span class="bd-cn__liked" title="Du hast zugestimmt">👍</span>' : ''}
@@ -872,7 +953,7 @@
       `<div class="bd-port${slide}" id="bdPort">
          <div class="bd-stage" id="bdStage">
            <div class="bd-cloud" id="bdCloud">${inCat.map(n => cardHTML(n, {
-             size: sizeFor(Number(n.likes || 0), maxLikes)
+             strength: strength(Number(n.likes || 0), maxLikes)
            })).join('')}</div>
          </div>
        </div>
@@ -916,7 +997,28 @@
      den Bildschirm passt, entscheidet danach die Lupe (fitView) — und
      zur Not die zwei Finger.                                          */
 
-  const CLOUD_GAP   = 10;     // Sichtabstand zwischen zwei Zetteln
+  /* Sichtabstand zwischen zwei Zetteln. Von 10 auf 17 gegangen, als der
+     Stapel dazukam: die Blätter liegen bis zu 10/12 px nach rechts
+     unten versetzt und ragen damit über die gemessene Karte hinaus.
+     Mit den alten 10 px legte sich das unterste Blatt einer stark
+     getragenen Karte über den Nachbarn — und ausgerechnet die
+     wichtigsten Karten sahen aus wie ein Fehler. Der Preis ist eine
+     etwas größere Wolke und damit ein kleinerer Überblick-Maßstab. */
+  const CLOUD_GAP   = 17;
+
+  /* Wie weit der Stapel über die gemessene Karte hinausragt. Die
+     Blätter liegen nach rechts unten versetzt (10/12 px plus 1 px
+     Kante, siehe --st2 in board.css), und offsetWidth/offsetHeight
+     kennen sie nicht — Schatten zählen nicht zur Elementgröße.
+
+     Zwei Stellen brauchen das: der Abstand oben (CLOUD_GAP liegt
+     bewusst darüber, sonst schöbe sich ein Blatt über den Nachbarn)
+     und der Zuschnitt der Tafel ganz unten in layoutCloud. Ohne den
+     schnitte das Fenster den Randkarten ihr unterstes Blatt ab —
+     die Tafel wird eng auf die Karten zugeschnitten, und der Rest
+     liegt außerhalb. */
+  const SHEET_REACH_X = 12;
+  const SHEET_REACH_Y = 14;
   const CLOUD_PAD   = 12;     // Luft zwischen Wolke und Fensterkante
   const CLOUD_MIN_W = 380;    // schmalste virtuelle Tafel
   const CLOUD_MAX_W = 2400;   // breiteste — darüber wächst sie in die Höhe
@@ -1098,9 +1200,11 @@
 
     // Die Tafel auf ihren Inhalt zuschneiden — daraus rechnet die Lupe
     // ihren Maßstab. +2 px gegen Rundungsreste, damit keine Karte in
-    // der letzten Zeile neu umbricht.
-    const w = Math.max(1, Math.round(maxX - minX) + 2);
-    const h = Math.max(1, Math.round(maxY - minY) + 2);
+    // der letzten Zeile neu umbricht; dazu der Überstand des Stapels,
+    // der rechts und unten über die gemessenen Karten hinausragt und
+    // sonst am Fensterrand abgeschnitten würde.
+    const w = Math.max(1, Math.round(maxX - minX) + 2 + SHEET_REACH_X);
+    const h = Math.max(1, Math.round(maxY - minY) + 2 + SHEET_REACH_Y);
     box.style.width  = w + 'px';
     box.style.height = h + 'px';
     return { w, h };
