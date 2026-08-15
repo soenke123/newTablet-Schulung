@@ -15,46 +15,54 @@
 </head>
 <body>
 
-<!-- ── Kopf ──────────────────────────────────────────────── -->
+<!-- ── Kopf ──────────────────────────────────────────────────
+     Alles, was dauerhaft sichtbar sein muss, steht in EINER Zeile:
+     Titel, Phasen, Ansichtswechsel. Was nur manchmal gebraucht wird —
+     der Auftrag der Phase und der eigene Kontingentstand — ist einen
+     Klick entfernt (? bzw. der Plus-Knopf). Der gewonnene Platz gehört
+     der Wolke; die stand vorher unter zwei Leisten und einem
+     Fließtext. -->
 <header class="bd-head">
   <a class="bd-hub-btn" href="../index.html">← Hub</a>
   <div class="bd-head__title">
     <h1>🧭 Reality Check</h1>
     <p class="bd-head__sub" id="bdCourse">…</p>
   </div>
+
+  <!-- ── Phasen ────────────────────────────────────────────
+       Zeigt nicht nur an, wo der Kurs steht, sondern schaltet auch um:
+       Phase 1 zeigt die Post-Its, Phase 2 die Recherchen. Was noch
+       nicht freigeschaltet ist, bleibt gesperrt. Phase 3 hat keinen
+       eigenen Inhalt — sie ist ein Zustand, kein Fach — und ist
+       deshalb ein <div> und kein Knopf.
+       Nur Nummer und Name: in der Kopfzeile ist kein Platz für
+       Kartenzahlen, und die Frage „wie viele liegen da?" beantwortet
+       der Bereichs-Wechsler ohnehin genauer. -->
+  <div class="bd-phases" id="bdPhases" hidden>
+    <button type="button" class="bd-phase" data-phase="1">
+      <span class="bd-phase__no">1</span>
+      <span class="bd-phase__name">Sammeln</span>
+    </button>
+    <button type="button" class="bd-phase" data-phase="2">
+      <span class="bd-phase__no">2</span>
+      <span class="bd-phase__name">Recherchieren</span>
+    </button>
+    <div class="bd-phase bd-phase--static" data-phase="3">
+      <span class="bd-phase__no">3</span>
+      <span class="bd-phase__name">Besprechen</span>
+    </div>
+    <button type="button" class="bd-phasehelp" id="bdPhaseHelp"
+            aria-label="Auftrag der aktuellen Phase ansehen"
+            title="Was ist gerade zu tun?">?</button>
+  </div>
+
   <div class="bd-head__right">
-    <div class="bd-quota" id="bdQuota"></div>
     <div class="bd-viewswitch" id="bdViewSwitch" hidden>
       <button type="button" data-view="board" class="active">Board</button>
       <button type="button" data-view="table">Tabelle</button>
     </div>
   </div>
 </header>
-
-<!-- ── Phasen ────────────────────────────────────────────────
-     Zeigt nicht nur an, wo der Kurs steht, sondern schaltet auch um:
-     Phase 1 zeigt die Post-Its, Phase 2 die Recherchen. Was noch nicht
-     freigeschaltet ist, bleibt gesperrt. Phase 3 hat keinen eigenen
-     Inhalt — sie ist ein Zustand, kein Fach — und ist deshalb ein
-     <div> und kein Knopf. -->
-<div class="bd-phases" id="bdPhases" hidden>
-  <button type="button" class="bd-phase" data-phase="1">
-    <span class="bd-phase__no">1</span>
-    <span class="bd-phase__name">Sammeln</span>
-    <span class="bd-phase__what">Post-Its</span>
-    <span class="bd-phase__count"></span>
-  </button>
-  <button type="button" class="bd-phase" data-phase="2">
-    <span class="bd-phase__no">2</span>
-    <span class="bd-phase__name">Recherchieren</span>
-    <span class="bd-phase__what">Recherchen</span>
-    <span class="bd-phase__count"></span>
-  </button>
-  <div class="bd-phase bd-phase--static" data-phase="3">
-    <span class="bd-phase__no">3</span>
-    <span class="bd-phase__name">Besprechen</span>
-  </div>
-</div>
 
 <!-- ── Admin-Leiste ──────────────────────────────────────── -->
 <div class="bd-adminbar" id="bdAdminBar" hidden>
@@ -64,9 +72,6 @@
   <button type="button" id="bdPhaseNext" class="bd-btn">Nächste Phase ▶</button>
   <button type="button" id="bdReset" class="bd-btn bd-btn--danger">Board zurücksetzen</button>
 </div>
-
-<!-- ── Hinweiszeile (Auftrag der aktuellen Phase) ─────────── -->
-<p class="bd-hint" id="bdHint" hidden></p>
 
 <!-- ── Inhalt ────────────────────────────────────────────── -->
 <main class="bd-main">
@@ -162,6 +167,26 @@
       <button type="button" id="bdDetailDel"   class="bd-btn bd-btn--danger" hidden>🗑️ Löschen</button>
       <button type="button" id="bdDetailEdit"  class="bd-btn" hidden>✏️ Bearbeiten</button>
       <button type="button" id="bdDetailClose" class="bd-btn bd-btn--ghost">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Auftrag der Phase ─────────────────────────────────────
+     Der Text stand früher dauerhaft als Fließzeile über dem Board und
+     kostete dort Platz, den die Wolke besser gebraucht hat — gelesen
+     wird er ohnehin genau zweimal: wenn man das Board öffnet und wenn
+     die Lehrkraft weiterschaltet. Genau dann kommt er jetzt, und über
+     das ? daneben so oft man will. -->
+<div class="bd-modal-backdrop" id="bdPhaseInfo" hidden>
+  <div class="bd-modal bd-modal--phase" role="dialog" aria-modal="true" aria-labelledby="bdPhaseInfoTitle">
+    <div class="bd-phaseinfo__head">
+      <span class="bd-phaseinfo__no" id="bdPhaseInfoNo">1</span>
+      <h2 id="bdPhaseInfoTitle">Sammeln</h2>
+    </div>
+    <p id="bdPhaseInfoText"></p>
+    <p class="bd-phaseinfo__note" id="bdPhaseInfoNote" hidden></p>
+    <div class="bd-modal__actions">
+      <button type="button" id="bdPhaseInfoOk" class="bd-btn">Alles klar</button>
     </div>
   </div>
 </div>

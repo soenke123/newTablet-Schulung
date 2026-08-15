@@ -88,14 +88,18 @@ body {
    der im dunklen Kleid genügte, verschwindet hier einfach. */
 :focus-visible { outline: 2px solid var(--clr-accent); outline-offset: 2px; }
 
-/* ── Kopf ─────────────────────────────────────────────── */
+/* ── Kopf ───────────────────────────────────────────────
+   Eine Zeile für alles, was dauerhaft dastehen muss: Titel, Phasen,
+   Ansichtswechsel. Vorher waren es drei Blöcke übereinander (Kopf,
+   Phasenleiste, Hinweistext) — auf einem Tablet blieb darunter für
+   die Wolke kaum ein Streifen. */
 .bd-head {
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  padding: 14px 18px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 12px 18px;
   background: var(--clr-chrome);
   border-bottom: 1px solid var(--clr-line);
 }
-.bd-head__title { flex: 1 1 240px; }
+.bd-head__title { flex: 1 1 190px; }
 .bd-head h1 {
   font-family: var(--font-display); font-size: 1.2rem; font-weight: 800;
   letter-spacing: -.01em; color: var(--clr-ink);
@@ -109,9 +113,6 @@ body {
   border: 1px solid var(--clr-line); font-weight: 600; font-size: .88rem;
 }
 .bd-hub-btn:hover { background: var(--clr-surface); color: var(--clr-ink); }
-
-.bd-quota { font-size: .85rem; color: var(--clr-ink-3); text-align: right; line-height: 1.45; }
-.bd-quota strong { color: var(--clr-ink); font-weight: 700; }
 
 .bd-viewswitch { display: flex; border: 1px solid var(--clr-line); border-radius: 8px; overflow: hidden; }
 .bd-viewswitch button {
@@ -127,33 +128,41 @@ body {
    gerade ansiehst. Beides kann auseinanderfallen — genau dafür
    ist der Umschalter da. */
 .bd-phases {
-  display: flex; gap: 8px; justify-content: center;
-  padding: 14px 18px 4px; flex-wrap: wrap;
-  background: var(--clr-chrome);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  justify-content: center;
 }
 .bd-phase {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 16px; border-radius: 999px;
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 13px; border-radius: 999px;
   border: 1px solid var(--clr-line); background: var(--clr-surface);
-  color: var(--clr-ink-3); font-weight: 600; font-size: .88rem;
-  font-family: var(--font-body); text-align: left;
+  color: var(--clr-ink-3); font-weight: 600; font-size: .84rem;
+  font-family: var(--font-body); text-align: left; white-space: nowrap;
   transition: background .12s ease, border-color .12s ease, color .12s ease;
 }
 button.bd-phase { cursor: pointer; }
 button.bd-phase:hover:not(:disabled) { background: var(--clr-surface2); color: var(--clr-ink); }
 .bd-phase__no {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: 50%;
-  background: var(--clr-surface2); font-size: .78rem; font-weight: 700;
+  width: 21px; height: 21px; border-radius: 50%;
+  background: var(--clr-surface2); font-size: .76rem; font-weight: 700;
 }
-/* Was in diesem Fach liegt — die eigentliche Ansage des Umschalters.
-   Der Phasenname allein sagt noch nicht, dass man hier Post-Its
-   oder Recherchen zu sehen bekommt. */
-.bd-phase__what {
-  font-weight: 700; font-size: .76rem; opacity: .8;
-  padding-left: 8px; border-left: 1px solid var(--clr-line);
+
+/* Der Auftrag auf Abruf. Klein und unauffällig: gebraucht wird er
+   zweimal je Stunde, und von selbst kommt er ohnehin — beim Öffnen
+   und beim Phasenwechsel. */
+.bd-phasehelp {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; margin-left: 2px;
+  border-radius: 50%; border: 1px solid var(--clr-line);
+  background: var(--clr-surface); color: var(--clr-ink-3);
+  font-family: var(--font-body); font-size: .84rem; font-weight: 800;
+  line-height: 1; cursor: pointer;
+  transition: background .12s ease, border-color .12s ease, color .12s ease;
 }
-.bd-phase__count { font-size: .74rem; font-weight: 700; opacity: .75; }
+.bd-phasehelp:hover {
+  background: var(--clr-accent-soft); border-color: var(--clr-accent); color: var(--clr-ink);
+}
 
 /* Der Kurs steht hier. */
 .bd-phase--running {
@@ -166,7 +175,6 @@ button.bd-phase:hover:not(:disabled) { background: var(--clr-surface2); color: v
   background: var(--clr-accent); border-color: var(--clr-accent); color: var(--clr-accent-ink);
 }
 .bd-phase--shown .bd-phase__no  { background: rgba(255,255,255,0.22); color: var(--clr-accent-ink); }
-.bd-phase--shown .bd-phase__what { border-left-color: rgba(255,255,255,0.3); opacity: .9; }
 /* muss die allgemeine Hover-Regel oben schlagen — sonst verliert der
    gewählte Reiter unter dem Mauszeiger seine Füllung */
 button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); color: var(--clr-accent-ink); }
@@ -204,12 +212,6 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); col
 .bd-btn--ghost:hover:not(:disabled) { filter: none; background: var(--clr-surface); color: var(--clr-ink); }
 .bd-btn--danger { background: var(--clr-danger); border-color: var(--clr-danger); color: #fff; }
 .bd-btn--danger:hover:not(:disabled) { filter: brightness(1.08); }
-
-.bd-hint {
-  max-width: 780px; margin: 0 auto; padding: 12px 18px 16px;
-  text-align: center; color: var(--clr-ink-3); font-size: .9rem; line-height: 1.55;
-  background: var(--clr-chrome);
-}
 
 /* ── Inhalt ───────────────────────────────────────────── */
 .bd-main { padding: 18px; }
@@ -290,6 +292,11 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); col
 }
 .bd-catadd:hover:not(:disabled) { transform: scale(1.08); filter: brightness(1.35); }
 .bd-catadd:disabled { opacity: .32; cursor: not-allowed; box-shadow: none; }
+/* Kontingent aufgebraucht: blass, aber anklickbar — der Knopf sagt beim
+   Drücken selbst, warum nichts mehr geht. Ein toter Knopf beantwortet
+   die Frage nicht, und ein verschwundener nimmt sie mit. */
+.bd-catadd--full { opacity: .42; box-shadow: none; }
+.bd-catadd--full:hover { transform: none; filter: none; }
 /* Recherchen sind blau — im Formular, in der Tabelle, und hier am Knopf. */
 .bd-catadd--fact {
   background: var(--clr-blue); border-color: var(--clr-blue); color: #fff;
@@ -610,6 +617,29 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
   box-shadow: 0 20px 60px rgba(28,37,48,0.28);
 }
 .bd-modal--small { max-width: 400px; }
+
+/* ── Auftrag der Phase ────────────────────────────────────
+   Kein Formular, sondern eine Ansage: eine große Zahl, eine Zeile
+   Überschrift, ein Absatz Auftrag. Das Fenster kommt von selbst
+   (Öffnen, Phasenwechsel) und darf deshalb ruhig groß auftreten —
+   dafür steht dieser Text sonst nirgends mehr im Weg. */
+.bd-modal--phase { max-width: 470px; }
+.bd-phaseinfo__head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.bd-phaseinfo__no {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--clr-accent); color: var(--clr-accent-ink);
+  font-size: 1.05rem; font-weight: 800;
+}
+.bd-modal--phase h2 { margin-bottom: 0; }
+/* Klassenselektor allein verlöre gegen `.bd-modal p` — dort steht zwar
+   keine Farbe, aber die Reihenfolge soll hier nicht die Regel sein. */
+.bd-modal .bd-phaseinfo__note {
+  margin-top: 14px; padding-top: 12px;
+  border-top: 1px solid var(--clr-line);
+  font-size: .87rem; color: var(--clr-ink-3);
+}
 .bd-modal h2 {
   font-family: var(--font-display); color: var(--clr-ink); font-size: 1.2rem;
   font-weight: 800; letter-spacing: -.01em; margin-bottom: 14px;
@@ -746,16 +776,16 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
 .bd-toast--error { background: var(--clr-danger); border-color: var(--clr-danger); color: #fff; }
 
 @media (max-width: 640px) {
-  .bd-head { gap: 10px; }
+  .bd-head { gap: 10px; padding: 10px 12px; }
   .bd-head h1 { font-size: 1.05rem; }
-  /* Drei volle Reiter passen nicht nebeneinander. Der Phasenname
-     weicht, die Nummer bleibt — und was im Fach liegt („Post-Its",
-     „Recherchen") erst recht, das ist die eigentliche Ansage. Phase 3
-     schaltet nichts um und behält deshalb ihren Namen. */
-  .bd-phases { gap: 6px; padding: 12px 12px 2px; }
-  .bd-phase { padding: 6px 12px; gap: 6px; font-size: .85rem; }
-  button.bd-phase .bd-phase__name { display: none; }
-  .bd-phase__what { padding-left: 0; border-left: 0; }
+  /* Die Phasen bekommen auf schmalen Geräten eine eigene Zeile unter
+     Titel und Ansichtswechsel — nebeneinander drängen sich sonst fünf
+     Elemente in eine Breite, die für drei reicht. Die Namen bleiben
+     stehen: ohne sie wäre die Leiste nur noch „1 2 3", und was in
+     welcher Phase passiert, stünde nirgends mehr. */
+  .bd-phases { flex: 1 1 100%; order: 3; gap: 5px; }
+  .bd-phase { padding: 5px 11px; gap: 6px; font-size: .8rem; }
+  .bd-phase__no { width: 19px; height: 19px; font-size: .72rem; }
   .bd-adminbar { margin: 12px 12px 0; }
   .bd-main { padding: 12px; }
   /* muss zur schmaleren Innenkante von .bd-main passen, sonst steht die

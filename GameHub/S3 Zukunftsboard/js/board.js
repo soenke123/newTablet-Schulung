@@ -45,11 +45,25 @@
      Gegenwart, nicht Zukunft: gefragt ist, was KI und Social Media JETZT
      mit uns machen. Und was in Phase 2 dazukommt, heißt „Recherche" und
      nicht „Fakt" — man kann im Netz auch Müll finden, das Wort darf das
-     Urteil nicht vorwegnehmen. Ob eine Recherche trägt, klärt Phase 3. */
-  const PHASE_HINT = {
-    1: 'Phase 1 · Sammeln — Was bewirken KI, Social Media und Handy-Games gerade bei uns? Halte Chancen, Risiken und Vermutungen fest. Du hast 8 Post-Its.',
-    2: 'Phase 2 · Recherchieren — Such dir einen Punkt aus und finde heraus, was wirklich dazu bekannt ist. Eine Recherche ist Pflicht, zwei sind möglich — jeweils mit vollständiger Quelle.',
-    3: 'Phase 3 · Besprechen — Das Board ist eingefroren. Jetzt schauen wir gemeinsam drauf.'
+     Urteil nicht vorwegnehmen. Ob eine Recherche trägt, klärt Phase 3.
+
+     Die Kontingent-Zahlen stehen als {ideas}/{facts} drin und werden
+     erst beim Anzeigen aus der Server-Antwort gefüllt (phaseTask()) —
+     die Zahl gehört dem Server, der sie auch durchsetzt, und soll nicht
+     zusätzlich in einem Text stehen, den beim nächsten Mal jemand
+     übersieht.
+
+     Gezeigt wird der Auftrag nicht mehr dauerhaft, sondern als Modal:
+     beim Öffnen des Boards, beim Phasenwechsel und über das ? in der
+     Kopfzeile. Deshalb ist er hier in Überschrift und Fließtext
+     getrennt. */
+  const PHASE_INFO = {
+    1: { name: 'Sammeln',
+         task: 'Was bewirken KI, Social Media und Handy-Games gerade bei uns? Halte fest, was dir dazu einfällt — als Chance, als Risiko oder als Vermutung. Du hast {ideas} Post-Its.' },
+    2: { name: 'Recherchieren',
+         task: 'Such dir einen Punkt aus und finde heraus, was wirklich dazu bekannt ist. Eine Recherche ist Pflicht, bis zu {facts} sind möglich — jeweils mit vollständiger Quelle: Link, wer es geschrieben hat und wann.' },
+    3: { name: 'Besprechen',
+         task: 'Das Board ist eingefroren — es kommt nichts mehr dazu und nichts wird mehr geändert. Jetzt schauen wir gemeinsam drauf. Zustimmen kannst du weiter.' }
   };
 
   const KIND_LABEL = { idee: 'Post-It', fakt: 'Recherche' };
@@ -251,6 +265,8 @@
        auf Phase 3 wird nicht umgeschaltet: dort gibt es kein eigenes
        Fach, und wer gerade etwas ansieht, soll es behalten. */
     const p = res.phase ?? 1;
+    const firstLoad  = state.lastPhase === null;
+    const switched   = !firstLoad && p !== state.lastPhase;
     if (state.lastPhase === null) {
       // Erster Ladevorgang: wer neu dazukommt, während der Kurs schon
       // bei den Recherchen ist, soll auch dort landen — es sei denn, er hat
@@ -265,6 +281,28 @@
     setViewPhase(state.viewPhase, { silent: true });
 
     render();
+
+    /* Der Auftrag kommt von selbst: einmal beim Öffnen und danach immer
+       dann, wenn die Lehrkraft weiterschaltet — der Wechsel erreicht
+       jedes Tablet über den 5-Sekunden-Poll, und ohne Ansage merkt ihn
+       niemand außer daran, dass der Plus-Knopf plötzlich anders aussieht.
+
+       Ausnahme: wer gerade ein Formular ausgefüllt hat, verliert es
+       nicht an ein Fenster, das sich von selbst davorschiebt. Dann nur
+       eine Zeile — die Absage kommt beim Speichern ohnehin vom Server,
+       und das ? holt den Auftrag jederzeit nach.
+
+       Ein offenes Detail oder eine offene Rückfrage dagegen darf das
+       Fenster verdrängen: dort geht nichts verloren.                  */
+    if (firstLoad || switched) {
+      if (!$('bdModal').hidden) {
+        if (switched) toast(`Phase ${p} · ${PHASE_INFO[p].name} läuft jetzt.`);
+      } else {
+        if (!$('bdConfirm').hidden) { $('bdConfirm').hidden = true; state.confirmFn = null; }
+        closeDetail();
+        openPhaseInfo();
+      }
+    }
   }
 
   function showStatus(msg, isError) {
@@ -276,7 +314,6 @@
     $('bdTable').hidden = true;
     $('bdCatNav').hidden = true;
     $('bdPhases').hidden  = true;
-    $('bdHint').hidden    = true;
     $('bdViewSwitch').hidden = true;
     // Signatur verwerfen: sonst hält render() beim nächsten erfolgreichen
     // Laden die Daten für „unverändert", steigt früh aus — und die
@@ -311,8 +348,6 @@
     $('bdCourse').textContent = d.cluster_name ? `Kurs: ${d.cluster_name}` : '';
 
     renderPhases();
-    renderHint();
-    renderQuota();
     renderAdminBar();
 
     $('bdViewSwitch').hidden = false;
@@ -342,10 +377,8 @@
      (gefüllt = das sieht man gerade). Getrennte Signale für zwei
      getrennte Fragen — „wo sind wir?" und „was schaue ich an?". */
   function renderPhases() {
-    const p    = phase();
-    const max  = maxViewPhase();
-    const cnt  = { 1: 0, 2: 0 };
-    (state.data.notes || []).forEach(n => { cnt[n.kind === 'fakt' ? 2 : 1]++; });
+    const p   = phase();
+    const max = maxViewPhase();
 
     $('bdPhases').hidden = false;
     document.querySelectorAll('.bd-phase').forEach(el => {
@@ -356,9 +389,6 @@
       el.classList.toggle('bd-phase--shown',   n < 3 && n === state.viewPhase);
       el.classList.toggle('bd-phase--locked',  locked);
 
-      const c = el.querySelector('.bd-phase__count');
-      if (c) c.textContent = locked ? '·' : cnt[n];
-
       if (el.tagName !== 'BUTTON') return;
       el.disabled = locked;
       el.setAttribute('aria-pressed', String(n === state.viewPhase));
@@ -368,45 +398,58 @@
     });
   }
 
-  function renderHint() {
-    const h = $('bdHint');
-    const p = phase(), v = state.viewPhase;
-    const fach = v === 1 ? 'die Post-Its' : 'die Recherchen';
+  /* Das Kontingent kommt aus board_get — dort wird es auch durchgesetzt.
+     Die Zahlen daneben sind nur der Notnagel für den Moment vor dem
+     ersten Laden; weicht der Server ab, gilt der Server. */
+  const ideasMax = () => state.data?.me?.ideas_max ?? 10;
+  const factsMax = () => state.data?.me?.facts_max ?? 5;
 
-    h.textContent =
-      p >= 3
-        ? `${PHASE_HINT[3]} Du siehst gerade ${fach} — oben wechselst du zwischen beidem.`
-      : v === p
-        ? PHASE_HINT[p]
-      : v === 1
-        ? 'Rückblick auf Phase 1 · Sammeln — hier stehen die Post-Its des Kurses. Neue kommen jetzt keine mehr dazu; zustimmen kannst du weiter.'
-        : PHASE_HINT[2];
+  const phaseTask = p => PHASE_INFO[p].task
+    .replace('{ideas}', ideasMax())
+    .replace('{facts}', factsMax());
 
-    h.hidden = false;
-  }
+  /* ── Auftrag der Phase ───────────────────────────────────
+     Kommt von selbst, wenn er gebraucht wird — beim Öffnen des Boards
+     und wenn die Lehrkraft weiterschaltet — und sonst auf Anfrage über
+     das ? in der Kopfzeile. Als Dauertext über dem Board kostete er
+     Platz, den die Wolke besser gebrauchen kann, und war nach dem
+     zweiten Blick ohnehin Tapete. */
+  function openPhaseInfo() {
+    const p = phase();
+    $('bdPhaseInfoNo').textContent    = p;
+    $('bdPhaseInfoTitle').textContent = `Phase ${p} · ${PHASE_INFO[p].name}`;
+    $('bdPhaseInfoText').textContent  = phaseTask(p);
 
-  /* Nur das Kontingent des Fachs, das man ansieht. Die andere Zahl
-     stünde nur daneben und wäre gerade nicht die Frage. */
-  function renderQuota() {
-    const me = state.data.me || {};
-    if (state.isAdmin) {
-      $('bdQuota').innerHTML = `${visibleNotes().length} von ${state.data.notes.length} Karten im Kurs`;
-      return;
+    /* Wer gerade ein anderes Fach ansieht, als der Kurs bearbeitet,
+       braucht die Einordnung dazu — das war früher der einzige Teil der
+       Hinweiszeile, der nicht in der Phase selbst steht. */
+    const v    = state.viewPhase;
+    const note = $('bdPhaseInfoNote');
+    const show = p >= 3 || v !== p;
+    note.hidden = !show;
+    if (show) {
+      note.textContent = p >= 3
+        ? `Du siehst gerade ${v === 1 ? 'die Post-Its' : 'die Recherchen'} — oben in der Kopfzeile wechselst du zwischen beidem.`
+        : v === 1
+          ? 'Du siehst gerade die Post-Its aus Phase 1. Neue kommen keine mehr dazu — zustimmen und nachbessern kannst du weiter.'
+          : 'Du siehst gerade die Recherchen. Oben in der Kopfzeile wechselst du zwischen beiden Phasen.';
     }
-    $('bdQuota').innerHTML = state.viewPhase === 1
-      ? `Post-Its <strong>${me.ideas_used ?? 0}/${me.ideas_max ?? 8}</strong>`
-      : `Recherchen <strong>${me.facts_used ?? 0}/${me.facts_max ?? 2}</strong>`;
+
+    $('bdPhaseInfo').hidden = false;
+    $('bdPhaseInfoOk').focus();
   }
 
-  /* Voll? Dann bleibt der Plus-Knopf sichtbar, aber tot — verschwinden
-     würde die Frage „wo kann ich schreiben?" mit sich nehmen, ohne sie
-     zu beantworten. */
+  function closePhaseInfo() { $('bdPhaseInfo').hidden = true; }
+
+  /* Voll? Dann bleibt der Plus-Knopf anklickbar und sagt es beim
+     Drücken. Ein toter Knopf beantwortet die Frage „warum geht das
+     nicht?" nicht, und ein verschwundener nimmt sie mit. */
   function quotaFull() {
     const me = state.data.me || {};
     if (state.isAdmin) return false;
     return state.viewPhase === 1
-      ? (me.ideas_used ?? 0) >= (me.ideas_max ?? 8)
-      : (me.facts_used ?? 0) >= (me.facts_max ?? 2);
+      ? (me.ideas_used ?? 0) >= ideasMax()
+      : (me.facts_used ?? 0) >= factsMax();
   }
 
   /* ── Karten in der Wolke ─────────────────────────────────
@@ -534,18 +577,22 @@
     /* Der Plus-Knopf gehört zum Bereichsnamen, nicht in eine eigene
        Leiste: was man schreibt, landet genau in dem Bereich, der
        danebensteht — und im Fach, das man gerade ansieht. Damit ist
-       die Frage nach der Kategorie im Formular erledigt. */
+       die Frage nach der Kategorie im Formular erledigt.
+
+       Anklickbar bleibt er auch bei vollem Kontingent — die Absage
+       kommt beim Drücken als kurze Meldung. Und wie viele Karten noch
+       offen sind, steht erst dahinter im Formular („Neues Post-It 4 von
+       10"): in der Kopfzeile stand die Zahl dauerhaft und wurde
+       dauerhaft überlesen. */
     const kind = viewKind();
     const add  = $('bdCatAdd');
     add.hidden = !canAdd(kind);
     if (!add.hidden) {
-      const full = quotaFull();
-      add.disabled = full;
-      add.title = full
-        ? (kind === 'fakt' ? 'Deine 2 Recherchen sind vergeben.' : 'Deine 8 Post-Its sind vergeben.')
-        : `Neue${kind === 'fakt' ? ' Recherche' : 's Post-It'} in „${cat.label}“`;
+      add.disabled = false;
+      add.title = `Neue${kind === 'fakt' ? ' Recherche' : 's Post-It'} in „${cat.label}“`;
       add.setAttribute('aria-label', add.title);
       add.classList.toggle('bd-catadd--fact', kind === 'fakt');
+      add.classList.toggle('bd-catadd--full', quotaFull());
     }
   }
 
@@ -1209,9 +1256,18 @@
       topics:   note ? topicsOf(note).slice() : []
     };
 
+    /* Beim Anlegen steht das Kontingent im Titel — „Neues Post-It 4 von
+       10". Hier ist es die Antwort auf eine Frage, die man sich gerade
+       stellt; in der Kopfzeile war es eine Zahl, die immer dastand.
+       Admins bekommen keine: für sie gilt das Kontingent nicht. */
+    const me   = state.data?.me || {};
+    const used = kind === 'fakt' ? (me.facts_used ?? 0) : (me.ideas_used ?? 0);
+    const max  = kind === 'fakt' ? factsMax() : ideasMax();
+    const nth  = state.isAdmin ? '' : ` ${Math.min(used + 1, max)} von ${max}`;
+
     $('bdModalTitle').textContent = note
       ? (kind === 'fakt' ? 'Recherche bearbeiten' : 'Post-It bearbeiten')
-      : (kind === 'fakt' ? 'Neue Recherche'       : 'Neues Post-It');
+      : (kind === 'fakt' ? `Neue Recherche${nth}` : `Neues Post-It${nth}`);
 
     const c = catOf(cat);
     $('bdModalCat').innerHTML =
@@ -1431,8 +1487,26 @@
       setViewPhase(Number(b.dataset.phase));
     });
 
-    // Neue Karte: Art aus dem Fach, Bereich aus dem Wechsler daneben.
-    $('bdCatAdd').addEventListener('click', () => openModal(viewKind(), null, state.cat));
+    $('bdPhaseHelp').addEventListener('click', openPhaseInfo);
+    $('bdPhaseInfoOk').addEventListener('click', closePhaseInfo);
+    $('bdPhaseInfo').addEventListener('click', ev => {
+      if (ev.target === $('bdPhaseInfo')) closePhaseInfo();
+    });
+
+    /* Neue Karte: Art aus dem Fach, Bereich aus dem Wechsler daneben.
+       Ist das Kontingent aufgebraucht, sagt der Knopf das hier — kurz,
+       und ohne ein Formular zu öffnen, das nachher nur abgewiesen
+       würde. */
+    $('bdCatAdd').addEventListener('click', () => {
+      const kind = viewKind();
+      if (quotaFull()) {
+        toast(kind === 'fakt'
+          ? `Du hast alle ${factsMax()} Recherchen erstellt.`
+          : `Du hast alle ${ideasMax()} Post-Its erstellt.`, true);
+        return;
+      }
+      openModal(kind, null, state.cat);
+    });
 
     $('bdStanceChoice').addEventListener('click', ev => {
       const b = ev.target.closest('button'); if (!b || !state.editing) return;
@@ -1474,9 +1548,10 @@
 
     document.addEventListener('keydown', ev => {
       if (ev.key === 'Escape') {
-        if (!$('bdModal').hidden)   closeModal();
-        if (!$('bdDetail').hidden)  closeDetail();
-        if (!$('bdConfirm').hidden) { $('bdConfirm').hidden = true; state.confirmFn = null; }
+        if (!$('bdModal').hidden)     closeModal();
+        if (!$('bdDetail').hidden)    closeDetail();
+        if (!$('bdPhaseInfo').hidden) closePhaseInfo();
+        if (!$('bdConfirm').hidden)   { $('bdConfirm').hidden = true; state.confirmFn = null; }
         return;
       }
 
@@ -1485,7 +1560,8 @@
       // Fenster offen ist oder jemand in einem Feld schreibt.
       if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
       if (state.view !== 'board') return;
-      if (!$('bdModal').hidden || !$('bdDetail').hidden || !$('bdConfirm').hidden) return;
+      if (!$('bdModal').hidden || !$('bdDetail').hidden || !$('bdConfirm').hidden
+          || !$('bdPhaseInfo').hidden) return;
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) return;
       ev.preventDefault();
       gotoCat(ev.key === 'ArrowRight' ? 1 : -1);
