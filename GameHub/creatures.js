@@ -2955,3 +2955,86 @@ async function syncStartupStory() {
 
 window.syncStartupStory  = syncStartupStory;
 window.startupUsersFromScore = startupUsersFromScore;
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Reality Check (game19) — die Nachholung
+   ═══════════════════════════════════════════════════════════════
+   Anders als bei Startup Story rechnet der Hub hier NICHTS aus. Die
+   Bemessungsgrundlage gehört dem Kurs (board_notes, board_likes) und
+   der Auslöser ist der Phasenwechsel der Lehrkraft — beides sieht der
+   Client nicht vollständig und darf es auch nicht entscheiden.
+   Gerechnet und vergeben wird deshalb in board_claim_reward
+   (Migration 0067); hier wird nur abgeholt, was noch offen ist.
+
+   Der Normalfall ist, dass hier gar nichts mehr kommt: die Sequenz
+   läuft im Board selbst, in dem Moment, in dem die Lehrkraft
+   weiterschaltet und der ganze Kurs davor sitzt. Dieser Weg ist für
+   alle, die genau dann nicht auf der Seite waren — Tablet zu, Akku
+   leer, später dazugekommen. Der Server gibt jede Stufe genau einmal
+   aus, doppelt kann es also nicht kommen.                          */
+const RC_GAME_ID = 'game19';
+
+async function syncRealityCheck() {
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
+  if (!getAccessToken()) return;
+
+  // Bis zu zwei Stufen: wer erst nach Phase 3 wiederkommt, hat
+  // Schlüpfen UND Wachsen offen. Der RPC gibt eine pro Aufruf aus.
+  let rv = null;
+  for (let i = 0; i < 2; i++) {
+    const r = await callBonbonRPC('board_claim_reward', {});
+    if (!r || !r.ok || !r.event || r.event === 'none') break;
+    rv = rv || { hatched: false, creature: null, growthBefore: 0, growthAfter: 0,
+                 coinsGained: 0, bonbonsGained: 0 };
+    if (r.event === 'hatch') {
+      rv.hatched      = true;
+      rv.creature     = r.creature;
+      rv.growthBefore = 0;
+      rv.growthAfter  = 0;
+    } else {
+      rv.creature = rv.creature || r.creature;
+      // Beim frisch geschlüpften Tier fängt die Strecke bei 0 an — die
+      // Vorher-Zahl aus dem zweiten Aufruf würde sonst den ersten
+      // Schritt der Sequenz verschlucken.
+      if (!rv.hatched) rv.growthBefore = r.growth_before || 0;
+      rv.growthAfter    = r.growth_after || 0;
+      rv.coinsGained   += r.coins_gained   || 0;
+      rv.bonbonsGained += r.bonbons_gained || 0;
+    }
+  }
+  if (!rv) return;
+
+  /* localStorage nachziehen. loadServerState() läuft im Boot-Ablauf
+     VOR dieser Funktion und hat den Stand von vor der Vergabe gelesen —
+     ohne diese Zeilen zeigte die Kachel bis zum nächsten Start noch das
+     Ei. saveGameData pusht die (identischen) Werte anschließend zurück,
+     das ist redundant, aber harmlos und hält den Dirty-Marker sauber. */
+  const all = loadStorage(STORAGE_KEY);
+  const gd  = all[RC_GAME_ID] || defaultGameData();
+  if (rv.hatched) {
+    // Auch der zweite Durchlauf nach einem board_reset: neues Tier,
+    // Wachstum zurück auf null, Münzen des ersten bleiben liegen.
+    gd.creature     = rv.creature;
+    gd.growth       = 0;
+    gd.roundsPlayed = 1;
+  } else if (rv.creature && !gd.creature) {
+    gd.creature = rv.creature;
+  }
+  // Math.max, damit ein vorher angewendeter Wachstumstrank (+5) oder der
+  // Stein der Vollendung nicht von der Kurve zurückgedreht wird — dieselbe
+  // Regel wie serverseitig in board_claim_reward.
+  gd.growth = Math.max(gd.growth || 0, rv.growthAfter);
+  gd.coins  = (gd.coins || 0) + rv.coinsGained;
+  saveGameData(RC_GAME_ID, gd);
+
+  // Die Bonbons hat add_bonbons serverseitig verbucht — der Cluster-
+  // Fortschritt im Hub und im Bonbon-Modal stünde sonst zu niedrig.
+  if (rv.bonbonsGained > 0 && typeof window.refreshBonbonStatus === 'function') {
+    window.refreshBonbonStatus();
+  }
+
+  window.__boardReveal = rv;
+}
+
+window.syncRealityCheck = syncRealityCheck;

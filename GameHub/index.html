@@ -339,6 +339,11 @@
       // aufgerufen sähe sie auf einem neuen Gerät eine 0 und zahlte die
       // Münzen ein zweites Mal aus.
       await window.syncStartupStory?.();
+      // Reality Check: holt eine Belohnung nach, die im Board selbst
+      // niemand gesehen hat (Tablet war zu, als die Lehrkraft die Phase
+      // beendet hat). Nach loadServerState, weil die Funktion den
+      // frischen Stand um ihren Zuwachs ergänzt.
+      await window.syncRealityCheck?.();
 
       // Late-Joiner-Reveal-Recovery: legiRevealed=true stehen lassen wäre
       // ein inkonsistenter Zustand, wenn die Kreatur nie im game_state
@@ -432,6 +437,7 @@
         await window.syncHighscores?.();
         await window.fetchDailyBonbonStatus?.();
         await window.syncStartupStory?.();
+        await window.syncRealityCheck?.();
         window.repairLegiRevealMarker?.();
         renderHub();
       });

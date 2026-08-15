@@ -76,8 +76,13 @@ const GAMES_CONFIG = [
   // im Spielstand des einzelnen Users. Wie standalone meldet die Kachel
   // kein Rundenergebnis — deshalb sind Nester, Runden-Items und der
   // Rundenbonus aus (siehe isRoundless).
-  // Ein Monster ist vorgesehen (games-Eintrag existiert), aber die
-  // Wachstums- und Coin-Regel steht noch aus. Bis dahin bleibt das Ei liegen.
+  // Das Monster hängt an zwei Phasenwechseln der Lehrkraft: Phase 1
+  // beendet ⇒ es schlüpft (die Zahl der eigenen Post-Its deckelt, wie
+  // hoch es in der Leiter stehen kann), Phase 2 beendet ⇒ es wächst am
+  // Anteil an den Zustimmungen des Kurses. Gerechnet und vergeben wird
+  // serverseitig (board_claim_reward, Migration 0067) — der Client
+  // zeigt nur. Freilassen gibt es hier deshalb nicht: der Auslöser
+  // kommt genau einmal und lässt sich nicht nachspielen.
   { id: 'game19', season: 3, title: 'Reality Check',       icon: '🧭', url: 'S3 Zukunftsboard/index.html', collab: true },
 ];
 
@@ -343,9 +348,11 @@ function renderHub() {
   window.refreshHubAvatarNewBadges?.();
 
   // Zuletzt: die Kachel steht schon auf dem Endstand, wenn die Sequenz
-  // darüber läuft. Sie schaltet sich selbst scharf (einmaliger Marker) und
-  // ist ein No-Op, wenn syncStartupStory nichts gefunden hat.
-  maybeShowStartupReveal();
+  // darüber läuft. Beide schalten sich selbst scharf (einmaliger Marker)
+  // und sind No-Ops, wenn der jeweilige Sync nichts gefunden hat.
+  // Nacheinander statt gleichzeitig — sie teilen sich modalOverlay, und
+  // zwei Sequenzen übereinander wären keine.
+  if (!maybeShowStartupReveal()) maybeShowBoardReveal();
 }
 
 function renderGamesGrid(allData, shopData) {
@@ -600,8 +607,8 @@ function buildCardHTML(game, data, shopData) {
   // kommt ausschließlich durch die Trainings-Aufgaben.
   // standalone und collab genauso wenig wie das Team-Legendär: der Bonus
   // wird in computeRoundResult() ausgeschüttet, und beide spielen keine
-  // Runden. Startup Storys Münzen kommen aus der Userzahl-Kurve, das
-  // Reality Check schüttet (noch) gar nichts aus.
+  // Runden. Startup Storys Münzen kommen aus der Userzahl-Kurve, die des
+  // Reality Check einmalig aus board_claim_reward.
   const bonusCoins = (!isLegi && !isRoundless(game) && hasCreature) ? getGrowthBonusCoins(data.growth || 0) : 0;
   const bonusHint = bonusCoins > 0
     ? `<div class="game-card__bonus-hint" title="${bonusCoins === 10 ? 'Vollendungs-Bonus' : 'Ausgewachsen-Bonus'}: +${bonusCoins} Münzen pro Runde">+${bonusCoins}<span class="game-card__bonus-hint-coin">🪙</span></div>`
@@ -618,8 +625,9 @@ function buildCardHTML(game, data, shopData) {
                     || (typeof getBerlinTodayIso === 'function' ? getBerlinTodayIso() : new Date().toISOString().slice(0, 10));
   // collab ist hier ausgenommen (standalone NICHT — Startup Story holt den
   // Tages-Bonus bei der ersten Rückkehr mit Fortschritt): Reality Check
-  // schickt überhaupt keine Submission, der Hinweis wäre ein Versprechen,
-  // das die Kachel nicht einlösen kann.
+  // bekommt zwar Bonbons, aber genau einmal und in Höhe seiner Münzen
+  // (board_claim_reward → add_bonbons). Ein Hinweis „+20 pro Tag" wäre
+  // ein Versprechen, das die Kachel nie einlöst.
   const bonbonAvailable = !isLegi
     && !game.collab
     && bonbonStatus.enabled
@@ -649,7 +657,7 @@ function buildCardHTML(game, data, shopData) {
          title="${hasCreature ? 'Klicken für Details' : ''}">
       ${imgContent}
     </div>
-    ${!hasCreature ? `<p class="game-card__stage-label">${game.standalone ? 'Das Ei brütet…' : game.collab ? 'Belohnung folgt…' : 'Ei schlummert…'}</p>` : ''}
+    ${!hasCreature ? `<p class="game-card__stage-label">${game.standalone ? 'Das Ei brütet…' : game.collab ? 'Das Ei wartet auf deinen Kurs…' : 'Ei schlummert…'}</p>` : ''}
     <div class="game-card__progress">
       <div class="game-card__progress-fill" style="width:${progressPct}%"></div>
     </div>
@@ -685,7 +693,7 @@ function buildCardHTML(game, data, shopData) {
   ).join('');
   return `<div class="game-card__action-row"><button class="game-card__btn">Spielen!</button>${useBtns}</div>`;
 })()}
-    ${data.creature && !isLegi ? `<button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>` : ''}
+    ${data.creature && !isLegi && !game.collab ? `<button class="game-card__release" title="Tier freilassen">${RELEASE_ICON}</button>` : ''}
   `;
 }
 
@@ -1723,10 +1731,11 @@ async function activateResetKarte() {
    sieht drei Stufen. */
 function maybeShowStartupReveal() {
   const rv = window.__startupReveal;
-  if (!rv) return;
+  if (!rv) return false;
   window.__startupReveal = null;
   if (rv.released) showStartupReleasedModal();
   else             showStartupRevealModal(rv);
+  return true;
 }
 
 function showStartupReleasedModal() {
@@ -1750,25 +1759,33 @@ function showStartupReleasedModal() {
   overlay.hidden = false;
 }
 
-function showStartupRevealModal(rv) {
+/* Die Schritt-Maschine hinter beiden Rückkehr-Sequenzen (Startup Story
+   und Reality Check). Beide zeigen dasselbe: erst das Ei, dann jede
+   erreichte Wachstumsstufe einzeln, zuletzt die Ausbeute. Unterschiedlich
+   sind nur die Texte und woher die Münzen und Bonbons kommen — deshalb
+   steht der Ablauf hier und nicht zweimal daneben.
+
+   spec = {
+     creature, hatchedNow, fromStage, toStage, growth, growthGained,
+     variant, eggSub, onCoins(containerId)
+   }
+   fromStage = -1 heißt „es gab vorher kein Tier". */
+function runRevealSequence(spec) {
   const overlay = document.getElementById('modalOverlay');
   const content = document.getElementById('modalContent');
   if (!overlay || !content) return;
 
-  const creature   = rv.after.creature;
-  const hatchedNow = !rv.before.creature && !!creature;
-  const fromStage  = rv.before.creature ? getGrowthStage(rv.before.growth) : -1;
-  const toStage    = creature ? getGrowthStage(rv.after.growth) : -1;
+  const { creature, hatchedNow, fromStage, toStage } = spec;
 
-  // Schritt-Liste. Wachstum, das innerhalb einer Stufe bleibt, bekommt
-  // trotzdem ein Bild — sonst spränge die Sequenz bei kleinen Zuwächsen
-  // direkt zu den Münzen und der Fortschrittsbalken bliebe unbemerkt.
+  // Wachstum, das innerhalb einer Stufe bleibt, bekommt trotzdem ein Bild —
+  // sonst spränge die Sequenz bei kleinen Zuwächsen direkt zu den Münzen
+  // und der Fortschrittsbalken bliebe unbemerkt.
   const steps = [];
   if (hatchedNow) steps.push({ kind: 'egg' });
   if (creature) {
-    if (hatchedNow)               for (let s = 0; s <= toStage; s++) steps.push({ kind: 'grow', stage: s });
-    else if (toStage > fromStage) for (let s = fromStage + 1; s <= toStage; s++) steps.push({ kind: 'grow', stage: s });
-    else if (rv.growthGained > 0) steps.push({ kind: 'grow', stage: toStage });
+    if (hatchedNow)                 for (let s = 0; s <= toStage; s++) steps.push({ kind: 'grow', stage: s });
+    else if (toStage > fromStage)   for (let s = fromStage + 1; s <= toStage; s++) steps.push({ kind: 'grow', stage: s });
+    else if (spec.growthGained > 0) steps.push({ kind: 'grow', stage: toStage });
   }
   steps.push({ kind: 'coins' });
 
@@ -1795,7 +1812,7 @@ function showStartupRevealModal(rv) {
       shell(`
         <h2 style="font-family:var(--font-display);color:var(--clr-gold);font-size:1.25rem;margin:0 0 14px;">Da tut sich was…</h2>
         <div id="ssRevealEgg" class="modal-creature-img">${getEggSVG(0)}</div>
-        <p style="color:var(--clr-cream-dim);line-height:1.6;margin-top:12px;">Deine Plattform hat die erste Million erreicht.</p>
+        <p style="color:var(--clr-cream-dim);line-height:1.6;margin-top:12px;">${spec.eggSub}</p>
       `, 'Weiter');
       // Risse durchlaufen, dann stehen lassen — die Auflösung ist der
       // nächste Schritt und gehört dem Spieler, nicht einem Timer.
@@ -1815,11 +1832,11 @@ function showStartupRevealModal(rv) {
       const badge = isRare(creature)      ? `<span class="rare-badge">✦ Selten ✦</span>`
                   : isEpic(creature)      ? `<span class="epic-badge">✦ Episch ✦</span>` : '';
       const head  = (hatchedNow && step.stage === 0) ? 'Es ist geschlüpft!' : 'Dein Monster wächst!';
-      const pct   = Math.min((rv.after.growth || 0) / GROWTH_MAX * 100, 100);
+      const pct   = Math.min((spec.growth || 0) / GROWTH_MAX * 100, 100);
       shell(`
         <h2 style="font-family:var(--font-display);color:var(--clr-gold);font-size:1.25rem;margin:0 0 6px;">${head}</h2>
         ${badge}
-        <div id="ssRevealCreature" class="modal-creature-img">${getCreatureHTML(creature, step.stage, rv.after.variant)}</div>
+        <div id="ssRevealCreature" class="modal-creature-img">${getCreatureHTML(creature, step.stage, spec.variant)}</div>
         <p style="color:var(--clr-cream);font-weight:700;margin:10px 0 4px;">
           ${escapeHtml(CREATURE_NAMES[creature] ?? creature)} · ${GROWTH_LABELS[step.stage]}
         </p>
@@ -1832,26 +1849,91 @@ function showStartupRevealModal(rv) {
     }
 
     // Münzen + Bonbons. renderCoinBank legt den Bonbon-Slot selbst an,
-    // awardBonbonsAndRender füllt ihn — dieselbe Paarung wie am Rundenende
-    // jedes anderen Spiels.
+    // der Aufrufer füllt ihn — bei Startup Story über die Runden-Vergabe,
+    // beim Reality Check hat der Server sie schon verbucht.
     shell(`
       <h2 style="font-family:var(--font-display);color:var(--clr-gold);font-size:1.25rem;margin:0 0 14px;">Deine Ausbeute</h2>
       <div id="ssRevealCoins"></div>
     `, 'Fertig');
-    renderCoinBank('ssRevealCoins', rv.coinsGained || 0);
-    // p_correct = gewonnene Wachstumspunkte (0–10). Ohne Fortschritt käme
-    // die Sequenz gar nicht erst hierher, also druckt wiederholtes
-    // Hub-Auf-und-Ab keine Bonbons.
-    awardBonbonsAndRender('game18', Math.min(10, rv.growthGained || 0), 10, 'ssRevealCoins');
+    spec.onCoins('ssRevealCoins');
   }
 
   draw();
   overlay.hidden = false;
 }
 
+function showStartupRevealModal(rv) {
+  const creature = rv.after.creature;
+  runRevealSequence({
+    creature,
+    hatchedNow:   !rv.before.creature && !!creature,
+    fromStage:    rv.before.creature ? getGrowthStage(rv.before.growth) : -1,
+    toStage:      creature ? getGrowthStage(rv.after.growth) : -1,
+    growth:       rv.after.growth || 0,
+    growthGained: rv.growthGained || 0,
+    variant:      rv.after.variant,
+    eggSub:       'Deine Plattform hat die erste Million erreicht.',
+    onCoins: id => {
+      renderCoinBank(id, rv.coinsGained || 0);
+      // p_correct = gewonnene Wachstumspunkte (0–10). Ohne Fortschritt käme
+      // die Sequenz gar nicht erst hierher, also druckt wiederholtes
+      // Hub-Auf-und-Ab keine Bonbons.
+      awardBonbonsAndRender('game18', Math.min(10, rv.growthGained || 0), 10, id);
+    }
+  });
+}
+
+/* ─────────────────────────────────────────────────
+   8d. REALITY CHECK — NACHGEREICHTE BELOHNUNG
+   ─────────────────────────────────────────────────
+   Der Regelfall ist, dass hier nichts passiert: die Sequenz läuft im
+   Board selbst, wenn die Lehrkraft die Phase beendet und der Kurs
+   davorsitzt. Dieser Weg ist für alle, die genau dann nicht auf der
+   Seite waren. Die Daten setzt syncRealityCheck() (creatures.js), die
+   Vergabe hat der Server längst gebucht — hier wird nur gezeigt.
+
+   Kein Wort darüber, WORAN das Monster hängt. Weder die Zahl der
+   Post-Its noch die Zustimmungen tauchen auf; das ist dieselbe Regel
+   wie im Board. */
+function maybeShowBoardReveal() {
+  const rv = window.__boardReveal;
+  if (!rv) return false;
+  window.__boardReveal = null;
+
+  const fromStage = rv.hatched ? -1 : getGrowthStage(rv.growthBefore || 0);
+  const toStage   = rv.creature ? getGrowthStage(rv.growthAfter || 0) : -1;
+
+  runRevealSequence({
+    creature:     rv.creature,
+    hatchedNow:   !!rv.hatched,
+    fromStage,
+    toStage,
+    growth:       rv.growthAfter || 0,
+    growthGained: Math.max(0, (rv.growthAfter || 0) - (rv.growthBefore || 0)),
+    eggSub:       'Euer Kurs hat die erste Phase hinter sich.',
+    onCoins: id => {
+      renderCoinBank(id, rv.coinsGained || 0);
+      // Anders als bei den Runden-Kacheln wird hier NICHTS mehr vergeben:
+      // add_bonbons lief serverseitig in board_claim_reward. Ein zweiter
+      // Aufruf hier würde die Menge verdoppeln.
+      if (rv.bonbonsGained > 0) {
+        renderBonbonBank(id + '-bonbons', { ok: true, base: rv.bonbonsGained, bonus: 0 });
+      }
+    }
+  });
+  return true;
+}
+
+/* Zwei Kacheln lassen ihr Tier nicht ziehen, aus demselben Grund: es
+   ist nicht durch Spielen entstanden und kann durch Spielen auch nicht
+   wiederkommen. Das Team-Legendär hängt an den Kurs-Aufgaben, das
+   Monster des Reality Check an einem Phasenwechsel, den die Lehrkraft
+   genau einmal auslöst — freigelassen wäre es endgültig weg. Der Knopf
+   ist in buildCardHTML schon ausgeblendet; hier steht der Riegel für
+   den Fall, dass jemand die Funktion anders erreicht. */
 function confirmRelease(gameId) {
   const game    = GAMES_CONFIG.find(g => g.id === gameId);
-  if (game?.clusterLegi) return;
+  if (game?.clusterLegi || game?.collab) return;
   const allData = loadAllData();
   const data    = allData[gameId];
   const overlay = document.getElementById('modalOverlay');
@@ -1892,7 +1974,7 @@ function confirmRelease(gameId) {
 
 function releaseCreature(gameId) {
   const game = GAMES_CONFIG.find(g => g.id === gameId);
-  if (game?.clusterLegi) return;
+  if (game?.clusterLegi || game?.collab) return;
   const allData        = loadAllData();
   updateSeenCreatures(allData);
   let keepCoins        = allData[gameId]?.coins || 0;

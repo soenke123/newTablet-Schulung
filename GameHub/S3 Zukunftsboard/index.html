@@ -193,6 +193,33 @@
   </div>
 </div>
 
+<!-- ── Belohnung ─────────────────────────────────────────────
+     Der einzige Moment, in dem auf dieser Seite ein Monster vorkommt.
+     Er gehört bewusst hierher und nicht in den Hub: wenn die Lehrkraft
+     weiterschaltet, schlüpft es auf allen Tablets gleichzeitig — das
+     ist der gemeinsame Moment, den eine Kurs-Kachel haben soll. Wer
+     gerade nicht auf der Seite war, bekommt dieselbe Sequenz beim
+     nächsten Hub-Besuch nachgereicht.
+
+     Kein Münzbank-Widget wie im Hub: die Gesamtstände stehen im
+     localStorage, den diese Seite bewusst nicht führt — eine Bank mit
+     falscher Summe ist schlimmer als keine. Hier steht nur, was gerade
+     dazugekommen ist. -->
+<div class="bd-modal-backdrop" id="bdReveal" hidden>
+  <div class="bd-modal bd-modal--reveal" role="dialog" aria-modal="true" aria-labelledby="bdRevealTitle">
+    <div class="bd-reveal__badge" id="bdRevealBadge" hidden></div>
+    <h2 id="bdRevealTitle"></h2>
+    <div class="bd-reveal__art" id="bdRevealArt"></div>
+    <p class="bd-reveal__name" id="bdRevealName" hidden></p>
+    <div class="bd-reveal__bar" id="bdRevealBar" hidden><span id="bdRevealBarFill"></span></div>
+    <p class="bd-reveal__sub" id="bdRevealSub"></p>
+    <div class="bd-reveal__gains" id="bdRevealGains" hidden></div>
+    <div class="bd-modal__actions">
+      <button type="button" id="bdRevealNext" class="bd-btn">Weiter</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Bestätigungs-Modal (Löschen / Zurücksetzen) ────────── -->
 <div class="bd-modal-backdrop" id="bdConfirm" hidden>
   <div class="bd-modal bd-modal--small" role="dialog" aria-modal="true">
@@ -213,6 +240,14 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../../supabase-config.js"></script>
 <script src="../../session.js"></script>
+
+<!-- creatures.js liefert die Kreatur- und Ei-Grafiken für die
+     Belohnungs-Sequenz. Der Basispfad muss VOR dem Laden stehen —
+     gleiches Muster wie in jedem anderen Spiel. Gespeichert wird von
+     hier aus nichts: die Vergabe erledigt board_claim_reward auf dem
+     Server, der Hub liest sie beim nächsten Boot. -->
+<script>window.CREATURE_IMAGE_BASE = '../data/';</script>
+<script src="../creatures.js"></script>
 
 <script src="js/api.js"></script>
 <script src="js/board.js"></script>

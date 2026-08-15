@@ -114,7 +114,9 @@
     detailId:  null,   // offene Karten-Ansicht
     confirmFn: null,
     shuffle:   0,      // Mischzähler für „neu anordnen" — rein lokal
-    failStreak: 0      // wie viele stille Polls hintereinander fehlschlugen
+    failStreak: 0,     // wie viele stille Polls hintereinander fehlschlugen
+    rewardBusy: false, // läuft gerade ein Belohnungs-Abruf oder eine Sequenz?
+    rewardDue:  false  // Phasenwechsel kam, während ein Formular offen war
   };
 
   /* Die Wolke hat zwei Ebenen, die einander ins Wort fallen können:
@@ -311,11 +313,27 @@
     if (firstLoad || switched) {
       if (!$('bdModal').hidden) {
         if (switched) toast(`Phase ${p} · ${PHASE_INFO[p].name} läuft jetzt.`);
+        // Vorgemerkt statt abgeholt: der RPC gibt seine Belohnung genau
+        // einmal aus, und wer sie jetzt einlöste, verlöre die halb
+        // getippte Karte an die Sequenz. Der nächste Poll ohne offenes
+        // Formular holt sie nach.
+        state.rewardDue = true;
       } else {
         if (!$('bdConfirm').hidden) { $('bdConfirm').hidden = true; state.confirmFn = null; }
         closeDetail();
+        // Erst die Belohnung, dann der Auftrag: das Ei schlüpft VOR dem
+        // Phasen-Modal, sonst stünde die neue Aufgabe schon da, während
+        // das Ergebnis der alten noch aussteht.
+        state.rewardDue = false;
+        await maybeClaimReward();
         openPhaseInfo();
       }
+    } else if (state.rewardDue && $('bdModal').hidden) {
+      // Nachgeholt: das Formular ist zu, der Auftrag stand schon als
+      // Toast da — jetzt fehlt nur noch die Belohnung.
+      state.rewardDue = false;
+      closeDetail();
+      await maybeClaimReward();
     }
   }
 
@@ -454,6 +472,174 @@
   }
 
   function closePhaseInfo() { $('bdPhaseInfo').hidden = true; }
+
+  /* ── Belohnung ───────────────────────────────────────────
+     Reality Check ist die einzige Kachel, deren Monster an einer
+     Handlung der LEHRKRAFT hängt: Phase 1 beendet ⇒ es schlüpft,
+     Phase 2 beendet ⇒ es wächst. Gerechnet und vergeben wird das
+     serverseitig (board_claim_reward, Migration 0067) — hier wird nur
+     gezeigt, was zurückkommt.
+
+     Warum die Sequenz auf DIESER Seite läuft und nicht erst im Hub wie
+     bei Startup Story: der Kurs sitzt in diesem Moment zusammen. Wenn
+     die Lehrkraft weiterschaltet, schlüpft es auf allen Tablets
+     gleichzeitig. Für alle, die gerade nicht auf der Seite waren, holt
+     der Hub dieselbe Sequenz beim nächsten Besuch nach — der Server
+     gibt jede Stufe genau einmal aus, doppelt kann es also nicht
+     kommen.
+
+     Absichtlich steht nirgends, WORAN das Monster hängt. Weder die
+     Zahl der Post-Its noch die Zustimmungen werden erwähnt. */
+  async function maybeClaimReward() {
+    if (state.rewardBusy) return;
+    // Admins moderieren, sie sammeln nicht — der Server weist sie ohnehin
+    // ab, aber ein Aufruf je Phasenwechsel und Kurs wäre reine Last.
+    if (state.isAdmin) return;
+    state.rewardBusy = true;
+    try {
+      /* Bis zu zwei Stufen am Stück: wer erst in Phase 3 dazukommt, hat
+         Schlüpfen UND Wachsen offen. Der Server gibt pro Aufruf eine
+         Stufe aus, also einmal nachfassen. Die Schleife endet an
+         'none' — mehr als zwei Stufen gibt es nicht. */
+      for (let i = 0; i < 2; i++) {
+        const rv = await window.BoardAPI.claimReward(state.clusterId);
+        if (!rv || !rv.ok || rv.event === 'none' || !rv.event) return;
+        // Wer sich an den Zustimmungen gar nicht beteiligt hat, wächst
+        // um 0 und verdient nichts. Die Vergabe ist damit erledigt (der
+        // Server hat sie vermerkt), aber ein Fenster, das „Dein Monster
+        // wächst!" über einen unveränderten Balken schreibt, wäre eine
+        // Lüge. Also still übergehen.
+        const nothing = rv.event === 'grow'
+          && (rv.growth_after || 0) <= (rv.growth_before || 0)
+          && !(rv.coins_gained || 0) && !(rv.bonbons_gained || 0);
+        if (!nothing) await runReveal(rv);
+      }
+    } catch (e) {
+      console.warn('[BOARD] claimReward:', e.message);
+    } finally {
+      state.rewardBusy = false;
+    }
+  }
+
+  /* Zeigt die Sequenz und löst auf, wenn sie durch ist. Der Aufrufer
+     wartet darauf, damit das Phasen-Modal erst danach kommt. */
+  function runReveal(rv) {
+    // Ohne creatures.js gäbe es weder Ei noch Bild. Dann lieber eine
+    // Zeile als ein leeres Fenster — vergeben ist die Belohnung ja
+    // trotzdem, der Hub zeigt sie beim nächsten Besuch richtig.
+    if (typeof getCreatureHTML !== 'function' || typeof getEggSVG !== 'function') {
+      toast(rv.event === 'hatch' ? 'Dein Monster ist geschlüpft! Schau im Hub nach.'
+                                 : 'Dein Monster ist gewachsen! Schau im Hub nach.');
+      return Promise.resolve();
+    }
+
+    const creature = rv.creature;
+    const from     = rv.event === 'hatch' ? -1 : getGrowthStage(rv.growth_before  || 0);
+    const to       = rv.event === 'hatch' ?  0 : getGrowthStage(rv.growth_after   || 0);
+    const growth   = rv.event === 'hatch' ?  0 : (rv.growth_after || 0);
+
+    /* Schritt-Liste. Beim Schlüpfen erst das Ei, dann das Baby. Beim
+       Wachsen jede erreichte Stufe einzeln — wer drei Stufen auf einmal
+       geschafft hat, soll sie auch drei Mal sehen. Bleibt der Zuwachs
+       innerhalb einer Stufe, gibt es trotzdem ein Bild, sonst spränge
+       die Sequenz direkt zur Ausbeute. */
+    const steps = [];
+    if (rv.event === 'hatch') {
+      steps.push({ kind: 'egg' });
+      steps.push({ kind: 'grow', stage: 0 });
+    } else {
+      if (to > from) for (let s = from + 1; s <= to; s++) steps.push({ kind: 'grow', stage: s });
+      else           steps.push({ kind: 'grow', stage: Math.max(0, to) });
+      if ((rv.coins_gained || 0) > 0 || (rv.bonbons_gained || 0) > 0) steps.push({ kind: 'gains' });
+    }
+
+    const box   = $('bdReveal');
+    const badge = $('bdRevealBadge');
+    const art   = $('bdRevealArt');
+    const name  = $('bdRevealName');
+    const bar   = $('bdRevealBar');
+    const sub   = $('bdRevealSub');
+    const gains = $('bdRevealGains');
+    const next  = $('bdRevealNext');
+
+    let i = 0;
+    let eggTimer = null;
+
+    return new Promise(resolve => {
+      function finish() {
+        clearInterval(eggTimer);
+        box.hidden = true;
+        next.removeEventListener('click', onNext);
+        document.removeEventListener('keydown', onEsc);
+        resolve();
+      }
+      function onNext() { i++; (i < steps.length) ? draw() : finish(); }
+      function onEsc(ev) { if (ev.key === 'Escape') finish(); }
+
+      function draw() {
+        const step = steps[i];
+        clearInterval(eggTimer);
+        badge.hidden = true;
+        name.hidden  = true;
+        bar.hidden   = true;
+        gains.hidden = true;
+        next.textContent = (i === steps.length - 1) ? 'Fertig' : 'Weiter';
+
+        if (step.kind === 'egg') {
+          $('bdRevealTitle').textContent = 'Da tut sich was…';
+          sub.textContent = 'Euer Board hat die erste Phase hinter sich.';
+          art.innerHTML = getEggSVG(0);
+          // Risse durchlaufen und stehen lassen — die Auflösung ist der
+          // nächste Schritt und gehört dem Kind, nicht einem Timer.
+          let f = 0;
+          eggTimer = setInterval(() => {
+            f++;
+            art.innerHTML = getEggSVG(f);
+            if (f >= 4) clearInterval(eggTimer);
+          }, 420);
+          return;
+        }
+
+        if (step.kind === 'grow') {
+          const hatching = rv.event === 'hatch';
+          $('bdRevealTitle').textContent = hatching ? 'Es ist geschlüpft!' : 'Dein Monster wächst!';
+          sub.textContent = hatching
+            ? 'Es zieht mit dir in die Lernwelt — du findest es dort auf der Reality-Check-Kachel.'
+            : '';
+          art.innerHTML  = getCreatureHTML(creature, step.stage);
+          name.hidden    = false;
+          name.textContent = `${CREATURE_NAMES[creature] ?? creature} · ${GROWTH_LABELS[step.stage]}`;
+
+          if (isRare(creature))      { badge.hidden = false; badge.textContent = '✦ Selten ✦';  badge.className = 'bd-reveal__badge bd-reveal__badge--rare'; }
+          else if (isEpic(creature)) { badge.hidden = false; badge.textContent = '✦ Episch ✦'; badge.className = 'bd-reveal__badge bd-reveal__badge--epic'; }
+
+          if (!hatching) {
+            bar.hidden = false;
+            $('bdRevealBarFill').style.width =
+              Math.min(100, growth / GROWTH_MAX * 100) + '%';
+          }
+          return;
+        }
+
+        // Ausbeute. Bewusst nur der Zuwachs und keine Gesamtsumme: die
+        // Stände stehen im localStorage des Hubs, den diese Seite nicht
+        // führt — eine Bank mit falscher Summe wäre schlimmer als keine.
+        $('bdRevealTitle').textContent = 'Deine Ausbeute';
+        sub.textContent = '';
+        art.innerHTML   = '';
+        gains.hidden    = false;
+        gains.innerHTML =
+          ((rv.coins_gained   || 0) > 0 ? `<div class="bd-reveal__gain">🪙 <strong>+${rv.coins_gained}</strong> Münzen</div>`   : '') +
+          ((rv.bonbons_gained || 0) > 0 ? `<div class="bd-reveal__gain">🍬 <strong>+${rv.bonbons_gained}</strong> Bonbons</div>` : '');
+      }
+
+      next.addEventListener('click', onNext);
+      document.addEventListener('keydown', onEsc);
+      draw();
+      box.hidden = false;
+      next.focus();
+    });
+  }
 
   /* Voll? Dann bleibt der Plus-Knopf anklickbar und sagt es beim
      Drücken. Ein toter Knopf beantwortet die Frage „warum geht das
@@ -1578,7 +1764,7 @@
       if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
       if (state.view !== 'board') return;
       if (!$('bdModal').hidden || !$('bdDetail').hidden || !$('bdConfirm').hidden
-          || !$('bdPhaseInfo').hidden) return;
+          || !$('bdPhaseInfo').hidden || !$('bdReveal').hidden) return;
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) return;
       ev.preventDefault();
       gotoCat(ev.key === 'ArrowRight' ? 1 : -1);

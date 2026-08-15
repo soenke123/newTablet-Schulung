@@ -120,6 +120,12 @@
     // antwortet mit dem Ergebnis { liked, likes }.
     toggleLike: noteId => rpc('board_toggle_like', { p_note_id: noteId }),
 
+    /* Belohnung abholen (Migration 0067). Idempotent: der Server gibt
+       jede Stufe genau einmal aus und antwortet danach mit
+       event: 'none'. Deshalb darf der Aufruf ruhig mehrfach kommen —
+       aber nicht beliebig oft, siehe maybeClaimReward() in board.js. */
+    claimReward: clusterId => rpc('board_claim_reward', { p_cluster_id: clusterId ?? null }),
+
     remove:   id                 => rpc('board_delete_note', { p_id: id }),
     setPhase: (clusterId, phase) => rpc('board_set_phase', { p_cluster_id: clusterId, p_phase: phase }),
     reset:    clusterId          => rpc('board_reset',     { p_cluster_id: clusterId }),

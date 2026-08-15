@@ -644,6 +644,60 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
   font-family: var(--font-display); color: var(--clr-ink); font-size: 1.2rem;
   font-weight: 800; letter-spacing: -.01em; margin-bottom: 14px;
 }
+
+/* ── Belohnung ────────────────────────────────────────────
+   Der einzige Ort auf dieser Seite, an dem ein Monster vorkommt. Es
+   bekommt seinen Auftritt, aber nicht das Fantasy-Kleid des Hubs:
+   dasselbe weiße Fenster wie alle anderen, dieselbe Schrift,
+   derselbe anthrazitfarbene Knopf. Bunt ist hier nur das Tier — und
+   das ist ein Bild, keine Fläche, die mit den Zetteln konkurriert. */
+.bd-modal--reveal { max-width: 400px; text-align: center; }
+.bd-modal--reveal h2 { margin-bottom: 10px; }
+
+.bd-reveal__badge {
+  display: inline-block; margin-bottom: 8px;
+  padding: 3px 12px; border-radius: 999px;
+  font-size: .72rem; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.bd-reveal__badge--rare { background: var(--clr-blue-soft); color: var(--clr-blue); }
+.bd-reveal__badge--epic { background: #f1e6fb;              color: #6b3fa0; }
+/* Das Schildchen ist hier die ganze Auszeichnung: getCreatureHTML()
+   packt seltene und epische Tiere in .rare-frame/.epic-frame, deren
+   Glitzer-Overlays aber in GameHub/style.css stehen — und die zieht
+   diese Seite nicht mit rein, sonst käme das komplette Fantasy-Kleid
+   hinterher. Die volle Show gibt es im Hub. */
+
+/* Feste Höhe: Ei und Kreatur sind unterschiedlich hoch, und ohne sie
+   springt der Weiter-Knopf zwischen den Schritten hin und her —
+   genau unter dem Finger, der ihn gerade drücken will. */
+.bd-reveal__art {
+  height: 170px; margin: 6px auto 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.bd-reveal__art svg,
+.bd-reveal__art img { max-height: 170px; max-width: 100%; object-fit: contain; }
+
+.bd-reveal__name { font-weight: 700; color: var(--clr-ink); margin-bottom: 10px; }
+.bd-modal .bd-reveal__sub { font-size: .9rem; color: var(--clr-ink-2); }
+
+.bd-reveal__bar {
+  height: 8px; max-width: 220px; margin: 0 auto 12px;
+  border-radius: 999px; background: var(--clr-surface2); overflow: hidden;
+}
+.bd-reveal__bar > span {
+  display: block; height: 100%; width: 0;
+  background: var(--clr-accent); border-radius: 999px;
+  transition: width .6s cubic-bezier(.2,.8,.3,1);
+}
+
+.bd-reveal__gains { display: grid; gap: 8px; margin: 4px 0 6px; }
+.bd-reveal__gain {
+  padding: 10px 14px; border-radius: 10px;
+  background: var(--clr-surface); border: 1px solid var(--clr-line);
+  font-size: 1rem; color: var(--clr-ink-2);
+}
+.bd-reveal__gain strong { color: var(--clr-ink); font-size: 1.1rem; }
 /* Bewusst ohne `color`: `.bd-modal p` wäre spezifischer als `.bd-error`
    und `.bd-help` und würde beiden ihre Farbe nehmen — die Fehlermeldung
    stünde in Grau statt in Rot. */
