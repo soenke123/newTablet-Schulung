@@ -347,6 +347,7 @@
     $('bdCatNav').hidden = true;
     $('bdPhases').hidden  = true;
     $('bdViewSwitch').hidden = true;
+    fillPage(false);
     // Signatur verwerfen: sonst hält render() beim nächsten erfolgreichen
     // Laden die Daten für „unverändert", steigt früh aus — und die
     // Fehlermeldung bliebe über einem versteckten Board stehen.
@@ -796,8 +797,20 @@
     }
   }
 
+  /* In der Wolken-Ansicht reicht die Tafel bis an die untere
+     Bildschirmkante — darunter steht nichts mehr, also braucht die
+     Seite dort auch keinen Fuß. Das Polster gehört der Liste und dem
+     Recherche-Raster, die beide weiterwachsen dürfen. */
+  const fillPage = on => {
+    document.body.classList.toggle('bd-fill', !!on);
+    // Ohne Wolke gibt es auch keine Tafel, die über die Kante reicht —
+    // die Lupenknöpfe gehören dann sowieso nicht auf den Schirm.
+    if (!on) document.body.classList.remove('bd-tall');
+  };
+
   function renderBoard() {
     const inCat = notesOf(state.cat);
+    fillPage(false);
 
     // Richtung der Einblendung: beim Wischen nach links kommt die neue
     // Wolke von rechts herein. Wird nach dem Zeichnen zurückgesetzt,
@@ -835,7 +848,13 @@
                    gepackt, ohne von der Gerätebreite zu wissen.
        Getrennt, weil sonst das Zoomen die Anordnung verändern würde —
        und eine Wolke, die sich beim Hineinzoomen umsortiert, ist keine
-       Karte mehr, auf der man sich zurechtfindet.                    */
+       Karte mehr, auf der man sich zurechtfindet.
+
+       Die Lupenknöpfe stehen NEBEN dem Fenster, nicht darin: reicht die
+       Tafel über den unteren Bildschirmrand hinaus, heften sie sich an
+       den Schirm (position: fixed), und ein transformierter Vorfahr —
+       das Fenster trägt beim Bereichswechsel kurz die Einblende-
+       Animation — würde genau das aushebeln.                          */
     $('bdBoard').innerHTML =
       `<div class="bd-port${slide}" id="bdPort">
          <div class="bd-stage" id="bdStage">
@@ -843,15 +862,18 @@
              size: sizeFor(Number(n.likes || 0), maxLikes)
            })).join('')}</div>
          </div>
-         <div class="bd-zoom" id="bdZoom">
-           <button type="button" data-zoom="out"     aria-label="Herauszoomen" title="Herauszoomen">−</button>
-           <button type="button" data-zoom="fit"     aria-label="Alles zeigen" title="Alles zeigen">⤢</button>
-           <button type="button" data-zoom="in"      aria-label="Hineinzoomen" title="Hineinzoomen">＋</button>
-           <button type="button" data-zoom="shuffle" aria-label="Neu anordnen"
-                   title="Neu anordnen — nur auf diesem Gerät, niemand sonst merkt etwas davon">⟳</button>
-         </div>
+       </div>
+       <div class="bd-zoom" id="bdZoom">
+         <button type="button" data-zoom="out"     aria-label="Herauszoomen" title="Herauszoomen">−</button>
+         <button type="button" data-zoom="fit"     aria-label="Alles zeigen" title="Alles zeigen">⤢</button>
+         <button type="button" data-zoom="in"      aria-label="Hineinzoomen" title="Hineinzoomen">＋</button>
+         <button type="button" data-zoom="shuffle" aria-label="Neu anordnen"
+                 title="Neu anordnen — nur auf diesem Gerät, niemand sonst merkt etwas davon">⟳</button>
        </div>`;
 
+    // VOR dem Vermessen: das Fenster rechnet sich aus, was unter ihm
+    // noch zur Seite gehört — und das ist mit Fuß ein anderer Wert.
+    fillPage(true);
     layoutClouds();
     wirePort($('bdPort'));
   }
@@ -887,6 +909,12 @@
   const CLOUD_MAX_W = 2400;   // breiteste — darüber wächst sie in die Höhe
   const CLOUD_ASPECT = 0.52;  // Wunschverhältnis Höhe zu Breite
   const CLOUD_INIT_MIN = 0.45; // so weit wird höchstens herausgezoomt beim Öffnen
+  /* Untergrenze für das Fenster. Greift nur, wo der Platz wirklich
+     ausgeht — Handy im Querformat, aufgeklappte Bildschirmtastatur.
+     Dann ragt die Tafel eben doch ein Stück über die Kante, und die
+     Seite lässt sich scrollen; das ist immer noch besser als ein
+     Guckloch von zwei Karten Höhe. */
+  const CLOUD_MIN_H = 260;
 
   /* Sechs Neigungen im Wechsel. Stehen seit dem Zoom im Skript und
      nicht mehr im Stylesheet: die Platzierung rechnet mit
@@ -1115,11 +1143,84 @@
     vp.ty = ch <= ph ? (ph - ch) / 2 : clamp(vp.ty, ph - ch, 0);
   }
 
-  /* Fensterhöhe und Anfangsmaßstab.
+  /* Wie viel Seite steht unter dem Fenster noch an?
 
-     Die Höhe folgt dem Inhalt: so hoch, wie die Wolke bei voller Breite
-     braucht — aber nie höher als knapp zwei Drittel des Bildschirms,
-     sonst schiebt das Board seine eigene Bedienung aus dem Blick.
+     Gerechnet, nicht gemessen: solange das Fenster seine Höhe noch
+     nicht hat, ist die Tafel nur so hoch wie ihre Mindesthöhe — eine
+     Messung an document.body zählte genau die mit und machte das
+     Fenster um eben diesen Betrag zu klein. Also werden die unteren
+     Polster und Kanten aller Kästen aufsummiert, in denen das Fenster
+     steckt, plus alles, was darunter noch im Fluss steht. Damit
+     stimmen auch die schmale Fassung (@media) und die
+     Moderationsleiste, ohne dass hier eine einzige Zahl steht. */
+  function spaceBelow(el) {
+    let sum = 0;
+    for (let n = el; n && n !== document.body && n.parentElement; n = n.parentElement) {
+      const pcs = getComputedStyle(n.parentElement);
+      sum += (parseFloat(pcs.paddingBottom) || 0) + (parseFloat(pcs.borderBottomWidth) || 0);
+      sum += (parseFloat(getComputedStyle(n).marginBottom) || 0);
+
+      for (let s = n.nextElementSibling; s; s = s.nextElementSibling) {
+        const scs = getComputedStyle(s);
+        // Ausgeblendetes und alles, was aus dem Fluss genommen ist
+        // (Modale, Toast), braucht keinen Platz.
+        if (scs.display === 'none' || scs.position === 'fixed' || scs.position === 'absolute') continue;
+        sum += s.offsetHeight
+             + (parseFloat(scs.marginTop) || 0) + (parseFloat(scs.marginBottom) || 0);
+      }
+    }
+    return sum;
+  }
+
+  /* Wie hoch darf das Fenster höchstens werden?
+
+     Vorher stand hier eine Zahl: zwei Drittel der Bildschirmhöhe. Die
+     wusste nichts davon, wie viel Platz tatsächlich da ist — auf dem
+     Handy blieb darunter leere Seite, auf dem Tablet ein Drittel
+     ungenutzt. Jetzt wird gerechnet, und zwar zweimal:
+
+     flach — die Tafel endet genau an der unteren Bildschirmkante,
+             ohne dass irgendetwas scrollen muss. Alles bleibt im Bild:
+             Kopfzeile, Phasen, Bereichs-Wechsler, Tafel.
+     voll  — die Kopfzeile darf nach oben wegscrollen; stehen bleibt
+             der Bereichs-Wechsler, der ohnehin oben klebt. Die Tafel
+             reicht dann über den unteren Rand hinaus, und ein Wisch
+             stellt sie genau ins Bild.
+
+     Genommen wird „flach", solange dabei ordentlich Platz herauskommt —
+     eine Seite, die aus keinem anderen Grund als der Kopfzeile
+     scrollt, ist ein schlechter Tausch. Erst wenn es eng wird (Handy
+     im Hochformat: die Kopfzeile frisst dort ein Sechstel des
+     Schirms), ist der Platz mehr wert als das Nicht-Scrollen. */
+  const CLOUD_COMFY = 560;   // ab so viel flachem Platz bleibt die Kopfzeile stehen
+
+  function portSpace(port) {
+    // Oberkante im Dokument. Über getBoundingClientRect, weil die nicht
+    // davon abhängt, welcher Kasten gerade als offsetParent gilt.
+    const top   = port.getBoundingClientRect().top + window.scrollY;
+    const below = spaceBelow(port);
+    const flat  = window.innerHeight - top - below;
+
+    let full = flat;
+    const nav = $('bdCatNav');
+    if (nav && !nav.hidden) {
+      /* Der Abstand zwischen der Unterkante des klebenden Wechslers und
+         der Oberkante des Fensters. Aus den Stilwerten gelesen und
+         nicht aus Positionen gemessen: ein sticky-Kasten steht je nach
+         Scrollstand woanders, seine Höhe und die Polster darunter
+         ändern sich dabei nicht. */
+      const scs = getComputedStyle(port.parentElement);
+      const gap = (parseFloat(getComputedStyle(nav).marginBottom) || 0)
+                + (parseFloat(scs.borderTopWidth) || 0)
+                + (parseFloat(scs.paddingTop)     || 0);
+      full = window.innerHeight - nav.offsetHeight - gap - below;
+    }
+
+    const max = Math.max(CLOUD_MIN_H, Math.round(flat >= CLOUD_COMFY ? flat : full));
+    return { max, flat };
+  }
+
+  /* Fensterhöhe und Anfangsmaßstab.
 
      Der Anfangsmaßstab ist der Überblick — außer der wäre so klein,
      dass nichts mehr zu erkennen ist. Auf einem Handy passen 40 Karten
@@ -1129,14 +1230,29 @@
      einen Druck auf ⤢ entfernt. */
   function fitView(port, opts) {
     const availW  = Math.max(80, port.clientWidth - 2 * CLOUD_PAD);
-    const maxH    = Math.max(300, Math.round(window.innerHeight * 0.62));
+    const space   = portSpace(port);
     const byWidth = Math.min(1, availW / vp.w);
 
-    // Wird ohnehin ausschnittweise gezeigt, darf das Fenster den ganzen
-    // erlaubten Platz nehmen — sonst bliebe ein flacher Streifen übrig.
-    port.style.height = (byWidth < CLOUD_INIT_MIN
-      ? maxH
-      : clamp(Math.ceil(vp.h * byWidth) + 2 * CLOUD_PAD, 240, maxH)) + 'px';
+    /* Passt die Wolke in der Breite auf den Schirm, dann bestimmt die
+       Breite ihre Größe — mehr Fensterhöhe brächte dort keine einzige
+       Karte mehr, nur einen leeren Streifen unter der Wolke. Also
+       bekommt das Fenster genau die Höhe, die die Wolke braucht.
+
+       Wird sie ohnehin nur ausschnittweise gezeigt (byWidth unter der
+       Lesbarkeitsgrenze — der Regelfall auf dem Handy), zählt dagegen
+       jede Zeile: dann nimmt das Fenster allen Platz, den es kriegen
+       kann. Genau dieser Fall war vorher auf zwei Drittel der
+       Bildschirmhöhe gedeckelt. */
+    const h = byWidth < CLOUD_INIT_MIN
+      ? space.max
+      : clamp(Math.ceil(vp.h * byWidth) + 2 * CLOUD_PAD, 240, space.max);
+    port.style.height = h + 'px';
+
+    /* Reicht die Tafel über die untere Bildschirmkante hinaus, wandern
+       die Lupenknöpfe an den Schirm — an ihrem Platz am Fuß der Tafel
+       lägen sie sonst im nicht sichtbaren Teil und wären erst nach dem
+       Scrollen zu erreichen. */
+    document.body.classList.toggle('bd-tall', h > space.flat + 1);
 
     const availH = Math.max(80, port.clientHeight - 2 * CLOUD_PAD);
 
@@ -1202,6 +1318,9 @@
       // Lieber untereinander als übereinander: die Karten bleiben
       // lesbar, auch wenn die Platzierung schiefgeht.
       console.warn('[BOARD] Wolken-Layout fehlgeschlagen:', e.message);
+      // Im Notfall-Layout fließen die Karten wieder nach unten weiter —
+      // dann braucht die Seite ihren Fuß zurück.
+      fillPage(false);
       box.classList.add('bd-cloud--plain');
       box.style.width = ''; box.style.height = '';
       port.classList.add('bd-port--plain');
@@ -1297,8 +1416,9 @@
     // Am Rechner wird mit gedrückter Taste geschoben, sobald es etwas
     // zu schieben gibt.
     port.addEventListener('pointerdown', ev => {
+      // Die Lupenknöpfe brauchen hier keine Ausnahme mehr: sie stehen
+      // neben dem Fenster, ein Druck auf sie kommt gar nicht erst an.
       if (ev.pointerType === 'touch' || ev.button !== 0 || !isPanMode()) return;
-      if (ev.target.closest('.bd-zoom')) return;
       drag = { x: ev.clientX, y: ev.clientY, tx: vp.tx, ty: vp.ty, on: false, id: ev.pointerId };
     });
     port.addEventListener('pointermove', ev => {
@@ -1362,6 +1482,7 @@
   }
 
   function renderTable() {
+    fillPage(false);
     const cols = tableCols();
     // Beim Fachwechsel kann die Sortierspalte verschwinden (👍 ↔ Quelle).
     // Dann still auf das Alter zurückfallen statt nach einem Wert zu

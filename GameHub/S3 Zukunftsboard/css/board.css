@@ -215,6 +215,22 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); col
 
 /* ── Inhalt ───────────────────────────────────────────── */
 .bd-main { padding: 18px; }
+
+/* Wolken-Ansicht: die Tafel reicht bis an die untere Bildschirmkante,
+   darunter steht nichts mehr — also fällt der Fuß der Seite weg. Das
+   Skript setzt die Klasse, BEVOR es das Fenster ausmisst; es rechnet
+   sich seine Höhe aus dem, was unter ihm noch zur Seite gehört.
+   Die 14 px bleiben stehen, damit die Tafelkante auf Geräten mit
+   Balken am unteren Rand nicht darunter verschwindet.
+
+   Ohne Klasse (Liste, Recherche-Raster, leerer Bereich) bleibt alles
+   wie es war: dort wächst der Inhalt weiter und braucht seinen Fuß. */
+body.bd-fill { padding-bottom: 14px; }
+body.bd-fill .bd-main { padding-bottom: 0; }
+/* Die Mindesthöhe gilt der leeren Tafel — in der Wolken-Ansicht setzt
+   das Fenster die Höhe, und 320 px könnten sie nur noch nach unten
+   über die Bildschirmkante schieben. */
+body.bd-fill .bd-surface { min-height: 0; }
 .bd-status { text-align: center; color: var(--clr-ink-3); padding: 40px 18px; }
 .bd-status--error { color: var(--clr-danger); font-weight: 700; }
 
@@ -308,6 +324,9 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); col
    weißen Fläche die Leere, ohne mit den Zetteln zu konkurrieren —
    28 px, damit es bei jeder Kartengröße ruhig bleibt. */
 .bd-surface {
+  /* Bezug für die Lupenknöpfe: die sitzen seit dem großen Fenster
+     neben und nicht mehr im Fenster (siehe .bd-zoom). */
+  position: relative;
   background-color: var(--clr-board);
   background-image:
     linear-gradient(rgba(28,37,48,0.045) 1px, transparent 1px),
@@ -367,12 +386,19 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); col
 .bd-cloud--plain .bd-cn { position: static; }
 .bd-port--plain { overflow: visible; height: auto !important; touch-action: auto; }
 .bd-port--plain .bd-stage { position: static; transform: none !important; }
-.bd-port--plain .bd-zoom { display: none; }
+/* Geschwister-Wähler, weil die Knöpfe neben dem Fenster stehen. */
+.bd-port--plain ~ .bd-zoom { display: none; }
 
 /* ── Lupenknöpfe ──────────────────────────────────────────
-   Unten rechts, damit sie dem Bereichs-Wechsler oben nicht ins Gehege
-   kommen. Bewusst klein und unbunt: sie bedienen die Ansicht, sie
-   sagen nichts über den Inhalt. */
+   Unten rechts in der Tafel, damit sie dem Bereichs-Wechsler oben
+   nicht ins Gehege kommen. Bewusst klein und unbunt: sie bedienen die
+   Ansicht, sie sagen nichts über den Inhalt.
+
+   Sie hängen an der Tafel und nicht am Fenster: reicht die Tafel über
+   die untere Bildschirmkante hinaus, heften sie sich an den Schirm
+   (unten) — und ein transformierter Vorfahr würde das aushebeln. Das
+   Fenster trägt beim Bereichswechsel kurz eine Einblende-Animation,
+   also genau so einen. */
 .bd-zoom {
   position: absolute; right: 8px; bottom: 8px; z-index: 15;
   display: flex; gap: 3px; padding: 3px;
@@ -394,6 +420,11 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); col
   margin-left: 3px; border-left: 1px solid var(--clr-line-soft); border-radius: 0 8px 8px 0;
   font-size: 1.15rem;
 }
+
+/* Tafel über der Bildschirmkante: die Knöpfe bleiben im Bild. Setzt
+   das Skript, wenn die gewählte Fensterhöhe nicht mehr ohne Scrollen
+   auf den Schirm passt (portSpace in board.js). */
+body.bd-tall .bd-zoom { position: fixed; right: 14px; bottom: 14px; }
 
 /* ── Klebezettel ──────────────────────────────────────────
    Fast rechtwinklig (3 px), ein einzelner weicher Schatten nach
@@ -852,6 +883,16 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
   .bd-cattab__icon { font-size: 1.2rem; }
   .bd-catnav__name { font-size: .98rem; min-width: 9ch; }
   /* Auf schmalen Geräten zählt jeder Punkt Breite — die Tafel behält
-     ihre Fläche, aber nicht mehr ihren Rahmen. */
-  .bd-surface { padding: 16px 10px 20px; border-radius: 10px; }
+     ihre Fläche, aber nicht mehr ihren Rahmen. Und sie geht bis an
+     beide Bildschirmkanten: auf einem Handy ist ein Zettel fast so
+     breit wie der Schirm, da sind 24 px Seitenrand kein Rahmen mehr,
+     sondern eine ganze Kartenspalte. Gerundete Ecken und Seitenkanten
+     fallen damit weg — die gibt es an einer Kante, die man nicht
+     sieht, ohnehin nicht zu sehen. */
+  .bd-surface {
+    margin: 0 -12px;
+    padding: 16px 10px 20px;
+    border-radius: 0;
+    border-left: 0; border-right: 0;
+  }
 }
