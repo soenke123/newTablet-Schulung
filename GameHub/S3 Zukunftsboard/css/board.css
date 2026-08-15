@@ -216,20 +216,20 @@ button.bd-phase--shown:hover:not(:disabled) { background: var(--clr-accent); col
 /* ── Inhalt ───────────────────────────────────────────── */
 .bd-main { padding: 18px; }
 
-/* Wolken-Ansicht: die Tafel reicht bis an die untere Bildschirmkante,
+/* Board-Ansicht: die Tafel reicht bis an die untere Bildschirmkante,
    darunter steht nichts mehr — also fällt der Fuß der Seite weg. Das
-   Skript setzt die Klasse, BEVOR es das Fenster ausmisst; es rechnet
-   sich seine Höhe aus dem, was unter ihm noch zur Seite gehört.
-   Die 14 px bleiben stehen, damit die Tafelkante auf Geräten mit
-   Balken am unteren Rand nicht darunter verschwindet.
+   Skript setzt die Klasse, BEVOR es die Höhe ausmisst; es rechnet sie
+   aus dem, was unter der Tafel noch zur Seite gehört. Die 14 px
+   bleiben stehen, damit die Tafelkante auf Geräten mit Balken am
+   unteren Rand nicht darunter verschwindet.
 
-   Ohne Klasse (Liste, Recherche-Raster, leerer Bereich) bleibt alles
-   wie es war: dort wächst der Inhalt weiter und braucht seinen Fuß. */
+   Ohne Klasse (Liste) bleibt alles wie es war: dort wächst der Inhalt
+   weiter und braucht seinen Fuß. */
 body.bd-fill { padding-bottom: 14px; }
 body.bd-fill .bd-main { padding-bottom: 0; }
-/* Die Mindesthöhe gilt der leeren Tafel — in der Wolken-Ansicht setzt
-   das Fenster die Höhe, und 320 px könnten sie nur noch nach unten
-   über die Bildschirmkante schieben. */
+/* Die 320 px sind eine Notlösung für den Fall, dass das Skript keine
+   Höhe setzt. Wo es eine setzt (jede Board-Ansicht), sind sie nur im
+   Weg: sie könnten die Tafel über die Bildschirmkante schieben. */
 body.bd-fill .bd-surface { min-height: 0; }
 .bd-status { text-align: center; color: var(--clr-ink-3); padding: 40px 18px; }
 .bd-status--error { color: var(--clr-danger); font-weight: 700; }
@@ -345,10 +345,12 @@ body.bd-fill .bd-surface { min-height: 0; }
 }
 
 /* ── Fenster, Lupe, Tafel ─────────────────────────────────
-   Drei Schichten mit je einer Aufgabe. Das Fenster (.bd-port) ist so
-   groß wie der Platz auf dem Gerät und schneidet ab. Die Lupe
+   Drei Schichten mit je einer Aufgabe. Das Fenster (.bd-port) nimmt
+   allen Platz bis zur unteren Bildschirmkante und schneidet ab — die
+   Höhe setzt das Skript, sie hängt nicht am Inhalt. Die Lupe
    (.bd-stage) trägt Maßstab und Ausschnitt. Die Tafel (.bd-cloud) wird
-   in ihrer eigenen Breite gepackt und weiß vom Gerät nichts.
+   in ihrer eigenen Breite gepackt; vom Gerät kennt sie nur das Format
+   des Fensters, nicht dessen Pixel.
 
    Der Grund für die Trennung: auf einem Handy ist ein Zettel fast so
    breit wie der Bildschirm. Packt man die Wolke in dieser Breite, stößt
@@ -394,11 +396,9 @@ body.bd-fill .bd-surface { min-height: 0; }
    nicht ins Gehege kommen. Bewusst klein und unbunt: sie bedienen die
    Ansicht, sie sagen nichts über den Inhalt.
 
-   Sie hängen an der Tafel und nicht am Fenster: reicht die Tafel über
-   die untere Bildschirmkante hinaus, heften sie sich an den Schirm
-   (unten) — und ein transformierter Vorfahr würde das aushebeln. Das
-   Fenster trägt beim Bereichswechsel kurz eine Einblende-Animation,
-   also genau so einen. */
+   Sie hängen an der Tafel und nicht im Fenster: das Fenster fährt beim
+   Bereichswechsel eine Einblende-Animation, und Knöpfe, die die Ansicht
+   bedienen, sollen dabei nicht mitwandern. */
 .bd-zoom {
   position: absolute; right: 8px; bottom: 8px; z-index: 15;
   display: flex; gap: 3px; padding: 3px;
@@ -420,11 +420,6 @@ body.bd-fill .bd-surface { min-height: 0; }
   margin-left: 3px; border-left: 1px solid var(--clr-line-soft); border-radius: 0 8px 8px 0;
   font-size: 1.15rem;
 }
-
-/* Tafel über der Bildschirmkante: die Knöpfe bleiben im Bild. Setzt
-   das Skript, wenn die gewählte Fensterhöhe nicht mehr ohne Scrollen
-   auf den Schirm passt (portSpace in board.js). */
-body.bd-tall .bd-zoom { position: fixed; right: 14px; bottom: 14px; }
 
 /* ── Klebezettel ──────────────────────────────────────────
    Fast rechtwinklig (3 px), ein einzelner weicher Schatten nach
