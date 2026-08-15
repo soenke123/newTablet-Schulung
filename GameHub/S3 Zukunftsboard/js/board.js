@@ -142,6 +142,20 @@
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
+  // Quellendatum ist ein Monatsfeld (der Tag ist für eine Quellenangabe
+  // irrelevant) — Vergleich und max-Attribut brauchen darum "YYYY-MM"
+  // statt das volle todayIso().
+  function monthIso() {
+    return todayIso().slice(0, 7);
+  }
+
+  function formatMonthYear(iso) {
+    if (!iso) return '';
+    const d = new Date(String(iso).slice(0, 7) + '-01T00:00:00');
+    if (isNaN(d)) return String(iso);
+    return d.toLocaleDateString('de-DE', { month: '2-digit', year: 'numeric' });
+  }
+
   function formatDate(iso) {
     if (!iso) return '';
     // 'T00:00:00' erzwingt lokale Mitternacht. Ohne das liest der Browser
@@ -165,7 +179,7 @@
     const link = isSafeUrl(note.source_url)
       ? `<a href="${esc(note.source_url)}" target="_blank" rel="noopener noreferrer" title="${esc(note.source_url)}">${esc(domainOf(note.source_url))} ↗</a>`
       : esc(note.source_url);   // kein Link — javascript: & Co. bleiben Text
-    return `${esc(note.source_author)} (${formatDate(note.source_date)}): ${link}`;
+    return `${esc(note.source_author)} (${formatMonthYear(note.source_date)}): ${link}`;
   }
 
   function toast(msg, isError) {
@@ -1288,8 +1302,8 @@
     $('bdSource').hidden = !isFact;
     $('bdSrcUrl').value    = note?.source_url    ?? '';
     $('bdSrcAuthor').value = note?.source_author ?? '';
-    $('bdSrcDate').value   = note?.source_date ? String(note.source_date).slice(0, 10) : '';
-    $('bdSrcDate').max     = todayIso();
+    $('bdSrcDate').value   = note?.source_date ? String(note.source_date).slice(0, 7) : '';
+    $('bdSrcDate').max     = monthIso();
 
     ['bdText', 'bdSrcUrl', 'bdSrcAuthor', 'bdSrcDate'].forEach(id => $(id).classList.remove('bd-invalid'));
     $('bdModalError').hidden = true;
@@ -1315,7 +1329,7 @@
       text:   text.length < 3 || text.length > 200,
       url:    isFact && !isSafeUrl($('bdSrcUrl').value.trim()),
       author: isFact && ($('bdSrcAuthor').value.trim().length < 2 || $('bdSrcAuthor').value.trim().length > 120),
-      date:   isFact && (!$('bdSrcDate').value || $('bdSrcDate').value > todayIso())
+      date:   isFact && (!$('bdSrcDate').value || $('bdSrcDate').value > monthIso())
     };
 
     // Rot erst markieren, wenn im Feld überhaupt etwas steht — sonst
@@ -1346,7 +1360,10 @@
       text:          $('bdText').value.trim(),
       source_url:    isFact ? $('bdSrcUrl').value.trim()    : null,
       source_author: isFact ? $('bdSrcAuthor').value.trim() : null,
-      source_date:   isFact ? $('bdSrcDate').value          : null,
+      // Nur Monat/Jahr sind erfassbar — der Tag ist für die Quellenangabe
+      // irrelevant, die DB-Spalte ist aber `date`. Fixer Tag 1, wird nie
+      // wieder ausgelesen (formatMonthYear zeigt ihn nicht an).
+      source_date:   isFact && $('bdSrcDate').value ? $('bdSrcDate').value + '-01' : null,
       cluster_id:    state.clusterId
     });
 
