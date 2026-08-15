@@ -132,15 +132,17 @@
 
       <label class="bd-field-label" for="bdSrcUrl">🔗 Link zur Seite</label>
       <input type="url" id="bdSrcUrl" placeholder="https://www.tagesschau.de/…" inputmode="url">
-      <p class="bd-help">Die vollständige Adresse aus der Adresszeile — mit <code>https://</code> am Anfang.</p>
 
-      <label class="bd-field-label" for="bdSrcAuthor">✍️ Wer hat es geschrieben?</label>
-      <input type="text" id="bdSrcAuthor" maxlength="120" placeholder="Mustermann, Erika">
-      <p class="bd-help">Nachname, Vorname — oder die Einrichtung, z.&nbsp;B. „Bundeszentrale für politische Bildung".</p>
-
-      <label class="bd-field-label" for="bdSrcDate">📅 Wann wurde es veröffentlicht?</label>
-      <input type="date" id="bdSrcDate">
-      <p class="bd-help">Das Datum des Artikels, nicht das von heute. Es steht meist direkt unter der Überschrift oder ganz unten auf der Seite.</p>
+      <div class="bd-source-row">
+        <div>
+          <label class="bd-field-label" for="bdSrcAuthor">✍️ Wer hat es geschrieben?</label>
+          <input type="text" id="bdSrcAuthor" maxlength="120" placeholder="Mustermann, Erika">
+        </div>
+        <div>
+          <label class="bd-field-label" for="bdSrcDate">📅 Wann veröffentlicht?</label>
+          <input type="date" id="bdSrcDate">
+        </div>
+      </div>
     </fieldset>
 
     <p class="bd-error" id="bdModalError" hidden></p>
