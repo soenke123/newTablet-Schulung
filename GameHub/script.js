@@ -555,6 +555,11 @@ function buildSeasonBulkBar(season) {
       const cluster = getActiveClusterId();
       if (!cluster) return;
       const open = btn.dataset.open === '1';
+      if (!open && !confirm(
+        `Alle Spiele der Season ${season.id} für diesen Kurs sperren?\n\n` +
+        `Die Spiele sind danach nicht mehr startbar. Monster, Wachstum und ` +
+        `Münzen bleiben erhalten.`
+      )) return;
       bar.querySelectorAll('button').forEach(b => b.disabled = true);
       const res = await window.setClusterSeasonAccess?.(cluster, season.id, open);
       if (!res?.ok) {
@@ -651,8 +656,17 @@ function attachCardListeners(card, game, data, isBackupTarget) {
     const btn = e.currentTarget;
     const cluster = getActiveClusterId();
     if (!cluster) return;
+    const wantOpen = btn.dataset.open !== '1';
+    // Rückfrage nur beim Sperren. Freischalten ist mit einem zweiten
+    // Klick zurückgenommen; Sperren trifft den ganzen Kurs auf einmal
+    // und passiert mitten in einer laufenden Stunde.
+    if (!wantOpen && !confirm(
+      `„${game.title}" für diesen Kurs sperren?\n\n` +
+      `Das Spiel ist danach nicht mehr startbar. Monster, Wachstum und ` +
+      `Münzen bleiben erhalten.`
+    )) return;
     btn.disabled = true;
-    const res = await window.setClusterGameAccess?.(cluster, game.id, btn.dataset.open !== '1');
+    const res = await window.setClusterGameAccess?.(cluster, game.id, wantOpen);
     btn.disabled = false;
     if (!res?.ok) {
       showHubToast(`Konnte nicht schalten (${res?.error ?? 'unbekannt'}).`);

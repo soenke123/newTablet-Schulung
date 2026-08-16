@@ -509,6 +509,10 @@ body.s2-active .hud-kristalle { display: flex; }
 .game-card__admin-toggle:disabled { opacity: 0.45; cursor: default; }
 
 /* ── Kurs-Leiste der Lehrkraft ─────────────────── */
+/* [hidden] zuerst und ohne Auslassung: das display:flex unten ist
+   spezifischer als das display:none aus dem Browser-Stylesheet, sonst
+   stünde die Leiste bei Schülern als leerer Kasten da.               */
+.hub-adminbar[hidden] { display: none; }
 .hub-adminbar {
   display: flex;
   align-items: center;

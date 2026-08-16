@@ -511,6 +511,17 @@ async function renderClusterGamesBody() {
 
     body.querySelectorAll('.js-cg-one').forEach(cb => {
       cb.addEventListener('change', async () => {
+        // Rückfrage nur beim Sperren: Freischalten ist mit einem
+        // zweiten Klick zurückgenommen, Sperren fällt mitten in eine
+        // laufende Stunde und trifft den ganzen Kurs auf einmal.
+        if (!cb.checked && !confirm(
+          `„${gameTitle(cb.dataset.game)}" für diesen Kurs sperren?\n\n` +
+          `Das Spiel ist danach nicht mehr startbar. Monster, Wachstum und ` +
+          `Münzen bleiben erhalten.`
+        )) {
+          cb.checked = true;
+          return;
+        }
         cb.disabled = true;
         let res = null, err = null;
         try {
@@ -533,6 +544,11 @@ async function renderClusterGamesBody() {
     body.querySelectorAll('.js-cg-all').forEach(btn => {
       btn.addEventListener('click', async () => {
         const wantOpen = btn.dataset.open === '1';
+        if (!wantOpen && !confirm(
+          `Alle Spiele der Season ${btn.dataset.season} für diesen Kurs sperren?\n\n` +
+          `Die Spiele sind danach nicht mehr startbar. Monster, Wachstum und ` +
+          `Münzen bleiben erhalten.`
+        )) return;
         body.querySelectorAll('button, input').forEach(el => el.disabled = true);
         let res = null, err = null;
         try {
@@ -649,9 +665,16 @@ function openClusterEdit(id) {
 // aber neue Anmeldungen bekommen nichts mehr.
 let bonusClusterId = null;
 
+// cluster_managed=false (Migration 0072) filtert Spiele heraus, die dem
+// Kurs-Schalter nicht gehören — heute nur das Easter-Egg game1337. Es
+// steht in `games`, aber nicht in GAMES_CONFIG: es erschließt sich über
+// die Atari-Zahlenreihe, nicht über eine Freischaltung der Lehrkraft.
+// Der Filter sitzt hier und nicht in den drei Aufrufern, damit es keine
+// Liste gibt, in der es doch wieder auftaucht.
 async function ensureGamesBySeason() {
   if (gamesBySeason) return gamesBySeason;
-  const rows = await api('GET', `games?select=id,season,title&active=eq.true&order=season.asc`);
+  const rows = await api('GET',
+    `games?select=id,season,title&active=eq.true&cluster_managed=eq.true&order=season.asc`);
   gamesBySeason = {};
   gameTitleById = {};
   for (const g of rows) {

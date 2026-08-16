@@ -64,8 +64,12 @@ on conflict (id) do update set
   requires_login = excluded.requires_login,
   active         = excluded.active;
 
--- Easter-Egg: 1337.html — Login-Pflicht, kein Passwort, kein regulärer Season-Content
-insert into games (id, season, folder, title, icon, password_hash, requires_login, active) values
-  ('game1337', 1, '', 'Atari-1337', '📡', null, true, true)
+-- Easter-Egg: 1337.html — Login-Pflicht, kein Passwort, kein regulärer Season-Content.
+-- cluster_managed = false (Migration 0072): das Spiel gehört nicht dem
+-- Kurs-Schalter. Es erschließt sich über die Atari-Zahlenreihe, nicht
+-- über eine Freischaltung durch die Lehrkraft.
+insert into games (id, season, folder, title, icon, password_hash, requires_login, active, cluster_managed) values
+  ('game1337', 1, '', 'Atari-1337', '📡', null, true, true, false)
 on conflict (id) do update set
-  requires_login = excluded.requires_login;
+  requires_login  = excluded.requires_login,
+  cluster_managed = excluded.cluster_managed;
