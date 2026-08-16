@@ -256,17 +256,21 @@ body.bd-fill .bd-surface { min-height: 0; }
 }
 .bd-catnav__tabs { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
 
+/* Die sechs Symbole sind die Nebenrolle: sie sagen, wohin man noch
+   wischen kann. Wo man ist, sagt der Name darunter — deshalb sind die
+   Symbole eine Spur kleiner als der Name groß ist. Das Tippziel bleibt
+   trotzdem breit genug für einen Finger. */
 .bd-cattab {
   position: relative;
   display: flex; flex-direction: column; align-items: center; gap: 1px;
-  width: 52px; padding: 6px 0 4px;   /* Tippziel, nicht nur Symbol */
+  width: 48px; padding: 5px 0 4px;   /* Tippziel, nicht nur Symbol */
   border: 1px solid transparent; border-radius: 10px;
   background: transparent; cursor: pointer;
   font-family: var(--font-body); line-height: 1;
   transition: background .12s ease, border-color .12s ease, transform .12s ease;
 }
 .bd-cattab:hover { background: var(--clr-accent-soft); }
-.bd-cattab__icon  { font-size: 1.35rem; filter: grayscale(.6) opacity(.55); transition: filter .12s ease; }
+.bd-cattab__icon  { font-size: 1.18rem; filter: grayscale(.6) opacity(.55); transition: filter .12s ease; }
 .bd-cattab__count { font-size: .68rem; font-weight: 700; color: var(--clr-ink-3); }
 .bd-cattab--on { border-color: var(--clr-accent); background: var(--clr-accent-soft); }
 .bd-cattab--on .bd-cattab__icon  { filter: none; }
@@ -274,15 +278,27 @@ body.bd-fill .bd-surface { min-height: 0; }
 
 .bd-catnav__title {
   display: flex; align-items: center; justify-content: center; gap: 6px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
+/* Wo man ist, ist die wichtigste Angabe der Leiste — sichtbar ist immer
+   nur eine der sechs Kategorien, und auf der Tafel darunter steht ihr
+   Name nirgends. Deshalb steht er in einem eigenen Rahmen mit leicht
+   getönter Fläche: kein Knopf (der ＋ daneben bleibt das einzig
+   Gefüllte), sondern ein Schild. Getönt wird mit dem Bedien-Anthrazit
+   und nicht mit einer neuen Farbe — Regel 1 der Optik: die Farbe
+   gehört den Zetteln. */
 .bd-catnav__name {
-  font-family: var(--font-display); font-size: 1.08rem; font-weight: 700;
-  letter-spacing: -.01em; color: var(--clr-ink); text-align: center; min-width: 11ch;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 5px 16px; border-radius: 999px;
+  border: 1.5px solid var(--clr-accent); background: var(--clr-accent-soft);
+  font-family: var(--font-display); font-size: 1.3rem; font-weight: 800;
+  letter-spacing: -.01em; color: var(--clr-ink); text-align: center;
+  min-width: 13ch; white-space: nowrap;
 }
 .bd-catnav__count {
-  font-family: var(--font-body); font-size: .75rem; font-weight: 600;
-  color: var(--clr-ink-3); vertical-align: middle;
+  font-family: var(--font-body); font-size: .78rem; font-weight: 700;
+  color: var(--clr-accent-ink); background: var(--clr-accent);
+  border-radius: 999px; padding: 2px 8px; line-height: 1.25;
 }
 /* Die Pfeile sind das sichtbare Versprechen, dass man wischen kann. */
 .bd-catnav__arrow {
@@ -937,9 +953,10 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
   /* muss zur schmaleren Innenkante von .bd-main passen, sonst steht die
      Leiste 6 px über den Rand hinaus */
   .bd-catnav { margin: 0 -12px 12px; padding: 6px 12px 8px; }
-  .bd-cattab { width: 46px; }
-  .bd-cattab__icon { font-size: 1.2rem; }
-  .bd-catnav__name { font-size: .98rem; min-width: 9ch; }
+  .bd-cattab { width: 44px; }
+  .bd-cattab__icon { font-size: 1.08rem; }
+  .bd-catnav__name { font-size: 1.12rem; min-width: 11ch; padding: 4px 12px; gap: 6px; }
+  .bd-catnav__count { font-size: .72rem; padding: 1px 7px; }
   /* Auf schmalen Geräten zählt jeder Punkt Breite — die Tafel behält
      ihre Fläche, aber nicht mehr ihren Rahmen. Und sie geht bis an
      beide Bildschirmkanten: auf einem Handy ist ein Zettel fast so
@@ -953,4 +970,13 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
     border-radius: 0;
     border-left: 0; border-right: 0;
   }
+}
+
+/* Auf den schmalsten Geräten steht „Gesellschaftlich" mit Rahmen, Zahl,
+   zwei Pfeilen und dem ＋ in einer Zeile — das passt nur, wenn Schild
+   und Pfeile noch eine Spur enger werden. Umbrechen darf der Name
+   nicht: ein zweizeiliger Bereichsname liest sich wie zwei Bereiche. */
+@media (max-width: 380px) {
+  .bd-catnav__name  { font-size: 1.02rem; min-width: 0; padding: 4px 10px; }
+  .bd-catnav__arrow { font-size: 1.4rem; padding: 0 5px; }
 }
