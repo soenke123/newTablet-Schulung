@@ -6,7 +6,7 @@
   <title>Admin · Lernwelt</title>
   <link rel="icon" type="image/png" sizes="64x64" href="../icons/favicon-64.png" />
   <link rel="icon" type="image/png" sizes="256x256" href="../icons/favicon-256.png" />
-  <link rel="stylesheet" href="style.css?v=20260812" />
+  <link rel="stylesheet" href="style.css?v=20260816" />
 </head>
 <body>
   <div id="bootMask" class="boot-mask">Lade …</div>
@@ -113,12 +113,13 @@
                 <th>Schließt</th>
                 <th>Status</th>
                 <th>User</th>
+                <th>🔓 Offen</th>
                 <th>🍬 Bonbons</th>
                 <th>Aktion</th>
               </tr>
             </thead>
             <tbody id="clusterTbody">
-              <tr><td colspan="8" class="empty">Lade …</td></tr>
+              <tr><td colspan="9" class="empty">Lade …</td></tr>
             </tbody>
           </table>
         </div>
@@ -286,6 +287,24 @@
     </div>
   </div>
 
+  <!-- ─── Spiele-Freischaltung pro Kurs (Migration 0070) ───── -->
+  <!-- Vorbereiten, bevor der Kurs im Raum sitzt. Während der Stunde
+       schaltet die Lehrkraft direkt auf der Hub-Kachel. -->
+  <div class="modal-overlay" id="clusterGamesModal" hidden>
+    <div class="modal-box modal-wide">
+      <button type="button" class="modal-close" id="clusterGamesClose">×</button>
+      <h3 id="clusterGamesTitle">Spiele freischalten</h3>
+      <p class="modal-hint">
+        Freigeschaltete Spiele sind für den Kurs spielbar. Sperren löscht
+        nichts — Monster, Wachstum und Münzen bleiben stehen, das Spiel ist
+        nur nicht mehr startbar. Die Einhornkatze (Legi-Trainer) eröffnet
+        zusätzlich das Bonbon-Sammeln: solange sie zu ist, entstehen im Kurs
+        gar keine Bonbons.
+      </p>
+      <div id="clusterGamesBody"><p class="empty">Lade …</p></div>
+    </div>
+  </div>
+
   <!-- ─── User-Detail-Modal (Progress-View) ────────────────── -->
   <div class="modal-overlay" id="userDetailModal" hidden>
     <div class="modal-box modal-wide">
@@ -417,6 +436,6 @@
   <script src="../supabase-config.js?v=20260723"></script>
   <script src="../session.js?v=20260811"></script>
   <script src="../avatars.js?v=20260721"></script>
-  <script src="app.js?v=20260812"></script>
+  <script src="app.js?v=20260816"></script>
 </body>
 </html>

@@ -6,17 +6,21 @@
 'use strict';
 
 /* ─────────────────────────────────────────────────
-   ZUGRIFFSKONTROLLE (geladen aus config.json)
+   ZUGRIFFSKONTROLLE
+
+   Fünf Zustände:
+     'available'      spielbar
+     'locked'         Season noch nicht erreicht, oder in config.js
+                      global abgeschaltet — der Not-Aus
+     'admin_locked'   von der Lehrkraft für diesen Kurs zugesperrt
+                      (Migration 0070). Ersetzt das frühere 'password'.
+     'cluster_locked' Einhornkatze: Bonbon-Ziel des Kurses offen
+     'ready_to_reveal' Einhornkatze: Ziel erreicht, Reveal steht aus
+
+   'admin_locked' heißt bewusst nicht 'cluster_locked' — der Name ist
+   seit Migration 0032 vergeben und bedeutet dort etwas anderes.
    ───────────────────────────────────────────────── */
 if (typeof GAME_ACCESS === 'undefined') window.GAME_ACCESS = {};
-function loadUnlocked() { return window.getUnlocked ? window.getUnlocked() : []; }
-function saveUnlocked(gameId) { if (window.setUnlocked) window.setUnlocked(gameId); }
-
-async function hashPassword(pw) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-window.hashPassword = hashPassword;
 
 function getGameAccess(gameId) {
   const game = GAMES_CONFIG.find(g => g.id === gameId);
@@ -29,6 +33,28 @@ function getGameAccess(gameId) {
   // beide Admin-Rollen ab (Volladmin hat laut Migration 0053 auch is_admin).
   const adminCollab = !!(game?.collab && isAdminUser());
   if (game && !adminCollab && game.season > 1 && game.season > getUserSeason()) return 'locked';
+
+  // Not-Aus aus config.js: schaltet ein Spiel global ab, unabhängig
+  // von jedem Kurs. Steht vor der Kurs-Freischaltung, damit eine
+  // Lehrkraft ein kaputtes Spiel nicht doch aufmachen kann.
+  if (GAME_ACCESS[gameId]?.status === 'locked') return 'locked';
+
+  // Kurs-Freischaltung (Migration 0070). Steht VOR dem clusterLegi-
+  // Zweig: solange die Einhornkatze zu ist, hat das Bonbon-Sammeln
+  // noch nicht begonnen, und die Kachel soll das Schloss zeigen statt
+  // den Fortschritt eines Spiels, das niemand eröffnet hat.
+  if (game && !window.isGameOpenForCluster?.(gameId)) return 'admin_locked';
+
+  return getGameAccessIfOpen(gameId);
+}
+
+// Der Rest von getGameAccess, wenn die Kurs-Sperre wegfällt. Eigene
+// Funktion, weil die Admin-Kachel genau das braucht: sie zeigt der
+// Lehrkraft, was der Kurs nach dem Freischalten sähe — bei der
+// Einhornkatze also den Regenbogen-Fortschritt und nicht das Schloss,
+// das für sie selbst gar nicht gilt.
+function getGameAccessIfOpen(gameId) {
+  const game = GAMES_CONFIG.find(g => g.id === gameId);
   // Cluster-Legi (Season 3): Bonbon-Ziel muss erreicht sein.
   // Drei-Zustände:
   //   - Cluster noch nicht unlocked → 'cluster_locked' (Sammel-Phase)
@@ -40,11 +66,108 @@ function getGameAccess(gameId) {
     const gd = loadAllData()[gameId];
     if (!gd || !gd.creature) return 'ready_to_reveal';
   }
-  const cfg = GAME_ACCESS[gameId];
-  if (!cfg || cfg.status === 'available') return 'available';
-  if (cfg.status === 'locked') return 'locked';
-  if (cfg.status === 'password') return loadUnlocked().includes(gameId) ? 'available' : 'password';
   return 'available';
+}
+
+// Darf ein Nest, das an dieses Spiel gebunden ist, gestartet werden?
+// Für Admins ja — die Sperre gilt der Klasse, nicht der Lehrkraft.
+function isNestGameOpen(gameId) {
+  const access = getGameAccess(gameId);
+  if (access === 'locked') return false;
+  if (access === 'admin_locked') return isAdminUser();
+  return true;
+}
+
+/* ─── Kurs-Kontext der Lehrkraft ───────────────────────────────
+   Admins hängen in keinem Kurs (Beobachter-Rolle, Migration 0053),
+   müssen aber für einen schalten. Die Wahl steht im sessionStorage:
+   auf einem geteilten Lehrer-Tablet soll sie mit dem Tab verschwinden
+   — dasselbe Verhalten wie im Reality-Check-Board.                */
+const ADMIN_CLUSTER_KEY = 'hub_admin_cluster';
+
+function getActiveClusterId() {
+  if (!isAdminUser()) return window.getSessionUser?.()?.cluster_id ?? null;
+  return window.__adminClusterId ?? null;
+}
+
+// Season, an der die Sichtbarkeit der Abschnitte hängt. Für Schüler
+// die eigene, für Admins die des gewählten Kurses — getUserSeason()
+// liefert ihnen 0, und dann wäre der Hub für die Lehrkraft leer.
+function getEffectiveSeason() {
+  if (!isAdminUser()) return getUserSeason();
+  const id = getActiveClusterId();
+  const cl = (window.__adminClusters || []).find(c => c.id === id);
+  return cl?.season ?? getUserSeason();
+}
+
+// Einmal beim Hub-Boot: Kursliste holen und die gemerkte Wahl setzen.
+// Vorbelegung wie im Reality-Check-Board: gemerkte Wahl → eigener Kurs
+// → erster Kurs der Liste.
+async function initAdminClusters() {
+  if (!isAdminUser()) return;
+  window.__adminClusters = await window.listClustersForAdmin?.() ?? [];
+  const known = id => window.__adminClusters.some(c => c.id === id);
+  let saved = null;
+  try { saved = sessionStorage.getItem(ADMIN_CLUSTER_KEY); } catch (e) {}
+  const own = window.getSessionUser?.()?.cluster_id;
+  window.__adminClusterId = (saved && known(saved)) ? saved
+                          : (own && known(own))     ? own
+                          : (window.__adminClusters[0]?.id ?? null);
+}
+
+function renderAdminBar() {
+  const bar = document.getElementById('hubAdminBar');
+  if (!bar) return;
+  if (!isAdminUser()) { bar.hidden = true; return; }
+
+  const clusters = window.__adminClusters || [];
+  bar.hidden = false;
+
+  if (!clusters.length) {
+    bar.innerHTML = `<span class="hub-adminbar__note">Für deine Schule ist noch kein Kurs angelegt — im Admin-Panel anlegen.</span>`;
+    return;
+  }
+
+  const active = getActiveClusterId();
+  const opts = clusters.map(c =>
+    `<option value="${escapeHtml(c.id)}"${c.id === active ? ' selected' : ''}>${escapeHtml(c.name)} · S${c.season}</option>`
+  ).join('');
+
+  const openCount = (window.__clusterGames?.open?.size) ?? 0;
+  bar.innerHTML = `
+    <label class="hub-adminbar__label" for="hubAdminCluster">Kurs</label>
+    <select id="hubAdminCluster" class="hub-adminbar__select">${opts}</select>
+    <span class="hub-adminbar__note">${openCount} Spiel${openCount === 1 ? '' : 'e'} freigeschaltet</span>`;
+
+  document.getElementById('hubAdminCluster')?.addEventListener('change', async e => {
+    const id = e.target.value;
+    window.__adminClusterId = id;
+    try { sessionStorage.setItem(ADMIN_CLUSTER_KEY, id); } catch (err) {}
+    await window.refreshClusterGamesFromServer?.(id);
+    // Der Bonbon-Status hängt am Kurs des Aufrufers, nicht am gewählten —
+    // für Admins ist er ohnehin leer. Ein Re-Render reicht.
+    renderHub();
+  });
+}
+
+/* Kurze Rückmeldung ohne Modal. Der Hub hatte bisher keine — jeder
+   Vorgang endete in einem Fenster oder in einer neu gezeichneten
+   Kachel. Beim Freischalten reicht beides nicht: die Kachel ändert
+   sich für die Lehrkraft kaum sichtbar (sie durfte vorher schon
+   spielen), und ein Modal wäre in einer laufenden Stunde im Weg.   */
+let _hubToastTimer = null;
+function showHubToast(msg) {
+  let el = document.getElementById('hubToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'hubToast';
+    el.className = 'hub-toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('hub-toast--on');
+  clearTimeout(_hubToastTimer);
+  _hubToastTimer = setTimeout(() => el.classList.remove('hub-toast--on'), 2600);
 }
 
 /* ─────────────────────────────────────────────────
@@ -324,6 +447,7 @@ function renderHub() {
   // dedupliziert, ist ab dem zweiten Aufruf also fast gratis.
   window.warmCreatureImages?.(allData, shopData);
 
+  renderAdminBar();
   renderGamesGrid(allData, shopData);
   renderGallery(allData);
   renderCoinDisplay(allData);
@@ -362,7 +486,7 @@ function renderGamesGrid(allData, shopData) {
 
   // Season 1 ist Baseline und immer sichtbar. Höhere Seasons erscheinen
   // erst, sobald der User dorthin freigeschaltet ist. Reihenfolge: neueste oben.
-  const userSeason = Math.max(getUserSeason(), 1);
+  const userSeason = Math.max(getEffectiveSeason(), 1);
   // Admins moderieren Reality Check, hängen dabei aber in keinem Kurs
   // und haben deshalb Season 0. Ohne diese Ausnahme wäre die Season-Sektion
   // gar nicht da und die Kachel für die Lehrkraft unerreichbar — die
@@ -408,8 +532,47 @@ function buildSeasonSection(season, allData, shopData) {
 
   section.appendChild(titleEl);
   section.appendChild(descEl);
+  const bulk = buildSeasonBulkBar(season);
+  if (bulk) section.appendChild(bulk);
   section.appendChild(seasonGrid);
   return section;
+}
+
+// „Alle auf / alle zu" pro Season. Ohne diesen Knopf müsste eine
+// Lehrkraft für jeden neuen Kurs sechs bis sieben Kacheln einzeln
+// antippen, bevor die Stunde überhaupt losgeht.
+function buildSeasonBulkBar(season) {
+  if (!isAdminUser() || !getActiveClusterId()) return null;
+  const bar = document.createElement('div');
+  bar.className = 'season-bulk';
+  bar.innerHTML = `
+    <span class="season-bulk__label">Für diesen Kurs:</span>
+    <button type="button" class="season-bulk__btn" data-open="1">🔓 alle freischalten</button>
+    <button type="button" class="season-bulk__btn" data-open="0">🔒 alle sperren</button>`;
+
+  bar.querySelectorAll('.season-bulk__btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cluster = getActiveClusterId();
+      if (!cluster) return;
+      const open = btn.dataset.open === '1';
+      bar.querySelectorAll('button').forEach(b => b.disabled = true);
+      const res = await window.setClusterSeasonAccess?.(cluster, season.id, open);
+      if (!res?.ok) {
+        bar.querySelectorAll('button').forEach(b => b.disabled = false);
+        showHubToast(`Konnte nicht schalten (${res?.error ?? 'unbekannt'}).`);
+        return;
+      }
+      await window.refreshClusterGamesFromServer?.(cluster);
+      // Season 3 enthält die Einhornkatze, an der seit Migration 0071
+      // das ganze Bonbon-Prinzip hängt — der Status muss mit.
+      await window.refreshBonbonStatus?.();
+      renderHub();
+      showHubToast(open
+        ? `Season ${season.id} ist für den Kurs freigeschaltet.`
+        : `Season ${season.id} ist für den Kurs gesperrt.`);
+    });
+  });
+  return bar;
 }
 
 // Knoten-Caches für die drei Bereiche, die Kreaturbilder zeigen. Key ist die
@@ -443,8 +606,11 @@ function buildGameCard(game, data, shopData) {
     && (access === 'cluster_locked' || access === 'ready_to_reveal')
     && bonbonMilestoneChainable();
 
-  const cls = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${access === 'ready_to_reveal' ? ' game-card--cluster-locked game-card--legi-ready' : ''}${giftBlink ? ' game-card--legi-ready' : ''}${milestoneBlink ? ' game-card--legi-ready' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
-  const html = buildCardHTML(game, data, shopData);
+  const cls = `game-card${access === 'locked' ? ' game-card--locked' : ''}${access === 'admin_locked' && !isAdminUser() ? ' game-card--locked' : ''}${access === 'cluster_locked' ? ' game-card--cluster-locked' : ''}${access === 'ready_to_reveal' ? ' game-card--cluster-locked game-card--legi-ready' : ''}${giftBlink ? ' game-card--legi-ready' : ''}${milestoneBlink ? ' game-card--legi-ready' : ''}${data.creature && access === 'available' ? ' has-creature' : ''}${rare && access === 'available' ? ' game-card--rare' : ''}${epic && access === 'available' ? ' game-card--epic' : ''}${legendary && access === 'available' ? ' game-card--legendary' : ''}${maxed && access === 'available' ? ' creature-maxed' : ''}${isBackupTarget ? ' game-card--backup-target' : ''}`;
+  // Der Schalter der Lehrkraft hängt an der Karte, nicht in einem der
+  // Zweige von buildCardHTML — sonst müsste er in fünf Zustände
+  // eingebaut werden und würde in einem davon fehlen.
+  const html = buildCardHTML(game, data, shopData) + buildAdminToggleHTML(game, access);
 
   // renderHub() läuft nach fast jedem Klick. Eine unveränderte Karte neu zu
   // bauen heißt: <img> wegwerfen, neu anlegen, neu dekodieren — auf iPad und
@@ -462,7 +628,48 @@ function buildGameCard(game, data, shopData) {
   return card;
 }
 
+/* Freischalt-Schalter der Lehrkraft (Migration 0070).
+   Der Zustand steht am Knopf selbst — „Sperren" heißt: ist gerade
+   offen. Eine zusätzliche Statuszeile bräuchte Platz auf der Kachel
+   und sagte dasselbe zweimal.
+   Nicht bei 'locked': Season-Gate und Not-Aus aus config.js sind
+   nichts, was ein Kurs-Schalter aufmachen könnte.                 */
+function buildAdminToggleHTML(game, access) {
+  if (!isAdminUser() || access === 'locked') return '';
+  if (!getActiveClusterId()) return '';
+  const open = access !== 'admin_locked';
+  return `<button class="game-card__admin-toggle${open ? '' : ' game-card__admin-toggle--closed'}"
+            data-open="${open ? '1' : '0'}"
+            title="${open ? 'Für diesen Kurs sperren' : 'Für diesen Kurs freischalten'}">
+            ${open ? '🔒 Sperren' : '🔓 Freischalten'}
+          </button>`;
+}
+
 function attachCardListeners(card, game, data, isBackupTarget) {
+  card.querySelector('.game-card__admin-toggle')?.addEventListener('click', async e => {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    const cluster = getActiveClusterId();
+    if (!cluster) return;
+    btn.disabled = true;
+    const res = await window.setClusterGameAccess?.(cluster, game.id, btn.dataset.open !== '1');
+    btn.disabled = false;
+    if (!res?.ok) {
+      showHubToast(`Konnte nicht schalten (${res?.error ?? 'unbekannt'}).`);
+      return;
+    }
+    // Die Bonbon-Anzeige hängt an game16 (Migration 0071): schaltet die
+    // Lehrkraft die Einhornkatze, kippt `enabled` in
+    // get_cluster_bonbon_status und damit die +20-Hinweise auf allen
+    // anderen Kacheln mit.
+    await window.refreshClusterGamesFromServer?.(cluster);
+    if (game.clusterLegi) await window.refreshBonbonStatus?.();
+    renderHub();
+    showHubToast(res.open
+      ? `${game.title} ist für den Kurs freigeschaltet.`
+      : `${game.title} ist für den Kurs gesperrt.`);
+  });
+
   card.querySelectorAll('.game-card__use-btn').forEach(useBtn => {
     useBtn.addEventListener('click', e => {
       e.stopPropagation();
@@ -485,15 +692,21 @@ function attachCardListeners(card, game, data, isBackupTarget) {
 
   card.querySelector('.game-card__btn')?.addEventListener('click', () => {
     if (isBackupTarget) { applyBackupSwap(game.id); return; }
-    const access = getGameAccess(game.id);
+    let access = getGameAccess(game.id);
     if (access === 'locked') return;
+    // Die Kurs-Sperre gilt der Klasse, nicht der Lehrkraft: ein Admin
+    // muss das Spiel starten können, um zu sehen, was er da aufmacht.
+    // Für alle anderen ist die Kachel hier ohnehin knopflos.
+    if (access === 'admin_locked') {
+      if (!isAdminUser()) return;
+      access = getGameAccessIfOpen(game.id);
+    }
     if (access === 'cluster_locked' || access === 'ready_to_reveal') {
       if (bonbonMilestoneChainable()) { openBonbonMilestoneChain(); return; }
       openBonbonModal();
       return;
     }
     if (game.clusterLegi && access === 'available') { openLegiTaskModal(); return; }
-    if (access === 'password') { showPasswordPrompt(game.id); return; }
     const sd = loadShopData();
     // Nester laufen unter einer eigenen Id durch ein Spiel und erwarten am
     // Rundenende ein Ergebnis. Startup Story und Reality Check haben
@@ -533,7 +746,13 @@ function attachCardListeners(card, game, data, isBackupTarget) {
 }
 
 function buildCardHTML(game, data, shopData) {
-  const access = getGameAccess(game.id);
+  // Für Admins zeigt die Kachel, was der Kurs nach dem Freischalten
+  // sähe — die Sperre gilt der Klasse, nicht der Lehrkraft, die sie
+  // gesetzt hat. Den Zustand sagt ihr der Schalter darunter.
+  const raw    = getGameAccess(game.id);
+  const access = (raw === 'admin_locked' && isAdminUser())
+    ? getGameAccessIfOpen(game.id)
+    : raw;
 
   if (access === 'locked') {
     return `
@@ -548,16 +767,31 @@ function buildCardHTML(game, data, shopData) {
     `;
   }
 
-  if (access === 'password') {
+  // Kurs-Sperre (Migration 0070). Für Schüler ein Schloss — aber eines,
+  // das nichts weggenommen hat: Monster, Wachstum und Münzen stehen
+  // unverändert dahinter und sind beim nächsten Freischalten wieder da.
+  // Genau das sagt die Zusatzzeile, wenn dort schon ein Tier wohnt;
+  // ohne sie liest sich die zugesperrte Kachel wie ein Verlust.
+  // Für Admins läuft dieser Zweig nicht — sie bekommen unten die
+  // normale Kachel plus Schalter.
+  if (access === 'admin_locked') {
+    // Wer in keinem Kurs hängt (Anmeldung außerhalb eines Zeitfensters,
+    // status='pending'), hat auch niemanden, der freischalten könnte.
+    // „Noch nicht freigeschaltet" wäre dort eine Ausrede statt einer
+    // Antwort — das Warten hilft nicht, die Zuordnung schon.
+    const noCluster = !window.getSessionUser?.()?.cluster_id;
+    const hint = noCluster
+      ? `<p class="game-card__lock-hint">Du bist noch keinem Kurs zugeordnet — melde dich bei deiner Lehrkraft.</p>`
+      : data.creature
+      ? `<p class="game-card__lock-hint">Dein Monster wartet hier auf dich.</p>`
+      : '';
     return `
       <h3 class="game-card__title">${game.icon} ${game.title}</h3>
       <div class="game-card__creature-wrap">
         <div style="font-size:3.5rem;line-height:1;margin:16px 0 12px;">🔒</div>
       </div>
-      <p class="game-card__stage-label" style="color:var(--clr-amber);">Passwort erforderlich</p>
-      <div class="game-card__progress"><div class="game-card__progress-fill" style="width:0%"></div></div>
-      <div class="game-card__points" style="opacity:0.3;">— —</div>
-      <button class="game-card__btn">🔑 Freischalten</button>
+      <p class="game-card__stage-label" style="color:var(--clr-cream-dim);">Noch nicht freigeschaltet</p>
+      ${hint}
     `;
   }
 
@@ -2576,85 +2810,12 @@ function showEvolutionModal(creature) {
   });
 }
 
-function showPasswordPrompt(gameId) {
-  const game    = GAMES_CONFIG.find(g => g.id === gameId);
-  const overlay = document.getElementById('modalOverlay');
-  const content = document.getElementById('modalContent');
-  if (!overlay || !content) return;
-
-  content.innerHTML = `
-    <div style="text-align:center;padding:8px 0;">
-      <div style="font-size:3rem;margin-bottom:12px;">🔑</div>
-      <h2 style="font-family:var(--font-display);color:var(--clr-gold);font-size:1.3rem;margin:0 0 8px;">${game.icon} ${game.title}</h2>
-      <p style="color:var(--clr-cream-dim);margin-bottom:18px;line-height:1.5;">Gib das Passwort ein,<br>um dieses Spiel freizuschalten.</p>
-      <input id="pwInput" type="password" placeholder="Passwort…" autocomplete="off"
-        style="width:100%;max-width:220px;padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--clr-border);background:var(--clr-surface2);color:var(--clr-cream);font-family:var(--font-body);font-size:1rem;box-sizing:border-box;margin-bottom:8px;display:block;margin-left:auto;margin-right:auto;" />
-      <div id="pwError" style="color:#e05;font-size:0.82rem;min-height:1.4em;margin-bottom:10px;"></div>
-      <button id="pwSubmit"
-        style="background:var(--clr-green);color:#fff;border:none;border-radius:var(--radius-md);padding:10px 28px;font-family:var(--font-body);font-weight:800;font-size:0.95rem;cursor:pointer;">
-        Freischalten
-      </button>
-    </div>`;
-  overlay.hidden = false;
-
-  const input  = document.getElementById('pwInput');
-  const error  = document.getElementById('pwError');
-  const submit = document.getElementById('pwSubmit');
-
-  const attempt = async () => {
-    submit.disabled = true;
-    error.textContent = '';
-    const pw = input.value;
-    const loggedIn = window.isLoggedIn?.() ?? false;
-
-    const onSuccess = () => {
-      saveUnlocked(gameId);
-      overlay.hidden = true;
-      window.location.href = game.url + '?id=' + gameId;
-    };
-    const onWrong = () => {
-      error.textContent = 'Falsches Passwort – bitte versuche es erneut.';
-      input.value = '';
-      submit.disabled = false;
-      input.focus();
-    };
-
-    if (loggedIn && window.__accessToken) {
-      // Server-side Check via unlock_game RPC
-      try {
-        const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/unlock_game`, {
-          method: 'POST',
-          headers: {
-            apikey: window.SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${window.__accessToken}`,
-            'Content-Type': 'application/json',
-            Accept: 'application/json'
-          },
-          body: JSON.stringify({ p_game_id: gameId, p_password: pw })
-        });
-        const body = await res.json().catch(() => ({}));
-        if (body?.ok) onSuccess();
-        else onWrong();
-      } catch (e) {
-        console.error('[unlock] RPC-Fehler:', e);
-        error.textContent = 'Netzwerkfehler. Versuche es erneut.';
-        submit.disabled = false;
-      }
-      return;
-    }
-
-    // Guest: client-side hash check gegen GAME_ACCESS (kein Progress-Save)
-    const cfg = GAME_ACCESS[gameId];
-    if (!cfg?.passwordHash) { onWrong(); return; }
-    const inputHash = await hashPassword(pw);
-    if (inputHash === cfg.passwordHash) onSuccess();
-    else onWrong();
-  };
-
-  submit.addEventListener('click', attempt);
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
-  setTimeout(() => input.focus(), 50);
-}
+/* showPasswordPrompt() ist mit Migration 0070 entfallen. Freigeschaltet
+   wird nicht mehr per Passwort durch den Schüler, sondern per Schalter
+   durch die Lehrkraft — siehe buildAdminToggleHTML(). Die DB-Seite
+   (games.password_hash, unlock_game, user_unlocked_games) steht noch,
+   wird aber nicht mehr aufgerufen; user_unlocked_games ist die
+   Grundlage des Backfills in 0070.                                  */
 
 /* ─────────────────────────────────────────────────
    8. NEST-SEKTION (zwischen Spielen und Shop)
@@ -2690,7 +2851,12 @@ function buildNestCard(nest, allData, shopData) {
   // canPlay muss an nest.gameId hängen, nicht an hasCreature. Sealed-Egg-Nester
   // (himmel/suempfe) und zurückgesetzte Legi-Nester haben creature bereits gesetzt,
   // aber keine gameUrl → playNest() returnt still und der Klick tut nichts.
-  const canPlay     = !!nest.gameId;
+  // Zusätzlich seit Migration 0070: hängt das Nest an einem Spiel, das
+  // die Lehrkraft gerade zugesperrt hat, ist es nicht spielbar. Ein
+  // Knopf, der ins gesperrte Spiel führt, wäre eine Hintertür — und
+  // eine, die sich nicht wie eine anfühlt.
+  const gameOpen    = !nest.gameId || isNestGameOpen(nest.gameId);
+  const canPlay     = !!nest.gameId && gameOpen;
   const nestMaxed   = hasCreature && nestData.growth >= GROWTH_MAX;
   const canUseTrank = hasCreature && !nestMaxed && getConsumableCount(shopData, 'wachstumstrank') > 0;
   const isAtariEgg  = !hasCreature && nest.eggType === 'atari';
@@ -2733,7 +2899,12 @@ function buildNestCard(nest, allData, shopData) {
   if (canPlay) {
     playBtn = `<button class="game-card__btn">Spielen!</button>`;
   } else {
-    playBtn = isPending
+    playBtn = !gameOpen
+      // Das Ei ist an ein Spiel gebunden, das gerade zu ist. Ohne diese
+      // Zeile stünde hier „Wähle ein Spiel…" — und das stimmt nicht,
+      // gewählt ist längst, es ist nur gerade nicht offen.
+      ? `<p class="nest-card__hint" style="opacity:0.6;">🔒 Spiel gerade gesperrt</p>`
+      : isPending
       ? `<p class="nest-card__hint">Klicke auf "Spielen!" bei einem Spiel!</p>`
       : `<p class="nest-card__hint" style="opacity:0.5;">Wähle ein Spiel…</p>`;
   }
@@ -2827,6 +2998,10 @@ function playNest(nestId) {
   const sd = loadShopData();
   const nest = sd.nests.find(n => n.nestId === nestId);
   if (!nest || !nest.gameUrl) return;
+  // Riegel auch hier, nicht nur am Knopf: der Knoten überlebt
+  // Re-Renders (_nestNodeCache), ein Listener von vor dem Zusperren
+  // könnte also noch hängen.
+  if (nest.gameId && !isNestGameOpen(nest.gameId)) return;
   window.location.href = nest.gameUrl + '?id=' + nestId + '&egg=' + nest.eggType;
 }
 

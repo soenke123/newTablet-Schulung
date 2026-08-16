@@ -822,6 +822,33 @@ html, body {
 }
 .cb-season + .cb-season { border-top: 1px solid var(--a-border); }
 .cb-season input { margin-top: 3px; flex-shrink: 0; }
+
+/* ─── Spiele-Freischaltung pro Kurs (Migration 0070) ───────── */
+#clusterGamesBody .card h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.cg-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 4px 16px;
+}
+.cg-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--a-text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cg-item input { flex-shrink: 0; }
+.cg-item em { color: var(--a-muted); font-size: 11px; font-style: normal; }
 .cb-season strong { color: var(--a-gold); }
 .cb-season span { line-height: 1.4; }
 

@@ -11,7 +11,7 @@
   <link rel="manifest" href="../site.webmanifest" />
   <!-- Atari2 · Enter 1-5-0-7 -->
   <script defer src="/_vercel/insights/script.js"></script>
-  <link rel="stylesheet" href="style.css?v=20260725" />
+  <link rel="stylesheet" href="style.css?v=20260816" />
 </head>
 <body class="hub-page">
 
@@ -75,6 +75,11 @@
   <!-- ═══ SPIELE-GRID ═══ -->
   <main class="hub-main">
     <h2 class="hub-section-title">Wähle dein Abenteuer</h2>
+
+    <!-- Kurs-Wähler der Lehrkraft (Migration 0070). Admins hängen in
+         keinem Kurs, schalten aber für einen — die Leiste sagt, für
+         welchen. Für Schüler bleibt sie hidden. -->
+    <div class="hub-adminbar" id="hubAdminBar" hidden></div>
 
     <div id="gamesGrid">
       <!-- Spiel-Kacheln werden per JS generiert -->
@@ -293,9 +298,9 @@
   <script src="../session.js?v=20260811"></script>
   <script src="../avatars.js?v=20260724b"></script>
 
-  <script src="config.js?v=20260724b"></script>
-  <script src="creatures.js?v=20260812"></script>
-  <script src="script.js?v=20260812"></script>
+  <script src="config.js?v=20260816"></script>
+  <script src="creatures.js?v=20260816"></script>
+  <script src="script.js?v=20260816"></script>
   <script>
     // Hub-spezifischer Code
     // Atari1 · Enter 4-8-2-6
@@ -326,6 +331,11 @@
       //   3. Game-State aus DB holen (überschreibt localStorage)
       await window.pushPendingState?.();
       await window.refreshUnlockedFromServer?.();
+      // Kurs-Freischaltung (Migration 0070). Für Admins zuerst die
+      // Kursliste + gemerkte Wahl, sonst wüsste der nächste Aufruf
+      // nicht, wessen Freischaltungen er holen soll.
+      await window.initAdminClusters?.();
+      await window.refreshClusterGamesFromServer?.(window.__adminClusterId ?? undefined);
       await window.loadServerState?.();
       await window.loadServerShop?.();
       await window.loadGiftTasks?.();
@@ -432,6 +442,8 @@
         renderHubAuth();
         await window.pushPendingState?.();
         await window.refreshUnlockedFromServer?.();
+        await window.initAdminClusters?.();
+        await window.refreshClusterGamesFromServer?.(window.__adminClusterId ?? undefined);
         await window.loadServerState?.();
         await window.loadVirusProgress?.();
         await window.syncHighscores?.();
@@ -440,6 +452,30 @@
         await window.syncRealityCheck?.();
         window.repairLegiRevealMarker?.();
         renderHub();
+      });
+
+      /* Freischaltungen der Lehrkraft nachziehen (Migration 0070).
+         Ohne Poll müsste sie in der Stunde „einmal neu laden" durch
+         den Raum rufen; mit ihm klappt die Kachel von selbst auf.
+         20 s statt der 5 s des Reality-Check-Boards: dort hängt ein
+         Gespräch dran, hier reicht „gleich".
+         Neu gezeichnet wird nur bei geänderter Liste — sonst zuckte
+         alle 20 Sekunden der halbe Hub, auch bei offenem Shop. */
+      const pullClusterGames = async () => {
+        if (document.visibilityState !== 'visible') return;
+        const target = window.__adminClusterId ?? undefined;
+        if (await window.refreshClusterGamesFromServer?.(target)) {
+          // Der Bonbon-Status hängt seit Migration 0071 an game16 —
+          // wird die Einhornkatze geschaltet, kippt `enabled` mit.
+          await window.refreshBonbonStatus?.();
+          renderHub();
+        }
+      };
+      setInterval(pullClusterGames, 20000);
+      // Beim Zurückkommen auf den Tab sofort, nicht erst nach 20 s:
+      // Wer aus einem Spiel zurückkehrt, will den aktuellen Stand.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') pullClusterGames();
       });
     });
 

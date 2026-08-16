@@ -1,38 +1,27 @@
 /* ══════════════════════════════════════════════════════════════
-   LERNWELT – config.js   (diese Datei auf dem Server anpassen)
+   LERNWELT – config.js
 
-   Spiel-Status:  "available" | "password" | "locked"
+   Spiel-Status:  "available" | "locked"
 
-   NEUEN PASSWORT-HASH GENERIEREN:
-     1. index.html im Browser öffnen
-     2. Konsole öffnen (F12)
-     3. Eingeben:  hashPassword('meinPasswort').then(h => console.log(h))
-     4. Den ausgegebenen Hash hier als passwordHash eintragen
+   WER EIN SPIEL FREISCHALTET, STEHT NICHT MEHR HIER.
+   Seit Migration 0070 entscheidet ein Schalter pro (Kurs, Spiel),
+   den Admins und Schuladmins direkt auf der Hub-Kachel bedienen
+   (Tabelle cluster_unlocked_games). Die Passwörter sind ersatzlos
+   entfallen — ein Passwort war ein Geheimnis pro Spiel, das man
+   einmal ansagt und danach nicht mehr zurücknehmen kann.
 
-   Hinweis: Season-Sichtbarkeit wird jetzt über die Backend-Session
-   geregelt (siehe session.js: getUserSeason()). Der frühere
-   globale _rel-Bool ist entfallen.
+   Diese Datei ist nur noch der NOT-AUS: "locked" schaltet ein Spiel
+   global ab, unabhängig von jedem Kurs und über jeden Admin hinweg.
+   Gedacht für den Fall, dass ein Spiel kaputt ist und niemand mehr
+   hineinlaufen soll. Im Normalbetrieb steht hier nichts.
+
+   Season-Sichtbarkeit läuft weiter über die Backend-Session
+   (session.js: getUserSeason()) bzw. für Admins über den gewählten
+   Kurs (getEffectiveSeason() in script.js).
    ══════════════════════════════════════════════════════════════ */
 
 
 GAME_ACCESS = {
-  // Season 1 – Schulung 1 (Regeln, Ordnung, Dateien & Aufmerksamkeit)
-  game3:  { status: 'password', passwordHash: 'c271515d04b978b6d10041e4e754ec6525a40266ec17dafcf8ee4474960ab800' },
-  game7:  { status: 'available' },
-  game8:  { status: 'password', passwordHash: 'a3649c0969937aef94e1556fd5d9f3649f5d4966c90bb854a4aca56e32cc9f04' },
-  game9:  { status: 'password', passwordHash: '8bd18d730cb0594285e09af7869d1baab844a1573ecfdce9c25480f0ab31fb58' },
-  game10: { status: 'password', passwordHash: '8bd18d730cb0594285e09af7869d1baab844a1573ecfdce9c25480f0ab31fb58' },
-  game11: { status: 'password', passwordHash: 'dd8265590e8dcbe0be95c93961e8f3e5ed3b877d98b136e1a11e7b6827eba84e' },
-  // Season 2 – Schulung 2 (LLM und Recherche)
-  game12: { status: 'password', passwordHash: '1d75fc98b5dc89c3612274e343f3271776c57ccdd8a7022650d38eea7db7cea3' },
-  game15: { status: 'password', passwordHash: '7625ae9cd8c2645149cb2016e7ed931638d49fd51f96b1aef9db7add759c1dd5' },
-  game14: { status: 'password', passwordHash: '71391cf2eb6d22058056461195b0134a2933352f21faa98ff9992513ac7e8fb4' },
-  // Season 3 – Schulung 3 (Social Media und Folgen von KI)
-  game18: { status: 'available' },
-  game17: { status: 'password', passwordHash: '143d9b39f43e4cb468a95238047aa6674d6ef735748170599e9a8a0fc55a0cc7' },
-  // Reality Check (Ordner heißt weiter S3 Zukunftsboard) — Passwort
-  // "Zukunft2026". Derselbe Hash steht in
-  // Migration 0062; dieser hier gilt nur für nicht eingeloggte Gäste,
-  // eingeloggte User laufen über unlock_game gegen die games-Tabelle.
-  game19: { status: 'password', passwordHash: 'efc15d7b5561ee4ca922a571af606d8eb67be3706ada4ff23eaf49395484848f' },
+  // Beispiel für den Not-Aus:
+  // game9: { status: 'locked' },
 };

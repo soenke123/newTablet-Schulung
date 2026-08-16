@@ -158,6 +158,7 @@ function validateClusterWindow(opensAt, closesAt) {
   wireClusterEditModal();
   wireClusterDeleteModal();
   wireClusterBonusModal();
+  wireClusterGamesModal();
   wireUserFilters();
   wireViewSwitch();
   wireProgressSourceSwitch();
@@ -343,12 +344,31 @@ async function loadClusters() {
       console.warn('[admin] admin_cluster_bonbon_totals fehlgeschlagen:', e.message);
     }
 
+    // Freischaltungen pro Cluster (Migration 0070) für die "Offen"-Spalte.
+    // Fehler tolerieren, falls 0070 noch nicht deployed ist.
+    try {
+      const clusterIds = rows.map(r => r.id);
+      if (clusterIds.length > 0) {
+        const open = await api('GET',
+          `cluster_unlocked_games?select=cluster_id,game_id&cluster_id=in.(${clusterIds.join(',')})`);
+        const byId = {};
+        for (const o of open) byId[o.cluster_id] = (byId[o.cluster_id] || 0) + 1;
+        for (const c of rows) c.games_open = byId[c.id] || 0;
+      }
+      await ensureGamesBySeason();
+    } catch (e) {
+      console.warn('[admin] cluster_unlocked_games laden fehlgeschlagen:', e.message);
+    }
+
     if (rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="empty">Noch keine Cluster.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="empty">Noch keine Cluster.</td></tr>';
     } else {
       tbody.innerHTML = rows.map(c => renderClusterRow(c, counts[c.id] || 0)).join('');
       tbody.querySelectorAll('.js-cluster-edit').forEach(btn => {
         btn.addEventListener('click', () => openClusterEdit(btn.dataset.id));
+      });
+      tbody.querySelectorAll('.js-cluster-games').forEach(btn => {
+        btn.addEventListener('click', () => openClusterGames(btn.dataset.id));
       });
       tbody.querySelectorAll('.js-cluster-bonus').forEach(btn => {
         btn.addEventListener('click', () => openClusterBonus(btn.dataset.id));
@@ -361,7 +381,7 @@ async function loadClusters() {
     // Bulk-Cluster-Dropdown aktuell halten
     refreshBulkClusterOptions();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty">Fehler: ${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="empty">Fehler: ${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -391,6 +411,20 @@ function renderClusterRow(c, memberCount) {
     }
   }
 
+  // Freischaltungen (Migration 0070). Nenner sind alle aktiven Spiele bis
+  // einschließlich der Kurs-Season — was darüber liegt, sieht der Kurs
+  // ohnehin nicht, und ein Bruch, dessen Nenner nie erreichbar ist,
+  // sähe dauerhaft nach Rückstand aus.
+  let openCell = '—';
+  if (typeof c.games_open === 'number') {
+    let total = 0;
+    for (const s of Object.keys(gamesBySeason || {})) {
+      if (Number(s) <= c.season) total += gamesBySeason[s].length;
+    }
+    openCell = total > 0 ? `${c.games_open} / ${total}` : String(c.games_open);
+    if (c.games_open === 0) openCell = `<span class="badge closed">${openCell}</span>`;
+  }
+
   return `
     <tr>
       <td>${escapeHtml(c.name)}</td>
@@ -399,13 +433,127 @@ function renderClusterRow(c, memberCount) {
       <td>${fmtDT(c.closes_at)}</td>
       <td>${statusBadge}</td>
       <td>${memberCount}</td>
+      <td>${openCell}</td>
       <td>${bonbonsCell}</td>
       <td>
         <button class="btn small js-cluster-edit"   data-id="${c.id}">Bearbeiten</button>
+        <button class="btn small js-cluster-games"  data-id="${c.id}">Spiele</button>
         <button class="btn small js-cluster-bonus"  data-id="${c.id}">${bonusLabel}</button>
         <button class="btn small danger js-cluster-delete" data-id="${c.id}">Löschen</button>
       </td>
     </tr>`;
+}
+
+/* ─── Spiele-Freischaltung pro Kurs (Migration 0070) ──────────
+   Dient dem Vorbereiten: eine Stunde einrichten, bevor der Kurs da
+   ist. Während der Stunde schaltet die Lehrkraft direkt auf der
+   Hub-Kachel — dort, wo sie das Spiel auch sieht.               */
+let gamesClusterId = null;
+
+function wireClusterGamesModal() {
+  const overlay = document.getElementById('clusterGamesModal');
+  const close   = document.getElementById('clusterGamesClose');
+  if (!overlay || !close) return;
+  const doClose = () => { overlay.hidden = true; gamesClusterId = null; };
+  close.addEventListener('click', doClose);
+  overlay.addEventListener('click', e => { if (e.target === overlay) doClose(); });
+}
+
+async function openClusterGames(clusterId) {
+  const cluster = clusterCache.find(c => c.id === clusterId);
+  if (!cluster) return;
+  gamesClusterId = clusterId;
+  document.getElementById('clusterGamesTitle').textContent =
+    `Spiele freischalten — ${cluster.name}`;
+  document.getElementById('clusterGamesModal').hidden = false;
+  await renderClusterGamesBody();
+}
+
+async function renderClusterGamesBody() {
+  const body = document.getElementById('clusterGamesBody');
+  if (!body || !gamesClusterId) return;
+  body.innerHTML = '<p class="empty">Lade …</p>';
+
+  const cluster = clusterCache.find(c => c.id === gamesClusterId);
+  try {
+    await ensureGamesBySeason();
+    const rows = await api('GET',
+      `cluster_unlocked_games?select=game_id&cluster_id=eq.${gamesClusterId}`);
+    const open = new Set(rows.map(r => r.game_id));
+
+    // Seasons oberhalb der Kurs-Season bleiben draußen: sie wären für
+    // den Kurs unsichtbar, ein Schalter dafür verspräche etwas, das
+    // erst nach einer Season-Änderung eintritt.
+    const seasons = Object.keys(gamesBySeason)
+      .map(Number)
+      .filter(s => s <= cluster.season)
+      .sort((a, b) => a - b);
+
+    if (seasons.length === 0) {
+      body.innerHTML = '<p class="empty">Für diese Season sind keine Spiele hinterlegt.</p>';
+      return;
+    }
+
+    body.innerHTML = seasons.map(s => `
+      <div class="card">
+        <h4>Season ${s}
+          <button class="btn small js-cg-all" data-season="${s}" data-open="1">alle freischalten</button>
+          <button class="btn small js-cg-all" data-season="${s}" data-open="0">alle sperren</button>
+        </h4>
+        <div class="cg-list">
+          ${gamesBySeason[s].map(id => `
+            <label class="cg-item">
+              <input type="checkbox" class="js-cg-one" data-game="${id}" ${open.has(id) ? 'checked' : ''} />
+              <span>${escapeHtml(gameTitle(id))}${id === 'game16' ? ' <em>(eröffnet das Bonbon-Sammeln)</em>' : ''}</span>
+            </label>`).join('')}
+        </div>
+      </div>`).join('');
+
+    body.querySelectorAll('.js-cg-one').forEach(cb => {
+      cb.addEventListener('change', async () => {
+        cb.disabled = true;
+        let res = null, err = null;
+        try {
+          res = await api('POST', 'rpc/set_cluster_game_access', {
+            p_cluster_id: gamesClusterId, p_game_id: cb.dataset.game, p_open: cb.checked
+          });
+        } catch (e) { err = e.message; }
+        cb.disabled = false;
+        if (!res?.ok) {
+          // Zurückspringen statt einen Zustand stehen zu lassen, den
+          // der Server nicht kennt.
+          cb.checked = !cb.checked;
+          alert(`Konnte nicht schalten: ${err ?? res?.error ?? 'unbekannt'}`);
+          return;
+        }
+        loadClusters();
+      });
+    });
+
+    body.querySelectorAll('.js-cg-all').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const wantOpen = btn.dataset.open === '1';
+        body.querySelectorAll('button, input').forEach(el => el.disabled = true);
+        let res = null, err = null;
+        try {
+          res = await api('POST', 'rpc/set_cluster_season_access', {
+            p_cluster_id: gamesClusterId,
+            p_season: Number(btn.dataset.season),
+            p_open: wantOpen
+          });
+        } catch (e) { err = e.message; }
+        if (!res?.ok) {
+          body.querySelectorAll('button, input').forEach(el => el.disabled = false);
+          alert(`Konnte nicht schalten: ${err ?? res?.error ?? 'unbekannt'}`);
+          return;
+        }
+        await renderClusterGamesBody();
+        loadClusters();
+      });
+    });
+  } catch (err) {
+    body.innerHTML = `<p class="empty">Fehler: ${escapeHtml(err.message)}</p>`;
+  }
 }
 
 // ─── Cluster-Edit-Modal ──────────────────────────────────────

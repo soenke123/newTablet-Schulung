@@ -21,7 +21,7 @@ Webauftrtitt/
     ├── script.js       → Hub-only logic: GAMES_CONFIG, renderHub, shop modal, gallery
     ├── creatures.js    → Shared: creature images, egg SVGs, localStorage read/write
     ├── style.css       → Fantasy/adventure theme (CSS variables, Cinzel + Nunito fonts)
-    ├── config.js       → GAME_ACCESS: password/lock status for each game (wandert schrittweise in DB)
+    ├── config.js       → GAME_ACCESS: nur noch Not-Aus (`locked`). Freischaltung läuft über cluster_unlocked_games
     ├── data/           → Creature PNG sprites (14 types × 5 growth stages)
     ├── 1337.html       → Secret easter-egg game (Atari-1337 creature unlock)
     └── [14 game folders] (see GameHub/CLAUDE.md)
@@ -97,6 +97,16 @@ Migrationen 0001–0067 liegen in `supabase/migrations/`. Schema/Seed, RLS, Sess
 
 **`collab`-Flag in `GAMES_CONFIG`:** dritter Kachel-Sonderfall neben `standalone` und `clusterLegi`. Gemeinsam mit `standalone` unter dem Prädikat `isRoundless(game)` in `script.js` zusammengefasst — beide melden kein Rundenergebnis, also sind Nest-Eier, Runden-Items, Backup-Tausch und Rundenbonus aus. Zusätzlich collab-spezifisch: kein Bonbon-Tages-Hinweis (die +20 hängen an einer gespielten Runde — die Bonbons kommen hier einmalig aus 0067), **kein Freilassen** (Knopf aus in `buildCardHTML`, Riegel in `confirmRelease` **und** `releaseCreature` — der Auslöser ist ein einmaliger Phasenwechsel und lässt sich nicht nachspielen), und Admins dürfen das Season-Gate passieren (`isAdminUser()` in `getGameAccess` **und** in der Season-Sektions-Filterung von `renderHub` — beide Stellen sind nötig). Wachstumstrank und Stein der Vollendung wirken wie bei `standalone`.
 
+**Kurs-Freischaltung statt Passwörter (Migrationen 0070 + 0071, 2026-08-16):** Die Spiel-Passwörter sind weg. Ein Passwort war ein **Geheimnis pro Spiel** — einmal angesagt, nicht mehr zurückzunehmen, und es wanderte in den nächsten Kurs. Gebraucht wurde das Gegenteil: ein **Schalter pro (Kurs, Spiel)**, den Admins und Schuladmins in beide Richtungen bedienen. Tabelle `cluster_unlocked_games`, bewusst parallel zu `user_unlocked_games` gebaut: **Zeile vorhanden = offen**, Sperren = Zeile löschen (kein `boolean`, sonst gäbe es den dritten Zustand „Zeile da, aber false"). Nur SELECT-Policies, geschrieben wird über `set_cluster_game_access` / `set_cluster_season_access` (beide verlangen `is_any_admin()` **zusätzlich** zur Kurs-Auflösung — `board_target_cluster` allein lieferte einem Schüler brav seinen eigenen Kurs). Der Kurs-Auflöser aus 0062 wird wiederverwendet und nicht kopiert; sein `board_`-Präfix ist seither historisch.
+
+**Sperren löscht nichts** — `game_state`, Kreaturen, Wachstum, Münzen und Highscores bleiben unangetastet, das Spiel ist nur nicht startbar. Auf der Schüler-Kachel steht deshalb bei vorhandenem Monster „Dein Monster wartet hier auf dich."; ohne die Zeile liest sich das Schloss wie ein Verlust. **Der Serverriegel ist absichtlich flach:** `submit_game_result` bleibt offen, damit eine Runde, die beim Zusperren gerade lief, nicht verlorengeht. Geriegelt sind nur die Bonbons (0071).
+
+**Verteilung:** die Schüler-Tablets pollen die Liste alle 20 s (plus sofort bei `visibilitychange`) und zeichnen **nur bei geänderter Liste** neu — sonst zuckte alle 20 Sekunden der halbe Hub. **Admins** hängen in keinem Kurs (Beobachter-Rolle, 0053) und wählen ihn im Hub (`#hubAdminBar`, `sessionStorage` — auf einem geteilten Lehrer-Tablet soll die Wahl mit dem Tab verschwinden, wie im Reality-Check-Board). Für sie zieht auch die Season-Sichtbarkeit am gewählten Kurs (`getEffectiveSeason()`), sonst wäre der Hub für die Lehrkraft leer (Admin = Season 0). Die Kachel zeigt ihnen, was der Kurs **nach** dem Freischalten sähe (`getGameAccessIfOpen()`), plus den Schalter — die Sperre gilt der Klasse, nicht der Lehrkraft. Zum Vorbereiten gibt es dieselbe Matrix im Admin-Panel (Cluster-Tab → „Spiele").
+
+**Die Einhornkatze eröffnet das Bonbon-Prinzip (0071):** `game16` ist ebenfalls sperrbar, und solange sie zu ist, entstehen im **ganzen Kurs** keine Bonbons — vorher sammelt niemand unbemerkt auf ein Ziel hin, das noch gar nicht erklärt wurde. Das Tor steht in `add_bonbons` (zentral, deckt damit auch `board_claim_reward` ab), in `get_cluster_bonbon_status` (`enabled`, daran hängen die +20-Tageshinweise **aller** Kacheln) und in `award_game_bonbons`. ⚠️ Dort **vor** dem `bonbon_daily_claims`-Schreibzugriff: die Funktion setzt den Tagesmarker, bevor sie an `add_bonbons` delegiert — läge das Tor nur dort, wäre der +20-Bonus verbrannt, ohne dass ein Bonbon geflossen ist. Nicht betroffen: die Münzen aus `board_claim_reward` gehen direkt in `game_state.coins`, Reality Check gibt bei gesperrter Einhornkatze also weiter Wachstum und Münzen, nur keine Bonbons.
+
+**Backfill (0070):** Grundzustand ist „alles zu", also öffnet die Migration für jeden Kurs jedes Spiel, das dort nachweislich schon läuft (`game_state` ∪ `user_unlocked_games`) — genau dafür bleiben `user_unlocked_games` und `unlock_game` stehen und werden nicht gedroppt. `game16` bleibt dabei bewusst zu, **außer** wo das Sammeln schon läuft (Legi vergeben oder Bonbons > 0); einem laufenden Kurs die Sammlung stillzulegen wäre nirgends erklärbar.
+
 **Noch offen:** PDF-Storage-Anbindung. Season 3 (Kreaturen + Games). Diverse UI-ToDos: FokusFlow-Max-Score, Algorithm-Balancing, Theme in DB.
 
 ## Architecture
@@ -105,9 +115,9 @@ The landing page (`index.html`) is a standalone HTML file — no shared JS or CS
 
 GameHub uses a hub-and-spoke model: `GameHub/index.html` is the central hub, each game lives in its own folder, and `creatures.js` is the only shared JS between hub and games. See `GameHub/CLAUDE.md` for the full data flow, game-adding guide, creature logic, and localStorage state shape.
 
-### Game Access Control (`config.js`)
+### Game Access Control
 
-`GAME_ACCESS` maps game IDs to lock/password settings. Edit this file to restrict or unlock games without touching game code.
+Fünf Zustände in `getGameAccess()` (`GameHub/script.js`): `available` · `locked` (Season-Gate oder Not-Aus) · `admin_locked` (Kurs-Sperre) · `cluster_locked` / `ready_to_reveal` (Einhornkatze). `config.js` ist seit Migration 0070 **nur noch der Not-Aus** (`status: 'locked'` schaltet ein Spiel global ab) — wer ein Spiel freischaltet, steht in `cluster_unlocked_games`. Siehe „Kurs-Freischaltung" oben.
 
 ### Shop & Coin Economy (in `script.js`)
 

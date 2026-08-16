@@ -1603,6 +1603,140 @@ function setUnlocked(gameId) {
   }
 }
 
+/* ─── Kurs-Freischaltung (Migration 0070) ───────────────────────
+   Seit 0070 entscheidet nicht mehr ein Passwort pro Spiel, wer
+   spielen darf, sondern ein Schalter pro (Kurs, Spiel), den die
+   Lehrkraft bedient. Zeile in cluster_unlocked_games vorhanden =
+   offen. Gelesen wird per REST (RLS-Policy erlaubt den eigenen Kurs
+   bzw. Admins die Kurse ihrer Schule) — kein RPC, weil der Hub die
+   Liste alle 20 Sekunden pollt und ein schlanker GET dafür reicht.
+
+   window.__clusterGames = { clusterId, open: Set<gameId>, loaded }
+   `loaded` trennt „noch nie geladen" von „geladen und leer". Leer ist
+   ein gültiger Zustand (= alles gesperrt), nicht erreichbar dagegen
+   darf nichts zuklappen: sonst nimmt ein kurzer WLAN-Hänger dem
+   ganzen Kurs mitten in der Stunde die Kacheln weg.               */
+let _clusterGames = { clusterId: null, open: new Set(), loaded: false };
+window.__clusterGames = _clusterGames;
+
+// Rückgabe: true, wenn sich die Liste geändert hat (Aufrufer rendert
+// dann neu), sonst false. Ein Fehler ist ebenfalls false — der letzte
+// bekannte Stand bleibt stehen.
+async function refreshClusterGamesFromServer(clusterId) {
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return false;
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return false;
+
+  // Ohne Argument: der eigene Kurs. Admins hängen in keinem Kurs und
+  // geben deshalb den gewählten mit (Kurs-Wähler im Hub).
+  const target = clusterId ?? window.getSessionUser?.()?.cluster_id ?? null;
+  if (!target) {
+    // Kein Kurs = nichts freigeschaltet, und das ist eine Antwort und
+    // kein Fehler (Admin ohne Kurswahl, Schüler ohne Zuordnung).
+    const changed = _clusterGames.open.size > 0 || !_clusterGames.loaded;
+    _clusterGames = { clusterId: null, open: new Set(), loaded: true };
+    window.__clusterGames = _clusterGames;
+    return changed;
+  }
+
+  try {
+    const url = `${window.SUPABASE_URL}/rest/v1/cluster_unlocked_games`
+              + `?select=game_id&cluster_id=eq.${encodeURIComponent(target)}`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    });
+    if (!res.ok) throw new Error(`cluster_unlocked_games ${res.status}`);
+    const rows = await res.json();
+    const next = new Set(rows.map(r => r.game_id));
+
+    const changed = !_clusterGames.loaded
+      || _clusterGames.clusterId !== target
+      || next.size !== _clusterGames.open.size
+      || [...next].some(id => !_clusterGames.open.has(id));
+
+    _clusterGames = { clusterId: target, open: next, loaded: true };
+    window.__clusterGames = _clusterGames;
+    if (changed) console.log('[creatures] Kurs-Freischaltungen:', [...next]);
+    return changed;
+  } catch (e) {
+    console.warn('[creatures] Kurs-Freischaltungen laden fehlgeschlagen:', e.message);
+    return false;
+  }
+}
+
+// Synchron, damit getGameAccess() synchron bleiben kann wie bisher.
+// Vor dem ersten erfolgreichen Laden ist alles zu — der Hub rendert
+// erst nach dem Boot-Sync, und eine Kachel, die kurz aufblitzt und
+// wieder zugeht, wäre schlimmer als eine, die zu bleibt.
+function isGameOpenForCluster(gameId) {
+  return _clusterGames.open.has(gameId);
+}
+
+// Kursliste für den Admin-Wähler im Hub. Die RLS-Policy auf clusters
+// liefert Schuladmins die Kurse ihrer Schule, Volladmins alle.
+async function listClustersForAdmin() {
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return [];
+  try {
+    const res = await fetch(
+      `${window.SUPABASE_URL}/rest/v1/clusters?select=id,name,season&order=name.asc`,
+      {
+        headers: {
+          apikey: window.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json'
+        }
+      }
+    );
+    if (!res.ok) throw new Error(`clusters ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.warn('[creatures] Kursliste fehlgeschlagen:', e.message);
+    return [];
+  }
+}
+
+// Schalter für Admins. p_open=false löscht nur die Freischaltungs-
+// Zeile — Spielstände, Kreaturen und Münzen bleiben unangetastet.
+async function setClusterGameAccess(clusterId, gameId, open) {
+  return callAccessRpc('set_cluster_game_access', {
+    p_cluster_id: clusterId, p_game_id: gameId, p_open: !!open
+  });
+}
+
+async function setClusterSeasonAccess(clusterId, season, open) {
+  return callAccessRpc('set_cluster_season_access', {
+    p_cluster_id: clusterId, p_season: season, p_open: !!open
+  });
+}
+
+async function callAccessRpc(fn, body) {
+  const token = window.__accessToken;
+  if (!token || !window.SUPABASE_URL) return { ok: false, error: 'no_token' };
+  try {
+    const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: json?.message || `http_${res.status}` };
+    return json;
+  } catch (e) {
+    console.warn(`[creatures] ${fn} fehlgeschlagen:`, e.message);
+    return { ok: false, error: 'network' };
+  }
+}
+
 function migrateUnlocked() {
   const OLD_KEY = 'lernwelt_unlocked';
   const old = localStorage.getItem(OLD_KEY);
@@ -1623,6 +1757,11 @@ window.getUnlocked            = getUnlocked;
 window.setUnlocked            = setUnlocked;
 window.migrateUnlocked        = migrateUnlocked;
 window.refreshUnlockedFromServer = refreshUnlockedFromServer;
+window.refreshClusterGamesFromServer = refreshClusterGamesFromServer;
+window.isGameOpenForCluster   = isGameOpenForCluster;
+window.listClustersForAdmin   = listClustersForAdmin;
+window.setClusterGameAccess   = setClusterGameAccess;
+window.setClusterSeasonAccess = setClusterSeasonAccess;
 window.loadServerState        = loadServerState;
 window.syncGameStateToServer  = syncGameStateToServer;
 window.pushPendingState       = pushPendingState;
