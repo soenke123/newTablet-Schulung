@@ -111,6 +111,7 @@
     sort:      { col: 'created_at', dir: 'desc' },
     lastSig:   null,
     editing:   null,   // { id|null, kind, category, stance }
+    presets:   [],     // im Vorlagen-Menü gerade gezeigte Karten (gefiltert)
     detailId:  null,   // offene Karten-Ansicht
     confirmFn: null,
     shuffle:   0,      // Mischzähler für „neu anordnen" — rein lokal
@@ -783,11 +784,20 @@
     // Die Blätter unter der Karte. Nur in der Wolke, siehe oben.
     const sheets = hasStrength ? sheetsFor(t) : 0;
 
-    const hint = note.is_mine
+    /* Karten der Lehrkraft tragen einen Rahmen (bd-cn--admin, gezeichnet
+       in board.css). Das ist die einzige Ausnahme von „auf der Karte
+       steht nur der Text" außer dem Daumen — und sie muss sein: eine
+       vorbereitete Recherche, die die Lehrkraft in die Besprechung
+       wirft, ist etwas anderes als ein Fund aus dem Kurs, und wer das
+       nicht sieht, hält sie für die Arbeit einer Mitschülerin.
+       Der Rahmen sagt „nicht aus dem Kurs", nicht „richtiger" — deshalb
+       ist er anthrazit und keine vierte Zettelfarbe (Regel 1 der Optik).
+       Wer es genauer wissen will, findet im Detail die Zeile „Von". */
+    const hint = (note.by_admin ? 'Von deiner Lehrkraft · ' : '') + (note.is_mine
       ? 'Antippen: deine Karte ansehen, ändern oder löschen'
       : canLike(note)
         ? 'Antippen für Details · Doppeltippen zum Zustimmen'
-        : 'Antippen für Details und Quelle';
+        : 'Antippen für Details und Quelle');
 
     // Bewusst ohne role="button": die Karte ist zwar antippbar, aber
     // role="button" macht ihren Inhalt für Screenreader zu reiner
@@ -796,7 +806,7 @@
     // Recherche wäre er ein Versprechen, das der Doppeltipp nicht hält.
     const liked = !!note.liked_by_me && note.kind !== 'fakt';
 
-    return `<article class="bd-cn bd-cn--${esc(note.stance)}${note.is_mine ? ' bd-cn--mine' : ''}${liked ? ' bd-cn--liked' : ''}${sheets ? ` bd-cn--st${sheets}` : ''}"
+    return `<article class="bd-cn bd-cn--${esc(note.stance)}${note.by_admin ? ' bd-cn--admin' : ''}${note.is_mine ? ' bd-cn--mine' : ''}${liked ? ' bd-cn--liked' : ''}${sheets ? ` bd-cn--st${sheets}` : ''}"
              data-note="${esc(note.id)}"${style}
              tabindex="0" title="${hint}">
         ${liked ? '<span class="bd-cn__liked" title="Du hast zugestimmt">👍</span>' : ''}
@@ -1628,7 +1638,9 @@
         case 'text':     return `<td>${esc(n.text)}</td>`;
         case 'source':   return `<td>${formatSource(n) || '—'}</td>`;
         case 'likes':    return `<td class="bd-td-likes">${Number(n.likes || 0) || '—'}</td>`;
-        case 'author':   return `<td>${esc(n.author || '—')}</td>`;
+        // Das Schild steht auch hier: in der Tabelle gibt es keinen
+        // Rahmen, und „von wem" ist genau die Spalte, die es beantwortet.
+        case 'author':   return `<td>${n.by_admin ? '🛡️ ' : ''}${esc(n.author || '—')}</td>`;
         default:         return `<td>${formatDate(n.created_at)}</td>`;
       }
     }
@@ -1720,6 +1732,19 @@
     $('bdSrcDate').value   = note?.source_date ? String(note.source_date).slice(0, 7) : '';
     $('bdSrcDate').max     = monthIso();
 
+    /* Der Vorlagen-Wähler: nur für Admins, nur beim ANLEGEN und nur,
+       wenn es für diese Kartenart überhaupt Vorlagen gibt (in Phase 1
+       gibt es keine — Post-Its soll der Kurs selbst schreiben).
+
+       Beim Bearbeiten fehlt er bewusst: eine Vorlage überschreibt die
+       ganze Maske, und beim Nachbessern einer fremden Karte wäre das
+       ein Fehlgriff, der die Karte einer Schülerin ersetzt. „Vorlage
+       einsetzen" gehört zum Anlegen. */
+    const hasPresets = Array.isArray(window.BOARD_PRESETS)
+      && window.BOARD_PRESETS.some(p => p.kind === kind);
+    closePresetMenu();
+    $('bdPreset').hidden = !(state.isAdmin && !note && hasPresets);
+
     ['bdText', 'bdSrcUrl', 'bdSrcAuthor', 'bdSrcDate'].forEach(id => $(id).classList.remove('bd-invalid'));
     $('bdModalError').hidden = true;
     $('bdModal').hidden = false;
@@ -1728,8 +1753,113 @@
   }
 
   function closeModal() {
+    closePresetMenu();
     $('bdModal').hidden = true;
     state.editing = null;
+  }
+
+  /* ── Vorbereitete Karten (nur Admins) ────────────────────
+     In Phase 3 hängt das Gespräch daran, dass etwas Belastbares auf dem
+     Board liegt. Was der Kurs nicht selbst gefunden hat, wirft die
+     Lehrkraft dazu — aber nicht, indem sie mitten in der Besprechung
+     eine Quellenangabe abtippt. Die Karten stehen fertig in
+     js/presets.js und sind hier einen Klick entfernt.
+
+     Der Wähler steht bewusst IM Formular und nicht daneben: eine
+     Vorlage füllt die Maske, sie speichert nicht. Danach lässt sich
+     alles noch ändern, und gespeichert wird über denselben Knopf wie
+     jede andere Karte — mit derselben Prüfung und derselben RPC.
+     Genau deshalb ist der Weg auch ungefährlich: eine kaputte Vorlage
+     wird vom Formular abgewiesen wie eine kaputte Eingabe.
+
+     Gefiltert wird nach Art UND Bereich. Der Bereich steht beim Anlegen
+     ohnehin fest (er kommt vom Plus-Knopf), also wäre eine Liste über
+     alle sechs Bereiche nur eine Liste, aus der man fünf Sechstel nicht
+     nehmen darf.                                                      */
+  function presetsFor(kind, category) {
+    const all = Array.isArray(window.BOARD_PRESETS) ? window.BOARD_PRESETS : [];
+    return all.filter(p => p.kind === kind && p.category === category);
+  }
+
+  /* Liegt diese Vorlage schon auf dem Board? Verglichen wird der Text —
+     eine ID haben die Vorlagen nicht, und sie sollen auch keine
+     bekommen: sonst müsste die Karte in der Datenbank wissen, aus
+     welcher Vorlage sie stammt, und das interessiert nach dem Speichern
+     niemanden mehr. Der Vergleich ist nur eine Hilfe gegen das
+     versehentliche zweite Einwerfen im Gespräch, keine Sperre. */
+  function presetOnBoard(p) {
+    return (state.data?.notes || []).some(n => n.kind === p.kind && n.text === p.text);
+  }
+
+  function renderPresetMenu() {
+    const e = state.editing;
+    if (!e) return;
+    state.presets = presetsFor(e.kind, e.category);
+    const cat = catOf(e.category);
+
+    $('bdPresetMenu').innerHTML = state.presets.length
+      ? state.presets.map((p, i) => {
+          const used = presetOnBoard(p);
+          const st   = stanceOf(p.stance);
+          return `<button type="button" role="menuitem" data-i="${i}"
+                          class="bd-preset__item${used ? ' bd-preset__item--used' : ''}">
+                    <span class="bd-preset__stance" title="${esc(st.label)}">${st.icon}</span>
+                    <span class="bd-preset__body">
+                      <span class="bd-preset__text">${esc(p.text)}</span>
+                      <span class="bd-preset__src">${
+                        p.source_url ? esc(domainOf(p.source_url)) + ' · ' : ''
+                      }${esc(p.source_author || '')}${used ? ' · liegt schon auf dem Board' : ''}</span>
+                    </span>
+                  </button>`;
+        }).join('')
+      : `<p class="bd-preset__empty">Für „${esc(cat.label)}" ist nichts vorbereitet.</p>`;
+  }
+
+  function openPresetMenu() {
+    renderPresetMenu();
+    $('bdPresetMenu').hidden = false;
+    $('bdPresetBtn').setAttribute('aria-expanded', 'true');
+  }
+
+  function closePresetMenu() {
+    const m = $('bdPresetMenu');
+    if (!m || m.hidden) return;
+    m.hidden = true;
+    $('bdPresetBtn').setAttribute('aria-expanded', 'false');
+  }
+
+  /* Setzt die Vorlage in die Maske — inklusive der beiden
+     Auswahlleisten, die ihren Zustand im aria-pressed führen und
+     deshalb einzeln nachgezogen werden müssen. Der Bereich wird NICHT
+     angefasst: er kommt vom Plus-Knopf, und eine Vorlage aus einem
+     anderen Bereich steht gar nicht erst in der Liste. */
+  function applyPreset(p) {
+    const e = state.editing;
+    if (!e || !p) return;
+
+    e.stance = p.stance;
+    e.topics = Array.isArray(p.topics) ? p.topics.slice() : [];
+    $('bdStanceChoice').querySelectorAll('button').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.val === e.stance)));
+    $('bdTopicChoice').querySelectorAll('button').forEach(b =>
+      b.setAttribute('aria-pressed', String(e.topics.includes(b.dataset.val))));
+
+    $('bdText').value = p.text || '';
+    $('bdTextCount').textContent = $('bdText').value.length;
+
+    if (e.kind === 'fakt') {
+      $('bdSrcUrl').value    = p.source_url    || '';
+      $('bdSrcAuthor').value = p.source_author || '';
+      // Das Feld ist ein Monatsfeld; die Vorlage bringt 'YYYY-MM' mit.
+      $('bdSrcDate').value   = String(p.source_date || '').slice(0, 7);
+    }
+
+    closePresetMenu();
+    // Alles gefüllt? Dann gehört der nächste Griff dem Speichern-Knopf.
+    // Hakt etwas (eine Vorlage mit Datum in der Zukunft etwa), steht der
+    // Fokus im Text — validate() hat das schuldige Feld schon rot.
+    const ok = validate();
+    (ok ? $('bdSave') : $('bdText')).focus();
   }
 
   /* Gibt zurück, was noch fehlt — und markiert die Felder. Genau
@@ -1883,7 +2013,9 @@
     $('bdDetailMeta').innerHTML =
       `<div class="bd-detail__row"><span>Bereich</span><strong>${cat.icon} ${esc(cat.label)}</strong></div>
        <div class="bd-detail__row"><span>Thema</span><strong>${topics || '<em class="bd-detail__none">nichts angegeben</em>'}</strong></div>
-       <div class="bd-detail__row"><span>Von</span><strong>${esc(note.author || 'Unbekannt')}${note.is_mine ? ' (du)' : ''}</strong></div>
+       <div class="bd-detail__row"><span>Von</span><strong>${esc(note.author || 'Unbekannt')}${note.is_mine ? ' (du)' : ''}${
+         note.by_admin ? ' <span class="bd-pill bd-pill--admin">🛡️ Lehrkraft</span>' : ''
+       }</strong></div>
        ${likeRow}`;
 
     // Zustimmen und Zurücknehmen sitzen am selben Knopf — er sagt immer,
@@ -1967,9 +2099,24 @@
     ['bdSrcUrl', 'bdSrcAuthor', 'bdSrcDate'].forEach(id =>
       $(id).addEventListener('input', validate));
 
+    // ── Vorlagen-Wähler (nur Admins) ──
+    $('bdPresetBtn').addEventListener('click', () => {
+      if ($('bdPresetMenu').hidden) openPresetMenu(); else closePresetMenu();
+    });
+    $('bdPresetMenu').addEventListener('click', ev => {
+      const b = ev.target.closest('button[data-i]'); if (!b) return;
+      applyPreset(state.presets[Number(b.dataset.i)]);
+    });
+
     $('bdSave').addEventListener('click', save);
     $('bdCancel').addEventListener('click', closeModal);
-    $('bdModal').addEventListener('click', ev => { if (ev.target === $('bdModal')) closeModal(); });
+    $('bdModal').addEventListener('click', ev => {
+      if (ev.target === $('bdModal')) { closeModal(); return; }
+      // Klick irgendwo sonst im Formular schließt das Vorlagen-Menü —
+      // es liegt über den Feldern, und wer daneben tippt, will an das
+      // Feld darunter.
+      if (!ev.target.closest('#bdPreset')) closePresetMenu();
+    });
 
     $('bdConfirmNo').addEventListener('click', () => { $('bdConfirm').hidden = true; state.confirmFn = null; });
     $('bdConfirmYes').addEventListener('click', async () => {
@@ -1980,7 +2127,13 @@
 
     document.addEventListener('keydown', ev => {
       if (ev.key === 'Escape') {
-        if (!$('bdModal').hidden)     closeModal();
+        // Erst das Vorlagen-Menü, dann das Formular: Escape schließt
+        // immer nur die oberste Schicht, sonst nimmt ein Griff daneben
+        // die halb gefüllte Maske mit.
+        if (!$('bdModal').hidden) {
+          if (!$('bdPresetMenu').hidden) closePresetMenu();
+          else                           closeModal();
+        }
         if (!$('bdDetail').hidden)    closeDetail();
         if (!$('bdPhaseInfo').hidden) closePhaseInfo();
         if (!$('bdConfirm').hidden)   { $('bdConfirm').hidden = true; state.confirmFn = null; }

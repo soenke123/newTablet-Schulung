@@ -568,6 +568,40 @@ body.bd-fill .bd-surface { min-height: 0; }
    ist die Aussage, nicht die Besitzverhältnisse. */
 .bd-cn--mine { --ring: 0 0 0 2px rgba(28,37,48,0.42); }
 
+/* Karten der Lehrkraft: ein aufgemalter Rahmen INNEN, kein Ring außen.
+   Zwei Gründe für innen. Erstens der Stapel: die Blätter liegen 5/6 px
+   nach rechts unten versetzt, ein äußerer Ring von 3–4 px schnitte
+   ihnen die Kante an und ausgerechnet die stark getragenen Karten sähen
+   aus wie ein Fehler. Zweitens die Lesart — ein Rahmen im Zettel wirkt
+   gezeichnet, ein Ring darum wirkt ausgewählt, und ausgewählt ist die
+   Karte nicht.
+
+   Gebaut aus zwei inset-Schatten: der erste malt 3 px Zettelfarbe an
+   die Kante, der zweite darunter eine 5 px breite anthrazitfarbene
+   Fläche. Sichtbar bleibt davon ein 2-px-Strich mit 3 px Abstand zur
+   Kante — also ein Rahmen und keine dickere Kante. Ohne den Abstand
+   sieht dieselbe Linie nur nach „fetterer Rand" aus; mit ihm nach
+   Absicht. Die Reihenfolge ist entscheidend: bei box-shadow liegt das
+   zuerst Genannte vorn.
+
+   Anthrazit und keine vierte Farbe (Regel 1 ganz oben): der Rahmen
+   sagt „kommt nicht aus dem Kurs", nicht „ist wichtiger".
+
+   --cn-fill setzt cardHTML für jede Karte in der Wolke (STANCE_RAMP).
+   Der Rückfall auf Weiß ist trotzdem nötig: eine ungültige var() macht
+   die ganze box-shadow-Deklaration ungültig, und dann verlöre die Karte
+   auch Stapel und Schatten.
+
+   Kann mit --liked zusammentreffen (Lehrkraft-Post-Its darf man
+   zustimmen) und gewinnt dann — der Daumen in der Ecke steht ohnehin
+   noch da und ist das deutlichere Zeichen. Mit --mine trifft er nur
+   für die Lehrkraft selbst zusammen; auch dort ist „von der Lehrkraft"
+   die nützlichere Auskunft. */
+.bd-cn--admin {
+  --ring: inset 0 0 0 3px var(--cn-fill, #fff),
+          inset 0 0 0 5px rgba(43,52,64,0.60);
+}
+
 .bd-cn__text { font-size: 1em; line-height: 1.32; font-weight: 600; }
 
 /* Einziges Zeichen auf der Karte außer dem Text: hast DU zugestimmt.
@@ -664,6 +698,28 @@ body.bd-fill .bd-surface { min-height: 0; }
 .bd-factgrid .bd-cn--mine:hover, .bd-factgrid .bd-cn--mine:focus-visible {
   box-shadow: 0 0 0 2px var(--clr-accent), 0 4px 14px rgba(28,37,48,0.14);
 }
+
+/* Karten der Lehrkraft im Recherche-Raster. Hier gibt es keinen
+   Stapel, der einem äußeren Rahmen im Weg stünde — also die ruhigere
+   Variante: die Kante wird anthrazit statt hellblau, plus eine zweite
+   Linie direkt daneben. Zusammen ist das eindeutig ein Rahmen und
+   trotzdem leiser als der satte 2-px-Ring der eigenen Karte.
+
+   Die blaue Kopfkante bleibt blau: sie sagt „Recherche" (Regel 2 ganz
+   oben), und das gilt für die Karte der Lehrkraft genauso.
+
+   Steht bewusst NACH --mine: eine Karte kann beides sein, wenn ein
+   Admin seine eigene ansieht, und „von der Lehrkraft" ist dann die
+   nützlichere Auskunft. Gleiche Spezifität, also entscheidet die
+   Reihenfolge. */
+.bd-factgrid .bd-cn--admin {
+  border-color: rgba(43,52,64,0.55);
+  box-shadow: 0 0 0 1px rgba(43,52,64,0.55), 0 1px 3px rgba(28,37,48,0.08);
+}
+.bd-factgrid .bd-cn--admin:hover, .bd-factgrid .bd-cn--admin:focus-visible {
+  border-color: var(--clr-accent);
+  box-shadow: 0 0 0 1px var(--clr-accent), 0 4px 14px rgba(28,37,48,0.14);
+}
 .bd-factgrid .bd-cn__text { font-weight: 600; line-height: 1.45; font-size: .95rem; }
 
 /* Einblenden beim Bereichswechsel — die Richtung folgt dem Wischer.
@@ -708,6 +764,9 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
 .bd-pill--risiko    { background: var(--clr-red);    border-color: var(--clr-red-line);    color: var(--clr-red-ink); }
 .bd-pill--vermutung { background: var(--clr-yellow); border-color: var(--clr-yellow-line); color: var(--clr-yellow-ink); }
 .bd-pill--fakt      { background: var(--clr-blue-soft); border-color: var(--clr-blue-line); color: var(--clr-blue); }
+/* Steht im Detail neben dem Namen und beantwortet, was der Rahmen auf
+   der Karte nur andeutet. */
+.bd-pill--admin     { background: var(--clr-accent-soft); border-color: rgba(43,52,64,0.30); color: var(--clr-accent); }
 
 /* ── Modal ────────────────────────────────────────────── */
 .bd-modal-backdrop {
@@ -748,6 +807,69 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
 .bd-modal h2 {
   font-family: var(--font-display); color: var(--clr-ink); font-size: 1.2rem;
   font-weight: 800; letter-spacing: -.01em; margin-bottom: 14px;
+}
+
+/* ── Titelzeile mit Vorlagen-Wähler ───────────────────────
+   Der Abstand nach unten wandert vom h2 an die Zeile, sonst säße der
+   Knopf um die halbe Zeilenhöhe zu hoch: align-items zentriert die
+   Rand-Box, und die trägt beim h2 die 14 px mit. */
+.bd-modal__titlerow {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 14px;
+}
+.bd-modal__titlerow h2 { margin-bottom: 0; }
+
+/* Der Wähler selbst. Nur Admins sehen ihn — was dahinter liegt, ist
+   Unterrichtsmaterial und keine Abkürzung für den Kurs. Bewusst
+   unbunt und klein: er ist eine Hilfe beim Ausfüllen, nicht der
+   Hauptweg ins Formular. */
+.bd-preset { position: relative; flex: 0 0 auto; }
+
+.bd-preset__btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  border: 1px solid var(--clr-line); border-radius: 9px;
+  background: var(--clr-surface); color: var(--clr-ink-2);
+  font-size: 1rem; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.bd-preset__btn:hover { background: var(--clr-surface2); border-color: var(--clr-ink-3); }
+.bd-preset__btn[aria-expanded="true"] {
+  background: var(--clr-accent); border-color: var(--clr-accent);
+}
+
+/* Liegt über den Feldern und schneidet bei vielen Vorlagen ab. Die
+   Höhe ist begrenzt, damit das Menü auf einem Tablet nicht über das
+   ganze Formular wächst — dann sähe man nicht mehr, was es füllt. */
+.bd-preset__menu {
+  position: absolute; z-index: 10; top: calc(100% + 6px); right: 0;
+  width: min(340px, 78vw); max-height: 320px; overflow-y: auto;
+  padding: 6px;
+  background: var(--clr-chrome);
+  border: 1px solid var(--clr-line); border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(28,37,48,0.20);
+}
+
+.bd-preset__item {
+  display: flex; align-items: flex-start; gap: 9px; width: 100%;
+  padding: 9px 10px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--clr-ink);
+  font: inherit; text-align: left; cursor: pointer;
+}
+.bd-preset__item:hover, .bd-preset__item:focus-visible { background: var(--clr-surface); }
+.bd-preset__stance { flex: 0 0 auto; font-size: .8rem; line-height: 1.35; }
+.bd-preset__body   { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bd-preset__text   { font-size: .88rem; font-weight: 600; line-height: 1.35; }
+.bd-preset__src    { font-size: .74rem; color: var(--clr-ink-3); }
+
+/* Schon eingeworfen: blass, aber anklickbar. Eine Sperre wäre falsch —
+   eine Karte kann gelöscht worden sein, und dann will man sie wieder.
+   Der Hinweis steht in der Quellenzeile darunter. */
+.bd-preset__item--used { opacity: .5; }
+
+.bd-preset__empty {
+  padding: 10px 10px 11px;
+  font-size: .84rem; color: var(--clr-ink-3);
 }
 
 /* ── Belohnung ────────────────────────────────────────────

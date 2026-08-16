@@ -104,7 +104,20 @@
 <!-- ── Erfassungs-Modal ──────────────────────────────────── -->
 <div class="bd-modal-backdrop" id="bdModal" hidden>
   <div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bdModalTitle">
-    <h2 id="bdModalTitle">Neues Post-It</h2>
+    <!-- Titelzeile. Rechts daneben der Vorlagen-Wähler — nur für
+         Admins, und nur wenn es für diese Art Karte überhaupt Vorlagen
+         gibt. Er sitzt am Titel und nicht bei den Feldern, weil er das
+         ganze Formular auf einmal füllt und nicht eines davon. -->
+    <div class="bd-modal__titlerow">
+      <h2 id="bdModalTitle">Neues Post-It</h2>
+      <div class="bd-preset" id="bdPreset" hidden>
+        <button type="button" id="bdPresetBtn" class="bd-preset__btn"
+                aria-haspopup="menu" aria-expanded="false"
+                aria-label="Vorbereitete Recherche einsetzen"
+                title="Vorbereitete Recherche einsetzen">🗂️</button>
+        <div class="bd-preset__menu" id="bdPresetMenu" role="menu" hidden></div>
+      </div>
+    </div>
 
     <!-- Der Bereich steht fest: er kommt von dort, wo der Plus-Knopf
          gedrückt wurde. Hier nur noch zum Nachlesen, nicht zum Ändern. -->
@@ -250,6 +263,11 @@
 <script src="../creatures.js"></script>
 
 <script src="js/api.js"></script>
+<!-- Vorbereitete Karten der Lehrkraft. Reine Datendatei ohne
+     Abhängigkeiten; muss nur vor board.js stehen, damit der
+     Vorlagen-Knopf beim ersten Öffnen des Formulars schon weiß, ob es
+     etwas zu wählen gibt. -->
+<script src="js/presets.js"></script>
 <script src="js/board.js"></script>
 </body>
 </html>
