@@ -381,7 +381,12 @@ function paintBeamer(code, data) {
   // aufgebaut werden.
   if (qrDrawn !== code) {
     try {
-      document.getElementById('bQr').innerHTML = MPQR.svg(url, { quiet: 2, title: 'Code ' + code });
+      // Ruhezone 4 Module — das ist der Normwert und keine Zierde:
+      // ein Lesegerät findet die Suchmarkierungen nur, wenn um den
+      // Code herum genug Weiß steht. Am Beamer, schräg und aus zehn
+      // Metern, ist das der Unterschied zwischen „geht sofort" und
+      // „geht bei manchen nicht".
+      document.getElementById('bQr').innerHTML = MPQR.svg(url, { title: 'Code ' + code });
       qrDrawn = code;
     } catch (e) {
       document.getElementById('bQr').innerHTML =

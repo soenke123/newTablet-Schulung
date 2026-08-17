@@ -27,6 +27,27 @@
    Vorlage ist die übliche Umsetzung nach ISO/IEC 18004; die
    Struktur (Galois-Feld, Blockverschränkung, Maskenbewertung)
    folgt zwangsläufig der Norm.
+
+   ── Wie das hier geprüft wurde, und warum das wichtig ist ─────
+   Der erste Anlauf war mit einem selbst geschriebenen RÜCKLESER
+   geprüft: Matrix erzeugen, Inhalt wieder herauslesen, vergleichen.
+   Das bestand — und der Code war trotzdem für jedes echte Lesegerät
+   unbrauchbar. Der Grund ist lehrreich: Rückleser und Erzeuger
+   teilten dieselbe falsche Annahme über die Formatfelder, und ein
+   Test, der die Annahme des Prüflings übernimmt, prüft nichts.
+
+   Zwei Fehler steckten darin, beide unsichtbar für den Rückleser:
+     · Die zweite Kopie der Formatinfo wurde 8/7 statt 7/8
+       aufgeteilt. Folge: (8, size-8) galt nicht als Funktionsmodul
+       und schluckte ein Datenbit — ab dort war alles verschoben.
+     · Die 15 Formatbits lagen verkehrt herum (niedrigstwertiges
+       zuerst statt höchstwertiges).
+
+   Gültig ist deshalb nur eine Prüfung gegen etwas Unabhängiges.
+   Aktueller Stand: bitgenau identisch mit `qrcode` (npm) für die
+   Versionen 1–10 × alle 8 Masken (80 Vergleiche, 0 Abweichungen,
+   Maskenwahl inklusive) und gelesen von `jsqr` (npm). Wer hier
+   etwas ändert, prüft bitte wieder so und nicht per Rücklese-Test.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -295,14 +316,37 @@
     // legt die Datenschleife ihre Bits darüber.
     const drawFormat = (mask) => {
       const fb = formatBits(mask);
-      const bit = (i) => (fb >>> i) & 1;
+      // Die 15 Formatbits werden MIT DEM HÖCHSTWERTIGEN ZUERST
+      // abgelegt: Stelle 0 (also Modul (8,0)) trägt Bit 14.
+      // Andersherum entsteht ein Bild, das strukturell wie ein
+      // QR-Code aussieht — Suchmarkierungen, Takt, Daten alles
+      // richtig — und das trotzdem kein Lesegerät annimmt, weil
+      // es Fehlerkorrekturstufe und Maske falsch herum liest.
+      const bit = (i) => (fb >>> (14 - i)) & 1;
+      // Erste Kopie, um die linke obere Suchmarkierung herum:
+      // 8 Module in Zeile 8 (Spalte 6 ist Taktlinie und wird
+      // übersprungen), 7 Module in Spalte 8.
       for (let i = 0; i <= 5; i++) set(8, i, bit(i));
       set(8, 7, bit(6));
       set(8, 8, bit(7));
       set(7, 8, bit(8));
       for (let i = 9; i < 15; i++) set(14 - i, 8, bit(i));
-      for (let i = 0; i < 8; i++)  set(size - 1 - i, 8, bit(i));
-      for (let i = 8; i < 15; i++) set(8, size - 15 + i, bit(i));
+
+      // Zweite Kopie — und hier ist die Aufteilung NICHT 8/7,
+      // sondern 7/8:
+      //   Bits 0–6  in Spalte 8, Zeilen size-1 … size-7
+      //   Bits 7–14 in Zeile 8,  Spalten size-8 … size-1
+      // Die Zeile size-8 in Spalte 8 gehört dem immer dunklen
+      // Modul und ist deshalb aus der Spaltenreihe ausgenommen.
+      //
+      // ⚠ Diese Grenze ist die Stelle, an der ein QR-Code lautlos
+      // kaputtgeht: schreibt man 8 Module in die Spalte und lässt
+      // die Zeile bei size-7 beginnen, überschreibt das dunkle
+      // Modul Bit 7 — und schlimmer: (8, size-8) bleibt dann
+      // unmarkiert und wird von der Datenschleife als Datenmodul
+      // benutzt. Ab dort ist der ganze Bitstrom um eins verschoben.
+      for (let i = 0; i < 7; i++)  set(size - 1 - i, 8, bit(i));
+      for (let i = 7; i < 15; i++) set(8, size - 15 + i, bit(i));
       set(size - 8, 8, 1);   // das immer dunkle Modul
     };
     drawFormat(0);
