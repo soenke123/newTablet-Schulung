@@ -210,6 +210,108 @@ body {
 }
 .soon strong { font-weight: 700; }
 
+/* ─── Werkzeug-Kacheln ────────────────────────────────── */
+.tools { margin-top: 40px; }
+.tools-title {
+  font-size: 1.06rem;
+  letter-spacing: -0.01em;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.tools-count {
+  font-family: var(--mono);
+  font-size: .72rem;
+  font-weight: 500;
+  color: var(--ink-faint);
+  background: var(--paper-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.tools-empty {
+  color: var(--ink-faint);
+  font-size: .9rem;
+  background: var(--surface);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 0;
+}
+
+.tile-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(252px, 1fr));
+}
+
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 17px 18px 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+/* „In Vorbereitung" wird nicht ausgegraut, nur zurückgenommen: die
+   Kachel soll lesbar bleiben — sie ist der Grund, hier wiederzukommen. */
+.tile--soon { background: #fcfcfa; box-shadow: none; }
+
+.tile-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 8px;
+}
+.tile-ic {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex: none;
+}
+.tile-head h3 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.tile-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.tag {
+  font-family: var(--mono);
+  font-size: .66rem;
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  color: var(--ink-faint);
+}
+.tag--soon { background: var(--accent-dim); border-color: #a9d5d0; color: var(--accent-ink); }
+.tag--off  { background: var(--warn-dim);   border-color: #f0c4ab; color: #8a2c07; }
+
+.tile-blurb {
+  margin: 0;
+  font-size: .875rem;
+  color: var(--ink-soft);
+  flex: 1;
+}
+.tile-note {
+  margin: 12px 0 0;
+  font-size: .8rem;
+  color: var(--ink-faint);
+}
+.tile-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 15px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line-soft);
+}
+
 /* ─── Fuß ─────────────────────────────────────────────── */
 .foot {
   border-top: 1px solid var(--line);

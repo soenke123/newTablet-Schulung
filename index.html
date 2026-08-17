@@ -71,6 +71,29 @@
       text-align: center;
     }
 
+    /* Fuß — trägt genau einen Link: den Übergang zu MPSkills.
+       Bewusst dezent und keine Kachel: MPSkills ist ein eigener
+       Bereich für den Unterricht und gehört nicht in den Ablauf
+       der Schulung (siehe Konzept_MPSkills_v1.html, Abschnitt 02). */
+    .site-foot {
+      width: 100%;
+      margin: 34px auto 0;
+      padding: 18px 12px 4px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
+      font-size: 0.84rem;
+    }
+    .site-foot a {
+      color: rgba(255, 255, 255, 0.62);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+    .site-foot a:hover {
+      color: rgba(255, 255, 255, 0.95);
+      text-decoration: underline;
+    }
+    .site-foot .foot-arrow { opacity: 0.6; }
+
     /* Überschrift */
     h1 {
       margin: 0;
@@ -893,6 +916,13 @@
       </a>
 
     </section>
+
+    <!-- Fuß bewusst INNERHALB von main: body ist ein Flex-Container
+         mit Reihen-Richtung, ein Geschwister-Element von main landet
+         daneben statt darunter. -->
+    <footer class="site-foot">
+      <a href="MPSkills/index.html">MPSkills — Werkzeuge für den Unterricht <span class="foot-arrow" aria-hidden="true">→</span></a>
+    </footer>
 
   </main>
 

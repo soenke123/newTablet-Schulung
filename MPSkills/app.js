@@ -68,6 +68,112 @@ async function fillSchoolSelect(selectEl) {
     .join('');
 }
 
+/* ─── Werkzeug-Registry ───────────────────────────────── */
+// Quelle ist skill_tools (Migration 0078), NICHT tools.js. Dort steht
+// nur das ready-Flag — siehe Kopfkommentar in tools.js.
+//
+// Mit Login wird der Token des Users benutzt, ohne Login der anon-Key:
+// die Policy skill_tools_select_public zeigt Gästen nur aktive Tools,
+// Admins auch abgeschaltete. Dieselbe Abfrage, zwei Ergebnisse.
+let toolsCache = null;
+let toolsError = null;
+
+async function loadTools() {
+  if (toolsCache) return toolsCache;
+  const token = window.__accessToken || window.SUPABASE_ANON_KEY;
+  try {
+    const res = await fetch(
+      `${window.SUPABASE_URL}/rest/v1/skill_tools`
+      + '?select=id,title,blurb,icon,folder,multi_room,active,sort_order'
+      + '&order=sort_order.asc',
+      {
+        headers: {
+          apikey: window.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json'
+        }
+      }
+    );
+    if (!res.ok) throw new Error(`skill_tools ${res.status}: ${(await res.text()).slice(0, 160)}`);
+    toolsCache = await res.json();
+    toolsError = null;
+  } catch (e) {
+    console.warn('[mpskills] Werkzeugliste laden fehlgeschlagen:', e.message);
+    toolsCache = null;
+    toolsError = e.message;
+  }
+  return toolsCache;
+}
+
+function isReady(toolId) {
+  return !!(window.TOOLS_OVERLAY?.[toolId]?.ready);
+}
+
+// mode 'act'  — Lehrkraft/Admin: Kacheln mit Knöpfen
+// mode 'view' — alle anderen: dieselbe Liste, ohne Knöpfe
+function toolCard(t, mode) {
+  const ready = isReady(t.id);
+  const badges = [
+    ready ? '' : '<span class="tag tag--soon">In Vorbereitung</span>',
+    t.active ? '' : '<span class="tag tag--off">Abgeschaltet</span>'
+  ].filter(Boolean).join('');
+
+  let foot = '';
+  if (mode === 'act') {
+    // Die Knöpfe stehen schon da, sind aber ehrlich abgeschaltet:
+    // beide brauchen Räume, und Räume kommen in Stufe 3. Ein Knopf,
+    // der nichts tut, ist schlimmer als ein Knopf, der sagt warum.
+    const off = ready ? '' : 'disabled';
+    const why = ready ? '' : ' title="Räume gibt es ab der nächsten Ausbaustufe."';
+    foot = `<div class="tile-foot">
+        <button type="button" class="btn btn--sm" ${off}${why}>Testen</button>
+        <button type="button" class="btn btn--sm btn--primary" ${off}${why}>Für eine Klasse öffnen</button>
+      </div>`;
+  } else {
+    foot = '<p class="tile-note">Deine Lehrkraft schaltet das frei.</p>';
+  }
+
+  return `<article class="tile${ready ? '' : ' tile--soon'}">
+      <div class="tile-head">
+        <span class="tile-ic">${esc(t.icon || '🧩')}</span>
+        <h3>${esc(t.title)}</h3>
+      </div>
+      ${badges ? `<div class="tile-tags">${badges}</div>` : ''}
+      <p class="tile-blurb">${esc(t.blurb || '')}</p>
+      ${foot}
+    </article>`;
+}
+
+async function renderTools(mode) {
+  const host = document.getElementById('toolsHost');
+  if (!host) return;
+  const tools = await loadTools();
+
+  if (!tools) {
+    // Häufigster Fall beim Ausrollen: Migration 0078 ist noch nicht
+    // gelaufen. Für Admins die technische Ursache mit dazu, für alle
+    // anderen nur die Aussage.
+    const s = window.getSessionUser?.();
+    const tech = (s?.is_admin || s?.is_superadmin) && toolsError
+      ? `<br><span class="tile-note">Technisch: ${esc(toolsError)} — läuft Migration 0078 schon?</span>`
+      : '';
+    host.innerHTML = `<div class="tools"><h2 class="tools-title">Werkzeuge</h2>
+      <p class="tools-empty">Die Werkzeugliste ist gerade nicht erreichbar.${tech}</p></div>`;
+    return;
+  }
+
+  if (tools.length === 0) {
+    host.innerHTML = `<div class="tools"><h2 class="tools-title">Werkzeuge</h2>
+      <p class="tools-empty">Hier ist noch nichts eingetragen.</p></div>`;
+    return;
+  }
+
+  host.innerHTML = `<div class="tools">
+      <h2 class="tools-title">Werkzeuge <span class="tools-count">${tools.length}</span></h2>
+      <div class="tile-grid">${tools.map(t => toolCard(t, mode)).join('')}</div>
+    </div>`;
+}
+
 /* ─── Modals ──────────────────────────────────────────── */
 function openModal(id) {
   document.getElementById(id).hidden = false;
@@ -106,9 +212,9 @@ function roleOf(s) {
   return 'noRole';
 }
 
-const SOON = '<div class="soon"><strong>Ausbaustufe 1 von 7.</strong> '
-  + 'Die Werkzeuge selbst, die Räume und der QR-Code kommen als Nächstes. '
-  + 'Was hier schon steht, ist die Rolle — und die zählt: ohne sie kann niemand einen Raum aufmachen.</div>';
+const SOON = '<div class="soon"><strong>Ausbaustufe 2 von 7.</strong> '
+  + 'Die Werkzeuge stehen unten schon in der Liste. Was noch fehlt, ist das Wichtigste: '
+  + 'der Raum mit Code und QR, über den eine Klasse hereinkommt. Das ist die nächste Stufe.</div>';
 
 function renderState() {
   const host = document.getElementById('stateHost');
@@ -125,6 +231,12 @@ function renderState() {
     else if (role === 'teacher') { pill.textContent = 'Lehrkraft'; pill.hidden = false; }
     else                         { pill.hidden = true; }
   }
+
+  // Die Werkzeugliste steht für ALLE Rollen da — sie ist die Antwort auf
+  // „was ist das hier überhaupt". Unterschiedlich ist nur, ob Knöpfe
+  // dran sind. Absichtlich nicht awaited: die Rollenweiche darf nicht
+  // auf das Netz warten.
+  renderTools(role === 'teacher' || role === 'admin' ? 'act' : 'view');
 
   if (role === 'guest') {
     host.innerHTML = `
