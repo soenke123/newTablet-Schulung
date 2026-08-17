@@ -78,7 +78,11 @@ const ERRORS = {
   title_too_long:    'Der Titel ist zu lang (höchstens 60 Zeichen).',
   single_room_only:  'Von diesem Werkzeug ist nur ein Raum gleichzeitig möglich.',
   code_collision:    'Es ließ sich gerade kein freier Code finden. Bitte noch einmal.',
-  no_profile:        'Zu deinem Zugang fehlt das Profil.'
+  no_profile:        'Zu deinem Zugang fehlt das Profil.',
+  not_deletable:     'Das kannst du nicht löschen — blende es aus, wenn es stören soll.',
+  not_editable:      'Das lässt sich nicht mehr ändern, nur löschen und neu schreiben.',
+  phase_invalid:     'Diese Phase gibt es bei diesem Werkzeug nicht.',
+  payload_too_big:   'Das ist zu viel auf einmal.'
 };
 const errText = (e, data) =>
   e === 'room_limit'
@@ -215,7 +219,9 @@ function roomCard(r) {
       <div class="roomcard-meta">
         <span class="meta-people"><strong>${r.people}</strong> ${r.people === 1 ? 'Teilnehmer' : 'Teilnehmer'}</span>
         ${r.online ? `<span class="meta-on">${r.online} gerade da</span>` : ''}
+        ${r.entries ? `<span class="meta-entries">${r.entries} Beiträge</span>` : ''}
         ${closed ? '<span class="meta-closed">Beitritt zu</span>' : ''}
+        ${r.blocked ? `<span class="meta-blocked">${r.blocked} gesperrt</span>` : ''}
         <span class="meta-until">${esc(r.expired ? 'abgelaufen' : MPRoom.untilText(r.expires_at))}</span>
       </div>
 
@@ -223,6 +229,13 @@ function roomCard(r) {
         <a class="btn btn--sm btn--primary" href="#${esc(r.code)}">Beamer</a>
         <button type="button" class="btn btn--sm" data-act="toggle" data-open="${closed ? '1' : '0'}">
           ${closed ? 'Beitritt öffnen' : 'Beitritt schließen'}
+        </button>
+        <!-- Verlängern steht auch bei abgelaufenen Räumen da: zwischen
+             Ablauf und Aufräum-Lauf liegt bis zu ein Tag, und genau in
+             dem Fenster ist „den hätte ich doch noch gebraucht" der
+             wahrscheinlichste Grund, hier zu klicken. -->
+        <button type="button" class="btn btn--sm" data-act="extend">
+          ${r.expired ? 'Zurückholen' : 'Verlängern'}
         </button>
         <button type="button" class="btn btn--sm btn--danger" data-act="delete">Löschen</button>
       </div>
@@ -258,6 +271,13 @@ function wireRoomCards() {
             const r = await trpc('skill_room_set_open', { p_code: code, p_open: open });
             if (!r.ok) { toast(errText(r.error, r), 'error'); btn.disabled = false; return; }
             toast(open ? 'Beitritt geöffnet.' : 'Beitritt geschlossen.');
+            renderList();
+          } else if (act === 'extend') {
+            const r = await trpc('skill_room_extend', { p_code: code });
+            if (!r.ok) { toast(errText(r.error, r), 'error'); btn.disabled = false; return; }
+            toast(r.revived
+              ? 'Raum zurückgeholt — er läuft wieder 60 Tage.'
+              : 'Verlängert: ' + MPRoom.untilText(r.expires_at) + '.');
             renderList();
           } else if (act === 'delete') {
             // Löschen heißt löschen: Raum, Teilnehmer und alles,
@@ -475,9 +495,41 @@ function renderBeamer(code) {
         </div>
       </div>
 
+      <!-- Teilnehmer-Moderation. Zugeklappt, und zwar mit Absicht: der
+           Knopf, mit dem man jemanden stilllegt, soll nicht neben dem
+           liegen, den man ständig drückt. Wer ihn braucht, sucht ihn
+           in dem Moment auch. -->
+      <details class="modbox" id="bMod">
+        <summary>Teilnehmer verwalten <span class="card-h-note" id="bModCount"></span></summary>
+        <ul class="modlist" id="bModList"></ul>
+        <p class="rule">Stilllegen nimmt einem Tablet Lesen, Schreiben und Zustimmen —
+        die schon geschriebenen Beiträge bleiben stehen. Jederzeit umkehrbar.</p>
+      </details>
+
       <!-- Hier hängt sich das Werkzeug ein. -->
       <div class="beam-tool" id="bTool"></div>
     </div>`;
+
+  // Delegiert und nicht je Zeile: die Liste wird bei jedem Poll neu
+  // gezeichnet, und Listener an ihren Kindern wären damit jedes Mal weg.
+  document.getElementById('bModList').addEventListener('click', async (ev) => {
+    const b = ev.target.closest('button[data-block]');
+    if (!b) return;
+    const on = b.dataset.block === '1';
+    b.disabled = true;
+    try {
+      const r = await trpc('skill_room_set_blocked', {
+        p_code: code, p_participant: b.dataset.id, p_blocked: on
+      });
+      if (!r.ok) { toast(errText(r.error, r), 'error'); b.disabled = false; return; }
+      toast(on ? 'Tablet stillgelegt.' : 'Wieder freigegeben.');
+      poller && poller.invalidate();
+      poller && poller.refresh();
+    } catch (e) {
+      toast('Fehler: ' + e.message, 'error');
+      b.disabled = false;
+    }
+  });
 
   document.getElementById('fsBtn').addEventListener('click', toggleFullscreen);
   document.getElementById('bDoorBtn').addEventListener('click', () => setDoor(code, !doorOpen(code)));
@@ -566,8 +618,25 @@ function paintBeamer(code, data) {
   tg.classList.toggle('btn--primary', !r.join_open);
 
   document.getElementById('bNames').innerHTML = people.map(p => `
-    <li class="chip${p.online ? ' chip--on' : ''}">${esc(p.name)}</li>`).join('')
+    <li class="chip${p.online ? ' chip--on' : ''}${p.blocked ? ' chip--blocked' : ''}"
+        >${p.blocked ? '🔇 ' : ''}${esc(p.name)}</li>`).join('')
     || '<li class="chip chip--wait">Noch niemand da — der Code steht bereit.</li>';
+
+  const blocked = people.filter(p => p.blocked).length;
+  document.getElementById('bModCount').textContent =
+    blocked ? `${blocked} stillgelegt` : `${people.length}`;
+  document.getElementById('bModList').innerHTML = people.length
+    ? people.map(p => `
+        <li class="modrow${p.blocked ? ' modrow--blocked' : ''}">
+          <span class="dot${p.online ? ' dot--on' : ''}" aria-hidden="true"></span>
+          <span class="modrow-name">${esc(p.name)}</span>
+          ${p.blocked ? '<span class="modrow-tag">stillgelegt</span>' : ''}
+          <button type="button" class="btn btn--sm${p.blocked ? '' : ' btn--danger'}"
+                  data-id="${esc(p.id)}" data-block="${p.blocked ? '0' : '1'}">
+            ${p.blocked ? 'Freigeben' : 'Stilllegen'}
+          </button>
+        </li>`).join('')
+    : '<li class="modrow modrow--empty">Noch niemand da.</li>';
 
   // Beim ersten Durchlauf montieren (vorher kennen wir das Werkzeug
   // nicht), danach nur noch durchreichen.

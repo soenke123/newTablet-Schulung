@@ -813,6 +813,52 @@ body.bd-fill #pagefoot { display: none; }
    wird, verschenkt auf einem Beamer die Hälfte des Bildes. */
 body.beamer .wrap { max-width: 1500px; }
 
+/* ─── Moderation (Stufe 5) ────────────────────────────────────
+   Stilllegen ist der einzige Knopf hier, der jemandem etwas
+   wegnimmt. Er sitzt deshalb zugeklappt und nicht neben den
+   Knöpfen, die man ständig drückt. */
+.modbox {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 10px 16px; margin-bottom: 16px;
+}
+.modbox > summary {
+  cursor: pointer; font-weight: 700; font-size: .9rem; color: var(--ink-soft);
+}
+.modbox > summary:hover { color: var(--ink); }
+.modbox .rule { margin-top: 10px; font-size: .78rem; color: var(--ink-faint); }
+
+.modlist { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.modrow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 4px; border-bottom: 1px solid var(--line-soft);
+  font-size: .9rem;
+}
+.modrow:last-of-type { border-bottom: 0; }
+.modrow-name { flex: 1; min-width: 0; }
+.modrow--blocked .modrow-name { color: var(--ink-faint); text-decoration: line-through; }
+.modrow--empty { color: var(--ink-faint); font-style: italic; }
+.modrow-tag {
+  font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
+  font-weight: 700; color: #8a2c07; background: var(--warn-dim);
+  border-radius: 999px; padding: 2px 8px;
+}
+.modrow .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--line); flex: none;
+}
+.modrow .dot--on { background: var(--ok); }
+
+/* Ein stillgelegtes Tablet bleibt in der Namensleiste stehen — es ist
+   ja da. Durchgestrichen statt weg: verschwände es, sähe es aus wie
+   „gegangen", und die Lehrkraft verlöre den Überblick über das, was
+   sie selbst getan hat. */
+.chip--blocked {
+  background: var(--warn-dim); border-color: #f0c4ab; color: #8a2c07;
+  text-decoration: line-through;
+}
+.roomcard-meta .meta-blocked { background: var(--warn-dim); color: #8a2c07; }
+.roomcard-meta .meta-entries { color: var(--ink-soft); }
+
 @media (max-width: 560px) {
   .wrap { padding: 30px 16px 54px; }
   .state { padding: 20px 18px; border-radius: 11px; }

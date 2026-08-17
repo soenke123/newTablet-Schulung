@@ -188,6 +188,8 @@
     payload_too_big: 'Das ist zu viel auf einmal.',
     votes_disabled:  'Hier wird nicht abgestimmt.',
     own_entry:       'Deinem eigenen Beitrag kannst du nicht zustimmen.',
+    text_blocked:    'Solche Wörter bitte nicht. Schreib es anders.',
+    blocked:         'Deine Lehrkraft hat dieses Tablet gerade stillgelegt.',
     not_allowed:     'Das darfst du hier nicht.',
     not_editable:    'Das lässt sich nicht mehr ändern — nur löschen und neu schreiben.',
     not_deletable:   'Das kannst du nicht löschen. Blende es aus, wenn es stören soll.',

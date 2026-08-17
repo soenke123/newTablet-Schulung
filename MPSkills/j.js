@@ -35,6 +35,8 @@ let tool   = null;   // geladenes Werkzeug-Modul, solange eines montiert ist
 // der nächste Takt, während noch geladen wird, fände tool === null und
 // montierte ein zweites Mal — doppeltes DOM, doppelte Listener.
 let toolBusy = false;
+// Steht gerade die Sperrmeldung statt des Raums? Siehe showBlocked().
+let blockedShown = false;
 
 /* ─── Toast ───────────────────────────────────────────────── */
 let toastTimer = null;
@@ -61,6 +63,8 @@ const ERRORS = {
   name_blocked:  'Diesen Namen bitte nicht.',
   name_too_long: 'Der Name ist zu lang — höchstens 24 Zeichen.',
   rate_limit:    'Zu viele Versuche von diesem Netz. Bitte warte einen Moment.',
+  text_blocked:  'Solche Wörter bitte nicht. Schreib es anders.',
+  blocked:       'Deine Lehrkraft hat dieses Tablet gerade stillgelegt.',
   server_misconfigured: 'Der Server ist nicht richtig eingerichtet. Bitte der Lehrkraft Bescheid sagen.'
 };
 const errText = (code) => ERRORS[code] || 'Etwas hat nicht geklappt. Bitte noch einmal versuchen.';
@@ -329,9 +333,32 @@ async function renderDoor(code) {
 }
 
 /* ─── Zustand: im Raum ────────────────────────────────────── */
+/* ─── Zustand: stillgelegt ────────────────────────────────────
+   Die Lehrkraft hat dieses Tablet gesperrt. Der Poller läuft dabei
+   ABSICHTLICH weiter: eine Sperre ist umkehrbar, und wenn sie
+   aufgehoben wird, soll der Raum von selbst zurückkommen — ein
+   Schüler, der erst die Seite neu laden muss, sitzt sonst weiter
+   draußen, obwohl er längst wieder darf.
+
+   Bewusst ohne Begründung im Text: warum gesperrt wurde, klärt sich
+   im Klassenraum und nicht auf dem Bildschirm. */
+function showBlocked() {
+  if (blockedShown) return;
+  blockedShown = true;
+  unmountTool();
+  host().innerHTML = `
+    <div class="card card--join">
+      <h1 class="join-h">Kurze Pause</h1>
+      <p class="join-sub">${esc(ERRORS.blocked)}</p>
+      <p class="rule">Sobald sie es wieder freigibt, geht es hier von allein weiter —
+      du musst nichts tun.</p>
+    </div>`;
+}
+
 function renderRoom(code, token) {
   if (poller) { poller.stop(); poller = null; }
   unmountTool();
+  blockedShown = false;
 
   /* Die Raumkarte ist ab Stufe 4 nur noch die Kopfzeile: Titel,
      Werkzeug, wer ich bin. Die Bühne gehört dem Werkzeug darunter.
@@ -383,7 +410,11 @@ function renderRoom(code, token) {
         unmountTool();
         MPRoom.forget(code);
         renderGone(err);
+        return;
       }
+      // 'blocked' ist das Gegenteil eines Endes: der Poller läuft
+      // weiter, damit das Aufheben von selbst ankommt.
+      if (err === 'blocked') { showBlocked(); return; }
       // Alles andere ist mit hoher Wahrscheinlichkeit das WLAN.
       // Der Poller versucht es in drei Sekunden von selbst wieder.
     }
@@ -391,6 +422,19 @@ function renderRoom(code, token) {
 }
 
 function paintRoom(data, token) {
+  /* Die Sperre ist aufgehoben — es kommen wieder Daten. Der Raum wird
+     komplett neu aufgebaut, weil showBlocked() sein DOM ersetzt hat;
+     renderRoom startet dabei auch den Poller neu, was hier drin
+     genau richtig ist: der alte hat seine Arbeit getan.
+
+     Muss die ERSTE Zeile sein — alles darunter greift auf Elemente
+     zu, die es während der Sperre nicht gibt. */
+  if (blockedShown) {
+    blockedShown = false;
+    renderRoom(data.room.code, token);
+    return;
+  }
+
   const r = data.room, me = data.me;
   document.getElementById('rTitle').textContent = r.title;
   document.getElementById('rTool').textContent  = r.tool_title || '';
