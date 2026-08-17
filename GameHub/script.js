@@ -207,6 +207,19 @@ const GAMES_CONFIG = [
   // zeigt nur. Freilassen gibt es hier deshalb nicht: der Auslöser
   // kommt genau einmal und lässt sich nicht nachspielen.
   { id: 'game19', season: 3, title: 'Reality Check',       icon: '🧭', url: 'S3 Zukunftsboard/index.html', collab: true },
+  // Die zweite collab-Kachel und die erste in Season 1: eine Wortwolke
+  // zu genau einer Frage („Warum wollt ihr ein Tablet in der Schule
+  // nutzen?"), zwei Phasen, zehn Zettel pro Kopf. Abgeleitet von
+  // Reality Check, aber viel kleiner — keine Bereiche, keine
+  // Recherchen, kein Wachstum. Eigene Server-Schicht (wc_*, Migration
+  // 0075), damit die Tabellen des laufenden Boards nicht angefasst
+  // werden mussten.
+  // Das Monster hängt an EINEM Phasenwechsel der Lehrkraft: Sammeln
+  // beendet ⇒ es schlüpft. Jeder im Kurs bekommt dasselbe (Schnecke
+  // oder Fisch, 10 Münzen) — das hier ist der Einstieg einer Schulung
+  // und keine Leistungsmessung. Freilassen gibt es wie bei game19
+  // nicht: der Auslöser kommt genau einmal.
+  { id: 'game20', season: 1, title: 'Warum Tablets?',      icon: '💭', url: 'S1 wieso weshalb warum/index.html', collab: true },
 ];
 
 // „Kachel ohne Runden": Startup Story (standalone) und Reality Check
@@ -472,11 +485,30 @@ function renderHub() {
   window.refreshHubAvatarNewBadges?.();
 
   // Zuletzt: die Kachel steht schon auf dem Endstand, wenn die Sequenz
-  // darüber läuft. Beide schalten sich selbst scharf (einmaliger Marker)
-  // und sind No-Ops, wenn der jeweilige Sync nichts gefunden hat.
-  // Nacheinander statt gleichzeitig — sie teilen sich modalOverlay, und
-  // zwei Sequenzen übereinander wären keine.
-  if (!maybeShowStartupReveal()) maybeShowBoardReveal();
+  // darüber läuft. Alle drei schalten sich selbst scharf (einmaliger
+  // Marker) und sind No-Ops, wenn der jeweilige Sync nichts gefunden hat.
+  runPendingReveals();
+}
+
+/* Die wartenden Rückkehr-Sequenzen der Reihe nach zeigen — Startup
+   Story, Reality Check, Wortwolke.
+
+   Nacheinander statt gleichzeitig, weil sie sich modalOverlay teilen und
+   zwei Sequenzen übereinander keine wären. Und wirklich NACHEINANDER
+   statt „die erste, die anspringt": jeder RPC gibt seine Belohnung genau
+   einmal aus, eine übersprungene Sequenz käme also nie wieder. Selten,
+   aber möglich — ein Season-3-Kurs kann beide Boards laufen haben, und
+   wer bei beiden Phasenwechseln nicht am Tablet saß, hat hier zwei
+   offene Posten. */
+function runPendingReveals() {
+  const queue = [maybeShowStartupReveal, maybeShowBoardReveal, maybeShowWordcloudReveal];
+  let i = 0;
+  const step = () => {
+    // while, nicht if: was nichts zu zeigen hat, gibt false zurück und
+    // wird übersprungen, ohne dass jemand klicken muss.
+    while (i < queue.length) { if (queue[i++](step)) return; }
+  };
+  step();
 }
 
 function renderGamesGrid(allData, shopData) {
@@ -1977,16 +2009,16 @@ async function activateResetKarte() {
    window.__startupReveal. Gezeigt wird die Strecke seit dem LETZTEN
    Hub-Besuch am Stück — wer drei Wachstumsstufen am Stück geschafft hat,
    sieht drei Stufen. */
-function maybeShowStartupReveal() {
+function maybeShowStartupReveal(onDone) {
   const rv = window.__startupReveal;
   if (!rv) return false;
   window.__startupReveal = null;
-  if (rv.released) showStartupReleasedModal();
-  else             showStartupRevealModal(rv);
+  if (rv.released) showStartupReleasedModal(onDone);
+  else             showStartupRevealModal(rv, onDone);
   return true;
 }
 
-function showStartupReleasedModal() {
+function showStartupReleasedModal(onDone) {
   const overlay = document.getElementById('modalOverlay');
   const content = document.getElementById('modalContent');
   if (!overlay || !content) return;
@@ -1999,11 +2031,17 @@ function showStartupReleasedModal() {
         Tier fortgezogen. Ein neues Ei liegt schon bereit.<br>
         Deine Münzen und dein Bestenlisten-Eintrag sind geblieben.
       </p>
-      <button onclick="document.getElementById('modalOverlay').hidden=true"
+      <button id="ssReleasedOk"
         style="background:var(--clr-gold);color:#2b1a06;border:none;border-radius:var(--radius-md);padding:10px 26px;font-family:var(--font-body);font-weight:800;font-size:0.9rem;cursor:pointer;">
         Alles klar
       </button>
     </div>`;
+  // Kein inline-onclick mehr: das Schließen muss die nächste wartende
+  // Sequenz anstoßen können (siehe runPendingReveals).
+  document.getElementById('ssReleasedOk').addEventListener('click', () => {
+    overlay.hidden = true;
+    if (typeof onDone === 'function') onDone();
+  });
   overlay.hidden = false;
 }
 
@@ -2038,7 +2076,17 @@ function runRevealSequence(spec) {
   steps.push({ kind: 'coins' });
 
   let i = 0;
-  const next = () => { i++; (i < steps.length) ? draw() : overlay.hidden = true; };
+  /* spec.onDone feuert, wenn der letzte Schritt weggeklickt ist. Nötig,
+     seit es DREI Rückkehr-Sequenzen gibt (Startup Story, Reality Check,
+     Wortwolke): sie teilen sich modalOverlay, laufen also nacheinander
+     — und eine Sequenz, die dabei unter den Tisch fällt, ist endgültig
+     weg, weil der jeweilige RPC sie nur einmal ausgibt. */
+  const next = () => {
+    i++;
+    if (i < steps.length) { draw(); return; }
+    overlay.hidden = true;
+    if (typeof spec.onDone === 'function') spec.onDone();
+  };
   const isLast = () => i === steps.length - 1;
 
   function shell(inner, btnLabel) {
@@ -2110,7 +2158,7 @@ function runRevealSequence(spec) {
   overlay.hidden = false;
 }
 
-function showStartupRevealModal(rv) {
+function showStartupRevealModal(rv, onDone) {
   const creature = rv.after.creature;
   runRevealSequence({
     creature,
@@ -2127,7 +2175,8 @@ function showStartupRevealModal(rv) {
       // die Sequenz gar nicht erst hierher, also druckt wiederholtes
       // Hub-Auf-und-Ab keine Bonbons.
       awardBonbonsAndRender('game18', Math.min(10, rv.growthGained || 0), 10, id);
-    }
+    },
+    onDone
   });
 }
 
@@ -2143,7 +2192,7 @@ function showStartupRevealModal(rv) {
    Kein Wort darüber, WORAN das Monster hängt. Weder die Zahl der
    Post-Its noch die Zustimmungen tauchen auf; das ist dieselbe Regel
    wie im Board. */
-function maybeShowBoardReveal() {
+function maybeShowBoardReveal(onDone) {
   const rv = window.__boardReveal;
   if (!rv) return false;
   window.__boardReveal = null;
@@ -2167,7 +2216,37 @@ function maybeShowBoardReveal() {
       if (rv.bonbonsGained > 0) {
         renderBonbonBank(id + '-bonbons', { ok: true, base: rv.bonbonsGained, bonus: 0 });
       }
-    }
+    },
+    onDone
+  });
+  return true;
+}
+
+/* Dasselbe für die Wortwolke „Warum Tablets?" (game20). Die Daten setzt
+   syncWordcloud() (creatures.js), vergeben hat sie wc_claim_reward —
+   hier wird nur gezeigt.
+
+   Kürzer als die beiden anderen: es gibt genau einen Schritt zwischen
+   Ei und Münzen, weil diese Kachel nicht wächst. Und kein Wort darüber,
+   WORAN das Monster hing — es hing an nichts außer daran, dabei gewesen
+   zu sein, und das muss man nicht erklären. */
+function maybeShowWordcloudReveal(onDone) {
+  const rv = window.__wcReveal;
+  if (!rv) return false;
+  window.__wcReveal = null;
+
+  runRevealSequence({
+    creature:     rv.creature,
+    hatchedNow:   true,
+    fromStage:    -1,
+    toStage:      0,
+    growth:       0,
+    growthGained: 0,
+    eggSub:       'Euer Kurs hat die erste Runde hinter sich.',
+    // Keine Bonbons: die gehören der Season 3 (Einhornkatze), und
+    // wc_claim_reward vergibt hier bewusst keine.
+    onCoins: id => renderCoinBank(id, rv.coinsGained || 0),
+    onDone
   });
   return true;
 }

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <!-- Bewusst OHNE maximum-scale: das hier ist eine Lese- und Schreib-
+       oberfläche, keine Spielfläche mit fixem Layout. Zoom ist eine
+       Hilfe, kein Störfall. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Warum Tablets? — Lernwelt</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="../../icons/favicon-64.png" />
+  <link rel="icon" type="image/png" sizes="256x256" href="../../icons/favicon-256.png" />
+  <link rel="apple-touch-icon" href="../../icons/icon-192.png" />
+  <link rel="manifest" href="../../site.webmanifest" />
+  <link rel="stylesheet" href="css/wc.css">
+</head>
+<body>
+
+<!-- ── Kopf ──────────────────────────────────────────────────
+     Eine Zeile für alles, was dauerhaft dastehen muss: Titel, Phasen,
+     Ansichtswechsel. Der Auftrag der Phase und der eigene
+     Kontingentstand sind einen Klick entfernt (? bzw. der Plus-Knopf) —
+     der gewonnene Platz gehört der Wolke. -->
+<header class="bd-head">
+  <a class="bd-hub-btn" href="../index.html">← Hub</a>
+  <div class="bd-head__title">
+    <h1>💭 Warum Tablets?</h1>
+    <p class="bd-head__sub" id="bdCourse">…</p>
+  </div>
+
+  <!-- ── Phasen ────────────────────────────────────────────
+       Reine Anzeige, kein Umschalter: es gibt nur ein Fach. Anders als
+       beim Reality Check, wo Phase 1 und 2 zwei verschiedene Stapel
+       Karten halten, liegen hier immer dieselben Zettel — Phase 2
+       ändert nur, was man mit ihnen tun darf. Deshalb <div> und keine
+       Knöpfe. -->
+  <div class="bd-phases" id="bdPhases" hidden>
+    <div class="bd-phase" data-phase="1">
+      <span class="bd-phase__no">1</span>
+      <span class="bd-phase__name">Sammeln</span>
+    </div>
+    <div class="bd-phase" data-phase="2">
+      <span class="bd-phase__no">2</span>
+      <span class="bd-phase__name">Besprechen</span>
+    </div>
+    <button type="button" class="bd-phasehelp" id="bdPhaseHelp"
+            aria-label="Auftrag der aktuellen Phase ansehen"
+            title="Was ist gerade zu tun?">?</button>
+  </div>
+
+  <div class="bd-head__right">
+    <div class="bd-viewswitch" id="bdViewSwitch" hidden>
+      <button type="button" data-view="board" class="active">Wolke</button>
+      <button type="button" data-view="table">Liste</button>
+    </div>
+  </div>
+</header>
+
+<!-- ── Admin-Leiste ──────────────────────────────────────── -->
+<div class="bd-adminbar" id="bdAdminBar" hidden>
+  <span class="bd-adminbar__label">🛡️ Moderation</span>
+  <select id="bdClusterSelect" class="bd-select" aria-label="Kurs wählen"></select>
+  <button type="button" id="bdPhasePrev" class="bd-btn bd-btn--ghost">◀ Phase zurück</button>
+  <button type="button" id="bdPhaseNext" class="bd-btn">Nächste Phase ▶</button>
+  <button type="button" id="bdReset" class="bd-btn bd-btn--danger">Wolke zurücksetzen</button>
+</div>
+
+<!-- ── Inhalt ────────────────────────────────────────────── -->
+<main class="bd-main">
+  <div class="bd-status" id="bdStatus">Lade …</div>
+
+  <!-- Die Frage steht über der Wolke, dort wo beim Reality Check der
+       Bereichs-Wechsler saß. Sie ist der ganze Auftrag dieser Kachel und
+       muss deshalb sichtbar bleiben, auch wenn das Phasen-Modal längst
+       weggeklickt ist. Der Plus-Knopf sitzt direkt daneben: was man
+       schreibt, ist die Antwort auf genau diese Frage.
+       Klebt beim Scrollen oben fest — dieselbe Leiste wie dort. -->
+  <nav class="bd-catnav" id="bdCatNav" hidden>
+    <div class="bd-catnav__title">
+      <span class="bd-catnav__name" id="bdCatName"></span>
+      <button type="button" class="bd-catadd" id="bdCatAdd" hidden>＋</button>
+    </div>
+  </nav>
+
+  <!-- Die Tafel: weiße Fläche mit feinem Raster, auf die geklebt wird.
+       Die Klasse sitzt hier und nicht im Skript, weil sie zur Bühne
+       gehört und nicht zum Inhalt. -->
+  <section id="bdBoard" class="bd-surface" hidden></section>
+  <section id="bdTable" hidden></section>
+</main>
+
+<!-- ── Erfassungs-Modal ──────────────────────────────────────
+     Ein Feld, sonst nichts. Keine Kategorie (es gibt eine), keine
+     Haltung, kein Thema, keine Quelle — alles, was beim Reality Check
+     vor dem Text steht, wäre hier eine Frage ohne Antwortmöglichkeit. -->
+<div class="bd-modal-backdrop" id="bdModal" hidden>
+  <div class="bd-modal" role="dialog" aria-modal="true" aria-labelledby="bdModalTitle">
+    <div class="bd-modal__titlerow">
+      <h2 id="bdModalTitle">Neuer Zettel</h2>
+    </div>
+
+    <!-- Die Frage steht auch hier: wer das Formular offen hat, sieht die
+         Leiste dahinter nicht mehr. -->
+    <div class="bd-modal__cat" id="bdModalCat"></div>
+
+    <label class="bd-field-label" for="bdText">Dein Zettel</label>
+    <!-- Einzeiliges Feld, nicht textarea: gefragt sind Begriffe. Ein
+         mehrzeiliges Feld lädt zum Aufsatz ein, und in der Wolke soll
+         die Größe von der Zustimmung erzählen, nicht von der Textmenge. -->
+    <input type="text" id="bdText" maxlength="60"
+           placeholder="Ein Begriff oder ein paar Worte"
+           autocomplete="off" enterkeyhint="done">
+    <div class="bd-counter"><span id="bdTextCount">0</span>/60</div>
+
+    <p class="bd-error" id="bdModalError" hidden></p>
+
+    <div class="bd-modal__actions">
+      <button type="button" id="bdCancel" class="bd-btn bd-btn--ghost">Abbrechen</button>
+      <button type="button" id="bdSave" class="bd-btn" disabled>Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Karten-Detail ─────────────────────────────────────────
+     Was die Karte in der Wolke bewusst weglässt: Verfasser:in und die
+     Knöpfe zum Ändern und Löschen. -->
+<div class="bd-modal-backdrop" id="bdDetail" hidden>
+  <div class="bd-modal bd-modal--detail" role="dialog" aria-modal="true" aria-labelledby="bdDetailText">
+    <p class="bd-detail__text" id="bdDetailText"></p>
+    <div class="bd-detail__meta" id="bdDetailMeta"></div>
+    <div class="bd-modal__actions bd-detail__actions">
+      <button type="button" id="bdDetailLike" class="bd-btn bd-btn--like" hidden></button>
+      <span class="bd-detail__spacer"></span>
+      <button type="button" id="bdDetailDel"   class="bd-btn bd-btn--danger" hidden>🗑️ Löschen</button>
+      <button type="button" id="bdDetailEdit"  class="bd-btn" hidden>✏️ Bearbeiten</button>
+      <button type="button" id="bdDetailClose" class="bd-btn bd-btn--ghost">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Auftrag der Phase ─────────────────────────────────────
+     Kommt von selbst beim Öffnen und bei jedem Phasenwechsel — der
+     erreicht jedes Tablet über den 5-Sekunden-Poll und wäre sonst nur
+     daran zu merken, dass der Plus-Knopf plötzlich weg ist. Nachlesen
+     jederzeit über das ? in der Kopfzeile. -->
+<div class="bd-modal-backdrop" id="bdPhaseInfo" hidden>
+  <div class="bd-modal bd-modal--phase" role="dialog" aria-modal="true" aria-labelledby="bdPhaseInfoTitle">
+    <div class="bd-phaseinfo__head">
+      <span class="bd-phaseinfo__no" id="bdPhaseInfoNo">1</span>
+      <h2 id="bdPhaseInfoTitle">Sammeln</h2>
+    </div>
+    <p id="bdPhaseInfoText"></p>
+    <div class="bd-modal__actions">
+      <button type="button" id="bdPhaseInfoOk" class="bd-btn">Alles klar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Belohnung ─────────────────────────────────────────────
+     Der einzige Moment, in dem auf dieser Seite ein Monster vorkommt.
+     Er gehört hierher und nicht in den Hub: wenn die Lehrkraft die
+     Sammelphase beendet, schlüpft es auf allen Tablets gleichzeitig.
+     Wer gerade nicht auf der Seite war, bekommt dieselbe Sequenz beim
+     nächsten Hub-Besuch nachgereicht.
+
+     Kein Münzbank-Widget wie im Hub: die Gesamtstände stehen im
+     localStorage, den diese Seite bewusst nicht führt — eine Bank mit
+     falscher Summe ist schlimmer als keine. Hier steht nur, was gerade
+     dazugekommen ist. -->
+<div class="bd-modal-backdrop" id="bdReveal" hidden>
+  <div class="bd-modal bd-modal--reveal" role="dialog" aria-modal="true" aria-labelledby="bdRevealTitle">
+    <h2 id="bdRevealTitle"></h2>
+    <div class="bd-reveal__art" id="bdRevealArt"></div>
+    <p class="bd-reveal__name" id="bdRevealName" hidden></p>
+    <p class="bd-reveal__sub" id="bdRevealSub"></p>
+    <div class="bd-reveal__gains" id="bdRevealGains" hidden></div>
+    <div class="bd-modal__actions">
+      <button type="button" id="bdRevealNext" class="bd-btn">Weiter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bestätigungs-Modal (Löschen / Zurücksetzen) ────────── -->
+<div class="bd-modal-backdrop" id="bdConfirm" hidden>
+  <div class="bd-modal bd-modal--small" role="dialog" aria-modal="true">
+    <h2 id="bdConfirmTitle">Sicher?</h2>
+    <p id="bdConfirmText"></p>
+    <div class="bd-modal__actions">
+      <button type="button" id="bdConfirmNo" class="bd-btn bd-btn--ghost">Abbrechen</button>
+      <button type="button" id="bdConfirmYes" class="bd-btn bd-btn--danger">Ja, machen</button>
+    </div>
+  </div>
+</div>
+
+<div class="bd-toast" id="bdToast" hidden></div>
+
+<!-- Session-Layer VOR den eigenen Skripten — window.__accessToken und
+     waitForSession() müssen beim Boot stehen. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../../supabase-config.js"></script>
+<script src="../../session.js"></script>
+
+<!-- creatures.js liefert die Kreatur- und Ei-Grafiken für die
+     Belohnungs-Sequenz. Der Basispfad muss VOR dem Laden stehen —
+     gleiches Muster wie in jedem anderen Spiel. Gespeichert wird von
+     hier aus nichts: die Vergabe erledigt wc_claim_reward auf dem
+     Server, der Hub liest sie beim nächsten Boot. -->
+<script>window.CREATURE_IMAGE_BASE = '../data/';</script>
+<script src="../creatures.js"></script>
+
+<script src="js/api.js"></script>
+<script src="js/wordcloud.js"></script>
+</body>
+</html>

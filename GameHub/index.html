@@ -354,6 +354,10 @@
       // beendet hat). Nach loadServerState, weil die Funktion den
       // frischen Stand um ihren Zuwachs ergänzt.
       await window.syncRealityCheck?.();
+      // Dasselbe für die Wortwolke „Warum Tablets?" (game20). Eigene
+      // Funktion und nicht in syncRealityCheck mit hinein: es sind zwei
+      // Kacheln mit zwei RPCs, die nur zufällig beide Boards sind.
+      await window.syncWordcloud?.();
 
       // Late-Joiner-Reveal-Recovery: legiRevealed=true stehen lassen wäre
       // ein inkonsistenter Zustand, wenn die Kreatur nie im game_state
@@ -450,6 +454,7 @@
         await window.fetchDailyBonbonStatus?.();
         await window.syncStartupStory?.();
         await window.syncRealityCheck?.();
+        await window.syncWordcloud?.();
         window.repairLegiRevealMarker?.();
         renderHub();
       });

@@ -3177,3 +3177,48 @@ async function syncRealityCheck() {
 }
 
 window.syncRealityCheck = syncRealityCheck;
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Wortwolke „Warum Tablets?" (game20) — die Nachholung
+   ═══════════════════════════════════════════════════════════════
+   Dasselbe Muster wie bei Reality Check, nur kürzer: es gibt genau
+   EINE Stufe (das Ei schlüpft, wenn die Lehrkraft die Sammelphase
+   beendet), also keine Schleife. Kein Wachstum, keine Bonbons.
+
+   Der Normalfall ist auch hier, dass nichts mehr kommt: die Sequenz
+   läuft in der Kachel selbst, in dem Moment, in dem der ganze Kurs
+   davorsitzt. Dieser Weg ist für alle, die genau dann nicht auf der
+   Seite waren. Der Server gibt die Belohnung genau einmal aus, doppelt
+   kann sie also nicht kommen.                                       */
+const WC_GAME_ID = 'game20';
+
+async function syncWordcloud() {
+  if (typeof window.isLoggedIn !== 'function' || !window.isLoggedIn()) return;
+  if (!getAccessToken()) return;
+
+  const r = await callBonbonRPC('wc_claim_reward', { p_board: WC_GAME_ID });
+  if (!r || !r.ok || r.event !== 'hatch') return;
+
+  /* localStorage nachziehen. loadServerState() läuft im Boot-Ablauf VOR
+     dieser Funktion und hat den Stand von vor der Vergabe gelesen — ohne
+     diese Zeilen zeigte die Kachel bis zum nächsten Start noch das Ei.
+     saveGameData pusht die (identischen) Werte anschließend zurück, das
+     ist redundant, aber harmlos und hält den Dirty-Marker sauber. */
+  const all = loadStorage(STORAGE_KEY);
+  const gd  = all[WC_GAME_ID] || defaultGameData();
+  // Auch der zweite Durchlauf nach einem wc_reset: neues Tier, Wachstum
+  // zurück auf null, Münzen des ersten bleiben liegen.
+  gd.creature     = r.creature;
+  gd.growth       = 0;
+  gd.roundsPlayed = 1;
+  gd.coins        = (gd.coins || 0) + (r.coins_gained || 0);
+  saveGameData(WC_GAME_ID, gd);
+
+  window.__wcReveal = {
+    creature:    r.creature,
+    coinsGained: r.coins_gained || 0
+  };
+}
+
+window.syncWordcloud = syncWordcloud;
