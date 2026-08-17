@@ -15,7 +15,8 @@ Webauftrtitt/
 ├── Dokumente/          → PDF handouts for students (e.g. Handout_Tablet-Schulung.pdf)
 ├── supabase/           → Datenbank-Schema, Seed, Blacklist, Setup-Doku
 ├── api/                → Vercel Serverless Functions (signup, admin-Actions)
-├── admin/              → Admin-Panel: Cluster/User/Fortschritts-Verwaltung
+├── admin/              → Admin-Panel: Cluster/User/Fortschritts-/Lehrkraft-Verwaltung
+├── MPSkills/           → Zweiter Anwendungsbereich: Tools für den Unterricht (eigene Landing, eigene Optik)
 └── GameHub/            → All game logic (see GameHub/CLAUDE.md for detailed docs)
     ├── index.html      → Game selection hub with creature gallery
     ├── script.js       → Hub-only logic: GAMES_CONFIG, renderHub, shop modal, gallery
@@ -136,6 +137,26 @@ Migrationen 0001–0076 liegen in `supabase/migrations/`. Schema/Seed, RLS, Sess
 *Unverändert übernommen* ist der ganze Wolken-Apparat (Spirale mit Kollisionsprüfung, virtuelle Tafel, Lupe, Gesten, `dataset.placed`, `TILTS` im Skript, `CLOUD_GAP = 17` + `SHEET_REACH_X/Y`) — wer dort etwas repariert, sollte beide Dateien anfassen. Die CSS-Klassen heißen deshalb auch in `css/wc.css` weiter `bd-`.
 
 **Noch offen:** PDF-Storage-Anbindung. Season 3 (Kreaturen + Games). Diverse UI-ToDos: FokusFlow-Max-Score, Algorithm-Balancing, Theme in DB.
+
+## MPSkills — zweiter Anwendungsbereich
+
+Sammelseite aus Tools/Spielen für den **normalen Unterricht**, losgelöst von der Schulung: Lehrkräfte schalten ein Tool für eine Klasse frei und bekommen einen 6-stelligen Code samt QR, SuS brauchen **keinen Account**. Eigene Landingpage `/MPSkills/`, eigene Optik, nur ein kleiner Link zurück zur Schulung. Referenzdokument: **`Konzept_MPSkills_v1.html`** im Repo-Root (Rollen, Flows, Wireframes, Grenzen, Stufenplan 0–7). Geteilt werden Supabase-Projekt, `auth`, `profiles` und `session.js` — sonst möglichst nichts.
+
+**Aktueller Stand: Stufe 1 (Rolle) umgesetzt, Migration 0077.** Räume, Tools, Codes und anonyme Teilnehmer kommen in Stufe 2–4.
+
+**Die Trennlinie ist die wichtigste Regel des Bereichs:** Auf der Schulungsseite darf man nicht merken, dass MPSkills existiert. Eine freigeschaltete Lehrkraft ist im GameHub ein gewöhnlicher User — pending oder im Kurs, ohne Sonderrechte, ohne zusätzliche Kachel. Deshalb ist die Rolle ein **eigenes Feld** und keine Erweiterung von `is_admin`: dieses Flag öffnet im Hub das Season-Gate, macht Kurs-Sperren sichtbar und schaltet das Admin-Panel frei.
+
+**Rolle (Migration 0077):** `profiles.teacher_status` (`none`/`pending`/`approved`/`rejected`) plus `teacher_requested_at`/`teacher_decided_at`/`teacher_decided_by`, **orthogonal** zu `status` und `cluster_id` — beides kann gleichzeitig gelten. `can_teach()` = `is_admin or is_superadmin or teacher_status='approved'`; Admins sind implizit Lehrkräfte, weil sie jedes Tool testen müssen, ohne sich selbst freizuschalten. Der GameHub liest das Feld nirgends; `user_session` führt es am Ende mit (Reihenfolge der 0053-Spalten unverändert — `create or replace view` lässt kein Umordnen zu).
+
+**Zwei Wege zur Rolle.** Neuanmeldung über MPSkills: `/api/signup` mit `context:'mpskills'` — derselbe Endpunkt wie die Schulung (Namensregeln, Blacklist, Passwort-Policy, Rate-Limit, Rollback sind identisch; ein zweiter Endpunkt wäre eine Kopie mit zwei geänderten Zeilen). Der `context` schaltet genau zwei Dinge: die Cluster-Suche entfällt **komplett** und `teacher_status` startet auf `pending`. Ein unbekannter `context` wird mit `context_invalid` abgewiesen und nicht stillschweigend auf `'schulung'` gedreht — sonst setzte ein Frontend-Tippfehler eine Lehrkraft in den nächsten offenen Kurs, und das fiele erst auf, wenn sie im Hub Monster sammelt. Zweiter Weg für bestehende Schulungs-Accounts: RPC **`request_teacher_role()`** (`none`/`rejected` → `pending`, security definer). Nötig, weil es bewusst **keine** Policy gibt, die einen User sein eigenes Profil schreiben lässt — `profiles_admin_update` ist die einzige UPDATE-Policy (0002/0053).
+
+**Zeitstempel per Trigger, nicht per Client:** `profiles_teacher_stamp_trg` (BEFORE INSERT OR UPDATE, erster Trigger auf `profiles`) setzt die drei Stempel selbst und ist ein No-Op, solange sich `teacher_status` nicht ändert — `profiles` ist die heißeste Tabelle im System. Grund: freigeschaltet wird per **PATCH auf `profiles`** aus dem Admin-Panel (wie Cluster-Zuweisung und `display_name_locked`, gedeckt durch `profiles_admin_update`), und damit könnte der Browser `teacher_decided_by` frei mitschicken und die Entscheidung einem anderen Admin zuschreiben. Im service_role-Kontext (Signup) ist `auth.uid()` null → `decided_by` bleibt leer, was richtig ist: dort hat niemand entschieden, dort wurde beantragt.
+
+**Admin-Panel → Tab „Lehrkräfte"** (`admin/app.js`, `renderTeachers`): Filter Status/Suche, Aktionen Freischalten · Ablehnen · Rolle entziehen · Antrag entfernen. Sichtbar für **Schul- und Volladmin**; der Schul-Scope kommt aus `profiles_select_own` (0053), es wird hier nichts zusätzlich gefiltert. Die Liste zeigt nur `teacher_status <> 'none'` (alle anderen stehen im User-Tab), sortiert nach ältestem Antrag. Zwei Spalten mit Absicht nebeneinander: **MPSkills** und **Schulung** — damit sichtbar bleibt, dass eine freigeschaltete Lehrkraft dort weiter `pending` ist. Die Schul-Spalte erscheint nur für Volladmins; für einen Schuladmin stünde in jeder Zeile derselbe Wert (und `allSchools` ist für ihn leer, siehe `initSchoolSwitcher`). Nur „Rolle entziehen" fragt nach — es ist der einzige Schritt, der jemandem etwas wegnimmt, das er schon benutzt.
+
+**Frontend Stufe 1:** `MPSkills/index.html` + `app.js` + `style.css`. Die Optik ist bewusst **nicht** das Fantasy-Kleid (Cinzel/Gold auf Braun), sondern Werkzeugkasten: heller Grund, Tinte, **ein** Akzent (Teal `#0f766e`), Warnrot nur für Fehler — die Farbwerte stammen aus der Konzeptseite, und hell deshalb, weil die Seite an den Beamer geht. `session.js` wird unverändert mit demselben `storageKey` wiederverwendet: ein Konto, zwei Bereiche, eine Anmeldung. Die ganze Seite ist eine **Rollenweiche** (`roleOf()` → `guest`/`admin`/`teacher`/`pending`/`rejected`/`noRole`), an der ab Stufe 2 die Tool-Kacheln hängen. **Noch nicht von der Schulungs-Landing verlinkt** — der Link kommt in Stufe 2, solange ist die Seite nur per URL erreichbar (`noindex`).
+
+**Was in Stufe 3 mitgelöst werden muss:** `window.__accessToken` veraltet nach `TOKEN_REFRESHED` (`session.js` kehrt bei dem Event früh zurück). Im Admin-Panel ist das ein F5 wert; die Beamer-Ansicht einer Lehrkraft steht aber 90 Minuten offen und der Refresh kommt nach 60. Betrifft in Stufe 1 nur `request_teacher_role()`, das direkt nach dem Anmelden aufgerufen wird.
 
 ## Architecture
 

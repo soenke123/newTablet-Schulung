@@ -47,6 +47,7 @@
     <button type="button" class="tab active" data-tab="dashboard">Dashboard</button>
     <button type="button" class="tab" data-tab="clusters">Cluster (Kurs)</button>
     <button type="button" class="tab" data-tab="users">User</button>
+    <button type="button" class="tab" data-tab="teachers">Lehrkräfte</button>
     <button type="button" class="tab" data-tab="admins" id="tabAdmins" hidden>Admins (alle Schulen)</button>
   </nav>
 
@@ -217,6 +218,45 @@
             </thead>
             <tbody id="userTbody">
               <tr><td class="empty">Lade …</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Lehrkräfte-Tab (MPSkills, Migration 0077) ──────── -->
+    <section class="panel" id="panel-teachers" hidden>
+      <div class="panel-head">
+        <h2>Lehrkräfte <span style="color:var(--a-muted);font-weight:400;font-size:0.7em">(MPSkills)</span></h2>
+        <p class="panel-sub">
+          Freischaltung für <strong>MPSkills</strong> — nur dort darf eine freigeschaltete Lehrkraft
+          Räume aufmachen. In der Tablet-Schulung bleibt sie ein gewöhnlicher User ohne Sonderrechte.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="filter-row">
+          <label>Status
+            <select id="teacherStatusFilter">
+              <option value="pending" selected>Ausstehend</option>
+              <option value="approved">Freigeschaltet</option>
+              <option value="rejected">Abgelehnt</option>
+              <option value="all">Alle (außer „keine")</option>
+            </select>
+          </label>
+          <label>Suche
+            <input type="search" id="teacherSearch" placeholder="Accountname, Anzeigename, Schule" />
+          </label>
+          <button type="button" class="btn" id="teacherReload">Neu laden</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="dtable" id="teacherTable">
+            <thead id="teacherThead">
+              <!-- Schul-Spalte nur für Volladmin — wird dynamisch gerendert -->
+            </thead>
+            <tbody id="teacherTbody">
+              <tr><td colspan="6" class="empty">Lade …</td></tr>
             </tbody>
           </table>
         </div>

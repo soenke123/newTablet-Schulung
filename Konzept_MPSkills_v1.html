@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MPSkills — Konzept v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════
+   Optik: bewusst NICHT das Fantasy-Kleid des Hubs.
+   MPSkills ist Werkzeugkasten, nicht Abenteuer — heller Grund,
+   Tinte, ein einziger Akzent (Teal), Warnrot nur für Risiken.
+   Diese Seite ist zugleich die Farbprobe für /MPSkills/style.css.
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --ink:        #17212b;
+  --ink-soft:   #4a5b6b;
+  --ink-faint:  #7b8b99;
+  --paper:      #f6f5f1;
+  --paper-2:    #eeece5;
+  --surface:    #ffffff;
+  --line:       #dcd9d0;
+  --line-soft:  #e8e5dd;
+  --accent:     #0f766e;
+  --accent-dim: #d5eae7;
+  --accent-ink: #0a4f4a;
+  --warn:       #c2410c;
+  --warn-dim:   #fbe9df;
+  --ok:         #15803d;
+  --ok-dim:     #e2f2e5;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.68;
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 292px 1fr;
+  max-width: 1440px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+/* ─── Sidebar ─────────────────────────────────────────── */
+aside {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 34px 26px 40px;
+  background: var(--ink);
+  color: #cfd8e0;
+}
+aside .brand {
+  font-weight: 700;
+  font-size: 1.3rem;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin: 0;
+}
+aside .brand span { color: #5eead4; }
+aside .subtitle {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #7b8b99;
+  margin: 6px 0 26px;
+}
+aside nav { display: flex; flex-direction: column; gap: 1px; }
+aside nav a {
+  color: #b3c0cb;
+  text-decoration: none;
+  padding: 7px 11px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  display: flex;
+  gap: 11px;
+  align-items: baseline;
+  border-left: 2px solid transparent;
+  transition: background .14s ease, color .14s ease;
+}
+aside nav a:hover { background: rgba(94,234,212,.09); color: #fff; border-left-color: #5eead4; }
+aside nav a .num { font-family: var(--mono); font-size: .72rem; color: #5f7280; min-width: 20px; }
+aside .aside-foot {
+  margin-top: 30px; padding-top: 18px;
+  border-top: 1px solid #2b3844;
+  font-size: .74rem; color: #6b7a87; line-height: 1.6;
+}
+
+/* ─── Main ────────────────────────────────────────────── */
+main { padding: 58px 60px 130px; max-width: 960px; }
+
+.hero { padding-bottom: 30px; margin-bottom: 46px; border-bottom: 2px solid var(--ink); }
+.hero .eyebrow {
+  font-size: .74rem; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--accent); font-weight: 700; margin-bottom: 12px;
+}
+.hero h1 {
+  font-size: clamp(1.9rem, 4vw, 2.8rem);
+  line-height: 1.12; letter-spacing: -0.03em; margin: 0 0 14px;
+}
+.hero p { font-size: 1.08rem; color: var(--ink-soft); margin: 0; max-width: 62ch; }
+.hero .meta {
+  margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px;
+}
+.tag {
+  font-family: var(--mono); font-size: .72rem; font-weight: 500;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink-soft);
+}
+.tag--ok { background: var(--ok-dim); border-color: #bcd9c3; color: var(--ok); }
+
+section { margin-bottom: 62px; scroll-margin-top: 24px; }
+section > h2 {
+  font-size: 1.42rem; letter-spacing: -0.02em; margin: 0 0 6px;
+  display: flex; align-items: baseline; gap: 13px;
+}
+section > h2 .num {
+  font-family: var(--mono); font-size: .82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-dim);
+  padding: 3px 8px; border-radius: 5px; flex: none;
+}
+section > .lead { color: var(--ink-soft); margin: 0 0 26px; max-width: 66ch; }
+
+h3 { font-size: 1.02rem; margin: 30px 0 10px; letter-spacing: -0.01em; }
+p { margin: 0 0 14px; max-width: 70ch; }
+ul, ol { margin: 0 0 16px; padding-left: 22px; max-width: 70ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+a { color: var(--accent-ink); }
+
+code, .k {
+  font-family: var(--mono); font-size: .855em;
+  background: var(--paper-2); border: 1px solid var(--line-soft);
+  padding: 1px 5px; border-radius: 4px; color: var(--accent-ink);
+  white-space: nowrap;
+}
+
+/* ─── Karten / Raster ─────────────────────────────────── */
+.cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(238px, 1fr)); margin-bottom: 18px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 17px 18px;
+}
+.card h4 {
+  margin: 0 0 7px; font-size: .95rem; display: flex; align-items: center; gap: 8px;
+}
+.card h4 .ic { font-size: 1.15rem; }
+.card p { font-size: .885rem; color: var(--ink-soft); margin: 0; }
+.card--accent { border-color: var(--accent); border-width: 1px; box-shadow: inset 3px 0 0 var(--accent); }
+
+/* ─── Tabellen ────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .885rem; min-width: 560px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+thead th { background: var(--paper-2); font-size: .74rem; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+.yes { color: var(--ok); font-weight: 700; }
+.no  { color: var(--ink-faint); }
+.part { color: var(--warn); font-weight: 600; }
+
+/* ─── Wireframes ──────────────────────────────────────── */
+.wire {
+  font-family: var(--mono); font-size: .765rem; line-height: 1.55;
+  background: var(--surface); border: 1px dashed var(--line);
+  border-radius: 10px; padding: 16px 18px; margin: 0 0 18px;
+  white-space: pre; overflow-x: auto; color: var(--ink-soft);
+}
+.wire b { color: var(--ink); font-weight: 700; }
+.wire i { color: var(--accent); font-style: normal; font-weight: 500; }
+.wire-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
+.wire-cap { font-size: .78rem; color: var(--ink-faint); margin: -8px 0 20px; }
+
+/* ─── Flow ────────────────────────────────────────────── */
+.flow { display: flex; flex-direction: column; gap: 0; margin: 0 0 22px; }
+.step { display: grid; grid-template-columns: 34px 1fr; gap: 15px; }
+.step .dot {
+  font-family: var(--mono); font-size: .75rem; font-weight: 700;
+  width: 27px; height: 27px; border-radius: 50%;
+  background: var(--ink); color: #fff;
+  display: grid; place-items: center; margin-top: 2px;
+}
+.step .body { padding-bottom: 18px; }
+.step:not(:last-child) .dot { box-shadow: 0 34px 0 -13px var(--line); }
+.step h4 { margin: 0 0 3px; font-size: .95rem; }
+.step p { margin: 0; font-size: .885rem; color: var(--ink-soft); }
+
+/* ─── Callouts ────────────────────────────────────────── */
+.note, .warn, .rule {
+  border-radius: 10px; padding: 14px 17px; margin: 0 0 18px;
+  font-size: .9rem; border: 1px solid;
+}
+.note { background: var(--accent-dim); border-color: #a9d5d0; color: var(--accent-ink); }
+.warn { background: var(--warn-dim); border-color: #f0c4ab; color: #8a2c07; }
+.note p:last-child, .warn p:last-child, .rule p:last-child { margin-bottom: 0; }
+.note strong, .warn strong { color: inherit; }
+
+.rules { counter-reset: r; }
+.rule {
+  background: var(--surface); border-color: var(--line);
+  display: grid; grid-template-columns: 30px 1fr; gap: 14px; align-items: start;
+}
+.rule::before {
+  counter-increment: r; content: counter(r);
+  font-family: var(--mono); font-weight: 700; font-size: .78rem;
+  background: var(--warn); color: #fff;
+  width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center;
+}
+
+/* ─── Stufen ──────────────────────────────────────────── */
+.stage {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 11px; padding: 18px 20px; margin-bottom: 13px;
+  border-left: 4px solid var(--accent);
+}
+.stage--doc { border-left-color: var(--ink-faint); }
+.stage-head { display: flex; align-items: baseline; gap: 11px; flex-wrap: wrap; margin-bottom: 9px; }
+.stage-num {
+  font-family: var(--mono); font-size: .72rem; font-weight: 700;
+  background: var(--ink); color: #fff; padding: 3px 8px; border-radius: 5px;
+}
+.stage-head h3 { margin: 0; font-size: 1.02rem; }
+.stage-head .files { font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); }
+.stage p { font-size: .9rem; margin-bottom: 10px; }
+.test {
+  background: var(--paper-2); border-radius: 7px; padding: 10px 13px;
+  font-size: .855rem; color: var(--ink-soft);
+}
+.test b { color: var(--ink); }
+
+/* ─── Risiken ─────────────────────────────────────────── */
+.risk { display: grid; grid-template-columns: 13px 1fr; gap: 15px; padding: 15px 0; border-bottom: 1px solid var(--line-soft); }
+.risk:last-child { border-bottom: none; }
+.risk .sev { width: 11px; height: 11px; border-radius: 50%; margin-top: 7px; }
+.sev--hi { background: var(--warn); }
+.sev--mid { background: #d69e2e; }
+.sev--lo { background: var(--ink-faint); }
+.risk h4 { margin: 0 0 4px; font-size: .95rem; }
+.risk p { margin: 0; font-size: .885rem; color: var(--ink-soft); }
+
+hr.sep { border: none; border-top: 1px solid var(--line); margin: 34px 0; }
+
+/* ─── Responsive ──────────────────────────────────────── */
+@media (max-width: 940px) {
+  .layout { grid-template-columns: 1fr; }
+  aside { position: static; height: auto; padding: 22px 20px 26px; }
+  aside nav { flex-direction: row; flex-wrap: wrap; gap: 5px; }
+  aside nav a { border-left: none; background: rgba(255,255,255,.06); padding: 5px 10px; font-size: .8rem; }
+  aside .aside-foot { display: none; }
+  main { padding: 34px 20px 80px; }
+}
+@media print {
+  aside { display: none; }
+  .layout { grid-template-columns: 1fr; }
+  main { padding: 0; max-width: none; }
+  section { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<aside>
+  <p class="brand">MP<span>Skills</span></p>
+  <p class="subtitle">Konzept v1 · 17.08.2026</p>
+  <nav>
+    <a href="#idee"><span class="num">01</span> Die Idee</a>
+    <a href="#abgrenzung"><span class="num">02</span> Abgrenzung zur Schulung</a>
+    <a href="#rollen"><span class="num">03</span> Rollen &amp; Rechte</a>
+    <a href="#lehrweg"><span class="num">04</span> Weg der Lehrkraft</a>
+    <a href="#schuelerweg"><span class="num">05</span> Weg der Schüler</a>
+    <a href="#raum"><span class="num">06</span> Der Raum</a>
+    <a href="#daten"><span class="num">07</span> Datenmodell</a>
+    <a href="#sicherheit"><span class="num">08</span> Sicherheitsmodell</a>
+    <a href="#seiten"><span class="num">09</span> Seiten &amp; Wireframes</a>
+    <a href="#tools"><span class="num">10</span> Was ein Tool ist</a>
+    <a href="#stufen"><span class="num">11</span> Stufenplan</a>
+    <a href="#risiken"><span class="num">12</span> Risiken</a>
+    <a href="#offen"><span class="num">13</span> Entscheidungen</a>
+  </nav>
+  <p class="aside-foot">
+    Entwurf zur Abstimmung. Kein Code, keine Migration —
+    beschlossen wird hier, <em>was</em> gebaut wird und
+    in welcher Reihenfolge es testbar ist.
+  </p>
+</aside>
+
+<main>
+
+<div class="hero">
+  <p class="eyebrow">Zweiter Anwendungsbereich</p>
+  <h1>MPSkills — Werkzeuge und Spiele für den Unterricht, losgelöst von der Schulung</h1>
+  <p>
+    Eine eigene Sammelseite: Lehrkräfte schalten ein Tool für eine Klasse frei und bekommen
+    dafür einen Code samt QR. Schüler brauchen keinen Account — Code scannen, drin sein,
+    mitmachen. Nach 60 Tagen Ruhe räumt sich der Raum selbst weg.
+  </p>
+  <div class="meta">
+    <span class="tag">eigene Landingpage</span>
+    <span class="tag">eigene Optik</span>
+    <span class="tag">gleiche Nutzerbasis</span>
+    <span class="tag tag--ok">Stufe 0 · dieses Dokument</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="idee">
+  <h2><span class="num">01</span> Die Idee</h2>
+  <p class="lead">
+    Die Plattform kann heute genau eine Sache: eine Schulungs-Kohorte durch eine Season aus
+    Spielen führen. Alles hängt daran — Season-Gate, Kurs-Freischaltung, Kreaturen, Bonbons.
+    MPSkills ist das Gegenstück: einzelne Dinge, die im normalen Unterricht sofort nützlich
+    sind, ohne Kohorte, ohne Season, ohne Sammelfortschritt.
+  </p>
+
+  <div class="cards">
+    <div class="card card--accent">
+      <h4><span class="ic">🧰</span> Sammelstelle statt Kurs</h4>
+      <p>Kein Lehrpfad, keine Reihenfolge. Jedes Tool steht für sich und wird einzeln benutzt.</p>
+    </div>
+    <div class="card">
+      <h4><span class="ic">🔑</span> Lehrkraft schaltet frei</h4>
+      <p>Ohne Raum passiert nichts. Die Lehrkraft entscheidet, was ihre Klasse wann öffnen kann.</p>
+    </div>
+    <div class="card">
+      <h4><span class="ic">📱</span> Schüler ohne Account</h4>
+      <p>QR scannen genügt. Kein Name, kein Passwort, keine Anmeldung — sofern die Lehrkraft es so will.</p>
+    </div>
+    <div class="card">
+      <h4><span class="ic">🕓</span> Räume verfallen</h4>
+      <p>60 Tage nach der letzten Aktivität ist der Raum weg. Keine Altlasten, kein Aufräumdienst.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <p><strong>Der Satz, an dem am Ende gemessen wird:</strong> Eine Lehrkraft öffnet für ihre 9b
+    einen Raum, zeigt den QR-Code am Beamer, und 28 Tablets sind in 30 Sekunden drin —
+    ohne dass ein einziges Passwort im Raum gesagt wurde.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="abgrenzung">
+  <h2><span class="num">02</span> Abgrenzung zur Tablet-Schulung</h2>
+  <p class="lead">
+    Beide Seiten teilen Datenbank, Auth und Deployment — und sonst möglichst nichts.
+    Die Trennlinie muss scharf sein, sonst wandern Season-Logik und Kreaturen langsam
+    in die neue Seite hinein.
+  </p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>&nbsp;</th><th>Tablet-Schulung</th><th>MPSkills</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><b>Einstieg</b></td><td><code>/index.html</code></td><td><code>/MPSkills/index.html</code></td></tr>
+        <tr><td><b>Zielgruppe</b></td><td>Kurs-Kohorte in einer Schulung</td><td>beliebige Klasse in einer Unterrichtsstunde</td></tr>
+        <tr><td><b>Zugang</b></td><td>Account nötig, Kurs-Zuordnung</td><td>Raum-Code, Account optional</td></tr>
+        <tr><td><b>Freischaltung</b></td><td><code>cluster_unlocked_games</code> je Kurs</td><td>Raum existiert oder nicht</td></tr>
+        <tr><td><b>Fortschritt</b></td><td>Kreaturen, Münzen, Bonbons, Season</td><td>keiner — der Raum <em>ist</em> der Zustand</td></tr>
+        <tr><td><b>Optik</b></td><td>Fantasy: Cinzel, Gold auf Braun</td><td>Werkzeug: Inter, Tinte auf Papier, ein Akzent</td></tr>
+        <tr><td><b>Verlinkung</b></td><td colspan="2">gegenseitig, aber klein — ein Link im Fuß, kein Wechsel-Menü</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="warn">
+    <p><strong>Harte Regel:</strong> Auf der Schulungsseite darf man nicht merken, dass MPSkills
+    existiert. Eine freigeschaltete Lehrkraft ist im GameHub ein gewöhnlicher User — pending
+    oder im Kurs, ohne Sonderrechte, ohne zusätzliche Kachel, ohne veränderte Anzeige.
+    Deshalb ist die Lehrkraft-Rolle ein eigenes Feld und <em>nicht</em> eine Erweiterung von
+    <code>is_admin</code>.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="rollen">
+  <h2><span class="num">03</span> Rollen &amp; Rechte</h2>
+  <p class="lead">
+    Fünf Rollen treffen auf MPSkills. Vier davon existieren bereits, die Lehrkraft kommt neu
+    dazu — als eigenes Feld <code>teacher_status</code> am Profil, unabhängig von
+    <code>status</code> und Kurszuordnung.
+  </p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Rolle</th><th>Tools sehen</th><th>Testen</th><th>Räume anlegen</th>
+          <th>Moderieren</th><th>Lehrkräfte freischalten</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Gast</b> <span style="color:var(--ink-faint)">(kein Login)</span></td>
+          <td class="part">nur Namen</td><td class="no">–</td><td class="no">–</td><td class="no">–</td><td class="no">–</td>
+        </tr>
+        <tr>
+          <td><b>Teilnehmer</b> <span style="color:var(--ink-faint)">(Token)</span></td>
+          <td class="part">nur seinen Raum</td><td class="no">–</td><td class="no">–</td><td class="no">–</td><td class="no">–</td>
+        </tr>
+        <tr>
+          <td><b>Schüler</b> <span style="color:var(--ink-faint)">(eingeloggt)</span></td>
+          <td class="part">nur seine Räume</td><td class="no">–</td><td class="no">–</td><td class="no">–</td><td class="no">–</td>
+        </tr>
+        <tr>
+          <td><b>Lehrkraft pending</b></td>
+          <td class="part">Namen + Hinweis</td><td class="no">–</td><td class="no">–</td><td class="no">–</td><td class="no">–</td>
+        </tr>
+        <tr>
+          <td><b>Lehrkraft</b></td>
+          <td class="yes">alle</td><td class="yes">✓</td><td class="yes">✓</td><td class="part">eigene Räume</td><td class="no">–</td>
+        </tr>
+        <tr>
+          <td><b>Schuladmin</b></td>
+          <td class="yes">alle</td><td class="yes">✓</td><td class="yes">✓</td><td class="part">eigene Räume</td><td class="part">eigene Schule</td>
+        </tr>
+        <tr>
+          <td><b>Volladmin</b></td>
+          <td class="yes">alle</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">alle</td><td class="yes">alle</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Der Weg zur Lehrkraft-Rolle</h3>
+  <div class="wire"><b>Anmeldung über MPSkills</b>
+  ┌──────────────────────────────────────────────┐
+  │ profiles.teacher_status = <i>'pending'</i>            │
+  │ profiles.cluster_id     = <i>NULL</i>  ← immer      │
+  │ profiles.status         = 'pending'          │
+  └──────────────────────────────────────────────┘
+                     │
+                     ▼   Admin-Panel → Tab „Lehrkräfte"
+  ┌──────────────────────────────────────────────┐
+  │ [ Freischalten ]  →  teacher_status=<i>approved</i> │
+  │ [ Ablehnen    ]  →  teacher_status=<i>rejected</i> │
+  └──────────────────────────────────────────────┘</div>
+  <p class="wire-cap">
+    Wichtig: die Anmeldung über MPSkills weist <b>nie</b> einen Kurs zu — auch dann nicht,
+    wenn gerade ein Kurs-Zeitfenster offen steht. Auf der Schulungsseite ist die Lehrkraft
+    damit ein pending-User wie jeder andere und kann später ganz normal einem Kurs beitreten.
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="lehrweg">
+  <h2><span class="num">04</span> Weg der Lehrkraft</h2>
+  <p class="lead">Von der Anmeldung bis zum Beamer — fünf Schritte, davon vier einmalig.</p>
+
+  <div class="flow">
+    <div class="step"><div class="dot">1</div><div class="body">
+      <h4>Anmelden</h4>
+      <p>Schule wählen, Accountname, Anzeigename (das Kürzel, das die Klasse kennt), Passwort. Danach: „Deine Freischaltung als Lehrkraft ist beantragt."</p>
+    </div></div>
+    <div class="step"><div class="dot">2</div><div class="body">
+      <h4>Freigeschaltet werden</h4>
+      <p>Ein Schul- oder Volladmin bestätigt im Admin-Panel. Ab dann sieht die Lehrkraft alle Tools.</p>
+    </div></div>
+    <div class="step"><div class="dot">3</div><div class="body">
+      <h4>Ausprobieren</h4>
+      <p>„Testen" auf einer Tool-Kachel öffnet einen <b>Testraum</b> — ein normaler Raum, nur als Test markiert. Es gibt bewusst keinen Solo-Modus: jedes Tool hat genau einen Code-Pfad, damit der Test das echte Verhalten zeigt.</p>
+    </div></div>
+    <div class="step"><div class="dot">4</div><div class="body">
+      <h4>Raum für die Klasse anlegen</h4>
+      <p>Titel („9b Deutsch"), Namen abfragen ja/nein, tool-eigene Einstellungen (bei der Wortwolke: die Frage). Ergebnis ist ein Code wie <code>K7F2QM</code> plus QR.</p>
+    </div></div>
+    <div class="step"><div class="dot">5</div><div class="body">
+      <h4>Beamen und moderieren</h4>
+      <p>Beamer-Ansicht zeigt QR und Code groß. Daneben: wer ist drin, Beitritt öffnen/schließen, Beitrag ausblenden, Tablet sperren, Phase weiterschalten.</p>
+    </div></div>
+  </div>
+
+  <div class="note">
+    <p><strong>Mehrere Klassen, mehrere Räume.</strong> Dasselbe Tool kann beliebig oft
+    aufgemacht werden — 9b und 9c bekommen getrennte Räume mit getrennten Codes und
+    getrennten Inhalten. In der Raumliste der Lehrkraft stehen sie mit Titel und Restlaufzeit
+    nebeneinander.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="schuelerweg">
+  <h2><span class="num">05</span> Weg der Schüler</h2>
+  <p class="lead">
+    Der Normalweg ist der QR-Code. Der Code zum Tippen ist der Rückfallweg für Geräte ohne
+    Kamera und für die, bei denen das Scannen nicht klappt.
+  </p>
+
+  <div class="wire-grid">
+    <div>
+      <div class="wire"><b>QR scannen</b> (Normalweg)
+
+  Kamera → <i>…/MPSkills/j.html#K7F2QM</i>
+       │
+       ▼
+  ┌────────────────────────────┐
+  │  <b>9b Deutsch</b>                │
+  │  Wortwolke                 │
+  │                            │
+  │  Dein Name                 │
+  │  ┌──────────────────────┐  │
+  │  │ Mia                  │  │
+  │  └──────────────────────┘  │
+  │       [   Mitmachen   ]    │
+  └────────────────────────────┘</div>
+    </div>
+    <div>
+      <div class="wire"><b>Code tippen</b> (Rückfallweg)
+
+  <i>mpskills</i> aufrufen
+       │
+       ▼
+  ┌────────────────────────────┐
+  │  Code von der Tafel        │
+  │  ┌──┬──┬──┬──┬──┬──┐       │
+  │  │K │7 │F │2 │Q │M │       │
+  │  └──┴──┴──┴──┴──┴──┘       │
+  │       [   Weiter     ]     │
+  │                            │
+  │  <i>Meine Räume (dieses Gerät)</i> │
+  │  · 9b Deutsch · Wortwolke  │
+  └────────────────────────────┘</div>
+    </div>
+  </div>
+  <p class="wire-cap">
+    Alphabet ohne Verwechslungsgefahr: <code>23456789ABCDEFGHJKLMNPQRSTUVWXYZ</code> —
+    kein O/0, kein I/1. Sechs Stellen ergeben gut eine Milliarde Möglichkeiten, Durchprobieren
+    ist damit aussichtslos. Der Code steht im URL-<em>Hash</em>, nicht im Query-String:
+    so landet er nicht in Server-Logs.
+  </p>
+
+  <h3>Was aus dem Beitritt entsteht</h3>
+  <div class="wire">Beitritt  →  Server legt einen Teilnehmer an  →  gibt <b>einen geheimen Token</b> zurück
+
+  localStorage['mpskills_rooms'] = [
+    { code:'K7F2QM', token:'<i>c1f9…8a3</i>', room:'9b Deutsch', tool:'wordcloud' },
+    { code:'PQ4H7T', token:'<i>77b2…e10</i>', room:'Abstimmung',  tool:'poll'      }
+  ]
+
+  Jeder weitere Aufruf schickt <b>nur den Token</b>. Der Server löst daraus
+  Teilnehmer + Raum auf — die Seite selbst nennt nie eine Raum-ID.</div>
+
+  <div class="cards">
+    <div class="card">
+      <h4>Ohne Account</h4>
+      <p>Die Token-Liste liegt im Gerät. Auf einem Klassensatz-Tablet ist genau das der Sinn: der Raum von gestern ist morgen noch da.</p>
+    </div>
+    <div class="card">
+      <h4>Mit Account</h4>
+      <p>Ist ein Schüler eingeloggt, hängt der Teilnehmer zusätzlich an seiner User-ID — dann findet er seine Räume auch auf einem anderen Gerät wieder.</p>
+    </div>
+    <div class="card">
+      <h4>Anonymer Raum</h4>
+      <p>Hat die Lehrkraft „Namen abfragen" ausgeschaltet, entfällt das Namensfeld und jeder heißt intern <code>Tablet 1…n</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="raum">
+  <h2><span class="num">06</span> Der Raum</h2>
+  <p class="lead">
+    Der Raum ist die zentrale Einheit: er verbindet ein Tool, eine Lehrkraft und eine Gruppe
+    von Teilnehmern — und er hat ein Ablaufdatum.
+  </p>
+
+  <div class="wire">        <b>Raum</b>  K7F2QM · „9b Deutsch"
+        ├─ Tool           wordcloud
+        ├─ Besitzerin     Lehrkraft (Account)
+        ├─ Schule         MPS
+        ├─ Namen          abfragen  ●○  anonym
+        ├─ Beitritt       offen  ●○  zu
+        ├─ Einstellungen  { question: "Warum wollt ihr …?" }
+        ├─ Zustand        { phase: 1 }        ← Lehrkraft steuert
+        ├─ Teilnehmer     Mia · Ben · Ayla · … (Token je Gerät)
+        ├─ Beiträge       Zettel, Antworten, Stimmen
+        └─ läuft ab       letzte Aktivität + <b>60 Tage</b></div>
+
+  <h3>Lebenszyklus</h3>
+  <div class="wire">anlegen ──► benutzen ──────────────► 60 Tage Ruhe ──► <b>weg</b>
+                  │      ▲                              ▲
+                  │      └── jede Aktivität setzt        │
+                  │          die Frist zurück            │
+                  ├──► [ Verlängern ] ───────────────────┘
+                  ├──► [ Beitritt zu ]  Raum lesbar, niemand kommt neu dazu
+                  └──► [ Löschen ]      sofort weg, mit Rückfrage</div>
+
+  <div class="cards">
+    <div class="card card--accent">
+      <h4>Frist ab letzter Aktivität</h4>
+      <p>Nicht ab dem Anlegen. Ein Raum, der über Wochen weiterbenutzt wird, verfällt nicht mitten in der Reihe.</p>
+    </div>
+    <div class="card">
+      <h4>Aufgeräumt wird zweifach</h4>
+      <p>Beiläufig bei jedem Zugriff der Lehrkraft, zusätzlich einmal täglich automatisch — damit auch Räume verschwinden, die niemand mehr anfasst.</p>
+    </div>
+    <div class="card">
+      <h4>Löschen heißt löschen</h4>
+      <p>Raum, Teilnehmer, Beiträge, Stimmen — alles. Die Token der Schüler laufen dann in eine klare Meldung, nicht in einen Fehler.</p>
+    </div>
+  </div>
+
+  <h3>Grenzen</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Grenze</th><th>Wert</th><th>Wie gezählt wird</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Teilnehmer je Raum</b></td>
+          <td><code>60</code></td>
+          <td>Jedes Gerät ist ein Teilnehmer. Wer den Browser-Speicher löscht und neu beitritt, belegt einen zweiten Platz — bei einem Klassensatz von 30 ist die Luft dafür da. Ist der Raum voll, sagt der Beitritt das klar („Dieser Raum ist voll"), statt einen Fehler zu zeigen.</td>
+        </tr>
+        <tr>
+          <td><b>Räume je Tool und Lehrkraft</b></td>
+          <td><code>5</code></td>
+          <td>Gezählt werden nur <b>lebende</b> Räume. Abgelaufene zählen nicht mehr mit, der Testraum ebenfalls nicht. Ist die Grenze erreicht, zeigt die Raumliste, welcher Raum am längsten unbenutzt ist, mit einem Löschen-Knopf daneben.</td>
+        </tr>
+        <tr>
+          <td><b>Beiträge je Teilnehmer</b></td>
+          <td>je Tool</td>
+          <td>Steht als Grenze in der Registry (bei der Wortwolke: 10 Zettel, 3–60 Zeichen), nicht global.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="warn">
+    <p><strong>Ein Vorbehalt zu den 5 Räumen je Tool.</strong> Eine Deutschlehrkraft mit fünf
+    Klassen sitzt damit genau auf der Grenze — kommt eine Vertretung oder ein zweiter Kurs
+    dazu, muss sie erst einen Raum löschen. Weil die Frist erst nach 60 Tagen Ruhe greift,
+    räumt sich das nicht rechtzeitig von selbst auf. Die Grenze bleibt bei 5, aber sie steht
+    als eine Zahl an einer Stelle: fällt im Betrieb auf, dass sie zu eng ist, ist das eine
+    Zeile und keine Umbaumaßnahme.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="daten">
+  <h2><span class="num">07</span> Datenmodell</h2>
+  <p class="lead">
+    Ein neues Feld am Profil, sieben neue Tabellen — alle mit Präfix <code>skill_</code>,
+    damit auf einen Blick klar ist, was zu MPSkills gehört und was zur Schulung.
+  </p>
+
+  <h3>Am bestehenden Profil</h3>
+  <div class="wire">profiles
+  + <b>teacher_status</b>   'none' | 'pending' | 'approved' | 'rejected'
+  + teacher_requested_at / teacher_decided_at / teacher_decided_by</div>
+  <p class="wire-cap">
+    Bewusst <b>orthogonal</b> zu <code>status</code> und <code>cluster_id</code>: eine
+    freigeschaltete Lehrkraft kann gleichzeitig Teilnehmerin einer Schulung sein.
+    Die Schulungsseite liest das Feld nirgends.
+  </p>
+
+  <h3>Neue Tabellen</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Tabelle</th><th>Wofür</th><th>Besonderheit</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>skill_tools</code></td>
+          <td>Registry der Tools: Titel, Ordner, Icon, Grenzen</td>
+          <td>Spiegel von <code>MPSkills/tools.js</code> — wie <code>games</code> ↔ <code>GAMES_CONFIG</code></td>
+        </tr>
+        <tr>
+          <td><code>skill_rooms</code></td>
+          <td>der Raum: Code, Tool, Besitzerin, Titel, Einstellungen, Ablaufdatum</td>
+          <td><code>expires_at</code> ist eine echte Spalte — sonst gäbe es kein „Verlängern"</td>
+        </tr>
+        <tr>
+          <td><code>skill_participants</code></td>
+          <td>ein Gerät bzw. eine Person im Raum</td>
+          <td>trägt den <b>Token</b> — das einzige Geheimnis der Schülerseite</td>
+        </tr>
+        <tr>
+          <td><code>skill_room_state</code></td>
+          <td>was die Lehrkraft steuert (Phase, aktuelle Frage)</td>
+          <td>ein <code>jsonb</code> je Raum, vom Tool interpretiert</td>
+        </tr>
+        <tr>
+          <td><code>skill_room_entries</code></td>
+          <td>Beiträge: Zettel, Antworten, Ergebnisse</td>
+          <td><code>payload jsonb</code> + <code>hidden</code> für Moderation</td>
+        </tr>
+        <tr>
+          <td><code>skill_room_votes</code></td>
+          <td>Zustimmung zu einem Beitrag</td>
+          <td>Primärschlüssel erledigt „genau eine Stimme" — kein Zähler, der doppelt läuft</td>
+        </tr>
+        <tr>
+          <td><code>skill_join_attempts</code></td>
+          <td>Protokoll für das Beitritts-Rate-Limit</td>
+          <td>gleiches Muster wie <code>signup_attempts</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <p><strong>Warum eine generische Schicht statt Tabellen je Tool.</strong> Die Schulung hat
+    für ihre kollaborativen Kacheln eigene Schemata (<code>board_*</code>, <code>wc_*</code>),
+    weil dort jede Achse eine Bedeutung trägt. MPSkills ist das Gegenteil: eine Sammlung, die
+    wachsen soll. Deshalb <em>ein</em> Satz Tabellen für alle — <b>ein neues Tool ist ein Ordner
+    und eine Zeile in der Registry, keine Migration</b>. Der Preis: die Gültigkeitsprüfung
+    (Länge, Anzahl, erlaubte Felder) steht als <code>jsonb</code> in der Registry und nicht als
+    Constraint an der Spalte. Für ein Tool, das wirklich mehr braucht — eine Simulation, ein
+    Buzzer auf Millisekunden — bleibt der Weg zu eigenen Tabellen offen.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="sicherheit">
+  <h2><span class="num">08</span> Sicherheitsmodell</h2>
+  <p class="lead">
+    Das ist die neuralgische Stelle des ganzen Vorhabens. Bisher lag unter jedem Zugriff ein
+    Sicherheitsnetz: die Datenbank prüft selbst, wem eine Zeile gehört. Für Teilnehmer ohne
+    Account gibt es dieses Netz nicht — sie sprechen als anonyme Rolle mit dem Server.
+  </p>
+
+  <div class="rules">
+    <div class="rule"><div>
+      <p><strong>Kein direkter Tabellenzugriff für Anonyme.</strong> Die anonyme Rolle darf
+      ausschließlich eine Handvoll benannter Server-Funktionen aufrufen — kein Lesen, kein
+      Schreiben an einer Tabelle, nicht einmal lesend. Das Muster ist etabliert (bei Reality
+      Check und der Wortwolke wird schon ausschließlich über Funktionen geschrieben), hier
+      gilt es zusätzlich fürs Lesen.</p>
+    </div></div>
+    <div class="rule"><div>
+      <p><strong>Keine Funktion nimmt eine Raum- oder Teilnehmer-ID von außen.</strong>
+      Die erste Zeile jeder anonymen Funktion löst den Token auf; alle weiteren IDs stammen
+      aus dieser Auflösung. Sonst könnte ein Teilnehmer mit gültigem Token in einen fremden
+      Raum schreiben.</p>
+    </div></div>
+    <div class="rule"><div>
+      <p><strong>Der Token verlässt die Datenbank genau einmal</strong> — in der Antwort auf
+      den Beitritt. In keiner Liste, keiner Ansicht, keiner Aktualisierung tauchen die Token
+      anderer Teilnehmer auf.</p>
+    </div></div>
+  </div>
+
+  <h3>Warum der Beitritt über den Server läuft und nicht über die Datenbank</h3>
+  <p>
+    Der Raum-Code ist das einzige erratbare Geheimnis im System. Wer ihn prüft, sollte auch
+    zählen können, wie oft jemand daneben liegt — und die Client-Adresse sieht nur die
+    Server-Funktion, nicht die Datenbank. Der Beitritt bekommt deshalb einen eigenen
+    Endpunkt, genau wie die Anmeldung: Code prüfen, Raum offen?, Schimpfwort-Prüfung auf den
+    Namen (dieselbe Liste, die schon bei der Anmeldung greift), Teilnehmer anlegen, Token
+    zurückgeben. Alles danach läuft direkt gegen die Datenbank-Funktionen.
+  </p>
+
+  <h3>Aktualisierung: zwei Anfragen statt einer</h3>
+  <div class="wire">alle 3 s   <b>Signatur?</b>  →  "27 Beiträge, Stand 14:32:07, Phase 1"   ← billig
+                     │
+       nur wenn geändert
+                     ▼
+             <b>vollständige Ansicht</b>  →  Raum, Zustand, Beiträge, Stimmen  ← teuer</div>
+  <p class="wire-cap">
+    28 Tablets × alle 3 Sekunden × mehrere Klassen gleichzeitig — das ist der Unterschied
+    zwischen einer teuren und einer billigen Anfrage pro Tablet. Deshalb steckt die Trennung
+    von Anfang an drin und wird nicht nachgerüstet.
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="seiten">
+  <h2><span class="num">09</span> Seiten &amp; Wireframes</h2>
+  <p class="lead">Vier Seiten, kein Build, kein Framework — dieselbe Bauweise wie der Rest des Projekts.</p>
+
+  <div class="wire">MPSkills/
+    <b>index.html</b>     Landing: Tool-Kacheln, Code-Feld, Login
+    <b>j.html</b>         Beitritt — Ziel des QR-Codes (<i>#CODE</i>)
+    <b>lehrer.html</b>    Raumverwaltung + Beamer-Ansicht
+    style.css      eigene Optik (diese Seite ist die Farbprobe)
+    tools.js       Registry-Spiegel
+    lib/room.js    Token, Aktualisierung, Serveraufrufe
+    lib/qr.js      QR-Erzeugung, lokal — kein CDN
+    tools/wordcloud/   erstes Tool</div>
+
+  <h3>Landing — was die Rolle sieht</h3>
+  <div class="wire-grid">
+    <div><div class="wire"><b>Gast</b>
+  ┌──────────────────────────────────┐
+  │ MPSkills            [ Anmelden ] │
+  ├──────────────────────────────────┤
+  │  Code von der Tafel              │
+  │  ┌──┬──┬──┬──┬──┬──┐  [Weiter]   │
+  │  └──┴──┴──┴──┴──┴──┘             │
+  ├──────────────────────────────────┤
+  │  <i>Was es hier gibt</i>                │
+  │  ┌────────┐ ┌────────┐           │
+  │  │Wortwolke│ │Abstimm.│  …       │
+  │  │ 🔒 Code │ │ 🔒 Code │          │
+  │  └────────┘ └────────┘           │
+  └──────────────────────────────────┘</div></div>
+    <div><div class="wire"><b>Lehrkraft</b> (freigeschaltet)
+  ┌──────────────────────────────────┐
+  │ MPSkills      Sn ▾  [Meine Räume]│
+  ├──────────────────────────────────┤
+  │  ┌──────────────┐ ┌─────────────┐│
+  │  │ ☁ Wortwolke  │ │ 📊 Abstimm. ││
+  │  │ eine Frage,  │ │ Frage +     ││
+  │  │ viele Zettel │ │ Optionen    ││
+  │  │[Testen][Raum]│ │[Testen][Raum]│
+  │  └──────────────┘ └─────────────┘│
+  └──────────────────────────────────┘</div></div>
+  </div>
+
+  <h3>Beamer-Ansicht der Lehrkraft</h3>
+  <div class="wire">┌──────────────────────────────────────────────────────────────┐
+  │  9b Deutsch · Wortwolke                        Phase <b>1</b> ▸ 2  │
+  │                                                              │
+  │      ████ ██  ████        <b>K7F2QM</b>                            │
+  │      ██  ████   ██                                           │
+  │      ████ ██  ████        mpskills.…/j                       │
+  │        (QR-Code)                                             │
+  │                                                              │
+  │  Drin: 24     Beitritt [ offen ●○ zu ]     [ Vollbild ]      │
+  │  Mia · Ben · Ayla · Tim · Noah · Lea · …                     │
+  └──────────────────────────────────────────────────────────────┘</div>
+  <p class="wire-cap">
+    Die Beamer-Ansicht ist die Seite, die am längsten offen steht — sie muss eine
+    Doppelstunde durchhalten, ohne dass jemand neu laden muss.
+  </p>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="tools">
+  <h2><span class="num">10</span> Was ein Tool ist</h2>
+  <p class="lead">
+    Damit die Sammlung wachsen kann, muss „ein Tool hinzufügen" klein bleiben. Deshalb ist
+    festgelegt, was ein Tool vom System bekommt — und was es selbst mitbringen muss.
+  </p>
+
+  <div class="cards">
+    <div class="card">
+      <h4>Das System stellt</h4>
+      <p>Raum, Code, QR, Beitritt, Teilnehmerliste, Aktualisierung, Zustand der Lehrkraft, Beiträge, Zustimmung, Moderation, Ablauf.</p>
+    </div>
+    <div class="card">
+      <h4>Das Tool bringt</h4>
+      <p>Einen Ordner mit Darstellung und Bedienung, eine Zeile in der Registry, und die Bedeutung dessen, was in <code>payload</code> steht.</p>
+    </div>
+    <div class="card card--accent">
+      <h4>Erstes Tool: Wortwolke</h4>
+      <p>Die Engine aus „Warum Tablets?" wird portiert — Spirale, virtuelle Tafel, Lupe, Gesten bleiben unangetastet. Neu ist nur die Datenanbindung.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <p><strong>Warum die Wortwolke als erstes Tool.</strong> Sie ist die einzige Sache in dieser
+    Kette, die schon erprobt ist. Wenn beim ersten Klassentest etwas nicht stimmt, liegt es
+    dann mit hoher Wahrscheinlichkeit am neuen Fundament — Raum, Token, Aktualisierung — und
+    nicht am Tool. Ein neu gebautes Tool hätte diese Aussagekraft nicht.</p>
+    <p>Weg fallen dabei: Kreatur-Belohnung, Wachstum, Münzen, Season-Gate, Kurs-Bezug. Die
+    Frage tippt die Lehrkraft beim Anlegen selbst ein, statt dass sie fest im Spiel steht.</p>
+  </div>
+
+  <h3>Kandidaten danach</h3>
+  <ul>
+    <li><b>Abstimmung</b> — Frage plus Optionen, Balken live. Beweist, dass die Registry trägt (Ordner + eine Zeile, keine Migration).</li>
+    <li><b>Gruppen-Auslosung / Zufallsrad</b> — braucht nur die Teilnehmerliste, keine Beiträge.</li>
+    <li><b>Kartenabfrage</b> — jeder schreibt drei Begriffe, die Lehrkraft sortiert sie am Beamer in Gruppen.</li>
+    <li><b>Buzzer / Quiz</b> — der erste Kandidat, der die generische Schicht sprengen könnte; deshalb bewusst nicht als zweites Tool.</li>
+  </ul>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="stufen">
+  <h2><span class="num">11</span> Stufenplan</h2>
+  <p class="lead">
+    Acht Stufen, jede für sich testbar und jede einzeln nutzbar abgeschlossen. Nach jeder
+    Stufe gilt derselbe Dreiklang: Rollen-Matrix durchklicken · Regressionsprobe auf der
+    Schulungsseite · ab Stufe 3 Mehrgeräte-Test mit mindestens drei echten Geräten.
+  </p>
+
+  <div class="stage stage--doc">
+    <div class="stage-head"><span class="stage-num">Stufe 0</span><h3>Konzept</h3><span class="files">Konzept_MPSkills_v1.html</span></div>
+    <p>Dieses Dokument. Rollen, Flows, Datenmodell, Wireframes, Reihenfolge.</p>
+    <div class="test"><b>Fertig wenn:</b> gelesen und abgesegnet. Kein Code, keine Migration.</div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-head"><span class="stage-num">Stufe 1</span><h3>Lehrkraft-Rolle</h3><span class="files">Migration · Anmeldung · Admin-Panel</span></div>
+    <p>Das Feld am Profil, die Anmeldung über MPSkills (die <b>nie</b> einen Kurs zuweist), und im Admin-Panel ein Tab „Lehrkräfte" mit Filter nach Status und Schule.</p>
+    <div class="test">
+      <b>Test:</b> Anmeldung während ein Kurs-Zeitfenster offen ist → trotzdem kein Kurs.
+      Admin schaltet frei → Rolle greift.
+      <b>Gegentest:</b> derselbe Account im GameHub — gewöhnlicher pending-User, keine sichtbare Änderung.
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-head"><span class="stage-num">Stufe 2</span><h3>Landing + Registry</h3><span class="files">MPSkills/index.html · style.css · tools.js</span></div>
+    <p>Die Seite existiert, hat ihre eigene Optik, kennt die Tools und zeigt jeder Rolle das Richtige. Noch keine Räume.</p>
+    <div class="test"><b>Test:</b> alle Rollen-Ansichten, Handy und Beamer, Links in beide Richtungen.</div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-head"><span class="stage-num">Stufe 3</span><h3>Räume, Code, QR, Beitritt</h3><span class="files">Migration · Beitritts-Endpunkt · lehrer.html · j.html</span></div>
+    <p>Der Kern. Code-Erzeugung, Beitritt mit Rate-Limit, Token, Raumverwaltung, Beamer-Ansicht. Inhalt ist zunächst nur „Wer ist da?" — eine Teilnehmerliste, die live wächst.</p>
+    <div class="test">
+      <b>Test:</b> echtes Tablet scannt den QR · 5 Geräte gleichzeitig · falscher Code ·
+      geschlossener Raum · zwei Räume desselben Tools · Browser-Neustart (Token überlebt) ·
+      eingeloggter Schüler auf einem zweiten Gerät · Code-Raten in Serie (Rate-Limit greift).
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-head"><span class="stage-num">Stufe 4</span><h3>Inhaltsschicht + Wortwolke</h3><span class="files">Migration · tools/wordcloud/</span></div>
+    <p>Zustand, Beiträge, Zustimmung — und das erste echte Tool darauf. Die Wolken-Engine wird unverändert übernommen.</p>
+    <div class="test">
+      <b>Test:</b> Klasse sammelt · Doppeltipp stimmt zu · Phase 2 friert den Inhalt ein ·
+      am Beamer liegt dieselbe Karte in der Mitte wie auf dem Tablet · Moderation blendet eine Karte aus.
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-head"><span class="stage-num">Stufe 5</span><h3>Lebenszyklus + Moderation</h3><span class="files">Migration · täglicher Aufräum-Lauf</span></div>
+    <p>Ablauf nach 60 Tagen Ruhe, Verlängern, automatisches Aufräumen; Beiträge ausblenden, Tablets sperren, Schimpfwortprüfung auf Namen und Texte.</p>
+    <div class="test"><b>Test:</b> Raum künstlich auf abgelaufen setzen → verschwindet samt Beiträgen, Token läuft in eine klare Meldung statt in einen Fehler. Verlängern setzt die Frist zurück.</div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-head"><span class="stage-num">Stufe 6</span><h3>Zweites Tool</h3><span class="files">tools/poll/ + eine Registry-Zeile</span></div>
+    <p>Ein Tool anderer Bauart, um zu beweisen, dass die Registry trägt: <b>keine Migration</b>. Fällt das durch, ist es hier billig zu korrigieren — und nicht erst nach zehn Tools.</p>
+    <div class="test"><b>Test:</b> von der leeren Datei bis zum Klassenraum, ohne die Datenbank anzufassen.</div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-head"><span class="stage-num">Stufe 7</span><h3>Politur</h3><span class="files">Admin-Übersicht · Fehlerzustände</span></div>
+    <p>Räume pro Schule im Admin-Panel, Datenschutz-Absatz auf der Landing, saubere Fehlerbilder (Raum gesperrt, gelöscht, kein Netz).</p>
+    <div class="test"><b>Test:</b> Netz während einer laufenden Stunde abschalten und wieder anschalten.</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="risiken">
+  <h2><span class="num">12</span> Risiken — und wo es weh tut</h2>
+  <p class="lead">
+    Machbar ist das Ganze, weil fast alles auf Bekanntem aufsetzt: Anmeldung, Schul-Rollen,
+    Admin-Panel, das Funktions-Muster der Datenbank, die Aktualisierung per Abfrage, und
+    mit der Wortwolke ein fertiges kollaboratives Tool. <b>Genau eine Sache ist wirklich
+    neu: Teilnehmer ohne Account.</b> Alles andere ist Variation.
+  </p>
+
+  <h3>Was jetzt, was später</h3>
+  <p>
+    Die meisten Punkte hier sind Arbeit, die man aufschieben kann. Zwei sind es nicht — nicht
+    weil sie dringend wären, sondern weil sie <em>keine Aufgaben</em> sind, sondern
+    Eigenschaften der Bauweise. Sie kosten beim Bauen nichts und beim Nachrüsten viel.
+  </p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Punkt</th><th>Wann</th><th>Warum</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Kein Sicherheitsnetz (Regel „keine ID von außen")</td>
+          <td><b>beim Bauen</b></td>
+          <td>Keine Aufgabe, sondern eine Regel beim Schreiben jeder Funktion. Nachträglich heißt es: jede Funktion einzeln prüfen — und die eine übersehene ist genau das Leck.</td>
+        </tr>
+        <tr>
+          <td>Signatur getrennt von Ansicht</td>
+          <td><b>beim Bauen</b></td>
+          <td>Kostet in Stufe 3 eine zusätzliche kleine Funktion. Nachträglich hängt jedes bereits gebaute Tool an der alten Abfrage und muss mit umgestellt werden.</td>
+        </tr>
+        <tr>
+          <td>Token-Erneuerung in der Beamer-Sitzung</td>
+          <td>Stufe 3</td>
+          <td>Kleiner, örtlich begrenzter Fix. Aber vor dem ersten echten Klasseneinsatz, sonst steht die Lehrkraft nach 60 Minuten vor einer toten Seite.</td>
+        </tr>
+        <tr>
+          <td>Moderation, Schimpfwortprüfung, Beitritt sperren</td>
+          <td>Stufe 5</td>
+          <td>Ohnehin später eingeplant. Grenze ist nicht die Stufe, sondern der erste Einsatz mit einer echten Klasse — vorher reicht der Testraum.</td>
+        </tr>
+        <tr>
+          <td>Datenschutz-Absatz</td>
+          <td>Stufe 7</td>
+          <td>Die zwei Mechanismen, auf die er sich beruft (60 Tage, anonymer Raum), sind von Anfang an drin. Es fehlt nur der Text.</td>
+        </tr>
+        <tr>
+          <td>Tools, die nicht in die generische Schicht passen</td>
+          <td>je Tool</td>
+          <td>Nichts zu beheben, solange kein solches Tool ansteht. Entschieden wird das dann am konkreten Tool.</td>
+        </tr>
+        <tr>
+          <td>Aufwandsschwerpunkt · zwei Landingpages</td>
+          <td>—</td>
+          <td>Keine Fehler, sondern Dinge, die man beim Schätzen und beim Verlinken im Kopf behalten muss.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="risk"><div class="sev sev--hi"></div><div>
+    <h4>Kein Sicherheitsnetz unter den anonymen Zugriffen</h4>
+    <p>Bisher war eine vergessene Prüfung halb abgefedert, weil die Datenbank selbst noch
+    einmal nachsah, wem eine Zeile gehört. Für Anonyme liegt darunter nichts. Die drei Regeln
+    aus Abschnitt 08 sind deshalb keine Stilfrage — besonders „keine ID von außen".</p>
+  </div></div>
+
+  <div class="risk"><div class="sev sev--hi"></div><div>
+    <h4>Die Beamer-Sitzung läuft länger als die Anmeldung gültig ist</h4>
+    <p>Es gibt einen bekannten Fehler: der Zugangsschlüssel der Lehrkraft wird im Hintergrund
+    erneuert, die Seite merkt es aber nicht und arbeitet mit dem alten weiter. Im Admin-Panel
+    kostet das ein F5. Hier trifft es eine Seite, die 90 Minuten offen steht, während die
+    Erneuerung nach 60 Minuten fällig wird — mitten in der Stunde. Muss in Stufe 3
+    mitgelöst werden.</p>
+  </div></div>
+
+  <div class="risk"><div class="sev sev--hi"></div><div>
+    <h4>Anonyme Beiträge in einer Klasse</h4>
+    <p>Kein Account heißt keine Rechenschaft. Schimpfwortprüfung, Ausblenden, Tablet sperren
+    und „Beitritt zu" sind Pflichtausstattung, nicht Politur — deshalb stehen sie in Stufe 5
+    und nicht in Stufe 7.</p>
+  </div></div>
+
+  <div class="risk"><div class="sev sev--mid"></div><div>
+    <h4>Last durch das Aktualisieren</h4>
+    <p>28 Tablets alle 3 Sekunden, mehrere Klassen parallel. Beherrschbar, aber nur mit der
+    Trennung in billige Signatur und teure Ansicht. Ohne sie wird das der Engpass, sobald
+    zwei Klassen gleichzeitig arbeiten.</p>
+  </div></div>
+
+  <div class="risk"><div class="sev sev--mid"></div><div>
+    <h4>Tools, die nicht in die generische Schicht passen</h4>
+    <p>Ein Buzzer auf Millisekunden, eine Simulation mit großem Zustand. Für die bleibt der
+    Weg zu eigenen Tabellen offen — aber jedes Tool, das ihn nimmt, kostet wieder eine
+    Migration und damit den Vorteil der Sammelseite.</p>
+  </div></div>
+
+  <div class="risk"><div class="sev sev--mid"></div><div>
+    <h4>Datenschutz</h4>
+    <p>Namen von Minderjährigen ohne Account. Die Antwort darauf sind die 60-Tage-Löschung
+    und der „anonym"-Schalter pro Raum; dazu gehört ein kurzer, ehrlicher Absatz auf der
+    Landing. Nichts davon ist technisch schwierig — es darf nur nicht vergessen werden.</p>
+  </div></div>
+
+  <div class="risk"><div class="sev sev--lo"></div><div>
+    <h4>Aufwandsschwerpunkt liegt nicht in der Datenbank</h4>
+    <p>Die Migrationen sind überschaubar. Die längste Einzelstufe ist die Lehrer-Seite:
+    Raumverwaltung, Beamer-Darstellung, Moderation. Wer den Aufwand an den Tabellen schätzt,
+    schätzt zu niedrig.</p>
+  </div></div>
+
+  <div class="risk"><div class="sev sev--lo"></div><div>
+    <h4>Zwei Landingpages, ein Projekt</h4>
+    <p>Die Gefahr ist nicht technisch, sondern begrifflich: dass die beiden Bereiche
+    zusammenwachsen, weil es bequem ist. Ein Link im Fuß, kein Wechsel-Menü.</p>
+  </div></div>
+</section>
+
+<!-- ══════════════════════════════════════════════════ -->
+<section id="offen">
+  <h2><span class="num">13</span> Entschieden am 17.08.2026</h2>
+  <p class="lead">Die sechs offenen Punkte aus dem ersten Entwurf sind beantwortet.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Frage</th><th>Entscheidung</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Name und Adresse</b></td>
+          <td>Bleibt „MPSkills" als Unterordner. Eine eigene Domain kann später per Weiterleitung davorgesetzt werden, ohne dass der Code etwas davon wissen muss.</td>
+        </tr>
+        <tr>
+          <td><b>Teilnehmer je Raum</b></td>
+          <td><code>60</code> — siehe Abschnitt 06.</td>
+        </tr>
+        <tr>
+          <td><b>Räume je Lehrkraft</b></td>
+          <td><code>5 je Tool</code> (nicht insgesamt), nur lebende Räume gezählt, Testraum ausgenommen — siehe Abschnitt 06 samt Vorbehalt.</td>
+        </tr>
+        <tr>
+          <td><b>Raum an eine Kollegin übergeben</b></td>
+          <td><b>Nein.</b> Ein Raum gehört der Lehrkraft, die ihn angelegt hat — Punkt. Vertretung legt einen eigenen Raum an; das ist ein Code an der Tafel und keine Rechteverwaltung.</td>
+        </tr>
+        <tr>
+          <td><b>Ergebnis-Ausgabe</b></td>
+          <td>Wird <b>je Tool</b> entschieden, wenn das Tool gebaut wird. Keine gemeinsame Export-Funktion im Fundament — eine Wortwolke will als Bild raus, eine Abstimmung als Zahlenreihe, ein Quiz gar nicht.</td>
+        </tr>
+        <tr>
+          <td><b>Tool wird abgeschaltet</b></td>
+          <td>Bestehende Räume <b>laufen aus</b> und bleiben bis dahin benutzbar; neue lassen sich nicht mehr anlegen. Ein Raum, in dem eine Klasse gerade arbeitet, darf nicht durch einen Schalter im Hintergrund verschwinden.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    Damit ist nichts mehr offen, was Stufe 1 bis 4 aufhalten würde. Was sich beim Bauen an
+    neuen Fragen ergibt, kommt als Abschnitt 14 dazu.
+  </p>
+
+  <hr class="sep" />
+
+  <div class="note">
+    <p><strong>Nächster Schritt.</strong> Wenn dieses Dokument passt, beginnt Stufe 1 — die
+    Lehrkraft-Rolle. Das ist die kleinste Stufe mit dem größten Klärungswert: sie beweist,
+    dass sich eine zweite Rolle in die bestehende Nutzerbasis einhängen lässt, ohne dass die
+    Schulungsseite davon etwas merkt.</p>
+  </div>
+</section>
+
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,350 @@
+/* ══════════════════════════════════════════════════════════════
+   MPSkills — style.css
+   ══════════════════════════════════════════════════════════════
+   Bewusst NICHT das Fantasy-Kleid der Tablet-Schulung (Cinzel,
+   Gold auf Braun). MPSkills ist Werkzeugkasten, nicht Abenteuer:
+   heller Grund, Tinte, EIN Akzent (Teal), Warnrot nur für Fehler.
+   Die Farbwerte stammen aus Konzept_MPSkills_v1.html.
+
+   Warum hell: die Seite wird an den Beamer gehängt. Dunkle
+   Flächen fressen im hellen Klassenraum den Kontrast, und ein
+   weißer Grund ist das, was ein Beamer am besten kann.
+
+   Stand: Stufe 1 (Rolle). Kacheln, Code-Feld und Raum-Ansicht
+   kommen in Stufe 2/3 dazu.
+   ══════════════════════════════════════════════════════════════ */
+
+:root {
+  --ink:        #17212b;
+  --ink-soft:   #4a5b6b;
+  --ink-faint:  #7b8b99;
+  --paper:      #f6f5f1;
+  --paper-2:    #eeece5;
+  --surface:    #ffffff;
+  --line:       #dcd9d0;
+  --line-soft:  #e8e5dd;
+  --accent:     #0f766e;
+  --accent-dim: #d5eae7;
+  --accent-ink: #0a4f4a;
+  --warn:       #c2410c;
+  --warn-dim:   #fbe9df;
+  --ok:         #15803d;
+  --ok-dim:     #e2f2e5;
+  --shadow:     0 2px 10px rgba(23,33,43,.07);
+  --shadow-lg:  0 12px 40px rgba(23,33,43,.18);
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.65;
+  font-size: 16px;
+}
+
+/* ─── Kopfzeile ───────────────────────────────────────── */
+.topbar {
+  background: var(--ink);
+  color: #fff;
+  padding: 13px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.wordmark {
+  font-size: 1.22rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  color: #fff;
+}
+.wordmark span { color: #5eead4; }
+.topbar-spacer { flex: 1; }
+
+.userpill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: .875rem;
+  color: #cfd8e0;
+}
+.userpill strong { color: #fff; font-weight: 600; }
+.userpill .role {
+  font-size: .7rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(94,234,212,.15);
+  color: #5eead4;
+  font-weight: 700;
+}
+
+/* ─── Knöpfe ──────────────────────────────────────────── */
+.btn {
+  font: inherit;
+  font-size: .92rem;
+  font-weight: 600;
+  padding: 9px 17px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background .14s ease, border-color .14s ease, transform .1s ease;
+}
+.btn:hover { background: var(--paper-2); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn--primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+.btn--ghost {
+  background: transparent;
+  border-color: rgba(255,255,255,.28);
+  color: #fff;
+}
+.btn--ghost:hover { background: rgba(255,255,255,.1); }
+.btn--link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  font-weight: 500;
+  font-size: .875rem;
+}
+.btn--sm { padding: 6px 12px; font-size: .84rem; }
+
+/* ─── Seitenrumpf ─────────────────────────────────────── */
+.wrap {
+  flex: 1;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 46px 22px 70px;
+}
+
+.hero { margin-bottom: 34px; }
+.hero .eyebrow {
+  font-size: .72rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+.hero h1 {
+  font-size: clamp(1.7rem, 5vw, 2.4rem);
+  line-height: 1.14;
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
+}
+.hero p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 1.04rem;
+  max-width: 58ch;
+}
+
+/* ─── Zustands-Karte (die Rollenweiche) ───────────────── */
+.state {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 24px 26px;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--ink-faint);
+}
+.state--ok      { border-left-color: var(--ok); }
+.state--wait    { border-left-color: #d69e2e; }
+.state--no      { border-left-color: var(--warn); }
+.state--invite  { border-left-color: var(--accent); }
+
+.state h2 {
+  margin: 0 0 8px;
+  font-size: 1.18rem;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.state h2 .ic { font-size: 1.3rem; }
+.state p { margin: 0 0 12px; color: var(--ink-soft); max-width: 62ch; }
+.state p:last-child { margin-bottom: 0; }
+.state .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.state .hint {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  font-size: .86rem;
+  color: var(--ink-faint);
+}
+
+/* Baustellen-Hinweis — verschwindet mit Stufe 2/3 wieder */
+.soon {
+  margin-top: 22px;
+  background: var(--accent-dim);
+  border: 1px solid #a9d5d0;
+  color: var(--accent-ink);
+  border-radius: 10px;
+  padding: 13px 16px;
+  font-size: .885rem;
+}
+.soon strong { font-weight: 700; }
+
+/* ─── Fuß ─────────────────────────────────────────────── */
+.foot {
+  border-top: 1px solid var(--line);
+  padding: 20px 22px 26px;
+  text-align: center;
+  font-size: .83rem;
+  color: var(--ink-faint);
+}
+.foot a { color: var(--ink-soft); }
+.foot .sep { margin: 0 8px; opacity: .5; }
+
+/* ─── Modal ───────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(23,33,43,.55);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 50;
+}
+.overlay[hidden] { display: none; }
+.modal {
+  background: var(--surface);
+  border-radius: 15px;
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 430px;
+  max-height: calc(100vh - 36px);
+  overflow-y: auto;
+  padding: 26px 26px 24px;
+  position: relative;
+}
+.modal h2 { margin: 0 0 6px; font-size: 1.2rem; letter-spacing: -0.01em; }
+.modal .sub { margin: 0 0 20px; font-size: .875rem; color: var(--ink-soft); }
+.modal-close {
+  position: absolute;
+  top: 12px; right: 12px;
+  width: 30px; height: 30px;
+  border: none; border-radius: 8px;
+  background: var(--paper-2);
+  color: var(--ink-soft);
+  font-size: 1.15rem; line-height: 1;
+  cursor: pointer;
+}
+.modal-close:hover { background: var(--line); color: var(--ink); }
+
+label.field {
+  display: block;
+  margin-bottom: 14px;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+label.field input,
+label.field select {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  font: inherit;
+  font-size: .95rem;
+  font-weight: 400;
+  color: var(--ink);
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+label.field input:focus,
+label.field select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  background: var(--surface);
+}
+label.field .rule {
+  display: block;
+  margin-top: 4px;
+  font-weight: 400;
+  font-size: .76rem;
+  color: var(--ink-faint);
+}
+
+.modal .actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 20px;
+}
+.modal .actions .btn--primary { flex: 1; }
+
+.msg {
+  border-radius: 9px;
+  padding: 10px 13px;
+  font-size: .875rem;
+  margin-bottom: 14px;
+}
+.msg--err { background: var(--warn-dim); border: 1px solid #f0c4ab; color: #8a2c07; }
+.msg--ok  { background: var(--ok-dim);   border: 1px solid #bcd9c3; color: var(--ok); }
+.msg[hidden] { display: none; }
+
+.switch-line {
+  margin: 16px 0 0;
+  font-size: .86rem;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+/* ─── Toast ───────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%) translateY(14px);
+  background: var(--ink);
+  color: #fff;
+  padding: 11px 20px;
+  border-radius: 999px;
+  font-size: .9rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  z-index: 60;
+  max-width: calc(100% - 32px);
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.err { background: var(--warn); }
+
+/* ─── Ladezustand ─────────────────────────────────────── */
+.booting { color: var(--ink-faint); font-size: .95rem; }
+
+@media (max-width: 560px) {
+  .wrap { padding: 30px 16px 54px; }
+  .state { padding: 20px 18px; border-radius: 11px; }
+  .topbar { padding: 11px 16px; }
+}

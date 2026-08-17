@@ -1,15 +1,32 @@
 // ══════════════════════════════════════════════════════════════
 // POST /api/signup
 // ══════════════════════════════════════════════════════════════
-// Body: { school_slug, account_name, display_name, password }
+// Body: { school_slug, account_name, display_name, password, context? }
+//
+// context steuert, WOFÜR das Konto angelegt wird:
+//   'schulung' (default) — Tablet-Schulung. Verhalten wie bisher:
+//                          läuft gerade ein Kurs-Zeitfenster, wird der
+//                          User aktiv und bekommt die Starthilfe.
+//   'mpskills'           — MPSkills (Migration 0077). Bekommt NIE einen
+//                          Kurs, auch wenn gerade einer offen ist, und
+//                          dafür teacher_status='pending'.
+//
+// Warum kein zweiter Endpunkt: Namensregeln, Schimpfwortprüfung,
+// Passwort-Policy, Rate-Limit, Duplikatprüfung und das Rollback nach
+// einem halb angelegten Konto sind in beiden Fällen identisch. Ein
+// eigener Endpunkt wäre eine Kopie mit zwei geänderten Zeilen — und
+// die nächste Verschärfung der Passwortregel würde an einer der
+// beiden Stellen vergessen.
 //
 // Ablauf:
 //   1) Input-Validierung (Länge, Zeichensatz, Passwort-Policy)
 //   2) Schimpfwort-Blacklist auf account_name UND display_name
 //   3) Prüfen ob Account-Name in dieser Schule schon existiert
-//   4) Aktives Cluster (jetzt im Zeitfenster) für die Schule suchen
+//   4) NUR bei context='schulung': aktives Cluster (jetzt im
+//      Zeitfenster) für die Schule suchen
 //        → gefunden: status='active', cluster_id gesetzt
 //        → sonst:    status='pending', cluster_id=null
+//      Bei 'mpskills' entfällt der Schritt komplett.
 //   5) auth.users mit Fake-Mail anlegen (email_confirm=true, damit sofort loginbar)
 //   6) profiles-Row mit passenden Werten anlegen
 //   7) Bei Fehler in Schritt 6: auth.users wieder löschen (Rollback)
@@ -118,10 +135,18 @@ export default async function handler(req, res) {
   const account_name = String(body.account_name ?? '').trim().toLowerCase();
   const display_name = String(body.display_name ?? '').trim();
   const password     = String(body.password     ?? '');
+  const context      = String(body.context ?? 'schulung').trim().toLowerCase();
 
   // 1) Input-Validierung
   if (!school_slug) {
     return fail(400, { error: 'school_required' });
+  }
+  // Unbekannter context wird abgewiesen und nicht stillschweigend auf
+  // 'schulung' gedreht: ein Tippfehler im Frontend würde sonst eine
+  // Lehrkraft in den nächsten offenen Kurs setzen, und das fiele erst
+  // auf, wenn sie im GameHub plötzlich Monster sammelt.
+  if (context !== 'schulung' && context !== 'mpskills') {
+    return fail(400, { error: 'context_invalid' });
   }
   if (!ACCOUNT_NAME_RE.test(account_name)) {
     return fail(400, { error: 'account_name_invalid',
@@ -178,20 +203,35 @@ export default async function handler(req, res) {
     return fail(409, { error: 'account_name_taken' });
   }
 
-  // 4) Aktives Cluster JETZT?
-  const nowIso = new Date().toISOString();
-  const { data: cluster } = await admin
-    .from('clusters')
-    .select('id, season, opens_at, closes_at')
-    .eq('school_id', school.id)
-    .lte('opens_at', nowIso)
-    .gte('closes_at', nowIso)
-    .order('opens_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // 4) Aktives Cluster JETZT? — nur für die Schulung.
+  //
+  // Bei context='mpskills' wird die Abfrage übersprungen. Das ist keine
+  // Optimierung, sondern die Regel: eine Anmeldung über MPSkills führt
+  // NIE in einen Kurs. Sonst landete eine Lehrkraft, die sich zufällig
+  // während eines laufenden Schulungsfensters anmeldet, als aktive
+  // Teilnehmerin in der Kohorte ihrer eigenen Klasse — samt Starthilfe,
+  // Monstern und Kurs-Rangliste.
+  let cluster = null;
+  if (context === 'schulung') {
+    const nowIso = new Date().toISOString();
+    const { data: found } = await admin
+      .from('clusters')
+      .select('id, season, opens_at, closes_at')
+      .eq('school_id', school.id)
+      .lte('opens_at', nowIso)
+      .gte('closes_at', nowIso)
+      .order('opens_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    cluster = found ?? null;
+  }
 
   const status     = cluster ? 'active'    : 'pending';
   const cluster_id = cluster ? cluster.id  : null;
+
+  // MPSkills-Anmeldung = Antrag auf die Lehrkraft-Rolle (Migration 0077).
+  // Den Zeitstempel setzt der Trigger profiles_teacher_stamp_trg.
+  const teacher_status = context === 'mpskills' ? 'pending' : 'none';
 
   // 5) Fake-Mail
   const email = `${account_name}@${school.slug}.${FAKE_EMAIL_DOMAIN}`;
@@ -219,7 +259,8 @@ export default async function handler(req, res) {
     cluster_id,
     account_name,
     display_name,
-    status
+    status,
+    teacher_status
   });
 
   if (profileErr) {
@@ -266,6 +307,8 @@ export default async function handler(req, res) {
     status,
     cluster_id,
     season: cluster?.season ?? 0,
+    context,
+    teacher_status,
     bonus,
     bonus_error
   });

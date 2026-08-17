@@ -20,6 +20,7 @@ let gamesBySeason   = null;   // { 1: ['game1', ...], 2: [...] }, lazy geladen
 let gameTitleById   = null;   // { game1: 'Zahlenduell', ... }, lazy geladen aus games-Tabelle
 let userCache       = [];     // profiles rows (angereichert mit progress-Daten wenn geladen)
 let adminCache      = [];     // profiles rows aller Admins (Volladmin-Reiter)
+let teacherCache    = [];     // profiles rows mit teacher_status <> 'none' (MPSkills-Reiter)
 let progressLoaded  = false;  // game_state/wallets/user_collectibles einmal nachgeladen?
 let startupLoaded   = false;  // user_game_saves (game18) einmal nachgeladen?
 
@@ -171,6 +172,7 @@ function validateClusterWindow(opensAt, closesAt) {
   wireRoleChangeModal();
   wireMoveSchoolModal();
   wireAdminsTab();
+  wireTeachersTab();
 
   await initSchoolSwitcher();  // lädt alle Schulen (nur Volladmin) und rendert Header-Label
 
@@ -213,7 +215,7 @@ function wireUserMenu() {
 }
 
 // ─── Tabs ────────────────────────────────────────────────────
-const TAB_PANELS = ['dashboard', 'clusters', 'users', 'admins'];
+const TAB_PANELS = ['dashboard', 'clusters', 'users', 'teachers', 'admins'];
 
 function wireTabs() {
   document.querySelectorAll('.tab').forEach(tab => {
@@ -231,6 +233,9 @@ function wireTabs() {
       }
       if (target === 'admins') {
         loadAdmins();
+      }
+      if (target === 'teachers') {
+        loadTeachers();
       }
     });
   });
@@ -3078,4 +3083,181 @@ function toggleRowActionsMenu(btn) {
   }
   menu.style.top  = top  + 'px';
   menu.style.left = left + 'px';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Lehrkräfte-Tab (MPSkills, Migration 0077)
+   ══════════════════════════════════════════════════════════════
+   Freischaltung der Lehrkraft-Rolle. Sichtbar für Schuladmin UND
+   Volladmin — der Schuladmin sieht durch profiles_select_own (0053)
+   nur die eigene Schule, ohne dass hier gefiltert werden müsste.
+
+   Geschrieben wird per PATCH auf profiles, wie bei der
+   Cluster-Zuweisung und display_name_locked: die Policy
+   profiles_admin_update deckt das ab. Die drei Zeitstempel setzt
+   der Trigger profiles_teacher_stamp_trg — teacher_decided_by darf
+   nicht aus dem Browser kommen.
+   ══════════════════════════════════════════════════════════════ */
+
+const TEACHER_STATUS_LABEL = {
+  pending:  'Ausstehend',
+  approved: 'Freigeschaltet',
+  rejected: 'Abgelehnt'
+};
+
+function wireTeachersTab() {
+  document.getElementById('teacherSearch')?.addEventListener('input', renderTeachers);
+  document.getElementById('teacherStatusFilter')?.addEventListener('change', renderTeachers);
+  document.getElementById('teacherReload')?.addEventListener('click', loadTeachers);
+}
+
+async function loadTeachers() {
+  const tbody = document.getElementById('teacherTbody');
+  if (!tbody) return;
+  try {
+    // teacher_status=neq.none: die Tabelle zeigt nur, wer mit der Rolle
+    // überhaupt zu tun hat. Alle anderen stehen im User-Tab.
+    // Sortierung: älteste Anträge zuerst — wer am längsten wartet, oben.
+    teacherCache = await api('GET',
+      'profiles?select=id,account_name,display_name,school_id,cluster_id,status,is_admin,is_superadmin,'
+      + 'teacher_status,teacher_requested_at,teacher_decided_at'
+      + '&teacher_status=neq.none'
+      + '&order=teacher_requested_at.asc.nullslast,account_name.asc');
+    renderTeachers();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function teacherStatusBadge(st) {
+  const cls = st === 'approved' ? 'active' : st === 'pending' ? 'pending' : 'closed';
+  return `<span class="badge ${cls}">${TEACHER_STATUS_LABEL[st] || escapeHtml(st)}</span>`;
+}
+
+// „vor 3 Tagen" statt Datum: bei einem offenen Antrag ist die Wartezeit
+// die Information, nicht der Kalendertag.
+function teacherWaited(iso) {
+  if (!iso) return '—';
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days <= 0)  return 'heute';
+  if (days === 1) return 'gestern';
+  return `vor ${days} Tagen`;
+}
+
+function renderTeachers() {
+  const tbody = document.getElementById('teacherTbody');
+  const thead = document.getElementById('teacherThead');
+  if (!tbody || !thead) return;
+
+  const q      = (document.getElementById('teacherSearch')?.value || '').trim().toLowerCase();
+  const filter = document.getElementById('teacherStatusFilter')?.value || 'pending';
+
+  // Schul-Spalte nur für den Volladmin: für einen Schuladmin stünde in
+  // jeder Zeile derselbe Wert. allSchools ist für ihn ohnehin leer
+  // (siehe initSchoolSwitcher).
+  const showSchool = isVolladmin;
+  const schoolById = {};
+  for (const s of allSchools) schoolById[s.id] = s.name;
+
+  thead.innerHTML = '<tr>'
+    + '<th>Account</th>'
+    + '<th>Anzeigename</th>'
+    + (showSchool ? '<th>Schule</th>' : '')
+    + '<th>Beantragt</th>'
+    + '<th>MPSkills</th>'
+    + '<th>Schulung</th>'
+    + '<th>Aktion</th>'
+    + '</tr>';
+  const cols = showSchool ? 7 : 6;
+
+  let rows = teacherCache.slice();
+  if (filter !== 'all') rows = rows.filter(r => r.teacher_status === filter);
+  if (q) rows = rows.filter(r =>
+    (r.account_name || '').toLowerCase().includes(q) ||
+    (r.display_name || '').toLowerCase().includes(q) ||
+    (schoolById[r.school_id] || '').toLowerCase().includes(q));
+
+  if (rows.length === 0) {
+    const msg = filter === 'pending'
+      ? 'Keine offenen Anträge.'
+      : 'Keine Einträge für diesen Filter.';
+    tbody.innerHTML = `<tr><td colspan="${cols}" class="empty">${msg}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(u => {
+    const st = u.teacher_status;
+    // Was auf der Schulungsseite gilt — bewusst mit angezeigt, damit
+    // sichtbar bleibt, dass die beiden Rollen nichts miteinander zu tun
+    // haben: eine freigeschaltete Lehrkraft ist dort weiter pending.
+    const schulung = `<span class="badge ${u.status}">${u.status}</span>`
+                   + (u.is_admin || u.is_superadmin ? ' ' + roleBadge(u) : '');
+
+    let actions = '';
+    if (st === 'pending' || st === 'rejected') {
+      actions += `<button class="btn small js-teacher-approve" data-user-id="${u.id}">Freischalten</button>`;
+    }
+    if (st === 'pending') {
+      actions += `<button class="btn small js-teacher-reject" data-user-id="${u.id}">Ablehnen</button>`;
+    }
+    if (st === 'approved') {
+      actions += `<button class="btn small danger js-teacher-revoke" data-user-id="${u.id}">Rolle entziehen</button>`;
+    }
+    if (st === 'rejected') {
+      actions += `<button class="btn small js-teacher-clear" data-user-id="${u.id}">Antrag entfernen</button>`;
+    }
+
+    return `<tr>
+      <td>${escapeHtml(u.account_name)}</td>
+      <td>${escapeHtml(u.display_name || '—')}</td>
+      ${showSchool ? `<td>${escapeHtml(schoolById[u.school_id] || '—')}</td>` : ''}
+      <td>${teacherWaited(u.teacher_requested_at)}</td>
+      <td>${teacherStatusBadge(st)}</td>
+      <td>${schulung}</td>
+      <td><div class="actions">${actions}</div></td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('.js-teacher-approve').forEach(b =>
+    b.addEventListener('click', () => setTeacherStatus(b.dataset.userId, 'approved')));
+  tbody.querySelectorAll('.js-teacher-reject').forEach(b =>
+    b.addEventListener('click', () => setTeacherStatus(b.dataset.userId, 'rejected')));
+  tbody.querySelectorAll('.js-teacher-revoke').forEach(b =>
+    b.addEventListener('click', () => setTeacherStatus(b.dataset.userId, 'rejected')));
+  tbody.querySelectorAll('.js-teacher-clear').forEach(b =>
+    b.addEventListener('click', () => setTeacherStatus(b.dataset.userId, 'none')));
+}
+
+async function setTeacherStatus(userId, status) {
+  const u = teacherCache.find(r => r.id === userId);
+  const label = u ? (u.display_name || u.account_name) : 'Diese Lehrkraft';
+
+  // Entziehen ist der einzige Schritt, der jemandem etwas wegnimmt, das
+  // er schon benutzt — die Räume bleiben, aber neue lassen sich nicht
+  // mehr aufmachen. Deshalb hier eine Rückfrage und sonst keine.
+  if (status === 'rejected' && u?.teacher_status === 'approved') {
+    const ok = confirm(`${label} die Lehrkraft-Rolle entziehen?\n\n`
+      + 'Bestehende Räume bleiben bis zu ihrem Ablauf nutzbar, neue lassen sich nicht mehr anlegen.');
+    if (!ok) return;
+  }
+
+  try {
+    await api('PATCH', `profiles?id=eq.${userId}`, { teacher_status: status });
+    // Lokal nachziehen statt neu laden: bei Filter „Ausstehend" verschwindet
+    // die Zeile dadurch sofort aus der Liste, und genau das ist die
+    // Rückmeldung, dass es geklappt hat.
+    if (u) {
+      u.teacher_status = status;
+      if (status === 'none') teacherCache = teacherCache.filter(r => r.id !== userId);
+    }
+    renderTeachers();
+    const msg = {
+      approved: `${label} ist für MPSkills freigeschaltet.`,
+      rejected: `${label}: Antrag abgelehnt.`,
+      none:     `${label}: Antrag entfernt.`
+    }[status] || 'Status gesetzt.';
+    showToast(msg);
+  } catch (err) {
+    showToast('Änderung fehlgeschlagen: ' + err.message, 'error');
+  }
 }

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MPSkills</title>
+<meta name="description" content="Werkzeuge und Spiele für den Unterricht. Lehrkräfte schalten frei, Klassen machen mit." />
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=20260817" />
+<link rel="icon" type="image/png" sizes="64x64" href="../icons/favicon-64.png" />
+<link rel="icon" type="image/png" sizes="256x256" href="../icons/favicon-256.png" />
+</head>
+<body>
+
+<!-- ─── Kopfzeile ───────────────────────────────────────── -->
+<header class="topbar">
+  <a class="wordmark" href="index.html">MP<span>Skills</span></a>
+  <div class="topbar-spacer"></div>
+
+  <!-- Gast -->
+  <div id="guestBar" hidden>
+    <button type="button" class="btn btn--ghost btn--sm" id="loginBtn">Anmelden</button>
+  </div>
+
+  <!-- Angemeldet -->
+  <div class="userpill" id="userBar" hidden>
+    <span><strong id="userName">…</strong></span>
+    <span class="role" id="userRole" hidden>Lehrkraft</span>
+    <button type="button" class="btn btn--ghost btn--sm" id="logoutBtn">Abmelden</button>
+  </div>
+</header>
+
+<!-- ─── Rumpf ───────────────────────────────────────────── -->
+<main class="wrap">
+  <div class="hero">
+    <p class="eyebrow">Für den Unterricht</p>
+    <h1>Werkzeuge und Spiele, die eine Klasse in 30 Sekunden benutzt</h1>
+    <p>
+      Lehrkräfte schalten ein Werkzeug für eine Klasse frei und bekommen einen Code samt
+      QR. Schülerinnen und Schüler brauchen dafür kein Konto — Code scannen, mitmachen.
+    </p>
+  </div>
+
+  <!-- Die Rollenweiche. Inhalt kommt aus app.js. -->
+  <div id="stateHost">
+    <p class="booting">Lade …</p>
+  </div>
+</main>
+
+<!-- ─── Fuß ─────────────────────────────────────────────── -->
+<footer class="foot">
+  <a href="../index.html">Tablet-Schulung</a>
+  <span class="sep">·</span>
+  MPSkills · Marion-Prahm-Schule
+</footer>
+
+<!-- ─── Anmelden ────────────────────────────────────────── -->
+<div class="overlay" id="loginModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <button type="button" class="modal-close" id="loginClose" aria-label="Schließen">×</button>
+    <h2 id="loginTitle">Anmelden</h2>
+    <p class="sub">Mit demselben Konto wie in der Tablet-Schulung.</p>
+
+    <div class="msg msg--err" id="loginError" hidden></div>
+
+    <form id="loginForm" novalidate>
+      <label class="field">Schule
+        <select id="loginSchool" required></select>
+      </label>
+      <label class="field">Accountname
+        <input type="text" id="loginAccount" autocomplete="username"
+               autocapitalize="none" spellcheck="false" required />
+      </label>
+      <label class="field">Passwort
+        <input type="password" id="loginPassword" autocomplete="current-password" required />
+      </label>
+      <div class="actions">
+        <button type="submit" class="btn btn--primary" id="loginSubmit">Anmelden</button>
+      </div>
+    </form>
+
+    <p class="switch-line">
+      Noch kein Konto? <button type="button" class="btn--link" id="toRegister">Als Lehrkraft anmelden</button>
+    </p>
+  </div>
+</div>
+
+<!-- ─── Konto anlegen (Lehrkraft) ───────────────────────── -->
+<div class="overlay" id="registerModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="regTitle">
+    <button type="button" class="modal-close" id="registerClose" aria-label="Schließen">×</button>
+    <h2 id="regTitle">Konto als Lehrkraft</h2>
+    <p class="sub">
+      Nach dem Anlegen schaltet ein Admin dich frei. Dieses Konto führt <strong>nicht</strong>
+      in eine Schulung — auch dann nicht, wenn gerade eine läuft.
+    </p>
+
+    <div class="msg msg--err" id="registerError" hidden></div>
+    <div class="msg msg--ok"  id="registerSuccess" hidden></div>
+
+    <form id="registerForm" novalidate>
+      <label class="field">Schule
+        <select id="regSchool" required></select>
+      </label>
+      <label class="field">Accountname
+        <input type="text" id="regAccount" autocomplete="username"
+               autocapitalize="none" spellcheck="false" required />
+        <span class="rule">2–20 Zeichen · a–z, 0–9, . _ -</span>
+      </label>
+      <label class="field">Anzeigename
+        <input type="text" id="regDisplayName" autocomplete="name" required />
+        <span class="rule">Was die Klasse sieht — z. B. dein Kürzel.</span>
+      </label>
+      <label class="field">Passwort
+        <input type="password" id="regPassword" autocomplete="new-password" required />
+        <span class="rule">Mindestens 8 Zeichen, mit Buchstabe und Zahl.</span>
+      </label>
+      <label class="field">Passwort wiederholen
+        <input type="password" id="regPassword2" autocomplete="new-password" required />
+      </label>
+      <div class="actions">
+        <button type="submit" class="btn btn--primary" id="registerSubmit">Konto anlegen</button>
+      </div>
+    </form>
+
+    <p class="switch-line">
+      Schon ein Konto? <button type="button" class="btn--link" id="toLogin">Anmelden</button>
+    </p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../supabase-config.js"></script>
+<script src="../session.js?v=20260811"></script>
+<script src="app.js?v=20260817"></script>
+</body>
+</html>
