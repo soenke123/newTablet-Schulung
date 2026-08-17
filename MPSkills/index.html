@@ -20,6 +20,9 @@
   <a class="wordmark" href="index.html">MP<span>Skills</span></a>
   <div class="topbar-spacer"></div>
 
+  <!-- Nur für Lehrkräfte und Admins — sonst führt der Link ins Leere. -->
+  <a class="btn btn--ghost btn--sm" id="myRoomsBtn" href="lehrer.html" hidden>Meine Räume</a>
+
   <!-- Gast -->
   <div id="guestBar" hidden>
     <button type="button" class="btn btn--ghost btn--sm" id="loginBtn">Anmelden</button>
@@ -43,6 +46,11 @@
       QR. Schülerinnen und Schüler brauchen dafür kein Konto — Code scannen, mitmachen.
     </p>
   </div>
+
+  <!-- Der Weg der Schüler: Code von der Tafel. Steht für alle da, die
+       nicht gerade als Lehrkraft handeln — für die übernimmt der Knopf
+       „Meine Räume" in der Kopfzeile. -->
+  <div id="joinHost"></div>
 
   <!-- Die Rollenweiche. Inhalt kommt aus app.js. -->
   <div id="stateHost">
@@ -140,8 +148,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../supabase-config.js"></script>
-<script src="../session.js?v=20260811"></script>
+<script src="../session.js?v=20260817"></script>
+<script src="lib/room.js?v=20260817"></script>
 <script src="tools.js?v=20260817"></script>
-<script src="app.js?v=20260817b"></script>
+<script src="app.js?v=20260817c"></script>
 </body>
 </html>

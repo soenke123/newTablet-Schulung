@@ -111,26 +111,32 @@ function isReady(toolId) {
 
 // mode 'act'  — Lehrkraft/Admin: Kacheln mit Knöpfen
 // mode 'view' — alle anderen: dieselbe Liste, ohne Knöpfe
+//
+// Seit Stufe 3 funktionieren die Knöpfe — auch für Werkzeuge mit
+// ready:false. Das ist kein Widerspruch: der RAUM ist fertig (Code,
+// QR, Beitritt, „wer ist da"), nur das Werkzeug darin noch nicht.
+// Das Schild bleibt deshalb stehen und sagt jetzt, worauf es sich
+// bezieht.
 function toolCard(t, mode) {
   const ready = isReady(t.id);
   const badges = [
-    ready ? '' : '<span class="tag tag--soon">In Vorbereitung</span>',
+    ready ? '' : '<span class="tag tag--soon">Werkzeug in Vorbereitung</span>',
     t.active ? '' : '<span class="tag tag--off">Abgeschaltet</span>'
   ].filter(Boolean).join('');
 
   let foot = '';
   if (mode === 'act') {
-    // Die Knöpfe stehen schon da, sind aber ehrlich abgeschaltet:
-    // beide brauchen Räume, und Räume kommen in Stufe 3. Ein Knopf,
-    // der nichts tut, ist schlimmer als ein Knopf, der sagt warum.
-    const off = ready ? '' : 'disabled';
-    const why = ready ? '' : ' title="Räume gibt es ab der nächsten Ausbaustufe."';
+    // Ein abgeschaltetes Werkzeug bekommt keine neuen Räume mehr
+    // (Entscheidung 17.08.2026) — die Knöpfe wären dann eine
+    // Einladung in eine Fehlermeldung.
+    const off = t.active ? '' : ' disabled title="Dieses Werkzeug ist abgeschaltet."';
     foot = `<div class="tile-foot">
-        <button type="button" class="btn btn--sm" ${off}${why}>Testen</button>
-        <button type="button" class="btn btn--sm btn--primary" ${off}${why}>Für eine Klasse öffnen</button>
-      </div>`;
+        <button type="button" class="btn btn--sm" data-act="test" data-tool="${esc(t.id)}"${off}>Testen</button>
+        <button type="button" class="btn btn--sm btn--primary" data-act="open" data-tool="${esc(t.id)}"${off}>Für eine Klasse öffnen</button>
+      </div>
+      ${ready ? '' : '<p class="tile-note">Der Raum funktioniert schon — das Werkzeug darin kommt in der nächsten Stufe.</p>'}`;
   } else {
-    foot = '<p class="tile-note">Deine Lehrkraft schaltet das frei.</p>';
+    foot = '<p class="tile-note">Deine Lehrkraft schaltet das frei und gibt euch den Code.</p>';
   }
 
   return `<article class="tile${ready ? '' : ' tile--soon'}">
@@ -142,6 +148,57 @@ function toolCard(t, mode) {
       <p class="tile-blurb">${esc(t.blurb || '')}</p>
       ${foot}
     </article>`;
+}
+
+/* ─── Werkzeug-Knöpfe ─────────────────────────────────────── */
+// „Testen" legt sofort einen Raum an — es gibt bewusst keinen
+// Solo-Modus, damit der Test dasselbe zeigt wie der Ernstfall. Ein
+// vorhandener Testraum wird dabei wiederverwendet (Server-Regel in
+// Migration 0079), sonst sammelte jeder Klick einen weiteren an.
+//
+// „Für eine Klasse öffnen" fragt nach Titel und Namen — das gehört
+// auf die Raumseite und nicht in ein zweites Formular hier.
+function wireToolButtons() {
+  document.querySelectorAll('#toolsHost button[data-act]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const tool = btn.dataset.tool;
+      if (btn.dataset.act === 'open') {
+        location.href = 'lehrer.html?new=' + encodeURIComponent(tool);
+        return;
+      }
+      btn.disabled = true;
+      const before = btn.textContent;
+      btn.textContent = 'Einen Moment …';
+      try {
+        const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/skill_room_create`, {
+          method: 'POST',
+          headers: {
+            apikey: window.SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${window.__accessToken}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          },
+          body: JSON.stringify({ p_tool_id: tool, p_is_test: true })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const r = await res.json();
+        if (!r.ok) {
+          toast(r.error === 'tool_inactive'
+            ? 'Dieses Werkzeug ist abgeschaltet — neue Räume gibt es dafür nicht.'
+            : 'Testraum ließ sich nicht anlegen (' + r.error + ').', 'error');
+          btn.disabled = false;
+          btn.textContent = before;
+          return;
+        }
+        location.href = 'lehrer.html#' + r.code;
+      } catch (e) {
+        console.error('[mpskills] Testraum:', e);
+        toast('Testraum ließ sich nicht anlegen: ' + e.message, 'error');
+        btn.disabled = false;
+        btn.textContent = before;
+      }
+    });
+  });
 }
 
 async function renderTools(mode) {
@@ -172,6 +229,61 @@ async function renderTools(mode) {
       <h2 class="tools-title">Werkzeuge <span class="tools-count">${tools.length}</span></h2>
       <div class="tile-grid">${tools.map(t => toolCard(t, mode)).join('')}</div>
     </div>`;
+
+  if (mode === 'act') wireToolButtons();
+}
+
+/* ─── Code von der Tafel ──────────────────────────────────── */
+// Der Weg der Schüler beginnt normalerweise beim QR-Code; dieses
+// Feld ist der Rückfallweg für Geräte ohne Kamera und für alle, bei
+// denen das Scannen nicht klappt. Es führt nach j.html — dort und
+// nur dort steht der ganze Beitritts-Ablauf.
+//
+// Für Lehrkräfte und Admins entfällt es: sie kommen über „Meine
+// Räume" an dieselben Räume, und zwar von der anderen Seite.
+function renderJoinBox(role) {
+  const el = document.getElementById('joinHost');
+  if (!el) return;
+  if (role === 'teacher' || role === 'admin') { el.innerHTML = ''; return; }
+
+  const mine = (window.MPRoom?.list() || []);
+  el.innerHTML = `
+    <div class="joinbox">
+      <form id="hubCodeForm" novalidate>
+        <label for="hubCode">Code von der Tafel</label>
+        <div class="joinbox-row">
+          <input type="text" id="hubCode" maxlength="9" autocomplete="off"
+                 autocapitalize="characters" spellcheck="false"
+                 inputmode="latin" placeholder="K7F2QM" aria-describedby="hubCodeHint" />
+          <button type="submit" class="btn btn--primary">Weiter</button>
+        </div>
+        <p class="rule" id="hubCodeHint">Sechs Zeichen. Kein Konto nötig.</p>
+      </form>
+      ${mine.length ? `
+        <div class="joinbox-mine">
+          <span class="joinbox-mine-h">Zuletzt auf diesem Gerät</span>
+          ${mine.slice(0, 4).map(r => `
+            <a class="minichip" href="j.html#${esc(r.code)}">
+              <span>${esc(r.room?.tool_icon || '🧩')}</span>
+              ${esc(r.room?.title || r.code)}
+            </a>`).join('')}
+        </div>` : ''}
+    </div>`;
+
+  const input = document.getElementById('hubCode');
+  input.addEventListener('input', () => {
+    input.value = window.MPRoom.normalizeCode(input.value).slice(0, 6);
+  });
+  document.getElementById('hubCodeForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const code = window.MPRoom.normalizeCode(input.value);
+    if (!window.MPRoom.isCode(code)) {
+      toast('Der Code besteht aus 6 Zeichen — Buchstaben und Ziffern.', 'error');
+      input.focus();
+      return;
+    }
+    location.href = 'j.html#' + code;
+  });
 }
 
 /* ─── Modals ──────────────────────────────────────────── */
@@ -212,9 +324,9 @@ function roleOf(s) {
   return 'noRole';
 }
 
-const SOON = '<div class="soon"><strong>Ausbaustufe 2 von 7.</strong> '
-  + 'Die Werkzeuge stehen unten schon in der Liste. Was noch fehlt, ist das Wichtigste: '
-  + 'der Raum mit Code und QR, über den eine Klasse hereinkommt. Das ist die nächste Stufe.</div>';
+const SOON = '<div class="soon"><strong>Ausbaustufe 3 von 7.</strong> '
+  + 'Räume, Codes, QR und Beitritt stehen. Was ein Raum bisher kann, ist zeigen, wer da ist — '
+  + 'die Werkzeuge selbst (Wortwolke, Abstimmung) kommen in der nächsten Stufe.</div>';
 
 function renderState() {
   const host = document.getElementById('stateHost');
@@ -224,6 +336,8 @@ function renderState() {
   // Kopfzeile
   document.getElementById('guestBar').hidden = role !== 'guest';
   document.getElementById('userBar').hidden  = role === 'guest';
+  document.getElementById('myRoomsBtn').hidden = !(role === 'teacher' || role === 'admin');
+  renderJoinBox(role);
   if (s) {
     document.getElementById('userName').textContent = s.display_name || s.account_name;
     const pill = document.getElementById('userRole');
@@ -252,8 +366,7 @@ function renderState() {
         </div>
         <p class="hint">
           <strong>Für Schülerinnen und Schüler:</strong> Ihr braucht hier kein Konto.
-          Ihr bekommt von der Lehrkraft einen Code oder einen QR-Code — das Feld dafür
-          entsteht in der nächsten Ausbaustufe.
+          Ihr scannt den QR-Code eurer Lehrkraft oder tippt oben den Code von der Tafel ein.
         </p>
       </div>`;
     document.getElementById('ctaLogin').addEventListener('click', openLogin);
@@ -279,7 +392,11 @@ function renderState() {
     host.innerHTML = `
       <div class="state state--ok">
         <h2><span class="ic">✓</span> Du bist freigeschaltet</h2>
-        <p>Du kannst Werkzeuge für deine Klassen freischalten, sobald es welche gibt.</p>
+        <p>
+          Wähle unten ein Werkzeug: <strong>Testen</strong> macht dir einen eigenen Raum zum
+          Ausprobieren, <strong>Für eine Klasse öffnen</strong> einen mit Titel und Code.
+          Alles Weitere steht unter <a href="lehrer.html">Meine Räume</a>.
+        </p>
         ${SOON}
       </div>`;
     return;

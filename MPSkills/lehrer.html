@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meine Räume · MPSkills</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=20260817b" />
+<link rel="icon" type="image/png" sizes="64x64" href="../icons/favicon-64.png" />
+<link rel="icon" type="image/png" sizes="256x256" href="../icons/favicon-256.png" />
+</head>
+<body>
+
+<header class="topbar" id="topbar">
+  <a class="wordmark" href="index.html">MP<span>Skills</span></a>
+  <div class="topbar-spacer"></div>
+  <div class="userpill" id="userBar" hidden>
+    <span><strong id="userName">…</strong></span>
+    <span class="role" id="userRole" hidden>Lehrkraft</span>
+  </div>
+</header>
+
+<main class="wrap" id="mainWrap">
+  <div id="lehrerHost">
+    <p class="booting">Lade …</p>
+  </div>
+</main>
+
+<footer class="foot" id="pagefoot">
+  <a href="index.html">MPSkills</a>
+  <span class="sep">·</span>
+  <a href="../index.html">Tablet-Schulung</a>
+</footer>
+
+<!-- ─── Neuer Raum ──────────────────────────────────────── -->
+<div class="overlay" id="newModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="newTitle">
+    <button type="button" class="modal-close" id="newClose" aria-label="Schließen">×</button>
+    <h2 id="newTitle">Raum für eine Klasse</h2>
+    <p class="sub">Der Raum bekommt einen Code, den du an die Tafel wirfst.</p>
+
+    <div class="msg msg--err" id="newError" hidden></div>
+
+    <form id="newForm" novalidate>
+      <label class="field">Werkzeug
+        <select id="newTool" required></select>
+      </label>
+      <label class="field">Titel
+        <input type="text" id="newRoomTitle" maxlength="60" placeholder="9b Deutsch" required />
+        <span class="rule">Nur für dich — damit du deine Räume auseinanderhältst.</span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="newAskNames" checked />
+        <span>
+          <strong>Namen abfragen</strong>
+          <span class="rule">Aus. schalten heißt: jeder heißt Tablet 1, 2, 3 … Nichts lässt sich
+          dann einer Person zuordnen.</span>
+        </span>
+      </label>
+      <div class="actions">
+        <button type="submit" class="btn btn--primary" id="newSubmit">Raum anlegen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../supabase-config.js"></script>
+<script src="../session.js?v=20260817"></script>
+<script src="lib/qr.js?v=20260817"></script>
+<script src="lib/room.js?v=20260817"></script>
+<script src="lehrer.js?v=20260817"></script>
+</body>
+</html>

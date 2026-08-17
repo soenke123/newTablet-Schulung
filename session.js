@@ -392,7 +392,21 @@
 
   client.auth.onAuthStateChange(async (event, authSession) => {
     console.log('[SESSION] event:', event, authSession ? `user=${authSession.user.email}` : '(no session)');
-    if (event === 'TOKEN_REFRESHED') return;
+    // TOKEN_REFRESHED: das Profil hat sich nicht geändert, also weder
+    // user_session neu ziehen noch 'session-changed' feuern — der
+    // frühe Ausstieg ist Absicht. Der zwischengespeicherte Token muss
+    // aber mit, sonst arbeiten alle direkten REST-Aufrufe ab der
+    // ersten Erneuerung mit einem abgelaufenen JWT weiter.
+    //
+    // Im Admin-Panel war das ein F5 wert. Für MPSkills nicht mehr:
+    // die Beamer-Ansicht steht eine Doppelstunde offen, die
+    // Erneuerung kommt nach 60 Minuten — mitten im Unterricht, und
+    // niemand lädt einen Beamer neu, während die Klasse zusieht.
+    if (event === 'TOKEN_REFRESHED') {
+      window.__accessToken = authSession?.access_token ?? null;
+      console.log('[SESSION] TOKEN_REFRESHED → __accessToken aktualisiert.');
+      return;
+    }
     await applyAuthSession(authSession);
     if (event === 'SIGNED_IN' && authSession?.access_token) {
       touchLogin(authSession.access_token);  // fire-and-forget
