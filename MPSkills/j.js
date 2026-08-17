@@ -11,17 +11,30 @@
      room  — drin: wer ist da
      gone  — Raum weg, abgelaufen oder gelöscht
 
-   In dieser Ausbaustufe kann ein Raum genau eine Sache: zeigen,
-   wer da ist. Das Werkzeug selbst (Wortwolke, Abstimmung) kommt
-   in Stufe 4 und hängt sich dann in denselben Raum.
+   Seit Stufe 4 hängt im Zustand 'room' das WERKZEUG mit drin —
+   die Wolke, die Abstimmung, was auch immer der Raum führt. Diese
+   Datei weiß davon nichts weiter, als wo es hingehört und wann es
+   neue Daten bekommt: sie lädt das Modul über lib/tool.js, ruft
+   mount() einmal und update() bei jeder Änderung.
+
+   Die Aufteilung ist Absicht. Was hier steht (Beitritt, Token,
+   Poller, Fehlerbilder) gilt für JEDES Werkzeug und darf sich
+   nicht je Werkzeug wiederholen; was das Werkzeug tut, geht diese
+   Datei nichts an.
    ══════════════════════════════════════════════════════════════ */
 
 'use strict';
 
 const esc = (s) => (window.escapeHtml ? window.escapeHtml(s) : String(s ?? ''));
 const host = () => document.getElementById('joinHost');
+const toolHost = () => document.getElementById('toolHost');
 
 let poller = null;   // läuft nur im Zustand 'room'
+let tool   = null;   // geladenes Werkzeug-Modul, solange eines montiert ist
+// Das Laden ist asynchron, der Poller nicht: ohne diesen Riegel käme
+// der nächste Takt, während noch geladen wird, fände tool === null und
+// montierte ein zweites Mal — doppeltes DOM, doppelte Listener.
+let toolBusy = false;
 
 /* ─── Toast ───────────────────────────────────────────────── */
 let toastTimer = null;
@@ -51,6 +64,67 @@ const ERRORS = {
   server_misconfigured: 'Der Server ist nicht richtig eingerichtet. Bitte der Lehrkraft Bescheid sagen.'
 };
 const errText = (code) => ERRORS[code] || 'Etwas hat nicht geklappt. Bitte noch einmal versuchen.';
+
+/* ─── Werkzeug ────────────────────────────────────────────── */
+// Einmal montieren, danach nur noch füttern. Welches Werkzeug es ist,
+// steht im Raum — diese Datei kennt keinen einzigen Werkzeugnamen.
+async function mountTool(view, token) {
+  const id = view.room?.tool_id;
+  if (!id || tool || toolBusy) return;
+  toolBusy = true;
+
+  const box = toolHost();
+  box.hidden = false;
+  box.innerHTML = '<p class="booting">Werkzeug wird geladen …</p>';
+
+  let impl;
+  try {
+    impl = await window.MPTool.load(id, view.room.tool_folder);
+  } catch (e) {
+    // Kein Weltuntergang: der Raum funktioniert, die Teilnehmerliste
+    // steht, nur das Werkzeug fehlt. Also sagen, was los ist, statt die
+    // Seite abzuräumen.
+    console.error('[mpskills] Werkzeug laden:', e);
+    box.innerHTML = `<div class="card"><div class="msg msg--err">Dieses Werkzeug lässt sich gerade
+      nicht laden. Sag deiner Lehrkraft Bescheid.</div>
+      <button type="button" class="btn" onclick="location.reload()">Noch einmal</button></div>`;
+    return;
+  } finally {
+    toolBusy = false;
+  }
+
+  // Während geladen wurde, kann der Raum verlassen worden sein
+  // (Hash-Wechsel, „Raum entfernen"). Dann steht der Kasten schon
+  // leer da und darf nicht wieder gefüllt werden.
+  if (!toolHost() || toolHost().hidden) return;
+
+  const ctx = window.MPTool.makeCtx({
+    actions: window.MPTool.participantActions(token),
+    title:   view.room.title,
+    toast:   (m, err) => toast(m, err ? 'error' : ''),
+    // Nach einer eigenen Änderung nicht bis zum nächsten Takt warten:
+    // invalidate() vergisst die gemerkte Signatur, refresh() holt sofort.
+    refresh: () => { poller && poller.invalidate(); poller && poller.refresh(); }
+  });
+
+  box.innerHTML = '';
+  tool = impl;
+  // Ab jetzt gehört die Resthöhe dem Werkzeug und nicht mehr der
+  // Beitrittskarte darüber (siehe body.has-tool in style.css).
+  document.body.classList.add('has-tool');
+  tool.mount(box, ctx);
+  tool.update(view);
+}
+
+function unmountTool() {
+  if (tool) {
+    try { tool.unmount(); } catch (e) { console.warn('[mpskills] unmount:', e.message); }
+    tool = null;
+  }
+  document.body.classList.remove('has-tool');
+  const box = toolHost();
+  if (box) { box.innerHTML = ''; box.hidden = true; }
+}
 
 /* ─── Zustand: Code abtippen ──────────────────────────────── */
 // Sechs Einzelfelder statt eines langen: das ist auf einem Tablet
@@ -257,9 +331,15 @@ async function renderDoor(code) {
 /* ─── Zustand: im Raum ────────────────────────────────────── */
 function renderRoom(code, token) {
   if (poller) { poller.stop(); poller = null; }
+  unmountTool();
 
+  /* Die Raumkarte ist ab Stufe 4 nur noch die Kopfzeile: Titel,
+     Werkzeug, wer ich bin. Die Bühne gehört dem Werkzeug darunter.
+     Deshalb steht die Teilnehmerliste in einem zugeklappten Kasten —
+     „wer ist da" bleibt jederzeit erreichbar, nimmt aber der Wolke
+     nicht mehr den halben Bildschirm weg. */
   host().innerHTML = `
-    <div class="card card--room">
+    <div class="card card--room card--roomhead">
       <div class="room-head">
         <div>
           <div class="door-tool"><span class="door-ic" id="rTip">🧩</span><span id="rTool"></span></div>
@@ -270,17 +350,13 @@ function renderRoom(code, token) {
       <p class="join-sub" id="rMe"></p>
       <div class="msg msg--warn" id="rWarn" hidden></div>
 
-      <div class="soon" id="rSoon">
-        <strong>Du bist drin.</strong> Das Werkzeug selbst kommt in der nächsten
-        Ausbaustufe — bis dahin zeigt der Raum, wer da ist.
-      </div>
-
-      <h2 class="card-h">Wer ist da? <span class="card-h-note" id="rCount"></span></h2>
-      <ul class="people" id="rPeople"></ul>
-
-      <p class="join-foot">
-        <button type="button" class="btn--link" id="leaveBtn">Diesen Raum von diesem Gerät entfernen</button>
-      </p>
+      <details class="peoplebox">
+        <summary>Wer ist da? <span class="card-h-note" id="rCount"></span></summary>
+        <ul class="people" id="rPeople"></ul>
+        <p class="join-foot">
+          <button type="button" class="btn--link" id="leaveBtn">Diesen Raum von diesem Gerät entfernen</button>
+        </p>
+      </details>
     </div>`;
 
   document.getElementById('leaveBtn').addEventListener('click', () => {
@@ -288,6 +364,7 @@ function renderRoom(code, token) {
                + 'brauchst du den Code erneut. Fortfahren?')) return;
     MPRoom.forget(code);
     if (poller) { poller.stop(); poller = null; }
+    unmountTool();
     history.replaceState(null, '', location.pathname);
     renderAsk('');
     toast('Raum von diesem Gerät entfernt.');
@@ -296,13 +373,14 @@ function renderRoom(code, token) {
   poller = MPRoom.poll({
     sig:  () => MPRoom.sig(token),
     view: () => MPRoom.view(token),
-    onChange: paintRoom,
+    onChange: (data) => paintRoom(data, token),
     onError: (err) => {
       // 'room_gone' und 'unknown_token' sind keine Netzfehler,
       // sondern das Ende dieses Raums — mit einer klaren Meldung
       // statt eines stehengebliebenen Bildschirms.
       if (err === 'room_gone' || err === 'unknown_token') {
         if (poller) { poller.stop(); poller = null; }
+        unmountTool();
         MPRoom.forget(code);
         renderGone(err);
       }
@@ -312,7 +390,7 @@ function renderRoom(code, token) {
   });
 }
 
-function paintRoom(data) {
+function paintRoom(data, token) {
   const r = data.room, me = data.me;
   document.getElementById('rTitle').textContent = r.title;
   document.getElementById('rTool').textContent  = r.tool_title || '';
@@ -337,10 +415,16 @@ function paintRoom(data) {
       <span>${esc(p.name)}</span>
       ${p.is_me ? '<span class="person-tag">du</span>' : ''}
     </li>`).join('');
+
+  // Beim ersten Durchlauf montieren (vorher kennen wir das Werkzeug
+  // nicht), danach nur noch durchreichen.
+  if (!tool) mountTool(data, token);
+  else tool.update(data);
 }
 
 /* ─── Zustand: weg ────────────────────────────────────────── */
 function renderGone(reason) {
+  unmountTool();
   host().innerHTML = `
     <div class="card card--join">
       <h1 class="join-h">Der Raum ist zu Ende</h1>
@@ -359,6 +443,11 @@ function renderGone(reason) {
 // zweiter Platz). Sonst die Tür.
 async function route() {
   if (poller) { poller.stop(); poller = null; }
+  // Jeder Zustandswechsel außer „im Raum bleiben" nimmt das Werkzeug
+  // mit. renderRoom montiert es gleich wieder — auch das ist richtig:
+  // ein anderer Code ist ein anderer Raum und womöglich ein anderes
+  // Werkzeug.
+  unmountTool();
 
   const code = MPRoom.normalizeCode(location.hash.replace(/^#/, ''));
   if (!code) { renderAsk(''); return; }

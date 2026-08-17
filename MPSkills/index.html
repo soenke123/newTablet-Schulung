@@ -150,7 +150,12 @@
 <script src="../supabase-config.js"></script>
 <script src="../session.js?v=20260817"></script>
 <script src="lib/room.js?v=20260817"></script>
-<script src="tools.js?v=20260817"></script>
-<script src="app.js?v=20260817c"></script>
+<!-- Auf der Landing läuft kein Werkzeug. lib/tool.js wird trotzdem
+     geladen: der Testraum-Knopf holt sich damit die Vorgaben des
+     Werkzeugs (z. B. die Frage der Wortwolke), bevor er den Raum
+     anlegt — er tut es ja ohne Dialog. -->
+<script src="lib/tool.js?v=20260818"></script>
+<script src="tools.js?v=20260818"></script>
+<script src="app.js?v=20260818"></script>
 </body>
 </html>

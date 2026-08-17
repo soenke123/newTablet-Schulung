@@ -729,14 +729,9 @@ body.beamer #pagefoot { display: none; }
 }
 .beam-hint { margin: 12px 0 0; font-size: .87rem; color: var(--ink-faint); }
 
-.beam-foot {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  margin-top: 18px;
-}
 .beam-count { font-size: clamp(1rem, 2.2vw, 1.3rem); color: var(--ink-soft); }
 .beam-count strong { color: var(--ink); font-size: 1.35em; }
 .beam-count span { font-size: .8em; color: var(--ink-faint); margin-left: 6px; }
-.beam-foot .btn { margin-left: auto; }
 
 .namestrip {
   list-style: none; margin: 16px 0 0; padding: 0;
@@ -749,6 +744,74 @@ body.beamer #pagefoot { display: none; }
 }
 .chip--on { background: var(--surface); border-color: var(--accent); color: var(--ink); }
 .chip--wait { font-size: .9rem; font-style: italic; }
+
+/* ─── Inhaltsschicht (Stufe 4) ────────────────────────────────
+   Ab hier hat ein Raum einen Inhalt, und der bekommt die Bühne.
+   Alles Bisherige — Beitrittskarte, Teilnehmerliste, QR — rückt
+   dafür zusammen.
+
+   Was das Werkzeug SELBST mitbringt, steht nicht hier, sondern in
+   tools/<name>/tool.css. Diese Datei stellt nur den Kasten. */
+
+/* Schülerseite: der Kasten steht bewusst AUSSERHALB von
+   .wrap--narrow. Die Beitrittskarte darf schmal bleiben (sie ist ein
+   Formular), eine Wortwolke nicht — die braucht jeden Punkt Breite,
+   den das Gerät hergibt. */
+.toolhost {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 22px;
+}
+@media (max-width: 640px) { .toolhost { padding: 0 12px; } }
+
+/* Wer den Platz bekommt, wenn ein Werkzeug montiert ist.
+
+   .wrap trägt sonst flex: 1 und streckt sich über die ganze
+   Resthöhe — die Beitrittskarte stünde dann oben und das Werkzeug
+   ganz unten am Bildschirmrand. Mit Werkzeug dreht sich das um: die
+   Kopfzeile nimmt, was sie braucht, der Rest gehört dem Inhalt.
+   Die Klasse setzt j.js beim Montieren. */
+body.has-tool .wrap { flex: 0 0 auto; padding: 20px 22px 6px; }
+body.has-tool .toolhost { flex: 1 1 auto; }
+
+/* bd-fill setzt das Werkzeug, wenn seine Fläche bis an die untere
+   Bildschirmkante reicht. Dann darf darunter nichts mehr stehen —
+   der Fuß wandert erst in der Listenansicht zurück. */
+body.bd-fill #pagefoot { display: none; }
+
+/* Die Raumkarte ist jetzt nur noch Kopfzeile: wer bin ich, wo bin
+   ich, wie heißt der Raum. Deshalb schmaler und ohne den Abstand
+   nach unten, den eine Karte sonst hätte. */
+.card--roomhead { margin-bottom: 14px; }
+
+/* „Wer ist da" ist ab Stufe 4 eine Nebenfrage — die Hauptsache steht
+   darunter. Zugeklappt bleibt es jederzeit erreichbar, ohne der
+   Wolke den halben Bildschirm zu nehmen. */
+.peoplebox { margin-top: 10px; }
+.peoplebox > summary {
+  cursor: pointer; font-weight: 700; font-size: .9rem;
+  color: var(--ink-soft); padding: 4px 0;
+  list-style-position: inside;
+}
+.peoplebox > summary:hover { color: var(--ink); }
+.peoplebox > .people { margin-top: 10px; }
+
+/* Beamer: die Kopfzeile trägt jetzt auch die Zählung und die
+   Umschalter, damit darunter alles der Klasse gehört. */
+.beam-head__right {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.beam-head__right .btn { text-decoration: none; }
+
+/* Die Tür (QR + Code) klappt weg, sobald die Klasse drin ist — der
+   Umschalter sitzt in der Kopfzeile, siehe setDoor() in lehrer.js. */
+.beam-main { margin-bottom: 18px; }
+.beam-tool { min-height: 40px; }
+
+/* Mehr Breite als in Stufe 3: eine Wolke, die auf 1180 px gepackt
+   wird, verschenkt auf einem Beamer die Hälfte des Bildes. */
+body.beamer .wrap { max-width: 1500px; }
 
 @media (max-width: 560px) {
   .wrap { padding: 30px 16px 54px; }

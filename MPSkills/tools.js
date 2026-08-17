@@ -24,8 +24,9 @@
    ══════════════════════════════════════════════════════════════ */
 
 window.TOOLS_OVERLAY = {
-  // Stufe 4 — Engine aus „Warum Tablets?" wird portiert.
-  wordcloud: { ready: false },
+  // Stufe 4 — Engine aus „Warum Tablets?" portiert, liegt unter
+  // tools/wordcloud/ (tool.js + tool.css).
+  wordcloud: { ready: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   poll:      { ready: false }
 };

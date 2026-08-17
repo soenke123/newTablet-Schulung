@@ -20,14 +20,20 @@
   <span class="userpill" id="whoBar" hidden><strong id="whoName"></strong></span>
 </header>
 
-<main class="wrap wrap--narrow">
+<main class="wrap wrap--narrow" id="mainWrap">
   <!-- Alles Weitere kommt aus j.js: Code-Eingabe, Beitritt oder Raum. -->
   <div id="joinHost">
     <p class="booting">Einen Moment …</p>
   </div>
 </main>
 
-<footer class="foot">
+<!-- Das Werkzeug bekommt seinen eigenen Kasten, und zwar AUSSERHALB
+     von .wrap--narrow: die Wolke braucht die ganze Breite, die
+     Beitrittskarte darüber nicht. Leer und ausgeblendet, solange man
+     nicht in einem Raum ist. -->
+<div id="toolHost" class="toolhost" hidden></div>
+
+<footer class="foot" id="pagefoot">
   <a href="index.html">MPSkills</a>
   <span class="sep">·</span>
   Marion-Prahm-Schule
@@ -43,6 +49,7 @@
 <script src="../supabase-config.js"></script>
 <script src="../session.js?v=20260817"></script>
 <script src="lib/room.js?v=20260817"></script>
-<script src="j.js?v=20260817"></script>
+<script src="lib/tool.js?v=20260818"></script>
+<script src="j.js?v=20260818"></script>
 </body>
 </html>

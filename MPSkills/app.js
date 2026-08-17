@@ -170,6 +170,22 @@ function wireToolButtons() {
       const before = btn.textContent;
       btn.textContent = 'Einen Moment …';
       try {
+        /* Der Testraum entsteht ohne Dialog — also holt er sich die
+           Vorgaben des Werkzeugs selbst. Sonst stünde im Testraum
+           einer Wortwolke eine Wolke ohne Frage, und der Test zeigte
+           genau das nicht, was er zeigen soll.
+
+           Schlägt das Laden fehl, wird der Raum trotzdem angelegt:
+           ein Testraum mit Rückfall-Einstellungen ist besser als ein
+           Knopf, der nichts tut. */
+        let settings = {};
+        try {
+          const impl = await MPTool.load(tool, (window.__toolFolders || {})[tool]);
+          settings = MPTool.defaultSettings(impl);
+        } catch (e) {
+          console.warn('[mpskills] Vorgaben des Werkzeugs:', e.message);
+        }
+
         const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/skill_room_create`, {
           method: 'POST',
           headers: {
@@ -178,7 +194,7 @@ function wireToolButtons() {
             'Content-Type': 'application/json',
             Accept: 'application/json'
           },
-          body: JSON.stringify({ p_tool_id: tool, p_is_test: true })
+          body: JSON.stringify({ p_tool_id: tool, p_is_test: true, p_settings: settings })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const r = await res.json();
@@ -229,6 +245,12 @@ async function renderTools(mode) {
       <h2 class="tools-title">Werkzeuge <span class="tools-count">${tools.length}</span></h2>
       <div class="tile-grid">${tools.map(t => toolCard(t, mode)).join('')}</div>
     </div>`;
+
+  // Wo das Frontend eines Werkzeugs liegt. Braucht nur der
+  // Testraum-Knopf, um die Vorgaben des Werkzeugs zu holen — der
+  // Ordner steht neben der ID, damit ein Werkzeug umbenannt werden
+  // kann, ohne dass Räume ihre tool_id verlieren (0078).
+  window.__toolFolders = Object.fromEntries(tools.map(t => [t.id, t.folder]));
 
   if (mode === 'act') wireToolButtons();
 }

@@ -52,6 +52,12 @@
         <input type="text" id="newRoomTitle" maxlength="60" placeholder="9b Deutsch" required />
         <span class="rule">Nur für dich — damit du deine Räume auseinanderhältst.</span>
       </label>
+
+      <!-- Was das gewählte Werkzeug zusätzlich wissen will (bei der
+           Wortwolke: die Frage). Die Felder liefert das Werkzeug selbst
+           über settingsFields — lehrer.js sammelt sie nur ein und legt
+           sie als skill_rooms.settings ab. -->
+      <div id="newToolFields"></div>
       <label class="check">
         <input type="checkbox" id="newAskNames" checked />
         <span>
@@ -74,6 +80,7 @@
 <script src="../session.js?v=20260817"></script>
 <script src="lib/qr.js?v=20260817"></script>
 <script src="lib/room.js?v=20260817"></script>
-<script src="lehrer.js?v=20260817"></script>
+<script src="lib/tool.js?v=20260818"></script>
+<script src="lehrer.js?v=20260818"></script>
 </body>
 </html>

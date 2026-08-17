@@ -21,6 +21,10 @@
      · Der QR-Code wird genau einmal gezeichnet und nicht bei
        jedem Poll neu — er ändert sich nie, und ein flackernder
        QR-Code lässt sich nicht scannen.
+
+   Seit Stufe 4 hängt im Beamer das WERKZEUG mit drin. Diese Datei
+   weiß davon nur, wo es hingehört und wann es neue Daten bekommt;
+   was es tut, geht sie nichts an (siehe lib/tool.js).
    ══════════════════════════════════════════════════════════════ */
 
 'use strict';
@@ -30,6 +34,11 @@ const host = () => document.getElementById('lehrerHost');
 
 let poller  = null;
 let qrDrawn = null;   // für welchen Code der QR schon im DOM steht
+let tool    = null;   // geladenes Werkzeug-Modul, solange eines montiert ist
+// Das Laden ist asynchron, der Poller nicht: ohne diesen Riegel käme
+// der nächste Takt, während noch geladen wird, fände tool === null und
+// montierte ein zweites Mal — doppeltes DOM, doppelte Listener.
+let toolBusy = false;
 
 /* ─── Toast ───────────────────────────────────────────────── */
 let toastTimer = null;
@@ -80,8 +89,62 @@ const errText = (e, data) =>
 /* ══════════════════════════════════════════════════════════
    Liste
    ══════════════════════════════════════════════════════════ */
+/* ─── Werkzeug ────────────────────────────────────────────── */
+// Einmal montieren, danach nur noch füttern. Welches Werkzeug es ist,
+// steht im Raum — diese Datei kennt keinen einzigen Werkzeugnamen.
+async function mountTool(code, view) {
+  const id = view.room?.tool_id;
+  const box = document.getElementById('bTool');
+  if (!id || tool || toolBusy || !box) return;
+  toolBusy = true;
+
+  box.innerHTML = '<p class="booting">Werkzeug wird geladen …</p>';
+
+  let impl;
+  try {
+    impl = await MPTool.load(id, view.room.tool_folder);
+  } catch (e) {
+    // Der Raum funktioniert weiter: Code, QR und Teilnehmerliste
+    // stehen. Nur der Inhalt fehlt — also sagen, statt abzuräumen.
+    console.error('[mpskills] Werkzeug laden:', e);
+    box.innerHTML = `<div class="msg msg--err">Dieses Werkzeug lässt sich gerade nicht laden.
+      Der Raum und der Code funktionieren trotzdem.</div>`;
+    return;
+  } finally {
+    toolBusy = false;
+  }
+
+  // Während geladen wurde, kann die Ansicht gewechselt haben (zurück
+  // zur Raumliste, anderer Raum). Dann gibt es diesen Kasten nicht
+  // mehr, und montiert würde in ein Element außerhalb des Dokuments.
+  if (document.getElementById('bTool') !== box) return;
+
+  const ctx = MPTool.makeCtx({
+    // trpc statt einer festgehaltenen Kopie: der Access-Token wird bei
+    // JEDEM Aufruf frisch gelesen, sonst wäre er nach einer Stunde tot
+    // — und diese Ansicht steht eine Doppelstunde offen.
+    actions: MPTool.presenterActions(code, trpc),
+    title:   view.room.title,
+    toast:   (m, err) => toast(m, err ? 'error' : ''),
+    refresh: () => { poller && poller.invalidate(); poller && poller.refresh(); }
+  });
+
+  box.innerHTML = '';
+  tool = impl;
+  tool.mount(box, ctx);
+  tool.update(view);
+}
+
+function unmountTool() {
+  if (tool) {
+    try { tool.unmount(); } catch (e) { console.warn('[mpskills] unmount:', e.message); }
+    tool = null;
+  }
+}
+
 async function renderList() {
   if (poller) { poller.stop(); poller = null; }
+  unmountTool();
   qrDrawn = null;
   document.body.classList.remove('beamer');
   document.title = 'Meine Räume · MPSkills';
@@ -221,6 +284,61 @@ function wireRoomCards() {
 /* ══════════════════════════════════════════════════════════
    Neuer Raum
    ══════════════════════════════════════════════════════════ */
+/* Die zusätzlichen Felder des gewählten Werkzeugs.
+
+   Sie stehen NICHT in dieser Datei und nicht in der Datenbank,
+   sondern im Werkzeug selbst (settingsFields in tools/<x>/tool.js).
+   Der Grund ist derselbe wie bei allem anderen hier: was die Frage
+   einer Wortwolke ist, weiß die Wortwolke — und ein Dialog, der jede
+   Werkzeug-Eigenheit kennen müsste, wäre bei jedem neuen Werkzeug zu
+   ändern. Genau das soll ab Stufe 6 nicht mehr nötig sein.
+
+   Deshalb wird das Modul hier geladen, obwohl auf dieser Seite noch
+   gar nichts davon läuft. MPTool.load merkt sich, was schon da ist;
+   ein zweiter Aufruf kostet nichts. */
+async function renderToolFields(toolId) {
+  const box = document.getElementById('newToolFields');
+  const t   = (window.__tools || {})[toolId];
+  box.innerHTML = '';
+  if (!t) return;
+
+  let impl = null;
+  try {
+    impl = await MPTool.load(toolId, t.folder);
+  } catch (e) {
+    // Kein Grund, das Anlegen zu verhindern: der Raum entsteht auch
+    // ohne die Zusatzangaben, das Werkzeug fällt dann auf seine
+    // Vorgaben zurück. Aber sagen muss man es.
+    console.warn('[mpskills] settingsFields:', e.message);
+    box.innerHTML = `<p class="rule">Die Einstellungen dieses Werkzeugs lassen sich gerade nicht
+      laden — der Raum entsteht trotzdem.</p>`;
+    return;
+  }
+
+  // Das Auswahlfeld kann sich geändert haben, während geladen wurde.
+  if (document.getElementById('newTool').value !== toolId) return;
+
+  const fields = (impl && impl.settingsFields) || [];
+  box.innerHTML = fields.map(f => `
+    <label class="field">${esc(f.label)}
+      <input type="text" data-setting="${esc(f.key)}"
+             maxlength="${Number(f.maxlength) || 140}"
+             placeholder="${esc(f.placeholder || '')}"
+             value="${esc(f.default || '')}"
+             ${f.required ? 'required' : ''} />
+      ${f.hint ? `<span class="rule">${esc(f.hint)}</span>` : ''}
+    </label>`).join('');
+}
+
+function readToolSettings() {
+  const out = {};
+  document.querySelectorAll('#newToolFields [data-setting]').forEach(el => {
+    const v = String(el.value || '').trim();
+    if (v) out[el.dataset.setting] = v;
+  });
+  return out;
+}
+
 function openNew(preselect) {
   const sel = document.getElementById('newTool');
   const tools = window.__tools || {};
@@ -245,6 +363,7 @@ function openNew(preselect) {
   if (preselect) sel.value = preselect;
   document.getElementById('newSubmit').disabled = false;
   document.getElementById('newModal').hidden = false;
+  renderToolFields(sel.value);
   setTimeout(() => document.getElementById('newRoomTitle').focus(), 50);
 }
 
@@ -253,14 +372,28 @@ async function submitNew(e) {
   const errBox = document.getElementById('newError');
   const btn    = document.getElementById('newSubmit');
   errBox.hidden = true;
-  btn.disabled = true;
 
+  // Pflichtfelder des Werkzeugs. Der Server nimmt settings ungeprüft
+  // entgegen (er kennt die Bedeutung nicht), also ist das hier die
+  // einzige Stelle, an der eine fehlende Frage auffällt — und besser
+  // hier als am Beamer vor der Klasse.
+  const missing = [...document.querySelectorAll('#newToolFields [data-setting][required]')]
+    .find(el => !String(el.value || '').trim());
+  if (missing) {
+    errBox.textContent = 'Da fehlt noch etwas: ' +
+      (missing.closest('label')?.firstChild?.textContent || '').trim();
+    errBox.hidden = false;
+    missing.focus();
+    return;
+  }
+
+  btn.disabled = true;
   try {
     const r = await trpc('skill_room_create', {
       p_tool_id:   document.getElementById('newTool').value,
       p_title:     document.getElementById('newRoomTitle').value.trim(),
       p_ask_names: document.getElementById('newAskNames').checked,
-      p_settings:  {},
+      p_settings:  readToolSettings(),
       p_is_test:   false
     });
     if (!r.ok) {
@@ -283,8 +416,33 @@ async function submitNew(e) {
 /* ══════════════════════════════════════════════════════════
    Beamer-Ansicht
    ══════════════════════════════════════════════════════════ */
+/* Die Tür (QR + Code) soll die Bühne nicht dauerhaft besetzen, sobald
+   die Klasse drin ist — und sie muss trotzdem jederzeit
+   zurückkommen, wenn jemand zu spät kommt. Also ein Umschalter,
+   den die Lehrkraft bedient, und KEINE Automatik: ein Fenster, das
+   von selbst zuklappt, während noch jemand scannt, ist schlimmer als
+   eins, das zu lange offen steht.
+
+   Die Wahl liegt im sessionStorage und je Code: auf einem geteilten
+   Lehrer-Tablet soll sie mit dem Tab verschwinden. */
+const doorKey  = (code) => 'mpskills_door_' + code;
+const doorOpen = (code) => {
+  try { return sessionStorage.getItem(doorKey(code)) !== '0'; } catch (e) { return true; }
+};
+function setDoor(code, on) {
+  try { sessionStorage.setItem(doorKey(code), on ? '1' : '0'); } catch (e) {}
+  const main = document.getElementById('bDoor');
+  const btn  = document.getElementById('bDoorBtn');
+  if (main) main.hidden = !on;
+  if (btn)  btn.textContent = on ? 'Code ausblenden' : 'Code zeigen';
+  // Die Wolke rechnet ihre Höhe aus dem, was über ihr steht — klappt
+  // die Tür weg, hat sie plötzlich mehr Platz und muss neu einpassen.
+  window.dispatchEvent(new Event('resize'));
+}
+
 function renderBeamer(code) {
   if (poller) { poller.stop(); poller = null; }
+  unmountTool();
   qrDrawn = null;
   document.body.classList.add('beamer');
 
@@ -294,35 +452,36 @@ function renderBeamer(code) {
         <a class="btn btn--sm" href="lehrer.html" id="backBtn">‹ Meine Räume</a>
         <div class="beam-id">
           <strong id="bTitle">…</strong>
-          <span id="bTool"></span>
+          <span id="bToolName"></span>
         </div>
-        <button type="button" class="btn btn--sm" id="fsBtn">Vollbild</button>
+        <div class="beam-head__right">
+          <span class="beam-count">Drin: <strong id="bCount">–</strong> <span id="bOnline"></span></span>
+          <button type="button" class="btn btn--sm" id="bDoorBtn">Code ausblenden</button>
+          <button type="button" class="btn btn--sm" id="bToggle">…</button>
+          <button type="button" class="btn btn--sm" id="fsBtn">Vollbild</button>
+        </div>
       </div>
 
       <div class="msg msg--err" id="bErr" hidden></div>
 
-      <div class="beam-main">
+      <div class="beam-main" id="bDoor">
         <div class="beam-qr" id="bQr"><div class="qr-wait">QR wird erzeugt …</div></div>
         <div class="beam-code">
           <p class="beam-label">Code von der Tafel</p>
           <div class="bigcode" id="bCode">${esc(code)}</div>
           <p class="beam-url" id="bUrl"></p>
           <p class="beam-hint">Scannen — oder auf <strong>mpskills</strong> den Code eintippen.</p>
+          <ul class="namestrip" id="bNames"></ul>
         </div>
       </div>
 
-      <div class="beam-foot">
-        <div class="beam-count">
-          Drin: <strong id="bCount">–</strong>
-          <span id="bOnline"></span>
-        </div>
-        <button type="button" class="btn btn--sm" id="bToggle">…</button>
-      </div>
-
-      <ul class="namestrip" id="bNames"></ul>
+      <!-- Hier hängt sich das Werkzeug ein. -->
+      <div class="beam-tool" id="bTool"></div>
     </div>`;
 
   document.getElementById('fsBtn').addEventListener('click', toggleFullscreen);
+  document.getElementById('bDoorBtn').addEventListener('click', () => setDoor(code, !doorOpen(code)));
+  setDoor(code, doorOpen(code));
   document.getElementById('bToggle').addEventListener('click', async (ev) => {
     const btn = ev.currentTarget;
     const open = btn.dataset.open === '1';
@@ -346,6 +505,7 @@ function renderBeamer(code) {
     onError: (err) => {
       if (err === 'not_found') {
         if (poller) { poller.stop(); poller = null; }
+        unmountTool();
         host().innerHTML = `<div class="card"><div class="msg msg--err">Diesen Raum gibt es nicht
           (mehr) — oder er gehört nicht dir.</div>
           <p><a href="lehrer.html">Zurück zu meinen Räumen</a></p></div>`;
@@ -369,8 +529,8 @@ function paintBeamer(code, data) {
   const box = document.getElementById('bErr');
   if (box) box.hidden = true;
 
-  document.getElementById('bTitle').textContent = r.title;
-  document.getElementById('bTool').textContent  = (r.tool_icon || '') + ' ' + (r.tool_title || '');
+  document.getElementById('bTitle').textContent    = r.title;
+  document.getElementById('bToolName').textContent = (r.tool_icon || '') + ' ' + (r.tool_title || '');
   document.title = r.title + ' · MPSkills';
 
   const url = MPRoom.joinUrl(code);
@@ -408,6 +568,11 @@ function paintBeamer(code, data) {
   document.getElementById('bNames').innerHTML = people.map(p => `
     <li class="chip${p.online ? ' chip--on' : ''}">${esc(p.name)}</li>`).join('')
     || '<li class="chip chip--wait">Noch niemand da — der Code steht bereit.</li>';
+
+  // Beim ersten Durchlauf montieren (vorher kennen wir das Werkzeug
+  // nicht), danach nur noch durchreichen.
+  if (!tool) mountTool(code, data);
+  else tool.update(data);
 }
 
 function toggleFullscreen() {
@@ -431,6 +596,9 @@ function route() {
 document.getElementById('newClose').addEventListener('click',
   () => { document.getElementById('newModal').hidden = true; });
 document.getElementById('newForm').addEventListener('submit', submitNew);
+// Anderes Werkzeug = andere Zusatzfelder.
+document.getElementById('newTool').addEventListener('change',
+  (ev) => renderToolFields(ev.target.value));
 document.getElementById('newModal').addEventListener('click', (e) => {
   if (e.target.id === 'newModal') document.getElementById('newModal').hidden = true;
 });
