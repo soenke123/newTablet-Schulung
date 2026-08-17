@@ -175,6 +175,24 @@ function showHubToast(msg) {
    ───────────────────────────────────────────────── */
 // Atari4 · Enter 9-0-4-3
 const GAMES_CONFIG = [
+  // Steht bewusst ganz vorn: die Wortwolke ist der Einstieg einer
+  // Schulung — erst die eigene Frage („warum überhaupt?"), dann die
+  // Spiele. Die Reihenfolge dieses Arrays IST die Reihenfolge der
+  // Kacheln im Hub (renderHub filtert nur nach Season).
+  //
+  // Die zweite collab-Kachel und die erste in Season 1: eine Wortwolke
+  // zu genau einer Frage („Warum wollt ihr ein Tablet in der Schule
+  // nutzen?"), zwei Phasen, zehn Zettel pro Kopf. Abgeleitet von
+  // Reality Check, aber viel kleiner — keine Bereiche, keine
+  // Recherchen, kein Wachstum. Eigene Server-Schicht (wc_*, Migration
+  // 0075), damit die Tabellen des laufenden Boards nicht angefasst
+  // werden mussten.
+  // Das Monster hängt an EINEM Phasenwechsel der Lehrkraft: Sammeln
+  // beendet ⇒ es schlüpft. Jeder im Kurs bekommt dasselbe (Schnecke
+  // oder Fisch, 10 Münzen) — das hier ist der Einstieg einer Schulung
+  // und keine Leistungsmessung. Freilassen gibt es wie bei game19
+  // nicht: der Auslöser kommt genau einmal.
+  { id: 'game20', season: 1, title: 'Warum Tablets?',      icon: '💭', url: 'S1 wieso weshalb warum/index.html', collab: true },
   { id: 'game7', season: 1, title: 'Escape the Rules', icon: '🔐', url: 'S1 EscapeGame/index.html'       },
   { id: 'game3', season: 1, title: 'Daten-Quiz',       icon: '📁', url: 'S1 DateiformatQuiz/index.html'  },
   { id: 'game8', season: 1, title: 'Projekt_FINAL_v7_NEU',  icon: '🗂️', url: 'S1 Projekt_FINAL_v7_NEU/index.html'       },
@@ -207,19 +225,6 @@ const GAMES_CONFIG = [
   // zeigt nur. Freilassen gibt es hier deshalb nicht: der Auslöser
   // kommt genau einmal und lässt sich nicht nachspielen.
   { id: 'game19', season: 3, title: 'Reality Check',       icon: '🧭', url: 'S3 Zukunftsboard/index.html', collab: true },
-  // Die zweite collab-Kachel und die erste in Season 1: eine Wortwolke
-  // zu genau einer Frage („Warum wollt ihr ein Tablet in der Schule
-  // nutzen?"), zwei Phasen, zehn Zettel pro Kopf. Abgeleitet von
-  // Reality Check, aber viel kleiner — keine Bereiche, keine
-  // Recherchen, kein Wachstum. Eigene Server-Schicht (wc_*, Migration
-  // 0075), damit die Tabellen des laufenden Boards nicht angefasst
-  // werden mussten.
-  // Das Monster hängt an EINEM Phasenwechsel der Lehrkraft: Sammeln
-  // beendet ⇒ es schlüpft. Jeder im Kurs bekommt dasselbe (Schnecke
-  // oder Fisch, 10 Münzen) — das hier ist der Einstieg einer Schulung
-  // und keine Leistungsmessung. Freilassen gibt es wie bei game19
-  // nicht: der Auslöser kommt genau einmal.
-  { id: 'game20', season: 1, title: 'Warum Tablets?',      icon: '💭', url: 'S1 wieso weshalb warum/index.html', collab: true },
 ];
 
 // „Kachel ohne Runden": Startup Story (standalone) und Reality Check
