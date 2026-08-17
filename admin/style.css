@@ -942,3 +942,13 @@ html, body {
   from { opacity: 0; transform: translate(-50%, -10px); }
   to   { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ─── MPSkills-Räume (Stufe 7) ────────────────────────────────
+   Nur ein paar Kleinigkeiten: die Tabelle nutzt sonst durchgehend
+   die vorhandenen .dtable/.badge-Regeln. */
+.hint { color: var(--a-muted); font-size: 0.85em; }
+#skillRoomTable code {
+  background: rgba(0,0,0,0.25); border-radius: 4px;
+  padding: 1px 6px; letter-spacing: 0.08em; font-size: 0.86em;
+}
+#skillRoomSummary { margin-top: 10px; }

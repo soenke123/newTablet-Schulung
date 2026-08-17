@@ -173,6 +173,7 @@ function validateClusterWindow(opensAt, closesAt) {
   wireMoveSchoolModal();
   wireAdminsTab();
   wireTeachersTab();
+  wireSkillRoomsTab();
 
   await initSchoolSwitcher();  // lädt alle Schulen (nur Volladmin) und rendert Header-Label
 
@@ -215,7 +216,7 @@ function wireUserMenu() {
 }
 
 // ─── Tabs ────────────────────────────────────────────────────
-const TAB_PANELS = ['dashboard', 'clusters', 'users', 'teachers', 'admins'];
+const TAB_PANELS = ['dashboard', 'clusters', 'users', 'teachers', 'skillrooms', 'admins'];
 
 function wireTabs() {
   document.querySelectorAll('.tab').forEach(tab => {
@@ -236,6 +237,9 @@ function wireTabs() {
       }
       if (target === 'teachers') {
         loadTeachers();
+      }
+      if (target === 'skillrooms') {
+        loadSkillRooms();
       }
     });
   });
@@ -2754,9 +2758,15 @@ async function switchSchool(newSchoolId) {
   progressLoaded = false;
   startupLoaded  = false;
   dashboardLoaded = false;
+  // Die Raumübersicht hängt am Schul-Kontext (skill_rooms_overview
+  // bekommt currentSchoolId). Nur den Cache leeren und nicht neu
+  // laden: der Reiter ist meist gar nicht offen, und beim Öffnen holt
+  // er sich die Daten selbst.
+  skillRoomCache = [];
 
   await loadClusters();
   await loadUsers();
+  if (!document.getElementById('panel-skillrooms')?.hidden) loadSkillRooms();
   loadDashboard(currentSchoolId);  // fire-and-forget
   showToast(`Kontext: ${document.getElementById('schoolSwitcherLabel').textContent}`);
 }
@@ -3259,5 +3269,140 @@ async function setTeacherStatus(userId, status) {
     showToast(msg);
   } catch (err) {
     showToast('Änderung fehlgeschlagen: ' + err.message, 'error');
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   MPSkills-Räume (Migration 0082)
+   ══════════════════════════════════════════════════════════════
+   Die einzige Stelle im Panel, an der man sieht, was in MPSkills
+   gerade läuft — bisher sah jede Lehrkraft nur ihre eigenen Räume.
+
+   NUR LESEND, und das ist Absicht. Ein Raum ist Unterricht; wer ihn
+   löscht, löscht die Arbeit einer Klasse, und das darf nur, wer sie
+   kennt. Verwaiste Räume räumen sich seit Migration 0081 nach 60
+   Tagen Ruhe von selbst weg — es gibt hier also gar kein
+   Aufräum-Problem, das ein Knopf lösen müsste.
+
+   Teilnehmer-NAMEN liefert der RPC bewusst nicht mit, nur ihre
+   Anzahl: eine Übersicht beantwortet „was läuft hier", nicht „wer
+   sitzt da". Je weniger Stellen Klarnamen von Minderjährigen
+   ausliefern, desto besser.
+   ══════════════════════════════════════════════════════════════ */
+
+let skillRoomCache = [];
+
+function wireSkillRoomsTab() {
+  document.getElementById('skillRoomFilter')?.addEventListener('change', renderSkillRooms);
+  document.getElementById('skillRoomSearch')?.addEventListener('input', renderSkillRooms);
+  document.getElementById('skillRoomReload')?.addEventListener('click', loadSkillRooms);
+}
+
+async function loadSkillRooms() {
+  const tbody = document.getElementById('skillRoomTbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Lade …</td></tr>';
+
+  try {
+    // Volladmin: die Schule des Umschalters, null = alle. Für einen
+    // Schuladmin ist der Parameter wirkungslos, der RPC setzt seine
+    // eigene Schule ein.
+    const res = await api('POST', 'rpc/skill_rooms_overview',
+      { p_school: isVolladmin ? (currentSchoolId || null) : null });
+
+    if (!res || res.ok !== true) {
+      // Häufigster Fall beim Ausrollen: Migration 0082 ist noch nicht
+      // gelaufen. Die technische Ursache steht dabei — dieses Panel
+      // sehen ohnehin nur Admins.
+      tbody.innerHTML = `<tr><td colspan="7" class="empty">Nicht verfügbar`
+        + `${res?.error ? ' (' + escapeHtml(res.error) + ')' : ''}.</td></tr>`;
+      return;
+    }
+    skillRoomCache = res.rooms || [];
+    renderSkillRooms();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Fehler: ${escapeHtml(err.message)}`
+      + `<br><span class="hint">Läuft Migration 0082 schon?</span></td></tr>`;
+  }
+}
+
+function renderSkillRooms() {
+  const tbody = document.getElementById('skillRoomTbody');
+  const thead = document.getElementById('skillRoomThead');
+  const sum   = document.getElementById('skillRoomSummary');
+  if (!tbody || !thead) return;
+
+  const mode = document.getElementById('skillRoomFilter')?.value || 'live';
+  const q    = (document.getElementById('skillRoomSearch')?.value || '').trim().toLowerCase();
+
+  let rows = skillRoomCache.filter(r => {
+    if (mode === 'live') return !r.expired && !r.is_test;
+    if (mode === 'test') return r.is_test;
+    return true;
+  });
+
+  if (q) {
+    rows = rows.filter(r =>
+      [r.title, r.code, r.owner, r.tool_title, r.school_name]
+        .some(v => String(v || '').toLowerCase().includes(q)));
+  }
+
+  // Schul-Spalte nur für den Volladmin: für einen Schuladmin stünde in
+  // jeder Zeile derselbe Wert. Gleiche Überlegung wie im Lehrkräfte-Tab.
+  const showSchool = isVolladmin;
+  thead.innerHTML = `<tr>
+      <th>Raum</th>
+      <th>Werkzeug</th>
+      <th>Lehrkraft</th>
+      ${showSchool ? '<th>Schule</th>' : ''}
+      <th>Drin</th>
+      <th>Beiträge</th>
+      <th>Zuletzt aktiv</th>
+      <th>Läuft ab</th>
+    </tr>`;
+
+  const cols = showSchool ? 8 : 7;
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="${cols}" class="empty">`
+      + (skillRoomCache.length ? 'Nichts gefunden.' : 'Noch keine Räume.')
+      + '</td></tr>';
+  } else {
+    tbody.innerHTML = rows.map(r => {
+      // Der Code steht dabei, weil er das ist, woran eine Lehrkraft
+      // ihren Raum erkennt — er ist kein Geheimnis, er hängt an der
+      // Tafel. Wer damit beitreten wollte, säße als Teilnehmer in einer
+      // fremden Klasse; dagegen hilft „Beitritt schließen", nicht das
+      // Verstecken hier.
+      const tags = [
+        r.is_test   ? '<span class="badge">Test</span>'            : '',
+        r.expired   ? '<span class="badge closed">abgelaufen</span>' : '',
+        !r.join_open ? '<span class="badge pending">Beitritt zu</span>' : '',
+        !r.ask_names ? '<span class="badge">anonym</span>'          : '',
+        r.blocked    ? `<span class="badge closed">${r.blocked} gesperrt</span>` : ''
+      ].filter(Boolean).join(' ');
+
+      return `<tr>
+        <td><strong>${escapeHtml(r.title)}</strong><br>
+            <code>${escapeHtml(r.code)}</code> ${tags}</td>
+        <td>${escapeHtml(r.tool_icon || '')} ${escapeHtml(r.tool_title || r.tool_id)}</td>
+        <td>${escapeHtml(r.owner || '—')}</td>
+        ${showSchool ? `<td>${escapeHtml(r.school_name || '—')}</td>` : ''}
+        <td>${r.people}${r.online ? ` <span class="hint">(${r.online} jetzt)</span>` : ''}</td>
+        <td>${r.entries}</td>
+        <td>${escapeHtml(fmtRelative(r.last_active_at))}</td>
+        <td>${escapeHtml(r.expired ? 'abgelaufen' : fmtDT(r.expires_at))}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  if (sum) {
+    const live = skillRoomCache.filter(r => !r.expired && !r.is_test).length;
+    const ppl  = skillRoomCache.filter(r => !r.expired && !r.is_test)
+                               .reduce((n, r) => n + (r.people || 0), 0);
+    sum.textContent = `${live} laufende ${live === 1 ? 'Raum' : 'Räume'} · `
+      + `${ppl} ${ppl === 1 ? 'Teilnehmer' : 'Teilnehmer'} · `
+      + `${skillRoomCache.length} insgesamt (mit Testräumen und abgelaufenen).`;
   }
 }

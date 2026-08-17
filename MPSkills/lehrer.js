@@ -566,13 +566,15 @@ function renderBeamer(code) {
       }
       // Netzfehler: die Anzeige bleibt stehen. Ein leerer Beamer
       // mitten in der Stunde wäre schlimmer als ein Bild, das ein
-      // paar Sekunden alt ist.
+      // paar Sekunden alt ist. Die Leiste oben sagt, dass es hakt —
+      // hier steht nur, was es für DIESE Ansicht bedeutet.
       const box = document.getElementById('bErr');
       if (box) {
         box.textContent = 'Keine Verbindung — die Anzeige ist vielleicht nicht aktuell.';
         box.hidden = false;
       }
-    }
+    },
+    onNet: MPRoom.showNet
   });
 }
 

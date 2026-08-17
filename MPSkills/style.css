@@ -813,6 +813,59 @@ body.bd-fill #pagefoot { display: none; }
    wird, verschenkt auf einem Beamer die Hälfte des Bildes. */
 body.beamer .wrap { max-width: 1500px; }
 
+/* ─── Datenschutz-Absatz (Stufe 7) ────────────────────────────
+   Ruhig gehalten und nicht als Warnung gesetzt: es ist eine
+   Auskunft, keine Einwilligung, die man wegklicken müsste. */
+.privacy {
+  margin-top: 46px; padding-top: 26px;
+  border-top: 1px solid var(--line);
+}
+.privacy h2 { font-size: 1.15rem; margin: 0 0 4px; }
+.privacy h3 {
+  font-size: .82rem; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--accent); margin: 18px 0 6px;
+}
+.privacy h3:first-child { margin-top: 12px; }
+.privacy p {
+  margin: 0 0 10px; font-size: .9rem; color: var(--ink-soft); max-width: 60ch;
+}
+.privacy-grid { display: grid; gap: 8px 42px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+
+/* Am Beitritt: kurz, direkt über dem Knopf, der den Namen abschickt. */
+.privacy-note {
+  margin-top: 14px; font-size: .78rem; line-height: 1.5;
+  color: var(--ink-faint);
+}
+.privacy-note a { color: var(--ink-soft); }
+
+/* ─── Verbindungs-Leiste (Stufe 7) ────────────────────────────
+   Fällt das Netz aus, bleibt die Seite stehen und sagt es. Oben
+   und über allem, weil sie für JEDE Ansicht gilt — auch für den
+   Beamer, bei dem die halbe Klasse zuschaut und niemand versteht,
+   warum nichts mehr dazukommt.
+
+   Ganz bewusst keine Modal-Sperre: was dasteht, bleibt lesbar und
+   bedienbar. Was man in der Zeit tippt, geht beim Speichern in eine
+   Fehlermeldung — der Text bleibt dabei im Formular stehen. */
+.netbar {
+  position: fixed; inset: 0 0 auto 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 9px 16px;
+  background: var(--warn); color: #fff;
+  font-size: .88rem; font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(23,33,43,.25);
+}
+.netbar-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex: none;
+  background: #fff; opacity: .85;
+  animation: netbar-pulse 1.4s ease-in-out infinite;
+}
+@keyframes netbar-pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) {
+  .netbar-dot { animation: none; }
+}
+
 /* ─── Moderation (Stufe 5) ────────────────────────────────────
    Stilllegen ist der einzige Knopf hier, der jemandem etwas
    wegnimmt. Er sitzt deshalb zugeklappt und nicht neben den

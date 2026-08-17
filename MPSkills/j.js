@@ -278,6 +278,17 @@ async function renderDoor(code) {
             einzutragen.</p>`}
           <button type="submit" class="btn btn--primary btn--wide" id="joinGo">Mitmachen</button>
         </form>
+        <!-- Der Hinweis steht VOR dem Beitritt, nicht irgendwo im Fuß:
+             wer gleich seinen Namen eintippt, soll in dem Moment wissen,
+             wer ihn sieht und wie lange er bleibt. Kurz, mit dem
+             Ausführlichen einen Klick entfernt. -->
+        <p class="privacy-note">
+          ${info.ask_names
+            ? 'Dein Name und was du schreibst sind für alle im Raum sichtbar.'
+            : 'Dieser Raum ist anonym — du heißt hier nur „Tablet …".'}
+          Nach 60 Tagen ohne Aktivität wird alles automatisch gelöscht.
+          <a href="index.html#privacy">Mehr dazu</a>
+        </p>
       `}
       <p class="join-foot"><button type="button" class="btn--link" id="otherCode">Anderen Code eingeben</button></p>
     </div>`;
@@ -416,8 +427,10 @@ function renderRoom(code, token) {
       // weiter, damit das Aufheben von selbst ankommt.
       if (err === 'blocked') { showBlocked(); return; }
       // Alles andere ist mit hoher Wahrscheinlichkeit das WLAN.
-      // Der Poller versucht es in drei Sekunden von selbst wieder.
-    }
+      // Der Poller versucht es in drei Sekunden von selbst wieder und
+      // meldet sich über onNet, wenn es länger dauert.
+    },
+    onNet: MPRoom.showNet
   });
 }
 

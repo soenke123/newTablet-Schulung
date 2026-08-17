@@ -122,18 +122,42 @@
   const view = (token) => rpc('skill_view', { p_token: token });
   const sig  = (token) => rpc('skill_sig',  { p_token: token });
 
-  /* ─── Poller ────────────────────────────────────────────── */
-  // opts: { sig(), view(), onChange(data), onError(err), interval }
-  //
-  // Ruht, solange der Reiter im Hintergrund ist, und holt beim
-  // Zurückkommen sofort nach: ein zugeklapptes Tablet muss den
-  // Server nicht alle drei Sekunden fragen, und beim Aufklappen
-  // will niemand drei Sekunden auf den aktuellen Stand warten.
+  /* ─── Poller ────────────────────────────────────────────────
+     opts: { sig(), view(), onChange(data), onError(err), onNet(state), interval }
+
+     Ruht, solange der Reiter im Hintergrund ist, und holt beim
+     Zurückkommen sofort nach: ein zugeklapptes Tablet muss den
+     Server nicht alle drei Sekunden fragen, und beim Aufklappen
+     will niemand drei Sekunden auf den aktuellen Stand warten.
+
+     ── Verbindungsabbruch ──────────────────────────────────────
+     Das Schulnetz fällt aus, das WLAN wechselt den Accesspoint,
+     jemand geht mit dem Tablet um die Ecke. Dafür meldet der Poller
+     'offline' und später wieder 'online' — getrennt von onError,
+     weil das kein Fehler EINES Aufrufs ist, sondern ein Zustand.
+
+     ZWEI aufeinanderfolgende Fehlversuche, nicht einer: ein
+     einzelner Aussetzer ist im Schulnetz normal, und eine Warnung,
+     die im Sekundentakt auf- und zugeht, liest bald niemand mehr.
+     Sagt der Browser selbst, dass er offline ist (navigator.onLine),
+     gilt das dagegen sofort — dann ist es kein Aussetzer.
+
+     Der Poller läuft im Abbruch WEITER. Das ist der Punkt: die
+     Rückkehr soll von selbst ankommen und kein Neuladen verlangen —
+     eine Beamer-Ansicht lädt mitten in der Stunde niemand neu.     */
   function poll(opts) {
     let timer   = null;
     let stopped = false;
     let last    = null;
     let busy    = false;
+    let fails   = 0;
+    let offline = false;
+
+    function setNet(down) {
+      if (down === offline) return;
+      offline = down;
+      opts.onNet && opts.onNet(down ? 'offline' : 'online');
+    }
 
     async function tick(force) {
       if (stopped || busy) return;
@@ -143,9 +167,13 @@
         const s = await opts.sig();
         if (stopped) return;
         if (!s || s.ok !== true) {
+          // Der Server hat geantwortet — die Verbindung steht also,
+          // auch wenn die Antwort ein Nein ist.
+          fails = 0; setNet(false);
           opts.onError && opts.onError(s && s.error ? s.error : 'sig_failed');
           return;
         }
+        fails = 0; setNet(false);
         if (s.sig === last && !force) return;
         const full = await opts.view();
         if (stopped) return;
@@ -156,6 +184,10 @@
         last = s.sig;
         opts.onChange && opts.onChange(full);
       } catch (e) {
+        // Hier landen Netzfehler UND HTTP-Fehler (siehe rpc()). Beides
+        // heißt für den Benutzer dasselbe: gerade kommt nichts durch.
+        fails++;
+        if (fails >= 2) setNet(true);
         opts.onError && opts.onError(e.message || 'network');
       } finally {
         busy = false;
@@ -163,7 +195,15 @@
     }
 
     function onVisible() { if (!document.hidden) tick(true); }
+    // Der Browser weiß es oft früher als der nächste fehlgeschlagene
+    // Aufruf — und beim Zurückkommen soll nicht bis zum nächsten Takt
+    // gewartet werden.
+    function onOffline() { fails = 2; setNet(true); }
+    function onOnline()  { fails = 0; tick(true); }
+
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('online',  onOnline);
 
     timer = setInterval(() => tick(false), opts.interval || POLL_MS);
     tick(true);
@@ -173,12 +213,46 @@
       // Nach einer eigenen Änderung: die gemerkte Signatur
       // vergessen, damit der nächste Durchlauf sicher neu lädt.
       invalidate: () => { last = null; },
+      isOffline: () => offline,
       stop: () => {
         stopped = true;
         clearInterval(timer);
         document.removeEventListener('visibilitychange', onVisible);
+        window.removeEventListener('offline', onOffline);
+        window.removeEventListener('online',  onOnline);
+        // Die Leiste gehört dem laufenden Poller: wer stoppt, räumt sie
+        // ab, sonst bliebe sie über einer Seite stehen, die gar nicht
+        // mehr fragt.
+        if (offline) { offline = false; opts.onNet && opts.onNet('online'); }
       }
     };
+  }
+
+  /* ─── Verbindungs-Leiste ────────────────────────────────────
+     Eine Zeile am oberen Rand, gemeinsam für Schüler- und
+     Lehrerseite — derselbe Zustand soll überall gleich aussehen.
+
+     Sie räumt die Seite ABSICHTLICH nicht ab: was zuletzt da war,
+     bleibt stehen. Ein leerer Beamer mitten in der Stunde ist
+     schlimmer als ein Bild, das ein paar Sekunden alt ist, und ein
+     Schüler soll seinen halb getippten Zettel nicht verlieren, weil
+     das WLAN kurz gehustet hat. */
+  function showNet(state) {
+    let bar = document.getElementById('netbar');
+    if (state !== 'offline') {
+      if (bar) bar.remove();
+      return;
+    }
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'netbar';
+      bar.className = 'netbar';
+      bar.setAttribute('role', 'status');
+      bar.innerHTML = '<span class="netbar-dot" aria-hidden="true"></span>'
+        + 'Keine Verbindung — angezeigt wird der letzte Stand. '
+        + 'Es geht von selbst weiter, sobald das Netz zurück ist.';
+      document.body.appendChild(bar);
+    }
   }
 
   /* ─── Kleinkram ─────────────────────────────────────────── */
@@ -217,7 +291,7 @@
 
   window.MPRoom = {
     list, get, remember, forget,
-    rpc, peek, join, view, sig, poll,
+    rpc, peek, join, view, sig, poll, showNet,
     normalizeCode, isCode, joinUrl, untilText,
     CODE_RE, POLL_MS
   };

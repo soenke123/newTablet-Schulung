@@ -6,7 +6,7 @@
   <title>Admin · Lernwelt</title>
   <link rel="icon" type="image/png" sizes="64x64" href="../icons/favicon-64.png" />
   <link rel="icon" type="image/png" sizes="256x256" href="../icons/favicon-256.png" />
-  <link rel="stylesheet" href="style.css?v=20260816b" />
+  <link rel="stylesheet" href="style.css?v=20260818" />
 </head>
 <body>
   <div id="bootMask" class="boot-mask">Lade …</div>
@@ -48,6 +48,7 @@
     <button type="button" class="tab" data-tab="clusters">Cluster (Kurs)</button>
     <button type="button" class="tab" data-tab="users">User</button>
     <button type="button" class="tab" data-tab="teachers">Lehrkräfte</button>
+    <button type="button" class="tab" data-tab="skillrooms">MPSkills-Räume</button>
     <button type="button" class="tab" data-tab="admins" id="tabAdmins" hidden>Admins (alle Schulen)</button>
   </nav>
 
@@ -257,6 +258,51 @@
             </thead>
             <tbody id="teacherTbody">
               <tr><td colspan="6" class="empty">Lade …</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── MPSkills-Räume ────────────────────────────────────
+         Nur lesend, mit Absicht: ein Raum ist Unterricht, und wer
+         ihn löscht, löscht die Arbeit einer Klasse — das darf nur,
+         wer sie kennt. Verwaiste Räume räumen sich seit Migration
+         0081 nach 60 Tagen Ruhe von selbst weg. -->
+    <section class="panel" id="panel-skillrooms" hidden>
+      <div class="panel-head">
+        <h2>Räume <span style="color:var(--a-muted);font-weight:400;font-size:0.7em">(MPSkills)</span></h2>
+        <p class="panel-sub">
+          Was gerade läuft. <strong>Nur zum Ansehen</strong> — verwaltet wird ein Raum von der
+          Lehrkraft, der er gehört. Ohne Aktivität verschwindet er nach 60 Tagen von selbst,
+          samt Teilnehmern und Beiträgen.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="filter-row">
+          <label>Zeigen
+            <select id="skillRoomFilter">
+              <option value="live" selected>Laufende</option>
+              <option value="all">Alle (inkl. abgelaufen &amp; Testräume)</option>
+              <option value="test">Nur Testräume</option>
+            </select>
+          </label>
+          <label>Suche
+            <input type="search" id="skillRoomSearch" placeholder="Titel, Code, Lehrkraft, Werkzeug" />
+          </label>
+          <button type="button" class="btn" id="skillRoomReload">Neu laden</button>
+        </div>
+
+        <p class="panel-sub" id="skillRoomSummary"></p>
+
+        <div class="table-wrap">
+          <table class="dtable" id="skillRoomTable">
+            <thead id="skillRoomThead">
+              <!-- Schul-Spalte nur für Volladmin — dynamisch gerendert -->
+            </thead>
+            <tbody id="skillRoomTbody">
+              <tr><td colspan="7" class="empty">Lade …</td></tr>
             </tbody>
           </table>
         </div>
@@ -476,6 +522,6 @@
   <script src="../supabase-config.js?v=20260723"></script>
   <script src="../session.js?v=20260811"></script>
   <script src="../avatars.js?v=20260721"></script>
-  <script src="app.js?v=20260816b"></script>
+  <script src="app.js?v=20260818"></script>
 </body>
 </html>
