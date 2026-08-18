@@ -266,7 +266,7 @@ body {
   text-decoration: none;
   color: var(--chrome-ink);
 }
-.wordmark span { color: var(--chrome-accent); }
+.wordmark-text span { color: var(--chrome-accent); }
 .wordmark-logo {
   height: 28px;
   width: auto;
