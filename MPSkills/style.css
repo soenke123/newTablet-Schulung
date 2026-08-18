@@ -397,6 +397,7 @@ body {
 
 .pane-foot { margin: 14px 0 0; font-size: .86rem; }
 .pane-foot a { color: var(--accent-ink); }
+.pane-foot--warn { color: var(--warn); }
 
 /* ─── Werkzeug-Kacheln ────────────────────────────────── */
 .tools { margin-top: 40px; }
@@ -751,13 +752,24 @@ label.field .rule {
   font-weight: 700; opacity: .7;
 }
 
+/* ─── Raumlisten ──────────────────────────────────────────────
+   Zweimal dieselbe Liste mit verschiedenen Enden: auf j.html die
+   Räume dieses Geräts, mit dem Code am Rand — dort ist er die
+   Wiedererkennung. Auf der Landing die eigenen Räume der
+   Lehrkraft, mit den drei Punkten am Rand statt des Codes; der
+   Code steht dort eine Ebene tiefer, an der Tafel.
+
+   Die Trennlinie liegt am <li> und nicht am Link darin: in der
+   Lehrer-Fassung steht rechts vom Link noch das Menü, und eine
+   Linie, die davor aufhört, sähe kaputt aus. */
 .roomlist { list-style: none; margin: 0; padding: 0; }
+.roomlist > li { border-bottom: 1px solid var(--line-soft); }
+.roomlist > li:last-child { border-bottom: none; }
 .roomlist-a {
   display: flex; align-items: center; gap: 12px;
   padding: 11px 4px; text-decoration: none; color: var(--ink);
-  border-bottom: 1px solid var(--line-soft);
+  border-radius: 8px;
 }
-.roomlist li:last-child .roomlist-a { border-bottom: none; }
 .roomlist-a:hover { background: var(--paper); }
 .roomlist-ic { font-size: 1.35rem; flex: none; }
 .roomlist-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -768,54 +780,50 @@ label.field .rule {
   color: var(--ink-faint); flex: none;
 }
 
-/* ─── Raumliste der Lehrkraft ─────────────────────────────── */
-.roomgrid {
-  display: grid; gap: 14px;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+/* Die Fassung mit Menü: Link und Menü nebeneinander im <li>. */
+.roomlist-row { display: flex; align-items: center; gap: 4px; }
+.roomlist-row .roomlist-a { flex: 1; min-width: 0; }
+.roomlist-row--dead .roomlist-a { opacity: .6; }
+
+/* ─── Die drei Punkte ─────────────────────────────────────────
+   Steht dort, wo vorher der Code stand. Der Knopf ist blass und
+   wird erst beim Darüberfahren deutlich: er gehört nicht zum
+   Lesen der Zeile, sondern zu dem seltenen Fall, dass jemand
+   etwas ändern will. */
+.rowmenu { position: relative; flex: none; }
+.rowmenu-btn {
+  font: inherit; font-size: 1.15rem; line-height: 1;
+  color: var(--ink-faint); background: none; border: 0;
+  border-radius: 8px; cursor: pointer;
+  width: 34px; height: 34px;
+  transition: background .14s ease, color .14s ease;
 }
-.roomcard {
+.rowmenu-btn:hover, .rowmenu-btn[aria-expanded="true"] {
+  background: var(--paper-2); color: var(--ink);
+}
+.rowmenu-pop {
+  position: absolute; right: 0; top: calc(100% + 4px);
+  z-index: 40; min-width: 190px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px 17px 14px;
-  box-shadow: var(--shadow);
+  border-radius: 10px;
+  box-shadow: 0 10px 26px rgba(23, 33, 43, .16);
+  padding: 5px;
   display: flex; flex-direction: column;
 }
-.roomcard--dead { opacity: .6; box-shadow: none; }
-.roomcard-top { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 11px; }
-.roomcard-ic { font-size: 1.5rem; line-height: 1; flex: none; }
-.roomcard-id { flex: 1; min-width: 0; }
-.roomcard-id h3 { margin: 0; font-size: 1rem; letter-spacing: -0.01em; }
-.roomcard-id span { font-size: .78rem; color: var(--ink-faint); }
-
-.roomcard-meta {
-  display: flex; flex-wrap: wrap; gap: 6px;
-  font-size: .76rem; color: var(--ink-faint); margin-bottom: 13px;
+.rowmenu-pop[hidden] { display: none; }
+.rowmenu-pop button {
+  font: inherit; font-size: .88rem; text-align: left;
+  color: var(--ink); background: none; border: 0;
+  border-radius: 7px; padding: 8px 11px; cursor: pointer;
+  white-space: nowrap;
 }
-.roomcard-meta > span {
-  background: var(--paper-2); border-radius: 999px; padding: 2px 9px;
-}
-.roomcard-meta .meta-people strong { color: var(--ink); }
-.roomcard-meta .meta-on     { background: var(--ok-dim);   color: var(--ok); }
-.roomcard-meta .meta-closed { background: var(--warn-dim); color: #8a2c07; }
-
-.roomcard-foot {
-  display: flex; flex-wrap: wrap; gap: 7px;
-  margin-top: auto; padding-top: 12px;
-  border-top: 1px solid var(--line-soft);
-}
-.roomcard-foot .btn { text-decoration: none; }
-
-.card--quota { margin-top: 26px; }
-.quota { list-style: none; margin: 0 0 10px; padding: 0; }
-.quota li {
-  display: flex; justify-content: space-between; gap: 12px;
-  padding: 7px 0; border-bottom: 1px solid var(--line-soft);
-  font-size: .88rem;
-}
-.quota li:last-child { border-bottom: none; }
-.quota-full { color: var(--warn); }
-.card--quota .rule { margin: 0; font-size: .78rem; color: var(--ink-faint); }
+.rowmenu-pop button:hover { background: var(--paper); }
+.rowmenu-pop button:disabled { opacity: .5; cursor: default; }
+/* Löschen bekommt seine Farbe erst beim Darauffahren — rot in der
+   Ruhelage zöge in einem Menü aus drei Zeilen den Blick auf die
+   eine, die man am seltensten will. */
+.rowmenu-danger:hover { background: var(--warn-dim); color: var(--warn); }
 
 .check {
   display: flex; gap: 10px; align-items: flex-start;
@@ -1073,8 +1081,6 @@ body.beamer .wrap { max-width: 1500px; }
   background: var(--warn-dim); border-color: #f0c4ab; color: #8a2c07;
   text-decoration: line-through;
 }
-.roomcard-meta .meta-blocked { background: var(--warn-dim); color: #8a2c07; }
-.roomcard-meta .meta-entries { color: var(--ink-soft); }
 
 /* ══════════════════════════════════════════════════════════════
    Die Ecke oben rechts (lib/userbar.js)
@@ -1329,5 +1335,4 @@ body.beamer .wrap { max-width: 1500px; }
   .page-head .btn { margin-left: 0; width: 100%; }
   .beam-main { flex-direction: column; }
   .beam-code { text-align: center; }
-  .roomgrid { grid-template-columns: 1fr; }
 }

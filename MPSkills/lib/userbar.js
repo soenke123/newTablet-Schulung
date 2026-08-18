@@ -7,6 +7,12 @@
    und auf lehrer.html stand nur der Name ohne jede Handlung. Drei
    Orte, an denen dasselbe hätte stehen sollen — also einer.
 
+   „Meine Räume" ist am 18.08.2026 wieder aus dem Menü geflogen: die
+   Räume stehen seither als Reiter auf der Landing, und das Wortmark
+   links führt schon dorthin. Ein Menüpunkt, der auf dieselbe Seite
+   zeigt wie der Knopf daneben, ist kein Weg, sondern ein zweiter
+   Name für einen.
+
    Vorbild ist bewusst die Tablet-Schulung (index.html, .auth-bar):
    Avatar · Name · Pfeil, dahinter ein Menü. Es ist dasselbe Konto,
    und wer aus der Schulung kommt, soll die Ecke wiedererkennen.
@@ -15,7 +21,6 @@
 
    Wer was im Menü sieht:
      Profil          — alle Angemeldeten
-     Meine Räume     — Lehrkraft und Admin (sonst führt es ins Leere)
      Admin-Bereich   — Admin
      Tablet-Schulung — alle (ein Konto, zwei Bereiche)
      Abmelden        — alle Angemeldeten
@@ -76,7 +81,6 @@
       return;
     }
 
-    const mayRooms = (role === 'teacher' || role === 'admin');
     // Die Rolle steht als Pille neben dem Namen — aber nur, wenn sie
     // etwas erlaubt. „Wartet auf Freischaltung" gehört ins Profil und
     // nicht in eine Ecke, in der sonst nur Zustände stehen, die man
@@ -96,7 +100,6 @@
         </button>
         <div class="ub-menu" data-ub-menu hidden>
           <a href="profil.html">Profil</a>
-          ${mayRooms ? '<a href="lehrer.html">Meine Räume</a>' : ''}
           ${role === 'admin' ? '<a class="ub-admin" href="../admin/index.html">Admin-Bereich</a>' : ''}
           <a href="../index.html">Tablet-Schulung</a>
           <button type="button" data-ub="logout">Abmelden</button>

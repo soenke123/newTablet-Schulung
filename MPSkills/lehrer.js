@@ -1,9 +1,18 @@
 /* ══════════════════════════════════════════════════════════════
-   MPSkills — lehrer.js   ·   Raumverwaltung und Beamer-Ansicht
+   MPSkills — lehrer.js   ·   Beamer-Ansicht (+ Raum anlegen)
    ══════════════════════════════════════════════════════════════
-   Zwei Ansichten, eine Seite — der Hash entscheidet:
-     lehrer.html          Liste aller eigenen Räume
+   Der Hash entscheidet:
      lehrer.html#K7F2QM   der Raum, groß, für den Beamer
+     lehrer.html?new=x    der Anlege-Dialog, von der Landing gerufen
+     lehrer.html          nichts mehr — weiter zur Landing
+
+   Die Raumliste stand bis zum 18.08.2026 hier und steht jetzt auf
+   der Landing (app.js, Reiter „Meine Räume"). Zwei Listen derselben
+   Sache laufen auseinander, und die hiesige war ohnehin nur über
+   einen Link am Fuß der anderen erreichbar. Geblieben ist, was nur
+   hier sein kann: der Raum am Beamer — und der Anlege-Dialog, weil
+   dessen Zusatzfelder aus dem Werkzeug kommen und die Obergrenzen
+   aus skill_rooms_list.
 
    ── Die Beamer-Ansicht ist die Seite mit den härtesten
       Anforderungen im ganzen Projekt ──────────────────────────
@@ -91,9 +100,8 @@ const errText = (e, data) =>
     : (ERRORS[e] || 'Das hat nicht geklappt.');
 
 /* ══════════════════════════════════════════════════════════
-   Liste
+   Das Werkzeug im Beamer
    ══════════════════════════════════════════════════════════ */
-/* ─── Werkzeug ────────────────────────────────────────────── */
 // Einmal montieren, danach nur noch füttern. Welches Werkzeug es ist,
 // steht im Raum — diese Datei kennt keinen einzigen Werkzeugnamen.
 async function mountTool(code, view) {
@@ -146,20 +154,36 @@ function unmountTool() {
   }
 }
 
-async function renderList() {
+/* ══════════════════════════════════════════════════════════
+   Neuer Raum
+   ══════════════════════════════════════════════════════════
+   Die Kachel „Für eine Klasse öffnen" auf der Landing schickt
+   hierher: lehrer.html?new=<werkzeug>. Der Dialog bleibt auf
+   dieser Seite, weil er zwei Dinge braucht, die die Landing nicht
+   hat — die Obergrenzen aus skill_rooms_list und die Zusatzfelder
+   des Werkzeugs. */
+async function renderNew() {
   if (poller) { poller.stop(); poller = null; }
   unmountTool();
   qrDrawn = null;
   document.body.classList.remove('beamer');
-  document.title = 'Meine Räume · MPSkills';
-  host().innerHTML = '<p class="booting">Räume werden geladen …</p>';
+
+  // Ohne ?new gibt es auf dieser Seite nichts mehr zu sehen. replace
+  // statt href: sonst führte „zurück" wieder hierher und von hier
+  // wieder zur Landing.
+  const wanted = new URLSearchParams(location.search).get('new');
+  if (!wanted) { location.replace('index.html'); return; }
+
+  document.title = 'Neuer Raum · MPSkills';
+  host().innerHTML = '<p class="booting">Einen Moment …</p>';
 
   let data;
   try {
     data = await trpc('skill_rooms_list', {});
   } catch (e) {
-    host().innerHTML = `<div class="card"><div class="msg msg--err">Räume konnten nicht geladen
-      werden: ${esc(e.message)}</div></div>`;
+    host().innerHTML = `<div class="card"><div class="msg msg--err">Die Werkzeuge ließen sich
+      nicht laden: ${esc(e.message)}</div>
+      <p><a href="index.html">Zurück zu MPSkills</a></p></div>`;
     return;
   }
   if (!data.ok) {
@@ -169,141 +193,31 @@ async function renderList() {
   }
 
   window.__tools = data.tools || {};
-  const rooms = data.rooms || [];
-  const live  = rooms.filter(r => !r.is_test);
-  const tests = rooms.filter(r =>  r.is_test);
 
-  host().innerHTML = `
-    <div class="page-head">
-      <div>
-        <h1>Meine Räume</h1>
-        <p class="page-sub">Ein Raum gehört dir. Er läuft ab, wenn 60 Tage lang niemand
-        mehr darin war.</p>
-      </div>
-      <button type="button" class="btn btn--primary" id="newBtn">+ Neuer Raum</button>
-    </div>
-
-    ${rooms.length === 0 ? `
-      <div class="card card--empty">
-        <p><strong>Noch kein Raum.</strong> Leg einen an — du bekommst einen Code und einen
-        QR-Code, und die Klasse ist in 30 Sekunden drin.</p>
-      </div>` : ''}
-
-    ${live.length ? `<div class="roomgrid">${live.map(roomCard).join('')}</div>` : ''}
-
-    ${tests.length ? `
-      <h2 class="section-h">Testräume <span class="card-h-note">zählen nicht gegen dein
-        Raum-Kontingent</span></h2>
-      <div class="roomgrid">${tests.map(roomCard).join('')}</div>` : ''}
-
-    ${quotaBlock(data.tools)}
-  `;
-
-  document.getElementById('newBtn').addEventListener('click', () => openNew());
-  wireRoomCards();
-}
-
-function roomCard(r) {
-  const closed = !r.join_open;
-  return `
-    <article class="roomcard${r.expired ? ' roomcard--dead' : ''}" data-code="${esc(r.code)}">
-      <div class="roomcard-top">
-        <span class="roomcard-ic">${esc(r.tool_icon || '🧩')}</span>
-        <div class="roomcard-id">
-          <h3>${esc(r.title)}</h3>
-          <span>${esc(r.tool_title || r.tool_id)}${r.is_test ? ' · Testraum' : ''}</span>
-        </div>
-        <code class="code-chip">${esc(r.code)}</code>
-      </div>
-
-      <div class="roomcard-meta">
-        <span class="meta-people"><strong>${r.people}</strong> ${r.people === 1 ? 'Teilnehmer' : 'Teilnehmer'}</span>
-        ${r.online ? `<span class="meta-on">${r.online} gerade da</span>` : ''}
-        ${r.entries ? `<span class="meta-entries">${r.entries} Beiträge</span>` : ''}
-        ${closed ? '<span class="meta-closed">Beitritt zu</span>' : ''}
-        ${r.blocked ? `<span class="meta-blocked">${r.blocked} gesperrt</span>` : ''}
-        <span class="meta-until">${esc(r.expired ? 'abgelaufen' : MPRoom.untilText(r.expires_at))}</span>
-      </div>
-
-      <div class="roomcard-foot">
-        <a class="btn btn--sm btn--primary" href="#${esc(r.code)}">Beamer</a>
-        <button type="button" class="btn btn--sm" data-act="toggle" data-open="${closed ? '1' : '0'}">
-          ${closed ? 'Beitritt öffnen' : 'Beitritt schließen'}
-        </button>
-        <!-- Verlängern steht auch bei abgelaufenen Räumen da: zwischen
-             Ablauf und Aufräum-Lauf liegt bis zu ein Tag, und genau in
-             dem Fenster ist „den hätte ich doch noch gebraucht" der
-             wahrscheinlichste Grund, hier zu klicken. -->
-        <button type="button" class="btn btn--sm" data-act="extend">
-          ${r.expired ? 'Zurückholen' : 'Verlängern'}
-        </button>
-        <button type="button" class="btn btn--sm btn--danger" data-act="delete">Löschen</button>
-      </div>
-    </article>`;
-}
-
-// „Wortwolke 2 von 5" — die Liste ist der Ort, an dem eine
-// erreichte Obergrenze erklärt werden muss, nicht der Fehlerdialog
-// beim Anlegen.
-function quotaBlock(tools) {
-  const rows = Object.entries(tools || {})
-    .filter(([, t]) => t.live > 0)
-    .map(([, t]) => `<li><span>${esc(t.icon || '')} ${esc(t.title)}</span>
-        <strong class="${t.live >= t.max_rooms ? 'quota-full' : ''}">${t.live} von ${t.max_rooms}</strong></li>`);
-  if (!rows.length) return '';
-  return `<div class="card card--quota">
-      <h2 class="card-h">Raum-Kontingent</h2>
-      <ul class="quota">${rows.join('')}</ul>
-      <p class="rule">Abgelaufene Räume und Testräume zählen nicht mit.</p>
+  // Was unter dem Dialog liegt. Bewusst nur ein Ausweg und keine
+  // zweite Raumliste — die steht auf der Landing.
+  host().innerHTML = `<div class="card card--join">
+      <h1 class="join-h">Neuer Raum</h1>
+      <p class="join-sub">Gleich fragt der Dialog nach Titel und Einstellungen.</p>
+      <a class="btn btn--wide" href="index.html">Zurück zu MPSkills</a>
     </div>`;
+
+  // ?new aus der Adresse nehmen: ein Neuladen soll den Dialog nicht
+  // ein zweites Mal aufmachen, und der Raum ist dann vielleicht
+  // schon angelegt.
+  history.replaceState(null, '', location.pathname);
+  openNew(wanted);
 }
 
-function wireRoomCards() {
-  host().querySelectorAll('.roomcard').forEach(card => {
-    const code = card.dataset.code;
-    card.querySelectorAll('button[data-act]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const act = btn.dataset.act;
-        btn.disabled = true;
-        try {
-          if (act === 'toggle') {
-            const open = btn.dataset.open === '1';
-            const r = await trpc('skill_room_set_open', { p_code: code, p_open: open });
-            if (!r.ok) { toast(errText(r.error, r), 'error'); btn.disabled = false; return; }
-            toast(open ? 'Beitritt geöffnet.' : 'Beitritt geschlossen.');
-            renderList();
-          } else if (act === 'extend') {
-            const r = await trpc('skill_room_extend', { p_code: code });
-            if (!r.ok) { toast(errText(r.error, r), 'error'); btn.disabled = false; return; }
-            toast(r.revived
-              ? 'Raum zurückgeholt — er läuft wieder 60 Tage.'
-              : 'Verlängert: ' + MPRoom.untilText(r.expires_at) + '.');
-            renderList();
-          } else if (act === 'delete') {
-            // Löschen heißt löschen: Raum, Teilnehmer und alles,
-            // was daran hängt. Deshalb die Rückfrage — es ist der
-            // einzige Schritt hier, der nicht rückgängig zu machen ist.
-            if (!confirm(`Raum wirklich löschen?\n\nAlles darin ist weg — auch für die Klasse. `
-                       + `Der Code ${code} funktioniert danach nicht mehr.`)) {
-              btn.disabled = false; return;
-            }
-            const r = await trpc('skill_room_delete', { p_code: code });
-            if (!r.ok) { toast(errText(r.error, r), 'error'); btn.disabled = false; return; }
-            toast('Raum gelöscht.');
-            renderList();
-          }
-        } catch (e) {
-          toast('Fehler: ' + e.message, 'error');
-          btn.disabled = false;
-        }
-      });
-    });
-  });
+/* Wer den Dialog abbricht, steht auf einer leeren Seite — also
+   zurück zur Landing. Nur im Beamer nicht: dort liegt der Dialog
+   über einem laufenden Raum. */
+function closeNew() {
+  document.getElementById('newModal').hidden = true;
+  const code = MPRoom.normalizeCode(location.hash.replace(/^#/, ''));
+  if (!MPRoom.isCode(code)) location.href = 'index.html';
 }
 
-/* ══════════════════════════════════════════════════════════
-   Neuer Raum
-   ══════════════════════════════════════════════════════════ */
 /* Die zusätzlichen Felder des gewählten Werkzeugs.
 
    Sie stehen NICHT in dieser Datei und nicht in der Datenbank,
@@ -469,7 +383,7 @@ function renderBeamer(code) {
   host().innerHTML = `
     <div class="beam">
       <div class="beam-head">
-        <a class="btn btn--sm" href="lehrer.html" id="backBtn">‹ Meine Räume</a>
+        <a class="btn btn--sm" href="index.html" id="backBtn">‹ Meine Räume</a>
         <div class="beam-id">
           <strong id="bTitle">…</strong>
           <span id="bToolName"></span>
@@ -560,7 +474,7 @@ function renderBeamer(code) {
         unmountTool();
         host().innerHTML = `<div class="card"><div class="msg msg--err">Diesen Raum gibt es nicht
           (mehr) — oder er gehört nicht dir.</div>
-          <p><a href="lehrer.html">Zurück zu meinen Räumen</a></p></div>`;
+          <p><a href="index.html">Zurück zu meinen Räumen</a></p></div>`;
         document.body.classList.remove('beamer');
         return;
       }
@@ -661,20 +575,19 @@ function toggleFullscreen() {
 function route() {
   const code = MPRoom.normalizeCode(location.hash.replace(/^#/, ''));
   if (MPRoom.isCode(code)) { renderBeamer(code); return Promise.resolve(); }
-  return renderList();
+  return renderNew();
 }
 
-document.getElementById('newClose').addEventListener('click',
-  () => { document.getElementById('newModal').hidden = true; });
+document.getElementById('newClose').addEventListener('click', closeNew);
 document.getElementById('newForm').addEventListener('submit', submitNew);
 // Anderes Werkzeug = andere Zusatzfelder.
 document.getElementById('newTool').addEventListener('change',
   (ev) => renderToolFields(ev.target.value));
 document.getElementById('newModal').addEventListener('click', (e) => {
-  if (e.target.id === 'newModal') document.getElementById('newModal').hidden = true;
+  if (e.target.id === 'newModal') closeNew();
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') document.getElementById('newModal').hidden = true;
+  if (e.key === 'Escape' && !document.getElementById('newModal').hidden) closeNew();
 });
 window.addEventListener('hashchange', route);
 
@@ -707,15 +620,7 @@ window.addEventListener('hashchange', route);
     return;
   }
 
+  // Ohne Hash landet route() in renderNew — dort steht der Anlege-
+  // Dialog (?new=…) und sonst der Weg zurück zur Landing.
   await route();
-
-  // Von der Kachel „Für eine Klasse öffnen" auf der Landing kommt
-  // ?new=<tool>. Der Dialog gehört hierher und nicht dorthin: die
-  // Obergrenzen und die Werkzeugliste stehen in der Antwort von
-  // skill_rooms_list, die nur diese Seite holt.
-  const wanted = new URLSearchParams(location.search).get('new');
-  if (wanted && !MPRoom.isCode(MPRoom.normalizeCode(location.hash.replace(/^#/, '')))) {
-    history.replaceState(null, '', location.pathname);
-    openNew(wanted);
-  }
 })();

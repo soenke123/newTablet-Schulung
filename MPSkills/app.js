@@ -4,8 +4,8 @@
    Die Seite kennt drei Ansichten:
 
      1. nicht angemeldet          — Code · Zugang · zwei Auskünfte
-     2. angemeldet ohne Rechte    ┐ stehen vorerst noch so da, wie sie
-     3. angemeldet mit Rechten    ┘ waren; Umbau als eigener Schritt.
+     2. angemeldet ohne Rechte    — der Zustand des Antrags
+     3. angemeldet mit Rechten    — Gruß · Meine Räume · Alle Werkzeuge
 
    Ansicht 1 ist auf EINEN Weg hin gebaut: jemand steht vor einer
    Tafel, auf der ein Code steht. Alles andere ist seltener und
@@ -284,32 +284,115 @@ async function rpc(fn, args) {
 /* ══════════════════════════════════════════════════════════
    Reiter „Meine Räume"
    ══════════════════════════════════════════════════════════
-   Bewusst die kurze Fassung: eine Zeile je Raum, ein Klick führt
-   in die Beamer-Ansicht. Öffnen, schließen, verlängern und löschen
-   bleiben in lehrer.html — dieselben Knöpfe an zwei Orten wären
-   zwei Orte, an denen dieselbe Bestätigungsfrage gepflegt werden
-   muss, und einer davon wird vergessen. Die Landing beantwortet
-   „was läuft gerade?", nicht „was mache ich damit?".
+   Das ist seit 18.08.2026 der EINZIGE Ort, an dem die eigenen
+   Räume stehen — die zweite Liste unter lehrer.html ist weg.
+   Zwei Listen derselben Sache sind zwei Listen, die auseinander
+   laufen, und die zweite war nur über einen Link am Fuß der
+   ersten erreichbar.
+
+   Eine Zeile je Raum: ein Klick führt in die Beamer-Ansicht,
+   alles Weitere steht hinter den drei Punkten am rechten Rand.
+   Dort und nicht als Knopfreihe in der Zeile, weil die Zeile
+   sonst mehr Bedienung als Auskunft wäre — gedrückt wird hier in
+   99 von 100 Fällen der Raum selbst.
+
+   Wo vorher der Code stand, steht jetzt dieses Menü. Der Code
+   gehört an die Tafel und damit in die Beamer-Ansicht; in einer
+   Übersicht beantwortet er keine Frage, die man hier hat.
 
    Testräume stehen mit in der Liste, nur ausgewiesen: auf der
    Landing sind sie kein eigenes Kapitel, sondern einer von
    wenigen Räumen. */
+const ROOM_ERRORS = {
+  not_authenticated: 'Du bist nicht angemeldet.',
+  not_a_teacher:     'Dein Konto ist für MPSkills nicht freigeschaltet.',
+  not_found:         'Diesen Raum gibt es nicht (mehr).',
+  no_profile:        'Zu deinem Zugang fehlt das Profil.'
+};
+
 function roomRow(r) {
   const bits = [r.tool_title || r.tool_id];
   if (r.is_test)    bits.push('Testraum');
   bits.push(`${r.people} ${r.people === 1 ? 'Person' : 'Personen'}`);
   if (r.online)     bits.push(`${r.online} gerade da`);
   if (!r.join_open) bits.push('Beitritt zu');
-  if (r.expired)    bits.push('abgelaufen');
 
-  return `<li><a class="roomlist-a" href="lehrer.html#${esc(r.code)}">
-      <span class="roomlist-ic">${esc(r.tool_icon || '🧩')}</span>
-      <span class="roomlist-txt">
-        <strong>${esc(r.title)}</strong>
-        <span>${esc(bits.join(' · '))}</span>
-      </span>
-      <code class="roomlist-code">${esc(r.code)}</code>
-    </a></li>`;
+  // Die Restlaufzeit nur, wenn sie eine Handlung nahelegt — und
+  // dann steht „Verlängern" gleich daneben im Menü. „noch 57 Tage"
+  // an jeder Zeile wäre eine Zahl, die nie jemanden angeht.
+  const left = new Date(r.expires_at).getTime() - Date.now();
+  if (r.expired) bits.push('abgelaufen');
+  else if (isFinite(left) && left < 8 * 86400000) bits.push(window.MPRoom.untilText(r.expires_at));
+
+  return `<li class="roomlist-row${r.expired ? ' roomlist-row--dead' : ''}" data-code="${esc(r.code)}">
+      <a class="roomlist-a" href="lehrer.html#${esc(r.code)}">
+        <span class="roomlist-ic">${esc(r.tool_icon || '🧩')}</span>
+        <span class="roomlist-txt">
+          <strong>${esc(r.title)}</strong>
+          <span>${esc(bits.join(' · '))}</span>
+        </span>
+      </a>
+      <div class="rowmenu">
+        <button type="button" class="rowmenu-btn" data-rowmenu aria-haspopup="true"
+                aria-expanded="false" aria-label="Raum bearbeiten" title="Raum bearbeiten">⋮</button>
+        <div class="rowmenu-pop" hidden>
+          <button type="button" data-act="toggle" data-open="${r.join_open ? '0' : '1'}">
+            ${r.join_open ? 'Beitritt schließen' : 'Beitritt öffnen'}</button>
+          <!-- Verlängern steht auch bei abgelaufenen Räumen da: zwischen
+               Ablauf und Aufräum-Lauf liegt bis zu ein Tag, und genau in
+               dem Fenster ist „den hätte ich doch noch gebraucht" der
+               wahrscheinlichste Grund, hier zu klicken. -->
+          <button type="button" data-act="extend">${r.expired ? 'Zurückholen' : 'Verlängern'}</button>
+          <button type="button" class="rowmenu-danger" data-act="delete">Löschen</button>
+        </div>
+      </div>
+    </li>`;
+}
+
+/* Ein offenes Menü zu, sobald irgendwo anders hingefasst wird.
+   Sonst stünden nach drei Klicks drei Menüs offen. */
+function closeRowMenus(except) {
+  document.querySelectorAll('.rowmenu').forEach(m => {
+    if (m === except) return;
+    const pop = m.querySelector('.rowmenu-pop');
+    if (pop) pop.hidden = true;
+    m.querySelector('.rowmenu-btn')?.setAttribute('aria-expanded', 'false');
+  });
+}
+
+async function roomAction(code, act, btn) {
+  if (act === 'delete') {
+    // Der einzige Schritt hier, der nicht rückgängig zu machen ist.
+    if (!confirm(`Raum wirklich löschen?\n\nAlles darin ist weg — auch für die Klasse. `
+               + `Der Code ${code} funktioniert danach nicht mehr.`)) return;
+  }
+
+  closeRowMenus();
+  btn.disabled = true;
+  try {
+    let r;
+    if (act === 'toggle') {
+      r = await rpc('skill_room_set_open', { p_code: code, p_open: btn.dataset.open === '1' });
+    } else if (act === 'extend') {
+      r = await rpc('skill_room_extend', { p_code: code });
+    } else {
+      r = await rpc('skill_room_delete', { p_code: code });
+    }
+    if (!r?.ok) {
+      toast(ROOM_ERRORS[r?.error] || 'Das hat nicht geklappt.', 'error');
+      btn.disabled = false;
+      return;
+    }
+    toast(act === 'toggle'  ? (btn.dataset.open === '1' ? 'Beitritt geöffnet.' : 'Beitritt geschlossen.')
+        : act === 'extend'  ? (r.revived ? 'Raum zurückgeholt — er läuft wieder 60 Tage.'
+                                         : 'Verlängert: ' + window.MPRoom.untilText(r.expires_at) + '.')
+        : 'Raum gelöscht.');
+    renderRooms();
+  } catch (e) {
+    console.error('[mpskills] Raum bearbeiten:', e);
+    toast('Fehler: ' + e.message, 'error');
+    btn.disabled = false;
+  }
 }
 
 async function renderRooms() {
@@ -333,18 +416,48 @@ async function renderRooms() {
   }
 
   const rooms = data.rooms || [];
-  pane.innerHTML = rooms.length ? `
-      <div class="card">
-        <ul class="roomlist">${rooms.map(roomRow).join('')}</ul>
-      </div>
-      <p class="pane-foot"><a href="lehrer.html">Räume verwalten, verlängern, löschen →</a></p>`
-    : `<div class="card card--empty">
+  if (!rooms.length) {
+    pane.innerHTML = `<div class="card card--empty">
         <p><strong>Noch kein Raum.</strong> Öffne unter „Alle Werkzeuge" eins für deine
         Klasse — du bekommst einen Code und einen QR-Code, und die Klasse ist in 30 Sekunden
         drin.</p>
         <div class="actions"><button type="button" class="btn" data-tab="tools">Alle Werkzeuge
         ansehen</button></div>
       </div>`;
+    return;
+  }
+
+  // Die erreichte Obergrenze gehört dorthin, wo die Räume stehen, und
+  // nicht erst in die Fehlermeldung beim Anlegen. Aber nur dann: eine
+  // Dauerzeile „2 von 5" beantwortet keine Frage.
+  const full = Object.values(data.tools || {})
+    .filter(t => t.live >= (t.multi_room ? t.max_rooms : 1))
+    .map(t => `${esc(t.icon || '')} ${esc(t.title)}: ${t.live} von ${t.multi_room ? t.max_rooms : 1}`);
+
+  pane.innerHTML = `
+      <div class="card">
+        <ul class="roomlist">${rooms.map(roomRow).join('')}</ul>
+      </div>
+      ${full.length ? `<p class="pane-foot pane-foot--warn">${full.join(' · ')} Räumen belegt —
+        für einen neuen musst du erst einen löschen. Abgelaufene Räume und Testräume
+        zählen nicht mit.</p>` : ''}`;
+
+  // Ein Listener an der Liste statt an jeder Zeile. Die Liste wird bei
+  // jeder Änderung komplett neu geschrieben, ein Listener je Zeile wäre
+  // damit ohnehin jedes Mal weg.
+  pane.querySelector('.roomlist').addEventListener('click', (e) => {
+    const mBtn = e.target.closest('.rowmenu-btn');
+    if (mBtn) {
+      const menu = mBtn.closest('.rowmenu');
+      const pop  = menu.querySelector('.rowmenu-pop');
+      closeRowMenus(menu);
+      pop.hidden = !pop.hidden;
+      mBtn.setAttribute('aria-expanded', String(!pop.hidden));
+      return;
+    }
+    const aBtn = e.target.closest('.rowmenu-pop button[data-act]');
+    if (aBtn) roomAction(aBtn.closest('.roomlist-row').dataset.code, aBtn.dataset.act, aBtn);
+  });
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -926,10 +1039,17 @@ document.getElementById('authModal').addEventListener('click', (e) => {
   if (btn) openAuth(btn.dataset.auth);
 });
 
+// Irgendwo anders hingefasst: das offene Zeilen-Menü zu. Am document
+// und nicht an der Liste — geklickt wird ja gerade daneben.
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.rowmenu')) closeRowMenus();
+});
+
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   closeInfos();
   closeAuth();
+  closeRowMenus();
 });
 
 window.addEventListener('lernwelt:session-changed', renderState);

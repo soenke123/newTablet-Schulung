@@ -75,7 +75,7 @@ function roleState(s) {
         cls: 'ok', label: 'Freigeschaltet',
         text: (d ? `Seit dem ${d} f` : 'F')
             + 'reigeschaltet. Du kannst Werkzeuge für deine Klassen öffnen — '
-            + 'deine Räume stehen unter <a href="lehrer.html">Meine Räume</a>.'
+            + 'deine Räume stehen auf der <a href="index.html">MPSkills-Startseite</a>.'
       };
     }
     case 'pending': {
