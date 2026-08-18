@@ -1,22 +1,38 @@
 /* ══════════════════════════════════════════════════════════════
-   MPSkills — app.js  (Stufe 1: Rolle)
+   MPSkills — app.js  ·  Landingpage
    ══════════════════════════════════════════════════════════════
-   Diese Seite kann in Stufe 1 genau eine Sache: die Lehrkraft-Rolle.
-   Anmelden, Konto anlegen, Rolle beantragen, Zustand anzeigen.
-   Werkzeuge, Räume, Codes und QR kommen in Stufe 2/3.
+   Die Seite kennt drei Ansichten:
 
-   Zwei Dinge, die hier bewusst so sind:
+     1. nicht angemeldet          — Code · Zugang · zwei Auskünfte
+     2. angemeldet ohne Rechte    ┐ stehen vorerst noch so da, wie sie
+     3. angemeldet mit Rechten    ┘ waren; Umbau als eigener Schritt.
+
+   Ansicht 1 ist auf EINEN Weg hin gebaut: jemand steht vor einer
+   Tafel, auf der ein Code steht. Alles andere ist seltener und
+   steht deshalb weiter unten (Zugang) oder hinter einem Knopf
+   (die beiden Auskünfte).
+
+   Drei Dinge, die hier bewusst so sind:
 
    1) Es wird session.js aus dem Repo-Root wiederverwendet, mit
       demselben storageKey. Eine Lehrkraft, die in der Schulung
       angemeldet ist, ist hier automatisch mit angemeldet — ein
-      Konto, zwei Bereiche. Anonyme Teilnehmer (ab Stufe 3) haben
-      gar keine Auth-Session und sind davon nicht betroffen.
+      Konto, zwei Bereiche. Anonyme Teilnehmer haben gar keine
+      Auth-Session und sind davon nicht betroffen.
 
    2) Die Kontoanlage schickt context='mpskills' an /api/signup.
       Das ist der einzige Unterschied zur Anmeldung auf der
-      Schulungs-Landing — und er entscheidet, dass dieses Konto
-      NIE in einen Kurs kommt (Migration 0077 + api/signup.js).
+      Schulungs-Landing — und er entscheidet, dass dieses Konto NIE
+      in einen Kurs kommt und sofort auf 'pending' steht
+      (Migration 0077 + api/signup.js). Registrieren IST damit der
+      Antrag; ein zweiter Klick wäre nur eine Wiederholung.
+
+   3) Anmelden und Registrieren stehen IN der Seite und nicht mehr
+      in zwei Modals. Ein Dialog, der sich über die Erklärung
+      schiebt, warum man ihn ausfüllt, nimmt genau die Erklärung
+      weg — und die beiden Wege („habe ich schon ein Konto?")
+      lassen sich nebeneinander in einem Blick vergleichen,
+      hintereinander nicht.
    ══════════════════════════════════════════════════════════════ */
 
 'use strict';
@@ -61,20 +77,133 @@ async function loadSchools() {
   return schoolsCache;
 }
 
-async function fillSchoolSelect(selectEl) {
+// Beide Auswahlfelder auf einmal, und nur beim ersten Aufklappen:
+// die Liste ist ein Netzaufruf, und solange der Zugang zugeklappt
+// ist, braucht ihn niemand.
+let schoolsFilled = false;
+async function fillSchoolSelects() {
+  if (schoolsFilled) return;
   const schools = await loadSchools();
-  selectEl.innerHTML = schools
+  const html = schools
     .map(s => `<option value="${esc(s.slug)}">${esc(s.name)}</option>`)
     .join('');
+  for (const id of ['loginSchool', 'regSchool']) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  }
+  schoolsFilled = true;
 }
 
-/* ─── Werkzeug-Registry ───────────────────────────────── */
-// Quelle ist skill_tools (Migration 0078), NICHT tools.js. Dort steht
-// nur das ready-Flag — siehe Kopfkommentar in tools.js.
-//
-// Mit Login wird der Token des Users benutzt, ohne Login der anon-Key:
-// die Policy skill_tools_select_public zeigt Gästen nur aktive Tools,
-// Admins auch abgeschaltete. Dieselbe Abfrage, zwei Ergebnisse.
+/* ══════════════════════════════════════════════════════════
+   1. Der Code von der Tafel
+   ══════════════════════════════════════════════════════════
+   Das Feld steht statisch im HTML — es ist die Hauptsache der
+   Seite und soll nicht auf ein Skript warten müssen. Hier steht
+   nur die Verdrahtung und die Liste der Räume, in denen dieses
+   Gerät schon war. */
+function wireJoinForm() {
+  const input = document.getElementById('hubCode');
+  const form  = document.getElementById('hubCodeForm');
+  if (!input || !form) return;
+
+  input.addEventListener('input', () => {
+    input.value = window.MPRoom.normalizeCode(input.value).slice(0, 6);
+  });
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const code = window.MPRoom.normalizeCode(input.value);
+    if (!window.MPRoom.isCode(code)) {
+      toast('Der Code besteht aus 6 Zeichen — Buchstaben und Ziffern.', 'error');
+      input.focus();
+      return;
+    }
+    location.href = 'j.html#' + code;
+  });
+}
+
+function renderMyRooms() {
+  const el = document.getElementById('joinMine');
+  if (!el) return;
+  const mine = (window.MPRoom?.list() || []);
+  el.innerHTML = mine.length ? `
+    <div class="joincard-mine">
+      <span class="joincard-mine-h">Zuletzt auf diesem Gerät</span>
+      ${mine.slice(0, 4).map(r => `
+        <a class="minichip" href="j.html#${esc(r.code)}">
+          <span>${esc(r.room?.tool_icon || '🧩')}</span>
+          ${esc(r.room?.title || r.code)}
+        </a>`).join('')}
+    </div>` : '';
+}
+
+/* ══════════════════════════════════════════════════════════
+   2. Zugang für Lehrkräfte
+   ══════════════════════════════════════════════════════════ */
+function accessOpen() {
+  return document.getElementById('accessPanel')?.hidden === false;
+}
+
+// which: 'login' | 'register' | undefined
+// Der Sprung zum Feld ist der Punkt: wer in der Ecke oben rechts auf
+// „Registrieren" drückt, meint die rechte Spalte und nicht „irgendwo
+// hier unten steht ein Formular".
+async function openAccess(which) {
+  const panel  = document.getElementById('accessPanel');
+  const toggle = document.getElementById('accessToggle');
+  if (!panel) return;
+
+  panel.hidden = false;
+  toggle?.setAttribute('aria-expanded', 'true');
+  if (toggle) toggle.textContent = 'Zugang bekommen';
+
+  await fillSchoolSelects();
+
+  const first = which === 'register' ? 'regAccount'
+              : which === 'login'    ? 'loginAccount'
+              : null;
+  const target = document.getElementById(first || 'accessPanel');
+  target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (first) setTimeout(() => document.getElementById(first)?.focus(), 260);
+}
+
+function closeAccess() {
+  const panel  = document.getElementById('accessPanel');
+  const toggle = document.getElementById('accessToggle');
+  if (panel) panel.hidden = true;
+  toggle?.setAttribute('aria-expanded', 'false');
+}
+
+/* ══════════════════════════════════════════════════════════
+   3. Die beiden Auskünfte
+   ══════════════════════════════════════════════════════════
+   Inhalt steht im HTML, nicht hier — es ist Text, den jemand
+   lesen und ändern soll, und der gehört dorthin, wo er zu sehen
+   ist. */
+function openInfo(which) {
+  const id = which === 'privacy' ? 'privacyModal' : 'aboutModal';
+  const el = document.getElementById(id);
+  if (el) el.hidden = false;
+}
+
+function closeInfos() {
+  for (const id of ['privacyModal', 'aboutModal']) {
+    const el = document.getElementById(id);
+    if (el) el.hidden = true;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Werkzeug-Kacheln (Provisorium)
+   ══════════════════════════════════════════════════════════
+   Für Gäste ist die Liste weg — sie beantwortet keine Frage, die
+   ein Gast hat, und schob den Code-Kasten nach unten. Für
+   Lehrkräfte und Admins steht sie vorerst weiter da: sie hält den
+   Weg „Testraum anlegen" offen, den es sonst nirgends gibt (in
+   lehrer.html entstehen nur echte Räume). Beim Umbau der Ansicht 3
+   gehört beides an einen Ort.
+
+   Quelle ist skill_tools (Migration 0078), NICHT tools.js. Dort
+   steht nur das ready-Flag — siehe Kopfkommentar in tools.js. */
 let toolsCache = null;
 let toolsError = null;
 
@@ -109,35 +238,17 @@ function isReady(toolId) {
   return !!(window.TOOLS_OVERLAY?.[toolId]?.ready);
 }
 
-// mode 'act'  — Lehrkraft/Admin: Kacheln mit Knöpfen
-// mode 'view' — alle anderen: dieselbe Liste, ohne Knöpfe
-//
-// Seit Stufe 3 funktionieren die Knöpfe — auch für Werkzeuge mit
-// ready:false. Das ist kein Widerspruch: der RAUM ist fertig (Code,
-// QR, Beitritt, „wer ist da"), nur das Werkzeug darin noch nicht.
-// Das Schild bleibt deshalb stehen und sagt jetzt, worauf es sich
-// bezieht.
-function toolCard(t, mode) {
+function toolCard(t) {
   const ready = isReady(t.id);
   const badges = [
     ready ? '' : '<span class="tag tag--soon">Werkzeug in Vorbereitung</span>',
     t.active ? '' : '<span class="tag tag--off">Abgeschaltet</span>'
   ].filter(Boolean).join('');
 
-  let foot = '';
-  if (mode === 'act') {
-    // Ein abgeschaltetes Werkzeug bekommt keine neuen Räume mehr
-    // (Entscheidung 17.08.2026) — die Knöpfe wären dann eine
-    // Einladung in eine Fehlermeldung.
-    const off = t.active ? '' : ' disabled title="Dieses Werkzeug ist abgeschaltet."';
-    foot = `<div class="tile-foot">
-        <button type="button" class="btn btn--sm" data-act="test" data-tool="${esc(t.id)}"${off}>Testen</button>
-        <button type="button" class="btn btn--sm btn--primary" data-act="open" data-tool="${esc(t.id)}"${off}>Für eine Klasse öffnen</button>
-      </div>
-      ${ready ? '' : '<p class="tile-note">Der Raum funktioniert schon — das Werkzeug darin kommt in der nächsten Stufe.</p>'}`;
-  } else {
-    foot = '<p class="tile-note">Deine Lehrkraft schaltet das frei und gibt euch den Code.</p>';
-  }
+  // Ein abgeschaltetes Werkzeug bekommt keine neuen Räume mehr
+  // (Entscheidung 17.08.2026) — die Knöpfe wären dann eine Einladung
+  // in eine Fehlermeldung.
+  const off = t.active ? '' : ' disabled title="Dieses Werkzeug ist abgeschaltet."';
 
   return `<article class="tile${ready ? '' : ' tile--soon'}">
       <div class="tile-head">
@@ -146,18 +257,21 @@ function toolCard(t, mode) {
       </div>
       ${badges ? `<div class="tile-tags">${badges}</div>` : ''}
       <p class="tile-blurb">${esc(t.blurb || '')}</p>
-      ${foot}
+      <div class="tile-foot">
+        <button type="button" class="btn btn--sm" data-act="test" data-tool="${esc(t.id)}"${off}>Testen</button>
+        <button type="button" class="btn btn--sm btn--primary" data-act="open" data-tool="${esc(t.id)}"${off}>Für eine Klasse öffnen</button>
+      </div>
+      ${ready ? '' : '<p class="tile-note">Der Raum funktioniert schon — das Werkzeug darin kommt noch.</p>'}
     </article>`;
 }
 
-/* ─── Werkzeug-Knöpfe ─────────────────────────────────────── */
-// „Testen" legt sofort einen Raum an — es gibt bewusst keinen
-// Solo-Modus, damit der Test dasselbe zeigt wie der Ernstfall. Ein
-// vorhandener Testraum wird dabei wiederverwendet (Server-Regel in
-// Migration 0079), sonst sammelte jeder Klick einen weiteren an.
-//
-// „Für eine Klasse öffnen" fragt nach Titel und Namen — das gehört
-// auf die Raumseite und nicht in ein zweites Formular hier.
+/* „Testen" legt sofort einen Raum an — es gibt bewusst keinen
+   Solo-Modus, damit der Test dasselbe zeigt wie der Ernstfall. Ein
+   vorhandener Testraum wird dabei wiederverwendet (Server-Regel in
+   Migration 0079), sonst sammelte jeder Klick einen weiteren an.
+
+   „Für eine Klasse öffnen" fragt nach Titel und Namen — das gehört
+   auf die Raumseite und nicht in ein zweites Formular hier. */
 function wireToolButtons() {
   document.querySelectorAll('#toolsHost button[data-act]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -217,7 +331,7 @@ function wireToolButtons() {
   });
 }
 
-async function renderTools(mode) {
+async function renderTools() {
   const host = document.getElementById('toolsHost');
   if (!host) return;
   const tools = await loadTools();
@@ -243,7 +357,7 @@ async function renderTools(mode) {
 
   host.innerHTML = `<div class="tools">
       <h2 class="tools-title">Werkzeuge <span class="tools-count">${tools.length}</span></h2>
-      <div class="tile-grid">${tools.map(t => toolCard(t, mode)).join('')}</div>
+      <div class="tile-grid">${tools.map(toolCard).join('')}</div>
     </div>`;
 
   // Wo das Frontend eines Werkzeugs liegt. Braucht nur der
@@ -252,91 +366,13 @@ async function renderTools(mode) {
   // kann, ohne dass Räume ihre tool_id verlieren (0078).
   window.__toolFolders = Object.fromEntries(tools.map(t => [t.id, t.folder]));
 
-  if (mode === 'act') wireToolButtons();
+  wireToolButtons();
 }
 
-/* ─── Code von der Tafel ──────────────────────────────────── */
-// Der Weg der Schüler beginnt normalerweise beim QR-Code; dieses
-// Feld ist der Rückfallweg für Geräte ohne Kamera und für alle, bei
-// denen das Scannen nicht klappt. Es führt nach j.html — dort und
-// nur dort steht der ganze Beitritts-Ablauf.
-//
-// Für Lehrkräfte und Admins entfällt es: sie kommen über „Meine
-// Räume" an dieselben Räume, und zwar von der anderen Seite.
-function renderJoinBox(role) {
-  const el = document.getElementById('joinHost');
-  if (!el) return;
-  if (role === 'teacher' || role === 'admin') { el.innerHTML = ''; return; }
-
-  const mine = (window.MPRoom?.list() || []);
-  el.innerHTML = `
-    <div class="joinbox">
-      <form id="hubCodeForm" novalidate>
-        <label for="hubCode">Code von der Tafel</label>
-        <div class="joinbox-row">
-          <input type="text" id="hubCode" maxlength="9" autocomplete="off"
-                 autocapitalize="characters" spellcheck="false"
-                 inputmode="latin" placeholder="K7F2QM" aria-describedby="hubCodeHint" />
-          <button type="submit" class="btn btn--primary">Weiter</button>
-        </div>
-        <p class="rule" id="hubCodeHint">Sechs Zeichen. Kein Konto nötig.</p>
-      </form>
-      ${mine.length ? `
-        <div class="joinbox-mine">
-          <span class="joinbox-mine-h">Zuletzt auf diesem Gerät</span>
-          ${mine.slice(0, 4).map(r => `
-            <a class="minichip" href="j.html#${esc(r.code)}">
-              <span>${esc(r.room?.tool_icon || '🧩')}</span>
-              ${esc(r.room?.title || r.code)}
-            </a>`).join('')}
-        </div>` : ''}
-    </div>`;
-
-  const input = document.getElementById('hubCode');
-  input.addEventListener('input', () => {
-    input.value = window.MPRoom.normalizeCode(input.value).slice(0, 6);
-  });
-  document.getElementById('hubCodeForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const code = window.MPRoom.normalizeCode(input.value);
-    if (!window.MPRoom.isCode(code)) {
-      toast('Der Code besteht aus 6 Zeichen — Buchstaben und Ziffern.', 'error');
-      input.focus();
-      return;
-    }
-    location.href = 'j.html#' + code;
-  });
-}
-
-/* ─── Modals ──────────────────────────────────────────── */
-function openModal(id) {
-  document.getElementById(id).hidden = false;
-}
-function closeModal(id) {
-  document.getElementById(id).hidden = true;
-}
-
-async function openLogin() {
-  document.getElementById('loginError').hidden = true;
-  await fillSchoolSelect(document.getElementById('loginSchool'));
-  openModal('loginModal');
-  setTimeout(() => document.getElementById('loginAccount').focus(), 50);
-}
-
-async function openRegister() {
-  document.getElementById('registerError').hidden = true;
-  document.getElementById('registerSuccess').hidden = true;
-  document.getElementById('registerSubmit').disabled = false;
-  document.getElementById('registerForm').reset();
-  await fillSchoolSelect(document.getElementById('regSchool'));
-  openModal('registerModal');
-  setTimeout(() => document.getElementById('regAccount').focus(), 50);
-}
-
-/* ─── Rollenweiche ────────────────────────────────────── */
-// Ein Ort, an dem entschieden wird, was die Seite zeigt. Ab Stufe 2
-// hängen hier die Werkzeug-Kacheln dran, deshalb schon jetzt als
-// eigene Funktion mit einem einzigen Rückgabewert je Zustand.
+/* ══════════════════════════════════════════════════════════
+   Rollenweiche
+   ══════════════════════════════════════════════════════════
+   Ein Ort, an dem entschieden wird, was die Seite zeigt. */
 function roleOf(s) {
   if (!s)                              return 'guest';
   if (s.is_admin || s.is_superadmin)   return 'admin';
@@ -346,47 +382,45 @@ function roleOf(s) {
   return 'noRole';
 }
 
-const SOON = '<div class="soon"><strong>Ausbaustufe 3 von 7.</strong> '
-  + 'Räume, Codes, QR und Beitritt stehen. Was ein Raum bisher kann, ist zeigen, wer da ist — '
-  + 'die Werkzeuge selbst (Wortwolke, Abstimmung) kommen in der nächsten Stufe.</div>';
-
 function renderState() {
   const host = document.getElementById('stateHost');
   const s    = window.getSessionUser?.() ?? null;
   const role = roleOf(s);
+  const acts = (role === 'teacher' || role === 'admin');
 
   // Die Kopfzeile pflegt sich seit lib/userbar.js selbst — sie hängt
   // am selben session-changed-Event wie diese Funktion.
-  renderJoinBox(role);
 
-  // Die Werkzeugliste steht für ALLE Rollen da — sie ist die Antwort auf
-  // „was ist das hier überhaupt". Unterschiedlich ist nur, ob Knöpfe
-  // dran sind. Absichtlich nicht awaited: die Rollenweiche darf nicht
-  // auf das Netz warten.
-  renderTools(role === 'teacher' || role === 'admin' ? 'act' : 'view');
+  // Der Code-Kasten entfällt für Lehrkräfte und Admins: sie kommen
+  // über „Meine Räume" an dieselben Räume, von der anderen Seite.
+  const join = document.getElementById('joinCard');
+  if (join) join.hidden = acts;
+  if (!acts) renderMyRooms();
 
+  // Der Zugang gilt nur Gästen. Wer angemeldet ist, sieht statt der
+  // beiden Formulare seinen Zustand — das ist dieselbe Frage, eine
+  // Stufe weiter.
+  const access = document.getElementById('accessSection');
+  if (access) access.hidden = (role !== 'guest');
+  if (role !== 'guest') closeAccess();
+
+  // Kacheln nur für die, die damit etwas anfangen können.
+  // Absichtlich nicht awaited: die Rollenweiche darf nicht auf das
+  // Netz warten.
+  const toolsHost = document.getElementById('toolsHost');
+  if (acts) renderTools();
+  else if (toolsHost) toolsHost.innerHTML = '';
+
+  /* ─── Ansicht 1: Gast ───────────────────────────────────
+     Der ganze Inhalt steht statisch im HTML. Hier bleibt nichts
+     zu tun — und genau das ist der Punkt der Umstellung. */
   if (role === 'guest') {
-    host.innerHTML = `
-      <div class="state state--invite">
-        <h2><span class="ic">🔑</span> Für Lehrkräfte</h2>
-        <p>
-          Melde dich an, um die Werkzeuge zu sehen und für eine Klasse freizuschalten.
-          Du brauchst dafür einmal die Freischaltung durch die Schulleitung oder die Schulung.
-        </p>
-        <div class="actions">
-          <button type="button" class="btn btn--primary" id="ctaRegister">Konto als Lehrkraft</button>
-          <button type="button" class="btn" id="ctaLogin">Ich habe schon ein Konto</button>
-        </div>
-        <p class="hint">
-          <strong>Für Schülerinnen und Schüler:</strong> Ihr braucht hier kein Konto.
-          Ihr scannt den QR-Code eurer Lehrkraft oder tippt oben den Code von der Tafel ein.
-        </p>
-      </div>`;
-    document.getElementById('ctaLogin').addEventListener('click', openLogin);
-    document.getElementById('ctaRegister').addEventListener('click', openRegister);
+    host.innerHTML = '';
     return;
   }
 
+  /* ─── Ansichten 2 und 3 ─────────────────────────────────
+     Stand wie bisher. Der Umbau ist ein eigener Schritt. */
   if (role === 'admin') {
     host.innerHTML = `
       <div class="state state--ok">
@@ -396,7 +430,6 @@ function renderState() {
           Anträge von Lehrkräften bearbeitest du im
           <a href="../admin/index.html">Admin-Panel</a> unter „Lehrkräfte".
         </p>
-        ${SOON}
       </div>`;
     return;
   }
@@ -410,7 +443,6 @@ function renderState() {
           Ausprobieren, <strong>Für eine Klasse öffnen</strong> einen mit Titel und Code.
           Alles Weitere steht unter <a href="lehrer.html">Meine Räume</a>.
         </p>
-        ${SOON}
       </div>`;
     return;
   }
@@ -418,7 +450,7 @@ function renderState() {
   if (role === 'pending') {
     host.innerHTML = `
       <div class="state state--wait">
-        <h2><span class="ic">⏳</span> Deine Freischaltung ist beantragt</h2>
+        <h2><span class="ic">⏳</span> Dein Zugang ist beantragt</h2>
         <p>
           Ein Admin schaltet dich frei — das passiert nicht automatisch. Wenn es dauert,
           sprich die Person an, die dir diese Seite gezeigt hat.
@@ -450,13 +482,13 @@ function renderState() {
   // noRole — angemeldeter Schulungs-Account ohne Lehrkraft-Bezug.
   host.innerHTML = `
     <div class="state state--invite">
-      <h2><span class="ic">🔑</span> Du brauchst die Lehrkraft-Rolle</h2>
+      <h2><span class="ic">🔑</span> Du brauchst noch den Zugang</h2>
       <p>
         Du bist angemeldet, aber für MPSkills noch nicht freigeschaltet. Wenn du an dieser
-        Schule unterrichtest, beantrage die Rolle — ein Admin schaltet dich dann frei.
+        Schule unterrichtest, beantrage den Zugang — ein Admin schaltet dich dann frei.
       </p>
       <div class="actions">
-        <button type="button" class="btn btn--primary" id="ctaRequest">Lehrkraft-Rolle beantragen</button>
+        <button type="button" class="btn btn--primary" id="ctaRequest">Zugang beantragen</button>
       </div>
       <p class="hint">
         Bist du Schülerin oder Schüler? Dann brauchst du hier nichts zu beantragen —
@@ -466,7 +498,7 @@ function renderState() {
   document.getElementById('ctaRequest').addEventListener('click', requestRole);
 }
 
-/* ─── Rolle beantragen ────────────────────────────────── */
+/* ─── Zugang beantragen ───────────────────────────────── */
 // RPC request_teacher_role (0077). Es gibt keine Policy, die einen User
 // sein eigenes Profil schreiben lässt — deshalb eine RPC und kein PATCH.
 async function requestRole() {
@@ -527,8 +559,8 @@ async function doLogin(e) {
       errBox.hidden = false;
       return;
     }
-    closeModal('loginModal');
-    // renderState läuft über das session-changed-Event.
+    // renderState läuft über das session-changed-Event und räumt den
+    // Zugang selbst weg.
   } catch (ex) {
     errBox.textContent = 'Fehler bei der Anmeldung: ' + (ex?.message ?? ex);
     errBox.hidden = false;
@@ -609,9 +641,9 @@ async function doRegister(e) {
       errBox.textContent = 'Konto angelegt, aber die Anmeldung schlug fehl: ' + loginErr.message;
       errBox.hidden = false;
       btn.disabled = false;
-      return;
     }
-    setTimeout(() => closeModal('registerModal'), 1400);
+    // Bei Erfolg übernimmt session-changed → renderState: der Zugang
+    // klappt weg, an seiner Stelle steht der Warte-Zustand.
   } catch (ex) {
     console.error('[mpskills] signup:', ex);
     errBox.textContent = 'Netzwerkfehler: ' + (ex?.message ?? ex);
@@ -621,30 +653,27 @@ async function doRegister(e) {
 }
 
 /* ─── Verdrahtung ─────────────────────────────────────── */
-// Anmelden, Abmelden und das Menü oben rechts stehen in
-// lib/userbar.js — auf allen MPSkills-Seiten dasselbe. Diese Seite
-// gibt nur weiter, was nur sie hat: die beiden Modals.
-document.getElementById('loginClose').addEventListener('click', () => closeModal('loginModal'));
-document.getElementById('registerClose').addEventListener('click', () => closeModal('registerModal'));
+wireJoinForm();
+
+document.getElementById('accessToggle').addEventListener('click', () => {
+  if (accessOpen()) closeAccess(); else openAccess();
+});
 document.getElementById('loginForm').addEventListener('submit', doLogin);
 document.getElementById('registerForm').addEventListener('submit', doRegister);
-document.getElementById('toRegister').addEventListener('click', () => {
-  closeModal('loginModal');
-  openRegister();
+
+document.getElementById('infobar').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-info]');
+  if (btn) openInfo(btn.dataset.info);
 });
-document.getElementById('toLogin').addEventListener('click', () => {
-  closeModal('registerModal');
-  openLogin();
-});
+
 // Klick auf den dunklen Grund schließt — aber nur dort, nicht im Kasten.
-for (const id of ['loginModal', 'registerModal']) {
-  document.getElementById(id).addEventListener('click', e => {
-    if (e.target.id === id) closeModal(id);
+for (const id of ['privacyModal', 'aboutModal']) {
+  const el = document.getElementById(id);
+  el.addEventListener('click', (e) => {
+    if (e.target === el || e.target.closest('[data-close]')) closeInfos();
   });
 }
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeModal('loginModal'); closeModal('registerModal'); }
-});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeInfos(); });
 
 window.addEventListener('lernwelt:session-changed', renderState);
 window.addEventListener('lernwelt:no-profile', () => {
@@ -652,7 +681,13 @@ window.addEventListener('lernwelt:no-profile', () => {
 });
 
 (async function boot() {
-  window.MPUserBar?.mount({ onLogin: openLogin, onRegister: openRegister });
+  // Die Ecke oben rechts schickt Gäste in denselben Kasten, in dem
+  // die Erklärung steht — und nicht in ein Modal daneben.
+  window.MPUserBar?.mount({
+    onLogin:    () => openAccess('login'),
+    onRegister: () => openAccess('register')
+  });
+  renderMyRooms();
   await (window.waitForSession?.() ?? Promise.resolve());
   renderState();
 })();

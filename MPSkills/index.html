@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260818c" />
+<link rel="stylesheet" href="style.css?v=20260818d" />
 <link rel="icon" type="image/png" sizes="64x64" href="../icons/favicon-64.png" />
 <link rel="icon" type="image/png" sizes="256x256" href="../icons/favicon-256.png" />
 </head>
@@ -26,50 +26,189 @@
   <div id="userbarHost"></div>
 </header>
 
-<!-- ─── Rumpf ───────────────────────────────────────────── -->
+<!-- ══════════════════════════════════════════════════════════════
+     Rumpf
+     ══════════════════════════════════════════════════════════════
+     Die Seite ist auf EINEN Weg hin gebaut: jemand steht vor einer
+     Tafel, auf der ein Code steht, und will hinein. Alles andere ist
+     seltener und steht deshalb weiter unten oder hinter einem Klick.
+
+     Reihenfolge und Gewicht sind Absicht:
+       1. Der Code — groß, oben, ohne Vorrede.
+       2. Der Zugang für Lehrkräfte — erklärt, aber zugeklappt.
+       3. Zwei Auskünfte — hinter Knöpfen, nicht als Fließtext.
+     ══════════════════════════════════════════════════════════════ -->
 <main class="wrap">
-  <div class="hero">
-    <p class="eyebrow">Für den Unterricht</p>
-    <h1>Werkzeuge und Spiele, die eine Klasse in 30 Sekunden benutzt</h1>
-    <p>
-      Lehrkräfte schalten ein Werkzeug für eine Klasse frei und bekommen einen Code samt
-      QR. Schülerinnen und Schüler brauchen dafür kein Konto — Code scannen, mitmachen.
-    </p>
-  </div>
 
-  <!-- Der Weg der Schüler: Code von der Tafel. Steht für alle da, die
-       nicht gerade als Lehrkraft handeln — die kommen über „Meine
-       Räume" im Menü oben rechts von der anderen Seite an denselben
-       Raum. -->
-  <div id="joinHost"></div>
+  <!-- ─── 1. Der Code von der Tafel ────────────────────────────
+       Der Normalweg ist der QR-Code; dieses Feld ist der Rückweg
+       für Geräte ohne Kamera und für alle, bei denen das Scannen
+       nicht klappt. Es führt nach j.html — dort und nur dort steht
+       der ganze Beitritts-Ablauf.
 
-  <!-- Die Rollenweiche. Inhalt kommt aus app.js. -->
-  <div id="stateHost">
-    <p class="booting">Lade …</p>
-  </div>
+       Für Lehrkräfte und Admins blendet app.js den Kasten aus: sie
+       kommen über „Meine Räume" an dieselben Räume, und zwar von
+       der anderen Seite. -->
+  <section class="joincard" id="joinCard">
+    <h1 class="joincard-h">Code von der Tafel eingeben</h1>
+    <form id="hubCodeForm" novalidate>
+      <div class="joincard-row">
+        <input type="text" id="hubCode" maxlength="9" autocomplete="off"
+               autocapitalize="characters" spellcheck="false"
+               inputmode="latin" placeholder="K7F2QM"
+               aria-label="Code von der Tafel" aria-describedby="hubCodeHint" />
+        <button type="submit" class="btn btn--primary joincard-go">Mitmachen</button>
+      </div>
+      <p class="joincard-rule" id="hubCodeHint">Sechs Zeichen · kein Konto nötig</p>
+    </form>
 
-  <!-- Werkzeugliste aus skill_tools (Migration 0078). Für alle Rollen
-       sichtbar, Knöpfe nur für Lehrkräfte und Admins. -->
+    <!-- Räume, in denen dieses Gerät schon war (localStorage). -->
+    <div id="joinMine"></div>
+  </section>
+
+  <!-- ─── Rollenweiche für Angemeldete ─────────────────────────
+       Bleibt vorerst, wie sie war. Die Ansichten „angemeldet ohne
+       Rechte" und „angemeldet mit Rechten" werden als eigener
+       Schritt gebaut. -->
+  <div id="stateHost"></div>
+
+  <!-- Werkzeug-Kacheln NUR noch für Lehrkräfte und Admins — für
+       Gäste ist die Liste weg (sie beantwortet keine Frage, die ein
+       Gast hat). Provisorium bis zum Umbau der Ansichten 2 und 3;
+       sie hält den Weg „Testraum anlegen" offen, den es sonst
+       nirgends gibt. -->
   <div id="toolsHost"></div>
 
-  <!-- ─── Was gespeichert wird ─────────────────────────────────
-       Hier machen Minderjährige ohne Konto mit, und ihre Namen
-       stehen für alle im Raum sichtbar an der Wand. Dafür gehört
-       ein Absatz auf die Seite, den ein Vierzehnjähriger versteht —
-       kein Kleingedrucktes, das niemand liest.
+  <!-- ─── 2. Zugang für Lehrkräfte ─────────────────────────────
+       Zugeklappt, weil es die Frage der Minderheit ist. Aufgeklappt
+       stehen beide Wege NEBENEINANDER statt hintereinander: „habe
+       ich schon ein Konto?" ist die einzige Frage, die hier
+       entschieden werden muss, und zwei Spalten stellen sie, ohne
+       sie zu stellen.
 
-       Alles Behauptete ist überprüfbar und steht so im Code:
-       60 Tage → skill_cleanup (Migration 0081), anonymer Raum →
-       skill_rooms.ask_names (0079), Kennzeichen im Gerät →
-       localStorage['mpskills_rooms'] (lib/room.js).
+       Die Anmelde- und Registrierfelder standen früher in zwei
+       Modals. Sie stehen jetzt in der Seite: ein Dialog, der sich
+       über die Erklärung schiebt, warum man ihn ausfüllt, nimmt
+       genau die Erklärung weg. -->
+  <section class="access" id="accessSection" hidden>
+    <h2 class="access-h">Möchtest du selbst Werkzeuge bereitstellen?</h2>
+    <p class="access-lead">
+      Als Lehrkraft öffnest du ein Werkzeug für eine Klasse und bekommst einen Code samt
+      QR-Code. Deine Schülerinnen und Schüler machen ohne Konto mit — sie scannen und sind drin.
+      Du brauchst dafür ein Konto und einmalig die Freischaltung durch einen Admin.
+    </p>
+    <button type="button" class="btn btn--primary" id="accessToggle"
+            aria-expanded="false" aria-controls="accessPanel">Zugang bekommen</button>
 
-       ⚠️ Das ist eine ERKLÄRUNG, keine Datenschutzerklärung im
-       Rechtssinn. Verantwortliche Stelle, Rechtsgrundlage,
-       Auftragsverarbeitung und Serverstandort gehören in das
-       Impressum der Schule und müssen von dort kommen — sie stehen
-       hier bewusst nicht, weil sie niemand erfinden darf. -->
-  <section class="privacy" id="privacy">
-    <h2>Was hier gespeichert wird</h2>
+    <div class="access-panel" id="accessPanel" hidden>
+      <div class="access-cols">
+
+        <!-- a) schon ein Konto -->
+        <section class="access-col">
+          <h3>Du hast schon ein Konto</h3>
+          <p class="access-note">
+            Hier oder in der Tablet-Schulung — es ist dasselbe Konto. Melde dich an; danach
+            steht auf dieser Seite ein Knopf, mit dem du den Zugang beantragst.
+          </p>
+
+          <div class="msg msg--err" id="loginError" hidden></div>
+
+          <form id="loginForm" novalidate>
+            <label class="field">Schule
+              <select id="loginSchool" required></select>
+            </label>
+            <label class="field">Accountname
+              <input type="text" id="loginAccount" autocomplete="username"
+                     autocapitalize="none" spellcheck="false" required />
+            </label>
+            <label class="field">Passwort
+              <input type="password" id="loginPassword" autocomplete="current-password" required />
+            </label>
+            <button type="submit" class="btn btn--primary btn--wide" id="loginSubmit">Anmelden</button>
+          </form>
+        </section>
+
+        <!-- b) noch kein Konto -->
+        <section class="access-col">
+          <h3>Noch kein Konto</h3>
+          <p class="access-note">
+            Leg eins an — der Antrag auf den Zugang geht dabei mit raus. Dieses Konto führt
+            <strong>nicht</strong> in eine Schulung, auch dann nicht, wenn gerade eine läuft.
+          </p>
+
+          <div class="msg msg--err" id="registerError" hidden></div>
+          <div class="msg msg--ok"  id="registerSuccess" hidden></div>
+
+          <form id="registerForm" novalidate>
+            <label class="field">Schule
+              <select id="regSchool" required></select>
+            </label>
+            <label class="field">Accountname
+              <input type="text" id="regAccount" autocomplete="username"
+                     autocapitalize="none" spellcheck="false" required />
+              <span class="rule">2–20 Zeichen · a–z, 0–9, . _ -</span>
+            </label>
+            <label class="field">Anzeigename
+              <input type="text" id="regDisplayName" autocomplete="name" required />
+              <span class="rule">Was die Klasse sieht — z. B. dein Kürzel.</span>
+            </label>
+            <label class="field">Passwort
+              <input type="password" id="regPassword" autocomplete="new-password" required />
+              <span class="rule">Mindestens 8 Zeichen, mit Buchstabe und Zahl.</span>
+            </label>
+            <label class="field">Passwort wiederholen
+              <input type="password" id="regPassword2" autocomplete="new-password" required />
+            </label>
+            <button type="submit" class="btn btn--primary btn--wide" id="registerSubmit">Konto anlegen</button>
+          </form>
+        </section>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── 3. Zwei Auskünfte ────────────────────────────────────
+       Beides stand vorher als Fließtext auf der Seite und hat sie
+       lang gemacht, obwohl es niemand liest, der gerade einen Code
+       eintippt. Als Knopf ist es genauso auffindbar und kostet
+       nichts, solange es niemand braucht. -->
+  <div class="infobar" id="infobar">
+    <button type="button" class="btn btn--info" data-info="privacy">Was wird hier gespeichert?</button>
+    <button type="button" class="btn btn--info" data-info="about">Was kann diese Seite?</button>
+  </div>
+</main>
+
+<!-- ─── Fuß ─────────────────────────────────────────────── -->
+<footer class="foot">
+  <a href="../index.html">Tablet-Schulung</a>
+  <span class="sep">·</span>
+  MPSkills · Max-Planck-Schule
+</footer>
+
+<!-- ══════════════════════════════════════════════════════════════
+     Was hier gespeichert wird
+     ══════════════════════════════════════════════════════════════
+     Hier machen Minderjährige ohne Konto mit, und ihre Namen stehen
+     für alle im Raum sichtbar an der Wand. Dafür gehört ein Absatz
+     auf die Seite, den ein Vierzehnjähriger versteht — kein
+     Kleingedrucktes, das niemand liest.
+
+     Alles Behauptete ist überprüfbar und steht so im Code:
+     60 Tage → skill_cleanup (Migration 0081), anonymer Raum →
+     skill_rooms.ask_names (0079), Kennzeichen im Gerät →
+     localStorage['mpskills_rooms'] (lib/room.js).
+
+     ⚠️ Das ist eine ERKLÄRUNG, keine Datenschutzerklärung im
+     Rechtssinn. Verantwortliche Stelle, Rechtsgrundlage,
+     Auftragsverarbeitung und Serverstandort gehören in das Impressum
+     der Schule und müssen von dort kommen — sie stehen hier bewusst
+     nicht, weil sie niemand erfinden darf.
+     ══════════════════════════════════════════════════════════════ -->
+<div class="overlay" id="privacyModal" hidden>
+  <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+    <button type="button" class="modal-close" data-close="privacyModal" aria-label="Schließen">×</button>
+    <h2 id="privacyTitle">Was hier gespeichert wird</h2>
+
     <div class="privacy-grid">
       <div>
         <h3>Wenn du mitmachst</h3>
@@ -103,87 +242,41 @@
         </p>
       </div>
     </div>
-  </section>
-</main>
-
-<!-- ─── Fuß ─────────────────────────────────────────────── -->
-<footer class="foot">
-  <a href="../index.html">Tablet-Schulung</a>
-  <span class="sep">·</span>
-  MPSkills · Max-Planck-Schule
-</footer>
-
-<!-- ─── Anmelden ────────────────────────────────────────── -->
-<div class="overlay" id="loginModal" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-    <button type="button" class="modal-close" id="loginClose" aria-label="Schließen">×</button>
-    <h2 id="loginTitle">Anmelden</h2>
-    <p class="sub">Mit demselben Konto wie in der Tablet-Schulung.</p>
-
-    <div class="msg msg--err" id="loginError" hidden></div>
-
-    <form id="loginForm" novalidate>
-      <label class="field">Schule
-        <select id="loginSchool" required></select>
-      </label>
-      <label class="field">Accountname
-        <input type="text" id="loginAccount" autocomplete="username"
-               autocapitalize="none" spellcheck="false" required />
-      </label>
-      <label class="field">Passwort
-        <input type="password" id="loginPassword" autocomplete="current-password" required />
-      </label>
-      <div class="actions">
-        <button type="submit" class="btn btn--primary" id="loginSubmit">Anmelden</button>
-      </div>
-    </form>
-
-    <p class="switch-line">
-      Noch kein Konto? <button type="button" class="btn--link" id="toRegister">Als Lehrkraft anmelden</button>
-    </p>
   </div>
 </div>
 
-<!-- ─── Konto anlegen (Lehrkraft) ───────────────────────── -->
-<div class="overlay" id="registerModal" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="regTitle">
-    <button type="button" class="modal-close" id="registerClose" aria-label="Schließen">×</button>
-    <h2 id="regTitle">Konto als Lehrkraft</h2>
-    <p class="sub">
-      Nach dem Anlegen schaltet ein Admin dich frei. Dieses Konto führt <strong>nicht</strong>
-      in eine Schulung — auch dann nicht, wenn gerade eine läuft.
+<!-- ─── Was kann diese Seite ─────────────────────────────────
+     Bewusst OHNE Aufzählung der Werkzeuge: was es gerade gibt,
+     ändert sich, und wer diesen Knopf drückt, fragt nach dem
+     Prinzip und nicht nach dem Sortiment. -->
+<div class="overlay" id="aboutModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+    <button type="button" class="modal-close" data-close="aboutModal" aria-label="Schließen">×</button>
+    <h2 id="aboutTitle">Was kann diese Seite?</h2>
+
+    <p class="about-p">
+      MPSkills stellt Werkzeuge für den Unterricht bereit — Dinge, an denen eine ganze Klasse
+      gleichzeitig arbeitet, während vorne an der Wand zu sehen ist, was dabei entsteht.
     </p>
 
-    <div class="msg msg--err" id="registerError" hidden></div>
-    <div class="msg msg--ok"  id="registerSuccess" hidden></div>
+    <h3 class="about-h">Für die Klasse</h3>
+    <p class="about-p">
+      Ihr braucht <strong>kein Konto</strong> und müsst nichts installieren. Eure Lehrkraft
+      zeigt einen QR-Code und einen sechsstelligen Code. Scannen oder abtippen — fertig, ihr
+      seid drin und könnt mitschreiben.
+    </p>
 
-    <form id="registerForm" novalidate>
-      <label class="field">Schule
-        <select id="regSchool" required></select>
-      </label>
-      <label class="field">Accountname
-        <input type="text" id="regAccount" autocomplete="username"
-               autocapitalize="none" spellcheck="false" required />
-        <span class="rule">2–20 Zeichen · a–z, 0–9, . _ -</span>
-      </label>
-      <label class="field">Anzeigename
-        <input type="text" id="regDisplayName" autocomplete="name" required />
-        <span class="rule">Was die Klasse sieht — z. B. dein Kürzel.</span>
-      </label>
-      <label class="field">Passwort
-        <input type="password" id="regPassword" autocomplete="new-password" required />
-        <span class="rule">Mindestens 8 Zeichen, mit Buchstabe und Zahl.</span>
-      </label>
-      <label class="field">Passwort wiederholen
-        <input type="password" id="regPassword2" autocomplete="new-password" required />
-      </label>
-      <div class="actions">
-        <button type="submit" class="btn btn--primary" id="registerSubmit">Konto anlegen</button>
-      </div>
-    </form>
+    <h3 class="about-h">Für Lehrkräfte</h3>
+    <p class="about-p">
+      Du öffnest ein Werkzeug für eine Klasse und bekommst dafür einen eigenen Raum mit Code
+      und QR-Code. Am Beamer siehst du in Echtzeit, was hereinkommt, schaltest weiter, wenn
+      die Klasse so weit ist, und kannst einzelne Beiträge ausblenden. Ein Raum gehört dir und
+      räumt sich von selbst weg, wenn er nicht mehr gebraucht wird.
+    </p>
 
-    <p class="switch-line">
-      Schon ein Konto? <button type="button" class="btn--link" id="toLogin">Anmelden</button>
+    <p class="about-foot">
+      Für den Zugang brauchst du ein Konto und die Freischaltung durch einen Admin —
+      der Weg dahin steht auf dieser Seite unter „Zugang bekommen".
     </p>
   </div>
 </div>
@@ -202,6 +295,6 @@
      anlegt — er tut es ja ohne Dialog. -->
 <script src="lib/tool.js?v=20260818b"></script>
 <script src="tools.js?v=20260818"></script>
-<script src="app.js?v=20260818c"></script>
+<script src="app.js?v=20260818d"></script>
 </body>
 </html>
