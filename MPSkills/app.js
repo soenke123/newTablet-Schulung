@@ -311,25 +311,36 @@ const ROOM_ERRORS = {
 };
 
 function roomRow(r) {
-  const bits = [r.tool_title || r.tool_id];
-  if (r.is_test)    bits.push('Testraum');
-  bits.push(`${r.people} ${r.people === 1 ? 'Person' : 'Personen'}`);
-  if (r.online)     bits.push(`${r.online} gerade da`);
-  if (!r.join_open) bits.push('Beitritt zu');
+  // Jedes Stück einzeln maskiert, weil die Restlaufzeit als
+  // einziges eine eigene Auszeichnung tragen kann.
+  const bits = [esc(r.tool_title || r.tool_id)];
+  if (r.is_test) bits.push('Testraum');
 
-  // Die Restlaufzeit nur, wenn sie eine Handlung nahelegt — und
-  // dann steht „Verlängern" gleich daneben im Menü. „noch 57 Tage"
-  // an jeder Zeile wäre eine Zahl, die nie jemanden angeht.
+  // Die Anwesenden gehören zur Personenzahl und stehen deshalb in
+  // derselben Angabe — sonst schöbe sich die Restlaufzeit zwischen
+  // zwei Zahlen, die dasselbe zählen.
+  bits.push(`${r.people} ${r.people === 1 ? 'Person' : 'Personen'}`
+    + (r.online ? ` (${r.online} gerade da)` : ''));
+
+  /* Die Restlaufzeit steht an JEDER Zeile und nicht erst, wenn es
+     eng wird: ein Raum, der still abläuft, ist die eine Sache, die
+     diese Liste rechtzeitig sagen muss — „verlängern" geht nur
+     vorher leicht. Ab acht Tagen wird sie eingefärbt, dann ist sie
+     ein Hinweis und keine Angabe mehr; das Gegenmittel steht in
+     derselben Zeile hinter den drei Punkten. */
   const left = new Date(r.expires_at).getTime() - Date.now();
-  if (r.expired) bits.push('abgelaufen');
-  else if (isFinite(left) && left < 8 * 86400000) bits.push(window.MPRoom.untilText(r.expires_at));
+  const soon = r.expired || (isFinite(left) && left < 8 * 86400000);
+  const until = esc(r.expired ? 'abgelaufen' : window.MPRoom.untilText(r.expires_at));
+  bits.push(soon ? `<span class="roomlist-soon">${until}</span>` : until);
+
+  if (!r.join_open) bits.push('Beitritt zu');
 
   return `<li class="roomlist-row${r.expired ? ' roomlist-row--dead' : ''}" data-code="${esc(r.code)}">
       <a class="roomlist-a" href="lehrer.html#${esc(r.code)}">
         <span class="roomlist-ic">${esc(r.tool_icon || '🧩')}</span>
         <span class="roomlist-txt">
           <strong>${esc(r.title)}</strong>
-          <span>${esc(bits.join(' · '))}</span>
+          <span>${bits.join(' · ')}</span>
         </span>
       </a>
       <div class="rowmenu">
