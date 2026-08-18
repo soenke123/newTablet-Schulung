@@ -355,18 +355,9 @@ function renderState() {
   const s    = window.getSessionUser?.() ?? null;
   const role = roleOf(s);
 
-  // Kopfzeile
-  document.getElementById('guestBar').hidden = role !== 'guest';
-  document.getElementById('userBar').hidden  = role === 'guest';
-  document.getElementById('myRoomsBtn').hidden = !(role === 'teacher' || role === 'admin');
+  // Die Kopfzeile pflegt sich seit lib/userbar.js selbst — sie hängt
+  // am selben session-changed-Event wie diese Funktion.
   renderJoinBox(role);
-  if (s) {
-    document.getElementById('userName').textContent = s.display_name || s.account_name;
-    const pill = document.getElementById('userRole');
-    if (role === 'admin')        { pill.textContent = 'Admin';     pill.hidden = false; }
-    else if (role === 'teacher') { pill.textContent = 'Lehrkraft'; pill.hidden = false; }
-    else                         { pill.hidden = true; }
-  }
 
   // Die Werkzeugliste steht für ALLE Rollen da — sie ist die Antwort auf
   // „was ist das hier überhaupt". Unterschiedlich ist nur, ob Knöpfe
@@ -629,20 +620,10 @@ async function doRegister(e) {
   }
 }
 
-/* ─── Abmelden ────────────────────────────────────────── */
-// Gleicher Ablauf wie auf der Schulungs-Landing: erst die Highscores
-// aus dem localStorage retten, dann den Spielstand des Geräts räumen,
-// dann abmelden. Wer hier abmeldet, ist danach auch in der Schulung
-// abgemeldet — ein Konto, ein Cookie.
-async function doLogout() {
-  await window.pushLocalHighscoresToServer?.().catch(() => {});
-  window.clearLocalGameState?.();
-  await window.supabaseClient?.auth?.signOut();
-}
-
 /* ─── Verdrahtung ─────────────────────────────────────── */
-document.getElementById('loginBtn').addEventListener('click', openLogin);
-document.getElementById('logoutBtn').addEventListener('click', doLogout);
+// Anmelden, Abmelden und das Menü oben rechts stehen in
+// lib/userbar.js — auf allen MPSkills-Seiten dasselbe. Diese Seite
+// gibt nur weiter, was nur sie hat: die beiden Modals.
 document.getElementById('loginClose').addEventListener('click', () => closeModal('loginModal'));
 document.getElementById('registerClose').addEventListener('click', () => closeModal('registerModal'));
 document.getElementById('loginForm').addEventListener('submit', doLogin);
@@ -671,6 +652,7 @@ window.addEventListener('lernwelt:no-profile', () => {
 });
 
 (async function boot() {
+  window.MPUserBar?.mount({ onLogin: openLogin, onRegister: openRegister });
   await (window.waitForSession?.() ?? Promise.resolve());
   renderState();
 })();

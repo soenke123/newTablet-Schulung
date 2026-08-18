@@ -679,6 +679,10 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('hashchange', route);
 
 (async function boot() {
+  // Die Ecke oben rechts steht auf jeder MPSkills-Seite (lib/userbar.js).
+  // Sie zeichnet sich selbst, sobald die Session da ist — hier gibt es
+  // keine Anmelde-Modals, ein Gast wird auf die Landing geschickt.
+  window.MPUserBar?.mount();
   await (window.waitForSession?.() ?? Promise.resolve());
   const s = window.getSessionUser?.();
 
@@ -693,11 +697,6 @@ window.addEventListener('hashchange', route);
 
   const isAdmin   = s.is_admin || s.is_superadmin;
   const isTeacher = s.teacher_status === 'approved';
-  document.getElementById('userBar').hidden = false;
-  document.getElementById('userName').textContent = s.display_name || s.account_name;
-  const pill = document.getElementById('userRole');
-  if (isAdmin)        { pill.textContent = 'Admin';     pill.hidden = false; }
-  else if (isTeacher) { pill.textContent = 'Lehrkraft'; pill.hidden = false; }
 
   if (!isAdmin && !isTeacher) {
     host().innerHTML = `<div class="card card--join">

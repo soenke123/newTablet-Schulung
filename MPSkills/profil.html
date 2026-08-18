@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Mitmachen · MPSkills</title>
+<title>Profil · MPSkills</title>
 <meta name="robots" content="noindex" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,39 +17,46 @@
 <header class="topbar">
   <a class="wordmark" href="index.html">MP<span>Skills</span></a>
   <div class="topbar-spacer"></div>
-  <span class="userpill" id="whoBar" hidden><strong id="whoName"></strong></span>
+  <div id="userbarHost"></div>
 </header>
 
-<main class="wrap wrap--narrow" id="mainWrap">
-  <!-- Alles Weitere kommt aus j.js: Code-Eingabe, Beitritt oder Raum. -->
-  <div id="joinHost">
-    <p class="booting">Einen Moment …</p>
+<main class="wrap">
+  <div id="profHost">
+    <p class="booting">Lade …</p>
   </div>
 </main>
 
-<!-- Das Werkzeug bekommt seinen eigenen Kasten, und zwar AUSSERHALB
-     von .wrap--narrow: die Wolke braucht die ganze Breite, die
-     Beitrittskarte darüber nicht. Leer und ausgeblendet, solange man
-     nicht in einem Raum ist. -->
-<div id="toolHost" class="toolhost" hidden></div>
-
-<footer class="foot" id="pagefoot">
+<footer class="foot">
   <a href="index.html">MPSkills</a>
+  <span class="sep">·</span>
+  <a href="../index.html">Tablet-Schulung</a>
   <span class="sep">·</span>
   Max-Planck-Schule
 </footer>
 
+<!-- ─── Profilbild wählen ───────────────────────────────────
+     Derselbe Katalog wie in der Schulung (../avatars.js). Die
+     Freischaltung hängt am Spielstand des GameHubs — wer nie
+     gespielt hat, hat die Eier. Reiter erscheinen nur für
+     Gruppen, in denen wirklich etwas liegt. -->
+<div class="overlay" id="pickerModal" hidden>
+  <div class="modal picker" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+    <div class="picker-head">
+      <h2 id="pickerTitle">Profilbild wählen</h2>
+      <button type="button" class="modal-close" id="pickerClose" aria-label="Schließen">×</button>
+    </div>
+    <div class="picker-tabs" id="pickerTabs"></div>
+    <div class="picker-grid" id="pickerGrid"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<!-- session.js wird geladen, damit ein ANGEMELDETER Schüler seinen
-     Beitritt an sein Konto hängt und den Raum auf einem zweiten Gerät
-     wiederfindet. Für alle anderen passiert hier nichts — Teilnehmer
-     brauchen kein Konto, und ohne Anmeldung läuft alles über anon. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../supabase-config.js"></script>
 <script src="../session.js?v=20260817"></script>
-<script src="lib/room.js?v=20260818"></script>
-<script src="lib/tool.js?v=20260818b"></script>
-<script src="j.js?v=20260818c"></script>
+<script src="../avatars.js?v=20260709"></script>
+<script src="lib/userbar.js?v=20260818"></script>
+<script src="profil.js?v=20260818"></script>
 </body>
 </html>

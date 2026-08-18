@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260818b" />
+<link rel="stylesheet" href="style.css?v=20260818c" />
 <link rel="icon" type="image/png" sizes="64x64" href="../icons/favicon-64.png" />
 <link rel="icon" type="image/png" sizes="256x256" href="../icons/favicon-256.png" />
 </head>
@@ -20,20 +20,10 @@
   <a class="wordmark" href="index.html">MP<span>Skills</span></a>
   <div class="topbar-spacer"></div>
 
-  <!-- Nur für Lehrkräfte und Admins — sonst führt der Link ins Leere. -->
-  <a class="btn btn--ghost btn--sm" id="myRoomsBtn" href="lehrer.html" hidden>Meine Räume</a>
-
-  <!-- Gast -->
-  <div id="guestBar" hidden>
-    <button type="button" class="btn btn--ghost btn--sm" id="loginBtn">Anmelden</button>
-  </div>
-
-  <!-- Angemeldet -->
-  <div class="userpill" id="userBar" hidden>
-    <span><strong id="userName">…</strong></span>
-    <span class="role" id="userRole" hidden>Lehrkraft</span>
-    <button type="button" class="btn btn--ghost btn--sm" id="logoutBtn">Abmelden</button>
-  </div>
+  <!-- Einloggen/Registrieren als Gast, sonst Avatar + Name + Menü.
+       Inhalt und Verhalten stehen in lib/userbar.js — auf allen
+       MPSkills-Seiten dasselbe, wie in der Tablet-Schulung. -->
+  <div id="userbarHost"></div>
 </header>
 
 <!-- ─── Rumpf ───────────────────────────────────────────── -->
@@ -48,8 +38,9 @@
   </div>
 
   <!-- Der Weg der Schüler: Code von der Tafel. Steht für alle da, die
-       nicht gerade als Lehrkraft handeln — für die übernimmt der Knopf
-       „Meine Räume" in der Kopfzeile. -->
+       nicht gerade als Lehrkraft handeln — die kommen über „Meine
+       Räume" im Menü oben rechts von der anderen Seite an denselben
+       Raum. -->
   <div id="joinHost"></div>
 
   <!-- Die Rollenweiche. Inhalt kommt aus app.js. -->
@@ -119,7 +110,7 @@
 <footer class="foot">
   <a href="../index.html">Tablet-Schulung</a>
   <span class="sep">·</span>
-  MPSkills · Marion-Prahm-Schule
+  MPSkills · Max-Planck-Schule
 </footer>
 
 <!-- ─── Anmelden ────────────────────────────────────────── -->
@@ -202,6 +193,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../supabase-config.js"></script>
 <script src="../session.js?v=20260817"></script>
+<script src="../avatars.js?v=20260709"></script>
+<script src="lib/userbar.js?v=20260818"></script>
 <script src="lib/room.js?v=20260818"></script>
 <!-- Auf der Landing läuft kein Werkzeug. lib/tool.js wird trotzdem
      geladen: der Testraum-Knopf holt sich damit die Vorgaben des
@@ -209,6 +202,6 @@
      anlegt — er tut es ja ohne Dialog. -->
 <script src="lib/tool.js?v=20260818b"></script>
 <script src="tools.js?v=20260818"></script>
-<script src="app.js?v=20260818b"></script>
+<script src="app.js?v=20260818c"></script>
 </body>
 </html>

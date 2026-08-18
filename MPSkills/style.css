@@ -912,10 +912,247 @@ body.beamer .wrap { max-width: 1500px; }
 .roomcard-meta .meta-blocked { background: var(--warn-dim); color: #8a2c07; }
 .roomcard-meta .meta-entries { color: var(--ink-soft); }
 
+/* ══════════════════════════════════════════════════════════════
+   Die Ecke oben rechts (lib/userbar.js)
+   ══════════════════════════════════════════════════════════════
+   Verhalten wie in der Tablet-Schulung — Avatar, Name, Pfeil,
+   dahinter ein Menü —, Optik aber die von MPSkills. Die Kopfzeile
+   ist die einzige dunkle Fläche der Seite, deshalb steht hier
+   Weiß auf Tinte und der Akzent ist das helle Teal des Wortmarks;
+   das Menü selbst klappt auf hellen Grund auf, weil dort dieselben
+   Einträge stehen wie sonst auf der Seite.
+   ══════════════════════════════════════════════════════════════ */
+.ub { position: relative; display: flex; align-items: center; gap: 8px; }
+
+.ub-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font: inherit;
+  font-size: .875rem;
+  color: #fff;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 999px;
+  padding: 4px 13px 4px 5px;
+  cursor: pointer;
+  transition: background .14s ease;
+}
+.ub-btn:hover { background: rgba(255,255,255,.15); }
+
+.ub-av {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.14);
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.ub-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ub-initial { font-weight: 700; font-size: .9rem; color: #fff; }
+
+.ub-name {
+  font-weight: 600;
+  max-width: 15ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ub-role {
+  font-size: .66rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(94,234,212,.15);
+  color: #5eead4;
+}
+.ub-caret { font-size: .6rem; opacity: .7; }
+
+.ub-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 190px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 40;
+}
+.ub-menu[hidden] { display: none; }
+.ub-menu a,
+.ub-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: .9rem;
+  padding: 10px 15px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+.ub-menu a:hover,
+.ub-menu button:hover { background: var(--paper-2); }
+.ub-menu .ub-admin { color: var(--accent); font-weight: 600; }
+.ub-menu button[data-ub="logout"] {
+  border-top: 1px solid var(--line-soft);
+  color: var(--ink-soft);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Profilseite (profil.html)
+   ══════════════════════════════════════════════════════════════ */
+.prof-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 30px;
+  align-items: center;
+}
+.prof-av {
+  width: 148px; height: 148px;
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  background: var(--paper-2);
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.prof-av:hover { transform: scale(1.03); box-shadow: 0 0 0 6px var(--accent-dim); }
+.prof-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.prof-avcol { display: flex; flex-direction: column; align-items: center; gap: 11px; }
+
+.prof-info {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  row-gap: 12px;
+  column-gap: 22px;
+  margin: 0;
+  align-items: baseline;
+}
+.prof-info dt {
+  font-size: .72rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+.prof-info dd { margin: 0; font-size: 1rem; font-weight: 500; word-break: break-word; }
+
+/* Der Zustand der Lehrkraft-Rolle. Vier Zustände, vier Farben —
+   dieselben, die die Zustands-Karte auf der Landing benutzt, damit
+   „freigeschaltet" hier nicht anders aussieht als dort. */
+.prof-badge {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+.prof-badge--ok   { background: var(--ok-dim);   border-color: #bcd9c3; color: var(--ok); }
+.prof-badge--wait { background: #fdf6e3;         border-color: #ecd9a8; color: #7a5a12; }
+.prof-badge--no   { background: var(--warn-dim); border-color: #f0c4ab; color: #8a2c07; }
+.prof-badge--none { background: var(--paper-2);  border-color: var(--line); color: var(--ink-soft); }
+
+.prof-note {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  font-size: .86rem;
+  color: var(--ink-soft);
+}
+.prof-note a { color: var(--accent-ink); }
+
+.prof-form { display: grid; gap: 4px; max-width: 380px; }
+.prof-form .actions { margin-top: 8px; }
+
+/* ─── Avatar-Auswahl ──────────────────────────────────────────
+   Die Bilder hängen am Spielstand des GameHubs (../avatars.js).
+   Eine Lehrkraft, die nie gespielt hat, sieht deshalb nur Eier —
+   und dann steht auch nur EIN Reiter da statt fünf, von denen
+   vier leer sind. Ein Reiter, hinter dem nichts liegt, ist keine
+   Auskunft, sondern eine Sackgasse. */
+/* Kopf und Reiter bleiben stehen, gescrollt wird nur das Raster —
+   sonst wandert beim Blättern durch 40 Bilder der Reiter aus dem
+   Bild, an dem man gerade die Gruppe wechseln will. */
+.picker {
+  max-width: 720px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.picker-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.picker-head h2 { margin: 0; }
+.picker-head .modal-close { position: static; flex: none; }
+.picker-tabs {
+  display: flex; gap: 7px; flex-wrap: wrap;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.picker-tabs[hidden] { display: none; }
+.picker-tab {
+  font: inherit; font-size: .84rem; font-weight: 600;
+  padding: 5px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.picker-tab:hover { border-color: var(--accent); }
+.picker-tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 12px;
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+}
+.picker-tile {
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: none;
+  padding: 8px 6px;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.picker-tile:hover { background: var(--paper); border-color: var(--accent-dim); }
+.picker-tile.on { border-color: var(--accent); background: var(--accent-dim); }
+.picker-tile img {
+  width: 76px; height: 76px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--paper-2);
+  display: block;
+}
+.picker-tile span { font-size: .74rem; color: var(--ink-faint); text-align: center; line-height: 1.3; }
+
 @media (max-width: 560px) {
   .wrap { padding: 30px 16px 54px; }
   .state { padding: 20px 18px; border-radius: 11px; }
   .topbar { padding: 11px 16px; }
+  .ub-name { display: none; }
+  .ub-role { display: none; }
+  .ub-btn { padding: 4px 10px 4px 5px; }
+  .prof-head { grid-template-columns: 1fr; gap: 20px; }
+  .prof-info { grid-template-columns: 1fr; row-gap: 3px; }
+  .prof-info dt { margin-top: 10px; }
+  .picker-grid { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); padding: 16px; }
+  .picker-head, .picker-tabs { padding-left: 16px; padding-right: 16px; }
   .card { padding: 18px 17px; border-radius: 11px; }
   .card--join { padding: 20px 18px; }
   .codebox { gap: 5px; }
