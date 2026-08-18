@@ -257,6 +257,9 @@ body {
   gap: 16px;
 }
 .wordmark {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   font-size: 1.22rem;
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -264,6 +267,11 @@ body {
   color: var(--chrome-ink);
 }
 .wordmark span { color: var(--chrome-accent); }
+.wordmark-logo {
+  height: 28px;
+  width: auto;
+  display: block;
+}
 .topbar-spacer { flex: 1; }
 
 .userpill {
