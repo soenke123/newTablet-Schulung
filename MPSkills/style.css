@@ -1373,12 +1373,15 @@ body.bd-fill #pagefoot { display: none; }
                       Links, mit Linie dazwischen: die Links führen
                       weg, dieser hier bleibt. Deshalb schließt das
                       Menü beim Umschalten auch NICHT.
-     .ub-theme-seg    nackt — in der Reiterleiste eines Raums, auf
-                      dem Grund der SEITE (wie Code und Vollbild
-                      daneben), also mit den normalen Farben.
-     …--bar           nackt — in der Kopfzeile neben Einloggen /
-                      Registrieren, also auf dem dunklen Balken und
-                      damit mit --chrome-*. */
+     …-seg--bar       nackt — offen in der Kopfzeile (Gäste neben
+                      Einloggen/Registrieren, j.html für sich
+                      allein), also auf dem dunklen Balken und damit
+                      mit --chrome-*.
+
+   Die unbeschriftete Fassung OHNE --bar hat gerade keinen Ort mehr:
+   sie war für die Reiterleiste eines Raums gedacht, und die ist als
+   Standort wieder gestrichen (siehe Kopf von lib/theme.js). Die
+   Grundregeln bleiben stehen, weil --bar auf ihnen aufsetzt. */
 .ub-theme {
   display: flex; align-items: center; gap: 8px;
   padding: 9px 15px 10px;
@@ -1421,10 +1424,6 @@ body.bd-fill #pagefoot { display: none; }
   color: var(--chrome-accent);
   opacity: 1;
 }
-
-/* In der Reiterleiste eines Raums: eine Spur höher, damit er neben
-   dem Vollbild-Knopf und dem Code auf einer Linie sitzt. */
-.rtabs-side .ub-theme-seg button { width: 32px; height: 26px; }
 
 /* ══════════════════════════════════════════════════════════════
    Profilseite (profil.html)

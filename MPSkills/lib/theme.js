@@ -20,26 +20,27 @@
    (j.html) hat gar kein Konto, an dem etwas hängen könnte.
 
    ── Wo der Umschalter steht ───────────────────────────────────
-   An drei Orten, und deshalb steht sein Markup HIER und nicht dort:
-   drei Kopien liefen beim nächsten Umbau auseinander.
+   Immer in der Kopfzeile, auf einer Höhe mit dem Wort MPSkills, und
+   nirgends sonst. Das ist die ganze Regel: auf jeder Seite und in
+   jedem Zustand dieselbe Ecke, damit man ihn nicht suchen muss.
 
      Angemeldet   im Menü hinter dem eigenen Namen (lib/userbar.js)
-     Als Gast     in der Kopfzeile neben Einloggen/Registrieren
-     Im Raum      rechts in der Reiterleiste (j.js, lehrer.js)
+     Als Gast     offen daneben, links von Einloggen/Registrieren
+     j.html       offen in der Kopfzeile (data-theme-switch im HTML)
 
-   Im Raum steht er sichtbar und nicht in einem Menü: dort hängt ein
-   Beamer dran, und „abdunkeln" ist eine Sache von einem Griff.
+   Er stand testweise auch unten in der Reiterleiste eines Raums —
+   dort, wo Code und Vollbild sitzen. Das ist wieder raus: für
+   Angemeldete lag er damit zweimal auf demselben Bildschirm, und
+   für alle anderen wanderte er beim Betreten eines Raums an eine
+   andere Stelle. Ein Schalter, den man an zwei Orten suchen kann,
+   ist schlechter als einer, der immer am selben steht.
 
-   Bedient werden alle drei von dem einen delegierten Listener weiter
-   unten — jeder Knopf mit data-theme-set wirkt, egal wer ihn
+   Sein Markup steht HIER und nicht bei den Aufrufern (segmentHTML
+   weiter unten): drei Kopien liefen beim nächsten Umbau
+   auseinander. Bedient werden alle von dem einen delegierten
+   Listener — jeder Knopf mit data-theme-set wirkt, egal wer ihn
    gezeichnet hat und wann. Und apply() zieht ALLE Knöpfe auf der
-   Seite nach, nicht nur den gedrückten: sonst behauptete der zweite
-   Schalter weiter, es sei hell.
-
-   Ohne Umschalter bleibt nur eine Stelle: die Code-Eingabe auf
-   j.html, bevor jemand in einem Raum ist. Dort gilt das Gerät — und
-   das ist die richtige Antwort für einen Bildschirm, den man zehn
-   Sekunden lang sieht.
+   Seite nach, nicht nur den gedrückten.
 
    ── Kein Umschalten ohne Not ──────────────────────────────────
    Ändert das GERÄT seine Einstellung, ziehen wir nur mit, solange
@@ -97,6 +98,21 @@
   document.addEventListener('click', (e) => {
     const btn = e.target.closest?.('[data-theme-set]');
     if (btn) window.MPTheme.set(btn.dataset.themeSet);
+  });
+
+  /* Seiten ohne Anmelde-Ecke (j.html) setzen einen leeren Kasten mit
+     data-theme-switch in die Kopfzeile und bekommen ihn von hier
+     gefüllt — sie brauchen dafür kein eigenes Skript. Der Wert des
+     Attributs ist der Ton ('bar' auf dem dunklen Balken).
+
+     Erst bei DOMContentLoaded: diese Datei läuft blockierend im
+     <head>, da gibt es die Kopfzeile noch nicht. Das ist unkritisch,
+     weil hier nur ein Bedienelement nachwächst — die Farben der
+     Seite stehen längst, dafür sorgt apply() ganz oben. */
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-theme-switch]').forEach((host) => {
+      host.innerHTML = window.MPTheme.segmentHTML({ tone: host.dataset.themeSwitch });
+    });
   });
 
   window.addEventListener('storage', (e) => {

@@ -233,7 +233,6 @@ function renderShell() {
       </div>
       <div class="rtabs-side">
         ${creating ? '' : `<code class="rtabs-code" id="rtCode" title="Code dieses Raums">${esc(S.code)}</code>`}
-        ${window.MPTheme?.segmentHTML() ?? ''}
         <button type="button" class="rtabs-fs" id="fsBtn" title="Vollbild" aria-label="Vollbild">⛶</button>
       </div>
     </nav>
