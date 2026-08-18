@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MPSkills — Design-Showroom</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@500;600;700;800;900&family=Bebas+Neue&family=Instrument+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Unbounded:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   MPSkills — DESIGN-SHOWROOM · zweite Runde
+   ═══════════════════════════════════════════════════════════════════
+   Nach der ersten Runde stand fest, wohin es geht: clean, gut
+   lesbar, modern — und ohne warmes Papier. Werkstatt, Kreide,
+   Studio und Riso sind deshalb raus; sie waren Antworten auf eine
+   andere Frage.
+
+   Was bleibt, ist der Aufbau: ALLE Varianten teilen EIN Skelett.
+   Dieselbe Kopfzeile, dieselbe Reiterleiste, derselbe QR-Kasten,
+   dieselben Kacheln, dieselben Zettel. Unterschiedlich sind nur
+   Schrift, Form, Farbe und Effekt — verschöbe eine Variante
+   zusätzlich die Anordnung, ließe sich nicht mehr sagen, woher der
+   bessere Eindruck kommt.
+
+   Deshalb steckt das Skelett genau einmal im <template> und wird
+   sechsmal geklont. Die Themes greifen nur über CSS-Variablen und
+   eine Handvoll gezielter Regeln ein.
+
+   Die Hülle (dunkel, neutral) gehört keiner Variante — sie darf mit
+   keiner um Aufmerksamkeit konkurrieren.
+   ═══════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Manrope', system-ui, sans-serif;
+  background: #0e1014;
+  color: #e6e9ee;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 120px;
+}
+
+/* ── Kopfleiste des Showrooms ─────────────────────────────────── */
+.sr-top {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 11px 20px;
+  background: rgba(14,16,20,.93);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #242a33;
+}
+.sr-top h1 {
+  font-family: 'Archivo', sans-serif;
+  font-size: .92rem; font-weight: 800; letter-spacing: -.01em;
+}
+.sr-top h1 span { color: #6f7a88; font-weight: 500; }
+
+.sr-switch { display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto; }
+.sr-sw {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 13px 6px 7px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #2e353f; background: #171b21; color: #a6b0bc;
+  font-family: inherit; font-weight: 700; font-size: .8rem;
+  transition: background .13s, color .13s, border-color .13s;
+}
+.sr-sw:hover { background: #212730; color: #fff; }
+.sr-sw.on { background: #f0f3f7; border-color: #f0f3f7; color: #0e1014; }
+.sr-sw i { display: flex; gap: 2px; }
+.sr-sw i b { width: 9px; height: 15px; border-radius: 2px; display: block; }
+
+.sr-tools { display: flex; gap: 6px; }
+.sr-tool {
+  padding: 7px 13px; border-radius: 8px; cursor: pointer;
+  border: 1px dashed #39424e; background: transparent; color: #8c96a3;
+  font-family: inherit; font-weight: 600; font-size: .78rem;
+}
+.sr-tool:hover { border-style: solid; color: #fff; }
+.sr-tool.on { border-style: solid; background: #28313d; color: #fff; border-color: #46525f; }
+
+/* ── Vorspann ─────────────────────────────────────────────────── */
+.sr-lead { max-width: 1240px; margin: 34px auto 0; padding: 0 22px; }
+.sr-lead h2 {
+  font-family: 'Archivo', sans-serif;
+  font-size: clamp(1.5rem, 3.4vw, 2.15rem); font-weight: 800; letter-spacing: -.025em;
+}
+.sr-lead p { color: #8d97a4; margin-top: 10px; max-width: 68ch; line-height: 1.6; font-size: .95rem; }
+.sr-lead p b { color: #cfd6de; font-weight: 700; }
+
+/* ── Eine Variante ────────────────────────────────────────────── */
+.sr-var { max-width: 1240px; margin: 0 auto; padding: 0 22px; }
+.sr-var[hidden] { display: none; }
+
+.sr-head { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; margin: 54px 0 16px; }
+.sr-num {
+  font-family: 'Archivo', sans-serif; font-size: 3.1rem; font-weight: 900;
+  line-height: .8; color: #2a313b; letter-spacing: -.04em;
+}
+.sr-head-t { flex: 1 1 260px; }
+.sr-head h3 {
+  font-family: 'Archivo', sans-serif;
+  font-size: 1.45rem; font-weight: 800; letter-spacing: -.02em;
+}
+.sr-head p { color: #8d97a4; font-size: .93rem; margin-top: 3px; max-width: 62ch; }
+
+.sr-specs { display: grid; gap: 9px; grid-template-columns: repeat(auto-fit, minmax(184px, 1fr)); margin-bottom: 16px; }
+.sr-spec { border: 1px solid #242a33; border-radius: 11px; padding: 10px 12px; background: #151920; }
+.sr-spec dt {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .61rem; font-weight: 500; letter-spacing: .13em;
+  text-transform: uppercase; color: #626d7a; margin-bottom: 5px;
+}
+.sr-spec dd { font-size: .83rem; line-height: 1.45; color: #ccd3db; }
+.sr-spec dd + dd { margin-top: 2px; color: #8d97a4; }
+.sr-sw-row { display: flex; gap: 4px; margin-top: 8px; }
+.sr-sw-row i { width: 24px; height: 24px; border-radius: 5px; border: 1px solid rgba(255,255,255,.13); }
+
+.sr-price {
+  font-size: .84rem; color: #9aa4b1; margin-bottom: 14px;
+  border-left: 2px solid #39424e; padding-left: 12px; max-width: 76ch; line-height: 1.55;
+}
+.sr-price b { color: #e6e9ee; font-weight: 700; }
+
+/* Der Rahmen um die Bühne — ein Fensterrahmen, kein Design. */
+.sr-frame {
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 26px 70px rgba(0,0,0,.55);
+  border: 1px solid #29303a;
+}
+
+/* „Aus der letzten Reihe": verkleinert die Bühne und legt eine
+   Unschärfe darüber. Das ist der Test, den diese Seite wirklich
+   bestehen muss — sie hängt am Beamer, und die Frage ist nicht,
+   ob es aus 40 cm schön ist. */
+body.far .sr-frame { zoom: .48; filter: blur(.7px); }
+body.far .sr-var { max-width: 660px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   DAS SKELETT
+   ═══════════════════════════════════════════════════════════════════
+   Ab hier gilt: keine Farbe, kein Radius, keine Schrift steht als
+   Wert da — alles kommt aus Variablen, die das Theme setzt. Wer
+   hier einen Hexwert findet, hat einen Fehler gefunden.
+   ═══════════════════════════════════════════════════════════════════ */
+.st {
+  --on-paper: var(--ink);
+  font-family: var(--font-ui);
+  background: var(--paper);
+  color: var(--on-paper);
+  position: relative;
+  isolation: isolate;
+}
+.st * { font-family: inherit; }
+
+/* Kopfzeile */
+.st-top {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 22px;
+  background: var(--chrome); color: var(--chrome-ink);
+  border-bottom: var(--chrome-line, none);
+}
+.st-mark {
+  font-family: var(--font-dis);
+  font-size: 1.28rem; font-weight: var(--dis-wt); letter-spacing: var(--dis-track);
+  text-transform: var(--dis-case, none);
+}
+.st-mark i { color: var(--chrome-accent); font-style: normal; }
+.st-spacer { flex: 1; }
+.st-user {
+  display: flex; align-items: center; gap: 9px;
+  padding: 4px 13px 4px 5px; border-radius: var(--r-pill);
+  background: var(--chrome-soft); border: 1px solid var(--chrome-edge);
+  font-size: .85rem;
+}
+.st-av {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center; flex: none;
+  background: var(--chrome-accent); color: var(--chrome);
+  font-size: .78rem; font-weight: 700;
+}
+.st-uname { font-weight: 600; }
+.st-role {
+  font-family: var(--font-mono);
+  font-size: .62rem; letter-spacing: .08em; text-transform: uppercase;
+  font-weight: 700; padding: 2px 7px; border-radius: var(--r-pill);
+  background: var(--chrome-soft); color: var(--chrome-accent);
+}
+
+/* Reiterleiste des Raums */
+.st-tabs {
+  display: flex; align-items: stretch; gap: 10px;
+  padding: 0 16px;
+  background: var(--surface); border-bottom: var(--bw) solid var(--line);
+}
+.st-tab {
+  font: inherit; font-size: .89rem; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 13px 10px;
+  background: none; border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--ink-3); cursor: pointer; white-space: nowrap;
+}
+.st-tab.on { color: var(--ink); border-bottom-color: var(--accent); }
+.st-n {
+  flex: none; width: 20px; height: 20px; border-radius: var(--r-tabn, 50%);
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: .68rem; font-weight: 700;
+  background: var(--paper-2); color: var(--ink-3);
+}
+.st-tab.on .st-n { background: var(--accent); color: var(--on-accent); }
+.st-tabs-side { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+.st-code {
+  font-family: var(--font-mono); font-weight: 700;
+  font-size: 1rem; letter-spacing: .08em;
+  background: var(--paper-2); color: var(--ink);
+  border: var(--bw) solid var(--code-edge, transparent);
+  border-radius: var(--r-sm); padding: 4px 11px;
+}
+.st-fs {
+  font: inherit; font-size: 1rem; line-height: 1; cursor: pointer;
+  background: none; border: var(--bw) solid var(--line);
+  border-radius: var(--r-sm); padding: 6px 10px; color: var(--ink-2);
+}
+
+/* Rumpf */
+.st-body { padding: 26px 22px 30px; display: grid; gap: 26px; }
+.st-lbl {
+  font-family: var(--font-mono);
+  font-size: .63rem; font-weight: 500; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-3);
+  display: flex; align-items: center; gap: 10px;
+}
+.st-lbl::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+/* ── Die Tür: QR + Code ──────────────────────────────────────── */
+.st-door {
+  display: flex; align-items: center; gap: clamp(20px, 4vw, 48px);
+  background: var(--surface);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  padding: clamp(18px, 3vw, 32px);
+  flex-wrap: wrap;
+}
+.st-qr {
+  width: clamp(150px, 21vw, 210px); aspect-ratio: 1; flex: none;
+  display: grid; place-items: center;
+  background: var(--qr-bg, transparent);
+  border-radius: var(--r-md);
+  padding: var(--qr-pad, 0);
+}
+.st-qr svg { width: 100%; height: 100%; display: block; color: var(--qr-ink, var(--ink)); }
+.st-doortxt { flex: 1 1 240px; min-width: 0; }
+.st-eyebrow {
+  font-family: var(--font-mono);
+  font-size: .7rem; font-weight: 700; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 6px;
+}
+.st-big {
+  font-family: var(--font-code, var(--font-mono));
+  font-size: clamp(2.6rem, 7vw, 4.4rem); font-weight: var(--code-wt, 700);
+  line-height: .95; letter-spacing: var(--code-track, .07em);
+  color: var(--big-ink, var(--ink));
+  text-shadow: var(--big-shadow, none);
+}
+.st-url { font-family: var(--font-mono); font-size: .82rem; color: var(--ink-2); margin-top: 8px; }
+.st-count { margin-top: 14px; font-size: 1.05rem; color: var(--ink-2); display: flex; align-items: baseline; gap: 8px; }
+.st-count strong {
+  font-family: var(--font-dis); font-size: 1.9rem; font-weight: var(--dis-wt);
+  color: var(--ink); letter-spacing: var(--dis-track); line-height: 1;
+}
+.st-chips { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.st-chips li {
+  font-size: .82rem; padding: 4px 13px;
+  border-radius: var(--r-pill);
+  background: var(--paper-2); border: var(--bw) solid var(--line);
+  color: var(--ink-3);
+}
+.st-chips li.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+
+/* ── Drei Schritte: fast ohne Worte ──────────────────────────── */
+.st-steps { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.st-step {
+  flex: 1 1 150px;
+  display: flex; align-items: center; gap: 13px;
+  background: var(--surface); border: var(--bw) solid var(--line);
+  border-radius: var(--r-md); padding: 13px 15px;
+  box-shadow: var(--sh-1);
+}
+.st-step-ic {
+  width: 46px; height: 46px; flex: none;
+  display: grid; place-items: center;
+  border-radius: var(--r-ic, var(--r-sm));
+  background: var(--accent-soft); color: var(--accent-ink);
+}
+.st-step-ic svg { width: 26px; height: 26px; }
+.st-step b {
+  font-family: var(--font-dis); font-size: 1rem; font-weight: var(--dis-wt);
+  letter-spacing: var(--dis-track); display: block; text-transform: var(--dis-case, none);
+}
+.st-step span { font-size: .78rem; color: var(--ink-3); }
+.st-arrow { color: var(--ink-3); flex: none; }
+.st-arrow svg { width: 22px; height: 22px; }
+
+svg.ic { fill: none; stroke: currentColor; stroke-width: var(--icon-sw); stroke-linecap: var(--icon-cap); stroke-linejoin: var(--icon-cap); }
+
+/* ── Werkzeug-Kacheln ────────────────────────────────────────── */
+.st-tiles { display: grid; gap: 13px; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); }
+.st-tile {
+  background: var(--surface); border: var(--bw) solid var(--line);
+  border-radius: var(--r-md); padding: 16px 17px 15px;
+  box-shadow: var(--sh-1);
+  display: flex; flex-direction: column; gap: 9px;
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.st-tile:hover { transform: var(--hover-lift, translateY(-3px)); box-shadow: var(--sh-2); }
+.st-tile--off { opacity: var(--off-fade, .62); box-shadow: none; }
+.st-tile-h { display: flex; align-items: center; gap: 11px; }
+.st-tile-ic {
+  width: 40px; height: 40px; flex: none; display: grid; place-items: center;
+  border-radius: var(--r-ic, var(--r-sm));
+  background: var(--accent-soft); color: var(--accent-ink);
+}
+.st-tile-ic svg { width: 23px; height: 23px; }
+.st-tile h4 {
+  font-family: var(--font-dis); font-size: 1.02rem; font-weight: var(--dis-wt);
+  letter-spacing: var(--dis-track); text-transform: var(--dis-case, none);
+}
+.st-tag {
+  align-self: flex-start;
+  font-family: var(--font-mono); font-size: .61rem; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: var(--r-pill);
+  border: var(--bw) solid var(--line); background: var(--paper-2); color: var(--ink-3);
+}
+.st-tag--hot { background: var(--hot-soft); border-color: var(--hot); color: var(--hot-ink); }
+.st-tile p { font-size: .85rem; color: var(--ink-2); flex: 1; }
+
+/* ── Zettelwolke (Ausschnitt aus dem Werkzeug) ───────────────── */
+.st-cloud {
+  position: relative; min-height: 218px;
+  background: var(--board, var(--surface));
+  background-image: var(--board-tex, none);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  overflow: hidden;
+}
+.st-note {
+  position: absolute;
+  padding: 9px 13px;
+  border-radius: var(--r-note, 6px);
+  border: var(--note-bw, 0) solid var(--note-edge, transparent);
+  box-shadow: var(--sh-note);
+  line-height: 1.25;
+  max-width: 42%;
+}
+.st-note b { font-weight: 700; }
+
+/* ── Bedienteile ─────────────────────────────────────────────── */
+.st-bits { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.st-btn {
+  font: inherit; font-size: .9rem; font-weight: 600;
+  padding: 10px 18px; cursor: pointer;
+  border-radius: var(--r-sm);
+  border: var(--bw) solid var(--line);
+  background: var(--surface); color: var(--ink);
+  box-shadow: var(--sh-btn, none);
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  text-transform: var(--btn-case, none);
+  letter-spacing: var(--btn-track, 0);
+}
+.st-btn:hover { transform: var(--btn-hover, none); box-shadow: var(--sh-btn-h, var(--sh-btn, none)); }
+.st-btn--go { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.st-btn--warn { background: transparent; border-color: var(--hot); color: var(--hot-ink); }
+.st-badge {
+  font-family: var(--font-mono); font-size: .7rem; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: 5px 12px; border-radius: var(--r-pill);
+  background: var(--ok-soft); color: var(--ok); border: var(--bw) solid var(--ok);
+}
+.st-toast {
+  margin-left: auto;
+  background: var(--toast-bg, var(--chrome)); color: var(--toast-ink, var(--chrome-ink));
+  padding: 10px 20px; border-radius: var(--r-pill);
+  font-size: .88rem; font-weight: 600;
+  box-shadow: var(--sh-2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   00 — „Heute"
+   ═══════════════════════════════════════════════════════════════════
+   Der Ist-Zustand, unverändert aus style.css. Steht hier nicht als
+   Vorschlag, sondern als Nullpunkt: ohne ihn ist „besser" eine
+   Behauptung ohne Bezug.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-t="heute"] {
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-dis: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --dis-wt: 700; --dis-track: -.02em;
+  --paper: #f6f5f1; --paper-2: #eeece5; --surface: #ffffff;
+  --ink: #17212b; --ink-2: #4a5b6b; --ink-3: #7b8b99;
+  --line: #dcd9d0; --bw: 1px;
+  --chrome: #17212b; --chrome-ink: #ffffff; --chrome-accent: #5eead4;
+  --chrome-soft: rgba(255,255,255,.09); --chrome-edge: rgba(255,255,255,.18);
+  --accent: #0f766e; --accent-ink: #0a4f4a; --accent-soft: #d5eae7; --on-accent: #fff;
+  --hot: #c2410c; --hot-soft: #fbe9df; --hot-ink: #8a2c07;
+  --ok: #15803d; --ok-soft: #e2f2e5;
+  --r-lg: 16px; --r-md: 12px; --r-sm: 8px; --r-pill: 999px;
+  --sh-1: 0 2px 10px rgba(23,33,43,.07);
+  --sh-2: 0 12px 40px rgba(23,33,43,.16);
+  --icon-sw: 1.75; --icon-cap: round;
+  --sh-note: 2px 3px 7px rgba(23,33,43,.13);
+  --note-1: #d9f2e3; --note-2: #ffe0e4; --note-3: #fdf3cd;
+  --note-ink: #223028;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   01 — „Klar"
+   ═══════════════════════════════════════════════════════════════════
+   „Heute", aber konsequent zu Ende gebracht. Reines Weiß auf kühlem
+   Grau, tiefes Schwarzblau als Tinte, EIN elektrisches Blau. Keine
+   warmen Töne, keine Streuschatten als Deko — Höhe entsteht durch
+   Kante, nicht durch Wolke.
+
+   Das ist die ruhigste Fassung: sie hält sich raus, damit die
+   Zettel der Klasse die einzige Farbe im Raum sind. Wenn „clean und
+   gut lesbar" das Ziel ist, ist das der direkte Weg dahin.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-t="klar"] {
+  --font-ui: 'Instrument Sans', sans-serif;
+  --font-dis: 'Instrument Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --dis-wt: 700; --dis-track: -.025em;
+  --paper: #f1f4f8; --paper-2: #e5eaf1; --surface: #ffffff;
+  --ink: #0a0f16; --ink-2: #465366; --ink-3: #78859a;
+  --line: #dde3ec; --bw: 1px;
+  --chrome: #0a0f16; --chrome-ink: #ffffff; --chrome-accent: #5b8bff;
+  --chrome-soft: rgba(255,255,255,.09); --chrome-edge: rgba(255,255,255,.16);
+  --accent: #1f5eff; --accent-ink: #0f3ec4; --accent-soft: #e1eaff; --on-accent: #fff;
+  --hot: #e11d48; --hot-soft: #ffe3ea; --hot-ink: #b0113a;
+  --ok: #0a9d5c; --ok-soft: #dcf6ea;
+  --r-lg: 14px; --r-md: 10px; --r-sm: 8px; --r-pill: 999px; --r-ic: 10px;
+  --sh-1: 0 1px 2px rgba(10,15,22,.05);
+  --sh-2: 0 10px 28px -8px rgba(10,15,22,.22);
+  --icon-sw: 1.8; --icon-cap: round;
+  --sh-note: 0 1px 2px rgba(10,15,22,.06), 0 6px 16px -8px rgba(10,15,22,.2);
+  --note-1: #e1eaff; --note-2: #ffe3ea; --note-3: #dcf6ea;
+  --note-ink: #0a0f16; --r-note: 8px;
+  --code-track: .06em;
+}
+[data-t="klar"] .st-tabs { background: #fff; }
+[data-t="klar"] .st-cloud { --board: #fff; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   02 — „Kante"
+   ═══════════════════════════════════════════════════════════════════
+   Die Plakat-Energie ohne das Beige: reines Weiß, tiefschwarze
+   Linien in voller Stärke, harte Versatzschatten — und statt der
+   Retro-Palette ein einziges Acid-Grün, das es so nur auf einem
+   Bildschirm gibt. Anton als Schlagzeile, eng und laut.
+
+   Das ist die Fassung, die aus der letzten Reihe gewinnt, und die
+   einzige, die Vierzehnjährige von sich aus „cool" nennen. Der
+   Preis steht unten.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-t="kante"] {
+  --font-ui: 'Archivo', sans-serif;
+  --font-dis: 'Anton', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --dis-wt: 400; --dis-track: .005em; --dis-case: uppercase;
+  --paper: #ffffff; --paper-2: #f0f1f4; --surface: #ffffff;
+  --ink: #08090c; --ink-2: #3d4149; --ink-3: #6e737d;
+  --line: #08090c; --bw: 2px;
+  --chrome: #08090c; --chrome-ink: #ffffff; --chrome-accent: #ccff33;
+  --chrome-soft: rgba(255,255,255,.1); --chrome-edge: rgba(255,255,255,.3);
+  --accent: #ccff33; --accent-ink: #08090c; --accent-soft: #eeffbc; --on-accent: #08090c;
+  --hot: #ff3b1f; --hot-soft: #ffe0da; --hot-ink: #b32000;
+  --ok: #00a86b; --ok-soft: #d3f6e8;
+  --r-lg: 4px; --r-md: 3px; --r-sm: 3px; --r-pill: 999px; --r-ic: 3px; --r-tabn: 3px;
+  --sh-1: 4px 4px 0 var(--ink);
+  --sh-2: 7px 7px 0 var(--ink);
+  --sh-btn: 3px 3px 0 var(--ink);
+  --sh-btn-h: 1px 1px 0 var(--ink);
+  --btn-hover: translate(2px, 2px);
+  --hover-lift: translate(-2px, -2px);
+  --icon-sw: 2.6; --icon-cap: square;
+  --sh-note: 4px 4px 0 var(--ink);
+  --note-1: #ccff33; --note-2: #ffffff; --note-3: #e9ebef;
+  --note-ink: #08090c; --note-bw: 2px; --note-edge: #08090c; --r-note: 3px;
+  --btn-case: uppercase; --btn-track: .04em;
+  --font-code: 'Anton', sans-serif; --code-wt: 400; --code-track: .01em;
+  --off-fade: 1;
+}
+[data-t="kante"] .st-tab.on { border-bottom-width: 5px; }
+[data-t="kante"] .st-tile--off { background: var(--paper-2); box-shadow: 2px 2px 0 var(--ink); }
+[data-t="kante"] .st-eyebrow { color: var(--ink); background: var(--accent); display: inline-block; padding: 3px 10px; }
+[data-t="kante"] .st-badge { border-width: 2px; }
+/* Anton läuft schmal und ohne Unterlängen-Luft — die Schlagzeilen
+   brauchen deshalb mehr Grad als eine Grotesk gleicher Größe. */
+[data-t="kante"] .st-mark { font-size: 1.5rem; }
+[data-t="kante"] .st-tile h4 { font-size: 1.2rem; }
+[data-t="kante"] .st-step b { font-size: 1.15rem; }
+[data-t="kante"] .st-count strong { font-size: 2.2rem; }
+[data-t="kante"] .st-big { font-size: clamp(3.2rem, 8.5vw, 5.4rem); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   03 — „Nacht"
+   ═══════════════════════════════════════════════════════════════════
+   Tiefschwarz, sehr helles Weiß, ein Violett und ein Cyan. Kein
+   Grau-in-Grau: der Kontrast zwischen Text und Grund ist HÖHER als
+   in jeder hellen Fassung, deshalb ist das hier lesbar und nicht
+   nur stimmungsvoll.
+
+   Das ist die Fassung, die auf einem Schüler-Tablet aussieht wie
+   die Apps, die sie ohnehin benutzen. Am Beamer ist sie eine
+   Wette — siehe Preis.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-t="nacht"] {
+  --font-ui: 'Manrope', sans-serif;
+  --font-dis: 'Unbounded', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --dis-wt: 700; --dis-track: -.03em;
+  --paper: #08090d; --paper-2: #191b25; --surface: #101219;
+  --on-paper: #f3f5fa;
+  --ink: #f3f5fa; --ink-2: #a5abbe; --ink-3: #6e7488;
+  --line: #232733; --bw: 1px;
+  --chrome: #030408; --chrome-ink: #ffffff; --chrome-accent: #9d7bff;
+  --chrome-soft: rgba(157,123,255,.14); --chrome-edge: rgba(243,245,250,.12);
+  --accent: #7c4dff; --accent-ink: #c9b4ff; --accent-soft: rgba(124,77,255,.17); --on-accent: #fff;
+  --hot: #00e0ff; --hot-soft: rgba(0,224,255,.14); --hot-ink: #7ceeff;
+  --ok: #2ee87f; --ok-soft: rgba(46,232,127,.13);
+  --r-lg: 16px; --r-md: 12px; --r-sm: 9px; --r-pill: 999px; --r-ic: 11px;
+  --sh-1: 0 1px 0 rgba(255,255,255,.04) inset, 0 14px 34px rgba(0,0,0,.55);
+  --sh-2: 0 1px 0 rgba(255,255,255,.07) inset, 0 24px 56px rgba(0,0,0,.7);
+  --icon-sw: 1.8; --icon-cap: round;
+  --sh-note: 0 12px 26px rgba(0,0,0,.5);
+  --note-1: #171a24; --note-2: #1b1626; --note-3: #131c22;
+  --note-ink: #eef1f7; --note-bw: 1px; --note-edge: #2a2f3d; --r-note: 10px;
+  --big-ink: #ffffff;
+  --big-shadow: 0 0 40px rgba(124,77,255,.45);
+  --code-track: .09em;
+  --qr-bg: #f3f5fa; --qr-pad: 12px; --qr-ink: #030408;
+  --toast-bg: #7c4dff; --toast-ink: #fff;
+}
+/* Ein einziger Lichtkegel von oben. Er ist so schwach, dass man ihn
+   nicht sieht — man merkt nur, dass die Mitte wichtiger ist als der
+   Rand. */
+[data-t="nacht"]::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse 85% 55% at 50% -10%, rgba(124,77,255,.16), transparent 65%);
+}
+[data-t="nacht"] .st-tabs { background: rgba(255,255,255,.025); }
+[data-t="nacht"] .st-cloud { --board: #0c0e14; }
+[data-t="nacht"] .st-note { border-left: 3px solid var(--accent); }
+[data-t="nacht"] .st-note:nth-child(2n) { border-left-color: var(--hot); }
+[data-t="nacht"] .st-btn--go { box-shadow: 0 0 28px rgba(124,77,255,.4); }
+[data-t="nacht"] .st-count strong { color: var(--hot-ink); }
+[data-t="nacht"] .st-mark { font-size: 1.1rem; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   04 — „Anzeige"
+   ═══════════════════════════════════════════════════════════════════
+   Anzeigetafel. Schmale Versalien (Bebas Neue), kühles Grau, ein
+   Signalorange — und Zahlen, die alles andere überragen. Der Code
+   ist hier nicht Text, sondern Anzeige: er steht so, wie eine
+   Stadionuhr steht.
+
+   Passt zu dem, was die Seite wirklich tut: sie zeigt einer Halle
+   voller Leute eine Zahl und zählt mit, wer da ist.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-t="anzeige"] {
+  --font-ui: 'Manrope', sans-serif;
+  --font-dis: 'Bebas Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --dis-wt: 400; --dis-track: .03em;
+  --paper: #eceff3; --paper-2: #dfe4ea; --surface: #ffffff;
+  --ink: #101419; --ink-2: #434b56; --ink-3: #757e8a;
+  --line: #d2d8e0; --bw: 1px;
+  --chrome: #101419; --chrome-ink: #ffffff; --chrome-accent: #ff5a00;
+  --chrome-soft: rgba(255,255,255,.08); --chrome-edge: rgba(255,255,255,.18);
+  --accent: #ff5a00; --accent-ink: #b83e00; --accent-soft: #ffe5d6; --on-accent: #fff;
+  --hot: #0047ff; --hot-soft: #dee6ff; --hot-ink: #0035c4;
+  --ok: #00a24d; --ok-soft: #d7f3e2;
+  --r-lg: 6px; --r-md: 5px; --r-sm: 4px; --r-pill: 999px; --r-ic: 5px; --r-tabn: 4px;
+  --sh-1: 0 1px 0 rgba(16,20,25,.05), 0 8px 20px -12px rgba(16,20,25,.4);
+  --sh-2: 0 14px 30px -14px rgba(16,20,25,.5);
+  --icon-sw: 2.1; --icon-cap: butt;
+  --sh-note: 0 1px 0 rgba(16,20,25,.06);
+  --note-1: #ffffff; --note-2: #ffffff; --note-3: #ffffff;
+  --note-ink: #101419; --note-bw: 1px; --note-edge: #d2d8e0; --r-note: 4px;
+  --font-code: 'Bebas Neue', sans-serif; --code-wt: 400; --code-track: .04em;
+  --btn-case: uppercase; --btn-track: .06em;
+  --hover-lift: none;
+}
+[data-t="anzeige"] .st-tab.on { border-bottom-width: 4px; }
+[data-t="anzeige"] .st-cloud { --board: #fff; }
+/* Die Zettel bekommen ihre Farbe an der Kante statt in der Fläche —
+   auf einer Anzeigetafel ist die Fläche für die Zahl reserviert. */
+[data-t="anzeige"] .st-note { border-top: 4px solid var(--accent); }
+[data-t="anzeige"] .st-note:nth-child(3n+2) { border-top-color: var(--hot); }
+[data-t="anzeige"] .st-note:nth-child(3n) { border-top-color: var(--ink); }
+[data-t="anzeige"] .st-mark { font-size: 1.7rem; }
+[data-t="anzeige"] .st-tile h4 { font-size: 1.35rem; }
+[data-t="anzeige"] .st-step b { font-size: 1.3rem; }
+[data-t="anzeige"] .st-count strong { font-size: 2.8rem; color: var(--accent); }
+[data-t="anzeige"] .st-big { font-size: clamp(3.6rem, 9.5vw, 6rem); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   05 — „Rund"
+   ═══════════════════════════════════════════════════════════════════
+   Modern-freundlich: große Radien, weiße Karten auf sehr hellem
+   Kühlgrau, geometrische Schrift (Outfit), ein klares Mintgrün als
+   Nachfolger des heutigen Teals. Als einziges Theme mit HELLER
+   Kopfzeile — die Seite wird oben nicht abgeschnitten, sie fängt
+   an.
+
+   Nächster Verwandter von „heute", aber jünger, runder und ohne
+   das Beige: derselbe Charakter, eine Generation später.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-t="rund"] {
+  --font-ui: 'Outfit', sans-serif;
+  --font-dis: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --dis-wt: 700; --dis-track: -.03em;
+  --paper: #eef2f1; --paper-2: #e2e9e7; --surface: #ffffff;
+  --ink: #0d1a17; --ink-2: #475853; --ink-3: #7b8a86;
+  --line: #dfe7e5; --bw: 1px;
+  --chrome: #ffffff; --chrome-ink: #0d1a17; --chrome-accent: #00b37e;
+  --chrome-soft: #edf6f2; --chrome-edge: #dfe7e5;
+  --chrome-line: 1px solid #dfe7e5;
+  --accent: #00b37e; --accent-ink: #00714f; --accent-soft: #d6f5e8; --on-accent: #fff;
+  --hot: #ff4d6d; --hot-soft: #ffe0e6; --hot-ink: #c31b3c;
+  --ok: #00b37e; --ok-soft: #d6f5e8;
+  --r-lg: 24px; --r-md: 18px; --r-sm: 12px; --r-pill: 999px; --r-ic: 14px;
+  --sh-1: 0 2px 4px rgba(13,26,23,.04), 0 12px 28px -12px rgba(13,26,23,.2);
+  --sh-2: 0 4px 8px rgba(13,26,23,.05), 0 24px 46px -16px rgba(13,26,23,.28);
+  --icon-sw: 2; --icon-cap: round;
+  --sh-note: 0 2px 4px rgba(13,26,23,.05), 0 10px 22px -10px rgba(13,26,23,.22);
+  --note-1: #d6f5e8; --note-2: #dde8ff; --note-3: #ffe0e6;
+  --note-ink: #0d1a17; --r-note: 14px;
+  --code-track: -.01em;
+  --toast-bg: #0d1a17; --toast-ink: #fff;
+}
+[data-t="rund"] .st-tabs { background: transparent; }
+[data-t="rund"] .st-cloud { --board: #fff; }
+
+/* ── Schmale Geräte ───────────────────────────────────────────── */
+@media (max-width: 620px) {
+  .st-body { padding: 18px 14px 22px; gap: 20px; }
+  .st-tabs { padding: 0 8px; }
+  .st-tab { padding: 10px 8px 8px; font-size: .82rem; }
+  .sr-head { margin-top: 38px; }
+  .sr-num { font-size: 2.2rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Zeichensatz ────────────────────────────────────────────────
+     Alle Bildzeichen einmal als <symbol>, damit das geklonte
+     Skelett sie über <use> sechsmal benutzt, ohne sie sechsmal zu
+     enthalten. Die Strichstärke steht NICHT im Pfad, sondern in
+     --icon-sw: die Bildsprache gehört dem Theme, nicht der Ikone. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-scan" viewBox="0 0 24 24">
+    <path d="M3 8V5a2 2 0 0 1 2-2h3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3"/>
+    <path d="M3 12h18"/>
+  </symbol>
+  <symbol id="i-people" viewBox="0 0 24 24">
+    <circle cx="9" cy="8" r="3.2"/>
+    <path d="M3 20c0-3.2 2.7-5.5 6-5.5s6 2.3 6 5.5"/>
+    <path d="M16.5 5.6a3.2 3.2 0 0 1 0 6M18 14.9c2 .7 3.5 2.6 3.5 5.1"/>
+  </symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24">
+    <rect x="2.5" y="4.5" width="8" height="6" rx="1.4"/>
+    <rect x="13" y="7" width="8.5" height="6" rx="1.4"/>
+    <rect x="5" y="14" width="9" height="6" rx="1.4"/>
+  </symbol>
+  <symbol id="i-vote" viewBox="0 0 24 24">
+    <path d="M4 20V11h4v9zM8 12l3.5-8a2 2 0 0 1 2.8 2.5L13 11h5.5a2 2 0 0 1 2 2.5l-1.4 5A2 2 0 0 1 17 20H8z"/>
+  </symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24">
+    <circle cx="12" cy="13.5" r="7.5"/>
+    <path d="M12 9.5v4l2.5 2M9 2.5h6"/>
+  </symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+</svg>
+
+<header class="sr-top">
+  <h1>MPSkills <span>· Design-Showroom</span></h1>
+  <div class="sr-switch" id="srSwitch"></div>
+  <div class="sr-tools">
+    <button class="sr-tool" id="btnAll" type="button">Alle untereinander</button>
+    <button class="sr-tool" id="btnFar" type="button">Aus der letzten Reihe</button>
+  </div>
+</header>
+
+<section class="sr-lead">
+  <h2>Zweite Runde: clean, kontrastreich, kein Beige.</h2>
+  <p>
+    Aus der ersten Runde blieben <b>„Heute"</b> und <b>„Plakat"</b> übrig — also: klare Flächen,
+    hohe Lesbarkeit, kräftige Kanten. Werkstatt, Kreide, Studio und Riso sind raus, sie waren
+    Antworten auf eine andere Frage. Alle fünf neuen Vorschläge stehen jetzt auf
+    <b>reinem Weiß, kühlem Grau oder Tiefschwarz</b> — kein warmes Papier, kein gedeckter Ton.
+  </p>
+  <p>
+    Weiterhin gilt: <b>alle zeigen exakt dieselbe Anordnung.</b> Unterschiedlich sind nur Schrift,
+    Form, Farbe und Effekt. Zwei Knöpfe oben rechts — <b>Alle untereinander</b> für den direkten
+    Vergleich, <b>Aus der letzten Reihe</b> für den Beamer-Test. ←/→ blättert.
+  </p>
+</section>
+
+<main id="srMain"></main>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     DAS SKELETT — genau einmal.
+     ═══════════════════════════════════════════════════════════════
+     Sechs Ausschnitte, die zusammen die Fragen beantworten, die
+     eine Gestaltung hier beantworten muss:
+       1. Kopfzeile + Reiter   → wie wirkt der Rahmen?
+       2. QR + Code            → der wichtigste Moment der Seite.
+       3. Drei Schritte        → wie sieht die Bildsprache aus?
+       4. Kacheln              → wie sieht ein Angebot aus?
+       5. Zettelwolke          → wie sieht die Arbeit der Klasse aus?
+       6. Bedienteile          → wie sieht ein Knopf aus?
+     ═══════════════════════════════════════════════════════════════ -->
+<template id="stageTpl">
+<div class="st">
+
+  <div class="st-top">
+    <span class="st-mark">MP<i>Skills</i></span>
+    <span class="st-spacer"></span>
+    <span class="st-user">
+      <span class="st-av">SF</span>
+      <span class="st-uname">Finnern</span>
+      <span class="st-role">Lehrkraft</span>
+    </span>
+  </div>
+
+  <div class="st-tabs">
+    <button class="st-tab" type="button"><span class="st-n">1</span>Einstellungen</button>
+    <button class="st-tab on" type="button"><span class="st-n">2</span>Onboarding</button>
+    <button class="st-tab" type="button"><span class="st-n">3</span>Wortwolke</button>
+    <span class="st-tabs-side">
+      <span class="st-code">K7F2QM</span>
+      <button class="st-fs" type="button">⤢</button>
+    </span>
+  </div>
+
+  <div class="st-body">
+
+    <!-- 2 — die Tür -->
+    <section class="st-door">
+      <div class="st-qr"></div>
+      <div class="st-doortxt">
+        <p class="st-eyebrow">Mitmachen</p>
+        <p class="st-big">K7F2QM</p>
+        <p class="st-url">mpskills.de/j</p>
+        <div class="st-count"><strong>12</strong> von 28 sind dabei</div>
+        <ul class="st-chips">
+          <li class="on">Mia</li><li class="on">Jonas</li><li class="on">Leyla</li>
+          <li class="on">Ben</li><li>Elif</li><li>Noah</li><li>+ 6</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3 — Bildsprache -->
+    <p class="st-lbl">So läuft es</p>
+    <section class="st-steps">
+      <div class="st-step">
+        <span class="st-step-ic"><svg class="ic"><use href="#i-scan"/></svg></span>
+        <span><b>Scannen</b><span>oder Code tippen</span></span>
+      </div>
+      <span class="st-arrow"><svg class="ic"><use href="#i-arrow"/></svg></span>
+      <div class="st-step">
+        <span class="st-step-ic"><svg class="ic"><use href="#i-people"/></svg></span>
+        <span><b>Name</b><span>oder anonym</span></span>
+      </div>
+      <span class="st-arrow"><svg class="ic"><use href="#i-arrow"/></svg></span>
+      <div class="st-step">
+        <span class="st-step-ic"><svg class="ic"><use href="#i-cloud"/></svg></span>
+        <span><b>Mitschreiben</b><span>alle sehen es</span></span>
+      </div>
+    </section>
+
+    <!-- 4 — das Angebot -->
+    <p class="st-lbl">Werkzeuge</p>
+    <section class="st-tiles">
+      <div class="st-tile">
+        <div class="st-tile-h">
+          <span class="st-tile-ic"><svg class="ic"><use href="#i-cloud"/></svg></span>
+          <h4>Wortwolke</h4>
+        </div>
+        <span class="st-tag">bis 60 · offen</span>
+        <p>Eine Frage, viele Zettel. Zustimmung macht groß.</p>
+      </div>
+      <div class="st-tile">
+        <div class="st-tile-h">
+          <span class="st-tile-ic"><svg class="ic"><use href="#i-vote"/></svg></span>
+          <h4>Abstimmung</h4>
+        </div>
+        <span class="st-tag">bis 60</span>
+        <p>Vier Antworten, ein Balken, sofort sichtbar.</p>
+      </div>
+      <div class="st-tile st-tile--off">
+        <div class="st-tile-h">
+          <span class="st-tile-ic"><svg class="ic"><use href="#i-timer"/></svg></span>
+          <h4>Zeitgeber</h4>
+        </div>
+        <span class="st-tag st-tag--hot">in Vorbereitung</span>
+        <p>Läuft an der Wand, für alle gleich.</p>
+      </div>
+    </section>
+
+    <!-- 5 — die Arbeit der Klasse -->
+    <p class="st-lbl">Im Raum</p>
+    <section class="st-cloud">
+      <div class="st-note" style="left:4%;  top:16%; font-size:1.5rem;  background:var(--note-1); color:var(--note-ink); transform:rotate(-1.6deg)"><b>schneller tippen</b></div>
+      <div class="st-note" style="left:37%; top:6%;  font-size:1.05rem; background:var(--note-3); color:var(--note-ink); transform:rotate(1.4deg)">alles an einem Ort</div>
+      <div class="st-note" style="left:66%; top:20%; font-size:2.05rem; background:var(--note-2); color:var(--note-ink); transform:rotate(-.8deg)"><b>nichts vergessen</b></div>
+      <div class="st-note" style="left:8%;  top:56%; font-size:1.2rem;  background:var(--note-2); color:var(--note-ink); transform:rotate(2deg)">Videos anschauen</div>
+      <div class="st-note" style="left:40%; top:52%; font-size:.95rem;  background:var(--note-1); color:var(--note-ink); transform:rotate(-2.2deg)">weniger Papier</div>
+      <div class="st-note" style="left:66%; top:66%; font-size:1.35rem; background:var(--note-3); color:var(--note-ink); transform:rotate(1deg)">zusammen arbeiten</div>
+    </section>
+
+    <!-- 6 — Bedienteile -->
+    <section class="st-bits">
+      <button class="st-btn st-btn--go" type="button">Raum eröffnen</button>
+      <button class="st-btn" type="button">Beitritt schließen</button>
+      <button class="st-btn st-btn--warn" type="button">Ausblenden</button>
+      <span class="st-badge">Freigeschaltet</span>
+      <span class="st-toast">Raum verlängert · 60 Tage</span>
+    </section>
+
+  </div>
+</div>
+</template>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   Die Vorschläge.
+   ═══════════════════════════════════════════════════════════════════
+   „preis" ist bewusst Pflichtfeld: jede Gestaltung kostet etwas,
+   und ein Showroom, der nur Vorzüge zeigt, hilft bei keiner
+   Entscheidung.
+   ═══════════════════════════════════════════════════════════════════ */
+const VARIANTS = [
+  {
+    key: 'heute', name: 'Heute', tag: 'Der Nullpunkt',
+    lead: 'Der Ist-Zustand — Inter, Teal, warmes Papier, weiche Schatten. Steht hier nur als Bezugsgröße.',
+    spec: {
+      Schrift: ['Inter überall', 'JetBrains Mono für Codes'],
+      Form:    ['Radius 8–16 px', 'Haarlinien, 1 px'],
+      Effekt:  ['weicher Streuschatten', 'keine Textur'],
+      Farbe:   ['warmes Papier + ein Teal', 'Warnrot nur für Fehler']
+    },
+    sw: ['#17212b', '#0f766e', '#5eead4', '#f6f5f1', '#c2410c'],
+    preis: 'Kein Fehler drin — aber auch kein Gedanke, den man wiedererkennt. Das <b>warme Papier (#f6f5f1)</b> ist dabei das, was am meisten altert: es macht die Seite ruhig, aber auch behäbig.'
+  },
+  {
+    key: 'klar', name: 'Klar', tag: 'Präzision',
+    lead: '„Heute“, konsequent zu Ende gebracht: reines Weiß auf kühlem Grau, tiefe Tinte, ein elektrisches Blau. Höhe entsteht durch Kante statt durch Schattenwolke.',
+    spec: {
+      Schrift: ['Instrument Sans, eng gesetzt', 'JetBrains Mono für Codes'],
+      Form:    ['Radius 8–14 px', 'Haarlinien in Kühlgrau'],
+      Effekt:  ['fast keine Schatten', 'nichts schwebt ohne Grund'],
+      Farbe:   ['Weiß / Kühlgrau / Tinte', 'ein Elektrikblau']
+    },
+    sw: ['#0a0f16', '#1f5eff', '#f1f4f8', '#ffffff', '#e11d48'],
+    preis: 'Die sicherste Wahl: maximale Lesbarkeit, altert kaum, verträgt jedes weitere Werkzeug. <b>Preis: sie ist nicht auffällig.</b> Wer „cool“ als Ziel setzt, bekommt hier „ordentlich“ — was für eine Lehrkraft-Oberfläche das Richtige sein kann.'
+  },
+  {
+    key: 'kante', name: 'Kante', tag: 'Plakat in kalt',
+    lead: 'Die Plakat-Energie ohne Beige: reines Weiß, tiefschwarze Linien in voller Stärke, harte Versatzschatten — und ein einziges Acid-Grün, das es so nur auf einem Bildschirm gibt.',
+    spec: {
+      Schrift: ['Anton als Schlagzeile', 'Archivo als Lesetext'],
+      Form:    ['Radius 3 px', 'Rahmen 2 px in Schwarz'],
+      Effekt:  ['4 px Versatzschatten', 'Knopf rutscht beim Drücken'],
+      Farbe:   ['Weiß + Schwarz', 'Acid-Grün als einziges Signal']
+    },
+    sw: ['#08090c', '#ccff33', '#ffffff', '#f0f1f4', '#ff3b1f'],
+    preis: 'Gewinnt den Test aus der letzten Reihe deutlich und ist die einzige Fassung, die Schüler von sich aus „cool“ nennen. <b>Preis: sie verträgt keine Beliebigkeit.</b> Jedes neue Werkzeug muss in Schwarz-Weiß-plus-eine-Farbe passen — eine zweite Signalfarbe zerstört den Effekt sofort.'
+  },
+  {
+    key: 'nacht', name: 'Nacht', tag: 'Dunkel, hoher Kontrast',
+    lead: 'Tiefschwarz, sehr helles Weiß, ein Violett und ein Cyan. Der Kontrast zwischen Text und Grund ist höher als in jeder hellen Fassung — lesbar, nicht nur stimmungsvoll.',
+    spec: {
+      Schrift: ['Unbounded als Schlagzeile', 'Manrope als Lesetext'],
+      Form:    ['Radius 9–16 px', 'Linien fast unsichtbar'],
+      Effekt:  ['Leuchten um Code + Zahl', 'ein Lichtkegel von oben'],
+      Farbe:   ['Schwarz + Weiß', 'Violett, Cyan als zweites Signal']
+    },
+    sw: ['#030408', '#7c4dff', '#00e0ff', '#f3f5fa', '#101219'],
+    preis: 'Sieht auf einem Schüler-Tablet aus wie die Apps, die sie ohnehin benutzen. <b>⚠️ Am Beamer ist es eine Wette:</b> im hellen Klassenraum frisst der Projektor den Kontrast und Schwarz wird Grau. Machbar wäre Tablet dunkel / Beamer hell — aber das sind zwei Oberflächen, die gepflegt werden müssen.'
+  },
+  {
+    key: 'anzeige', name: 'Anzeige', tag: 'Anzeigetafel',
+    lead: 'Schmale Versalien, kühles Grau, ein Signalorange — und Zahlen, die alles überragen. Der Code ist hier kein Text, sondern eine Anzeige.',
+    spec: {
+      Schrift: ['Bebas Neue für Zahlen + Titel', 'Manrope als Lesetext'],
+      Form:    ['Radius 4–6 px', 'Zettel mit Farbkante oben'],
+      Effekt:  ['nichts hebt ab', 'Farbe nur an Kanten'],
+      Farbe:   ['Kühlgrau + Weiß', 'Signalorange, Blau als zweites']
+    },
+    sw: ['#101419', '#ff5a00', '#0047ff', '#eceff3', '#ffffff'],
+    preis: 'Passt zu dem, was die Seite wirklich tut: einer Halle voller Leute eine Zahl zeigen. <b>Preis: Versalien lesen sich langsamer</b> — sie dürfen deshalb nie einen ganzen Satz tragen, nur Titel, Codes und Zahlen.'
+  },
+  {
+    key: 'rund', name: 'Rund', tag: 'Modern-freundlich',
+    lead: 'Große Radien, weiße Karten auf sehr hellem Kühlgrau, geometrische Schrift, klares Mintgrün. Als einziges Theme mit heller Kopfzeile.',
+    spec: {
+      Schrift: ['Outfit überall', 'JetBrains Mono für Codes'],
+      Form:    ['Radius 12–24 px', 'große weiche Flächen'],
+      Effekt:  ['zwei Schattenlagen', 'helle Kopfzeile mit Linie'],
+      Farbe:   ['Kühlgrau + Weiß', 'Mintgrün statt Teal']
+    },
+    sw: ['#0d1a17', '#00b37e', '#eef2f1', '#ffffff', '#ff4d6d'],
+    preis: 'Der nächste Verwandte von „heute“ — derselbe Charakter, eine Generation jünger, ohne das Beige. <b>Preis: die weichste Fassung im Feld.</b> Große Radien und helle Kopfzeile nehmen Kanten weg, und mit ihnen einen Teil der Orientierung aus der Ferne.'
+  }
+];
+
+/* ── Ein glaubwürdiger QR-Code ─────────────────────────────────────
+   Kein echter — er soll nur aussehen wie einer, damit die Bühne
+   nicht mit einem grauen Kasten dasteht. Suchmarkierungen an den
+   drei Ecken, Takt dazwischen, Rest deterministisch gewürfelt:
+   deterministisch, damit alle Varianten DENSELBEN Code zeigen und
+   der Vergleich nicht am Muster hängt. */
+function qrSvg() {
+  const N = 25, m = Array.from({ length: N }, () => new Array(N).fill(0));
+  const finder = (r, c) => {
+    for (let i = -1; i <= 7; i++) for (let j = -1; j <= 7; j++) {
+      const y = r + i, x = c + j;
+      if (y < 0 || x < 0 || y >= N || x >= N) continue;
+      const edge = i === 0 || i === 6 || j === 0 || j === 6;
+      const core = i >= 2 && i <= 4 && j >= 2 && j <= 4;
+      m[y][x] = (edge || core) && i >= 0 && i <= 6 && j >= 0 && j <= 6 ? 1 : 0;
+    }
+  };
+  finder(0, 0); finder(0, N - 7); finder(N - 7, 0);
+  for (let i = 8; i < N - 8; i++) { m[6][i] = i % 2 === 0 ? 1 : 0; m[i][6] = i % 2 === 0 ? 1 : 0; }
+  let seed = 20260818;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const inFinder = (y < 8 && x < 8) || (y < 8 && x >= N - 8) || (y >= N - 8 && x < 8);
+    if (inFinder || y === 6 || x === 6) continue;
+    m[y][x] = rnd() > 0.52 ? 1 : 0;
+  }
+  let d = '';
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (m[y][x]) d += `M${x} ${y}h1v1h-1z`;
+  return `<svg viewBox="-2 -2 ${N + 4} ${N + 4}" shape-rendering="crispEdges" aria-hidden="true"><path d="${d}" fill="currentColor"/></svg>`;
+}
+
+/* ── Aufbau ───────────────────────────────────────────────────── */
+const main = document.getElementById('srMain');
+const tpl  = document.getElementById('stageTpl');
+const QR   = qrSvg();
+
+VARIANTS.forEach((v, i) => {
+  const sec = document.createElement('section');
+  sec.className = 'sr-var';
+  sec.dataset.key = v.key;
+
+  const specs = Object.entries(v.spec).map(([k, lines]) =>
+    `<dl class="sr-spec"><dt>${k}</dt>${lines.map(l => `<dd>${l}</dd>`).join('')}</dl>`
+  ).join('');
+
+  sec.innerHTML = `
+    <div class="sr-head">
+      <span class="sr-num">${String(i).padStart(2, '0')}</span>
+      <div class="sr-head-t">
+        <h3>${v.name} <span style="color:#6f7a88;font-weight:500">— ${v.tag}</span></h3>
+        <p>${v.lead}</p>
+      </div>
+    </div>
+    <div class="sr-specs">
+      ${specs}
+      <dl class="sr-spec"><dt>Palette</dt>
+        <dd class="sr-sw-row">${v.sw.map(c => `<i style="background:${c}"></i>`).join('')}</dd>
+      </dl>
+    </div>
+    <p class="sr-price">${v.preis}</p>
+    <div class="sr-frame"></div>`;
+
+  const stage = tpl.content.cloneNode(true);
+  stage.querySelector('.st').dataset.t = v.key;
+  stage.querySelector('.st-qr').innerHTML = QR;
+  sec.querySelector('.sr-frame').appendChild(stage);
+  main.appendChild(sec);
+});
+
+/* ── Umschalter ───────────────────────────────────────────────── */
+const sw = document.getElementById('srSwitch');
+sw.innerHTML = VARIANTS.map((v, i) =>
+  `<button type="button" class="sr-sw${i === 0 ? ' on' : ''}" data-k="${v.key}">
+     <i>${v.sw.slice(0, 3).map(c => `<b style="background:${c}"></b>`).join('')}</i>${v.name}
+   </button>`).join('');
+
+let showAll = false;
+
+function paint(key) {
+  document.querySelectorAll('.sr-var').forEach(s => { s.hidden = !showAll && s.dataset.key !== key; });
+  sw.querySelectorAll('.sr-sw').forEach(b => b.classList.toggle('on', !showAll && b.dataset.k === key));
+}
+
+let current = VARIANTS[0].key;
+paint(current);
+
+sw.addEventListener('click', e => {
+  const b = e.target.closest('.sr-sw');
+  if (!b) return;
+  showAll = false;
+  document.getElementById('btnAll').classList.remove('on');
+  current = b.dataset.k;
+  paint(current);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+document.getElementById('btnAll').addEventListener('click', e => {
+  showAll = !showAll;
+  e.currentTarget.classList.toggle('on', showAll);
+  paint(current);
+});
+
+document.getElementById('btnFar').addEventListener('click', e => {
+  document.body.classList.toggle('far');
+  e.currentTarget.classList.toggle('on', document.body.classList.contains('far'));
+});
+
+/* Pfeiltasten blättern durch die Vorschläge — beim Vergleichen will
+   man nicht zur Maus greifen, sondern hin und her springen und
+   sehen, was am Bild sich ändert. */
+addEventListener('keydown', e => {
+  if (showAll || e.target.matches('input, textarea')) return;
+  const i = VARIANTS.findIndex(v => v.key === current);
+  if (e.key === 'ArrowRight') { current = VARIANTS[(i + 1) % VARIANTS.length].key; paint(current); }
+  if (e.key === 'ArrowLeft')  { current = VARIANTS[(i - 1 + VARIANTS.length) % VARIANTS.length].key; paint(current); }
+});
+</script>
+</body>
+</html>

@@ -17,9 +17,10 @@
    Avatar · Name · Pfeil, dahinter ein Menü. Es ist dasselbe Konto,
    und wer aus der Schulung kommt, soll die Ecke wiedererkennen.
    Übernommen ist das Verhalten, NICHT die Optik — dort Gold auf
-   Braun, hier Tinte und Teal (siehe Kopf von style.css).
+   Braun, hier die Richtung „Rund" (siehe Kopf von style.css).
 
    Wer was im Menü sieht:
+     Hell / Dunkel   — alle Angemeldeten, ganz oben (lib/theme.js)
      Profil          — alle Angemeldeten
      Admin-Bereich   — Admin
      Tablet-Schulung — alle (ein Konto, zwei Bereiche)
@@ -99,10 +100,43 @@
           <span class="ub-caret" aria-hidden="true">▼</span>
         </button>
         <div class="ub-menu" data-ub-menu hidden>
+          ${themeHTML()}
           <a href="profil.html">Profil</a>
           ${role === 'admin' ? '<a class="ub-admin" href="../admin/index.html">Admin-Bereich</a>' : ''}
           <a href="../index.html">Tablet-Schulung</a>
           <button type="button" data-ub="logout">Abmelden</button>
+        </div>
+      </div>`;
+  }
+
+  /* ── Hell / Dunkel ──────────────────────────────────────────
+     Steht ganz oben im Menü und nicht unten bei „Abmelden": es ist
+     das Einzige hier, das man mehrmals benutzt, und das Einzige,
+     das nicht wegführt.
+
+     Zwei Knöpfe statt eines Umschalters — ein einzelner Eintrag
+     „Dunkelmodus" müsste erst gelesen werden, um zu verraten, wo
+     man gerade steht. Hier ist die geltende Antwort gefüllt, und
+     die andere steht daneben.
+
+     Gedrückt wird aria-pressed und nicht eine Klasse: der Zustand
+     gehört zur Bedeutung des Knopfes, nicht zu seinem Aussehen —
+     eine Sprachausgabe liest ihn damit mit.
+
+     Fehlt lib/theme.js (etwa auf einer Seite, die sie nicht
+     einbindet), fällt das Fach ersatzlos weg. Ein Schalter ohne
+     Wirkung wäre schlimmer als keiner. */
+  function themeHTML() {
+    if (!window.MPTheme) return '';
+    const t = window.MPTheme.get();
+    const b = (v, icon, label) =>
+      `<button type="button" data-ub="theme" data-theme-set="${v}"
+               aria-pressed="${t === v}" title="${label}" aria-label="${label}">${icon}</button>`;
+    return `
+      <div class="ub-theme">
+        <span class="ub-theme-l">Ansicht</span>
+        <div class="ub-theme-seg" role="group" aria-label="Hell oder dunkel">
+          ${b('light', '☀', 'Hell')}${b('dark', '☾', 'Dunkel')}
         </div>
       </div>`;
   }
@@ -154,6 +188,18 @@
           if (opts.onRegister) opts.onRegister();
           else location.href = 'index.html';
           break;
+        /* Schließt das Menü ausdrücklich NICHT: man will sehen, was
+           passiert, und notfalls sofort zurück. Neu gezeichnet wird
+           nur das Fach selbst — ein render() ersetzte das ganze Menü
+           und klappte es damit zu. */
+        case 'theme': {
+          window.MPTheme?.set(trigger.dataset.themeSet);
+          const now = window.MPTheme?.get();
+          document.querySelectorAll('[data-ub="theme"]').forEach(b => {
+            b.setAttribute('aria-pressed', String(b.dataset.themeSet === now));
+          });
+          break;
+        }
         case 'logout':
           closeMenu();
           logout();

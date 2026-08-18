@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MPSkills — Rund: hell und dunkel</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   MPSkills — SHOWROOM: „Rund" hell und dunkel
+   ═══════════════════════════════════════════════════════════════════
+   Entschieden ist die Richtung: „Rund" — große Radien, Outfit,
+   Mintgrün, kühles Grau. Offen ist nur noch, wie dieselbe Richtung
+   im Dunkeln aussieht.
+
+   ⚠️ DIE EINE REGEL DIESER SEITE:
+   Die Zettel der Wortwolke ändern sich NICHT. Nicht die Form
+   (3 px Radius, ±2,4° Neigung), nicht die Farben (die sechs
+   NOTE_RAMPS), nicht der Stapel, nicht der Schatten, nicht die
+   Schrift auf der Karte. Sie sind der Inhalt; alles andere ist der
+   Rahmen darum, und nur der wechselt zwischen hell und dunkel.
+
+   Deshalb sind die Karten hier auch nicht nachgebaut, sondern mit
+   den Formeln aus tools/wordcloud/tool.js gerechnet:
+   NOTE_RAMPS · strength() · sizeFor() · sheetsFor() · rampFor() ·
+   tiltFor() · mixRGB(), und der Stapel als dieselben zwei
+   box-shadow-Blätter wie in tool.css. Was du hier siehst, ist die
+   echte Karte und keine Skizze davon.
+
+   Zwei Dinge sind bewusst als Schalter oben eingebaut, weil sie
+   echte offene Fragen sind und keine Geschmacksfrage:
+     · Tafel dunkel oder hell (die Fläche UNTER den Zetteln)
+     · Akzent im Dunkeln: Mint (eine Marke) oder Violett (Nacht)
+   ═══════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Outfit', system-ui, sans-serif;
+  background: #0e1211;
+  color: #e6ecea;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 110px;
+}
+
+/* ── Kopfleiste des Showrooms ─────────────────────────────────── */
+.sr-top {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 10px 20px;
+  background: rgba(14,18,17,.93);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #232b29;
+}
+.sr-top h1 {
+  font-family: 'Archivo', sans-serif;
+  font-size: .92rem; font-weight: 800; letter-spacing: -.01em;
+}
+.sr-top h1 span { color: #6d7b77; font-weight: 500; }
+
+.sr-grp { display: flex; align-items: center; gap: 7px; }
+.sr-grp > label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; color: #5e6d69;
+}
+.sr-seg { display: flex; border: 1px solid #2c3634; border-radius: 999px; overflow: hidden; }
+.sr-seg button {
+  padding: 6px 14px; cursor: pointer; border: 0;
+  background: #171d1c; color: #9aa8a4;
+  font-family: inherit; font-weight: 600; font-size: .8rem;
+  transition: background .13s, color .13s;
+}
+.sr-seg button:hover { background: #202826; color: #fff; }
+.sr-seg button.on { background: #eef3f1; color: #0e1211; }
+
+.sr-right { margin-left: auto; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.sr-tool {
+  padding: 7px 13px; border-radius: 9px; cursor: pointer;
+  border: 1px dashed #36423f; background: transparent; color: #8b9995;
+  font-family: inherit; font-weight: 600; font-size: .78rem;
+}
+.sr-tool:hover { border-style: solid; color: #fff; }
+.sr-tool.on { border-style: solid; background: #26302e; color: #fff; border-color: #44514e; }
+#darkOnly[hidden] { display: none; }
+
+/* ── Vorspann und Abschnitte ──────────────────────────────────── */
+.sr-lead, .sr-var, .sr-out { max-width: 1240px; margin: 0 auto; padding: 0 22px; }
+.sr-lead { margin-top: 34px; }
+.sr-lead h2 {
+  font-family: 'Archivo', sans-serif;
+  font-size: clamp(1.5rem, 3.4vw, 2.1rem); font-weight: 800; letter-spacing: -.025em;
+}
+.sr-lead p { color: #8b9995; margin-top: 10px; max-width: 70ch; line-height: 1.6; font-size: .95rem; }
+.sr-lead p b { color: #cfd8d5; font-weight: 700; }
+
+.sr-head { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; margin: 50px 0 14px; }
+.sr-num {
+  font-family: 'Archivo', sans-serif; font-size: 2.8rem; font-weight: 900;
+  line-height: .8; color: #29332f; letter-spacing: -.04em;
+}
+.sr-head-t { flex: 1 1 260px; }
+.sr-head h3 { font-family: 'Archivo', sans-serif; font-size: 1.4rem; font-weight: 800; letter-spacing: -.02em; }
+.sr-head p { color: #8b9995; font-size: .92rem; margin-top: 3px; max-width: 62ch; }
+
+.sr-specs { display: grid; gap: 9px; grid-template-columns: repeat(auto-fit, minmax(184px, 1fr)); margin-bottom: 14px; }
+.sr-spec { border: 1px solid #232b29; border-radius: 12px; padding: 10px 12px; background: #141a19; }
+.sr-spec dt {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .6rem; font-weight: 500; letter-spacing: .13em;
+  text-transform: uppercase; color: #5e6d69; margin-bottom: 5px;
+}
+.sr-spec dd { font-size: .83rem; line-height: 1.45; color: #ccd5d2; }
+.sr-spec dd + dd { margin-top: 2px; color: #8b9995; }
+.sr-sw-row { display: flex; gap: 4px; margin-top: 8px; }
+.sr-sw-row i { width: 24px; height: 24px; border-radius: 6px; border: 1px solid rgba(255,255,255,.13); }
+
+.sr-frame { border-radius: 16px; overflow: hidden; box-shadow: 0 26px 70px rgba(0,0,0,.55); border: 1px solid #283230; }
+.sr-var[hidden] { display: none; }
+
+body.far .sr-frame { zoom: .48; filter: blur(.7px); }
+body.far .sr-var { max-width: 660px; }
+
+/* Der Ausblick am Ende — kein Design, nur Text. */
+.sr-out { margin-top: 64px; }
+.sr-out h3 { font-family: 'Archivo', sans-serif; font-size: 1.2rem; font-weight: 800; letter-spacing: -.02em; margin-bottom: 12px; }
+.sr-out .box {
+  border: 1px solid #232b29; border-left: 3px solid #00b37e;
+  border-radius: 12px; padding: 16px 18px; background: #141a19;
+  max-width: 78ch;
+}
+.sr-out p { color: #9aa8a4; font-size: .9rem; line-height: 1.6; }
+.sr-out p + p { margin-top: 10px; }
+.sr-out b { color: #e6ecea; font-weight: 700; }
+.sr-out code {
+  font-family: 'JetBrains Mono', monospace; font-size: .82em;
+  background: #1d2523; border: 1px solid #2b3533; border-radius: 5px;
+  padding: 1px 5px; color: #b9e8d5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DIE BÜHNE — „Rund", hell wie dunkel
+   ═══════════════════════════════════════════════════════════════════
+   Ein Regelsatz, zwei Wertesätze. Alles, was sich zwischen hell und
+   dunkel ändert, steht als Variable an .st — und NICHTS davon fasst
+   die Zettel an. Die haben ihre eigenen Werte, die unten in einem
+   eigenen Block stehen und in beiden Modi identisch sind.
+   ═══════════════════════════════════════════════════════════════════ */
+.st {
+  /* ── Form: gehört „Rund" und gilt in beiden Modi ── */
+  --font-ui: 'Outfit', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --r-lg: 24px; --r-md: 18px; --r-sm: 12px; --r-pill: 999px; --r-ic: 14px;
+  --icon-sw: 2;
+
+  font-family: var(--font-ui);
+  background: var(--paper); color: var(--ink);
+  position: relative; isolation: isolate;
+}
+.st * { font-family: inherit; }
+
+/* ── Hell ──────────────────────────────────────────────────────── */
+.st[data-mode="light"] {
+  --paper: #eef2f1; --paper-2: #e2e9e7; --surface: #ffffff;
+  --ink: #0d1a17; --ink-2: #475853; --ink-3: #7b8a86;
+  --line: #dfe7e5;
+  --chrome: #ffffff; --chrome-ink: #0d1a17; --chrome-line: 1px solid #dfe7e5;
+  --chrome-soft: #edf6f2; --chrome-edge: #dfe7e5;
+  --accent: #00b37e; --accent-ink: #00714f; --accent-soft: #d6f5e8; --on-accent: #ffffff;
+  --hot: #ff4d6d; --hot-soft: #ffe0e6; --hot-ink: #c31b3c;
+  --ok: #00b37e; --ok-soft: #d6f5e8;
+  --sh-1: 0 2px 4px rgba(13,26,23,.04), 0 12px 28px -12px rgba(13,26,23,.2);
+  --sh-2: 0 4px 8px rgba(13,26,23,.05), 0 24px 46px -16px rgba(13,26,23,.28);
+  --toast-bg: #0d1a17; --toast-ink: #fff;
+  --qr-bg: transparent; --qr-ink: #0d1a17;
+}
+
+/* ── Dunkel ────────────────────────────────────────────────────────
+   Nicht „hell mit invertierten Werten": im Dunkeln trägt nicht mehr
+   der Schatten die Höhe, sondern die Fläche. Deshalb wird die Karte
+   HELLER als der Grund (statt weiß auf grau), die Linien werden fast
+   unsichtbar, und der Akzent wird angehoben — #00b37e ist auf
+   Schwarz zu dunkel zum Lesen, #2ee8a5 nicht.
+
+   Der Grund ist leicht kühl-grün abgestimmt und nicht neutral grau:
+   ein völlig unbunter Hintergrund lässt Mint daneben giftig
+   aussehen. */
+.st[data-mode="dark"] {
+  --paper: #0b100f; --paper-2: #1a2321; --surface: #131a18;
+  --ink: #eef4f2; --ink-2: #a3b3ae; --ink-3: #6e807b;
+  --line: #232e2b;
+  --chrome: #080c0b; --chrome-ink: #ffffff; --chrome-line: 1px solid #1c2523;
+  --chrome-soft: rgba(255,255,255,.07); --chrome-edge: rgba(255,255,255,.1);
+  --accent: #2ee8a5; --accent-ink: #2ee8a5; --accent-soft: rgba(46,232,165,.14); --on-accent: #04140e;
+  --hot: #ff5c7c; --hot-soft: rgba(255,92,124,.14); --hot-ink: #ff92a8;
+  --ok: #2ee8a5; --ok-soft: rgba(46,232,165,.13);
+  --sh-1: 0 1px 0 rgba(255,255,255,.03) inset, 0 14px 32px rgba(0,0,0,.5);
+  --sh-2: 0 1px 0 rgba(255,255,255,.05) inset, 0 24px 52px rgba(0,0,0,.66);
+  --toast-bg: #2ee8a5; --toast-ink: #04140e;
+  --qr-bg: #eef4f2; --qr-ink: #080c0b;
+}
+/* Ein einziger, sehr flacher Lichtkegel von oben — im Dunkeln ist
+   das der Ersatz für den Schatten: er sagt, wo die Mitte ist. */
+.st[data-mode="dark"]::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse 85% 55% at 50% -12%, rgba(46,232,165,.10), transparent 62%);
+}
+
+/* Zweiter Akzent zur Wahl: das Violett aus „Nacht". Ändert NUR die
+   Akzentfarbe — Form, Grund und Karten bleiben, wie sie sind. */
+.st[data-mode="dark"][data-accent="violet"] {
+  --paper: #0a0b10; --paper-2: #1c1e29; --surface: #12141b;
+  --line: #252836;
+  --chrome: #06070b; --chrome-line: 1px solid #1b1e28;
+  --accent: #9d7bff; --accent-ink: #9d7bff; --accent-soft: rgba(157,123,255,.16); --on-accent: #ffffff;
+  --toast-bg: #7c4dff; --toast-ink: #fff;
+}
+.st[data-mode="dark"][data-accent="violet"]::before {
+  background: radial-gradient(ellipse 85% 55% at 50% -12%, rgba(124,77,255,.16), transparent 62%);
+}
+
+/* ── Kopfzeile ─────────────────────────────────────────────────── */
+.st-top {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 22px;
+  background: var(--chrome); color: var(--chrome-ink);
+  border-bottom: var(--chrome-line);
+}
+.st-mark { font-size: 1.28rem; font-weight: 700; letter-spacing: -.03em; }
+.st-mark i { color: var(--accent); font-style: normal; }
+.st-spacer { flex: 1; }
+
+/* Der Schalter selbst — er gehört ins Bild, weil er ab jetzt Teil
+   der Kopfzeile ist. Rund und unbunt: er schaltet die Ansicht um,
+   er sagt nichts über den Inhalt. */
+.st-theme {
+  width: 34px; height: 34px; flex: none; cursor: pointer;
+  display: grid; place-items: center;
+  border-radius: 50%; border: 1px solid var(--chrome-edge);
+  background: var(--chrome-soft); color: var(--chrome-ink);
+  font-size: .95rem; line-height: 1;
+  transition: background .14s ease;
+}
+.st-theme:hover { background: var(--accent-soft); }
+
+.st-user {
+  display: flex; align-items: center; gap: 9px;
+  padding: 4px 13px 4px 5px; border-radius: var(--r-pill);
+  background: var(--chrome-soft); border: 1px solid var(--chrome-edge);
+  font-size: .85rem;
+}
+.st-av {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center; flex: none;
+  background: var(--accent); color: var(--on-accent);
+  font-size: .78rem; font-weight: 700;
+}
+.st-uname { font-weight: 600; }
+.st-role {
+  font-family: var(--font-mono);
+  font-size: .62rem; letter-spacing: .08em; text-transform: uppercase;
+  font-weight: 700; padding: 2px 7px; border-radius: var(--r-pill);
+  background: var(--accent-soft); color: var(--accent-ink);
+}
+
+/* ── Reiterleiste ──────────────────────────────────────────────── */
+.st-tabs {
+  display: flex; align-items: stretch; gap: 10px;
+  padding: 0 16px;
+  background: transparent; border-bottom: 1px solid var(--line);
+}
+.st-tab {
+  font: inherit; font-size: .9rem; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 13px 10px;
+  background: none; border: none; border-bottom: 3px solid transparent;
+  color: var(--ink-3); cursor: pointer; white-space: nowrap;
+}
+.st-tab.on { color: var(--ink); border-bottom-color: var(--accent); }
+.st-n {
+  flex: none; width: 21px; height: 21px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: .68rem; font-weight: 700;
+  background: var(--paper-2); color: var(--ink-3);
+}
+.st-tab.on .st-n { background: var(--accent); color: var(--on-accent); }
+.st-tabs-side { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+.st-code {
+  font-family: var(--font-mono); font-weight: 700;
+  font-size: 1rem; letter-spacing: .08em;
+  background: var(--paper-2); color: var(--ink);
+  border-radius: var(--r-sm); padding: 4px 12px;
+}
+.st-fs {
+  font: inherit; font-size: 1rem; line-height: 1; cursor: pointer;
+  background: none; border: 1px solid var(--line);
+  border-radius: var(--r-sm); padding: 6px 10px; color: var(--ink-2);
+}
+
+/* ── Rumpf ─────────────────────────────────────────────────────── */
+.st-body { padding: 24px 22px 28px; display: grid; gap: 24px; }
+.st-lbl {
+  font-family: var(--font-mono);
+  font-size: .63rem; font-weight: 500; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-3);
+  display: flex; align-items: center; gap: 10px;
+}
+.st-lbl::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+.st-door {
+  display: flex; align-items: center; gap: clamp(20px, 4vw, 46px);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-lg); box-shadow: var(--sh-1);
+  padding: clamp(18px, 3vw, 30px); flex-wrap: wrap;
+}
+.st-qr {
+  width: clamp(140px, 19vw, 190px); aspect-ratio: 1; flex: none;
+  display: grid; place-items: center;
+  background: var(--qr-bg); border-radius: var(--r-md); padding: var(--qr-pad, 10px);
+}
+.st-qr svg { width: 100%; height: 100%; display: block; color: var(--qr-ink); }
+.st-doortxt { flex: 1 1 240px; min-width: 0; }
+.st-eyebrow {
+  font-family: var(--font-mono);
+  font-size: .7rem; font-weight: 700; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--accent-ink); margin-bottom: 6px;
+}
+.st-big {
+  font-size: clamp(2.6rem, 7vw, 4.2rem); font-weight: 700;
+  line-height: .95; letter-spacing: -.01em; color: var(--ink);
+}
+.st-url { font-family: var(--font-mono); font-size: .82rem; color: var(--ink-2); margin-top: 8px; }
+.st-count { margin-top: 14px; font-size: 1.05rem; color: var(--ink-2); display: flex; align-items: baseline; gap: 8px; }
+.st-count strong { font-size: 1.9rem; font-weight: 700; color: var(--ink); letter-spacing: -.03em; line-height: 1; }
+.st-chips { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.st-chips li {
+  font-size: .82rem; padding: 4px 13px; border-radius: var(--r-pill);
+  background: var(--paper-2); border: 1px solid var(--line); color: var(--ink-3);
+}
+.st-chips li.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+
+.st-steps { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.st-step {
+  flex: 1 1 150px; display: flex; align-items: center; gap: 13px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-md); padding: 13px 15px; box-shadow: var(--sh-1);
+}
+.st-step-ic {
+  width: 46px; height: 46px; flex: none; display: grid; place-items: center;
+  border-radius: var(--r-ic); background: var(--accent-soft); color: var(--accent-ink);
+}
+.st-step-ic svg { width: 26px; height: 26px; }
+.st-step b { font-size: 1rem; font-weight: 600; display: block; letter-spacing: -.02em; }
+.st-step span { font-size: .78rem; color: var(--ink-3); }
+.st-arrow { color: var(--ink-3); flex: none; }
+.st-arrow svg { width: 22px; height: 22px; }
+svg.ic { fill: none; stroke: currentColor; stroke-width: var(--icon-sw); stroke-linecap: round; stroke-linejoin: round; }
+
+.st-tiles { display: grid; gap: 13px; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); }
+.st-tile {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-md); padding: 16px 17px 15px; box-shadow: var(--sh-1);
+  display: flex; flex-direction: column; gap: 9px;
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.st-tile:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
+.st-tile--off { opacity: .6; box-shadow: none; }
+.st-tile-h { display: flex; align-items: center; gap: 11px; }
+.st-tile-ic {
+  width: 40px; height: 40px; flex: none; display: grid; place-items: center;
+  border-radius: var(--r-ic); background: var(--accent-soft); color: var(--accent-ink);
+}
+.st-tile-ic svg { width: 23px; height: 23px; }
+.st-tile h4 { font-size: 1.04rem; font-weight: 700; letter-spacing: -.03em; }
+.st-tag {
+  align-self: flex-start; font-family: var(--font-mono);
+  font-size: .61rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: var(--r-pill);
+  border: 1px solid var(--line); background: var(--paper-2); color: var(--ink-3);
+}
+.st-tag--hot { background: var(--hot-soft); border-color: var(--hot); color: var(--hot-ink); }
+.st-tile p { font-size: .85rem; color: var(--ink-2); flex: 1; }
+
+.st-bits { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.st-btn {
+  font: inherit; font-size: .9rem; font-weight: 600; padding: 10px 20px; cursor: pointer;
+  border-radius: var(--r-sm); border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink);
+  transition: background .12s ease;
+}
+.st-btn--go { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.st-btn--warn { background: transparent; border-color: var(--hot); color: var(--hot-ink); }
+.st-badge {
+  font-family: var(--font-mono); font-size: .7rem; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: 5px 12px; border-radius: var(--r-pill);
+  background: var(--ok-soft); color: var(--ok); border: 1px solid var(--ok);
+}
+.st-toast {
+  margin-left: auto; background: var(--toast-bg); color: var(--toast-ink);
+  padding: 10px 20px; border-radius: var(--r-pill);
+  font-size: .88rem; font-weight: 600; box-shadow: var(--sh-2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DAS WERKZEUG — 1:1 aus tools/wordcloud/tool.css
+   ═══════════════════════════════════════════════════════════════════
+   Zwei Schichten, und die Trennlinie zwischen ihnen ist der ganze
+   Punkt dieser Seite:
+
+   (a) DER RAHMEN — Frageleiste, Plus-Knopf, Lupenknöpfe, die Tafel
+       selbst. Das ist Bedienung, also wechselt sie mit dem Modus.
+       Sie bleibt dabei UNBUNT (Regel 1 aus tool.css: „die Farbe
+       gehört den Zetteln") — im Dunkeln wird aus dem Anthrazit
+       eben ein helles Grau und nicht plötzlich Mint.
+
+   (b) DIE ZETTEL — .bd-cn und alles daran. Unverändert, in beiden
+       Modi, bis auf die Nachkommastelle: Fläche und Kante kommen
+       aus NOTE_RAMPS, die Schrift bleibt Inter, der Text bleibt
+       #1c2530, die Neigung bleibt aus TILTS, der Stapel bleibt die
+       zwei versetzten Blätter.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* (a) Der Rahmen — hell */
+.st[data-mode="light"] .wc {
+  --clr-board: #ffffff;
+  --clr-grid: rgba(28,37,48,0.045);
+  --clr-chrome: #ffffff;
+  --clr-surface: #f4f6f8;
+  --clr-line: #d7dce2;
+  --clr-ink: #1c2530; --clr-ink-3: #7c8794;
+  --clr-mod: #2b3440;           /* der unbunte Bedien-Akzent */
+  --clr-mod-ink: #ffffff;
+  --clr-mod-soft: rgba(43,52,64,0.08);
+  --wc-zoom-bg: rgba(255,255,255,0.92);
+}
+/* (a) Der Rahmen — dunkel */
+.st[data-mode="dark"] .wc {
+  --clr-board: #10161a;
+  --clr-grid: rgba(255,255,255,0.05);
+  --clr-chrome: #131a18;
+  --clr-surface: #1a2321;
+  --clr-line: #262f2d;
+  --clr-ink: #eef4f2; --clr-ink-3: #7d8b87;
+  --clr-mod: #dbe6e2;           /* dasselbe Signal, andere Richtung */
+  --clr-mod-ink: #0b100f;
+  --clr-mod-soft: rgba(219,230,226,0.10);
+  --wc-zoom-bg: rgba(19,26,24,0.92);
+}
+/* Die Tafel bleibt weiß — der Schalter oben. Nur diese eine Fläche
+   dreht zurück ins Helle; die Zettel merken davon ohnehin nichts. */
+.st[data-board="light"] .wc {
+  --clr-board: #ffffff;
+  --clr-grid: rgba(28,37,48,0.045);
+}
+
+.wc { padding: 0; }
+.bd-catnav {
+  margin: 0 0 14px; padding: 0 0 10px;
+  border-bottom: 1px solid var(--clr-line);
+}
+.bd-catnav__title { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.bd-catnav__name {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  flex-wrap: wrap; padding: 6px 18px; border-radius: 999px;
+  border: 1.5px solid var(--clr-mod); background: var(--clr-mod-soft);
+  font-size: 1.12rem; font-weight: 700; letter-spacing: -.02em;
+  color: var(--clr-ink); text-align: center; line-height: 1.3;
+}
+.bd-catnav__count {
+  font-size: .78rem; font-weight: 700;
+  color: var(--clr-mod-ink); background: var(--clr-mod);
+  border-radius: 999px; padding: 2px 9px; line-height: 1.25;
+}
+.bd-catadd {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; margin-left: 6px;
+  border-radius: 50%; border: 1px solid var(--clr-mod);
+  background: var(--clr-mod); color: var(--clr-mod-ink);
+  font-size: 1.15rem; font-weight: 700; line-height: 1; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.20);
+  transition: transform .12s ease;
+}
+.bd-catadd:hover { transform: scale(1.08); }
+
+/* Die Tafel. Raster und Kante wechseln mit dem Modus, das Maß nicht:
+   28 px, wie in tool.css. */
+.bd-surface {
+  position: relative;
+  background-color: var(--clr-board);
+  background-image:
+    linear-gradient(var(--clr-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--clr-grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+  border: 1px solid var(--clr-line);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+/* Höhe setzt das Skript, nachdem es gepackt hat — wie im Werkzeug,
+   wo die Tafel ihre Maße auch erst nach der Platzierung kennt. Ein
+   fester Wert hier hieße: auf einem schmalen Gerät fällt die letzte
+   Karte unten heraus. */
+.bd-port { position: relative; overflow: hidden; }
+.bd-cloud { position: relative; width: 100%; }
+
+.bd-zoom {
+  position: absolute; right: 8px; bottom: 8px; z-index: 15;
+  display: flex; gap: 3px; padding: 3px;
+  background: var(--wc-zoom-bg);
+  border: 1px solid var(--clr-line); border-radius: 11px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.bd-zoom button {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 8px; background: transparent; cursor: pointer;
+  font-size: 1.02rem; line-height: 1; color: var(--clr-ink-3);
+}
+.bd-zoom button:hover { background: var(--clr-mod-soft); color: var(--clr-ink); }
+
+/* ── (b) Die Zettel — ab hier ändert sich NICHTS mehr ──────────────
+   Wortgleich aus tool.css. Keine einzige Variable dieser Regeln
+   hängt am Modus: Inter, #1c2530, 3 px Radius, derselbe Schatten,
+   dieselben zwei Stapelblätter. Wer das anfassen will, muss es
+   drüben im Werkzeug tun. */
+.bd-cn {
+  position: absolute; left: 0; top: 0;
+  display: flex; flex-direction: column; gap: .35em;
+  padding: .62em .78em;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--cn-fill, #fbe8ad);
+  border-color: var(--cn-line, #e8cf82);
+  color: #1c2530;
+
+  --ring:   0 0 0 0 transparent;
+  --sheets: 0 0 0 0 transparent;
+  --lift:   2px 3px 7px rgba(28,37,48,0.14);
+  box-shadow: var(--ring), var(--sheets), var(--lift);
+
+  cursor: pointer; word-break: break-word; hyphens: auto;
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.bd-cn:hover { z-index: 5; transform: rotate(0deg) scale(1.05); --lift: 4px 9px 20px rgba(28,37,48,0.22); }
+.bd-cn--st1 {
+  --sheets: 5px 6px 0 0 var(--cn-fill, transparent),
+            5px 6px 0 1px var(--cn-line, transparent);
+}
+.bd-cn--st2 {
+  --sheets: 5px 6px 0 0 var(--cn-fill, transparent),
+            5px 6px 0 1px var(--cn-line, transparent),
+            10px 12px 0 0 var(--cn-fill, transparent),
+            10px 12px 0 1px var(--cn-line, transparent);
+}
+.bd-cn--mine  { --ring: 0 0 0 2px rgba(28,37,48,0.42); }
+.bd-cn--liked { --ring: inset 0 0 0 2px rgba(28,37,48,0.10); }
+.bd-cn__text  { font-size: 1em; line-height: 1.32; font-weight: 600; }
+.bd-cn__liked {
+  position: absolute; top: -.5em; right: -.4em;
+  font-size: .62em; line-height: 1;
+  padding: .25em .3em; border-radius: 999px;
+  background: #2b3440; color: #fff;
+  box-shadow: 0 2px 5px rgba(28,37,48,0.28);
+}
+
+@media (max-width: 620px) {
+  .st-body { padding: 18px 14px 22px; gap: 20px; }
+  .st-tabs { padding: 0 8px; }
+  .st-tab { padding: 10px 8px 8px; font-size: .82rem; }
+  .sr-head { margin-top: 36px; }
+  .sr-num { font-size: 2.1rem; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-scan" viewBox="0 0 24 24">
+    <path d="M3 8V5a2 2 0 0 1 2-2h3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3"/>
+    <path d="M3 12h18"/>
+  </symbol>
+  <symbol id="i-people" viewBox="0 0 24 24">
+    <circle cx="9" cy="8" r="3.2"/>
+    <path d="M3 20c0-3.2 2.7-5.5 6-5.5s6 2.3 6 5.5"/>
+    <path d="M16.5 5.6a3.2 3.2 0 0 1 0 6M18 14.9c2 .7 3.5 2.6 3.5 5.1"/>
+  </symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24">
+    <rect x="2.5" y="4.5" width="8" height="6" rx="1.4"/>
+    <rect x="13" y="7" width="8.5" height="6" rx="1.4"/>
+    <rect x="5" y="14" width="9" height="6" rx="1.4"/>
+  </symbol>
+  <symbol id="i-vote" viewBox="0 0 24 24">
+    <path d="M4 20V11h4v9zM8 12l3.5-8a2 2 0 0 1 2.8 2.5L13 11h5.5a2 2 0 0 1 2 2.5l-1.4 5A2 2 0 0 1 17 20H8z"/>
+  </symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24">
+    <circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 2M9 2.5h6"/>
+  </symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol>
+</svg>
+
+<header class="sr-top">
+  <h1>Rund <span>· hell &amp; dunkel</span></h1>
+
+  <div class="sr-grp">
+    <div class="sr-seg" id="segView">
+      <button type="button" data-v="both" class="on">Beide</button>
+      <button type="button" data-v="light">Hell</button>
+      <button type="button" data-v="dark">Dunkel</button>
+    </div>
+  </div>
+
+  <div class="sr-right">
+    <div class="sr-grp" id="darkOnly">
+      <label>nur dunkel</label>
+      <div class="sr-seg" id="segBoard">
+        <button type="button" data-b="dark" class="on">Tafel dunkel</button>
+        <button type="button" data-b="light">Tafel hell</button>
+      </div>
+      <div class="sr-seg" id="segAccent">
+        <button type="button" data-a="mint">Mint</button>
+        <button type="button" data-a="violet" class="on">Violett</button>
+      </div>
+    </div>
+    <button class="sr-tool" id="btnFar" type="button">Aus der letzten Reihe</button>
+  </div>
+</header>
+
+<section class="sr-lead">
+  <h2>Ein Rahmen, zwei Beleuchtungen — die Zettel bleiben, wie sie sind.</h2>
+  <p>
+    Beide Bühnen tragen dieselbe Formsprache: <b>Radius 12–24 px, Outfit, runde Icons-Kacheln,
+    Mint als Akzent.</b> Was zwischen hell und dunkel wechselt, ist ausschließlich der Rahmen —
+    Kopfzeile, Reiter, Karten, Knöpfe, die Tafel.
+  </p>
+  <p>
+    Die Zettel der Wortwolke sind hier <b>nicht nachgebaut, sondern gerechnet</b>: mit
+    <code style="font-family:'JetBrains Mono',monospace;font-size:.85em">NOTE_RAMPS</code>,
+    <code style="font-family:'JetBrains Mono',monospace;font-size:.85em">strength()</code>,
+    <code style="font-family:'JetBrains Mono',monospace;font-size:.85em">sizeFor()</code>,
+    <code style="font-family:'JetBrains Mono',monospace;font-size:.85em">sheetsFor()</code> und
+    <code style="font-family:'JetBrains Mono',monospace;font-size:.85em">TILTS</code> aus
+    <code style="font-family:'JetBrains Mono',monospace;font-size:.85em">tools/wordcloud/tool.js</code>,
+    platziert mit derselben Spirale. Form, Farbe, Stapel, Schatten und Schrift sind in beiden
+    Bühnen <b>identisch bis auf die Nachkommastelle</b>.
+  </p>
+  <p>
+    Zwei echte offene Fragen stehen oben als Schalter: <b>Bleibt die Tafel im Dunkeln weiß?</b>
+    (die Fläche unter den Zetteln — auf Weiß leuchten Pastelltöne stärker, dafür blendet ein
+    weißes Rechteck im dunklen Raum) und <b>welcher Akzent im Dunkeln?</b>
+  </p>
+</section>
+
+<main>
+
+<section class="sr-var" data-key="light">
+  <div class="sr-head">
+    <span class="sr-num">01</span>
+    <div class="sr-head-t">
+      <h3>Rund — hell <span style="color:#6d7b77;font-weight:500">— die Vorgabe</span></h3>
+      <p>Weiße Karten auf sehr hellem Kühlgrau, helle Kopfzeile mit Linie, Mint als einziger Akzent. Das, was am Beamer im hellen Klassenraum steht.</p>
+    </div>
+  </div>
+  <div class="sr-specs">
+    <dl class="sr-spec"><dt>Schrift</dt><dd>Outfit 400–700</dd><dd>JetBrains Mono für Codes</dd></dl>
+    <dl class="sr-spec"><dt>Form</dt><dd>Radius 12 · 18 · 24 px</dd><dd>runde Icon-Kacheln</dd></dl>
+    <dl class="sr-spec"><dt>Effekt</dt><dd>zwei weiche Schattenlagen</dd><dd>Höhe kommt vom Schatten</dd></dl>
+    <dl class="sr-spec"><dt>Akzent</dt><dd>Mint #00b37e</dd><dd>Rot nur für Fehler</dd></dl>
+    <dl class="sr-spec"><dt>Palette</dt>
+      <dd class="sr-sw-row"><i style="background:#0d1a17"></i><i style="background:#00b37e"></i><i style="background:#eef2f1"></i><i style="background:#ffffff"></i><i style="background:#ff4d6d"></i></dd>
+    </dl>
+  </div>
+  <div class="sr-frame" id="stageLight"></div>
+</section>
+
+<section class="sr-var" data-key="dark">
+  <div class="sr-head">
+    <span class="sr-num">02</span>
+    <div class="sr-head-t">
+      <h3>Rund — dunkel <span style="color:#6d7b77;font-weight:500">— derselbe Bau bei Nacht</span></h3>
+      <p>Gleiche Radien, gleiche Schrift, gleiche Abstände. Anders: die Karte ist heller als der Grund, die Linien verschwinden fast, und der Akzent wird angehoben — #00b37e ist auf Schwarz zu dunkel, #2ee8a5 nicht.</p>
+    </div>
+  </div>
+  <div class="sr-specs">
+    <dl class="sr-spec"><dt>Schrift</dt><dd>Outfit 400–700</dd><dd>unverändert</dd></dl>
+    <dl class="sr-spec"><dt>Form</dt><dd>Radius 12 · 18 · 24 px</dd><dd>unverändert</dd></dl>
+    <dl class="sr-spec"><dt>Effekt</dt><dd>Höhe kommt von der Fläche</dd><dd>ein flacher Lichtkegel</dd></dl>
+    <dl class="sr-spec"><dt>Akzent</dt><dd>Mint angehoben #2ee8a5</dd><dd>Grund leicht kühl-grün</dd></dl>
+    <dl class="sr-spec"><dt>Palette</dt>
+      <dd class="sr-sw-row"><i style="background:#080c0b"></i><i style="background:#131a18"></i><i style="background:#2ee8a5"></i><i style="background:#eef4f2"></i><i style="background:#ff5c7c"></i></dd>
+    </dl>
+  </div>
+  <div class="sr-frame" id="stageDark"></div>
+</section>
+
+</main>
+
+<section class="sr-out">
+  <h3>Wenn du dich entschieden hast: so wird daraus ein Darkmode</h3>
+  <div class="box">
+    <p>
+      <b>Ein Attribut, zwei Wertesätze.</b> <code>&lt;html data-theme="dark"&gt;</code>, und in
+      <code>style.css</code> steht unter <code>:root</code> der helle und unter
+      <code>:root[data-theme="dark"]</code> der dunkle Satz derselben Variablen. Kein zweites
+      Stylesheet — sonst laufen die beiden Fassungen beim nächsten Umbau auseinander.
+    </p>
+    <p>
+      <b>Die Vorgabe kommt vom Gerät</b> (<code>prefers-color-scheme</code>), die Wahl vom
+      Menschen: der Schalter steht in der Ecke oben rechts (<code>lib/userbar.js</code>) und
+      merkt sich seine Stellung im <code>localStorage</code> — <b>nicht</b> im Profil, denn ein
+      geteiltes Lehrer-Tablet und das eigene Handy wollen verschiedene Antworten.
+    </p>
+    <p>
+      <b>Die eine Stelle, an der es unangenehm wird, ist der Beamer.</b> Was in der Hand richtig
+      ist, ist an der Wand oft falsch: im hellen Klassenraum frisst der Projektor den Kontrast
+      und Schwarz wird Grau. Mein Vorschlag: der Schalter gilt für die ganze Seite, aber die
+      <b>Raumseite</b> (<code>lehrer.html</code>) bekommt in der Reiterleiste einen eigenen —
+      dieselbe Stelle, an der schon der Vollbild-Knopf sitzt. Zwei Stellungen für zwei Räume,
+      und beide gehören der Lehrkraft.
+    </p>
+    <p>
+      <b>Offen und deine Entscheidung:</b> der Text auf den Zetteln steht heute in Inter, der
+      Rahmen künftig in Outfit. Ich habe die Karten bewusst nicht angefasst — sag Bescheid,
+      wenn auch der Kartentext auf Outfit soll.
+    </p>
+  </div>
+</section>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   Die Zettel — Formeln 1:1 aus tools/wordcloud/tool.js
+   ═══════════════════════════════════════════════════════════════════
+   Kopiert und nicht neu erfunden: eine Karte, die hier anders
+   aussähe als im Werkzeug, würde eine Entscheidung auf einer
+   falschen Grundlage herbeiführen.
+   ═══════════════════════════════════════════════════════════════════ */
+const LIKE_SIZE_MIN = 0.88, LIKE_SIZE_MAX = 2.20, LIKE_SPAN_REF = 5;
+const CLOUD_GAP = 17, SHEET_REACH_X = 12, SHEET_REACH_Y = 14;
+
+function strength(likes, maxLikes) {
+  const l = Math.max(0, Number(likes) || 0);
+  if (maxLikes <= 0 || l <= 0) return 0;
+  return Math.pow(Math.min(l, maxLikes) / maxLikes, 0.65) * Math.min(1, maxLikes / LIKE_SPAN_REF);
+}
+const sizeFor   = t => LIKE_SIZE_MIN + t * (LIKE_SIZE_MAX - LIKE_SIZE_MIN);
+const sheetsFor = t => (t >= 0.72 ? 2 : t >= 0.40 ? 1 : 0);
+
+const NOTE_RAMPS = [
+  { fillP: [237,248,238], fillS: [147,211,160], lineP: [215,236,217], lineS: [111,190,128] }, // Grün
+  { fillP: [253,238,236], fillS: [242,164,154], lineP: [247,222,217], lineS: [232,131,118] }, // Rosa
+  { fillP: [254,248,230], fillS: [245,210,113], lineP: [244,233,200], lineS: [223,184,69]  }, // Gelb
+  { fillP: [235,244,252], fillS: [146,190,235], lineP: [212,230,246], lineS: [107,163,219] }, // Blau
+  { fillP: [245,240,252], fillS: [186,166,226], lineP: [230,222,246], lineS: [154,130,205] }, // Lila
+  { fillP: [254,243,231], fillS: [246,186,120], lineP: [248,228,206], lineS: [228,159,86]  }  // Pfirsich
+];
+function rampFor(id) {
+  let h = 0; const s = String(id);
+  for (let i = 0; i < s.length; i++) h = (h * 131 + s.charCodeAt(i)) % 100003;
+  return NOTE_RAMPS[h % NOTE_RAMPS.length];
+}
+const mixRGB = (a, b, t) =>
+  'rgb(' + Math.round(a[0] + (b[0]-a[0])*t) + ',' + Math.round(a[1] + (b[1]-a[1])*t) + ',' +
+           Math.round(a[2] + (b[2]-a[2])*t) + ')';
+
+const TILTS = [-1.8, 1.4, -0.7, 2.2, -2.4, 0.9];
+function tiltFor(id) {
+  let h = 0; const s = String(id);
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 9973;
+  return TILTS[h % TILTS.length];
+}
+
+/* Dieselben Zettel in beiden Bühnen — sonst vergliche man zwei
+   Wolken statt zweier Rahmen. */
+const NOTES = [
+  { id: 'n1', text: 'schneller nachschlagen', likes: 7 },
+  { id: 'n2', text: 'nichts mehr vergessen',  likes: 6, mine: true },
+  { id: 'n3', text: 'weniger Papier',         likes: 4 },
+  { id: 'n4', text: 'Videos anschauen',       likes: 3, liked: true },
+  { id: 'n5', text: 'zusammen arbeiten',      likes: 3 },
+  { id: 'n6', text: 'Hausaufgaben ordnen',    likes: 2 },
+  { id: 'n7', text: 'Bilder bearbeiten',      likes: 1 },
+  { id: 'n8', text: 'alles an einem Ort',     likes: 1 },
+  { id: 'n9', text: 'Musik im Unterricht',    likes: 0 }
+];
+const MAXL = Math.max(...NOTES.map(n => n.likes));
+
+function cardHTML(note) {
+  const t = strength(note.likes, MAXL);
+  const size = sizeFor(t);
+  const ramp = rampFor(note.id);
+  const sheets = sheetsFor(t);
+  const cls = ['bd-cn'];
+  if (note.mine)  cls.push('bd-cn--mine');
+  if (note.liked) cls.push('bd-cn--liked');
+  if (sheets)     cls.push('bd-cn--st' + sheets);
+  const style = `font-size:${size.toFixed(2)}rem`
+    + `;max-width:${Math.round(150 + (size - LIKE_SIZE_MIN) * 145)}px`
+    + `;--cn-fill:${mixRGB(ramp.fillP, ramp.fillS, t)}`
+    + `;--cn-line:${mixRGB(ramp.lineP, ramp.lineS, t)}`
+    + `;--tilt:${tiltFor(note.id)}deg`;
+  return `<article class="${cls.join(' ')}" style="${style}">`
+    + (note.liked ? '<span class="bd-cn__liked">👍</span>' : '')
+    + `<p class="bd-cn__text">${note.text}</p></article>`;
+}
+
+/* ── Platzierung: archimedische Spirale mit Kollisionsprüfung ──────
+   Gekürzte Fassung von layoutCloud() — ohne virtuelle Tafel und
+   Lupe, die hier nichts zu entscheiden haben. Gerechnet wird wie
+   drüben mit dem achsenparallelen Rechteck der GEDREHTEN Karte;
+   der Stapel ragt nach rechts unten über die gemessene Karte
+   hinaus, deshalb SHEET_REACH. */
+function layout(cloud) {
+  const els = [...cloud.querySelectorAll('.bd-cn')];
+  if (!els.length) return;
+  const W = cloud.clientWidth;
+  if (!W) return;
+
+  /* Waagerecht ist die Breite die Grenze, senkrecht nicht: die Wolke
+     darf so hoch werden, wie sie muss, und die Tafel wächst mit. Ein
+     fester Rahmen in beide Richtungen hieße auf einem schmalen Gerät,
+     dass die letzte Karte keinen Platz findet und übereinander fällt —
+     genau der Fehler, den das Werkzeug drüben mit der virtuellen Tafel
+     löst. */
+  const ratio = 0.62;                       // Wunschverhältnis der Wolke
+  const placed = [], boxes = [];
+
+  els.forEach(el => {
+    const w = el.offsetWidth, h = el.offsetHeight;
+    const rad = Math.abs(parseFloat(el.style.getPropertyValue('--tilt')) || 0) * Math.PI / 180;
+    const bw = w * Math.cos(rad) + h * Math.sin(rad) + SHEET_REACH_X;
+    const bh = w * Math.sin(rad) + h * Math.cos(rad) + SHEET_REACH_Y;
+
+    let best = null;
+    for (let a = 0; a < 1400 && !best; a += 0.22) {
+      const r = 3.4 * a;
+      const box = {
+        x: W / 2 + r * Math.cos(a) - bw / 2,
+        y: r * Math.sin(a) * ratio - bh / 2,
+        w: bw, h: bh
+      };
+      if (box.x < 0 || box.x + box.w > W) continue;
+      const hit = placed.some(p =>
+        !(box.x + box.w + CLOUD_GAP <= p.x || p.x + p.w + CLOUD_GAP <= box.x ||
+          box.y + box.h + CLOUD_GAP <= p.y || p.y + p.h + CLOUD_GAP <= box.y));
+      if (!hit) best = box;
+    }
+    if (!best) best = { x: 0, y: 0, w: bw, h: bh };   // Notnagel: lieber schief als weg
+    placed.push(best);
+    boxes.push({ el, box: best, w, h });
+  });
+
+  /* Gepackt wurde um die Null herum, also auch nach oben. Jetzt alles
+     so verschieben, dass die oberste Karte an der Tafelkante liegt. */
+  const top = Math.min(...placed.map(p => p.y));
+  const bot = Math.max(...placed.map(p => p.y + p.h));
+  boxes.forEach(({ el, box, w, h }) => {
+    el.style.left = Math.round(box.x + (box.w - w) / 2) + 'px';
+    el.style.top  = Math.round(box.y - top + (box.h - h) / 2) + 'px';
+  });
+  cloud.style.height = Math.ceil(bot - top) + 'px';
+}
+
+/* ── Die Bühne ────────────────────────────────────────────────── */
+function stageHTML() {
+  return `
+  <div class="st">
+    <div class="st-top">
+      <span class="st-mark">MP<i>Skills</i></span>
+      <span class="st-spacer"></span>
+      <button class="st-theme" type="button" title="Hell / Dunkel">◐</button>
+      <span class="st-user">
+        <span class="st-av">SF</span><span class="st-uname">Finnern</span>
+        <span class="st-role">Lehrkraft</span>
+      </span>
+    </div>
+
+    <div class="st-tabs">
+      <button class="st-tab" type="button"><span class="st-n">1</span>Einstellungen</button>
+      <button class="st-tab" type="button"><span class="st-n">2</span>Onboarding</button>
+      <button class="st-tab on" type="button"><span class="st-n">3</span>Wortwolke</button>
+      <span class="st-tabs-side"><span class="st-code">K7F2QM</span><button class="st-fs" type="button">⤢</button></span>
+    </div>
+
+    <div class="st-body">
+
+      <section class="st-door">
+        <div class="st-qr"></div>
+        <div class="st-doortxt">
+          <p class="st-eyebrow">Mitmachen</p>
+          <p class="st-big">K7F2QM</p>
+          <p class="st-url">mpskills.de/j</p>
+          <div class="st-count"><strong>12</strong> von 28 sind dabei</div>
+          <ul class="st-chips">
+            <li class="on">Mia</li><li class="on">Jonas</li><li class="on">Leyla</li>
+            <li class="on">Ben</li><li>Elif</li><li>Noah</li><li>+ 6</li>
+          </ul>
+        </div>
+      </section>
+
+      <p class="st-lbl">So läuft es</p>
+      <section class="st-steps">
+        <div class="st-step">
+          <span class="st-step-ic"><svg class="ic"><use href="#i-scan"/></svg></span>
+          <span><b>Scannen</b><span>oder Code tippen</span></span>
+        </div>
+        <span class="st-arrow"><svg class="ic"><use href="#i-arrow"/></svg></span>
+        <div class="st-step">
+          <span class="st-step-ic"><svg class="ic"><use href="#i-people"/></svg></span>
+          <span><b>Name</b><span>oder anonym</span></span>
+        </div>
+        <span class="st-arrow"><svg class="ic"><use href="#i-arrow"/></svg></span>
+        <div class="st-step">
+          <span class="st-step-ic"><svg class="ic"><use href="#i-cloud"/></svg></span>
+          <span><b>Mitschreiben</b><span>alle sehen es</span></span>
+        </div>
+      </section>
+
+      <p class="st-lbl">Werkzeuge</p>
+      <section class="st-tiles">
+        <div class="st-tile">
+          <div class="st-tile-h"><span class="st-tile-ic"><svg class="ic"><use href="#i-cloud"/></svg></span><h4>Wortwolke</h4></div>
+          <span class="st-tag">bis 60 · offen</span>
+          <p>Eine Frage, viele Zettel. Zustimmung macht groß.</p>
+        </div>
+        <div class="st-tile">
+          <div class="st-tile-h"><span class="st-tile-ic"><svg class="ic"><use href="#i-vote"/></svg></span><h4>Abstimmung</h4></div>
+          <span class="st-tag">bis 60</span>
+          <p>Vier Antworten, ein Balken, sofort sichtbar.</p>
+        </div>
+        <div class="st-tile st-tile--off">
+          <div class="st-tile-h"><span class="st-tile-ic"><svg class="ic"><use href="#i-timer"/></svg></span><h4>Zeitgeber</h4></div>
+          <span class="st-tag st-tag--hot">in Vorbereitung</span>
+          <p>Läuft an der Wand, für alle gleich.</p>
+        </div>
+      </section>
+
+      <p class="st-lbl">Das Werkzeug — die Zettel sind in beiden Bühnen dieselben</p>
+      <section class="wc">
+        <div class="bd-catnav">
+          <div class="bd-catnav__title">
+            <span class="bd-catnav__name">Warum wollt ihr ein Tablet in der Schule nutzen?
+              <span class="bd-catnav__count">9</span></span>
+            <button class="bd-catadd" type="button">＋</button>
+          </div>
+        </div>
+        <div class="bd-surface">
+          <div class="bd-port"><div class="bd-cloud"></div></div>
+          <div class="bd-zoom">
+            <button type="button">−</button><button type="button">⤢</button>
+            <button type="button">＋</button><button type="button">⟳</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="st-bits">
+        <button class="st-btn st-btn--go" type="button">Raum eröffnen</button>
+        <button class="st-btn" type="button">Beitritt schließen</button>
+        <button class="st-btn st-btn--warn" type="button">Ausblenden</button>
+        <span class="st-badge">Freigeschaltet</span>
+        <span class="st-toast">Raum verlängert · 60 Tage</span>
+      </section>
+
+    </div>
+  </div>`;
+}
+
+/* Ein glaubwürdiger QR-Code — kein echter, er soll nur aussehen wie
+   einer. Deterministisch, damit beide Bühnen denselben zeigen. */
+function qrSvg() {
+  const N = 25, m = Array.from({ length: N }, () => new Array(N).fill(0));
+  const finder = (r, c) => {
+    for (let i = -1; i <= 7; i++) for (let j = -1; j <= 7; j++) {
+      const y = r + i, x = c + j;
+      if (y < 0 || x < 0 || y >= N || x >= N) continue;
+      const edge = i === 0 || i === 6 || j === 0 || j === 6;
+      const core = i >= 2 && i <= 4 && j >= 2 && j <= 4;
+      m[y][x] = (edge || core) && i >= 0 && i <= 6 && j >= 0 && j <= 6 ? 1 : 0;
+    }
+  };
+  finder(0, 0); finder(0, N - 7); finder(N - 7, 0);
+  for (let i = 8; i < N - 8; i++) { m[6][i] = i % 2 === 0 ? 1 : 0; m[i][6] = i % 2 === 0 ? 1 : 0; }
+  let seed = 20260818;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const inF = (y < 8 && x < 8) || (y < 8 && x >= N - 8) || (y >= N - 8 && x < 8);
+    if (inF || y === 6 || x === 6) continue;
+    m[y][x] = rnd() > 0.52 ? 1 : 0;
+  }
+  let d = '';
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (m[y][x]) d += `M${x} ${y}h1v1h-1z`;
+  return `<svg viewBox="-2 -2 ${N+4} ${N+4}" shape-rendering="crispEdges" aria-hidden="true"><path d="${d}" fill="currentColor"/></svg>`;
+}
+
+/* ── Aufbau ───────────────────────────────────────────────────── */
+const QR = qrSvg();
+const stages = {};
+
+['light', 'dark'].forEach(mode => {
+  const host = document.getElementById(mode === 'light' ? 'stageLight' : 'stageDark');
+  host.innerHTML = stageHTML();
+  const st = host.querySelector('.st');
+  st.dataset.mode = mode;
+  st.dataset.board = 'dark';
+  st.dataset.accent = 'violet';   // die Entscheidung vom 19.08.2026
+  host.querySelector('.st-qr').innerHTML = QR;
+  host.querySelector('.bd-cloud').innerHTML = NOTES.map(cardHTML).join('');
+  /* Der Schalter im Bild schaltet wirklich — er ist Teil dessen, was
+     hier beurteilt werden soll, und ein toter Knopf im Entwurf ist
+     eine Behauptung. */
+  host.querySelector('.st-theme').addEventListener('click', () => {
+    st.dataset.mode = st.dataset.mode === 'dark' ? 'light' : 'dark';
+    relayout();
+  });
+  stages[mode] = st;
+});
+
+function relayout() {
+  document.querySelectorAll('.bd-cloud').forEach(layout);
+}
+
+/* Erst wenn die Schriften stehen, stimmen die gemessenen Breiten —
+   sonst packt die Spirale mit den Maßen der Ersatzschrift. */
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+relayout();
+addEventListener('resize', relayout);
+
+/* ── Bedienung des Showrooms ──────────────────────────────────── */
+function seg(id, fn) {
+  const el = document.getElementById(id);
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    [...el.querySelectorAll('button')].forEach(x => x.classList.toggle('on', x === b));
+    fn(b.dataset);
+  });
+}
+
+seg('segView', d => {
+  document.querySelectorAll('.sr-var').forEach(s => {
+    s.hidden = d.v !== 'both' && s.dataset.key !== d.v;
+  });
+  document.getElementById('darkOnly').hidden = d.v === 'light';
+  relayout();
+});
+seg('segBoard',  d => { stages.dark.dataset.board  = d.b; });
+seg('segAccent', d => { stages.dark.dataset.accent = d.a; });
+
+document.getElementById('btnFar').addEventListener('click', e => {
+  document.body.classList.toggle('far');
+  e.currentTarget.classList.toggle('on', document.body.classList.contains('far'));
+  relayout();
+});
+</script>
+</body>
+</html>

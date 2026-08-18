@@ -57,11 +57,79 @@
   --clr-blue-soft: #eaf2fb;
   --clr-danger:    #cf4a41;
 
-  --font-display: 'Inter', system-ui, sans-serif;
-  --font-body:    'Inter', system-ui, sans-serif;
+  /* Der RAHMEN traegt die Schrift von MPSkills. Der ZETTEL nicht:
+     --font-note steht weiter auf Inter und wird im Dunkeln so wenig
+     angefasst wie seine Farbe. */
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body:    'Outfit', system-ui, sans-serif;
+  --font-note:    'Inter', system-ui, sans-serif;
 
   --shadow-note:    2px 3px 7px rgba(28,37,48,0.14);
   --shadow-note-hi: 4px 9px 20px rgba(28,37,48,0.22);
+
+  /* Flächen, die es vor dem Darkmode nicht als Variable gab. */
+  --clr-grid:        rgba(28,37,48,0.045);
+  --clr-board-in:    inset 0 1px 0 #fff;
+  --clr-chrome-blur: rgba(255,255,255,0.94);
+  --clr-overlay:     rgba(28,37,48,0.45);
+  --clr-danger-soft: #fdf0ef;
+
+  /* ⚠️ DIE ZETTEL. Diese vier Werte stehen bewusst hier und werden
+     im dunklen Block NICHT überschrieben — sonst stünde heller Text
+     auf einem Pastellzettel. Wer sie ändert, ändert das Werkzeug
+     und nicht das Kleid. */
+  --cn-ink:     #1c2530;
+  --cn-mod:     #2b3440;
+  --cn-mod-ink: #ffffff;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Dunkel
+   ══════════════════════════════════════════════════════════════
+   Gesetzt wird data-theme am <html> von ../../lib/theme.js. Hier
+   kippt ausschließlich der RAHMEN: Tafel, Frageleiste, Plus-Knopf,
+   Lupe, Modale, Tabelle.
+
+   Zwei Entscheidungen, die man sehen können soll:
+
+   (1) Die Tafel wird dunkel und bleibt nicht weiß. Ein weißes
+       Rechteck ist im abgedunkelten Raum das Hellste an der Wand
+       und blendet genau die Klasse, die auf die Zettel schauen
+       soll — und die Pastelltöne tragen auf Dunkel ohne Weiteres,
+       sie sind hell genug.
+
+   (2) Der Bedien-Akzent bleibt UNBUNT, so wie im Hellen (Regel 1
+       ganz oben: die Farbe gehört den Zetteln). Aus dem Anthrazit
+       wird deshalb ein helles Grau und nicht etwa das Violett von
+       MPSkills. Ein zweiter Farbträger neben den Zetteln nähme
+       ihnen die Aufmerksamkeit — im Dunkeln erst recht.
+   ══════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] {
+  --clr-room:      #0a0b10;
+  --clr-board:     #10121a;
+  --clr-chrome:    #12141b;
+  --clr-surface:   #1c1f2a;
+  --clr-surface2:  #242838;
+  --clr-line:      #272b3a;
+  --clr-line-soft: #1e212c;
+
+  --clr-ink:       #edeff5;
+  --clr-ink-2:     #a4a9bd;
+  --clr-ink-3:     #767c92;
+
+  --clr-accent:      #dfe3ee;
+  --clr-accent-ink:  #0b0d14;
+  --clr-accent-soft: rgba(223,227,238,0.10);
+
+  --clr-blue:      #8fb6ef;
+  --clr-blue-soft: rgba(143,182,239,0.12);
+  --clr-danger:    #ff5c7c;
+
+  --clr-grid:        rgba(255,255,255,0.05);
+  --clr-board-in:    inset 0 1px 0 rgba(255,255,255,0.04);
+  --clr-chrome-blur: rgba(18,20,27,0.94);
+  --clr-overlay:     rgba(3,4,8,0.62);
+  --clr-danger-soft: rgba(255,92,124,0.12);
 }
 
 .bd-tool, .bd-tool *, .bd-tool *::before, .bd-tool *::after {
@@ -194,7 +262,7 @@ body.bd-fill .bd-surface { min-height: 0; }
 .bd-catnav {
   position: sticky; top: 0; z-index: 20;
   margin: 0 -18px 14px; padding: 8px 18px 10px;
-  background: rgba(255,255,255,0.94);
+  background: var(--clr-chrome-blur);
   backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--clr-line);
 }
@@ -255,14 +323,14 @@ body.bd-fill .bd-surface { min-height: 0; }
   position: relative;
   background-color: var(--clr-board);
   background-image:
-    linear-gradient(rgba(28,37,48,0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(28,37,48,0.045) 1px, transparent 1px);
+    linear-gradient(var(--clr-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--clr-grid) 1px, transparent 1px);
   background-size: 28px 28px;
   border: 1px solid var(--clr-line);
   border-radius: 14px;
   padding: 22px 18px 26px;
   min-height: 320px;
-  box-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(28,37,48,0.06);
+  box-shadow: var(--clr-board-in), 0 1px 3px rgba(28,37,48,0.06);
 }
 
 .bd-cloud-sec__empty {
@@ -328,7 +396,7 @@ body.bd-fill .bd-surface { min-height: 0; }
 .bd-zoom {
   position: absolute; right: 8px; bottom: 8px; z-index: 15;
   display: flex; gap: 3px; padding: 3px;
-  background: rgba(255,255,255,0.92);
+  background: var(--clr-chrome-blur);
   border: 1px solid var(--clr-line); border-radius: 11px;
   backdrop-filter: blur(4px);
   box-shadow: 0 2px 8px rgba(28,37,48,0.12);
@@ -365,7 +433,10 @@ body.bd-fill .bd-surface { min-height: 0; }
      und keine der sechs Farben mit Anspruch. */
   background: var(--cn-fill, var(--clr-yellow));
   border-color: var(--cn-line, var(--clr-yellow-line));
-  color: var(--clr-ink);
+  /* NICHT --clr-ink: der Zettel gehoert dem Inhalt und bleibt in
+     beiden Kleidern derselbe. Siehe Kopf dieser Datei. */
+  color: var(--cn-ink);
+  font-family: var(--font-note);
 
   /* Der Kartenschatten besteht aus drei unabhängigen Teilen, und jeder
      hat seinen eigenen Schalter. Ohne diese Trennung müsste jede
@@ -518,7 +589,7 @@ body.bd-fill .bd-surface { min-height: 0; }
   position: absolute; top: -.5em; right: -.4em;
   font-size: .62em; line-height: 1;
   padding: .25em .3em; border-radius: 999px;
-  background: var(--clr-accent); color: var(--clr-accent-ink);
+  background: var(--cn-mod); color: var(--cn-mod-ink);
   box-shadow: 0 2px 5px rgba(28,37,48,0.28);
 }
 
@@ -569,11 +640,11 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 480px; font-
 }
 /* Steht im Detail neben dem Namen und beantwortet, was der Rahmen auf
    der Karte nur andeutet. */
-.bd-pill--admin     { background: var(--clr-accent-soft); border-color: rgba(43,52,64,0.30); color: var(--clr-accent); }
+.bd-pill--admin     { background: var(--clr-accent-soft); border-color: var(--clr-line); color: var(--clr-ink-2); }
 
 /* ── Modal ────────────────────────────────────────────── */
 .bd-modal-backdrop {
-  position: fixed; inset: 0; background: rgba(28,37,48,0.45);
+  position: fixed; inset: 0; background: var(--clr-overlay);
   backdrop-filter: blur(3px);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 24px 14px; overflow-y: auto; z-index: 50;
@@ -650,7 +721,7 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 480px; font-
 }
 .bd-modal textarea { resize: vertical; }
 .bd-modal input.bd-invalid, .bd-modal textarea.bd-invalid {
-  border-color: var(--clr-danger); background: #fdf0ef;
+  border-color: var(--clr-danger); background: var(--clr-danger-soft);
 }
 .bd-counter { text-align: right; font-size: .78rem; color: var(--clr-ink-3); margin-top: 4px; }
 

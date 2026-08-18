@@ -70,6 +70,11 @@
     if (loading[id])  return loading[id];
 
     const dir = 'tools/' + (folder || id) + '/';
+    /* Cache-Stempel wie bei den Seiten-Skripten. Ohne ihn behält ein
+       Gerät, das ein Werkzeug schon einmal geladen hat, dessen altes
+       CSS — beim Umbau auf hell/dunkel (19.08.2026) wäre die halbe
+       Kachel im alten Kleid stehengeblieben. */
+    const v = '?v=20260819';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf
@@ -78,13 +83,13 @@
       if (!document.querySelector(`link[data-tool="${id}"]`)) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = dir + 'tool.css';
+        link.href = dir + 'tool.css' + v;
         link.dataset.tool = id;
         document.head.appendChild(link);
       }
 
       const s = document.createElement('script');
-      s.src = dir + 'tool.js';
+      s.src = dir + 'tool.js' + v;
       s.async = false;
       s.onload = () => {
         if (registry[id]) resolve(registry[id]);

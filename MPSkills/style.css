@@ -2,37 +2,187 @@
    MPSkills — style.css
    ══════════════════════════════════════════════════════════════
    Bewusst NICHT das Fantasy-Kleid der Tablet-Schulung (Cinzel,
-   Gold auf Braun). MPSkills ist Werkzeugkasten, nicht Abenteuer:
-   heller Grund, Tinte, EIN Akzent (Teal), Warnrot nur für Fehler.
-   Die Farbwerte stammen aus Konzept_MPSkills_v1.html.
+   Gold auf Braun). MPSkills ist Werkzeugkasten, nicht Abenteuer.
 
-   Warum hell: die Seite wird an den Beamer gehängt. Dunkle
-   Flächen fressen im hellen Klassenraum den Kontrast, und ein
-   weißer Grund ist das, was ein Beamer am besten kann.
+   Gestaltungs-Durchgang 19.08.2026 — Richtung „Rund" (aus
+   showroom.html, zweite Runde; die Dunkelfassung steht in
+   showroom-darkmode.html):
 
-   Stand: Stufe 3 (Räume, Code, QR, Beitritt). Die Inhaltsschicht
-   der Werkzeuge kommt in Stufe 4 dazu.
+     Schrift  Outfit, eng gesetzt. Geometrisch und jung, aber ohne
+              Manier — der Werkzeugkasten bleibt ein Werkzeugkasten.
+     Form     große Radien (12 · 18 · 24 px), runde Icon-Kacheln.
+              Nichts hat mehr scharfe Ecken außer den Zetteln der
+              Wortwolke, und genau das hebt sie heraus.
+     Farbe    kühles Grau statt des alten warmen Papiers, EIN
+              Akzent, Rot nur für Fehler.
+     Chrom    die Kopfzeile ist HELL mit einer Linie darunter. Sie
+              schneidet die Seite nicht mehr ab, sie fängt sie an.
+
+   ── Zwei Beleuchtungen ─────────────────────────────────────────
+   Alles Farbige steht als Variable hier oben, und zwar zweimal:
+   unter :root die helle Fassung, unter :root[data-theme="dark"]
+   die dunkle. KEIN zweites Stylesheet — zwei Dateien laufen beim
+   nächsten Umbau auseinander, zwei Wertesätze nicht.
+
+   Wer unten eine Farbe direkt hinschreibt, nimmt sie damit aus dem
+   Darkmode heraus. Es gibt genau eine Stelle, an der das Absicht
+   ist: die Zettel der Wortwolke (tools/wordcloud/tool.css) — die
+   sind der Inhalt und nicht der Rahmen.
+
+   Der Akzent WECHSELT zwischen den Fassungen die Farbe: hell Mint,
+   dunkel Violett. Das ist eine bewusste Entscheidung und nicht der
+   Normalfall eines Darkmodes — Mint auf Schwarz bliebe lesbar, es
+   wirkt dort nur kühl und technisch, und die dunkle Fassung soll
+   nach Abend aussehen und nicht nach Nachtschicht.
+
+   Gesetzt wird data-theme von lib/theme.js, und zwar VOR dem
+   ersten Zeichnen — sonst blitzt die helle Seite auf, bevor die
+   dunkle kommt.
    ══════════════════════════════════════════════════════════════ */
 
 :root {
-  --ink:        #17212b;
-  --ink-soft:   #4a5b6b;
-  --ink-faint:  #7b8b99;
-  --paper:      #f6f5f1;
-  --paper-2:    #eeece5;
+  color-scheme: light;
+
+  /* Flächen */
+  --paper:      #eef2f1;
+  --paper-2:    #e2e9e7;
   --surface:    #ffffff;
-  --line:       #dcd9d0;
-  --line-soft:  #e8e5dd;
-  --accent:     #0f766e;
-  --accent-dim: #d5eae7;
-  --accent-ink: #0a4f4a;
-  --warn:       #c2410c;
-  --warn-dim:   #fbe9df;
-  --ok:         #15803d;
-  --ok-dim:     #e2f2e5;
-  --shadow:     0 2px 10px rgba(23,33,43,.07);
-  --shadow-lg:  0 12px 40px rgba(23,33,43,.18);
+  --surface-2:  #f7faf9;   /* leere Karten, „in Vorbereitung" */
+  --line:       #dfe7e5;
+  --line-soft:  #eaf0ee;
+
+  /* Schrift */
+  --ink:        #0d1a17;
+  --ink-soft:   #475853;
+  --ink-faint:  #7b8a86;
+
+  /* Akzent */
+  --accent:      #00b37e;
+  --accent-dim:  #d6f5e8;
+  --accent-ink:  #00714f;
+  --accent-edge: #a5e3cd;
+  --on-accent:   #ffffff;
+
+  /* Kopfzeile — hell, mit Linie statt Fläche */
+  --chrome:      #ffffff;
+  --chrome-ink:  #0d1a17;
+  --chrome-soft: #edf6f2;
+  --chrome-edge: #dfe7e5;
+  --chrome-line: #dfe7e5;
+
+  /* Der Code-Kasten und alles, was aussieht wie er (Code-Chip,
+     Griff der Tür am Rand, Toast). Im Hellen die einzige dunkle
+     Fläche der Seite — hier endet fast jeder Besuch. */
+  --hero:            #0d1a17;
+  --hero-ink:        #ffffff;
+  --hero-dim:        rgba(255,255,255,.55);
+  --hero-soft:       rgba(255,255,255,.08);
+  --hero-edge:       rgba(255,255,255,.18);
+  --hero-accent:     #2ee8a5;
+  --hero-accent-hi:  #7df3c4;
+  --hero-accent-ink: #04241a;
+
+  /* Zustände */
+  --warn:      #d43a52;
+  --warn-dim:  #ffe4e9;
+  --warn-edge: #f6bfc9;
+  --warn-ink:  #a81433;
+  --on-warn:   #ffffff;
+  --ok:        #00996d;
+  --ok-dim:    #d6f5e8;
+  --ok-edge:   #a5e3cd;
+  --wait:      #a4740a;
+  --wait-dim:  #fdf4e0;
+  --wait-edge: var(--wait-edge);
+  --wait-ink:  var(--wait-ink);
+
+  /* Tiefe. Im Hellen trägt der Schatten die Höhe — zwei Lagen:
+     eine harte, kurze für die Kante, eine weite, weiche für das
+     Licht von oben. */
+  --overlay:    rgba(13,26,23,.5);
+  --shadow:     0 2px 4px rgba(13,26,23,.04), 0 12px 28px -12px rgba(13,26,23,.2);
+  --shadow-lg:  0 4px 8px rgba(13,26,23,.05), 0 24px 46px -16px rgba(13,26,23,.28);
+  --shadow-pop: 0 10px 26px rgba(13,26,23,.16);
+  --shadow-in:  inset 0 1px 0 rgba(255,255,255,.9);
+
+  /* Form */
+  --r-lg:   24px;
+  --r-md:   18px;
+  --r-sm:   12px;
+  --r-xs:   9px;
+  --r-pill: 999px;
+
   --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ── Dunkel ────────────────────────────────────────────────────
+   Kein Hell mit vertauschten Werten. Zwei Dinge kippen wirklich:
+
+   (1) Höhe kommt nicht mehr vom Schatten, sondern von der Fläche.
+       Eine Karte ist HELLER als ihr Grund; ein Schatten auf
+       Schwarz ist keiner. Was bleibt, ist eine hauchdünne helle
+       Oberkante — das Licht, das auf die Kante fällt.
+   (2) Der Akzent trägt zwei Werte statt einem: --accent ist die
+       Füllung (dunkel genug für weiße Schrift darauf),
+       --accent-ink dieselbe Farbe als SCHRIFT auf dunklem Grund
+       (hell genug zum Lesen). Im Hellen ist es andersherum. Ein
+       einziger Violettwert kann beides nicht.               */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --paper:      #0a0b10;
+  --paper-2:    #1c1e29;
+  --surface:    #12141b;
+  --surface-2:  #171a22;
+  --line:       #252836;
+  --line-soft:  #1e212c;
+
+  --ink:        #edeff5;
+  --ink-soft:   #a4a9bd;
+  --ink-faint:  #71768c;
+
+  --accent:      #7c4dff;
+  --accent-dim:  rgba(124,77,255,.18);
+  --accent-ink:  #b7a0ff;
+  --accent-edge: #453770;
+  --on-accent:   #ffffff;
+
+  --chrome:      #06070b;
+  --chrome-ink:  #ffffff;
+  --chrome-soft: rgba(255,255,255,.07);
+  --chrome-edge: rgba(255,255,255,.12);
+  --chrome-line: #1b1e28;
+
+  /* Im Dunkeln kann der Code-Kasten nicht mehr „die dunkle Fläche"
+     sein — das ist alles. Er wird stattdessen die HELLSTE Fläche
+     der Seite und behält damit seine Rolle: hier endet der Besuch. */
+  --hero:            #1e2130;
+  --hero-ink:        #edeff5;
+  --hero-dim:        rgba(237,239,245,.55);
+  --hero-soft:       rgba(255,255,255,.06);
+  --hero-edge:       rgba(255,255,255,.14);
+  --hero-accent:     #9d7bff;
+  --hero-accent-hi:  #b7a0ff;
+  --hero-accent-ink: #0a0b10;
+
+  --warn:      #ff5c7c;
+  --warn-dim:  rgba(255,92,124,.14);
+  --warn-edge: rgba(255,92,124,.42);
+  --warn-ink:  #ff92a8;
+  --on-warn:   #16060b;
+  --ok:        #35d39a;
+  --ok-dim:    rgba(53,211,154,.14);
+  --ok-edge:   rgba(53,211,154,.42);
+  --wait:      #e3b341;
+  --wait-dim:  rgba(227,179,65,.13);
+  --wait-edge: rgba(227,179,65,.38);
+  --wait-ink:  #f0cd7a;
+
+  --overlay:    rgba(3,4,8,.68);
+  --shadow:     0 1px 0 rgba(255,255,255,.04) inset, 0 14px 32px rgba(0,0,0,.5);
+  --shadow-lg:  0 1px 0 rgba(255,255,255,.06) inset, 0 24px 52px rgba(0,0,0,.66);
+  --shadow-pop: 0 16px 40px rgba(0,0,0,.6);
+  --shadow-in:  inset 0 1px 0 rgba(255,255,255,.05);
 }
 
 * { box-sizing: border-box; }
@@ -44,17 +194,41 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
   background: var(--paper);
   color: var(--ink);
   line-height: 1.65;
   font-size: 16px;
 }
 
-/* ─── Kopfzeile ───────────────────────────────────────── */
+/* Im Dunkeln liegt ein einzelner, sehr flacher Lichtkegel über der
+   Seite. Er ersetzt, was im Hellen der Schatten leistet: er sagt,
+   wo die Mitte ist.
+
+   Als HINTERGRUND des <body> und nicht als Pseudo-Element mit
+   eigener Schicht: ein ::before müsste über der Fläche liegen, und
+   damit müsste alles Übrige eine Schicht bekommen — eine Regel auf
+   `body > *` überschreibt aber das `position: fixed` von Modal,
+   Toast und Netzleiste, weil sie spezifischer ist. Die drei
+   klebten dann mitten im Dokument.
+
+   `background-attachment: fixed` hält das Licht beim Scrollen an
+   seinem Platz. Licht scrollt nicht mit. */
+:root[data-theme="dark"] body {
+  background-image: radial-gradient(ellipse 80% 52% at 50% 0%, rgba(124,77,255,.14), transparent 62%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* ─── Kopfzeile ───────────────────────────────────────────────
+   Seit dem Gestaltungs-Durchgang HELL: eine Linie statt einer
+   Fläche. Der dunkle Balken schnitt die Seite oben ab, und da die
+   dunkle Fassung ohnehin alles dunkel macht, wäre er dort ein
+   Balken ohne Gegenüber gewesen. */
 .topbar {
-  background: var(--ink);
-  color: #fff;
+  background: var(--chrome);
+  color: var(--chrome-ink);
+  border-bottom: 1px solid var(--chrome-line);
   padding: 13px 22px;
   display: flex;
   align-items: center;
@@ -63,11 +237,11 @@ body {
 .wordmark {
   font-size: 1.22rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   text-decoration: none;
-  color: #fff;
+  color: var(--chrome-ink);
 }
-.wordmark span { color: #5eead4; }
+.wordmark span { color: var(--accent-ink); }
 .topbar-spacer { flex: 1; }
 
 .userpill {
@@ -75,17 +249,17 @@ body {
   align-items: center;
   gap: 10px;
   font-size: .875rem;
-  color: #cfd8e0;
+  color: var(--ink-soft);
 }
-.userpill strong { color: #fff; font-weight: 600; }
+.userpill strong { color: var(--ink); font-weight: 600; }
 .userpill .role {
   font-size: .7rem;
   letter-spacing: .06em;
   text-transform: uppercase;
   padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(94,234,212,.15);
-  color: #5eead4;
+  border-radius: var(--r-pill);
+  background: var(--accent-dim);
+  color: var(--accent-ink);
   font-weight: 700;
 }
 
@@ -94,8 +268,8 @@ body {
   font: inherit;
   font-size: .92rem;
   font-weight: 600;
-  padding: 9px 17px;
-  border-radius: 8px;
+  padding: 9px 18px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink);
@@ -115,15 +289,17 @@ a.btn {
 .btn--primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
-.btn--primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+.btn--primary:hover { filter: brightness(1.08); }
+/* Steht in der Kopfzeile, also auf deren Grund — seit die hell ist,
+   ist das derselbe wie überall sonst. */
 .btn--ghost {
   background: transparent;
-  border-color: rgba(255,255,255,.28);
-  color: #fff;
+  border-color: var(--chrome-edge);
+  color: var(--chrome-ink);
 }
-.btn--ghost:hover { background: rgba(255,255,255,.1); }
+.btn--ghost:hover { background: var(--chrome-soft); }
 .btn--link {
   background: none;
   border: none;
@@ -158,9 +334,9 @@ a.btn {
    in das man einfach einfügen kann, ist dafür das Richtige.
    ══════════════════════════════════════════════════════════════ */
 .joincard {
-  background: var(--ink);
-  color: #fff;
-  border-radius: 16px;
+  background: var(--hero);
+  color: var(--hero-ink);
+  border-radius: var(--r-lg);
   padding: clamp(22px, 4vw, 34px) clamp(20px, 4vw, 34px);
   box-shadow: var(--shadow-lg);
   margin-bottom: 34px;
@@ -171,8 +347,8 @@ a.btn {
   margin: 0 0 16px;
   font-size: clamp(1.35rem, 4.2vw, 1.95rem);
   line-height: 1.15;
-  letter-spacing: -0.03em;
-  color: #fff;
+  letter-spacing: -0.035em;
+  color: var(--hero-ink);
 }
 
 .joincard-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -186,48 +362,51 @@ a.btn {
   text-transform: uppercase;
   text-align: center;
   padding: 12px 14px;
-  border: 2px solid rgba(255,255,255,.22);
-  border-radius: 11px;
-  background: rgba(255,255,255,.06);
-  color: #fff;
+  border: 2px solid var(--hero-edge);
+  border-radius: var(--r-sm);
+  background: var(--hero-soft);
+  color: var(--hero-ink);
 }
 .joincard-row input:focus {
   outline: none;
-  border-color: #5eead4;
-  background: rgba(255,255,255,.12);
+  border-color: var(--hero-accent);
+  background: var(--hero-soft);
 }
-.joincard-row input::placeholder { color: rgba(255,255,255,.3); letter-spacing: .18em; }
+.joincard-row input::placeholder { color: var(--hero-dim); opacity: .55; letter-spacing: .18em; }
 
 .joincard-go {
   flex: 0 0 auto;
   font-size: 1.02rem;
   padding: 0 26px;
-  border-radius: 11px;
-  background: #5eead4;
-  border-color: #5eead4;
-  color: #0a3b37;
+  border-radius: var(--r-sm);
+  background: var(--hero-accent);
+  border-color: var(--hero-accent);
+  color: var(--hero-accent-ink);
 }
-.joincard-go:hover { background: #99f6e4; border-color: #99f6e4; color: #0a3b37; }
+.joincard-go:hover {
+  background: var(--hero-accent-hi); border-color: var(--hero-accent-hi);
+  color: var(--hero-accent-ink); filter: none;
+}
 
 .joincard-rule {
   margin: 10px 0 0;
   font-size: .82rem;
-  color: rgba(255,255,255,.55);
+  color: var(--hero-dim);
 }
 
 /* Räume, in denen dieses Gerät schon war. */
 .joincard-mine {
   margin-top: 18px; padding-top: 15px;
-  border-top: 1px solid rgba(255,255,255,.14);
+  border-top: 1px solid var(--hero-edge);
   display: flex; flex-wrap: wrap; gap: 7px; align-items: center;
 }
-.joincard-mine-h { font-size: .76rem; color: rgba(255,255,255,.5); width: 100%; }
+.joincard-mine-h { font-size: .76rem; color: var(--hero-dim); width: 100%; }
 .joincard-mine .minichip {
-  background: rgba(255,255,255,.1);
-  border-color: rgba(255,255,255,.16);
-  color: #fff;
+  background: var(--hero-soft);
+  border-color: var(--hero-edge);
+  color: var(--hero-ink);
 }
-.joincard-mine .minichip:hover { background: rgba(94,234,212,.2); border-color: #5eead4; }
+.joincard-mine .minichip:hover { background: var(--hero-edge); border-color: var(--hero-accent); }
 
 /* ══════════════════════════════════════════════════════════════
    Landing 2 — Zugang für Lehrkräfte
@@ -241,7 +420,7 @@ a.btn {
   background: var(--surface);
   border: 1px solid var(--line);
   border-left: 4px solid var(--accent);
-  border-radius: 13px;
+  border-radius: 18px;
   padding: 24px 26px;
   box-shadow: var(--shadow);
 }
@@ -319,13 +498,13 @@ a.btn {
 .state {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 13px;
+  border-radius: 18px;
   padding: 24px 26px;
   box-shadow: var(--shadow);
   border-left: 4px solid var(--ink-faint);
 }
 .state--ok      { border-left-color: var(--ok); }
-.state--wait    { border-left-color: #d69e2e; }
+.state--wait    { border-left-color: var(--wait); }
 .state--no      { border-left-color: var(--warn); }
 .state--invite  { border-left-color: var(--accent); }
 
@@ -443,7 +622,7 @@ a.btn {
   font-size: .9rem;
   background: var(--surface);
   border: 1px dashed var(--line);
-  border-radius: 10px;
+  border-radius: 14px;
   padding: 16px 18px;
   margin: 0;
 }
@@ -457,7 +636,7 @@ a.btn {
 .tile {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 17px 18px 16px;
   box-shadow: var(--shadow);
   display: flex;
@@ -465,7 +644,7 @@ a.btn {
 }
 /* „In Vorbereitung" wird nicht ausgegraut, nur zurückgenommen: die
    Kachel soll lesbar bleiben — sie ist der Grund, hier wiederzukommen. */
-.tile--soon { background: #fcfcfa; box-shadow: none; }
+.tile--soon { background: var(--surface-2); box-shadow: none; }
 
 .tile-head {
   display: flex;
@@ -497,8 +676,8 @@ a.btn {
   background: var(--paper-2);
   color: var(--ink-faint);
 }
-.tag--soon { background: var(--accent-dim); border-color: #a9d5d0; color: var(--accent-ink); }
-.tag--off  { background: var(--warn-dim);   border-color: #f0c4ab; color: #8a2c07; }
+.tag--soon { background: var(--accent-dim); border-color: var(--accent-edge); color: var(--accent-ink); }
+.tag--off  { background: var(--warn-dim);   border-color: var(--warn-edge); color: var(--warn-ink); }
 
 .tile-blurb {
   margin: 0;
@@ -535,7 +714,7 @@ a.btn {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(23,33,43,.55);
+  background: var(--overlay);
   display: grid;
   place-items: center;
   padding: 18px;
@@ -544,7 +723,7 @@ a.btn {
 .overlay[hidden] { display: none; }
 .modal {
   background: var(--surface);
-  border-radius: 15px;
+  border-radius: 20px;
   box-shadow: var(--shadow-lg);
   width: 100%;
   max-width: 430px;
@@ -563,7 +742,7 @@ a.btn {
   position: absolute;
   top: 12px; right: 12px;
   width: 30px; height: 30px;
-  border: none; border-radius: 8px;
+  border: none; border-radius: 12px;
   background: var(--paper-2);
   color: var(--ink-soft);
   font-size: 1.15rem; line-height: 1;
@@ -589,7 +768,7 @@ label.field select {
   color: var(--ink);
   padding: 9px 11px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--paper);
 }
 label.field input:focus,
@@ -615,13 +794,13 @@ label.field .rule {
 .modal .actions .btn--primary { flex: 1; }
 
 .msg {
-  border-radius: 9px;
+  border-radius: 12px;
   padding: 10px 13px;
   font-size: .875rem;
   margin-bottom: 14px;
 }
-.msg--err { background: var(--warn-dim); border: 1px solid #f0c4ab; color: #8a2c07; }
-.msg--ok  { background: var(--ok-dim);   border: 1px solid #bcd9c3; color: var(--ok); }
+.msg--err { background: var(--warn-dim); border: 1px solid var(--warn-edge); color: var(--warn-ink); }
+.msg--ok  { background: var(--ok-dim);   border: 1px solid var(--ok-edge); color: var(--ok); }
 .msg[hidden] { display: none; }
 
 /* ─── Toast ───────────────────────────────────────────── */
@@ -630,8 +809,8 @@ label.field .rule {
   left: 50%;
   bottom: 26px;
   transform: translateX(-50%) translateY(14px);
-  background: var(--ink);
-  color: #fff;
+  background: var(--hero);
+  color: var(--hero-ink);
   padding: 11px 20px;
   border-radius: 999px;
   font-size: .9rem;
@@ -645,7 +824,7 @@ label.field .rule {
   text-align: center;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.err { background: var(--warn); }
+.toast.err { background: var(--warn); color: var(--on-warn); }
 
 /* ─── Ladezustand ─────────────────────────────────────── */
 .booting { color: var(--ink-faint); font-size: .95rem; }
@@ -657,21 +836,21 @@ label.field .rule {
 .wrap--narrow { max-width: 560px; }
 
 .btn--wide   { width: 100%; justify-content: center; }
-.btn--danger { border-color: #f0c4ab; color: #8a2c07; }
+.btn--danger { border-color: var(--warn-edge); color: var(--warn-ink); }
 .btn--danger:hover { background: var(--warn-dim); }
 
-.msg--warn { background: #fdf6e3; border: 1px solid #ecd9a8; color: #7a5a12; }
+.msg--warn { background: var(--wait-dim); border: 1px solid var(--wait-edge); color: var(--wait-ink); }
 
 /* ─── Karten ──────────────────────────────────────────────── */
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 13px;
+  border-radius: 18px;
   padding: 22px 24px;
   box-shadow: var(--shadow);
   margin-bottom: 16px;
 }
-.card--empty { border-style: dashed; box-shadow: none; background: #fcfcfa; }
+.card--empty { border-style: dashed; box-shadow: none; background: var(--surface-2); }
 .card--empty p { margin: 0; color: var(--ink-soft); }
 .card-h {
   font-size: .95rem;
@@ -700,7 +879,7 @@ label.field .rule {
   border: 1px solid var(--line-soft); border-radius: 999px;
   padding: 4px 12px;
 }
-.minichip:hover { background: var(--accent-dim); border-color: #a9d5d0; }
+.minichip:hover { background: var(--accent-dim); border-color: var(--accent-edge); }
 
 /* ─── Beitrittsseite ──────────────────────────────────────── */
 .card--join { padding: 26px 26px 24px; }
@@ -708,13 +887,13 @@ label.field .rule {
 .join-sub { margin: 0 0 18px; color: var(--ink-soft); font-size: .93rem; }
 .join-foot { margin: 18px 0 0; text-align: center; }
 .anon-note {
-  background: var(--paper-2); border-radius: 9px;
+  background: var(--paper-2); border-radius: 12px;
   padding: 11px 14px; font-size: .86rem; color: var(--ink-soft); margin: 0 0 16px;
 }
 .door-tool {
   display: flex; align-items: center; gap: 8px;
   font-size: .8rem; font-weight: 600; letter-spacing: .04em;
-  text-transform: uppercase; color: var(--accent);
+  text-transform: uppercase; color: var(--accent-ink);
   margin-bottom: 9px;
 }
 .door-ic { font-size: 1.1rem; }
@@ -729,7 +908,7 @@ label.field .rule {
   font-size: clamp(1.3rem, 7vw, 1.9rem); font-weight: 700;
   text-align: center; text-transform: uppercase;
   color: var(--ink); background: var(--paper);
-  border: 1px solid var(--line); border-radius: 10px;
+  border: 1px solid var(--line); border-radius: 14px;
   padding: 0;
 }
 .codecell:focus {
@@ -747,8 +926,8 @@ label.field .rule {
 .code-chip {
   font-family: var(--mono); font-size: .95rem; font-weight: 700;
   letter-spacing: .1em;
-  background: var(--ink); color: #fff;
-  border-radius: 8px; padding: 5px 11px; flex: none;
+  background: var(--hero); color: var(--hero-ink);
+  border-radius: 12px; padding: 5px 11px; flex: none;
 }
 
 .people { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 7px; }
@@ -787,7 +966,7 @@ label.field .rule {
 .roomlist-a {
   display: flex; align-items: center; gap: 12px;
   padding: 11px 4px; text-decoration: none; color: var(--ink);
-  border-radius: 8px;
+  border-radius: 12px;
 }
 .roomlist-a:hover { background: var(--paper); }
 .roomlist-ic { font-size: 1.35rem; flex: none; }
@@ -817,7 +996,7 @@ label.field .rule {
 .rowmenu-btn {
   font: inherit; font-size: 1.15rem; line-height: 1;
   color: var(--ink-faint); background: none; border: 0;
-  border-radius: 8px; cursor: pointer;
+  border-radius: 12px; cursor: pointer;
   width: 34px; height: 34px;
   transition: background .14s ease, color .14s ease;
 }
@@ -829,8 +1008,8 @@ label.field .rule {
   z-index: 40; min-width: 190px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 10px 26px rgba(23, 33, 43, .16);
+  border-radius: 14px;
+  box-shadow: var(--shadow-pop);
   padding: 5px;
   display: flex; flex-direction: column;
 }
@@ -869,7 +1048,7 @@ label.field .rule {
   display: flex; align-items: center; gap: clamp(20px, 5vw, 54px);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 24px;
   padding: clamp(18px, 3.5vw, 38px);
   box-shadow: var(--shadow);
   flex-wrap: wrap; justify-content: center;
@@ -886,7 +1065,7 @@ label.field .rule {
 .beam-code { flex: 1; min-width: 240px; }
 .beam-label {
   margin: 0 0 4px; font-size: .74rem; letter-spacing: .16em;
-  text-transform: uppercase; color: var(--accent); font-weight: 700;
+  text-transform: uppercase; color: var(--accent-ink); font-weight: 700;
 }
 .bigcode {
   font-family: var(--mono);
@@ -958,7 +1137,7 @@ body.bd-fill #pagefoot { display: none; }
    keine Einwilligung, die man wegklicken müsste. */
 .privacy-grid h3 {
   font-size: .82rem; text-transform: uppercase; letter-spacing: .07em;
-  color: var(--accent); margin: 18px 0 6px;
+  color: var(--accent-ink); margin: 18px 0 6px;
 }
 .privacy-grid > div > h3:first-child { margin-top: 0; }
 .privacy-grid p {
@@ -969,7 +1148,7 @@ body.bd-fill #pagefoot { display: none; }
 /* ─── „Was kann diese Seite?" ─────────────────────────────── */
 .about-h {
   font-size: .82rem; text-transform: uppercase; letter-spacing: .07em;
-  color: var(--accent); margin: 20px 0 6px;
+  color: var(--accent-ink); margin: 20px 0 6px;
 }
 .about-p { margin: 0 0 10px; font-size: .92rem; color: var(--ink-soft); }
 .about-foot {
@@ -998,14 +1177,14 @@ body.bd-fill #pagefoot { display: none; }
   position: fixed; inset: 0 0 auto 0; z-index: 200;
   display: flex; align-items: center; justify-content: center; gap: 10px;
   padding: 9px 16px;
-  background: var(--warn); color: #fff;
+  background: var(--warn); color: var(--on-warn);
   font-size: .88rem; font-weight: 600;
   text-align: center;
-  box-shadow: 0 2px 12px rgba(23,33,43,.25);
+  box-shadow: var(--shadow-pop);
 }
 .netbar-dot {
   width: 9px; height: 9px; border-radius: 50%; flex: none;
-  background: #fff; opacity: .85;
+  background: currentColor; opacity: .85;
   animation: netbar-pulse 1.4s ease-in-out infinite;
 }
 @keyframes netbar-pulse { 50% { opacity: .25; } }
@@ -1019,7 +1198,7 @@ body.bd-fill #pagefoot { display: none; }
    Knöpfen, die man ständig drückt. */
 .modbox {
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: 12px; padding: 10px 16px; margin-bottom: 16px;
+  border-radius: 16px; padding: 10px 16px; margin-bottom: 16px;
 }
 .modbox > summary {
   cursor: pointer; font-weight: 700; font-size: .9rem; color: var(--ink-soft);
@@ -1039,7 +1218,7 @@ body.bd-fill #pagefoot { display: none; }
 .modrow--empty { color: var(--ink-faint); font-style: italic; }
 .modrow-tag {
   font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
-  font-weight: 700; color: #8a2c07; background: var(--warn-dim);
+  font-weight: 700; color: var(--warn-ink); background: var(--warn-dim);
   border-radius: 999px; padding: 2px 8px;
 }
 .modrow .dot {
@@ -1053,7 +1232,7 @@ body.bd-fill #pagefoot { display: none; }
    „gegangen", und die Lehrkraft verlöre den Überblick über das, was
    sie selbst getan hat. */
 .chip--blocked {
-  background: var(--warn-dim); border-color: #f0c4ab; color: #8a2c07;
+  background: var(--warn-dim); border-color: var(--warn-edge); color: var(--warn-ink);
   text-decoration: line-through;
 }
 
@@ -1061,11 +1240,15 @@ body.bd-fill #pagefoot { display: none; }
    Die Ecke oben rechts (lib/userbar.js)
    ══════════════════════════════════════════════════════════════
    Verhalten wie in der Tablet-Schulung — Avatar, Name, Pfeil,
-   dahinter ein Menü —, Optik aber die von MPSkills. Die Kopfzeile
-   ist die einzige dunkle Fläche der Seite, deshalb steht hier
-   Weiß auf Tinte und der Akzent ist das helle Teal des Wortmarks;
-   das Menü selbst klappt auf hellen Grund auf, weil dort dieselben
-   Einträge stehen wie sonst auf der Seite.
+   dahinter ein Menü —, Optik aber die von MPSkills.
+
+   Seit die Kopfzeile hell ist (Gestaltungs-Durchgang 19.08.2026),
+   steht die Ecke auf demselben Grund wie die Seite darunter, und
+   Knopf wie Menü kommen mit denselben Variablen aus. Vorher waren
+   es zwei Farbwelten in einer Leiste.
+
+   Im Menü sitzt seither der Umschalter zwischen hell und dunkel —
+   siehe .ub-theme weiter unten.
    ══════════════════════════════════════════════════════════════ */
 .ub { position: relative; display: flex; align-items: center; gap: 8px; }
 
@@ -1075,27 +1258,27 @@ body.bd-fill #pagefoot { display: none; }
   gap: 9px;
   font: inherit;
   font-size: .875rem;
-  color: #fff;
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.18);
-  border-radius: 999px;
+  color: var(--chrome-ink);
+  background: var(--chrome-soft);
+  border: 1px solid var(--chrome-edge);
+  border-radius: var(--r-pill);
   padding: 4px 13px 4px 5px;
   cursor: pointer;
   transition: background .14s ease;
 }
-.ub-btn:hover { background: rgba(255,255,255,.15); }
+.ub-btn:hover { background: var(--accent-dim); }
 
 .ub-av {
   width: 30px; height: 30px;
   border-radius: 50%;
-  background: rgba(255,255,255,.14);
+  background: var(--accent-dim);
   flex: none;
   display: grid;
   place-items: center;
   overflow: hidden;
 }
 .ub-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ub-initial { font-weight: 700; font-size: .9rem; color: #fff; }
+.ub-initial { font-weight: 700; font-size: .9rem; color: var(--accent-ink); }
 
 .ub-name {
   font-weight: 600;
@@ -1110,9 +1293,9 @@ body.bd-fill #pagefoot { display: none; }
   text-transform: uppercase;
   font-weight: 700;
   padding: 2px 7px;
-  border-radius: 999px;
-  background: rgba(94,234,212,.15);
-  color: #5eead4;
+  border-radius: var(--r-pill);
+  background: var(--accent-dim);
+  color: var(--accent-ink);
 }
 .ub-caret { font-size: .6rem; opacity: .7; }
 
@@ -1123,7 +1306,7 @@ body.bd-fill #pagefoot { display: none; }
   min-width: 190px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: 14px;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   z-index: 40;
@@ -1145,10 +1328,48 @@ body.bd-fill #pagefoot { display: none; }
 }
 .ub-menu a:hover,
 .ub-menu button:hover { background: var(--paper-2); }
-.ub-menu .ub-admin { color: var(--accent); font-weight: 600; }
+.ub-menu .ub-admin { color: var(--accent-ink); font-weight: 600; }
 .ub-menu button[data-ub="logout"] {
   border-top: 1px solid var(--line-soft);
   color: var(--ink-soft);
+}
+
+/* ── Hell / Dunkel ────────────────────────────────────────────
+   Kein Menüpunkt, der etwas aufruft, sondern ein Schalter, der
+   einen Zustand zeigt: beide Möglichkeiten stehen nebeneinander,
+   und eine ist gefüllt. Ein einzelner Eintrag „Dunkelmodus" müsste
+   erst gelesen werden, um zu verraten, wo man gerade steht.
+
+   Deshalb sitzt er auch nicht in der Reihe der Links, sondern in
+   einem eigenen Fach darüber, mit einer Linie dazwischen: die
+   Links führen weg, dieser hier bleibt. Und deshalb schließt das
+   Menü beim Umschalten NICHT — man will sehen, was passiert, und
+   notfalls sofort zurück. */
+.ub-theme {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 15px 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.ub-theme-l {
+  flex: 1; min-width: 0;
+  font-size: .78rem; color: var(--ink-faint);
+}
+.ub-theme-seg {
+  display: flex; flex: none;
+  border: 1px solid var(--line); border-radius: var(--r-pill);
+  background: var(--paper); padding: 2px;
+}
+.ub-theme-seg button {
+  width: 30px; height: 24px; padding: 0;
+  display: grid; place-items: center;
+  border: 0; border-radius: var(--r-pill);
+  background: none; color: var(--ink-faint);
+  font-size: .82rem; line-height: 1; cursor: pointer;
+  transition: background .14s ease, color .14s ease;
+}
+.ub-theme-seg button:hover { color: var(--ink); }
+.ub-theme-seg button[aria-pressed="true"] {
+  background: var(--accent); color: var(--on-accent);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1202,9 +1423,9 @@ body.bd-fill #pagefoot { display: none; }
   font-weight: 700;
   border: 1px solid transparent;
 }
-.prof-badge--ok   { background: var(--ok-dim);   border-color: #bcd9c3; color: var(--ok); }
-.prof-badge--wait { background: #fdf6e3;         border-color: #ecd9a8; color: #7a5a12; }
-.prof-badge--no   { background: var(--warn-dim); border-color: #f0c4ab; color: #8a2c07; }
+.prof-badge--ok   { background: var(--ok-dim);   border-color: var(--ok-edge); color: var(--ok); }
+.prof-badge--wait { background: var(--wait-dim);         border-color: var(--wait-edge); color: var(--wait-ink); }
+.prof-badge--no   { background: var(--warn-dim); border-color: var(--warn-edge); color: var(--warn-ink); }
 .prof-badge--none { background: var(--paper-2);  border-color: var(--line); color: var(--ink-soft); }
 
 .prof-note {
@@ -1258,7 +1479,7 @@ body.bd-fill #pagefoot { display: none; }
   cursor: pointer;
 }
 .picker-tab:hover { border-color: var(--accent); }
-.picker-tab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.picker-tab.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
 .picker-grid {
   display: grid;
@@ -1269,7 +1490,7 @@ body.bd-fill #pagefoot { display: none; }
 }
 .picker-tile {
   border: 2px solid transparent;
-  border-radius: 12px;
+  border-radius: 16px;
   background: none;
   padding: 8px 6px;
   cursor: pointer;
@@ -1314,7 +1535,7 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
 
 .rtabs {
   display: flex; align-items: stretch; gap: 12px;
-  background: var(--surface);
+  background: transparent;
   border-bottom: 1px solid var(--line);
   padding: 0 14px;
 }
@@ -1349,7 +1570,7 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   font-size: .72rem; font-weight: 700;
   background: var(--paper-2); color: var(--ink-faint);
 }
-.rtab.on .rtab-n { background: var(--accent); color: #fff; }
+.rtab.on .rtab-n { background: var(--accent); color: var(--on-accent); }
 .rtab-t { overflow: hidden; text-overflow: ellipsis; }
 
 /* Der Code steht in der Leiste und damit auf JEDEM Fach — auch auf
@@ -1359,13 +1580,13 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   font-size: 1.05rem; letter-spacing: .08em;
   color: var(--ink);
   background: var(--paper-2);
-  border-radius: 8px; padding: 4px 11px;
+  border-radius: 12px; padding: 4px 11px;
   user-select: all;
 }
 .rtabs-fs {
   font: inherit; font-size: 1.05rem; line-height: 1;
   background: none; border: 1px solid var(--line);
-  border-radius: 8px; padding: 6px 10px;
+  border-radius: 12px; padding: 6px 10px;
   color: var(--ink-soft); cursor: pointer;
 }
 .rtabs-fs:hover { background: var(--paper-2); color: var(--ink); }
@@ -1388,7 +1609,7 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
 .card--form { padding: 26px 26px 22px; }
 .pane-h  { margin: 0 0 4px; font-size: 1.35rem; letter-spacing: -0.02em; }
 .pane-sub { margin: 0 0 20px; font-size: .9rem; color: var(--ink-soft); }
-.req { color: var(--accent); font-weight: 700; }
+.req { color: var(--accent-ink); font-weight: 700; }
 
 .field--static {
   display: block; margin-bottom: 16px;
@@ -1400,7 +1621,7 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
 }
 
 .fieldset {
-  border: 1px solid var(--line-soft); border-radius: 10px;
+  border: 1px solid var(--line-soft); border-radius: 14px;
   padding: 12px 14px 6px; margin: 0 0 16px;
 }
 .fieldset > legend {
@@ -1447,12 +1668,12 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   flex: none; align-self: center;
   width: 42px; height: 62px;
   display: grid; place-items: center;
-  background: var(--ink); color: #fff;
+  background: var(--hero); color: var(--hero-ink);
   border: none; border-radius: 10px 0 0 10px;
   cursor: pointer;
-  box-shadow: -2px 2px 10px rgba(23,33,43,.18);
+  box-shadow: var(--shadow-pop);
 }
-.qrfly-grip:hover { background: var(--accent-ink); }
+.qrfly-grip:hover { background: var(--accent); color: var(--on-accent); }
 .qrfly-grip svg { width: 24px; height: 24px; fill: currentColor; }
 
 .qrfly-body {
@@ -1503,12 +1724,12 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
      schmal, dass daneben noch etwas vom Werkzeug zu sehen ist. */
   .qrfly { --flyw: 200px; }
   .qrbox-in { flex-direction: column; text-align: center; }
-  .state { padding: 20px 18px; border-radius: 11px; }
+  .state { padding: 20px 18px; border-radius: 14px; }
   /* Auf dem Handy geht der Knopf unter das Feld statt daneben:
      nebeneinander bliebe für den Code kein Platz mehr, und er ist
      das, was hier gelesen werden muss. */
   .joincard-go { width: 100%; padding: 11px 20px; }
-  .access { padding: 20px 18px; border-radius: 11px; }
+  .access { padding: 20px 18px; border-radius: 14px; }
   .infobar .btn { width: 100%; }
   .topbar { padding: 11px 16px; }
   .ub-name { display: none; }
@@ -1519,7 +1740,7 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   .prof-info dt { margin-top: 10px; }
   .picker-grid { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); padding: 16px; }
   .picker-head, .picker-tabs { padding-left: 16px; padding-right: 16px; }
-  .card { padding: 18px 17px; border-radius: 11px; }
+  .card { padding: 18px 17px; border-radius: 14px; }
   .card--join { padding: 20px 18px; }
   .codebox { gap: 5px; }
   .page-head .btn { margin-left: 0; width: 100%; }
