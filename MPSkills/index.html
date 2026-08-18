@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260818e" />
+<link rel="stylesheet" href="style.css?v=20260818f" />
 <link rel="icon" type="image/png" sizes="64x64" href="../icons/favicon-64.png" />
 <link rel="icon" type="image/png" sizes="256x256" href="../icons/favicon-256.png" />
 </head>
@@ -66,18 +66,12 @@
     <div id="joinMine"></div>
   </section>
 
-  <!-- ─── Rollenweiche für Angemeldete ─────────────────────────
-       Bleibt vorerst, wie sie war. Die Ansichten „angemeldet ohne
-       Rechte" und „angemeldet mit Rechten" werden als eigener
-       Schritt gebaut. -->
+  <!-- ─── Alles für Angemeldete ────────────────────────────────
+       Gruß, die beiden Reiter (Meine Räume · Alle Werkzeuge) und
+       für alle, die noch keinen Zugang haben, der Zustand ihres
+       Antrags. Inhalt kommt aus app.js — was hier steht, hängt an
+       der Rolle, und die kennt erst das Skript. -->
   <div id="stateHost"></div>
-
-  <!-- Werkzeug-Kacheln NUR noch für Lehrkräfte und Admins — für
-       Gäste ist die Liste weg (sie beantwortet keine Frage, die ein
-       Gast hat). Provisorium bis zum Umbau der Ansichten 2 und 3;
-       sie hält den Weg „Testraum anlegen" offen, den es sonst
-       nirgends gibt. -->
-  <div id="toolsHost"></div>
 
   <!-- ─── 2. Zugang für Lehrkräfte ─────────────────────────────
        Zugeklappt, weil es die Frage der Minderheit ist. Aufgeklappt
@@ -86,10 +80,10 @@
        entschieden werden muss, und zwei Spalten stellen sie, ohne
        sie zu stellen.
 
-       Die Anmelde- und Registrierfelder standen früher in zwei
-       Modals. Sie stehen jetzt in der Seite: ein Dialog, der sich
-       über die Erklärung schiebt, warum man ihn ausfüllt, nimmt
-       genau die Erklärung weg. -->
+       Die Felder stehen hier IN der Seite, direkt unter der
+       Erklärung, warum man sie ausfüllt. Dieselben Felder gibt es
+       zusätzlich als Modal für die Knöpfe oben rechts — dort weiß
+       man schon, was man will, und braucht die Erklärung nicht. -->
   <section class="access" id="accessSection" hidden>
     <h2 class="access-h">Möchtest du selbst Werkzeuge bereitstellen?</h2>
     <p class="access-lead">
@@ -119,8 +113,8 @@
         <div class="access-slot" id="slotLogin"><section class="access-col" id="colLogin">
           <h3>Du hast schon ein Konto</h3>
           <p class="access-note">
-            Hier oder in der Tablet-Schulung — es ist dasselbe Konto. Melde dich an; danach
-            steht auf dieser Seite ein Knopf, mit dem du den Zugang beantragst.
+            Hier oder in der Tablet-Schulung — es ist dasselbe Konto. Melde dich an, dann
+            geht der Antrag auf den Zugang direkt mit raus.
           </p>
 
           <div class="msg msg--err" id="loginError" hidden></div>
@@ -322,6 +316,6 @@
      anlegt — er tut es ja ohne Dialog. -->
 <script src="lib/tool.js?v=20260818b"></script>
 <script src="tools.js?v=20260818"></script>
-<script src="app.js?v=20260818f"></script>
+<script src="app.js?v=20260818g"></script>
 </body>
 </html>

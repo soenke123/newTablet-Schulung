@@ -259,14 +259,99 @@ function closeInfos() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   Werkzeug-Kacheln (Provisorium)
+   Serveraufruf
    ══════════════════════════════════════════════════════════
-   Für Gäste ist die Liste weg — sie beantwortet keine Frage, die
-   ein Gast hat, und schob den Code-Kasten nach unten. Für
-   Lehrkräfte und Admins steht sie vorerst weiter da: sie hält den
-   Weg „Testraum anlegen" offen, den es sonst nirgends gibt (in
-   lehrer.html entstehen nur echte Räume). Beim Umbau der Ansicht 3
-   gehört beides an einen Ort.
+   Wie in lehrer.js bewusst OHNE zwischengespeicherten Token: das
+   SDK erneuert ihn nach 60 Minuten, und eine festgehaltene Kopie
+   wäre ab da tot. */
+async function rpc(fn, args) {
+  const token = window.__accessToken;
+  if (!token) throw new Error('nicht angemeldet');
+  const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: {
+      apikey: window.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(args || {})
+  });
+  if (!res.ok) throw new Error(`${fn} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return res.json();
+}
+
+/* ══════════════════════════════════════════════════════════
+   Reiter „Meine Räume"
+   ══════════════════════════════════════════════════════════
+   Bewusst die kurze Fassung: eine Zeile je Raum, ein Klick führt
+   in die Beamer-Ansicht. Öffnen, schließen, verlängern und löschen
+   bleiben in lehrer.html — dieselben Knöpfe an zwei Orten wären
+   zwei Orte, an denen dieselbe Bestätigungsfrage gepflegt werden
+   muss, und einer davon wird vergessen. Die Landing beantwortet
+   „was läuft gerade?", nicht „was mache ich damit?".
+
+   Testräume stehen mit in der Liste, nur ausgewiesen: auf der
+   Landing sind sie kein eigenes Kapitel, sondern einer von
+   wenigen Räumen. */
+function roomRow(r) {
+  const bits = [r.tool_title || r.tool_id];
+  if (r.is_test)    bits.push('Testraum');
+  bits.push(`${r.people} ${r.people === 1 ? 'Person' : 'Personen'}`);
+  if (r.online)     bits.push(`${r.online} gerade da`);
+  if (!r.join_open) bits.push('Beitritt zu');
+  if (r.expired)    bits.push('abgelaufen');
+
+  return `<li><a class="roomlist-a" href="lehrer.html#${esc(r.code)}">
+      <span class="roomlist-ic">${esc(r.tool_icon || '🧩')}</span>
+      <span class="roomlist-txt">
+        <strong>${esc(r.title)}</strong>
+        <span>${esc(bits.join(' · '))}</span>
+      </span>
+      <code class="roomlist-code">${esc(r.code)}</code>
+    </a></li>`;
+}
+
+async function renderRooms() {
+  const pane = document.getElementById('paneRooms');
+  if (!pane) return;
+
+  let data;
+  try {
+    data = await rpc('skill_rooms_list', {});
+  } catch (e) {
+    console.warn('[mpskills] skill_rooms_list:', e.message);
+    pane.innerHTML = `<div class="card"><div class="msg msg--err">Deine Räume ließen sich
+      gerade nicht laden.</div>
+      <p class="rule">${esc(e.message)}</p></div>`;
+    return;
+  }
+  if (!data?.ok) {
+    pane.innerHTML = `<div class="card"><div class="msg msg--err">Deine Räume ließen sich
+      nicht laden (${esc(data?.error || 'unbekannt')}).</div></div>`;
+    return;
+  }
+
+  const rooms = data.rooms || [];
+  pane.innerHTML = rooms.length ? `
+      <div class="card">
+        <ul class="roomlist">${rooms.map(roomRow).join('')}</ul>
+      </div>
+      <p class="pane-foot"><a href="lehrer.html">Räume verwalten, verlängern, löschen →</a></p>`
+    : `<div class="card card--empty">
+        <p><strong>Noch kein Raum.</strong> Öffne unter „Alle Werkzeuge" eins für deine
+        Klasse — du bekommst einen Code und einen QR-Code, und die Klasse ist in 30 Sekunden
+        drin.</p>
+        <div class="actions"><button type="button" class="btn" data-tab="tools">Alle Werkzeuge
+        ansehen</button></div>
+      </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Reiter „Alle Werkzeuge"
+   ══════════════════════════════════════════════════════════
+   Für Gäste gibt es die Liste nicht — sie beantwortet keine Frage,
+   die ein Gast hat, und schob den Code-Kasten nach unten.
 
    Quelle ist skill_tools (Migration 0078), NICHT tools.js. Dort
    steht nur das ready-Flag — siehe Kopfkommentar in tools.js. */
@@ -339,7 +424,7 @@ function toolCard(t) {
    „Für eine Klasse öffnen" fragt nach Titel und Namen — das gehört
    auf die Raumseite und nicht in ein zweites Formular hier. */
 function wireToolButtons() {
-  document.querySelectorAll('#toolsHost button[data-act]').forEach(btn => {
+  document.querySelectorAll('#paneTools button[data-act]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const tool = btn.dataset.tool;
       if (btn.dataset.act === 'open') {
@@ -398,7 +483,7 @@ function wireToolButtons() {
 }
 
 async function renderTools() {
-  const host = document.getElementById('toolsHost');
+  const host = document.getElementById('paneTools');
   if (!host) return;
   const tools = await loadTools();
 
@@ -410,21 +495,18 @@ async function renderTools() {
     const tech = (s?.is_admin || s?.is_superadmin) && toolsError
       ? `<br><span class="tile-note">Technisch: ${esc(toolsError)} — läuft Migration 0078 schon?</span>`
       : '';
-    host.innerHTML = `<div class="tools"><h2 class="tools-title">Werkzeuge</h2>
-      <p class="tools-empty">Die Werkzeugliste ist gerade nicht erreichbar.${tech}</p></div>`;
+    host.innerHTML = `<p class="tools-empty">Die Werkzeugliste ist gerade nicht
+      erreichbar.${tech}</p>`;
     return;
   }
 
   if (tools.length === 0) {
-    host.innerHTML = `<div class="tools"><h2 class="tools-title">Werkzeuge</h2>
-      <p class="tools-empty">Hier ist noch nichts eingetragen.</p></div>`;
+    host.innerHTML = '<p class="tools-empty">Hier ist noch nichts eingetragen.</p>';
     return;
   }
 
-  host.innerHTML = `<div class="tools">
-      <h2 class="tools-title">Werkzeuge <span class="tools-count">${tools.length}</span></h2>
-      <div class="tile-grid">${tools.map(toolCard).join('')}</div>
-    </div>`;
+  // Keine Überschrift: der Reiter darüber sagt schon, was das ist.
+  host.innerHTML = `<div class="tile-grid">${tools.map(toolCard).join('')}</div>`;
 
   // Wo das Frontend eines Werkzeugs liegt. Braucht nur der
   // Testraum-Knopf, um die Vorgaben des Werkzeugs zu holen — der
@@ -439,6 +521,29 @@ async function renderTools() {
    Rollenweiche
    ══════════════════════════════════════════════════════════
    Ein Ort, an dem entschieden wird, was die Seite zeigt. */
+/* ─── Reiter ──────────────────────────────────────────────────
+   „Meine Räume" steht offen, weil das die Frage beim Öffnen der
+   Seite ist: läuft noch was, und wo ist der Code dazu. Das
+   Sortiment schaut man seltener an — und wenn, dann absichtlich.
+
+   Die Wahl liegt in einer Variablen und nicht im sessionStorage:
+   sie soll den Klick auf einen Raum nicht überleben. Wer zurück
+   auf die Landing kommt, fragt wieder als Erstes nach den Räumen. */
+let activeTab = 'rooms';
+
+function showTab(which) {
+  activeTab = which;
+  document.querySelectorAll('#stateHost .tab').forEach(b => {
+    const on = b.dataset.tab === which;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  for (const [id, key] of [['paneRooms', 'rooms'], ['paneTools', 'tools']]) {
+    const el = document.getElementById(id);
+    if (el) el.hidden = (key !== which);
+  }
+}
+
 function roleOf(s) {
   if (!s)                              return 'guest';
   if (s.is_admin || s.is_superadmin)   return 'admin';
@@ -482,13 +587,6 @@ function renderState() {
   }
   if (access) access.hidden = (role !== 'guest');
 
-  // Kacheln nur für die, die damit etwas anfangen können.
-  // Absichtlich nicht awaited: die Rollenweiche darf nicht auf das
-  // Netz warten.
-  const toolsHost = document.getElementById('toolsHost');
-  if (acts) renderTools();
-  else if (toolsHost) toolsHost.innerHTML = '';
-
   /* ─── Ansicht 1: Gast ───────────────────────────────────
      Der ganze Inhalt steht statisch im HTML. Hier bleibt nichts
      zu tun — und genau das ist der Punkt der Umstellung. */
@@ -497,31 +595,48 @@ function renderState() {
     return;
   }
 
-  /* ─── Ansichten 2 und 3 ─────────────────────────────────
-     Stand wie bisher. Der Umbau ist ein eigener Schritt. */
-  if (role === 'admin') {
-    host.innerHTML = `
-      <div class="state state--ok">
-        <h2><span class="ic">🛡️</span> Du bist Admin</h2>
-        <p>
-          Als Admin darfst du hier alles sehen und testen, ohne eigene Freischaltung.
-          Anträge von Lehrkräften bearbeitest du im
-          <a href="../admin/index.html">Admin-Panel</a> unter „Lehrkräfte".
-        </p>
-      </div>`;
-    return;
-  }
+  /* ─── Ansicht 3: Lehrkraft und Admin ────────────────────
+     Kurzer Gruß, dann zwei Reiter. Der Gruß erklärt nichts mehr —
+     wer hier steht, ist eingerichtet und will an die Arbeit; die
+     Erklärung steht für alle unten hinter „Was kann diese Seite?".
 
-  if (role === 'teacher') {
+     Für den Admin dieselbe Seite mit einem Satz mehr: er hat
+     keinen Zugang beantragt, sondern hat ihn qua Amt, und die
+     Anträge der anderen liegen woanders. */
+  if (acts) {
+    const name = (s?.display_name || s?.account_name || '').trim();
     host.innerHTML = `
-      <div class="state state--ok">
-        <h2><span class="ic">✓</span> Du bist freigeschaltet</h2>
+      <section class="welcome">
+        <h1>Hallo${name ? ' ' + esc(name) : ''}!</h1>
         <p>
-          Wähle unten ein Werkzeug: <strong>Testen</strong> macht dir einen eigenen Raum zum
-          Ausprobieren, <strong>Für eine Klasse öffnen</strong> einen mit Titel und Code.
-          Alles Weitere steht unter <a href="lehrer.html">Meine Räume</a>.
+          Du hast Zugriff auf alle Werkzeuge. Öffne eines für eine Klasse — den Code und den
+          QR-Code dazu bekommst du sofort.
+          ${role === 'admin'
+            ? 'Anträge von Lehrkräften bearbeitest du im <a href="../admin/index.html">Admin-Panel</a> unter „Lehrkräfte".'
+            : ''}
         </p>
+      </section>
+
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab" role="tab" data-tab="rooms"
+                aria-controls="paneRooms" aria-selected="false">Meine Räume</button>
+        <button type="button" class="tab" role="tab" data-tab="tools"
+                aria-controls="paneTools" aria-selected="false">Alle Werkzeuge</button>
+      </div>
+
+      <div class="tabpane" id="paneRooms" role="tabpanel">
+        <p class="booting">Räume werden geladen …</p>
+      </div>
+      <div class="tabpane" id="paneTools" role="tabpanel" hidden>
+        <p class="booting">Werkzeuge werden geladen …</p>
       </div>`;
+
+    showTab(activeTab);
+    // Beide Reiter werden gefüllt, auch der verdeckte: sonst
+    // wartete man beim Umschalten auf das Netz, und das ist genau
+    // der Moment, in dem man etwas sucht.
+    renderRooms();
+    renderTools();
     return;
   }
 
@@ -779,6 +894,16 @@ document.getElementById('accessToggle').addEventListener('click', () => {
 });
 document.getElementById('loginForm').addEventListener('submit', doLogin);
 document.getElementById('registerForm').addEventListener('submit', doRegister);
+
+// Ein Listener am Kasten statt an jedem Reiter — EINMAL, außerhalb
+// von renderState: der Kasten bleibt stehen, sein Inhalt wird
+// ersetzt, und ein Listener je Durchlauf summierte sich. Delegiert
+// erwischt er zugleich den zweiten Umschalter, der im leeren
+// Raum-Zustand steht und beim Verdrahten noch nicht existierte.
+document.getElementById('stateHost').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-tab]');
+  if (btn) showTab(btn.dataset.tab);
+});
 
 document.getElementById('infobar').addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-info]');

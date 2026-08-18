@@ -347,6 +347,57 @@ body {
   color: var(--ink-faint);
 }
 
+/* ══════════════════════════════════════════════════════════════
+   Landing für Angemeldete — Gruß und Reiter
+   ══════════════════════════════════════════════════════════════
+   Der Gruß erklärt nichts. Wer hier steht, ist eingerichtet und
+   will an die Arbeit; die Erklärung steht für alle unten hinter
+   „Was kann diese Seite?". Deshalb zwei Zeilen und keine Karte —
+   eine Karte sähe aus, als stünde eine Aufgabe darin.
+   ══════════════════════════════════════════════════════════════ */
+.welcome { margin-bottom: 26px; }
+.welcome h1 {
+  margin: 0 0 6px;
+  font-size: clamp(1.5rem, 4.4vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+.welcome p { margin: 0; color: var(--ink-soft); max-width: 60ch; }
+.welcome a { color: var(--accent-ink); }
+
+/* Reiter mit Unterstrich statt Kästen: sie sind zwei Sichten auf
+   dasselbe und keine zwei Knöpfe, die etwas auslösen. Die Linie
+   unter der ganzen Leiste hält sie zusammen, auch wenn nur einer
+   gefärbt ist. */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 20px;
+}
+.tab {
+  font: inherit;
+  font-size: .95rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 9px 15px;
+  cursor: pointer;
+  transition: color .14s ease, border-color .14s ease;
+}
+.tab:hover { color: var(--ink); }
+.tab.on {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+.tabpane[hidden] { display: none; }
+
+.pane-foot { margin: 14px 0 0; font-size: .86rem; }
+.pane-foot a { color: var(--accent-ink); }
+
 /* ─── Werkzeug-Kacheln ────────────────────────────────── */
 .tools { margin-top: 40px; }
 .tools-title {
