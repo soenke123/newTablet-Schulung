@@ -5,7 +5,7 @@
 
      1. nicht angemeldet          — Code · Zugang · zwei Auskünfte
      2. angemeldet ohne Rechte    — der Zustand des Antrags
-     3. angemeldet mit Rechten    — Gruß · Meine Räume · Alle Werkzeuge
+     3. angemeldet mit Rechten    — Gruß · Meine Räume · Alle Skills
 
    Ansicht 1 ist auf EINEN Weg hin gebaut: jemand steht vor einer
    Tafel, auf der ein Code steht. Alles andere ist seltener und
@@ -487,7 +487,7 @@ async function renderRooms() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   Reiter „Alle Werkzeuge"
+   Reiter „Alle Skills"
    ══════════════════════════════════════════════════════════
    Für Gäste gibt es die Liste nicht — sie beantwortet keine Frage,
    die ein Gast hat, und schob den Code-Kasten nach unten.
@@ -503,7 +503,7 @@ async function loadTools() {
   try {
     const res = await fetch(
       `${window.SUPABASE_URL}/rest/v1/skill_tools`
-      + '?select=id,title,blurb,icon,folder,multi_room,active,sort_order'
+      + '?select=id,title,blurb,icon,multi_room,active,sort_order'
       + '&order=sort_order.asc',
       {
         headers: {
@@ -536,7 +536,7 @@ function toolCard(t) {
   ].filter(Boolean).join('');
 
   // Ein abgeschaltetes Werkzeug bekommt keine neuen Räume mehr
-  // (Entscheidung 17.08.2026) — die Knöpfe wären dann eine Einladung
+  // (Entscheidung 17.08.2026) — der Knopf wäre dann eine Einladung
   // in eine Fehlermeldung.
   const off = t.active ? '' : ' disabled title="Dieses Werkzeug ist abgeschaltet."';
 
@@ -548,75 +548,26 @@ function toolCard(t) {
       ${badges ? `<div class="tile-tags">${badges}</div>` : ''}
       <p class="tile-blurb">${esc(t.blurb || '')}</p>
       <div class="tile-foot">
-        <button type="button" class="btn btn--sm" data-act="test" data-tool="${esc(t.id)}"${off}>Testen</button>
-        <button type="button" class="btn btn--sm btn--primary" data-act="open" data-tool="${esc(t.id)}"${off}>Für eine Klasse öffnen</button>
+        <button type="button" class="btn btn--sm btn--primary" data-act="open" data-tool="${esc(t.id)}"${off}>+ Raum öffnen</button>
       </div>
       ${ready ? '' : '<p class="tile-note">Der Raum funktioniert schon — das Werkzeug darin kommt noch.</p>'}
     </article>`;
 }
 
-/* „Testen" legt sofort einen Raum an — es gibt bewusst keinen
-   Solo-Modus, damit der Test dasselbe zeigt wie der Ernstfall. Ein
-   vorhandener Testraum wird dabei wiederverwendet (Server-Regel in
-   Migration 0079), sonst sammelte jeder Klick einen weiteren an.
+/* „+ Raum öffnen" fragt nach Titel und Namen — das gehört auf die
+   Raumseite (lehrer.html?new = Fach 1) und nicht in ein zweites
+   Formular hier.
 
-   „Für eine Klasse öffnen" fragt nach Titel und Namen — das gehört
-   auf die Raumseite und nicht in ein zweites Formular hier. */
+   Der „Testen"-Knopf ist weg (18.08.2026): seit die Raumseite den
+   Anlege-Dialog ersetzt hat, ist ein Raum ohnehin in zwei Klicks da
+   und jederzeit wieder löschbar — ein zweiter Weg, der dasselbe tut
+   und dabei einen unsichtbaren Sonderraum anlegt, beantwortete keine
+   Frage mehr. Serverseitig bleibt is_test bestehen (0079); es wird
+   von hier nur nicht mehr angefordert. */
 function wireToolButtons() {
-  document.querySelectorAll('#paneTools button[data-act]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const tool = btn.dataset.tool;
-      if (btn.dataset.act === 'open') {
-        location.href = 'lehrer.html?new=' + encodeURIComponent(tool);
-        return;
-      }
-      btn.disabled = true;
-      const before = btn.textContent;
-      btn.textContent = 'Einen Moment …';
-      try {
-        /* Der Testraum entsteht ohne Dialog — also holt er sich die
-           Vorgaben des Werkzeugs selbst. Sonst stünde im Testraum
-           einer Wortwolke eine Wolke ohne Frage, und der Test zeigte
-           genau das nicht, was er zeigen soll.
-
-           Schlägt das Laden fehl, wird der Raum trotzdem angelegt:
-           ein Testraum mit Rückfall-Einstellungen ist besser als ein
-           Knopf, der nichts tut. */
-        let settings = {};
-        try {
-          const impl = await MPTool.load(tool, (window.__toolFolders || {})[tool]);
-          settings = MPTool.defaultSettings(impl);
-        } catch (e) {
-          console.warn('[mpskills] Vorgaben des Werkzeugs:', e.message);
-        }
-
-        const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/skill_room_create`, {
-          method: 'POST',
-          headers: {
-            apikey: window.SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${window.__accessToken}`,
-            'Content-Type': 'application/json',
-            Accept: 'application/json'
-          },
-          body: JSON.stringify({ p_tool_id: tool, p_is_test: true, p_settings: settings })
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const r = await res.json();
-        if (!r.ok) {
-          toast(r.error === 'tool_inactive'
-            ? 'Dieses Werkzeug ist abgeschaltet — neue Räume gibt es dafür nicht.'
-            : 'Testraum ließ sich nicht anlegen (' + r.error + ').', 'error');
-          btn.disabled = false;
-          btn.textContent = before;
-          return;
-        }
-        location.href = 'lehrer.html#' + r.code;
-      } catch (e) {
-        console.error('[mpskills] Testraum:', e);
-        toast('Testraum ließ sich nicht anlegen: ' + e.message, 'error');
-        btn.disabled = false;
-        btn.textContent = before;
-      }
+  document.querySelectorAll('#paneTools button[data-act="open"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      location.href = 'lehrer.html?new=' + encodeURIComponent(btn.dataset.tool);
     });
   });
 }
@@ -646,13 +597,6 @@ async function renderTools() {
 
   // Keine Überschrift: der Reiter darüber sagt schon, was das ist.
   host.innerHTML = `<div class="tile-grid">${tools.map(toolCard).join('')}</div>`;
-
-  // Wo das Frontend eines Werkzeugs liegt. Braucht nur der
-  // Testraum-Knopf, um die Vorgaben des Werkzeugs zu holen — der
-  // Ordner steht neben der ID, damit ein Werkzeug umbenannt werden
-  // kann, ohne dass Räume ihre tool_id verlieren (0078).
-  window.__toolFolders = Object.fromEntries(tools.map(t => [t.id, t.folder]));
-
   wireToolButtons();
 }
 
@@ -768,7 +712,7 @@ function renderState() {
         <button type="button" class="tab" role="tab" data-tab="rooms"
                 aria-controls="paneRooms" aria-selected="false">Meine Räume</button>
         <button type="button" class="tab" role="tab" data-tab="tools"
-                aria-controls="paneTools" aria-selected="false">Alle Werkzeuge</button>
+                aria-controls="paneTools" aria-selected="false">Alle <span class="tab-accent">Skills</span></button>
       </div>
 
       <div class="tabpane" id="paneRooms" role="tabpanel">

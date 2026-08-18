@@ -605,6 +605,11 @@ a.btn {
   transition: color .14s ease, border-color .14s ease;
 }
 .tab:hover { color: var(--ink); }
+/* „Alle Skills" trägt dasselbe Wort in derselben Farbe wie die
+   Wortmarke oben — dort aber auf dem dunklen Balken (--chrome-accent),
+   hier auf dem Seitengrund, also --accent-ink. Ein einziger Wert kann
+   beides nicht (siehe Kopf des Farbblocks). */
+.tab-accent { color: var(--accent-ink); }
 .tab.on {
   color: var(--ink);
   border-bottom-color: var(--accent);

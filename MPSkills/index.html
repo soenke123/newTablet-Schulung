@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260819e" />
+<link rel="stylesheet" href="style.css?v=20260819f" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -75,7 +75,7 @@
   </section>
 
   <!-- ─── Alles für Angemeldete ────────────────────────────────
-       Gruß, die beiden Reiter (Meine Räume · Alle Werkzeuge) und
+       Gruß, die beiden Reiter (Meine Räume · Alle Skills) und
        für alle, die noch keinen Zugang haben, der Zustand ihres
        Antrags. Inhalt kommt aus app.js — was hier steht, hängt an
        der Rolle, und die kennt erst das Skript. -->
@@ -318,12 +318,12 @@
 <script src="../avatars.js?v=20260709"></script>
 <script src="lib/userbar.js?v=20260819c"></script>
 <script src="lib/room.js?v=20260818"></script>
-<!-- Auf der Landing läuft kein Werkzeug. lib/tool.js wird trotzdem
-     geladen: der Testraum-Knopf holt sich damit die Vorgaben des
-     Werkzeugs (z. B. die Frage der Wortwolke), bevor er den Raum
-     anlegt — er tut es ja ohne Dialog. -->
-<script src="lib/tool.js?v=20260818b"></script>
+<!-- Auf der Landing läuft kein Werkzeug, und seit der „Testen"-Knopf
+     weg ist (18.08.2026) braucht sie auch lib/tool.js nicht mehr: der
+     einzige Aufrufer holte damit die Vorgaben eines Werkzeugs, bevor
+     er ohne Dialog einen Testraum anlegte. Das Anlegen fragt jetzt
+     ausnahmslos auf der Raumseite. -->
 <script src="tools.js?v=20260818"></script>
-<script src="app.js?v=20260818k"></script>
+<script src="app.js?v=20260818l"></script>
 </body>
 </html>
