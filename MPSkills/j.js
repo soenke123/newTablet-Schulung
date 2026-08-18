@@ -355,7 +355,7 @@ async function renderDoor(code) {
           ${info.ask_names
             ? 'Dein Name und was du schreibst sind für alle im Raum sichtbar.'
             : 'Dieser Raum ist anonym — du heißt hier nur „Tablet …".'}
-          Nach 60 Tagen ohne Aktivität wird alles automatisch gelöscht.
+          Nach 30 Tagen ohne Aktivität wird alles automatisch gelöscht.
           <a href="index.html#privacy">Mehr dazu</a>
         </p>
       `}

@@ -395,7 +395,7 @@ async function roomAction(code, act, btn) {
       return;
     }
     toast(act === 'toggle'  ? (btn.dataset.open === '1' ? 'Beitritt geöffnet.' : 'Beitritt geschlossen.')
-        : act === 'extend'  ? (r.revived ? 'Raum zurückgeholt — er läuft wieder 60 Tage.'
+        : act === 'extend'  ? (r.revived ? 'Raum zurückgeholt — er läuft wieder 30 Tage.'
                                          : 'Verlängert: ' + window.MPRoom.untilText(r.expires_at) + '.')
         : 'Raum gelöscht.');
     renderRooms();
@@ -457,7 +457,7 @@ async function renderRooms() {
 
   pane.innerHTML = `
       <div class="pane-head">
-        <p class="pane-head-note">Ein Raum läuft ab, wenn 60 Tage lang niemand mehr darin
+        <p class="pane-head-note">Ein Raum läuft ab, wenn 30 Tage lang niemand mehr darin
           war — verlängern kannst du ihn über die drei Punkte.</p>
         <a class="btn btn--primary" href="lehrer.html?new">+ Raum eröffnen</a>
       </div>
