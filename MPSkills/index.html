@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260818d" />
+<link rel="stylesheet" href="style.css?v=20260818e" />
 <link rel="icon" type="image/png" sizes="64x64" href="../icons/favicon-64.png" />
 <link rel="icon" type="image/png" sizes="256x256" href="../icons/favicon-256.png" />
 </head>
@@ -100,11 +100,23 @@
     <button type="button" class="btn btn--primary" id="accessToggle"
             aria-expanded="false" aria-controls="accessPanel">Zugang bekommen</button>
 
+    <!-- Die beiden Spalten stehen in „Fächern" (.access-slot), weil es
+         sie an ZWEI Orten gibt: hier in der Seite, und einzeln in
+         einem Modal, wenn jemand oben rechts auf Einloggen oder
+         Registrieren drückt.
+
+         Verschoben statt verdoppelt: zwei Formulare mit denselben
+         Feldern wären zwei Stellen, an denen dieselbe Regel gepflegt
+         werden muss — und eine davon wird beim nächsten Mal
+         vergessen. Ein DOM-Knoten behält beim Umhängen seine
+         Listener, also gibt es die Formulare genau einmal.
+         Zurückgehängt wird beim Schließen (siehe homeAuth() in
+         app.js), damit hier nie ein Loch bleibt. -->
     <div class="access-panel" id="accessPanel" hidden>
       <div class="access-cols">
 
         <!-- a) schon ein Konto -->
-        <section class="access-col">
+        <div class="access-slot" id="slotLogin"><section class="access-col" id="colLogin">
           <h3>Du hast schon ein Konto</h3>
           <p class="access-note">
             Hier oder in der Tablet-Schulung — es ist dasselbe Konto. Melde dich an; danach
@@ -126,10 +138,10 @@
             </label>
             <button type="submit" class="btn btn--primary btn--wide" id="loginSubmit">Anmelden</button>
           </form>
-        </section>
+        </section></div>
 
         <!-- b) noch kein Konto -->
-        <section class="access-col">
+        <div class="access-slot" id="slotRegister"><section class="access-col" id="colRegister">
           <h3>Noch kein Konto</h3>
           <p class="access-note">
             Leg eins an — der Antrag auf den Zugang geht dabei mit raus. Dieses Konto führt
@@ -161,7 +173,7 @@
             </label>
             <button type="submit" class="btn btn--primary btn--wide" id="registerSubmit">Konto anlegen</button>
           </form>
-        </section>
+        </section></div>
 
       </div>
     </div>
@@ -281,6 +293,21 @@
   </div>
 </div>
 
+<!-- ─── Anmelden / Registrieren aus der Kopfzeile ────────────
+     Wer oben rechts auf Einloggen oder Registrieren drückt, meint
+     genau eines von beidem und will nicht erst an eine Stelle
+     weiter unten geschickt werden. Also kommt die passende Spalte
+     hierher — dieselbe, ohne Kopie (siehe Kommentar am
+     Zugangs-Kasten). #authBody ist beim Laden leer und bleibt es,
+     bis jemand einen der beiden Knöpfe drückt. -->
+<div class="overlay" id="authModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Anmelden oder Konto anlegen">
+    <button type="button" class="modal-close" data-close="authModal" aria-label="Schließen">×</button>
+    <div id="authBody"></div>
+    <p class="switch-line" id="authSwitch"></p>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -295,6 +322,6 @@
      anlegt — er tut es ja ohne Dialog. -->
 <script src="lib/tool.js?v=20260818b"></script>
 <script src="tools.js?v=20260818"></script>
-<script src="app.js?v=20260818e"></script>
+<script src="app.js?v=20260818f"></script>
 </body>
 </html>

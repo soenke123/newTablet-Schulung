@@ -258,12 +258,32 @@ body {
    Alternativen, keine Fortsetzung. Auf einer Spalte wäre sie eine
    Linie quer durch nichts. */
 @media (min-width: 700px) {
-  .access-col + .access-col {
+  .access-slot + .access-slot {
     border-left: 1px solid var(--line-soft);
     padding-left: 34px;
   }
 }
+
+/* Ist die Spalte gerade im Modal, verschwindet ihr Fach mitsamt der
+   Trennlinie — sonst stünde im Kasten dahinter eine leere Rasterzelle
+   mit einem Strich daneben. */
+.access-slot.is-away { display: none; }
+.access-slot.is-away + .access-slot { border-left: 0; padding-left: 0; }
+
 .access-col h3 { margin: 0 0 6px; font-size: 1rem; letter-spacing: -0.01em; }
+
+/* Im Modal ist die Überschrift der Spalte zugleich der Titel des
+   Fensters — sie darf dort so groß sein wie sonst ein modal h2. */
+#authBody .access-col h3 { font-size: 1.2rem; margin-bottom: 8px; }
+#authBody .access-note { margin-bottom: 20px; }
+
+.switch-line {
+  margin: 16px 0 0;
+  font-size: .86rem;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.switch-line:empty { display: none; }
 .access-note { margin: 0 0 16px; font-size: .875rem; color: var(--ink-soft); }
 .access-col .field:last-of-type { margin-bottom: 16px; }
 

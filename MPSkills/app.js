@@ -159,27 +159,19 @@ function accessOpen() {
 let requestAfterLogin = false;
 let requesting = false;
 
-// which: 'login' | 'register' | undefined
-// Der Sprung zum Feld ist der Punkt: wer in der Ecke oben rechts auf
-// „Registrieren" drückt, meint die rechte Spalte und nicht „irgendwo
-// hier unten steht ein Formular".
-async function openAccess(which) {
+async function openAccess() {
   const panel  = document.getElementById('accessPanel');
   const toggle = document.getElementById('accessToggle');
   if (!panel) return;
 
+  // Beide Spalten müssen hier stehen, bevor der Kasten aufgeht —
+  // eine davon kann gerade im Modal sein.
+  closeAuth();
+
   panel.hidden = false;
   toggle?.setAttribute('aria-expanded', 'true');
-  if (toggle) toggle.textContent = 'Zugang bekommen';
-
   await fillSchoolSelects();
-
-  const first = which === 'register' ? 'regAccount'
-              : which === 'login'    ? 'loginAccount'
-              : null;
-  const target = document.getElementById(first || 'accessPanel');
-  target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  if (first) setTimeout(() => document.getElementById(first)?.focus(), 260);
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function closeAccess() {
@@ -187,6 +179,64 @@ function closeAccess() {
   const toggle = document.getElementById('accessToggle');
   if (panel) panel.hidden = true;
   toggle?.setAttribute('aria-expanded', 'false');
+}
+
+/* ─── Dieselben Formulare als Modal ───────────────────────────
+   Die Knöpfe oben rechts meinen genau eines von beidem. Sie
+   bekommen deshalb ein eigenes Fenster statt eines Sprungs an eine
+   Stelle weiter unten — ein Sprung beantwortet die Frage „wo soll
+   ich jetzt tippen?" erst, nachdem man gesucht hat.
+
+   Verschoben, nicht verdoppelt: die Spalte wird als DOM-Knoten ins
+   Modal gehängt und beim Schließen zurück in ihr Fach. Ein zweiter
+   Satz Felder wäre ein zweiter Satz IDs, Fehlerkästen und
+   Absende-Handler — und die erste Regel, die sich ändert, würde nur
+   an einem der beiden Orte nachgezogen. */
+let authWhich = null;
+
+const colEl  = (w) => document.getElementById(w === 'register' ? 'colRegister'  : 'colLogin');
+const slotEl = (w) => document.getElementById(w === 'register' ? 'slotRegister' : 'slotLogin');
+
+// Die Spalte zurück in ihr Fach. Muss VOR jedem Wechsel und bei
+// jedem Schließen laufen, sonst bliebe im Kasten ein Loch.
+function homeAuth() {
+  if (!authWhich) return;
+  const slot = slotEl(authWhich);
+  slot.appendChild(colEl(authWhich));
+  slot.classList.remove('is-away');
+  authWhich = null;
+}
+
+async function openAuth(which) {
+  // Ein offener Zugangs-Kasten und ein Modal mit derselben Spalte
+  // schlössen sich gegenseitig aus — der Knoten kann nur an einem
+  // Ort sein. Also gehört er in diesem Moment dem Modal.
+  homeAuth();
+  closeAccess();
+
+  authWhich = which;
+  const slot = slotEl(which);
+  slot.classList.add('is-away');
+  document.getElementById('authBody').appendChild(colEl(which));
+
+  document.getElementById('authSwitch').innerHTML = which === 'register'
+    ? 'Schon ein Konto? <button type="button" class="btn--link" data-auth="login">Anmelden</button>'
+    : 'Noch kein Konto? <button type="button" class="btn--link" data-auth="register">Konto anlegen</button>';
+
+  // Die Schulliste VOR dem Aufmachen, nicht danach: sonst steht das
+  // Formular offen, während das Auswahlfeld noch leer ist — und wer
+  // schnell tippt, meldet sich mit einer Schule an, die keine ist.
+  await fillSchoolSelects();
+  document.getElementById('authModal').hidden = false;
+  setTimeout(() => {
+    document.getElementById(which === 'register' ? 'regAccount' : 'loginAccount')?.focus();
+  }, 60);
+}
+
+function closeAuth() {
+  const el = document.getElementById('authModal');
+  if (el) el.hidden = true;
+  homeAuth();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -422,8 +472,15 @@ function renderState() {
   // beiden Formulare seinen Zustand — das ist dieselbe Frage, eine
   // Stufe weiter.
   const access = document.getElementById('accessSection');
+  if (role !== 'guest') {
+    // Erst das Modal schließen, DANN den Kasten verstecken: closeAuth
+    // hängt die Spalte in ihr Fach zurück, und das Fach steht im
+    // Kasten. Andersherum bliebe ein Formular im Nichts hängen und
+    // wäre nach dem Abmelden verschwunden.
+    closeAuth();
+    closeAccess();
+  }
   if (access) access.hidden = (role !== 'guest');
-  if (role !== 'guest') closeAccess();
 
   // Kacheln nur für die, die damit etwas anfangen können.
   // Absichtlich nicht awaited: die Rollenweiche darf nicht auf das
@@ -596,6 +653,16 @@ async function doLogin(e) {
   const password = document.getElementById('loginPassword').value;
   if (!account || !password) return;
 
+  // Ohne Schule wird aus der Fake-Mail „name@.fake" — Supabase weist
+  // das ab, und die Meldung darunter behauptete dann, das Passwort
+  // stimme nicht. Kann passieren, solange die Schulliste noch lädt.
+  if (!slug) {
+    errBox.textContent = 'Die Schulliste ist noch nicht geladen. Einen Moment, dann noch einmal.';
+    errBox.hidden = false;
+    fillSchoolSelects();
+    return;
+  }
+
   const email = `${account}@${slug}.${window.FAKE_EMAIL_DOMAIN}`;
   const btn = document.getElementById('loginSubmit');
   btn.disabled = true;
@@ -719,13 +786,26 @@ document.getElementById('infobar').addEventListener('click', (e) => {
 });
 
 // Klick auf den dunklen Grund schließt — aber nur dort, nicht im Kasten.
-for (const id of ['privacyModal', 'aboutModal']) {
+for (const id of ['privacyModal', 'aboutModal', 'authModal']) {
   const el = document.getElementById(id);
   el.addEventListener('click', (e) => {
-    if (e.target === el || e.target.closest('[data-close]')) closeInfos();
+    if (e.target !== el && !e.target.closest('[data-close]')) return;
+    if (id === 'authModal') closeAuth(); else closeInfos();
   });
 }
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeInfos(); });
+
+// Der Wechsel zwischen den beiden Wegen IM Modal. Delegiert, weil die
+// Zeile bei jedem Öffnen neu geschrieben wird.
+document.getElementById('authModal').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-auth]');
+  if (btn) openAuth(btn.dataset.auth);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  closeInfos();
+  closeAuth();
+});
 
 window.addEventListener('lernwelt:session-changed', renderState);
 window.addEventListener('lernwelt:no-profile', () => {
@@ -733,11 +813,11 @@ window.addEventListener('lernwelt:no-profile', () => {
 });
 
 (async function boot() {
-  // Die Ecke oben rechts schickt Gäste in denselben Kasten, in dem
-  // die Erklärung steht — und nicht in ein Modal daneben.
+  // Die Ecke oben rechts bekommt ein eigenes Fenster mit genau dem
+  // Formular, das der Knopf verspricht.
   window.MPUserBar?.mount({
-    onLogin:    () => openAccess('login'),
-    onRegister: () => openAccess('register')
+    onLogin:    () => openAuth('login'),
+    onRegister: () => openAuth('register')
   });
   renderMyRooms();
   await (window.waitForSession?.() ?? Promise.resolve());
