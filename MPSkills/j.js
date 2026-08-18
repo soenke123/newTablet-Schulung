@@ -123,6 +123,7 @@ function renderTabs(code, room) {
       </div>
       <div class="rtabs-side">
         <code class="rtabs-code">${esc(code)}</code>
+        ${window.MPTheme?.segmentHTML() ?? ''}
       </div>
     </nav>`;
   tabHost().querySelectorAll('.rtab').forEach(b => {

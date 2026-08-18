@@ -19,13 +19,27 @@
    eigene Handy wollen verschiedene Antworten, und die Schülerseite
    (j.html) hat gar kein Konto, an dem etwas hängen könnte.
 
-   Folge, und sie ist gewollt: der Umschalter sitzt im Menü hinter
-   dem eigenen Namen (lib/userbar.js) und steht damit nur
-   Angemeldeten zur Verfügung. Alle anderen — Gäste auf der Landing
-   und die ganze Schülerseite — bekommen, was ihr Gerät sagt. Das
-   ist dort auch die bessere Antwort: wer abends im Dunkeln sein
-   Handy auf Dunkel gestellt hat, will nicht erst eine Einstellung
-   suchen, die es für ihn ohnehin nur einmal gibt.
+   ── Wo der Umschalter steht ───────────────────────────────────
+   An drei Orten, und deshalb steht sein Markup HIER und nicht dort:
+   drei Kopien liefen beim nächsten Umbau auseinander.
+
+     Angemeldet   im Menü hinter dem eigenen Namen (lib/userbar.js)
+     Als Gast     in der Kopfzeile neben Einloggen/Registrieren
+     Im Raum      rechts in der Reiterleiste (j.js, lehrer.js)
+
+   Im Raum steht er sichtbar und nicht in einem Menü: dort hängt ein
+   Beamer dran, und „abdunkeln" ist eine Sache von einem Griff.
+
+   Bedient werden alle drei von dem einen delegierten Listener weiter
+   unten — jeder Knopf mit data-theme-set wirkt, egal wer ihn
+   gezeichnet hat und wann. Und apply() zieht ALLE Knöpfe auf der
+   Seite nach, nicht nur den gedrückten: sonst behauptete der zweite
+   Schalter weiter, es sei hell.
+
+   Ohne Umschalter bleibt nur eine Stelle: die Code-Eingabe auf
+   j.html, bevor jemand in einem Raum ist. Dort gilt das Gerät — und
+   das ist die richtige Antwort für einen Bildschirm, den man zehn
+   Sekunden lang sieht.
 
    ── Kein Umschalten ohne Not ──────────────────────────────────
    Ändert das GERÄT seine Einstellung, ziehen wir nur mit, solange
@@ -56,11 +70,34 @@
 
   function apply() {
     document.documentElement.setAttribute('data-theme', effective());
+    sync();
+  }
+
+  /* Zieht jeden Schalter auf der Seite nach — auch den, der gerade
+     nicht gedrückt wurde, und auch den, der von einem zweiten Tab
+     aus umgestellt wird. Beim allerersten Lauf gibt es noch kein
+     <body>; querySelectorAll findet dann nichts, und das ist in
+     Ordnung. Die frisch gezeichneten Knöpfe holen sich ihren Zustand
+     ohnehin aus segmentHTML(). */
+  function sync() {
+    const now = effective();
+    document.querySelectorAll('[data-theme-set]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(b.dataset.themeSet === now));
+    });
   }
 
   apply();   // sofort, noch vor dem <body>
 
   mq.addEventListener?.('change', () => { if (!stored()) apply(); });
+
+  /* Ein Listener für alle drei Orte. Delegiert am document, weil die
+     Schalter in Markup stecken, das laufend neu gezeichnet wird
+     (Session-Wechsel, Raum betreten, Reiterleiste) — Listener an
+     ersetzten Knoten wären danach weg. */
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest?.('[data-theme-set]');
+    if (btn) window.MPTheme.set(btn.dataset.themeSet);
+  });
 
   window.addEventListener('storage', (e) => {
     if (e.key === KEY) { apply(); fire(); }
@@ -83,6 +120,43 @@
       } catch { /* siehe oben */ }
       apply();
       fire();
+    },
+
+    /* ── Das Markup ─────────────────────────────────────────────
+       Zwei Knöpfe statt eines Umschalters: ein einzelner Eintrag
+       „Dunkelmodus" müsste erst gelesen werden, um zu verraten, wo
+       man gerade steht. Hier ist die geltende Antwort gefüllt, und
+       die andere steht daneben.
+
+       Gedrückt wird aria-pressed und nicht eine Klasse — der
+       Zustand gehört zur Bedeutung des Knopfes und nicht zu seinem
+       Aussehen; eine Sprachausgabe liest ihn damit mit.
+
+         label  gesetzt  → mit Beschriftung davor (fürs Menü, wo
+                           daneben lauter benannte Zeilen stehen)
+                leer     → nur die zwei Knöpfe (Leisten, wo der
+                           Platz knapp und der Zusammenhang klar ist)
+         tone   'bar'    → auf dem dunklen Balken der Kopfzeile,
+                           also --chrome-* statt der Seitenfarben
+
+       data-ub="theme" steht mit drin und ist NICHT tot: das Menü in
+       userbar.js schließt bei jedem Klick, der auf keinem [data-ub]
+       landet. Ohne das Attribut klappte es beim Umschalten zu — und
+       genau dabei will man ja sehen, was passiert. */
+    segmentHTML({ label = '', tone = '' } = {}) {
+      const now = effective();
+      const b = (v, icon, name) =>
+        `<button type="button" data-ub="theme" data-theme-set="${v}"`
+        + ` aria-pressed="${now === v}" title="${name}" aria-label="${name}">${icon}</button>`;
+
+      const seg =
+        `<div class="ub-theme-seg${tone === 'bar' ? ' ub-theme-seg--bar' : ''}"`
+        + ` role="group" aria-label="Hell oder dunkel">`
+        + `${b('light', '☀', 'Hell')}${b('dark', '☾', 'Dunkel')}</div>`;
+
+      return label
+        ? `<div class="ub-theme"><span class="ub-theme-l">${label}</span>${seg}</div>`
+        : seg;
     }
   };
 })();

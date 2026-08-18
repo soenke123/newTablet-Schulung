@@ -73,9 +73,13 @@
     const s    = window.getSessionUser?.() ?? null;
     const role = roleOf(s);
 
+    /* Gäste haben kein Menü, in dem der Umschalter sitzen könnte —
+       also steht er offen daneben. Ohne ihn wäre die Landing der
+       einzige Ort mit Darkmode, an dem man ihn nicht bedienen kann. */
     if (role === 'guest') {
       host.innerHTML = `
         <div class="ub ub--guest">
+          ${themeHTML('bar')}
           <button type="button" class="btn btn--ghost btn--sm" data-ub="login">Einloggen</button>
           <button type="button" class="btn btn--primary btn--sm" data-ub="register">Registrieren</button>
         </div>`;
@@ -110,35 +114,25 @@
   }
 
   /* ── Hell / Dunkel ──────────────────────────────────────────
-     Steht ganz oben im Menü und nicht unten bei „Abmelden": es ist
-     das Einzige hier, das man mehrmals benutzt, und das Einzige,
-     das nicht wegführt.
+     Markup und Wirkung stehen in lib/theme.js — dieselben Knöpfe
+     hängen auch in der Reiterleiste eines Raums, und drei Kopien
+     liefen beim nächsten Umbau auseinander.
 
-     Zwei Knöpfe statt eines Umschalters — ein einzelner Eintrag
-     „Dunkelmodus" müsste erst gelesen werden, um zu verraten, wo
-     man gerade steht. Hier ist die geltende Antwort gefüllt, und
-     die andere steht daneben.
-
-     Gedrückt wird aria-pressed und nicht eine Klasse: der Zustand
-     gehört zur Bedeutung des Knopfes, nicht zu seinem Aussehen —
-     eine Sprachausgabe liest ihn damit mit.
+     Im Menü steht der Schalter ganz oben und nicht unten bei
+     „Abmelden": er ist das Einzige hier, das man mehrmals benutzt,
+     und das Einzige, das nicht wegführt. Deshalb auch beschriftet —
+     daneben stehen lauter benannte Zeilen. In der Kopfzeile hat er
+     keine Beschriftung: dort ist der Platz knapp und der
+     Zusammenhang ohnehin klar.
 
      Fehlt lib/theme.js (etwa auf einer Seite, die sie nicht
      einbindet), fällt das Fach ersatzlos weg. Ein Schalter ohne
      Wirkung wäre schlimmer als keiner. */
-  function themeHTML() {
+  function themeHTML(tone) {
     if (!window.MPTheme) return '';
-    const t = window.MPTheme.get();
-    const b = (v, icon, label) =>
-      `<button type="button" data-ub="theme" data-theme-set="${v}"
-               aria-pressed="${t === v}" title="${label}" aria-label="${label}">${icon}</button>`;
-    return `
-      <div class="ub-theme">
-        <span class="ub-theme-l">Ansicht</span>
-        <div class="ub-theme-seg" role="group" aria-label="Hell oder dunkel">
-          ${b('light', '☀', 'Hell')}${b('dark', '☾', 'Dunkel')}
-        </div>
-      </div>`;
+    return window.MPTheme.segmentHTML(tone === 'bar'
+      ? { tone: 'bar' }
+      : { label: 'Ansicht' });
   }
 
   function menuEl() { return document.querySelector('[data-ub-menu]'); }
@@ -188,18 +182,14 @@
           if (opts.onRegister) opts.onRegister();
           else location.href = 'index.html';
           break;
-        /* Schließt das Menü ausdrücklich NICHT: man will sehen, was
-           passiert, und notfalls sofort zurück. Neu gezeichnet wird
-           nur das Fach selbst — ein render() ersetzte das ganze Menü
-           und klappte es damit zu. */
-        case 'theme': {
-          window.MPTheme?.set(trigger.dataset.themeSet);
-          const now = window.MPTheme?.get();
-          document.querySelectorAll('[data-ub="theme"]').forEach(b => {
-            b.setAttribute('aria-pressed', String(b.dataset.themeSet === now));
-          });
+        /* Umschalten tut lib/theme.js von sich aus. Der Fall steht
+           hier trotzdem, und zwar als das Einzige, was er leistet:
+           er verhindert, dass das Menü zuklappt. Ohne ihn liefe der
+           Klick oben in closeMenu() — und ausgerechnet beim
+           Umschalten will man sehen, was passiert, und notfalls
+           sofort zurück. */
+        case 'theme':
           break;
-        }
         case 'logout':
           closeMenu();
           logout();

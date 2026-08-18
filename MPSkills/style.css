@@ -63,11 +63,14 @@
   --accent-edge: #a5e3cd;
   --on-accent:   #ffffff;
 
-  /* Kopfzeile — GEGENLÄUFIG zur Seite: heller Grund, dunkler Balken.
-     Sie ist damit in beiden Fassungen dieselbe Geste (ein Streifen,
-     der sich absetzt) und nicht einmal Fläche und einmal Linie.
-     Deshalb braucht sie auch keine Trennlinie mehr — der
-     Helligkeitssprung ist die Kante.
+  /* Kopfzeile — DUNKEL, und zwar in beiden Fassungen. Sie ist das
+     einzige Stück der Seite, das nicht mitkippt: der Balken soll
+     überall derselbe sein, damit man ihn wiedererkennt, egal in
+     welchem Kleid die Seite steckt.
+
+     Im Hellen braucht er dafür keine Trennlinie — der
+     Helligkeitssprung IST die Kante (--chrome-line: transparent);
+     im Dunkeln bekommt er sie zurück.
 
      Der Balken ist eine eigene Farbwelt und nicht die der Seite:
      alles darin nimmt --chrome-*, auch der Akzent. --accent-ink ist
@@ -158,18 +161,19 @@
   --accent-edge: #453770;
   --on-accent:   #ffffff;
 
-  /* Und hier andersherum: dunkle Seite, heller Balken. Bewusst kein
-     reines Weiß — ein weißer Streifen ist im abgedunkelten Raum das
-     Hellste an der Wand, und der Balken ist nicht das, worauf die
-     Klasse schauen soll. */
-  --chrome:        #e8eaf2;
-  --chrome-ink:    #0a0b10;
-  --chrome-soft:   rgba(10,11,16,.06);
-  --chrome-edge:   rgba(10,11,16,.16);
-  --chrome-hover:  rgba(10,11,16,.10);
-  --chrome-line:   transparent;
-  --chrome-accent: #5b2fe0;
-  --chrome-dim:    rgba(91,47,224,.13);
+  /* Der Balken bleibt dunkel — er kippt als einziger Teil der Seite
+     NICHT mit. Hier fehlt ihm der Helligkeitssprung zur Seite, also
+     bekommt er seine Kante zurück: eine Spur dunkler als der Grund
+     plus eine Linie. Ein heller Streifen an dieser Stelle wäre im
+     abgedunkelten Raum das Hellste an der Wand. */
+  --chrome:        #06070b;
+  --chrome-ink:    #ffffff;
+  --chrome-soft:   rgba(255,255,255,.07);
+  --chrome-edge:   rgba(255,255,255,.12);
+  --chrome-hover:  rgba(255,255,255,.13);
+  --chrome-line:   #1b1e28;
+  --chrome-accent: #b7a0ff;
+  --chrome-dim:    rgba(124,77,255,.22);
 
   /* Im Dunkeln kann der Code-Kasten nicht mehr „die dunkle Fläche"
      sein — das ist alles. Er wird stattdessen die HELLSTE Fläche
@@ -239,9 +243,9 @@ body {
 }
 
 /* ─── Kopfzeile ───────────────────────────────────────────────
-   Läuft der Seite entgegen: heller Grund, dunkler Balken — und
-   umgekehrt. Alles darin nimmt --chrome-*, weil der Balken eine
-   eigene Farbwelt ist; --ink und --accent-ink sind für den
+   In beiden Fassungen dunkel — das einzige Stück der Seite, das
+   nicht mitkippt. Alles darin nimmt --chrome-*, weil der Balken
+   eine eigene Farbwelt ist; --ink und --accent-ink sind für den
    Seitengrund gerechnet und stünden hier verkehrt herum. */
 .topbar {
   background: var(--chrome);
@@ -1261,10 +1265,12 @@ body.bd-fill #pagefoot { display: none; }
    dahinter ein Menü —, Optik aber die von MPSkills.
 
    Hier stoßen zwei Farbwelten aneinander, und zwar an der richtigen
-   Stelle: der KNOPF steht auf dem Balken und nimmt --chrome-*, das
-   MENÜ hängt darunter über der Seite und nimmt --surface/--ink.
-   Ein Aufklapp-Menü ist eine Fläche über der Seite und keine
-   Verlängerung der Leiste — es soll sich vom Balken lösen.
+   Stelle: der KNOPF steht auf dem dunklen Balken und nimmt
+   --chrome-*, das MENÜ hängt darunter über der Seite und nimmt
+   --surface/--ink. Ein Aufklapp-Menü ist eine Fläche über der Seite
+   und keine Verlängerung der Leiste — es soll sich vom Balken
+   lösen. Im Hellen ist das ein sichtbarer Wechsel (dunkler Knopf,
+   helles Menü), im Dunkeln nur ein leichter Aufheller.
 
    Im Menü sitzt seither der Umschalter zwischen hell und dunkel —
    siehe .ub-theme weiter unten.
@@ -1359,11 +1365,20 @@ body.bd-fill #pagefoot { display: none; }
    und eine ist gefüllt. Ein einzelner Eintrag „Dunkelmodus" müsste
    erst gelesen werden, um zu verraten, wo man gerade steht.
 
-   Deshalb sitzt er auch nicht in der Reihe der Links, sondern in
-   einem eigenen Fach darüber, mit einer Linie dazwischen: die
-   Links führen weg, dieser hier bleibt. Und deshalb schließt das
-   Menü beim Umschalten NICHT — man will sehen, was passiert, und
-   notfalls sofort zurück. */
+   Derselbe Schalter steht an drei Orten (Markup: lib/theme.js) und
+   trägt darum zwei Fassungen:
+
+     .ub-theme        mit Beschriftung — im Menü, wo daneben lauter
+                      benannte Zeilen stehen. Eigenes Fach über den
+                      Links, mit Linie dazwischen: die Links führen
+                      weg, dieser hier bleibt. Deshalb schließt das
+                      Menü beim Umschalten auch NICHT.
+     .ub-theme-seg    nackt — in der Reiterleiste eines Raums, auf
+                      dem Grund der SEITE (wie Code und Vollbild
+                      daneben), also mit den normalen Farben.
+     …--bar           nackt — in der Kopfzeile neben Einloggen /
+                      Registrieren, also auf dem dunklen Balken und
+                      damit mit --chrome-*. */
 .ub-theme {
   display: flex; align-items: center; gap: 8px;
   padding: 9px 15px 10px;
@@ -1390,6 +1405,26 @@ body.bd-fill #pagefoot { display: none; }
 .ub-theme-seg button[aria-pressed="true"] {
   background: var(--accent); color: var(--on-accent);
 }
+
+/* Auf dem dunklen Balken. Die gedrückte Seite bekommt hier NICHT
+   die volle Akzentfläche wie im Menü — ein leuchtender Mintfleck
+   neben „Registrieren" zöge mehr Blicke auf sich als der Knopf,
+   um den es geht. Gefüllt wird gedämpft, wie die Rollen-Pille. */
+.ub-theme-seg--bar {
+  background: var(--chrome-soft);
+  border-color: var(--chrome-edge);
+}
+.ub-theme-seg--bar button { color: var(--chrome-ink); opacity: .5; }
+.ub-theme-seg--bar button:hover { color: var(--chrome-ink); opacity: .85; }
+.ub-theme-seg--bar button[aria-pressed="true"] {
+  background: var(--chrome-dim);
+  color: var(--chrome-accent);
+  opacity: 1;
+}
+
+/* In der Reiterleiste eines Raums: eine Spur höher, damit er neben
+   dem Vollbild-Knopf und dem Code auf einer Linie sitzt. */
+.rtabs-side .ub-theme-seg button { width: 32px; height: 26px; }
 
 /* ══════════════════════════════════════════════════════════════
    Profilseite (profil.html)
@@ -1750,7 +1785,15 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   .joincard-go { width: 100%; padding: 11px 20px; }
   .access { padding: 20px 18px; border-radius: 14px; }
   .infobar .btn { width: 100%; }
-  .topbar { padding: 11px 16px; }
+  /* Auf einem Handy wird die Ecke für Gäste zu breit: Wortmarke +
+     Umschalter + zwei Knöpfe passen unter 400 px nicht mehr neben-
+     einander. flex-wrap löst das von selbst und NUR dann — passt
+     es, bleibt es einzeilig; passt es nicht, rutscht die Ecke unter
+     die Wortmarke statt aus dem Bild. Kein erzwungener Umbruch,
+     sonst wäre die Kopfzeile auch für Angemeldete zweizeilig, für
+     die sie längst passt (Name und Rolle sind hier ausgeblendet). */
+  .topbar { padding: 11px 16px; flex-wrap: wrap; row-gap: 10px; }
+  #userbarHost { margin-left: auto; }
   .ub-name { display: none; }
   .ub-role { display: none; }
   .ub-btn { padding: 4px 10px 4px 5px; }
