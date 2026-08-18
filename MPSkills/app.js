@@ -143,6 +143,22 @@ function accessOpen() {
   return document.getElementById('accessPanel')?.hidden === false;
 }
 
+/* Wer sich HIER anmeldet, hat vorher „Zugang bekommen" gedrückt und
+   in einem Kasten getippt, über dem steht, wofür. Danach noch einen
+   Knopf „Zugang beantragen" zu verlangen, fragt dasselbe ein zweites
+   Mal. Also stellt die Seite den Antrag selbst.
+
+   Das Merkmal ist der WEG, nicht die Anmeldung: wer schon angemeldet
+   ankommt (etwa mit einem Schulungs-Konto, weil ein Kind das Tablet
+   vorher benutzt hat), bekommt weiter den Knopf. Sonst stellte ein
+   Seitenaufruf einen Antrag, den niemand gestellt hat.
+
+   Nur aus 'none' heraus — 'rejected' bleibt beim Knopf. Da hat ein
+   Admin entschieden; diese Entscheidung darf nicht nebenbei
+   umgestoßen werden, ohne dass der Grund überhaupt gelesen wurde. */
+let requestAfterLogin = false;
+let requesting = false;
+
 // which: 'login' | 'register' | undefined
 // Der Sprung zum Feld ist der Punkt: wer in der Ecke oben rechts auf
 // „Registrieren" drückt, meint die rechte Spalte und nicht „irgendwo
@@ -388,6 +404,11 @@ function renderState() {
   const role = roleOf(s);
   const acts = (role === 'teacher' || role === 'admin');
 
+  // Die Fahne gilt genau dem einen Fall, für den sie gesetzt wurde.
+  // Wer sich anmeldet und schon freigeschaltet ist (oder schon
+  // wartet), hat nichts zu beantragen.
+  if (role !== 'noRole') requestAfterLogin = false;
+
   // Die Kopfzeile pflegt sich seit lib/userbar.js selbst — sie hängt
   // am selben session-changed-Event wie diese Funktion.
 
@@ -480,6 +501,21 @@ function renderState() {
   }
 
   // noRole — angemeldeter Schulungs-Account ohne Lehrkraft-Bezug.
+
+  // Kam die Anmeldung gerade aus dem Zugangs-Kasten, ist der Antrag
+  // schon gestellt worden — die Seite zeigt so lange denselben
+  // Warte-Zustand, in dem sie gleich stehen bleibt. Schlägt der RPC
+  // fehl, fällt sie auf den Knopf darunter zurück.
+  if (requestAfterLogin) {
+    requestAfterLogin = false;
+    host.innerHTML = `
+      <div class="state state--wait">
+        <h2><span class="ic">⏳</span> Dein Zugang wird beantragt …</h2>
+      </div>`;
+    requestRole();
+    return;
+  }
+
   host.innerHTML = `
     <div class="state state--invite">
       <h2><span class="ic">🔑</span> Du brauchst noch den Zugang</h2>
@@ -501,7 +537,12 @@ function renderState() {
 /* ─── Zugang beantragen ───────────────────────────────── */
 // RPC request_teacher_role (0077). Es gibt keine Policy, die einen User
 // sein eigenes Profil schreiben lässt — deshalb eine RPC und kein PATCH.
+// Wird aus zwei Richtungen gerufen: vom Knopf, und von der
+// Rollenweiche direkt nach einer Anmeldung im Zugangs-Kasten. Beim
+// zweiten Weg gibt es keinen Knopf — deshalb ist er überall optional.
 async function requestRole() {
+  if (requesting) return;
+  requesting = true;
   const btn = document.getElementById('ctaRequest');
   if (btn) btn.disabled = true;
   try {
@@ -523,12 +564,18 @@ async function requestRole() {
     // Warte-Zustand zeigt. Ein Reload würde denselben Wert liefern.
     const s = window.getSessionUser?.();
     if (s) s.teacher_status = data.status;
+    requesting = false;
     renderState();
     toast('Antrag gestellt. Ein Admin schaltet dich frei.');
   } catch (e) {
     console.error('[mpskills] request_teacher_role:', e);
+    requesting = false;
     if (btn) btn.disabled = false;
     toast('Antrag fehlgeschlagen: ' + e.message, 'error');
+    // Ohne Knopf lief der Aufruf automatisch — dann muss die Seite
+    // neu gezeichnet werden, sonst bliebe „wird beantragt …" stehen
+    // und niemand käme mehr an den Antrag heran.
+    if (!btn) renderState();
   }
 }
 
@@ -553,14 +600,19 @@ async function doLogin(e) {
   const btn = document.getElementById('loginSubmit');
   btn.disabled = true;
   try {
+    // VOR dem Anmelden setzen: das session-changed-Event kann durch
+    // sein, bevor await zurückkehrt — dann liefe renderState an einer
+    // Fahne vorbei, die erst danach gesetzt wird.
+    requestAfterLogin = true;
     const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
     if (error) {
+      requestAfterLogin = false;
       errBox.textContent = 'Anmeldung fehlgeschlagen. Accountname, Schule oder Passwort stimmt nicht.';
       errBox.hidden = false;
       return;
     }
-    // renderState läuft über das session-changed-Event und räumt den
-    // Zugang selbst weg.
+    // renderState läuft über das session-changed-Event, räumt den
+    // Zugang weg und stellt den Antrag, falls noch keiner vorliegt.
   } catch (ex) {
     errBox.textContent = 'Fehler bei der Anmeldung: ' + (ex?.message ?? ex);
     errBox.hidden = false;
