@@ -1271,6 +1271,7 @@ function renderDashboard(a, schoolName) {
 
 function wireUserFilters() {
   document.getElementById('userStatusFilter').addEventListener('change', renderUsers);
+  document.getElementById('userRoleFilter')?.addEventListener('change', renderUsers);
   document.getElementById('userSearch').addEventListener('input', renderUsers);
   document.getElementById('userReload').addEventListener('click', async () => {
     progressLoaded = false;  // erzwinge Neuladen der Progress-Daten
@@ -1341,7 +1342,7 @@ async function loadUsers() {
   const tbody = document.getElementById('userTbody');
   try {
     const rows = await api('GET',
-      `profiles?select=id,account_name,display_name,display_name_locked,status,cluster_id,is_admin,is_superadmin,avatar_id,created_at`
+      `profiles?select=id,account_name,display_name,display_name_locked,status,cluster_id,is_admin,is_superadmin,teacher_status,avatar_id,created_at`
       + `&school_id=eq.${currentSchoolId}`);
     userCache = rows;
 
@@ -1651,6 +1652,7 @@ function renderUsers() {
   const thead  = document.getElementById('userThead');
   const tbody  = document.getElementById('userTbody');
   const status = document.getElementById('userStatusFilter').value;
+  const role   = document.getElementById('userRoleFilter')?.value || 'all';
   const q      = document.getElementById('userSearch').value.trim().toLowerCase();
   const cols   = VIEW_COLUMNS[viewKey()] || VIEW_COLUMNS.admin;
 
@@ -1670,6 +1672,20 @@ function renderUsers() {
   // Filter + Sortieren
   let rows = userCache.slice();
   if (status !== 'all') rows = rows.filter(r => r.status === status);
+  // Rollen-Filter: „Lehrkräfte" zeigt bewusst NUR die freigeschalteten
+  // Lehrkraft-Accounts und nicht die Admins mit dazu — die sind zwar über
+  // can_teach() ebenfalls Lehrkräfte, stehen aber unter „Admins", und wer
+  // hier filtert, sucht die Liste der Kolleg:innen, nicht die der Rechte.
+  if (role !== 'all') rows = rows.filter(r => {
+    const isAdmin = r.is_admin || r.is_superadmin;
+    switch (role) {
+      case 'admin':           return isAdmin;
+      case 'teacher':         return !isAdmin && r.teacher_status === 'approved';
+      case 'teacher_pending': return !isAdmin && r.teacher_status === 'pending';
+      case 'student':         return !isAdmin && r.teacher_status !== 'approved';
+      default:                return true;
+    }
+  });
   if (q) rows = rows.filter(r =>
     (r.account_name || '').toLowerCase().includes(q) ||
     (r.display_name || '').toLowerCase().includes(q));
@@ -1787,7 +1803,7 @@ function sortRows(rows, sort) {
       case 'ss_dark':      return u._ss ? u._ss.tree.darkDone : -1;
       case 'ss_updated':   return u._ss ? u._ss.updatedAt  : '';
       case 'display_name_locked': return u.display_name_locked ? 1 : 0;
-      case 'is_admin':    return u.is_admin ? 1 : 0;
+      case 'is_admin':    return roleRank(u);
       default:            return u[key] ?? '';
     }
   };
@@ -1831,9 +1847,11 @@ function renderCell(u, col) {
       return `<td>${name}${lock}</td>`;
     }
     case 'status': {
-      let badge = `<span class="badge ${u.status}">${u.status}</span>`;
-      badge += ' ' + roleBadge(u);
-      return `<td>${badge}</td>`;
+      // Nur der Schulungs-Status. Die Rolle steht eine Spalte weiter —
+      // sie hier zusätzlich zu zeigen hieß, dieselbe Auskunft zweimal
+      // in dieselbe Zeile zu schreiben. Beide Spalten stehen ohnehin
+      // immer zusammen (VIEW_COLUMNS.admin).
+      return `<td><span class="badge ${u.status}">${u.status}</span></td>`;
     }
     case 'cluster': {
       const opts = ['<option value="">— kein Cluster —</option>']
@@ -1982,10 +2000,34 @@ function canResetTarget(u) {
 }
 
 // Rendert den passenden Rollen-Badge für einen User-Row.
+//
+// Genau EIN Badge sagt, was jemand ist — Admins sind über can_teach()
+// implizit auch Lehrkräfte, aber „Volladmin" ist die nützlichere Auskunft
+// als ein zweites Schild daneben. Eine freigeschaltete Lehrkraft ist
+// dagegen ausdrücklich kein Schüler, und genau das stand hier bisher.
+// Ein offener Antrag bekommt einen zweiten, gedämpften Marker: die Rolle
+// gilt noch nicht, aber wer im User-Tab steht, soll nicht erst im
+// Lehrkräfte-Tab nachsehen müssen, ob da jemand wartet.
 function roleBadge(u) {
   if (u.is_superadmin) return '<span class="badge volladmin">Volladmin</span>';
   if (u.is_admin)      return '<span class="badge schuladmin">Schuladmin</span>';
-  return '<span class="badge">Schüler</span>';
+  if (u.teacher_status === 'approved') {
+    return '<span class="badge lehrkraft" title="Für MPSkills freigeschaltet">Lehrkraft</span>';
+  }
+  const pending = u.teacher_status === 'pending'
+    ? ' <span class="badge lehrkraft-antrag" title="Lehrkraft-Rolle beantragt — Entscheidung im Tab Lehrkräfte">Antrag</span>'
+    : '';
+  return `<span class="badge">Schüler</span>${pending}`;
+}
+
+// Rollen-Rang für Sortierung und Filter. Die Reihenfolge ist dieselbe,
+// die roleBadge zeigt: was oben steht, gewinnt.
+function roleRank(u) {
+  if (u.is_superadmin) return 4;
+  if (u.is_admin)      return 3;
+  if (u.teacher_status === 'approved') return 2;
+  if (u.teacher_status === 'pending')  return 1;
+  return 0;
 }
 function renderProgressActions(u) {
   return `<td><div class="actions">
@@ -3259,6 +3301,13 @@ async function setTeacherStatus(userId, status) {
     if (u) {
       u.teacher_status = status;
       if (status === 'none') teacherCache = teacherCache.filter(r => r.id !== userId);
+    }
+    // Der User-Tab zeigt dieselbe Rolle als Badge — ohne das Nachziehen
+    // stünde dort bis zum nächsten Neuladen noch „Schüler".
+    const cu = userCache.find(r => r.id === userId);
+    if (cu) {
+      cu.teacher_status = status;
+      if (document.getElementById('userTbody')) renderUsers();
     }
     renderTeachers();
     const msg = {

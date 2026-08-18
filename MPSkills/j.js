@@ -8,7 +8,7 @@
      ask   — kein Code da: Feld zum Abtippen (der Rückfallweg für
              Geräte ohne Kamera)
      door  — Code geprüft, Raum gefunden: Titel, Werkzeug, Name
-     room  — drin: wer ist da
+     room  — drin: zwei Reiter, siehe unten
      gone  — Raum weg, abgelaufen oder gelöscht
 
    Seit Stufe 4 hängt im Zustand 'room' das WERKZEUG mit drin —
@@ -16,6 +16,20 @@
    Datei weiß davon nichts weiter, als wo es hingehört und wann es
    neue Daten bekommt: sie lädt das Modul über lib/tool.js, ruft
    mount() einmal und update() bei jeder Änderung.
+
+   ── Zwei Reiter im Raum (Umbau 18.08.2026) ────────────────────
+   Vorher stand die Raumkarte dauerhaft über dem Werkzeug und nahm
+   ihm auf einem Tablet ein Viertel der Höhe — für eine Auskunft,
+   die man einmal liest. Jetzt sind es zwei Fächer, und offen ist
+   von Anfang an das Werkzeug: dafür ist man hier.
+
+     Raum       wer ist da, wie heiße ich, der Code (falls der
+                Nachbar ihn braucht), Raum vom Gerät entfernen
+     <Werkzeug> die ganze Fläche
+
+   Dieselbe Aufteilung wie auf der Lehrerseite, nur ohne das erste
+   Fach: Einstellungen gehören der Lehrkraft, und die Tür am Rand
+   gibt es hier auch nicht — wer drin ist, muss nicht mehr rein.
 
    Die Aufteilung ist Absicht. Was hier steht (Beitritt, Token,
    Poller, Fehlerbilder) gilt für JEDES Werkzeug und darf sich
@@ -28,9 +42,15 @@
 const esc = (s) => (window.escapeHtml ? window.escapeHtml(s) : String(s ?? ''));
 const host = () => document.getElementById('joinHost');
 const toolHost = () => document.getElementById('toolHost');
+const tabHost  = () => document.getElementById('tabHost');
+const mainWrap = () => document.getElementById('mainWrap');
 
 let poller = null;   // läuft nur im Zustand 'room'
 let tool   = null;   // geladenes Werkzeug-Modul, solange eines montiert ist
+// Welches Fach offen ist — und zugleich der Marker „wir sind in einem
+// Raum". null heißt: Code eintippen, Tür oder Ende.
+let jPane  = null;
+let qrDone = null;   // für welchen Code der kleine QR schon im DOM steht
 // Das Laden ist asynchron, der Poller nicht: ohne diesen Riegel käme
 // der nächste Takt, während noch geladen wird, fände tool === null und
 // montierte ein zweites Mal — doppeltes DOM, doppelte Listener.
@@ -69,6 +89,58 @@ const ERRORS = {
 };
 const errText = (code) => ERRORS[code] || 'Etwas hat nicht geklappt. Bitte noch einmal versuchen.';
 
+/* ─── Die zwei Fächer ─────────────────────────────────────── */
+/* Das Werkzeug hängt in #toolHost und damit AUSSERHALB der schmalen
+   Spalte — die Raumkarte darf schmal bleiben (sie ist eine Auskunft),
+   eine Wolke nicht. Umgeschaltet wird deshalb zwischen zwei Kästen,
+   die auf der Seite nebeneinanderstehen, und nicht innerhalb eines. */
+function showJPane(which) {
+  jPane = which;
+  document.querySelectorAll('#tabHost .rtab').forEach(b => {
+    const on = b.dataset.pane === which;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  mainWrap().hidden = (which !== 'room');
+  toolHost().hidden = (which !== 'tool');
+  document.body.classList.toggle('pane-tool', which === 'tool');
+
+  // Ein ausgeblendetes Fach hat keine Maße; das Werkzeug rechnet seine
+  // Fläche aber aus dem, was über ihm steht. Also nachmessen lassen,
+  // sobald es wieder sichtbar ist.
+  if (which === 'tool') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+}
+
+function renderTabs(code, room) {
+  tabHost().innerHTML = `
+    <nav class="rtabs" aria-label="Raum">
+      <div class="rtabs-tabs" role="tablist">
+        <button type="button" class="rtab" role="tab" data-pane="room" aria-selected="false">
+          <span class="rtab-t">Raum</span></button>
+        <button type="button" class="rtab" role="tab" data-pane="tool" aria-selected="false">
+          <span class="rtab-t" id="jToolName">${esc((room?.tool_icon || '🧩') + ' '
+            + (room?.tool_title || 'Werkzeug'))}</span></button>
+      </div>
+      <div class="rtabs-side">
+        <code class="rtabs-code">${esc(code)}</code>
+      </div>
+    </nav>`;
+  tabHost().querySelectorAll('.rtab').forEach(b => {
+    b.addEventListener('click', () => showJPane(b.dataset.pane));
+  });
+}
+
+/* Verlassen wir den Raum, muss die Leiste weg und die schmale Spalte
+   zurück — sonst stünden über der Code-Eingabe zwei Reiter, die ins
+   Leere zeigen. */
+function clearTabs() {
+  jPane = null;
+  qrDone = null;
+  tabHost().innerHTML = '';
+  mainWrap().hidden = false;
+  document.body.classList.remove('roomview', 'pane-tool');
+}
+
 /* ─── Werkzeug ────────────────────────────────────────────── */
 // Einmal montieren, danach nur noch füttern. Welches Werkzeug es ist,
 // steht im Raum — diese Datei kennt keinen einzigen Werkzeugnamen.
@@ -78,7 +150,6 @@ async function mountTool(view, token) {
   toolBusy = true;
 
   const box = toolHost();
-  box.hidden = false;
   box.innerHTML = '<p class="booting">Werkzeug wird geladen …</p>';
 
   let impl;
@@ -98,9 +169,11 @@ async function mountTool(view, token) {
   }
 
   // Während geladen wurde, kann der Raum verlassen worden sein
-  // (Hash-Wechsel, „Raum entfernen"). Dann steht der Kasten schon
-  // leer da und darf nicht wieder gefüllt werden.
-  if (!toolHost() || toolHost().hidden) return;
+  // (Hash-Wechsel, „Raum entfernen"). Dann darf der Kasten nicht wieder
+  // gefüllt werden. Gefragt wird nach jPane und nicht danach, ob der
+  // Kasten sichtbar ist: sichtbar ist er auch dann nicht, wenn gerade
+  // nur das andere Fach offen steht.
+  if (jPane === null) return;
 
   const ctx = window.MPTool.makeCtx({
     actions: window.MPTool.participantActions(token),
@@ -113,9 +186,6 @@ async function mountTool(view, token) {
 
   box.innerHTML = '';
   tool = impl;
-  // Ab jetzt gehört die Resthöhe dem Werkzeug und nicht mehr der
-  // Beitrittskarte darüber (siehe body.has-tool in style.css).
-  document.body.classList.add('has-tool');
   tool.mount(box, ctx);
   tool.update(view);
 }
@@ -125,7 +195,6 @@ function unmountTool() {
     try { tool.unmount(); } catch (e) { console.warn('[mpskills] unmount:', e.message); }
     tool = null;
   }
-  document.body.classList.remove('has-tool');
   const box = toolHost();
   if (box) { box.innerHTML = ''; box.hidden = true; }
 }
@@ -357,6 +426,10 @@ function showBlocked() {
   if (blockedShown) return;
   blockedShown = true;
   unmountTool();
+  // Die Reiter gehören zu einem Raum, in dem man mitmachen darf. Wer
+  // stillgelegt ist, hat nichts zu wechseln — und soll den Satz lesen,
+  // statt daneben auf ein leeres Werkzeug zu tippen.
+  clearTabs();
   host().innerHTML = `
     <div class="card card--join">
       <h1 class="join-h">Kurze Pause</h1>
@@ -371,31 +444,61 @@ function renderRoom(code, token) {
   unmountTool();
   blockedShown = false;
 
-  /* Die Raumkarte ist ab Stufe 4 nur noch die Kopfzeile: Titel,
-     Werkzeug, wer ich bin. Die Bühne gehört dem Werkzeug darunter.
-     Deshalb steht die Teilnehmerliste in einem zugeklappten Kasten —
-     „wer ist da" bleibt jederzeit erreichbar, nimmt aber der Wolke
-     nicht mehr den halben Bildschirm weg. */
+  /* Das Fach „Raum": alles, was man einmal liest und danach nur noch
+     selten braucht. Die Teilnehmerliste steht deshalb wieder offen da
+     und nicht mehr zugeklappt — sie nimmt hier niemandem etwas weg. */
+  document.body.classList.add('roomview');
+  renderTabs(code, MPRoom.get(code)?.room || null);
   host().innerHTML = `
-    <div class="card card--room card--roomhead">
+    <div class="card card--room">
+      <!-- Ohne Code-Chip: der Code steht seit dem Umbau in der
+           Reiterleiste und damit auf beiden Fächern. Zweimal
+           dasselbe auf einem Bildschirm ist eine Frage zu viel. -->
       <div class="room-head">
         <div>
           <div class="door-tool"><span class="door-ic" id="rTip">🧩</span><span id="rTool"></span></div>
           <h1 class="join-h" id="rTitle">…</h1>
         </div>
-        <code class="code-chip">${esc(code)}</code>
       </div>
       <p class="join-sub" id="rMe"></p>
       <div class="msg msg--warn" id="rWarn" hidden></div>
 
-      <details class="peoplebox">
-        <summary>Wer ist da? <span class="card-h-note" id="rCount"></span></summary>
-        <ul class="people" id="rPeople"></ul>
-        <p class="join-foot">
-          <button type="button" class="btn--link" id="leaveBtn">Diesen Raum von diesem Gerät entfernen</button>
-        </p>
+      <h2 class="card-h">Wer ist da? <span class="card-h-note" id="rCount"></span></h2>
+      <ul class="people" id="rPeople"></ul>
+
+      <!-- Der Code steht hier klein mit dabei, samt QR: wenn der
+           Nachbar nicht hereinkommt, ist das Gerät in der Hand näher
+           als die Tafel vorn. Gezeichnet wird er erst, wenn dieses
+           Fach zum ersten Mal geöffnet wird. -->
+      <details class="qrbox" id="jQrBox">
+        <summary>Jemanden dazuholen</summary>
+        <div class="qrbox-in">
+          <div class="qrbox-qr" id="jQr"></div>
+          <div>
+            <div class="bigcode bigcode--sm">${esc(code)}</div>
+            <p class="beam-url" id="jUrl"></p>
+          </div>
+        </div>
       </details>
+
+      <p class="join-foot">
+        <button type="button" class="btn--link" id="leaveBtn">Diesen Raum von diesem Gerät entfernen</button>
+      </p>
     </div>`;
+
+  const url = MPRoom.joinUrl(code);
+  document.getElementById('jUrl').textContent = url.replace(/^https?:\/\//, '');
+  document.getElementById('jQrBox').addEventListener('toggle', (ev) => {
+    if (!ev.target.open || qrDone === code) return;
+    try {
+      document.getElementById('jQr').innerHTML = MPQR.svg(url, { title: 'Code ' + code });
+      qrDone = code;
+    } catch (e) {
+      document.getElementById('jQr').innerHTML =
+        '<div class="qr-wait">Der Code oben funktioniert trotzdem.</div>';
+      console.error('[mpskills] QR:', e);
+    }
+  });
 
   document.getElementById('leaveBtn').addEventListener('click', () => {
     if (!confirm('Der Raum verschwindet nur von diesem Gerät. Um wieder mitzumachen, '
@@ -403,10 +506,18 @@ function renderRoom(code, token) {
     MPRoom.forget(code);
     if (poller) { poller.stop(); poller = null; }
     unmountTool();
+    clearTabs();
     history.replaceState(null, '', location.pathname);
     renderAsk('');
     toast('Raum von diesem Gerät entfernt.');
   });
+
+  /* Offen ist das Werkzeug und nicht der Raum: wer hier ankommt, ist
+     gerade beigetreten oder kommt zurück — beides heißt „ich will
+     mitmachen", nicht „wer ist da". Das Werkzeug lädt noch, der Kasten
+     sagt das solange. */
+  toolHost().innerHTML = '<p class="booting">Raum wird geladen …</p>';
+  showJPane('tool');
 
   poller = MPRoom.poll({
     sig:  () => MPRoom.sig(token),
@@ -452,6 +563,11 @@ function paintRoom(data, token) {
   document.getElementById('rTitle').textContent = r.title;
   document.getElementById('rTool').textContent  = r.tool_title || '';
   document.getElementById('rTip').textContent   = r.tool_icon  || '🧩';
+  // Der Reiter trug bis hierher, was im Gerätespeicher stand — das
+  // kann von gestern sein. Ab jetzt steht der Name des Werkzeugs drauf,
+  // den der Server nennt.
+  const tabName = document.getElementById('jToolName');
+  if (tabName) tabName.textContent = `${r.tool_icon || '🧩'} ${r.tool_title || 'Werkzeug'}`;
   document.getElementById('rMe').textContent    = `Du bist dabei als ${me.name}.`;
   document.title = r.title + ' · MPSkills';
 
@@ -482,6 +598,7 @@ function paintRoom(data, token) {
 /* ─── Zustand: weg ────────────────────────────────────────── */
 function renderGone(reason) {
   unmountTool();
+  clearTabs();
   host().innerHTML = `
     <div class="card card--join">
       <h1 class="join-h">Der Raum ist zu Ende</h1>
@@ -505,6 +622,7 @@ async function route() {
   // ein anderer Code ist ein anderer Raum und womöglich ein anderes
   // Werkzeug.
   unmountTool();
+  clearTabs();
 
   const code = MPRoom.normalizeCode(location.hash.replace(/^#/, ''));
   if (!code) { renderAsk(''); return; }

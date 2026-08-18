@@ -856,25 +856,15 @@ label.field .rule {
 .check strong { display: block; color: var(--ink); font-size: .82rem; }
 .check .rule { display: block; margin-top: 2px; font-size: .78rem; color: var(--ink-faint); }
 
-/* ─── Beamer-Ansicht ──────────────────────────────────────────
-   Sie hängt am Projektor in einem hellen Klassenraum. Deshalb
+/* ─── Onboarding-Fach ─────────────────────────────────────────
+   Es hängt am Projektor in einem hellen Klassenraum. Deshalb
    weiß, groß und ohne Zierrat: was hier steht, muss aus der
-   letzten Reihe lesbar sein. */
-body.beamer .wrap { max-width: 1180px; padding-top: 20px; }
-body.beamer #pagefoot { display: none; }
+   letzten Reihe lesbar sein.
 
-.beam-head {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-.beam-head .btn { text-decoration: none; }
-.beam-id { flex: 1; min-width: 0; text-align: center; }
-.beam-id strong {
-  display: block; font-size: clamp(1.1rem, 2.6vw, 1.7rem);
-  letter-spacing: -0.02em; line-height: 1.15;
-}
-.beam-id span { font-size: .85rem; color: var(--ink-faint); }
-
+   Die Klassennamen tragen noch das „beam"-Präfix von damals, als
+   das hier die ganze Seite war (bis 18.08.2026 „Beamer-Ansicht").
+   Umbenannt wurde nichts, was nur anders heißen würde — das
+   Werkzeug-Fach ist heute genauso Beamer wie dieses. */
 .beam-main {
   display: flex; align-items: center; gap: clamp(20px, 5vw, 54px);
   background: var(--surface);
@@ -940,64 +930,26 @@ body.beamer #pagefoot { display: none; }
    tools/<name>/tool.css. Diese Datei stellt nur den Kasten. */
 
 /* Schülerseite: der Kasten steht bewusst AUSSERHALB von
-   .wrap--narrow. Die Beitrittskarte darf schmal bleiben (sie ist ein
-   Formular), eine Wortwolke nicht — die braucht jeden Punkt Breite,
-   den das Gerät hergibt. */
+   .wrap--narrow. Die Raumkarte darf schmal bleiben (sie ist eine
+   Auskunft), eine Wortwolke nicht — die braucht jeden Punkt Breite,
+   den das Gerät hergibt. Seit dem Umbau auf zwei Fächer ist er
+   zugleich das Fach „Werkzeug": j.js blendet ihn und die schmale
+   Spalte gegeneinander ein. */
 .toolhost {
   width: 100%;
-  max-width: 1180px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: 0 22px;
 }
 @media (max-width: 640px) { .toolhost { padding: 0 12px; } }
-
-/* Wer den Platz bekommt, wenn ein Werkzeug montiert ist.
-
-   .wrap trägt sonst flex: 1 und streckt sich über die ganze
-   Resthöhe — die Beitrittskarte stünde dann oben und das Werkzeug
-   ganz unten am Bildschirmrand. Mit Werkzeug dreht sich das um: die
-   Kopfzeile nimmt, was sie braucht, der Rest gehört dem Inhalt.
-   Die Klasse setzt j.js beim Montieren. */
-body.has-tool .wrap { flex: 0 0 auto; padding: 20px 22px 6px; }
-body.has-tool .toolhost { flex: 1 1 auto; }
 
 /* bd-fill setzt das Werkzeug, wenn seine Fläche bis an die untere
    Bildschirmkante reicht. Dann darf darunter nichts mehr stehen —
    der Fuß wandert erst in der Listenansicht zurück. */
 body.bd-fill #pagefoot { display: none; }
 
-/* Die Raumkarte ist jetzt nur noch Kopfzeile: wer bin ich, wo bin
-   ich, wie heißt der Raum. Deshalb schmaler und ohne den Abstand
-   nach unten, den eine Karte sonst hätte. */
-.card--roomhead { margin-bottom: 14px; }
-
-/* „Wer ist da" ist ab Stufe 4 eine Nebenfrage — die Hauptsache steht
-   darunter. Zugeklappt bleibt es jederzeit erreichbar, ohne der
-   Wolke den halben Bildschirm zu nehmen. */
-.peoplebox { margin-top: 10px; }
-.peoplebox > summary {
-  cursor: pointer; font-weight: 700; font-size: .9rem;
-  color: var(--ink-soft); padding: 4px 0;
-  list-style-position: inside;
-}
-.peoplebox > summary:hover { color: var(--ink); }
-.peoplebox > .people { margin-top: 10px; }
-
-/* Beamer: die Kopfzeile trägt jetzt auch die Zählung und die
-   Umschalter, damit darunter alles der Klasse gehört. */
-.beam-head__right {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-}
-.beam-head__right .btn { text-decoration: none; }
-
-/* Die Tür (QR + Code) klappt weg, sobald die Klasse drin ist — der
-   Umschalter sitzt in der Kopfzeile, siehe setDoor() in lehrer.js. */
 .beam-main { margin-bottom: 18px; }
 .beam-tool { min-height: 40px; }
-
-/* Mehr Breite als in Stufe 3: eine Wolke, die auf 1180 px gepackt
-   wird, verschenkt auf einem Beamer die Hälfte des Bildes. */
-body.beamer .wrap { max-width: 1500px; }
 
 /* ─── Datenschutz-Auskunft (Stufe 7) ──────────────────────────
    Steht seit dem Umbau der Landing in einem Modal hinter „Was wird
@@ -1334,8 +1286,223 @@ body.beamer .wrap { max-width: 1500px; }
 }
 .picker-tile span { font-size: .74rem; color: var(--ink-faint); text-align: center; line-height: 1.3; }
 
+/* ══════════════════════════════════════════════════════════════
+   Die Raumseite — drei Fächer (Umbau 18.08.2026)
+   ══════════════════════════════════════════════════════════════
+   Vorher stand auf der Lehrerseite alles untereinander: Kopfzeile,
+   QR und Code in voller Breite, darunter das Werkzeug. Der
+   QR-Code nahm damit dauerhaft den halben Beamer und das Werkzeug
+   — die eigentliche Stunde — den Rest.
+
+   Jetzt hat jede Frage ihr Fach, und im Werkzeug-Fach steht über
+   der Bühne nichts als die MPSkills-Kopfzeile und diese Leiste.
+   Sie ist deshalb so flach wie möglich: jeder Punkt hier ist ein
+   Punkt weniger für die Wolke.
+
+   Dieselbe Leiste trägt die Schülerseite mit zwei Fächern (Raum ·
+   Werkzeug) — es ist dieselbe Sache in zwei Rollen, und sie soll
+   auf beiden Geräten gleich aussehen. */
+body.roomview #pagefoot { display: none; }
+/* Die Raumseite baut ihr Inneres selbst und hat deshalb kein .wrap,
+   an dem die Seitenhöhe hinge. Ohne das stünde der Fuß in den
+   Fehlerbildern direkt unter dem Text statt am unteren Rand. */
+#lehrerHost { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+/* .wrap streckt sich sonst über die Resthöhe und schöbe das
+   Werkzeug an den unteren Bildschirmrand. Im Raum gehört die
+   Resthöhe dem Fach, nicht der Spalte darüber. */
+body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
+
+.rtabs {
+  display: flex; align-items: stretch; gap: 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 0 14px;
+}
+.rtabs-tabs { display: flex; align-items: stretch; gap: 2px; min-width: 0; overflow-x: auto; }
+.rtabs-side {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0;
+}
+
+.rtab {
+  font: inherit; font-size: .92rem; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px 10px;
+  background: none; border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--ink-faint);
+  cursor: pointer; white-space: nowrap;
+}
+.rtab:hover:not(:disabled) { color: var(--ink); }
+.rtab.on { color: var(--ink); border-bottom-color: var(--accent); }
+/* Zugesperrt, solange es den Raum noch nicht gibt. Sichtbar bleiben
+   sie trotzdem: sie sagen, was als Nächstes kommt. */
+.rtab:disabled { opacity: .38; cursor: not-allowed; }
+
+/* Die Nummer ist kein Schmuck, sondern die Reihenfolge: erst
+   einrichten, dann hereinlassen, dann arbeiten. */
+.rtab-n {
+  flex: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: .72rem; font-weight: 700;
+  background: var(--paper-2); color: var(--ink-faint);
+}
+.rtab.on .rtab-n { background: var(--accent); color: #fff; }
+.rtab-t { overflow: hidden; text-overflow: ellipsis; }
+
+/* Der Code steht in der Leiste und damit auf JEDEM Fach — auch auf
+   dem Werkzeug-Fach, wo sonst nichts mehr an den Raum erinnert. */
+.rtabs-code {
+  font-family: var(--mono); font-weight: 700;
+  font-size: 1.05rem; letter-spacing: .08em;
+  color: var(--ink);
+  background: var(--paper-2);
+  border-radius: 8px; padding: 4px 11px;
+  user-select: all;
+}
+.rtabs-fs {
+  font: inherit; font-size: 1.05rem; line-height: 1;
+  background: none; border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 10px;
+  color: var(--ink-soft); cursor: pointer;
+}
+.rtabs-fs:hover { background: var(--paper-2); color: var(--ink); }
+
+.rpane {
+  width: 100%; max-width: 1500px;
+  margin: 0 auto;
+  padding: 22px 22px 28px;
+}
+.rpane--form { max-width: 640px; }
+/* Das Werkzeug-Fach: nur ein Rahmen. Die Höhe rechnet sich das
+   Werkzeug selbst aus dem, was über ihm steht (portHeight in
+   tool.js) — hier darf deshalb unter ihm nichts stehen, was es
+   nicht kennt. */
+.rpane--tool { padding: 0 22px; }
+@media (max-width: 640px) { .rpane--tool { padding: 0 12px; } }
+.rpane-err { max-width: 1500px; margin: 12px auto 0; }
+
+/* ─── Fach 1: das Formular ────────────────────────────────── */
+.card--form { padding: 26px 26px 22px; }
+.pane-h  { margin: 0 0 4px; font-size: 1.35rem; letter-spacing: -0.02em; }
+.pane-sub { margin: 0 0 20px; font-size: .9rem; color: var(--ink-soft); }
+.req { color: var(--accent); font-weight: 700; }
+
+.field--static {
+  display: block; margin-bottom: 16px;
+  font-size: .82rem; font-weight: 600; color: var(--ink-soft);
+}
+.field--static strong {
+  display: block; font-size: 1rem; font-weight: 600; color: var(--ink);
+  margin-top: 3px;
+}
+
+.fieldset {
+  border: 1px solid var(--line-soft); border-radius: 10px;
+  padding: 12px 14px 6px; margin: 0 0 16px;
+}
+.fieldset > legend {
+  font-size: .82rem; font-weight: 600; color: var(--ink-soft);
+  padding: 0 6px;
+}
+.fieldset .check { margin-bottom: 10px; }
+/* Gesperrte Felder bleiben SICHTBAR und werden nur unbedienbar: ein
+   verschwundenes Feld beantwortet die Frage „wo ist das hin?" nicht,
+   ein graues mit einer Zeile Begründung schon. */
+.fieldset--locked, #setToolFields.is-locked { opacity: .62; }
+.lockline {
+  margin: -8px 0 16px;
+  font-size: .8rem; color: var(--warn);
+}
+.actions--go { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ─── Fach 2: Onboarding ──────────────────────────────────── */
+.onb-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+}
+
+/* ─── Die Tür am Rand ─────────────────────────────────────────
+   Nur im Werkzeug-Fach. Ein Griff am rechten Rand, der den Code
+   ausfährt — für die, die zu spät kommen, ohne dass die Klasse
+   ihre Ansicht verliert.
+
+   Zugeklappt wird die ganze Leiste um die Breite des Kastens nach
+   rechts geschoben; der Griff steht davor und bleibt damit stehen.
+   Deshalb ist die Breite eine Variable und keine Zahl an zwei
+   Stellen. */
+.qrfly {
+  --flyw: 250px;
+  position: fixed; right: 0; top: 50%;
+  z-index: 60;
+  display: flex; align-items: stretch;
+  transition: transform .22s ease;
+  transform: translate(var(--flyw), -50%);
+}
+.qrfly.open { transform: translate(0, -50%); }
+
+.qrfly-grip {
+  flex: none; align-self: center;
+  width: 42px; height: 62px;
+  display: grid; place-items: center;
+  background: var(--ink); color: #fff;
+  border: none; border-radius: 10px 0 0 10px;
+  cursor: pointer;
+  box-shadow: -2px 2px 10px rgba(23,33,43,.18);
+}
+.qrfly-grip:hover { background: var(--accent-ink); }
+.qrfly-grip svg { width: 24px; height: 24px; fill: currentColor; }
+
+.qrfly-body {
+  width: var(--flyw);
+  background: var(--surface);
+  border: 1px solid var(--line); border-right: none;
+  border-radius: 12px 0 0 12px;
+  padding: 14px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+.qrfly-qr { width: 100%; aspect-ratio: 1; display: grid; place-items: center; }
+.qrfly-qr svg { display: block; width: 100%; height: 100%; }
+.qrfly-code {
+  font-family: var(--mono); font-weight: 700;
+  font-size: 1.5rem; letter-spacing: .1em;
+  margin-top: 6px; user-select: all;
+}
+.qrfly-url {
+  margin: 2px 0 10px; font-family: var(--mono);
+  font-size: .68rem; color: var(--ink-faint); word-break: break-all;
+}
+
+/* ─── Schülerseite: „Jemanden dazuholen" ──────────────────────
+   Derselbe Gedanke wie die Tür am Rand, nur kleiner und ohne
+   Bühne: zugeklappt, weil im Fach „Raum" die Frage „wer ist da"
+   die häufigere ist. */
+.qrbox { margin: 14px 0 6px; }
+.qrbox > summary {
+  cursor: pointer; font-weight: 600; font-size: .88rem;
+  color: var(--ink-soft); padding: 4px 0;
+  list-style-position: inside;
+}
+.qrbox > summary:hover { color: var(--ink); }
+.qrbox-in { display: flex; align-items: center; gap: 16px; margin-top: 10px; }
+.qrbox-qr { width: 132px; flex: none; aspect-ratio: 1; display: grid; place-items: center; }
+.qrbox-qr svg { display: block; width: 100%; height: 100%; }
+.bigcode--sm { font-size: 1.7rem; letter-spacing: .1em; }
+
 @media (max-width: 560px) {
   .wrap { padding: 30px 16px 54px; }
+  .rtabs { padding: 0 8px; gap: 6px; }
+  .rtab { padding: 10px 9px 8px; font-size: .86rem; }
+  .rtab-n { display: none; }
+  .rtabs-code { font-size: .95rem; padding: 3px 8px; }
+  .rpane { padding: 16px 14px 22px; }
+  /* Die Tür bleibt auch auf dem Handy bedienbar — sie wird nur so
+     schmal, dass daneben noch etwas vom Werkzeug zu sehen ist. */
+  .qrfly { --flyw: 200px; }
+  .qrbox-in { flex-direction: column; text-align: center; }
   .state { padding: 20px 18px; border-radius: 11px; }
   /* Auf dem Handy geht der Knopf unter das Feld statt daneben:
      nebeneinander bliebe für den Code kein Platz mehr, und er ist

@@ -440,6 +440,15 @@ html, body {
 .badge.admin   { background: rgba(212,168,48,0.2); color: var(--a-gold); }
 .badge.schuladmin { background: rgba(212,168,48,0.2); color: var(--a-gold); }
 .badge.volladmin  { background: rgba(159,122,234,0.2); color: #c8a2ff; font-weight: 600; }
+/* Lehrkraft (MPSkills): Teal statt Gold — es ist keine Admin-Rolle,
+   und die Farbe ist die des Bereichs, aus dem sie kommt. Der offene
+   Antrag ist derselbe Ton, nur ohne Fläche: gilt noch nicht. */
+.badge.lehrkraft { background: rgba(45,212,191,0.16); color: #5eead4; }
+.badge.lehrkraft-antrag {
+  background: transparent; color: #7fb3ac;
+  box-shadow: inset 0 0 0 1px rgba(45,212,191,0.35);
+  text-transform: none; letter-spacing: 0;
+}
 .badge.closed  { background: rgba(0,0,0,0.3); color: var(--a-muted); }
 .badge.open    { background: rgba(107,191,89,0.15); color: #8fd97e; }
 

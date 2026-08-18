@@ -808,8 +808,10 @@ body.bd-fill .bd-tool { padding-bottom: 0; }
    schaut, die Lehrkraft moderiert. Also mehr Schrift und keine
    Berührungs-Feinheiten.
 
-   body.beamer setzt lehrer.js — dieselbe Klasse, die schon in Stufe 3
-   die Raumansicht umschaltet. */
+   body.beamer setzt lehrer.js für die ganze Lehrerseite — sie heißt
+   seit Stufe 3 so und ist seit dem Umbau auf drei Fächer
+   (18.08.2026) der Marker „hier schaut eine Klasse drauf", nicht
+   mehr der Name einer eigenen Ansicht. */
 body.beamer .bd-tool { padding: 12px 18px; }
 body.beamer .bd-catnav {
   position: static; background: none; backdrop-filter: none;

@@ -428,11 +428,11 @@ async function renderRooms() {
 
   const rooms = data.rooms || [];
 
-  /* „+ Raum eröffnen" führt nach lehrer.html?new — dort steht der
-     Dialog, weil er die Zusatzfelder des Werkzeugs braucht (siehe
-     dort). OHNE Werkzeug in der Adresse: der Dialog fragt es dann als
-     erstes Feld ab. Von einer Kachel aus ist es schon beantwortet,
-     von hier aus noch nicht.
+  /* „+ Raum eröffnen" führt nach lehrer.html?new — dort steht seit
+     dem Umbau vom 18.08.2026 kein Dialog mehr, sondern das erste
+     Fach der Raumseite („Einstellungen"). OHNE Werkzeug in der
+     Adresse: dann ist es dort die erste Frage. Von einer Kachel aus
+     ist es schon beantwortet, von hier aus noch nicht.
 
      Ein Link und kein Knopf: das ist ein Ortswechsel, und er soll
      sich in einem zweiten Reiter öffnen lassen. */
