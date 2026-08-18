@@ -706,11 +706,19 @@ function renderState() {
   // Die Kopfzeile pflegt sich seit lib/userbar.js selbst — sie hängt
   // am selben session-changed-Event wie diese Funktion.
 
-  // Der Code-Kasten entfällt für Lehrkräfte und Admins: sie kommen
-  // über „Meine Räume" an dieselben Räume, von der anderen Seite.
+  // Der Code-Kasten bleibt für alle da — auch eine Lehrkraft will
+  // vielleicht mal in den Raum einer Kolleg:in als Teilnehmer:in
+  // hinein. Für Lehrkräfte/Admins rutscht dieselbe Box aber HINTER
+  // die eigene Raumliste: das ist dort die seltenere der beiden
+  // Fragen, „Meine Räume" bleibt der Normalweg. Bewegt statt
+  // verdoppelt — derselbe DOM-Knoten behält seine Listener.
   const join = document.getElementById('joinCard');
-  if (join) join.hidden = acts;
-  if (!acts) renderMyRooms();
+  if (join) {
+    join.hidden = false;
+    if (acts) host.insertAdjacentElement('afterend', join);
+    else      host.insertAdjacentElement('beforebegin', join);
+  }
+  renderMyRooms();
 
   // Der Zugang gilt nur Gästen. Wer angemeldet ist, sieht statt der
   // beiden Formulare seinen Zustand — das ist dieselbe Frage, eine

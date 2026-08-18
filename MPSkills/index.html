@@ -50,9 +50,13 @@
        nicht klappt. Es führt nach j.html — dort und nur dort steht
        der ganze Beitritts-Ablauf.
 
-       Für Lehrkräfte und Admins blendet app.js den Kasten aus: sie
-       kommen über „Meine Räume" an dieselben Räume, und zwar von
-       der anderen Seite. -->
+       Für Lehrkräfte und Admins verschiebt app.js denselben Kasten
+       hinter die eigene Raumliste (#stateHost), statt ihn
+       auszublenden: „Meine Räume" ist ihr Normalweg zu den eigenen
+       Räumen, ein Code bleibt aber der Weg in den Raum einer
+       Kolleg:in. Steht hier im HTML nur als Ausgangsposition für
+       Gäste — wohin die Box tatsächlich rutscht, entscheidet
+       renderState() in app.js. -->
   <section class="joincard" id="joinCard">
     <h1 class="joincard-h">Code von der Tafel eingeben</h1>
     <form id="hubCodeForm" novalidate>
@@ -320,6 +324,6 @@
      anlegt — er tut es ja ohne Dialog. -->
 <script src="lib/tool.js?v=20260818b"></script>
 <script src="tools.js?v=20260818"></script>
-<script src="app.js?v=20260818j"></script>
+<script src="app.js?v=20260818k"></script>
 </body>
 </html>
