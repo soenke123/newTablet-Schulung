@@ -102,6 +102,13 @@ body {
   cursor: pointer;
   transition: background .14s ease, border-color .14s ease, transform .1s ease;
 }
+/* Ein Link, der wie ein Knopf aussieht, muss sich auch wie einer
+   setzen lassen — sonst unterstreicht ihn der Browser und btn--wide
+   (width + justify-content) griffe ins Leere. */
+a.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  text-decoration: none;
+}
 .btn:hover { background: var(--paper-2); }
 .btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
@@ -394,6 +401,18 @@ body {
   border-bottom-color: var(--accent);
 }
 .tabpane[hidden] { display: none; }
+
+/* Über der Raumliste: links, wozu die drei Punkte gut sind, rechts
+   der eine Knopf, der von hier aus wegführt. */
+.pane-head {
+  display: flex; align-items: center; gap: 16px;
+  margin: 0 0 14px;
+}
+.pane-head-note {
+  margin: 0; flex: 1; min-width: 0;
+  font-size: .82rem; color: var(--ink-faint); max-width: 48ch;
+}
+.pane-head .btn { flex: none; }
 
 .pane-foot { margin: 14px 0 0; font-size: .86rem; }
 .pane-foot a { color: var(--accent-ink); }
@@ -1333,6 +1352,8 @@ body.beamer .wrap { max-width: 1500px; }
   .card--join { padding: 20px 18px; }
   .codebox { gap: 5px; }
   .page-head .btn { margin-left: 0; width: 100%; }
+  .pane-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .pane-head .btn { width: 100%; }
   .beam-main { flex-direction: column; }
   .beam-code { text-align: center; }
 }

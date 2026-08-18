@@ -157,11 +157,13 @@ function unmountTool() {
 /* ══════════════════════════════════════════════════════════
    Neuer Raum
    ══════════════════════════════════════════════════════════
-   Die Kachel „Für eine Klasse öffnen" auf der Landing schickt
-   hierher: lehrer.html?new=<werkzeug>. Der Dialog bleibt auf
-   dieser Seite, weil er zwei Dinge braucht, die die Landing nicht
-   hat — die Obergrenzen aus skill_rooms_list und die Zusatzfelder
-   des Werkzeugs. */
+   Die Landing schickt auf zwei Wegen hierher: von der Kachel mit
+   dem Werkzeug in der Adresse (?new=wordcloud), vom Knopf über der
+   Raumliste ohne (?new) — dann ist das Werkzeug die erste Frage im
+   Dialog statt schon beantwortet. Der Dialog bleibt auf dieser
+   Seite, weil er zwei Dinge braucht, die die Landing nicht hat: die
+   Obergrenzen aus skill_rooms_list und die Zusatzfelder des
+   Werkzeugs. */
 async function renderNew() {
   if (poller) { poller.stop(); poller = null; }
   unmountTool();
@@ -171,8 +173,12 @@ async function renderNew() {
   // Ohne ?new gibt es auf dieser Seite nichts mehr zu sehen. replace
   // statt href: sonst führte „zurück" wieder hierher und von hier
   // wieder zur Landing.
-  const wanted = new URLSearchParams(location.search).get('new');
-  if (!wanted) { location.replace('index.html'); return; }
+  //
+  // has() und nicht get(): „?new" ohne Wert ist der Weg vom Knopf
+  // über der Raumliste und heißt „Dialog auf, Werkzeug offen".
+  const params = new URLSearchParams(location.search);
+  if (!params.has('new')) { location.replace('index.html'); return; }
+  const wanted = params.get('new') || null;
 
   document.title = 'Neuer Raum · MPSkills';
   host().innerHTML = '<p class="booting">Einen Moment …</p>';

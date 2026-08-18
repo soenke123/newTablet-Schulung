@@ -416,13 +416,23 @@ async function renderRooms() {
   }
 
   const rooms = data.rooms || [];
+
+  /* „+ Raum eröffnen" führt nach lehrer.html?new — dort steht der
+     Dialog, weil er die Zusatzfelder des Werkzeugs braucht (siehe
+     dort). OHNE Werkzeug in der Adresse: der Dialog fragt es dann als
+     erstes Feld ab. Von einer Kachel aus ist es schon beantwortet,
+     von hier aus noch nicht.
+
+     Ein Link und kein Knopf: das ist ein Ortswechsel, und er soll
+     sich in einem zweiten Reiter öffnen lassen. */
   if (!rooms.length) {
     pane.innerHTML = `<div class="card card--empty">
-        <p><strong>Noch kein Raum.</strong> Öffne unter „Alle Werkzeuge" eins für deine
-        Klasse — du bekommst einen Code und einen QR-Code, und die Klasse ist in 30 Sekunden
-        drin.</p>
-        <div class="actions"><button type="button" class="btn" data-tab="tools">Alle Werkzeuge
-        ansehen</button></div>
+        <p><strong>Noch kein Raum.</strong> Eröffne einen — du bekommst einen Code und einen
+        QR-Code, und die Klasse ist in 30 Sekunden drin.</p>
+        <div class="actions">
+          <a class="btn btn--primary" href="lehrer.html?new">+ Raum eröffnen</a>
+          <button type="button" class="btn" data-tab="tools">Erst die Werkzeuge ansehen</button>
+        </div>
       </div>`;
     return;
   }
@@ -435,6 +445,11 @@ async function renderRooms() {
     .map(t => `${esc(t.icon || '')} ${esc(t.title)}: ${t.live} von ${t.multi_room ? t.max_rooms : 1}`);
 
   pane.innerHTML = `
+      <div class="pane-head">
+        <p class="pane-head-note">Ein Raum läuft ab, wenn 60 Tage lang niemand mehr darin
+          war — verlängern kannst du ihn über die drei Punkte.</p>
+        <a class="btn btn--primary" href="lehrer.html?new">+ Raum eröffnen</a>
+      </div>
       <div class="card">
         <ul class="roomlist">${rooms.map(roomRow).join('')}</ul>
       </div>
