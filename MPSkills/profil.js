@@ -64,7 +64,7 @@ function roleState(s) {
     return {
       cls:   'ok',
       label: 'Admin',
-      text:  'Als Admin darfst du alle Werkzeuge öffnen und testen, ohne eigene Freischaltung. '
+      text:  'Als Admin darfst du alle Skills öffnen und testen, ohne eigene Freischaltung. '
            + 'Anträge anderer Lehrkräfte bearbeitest du im <a href="../admin/index.html">Admin-Panel</a> unter „Lehrkräfte".'
     };
   }
@@ -74,7 +74,7 @@ function roleState(s) {
       return {
         cls: 'ok', label: 'Freigeschaltet',
         text: (d ? `Seit dem ${d} f` : 'F')
-            + 'reigeschaltet. Du kannst Werkzeuge für deine Klassen öffnen — '
+            + 'reigeschaltet. Du kannst Skills für deine Klassen öffnen — '
             + 'deine Räume stehen auf der <a href="index.html">MPSkills-Startseite</a>.'
       };
     }

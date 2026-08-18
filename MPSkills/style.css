@@ -1062,14 +1062,6 @@ label.field .rule {
    eine, die man am seltensten will. */
 .rowmenu-danger:hover { background: var(--warn-dim); color: var(--warn); }
 
-.check {
-  display: flex; gap: 10px; align-items: flex-start;
-  margin-bottom: 14px; font-size: .86rem; color: var(--ink-soft);
-}
-.check input { margin-top: 3px; flex: none; width: 17px; height: 17px; accent-color: var(--accent); }
-.check strong { display: block; color: var(--ink); font-size: .82rem; }
-.check .rule { display: block; margin-top: 2px; font-size: .78rem; color: var(--ink-faint); }
-
 /* ─── Onboarding-Fach ─────────────────────────────────────────
    Es hängt am Projektor in einem hellen Klassenraum. Deshalb
    weiß, groß und ohne Zierrat: was hier steht, muss aus der
@@ -1671,38 +1663,92 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
 @media (max-width: 640px) { .rpane--tool { padding: 0 12px; } }
 .rpane-err { max-width: 1500px; margin: 12px auto 0; }
 
-/* ─── Fach 1: das Formular ────────────────────────────────── */
+/* ─── Fach 1: das Formular ─────────────────────────────────────
+   Zwei Blöcke und sonst nichts (Umbau 19.08.2026): oben in EINEM
+   Rahmen die allgemeinen Raum-Angaben (Titel · Skill · Namen),
+   darunter ohne Rahmen das, was der Skill selbst wissen will.
+   Dass die drei oben zusammengehören, sagt der Rahmen — es steht
+   nirgends. Erklärungssätze unter den Feldern gibt es keine mehr;
+   geblieben sind nur die Begründungen unter gesperrten Feldern
+   (.lockline), und die stehen nur da, wenn etwas nicht mehr geht. */
 .card--form { padding: 26px 26px 22px; }
-.pane-h  { margin: 0 0 4px; font-size: 1.35rem; letter-spacing: -0.02em; }
-.pane-sub { margin: 0 0 20px; font-size: .9rem; color: var(--ink-soft); }
+.pane-h  { margin: 0 0 18px; font-size: 1.35rem; letter-spacing: -0.02em; }
 .req { color: var(--accent-ink); font-weight: 700; }
 
+/* Ein Rahmen und keine Füllung: die Felder darin stehen schon auf
+   --paper, eine dritte Fläche dazwischen würde nur trüben. Die
+   Linie ist --line und nicht --line-soft — sie hat eine Aufgabe
+   (das gehört zusammen) und muss dafür zu sehen sein. */
+.setbox {
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 16px; margin: 0 0 18px;
+  display: grid; gap: 14px;
+}
+/* Titel und Skill nebeneinander: zwei kurze Angaben, die zusammen
+   eine Zeile ergeben. Unter 560 px untereinander — dort wären zwei
+   Spalten zwei zu schmale Felder. */
+.setrow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+@media (max-width: 560px) { .setrow { grid-template-columns: 1fr; } }
+.setbox label.field { margin-bottom: 0; }
+
+/* Der Skill steht fest, solange es den Raum gibt — deshalb sieht er
+   aus wie ein Feld (damit die Zeile aufgeht), aber gefüllt statt
+   umrandet. */
 .field--static {
-  display: block; margin-bottom: 16px;
+  display: block; margin-bottom: 0;
   font-size: .82rem; font-weight: 600; color: var(--ink-soft);
 }
 .field--static strong {
-  display: block; font-size: 1rem; font-weight: 600; color: var(--ink);
-  margin-top: 3px;
+  display: block; margin-top: 5px;
+  font-size: .95rem; font-weight: 500; color: var(--ink);
+  padding: 9px 11px;
+  border: 1px solid transparent; border-radius: 12px;
+  background: var(--paper-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-.fieldset {
-  border: 1px solid var(--line-soft); border-radius: 14px;
-  padding: 12px 14px 6px; margin: 0 0 16px;
+.setfield { font-size: .82rem; font-weight: 600; color: var(--ink-soft); }
+.setfield-l { display: block; margin-bottom: 5px; }
+
+/* Zwei Antworten auf eine Frage, nebeneinander in einer Schiene.
+   Die geltende ist gefüllt — man muss nicht erst lesen, um zu
+   sehen, wo man steht. Es sind echte Radios darunter: die Gruppe
+   für Tastatur und Vorlesegerät gibt es damit geschenkt. */
+.seg2 {
+  position: relative;
+  display: flex; gap: 3px; padding: 3px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--paper);
 }
-.fieldset > legend {
-  font-size: .82rem; font-weight: 600; color: var(--ink-soft);
-  padding: 0 6px;
+.seg2 input {
+  position: absolute; width: 1px; height: 1px;
+  opacity: 0; margin: 0; pointer-events: none;
 }
-.fieldset .check { margin-bottom: 10px; }
+.seg2 label {
+  flex: 1; text-align: center;
+  padding: 7px 10px; border-radius: 9px;
+  font-size: .9rem; font-weight: 500; color: var(--ink-soft);
+  cursor: pointer; user-select: none;
+}
+.seg2 label:hover { background: var(--paper-2); color: var(--ink); }
+.seg2 input:checked + label {
+  background: var(--accent); color: var(--on-accent); font-weight: 600;
+}
+.seg2 input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Nach den beiden darüber, sonst gewinnt :hover über die Sperre. */
+.seg2 input:disabled + label { cursor: default; }
+.seg2 input:disabled + label:hover { background: none; color: var(--ink-soft); }
+.seg2 input:disabled:checked + label { background: var(--accent); color: var(--on-accent); }
+
 /* Gesperrte Felder bleiben SICHTBAR und werden nur unbedienbar: ein
    verschwundenes Feld beantwortet die Frage „wo ist das hin?" nicht,
    ein graues mit einer Zeile Begründung schon. */
-.fieldset--locked, #setToolFields.is-locked { opacity: .62; }
+.setfield.is-locked .seg2, #setToolFields.is-locked { opacity: .62; }
 .lockline {
-  margin: -8px 0 16px;
-  font-size: .8rem; color: var(--warn);
+  margin: 6px 0 0;
+  font-size: .8rem; font-weight: 400; color: var(--warn);
 }
+#setToolFields + .lockline { margin: -6px 0 0; }
 .actions--go { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ─── Fach 2: Onboarding ──────────────────────────────────── */

@@ -442,7 +442,7 @@ async function renderRooms() {
         QR-Code, und die Klasse ist in 30 Sekunden drin.</p>
         <div class="actions">
           <a class="btn btn--primary" href="lehrer.html?new">+ Raum eröffnen</a>
-          <button type="button" class="btn" data-tab="tools">Erst die Werkzeuge ansehen</button>
+          <button type="button" class="btn" data-tab="tools">Erst die Skills ansehen</button>
         </div>
       </div>`;
     return;
@@ -531,14 +531,14 @@ function isReady(toolId) {
 function toolCard(t) {
   const ready = isReady(t.id);
   const badges = [
-    ready ? '' : '<span class="tag tag--soon">Werkzeug in Vorbereitung</span>',
+    ready ? '' : '<span class="tag tag--soon">Skill in Vorbereitung</span>',
     t.active ? '' : '<span class="tag tag--off">Abgeschaltet</span>'
   ].filter(Boolean).join('');
 
-  // Ein abgeschaltetes Werkzeug bekommt keine neuen Räume mehr
+  // Ein abgeschalteter Skill bekommt keine neuen Räume mehr
   // (Entscheidung 17.08.2026) — der Knopf wäre dann eine Einladung
   // in eine Fehlermeldung.
-  const off = t.active ? '' : ' disabled title="Dieses Werkzeug ist abgeschaltet."';
+  const off = t.active ? '' : ' disabled title="Dieser Skill ist abgeschaltet."';
 
   return `<article class="tile${ready ? '' : ' tile--soon'}">
       <div class="tile-head">
@@ -550,7 +550,7 @@ function toolCard(t) {
       <div class="tile-foot">
         <button type="button" class="btn btn--sm btn--primary" data-act="open" data-tool="${esc(t.id)}"${off}>+ Raum öffnen</button>
       </div>
-      ${ready ? '' : '<p class="tile-note">Der Raum funktioniert schon — das Werkzeug darin kommt noch.</p>'}
+      ${ready ? '' : '<p class="tile-note">Der Raum funktioniert schon — der Skill darin kommt noch.</p>'}
     </article>`;
 }
 
@@ -585,7 +585,7 @@ async function renderTools() {
     const tech = (s?.is_admin || s?.is_superadmin) && toolsError
       ? `<br><span class="tile-note">Technisch: ${esc(toolsError)} — läuft Migration 0078 schon?</span>`
       : '';
-    host.innerHTML = `<p class="tools-empty">Die Werkzeugliste ist gerade nicht
+    host.innerHTML = `<p class="tools-empty">Die Skill-Liste ist gerade nicht
       erreichbar.${tech}</p>`;
     return;
   }
@@ -700,7 +700,7 @@ function renderState() {
       <section class="welcome">
         <h1>Hallo${name ? ' ' + esc(name) : ''}!</h1>
         <p>
-          Du hast Zugriff auf alle Werkzeuge. Öffne eines für eine Klasse — den Code und den
+          Du hast Zugriff auf alle Skills. Öffne einen für eine Klasse — den Code und den
           QR-Code dazu bekommst du sofort.
           ${role === 'admin'
             ? 'Anträge von Lehrkräften bearbeitest du im <a href="../admin/index.html">Admin-Panel</a> unter „Lehrkräfte".'
@@ -719,7 +719,7 @@ function renderState() {
         <p class="booting">Räume werden geladen …</p>
       </div>
       <div class="tabpane" id="paneTools" role="tabpanel" hidden>
-        <p class="booting">Werkzeuge werden geladen …</p>
+        <p class="booting">Skills werden geladen …</p>
       </div>`;
 
     showTab(activeTab);

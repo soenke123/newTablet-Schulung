@@ -119,7 +119,7 @@ function renderTabs(code, room) {
           <span class="rtab-t">Raum</span></button>
         <button type="button" class="rtab" role="tab" data-pane="tool" aria-selected="false">
           <span class="rtab-t" id="jToolName">${esc((room?.tool_icon || '🧩') + ' '
-            + (room?.tool_title || 'Werkzeug'))}</span></button>
+            + (room?.tool_title || 'Skill'))}</span></button>
       </div>
       <div class="rtabs-side">
         <code class="rtabs-code">${esc(code)}</code>
@@ -150,17 +150,17 @@ async function mountTool(view, token) {
   toolBusy = true;
 
   const box = toolHost();
-  box.innerHTML = '<p class="booting">Werkzeug wird geladen …</p>';
+  box.innerHTML = '<p class="booting">Skill wird geladen …</p>';
 
   let impl;
   try {
     impl = await window.MPTool.load(id, view.room.tool_folder);
   } catch (e) {
     // Kein Weltuntergang: der Raum funktioniert, die Teilnehmerliste
-    // steht, nur das Werkzeug fehlt. Also sagen, was los ist, statt die
+    // steht, nur der Skill fehlt. Also sagen, was los ist, statt die
     // Seite abzuräumen.
-    console.error('[mpskills] Werkzeug laden:', e);
-    box.innerHTML = `<div class="card"><div class="msg msg--err">Dieses Werkzeug lässt sich gerade
+    console.error('[mpskills] Skill laden:', e);
+    box.innerHTML = `<div class="card"><div class="msg msg--err">Dieser Skill lässt sich gerade
       nicht laden. Sag deiner Lehrkraft Bescheid.</div>
       <button type="button" class="btn" onclick="location.reload()">Noch einmal</button></div>`;
     return;
@@ -564,10 +564,10 @@ function paintRoom(data, token) {
   document.getElementById('rTool').textContent  = r.tool_title || '';
   document.getElementById('rTip').textContent   = r.tool_icon  || '🧩';
   // Der Reiter trug bis hierher, was im Gerätespeicher stand — das
-  // kann von gestern sein. Ab jetzt steht der Name des Werkzeugs drauf,
+  // kann von gestern sein. Ab jetzt steht der Name des Skills drauf,
   // den der Server nennt.
   const tabName = document.getElementById('jToolName');
-  if (tabName) tabName.textContent = `${r.tool_icon || '🧩'} ${r.tool_title || 'Werkzeug'}`;
+  if (tabName) tabName.textContent = `${r.tool_icon || '🧩'} ${r.tool_title || 'Skill'}`;
   document.getElementById('rMe').textContent    = `Du bist dabei als ${me.name}.`;
   document.title = r.title + ' · MPSkills';
 

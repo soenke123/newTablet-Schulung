@@ -1490,8 +1490,13 @@
   window.MPTool.register('wordcloud', {
 
     /* Was beim Anlegen eines Raums abgefragt wird. Steht hier und nicht
-       in lehrer.js: die Frage ist Sache des Werkzeugs, der Raum-Dialog
-       soll sie nur einsammeln. Landet in skill_rooms.settings. */
+       in lehrer.js: die Frage ist Sache des Skills, das Fach
+       „Einstellungen" sammelt sie nur ein. Landet in
+       skill_rooms.settings.
+
+       Ohne `hint`: das Formular zeigt seit dem Umbau vom 19.08.2026
+       keine Erklärungssätze mehr unter den Feldern. Was ein Feld
+       will, muss aus Beschriftung und Platzhalter hervorgehen. */
     settingsFields: [
       { key: 'question', label: 'Eure Frage', type: 'text', maxlength: 140, required: true,
         placeholder: 'z. B. Was macht guten Unterricht aus?',
@@ -1499,8 +1504,7 @@
         // des Testraums: der wird von der Landing aus mit einem Klick
         // angelegt, ganz ohne Dialog (siehe app.js). Ohne Vorgabe
         // stünde dort eine Wolke ohne Frage.
-        default: 'Was fällt euch dazu ein?',
-        hint: 'Steht über der Wolke und im Formular. Kurz und offen gestellt funktioniert am besten.' }
+        default: 'Was fällt euch dazu ein?' }
     ],
 
     mount(el, context) {

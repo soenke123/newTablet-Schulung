@@ -116,16 +116,16 @@ const ERRORS = {
   not_authenticated: 'Du bist nicht angemeldet.',
   not_a_teacher:     'Dein Konto ist für MPSkills nicht freigeschaltet.',
   not_found:         'Diesen Raum gibt es nicht (mehr).',
-  tool_unknown:      'Dieses Werkzeug gibt es nicht.',
-  tool_inactive:     'Dieses Werkzeug ist abgeschaltet — neue Räume gibt es dafür nicht.',
+  tool_unknown:      'Diesen Skill gibt es nicht.',
+  tool_inactive:     'Dieser Skill ist abgeschaltet — neue Räume gibt es dafür nicht.',
   title_required:    'Der Raum braucht einen Titel.',
   title_too_long:    'Der Titel ist zu lang (höchstens 60 Zeichen).',
-  single_room_only:  'Von diesem Werkzeug ist nur ein Raum gleichzeitig möglich.',
+  single_room_only:  'Von diesem Skill ist nur ein Raum gleichzeitig möglich.',
   code_collision:    'Es ließ sich gerade kein freier Code finden. Bitte noch einmal.',
   no_profile:        'Zu deinem Zugang fehlt das Profil.',
   not_deletable:     'Das kannst du nicht löschen — blende es aus, wenn es stören soll.',
   not_editable:      'Das lässt sich nicht mehr ändern, nur löschen und neu schreiben.',
-  phase_invalid:     'Diese Phase gibt es bei diesem Werkzeug nicht.',
+  phase_invalid:     'Diese Phase gibt es bei diesem Skill nicht.',
   payload_too_big:   'Das ist zu viel auf einmal.',
   invalid_input:     'Damit stimmt etwas nicht.',
   // Die beiden Sperren aus Migration 0084. Sie sind keine Fehler,
@@ -137,7 +137,7 @@ const ERRORS = {
 };
 const errText = (e, data) =>
   e === 'room_limit'
-    ? `Du hast schon ${data?.live ?? ''} von ${data?.max ?? ''} Räumen dieses Werkzeugs. `
+    ? `Du hast schon ${data?.live ?? ''} von ${data?.max ?? ''} Räumen dieses Skills. `
       + 'Lösche einen, den du nicht mehr brauchst.'
     : (ERRORS[e] || 'Das hat nicht geklappt.');
 
@@ -207,10 +207,10 @@ function renderShell() {
   const creating = !S.code;
   const t = S.view?.room;
   const toolLabel = t
-    ? `${t.tool_icon || '🧩'} ${t.tool_title || 'Werkzeug'}`
+    ? `${t.tool_icon || '🧩'} ${t.tool_title || 'Skill'}`
     : (S.tools[S.toolId]
         ? `${S.tools[S.toolId].icon || '🧩'} ${S.tools[S.toolId].title}`
-        : 'Werkzeug');
+        : 'Skill');
 
   /* „beamer" ist der Marker für „hier schaut eine Klasse drauf" — die
      Werkzeuge hängen ihre Beamer-Feinheiten daran (mehr Schrift, keine
@@ -264,12 +264,30 @@ function renderShell() {
 
      Titel      immer
      Namen      nur, solange niemand beigetreten ist
-     Werkzeug-
+     Skill-
      Angaben    nur, solange kein Beitrag da ist
 
    Gesperrte Felder bleiben SICHTBAR und werden nur unbedienbar.
    Ein verschwundenes Feld beantwortet die Frage „wo ist die Frage
-   hin?" nicht — ein graues mit einer Zeile Begründung schon. */
+   hin?" nicht — ein graues mit einer Zeile Begründung schon.
+
+   ── Zwei Blöcke, sonst nichts (19.08.2026) ─────────────────────
+   Das Fach stand vorher als eine lange Spalte da, und unter jedem
+   Feld hing ein Satz, der erklärte, was das Feld ohnehin sagt.
+   Bei drei Feldern liest man den ersten und überspringt den Rest,
+   und das Wenige, das wirklich erklärt werden muss, geht darin
+   unter. Jetzt gilt:
+
+     · Oben, in EINEM Rahmen: Titel · Skill · Namensabfrage. Das
+       sind die allgemeinen Angaben zum Raum, und dass sie
+       zusammengehören, sagt der Rahmen — es steht nirgends.
+     · Darunter, ohne Rahmen: was der Skill selbst wissen will.
+       Hier kann sich noch etwas ändern, oben nicht mehr.
+
+   Erklärungstexte gibt es keine. Die einzige Ausnahme sind die
+   Begründungen unter gesperrten Feldern: die stehen nur da, wenn
+   etwas nicht mehr geht, und beantworten dann die einzige Frage,
+   die in dem Moment offen ist. */
 
 function toolFieldsHTML(locked) {
   if (!S.fields.length) return '';
@@ -283,7 +301,6 @@ function toolFieldsHTML(locked) {
              placeholder="${esc(f.placeholder || '')}"
              value="${esc(val)}"
              ${locked ? 'disabled' : ''} />
-      ${f.hint ? `<span class="rule">${esc(f.hint)}</span>` : ''}
     </label>`;
   }).join('');
 }
@@ -298,13 +315,13 @@ function renderSettings() {
 
   const askNames = room ? room.ask_names !== false : true;
 
-  // Im Anlege-Modus ist das Werkzeug die erste Frage — außer die
-  // Kachel auf der Landing hat sie schon beantwortet. Danach ist es
-  // keine Frage mehr: das Werkzeug macht den Raum aus, es zu tauschen
-  // hieße, einen neuen anzulegen.
+  // Im Anlege-Modus ist der Skill die erste Frage — außer die Kachel
+  // auf der Landing hat sie schon beantwortet. Danach ist es keine
+  // Frage mehr: der Skill macht den Raum aus, ihn zu tauschen hieße,
+  // einen neuen anzulegen.
   const usable = Object.entries(S.tools).filter(([, t]) => t.active);
   const toolBlock = creating
-    ? `<label class="field">Werkzeug <span class="req">*</span>
+    ? `<label class="field">Skill <span class="req">*</span>
          <select id="setTool" data-req>
            ${usable.map(([id, t]) => {
              const full = !t.multi_room ? t.live >= 1 : t.live >= t.max_rooms;
@@ -313,52 +330,50 @@ function renderSettings() {
            }).join('')}
          </select>
        </label>`
-    : `<div class="field field--static">Werkzeug
+    : `<div class="field field--static">Skill
          <strong>${esc((room?.tool_icon || '') + ' ' + (room?.tool_title || ''))}</strong>
-         <span class="rule">Steht fest, solange es diesen Raum gibt.</span>
        </div>`;
+
+  /* Zwei Knöpfe in einer Zeile statt zweier untereinanderstehender
+     Auswahlpunkte: es sind zwei Antworten auf eine Frage, und die
+     geltende erkennt man an der Füllung. Radios bleiben es
+     trotzdem — Tastatur und Vorlesegerät bekommen damit ohne
+     Zusatzarbeit die Gruppe, die sie brauchen (und readAskNames
+     liest weiter dieselbe Stelle). */
+  const seg = (val, id, label) => `
+    <input type="radio" name="askNames" id="${id}" value="${val}"
+           ${(val === '1') === askNames ? 'checked' : ''} ${lockNames ? 'disabled' : ''} />
+    <label for="${id}">${label}</label>`;
 
   pane.innerHTML = `
     <div class="card card--form">
       <h1 class="pane-h">${creating ? 'Neuer Raum' : 'Einstellungen'}</h1>
-      <p class="pane-sub">${creating
-        ? 'Zwei Angaben, dann bekommt der Raum seinen Code.'
-        : 'Was sich noch ändern lässt, steht offen — der Rest ist grau.'}</p>
 
       <div class="msg msg--err" id="setError" hidden></div>
 
       <form id="setForm" novalidate>
-        ${toolBlock}
+        <div class="setbox">
+          <div class="setrow">
+            <label class="field">Titel <span class="req">*</span>
+              <input type="text" id="setTitle" data-req maxlength="60" placeholder="9b Deutsch"
+                     value="${esc(room?.title || '')}" />
+            </label>
+            ${toolBlock}
+          </div>
 
-        <label class="field">Titel <span class="req">*</span>
-          <input type="text" id="setTitle" data-req maxlength="60" placeholder="9b Deutsch"
-                 value="${esc(room?.title || '')}" />
-          <span class="rule">Nur für dich — damit du deine Räume auseinanderhältst.</span>
-        </label>
-
-        <fieldset class="fieldset${lockNames ? ' fieldset--locked' : ''}">
-          <legend>Wer sitzt im Raum?</legend>
-          <label class="check">
-            <input type="radio" name="askNames" value="1" ${askNames ? 'checked' : ''}
-                   ${lockNames ? 'disabled' : ''} />
-            <span><strong>Mit Namen</strong>
-              <span class="rule">Jede:r trägt beim Beitritt einen Namen ein. Den sieht die Klasse.</span>
-            </span>
-          </label>
-          <label class="check">
-            <input type="radio" name="askNames" value="0" ${askNames ? '' : 'checked'}
-                   ${lockNames ? 'disabled' : ''} />
-            <span><strong>Ohne Namen</strong>
-              <span class="rule">Jedes Gerät heißt <em>User 1, User 2 …</em> — nichts lässt sich
-              einer Person zuordnen.</span>
-            </span>
-          </label>
-          ${lockNames ? `<p class="lockline">Nicht mehr änderbar: es ${S.counts.people === 1
-            ? 'ist schon jemand' : `sind schon ${S.counts.people} Leute`} im Raum.</p>` : ''}
-        </fieldset>
+          <div class="setfield${lockNames ? ' is-locked' : ''}">
+            <span class="setfield-l" id="askNamesL">Sollen User Namen angeben?</span>
+            <div class="seg2" role="radiogroup" aria-labelledby="askNamesL">
+              ${seg('1', 'askYes', 'Ja, mit Namen')}
+              ${seg('0', 'askNo',  'Nein, anonym')}
+            </div>
+            ${lockNames ? `<p class="lockline">Nicht mehr änderbar: es ${S.counts.people === 1
+              ? 'ist schon jemand' : `sind schon ${S.counts.people} Leute`} im Raum.</p>` : ''}
+          </div>
+        </div>
 
         <div id="setToolFields" class="${lockTool ? 'is-locked' : ''}">
-          ${S.fields.length ? '' : '<p class="rule">Einstellungen werden geladen …</p>'}
+          ${S.fields.length ? '' : '<p class="booting">Einstellungen werden geladen …</p>'}
           ${toolFieldsHTML(lockTool)}
         </div>
         ${lockTool ? `<p class="lockline">Nicht mehr änderbar: im Raum ${S.counts.entries === 1
@@ -379,7 +394,7 @@ function renderSettings() {
     $('setTool').addEventListener('change', async (ev) => {
       S.toolId = ev.target.value;
       $('rtToolName').textContent =
-        `${S.tools[S.toolId]?.icon || '🧩'} ${S.tools[S.toolId]?.title || 'Werkzeug'}`;
+        `${S.tools[S.toolId]?.icon || '🧩'} ${S.tools[S.toolId]?.title || 'Skill'}`;
       await loadFields();
       $('setToolFields').innerHTML = toolFieldsHTML(false) || '';
       updateGo();
@@ -711,7 +726,7 @@ async function mountTool(view) {
   if (!id || tool || toolBusy || !box) return;
   toolBusy = true;
 
-  box.innerHTML = '<p class="booting">Werkzeug wird geladen …</p>';
+  box.innerHTML = '<p class="booting">Skill wird geladen …</p>';
 
   let impl;
   try {
@@ -720,7 +735,7 @@ async function mountTool(view) {
     // Der Raum funktioniert weiter: Code, QR und Teilnehmerliste
     // stehen. Nur der Inhalt fehlt — also sagen, statt abzuräumen.
     console.error('[mpskills] Werkzeug laden:', e);
-    box.innerHTML = `<div class="msg msg--err">Dieses Werkzeug lässt sich gerade nicht laden.
+    box.innerHTML = `<div class="msg msg--err">Dieser Skill lässt sich gerade nicht laden.
       Der Raum und der Code funktionieren trotzdem.</div>`;
     return;
   } finally {
@@ -831,7 +846,7 @@ function paintRoom(data) {
   if (box) box.hidden = true;
 
   document.title = r.title + ' · MPSkills';
-  $('rtToolName').textContent = `${r.tool_icon || '🧩'} ${r.tool_title || 'Werkzeug'}`;
+  $('rtToolName').textContent = `${r.tool_icon || '🧩'} ${r.tool_title || 'Skill'}`;
 
   const url = MPRoom.joinUrl(S.code);
   $('bUrl').textContent  = url.replace(/^https?:\/\//, '');
@@ -924,7 +939,7 @@ async function renderNew() {
     data = await trpc('skill_rooms_list', {});
   } catch (e) {
     host().innerHTML = `<main class="wrap"><div class="card"><div class="msg msg--err">Die
-      Werkzeuge ließen sich nicht laden: ${esc(e.message)}</div>
+      Skills ließen sich nicht laden: ${esc(e.message)}</div>
       <p><a href="index.html">Zurück zu MPSkills</a></p></div></main>`;
     return;
   }
@@ -939,7 +954,7 @@ async function renderNew() {
   const usable = Object.keys(S.tools).filter(id => S.tools[id].active);
   if (!usable.length) {
     host().innerHTML = `<main class="wrap"><div class="card"><div class="msg msg--warn">Es ist
-      gerade kein Werkzeug verfügbar.</div>
+      gerade kein Skill verfügbar.</div>
       <p><a href="index.html">Zurück zu MPSkills</a></p></div></main>`;
     return;
   }
