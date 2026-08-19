@@ -625,6 +625,13 @@ function showTab(which) {
     const el = document.getElementById(id);
     if (el) el.hidden = (key !== which);
   }
+
+  /* Der Code-Kasten steht unter „Meine Räume" und nur dort: er ist
+     der Weg IN einen fremden Raum, und das ist eine Frage derselben
+     Art wie „wo sind meine". Im Sortiment beantwortet er keine —
+     wer sich ansieht, was es gibt, tippt gerade keinen Code ab. */
+  const join = document.getElementById('joinCard');
+  if (join) join.hidden = (which !== 'rooms');
 }
 
 function roleOf(s) {
@@ -656,6 +663,9 @@ function renderState() {
   // die eigene Raumliste: das ist dort die seltenere der beiden
   // Fragen, „Meine Räume" bleibt der Normalweg. Bewegt statt
   // verdoppelt — derselbe DOM-Knoten behält seine Listener.
+  //
+  // Sichtbar ist er dort nur unter „Meine Räume"; im Reiter „Alle
+  // Skills" nimmt ihn showTab() wieder weg (Begründung dort).
   const join = document.getElementById('joinCard');
   if (join) {
     join.hidden = false;
