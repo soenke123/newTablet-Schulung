@@ -1322,6 +1322,13 @@ body.pv-lock { overflow: hidden; }
 
    Deutlich schmaler als die Skill-Kacheln (320): dort steht ein
    Standbild und ein Absatz Erklärung, hier ein Name. */
+/* Der Abstand nach unten gehört dem Abschnitt selbst, wie beim
+   Code-Kasten darüber: die Überschrift bringt ihre 30 px nach oben
+   mit (.section-h), unter der letzten Kachelreihe stand dagegen
+   nichts — und was danach kam, klebte daran. 30 px, damit der
+   Abstand nach oben und unten derselbe ist. */
+.visited { margin-bottom: 30px; }
+
 .vgrid {
   display: grid;
   gap: 10px;
