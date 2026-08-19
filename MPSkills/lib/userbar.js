@@ -143,14 +143,44 @@
     document.querySelector('[data-ub="toggle"]')?.setAttribute('aria-expanded', 'false');
   }
 
+  /* Ist das hier die Landing? Danach entscheidet sich, wohin das
+     Abmelden führt. Kein Marker im Markup und keine Mount-Option,
+     sondern die Datei selbst: sie ist die einzige Auskunft, die
+     nicht vergessen werden kann, wenn eine vierte Seite dazukommt.
+
+     Im Zweifel lautet die Antwort „ja, Landing": ein Pfad ohne
+     Dateinamen (`/MPSkills/`) ist sie, und einer, den wir nicht
+     erkennen, wird lieber gar nicht verlassen — ein Sprung auf ein
+     relatives index.html landete von dort womöglich in der
+     Schulung, und das ist der schlechtere Fehlgriff als zu
+     bleiben. */
+  function onLanding() {
+    const file = location.pathname.split('/').pop();
+    return !file || file === 'index.html' || !file.includes('.');
+  }
+
   /* Gleicher Ablauf wie auf der Schulungs-Landing: erst die
      Highscores aus dem localStorage retten, dann den Spielstand des
      Geräts räumen, dann abmelden. Wer hier abmeldet, ist danach auch
-     in der Schulung abgemeldet — ein Konto, ein Cookie. */
+     in der Schulung abgemeldet — ein Konto, ein Cookie.
+
+     Danach zurück auf die Landing — überall außer dort, wo man schon
+     ist. Die Landing hat einen Gast-Zustand und zeichnet ihn über
+     session-changed selbst; profil.html und lehrer.html haben keinen,
+     der etwas wert wäre: dort stünde nach dem Abmelden eine Seite,
+     die es ohne Konto nicht gibt, und auf lehrer.html liefe der
+     Poller mit einem Token weiter, das gerade ungültig geworden ist.
+     replace() statt href, damit der Zurück-Knopf nicht in den Raum
+     zurückführt, den man gerade verlassen hat. */
   async function logout() {
     await window.pushLocalHighscoresToServer?.().catch(() => {});
     window.clearLocalGameState?.();
-    await window.supabaseClient?.auth?.signOut();
+    // Der Fehlschlag darf den Rücksprung nicht verhindern: lokal ist
+    // die Anmeldung dann in aller Regel trotzdem weg, und eine
+    // Landing, auf der noch ein Name steht, ist die harmlosere
+    // Auskunft als eine Raumseite, die niemandem mehr gehört.
+    try { await window.supabaseClient?.auth?.signOut(); } catch (e) { /* egal */ }
+    if (!onLanding()) location.replace('index.html');
   }
 
   function mount(options = {}) {
