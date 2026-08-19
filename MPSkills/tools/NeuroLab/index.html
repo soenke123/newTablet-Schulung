@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Neuron-Simulator</title>
-  <link rel="stylesheet" href="style.css?v=20260819b">
+  <link rel="stylesheet" href="style.css?v=20260819c">
 </head>
 <body>
 
@@ -19,8 +19,17 @@
     <button id="btn-print" class="print-btn" title="Druckansicht umschalten">Druck</button>
   </header>
 
+  <!-- Das Feld ist ein Fenster (#network), in dem eine Tafel (#net-stage)
+       verschoben und gezoomt wird. Die Tafel baut app.js bei jedem render()
+       neu; die Lupenknöpfe stehen hier, weil sie zum Fenster gehören und den
+       Neuaufbau überleben müssen. -->
   <main id="network">
-    <!-- Rendered by app.js -->
+    <!-- #net-stage wird von app.js eingehängt -->
+    <div class="net-zoom">
+      <button id="btn-zoom-out" title="Herauszoomen">&minus;</button>
+      <button id="btn-zoom-fit" title="Ganzes Netz zeigen">&#10530;</button>
+      <button id="btn-zoom-in"  title="Heranzoomen">+</button>
+    </div>
   </main>
 
   <div id="popup-overlay" class="hidden">
@@ -31,6 +40,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260819b"></script>
+  <script src="app.js?v=20260819c"></script>
 </body>
 </html>

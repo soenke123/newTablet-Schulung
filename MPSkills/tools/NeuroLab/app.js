@@ -1730,7 +1730,7 @@ function resyncWeights(layerIdx) {
 
 // ── Spacing-drag helpers ──────────────────────────────────────────────────
 function addPointerDrag(el, getVal, setVal, onClick) {
-  let startY, startVal, minVal, didDrag, active = false;
+  let startY, startVal, minVal, maxVal, didDrag, active = false;
   el.addEventListener('pointerdown', e => {
     if (e.target.closest('input, button')) return;
     startY = e.clientY;
@@ -1739,27 +1739,37 @@ function addPointerDrag(el, getVal, setVal, onClick) {
     active = true;
     const colBody = el.closest('.col-body');
     if (colBody) {
-      const bodyTop = colBody.getBoundingClientRect().top;
-      const elTop   = el.getBoundingClientRect().top;
-      // minimum translateY so element's top edge never goes above col-body top
-      minVal = startVal - (elTop - bodyTop);
+      /* Nach oben wie nach unten im Spaltenkörper bleiben: die Spalte
+         schneidet ab, und was hinausgeschoben wird, wäre weg — was oben
+         hinausgeschoben wird, sogar unwiederbringlich. Die Rechtecke sind
+         Bildschirmmaße, der Wert ist ein Layoutmaß, also durch den
+         Maßstab teilen. */
+      const b = colBody.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      const s = view.scale || 1;
+      minVal = startVal - (r.top - b.top) / s;
+      maxVal = startVal + (b.bottom - r.bottom) / s;
+      if (maxVal < minVal) maxVal = minVal;
     } else {
       minVal = -Infinity;
+      maxVal = Infinity;
     }
     el.setPointerCapture(e.pointerId);
   });
   el.addEventListener('pointermove', e => {
     if (!active) return;
-    const delta = e.clientY - startY;
+    // Zwei Finger gehören der Lupe (siehe initNetGestures).
+    if (view.pinching) { active = false; el.style.cursor = ''; return; }
+    const delta = (e.clientY - startY) / (view.scale || 1);
     if (!didDrag && Math.abs(delta) > 8) {
       didDrag = true;
       el.style.cursor = 'grabbing';
     }
     if (didDrag) {
-      const newVal = Math.max(minVal, startVal + delta);
+      const newVal = Math.max(minVal, Math.min(maxVal, startVal + delta));
       setVal(newVal);
       el.style.transform = `translateY(${newVal}px)`;
-      drawEdgeOverlay(document.getElementById('network'));
+      redrawEdges();
     }
   });
   el.addEventListener('pointerup', () => {
@@ -1774,9 +1784,10 @@ function addPointerDrag(el, getVal, setVal, onClick) {
 
 function applyColumnOffsets(offsets) {
   state.colOffsets = offsets;
-  const cols = [...document.querySelectorAll('#network > .col:not(#learn-panel)')];
+  const cols = [...document.querySelectorAll('#net-stage > .col')];
   cols.forEach((col, i) => { col.style.left = `${offsets[i] || 0}px`; });
-  drawEdgeOverlay(document.getElementById('network'));
+  syncStagePad();
+  redrawEdges();
 }
 
 function addColumnDrag(header, colIdx) {
@@ -1791,7 +1802,8 @@ function addColumnDrag(header, colIdx) {
   });
   header.addEventListener('pointermove', e => {
     if (!active) return;
-    const delta = e.clientX - startX;
+    if (view.pinching) { active = false; header.style.cursor = ''; return; }
+    const delta = (e.clientX - startX) / (view.scale || 1);
     if (!didDrag && Math.abs(delta) > 8) { didDrag = true; header.style.cursor = 'grabbing'; }
     if (didDrag) {
       const o = [...startOffsets];
@@ -3057,8 +3069,256 @@ function updateNeuronDisplays() {
       });
     });
   }
-  drawEdgeOverlay(document.getElementById('network'));
+  redrawEdges();
   saveState();
+}
+
+// ── Ansicht: verschieben & zoomen ──────────────────────────────────────────
+/* Die Spalten hatten bis hierher jede ihre eigene Scrollleiste. Das war aus
+   einem Grund falsch, der sich nicht abstellen ließ: die Kanten zwischen den
+   Neuronen liegen als EIN SVG über der ganzen Tafel (drawEdgeOverlay). Scrollt
+   eine Spalte für sich, wandern ihre Neuronen und die Kanten bleiben liegen —
+   die Linien zeigen dann ins Leere. Und weil die Spaltenkörper ihren Inhalt
+   zentrieren, war der Überschuss oben durch Scrollen grundsätzlich nicht
+   erreichbar: die ersten Neuronen einer vollen Schicht flogen schlicht aus
+   dem Bild.
+
+   Beides beantwortet dieselbe Änderung. Die Spalten wachsen jetzt mit ihrem
+   Inhalt (kein overflow mehr, siehe style.css), die Tafel wächst mit den
+   Spalten, und bewegt wird immer nur die Tafel als Ganzes. Damit kann kein
+   Neuron mehr irgendwo herausfallen, und die Kanten stimmen in jedem
+   Maßstab, weil sie mit auf der Tafel liegen und nicht darüber.
+
+   Anfangsmaßstab ist der volle Überblick, und solange niemand selbst an der
+   Lupe war (`touched`), bleibt er es: wer eine Schicht auf zehn Neuronen
+   stellt, sieht danach das ganze Netz und muss nicht suchen, wo es hin ist.
+   Ab dem ersten eigenen Zoom gilt die eigene Wahl — ein Neuaufbau darf
+   niemandem die Lupe aus der Hand schlagen. */
+const MAX_SCALE = 3;
+const view = { scale: 1, x: 0, y: 0, touched: false, pinching: false };
+
+function portEl()  { return document.getElementById('network'); }
+function stageEl() { return document.getElementById('net-stage'); }
+
+function clampScale(s) {
+  return Math.max(fitScale(), Math.min(MAX_SCALE, s));
+}
+
+/* Maßstab, bei dem die ganze Tafel ins Fenster passt — nach oben auf 1
+   gedeckelt: ein einzelnes Neuron soll nicht bildschirmfüllend aufgeblasen
+   werden, nur weil sonst nichts dasteht. */
+function fitScale() {
+  const port = portEl(), stage = stageEl();
+  if (!port || !stage || !stage.offsetWidth || !stage.offsetHeight) return 1;
+  return Math.min(1, port.clientWidth / stage.offsetWidth,
+                     port.clientHeight / stage.offsetHeight);
+}
+
+/* Hält den Ausschnitt im Fenster: ist die Tafel größer, sind ihre Ränder
+   erreichbar und nicht mehr; ist sie kleiner, darf sie frei darin liegen.
+   (Eine kleine Tafel mittig festzunageln fühlt sich beim Schieben wie eine
+   Sperre an.) */
+function clampView() {
+  const port = portEl(), stage = stageEl();
+  if (!port || !stage) return;
+  const w = stage.offsetWidth  * view.scale;
+  const h = stage.offsetHeight * view.scale;
+  const dx = port.clientWidth  - w;
+  const dy = port.clientHeight - h;
+  view.x = Math.max(Math.min(0, dx), Math.min(Math.max(0, dx), view.x));
+  view.y = Math.max(Math.min(0, dy), Math.min(Math.max(0, dy), view.y));
+}
+
+function applyView() {
+  const stage = stageEl();
+  if (!stage) return;
+  view.scale = clampScale(view.scale);
+  clampView();
+  stage.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+}
+
+/* Die Spalten sollen das Fenster ausfüllen — auch dann, wenn die Tafel
+   verkleinert dargestellt wird, weil sie zu BREIT ist. Das CSS gibt ihnen
+   `min-height: 100%`, also genau die Fensterhöhe; wird das Ganze danach auf
+   0,76 heruntergerechnet, bleiben oben und unten graue Bänder stehen und die
+   Karten schweben in der Mitte. Deshalb bekommt die Tafel in dem Fall die
+   Höhe, die nach dem Verkleinern gerade das Fenster ergibt.
+
+   Läuft in einem Durchgang und schaukelt sich nicht auf: der Zuschlag
+   vergrößert nur die leere Streckung, nicht den Inhalt — die Breite bleibt
+   also, und begrenzt die Höhe den Maßstab, ist der Zuschlag null. */
+function syncStageHeight() {
+  const port = portEl(), stage = stageEl();
+  if (!port || !stage) return;
+  stage.style.minHeight = '';                    // zurück auf die 100 % aus dem CSS
+  const s = fitScale();
+  if (s < 1 && port.clientHeight / s > stage.offsetHeight)
+    stage.style.minHeight = `${port.clientHeight / s}px`;
+}
+
+function fitView() {
+  const port = portEl(), stage = stageEl();
+  if (!port || !stage) return;
+  view.scale = fitScale();
+  view.x = (port.clientWidth  - stage.offsetWidth  * view.scale) / 2;
+  view.y = (port.clientHeight - stage.offsetHeight * view.scale) / 2;
+  view.touched = false;
+  applyView();
+}
+
+/* Zoomen um einen festen Punkt: was unter den Fingern (oder dem Zeiger)
+   liegt, bleibt darunter. */
+function zoomAt(cx, cy, k) {
+  const port = portEl();
+  if (!port) return;
+  const r = port.getBoundingClientRect();
+  const s = clampScale(view.scale * k);
+  const f = s / view.scale;
+  view.x = (cx - r.left) - f * ((cx - r.left) - view.x);
+  view.y = (cy - r.top)  - f * ((cy - r.top)  - view.y);
+  view.scale = s;
+  view.touched = true;
+  applyView();
+}
+
+function zoomBy(k) {
+  const port = portEl();
+  if (!port) return;
+  const r = port.getBoundingClientRect();
+  zoomAt(r.left + r.width / 2, r.top + r.height / 2, k);
+}
+
+/* Worauf ein einzelner Finger das Feld verschieben darf: überall dort, wo er
+   sonst nichts zu tun hätte. Neuronen, Spaltenköpfe und alles Bedienbare
+   behalten ihre eigene Geste. */
+function isFieldBackground(t) {
+  return !t.closest('.col-header, .neuron-card, .input-node-row, ' +
+                    '.data-table-col, #learn-group, .net-zoom, ' +
+                    'button, input, select, textarea, a');
+}
+
+function initNetGestures() {
+  const port = portEl();
+  /* In der Auslage steht das Bild still (siehe DEMO): dort läuft ein
+     Drehbuch, und ein verschobener Ausschnitt wäre nur im Weg. */
+  if (!port || DEMO) return;
+
+  const ptrs = new Map();
+  let pinch = null, pan = null;
+
+  /* ⚠️ ALLE Zeiger-Listener hier hängen in der CAPTURE-Phase, und zwar aus
+     einem Grund, der beim Bauen zwei Anläufe gekostet hat: im Neuron sitzen
+     Schaltflächen, die ihr pointerdown mit stopPropagation() abfangen (der
+     OUT-Umschalter, die Eingabefelder). Beim Hochlaufen käme das Ereignis
+     hier also nie an — und dann ließe sich das Feld überall aufziehen, nur
+     nicht dort, wo gerade ein Neuron steht. Zwei Finger auf dem Bildschirm
+     bedeuten immer dasselbe, egal worauf sie liegen; deshalb wird die Geste
+     auf dem Weg NACH UNTEN mitgelesen. Genommen wird dabei nichts: ein
+     einzelner Finger startet nur auf freier Fläche (isFieldBackground), und
+     weitergereicht wird das Ereignis in jedem Fall. */
+  const cap = { capture: true };
+
+  port.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    /* Das Lernpanel liegt über dem Feld, gehört aber nicht dazu: dort wird
+       gescrollt und geregelt, nicht gezoomt. */
+    if (e.target.closest('#learn-group')) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (ptrs.size === 2) {
+      /* Zwei Finger übernehmen, ganz gleich worauf der erste lag — sonst
+         müsste man erst eine leere Stelle suchen, um zoomen zu können.
+         Ein angefangenes Ziehen an einem Neuron gibt dafür auf; sein Wert
+         steht schon im state, gesichert wird er hier. */
+      const [a, b] = [...ptrs.values()];
+      pinch = {
+        dist: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+        mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2,
+        scale: view.scale, x: view.x, y: view.y,
+      };
+      pan = null;
+      if (!view.pinching) { view.pinching = true; saveState(); }
+      return;
+    }
+
+    if (ptrs.size === 1 && isFieldBackground(e.target)) {
+      pan = { id: e.pointerId, x: e.clientX, y: e.clientY, vx: view.x, vy: view.y };
+      port.setPointerCapture(e.pointerId);
+      port.style.cursor = 'grabbing';
+    }
+  }, cap);
+
+  port.addEventListener('pointermove', e => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pinch && ptrs.size >= 2) {
+      const [a, b] = [...ptrs.values()];
+      const r  = port.getBoundingClientRect();
+      const s  = clampScale(pinch.scale * (Math.hypot(a.x - b.x, a.y - b.y) / pinch.dist));
+      const f  = s / pinch.scale;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      // Der Punkt zwischen den Fingern bleibt zwischen den Fingern —
+      // dieselbe Geste schiebt und zoomt.
+      view.scale = s;
+      view.x = (mx - r.left) - f * ((pinch.mx - r.left) - pinch.x);
+      view.y = (my - r.top)  - f * ((pinch.my - r.top)  - pinch.y);
+      view.touched = true;
+      applyView();
+      return;
+    }
+
+    if (pan && pan.id === e.pointerId) {
+      view.x = pan.vx + (e.clientX - pan.x);
+      view.y = pan.vy + (e.clientY - pan.y);
+      view.touched = true;
+      applyView();
+    }
+  }, cap);
+
+  const end = e => {
+    ptrs.delete(e.pointerId);
+    if (ptrs.size < 2) pinch = null;
+    /* Erst wenn ALLE Finger weg sind: sonst nähme der letzte verbliebene
+       Finger sofort wieder das Neuron mit, an dem der Zoom begonnen hat. */
+    if (ptrs.size === 0) view.pinching = false;
+    if (pan && pan.id === e.pointerId) { pan = null; port.style.cursor = ''; }
+  };
+  port.addEventListener('pointerup', end, cap);
+  port.addEventListener('pointercancel', end, cap);
+
+  port.addEventListener('wheel', e => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.002));
+      return;
+    }
+    /* Ohne Zusatztaste schiebt das Rad — aber nur, wenn es etwas zu schieben
+       gibt. Passt die Tafel ganz ins Fenster, bleibt das Ereignis liegen
+       statt ein Bild zu bewegen, das vollständig dasteht. */
+    const stage = stageEl();
+    if (!stage) return;
+    const over = stage.offsetWidth  * view.scale > port.clientWidth  + 1
+              || stage.offsetHeight * view.scale > port.clientHeight + 1;
+    if (!over) return;
+    e.preventDefault();
+    view.x -= e.deltaX;
+    view.y -= e.deltaY;
+    view.touched = true;
+    applyView();
+  }, { passive: false, capture: true });
+
+  /* Vorsichtig verdrahtet: die Knöpfe stehen im HTML, das Skript kommt aus
+     derselben Auslieferung — aber ein Gerät kann die Seite aus dem Cache und
+     das Skript neu haben. Fehlt einer, sollen deshalb nicht die Gesten
+     mitsterben; sie sind die eigentliche Bedienung, die Knöpfe die Beigabe. */
+  const bind = (id, fn) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', fn);
+  };
+  bind('btn-zoom-in',  () => zoomBy(1.25));
+  bind('btn-zoom-out', () => zoomBy(1 / 1.25));
+  bind('btn-zoom-fit', fitView);
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────
@@ -3152,22 +3412,52 @@ function renderDataTableCol() {
 
 function renderNetwork() {
   const net = document.getElementById('network');
-  net.innerHTML = '';
+  /* Nur Tafel und Lernpanel neu bauen — die Lupenknöpfe stehen fest im
+     HTML und gehören zum Fenster, nicht zum Inhalt. */
+  net.querySelectorAll('#net-stage, #learn-group').forEach(el => el.remove());
+
+  const stage = document.createElement('div');
+  stage.id = 'net-stage';
+  net.appendChild(stage);
+
   const inputCol = renderInputsCol();
   inputCol.style.left = '0px';
-  net.appendChild(inputCol);
+  stage.appendChild(inputCol);
   for (let i = 0; i < 4; i++) {
     const layerCol = renderLayerCol(i);
     layerCol.style.left = `${state.colOffsets[i + 1] || 0}px`;
-    net.appendChild(layerCol);
+    stage.appendChild(layerCol);
   }
-  drawEdgeOverlay(net);
   if (state.phase === 'learn' && state.learn.scenario) {
     const dataCol = renderDataTableCol();
     dataCol.style.left = `${state.colOffsets[5] || 0}px`;
-    net.appendChild(dataCol);
+    stage.appendChild(dataCol);
   }
+
+  /* Reihenfolge: erst die Tafel vermessen und einpassen, dann die Kanten
+     zeichnen — drawEdgeOverlay rechnet Bildschirm- in Tafelkoordinaten um
+     und braucht dafür den geltenden Maßstab. */
+  syncStagePad();
+  /* Die Spaltenhöhe hängt am Überblick und NICHT am gerade eingestellten
+     Zoom: sonst wüchse und schrumpfte die Karte unter den Neuronen bei
+     jedem Lupenschritt. */
+  syncStageHeight();
+  if (view.touched) applyView(); else fitView();
+  drawEdgeOverlay(stage);
+
+  /* Das Lernpanel ans FENSTER, nicht an die Tafel: es ist ein Bedienfeld
+     und soll weder mitzoomen noch mitwandern. */
   if (state.phase === 'learn') net.appendChild(renderLearnGroup());
+}
+
+/* Die Spalten lassen sich am Kopf nach rechts ziehen (col.style.left).
+   Relative Positionierung vergrößert die Tafel nicht — ohne diesen Zuschlag
+   ließe sich eine weit gezogene Spalte weder heranholen noch überblicken. */
+function syncStagePad() {
+  const stage = stageEl();
+  if (!stage) return;
+  const max = Math.max(0, ...(state.colOffsets || []).map(v => v || 0));
+  stage.style.paddingRight = `${12 + max}px`;
 }
 
 // ── Inputs column ──────────────────────────────────────────────────────────
@@ -3638,15 +3928,26 @@ const VB_MID_Y = 58;   // NB_CY — vertical center of neuron body
 const VB_W_REF = 268;  // viewBox width
 const VB_H_REF = 160;  // viewBox height
 
+/* `net` ist die TAFEL (#net-stage), nicht das Fenster: die Kanten liegen mit
+   auf ihr und werden von ihrem transform mitgezoomt und mitgeschoben. Genau
+   deshalb müssen sie beim Verschieben und Zoomen nicht neu gezeichnet werden
+   — und deshalb können sie nicht mehr von ihren Neuronen abreißen.
+
+   Gemessen wird trotzdem in Bildschirmkoordinaten (getBoundingClientRect ist
+   die einzige Angabe, die durch alle Verschachtelungen hindurch stimmt);
+   umgerechnet wird über die Ecke der Tafel und den geltenden Maßstab. Die
+   Tafel hat transform-origin 0 0, ihre linke obere Ecke ist also der
+   Nullpunkt. */
 function drawEdgeOverlay(net) {
+  if (!net) return;
   const old = net.querySelector('.edge-overlay');
   if (old) old.remove();
 
   const netRect = net.getBoundingClientRect();
-  const sl = net.scrollLeft, st = net.scrollTop;
+  const s = view.scale || 1;
 
   function toNet(vx, vy) {
-    return { x: vx - netRect.left + sl, y: vy - netRect.top + st };
+    return { x: (vx - netRect.left) / s, y: (vy - netRect.top) / s };
   }
 
   // Map a viewBox coordinate on a neuron-svg element to net-space coords
@@ -3660,8 +3961,9 @@ function drawEdgeOverlay(net) {
   const overlaySvg = svgEl('svg', {
     class: 'edge-overlay',
     style: 'position:absolute;top:0;left:0;pointer-events:none',
-    width: net.scrollWidth,
-    height: net.scrollHeight,
+    // Maße der ungedrehten, ungezoomten Tafel (offset*, nicht getBounding*)
+    width: net.offsetWidth,
+    height: net.offsetHeight,
   });
 
   const inputAnchors = (state.phase === 'run' || state.phase === 'learn')
@@ -3736,6 +4038,10 @@ function drawEdgeOverlay(net) {
 
   net.insertBefore(overlaySvg, net.firstChild);
 }
+
+// Die Kanten hängen an der Tafel — ein Aufrufer soll nicht wissen müssen,
+// welches Element das gerade ist.
+function redrawEdges() { drawEdgeOverlay(stageEl()); }
 
 // ── Combined popup ─────────────────────────────────────────────────────────
 let popupDirty = false;
@@ -4202,5 +4508,6 @@ function demoState() {
 // ── Init ───────────────────────────────────────────────────────────────────
 if (DEMO) demoState();
 else if (!loadState()) resetState();
+initNetGestures();
 render();
 window.addEventListener('resize', render);

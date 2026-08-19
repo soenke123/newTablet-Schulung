@@ -133,10 +133,16 @@
          sich NeuroLab nichts und startet an einem vorbereiteten Netz
          (siehe app.js, DEMO). Was in der Auslage passiert, bleibt in
          der Auslage. */
-      const demo = ctx && ctx.preview ? '?demo=1' : '';
+      /* Der Stempel gehört an die Rahmen-URL und nicht nur an die Dateien
+         darin: index.html selbst zieht sich sonst aus dem Cache, und ein
+         Gerät, das NeuroLab schon einmal geladen hat, bekäme eine alte
+         Seite mit neuem Skript — genau der Fall, in dem ein Knopf im
+         Markup fehlt, den das Skript sucht. Dieselbe Überlegung wie beim
+         ?v= an tool.css/tool.js in lib/tool.js. */
+      const q = (ctx && ctx.preview ? '?demo=1&' : '?') + 'v=20260819c';
       root.innerHTML =
         '<div class="nl-host">' +
-          '<iframe class="nl-frame" src="tools/NeuroLab/index.html' + demo + '" ' +
+          '<iframe class="nl-frame" src="tools/NeuroLab/index.html' + q + '" ' +
                   'title="NeuroLab" loading="eager"></iframe>' +
         '</div>';
 

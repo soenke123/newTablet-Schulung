@@ -113,16 +113,70 @@ body.learn-phase .phase-btn.active {
 }
 
 
-/* ── Network layout ── */
+/* ── Network layout ─────────────────────────────────────────────────────────
+   Zwei Schichten mit je einer Aufgabe:
+
+     #network    das FENSTER — feste Höhe, schneidet ab, fängt die Finger
+     #net-stage  die TAFEL   — trägt translate()+scale(), sonst nichts
+
+   Warum nicht scrollen: die Kanten zwischen den Neuronen liegen als ein
+   einziges SVG über der ganzen Tafel. Scrollt eine einzelne Spalte, wandern
+   ihre Neuronen, die Kanten aber nicht — die Linien zeigen dann ins Leere.
+   Deshalb hat KEINE Spalte mehr eine eigene Scrollleiste; bewegt wird immer
+   das ganze Feld, und dann bewegt sich alles gemeinsam. */
 main#network {
-  display: flex;
   flex: 1;
   min-height: 0;
+  position: relative;
+  overflow: hidden;
+  /* Zwei Finger gehören uns (Zoom), nicht dem Browser. Die Seite selbst
+     scrollt ohnehin nicht — body steht auf overflow:hidden. */
+  touch-action: none;
+}
+
+#net-stage {
+  position: relative;
+  display: flex;
   gap: 10px;
   padding: 12px;
-  overflow-x: auto;
-  position: relative;
+  width: max-content;
+  min-width: 100%;
+  min-height: 100%;
+  transform-origin: 0 0;
+  will-change: transform;
 }
+
+/* ── Lupenknöpfe ──
+   Sie hängen am Fenster und nicht an der Tafel: sie bedienen die Ansicht
+   und dürfen nicht mitwandern, wenn die Ansicht wandert. */
+.net-zoom {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 4px;
+  z-index: 40;
+}
+.net-zoom button {
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: rgba(255,255,255,.92);
+  color: #475569;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.net-zoom button:hover { background: #f1f5f9; border-color: #94a3b8; color: #1e293b; }
+body.print-mode .net-zoom { display: none; }
 
 /* ── Columns ── */
 .col {
@@ -223,11 +277,16 @@ main#network {
   color: #374151;
 }
 
-/* ── Column body ── */
+/* ── Column body ──
+   KEIN overflow und KEIN min-height:0 — beides zusammen war die Ursache
+   dafür, dass Neuronen oben aus dem Bild flogen: bei zentriertem Inhalt
+   verteilt sich der Überschuss auf beide Seiten, und der obere Teil ist
+   durch Scrollen grundsätzlich nicht erreichbar. Jetzt wächst die Spalte
+   stattdessen mit ihrem Inhalt, die Tafel wächst mit der Spalte, und die
+   Ansicht zoomt darauf. Damit steht jedes Neuron immer unter seinem
+   Spaltentitel. */
 .col-body {
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -364,6 +423,11 @@ main#network {
 /* ── Edge overlay ── */
 .edge-overlay {
   z-index: 2;
+  /* Ein <svg> schneidet seinen Inhalt von sich aus am viewport ab. Eine
+     nach rechts gezogene Spalte (col.style.left) vergrößert die Tafel
+     nicht, ihre Kanten lägen dann außerhalb — sichtbar bleiben sollen
+     sie trotzdem. */
+  overflow: visible;
 }
 
 /* ── SVG element styles ── */
@@ -702,12 +766,19 @@ body.print-mode .random-btn {
 }
 
 /* ── Learn group (draggable container) ── */
+/* Das Lernpanel steht am FENSTER und nicht auf der Tafel: es ist ein
+   Bedienfeld wie die Kopfzeile, und beim Herauszoomen wären seine Knöpfe
+   nicht mehr zu treffen. Deshalb hängt es in #network und nicht in
+   #net-stage — ein position:fixed innerhalb eines transform()-Elements
+   wäre nicht mehr am Bildschirm, sondern an der Tafel festgemacht. */
 #learn-group {
   position: fixed;
   display: flex;
   align-items: flex-start;
   gap: 6px;
   z-index: 50;
+  /* Die Tafel hat touch-action:none; die Panels darin scrollen aber. */
+  touch-action: pan-y;
 }
 
 /* ── Learn info panel ── */
@@ -824,7 +895,11 @@ body.print-mode .random-btn {
 }
 
 /* ── Learn panel ── */
+/* touch-action gehört an den Kasten, der wirklich scrollt: geprüft wird die
+   Kette vom Finger bis zum scrollenden Element, das touch-action:none des
+   Fensters darüber steht nicht darin. */
 #learn-panel {
+  touch-action: pan-y;
   width: 300px;
   background: #fff;
   border-radius: 14px;
@@ -1149,10 +1224,21 @@ body.print-mode .random-btn {
   flex-shrink: 0;
 }
 
+/* Die EINZIGE Spalte, die ihre Scrollleiste behält — und aus dem Grund,
+   aus dem alle anderen sie verloren haben, nämlich der Kanten wegen: an
+   der Tabelle hängt keine. Sie muss sie sogar behalten, denn hier hängen
+   keine zehn Neuronen, sondern womöglich 1500 Datenzeilen; ohne Deckel
+   zöge eine hochgeladene CSV die ganze Tafel meterhoch und der Überblick
+   zeigte ein Netz von der Größe einer Briefmarke.
+
+   Deckel in vh, also gemessen am Rahmen, in dem NeuroLab steckt. */
 .data-table-col .col-body {
   justify-content: flex-start;
   align-items: stretch;
   padding: 0;
+  overflow-y: auto;
+  max-height: calc(100vh - 130px);
+  touch-action: pan-y;
 }
 
 .data-table-col .col-header {
@@ -1212,19 +1298,14 @@ body.print-mode .random-btn {
    Schaufenster-Modus (?demo=1, siehe DEMO in app.js)
    ══════════════════════════════════════════════════════════════
    Eine Vorschau ist ein Bild und kein Arbeitsplatz: es gibt nichts
-   zu suchen, was gerade nicht zu sehen ist. Rollbalken laden dazu
-   ein, an einem Ausschnitt zu ziehen, der von selbst weiterläuft —
-   und sie fressen im Rahmen an allen vier Seiten Fläche.
+   zu suchen, was gerade nicht zu sehen ist, und niemand soll an
+   einem Ausschnitt ziehen, der von selbst weiterläuft.
 
-   Deshalb steht das Feld hier fest. Geklemmt wird nichts: das
-   Overlay der Auslage gibt dem Rahmen genug Höhe (siehe
-   .overlay--wide in MPSkills/style.css), die Spalten passen. Das
-   hidden ist der Riegel für den Fall, dass jemand das Fenster sehr
-   klein zieht — dann fehlt lieber ein Rand als dass die Vorschau
-   zum Schiebepuzzle wird.
-
-   Gilt AUSSCHLIESSLICH für die Auslage. Im Raum bleibt alles
-   scrollbar: dort baut jemand ein Netz, das größer sein darf als
-   der Bildschirm. */
-body.demo-mode main#network { overflow: hidden; }
-body.demo-mode .col-body    { overflow: hidden; }
+   Seit das Feld ein Fenster mit Tafel ist, schneidet es ohnehin ab
+   und passt sich beim Öffnen von selbst ein (fitView) — das
+   Herumschieben nimmt ihm hier lib/preview.js ab, indem es die
+   Lupenknöpfe ausblendet und die Gesten abschaltet (DEMO in
+   app.js). Bleibt der Deckel für die Datentabelle: in der Auslage
+   sind es vier XOR-Zeilen, die vollständig dastehen sollen. */
+body.demo-mode .net-zoom { display: none; }
+body.demo-mode .data-table-col .col-body { overflow: hidden; max-height: none; }
