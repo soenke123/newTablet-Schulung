@@ -503,7 +503,10 @@ async function loadTools() {
   try {
     const res = await fetch(
       `${window.SUPABASE_URL}/rest/v1/skill_tools`
-      + '?select=id,title,blurb,icon,multi_room,active,sort_order'
+      // folder mit dazu: das Schaufenster lädt das Werkzeug über
+      // MPTool.load(id, folder), und der Ordner darf sich von der
+      // ID unterscheiden (0078) — genau dafür gibt es die Spalte.
+      + '?select=id,title,blurb,icon,folder,multi_room,active,sort_order'
       + '&order=sort_order.asc',
       {
         headers: {
@@ -528,6 +531,20 @@ function isReady(toolId) {
   return !!(window.TOOLS_OVERLAY?.[toolId]?.ready);
 }
 
+/* Eine Kachel sagt, wie ein Skill heißt und wozu er da ist — was
+   dabei an der Wand entsteht, sagt sie nicht. Genau das ist aber
+   die Frage von jemandem, der überlegt, ob er damit eine Stunde
+   macht. Also steht darüber ein Standbild, und dahinter liegt die
+   ganze Kachel als Knopf, der die laufende Vorschau öffnet.
+
+   Nur für Skills, für die ein Drehbuch ausgeliefert ist
+   (preview/<id>.js). Ein „in Vorbereitung" hat noch nichts zu
+   zeigen, und ein Knopf, hinter dem ein leerer Kasten aufgeht,
+   ist schlechter als keiner. */
+function previewOf(t) {
+  return (isReady(t.id) && window.MPPreview?.has(t.id)) ? window.MPPreview : null;
+}
+
 function toolCard(t) {
   const ready = isReady(t.id);
   const badges = [
@@ -540,7 +557,16 @@ function toolCard(t) {
   // in eine Fehlermeldung.
   const off = t.active ? '' : ' disabled title="Dieser Skill ist abgeschaltet."';
 
-  return `<article class="tile${ready ? '' : ' tile--soon'}">
+  const pv    = previewOf(t);
+  const still = pv ? pv.tileHTML(t.id) : '';
+  const peek  = pv
+    ? `<button type="button" class="tile-peek" data-act="peek" data-tool="${esc(t.id)}"
+               aria-label="${esc(t.title)} in Aktion ansehen"></button>`
+    : '';
+
+  return `<article class="tile${ready ? '' : ' tile--soon'}${pv ? ' tile--peek' : ''}">
+      ${peek}
+      ${still}
       <div class="tile-head">
         <span class="tile-ic">${esc(t.icon || '🧩')}</span>
         <h3>${esc(t.title)}</h3>
@@ -564,13 +590,32 @@ function toolCard(t) {
    und dabei einen unsichtbaren Sonderraum anlegt, beantwortete keine
    Frage mehr. Serverseitig bleibt is_test bestehen (0079); es wird
    von hier nur nicht mehr angefordert. */
+const newRoomHref = id => 'lehrer.html?new=' + encodeURIComponent(id);
+
 function wireToolButtons() {
   document.querySelectorAll('#paneTools button[data-act="open"]').forEach(btn => {
+    btn.addEventListener('click', () => { location.href = newRoomHref(btn.dataset.tool); });
+  });
+
+  // Die Kachel selbst öffnet das Schaufenster. Der Titel kommt aus
+  // der Registry und nicht aus dem Drehbuch: wie ein Skill heißt,
+  // entscheidet die Datenbank (0078), nicht das ausgelieferte
+  // Frontend.
+  document.querySelectorAll('#paneTools button[data-act="peek"]').forEach(btn => {
     btn.addEventListener('click', () => {
-      location.href = 'lehrer.html?new=' + encodeURIComponent(btn.dataset.tool);
+      const t = (toolsCache || []).find(x => x.id === btn.dataset.tool);
+      if (t) window.MPPreview?.open({ id: t.id, title: t.title, folder: t.folder });
     });
   });
 }
+
+/* Der Knopf im Schaufenster führt dorthin, wo auch der auf der
+   Kachel hinführt. Delegiert, weil das Modal fest im HTML steht
+   und beim Öffnen nur gefüllt wird. */
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('#pvOpen');
+  if (b && b.dataset.tool) location.href = newRoomHref(b.dataset.tool);
+});
 
 async function renderTools() {
   const host = document.getElementById('paneTools');

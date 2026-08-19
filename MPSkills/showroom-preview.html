@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MPSkills — Schaufenster ansehen</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=20260819i" />
+<script src="lib/theme.js?v=20260819d"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     Schaufenster ohne Anmeldung
+     ══════════════════════════════════════════════════════════════
+     Dieselbe Bauart wie showroom.html und showroom-darkmode.html:
+     eine Seite, um eine Entscheidung anzusehen, statt sie zu
+     beschreiben.
+
+     Der Unterschied zur Landing ist genau EINE Zeile — die
+     Registry kommt hier aus einer Konstanten statt aus
+     skill_tools. Alles andere (style.css, lib/preview.js,
+     preview/wordcloud.js, MPTool, das Werkzeug selbst) ist
+     dasselbe. Wer hier etwas sieht, sieht es auf der Landing
+     genauso.
+
+     Da bleibt es auch: eine Vorschau, für die man sich erst
+     anmelden und eine Lehrkraft-Rolle beantragen muss, kann man
+     beim Bauen nicht ansehen — und genau dann will man sie
+     ansehen.
+     ══════════════════════════════════════════════════════════════ -->
+
+<header class="topbar">
+  <a class="wordmark" href="index.html"><span class="wordmark-text">MP<span>Skills</span></span></a>
+  <div class="topbar-spacer"></div>
+  <div data-theme-switch="bar"></div>
+</header>
+
+<main class="wrap">
+  <h1 style="margin:0 0 6px;font-size:1.5rem;">Schaufenster</h1>
+  <p style="margin:0 0 26px;color:var(--ink-soft);font-size:.95rem;">
+    Die Kachel wie im Reiter „Alle Skills“. Mit der Maus darüberfahren zeigt die
+    Bewegung im Kleinen, ein Klick öffnet die laufende Vorschau. Der Umschalter
+    oben rechts prüft beide Kleider.
+  </p>
+  <div id="paneTools"></div>
+</main>
+
+<!-- Muss das LETZTE Element im Fluss sein, sonst zieht die Wolke
+     die Höhe der nachfolgenden Geschwister von ihrer eigenen ab.
+     Begründung ausführlich in index.html. -->
+<div class="overlay overlay--preview" id="previewModal" hidden>
+  <div class="pv-modal" role="dialog" aria-modal="true" aria-labelledby="pvTitle">
+    <button type="button" class="modal-close" data-close="previewModal" aria-label="Schließen">×</button>
+
+    <div class="pv-head">
+      <h2 id="pvTitle"></h2>
+      <span class="pv-live">Vorschau</span>
+    </div>
+
+    <p class="pv-busy" id="pvBusy" hidden>Vorschau wird geladen …</p>
+    <div class="pv-host" id="pvHost"></div>
+
+    <div class="pv-foot">
+      <p class="pv-cap" id="pvCaption" aria-live="polite"></p>
+      <button type="button" class="btn btn--sm" id="pvPlay" aria-pressed="true">❙❙ Pause</button>
+      <button type="button" class="btn btn--sm btn--primary" id="pvOpen">+ Raum eröffnen</button>
+    </div>
+
+    <div class="pv-blurb" id="pvBlurb"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="lib/preview.js?v=20260819"></script>
+<script src="preview/wordcloud.js?v=20260819"></script>
+<script>
+/* Der Ersatz für app.js: die Registry als Konstante und die zwei
+   Klicks, die die Kachel kennt. Bewusst keine Kopie von toolCard —
+   die Kachel soll hier dieselbe sein wie dort, also steht das
+   Markup nur einmal, und wenn es dort umgebaut wird, fällt der
+   Unterschied hier auf. */
+const TOOLS = [
+  { id: 'wordcloud', title: 'WordPool', folder: 'wordcloud', icon: '💬',
+    blurb: 'Eine Frage, viele Antworten — was Zustimmung bekommt, wächst.' }
+];
+
+// Minimaler Toast, damit die Rückmeldungen des Werkzeugs
+// („Hängt an der Wand!") auch hier ankommen.
+window.toast = (msg, kind) => {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (kind === 'err' ? ' err' : '');
+  clearTimeout(window.__tt);
+  window.__tt = setTimeout(() => { t.className = 'toast'; }, 2600);
+};
+
+document.getElementById('paneTools').innerHTML =
+  '<div class="tile-grid">' + TOOLS.map(t => `
+    <article class="tile tile--peek">
+      <button type="button" class="tile-peek" data-tool="${t.id}"
+              aria-label="${t.title} in Aktion ansehen"></button>
+      ${window.MPPreview.tileHTML(t.id)}
+      <div class="tile-head"><span class="tile-ic">${t.icon}</span><h3>${t.title}</h3></div>
+      <p class="tile-blurb">${t.blurb}</p>
+      <div class="tile-foot">
+        <button type="button" class="btn btn--sm btn--primary">+ Raum öffnen</button>
+      </div>
+    </article>`).join('') + '</div>';
+
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('.tile-peek');
+  if (!b) return;
+  const t = TOOLS.find(x => x.id === b.dataset.tool);
+  if (t) window.MPPreview.open(t);
+});
+</script>
+</body>
+</html>

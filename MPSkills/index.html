@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260819h" />
+<link rel="stylesheet" href="style.css?v=20260819i" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -310,6 +310,40 @@
   </div>
 </div>
 
+<!-- ─── Schaufenster ────────────────────────────────────────
+     Darin läuft das ECHTE Werkzeug mit erfundenen Daten (siehe
+     lib/preview.js) — kein Video, kein Screenshot. Ein Bild
+     könnte keinen Darkmode, veraltete still und verschwiege
+     ausgerechnet das, was die Wolke ausmacht: die Bewegung.
+
+     ⚠️ Dieses Overlay steht ALS LETZTES im <body>, und das ist
+     keine Kosmetik. Das Werkzeug misst mit spaceBelow(), was
+     unter seiner Tafel noch zur Seite gehört, indem es die
+     nachfolgenden Geschwister aufsummiert. Stünde das Overlay
+     vor der Kopfzeile oder dem Fuß, zöge die Wolke deren Höhe
+     von ihrer eigenen ab und säße als Streifen im Kasten. -->
+<div class="overlay overlay--preview" id="previewModal" hidden>
+  <div class="pv-modal" role="dialog" aria-modal="true" aria-labelledby="pvTitle">
+    <button type="button" class="modal-close" data-close="previewModal" aria-label="Schließen">×</button>
+
+    <div class="pv-head">
+      <h2 id="pvTitle"></h2>
+      <span class="pv-live">Vorschau</span>
+    </div>
+
+    <p class="pv-busy" id="pvBusy" hidden>Vorschau wird geladen …</p>
+    <div class="pv-host" id="pvHost"></div>
+
+    <div class="pv-foot">
+      <p class="pv-cap" id="pvCaption" aria-live="polite"></p>
+      <button type="button" class="btn btn--sm" id="pvPlay" aria-pressed="true">❙❙ Pause</button>
+      <button type="button" class="btn btn--sm btn--primary" id="pvOpen">+ Raum eröffnen</button>
+    </div>
+
+    <div class="pv-blurb" id="pvBlurb"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -324,6 +358,12 @@
      er ohne Dialog einen Testraum anlegte. Das Anlegen fragt jetzt
      ausnahmslos auf der Raumseite. -->
 <script src="tools.js?v=20260818"></script>
-<script src="app.js?v=20260819b"></script>
+<!-- Das Schaufenster. lib/preview.js ist der Regisseur, preview/*.js
+     das Drehbuch je Skill; das Werkzeug selbst (137 KB) kommt erst,
+     wenn jemand eine Kachel öffnet — und mit ihm lib/tool.js. Wer
+     nur die Liste anschaut, lädt nichts davon. -->
+<script src="lib/preview.js?v=20260819"></script>
+<script src="preview/wordcloud.js?v=20260819"></script>
+<script src="app.js?v=20260819c"></script>
 </body>
 </html>
