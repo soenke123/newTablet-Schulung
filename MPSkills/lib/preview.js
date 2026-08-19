@@ -213,7 +213,30 @@
       return alive();
     }
 
-    const q = sel => (alive() ? cur.host.querySelector(sel) : null);
+    /* Ein Skill kann in einem <iframe> stecken statt im Wirt selbst —
+       NeuroLab tut das, weil es eine gewachsene eigene Seite ist
+       (Begründung in tools/NeuroLab/tool.js). Für das Drehbuch soll
+       das kein Unterschied sein: es sagt weiter `#btn-run`, und hier
+       steht, wo gesucht wird.
+
+       Erst im Wirt, dann im Rahmen — nie umgekehrt: was das Werkzeug
+       selbst gebaut hat, gehört ihm, und ein Rahmen darf es nicht
+       überstimmen.
+
+       Nur bei gleichem Ursprung. Fremde Rahmen gibt es hier nicht
+       (alles liegt im selben Deployment), aber der try/catch steht
+       da, damit ein künftiger doch nicht die ganze Vorstellung mit
+       einer Ausnahme beendet — er ist dann eben nicht erreichbar. */
+    function frameDoc() {
+      if (!alive()) return null;
+      const f = cur.host.querySelector('iframe');
+      try { return (f && f.contentDocument) || null; } catch (e) { return null; }
+    }
+
+    const q = sel => {
+      if (!alive()) return null;
+      return cur.host.querySelector(sel) || frameDoc()?.querySelector(sel) || null;
+    };
 
     function fire(el, type) {
       el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));
@@ -222,6 +245,20 @@
     return {
       alive,
       async wait(ms) { await wait(ms); return gate(); },
+
+      /* Warten, bis etwas da ist. Braucht, wer auf einen Rahmen
+         zielt: der lädt eine eigene Seite, und bis die steht, gibt es
+         nichts zu klicken. Ein Drehbuch, das stattdessen blind eine
+         feste Zeit abwartet, ist auf einem langsamen Gerät zu früh
+         und auf jedem anderen zu langsam. */
+      async waitFor(sel, ms) {
+        const until = Date.now() + (ms || 4000);
+        while (alive() && Date.now() < until) {
+          if (q(sel)) return gate();
+          if (!await this.wait(120)) return false;
+        }
+        return false;
+      },
 
       click(sel) {
         const el = q(sel);
@@ -278,21 +315,30 @@
     /* Endlos, bis geschlossen wird. Zwischen zwei Durchgängen
        blendet die Bühne kurz ab: das Zurücksetzen entfernt drei
        Karten auf einmal, und das sieht mitten in der Bewegung nach
-       Fehler aus statt nach Anfang. */
+       Fehler aus statt nach Anfang.
+
+       `fade: false` schaltet das ab — für Skills, die ihren Stand
+       nicht aus der view beziehen und ihn deshalb im Drehbuch selbst
+       zurückstellen (NeuroLab). Dort verschwindet nichts auf einmal,
+       und eine Blende ohne Anlass sieht aus wie ein Aussetzer. */
+    const fade = show.fade !== false;
+
     while (api.alive()) {
       try {
         await show.play(api);
         if (!api.alive()) return;
 
         const host = cur.host;
-        host.classList.add('pv-fade');
-        await api.wait(260);
-        if (!api.alive()) return;
+        if (fade) {
+          host.classList.add('pv-fade');
+          await api.wait(260);
+          if (!api.alive()) return;
+        }
 
         cur.view = show.view();
         cur.tool.update(cur.view);
         host.classList.remove('pv-fade');
-        await api.wait(240);
+        await api.wait(fade ? 240 : 400);
       } catch (e) {
         // Eine Vorschau, die sich verschluckt, wird still zur
         // Standanzeige — der Kasten bleibt, was darin liegt, ist
@@ -318,7 +364,7 @@
     if (window.MPTool) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'lib/tool.js?v=20260819b';
+      s.src = 'lib/tool.js?v=20260819c';
       s.onload  = () => window.MPTool ? resolve() : reject(new Error('MPTool fehlt'));
       s.onerror = () => reject(new Error('lib/tool.js nicht gefunden'));
       document.head.appendChild(s);
@@ -343,6 +389,13 @@
 
     document.getElementById('pvTitle').textContent = meta.title || '';
     document.getElementById('pvBlurb').innerHTML   = show.blurb || '';
+
+    /* Ein Werkzeug füllt den Kasten, eine ganze Anwendung braucht mehr
+       (NeuroLab: Kopfleiste, fünf Spalten). Die Breite steht deshalb am
+       Drehbuch und nicht als Regel im Stylesheet — sie hängt daran, was
+       gezeigt wird. Immer gesetzt, nie nur hinzugefügt: der Kasten ist
+       bei jedem Öffnen derselbe Knoten. */
+    overlay.querySelector('.pv-modal')?.classList.toggle('pv-modal--wide', !!show.wide);
 
     /* „+ Raum eröffnen" führt genau dorthin, wo es auch von der
        Kachel aus hinführt. Den Weg kennt app.js — hier steht nur,
@@ -391,6 +444,14 @@
     const ctx = window.MPTool.makeCtx({
       actions: fakeActions(() => cur && cur.view, show.role || 'participant'),
       title:   meta.title || '',
+      /* „Du stehst in der Auslage und nicht in einer Stunde." Die
+         meisten Werkzeuge interessiert das nicht — ihr ganzer Stand
+         kommt aus der view, und die ist hier erfunden. Wer aber
+         nebenher etwas auf dem Gerät ablegt, darf das hier nicht:
+         NeuroLab merkt sich sein Netz im localStorage und bekäme
+         sonst das halbfertige von gestern zu sehen — und ließe das
+         Drehbuch darüber schreiben. */
+      preview: true,
       toast:   (m, err) => window.toast?.(m, err ? 'err' : ''),
       // Im Schaufenster fragt niemand nach: eine Rückfrage, die
       // niemand beantwortet, hielte das Drehbuch an.
@@ -419,17 +480,39 @@
 
        isTrusted trennt den Finger vom Regisseur — dessen Klicks
        sind synthetisch und dürfen sich nicht selbst anhalten. */
-    host.addEventListener('pointerdown', ev => {
+    function grabbed(ev) {
       if (!ev.isTrusted || !cur || cur.seq !== mySeq || cur.paused) return;
       cur.paused = true;
       syncPlayBtn();
       // Der Knopf sagt es schon („▶ Abspielen"), aber nicht laut
       // genug für jemanden, der gerade woanders hingesehen hat.
       window.toast?.('Angehalten — probier es selbst aus.');
+    }
     // Über den Abbruch abgemeldet und nicht von Hand: die Bühne ist
     // bei jedem Öffnen derselbe Knoten, ein zweiter Besuch hinge
     // sonst einen zweiten Zuhörer daran.
-    }, { signal: cur.abort.signal });
+    host.addEventListener('pointerdown', grabbed, { signal: cur.abort.signal });
+
+    /* ⚠️ Ein <iframe> verschluckt die Finger: was darin passiert,
+       steigt nicht in den Wirt auf. Ohne diese zweite Anmeldung
+       liefe das Drehbuch bei NeuroLab munter weiter, während jemand
+       es selbst bedient — und schaltete ihm alle zwei Sekunden die
+       Phase um.
+
+       Beim `load` und nicht nur sofort: bis die Seite im Rahmen
+       steht, ist sein Dokument ein anderes (about:blank), und der
+       Zuhörer hinge am falschen. Beides, weil ein aus dem Cache
+       geholter Rahmen schon fertig sein kann, bevor wir hier
+       ankommen. */
+    const fr = host.querySelector('iframe');
+    if (fr) {
+      const listen = () => {
+        try { fr.contentDocument?.addEventListener('pointerdown', grabbed, { signal: cur.abort.signal }); }
+        catch (e) { /* fremder Ursprung — dann eben nicht */ }
+      };
+      fr.addEventListener('load', listen, { signal: cur.abort.signal });
+      listen();
+    }
 
     runLoop(show, makeApi());
   }

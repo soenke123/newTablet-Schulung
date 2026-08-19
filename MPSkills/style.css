@@ -950,6 +950,86 @@ a.btn {
   .tprev-n, .tprev-thumb { transition: none; }
 }
 
+/* ═══════════════════════════════════════════════════════
+   Standbild NeuroLab
+   ═══════════════════════════════════════════════════════
+   Zweites Standbild, andere Aufgabe. Die Wolke deutet ihre Wörter
+   nur an, weil fünfzehn Zettel in einer Kachel nicht zu lesen
+   wären — hier steht EIN Neuron, fast in Originalgröße, und seine
+   Beschriftungen (x1, Σ, b = −1,5) sind das, worum es geht. Was
+   man lesen kann, soll man lesen dürfen.
+
+   Gezeichnet wird in preview/neurolab.js; hier steht nur, wann
+   welcher der beiden Zustände gilt.                              */
+
+/* Die Tafel bleibt in beiden Kleidern hell — und das ist dieselbe
+   Entscheidung wie bei NeuroLab selbst (Migration 0089): der
+   Rahmen gehört MPSkills, der Inhalt dem Skill, und NeuroLab
+   bringt sein eigenes Aussehen mit. Eine dunkle Kachel, hinter der
+   eine helle Anwendung aufgeht, verspräche etwas anderes, als
+   dann kommt.
+
+   ⚠️ Die Dunkel-Regel steht ausdrücklich noch einmal da: die des
+   Wolken-Standbilds ist mit `:root[data-theme="dark"] .tprev`
+   spezifischer als eine einzelne Klasse und färbte die Tafel
+   sonst mit um. */
+.tprev--nl {
+  background-color: #f4f6f9;
+  background-image: none;
+  display: grid;
+  place-items: center;
+  padding: 4px 6px;
+}
+:root[data-theme="dark"] .tprev--nl {
+  background-color: #f4f6f9;
+  background-image: none;
+  /* Hell bleibt hell, aber nicht grell: unverändert wäre die Kachel
+     das Hellste auf einer dunklen Seite und zöge mehr Blick auf sich,
+     als ihr zusteht — dieselbe Überlegung, aus der die Tafel des
+     WordPools im Dunkeln dunkel wird. Gedämpft statt umgefärbt, damit
+     sie zeigt, was hinter ihr aufgeht: eine helle Anwendung. */
+  filter: brightness(.88);
+}
+
+.nlp {
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* Dieselbe Schrift wie in der Anwendung. Outfit ist das Kleid der
+     Seite; die Kachel zeigt aber den Skill. */
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Die Leitungen bleiben in beiden Zuständen liegen — es ändert sich
+   ja nichts am Netz, wenn man Werte hineingibt. Sie färben nur mit,
+   damit man sieht, dass jetzt etwas hindurchgeht. */
+.nlp-edge {
+  stroke: #b9c3cf;
+  stroke-width: 2;
+  fill: none;
+  transition: stroke .4s ease, stroke-width .4s ease;
+}
+
+.nlp-build, .nlp-run { transition: opacity .4s ease; }
+.nlp-run { opacity: 0; }
+
+/* Nur, wo es ein Zeigegerät gibt — auf einem Tablet gibt es kein
+   Darüberfahren, dort bleibt das Bild still und die Bewegung ist
+   einen Tipp entfernt im Schaufenster. Dieselbe Abfrage wie beim
+   Wolken-Standbild.
+
+   Gezeigt wird der eine Vorgang, der ein Neuron ausmacht: aus Build
+   wird Run, die Eingänge bekommen Werte, und hinten kippt „–" auf 1. */
+@media (hover: hover) {
+  .tile--peek:hover .nlp-build { opacity: 0; }
+  .tile--peek:hover .nlp-run   { opacity: 1; }
+  .tile--peek:hover .nlp-edge  { stroke: #f59e0b; stroke-width: 2.6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nlp-build, .nlp-run, .nlp-edge { transition: none; }
+}
+
 /* ─── Fuß ─────────────────────────────────────────────── */
 .foot {
   border-top: 1px solid var(--line);
@@ -1111,6 +1191,13 @@ label.field .rule {
      seines Feldes so, dass Untertitel, Knöpfe und Erklärung genau
      bis an das untere Polster des Overlays reichen. */
 }
+
+/* Für Skills, die keine Tafel zeigen, sondern eine ganze Anwendung —
+   NeuroLab stellt eine Kopfleiste und fünf Spalten nebeneinander, und
+   im Regelmaß schnitt die letzte („Ausgabe") am rechten Rand ab. Wer
+   die Breite bekommt, steht im Drehbuch (`wide: true`), nicht hier:
+   sie hängt daran, was gezeigt wird. */
+.pv-modal--wide { max-width: 980px; }
 
 /* Zwei Aufgaben auf einmal.
 

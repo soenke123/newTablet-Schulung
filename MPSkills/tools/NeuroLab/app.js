@@ -2872,7 +2872,19 @@ const OB_CX = OB_X + OB_W / 2;     // 236
 // ── LocalStorage persistence ───────────────────────────────────────────────
 const STORAGE_KEY = 'neuron-sim-v2';
 
+/* Schaufenster-Modus (MPSkills). Wird von tools/NeuroLab/tool.js an den
+   <iframe> gehängt, wenn NeuroLab in der Vorschau der Landing läuft und
+   nicht in einem Raum.
+
+   Dann wird nichts gespeichert und nichts geladen: eine Auslage soll
+   niemandem sein Netz umbauen, und sie soll auch nicht das halbfertige
+   von gestern zeigen, sondern immer dasselbe vorbereitete Neuron
+   (siehe ganz unten, Init). Sonst ändert der Modus nichts — es läuft
+   dieselbe Anwendung, und wer darin herumklickt, darf alles. */
+const DEMO = new URLSearchParams(location.search).has('demo');
+
 function saveState() {
+  if (DEMO) return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     phase: state.phase,
     numInputs: state.numInputs,
@@ -4084,6 +4096,13 @@ document.getElementById('btn-print').addEventListener('click', () => {
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
-if (!loadState()) resetState();
+/* Im Schaufenster (siehe DEMO) steht ein vorbereitetes Netz: zwei Eingänge,
+   beide Gewichte 1, Schwellenwert −1,5. Also ein UND — ein Eingang allein
+   reicht nicht, erst beide zusammen kommen über die Schwelle. Das ist in
+   zwei Schritten zu zeigen und damit genau das, was eine Vorschau zeigen
+   soll. Mit der Vorgabe (Bias 0) feuerte es schon beim ersten Eingang und
+   erklärte nichts. */
+if (DEMO) { resetState(); state.layers[0].neurons[0].bias = -1.5; }
+else if (!loadState()) resetState();
 render();
 window.addEventListener('resize', render);

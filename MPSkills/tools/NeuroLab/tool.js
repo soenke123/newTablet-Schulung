@@ -60,10 +60,42 @@
   const GAP = 12;          // Luft unter dem Rahmen
   const MIN = 420;         // damit auf einem kleinen Gerät nicht ein Streifen bleibt
 
+  /* Wie viel Seite steht unter dem Rahmen noch an?
+
+     Im Raum ist das fast nichts — dort ist der Rahmen das Letzte auf
+     der Seite. Im Schaufenster (lib/preview.js) stehen darunter aber
+     die Knöpfe und der Erklärtext des Modals, und ohne diese Rechnung
+     schöbe sich der Rahmen genau um deren Höhe darüber hinaus.
+
+     Gerechnet und nicht an document.body gemessen: der Rahmen hat
+     eine Mindesthöhe, und die zählte eine Messung mit. Deshalb
+     dieselbe Summe wie in tools/wordcloud/tool.js — untere Polster
+     und Kanten aller Kästen, in denen der Rahmen steckt, plus alles,
+     was darunter noch im Fluss steht. Wer sie dort repariert, sollte
+     hier mitziehen. */
+  function spaceBelow(el) {
+    let sum = 0;
+    for (let n = el; n && n !== document.body && n.parentElement; n = n.parentElement) {
+      const pcs = getComputedStyle(n.parentElement);
+      sum += (parseFloat(pcs.paddingBottom) || 0) + (parseFloat(pcs.borderBottomWidth) || 0);
+      sum += (parseFloat(getComputedStyle(n).marginBottom) || 0);
+
+      for (let s = n.nextElementSibling; s; s = s.nextElementSibling) {
+        const scs = getComputedStyle(s);
+        // Ausgeblendetes und alles, was aus dem Fluss genommen ist
+        // (Modale, Toast), braucht keinen Platz.
+        if (scs.display === 'none' || scs.position === 'fixed' || scs.position === 'absolute') continue;
+        sum += s.offsetHeight
+             + (parseFloat(scs.marginTop) || 0) + (parseFloat(scs.marginBottom) || 0);
+      }
+    }
+    return sum;
+  }
+
   function fit() {
     if (!frame) return;
     const top = frame.getBoundingClientRect().top;
-    const h   = Math.max(MIN, window.innerHeight - top - GAP);
+    const h   = Math.max(MIN, window.innerHeight - top - spaceBelow(frame) - GAP);
     frame.style.height = h + 'px';
   }
 
@@ -91,10 +123,20 @@
          gehört zum selben Deployment. Ein sandbox ohne
          allow-same-origin nähme NeuroLab den localStorage, in dem
          sein Netz liegt — und mit allow-same-origin wäre es keine
-         Absicherung mehr, sondern nur noch ein Attribut. */
+         Absicherung mehr, sondern nur noch ein Attribut.
+
+         ── ?demo=1 im Schaufenster ──────────────────────────────
+         NeuroLab legt seinen Stand auf dem Gerät ab. In einer
+         Vorschau ist das zweimal falsch: sie zeigte das halbfertige
+         Netz von gestern statt eines Neurons, an dem etwas zu sehen
+         ist, und das Drehbuch schriebe darüber. Mit dem Zusatz merkt
+         sich NeuroLab nichts und startet an einem vorbereiteten Netz
+         (siehe app.js, DEMO). Was in der Auslage passiert, bleibt in
+         der Auslage. */
+      const demo = ctx && ctx.preview ? '?demo=1' : '';
       root.innerHTML =
         '<div class="nl-host">' +
-          '<iframe class="nl-frame" src="tools/NeuroLab/index.html" ' +
+          '<iframe class="nl-frame" src="tools/NeuroLab/index.html' + demo + '" ' +
                   'title="NeuroLab" loading="eager"></iframe>' +
         '</div>';
 
@@ -104,8 +146,13 @@
          nichts mehr stehen — sonst schöbe der Seitenfuß ihn beim
          Scrollen nach oben und der gemessene Platz stimmte nicht mehr.
          Dieselbe Regel wie beim WordPool, nur unter dem neutralen
-         Namen (siehe style.css). */
-      document.body.classList.add('tool-fill');
+         Namen (siehe style.css).
+
+         Im Schaufenster nicht: dort gehört die Seite nicht uns, sie
+         steht ohnehin still (body.pv-lock), und ihren Fuß
+         abzuräumen, während ein Overlay darüber liegt, ändert nur
+         etwas nach dem Schließen. */
+      if (!(ctx && ctx.preview)) document.body.classList.add('tool-fill');
 
       onResize = () => fit();
       window.addEventListener('resize', onResize);

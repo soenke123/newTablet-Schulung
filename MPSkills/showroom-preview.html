@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260819l" />
+<link rel="stylesheet" href="style.css?v=20260819r" />
 <script src="lib/theme.js?v=20260819d"></script>
 </head>
 <body>
@@ -75,8 +75,9 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="lib/preview.js?v=20260819b"></script>
+<script src="lib/preview.js?v=20260819c"></script>
 <script src="preview/wordcloud.js?v=20260819d"></script>
+<script src="preview/neurolab.js?v=20260819a"></script>
 <script>
 /* Der Ersatz für app.js: die Registry als Konstante und die zwei
    Klicks, die die Kachel kennt. Bewusst keine Kopie von toolCard —
@@ -85,7 +86,15 @@
    Unterschied hier auf. */
 const TOOLS = [
   { id: 'wordcloud', title: 'WordPool', folder: 'wordcloud', icon: '💬',
-    blurb: 'Eine Frage, viele Antworten — was Zustimmung bekommt, wächst.' }
+    blurb: 'Eine Frage, viele Antworten — was Zustimmung bekommt, wächst.' },
+  /* ⚠️ folder mit großem L — der Ordner kam so aus seinem eigenen
+     Repository, und dass die id davon abweichen darf, ist genau der
+     Grund für die folder-Spalte in skill_tools. Auf der Landing
+     kommt der Wert von dort; hier steht er von Hand, und mit
+     'neurolab' liefe der Rahmen auf einem Dateisystem, das
+     Groß- und Kleinschreibung unterscheidet, ins Leere. */
+  { id: 'neurolab', title: 'NeuroLab', folder: 'NeuroLab', icon: '🧠',
+    blurb: 'Ein künstliches Neuron bauen, ausprobieren und lernen lassen.' }
 ];
 
 // Minimaler Toast, damit die Rückmeldungen des Werkzeugs

@@ -74,7 +74,7 @@
        Gerät, das ein Werkzeug schon einmal geladen hat, dessen altes
        CSS — beim Umbau auf hell/dunkel (19.08.2026) wäre die halbe
        Kachel im alten Kleid stehengeblieben. */
-    const v = '?v=20260819e';
+    const v = '?v=20260819f';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf
@@ -237,6 +237,13 @@
       // Kein Raumgeheimnis: der Titel steht am Beamer, der Code
       // ohnehin an der Tafel. Der Token bleibt hier draußen.
       title:   opts.title || '',
+      /* Läuft hier ein Schaufenster statt eines Raums (lib/preview.js)?
+         Für die meisten Werkzeuge ohne Bedeutung — ihr Stand kommt aus
+         der view, und ob die erfunden ist, geht sie nichts an. Wer
+         aber NEBEN der view etwas auf dem Gerät ablegt, muss es
+         wissen: in der Auslage darf nichts hängenbleiben und nichts
+         von früher hereinragen. */
+      preview: !!opts.preview,
       toast:   opts.toast || function () {},
       confirm: opts.confirm || (msg => Promise.resolve(window.confirm(msg))),
       // Nach einer eigenen Änderung sofort nachladen, statt bis zum
