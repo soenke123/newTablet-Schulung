@@ -1193,11 +1193,16 @@ label.field .rule {
 }
 
 /* Für Skills, die keine Tafel zeigen, sondern eine ganze Anwendung —
-   NeuroLab stellt eine Kopfleiste und fünf Spalten nebeneinander, und
-   im Regelmaß schnitt die letzte („Ausgabe") am rechten Rand ab. Wer
-   die Breite bekommt, steht im Drehbuch (`wide: true`), nicht hier:
-   sie hängt daran, was gezeigt wird. */
-.pv-modal--wide { max-width: 980px; }
+   NeuroLab stellt eine Kopfleiste, fünf Spalten und das Lernpanel
+   nebeneinander. Im Regelmaß von 820 px schnitt die letzte Spalte ab,
+   und bei 980 lag das Panel über dem Ausgabe-Neuron. Wer die Breite
+   bekommt, steht im Drehbuch (`wide: true`), nicht hier: sie hängt
+   daran, was gezeigt wird.
+
+   Mehr als das wird es nicht: das Overlay lässt links und rechts
+   6vw stehen, und eine Auslage, die den ganzen Bildschirm nimmt, ist
+   zu groß für das, was sie ist — man soll auch wieder herauskommen. */
+.pv-modal--wide { max-width: 1100px; }
 
 /* Zwei Aufgaben auf einmal.
 

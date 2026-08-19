@@ -301,6 +301,17 @@
         return true;
       },
 
+      /* Was steht da gerade? Für Drehbücher, die nicht nur klicken,
+         sondern auf etwas warten wollen, das der Skill selbst
+         ausrechnet — NeuroLab hält an, sobald der Verlust unten ist,
+         statt eine Zahl Sekunden abzuwarten, die beim nächsten
+         Rechner nicht mehr stimmt. Lesen, nicht deuten: was die
+         Zeichenkette bedeutet, weiß nur das Drehbuch. */
+      text(sel) {
+        const el = q(sel);
+        return el ? (el.textContent || '').trim() : null;
+      },
+
       // Für Drehbücher, die eine Karte suchen wollen, ohne die
       // Zettel-IDs fest zu verdrahten.
       noteIds() {

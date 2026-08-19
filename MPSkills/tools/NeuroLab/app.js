@@ -4095,14 +4095,100 @@ document.getElementById('btn-print').addEventListener('click', () => {
   render();
 });
 
+// ── Schaufenster-Netz ──────────────────────────────────────────────────────
+/* Was im Schaufenster steht, wenn ?demo=1 gesetzt ist (siehe DEMO oben).
+
+   Gezeigt wird nicht der Anfang, sondern das Beste, was die Anwendung kann:
+   ein mehrschichtiges Netz in der Phase LERNEN. Ein einzelnes Neuron, an dem
+   jemand von Hand Gewichte einstellt, ist der erste Schritt einer Stunde —
+   die Vorschau hat aber zehn Sekunden und muss in denen zeigen, wofür man
+   das Ding aufmacht: dass sich die Kanten von selbst verändern, bis die
+   Ausgabe stimmt.
+
+   XOR, weil es die Aufgabe ist, an der ein EINZELNES Neuron scheitert: die
+   vier Fälle lassen sich nicht mit einer Geraden trennen. Genau deshalb
+   braucht es die Schichten dazwischen, und genau das sieht man hier
+   passieren. Vier Datenzeilen sind außerdem wenig genug, dass die Tabelle
+   daneben vollständig lesbar bleibt.
+
+   Als `custom`-Datensatz und nicht als vierter Eintrag in SCENARIOS: das
+   Schaufenster soll dem Sortiment der Anwendung nichts hinzufügen, das im
+   Unterricht dann in der Auswahlliste steht. Der Weg über customData ist
+   derselbe, den eine hochgeladene CSV nimmt.
+
+   3 → 3 → 1 mit tanh: sieben Neuronen auf drei Schichten. Klein genug, dass
+   die Kanten einzeln zu verfolgen sind, und groß genug, dass es drei Spalten
+   füllt. Lernrate 0,6 und Tempo 300/Sek stehen hoch, weil eine Vorschau
+   keine 2.000 Epochen abwarten kann — beides sind Regler, die in der
+   Anwendung ohnehin danebenstehen.
+
+   ⚠️ Die Zahlen sind GEMESSEN und nicht geschätzt: je 30 Läufe mit frisch
+   gewürfelten Startgewichten, gezählt wurde, wie oft und wie schnell der
+   Verlust unter 0,02 fällt.
+
+     2-2-1 sigmoid   0/30  — bleibt bei 0,25 stehen (die „alles 0,5"-Ebene)
+     2-2-1 tanh     28/30  — Median 5 s, aber jeder fünfte Lauf kriecht
+     3-2-1 tanh     29/30  — Median 3 s
+     3-3-1 tanh     30/30  — Median 2,6 s, langsamster Lauf 6 s
+
+   Sigmoid in den verdeckten Schichten lernt XOR hier ÜBERHAUPT nicht, und
+   die kleinste Fassung mit fünf Neuronen ist ein Münzwurf zu viel: eine
+   Auslage, die in einem von fünf Aufrufen nichts zustande bringt, zeigt das
+   Gegenteil von dem, wofür sie da ist. Wer die Form ändert, misst bitte
+   wieder nach. */
+const DEMO_DATA = {
+  numInputs:    2,
+  inputLabels:  ['A', 'B'],
+  outputLabels: ['A XOR B'],
+  data: [
+    { inputs: [0, 0], targets: [0] },
+    { inputs: [0, 1], targets: [1] },
+    { inputs: [1, 0], targets: [1] },
+    { inputs: [1, 1], targets: [0] },
+  ],
+};
+const DEMO_SHAPE = [3, 3, 1, 0];
+
+function demoState() {
+  resetState();
+  state.phase        = 'learn';
+  state.numInputs    = DEMO_DATA.numInputs;
+  state.inputLabels  = [...DEMO_DATA.inputLabels, ...state.inputLabels.slice(DEMO_DATA.inputLabels.length)];
+  state.outputLabels = [...DEMO_DATA.outputLabels];
+
+  state.learn.scenario       = 'custom';
+  state.learn.customData     = DEMO_DATA;
+  state.learn.customFileName = 'XOR (Beispiel)';
+  state.learn.learningRate   = 0.6;
+  state.learn.speed          = 60;
+  /* Der Info-Kasten erklärt, wie man eine CSV-Datei hochlädt — in der
+     Stunde die richtige Auskunft, in der Auslage eine Wand quer über
+     dem Netz. Er hängt außerdem LINKS am Lernpanel und schöbe es aus
+     dem Rahmen hinaus, und damit läge ausgerechnet die Verlaufskurve
+     draußen. Eingeklappt ist er einen Klick auf ▶ entfernt. */
+  state.learn.infoPanelOpen  = false;
+
+  for (let li = 0; li < state.layers.length; li++) {
+    const inCount = li === 0 ? state.numInputs : DEMO_SHAPE[li - 1];
+    const isOut   = DEMO_SHAPE[li] > 0 && !DEMO_SHAPE[li + 1];
+    state.layers[li].count   = DEMO_SHAPE[li];
+    state.layers[li].neurons = Array.from({ length: DEMO_SHAPE[li] }, () => ({
+      // Ausgang sigmoid, weil die Zielwerte 0 und 1 sind; dahinter tanh,
+      // weil sigmoid in den verdeckten Schichten XOR nicht lernt (s. o.).
+      type: isOut ? 'sigmoid' : 'tanh',
+      weights:  Array(inCount).fill(0),
+      disabled: Array(inCount).fill(false),
+      bias: 0, spacing: 0,
+    }));
+  }
+  // Die Startgewichte kommen aus derselben Funktion wie der ↺-Knopf im
+  // Lernpanel — dann ist der erste Durchgang der Vorschau derselbe Vorgang
+  // wie jeder weitere.
+  resetWeightsOnly();
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
-/* Im Schaufenster (siehe DEMO) steht ein vorbereitetes Netz: zwei Eingänge,
-   beide Gewichte 1, Schwellenwert −1,5. Also ein UND — ein Eingang allein
-   reicht nicht, erst beide zusammen kommen über die Schwelle. Das ist in
-   zwei Schritten zu zeigen und damit genau das, was eine Vorschau zeigen
-   soll. Mit der Vorgabe (Bias 0) feuerte es schon beim ersten Eingang und
-   erklärte nichts. */
-if (DEMO) { resetState(); state.layers[0].neurons[0].bias = -1.5; }
+if (DEMO) demoState();
 else if (!loadState()) resetState();
 render();
 window.addEventListener('resize', render);

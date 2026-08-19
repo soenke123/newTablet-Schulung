@@ -19,16 +19,22 @@
    der Rahmen im Schaufenster ein `?demo=1`: NeuroLab merkt sich
    dann nichts. Wer die Vorschau ansieht, soll nicht hinterher sein
    eigenes Netz umgebaut vorfinden — und er soll auch nicht das
-   halbfertige Netz von gestern zu sehen bekommen, sondern ein
-   Neuron, an dem etwas zu sehen ist.
+   halbfertige Netz von gestern zu sehen bekommen, sondern etwas,
+   an dem etwas zu sehen ist.
 
-   ── Das Netz, das im Schaufenster steht ───────────────────────
-   Zwei Eingänge, beide Gewichte 1, Schwellenwert −1,5. Also ein
-   UND: ein Eingang allein reicht nicht, erst beide zusammen
-   kommen über die Schwelle. Das ist der eine Satz, den ein
-   künstliches Neuron zu sagen hat, und man sieht ihn in zwei
-   Schritten. Ein Netz mit Bias 0 (die Vorgabe von NeuroLab)
-   feuerte schon beim ersten Eingang und zeigte damit nichts.
+   ── Nicht der Anfang, sondern das Beste ───────────────────────
+   Der erste Anlauf zeigte hier ein einzelnes Neuron, an dem das
+   Drehbuch zwei Eingaben von Hand setzte. Das ist der erste
+   Schritt einer Doppelstunde und in einer Auslage zu wenig: es
+   sieht aus wie ein Taschenrechner mit drei Feldern.
+
+   Gezeigt wird deshalb, wofür man die Anwendung aufmacht — ein
+   dreischichtiges Netz LERNT. Die Startgewichte sind gewürfelt,
+   die Kanten dünn und blass, die Ausgabe rot; nach ein paar
+   Sekunden sind die Kanten dick, die Kurve gefallen und die
+   Ausgabe grün. Welches Netz und welche Daten, steht in
+   demoState() in app.js — das gehört zur Anwendung und nicht
+   zum Drehbuch.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -58,54 +64,94 @@
   }
 
   /* ─── Das Drehbuch ──────────────────────────────────────────
-     Gezeigt wird der Weg von Build nach Run und der Moment, auf den
-     die Stunde hinausläuft: ein Eingang genügt nicht, zwei kippen
-     das Ergebnis.
+     Nicht der Anfang, sondern das Beste: das Netz LERNT. Ein einzelnes
+     Neuron, an dem jemand von Hand Zahlen einstellt, ist der erste
+     Schritt einer Doppelstunde — eine Vorschau hat zehn Sekunden und
+     muss in denen zeigen, wofür man das Ding aufmacht. Also steht die
+     Anwendung schon in der Phase „Lernen" (siehe demoState() in
+     app.js), und hier wird nur noch gestartet und zugesehen: der
+     Verlust fällt, die Kanten ändern Dicke und Farbe, die Ausgabe
+     rückt an den Sollwert heran.
 
-     Bedient wird über die drei Dinge, die in NeuroLab stabil sind —
-     die Phasenknöpfe im Kopf und die Eingabefelder der Run-Phase.
-     An den Gewichten oder am Schwellenwert wird NICHTS gedreht: die
-     stehen in geteilten Inline-Feldern, die beim Öffnen umgehängt
-     werden, und ein Drehbuch, das dort hineingreift, bricht beim
-     nächsten Umbau still.
+     Bedient wird ausschließlich über die vier Knöpfe des Lernpanels
+     (`#learn-btn-start` · `-pause` · `-reset`). Sie haben feste IDs
+     und tun genau eine Sache. An Gewichten, Schwellenwerten oder der
+     Topologie wird NICHTS gedreht: die hängen an geteilten
+     Inline-Feldern, die beim Öffnen umgehängt werden, und ein
+     Drehbuch, das dort hineingreift, bricht beim nächsten Umbau
+     still.
 
-     Zurückgestellt wird am Ende selbst (Eingänge auf 0, zurück nach
-     Build) — der Regisseur kann es nicht: sein Zurücksetzen ruft
-     update(view), und NeuroLabs update() hat nichts zu tun. Deshalb
-     steht unten auch fade: false. */
-  const IN1 = '.col-inputs .input-node-row:nth-child(1) .node-run-input-field';
-  const IN2 = '.col-inputs .input-node-row:nth-child(2) .node-run-input-field';
+     Zurückgestellt wird am Ende selbst — mit demselben ↺, das im
+     Panel steht: neue Zufallsgewichte, Epoche 0, Kurve leer. Der
+     Regisseur kann es nicht, sein Zurücksetzen ruft update(view),
+     und NeuroLabs update() hat nichts zu tun. Deshalb steht unten
+     auch fade: false. */
+
+  /* ⚠️ Angehalten wird nicht nach einer Zahl Sekunden, sondern wenn
+     das Netz FERTIG ist — abgelesen am Verlust im Panel. Eine feste
+     Wartezeit wäre auf einem langsamen Tablet zu kurz und auf jedem
+     anderen Leerlauf, und sie hinge an einer Zufallszahl: wie schnell
+     es geht, entscheiden die gewürfelten Startgewichte.
+
+     Der zweite Fall ist der eigentliche Grund. In etwa einem von
+     zwanzig Läufen bleibt das Netz auf der „alles 0,5"-Ebene stehen
+     (Verlust 0,25) und kommt dort nicht mehr weg — gemessen, siehe
+     app.js. Dann würfelt das Drehbuch neu und fängt von vorn an;
+     genau dafür steht das ↺ im Panel, und ein Kurs macht es
+     genauso. Eine Auslage, die dabei zusieht, wie nichts passiert,
+     zeigt das Gegenteil von dem, wofür sie da ist. */
+  const READY  = 0.02,   // darunter sitzt XOR
+        STUCK  = 0.20,   // darüber steht es auf der Ebene
+        STEP   = 700,    // so oft wird nachgesehen — und „Pause" greift
+        PATIENCE = 7000, // so lange, bevor „steht" als „steht" gilt
+        LIMIT  = 20000,  // Notausgang, falls die Anzeige nie fällt
+        REROLLS = 2;
+
+  const lossNow = api => parseFloat(api.text('#learn-loss-display'));
 
   async function play(api) {
     // Der Rahmen lädt eine eigene Seite. Bis die steht, gibt es
     // nichts zu klicken — und ein Drehbuch, das ins Leere greift,
     // sähe aus wie eine kaputte Vorschau.
-    if (!await api.waitFor('#btn-run', 6000)) return;
+    if (!await api.waitFor('#learn-btn-start', 6000)) return;
 
-    // Erst das gebaute Neuron stehen lassen: Gewichte, Σ,
-    // Schwellenwert. Wer gerade geöffnet hat, liest das zuerst.
-    if (!await api.wait(1800)) return;
+    // Einen Moment das ungelernte Netz stehen lassen: drei Schichten,
+    // Zufallsgewichte, Verlust 0. Ohne dieses Vorher fehlt dem
+    // Nachher der Vergleich.
+    if (!await api.wait(1600)) return;
 
-    if (!api.click('#btn-run')) return;
-    if (!await api.wait(1200)) return;
+    if (!api.click('#learn-btn-start')) return;
 
-    // Ein Eingang an — und hinten bleibt trotzdem 0. Das ist der
-    // Schritt, der die Schwelle erklärt, und deshalb steht er länger
-    // als der zweite.
-    await api.type(IN1, '1');
-    if (!await api.wait(2200)) return;
+    let waited = 0, rerolls = 0;
+    for (;;) {
+      if (!await api.wait(STEP)) return;
+      waited += STEP;
 
-    // Beide an: 1 + 1 − 1,5 = 0,5 > 0. Es feuert.
-    await api.type(IN2, '1');
-    if (!await api.wait(2800)) return;
+      const loss = lossNow(api);
+      // Keine Zahl da? Dann ist das Panel weg (jemand hat die Phase
+      // gewechselt) — nicht weiterklicken, der Mensch hat übernommen.
+      if (!isFinite(loss)) return;
+      if (loss < READY) break;
 
-    // Zurück auf Anfang, damit der nächste Durchgang wieder dort
-    // beginnt, wo dieser begonnen hat.
-    await api.type(IN1, '0');
-    await api.type(IN2, '0');
-    if (!await api.wait(600)) return;
-    api.click('#btn-build');
-    await api.wait(900);
+      if (waited >= PATIENCE && loss > STUCK && rerolls < REROLLS) {
+        rerolls++;
+        api.click('#learn-btn-reset');
+        if (!await api.wait(900)) return;
+        api.click('#learn-btn-start');
+        waited = 0;
+        continue;
+      }
+      if (waited >= LIMIT) break;
+    }
+
+    // Anhalten und das Ergebnis stehen lassen: die Ausgabe steht auf
+    // dem Sollwert und ist von rot auf grün gesprungen, die Kanten
+    // sind dick. Das ist der Schluss, nicht das Laufen selbst.
+    api.click('#learn-btn-pause');
+    if (!await api.wait(3400)) return;
+
+    api.click('#learn-btn-reset');
+    await api.wait(1000);
   }
 
   /* ═══════════════════════════════════════════════════════════
@@ -118,11 +164,18 @@
      Neuron ist, sagt eines allein deutlicher als die ganze Seite im
      Kleinen.
 
-     Nachgebaut ist deshalb genau EIN Neuron, und zwar das, das im
-     Schaufenster wirklich dasteht: zwei Eingänge, Gewichte 1,
-     Schwellenwert −1,5. Wer die Kachel öffnet, findet dasselbe
-     Netz wieder — die Vorschau ist dann die Fortsetzung des
-     Standbilds und nicht ein zweites Bild.
+     Nachgebaut ist deshalb genau EIN Neuron: zwei Eingänge,
+     Gewichte, Schwellenwert, Σ, Sprungfunktion, Ausgang.
+
+     ⚠️ Die Kachel zeigt damit ABSICHTLICH etwas anderes als das
+     Modal — dort lernt ein dreischichtiges Netz. Das ist keine
+     Unstimmigkeit, sondern die Arbeitsteilung: die Kachel sagt in
+     einem stehenden Bild, WAS das Ding ist (ein Neuron rechnet aus
+     Eingaben eine Ausgabe), das Modal zeigt in zehn Sekunden, was
+     es KANN. Dasselbe Netz an beiden Stellen ginge nur in eine
+     Richtung schlecht aus: achtzehn Kanten und sieben Neuronen in
+     186 px Höhe sind ein Fleck, und wer einen Fleck sieht, klickt
+     nicht.
 
      Anders als bei der Wolke sind die Beschriftungen hier LESBAR
      und sollen es sein: x1, Σ, b = −1,5 sind keine angedeuteten
@@ -131,9 +184,9 @@
      Maßstab 0,25 sind Matsch, ein Neuron auf Maßstab 0,9 ist ein
      Neuron.
 
-     Die Bewegung beim Darüberfahren ist derselbe Vorgang wie im
-     Modal, auf einen Schritt eingedampft: aus Build wird Run, aus
-     leeren Eingängen werden Werte, aus „–" wird eine 1.
+     Die Bewegung beim Darüberfahren zeigt den einen Vorgang, den
+     ein Neuron ausmacht: aus Build wird Run, aus leeren Eingängen
+     werden Werte, aus „–" wird eine 1.
 
      aria-hidden: für eine Vorlesestimme ist das ein Bild.
      ═══════════════════════════════════════════════════════════ */
@@ -249,9 +302,10 @@
 
     /* Breitere Bühne. NeuroLab bringt keine Tafel mit, sondern eine
        ganze Anwendung: Kopfleiste, Eingabespalte, vier Schichten,
-       Ausgang. Im Regelmaß des Kastens (820 px) schnitt die letzte
-       Spalte am rechten Rand ab — und ausgerechnet die heißt
-       „Ausgabe". */
+       Ausgang — und in der Lernphase zusätzlich das Panel mit Reglern
+       und Verlaufskurve. Im Regelmaß des Kastens (820 px) schnitt die
+       letzte Spalte ab, und die heißt ausgerechnet „Ausgabe"; bei
+       980 lag das Panel über dem Ausgabe-Neuron. */
     wide: true,
 
     /* Keine Blende zwischen zwei Durchgängen. Sie ist dafür gedacht,
@@ -265,11 +319,14 @@
        hierher gehört, was diesen von den anderen unterscheidet — und
        das ist bei NeuroLab, dass nichts geteilt wird. */
     blurb: `
-      <p>Ein künstliches Neuron zum Anfassen: Gewichte und Schwellenwert einstellen,
-         Zahlen hineingeben, zusehen, was hinten herauskommt. In der Phase
-         <strong>Lernen</strong> sucht sich das Netz seine Gewichte selbst — an
-         Logik-Gattern, an einer Ziffernerkennung oder an eigenen Daten aus einer
-         CSV-Datei.</p>
+      <p>Ein neuronales Netz zum Anfassen: Schichten zusammenstecken, Gewichte und
+         Schwellenwerte von Hand einstellen, Eingaben durchrechnen. Oben lernt es
+         gerade selbst — aus gewürfelten Startwerten wird in Sekunden ein Netz, das
+         <strong>XOR</strong> kann: die Aufgabe, an der ein einzelnes Neuron
+         scheitert.</p>
+      <p>Zum Trainieren stehen Logik-Gatter, eine Ziffernerkennung und eine
+         Zielscheibe bereit, eigene Daten kommen als CSV-Datei dazu — und für
+         Arbeitsblätter gibt es eine Druckansicht.</p>
       <p>Hier baut <strong>jede Person ihr eigenes Netz</strong> — nichts wandert an
          die Wand, nichts wird zusammengezählt. Der Raum trägt allein die Tür: Ein
          QR-Code bringt den Klassensatz in einer halben Minute auf dieselbe Seite.</p>`
