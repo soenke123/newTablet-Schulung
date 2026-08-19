@@ -685,6 +685,26 @@ a.btn {
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
 }
 
+/* ─── Fächer (Migration 0089) ─────────────────────────────────
+   Die Überschrift über einer Kachelgruppe. Klein und in
+   Versalien, nicht als zweite Titelzeile: sie gliedert das
+   Sortiment, sie kündigt nichts an — die Kacheln darunter sind
+   laut genug. Dieselbe Bauart wie die Zwischentitel der
+   Datenschutz-Auskunft, damit die Seite dafür nicht zwei
+   Formen kennt.
+
+   Nur zwischen zwei Gruppen fällt Abstand an; die erste sitzt
+   oben im Fach und braucht keinen. */
+.tools-sec {
+  margin: 26px 0 10px;
+  font-size: .78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--accent-ink);
+}
+.tools-sec:first-child { margin-top: 0; }
+
 .tile {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1540,10 +1560,17 @@ body.pv-lock { overflow: hidden; }
 }
 @media (max-width: 640px) { .toolhost { padding: 0 12px; } }
 
-/* bd-fill setzt das Werkzeug, wenn seine Fläche bis an die untere
+/* Setzt ein Werkzeug, wenn seine Fläche bis an die untere
    Bildschirmkante reicht. Dann darf darunter nichts mehr stehen —
-   der Fuß wandert erst in der Listenansicht zurück. */
-body.bd-fill #pagefoot { display: none; }
+   beim WordPool wandert der Fuß erst in der Listenansicht zurück.
+
+   Zwei Namen für eine Sache, und das ist Absicht: `bd-fill` gehört
+   dem WordPool, dessen eigenes tool.css an drei weiteren Stellen
+   darauf aufsetzt (der bd-Präfix ist dort historisch, siehe 0065).
+   Neue Werkzeuge nehmen `tool-fill` — es sagt, was gemeint ist,
+   ohne dass am WordPool etwas umbenannt werden müsste. */
+body.bd-fill #pagefoot,
+body.tool-fill #pagefoot { display: none; }
 
 .beam-main { margin-bottom: 18px; }
 .beam-tool { min-height: 40px; }

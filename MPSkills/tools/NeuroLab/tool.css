@@ -1,0 +1,45 @@
+/* ══════════════════════════════════════════════════════════════
+   MPSkills — Skill „NeuroLab"  ·  tool.css
+   ══════════════════════════════════════════════════════════════
+   Sehr wenig, und das ist der Punkt: alles, was man sieht, steht in
+   style.css NEBENAN und gehört der Anwendung selbst. Hier steht nur,
+   wie ihr Rahmen in der Seite sitzt.
+
+   Der Rahmen kippt mit dem Kleid der Seite (Kante, Ecken, Grund),
+   der Inhalt darin nicht — siehe Kopfkommentar in tool.js. Deshalb
+   nimmt er die MPSkills-Variablen und schreibt keine Farbe hin.
+   ══════════════════════════════════════════════════════════════ */
+
+.nl-host {
+  /* Die Anwendung bringt ihre eigene Kopfzeile mit und rechnet mit
+     einer vollen Fläche. Sie bekommt sie — bis an die Kanten des
+     Fachs, ohne Polster darum. */
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg, 18px);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.nl-frame {
+  display: block;      /* sonst setzt die Zeilenbox einen Streifen darunter */
+  width: 100%;
+  border: 0;
+  /* Die Höhe setzt tool.js, weil sie davon abhängt, was über dem
+     Rahmen steht — auf der Schülerseite eine Reiterleiste, auf der
+     Raumseite zwei. Der Wert hier ist nur der Ausgangspunkt für den
+     Moment vor der ersten Messung. */
+  height: 70vh;
+}
+
+/* Auf schmalen Geräten bis an beide Bildschirmkanten, wie die Tafel
+   des WordPools: 22 px Seitenrand sind auf einem Handy keine Zierde,
+   sondern die Spalte, in der die Eingaben stehen. */
+@media (max-width: 640px) {
+  .nl-host {
+    margin: 0 -12px;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+}

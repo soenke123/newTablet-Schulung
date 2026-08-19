@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neuron-Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="phase-toggle">
+      <button id="btn-build" class="phase-btn active">Build</button>
+      <button id="btn-run" class="phase-btn">Run</button>
+      <button id="btn-learn" class="phase-btn">Lernen</button>
+    </div>
+    <span class="phase-hint-text" id="phase-hint-text"></span>
+    <button id="btn-reset" class="reset-btn" title="Alles zurücksetzen">&#8635; Reset</button>
+    <button id="btn-print" class="print-btn" title="Druckansicht umschalten">Druck</button>
+  </header>
+
+  <main id="network">
+    <!-- Rendered by app.js -->
+  </main>
+
+  <div id="popup-overlay" class="hidden">
+    <div id="popup">
+      <button id="popup-close">&times;</button>
+      <h3 id="popup-title"></h3>
+      <div id="popup-content"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

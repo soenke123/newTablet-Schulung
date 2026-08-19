@@ -655,27 +655,42 @@ async function renderRooms() {
 let toolsCache = null;
 let toolsError = null;
 
+// folder mit dabei: das Schaufenster lädt das Werkzeug über
+// MPTool.load(id, folder), und der Ordner darf sich von der ID
+// unterscheiden (0078) — genau dafür gibt es die Spalte.
+const TOOL_COLS = 'id,title,blurb,icon,folder,multi_room,active,sort_order';
+
+async function fetchTools(cols) {
+  const token = window.__accessToken || window.SUPABASE_ANON_KEY;
+  const res = await fetch(
+    `${window.SUPABASE_URL}/rest/v1/skill_tools?select=${cols}&order=sort_order.asc`,
+    {
+      headers: {
+        apikey: window.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    }
+  );
+  if (!res.ok) throw new Error(`skill_tools ${res.status}: ${(await res.text()).slice(0, 160)}`);
+  return res.json();
+}
+
 async function loadTools() {
   if (toolsCache) return toolsCache;
-  const token = window.__accessToken || window.SUPABASE_ANON_KEY;
   try {
-    const res = await fetch(
-      `${window.SUPABASE_URL}/rest/v1/skill_tools`
-      // folder mit dazu: das Schaufenster lädt das Werkzeug über
-      // MPTool.load(id, folder), und der Ordner darf sich von der
-      // ID unterscheiden (0078) — genau dafür gibt es die Spalte.
-      + '?select=id,title,blurb,icon,folder,multi_room,active,sort_order'
-      + '&order=sort_order.asc',
-      {
-        headers: {
-          apikey: window.SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json'
-        }
-      }
-    );
-    if (!res.ok) throw new Error(`skill_tools ${res.status}: ${(await res.text()).slice(0, 160)}`);
-    toolsCache = await res.json();
+    /* Mit `subject` (Migration 0089) und bei Fehlschlag noch einmal
+       ohne. Das Frontend kann vor der Migration ausgeliefert sein —
+       dann antwortet PostgREST auf die unbekannte Spalte mit 400,
+       und ohne diesen zweiten Anlauf wäre nicht die Gruppierung weg,
+       sondern die ganze Skill-Liste. Fällt sie zurück, steht alles
+       in einem Abschnitt, und das ist genau der Stand von vorher. */
+    try {
+      toolsCache = await fetchTools(TOOL_COLS + ',subject');
+    } catch (e) {
+      console.warn('[mpskills] skill_tools ohne subject (Migration 0089 noch nicht gelaufen?):', e.message);
+      toolsCache = await fetchTools(TOOL_COLS);
+    }
     toolsError = null;
   } catch (e) {
     console.warn('[mpskills] Werkzeugliste laden fehlgeschlagen:', e.message);
@@ -798,8 +813,34 @@ async function renderTools() {
     return;
   }
 
-  // Keine Überschrift: der Reiter darüber sagt schon, was das ist.
-  host.innerHTML = `<div class="tile-grid">${tools.map(toolCard).join('')}</div>`;
+  /* Nach Fach gruppiert (Migration 0089). Ein Gitter ohne
+     Überschriften trug zwei Kacheln gut; sobald ein Skill dabei ist,
+     der nur in einem Fach etwas zu suchen hat, ist die Reihenfolge
+     allein keine Auskunft mehr — „warum steht das hier?" beantwortet
+     nur eine Beschriftung.
+
+     Die Reihenfolge der Abschnitte folgt dem kleinsten sort_order
+     darin. Damit ordnet dieselbe Zahl beide Ebenen, und ein Fach
+     nach vorn zu holen heißt, seinem ersten Skill eine kleinere
+     Zahl zu geben (siehe Kopf von 0089).
+
+     Ein EINZIGER Abschnitt bekommt keine Überschrift: dann ist sie
+     keine Gliederung, sondern eine Zeile, die dasselbe sagt wie der
+     Reiter darüber. Das ist zugleich der Rückfall für den Fall, dass
+     die Migration noch nicht gelaufen ist — dort fehlt subject an
+     jeder Zeile. */
+  const groups = new Map();
+  tools.forEach((t, i) => {
+    const key = (t.subject || '').trim() || 'Skills';
+    if (!groups.has(key)) groups.set(key, { name: key, rank: i, items: [] });
+    groups.get(key).items.push(t);
+  });
+
+  const secs = [...groups.values()].sort((a, b) => a.rank - b.rank);
+  host.innerHTML = secs.map(s =>
+    (secs.length > 1 ? `<h3 class="tools-sec">${esc(s.name)}</h3>` : '')
+    + `<div class="tile-grid">${s.items.map(toolCard).join('')}</div>`
+  ).join('');
   wireToolButtons();
 }
 

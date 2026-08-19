@@ -78,6 +78,13 @@ const S = {
   tools:   {},     // nur im Anlege-Modus: was zur Auswahl steht
   toolId:  null,   // im Anlege-Modus das gewählte, sonst das des Raums
   fields:  [],     // settingsFields des Werkzeugs
+  /* Für welchen Skill S.fields feststeht — und nicht, OB etwas darin
+     steht. Seit NeuroLab (0089) gibt es Skills ohne eine einzige
+     Einstellung; an der leeren Liste allein ließe sich „hat keine"
+     nicht von „ist noch nicht geladen" unterscheiden, und im Fach
+     stünde für sie dauerhaft „Einstellungen werden geladen …". */
+  fieldsFor: null,
+  fieldsErr: false,
   groups:  {},     // Feldschlüssel → [{id, text}] für Listenfelder
   counts:  { people: 0, entries: 0 },   // woran die Sperren hängen
   setStale: false, // Sperren haben sich geändert, Fach 1 muss neu gezeichnet werden
@@ -376,6 +383,26 @@ function listHTML(f) {
     </div>`;
 }
 
+/* Der Inhalt von #setToolFields, aus zwei Richtungen gebraucht: beim
+   Zeichnen des Fachs und beim Wechsel des Skills im Anlege-Modus.
+   Eine Funktion, damit nicht der eine Weg eine Meldung zeigt, die der
+   andere verschluckt. */
+function toolFieldsBlock(locked) {
+  if (S.fieldsFor !== S.toolId) {
+    return '<p class="booting">Einstellungen werden geladen …</p>';
+  }
+  if (S.fieldsErr) {
+    // Der Raum lässt sich trotzdem anlegen — der Skill fällt dann auf
+    // seine Vorgaben zurück. Verschweigen wäre schlimmer als ein Satz,
+    // der erklärt, warum hier nichts steht.
+    return '<p class="lockline">Die Einstellungen dieses Skills ließen sich nicht laden. '
+         + 'Der Raum funktioniert, der Skill nimmt seine Vorgaben.</p>';
+  }
+  // Kein Satz „dieser Skill hat keine Einstellungen": ein leerer Block
+  // sagt dasselbe, ohne dass jemand ihn lesen muss (NeuroLab, 0089).
+  return toolFieldsHTML(locked);
+}
+
 function toolFieldsHTML(locked) {
   if (!S.fields.length) return '';
   const cur = S.view?.room?.settings || {};
@@ -525,10 +552,7 @@ function renderSettings() {
           </div>
         </div>
 
-        <div id="setToolFields">
-          ${S.fields.length ? '' : '<p class="booting">Einstellungen werden geladen …</p>'}
-          ${toolFieldsHTML(lockTool)}
-        </div>
+        <div id="setToolFields">${toolFieldsBlock(lockTool)}</div>
         ${anyLocked ? `<p class="lockline">Nicht mehr änderbar: im Raum ${S.counts.entries === 1
           ? 'steht schon ein Beitrag' : `stehen schon ${S.counts.entries} Beiträge`}.</p>` : ''}
 
@@ -580,7 +604,7 @@ function renderSettings() {
       $('rtToolName').textContent =
         `${S.tools[S.toolId]?.icon || '🧩'} ${S.tools[S.toolId]?.title || 'Skill'}`;
       await loadFields();
-      $('setToolFields').innerHTML = toolFieldsHTML(false) || '';
+      $('setToolFields').innerHTML = toolFieldsBlock(false);
       updateGo();
     });
   }
@@ -651,7 +675,9 @@ const readAskNames = () =>
    Seite noch gar nichts davon läuft; MPTool.load merkt sich, was
    schon da ist. */
 async function loadFields() {
-  S.fields = [];
+  S.fields    = [];
+  S.fieldsFor = null;
+  S.fieldsErr = false;
   const id = S.toolId;
   if (!id) return;
   const folder = S.view?.room?.tool_folder || S.tools[id]?.folder;
@@ -665,7 +691,12 @@ async function loadFields() {
     // ohne die Zusatzangaben, das Werkzeug fällt dann auf seine
     // Vorgaben zurück. Aber sagen muss man es.
     console.warn('[mpskills] settingsFields:', e.message);
+    if (S.toolId !== id) return;
+    S.fieldsErr = true;
   }
+  // Erst hier, und in beiden Fällen: ab jetzt ist die Frage
+  // beantwortet — auch wenn die Antwort „gar keine" lautet.
+  S.fieldsFor = id;
   seedGroups();
 }
 

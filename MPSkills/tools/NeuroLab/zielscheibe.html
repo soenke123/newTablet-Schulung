@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Zielscheibe</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #e8f0f2;
+      font-family: sans-serif;
+    }
+    .target-container {
+      background: white;
+      padding: 0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+      line-height: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="target-container">
+    <svg width="528" height="528" viewBox="16 16 528 528">
+
+      <!--
+        Zentrum: (280, 280), Außenradius R = 240, Mittelkreis r = 24 (10%)
+        5 Sektoren à 72°, Start bei -90° (oben), Uhrzeigersinn
+
+        Eckpunkte auf dem Außenkreis:
+          P0 = (280, 40)              [-90°]
+          P1 = (508.25, 205.75)       [-18°]
+          P2 = (421.10, 474.14)       [ 54°]
+          P3 = (138.90, 474.14)       [126°]
+          P4 = ( 51.75, 205.75)       [198°]
+
+        Petrol/Blaugrün-Familie — dunkel außen, hell zur Mitte:
+          5  Pkt → #0B3948  Tiefes Petrol   (außen, dunkelste)
+          10 Pkt → #1B6B8A  Petrol-Blau
+          15 Pkt → #2A9D8F  Teal
+          20 Pkt → #52C0CE  Helles Teal
+          25 Pkt → #90D9E8  Eisblau
+          50 Pkt → #E0F4F8  Fast-Weiß       (Zentrum, hellste)
+      -->
+
+      <!-- Sektor 0: 5 Punkte — Tiefes Petrol -->
+      <path d="M 280,280 L 280,40 A 240,240 0 0,1 508.25,205.75 Z"
+            fill="#0B3948" stroke="#082d39" stroke-width="1.5" stroke-linejoin="round"/>
+
+      <!-- Sektor 1: 10 Punkte — Petrol-Blau -->
+      <path d="M 280,280 L 508.25,205.75 A 240,240 0 0,1 421.1,474.14 Z"
+            fill="#1B6B8A" stroke="#082d39" stroke-width="1.5" stroke-linejoin="round"/>
+
+      <!-- Sektor 2: 15 Punkte — Teal -->
+      <path d="M 280,280 L 421.1,474.14 A 240,240 0 0,1 138.9,474.14 Z"
+            fill="#2A9D8F" stroke="#082d39" stroke-width="1.5" stroke-linejoin="round"/>
+
+      <!-- Sektor 3: 20 Punkte — Helles Teal -->
+      <path d="M 280,280 L 138.9,474.14 A 240,240 0 0,1 51.75,205.75 Z"
+            fill="#52C0CE" stroke="#082d39" stroke-width="1.5" stroke-linejoin="round"/>
+
+      <!-- Sektor 4: 25 Punkte — Eisblau -->
+      <path d="M 280,280 L 51.75,205.75 A 240,240 0 0,1 280,40 Z"
+            fill="#90D9E8" stroke="#082d39" stroke-width="1.5" stroke-linejoin="round"/>
+
+      <!-- Außenkreis-Umrandung -->
+      <circle cx="280" cy="280" r="240" fill="none" stroke="#082d39" stroke-width="3"/>
+
+      <!-- Mittelkreis: 50 Punkte — fast Weiß (hellste Stelle) -->
+      <circle cx="280" cy="280" r="24" fill="#E0F4F8" stroke="#082d39" stroke-width="1.5"/>
+
+      <!--
+        Texte bei 65 % des Radius (= 156 px vom Zentrum)
+        Winkel der Sektormittelpunkte: -54°, 18°, 90°, 162°, 234°
+          S0 (-54°): (371.7, 153.7)
+          S1 ( 18°): (428.3, 328.2)
+          S2 ( 90°): (280,   436  )
+          S3 (162°): (131.7, 328.2)
+          S4 (234°): (188.3, 153.7)
+      -->
+
+      <text x="371.7" y="153.7" text-anchor="middle" dominant-baseline="middle"
+            font-size="26" font-weight="bold" fill="white">0.1</text>
+
+      <text x="428.3" y="328.2" text-anchor="middle" dominant-baseline="middle"
+            font-size="26" font-weight="bold" fill="white">0.2</text>
+
+      <text x="280" y="436" text-anchor="middle" dominant-baseline="middle"
+            font-size="26" font-weight="bold" fill="white">0.3</text>
+
+      <text x="131.7" y="328.2" text-anchor="middle" dominant-baseline="middle"
+            font-size="26" font-weight="bold" fill="#082d39">0.4</text>
+
+      <text x="188.3" y="153.7" text-anchor="middle" dominant-baseline="middle"
+            font-size="26" font-weight="bold" fill="#082d39">0.5</text>
+
+      <text x="280" y="280" text-anchor="middle" dominant-baseline="middle"
+            font-size="13" font-weight="bold" fill="#082d39">1.0</text>
+
+    </svg>
+  </div>
+</body>
+</html>

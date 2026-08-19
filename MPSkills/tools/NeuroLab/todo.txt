@@ -1,0 +1,6 @@
+
+ 
+5.
+6. es gibt eine Druck Ansicht (button neben dem Reset button). dann werden die Layer spalten unsichtbar. die Neuronen und Inputs liegen auf einer einer weißen durchgängigen fläche, damit ich sceenshots für Arbeitsblätter oder Klausuren machen kann. statt der richtigen aktivierungsfunktion des jeweiligen Neutrons steht hier nur "Aktivierungsfunktion f(z)" und  "Sigmar=z"(links). Nur in diesem druckmodus 
+
+Kanten passend zum Neuron, 
