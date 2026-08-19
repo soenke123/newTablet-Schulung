@@ -78,6 +78,7 @@ const S = {
   tools:   {},     // nur im Anlege-Modus: was zur Auswahl steht
   toolId:  null,   // im Anlege-Modus das gewählte, sonst das des Raums
   fields:  [],     // settingsFields des Werkzeugs
+  groups:  {},     // Feldschlüssel → [{id, text}] für Listenfelder
   counts:  { people: 0, entries: 0 },   // woran die Sperren hängen
   setStale: false, // Sperren haben sich geändert, Fach 1 muss neu gezeichnet werden
   qrDrawn: {}      // Ziel-Element-ID → Code, für den dort schon ein QR steht
@@ -133,7 +134,14 @@ const ERRORS = {
   has_participants:  'Das geht nicht mehr: es sind schon Leute im Raum. '
                    + 'Wer beigetreten ist, hat seinen Namen unter der Ansage abgegeben, die damals galt.',
   has_entries:       'Das geht nicht mehr: im Raum steht schon etwas. '
-                   + 'Sonst antworten die Beiträge auf eine andere Frage als die, die oben steht.'
+                   + 'Sonst antworten die Beiträge auf eine andere Frage als die, die oben steht.',
+  // Die gruppenfeine Sperre aus 0086. Sie trifft genau eine Frage,
+  // nicht das ganze Formular — deshalb sagt sie auch das.
+  group_has_entries: 'Darunter liegen schon Beiträge. Solange die dastehen, bleibt die Frage, '
+                   + 'wie sie ist — sonst antworten sie auf etwas anderes.',
+  groups_required:   'Mindestens eine Frage muss stehen bleiben.',
+  groups_invalid:    'Mit den Fragen stimmt etwas nicht.',
+  too_many_groups:   'Mehr Fragen gehen in einem Raum nicht.'
 };
 const errText = (e, data) =>
   e === 'room_limit'
@@ -289,10 +297,103 @@ function renderShell() {
    etwas nicht mehr geht, und beantworten dann die einzige Frage,
    die in dem Moment offen ist. */
 
+/* ── Was das Skill wissen will ────────────────────────────────
+   Drei Feldarten, und alle drei stehen hier und nicht im Skill:
+   ein Werkzeug beschreibt, WAS es braucht, diese Datei weiß, wie
+   ein Formularfeld aussieht.
+
+     text   ein Wert. Die Urform.
+     list   mehrere gleichartige Werte mit „+"-Knopf — bei WordPool
+            die Fragen. Jeder Eintrag trägt eine id, die ihn
+            überlebt: daran hängen die Beiträge (Migration 0086),
+            und daran hängt, ob er noch änderbar ist.
+     quota  eine Zahl oder nichts. Leer ist keine fehlende Angabe,
+            sondern die Antwort „unbegrenzt" — deshalb steht sie im
+            Platzhalter und nicht in einem Erklärungssatz. */
+
+// Die Grenzen, die für dieses Skill gelten. Beim bestehenden Raum
+// kommen sie aus der Ansicht (dort schon mit Raum-Überschreibung),
+// beim neuen aus der Werkzeug-Liste.
+const toolLimits = () => S.view?.limits || S.tools[S.toolId]?.limits || {};
+
+/* Wie viele Beiträge liegen unter jeder Gruppe? Aus der Antwort der
+   Lehrkraft-Ansicht gezählt (sie enthält auch die ausgeblendeten,
+   0080) — ein eigener Aufruf dafür wäre eine zweite Quelle für
+   dieselbe Auskunft. */
+function groupCounts() {
+  const fld = toolLimits().group_field;
+  const out = {};
+  if (!fld) return out;
+  for (const e of (S.view?.entries || [])) {
+    const g = e.payload?.[fld];
+    if (g) out[g] = (out[g] || 0) + 1;
+  }
+  return out;
+}
+
+// Kurz, unverwechselbar und ohne Zähler: eine id, die aus der
+// Position käme, würde beim Löschen eines Eintrags von einem anderen
+// geerbt — und mit ihr dessen Beiträge.
+const newGroupId = () =>
+  'q' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-3);
+
+function listRowHTML(f, item, locked, n) {
+  return `
+    <div class="listrow${locked ? ' is-locked' : ''}" data-row="${esc(f.key)}">
+      <span class="listrow-n">${n}</span>
+      <input type="text" data-setting-item="${esc(f.key)}" data-gid="${esc(item.id)}" data-req
+             maxlength="${Number(f.maxlength) || 140}"
+             placeholder="${esc(f.placeholder || '')}"
+             value="${esc(item.text || '')}" ${locked ? 'disabled' : ''}
+             aria-label="${esc(f.itemLabel || f.label)} ${n}" />
+      <button type="button" class="listrow-del" data-del="${esc(item.id)}"
+              ${locked ? 'disabled' : ''}
+              title="${locked ? 'Darunter liegen schon Beiträge.' : 'Entfernen'}"
+              aria-label="${esc(f.itemLabel || f.label)} ${n} entfernen">✕</button>
+    </div>`;
+}
+
+function listHTML(f) {
+  const counts = groupCounts();
+  const items  = S.groups[f.key] || [];
+  const max    = Number(f.max) || 7;
+  const anyLocked = items.some(it => counts[it.id] > 0);
+
+  return `
+    <div class="field field--list" data-list="${esc(f.key)}">
+      <span class="field-l">${esc(f.label)}${f.required ? ' <span class="req">*</span>' : ''}</span>
+      <div class="listrows" id="rows_${esc(f.key)}">
+        ${items.map((it, i) => listRowHTML(f, it, counts[it.id] > 0, i + 1)).join('')}
+      </div>
+      <button type="button" class="listadd" data-add="${esc(f.key)}"
+              ${items.length >= max ? 'disabled' : ''}>
+        ${esc(f.addLabel || '+ ' + (f.itemLabel || 'Eintrag'))}
+      </button>
+      ${items.length >= max
+        ? `<p class="lockline">Mehr als ${max} ${esc(f.label)} gehen in einem Raum nicht.</p>` : ''}
+      ${anyLocked
+        ? '<p class="lockline">Wo schon Zettel liegen, bleibt die Frage stehen.</p>' : ''}
+    </div>`;
+}
+
 function toolFieldsHTML(locked) {
   if (!S.fields.length) return '';
   const cur = S.view?.room?.settings || {};
+
   return S.fields.map(f => {
+    if (f.type === 'list') return listHTML(f);
+
+    if (f.type === 'quota') {
+      const v = Number(cur[f.key]) || 0;
+      return `
+    <label class="field field--quota">${esc(f.label)}
+      <input type="number" data-setting-num="${esc(f.key)}"
+             min="${Number(f.min) || 1}" max="${Number(f.max) || 100}" step="1"
+             placeholder="${esc(f.unlimitedLabel || 'unbegrenzt')}"
+             value="${v > 0 ? v : ''}" />
+    </label>`;
+    }
+
     const val = cur[f.key] != null ? cur[f.key] : (S.code ? '' : (f.default || ''));
     return `
     <label class="field">${esc(f.label)}${f.required ? ' <span class="req">*</span>' : ''}
@@ -305,13 +406,65 @@ function toolFieldsHTML(locked) {
   }).join('');
 }
 
+/* Die Listen liegen in S.groups und nicht im DOM: eine Zeile, die
+   gerade hinzugefügt wurde, hat noch keinen gespeicherten Wert, und
+   beim Neuzeichnen (Sperre dazugekommen) darf sie trotzdem nicht
+   verschwinden. Aufgefüllt wird aus den Einstellungen des Raums —
+   oder mit einer leeren Zeile, denn eine Liste ohne Zeile hat kein
+   Feld, in das man tippen könnte. */
+function seedGroups() {
+  S.groups = {};
+  const cur = S.view?.room?.settings || {};
+  for (const f of S.fields) {
+    if (f.type !== 'list') continue;
+    const raw = Array.isArray(cur[f.key]) ? cur[f.key] : [];
+    const items = raw
+      .filter(it => it && it.id)
+      .map(it => ({ id: String(it.id), text: String(it.text || '') }));
+    S.groups[f.key] = items.length ? items : [{ id: newGroupId(), text: '' }];
+  }
+}
+
+// Was gerade in den Feldern steht, zurück in S.groups — vor jedem
+// Neuzeichnen der Liste, sonst wäre das Getippte weg.
+function harvestGroups() {
+  for (const f of S.fields) {
+    if (f.type !== 'list') continue;
+    const items = S.groups[f.key] || [];
+    document.querySelectorAll(`[data-setting-item="${f.key}"]`).forEach(el => {
+      const it = items.find(x => x.id === el.dataset.gid);
+      if (it && !el.disabled) it.text = String(el.value || '');
+    });
+  }
+}
+
+function redrawList(key) {
+  const f = S.fields.find(x => x.key === key);
+  const box = document.querySelector(`[data-list="${key}"]`);
+  if (!f || !box) return;
+  harvestGroups();
+  box.outerHTML = listHTML(f);
+  updateGo();
+}
+
 function renderSettings() {
   const pane = $('paneSet');
   const creating = !S.code;
   const room = S.view?.room;
 
+  // Was gerade im Formular steht, retten: diese Funktion wird auch
+  // aufgerufen, während jemand tippt (eine Sperre ist dazugekommen,
+  // der Server hat eine Änderung abgelehnt).
+  harvestGroups();
+
   const lockNames = !creating && S.counts.people  > 0;
+  /* Die harte Sperre aus 0084 gilt nur noch für einfache Felder.
+     Listen sind je Eintrag gesperrt (dort, wo Beiträge liegen), und
+     das Kontingent ist nie gesperrt — es zu erhöhen, weil die Klasse
+     mehr braucht, ist genau der Fall, für den es die Einstellung
+     gibt. Durchgesetzt wird beides ohnehin serverseitig (0086). */
   const lockTool  = !creating && S.counts.entries > 0;
+  const anyLocked = lockTool && S.fields.some(f => !f.type || f.type === 'text');
 
   const askNames = room ? room.ask_names !== false : true;
 
@@ -372,11 +525,11 @@ function renderSettings() {
           </div>
         </div>
 
-        <div id="setToolFields" class="${lockTool ? 'is-locked' : ''}">
+        <div id="setToolFields">
           ${S.fields.length ? '' : '<p class="booting">Einstellungen werden geladen …</p>'}
           ${toolFieldsHTML(lockTool)}
         </div>
-        ${lockTool ? `<p class="lockline">Nicht mehr änderbar: im Raum ${S.counts.entries === 1
+        ${anyLocked ? `<p class="lockline">Nicht mehr änderbar: im Raum ${S.counts.entries === 1
           ? 'steht schon ein Beitrag' : `stehen schon ${S.counts.entries} Beiträge`}.</p>` : ''}
 
         <div class="actions actions--go">
@@ -390,6 +543,37 @@ function renderSettings() {
   const form = $('setForm');
   form.addEventListener('submit', creating ? submitCreate : submitUpdate);
   form.addEventListener('input',  updateGo);
+
+  /* Delegiert am Formular und nicht an den Knöpfen: redrawList
+     ersetzt den ganzen Kasten, Listener an seinen Kindern wären
+     danach weg. */
+  form.addEventListener('click', (ev) => {
+    const add = ev.target.closest('button[data-add]');
+    if (add) {
+      const key = add.dataset.add;
+      const f   = S.fields.find(x => x.key === key);
+      harvestGroups();
+      if ((S.groups[key] || []).length >= (Number(f?.max) || 7)) return;
+      S.groups[key] = (S.groups[key] || []).concat([{ id: newGroupId(), text: '' }]);
+      redrawList(key);
+      // In das neue Feld springen: wer „+ Frage" drückt, will tippen.
+      const rows = document.querySelectorAll(`[data-setting-item="${key}"]`);
+      rows[rows.length - 1]?.focus();
+      return;
+    }
+
+    const del = ev.target.closest('button[data-del]');
+    if (!del || del.disabled) return;
+    const key = del.closest('[data-list]')?.dataset.list;
+    if (!key) return;
+    harvestGroups();
+    const rest = (S.groups[key] || []).filter(it => it.id !== del.dataset.del);
+    // Die letzte Zeile bleibt: eine Liste ohne Zeile hätte kein Feld,
+    // in das man tippen könnte, und der Server nähme sie auch nicht.
+    S.groups[key] = rest.length ? rest : [{ id: newGroupId(), text: '' }];
+    redrawList(key);
+  });
+
   if (creating) {
     $('setTool').addEventListener('change', async (ev) => {
       S.toolId = ev.target.value;
@@ -421,12 +605,37 @@ function updateGo() {
   go.disabled = missing;
 }
 
+/* Was am Ende in skill_rooms.settings landet. Drei Feldarten, drei
+   Formen — und die Listen kommen aus S.groups und nicht aus dem DOM,
+   damit ein gesperrter (und damit disabled) Eintrag nicht verloren
+   geht: er steht weiter im Raum, er ist nur nicht mehr zu ändern. */
 function readSettings() {
   const out = {};
+
   document.querySelectorAll('#setToolFields [data-setting]').forEach(el => {
     const v = String(el.value || '').trim();
     if (v) out[el.dataset.setting] = v;
   });
+
+  document.querySelectorAll('#setToolFields [data-setting-num]').forEach(el => {
+    const f = S.fields.find(x => x.key === el.dataset.settingNum) || {};
+    const n = parseInt(String(el.value || '').trim(), 10);
+    // Leer, 0 oder Unsinn heißt „unbegrenzt", und das ist eine
+    // Antwort und keine fehlende Angabe.
+    out[el.dataset.settingNum] = (isFinite(n) && n > 0)
+      ? Math.min(Number(f.max) || 100, Math.max(Number(f.min) || 1, n))
+      : 0;
+  });
+
+  harvestGroups();
+  for (const f of S.fields) {
+    if (f.type !== 'list') continue;
+    const items = (S.groups[f.key] || [])
+      .map(it => ({ id: it.id, text: String(it.text || '').trim() }))
+      .filter(it => it.text);
+    if (items.length) out[f.key] = items;
+  }
+
   return out;
 }
 
@@ -435,8 +644,8 @@ const readAskNames = () =>
 
 /* Die zusätzlichen Felder des Werkzeugs stehen NICHT in dieser Datei
    und nicht in der Datenbank, sondern im Werkzeug selbst
-   (settingsFields in tools/<x>/tool.js). Was die Frage einer
-   Wortwolke ist, weiß die Wortwolke — ein Formular, das jede
+   (settingsFields in tools/<x>/tool.js). Was die Fragen eines
+   WordPools sind, weiß der WordPool — ein Formular, das jede
    Werkzeug-Eigenheit kennen müsste, wäre bei jedem neuen Werkzeug zu
    ändern. Deshalb wird das Modul hier geladen, auch wenn auf dieser
    Seite noch gar nichts davon läuft; MPTool.load merkt sich, was
@@ -457,6 +666,7 @@ async function loadFields() {
     // Vorgaben zurück. Aber sagen muss man es.
     console.warn('[mpskills] settingsFields:', e.message);
   }
+  seedGroups();
 }
 
 async function submitCreate(e) {
@@ -512,7 +722,12 @@ async function submitUpdate(e) {
     const ask = readAskNames();
     if (ask !== (room.ask_names !== false)) patch.p_ask_names = ask;
   }
-  if (S.counts.entries === 0 && S.fields.length) {
+  /* Die Einstellungen gehen IMMER mit, wenn sie sich unterscheiden —
+     seit 0086 entscheidet der Server je Frage, was noch geht. Vorher
+     hielt diese Zeile sie schon beim ersten Beitrag im Raum zurück;
+     damit ließe sich keine Frage mehr ergänzen und kein Kontingent
+     mehr erhöhen. */
+  if (S.fields.length) {
     const st = readSettings();
     if (JSON.stringify(st) !== JSON.stringify(room.settings || {})) patch.p_settings = st;
   }
@@ -530,6 +745,9 @@ async function submitUpdate(e) {
          ersetzt den Kasten, in dem sie steht. */
       if (r.error === 'has_participants') S.counts.people  = r.people  || 1;
       if (r.error === 'has_entries')      S.counts.entries = r.entries || 1;
+      // Bei group_has_entries reicht das Neuzeichnen: die Sperre je
+      // Frage kommt aus derselben Antwort, die der Poller ohnehin
+      // holt — hier ist nur die eigene Sicht ein paar Sekunden alt.
       renderSettings();
       const box = $('setError');
       box.textContent = errText(r.error, r);

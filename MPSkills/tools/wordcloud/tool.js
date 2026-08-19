@@ -1,9 +1,25 @@
 /* ══════════════════════════════════════════════════════════════
-   MPSkills — Werkzeug „Wortwolke"
+   MPSkills — Werkzeug „WordPool"
    ══════════════════════════════════════════════════════════════
-   Eine Frage, viele kurze Antworten. Wer zustimmt, macht eine
-   Antwort größer — was die Gruppe trägt, steht am Ende in der
+   Bis zu sieben Fragen, viele kurze Antworten. Wer zustimmt, macht
+   eine Antwort größer — was die Gruppe trägt, steht am Ende in der
    Mitte.
+
+   ── Mehrere Fragen (19.08.2026) ──────────────────────────────
+   Jede Frage ist ein eigenes FACH, und sichtbar ist immer genau
+   eines — dieselbe Bauart wie die sechs Bereiche des Reality Check
+   und aus demselben Grund: eine Wolke, die zwei Fragen zugleich
+   zeigt, beantwortet keine davon. Gewechselt wird über die Reiter,
+   die Pfeile, ←/→ oder Wischen.
+
+   Welche Frage jemand gerade ansieht, ist SEINE Sache und wandert
+   nicht mit: die Lehrkraft zeigt am Beamer die dritte, während im
+   Raum jemand an der ersten weiterschreibt. Die Phase gilt dagegen
+   für den ganzen Raum — sie ist der Stand der Stunde und nicht der
+   einer Frage.
+
+   Zu welcher Frage ein Zettel gehört, steht in payload.q; das
+   Kontingent zählt je Frage (Migration 0086, group_field).
 
    ── Herkunft ─────────────────────────────────────────────────
    Portiert aus GameHub/S1 wieso weshalb warum (Migration 0075),
@@ -17,7 +33,7 @@
    Weg ist alles, was aus der Schulung kam und nicht aus dem
    Werkzeug: Kreatur, Wachstum, Münzen, Season-Gate, Kurs-Bezug,
    die Belohnungs-Sequenz. Die Frage steht nicht mehr im Code,
-   sondern im Raum (settings.question) — die Lehrkraft tippt sie
+   sondern im Raum (settings.questions) — die Lehrkraft tippt sie
    beim Anlegen ein.
 
    ── Warum die Wolke als erstes Werkzeug ──────────────────────
@@ -49,26 +65,34 @@
      gehört dem Raum, die Zahl dem Server, der sie auch durchsetzt. */
   const PHASE_INFO = {
     1: { name: 'Sammeln',
-         task: '{frage} Schreib auf, was dir einfällt — ein Begriff oder ein paar Worte, pro Zettel eine Sache. Du hast {anzahl} Zettel. Und schau dir an, was die anderen schreiben: was du auch so siehst, kannst du mit einem Doppeltipp bestätigen.' },
+         task: '{frage} Schreib auf, was dir einfällt — ein Begriff oder ein paar Worte, pro Zettel eine Sache. {kontingent} Und schau dir an, was die anderen schreiben: was du auch so siehst, kannst du mit einem Doppeltipp bestätigen.{fragen}' },
     2: { name: 'Besprechen',
-         task: 'Eure Wolke steht. Je öfter etwas bestätigt wurde, desto größer steht es da. Jetzt schauen wir gemeinsam drauf — neue Zettel kommen keine mehr dazu, zustimmen kannst du weiter.' }
+         task: 'Euer Pool steht. Je öfter etwas bestätigt wurde, desto größer steht es da. Jetzt schauen wir gemeinsam drauf — neue Zettel kommen keine mehr dazu, zustimmen kannst du weiter.{fragen}' }
   };
 
   const PRESENTER_TASK = {
-    1: 'Die Klasse sammelt. Du siehst die Wolke live mitwachsen — schalte weiter, wenn genug dasteht.',
+    1: 'Die Klasse sammelt. Du siehst den Pool live mitwachsen — schalte weiter, wenn genug dasteht.',
     2: 'Besprechen. Neue Zettel kommen keine mehr dazu; zustimmen darf die Klasse weiter.'
   };
 
   // Werkzeug-eigene Fehlerfälle. Alles Übrige erbt es aus lib/tool.js.
   const ERRORS = {
     phase_locked:   'Die Sammelrunde ist vorbei — jetzt wird nur noch besprochen.',
-    quota_exceeded: 'Du hast schon alle deine Zettel geschrieben.',
+    quota_exceeded: 'Du hast schon alle deine Zettel zu dieser Frage geschrieben.',
     invalid_input:  'Mit dem Text stimmt etwas nicht — 3 bis 60 Zeichen.',
     own_entry:      'Deinem eigenen Zettel kannst du nicht zustimmen.',
-    not_found:      'Diesen Zettel gibt es nicht mehr.'
+    not_found:      'Diesen Zettel gibt es nicht mehr.',
+    // Kann nur passieren, wenn die Lehrkraft die Frage im selben
+    // Moment entfernt hat, in dem hier gespeichert wurde.
+    group_unknown:  'Diese Frage gibt es nicht mehr.'
   };
 
   const VIEW_KEY = 'wc_view';
+  // Welche Frage jemand ansieht, je Raum. sessionStorage und nicht
+  // localStorage: auf einem geteilten Tablet soll die Wahl mit dem
+  // Tab verschwinden — dieselbe Überlegung wie beim Fach der
+  // Raumseite und beim Kurs-Wähler des Reality-Check-Boards.
+  const qKey = () => 'wc_q_' + (state.view?.room?.code || '');
 
   /* ── Zustand ──────────────────────────────────────────────
      Ein Werkzeug je Seite, deshalb Modulzustand statt Fabrik. mount()
@@ -82,6 +106,9 @@
     sort:      { col: 'created_at', dir: 'desc' },
     lastSig:   null,
     lastPhase: null,
+    qid:       null,   // die Frage, die gerade sichtbar ist
+    slide:     0,      // Richtung des letzten Wechsels, für die Einblende
+
     editing:   null,
     detailId:  null,
     confirmFn: null,
@@ -124,8 +151,13 @@
      Zettel — der einzige Ort, an dem diese Datei etwas über das
      Datenmodell des Servers annimmt. */
   function toNotes(view) {
+    // Ein Zettel ohne Frage kann es seit Migration 0086 nicht mehr
+    // geben; die Notlösung steht trotzdem hier, damit ein solcher
+    // Zettel sichtbar bliebe statt in kein Fach zu fallen.
+    const first = questionsOf(view)[0].id;
     return (view.entries || []).map(e => ({
       id:          e.id,
+      q:           String(e.payload?.q || first),
       text:        String(e.payload?.text ?? ''),
       likes:       Number(e.votes || 0),
       liked_by_me: !!e.voted,
@@ -138,12 +170,40 @@
     }));
   }
 
-  /* ── Rechte — dieselbe Logik wie serverseitig (0080) ─────── */
+  /* ── Die Fragen ──────────────────────────────────────────
+     Sie stehen im Raum (settings.questions) und nicht im Code: die
+     Lehrkraft tippt sie in Fach 1 der Raumseite ein und darf
+     jederzeit welche ergänzen.
+
+     Der Rückfall auf eine Frage ist kein Vorgabewert, sondern eine
+     Notbremse: eine leere Liste hätte kein Fach, in dem Zettel
+     stehen könnten, und der Pool wäre stumm, ohne dass irgendwo
+     stünde warum. Der Server lässt sie deshalb gar nicht erst zu
+     (skill_check_settings). */
+  const QFALLBACK = [{ id: 'q1', text: 'Was fällt euch dazu ein?' }];
+
+  function questionsOf(view) {
+    const raw = view?.room?.settings?.questions;
+    const list = Array.isArray(raw)
+      ? raw.filter(q => q && q.id).map(q => ({ id: String(q.id), text: String(q.text || '') }))
+      : [];
+    return list.length ? list : QFALLBACK;
+  }
+
+  const questions = () => questionsOf(state.view);
+  const curQ      = () => questions().find(q => q.id === state.qid) || questions()[0];
+  const question  = () => curQ().text;
+  const notesOf   = qid => state.notes.filter(n => n.q === qid);
+
+  /* ── Rechte — dieselbe Logik wie serverseitig (0080/0086) ── */
   const isPresenter = () => ctx.role === 'presenter';
   const phase       = () => state.view?.state?.phase ?? 1;
   const limits      = () => state.view?.limits || {};
-  const termsMax    = () => Number(limits().max_entries) || 10;
-  const question    = () => state.view?.room?.settings?.question || 'Was fällt euch dazu ein?';
+  // 0 heißt unbegrenzt — und das ist seit 0086 die Vorgabe. Wer eine
+  // Zahl will, trägt sie in den Raum-Einstellungen ein; sie gilt dann
+  // je Frage.
+  const termsMax    = () => Math.max(0, Number(limits().max_entries) || 0);
+  const usedInQ     = qid => Number(state.view?.me?.entries_by_group?.[qid] || 0);
 
   // Die Lehrkraft schreibt in jeder Phase: sie hat sie ja gesetzt.
   // Für alle anderen hat der Server die Antwort schon mitgeschickt.
@@ -158,9 +218,14 @@
   }
   const canLike = note => !isPresenter() && !note.is_mine;
 
+  /* Voll ist immer nur EINE Frage. Wer bei der ersten alles
+     aufgebraucht hat, schreibt bei der zweiten weiter — sonst
+     entschiede die Reihenfolge, in der jemand die Fächer durchgeht,
+     wie viel er insgesamt sagen darf. */
   function quotaFull() {
     if (isPresenter()) return false;
-    return (state.view?.me?.entries_used ?? 0) >= termsMax();
+    const max = termsMax();
+    return max > 0 && usedInQ(state.qid) >= max;
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -169,28 +234,41 @@
   const TEMPLATE = `
   <div class="bd-tool">
     <nav class="bd-catnav" id="bdCatNav" hidden>
-      <div class="bd-catnav__title">
-        <span class="bd-catnav__name" id="bdCatName"></span>
-        <button type="button" class="bd-catadd" id="bdCatAdd" hidden>＋</button>
+      <!-- Der Wechsler steht ÜBER der Frage und nicht daneben: er
+           gehört zu ihr, und was gerade gilt, liest man darunter in
+           voller Größe. Bei nur einer Frage entfällt er ganz. -->
+      <div class="bd-qbar" id="bdQBar" hidden>
+        <button type="button" class="bd-qarrow" id="bdQPrev"
+                aria-label="Vorige Frage" title="Vorige Frage">‹</button>
+        <div class="bd-qtabs" id="bdQTabs" role="tablist"></div>
+        <button type="button" class="bd-qarrow" id="bdQNext"
+                aria-label="Nächste Frage" title="Nächste Frage">›</button>
       </div>
+
+      <div class="bd-catnav__title">
+        <h2 class="bd-q" id="bdCatName"></h2>
+      </div>
+
       <div class="bd-catnav__right">
         <div class="bd-phases" id="bdPhases" hidden></div>
         <button type="button" class="bd-phasehelp" id="bdPhaseHelp"
                 aria-label="Auftrag der aktuellen Phase ansehen"
                 title="Was ist gerade zu tun?">?</button>
         <div class="bd-viewswitch" id="bdViewSwitch">
-          <button type="button" data-view="board" class="active">Wolke</button>
+          <button type="button" data-view="board" class="active">Pool</button>
           <button type="button" data-view="table">Liste</button>
         </div>
       </div>
     </nav>
 
+    <!-- Moderation: am rechten Rand und nur so breit wie ihre zwei
+         Knöpfe. Über die ganze Fläche gezogen sah sie aus wie die
+         Hauptsache — sie ist aber das, was die Lehrkraft zweimal je
+         Stunde braucht. Der Phasenknopf sagt, was der nächste Druck
+         bewirkt, statt „vor" und „zurück" nebeneinanderzustellen. -->
     <div class="bd-adminbar" id="bdAdminBar" hidden>
-      <span class="bd-adminbar__label">🛡️ Moderation</span>
-      <button type="button" id="bdPhasePrev" class="bd-btn bd-btn--ghost">◀ Phase zurück</button>
-      <button type="button" id="bdPhaseNext" class="bd-btn">Nächste Phase ▶</button>
-      <span class="bd-adminbar__spacer"></span>
-      <button type="button" id="bdReset" class="bd-btn bd-btn--danger">Wolke leeren</button>
+      <button type="button" id="bdPhaseNext" class="bd-btn bd-btn--sm">Zur Besprechung ▶</button>
+      <button type="button" id="bdReset" class="bd-btn bd-btn--sm bd-btn--danger">Pool leeren</button>
     </div>
 
     <div class="bd-status" id="bdStatus" hidden>Lade …</div>
@@ -266,11 +344,14 @@
     if (!v) return '';
     return JSON.stringify([
       phase(), ctx.role, state.mode, state.sort,
-      v.me?.entries_used, question(),
+      // Der ganze Fragen-Satz und nicht nur der sichtbare: eine
+      // ergänzte Frage ändert die Reiterleiste, auch wenn man
+      // gerade in einer anderen steht.
+      state.qid, questions(), termsMax(), usedInQ(state.qid),
       // likes gehören in die Signatur: sonst bliebe eine Zustimmung aus
       // einem anderen Tablet unsichtbar, weil updated_at sich dabei
       // nicht ändert — und der eigene Doppeltipp würde ebenso verschluckt.
-      state.notes.map(n => [n.id, n.updated_at, n.likes, n.liked_by_me, n.hidden])
+      state.notes.map(n => [n.id, n.q, n.updated_at, n.likes, n.liked_by_me, n.hidden])
     ]);
   }
 
@@ -301,6 +382,18 @@
       renderTable();
     }
 
+    /* Ein Wechsel der Frage soll zu sehen sein — am Beamer sitzt die
+       Klasse zehn Meter weg, und ohne Bewegung sähe es aus, als wären
+       einfach alle Zettel ausgetauscht worden. Nur beim Wechsel, nicht
+       bei jedem Poll: state.slide setzt allein setQ. */
+    if (state.slide) {
+      const el = state.mode === 'board' ? $('bdBoard') : $('bdTable');
+      el.classList.remove('bd-slide-l', 'bd-slide-r');
+      void el.offsetWidth;              // erzwingt den Neustart der Animation
+      el.classList.add(state.slide > 0 ? 'bd-slide-r' : 'bd-slide-l');
+      state.slide = 0;
+    }
+
     // Offenes Detail mitziehen: sonst zeigt es nach einer Zustimmung
     // von einem anderen Gerät noch den alten Zählerstand.
     if (state.detailId && !$('bdDetail').hidden) renderDetail();
@@ -321,17 +414,30 @@
       </div>`).join('');
   }
 
+  /* Ein Knopf für beide Richtungen. „Nächste Phase" und „Phase
+     zurück" nebeneinander sind zwei Knöpfe für einen Umschalter mit
+     zwei Zuständen — und der zweite ist in 99 von 100 Fällen der
+     falsche. Beschriftet ist er mit dem, was der Druck bewirkt. */
   function renderAdminBar() {
     const bar = $('bdAdminBar');
     if (!isPresenter()) { bar.hidden = true; return; }
     bar.hidden = false;
-    $('bdPhasePrev').disabled = phase() <= 1;
-    $('bdPhaseNext').disabled = phase() >= 2;
+    const p = phase();
+    $('bdPhaseNext').textContent = p >= 2 ? '◀ Weiter sammeln' : 'Zur Besprechung ▶';
+    $('bdPhaseNext').classList.toggle('bd-btn--ghost', p >= 2);
   }
 
-  const phaseTask = p => isPresenter()
-    ? PRESENTER_TASK[p]
-    : PHASE_INFO[p].task.replace('{frage}', question()).replace('{anzahl}', termsMax());
+  function phaseTask(p) {
+    if (isPresenter()) return PRESENTER_TASK[p];
+    const max = termsMax();
+    return PHASE_INFO[p].task
+      .replace('{frage}', question())
+      .replace('{kontingent}', max > 0
+        ? `Du hast ${max} Zettel zu dieser Frage.`
+        : 'Schreib so viele, wie dir einfallen.')
+      .replace('{fragen}', questions().length > 1
+        ? ' Oben stehen mehrere Fragen — durchtippen oder wischen.' : '');
+  }
 
   function openPhaseInfo() {
     const p = phase();
@@ -471,27 +577,54 @@
      außen, wer zuerst drankommt, landet in der Mitte. Bei Gleichstand
      das Alter, sonst tauschten zwei Zettel mit gleich vielen Stimmen
      bei jedem Poll die Plätze. */
-  const sortedNotes = () => state.notes.slice().sort((a, b) =>
+  const sortedNotes = () => notesOf(state.qid).slice().sort((a, b) =>
     (Number(b.likes || 0) - Number(a.likes || 0)) ||
     String(a.created_at).localeCompare(String(b.created_at)));
 
+  /* Die Frage ist der ganze Auftrag dieses Fachs — sie steht groß da
+     und trägt weder Rahmen noch Zähler. Ein Kasten drumherum machte
+     aus der Überschrift ein Bedienelement, und die Zahl dahinter
+     beantwortete eine Frage, die niemand stellt: wie viele Zettel da
+     liegen, sieht man an den Zetteln. */
   function renderQuestionBar() {
     $('bdCatNav').hidden = false;
-    $('bdCatName').innerHTML =
-      `${esc(question())} <span class="bd-catnav__count">${state.notes.length}</span>`;
+    $('bdCatName').textContent = question();
 
-    /* Anklickbar bleibt der Knopf auch bei vollem Kontingent — die
-       Absage kommt beim Drücken als kurze Meldung. Ein toter Knopf
-       beantwortet die Frage „warum geht das nicht?" nicht, und ein
-       verschwundener nimmt sie mit. */
-    const add = $('bdCatAdd');
-    add.hidden = !canWrite();
-    if (!add.hidden) {
-      add.disabled = false;
-      add.title = isPresenter() ? 'Eigenen Zettel dazuschreiben' : 'Neuen Zettel schreiben';
-      add.setAttribute('aria-label', add.title);
-      add.classList.toggle('bd-catadd--full', quotaFull());
-    }
+    const qs  = questions();
+    const bar = $('bdQBar');
+    bar.hidden = qs.length < 2;
+    if (bar.hidden) return;
+
+    /* Nummer und Zettelzahl, sonst nichts: der Text der Frage steht
+       eine Zeile tiefer in voller Größe, und sieben Fragen
+       nebeneinander wären sieben Fließtexte. Die Nummer ist dieselbe
+       wie in den Einstellungen der Lehrkraft. */
+    $('bdQTabs').innerHTML = qs.map((q, i) => {
+      const on = q.id === state.qid;
+      return `<button type="button" role="tab" data-q="${esc(q.id)}"
+                class="bd-qtab${on ? ' bd-qtab--on' : ''}" aria-selected="${on}"
+                title="${esc(q.text)}">
+                <span class="bd-qtab__no">${i + 1}</span>
+                <span class="bd-qtab__count">${notesOf(q.id).length}</span>
+              </button>`;
+    }).join('');
+  }
+
+  function gotoQ(delta) {
+    const qs = questions();
+    const i  = Math.max(0, qs.findIndex(q => q.id === state.qid));
+    setQ(qs[(i + delta + qs.length) % qs.length].id, delta);
+  }
+
+  function setQ(id, dir) {
+    if (!id || id === state.qid) return;
+    state.qid   = id;
+    state.slide = dir || 0;
+    try { sessionStorage.setItem(qKey(), id); } catch (e) {}
+    // Der Ausschnitt gehört der Wolke, die man gerade verlässt: die
+    // nächste Frage fängt beim Überblick an.
+    vp.touched = false;
+    render();
   }
 
   /* In der Wolken-Ansicht reicht die Tafel bis an die untere
@@ -505,13 +638,33 @@
     b.style.minHeight = portHeight(b) + 'px';
   }
 
+  /* ── Der Plus-Knopf ──────────────────────────────────────
+     Er schwebt über dem Feld, oben rechts, und trägt als einziges
+     Bedienelement dieses Werkzeugs die Farbe von MPSkills (Mint bzw.
+     Violett). Das ist eine bewusste Ausnahme von Regel 1 der Optik
+     („die Farbe gehört den Zetteln"): der Knopf liegt AUF der Tafel
+     und muss dort auf Anhieb gefunden werden — anthrazit auf weiß
+     sah aus wie ein weiterer Zettel.
+
+     In der Listenansicht gibt es ihn nicht: dort ist kein Feld, über
+     dem er schweben könnte. Anklickbar bleibt er auch bei vollem
+     Kontingent — die Absage kommt beim Drücken als kurze Meldung.
+     Ein toter Knopf beantwortet die Frage „warum geht das nicht?"
+     nicht, und ein verschwundener nimmt sie mit. */
+  function addBtnHTML() {
+    if (!canWrite()) return '';
+    const t = isPresenter() ? 'Eigenen Zettel dazuschreiben' : 'Neuen Zettel schreiben';
+    return `<button type="button" class="bd-catadd${quotaFull() ? ' bd-catadd--full' : ''}"
+                    id="bdCatAdd" title="${t}" aria-label="${t}">＋</button>`;
+  }
+
   function renderBoard() {
     const notes = sortedNotes();
     const board = $('bdBoard');
     fillPage(true);   // vor dem Messen: ohne Fuß kommt eine andere Höhe heraus
 
     if (!notes.length) {
-      board.innerHTML = `<p class="bd-cloud-sec__empty">${esc(emptyText())}</p>`;
+      board.innerHTML = `<p class="bd-cloud-sec__empty">${esc(emptyText())}</p>${addBtnHTML()}`;
       fitBoardHeight();
       return;
     }
@@ -543,14 +696,15 @@
          <button type="button" data-zoom="in"      aria-label="Hineinzoomen" title="Hineinzoomen">＋</button>
          <button type="button" data-zoom="shuffle" aria-label="Neu anordnen"
                  title="Neu anordnen — nur auf diesem Gerät, niemand sonst merkt etwas davon">⟳</button>
-       </div>`;
+       </div>
+       ${addBtnHTML()}`;
 
     layoutClouds();
     wirePort($('bdPort'));
   }
 
   function emptyText() {
-    if (isPresenter()) return 'Noch nichts da. Sobald jemand etwas schreibt, wächst hier die Wolke.';
+    if (isPresenter()) return 'Noch nichts da. Sobald jemand etwas schreibt, wächst hier der Pool.';
     return 'Hier steht noch nichts. ' + (canWrite() ? 'Schreib den ersten Zettel.' : '');
   }
 
@@ -1061,7 +1215,9 @@
     $('bdBoard').style.minHeight = '';
     const cols = tableCols();
 
-    const rows = state.notes.slice().sort((a, b) => {
+    // Auch die Liste zeigt nur das offene Fach: sie ist eine andere
+    // Sicht auf dieselbe Frage und keine Gesamtausgabe.
+    const rows = notesOf(state.qid).slice().sort((a, b) => {
       const av = sortValue(a, state.sort.col);
       const bv = sortValue(b, state.sort.col);
       // Zustimmungen sind Zahlen — als Text sortiert stünde 10 vor 2.
@@ -1113,10 +1269,12 @@
     /* Beim Anlegen steht das Kontingent im Titel — „Neuer Zettel 4 von
        10". Hier ist es die Antwort auf eine Frage, die man sich gerade
        stellt; in der Kopfzeile wäre es eine Zahl, die immer dasteht.
-       Die Lehrkraft bekommt keine: für sie gilt das Kontingent nicht. */
-    const used = state.view?.me?.entries_used ?? 0;
+       Keine Zahl bekommen zwei: die Lehrkraft (für sie gilt das
+       Kontingent nicht) und alle in einem Raum ohne Kontingent — dort
+       gäbe es nichts zu zählen. */
     const max  = termsMax();
-    const nth  = isPresenter() ? '' : ` ${Math.min(used + 1, max)} von ${max}`;
+    const used = usedInQ(state.qid);
+    const nth  = (isPresenter() || max <= 0) ? '' : ` ${Math.min(used + 1, max)} von ${max}`;
 
     $('bdModalTitle').textContent = note ? 'Zettel bearbeiten' : `Neuer Zettel${nth}`;
     $('bdModalCat').innerHTML =
@@ -1155,7 +1313,13 @@
     if (!validate()) return;
     $('bdSave').disabled = true;
 
-    const res = await ctx.actions.upsert({ text: $('bdText').value.trim() }, state.editing.id);
+    /* Die Frage geht mit: sie ist beim Anlegen die einzige Angabe
+       neben dem Text, und im Formular ist sie keine Frage mehr,
+       sondern eine Angabe (sie steht als Überschrift darüber). Beim
+       Ändern verwirft der Server sie und behält die des Zettels —
+       bearbeiten ändert den Text, nicht das Fach (0086). */
+    const res = await ctx.actions.upsert(
+      { text: $('bdText').value.trim(), q: state.qid }, state.editing.id);
     if (!res.ok) {
       $('bdModalError').textContent = errText(res.error);
       $('bdModalError').hidden = false;
@@ -1281,13 +1445,29 @@
 
     /* Neuer Zettel. Ist das Kontingent aufgebraucht, sagt der Knopf das
        hier — kurz, und ohne ein Formular zu öffnen, das nachher nur
-       abgewiesen würde. */
-    $('bdCatAdd').addEventListener('click', () => {
+       abgewiesen würde.
+
+       Delegiert und nicht am Knopf: er schwebt seit dem Umbau IM
+       Feld, und das Feld wird bei jeder Änderung neu gezeichnet — ein
+       Listener am Knopf wäre nach dem ersten Poll weg. */
+    function addTapped() {
       if (quotaFull()) {
-        ctx.toast(`Du hast alle ${termsMax()} Zettel geschrieben.`, true);
+        ctx.toast(`Du hast alle ${termsMax()} Zettel zu dieser Frage geschrieben.`, true);
         return;
       }
       openModal(null);
+    }
+
+    // ── Zwischen den Fragen wechseln ──
+    $('bdQPrev').addEventListener('click', () => gotoQ(-1));
+    $('bdQNext').addEventListener('click', () => gotoQ(1));
+    $('bdQTabs').addEventListener('click', ev => {
+      const b = ev.target.closest('button[data-q]');
+      if (!b) return;
+      const qs = questions();
+      const from = qs.findIndex(q => q.id === state.qid);
+      const to   = qs.findIndex(q => q.id === b.dataset.q);
+      setQ(b.dataset.q, to > from ? 1 : -1);
     });
 
     $('bdText').addEventListener('input', () => {
@@ -1316,11 +1496,24 @@
     });
 
     onDoc(document, 'keydown', ev => {
-      if (ev.key !== 'Escape' || !root) return;
-      if (!$('bdModal').hidden)     closeModal();
-      if (!$('bdDetail').hidden)    closeDetail();
-      if (!$('bdPhaseInfo').hidden) closePhaseInfo();
-      if (!$('bdConfirm').hidden)   { $('bdConfirm').hidden = true; state.confirmFn = null; }
+      if (!root) return;
+
+      if (ev.key === 'Escape') {
+        if (!$('bdModal').hidden)     closeModal();
+        if (!$('bdDetail').hidden)    closeDetail();
+        if (!$('bdPhaseInfo').hidden) closePhaseInfo();
+        if (!$('bdConfirm').hidden)   { $('bdConfirm').hidden = true; state.confirmFn = null; }
+        return;
+      }
+
+      // Pfeiltasten blättern durch die Fragen — aber nicht, während
+      // jemand in einem Feld steht oder ein Fenster offen ist.
+      if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+      if (questions().length < 2) return;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
+      if (!$('bdModal').hidden || !$('bdDetail').hidden
+       || !$('bdPhaseInfo').hidden || !$('bdConfirm').hidden) return;
+      gotoQ(ev.key === 'ArrowLeft' ? -1 : 1);
     });
 
     /* Karten: einmal tippen öffnet das Detail, zweimal stimmt zu.
@@ -1358,9 +1551,33 @@
     }
 
     $('bdBoard').addEventListener('click', ev => {
+      if (ev.target.closest('#bdCatAdd')) { addTapped(); return; }
       const card = ev.target.closest('[data-note]');
       if (card) cardTapped(card);
     });
+
+    /* Wischen zwischen den Fragen — passiv, damit das Scrollen nicht
+       stirbt, und nur bei deutlich waagerechten Bewegungen. Im
+       Schiebe-Modus gehört der Finger dem Ausschnitt, dort ist es aus
+       (dieselbe Regel wie beim Reality Check). */
+    let sw = null;
+    const SWIPE_MIN = 55;
+    gesture.cancelSwipe = () => { sw = null; };
+
+    $('bdBoard').addEventListener('touchstart', ev => {
+      sw = (ev.touches.length === 1 && questions().length > 1 && !isPanMode())
+        ? { x: ev.touches[0].clientX, y: ev.touches[0].clientY } : null;
+    }, { passive: true });
+
+    $('bdBoard').addEventListener('touchend', ev => {
+      const s = sw; sw = null;
+      if (!s || ev.changedTouches.length !== 1) return;
+      const dx = ev.changedTouches[0].clientX - s.x;
+      const dy = ev.changedTouches[0].clientY - s.y;
+      if (Math.abs(dx) < SWIPE_MIN || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+      gesture.cancelTap();
+      gotoQ(dx < 0 ? 1 : -1);
+    }, { passive: true });
     $('bdBoard').addEventListener('keydown', ev => {
       const card = ev.target.closest('[data-note]');
       if (!card) return;
@@ -1446,18 +1663,26 @@
       ctx.toast(`Phase ${p} läuft.`);
       ctx.refresh();
     };
-    $('bdPhaseNext').addEventListener('click', () => setPhase(Math.min(2, phase() + 1)));
-    $('bdPhasePrev').addEventListener('click', () => setPhase(Math.max(1, phase() - 1)));
+    // Ein Knopf, zwei Richtungen: er trägt, was der Druck bewirkt.
+    $('bdPhaseNext').addEventListener('click', () => setPhase(phase() >= 2 ? 1 : 2));
 
+    /* Geleert wird der ganze Raum und nicht nur das offene Fach — das
+       ist die Handlung, die der Server anbietet (skill_room_reset),
+       und „nur diese Frage" wäre eine zweite, die sich mit der ersten
+       verwechseln ließe. Deshalb sagt die Rückfrage ausdrücklich,
+       dass ALLE Fragen betroffen sind. */
     $('bdReset').addEventListener('click', () => {
-      const n = state.notes.length;
-      confirmAsk('Wolke leeren?',
-        `Alle ${n} Zettel werden gelöscht und die Phase geht zurück auf 1. Wer im Raum ist, `
-        + 'bleibt drin — nur der Inhalt ist weg. Das lässt sich nicht rückgängig machen.',
+      const n  = state.notes.length;
+      const qs = questions().length;
+      confirmAsk('Pool leeren?',
+        `Alle ${n} Zettel werden gelöscht${qs > 1 ? ` — auch die der anderen ${qs - 1} `
+          + `${qs === 2 ? 'Frage' : 'Fragen'}` : ''}, und die Phase geht zurück auf 1. `
+        + 'Wer im Raum ist, bleibt drin, und die Fragen bleiben stehen — nur der Inhalt ist '
+        + 'weg. Das lässt sich nicht rückgängig machen.',
         async () => {
           const res = await ctx.actions.reset();
           if (!res.ok) { ctx.toast(errText(res.error), true); return; }
-          ctx.toast(`Wolke geleert (${res.deleted} Zettel).`);
+          ctx.toast(`Pool geleert (${res.deleted} Zettel).`);
           state.lastPhase = null;
           ctx.refresh();
         });
@@ -1498,13 +1723,26 @@
        keine Erklärungssätze mehr unter den Feldern. Was ein Feld
        will, muss aus Beschriftung und Platzhalter hervorgehen. */
     settingsFields: [
-      { key: 'question', label: 'Eure Frage', type: 'text', maxlength: 140, required: true,
-        placeholder: 'z. B. Was macht guten Unterricht aus?',
-        // Der Vorgabewert ist nicht Bequemlichkeit, sondern der Inhalt
-        // des Testraums: der wird von der Landing aus mit einem Klick
-        // angelegt, ganz ohne Dialog (siehe app.js). Ohne Vorgabe
-        // stünde dort eine Wolke ohne Frage.
-        default: 'Was fällt euch dazu ein?' }
+      /* Ohne Vorgabewert, und das ist der Punkt (19.08.2026): eine
+         vorausgefüllte Frage wird abgenickt, und im Raum steht dann
+         „Was fällt euch dazu ein?" über einer Stunde, die etwas ganz
+         Bestimmtes wissen wollte. Das Feld ist Pflicht — wer einen
+         Raum aufmacht, weiß, wonach er fragt.
+
+         Die Nachfolgerin des alten `question`-Feldes: bis zu sieben
+         Fragen, jederzeit ergänzbar. `max` ist auch serverseitig
+         hinterlegt (skill_tools.limits.max_groups) — hier steht es
+         für den Knopf, dort für die Regel. */
+      { key: 'questions', type: 'list', label: 'Fragen', itemLabel: 'Frage',
+        addLabel: '+ Frage', max: 7, maxlength: 140, required: true,
+        placeholder: 'z. B. Was macht guten Unterricht aus?' },
+
+      /* Leer heißt unbegrenzt, und das ist die Vorgabe: eine Zahl,
+         die niemand eingestellt hat, soll niemanden bremsen. Wer eine
+         setzt, setzt sie je Frage — sonst entschiede die Reihenfolge,
+         in der jemand die Fächer durchgeht, wie viel er sagen darf. */
+      { key: 'max_entries', type: 'quota', label: 'Zettel je Person und Frage',
+        min: 1, max: 100, unlimitedLabel: 'unbegrenzt' }
     ],
 
     mount(el, context) {
@@ -1514,6 +1752,8 @@
       state.lastPhase = null;
       state.notes     = [];
       state.view      = null;
+      state.qid       = null;
+      state.slide     = 0;
       vp.ready = false; vp.touched = false;
 
       root.innerHTML = TEMPLATE;
@@ -1526,6 +1766,19 @@
     update(view) {
       state.view  = view;
       state.notes = toNotes(view);
+
+      /* Welches Fach offen ist, wird bei JEDEM Takt geprüft und nicht
+         nur beim ersten: die Lehrkraft darf Fragen ergänzen und —
+         solange nichts darunter liegt — auch entfernen. Wer gerade in
+         einer entfernten stand, landet bei der ersten, statt vor
+         einem leeren Feld ohne Erklärung. */
+      const qs = questions();
+      if (!state.qid || !qs.some(q => q.id === state.qid)) {
+        let want = null;
+        try { want = sessionStorage.getItem(qKey()); } catch (e) {}
+        state.qid = (want && qs.some(q => q.id === want)) ? want : qs[0].id;
+      }
+
       render();
 
       /* Der Auftrag kommt von selbst: einmal beim Öffnen und danach
@@ -1564,7 +1817,8 @@
       for (const [t, type, fn, opts] of docListeners) t.removeEventListener(type, fn, opts);
       docListeners.length = 0;
       fillPage(false);
-      gesture.cancelTap = () => {};
+      gesture.cancelTap   = () => {};
+      gesture.cancelSwipe = () => {};
       root = null;
       ctx  = null;
       state.view = null;
@@ -1573,6 +1827,7 @@
       state.lastPhase = null;
       state.detailId = null;
       state.editing = null;
+      state.qid = null;
     }
   });
 })();

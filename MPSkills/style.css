@@ -1743,13 +1743,71 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
 /* Gesperrte Felder bleiben SICHTBAR und werden nur unbedienbar: ein
    verschwundenes Feld beantwortet die Frage „wo ist das hin?" nicht,
    ein graues mit einer Zeile Begründung schon. */
-.setfield.is-locked .seg2, #setToolFields.is-locked { opacity: .62; }
+.setfield.is-locked .seg2 { opacity: .62; }
 .lockline {
   margin: 6px 0 0;
   font-size: .8rem; font-weight: 400; color: var(--warn);
 }
 #setToolFields + .lockline { margin: -6px 0 0; }
 .actions--go { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ── Listenfeld (die Fragen eines WordPools) ───────────────────
+   Mehrere gleichartige Zeilen mit einem „+" darunter. Nummeriert,
+   weil im Raum genau diese Nummern über den Fächern stehen — wer
+   hier die dritte Zeile ändert, soll wissen, welche das drüben ist.
+
+   Die Zeilen stehen bewusst NICHT in einem eigenen Rahmen: der
+   Kasten oben trägt die allgemeinen Raum-Angaben, hier unten steht
+   das, was der Skill will, und ein zweiter Rahmen machte aus zwei
+   Blöcken wieder drei. */
+.field--list { margin-bottom: 14px; }
+.field-l {
+  display: block; margin-bottom: 6px;
+  font-size: .82rem; font-weight: 600; color: var(--ink-soft);
+}
+.listrows { display: grid; gap: 8px; }
+.listrow { display: flex; align-items: center; gap: 8px; }
+.listrow-n {
+  flex: 0 0 auto;
+  width: 22px; text-align: center;
+  font-size: .8rem; font-weight: 700; color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.listrow input {
+  flex: 1 1 auto; min-width: 0;
+  font: inherit; font-size: .95rem; color: var(--ink);
+  padding: 9px 11px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--paper);
+}
+.listrow input:focus { outline: 2px solid var(--accent); outline-offset: -1px; background: var(--surface); }
+/* Gesperrt heißt sichtbar und unbedienbar — die Frage bleibt
+   lesbar, sie lässt sich nur nicht mehr anfassen (0086). */
+.listrow.is-locked input { background: var(--paper-2); color: var(--ink-soft); }
+.listrow-del {
+  flex: 0 0 auto;
+  width: 32px; height: 32px; line-height: 1;
+  font: inherit; font-size: .9rem;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: none; color: var(--ink-faint); cursor: pointer;
+}
+.listrow-del:hover:not(:disabled) { background: var(--warn-dim); border-color: var(--warn); color: var(--warn); }
+.listrow-del:disabled { opacity: .3; cursor: default; }
+
+.listadd {
+  margin: 10px 0 0 30px;
+  font: inherit; font-size: .86rem; font-weight: 600;
+  color: var(--accent-ink);
+  padding: 7px 13px;
+  border: 1px dashed var(--accent-edge); border-radius: 12px;
+  background: none; cursor: pointer;
+}
+.listadd:hover:not(:disabled) { background: var(--accent-dim); }
+.listadd:disabled { opacity: .4; cursor: default; }
+
+/* Das Kontingent. Leer heißt „unbegrenzt", und das steht im
+   Platzhalter — es ist die Antwort und keine fehlende Angabe. */
+.field--quota input { max-width: 190px; }
 
 /* ─── Fach 2: Onboarding ──────────────────────────────────── */
 .onb-bar {
