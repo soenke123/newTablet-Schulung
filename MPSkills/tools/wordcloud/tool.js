@@ -111,6 +111,7 @@
 
     editing:   null,
     detailId:  null,
+    moving:    false,  // steht im Detail gerade die Frage-Auswahl offen?
     confirmFn: null,
     shuffle:   0,
     busy:      {}      // id → läuft gerade eine Zustimmung?
@@ -216,7 +217,17 @@
     if (isPresenter()) return !!note.by_admin;   // nur die eigenen
     return !!note.is_mine && canWrite();
   }
-  const canLike = note => !isPresenter() && !note.is_mine;
+  /* Zustimmen darf seit Migration 0087 auch die Lehrkraft. An den
+     Stimmen hängt hier keine Note und keine Belohnung — sie ordnen die
+     Wolke, und wer vorne steht und mitredet, hat dazu eine Meinung wie
+     alle anderen. Der eigene Zettel bleibt für beide Rollen tabu:
+     is_mine ist am Beamer für die Karten der Lehrkraft wahr. */
+  const canLike = note => !note.is_mine;
+
+  /* Verschieben ist Moderation wie das Ausblenden — und es gibt es nur
+     dort, wo es etwas zu wählen gibt: bei einer einzigen Frage wäre
+     „wohin?" eine Frage ohne Antwort. */
+  const canMove = () => isPresenter() && questions().length > 1;
 
   /* Voll ist immer nur EINE Frage. Wer bei der ersten alles
      aufgebraucht hat, schreibt bei der zweiten weiter — sonst
@@ -299,9 +310,15 @@
       <div class="bd-modal bd-modal--detail" role="dialog" aria-modal="true" aria-labelledby="bdDetailText">
         <p class="bd-detail__text" id="bdDetailText"></p>
         <div class="bd-detail__meta" id="bdDetailMeta"></div>
+        <!-- Wohin verschieben? Klappt im Detail selbst auf und nicht in
+             einem zweiten Fenster: der Zettel, um den es geht, soll dabei
+             sichtbar bleiben. -->
+        <div class="bd-move" id="bdMoveList" hidden></div>
         <div class="bd-modal__actions bd-detail__actions">
           <button type="button" id="bdDetailLike"  class="bd-btn bd-btn--like" hidden></button>
           <span class="bd-detail__spacer"></span>
+          <button type="button" id="bdDetailMove"  class="bd-btn bd-btn--ghost" hidden
+                  aria-expanded="false">↔️ Verschieben</button>
           <button type="button" id="bdDetailHide"  class="bd-btn bd-btn--ghost" hidden></button>
           <button type="button" id="bdDetailDel"   class="bd-btn bd-btn--danger" hidden>🗑️ Löschen</button>
           <button type="button" id="bdDetailEdit"  class="bd-btn" hidden>✏️ Bearbeiten</button>
@@ -555,8 +572,16 @@
     }
 
     const sheets = hasStrength ? sheetsFor(t) : 0;
+
+    /* Der Besitz-Ring bleibt am Beamer aus. Seit 0087 ist is_mine auch
+       dort wahr — für die Karten der Lehrkraft —, aber die tragen schon
+       den Lehrkraft-Rahmen, und ein zweiter Marker auf derselben Karte
+       sagt der Klasse nichts, was der erste nicht schon sagt. */
+    const mine = note.is_mine && !isPresenter();
     const hint = (note.by_admin ? 'Von der Lehrkraft · ' : '') + (note.is_mine
-      ? 'Antippen: deinen Zettel ansehen, ändern oder löschen'
+      ? (isPresenter()
+          ? 'Antippen: deinen Zettel ansehen oder löschen'
+          : 'Antippen: deinen Zettel ansehen, ändern oder löschen')
       : (canLike(note) ? 'Antippen für Details · Doppeltippen zum Zustimmen' : 'Antippen für Details'));
 
     // Bewusst ohne role="button": die Karte ist zwar antippbar, aber
@@ -564,7 +589,7 @@
     // Dekoration — und der Inhalt ist hier die ganze Information.
     const liked = !!note.liked_by_me;
 
-    return `<article class="bd-cn${note.by_admin ? ' bd-cn--admin' : ''}${note.is_mine ? ' bd-cn--mine' : ''}${liked ? ' bd-cn--liked' : ''}${note.hidden ? ' bd-cn--hidden' : ''}${sheets ? ` bd-cn--st${sheets}` : ''}"
+    return `<article class="bd-cn${note.by_admin ? ' bd-cn--admin' : ''}${mine ? ' bd-cn--mine' : ''}${liked ? ' bd-cn--liked' : ''}${note.hidden ? ' bd-cn--hidden' : ''}${sheets ? ` bd-cn--st${sheets}` : ''}"
              data-note="${esc(note.id)}"${style}
              tabindex="0" title="${hint}">
         ${liked ? '<span class="bd-cn__liked" title="Du hast zugestimmt">👍</span>' : ''}
@@ -1375,12 +1400,19 @@
      Wolke ruhig und macht trotzdem nichts unerreichbar. */
   function openDetail(id) {
     state.detailId = id;
+    // Jede Karte fängt zugeklappt an: die Auswahl gehört zu der Karte,
+    // für die sie aufgeklappt wurde, und nicht zur nächsten.
+    state.moving   = false;
     if (!renderDetail()) return;
     $('bdDetail').hidden = false;
     $('bdDetailClose').focus();
   }
 
-  const closeDetail = () => { $('bdDetail').hidden = true; state.detailId = null; };
+  const closeDetail = () => {
+    $('bdDetail').hidden = true;
+    state.detailId = null;
+    state.moving   = false;
+  };
 
   function renderDetail() {
     const note = state.notes.find(n => n.id === state.detailId);
@@ -1417,12 +1449,46 @@
       hideBtn.textContent = note.hidden ? '👁️ Wieder einblenden' : '🚫 Ausblenden';
     }
 
+    /* Verschieben: nur die Lehrkraft, nur bei mehr als einer Frage.
+       Der Knopf öffnet die Auswahl darunter und schließt sie wieder —
+       er sagt also nichts an, sondern zeigt etwas. */
+    const moveBtn = $('bdDetailMove');
+    moveBtn.hidden = !canMove();
+    if (moveBtn.hidden) state.moving = false;
+    moveBtn.setAttribute('aria-expanded', String(!!state.moving));
+    moveBtn.classList.toggle('bd-btn--on', !!state.moving);
+    renderMoveList(note);
+
     const mayEdit = canEdit(note);
     // Die Lehrkraft kann ihre eigenen Zettel nicht ändern, nur löschen
     // — es gibt serverseitig keinen Schreibweg dafür (lib/tool.js).
     $('bdDetailEdit').hidden = !mayEdit || isPresenter();
     $('bdDetailDel').hidden  = !mayEdit;
     return true;
+  }
+
+  /* Alle Fragen stehen da, auch die eigene — sie ist als „steht hier"
+     markiert und nicht anklickbar. Ohne sie stimmten die Nummern nicht
+     mehr mit der Reiterleiste überein, und genau daran erkennt die
+     Lehrkraft, wohin sie schiebt. */
+  function renderMoveList(note) {
+    const box = $('bdMoveList');
+    const on  = !!state.moving && canMove();
+    box.hidden = !on;
+    if (!on) { box.innerHTML = ''; return; }
+
+    box.innerHTML =
+      `<p class="bd-move__head">In welche Frage?</p>` +
+      questions().map((q, i) => {
+        const here = q.id === note.q;
+        const inner = `<span class="bd-move__no">${i + 1}</span>
+                       <span class="bd-move__text">${esc(q.text)}</span>` +
+                      (here ? '<span class="bd-move__here">steht hier</span>' : '');
+        return here
+          ? `<div class="bd-move__item bd-move__item--here">${inner}</div>`
+          : `<button type="button" class="bd-move__item" data-q="${esc(q.id)}">${inner}</button>`;
+      }).join('') +
+      `<p class="bd-move__note">Die Zustimmungen bleiben am Zettel.</p>`;
   }
 
   /* ── Bestätigen ──────────────────────────────────────── */
@@ -1606,6 +1672,30 @@
       openModal(note);
     });
 
+    /* Verschieben: erst aufklappen, dann das Ziel tippen. Zwei Schritte
+       und nicht einer, weil der zweite unumkehrbar aussieht — die Karte
+       verschwindet aus dem Fach, in dem man gerade steht. */
+    $('bdDetailMove').addEventListener('click', () => {
+      state.moving = !state.moving;
+      renderDetail();
+    });
+
+    $('bdMoveList').addEventListener('click', async ev => {
+      const b = ev.target.closest('button[data-q]');
+      if (!b) return;
+      const note = state.notes.find(n => n.id === state.detailId);
+      if (!note) return;
+
+      const nth = questions().findIndex(q => q.id === b.dataset.q) + 1;
+      b.disabled = true;
+      const res = await ctx.actions.move(note.id, b.dataset.q);
+      if (!res.ok) { b.disabled = false; ctx.toast(errText(res.error), true); return; }
+
+      closeDetail();
+      ctx.toast(`Verschoben zu Frage ${nth} — mit allen Zustimmungen.`);
+      ctx.refresh();
+    });
+
     $('bdDetailHide').addEventListener('click', async () => {
       const note = state.notes.find(n => n.id === state.detailId);
       if (!note) return;
@@ -1741,7 +1831,8 @@
          die niemand eingestellt hat, soll niemanden bremsen. Wer eine
          setzt, setzt sie je Frage — sonst entschiede die Reihenfolge,
          in der jemand die Fächer durchgeht, wie viel er sagen darf. */
-      { key: 'max_entries', type: 'quota', label: 'Zettel je Person und Frage',
+      { key: 'max_entries', type: 'quota',
+        label: 'Wie viele Beiträge darf eine Person pro Frage angeben?',
         min: 1, max: 100, unlimitedLabel: 'unbegrenzt' }
     ],
 
@@ -1826,6 +1917,7 @@
       state.lastSig = null;
       state.lastPhase = null;
       state.detailId = null;
+      state.moving = false;
       state.editing = null;
       state.qid = null;
     }

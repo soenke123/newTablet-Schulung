@@ -74,7 +74,7 @@
        Gerät, das ein Werkzeug schon einmal geladen hat, dessen altes
        CSS — beim Umbau auf hell/dunkel (19.08.2026) wäre die halbe
        Kachel im alten Kleid stehengeblieben. */
-    const v = '?v=20260819c';
+    const v = '?v=20260819d';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf
@@ -147,6 +147,7 @@
       // still nichts zu tun. Ein Werkzeug soll den Knopf gar nicht
       // erst anbieten, aber wenn doch, ist eine Meldung besser als
       // ein toter Klick.
+      move:     () => Promise.resolve({ ok: false, error: 'not_allowed' }),
       hide:     () => Promise.resolve({ ok: false, error: 'not_allowed' }),
       setPhase: () => Promise.resolve({ ok: false, error: 'not_allowed' }),
       setData:  () => Promise.resolve({ ok: false, error: 'not_allowed' }),
@@ -171,7 +172,20 @@
         ? Promise.resolve({ ok: false, error: 'not_editable' })
         : rpc('skill_room_entry_add', { p_payload: payload, p_kind: kind || 'entry' }),
       remove:   (id)      => rpc('skill_room_entry_delete', { p_id: id }),
-      vote:     ()        => Promise.resolve({ ok: false, error: 'not_allowed' }),
+
+      /* Zustimmen darf sie seit 0087 auch. Die Entscheidung von 0080
+         („die Lehrkraft moderiert und wiegt nicht auf") galt einer
+         Auswertung, die es nicht gibt: an den Stimmen hängt keine
+         Note, sie ordnen die Anzeige. Wer vorne steht und mitredet,
+         hat dazu eine Meinung wie alle — eine Stimme unter vielen. */
+      vote:     (id)      => rpc('skill_room_vote_toggle', { p_entry: id }),
+
+      /* Sortieren statt löschen: ein Beitrag im falschen Fach behält
+         beim Verschieben seine Zustimmungen. Ihn löschen und neu
+         schreiben zu lassen, wärfe genau das weg, was der Kurs daran
+         getan hat. Welcher payload-Schlüssel die Gruppe trägt, weiß
+         der Server aus skill_tools.limits — hier steht nur ihr Name. */
+      move:     (id, grp) => rpc('skill_room_entry_move', { p_id: id, p_group: grp }),
       hide:     (id, on)  => rpc('skill_room_entry_hide', { p_id: id, p_hidden: on !== false }),
       setPhase: (n)       => rpc('skill_room_set_state', { p_phase: n }),
       setData:  (obj)     => rpc('skill_room_set_state', { p_data: obj }),
@@ -192,6 +206,7 @@
     invalid_input:   'Damit stimmt etwas nicht.',
     payload_too_big: 'Das ist zu viel auf einmal.',
     votes_disabled:  'Hier wird nicht abgestimmt.',
+    group_unknown:   'Dieses Fach gibt es nicht mehr.',
     own_entry:       'Deinem eigenen Beitrag kannst du nicht zustimmen.',
     text_blocked:    'Solche Wörter bitte nicht. Schreib es anders.',
     blocked:         'Deine Lehrkraft hat dieses Tablet gerade stillgelegt.',

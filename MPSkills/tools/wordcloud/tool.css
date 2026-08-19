@@ -816,6 +816,71 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 480px; font-
 .bd-detail__row strong   { color: var(--clr-ink); font-weight: 700; }
 .bd-detail__none { color: var(--clr-ink-3); font-weight: 400; font-style: normal; }
 
+/* ── Verschieben ──────────────────────────────────────────
+   Klappt im Detail selbst auf, zwischen Angaben und Knöpfen — der
+   Zettel, um den es geht, bleibt dabei sichtbar. Bewusst kein
+   zweites Fenster: „wohin?" ist eine Rückfrage zu dem, was schon
+   offen ist, und kein neuer Vorgang.
+
+   Die Nummer trägt die Bedienfarbe (Anthrazit, Regel 1 ganz oben)
+   und nicht die eines Zettels: sie zeigt auf ein Fach, nicht auf
+   einen Inhalt. */
+.bd-move {
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--clr-line);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.bd-move__head {
+  font-size: .78rem; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--clr-ink-3);
+}
+.bd-move__item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 12px; border-radius: 10px; text-align: left;
+  background: var(--clr-surface); border: 1px solid var(--clr-line);
+  color: var(--clr-ink); font-family: var(--font-body); font-size: .92rem;
+}
+button.bd-move__item { cursor: pointer; }
+button.bd-move__item:hover:not(:disabled) {
+  background: var(--clr-surface2); border-color: var(--clr-accent);
+}
+button.bd-move__item:disabled { opacity: .55; cursor: default; }
+/* Das Fach, in dem der Zettel schon liegt: steht mit da, damit die
+   Nummern zu denen der Reiterleiste passen — aber flach und ohne
+   Knopfform, sonst sähe es nach einer Wahl aus, die nichts tut. */
+.bd-move__item--here {
+  background: transparent; border-style: dashed; color: var(--clr-ink-3);
+}
+.bd-move__no {
+  flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px;
+  display: grid; place-items: center;
+  background: var(--clr-accent); color: var(--clr-accent-ink);
+  font-size: .76rem; font-weight: 800;
+}
+.bd-move__item--here .bd-move__no {
+  background: var(--clr-surface2); color: var(--clr-ink-3);
+}
+/* Ausgeschrieben und nicht abgeschnitten: wer ein Ziel wählt, muss die
+   Frage lesen können — bei sieben Fragen endet die halbe Liste sonst
+   auf denselben drei Wörtern. Wird die Liste dadurch länger als der
+   Bildschirm, scrollt der Hintergrund (bd-modal-backdrop). */
+.bd-move__text {
+  flex: 1 1 auto; min-width: 0;
+  line-height: 1.35; overflow-wrap: anywhere;
+}
+.bd-move__here {
+  flex: 0 0 auto; font-size: .74rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em; color: var(--clr-ink-3);
+}
+.bd-move__note { font-size: .78rem; color: var(--clr-ink-3); margin-top: 2px; }
+
+/* Aufgeklappt sieht man dem Knopf an, dass die Liste zu ihm gehört. */
+.bd-btn--on,
+.bd-btn--on:hover:not(:disabled) {
+  background: var(--clr-accent); border-color: var(--clr-accent);
+  color: var(--clr-accent-ink);
+}
+
 /* Zustimmen sitzt links, weg von Löschen — die beiden sollen sich
    nicht am selben Daumen begegnen. */
 .bd-detail__actions { justify-content: flex-start; }
