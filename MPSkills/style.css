@@ -2237,6 +2237,10 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
 .qrfly-grip:hover { background: var(--accent); color: var(--on-accent); }
 .qrfly-grip svg { width: 24px; height: 24px; fill: currentColor; }
 
+/* Der ganze Kasten schließt die Tür wieder (Klick-Ziel: was man
+   sieht, nicht der schmale Griff daneben). Deshalb der Zeiger —
+   und deshalb bekommen die beiden Stellen, an denen der Klick schon
+   vergeben ist, ihren eigenen zurück. */
 .qrfly-body {
   width: var(--flyw);
   background: var(--surface);
@@ -2245,13 +2249,16 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   padding: 14px;
   box-shadow: var(--shadow-lg);
   text-align: center;
+  cursor: pointer;
 }
+.qrfly-body .btn { cursor: pointer; }
 .qrfly-qr { width: 100%; aspect-ratio: 1; display: grid; place-items: center; }
 .qrfly-qr svg { display: block; width: 100%; height: 100%; }
 .qrfly-code {
   font-family: var(--mono); font-weight: 700;
   font-size: 1.5rem; letter-spacing: .1em;
   margin-top: 6px; user-select: all;
+  cursor: text;
 }
 .qrfly-url {
   margin: 2px 0 10px; font-family: var(--mono);

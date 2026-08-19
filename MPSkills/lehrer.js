@@ -887,7 +887,12 @@ function drawQr(targetId, url) {
 
    Bewusst klein und bewusst OHNE Automatik: ein Fenster, das von
    selbst zuklappt, während noch jemand scannt, ist schlimmer als
-   eins, das zu lange offen steht. */
+   eins, das zu lange offen steht.
+
+   Zu geht es dafür überall: ein Griff, den man zum Ausfahren gedrückt
+   hat, ist danach ein 42 px breiter Streifen neben einem 250 px
+   breiten Kasten — wer ihn wieder wegräumen will, zielt auf das, was
+   er sieht. Also schließt ein Klick irgendwo auf dem Kasten. */
 function flyHTML() {
   return `
     <aside class="qrfly" id="qrFly" hidden>
@@ -899,7 +904,7 @@ function flyHTML() {
           <path d="M14 14h3v3h-3v-3zm5 0h2v2h-2v-2zm-5 5h2v2h-2v-2zm3 0h4v2h-4v-2zm2-3h2v2h-2v-2z"/>
         </svg>
       </button>
-      <div class="qrfly-body">
+      <div class="qrfly-body" id="qrFlyBody" title="Zum Einfahren klicken">
         <div class="qrfly-qr" id="flyQr"></div>
         <div class="qrfly-code">${esc(S.code)}</div>
         <p class="qrfly-url" id="flyUrl"></p>
@@ -925,6 +930,15 @@ function wireFly() {
     // Erst beim ersten Ausfahren zeichnen: ein QR-Code, den niemand
     // sieht, muss auch nicht gebaut werden.
     if (on) drawQr('flyQr', MPRoom.joinUrl(S.code));
+  });
+  // Ein Klick auf den ausgefahrenen Kasten fährt ihn wieder ein —
+  // zwei Ausnahmen, beide aus demselben Grund: dort ist der Klick
+  // schon vergeben. Der Beitritts-Knopf macht seine eigene Sache,
+  // und der Code ist `user-select: all`, also zum Markieren da; führe
+  // der Kasten dabei weg, wäre die Markierung mit weg.
+  $('qrFlyBody').addEventListener('click', (ev) => {
+    if (ev.target.closest('button, .qrfly-code')) return;
+    closeFly();
   });
   $('flyToggle').addEventListener('click', (ev) => toggleJoin(ev.currentTarget));
   document.addEventListener('keydown', (e) => {
