@@ -1492,6 +1492,10 @@ body.pv-lock { overflow: hidden; }
   font-size: .93rem;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* Wem der Raum gehört, steht im Titel und trägt ihn nicht: normale
+   Strichstärke, gedämpfte Farbe. Der Name ist die Unterscheidung
+   zwischen zwei gleich betitelten Räumen — nicht die Überschrift. */
+.vtile-by { font-weight: 400; color: var(--ink-faint); }
 .vtile-meta {
   font-size: .78rem; color: var(--ink-faint);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

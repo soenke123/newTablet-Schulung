@@ -188,16 +188,28 @@ function showVisited(intoPane) {
 /* Eine Kachel. Der Link liegt als gestreckter Überzug darüber
    (wie .tile-peek bei den Skill-Kacheln) statt als <a> um alles:
    ein Knopf in einem Link wäre ungültig, und das Menü in der Ecke
-   ist einer. */
+   ist einer.
+
+   Hinter dem Titel steht in Klammern, WEM der Raum gehört (0090).
+   Das ist die Angabe, die zwei besuchte Räume auseinanderhält: ein
+   Titel wie „Einstieg" steht in der zweiten Klasse genauso da, der
+   Name der Lehrkraft nicht. Er steht im Titel und nicht in der
+   Fußzeile, weil er zum Namen des Raums gehört — „Einstieg (Frau
+   Meyer)" ist eine Angabe, keine zwei.
+
+   Fehlt er, fällt er weg: Einträge, die vor 0090 im Gerät gelandet
+   sind, kennen ihn nicht, und ein leeres Klammerpaar wäre die
+   schlechtere Auskunft als keine. */
 function visitedTile(v) {
   const seen = v.seen ? window.MPRoom.agoText(v.seen) : '';
   const bits = [esc(v.tool_title || ''), esc(seen)].filter(Boolean);
+  const by   = v.owner ? ` <span class="vtile-by">(${esc(v.owner)})</span>` : '';
   return `<article class="vtile" data-code="${esc(v.code)}">
       <a class="vtile-a" href="j.html#${esc(v.code)}"
-         aria-label="${esc(v.title)} öffnen"></a>
+         aria-label="${esc(v.title)}${v.owner ? ' von ' + esc(v.owner) : ''} öffnen"></a>
       <span class="vtile-ic" aria-hidden="true">${esc(v.tool_icon || '🧩')}</span>
       <div class="vtile-txt">
-        <strong>${esc(v.title)}</strong>
+        <strong>${esc(v.title)}${by}</strong>
         <span class="vtile-meta">${bits.join(' · ')}</span>
       </div>
       <div class="rowmenu">
@@ -241,6 +253,7 @@ async function renderVisited() {
   const local = (window.MPRoom?.list() || []).map(r => ({
     code: r.code,
     title: r.room?.title || r.code,
+    owner: r.room?.owner_name || '',
     tool_title: r.room?.tool_title || '',
     tool_icon: r.room?.tool_icon || '',
     seen: r.seen_at || r.saved_at || 0
@@ -255,6 +268,7 @@ async function renderVisited() {
         rooms = (data.rooms || []).map(r => ({
           code: r.room?.code,
           title: r.room?.title || r.room?.code,
+          owner: r.room?.owner_name || '',
           tool_title: r.room?.tool_title || '',
           tool_icon: r.room?.tool_icon || '',
           seen: new Date(r.last_seen_at || r.joined_at).getTime()

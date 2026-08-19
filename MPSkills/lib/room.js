@@ -118,6 +118,31 @@
     writeStore(all);
   }
 
+  /* Die Raum-Angaben im Gerät nachführen.
+
+     Beim Beitritt wird eine Abschrift des Raums mitgespeichert, und
+     die Landing baut ohne Anmeldung ihre Kacheln daraus. Sie ist
+     damit so alt wie der Beitritt: ein umbenannter Raum heißt dort
+     weiter wie am ersten Tag, und Angaben, die es beim Beitritt noch
+     nicht gab (owner_name, 0090), fehlen für immer.
+
+     Für Angemeldete löst das skill_my_rooms — der Server nennt den
+     aktuellen Stand. Ohne Anmeldung gibt es nur diesen Weg: wer im
+     Raum ist, bekommt die Angaben ohnehin bei jedem Poll, also wird
+     die Abschrift dabei still erneuert.
+
+     Auf der Rohschicht und ohne Umsortieren: gemeint ist ein
+     Eintrag, in dem der Aufrufer gerade steckt — nicht ein neuer. */
+  function snapshot(code, room) {
+    if (!room) return;
+    const up  = String(code || '').toUpperCase();
+    const all = readStore();
+    const hit = all.find(e => e.code === up);
+    if (!hit) return;
+    hit.room = room;
+    writeStore(all);
+  }
+
   /* Einen Raum aus der eigenen Liste nehmen.
 
      Zwei Schritte, einer davon darf scheitern: der Server-Merker
@@ -379,7 +404,7 @@
   }
 
   window.MPRoom = {
-    list, get, remember, forget, touch, leave, uid,
+    list, get, remember, snapshot, forget, touch, leave, uid,
     rpc, peek, join, view, sig, poll, showNet,
     normalizeCode, isCode, joinUrl, untilText, agoText,
     CODE_RE, POLL_MS

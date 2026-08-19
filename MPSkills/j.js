@@ -578,6 +578,11 @@ function paintRoom(data, token) {
   }
 
   const r = data.room, me = data.me;
+  // Die Abschrift im Gerät ist vom Beitrittstag. Hier steht der
+  // aktuelle Stand — also wird sie nachgeführt, damit die Kacheln
+  // auf der Landing auch ohne Anmeldung stimmen (Titel, und seit
+  // 0090 der Name der Lehrkraft).
+  MPRoom.snapshot(r.code, r);
   document.getElementById('rTitle').textContent = r.title;
   document.getElementById('rTool').textContent  = r.tool_title || '';
   document.getElementById('rTip').textContent   = r.tool_icon  || '🧩';
