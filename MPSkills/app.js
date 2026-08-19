@@ -677,6 +677,12 @@ function showTab(which) {
      wer sich ansieht, was es gibt, tippt gerade keinen Code ab. */
   const join = document.getElementById('joinCard');
   if (join) join.hidden = (which !== 'rooms');
+
+  // Der Satz gehört zum Kasten und geht mit ihm — ein Versprechen,
+  // das unter einer Liste von Skills allein stehen bliebe, wäre
+  // eine Behauptung ohne Gegenüber.
+  const pitch = document.getElementById('pitch');
+  if (pitch) pitch.hidden = (which !== 'rooms');
 }
 
 function roleOf(s) {
@@ -716,6 +722,16 @@ function renderState() {
     join.hidden = false;
     if (acts) host.insertAdjacentElement('afterend', join);
     else      host.insertAdjacentElement('beforebegin', join);
+
+    // Der Satz wandert mit. Sonst bliebe er für eine Lehrkraft dort
+    // stehen, wo der Kasten NICHT mehr ist — mitten zwischen Gruß
+    // und Reiterleiste, und dann steht ein Versprechen über einer
+    // Raumliste, die es längst eingelöst hat.
+    const pitch = document.getElementById('pitch');
+    if (pitch) {
+      pitch.hidden = false;
+      join.insertAdjacentElement('afterend', pitch);
+    }
   }
   renderMyRooms();
 

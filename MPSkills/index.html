@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260819l" />
+<link rel="stylesheet" href="style.css?v=20260819m" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -73,6 +73,28 @@
     <!-- Räume, in denen dieses Gerät schon war (localStorage). -->
     <div id="joinMine"></div>
   </section>
+
+  <!-- ─── Der Satz unter dem Kasten ────────────────────────────
+       Stand bis zum Umbau der Landing als Hero ÜBER allem und ist
+       dabei mit dem Rest der Vorrede weggefallen. Er gehört aber
+       nicht zur Vorrede: er ist die einzige Zeile, die sagt, was
+       diese Seite überhaupt behauptet — und die Zahl darin ist das
+       Versprechen, an dem sie gemessen werden will.
+
+       Unter dem Kasten statt darüber, weil der Code den ersten
+       Platz hat: wer hier ankommt, will hinein und nicht überzeugt
+       werden. Wer nicht hier ankommt, sondern die Seite ansieht,
+       liest den Satz als Zweites — und das reicht.
+
+       Bewusst OHNE den früheren Untertitel („Lehrkräfte schalten
+       frei … kein Konto"): das steht eine Karte weiter im
+       Zugangs-Kasten und hinter „Was kann diese Seite?", und die
+       Seite ist genau deshalb kurz geworden.
+
+       Er klebt am Kasten und wandert mit ihm — siehe renderState()
+       in app.js. Eine Regel, ein Satz: der steht unter dem Kasten. -->
+  <p class="pitch" id="pitch">Skills und Spiele, die eine Klasse in
+    <span class="pitch-hi">30&nbsp;Sekunden</span> benutzt</p>
 
   <!-- ─── Alles für Angemeldete ────────────────────────────────
        Gruß, die beiden Reiter (Meine Räume · Alle Skills) und
@@ -363,6 +385,6 @@
      nur die Liste anschaut, lädt nichts davon. -->
 <script src="lib/preview.js?v=20260819b"></script>
 <script src="preview/wordcloud.js?v=20260819d"></script>
-<script src="app.js?v=20260819c"></script>
+<script src="app.js?v=20260819d"></script>
 </body>
 </html>

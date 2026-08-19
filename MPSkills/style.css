@@ -438,6 +438,33 @@ a.btn {
 }
 .joincard-mine .minichip:hover { background: var(--hero-edge); border-color: var(--hero-accent); }
 
+/* ─── Der Satz unter dem Kasten ────────────────────────────────
+   Die größte Schrift der Seite, und das ist Absicht: der Code-
+   Kasten trägt seinen Rang über die dunkle Fläche, nicht über den
+   Schriftgrad — die beiden konkurrieren also nicht, obwohl der
+   Satz größer ist als jede Zeile darin.
+
+   Die Zahl steht im Akzent, weil sie das eigentliche Versprechen
+   ist. --accent-ink und NICHT --accent: der Akzent ist hier
+   Schrift auf dem Seitengrund, und dafür gibt es den zweiten Wert
+   (siehe Kopf dieser Datei). Sonst stünde im Hellen ein zu blasses
+   Mint auf Grau.
+
+   max-width in ch statt px: der Umbruch soll an der Zeilenlänge
+   hängen und nicht an der Fensterbreite — sonst steht der Satz auf
+   einem breiten Beamer in einer einzigen langen Zeile da. */
+.pitch {
+  margin: 0 0 34px;
+  max-width: 26ch;
+  font-size: clamp(1.5rem, 4.8vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.14;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+.pitch-hi { color: var(--accent-ink); }
+
 /* ══════════════════════════════════════════════════════════════
    Landing 2 — Zugang für Lehrkräfte
    ══════════════════════════════════════════════════════════════
