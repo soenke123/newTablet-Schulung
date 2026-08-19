@@ -269,18 +269,22 @@
           <button type="button" data-view="board" class="active">Pool</button>
           <button type="button" data-view="table">Liste</button>
         </div>
+
+        <!-- Moderation: in derselben Zeile wie Phasen und
+             Ansichtswechsel und nicht als eigener Streifen darunter.
+             Sie sagt, wo der Raum steht und was ihn weiterbringt — das
+             ist dieselbe Frage wie die daneben, also auch dieselbe
+             Zeile. Der Phasenknopf sagt, was der nächste Druck
+             bewirkt, statt „vor" und „zurück" nebeneinanderzustellen.
+
+             Gestrichelt und blau bleibt sie: das ist am Beamer das
+             Einzige, was „gehört dir, nicht der Klasse" sagt. -->
+        <div class="bd-adminbar" id="bdAdminBar" hidden>
+          <button type="button" id="bdPhaseNext" class="bd-btn bd-btn--sm">Zur Besprechung ▶</button>
+          <button type="button" id="bdReset" class="bd-btn bd-btn--sm bd-btn--danger">Pool leeren</button>
+        </div>
       </div>
     </nav>
-
-    <!-- Moderation: am rechten Rand und nur so breit wie ihre zwei
-         Knöpfe. Über die ganze Fläche gezogen sah sie aus wie die
-         Hauptsache — sie ist aber das, was die Lehrkraft zweimal je
-         Stunde braucht. Der Phasenknopf sagt, was der nächste Druck
-         bewirkt, statt „vor" und „zurück" nebeneinanderzustellen. -->
-    <div class="bd-adminbar" id="bdAdminBar" hidden>
-      <button type="button" id="bdPhaseNext" class="bd-btn bd-btn--sm">Zur Besprechung ▶</button>
-      <button type="button" id="bdReset" class="bd-btn bd-btn--sm bd-btn--danger">Pool leeren</button>
-    </div>
 
     <div class="bd-status" id="bdStatus" hidden>Lade …</div>
 

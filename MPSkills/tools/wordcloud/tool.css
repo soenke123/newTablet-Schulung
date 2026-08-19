@@ -201,10 +201,15 @@ button.bd-phase:hover:not(:disabled) { background: var(--clr-surface2); color: v
 .bd-phase--locked { opacity: .42; }
 
 /* ── Moderationsleiste ───────────────────────────────────
-   Am rechten Rand und nur so breit wie ihre zwei Knöpfe (19.08.2026).
-   Über die ganze Fläche gezogen sah sie aus wie die Hauptsache — sie
-   ist aber das, was die Lehrkraft zweimal je Stunde braucht, und die
-   Hauptsache steht darunter auf der Tafel.
+   Steht in .bd-catnav__right, also in derselben Zeile wie Phasen und
+   Ansichtswechsel (19.08.2026). Vorher war sie ein eigener Streifen
+   darunter — eine zweite Zeile für zwei Knöpfe, und dazwischen eine
+   Kante quer durch etwas, das zusammengehört.
+
+   Nur so breit wie ihre zwei Knöpfe: über die ganze Fläche gezogen sah
+   sie aus wie die Hauptsache — sie ist aber das, was die Lehrkraft
+   zweimal je Stunde braucht, und die Hauptsache steht darunter auf der
+   Tafel.
 
    Gestrichelt und blau bleibt sie trotzdem: das ist am Beamer das
    Einzige, was „gehört dir, nicht der Klasse" sagt, und Blau kommt
@@ -212,7 +217,7 @@ button.bd-phase:hover:not(:disabled) { background: var(--clr-surface2); color: v
 .bd-adminbar {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   width: max-content; max-width: 100%;
-  margin: 0 0 10px auto; padding: 6px 8px;
+  margin: 0; padding: 6px 8px;
   border: 1px dashed var(--clr-blue); border-radius: 12px;
   background: var(--clr-blue-soft);
 }
@@ -919,6 +924,10 @@ button.bd-move__item:disabled { opacity: .55; cursor: default; }
   .bd-phases { flex: 1 1 100%; order: 3; gap: 5px; }
   .bd-phase { padding: 5px 11px; gap: 6px; font-size: .8rem; }
   .bd-phase__no { width: 19px; height: 19px; font-size: .72rem; }
+  /* Die Moderation rutscht hinter die Phasen — die nehmen hier eine
+     ganze Zeile, also bekommt sie die nächste. Sie bleibt dabei so
+     breit wie ihre Knöpfe und wird nicht über die Zeile gezogen. */
+  .bd-adminbar { order: 4; }
   /* muss zur schmaleren Innenkante von .bd-main passen, sonst steht die
      Leiste 6 px über den Rand hinaus */
   .bd-catnav { margin: 0 -12px 12px; padding: 6px 12px 8px; }
