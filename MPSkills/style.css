@@ -424,20 +424,6 @@ a.btn {
   color: var(--hero-dim);
 }
 
-/* Räume, in denen dieses Gerät schon war. */
-.joincard-mine {
-  margin-top: 18px; padding-top: 15px;
-  border-top: 1px solid var(--hero-edge);
-  display: flex; flex-wrap: wrap; gap: 7px; align-items: center;
-}
-.joincard-mine-h { font-size: .76rem; color: var(--hero-dim); width: 100%; }
-.joincard-mine .minichip {
-  background: var(--hero-soft);
-  border-color: var(--hero-edge);
-  color: var(--hero-ink);
-}
-.joincard-mine .minichip:hover { background: var(--hero-edge); border-color: var(--hero-accent); }
-
 /* ─── Der Satz unter dem Kasten ────────────────────────────────
    Die größte Schrift der Seite, und das ist Absicht: der Code-
    Kasten trägt seinen Rang über die dunkle Fläche, nicht über den
@@ -1258,18 +1244,6 @@ body.pv-lock { overflow: hidden; }
 .page-sub { margin: 0; color: var(--ink-soft); font-size: .9rem; max-width: 52ch; }
 .page-head .btn { margin-left: auto; }
 
-/* Räume, in denen dieses Gerät schon war — auf der Landing im
-   Code-Kasten (dort hell auf Tinte, siehe .joincard-mine), sonst
-   in der Seitenfarbe. */
-.minichip {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: .82rem; text-decoration: none;
-  color: var(--ink); background: var(--paper-2);
-  border: 1px solid var(--line-soft); border-radius: 999px;
-  padding: 4px 12px;
-}
-.minichip:hover { background: var(--accent-dim); border-color: var(--accent-edge); }
-
 /* ─── Beitrittsseite ──────────────────────────────────────── */
 .card--join { padding: 26px 26px 24px; }
 .join-h   { margin: 0 0 6px; font-size: 1.45rem; letter-spacing: -0.02em; line-height: 1.2; }
@@ -1338,6 +1312,62 @@ body.pv-lock { overflow: hidden; }
   font-size: .66rem; text-transform: uppercase; letter-spacing: .06em;
   font-weight: 700; opacity: .7;
 }
+
+/* ─── Besuchte Räume ──────────────────────────────────────────
+   Kleine Kacheln, keine Liste: hier stehen zwei Angaben je Raum
+   und keine sechs wie bei den eigenen Räumen einer Lehrkraft —
+   eine Zeile mit zwei Wörtern und viel Weiß daneben sähe wie eine
+   Liste aus, aus der etwas fehlt. Und sie stehen nebeneinander,
+   weil man sie überfliegt und nicht durchgeht.
+
+   Deutlich schmaler als die Skill-Kacheln (320): dort steht ein
+   Standbild und ein Absatz Erklärung, hier ein Name. */
+.vgrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+
+.vtile {
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 6px 11px 13px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+}
+.vtile:hover { border-color: var(--accent-edge); }
+
+/* Die ganze Kachel ist der Weg in den Raum — als gestreckter Link
+   und nicht als <a> um alles: in der Ecke sitzt ein Knopf, und ein
+   Knopf in einem Link ist ungültiges Markup. Er liegt UNTER dem
+   Menü (z-index), damit der Knopf dort der Knopf bleibt. */
+.vtile-a {
+  position: absolute; inset: 0; z-index: 1;
+  border-radius: var(--r-md);
+}
+.vtile-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.vtile-ic  { font-size: 1.35rem; line-height: 1; flex: none; }
+.vtile-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+/* Ein langer Raumtitel bricht nicht um, sondern hört auf: die
+   Kacheln stehen in einem Raster und sollen gleich hoch sein. */
+.vtile-txt strong {
+  font-size: .93rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vtile-meta {
+  font-size: .78rem; color: var(--ink-faint);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* ⚠️ Trägt zweierlei: das Menü über den Überzug (sonst öffnete der
+   Klick darauf den Raum), UND das offene Menü über die Kachel eine
+   Reihe weiter — die Kacheln sind alle positioniert, ein Menü ohne
+   eigenen z-index verschwände unter der nächsten. In der Raumliste
+   der Lehrkraft stellt sich die zweite Frage nicht: dort sind die
+   Zeilen nicht positioniert. */
+.vtile .rowmenu { z-index: 2; }
 
 /* ─── Raumlisten ──────────────────────────────────────────────
    Zweimal dieselbe Liste mit verschiedenen Enden: auf j.html die

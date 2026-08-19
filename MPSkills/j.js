@@ -444,6 +444,10 @@ function renderRoom(code, token) {
   unmountTool();
   blockedShown = false;
 
+  // „Zuletzt besucht" ist jetzt, und nicht der Tag des Beitritts —
+  // die Kachel auf der Landing lebt davon.
+  MPRoom.touch(code);
+
   /* Das Fach „Raum": alles, was man einmal liest und danach nur noch
      selten braucht. Die Teilnehmerliste steht deshalb wieder offen da
      und nicht mehr zugeklappt — sie nimmt hier niemandem etwas weg. */
@@ -481,8 +485,12 @@ function renderRoom(code, token) {
         </div>
       </details>
 
+      <!-- Heißt genauso wie der Eintrag hinter den drei Punkten auf
+           der Landing: eine Sache, ein Name. Was dabei genau
+           passiert, sagt die Rückfrage — und das ist mit und ohne
+           Anmeldung nicht dasselbe. -->
       <p class="join-foot">
-        <button type="button" class="btn--link" id="leaveBtn">Diesen Raum von diesem Gerät entfernen</button>
+        <button type="button" class="btn--link" id="leaveBtn">Diesen Raum verlassen</button>
       </p>
     </div>`;
 
@@ -500,16 +508,26 @@ function renderRoom(code, token) {
     }
   });
 
-  document.getElementById('leaveBtn').addEventListener('click', () => {
-    if (!confirm('Der Raum verschwindet nur von diesem Gerät. Um wieder mitzumachen, '
-               + 'brauchst du den Code erneut. Fortfahren?')) return;
-    MPRoom.forget(code);
+  /* Deine Zettel bleiben stehen — das ist die Frage, die bei einem
+     Knopf namens „verlassen" zuerst kommt, und die Antwort ist
+     dieselbe wie beim Ausblenden: hier verschwindet eine Liste,
+     kein Inhalt. Der Rückweg ist der Code, mehr braucht es nicht. */
+  document.getElementById('leaveBtn').addEventListener('click', async () => {
+    const everywhere = !!(window.isLoggedIn && window.isLoggedIn());
+    if (!confirm(
+      (everywhere
+        ? 'Der Raum verschwindet aus deiner Liste — auf allen deinen Geräten. '
+        : 'Der Raum verschwindet von diesem Gerät. ')
+      + 'Was du geschrieben hast, bleibt für die Klasse stehen. Mit dem Code kommst '
+      + 'du jederzeit zurück.\n\nFortfahren?')) return;
+
     if (poller) { poller.stop(); poller = null; }
     unmountTool();
     clearTabs();
+    await MPRoom.leave(code);
     history.replaceState(null, '', location.pathname);
     renderAsk('');
-    toast('Raum von diesem Gerät entfernt.');
+    toast('Raum verlassen.');
   });
 
   /* Offen ist das Werkzeug und nicht der Raum: wer hier ankommt, ist

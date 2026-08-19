@@ -99,8 +99,8 @@ async function fillSchoolSelects() {
    ══════════════════════════════════════════════════════════
    Das Feld steht statisch im HTML — es ist die Hauptsache der
    Seite und soll nicht auf ein Skript warten müssen. Hier steht
-   nur die Verdrahtung und die Liste der Räume, in denen dieses
-   Gerät schon war. */
+   nur die Verdrahtung; die besuchten Räume haben seit dem
+   19.08.2026 einen eigenen Abschnitt (weiter unten). */
 function wireJoinForm() {
   const input = document.getElementById('hubCode');
   const form  = document.getElementById('hubCodeForm');
@@ -121,19 +121,161 @@ function wireJoinForm() {
   });
 }
 
-function renderMyRooms() {
-  const el = document.getElementById('joinMine');
-  if (!el) return;
-  const mine = (window.MPRoom?.list() || []);
-  el.innerHTML = mine.length ? `
-    <div class="joincard-mine">
-      <span class="joincard-mine-h">Zuletzt auf diesem Gerät</span>
-      ${mine.slice(0, 4).map(r => `
-        <a class="minichip" href="j.html#${esc(r.code)}">
-          <span>${esc(r.room?.tool_icon || '🧩')}</span>
-          ${esc(r.room?.title || r.code)}
-        </a>`).join('')}
-    </div>` : '';
+/* ══════════════════════════════════════════════════════════
+   Besuchte Räume
+   ══════════════════════════════════════════════════════════
+   Räume, in denen man als TEILNEHMER:IN war — nicht die eigenen.
+   Die stehen für Lehrkräfte eine Ebene höher unter „Meine Räume"
+   und können sich nicht überschneiden: wer einen Raum eröffnet,
+   ist darin kein Teilnehmer.
+
+   ── Zwei Quellen, und das ist Absicht ─────────────────────────
+   Ohne Anmeldung gibt es nur den Gerätespeicher — es gibt kein
+   Konto, an dem etwas hängen könnte.
+
+   Mit Anmeldung fragt die Seite den Server (skill_my_rooms). Das
+   ist mehr als eine Bequemlichkeit: die Liste steht damit auch auf
+   dem zweiten Gerät, sie trägt den aktuellen Titel statt dem vom
+   Beitrittstag — und sie ist beim Abmelden von selbst weg, weil
+   die Quelle wegfällt und nicht, weil jemand ans Aufräumen gedacht
+   hat.
+
+   Antwortet der Server, hat ER recht, auch mit leerer Liste: dann
+   sind die Räume verlassen, abgelaufen oder gelöscht, und die
+   eigenen Einträge im Gerätespeicher werden nachgezogen. Kommt gar
+   keine Antwort, bleibt stehen, was das Gerät weiß — eine Liste,
+   die beim ersten Netzhusten verschwindet, ist schlimmer als eine,
+   die einen Tag alt ist. */
+function visitedEl() {
+  return {
+    section: document.getElementById('visitedSection'),
+    grid:    document.getElementById('visitedGrid')
+  };
+}
+
+/* Der Abschnitt steht im HTML unter dem Code-Kasten und wird für
+   Lehrkräfte ans Ende von „Meine Räume" gehängt — damit steht er
+   dort unter der eigenen Raumliste und über dem Code-Kasten, der
+   für diese Rolle hinter #stateHost rutscht.
+
+   Verschoben und nicht verdoppelt, wie schon der Code-Kasten:
+   derselbe Knoten behält seinen Inhalt und seine Listener.
+
+   ⚠️ Zwei Regeln, an denen der Knoten sonst stirbt: der Umzug INS
+   Fach muss nach jedem innerHTML an #paneRooms laufen (das Fach
+   schreibt sich beim Laden komplett neu), und der Umzug ZURÜCK
+   muss vor jedem innerHTML an #stateHost laufen — sonst räumt das
+   Abmelden den Abschnitt mitsamt dem Fach weg, in dem er gerade
+   hängt. Deshalb sagt der Aufrufer, wohin, statt dass die Funktion
+   sich am vorhandenen DOM orientiert. */
+function placeVisited(intoPane) {
+  const { section } = visitedEl();
+  if (!section) return;
+  const pane = intoPane ? document.getElementById('paneRooms') : null;
+  if (pane) { pane.appendChild(section); return; }
+  const pitch = document.getElementById('pitch');
+  if (pitch) pitch.insertAdjacentElement('afterend', section);
+}
+
+// Ort und Inhalt in einem Griff. Getrennt zu haben wäre die
+// Einladung, ihn zu füllen, bevor er steht — und dann stünde er für
+// einen Moment sichtbar an der falschen Stelle.
+function showVisited(intoPane) {
+  placeVisited(intoPane);
+  renderVisited();
+}
+
+/* Eine Kachel. Der Link liegt als gestreckter Überzug darüber
+   (wie .tile-peek bei den Skill-Kacheln) statt als <a> um alles:
+   ein Knopf in einem Link wäre ungültig, und das Menü in der Ecke
+   ist einer. */
+function visitedTile(v) {
+  const seen = v.seen ? window.MPRoom.agoText(v.seen) : '';
+  const bits = [esc(v.tool_title || ''), esc(seen)].filter(Boolean);
+  return `<article class="vtile" data-code="${esc(v.code)}">
+      <a class="vtile-a" href="j.html#${esc(v.code)}"
+         aria-label="${esc(v.title)} öffnen"></a>
+      <span class="vtile-ic" aria-hidden="true">${esc(v.tool_icon || '🧩')}</span>
+      <div class="vtile-txt">
+        <strong>${esc(v.title)}</strong>
+        <span class="vtile-meta">${bits.join(' · ')}</span>
+      </div>
+      <div class="rowmenu">
+        <button type="button" class="rowmenu-btn" data-rowmenu aria-haspopup="true"
+                aria-expanded="false" aria-label="Mehr zu diesem Raum"
+                title="Mehr zu diesem Raum">⋮</button>
+        <div class="rowmenu-pop" hidden>
+          <button type="button" class="rowmenu-danger" data-act="leave">Raum verlassen</button>
+        </div>
+      </div>
+    </article>`;
+}
+
+/* Was die Rückfrage sagen muss, hängt an der Anmeldung: ohne Konto
+   ist es dieses Gerät, mit Konto sind es alle. Beides Mal gilt der
+   Satz, der die eigentliche Sorge beantwortet — die Zettel bleiben
+   stehen. Wortgleich zu j.js, damit derselbe Knopf nicht zwei
+   Versprechen gibt. */
+async function leaveRoom(code, btn) {
+  const everywhere = !!(window.isLoggedIn && window.isLoggedIn());
+  if (!confirm(
+    (everywhere
+      ? 'Der Raum verschwindet aus deiner Liste — auf allen deinen Geräten. '
+      : 'Der Raum verschwindet von diesem Gerät. ')
+    + 'Was du geschrieben hast, bleibt für die Klasse stehen. Mit dem Code kommst '
+    + 'du jederzeit zurück.\n\nFortfahren?')) return;
+
+  closeRowMenus();
+  btn.disabled = true;
+  await window.MPRoom.leave(code);
+  toast('Raum verlassen.');
+  renderVisited();
+}
+
+async function renderVisited() {
+  const { section, grid } = visitedEl();
+  if (!section || !grid) return;
+
+  // Der Gerätespeicher ist seit lib/room.js nach Anmeldung
+  // getrennt: hier kommt nur an, was zur Person am Gerät gehört.
+  const local = (window.MPRoom?.list() || []).map(r => ({
+    code: r.code,
+    title: r.room?.title || r.code,
+    tool_title: r.room?.tool_title || '',
+    tool_icon: r.room?.tool_icon || '',
+    seen: r.seen_at || r.saved_at || 0
+  }));
+
+  let rooms = local;
+
+  if (window.isLoggedIn?.()) {
+    try {
+      const data = await window.MPRoom.rpc('skill_my_rooms', {});
+      if (data?.ok) {
+        rooms = (data.rooms || []).map(r => ({
+          code: r.room?.code,
+          title: r.room?.title || r.room?.code,
+          tool_title: r.room?.tool_title || '',
+          tool_icon: r.room?.tool_icon || '',
+          seen: new Date(r.last_seen_at || r.joined_at).getTime()
+        })).filter(r => r.code);
+
+        /* Was der Server nicht mehr nennt, gehört auch nicht mehr
+           ins Gerät: verlassen, abgelaufen oder gelöscht. Sonst
+           fände route() in j.html einen Token wieder, den es
+           serverseitig nicht mehr gibt. */
+        const live = new Set(rooms.map(r => r.code));
+        for (const r of local) if (!live.has(r.code)) window.MPRoom.forget(r.code);
+      }
+    } catch (e) {
+      // Kein Netz: es bleibt beim letzten Stand des Geräts.
+      console.warn('[mpskills] skill_my_rooms:', e.message);
+    }
+  }
+
+  rooms.sort((a, b) => (b.seen || 0) - (a.seen || 0));
+  section.hidden = !rooms.length;
+  grid.innerHTML = rooms.map(visitedTile).join('');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -410,6 +552,14 @@ async function renderRooms() {
   const pane = document.getElementById('paneRooms');
   if (!pane) return;
 
+  /* ⚠️ Die besuchten Räume hängen am Ende dieses Fachs, und jeder
+     der vier Ausgänge unten schreibt es komplett neu. Wird der
+     Abschnitt nicht vorher herausgeholt, ist er nach dem ersten
+     „Beitritt schließen" weg — denn dann findet ihn auch
+     placeVisited() nicht mehr. Rein kommt er an jedem Ausgang
+     wieder, mit showVisited(true). */
+  placeVisited(false);
+
   let data;
   try {
     data = await rpc('skill_rooms_list', {});
@@ -418,11 +568,13 @@ async function renderRooms() {
     pane.innerHTML = `<div class="card"><div class="msg msg--err">Deine Räume ließen sich
       gerade nicht laden.</div>
       <p class="rule">${esc(e.message)}</p></div>`;
+    showVisited(true);
     return;
   }
   if (!data?.ok) {
     pane.innerHTML = `<div class="card"><div class="msg msg--err">Deine Räume ließen sich
       nicht laden (${esc(data?.error || 'unbekannt')}).</div></div>`;
+    showVisited(true);
     return;
   }
 
@@ -445,6 +597,7 @@ async function renderRooms() {
           <button type="button" class="btn" data-tab="tools">Erst die Skills ansehen</button>
         </div>
       </div>`;
+    showVisited(true);
     return;
   }
 
@@ -484,6 +637,11 @@ async function renderRooms() {
     const aBtn = e.target.closest('.rowmenu-pop button[data-act]');
     if (aBtn) roomAction(aBtn.closest('.roomlist-row').dataset.code, aBtn.dataset.act, aBtn);
   });
+
+  // Unter die eigenen Räume und damit über den Code-Kasten, der für
+  // diese Rolle hinter #stateHost steht. Zuerst, was mir gehört —
+  // dann, wo ich zu Gast war.
+  showVisited(true);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -733,7 +891,18 @@ function renderState() {
       join.insertAdjacentElement('afterend', pitch);
     }
   }
-  renderMyRooms();
+
+  /* Der Abschnitt geht AUSNAHMSLOS erst nach Hause, auch für eine
+     Lehrkraft: unten in dieser Funktion wird #stateHost neu
+     geschrieben, und was in diesem Moment noch im alten Fach hängt,
+     wäre danach weg.
+
+     Gefüllt wird er hier aber nur für die Rollen, bei denen er auch
+     hier stehen bleibt. Für eine Lehrkraft macht das renderRooms(),
+     sobald das Fach steht — sonst könnte er sichtbar werden, bevor
+     er an seinem Platz ist. */
+  placeVisited(false);
+  if (!acts) renderVisited();
 
   // Der Zugang gilt nur Gästen. Wer angemeldet ist, sieht statt der
   // beiden Formulare seinen Zustand — das ist dieselbe Frage, eine
@@ -1088,6 +1257,28 @@ document.getElementById('authModal').addEventListener('click', (e) => {
   if (btn) openAuth(btn.dataset.auth);
 });
 
+/* Ein Listener am Gitter statt an jeder Kachel — es wird bei jeder
+   Änderung neu geschrieben. Am Gitter und nicht am Abschnitt, weil
+   der Abschnitt zwischen zwei Orten hin- und herwandert; der
+   Listener wandert dabei mit, das Gitter bleibt sein Anker.
+
+   Dieselben Klassen wie in der Raumliste der Lehrkraft: damit
+   greifen closeRowMenus(), der Schließer am document (gleich
+   darunter) und Escape hier ohne eine Zeile mehr. */
+document.getElementById('visitedGrid').addEventListener('click', (e) => {
+  const mBtn = e.target.closest('.rowmenu-btn');
+  if (mBtn) {
+    const menu = mBtn.closest('.rowmenu');
+    const pop  = menu.querySelector('.rowmenu-pop');
+    closeRowMenus(menu);
+    pop.hidden = !pop.hidden;
+    mBtn.setAttribute('aria-expanded', String(!pop.hidden));
+    return;
+  }
+  const aBtn = e.target.closest('.rowmenu-pop button[data-act="leave"]');
+  if (aBtn) leaveRoom(aBtn.closest('.vtile').dataset.code, aBtn);
+});
+
 // Irgendwo anders hingefasst: das offene Zeilen-Menü zu. Am document
 // und nicht an der Liste — geklickt wird ja gerade daneben.
 document.addEventListener('click', (e) => {
@@ -1113,7 +1304,12 @@ window.addEventListener('lernwelt:no-profile', () => {
     onLogin:    () => openAuth('login'),
     onRegister: () => openAuth('register')
   });
-  renderMyRooms();
+  /* Die besuchten Räume werden bewusst NICHT vor der Session
+     gezeichnet, obwohl sie im Gerät stehen und sofort da sein
+     könnten: welche davon jemandem gehören, hängt seit der
+     Trennung in lib/room.js an der Anmeldung. Vorher gezeichnet,
+     blitzten einem Angemeldeten für einen Moment die anonymen
+     Räume des Geräts auf. */
   await (window.waitForSession?.() ?? Promise.resolve());
   renderState();
 })();

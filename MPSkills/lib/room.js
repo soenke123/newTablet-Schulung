@@ -15,6 +15,23 @@
    findet seine Räume über skill_my_rooms auch auf einem anderen
    Gerät wieder.
 
+   ── Jeder Eintrag gehört jemandem ─────────────────────────────
+   Ein Klassensatz-Tablet wird geteilt, und die Ablage ist eine
+   pro Gerät. Deshalb steht an jedem Eintrag, WER ihn angelegt hat:
+   eine User-ID, oder null für „ohne Anmeldung". Gelesen wird nur,
+   was zur gerade angemeldeten Person passt — wer sich abmeldet,
+   sieht seine Räume nicht mehr, und die nächste Person am Gerät
+   sieht sie erst recht nicht.
+
+   Die Trennung ist strikt und geht in beide Richtungen: die
+   anonymen Räume des Geräts sind für einen Angemeldeten ebenso
+   unsichtbar. Zwei Fragen, zwei Antworten — „was hat dieses Gerät
+   gemacht" und „was habe ich gemacht" sind nicht dasselbe.
+
+   Sie sitzt HIER und nicht in der Landing: j.html liest dieselbe
+   Ablage, und eine Trennung, die nur auf einer von zwei Seiten
+   gilt, ist keine.
+
    ── Zwei Anfragen statt einer ─────────────────────────────────
    28 Tablets × alle 3 Sekunden × mehrere Klassen parallel. Der
    Poller fragt deshalb erst die billige Signatur ab und holt die
@@ -53,8 +70,24 @@
     }
   }
 
-  const list   = () => readStore();
-  const get    = (code) => readStore().find(e => e.code === String(code || '').toUpperCase()) || null;
+  /* Wer sitzt gerade davor? null heißt „niemand angemeldet" — und
+     ist damit selbst eine Identität, nämlich die des Geräts.
+
+     Bewusst bei jedem Aufruf frisch aus der Session gelesen und
+     nicht einmal gemerkt: An- und Abmelden passieren mitten in der
+     Sitzung, und eine festgehaltene Kopie zeigte danach die Räume
+     der vorigen Person. */
+  const uid = () => window.getSessionUser?.()?.id ?? null;
+
+  // Alteinträge ohne uid zählen als Geräte-Einträge. Sie stammen
+  // aus der Zeit vor dieser Trennung und sind Testbestand.
+  const isMine = (e) => (e.uid ?? null) === uid();
+
+  const list   = () => readStore().filter(isMine);
+  const get    = (code) => list().find(e => e.code === String(code || '').toUpperCase()) || null;
+
+  // forget arbeitet auf der Rohschicht: gemeint ist immer ein
+  // Eintrag, den der Aufrufer gerade in der Hand hat.
   const forget = (code) => {
     const up = String(code || '').toUpperCase();
     writeStore(readStore().filter(e => e.code !== up));
@@ -64,8 +97,43 @@
   function remember(entry) {
     const up   = String(entry.code).toUpperCase();
     const rest = readStore().filter(e => e.code !== up);
-    rest.unshift(Object.assign({}, entry, { code: up, saved_at: Date.now() }));
+    const now  = Date.now();
+    rest.unshift(Object.assign({}, entry, {
+      code: up, uid: uid(), saved_at: now, seen_at: now
+    }));
     writeStore(rest);
+  }
+
+  /* Zuletzt drin gewesen. Steht getrennt vom Beitrittsdatum, weil
+     auf der Kachel „zuletzt besucht" steht — und wer seit drei
+     Wochen jeden Tag in demselben Raum arbeitet, war nicht vor
+     drei Wochen zuletzt drin. Beim Server macht das last_seen_at,
+     hier dieser Aufruf beim Betreten eines Raums. */
+  function touch(code) {
+    const up   = String(code || '').toUpperCase();
+    const all  = readStore();
+    const hit  = all.find(e => e.code === up);
+    if (!hit) return;
+    hit.seen_at = Date.now();
+    writeStore(all);
+  }
+
+  /* Einen Raum aus der eigenen Liste nehmen.
+
+     Zwei Schritte, einer davon darf scheitern: der Server-Merker
+     (0088) gilt der Liste eines angemeldeten Teilnehmers auf allen
+     seinen Geräten, die Ablage hier gilt diesem Gerät. Kommt der
+     Aufruf nicht durch, verschwindet der Raum trotzdem von hier —
+     „weg" darf nicht am WLAN hängen. Für ein Gerät ohne Anmeldung
+     ist der Aufruf ohnehin folgenlos, aber ein zweiter Codeweg für
+     denselben Knopf wäre der teurere Preis. */
+  async function leave(code) {
+    const hit = get(code);
+    if (hit?.token) {
+      try { await rpc('skill_room_leave', { p_token: hit.token }); }
+      catch (e) { console.warn('[mpskills] skill_room_leave:', e.message); }
+    }
+    forget(code);
   }
 
   /* ─── Serveraufrufe ─────────────────────────────────────── */
@@ -289,10 +357,31 @@
     return 'läuft bald ab';
   }
 
+  /* „vor 3 Stunden" — die andere Richtung, für die besuchten Räume
+     auf der Landing. Bewusst grob: die Frage dahinter ist „welcher
+     war das nochmal?", und die beantwortet man nicht auf die
+     Minute. Ab einer Woche steht das Datum da, weil „vor 23 Tagen"
+     niemand in einen Wochentag zurückrechnet. */
+  function agoText(ts) {
+    if (!ts) return '';
+    const ms = Date.now() - Number(ts);
+    if (!isFinite(ms) || ms < 0) return '';
+    const min = Math.floor(ms / 60000);
+    if (min < 2)  return 'gerade eben';
+    if (min < 60) return `vor ${min} Minuten`;
+    const hours = Math.floor(min / 60);
+    if (hours < 24) return `vor ${hours} ${hours === 1 ? 'Stunde' : 'Stunden'}`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'gestern';
+    if (days < 7)   return `vor ${days} Tagen`;
+    return 'am ' + new Date(Number(ts)).toLocaleDateString('de-DE',
+      { day: '2-digit', month: '2-digit' });
+  }
+
   window.MPRoom = {
-    list, get, remember, forget,
+    list, get, remember, forget, touch, leave, uid,
     rpc, peek, join, view, sig, poll, showNet,
-    normalizeCode, isCode, joinUrl, untilText,
+    normalizeCode, isCode, joinUrl, untilText, agoText,
     CODE_RE, POLL_MS
   };
 })();

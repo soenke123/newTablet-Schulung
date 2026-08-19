@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260819m" />
+<link rel="stylesheet" href="style.css?v=20260819n" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -69,9 +69,6 @@
       </div>
       <p class="joincard-rule" id="hubCodeHint">Sechs Zeichen · kein Konto nötig</p>
     </form>
-
-    <!-- Räume, in denen dieses Gerät schon war (localStorage). -->
-    <div id="joinMine"></div>
   </section>
 
   <!-- ─── Der Satz unter dem Kasten ────────────────────────────
@@ -95,6 +92,28 @@
        in app.js. Eine Regel, ein Satz: der steht unter dem Kasten. -->
   <p class="pitch" id="pitch">Skills und Spiele, die eine Klasse in
     <span class="pitch-hi">30&nbsp;Sekunden</span> benutzt</p>
+
+  <!-- ─── Besuchte Räume ───────────────────────────────────────
+       Wo man schon war. Stand bis zum 19.08.2026 als vier blasse
+       Chips IM Code-Kasten und war damit ein Anhängsel des
+       Abtippens — dabei ist „ich war da schon" der häufigere Fall
+       als „ich tippe einen Code ab": ein Raum lebt 30 Tage, eine
+       Stunde dauert 45 Minuten.
+
+       Wohin der Abschnitt gehört, hängt an der Rolle und
+       entscheidet renderState() in app.js: für alle ohne eigene
+       Räume bleibt er hier, unter dem Code-Kasten. Für Lehrkräfte
+       wandert er ans Ende von „Meine Räume" — dort steht dann
+       zuerst, was ihnen gehört, und darunter, wo sie zu Gast
+       waren.
+
+       Leer wird er nicht angezeigt: ein Abschnitt, der erklärt,
+       dass er leer ist, beantwortet keine Frage, die jemand hat. -->
+  <section class="visited" id="visitedSection" hidden>
+    <h2 class="section-h">Besuchte Räume
+      <span class="card-h-note">als Teilnehmer:in</span></h2>
+    <div class="vgrid" id="visitedGrid"></div>
+  </section>
 
   <!-- ─── Alles für Angemeldete ────────────────────────────────
        Gruß, die beiden Reiter (Meine Räume · Alle Skills) und
@@ -372,7 +391,7 @@
 <script src="../session.js?v=20260817"></script>
 <script src="../avatars.js?v=20260709"></script>
 <script src="lib/userbar.js?v=20260819c"></script>
-<script src="lib/room.js?v=20260818"></script>
+<script src="lib/room.js?v=20260819"></script>
 <!-- Auf der Landing läuft kein Werkzeug, und seit der „Testen"-Knopf
      weg ist (18.08.2026) braucht sie auch lib/tool.js nicht mehr: der
      einzige Aufrufer holte damit die Vorgaben eines Werkzeugs, bevor
@@ -385,6 +404,6 @@
      nur die Liste anschaut, lädt nichts davon. -->
 <script src="lib/preview.js?v=20260819b"></script>
 <script src="preview/wordcloud.js?v=20260819d"></script>
-<script src="app.js?v=20260819d"></script>
+<script src="app.js?v=20260819e"></script>
 </body>
 </html>
