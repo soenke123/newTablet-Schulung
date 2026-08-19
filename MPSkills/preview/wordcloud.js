@@ -113,33 +113,27 @@
      Modal mitten im Tippen schließt, soll nicht noch zwei
      Sekunden lang in ein abgeräumtes DOM greifen lassen. */
   async function play(api) {
-    api.say('15 Begriffe von 15 Tablets. Der meistgetragene liegt in der Mitte.');
-    if (!await api.wait(2200)) return;
-
-    api.say('Zweimal tippen heißt zustimmen — die Wolke ordnet sich sofort neu.');
-    if (!await api.wait(1000)) return;
+    // Erst einen Moment stehen lassen: wer das Fenster gerade
+    // geöffnet hat, schaut sich zuerst die Wolke an.
+    if (!await api.wait(1700)) return;
 
     /* Drei verschiedene Zettel, nicht dreimal derselbe: Zustimmen
        ist ein Umschalter, der zweite Doppeltipp auf dieselbe Karte
        nähme die Stimme wieder weg. */
     for (const id of ['pv-13', 'pv-9', 'pv-5']) {
       if (!await api.doubleTap(id)) break;
-      if (!await api.wait(1900)) return;
+      if (!await api.wait(1800)) return;
     }
-
-    api.say('Über das ＋ schreibst du selbst etwas dazu.');
-    if (!await api.wait(700)) return;
 
     if (api.click('#bdCatAdd')) {
       if (!await api.wait(750)) return;
       await api.type('#bdText', NEUE[neuIdx++ % NEUE.length]);
       if (!await api.wait(550)) return;
       api.click('#bdSave');
-      if (!await api.wait(2600)) return;
+      if (!await api.wait(2400)) return;
     }
 
-    api.say('Und weiter — solange die Klasse schreibt.');
-    await api.wait(1600);
+    await api.wait(900);
   }
 
   /* ═══════════════════════════════════════════════════════════

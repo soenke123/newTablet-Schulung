@@ -49,10 +49,11 @@
 
    Das Standbild für die Kachel kommt aus derselben Datei, ist
    aber bewusst ein LEICHTER Nachbau und nicht das Werkzeug: die
-   Wolke skaliert ihre Tafel ins Fenster, und in einer 260 px
-   breiten Kachel landen 15 Zettel bei Maßstab 0,25. Matsch. Die
-   Kachel zeigt fünf große Zettel, die Bewegung gibt es dort, wo
-   Platz dafür ist.
+   Wolke skaliert ihre Tafel ins Fenster, und in einer 320 px
+   breiten Kachel landeten die Zettel bei Maßstab 0,25. Matsch.
+   Nachgebildet ist deshalb nur die ANORDNUNG — die stammt aus
+   derselben Packlogik, einmal offline gerechnet —, die Wörter
+   sind angedeutet. Lesbar wird es im Schaufenster.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -222,14 +223,6 @@
       alive,
       async wait(ms) { await wait(ms); return gate(); },
 
-      // Eine Zeile unter der Bühne, die sagt, was gerade passiert.
-      // Ohne sie sieht man eine Karte wachsen und weiß nicht, warum.
-      say(text) {
-        if (!alive()) return;
-        const cap = document.getElementById('pvCaption');
-        if (cap) cap.textContent = text || '';
-      },
-
       click(sel) {
         const el = q(sel);
         if (!el) return false;
@@ -325,7 +318,7 @@
     if (window.MPTool) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'lib/tool.js?v=20260819';
+      s.src = 'lib/tool.js?v=20260819b';
       s.onload  = () => window.MPTool ? resolve() : reject(new Error('MPTool fehlt'));
       s.onerror = () => reject(new Error('lib/tool.js nicht gefunden'));
       document.head.appendChild(s);
@@ -350,7 +343,6 @@
 
     document.getElementById('pvTitle').textContent = meta.title || '';
     document.getElementById('pvBlurb').innerHTML   = show.blurb || '';
-    document.getElementById('pvCaption').textContent = '';
 
     /* „+ Raum eröffnen" führt genau dorthin, wo es auch von der
        Kachel aus hinführt. Den Weg kennt app.js — hier steht nur,
@@ -431,8 +423,9 @@
       if (!ev.isTrusted || !cur || cur.seq !== mySeq || cur.paused) return;
       cur.paused = true;
       syncPlayBtn();
-      const cap = document.getElementById('pvCaption');
-      if (cap) cap.textContent = 'Angehalten — probier es selbst aus. ▶ lässt es weiterlaufen.';
+      // Der Knopf sagt es schon („▶ Abspielen"), aber nicht laut
+      // genug für jemanden, der gerade woanders hingesehen hat.
+      window.toast?.('Angehalten — probier es selbst aus.');
     // Über den Abbruch abgemeldet und nicht von Hand: die Bühne ist
     // bei jedem Öffnen derselbe Knoten, ein zweiter Besuch hinge
     // sonst einen zweiten Zuhörer daran.

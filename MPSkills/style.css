@@ -1079,12 +1079,27 @@ label.field .rule {
      bis an das untere Polster des Overlays reichen. */
 }
 
-/* Zweiter Riegel gegen denselben Fehler: was hier je über den Rand
-   ginge, wird abgeschnitten statt über die Knöpfe gelegt. Die
-   Fenster des Werkzeugs sind position:fixed und entkommen dem —
-   solange hier kein transform/filter dazukommt, das einen
-   Containing Block aufmachen würde. */
-.pv-host { overflow: hidden; }
+/* Zwei Aufgaben auf einmal.
+
+   overflow: Was hier je über den Rand ginge, wird abgeschnitten
+   statt über die Knöpfe gelegt — zweiter Riegel gegen den Fehler
+   von oben.
+
+   transform: Die Fenster des Werkzeugs („Neuer Zettel", Detail,
+   Auftrag) sind position:fixed und bezögen sich damit auf das
+   BROWSERFENSTER — im Raum richtig, hier legten sie sich über die
+   halbe Landingpage statt über die Bühne. Ein transform macht
+   diesen Kasten zum Bezugsrahmen für alles Fixierte darin, und
+   ihr inset:0 fällt damit genau auf die Bühne.
+
+   ⚠️ Deshalb ist das translateZ(0) KEIN Beschleunigungstrick, den
+   man wegräumen darf: ohne ihn springen die Fenster wieder heraus.
+   Die 👍-Blase des Werkzeugs ist davon nicht betroffen — die hängt
+   am <body> und rechnet in Bildschirmkoordinaten. */
+.pv-host {
+  overflow: hidden;
+  transform: translateZ(0);
+}
 
 .pv-head {
   display: flex;
@@ -1116,23 +1131,20 @@ label.field .rule {
 }
 .pv-busy[hidden] { display: none; }
 
-/* Untertitel: sagt, was gerade passiert. Ohne ihn sieht man eine
-   Karte wachsen und weiß nicht, warum — und die Wolke erklärt
-   sich nur, wenn man den Auslöser mitbekommt. */
+/* Unter der Bühne stand bis zuletzt eine Zeile, die ansagte, was
+   gerade passiert („Zweimal tippen heißt zustimmen …"). Sie ist
+   weg: in einem kleineren Fenster liest man sie nicht mit, während
+   oben etwas passiert, und was sie erklärte, zeigt die Bewegung
+   deutlicher als der Satz. Was bleibt, sind zwei Knöpfe — beide
+   Handlungen, keine Auskunft. */
 .pv-foot {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: flex-end;
+  gap: 10px;
   margin-top: 12px;
   padding-top: 11px;
   border-top: 1px solid var(--line-soft);
-}
-.pv-cap {
-  flex: 1;
-  margin: 0;
-  font-size: .9rem;
-  color: var(--ink-soft);
-  min-height: 1.3em;
 }
 .pv-blurb { margin: 10px 0 0; }
 .pv-blurb p { margin: 0 0 7px; font-size: .9rem; color: var(--ink-soft); }
