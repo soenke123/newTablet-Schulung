@@ -186,37 +186,72 @@
   // Dieselbe Dreiteilung wie sheetsFor() im Werkzeug.
   const sheets = t => (t >= 0.72 ? 2 : t >= 0.40 ? 1 : 0);
 
-  /* Die Anordnung. x/y/w in Prozent der Tafel, damit die Wolke
-     mit der Kachel wächst statt in ihrer Mitte zu versacken; die
-     Balkenhöhe folgt der Stärke, wie im Werkzeug der Schriftgrad.
+  /* ── Die Anordnung ──────────────────────────────────────────
+     ⚠️ VON HAND GERECHNET, ABER NICHT VON HAND ERFUNDEN. Diese
+     Zahlen sind das Ergebnis der Packlogik des Werkzeugs selbst —
+     archimedische Spirale mit Kollisionsprüfung, achsenparallele
+     Rechtecke der GEDREHTEN Zettel, Abstand wie in findSpot() —,
+     einmal offline gerechnet und hier eingetragen. Deshalb sieht
+     die Kachel aus wie eine echte Wolke und nicht wie elf
+     verteilte Kästchen: Füllgrad 44 %, und die Spirale erreicht
+     laut cloudWidth() knapp die Hälfte.
 
-     `hover` steht nur an den Zetteln, die sich beim Darüberfahren
-     bewegen: einer bekommt Zustimmung, die Nachbarn machen Platz.
+     Wer einen Zettel dazusetzt oder eine Breite ändert, würfelt
+     die Packung durcheinander und bekommt Überlappungen. Dann
+     bitte neu rechnen lassen, nicht schieben.
+
+     Zwei vollständige Zustände, beide gepackt: `x/y/w` vorher,
+     `hover` nachdem der markierte Zettel Zustimmung bekommen hat.
+     Die Kachel blendet zwischen ihnen um — die Bewegung ist damit
+     eine echte Neuanordnung und kein nachgestelltes Verschieben.
+     Der Wurf ist gezielt einer, bei dem sich nur die Nachbarschaft
+     sortiert: der gelikte Zettel wächst und tauscht den Platz mit
+     seinem Nachbarn, alle anderen rücken um rund 3 px nach. Ein
+     Wurf, in dem drei Zettel quer über die Tafel springen, wäre
+     genauso echt gewesen und hätte wie ein Wirbel ausgesehen.
+
      Der Zielzustand steht HIER und nicht im Stylesheet, weil eine
-     Regel dort gegen die Inline-Angabe verlöre — deshalb setzt das
-     Markup zwei Sätze (--x0/--x1) und das Stylesheet schaltet nur
-     um, welcher gilt. */
+     Regel dort gegen die Inline-Angabe verlöre — das Markup setzt
+     zwei Sätze (--x0/--x1), das Stylesheet schaltet nur um. */
   const STILL = [
-    // Mitte — der meistgetragene Zettel
-    { x: 49, y: 47, w: 30, t: .95, r: 0, tr: -1.8, bars: [88, 66, 42],
-      hover: { y: 43 } },
-    // Erster Ring
-    { x: 20, y: 27, w: 22, t: .58, r: 3, tr:  1.4, bars: [82, 54] },
-    { x: 78, y: 31, w: 21, t: .52, r: 2, tr: -0.7, bars: [76, 46] },
-    { x: 26, y: 73, w: 20, t: .46, r: 4, tr:  2.2, bars: [84, 40],
-      hover: { x: 21, y: 68 } },
-    { x: 75, y: 70, w: 19, t: .38, r: 5, tr: -2.4, bars: [72],
-      hover: { x: 80, y: 66 } },
-    // Außen
-    { x: 48, y: 12, w: 16, t: .24, r: 1, tr:  0.9, bars: [78] },
-    // Der Zettel, der beim Darüberfahren Zustimmung bekommt: klein
-    // und blass, danach eine Stufe größer, satter und mit Blatt.
-    { x: 52, y: 85, w: 15, t: .16, r: 0, tr: -1.8, bars: [70], cls: 'tprev-n--up',
-      hover: { x: 50, y: 79, w: 24, t: .62 } },
-    { x:  8, y: 50, w: 13, t: .20, r: 2, tr:  1.4, bars: [74] },
-    { x: 92, y: 52, w: 13, t: .14, r: 3, tr: -0.7, bars: [66] },
-    { x: 12, y: 11, w: 12, t: .10, r: 4, tr:  2.2, bars: [70] },
-    { x: 88, y: 11, w: 12, t: .12, r: 1, tr: -2.4, bars: [64] }
+    { x: 49.2, y: 49.5, w: 38, t: .95, r: 0, tr: -0.7, bars: [88, 66, 42],
+      hover: { x: 50.5, y: 49.5 } },
+    { x: 45.8, y: 25.4, w: 30, t: .70, r: 3, tr:  2.2, bars: [84, 58],
+      hover: { x: 47.1, y: 25.4 } },
+    { x: 59.6, y: 73.2, w: 28, t: .58, r: 2, tr: -2.4, bars: [82, 54],
+      hover: { x: 60.9, y: 73.2 } },
+    { x: 28.3, y: 75.8, w: 27, t: .52, r: 4, tr:  0.9, bars: [76, 46],
+      hover: { x: 29.6, y: 75.8 } },
+    { x: 84.3, y: 42.7, w: 26, t: .46, r: 1, tr: -1.8, bars: [84, 40],
+      hover: { x: 85.6, y: 42.7 } },
+
+    // Die beiden Nachbarn, die Platz machen: die linke Spalte
+    // sortiert sich neu, als der Zettel darunter größer wird.
+    { x: 15.5, y: 53.9, w: 24, t: .38, r: 5, tr:  1.4, bars: [72],
+      hover: { x: 13.3, y: 43.2 } },
+    { x: 13.2, y: 38.0, w: 21, t: .24, r: 3, tr:  2.2, bars: [70],
+      hover: { x: 16.3, y: 25.9 } },
+
+    { x: 75.1, y: 25.3, w: 22, t: .30, r: 0, tr: -0.7, bars: [78],
+      hover: { x: 76.4, y: 25.3 } },
+    { x: 86.8, y: 61.7, w: 20, t: .20, r: 2, tr: -2.4, bars: [74],
+      hover: { x: 88.2, y: 61.7 } },
+
+    /* Der Zettel, der die Stimme bekommt. Alle drei Kanäle
+       schalten mit: größer (19 → 22 %), satter (Stärke .16 → .44)
+       und sein erstes Blatt — die Schwelle dafür liegt bei .40,
+       weshalb der Zuwachs bewusst darüber hinausgeht. Und er rückt
+       nach innen, weil die Wolke nach Zustimmung sortiert. */
+    { x: 18.6, y: 21.3, w: 19, t: .16, r: 5, tr:  0.9, bars: [68],
+      cls: 'tprev-n--up',
+      hover: { x: 17.8, y: 58.5, w: 22, t: .44 } },
+
+    { x: 46.8, y:  7.5, w: 18, t: .13, r: 1, tr: -1.8, bars: [70],
+      hover: { x: 48.1, y:  7.5 } },
+    { x: 63.3, y: 90.8, w: 17, t: .10, r: 4, tr:  1.4, bars: [64],
+      hover: { x: 64.6, y: 90.8 } },
+    { x: 42.1, y: 92.8, w: 17, t: .08, r: 2, tr: -0.7, bars: [72],
+      hover: { x: 43.5, y: 92.8 } }
   ];
 
   function noteHTML(n) {
