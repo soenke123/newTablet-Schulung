@@ -1207,3 +1207,24 @@ body.print-mode .random-btn {
 .dt-td.dt-cell-close   { background: #fef9c3; color: #854d0e; }
 .dt-td.dt-cell-off     { background: #fed7aa; color: #9a3412; }
 .dt-td.dt-cell-wrong   { background: #fecaca; color: #991b1b; }
+
+/* ══════════════════════════════════════════════════════════════
+   Schaufenster-Modus (?demo=1, siehe DEMO in app.js)
+   ══════════════════════════════════════════════════════════════
+   Eine Vorschau ist ein Bild und kein Arbeitsplatz: es gibt nichts
+   zu suchen, was gerade nicht zu sehen ist. Rollbalken laden dazu
+   ein, an einem Ausschnitt zu ziehen, der von selbst weiterläuft —
+   und sie fressen im Rahmen an allen vier Seiten Fläche.
+
+   Deshalb steht das Feld hier fest. Geklemmt wird nichts: das
+   Overlay der Auslage gibt dem Rahmen genug Höhe (siehe
+   .overlay--wide in MPSkills/style.css), die Spalten passen. Das
+   hidden ist der Riegel für den Fall, dass jemand das Fenster sehr
+   klein zieht — dann fehlt lieber ein Rand als dass die Vorschau
+   zum Schiebepuzzle wird.
+
+   Gilt AUSSCHLIESSLICH für die Auslage. Im Raum bleibt alles
+   scrollbar: dort baut jemand ein Netz, das größer sein darf als
+   der Bildschirm. */
+body.demo-mode main#network { overflow: hidden; }
+body.demo-mode .col-body    { overflow: hidden; }

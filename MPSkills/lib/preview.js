@@ -407,6 +407,10 @@
        gezeigt wird. Immer gesetzt, nie nur hinzugefügt: der Kasten ist
        bei jedem Öffnen derselbe Knoten. */
     overlay.querySelector('.pv-modal')?.classList.toggle('pv-modal--wide', !!show.wide);
+    // Und am Overlay selbst: die breite Auslage bekommt oben und unten
+    // weniger Polster, damit die Anwendung darin ihre Höhe bekommt,
+    // statt sich Rollbalken zu holen.
+    overlay.classList.toggle('overlay--wide', !!show.wide);
 
     /* „+ Raum eröffnen" führt genau dorthin, wo es auch von der
        Kachel aus hinführt. Den Weg kennt app.js — hier steht nur,

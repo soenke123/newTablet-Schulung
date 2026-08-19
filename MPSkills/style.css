@@ -1168,6 +1168,22 @@ label.field .rule {
   overflow-y: auto;
 }
 
+/* Dieselbe Auslage, aber für einen Skill, der eine ganze Anwendung
+   mitbringt (siehe .pv-modal--wide). Die 15vh oben und unten sind für
+   eine Tafel gerechnet, die sich in jede Höhe fügt — eine Anwendung
+   kann das nicht: NeuroLabs Spalten haben eine Mindesthöhe, und was
+   an Polster fehlt, holt sie sich als Rollbalken zurück. Auf einem
+   900 px hohen Fenster waren das 270 px Luft gegen 20 px, die den
+   Spalten fehlten.
+
+   Am Overlay und nicht per :has() am Kasten — dieselbe Entscheidung
+   wie bei .tile--peek: eine Klasse, die der Aufrufer setzt, kommt
+   auch auf älteren Tablets an. */
+.overlay--preview.overlay--wide {
+  padding-top:    clamp(10px, 4vh, 44px);
+  padding-bottom: clamp(10px, 4vh, 44px);
+}
+
 .pv-modal {
   background: var(--surface);
   border-radius: var(--r-lg);

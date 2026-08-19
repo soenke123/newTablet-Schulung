@@ -3063,7 +3063,12 @@ function updateNeuronDisplays() {
 
 // ── Render ─────────────────────────────────────────────────────────────────
 function render() {
-  document.body.className = state.phase + '-phase' + (printMode ? ' print-mode' : '');
+  /* ⚠️ Die Zeile setzt die Klassen NEU und wischt dabei alles weg, was
+     jemand sonst am <body> anhängt — deshalb steht demo-mode hier und
+     nicht einmalig beim Start. */
+  document.body.className = state.phase + '-phase'
+    + (printMode ? ' print-mode' : '')
+    + (DEMO ? ' demo-mode' : '');
   renderHeader();
   renderNetwork();
   if (state.phase === 'learn') updateLossPanelDisplay();
@@ -3706,14 +3711,21 @@ function drawEdgeOverlay(net) {
         const mx = (src.x + tgt.x) / 2;
         const my = (src.y + tgt.y) / 2;
         const label = fmt(w);
-        const lw = label.length * 9 + 8;
+        /* 10 px, nicht 16. Das Gewicht an der Kante ist nicht wichtiger
+           als die Zahlen IM Neuron (z und y′ stehen auf 10, der Bias auf
+           10–11) — vorher war es die mit Abstand größte Schrift auf der
+           Fläche. Bei einem Netz mit mehreren Neuronen je Schicht laufen
+           außerdem viele Kanten auf denselben Punkt zu, und dann legen
+           sich die Kästchen übereinander statt nebeneinander.
+           Monospace ≈ 0,6 em breit, daher 6 px je Zeichen. */
+        const lw = label.length * 6 + 7;
         overlaySvg.appendChild(svgEl('rect', {
-          x: mx - lw / 2, y: my - 10, width: lw, height: 18, rx: 3,
+          x: mx - lw / 2, y: my - 7, width: lw, height: 13, rx: 3,
           fill: 'white', 'fill-opacity': '0.9',
         }));
         const t = svgEl('text', {
-          x: mx, y: my + 5,
-          'text-anchor': 'middle', 'font-size': '16', 'font-weight': '700',
+          x: mx, y: my + 3.5,
+          'text-anchor': 'middle', 'font-size': '10', 'font-weight': '700',
           'font-family': 'monospace', fill: color,
         });
         t.textContent = label;
