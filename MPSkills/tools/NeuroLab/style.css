@@ -462,14 +462,24 @@ body.print-mode .net-zoom { display: none; }
 }
 
 /* ── Popup ── */
+/* Sichtbarer Bereich statt Bildschirm (viewport.js) + eigene
+   Scrollstrecke: ein zentrierter Kasten, der hoeher ist als der
+   Platz, ragt oben wie unten hinaus und ist an beiden Enden
+   unerreichbar. Siehe GameHub/style.css .modal-overlay. */
 #popup-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.22);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 300;
+  top: var(--vv-top, 0px);
+  height: 100vh;
+  height: var(--vv-h, 100vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
 }
 #popup-overlay.hidden { display: none; }
 
@@ -481,6 +491,7 @@ body.print-mode .net-zoom { display: none; }
   width: min(92vw, 560px);
   box-shadow: 0 10px 40px rgba(0,0,0,.15);
   position: relative;
+  margin: auto;
 }
 #popup-close {
   position: absolute;

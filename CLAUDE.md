@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 Webauftrtitt/
 ├── index.html          → Landing page: links to GameHub, PDF downloads, and workshop slides
+├── viewport.js         → sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen
 ├── PROJEKTBRIEFING.md  → Migrationsplan Frontend-only → Supabase-Backend (v2, 2026-07-04)
 ├── Dokumente/          → PDF handouts for students (e.g. Handout_Tablet-Schulung.pdf)
 ├── supabase/           → Datenbank-Schema, Seed, Blacklist, Setup-Doku
@@ -36,7 +37,7 @@ Die Plattform ist von Frontend-only (localStorage) auf **Supabase-Backend + Verc
 
 **Aktueller Stand: Schritte 1–4 durch. Admin-Panel produktiv. Cluster-Starthilfe (Migration 0020) neu dazugekommen.**
 
-Migrationen 0001–0076 liegen in `supabase/migrations/`. Schema/Seed, RLS, Session-Layer, Signup, State-Persistenz, Shop-Sync, Highscores, Cluster-Bonus, Multi-School, Blob-Spielstände und das kollaborative Board sind umgesetzt.
+Migrationen 0001–0092 liegen in `supabase/migrations/` (0077 aufwärts gehören MPSkills, siehe unten). Schema/Seed, RLS, Session-Layer, Signup, State-Persistenz, Shop-Sync, Highscores, Cluster-Bonus, Multi-School, Blob-Spielstände und das kollaborative Board sind umgesetzt.
 
 **Frontend-Session-Layer** (`session.js` im Repo-Root): stellt `window.supabaseClient`, `getUserSeason()`, `isLoggedIn()`, `getSessionUser()`, `waitForSession()`, `window.__accessToken` (JWT für direkte REST-Aufrufe) und ein `lernwelt:session-changed`-Event bereit. Die eigentliche Profil-Query läuft per direktem `fetch` gegen `/rest/v1/user_session`, nicht über die SDK-Query-Builder — die SDK hatte cross-tab-Lock-Probleme.
 
@@ -144,7 +145,7 @@ Migrationen 0001–0076 liegen in `supabase/migrations/`. Schema/Seed, RLS, Sess
 
 Sammelseite aus Tools/Spielen für den **normalen Unterricht**, losgelöst von der Schulung: Lehrkräfte schalten ein Tool für eine Klasse frei und bekommen einen 6-stelligen Code samt QR, SuS brauchen **keinen Account**. Eigene Landingpage `/MPSkills/`, eigene Optik, nur ein kleiner Link zurück zur Schulung. Referenzdokument: **`Konzept_MPSkills_v1.html`** im Repo-Root (Rollen, Flows, Wireframes, Grenzen, Stufenplan 0–7). Geteilt werden Supabase-Projekt, `auth`, `profiles` und `session.js` — sonst möglichst nichts.
 
-**Aktueller Stand: Stufen 1–5 und 7 umgesetzt** — Rolle (0077), Tool-Registry (0078), Räume (0079), Inhaltsschicht + Wortwolke (0080), Lebenszyklus + Moderation (0081), Politur (0082), Raumseite mit drei Fächern (0084), Ablauffrist 30 Tage (0085), gruppierte Beiträge + WordPool (0086), Zustimmung der Lehrkraft + Verschieben (0087), besuchte Räume + Raum verlassen (0088), **zweiter Skill NeuroLab + Fächer im Sortiment (0089)**, Raumbesitzer auf der Kachel (0090), Raumgröße 150 (0091). Damit ist auch **Stufe 6** durch — sie war der Test der Architektur, und er ist bestanden: NeuroLab kam als Migration mit einer `insert`-Zeile, einer Zeile in `tools.js` und einem Ordner mit zwei Dateien dazu; an der Inhaltsschicht, an den RPCs und an den beiden Raumseiten musste nichts geändert werden. (Die Stufe hatte bis 2026-08-18 bewusst hinten angestanden: ein zweites Werkzeug ist ein Test und kein Feature, sein Wert verfällt nicht, und Stufe 7 war das, was vor dem ersten echten Klasseneinsatz gebraucht wurde.) Der **Gestaltungs-Durchgang** über alle MPSkills-Seiten lief als eigener Schritt: Kopfzeile und Profilseite (0083), dann die Raumseite (0084), dann **Kleid und Darkmode** (19.08.2026, kein Migrationsbedarf — siehe „Die Richtung ‚Rund'").
+**Aktueller Stand: Stufen 1–5 und 7 umgesetzt** — Rolle (0077), Tool-Registry (0078), Räume (0079), Inhaltsschicht + Wortwolke (0080), Lebenszyklus + Moderation (0081), Politur (0082), Raumseite mit drei Fächern (0084), Ablauffrist 30 Tage (0085), gruppierte Beiträge + WordPool (0086), Zustimmung der Lehrkraft + Verschieben (0087), besuchte Räume + Raum verlassen (0088), **zweiter Skill NeuroLab + Fächer im Sortiment (0089)**, Raumbesitzer auf der Kachel (0090), Raumgröße 150 (0091), **dritter Skill Cäsar-Scheibe (0092)**. Damit ist auch **Stufe 6** durch — sie war der Test der Architektur, und er ist bestanden: NeuroLab kam als Migration mit einer `insert`-Zeile, einer Zeile in `tools.js` und einem Ordner mit zwei Dateien dazu; an der Inhaltsschicht, an den RPCs und an den beiden Raumseiten musste nichts geändert werden. (Die Stufe hatte bis 2026-08-18 bewusst hinten angestanden: ein zweites Werkzeug ist ein Test und kein Feature, sein Wert verfällt nicht, und Stufe 7 war das, was vor dem ersten echten Klasseneinsatz gebraucht wurde.) Der **Gestaltungs-Durchgang** über alle MPSkills-Seiten lief als eigener Schritt: Kopfzeile und Profilseite (0083), dann die Raumseite (0084), dann **Kleid und Darkmode** (19.08.2026, kein Migrationsbedarf — siehe „Die Richtung ‚Rund'").
 
 **Die Richtung „Rund" + Darkmode (2026-08-19, reine Frontend-Änderung):** Entschieden über zwei Showrooms im Repo — `MPSkills/showroom.html` (sieben Richtungen, dann fünf im engeren Korridor) und `MPSkills/showroom-darkmode.html` (hell/dunkel nebeneinander). Beide bauen **ein** Skelett und kleiden es mehrfach ein: nur so vergleicht man Schrift, Form, Farbe und Effekt und nicht mehrere Layouts. Ergebnis: **Outfit** statt Inter, **Radien 12 · 18 · 24 px**, **kühles Grau** statt warmem Papier. Akzent hell **Mint `#00b37e`**.
 
@@ -375,6 +376,86 @@ Beides beantwortet dieselbe Änderung, und sie ist dieselbe wie bei der Wortwolk
 *Das Standbild* ist wie bei der Wolke ein leichter Nachbau, aber aus dem umgekehrten Grund: dort werden die Wörter nur angedeutet, weil fünfzehn Zettel auf Maßstab 0,25 Matsch wären — hier steht **ein** Neuron fast in Originalgröße, und `x1`, `Σ`, `b = −1,5` sind das, worum es geht. Gezeichnet als SVG in `preview/neurolab.js`, zwei Zustände über Deckkraft gekreuzt (Build ↔ Run) plus mitfärbende Leitungen; die Bias-Leitung färbt **nicht** mit, durch sie geht kein Ergebnis. ⚠️ Die Kachel zeigt damit **absichtlich etwas anderes** als das Modal: sie sagt im stehenden Bild, WAS das Ding ist, das Modal zeigt in zehn Sekunden, was es KANN. Dasselbe Netz an beiden Stellen ginge nur in eine Richtung schlecht aus — achtzehn Kanten und sieben Neuronen in 186 px Höhe sind ein Fleck, und wer einen Fleck sieht, klickt nicht. Die Tafel bleibt in **beiden** Kleidern hell (`.tprev--nl`), nur im Dunkeln gedämpft (`brightness(.88)`): NeuroLab kippt nicht mit (0089), und eine dunkle Kachel verspräche etwas anderes, als dann kommt.
 
 ✔️ **`MPSkills/tools/NeuroLab/` hatte ein eigenes `.git` — erledigt.** Solange das so war, war der Ordner für dieses Repository eine **eingebettete Fremd-Repo**: `git add` legt dann einen Gitlink an statt der Dateien, und ein Deployment enthielte ein leeres Verzeichnis — die Kachel stünde da, der Raum ginge auf, und der Rahmen darin liefe ins 404. Das `.git` ist weg, die Dateien sind normal versioniert (`git ls-files` zeigt sie). Steht hier weiter, weil derselbe Fall bei jedem übernommenen Skill wieder auftritt.
+
+**Cäsar-Scheibe — portiert statt eingerahmt (Migration 0092, 20.08.2026):** Dritter Skill, zweiter im Fach Informatik (`MPSkills/tools/Caesercode/`, id `caesar`). Eine drehbare Cäsar-Scheibe: äußerer Ring starr, inneres Rad ziehen, Schlüssel in der Mitte ablesen. Wie NeuroLab **teilt sie nichts** — keine Beiträge, keine Zustimmung, keine Phase, `limits` leer, die Inhaltsschicht (0080/0086) wird nie angesprochen. Der Raum trägt allein die **Tür**. Die Migration ist ein `insert` und sonst nichts; an RPCs, Inhaltsschicht und den beiden Raumseiten wurde nichts geändert. `folder` (`Caesercode`, mit Dreher im Namen) weicht wieder von der id ab — genau der Fall, für den 0078 die Spalte hat. ⚠️ Wer den Ordner umbenennt, fasst **drei** Stellen an: die Spalte, den Ordner und die Konstante in `showroom-preview.html` (dort steht der Wert von Hand, weil das Schaufenster ohne Anmeldung läuft).
+
+*Warum hier kein `<iframe>`:* der Rahmen ist bei NeuroLab die **Ausnahme mit Begründung** — 4.000 Zeilen Logik, die das Dokument direkt ansprechen, und ein Stylesheet, das auf `body` geht. Die Vorlage der Scheibe waren 140 Zeilen in einer Datei ohne eine einzige Regel auf `body`; dort kostet der Port nichts und bringt drei Dinge, die ein Rahmen nie hergäbe: **Darkmode** (sie nimmt die Variablen der Seite — eine weiße Scheibe von 60 cm Durchmesser ist im abgedunkelten Raum das Hellste an der Wand), **Größe** (sie misst und füllt, statt in beiden Fällen bei 260 px zu stehen), und keinen zweiten Satz Klempnerei (kein eigenes `viewport.js` im Rahmen, kein Cache-Stempel an der Rahmen-URL, keine Höhenmessung durch eine Dokumentgrenze). Die Regel daraus: **der Rahmen ist eine Kostenfrage, keine Bauweise** — er lohnt bei einer gewachsenen Anwendung und nirgends sonst.
+
+*Was sich dreht:* **ein** Element (`.cs-wheel`) über **eine** Variable (`--spin`); jeder Buchstabe darauf dreht in CSS um denselben Betrag zurück und bleibt damit aufrecht (auf einer echten Scheibe stünde die untere Hälfte auf dem Kopf — lesbar ist das nicht). Die Vorlage setzte bei jeder Fingerbewegung 26 Buchstaben einzeln und las dabei je einmal `getBoundingClientRect()`, also 26 erzwungene Layouts pro Bild; das war der Grund, warum das Drehen auf einem Tablet zäh war. ⚠️ **`spin` läuft durch und wird nicht auf 0–360 zurückgeholt:** von Z auf A ist ein Schritt vorwärts, in einem gedeckelten Wert aber ein Sprung von 346° auf 0° — und den fährt der Browser wegen der Übergangszeit als ganze Rückwärtsdrehung ab. Nur die Anzeige rechnet modulo; `goTo(shift)` sucht sich dafür die Darstellung des Ziels, die der jetzigen Lage am nächsten liegt, sonst drehte „zurück auf A" von Y aus einmal ganz herum. Beim Ziehen wird zusätzlich der **kürzeste** Winkelunterschied genommen (die Vorlage rechnete `ang − startAngle` und drehte beim Überqueren von ±180° einmal ganz durch). ⚠️ Und: `--a` steht als **fertiger Winkel** im style-Attribut, nicht als blanke Zahl — `calc(var(--a) * var(--x))` multipliziert zwei Variablen, und wo ein Browser das erst nach dem Einsetzen prüft, fällt die ganze Regel weg und alle 26 Buchstaben lägen übereinander.
+
+*Was gegenüber der Vorlage dazukam:* ein Umbruch setzt die Scheibe **nicht mehr auf A zurück** (dort rief `resize` das ganze `init()` samt `setInnerAngle(0)` — wer sein Tablet drehte, verlor den Schlüssel mitten in der Aufgabe); **Schritt-Knöpfe ◀ ▶ ↺** (am Beamer wird von vorn bedient und nicht am Platz gezogen, und ein Schlüssel, den die ganze Klasse gleich einstellen soll, wird angesagt und nicht getroffen — sie sind zugleich das Einzige, was das Schaufenster bedienen kann, denn eine Ziehgeste lässt sich mit einem Klick-Ereignis nicht nachstellen); und die **Leserichtung steht dabei**. Die war in der Vorlage nirgends gesagt, folgt aber zwingend aus ihrer eigenen Anzeige: Buchstabe *i* innen liegt nach *s* Schritten bei außen *i+s*, innen A also bei außen *s* — dem angezeigten Schlüssel. Also **innen Klartext, außen Geheimtext, A → Schlüsselbuchstabe** (die übliche Konvention: Schlüssel D heißt A→D). Bewusst **kein Eingabefeld**, in das man einen Text tippt und verschlüsselt bekommt: Buchstabe für Buchstabe umzusetzen *ist* die Aufgabe. Die Scheibe ist ein Werkzeug zum Nachschlagen, kein Löser.
+
+*Standbild und Schaufenster* (`preview/caesar.js`, `.tprev--cs` in `style.css`): anders als bei Wolke und NeuroLab ist hier **kein Weglassen** nötig — eine Scheibe mit 52 Buchstaben ist in 186 px genau das, was sie in Lebensgröße auch ist. Beim Darüberfahren dreht das innere Rad drei Schritte und der Schlüssel springt von A auf D; die Buchstaben drehen dabei einzeln zurück, genau wie im Werkzeug. ⚠️ Dafür braucht es **`transform-box` zweimal mit verschiedenen Werten** — der Ring dreht um die Mitte der Scheibe (`view-box`), jeder Buchstabe um sich selbst (`fill-box`); ohne das nimmt der Browser die Kastenkante als Drehpunkt und das Rad wandert aus dem Bild. Die Kachel **kippt mit dem Kleid**, anders als `.tprev--nl`, das hell bleibt — dieselbe Regel von der anderen Seite: eine Kachel verspricht, was hinter ihr aufgeht, und hinter dieser geht etwas Portiertes auf. Das Drehbuch drückt dreimal ▶, bleibt auf D stehen, drückt viermal, bleibt auf H stehen und geht mit ↺ zurück; `fade: false` wie bei NeuroLab (der Skill bezieht seinen Stand nicht aus der view, also stellt das Drehbuch selbst zurück), `wide` braucht er **nicht** — die Scheibe ist rund und misst ihren Durchmesser aus dem, was da ist.
+
+⚠️ **`spaceBelow()` steht jetzt dreimal** — `tools/wordcloud/tool.js`, `tools/NeuroLab/tool.js` und hier, wortgleich. Wer die Höhenrechnung an einer Stelle repariert, zieht die anderen mit.
+
+## Modale auf kleinen Geräten (`viewport.js`, 20.08.2026, keine Migration)
+
+Ein Fenster, an dessen Knöpfe man nicht herankommt, ist kaputt — und das
+Registrieren-Formular war es auf **jedem** Handy: 805 px hoch auf einem
+667 px hohen Bildschirm, mittig gestellt, also stand sein Anfang bei
+**−87 px** und „Konto anlegen" bei 705 px. Beide Enden unerreichbar, weil
+es nichts zu scrollen gab. Dieselbe Bauart lag im ganzen Projekt, in 21
+Fenstern über acht Oberflächen. Drei Fehler stecken darin, und sie werden
+überall mit demselben Muster beantwortet:
+
+**(1) Der Bildschirm ist nicht der sichtbare Bereich.** `position: fixed`
++ `inset: 0` bezieht sich auf das Layout-Fenster. Die Adressleiste fährt
+ein und aus, und die **Tastatur legt sich über die untere Hälfte, ohne
+dass das Layout etwas davon erfährt** — ein zentriertes Fenster steht
+dann mitsamt seiner Knöpfe darunter. `viewport.js` liest dafür die
+VisualViewport-API und schreibt `--vv-h` (Höhe des sichtbaren Bereichs)
+und `--vv-top` (wie weit er nach unten gerutscht ist) an `<html>`; ein
+Overlay nimmt `top: var(--vv-top, 0px)` und `height: var(--vv-h, 100vh)`
+und liegt damit immer genau auf dem Stück Bildschirm, das man sieht.
+`100vh` als Rückfall und **nicht** `100dvh`: fehlt `--vv-h`, wäre ein
+`var(--vv-h, 100dvh)` in einem Browser ohne `dvh` „invalid at
+computed-value time" und fiele auf `unset` statt auf die Zeile darüber.
+
+**(2) Zentriert heißt bei zu wenig Platz „an beiden Enden abgeschnitten".**
+`align-items: center` verteilt negativen freien Platz nach oben *und*
+unten. Deshalb ist der **Overlay die Scrollstrecke** (`overflow-y: auto`
++ `overscroll-behavior: contain`) und der Kasten zentriert über
+`margin: auto` statt über die Ausrichtung: Auto-Ränder schlucken freien
+Platz, werden bei zu wenig aber **0 statt negativ**. Der Kasten beginnt
+dann oben und scrollt. Ohne Platznot sieht es aus wie vorher.
+
+**(3) `max-height: 90vh` ist dieselbe Lüge wie (1)** — nur an den Kästen,
+die ihre eigene Scrollstrecke mitbringen. `100%` statt `vh`, das bezieht
+sich auf den Overlay und der ist jetzt der sichtbare Bereich.
+
+Dazu holt `viewport.js` das **fokussierte Eingabefeld ins Sichtbare**,
+zweimal (sofort und nach ~350 ms, wenn die Tastatur wirklich steht) und
+mit `block: 'center'` — der Browser scrollt beim Fokus selbst, aber für
+die Seite; steckt das Feld in einem eigenen Scroller, bleibt es liegen.
+`center` und nicht `nearest`, weil ein Feld direkt an der Tastaturkante
+zwar zu sehen ist, die Fehlermeldung darunter aber nicht.
+
+**⚠️ Zwei Fallen beim Nacharbeiten.** *Erstens:* bei
+`flex-direction: column` ist **`justify-content`** die senkrechte Achse,
+nicht `align-items` — dort greift das Muster an der anderen Eigenschaft,
+und die Mitte holt man über `margin-top/bottom: auto` an erstem und
+letztem Kind (siehe `#pwOverlay` in `GameHub/rec13677.html`). *Zweitens:*
+in `S1 The Algorithm/style.css` steht **hinter** `#gameover-box`/`#win-box`
+eine zweite Regel (`SPLIT ENDSCREEN LAYOUT`), die die Höhe erneut setzt
+und gewinnt — wer oben etwas ändert, ändert nichts.
+
+*Wo es gilt:* Landing (Login/Registrieren), `profil.html`,
+`highscores.html`, Admin-Panel, GameHub-Hub (Modal · Shop · S2-Ankündigung
+· Lootbox), MPSkills (`.overlay`, Schaufenster), die drei Kopien des
+`.bd-modal-backdrop` (WordPool · Reality Check · „Warum Tablets?"), sowie
+Algorithm, Startup Story, 10finger, Quellen Tinder, Reinforce Yourself,
+EscapeGame (neun Popups, inline per `style.cssText`), NeuroLab und
+`rec13677.html`. **NeuroLab braucht `viewport.js` in seiner eigenen
+`index.html`** — es steckt in einem `<iframe>`, und CSS-Variablen des
+Wirts reichen dort nicht hinein.
+
+*Nicht angefasst und mit Absicht:* fliegende Zahlen und Rückmeldungen
+(`.bd-burst`, `.meta-fly`, `.money-fly`, `.rt-trend-fly`), Ladeschichten
+(`.boot-mask`, `.netbar`) und bildschirmfüllende Spiel-Layouts
+(`#start-overlay` in Algorithm, `#wrap` in BubbleBounce, der Splitscreen
+in EscapeGame) — das sind keine Fenster, aus denen man herausklicken
+muss, und ein Polster oder eine Scrollstrecke wäre dort ein Fehler.
 
 ## Architecture
 

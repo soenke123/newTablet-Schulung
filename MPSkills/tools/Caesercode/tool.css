@@ -1,0 +1,237 @@
+/* ══════════════════════════════════════════════════════════════
+   MPSkills — Skill „Cäsar-Scheibe"  ·  tool.css
+   ══════════════════════════════════════════════════════════════
+   Anders als NeuroLab bringt dieser Skill KEIN eigenes Aussehen
+   mit — er ist portiert und nicht eingerahmt (Begründung im Kopf
+   von tool.js). Also nimmt er die Variablen der Seite und schreibt
+   nirgends eine Farbe hin: die Scheibe kippt mit dem Kleid.
+
+   Das ist hier nicht nur bequem, sondern der Punkt. Eine weiße
+   Scheibe von 60 cm Durchmesser ist im abgedunkelten Raum das
+   Hellste an der Wand — dieselbe Überlegung, aus der die Tafel des
+   WordPools im Dunkeln dunkel wird.
+
+   ── Eine Größe, aus der alles folgt ───────────────────────────
+   `--cs-size` setzt tool.js nach der Messung; jedes Maß darin ist
+   ein Anteil davon. Deshalb sieht die Scheibe auf dem Handy und am
+   Beamer gleich aus und nicht wie zweimal etwas anderes:
+   Buchstaben, Knopf und Ringe wachsen zusammen.
+
+     Ring außen  ·  Buchstaben bei .443  (Band .39 – .50)
+     Rad innen   ·  Kante bei .39, Buchstaben bei .325
+
+   ── Was sich dreht und was aufrecht bleibt ────────────────────
+   Gedreht wird EIN Element (`.cs-wheel`) über eine einzige
+   Variable, `--spin`. Die Buchstaben darauf drehen dabei mit —
+   also dreht jeder sich um denselben Betrag zurück und steht
+   wieder aufrecht. Die Rechnung steht in CSS und nicht in JS: so
+   schreibt tool.js beim Ziehen genau eine Eigenschaft pro Bild
+   statt 26 Transformationen (das war in der Vorlage der Grund,
+   warum das Drehen auf einem Tablet zäh war).
+   ══════════════════════════════════════════════════════════════ */
+
+.cs-host {
+  --cs-size: 320px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  /* Die Höhe setzt tool.js, weil sie davon abhängt, was über der
+     Scheibe steht — auf der Schülerseite eine Reiterleiste, auf der
+     Raumseite zwei. Der Wert hier ist nur der Ausgangspunkt für den
+     Moment vor der ersten Messung. Der Wert ist derselbe wie MIN in
+     tool.js — sonst gewänne mal die eine, mal die andere Zahl. */
+  min-height: 300px;
+}
+
+/* Die Bühne nimmt, was zwischen Kopf und Leiste übrig ist. Aus
+   ihren Maßen rechnet tool.js --cs-size — deshalb `min-height: 0`:
+   ohne das wächst ein Flex-Kind über seinen Anteil hinaus und die
+   Messung fiele immer zu groß aus. */
+.cs-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: grid;
+  place-items: center;
+}
+
+/* ─── Die Scheibe ──────────────────────────────────────────── */
+
+.cs-disc {
+  position: relative;
+  width:  var(--cs-size);
+  height: var(--cs-size);
+  border-radius: 50%;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cs-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  /* Die Buchstaben fangen keine Finger: gezogen wird am Rad
+     darunter, und ein Buchstabe, der die Geste schluckt, macht aus
+     der Scheibe ein Feld mit 26 toten Stellen. */
+  pointer-events: none;
+}
+
+.cs-ring span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-weight: 700;
+  font-size: calc(var(--cs-size) * .053);
+  line-height: 1;
+}
+
+/* --a ist der Platz des Buchstabens im Kreis, als fertiger
+   Winkel — gesetzt beim Bauen und danach nie wieder.
+   ⚠️ Als Winkel und nicht als blanke Zahl: `calc(var(--a) * var(--x))`
+   multipliziert zwei Variablen, und das prüfen ältere Tablet-Browser
+   erst nach dem Einsetzen — wo sie es prüfen, fällt die ganze
+   Regel weg und die Buchstaben lägen alle übereinander. */
+.cs-ring--out span {
+  color: var(--ink);
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--a))
+    translateY(calc(var(--cs-size) * -.443))
+    rotate(calc(var(--a) * -1));
+}
+
+.cs-wheel {
+  position: absolute;
+  inset: 11%;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop);
+  cursor: grab;
+  /* Ohne das scrollt der Browser die Seite, statt das Rad zu
+     drehen — auf einem Tablet ist das der Unterschied zwischen
+     „geht" und „geht nicht". */
+  touch-action: none;
+  transform: rotate(var(--spin, 0deg));
+  transition: transform .16s ease-out;
+}
+.cs-wheel:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+.cs-ring--in span {
+  color: var(--ink);
+  /* Der Buchstabe dreht mit dem Rad (--spin) und hier wieder
+     zurück — er steht damit immer aufrecht, egal wo er liegt.
+     Auf einer echten Scheibe stünde die untere Hälfte auf dem
+     Kopf; lesbar ist das nicht, und gelesen werden soll es. */
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--a))
+    translateY(calc(var(--cs-size) * -.325))
+    rotate(calc(var(--a) * -1 - var(--spin, 0deg)));
+  transition: transform .16s ease-out;
+}
+
+/* Während des Ziehens keine Weichzeichnung: eine Übergangszeit von
+   160 ms bei 60 Bildern je Sekunde heißt, dass das Rad dem Finger
+   dauerhaft hinterherhinkt. Sie gehört den Schritt-Knöpfen und der
+   Tastatur, wo tatsächlich gesprungen wird. */
+.cs-host--drag .cs-wheel,
+.cs-host--drag .cs-ring--in span { transition: none; }
+.cs-host--drag .cs-wheel { cursor: grabbing; }
+
+/* Der Schlüssel in der Mitte. Sitzt als Geschwister NEBEN dem Rad
+   und nicht darin: er dreht sich nicht mit, und was er anzeigt,
+   gilt für die ganze Scheibe. `pointer-events: none`, damit ein
+   Finger, der in der Mitte aufsetzt, trotzdem am Rad zieht. */
+.cs-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width:  calc(var(--cs-size) * .19);
+  height: calc(var(--cs-size) * .19);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 800;
+  font-size: calc(var(--cs-size) * .085);
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* ─── Ablesen und Schalten ─────────────────────────────────── */
+
+.cs-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cs-step {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.cs-step:hover  { border-color: var(--accent-edge); background: var(--surface-2); }
+.cs-step:active { transform: translateY(1px); }
+.cs-step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cs-step--home { font-size: 1.1rem; color: var(--ink-soft); }
+
+.cs-read {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 6px 16px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.cs-read b {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--accent-ink);
+  letter-spacing: .02em;
+}
+.cs-read span { color: var(--ink-soft); font-size: .95rem; }
+.cs-read .cs-map { font-weight: 700; color: var(--ink); }
+
+.cs-hint {
+  margin: 0;
+  max-width: 48ch;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: .86rem;
+  line-height: 1.45;
+}
+
+/* Am Beamer schaut eine Klasse aus fünf Metern darauf. Dann ist
+   die Ablesezeile keine Fußnote, sondern das, was mitgeschrieben
+   wird — und die Knöpfe werden von vorn bedient, nicht am Platz. */
+body.beamer .cs-read b   { font-size: 2.1rem; }
+body.beamer .cs-read span { font-size: 1.15rem; }
+body.beamer .cs-step     { width: 52px; height: 52px; font-size: 1.15rem; }
+body.beamer .cs-hint     { font-size: 1rem; max-width: 60ch; }
+
+@media (max-width: 480px) {
+  .cs-read { padding: 5px 12px; gap: 8px; }
+  .cs-read b { font-size: 1.25rem; }
+}

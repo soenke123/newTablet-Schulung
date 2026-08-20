@@ -2115,16 +2115,27 @@ html, body {
 }
 
 /* ---- Launch-Overlay (Terminal-Deploy) ---- */
+/* Sichtbarer Bereich statt Bildschirm (viewport.js) + eigene
+   Scrollstrecke: ein zentrierter Kasten, der hoeher ist als der
+   Platz, ragt oben wie unten hinaus und ist an beiden Enden
+   unerreichbar. Siehe GameHub/style.css .modal-overlay. */
 .rt-launch-overlay {
   position: fixed; inset: 0;
   background: rgba(0, 0, 0, 0.85);
   z-index: 200;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: flex-start; justify-content: center;
   padding: 20px;
   animation: rt-launch-fade-in 0.3s ease;
+  top: var(--vv-top, 0px);
+  height: 100vh;
+  height: var(--vv-h, 100vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 @keyframes rt-launch-fade-in { from { opacity: 0; } to { opacity: 1; } }
-.rt-launch-screen { width: 100%; max-width: 640px; }
+.rt-launch-screen { width: 100%; max-width: 640px;
+  margin: auto;
+}
 .rt-launch-terminal {
   background: #0d1117; border-radius: 12px; overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.6);
@@ -2393,12 +2404,21 @@ html, body {
    Eigenes Overlay statt RT.ui's einzigem Modal-Slot: beim Wiederkommen
    können sich sonst Kartentisch (Phase 4) und Erklär-Touren um dieselbe
    Fläche streiten. */
+/* Sichtbarer Bereich statt Bildschirm (viewport.js) + eigene
+   Scrollstrecke: ein zentrierter Kasten, der hoeher ist als der
+   Platz, ragt oben wie unten hinaus und ist an beiden Enden
+   unerreichbar. Siehe GameHub/style.css .modal-overlay. */
 .rt-offline {
   position: fixed; inset: 0;
   background: rgba(0, 0, 0, 0.55);
   z-index: 140;                 /* über #modal (100), unter der Tour */
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: flex-start; justify-content: center;
   padding: 20px;
+  top: var(--vv-top, 0px);
+  height: 100vh;
+  height: var(--vv-h, 100vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .rt-offline__box {
   background: var(--tt-paper, #fffaf0);
@@ -2410,6 +2430,7 @@ html, body {
   width: 100%; max-width: 400px;
   color: var(--tt-brown, #4a3829);
   text-align: center;
+  margin: auto;
 }
 .rt-offline__head { font-size: 20px; font-weight: 800; }
 .rt-offline__sub  { font-size: 13px; opacity: 0.7; margin-top: 2px; }

@@ -32,6 +32,11 @@ window.TOOLS_OVERLAY = {
   // kam; dass die id davon abweichen darf, ist genau der Grund für
   // die folder-Spalte in skill_tools.
   neurolab:  { ready: true },
+  // Dritter Skill (Migration 0092). Liegt unter tools/Caesercode/ —
+  // wieder ein Ordner, dessen Name nicht die id ist, diesmal wegen
+  // eines Drehers darin. Anders als NeuroLab ist die Scheibe
+  // PORTIERT und nicht eingerahmt (Begründung im Kopf ihrer tool.js).
+  caesar:    { ready: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   poll:      { ready: false }
 };

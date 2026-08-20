@@ -60,7 +60,7 @@
         card.classList.add('is-selected');
         RT.theme.apply(selectedLogo);
         var def = RT.assets.LOGOS[selectedLogo].defaultName;
-        if (def) { inputEl.value = def; inputEl.select(); }
+        if (def && isSuggestion(inputEl.value)) { inputEl.value = def; inputEl.select(); }
         updateConfirmState();
       });
       if (card.getAttribute('data-logo') === selectedLogo) {
@@ -78,6 +78,16 @@
     if (window.matchMedia && window.matchMedia('(min-width: 600px)').matches) {
       inputEl.focus();
     }
+  }
+
+  /* Wie im Charakter-Schritt: der Vorschlag überschreibt nur einen leeren
+     oder selbst vorgeschlagenen Namen, nie einen selbst getippten. */
+  function isSuggestion(value) {
+    var name = (value || '').trim();
+    if (!name) return true;
+    return Object.keys(RT.assets.LOGOS).some(function (id) {
+      return RT.assets.LOGOS[id].defaultName === name;
+    });
   }
 
   function updateConfirmState() {

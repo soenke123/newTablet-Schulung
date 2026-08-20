@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cäsar Scheibe</title>
+  <style>
+    :root{--size:260px}
+    body{font-family:system-ui,Segoe UI,Arial;margin:24px;display:flex;flex-direction:column;align-items:center;gap:16px;color:#0b1220}
+    h1{margin:0;font-size:20px}
+    .desc{color:#475569;font-size:14px}
+    .container{width:var(--size);height:var(--size);position:relative}
+    .wheel{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;touch-action:none}
+    .outer{background:#f3f4f6;border:4px solid #e6eef8; border-radius:50%}
+    .inner{width:78%;height:78%;left:11%;top:11%;background:#fff;border-radius:50%;border:2px solid #cbd5e1;box-shadow:0 6px 14px rgba(2,6,23,0.06);touch-action:none}
+    .letters{position:absolute;inset:0;border-radius:50%;pointer-events:none}
+    .letters span{position:absolute;left:50%;top:50%;transform-origin:0 0;font-weight:600;user-select:none}
+    .center{position:absolute;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:#0f172a;color:#fff;font-weight:700}
+    .info{display:flex;gap:12px;align-items:center}
+    .key{font-weight:800;font-size:18px}
+    .shift{color:#475569}
+  </style>
+</head>
+<body>
+  <h1>Cäsar Scheibe</h1>
+  <div class="desc">Drehe das innere Rad. Das äußere Rad bleibt starr.</div>
+
+  <div class="container" id="canvas">
+    <div class="wheel outer" id="outer">
+      <div class="letters" id="lettersOuter"></div>
+    </div>
+    <div class="wheel inner" id="inner">
+      <div class="letters" id="lettersInner"></div>
+      <div class="center" id="knob">A</div>
+    </div>
+  </div>
+
+  <div class="info">
+    <div>Schlüssel: <div class="key" id="keyLetter">A</div></div>
+    <div class="shift">(Shift: <span id="shift">0</span>)</div>
+  </div>
+
+  <script>
+    const A = 65;
+    const letters = Array.from({length:26},(_,i)=>String.fromCharCode(A+i));
+    const lettersOuter = document.getElementById('lettersOuter');
+    const lettersInner = document.getElementById('lettersInner');
+    const knob = document.getElementById('knob');
+    const keyLetter = document.getElementById('keyLetter');
+    const shiftEl = document.getElementById('shift');
+    const step = 360/26;
+
+    function placeLetters(container, radius){
+      container.innerHTML='';
+      letters.forEach((ch,i)=>{
+        const s = document.createElement('span');
+        s.textContent = ch;
+        const angle = i*step;
+        s.style.transform = `translate(-50%,-50%) rotate(${angle}deg) translate(0, -${radius}px) rotate(${-angle}deg)`;
+        container.appendChild(s);
+      });
+    }
+
+    function init(){
+      const rect = document.getElementById('canvas').getBoundingClientRect();
+      const outerRadius = rect.width/2 - 15;
+      const innerRadius = rect.width*0.40;
+      placeLetters(lettersOuter, outerRadius);
+      placeLetters(lettersInner, innerRadius);
+      setInnerAngle(0);
+    }
+
+    const inner = document.getElementById('inner');
+    let startAngle=0, startDeg=0, dragging=false;
+
+    function getAngle(ev){
+      const rect = inner.getBoundingClientRect();
+      const cx = rect.left + rect.width/2;
+      const cy = rect.top + rect.height/2;
+      const x = (ev.clientX ?? ev.touches?.[0]?.clientX) - cx;
+      const y = (ev.clientY ?? ev.touches?.[0]?.clientY) - cy;
+      return Math.atan2(y,x)*180/Math.PI + 90;
+    }
+
+    inner.addEventListener('pointerdown', (e)=>{
+      e.preventDefault();
+      dragging=true;
+      startAngle = getAngle(e);
+      startDeg = currentDeg;
+      inner.setPointerCapture(e.pointerId);
+    });
+
+    inner.addEventListener('pointermove', (e)=>{
+      if(!dragging) return;
+      const ang = getAngle(e);
+      const delta = ang - startAngle;
+      setInnerAngle(startDeg + delta, true);
+    });
+
+    inner.addEventListener('pointerup', (e)=>{
+      dragging=false;
+      inner.releasePointerCapture(e.pointerId);
+      setInnerAngle(currentDeg);
+    });
+
+    let currentDeg = 0;
+    function setInnerAngle(deg, skipSnap=false){
+      deg = ((deg%360)+360)%360;
+      if(!skipSnap){
+        deg = Math.round(deg/step)*step;
+      }
+      currentDeg = deg;
+      Array.from(lettersInner.children).forEach((s, i)=>{
+        const baseAngle = i * step;
+        const radius = inner.getBoundingClientRect().width * 0.40;
+        s.style.transform = `translate(-50%,-50%) rotate(${baseAngle + deg}deg) translate(0, -${radius}px) rotate(${-baseAngle - deg}deg)`;
+      });
+      const idx = Math.round(deg/step)%26;
+      const shift = (idx%26+26)%26;
+      const key = String.fromCharCode(A + shift);
+      knob.textContent = key;
+      keyLetter.textContent = key;
+      shiftEl.textContent = shift;
+    }
+
+    window.addEventListener('resize', init);
+    init();
+
+    inner.tabIndex=0;
+    inner.addEventListener('keydown', e=>{
+      if(e.key==='ArrowLeft' || e.key==='ArrowRight'){
+        e.preventDefault();
+        const dir = e.key==='ArrowRight'?1:-1;
+        setInnerAngle(currentDeg + dir*step);
+      }
+    });
+  </script>
+</body>
+</html>

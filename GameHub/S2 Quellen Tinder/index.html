@@ -227,8 +227,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .bin{cursor:pointer}
 
 /* Disclaimer Modal */
-.disc-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:400;padding:20px;animation:fi .2s ease}
-.disc-box{background:white;border-radius:18px;padding:24px 22px;width:100%;max-width:480px;box-shadow:0 12px 48px rgba(0,0,0,.3)}
+/* Sichtbarer Bereich statt Bildschirm (viewport.js) und eigene
+   Scrollstrecke — sonst haengt der Kasten oben wie unten heraus. */
+.disc-overlay{position:fixed;inset:0;top:var(--vv-top,0px);height:100vh;height:var(--vv-h,100vh);background:rgba(0,0,0,.6);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;overscroll-behavior:contain;z-index:400;padding:20px;animation:fi .2s ease}
+.disc-box{background:white;border-radius:18px;padding:24px 22px;width:100%;max-width:480px;margin:auto;box-shadow:0 12px 48px rgba(0,0,0,.3)}
 .disc-box h3{font-size:1.1rem;font-weight:800;color:#1e3a5f;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .disc-body{font-size:.86rem;color:#374151;line-height:1.65;margin-bottom:18px}
 .disc-body p{margin-bottom:.75em}.disc-body p:last-child{margin-bottom:0}
@@ -370,6 +372,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <script src="../../supabase-config.js"></script>
 <script src="../config.js"></script>
 <script src="../creatures.js"></script>
+
+<!-- Sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen. -->
+<script src="../../viewport.js?v=20260820"></script>
 </head>
 <body>
 

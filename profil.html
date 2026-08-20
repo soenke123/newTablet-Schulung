@@ -247,13 +247,27 @@
     .form-msg[hidden] { display: none; }
 
     /* ─── Avatar-Picker-Modal ───────────────────────────────── */
+    /* `top`/`height` statt `inset: 0`: der Bildschirm ist nicht der
+       sichtbare Bereich — Adressleiste und Tastatur nehmen sich
+       davon, ohne dass das Layout-Fenster kleiner wird. Die Werte
+       kommen aus viewport.js, ohne die Datei gilt `100vh`. Dazu
+       scrollt der Overlay selbst, und der Kasten zentriert über
+       `margin: auto`: ein zentrierter Kasten, der höher ist als der
+       Platz, ragt oben wie unten hinaus und ist an beiden Enden
+       nicht mehr erreichbar. */
     .picker-overlay {
       position: fixed;
       inset: 0;
+      top: var(--vv-top, 0px);
+      height: 100vh;
+      height: var(--vv-h, 100vh);
       background: rgba(0, 0, 0, 0.72);
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
       z-index: 200;
       padding: 1rem;
     }
@@ -265,7 +279,8 @@
       border-radius: var(--radius-large);
       width: 100%;
       max-width: 780px;
-      max-height: 90vh;
+      margin: auto;
+      max-height: 100%;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -420,6 +435,11 @@
       font-weight: 600;
     }
   </style>
+
+<!-- Schreibt den sichtbaren Bereich (Tastatur, Adressleiste) als
+     CSS-Variablen an <html>. Blockierend im <head>, damit ein Modal
+     nicht erst falsch gezeichnet und dann verschoben wird. -->
+<script src="viewport.js?v=20260820"></script>
 </head>
 
 <body>

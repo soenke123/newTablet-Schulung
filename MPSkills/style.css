@@ -1030,6 +1030,85 @@ a.btn {
   .nlp-build, .nlp-run, .nlp-edge { transition: none; }
 }
 
+/* ═══════════════════════════════════════════════════════
+   Standbild Cäsar-Scheibe
+   ═══════════════════════════════════════════════════════
+   Gezeichnet in preview/caesar.js; hier steht nur, wie es
+   aussieht und wann es sich bewegt.
+
+   ⚠️ Diese Kachel KIPPT mit dem Kleid der Seite — anders als die
+   von NeuroLab (.tprev--nl bleibt hell). Das ist kein
+   Widerspruch, sondern dieselbe Regel von der anderen Seite: eine
+   Kachel verspricht, was hinter ihr aufgeht. NeuroLab bringt sein
+   eigenes, helles Aussehen mit (Migration 0089); die Scheibe ist
+   portiert und nimmt die Variablen der Seite. Deshalb steht hier
+   auch nirgends ein Farbwert.
+
+   Der Rasterhintergrund von .tprev bleibt: er ist die gemeinsame
+   Fläche aller Kacheln, und eine runde Scheibe liegt darauf wie
+   auf einem Tisch.                                              */
+.tprev--cs {
+  display: grid;
+  place-items: center;
+  padding: 4px 6px;
+}
+
+.csp { width: 100%; height: 100%; display: block; }
+
+.csp-outer { fill: var(--paper-2); stroke: var(--line); stroke-width: 1; }
+.csp-inner { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+.csp-knob  { fill: var(--accent); }
+
+.csp-out text, .csp-in text { fill: var(--ink); font-weight: 700; }
+.csp-key  { fill: var(--on-accent);  font-weight: 800; }
+.csp-lbl  { fill: var(--ink-faint);  font-weight: 600; text-anchor: middle; }
+.csp-big  { fill: var(--accent-ink); font-weight: 800; text-anchor: middle; }
+.csp-map  { fill: var(--ink-soft);   font-weight: 700; text-anchor: middle; }
+
+/* Der Ruhezustand ist Schlüssel A, beim Darüberfahren D. Zwei
+   Sätze übereinander, einer durchsichtig — der Buchstabe in der
+   Mitte wandert nicht, er wird ein anderer. */
+.csp-k1 { opacity: 0; }
+.csp-k0, .csp-k1 { transition: opacity .4s ease; }
+
+/* ⚠️ transform-origin in Nutzerkoordinaten braucht `transform-box`,
+   sonst nimmt der Browser die Kante des eigenen Kastens als
+   Drehpunkt und das Rad wandert aus dem Bild. Zweimal nötig und
+   mit zwei verschiedenen Werten: der Ring dreht um die MITTE DER
+   SCHEIBE (view-box), jeder Buchstabe um SICH SELBST (fill-box).
+
+   Genau diese beiden Drehungen zusammen sind das, was das Werkzeug
+   in CSS auch tut (siehe tools/Caesercode/tool.css): das Rad dreht,
+   die Schrift bleibt aufrecht. */
+.csp-in {
+  transform-box: view-box;
+  transform-origin: 100px 95px;
+  transition: transform .55s cubic-bezier(.2,.7,.2,1);
+}
+.csp-in text {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform .55s cubic-bezier(.2,.7,.2,1);
+}
+
+/* Nur, wo es ein Zeigegerät gibt — auf einem Tablet bleibt das Bild
+   still und die Bewegung ist einen Tipp entfernt im Schaufenster.
+   Dieselbe Abfrage wie bei den beiden anderen Standbildern.
+
+   3 × 360/26 = 41,538° — drei Buchstaben weiter, also von A auf D.
+   Groß genug, dass man die Drehung sieht, klein genug, dass man den
+   Weg mitgeht. */
+@media (hover: hover) {
+  .tile--peek:hover .csp-in      { transform: rotate(41.538deg); }
+  .tile--peek:hover .csp-in text { transform: rotate(-41.538deg); }
+  .tile--peek:hover .csp-k0      { opacity: 0; }
+  .tile--peek:hover .csp-k1      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .csp-in, .csp-in text, .csp-k0, .csp-k1 { transition: none; }
+}
+
 /* ─── Fuß ─────────────────────────────────────────────── */
 .foot {
   border-top: 1px solid var(--line);
@@ -1042,12 +1121,34 @@ a.btn {
 .foot .sep { margin: 0 8px; opacity: .5; }
 
 /* ─── Modal ───────────────────────────────────────────── */
+/* ⚠️ `top`/`height` statt `inset: 0`, und der Overlay ist zugleich
+   die Scrollstrecke. Zwei verschiedene Fehler, ein Muster:
+
+   (1) Der Bildschirm ist nicht der sichtbare Bereich. Die Tastatur
+   legt sich über die untere Hälfte, ohne dass das Layout-Fenster
+   kleiner wird — ein zentriertes Fenster steht dann mit seinen
+   Knöpfen darunter. `--vv-top`/`--vv-h` kommen aus viewport.js und
+   sind genau das, was man sieht; fehlt die Datei, gilt `100vh`.
+
+   (2) Ein zentrierter Kasten, der höher ist als der Platz, ragt
+   oben UND unten hinaus, und beide Enden sind unerreichbar — es
+   gibt nichts zu scrollen. `margin: auto` am Kasten zentriert,
+   solange Platz da ist, und wird sonst 0 statt negativ.
+
+   `.overlay--preview` hatte (2) schon einzeln gelöst (siehe dort);
+   das hier ist dieselbe Antwort für alle. */
 .overlay {
   position: fixed;
   inset: 0;
+  top: var(--vv-top, 0px);
+  height: 100vh;
+  height: var(--vv-h, 100vh);
   background: var(--overlay);
   display: grid;
   place-items: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 18px;
   z-index: 50;
 }
@@ -1058,8 +1159,7 @@ a.btn {
   box-shadow: var(--shadow-lg);
   width: 100%;
   max-width: 430px;
-  max-height: calc(100vh - 36px);
-  overflow-y: auto;
+  margin: auto;
   padding: 26px 26px 24px;
   position: relative;
 }

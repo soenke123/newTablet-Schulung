@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
@@ -163,6 +163,9 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:-apple-s
 .so-startbtn{padding:16px 48px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:20px;font-weight:800;cursor:pointer;letter-spacing:.02em;transition:background .15s}
 .so-startbtn:hover{background:#3a8fd8}
 </style>
+
+<!-- Sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen. -->
+<script src="../../viewport.js?v=20260820"></script>
 </head>
 <body>
 <nav class="escape-nav">
@@ -497,9 +500,9 @@ function openIgModal(){
 // ============ THOUGHT POPUP ============
 function showThoughtPopup(){
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:500';
+  ov.style.cssText='position:fixed;inset:0;top:var(--vv-top,0px);height:var(--vv-h,100vh);overflow-y:auto;overscroll-behavior:contain;padding:16px;background:rgba(0,0,0,.6);display:flex;align-items:flex-start;justify-content:center;z-index:500';
   const box=document.createElement('div');
-  box.style.cssText='background:#fff;border-radius:18px;padding:28px 32px;max-width:440px;width:90%;text-align:center;font-family:inherit;box-shadow:0 8px 40px rgba(0,0,0,.4)';
+  box.style.cssText='background:margin:auto;#fff;border-radius:18px;padding:28px 32px;max-width:440px;width:90%;text-align:center;font-family:inherit;box-shadow:0 8px 40px rgba(0,0,0,.4)';
   const choices=[
     {t:'Mit WLAN verbinden',ok:false},
     {t:'Fokus-Modus aktivieren',ok:true},
@@ -536,12 +539,12 @@ function showThoughtPopup(){
 // ============ FOCUS SETTINGS ============
 function showFocusSettings(){
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:500';
+  ov.style.cssText='position:fixed;inset:0;top:var(--vv-top,0px);height:var(--vv-h,100vh);overflow-y:auto;overscroll-behavior:contain;padding:16px;background:rgba(0,0,0,.7);display:flex;align-items:flex-start;justify-content:center;z-index:500';
   let step=1;
   function drawFocusStep(){
     ov.innerHTML='';
     const wrap=document.createElement('div');
-    wrap.style.cssText='background:#1c1c1e;border-radius:40px;width:260px;padding:20px 16px 24px;box-shadow:0 20px 60px rgba(0,0,0,.6);color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif';
+    wrap.style.cssText='background:margin:auto;#1c1c1e;border-radius:40px;width:260px;padding:20px 16px 24px;box-shadow:0 20px 60px rgba(0,0,0,.6);color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif';
     if(step===1){
       wrap.innerHTML='<div style="text-align:center;font-size:12px;color:#888;margin-bottom:14px">iPad – Homescreen</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 8px;margin-bottom:20px"><div style="text-align:center;font-size:28px">&#x1F4F7;</div><div style="text-align:center;font-size:28px">&#x1F3B5;</div><div style="text-align:center;font-size:28px">&#x1F4E7;</div><div style="text-align:center;font-size:28px">&#x1F5FA;&#xFE0F;</div><div style="text-align:center;font-size:28px">&#x1F6D2;</div><div style="text-align:center;font-size:28px">&#x1F4F0;</div><div style="text-align:center;font-size:28px">&#x1F4F7;</div><div style="text-align:center;font-size:28px">&#x1F4F1;</div><div id="set-ico" style="text-align:center;font-size:28px;cursor:pointer;border-radius:12px;padding:4px">&#x2699;&#xFE0F;</div><div style="text-align:center;font-size:28px">&#x1F3AE;</div><div style="text-align:center;font-size:28px">&#x1F4DA;</div><div style="text-align:center;font-size:28px">&#x1F3E5;</div></div><div style="text-align:center;font-size:12px;color:#aaa">Tippe auf <strong style="color:#fff">Einstellungen &#x2699;&#xFE0F;</strong></div>';
       const ico=wrap.querySelector('#set-ico');
@@ -590,9 +593,9 @@ function showSplitscreenHint(){
   splitHintTimer=null;
   if(S.solved.has(4)||S.unlocked.has(4)===false)return;
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:500';
+  ov.style.cssText='position:fixed;inset:0;top:var(--vv-top,0px);height:var(--vv-h,100vh);overflow-y:auto;overscroll-behavior:contain;padding:16px;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;z-index:500';
   const box=document.createElement('div');
-  box.style.cssText='background:#fff;border-radius:18px;padding:26px 30px;max-width:380px;width:90%;text-align:center;font-family:inherit;box-shadow:0 8px 40px rgba(0,0,0,.4)';
+  box.style.cssText='background:margin:auto;#fff;border-radius:18px;padding:26px 30px;max-width:380px;width:90%;text-align:center;font-family:inherit;box-shadow:0 8px 40px rgba(0,0,0,.4)';
   box.innerHTML='<span style="font-size:48px;display:block;text-align:center;margin:0 auto 8px">😟</span><h3 style="margin:0 0 10px;font-size:17px">Irgendetwas stimmt nicht…</h3><p style="color:#555;font-size:14px;line-height:1.6;margin:0 0 18px">Ich sollte langsam anfangen, mit meinem iPad zu arbeiten!</p>';
   const btn=document.createElement('button');btn.className='btn btn-p';btn.style.width='100%';btn.textContent='Ok, ich schaue auf das iPad!';
   btn.onclick=()=>document.body.removeChild(ov);
@@ -603,9 +606,9 @@ function showSplitscreenHint(){
 function showPreFinaleTeacher(){
   closeModal();
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
+  ov.style.cssText='position:fixed;inset:0;top:var(--vv-top,0px);height:var(--vv-h,100vh);overflow-y:auto;overscroll-behavior:contain;z-index:400;background:rgba(0,0,0,.78);display:flex;align-items:flex-start;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
   const box=document.createElement('div');
-  box.style.cssText='background:var(--surface);border:2px solid var(--accent);border-radius:16px;padding:28px 24px;max-width:430px;width:100%;text-align:center';
+  box.style.cssText='background:margin:auto;var(--surface);border:2px solid var(--accent);border-radius:16px;padding:28px 24px;max-width:430px;width:100%;text-align:center';
   box.innerHTML=
     '<span style="font-size:64px;display:block;text-align:center;margin:0 auto 10px">&#x1F9D1;&#x200D;&#x1F3EB;</span>'+
     '<h2 style="color:var(--accent);font-size:16px;margin-bottom:8px">Die Lehrkraft spricht</h2>'+
@@ -634,9 +637,9 @@ function showFinalQuiz(){
      opts:['Lautlos auf dem Tisch','Vollst\xE4ndig in der Tasche – nicht sichtbar','Beim Lehrer abgeben'],cor:1},
   ];
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.82);display:flex;align-items:flex-start;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif;overflow-y:auto';
+  ov.style.cssText='position:fixed;inset:0;top:var(--vv-top,0px);height:var(--vv-h,100vh);overflow-y:auto;overscroll-behavior:contain;z-index:500;background:rgba(0,0,0,.82);display:flex;align-items:flex-start;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
   const box=document.createElement('div');
-  box.style.cssText='background:var(--surface);border-radius:18px;padding:28px 24px;max-width:480px;width:100%;display:flex;flex-direction:column;gap:20px';
+  box.style.cssText='background:margin:auto;var(--surface);border-radius:18px;padding:28px 24px;max-width:480px;width:100%;display:flex;flex-direction:column;gap:20px';
   const title=document.createElement('h2');
   title.style.cssText='font-size:18px;color:var(--txt);text-align:center;margin:0';
   title.textContent='🎫 Abschluss-Quiz';
@@ -701,9 +704,9 @@ function showFinalQuiz(){
 // ============ SPLITSCREEN TEACHER POPUP ============
 function showSplitscreenTeacher(){
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
+  ov.style.cssText='position:fixed;inset:0;top:var(--vv-top,0px);height:var(--vv-h,100vh);overflow-y:auto;overscroll-behavior:contain;z-index:400;background:rgba(0,0,0,.78);display:flex;align-items:flex-start;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
   const box=document.createElement('div');
-  box.style.cssText='background:var(--surface);border:2px solid var(--accent);border-radius:16px;padding:28px 24px;max-width:430px;width:100%;text-align:center';
+  box.style.cssText='background:margin:auto;var(--surface);border:2px solid var(--accent);border-radius:16px;padding:28px 24px;max-width:430px;width:100%;text-align:center';
   box.innerHTML=
     '<span style="font-size:64px;display:block;text-align:center;margin:0 auto 10px">🧑‍🏫</span>'+
     '<h2 style="color:var(--accent);font-size:16px;margin-bottom:8px">Die Lehrkraft gibt eine Aufgabe</h2>'+
@@ -863,9 +866,9 @@ function openBackpackMenu(step){
 
 function showAngryTeacher(){
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(248,81,73,.15);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
+  ov.style.cssText='position:fixed;inset:0;top:var(--vv-top,0px);height:var(--vv-h,100vh);overflow-y:auto;overscroll-behavior:contain;z-index:400;background:rgba(248,81,73,.15);display:flex;align-items:flex-start;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
   const box=document.createElement('div');
-  box.style.cssText='background:var(--surface);border:2px solid var(--bad);border-radius:16px;padding:28px 24px;max-width:400px;width:100%;text-align:center';
+  box.style.cssText='background:margin:auto;var(--surface);border:2px solid var(--bad);border-radius:16px;padding:28px 24px;max-width:400px;width:100%;text-align:center';
   const angerImg='sehr w\xFCtend.png';
   box.innerHTML=
     '<img src="'+angerImg+'" style="width:90px;display:block;margin:0 auto 12px">'+
@@ -890,9 +893,9 @@ function showTeacherAnnouncement(){
   clearTimeout(teacherTimer);teacherTimer=null;
   if(S.teacherAnnounced)return;
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
+  ov.style.cssText='position:fixed;inset:0;top:var(--vv-top,0px);height:var(--vv-h,100vh);overflow-y:auto;overscroll-behavior:contain;z-index:400;background:rgba(0,0,0,.78);display:flex;align-items:flex-start;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
   const box=document.createElement('div');
-  box.style.cssText='background:var(--surface);border:2px solid var(--accent);border-radius:16px;padding:28px 24px;max-width:430px;width:100%;text-align:center';
+  box.style.cssText='background:margin:auto;var(--surface);border:2px solid var(--accent);border-radius:16px;padding:28px 24px;max-width:430px;width:100%;text-align:center';
   box.innerHTML=
     '<span style="font-size:64px;display:block;text-align:center;margin:0 auto 10px">🧑‍🏫</span>'+
     '<h2 style="color:var(--accent);font-size:16px;margin-bottom:8px">Die Lehrkraft spricht</h2>'+
@@ -913,9 +916,9 @@ function showTeacherAnnouncement(){
 
 function showIpadSuccess(step){
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
+  ov.style.cssText='position:fixed;inset:0;top:var(--vv-top,0px);height:var(--vv-h,100vh);overflow-y:auto;overscroll-behavior:contain;z-index:400;background:rgba(0,0,0,.78);display:flex;align-items:flex-start;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
   const box=document.createElement('div');
-  box.style.cssText='background:var(--surface);border:2px solid var(--green);border-radius:16px;padding:28px 24px;max-width:430px;width:100%;text-align:center';
+  box.style.cssText='background:margin:auto;var(--surface);border:2px solid var(--green);border-radius:16px;padding:28px 24px;max-width:430px;width:100%;text-align:center';
   box.innerHTML=
     '<span style="font-size:64px;display:block;text-align:center;margin:0 auto 10px">🧑‍🏫</span>'+
     '<h2 style="color:var(--green);font-size:17px;margin-bottom:10px">iPad herausgeholt!</h2>'+
@@ -931,9 +934,9 @@ function showIpadSuccess(step){
 
 function showTeacherCollecting(step){
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
+  ov.style.cssText='position:fixed;inset:0;top:var(--vv-top,0px);height:var(--vv-h,100vh);overflow-y:auto;overscroll-behavior:contain;z-index:400;background:rgba(0,0,0,.82);display:flex;align-items:flex-start;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Arial,sans-serif';
   const box=document.createElement('div');
-  box.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;max-width:450px;width:100%;text-align:center';
+  box.style.cssText='background:margin:auto;var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 24px;max-width:450px;width:100%;text-align:center';
   box.innerHTML=
     '<span style="font-size:72px;display:block;text-align:center;margin:0 auto 10px">🧑‍🏫</span>'+
     '<h2 style="color:var(--txt);font-size:16px;margin-bottom:14px">Die Lehrkraft geht herum …</h2>'+
@@ -1180,7 +1183,7 @@ function mkTF(step,idx){
 
 function openSplitscreenPuzzle(step){
   const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:500;display:flex;font-family:-apple-system,Segoe UI,Arial,sans-serif';
+  ov.style.cssText='position:fixed;inset:0;top:var(--vv-top,0px);height:var(--vv-h,100vh);z-index:500;display:flex;font-family:-apple-system,Segoe UI,Arial,sans-serif';
 
   /* ── LINKES FENSTER: Dokument-Leser ── */
   const lp=document.createElement('div');

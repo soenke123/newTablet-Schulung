@@ -399,9 +399,24 @@
       position: fixed;
       inset: 0;
 
+      /* Nicht der Bildschirm, sondern das, was man davon sieht:
+         `--vv-top`/`--vv-h` kommen aus viewport.js und ziehen das
+         Fenster über die Tastatur. Ohne die Datei gilt `100vh`,
+         also das bisherige Verhalten. */
+      top: var(--vv-top, 0px);
+      height: 100vh;
+      height: var(--vv-h, 100vh);
+
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
+
+      /* Der Overlay IST die Scrollstrecke. Vorher zentrierte er nur,
+         und ein Kasten, der höher war als der Bildschirm, ragte oben
+         wie unten hinaus — an beide Enden kam man nicht mehr heran. */
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
 
       background: rgba(0, 0, 0, 0.38);
 
@@ -425,6 +440,12 @@
     .modal {
       width: 100%;
       max-width: 560px;
+
+      /* `margin: auto` statt `align-items: center`: solange Platz da
+         ist, steht der Kasten mittig — ist er zu hoch, werden die
+         Ränder 0 statt negativ, und er beginnt oben am Rand. Genau
+         das macht ihn scrollbar. */
+      margin: auto;
 
       background: white;
 
@@ -679,6 +700,10 @@
       padding: 2rem;
       width: 100%;
       max-width: 420px;
+      /* Siehe `.modal`: zentriert, solange es passt, sonst oben
+         bündig und scrollbar. Das Registrieren-Formular hat sechs
+         Felder samt Hinweisen und passt auf kein Handy. */
+      margin: auto;
       position: relative;
       box-shadow: var(--shadow);
     }
@@ -804,7 +829,15 @@
         min-height: 180px;
       }
 
-      .modal {
+      /* Auf dem Handy ist Polster Breite: 1,5 rem an beiden Rändern
+         des Overlays plus 2 rem im Kasten sind 7 rem, die dem
+         Eingabefeld fehlen. */
+      .modal-overlay {
+        padding: 0.75rem;
+      }
+
+      .modal,
+      .login-modal-box {
         padding: 1.5rem;
       }
 
@@ -818,6 +851,11 @@
       }
     }
   </style>
+
+<!-- Schreibt den sichtbaren Bereich (Tastatur, Adressleiste) als
+     CSS-Variablen an <html>. Blockierend im <head>, damit ein Modal
+     nicht erst falsch gezeichnet und dann verschoben wird. -->
+<script src="viewport.js?v=20260820"></script>
 </head>
 
 <body>

@@ -58,7 +58,7 @@
         cards.forEach(function (c) { c.classList.remove('is-selected'); });
         card.classList.add('is-selected');
         var def = RT.assets.AVATARS[selectedAvatar].defaultName;
-        if (def) { inputEl.value = def; inputEl.select(); }
+        if (def && isSuggestion(inputEl.value)) { inputEl.value = def; inputEl.select(); }
         updateConfirmState();
       });
       if (card.getAttribute('data-avatar') === selectedAvatar) {
@@ -76,6 +76,17 @@
     if (window.matchMedia && window.matchMedia('(min-width: 600px)').matches) {
       inputEl.focus();
     }
+  }
+
+  /* Der Vorschlagsname wird nur gesetzt, solange nichts Eigenes im Feld steht.
+     Ein leeres Feld oder ein anderer Vorschlag darf ersetzt werden – ein selbst
+     getippter Name nie, sonst nimmt die Tierwahl ihn wieder weg. */
+  function isSuggestion(value) {
+    var name = (value || '').trim();
+    if (!name) return true;
+    return Object.keys(RT.assets.AVATARS).some(function (id) {
+      return RT.assets.AVATARS[id].defaultName === name;
+    });
   }
 
   function updateConfirmState() {

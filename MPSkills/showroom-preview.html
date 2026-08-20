@@ -78,6 +78,7 @@
 <script src="lib/preview.js?v=20260819e"></script>
 <script src="preview/wordcloud.js?v=20260819d"></script>
 <script src="preview/neurolab.js?v=20260819b"></script>
+<script src="preview/caesar.js?v=20260820"></script>
 <script>
 /* Der Ersatz für app.js: die Registry als Konstante und die zwei
    Klicks, die die Kachel kennt. Bewusst keine Kopie von toolCard —
@@ -94,7 +95,11 @@ const TOOLS = [
      'neurolab' liefe der Rahmen auf einem Dateisystem, das
      Groß- und Kleinschreibung unterscheidet, ins Leere. */
   { id: 'neurolab', title: 'NeuroLab', folder: 'NeuroLab', icon: '🧠',
-    blurb: 'Ein künstliches Neuron bauen, ausprobieren und lernen lassen.' }
+    blurb: 'Ein künstliches Neuron bauen, ausprobieren und lernen lassen.' },
+  /* ⚠️ Auch hier weicht der Ordner von der id ab — diesmal wegen
+     eines Drehers im Ordnernamen (siehe Migration 0092). */
+  { id: 'caesar', title: 'Cäsar-Scheibe', folder: 'Caesercode', icon: '🔐',
+    blurb: 'Inneres Rad drehen, Schlüssel ablesen, Buchstaben umsetzen.' }
 ];
 
 // Minimaler Toast, damit die Rückmeldungen des Werkzeugs

@@ -209,18 +209,27 @@
     .level-banner-sub    { font-size: 1.05rem; color: rgba(255,255,255,0.95); margin-top: 6px; font-weight: bold; }
 
     /* ── End screen ── */
+    /* Sichtbarer Bereich statt Bildschirm (viewport.js) + eigene
+       Scrollstrecke: ein zentrierter Kasten, der höher ist als der
+       Platz, ragt oben wie unten hinaus und ist an beiden Enden
+       unerreichbar. Siehe GameHub/style.css .modal-overlay. */
     #endScreen {
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.65);
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
       z-index: 900;
       padding: 20px;
       visibility: hidden;
       opacity: 0;
       transition: opacity 0.35s;
+      top: var(--vv-top, 0px);
+      height: 100vh;
+      height: var(--vv-h, 100vh);
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
     #endScreen.show {
       visibility: visible;
@@ -235,6 +244,7 @@
       max-width: 480px;
       width: 100%;
       animation: endPop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      margin: auto;
     }
     @keyframes endPop {
       from { transform: scale(0.75); opacity: 0; }
@@ -511,27 +521,39 @@
     .end-item-btn-wrap    { display: flex; justify-content: flex-end; margin: 2px 0 6px; }
 
     /* ── Start screen: kein Scrollen, Schrift skaliert per clamp() ── */
+    /* Sichtbarer Bereich statt Bildschirm (viewport.js) + eigene
+       Scrollstrecke: ein zentrierter Kasten, der höher ist als der
+       Platz, ragt oben wie unten hinaus und ist an beiden Enden
+       unerreichbar. Siehe GameHub/style.css .modal-overlay. */
     .start-screen{
       position:fixed;
       inset:0;
       background:rgba(0,0,0,0.55);
       display:flex;
       justify-content:center;
-      align-items:center;
+      align-items: flex-start;
       z-index:999;
       padding:12px;
       overflow:hidden;
+      top: var(--vv-top, 0px);
+      height: 100vh;
+      height: var(--vv-h, 100vh);
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
     .start-box{
       background:white;
       max-width:760px;
       width:100%;
-      max-height:calc(100vh - 24px);
+      /* Kein Höhendeckel: der Kasten hat keine eigene Scrollstrecke,
+         gedeckelt plus `overflow:hidden` wäre alles darunter schlicht
+         abgeschnitten. Er darf wachsen, gescrollt wird im Overlay. */
       border-radius:25px;
       padding:clamp(12px, 2.8vh, 35px);
       box-shadow:0 10px 30px rgba(0,0,0,0.2);
       animation:popup 0.3s ease;
       overflow:hidden;
+      margin: auto;
     }
     .start-title {
       color:#ff6b6b;
@@ -615,6 +637,9 @@
     body.keyboard-open .message         { font-size: 0.95rem; min-height: 22px; margin: 4px 0; }
 
   </style>
+
+<!-- Sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen. -->
+<script src="../../viewport.js?v=20260820"></script>
 </head>
 
 <body>

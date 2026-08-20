@@ -453,10 +453,20 @@ html, body {
 .badge.open    { background: rgba(107,191,89,0.15); color: #8fd97e; }
 
 /* ─── Modal ──────────────────────────────────────────────── */
+/* `top`/`height` statt `inset: 0`: der sichtbare Bereich ist bei
+   offener Tastatur kleiner als der Bildschirm (viewport.js), und der
+   Overlay ist zugleich die Scrollstrecke — sonst ragt ein zu hoher
+   Kasten oben wie unten hinaus und an beide Enden kommt man nicht. */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 200;
+  top: var(--vv-top, 0px);
+  height: 100vh;
+  height: var(--vv-h, 100vh);
   background: rgba(0,0,0,0.7);
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: flex-start; justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 20px;
 }
 .modal-box {
@@ -467,8 +477,10 @@ html, body {
   padding: 24px;
   max-width: 500px;
   width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
+  /* `margin: auto` zentriert, solange Platz da ist, und wird sonst 0
+     statt negativ — der Kasten beginnt dann oben und scrollt. */
+  margin: auto;
+  max-height: none;
 }
 .modal-box h3 {
   margin: 0 0 16px;

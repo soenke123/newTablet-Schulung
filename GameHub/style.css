@@ -773,13 +773,20 @@ body.s2-active .hud-kristalle { display: flex; }
    SHOP – Modal
    ══════════════════════════════════════════════════ */
 
+/* Muster siehe `.modal-overlay`. */
 .shop-modal-overlay {
   position: fixed;
   inset: 0;
+  top: var(--vv-top, 0px);
+  height: 100vh;
+  height: var(--vv-h, 100vh);
   background: rgba(0,0,0,0.8);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   z-index: 100;
   padding: 20px;
   backdrop-filter: blur(4px);
@@ -792,7 +799,8 @@ body.s2-active .hud-kristalle { display: flex; }
   border-radius: var(--radius-lg);
   max-width: 500px;
   width: 100%;
-  max-height: 85vh;
+  margin: auto;
+  max-height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
@@ -1876,13 +1884,36 @@ body.s2-active .hud-kristalle { display: flex; }
    MODAL
    ══════════════════════════════════════════════════ */
 
+/* ⚠️ Das Muster gilt für ALLE vier Overlays dieser Datei (Modal,
+   Shop, S2-Ankündigung, Lootbox) und ist überall dasselbe:
+
+   `top`/`height` statt `inset: 0` — der Bildschirm ist nicht der
+   sichtbare Bereich. Adressleiste und Tastatur nehmen sich davon,
+   ohne dass das Layout-Fenster kleiner wird, und ein zentriertes
+   Fenster steht dann zur Hälfte darunter. Die Werte kommen aus
+   viewport.js; fehlt die Datei, gilt `100vh` wie bisher.
+
+   `overflow-y: auto` am Overlay + `margin: auto` am Kasten statt
+   `align-items: center` — ein zentrierter Kasten, der höher ist als
+   der Bildschirm, ragt oben UND unten hinaus, und an beide Enden
+   kommt man nicht mehr heran. Auto-Ränder werden bei zu wenig Platz
+   0 statt negativ, der Kasten beginnt dann oben und scrollt.
+
+   `max-height: 100%` statt `90vh` — dieselbe Rechnung, nur für die
+   Kästen, die ihre eigene Scrollstrecke mitbringen. */
 .modal-overlay {
   position: fixed;
   inset: 0;
+  top: var(--vv-top, 0px);
+  height: 100vh;
+  height: var(--vv-h, 100vh);
   background: rgba(0,0,0,0.8);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   z-index: 100;
   padding: 20px;
   backdrop-filter: blur(4px);
@@ -1897,9 +1928,10 @@ body.s2-active .hud-kristalle { display: flex; }
   padding: 32px;
   max-width: 440px;
   width: 100%;
+  margin: auto;
   position: relative;
   box-shadow: var(--shadow-glow-gold);
-  max-height: 90vh;
+  max-height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2584,15 +2616,22 @@ body.s2-active .hud-kristalle { display: flex; }
    SEASON 3 ANNOUNCEMENT MODAL
    ══════════════════════════════════════════════════ */
 
+/* Muster siehe `.modal-overlay`. */
 .s2-overlay {
   position: fixed;
   inset: 0;
+  top: var(--vv-top, 0px);
+  height: 100vh;
+  height: var(--vv-h, 100vh);
   background: rgba(0,0,0,0.88);
   backdrop-filter: blur(6px);
   z-index: 9999;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 16px;
   animation: s3FadeIn 0.35s ease;
 }
@@ -2610,7 +2649,8 @@ body.s2-active .hud-kristalle { display: flex; }
   box-shadow: 0 0 60px rgba(240,180,41,0.25), var(--shadow-card);
   max-width: 700px;
   width: 100%;
-  max-height: 90vh;
+  margin: auto;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3108,13 +3148,23 @@ body.s2-active .hud-kristalle { display: flex; }
    LOOTBOX ÖFFNUNGS-MODAL
    ══════════════════════════════════════════════════ */
 
+/* Muster siehe `.modal-overlay`. Der Overlay hatte als einziger gar
+   kein Polster — der Kasten klebte auf kleinen Geräten an beiden
+   Bildschirmkanten. */
 .lootbox-modal-overlay {
   position: fixed;
   inset: 0;
+  top: var(--vv-top, 0px);
+  height: 100vh;
+  height: var(--vv-h, 100vh);
   background: rgba(0,0,0,0.92);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
   z-index: 200;
   backdrop-filter: blur(6px);
 }
@@ -3122,7 +3172,8 @@ body.s2-active .hud-kristalle { display: flex; }
 
 .lootbox-modal-box {
   position: relative;
-  width: min(380px, 90vw);
+  width: min(380px, 100%);
+  margin: auto;
   padding: 48px 32px 40px;
   background: var(--clr-surface);
   border: 2px solid var(--clr-gold);

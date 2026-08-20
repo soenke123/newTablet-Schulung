@@ -36,13 +36,32 @@
     }
 
     /* ─── Passwort-Overlay ─── */
+    /* Sichtbarer Bereich statt Bildschirm (viewport.js) + eigene
+       Scrollstrecke: ein zentrierter Kasten, der höher ist als der
+       Platz, ragt oben wie unten hinaus und ist an beiden Enden
+       unerreichbar. Siehe GameHub/style.css .modal-overlay. */
     #pwOverlay {
       position: fixed; inset: 0; z-index: 100;
       background: var(--bg);
       display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
+      align-items: center;
+      /* ⚠️ Eine Spalte: hier ist `justify-content` die senkrechte
+         Achse, nicht `align-items`. Mittig gestellt ragt der Inhalt
+         bei zu wenig Platz oben wie unten hinaus und ist an beiden
+         Enden unerreichbar — deshalb oben ansetzen und die Mitte
+         über die Auto-Ränder unten holen: die schlucken freien Platz,
+         werden bei zu wenig aber 0 statt negativ. */
+      justify-content: flex-start;
       gap: 14px;
+      top: var(--vv-top, 0px);
+      height: 100vh;
+      height: var(--vv-h, 100vh);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 20px;
     }
+    #pwOverlay > *:first-child { margin-top: auto; }
+    #pwOverlay > *:last-child  { margin-bottom: auto; }
     #pwOverlay .lock-icon { font-size: 3rem; }
     #pwOverlay h1 {
       font-family: 'Cinzel', serif;
@@ -262,6 +281,9 @@
     .back { display:block; text-align:center; color:var(--text-d); font-size:0.82rem; text-decoration:none; margin-top:10px; }
     .back:hover { color: var(--gold); }
   </style>
+
+<!-- Sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen. -->
+<script src="../viewport.js?v=20260820"></script>
 </head>
 <body>
 

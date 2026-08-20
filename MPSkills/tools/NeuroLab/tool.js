@@ -139,7 +139,7 @@
          Seite mit neuem Skript — genau der Fall, in dem ein Knopf im
          Markup fehlt, den das Skript sucht. Dieselbe Überlegung wie beim
          ?v= an tool.css/tool.js in lib/tool.js. */
-      const q = (ctx && ctx.preview ? '?demo=1&' : '?') + 'v=20260819c';
+      const q = (ctx && ctx.preview ? '?demo=1&' : '?') + 'v=20260820';
       root.innerHTML =
         '<div class="nl-host">' +
           '<iframe class="nl-frame" src="tools/NeuroLab/index.html' + q + '" ' +

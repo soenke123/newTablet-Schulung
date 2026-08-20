@@ -769,8 +769,17 @@ table.bd-table { border-collapse: collapse; width: 100%; min-width: 780px; font-
 .bd-pill--admin     { background: var(--clr-accent-soft); border-color: rgba(43,52,64,0.30); color: var(--clr-accent); }
 
 /* ── Modal ────────────────────────────────────────────── */
+/* `top`/`height` statt `inset: 0`: bei offener Tastatur ist der
+   sichtbare Bereich kleiner als der Bildschirm, und das Formular
+   für einen neuen Zettel stünde mit seinem Speichern-Knopf
+   darunter. Die Werte kommen aus viewport.js; fehlt die Datei,
+   gilt `100vh`. Scrollstrecke und Ausrichtung stimmten hier schon. */
 .bd-modal-backdrop {
-  position: fixed; inset: 0; background: rgba(28,37,48,0.45);
+  position: fixed; inset: 0;
+  top: var(--vv-top, 0px);
+  height: 100vh;
+  height: var(--vv-h, 100vh);
+  background: rgba(28,37,48,0.45);
   backdrop-filter: blur(3px);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 24px 14px; overflow-y: auto; z-index: 50;
