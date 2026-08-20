@@ -1535,10 +1535,9 @@ body.pv-lock { overflow: hidden; }
    steht in einer Reihe mit den anderen Angaben und wird nur
    deutlicher, nicht lauter. */
 .roomlist-soon { color: var(--warn); font-weight: 600; }
-.roomlist-code {
-  font-family: var(--mono); font-size: .78rem; letter-spacing: .08em;
-  color: var(--ink-faint); flex: none;
-}
+/* .roomlist-code gab es bis 19.08.2026 — der Code stand am rechten
+   Rand der Zeilen auf j.html. Er ist dort weg: ein Teilnehmer, der
+   ihn ablesen kann, kann ihn auch weitergeben. */
 
 /* Die Fassung mit Menü: Link und Menü nebeneinander im <li>. */
 .roomlist-row { display: flex; align-items: center; gap: 4px; }
@@ -1631,6 +1630,41 @@ body.pv-lock { overflow: hidden; }
   margin: 10px 0 0; font-family: var(--mono);
   font-size: clamp(.8rem, 1.6vw, 1rem); color: var(--ink-soft);
   word-break: break-all;
+}
+
+/* ─── Adresse + Kopieren ──────────────────────────────────────
+   Der Knopf steht NEBEN der Adresse und nicht darunter: er gehört
+   zu ihr, und eine eigene Zeile machte aus einer Angabe zwei. Er
+   bricht deshalb auch nicht mit um (flex: none) — die Adresse darf
+   umbrechen, das Blatt nicht.
+
+   Blass, bis man darüberfährt: die Adresse wird gelesen, kopiert
+   wird sie selten. Am Beamer soll er nicht mitleuchten. */
+.urlline {
+  display: flex; align-items: flex-start; gap: 6px;
+}
+.urlline > span { min-width: 0; }
+.copybtn {
+  flex: none;
+  font: inherit; line-height: 0;
+  background: none; border: 1px solid transparent;
+  border-radius: 8px; padding: 4px;
+  color: var(--ink-faint); cursor: pointer;
+  /* Die Adresse steht in Schreibmaschinenschrift und ist dadurch
+     kleiner als der Rest — der Knopf richtet sich nach ihr. */
+  margin-top: -2px;
+  transition: color .12s, background .12s, border-color .12s;
+}
+.copybtn svg { width: 1.05em; height: 1.05em; fill: currentColor; display: block; }
+.copybtn:hover { color: var(--ink); background: var(--paper-2); border-color: var(--line); }
+.copybtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Geschafft: kurz ein Haken. Der Toast sagt, DASS etwas passiert
+   ist — der Knopf sagt, dass es dieser war. */
+.copybtn--done { color: var(--ok); }
+.copybtn--done svg { display: none; }
+.copybtn--done::after {
+  content: '✓'; line-height: 1; font-size: 1.05em; font-weight: 700;
+  display: block; width: 1.05em; text-align: center;
 }
 .beam-hint { margin: 12px 0 0; font-size: .87rem; color: var(--ink-faint); }
 
@@ -2404,21 +2438,12 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   font-size: .68rem; color: var(--ink-faint); word-break: break-all;
 }
 
-/* ─── Schülerseite: „Jemanden dazuholen" ──────────────────────
-   Derselbe Gedanke wie die Tür am Rand, nur kleiner und ohne
-   Bühne: zugeklappt, weil im Fach „Raum" die Frage „wer ist da"
-   die häufigere ist. */
-.qrbox { margin: 14px 0 6px; }
-.qrbox > summary {
-  cursor: pointer; font-weight: 600; font-size: .88rem;
-  color: var(--ink-soft); padding: 4px 0;
-  list-style-position: inside;
-}
-.qrbox > summary:hover { color: var(--ink); }
-.qrbox-in { display: flex; align-items: center; gap: 16px; margin-top: 10px; }
-.qrbox-qr { width: 132px; flex: none; aspect-ratio: 1; display: grid; place-items: center; }
-.qrbox-qr svg { display: block; width: 100%; height: 100%; }
-.bigcode--sm { font-size: 1.7rem; letter-spacing: .1em; }
+/* Hier stand bis 19.08.2026 „.qrbox" — Code und QR im Fach „Raum"
+   der Schülerseite, damit man den Nachbarn dazuholen konnte. Genau
+   das war der Fehler: ein Raum, den jeder Teilnehmer beliebig
+   erweitern kann, ist für die Lehrkraft nicht mehr zu überblicken.
+   Die Tür steht jetzt ausschließlich auf der Lehrerseite (.qrfly
+   und das Onboarding-Fach). */
 
 @media (max-width: 560px) {
   .wrap { padding: 30px 16px 54px; }
@@ -2430,7 +2455,6 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   /* Die Tür bleibt auch auf dem Handy bedienbar — sie wird nur so
      schmal, dass daneben noch etwas vom Werkzeug zu sehen ist. */
   .qrfly { --flyw: 200px; }
-  .qrbox-in { flex-direction: column; text-align: center; }
   .state { padding: 20px 18px; border-radius: 14px; }
   /* Auf dem Handy geht der Knopf unter das Feld statt daneben:
      nebeneinander bliebe für den Code kein Platz mehr, und er ist

@@ -23,9 +23,14 @@
    die man einmal liest. Jetzt sind es zwei Fächer, und offen ist
    von Anfang an das Werkzeug: dafür ist man hier.
 
-     Raum       wer ist da, wie heiße ich, der Code (falls der
-                Nachbar ihn braucht), Raum vom Gerät entfernen
+     Raum       wer ist da, wie heiße ich, Raum vom Gerät entfernen
      <Werkzeug> die ganze Fläche
+
+   Der Code steht auf dieser Seite NIRGENDS (19.08.2026). Wer drin
+   ist, braucht ihn nicht mehr — und wer ihn weitergibt, holt Leute
+   in einen Raum, den die Lehrkraft nicht mehr überblickt. Die Tür
+   gehört der Tafel: dort steht der Code, dort hängt der QR, und
+   dort entscheidet die Lehrkraft, ob der Beitritt offen ist.
 
    Dieselbe Aufteilung wie auf der Lehrerseite, nur ohne das erste
    Fach: Einstellungen gehören der Lehrkraft, und die Tür am Rand
@@ -50,7 +55,6 @@ let tool   = null;   // geladenes Werkzeug-Modul, solange eines montiert ist
 // Welches Fach offen ist — und zugleich der Marker „wir sind in einem
 // Raum". null heißt: Code eintippen, Tür oder Ende.
 let jPane  = null;
-let qrDone = null;   // für welchen Code der kleine QR schon im DOM steht
 // Das Laden ist asynchron, der Poller nicht: ohne diesen Riegel käme
 // der nächste Takt, während noch geladen wird, fände tool === null und
 // montierte ein zweites Mal — doppeltes DOM, doppelte Listener.
@@ -111,6 +115,8 @@ function showJPane(which) {
   if (which === 'tool') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
 }
 
+/* Anders als auf der Lehrerseite trägt die Leiste hier NICHTS am
+   rechten Rand: dort steht der Code, und der gehört der Tafel. */
 function renderTabs(code, room) {
   tabHost().innerHTML = `
     <nav class="rtabs" aria-label="Raum">
@@ -120,9 +126,6 @@ function renderTabs(code, room) {
         <button type="button" class="rtab" role="tab" data-pane="tool" aria-selected="false">
           <span class="rtab-t" id="jToolName">${esc((room?.tool_icon || '🧩') + ' '
             + (room?.tool_title || 'Skill'))}</span></button>
-      </div>
-      <div class="rtabs-side">
-        <code class="rtabs-code">${esc(code)}</code>
       </div>
     </nav>`;
   tabHost().querySelectorAll('.rtab').forEach(b => {
@@ -135,7 +138,6 @@ function renderTabs(code, room) {
    Leere zeigen. */
 function clearTabs() {
   jPane = null;
-  qrDone = null;
   tabHost().innerHTML = '';
   mainWrap().hidden = false;
   document.body.classList.remove('roomview', 'pane-tool');
@@ -223,16 +225,20 @@ function renderAsk(prefill, errorMsg) {
     ${mine.length ? `
       <div class="card">
         <h2 class="card-h">Meine Räume <span class="card-h-note">auf diesem Gerät</span></h2>
+        <!-- Ohne Code (19.08.2026): die Zeile führt mit einem Tipp
+             zurück in den Raum, dafür braucht es ihn nicht — und wer
+             ihn ablesen könnte, gäbe ihn weiter. Auseinanderhalten
+             lassen sich die Räume an Titel, Skill und dem eigenen
+             Namen darin. -->
         <ul class="roomlist">
           ${mine.map(r => `
             <li>
               <a href="#${esc(r.code)}" class="roomlist-a">
                 <span class="roomlist-ic">${esc(r.room?.tool_icon || '🧩')}</span>
                 <span class="roomlist-txt">
-                  <strong>${esc(r.room?.title || r.code)}</strong>
+                  <strong>${esc(r.room?.title || 'Raum')}</strong>
                   <span>${esc(r.room?.tool_title || '')} · als ${esc(r.name || '—')}</span>
                 </span>
-                <code class="roomlist-code">${esc(r.code)}</code>
               </a>
             </li>`).join('')}
         </ul>
@@ -455,9 +461,8 @@ function renderRoom(code, token) {
   renderTabs(code, MPRoom.get(code)?.room || null);
   host().innerHTML = `
     <div class="card card--room">
-      <!-- Ohne Code-Chip: der Code steht seit dem Umbau in der
-           Reiterleiste und damit auf beiden Fächern. Zweimal
-           dasselbe auf einem Bildschirm ist eine Frage zu viel. -->
+      <!-- Ohne Code-Chip: der Code steht auf dieser Seite nirgends
+           mehr (19.08.2026). Wer hier ist, ist drin. -->
       <div class="room-head">
         <div>
           <div class="door-tool"><span class="door-ic" id="rTip">🧩</span><span id="rTool"></span></div>
@@ -470,20 +475,11 @@ function renderRoom(code, token) {
       <h2 class="card-h">Wer ist da? <span class="card-h-note" id="rCount"></span></h2>
       <ul class="people" id="rPeople"></ul>
 
-      <!-- Der Code steht hier klein mit dabei, samt QR: wenn der
-           Nachbar nicht hereinkommt, ist das Gerät in der Hand näher
-           als die Tafel vorn. Gezeichnet wird er erst, wenn dieses
-           Fach zum ersten Mal geöffnet wird. -->
-      <details class="qrbox" id="jQrBox">
-        <summary>Jemanden dazuholen</summary>
-        <div class="qrbox-in">
-          <div class="qrbox-qr" id="jQr"></div>
-          <div>
-            <div class="bigcode bigcode--sm">${esc(code)}</div>
-            <p class="beam-url" id="jUrl"></p>
-          </div>
-        </div>
-      </details>
+      <!-- Hier stand bis 19.08.2026 „Jemanden dazuholen" — Code und
+           QR auf dem Schülergerät. Das ist raus: wer drin ist, kann
+           damit beliebig viele weitere hereinholen, und die Lehrkraft
+           merkt es erst an der Teilnehmerzahl. Wer dazukommen soll,
+           bekommt den Code vorn. -->
 
       <!-- Heißt genauso wie der Eintrag hinter den drei Punkten auf
            der Landing: eine Sache, ein Name. Was dabei genau
@@ -493,20 +489,6 @@ function renderRoom(code, token) {
         <button type="button" class="btn--link" id="leaveBtn">Diesen Raum verlassen</button>
       </p>
     </div>`;
-
-  const url = MPRoom.joinUrl(code);
-  document.getElementById('jUrl').textContent = url.replace(/^https?:\/\//, '');
-  document.getElementById('jQrBox').addEventListener('toggle', (ev) => {
-    if (!ev.target.open || qrDone === code) return;
-    try {
-      document.getElementById('jQr').innerHTML = MPQR.svg(url, { title: 'Code ' + code });
-      qrDone = code;
-    } catch (e) {
-      document.getElementById('jQr').innerHTML =
-        '<div class="qr-wait">Der Code oben funktioniert trotzdem.</div>';
-      console.error('[mpskills] QR:', e);
-    }
-  });
 
   /* Deine Zettel bleiben stehen — das ist die Frage, die bei einem
      Knopf namens „verlassen" zuerst kommt, und die Antwort ist

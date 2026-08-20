@@ -101,6 +101,81 @@ function toast(message, kind) {
   toastTimer = setTimeout(() => { el.className = 'toast'; }, 4000);
 }
 
+/* ─── Adresse kopieren ────────────────────────────────────────
+   Die Beitritts-Adresse steht an zwei Stellen (Onboarding-Fach und
+   Tür am Rand), und an beiden will man sie irgendwann weitergeben —
+   in den Chat der Klasse, ins Aufgabenblatt, in die Mail an die
+   Kollegin. Von Hand markieren geht bei einer einzeiligen Adresse
+   in Schreibmaschinenschrift regelmäßig daneben, deshalb der Knopf.
+
+   Kopiert wird die VOLLE Adresse samt https:// — angezeigt wird sie
+   ohne, weil das Vorgeplänkel am Beamer nur Platz kostet, aber ein
+   eingefügter Link ohne Schema ist in vielen Programmen kein Link
+   mehr.
+
+   Zwei Wege, und der zweite ist kein Schmuck: navigator.clipboard
+   gibt es nur im sicheren Kontext. Wer die Seite zum Ausprobieren
+   über http:// oder file:// öffnet, bekäme sonst einen Knopf, der
+   nichts tut und auch nicht sagt, warum. */
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (e) { /* weiter mit dem Rückfallweg */ }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    // Außerhalb des Bildes, aber NICHT display:none — was nicht
+    // gezeichnet wird, lässt sich auch nicht markieren.
+    ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+/* Die Adresse mit dem Knopf daneben. Eine Funktion für beide Orte:
+   zwei Kopien liefen beim nächsten Umbau auseinander. Die Adresse
+   selbst trägt der Aufrufer nach (paintRoom), der Knopf holt sie
+   sich beim Drücken frisch aus S.code. */
+function urlLineHTML(spanId, cls) {
+  return `<p class="${cls} urlline">
+      <span id="${spanId}"></span>
+      <button type="button" class="copybtn" data-copy-url
+              title="Adresse kopieren" aria-label="Adresse kopieren">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 3h9a2 2 0 0 1 2 2v11h-2V5H9V3z"/>
+          <path d="M5 7h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0 2v10h9V9H5z"/>
+        </svg>
+      </button>
+    </p>`;
+}
+
+/* Delegiert am Dokument und einmal beim Start: beide Fächer werden
+   neu gezeichnet, Listener an den Knöpfen selbst wären danach weg. */
+document.addEventListener('click', async (ev) => {
+  const btn = ev.target.closest('[data-copy-url]');
+  if (!btn || !S.code) return;
+  // Dass der Knopf in der Tür den Kasten nicht zufahren lässt, regelt
+  // deren eigener Listener (er lässt jedes <button> durch) — hier wäre
+  // es zu spät, das Ereignis ist dort längst vorbei.
+  const ok = await copyText(MPRoom.joinUrl(S.code));
+  if (!ok) { toast('Kopieren geht auf diesem Gerät nicht — bitte von Hand markieren.', 'error'); return; }
+  toast('Adresse kopiert.');
+  // Kurz ein Haken statt des Blattes: der Toast sagt, DASS etwas
+  // passiert ist, der Knopf sagt, dass es dieser war.
+  btn.classList.add('copybtn--done');
+  setTimeout(() => btn.classList.remove('copybtn--done'), 1600);
+});
+
 /* ─── Serveraufruf ────────────────────────────────────────── */
 // Bewusst kein zwischengespeicherter Token: siehe Kopfkommentar.
 async function trpc(fn, args) {
@@ -830,7 +905,7 @@ function renderOnboarding() {
       <div class="beam-code">
         <p class="beam-label">Code von der Tafel</p>
         <div class="bigcode" id="bCode">${esc(S.code)}</div>
-        <p class="beam-url" id="bUrl"></p>
+        ${urlLineHTML('bUrl', 'beam-url')}
         <p class="beam-hint">Scannen — oder auf <strong>mpskills</strong> den Code eintippen.</p>
         <ul class="namestrip" id="bNames"></ul>
       </div>
@@ -938,7 +1013,7 @@ function flyHTML() {
       <div class="qrfly-body" id="qrFlyBody" title="Zum Einfahren klicken">
         <div class="qrfly-qr" id="flyQr"></div>
         <div class="qrfly-code">${esc(S.code)}</div>
-        <p class="qrfly-url" id="flyUrl"></p>
+        ${urlLineHTML('flyUrl', 'qrfly-url')}
         <button type="button" class="btn btn--sm" id="flyToggle">…</button>
       </div>
     </aside>`;
