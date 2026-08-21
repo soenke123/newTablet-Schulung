@@ -1,0 +1,223 @@
+/* ══════════════════════════════════════════════════════════════
+   MPSkills — Skill „Clash of Math"  ·  tool.css
+   ══════════════════════════════════════════════════════════════
+   Grundgerüst-Optik: Platzhalterfarben wie im Prototyp, kein
+   Fraktions-Artwork (das ist Sönkes Ausbau-Punkt 1). Nimmt die
+   Variablen der Seite (--surface/--ink/--line/--accent/--r-*), damit
+   Hell/Dunkel ohne eigenes Zutun mitkippt — dieselbe Überlegung wie
+   bei der Cäsar-Scheibe.
+
+   Die acht Team-Farben sind bewusst NICHT an --accent gekoppelt: sie
+   sind der Inhalt (wessen Feld das ist), --accent bleibt der
+   Bedien-Akzent (Start-Knopf, Eingabe-Fokus). Gleiche Regel wie beim
+   WordPool: die Farbe gehört dem Spielstand, nicht der Bedienung.
+   ══════════════════════════════════════════════════════════════ */
+
+.cm-host {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 2px 16px;
+}
+
+.cm-hide { display: none !important; }
+
+.cm-lead   { font-size: 1.05rem; font-weight: 700; }
+.cm-hint   { color: var(--ink-soft); font-size: .9rem; }
+
+/* ── Team-Übersicht (Lobby) ─────────────────────────────────── */
+.cm-roster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cm-rchip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: .85rem;
+  font-weight: 600;
+}
+.cm-rchip.cm-rchip--mine { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+.cm-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+
+/* ── Einstellungen der Lehrkraft (Fach 3, vor dem Start) ────── */
+.cm-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.cm-setuprow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cm-setuprow label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.cm-setuprow input[type="number"] {
+  width: 64px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.cm-btn {
+  padding: 10px 18px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+.cm-btn:disabled { opacity: .5; cursor: not-allowed; }
+.cm-btn--ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+/* ── Countdown ───────────────────────────────────────────────── */
+.cm-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 0;
+}
+.cm-count {
+  font-size: clamp(3rem, 12vw, 6rem);
+  font-weight: 900;
+  color: var(--accent-ink);
+  line-height: 1;
+}
+
+/* ── Karte ───────────────────────────────────────────────────── */
+/* Bewusst eine begrenzte Karte statt einer Vollbild-Tafel (anders als
+   NeuroLab/Cäsar): die Karte ist im Prototyp eine Karte in der Seite,
+   kein Arbeitsplatz, der den ganzen Bildschirm braucht. aspect-ratio
+   erspart die Höhen-Messerei der anderen Werkzeuge — ein Resize-
+   Observer in tool.js zeichnet bei Größenänderung einfach neu. */
+.cm-mapwrap {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  overflow: hidden;
+}
+.cm-mapwrap canvas { display: block; width: 100%; height: 100%; }
+.cm-mapwrap--sm { max-width: 320px; }
+
+/* ── Statusleiste (Beamer) ───────────────────────────────────── */
+.cm-statusbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.cm-scard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: .82rem;
+  font-weight: 700;
+}
+.cm-scard.cm-scard--out { opacity: .4; text-decoration: line-through; }
+
+/* ── Spiel-Kopfzeile (Teilnehmer) ────────────────────────────── */
+.cm-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.cm-teampill {
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  font-weight: 800;
+  font-size: .8rem;
+  color: #fff;
+}
+.cm-streak { font-weight: 700; }
+
+/* ── Frage ───────────────────────────────────────────────────── */
+.cm-question {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.cm-q {
+  font-size: clamp(1.6rem, 8vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: .5px;
+}
+.cm-form {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+}
+.cm-form input {
+  flex: 1;
+  padding: 12px 14px;
+  font-size: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: center;
+}
+.cm-form button {
+  padding: 12px 18px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+.cm-feedback { min-height: 1.2em; font-weight: 700; }
+.cm-feedback--ok   { color: var(--ok); }
+.cm-feedback--warn { color: var(--warn); }
+
+/* ── Ergebnis ────────────────────────────────────────────────── */
+.cm-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px 0;
+  text-align: center;
+}
+.cm-result b { font-size: 1.6rem; }

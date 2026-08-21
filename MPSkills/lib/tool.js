@@ -142,6 +142,13 @@
         rpc('skill_entry_upsert', { p_payload: payload, p_id: id ?? null, p_kind: kind || 'entry' }),
       remove: (id)   => rpc('skill_entry_delete', { p_id: id }),
       vote:   (id)   => rpc('skill_vote_toggle',  { p_entry: id }),
+      // Durchreiche für Werkzeuge mit eigenen RPC-Namen (z.B. Clash of
+      // Math): dieselbe Token-Bindung wie die Verben oben, nur ohne
+      // dass diese Datei den Namen kennen müsste. Ein Werkzeug, das
+      // nicht in die feste Verben-Liste der generischen Inhaltsschicht
+      // passt, braucht sonst einen zweiten Weg zum Server — und der
+      // wäre am Ende falsch.
+      call: (fn, args) => rpc(fn, args),
 
       // Was nur die Lehrkraft kann, sagt hier ehrlich Nein — statt
       // still nichts zu tun. Ein Werkzeug soll den Knopf gar nicht
@@ -189,7 +196,10 @@
       hide:     (id, on)  => rpc('skill_room_entry_hide', { p_id: id, p_hidden: on !== false }),
       setPhase: (n)       => rpc('skill_room_set_state', { p_phase: n }),
       setData:  (obj)     => rpc('skill_room_set_state', { p_data: obj }),
-      reset:    ()        => rpc('skill_room_reset', {})
+      reset:    ()        => rpc('skill_room_reset', {}),
+      // Dasselbe Ventil wie bei participantActions, nur mit p_code
+      // statt p_token gebunden.
+      call:     (fn, args) => rpc(fn, args)
     };
   }
 

@@ -37,6 +37,10 @@ window.TOOLS_OVERLAY = {
   // eines Drehers darin. Anders als NeuroLab ist die Scheibe
   // PORTIERT und nicht eingerahmt (Begründung im Kopf ihrer tool.js).
   caesar:    { ready: true },
+  // Vierter Skill (Migration 0093), erstes Team-Spiel und der erste,
+  // der eigene Tabellen statt der generischen Inhaltsschicht benutzt.
+  // Grundgerüst-Stand: Platzhalterfarben, keine Fraktionsbilder.
+  'clash-of-math': { ready: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   poll:      { ready: false }
 };

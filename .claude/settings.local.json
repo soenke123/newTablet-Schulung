@@ -39,7 +39,9 @@
       "Bash(grep -oE \"Gemessen wird mit .{0,180}\")",
       "PowerShell(Select-String -Path \"GameHub\\\\script.js\",\"GameHub\\\\creatures.js\",\"admin\\\\app.js\",\"admin\\\\index.html\",\"index.html\" -Pattern \"Zukunftsboard\" | ForEach-Object { \"$\\($_.Filename\\):$\\($_.LineNumber\\): $\\($_.Line.Trim\\(\\)\\)\" })",
       "PowerShell(node --check \"GameHub\\\\S3 Zukunftsboard\\\\js\\\\board.js\"; if \\($?\\) { \"board.js OK\" }; node --check \"GameHub\\\\script.js\"; if \\($?\\) { \"script.js OK\" })",
-      "Bash(git -C \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Webauftrtitt\" diff --stat)"
+      "Bash(git -C \"C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Webauftrtitt\" diff --stat)",
+      "Read(//c/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/63123789-18cb-4e9e-8836-4de82d4c8bcd/scratchpad/**)",
+      "Bash(node gen_clash_layouts.js)"
     ]
   }
 }
