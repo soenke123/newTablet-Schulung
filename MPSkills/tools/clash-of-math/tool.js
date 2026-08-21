@@ -31,6 +31,19 @@
    Countdown, einfache Addition bis 100, Eroberung, Elimination
    (Zuschauer-Platzhalter), Sieg. Platzhalterfarben statt der acht
    Fraktionsbilder im Ordner — die kommen mit Sönkes Ausbau-Punkt 1.
+
+   ── Fixes aus dem ersten Feature-Feedback (Migration 0094) ──────
+   (1) Rundenende auf Zeit (5s Test / 1..5 Min, siehe cmTimerSet/
+       cmTimerRun) — Sieger ist dann, wer die meisten Felder besitzt.
+   (2) Die Beamer-Karte füllt den freien Platz (fitPresenterMap,
+       body.tool-fill) statt an einer festen Breite zu stehen — der
+       Teilnehmer behält seine begrenzte Karte in der Seite.
+   (3) Die Tastatur bleibt beim Antworten offen (onSubmit fokussiert
+       das Feld direkt nach dem Absenden erneut).
+   (4) Team-Zuordnung hängt an „online" (last_seen_at < 90s, wie
+       0079) statt an „dem Raum zugeordnet" — reine Server-Änderung
+       (0094), hier nichts Neues außer den online_count/room_total-
+       Feldern in der Lobby-Anzeige.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -49,10 +62,12 @@
 
   let root = null, ctx = null, role = null;
   let els = {};
-  let pollTimer = null, countdownTimer = null, resizeObs = null;
+  let pollTimer = null, countdownTimer = null, matchTimerHandle = null, resizeObs = null, onWinResize = null;
   let channel = null, channelKey = null;
   let lastSig = null, lastView = null, busy = false, destroyed = false;
   let submitting = false;
+
+  const MAP_GAP = 12, MAP_MIN = 260, MAP_MAX = 1400;
 
   /* ─── Hex-Zeichnen ──────────────────────────────────────────
      Dieselbe Geometrie wie im Prototyp (versetzte Reihen, spitze
@@ -109,6 +124,75 @@
         g.fillText('🏰', p.x, p.y);
       }
     });
+  }
+
+  /* ─── Beamer: Karte nimmt den ganzen freien Platz ───────────
+     „Volles Bild" statt einer festen Kartenbreite, wie beim
+     Teilnehmer — anders als NeuroLab/Cäsar aber kein Vollbild-
+     Fenster mit Zoom/Pan, sondern ein möglichst großes Quadrat
+     (Höhe UND Breite ausnutzen, nicht nur eine Achse). Dieselbe
+     spaceBelow()-Rechnung wie dort — jetzt ein viertes Mal im
+     Projekt (siehe MEMORY „spaceBelow() steht jetzt dreimal"). */
+  function spaceBelow(el) {
+    let sum = 0;
+    for (let n = el; n && n !== document.body && n.parentElement; n = n.parentElement) {
+      const pcs = getComputedStyle(n.parentElement);
+      sum += (parseFloat(pcs.paddingBottom) || 0) + (parseFloat(pcs.borderBottomWidth) || 0);
+      sum += (parseFloat(getComputedStyle(n).marginBottom) || 0);
+      for (let s = n.nextElementSibling; s; s = s.nextElementSibling) {
+        const scs = getComputedStyle(s);
+        if (scs.display === 'none' || scs.position === 'fixed' || scs.position === 'absolute') continue;
+        sum += s.offsetHeight + (parseFloat(scs.marginTop) || 0) + (parseFloat(scs.marginBottom) || 0);
+      }
+    }
+    return sum;
+  }
+
+  function fitPresenterMap() {
+    if (role !== 'presenter' || !els.boardWrap || !els.mapWrap) return;
+    if (els.boardWrap.classList.contains('cm-hide')) return; // unsichtbar hat keine verlässlichen Maße
+    const top = els.boardWrap.getBoundingClientRect().top;
+    const h = Math.max(MAP_MIN, window.innerHeight - top - spaceBelow(els.boardWrap) - MAP_GAP);
+    els.boardWrap.style.height = h + 'px';
+
+    const used = (els.statusBar ? els.statusBar.offsetHeight : 0) +
+                 (els.timerBar  ? els.timerBar.offsetHeight  : 0);
+    const availH = Math.max(160, h - used - MAP_GAP);
+    const availW = els.boardWrap.clientWidth;
+    const size = Math.max(160, Math.min(availW, availH, MAP_MAX));
+    els.mapWrap.style.width  = size + 'px';
+    els.mapWrap.style.height = size + 'px';
+    if (els.map) paintBoard(els.map, lastView, {});
+  }
+
+  /* ─── Rundenende-Timer (Anzeige) ─────────────────────────────
+     Eigenständig von der 5s-Start-Countdown-Anzeige (startCountdown),
+     die nur während phase='countdown' läuft — dieser Timer läuft nur
+     während phase='running' und mit match_ends_at gesetzt. Die
+     tatsächliche Phase kommt weiterhin ausschließlich vom Server
+     (clash_maybe_advance_phase); hier wird nur mitgezählt. */
+  function fmtMMSS(sec) {
+    sec = Math.max(0, Math.round(sec));
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+  function startMatchTimer(endsAtIso) {
+    stopMatchTimer();
+    const endsAt = new Date(endsAtIso).getTime();
+    const step = () => {
+      const leftMs = endsAt - Date.now();
+      const txt = fmtMMSS(leftMs / 1000);
+      if (els.timeLeft)  els.timeLeft.textContent = txt;
+      if (els.timeLeftP) { els.timeLeftP.textContent = '⏱ ' + txt; els.timeLeftP.classList.remove('cm-hide'); }
+      if (leftMs <= 0) { stopMatchTimer(); tick(true); }
+    };
+    step();
+    matchTimerHandle = setInterval(step, 500);
+  }
+  function stopMatchTimer() {
+    if (matchTimerHandle) clearInterval(matchTimerHandle);
+    matchTimerHandle = null;
+    if (els.timeLeftP) els.timeLeftP.classList.add('cm-hide');
   }
 
   /* ─── Eigener Takt ──────────────────────────────────────────
@@ -210,6 +294,7 @@
         '<div class="cm-pane" id="cmLobby">' +
           '<p class="cm-lead">Dein vorläufiges Team: <b id="cmMyTeamName">…</b></p>' +
           '<div class="cm-roster" id="cmRoster"></div>' +
+          '<p class="cm-hint" id="cmOnlineHint"></p>' +
           '<p class="cm-hint">Sobald deine Lehrkraft startet, geht es los.</p>' +
         '</div>' +
         '<div class="cm-pane cm-hide" id="cmCountdown">' +
@@ -222,6 +307,7 @@
           '<div class="cm-topbar">' +
             '<span class="cm-teampill" id="cmTeamPill"></span>' +
             '<span class="cm-streak" id="cmStreak">🔥 0</span>' +
+            '<span class="cm-timeleft cm-hide" id="cmTimeLeftP"></span>' +
           '</div>' +
           '<div class="cm-mapwrap cm-mapwrap--sm"><canvas id="cmMiniMap"></canvas></div>' +
           '<div class="cm-question">' +
@@ -260,7 +346,9 @@
       ended: root.querySelector('#cmEnded'),
       result: root.querySelector('#cmResult'),
       myTeamName: root.querySelector('#cmMyTeamName'),
-      roster: root.querySelector('#cmRoster')
+      roster: root.querySelector('#cmRoster'),
+      onlineHint: root.querySelector('#cmOnlineHint'),
+      timeLeftP: root.querySelector('#cmTimeLeftP')
     };
 
     els.form.addEventListener('submit', onSubmit);
@@ -273,8 +361,15 @@
     if (!Number.isFinite(val)) return;
     submitting = true;
     els.answer.value = '';
+    // Tastatur soll offen bleiben: manche virtuellen Tastaturen
+    // schließen sich sonst, wenn das Feld per Enter/„Los" abgeschickt
+    // und der Wert danach programmatisch geleert wird. Direkt danach
+    // erneut fokussieren hält die Klasse im Frage-Antwort-Takt, ohne
+    // dass jemand die Tastatur wieder von Hand öffnen muss.
+    els.answer.focus({ preventScroll: true });
     const r = await ctx.actions.call('clash_submit_answer', { p_answer: val });
     submitting = false;
+    els.answer.focus({ preventScroll: true });
     if (!r || !r.ok) {
       els.feedback.textContent = ctx.errText((r && r.error) || 'network');
       els.feedback.className = 'cm-feedback cm-feedback--warn';
@@ -308,9 +403,21 @@
 
     if (v.phase === 'lobby') {
       show('lobby');
-      els.myTeamName.textContent = teamName(myTeam);
-      els.myTeamName.style.color = teamStroke(myTeam);
+      // myTeam ist für den Aufrufer selbst praktisch immer gesetzt
+      // (wer clash_view gerade aufruft, ist per Definition online) —
+      // die Prüfung ist trotzdem defensiv statt „Team NaN" anzuzeigen.
+      if (myTeam == null) {
+        els.myTeamName.textContent = '…';
+      } else {
+        els.myTeamName.textContent = teamName(myTeam);
+        els.myTeamName.style.color = teamStroke(myTeam);
+      }
       els.roster.innerHTML = rosterHTML(v.teams, teamCount, myTeam);
+      if (els.onlineHint) {
+        els.onlineHint.textContent = (v.online_count != null && v.room_total != null && v.room_total > v.online_count)
+          ? `${v.online_count} von ${v.room_total} im Raum sind bereit (online).`
+          : '';
+      }
       return;
     }
     if (v.phase === 'countdown') {
@@ -319,6 +426,7 @@
       return;
     }
     stopCountdown();
+    stopMatchTimer();
     if (v.phase === 'ended') {
       show('ended');
       const won = v.winner_team === myTeam;
@@ -337,6 +445,7 @@
     els.teamPill.textContent = teamName(myTeam);
     els.teamPill.style.background = teamStroke(myTeam);
     els.streak.textContent = '🔥 ' + (v.me.streak || 0);
+    if (v.match_ends_at) startMatchTimer(v.match_ends_at); else stopMatchTimer();
     if (v.me.question) els.q.textContent = v.me.question.a + ' + ' + v.me.question.b + ' = ?';
     paintBoard(els.map, v, { highlightTeam: myTeam });
   }
@@ -361,6 +470,7 @@
               '<button type="button" class="cm-btn" id="cmStartBtn">▶ Spiel starten</button>' +
             '</div>' +
             '<div class="cm-roster" id="cmRosterP"></div>' +
+            '<p class="cm-hint" id="cmOnlineHintP"></p>' +
           '</div>' +
         '</div>' +
         '<div class="cm-pane cm-hide" id="cmCountdownP">' +
@@ -370,7 +480,22 @@
         '</div>' +
         '<div class="cm-pane cm-hide" id="cmBoardWrap">' +
           '<div class="cm-statusbar" id="cmStatusBar"></div>' +
-          '<div class="cm-mapwrap"><canvas id="cmMap"></canvas></div>' +
+          '<div class="cm-timerbar" id="cmTimerBar">' +
+            '<div class="cm-timerset" id="cmTimerSet">' +
+              '<span class="cm-hint">Runde beenden in:</span>' +
+              '<button type="button" class="cm-chip" data-secs="5">5s (Test)</button>' +
+              '<button type="button" class="cm-chip" data-secs="60">1 Min</button>' +
+              '<button type="button" class="cm-chip" data-secs="120">2 Min</button>' +
+              '<button type="button" class="cm-chip" data-secs="180">3 Min</button>' +
+              '<button type="button" class="cm-chip" data-secs="240">4 Min</button>' +
+              '<button type="button" class="cm-chip" data-secs="300">5 Min</button>' +
+            '</div>' +
+            '<div class="cm-timerrun cm-hide" id="cmTimerRun">' +
+              '<span class="cm-hint">Rundenende in <b id="cmTimeLeft">--:--</b> — wer dann am meisten Feld hat, gewinnt.</span>' +
+              '<button type="button" class="cm-btn cm-btn--ghost" id="cmTimerCancel">Timer abbrechen</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="cm-mapwrap" id="cmMapWrap"><canvas id="cmMap"></canvas></div>' +
         '</div>' +
         '<div class="cm-pane cm-hide" id="cmEndedP">' +
           '<div class="cm-result" id="cmResultP"></div>' +
@@ -383,15 +508,42 @@
       teamCount: root.querySelector('#cmTeamCount'),
       startBtn: root.querySelector('#cmStartBtn'),
       rosterP: root.querySelector('#cmRosterP'),
+      onlineHintP: root.querySelector('#cmOnlineHintP'),
       countdownP: root.querySelector('#cmCountdownP'),
       countNumP: root.querySelector('#cmCountNumP'),
       boardWrap: root.querySelector('#cmBoardWrap'),
       statusBar: root.querySelector('#cmStatusBar'),
+      timerBar: root.querySelector('#cmTimerBar'),
+      timerSet: root.querySelector('#cmTimerSet'),
+      timerRun: root.querySelector('#cmTimerRun'),
+      timeLeft: root.querySelector('#cmTimeLeft'),
+      timerCancel: root.querySelector('#cmTimerCancel'),
+      mapWrap: root.querySelector('#cmMapWrap'),
       map: root.querySelector('#cmMap'),
       endedP: root.querySelector('#cmEndedP'),
       resultP: root.querySelector('#cmResultP'),
       resetBtn: root.querySelector('#cmResetBtn')
     };
+
+    // Delegiert statt sechs einzelner Listener — dieselbe Handlung für
+    // jeden Knopf, nur mit anderer Sekundenzahl.
+    els.timerSet.addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('[data-secs]');
+      if (!btn) return;
+      const secs = parseInt(btn.dataset.secs, 10);
+      btn.disabled = true;
+      const r = await ctx.actions.call('clash_room_set_match_timer', { p_seconds: secs });
+      btn.disabled = false;
+      if (!r || !r.ok) { ctx.toast(ctx.errText((r && r.error) || 'network'), true); return; }
+      nudge();
+      tick(true);
+    });
+    els.timerCancel.addEventListener('click', async () => {
+      const r = await ctx.actions.call('clash_room_clear_match_timer', {});
+      if (!r || !r.ok) { ctx.toast(ctx.errText((r && r.error) || 'network'), true); return; }
+      nudge();
+      tick(true);
+    });
 
     els.teamCount.addEventListener('change', async () => {
       const n = Math.max(2, Math.min(8, parseInt(els.teamCount.value, 10) || 4));
@@ -436,6 +588,11 @@
       show2('setup');
       els.teamCount.value = v.team_count;
       els.rosterP.innerHTML = rosterHTML(v.teams, v.team_count, null);
+      if (els.onlineHintP) {
+        els.onlineHintP.textContent = (v.online_count != null && v.room_total != null && v.room_total > v.online_count)
+          ? `${v.online_count} von ${v.room_total} bereit (online) — nur sie bekommen beim Start ein Team.`
+          : '';
+      }
       return;
     }
     if (v.phase === 'countdown') {
@@ -444,6 +601,7 @@
       return;
     }
     stopCountdown();
+    stopMatchTimer();
     if (v.phase === 'ended') {
       show2('endedP');
       els.resultP.innerHTML =
@@ -452,7 +610,17 @@
     }
     show2('boardWrap');
     els.statusBar.innerHTML = statusBarHTML(v);
-    paintBoard(els.map, v, {});
+    if (v.match_ends_at) {
+      els.timerSet.classList.add('cm-hide');
+      els.timerRun.classList.remove('cm-hide');
+      startMatchTimer(v.match_ends_at);
+    } else {
+      els.timerSet.classList.remove('cm-hide');
+      els.timerRun.classList.add('cm-hide');
+      stopMatchTimer();
+    }
+    fitPresenterMap();
+    requestAnimationFrame(fitPresenterMap);
   }
 
   function show2(which) {
@@ -481,9 +649,19 @@
 
       if (role === 'presenter') buildPresenterDOM(); else buildParticipantDOM();
 
+      // Beamer: die Karte soll den ganzen freien Platz nehmen (Fix 2)
+      // — dieselbe „tool-fill"-Klasse wie bei NeuroLab/Cäsar, hier nur
+      // für die Lehrkraft-Rolle. Der Teilnehmer behält seine begrenzte
+      // Karte in der Seite, siehe Kopfkommentar der Datei.
+      if (role === 'presenter' && !(ctx && ctx.preview)) {
+        document.body.classList.add('tool-fill');
+        onWinResize = () => fitPresenterMap();
+        window.addEventListener('resize', onWinResize);
+      }
+
       resizeObs = new ResizeObserver(() => {
         if (!lastView) return;
-        if (role === 'presenter') { if (els.map) paintBoard(els.map, lastView, {}); }
+        if (role === 'presenter') { fitPresenterMap(); }
         else {
           const myTeam = lastView.me && lastView.me.team;
           if (els.map)  paintBoard(els.map,  lastView, { highlightTeam: myTeam });
@@ -510,6 +688,10 @@
       if (pollTimer) clearInterval(pollTimer);
       pollTimer = null;
       stopCountdown();
+      stopMatchTimer();
+      if (onWinResize) window.removeEventListener('resize', onWinResize);
+      onWinResize = null;
+      document.body.classList.remove('tool-fill');
       if (resizeObs) { try { resizeObs.disconnect(); } catch (e) {} }
       resizeObs = null;
       if (channel && window.supabaseClient) {

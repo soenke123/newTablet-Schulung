@@ -130,6 +130,54 @@
 .cm-mapwrap canvas { display: block; width: 100%; height: 100%; }
 .cm-mapwrap--sm { max-width: 320px; }
 
+/* ── Beamer: Karte nimmt den ganzen freien Platz ────────────────
+   Fix 2 — vorher stand auch die Beamer-Karte an 620px gedeckelt und
+   ließ den Rest des Bildschirms leer. Größe kommt ab jetzt aus
+   tool.js (fitPresenterMap, feste px statt aspect-ratio): das
+   Quadrat muss Höhe UND Breite gleichzeitig ausnutzen, nicht nur
+   die Breite wie beim Teilnehmer — dessen Karte bleibt bewusst eine
+   Karte in der Seite (siehe Kopfkommentar der tool.js). */
+.cm-host--presenter #cmBoardWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+}
+.cm-host--presenter .cm-mapwrap {
+  max-width: none;
+  aspect-ratio: unset;
+  flex: 0 0 auto;
+}
+
+/* ── Rundenende-Timer (Beamer, Fix 1) ────────────────────────── */
+.cm-timerbar { width: 100%; margin-bottom: 10px; }
+.cm-timerset, .cm-timerrun {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cm-chip {
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: .85rem;
+  cursor: pointer;
+}
+.cm-chip:hover { border-color: var(--accent); }
+.cm-chip:disabled { opacity: .5; cursor: not-allowed; }
+.cm-timerrun b { font-variant-numeric: tabular-nums; }
+
+/* ── Restzeit-Anzeige (Teilnehmer, Fix 1) ────────────────────── */
+.cm-timeleft {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
 /* ── Statusleiste (Beamer) ───────────────────────────────────── */
 .cm-statusbar {
   display: grid;

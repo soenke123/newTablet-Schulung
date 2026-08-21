@@ -74,7 +74,7 @@
        Gerät, das ein Werkzeug schon einmal geladen hat, dessen altes
        CSS — beim Umbau auf hell/dunkel (19.08.2026) wäre die halbe
        Kachel im alten Kleid stehengeblieben. */
-    const v = '?v=20260820';
+    const v = '?v=20260822';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf
