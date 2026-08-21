@@ -182,14 +182,20 @@
   font-weight: 900;
   letter-spacing: .5px;
 }
+/* Untereinander statt nebeneinander: auf dem Handy schob eine
+   Reihe aus Eingabefeld + Knopf den Knopf über den rechten
+   Bildschirmrand hinaus — beide Kinder wollten ihren Platz, und
+   die Reihe hatte ihn nicht. Der Knopf bekommt seine eigene Zeile
+   und volle Breite, dann kann nichts mehr abgeschnitten werden. */
 .cm-form {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   width: 100%;
   max-width: 320px;
 }
 .cm-form input {
-  flex: 1;
+  width: 100%;
   padding: 12px 14px;
   font-size: 1.1rem;
   border: 1px solid var(--line);
@@ -197,8 +203,10 @@
   background: var(--surface);
   color: var(--ink);
   text-align: center;
+  box-sizing: border-box;
 }
 .cm-form button {
+  width: 100%;
   padding: 12px 18px;
   border-radius: var(--r-sm);
   border: 1px solid var(--accent);
@@ -206,6 +214,7 @@
   color: var(--on-accent);
   font-weight: 700;
   cursor: pointer;
+  box-sizing: border-box;
 }
 .cm-feedback { min-height: 1.2em; font-weight: 700; }
 .cm-feedback--ok   { color: var(--ok); }
