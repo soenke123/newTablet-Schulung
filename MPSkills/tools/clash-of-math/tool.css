@@ -170,7 +170,12 @@
   --cm-ground:     #d8c793;
   --cm-hexbase:    #8a9a5c;
   --cm-display: 'Cinzel', Georgia, 'Times New Roman', serif;
+  /* Breite der Völker-Spalten am Rand. Steht an EINER Stelle, weil
+     zwei davon abhängen: die Spalten selbst und die Polsterung der
+     Spielfläche, die ihren Platz freihält. */
+  --cm-roster-w: 178px;
 }
+@media (min-width: 1500px) { .cm-host--presenter { --cm-roster-w: 208px; } }
 
 /* ── Kulisse: der gemalte Hintergrund hinter dem Rahmen ──────────
    Im Showroom ist das der geblurrte Gamebanner. url() in einer CSS-
@@ -184,7 +189,10 @@
   align-items: center;
   justify-content: center;
   min-height: 0;
-  padding: 26px 20px 20px;
+  /* Links und rechts bleibt genau so viel frei, wie die Völker-Spalten
+     brauchen — dadurch sitzt der Rahmen zwischen ihnen statt unter
+     ihnen, ohne dass irgendwo eine zweite Zahl gepflegt werden muss. */
+  padding: 14px calc(var(--cm-roster-w) + 26px) 14px;
   border-radius: 28px;
   overflow: hidden;
   background: linear-gradient(180deg, #6f9fc9 0%, #e3b45f 55%, #a97a3a 100%);
@@ -208,13 +216,17 @@
    Vier ineinanderliegende inset-Schatten sind der ganze Trick: Gold
    außen, dunkles Holz, Nacht, Gold innen — kein Bild, keine border-
    image, nichts, was in der Größe kaputtgehen könnte. */
+/* Der Rahmen füllt die freie Fläche aus, statt um seinen Inhalt zu
+   schrumpfen — sonst bekäme das Spielfeld nur so viel Platz, wie die
+   Kopfzeile breit ist. */
 .cm-frame--board {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
-  max-width: 100%;
+  width: 100%;
   background: var(--cm-parchment);
   border: 3px solid var(--cm-gold);
   border-radius: 28px;
@@ -260,15 +272,6 @@
   letter-spacing: .02em;
   color: #4a3216;
 }
-.cm-boardphase {
-  font-size: .74rem;
-  font-weight: 700;
-  color: var(--cm-ink-soft);
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: var(--cm-parchment-2);
-  border: 1px solid var(--cm-gold-dark);
-}
 .cm-boardtop .cm-ring { margin-left: auto; }
 
 .cm-ring {
@@ -290,62 +293,22 @@
   color: var(--cm-ink);
 }
 
-/* ── Arena: Fraktionen links · Karte · Fraktionen rechts ────────── */
+/* ── Arena: nur noch die Karte ───────────────────────────────────
+   Die Völker stehen nicht mehr hier drin, sondern am Bildschirmrand
+   (siehe unten) — die Arena trägt allein das Spielfeld. */
 .cm-arena {
   display: flex;
-  align-items: stretch;
-  justify-content: center;
-  gap: 16px;               /* muss zu ARENA_GAP in tool.js passen */
-  flex-wrap: wrap;
-  min-height: 0;
-}
-.cm-roster {
-  flex: 0 0 158px;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-.cm-rcard {
-  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 9px;
-  border-radius: 13px;
-  background: var(--cm-card);
-  border: 1px solid var(--cm-gold-dark);
-}
-/* Ausgeschieden — dieselbe Aussage wie früher .cm-scard--out. */
-.cm-rcard--out { opacity: .42; }
-.cm-rcard--out .cm-rname { text-decoration: line-through; }
-.cm-rdot { width: 9px; height: 9px; border-radius: 50%; background: var(--team); flex: 0 0 auto; }
-.cm-rthumb {
-  width: 28px; height: 28px; flex: 0 0 auto;
-  display: flex; align-items: flex-end; justify-content: center;
-}
-.cm-rthumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.cm-rinfo { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
-.cm-rname {
-  font-family: var(--cm-display);
-  font-weight: 700;
-  font-size: .76rem;
-  color: var(--cm-ink);
-}
-.cm-rsub {
-  font-size: .6rem;
-  color: var(--cm-ink-faint);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.cm-rcount {
-  font-family: var(--cm-display);
-  font-weight: 800;
-  font-size: 1.02rem;
-  color: var(--team);
-  font-variant-numeric: tabular-nums;
+  justify-content: center;
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
-/* Größe kommt aus tool.js (fitPresenterMap, feste px): das Quadrat
-   muss Höhe UND Breite gleichzeitig ausnutzen — der Teilnehmer behält
-   dagegen seine begrenzte Karte per aspect-ratio (siehe oben). */
+/* Größe kommt aus tool.js (fitPresenterMap, feste px) — und zwar als
+   RECHTECK im Seitenverhältnis des Spielfelds, nicht als Quadrat: so
+   nimmt die Karte die volle Höhe und so viel Breite, wie das Feld
+   füllen kann. Der Teilnehmer behält dagegen seine begrenzte
+   quadratische Karte per aspect-ratio (siehe oben). */
 .cm-host--presenter .cm-mapwrap {
   max-width: none;
   aspect-ratio: unset;
@@ -353,25 +316,140 @@
   margin: 0;
 }
 
+/* ══ Die Völker am linken und rechten Bildschirmrand ═════════════
+   Aus dem Fluss genommen und an den Rand der Spielfläche geheftet:
+   dazwischen gehört alles dem Spielfeld. Ihren Platz hält die
+   Polsterung von #cmBoardWrap frei (--cm-roster-w), damit der Rahmen
+   in der Mitte sauber zwischen ihnen sitzt statt sie zu überlappen.
+
+   Die Spalten laufen über die volle Höhe und verteilen ihre Panels
+   gleichmäßig darauf (flex: 1 1 0) — bei zwei Völkern je Seite werden
+   die Panels hoch, bei vieren flacher, ohne dass irgendwo eine Zahl
+   im Code steht. */
+.cm-host--presenter .cm-roster {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  width: var(--cm-roster-w);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cm-roster--left  { left: 14px; }
+.cm-roster--right { right: 14px; }
+
+/* Das Panel TRÄGT die Farbe des Volkes — deshalb steht der Farbname
+   („Rot", „Blau") nirgends mehr als Wort, und der Farbpunkt ist weg.
+   Die Farbe ist die Zugehörigkeit, doppelt sagen muss man sie nicht. */
+.cm-rcard {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--team);
+  border: 2px solid color-mix(in srgb, var(--team) 55%, #140d04);
+  box-shadow: 0 6px 16px rgba(0,0,0,.35);
+}
+/* Ausgeschieden — dieselbe Aussage wie früher .cm-scard--out. */
+.cm-rcard--out { opacity: .45; filter: grayscale(.5); }
+.cm-rcard--out .cm-rname { text-decoration: line-through; }
+
+/* Das Gruppenbild über die ganze Panel-Breite. `contain` statt
+   `cover`, damit nie eine Einheit angeschnitten wird — die Bilder
+   sind quer (rund 2:1) und sollen vollständig zu sehen sein. */
+.cm-rbanner {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 6px 0;
+}
+.cm-rbanner img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 4px rgba(20,12,0,.45));
+}
+
+/* Name + Feldzahl auf abgedunkelter Fläche: weiße Schrift muss auf
+   allen acht Völkerfarben lesbar sein, auch auf Gelb und Rosa — die
+   Farbe der Fläche bleibt erkennbar die des Volkes. */
+.cm-rfoot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 9px;
+  background: color-mix(in srgb, var(--team) 42%, #140d04);
+  color: #fff;
+}
+.cm-rname {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: .82rem;
+  line-height: 1.15;
+}
+.cm-rcount {
+  flex: 0 0 auto;
+  font-family: var(--cm-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Die Namen der Kinder im Volk. Scrollt, statt das Panel zu sprengen
+   — ein Volk kann in einer großen Klasse gut ein Dutzend Namen haben. */
+.cm-rmembers {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 5px 9px 7px;
+  background: rgba(10,6,0,.42);
+  color: rgba(255,255,255,.92);
+  font-size: .64rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 /* Timer-Bedienung unter der Arena — im Showroom gibt es sie nicht
-   (Standbild), sie ist reine Lehrkraft-Bedienung. */
+   (Standbild), sie ist reine Lehrkraft-Bedienung. Ein Auswahlfeld
+   statt sechs Knöpfen: das spart eine ganze Zeile Bildschirmhöhe,
+   die jetzt dem Spielfeld gehört. */
 .cm-host--presenter .cm-timerbar {
   flex: 0 0 auto;
   width: 100%;
-  margin: 12px 0 0;
+  margin: 10px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
-.cm-host--presenter .cm-hint  { color: var(--cm-ink-soft); }
-.cm-host--presenter .cm-chip {
+.cm-host--presenter .cm-hint { color: var(--cm-ink-soft); font-size: .78rem; }
+.cm-timerpick {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--cm-ink-soft);
+}
+.cm-timerpick select {
+  font: inherit;
+  padding: 5px 9px;
+  border-radius: 9px;
+  border: 1px solid var(--cm-gold-dark);
   background: var(--cm-card);
-  border-color: var(--cm-gold-dark);
   color: var(--cm-ink);
+  cursor: pointer;
 }
-.cm-host--presenter .cm-chip:hover { border-color: var(--cm-wood); background: var(--cm-parchment-2); }
-.cm-host--presenter .cm-btn--ghost {
-  background: var(--cm-card);
-  border-color: var(--cm-gold-dark);
-  color: var(--cm-ink);
-}
+.cm-timerpick select:disabled { opacity: .55; cursor: wait; }
 
 /* ── Die Karte selbst ────────────────────────────────────────── */
 /* Der Kartengrund ist flaches Pergament, kein Verlauf: der gemalte
@@ -436,23 +514,9 @@
   filter: blur(1px);
 }
 
-/* Der Teamname über der Burg. Der helle Schein ringsum ersetzt einen
-   Kasten: die Schrift bleibt auf jeder Fraktionsfarbe lesbar, ohne
-   dass ein Schild die Karte zerschneidet. */
-.cm-castlelabel {
-  position: absolute;
-  transform: translate(-50%, -100%);
-  white-space: nowrap;
-  font-family: var(--cm-display, Georgia, serif);
-  font-weight: 700;
-  font-size: .82rem;
-  letter-spacing: .02em;
-  color: var(--cm-ink, #3a2b12);
-  text-shadow:
-    0 1px 0 rgba(255,242,200,.9),
-    0 0 8px rgba(255,242,200,.95),
-    0 0 2px rgba(255,242,200,.95);
-}
+/* Eine Beschriftung über der Burg (.cm-castlelabel) gab es hier bis
+   zum Gestaltungs-Durchgang — sie ist ersatzlos weg, Begründung steht
+   an der Stelle in tool.js, die sie nicht mehr erzeugt. */
 
 /* ── Rundenende-Timer (Beamer, Fix 1) ────────────────────────── */
 .cm-timerbar { width: 100%; margin-bottom: 10px; }
