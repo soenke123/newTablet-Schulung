@@ -173,13 +173,15 @@
   /* Breite der Völker-Spalten am Rand. Steht an EINER Stelle, weil
      zwei davon abhängen: die Spalten selbst und die Polsterung der
      Spielfläche, die ihren Platz freihält. */
-  /* Nur der Startwert — die tatsächliche Breite rechnet tool.js aus
-     dem, was das Spielfeld übrig lässt, und setzt sie inline. */
-  --cm-roster-w: 200px;
+  /* Feste Breite der Völker-Spalten — sie ist die Vorgabe, nach der
+     sich der Rest richtet (Rahmen und Spielfeld nehmen, was übrig
+     bleibt), nicht umgekehrt. */
+  --cm-roster-w: 178px;
   /* Abstand zwischen Völker-Spalte und Pergament. Steht hier, weil
      fitPresenterMap in tool.js damit rechnet (columnGap der Bühne). */
   --cm-gap: 12px;
 }
+@media (min-width: 1500px) { .cm-host--presenter { --cm-roster-w: 208px; } }
 
 /* ── Kulisse: der gemalte Hintergrund hinter dem Rahmen ──────────
    Im Showroom ist das der geblurrte Gamebanner. url() in einer CSS-
@@ -334,11 +336,6 @@
    gleichmäßig darauf (flex: 1 1 0) — bei zwei Völkern je Seite werden
    die Panels hoch, bei vieren flacher, ohne dass irgendwo eine Zahl
    im Code steht. */
-/* Die Breite setzt tool.js inline (sie ist die Stellschraube, mit der
-   das Spielfeld sein Pergament randlos füllt) — `--cm-roster-w` ist
-   nur der Startwert für den allerersten Aufbau, bevor gerechnet
-   wurde. `flex: 0 0 auto` sorgt dafür, dass die gesetzte Breite auch
-   gilt und nicht vom Flex-Algorithmus wieder eingedampft wird. */
 .cm-host--presenter .cm-roster {
   position: relative;
   z-index: 2;

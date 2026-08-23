@@ -95,11 +95,6 @@
   let matchEndsAtMs = 0, matchPeakMs = 1;
 
   const MAP_GAP = 12, MAP_MIN = 260, MAP_MAX = 2000;
-  // Grenzen für die Völker-Spalten. Ihre Breite ergibt sich sonst aus
-  // dem, was das Spielfeld übrig lässt (siehe fitPresenterMap) — unter
-  // ROSTER_MIN wären die Namen nicht mehr lesbar, über ROSTER_MAX
-  // sähen die Panels aufgeblasen aus.
-  const ROSTER_MIN = 168, ROSTER_MAX = 430;
 
   // Höhe der Figuren, in Vielfachen des Sechseck-Radius. Sie stehen
   // mit den Füßen auf dem Kachel-Mittelpunkt und ragen deshalb über
@@ -194,7 +189,7 @@
      (2) Die Territoriumsgrenze kommt aus den echten Nachbarschafts-
          kanten (Winkel zum Nachbar-Kachelmittelpunkt), nicht aus
          einer angenommenen Reihenfolge der Nachbar-Richtungen. */
-  function computeBorderSegments(tiles, centerFn, hexR) {
+  function computeBorderSegments(tiles, centerFn, rx, ry) {
     const ownerMap = new Map();
     tiles.forEach(t => ownerMap.set(t.r + ',' + t.c, t.team));
     const dirsEven = [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
@@ -213,8 +208,8 @@
         edgeIdx = ((edgeIdx % 6) + 6) % 6;
         const a1 = Math.PI / 3 * edgeIdx - Math.PI / 6;
         const a2 = Math.PI / 3 * (edgeIdx + 1) - Math.PI / 6;
-        const v1 = { x: p.x + hexR * Math.cos(a1), y: p.y + hexR * Math.sin(a1) };
-        const v2 = { x: p.x + hexR * Math.cos(a2), y: p.y + hexR * Math.sin(a2) };
+        const v1 = { x: p.x + rx * Math.cos(a1), y: p.y + ry * Math.sin(a1) };
+        const v2 = { x: p.x + rx * Math.cos(a2), y: p.y + ry * Math.sin(a2) };
         (segsByTeam[t.team] = segsByTeam[t.team] || []).push([v1, v2]);
       });
     });
@@ -234,24 +229,21 @@
     return out;
   }
 
-  /* ─── Ausdehnung des Spielfelds, in Vielfachen von hexR ──────────
+  /* ─── Ausdehnung des Spielfelds, in Kachel-Einheiten ─────────────
      Die Layouts aus clash_layouts (0093) füllen ihr rows×cols-Raster
      nie ganz aus — sie sind aus einem Vieleck geschnitten, je nach
      Team-Zahl mit unterschiedlich viel Luft am Rand. Wer auf das
      ganze Raster mittet, verschenkt diese Luft doppelt: das Feld
-     sitzt außermittig UND bleibt kleiner als nötig.
+     sitzt außermittig UND bleibt kleiner als nötig. Deshalb das
+     Umfassungsrechteck der TATSÄCHLICHEN Kacheln.
 
-     Das Ergebnis dient zwei Zwecken: `renderPresenterMap` passt das
-     Feld darauf ein, und `fitPresenterMap` holt sich daraus das
-     Seitenverhältnis — die Karte ist deshalb NICHT mehr quadratisch,
-     sondern so breit wie das Feld es will. Ein breites Feld nimmt
-     damit die volle Höhe UND die volle Breite ein, statt an der
-     kürzeren Seite eines Quadrats zu verhungern.
+     `spanX`/`spanY` sind die Ausdehnung in Vielfachen einer halben
+     Kachelbreite bzw. -höhe; renderPresenterMap teilt die verfügbare
+     Fläche durch sie und bekommt daraus seine beiden Maßstäbe.
 
-     Oben ist mehr Platz nötig als unten: die Burg ist 1,55·hexR hoch
-     und steht mit den Füßen auf dem Kachel-Mittelpunkt, ragt also
-     über ihre Kachel hinaus (der Volksname darüber darf bewusst ein
-     Stück über den Kartenrand ragen — so auch im Showroom). */
+     Oben ist mehr Platz nötig als unten: die Burg ragt über ihre
+     Kachel hinaus, weil sie mit den Füßen auf deren Mittelpunkt steht
+     — genau CASTLE_HEADROOM viel (siehe dort). */
   const SQ3 = Math.sqrt(3);
   const hexUnit = (r, c) => ({
     x: (c + 0.5) * SQ3 + (r % 2 === 1 ? SQ3 / 2 : 0),
@@ -277,8 +269,11 @@
     };
   }
 
-  function groundGlowHTML(p, size, raw) {
-    return '<div class="cm-groundglow" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + size + 'px;height:' + (size * 0.55) + 'px;--raw:' + raw + '"></div>';
+  // Der Bodenschein ist ein Oval unter der Figur. Breite und Höhe
+  // kommen getrennt herein, damit er der (in der Breite gestreckten)
+  // Kachelform folgt statt der unverzerrten Figur.
+  function groundGlowHTML(p, w, h, raw) {
+    return '<div class="cm-groundglow" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + w + 'px;height:' + h + 'px;--raw:' + raw + '"></div>';
   }
 
   function renderPresenterMap(view) {
@@ -289,25 +284,24 @@
     if (!tiles.length) { els.hexsvg.innerHTML = ''; els.icons.innerHTML = ''; return; }
     const gap = 2.5;
 
-    /* ─── Auf die BELEGTEN Felder einpassen, nicht auf das Raster ──
-       Die Spielfelder aus clash_layouts (0093) füllen ihr rows×cols-
-       Raster nie ganz aus — sie sind aus einem Vieleck geschnitten,
-       je nach Team-Zahl mit unterschiedlich viel Luft an den Rändern.
-       Wer auf das ganze Raster mittet, verschenkt diese Luft doppelt:
-       das Feld sitzt außermittig UND bleibt kleiner als nötig. Deshalb
-       erst das Umfassungsrechteck der tatsächlichen Kacheln in
-       Einheiten von hexR bestimmen, dann darauf einpassen.
+    /* ─── Zwei Maßstäbe statt einem: das Feld wird breitgezogen ────
+       `sx` und `sy` sind bewusst UNABHÄNGIG voneinander. Mit einem
+       gemeinsamen Maßstab (dem kleineren von beiden) bliebe auf einem
+       16:9-Beamer immer Pergament links und rechts stehen, weil die
+       Spielfelder aus clash_layouts fast quadratisch sind. Gestreckt
+       füllt das Feld die Fläche wirklich aus.
 
-       Oben ist mehr Platz nötig als unten: die Burg ist 1,55·hexR hoch
-       und steht mit den Füßen auf dem Kachel-Mittelpunkt, ragt also
-       über ihre Kachel hinaus (der Teamname darüber darf bewusst ein
-       Stück über den Kartenrand ragen — so auch im Showroom). */
+       Nur die KACHELN werden dabei verzerrt (breitere Sechsecke) — die
+       Figuren nicht: ihre Größe hängt allein an `sy` und ihre Bilder
+       behalten `width: auto`. Ein in die Breite gezogener Ritter wäre
+       sofort als Fehler zu sehen, ein breiteres Sechseck liest sich
+       als Geländeform. */
     const ext = boardExtent(tiles);
-    const hexR = Math.min(W / ext.spanX, H / ext.spanY);
-    const offX = (W - ext.spanX * hexR) / 2, offY = (H - ext.spanY * hexR) / 2;
+    const sx = W / ext.spanX;   // waagerechte Einheit (= halbe Kachelbreite)
+    const sy = H / ext.spanY;   // senkrechte Einheit (= halbe Kachelhöhe)
     const center = (r, c) => {
       const u = hexUnit(r, c);
-      return { x: (u.x - ext.minX) * hexR + offX, y: (u.y - ext.minY) * hexR + offY };
+      return { x: (u.x - ext.minX) * sx, y: (u.y - ext.minY) * sy };
     };
 
     let poly = '';
@@ -316,11 +310,12 @@
       const pts = [];
       for (let i = 0; i < 6; i++) {
         const a = Math.PI / 3 * i - Math.PI / 6;
-        pts.push((p.x + (hexR - gap) * Math.cos(a)).toFixed(1) + ',' + (p.y + (hexR - gap) * Math.sin(a)).toFixed(1));
+        pts.push((p.x + (sx - gap) * Math.cos(a)).toFixed(1) + ',' + (p.y + (sy - gap) * Math.sin(a)).toFixed(1));
       }
       poly += '<polygon class="cm-hex" points="' + pts.join(' ') + '" style="--raw:' + teamStroke(t.team) + '"></polygon>';
     });
-    const segs = computeBorderSegments(tiles, center, hexR - Math.min(gap, 1));
+    const segs = computeBorderSegments(tiles, center,
+      sx - Math.min(gap, 1), sy - Math.min(gap, 1));
     els.hexsvg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     els.hexsvg.innerHTML = poly + borderLayerHTML(segs);
 
@@ -334,9 +329,11 @@
       const castleTile = teamTiles.find(t => t.castle);
       if (castleTile) {
         const p = center(castleTile.r, castleTile.c);
-        const h = hexR * CASTLE_H, glow = hexR * 1.7;
+        // Figurenhöhe folgt allein `sy` — die Streckung in der Breite
+        // gilt nur den Kacheln, nicht den Bewohnern.
+        const h = sy * CASTLE_H;
         const z = 1000 + castleTile.r * 10 + 9;
-        icons += groundGlowHTML(p, glow, raw);
+        icons += groundGlowHTML(p, sx * 1.7, sy * 0.94, raw);
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;' +
           '--drop:' + (CASTLE_DROP * 100) + '%;z-index:' + z + '">' +
           '<div class="cm-spriteinner cm-spriteinner--castle"><img src="' + esrc(FACTION_CASTLE[team] || FACTION_CASTLE[0]) + '" alt=""></div></div>';
@@ -360,8 +357,8 @@
         const idx = Math.floor((k + 0.5) * others.length / unitCount);
         const t = others[idx];
         const p = center(t.r, t.c);
-        const h = hexR * UNIT_H, glow = hexR * 0.94;
-        icons += groundGlowHTML(p, glow, raw);
+        const h = sy * UNIT_H;
+        icons += groundGlowHTML(p, sx * 0.94, sy * 0.52, raw);
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + (1000 + t.r * 10 + 5) + '">' +
           '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + (k * 0.5) + 's"><img src="' + esrc(FACTION_UNIT[team] || FACTION_UNIT[0]) + '" alt=""></div></div>';
       }
@@ -412,24 +409,14 @@
                    padOf(els.boardWrap) + padOf(els.frame);
     const availH = Math.max(160, h - chrome - MAP_GAP);
 
-    /* ─── Breite: die VÖLKER-SPALTEN geben nach, nicht das Feld ────
-       Drei Dinge sollen gleichzeitig gelten, und lange schienen sie
-       sich zu widersprechen: die Spalten kleben am Bildschirmrand,
-       der Spalt zwischen Spalte und Pergament ist schmal, und das
-       Spielfeld füllt das Pergament ganz aus.
-
-       Der Denkfehler der vorigen Anläufe war, dafür am RAHMEN zu
-       drehen (mal auf volle Breite, mal auf Feldbreite geschrumpft) —
-       beides lässt zwangsläufig irgendwo Luft, weil das Spielfeld
-       sein Seitenverhältnis behalten muss und auf einem 16:9-Schirm
-       immer die HÖHE zuerst ausgeht.
-
-       Die Stellschraube ist stattdessen die SPALTENBREITE: erst das
-       Feld auf die volle Höhe bringen (daraus folgt seine Breite),
-       dann den Rest hälftig auf die beiden Spalten verteilen. Die
-       Spalten sitzen dadurch weiter außen, das Pergament dazwischen
-       ist exakt so breit wie das Feld — und die Panels bekommen
-       nebenbei mehr Platz für die Namen. */
+    /* ─── Breite: alles, was zwischen den Völker-Spalten frei ist ──
+       Die Spalten behalten ihre Breite aus tool.css; der Rahmen füllt
+       den Rest, und das Spielfeld füllt den Rahmen — in BEIDEN
+       Richtungen. Dass ein fast quadratisches Feld dabei in die Breite
+       gezogen wird, ist gewollt (siehe renderPresenterMap): auf einem
+       16:9-Beamer bliebe sonst zwangsläufig Pergament links und rechts
+       stehen. Deshalb hier kein Seitenverhältnis mehr, nur noch die
+       zwei verfügbaren Maße. */
     const stageCS = getComputedStyle(els.boardWrap);
     const stagePadX = (parseFloat(stageCS.paddingLeft) || 0) + (parseFloat(stageCS.paddingRight) || 0);
     const innerW = els.boardWrap.clientWidth - stagePadX;
@@ -440,31 +427,12 @@
       framePadX = (parseFloat(fcs.paddingLeft) || 0) + (parseFloat(fcs.paddingRight) || 0) +
                   (parseFloat(fcs.borderLeftWidth) || 0) + (parseFloat(fcs.borderRightWidth) || 0);
     }
+    const sideW = (els.rosterLeft ? els.rosterLeft.offsetWidth : 0) +
+                  (els.rosterRight ? els.rosterRight.offsetWidth : 0);
+    const availW = Math.max(160, innerW - sideW - gapPx * 2 - framePadX);
 
-    const tiles = (lastView && lastView.tiles) || [];
-    const ratio = tiles.length ? (function () {
-      const e = boardExtent(tiles);
-      return e.spanX / e.spanY;
-    })() : 1;
-
-    // 1) Höhe ausreizen — daraus folgt die Breite des Felds.
-    let mh = availH, mw = mh * ratio;
-    // 2) Deckel: die Spalten dürfen dabei nicht unter ihre Mindest-
-    //    breite gedrückt werden (schmaler Bildschirm, sehr breites
-    //    Feld). Dann gibt ausnahmsweise doch das Feld nach.
-    const maxMw = innerW - 2 * ROSTER_MIN - 2 * gapPx - framePadX;
-    if (mw > maxMw) { mw = Math.max(160, maxMw); mh = mw / ratio; }
-    mw = Math.max(160, Math.min(mw, MAP_MAX));
-    mh = Math.max(160, Math.min(mh, MAP_MAX));
-
-    // 3) Was übrig bleibt, gehört zu gleichen Teilen den Spalten.
-    let rosterW = Math.floor((innerW - mw - 2 * gapPx - framePadX) / 2);
-    rosterW = Math.max(ROSTER_MIN, Math.min(ROSTER_MAX, rosterW));
-    if (els.rosterLeft)  els.rosterLeft.style.width  = rosterW + 'px';
-    if (els.rosterRight) els.rosterRight.style.width = rosterW + 'px';
-
-    els.mapWrap.style.width  = mw + 'px';
-    els.mapWrap.style.height = mh + 'px';
+    els.mapWrap.style.width  = Math.min(availW, MAP_MAX) + 'px';
+    els.mapWrap.style.height = Math.min(availH, MAP_MAX) + 'px';
 
     if (els.hexsvg && els.icons) renderPresenterMap(lastView);
   }
