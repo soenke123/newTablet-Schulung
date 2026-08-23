@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clash of Math — UI-Showroom</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Figtree:wght@400;500;600;700;800&family=Fredoka:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Rajdhani:wght@500;600;700&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   Clash of Math — UI-SHOWROOM
+   ══════════════════════════════════════════════════════════════════
+   Beantwortet EINE Frage: die Kacheln, die Sprites, die Eroberung
+   stehen (Migration 0093/0094) — aber wie soll der Rest der
+   Oberfläche aussehen? Vier Richtungen, ein Skelett (dieselbe
+   Methode wie MPSkills/showroom.html): Struktur, Hex-Geometrie und
+   Teamfarben bleiben über alle vier gleich, nur Schrift, Form,
+   Chrom und Effekt wechseln.
+
+   Zwei Bildschirme je Richtung, weil beide Rollen etwas anderes
+   von derselben Karte wollen:
+     · Beamer  — Feldzahlen + Fraktionen links UND rechts (mit
+       Portraits), große Sechsecke, Burg-Artwork, Vollbild-Knopf.
+     · Handy   — die UI ist in der eigenen Teamfarbe eingefärbt,
+       eine eigene Einheit ist deutlich sichtbar, dieselbe Karte
+       kleiner mit.
+
+   Das Demo-Spielfeld benutzt bewusst 6 der 8 Fraktionen (ein
+   typischer Klassensatz an Teams) — bei allen 8 gleichzeitig
+   würden die Sechsecke auf dem Handy wieder so klein, wie der
+   Auftrag es gerade nicht will. Alle 8 Fraktionen samt Original-
+   Artwork stehen trotzdem einmal oben in der Galerie.
+
+   Die Teamfarben sind an keine Richtung gebunden — das sind die
+   echten Werte aus tool.js (TEAM_STROKE), keine Showroom-Erfindung.
+   ══════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Manrope', system-ui, sans-serif;
+  background: #0b0d10;
+  color: #e7ebef;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 120px;
+}
+
+/* ── Kopfleiste ───────────────────────────────────────────────── */
+.sr-top {
+  position: sticky; top: 0; z-index: 200;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 11px 20px;
+  background: rgba(11,13,16,.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #202329;
+}
+.sr-top h1 { font-size: .92rem; font-weight: 800; letter-spacing: -.01em; }
+.sr-top h1 span { color: #6f7a88; font-weight: 500; }
+.sr-switch { display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto; }
+.sr-sw {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 13px 6px 7px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #2a2f37; background: #16181d; color: #a6b0bc;
+  font-family: inherit; font-weight: 700; font-size: .8rem;
+  transition: background .13s, color .13s, border-color .13s;
+}
+.sr-sw:hover { background: #1d2027; color: #fff; }
+.sr-sw.on { background: #f0f3f7; border-color: #f0f3f7; color: #0e1014; }
+.sr-sw i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+
+/* ── Vorspann ─────────────────────────────────────────────────── */
+.sr-lead { max-width: 1240px; margin: 34px auto 0; padding: 0 22px; }
+.sr-lead h2 { font-size: clamp(1.5rem, 3.4vw, 2.1rem); font-weight: 800; letter-spacing: -.025em; }
+.sr-lead p { color: #8d97a4; margin-top: 10px; max-width: 74ch; line-height: 1.6; font-size: .95rem; }
+.sr-lead p b { color: #cfd6de; font-weight: 700; }
+.sr-fixes { list-style: none; display: grid; gap: 7px; margin: 16px 0 4px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); max-width: 1100px; }
+.sr-fixes li { font-size: .86rem; color: #b7c0ca; padding-left: 22px; position: relative; line-height: 1.45; }
+.sr-fixes li::before { content: '✓'; position: absolute; left: 0; color: #2ee8a5; font-weight: 800; }
+
+/* ── Fraktions-Galerie ────────────────────────────────────────── */
+.cm-gallery {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(148px,1fr)); gap: 12px;
+  margin: 22px auto 0; max-width: 1240px; padding: 0 22px;
+}
+.cm-gcard {
+  background: #12151a; border: 1px solid #232830; border-radius: 14px;
+  padding: 10px; display: flex; flex-direction: column; align-items: center;
+  border-top: 3px solid var(--team);
+}
+.cm-gcastle { width: 100%; height: 72px; display: flex; align-items: center; justify-content: center; }
+.cm-gcastle img { max-height: 100%; max-width: 100%; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,.5)); }
+.cm-gunit { width: 50px; height: 50px; margin-top: -8px; }
+.cm-gunit img { width: 100%; height: 100%; object-fit: contain; }
+.cm-ggroup { width: 100%; height: 30px; opacity: .82; margin-top: 2px; }
+.cm-ggroup img { width: 100%; height: 100%; object-fit: contain; }
+.cm-gname { font-weight: 800; font-size: .84rem; margin-top: 4px; }
+.cm-glabel { font-size: .66rem; color: #8d97a4; text-align: center; }
+.cm-gcap { max-width: 1240px; margin: 10px auto 0; padding: 0 22px; font-size: .78rem; color: #6b7581; }
+
+/* ── Eine Variante ────────────────────────────────────────────── */
+.cm-varwrap { max-width: 1240px; margin: 0 auto; padding: 0 22px; }
+.cm-varwrap[hidden] { display: none; }
+
+.cm-vhead { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin: 50px 0 12px; }
+.cm-vnum { font-size: 2.8rem; font-weight: 900; line-height: .8; color: #262c34; letter-spacing: -.03em; }
+.cm-vheadtxt { flex: 1 1 260px; }
+.cm-vtitle { font-size: 1.32rem; font-weight: 800; letter-spacing: -.015em; color: #f2f5f8; }
+.cm-vdesc { color: #8d97a4; font-size: .92rem; margin-top: 3px; max-width: 66ch; }
+.cm-vspecs { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); margin: 14px 0 4px; max-width: 980px; }
+.cm-vspec { border: 1px solid #232830; border-radius: 10px; padding: 8px 11px; background: #12151a; }
+.cm-vspeclabel { display: block; font-family: 'JetBrains Mono', monospace; font-size: .6rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: #626d7a; margin-bottom: 4px; }
+.cm-vspecval { font-size: .82rem; color: #ccd3db; line-height: 1.4; }
+.cm-vnote { margin: 16px 0 6px; font-size: .85rem; color: #939da8; max-width: 82ch; line-height: 1.6; border-left: 2px solid #333a44; padding-left: 13px; }
+
+/* ══════════════════════════════════════════════════════════════════
+   DAS SKELETT — ab hier nur Variablen, keine Farbe fest verdrahtet
+   (Ausnahme: die acht Teamfarben, die sind Produktwahrheit, keine
+   Showroom-Erfindung, und stehen darum als Inline-Style pro Element).
+   ══════════════════════════════════════════════════════════════════ */
+.cm-demo {
+  --font-display: 'Outfit', sans-serif;
+  --font-body:    'Outfit', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+  --stage-bg:       #eef2f1;
+  --stage-bg-image: none;
+  --panel:        #ffffff;
+  --panel-2:      #f7faf9;
+  --panel-border: #dfe7e5;
+  --panel-radius: 18px;
+  --panel-shadow: 0 10px 26px rgba(13,26,23,.12);
+  --ink:        #0d1a17;
+  --ink-soft:   #5b6d68;
+  --ink-faint:  #8a9793;
+  --hex-stroke:   rgba(13,26,23,.32);
+  --hex-stroke-w: 1.4;
+  --castle-radius: 50%;
+  --castle-ring:   3px solid #fff;
+  --castle-shadow: 0 0 0 2px rgba(0,0,0,.1), 0 6px 14px rgba(0,0,0,.25);
+  --unit-radius: 12px;
+  --chip-bg: #0d1a17;
+  --chip-radius: 999px;
+  --fab-bg: rgba(13,26,23,.07);
+  --fab-ink: #0d1a17;
+  --fab-border: 1px solid rgba(13,26,23,.16);
+  --ring-track: rgba(13,26,23,.12);
+  --ring-accent: #00b37e;
+  --btn-radius: 14px;
+  font-family: var(--font-body);
+}
+
+.cm-stage {
+  display: flex; gap: 26px; flex-wrap: wrap; align-items: flex-start;
+  padding: 24px; border-radius: 24px;
+  background: var(--stage-bg); background-image: var(--stage-bg-image);
+  background-size: cover;
+}
+
+/* ── Beamer / Board ───────────────────────────────────────────── */
+.cm-frame--board {
+  flex: 1 1 580px; max-width: 820px;
+  background: var(--panel); border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius); box-shadow: var(--panel-shadow);
+  padding: 16px;
+  position: relative;
+}
+.cm-boardtop { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.cm-boardtitle { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--ink); }
+.cm-boardphase {
+  font-family: var(--font-mono); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-soft); padding: 3px 10px; border-radius: var(--chip-radius);
+  background: var(--panel-2); border: 1px solid var(--panel-border);
+}
+.cm-boardtop .cm-ring { margin-left: auto; }
+
+.cm-arena { display: flex; align-items: stretch; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.cm-roster { flex: 0 0 152px; display: flex; flex-direction: column; gap: 8px; }
+.cm-mapwrap {
+  position: relative; flex: 1 1 420px; max-width: 520px; aspect-ratio: 1 / 1;
+  border-radius: calc(var(--panel-radius) - 5px);
+  background: var(--panel-2); border: 1px solid var(--panel-border);
+  overflow: hidden;
+}
+.cm-hexsvg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cm-hex { stroke: var(--hex-stroke); stroke-width: var(--hex-stroke-w); }
+.cm-iconlayer { position: absolute; inset: 0; pointer-events: none; }
+
+.cm-castle {
+  position: absolute; transform: translate(-50%,-50%);
+  border-radius: var(--castle-radius); overflow: hidden;
+  border: var(--castle-ring); box-shadow: var(--castle-shadow);
+  background: var(--panel);
+}
+.cm-castle img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 14%; transform: scale(1.16); display: block; }
+.cm-castletag {
+  position: absolute; top: -1.9em; left: 50%; transform: translateX(-50%); white-space: nowrap;
+  font-family: var(--font-mono); font-size: .58rem; font-weight: 700; letter-spacing: .03em;
+  padding: 2px 8px; border-radius: var(--chip-radius);
+  background: var(--chip-bg); color: var(--team, #fff); border: 1px solid var(--team, #fff);
+}
+.cm-unit { position: absolute; transform: translate(-50%,-92%); }
+.cm-unitbob {
+  width: 100%; height: 100%; border-radius: var(--unit-radius); overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,.28); background: var(--panel-2);
+  animation: cmBob 2.6s ease-in-out infinite;
+}
+.cm-unitbob img { width: 100%; height: 100%; object-fit: cover; object-position: center bottom; display: block; }
+@keyframes cmBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+.cm-rcard { display: flex; align-items: center; gap: 9px; padding: 8px; border-radius: 14px; background: var(--panel); border: 1px solid var(--panel-border); }
+.cm-rthumb { width: 36px; height: 36px; border-radius: var(--unit-radius); overflow: hidden; border: 2px solid var(--team); flex: 0 0 auto; background: var(--panel-2); }
+.cm-rthumb img { width: 100%; height: 100%; object-fit: cover; object-position: center bottom; display: block; }
+.cm-rinfo { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.cm-rname { font-family: var(--font-display); font-weight: 800; font-size: .82rem; color: var(--ink); }
+.cm-rsub { font-size: .64rem; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm-rcount { font-family: var(--font-mono); font-weight: 800; font-size: 1.08rem; color: var(--team); }
+
+.cm-fab {
+  width: 34px; height: 34px; border-radius: var(--btn-radius);
+  background: var(--fab-bg); color: var(--fab-ink); border: var(--fab-border);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; flex: 0 0 auto;
+}
+.cm-fab:hover { filter: brightness(1.08); }
+.cm-fabicon { width: 17px; height: 17px; }
+.cm-fab--sm { width: 30px; height: 30px; }
+.cm-fab--sm .cm-fabicon { width: 15px; height: 15px; }
+
+.cm-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.cm-ringtrack { stroke: var(--ring-track); }
+.cm-ringbar { stroke: var(--ring-accent); stroke-linecap: round; }
+.cm-ringlabel { position: absolute; font-family: var(--font-mono); font-weight: 700; white-space: nowrap; }
+.cm-ring--corner .cm-ringlabel { font-size: .68rem; color: var(--ink); }
+.cm-ring--q .cm-ringlabel { font-size: .62rem; color: var(--ink-soft); }
+
+.cm-arenacap { margin-top: 12px; font-size: .74rem; color: var(--ink-faint); text-align: center; }
+
+/* Vollbild — der Frame selbst geht in Fullscreen, damit Karte +
+   Rosterspalten mitgehen und nicht nur das <canvas>. */
+.cm-frame--board:fullscreen, .cm-frame--phone:fullscreen {
+  display: flex; flex-direction: column; justify-content: center;
+  background: var(--stage-bg); width: 100vw; height: 100vh; max-width: none;
+  padding: 26px;
+}
+.cm-frame--phone:fullscreen { align-items: center; }
+/* Vollbild soll wirklich etwas bringen — sonst ist der Knopf nur
+   Kosmetik. Die Karte darf im Vollbild deutlich größer werden, das
+   Sechseck-Maß rechnet renderMap() ohnehin live aus der Container-
+   größe neu (ResizeObserver), hier wird nur der Deckel angehoben. */
+.cm-frame--board:fullscreen .cm-arena { flex: 1 1 auto; align-items: center; }
+.cm-frame--board:fullscreen .cm-mapwrap { max-width: min(82vh, 900px); flex: 1 1 auto; }
+.cm-frame--board:fullscreen .cm-roster { flex: 0 0 190px; }
+.cm-frame--board:fullscreen .cm-rname { font-size: .92rem; }
+.cm-frame--board:fullscreen .cm-rcount { font-size: 1.3rem; }
+.cm-frame--phone:fullscreen .cm-phone { width: min(92vw, 380px); }
+
+/* ── Handy ─────────────────────────────────────────────────────── */
+.cm-frame--phone { flex: 0 0 320px; display: flex; justify-content: center; }
+.cm-phone {
+  width: 320px; border-radius: 32px; padding: 16px 13px 20px;
+  background: var(--panel); border: 1px solid var(--panel-border); box-shadow: var(--panel-shadow);
+  position: relative;
+}
+.cm-phone::before {
+  content: ''; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  width: 56px; height: 5px; border-radius: 4px; background: var(--panel-border);
+}
+.cm-phonebar { display: flex; align-items: center; gap: 8px; margin: 14px 0 12px; }
+.cm-teampill { font-family: var(--font-display); font-weight: 800; font-size: .82rem; padding: 5px 13px; border-radius: var(--chip-radius); background: var(--team); color: #fff; }
+.cm-streak { font-weight: 700; font-size: .82rem; color: var(--ink); }
+.cm-phonebar .cm-fab { margin-left: auto; }
+
+.cm-hero { position: relative; display: flex; align-items: center; justify-content: center; height: 148px; margin-bottom: 10px; }
+.cm-heroglow { position: absolute; inset: 6px; border-radius: 20px; background: radial-gradient(circle at 50% 66%, var(--team) 0%, transparent 72%); opacity: .32; }
+.cm-hero-box { position: relative; z-index: 1; width: 128px; height: 128px; border-radius: 18px; overflow: hidden; }
+.cm-hero-box img { width: 100%; height: 100%; object-fit: cover; object-position: center bottom; display: block; }
+.cm-herolabel { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); z-index: 2; font-size: .6rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); }
+
+.cm-phonemap { position: relative; width: 100%; aspect-ratio: 1 / 1; border-radius: 16px; background: var(--panel-2); border: 1px solid var(--panel-border); overflow: hidden; margin-bottom: 12px; }
+
+.cm-qcard { position: relative; padding: 16px; border-radius: 16px; background: var(--panel-2); border: 1px solid var(--panel-border); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.cm-qcard .cm-ring { position: absolute; top: 10px; right: 10px; }
+.cm-q { font-family: var(--font-display); font-weight: 800; font-size: 1.7rem; color: var(--ink); }
+.cm-form { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.cm-input { width: 100%; padding: 11px; border-radius: 12px; border: 1px solid var(--panel-border); background: var(--panel); color: var(--ink); text-align: center; font-size: 1rem; font-family: var(--font-body); }
+.cm-submit { width: 100%; padding: 11px; border-radius: var(--btn-radius); border: none; background: var(--team); color: #fff; font-weight: 800; cursor: pointer; font-family: var(--font-display); font-size: .95rem; }
+
+/* ══════════════════════════════════════════════════════════════════
+   RICHTUNG 1 — Kommandobrücke (dunkles taktisches HUD)
+   ══════════════════════════════════════════════════════════════════ */
+.cm-demo--hud {
+  --font-display: 'Rajdhani', sans-serif;
+  --font-body:    'Rajdhani', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+  --stage-bg: #070a10;
+  --stage-bg-image: radial-gradient(circle at 14% 8%, rgba(90,209,255,.10), transparent 42%), radial-gradient(circle at 88% 92%, rgba(90,209,255,.07), transparent 45%);
+  --panel:        rgba(255,255,255,.035);
+  --panel-2:      rgba(255,255,255,.05);
+  --panel-border: rgba(120,200,255,.2);
+  --panel-radius: 6px;
+  --panel-shadow: 0 0 0 1px rgba(120,200,255,.06), 0 24px 54px rgba(0,0,0,.55);
+  --ink:      #eaf6ff;
+  --ink-soft: #8fa8bb;
+  --ink-faint:#5d7286;
+  --hex-stroke:   rgba(180,230,255,.55);
+  --hex-stroke-w: 1;
+  --castle-radius: 10px;
+  --castle-ring:   2px solid rgba(180,230,255,.7);
+  --castle-shadow: 0 0 20px var(--team, rgba(90,209,255,.7)), inset 0 0 0 1px rgba(255,255,255,.1);
+  --unit-radius: 6px;
+  --chip-bg: #050709;
+  --chip-radius: 3px;
+  --fab-bg: rgba(120,200,255,.09);
+  --fab-ink: #cdeeff;
+  --fab-border: 1px solid rgba(120,200,255,.4);
+  --ring-track: rgba(120,200,255,.16);
+  --ring-accent: #5ad1ff;
+  --btn-radius: 3px;
+}
+.cm-demo--hud .cm-vtitle { color: #eaf6ff; }
+.cm-demo--hud .cm-frame--board, .cm-demo--hud .cm-phone {
+  backdrop-filter: blur(8px);
+  clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+}
+.cm-demo--hud .cm-rcard, .cm-demo--hud .cm-qcard, .cm-demo--hud .cm-phonemap, .cm-demo--hud .cm-mapwrap {
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+}
+.cm-demo--hud .cm-boardtitle, .cm-demo--hud .cm-teampill, .cm-demo--hud .cm-rname { text-transform: uppercase; letter-spacing: .04em; }
+.cm-demo--hud .cm-rname { font-family: var(--font-mono); font-size: .72rem; }
+.cm-demo--hud .cm-teampill { background: transparent; border: 1px solid var(--team); color: var(--team); box-shadow: 0 0 12px var(--team) inset, 0 0 12px var(--team); }
+.cm-demo--hud .cm-submit { background: transparent; border: 1px solid var(--team); color: var(--team); text-transform: uppercase; letter-spacing: .06em; }
+.cm-demo--hud .cm-submit:hover { background: var(--team); color: #04121a; }
+.cm-demo--hud .cm-heroglow { background: conic-gradient(from 0deg, transparent, var(--team), transparent 60%); filter: blur(7px); opacity: .55; animation: cmSpin 6s linear infinite; border-radius: 50%; }
+.cm-demo--hud .cm-hero-box { border-radius: 8px; filter: grayscale(.3) sepia(.35) hue-rotate(148deg) saturate(3.2) drop-shadow(0 0 10px var(--team)); }
+.cm-demo--hud .cm-herolabel { font-family: var(--font-mono); color: var(--team); letter-spacing: .1em; }
+@keyframes cmSpin { to { transform: rotate(360deg); } }
+
+/* ══════════════════════════════════════════════════════════════════
+   RICHTUNG 2 — Wimpelschlacht (Comic-Bilderbuch, wie das Artwork)
+   ══════════════════════════════════════════════════════════════════ */
+.cm-demo--storybook {
+  --font-display: 'Baloo 2', cursive;
+  --font-body:    'Figtree', sans-serif;
+  --font-mono:    'Figtree', sans-serif;
+  --stage-bg: #222b31;
+  --stage-bg-image: radial-gradient(circle at 18% 12%, rgba(255,255,255,.05), transparent 40%);
+  --panel:        #2b363c;
+  --panel-2:      #333f46;
+  --panel-border: #171d21;
+  --panel-radius: 20px;
+  --panel-shadow: 6px 8px 0 #171d21;
+  --ink:      #fbf6ea;
+  --ink-soft: #c3ccd1;
+  --ink-faint:#8b969c;
+  --hex-stroke:   #171d21;
+  --hex-stroke-w: 2.6;
+  --castle-radius: 50%;
+  --castle-ring:   4px solid #fbf6ea;
+  --castle-shadow: 4px 5px 0 #171d21;
+  --unit-radius: 50%;
+  --chip-bg: #fbf6ea;
+  --chip-radius: 3px 12px 3px 12px;
+  --fab-bg: #fbf6ea;
+  --fab-ink: #222b31;
+  --fab-border: 3px solid #171d21;
+  --ring-track: #171d21;
+  --ring-accent: #f2c744;
+  --btn-radius: 16px;
+}
+.cm-demo--storybook .cm-frame--board, .cm-demo--storybook .cm-phone,
+.cm-demo--storybook .cm-rcard, .cm-demo--storybook .cm-qcard,
+.cm-demo--storybook .cm-mapwrap, .cm-demo--storybook .cm-phonemap { border: 3px solid #171d21 !important; }
+.cm-demo--storybook .cm-fab { box-shadow: 3px 3px 0 #171d21; }
+.cm-demo--storybook .cm-rcard, .cm-demo--storybook .cm-qcard { box-shadow: 3px 3px 0 #171d21; }
+.cm-demo--storybook .cm-teampill {
+  background: var(--team); border: 2px solid #171d21; padding: 6px 14px 9px;
+  clip-path: polygon(0 0, 100% 0, 100% 68%, 92% 100%, 50% 76%, 8% 100%, 0 68%);
+  color: #171d21; text-shadow: 0 1px 0 rgba(255,255,255,.3);
+}
+.cm-demo--storybook .cm-castletag { background: var(--team, #fbf6ea); color: #171d21; border: 2px solid #171d21; font-family: var(--font-display); font-size: .62rem; }
+.cm-demo--storybook .cm-rname { font-family: var(--font-display); }
+.cm-demo--storybook .cm-hero { height: 168px; }
+.cm-demo--storybook .cm-heroglow { border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.14) 0%, transparent 70%); }
+.cm-demo--storybook .cm-hero-box { border-radius: 50%; border: 4px solid var(--team); box-shadow: 0 0 0 4px #171d21; width: 138px; height: 138px; }
+.cm-demo--storybook .cm-herolabel {
+  background: var(--team); color: #171d21; padding: 3px 13px; border: 2px solid #171d21;
+  border-radius: 3px 12px 3px 12px; bottom: -8px; font-family: var(--font-display); font-size: .64rem;
+}
+.cm-demo--storybook .cm-submit { border: 3px solid #171d21; box-shadow: 3px 3px 0 #171d21; }
+.cm-demo--storybook .cm-submit:active { box-shadow: 1px 1px 0 #171d21; transform: translate(2px,2px); }
+.cm-demo--storybook .cm-q { font-family: var(--font-display); }
+.cm-demo--storybook .cm-boardtitle { font-family: var(--font-display); font-size: 1.2rem; }
+
+/* ══════════════════════════════════════════════════════════════════
+   RICHTUNG 3 — Arena-Neon (Handyspiel-Arena, Sticker & Verläufe)
+   ══════════════════════════════════════════════════════════════════ */
+.cm-demo--neon {
+  --font-display: 'Fredoka', sans-serif;
+  --font-body:    'Sora', sans-serif;
+  --font-mono:    'Sora', sans-serif;
+  --stage-bg: #150a24;
+  --stage-bg-image: radial-gradient(circle at 28% 18%, rgba(255,255,255,.07), transparent 42%);
+  --panel:        #1d1033;
+  --panel-2:      #241541;
+  --panel-border: rgba(255,255,255,.14);
+  --panel-radius: 26px;
+  --panel-shadow: 0 20px 44px rgba(0,0,0,.5);
+  --ink:      #ffffff;
+  --ink-soft: #c9bde8;
+  --ink-faint:#8c7fae;
+  --hex-stroke:   rgba(255,255,255,.55);
+  --hex-stroke-w: 2;
+  --castle-radius: 50%;
+  --castle-ring:   4px solid #fff;
+  --castle-shadow: 0 0 0 4px rgba(255,255,255,.18), 0 10px 18px rgba(0,0,0,.45);
+  --unit-radius: 50%;
+  --chip-bg: #fff;
+  --chip-radius: 999px;
+  --fab-bg: linear-gradient(180deg,#fff,#e7e2ff);
+  --fab-ink: #1d1033;
+  --fab-border: 2px solid #fff;
+  --ring-track: rgba(255,255,255,.16);
+  --ring-accent: #ffffff;
+  --btn-radius: 999px;
+}
+.cm-demo--neon .cm-frame--board, .cm-demo--neon .cm-phone { border: 2px solid rgba(255,255,255,.14); }
+.cm-demo--neon .cm-rcard, .cm-demo--neon .cm-qcard { border: 2px solid rgba(255,255,255,.2); box-shadow: 0 8px 18px rgba(0,0,0,.35); }
+.cm-demo--neon .cm-teampill {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--team) 82%, white), var(--team));
+  box-shadow: 0 4px 0 rgba(0,0,0,.25), 0 0 18px var(--team); border: 2px solid #fff;
+}
+.cm-demo--neon .cm-submit {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--team) 78%, white), var(--team));
+  box-shadow: 0 5px 0 rgba(0,0,0,.3); border: 2px solid #fff;
+}
+.cm-demo--neon .cm-submit:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.3); }
+.cm-demo--neon .cm-fab { box-shadow: 0 3px 0 rgba(0,0,0,.25); }
+.cm-demo--neon .cm-hero { height: 174px; }
+.cm-demo--neon .cm-heroglow { background: conic-gradient(var(--team), transparent 30%, var(--team) 62%, transparent 92%); filter: blur(11px); opacity: .58; animation: cmSpin 5s linear infinite; border-radius: 50%; }
+.cm-demo--neon .cm-hero-box { border-radius: 50%; border: 4px solid #fff; box-shadow: 0 0 0 4px var(--team); transform: rotate(-6deg); width: 140px; height: 140px; }
+.cm-demo--neon .cm-herolabel { background: #fff; color: #1d1033; padding: 3px 13px; border-radius: 999px; border: 2px solid #1d1033; font-family: var(--font-display); bottom: -8px; font-size: .64rem; }
+.cm-demo--neon .cm-q { font-family: var(--font-display); }
+.cm-demo--neon .cm-boardtitle { font-family: var(--font-display); }
+
+/* ══════════════════════════════════════════════════════════════════
+   RICHTUNG 4 — MPSkills-Konform (das echte Kleid, nur die Teamfarbe neu)
+   ══════════════════════════════════════════════════════════════════ */
+.cm-demo--clean {
+  --font-display: 'Outfit', sans-serif;
+  --font-body:    'Outfit', sans-serif;
+  --font-mono:    'Outfit', sans-serif;
+  --stage-bg: #eef2f1;
+  --panel:        #ffffff;
+  --panel-2:      #f7faf9;
+  --panel-border: #dfe7e5;
+  --panel-radius: 18px;
+  --panel-shadow: 0 10px 26px rgba(13,26,23,.1);
+  --ink:      #0d1a17;
+  --ink-soft: #475853;
+  --ink-faint:#7b8a86;
+  --hex-stroke:   rgba(13,26,23,.26);
+  --hex-stroke-w: 1.1;
+  --castle-radius: 14px;
+  --castle-ring:   3px solid #fff;
+  --castle-shadow: 0 6px 16px rgba(13,26,23,.28);
+  --unit-radius: 10px;
+  --chip-bg: #0d1a17;
+  --chip-radius: 999px;
+  --fab-bg: #fff;
+  --fab-ink: #0d1a17;
+  --fab-border: 1px solid #dfe7e5;
+  --ring-track: #dfe7e5;
+  --ring-accent: #00b37e;
+  --btn-radius: 14px;
+}
+.cm-demo--clean .cm-hero { height: 118px; justify-content: flex-start; padding-left: 4px; }
+.cm-demo--clean .cm-heroglow { inset: auto; left: 4px; top: 50%; width: 96px; height: 96px; transform: translateY(-50%); border-radius: 50%; opacity: .16; }
+.cm-demo--clean .cm-hero-box { width: 100px; height: 100px; }
+.cm-demo--clean .cm-herolabel { left: 4px; transform: none; bottom: -1px; color: var(--ink-faint); }
+
+/* ── kleine Bildschirme: Rosterspalten rutschen unter die Karte ── */
+@media (max-width: 900px) {
+  .cm-arena { flex-direction: column; align-items: stretch; }
+  .cm-roster { flex-direction: row; flex-wrap: wrap; }
+  .cm-roster > .cm-rcard { flex: 1 1 150px; }
+  .cm-mapwrap { max-width: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="sr-top">
+  <h1>Clash of Math <span>· UI-Showroom</span></h1>
+  <div class="sr-switch" id="srSwitch"></div>
+</header>
+
+<section class="sr-lead">
+  <h2>Wie könnte die Oberfläche aussehen?</h2>
+  <p>
+    Die Mechanik steht (Migration 0093/0094): Sechsecke, Eroberung,
+    Rundentimer. Offen war <b>der Rest</b> — Beamer-Karte, Handy-UI,
+    das „runde Ding" fürs Countdown, wie die acht Fraktions-Sprites
+    ins Bild kommen. Vier Richtungen, ein Skelett: Struktur und
+    Hex-Geometrie sind überall gleich, nur Schrift, Form und Chrom
+    wechseln — so lässt sich vergleichen, was wirklich den Unterschied
+    macht.
+  </p>
+  <ul class="sr-fixes">
+    <li><b>Größere Sechsecke</b> — Burg und Figuren sind jetzt lesbar, nicht nur Farbflächen.</li>
+    <li><b>Echtes Artwork</b> statt Platzhalterfarbe: Burg pro Fraktion, bis zu 3 wandernde Einheiten je Team (insgesamt, nicht je Feld).</li>
+    <li><b>Feldzahlen + Fraktionen links und rechts</b> der Karte, mit Portrait der Einheit.</li>
+    <li><b>Vollbild-Knopf</b> — echt verdrahtet, einfach anklicken.</li>
+    <li><b>Handy in der eigenen Teamfarbe</b>, eine eigene Einheit gut sichtbar im Bild.</li>
+    <li><b>Das runde Ding neu</b>: ein Fortschrittsring statt der nackten Zahl, für Start-Countdown UND Rundenende.</li>
+  </ul>
+</section>
+
+<div class="cm-gallery" id="cmGallery"></div>
+<p class="cm-gcap">Alle 8 Fraktionen mit Original-Artwork. Das Demo-Spielfeld unten zeigt 6 davon — bei allen 8 gleichzeitig würden die Sechsecke auf dem Handy wieder zu klein, und genau das war der Auftrag, den es zu beheben galt.</p>
+
+<div id="cmVariants"></div>
+
+<template id="cmSkeleton">
+  <div class="cm-varwrap" hidden>
+    <div class="cm-demo">
+      <div class="cm-vhead">
+        <div class="cm-vnum" data-num></div>
+        <div class="cm-vheadtxt">
+          <h3 class="cm-vtitle" data-title></h3>
+          <p class="cm-vdesc" data-desc></p>
+        </div>
+      </div>
+      <div class="cm-vspecs" data-specs></div>
+
+      <div class="cm-stage">
+        <!-- Beamer -->
+        <div class="cm-frame cm-frame--board" data-frame="board">
+          <div class="cm-boardtop">
+            <span class="cm-boardtitle">Clash of Math</span>
+            <span class="cm-boardphase">Runde läuft</span>
+            <div class="cm-ring cm-ring--corner" data-ring></div>
+            <button class="cm-fab" data-fullscreen type="button" aria-label="Vollbild" title="Vollbild">
+              <svg viewBox="0 0 24 24" class="cm-fabicon"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="cm-arena">
+            <div class="cm-roster cm-roster--left" data-roster="left"></div>
+            <div class="cm-mapwrap" data-map></div>
+            <div class="cm-roster cm-roster--right" data-roster="right"></div>
+          </div>
+          <p class="cm-arenacap">🏰 Burg je Fraktion · bis zu 3 wandernde Einheiten je Team insgesamt</p>
+        </div>
+
+        <!-- Handy -->
+        <div class="cm-frame cm-frame--phone" data-frame="phone">
+          <div class="cm-phone">
+            <div class="cm-phonebar">
+              <span class="cm-teampill" data-teampill></span>
+              <span class="cm-streak" data-streak></span>
+              <button class="cm-fab cm-fab--sm" data-fullscreen type="button" aria-label="Vollbild" title="Vollbild">
+                <svg viewBox="0 0 24 24" class="cm-fabicon"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <div class="cm-hero" data-hero>
+              <div class="cm-heroglow"></div>
+              <div class="cm-hero-box"><img data-hero-img alt=""></div>
+              <span class="cm-herolabel" data-hero-label></span>
+            </div>
+            <div class="cm-phonemap" data-mapmini></div>
+            <div class="cm-qcard">
+              <div class="cm-ring cm-ring--q" data-ring2></div>
+              <div class="cm-q">7 + 8 = ?</div>
+              <form class="cm-form" onsubmit="return false">
+                <input type="text" inputmode="numeric" placeholder="Antwort" class="cm-input">
+                <button type="submit" class="cm-submit">Absenden</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="cm-vnote" data-note></p>
+    </div>
+  </div>
+</template>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ─── Fraktionsdaten ──────────────────────────────────────────
+     Dateinamen 1:1 wie im Ordner (inkl. der Dreher „margenta"/
+     „yello"/„Paining"). Farben sind TEAM_STROKE aus tool.js —
+     Produktwahrheit, keine Showroom-Erfindung. */
+  const TEAM_DEFS = {
+    red:     { name: 'Rot',     hex: '#ef4444', unit: 'red units.png',    castle: 'red carstle.png',    group: 'red ToastKnights.png',       label: 'Toast-Ritter' },
+    blue:    { name: 'Blau',    hex: '#3b82f6', unit: 'blue units.png',   castle: 'blue carstle.png',   group: 'blue roboDucks.png',         label: 'Robo-Enten' },
+    green:   { name: 'Grün',    hex: '#10b981', unit: 'green units.png',  castle: 'green carstle.png',  group: 'green BrokkoliGiraffen.png',  label: 'Brokkoli-Giraffen' },
+    yellow:  { name: 'Gelb',    hex: '#f59e0b', unit: 'yellow units.png', castle: 'yellow carstle.png', group: 'yellow PainingBunnies.png',   label: 'Mal-Hasen' },
+    lila:    { name: 'Lila',    hex: '#a855f7', unit: 'lila units.png',   castle: 'lila carstle.png',   group: 'lila cosmicCat.png',          label: 'Kosmische Katzen' },
+    turkis:  { name: 'Türkis',  hex: '#06b6d4', unit: 'türkis units.png', castle: 'türkis carstle.png', group: 'türkis OctoPferdchen.png',    label: 'Okto-Pferdchen' },
+    magenta: { name: 'Magenta', hex: '#d946a0', unit: 'magenta units.png',castle: 'magenta carstle.png',group: 'margenta SpookieUnicorn.png', label: 'Spuk-Einhorn' },
+    rosa:    { name: 'Rosa',    hex: '#f472b6', unit: 'rosa units.png',   castle: 'rosa carstle.png',   group: 'rosa CloudBirdPiraten.png',   label: 'Wolkenvogel-Piraten' }
+  };
+  const ALL_TEAMS = ['red','blue','green','yellow','lila','turkis','magenta','rosa'];
+  const BOARD_TEAMS = ['red','blue','green','yellow','lila','turkis']; // 6 von 8, siehe Kopfkommentar
+  const MY_TEAM = 'red';
+  const GRID_ROWS = 13, GRID_COLS = 13;
+
+  function esrc(name) { return encodeURI(name); }
+
+  /* ─── Galerie: alle 8 Fraktionen einmal, mit Original-Artwork ── */
+  (function buildGallery() {
+    const el = document.getElementById('cmGallery');
+    el.innerHTML = ALL_TEAMS.map(function (key) {
+      const t = TEAM_DEFS[key];
+      return '<div class="cm-gcard" style="--team:' + t.hex + '">' +
+        '<div class="cm-gcastle"><img src="' + esrc(t.castle) + '" alt=""></div>' +
+        '<div class="cm-gunit"><img src="' + esrc(t.unit) + '" alt=""></div>' +
+        '<div class="cm-ggroup"><img src="' + esrc(t.group) + '" alt=""></div>' +
+        '<div class="cm-gname">' + t.name + '</div>' +
+        '<div class="cm-glabel">' + t.label + '</div>' +
+      '</div>';
+    }).join('');
+  })();
+
+  /* ─── Seeded RNG — deterministisch, damit das Demo-Feld bei
+     jedem Wechsel/Resize gleich aussieht statt neu zu würfeln. ── */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  /* ─── Territorium: gleiche Geometrie wie im Prototyp (Vieleck
+     aus Kastellen, gültige Fläche per Punkt-in-Polygon), aber die
+     Aufteilung selbst ist eine echte Mehrquellen-Flutung von allen
+     Burgen gleichzeitig (BFS ring-für-ring, Reihenfolge gemischt)
+     statt Round-Robin — kein Feld bleibt neutral, jedes gehört dem
+     nächstgelegenen Schloss. Bis zu 3 Einheit-Positionen je Team
+     werden HIER schon gezogen (nicht erst beim Zeichnen), damit ein
+     Re-Render (Wechsel/Resize/Vollbild) nicht plötzlich andere
+     Felder bevölkert. */
+  function buildTerritory(rows, cols, teamKeys, seed) {
+    const rnd = mulberry32(seed);
+    const n = teamKeys.length;
+    const centerR = (rows - 1) / 2, centerC = (cols - 1) / 2;
+
+    function vertices(sides, radius) {
+      const startAngle = (sides % 2 !== 0) ? -Math.PI / 2 : -Math.PI / sides;
+      const out = [];
+      for (let i = 0; i < sides; i++) {
+        const angle = startAngle + i * 2 * Math.PI / sides;
+        out.push({ r: centerR + radius * Math.sin(angle), c: centerC + radius * Math.cos(angle) });
+      }
+      return out;
+    }
+    function inPoly(r, c, verts) {
+      let inside = false;
+      for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) {
+        const xi = verts[i].c, yi = verts[i].r, xj = verts[j].c, yj = verts[j].r;
+        const hit = ((yi > r) !== (yj > r)) && (c < (xj - xi) * (r - yi) / (yj - yi) + xi);
+        if (hit) inside = !inside;
+      }
+      return inside;
+    }
+
+    const targetTotal = n * 11;
+    let bestR = 3, bestDiff = 1e9, bestVerts = null;
+    for (let r = 1.6; r <= 5.4; r += 0.1) {
+      const v = vertices(n, r);
+      let cnt = 0;
+      for (let rr = 0; rr < rows; rr++) for (let cc = 0; cc < cols; cc++) if (inPoly(rr, cc, v)) cnt++;
+      const diff = Math.abs(cnt - targetTotal);
+      if (diff < bestDiff) { bestDiff = diff; bestR = r; bestVerts = v; }
+    }
+
+    const valid = [];
+    for (let r = 0; r < rows; r++) { valid[r] = []; for (let c = 0; c < cols; c++) valid[r][c] = inPoly(r, c, bestVerts); }
+
+    const castleVerts = vertices(n, bestR * 0.66);
+    const owner = []; for (let r = 0; r < rows; r++) owner[r] = new Array(cols).fill(null);
+    const castles = {};
+    let front = [];
+    teamKeys.forEach(function (team, i) {
+      const cv = castleVerts[i];
+      const cr = Math.max(1, Math.min(rows - 2, Math.round(cv.r)));
+      const cc = Math.max(1, Math.min(cols - 2, Math.round(cv.c)));
+      valid[cr][cc] = true;
+      owner[cr][cc] = team;
+      castles[team] = { r: cr, c: cc };
+      front.push({ r: cr, c: cc, team: team });
+    });
+
+    function neighbors(r, c) {
+      const dirsEven = [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
+      const dirsOdd  = [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
+      const dirs = (r % 2 === 1) ? dirsOdd : dirsEven;
+      const out = [];
+      dirs.forEach(function (d) {
+        const nr = r + d[0], nc = c + d[1];
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) out.push({ r: nr, c: nc });
+      });
+      return out;
+    }
+
+    while (front.length) {
+      for (let i = front.length - 1; i > 0; i--) {
+        const j = Math.floor(rnd() * (i + 1));
+        const tmp = front[i]; front[i] = front[j]; front[j] = tmp;
+      }
+      const next = [];
+      front.forEach(function (f) {
+        neighbors(f.r, f.c).forEach(function (nb) {
+          if (valid[nb.r][nb.c] && !owner[nb.r][nb.c]) {
+            owner[nb.r][nb.c] = f.team;
+            next.push({ r: nb.r, c: nb.c, team: f.team });
+          }
+        });
+      });
+      front = next;
+    }
+
+    const tiles = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      if (valid[r][c] && owner[r][c]) {
+        const cst = castles[owner[r][c]];
+        tiles.push({ r: r, c: c, team: owner[r][c], castle: (cst.r === r && cst.c === c) });
+      }
+    }
+
+    // bis zu 3 Positionen je Team für wandernde Einheiten (nie das Burgfeld)
+    const byTeam = {};
+    tiles.forEach(function (t) { if (!t.castle) (byTeam[t.team] = byTeam[t.team] || []).push(t); });
+    const picks = {};
+    Object.keys(byTeam).forEach(function (team) {
+      const pool = byTeam[team].slice();
+      const chosen = [];
+      for (let k = 0; k < 3 && pool.length; k++) {
+        const idx = Math.floor(rnd() * pool.length);
+        chosen.push(pool.splice(idx, 1)[0]);
+      }
+      picks[team] = chosen;
+    });
+
+    return { tiles: tiles, castles: castles, picks: picks };
+  }
+
+  const TERRITORY = buildTerritory(GRID_ROWS, GRID_COLS, BOARD_TEAMS, 1337);
+
+  /* ─── Zeichnen: Hex-Grid als SVG, Burg + Einheiten als absolut
+     positionierte <img> obendrüber (dieselbe Mittelpunkt-Formel). ── */
+  function renderMap(container, tiles, castles, picks, opts) {
+    const rows = opts.rows, cols = opts.cols;
+    const W = container.clientWidth, H = container.clientHeight;
+    if (W < 10 || H < 10) return;
+    const hexR = Math.min(W / ((cols + 0.5) * Math.sqrt(3)), H / ((rows + 0.5) * 1.5));
+    const hexW = Math.sqrt(3) * hexR, hexH = 2 * hexR;
+
+    function center(r, c) {
+      const xOff = (r % 2 === 1) ? hexW / 2 : 0;
+      return { x: (c + 0.5) * hexW + xOff + (W - cols * hexW) / 2, y: (r + 0.5) * (hexH * 0.75) + (H - rows * hexH * 0.75) / 2 };
+    }
+
+    let poly = '';
+    tiles.forEach(function (t) {
+      const p = center(t.r, t.c);
+      const pts = [];
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 3 * i - Math.PI / 6;
+        pts.push((p.x + (hexR - 1.5) * Math.cos(a)).toFixed(1) + ',' + (p.y + (hexR - 1.5) * Math.sin(a)).toFixed(1));
+      }
+      poly += '<polygon class="cm-hex" points="' + pts.join(' ') + '" fill="' + TEAM_DEFS[t.team].hex + '"></polygon>';
+    });
+    const svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="cm-hexsvg">' + poly + '</svg>';
+
+    let icons = '';
+    if (opts.showIcons) {
+      Object.keys(castles).forEach(function (team) {
+        const p = center(castles[team].r, castles[team].c);
+        const size = hexR * 2.5;
+        icons += '<div class="cm-castle" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + size + 'px;height:' + size + 'px;--team:' + TEAM_DEFS[team].hex + '">' +
+          '<span class="cm-castletag">' + TEAM_DEFS[team].name + '</span>' +
+          '<img src="' + esrc(TEAM_DEFS[team].castle) + '" alt="">' +
+        '</div>';
+      });
+      Object.keys(picks || {}).forEach(function (team) {
+        (picks[team] || []).forEach(function (t, i) {
+          const p = center(t.r, t.c);
+          const size = hexR * 1.5;
+          icons += '<div class="cm-unit" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + size + 'px;height:' + size + 'px">' +
+            '<div class="cm-unitbob" style="animation-delay:' + (i * 0.4) + 's"><img src="' + esrc(TEAM_DEFS[team].unit) + '" alt=""></div>' +
+          '</div>';
+        });
+      });
+    }
+    container.innerHTML = svg + '<div class="cm-iconlayer">' + icons + '</div>';
+  }
+
+  /* ─── Re-Render bei Größenänderung (Wechsel aus [hidden], Resize,
+     Vollbild) — derselbe Grundsatz wie fitPresenterMap() im echten
+     tool.js: die Größe kommt vom Container, nicht von einer festen
+     Zahl im Skript. */
+  const mapRegistry = new Map();
+  const ro = new ResizeObserver(function (entries) {
+    entries.forEach(function (entry) {
+      const data = mapRegistry.get(entry.target);
+      if (!data) return;
+      renderMap(entry.target, data.tiles, data.castles, data.picks, data.opts);
+    });
+  });
+  function registerMap(el, territory, opts) {
+    mapRegistry.set(el, { tiles: territory.tiles, castles: territory.castles, picks: territory.picks, opts: opts });
+    ro.observe(el);
+  }
+  document.addEventListener('fullscreenchange', function () {
+    requestAnimationFrame(function () {
+      mapRegistry.forEach(function (data, el) {
+        if (el.clientWidth > 10 && el.clientHeight > 10) renderMap(el, data.tiles, data.castles, data.picks, data.opts);
+      });
+    });
+  });
+
+  function ringSVG(percent, size, thickness, label) {
+    const r = (size / 2) - thickness / 2 - 1;
+    const c = 2 * Math.PI * r;
+    const off = c * (1 - Math.max(0, Math.min(1, percent)));
+    return '<svg viewBox="0 0 ' + size + ' ' + size + '" width="' + size + '" height="' + size + '" class="cm-ringsvg">' +
+      '<circle cx="' + (size / 2) + '" cy="' + (size / 2) + '" r="' + r + '" class="cm-ringtrack" stroke-width="' + thickness + '" fill="none"/>' +
+      '<circle cx="' + (size / 2) + '" cy="' + (size / 2) + '" r="' + r + '" class="cm-ringbar" stroke-width="' + thickness + '" fill="none" stroke-dasharray="' + c.toFixed(1) + '" stroke-dashoffset="' + off.toFixed(1) + '" transform="rotate(-90 ' + (size / 2) + ' ' + (size / 2) + ')"/>' +
+    '</svg><span class="cm-ringlabel">' + label + '</span>';
+  }
+
+  function rosterCardHTML(team, count) {
+    const t = TEAM_DEFS[team];
+    return '<div class="cm-rcard" style="--team:' + t.hex + '">' +
+      '<div class="cm-rthumb"><img src="' + esrc(t.unit) + '" alt=""></div>' +
+      '<div class="cm-rinfo"><span class="cm-rname">' + t.name + '</span><span class="cm-rsub">' + t.label + '</span></div>' +
+      '<span class="cm-rcount">' + count + '</span>' +
+    '</div>';
+  }
+
+  /* ─── Vier Richtungen ─────────────────────────────────────────── */
+  const VARIANTS = [
+    {
+      key: 'hud', num: '01', title: 'Kommandobrücke',
+      desc: 'Dunkles taktisches HUD: Glaspanels, Teamfarbe als Leuchtkontur, angeschnittene Ecken wie ein Radarschirm.',
+      specs: [['Schrift', 'Rajdhani · JetBrains Mono'], ['Farbwelt', 'Fast-Schwarz + Team-Neon'], ['Form', 'Angeschnittene Ecken, dünne Konturen'], ['Stimmung', 'Kontrollraum, E-Sport-Übertragung']],
+      note: 'Passt für den Beamer im abgedunkelten Raum — dieselbe Überlegung wie bei der Wortwolke: eine helle Fläche blendet, hier bleibt fast alles dunkel und nur die Teamfarbe leuchtet. Auf dem Handy wirkt „Hologramm-Einheit" evtl. distanziert, statt dass die Klasse ihre eigene Einheit sofort mag.'
+    },
+    {
+      key: 'storybook', num: '02', title: 'Wimpelschlacht',
+      desc: 'Comic-Konturen wie das Artwork selbst: dicke schwarze Linien, Wimpel statt Chips, ein Medaillon für die eigene Einheit.',
+      specs: [['Schrift', 'Baloo 2 · Figtree'], ['Farbwelt', 'Tiefes Schiefergrau + Teamfarbe'], ['Form', 'Dicke Konturen, Wimpel-Zacken'], ['Stimmung', 'Bilderbuch-Schlacht, kindgerecht']],
+      note: 'Nimmt den Zeichenstil der Sprites ernst — die Oberfläche sieht aus, als käme sie aus demselben Bilderbuch wie Toast-Ritter und Robo-Enten. Am meisten Eigencharakter, aber auch am weitesten vom aktuellen MPSkills-Kleid entfernt.'
+    },
+    {
+      key: 'neon', num: '03', title: 'Arena-Neon',
+      desc: 'Satte Verläufe, dicke weiße Sticker-Kanten, glänzende Pillen-Knöpfe — die Sprache von Handyspiel-Arenen.',
+      specs: [['Schrift', 'Fredoka · Sora'], ['Farbwelt', 'Radiale Team-Verläufe auf Dunkel'], ['Form', 'Sticker-Rahmen, dicke Rundungen'], ['Stimmung', 'Turnier-Energie, laut und bunt']],
+      note: 'Am meisten „Handyspiel" von allen vieren — passend, wenn die Klasse das ausdrücklich als Wettkampf erleben soll. Am Beamer in einem hellen Klassenzimmer ist Dunkel-auf-Dunkel eine bewusste Wette.'
+    },
+    {
+      key: 'clean', num: '04', title: 'MPSkills-Konform',
+      desc: 'Bleibt im echten Kleid des Werkzeugkastens (Outfit, große Radien, ruhige Flächen) — nur die Teamfarbe ist neu.',
+      specs: [['Schrift', 'Outfit'], ['Farbwelt', 'Kühles Grau + Teamfarbe als einziger Akzent'], ['Form', 'Radien 12 · 18 · 24 wie im echten style.css'], ['Stimmung', 'Werkzeug, nicht Jahrmarkt']],
+      note: 'Am wenigsten Aufwand, am wenigsten Risiko: sieht aus, als hätte es schon immer zu MPSkills gehört. Dafür auch am wenigsten „Spielgefühl" — für ein Team-gegen-Team-Duell evtl. zu zurückhaltend.'
+    }
+  ];
+
+  const container = document.getElementById('cmVariants');
+  const tpl = document.getElementById('cmSkeleton');
+  const counts = {};
+  TERRITORY.tiles.forEach(function (t) { counts[t.team] = (counts[t.team] || 0) + 1; });
+
+  const switchEl = document.getElementById('srSwitch');
+  const wraps = [];
+
+  VARIANTS.forEach(function (cfg, idx) {
+    const node = tpl.content.cloneNode(true);
+    const wrap = node.querySelector('.cm-varwrap');
+    const demo = wrap.querySelector('.cm-demo');
+    demo.classList.add('cm-demo--' + cfg.key);
+
+    wrap.querySelector('[data-num]').textContent = cfg.num;
+    wrap.querySelector('[data-title]').textContent = cfg.title;
+    wrap.querySelector('[data-desc]').textContent = cfg.desc;
+    wrap.querySelector('[data-note]').textContent = cfg.note;
+    wrap.querySelector('[data-specs]').innerHTML = cfg.specs.map(function (s) {
+      return '<div class="cm-vspec"><span class="cm-vspeclabel">' + s[0] + '</span><span class="cm-vspecval">' + s[1] + '</span></div>';
+    }).join('');
+
+    const rosterLeft = wrap.querySelector('[data-roster="left"]');
+    const rosterRight = wrap.querySelector('[data-roster="right"]');
+    BOARD_TEAMS.forEach(function (team, i) {
+      const html = rosterCardHTML(team, counts[team] || 0);
+      (i < 3 ? rosterLeft : rosterRight).insertAdjacentHTML('beforeend', html);
+    });
+
+    registerMap(wrap.querySelector('[data-map]'), TERRITORY, { rows: GRID_ROWS, cols: GRID_COLS, showIcons: true });
+    wrap.querySelector('[data-ring]').innerHTML = ringSVG(0.62, 46, 5, '1:47');
+
+    const phone = wrap.querySelector('.cm-phone');
+    phone.style.setProperty('--team', TEAM_DEFS[MY_TEAM].hex);
+    wrap.querySelector('[data-teampill]').textContent = 'Team ' + TEAM_DEFS[MY_TEAM].name;
+    wrap.querySelector('[data-streak]').textContent = '🔥 4';
+    wrap.querySelector('[data-hero-img]').src = esrc(TEAM_DEFS[MY_TEAM].unit);
+    wrap.querySelector('[data-hero-label]').textContent = TEAM_DEFS[MY_TEAM].label;
+    registerMap(wrap.querySelector('[data-mapmini]'), TERRITORY, { rows: GRID_ROWS, cols: GRID_COLS, showIcons: true });
+    wrap.querySelector('[data-ring2]').innerHTML = ringSVG(0.4, 34, 4, '🔥4');
+
+    container.appendChild(wrap);
+    wraps.push(wrap);
+
+    const btn = document.createElement('button');
+    btn.className = 'sr-sw' + (idx === 0 ? ' on' : '');
+    btn.innerHTML = '<i style="background:' + TEAM_DEFS[BOARD_TEAMS[idx % BOARD_TEAMS.length]].hex + '"></i>' + cfg.num + ' · ' + cfg.title;
+    btn.addEventListener('click', function () {
+      wraps.forEach(function (w, i) { w.hidden = i !== idx; });
+      Array.prototype.forEach.call(switchEl.children, function (b, i) { b.classList.toggle('on', i === idx); });
+      window.scrollTo({ top: wrap.getBoundingClientRect().top + window.scrollY - 70, behavior: 'smooth' });
+    });
+    switchEl.appendChild(btn);
+  });
+  wraps.forEach(function (w, i) { w.hidden = i !== 0; });
+
+  /* ─── Vollbild — echt verdrahtet, nicht nur eine Attrappe. Der
+     ganze Frame geht in Fullscreen (Karte + Rosterspalten bzw.
+     Handy-Kasten gehen mit), nicht nur das Canvas. */
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-fullscreen]');
+    if (!btn) return;
+    const frame = btn.closest('[data-frame]');
+    if (!frame) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else if (frame.requestFullscreen) {
+      frame.requestFullscreen().catch(function () { /* im Showroom kein Problem, einfach ignorieren */ });
+    }
+  });
+})();
+</script>
+</body>
+</html>

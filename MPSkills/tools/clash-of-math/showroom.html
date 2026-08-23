@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kingdoms of Mathoria — UI-Showroom v4</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Cinzel:wght@600;700;800&family=Nunito:wght@400;600;700;800;900&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   Kingdoms of Mathoria — UI-SHOWROOM, vierte Runde — nur die Beamer-Ansicht
+   ══════════════════════════════════════════════════════════════════
+   Zwei echte Bugs aus Runde 3 gefixt, nicht nur Kosmetik:
+
+   (1) FIGUREN STANDEN NICHT AUF IHRER KACHEL. Ursache war NICHT nur
+       die Sprite-Zentrierung, sondern vor allem ein CSS-Kollisions-
+       Bug: `.cm-sprite` setzte `transform: translate(-50%,-50%)`,
+       aber `.cm-sprite--castle`/`--unit` hatten zusätzlich eine
+       Animation, die ebenfalls die `transform`-Eigenschaft animiert
+       (`scale(1)` / `translateY(...)`). Eine CSS-Animation ERSETZT
+       den gesamten `transform`-Wert für die Dauer der Animation,
+       sie kombiniert nicht mit dem statischen Wert — die Zentrierung
+       ging dadurch komplett verloren, und jede Figur hing mit ihrer
+       Boxecke (statt Boxmitte) auf dem Kachel-Mittelpunkt: sichtbar
+       nach UNTEN UND RECHTS versetzt, exakt wie gemeldet. Fix: Position
+       (links/oben + Zentrierung) und Animation (Wippen/Atmen) sitzen
+       jetzt auf zwei VERSCHACHTELTEN Elementen, die sich nicht mehr
+       in die Quere kommen.
+   (2) Die Original-PNGs hatten sehr unterschiedliche transparente
+       Ränder (z. B. beim Ritter fast nur oben, bei der Burg unten
+       kaum welche) — das schob die sichtbare Figur zusätzlich aus der
+       Boxmitte. Alle 32 Sprites in sprites/ wurden einmalig auf ihre
+       sichtbare Bounding-Box zugeschnitten (+8px Puffer). Jetzt sitzt
+       jede Figur mit den FÜSSEN exakt auf dem Kachel-Mittelpunkt
+       (Bild unten-mittig verankert statt Boxmitte) — „steht" auf dem
+       Feld, statt mit der Körpermitte drüber zu schweben.
+   (3) Bildpfade zeigen jetzt auf sprites/ (Sönke hat alle Bilder dort
+       einsortiert).
+   (4) NEU: Territoriums-Umrandung — jede Fraktion bekommt eine dicke
+       Grenzlinie in der eigenen (abgedunkelten) Farbe um ihr GESAMTES
+       Gebiet, nicht nur um einzelne Felder. Berechnet aus den echten
+       Nachbarschaftskanten (kein Bild, reines SVG-Path).
+   (5) Drei NEUE Varianten statt der drei aus Runde 3 (die bleiben im
+       Git-Verlauf erhalten) — „Weiches Licht" war nah dran, aber
+       Sönke wollte mehr Kontrast/Textur. Diesmal: eine ruhige
+       Weiterentwicklung, eine kontrastreiche „Spiele-UI"-Variante,
+       und eine WIRKLICH fantasy-artige Variante nach dem Vorbild des
+       Gamebanners („Kingdoms of Mathoria"). Nur die Beamer-Ansicht —
+       die Teilnehmer-/Handy-Ansicht kommt in einer eigenen Runde.
+   ══════════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nunito', system-ui, sans-serif;
+  background: #0b0d10;
+  color: #e7ebef;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 120px;
+}
+
+/* ── Kopfleiste (Showroom-Chrom, nicht Teil des Produkts) ────────── */
+.sr-top {
+  position: sticky; top: 0; z-index: 200;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 11px 20px;
+  background: rgba(11,13,16,.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #202329;
+}
+.sr-top h1 { font-size: .92rem; font-weight: 800; letter-spacing: -.01em; }
+.sr-top h1 span { color: #6f7a88; font-weight: 500; }
+.sr-switch { display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto; }
+.sr-sw {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 13px 6px 7px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #2a2f37; background: #16181d; color: #a6b0bc;
+  font-family: inherit; font-weight: 700; font-size: .8rem;
+  transition: background .13s, color .13s, border-color .13s;
+}
+.sr-sw:hover { background: #1d2027; color: #fff; }
+.sr-sw.on { background: #f0f3f7; border-color: #f0f3f7; color: #0e1014; }
+.sr-sw i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+
+/* ── Vorspann ─────────────────────────────────────────────────── */
+.sr-lead { max-width: 1240px; margin: 34px auto 0; padding: 0 22px; }
+.sr-lead h2 { font-size: clamp(1.5rem, 3.4vw, 2.1rem); font-weight: 800; letter-spacing: -.025em; }
+.sr-lead p { color: #8d97a4; margin-top: 10px; max-width: 78ch; line-height: 1.6; font-size: .95rem; }
+.sr-lead p b { color: #cfd6de; font-weight: 700; }
+.sr-fixes { list-style: none; display: grid; gap: 7px; margin: 16px 0 4px; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); max-width: 1140px; }
+.sr-fixes li { font-size: .86rem; color: #b7c0ca; padding-left: 22px; position: relative; line-height: 1.45; }
+.sr-fixes li::before { content: '✓'; position: absolute; left: 0; color: #2ee8a5; font-weight: 800; }
+
+/* ── Referenzbild (Gamebanner) ───────────────────────────────────── */
+.sr-ref { max-width: 1240px; margin: 20px auto 0; padding: 0 22px; display: flex; align-items: center; gap: 14px; }
+.sr-ref img { width: 260px; max-width: 40vw; border-radius: 12px; border: 1px solid #2a2f37; }
+.sr-ref p { font-size: .8rem; color: #6b7581; max-width: 46ch; line-height: 1.5; }
+
+/* ── Fraktions-Galerie ────────────────────────────────────────── */
+.cm-gallery {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(148px,1fr)); gap: 12px;
+  margin: 22px auto 0; max-width: 1240px; padding: 0 22px;
+}
+.cm-gcard {
+  background: #12151a; border: 1px solid #232830; border-radius: 14px;
+  padding: 10px; display: flex; flex-direction: column; align-items: center;
+  border-top: 3px solid var(--team);
+}
+.cm-gcastle { width: 100%; height: 72px; display: flex; align-items: center; justify-content: center; }
+.cm-gcastle img { max-height: 100%; max-width: 100%; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,.5)); }
+.cm-gunit { width: 50px; height: 50px; margin-top: -8px; }
+.cm-gunit img { width: 100%; height: 100%; object-fit: contain; }
+.cm-ggroup { width: 100%; height: 30px; opacity: .82; margin-top: 2px; }
+.cm-ggroup img { width: 100%; height: 100%; object-fit: contain; }
+.cm-gname { font-weight: 800; font-size: .84rem; margin-top: 4px; }
+.cm-glabel { font-size: .66rem; color: #8d97a4; text-align: center; }
+.cm-gcap { max-width: 1240px; margin: 10px auto 0; padding: 0 22px; font-size: .78rem; color: #6b7581; }
+
+/* ── Eine Variante ────────────────────────────────────────────── */
+.cm-varwrap { max-width: 1520px; margin: 0 auto; padding: 0 22px; }
+.cm-varwrap[hidden] { display: none; }
+
+.cm-vhead { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin: 50px 0 12px; }
+.cm-vnum { font-size: 2.8rem; font-weight: 900; line-height: .8; color: #262c34; letter-spacing: -.03em; font-family: 'Baloo 2', sans-serif; }
+.cm-vheadtxt { flex: 1 1 260px; }
+.cm-vtitle { font-size: 1.32rem; font-weight: 800; letter-spacing: -.015em; color: #f2f5f8; font-family: 'Baloo 2', sans-serif; }
+.cm-vdesc { color: #8d97a4; font-size: .92rem; margin-top: 3px; max-width: 68ch; }
+.cm-vnote { margin: 16px 0 6px; font-size: .85rem; color: #939da8; max-width: 84ch; line-height: 1.6; border-left: 2px solid #333a44; padding-left: 13px; }
+
+/* ══════════════════════════════════════════════════════════════════
+   DAS SKELETT — gemeinsam für alle drei, nur Beamer (kein Handy).
+   ══════════════════════════════════════════════════════════════════ */
+.cm-demo {
+  --font-display: 'Baloo 2', sans-serif;
+  --font-body:    'Nunito', sans-serif;
+  --stage-bg:     #eef1ee;
+  --ground:       #eef1ee;
+  --panel:        #ffffff;
+  --panel-2:      #f6f8f6;
+  --panel-border: #e2e8e2;
+  --panel-shadow: 0 14px 32px rgba(20,30,20,.10);
+  --ink:        #263029;
+  --ink-soft:   #6d786f;
+  --ink-faint:  #9aa39b;
+  --hex-tint:   30%;
+  --hex-stroke: rgba(255,255,255,.5);
+  --hex-stroke-w: 2;
+  --hex-filter: none;
+  --sprite-shadow: drop-shadow(0 8px 8px rgba(20,30,20,.30));
+  --border-w: 6;
+  --border-op: 1;
+  --fab-bg: #ffffff;
+  --fab-ink: #263029;
+  --fab-border: 1px solid #e2e8e2;
+  --ring-track: #e2e8e2;
+  --ring-accent: #00b37e;
+  font-family: var(--font-body);
+  position: relative;
+}
+
+.cm-stage {
+  position: relative;
+  display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start;
+  padding: 26px; border-radius: 28px;
+  background: var(--stage-bg);
+}
+
+/* ── Beamer / Board — die einzige Ansicht dieser Runde ───────────── */
+.cm-frame--board {
+  position: relative;
+  flex: 1 1 100%; max-width: 1400px; margin: 0 auto;
+  background: var(--panel); border: 1px solid var(--panel-border);
+  border-radius: 28px; box-shadow: var(--panel-shadow);
+  padding: 20px;
+}
+.cm-boardtop { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.cm-boardtitle { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; color: var(--ink); }
+.cm-boardphase {
+  font-size: .74rem; font-weight: 700; color: var(--ink-soft);
+  padding: 4px 12px; border-radius: 999px;
+  background: var(--panel-2); border: 1px solid var(--panel-border);
+}
+.cm-boardtop .cm-ring { margin-left: auto; }
+
+.cm-arena { display: flex; align-items: stretch; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.cm-roster { flex: 0 0 158px; display: flex; flex-direction: column; gap: 7px; }
+.cm-mapwrap {
+  position: relative; flex: 4 1 780px; max-width: 900px; aspect-ratio: 1 / 1;
+  border-radius: 22px;
+  background: var(--ground);
+  border: 1px solid var(--panel-border);
+  overflow: visible; /* Sprites dürfen bewusst über die Kachel hinausragen */
+}
+.cm-mapinner { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; }
+.cm-hexsvg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cm-hex {
+  fill: color-mix(in srgb, var(--raw) var(--hex-tint), white);
+  stroke: var(--hex-stroke); stroke-width: var(--hex-stroke-w);
+  filter: var(--hex-filter);
+}
+/* Territoriums-Umrandung: eine dicke Linie je Fraktion um ihr GANZES
+   Gebiet, aus den echten Nachbarschaftskanten berechnet. */
+.cm-border {
+  fill: none; stroke-linecap: round;
+  stroke: color-mix(in srgb, var(--raw) 72%, black);
+  stroke-width: var(--border-w);
+  opacity: var(--border-op);
+}
+.cm-border--inner {
+  stroke: color-mix(in srgb, var(--raw) 55%, white);
+  stroke-width: calc(var(--border-w) * 0.46);
+}
+.cm-iconlayer { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+
+/* Sprites: Position/Zentrierung und Animation sitzen auf ZWEI
+   verschachtelten Elementen, damit die CSS-Animation (die die
+   `transform`-Eigenschaft ersetzt statt kombiniert) die Zentrierung
+   nicht mehr auffrisst — das war der eigentliche Positions-Bug. Der
+   äußere Anker sitzt außerdem UNTEN-MITTIG (nicht Boxmitte): nach dem
+   Zuschnitt der PNGs auf ihre Bounding-Box landen die „Füße" der
+   Figur exakt auf dem Kachel-Mittelpunkt. */
+.cm-sprite {
+  position: absolute; transform: translate(-50%, -100%);
+}
+.cm-spriteinner { display: block; height: 100%; filter: var(--sprite-shadow); }
+.cm-spriteinner img { display: block; height: 100%; width: auto; }
+/* Einheiten laufen ein bisschen hin und her — EINE Animation für X-
+   und Y-Bewegung zugleich (nicht zwei auf demselben `transform`,
+   das war ja der ursprüngliche Bug). Leicht asymmetrisch (nicht
+   0/50/100 spiegelsymmetrisch), damit es nicht wie ein Metronom
+   wirkt, wenn mehrere Einheiten mit Verzögerung nebeneinander laufen. */
+.cm-spriteinner--unit { animation: cmWander 4.6s ease-in-out infinite; }
+.cm-spriteinner--castle { animation: cmBreathe 5s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes cmWander {
+  0%   { transform: translate(0, 0); }
+  22%  { transform: translate(7px, -2px); }
+  48%  { transform: translate(9px, -5px); }
+  70%  { transform: translate(-6px, -3px); }
+  88%  { transform: translate(-8px, -1px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes cmBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.018); } }
+.cm-castlelabel {
+  position: absolute; transform: translate(-50%, -100%); white-space: nowrap;
+  font-family: var(--font-display); font-weight: 700; font-size: .82rem;
+  color: var(--raw); text-shadow: 0 1px 0 #fff, 0 0 8px rgba(255,255,255,.9), 0 0 2px rgba(255,255,255,.9);
+}
+.cm-groundglow {
+  position: absolute; transform: translate(-50%, -50%);
+  border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--raw) 55%, transparent) 0%, transparent 72%);
+  filter: blur(1px);
+}
+
+.cm-rcard { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 13px; background: var(--panel); border: 1px solid var(--panel-border); }
+.cm-rdot { width: 9px; height: 9px; border-radius: 50%; background: var(--team); flex: 0 0 auto; }
+.cm-rthumb { width: 28px; height: 28px; display: flex; align-items: flex-end; justify-content: center; flex: 0 0 auto; }
+.cm-rthumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.cm-rinfo { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.cm-rname { font-family: var(--font-display); font-weight: 700; font-size: .76rem; color: var(--ink); }
+.cm-rsub { font-size: .6rem; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm-rcount { font-family: var(--font-display); font-weight: 800; font-size: 1.02rem; color: var(--team); }
+
+.cm-fab {
+  width: 36px; height: 36px; border-radius: 12px;
+  background: var(--fab-bg); color: var(--fab-ink); border: var(--fab-border);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; flex: 0 0 auto;
+  box-shadow: 0 4px 10px rgba(20,30,20,.1);
+}
+.cm-fab:hover { filter: brightness(1.04); }
+.cm-fabicon { width: 18px; height: 18px; }
+
+.cm-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.cm-ringtrack { stroke: var(--ring-track); }
+.cm-ringbar { stroke: var(--ring-accent); stroke-linecap: round; }
+.cm-ringlabel { position: absolute; font-family: var(--font-display); font-weight: 700; white-space: nowrap; font-size: .7rem; color: var(--ink); }
+
+.cm-arenacap { margin-top: 12px; font-size: .76rem; color: var(--ink-faint); text-align: center; }
+
+.cm-frame--board:fullscreen {
+  display: flex; flex-direction: column; justify-content: center;
+  background: var(--stage-bg); width: 100vw; height: 100vh; max-width: none;
+  padding: 30px;
+}
+.cm-frame--board:fullscreen .cm-arena { flex: 1 1 auto; align-items: center; }
+.cm-frame--board:fullscreen .cm-mapwrap { max-width: min(88vh, 1200px); flex: 1 1 auto; }
+.cm-frame--board:fullscreen .cm-roster { flex: 0 0 180px; }
+.cm-frame--board:fullscreen .cm-rname { font-size: .9rem; }
+.cm-frame--board:fullscreen .cm-rcount { font-size: 1.3rem; }
+
+/* ══════════════════════════════════════════════════════════════════
+   D — Kartenrelief: Weiterentwicklung von „Weiches Licht". Gleiche
+   geprägte, ruhige Kachel-Technik — aber kühleres, nicht warmes/
+   beiges Papier, UND die Territoriums-Grenze übernimmt jetzt die
+   Aufgabe, die Fraktionen klar zu trennen, statt es allein der
+   (bewusst blassen) Kachelfarbe zu überlassen.
+   ══════════════════════════════════════════════════════════════════ */
+.cm-demo--relief {
+  --font-display: 'Nunito', sans-serif;
+  --font-body:    'Nunito', sans-serif;
+  --stage-bg: #eef1f5;
+  --ground: #eef1f5;
+  --panel: #fbfcfe;
+  --panel-2: #eef1f5;
+  --panel-border: #dde3ea;
+  --panel-shadow: 0 14px 30px rgba(20,30,45,.09);
+  --ink: #29323d;
+  --ink-soft: #75808d;
+  --ink-faint: #a4adb8;
+  --hex-tint: 15%;
+  --hex-stroke: rgba(255,255,255,.55);
+  --hex-stroke-w: 1;
+  --hex-filter: drop-shadow(-1px -1px 1px rgba(255,255,255,.9)) drop-shadow(2px 3px 4px rgba(30,40,60,.14));
+  --sprite-shadow: drop-shadow(0 8px 7px rgba(20,30,45,.24));
+  --border-w: 6;
+  --ring-track: #dde3ea;
+  --ring-accent: #3b7bd6;
+}
+.cm-demo--relief .cm-rcard,
+.cm-demo--relief .cm-mapwrap,
+.cm-demo--relief .cm-frame--board { box-shadow: -2px -2px 6px rgba(255,255,255,.8), 4px 6px 14px rgba(20,30,45,.08); border-color: transparent; }
+
+/* ══════════════════════════════════════════════════════════════════
+   E — Festungsbanner: kontrastreich, modern, dunkler Spielhintergrund
+   — kräftige, flache Teamfarben stechen darauf viel klarer hervor als
+   auf hellem Grund, dazu eine breite, leuchtende Territoriumsgrenze
+   wie eine Frontlinie. Am besten geeignet, wenn der Beamer-Raum nicht
+   abgedunkelt werden kann (hoher Kontrast trägt auch bei Umgebungslicht).
+   ══════════════════════════════════════════════════════════════════ */
+.cm-demo--bold {
+  --font-display: 'Baloo 2', sans-serif;
+  --font-body:    'Nunito', sans-serif;
+  --stage-bg: #10141c;
+  --ground: #171d28;
+  --panel: #0d1119;
+  --panel-2: #171d28;
+  --panel-border: #2a3242;
+  --panel-shadow: 0 18px 40px rgba(0,0,0,.5);
+  --ink: #eef2f8;
+  --ink-soft: #93a0b3;
+  --ink-faint: #5c6779;
+  --hex-tint: 88%;
+  --hex-stroke: rgba(255,255,255,.14);
+  --hex-stroke-w: 1.5;
+  --sprite-shadow: drop-shadow(0 6px 4px rgba(0,0,0,.55)) drop-shadow(0 0 16px rgba(0,0,0,.35));
+  --border-w: 7;
+  --ring-track: #2a3242;
+  --ring-accent: #ffb020;
+}
+.cm-demo--bold .cm-vnum { color: #232a36; }
+.cm-demo--bold .cm-border { stroke: color-mix(in srgb, var(--raw) 85%, white); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--raw) 70%, transparent)); }
+.cm-demo--bold .cm-castlelabel { color: color-mix(in srgb, var(--raw) 80%, white); text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(0,0,0,.7); }
+
+/* ══════════════════════════════════════════════════════════════════
+   F — Kingdoms of Mathoria: richtig fantasy, nach dem Gamebanner.
+   Gemalter Himmel/Landschaft-Hintergrund (geblurrt, als Kulisse hinter
+   der Karte), goldener Zierrahmen, Wappenbanner-Titel, Kacheln als
+   Gelände statt reiner Fläche, Territoriumsgrenze als doppelte
+   Königreichslinie (dunkles Umbra außen, heller Farbakzent innen).
+   ══════════════════════════════════════════════════════════════════ */
+.cm-demo--fantasy {
+  --font-display: 'Cinzel', serif;
+  --font-body:    'Nunito', sans-serif;
+  --stage-bg: #2a2115;
+  --ground: #d8c793;
+  --panel: #efe3c0;
+  --panel-2: #e4d5a8;
+  --panel-border: #a9863f;
+  --panel-shadow: 0 20px 44px rgba(0,0,0,.5);
+  --ink: #3a2b12;
+  --ink-soft: #6e572a;
+  --ink-faint: #927b4c;
+  --hex-tint: 54%;
+  --hex-stroke: rgba(58,38,12,.55);
+  --hex-stroke-w: 1.5;
+  --hex-filter: drop-shadow(-1px -1px 0 rgba(255,255,255,.18)) drop-shadow(1px 2px 2px rgba(30,20,5,.35));
+  --sprite-shadow: drop-shadow(0 8px 6px rgba(20,12,0,.45));
+  --border-w: 8;
+  --ring-track: #a9863f;
+  --ring-accent: #c4361f;
+}
+.cm-demo--fantasy .cm-hex { fill: color-mix(in srgb, var(--raw) var(--hex-tint), #8a9a5c); }
+.cm-demo--fantasy .cm-stage {
+  position: relative; overflow: hidden;
+  background: linear-gradient(180deg, #6f9fc9 0%, #e3b45f 55%, #a97a3a 100%);
+}
+.cm-demo--fantasy .cm-stage::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: url('Gamebanner.png');
+  background-size: cover; background-position: center 30%;
+  filter: blur(7px) saturate(1.05) brightness(.85);
+  transform: scale(1.08);
+}
+.cm-demo--fantasy .cm-stage::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 20%, rgba(0,0,0,0) 0%, rgba(20,12,0,.45) 100%);
+}
+.cm-demo--fantasy .cm-frame--board {
+  position: relative; z-index: 1;
+  border: 3px solid #caa457;
+  box-shadow: 0 0 0 2px #6b4a23 inset, 0 0 0 8px #2a2115 inset, 0 0 0 10px #caa457 inset, var(--panel-shadow);
+  padding: 26px 22px 22px;
+}
+.cm-fantasytitle {
+  position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+  z-index: 2; padding: 7px 26px; border-radius: 999px;
+  background: linear-gradient(180deg,#4a3216,#2a1c0c); border: 2px solid #caa457;
+  color: #f2dfae; font-family: 'Cinzel', serif; font-weight: 700; font-size: .8rem;
+  letter-spacing: .04em; white-space: nowrap; box-shadow: 0 6px 16px rgba(0,0,0,.4);
+}
+.cm-demo--fantasy .cm-boardtitle { font-family: 'Cinzel', serif; color: #4a3216; letter-spacing: .02em; }
+.cm-demo--fantasy .cm-boardphase { background: #e4d5a8; border-color: #a9863f; color: #6e572a; }
+.cm-demo--fantasy .cm-mapwrap { border: 2px solid #a9863f; }
+.cm-demo--fantasy .cm-rcard { border-color: #a9863f; background: #f4ead0; }
+.cm-demo--fantasy .cm-rname { font-family: 'Cinzel', serif; }
+.cm-demo--fantasy .cm-fab { background: #f4ead0; border-color: #a9863f; color: #4a3216; }
+.cm-demo--fantasy .cm-border--inner { stroke: color-mix(in srgb, var(--raw) 70%, #fff2c8); }
+.cm-demo--fantasy .cm-castlelabel {
+  color: #3a2b12; font-family: 'Cinzel', serif;
+  text-shadow: 0 1px 0 rgba(255,242,200,.9), 0 0 8px rgba(255,242,200,.95), 0 0 2px rgba(255,242,200,.95);
+}
+
+/* ── kleine Bildschirme ───────────────────────────────────────── */
+@media (max-width: 900px) {
+  .cm-arena { flex-direction: column; align-items: stretch; }
+  .cm-roster { flex-direction: row; flex-wrap: wrap; }
+  .cm-roster > .cm-rcard { flex: 1 1 150px; }
+  .cm-mapwrap { max-width: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="sr-top">
+  <h1>Kingdoms of Mathoria <span>· UI-Showroom v4 — nur Beamer · Variante 03 ist die entschiedene Richtung, jetzt live in tool.js</span></h1>
+  <div class="sr-switch" id="srSwitch"></div>
+</header>
+
+<section class="sr-lead">
+  <h2>Runde 4: zwei echte Bugs gefixt, Territoriumsgrenzen, drei neue Varianten</h2>
+  <p>
+    Die Figuren standen nicht auf ihrem Feld, weil die Zentrierung
+    (<b>translate(-50%,-50%)</b>) von der Wipp-/Atem-Animation auf
+    demselben Element überschrieben wurde — CSS-Animationen ersetzen
+    die <b>gesamte</b> transform-Eigenschaft, statt sich mit dem
+    statischen Wert zu kombinieren. Position und Animation sitzen jetzt
+    auf zwei verschachtelten Elementen. Zusätzlich waren die PNGs
+    höchst unterschiedlich stark „gepolstert" (transparenter Rand) —
+    alle 32 Sprites wurden auf ihre sichtbare Bounding-Box zugeschnitten
+    und werden jetzt <b>unten-mittig</b> verankert: die Füße stehen
+    exakt auf dem Kachel-Mittelpunkt. Bildpfade zeigen auf <b>sprites/</b>.
+  </p>
+  <ul class="sr-fixes">
+    <li><b>Positions-Bug behoben</b> — Ursache war eine CSS-Animation, die die Zentrierung überschrieb.</li>
+    <li><b>Alle Sprites zugeschnitten</b> — Figuren stehen jetzt mit den Füßen auf der Kachel-Mitte.</li>
+    <li><b>Pfade auf sprites/ korrigiert</b>, wie einsortiert.</li>
+    <li><b>Territoriums-Umrandung neu</b> — dicke Grenzlinie je Fraktion um das gesamte Gebiet.</li>
+    <li><b>3 neue Varianten</b>, eine davon richtig fantasy-artig nach dem Gamebanner-Vorbild.</li>
+  </ul>
+</section>
+
+<div class="sr-ref">
+  <img src="Gamebanner.png" alt="Kingdoms of Mathoria — Gamebanner">
+  <p>Stil-Referenz für Variante 03 „Kingdoms of Mathoria": warmes Licht, gemalte Landschaft, goldener Zierrahmen, Wappenbanner-Titel „Conquer. Calculate. Dominate."</p>
+</div>
+
+<div class="cm-gallery" id="cmGallery"></div>
+<p class="cm-gcap">Alle 8 Fraktionen mit Original-Artwork aus sprites/ — zugeschnitten, dieselben 8 stehen unten auf dem Testfeld.</p>
+
+<div id="cmVariants"></div>
+
+<template id="cmSkeleton">
+  <div class="cm-varwrap" hidden>
+    <div class="cm-demo">
+      <div class="cm-vhead">
+        <div class="cm-vnum" data-num></div>
+        <div class="cm-vheadtxt">
+          <h3 class="cm-vtitle" data-title></h3>
+          <p class="cm-vdesc" data-desc></p>
+        </div>
+      </div>
+
+      <div class="cm-stage">
+        <div class="cm-frame cm-frame--board" data-frame="board">
+          <div class="cm-boardtop">
+            <span class="cm-boardtitle">Kingdoms of Mathoria</span>
+            <span class="cm-boardphase">Runde läuft</span>
+            <div class="cm-ring cm-ring--corner" data-ring></div>
+            <button class="cm-fab" data-fullscreen type="button" aria-label="Vollbild" title="Vollbild">
+              <svg viewBox="0 0 24 24" class="cm-fabicon"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="cm-arena">
+            <div class="cm-roster cm-roster--left" data-roster="left"></div>
+            <div class="cm-mapwrap" data-map>
+              <div class="cm-mapinner"><svg class="cm-hexsvg" data-hexsvg></svg></div>
+              <div class="cm-iconlayer" data-icons></div>
+            </div>
+            <div class="cm-roster cm-roster--right" data-roster="right"></div>
+          </div>
+          <p class="cm-arenacap">Burg + bis zu 3 wandernde Einheiten je Team — Füße auf der Kachel-Mitte, Territorium umrandet.</p>
+        </div>
+      </div>
+
+      <p class="cm-vnote" data-note></p>
+    </div>
+  </div>
+</template>
+
+<script>
+(function () {
+  'use strict';
+
+  const TEAM_DEFS = {
+    red:     { name: 'Rot',     hex: '#ef4444', unit: 'red units.png',    castle: 'red carstle.png',    group: 'red ToastKnights.png',       label: 'Toast-Ritter' },
+    blue:    { name: 'Blau',    hex: '#3b82f6', unit: 'blue units.png',   castle: 'blue carstle.png',   group: 'blue roboDucks.png',         label: 'Robo-Enten' },
+    green:   { name: 'Grün',    hex: '#10b981', unit: 'green units.png',  castle: 'green carstle.png',  group: 'green BrokkoliGiraffen.png',  label: 'Brokkoli-Giraffen' },
+    yellow:  { name: 'Gelb',    hex: '#f59e0b', unit: 'yellow units.png', castle: 'yellow carstle.png', group: 'yellow PainingBunnies.png',   label: 'Mal-Hasen' },
+    lila:    { name: 'Lila',    hex: '#a855f7', unit: 'lila units.png',   castle: 'lila carstle.png',   group: 'lila cosmicCat.png',          label: 'Kosmische Katzen' },
+    turkis:  { name: 'Türkis',  hex: '#06b6d4', unit: 'türkis units.png', castle: 'türkis carstle.png', group: 'türkis OctoPferdchen.png',    label: 'Okto-Pferdchen' },
+    magenta: { name: 'Magenta', hex: '#d946a0', unit: 'magenta units.png',castle: 'magenta carstle.png',group: 'margenta SpookieUnicorn.png', label: 'Spuk-Einhorn' },
+    rosa:    { name: 'Rosa',    hex: '#f472b6', unit: 'rosa units.png',   castle: 'rosa carstle.png',   group: 'rosa CloudBirdPiraten.png',   label: 'Wolkenvogel-Piraten' }
+  };
+  const ALL_TEAMS = ['red','blue','green','yellow','lila','turkis','magenta','rosa'];
+  const BOARD_TEAMS = ALL_TEAMS;
+  const GRID_ROWS = 8, GRID_COLS = 8;
+  const SPRITE_DIR = 'sprites/';
+
+  function esrc(name) { return encodeURI(SPRITE_DIR + name); }
+
+  (function buildGallery() {
+    const el = document.getElementById('cmGallery');
+    el.innerHTML = ALL_TEAMS.map(function (key) {
+      const t = TEAM_DEFS[key];
+      return '<div class="cm-gcard" style="--team:' + t.hex + '">' +
+        '<div class="cm-gcastle"><img src="' + esrc(t.castle) + '" alt=""></div>' +
+        '<div class="cm-gunit"><img src="' + esrc(t.unit) + '" alt=""></div>' +
+        '<div class="cm-ggroup"><img src="' + esrc(t.group) + '" alt=""></div>' +
+        '<div class="cm-gname">' + t.name + '</div>' +
+        '<div class="cm-glabel">' + t.label + '</div>' +
+      '</div>';
+    }).join('');
+  })();
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  /* ─── Territorium: Vieleck aus Kastellen, Mehrquellen-Flutung —
+     unverändert aus Runde 3 (Geometrie steht, siehe git-Verlauf für
+     Details). ─────────────────────────────────────────────────── */
+  function buildTerritory(rows, cols, teamKeys, seed, perTeam) {
+    const rnd = mulberry32(seed);
+    const n = teamKeys.length;
+    const centerR = (rows - 1) / 2, centerC = (cols - 1) / 2;
+
+    function vertices(sides, radius) {
+      const startAngle = (sides % 2 !== 0) ? -Math.PI / 2 : -Math.PI / sides;
+      const out = [];
+      for (let i = 0; i < sides; i++) {
+        const angle = startAngle + i * 2 * Math.PI / sides;
+        out.push({ r: centerR + radius * Math.sin(angle), c: centerC + radius * Math.cos(angle) });
+      }
+      return out;
+    }
+    function inPoly(r, c, verts) {
+      let inside = false;
+      for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) {
+        const xi = verts[i].c, yi = verts[i].r, xj = verts[j].c, yj = verts[j].r;
+        const hit = ((yi > r) !== (yj > r)) && (c < (xj - xi) * (r - yi) / (yj - yi) + xi);
+        if (hit) inside = !inside;
+      }
+      return inside;
+    }
+
+    const targetTotal = n * perTeam;
+    let bestR = 3, bestDiff = 1e9, bestVerts = null;
+    for (let r = 1.0; r <= 4.2; r += 0.1) {
+      const v = vertices(n, r);
+      let cnt = 0;
+      for (let rr = 0; rr < rows; rr++) for (let cc = 0; cc < cols; cc++) if (inPoly(rr, cc, v)) cnt++;
+      const diff = Math.abs(cnt - targetTotal);
+      if (diff < bestDiff) { bestDiff = diff; bestR = r; bestVerts = v; }
+    }
+
+    const valid = [];
+    for (let r = 0; r < rows; r++) { valid[r] = []; for (let c = 0; c < cols; c++) valid[r][c] = inPoly(r, c, bestVerts); }
+
+    function neighbors(r, c) {
+      const dirsEven = [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
+      const dirsOdd  = [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
+      const dirs = (r % 2 === 1) ? dirsOdd : dirsEven;
+      const out = [];
+      dirs.forEach(function (d) {
+        const nr = r + d[0], nc = c + d[1];
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) out.push({ r: nr, c: nc });
+      });
+      return out;
+    }
+
+    const castleVerts = vertices(n, bestR * 0.6);
+    const owner = []; for (let r = 0; r < rows; r++) owner[r] = new Array(cols).fill(null);
+    const castles = {};
+    let front = [];
+    teamKeys.forEach(function (team, i) {
+      const cv = castleVerts[i];
+      let cr = Math.max(1, Math.min(rows - 2, Math.round(cv.r)));
+      let cc = Math.max(1, Math.min(cols - 2, Math.round(cv.c)));
+      if (owner[cr][cc]) {
+        const seen = new Set([cr + ',' + cc]);
+        let queue = neighbors(cr, cc);
+        let found = null;
+        while (queue.length && !found) {
+          const next = [];
+          for (let k = 0; k < queue.length; k++) {
+            const q = queue[k], key = q.r + ',' + q.c;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            if (!owner[q.r][q.c]) { found = q; break; }
+            next.push.apply(next, neighbors(q.r, q.c));
+          }
+          queue = next;
+        }
+        if (found) { cr = found.r; cc = found.c; }
+      }
+      valid[cr][cc] = true;
+      owner[cr][cc] = team;
+      castles[team] = { r: cr, c: cc };
+      front.push({ r: cr, c: cc, team: team });
+    });
+
+    while (front.length) {
+      for (let i = front.length - 1; i > 0; i--) {
+        const j = Math.floor(rnd() * (i + 1));
+        const tmp = front[i]; front[i] = front[j]; front[j] = tmp;
+      }
+      const next = [];
+      front.forEach(function (f) {
+        neighbors(f.r, f.c).forEach(function (nb) {
+          if (valid[nb.r][nb.c] && !owner[nb.r][nb.c]) {
+            owner[nb.r][nb.c] = f.team;
+            next.push({ r: nb.r, c: nb.c, team: f.team });
+          }
+        });
+      });
+      front = next;
+    }
+
+    const tiles = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      if (valid[r][c] && owner[r][c]) {
+        const cst = castles[owner[r][c]];
+        tiles.push({ r: r, c: c, team: owner[r][c], castle: (cst.r === r && cst.c === c) });
+      }
+    }
+
+    const byTeam = {};
+    tiles.forEach(function (t) { if (!t.castle) (byTeam[t.team] = byTeam[t.team] || []).push(t); });
+    const picks = {};
+    Object.keys(byTeam).forEach(function (team) {
+      const pool = byTeam[team].slice();
+      const chosen = [];
+      for (let k = 0; k < 3 && pool.length; k++) {
+        const idx = Math.floor(rnd() * pool.length);
+        chosen.push(pool.splice(idx, 1)[0]);
+      }
+      picks[team] = chosen;
+    });
+
+    return { tiles: tiles, castles: castles, picks: picks };
+  }
+
+  const TERRITORY = buildTerritory(GRID_ROWS, GRID_COLS, BOARD_TEAMS, 4242, 5);
+
+  /* ─── Territoriumsgrenze: für jede Kachelkante zum Nachbarn prüfen,
+     ob der Nachbar zum selben Team gehört. Wenn nicht (anderes Team
+     oder Kartenrand), ist das eine Außenkante des Gebiets — Endpunkte
+     der Sechseck-Kante über den Winkel zum Nachbarn bestimmen (robust,
+     unabhängig von der Reihenfolge in dirsEven/dirsOdd). ─────────── */
+  function computeBorderSegments(tiles, centerFn, hexR) {
+    const ownerMap = new Map();
+    tiles.forEach(function (t) { ownerMap.set(t.r + ',' + t.c, t.team); });
+    const dirsEven = [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
+    const dirsOdd  = [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
+    const segsByTeam = {};
+    tiles.forEach(function (t) {
+      const dirs = (t.r % 2 === 1) ? dirsOdd : dirsEven;
+      const p = centerFn(t.r, t.c);
+      dirs.forEach(function (d) {
+        const nr = t.r + d[0], nc = t.c + d[1];
+        const neighborTeam = ownerMap.get(nr + ',' + nc);
+        if (neighborTeam === t.team) return;
+        const np = centerFn(nr, nc);
+        const angleDeg = Math.atan2(np.y - p.y, np.x - p.x) * 180 / Math.PI;
+        let edgeIdx = Math.round(angleDeg / 60);
+        edgeIdx = ((edgeIdx % 6) + 6) % 6;
+        const a1 = Math.PI / 3 * edgeIdx - Math.PI / 6;
+        const a2 = Math.PI / 3 * (edgeIdx + 1) - Math.PI / 6;
+        const v1 = { x: p.x + hexR * Math.cos(a1), y: p.y + hexR * Math.sin(a1) };
+        const v2 = { x: p.x + hexR * Math.cos(a2), y: p.y + hexR * Math.sin(a2) };
+        (segsByTeam[t.team] = segsByTeam[t.team] || []).push([v1, v2]);
+      });
+    });
+    return segsByTeam;
+  }
+  function borderLayerHTML(segsByTeam, opts) {
+    let out = '';
+    Object.keys(segsByTeam).forEach(function (team) {
+      const d = segsByTeam[team].map(function (s) {
+        return 'M' + s[0].x.toFixed(1) + ',' + s[0].y.toFixed(1) + ' L' + s[1].x.toFixed(1) + ',' + s[1].y.toFixed(1);
+      }).join(' ');
+      const raw = TEAM_DEFS[team].hex;
+      out += '<path class="cm-border" d="' + d + '" style="--raw:' + raw + '"></path>';
+      if (opts.borderDouble) out += '<path class="cm-border cm-border--inner" d="' + d + '" style="--raw:' + raw + '"></path>';
+    });
+    return out;
+  }
+
+  /* ─── Zeichnen. Hex-Grid + Grenze als SVG, Sprites als plain <img>
+     im Icon-Layer darüber, unten-mittig verankert. ────────────────── */
+  function renderMap(container, tiles, castles, picks, opts) {
+    const rows = opts.rows, cols = opts.cols;
+    const W = container.clientWidth, H = container.clientHeight;
+    if (W < 10 || H < 10) return;
+    const hexR = Math.min(W / ((cols + 0.5) * Math.sqrt(3)), H / ((rows + 0.5) * 1.5));
+    const hexW = Math.sqrt(3) * hexR, hexH = 2 * hexR;
+    const gap = opts.gap != null ? opts.gap : 2;
+
+    function center(r, c) {
+      const xOff = (r % 2 === 1) ? hexW / 2 : 0;
+      return { x: (c + 0.5) * hexW + xOff + (W - cols * hexW) / 2, y: (r + 0.5) * (hexH * 0.75) + (H - rows * hexH * 0.75) / 2 };
+    }
+
+    const svgEl = container.querySelector('[data-hexsvg]');
+    const iconEl = container.querySelector('[data-icons]');
+    svgEl.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+    let poly = '';
+    tiles.forEach(function (t) {
+      const p = center(t.r, t.c);
+      const pts = [];
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 3 * i - Math.PI / 6;
+        pts.push((p.x + (hexR - gap) * Math.cos(a)).toFixed(1) + ',' + (p.y + (hexR - gap) * Math.sin(a)).toFixed(1));
+      }
+      poly += '<polygon class="cm-hex" points="' + pts.join(' ') + '" style="--raw:' + TEAM_DEFS[t.team].hex + '"></polygon>';
+    });
+
+    const segs = computeBorderSegments(tiles, center, hexR - Math.min(gap, 1));
+    svgEl.innerHTML = poly + borderLayerHTML(segs, opts);
+
+    let icons = '';
+    if (opts.showIcons) {
+      Object.keys(castles).forEach(function (team) {
+        const c = castles[team];
+        const p = center(c.r, c.c);
+        const h = hexR * 1.55;
+        const glow = hexR * 1.7;
+        const z = 1000 + c.r * 10 + 9;
+        const raw = TEAM_DEFS[team].hex;
+        if (opts.groundGlow) {
+          icons += '<div class="cm-groundglow" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + glow + 'px;height:' + (glow * 0.55) + 'px;--raw:' + raw + '"></div>';
+        }
+        icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + z + '">' +
+          '<div class="cm-spriteinner cm-spriteinner--castle"><img src="' + esrc(TEAM_DEFS[team].castle) + '" alt=""></div>' +
+        '</div>';
+        if (opts.labels !== false) {
+          icons += '<div class="cm-castlelabel" style="left:' + p.x + 'px;top:' + (p.y - h - 6) + 'px;--raw:' + raw + ';z-index:' + (z + 1) + '">' + TEAM_DEFS[team].name + '</div>';
+        }
+      });
+      Object.keys(picks || {}).forEach(function (team) {
+        (picks[team] || []).forEach(function (t, i) {
+          const p = center(t.r, t.c);
+          const h = hexR * 1.5;
+          const glow = hexR * 1.1;
+          const z = 1000 + t.r * 10 + 5;
+          const raw = TEAM_DEFS[team].hex;
+          if (opts.groundGlow) {
+            icons += '<div class="cm-groundglow" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + glow + 'px;height:' + (glow * 0.55) + 'px;--raw:' + raw + '"></div>';
+          }
+          icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + z + '">' +
+            '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + (i * 0.4) + 's"><img src="' + esrc(TEAM_DEFS[team].unit) + '" alt=""></div>' +
+          '</div>';
+        });
+      });
+    }
+    iconEl.innerHTML = icons;
+  }
+
+  const mapRegistry = new Map();
+  const ro = new ResizeObserver(function (entries) {
+    entries.forEach(function (entry) {
+      const data = mapRegistry.get(entry.target);
+      if (!data) return;
+      renderMap(entry.target, data.tiles, data.castles, data.picks, data.opts);
+    });
+  });
+  function registerMap(el, territory, opts) {
+    mapRegistry.set(el, { tiles: territory.tiles, castles: territory.castles, picks: territory.picks, opts: opts });
+    ro.observe(el);
+  }
+  document.addEventListener('fullscreenchange', function () {
+    requestAnimationFrame(function () {
+      mapRegistry.forEach(function (data, el) {
+        if (el.clientWidth > 10 && el.clientHeight > 10) renderMap(el, data.tiles, data.castles, data.picks, data.opts);
+      });
+    });
+  });
+
+  function ringSVG(percent, size, thickness, label) {
+    const r = (size / 2) - thickness / 2 - 1;
+    const c = 2 * Math.PI * r;
+    const off = c * (1 - Math.max(0, Math.min(1, percent)));
+    return '<svg viewBox="0 0 ' + size + ' ' + size + '" width="' + size + '" height="' + size + '" class="cm-ringsvg">' +
+      '<circle cx="' + (size / 2) + '" cy="' + (size / 2) + '" r="' + r + '" class="cm-ringtrack" stroke-width="' + thickness + '" fill="none"/>' +
+      '<circle cx="' + (size / 2) + '" cy="' + (size / 2) + '" r="' + r + '" class="cm-ringbar" stroke-width="' + thickness + '" fill="none" stroke-dasharray="' + c.toFixed(1) + '" stroke-dashoffset="' + off.toFixed(1) + '" transform="rotate(-90 ' + (size / 2) + ' ' + (size / 2) + ')"/>' +
+    '</svg><span class="cm-ringlabel">' + label + '</span>';
+  }
+
+  function rosterCardHTML(team, count) {
+    const t = TEAM_DEFS[team];
+    return '<div class="cm-rcard" style="--team:' + t.hex + '">' +
+      '<span class="cm-rdot"></span>' +
+      '<div class="cm-rthumb"><img src="' + esrc(t.unit) + '" alt=""></div>' +
+      '<div class="cm-rinfo"><span class="cm-rname">' + t.name + '</span><span class="cm-rsub">' + t.label + '</span></div>' +
+      '<span class="cm-rcount">' + count + '</span>' +
+    '</div>';
+  }
+
+  const VARIANTS = [
+    {
+      key: 'relief', num: '01', title: 'Kartenrelief',
+      desc: 'Weiterentwicklung von „Weiches Licht": dieselbe ruhige, geprägte Kachel-Technik, aber kühleres statt warm-beiges Papier — und die Fraktionsgrenze übernimmt jetzt die Aufgabe, Gebiete klar zu trennen.',
+      opts: { labels: true, gap: 3, groundGlow: true, borderDouble: false },
+      note: 'Ruhigste Variante der drei. Die Territoriumsgrenze macht den entscheidenden Unterschied zu Runde 3: Gebiete sind auf einen Blick erkennbar, obwohl die Kacheln selbst blass bleiben.'
+    },
+    {
+      key: 'bold', num: '02', title: 'Festungsbanner',
+      desc: 'Dunkler Spielgrund, kräftige flache Teamfarben, leuchtende Grenzlinie wie eine Frontlinie. Am kontrastreichsten — gut geeignet, wenn der Raum nicht abgedunkelt werden kann.',
+      opts: { labels: true, gap: 2, groundGlow: true, borderDouble: false },
+      note: 'Modernste, „spielhafteste" der drei UI-Sprachen — nah an dem, was aus Sicht der übrigen MPSkills-Werkzeuge (klar, kontrastreich) am ehesten passt.'
+    },
+    {
+      key: 'fantasy', num: '03', title: 'Kingdoms of Mathoria',
+      desc: 'Richtig fantasy-artig nach dem Gamebanner: gemalte Himmel/Landschafts-Kulisse, goldener Zierrahmen, Wappenbanner-Titel, Kacheln als Gelände statt reiner Fläche, Grenze als doppelte Königreichslinie.',
+      opts: { labels: true, gap: 2.5, groundGlow: true, borderDouble: true, fantasy: true },
+      note: 'Am aufwändigsten und am nächsten am Gamebanner-Look. Funktioniert am besten in Vollbild — der Rahmen und die Kulisse brauchen etwas Luft um das eigentliche Spielfeld.'
+    }
+  ];
+
+  const container = document.getElementById('cmVariants');
+  const tpl = document.getElementById('cmSkeleton');
+  const counts = {};
+  TERRITORY.tiles.forEach(function (t) { counts[t.team] = (counts[t.team] || 0) + 1; });
+
+  const switchEl = document.getElementById('srSwitch');
+  const wraps = [];
+
+  VARIANTS.forEach(function (cfg, idx) {
+    const node = tpl.content.cloneNode(true);
+    const wrap = node.querySelector('.cm-varwrap');
+    const demo = wrap.querySelector('.cm-demo');
+    demo.classList.add('cm-demo--' + cfg.key);
+
+    wrap.querySelector('[data-num]').textContent = cfg.num;
+    wrap.querySelector('[data-title]').textContent = cfg.title;
+    wrap.querySelector('[data-desc]').textContent = cfg.desc;
+    wrap.querySelector('[data-note]').textContent = cfg.note;
+
+    if (cfg.opts.fantasy) {
+      const titleEl = document.createElement('div');
+      titleEl.className = 'cm-fantasytitle';
+      titleEl.textContent = '⚔ Kingdoms of Mathoria ⚔';
+      wrap.querySelector('.cm-frame--board').appendChild(titleEl);
+    }
+
+    const rosterLeft = wrap.querySelector('[data-roster="left"]');
+    const rosterRight = wrap.querySelector('[data-roster="right"]');
+    BOARD_TEAMS.forEach(function (team, i) {
+      const html = rosterCardHTML(team, counts[team] || 0);
+      (i % 2 === 0 ? rosterLeft : rosterRight).insertAdjacentHTML('beforeend', html);
+    });
+
+    const mapOpts = Object.assign({ rows: GRID_ROWS, cols: GRID_COLS, showIcons: true }, cfg.opts);
+    registerMap(wrap.querySelector('[data-map]'), TERRITORY, mapOpts);
+    wrap.querySelector('[data-ring]').innerHTML = ringSVG(0.62, 46, 5, '1:47');
+
+    container.appendChild(wrap);
+    wraps.push(wrap);
+
+    const btn = document.createElement('button');
+    btn.className = 'sr-sw' + (idx === 0 ? ' on' : '');
+    btn.innerHTML = '<i style="background:' + TEAM_DEFS[BOARD_TEAMS[idx % BOARD_TEAMS.length]].hex + '"></i>' + cfg.num + ' · ' + cfg.title;
+    btn.addEventListener('click', function () {
+      wraps.forEach(function (w, i) { w.hidden = i !== idx; });
+      Array.prototype.forEach.call(switchEl.children, function (b, i) { b.classList.toggle('on', i === idx); });
+      window.scrollTo({ top: wrap.getBoundingClientRect().top + window.scrollY - 70, behavior: 'smooth' });
+    });
+    switchEl.appendChild(btn);
+  });
+  wraps.forEach(function (w, i) { w.hidden = i !== 0; });
+
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-fullscreen]');
+    if (!btn) return;
+    const frame = btn.closest('[data-frame]');
+    if (!frame) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else if (frame.requestFullscreen) {
+      frame.requestFullscreen().catch(function () { /* im Showroom kein Problem */ });
+    }
+  });
+})();
+</script>
+</body>
+</html>

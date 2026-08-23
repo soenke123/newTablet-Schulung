@@ -1,6 +1,11 @@
 /* ══════════════════════════════════════════════════════════════
-   MPSkills — Skill „Clash of Math"  ·  tool.js  (Grundgerüst)
+   MPSkills — Skill „Kingdoms of Mathoria" (intern: clash-of-math)
    ══════════════════════════════════════════════════════════════
+   Hieß bis Migration 0095 „Clash of Math" — nur der Anzeigename hat
+   sich geändert (siehe 0095). Ordner, tools.js-Eintrag und alle
+   clash_*-RPC-Namen bleiben bewusst 'clash-of-math': der technische
+   Schlüssel zieht nicht mit, das wäre eine eigene Aufräum-Migration.
+
    Vierter Skill, erster im Fach „Mathematik", und der erste, der
    NICHT über die generische Inhaltsschicht (0080/0086/0087) läuft —
    Clash of Math bringt eigene Tabellen und eigene RPC-Namen mit
@@ -59,6 +64,21 @@
   const teamName  = i => TEAM_NAMES[i] ?? ('Team ' + (i + 1));
   const teamFill  = i => TEAM_FILL[i]  ?? '#9994';
   const teamStroke = i => TEAM_STROKE[i] ?? '#999';
+
+  /* ── Kingdoms of Mathoria: Fraktionsgrafiken (Beamer) ─────────────
+     Reihenfolge deckungsgleich mit TEAM_NAMES/TEAM_STROKE — Team-
+     Index 0..7 ist zugleich der Index in diesen Listen. ASSET_DIR ist
+     absichtlich der volle Pfad ab MPSkills/ (nicht „sprites/…"): ein
+     in tool.js gebautes <img src> wird relativ zur SEITE aufgelöst
+     (lehrer.html/j.html liegen in MPSkills/), nicht relativ zu
+     tool.js selbst — anders als url(...) in tool.css, das relativ zur
+     Stylesheet-Datei auflöst. */
+  const ASSET_DIR = 'tools/clash-of-math/sprites/';
+  const FACTION_CASTLE = ['red carstle.png', 'blue carstle.png', 'green carstle.png', 'yellow carstle.png',
+                           'lila carstle.png', 'türkis carstle.png', 'magenta carstle.png', 'rosa carstle.png'];
+  const FACTION_UNIT   = ['red units.png', 'blue units.png', 'green units.png', 'yellow units.png',
+                           'lila units.png', 'türkis units.png', 'magenta units.png', 'rosa units.png'];
+  const esrc = name => encodeURI(ASSET_DIR + name);
 
   let root = null, ctx = null, role = null;
   let els = {};
@@ -126,6 +146,133 @@
     });
   }
 
+  /* ─── Beamer: Kingdoms of Mathoria — echte Fraktionsgrafiken ────
+     Ersetzt paintBoard() (Canvas, Platzhalterfarben) NUR für die
+     Lehrkraft-Rolle durch DOM/SVG: Sechsecke + Territoriumsgrenze
+     als <svg>, Burg + ein paar wandernde Einheiten je Fraktion als
+     <img> im Icon-Layer darüber. Der Teilnehmer behält vorerst
+     paintBoard() (eigene Runde, siehe Kopfkommentar der Datei).
+
+     Zwei Lehren aus dem Showroom (MPSkills/tools/clash-of-math/
+     showroom.html, dort ausführlich dokumentiert):
+     (1) Zentrierung (translate(-50%,-100%), unten-mittig) und
+         Wander-Animation dürfen NICHT beide auf derselben
+         `transform`-Eigenschaft desselben Elements sitzen — eine
+         CSS-Animation ersetzt `transform` komplett, statt sich mit
+         dem statischen Wert zu kombinieren. Deshalb zwei
+         verschachtelte Elemente: cm-sprite (Position, statisch) und
+         cm-spriteinner (Animation).
+     (2) Die Territoriumsgrenze kommt aus den echten Nachbarschafts-
+         kanten (Winkel zum Nachbar-Kachelmittelpunkt), nicht aus
+         einer angenommenen Reihenfolge der Nachbar-Richtungen. */
+  function computeBorderSegments(tiles, centerFn, hexR) {
+    const ownerMap = new Map();
+    tiles.forEach(t => ownerMap.set(t.r + ',' + t.c, t.team));
+    const dirsEven = [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
+    const dirsOdd  = [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]];
+    const segsByTeam = {};
+    tiles.forEach(t => {
+      const dirs = (t.r % 2 === 1) ? dirsOdd : dirsEven;
+      const p = centerFn(t.r, t.c);
+      dirs.forEach(d => {
+        const nr = t.r + d[0], nc = t.c + d[1];
+        const neighborTeam = ownerMap.get(nr + ',' + nc);
+        if (neighborTeam === t.team) return;
+        const np = centerFn(nr, nc);
+        const angleDeg = Math.atan2(np.y - p.y, np.x - p.x) * 180 / Math.PI;
+        let edgeIdx = Math.round(angleDeg / 60);
+        edgeIdx = ((edgeIdx % 6) + 6) % 6;
+        const a1 = Math.PI / 3 * edgeIdx - Math.PI / 6;
+        const a2 = Math.PI / 3 * (edgeIdx + 1) - Math.PI / 6;
+        const v1 = { x: p.x + hexR * Math.cos(a1), y: p.y + hexR * Math.sin(a1) };
+        const v2 = { x: p.x + hexR * Math.cos(a2), y: p.y + hexR * Math.sin(a2) };
+        (segsByTeam[t.team] = segsByTeam[t.team] || []).push([v1, v2]);
+      });
+    });
+    return segsByTeam;
+  }
+
+  function borderLayerHTML(segsByTeam) {
+    let out = '';
+    Object.keys(segsByTeam).forEach(team => {
+      const d = segsByTeam[team].map(s =>
+        'M' + s[0].x.toFixed(1) + ',' + s[0].y.toFixed(1) + ' L' + s[1].x.toFixed(1) + ',' + s[1].y.toFixed(1)
+      ).join(' ');
+      const raw = teamStroke(parseInt(team, 10));
+      out += '<path class="cm-border" d="' + d + '" style="--raw:' + raw + '"></path>';
+      out += '<path class="cm-border cm-border--inner" d="' + d + '" style="--raw:' + raw + '"></path>';
+    });
+    return out;
+  }
+
+  function groundGlowHTML(p, size, raw) {
+    return '<div class="cm-groundglow" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + size + 'px;height:' + (size * 0.55) + 'px;--raw:' + raw + '"></div>';
+  }
+
+  function renderPresenterMap(view) {
+    if (!view || !view.rows || !view.cols || !els.mapWrap || !els.hexsvg || !els.icons) return;
+    const W = els.mapWrap.clientWidth, H = els.mapWrap.clientHeight;
+    if (W < 10 || H < 10) return;
+    const rows = view.rows, cols = view.cols;
+    const hexR = Math.min(W / ((cols + 0.5) * Math.sqrt(3)), H / ((rows + 0.5) * 1.5));
+    const hexW = Math.sqrt(3) * hexR, hexH = 2 * hexR;
+    const gap = 2.5;
+    const center = (r, c) => {
+      const xOff = (r % 2 === 1) ? hexW / 2 : 0;
+      return {
+        x: (c + 0.5) * hexW + xOff + (W - cols * hexW) / 2,
+        y: (r + 0.5) * (hexH * 0.75) + (H - rows * hexH * 0.75) / 2
+      };
+    };
+
+    const tiles = view.tiles || [];
+    let poly = '';
+    tiles.forEach(t => {
+      const p = center(t.r, t.c);
+      const pts = [];
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 3 * i - Math.PI / 6;
+        pts.push((p.x + (hexR - gap) * Math.cos(a)).toFixed(1) + ',' + (p.y + (hexR - gap) * Math.sin(a)).toFixed(1));
+      }
+      poly += '<polygon class="cm-hex" points="' + pts.join(' ') + '" style="--raw:' + teamStroke(t.team) + '"></polygon>';
+    });
+    const segs = computeBorderSegments(tiles, center, hexR - Math.min(gap, 1));
+    els.hexsvg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    els.hexsvg.innerHTML = poly + borderLayerHTML(segs);
+
+    const byTeam = {};
+    tiles.forEach(t => (byTeam[t.team] = byTeam[t.team] || []).push(t));
+    let icons = '';
+    Object.keys(byTeam).forEach(teamKey => {
+      const team = parseInt(teamKey, 10);
+      const teamTiles = byTeam[teamKey];
+      const raw = teamStroke(team);
+      const castleTile = teamTiles.find(t => t.castle);
+      if (castleTile) {
+        const p = center(castleTile.r, castleTile.c);
+        const h = hexR * 1.55, glow = hexR * 1.7;
+        icons += groundGlowHTML(p, glow, raw);
+        icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + (1000 + castleTile.r * 10 + 9) + '">' +
+          '<div class="cm-spriteinner cm-spriteinner--castle"><img src="' + esrc(FACTION_CASTLE[team] || FACTION_CASTLE[0]) + '" alt=""></div></div>';
+      }
+      // Nicht jedes eroberte Feld bekommt eine eigene Einheit (bei 40+
+      // Feldern wäre das nur noch Gewusel) — eine kleine, über das
+      // Gebiet verteilte Auswahl reicht, um „lebendig" zu wirken.
+      const others = teamTiles.filter(t => !t.castle).sort((a, b) => (a.r - b.r) || (a.c - b.c));
+      const unitCount = Math.min(3, others.length);
+      for (let k = 0; k < unitCount; k++) {
+        const idx = Math.floor((k + 0.5) * others.length / unitCount);
+        const t = others[idx];
+        const p = center(t.r, t.c);
+        const h = hexR * 1.5, glow = hexR * 1.1;
+        icons += groundGlowHTML(p, glow, raw);
+        icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + (1000 + t.r * 10 + 5) + '">' +
+          '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + (k * 0.5) + 's"><img src="' + esrc(FACTION_UNIT[team] || FACTION_UNIT[0]) + '" alt=""></div></div>';
+      }
+    });
+    els.icons.innerHTML = icons;
+  }
+
   /* ─── Beamer: Karte nimmt den ganzen freien Platz ───────────
      „Volles Bild" statt einer festen Kartenbreite, wie beim
      Teilnehmer — anders als NeuroLab/Cäsar aber kein Vollbild-
@@ -162,7 +309,7 @@
     const size = Math.max(160, Math.min(availW, availH, MAP_MAX));
     els.mapWrap.style.width  = size + 'px';
     els.mapWrap.style.height = size + 'px';
-    if (els.map) paintBoard(els.map, lastView, {});
+    if (els.hexsvg && els.icons) renderPresenterMap(lastView);
   }
 
   /* ─── Rundenende-Timer (Anzeige) ─────────────────────────────
@@ -495,7 +642,10 @@
               '<button type="button" class="cm-btn cm-btn--ghost" id="cmTimerCancel">Timer abbrechen</button>' +
             '</div>' +
           '</div>' +
-          '<div class="cm-mapwrap" id="cmMapWrap"><canvas id="cmMap"></canvas></div>' +
+          '<div class="cm-mapwrap cm-mapwrap--kingdoms" id="cmMapWrap">' +
+            '<div class="cm-mapinner"><svg class="cm-hexsvg" id="cmHexSvg"></svg></div>' +
+            '<div class="cm-iconlayer" id="cmIcons"></div>' +
+          '</div>' +
         '</div>' +
         '<div class="cm-pane cm-hide" id="cmEndedP">' +
           '<div class="cm-result" id="cmResultP"></div>' +
@@ -519,7 +669,8 @@
       timeLeft: root.querySelector('#cmTimeLeft'),
       timerCancel: root.querySelector('#cmTimerCancel'),
       mapWrap: root.querySelector('#cmMapWrap'),
-      map: root.querySelector('#cmMap'),
+      hexsvg: root.querySelector('#cmHexSvg'),
+      icons: root.querySelector('#cmIcons'),
       endedP: root.querySelector('#cmEndedP'),
       resultP: root.querySelector('#cmResultP'),
       resetBtn: root.querySelector('#cmResetBtn')

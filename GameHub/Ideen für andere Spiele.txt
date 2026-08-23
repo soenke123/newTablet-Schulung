@@ -1,93 +1,20 @@
-ToDo:
+Bug Fixes:
+
+- am Pc öffnen sich auf dauer zu viele Tabs
+
+- die Info für die neue Saison geht nicht weg (müsste entweder nach irwie 3 mal weggehen oder durch [ ]nicht mehr anzeigen
+
+- ich glaube das mit dem kopieren beim Tippspiel(also schreiben nicht wetten) hat ihnen Vincent schon mitgeteilt? keine Ahnung, habe
+  ich auch nur gemacht um in jedem Minispiel den Highscore kriegen zu können :)
+
+- (und ja der Bubblebounce-Score ist ledgit, der sieht nur viel aus den könnte man aber noch erheblich höher kriegen)
+   -> Schwerer gestalten am Ende
+- einige Monster werden mir in der Leiste, in der sie rumlaufen als ausgewachsen angezeigt, jedoch habe ich nur ein einziges ausgewachsenes Monster, der Rest geht anscheinend nur bis groß?(oder die Anzeige oben ist halt falsch)
+
+- achso und ich habe dort zwei Schneckendrachen, bin mir nicht sicher ob das soll
 
 
-Spiel 1: 10 Finger blind schreiben
-Spielperson tippt kurze Sätze nach, die ggf. schwieriger werden. 
-5 Sätze je 2 Punkte einen für Geschwindigkeit und einen für die Richtigkeit. 
+Startup Story:
+- ich würde mir einen Pause Knopf wünschen, um alle Zusammenhänge in Ruhe erfassen zu können.
+- Der Drop Out in Abwesenheit ist zu krass. Es würde reichen wenn die Zeit in Abwesenheit um den Faktor 100 oder so langsamer liefe.
 
-Es gibt allerdings mehr sätze im Spiel. 
-In halt der Sätze, erklären, wie lernen am Tablet läuft, warum eine Tastatur so wichtig ist.
-
-
-Spiel 2.
-"Focus-Flow" (Survival Game):
-•	Inhalt: Ein kleiner Charakter versucht zu lesen/arbeiten, während ständig „Benachrichtigungs-Monster“ (Snapchat-Geister, TikTok-Blasen) von der Seite einfliegen. 
-•	Mechanik: Der Spieler muss den „Fokus-Modus-Schild“ aktivieren, um die Ablenkungen abzuwehren. 
-
-
-Spiel 3
-"Algorithm-Tycoon" (Simulation):
-o	Inhalt: Der Spieler übernimmt die Rolle eines Algorithmus. Das Ziel: User so lange wie möglich in der App halten. 
-o	Lerneffekt: Man merkt schnell, dass „Aufreger-Themen“ (Emotionale Aktivierung) mehr Klicks bringen als Fakten. Dies verdeutlicht das Geschäftsmodell „Aufmerksamkeit“. 
-
-
-Spiel 4 
-Ordner Aufräumen
-
-Der Master-Prompt für dein iPad-Sortierspiel
-Rolle: Du bist ein erfahrener Frontend-Entwickler und Pädagoge.
-
-Ziel: Erstelle ein webbasiertes Lernspiel (HTML, CSS, JavaScript) für Schüler, um das Organisieren von Dateien auf einem iPad zu üben.
-
-Spielmechanik:
-
-Oberfläche: Simuliere ein iPad-Interface mit einer Ordnerstruktur (Seitenleiste links, Dateiansicht rechts).
-
-Die Aufgabe: Der Spieler startet mit einer unordentlichen Ablage. Dateien haben schlechte Namen (z.B. "image123", "scann_final_v2"). Sie müssen umbenannt und per Drag & Drop in Fach-Ordner (z.B. Mathe, Deutsch, Bio) sortiert werden.
-
-Dateitypen: >    - PDF: Textinhalte anzeigen.
-
-PNG: Bilder anzeigen.
-
-Unlesbare Dateien: Dateien mit Endungen wie .dat oder .tmp. Diese müssen erst über einen Button "In PDF exportieren" umgewandelt werden, bevor man den Inhalt lesen kann.
-
-Rundensystem: >    - Runde 1: 6 Dateien.
-
-Runde 2: 12 Dateien.
-
-Runde 3: 20 Dateien.
-
-Das Test-System: Am Ende jeder Runde folgt ein Test. Eine Anweisung erscheint: "Öffne die Datei mit dem Inhalt [X]".
-
-Sofort gefunden: 2 Punkte.
-
-Ein Fehlklick: 1 Punkt.
-
-Zwei Fehlklicks: Nächste Testfrage (insgesamt 3 Fragen pro Runde).
-
-Technische Anforderungen:
-
-Nutze HTML5 Drag & Drop API.
-
-Designe das CSS im iPad-Look (abgerundete Ecken, App-Icons, helle Farben).
-
-Erstelle ein "Vorschau-Fenster" (Modal), wenn eine Datei angeklickt wird.
-
-Der Code soll in einer einzigen HTML-Datei (inkl. CSS/JS) ausgegeben werden, damit er leicht zu testen ist.
-
-Nutze Platzhaltertexte (Lorem Ipsum) und einfache SVG-Icons für die Dateien.
-
-Inhaltlicher Fokus: Die Texte in den Dateien sollen Hinweise auf das Schulfach geben (z.B. eine Rechnung für Mathe, ein Gedicht für Deutsch).
-
-
-Grobe Ideen
--richtig Prompten
-
--wie funktioniert eine KI Begriffe und Grundlagen
-
--Desktop Aufräumen. Dateien umbennen. und in Ordner einsortieren. 
-
-
-
-
-In Progress
-
--Hausregeln Escape game
-
--Quellen Tinder
-
-
-
-Done:
-
-Daten-Quiz
