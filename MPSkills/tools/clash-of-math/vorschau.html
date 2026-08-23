@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vorschau · Kingdoms of Mathoria</title>
+<meta name="robots" content="noindex" />
+
+<!-- ══════════════════════════════════════════════════════════════
+     Kingdoms of Mathoria ohne Raum und ohne Server — beide Rollen.
+
+     Anders als showroom.html (ein Standbild, in dem die Gestaltung
+     erfunden wurde) lädt diese Seite das ECHTE tool.css und die
+     ECHTE tool.js — sie kann also nicht davonlaufen. Was hier steht,
+     ist nur der Server: ein erfundener Spielstand, eine erfundene
+     Antwortprüfung, und die Kacheln, die ein Raum sonst mitbrächte.
+
+     Zum Ausprobieren: einfach im Browser öffnen. Die Auswahlfelder
+     oben wechseln Rolle (Tablet/Beamer), Volk und Phase. Dasselbe
+     geht über die Adresse, damit sich ein bestimmter Blick verlinken
+     lässt:  ?role=presenter&fac=3&phase=out&map=1&answer=42
+     ══════════════════════════════════════════════════════════════ -->
+
+<!-- ⚠️ Diese Seite liegt im Werkzeug-Ordner, läuft im Betrieb aber aus
+     MPSkills/ (j.html). Die <img src> in tool.js sind auf die SEITE
+     bezogen („tools/clash-of-math/sprites/…"), nicht auf tool.js —
+     ohne diese Grundadresse blieben hier alle Figuren leer, und man
+     würde eine Oberfläche begutachten, die es so nie gibt.
+     Alle Pfade unten sind deshalb ab MPSkills/ geschrieben. -->
+<base href="../../" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="tools/clash-of-math/tool.css" />
+<script src="../viewport.js"></script>
+
+<style>
+  body { margin: 0; }
+  /* Die Bedienleiste der Vorschau liegt ÜBER dem Spielbildschirm
+     (der ist fixed mit z-index 80) — sonst wäre sie unerreichbar,
+     sobald das Spiel läuft. Und weil sie sonst genau die Ecke
+     verdeckte, in der die Restzeit steht, RÜCKT der Spielbildschirm
+     hier um ihre Höhe nach unten. Nur in der Vorschau; im Betrieb
+     beginnt er oben am sichtbaren Bereich. */
+  :root { --pv-bar-h: 44px; }
+  .cm-play {
+    top: var(--pv-bar-h) !important;
+    height: calc(var(--vv-h, 100vh) - var(--pv-bar-h)) !important;
+  }
+  .pv-bar {
+    position: fixed;
+    z-index: 200;
+    top: 0; left: 0; right: 0;
+    height: var(--pv-bar-h);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(12,7,0,.92);
+    font: 600 12px/1 system-ui, sans-serif;
+  }
+  .pv-bar select { font: inherit; padding: 5px 6px; border-radius: 6px; }
+  .pv-note {
+    padding: 40px 20px;
+    max-width: 640px;
+    margin: 0 auto;
+    font: 400 15px/1.6 system-ui, sans-serif;
+    color: #475569;
+  }
+</style>
+</head>
+<body>
+
+<div class="pv-bar">
+  <select id="pvRole" title="Rolle">
+    <option value="participant" selected>Tablet</option>
+    <option value="presenter">Beamer</option>
+  </select>
+  <select id="pvFaction" title="Volk"></select>
+  <select id="pvPhase" title="Phase">
+    <option value="running" selected>läuft</option>
+    <option value="lobby">Lobby</option>
+    <option value="countdown">Countdown</option>
+    <option value="out">ausgeschieden</option>
+    <option value="ended">beendet</option>
+  </select>
+</div>
+
+<div class="pv-note">
+  <b>Vorschau ohne Server.</b> Der Spielbildschirm legt sich über diese
+  Seite, sobald „läuft“ gewählt ist. Richtige Antwort auf die gestellte
+  Aufgabe erobert ein Feld, eine falsche nicht.
+</div>
+
+<div id="toolHost" class="toolhost"></div>
+
+<script>
+/* ── Der erfundene Raum ──────────────────────────────────────────
+   Ein Spielfeld wie clash_layouts es liefert: ein aus dem Raster
+   geschnittener Klumpen, je Team eine Burg, alles Übrige der
+   nächstgelegenen Burg zugeschlagen. Genug, damit Karte, Anteil und
+   die Völkerreihe echte Zahlen bekommen. */
+const ROWS = 9, COLS = 9, TEAMS = 4;
+let factions = [0, 2, 4, 6];     // welche Völker auf den Slots sitzen
+let myTeam   = 0;
+let phase    = 'running';
+let streak   = 0;
+let tiles    = [];
+
+function hexUnit(r, c) {
+  return { x: (c + 0.5) * Math.sqrt(3) + (r % 2 === 1 ? Math.sqrt(3) / 2 : 0), y: (r + 0.5) * 1.5 };
+}
+
+function buildBoard() {
+  // Mittelpunkt des Rasters in denselben Einheiten wie hexUnit.
+  const mid = { x: (COLS / 2) * Math.sqrt(3), y: (ROWS / 2) * 1.5 };
+  const cells = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const u = hexUnit(r, c);
+    if (Math.hypot(u.x - mid.x, (u.y - mid.y) * 1.15) <= 6.2) cells.push({ r, c, u });
+  }
+  // Burgen: gleichmäßig auf einem Kreis um die Mitte, je die Kachel,
+  // die dem Wunschpunkt am nächsten liegt und noch frei ist.
+  const castles = [];
+  for (let t = 0; t < TEAMS; t++) {
+    const a = (Math.PI * 2 * t) / TEAMS - Math.PI / 2;
+    const tx = mid.x + Math.cos(a) * 4.4, ty = mid.y + Math.sin(a) * 4.0;
+    let best = null, bd = Infinity;
+    cells.forEach(cell => {
+      if (castles.indexOf(cell) >= 0) return;
+      const d = Math.hypot(cell.u.x - tx, cell.u.y - ty);
+      if (d < bd) { bd = d; best = cell; }
+    });
+    castles.push(best);
+  }
+  // Alles Übrige gehört der nächstgelegenen Burg.
+  tiles = cells.map(cell => {
+    let team = 0, bd = Infinity;
+    castles.forEach((k, t) => {
+      const d = Math.hypot(cell.u.x - k.u.x, cell.u.y - k.u.y);
+      if (d < bd) { bd = d; team = t; }
+    });
+    return { r: cell.r, c: cell.c, team, castle: castles.indexOf(cell) >= 0 };
+  });
+}
+buildBoard();
+
+let question = newQuestion();
+function newQuestion() {
+  const a = 2 + Math.floor(Math.random() * 60);
+  const b = 2 + Math.floor(Math.random() * (98 - a));
+  return { a, b };
+}
+
+/* Eine Eroberung: irgendein Feld an der eigenen Grenze. */
+function captureOne() {
+  const mineSet = new Set(tiles.filter(t => t.team === myTeam).map(t => t.r + ',' + t.c));
+  const dirsEven = [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
+  const dirsOdd  = [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
+  const border = tiles.filter(t => {
+    if (t.team === myTeam || t.castle) return false;
+    const dirs = (t.r % 2 === 1) ? dirsOdd : dirsEven;
+    return dirs.some(d => mineSet.has((t.r + d[0]) + ',' + (t.c + d[1])));
+  });
+  if (!border.length) return null;
+  const t = border[Math.floor(Math.random() * border.length)];
+  t.team = myTeam;
+  return { r: t.r, c: t.c };
+}
+
+const NAMES = [
+  ['Lena', 'Jonas', 'Mia', 'Ben', 'Ida'],
+  ['Emil', 'Sofia', 'Noah', 'Lea'],
+  ['Paul', 'Nele', 'Finn', 'Marie', 'Luca', 'Jara'],
+  ['Anton', 'Frieda', 'Theo', 'Romy']
+];
+
+const RPC = {
+  clash_sig: () => ({ ok: true, sig: phase + ':' + tiles.map(t => t.team).join('') + ':' + streak }),
+
+  /* Der Beamer. Dieselbe Wahrheit, andere Felder — genau die, die
+     renderPresenter/fillRosters lesen. Sie ist hier vor allem
+     deshalb nachgebaut, weil sich Teilnehmer und Beamer seit dem
+     UI-Durchgang DIESELBE Zeichenroutine für die Karte teilen
+     (renderHexMap): eine Änderung am Tablet kann den Beamer treffen,
+     und das soll man in derselben Datei sehen können. */
+  clash_room_sig: () => RPC.clash_sig(),
+  clash_room_get: () => {
+    const counts = {};
+    tiles.forEach(t => { counts[t.team] = (counts[t.team] || 0) + 1; });
+    const members = {};
+    for (let i = 0; i < TEAMS; i++) members[i] = NAMES[i % NAMES.length];
+    return {
+      ok: true,
+      phase: phase === 'out' ? 'running' : phase,
+      team_count: TEAMS,
+      factions: factions,
+      countdown_ends_at: new Date(Date.now() + 5000).toISOString(),
+      match_ends_at: new Date(Date.now() + 183000).toISOString(),
+      winner_team: 1,
+      broadcast_key: null,
+      rows: ROWS, cols: COLS,
+      tiles: tiles.map(t => ({ ...t })),
+      teams: counts,
+      team_tile_counts: counts,
+      team_members: members,
+      offline_members: ['Karl', 'Wilma'],
+      online_count: 22, room_total: 24
+    };
+  },
+  clash_room_set_factions: a => ({ ok: true, factions: a.p_factions }),
+  clash_room_set_match_timer: () => ({ ok: true }),
+  clash_room_clear_match_timer: () => ({ ok: true }),
+  clash_room_start: () => { phase = 'running'; return { ok: true }; },
+  clash_room_reset: () => { phase = 'lobby'; return { ok: true }; },
+
+  clash_view: () => ({
+    ok: true,
+    phase: phase === 'out' ? 'running' : phase,
+    team_count: TEAMS,
+    factions: factions,
+    countdown_ends_at: new Date(Date.now() + 5000).toISOString(),
+    match_ends_at: new Date(Date.now() + 183000).toISOString(),
+    winner_team: 1,
+    broadcast_key: null,
+    rows: ROWS, cols: COLS,
+    tiles: tiles.map(t => ({ ...t })),
+    teams: { 0: 6, 1: 5, 2: 6, 3: 5 },
+    my_team_members: [
+      { name: 'Lena', me: false }, { name: 'Jonas', me: true },
+      { name: 'Mia', me: false },  { name: 'Ben', me: false }
+    ],
+    online_count: 22, room_total: 24,
+    me: {
+      team: myTeam,
+      alive: phase !== 'out',
+      streak: streak,
+      question: question,
+      seat: 3, name: 'Jonas'
+    }
+  }),
+  clash_submit_answer: args => {
+    const correct = args.p_answer === question.a + question.b;
+    let captured = null;
+    if (correct) { streak++; captured = captureOne(); } else { streak = 0; }
+    question = newQuestion();
+    return { ok: true, correct, captured, streak, question };
+  }
+};
+
+window.MPTool = {
+  register(id, mod) { window.__tool = mod; }
+};
+
+const ctx = {
+  role: 'participant',   // wird von remount() aus dem Auswahlfeld gesetzt
+  preview: false,
+  esc: s => String(s == null ? '' : s).replace(/[&<>"']/g, ch =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])),
+  errText: e => 'Fehler: ' + e,
+  toast: m => console.log('toast:', m),
+  confirm: m => Promise.resolve(window.confirm(m)),
+  actions: {
+    call: (fn, args) => Promise.resolve(RPC[fn] ? RPC[fn](args || {}) : { ok: false, error: 'unknown_fn' })
+  }
+};
+</script>
+
+<script src="tools/clash-of-math/tool.js"></script>
+
+<script>
+/* ── Bedienleiste ───────────────────────────────────────────────
+   Volk und Phase wechseln heißt: das Werkzeug abbauen und neu
+   aufbauen. Das ist derselbe Weg, den j.js beim Raumwechsel geht —
+   und die schärfste Prüfung für unmount(): bleibt etwas hängen
+   (Zuhörer, Zeitgeber, body-Klasse), fällt es hier sofort auf. */
+const FACS = ['Toast-Ritter', 'Robo-Enten', 'Brokkoli-Giraffen', 'Mal-Hasen',
+              'Kosmische Katzen', 'Okto-Pferdchen', 'Spuk-Einhorn', 'Wolkenvogel-Piraten'];
+const selF = document.getElementById('pvFaction');
+FACS.forEach((n, i) => {
+  const o = document.createElement('option');
+  o.value = i; o.textContent = n;
+  selF.appendChild(o);
+});
+selF.value = String(factions[0]);
+
+const host = document.getElementById('toolHost');
+const selR = document.getElementById('pvRole');
+function remount() {
+  if (window.__mounted) window.__tool.unmount();
+  host.innerHTML = '';
+  ctx.role = selR.value;
+  window.__tool.mount(host, ctx);
+  window.__mounted = true;
+}
+selR.addEventListener('change', remount);
+selF.addEventListener('change', () => {
+  factions = [parseInt(selF.value, 10)].concat(
+    [0, 1, 2, 3, 4, 5, 6, 7].filter(f => f !== parseInt(selF.value, 10)).slice(0, TEAMS - 1));
+  remount();
+});
+document.getElementById('pvPhase').addEventListener('change', ev => {
+  phase = ev.target.value;
+  remount();
+});
+remount();
+
+/* Startzustand aus der Adresse: ?fac=4&phase=out&map=1&answer=42
+   — damit sich ein bestimmter Blick verlinken (und automatisiert
+   ablichten) lässt, ohne ihn jedes Mal zusammenzuklicken.
+
+   Verzögert, weil mount() seinen Spielstand erst über die (hier
+   erfundene, aber trotzdem asynchrone) RPC holt: vorher gibt es weder
+   Tasten noch Karten-Knopf zum Anklicken. */
+const q = new URLSearchParams(location.search);
+if (q.has('role'))  { selR.value = q.get('role'); selR.dispatchEvent(new Event('change')); }
+if (q.has('fac'))   { selF.value = q.get('fac'); selF.dispatchEvent(new Event('change')); }
+if (q.has('phase')) {
+  const sp = document.getElementById('pvPhase');
+  sp.value = q.get('phase'); sp.dispatchEvent(new Event('change'));
+}
+setTimeout(() => {
+  if (q.has('answer')) {
+    String(q.get('answer')).split('').forEach(ch => {
+      const b = document.querySelector('.cm-key[data-ins="' + ch + '"]');
+      if (b) b.click();
+    });
+  }
+  if (q.get('map') === '1') {
+    const b = document.getElementById('cmMapBtn');
+    if (b) b.click();
+  }
+}, 200);
+</script>
+</body>
+</html>

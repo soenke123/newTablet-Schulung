@@ -63,6 +63,38 @@
    facOf()/fStroke()/fLabel()/… nachgeschlagen. Wer eine der
    FACTION_*-Listen direkt mit einer Zahl indiziert, die vom Server
    kommt, macht mit ziemlicher Sicherheit einen Fehler.
+
+   ── Der Spielbildschirm des Teilnehmers (UI-Durchgang) ─────────
+   Bis hierher war das Tablet die Restrampe: eine Canvas-Karte mit
+   Platzhalterfarben, ein <input type=number> mit Gerätetastatur und
+   ein Absende-Knopf. Vier Änderungen, alle im Teilnehmer-Teil:
+
+   (1) EINE Karte für beide Rollen (renderHexMap). Die Canvas-Fassung
+       ist weg; das Tablet sieht dasselbe Bild wie die Klasse am
+       Beamer, nur ohne wandernde Einheiten und mit dem eigenen
+       Gebiet hervorgehoben.
+   (2) Die Karte ist standardmäßig ZU und hängt hinter einem Knopf
+       (openMap) — auf dem Spielbildschirm gehört der Platz der
+       Aufgabe.
+   (3) Eigene Tastatur statt der des Geräts (KEY_BASE/KEY_EXTRA/
+       MODES, siehe dort). Sie ist als Beschreibung angelegt, weil
+       die kommenden Aufgabenarten — Brüche, Vorzeichen, Variablen,
+       Potenzen, Wurzeln, Sinus/Kosinus, Binär, Hexadezimal — je ein
+       eigenes Tastenbündel brauchen, aber denselben Grundblock.
+   (4) Die Aufteilung, die Sönke vorgegeben hat: untere Hälfte
+       Tastatur (Bestätigen unten rechts), darüber Aufgabe und
+       Eingabe, darüber ein Viertel das eigene Volk mit Feldanteil
+       und Serien, ganz oben die Völker mit Strich durch die
+       ausgeschiedenen. Der Bildschirm ist dafür `fixed` auf dem
+       sichtbaren Bereich — die Anteile beziehen sich auf den ganzen
+       Bildschirm, in einem Kasten in der Seite ergäben sie nichts.
+
+   Was noch keine Quelle hat: die Serie des VOLKES (die eigene kommt
+   aus me.streak). Sie steht als „–" schon im Bild, damit später nur
+   der Wert nachzureichen ist — der Client liest v.team_streak.
+
+   Zum Anschauen ohne Raum: vorschau.html im selben Ordner. Sie lädt
+   dieses tool.js und tool.css und erfindet nur den Server.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -76,14 +108,16 @@
      Board mit den Brokkoli-Giraffen und dem Spuk-Einhorn die Slots 0/1,
      aber die Völker 2/6. Die Übersetzung macht `facOf` weiter unten —
      hier NIE direkt mit einem Slot indizieren. */
-  const FACTION_FILL   = ['rgba(239,68,68,.75)', 'rgba(59,130,246,.75)', 'rgba(16,185,129,.75)',
-                          'rgba(245,158,11,.75)', 'rgba(168,85,247,.75)', 'rgba(6,182,212,.75)',
-                          'rgba(217,70,160,.75)', 'rgba(244,114,182,.75)'];
+  /* Eine Farbe je Volk, nicht zwei. Bis zum UI-Durchgang stand hier
+     zusätzlich eine FACTION_FILL-Liste (dieselben Farben, halb
+     durchsichtig) — sie gehörte allein der Canvas-Karte des
+     Teilnehmers, und die gibt es nicht mehr (siehe renderHexMap).
+     Die gemalte Karte mischt ihre Flächen aus dieser einen Farbe. */
   const FACTION_STROKE = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b',
                           '#a855f7', '#06b6d4', '#d946a0', '#f472b6'];
 
   /* ── Kingdoms of Mathoria: Fraktionsgrafiken ──────────────────────
-     Reihenfolge deckungsgleich mit FACTION_FILL/FACTION_STROKE — auch
+     Reihenfolge deckungsgleich mit FACTION_STROKE — auch
      hier ist der Index das VOLK, nicht der Slot. ASSET_DIR ist
      absichtlich der volle Pfad ab MPSkills/ (nicht „sprites/…"): ein
      in tool.js gebautes <img src> wird relativ zur SEITE aufgelöst
@@ -123,7 +157,6 @@
      Lobby, die von Natur aus über Völker läuft, nicht über Slots. */
   let factions = [0, 1, 2, 3];
   const facOf    = s => (factions[s] != null ? factions[s] : s);
-  const fFill    = s => FACTION_FILL[facOf(s)]   ?? '#9994';
   const fStroke  = s => FACTION_STROKE[facOf(s)] ?? '#999';
   const fLabel   = s => FACTION_LABEL[facOf(s)]  ?? ('Team ' + (s + 1));
   const fCastle  = s => FACTION_CASTLE[facOf(s)] || FACTION_CASTLE[0];
@@ -140,6 +173,10 @@
   // laufender Speicher-Aufrufe — solange der über 0 steht, hat die
   // Anzeige Vorrang vor der Antwort des Servers, siehe Klick-Zuhörer.
   let pickSel = [], pickBusy = 0;
+  // Teilnehmer: der getippte Antwort-Text (Zeichenkette, nicht Zahl —
+  // „-" und „0," sind gültige Zwischenstände, die keine Zahl sind),
+  // die gerade aufgebaute Tastatur und ob das Karten-Fenster offen ist.
+  let answerBuf = '', keyMode = null, mapOpen = false;
 
   const MAP_GAP = 12, MAP_MIN = 260, MAP_MAX = 2000;
 
@@ -160,69 +197,22 @@
   // Kachelreihe frei lassen, sonst wird sie oben abgeschnitten.
   const CASTLE_HEADROOM = CASTLE_H * (1 - CASTLE_DROP);
 
-  /* ─── Hex-Zeichnen ──────────────────────────────────────────
-     Dieselbe Geometrie wie im Prototyp (versetzte Reihen, spitze
-     Hexagone) — hier aber ein einmaliges Zeichnen je Aktualisierung
-     statt einer requestAnimationFrame-Schleife: das Board ändert
-     sich höchstens ein paarmal pro Sekunde, nicht 60×. */
-  function paintBoard(canvas, view, opts) {
-    if (!canvas || !view || !view.rows || !view.cols) return;
-    const wrap = canvas.parentElement;
-    const rect = wrap.getBoundingClientRect();
-    const dpr  = window.devicePixelRatio || 1;
-    canvas.width  = Math.max(1, Math.round(rect.width  * dpr));
-    canvas.height = Math.max(1, Math.round(rect.height * dpr));
-    const g = canvas.getContext('2d');
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.clearRect(0, 0, rect.width, rect.height);
+  /* ─── EINE Karte für beide Rollen ───────────────────────────────
+     Bis zum UI-Durchgang gab es zwei: der Beamer bekam die gemalte
+     Karte (SVG-Sechsecke, echte Fraktionsgrafiken, Territoriums-
+     grenzen), das Tablet ein Canvas mit Platzhalterfarben und einem
+     🏰-Zeichen. Zwei Bilder derselben Sache, von denen eines deutlich
+     schlechter war — und ausgerechnet das stand vor dem Kind.
 
-    const rows = view.rows, cols = view.cols;
-    const hexRadius = Math.min(
-      rect.width  / ((cols + 0.5) * Math.sqrt(3)),
-      rect.height / ((rows + 0.5) * 1.5)
-    );
-    const hexWidth  = Math.sqrt(3) * hexRadius;
-    const hexHeight = 2 * hexRadius;
-    const center = (r, c) => {
-      const xOff = (r % 2 === 1) ? hexWidth / 2 : 0;
-      return {
-        x: (c + 0.5) * hexWidth + xOff + (rect.width  - cols * hexWidth) / 2,
-        y: (r + 0.5) * (hexHeight * 0.75) + (rect.height - rows * hexHeight * 0.75) / 2
-      };
-    };
+     Die Canvas-Fassung (paintBoard) ist deshalb ersatzlos weg. Beide
+     Rollen zeichnen jetzt mit renderHexMap(); was sie unterscheidet,
+     sind zwei Schalter:
 
-    const mine = opts && opts.highlightTeam;
-    (view.tiles || []).forEach(t => {
-      const p = center(t.r, t.c);
-      const isMine = (mine != null && t.team === mine);
-      g.beginPath();
-      for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI / 3) * i - (Math.PI / 6);
-        const hx = p.x + (hexRadius - 1.5) * Math.cos(angle);
-        const hy = p.y + (hexRadius - 1.5) * Math.sin(angle);
-        if (i === 0) g.moveTo(hx, hy); else g.lineTo(hx, hy);
-      }
-      g.closePath();
-      g.fillStyle = fFill(t.team);
-      g.fill();
-      g.lineWidth = t.castle ? 3 : (isMine ? 2.5 : 1);
-      g.strokeStyle = isMine ? '#ffffff' : fStroke(t.team);
-      g.stroke();
-      if (t.castle) {
-        g.font = Math.max(10, Math.round(hexRadius * 0.9)) + 'px sans-serif';
-        g.textAlign = 'center';
-        g.textBaseline = 'middle';
-        g.fillText('🏰', p.x, p.y);
-      }
-    });
-  }
-
-  /* ─── Beamer: Kingdoms of Mathoria — echte Fraktionsgrafiken ────
-     Ersetzt paintBoard() (Canvas, Platzhalterfarben) NUR für die
-     Lehrkraft-Rolle durch DOM/SVG: Sechsecke + Territoriumsgrenze
-     als <svg>, Burg + ein paar wandernde Einheiten je Fraktion als
-     <img> im Icon-Layer darüber. Der Teilnehmer behält vorerst
-     paintBoard() (eigene Runde, siehe Kopfkommentar der Datei).
+       units      Einheiten und Burgen laufen mit (Beamer) oder das
+                  Feld bleibt leer bis auf die Burgen (Tablet — der
+                  Blick soll auf die Gebiete gehen, nicht auf Figuren)
+       highlight  ein Team-Slot, dessen Kacheln hervorgehoben werden
+                  (auf dem Tablet das eigene Volk)
 
      Zwei Lehren aus dem Showroom (MPSkills/tools/clash-of-math/
      showroom.html, dort ausführlich dokumentiert):
@@ -285,7 +275,7 @@
      Umfassungsrechteck der TATSÄCHLICHEN Kacheln.
 
      `spanX`/`spanY` sind die Ausdehnung in Vielfachen einer halben
-     Kachelbreite bzw. -höhe; renderPresenterMap teilt die verfügbare
+     Kachelbreite bzw. -höhe; renderHexMap teilt die verfügbare
      Fläche durch sie und bekommt daraus seine beiden Maßstäbe.
 
      Oben ist mehr Platz nötig als unten: die Burg ragt über ihre
@@ -323,13 +313,19 @@
     return '<div class="cm-groundglow" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + w + 'px;height:' + h + 'px;--raw:' + raw + '"></div>';
   }
 
-  function renderPresenterMap(view) {
-    if (!view || !view.rows || !view.cols || !els.mapWrap || !els.hexsvg || !els.icons) return;
-    const W = els.mapWrap.clientWidth, H = els.mapWrap.clientHeight;
+  /* dom  = { wrap, svg, icons } — drei Elemente, die zusammengehören
+             (siehe mapDomHTML/mapDom weiter unten)
+     opts = { units: bool, highlight: slot|null } */
+  function renderHexMap(dom, view, opts) {
+    opts = opts || {};
+    if (!view || !view.rows || !view.cols || !dom || !dom.wrap || !dom.svg || !dom.icons) return;
+    const W = dom.wrap.clientWidth, H = dom.wrap.clientHeight;
     if (W < 10 || H < 10) return;
     const tiles = view.tiles || [];
-    if (!tiles.length) { els.hexsvg.innerHTML = ''; els.icons.innerHTML = ''; return; }
+    if (!tiles.length) { dom.svg.innerHTML = ''; dom.icons.innerHTML = ''; return; }
     const gap = 2.5;
+    const withUnits = opts.units !== false;
+    const mine = (opts.highlight == null) ? null : opts.highlight;
 
     /* ─── EIN Maßstab: die Sechsecke bleiben regelmäßig ────────────
        Ausprobiert und wieder verworfen war, waagerecht und senkrecht
@@ -357,11 +353,16 @@
         const a = Math.PI / 3 * i - Math.PI / 6;
         pts.push((p.x + (scale - gap) * Math.cos(a)).toFixed(1) + ',' + (p.y + (scale - gap) * Math.sin(a)).toFixed(1));
       }
-      poly += '<polygon class="cm-hex" points="' + pts.join(' ') + '" style="--raw:' + fStroke(t.team) + '"></polygon>';
+      // Das eigene Gebiet wird HELLER, nicht andersfarbig: die Farbe
+      // sagt bereits, wem die Kachel gehört: das darf die Hervorhebung
+      // nicht überschreiben, sonst gehört das eigene Feld plötzlich
+      // niemandem mehr.
+      const cls = (mine != null && t.team === mine) ? 'cm-hex cm-hex--mine' : 'cm-hex';
+      poly += '<polygon class="' + cls + '" points="' + pts.join(' ') + '" style="--raw:' + fStroke(t.team) + '"></polygon>';
     });
     const segs = computeBorderSegments(tiles, center, scale - Math.min(gap, 1));
-    els.hexsvg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-    els.hexsvg.innerHTML = poly + borderLayerHTML(segs);
+    dom.svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    dom.svg.innerHTML = poly + borderLayerHTML(segs);
 
     const byTeam = {};
     tiles.forEach(t => (byTeam[t.team] = byTeam[t.team] || []).push(t));
@@ -393,6 +394,9 @@
       // Nicht jedes eroberte Feld bekommt eine eigene Einheit (bei 40+
       // Feldern wäre das nur noch Gewusel) — eine kleine, über das
       // Gebiet verteilte Auswahl reicht, um „lebendig" zu wirken.
+      // Auf dem Tablet fallen sie ganz weg (units:false): dort ist die
+      // Karte eine Auskunft („wie steht es?"), keine Bühne.
+      if (!withUnits) return;
       const others = teamTiles.filter(t => !t.castle).sort((a, b) => (a.r - b.r) || (a.c - b.c));
       const unitCount = Math.min(3, others.length);
       for (let k = 0; k < unitCount; k++) {
@@ -405,7 +409,26 @@
           '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + (k * 0.5) + 's"><img src="' + esrc(fUnit(team)) + '" alt=""></div></div>';
       }
     });
-    els.icons.innerHTML = icons;
+    dom.icons.innerHTML = icons;
+  }
+
+  /* Die drei zusammengehörenden Elemente einer Karte — einmal als
+     HTML, einmal als Nachschlag. Sie stehen dreimal in der Seite
+     (Beamer, Karten-Fenster des Teilnehmers, Zuschauer-Ansicht), und
+     dreimal dasselbe von Hand zu schreiben ist dreimal die Gelegenheit,
+     eine Id zu vertippen. */
+  function mapDomHTML(prefix, cls) {
+    return '<div class="cm-hexmap ' + (cls || '') + '" id="' + prefix + 'Wrap">' +
+      '<div class="cm-mapinner"><svg class="cm-hexsvg" id="' + prefix + 'Svg"></svg></div>' +
+      '<div class="cm-iconlayer" id="' + prefix + 'Icons"></div>' +
+    '</div>';
+  }
+  function mapDom(prefix) {
+    return {
+      wrap:  root.querySelector('#' + prefix + 'Wrap'),
+      svg:   root.querySelector('#' + prefix + 'Svg'),
+      icons: root.querySelector('#' + prefix + 'Icons')
+    };
   }
 
   /* ─── Beamer: Karte nimmt den ganzen freien Platz ───────────
@@ -455,7 +478,7 @@
        Die Spalten behalten ihre Breite aus tool.css; der Rahmen füllt
        den Rest, und das Spielfeld füllt den Rahmen — in BEIDEN
        Richtungen. Dass ein fast quadratisches Feld dabei in die Breite
-       gezogen wird, ist gewollt (siehe renderPresenterMap): auf einem
+       gezogen wird, ist gewollt (siehe renderHexMap): auf einem
        16:9-Beamer bliebe sonst zwangsläufig Pergament links und rechts
        stehen. Deshalb hier kein Seitenverhältnis mehr, nur noch die
        zwei verfügbaren Maße. */
@@ -476,7 +499,9 @@
     els.mapWrap.style.width  = Math.min(availW, MAP_MAX) + 'px';
     els.mapWrap.style.height = Math.min(availH, MAP_MAX) + 'px';
 
-    if (els.hexsvg && els.icons) renderPresenterMap(lastView);
+    if (els.hexsvg && els.icons) {
+      renderHexMap({ wrap: els.mapWrap, svg: els.hexsvg, icons: els.icons }, lastView, { units: true });
+    }
   }
 
   /* ─── Rundenende-Timer (Anzeige) ─────────────────────────────
@@ -645,6 +670,179 @@
   }
 
   /* ══════════════════════════════════════════════════════════
+     Die Tastatur des Spiels
+     ══════════════════════════════════════════════════════════
+     Die Gerätetastatur ist raus. Sie war für „12 + 34" gerade noch
+     tragfähig, aber sie kann nichts von dem, was noch kommt: Brüche,
+     Vorzeichen, Variablen, Potenzen, Wurzeln, Sinus/Kosinus, Binär-
+     und Hexadezimalzahlen. Dazu nimmt sie auf einem Tablet die halbe
+     Höhe, ohne dass das Layout es erfährt, und sie schließt sich bei
+     jeder Gelegenheit wieder.
+
+     Der Aufbau ist deshalb bewusst eine BESCHREIBUNG, kein festes
+     HTML, damit jede kommende Aufgabenart nur eine Zeile hier braucht:
+
+       KEY_BASE    der Grundblock, den ALLE Arten teilen. Die Ziffern
+                   stehen bei jeder Art an derselben Stelle — wer
+                   „Brüche" bekommt, muss die 7 nicht neu suchen.
+       KEY_EXTRA   Zusatztasten, nach Thema gebündelt. Sie hängen sich
+                   als weitere Zeile UNTER den Grundblock, statt ihn
+                   umzustellen.
+       MODES       welche Bündel eine Aufgabenart mitbringt, und
+                   welche Ziffern sie überhaupt zulässt.
+
+     Der Grundblock (4 Spalten × 4 Zeilen):
+
+        7  8  9  ⌫
+        4  5  6  C
+        1  2  3  ✓   ← über zwei Zeilen, unten rechts (Sönkes Vorgabe)
+        ‹—— 0 ——›
+
+     Welche Art gerade gilt, sagt später der Server je Frage
+     (`question.input`). Heute schickt er nur `{a, b}` — eine Addition
+     bis 100 —, also greift überall der Rückfall 'natural'. Die
+     übrigen Arten stehen schon da, weil sie beim Hinzufügen sonst
+     wieder eine Layout-Diskussion auslösen würden; erreichbar sind
+     sie erst, wenn der Server sie benennt. */
+  const KEY_BASE = [
+    { lab: '7', ins: '7', r: 1, c: 1 }, { lab: '8', ins: '8', r: 1, c: 2 }, { lab: '9', ins: '9', r: 1, c: 3 },
+    { lab: '4', ins: '4', r: 2, c: 1 }, { lab: '5', ins: '5', r: 2, c: 2 }, { lab: '6', ins: '6', r: 2, c: 3 },
+    { lab: '1', ins: '1', r: 3, c: 1 }, { lab: '2', ins: '2', r: 3, c: 2 }, { lab: '3', ins: '3', r: 3, c: 3 },
+    { lab: '0', ins: '0', r: 4, c: 1, cs: 3 },
+    { lab: '⌫', act: 'back',   r: 1, c: 4, cls: 'cm-key--util', aria: 'Letzte Eingabe löschen' },
+    { lab: 'C', act: 'clear',  r: 2, c: 4, cls: 'cm-key--util', aria: 'Eingabe leeren' },
+    { lab: '✓', act: 'submit', r: 3, c: 4, rs: 2, cls: 'cm-key--go', aria: 'Antwort abschicken' }
+  ];
+
+  /* Die Zusatzbündel. Sie tragen KEINE Position — die verteilt
+     buildKeypad() der Reihe nach auf die Zeilen unter dem Grundblock,
+     damit ein neues Bündel nirgends nachgerechnet werden muss. */
+  const KEY_EXTRA = {
+    sign:  [{ lab: '±', act: 'sign', aria: 'Vorzeichen wechseln' }],
+    dec:   [{ lab: ',', ins: ',' }],
+    frac:  [{ lab: '/', ins: '/', aria: 'Bruchstrich' }],
+    pow:   [{ lab: 'x²', ins: '^2' }, { lab: 'xⁿ', ins: '^' }, { lab: '√', ins: '√' }],
+    trig:  [{ lab: 'sin', ins: 'sin(' }, { lab: 'cos', ins: 'cos(' }, { lab: 'tan', ins: 'tan(' },
+            { lab: ')', ins: ')' }, { lab: 'π', ins: 'π' }],
+    vars:  [{ lab: 'x', ins: 'x' }, { lab: 'y', ins: 'y' }],
+    // ⚠️ Wenn die Hexadezimal-Aufgaben tatsächlich kommen: das „C"
+    // hier trifft auf das „C" (Leeren) im Grundblock. Zwei gleich
+    // beschriftete Tasten nebeneinander sind eine Falle — dann die
+    // Leeren-Taste umbenennen (z. B. „AC"), nicht die Ziffer.
+    hex:   [{ lab: 'A', ins: 'A' }, { lab: 'B', ins: 'B' }, { lab: 'C', ins: 'C' },
+            { lab: 'D', ins: 'D' }, { lab: 'E', ins: 'E' }, { lab: 'F', ins: 'F' }]
+  };
+
+  /* `digits` grenzt den Grundblock ein (Binär kennt nur 0 und 1);
+     fehlt der Schlüssel, sind alle zehn Ziffern erlaubt.
+     `base` ist die Zahlenbasis, mit der parseAnswer liest. */
+  const MODES = {
+    natural: { extra: [],                       base: 10 },
+    integer: { extra: ['sign'],                 base: 10 },
+    decimal: { extra: ['sign', 'dec'],          base: 10 },
+    fraction:{ extra: ['sign', 'frac'],         base: 10 },
+    binary:  { extra: [],  digits: '01',        base: 2  },
+    hexa:    { extra: ['hex'],                  base: 16 },
+    algebra: { extra: ['sign', 'vars', 'pow'],  base: 10 },
+    trig:    { extra: ['dec', 'pow', 'trig'],   base: 10 }
+  };
+  const modeOf = name => MODES[name] || MODES.natural;
+
+  function buildKeypad(mode) {
+    const m = modeOf(mode);
+    const extras = (m.extra || []).reduce((all, k) => all.concat(KEY_EXTRA[k] || []), []);
+    const cols = 4;
+    let rows = 4, html = '';
+
+    const cell = (k, r, c) => {
+      const disabled = (k.ins && m.digits && /^[0-9]$/.test(k.ins) && m.digits.indexOf(k.ins) < 0);
+      const style = 'grid-area:' + r + '/' + c + '/span ' + (k.rs || 1) + '/span ' + (k.cs || 1);
+      return '<button type="button" class="cm-key ' + (k.cls || '') + '" style="' + style + '"' +
+        (k.ins ? ' data-ins="' + ctx.esc(k.ins) + '"' : '') +
+        (k.act ? ' data-act="' + k.act + '"' : '') +
+        (disabled ? ' disabled' : '') +
+        ' aria-label="' + ctx.esc(k.aria || k.lab) + '">' + ctx.esc(k.lab) + '</button>';
+    };
+
+    KEY_BASE.forEach(k => { html += cell(k, k.r, k.c); });
+    extras.forEach((k, i) => {
+      const r = 5 + Math.floor(i / cols);
+      html += cell(k, r, (i % cols) + 1);
+      rows = Math.max(rows, r);
+    });
+
+    els.keys.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+    els.keys.style.gridTemplateRows    = 'repeat(' + rows + ', 1fr)';
+    els.keys.innerHTML = html;
+    keyMode = mode;
+  }
+
+  /* Aus dem getippten Text eine Zahl machen. Heute reicht dafür die
+     Basis der Aufgabenart; sobald Brüche oder Terme dazukommen, ist
+     das die Stelle, an der aus „3/4" etwas anderes wird als eine Zahl
+     — und dann ändert sich auch, was clash_submit_answer entgegen-
+     nimmt (heute: ein int). Bis dahin bewusst schlicht. */
+  function parseAnswer(mode, buf) {
+    const s = String(buf || '').trim();
+    if (!s || s === '-') return null;
+    const n = parseInt(s, modeOf(mode).base);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  const ANSWER_MAX = 12;   // mehr tippt niemand versehentlich sinnvoll
+
+  function keyPress(k) {
+    if (k.act === 'submit') { onSubmit(); return; }
+    if (k.act === 'back')   { answerBuf = answerBuf.slice(0, -1); }
+    else if (k.act === 'clear') { answerBuf = ''; }
+    else if (k.act === 'sign')  {
+      answerBuf = answerBuf.startsWith('-') ? answerBuf.slice(1) : ('-' + answerBuf);
+    }
+    else if (k.ins != null && answerBuf.length < ANSWER_MAX) {
+      // Führende Nullen wegräumen: „007" ist als Antwort dasselbe wie
+      // „7", sieht aber aus wie ein Vertipper.
+      if (k.ins === '0' && (answerBuf === '0' || answerBuf === '-0')) return;
+      if (/^-?0$/.test(answerBuf) && /^[1-9]$/.test(k.ins)) {
+        answerBuf = answerBuf.replace(/0$/, k.ins);
+      } else {
+        answerBuf += k.ins;
+      }
+    }
+    renderAnswer();
+  }
+
+  function renderAnswer() {
+    if (!els.input) return;
+    els.input.textContent = answerBuf;
+    els.input.classList.toggle('cm-in--empty', !answerBuf);
+  }
+
+  /* Eine echte Tastatur darf trotzdem mit — am Rechner der Lehrkraft
+     und beim Ausprobieren ist das der schnellste Weg. Sie ist nur ein
+     zweiter Zugang zu denselben Tasten, kein eigener Pfad: für ein
+     Zeichen wird die zugehörige BILDSCHIRMTASTE gesucht, und gibt es
+     sie in dieser Aufgabenart nicht (oder ist sie gesperrt, wie die
+     2..9 bei Binärzahlen), passiert nichts. Sonst könnte man über die
+     Hardware etwas eintippen, was die Aufgabe gar nicht zulässt. */
+  function onHardwareKey(e) {
+    if (!els.game || els.game.classList.contains('cm-hide')) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (mapOpen) { if (e.key === 'Escape') { closeMap(); e.preventDefault(); } return; }
+    const k = e.key;
+    if (k === 'Enter')                         keyPress({ act: 'submit' });
+    else if (k === 'Backspace')                keyPress({ act: 'back' });
+    else if (k === 'Escape' || k === 'Delete') keyPress({ act: 'clear' });
+    else if (k === '-')                        keyPress({ act: 'sign' });
+    else if (k.length === 1 && els.keys) {
+      const btn = els.keys.querySelector('.cm-key[data-ins="' + k.toUpperCase() + '"]');
+      if (!btn || btn.disabled) return;
+      keyPress({ ins: btn.dataset.ins });
+    }
+    else return;
+    e.preventDefault();
+  }
+
+  /* ══════════════════════════════════════════════════════════
      Teilnehmer
      ══════════════════════════════════════════════════════════ */
   function buildParticipantDOM() {
@@ -674,26 +872,92 @@
             '<p class="cm-hint">Gleich geht’s los …</p>' +
           '</div>' +
         '</div>' +
-        '<div class="cm-pane cm-hide" id="cmGame">' +
-          '<div class="cm-topbar">' +
-            '<span class="cm-teampill" id="cmTeamPill"></span>' +
-            '<span class="cm-streak" id="cmStreak">🔥 0</span>' +
-            '<span class="cm-timeleft cm-hide" id="cmTimeLeftP"></span>' +
+        /* ── Der Spielbildschirm ────────────────────────────────────
+           Er füllt den sichtbaren Bereich vollständig (position:fixed
+           auf --vv-top/--vv-h, siehe tool.css) — nicht aus Effekt-
+           hascherei, sondern weil Sönkes Aufteilung sich auf den
+           GANZEN Bildschirm bezieht: untere Hälfte Tasten, darüber
+           Aufgabe, oben ein Fünftel die eigene Einheit. In einem
+           Kasten mitten in der Seite ergäben diese Anteile nichts.
+           Dass die Seite darunter verschwindet, ist dabei kein
+           Verlust: während einer laufenden Runde gibt es dort nichts
+           zu tun, und die Gerätetastatur, die den Platz sonst
+           zerschnitten hätte, öffnet sich nicht mehr.
+
+           Von oben nach unten:
+             cm-pfactions  die Völker, winzig — wer noch da ist
+             cm-phero      eigene Einheit, Anteil am Spielfeld, Serien
+             cm-pask       Aufgabe und Eingabe (ohne Absende-Knopf,
+                           der sitzt in der Tastatur)
+             cm-keys       die Tastatur, untere Hälfte */
+        '<div class="cm-pane cm-hide cm-play" id="cmGame">' +
+          '<div class="cm-pbg"></div>' +
+          '<div class="cm-pinner">' +
+            // Die Restzeit steht als Kind der Völker-Reihe da, obwohl
+            // renderFactionRow die Reihe bei jedem Takt neu füllt: die
+            // Anzeige wird danach wieder angehängt (der Verweis bleibt
+            // gültig, auch wenn das Element kurz aus dem Baum fällt).
+            // So braucht sie keinen eigenen Kasten und keine eigene
+            // Zeile Bildschirmhöhe.
+            '<div class="cm-pfactions" id="cmPFactions">' +
+              '<span class="cm-timeleft cm-hide" id="cmTimeLeftP"></span>' +
+            '</div>' +
+            '<div class="cm-phero">' +
+              '<div class="cm-pherounit"><img id="cmPUnit" src="" alt=""></div>' +
+              '<div class="cm-pherostats">' +
+                '<div class="cm-pstatline">' +
+                  '<div class="cm-pshare">' +
+                    '<b id="cmPShare">0 %</b>' +
+                    '<span class="cm-psharelab" id="cmPShareLab">des Spielfelds</span>' +
+                  '</div>' +
+                  // Zwei Serien-Anzeigen. Die eigene füttert der Server
+                  // heute schon (me.streak); die des Volkes hat noch
+                  // keine Quelle — sie steht bewusst schon da, mit „–"
+                  // statt einer erfundenen Zahl, damit später nur der
+                  // Wert nachzureichen ist und nicht das Layout.
+                  '<div class="cm-pstreaks">' +
+                    '<span class="cm-pstreak" id="cmStreak" title="Deine Serie richtiger Antworten">' +
+                      '<span class="cm-pstreakico">🔥</span><b>0</b></span>' +
+                    '<span class="cm-pstreak cm-pstreak--team" id="cmTeamStreak" title="Serie deines Volkes">' +
+                      '<span class="cm-pstreakico">⚔️</span><b>–</b></span>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="cm-pbar"><i id="cmPBar"></i></div>' +
+              '</div>' +
+              '<button type="button" class="cm-pmapbtn" id="cmMapBtn">' +
+                '<span class="cm-pmapico">🗺️</span><span>Karte</span></button>' +
+            '</div>' +
+            '<div class="cm-pask">' +
+              '<div class="cm-eq">' +
+                '<span class="cm-q" id="cmQ">? + ?</span>' +
+                '<span class="cm-eqop">=</span>' +
+                '<span class="cm-in cm-in--empty" id="cmIn"></span>' +
+              '</div>' +
+              '<div class="cm-feedback" id="cmFeedback"></div>' +
+            '</div>' +
+            '<div class="cm-keys" id="cmKeys"></div>' +
           '</div>' +
-          '<div class="cm-mapwrap cm-mapwrap--sm"><canvas id="cmMiniMap"></canvas></div>' +
-          '<div class="cm-question">' +
-            '<div class="cm-q" id="cmQ">? + ? =</div>' +
-            '<form id="cmForm" class="cm-form">' +
-              '<input id="cmAnswer" type="number" inputmode="numeric" autocomplete="off" placeholder="Antwort" required>' +
-              '<button type="submit">Absenden</button>' +
-            '</form>' +
-            '<div class="cm-feedback" id="cmFeedback"></div>' +
+          // Das Karten-Fenster. Es gehört in den Spielbildschirm und
+          // nicht daneben: es liegt über ihm und übernimmt denselben
+          // sichtbaren Bereich.
+          '<div class="cm-mapov cm-hide" id="cmMapOv">' +
+            '<div class="cm-mapovbox">' +
+              '<div class="cm-mapovhead">' +
+                '<span class="cm-mapovtitle">Kingdoms of Mathoria</span>' +
+                '<button type="button" class="cm-mapovclose" id="cmMapClose" aria-label="Karte schließen">✕</button>' +
+              '</div>' +
+              mapDomHTML('cmPMap') +
+              '<div class="cm-mapovfoot" id="cmMapFoot"></div>' +
+            '</div>' +
           '</div>' +
         '</div>' +
+        // Ausgeschieden: derselbe Blick wie beim Zuschauen auf dem
+        // Beamer, nur ohne Tastatur — die Karte steht jetzt fest da,
+        // statt hinter einem Knopf.
         '<div class="cm-pane cm-hide" id="cmOut">' +
-          '<p class="cm-lead">Dein Team ist ausgeschieden.</p>' +
+          '<p class="cm-lead">Dein Volk ist ausgeschieden.</p>' +
           '<p class="cm-hint">Du siehst weiter zu, wie es weitergeht.</p>' +
-          '<div class="cm-mapwrap cm-mapwrap--sm"><canvas id="cmMiniMap2"></canvas></div>' +
+          '<div class="cm-obsmap">' + mapDomHTML('cmOMap', 'cm-hexmap--square') + '</div>' +
         '</div>' +
         '<div class="cm-pane cm-hide" id="cmEnded">' +
           '<div class="cm-result" id="cmResult"></div>' +
@@ -705,15 +969,22 @@
       countdown: root.querySelector('#cmCountdown'),
       countNum: root.querySelector('#cmCountNum'),
       game: root.querySelector('#cmGame'),
-      teamPill: root.querySelector('#cmTeamPill'),
+      factionRow: root.querySelector('#cmPFactions'),
+      heroUnit: root.querySelector('#cmPUnit'),
+      share: root.querySelector('#cmPShare'),
+      shareLab: root.querySelector('#cmPShareLab'),
+      shareBar: root.querySelector('#cmPBar'),
       streak: root.querySelector('#cmStreak'),
-      map: root.querySelector('#cmMiniMap'),
+      teamStreak: root.querySelector('#cmTeamStreak'),
+      mapBtn: root.querySelector('#cmMapBtn'),
+      mapOv: root.querySelector('#cmMapOv'),
+      mapFoot: root.querySelector('#cmMapFoot'),
+      mapClose: root.querySelector('#cmMapClose'),
       q: root.querySelector('#cmQ'),
-      form: root.querySelector('#cmForm'),
-      answer: root.querySelector('#cmAnswer'),
+      input: root.querySelector('#cmIn'),
+      keys: root.querySelector('#cmKeys'),
       feedback: root.querySelector('#cmFeedback'),
       out: root.querySelector('#cmOut'),
-      map2: root.querySelector('#cmMiniMap2'),
       ended: root.querySelector('#cmEnded'),
       result: root.querySelector('#cmResult'),
       myTeam: root.querySelector('#cmMyTeam'),
@@ -722,51 +993,187 @@
       onlineHint: root.querySelector('#cmOnlineHint'),
       timeLeftP: root.querySelector('#cmTimeLeftP')
     };
+    els.pmap = mapDom('cmPMap');    // Karten-Fenster über dem Spiel
+    els.omap = mapDom('cmOMap');    // Zuschauer-Ansicht nach dem Ausscheiden
 
-    els.form.addEventListener('submit', onSubmit);
+    // EIN Zuhörer auf der ganzen Tastatur statt einem je Taste: die
+    // Tasten werden bei jedem Wechsel der Aufgabenart neu gezeichnet.
+    els.keys.addEventListener('click', ev => {
+      const btn = ev.target.closest('.cm-key');
+      if (!btn || btn.disabled) return;
+      keyPress({ ins: btn.dataset.ins, act: btn.dataset.act });
+    });
+    els.mapBtn.addEventListener('click', openMap);
+    els.mapClose.addEventListener('click', closeMap);
+    // Klick auf die Fläche neben der Karte schließt ebenfalls — der
+    // ✕ ist klein, und ein Kind, das die Karte wieder loswerden will,
+    // tippt irgendwohin.
+    els.mapOv.addEventListener('click', ev => { if (ev.target === els.mapOv) closeMap(); });
+    document.addEventListener('keydown', onHardwareKey);
   }
 
-  async function onSubmit(e) {
-    e.preventDefault();
+  /* ─── Das Karten-Fenster ────────────────────────────────────────
+     Die Karte ist standardmäßig ZU. Auf dem Spielbildschirm gehört der
+     Platz der Aufgabe; wer wissen will, wie es steht, holt sie sich —
+     und sieht dann dasselbe Bild wie die Klasse auf dem Beamer, nur
+     ohne die wandernden Einheiten und mit dem eigenen Gebiet
+     hervorgehoben. */
+  function openMap() {
+    if (!els.mapOv) return;
+    mapOpen = true;
+    els.mapOv.classList.remove('cm-hide');
+    renderPlayerMap();
+    // Zweimal: beim ersten Mal hat die gerade eingeblendete Fläche noch
+    // keine verlässlichen Maße (clientWidth 0) — dieselbe Zweitmessung
+    // wie beim Beamer.
+    requestAnimationFrame(renderPlayerMap);
+  }
+  function closeMap() {
+    mapOpen = false;
+    if (els.mapOv) els.mapOv.classList.add('cm-hide');
+  }
+  function renderPlayerMap() {
+    if (!mapOpen || !lastView || !els.pmap) return;
+    const myTeam = lastView.me && lastView.me.team;
+    renderHexMap(els.pmap, lastView, { units: false, highlight: myTeam });
+    if (els.mapFoot && myTeam != null) {
+      els.mapFoot.innerHTML = `<span class="cm-maplegend" style="--team:${fStroke(myTeam)}">` +
+        '<i></i>Dein Gebiet — ' + ctx.esc(fLabel(myTeam)) + '</span>';
+    }
+  }
+
+  async function onSubmit() {
     if (submitting) return;
-    const val = parseInt(els.answer.value, 10);
-    if (!Number.isFinite(val)) return;
+    const val = parseAnswer(keyMode, answerBuf);
+    if (val == null) { flashInput('warn'); return; }
     submitting = true;
-    els.answer.value = '';
-    // Tastatur soll offen bleiben: manche virtuellen Tastaturen
-    // schließen sich sonst, wenn das Feld per Enter/„Los" abgeschickt
-    // und der Wert danach programmatisch geleert wird. Direkt danach
-    // erneut fokussieren hält die Klasse im Frage-Antwort-Takt, ohne
-    // dass jemand die Tastatur wieder von Hand öffnen muss.
-    els.answer.focus({ preventScroll: true });
+    answerBuf = '';
+    renderAnswer();
     const r = await ctx.actions.call('clash_submit_answer', { p_answer: val });
     submitting = false;
-    els.answer.focus({ preventScroll: true });
     if (!r || !r.ok) {
-      els.feedback.textContent = ctx.errText((r && r.error) || 'network');
-      els.feedback.className = 'cm-feedback cm-feedback--warn';
+      setFeedback(ctx.errText((r && r.error) || 'network'), 'warn');
       if (r && r.error === 'team_eliminated') tick(true);
       return;
     }
     if (r.correct === true) {
-      els.feedback.textContent = r.captured ? '✅ Feld erobert!' : '✅ Richtig!';
-      els.feedback.className = 'cm-feedback cm-feedback--ok';
+      setFeedback(r.captured ? '✅ Feld erobert!' : '✅ Richtig!', 'ok');
+      flashInput('ok');
       // Eigene Antwort ist Wahrheit — lokal patchen statt auf den
       // nächsten Takt zu warten, und die anderen anstoßen.
       if (lastView && r.captured) {
         const t = (lastView.tiles || []).find(x => x.r === r.captured.r && x.c === r.captured.c);
         if (t) t.team = lastView.me.team;
-        paintBoard(els.map, lastView, { highlightTeam: lastView.me.team });
+        renderStandings(lastView);
+        renderPlayerMap();
       }
       nudge();
     } else if (r.correct === false) {
-      els.feedback.textContent = '❌ Leider nicht.';
-      els.feedback.className = 'cm-feedback cm-feedback--warn';
+      setFeedback('❌ Leider nicht.', 'warn');
+      flashInput('warn');
     } else {
-      els.feedback.textContent = '';
+      setFeedback('', '');
     }
-    if (r.streak != null && els.streak) els.streak.textContent = '🔥 ' + r.streak;
-    if (r.question && els.q) els.q.textContent = r.question.a + ' + ' + r.question.b + ' = ?';
+    if (r.streak != null) setStreak(r.streak);
+    if (r.question) setQuestion(r.question);
+  }
+
+  /* Rückmeldung und Aufgabe stehen in EIGENEN Kästen mit fester Höhe:
+     eine Zeile, die mal da ist und mal nicht, würde die Tastatur bei
+     jeder Antwort um ihre eigene Höhe verschieben — und das genau in
+     dem Moment, in dem der Finger schon zur nächsten Taste unterwegs
+     ist. */
+  let feedbackTimer = null;
+  function setFeedback(text, kind) {
+    if (!els.feedback) return;
+    els.feedback.textContent = text;
+    els.feedback.className = 'cm-feedback' + (kind ? ' cm-feedback--' + kind : '');
+    if (feedbackTimer) clearTimeout(feedbackTimer);
+    if (text) feedbackTimer = setTimeout(() => {
+      if (els.feedback) els.feedback.textContent = '';
+    }, 1800);
+  }
+  let flashTimer = null;
+  function flashInput(kind) {
+    if (!els.input) return;
+    els.input.classList.remove('cm-in--ok', 'cm-in--warn');
+    // Erzwingt einen Neustart der Animation, wenn zweimal hintereinander
+    // dasselbe Ergebnis kommt.
+    void els.input.offsetWidth;
+    els.input.classList.add('cm-in--' + kind);
+    if (flashTimer) clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => {
+      if (els.input) els.input.classList.remove('cm-in--ok', 'cm-in--warn');
+    }, 600);
+  }
+  function setStreak(n) {
+    if (!els.streak) return;
+    els.streak.querySelector('b').textContent = String(n || 0);
+    els.streak.classList.toggle('cm-pstreak--hot', (n || 0) >= 3);
+  }
+  function setQuestion(q) {
+    if (!els.q || !q) return;
+    // Heute schickt der Server nur {a, b} für eine Addition. Ein
+    // späterer `text` (fertig gesetzte Aufgabe) hat Vorrang, damit
+    // neue Aufgabenarten hier nichts mehr ändern müssen.
+    els.q.textContent = q.text ? q.text : (q.a + ' + ' + q.b);
+    const mode = q.input || 'natural';
+    if (mode !== keyMode) buildKeypad(mode);
+  }
+
+  /* ─── Wer wie viel hat ──────────────────────────────────────────
+     Der Server schickt dem Tablet ohnehin alle Kacheln (clash_view →
+     `tiles`) — die Feldzahlen daraus zu zählen ist billiger und immer
+     deckungsgleich mit der Karte, die aus denselben Kacheln entsteht.
+     Eine eigene Zahl vom Server (wie team_tile_counts beim Beamer)
+     könnte dagegen einen Takt älter sein als die Karte daneben. */
+  function tileCounts(v) {
+    const counts = {};
+    (v.tiles || []).forEach(t => { counts[t.team] = (counts[t.team] || 0) + 1; });
+    return counts;
+  }
+
+  /* Die Völker ganz oben: winzig, nur das Wappen und die Zahl der
+     Felder. Ausgeschieden (kein Feld mehr) heißt grau und
+     durchgestrichen — dieselbe Aussage wie am Beamer-Rand
+     (.cm-rcard--out), nur auf Daumennagelgröße. Namen stehen bewusst
+     nicht dabei: acht davon nebeneinander wären auf einem Tablet
+     entweder unlesbar klein oder abgeschnitten, und das eigene Volk
+     steht direkt darunter in voller Größe. Für Vorlese-Werkzeuge und
+     als Kurzhinweis tragen die Wappen den Namen im aria-label. */
+  function renderFactionRow(v, myTeam, counts) {
+    if (!els.factionRow) return;
+    let out = '';
+    for (let i = 0; i < v.team_count; i++) {
+      const n = counts[i] || 0;
+      const cls = 'cm-fchip' + (n === 0 ? ' cm-fchip--out' : '') + (i === myTeam ? ' cm-fchip--me' : '');
+      out += `<span class="${cls}" style="--team:${fStroke(i)}" ` +
+        `title="${ctx.esc(fLabel(i))}" aria-label="${ctx.esc(fLabel(i))}: ${n} Felder">` +
+        `<img src="${esrc(fUnit(i))}" alt="">` +
+        `<b>${n}</b>` +
+      '</span>';
+    }
+    els.factionRow.innerHTML = out;
+    // Die Restzeit hängt hinten an derselben Reihe — sie gehört zum
+    // Überblick, nicht zur Aufgabe, und nimmt hier keine eigene Zeile.
+    if (els.timeLeftP) els.factionRow.appendChild(els.timeLeftP);
+  }
+
+  function renderStandings(v) {
+    const myTeam = v.me.team;
+    const counts = tileCounts(v);
+    renderFactionRow(v, myTeam, counts);
+
+    const total = (v.tiles || []).length || 1;
+    const own   = counts[myTeam] || 0;
+    // Aufgerundet nur bis 1 %: „0 %" neben einem noch vorhandenen Feld
+    // wäre eine Falschauskunft, „100 %" bei einer fehlenden Kachel
+    // ebenso.
+    let pct = own / total * 100;
+    pct = (own > 0 && pct < 1) ? 1 : (own < total && pct > 99) ? 99 : Math.round(pct);
+    if (els.share)    els.share.textContent = pct + ' %';
+    if (els.shareBar) els.shareBar.style.width = pct + '%';
+    if (els.shareLab) els.shareLab.textContent = 'des Spielfelds · ' + own + ' von ' + total;
   }
 
   function renderParticipant(v) {
@@ -804,8 +1211,13 @@
       return;
     }
     stopCountdown();
-    stopMatchTimer();
+    // stopMatchTimer() steht bewusst NICHT hier, sondern in jedem Zweig
+    // einzeln: der Takt läuft mehrmals pro Minute durch diese Funktion,
+    // und ein Stopp-Start-Paar setzt den Nenner des Rings jedes Mal auf
+    // die verbliebene Restzeit zurück (siehe startMatchTimer) — der Ring
+    // stünde dann dauerhaft auf „voll".
     if (v.phase === 'ended') {
+      stopMatchTimer();
       show('ended');
       const won = v.winner_team === myTeam;
       els.result.innerHTML =
@@ -815,17 +1227,38 @@
     }
     // running
     if (!v.me.alive) {
+      stopMatchTimer();
       show('out');
-      paintBoard(els.map2, v, { highlightTeam: myTeam });
+      renderHexMap(els.omap, v, { units: false, highlight: myTeam });
+      requestAnimationFrame(() => renderHexMap(els.omap, v, { units: false, highlight: myTeam }));
       return;
     }
     show('game');
-    els.teamPill.textContent = fLabel(myTeam);
-    els.teamPill.style.background = fStroke(myTeam);
-    els.streak.textContent = '🔥 ' + (v.me.streak || 0);
+    // Der ganze Bildschirm trägt die Farbe des eigenen Volkes: Tasten,
+    // Rahmen, Schein. Sie steht als eine Variable am Spielbildschirm,
+    // alles Weitere mischt tool.css daraus.
+    els.game.style.setProperty('--cm-team', fStroke(myTeam));
+    if (els.heroUnit) {
+      const src = esrc(fUnit(myTeam));
+      // Nur bei Wechsel neu setzen — ein erneutes `src` startet das
+      // Laden neu und lässt die Figur bei jedem Takt kurz blinken.
+      if (els.heroUnit.getAttribute('src') !== src) els.heroUnit.setAttribute('src', src);
+      els.heroUnit.alt = fLabel(myTeam);
+    }
+    setStreak(v.me.streak || 0);
+    // Die Serie des Volkes hat noch keine Quelle (siehe DOM-Kommentar).
+    // Sobald der Server sie schickt, ist das hier die einzige Zeile,
+    // die sich ändert.
+    if (els.teamStreak) {
+      els.teamStreak.querySelector('b').textContent =
+        (v.team_streak != null) ? String(v.team_streak) : '–';
+    }
+    renderStandings(v);
     if (v.match_ends_at) startMatchTimer(v.match_ends_at); else stopMatchTimer();
-    if (v.me.question) els.q.textContent = v.me.question.a + ' + ' + v.me.question.b + ' = ?';
-    paintBoard(els.map, v, { highlightTeam: myTeam });
+    if (v.me.question) setQuestion(v.me.question);
+    if (!keyMode) buildKeypad('natural');
+    renderAnswer();
+    renderPlayerMap();
   }
 
   function show(which) {
@@ -833,6 +1266,11 @@
       if (els[k]) els[k].classList.toggle('cm-hide', k !== which);
     });
     if (which !== 'countdown') stopCountdown();
+    // Der Spielbildschirm liegt über der Seite und ist selbst so hoch
+    // wie der sichtbare Bereich — was dahinter noch scrollen kann, ist
+    // dann nur eine Falle für den Daumen.
+    document.body.classList.toggle('cm-locked', which === 'game');
+    if (which !== 'game') { closeMap(); answerBuf = ''; }
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -1185,8 +1623,10 @@
       return;
     }
     stopCountdown();
-    stopMatchTimer();
+    // Kein unbedingtes stopMatchTimer() — Begründung bei
+    // renderParticipant (der Ring stünde sonst immer auf „voll").
     if (v.phase === 'ended') {
+      stopMatchTimer();
       show2('endedP');
       els.resultP.innerHTML =
         `<b style="color:${fStroke(v.winner_team)}">${ctx.esc(fLabel(v.winner_team))} gewinnt!</b>`;
@@ -1244,13 +1684,26 @@
         window.addEventListener('resize', onWinResize);
       }
 
+      // Der Spielbildschirm des Teilnehmers hängt am SICHTBAREN Bereich
+      // (position:fixed auf --vv-h), nicht an der Größe von `root` —
+      // ein ResizeObserver auf root bekommt eine Drehung des Tablets
+      // deshalb gar nicht mit. Für ihn ist window.resize der richtige
+      // Anlass; der Beobachter bleibt für die Zuschauer-Karte, die
+      // ganz normal in der Seite steht.
+      if (role !== 'presenter') {
+        onWinResize = () => {
+          if (!lastView) return;
+          renderPlayerMap();
+        };
+        window.addEventListener('resize', onWinResize);
+      }
+
       resizeObs = new ResizeObserver(() => {
         if (!lastView) return;
         if (role === 'presenter') { fitPresenterMap(); }
-        else {
+        else if (els.omap && els.out && !els.out.classList.contains('cm-hide')) {
           const myTeam = lastView.me && lastView.me.team;
-          if (els.map)  paintBoard(els.map,  lastView, { highlightTeam: myTeam });
-          if (els.map2) paintBoard(els.map2, lastView, { highlightTeam: myTeam });
+          renderHexMap(els.omap, lastView, { units: false, highlight: myTeam });
         }
       });
       resizeObs.observe(root);
@@ -1276,7 +1729,11 @@
       stopMatchTimer();
       if (onWinResize) window.removeEventListener('resize', onWinResize);
       onWinResize = null;
-      document.body.classList.remove('tool-fill');
+      document.removeEventListener('keydown', onHardwareKey);
+      if (feedbackTimer) clearTimeout(feedbackTimer);
+      if (flashTimer) clearTimeout(flashTimer);
+      feedbackTimer = flashTimer = null;
+      document.body.classList.remove('tool-fill', 'cm-locked');
       if (resizeObs) { try { resizeObs.disconnect(); } catch (e) {} }
       resizeObs = null;
       if (channel && window.supabaseClient) {
@@ -1286,6 +1743,7 @@
       root = ctx = null; role = null;
       els = {}; lastView = null; lastSig = null; busy = false; submitting = false;
       pickSel = []; pickBusy = 0; factions = [0, 1, 2, 3];
+      answerBuf = ''; keyMode = null; mapOpen = false;
     }
   });
 })();
