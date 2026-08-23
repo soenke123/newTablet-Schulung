@@ -46,7 +46,8 @@
       "Bash(npx --yes playwright --version)",
       "Bash(npx --yes playwright install chromium --with-deps)",
       "Bash(npm init *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(awk '/function renderPresenterMap/,/^  \\\\/\\\\* ─── Beamer: Karte nimmt/' MPSkills/tools/clash-of-math/tool.js)"
     ]
   }
 }

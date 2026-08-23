@@ -78,7 +78,12 @@
                            'lila carstle.png', 'türkis carstle.png', 'magenta carstle.png', 'rosa carstle.png'];
   const FACTION_UNIT   = ['red units.png', 'blue units.png', 'green units.png', 'yellow units.png',
                            'lila units.png', 'türkis units.png', 'magenta units.png', 'rosa units.png'];
+  // Der Fraktionsname unter dem Teamnamen in der Liste — „Rot" sagt,
+  // wem das Feld gehört, „Toast-Ritter" sagt, wer da steht.
+  const FACTION_LABEL  = ['Toast-Ritter', 'Robo-Enten', 'Brokkoli-Giraffen', 'Mal-Hasen',
+                           'Kosmische Katzen', 'Okto-Pferdchen', 'Spuk-Einhorn', 'Wolkenvogel-Piraten'];
   const esrc = name => encodeURI(ASSET_DIR + name);
+  const factionLabel = i => FACTION_LABEL[i] ?? '';
 
   let root = null, ctx = null, role = null;
   let els = {};
@@ -86,8 +91,11 @@
   let channel = null, channelKey = null;
   let lastSig = null, lastView = null, busy = false, destroyed = false;
   let submitting = false;
+  let matchEndsAtMs = 0, matchPeakMs = 1;
 
   const MAP_GAP = 12, MAP_MIN = 260, MAP_MAX = 1400;
+  // Muss zum `gap` von .cm-arena in tool.css passen (Showroom: 16px).
+  const ARENA_GAP = 16;
 
   /* ─── Hex-Zeichnen ──────────────────────────────────────────
      Dieselbe Geometrie wie im Prototyp (versetzte Reihen, spitze
@@ -213,19 +221,45 @@
     if (!view || !view.rows || !view.cols || !els.mapWrap || !els.hexsvg || !els.icons) return;
     const W = els.mapWrap.clientWidth, H = els.mapWrap.clientHeight;
     if (W < 10 || H < 10) return;
-    const rows = view.rows, cols = view.cols;
-    const hexR = Math.min(W / ((cols + 0.5) * Math.sqrt(3)), H / ((rows + 0.5) * 1.5));
-    const hexW = Math.sqrt(3) * hexR, hexH = 2 * hexR;
+    const tiles = view.tiles || [];
+    if (!tiles.length) { els.hexsvg.innerHTML = ''; els.icons.innerHTML = ''; return; }
     const gap = 2.5;
+
+    /* ─── Auf die BELEGTEN Felder einpassen, nicht auf das Raster ──
+       Die Spielfelder aus clash_layouts (0093) füllen ihr rows×cols-
+       Raster nie ganz aus — sie sind aus einem Vieleck geschnitten,
+       je nach Team-Zahl mit unterschiedlich viel Luft an den Rändern.
+       Wer auf das ganze Raster mittet, verschenkt diese Luft doppelt:
+       das Feld sitzt außermittig UND bleibt kleiner als nötig. Deshalb
+       erst das Umfassungsrechteck der tatsächlichen Kacheln in
+       Einheiten von hexR bestimmen, dann darauf einpassen.
+
+       Oben ist mehr Platz nötig als unten: die Burg ist 1,55·hexR hoch
+       und steht mit den Füßen auf dem Kachel-Mittelpunkt, ragt also
+       über ihre Kachel hinaus (der Teamname darüber darf bewusst ein
+       Stück über den Kartenrand ragen — so auch im Showroom). */
+    const SQ3 = Math.sqrt(3);
+    const unit = (r, c) => ({ x: (c + 0.5) * SQ3 + (r % 2 === 1 ? SQ3 / 2 : 0), y: (r + 0.5) * 1.5 });
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    tiles.forEach(t => {
+      const u = unit(t.r, t.c);
+      if (u.x < minX) minX = u.x;
+      if (u.x > maxX) maxX = u.x;
+      if (u.y < minY) minY = u.y;
+      if (u.y > maxY) maxY = u.y;
+    });
+    minX -= SQ3 / 2; maxX += SQ3 / 2;   // halbe Kachelbreite links/rechts
+    minY -= 1.55;                        // Kopffreiheit für Burg + Name
+    maxY += 1.0;                         // halbe Kachelhöhe unten
+
+    const spanX = Math.max(0.001, maxX - minX), spanY = Math.max(0.001, maxY - minY);
+    const hexR = Math.min(W / spanX, H / spanY);
+    const offX = (W - spanX * hexR) / 2, offY = (H - spanY * hexR) / 2;
     const center = (r, c) => {
-      const xOff = (r % 2 === 1) ? hexW / 2 : 0;
-      return {
-        x: (c + 0.5) * hexW + xOff + (W - cols * hexW) / 2,
-        y: (r + 0.5) * (hexH * 0.75) + (H - rows * hexH * 0.75) / 2
-      };
+      const u = unit(r, c);
+      return { x: (u.x - minX) * hexR + offX, y: (u.y - minY) * hexR + offY };
     };
 
-    const tiles = view.tiles || [];
     let poly = '';
     tiles.forEach(t => {
       const p = center(t.r, t.c);
@@ -251,9 +285,12 @@
       if (castleTile) {
         const p = center(castleTile.r, castleTile.c);
         const h = hexR * 1.55, glow = hexR * 1.7;
+        const z = 1000 + castleTile.r * 10 + 9;
         icons += groundGlowHTML(p, glow, raw);
-        icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + (1000 + castleTile.r * 10 + 9) + '">' +
+        icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + z + '">' +
           '<div class="cm-spriteinner cm-spriteinner--castle"><img src="' + esrc(FACTION_CASTLE[team] || FACTION_CASTLE[0]) + '" alt=""></div></div>';
+        icons += '<div class="cm-castlelabel" style="left:' + p.x + 'px;top:' + (p.y - h - 6) + 'px;--raw:' + raw + ';z-index:' + (z + 1) + '">' +
+          ctx.esc(teamName(team)) + '</div>';
       }
       // Nicht jedes eroberte Feld bekommt eine eigene Einheit (bei 40+
       // Feldern wäre das nur noch Gewusel) — eine kleine, über das
@@ -302,10 +339,33 @@
     const h = Math.max(MAP_MIN, window.innerHeight - top - spaceBelow(els.boardWrap) - MAP_GAP);
     els.boardWrap.style.height = h + 'px';
 
-    const used = (els.statusBar ? els.statusBar.offsetHeight : 0) +
-                 (els.timerBar  ? els.timerBar.offsetHeight  : 0);
-    const availH = Math.max(160, h - used - MAP_GAP);
-    const availW = els.boardWrap.clientWidth;
+    // Höhe: alles abziehen, was im Rahmen ÜBER und UNTER der Arena
+    // steht (Kopfzeile, Timer-Leiste) plus die Polsterung von Kulisse
+    // und Rahmen — sonst wächst die Karte über den Bildschirm hinaus.
+    const padOf = el => {
+      if (!el) return 0;
+      const cs = getComputedStyle(el);
+      return (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) +
+             (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+    };
+    const chrome = (els.boardTop ? els.boardTop.offsetHeight : 0) +
+                   (els.timerBar ? els.timerBar.offsetHeight : 0) +
+                   padOf(els.boardWrap) + padOf(els.frame);
+    const availH = Math.max(160, h - chrome - MAP_GAP * 2);
+
+    // Breite: die beiden Fraktionsspalten und ihre Lücken abziehen.
+    // Auf schmalen Bildschirmen bricht die Arena um (die Spalten legen
+    // sich unter die Karte) — dann stehen sie nicht mehr daneben und
+    // dürfen auch nicht abgezogen werden. Erkennbar daran, dass die
+    // linke Spalte nicht mehr auf der Höhe der Karte beginnt.
+    const arenaW = els.arena ? els.arena.clientWidth : els.boardWrap.clientWidth;
+    const stacked = els.rosterLeft && els.mapWrap &&
+                    els.rosterLeft.offsetTop !== els.mapWrap.offsetTop;
+    const sideW = stacked ? 0 :
+      ((els.rosterLeft ? els.rosterLeft.offsetWidth : 0) +
+       (els.rosterRight ? els.rosterRight.offsetWidth : 0) + ARENA_GAP * 2);
+    const availW = Math.max(160, arenaW - sideW);
+
     const size = Math.max(160, Math.min(availW, availH, MAP_MAX));
     els.mapWrap.style.width  = size + 'px';
     els.mapWrap.style.height = size + 'px';
@@ -324,12 +384,22 @@
     return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
   }
   function startMatchTimer(endsAtIso) {
-    stopMatchTimer();
     const endsAt = new Date(endsAtIso).getTime();
+    // Neues Rundenende ⇒ neuer Nenner für den Ring (siehe renderRing).
+    // Dasselbe Ende ⇒ weiterlaufen lassen, sonst würde der Ring bei
+    // jedem Takt (8s Poll bzw. Broadcast) wieder auf „voll" springen.
+    if (endsAt !== matchEndsAtMs) {
+      matchEndsAtMs = endsAt;
+      matchPeakMs = Math.max(1, endsAt - Date.now());
+    }
+    if (matchTimerHandle) return; // läuft schon, nur das Ende war neu
     const step = () => {
-      const leftMs = endsAt - Date.now();
+      const leftMs = matchEndsAtMs - Date.now();
       const txt = fmtMMSS(leftMs / 1000);
-      if (els.timeLeft)  els.timeLeft.textContent = txt;
+      if (role === 'presenter') {
+        if (els.ring) els.ring.classList.remove('cm-hide');
+        renderRing(leftMs / matchPeakMs, txt);
+      }
       if (els.timeLeftP) { els.timeLeftP.textContent = '⏱ ' + txt; els.timeLeftP.classList.remove('cm-hide'); }
       if (leftMs <= 0) { stopMatchTimer(); tick(true); }
     };
@@ -339,6 +409,8 @@
   function stopMatchTimer() {
     if (matchTimerHandle) clearInterval(matchTimerHandle);
     matchTimerHandle = null;
+    matchEndsAtMs = 0;
+    if (els.ring) els.ring.classList.add('cm-hide');
     if (els.timeLeftP) els.timeLeftP.classList.add('cm-hide');
   }
 
@@ -625,26 +697,48 @@
             '<div class="cm-count" id="cmCountNumP">5</div>' +
           '</div>' +
         '</div>' +
-        '<div class="cm-pane cm-hide" id="cmBoardWrap">' +
-          '<div class="cm-statusbar" id="cmStatusBar"></div>' +
-          '<div class="cm-timerbar" id="cmTimerBar">' +
-            '<div class="cm-timerset" id="cmTimerSet">' +
-              '<span class="cm-hint">Runde beenden in:</span>' +
-              '<button type="button" class="cm-chip" data-secs="5">5s (Test)</button>' +
-              '<button type="button" class="cm-chip" data-secs="60">1 Min</button>' +
-              '<button type="button" class="cm-chip" data-secs="120">2 Min</button>' +
-              '<button type="button" class="cm-chip" data-secs="180">3 Min</button>' +
-              '<button type="button" class="cm-chip" data-secs="240">4 Min</button>' +
-              '<button type="button" class="cm-chip" data-secs="300">5 Min</button>' +
+        // Der Spielbildschirm ist 1:1 der Aufbau aus dem Showroom,
+        // Variante 03 „Kingdoms of Mathoria" (siehe showroom.html):
+        // Kulisse (cm-stage) → Zierrahmen (cm-frame--board) mit
+        // Wappenbanner → Kopfzeile mit Titel/Phase/Ring → Arena aus
+        // Fraktionsliste LINKS, Karte MITTE, Fraktionsliste RECHTS.
+        // Die Timer-Bedienung der Lehrkraft gibt es im Showroom nicht
+        // (das war ein Standbild) — sie sitzt unter der Arena, wo sie
+        // den Blick auf die Karte nicht zerschneidet.
+        '<div class="cm-pane cm-hide cm-stage" id="cmBoardWrap">' +
+          '<div class="cm-frame cm-frame--board" id="cmFrame">' +
+            '<div class="cm-fantasytitle">⚔ Kingdoms of Mathoria ⚔</div>' +
+            '<div class="cm-boardtop" id="cmBoardTop">' +
+              '<span class="cm-boardtitle">Kingdoms of Mathoria</span>' +
+              '<span class="cm-boardphase">Runde läuft</span>' +
+              '<div class="cm-ring cm-hide" id="cmRing"></div>' +
             '</div>' +
-            '<div class="cm-timerrun cm-hide" id="cmTimerRun">' +
-              '<span class="cm-hint">Rundenende in <b id="cmTimeLeft">--:--</b> — wer dann am meisten Feld hat, gewinnt.</span>' +
-              '<button type="button" class="cm-btn cm-btn--ghost" id="cmTimerCancel">Timer abbrechen</button>' +
+            '<div class="cm-arena" id="cmArena">' +
+              '<div class="cm-roster" id="cmRosterLeft"></div>' +
+              '<div class="cm-mapwrap cm-mapwrap--kingdoms" id="cmMapWrap">' +
+                '<div class="cm-mapinner"><svg class="cm-hexsvg" id="cmHexSvg"></svg></div>' +
+                '<div class="cm-iconlayer" id="cmIcons"></div>' +
+              '</div>' +
+              '<div class="cm-roster" id="cmRosterRight"></div>' +
             '</div>' +
-          '</div>' +
-          '<div class="cm-mapwrap cm-mapwrap--kingdoms" id="cmMapWrap">' +
-            '<div class="cm-mapinner"><svg class="cm-hexsvg" id="cmHexSvg"></svg></div>' +
-            '<div class="cm-iconlayer" id="cmIcons"></div>' +
+            '<div class="cm-timerbar" id="cmTimerBar">' +
+              '<div class="cm-timerset" id="cmTimerSet">' +
+                '<span class="cm-hint">Runde beenden in:</span>' +
+                '<button type="button" class="cm-chip" data-secs="5">5s (Test)</button>' +
+                '<button type="button" class="cm-chip" data-secs="60">1 Min</button>' +
+                '<button type="button" class="cm-chip" data-secs="120">2 Min</button>' +
+                '<button type="button" class="cm-chip" data-secs="180">3 Min</button>' +
+                '<button type="button" class="cm-chip" data-secs="240">4 Min</button>' +
+                '<button type="button" class="cm-chip" data-secs="300">5 Min</button>' +
+              '</div>' +
+              // Die Restzeit steht jetzt im Ring oben rechts, nicht mehr
+              // als Fließtext — hier bleibt nur, was der Ring nicht sagen
+              // kann: was beim Ablauf passiert, und der Rückweg.
+              '<div class="cm-timerrun cm-hide" id="cmTimerRun">' +
+                '<span class="cm-hint">Bei Ablauf gewinnt, wer am meisten Feld hat.</span>' +
+                '<button type="button" class="cm-btn cm-btn--ghost" id="cmTimerCancel">Timer abbrechen</button>' +
+              '</div>' +
+            '</div>' +
           '</div>' +
         '</div>' +
         '<div class="cm-pane cm-hide" id="cmEndedP">' +
@@ -662,11 +756,15 @@
       countdownP: root.querySelector('#cmCountdownP'),
       countNumP: root.querySelector('#cmCountNumP'),
       boardWrap: root.querySelector('#cmBoardWrap'),
-      statusBar: root.querySelector('#cmStatusBar'),
+      frame: root.querySelector('#cmFrame'),
+      boardTop: root.querySelector('#cmBoardTop'),
+      ring: root.querySelector('#cmRing'),
+      arena: root.querySelector('#cmArena'),
+      rosterLeft: root.querySelector('#cmRosterLeft'),
+      rosterRight: root.querySelector('#cmRosterRight'),
       timerBar: root.querySelector('#cmTimerBar'),
       timerSet: root.querySelector('#cmTimerSet'),
       timerRun: root.querySelector('#cmTimerRun'),
-      timeLeft: root.querySelector('#cmTimeLeft'),
       timerCancel: root.querySelector('#cmTimerCancel'),
       mapWrap: root.querySelector('#cmMapWrap'),
       hexsvg: root.querySelector('#cmHexSvg'),
@@ -722,16 +820,59 @@
     });
   }
 
-  function statusBarHTML(v) {
-    let out = '';
+  /* ─── Fraktionsliste links/rechts neben der Karte ────────────────
+     Ersetzt die frühere Statuszeile über der Karte (cm-statusbar):
+     im Showroom stehen die Fraktionen in zwei Spalten neben dem Feld,
+     mit Wappenbild, Fraktionsnamen und Feldzahl. Teams wechseln sich
+     ab (gerade nach links, ungerade nach rechts), damit beide Spalten
+     gleich lang bleiben. */
+  function rosterCardHTML(i, count) {
+    const dead = count === 0;
+    return `<div class="cm-rcard${dead ? ' cm-rcard--out' : ''}" style="--team:${teamStroke(i)}">` +
+      '<span class="cm-rdot"></span>' +
+      `<div class="cm-rthumb"><img src="${esrc(FACTION_UNIT[i] || FACTION_UNIT[0])}" alt=""></div>` +
+      '<div class="cm-rinfo">' +
+        `<span class="cm-rname">${ctx.esc(teamName(i))}</span>` +
+        `<span class="cm-rsub">${ctx.esc(factionLabel(i))}</span>` +
+      '</div>' +
+      `<span class="cm-rcount">${count}</span>` +
+    '</div>';
+  }
+
+  function fillRosters(v) {
+    if (!els.rosterLeft || !els.rosterRight) return;
+    let left = '', right = '';
     for (let i = 0; i < v.team_count; i++) {
       const n = (v.team_tile_counts && v.team_tile_counts[String(i)]) || 0;
-      const out_ = n === 0;
-      out += `<div class="cm-scard${out_ ? ' cm-scard--out' : ''}">` +
-        `<span class="cm-dot" style="background:${teamStroke(i)}"></span>` +
-        `${ctx.esc(teamName(i))} · ${n} Felder</div>`;
+      if (i % 2 === 0) left += rosterCardHTML(i, n); else right += rosterCardHTML(i, n);
     }
-    return out;
+    els.rosterLeft.innerHTML = left;
+    els.rosterRight.innerHTML = right;
+  }
+
+  /* ─── Restzeit-Ring oben rechts ──────────────────────────────────
+     Der Server kennt nur `match_ends_at`, nicht die gewählte Dauer
+     (0094 legt keine Spalte dafür an) — der Füllstand braucht aber
+     einen Nenner. Statt dafür eine Migration zu bauen, merkt sich der
+     Client die größte Restzeit, die er für DIESES Rundenende gesehen
+     hat: beim Setzen des Timers ist das die volle Dauer, und wer die
+     Seite mitten in der Runde neu lädt, sieht den Ring bei „voll"
+     anfangen und sauber leerlaufen. Nie falsch, höchstens optimistisch
+     — und die Zahl in der Mitte stimmt in jedem Fall. */
+  function renderRing(fraction, label) {
+    if (!els.ring) return;
+    const size = 46, thickness = 5;
+    const r = (size / 2) - thickness / 2 - 1;
+    const circ = 2 * Math.PI * r;
+    const off = circ * (1 - Math.max(0, Math.min(1, fraction)));
+    els.ring.innerHTML =
+      `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">` +
+        `<circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="cm-ringtrack" stroke-width="${thickness}" fill="none"/>` +
+        `<circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="cm-ringbar" stroke-width="${thickness}" fill="none" ` +
+          `stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" ` +
+          `transform="rotate(-90 ${size / 2} ${size / 2})"/>` +
+      '</svg>' +
+      `<span class="cm-ringlabel">${label}</span>`;
   }
 
   function renderPresenter(v) {
@@ -760,7 +901,7 @@
       return;
     }
     show2('boardWrap');
-    els.statusBar.innerHTML = statusBarHTML(v);
+    fillRosters(v);
     if (v.match_ends_at) {
       els.timerSet.classList.add('cm-hide');
       els.timerRun.classList.remove('cm-hide');

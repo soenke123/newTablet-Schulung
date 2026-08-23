@@ -133,40 +133,257 @@
 .cm-mapwrap canvas { display: block; width: 100%; height: 100%; }
 .cm-mapwrap--sm { max-width: 320px; }
 
-/* ── Beamer: Karte nimmt den ganzen freien Platz ────────────────
-   Fix 2 — vorher stand auch die Beamer-Karte an 620px gedeckelt und
-   ließ den Rest des Bildschirms leer. Größe kommt ab jetzt aus
-   tool.js (fitPresenterMap, feste px statt aspect-ratio): das
-   Quadrat muss Höhe UND Breite gleichzeitig ausnutzen, nicht nur
-   die Breite wie beim Teilnehmer — dessen Karte bleibt bewusst eine
-   Karte in der Seite (siehe Kopfkommentar der tool.js). */
+/* ══════════════════════════════════════════════════════════════
+   KINGDOMS OF MATHORIA — der Beamer-Spielbildschirm
+   ══════════════════════════════════════════════════════════════
+   Vollständig übernommen aus dem Showroom, Variante 03 (siehe
+   MPSkills/tools/clash-of-math/showroom.html — dort stehen die
+   Begründungen ausführlich). Dieselben Farben, Maße und Schriften;
+   der Aufbau (Kulisse → Zierrahmen → Kopfzeile → Arena aus
+   Fraktionsliste links, Karte, Fraktionsliste rechts) steht in
+   tool.js.
+
+   Bewusst ein FESTES Thema, NICHT an --surface/--ink der Seite
+   gekoppelt wie der Rest dieser Datei — dieselbe Überlegung wie beim
+   GameHub-Theme: der Spielbildschirm ist eine Spielwelt, kein
+   Formular. Er kippt darum auch nicht mit Hell/Dunkel.
+
+   Cinzel per @import statt über lehrer.html: die Schrift gehört
+   diesem einen Skill, und tool.css wird nur geladen, wenn er
+   tatsächlich läuft — ein Font-Link in der Seite lüde sie für jeden
+   anderen Skill mit. @import muss dafür ganz oben im Regelwerk
+   stehen; hier ist es die erste @-Regel der Datei.
+   ══════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap');
+
+.cm-host--presenter {
+  --cm-gold:       #caa457;
+  --cm-gold-dark:  #a9863f;
+  --cm-wood:       #6b4a23;
+  --cm-night:      #2a2115;
+  --cm-parchment:  #efe3c0;
+  --cm-parchment-2:#e4d5a8;
+  --cm-card:       #f4ead0;
+  --cm-ink:        #3a2b12;
+  --cm-ink-soft:   #6e572a;
+  --cm-ink-faint:  #927b4c;
+  --cm-ground:     #d8c793;
+  --cm-hexbase:    #8a9a5c;
+  --cm-display: 'Cinzel', Georgia, 'Times New Roman', serif;
+}
+
+/* ── Kulisse: der gemalte Hintergrund hinter dem Rahmen ──────────
+   Im Showroom ist das der geblurrte Gamebanner. url() in einer CSS-
+   Datei löst relativ zur STYLESHEET-Datei auf, nicht zur Seite —
+   Gamebanner.png liegt neben dieser Datei, deshalb reicht der nackte
+   Dateiname (anders als bei den <img src> in tool.js, siehe dort). */
 .cm-host--presenter #cmBoardWrap {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 26px 20px 20px;
+  border-radius: 28px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #6f9fc9 0%, #e3b45f 55%, #a97a3a 100%);
+}
+.cm-host--presenter #cmBoardWrap::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url('Gamebanner.png');
+  background-size: cover;
+  background-position: center 30%;
+  filter: blur(7px) saturate(1.05) brightness(.85);
+  transform: scale(1.08);
+}
+.cm-host--presenter #cmBoardWrap::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 20%, rgba(0,0,0,0) 0%, rgba(20,12,0,.45) 100%);
+}
+
+/* ── Der Zierrahmen ──────────────────────────────────────────────
+   Vier ineinanderliegende inset-Schatten sind der ganze Trick: Gold
+   außen, dunkles Holz, Nacht, Gold innen — kein Bild, keine border-
+   image, nichts, was in der Größe kaputtgehen könnte. */
+.cm-frame--board {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-width: 100%;
+  background: var(--cm-parchment);
+  border: 3px solid var(--cm-gold);
+  border-radius: 28px;
+  padding: 26px 22px 18px;
+  box-shadow:
+    0 0 0 2px var(--cm-wood) inset,
+    0 0 0 8px var(--cm-night) inset,
+    0 0 0 10px var(--cm-gold) inset,
+    0 20px 44px rgba(0,0,0,.5);
+}
+
+/* Das Wappenbanner sitzt auf der Rahmenkante, halb darüber. */
+.cm-fantasytitle {
+  position: absolute;
+  top: -22px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  padding: 7px 26px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #4a3216, var(--cm-night));
+  border: 2px solid var(--cm-gold);
+  color: #f2dfae;
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: .8rem;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(0,0,0,.4);
+}
+
+/* ── Kopfzeile: Titel · Phase · Restzeit-Ring ────────────────── */
+.cm-boardtop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex: 0 0 auto;
+}
+.cm-boardtitle {
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: .02em;
+  color: #4a3216;
+}
+.cm-boardphase {
+  font-size: .74rem;
+  font-weight: 700;
+  color: var(--cm-ink-soft);
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--cm-parchment-2);
+  border: 1px solid var(--cm-gold-dark);
+}
+.cm-boardtop .cm-ring { margin-left: auto; }
+
+.cm-ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.cm-ringtrack { stroke: var(--cm-gold-dark); }
+.cm-ringbar   { stroke: #c4361f; stroke-linecap: round; }
+.cm-ringlabel {
+  position: absolute;
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: .7rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--cm-ink);
+}
+
+/* ── Arena: Fraktionen links · Karte · Fraktionen rechts ────────── */
+.cm-arena {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 16px;               /* muss zu ARENA_GAP in tool.js passen */
+  flex-wrap: wrap;
   min-height: 0;
 }
+.cm-roster {
+  flex: 0 0 158px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.cm-rcard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 13px;
+  background: var(--cm-card);
+  border: 1px solid var(--cm-gold-dark);
+}
+/* Ausgeschieden — dieselbe Aussage wie früher .cm-scard--out. */
+.cm-rcard--out { opacity: .42; }
+.cm-rcard--out .cm-rname { text-decoration: line-through; }
+.cm-rdot { width: 9px; height: 9px; border-radius: 50%; background: var(--team); flex: 0 0 auto; }
+.cm-rthumb {
+  width: 28px; height: 28px; flex: 0 0 auto;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.cm-rthumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.cm-rinfo { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.cm-rname {
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: .76rem;
+  color: var(--cm-ink);
+}
+.cm-rsub {
+  font-size: .6rem;
+  color: var(--cm-ink-faint);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cm-rcount {
+  font-family: var(--cm-display);
+  font-weight: 800;
+  font-size: 1.02rem;
+  color: var(--team);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Größe kommt aus tool.js (fitPresenterMap, feste px): das Quadrat
+   muss Höhe UND Breite gleichzeitig ausnutzen — der Teilnehmer behält
+   dagegen seine begrenzte Karte per aspect-ratio (siehe oben). */
 .cm-host--presenter .cm-mapwrap {
   max-width: none;
   aspect-ratio: unset;
   flex: 0 0 auto;
+  margin: 0;
 }
 
-/* ── Kingdoms of Mathoria: die Beamer-Karte ──────────────────────
-   Bewusst ein FESTES Fantasy-Thema (nicht an --surface/--ink der
-   Seite gekoppelt, anders als der Rest von tool.css) — dieselbe
-   Überlegung wie beim GameHub-Theme (eigene Optik statt Seiten-
-   Variablen): die Karte ist eine Spielwelt, kein Formular. Gewachsen
-   aus dem Showroom (MPSkills/tools/clash-of-math/showroom.html,
-   Variante 03) — dort ausführlich dokumentiert und per Screenshot
-   geprüft, hier 1:1 mit denselben Werten übernommen. */
+/* Timer-Bedienung unter der Arena — im Showroom gibt es sie nicht
+   (Standbild), sie ist reine Lehrkraft-Bedienung. */
+.cm-host--presenter .cm-timerbar {
+  flex: 0 0 auto;
+  width: 100%;
+  margin: 12px 0 0;
+}
+.cm-host--presenter .cm-hint  { color: var(--cm-ink-soft); }
+.cm-host--presenter .cm-chip {
+  background: var(--cm-card);
+  border-color: var(--cm-gold-dark);
+  color: var(--cm-ink);
+}
+.cm-host--presenter .cm-chip:hover { border-color: var(--cm-wood); background: var(--cm-parchment-2); }
+.cm-host--presenter .cm-btn--ghost {
+  background: var(--cm-card);
+  border-color: var(--cm-gold-dark);
+  color: var(--cm-ink);
+}
+
+/* ── Die Karte selbst ────────────────────────────────────────── */
+/* Der Kartengrund ist flaches Pergament, kein Verlauf: der gemalte
+   Himmel gehört der Kulisse HINTER dem Rahmen (#cmBoardWrap::before),
+   nicht dem Spielfeld — sonst kämpfen zwei Landschaften um dieselbe
+   Fläche und die Sechsecke verlieren ihren Halt. So im Showroom. */
 .cm-mapwrap--kingdoms {
-  --raw-base: #8a9a5c;
+  --raw-base: var(--cm-hexbase, #8a9a5c);
   overflow: visible;
   border-radius: 22px;
-  border: 2px solid #a9863f;
-  background: #d8c793;
-  box-shadow: 0 0 0 2px #6b4a23 inset, 0 0 0 7px #2a2115 inset, 0 0 0 9px #caa457 inset, 0 16px 34px rgba(0,0,0,.35);
+  border: 2px solid var(--cm-gold-dark, #a9863f);
+  background: var(--cm-ground, #d8c793);
 }
 .cm-mapinner { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; }
 .cm-hexsvg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -219,13 +436,22 @@
   filter: blur(1px);
 }
 
-/* Kulisse hinter der Karte — dieselbe Idee wie im Showroom (dort mit
-   dem Gamebanner als Hintergrund), hier zurückhaltender: die
-   Beamer-Karte füllt fast den ganzen Bildschirm, ein Vollbild-Foto
-   dahinter würde nur ablenken. Stattdessen ein warmer Himmel-Verlauf
-   in denselben Farben. */
-.cm-host--presenter .cm-mapwrap--kingdoms {
-  background: linear-gradient(165deg, #6f9fc9 0%, #e3b45f 55%, #a97a3a 100%);
+/* Der Teamname über der Burg. Der helle Schein ringsum ersetzt einen
+   Kasten: die Schrift bleibt auf jeder Fraktionsfarbe lesbar, ohne
+   dass ein Schild die Karte zerschneidet. */
+.cm-castlelabel {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+  font-family: var(--cm-display, Georgia, serif);
+  font-weight: 700;
+  font-size: .82rem;
+  letter-spacing: .02em;
+  color: var(--cm-ink, #3a2b12);
+  text-shadow:
+    0 1px 0 rgba(255,242,200,.9),
+    0 0 8px rgba(255,242,200,.95),
+    0 0 2px rgba(255,242,200,.95);
 }
 
 /* ── Rundenende-Timer (Beamer, Fix 1) ────────────────────────── */
@@ -257,25 +483,10 @@
   color: var(--ink-soft);
 }
 
-/* ── Statusleiste (Beamer) ───────────────────────────────────── */
-.cm-statusbar {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.cm-scard {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  font-size: .82rem;
-  font-weight: 700;
-}
-.cm-scard.cm-scard--out { opacity: .4; text-decoration: line-through; }
+/* Die frühere Statuszeile über der Karte (.cm-statusbar/.cm-scard)
+   ist ersatzlos weg — die Feldzahlen stehen jetzt in den beiden
+   Fraktionsspalten neben der Karte (.cm-roster/.cm-rcard, weiter
+   unten im Kingdoms-Abschnitt). */
 
 /* ── Spiel-Kopfzeile (Teilnehmer) ────────────────────────────── */
 .cm-topbar {
