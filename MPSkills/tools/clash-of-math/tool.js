@@ -95,9 +95,16 @@
   let matchEndsAtMs = 0, matchPeakMs = 1;
 
   const MAP_GAP = 12, MAP_MIN = 260, MAP_MAX = 2000;
-  // Schmalster Rahmen, in den Kopfzeile (Titel + Ring) und Timer-Leiste
-  // noch nebeneinander passen.
-  const FRAME_MIN_W = 560;
+
+  // Höhe der Figuren, in Vielfachen des Sechseck-Radius. Sie stehen
+  // mit den Füßen auf dem Kachel-Mittelpunkt und ragen deshalb über
+  // ihre Kachel hinaus — die Burg deutlich, damit sie als Hauptstadt
+  // liest, die Einheiten knapp, damit sie das Feld nicht zustellen.
+  // CASTLE_H ist zugleich die Kopffreiheit, die boardExtent oben am
+  // Spielfeld reserviert: wird die Burg größer, muss auch der Platz
+  // über der obersten Kachelreihe mitwachsen.
+  const CASTLE_H = 2.02;
+  const UNIT_H   = 1.28;
 
   /* ─── Hex-Zeichnen ──────────────────────────────────────────
      Dieselbe Geometrie wie im Prototyp (versetzte Reihen, spitze
@@ -249,7 +256,7 @@
       if (u.y > maxY) maxY = u.y;
     });
     minX -= SQ3 / 2; maxX += SQ3 / 2;   // halbe Kachelbreite links/rechts
-    minY -= 1.55;                        // Kopffreiheit für Burg + Name
+    minY -= CASTLE_H;                    // Kopffreiheit für die Burg
     maxY += 1.0;                         // halbe Kachelhöhe unten
     return {
       minX: minX, minY: minY,
@@ -315,7 +322,7 @@
       const castleTile = teamTiles.find(t => t.castle);
       if (castleTile) {
         const p = center(castleTile.r, castleTile.c);
-        const h = hexR * 1.55, glow = hexR * 1.7;
+        const h = hexR * CASTLE_H, glow = hexR * 1.7;
         const z = 1000 + castleTile.r * 10 + 9;
         icons += groundGlowHTML(p, glow, raw);
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + z + '">' +
@@ -340,7 +347,7 @@
         const idx = Math.floor((k + 0.5) * others.length / unitCount);
         const t = others[idx];
         const p = center(t.r, t.c);
-        const h = hexR * 1.5, glow = hexR * 1.1;
+        const h = hexR * UNIT_H, glow = hexR * 0.94;
         icons += groundGlowHTML(p, glow, raw);
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + (1000 + t.r * 10 + 5) + '">' +
           '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + (k * 0.5) + 's"><img src="' + esrc(FACTION_UNIT[team] || FACTION_UNIT[0]) + '" alt=""></div></div>';
@@ -415,22 +422,12 @@
     els.mapWrap.style.width  = mw + 'px';
     els.mapWrap.style.height = mh + 'px';
 
-    /* Der Rahmen schmiegt sich an die Breite des Spielfelds an, statt
-       links und rechts davon Pergament stehen zu lassen. Das ist
-       rückgekoppelt (die Breite des Rahmens bestimmt oben availW),
-       läuft sich aber in einem Schritt fest: ist das Feld über die
-       HÖHE begrenzt — auf einem Beamer der Normalfall — dann ist
-       mw < availW, und availW wird beim nächsten Durchgang genau mw;
-       das Feld bleibt höhenbegrenzt und mw ändert sich nicht mehr.
-       Ist es über die BREITE begrenzt, ist mw ohnehin schon availW.
-       Die Mindestbreite hält Kopfzeile und Timer-Leiste lesbar. */
-    if (els.frame) {
-      const fcs = getComputedStyle(els.frame);
-      const fpad = (parseFloat(fcs.paddingLeft) || 0) + (parseFloat(fcs.paddingRight) || 0) +
-                   (parseFloat(fcs.borderLeftWidth) || 0) + (parseFloat(fcs.borderRightWidth) || 0);
-      els.frame.style.maxWidth = Math.max(FRAME_MIN_W, Math.round(mw + fpad)) + 'px';
-    }
-
+    // Der Rahmen bekommt bewusst KEINE an die Feldbreite angepasste
+    // Höchstbreite: er soll die ganze Fläche zwischen den beiden
+    // Völker-Spalten füllen, sodass dort nur ein schmaler Spalt bleibt
+    // (die Polsterung von #cmBoardWrap in tool.css setzt ihn auf 12px).
+    // Das Pergament links und rechts vom Feld ist gewollt — es ist der
+    // Tisch, auf dem die Karte liegt.
     if (els.hexsvg && els.icons) renderPresenterMap(lastView);
   }
 
