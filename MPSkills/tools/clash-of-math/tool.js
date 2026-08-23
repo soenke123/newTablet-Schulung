@@ -95,6 +95,11 @@
   let matchEndsAtMs = 0, matchPeakMs = 1;
 
   const MAP_GAP = 12, MAP_MIN = 260, MAP_MAX = 2000;
+  // Grenzen für die Völker-Spalten. Ihre Breite ergibt sich sonst aus
+  // dem, was das Spielfeld übrig lässt (siehe fitPresenterMap) — unter
+  // ROSTER_MIN wären die Namen nicht mehr lesbar, über ROSTER_MAX
+  // sähen die Panels aufgeblasen aus.
+  const ROSTER_MIN = 168, ROSTER_MAX = 430;
 
   // Höhe der Figuren, in Vielfachen des Sechseck-Radius. Sie stehen
   // mit den Füßen auf dem Kachel-Mittelpunkt und ragen deshalb über
@@ -407,47 +412,60 @@
                    padOf(els.boardWrap) + padOf(els.frame);
     const availH = Math.max(160, h - chrome - MAP_GAP);
 
-    /* Breite: NICHT aus dem Rahmen messen — der schmiegt sich per
-       `width: fit-content` um genau die Karte, die hier erst berechnet
-       wird; ihn zu messen wäre ein Kreis. Stattdessen von der Bühne
-       her rechnen, die als Einzige unabhängig feststeht: ihre Breite
-       minus beide Völker-Spalten, minus die zwei Abstände dazwischen,
-       minus die Polsterung des Rahmens. */
-    const stageW = els.boardWrap.clientWidth;   // ohne Bühnen-Polsterung
-    const sideW = (els.rosterLeft ? els.rosterLeft.offsetWidth : 0) +
-                  (els.rosterRight ? els.rosterRight.offsetWidth : 0);
-    const gapPx = parseFloat(getComputedStyle(els.boardWrap).columnGap) || 0;
+    /* ─── Breite: die VÖLKER-SPALTEN geben nach, nicht das Feld ────
+       Drei Dinge sollen gleichzeitig gelten, und lange schienen sie
+       sich zu widersprechen: die Spalten kleben am Bildschirmrand,
+       der Spalt zwischen Spalte und Pergament ist schmal, und das
+       Spielfeld füllt das Pergament ganz aus.
+
+       Der Denkfehler der vorigen Anläufe war, dafür am RAHMEN zu
+       drehen (mal auf volle Breite, mal auf Feldbreite geschrumpft) —
+       beides lässt zwangsläufig irgendwo Luft, weil das Spielfeld
+       sein Seitenverhältnis behalten muss und auf einem 16:9-Schirm
+       immer die HÖHE zuerst ausgeht.
+
+       Die Stellschraube ist stattdessen die SPALTENBREITE: erst das
+       Feld auf die volle Höhe bringen (daraus folgt seine Breite),
+       dann den Rest hälftig auf die beiden Spalten verteilen. Die
+       Spalten sitzen dadurch weiter außen, das Pergament dazwischen
+       ist exakt so breit wie das Feld — und die Panels bekommen
+       nebenbei mehr Platz für die Namen. */
+    const stageCS = getComputedStyle(els.boardWrap);
+    const stagePadX = (parseFloat(stageCS.paddingLeft) || 0) + (parseFloat(stageCS.paddingRight) || 0);
+    const innerW = els.boardWrap.clientWidth - stagePadX;
+    const gapPx = parseFloat(stageCS.columnGap) || 0;
     let framePadX = 0;
     if (els.frame) {
       const fcs = getComputedStyle(els.frame);
       framePadX = (parseFloat(fcs.paddingLeft) || 0) + (parseFloat(fcs.paddingRight) || 0) +
                   (parseFloat(fcs.borderLeftWidth) || 0) + (parseFloat(fcs.borderRightWidth) || 0);
     }
-    const availW = Math.max(160, stageW - sideW - gapPx * 2 - framePadX);
 
-    // Die Karte ist NICHT quadratisch, sondern nimmt das Seiten-
-    // verhältnis des Spielfelds an: erst die Höhe ausreizen, und nur
-    // wenn es dann zu breit würde, über die Breite zurückrechnen. So
-    // bekommt das Feld fast die volle Höhe und so viel Breite, wie es
-    // sinnvoll füllen kann — leerer Grund links und rechts entfällt.
     const tiles = (lastView && lastView.tiles) || [];
     const ratio = tiles.length ? (function () {
       const e = boardExtent(tiles);
       return e.spanX / e.spanY;
     })() : 1;
+
+    // 1) Höhe ausreizen — daraus folgt die Breite des Felds.
     let mh = availH, mw = mh * ratio;
-    if (mw > availW) { mw = availW; mh = mw / ratio; }
+    // 2) Deckel: die Spalten dürfen dabei nicht unter ihre Mindest-
+    //    breite gedrückt werden (schmaler Bildschirm, sehr breites
+    //    Feld). Dann gibt ausnahmsweise doch das Feld nach.
+    const maxMw = innerW - 2 * ROSTER_MIN - 2 * gapPx - framePadX;
+    if (mw > maxMw) { mw = Math.max(160, maxMw); mh = mw / ratio; }
     mw = Math.max(160, Math.min(mw, MAP_MAX));
     mh = Math.max(160, Math.min(mh, MAP_MAX));
+
+    // 3) Was übrig bleibt, gehört zu gleichen Teilen den Spalten.
+    let rosterW = Math.floor((innerW - mw - 2 * gapPx - framePadX) / 2);
+    rosterW = Math.max(ROSTER_MIN, Math.min(ROSTER_MAX, rosterW));
+    if (els.rosterLeft)  els.rosterLeft.style.width  = rosterW + 'px';
+    if (els.rosterRight) els.rosterRight.style.width = rosterW + 'px';
 
     els.mapWrap.style.width  = mw + 'px';
     els.mapWrap.style.height = mh + 'px';
 
-    // Der Rahmen braucht hier keine Zuweisung: `width: fit-content`
-    // in tool.css legt ihn von selbst um die eben gesetzte Karte, und
-    // die beiden Völker-Spalten rücken als Flex-Geschwister nach. So
-    // ist das Pergament die Spielfläche — kein breiter Rand mehr —
-    // und der Abstand zu den Spalten bleibt trotzdem schmal.
     if (els.hexsvg && els.icons) renderPresenterMap(lastView);
   }
 
