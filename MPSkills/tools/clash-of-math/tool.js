@@ -78,11 +78,6 @@
                            'lila carstle.png', 'türkis carstle.png', 'magenta carstle.png', 'rosa carstle.png'];
   const FACTION_UNIT   = ['red units.png', 'blue units.png', 'green units.png', 'yellow units.png',
                            'lila units.png', 'türkis units.png', 'magenta units.png', 'rosa units.png'];
-  // Gruppenbild fürs Volks-Panel — mehrere Einheiten nebeneinander,
-  // quer (rund 2:1), damit es die volle Panel-Breite tragen kann.
-  const FACTION_GROUP  = ['red ToastKnights.png', 'blue roboDucks.png', 'green BrokkoliGiraffen.png',
-                           'yellow PainingBunnies.png', 'lila cosmicCat.png', 'türkis OctoPferdchen.png',
-                           'margenta SpookieUnicorn.png', 'rosa CloudBirdPiraten.png'];
   // Der Name des Volkes. Er hat die Farbbezeichnung („Rot", „Blau")
   // als Anzeigename abgelöst: das Panel TRÄGT die Farbe, sie muss
   // nicht auch noch danebenstehen.
@@ -100,6 +95,9 @@
   let matchEndsAtMs = 0, matchPeakMs = 1;
 
   const MAP_GAP = 12, MAP_MIN = 260, MAP_MAX = 2000;
+  // Schmalster Rahmen, in den Kopfzeile (Titel + Ring) und Timer-Leiste
+  // noch nebeneinander passen.
+  const FRAME_MIN_W = 560;
 
   /* ─── Hex-Zeichnen ──────────────────────────────────────────
      Dieselbe Geometrie wie im Prototyp (versetzte Reihen, spitze
@@ -416,6 +414,23 @@
 
     els.mapWrap.style.width  = mw + 'px';
     els.mapWrap.style.height = mh + 'px';
+
+    /* Der Rahmen schmiegt sich an die Breite des Spielfelds an, statt
+       links und rechts davon Pergament stehen zu lassen. Das ist
+       rückgekoppelt (die Breite des Rahmens bestimmt oben availW),
+       läuft sich aber in einem Schritt fest: ist das Feld über die
+       HÖHE begrenzt — auf einem Beamer der Normalfall — dann ist
+       mw < availW, und availW wird beim nächsten Durchgang genau mw;
+       das Feld bleibt höhenbegrenzt und mw ändert sich nicht mehr.
+       Ist es über die BREITE begrenzt, ist mw ohnehin schon availW.
+       Die Mindestbreite hält Kopfzeile und Timer-Leiste lesbar. */
+    if (els.frame) {
+      const fcs = getComputedStyle(els.frame);
+      const fpad = (parseFloat(fcs.paddingLeft) || 0) + (parseFloat(fcs.paddingRight) || 0) +
+                   (parseFloat(fcs.borderLeftWidth) || 0) + (parseFloat(fcs.borderRightWidth) || 0);
+      els.frame.style.maxWidth = Math.max(FRAME_MIN_W, Math.round(mw + fpad)) + 'px';
+    }
+
     if (els.hexsvg && els.icons) renderPresenterMap(lastView);
   }
 
@@ -781,10 +796,10 @@
             // nach einem Neuladen nichts Falsches behaupten — die
             // gewählte Dauer steht nirgends auf dem Server (0094).
             '<div class="cm-timerbar" id="cmTimerBar">' +
-              '<span class="cm-hint" id="cmTimerState">Kein Zeitlimit — die Runde läuft, bis ein Volk alles hat.</span>' +
-              '<label class="cm-timerpick">Rundenende' +
+              '<span class="cm-hint" id="cmTimerState"></span>' +
+              '<label class="cm-timerpick">' +
                 '<select id="cmTimerSel">' +
-                  '<option value="" selected>ändern …</option>' +
+                  '<option value="" selected>Rundenende</option>' +
                   '<option value="0">ohne Zeitlimit</option>' +
                   '<option value="5">5 Sekunden (Test)</option>' +
                   '<option value="60">1 Minute</option>' +
@@ -889,9 +904,12 @@
     const memberHTML = names.length
       ? `<div class="cm-rmembers">${names.map(n => ctx.esc(n)).join(' · ')}</div>`
       : '';
+    // EINE Einheit mit dem Namen daneben (nicht das Gruppenbild über
+    // die volle Breite): so bleibt die Kopfzeile flach und der Platz
+    // darunter gehört den Namen der Kinder.
     return `<div class="cm-rcard${dead ? ' cm-rcard--out' : ''}" style="--team:${teamStroke(i)}">` +
-      `<div class="cm-rbanner"><img src="${esrc(FACTION_GROUP[i] || FACTION_GROUP[0])}" alt=""></div>` +
-      '<div class="cm-rfoot">' +
+      '<div class="cm-rhead">' +
+        `<div class="cm-rthumb"><img src="${esrc(FACTION_UNIT[i] || FACTION_UNIT[0])}" alt=""></div>` +
         `<span class="cm-rname">${ctx.esc(factionLabel(i))}</span>` +
         `<span class="cm-rcount">${count}</span>` +
       '</div>' +
@@ -964,10 +982,12 @@
     }
     show2('boardWrap');
     fillRosters(v);
+    // Ohne Timer steht hier nichts: dass kein Zeitlimit gesetzt ist,
+    // sagt schon der fehlende Ring oben rechts.
     if (els.timerState) {
       els.timerState.textContent = v.match_ends_at
         ? 'Bei Ablauf gewinnt, wer am meisten Feld hat.'
-        : 'Kein Zeitlimit — die Runde läuft, bis ein Volk alles hat.';
+        : '';
     }
     if (v.match_ends_at) startMatchTimer(v.match_ends_at); else stopMatchTimer();
     fitPresenterMap();
