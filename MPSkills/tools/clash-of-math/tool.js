@@ -100,11 +100,18 @@
   // mit den Füßen auf dem Kachel-Mittelpunkt und ragen deshalb über
   // ihre Kachel hinaus — die Burg deutlich, damit sie als Hauptstadt
   // liest, die Einheiten knapp, damit sie das Feld nicht zustellen.
-  // CASTLE_H ist zugleich die Kopffreiheit, die boardExtent oben am
-  // Spielfeld reserviert: wird die Burg größer, muss auch der Platz
-  // über der obersten Kachelreihe mitwachsen.
-  const CASTLE_H = 2.02;
+  const CASTLE_H = 2.22;
   const UNIT_H   = 1.28;
+  // Die Burg rutscht um diesen Anteil IHRER EIGENEN Höhe nach unten,
+  // sitzt also tiefer in ihrer Kachel statt nur darauf zu stehen.
+  // Der Wert geht als `--drop` ins style-Attribut; die Verschiebung
+  // rechnet tool.css daraus. Er steht bewusst nur hier, weil die
+  // Kopffreiheit unten davon abhängt.
+  const CASTLE_DROP = 0.20;
+  // Was die Burg nach dem Absacken noch über den Kachel-Mittelpunkt
+  // ragt — genau so viel Platz muss boardExtent über der obersten
+  // Kachelreihe frei lassen, sonst wird sie oben abgeschnitten.
+  const CASTLE_HEADROOM = CASTLE_H * (1 - CASTLE_DROP);
 
   /* ─── Hex-Zeichnen ──────────────────────────────────────────
      Dieselbe Geometrie wie im Prototyp (versetzte Reihen, spitze
@@ -256,7 +263,7 @@
       if (u.y > maxY) maxY = u.y;
     });
     minX -= SQ3 / 2; maxX += SQ3 / 2;   // halbe Kachelbreite links/rechts
-    minY -= CASTLE_H;                    // Kopffreiheit für die Burg
+    minY -= CASTLE_HEADROOM;             // Kopffreiheit für die Burg
     maxY += 1.0;                         // halbe Kachelhöhe unten
     return {
       minX: minX, minY: minY,
@@ -325,7 +332,8 @@
         const h = hexR * CASTLE_H, glow = hexR * 1.7;
         const z = 1000 + castleTile.r * 10 + 9;
         icons += groundGlowHTML(p, glow, raw);
-        icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + z + '">' +
+        icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;' +
+          '--drop:' + (CASTLE_DROP * 100) + '%;z-index:' + z + '">' +
           '<div class="cm-spriteinner cm-spriteinner--castle"><img src="' + esrc(FACTION_CASTLE[team] || FACTION_CASTLE[0]) + '" alt=""></div></div>';
         // KEINE Beschriftung über der Burg. Der Showroom hatte dort die
         // Farbbezeichnung („Rot", „Türkis") — die ist weg, seit das
@@ -399,10 +407,23 @@
                    padOf(els.boardWrap) + padOf(els.frame);
     const availH = Math.max(160, h - chrome - MAP_GAP);
 
-    // Breite: die Völker-Spalten sind aus dem Fluss genommen (absolut
-    // am Rand), ihren Platz hält die Polsterung von #cmBoardWrap frei
-    // — clientWidth der Arena ist damit schon der freie Raum.
-    const availW = Math.max(160, els.arena ? els.arena.clientWidth : els.boardWrap.clientWidth);
+    /* Breite: NICHT aus dem Rahmen messen — der schmiegt sich per
+       `width: fit-content` um genau die Karte, die hier erst berechnet
+       wird; ihn zu messen wäre ein Kreis. Stattdessen von der Bühne
+       her rechnen, die als Einzige unabhängig feststeht: ihre Breite
+       minus beide Völker-Spalten, minus die zwei Abstände dazwischen,
+       minus die Polsterung des Rahmens. */
+    const stageW = els.boardWrap.clientWidth;   // ohne Bühnen-Polsterung
+    const sideW = (els.rosterLeft ? els.rosterLeft.offsetWidth : 0) +
+                  (els.rosterRight ? els.rosterRight.offsetWidth : 0);
+    const gapPx = parseFloat(getComputedStyle(els.boardWrap).columnGap) || 0;
+    let framePadX = 0;
+    if (els.frame) {
+      const fcs = getComputedStyle(els.frame);
+      framePadX = (parseFloat(fcs.paddingLeft) || 0) + (parseFloat(fcs.paddingRight) || 0) +
+                  (parseFloat(fcs.borderLeftWidth) || 0) + (parseFloat(fcs.borderRightWidth) || 0);
+    }
+    const availW = Math.max(160, stageW - sideW - gapPx * 2 - framePadX);
 
     // Die Karte ist NICHT quadratisch, sondern nimmt das Seiten-
     // verhältnis des Spielfelds an: erst die Höhe ausreizen, und nur
@@ -422,12 +443,11 @@
     els.mapWrap.style.width  = mw + 'px';
     els.mapWrap.style.height = mh + 'px';
 
-    // Der Rahmen bekommt bewusst KEINE an die Feldbreite angepasste
-    // Höchstbreite: er soll die ganze Fläche zwischen den beiden
-    // Völker-Spalten füllen, sodass dort nur ein schmaler Spalt bleibt
-    // (die Polsterung von #cmBoardWrap in tool.css setzt ihn auf 12px).
-    // Das Pergament links und rechts vom Feld ist gewollt — es ist der
-    // Tisch, auf dem die Karte liegt.
+    // Der Rahmen braucht hier keine Zuweisung: `width: fit-content`
+    // in tool.css legt ihn von selbst um die eben gesetzte Karte, und
+    // die beiden Völker-Spalten rücken als Flex-Geschwister nach. So
+    // ist das Pergament die Spielfläche — kein breiter Rand mehr —
+    // und der Abstand zu den Spalten bleibt trotzdem schmal.
     if (els.hexsvg && els.icons) renderPresenterMap(lastView);
   }
 
@@ -764,15 +784,12 @@
         // Die Timer-Bedienung der Lehrkraft gibt es im Showroom nicht
         // (das war ein Standbild) — sie sitzt unter der Arena, wo sie
         // den Blick auf die Karte nicht zerschneidet.
-        // Die beiden Völker-Spalten hängen NICHT mehr im Rahmen, sondern
-        // sind an den linken/rechten Rand der Spielfläche geheftet
-        // (position:absolute in tool.css) — dazwischen bleibt dem
-        // eigentlichen Spielfeld die volle Höhe und fast die volle
-        // Breite. Sie stehen deshalb hier als Geschwister des Rahmens,
-        // nicht in der Arena.
+        // Die beiden Völker-Spalten hängen NICHT im Rahmen, sondern
+        // stehen als seine Geschwister links und rechts daneben — die
+        // Bühne ist eine Flex-Reihe (tool.css). Die Reihenfolge hier
+        // IST die Anordnung auf dem Bildschirm: links · Rahmen · rechts.
         '<div class="cm-pane cm-hide cm-stage" id="cmBoardWrap">' +
           '<div class="cm-roster cm-roster--left"  id="cmRosterLeft"></div>' +
-          '<div class="cm-roster cm-roster--right" id="cmRosterRight"></div>' +
           '<div class="cm-frame cm-frame--board" id="cmFrame">' +
             '<div class="cm-fantasytitle">⚔ Kingdoms of Mathoria ⚔</div>' +
             '<div class="cm-boardtop" id="cmBoardTop">' +
@@ -808,6 +825,7 @@
               '</label>' +
             '</div>' +
           '</div>' +
+          '<div class="cm-roster cm-roster--right" id="cmRosterRight"></div>' +
         '</div>' +
         '<div class="cm-pane cm-hide" id="cmEndedP">' +
           '<div class="cm-result" id="cmResultP"></div>' +

@@ -174,6 +174,9 @@
      zwei davon abhängen: die Spalten selbst und die Polsterung der
      Spielfläche, die ihren Platz freihält. */
   --cm-roster-w: 178px;
+  /* Abstand zwischen Völker-Spalte und Pergament. Steht hier, weil
+     fitPresenterMap in tool.js damit rechnet (CM_GAP). */
+  --cm-gap: 12px;
 }
 @media (min-width: 1500px) { .cm-host--presenter { --cm-roster-w: 208px; } }
 
@@ -182,17 +185,20 @@
    Datei löst relativ zur STYLESHEET-Datei auf, nicht zur Seite —
    Gamebanner.png liegt neben dieser Datei, deshalb reicht der nackte
    Dateiname (anders als bei den <img src> in tool.js, siehe dort). */
+/* Eine Reihe: Völker links · Rahmen · Völker rechts. Die Spalten
+   stehen im Fluss (nicht mehr absolut am Bühnenrand) — dadurch rücken
+   sie automatisch an den Rahmen heran, egal wie breit der ist, und
+   zwischen ihnen und dem Pergament bleibt genau `gap`. Der freie
+   Platz landet außen, wo die gemalte Kulisse ihn füllt. */
 .cm-host--presenter #cmBoardWrap {
   position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  align-items: stretch;
   justify-content: center;
+  gap: var(--cm-gap);
   min-height: 0;
-  /* Links und rechts bleibt genau so viel frei, wie die Völker-Spalten
-     brauchen — dadurch sitzt der Rahmen zwischen ihnen statt unter
-     ihnen, ohne dass irgendwo eine zweite Zahl gepflegt werden muss. */
-  padding: 14px calc(var(--cm-roster-w) + 26px) 14px;
+  padding: 14px;
   border-radius: 28px;
   overflow: hidden;
   background: linear-gradient(180deg, #6f9fc9 0%, #e3b45f 55%, #a97a3a 100%);
@@ -216,17 +222,21 @@
    Vier ineinanderliegende inset-Schatten sind der ganze Trick: Gold
    außen, dunkles Holz, Nacht, Gold innen — kein Bild, keine border-
    image, nichts, was in der Größe kaputtgehen könnte. */
-/* Der Rahmen füllt die freie Fläche aus, statt um seinen Inhalt zu
-   schrumpfen — sonst bekäme das Spielfeld nur so viel Platz, wie die
-   Kopfzeile breit ist. */
+/* Der Rahmen ist genau so breit wie das Spielfeld darin (`fit-content`
+   um die per JS gesetzte Kartenbreite) — damit ist das Pergament die
+   Spielfläche und nicht ein Tablett mit breitem Rand. Die Mindestbreite
+   hält Kopfzeile und Timer-Leiste lesbar, falls das Feld sehr schmal
+   ausfällt. */
 .cm-frame--board {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
-  width: 100%;
+  width: fit-content;
+  min-width: 520px;
+  max-width: 100%;
   background: var(--cm-parchment);
   border: 3px solid var(--cm-gold);
   border-radius: 28px;
@@ -327,18 +337,15 @@
    die Panels hoch, bei vieren flacher, ohne dass irgendwo eine Zahl
    im Code steht. */
 .cm-host--presenter .cm-roster {
-  position: absolute;
-  top: 14px;
-  bottom: 14px;
-  width: var(--cm-roster-w);
+  position: relative;
   z-index: 2;
+  flex: 0 0 var(--cm-roster-w);
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   gap: 8px;
 }
-.cm-roster--left  { left: 14px; }
-.cm-roster--right { right: 14px; }
 
 /* Das Panel TRÄGT die Farbe des Volkes — deshalb steht der Farbname
    („Rot", „Blau") nirgends mehr als Wort, und der Farbpunkt ist weg.
@@ -505,7 +512,11 @@
    Dauer, statt sie mit einem statischen Wert zu kombinieren — auf
    einem einzigen Element hätte die Animation die Zentrierung
    aufgefressen (das war der Positions-Bug im Showroom). */
-.cm-sprite { position: absolute; transform: translate(-50%, -100%); }
+/* `--drop` verschiebt die Figur um einen Anteil ihrer eigenen Höhe
+   nach unten (die Burg sitzt dadurch IN ihrer Kachel statt nur darauf).
+   Die Zahl kommt aus tool.js, weil dort die Kopffreiheit am oberen
+   Kartenrand aus demselben Wert berechnet wird. */
+.cm-sprite { position: absolute; transform: translate(-50%, calc(-100% + var(--drop, 0%))); }
 .cm-spriteinner { display: block; height: 100%; filter: drop-shadow(0 8px 6px rgba(20,12,0,.45)); }
 .cm-spriteinner img { display: block; height: 100%; width: auto; }
 .cm-spriteinner--unit { animation: cmWander 4.6s ease-in-out infinite; }
