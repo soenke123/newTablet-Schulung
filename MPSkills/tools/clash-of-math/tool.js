@@ -599,19 +599,49 @@
     countdownTimer = null;
   }
 
-  /* ─── Team-Übersicht (Lobby) ─────────────────────────────────
+  /* ─── Die Völker der anderen (Lobby, Teilnehmer) ─────────────
      `teams` ist {team_index: anzahl} — als Objekt, weil jsonb_object_agg
-     die Schlüssel als Zeichenketten liefert. */
-  function rosterHTML(teams, teamCount, myTeam) {
+     die Schlüssel als Zeichenketten liefert.
+
+     Bewusst nur Einheit, Name und Kopfzahl: wer sonst noch mitspielt,
+     ist eine Nebeninformation. Das eigene Volk steht darüber groß, und
+     die Namen der anderen Kinder bekommt das Tablet gar nicht erst
+     (siehe Migration 0098). */
+  function othersHTML(v, myTeam) {
     let out = '';
-    for (let i = 0; i < teamCount; i++) {
-      const n = (teams && teams[String(i)]) || 0;
-      const mine = (myTeam === i) ? ' cm-rchip--mine' : '';
-      out += `<span class="cm-rchip${mine}">` +
-        `<span class="cm-dot" style="background:${fStroke(i)}"></span>` +
-        `${ctx.esc(fLabel(i))} · ${n}</span>`;
+    for (let i = 0; i < v.team_count; i++) {
+      if (i === myTeam) continue;
+      const n = (v.teams && v.teams[String(i)]) || 0;
+      out += `<div class="cm-other" style="--team:${fStroke(i)}">` +
+        `<div class="cm-otherpic"><img src="${esrc(fUnit(i))}" alt=""></div>` +
+        `<span class="cm-othername">${ctx.esc(fLabel(i))}</span>` +
+        `<span class="cm-othern">${n}</span>` +
+      '</div>';
     }
     return out;
+  }
+
+  /* ─── Das eigene Volk (Lobby, Teilnehmer) ────────────────────
+     Derselbe Aufbau wie eine Spalte in der Lehrkraft-Lobby
+     (renderLobbyTeams): Gruppenbild, Name mit Kopfzahl, darunter die
+     Kinder — nur breiter, weil hier genau EINE Spalte steht. Der eigene
+     Eintrag ist hervorgehoben; welcher das ist, sagt der Server
+     (my_team_members[].me), nicht ein Namensvergleich — in einer Klasse
+     mit zwei „Lena" wäre der schlicht falsch. */
+  function myTeamHTML(v, myTeam) {
+    const members = Array.isArray(v.my_team_members) ? v.my_team_members : [];
+    const n = (v.teams && v.teams[String(myTeam)]) || members.length;
+    const list = members.length
+      ? members.map(m => `<li${m && m.me ? ' class="cm-lteamme"' : ''}>${ctx.esc((m && m.name) || '')}</li>`).join('')
+      : '<li class="cm-lteamempty">noch niemand</li>';
+    return `<div class="cm-lteam cm-lteam--mine" style="--team:${fStroke(myTeam)}">` +
+      `<div class="cm-lteampic"><img src="${esrc(FACTION_TEAM[facOf(myTeam)] || FACTION_TEAM[0])}" alt=""></div>` +
+      '<div class="cm-lteamname">' +
+        `<span>${ctx.esc(fLabel(myTeam))}</span>` +
+        `<span class="cm-lteamn">${n}</span>` +
+      '</div>' +
+      `<ul class="cm-lteamlist">${list}</ul>` +
+    '</div>';
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -620,11 +650,23 @@
   function buildParticipantDOM() {
     root.innerHTML =
       '<div class="cm-host">' +
-        '<div class="cm-pane" id="cmLobby">' +
-          '<p class="cm-lead">Dein vorläufiges Team: <b id="cmMyTeamName">…</b></p>' +
-          '<div class="cm-roster" id="cmRoster"></div>' +
+        // ── Warten auf den Spielstart ──────────────────────────────
+        // Bis zum UI-Durchgang stand hier eine Zeile Text („Dein
+        // vorläufiges Team: …") und darunter ein Chip je Volk. Das war
+        // dieselbe Auskunft für alle acht Völker — nur dass genau eines
+        // davon das eigene ist, und das interessiert am Tablet als
+        // einziges wirklich. Jetzt: das eigene Volk groß und mit den
+        // Namen der Gruppe (wie auf dem Beamer), die anderen als kleine
+        // Zeile darunter.
+        '<div class="cm-pane cm-pane--lobby" id="cmLobby">' +
+          '<div class="cm-wait"><span class="cm-waitdots"><i></i><i></i><i></i></span>' +
+            'Warten auf den Spielstart …</div>' +
+          '<div class="cm-myteamwrap" id="cmMyTeam"></div>' +
+          '<div class="cm-others cm-hide" id="cmOthersBox">' +
+            '<div class="cm-otherslabel">Diese Völker spielen mit</div>' +
+            '<div class="cm-otherlist" id="cmOthers"></div>' +
+          '</div>' +
           '<p class="cm-hint" id="cmOnlineHint"></p>' +
-          '<p class="cm-hint">Sobald deine Lehrkraft startet, geht es los.</p>' +
         '</div>' +
         '<div class="cm-pane cm-hide" id="cmCountdown">' +
           '<div class="cm-countdown">' +
@@ -674,8 +716,9 @@
       map2: root.querySelector('#cmMiniMap2'),
       ended: root.querySelector('#cmEnded'),
       result: root.querySelector('#cmResult'),
-      myTeamName: root.querySelector('#cmMyTeamName'),
-      roster: root.querySelector('#cmRoster'),
+      myTeam: root.querySelector('#cmMyTeam'),
+      othersBox: root.querySelector('#cmOthersBox'),
+      others: root.querySelector('#cmOthers'),
       onlineHint: root.querySelector('#cmOnlineHint'),
       timeLeftP: root.querySelector('#cmTimeLeftP')
     };
@@ -734,18 +777,24 @@
       show('lobby');
       // myTeam ist für den Aufrufer selbst praktisch immer gesetzt
       // (wer clash_view gerade aufruft, ist per Definition online) —
-      // die Prüfung ist trotzdem defensiv statt „Team NaN" anzuzeigen.
-      if (myTeam == null) {
-        els.myTeamName.textContent = '…';
-      } else {
-        els.myTeamName.textContent = fLabel(myTeam);
-        els.myTeamName.style.color = fStroke(myTeam);
-      }
-      els.roster.innerHTML = rosterHTML(v.teams, teamCount, myTeam);
+      // die Prüfung ist trotzdem defensiv statt eine Karte in der Farbe
+      // von „Team NaN" zu zeichnen. Ohne Volk bleibt die Liste der
+      // anderen als vollständige Aufzählung stehen, weil dann keines
+      // davon das eigene ist.
+      els.myTeam.innerHTML = (myTeam == null)
+        ? '<p class="cm-hint">Dein Volk bekommst du gleich zugeteilt.</p>'
+        : myTeamHTML(v, myTeam);
+      els.others.innerHTML = othersHTML(v, myTeam);
+      els.othersBox.classList.toggle('cm-hide', teamCount <= (myTeam == null ? 0 : 1));
       if (els.onlineHint) {
-        els.onlineHint.textContent = (v.online_count != null && v.room_total != null && v.room_total > v.online_count)
+        // Der leere Absatz muss WEG, nicht nur leer sein: die Tafel ist
+        // eine Flex-Spalte mit Abstand, ein leerer Absatz darin wäre
+        // eine sichtbare Lücke unter der Liste.
+        const hint = (v.online_count != null && v.room_total != null && v.room_total > v.online_count)
           ? `${v.online_count} von ${v.room_total} im Raum sind bereit (online).`
           : '';
+        els.onlineHint.textContent = hint;
+        els.onlineHint.classList.toggle('cm-hide', !hint);
       }
       return;
     }

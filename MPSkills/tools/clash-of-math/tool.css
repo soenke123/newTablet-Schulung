@@ -28,26 +28,148 @@
 .cm-lead   { font-size: 1.05rem; font-weight: 700; }
 .cm-hint   { color: var(--ink-soft); font-size: .9rem; }
 
-/* ── Team-Übersicht (Lobby) ─────────────────────────────────── */
-.cm-roster {
+/* ══ Warte-Ansicht des Teilnehmers ═══════════════════════════════
+   Die Chip-Reihe (.cm-rchip/.cm-dot: ein Zahlen-Chip je Volk, das
+   eigene mit Akzentrand) ist ersatzlos weg. Sie gab allen acht Völkern
+   dasselbe Gewicht, obwohl am Tablet genau eines zählt: das eigene.
+   Stattdessen die Spalte vom Beamer (.cm-lteam, weiter unten) für das
+   eigene Volk und eine schlichte Liste für den Rest.
+   `.cm-roster` gehört seitdem allein der Beamer-Rolle — die Regeln
+   dafür stehen im Kingdoms-Abschnitt. */
+
+/* Die Warte-Ansicht ist die einzige Tafel mit eigenem Abstand zwischen
+   ihren Teilen — die übrigen (.cm-pane) bleiben schlichte Blöcke, wie
+   sie es immer waren. `margin: 0` fängt den Standard-Abstand des
+   Absatzes ab, der sonst zum Zwischenraum dazukäme. */
+.cm-pane--lobby {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  gap: 14px;
 }
-.cm-rchip {
+.cm-pane--lobby > p { margin: 0; }
+
+.cm-wait {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--r-pill);
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  font-size: .85rem;
-  font-weight: 600;
+  gap: 10px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ink-soft);
 }
-.cm-rchip.cm-rchip--mine { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
-.cm-dot {
-  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+/* Drei atmende Punkte statt eines Ladekreisels: es LÄDT ja nichts, es
+   wartet nur jemand — ein Kreisel würde einen Fehler nahelegen, wenn er
+   zwei Minuten lang dreht. */
+.cm-waitdots { display: inline-flex; gap: 4px; }
+.cm-waitdots i {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: cmWait 1.4s ease-in-out infinite;
+}
+.cm-waitdots i:nth-child(2) { animation-delay: .18s; }
+.cm-waitdots i:nth-child(3) { animation-delay: .36s; }
+@keyframes cmWait {
+  0%, 60%, 100% { opacity: .28; transform: translateY(0); }
+  30%           { opacity: 1;   transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-waitdots i { animation: none; opacity: .6; }
+}
+
+/* Das eigene Volk steht mittig und darf breiter werden als eine
+   Beamer-Spalte — es ist die einzige. Nach oben trotzdem gedeckelt:
+   auf einem Tablet im Querformat wäre eine Karte über die volle Breite
+   nur noch ein Band mit viel Luft darin. */
+.cm-myteamwrap { display: flex; justify-content: center; }
+/* Doppelt geschrieben (.cm-lteam.cm-lteam--mine), damit diese Regeln
+   die der Beamer-Spalte schlagen — die steht weiter unten in der Datei
+   und hätte bei gleicher Spezifität sonst das letzte Wort. */
+.cm-lteam.cm-lteam--mine {
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--team) 26%, transparent);
+}
+.cm-lteam--mine .cm-lteampic { height: clamp(128px, 22vh, 210px); }
+.cm-lteam--mine .cm-lteamname { font-size: 1rem; }
+.cm-lteam--mine .cm-lteamlist { font-size: .92rem; }
+/* Der eigene Eintrag in der Namensliste. Welcher das ist, sagt der
+   Server (my_team_members[].me, Migration 0098).
+   Hervorgehoben wird er als getönte Zeile, NICHT über die Schriftfarbe:
+   in Volksfarbe geschrieben stünde „du" bei Gelb und Türkis kaum
+   lesbar auf hellem Grund. */
+.cm-lteamme {
+  font-weight: 800;
+  margin: 0 -5px;
+  padding: 0 5px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--team) 24%, transparent);
+}
+.cm-lteamme::after {
+  content: ' — du';
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* ── Die anderen Völker: Einheit, Name, Kopfzahl. Mehr nicht. ────
+   Ein Raster statt einer Spalte: auf dem Handy stehen sie
+   untereinander, auf dem Tablet zu zweit oder zu dritt nebeneinander —
+   ohne dass hier eine Bildschirmbreite als Zahl steht. */
+.cm-others {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.cm-otherslabel {
+  color: var(--ink-soft);
+  font-size: .82rem;
+  font-weight: 700;
+}
+.cm-otherlist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 8px;
+}
+.cm-other {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px 6px 6px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  /* Die Volksfarbe als Kante links, nicht als Fläche: die Zeile bleibt
+     ruhig, und sieben davon nebeneinander bleiben lesbar. */
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--team);
+}
+.cm-otherpic {
+  flex: 0 0 auto;
+  width: 30px; height: 34px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.cm-otherpic img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.28));
+}
+.cm-othername {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.cm-othern {
+  flex: 0 0 auto;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
 }
 
 /* ── Einstellungen der Lehrkraft (Fach 3, vor dem Start) ────── */
