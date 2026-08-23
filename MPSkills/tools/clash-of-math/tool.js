@@ -49,25 +49,42 @@
        0079) statt an „dem Raum zugeordnet" — reine Server-Änderung
        (0094), hier nichts Neues außer den online_count/room_total-
        Feldern in der Lobby-Anzeige.
+
+   ── Die Lobby wählt Völker, nicht mehr eine Zahl (Migration 0097) ──
+   Das Zahlenfeld „Teams: [4]" ist weg. Stattdessen stehen die acht
+   Wappen zum Anklicken da, darunter je gewähltem Volk eine Spalte mit
+   Gruppenbild, Namen und den Kindern, die dazugehören — und ganz
+   unten, wer im Raum, aber gerade nicht online ist.
+
+   Dadurch fällt eine Gleichung, die vorher überall stillschweigend
+   galt: Volk = Team-Slot. Der Server rechnet unverändert in Slots
+   0..n-1 (Spielfeld-Layout, Team-Verteilung, clash_players); WELCHES
+   Volk auf einem Slot sitzt, steht in `factions` und wird hier über
+   facOf()/fStroke()/fLabel()/… nachgeschlagen. Wer eine der
+   FACTION_*-Listen direkt mit einer Zahl indiziert, die vom Server
+   kommt, macht mit ziemlicher Sicherheit einen Fehler.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
   'use strict';
 
-  const TEAM_NAMES  = ['Rot', 'Blau', 'Grün', 'Gelb', 'Lila', 'Türkis', 'Magenta', 'Rosa'];
-  const TEAM_FILL   = ['rgba(239,68,68,.75)', 'rgba(59,130,246,.75)', 'rgba(16,185,129,.75)',
-                       'rgba(245,158,11,.75)', 'rgba(168,85,247,.75)', 'rgba(6,182,212,.75)',
-                       'rgba(217,70,160,.75)', 'rgba(244,114,182,.75)'];
-  const TEAM_STROKE = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b',
-                       '#a855f7', '#06b6d4', '#d946a0', '#f472b6'];
+  /* ── Die acht Völker ──────────────────────────────────────────────
+     ACHTUNG, seit Migration 0097: der Index in diesen Listen ist das
+     VOLK (0..7), NICHT mehr der Team-Slot auf dem Spielfeld. Solange
+     die Lehrkraft „die ersten vier" spielen ließ, waren beide
+     dasselbe; seit sie beliebige Völker an- und abwählen kann, hat ein
+     Board mit den Brokkoli-Giraffen und dem Spuk-Einhorn die Slots 0/1,
+     aber die Völker 2/6. Die Übersetzung macht `facOf` weiter unten —
+     hier NIE direkt mit einem Slot indizieren. */
+  const FACTION_FILL   = ['rgba(239,68,68,.75)', 'rgba(59,130,246,.75)', 'rgba(16,185,129,.75)',
+                          'rgba(245,158,11,.75)', 'rgba(168,85,247,.75)', 'rgba(6,182,212,.75)',
+                          'rgba(217,70,160,.75)', 'rgba(244,114,182,.75)'];
+  const FACTION_STROKE = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b',
+                          '#a855f7', '#06b6d4', '#d946a0', '#f472b6'];
 
-  const teamName  = i => TEAM_NAMES[i] ?? ('Team ' + (i + 1));
-  const teamFill  = i => TEAM_FILL[i]  ?? '#9994';
-  const teamStroke = i => TEAM_STROKE[i] ?? '#999';
-
-  /* ── Kingdoms of Mathoria: Fraktionsgrafiken (Beamer) ─────────────
-     Reihenfolge deckungsgleich mit TEAM_NAMES/TEAM_STROKE — Team-
-     Index 0..7 ist zugleich der Index in diesen Listen. ASSET_DIR ist
+  /* ── Kingdoms of Mathoria: Fraktionsgrafiken ──────────────────────
+     Reihenfolge deckungsgleich mit FACTION_FILL/FACTION_STROKE — auch
+     hier ist der Index das VOLK, nicht der Slot. ASSET_DIR ist
      absichtlich der volle Pfad ab MPSkills/ (nicht „sprites/…"): ein
      in tool.js gebautes <img src> wird relativ zur SEITE aufgelöst
      (lehrer.html/j.html liegen in MPSkills/), nicht relativ zu
@@ -78,13 +95,39 @@
                            'lila carstle.png', 'türkis carstle.png', 'magenta carstle.png', 'rosa carstle.png'];
   const FACTION_UNIT   = ['red units.png', 'blue units.png', 'green units.png', 'yellow units.png',
                            'lila units.png', 'türkis units.png', 'magenta units.png', 'rosa units.png'];
+  // Burg UND Einheiten in einem Bild — das Gruppenporträt des Volkes.
+  // Nur die Lobby benutzt es (eine Spalte je gewähltem Volk); auf dem
+  // Spielfeld bleiben Burg und Einheiten getrennt, weil sie dort auf
+  // verschiedenen Kacheln stehen. Der Dateiname von Gelb ist wirklich
+  // „yello Team.png" — Tippfehler im Ordner, nicht hier.
+  const FACTION_TEAM   = ['red Team.png', 'blue Team.png', 'green Team.png', 'yello Team.png',
+                           'lila Team.png', 'türkis Team.png', 'magenta Team.png', 'rosa Team.png'];
   // Der Name des Volkes. Er hat die Farbbezeichnung („Rot", „Blau")
   // als Anzeigename abgelöst: das Panel TRÄGT die Farbe, sie muss
   // nicht auch noch danebenstehen.
   const FACTION_LABEL  = ['Toast-Ritter', 'Robo-Enten', 'Brokkoli-Giraffen', 'Mal-Hasen',
                            'Kosmische Katzen', 'Okto-Pferdchen', 'Spuk-Einhorn', 'Wolkenvogel-Piraten'];
+  const FACTION_COUNT  = 8;
   const esrc = name => encodeURI(ASSET_DIR + name);
-  const factionLabel = i => FACTION_LABEL[i] ?? '';
+
+  /* ─── Slot → Volk ────────────────────────────────────────────────
+     `factions` ist die Übersetzungstabelle des Servers (0097):
+     factions[slot] = Volk. Sie kommt in jeder Ansicht mit und wird in
+     applyView gesetzt. Der Rückfall auf `slot` ist der Zustand vor
+     0097 (Volk = Slot) — er greift nur, falls die Migration noch nicht
+     gelaufen ist, und macht dann exakt das Alte.
+
+     AB HIER nehmen alle Anzeigefunktionen einen SLOT entgegen. Wer
+     eine der FACTION_*-Listen direkt indiziert, muss vorher durch
+     facOf() — die einzige Ausnahme ist die Völker-Auswahl in der
+     Lobby, die von Natur aus über Völker läuft, nicht über Slots. */
+  let factions = [0, 1, 2, 3];
+  const facOf    = s => (factions[s] != null ? factions[s] : s);
+  const fFill    = s => FACTION_FILL[facOf(s)]   ?? '#9994';
+  const fStroke  = s => FACTION_STROKE[facOf(s)] ?? '#999';
+  const fLabel   = s => FACTION_LABEL[facOf(s)]  ?? ('Team ' + (s + 1));
+  const fCastle  = s => FACTION_CASTLE[facOf(s)] || FACTION_CASTLE[0];
+  const fUnit    = s => FACTION_UNIT[facOf(s)]   || FACTION_UNIT[0];
 
   let root = null, ctx = null, role = null;
   let els = {};
@@ -93,6 +136,10 @@
   let lastSig = null, lastView = null, busy = false, destroyed = false;
   let submitting = false;
   let matchEndsAtMs = 0, matchPeakMs = 1;
+  // Lobby-Auswahl der Lehrkraft (Völker, nicht Slots) und ein Zähler
+  // laufender Speicher-Aufrufe — solange der über 0 steht, hat die
+  // Anzeige Vorrang vor der Antwort des Servers, siehe Klick-Zuhörer.
+  let pickSel = [], pickBusy = 0;
 
   const MAP_GAP = 12, MAP_MIN = 260, MAP_MAX = 2000;
 
@@ -156,10 +203,10 @@
         if (i === 0) g.moveTo(hx, hy); else g.lineTo(hx, hy);
       }
       g.closePath();
-      g.fillStyle = teamFill(t.team);
+      g.fillStyle = fFill(t.team);
       g.fill();
       g.lineWidth = t.castle ? 3 : (isMine ? 2.5 : 1);
-      g.strokeStyle = isMine ? '#ffffff' : teamStroke(t.team);
+      g.strokeStyle = isMine ? '#ffffff' : fStroke(t.team);
       g.stroke();
       if (t.castle) {
         g.font = Math.max(10, Math.round(hexRadius * 0.9)) + 'px sans-serif';
@@ -222,7 +269,7 @@
       const d = segsByTeam[team].map(s =>
         'M' + s[0].x.toFixed(1) + ',' + s[0].y.toFixed(1) + ' L' + s[1].x.toFixed(1) + ',' + s[1].y.toFixed(1)
       ).join(' ');
-      const raw = teamStroke(parseInt(team, 10));
+      const raw = fStroke(parseInt(team, 10));
       out += '<path class="cm-border" d="' + d + '" style="--raw:' + raw + '"></path>';
       out += '<path class="cm-border cm-border--inner" d="' + d + '" style="--raw:' + raw + '"></path>';
     });
@@ -310,7 +357,7 @@
         const a = Math.PI / 3 * i - Math.PI / 6;
         pts.push((p.x + (scale - gap) * Math.cos(a)).toFixed(1) + ',' + (p.y + (scale - gap) * Math.sin(a)).toFixed(1));
       }
-      poly += '<polygon class="cm-hex" points="' + pts.join(' ') + '" style="--raw:' + teamStroke(t.team) + '"></polygon>';
+      poly += '<polygon class="cm-hex" points="' + pts.join(' ') + '" style="--raw:' + fStroke(t.team) + '"></polygon>';
     });
     const segs = computeBorderSegments(tiles, center, scale - Math.min(gap, 1));
     els.hexsvg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
@@ -322,7 +369,7 @@
     Object.keys(byTeam).forEach(teamKey => {
       const team = parseInt(teamKey, 10);
       const teamTiles = byTeam[teamKey];
-      const raw = teamStroke(team);
+      const raw = fStroke(team);
       const castleTile = teamTiles.find(t => t.castle);
       if (castleTile) {
         const p = center(castleTile.r, castleTile.c);
@@ -331,7 +378,7 @@
         icons += groundGlowHTML(p, scale * 1.7, scale * 0.94, raw);
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;' +
           '--drop:' + (CASTLE_DROP * 100) + '%;z-index:' + z + '">' +
-          '<div class="cm-spriteinner cm-spriteinner--castle"><img src="' + esrc(FACTION_CASTLE[team] || FACTION_CASTLE[0]) + '" alt=""></div></div>';
+          '<div class="cm-spriteinner cm-spriteinner--castle"><img src="' + esrc(fCastle(team)) + '" alt=""></div></div>';
         // KEINE Beschriftung über der Burg. Der Showroom hatte dort die
         // Farbbezeichnung („Rot", „Türkis") — die ist weg, seit das
         // Volk „Toast-Ritter" heißt und die Farbe allein die
@@ -355,7 +402,7 @@
         const h = scale * UNIT_H;
         icons += groundGlowHTML(p, scale * 0.94, scale * 0.52, raw);
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + (1000 + t.r * 10 + 5) + '">' +
-          '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + (k * 0.5) + 's"><img src="' + esrc(FACTION_UNIT[team] || FACTION_UNIT[0]) + '" alt=""></div></div>';
+          '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + (k * 0.5) + 's"><img src="' + esrc(fUnit(team)) + '" alt=""></div></div>';
       }
     });
     els.icons.innerHTML = icons;
@@ -500,6 +547,9 @@
 
   function applyView(v) {
     lastView = v;
+    // Die Übersetzungstabelle zuerst — jede Anzeigefunktion darunter
+    // schlägt ihre Farben, Namen und Bilder darüber nach.
+    if (Array.isArray(v.factions) && v.factions.length) factions = v.factions;
     ensureChannel(v.broadcast_key);
     if (role === 'presenter') renderPresenter(v); else renderParticipant(v);
   }
@@ -558,8 +608,8 @@
       const n = (teams && teams[String(i)]) || 0;
       const mine = (myTeam === i) ? ' cm-rchip--mine' : '';
       out += `<span class="cm-rchip${mine}">` +
-        `<span class="cm-dot" style="background:${teamStroke(i)}"></span>` +
-        `${ctx.esc(teamName(i))} · ${n}</span>`;
+        `<span class="cm-dot" style="background:${fStroke(i)}"></span>` +
+        `${ctx.esc(fLabel(i))} · ${n}</span>`;
     }
     return out;
   }
@@ -688,8 +738,8 @@
       if (myTeam == null) {
         els.myTeamName.textContent = '…';
       } else {
-        els.myTeamName.textContent = teamName(myTeam);
-        els.myTeamName.style.color = teamStroke(myTeam);
+        els.myTeamName.textContent = fLabel(myTeam);
+        els.myTeamName.style.color = fStroke(myTeam);
       }
       els.roster.innerHTML = rosterHTML(v.teams, teamCount, myTeam);
       if (els.onlineHint) {
@@ -710,7 +760,7 @@
       show('ended');
       const won = v.winner_team === myTeam;
       els.result.innerHTML =
-        `<b style="color:${teamStroke(v.winner_team)}">${ctx.esc(teamName(v.winner_team))} gewinnt!</b>` +
+        `<b style="color:${fStroke(v.winner_team)}">${ctx.esc(fLabel(v.winner_team))} gewinnt!</b>` +
         `<p>${won ? 'Euer Team hat das Spielfeld erobert. 🎉' : 'Diesmal nicht — schaut euch an, wer gewonnen hat.'}</p>`;
       return;
     }
@@ -721,8 +771,8 @@
       return;
     }
     show('game');
-    els.teamPill.textContent = teamName(myTeam);
-    els.teamPill.style.background = teamStroke(myTeam);
+    els.teamPill.textContent = fLabel(myTeam);
+    els.teamPill.style.background = fStroke(myTeam);
     els.streak.textContent = '🔥 ' + (v.me.streak || 0);
     if (v.match_ends_at) startMatchTimer(v.match_ends_at); else stopMatchTimer();
     if (v.me.question) els.q.textContent = v.me.question.a + ' + ' + v.me.question.b + ' = ?';
@@ -742,14 +792,23 @@
   function buildPresenterDOM() {
     root.innerHTML =
       '<div class="cm-host cm-host--presenter">' +
+        // ── Lobby der Lehrkraft ──────────────────────────────────
+        // Bis 0097 stand hier ein Zahlenfeld „Teams: [4]". Die Zahl
+        // sagte aber nur, WIE VIELE mitspielen, nie WELCHE — die Völker
+        // ergaben sich still aus der Reihenfolge. Jetzt sind es die acht
+        // Wappen selbst: anklicken heißt dabei, wegklicken heißt raus.
+        // Ohne Beschriftung, weil die Figuren selbst erkennbar sind und
+        // acht Namen nebeneinander die Reihe sprengen würden; der Name
+        // steht unten an der Spalte, wo Platz dafür ist.
         '<div class="cm-pane" id="cmSetup">' +
           '<div class="cm-setup">' +
-            '<div class="cm-setuprow">' +
-              '<label>Teams: <input type="number" id="cmTeamCount" min="2" max="8" value="4"></label>' +
+            '<div class="cm-setuphead">' +
+              '<h3 class="cm-setuptitle">Welche Teams?</h3>' +
               '<button type="button" class="cm-btn" id="cmStartBtn">▶ Spiel starten</button>' +
             '</div>' +
-            '<div class="cm-roster" id="cmRosterP"></div>' +
-            '<p class="cm-hint" id="cmOnlineHintP"></p>' +
+            '<div class="cm-pick" id="cmPick"></div>' +
+            '<div class="cm-lobbyteams" id="cmLobbyTeams"></div>' +
+            '<div class="cm-offline cm-hide" id="cmOffline"></div>' +
           '</div>' +
         '</div>' +
         '<div class="cm-pane cm-hide" id="cmCountdownP">' +
@@ -816,10 +875,10 @@
 
     els = {
       setup: root.querySelector('#cmSetup'),
-      teamCount: root.querySelector('#cmTeamCount'),
+      pick: root.querySelector('#cmPick'),
+      lobbyTeams: root.querySelector('#cmLobbyTeams'),
+      offline: root.querySelector('#cmOffline'),
       startBtn: root.querySelector('#cmStartBtn'),
-      rosterP: root.querySelector('#cmRosterP'),
-      onlineHintP: root.querySelector('#cmOnlineHintP'),
       countdownP: root.querySelector('#cmCountdownP'),
       countNumP: root.querySelector('#cmCountNumP'),
       boardWrap: root.querySelector('#cmBoardWrap'),
@@ -859,11 +918,42 @@
       tick(true);
     });
 
-    els.teamCount.addEventListener('change', async () => {
-      const n = Math.max(2, Math.min(8, parseInt(els.teamCount.value, 10) || 4));
-      els.teamCount.value = n;
-      const r = await ctx.actions.call('clash_room_set_team_count', { p_team_count: n });
-      if (!r || !r.ok) ctx.toast(ctx.errText((r && r.error) || 'network'), true);
+    /* ── Ein Volk an- oder abwählen ────────────────────────────────
+       Ein Zuhörer auf der ganzen Reihe statt acht einzelner: die
+       Knöpfe werden bei jedem Takt neu gezeichnet, einzeln
+       angeheftete Zuhörer wären damit jedes Mal weg. */
+    els.pick.addEventListener('click', async ev => {
+      const btn = ev.target.closest('.cm-pickbtn');
+      if (!btn || btn.disabled) return;
+      const fac = parseInt(btn.dataset.fac, 10);
+      if (!Number.isInteger(fac)) return;
+
+      const on   = pickSel.indexOf(fac) >= 0;
+      const next = on ? pickSel.filter(f => f !== fac) : pickSel.concat([fac]);
+      if (next.length < 2) { ctx.toast('Mindestens zwei Völker müssen mitspielen.', true); return; }
+      if (next.length > FACTION_COUNT) return;
+      next.sort((a, b) => a - b);   // dieselbe Ordnung, die der Server speichert
+
+      // Sofort umschalten, ohne auf den Server zu warten — ein Klick,
+      // der eine halbe Sekunde nichts tut, wird ein zweites Mal
+      // geklickt. Solange die Antwort aussteht (pickBusy), darf ein
+      // dazwischenfunkender Takt die Auswahl NICHT zurückdrehen; die
+      // Spalten darunter bleiben derweil auf dem Stand des Servers,
+      // weil ihre Verteilung nur von dort kommen kann.
+      pickSel = next;
+      pickBusy++;
+      renderPick();
+      const r = await ctx.actions.call('clash_room_set_factions', { p_factions: next });
+      pickBusy--;
+      if (!r || !r.ok) {
+        ctx.toast(ctx.errText((r && r.error) || 'network'), true);
+        // Fehlgeschlagen ⇒ die Wahrheit des Servers wieder zulassen.
+        if (!pickBusy) syncPickFromView(lastView);
+        renderPick();
+        return;
+      }
+      if (Array.isArray(r.factions)) { factions = r.factions; if (!pickBusy) pickSel = r.factions.slice(); }
+      renderPick();
       tick(true);
     });
 
@@ -903,10 +993,10 @@
     // EINE Einheit mit dem Namen daneben (nicht das Gruppenbild über
     // die volle Breite): so bleibt die Kopfzeile flach und der Platz
     // darunter gehört den Namen der Kinder.
-    return `<div class="cm-rcard${dead ? ' cm-rcard--out' : ''}" style="--team:${teamStroke(i)}">` +
+    return `<div class="cm-rcard${dead ? ' cm-rcard--out' : ''}" style="--team:${fStroke(i)}">` +
       '<div class="cm-rhead">' +
-        `<div class="cm-rthumb"><img src="${esrc(FACTION_UNIT[i] || FACTION_UNIT[0])}" alt=""></div>` +
-        `<span class="cm-rname">${ctx.esc(factionLabel(i))}</span>` +
+        `<div class="cm-rthumb"><img src="${esrc(fUnit(i))}" alt=""></div>` +
+        `<span class="cm-rname">${ctx.esc(fLabel(i))}</span>` +
         `<span class="cm-rcount">${count}</span>` +
       '</div>' +
       memberHTML +
@@ -951,16 +1041,93 @@
       `<span class="cm-ringlabel">${label}</span>`;
   }
 
+  /* ══════════════════════════════════════════════════════════
+     Lobby der Lehrkraft: Auswahlreihe, Volk-Spalten, Nicht-Online
+     ══════════════════════════════════════════════════════════ */
+
+  /* Die acht Wappen zum An- und Abwählen. Nicht Gewählte sind grau und
+     blass, Gewählte tragen ihre Farbe und einen Schein — dieselbe
+     Aussage wie beim ausgeschiedenen Volk auf dem Spielfeld
+     (.cm-rcard--out), nur andersherum gelesen.
+     `title` und `aria-label` tragen den Volksnamen, den die Reihe
+     absichtlich nicht hinschreibt: für die Maus als Kurzhinweis, für
+     Vorlese-Werkzeuge als einzige Auskunft überhaupt. */
+  function renderPick() {
+    if (!els.pick) return;
+    const locked = pickSel.length <= 2;   // die letzten zwei sind nicht abwählbar
+    let out = '';
+    for (let f = 0; f < FACTION_COUNT; f++) {
+      const on   = pickSel.indexOf(f) >= 0;
+      const name = FACTION_LABEL[f];
+      out += `<button type="button" class="cm-pickbtn${on ? ' cm-pickbtn--on' : ''}" ` +
+        `data-fac="${f}" aria-pressed="${on}" aria-label="${ctx.esc(name)}" title="${ctx.esc(name)}" ` +
+        `style="--team:${FACTION_STROKE[f]}"${on && locked ? ' data-locked="1"' : ''}>` +
+        `<img src="${esrc(FACTION_UNIT[f])}" alt="">` +
+      '</button>';
+    }
+    els.pick.innerHTML = out;
+  }
+
+  // Die Auswahl des Servers übernehmen. Läuft nur, wenn gerade kein
+  // eigener Klick unterwegs ist — sonst würde eine Antwort von vorhin
+  // die frischere Anzeige überschreiben.
+  function syncPickFromView(v) {
+    if (!v) return;
+    if (Array.isArray(v.factions) && v.factions.length) pickSel = v.factions.slice();
+    else pickSel = Array.from({ length: v.team_count || 2 }, (_, i) => i);
+  }
+
+  /* Eine Spalte je gewähltem Volk: Gruppenbild, Name mit Kopfzahl,
+     darunter die Kinder. Nebeneinander statt untereinander — die Lobby
+     hängt am Beamer, und nebeneinander sieht die Klasse auf einen
+     Blick, wer zu wem gehört, statt vier Listen abwärts lesen zu
+     müssen. Ein Volk ohne Anwesende bleibt trotzdem stehen: es
+     SPIELT mit, es ist nur noch niemand da. */
+  function renderLobbyTeams(v) {
+    if (!els.lobbyTeams) return;
+    const members = v.team_members || {};
+    let out = '';
+    for (let slot = 0; slot < v.team_count; slot++) {
+      const names = Array.isArray(members[String(slot)]) ? members[String(slot)] : [];
+      const n = (v.teams && v.teams[String(slot)]) || names.length;
+      const list = names.length
+        ? names.map(x => `<li>${ctx.esc(x)}</li>`).join('')
+        : '<li class="cm-lteamempty">noch niemand</li>';
+      out += `<div class="cm-lteam" style="--team:${fStroke(slot)}">` +
+        `<div class="cm-lteampic"><img src="${esrc(FACTION_TEAM[facOf(slot)] || FACTION_TEAM[0])}" alt=""></div>` +
+        '<div class="cm-lteamname">' +
+          `<span>${ctx.esc(fLabel(slot))}</span>` +
+          `<span class="cm-lteamn">${n}</span>` +
+        '</div>' +
+        `<ul class="cm-lteamlist">${list}</ul>` +
+      '</div>';
+    }
+    els.lobbyTeams.innerHTML = out;
+  }
+
+  /* Wer im Raum ist, aber gerade nicht online: eine eigene Reihe ganz
+     unten, nebeneinander. Bewusst NICHT in die Völker-Spalten
+     einsortiert — beim Start bekommen genau diese Kinder kein Team
+     (clash_room_start), und was auf dem Beamer bei einem Volk steht,
+     soll auch dort mitspielen. Die Reihe verschwindet ganz, wenn alle
+     online sind: eine leere Überschrift wäre nur Lärm. */
+  function renderOffline(v) {
+    if (!els.offline) return;
+    const names = Array.isArray(v.offline_members) ? v.offline_members : [];
+    if (!names.length) { els.offline.classList.add('cm-hide'); els.offline.innerHTML = ''; return; }
+    els.offline.classList.remove('cm-hide');
+    els.offline.innerHTML =
+      `<span class="cm-offlabel">Gerade nicht online (${names.length}) — sie bekommen beim Start kein Team:</span>` +
+      names.map(x => `<span class="cm-offname">${ctx.esc(x)}</span>`).join('');
+  }
+
   function renderPresenter(v) {
     if (v.phase === 'lobby') {
       show2('setup');
-      els.teamCount.value = v.team_count;
-      els.rosterP.innerHTML = rosterHTML(v.teams, v.team_count, null);
-      if (els.onlineHintP) {
-        els.onlineHintP.textContent = (v.online_count != null && v.room_total != null && v.room_total > v.online_count)
-          ? `${v.online_count} von ${v.room_total} bereit (online) — nur sie bekommen beim Start ein Team.`
-          : '';
-      }
+      if (!pickBusy) syncPickFromView(v);
+      renderPick();
+      renderLobbyTeams(v);
+      renderOffline(v);
       return;
     }
     if (v.phase === 'countdown') {
@@ -973,7 +1140,7 @@
     if (v.phase === 'ended') {
       show2('endedP');
       els.resultP.innerHTML =
-        `<b style="color:${teamStroke(v.winner_team)}">${ctx.esc(teamName(v.winner_team))} gewinnt!</b>`;
+        `<b style="color:${fStroke(v.winner_team)}">${ctx.esc(fLabel(v.winner_team))} gewinnt!</b>`;
       return;
     }
     show2('boardWrap');
@@ -1003,11 +1170,13 @@
      Werkzeug-Schnittstelle
      ══════════════════════════════════════════════════════════ */
   window.MPTool.register('clash-of-math', {
-    // Team-Zahl lebt bewusst NICHT im generischen Einstellungen-Fach:
-    // sie ist über eine eigene RPC gesperrt, solange phase<>lobby, und
-    // das lässt sich mit has_participants/has_entries (0084) nicht
-    // ausdrücken. Der Regler steht deshalb im Werkzeug selbst
-    // (Fach 3, Beamer-Rolle). Leere Liste = „keine Angabe hier".
+    // Die Völker-Auswahl lebt bewusst NICHT im generischen
+    // Einstellungen-Fach: sie ist über eine eigene RPC gesperrt,
+    // solange phase<>lobby, und das lässt sich mit has_participants/
+    // has_entries (0084) nicht ausdrücken. Außerdem ist sie eine Reihe
+    // anklickbarer Bilder, kein Formularfeld. Sie steht deshalb im
+    // Werkzeug selbst (Fach 3, Beamer-Rolle) — leere Liste = „keine
+    // Angabe hier".
     settingsFields: [],
 
     mount(el, c) {
@@ -1067,6 +1236,7 @@
       channel = null; channelKey = null;
       root = ctx = null; role = null;
       els = {}; lastView = null; lastSig = null; busy = false; submitting = false;
+      pickSel = []; pickBusy = 0; factions = [0, 1, 2, 3];
     }
   });
 })();

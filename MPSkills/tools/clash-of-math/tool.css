@@ -60,26 +60,185 @@
   border-radius: var(--r-md);
   background: var(--surface);
 }
-.cm-setuprow {
+.cm-setuphead {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
-.cm-setuprow label {
+.cm-setuptitle {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+/* ── Die acht Wappen zum An- und Abwählen ────────────────────────
+   Die Lobby bleibt bewusst bei den Seiten-Variablen (--surface/--line)
+   statt beim Pergament-Thema der Karte: sie ist Bedienung, kein
+   Spielfeld. Die Völkerfarbe kommt trotzdem vor — aber als Zustand
+   („dieses Volk spielt mit"), nicht als Kulisse.
+
+   Kein festes Raster: die Knöpfe sind gleich breit und brechen um,
+   wenn der Beamer schmal ist. `--team` setzt tool.js je Knopf. */
+.cm-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.cm-pickbtn {
+  flex: 0 0 auto;
+  width: clamp(58px, 9vw, 84px);
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: var(--r-md);
+  border: 2px solid var(--line);
+  background: var(--surface-2);
+  /* Abgewählt: farblos und blass — dieselbe Aussage wie beim
+     ausgeschiedenen Volk auf dem Spielfeld (.cm-rcard--out). */
+  filter: grayscale(1);
+  opacity: .5;
+  transition: opacity .14s, filter .14s, border-color .14s, box-shadow .14s, transform .14s;
+}
+.cm-pickbtn img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  pointer-events: none;   /* sonst ist das Bild das Klickziel, nicht der Knopf */
+}
+.cm-pickbtn:hover { opacity: .7; }
+/* Gewählt: volle Farbe, die Volksfarbe als Rand und als Schein. */
+.cm-pickbtn--on {
+  filter: none;
+  opacity: 1;
+  border-color: var(--team);
+  background: color-mix(in srgb, var(--team) 14%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--team) 28%, transparent),
+              0 4px 12px color-mix(in srgb, var(--team) 30%, transparent);
+}
+.cm-pickbtn--on:hover { opacity: 1; transform: translateY(-2px); }
+/* Die letzten zwei lassen sich nicht abwählen — der Klick sagt das
+   auch (Hinweis-Blase in tool.js), der Zeiger schon vorher. */
+.cm-pickbtn--on[data-locked] { cursor: not-allowed; }
+.cm-pickbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Eine Spalte je gewähltem Volk ───────────────────────────────
+   Nebeneinander statt untereinander: die Lobby hängt am Beamer, und
+   nebeneinander sieht die Klasse in einem Blick, wer zu wem gehört.
+   Alle Spalten gleich breit (`1 1 0`), damit keine mit drei Namen
+   neben einer mit einem einzigen einbricht; ab acht Völkern brechen
+   sie um, statt schmaler als `min-width` zu werden. */
+.cm-lobbyteams {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  align-items: stretch;
+}
+/* Nach oben gedeckelt und die Reihe mittig: bei zwei Völkern stünden
+   sonst zwei riesige, halbleere Spalten an den äußersten Rändern, mit
+   dem Gruppenbild verloren in der Mitte. Zwei sitzen jetzt beieinander
+   in der Mitte, acht füllen die Breite von selbst. */
+.cm-lteam {
+  flex: 1 1 0;
+  min-width: 132px;
+  max-width: 250px;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  border: 2px solid var(--team);
+  background: color-mix(in srgb, var(--team) 9%, var(--surface));
+}
+/* Das Gruppenbild (Burg + Einheiten). `contain` statt `cover`, weil
+   die Figuren freigestellt sind und angeschnitten albern aussähen. */
+.cm-lteampic {
+  flex: 0 0 auto;
+  height: clamp(104px, 15vh, 176px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 8px 8px 0;
+}
+.cm-lteampic img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,.28));
+}
+/* Der Volksname liegt auf der vollen Volksfarbe — weiße Schrift mit
+   hartem Schatten, damit sie auch auf Gelb, Rosa und Türkis steht.
+   Dieselbe Behandlung wie .cm-rname am Spielfeldrand. */
+.cm-lteamname {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  /* Platz für zwei Zeilen, auch wenn nur eine gebraucht wird: sonst
+     sind die Namensleisten unterschiedlich hoch („Brokkoli-Giraffen"
+     bricht um, „Spuk-Einhorn" nicht) und die Namenslisten darunter
+     fangen auf verschiedenen Höhen an. */
+  min-height: calc(2.4em + 12px);
+  background: var(--team);
+  color: #fff;
+  font-weight: 800;
+  font-size: .92rem;
+  line-height: 1.2;
+  text-shadow: 0 1px 2px rgba(20,12,0,.7);
+  overflow-wrap: anywhere;
+}
+.cm-lteamname > span:first-child { flex: 1 1 auto; min-width: 0; }
+.cm-lteamn {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
+}
+.cm-lteamlist {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 34vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: 8px 10px;
+  list-style: none;
+  font-size: .85rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.cm-lteamempty { color: var(--ink-soft); font-style: italic; }
+
+/* ── Wer gerade nicht online ist ─────────────────────────────────
+   Eine eigene Reihe unter den Völkern, nebeneinander. Sie steht
+   bewusst außerhalb der Spalten: beim Start bekommen genau diese
+   Kinder kein Team, und was auf dem Beamer bei einem Volk steht, soll
+   auch dort mitspielen. */
+.cm-offline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.cm-offlabel {
+  flex: 0 0 auto;
+  color: var(--ink-soft);
+  font-size: .82rem;
   font-weight: 600;
 }
-.cm-setuprow input[type="number"] {
-  width: 64px;
-  padding: 8px 10px;
+.cm-offname {
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
+  color: var(--ink-soft);
+  font-size: .8rem;
 }
 .cm-btn {
   padding: 10px 18px;

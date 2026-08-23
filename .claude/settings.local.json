@@ -50,7 +50,8 @@
       "Bash(awk '/function renderPresenterMap/,/^  \\\\/\\\\* ─── Beamer: Karte nimmt/' MPSkills/tools/clash-of-math/tool.js)",
       "Bash(sed -n '/create table if not exists clash_players/,/\\);/p' supabase/migrations/0093_skill_tool_clash.sql)",
       "Bash(sed -n '/create or replace function clash_preview_teams/,/^\\\\$\\\\$;/p' supabase/migrations/0094_skill_tool_clash_fixes.sql)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(export NODE_PATH=\"/c/Users/snke/AppData/Local/npm-cache/_npx/e41f203b7505f1fb/node_modules\")"
     ]
   }
 }
