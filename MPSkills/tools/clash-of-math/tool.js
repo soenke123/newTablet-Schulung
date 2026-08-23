@@ -189,7 +189,7 @@
      (2) Die Territoriumsgrenze kommt aus den echten Nachbarschafts-
          kanten (Winkel zum Nachbar-Kachelmittelpunkt), nicht aus
          einer angenommenen Reihenfolge der Nachbar-Richtungen. */
-  function computeBorderSegments(tiles, centerFn, rx, ry) {
+  function computeBorderSegments(tiles, centerFn, hexR) {
     const ownerMap = new Map();
     tiles.forEach(t => ownerMap.set(t.r + ',' + t.c, t.team));
     const dirsEven = [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
@@ -208,8 +208,8 @@
         edgeIdx = ((edgeIdx % 6) + 6) % 6;
         const a1 = Math.PI / 3 * edgeIdx - Math.PI / 6;
         const a2 = Math.PI / 3 * (edgeIdx + 1) - Math.PI / 6;
-        const v1 = { x: p.x + rx * Math.cos(a1), y: p.y + ry * Math.sin(a1) };
-        const v2 = { x: p.x + rx * Math.cos(a2), y: p.y + ry * Math.sin(a2) };
+        const v1 = { x: p.x + hexR * Math.cos(a1), y: p.y + hexR * Math.sin(a1) };
+        const v2 = { x: p.x + hexR * Math.cos(a2), y: p.y + hexR * Math.sin(a2) };
         (segsByTeam[t.team] = segsByTeam[t.team] || []).push([v1, v2]);
       });
     });
@@ -284,24 +284,22 @@
     if (!tiles.length) { els.hexsvg.innerHTML = ''; els.icons.innerHTML = ''; return; }
     const gap = 2.5;
 
-    /* ─── Zwei Maßstäbe statt einem: das Feld wird breitgezogen ────
-       `sx` und `sy` sind bewusst UNABHÄNGIG voneinander. Mit einem
-       gemeinsamen Maßstab (dem kleineren von beiden) bliebe auf einem
-       16:9-Beamer immer Pergament links und rechts stehen, weil die
-       Spielfelder aus clash_layouts fast quadratisch sind. Gestreckt
-       füllt das Feld die Fläche wirklich aus.
-
-       Nur die KACHELN werden dabei verzerrt (breitere Sechsecke) — die
-       Figuren nicht: ihre Größe hängt allein an `sy` und ihre Bilder
-       behalten `width: auto`. Ein in die Breite gezogener Ritter wäre
-       sofort als Fehler zu sehen, ein breiteres Sechseck liest sich
-       als Geländeform. */
+    /* ─── EIN Maßstab: die Sechsecke bleiben regelmäßig ────────────
+       Ausprobiert und wieder verworfen war, waagerecht und senkrecht
+       getrennt zu skalieren, damit das Feld die Fläche restlos füllt —
+       das zieht die Kacheln in die Breite und war sofort zu sehen.
+       Also der kleinere der beiden Maßstäbe für beide Richtungen; was
+       dann links und rechts frei bleibt, ist Pergament und darf das
+       auch sein. Das Feld wird trotzdem so groß wie möglich, weil die
+       Fläche selbst (siehe fitPresenterMap) alles einnimmt, was
+       zwischen den Völker-Spalten liegt. */
     const ext = boardExtent(tiles);
-    const sx = W / ext.spanX;   // waagerechte Einheit (= halbe Kachelbreite)
-    const sy = H / ext.spanY;   // senkrechte Einheit (= halbe Kachelhöhe)
+    const scale = Math.min(W / ext.spanX, H / ext.spanY);
+    const offX = (W - ext.spanX * scale) / 2;
+    const offY = (H - ext.spanY * scale) / 2;
     const center = (r, c) => {
       const u = hexUnit(r, c);
-      return { x: (u.x - ext.minX) * sx, y: (u.y - ext.minY) * sy };
+      return { x: (u.x - ext.minX) * scale + offX, y: (u.y - ext.minY) * scale + offY };
     };
 
     let poly = '';
@@ -310,12 +308,11 @@
       const pts = [];
       for (let i = 0; i < 6; i++) {
         const a = Math.PI / 3 * i - Math.PI / 6;
-        pts.push((p.x + (sx - gap) * Math.cos(a)).toFixed(1) + ',' + (p.y + (sy - gap) * Math.sin(a)).toFixed(1));
+        pts.push((p.x + (scale - gap) * Math.cos(a)).toFixed(1) + ',' + (p.y + (scale - gap) * Math.sin(a)).toFixed(1));
       }
       poly += '<polygon class="cm-hex" points="' + pts.join(' ') + '" style="--raw:' + teamStroke(t.team) + '"></polygon>';
     });
-    const segs = computeBorderSegments(tiles, center,
-      sx - Math.min(gap, 1), sy - Math.min(gap, 1));
+    const segs = computeBorderSegments(tiles, center, scale - Math.min(gap, 1));
     els.hexsvg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     els.hexsvg.innerHTML = poly + borderLayerHTML(segs);
 
@@ -329,11 +326,9 @@
       const castleTile = teamTiles.find(t => t.castle);
       if (castleTile) {
         const p = center(castleTile.r, castleTile.c);
-        // Figurenhöhe folgt allein `sy` — die Streckung in der Breite
-        // gilt nur den Kacheln, nicht den Bewohnern.
-        const h = sy * CASTLE_H;
+        const h = scale * CASTLE_H;
         const z = 1000 + castleTile.r * 10 + 9;
-        icons += groundGlowHTML(p, sx * 1.7, sy * 0.94, raw);
+        icons += groundGlowHTML(p, scale * 1.7, scale * 0.94, raw);
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;' +
           '--drop:' + (CASTLE_DROP * 100) + '%;z-index:' + z + '">' +
           '<div class="cm-spriteinner cm-spriteinner--castle"><img src="' + esrc(FACTION_CASTLE[team] || FACTION_CASTLE[0]) + '" alt=""></div></div>';
@@ -357,8 +352,8 @@
         const idx = Math.floor((k + 0.5) * others.length / unitCount);
         const t = others[idx];
         const p = center(t.r, t.c);
-        const h = sy * UNIT_H;
-        icons += groundGlowHTML(p, sx * 0.94, sy * 0.52, raw);
+        const h = scale * UNIT_H;
+        icons += groundGlowHTML(p, scale * 0.94, scale * 0.52, raw);
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + (1000 + t.r * 10 + 5) + '">' +
           '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + (k * 0.5) + 's"><img src="' + esrc(FACTION_UNIT[team] || FACTION_UNIT[0]) + '" alt=""></div></div>';
       }
