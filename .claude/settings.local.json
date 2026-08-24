@@ -60,7 +60,8 @@
       "Bash(sort -t: -k3 -n)",
       "Bash(echo \"--- exit $?\")",
       "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless=new --disable-gpu --no-sandbox --hide-scrollbars --user-data-dir=C:/Users/snke/AppData/Local/Temp/clashprofile --window-size=1600,1000 --virtual-time-budget=4000 --screenshot=C:/Users/snke/AppData/Local/Temp/clashshots/run_presenter.png 'file:///C:/Users/snke/OneDrive/ClaudeProjekte/MPS%20TabletSchlung/Webauftrtitt/MPSkills/tools/clash-of-math/vorschau.html?role=presenter&phase=running')",
-      "Bash(npm i *)"
+      "Bash(npm i *)",
+      "Bash(python3 -)"
     ]
   }
 }

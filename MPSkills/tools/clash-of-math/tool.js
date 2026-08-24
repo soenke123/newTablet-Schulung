@@ -114,7 +114,7 @@
      Teilnehmers, und die gibt es nicht mehr (siehe renderHexMap).
      Die gemalte Karte mischt ihre Flächen aus dieser einen Farbe. */
   const FACTION_STROKE = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b',
-                          '#a855f7', '#06b6d4', '#d946a0', '#f472b6'];
+                          '#a855f7', '#06b6d4', '#9a1f6e', '#f9a8d4'];
 
   /* ── Kingdoms of Mathoria: Fraktionsgrafiken ──────────────────────
      Reihenfolge deckungsgleich mit FACTION_STROKE — auch
