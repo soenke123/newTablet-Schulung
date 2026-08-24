@@ -1308,7 +1308,19 @@
       }
       nudge();
     } else if (r.correct === false) {
-      setFeedback('❌ Leider nicht.', 'warn');
+      // Zwei Versuche je Aufgabe (Migration 0101): der erste
+      // Fehlversuch bekommt nur den Hinweis, die Aufgabe steht noch
+      // (kein r.question ⇒ setQuestion unten tut nichts). Erst der
+      // zweite Fehlversuch löst auf — reveal.sum ist die Summe der
+      // gescheiterten, nicht der neuen Aufgabe.
+      if (r.retry) {
+        setFeedback('❌ Leider falsch, versuch’s nochmal!', 'warn');
+      } else {
+        // Länger stehen lassen als die üblichen 1800ms — hier steht
+        // die richtige Zahl, die soll auch gelesen werden können.
+        const sum = r.reveal && r.reveal.sum;
+        setFeedback(sum != null ? ('❌ Leider falsch. Richtig wäre ' + sum + '.') : '❌ Leider falsch.', 'warn', 3200);
+      }
       flashInput('warn');
     } else {
       setFeedback('', '');
@@ -1323,14 +1335,14 @@
      dem Moment, in dem der Finger schon zur nächsten Taste unterwegs
      ist. */
   let feedbackTimer = null;
-  function setFeedback(text, kind) {
+  function setFeedback(text, kind, ms) {
     if (!els.feedback) return;
     els.feedback.textContent = text;
     els.feedback.className = 'cm-feedback' + (kind ? ' cm-feedback--' + kind : '');
     if (feedbackTimer) clearTimeout(feedbackTimer);
     if (text) feedbackTimer = setTimeout(() => {
       if (els.feedback) els.feedback.textContent = '';
-    }, 1800);
+    }, ms || 1800);
   }
   let flashTimer = null;
   function flashInput(kind) {
