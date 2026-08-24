@@ -383,10 +383,15 @@
   cursor: pointer;
 }
 .cm-btn:disabled { opacity: .5; cursor: not-allowed; }
-/* .cm-btn--ghost gab es für „Neues Spiel" unter dem Ergebnis. Der
-   Knopf sitzt jetzt in der Ecke des Siegerbilds und trägt dessen
-   Machart (.cm-newgame) — die blasse Variante hatte danach keinen
-   Träger mehr. */
+/* Zweitrangige Kopf-Aktion neben „Spiel starten": Rand statt Fläche,
+   damit auf den ersten Blick klar bleibt, welcher der beiden Knöpfe
+   der Hauptknopf ist. Träger seit 0104: „Teams mischen" in der Lobby. */
+.cm-btn--ghost {
+  background: transparent;
+  color: var(--accent-ink, var(--ink));
+  border-color: var(--line);
+}
+.cm-btn--ghost:hover { border-color: var(--accent); }
 
 /* ── Countdown ───────────────────────────────────────────────── */
 .cm-countdown {

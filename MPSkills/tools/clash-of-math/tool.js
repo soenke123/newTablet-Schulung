@@ -1568,6 +1568,7 @@
           '<div class="cm-setup">' +
             '<div class="cm-setuphead">' +
               '<h3 class="cm-setuptitle">Welche Teams?</h3>' +
+              '<button type="button" class="cm-btn cm-btn--ghost" id="cmShuffleBtn">🔀 Teams mischen</button>' +
               '<button type="button" class="cm-btn" id="cmStartBtn">▶ Spiel starten</button>' +
             '</div>' +
             '<div class="cm-pick" id="cmPick"></div>' +
@@ -1660,6 +1661,7 @@
       lobbyTeams: root.querySelector('#cmLobbyTeams'),
       offline: root.querySelector('#cmOffline'),
       startBtn: root.querySelector('#cmStartBtn'),
+      shuffleBtn: root.querySelector('#cmShuffleBtn'),
       countdownP: root.querySelector('#cmCountdownP'),
       countNumP: root.querySelector('#cmCountNumP'),
       boardWrap: root.querySelector('#cmBoardWrap'),
@@ -1744,6 +1746,18 @@
       els.startBtn.disabled = true;
       const r = await ctx.actions.call('clash_room_start', {});
       els.startBtn.disabled = false;
+      if (!r || !r.ok) { ctx.toast(ctx.errText((r && r.error) || 'network'), true); return; }
+      nudge();
+      tick(true);
+    });
+
+    // Würfelt nur die VORSCHAU neu (der Server dreht clash_boards.
+    // shuffle_seed, clash_preview_teams tut den Rest) — die Spalten
+    // darunter zeigen die neue Verteilung, sobald der Takt zurück ist.
+    els.shuffleBtn.addEventListener('click', async () => {
+      els.shuffleBtn.disabled = true;
+      const r = await ctx.actions.call('clash_room_shuffle_teams', {});
+      els.shuffleBtn.disabled = false;
       if (!r || !r.ok) { ctx.toast(ctx.errText((r && r.error) || 'network'), true); return; }
       nudge();
       tick(true);
