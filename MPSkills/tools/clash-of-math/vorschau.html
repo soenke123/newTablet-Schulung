@@ -19,6 +19,8 @@
      oben wechseln Rolle (Tablet/Beamer), Volk und Phase. Dasselbe
      geht über die Adresse, damit sich ein bestimmter Blick verlinken
      lässt:  ?role=presenter&fac=3&phase=out&map=1&answer=42
+     Die Zahl der Völker gibt es nur über die Adresse: ?teams=2 … 8
+     (sie ändert das erfundene Spielfeld, nicht bloß die Anzeige).
      ══════════════════════════════════════════════════════════════ -->
 
 <!-- ⚠️ Diese Seite liegt im Werkzeug-Ordner, läuft im Betrieb aber aus
@@ -104,8 +106,17 @@
    geschnittener Klumpen, je Team eine Burg, alles Übrige der
    nächstgelegenen Burg zugeschlagen. Genug, damit Karte, Anteil und
    die Völkerreihe echte Zahlen bekommen. */
-const ROWS = 9, COLS = 9, TEAMS = 4;
-let factions = [0, 2, 4, 6];     // welche Völker auf den Slots sitzen
+/* Wie viele Völker mitspielen, steht in der Adresse: ?teams=2 … 8
+   (Vorgabe 4). Das Siegerbild sieht bei zwei Völkern anders aus als
+   bei acht — ohne diesen Schalter wäre beides nur durch Ändern dieser
+   Datei zu sehen, und genau dann sieht es sich niemand an. */
+const ROWS = 9, COLS = 9;
+const TEAMS = Math.max(2, Math.min(8,
+  parseInt(new URLSearchParams(location.search).get('teams'), 10) || 4));
+// Welche Völker auf den Slots sitzen: jedes zweite, damit die Farben
+// nebeneinander unterscheidbar bleiben — bei mehr als vier sind
+// ohnehin alle acht dabei.
+let factions = [0, 2, 4, 6, 1, 3, 5, 7].slice(0, TEAMS);
 let myTeam   = 0;
 let phase    = 'running';
 let streak   = 0;
@@ -179,6 +190,14 @@ const NAMES = [
   ['Anton', 'Frieda', 'Theo', 'Romy']
 ];
 
+/* Richtige Antworten je Volk (0099). Erfundene, aber sprechende
+   Zahlen: Volk 1 gewinnt das Spielfeld, Volk 2 hat MEHR gerechnet —
+   genau der Fall, für den die zweite Zahl überhaupt dasteht. Der
+   Gewinner ist hier fest die 1 (siehe winner_team unten), damit sich
+   das Siegerbild aus Sicht eines NICHT-Siegers ansehen lässt. */
+const CORRECT = { 0: 18, 1: 41, 2: 47, 3: 9, 4: 33, 5: 21, 6: 2, 7: 16 };
+const WINNER  = 1;
+
 const RPC = {
   clash_sig: () => ({ ok: true, sig: phase + ':' + tiles.map(t => t.team).join('') + ':' + streak }),
 
@@ -201,12 +220,13 @@ const RPC = {
       factions: factions,
       countdown_ends_at: new Date(Date.now() + 5000).toISOString(),
       match_ends_at: new Date(Date.now() + 183000).toISOString(),
-      winner_team: 1,
+      winner_team: WINNER,
       broadcast_key: null,
       rows: ROWS, cols: COLS,
       tiles: tiles.map(t => ({ ...t })),
       teams: counts,
       team_tile_counts: counts,
+      team_correct_counts: CORRECT,
       team_members: members,
       offline_members: ['Karl', 'Wilma'],
       online_count: 22, room_total: 24
@@ -225,11 +245,15 @@ const RPC = {
     factions: factions,
     countdown_ends_at: new Date(Date.now() + 5000).toISOString(),
     match_ends_at: new Date(Date.now() + 183000).toISOString(),
-    winner_team: 1,
+    winner_team: WINNER,
     broadcast_key: null,
     rows: ROWS, cols: COLS,
     tiles: tiles.map(t => ({ ...t })),
-    teams: { 0: 6, 1: 5, 2: 6, 3: 5 },
+    // Kopfzahlen je Volk — aus denselben Namenslisten wie beim Beamer,
+    // damit sie bei ?teams=8 nicht plötzlich bei null stehen.
+    teams: Object.fromEntries(Array.from({ length: TEAMS },
+      (_, i) => [i, NAMES[i % NAMES.length].length])),
+    team_correct_counts: CORRECT,
     my_team_members: [
       { name: 'Lena', me: false }, { name: 'Jonas', me: true },
       { name: 'Mia', me: false },  { name: 'Ben', me: false }
@@ -246,7 +270,11 @@ const RPC = {
   clash_submit_answer: args => {
     const correct = args.p_answer === question.a + question.b;
     let captured = null;
-    if (correct) { streak++; captured = captureOne(); } else { streak = 0; }
+    // Die richtige Antwort zählt auch in der Völker-Reihe hoch — sonst
+    // stünde die neue Zahl (0099) hier als Standbild da und man sähe
+    // nicht, ob sie überhaupt nachgeführt wird.
+    if (correct) { streak++; CORRECT[myTeam] = (CORRECT[myTeam] || 0) + 1; captured = captureOne(); }
+    else { streak = 0; }
     question = newQuestion();
     return { ok: true, correct, captured, streak, question };
   }

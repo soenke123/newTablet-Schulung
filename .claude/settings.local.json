@@ -57,7 +57,9 @@
       "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless --disable-gpu --no-sandbox --hide-scrollbars --window-size=820,1180 --virtual-time-budget=4000 --screenshot=play.png \"file:///C:/Users/snke/OneDrive/ClaudeProjekte/MPS%20TabletSchlung/Webauftrtitt/MPSkills/tools/clash-of-math/preview-spieler.html\")",
       "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless --disable-gpu --no-sandbox --hide-scrollbars --window-size=820,1180 --virtual-time-budget=5000 --screenshot=\"C:\\\\Users\\\\snke\\\\AppData\\\\Local\\\\Temp\\\\cmshot\\\\play2.png\" \"file:///C:/Users/snke/OneDrive/ClaudeProjekte/MPS%20TabletSchlung/Webauftrtitt/MPSkills/tools/clash-of-math/preview-spieler.html\")",
       "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless --disable-gpu --no-sandbox --hide-scrollbars --window-size=820,1180 --virtual-time-budget=5000 --screenshot=\"C:\\\\Users\\\\snke\\\\AppData\\\\Local\\\\Temp\\\\cmshot\\\\play3.png\" \"file:///C:/Users/snke/OneDrive/ClaudeProjekte/MPS%20TabletSchlung/Webauftrtitt/MPSkills/tools/clash-of-math/preview-spieler.html\")",
-      "Bash(sort -t: -k3 -n)"
+      "Bash(sort -t: -k3 -n)",
+      "Bash(echo \"--- exit $?\")",
+      "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless=new --disable-gpu --no-sandbox --hide-scrollbars --user-data-dir=C:/Users/snke/AppData/Local/Temp/clashprofile --window-size=1600,1000 --virtual-time-budget=4000 --screenshot=C:/Users/snke/AppData/Local/Temp/clashshots/run_presenter.png 'file:///C:/Users/snke/OneDrive/ClaudeProjekte/MPS%20TabletSchlung/Webauftrtitt/MPSkills/tools/clash-of-math/vorschau.html?role=presenter&phase=running')"
     ]
   }
 }

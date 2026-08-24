@@ -141,6 +141,11 @@
   // nicht auch noch danebenstehen.
   const FACTION_LABEL  = ['Toast-Ritter', 'Robo-Enten', 'Brokkoli-Giraffen', 'Mal-Hasen',
                            'Kosmische Katzen', 'Okto-Pferdchen', 'Spuk-Einhorn', 'Wolkenvogel-Piraten'];
+  // Sieben Namen sind Mehrzahl („Toast-Ritter gewinnen"), einer ist es
+  // nicht („Spuk-Einhorn gewinnt"). Eine Liste statt einer Regel auf dem
+  // Namen: „…-Einhorn" wäre eine Regel, die beim nächsten Volk wieder
+  // falsch ist. Index ist das VOLK, wie in allen Listen hier.
+  const FACTION_PLURAL = [true, true, true, true, true, true, false, true];
   const FACTION_COUNT  = 8;
   const esrc = name => encodeURI(ASSET_DIR + name);
 
@@ -161,6 +166,10 @@
   const fLabel   = s => FACTION_LABEL[facOf(s)]  ?? ('Team ' + (s + 1));
   const fCastle  = s => FACTION_CASTLE[facOf(s)] || FACTION_CASTLE[0];
   const fUnit    = s => FACTION_UNIT[facOf(s)]   || FACTION_UNIT[0];
+  const fTeamPic = s => FACTION_TEAM[facOf(s)]   || FACTION_TEAM[0];
+  // „gewinnt" oder „gewinnen" — siehe FACTION_PLURAL. Unbekanntes Volk
+  // (Rückfall „Team 3") ist Einzahl.
+  const fVerb    = s => (FACTION_PLURAL[facOf(s)] ? 'gewinnen' : 'gewinnt');
 
   let root = null, ctx = null, role = null;
   let els = {};
@@ -845,6 +854,88 @@
   /* ══════════════════════════════════════════════════════════
      Teilnehmer
      ══════════════════════════════════════════════════════════ */
+  /* ══════════════════════════════════════════════════════════
+     Das Siegerbild — für BEIDE Rollen dieselben Bausteine
+     ══════════════════════════════════════════════════════════
+     Der Beamer zeigt alle Völker (Podest aus 1·2·3, der Rest als
+     schmale Zeilen daneben), das Tablet nur zwei davon: den Sieger und
+     das eigene Volk. Die Karte selbst, der Platz und die Zahl der
+     richtigen Antworten sind in beiden Fällen dasselbe Stück HTML —
+     was am Beamer steht, soll das Kind auf seinem Gerät wiedererkennen.
+
+     Die Reihenfolge kommt aus tileCounts (Felder am Ende) und
+     team_correct_counts (0099). Der SIEGER steht dabei nicht in dieser
+     Rechnung: welches Volk gewonnen hat, entscheidet der Server
+     (winner_team) — bei Feld-Gleichstand per Zufall, siehe
+     clash_maybe_advance_phase. Ihn hier neu auszurechnen könnte ein
+     anderes Ergebnis liefern als die große Überschrift daneben. */
+
+  const ORDINAL = ['', 'Erster', 'Zweiter', 'Dritter', 'Vierter',
+                   'Fünfter', 'Sechster', 'Siebter', 'Achter'];
+  const MEDAL   = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+  function endRows(v) {
+    const counts  = tileCounts(v);
+    const correct = v.team_correct_counts || {};
+    const rows = [];
+    for (let i = 0; i < v.team_count; i++) {
+      rows.push({
+        slot: i,
+        tiles: counts[i] || 0,
+        correct: parseInt(correct[String(i)], 10) || 0
+      });
+    }
+    const win = v.winner_team;
+    rows.sort((a, b) => {
+      if (a.slot === win) return -1;
+      if (b.slot === win) return 1;
+      return (b.tiles - a.tiles) || (b.correct - a.correct) || (a.slot - b.slot);
+    });
+    // Gleiche Felder UND gleich viele richtige Antworten ⇒ derselbe
+    // Platz, der nächste überspringt ihn (4·4·6, nicht 4·5·6). Das
+    // trifft vor allem die ausgeschiedenen Völker, die alle bei null
+    // Feldern stehen — eine erfundene Reihenfolge unter ihnen wäre
+    // nichts als die Slot-Nummer, groß auf die Wand geworfen.
+    // Platz 1 kann dabei niemand teilen: es gibt genau einen Sieger.
+    rows.forEach((r, i) => {
+      const prev = rows[i - 1];
+      r.place = (i > 1 && prev.tiles === r.tiles && prev.correct === r.correct)
+        ? prev.place : i + 1;
+    });
+    return rows;
+  }
+
+  // Eine Podest-Karte: Gruppenbild, Name, darunter Platz und richtige
+  // Antworten. `cls` bestimmt allein die Größe und den Platz in der
+  // Reihe (tool.css) — der Inhalt ist überall derselbe.
+  function podCardHTML(row, cls) {
+    return `<div class="cm-pod ${cls}" style="--team:${fStroke(row.slot)}">` +
+      `<div class="cm-podmedal">${MEDAL[row.place] || row.place}</div>` +
+      `<div class="cm-podpic"><img src="${esrc(fTeamPic(row.slot))}" alt=""></div>` +
+      `<div class="cm-podname">${ctx.esc(fLabel(row.slot))}</div>` +
+      '<div class="cm-podfoot">' +
+        `<span class="cm-podplace">Platz ${row.place}</span>` +
+        `<span class="cm-podcorr"><b>${row.correct}</b> richtig</span>` +
+      '</div>' +
+    '</div>';
+  }
+
+  // Ab Platz 4: eine schmale Zeile statt einer Karte. Dieselben drei
+  // Angaben, nur nebeneinander gelegt.
+  function endRowHTML(row) {
+    return `<div class="cm-erow" style="--team:${fStroke(row.slot)}">` +
+      `<span class="cm-eplace">${row.place}.</span>` +
+      `<span class="cm-ethumb"><img src="${esrc(fUnit(row.slot))}" alt=""></span>` +
+      `<span class="cm-ename">${ctx.esc(fLabel(row.slot))}</span>` +
+      `<span class="cm-ecorr"><b>${row.correct}</b> richtig</span>` +
+    '</div>';
+  }
+
+  function endTitleHTML(slot) {
+    return `<span class="cm-endname">${ctx.esc(fLabel(slot))}</span> ` +
+           `<span class="cm-endverb">${fVerb(slot)}!</span>`;
+  }
+
   function buildParticipantDOM() {
     root.innerHTML =
       '<div class="cm-host">' +
@@ -959,8 +1050,15 @@
           '<p class="cm-hint">Du siehst weiter zu, wie es weitergeht.</p>' +
           '<div class="cm-obsmap">' + mapDomHTML('cmOMap', 'cm-hexmap--square') + '</div>' +
         '</div>' +
-        '<div class="cm-pane cm-hide" id="cmEnded">' +
-          '<div class="cm-result" id="cmResult"></div>' +
+        // Das Siegerbild. Dieselben Bausteine wie am Beamer, nur ohne
+        // die Völker, die das Kind nichts angehen: ganz oben, wer
+        // gewonnen hat, darunter das Siegervolk groß und — wenn es
+        // nicht das eigene war — das eigene daneben, kleiner. Zum
+        // Schluss der eigene Platz in Worten.
+        '<div class="cm-pane cm-hide cm-endstage cm-endstage--me" id="cmEnded">' +
+          '<h2 class="cm-endtitle" id="cmEndTitle"></h2>' +
+          '<div class="cm-podium cm-podium--me" id="cmEndPodium"></div>' +
+          '<p class="cm-endplace" id="cmEndPlace"></p>' +
         '</div>' +
       '</div>';
 
@@ -986,7 +1084,9 @@
       feedback: root.querySelector('#cmFeedback'),
       out: root.querySelector('#cmOut'),
       ended: root.querySelector('#cmEnded'),
-      result: root.querySelector('#cmResult'),
+      endTitle: root.querySelector('#cmEndTitle'),
+      endPodium: root.querySelector('#cmEndPodium'),
+      endPlace: root.querySelector('#cmEndPlace'),
       myTeam: root.querySelector('#cmMyTeam'),
       othersBox: root.querySelector('#cmOthersBox'),
       others: root.querySelector('#cmOthers'),
@@ -1143,14 +1243,21 @@
      als Kurzhinweis tragen die Wappen den Namen im aria-label. */
   function renderFactionRow(v, myTeam, counts) {
     if (!els.factionRow) return;
+    const correct = v.team_correct_counts || {};
     let out = '';
     for (let i = 0; i < v.team_count; i++) {
       const n = counts[i] || 0;
+      // Zwei Zahlen je Plättchen: Felder groß, richtige Antworten
+      // klein darunter (0099). Sie sagen Verschiedenes — wer viel
+      // Feld hat, muss nicht der Fleißigste gewesen sein — und die
+      // kleine Zahl trägt darum das Häkchen als Erklärung mit.
+      const c = parseInt(correct[String(i)], 10) || 0;
       const cls = 'cm-fchip' + (n === 0 ? ' cm-fchip--out' : '') + (i === myTeam ? ' cm-fchip--me' : '');
       out += `<span class="${cls}" style="--team:${fStroke(i)}" ` +
-        `title="${ctx.esc(fLabel(i))}" aria-label="${ctx.esc(fLabel(i))}: ${n} Felder">` +
+        `title="${ctx.esc(fLabel(i))}" ` +
+        `aria-label="${ctx.esc(fLabel(i))}: ${n} Felder, ${c} richtige Antworten">` +
         `<img src="${esrc(fUnit(i))}" alt="">` +
-        `<b>${n}</b>` +
+        `<span class="cm-fchipnums"><b>${n}</b><i>✓${c}</i></span>` +
       '</span>';
     }
     els.factionRow.innerHTML = out;
@@ -1174,6 +1281,28 @@
     if (els.share)    els.share.textContent = pct + ' %';
     if (els.shareBar) els.shareBar.style.width = pct + '%';
     if (els.shareLab) els.shareLab.textContent = 'des Spielfelds · ' + own + ' von ' + total;
+  }
+
+  /* Das Siegerbild am Tablet: der Sieger groß, das eigene Volk daneben
+     (nur wenn es ein anderes ist — sonst stünde dasselbe Volk zweimal
+     da), darunter der eigene Platz als Satz. Ohne eigenes Volk (wer
+     erst nach dem Start dazukam) bleibt es beim Sieger allein. */
+  function renderEndParticipant(v, myTeam) {
+    const rows = endRows(v);
+    const win  = rows[0];
+    const mine = rows.find(r => r.slot === myTeam);
+    // Die ganze Tafel nimmt einen Hauch der Siegerfarbe an — dezent,
+    // weil das Bild darauf schon farbig genug ist.
+    els.ended.style.setProperty('--cm-win', fStroke(win.slot));
+    els.endTitle.innerHTML = endTitleHTML(win.slot);
+    els.endPodium.innerHTML = podCardHTML(win, 'cm-pod--1') +
+      ((mine && mine.slot !== win.slot) ? podCardHTML(mine, 'cm-pod--mine') : '');
+    els.endPlace.innerHTML = !mine
+      ? ''
+      : (mine.slot === win.slot)
+        ? 'Ihr habt gewonnen! 🎉'
+        : `Ihr seid <b>${ORDINAL[mine.place] || (mine.place + '.')}</b>.`;
+    els.endPlace.classList.toggle('cm-hide', !mine);
   }
 
   function renderParticipant(v) {
@@ -1219,10 +1348,7 @@
     if (v.phase === 'ended') {
       stopMatchTimer();
       show('ended');
-      const won = v.winner_team === myTeam;
-      els.result.innerHTML =
-        `<b style="color:${fStroke(v.winner_team)}">${ctx.esc(fLabel(v.winner_team))} gewinnt!</b>` +
-        `<p>${won ? 'Euer Team hat das Spielfeld erobert. 🎉' : 'Diesmal nicht — schaut euch an, wer gewonnen hat.'}</p>`;
+      renderEndParticipant(v, myTeam);
       return;
     }
     // running
@@ -1354,9 +1480,26 @@
           '</div>' +
           '<div class="cm-roster cm-roster--right" id="cmRosterRight"></div>' +
         '</div>' +
-        '<div class="cm-pane cm-hide" id="cmEndedP">' +
-          '<div class="cm-result" id="cmResultP"></div>' +
-          '<button type="button" class="cm-btn cm-btn--ghost" id="cmResetBtn">🔄 Neues Spiel</button>' +
+        // ── Das Siegerbild ───────────────────────────────────────
+        // Dieselbe Bühne wie das Spielfeld (gemalte Kulisse, nur in
+        // der Farbe des Siegers eingefärbt) — die Runde endet nicht
+        // damit, dass die Spielwelt verschwindet und eine Zeile Text
+        // dasteht.
+        // Aufbau: Überschrift, darunter das Podest (2 · 1 · 3, der
+        // Sieger in der Mitte und größer), rechts daneben die
+        // restlichen Völker als schmale Reihe. Der „Neues Spiel"-Knopf
+        // sitzt oben rechts, außerhalb des Podests: er gehört der
+        // Lehrkraft und nicht dem Ergebnis.
+        '<div class="cm-pane cm-hide cm-endstage" id="cmEndedP">' +
+          '<button type="button" class="cm-newgame" id="cmResetBtn">' +
+            '<span class="cm-newgameico">🔄</span>Neues Spiel</button>' +
+          '<div class="cm-endinner">' +
+            '<h2 class="cm-endtitle" id="cmEndTitleP"></h2>' +
+            '<div class="cm-endboard">' +
+              '<div class="cm-podium" id="cmPodium"></div>' +
+              '<div class="cm-endrest cm-hide" id="cmEndRest"></div>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
       '</div>';
 
@@ -1382,7 +1525,9 @@
       hexsvg: root.querySelector('#cmHexSvg'),
       icons: root.querySelector('#cmIcons'),
       endedP: root.querySelector('#cmEndedP'),
-      resultP: root.querySelector('#cmResultP'),
+      endTitleP: root.querySelector('#cmEndTitleP'),
+      podium: root.querySelector('#cmPodium'),
+      endRest: root.querySelector('#cmEndRest'),
       resetBtn: root.querySelector('#cmResetBtn')
     };
 
@@ -1468,7 +1613,7 @@
      mit Wappenbild, Fraktionsnamen und Feldzahl. Teams wechseln sich
      ab (gerade nach links, ungerade nach rechts), damit beide Spalten
      gleich lang bleiben. */
-  function rosterCardHTML(i, count, members) {
+  function rosterCardHTML(i, count, correct, members) {
     const dead = count === 0;
     // Namensliste. `team_members` kommt erst ab Migration 0096 — läuft
     // sie noch nicht, fehlt der Schlüssel einfach und das Panel zeigt
@@ -1480,11 +1625,20 @@
     // EINE Einheit mit dem Namen daneben (nicht das Gruppenbild über
     // die volle Breite): so bleibt die Kopfzeile flach und der Platz
     // darunter gehört den Namen der Kinder.
+    // Unter dem Namen die richtigen Antworten des Volkes (0099): die
+    // große Zahl rechts sagt, wem das Feld gehört — sie sagt aber
+    // nicht, wer gerechnet hat. Ein Volk kann viel Feld halten, ohne
+    // gerade fleißig zu sein, und umgekehrt. Beide Zahlen stehen
+    // deshalb nebeneinander, die Antwort-Zahl klein und mit Häkchen,
+    // damit sie nicht mit der Feldzahl verwechselt wird.
     return `<div class="cm-rcard${dead ? ' cm-rcard--out' : ''}" style="--team:${fStroke(i)}">` +
       '<div class="cm-rhead">' +
         `<div class="cm-rthumb"><img src="${esrc(fUnit(i))}" alt=""></div>` +
-        `<span class="cm-rname">${ctx.esc(fLabel(i))}</span>` +
-        `<span class="cm-rcount">${count}</span>` +
+        '<div class="cm-rtitle">' +
+          `<span class="cm-rname">${ctx.esc(fLabel(i))}</span>` +
+          `<span class="cm-rcorr" title="richtige Antworten">✓ ${correct} richtig</span>` +
+        '</div>' +
+        `<span class="cm-rcount" title="Felder">${count}</span>` +
       '</div>' +
       memberHTML +
     '</div>';
@@ -1493,10 +1647,12 @@
   function fillRosters(v) {
     if (!els.rosterLeft || !els.rosterRight) return;
     const members = v.team_members || {};
+    const correct = v.team_correct_counts || {};
     let left = '', right = '';
     for (let i = 0; i < v.team_count; i++) {
       const n = (v.team_tile_counts && v.team_tile_counts[String(i)]) || 0;
-      const html = rosterCardHTML(i, n, members[String(i)]);
+      const c = parseInt(correct[String(i)], 10) || 0;
+      const html = rosterCardHTML(i, n, c, members[String(i)]);
       if (i % 2 === 0) left += html; else right += html;
     }
     els.rosterLeft.innerHTML = left;
@@ -1608,6 +1764,28 @@
       names.map(x => `<span class="cm-offname">${ctx.esc(x)}</span>`).join('');
   }
 
+  /* Das Siegerbild am Beamer: alle Völker, die ersten drei auf dem
+     Podest, der Rest daneben. Die Podest-Karten stehen in der DOM in
+     der Reihenfolge 1·2·3 und werden erst von tool.css auf 2·1·3
+     umgestellt — wer die Seite vorlesen lässt, hört den Sieger zuerst
+     und nicht den Zweiten. */
+  function renderEndPresenter(v) {
+    const rows = endRows(v);
+    const win  = rows[0];
+    els.endedP.style.setProperty('--cm-win', fStroke(win.slot));
+    els.endTitleP.innerHTML = endTitleHTML(win.slot);
+
+    const top = rows.slice(0, 3);
+    els.podium.innerHTML = top.map((r, i) => podCardHTML(r, 'cm-pod--' + (i + 1))).join('');
+    // Zwei Völker sind kein Podest: ohne dritte Stufe stünde der
+    // Sieger sonst rechts außen statt in der Mitte.
+    els.podium.classList.toggle('cm-podium--duo', top.length < 3);
+
+    const rest = rows.slice(3);
+    els.endRest.innerHTML = rest.map(endRowHTML).join('');
+    els.endRest.classList.toggle('cm-hide', !rest.length);
+  }
+
   function renderPresenter(v) {
     if (v.phase === 'lobby') {
       show2('setup');
@@ -1628,8 +1806,7 @@
     if (v.phase === 'ended') {
       stopMatchTimer();
       show2('endedP');
-      els.resultP.innerHTML =
-        `<b style="color:${fStroke(v.winner_team)}">${ctx.esc(fLabel(v.winner_team))} gewinnt!</b>`;
+      renderEndPresenter(v);
       return;
     }
     show2('boardWrap');

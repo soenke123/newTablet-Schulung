@@ -383,11 +383,10 @@
   cursor: pointer;
 }
 .cm-btn:disabled { opacity: .5; cursor: not-allowed; }
-.cm-btn--ghost {
-  background: transparent;
-  color: var(--ink);
-  border-color: var(--line);
-}
+/* .cm-btn--ghost gab es für „Neues Spiel" unter dem Ergebnis. Der
+   Knopf sitzt jetzt in der Ecke des Siegerbilds und trägt dessen
+   Machart (.cm-newgame) — die blasse Variante hatte danach keinen
+   Träger mehr. */
 
 /* ── Countdown ───────────────────────────────────────────────── */
 .cm-countdown {
@@ -454,9 +453,14 @@
 /* Die Fantasy-Palette gilt für BEIDE Rollen: der Beamer-Spielschirm
    und der Spielbildschirm des Teilnehmers (.cm-play) sind dieselbe
    Welt, nur aus zwei Entfernungen gesehen. Sie kippen darum auch
-   beide nicht mit Hell/Dunkel. */
+   beide nicht mit Hell/Dunkel.
+   Das Siegerbild (.cm-endstage) steht ausdrücklich mit in dieser
+   Liste, obwohl es am Beamer ohnehin in .cm-host--presenter läge: am
+   Tablet hängt es als gewöhnlicher Block in der Seite und bekäme die
+   Palette sonst nicht mit (dieselbe Lage wie .cm-obsmap). */
 .cm-host--presenter,
-.cm-play {
+.cm-play,
+.cm-endstage {
   --cm-gold:       #caa457;
   --cm-gold-dark:  #a9863f;
   --cm-wood:       #6b4a23;
@@ -697,9 +701,16 @@
   object-fit: contain;
   filter: drop-shadow(0 3px 3px rgba(20,12,0,.5));
 }
-.cm-rname {
+/* Name und darunter die richtigen Antworten (0099) — zwei Zeilen in
+   einer Spalte, damit die Kopfzeile trotzdem eine Reihe bleibt. */
+.cm-rtitle {
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cm-rname {
   font-family: var(--cm-display);
   font-weight: 700;
   font-size: .84rem;
@@ -707,6 +718,21 @@
   color: #fff;
   text-shadow: 0 1px 2px rgba(20,12,0,.75), 0 0 6px rgba(20,12,0,.45);
   overflow-wrap: anywhere;
+}
+/* Klein, aber mit Wort: „12" allein neben der großen Feldzahl wäre
+   eine zweite Zahl ohne Bedeutung. Das Häkchen trägt die Aussage
+   auch dann, wenn das Wort in einer schmalen Spalte abgeschnitten
+   wird. */
+.cm-rcorr {
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+  color: rgba(255,255,255,.88);
+  text-shadow: 0 1px 2px rgba(20,12,0,.75);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .cm-rcount {
   flex: 0 0 auto;
@@ -992,11 +1018,29 @@ body.cm-locked { overflow: hidden; }
   object-fit: contain;
   object-position: bottom;
 }
+/* Zwei Zahlen übereinander: Felder (groß) und richtige Antworten
+   (klein, mit Häkchen). Übereinander statt nebeneinander, weil acht
+   Plättchen mit je zwei Zahlen nebeneinander die Reihe eines Tablets
+   sprengen würden — in der Höhe ist hier Platz, in der Breite nicht. */
+.cm-fchipnums {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.05;
+}
 .cm-fchip b {
   font-family: var(--cm-display);
   font-size: .74rem;
   font-variant-numeric: tabular-nums;
   color: #fff;
+  text-shadow: 0 1px 2px rgba(20,12,0,.8);
+}
+.cm-fchip i {
+  font-style: normal;
+  font-size: .56rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255,255,255,.82);
   text-shadow: 0 1px 2px rgba(20,12,0,.8);
 }
 /* Das eigene Volk: heller Ring statt einer weiteren Farbe. */
@@ -1515,13 +1559,369 @@ body.cm-locked { overflow: hidden; }
   box-shadow: 0 0 0 2px #6b4a23 inset, 0 10px 28px rgba(0,0,0,.35);
 }
 
-/* ── Ergebnis ────────────────────────────────────────────────── */
-.cm-result {
+/* ══════════════════════════════════════════════════════════════
+   DAS SIEGERBILD (.cm-endstage)
+   ══════════════════════════════════════════════════════════════
+   Bis zum UI-Durchgang stand hier eine Zeile Text („Robo-Enten
+   gewinnt!") auf weißem Grund — die Spielwelt verschwand in dem
+   Augenblick, in dem sie sich lohnen würde. Jetzt bleibt die Kulisse
+   des Spielfelds stehen, nur in der Farbe des Siegers getönt: das
+   Bannerbild verwaschen dahinter, darüber ein Schein aus --cm-win.
+
+   „Dezent" heißt: die Siegerfarbe färbt den SCHEIN und den Namen,
+   nicht die Fläche. Ein ganzer Bildschirm in Magenta wäre keine
+   Ehrung, sondern ein Alarm. Die Karten selbst tragen weiter die
+   Farbe ihres eigenen Volkes (--team) — dieselbe Zuordnung wie überall
+   sonst im Spiel.
+
+   Beide Rollen benutzen dieselben Klassen; der Unterschied ist allein,
+   WIE VIELE Karten tool.js hineinlegt (Beamer: alle, Tablet: Sieger
+   und eigenes Volk). Die Größen hängen deshalb an .cm-podium--me,
+   nicht an einer zweiten Garnitur Klassen. */
+.cm-endstage {
+  --cm-win: var(--cm-gold);
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 32px 0;
-  text-align: center;
+  justify-content: center;
+  gap: clamp(12px, 2.2vh, 24px);
+  min-height: min(72vh, 720px);
+  padding: clamp(20px, 3.4vh, 40px) clamp(14px, 2.6vw, 40px);
+  border-radius: 28px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #6f9fc9 0%, #e3b45f 55%, #a97a3a 100%);
 }
-.cm-result b { font-size: 1.6rem; }
+/* Dieselbe Kulisse wie #cmBoardWrap — url() löst relativ zu DIESER
+   Datei auf, deshalb reicht der nackte Dateiname. */
+.cm-endstage::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url('Gamebanner.png');
+  background-size: cover;
+  background-position: center 30%;
+  filter: blur(9px) saturate(1.05) brightness(.72);
+  transform: scale(1.08);
+}
+.cm-endstage::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 6%,
+      color-mix(in srgb, var(--cm-win) 42%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(20,12,0,.32) 0%, rgba(14,8,0,.74) 100%);
+}
+/* Alles Sichtbare liegt über den beiden Kulissen-Ebenen. */
+.cm-endstage > * { position: relative; z-index: 1; }
+
+/* Am Tablet ist weniger Platz und es steht weniger darauf — die Tafel
+   darf dort niedriger sein, sonst schiebt sie den Satz mit dem eigenen
+   Platz aus dem Bild. */
+.cm-endstage--me {
+  min-height: min(56vh, 520px);
+  gap: clamp(10px, 1.8vh, 18px);
+}
+
+/* ── „Spuk-Einhorn gewinnt!" ─────────────────────────────────── */
+.cm-endtitle {
+  margin: 0;
+  text-align: center;
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: clamp(1.35rem, 3.6vw, 3rem);
+  line-height: 1.15;
+  letter-spacing: .01em;
+  color: #fff4d9;
+  text-shadow: 0 2px 0 rgba(20,12,0,.5), 0 10px 28px rgba(0,0,0,.6);
+  overflow-wrap: anywhere;
+}
+/* Der Name trägt die Siegerfarbe — aber aufgehellt, damit auch Blau
+   und Lila auf dem dunklen Grund lesbar bleiben. */
+.cm-endname { color: color-mix(in srgb, var(--cm-win) 58%, #fff8e6); }
+.cm-endverb { opacity: .92; }
+
+/* ── Podest ──────────────────────────────────────────────────────
+   Reihenfolge im HTML: 1 · 2 · 3 (Vorlese-Reihenfolge). Auf dem
+   Bildschirm: 2 · 1 · 3, unten bündig — der Sieger steht in der Mitte
+   und ist größer, ohne dass eine Stufe darunter gemalt werden müsste.
+   Bei nur zwei Völkern gibt es kein Podest (.cm-podium--duo): dann
+   stehen sie schlicht nebeneinander, Sieger links. */
+.cm-endinner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 2.4vh, 28px);
+  width: 100%;
+  min-width: 0;
+}
+.cm-endboard {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(12px, 2vw, 28px);
+  flex-wrap: wrap;
+  width: 100%;
+}
+.cm-podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(8px, 1.4vw, 20px);
+  min-width: 0;
+}
+.cm-pod--1 { order: 2; }
+.cm-pod--2 { order: 1; }
+.cm-pod--3 { order: 3; }
+.cm-podium--duo .cm-pod--1 { order: 1; }
+.cm-podium--duo .cm-pod--2 { order: 2; }
+/* Am Tablet: Sieger links, das eigene Volk rechts daneben. */
+.cm-pod--mine { order: 3; }
+
+.cm-pod {
+  --pod-w: clamp(120px, 15vw, 210px);
+  --pod-h: clamp(80px, 13vh, 150px);
+  position: relative;
+  width: var(--pod-w);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 10px 10px;
+  border-radius: 20px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--team) 34%, rgba(24,14,0,.62)) 0%,
+    color-mix(in srgb, var(--team) 12%, rgba(12,7,0,.8)) 100%);
+  border: 2px solid color-mix(in srgb, var(--team) 72%, #140d04);
+  box-shadow: 0 12px 28px rgba(0,0,0,.45);
+}
+/* Der Sieger: größer, goldener Rahmen, ein Schein in seiner Farbe.
+   Das ist die einzige Stelle, an der --cm-win auf einer Karte landet. */
+.cm-pod--1 {
+  --pod-w: clamp(180px, 24vw, 340px);
+  --pod-h: clamp(130px, 22vh, 280px);
+  padding-bottom: 14px;
+  border-color: var(--cm-gold);
+  box-shadow:
+    0 0 0 2px rgba(20,12,0,.5),
+    0 0 34px color-mix(in srgb, var(--cm-win) 45%, transparent),
+    0 16px 38px rgba(0,0,0,.55);
+}
+.cm-podium--me .cm-pod--1   { --pod-w: clamp(170px, 50vw, 320px); --pod-h: clamp(120px, 20vh, 250px); }
+.cm-podium--me .cm-pod--mine { --pod-w: clamp(110px, 30vw, 190px); --pod-h: clamp(74px, 12vh, 140px); }
+
+/* Der Rang als Marke auf der Kante — dieselbe Machart wie das
+   Wappenbanner am Spielfeldrahmen. */
+.cm-podmedal {
+  position: absolute;
+  top: -18px; left: 50%;
+  transform: translateX(-50%);
+  min-width: 38px;
+  height: 38px;
+  padding: 0 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #4a3216, var(--cm-night));
+  border: 2px solid var(--cm-gold);
+  font-family: var(--cm-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: #f2dfae;
+  box-shadow: 0 4px 12px rgba(0,0,0,.45);
+}
+.cm-pod--1 .cm-podmedal { transform: translateX(-50%) scale(1.22); }
+
+.cm-podpic {
+  width: 100%;
+  height: var(--pod-h);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin-top: 6px;
+}
+.cm-podpic img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 10px rgba(20,12,0,.55));
+}
+/* Nur der Sieger atmet — dieselbe Regung wie die Burgen auf der
+   Karte, damit das Bild nicht wie ein Standbild wirkt. */
+.cm-pod--1 .cm-podpic img {
+  animation: cmBreathe 5s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+.cm-podname {
+  margin-top: 6px;
+  text-align: center;
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: clamp(.74rem, 1.1vw, 1.05rem);
+  line-height: 1.15;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(20,12,0,.8), 0 0 8px rgba(20,12,0,.5);
+  overflow-wrap: anywhere;
+}
+.cm-pod--1 .cm-podname { font-size: clamp(.95rem, 1.7vw, 1.5rem); }
+
+/* Platz und richtige Antworten — die beiden Angaben, um derentwillen
+   das Podest überhaupt da ist. Auf einem eigenen dunklen Streifen,
+   damit sie auf jeder Völkerfarbe stehen können. */
+.cm-podfoot {
+  margin-top: 8px;
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(10,6,0,.5);
+  border: 1px solid rgba(255,243,207,.22);
+}
+.cm-podplace {
+  font-family: var(--cm-display);
+  font-weight: 800;
+  font-size: .88rem;
+  color: #fff3cf;
+  white-space: nowrap;
+}
+.cm-pod--1 .cm-podplace { font-size: 1.05rem; }
+.cm-podcorr {
+  font-size: .72rem;
+  color: rgba(255,255,255,.85);
+  white-space: nowrap;
+}
+.cm-podcorr b {
+  font-family: var(--cm-display);
+  font-size: .92rem;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.cm-pod--1 .cm-podcorr   { font-size: .82rem; }
+.cm-pod--1 .cm-podcorr b { font-size: 1.05rem; }
+
+/* ── Ab Platz 4: schmale Zeilen neben dem Podest ─────────────────
+   Sie stehen bewusst nicht als vierte, fünfte Karte in der Reihe —
+   das Podest hat drei Plätze, alles Weitere ist eine Liste. */
+.cm-endrest {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  max-width: 320px;
+}
+.cm-erow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 6px;
+  border-radius: 999px;
+  background: rgba(10,6,0,.52);
+  border: 1.5px solid color-mix(in srgb, var(--team) 62%, transparent);
+}
+.cm-eplace {
+  flex: 0 0 auto;
+  min-width: 22px;
+  text-align: right;
+  font-family: var(--cm-display);
+  font-weight: 800;
+  font-size: .82rem;
+  color: #fff3cf;
+  font-variant-numeric: tabular-nums;
+}
+.cm-ethumb {
+  flex: 0 0 auto;
+  width: 26px; height: 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.cm-ethumb img {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(20,12,0,.6));
+}
+.cm-ename {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: .78rem;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-ecorr {
+  flex: 0 0 auto;
+  font-size: .68rem;
+  color: rgba(255,255,255,.82);
+  white-space: nowrap;
+}
+.cm-ecorr b {
+  font-family: var(--cm-display);
+  font-size: .82rem;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+/* ── Der eigene Platz (nur am Tablet) ────────────────────────────
+   Der Satz, den das Kind sucht: „Ihr seid Dritter." Groß genug, um
+   ihn ohne Suchen zu finden, aber unter dem Bild — die Überschrift
+   gehört dem Sieger. */
+.cm-endplace {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1rem, 4vw, 1.35rem);
+  color: #fff2d6;
+  text-shadow: 0 1px 2px rgba(20,12,0,.8);
+}
+.cm-endplace b {
+  font-family: var(--cm-display);
+  font-weight: 800;
+  color: color-mix(in srgb, var(--cm-win) 55%, #fff8e6);
+}
+
+/* ── „Neues Spiel" (nur Lehrkraft) ───────────────────────────────
+   Oben rechts in der Ecke der Tafel, nicht unter dem Ergebnis: er
+   gehört der Bedienung und soll das Siegerbild nicht kommentieren.
+   Dieselbe Machart wie der Karten-Knopf am Tablet (dunkles Holz,
+   Goldrand) — er ist Teil der Spielwelt, kein Formular-Knopf. */
+.cm-newgame {
+  position: absolute;
+  z-index: 2;
+  top: clamp(10px, 1.6vh, 18px);
+  right: clamp(10px, 1.4vw, 20px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 2px solid var(--cm-gold);
+  background: linear-gradient(180deg, #4a3216, var(--cm-night));
+  color: #f2dfae;
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: .88rem;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,.45);
+}
+.cm-newgame:hover { border-color: #f0d68f; color: #fff4d9; }
+.cm-newgame:active { transform: translateY(1px); }
+.cm-newgame:focus-visible { outline: 2px solid #fff3cf; outline-offset: 2px; }
+.cm-newgameico { font-size: 1rem; line-height: 1; }
+
+/* Auf schmalen Fenstern (Beamer-Vorschau am Laptop, gedrehtes Tablet)
+   würde der Knopf in der Ecke die Überschrift überlagern — dort steht
+   er als eigene Zeile darüber. */
+@media (max-width: 620px) {
+  .cm-newgame {
+    position: static;
+    align-self: flex-end;
+  }
+}
