@@ -63,7 +63,8 @@
       "Bash(npm i *)",
       "Bash(python3 -)",
       "Bash(sort -t_ -k1 -n)",
-      "Bash(git show *)"
+      "Bash(git show *)",
+      "Bash(grep -n \"^\\\\s*function \\\\|^\\\\s*const [A-Z_]* =\\\\|^  // ─\\\\|^// ─\\\\|MPTool.register\\\\|=> {$\" tool.js)"
     ]
   }
 }

@@ -65,7 +65,8 @@
     background: rgba(12,7,0,.92);
     font: 600 12px/1 system-ui, sans-serif;
   }
-  .pv-bar select { font: inherit; padding: 5px 6px; border-radius: 6px; }
+  .pv-bar select, .pv-bar button { font: inherit; padding: 5px 8px; border-radius: 6px; }
+  .pv-bar button { cursor: pointer; border: 1px solid #6b5a3a; background: #f3e7c9; }
   .pv-note {
     padding: 40px 20px;
     max-width: 640px;
@@ -90,6 +91,17 @@
     <option value="out">ausgeschieden</option>
     <option value="ended">beendet</option>
   </select>
+  <!-- Effekte (UI 18) auslösen, ohne sie erst herbeispielen zu müssen.
+       Die Knöpfe ändern den erfundenen SPIELSTAND und rufen keinen
+       Renderer an: der Effekt entsteht dann genau so, wie er es im
+       Betrieb tut (Kartenvergleich bzw. Ereignis-Log im nächsten Takt).
+       Wäre es andersherum, prüfte man die Animation und nicht den Weg,
+       auf dem sie ausgelöst wird. -->
+  <button type="button" id="pvFx1" title="ein Feld erobern">Feld</button>
+  <button type="button" id="pvFx2" title="eine Burg übernehmen">Burg</button>
+  <button type="button" id="pvFx3" title="ein Volk auslöschen">Volk raus</button>
+  <button type="button" id="pvFx4" title="Team-Serie ausgelöst">🔥 Volk</button>
+  <button type="button" id="pvFx5" title="Einzel-Serie ausgelöst">🔥 Kind</button>
 </div>
 
 <div class="pv-note">
@@ -236,8 +248,11 @@ const RPC = {
   // (auf dem Server macht das max(updated_at), siehe 0100).
   clash_sig: () => {
     expirePendingPicks();
+    // nextEventId mit in der Signatur: ein Serien-Ereignis ändert weder
+    // Besitzer noch Leben, muss aber trotzdem einen Takt auslösen — auf
+    // dem Server macht das seit 0106 max(id) aus clash_team_events.
     return { ok: true, sig: phase + ':' + tiles.map(t => t.team + '' + (t.hp == null ? '' : t.hp)).join('') +
-      ':' + streak + ':' + teamStreak + ':' + pendingPicks };
+      ':' + streak + ':' + teamStreak + ':' + pendingPicks + ':' + nextEventId };
   },
 
   /* Der Beamer. Dieselbe Wahrheit, andere Felder — genau die, die
@@ -268,6 +283,9 @@ const RPC = {
       team_correct_counts: CORRECT,
       team_members: members,
       offline_members: ['Karl', 'Wilma'],
+      // 0107: die Serien-Ereignisse ALLER Völker, mit Volk am Eintrag
+      // (clash_view liefert nur die des eigenen, siehe unten).
+      team_events: teamEvents.slice(-40),
       online_count: 22, room_total: 24
     };
   },
@@ -298,7 +316,10 @@ const RPC = {
       // 0106: geteilte Team-Serie + die letzten Team-Ereignisse (nur
       // fürs eigene Volk, wie clash_view es auch server-seitig filtert).
       team_streak: teamStreak,
-      my_team_events: teamEvents.slice(-20),
+      // Nur das EIGENE Volk und ohne den team-Schlüssel — genau so
+      // schneidet clash_view die Liste serverseitig zu (0106).
+      my_team_events: teamEvents.filter(e => e.team === myTeam)
+        .slice(-20).map(e => ({ id: e.id, kind: e.kind, payload: e.payload })),
       my_team_members: [
         { name: 'Lena', me: false }, { name: 'Jonas', me: true },
         { name: 'Mia', me: false },  { name: 'Ben', me: false }
@@ -332,7 +353,7 @@ const RPC = {
       if (Math.floor((oldStreak + 1) / 10) > Math.floor(oldStreak / 10)) {
         pendingPicks += 2;
         pickDeadline = new Date(Date.now() + 6000).toISOString();
-        teamEvents.push({ id: nextEventId++, kind: 'individual_fire',
+        teamEvents.push({ id: nextEventId++, team: myTeam, kind: 'individual_fire',
           payload: { name: 'Jonas', streak: oldStreak + 1 } });
       }
 
@@ -341,7 +362,7 @@ const RPC = {
       const oldTeamStreak = teamStreak;
       teamStreak++;
       if (Math.floor(teamStreak / 20) > Math.floor(oldTeamStreak / 20)) {
-        teamEvents.push({ id: nextEventId++, kind: 'team_fire', payload: { streak: teamStreak } });
+        teamEvents.push({ id: nextEventId++, team: myTeam, kind: 'team_fire', payload: { streak: teamStreak } });
         for (let i = 0; i < 7; i++) attackOne();
       }
     } else {
@@ -436,6 +457,69 @@ document.getElementById('pvPhase').addEventListener('change', ev => {
   remount();
 });
 remount();
+
+/* ── Effekte auslösen (UI 18) ────────────────────────────────────
+   Jeder Knopf ändert nur den erfundenen Spielstand — den Rest holt
+   sich das Werkzeug beim nächsten Takt selbst. Wer hier stattdessen
+   spawnTileFx() riefe, prüfte die Animation und nicht den Weg dorthin.
+   Der Takt läuft alle 8 Sekunden; damit man nicht so lange wartet,
+   liegt in NAMES/attackOne alles bereit und wir stupsen nichts an,
+   sondern kürzen einfach die Wartezeit mit einem sofortigen sig-Poll,
+   den das Werkzeug ohnehin bei jedem Timer-Tick macht. */
+const NEIGH_EVEN = [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
+const NEIGH_ODD  = [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
+function borderTiles(pred) {
+  const mineSet = new Set(tiles.filter(t => t.team === myTeam).map(t => t.r + ',' + t.c));
+  return tiles.filter(t => {
+    if (t.team === myTeam || !pred(t)) return false;
+    const dirs = (t.r % 2 === 1) ? NEIGH_ODD : NEIGH_EVEN;
+    return dirs.some(d => mineSet.has((t.r + d[0]) + ',' + (t.c + d[1])));
+  });
+}
+document.getElementById('pvFx1').addEventListener('click', () => {
+  // Nur ein gewöhnliches Feld — Burgen bekommt der Knopf daneben.
+  const cand = borderTiles(t => !t.castle);
+  if (cand.length) { cand[Math.floor(Math.random() * cand.length)].team = myTeam; }
+});
+document.getElementById('pvFx2').addEventListener('click', () => {
+  // Irgendeine fremde Burg übernehmen. Bewusst OHNE Grenzprüfung: eine
+  // Burg liegt mitten im Gebiet ihres Volkes und grenzt fast nie an das
+  // eigene — im Spiel kommt man erst nach vielen Feldern an sie heran.
+  // Für das Ansehen des Effekts ist dieser Weg nur die Abkürzung; die
+  // Legalität prüft ohnehin der Server (clash_capture_specific).
+  const cand = tiles.filter(t => t.castle && t.team !== myTeam);
+  if (!cand.length) { console.log('keine fremde Burg mehr da'); return; }
+  const t = cand[Math.floor(Math.random() * cand.length)];
+  t.team = myTeam; t.hp = 3;
+});
+document.getElementById('pvFx3').addEventListener('click', () => {
+  // Das kleinste fremde Volk verliert alles auf einmal.
+  const counts = {};
+  tiles.forEach(t => { counts[t.team] = (counts[t.team] || 0) + 1; });
+  const victim = Object.keys(counts).map(Number)
+    .filter(s => s !== myTeam && s >= 0)
+    .sort((a, b) => counts[a] - counts[b])[0];
+  if (victim == null) return;
+  tiles.forEach(t => { if (t.team === victim) t.team = myTeam; });
+});
+document.getElementById('pvFx4').addEventListener('click', () => {
+  teamStreak += 20 - (teamStreak % 20);
+  teamEvents.push({ id: nextEventId++, team: myTeam, kind: 'team_fire',
+    payload: { streak: teamStreak } });
+});
+document.getElementById('pvFx5').addEventListener('click', () => {
+  // Auf dem Beamer leuchtet damit ein NAME aus der Liste des Volkes —
+  // er muss deshalb aus derselben Liste stammen, die clash_room_get
+  // ausliefert (NAMES), nicht irgendein erfundener.
+  const list = NAMES[myTeam % NAMES.length];
+  // Am Tablet leuchtet nur, wer man SELBST ist (dort gibt es keine
+  // Namensliste) — deshalb in dieser Rolle der eigene Name.
+  const name = (ctx.role === 'participant')
+    ? 'Jonas'
+    : list[Math.floor(Math.random() * list.length)];
+  teamEvents.push({ id: nextEventId++, team: myTeam, kind: 'individual_fire',
+    payload: { name: name, streak: 10 } });
+});
 
 /* Startzustand aus der Adresse: ?fac=4&phase=out&map=1&answer=42
    — damit sich ein bestimmter Blick verlinken (und automatisiert

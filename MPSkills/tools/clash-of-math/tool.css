@@ -616,6 +616,10 @@
    Die Völker stehen nicht mehr hier drin, sondern am Bildschirmrand
    (siehe unten) — die Arena trägt allein das Spielfeld. */
 .cm-arena {
+  /* Bezugsrahmen für die Ankündigung (UI 18), die mittig über dem Feld
+     hängt — ohne diese Zeile hinge sie am nächsten positionierten
+     Vorfahren und damit irgendwo am Rahmen. */
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -679,6 +683,81 @@
 /* Ausgeschieden — dieselbe Aussage wie früher .cm-scard--out. */
 .cm-rcard--out { opacity: .45; filter: grayscale(.5); }
 .cm-rcard--out .cm-rname { text-decoration: line-through; }
+
+/* ══ „on fire" und „gerade ausgeschieden" (UI 18) ════════════════
+   Beides sind ZUSTÄNDE MIT ABLAUFZEIT, die tool.js bei jedem Zeichnen
+   neu setzt (teamFireUntil/teamOutUntil) — hier steht nur, wie sie
+   aussehen.
+
+   Das Leuchten ist GOLD, nicht heller in der Volksfarbe: es muss auf
+   allen acht Panels gleich stark lesen, und ein helleres Gelb auf dem
+   gelben Volk wäre kein Unterschied. Acht Sekunden sind lang genug,
+   dass eine Klasse quer durch den Raum darauf zeigen kann — deshalb
+   pulst es langsam statt zu blinken. */
+.cm-rcard--fire {
+  border-color: #ffe6a3;
+  animation: cmCardFire 1.5s ease-in-out infinite;
+}
+@keyframes cmCardFire {
+  0%, 100% { box-shadow: 0 6px 16px rgba(0,0,0,.35), 0 0 12px 2px rgba(255,196,80,.55); }
+  50%      { box-shadow: 0 6px 16px rgba(0,0,0,.35), 0 0 26px 7px rgba(255,214,120,.95); }
+}
+/* Die Flamme sitzt AUF der Figur des Volkes und nimmt keine Breite im
+   Fluss ein. Zwei verworfene Plätze, beide aus demselben Grund: frei
+   in der rechten oberen Ecke lag sie auf der Feldzahl, und vor der
+   Feldzahl schob sie den Volksnamen in einen Umbruch — das Panel
+   sprang bei jedem Serien-Bonus für acht Sekunden in eine andere Form. */
+.cm-rthumb { position: relative; }
+.cm-rcard--fire .cm-rthumb::after {
+  content: '🔥';
+  position: absolute;
+  left: -4px;
+  bottom: -2px;
+  font-size: 1rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(255,180,60,.95));
+  animation: cmFlameBob 1s ease-in-out infinite;
+}
+@keyframes cmFlameBob {
+  0%, 100% { transform: translateY(0)    scale(1); }
+  50%      { transform: translateY(-2px) scale(1.14); }
+}
+
+/* Ausgeschieden ist ein EREIGNIS, nicht nur ein Zustand: das Panel
+   zuckt einmal und wird dann grau (die Graufärbung bleibt, das Zucken
+   läuft nach ~3 s aus). Ohne das übersieht man auf einem Beamer, dass
+   gerade jemand rausgeflogen ist — es wäre nur eine Kachel weniger. */
+.cm-rcard--justout { animation: cmCardOut 3.4s ease-out forwards; }
+@keyframes cmCardOut {
+  0%   { transform: translateX(0); }
+  4%   { transform: translateX(-7px) rotate(-1.2deg); }
+  9%   { transform: translateX(7px)  rotate(1.2deg); }
+  14%  { transform: translateX(-5px) rotate(-.8deg); }
+  19%  { transform: translateX(5px)  rotate(.8deg); }
+  25%  { transform: translateX(0)    rotate(0); }
+  100% { transform: translateX(0); }
+}
+.cm-rcard--justout::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: rgba(255,255,255,.85);
+  pointer-events: none;
+  animation: cmCardOutFlash 1.1s ease-out forwards;
+}
+@keyframes cmCardOutFlash {
+  0%   { opacity: .9; }
+  100% { opacity: 0; }
+}
+.cm-rcard { position: relative; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-rcard--fire, .cm-rcard--justout,
+  .cm-rcard--fire .cm-rthumb::after, .cm-rcard--justout::after { animation: none; }
+  .cm-rcard--fire { box-shadow: 0 6px 16px rgba(0,0,0,.35), 0 0 20px 5px rgba(255,214,120,.85); }
+  .cm-rcard--justout::after { opacity: 0; }
+}
 
 /* Kopfzeile: EINE Einheit, daneben der Volksname, rechts die Feldzahl.
    Sie liegt auf der vollen Völkerfarbe — die Schrift ist deshalb weiß
@@ -762,6 +841,38 @@
   font-size: .7rem;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+/* Ein Element je Name (seit UI 18) — nur so lässt sich EIN Kind
+   hervorheben, wenn es eine Einzel-Serie geschafft hat. Der Trenner „·"
+   steht deshalb hier und nicht mehr im Text; der letzte bekommt keinen.
+   `inline-block`, damit das Leuchten den ganzen Namen umschließt und
+   ihn ein Umbruch nicht in zwei halb leuchtende Stücke teilt. */
+.cm-rmember { display: inline-block; }
+.cm-rmember + .cm-rmember::before { content: '·'; margin: 0 .35em; opacity: .6; }
+/* Dasselbe Gold wie beim Panel, nur klein: „dieses Kind gerade" statt
+   „dieses Volk gerade". Der dunkle Grund darunter macht es auch dann
+   lesbar, wenn das Panel selbst leuchtet. */
+.cm-rmember--fire {
+  padding: 0 5px;
+  margin: 0 -1px;
+  border-radius: 999px;
+  font-weight: 800;
+  color: #2a1a03;
+  background: #ffd977;
+  box-shadow: 0 0 10px rgba(255,200,90,.9);
+  animation: cmNameFire 1.2s ease-in-out infinite;
+}
+.cm-rmember--fire::after {
+  content: '🔥';
+  margin-left: .28em;
+  font-size: .9em;
+}
+@keyframes cmNameFire {
+  0%, 100% { box-shadow: 0 0 8px  rgba(255,200,90,.75); }
+  50%      { box-shadow: 0 0 18px rgba(255,222,140,1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-rmember--fire { animation: none; }
 }
 
 /* Timer-Bedienung unter der Arena — im Showroom gibt es sie nicht
@@ -960,6 +1071,193 @@
   filter: blur(1px);
 }
 
+/* ══ Effekte auf der Karte (UI 18) ═══════════════════════════════
+   Eigene Ebene über Sechsecken und Figuren. Sie MUSS eine eigene sein:
+   renderHexMap ersetzt bei jedem Takt sowohl das SVG als auch die
+   Figurenebene vollständig — eine Animation darin wäre nach
+   Millisekunden abgeschnitten.
+
+   z-index 4000 schlägt die Figuren (die tragen 1000+ als Inline-Wert,
+   damit weiter unten stehende vor weiter oben stehenden liegen).
+   Die Ebene selbst fängt keine Klicks: auf der Karte des Teilnehmers
+   liegen darunter die anklickbaren Zielfelder des Serien-Bonus. */
+.cm-fxlayer {
+  position: absolute;
+  inset: 0;
+  z-index: 4000;
+  pointer-events: none;
+  overflow: visible;
+}
+/* Alle Effekte sitzen mit ihrem MITTELPUNKT auf dem Kachelmittelpunkt
+   (dieselbe Verankerung, die tool.js für die Position rechnet), und
+   ihre Größe kommt als --fx aus dem Kartenmaßstab: ein Ring auf einem
+   8-Völker-Feld ist kleiner als auf einem 2-Völker-Feld, ohne dass
+   eine zweite Zahl gepflegt werden müsste. */
+.cm-fx {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+
+/* Das „Pling": ein Ring, der aus dem Nichts aufgeht und verblasst. */
+.cm-fx--ring {
+  width: var(--fx);
+  height: var(--fx);
+  margin: 0;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--raw) 70%, #fff8e0);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--raw) 60%, transparent),
+              inset 0 0 10px color-mix(in srgb, var(--raw) 45%, transparent);
+  animation: cmFxRing .8s cubic-bezier(.2, .75, .3, 1) forwards;
+}
+@keyframes cmFxRing {
+  0%   { transform: translate(-50%, -50%) scale(.15); opacity: 0; }
+  18%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+/* Eine eroberte BURG ist der einzige Effekt in Gold statt Volksfarbe:
+   die Kachel gehört danach zwar einem Volk, das Ereignis aber der
+   ganzen Runde — und Gold ist im Rahmen ringsum die Farbe für „das
+   hier ist wichtig". */
+.cm-fx--ring--gold {
+  border-width: 5px;
+  border-color: #ffe6a3;
+  box-shadow: 0 0 26px rgba(255,214,120,.85), inset 0 0 22px rgba(255,214,120,.5);
+  animation-duration: 1.35s;
+}
+.cm-fx--ring--late { animation-delay: .18s; }
+.cm-fx--ring--hit {
+  border-width: 4px;
+  border-color: #ffd0c0;
+  animation-duration: .6s;
+}
+
+/* Der kurze helle Klecks im Moment des Treffers — er trägt das
+   „jetzt", der Ring danach das „wo". */
+.cm-fx--pop {
+  width: var(--fx);
+  height: var(--fx);
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--raw) 30%, #fffdf0) 0%,
+    color-mix(in srgb, var(--raw) 65%, transparent) 55%,
+    transparent 72%);
+  animation: cmFxPop .6s ease-out forwards;
+}
+@keyframes cmFxPop {
+  0%   { transform: translate(-50%, -50%) scale(.3); opacity: .95; }
+  100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0; }
+}
+.cm-fx--flash {
+  width: var(--fx);
+  height: var(--fx);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,252,235,.95) 0%, rgba(255,222,140,.55) 40%, transparent 70%);
+  animation: cmFxPop .85s ease-out forwards;
+}
+
+/* Funken: ein Strich, der vom Mittelpunkt nach außen schießt. Gedreht
+   wird ein Element um seinen eigenen Mittelpunkt und dabei verschoben
+   — Winkel (--a) und Weg stecken zusammen in EINER transform-Kette,
+   weil eine zweite Animation auf derselben Eigenschaft die erste
+   ersetzen und nicht ergänzen würde (dieselbe Falle wie bei den
+   Figuren weiter oben). */
+.cm-fx--spark {
+  width: calc(var(--fx) * .34);
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--raw) 40%, #fff8e0), transparent);
+  animation: cmFxSpark .75s cubic-bezier(.15, .7, .3, 1) forwards;
+}
+.cm-fx--spark--gold {
+  background: linear-gradient(90deg, #fff3cd, rgba(255,214,120,0));
+  height: 4px;
+  animation-duration: 1.15s;
+}
+@keyframes cmFxSpark {
+  0%   { transform: translate(-50%, -50%) rotate(var(--a)) translateX(calc(var(--fx) * .1)); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(var(--a)) translateX(var(--fx)); opacity: 0; }
+}
+
+.cm-fx--burst {
+  font-size: var(--fx);
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(20,12,0,.6));
+  animation: cmFxBurst .7s ease-out forwards;
+}
+@keyframes cmFxBurst {
+  0%   { transform: translate(-50%, -50%) scale(.4); opacity: 0; }
+  25%  { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.25); opacity: 0; }
+}
+/* Die Krone steigt auf und bleibt kurz stehen — sie ist die einzige
+   Stelle, an der ein Effekt lange genug lebt, um gelesen zu werden. */
+.cm-fx--crown {
+  font-size: var(--fx);
+  line-height: 1;
+  filter: drop-shadow(0 0 10px rgba(255,214,120,.9)) drop-shadow(0 3px 5px rgba(20,12,0,.6));
+  animation: cmFxCrown 1.5s cubic-bezier(.2, .8, .3, 1) forwards;
+}
+@keyframes cmFxCrown {
+  0%   { transform: translate(-50%, -20%) scale(.3); opacity: 0; }
+  22%  { transform: translate(-50%, -80%) scale(1.15); opacity: 1; }
+  62%  { transform: translate(-50%, -105%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -160%) scale(.9); opacity: 0; }
+}
+
+/* Wer Bewegung abbestellt hat, bekommt den Ort trotzdem gezeigt: die
+   Effekte blenden dann nur auf und wieder ab, statt zu fliegen. */
+@media (prefers-reduced-motion: reduce) {
+  .cm-fx--spark, .cm-fx--crown { display: none; }
+  .cm-fx--ring, .cm-fx--pop, .cm-fx--flash, .cm-fx--burst {
+    animation: cmFxFade .7s ease-out forwards;
+  }
+  @keyframes cmFxFade {
+    0%, 40% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100%    { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+  }
+}
+
+/* ── Ankündigung über der Karte (nur Beamer) ─────────────────────
+   Für die zwei Ereignisse, die eine ganze Klasse angehen: eine Burg
+   hat den Besitzer gewechselt, oder ein Volk ist raus. Sie liegt über
+   der Arena und nimmt keine Klicks — die Lehrkraft bedient darunter
+   weiter ihren Rundentimer. */
+.cm-announce {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  transform: translate(-50%, -12px);
+  z-index: 4200;
+  max-width: 84%;
+  padding: 10px 26px;
+  border-radius: 999px;
+  font-family: var(--cm-display);
+  font-weight: 800;
+  font-size: clamp(1rem, 2.1vw, 1.7rem);
+  text-align: center;
+  color: #fff6df;
+  text-shadow: 0 2px 6px rgba(20,12,0,.85);
+  background: rgba(24,14,2,.86);
+  border: 2px solid var(--cm-gold, #d8b25a);
+  box-shadow: 0 10px 30px rgba(0,0,0,.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+}
+.cm-announce--show { opacity: 1; transform: translate(-50%, 0); }
+.cm-announce--castle {
+  border-color: #ffe6a3;
+  box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 26px rgba(255,214,120,.6);
+}
+.cm-announce--out {
+  border-color: #b9a08a;
+  color: #efe3d4;
+}
+
 /* Eine Beschriftung über der Burg (.cm-castlelabel) gab es hier bis
    zum Gestaltungs-Durchgang — sie ist ersatzlos weg, Begründung steht
    an der Stelle in tool.js, die sie nicht mehr erzeugt. */
@@ -1140,6 +1438,34 @@ body.cm-locked { overflow: hidden; }
   box-shadow: 0 0 3px rgba(0,0,0,.9);
   transform: rotate(-14deg);
 }
+/* Serien-Boni am Tablet (UI 18). Am Beamer leuchtet das Panel des
+   Volkes am Rand — hier gibt es keine Panels, also leuchtet das
+   Plättchen des eigenen Volkes in derselben Goldfarbe. Andere Völker
+   können hier nie leuchten: das Tablet erfährt nur die Ereignisse
+   SEINES Volkes (clash_view.my_team_events, 0106). */
+.cm-fchip--fire {
+  border-color: #ffe6a3;
+  animation: cmChipFire 1.4s ease-in-out infinite;
+}
+@keyframes cmChipFire {
+  0%, 100% { box-shadow: 0 0 8px  2px rgba(255,196,80,.55); }
+  50%      { box-shadow: 0 0 18px 5px rgba(255,214,120,.95); }
+}
+/* Gerade ausgeschieden: einmal zucken und hell aufblitzen, danach
+   bleibt der graue durchgestrichene Zustand von .cm-fchip--out. */
+.cm-fchip--justout { animation: cmChipOut 3.4s ease-out forwards; }
+@keyframes cmChipOut {
+  0%   { transform: translateY(0)    scale(1); }
+  6%   { transform: translateY(-4px) scale(1.18); }
+  14%  { transform: translateY(2px)  scale(.94); }
+  22%  { transform: translateY(0)    scale(1); }
+  100% { transform: translateY(0)    scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-fchip--fire, .cm-fchip--justout { animation: none; }
+  .cm-fchip--fire { box-shadow: 0 0 14px 4px rgba(255,214,120,.85); }
+}
+
 /* Die Restzeit hängt hinten an derselben Reihe (tool.js hängt sie
    nach jedem Neuzeichnen wieder an). */
 .cm-play .cm-timeleft {
@@ -1297,6 +1623,31 @@ body.cm-locked { overflow: hidden; }
   background: rgba(120,52,6,.6);
   color: #ffe0a8;
   box-shadow: 0 0 10px rgba(255,150,40,.45);
+}
+/* „on fire" ist etwas anderes als „hot" (UI 18): hot heißt „drei
+   richtige hintereinander" und steht, solange die Serie hält —
+   --fire heißt „gerade eben hat ein Serien-Bonus ausgelöst" und
+   erlischt nach acht Sekunden von selbst. Deshalb pulst es und ist
+   deutlich heller; beide dürfen gleichzeitig gelten. */
+.cm-pstreak--fire {
+  border-color: #ffe6a3;
+  background: rgba(160,80,8,.75);
+  color: #fff3d0;
+  animation: cmChipFire 1.2s ease-in-out infinite;
+}
+/* Der Kopf des eigenen Volkes leuchtet mit, wenn das VOLK eine Serie
+   geschafft hat — das Gegenstück zum leuchtenden Panel am Beamer. */
+.cm-phero--fire {
+  border-color: #ffe6a3;
+  animation: cmHeroFire 1.5s ease-in-out infinite;
+}
+@keyframes cmHeroFire {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(255,240,200,.16), 0 0 14px 2px rgba(255,196,80,.5); }
+  50%      { box-shadow: inset 0 0 0 1px rgba(255,240,200,.35), 0 0 32px 8px rgba(255,214,120,.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-pstreak--fire, .cm-phero--fire { animation: none; }
+  .cm-phero--fire { box-shadow: inset 0 0 0 1px rgba(255,240,200,.3), 0 0 22px 6px rgba(255,214,120,.8); }
 }
 /* Team-Toast (0106): „<Name> ist on fire" / „Ihr seid on fire". Sitzt
    als Geschwister von .cm-mapov oben mittig im Spielbildschirm, damit

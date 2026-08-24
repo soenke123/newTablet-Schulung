@@ -101,6 +101,44 @@
    my_team_events (applyTeamEvents/showFireToast) — andere Völker
    sehen davon nichts.
 
+   ── Effekte: was gerade passiert, muss man SEHEN (UI 18) ────────
+   Bis hierher änderte sich bei einer Eroberung nur eine Farbe auf der
+   Karte — auf einem Beamer, den zwanzig Kinder aus vier Metern
+   ansehen, ist das kein Ereignis, sondern ein Standbild, das anders
+   aussieht als vorher. Fünf Anlässe bekommen deshalb einen Effekt:
+
+     Feld erobert     ein kurzer Ring + Funken in der Farbe des neuen
+                      Besitzers („pling")
+     Burg getroffen   ein kleiner Aufschlag mit den Herzen darunter
+     Burg erobert     der größte Augenblick des Spiels: goldener
+                      Doppelring, Funkenkranz, aufsteigende Krone —
+                      plus eine Ankündigung über der Karte
+     Volk raus        Ankündigung + das Panel am Rand zuckt, bevor es
+                      grau wird
+     „on fire"        Serien-Bonus (0106): das Panel des Volkes leuchtet
+                      acht Sekunden, bei einer EINZEL-Serie stattdessen
+                      der Name des Kindes in der Namensliste
+
+   Zwei Entscheidungen dahinter:
+
+   (1) Die vier Spielfeld-Ereignisse werden NICHT aus RPC-Antworten
+       gelesen, sondern aus dem VERGLEICH zweier Kartenstände
+       (boardFx). Sonst bräuchte jeder Weg, auf dem sich eine Kachel
+       ändern kann, seine eigene Meldung — und seit 0106 sind das
+       vier (eigene Antwort, manueller Pick, 7er-Team-Bonus,
+       Auto-Ablauf der Frist), von denen der Beamer ohnehin nur die
+       Karte sieht. Ein Vergleich deckt alle ab, auch künftige.
+   (2) Die Effekte liegen in einer EIGENEN Ebene (.cm-fxlayer) neben
+       Sechsecken und Figuren, nicht darin: renderHexMap ersetzt bei
+       jedem Takt das ganze SVG und die ganze Figurenebene — eine
+       Animation darin wäre nach spätestens 8 Sekunden abgeschnitten,
+       oft nach wenigen Millisekunden.
+
+   Das „Leuchten" am Rand ist dagegen ein ZUSTAND mit Ablaufzeit
+   (teamFireUntil/memberFireUntil/teamOutUntil), kein einmaliges
+   Anhängen einer Klasse: fillRosters zeichnet die Panels bei jedem
+   Takt neu, eine angehängte Klasse wäre beim nächsten Takt weg.
+
    Zum Anschauen ohne Raum: vorschau.html im selben Ordner. Sie lädt
    dieses tool.js und tool.css und erfindet nur den Server.
    ══════════════════════════════════════════════════════════════ */
@@ -187,6 +225,11 @@
   // „gewinnt" oder „gewinnen" — siehe FACTION_PLURAL. Unbekanntes Volk
   // (Rückfall „Team 3") ist Einzahl.
   const fVerb    = s => (FACTION_PLURAL[facOf(s)] ? 'gewinnen' : 'gewinnt');
+  /* Dasselbe für jedes andere Zeitwort, das eine Ankündigung braucht
+     („ist/sind ausgeschieden", „erobert/erobern eine Burg"). fVerb
+     bleibt daneben stehen, weil es an genau einer Stelle im Siegerbild
+     hängt und dort lesbarer ist als fV(slot, 'gewinnen', 'gewinnt'). */
+  const fV = (s, plural, singular) => (FACTION_PLURAL[facOf(s)] ? plural : singular);
 
   let root = null, ctx = null, role = null;
   let els = {};
@@ -210,7 +253,30 @@
   // oben — die gehören der Lehrkraft-Lobby (Völker-Auswahl), nicht
   // dem Spielbildschirm.
   let myPendingPicks = 0, pendingPickDeadlineMs = 0, pickCountdownTimer = null;
-  let lastTeamEventId = 0, fireToastTimer = null;
+  let lastTeamEventId = 0, fireToastTimer = null, mapCloseTimer = null;
+
+  /* ── Effekte (UI 18) ──────────────────────────────────────────────
+     `fxTiles`/`fxCounts` sind der Kartenstand des letzten Abgleichs —
+     aus ihrem Vergleich mit dem neuen Stand entstehen die Ereignisse
+     (siehe boardFx). null heißt „noch nichts gesehen": der erste
+     Abgleich einer Runde erzeugt nie Effekte, sonst käme beim Betreten
+     eines laufenden Raums die halbe Karte auf einmal hoch.
+
+     Die drei `*Until`-Ablagen sind ZUSTÄNDE mit Ablaufzeit, keine
+     Klassen am DOM: die Panels am Rand werden bei jedem Takt neu
+     geschrieben (fillRosters), eine angehängte Klasse wäre dann weg.
+     Wer sie liest, fragt „leuchtet das gerade?" — nicht „wurde da mal
+     eine Klasse gesetzt?". */
+  let fxTiles = null, fxCounts = null;
+  const FIRE_MS = 8000;    // Sönkes Vorgabe: „leuchtet … für 8 Sekunden"
+  const OUT_MS  = 3400;    // so lange zuckt ein ausgeschiedenes Volk nach
+  let teamFireUntil = {}, memberFireUntil = {}, teamOutUntil = {};
+  let glowTimer = null;
+  // Ereignis-Ids, die schon verarbeitet sind. Die `primed`-Schalter
+  // verhindern, dass der ERSTE Abruf die letzten 20 Einträge des Logs
+  // (0106 trimmt darauf) als frische Nachrichten abfeuert.
+  let lastRoomEventId = 0, roomEventsPrimed = false, teamEventsPrimed = false;
+  let announceQueue = [], announceTimer = null;
 
   const MAP_GAP = 12, MAP_MIN = 260, MAP_MAX = 2000;
 
@@ -589,6 +655,277 @@
       });
     });
     dom.icons.innerHTML = icons;
+
+    /* Der Maßstab bleibt an der Karte hängen, damit ein Effekt später
+       (spawnTileFx) den Ort einer Kachel in Bildpunkten wiederfinden
+       kann, ohne die ganze Rechnung zu wiederholen. Deshalb muss der
+       Aufrufer ein STABILES dom-Objekt mitgeben und nicht bei jedem
+       Zeichnen ein frisch gebautes — sonst wäre die Ablage jedes Mal
+       weg (siehe els.bmap in buildPresenterDOM). */
+    dom.geo = { center: center, scale: scale };
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Effekte (UI 18) — siehe Kopfkommentar der Datei
+     ══════════════════════════════════════════════════════════ */
+
+  /* ─── Was hat sich auf der Karte geändert? ───────────────────────
+     Ein reiner Vergleich zweier Kartenstände. Er kennt keine RPC und
+     keinen Absender — deshalb gilt er gleichermaßen für die eigene
+     Antwort, einen manuellen Pick, die 7 Felder des Team-Bonus und
+     die Felder, die der Server nach Fristablauf selbst erobert.
+
+     Rückgabe ist eine Liste; Zustandsänderungen an der Anzeige macht
+     erst noteFxState, gezeichnet wird erst in flushFx. Diese Trennung
+     ist nicht Zierde: „ausgeschieden" muss VOR dem Neuzeichnen der
+     Panels feststehen, die Ringe und Funken erst DANACH entstehen. */
+  function boardFx(v) {
+    const tiles = (v && v.tiles) || [];
+    const next = new Map();
+    const counts = {};
+    tiles.forEach(t => {
+      next.set(t.r + ',' + t.c, { team: t.team, hp: t.hp, castle: !!t.castle });
+      counts[t.team] = (counts[t.team] || 0) + 1;
+    });
+
+    // Kein Vergleichsstand (erster Takt, gerade erst gestartet) oder
+    // gar keine Karte: nur merken, nichts zeigen.
+    const prev = fxTiles, prevCounts = fxCounts;
+    fxTiles = next; fxCounts = counts;
+    if (!prev || !tiles.length || (v && v.phase !== 'running')) return [];
+
+    const out = [];
+    next.forEach((t, key) => {
+      const p = prev.get(key);
+      if (!p) return;                       // neue Kachel: kein Ereignis
+      if (p.team !== t.team) {
+        // Neutrale Felder (Slot -1, 0105) können erobert WERDEN, aber
+        // eine Kachel fällt nie an niemanden zurück — der Fall bliebe
+        // sonst als Effekt in der Farbe „kein Volk" stehen.
+        if (t.team < 0) return;
+        const c = key.split(',');
+        out.push({ kind: t.castle ? 'castle' : 'capture',
+                   r: +c[0], c: +c[1], team: t.team, prev: p.team });
+      } else if (t.castle && p.hp != null && t.hp != null && t.hp < p.hp) {
+        const c = key.split(',');
+        out.push({ kind: 'hit', r: +c[0], c: +c[1], team: t.team, hp: t.hp });
+      }
+    });
+
+    // Ausgeschieden: hatte Felder, hat keine mehr. Über prevCounts,
+    // nicht über die Kacheln — ein Volk verschwindet ja gerade daraus.
+    Object.keys(prevCounts || {}).forEach(k => {
+      const slot = parseInt(k, 10);
+      if (slot < 0) return;
+      if ((prevCounts[k] || 0) > 0 && !(counts[k] > 0)) out.push({ kind: 'out', team: slot });
+    });
+    return out;
+  }
+
+  function resetFx() {
+    fxTiles = null; fxCounts = null;
+    teamFireUntil = {}; memberFireUntil = {}; teamOutUntil = {};
+    if (glowTimer) { clearTimeout(glowTimer); glowTimer = null; }
+  }
+
+  // Zustand, den das Zeichnen gleich lesen wird — muss deshalb VOR dem
+  // Zeichnen laufen.
+  function noteFxState(list) {
+    if (!list || !list.length) return;
+    const until = Date.now() + OUT_MS;
+    list.forEach(e => { if (e.kind === 'out') teamOutUntil[e.team] = until; });
+    scheduleGlowRepaint();
+  }
+
+  /* ─── Welche Karten stehen gerade vor jemandem? ──────────────────
+     Der Beamer hat immer dieselbe; der Teilnehmer hat zwei, von denen
+     meist keine sichtbar ist (die Karte ist standardmäßig zu). Ein
+     Effekt in eine unsichtbare Karte zu hängen wäre nicht falsch, nur
+     nutzlos — und er liefe dort trotzdem und würde später auf einem
+     inzwischen ganz anderen Kartenausschnitt sichtbar. */
+  function fxTargets() {
+    if (role === 'presenter') {
+      return (els.bmap && els.boardWrap && !els.boardWrap.classList.contains('cm-hide'))
+        ? [els.bmap] : [];
+    }
+    const out = [];
+    if (mapOpen && els.pmap && els.pmap.fx) out.push(els.pmap);
+    if (els.out && !els.out.classList.contains('cm-hide') && els.omap && els.omap.fx) out.push(els.omap);
+    return out;
+  }
+
+  function addFx(dom, cls, x, y, size, raw, ms, text, angle) {
+    const el = document.createElement('div');
+    el.className = 'cm-fx ' + cls;
+    el.style.left = x.toFixed(1) + 'px';
+    el.style.top  = y.toFixed(1) + 'px';
+    el.style.setProperty('--fx', size.toFixed(1) + 'px');
+    if (raw)   el.style.setProperty('--raw', raw);
+    if (angle != null) el.style.setProperty('--a', angle + 'deg');
+    if (text)  el.textContent = text;
+    dom.fx.appendChild(el);
+    // Aufräumen über die Zeit statt über 'animationend': ein Element
+    // mit mehreren Animationen meldet mehrfach, und eine Karte, die
+    // während des Laufs unsichtbar wird, meldet gar nicht mehr.
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, ms);
+  }
+
+  const SPARKS_SMALL = 6, SPARKS_BIG = 12;
+  function spawnTileFx(dom, e) {
+    if (!dom || !dom.fx || !dom.geo) return;
+    const p = dom.geo.center(e.r, e.c);
+    const s = dom.geo.scale;
+    const raw = fStroke(e.team);
+    if (e.kind === 'castle') {
+      // Der größte Augenblick des Spiels — und der einzige Effekt, der
+      // GOLD statt Volksfarbe trägt: eine eroberte Burg gehört jetzt
+      // zwar einem Volk, das Ereignis selbst gehört aber der Runde.
+      addFx(dom, 'cm-fx--flash',  p.x, p.y, s * 4.4, raw, 900);
+      addFx(dom, 'cm-fx--ring cm-fx--ring--gold', p.x, p.y, s * 5.2, raw, 1400);
+      addFx(dom, 'cm-fx--ring cm-fx--ring--gold cm-fx--ring--late', p.x, p.y, s * 3.6, raw, 1400);
+      for (let i = 0; i < SPARKS_BIG; i++) {
+        addFx(dom, 'cm-fx--spark cm-fx--spark--gold', p.x, p.y, s * 2.6, raw, 1200, '', (360 / SPARKS_BIG) * i);
+      }
+      addFx(dom, 'cm-fx--crown', p.x, p.y - s * 0.5, s * 1.5, raw, 1500, '👑');
+    } else if (e.kind === 'hit') {
+      addFx(dom, 'cm-fx--ring cm-fx--ring--hit', p.x, p.y, s * 2.2, raw, 620);
+      addFx(dom, 'cm-fx--burst', p.x, p.y, s * 1.15, raw, 700, '💥');
+    } else {
+      // Das „Pling" beim gewöhnlichen Feld: knapp unter einer Sekunde,
+      // in der Farbe des NEUEN Besitzers — es erzählt, wer gerade
+      // gewonnen hat, nicht wer verloren hat.
+      addFx(dom, 'cm-fx--ring', p.x, p.y, s * 2.9, raw, 820);
+      addFx(dom, 'cm-fx--pop',  p.x, p.y, s * 1.5, raw, 620);
+      for (let i = 0; i < SPARKS_SMALL; i++) {
+        addFx(dom, 'cm-fx--spark', p.x, p.y, s * 1.7, raw, 760, '', (360 / SPARKS_SMALL) * i + 15);
+      }
+    }
+  }
+
+  function flushFx(list) {
+    if (!list || !list.length) return;
+    const targets = fxTargets();
+    list.forEach(e => {
+      if (e.kind === 'out') {
+        if (role === 'presenter') {
+          announce(fLabel(e.team) + ' ' + fV(e.team, 'sind', 'ist') + ' ausgeschieden', 'cm-announce--out');
+        }
+        return;
+      }
+      targets.forEach(dom => spawnTileFx(dom, e));
+      if (e.kind === 'castle' && role === 'presenter') {
+        announce(fLabel(e.team) + ' ' + fV(e.team, 'erobern', 'erobert') + ' eine Burg!', 'cm-announce--castle');
+      }
+    });
+  }
+
+  /* ─── Ankündigungen über der Karte (nur Beamer) ──────────────────
+     Nacheinander, nicht übereinander: bei einer Burgübernahme, die
+     zugleich ein Volk auslöscht, kommen zwei auf einmal — und zwei
+     Sätze an derselben Stelle sind keiner. Die Schlange ist auf drei
+     gedeckelt, denn was vier Meldungen alt ist, erklärt das Bild auf
+     der Karte längst selbst. */
+  function announce(text, cls) {
+    if (role !== 'presenter' || !els.announce) return;
+    announceQueue.push({ text: text, cls: cls });
+    if (announceQueue.length > 3) announceQueue = announceQueue.slice(-3);
+    if (!announceTimer) runAnnounce();
+  }
+  function runAnnounce() {
+    if (!els.announce) { announceTimer = null; return; }
+    const a = announceQueue.shift();
+    if (!a) { announceTimer = null; els.announce.classList.add('cm-hide'); return; }
+    els.announce.className = 'cm-announce' + (a.cls ? ' ' + a.cls : '');
+    els.announce.textContent = a.text;
+    void els.announce.offsetWidth;   // Neustart der Einblendung erzwingen
+    els.announce.classList.add('cm-announce--show');
+    announceTimer = setTimeout(() => {
+      if (els.announce) els.announce.classList.remove('cm-announce--show');
+      announceTimer = setTimeout(runAnnounce, 280);
+    }, 2200);
+  }
+  function stopAnnounce() {
+    if (announceTimer) clearTimeout(announceTimer);
+    announceTimer = null;
+    announceQueue = [];
+    if (els.announce) { els.announce.className = 'cm-announce cm-hide'; els.announce.textContent = ''; }
+  }
+
+  /* ─── „on fire" (0106) als leuchtender Zustand ───────────────────
+     Ein Serien-Bonus feuert genau einmal; sichtbar sein soll er acht
+     Sekunden. Deshalb ein Ablaufzeitpunkt je Volk bzw. je Kind statt
+     einer Klasse am Element: die Panels am Rand werden bei jedem Takt
+     neu geschrieben, und ein Takt kommt spätestens alle 8 Sekunden. */
+  function noteFireEvent(slot, e) {
+    if (slot == null || slot < 0) return;
+    const until = Date.now() + FIRE_MS;
+    if (e.kind === 'team_fire') {
+      teamFireUntil[slot] = until;
+    } else if (e.kind === 'individual_fire') {
+      const name = e.payload && e.payload.name;
+      // Zugeordnet wird über den ANZEIGENAMEN, weil genau er auch in
+      // der Namensliste des Panels steht (beide aus skill_seat_name).
+      // Zwei Kinder mit demselben Namen in einem Volk leuchten damit
+      // gemeinsam — was auf dem Bildschirm nicht falsch ist: dort
+      // steht der Name zweimal, und einer von beiden ist gemeint.
+      if (name) memberFireUntil[slot + ' ' + name] = until;
+    }
+  }
+  const isFire   = (m, k) => (m[k] || 0) > Date.now();
+  const teamFire = slot => isFire(teamFireUntil, slot);
+  const memberFire = (slot, name) => isFire(memberFireUntil, slot + ' ' + name);
+
+  /* Ein Leuchten hört von selbst auf — aber nur, wenn danach noch
+     einmal gezeichnet wird. Der reguläre Takt kommt bis zu 8 Sekunden
+     später (und in einer ruhigen Minute gar nicht, weil sich die
+     Signatur nicht ändert), also holt dieser Zeitgeber das Zeichnen
+     genau zum Ablauf nach. */
+  function scheduleGlowRepaint() {
+    if (glowTimer) { clearTimeout(glowTimer); glowTimer = null; }
+    const now = Date.now();
+    let next = Infinity;
+    [teamFireUntil, memberFireUntil, teamOutUntil].forEach(m => {
+      Object.keys(m).forEach(k => { if (m[k] > now && m[k] < next) next = m[k]; });
+    });
+    if (next === Infinity) return;
+    glowTimer = setTimeout(glowRepaint, Math.max(80, next - now + 50));
+  }
+  function glowRepaint() {
+    glowTimer = null;
+    if (destroyed || !lastView) return;
+    if (role === 'presenter') {
+      if (lastView.phase === 'running') fillRosters(lastView);
+    } else if (lastView.me && lastView.phase === 'running') {
+      renderFactionRow(lastView, lastView.me.team, tileCounts(lastView));
+      applyHeroGlow(lastView.me.team, lastView.me.name);
+    }
+    scheduleGlowRepaint();
+  }
+
+  /* Das Gegenstück zu den Panels am Rand auf dem Tablet: dort gibt es
+     keine Namensliste, also leuchtet das eigene Volk am eigenen Kopf
+     (die Einheit mit Feldanteil) und die eigene Serie am eigenen
+     Abzeichen. „Ist ein User on fire, dann leuchtet er auch" — hier ist
+     der User man selbst. */
+  function applyHeroGlow(myTeam, myName) {
+    const mine = myName && memberFire(myTeam, myName);
+    if (els.hero)   els.hero.classList.toggle('cm-phero--fire', teamFire(myTeam));
+    if (els.streak) els.streak.classList.toggle('cm-pstreak--fire', !!mine);
+    if (els.teamStreak) els.teamStreak.classList.toggle('cm-pstreak--fire', teamFire(myTeam));
+  }
+
+  /* Beamer: dieselben Ereignisse wie beim Teilnehmer, nur für ALLE
+     Völker (clash_room_get.team_events, Migration 0107). Läuft 0107
+     noch nicht, fehlt der Schlüssel — dann bleibt es beim Spielfeld,
+     ohne dass hier etwas kaputtgeht. */
+  function applyRoomEvents(v) {
+    const events = Array.isArray(v.team_events) ? v.team_events : [];
+    let maxId = lastRoomEventId;
+    events.forEach(e => { if ((e.id || 0) > maxId) maxId = e.id; });
+    if (!roomEventsPrimed) { roomEventsPrimed = true; lastRoomEventId = maxId; return; }
+    events.forEach(e => { if ((e.id || 0) > lastRoomEventId) noteFireEvent(e.team, e); });
+    lastRoomEventId = maxId;
+    scheduleGlowRepaint();
   }
 
   /* Die drei zusammengehörenden Elemente einer Karte — einmal als
@@ -600,13 +937,18 @@
     return '<div class="cm-hexmap ' + (cls || '') + '" id="' + prefix + 'Wrap">' +
       '<div class="cm-mapinner"><svg class="cm-hexsvg" id="' + prefix + 'Svg"></svg></div>' +
       '<div class="cm-iconlayer" id="' + prefix + 'Icons"></div>' +
+      // Die Effekt-Ebene ist bewusst die DRITTE und liegt über beiden:
+      // renderHexMap ersetzt svg und icons bei jedem Takt komplett, eine
+      // laufende Animation darin wäre sofort abgeschnitten.
+      '<div class="cm-fxlayer" id="' + prefix + 'Fx"></div>' +
     '</div>';
   }
   function mapDom(prefix) {
     return {
       wrap:  root.querySelector('#' + prefix + 'Wrap'),
       svg:   root.querySelector('#' + prefix + 'Svg'),
-      icons: root.querySelector('#' + prefix + 'Icons')
+      icons: root.querySelector('#' + prefix + 'Icons'),
+      fx:    root.querySelector('#' + prefix + 'Fx')
     };
   }
 
@@ -678,8 +1020,12 @@
     els.mapWrap.style.width  = Math.min(availW, MAP_MAX) + 'px';
     els.mapWrap.style.height = Math.min(availH, MAP_MAX) + 'px';
 
-    if (els.hexsvg && els.icons) {
-      renderHexMap({ wrap: els.mapWrap, svg: els.hexsvg, icons: els.icons }, lastView, { units: true });
+    // els.bmap statt eines hier gebauten Objekts: renderHexMap legt
+    // seinen Maßstab am dom-Objekt ab (dom.geo), und den brauchen die
+    // Effekte später wieder. Ein bei jedem Aufruf frisch gebautes
+    // Objekt hätte die Ablage jedes Mal mitgenommen.
+    if (els.bmap && els.bmap.svg && els.bmap.icons) {
+      renderHexMap(els.bmap, lastView, { units: true });
     }
   }
 
@@ -759,9 +1105,21 @@
     // zufällig noch gültig. Bei 'ended' bleiben sie ABSICHTLICH
     // stehen — das Siegerbild zeigt dieselbe Karte, die eben noch da
     // war, und die soll sich nicht im letzten Moment neu sortieren.
-    if (v.phase === 'lobby' || v.phase === 'countdown') unitSpots = {};
+    // Dieselbe Begründung gilt für die Effekte: eine neue Partie hat
+    // ein neues Spielfeld, der alte Vergleichsstand wäre dort nur
+    // zufällig noch gültig — und ein „ausgeschieden" aus der letzten
+    // Runde gehört nicht in die neue.
+    if (v.phase === 'lobby' || v.phase === 'countdown') { unitSpots = {}; resetFx(); }
     ensureChannel(v.broadcast_key);
-    if (role === 'presenter') renderPresenter(v); else renderParticipant(v);
+    // Erkennen · merken · zeichnen · zeigen. Die Reihenfolge ist nicht
+    // beliebig: noteFxState setzt den „ausgeschieden"-Zustand, den die
+    // Panels beim Zeichnen lesen, und flushFx braucht den Maßstab, den
+    // das Zeichnen erst anlegt.
+    const fx = boardFx(v);
+    noteFxState(fx);
+    if (role === 'presenter') { applyRoomEvents(v); renderPresenter(v); }
+    else renderParticipant(v);
+    flushFx(fx);
   }
 
   /* ─── Broadcast: Signal, nicht Wahrheit ─────────────────────
@@ -1253,6 +1611,7 @@
       countNum: root.querySelector('#cmCountNum'),
       game: root.querySelector('#cmGame'),
       factionRow: root.querySelector('#cmPFactions'),
+      hero: root.querySelector('.cm-phero'),
       heroUnit: root.querySelector('#cmPUnit'),
       share: root.querySelector('#cmPShare'),
       shareLab: root.querySelector('#cmPShareLab'),
@@ -1332,6 +1691,7 @@
   // hier mit force=true durch, wenn das wirklich gewollt ist.
   function closeMap(force) {
     if (!force && myPendingPicks > 0) return;
+    if (mapCloseTimer) { clearTimeout(mapCloseTimer); mapCloseTimer = null; }
     mapOpen = false;
     if (els.mapOv) els.mapOv.classList.add('cm-hide');
   }
@@ -1376,7 +1736,14 @@
           if (res.captured) { t.team = lastView.me.team; if (res.captured.castle) t.hp = res.captured.hp; }
           else t.hp = res.castle_hit.hp;
         }
+        // Der Effekt kommt aus demselben Vergleich wie beim Takt (der
+        // eigene Broadcast schließt einen selbst aus, sonst käme das
+        // eigene Pling erst 8 Sekunden später oder gar nicht).
+        const fx = boardFx(lastView);
+        noteFxState(fx);
         renderStandings(lastView);
+        renderPlayerMap();
+        flushFx(fx);
       }
       applyPendingPicks(res.pending_picks, res.pick_deadline);
       renderPlayerMap();
@@ -1393,6 +1760,7 @@
     const wasPending = myPendingPicks > 0;
     myPendingPicks = n || 0;
     if (myPendingPicks > 0) {
+      if (mapCloseTimer) { clearTimeout(mapCloseTimer); mapCloseTimer = null; }
       pendingPickDeadlineMs = deadlineIso ? new Date(deadlineIso).getTime() : (Date.now() + 6000);
       if (!mapOpen) openMap(true);
       updatePickBanner();
@@ -1400,7 +1768,12 @@
     } else if (wasPending) {
       stopPickCountdown();
       updatePickBanner();
-      closeMap(true);
+      // Nicht sofort zu: der LETZTE Pick hat gerade ein Feld erobert,
+      // und sein Effekt (UI 18) spielt auf genau dieser Karte. Ginge
+      // sie im selben Wimpernschlag zu, wäre die eine Eroberung, die
+      // das Kind selbst ausgesucht hat, die einzige, die es nie sieht.
+      if (mapCloseTimer) clearTimeout(mapCloseTimer);
+      mapCloseTimer = setTimeout(() => { mapCloseTimer = null; closeMap(true); }, 850);
     }
   }
 
@@ -1448,8 +1821,20 @@
 
   function applyTeamEvents(v) {
     const events = Array.isArray(v.my_team_events) ? v.my_team_events : [];
-    const fresh = events.filter(e => e.id > lastTeamEventId);
-    fresh.forEach(e => {
+    const myTeam = v.me && v.me.team;
+    let maxId = lastTeamEventId;
+    events.forEach(e => { if ((e.id || 0) > maxId) maxId = e.id; });
+
+    /* Der ERSTE Abruf zeigt nichts an. clash_view liefert die letzten
+       20 Einträge des Team-Logs (0106) — wer mitten in einer Runde
+       dazukommt oder die Seite neu lädt, bekäme sonst zwanzig
+       „on fire"-Meldungen auf einmal, von denen keine gerade
+       passiert ist. */
+    if (!teamEventsPrimed) { teamEventsPrimed = true; lastTeamEventId = maxId; return; }
+
+    events.forEach(e => {
+      if ((e.id || 0) <= lastTeamEventId) return;
+      noteFireEvent(myTeam, e);   // UI 18: acht Sekunden Leuchten
       if (e.kind === 'individual_fire') {
         const name = (e.payload && e.payload.name) || 'Jemand';
         showFireToast('🔥 ' + name + ' ist on fire!');
@@ -1457,7 +1842,8 @@
         showFireToast('🔥🔥 Ihr seid on fire!');
       }
     });
-    events.forEach(e => { if (e.id > lastTeamEventId) lastTeamEventId = e.id; });
+    lastTeamEventId = maxId;
+    scheduleGlowRepaint();
   }
 
   async function onSubmit() {
@@ -1496,8 +1882,14 @@
             if (r.captured.castle) t.hp = r.captured.hp;   // übernommen ⇒ wieder voll
           } else t.hp = r.castle_hit.hp;
         }
+        // Wie beim manuellen Pick: derselbe Vergleich wie im Takt, nur
+        // sofort — die eigene Eroberung darf nicht auf den Server
+        // warten, um zu funkeln.
+        const fx = boardFx(lastView);
+        noteFxState(fx);
         renderStandings(lastView);
         renderPlayerMap();
+        flushFx(fx);
       }
       nudge();
     } else if (r.correct === false) {
@@ -1615,7 +2007,9 @@
       // Feld hat, muss nicht der Fleißigste gewesen sein — und die
       // kleine Zahl trägt darum das Häkchen als Erklärung mit.
       const c = parseInt(correct[String(i)], 10) || 0;
-      const cls = 'cm-fchip' + (n === 0 ? ' cm-fchip--out' : '') + (i === myTeam ? ' cm-fchip--me' : '');
+      const cls = 'cm-fchip' + (n === 0 ? ' cm-fchip--out' : '') + (i === myTeam ? ' cm-fchip--me' : '') +
+                  (isFire(teamOutUntil, i) ? ' cm-fchip--justout' : '') +
+                  (teamFire(i) ? ' cm-fchip--fire' : '');
       out += `<span class="${cls}" style="--team:${fStroke(i)}" ` +
         `title="${ctx.esc(fLabel(i))}" ` +
         `aria-label="${ctx.esc(fLabel(i))}: ${n} Felder, ${c} richtige Antworten">` +
@@ -1739,6 +2133,11 @@
     applyTeamEvents(v);   // 0106: Toast für „<Name>/Ihr seid on fire"
     applyPendingPicks((v.me && v.me.pending_picks) || 0, v.me && v.me.pick_deadline);
     renderStandings(v);
+    // Muss NACH renderStandings stehen: die Völker-Reihe wird dort neu
+    // geschrieben, und applyHeroGlow schaltet Klassen an Elementen, die
+    // das überstehen (Kopf und Abzeichen) — die Reihe selbst holt sich
+    // ihren Leuchtzustand beim Zeichnen aus denselben Ablagen.
+    applyHeroGlow(myTeam, v.me && v.me.name);
     if (v.match_ends_at) startMatchTimer(v.match_ends_at); else stopMatchTimer();
     if (v.me.question) setQuestion(v.me.question);
     if (!keyMode) buildKeypad('natural');
@@ -1815,7 +2214,14 @@
               '<div class="cm-mapwrap cm-mapwrap--kingdoms" id="cmMapWrap">' +
                 '<div class="cm-mapinner"><svg class="cm-hexsvg" id="cmHexSvg"></svg></div>' +
                 '<div class="cm-iconlayer" id="cmIcons"></div>' +
+                // Dritte Ebene für Ringe, Funken und Kronen (UI 18) —
+                // sie überlebt das Neuzeichnen der beiden darunter.
+                '<div class="cm-fxlayer" id="cmFx"></div>' +
               '</div>' +
+              // Die Ankündigung gehört der ARENA, nicht der Karte: sie
+              // steht mittig über dem Feld und darf beim Umrechnen der
+              // Kartengröße (fitPresenterMap) nicht mitwandern.
+              '<div class="cm-announce cm-hide" id="cmAnnounce"></div>' +
             '</div>' +
             // Ein Auswahlfeld statt sechs Knöpfen — das war eine ganze
             // Zeile Bildschirmhöhe, die jetzt dem Spielfeld gehört.
@@ -1887,11 +2293,21 @@
       mapWrap: root.querySelector('#cmMapWrap'),
       hexsvg: root.querySelector('#cmHexSvg'),
       icons: root.querySelector('#cmIcons'),
+      announce: root.querySelector('#cmAnnounce'),
       endedP: root.querySelector('#cmEndedP'),
       endTitleP: root.querySelector('#cmEndTitleP'),
       podium: root.querySelector('#cmPodium'),
       endRest: root.querySelector('#cmEndRest'),
       resetBtn: root.querySelector('#cmResetBtn')
+    };
+    // Die Beamer-Karte als EIN dauerhaftes Objekt (siehe fitPresenterMap):
+    // renderHexMap legt seinen Maßstab daran ab, und die Effekte holen
+    // ihn sich später von dort zurück.
+    els.bmap = {
+      wrap:  els.mapWrap,
+      svg:   els.hexsvg,
+      icons: els.icons,
+      fx:    root.querySelector('#cmFx')
     };
 
     // Ein Auswahlfeld für beide Richtungen: „ohne Zeitlimit" (Wert 0)
@@ -1993,9 +2409,15 @@
     // Namensliste. `team_members` kommt erst ab Migration 0096 — läuft
     // sie noch nicht, fehlt der Schlüssel einfach und das Panel zeigt
     // Bild/Name/Zahl wie zuvor, statt „undefined" zu schreiben.
+    // Jeder Name in einem eigenen Element, nicht mehr als eine
+    // zusammengeklebte Zeile: nur so lässt sich EIN Kind hervorheben,
+    // wenn es eine Einzel-Serie geschafft hat (UI 18). Der Trenner
+    // steht deshalb in tool.css (::after) statt im Text.
     const names = Array.isArray(members) ? members : [];
     const memberHTML = names.length
-      ? `<div class="cm-rmembers">${names.map(n => ctx.esc(n)).join(' · ')}</div>`
+      ? `<div class="cm-rmembers">${names.map(n =>
+          `<span class="cm-rmember${memberFire(i, n) ? ' cm-rmember--fire' : ''}">${ctx.esc(n)}</span>`
+        ).join('')}</div>`
       : '';
     // EINE Einheit mit dem Namen daneben (nicht das Gruppenbild über
     // die volle Breite): so bleibt die Kopfzeile flach und der Platz
@@ -2006,7 +2428,14 @@
     // gerade fleißig zu sein, und umgekehrt. Beide Zahlen stehen
     // deshalb nebeneinander, die Antwort-Zahl klein und mit Häkchen,
     // damit sie nicht mit der Feldzahl verwechselt wird.
-    return `<div class="cm-rcard${dead ? ' cm-rcard--out' : ''}" style="--team:${fStroke(i)}">` +
+    // Drei Zustände können gleichzeitig gelten: raus (grau), gerade
+    // erst rausgeflogen (zuckt) und „on fire" (leuchtet). Sie schließen
+    // sich nicht aus — ein Volk kann eine Serie schaffen und in
+    // derselben Sekunde sein letztes Feld verlieren.
+    const cls = 'cm-rcard' + (dead ? ' cm-rcard--out' : '') +
+                (isFire(teamOutUntil, i) ? ' cm-rcard--justout' : '') +
+                (teamFire(i) ? ' cm-rcard--fire' : '');
+    return `<div class="${cls}" style="--team:${fStroke(i)}">` +
       '<div class="cm-rhead">' +
         `<div class="cm-rthumb"><img src="${esrc(fUnit(i))}" alt=""></div>` +
         '<div class="cm-rtitle">' +
@@ -2225,6 +2654,12 @@
       destroyed = false; lastSig = null; lastView = null; channelKey = null;
       // 0106: neuer Raum, neue Serien-Boni-Historie.
       myPendingPicks = 0; pendingPickDeadlineMs = 0; lastTeamEventId = 0;
+      // UI 18: neuer Raum, kein Vergleichsstand und keine offenen
+      // Ereignisse. Die `primed`-Schalter sorgen dafür, dass der erste
+      // Abruf nur mitschreibt und nichts abfeuert.
+      resetFx();
+      lastRoomEventId = 0; roomEventsPrimed = false; teamEventsPrimed = false;
+      announceQueue = [];
 
       if (role === 'presenter') buildPresenterDOM(); else buildParticipantDOM();
 
@@ -2282,8 +2717,11 @@
       stopCountdown();
       stopMatchTimer();
       stopPickCountdown();   // 0106
+      stopAnnounce();        // UI 18 — muss vor dem Leeren von els laufen
       if (fireToastTimer) clearTimeout(fireToastTimer);
       fireToastTimer = null;
+      if (mapCloseTimer) clearTimeout(mapCloseTimer);
+      mapCloseTimer = null;
       if (onWinResize) window.removeEventListener('resize', onWinResize);
       onWinResize = null;
       document.removeEventListener('keydown', onHardwareKey);
@@ -2303,6 +2741,8 @@
       pickSel = []; pickBusy = 0; factions = [0, 1, 2, 3];
       answerBuf = ''; keyMode = null; mapOpen = false;
       myPendingPicks = 0; pendingPickDeadlineMs = 0; lastTeamEventId = 0;   // 0106
+      resetFx();                                                            // UI 18
+      lastRoomEventId = 0; roomEventsPrimed = false; teamEventsPrimed = false;
     }
   });
 })();
