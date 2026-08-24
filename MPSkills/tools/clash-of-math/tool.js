@@ -167,6 +167,15 @@
   const fCastle  = s => FACTION_CASTLE[facOf(s)] || FACTION_CASTLE[0];
   const fUnit    = s => FACTION_UNIT[facOf(s)]   || FACTION_UNIT[0];
   const fTeamPic = s => FACTION_TEAM[facOf(s)]   || FACTION_TEAM[0];
+  /* Nicht jedes Volk ist gleich groß gebaut. Die Einheiten aller
+     Völker laufen mit derselben Höhe über das Feld (UNIT_H) — bei den
+     Brokkoli-Giraffen sah das falsch aus: eine Giraffe, die genauso
+     hoch ist wie ein Toast-Ritter, liest sich nicht als Giraffe.
+     Deshalb ein Faktor je VOLK (nicht je Slot, wie alle Listen hier),
+     der nur die Einheit betrifft — die Burg bleibt unangetastet, sie
+     ist das Maß, an dem die Kachelgröße hängt. */
+  const FACTION_UNIT_SCALE = [1, 1, 1.2, 1, 1, 1, 1, 1];
+  const fUnitScale = s => FACTION_UNIT_SCALE[facOf(s)] || 1;
   // „gewinnt" oder „gewinnen" — siehe FACTION_PLURAL. Unbekanntes Volk
   // (Rückfall „Team 3") ist Einzahl.
   const fVerb    = s => (FACTION_PLURAL[facOf(s)] ? 'gewinnen' : 'gewinnt');
@@ -322,6 +331,98 @@
     return '<div class="cm-groundglow" style="left:' + p.x + 'px;top:' + p.y + 'px;width:' + w + 'px;height:' + h + 'px;--raw:' + raw + '"></div>';
   }
 
+  /* ─── Die Leben einer Burg ────────────────────────────────────
+     Drei Herzen dicht unter der Burg, verbrauchte bleiben als
+     leere Umrisse stehen — „noch zwei" liest sich nur, wenn auch
+     zu sehen ist, wie viele es einmal waren. Der Wert kommt als
+     `hp` an der Kachel vom Server (Migration 0100); fehlt er (alte
+     Fassung noch nicht eingespielt), stehen alle drei da und die
+     Anzeige sagt schlicht nichts Falsches.
+
+     Die Herzen sitzen im UNTEREN Teil der Kachel: die Burg steht mit
+     den Füßen auf dem Kachel-Mittelpunkt und ragt von dort nach oben,
+     unter ihr ist Platz. */
+  const CASTLE_LIVES = 3;
+  function heartsHTML(p, scale, hp, z) {
+    const left = Math.max(0, Math.min(CASTLE_LIVES, hp == null ? CASTLE_LIVES : hp));
+    let out = '<div class="cm-hearts" style="left:' + p.x.toFixed(1) + 'px;top:' + (p.y + scale * 0.42).toFixed(1) + 'px;' +
+      'font-size:' + Math.max(8, scale * 0.46).toFixed(1) + 'px;z-index:' + z + '">';
+    for (let i = 0; i < CASTLE_LIVES; i++) {
+      out += '<span class="cm-heart' + (i < left ? '' : ' cm-heart--lost') + '">♥</span>';
+    }
+    return out + '</div>';
+  }
+
+  /* ─── Wie viele Einheiten ein Volk zeigt und WO sie stehen ─────
+     Bis zum Feature-Durchgang waren es feste „bis zu 3", und ihr Ort
+     wurde bei jedem Zeichnen neu aus der sortierten Feldliste
+     gerechnet (`(k+0.5) * länge / anzahl`). Beides war falsch:
+
+     (1) Die Zahl sagte nichts über das Volk aus — zwei Felder trugen
+         so viele Einheiten wie zwanzig.
+     (2) Weil der Index aus der LÄNGE der Liste kam, rückte jede
+         einzelne Eroberung sämtliche Einheiten des Volkes auf andere
+         Kacheln: sie sprangen bei jedem Takt über die Karte.
+
+     Jetzt: eine Einheit je vier eigenen Feldern (2 Felder → 0,
+     5 → 1, 20 → 5), und die einmal vergebenen Plätze BLEIBEN. Verliert
+     ein Volk eine Kachel, auf der eine Einheit steht, fällt genau
+     diese Einheit weg und wird — wenn die Feldzahl sie noch trägt —
+     auf einer freien eigenen Kachel neu aufgestellt. Wer zusieht,
+     sieht eine Einheit umziehen statt aller auf einmal.
+
+     `unitSpots` hält den Stand zwischen zwei Zeichnungen: Volk → Liste
+     von "r,c". Er ist reine Anzeige, steht bewusst nicht auf dem
+     Server (dort ist eine Einheit kein Ding, nur ein Bild) und heilt
+     sich selbst: Schlüssel, die dem Volk nicht mehr gehören, fallen
+     beim nächsten Zeichnen heraus. */
+  const TILES_PER_UNIT = 4;
+  let unitSpots = {};
+
+  function planUnits(team, teamTiles) {
+    const key = String(team);
+    const byKey = new Map();
+    teamTiles.forEach(t => byKey.set(t.r + ',' + t.c, t));
+    // Auf einer Burgkachel steht keine Einheit — dort steht die Burg.
+    const open = teamTiles.filter(t => !t.castle).sort((a, b) => (a.r - b.r) || (a.c - b.c));
+    const want = Math.min(Math.floor(teamTiles.length / TILES_PER_UNIT), open.length);
+
+    const kept = [];
+    (unitSpots[key] || []).forEach(k => {
+      const t = byKey.get(k);
+      if (t && !t.castle && kept.indexOf(k) < 0) kept.push(k);
+    });
+    while (kept.length > want) kept.pop();
+
+    if (kept.length < want) {
+      const free = open.filter(t => kept.indexOf(t.r + ',' + t.c) < 0);
+      while (kept.length < want && free.length) {
+        // Neue Einheiten stellen sich möglichst weit von den schon
+        // stehenden auf, damit sich das Gebiet gleichmäßig füllt statt
+        // alle in einer Ecke zu drängen. Ohne schon stehende Einheiten
+        // entscheidet die (sortierte, also stabile) Reihenfolge.
+        let best = 0, bestD = -1;
+        for (let i = 0; i < free.length; i++) {
+          const u = hexUnit(free[i].r, free[i].c);
+          let d = Infinity;
+          kept.forEach(k => {
+            const o = byKey.get(k);
+            if (!o) return;
+            const uo = hexUnit(o.r, o.c);
+            d = Math.min(d, Math.hypot(u.x - uo.x, u.y - uo.y));
+          });
+          if (!isFinite(d)) d = 0;
+          if (d > bestD) { bestD = d; best = i; }
+        }
+        const t = free.splice(best, 1)[0];
+        kept.push(t.r + ',' + t.c);
+      }
+    }
+
+    unitSpots[key] = kept;
+    return kept.map(k => byKey.get(k)).filter(Boolean);
+  }
+
   /* dom  = { wrap, svg, icons } — drei Elemente, die zusammengehören
              (siehe mapDomHTML/mapDom weiter unten)
      opts = { units: bool, highlight: slot|null } */
@@ -371,7 +472,23 @@
     });
     const segs = computeBorderSegments(tiles, center, scale - Math.min(gap, 1));
     dom.svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-    dom.svg.innerHTML = poly + borderLayerHTML(segs);
+    /* Das eigene Gebiet bekommt seine AUSSENGRENZE weiß — und zwar
+       ganz zuletzt, also im Vordergrund (SVG malt in Dokument-
+       reihenfolge). Vorher trug jedes eigene Sechseck eine helle
+       Kante: dadurch leuchteten ausgerechnet die Linien ZWISCHEN den
+       eigenen Kacheln, das Gebiet zerfiel optisch in Einzelteile statt
+       als ein Land zu lesen. Die Grenzsegmente aus
+       computeBorderSegments sind genau die Kanten nach draußen — die
+       gehören hervorgehoben, die inneren nicht. */
+    let mineBorder = '';
+    if (mine != null && segs[mine]) {
+      const d = segs[mine].map(s =>
+        'M' + s[0].x.toFixed(1) + ',' + s[0].y.toFixed(1) + ' L' + s[1].x.toFixed(1) + ',' + s[1].y.toFixed(1)
+      ).join(' ');
+      mineBorder = '<path class="cm-border cm-border--mineglow" d="' + d + '"></path>' +
+                   '<path class="cm-border cm-border--mine" d="' + d + '"></path>';
+    }
+    dom.svg.innerHTML = poly + borderLayerHTML(segs) + mineBorder;
 
     const byTeam = {};
     tiles.forEach(t => (byTeam[t.team] = byTeam[t.team] || []).push(t));
@@ -380,8 +497,12 @@
       const team = parseInt(teamKey, 10);
       const teamTiles = byTeam[teamKey];
       const raw = fStroke(team);
-      const castleTile = teamTiles.find(t => t.castle);
-      if (castleTile) {
+      // MEHRZAHL, seit eine Burg übernommen statt zerstört wird
+      // (Migration 0100): wer die letzte Herzkammer einer fremden Burg
+      // trifft, bekommt sie — und hat dann zwei. `find` zeichnete
+      // damals nur die erste und ließ die eroberte unsichtbar auf der
+      // Karte stehen.
+      teamTiles.filter(t => t.castle).forEach(castleTile => {
         const p = center(castleTile.r, castleTile.c);
         const h = scale * CASTLE_H;
         const z = 1000 + castleTile.r * 10 + 9;
@@ -389,6 +510,7 @@
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;' +
           '--drop:' + (CASTLE_DROP * 100) + '%;z-index:' + z + '">' +
           '<div class="cm-spriteinner cm-spriteinner--castle"><img src="' + esrc(fCastle(team)) + '" alt=""></div></div>';
+        icons += heartsHTML(p, scale, castleTile.hp, z + 1);
         // KEINE Beschriftung über der Burg. Der Showroom hatte dort die
         // Farbbezeichnung („Rot", „Türkis") — die ist weg, seit das
         // Volk „Toast-Ritter" heißt und die Farbe allein die
@@ -399,24 +521,21 @@
         // ein Gebiet ohnehin doppelt — über die Farbe der Umrandung
         // und über dieselben Figuren, die auf dem Panel am Rand
         // stehen. Und was hier nicht steht, verdeckt keine Figur.
-      }
+      });
       // Nicht jedes eroberte Feld bekommt eine eigene Einheit (bei 40+
-      // Feldern wäre das nur noch Gewusel) — eine kleine, über das
-      // Gebiet verteilte Auswahl reicht, um „lebendig" zu wirken.
+      // Feldern wäre das nur noch Gewusel) — die Zahl wächst mit dem
+      // Gebiet (siehe planUnits), die Plätze bleiben stehen.
       // Auf dem Tablet fallen sie ganz weg (units:false): dort ist die
       // Karte eine Auskunft („wie steht es?"), keine Bühne.
       if (!withUnits) return;
-      const others = teamTiles.filter(t => !t.castle).sort((a, b) => (a.r - b.r) || (a.c - b.c));
-      const unitCount = Math.min(3, others.length);
-      for (let k = 0; k < unitCount; k++) {
-        const idx = Math.floor((k + 0.5) * others.length / unitCount);
-        const t = others[idx];
+      const uscale = fUnitScale(team);
+      planUnits(team, teamTiles).forEach((t, k) => {
         const p = center(t.r, t.c);
-        const h = scale * UNIT_H;
+        const h = scale * UNIT_H * uscale;
         icons += groundGlowHTML(p, scale * 0.94, scale * 0.52, raw);
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + (1000 + t.r * 10 + 5) + '">' +
-          '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + (k * 0.5) + 's"><img src="' + esrc(fUnit(team)) + '" alt=""></div></div>';
-      }
+          '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + ((k % 6) * 0.5) + 's"><img src="' + esrc(fUnit(team)) + '" alt=""></div></div>';
+      });
     });
     dom.icons.innerHTML = icons;
   }
@@ -584,6 +703,12 @@
     // Die Übersetzungstabelle zuerst — jede Anzeigefunktion darunter
     // schlägt ihre Farben, Namen und Bilder darüber nach.
     if (Array.isArray(v.factions) && v.factions.length) factions = v.factions;
+    // Vor der Runde die Einheiten-Plätze vergessen: eine neue Partie
+    // beginnt mit einem neuen Spielfeld, alte Plätze wären dort nur
+    // zufällig noch gültig. Bei 'ended' bleiben sie ABSICHTLICH
+    // stehen — das Siegerbild zeigt dieselbe Karte, die eben noch da
+    // war, und die soll sich nicht im letzten Moment neu sortieren.
+    if (v.phase === 'lobby' || v.phase === 'countdown') unitSpots = {};
     ensureChannel(v.broadcast_key);
     if (role === 'presenter') renderPresenter(v); else renderParticipant(v);
   }
@@ -1157,13 +1282,27 @@
       return;
     }
     if (r.correct === true) {
-      setFeedback(r.captured ? '✅ Feld erobert!' : '✅ Richtig!', 'ok');
+      // Drei Ausgänge, seit eine Burg drei Leben hat (Migration 0100):
+      // ein gewöhnliches Feld erobert, eine Burg getroffen (sie bleibt
+      // vorerst beim Gegner) oder eine Burg übernommen. Der letzte Fall
+      // ist der größte Augenblick des Spiels und bekommt eigene Worte —
+      // „Feld erobert!" hätte ihn verschluckt.
+      let msg = '✅ Richtig!';
+      if (r.captured) msg = r.captured.castle ? '👑 Burg erobert!' : '✅ Feld erobert!';
+      else if (r.castle_hit) msg = '💥 Burg getroffen! Noch ' + r.castle_hit.hp;
+      setFeedback(msg, 'ok');
       flashInput('ok');
       // Eigene Antwort ist Wahrheit — lokal patchen statt auf den
       // nächsten Takt zu warten, und die anderen anstoßen.
-      if (lastView && r.captured) {
-        const t = (lastView.tiles || []).find(x => x.r === r.captured.r && x.c === r.captured.c);
-        if (t) t.team = lastView.me.team;
+      const hitAt = r.captured || r.castle_hit;
+      if (lastView && hitAt) {
+        const t = (lastView.tiles || []).find(x => x.r === hitAt.r && x.c === hitAt.c);
+        if (t) {
+          if (r.captured) {
+            t.team = lastView.me.team;
+            if (r.captured.castle) t.hp = r.captured.hp;   // übernommen ⇒ wieder voll
+          } else t.hp = r.castle_hit.hp;
+        }
         renderStandings(lastView);
         renderPlayerMap();
       }
@@ -1919,6 +2058,7 @@
       channel = null; channelKey = null;
       root = ctx = null; role = null;
       els = {}; lastView = null; lastSig = null; busy = false; submitting = false;
+      unitSpots = {};   // die Einheiten-Plätze gehören zu DIESEM Raum
       pickSel = []; pickBusy = 0; factions = [0, 1, 2, 3];
       answerBuf = ''; keyMode = null; mapOpen = false;
     }

@@ -155,7 +155,9 @@ function buildBoard() {
       const d = Math.hypot(cell.u.x - k.u.x, cell.u.y - k.u.y);
       if (d < bd) { bd = d; team = t; }
     });
-    return { r: cell.r, c: cell.c, team, castle: castles.indexOf(cell) >= 0 };
+    const isCastle = castles.indexOf(cell) >= 0;
+    // `hp` nur an Burgen, wie clash_tiles_json es liefert (0100).
+    return { r: cell.r, c: cell.c, team, castle: isCastle, hp: isCastle ? 3 : null };
   });
 }
 buildBoard();
@@ -167,20 +169,31 @@ function newQuestion() {
   return { a, b };
 }
 
-/* Eine Eroberung: irgendein Feld an der eigenen Grenze. */
-function captureOne() {
+/* Ein Angriff auf irgendein Feld an der eigenen Grenze — mit
+   derselben Burg-Regel wie der Server seit 0100: eine Burg kostet
+   drei Treffer und wechselt beim letzten das Volk, statt zu
+   verschwinden. Burgen sind hier ausdrücklich KEINE Ausnahme mehr
+   (vorher `|| t.castle` in der Auswahl): sonst wären die Herzen in
+   der Vorschau ein Bild, das sich nie ändert. */
+function attackOne() {
   const mineSet = new Set(tiles.filter(t => t.team === myTeam).map(t => t.r + ',' + t.c));
   const dirsEven = [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
   const dirsOdd  = [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
   const border = tiles.filter(t => {
-    if (t.team === myTeam || t.castle) return false;
+    if (t.team === myTeam) return false;
     const dirs = (t.r % 2 === 1) ? dirsOdd : dirsEven;
     return dirs.some(d => mineSet.has((t.r + d[0]) + ',' + (t.c + d[1])));
   });
-  if (!border.length) return null;
+  if (!border.length) return { captured: null, castle_hit: null };
   const t = border[Math.floor(Math.random() * border.length)];
+  if (t.castle && (t.hp == null ? 3 : t.hp) > 1) {
+    t.hp = (t.hp == null ? 3 : t.hp) - 1;
+    return { captured: null, castle_hit: { r: t.r, c: t.c, hp: t.hp, owner: t.team } };
+  }
+  const prev = t.team;
   t.team = myTeam;
-  return { r: t.r, c: t.c };
+  if (t.castle) t.hp = 3;
+  return { captured: { r: t.r, c: t.c, prev_owner: prev, castle: !!t.castle, hp: 3 }, castle_hit: null };
 }
 
 const NAMES = [
@@ -199,7 +212,10 @@ const CORRECT = { 0: 18, 1: 41, 2: 47, 3: 9, 4: 33, 5: 21, 6: 2, 7: 16 };
 const WINNER  = 1;
 
 const RPC = {
-  clash_sig: () => ({ ok: true, sig: phase + ':' + tiles.map(t => t.team).join('') + ':' + streak }),
+  // Die Leben stecken mit in der Signatur — ein Burgtreffer ändert
+  // keinen Besitzer, soll aber trotzdem einen neuen Takt auslösen
+  // (auf dem Server macht das max(updated_at), siehe 0100).
+  clash_sig: () => ({ ok: true, sig: phase + ':' + tiles.map(t => t.team + '' + (t.hp == null ? '' : t.hp)).join('') + ':' + streak }),
 
   /* Der Beamer. Dieselbe Wahrheit, andere Felder — genau die, die
      renderPresenter/fillRosters lesen. Sie ist hier vor allem
@@ -269,14 +285,14 @@ const RPC = {
   }),
   clash_submit_answer: args => {
     const correct = args.p_answer === question.a + question.b;
-    let captured = null;
+    let hit = { captured: null, castle_hit: null };
     // Die richtige Antwort zählt auch in der Völker-Reihe hoch — sonst
     // stünde die neue Zahl (0099) hier als Standbild da und man sähe
     // nicht, ob sie überhaupt nachgeführt wird.
-    if (correct) { streak++; CORRECT[myTeam] = (CORRECT[myTeam] || 0) + 1; captured = captureOne(); }
+    if (correct) { streak++; CORRECT[myTeam] = (CORRECT[myTeam] || 0) + 1; hit = attackOne(); }
     else { streak = 0; }
     question = newQuestion();
-    return { ok: true, correct, captured, streak, question };
+    return { ok: true, correct, captured: hit.captured, castle_hit: hit.castle_hit, streak, question };
   }
 };
 

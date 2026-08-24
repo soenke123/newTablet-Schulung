@@ -817,15 +817,19 @@
   stroke-width: 1.5;
   filter: drop-shadow(-1px -1px 0 rgba(255,255,255,.18)) drop-shadow(1px 2px 2px rgba(30,20,5,.35));
 }
-/* Das eigene Gebiet auf der Karte des Teilnehmers. Es wird HELLER und
-   bekommt eine helle Kante — es wechselt NICHT die Farbe: die Farbe
-   sagt, wem die Kachel gehört, und das eigene Volk soll nicht plötzlich
-   ein neuntes sein. Ein sanftes Pulsieren obendrauf, damit das Gebiet
-   auf einen Blick zu finden ist, ohne es zu suchen. */
+/* Das eigene Gebiet auf der Karte des Teilnehmers. Es wird HELLER —
+   es wechselt NICHT die Farbe: die Farbe sagt, wem die Kachel gehört,
+   und das eigene Volk soll nicht plötzlich ein neuntes sein. Ein
+   sanftes Pulsieren obendrauf, damit das Gebiet auf einen Blick zu
+   finden ist, ohne es zu suchen.
+
+   Die helle Kante saß bis zum Feature-Durchgang HIER, an jedem
+   einzelnen Sechseck — und leuchtete damit vor allem zwischen den
+   eigenen Kacheln: das Gebiet zerfiel in lauter weiß umrandete
+   Waben. Sie ist an die Außengrenze umgezogen (.cm-border--mine),
+   die Kachel behält die gewöhnliche dunkle Fuge aus .cm-hex. */
 .cm-hex--mine {
   fill: color-mix(in srgb, var(--raw) 82%, #fff6d2);
-  stroke: rgba(255,250,225,.95);
-  stroke-width: 2.2;
   animation: cmMinePulse 2.6s ease-in-out infinite;
 }
 @keyframes cmMinePulse {
@@ -848,7 +852,56 @@
   stroke: color-mix(in srgb, var(--raw) 70%, #fff2c8);
   stroke-width: 3.7;
 }
+/* Die eigene Grenze auf der Karte des Teilnehmers: weiß, deckend und
+   ganz oben. tool.js hängt diese beiden Pfade als LETZTE ins SVG —
+   ein SVG malt in Dokumentreihenfolge, es gibt kein z-index. Zwei
+   Pfade, weil eine weiße Linie auf hellem Untergrund sonst verschwindet:
+   der dunkle, breitere Schein darunter trägt sie. */
+.cm-border--mineglow {
+  stroke: rgba(40,26,8,.55);
+  stroke-width: 9.5;
+}
+.cm-border--mine {
+  stroke: #fffdf5;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 4px rgba(255,255,255,.75));
+}
 .cm-iconlayer { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+
+/* ── Die drei Leben einer Burg ───────────────────────────────────
+   Sie stehen im unteren Teil der Burgkachel (die Burg selbst ragt von
+   dort nach oben). Größe und Ort kommen aus tool.js, weil beide am
+   Maßstab der Karte hängen — hier steht nur, wie ein Herz aussieht.
+   Verbrauchte Leben bleiben als dunkler Umriss stehen: „noch zwei"
+   liest sich nur, wenn auch zu sehen ist, wie viele es waren. */
+.cm-hearts {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: .12em;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.cm-heart {
+  color: #ff4d5e;
+  text-shadow:
+    0 0 2px rgba(0,0,0,.8),
+    -1px -1px 0 rgba(40,10,10,.9), 1px -1px 0 rgba(40,10,10,.9),
+    -1px  1px 0 rgba(40,10,10,.9), 1px  1px 0 rgba(40,10,10,.9);
+}
+/* Ein verbrauchtes Leben ist DUNKEL mit hellem Hof — nicht bloß
+   blass. Zuerst probiert war rgba(35,22,8,.42) ohne Hof: auf dem
+   roten Gebiet der Toast-Ritter war davon nichts mehr zu sehen, und
+   „noch eins" sah aus wie „hat eben nur eins". Der helle Hof trägt
+   die Form auf jeder Volksfarbe. */
+.cm-heart--lost {
+  color: rgba(26,15,5,.78);
+  text-shadow:
+    0 0 3px rgba(255,255,255,.7),
+    -1px -1px 0 rgba(255,252,240,.55), 1px -1px 0 rgba(255,252,240,.55),
+    -1px  1px 0 rgba(255,252,240,.55), 1px  1px 0 rgba(255,252,240,.55);
+}
 
 /* Sprites: Position (statisch, unten-mittig verankert — die Füße
    stehen exakt auf dem Kachel-Mittelpunkt) und Animation (Wander/
