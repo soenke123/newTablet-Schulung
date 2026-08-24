@@ -495,6 +495,12 @@
     let icons = '';
     Object.keys(byTeam).forEach(teamKey => {
       const team = parseInt(teamKey, 10);
+      // Neutrale Felder (slot -1, siehe Migration 0105 — sie füllen das
+      // Loch, das gleich große Völker in der Mitte offen ließen) gehören
+      // niemandem: keine Burg, keine Einheit, nur die graue Kachel aus
+      // dem poly-Durchlauf oben. fUnit(-1) fiele sonst auf Rot zurück
+      // und ein Volk stünde unbemannt auf fremden Feldern.
+      if (team < 0) return;
       const teamTiles = byTeam[teamKey];
       const raw = fStroke(team);
       // MEHRZAHL, seit eine Burg übernommen statt zerstört wird
