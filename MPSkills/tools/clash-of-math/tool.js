@@ -89,9 +89,17 @@
        sichtbaren Bereich — die Anteile beziehen sich auf den ganzen
        Bildschirm, in einem Kasten in der Seite ergäben sie nichts.
 
-   Was noch keine Quelle hat: die Serie des VOLKES (die eigene kommt
-   aus me.streak). Sie steht als „–" schon im Bild, damit später nur
-   der Wert nachzureichen ist — der Client liest v.team_streak.
+   Die Serie des VOLKES (v.team_streak) stand hier lange als „–" ohne
+   Quelle — seit Migration 0106 liefert der Server sie: ein geteilter
+   Zähler je Team (nicht die Summe der Einzel-Serien), der bei 20, 40,
+   60 … automatisch 7 Felder erobert. Die eigene Serie (me.streak)
+   gibt bei 10, 20, 30 … zwei offene manuelle Picks (pending_picks) —
+   die Karte öffnet sich dafür von selbst (siehe openMap(forced),
+   onMapTileClick), mit kurzer Frist, nach der der Server ungenutzte
+   Picks selbst zufällig einlöst (muss „schnell gehen", darf das Spiel
+   nicht aufhalten). Beide Boni benachrichtigen das eigene Team über
+   my_team_events (applyTeamEvents/showFireToast) — andere Völker
+   sehen davon nichts.
 
    Zum Anschauen ohne Raum: vorschau.html im selben Ordner. Sie lädt
    dieses tool.js und tool.css und erfindet nur den Server.
@@ -195,6 +203,14 @@
   // „-" und „0," sind gültige Zwischenstände, die keine Zahl sind),
   // die gerade aufgebaute Tastatur und ob das Karten-Fenster offen ist.
   let answerBuf = '', keyMode = null, mapOpen = false;
+  // Serien-Boni (Migration 0106): offene manuelle Picks aus dem
+  // Einzel-Bonus (10er-Serie), ihre Frist, der Countdown-Timer dafür,
+  // die höchste bereits gezeigte Team-Event-id (Toast-Dedupe) und der
+  // Auto-Dismiss-Timer des Toasts. Unabhängig von pickSel/pickBusy
+  // oben — die gehören der Lehrkraft-Lobby (Völker-Auswahl), nicht
+  // dem Spielbildschirm.
+  let myPendingPicks = 0, pendingPickDeadlineMs = 0, pickCountdownTimer = null;
+  let lastTeamEventId = 0, fireToastTimer = null;
 
   const MAP_GAP = 12, MAP_MIN = 260, MAP_MAX = 2000;
 
@@ -244,14 +260,19 @@
      (2) Die Territoriumsgrenze kommt aus den echten Nachbarschafts-
          kanten (Winkel zum Nachbar-Kachelmittelpunkt), nicht aus
          einer angenommenen Reihenfolge der Nachbar-Richtungen. */
+  // Hoch gezogen aus computeBorderSegments (waren dort inline), damit
+  // legalPickTargets (Migration 0106) dieselbe Nachbarschaftsregel wie
+  // clash_is_neighbor/clash_capture_random nutzen kann, ohne sie ein
+  // drittes Mal hinzuschreiben.
+  const HEX_DIRS_EVEN = [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
+  const HEX_DIRS_ODD  = [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]];
+
   function computeBorderSegments(tiles, centerFn, hexR) {
     const ownerMap = new Map();
     tiles.forEach(t => ownerMap.set(t.r + ',' + t.c, t.team));
-    const dirsEven = [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
-    const dirsOdd  = [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]];
     const segsByTeam = {};
     tiles.forEach(t => {
-      const dirs = (t.r % 2 === 1) ? dirsOdd : dirsEven;
+      const dirs = (t.r % 2 === 1) ? HEX_DIRS_ODD : HEX_DIRS_EVEN;
       const p = centerFn(t.r, t.c);
       dirs.forEach(d => {
         const nr = t.r + d[0], nc = t.c + d[1];
@@ -280,6 +301,23 @@
       const raw = fStroke(parseInt(team, 10));
       out += '<path class="cm-border" d="' + d + '" style="--raw:' + raw + '"></path>';
       out += '<path class="cm-border cm-border--inner" d="' + d + '" style="--raw:' + raw + '"></path>';
+    });
+    return out;
+  }
+
+  /* ─── Legale Zielfelder für den manuellen Serien-Bonus (0106) ────
+     Dieselbe Regel wie clash_is_neighbor/clash_capture_random: jedes
+     fremde oder neutrale Feld, das an eine eigene Kachel angrenzt.
+     Reine Anzeige-Hilfe (welche Kacheln pulsieren) — der Server prüft
+     beim Antippen (clash_pick_tile) alles noch einmal von Grund auf. */
+  function legalPickTargets(tiles, myTeam) {
+    const mineSet = new Set();
+    (tiles || []).forEach(t => { if (t.team === myTeam) mineSet.add(t.r + ',' + t.c); });
+    const out = new Set();
+    (tiles || []).forEach(t => {
+      if (t.team === myTeam) return;
+      const dirs = (t.r % 2 === 1) ? HEX_DIRS_ODD : HEX_DIRS_EVEN;
+      if (dirs.some(d => mineSet.has((t.r + d[0]) + ',' + (t.c + d[1])))) out.add(t.r + ',' + t.c);
     });
     return out;
   }
@@ -467,8 +505,15 @@
       // sagt bereits, wem die Kachel gehört: das darf die Hervorhebung
       // nicht überschreiben, sonst gehört das eigene Feld plötzlich
       // niemandem mehr.
-      const cls = (mine != null && t.team === mine) ? 'cm-hex cm-hex--mine' : 'cm-hex';
-      poly += '<polygon class="' + cls + '" points="' + pts.join(' ') + '" style="--raw:' + fStroke(t.team) + '"></polygon>';
+      // cm-hex--pickable (0106): legales Ziel für den offenen manuellen
+      // Serien-Bonus — nur gesetzt, wenn der Aufrufer ein opts.pickable-
+      // Set mitgibt (renderPlayerMap tut das nur, solange pending_picks
+      // offen sind).
+      const pickable = opts.pickable && opts.pickable.has(t.r + ',' + t.c);
+      const cls = 'cm-hex' + (mine != null && t.team === mine ? ' cm-hex--mine' : '') +
+                  (pickable ? ' cm-hex--pickable' : '');
+      poly += '<polygon class="' + cls + '" data-r="' + t.r + '" data-c="' + t.c + '" points="' +
+        pts.join(' ') + '" style="--raw:' + fStroke(t.team) + '"></polygon>';
     });
     const segs = computeBorderSegments(tiles, center, scale - Math.min(gap, 1));
     dom.svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
@@ -1168,10 +1213,19 @@
                 '<span class="cm-mapovtitle">Kingdoms of Mathoria</span>' +
                 '<button type="button" class="cm-mapovclose" id="cmMapClose" aria-label="Karte schließen">✕</button>' +
               '</div>' +
+              // Nur sichtbar, solange der Einzel-Serienbonus offene Picks
+              // hat (0106) — der Countdown steht hier, weil er direkt über
+              // der Karte den größten Sinn ergibt.
+              '<div class="cm-pickbanner cm-hide" id="cmPickBanner"></div>' +
               mapDomHTML('cmPMap') +
               '<div class="cm-mapovfoot" id="cmMapFoot"></div>' +
             '</div>' +
           '</div>' +
+          // Team-Toast (0106): Geschwister von .cm-mapov, damit „<Name>
+          // ist on fire"/„Ihr seid on fire" auch sichtbar ist, wenn die
+          // Karte gerade zu ist — die meisten Teammitglieder bekommen
+          // den Bonus ja gar nicht selbst, nur die Nachricht darüber.
+          '<div class="cm-firetoast cm-hide" id="cmFireToast"></div>' +
         '</div>' +
         // Ausgeschieden: derselbe Blick wie beim Zuschauen auf dem
         // Beamer, nur ohne Tastatur — die Karte steht jetzt fest da,
@@ -1207,8 +1261,10 @@
       teamStreak: root.querySelector('#cmTeamStreak'),
       mapBtn: root.querySelector('#cmMapBtn'),
       mapOv: root.querySelector('#cmMapOv'),
+      pickBanner: root.querySelector('#cmPickBanner'),
       mapFoot: root.querySelector('#cmMapFoot'),
       mapClose: root.querySelector('#cmMapClose'),
+      fireToast: root.querySelector('#cmFireToast'),
       q: root.querySelector('#cmQ'),
       input: root.querySelector('#cmIn'),
       keys: root.querySelector('#cmKeys'),
@@ -1234,12 +1290,18 @@
       if (!btn || btn.disabled) return;
       keyPress({ ins: btn.dataset.ins, act: btn.dataset.act });
     });
-    els.mapBtn.addEventListener('click', openMap);
-    els.mapClose.addEventListener('click', closeMap);
+    // Arrow-Wrapper statt der Funktionen direkt (0106): openMap/closeMap
+    // haben jetzt einen Parameter (forced/force) — ohne den Wrapper würde
+    // das MouseEvent des Klicks als erstes Argument durchrutschen und
+    // fälschlich als truthy forced/force gelesen.
+    els.mapBtn.addEventListener('click', () => openMap());
+    els.mapClose.addEventListener('click', () => closeMap());
     // Klick auf die Fläche neben der Karte schließt ebenfalls — der
     // ✕ ist klein, und ein Kind, das die Karte wieder loswerden will,
-    // tippt irgendwohin.
+    // tippt irgendwohin. Während eines offenen Serien-Bonus verweigert
+    // closeMap() das (siehe dort).
     els.mapOv.addEventListener('click', ev => { if (ev.target === els.mapOv) closeMap(); });
+    els.pmap.svg.addEventListener('click', onMapTileClick);   // 0106: manueller Pick
     document.addEventListener('keydown', onHardwareKey);
   }
 
@@ -1249,28 +1311,153 @@
      und sieht dann dasselbe Bild wie die Klasse auf dem Beamer, nur
      ohne die wandernden Einheiten und mit dem eigenen Gebiet
      hervorgehoben. */
-  function openMap() {
+  // `forced` (0106): true, wenn ein offener Serien-Bonus die Karte
+  // selbst öffnet (nicht der 🗺️-Knopf) — bekommt eine auffälligere
+  // Umrandung (.cm-mapov--forced), die zeigt, dass hier eine Aktion
+  // erwartet wird, kein bloßes Nachschauen.
+  function openMap(forced) {
     if (!els.mapOv) return;
     mapOpen = true;
     els.mapOv.classList.remove('cm-hide');
+    els.mapOv.classList.toggle('cm-mapov--forced', !!forced || myPendingPicks > 0);
     renderPlayerMap();
     // Zweimal: beim ersten Mal hat die gerade eingeblendete Fläche noch
     // keine verlässlichen Maße (clientWidth 0) — dieselbe Zweitmessung
     // wie beim Beamer.
     requestAnimationFrame(renderPlayerMap);
   }
-  function closeMap() {
+  // `force` (0106): während ein Serien-Bonus offene Picks hat, lässt
+  // sich die Karte nicht wegtippen (✕/Backdrop) — sie muss erst
+  // beantwortet oder abgelaufen sein. applyPendingPicks/show() rufen
+  // hier mit force=true durch, wenn das wirklich gewollt ist.
+  function closeMap(force) {
+    if (!force && myPendingPicks > 0) return;
     mapOpen = false;
     if (els.mapOv) els.mapOv.classList.add('cm-hide');
   }
   function renderPlayerMap() {
     if (!mapOpen || !lastView || !els.pmap) return;
     const myTeam = lastView.me && lastView.me.team;
-    renderHexMap(els.pmap, lastView, { units: false, highlight: myTeam });
+    // Nur während eines offenen Einzel-Bonus (0106) markiert die Karte
+    // die legalen Ziele — sonst ist sie reine Auskunft, kein Angebot.
+    const pickable = myPendingPicks > 0 ? legalPickTargets(lastView.tiles || [], myTeam) : null;
+    renderHexMap(els.pmap, lastView, { units: false, highlight: myTeam, pickable });
     if (els.mapFoot && myTeam != null) {
       els.mapFoot.innerHTML = `<span class="cm-maplegend" style="--team:${fStroke(myTeam)}">` +
         '<i></i>Dein Gebiet — ' + ctx.esc(fLabel(myTeam)) + '</span>';
     }
+  }
+
+  /* ─── Manueller Pick aus dem Einzel-Serienbonus (0106) ───────────
+     onMapTileClick sitzt auf dem SVG der Karte (Delegation statt eines
+     Zuhörers je Sechseck, das bei jedem Zeichnen neu entstünde).
+     applyPendingPicks/updatePickBanner/startPickCountdown bilden
+     zusammen den Zustandsautomaten: Karte öffnet sich, wenn neue Picks
+     da sind, Countdown läuft, läuft er ab, hat der Server den Rest
+     längst automatisch erobert (clash_expire_pending_picks) — der
+     Client muss dafür nichts Eigenes tun, nur neu abfragen. */
+  async function onMapTileClick(ev) {
+    if (myPendingPicks <= 0) return;
+    const poly = ev.target.closest('polygon.cm-hex--pickable');
+    if (!poly) return;
+    const r = parseInt(poly.dataset.r, 10), c = parseInt(poly.dataset.c, 10);
+    if (Number.isNaN(r) || Number.isNaN(c)) return;
+    poly.classList.add('cm-hex--pickbusy');
+    const res = await ctx.actions.call('clash_pick_tile', { p_r: r, p_c: c });
+    if (res && res.ok) {
+      // Wie in onSubmit: eigene Antwort ist Wahrheit, lokal patchen statt
+      // auf den nächsten Takt zu warten. Zwei Ausgänge wie bei jeder
+      // Eroberung (Burg-3-Leben, Migration 0100): entweder wechselt der
+      // Besitzer, oder eine Burg verliert „nur" ein Leben.
+      const hitAt = res.captured || res.castle_hit;
+      if (lastView && hitAt) {
+        const t = (lastView.tiles || []).find(x => x.r === r && x.c === c);
+        if (t) {
+          if (res.captured) { t.team = lastView.me.team; if (res.captured.castle) t.hp = res.captured.hp; }
+          else t.hp = res.castle_hit.hp;
+        }
+        renderStandings(lastView);
+      }
+      applyPendingPicks(res.pending_picks, res.pick_deadline);
+      renderPlayerMap();
+      nudge();
+    } else {
+      // Ziel war inzwischen ungültig (z. B. schon vom Auto-Ablauf
+      // erobert) — kein Fehlerbild, nur neu abgleichen.
+      poly.classList.remove('cm-hex--pickbusy');
+      tick(true);
+    }
+  }
+
+  function applyPendingPicks(n, deadlineIso) {
+    const wasPending = myPendingPicks > 0;
+    myPendingPicks = n || 0;
+    if (myPendingPicks > 0) {
+      pendingPickDeadlineMs = deadlineIso ? new Date(deadlineIso).getTime() : (Date.now() + 6000);
+      if (!mapOpen) openMap(true);
+      updatePickBanner();
+      startPickCountdown();
+    } else if (wasPending) {
+      stopPickCountdown();
+      updatePickBanner();
+      closeMap(true);
+    }
+  }
+
+  function updatePickBanner() {
+    if (!els.pickBanner) return;
+    if (myPendingPicks <= 0) { els.pickBanner.classList.add('cm-hide'); return; }
+    els.pickBanner.classList.remove('cm-hide');
+    const leftS = Math.max(0, Math.ceil((pendingPickDeadlineMs - Date.now()) / 1000));
+    els.pickBanner.innerHTML =
+      '<b>🔥 Wähle ' + myPendingPicks + (myPendingPicks === 1 ? ' Feld' : ' Felder') + ' deiner Wahl!</b>' +
+      '<span class="cm-pickbanner-time">' + leftS + 's</span>';
+  }
+
+  function startPickCountdown() {
+    stopPickCountdown();
+    pickCountdownTimer = setInterval(() => {
+      updatePickBanner();
+      if (Date.now() >= pendingPickDeadlineMs) { stopPickCountdown(); tick(true); }
+    }, 250);
+  }
+  function stopPickCountdown() {
+    if (pickCountdownTimer) clearInterval(pickCountdownTimer);
+    pickCountdownTimer = null;
+  }
+
+  /* ─── Team-Toast (0106) ───────────────────────────────────────────
+     Passiv — kein Zutun nötig, nur ein paar Sekunden sichtbar. Zeigt
+     nur das JÜNGSTE Ereignis (kein Stapel): zwei Treffer im selben
+     Poll sind selten genug, dass das keine Information verschluckt,
+     die nicht kurz danach ohnehin wieder auftaucht. */
+  function showFireToast(text) {
+    if (!els.fireToast) return;
+    els.fireToast.textContent = text;
+    els.fireToast.classList.remove('cm-hide');
+    void els.fireToast.offsetWidth;   // Neustart der Übergangsanimation erzwingen
+    els.fireToast.classList.add('cm-firetoast--show');
+    if (fireToastTimer) clearTimeout(fireToastTimer);
+    fireToastTimer = setTimeout(() => {
+      if (els.fireToast) els.fireToast.classList.remove('cm-firetoast--show');
+      fireToastTimer = setTimeout(() => {
+        if (els.fireToast) els.fireToast.classList.add('cm-hide');
+      }, 300);
+    }, 3500);
+  }
+
+  function applyTeamEvents(v) {
+    const events = Array.isArray(v.my_team_events) ? v.my_team_events : [];
+    const fresh = events.filter(e => e.id > lastTeamEventId);
+    fresh.forEach(e => {
+      if (e.kind === 'individual_fire') {
+        const name = (e.payload && e.payload.name) || 'Jemand';
+        showFireToast('🔥 ' + name + ' ist on fire!');
+      } else if (e.kind === 'team_fire') {
+        showFireToast('🔥🔥 Ihr seid on fire!');
+      }
+    });
+    events.forEach(e => { if (e.id > lastTeamEventId) lastTeamEventId = e.id; });
   }
 
   async function onSubmit() {
@@ -1333,6 +1520,13 @@
     }
     if (r.streak != null) setStreak(r.streak);
     if (r.question) setQuestion(r.question);
+    // 0106: aus der eigenen Antwort direkt, ohne auf den nächsten Takt
+    // zu warten — genau das macht den Einzel-Bonus „schnell". Die
+    // Team-Serie ebenso: der eigene Broadcast schließt den Absender
+    // selbst aus (siehe setTeamStreak), sonst stünde sie bis zum
+    // nächsten Takt auf dem alten Wert.
+    if (r.team_streak != null) setTeamStreak(r.team_streak);
+    if (r.pending_picks != null) applyPendingPicks(r.pending_picks, r.pick_deadline);
   }
 
   /* Rückmeldung und Aufgabe stehen in EIGENEN Kästen mit fester Höhe:
@@ -1367,6 +1561,18 @@
     if (!els.streak) return;
     els.streak.querySelector('b').textContent = String(n || 0);
     els.streak.classList.toggle('cm-pstreak--hot', (n || 0) >= 3);
+  }
+  // Geteilte Team-Serie (0106). Eigene Funktion statt nur in
+  // renderParticipant inline, weil onSubmit sie ZUSÄTZLICH sofort aus
+  // der eigenen RPC-Antwort setzen muss: der Broadcast-Kanal schließt
+  // den Absender selbst aus (`broadcast:{self:false}`, siehe
+  // ensureChannel), die eigene Antwort löst also KEIN eigenes tick()
+  // aus — ohne diesen Aufruf bliebe das Team-Serien-Badge bis zum
+  // nächsten 8s-Sicherheitsnetz-Takt stehen.
+  function setTeamStreak(n) {
+    if (!els.teamStreak) return;
+    els.teamStreak.querySelector('b').textContent = (n != null) ? String(n) : '–';
+    els.teamStreak.classList.toggle('cm-pstreak--hot', (n || 0) >= 3);
   }
   function setQuestion(q) {
     if (!els.q || !q) return;
@@ -1529,13 +1735,9 @@
       els.heroUnit.alt = fLabel(myTeam);
     }
     setStreak(v.me.streak || 0);
-    // Die Serie des Volkes hat noch keine Quelle (siehe DOM-Kommentar).
-    // Sobald der Server sie schickt, ist das hier die einzige Zeile,
-    // die sich ändert.
-    if (els.teamStreak) {
-      els.teamStreak.querySelector('b').textContent =
-        (v.team_streak != null) ? String(v.team_streak) : '–';
-    }
+    setTeamStreak(v.team_streak);   // 0106: geteilter Team-Zähler statt „–"
+    applyTeamEvents(v);   // 0106: Toast für „<Name>/Ihr seid on fire"
+    applyPendingPicks((v.me && v.me.pending_picks) || 0, v.me && v.me.pick_deadline);
     renderStandings(v);
     if (v.match_ends_at) startMatchTimer(v.match_ends_at); else stopMatchTimer();
     if (v.me.question) setQuestion(v.me.question);
@@ -1553,7 +1755,9 @@
     // wie der sichtbare Bereich — was dahinter noch scrollen kann, ist
     // dann nur eine Falle für den Daumen.
     document.body.classList.toggle('cm-locked', which === 'game');
-    if (which !== 'game') { closeMap(); answerBuf = ''; }
+    // force=true (0106): ein Phasenwechsel (Runde vorbei, ausgeschieden…)
+    // muss die Karte auch mitten in einem offenen Serien-Bonus schließen.
+    if (which !== 'game') { closeMap(true); answerBuf = ''; }
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -2019,6 +2223,8 @@
     mount(el, c) {
       root = el; ctx = c; role = ctx.role;
       destroyed = false; lastSig = null; lastView = null; channelKey = null;
+      // 0106: neuer Raum, neue Serien-Boni-Historie.
+      myPendingPicks = 0; pendingPickDeadlineMs = 0; lastTeamEventId = 0;
 
       if (role === 'presenter') buildPresenterDOM(); else buildParticipantDOM();
 
@@ -2075,6 +2281,9 @@
       pollTimer = null;
       stopCountdown();
       stopMatchTimer();
+      stopPickCountdown();   // 0106
+      if (fireToastTimer) clearTimeout(fireToastTimer);
+      fireToastTimer = null;
       if (onWinResize) window.removeEventListener('resize', onWinResize);
       onWinResize = null;
       document.removeEventListener('keydown', onHardwareKey);
@@ -2093,6 +2302,7 @@
       unitSpots = {};   // die Einheiten-Plätze gehören zu DIESEM Raum
       pickSel = []; pickBusy = 0; factions = [0, 1, 2, 3];
       answerBuf = ''; keyMode = null; mapOpen = false;
+      myPendingPicks = 0; pendingPickDeadlineMs = 0; lastTeamEventId = 0;   // 0106
     }
   });
 })();

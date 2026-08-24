@@ -121,6 +121,25 @@ let myTeam   = 0;
 let phase    = 'running';
 let streak   = 0;
 let tiles    = [];
+// Serien-Boni (0106): eine geteilte Team-Serie, offene manuelle Picks
+// mit ihrer Frist, und ein kleines Ereignis-Log — reicht, um die
+// Karten-Auto-Öffnung, den Countdown-Banner, die pulsierenden Ziele
+// und den Team-Toast ohne echten Server durchzuklicken.
+let teamStreak = 0;
+let teamEvents = [];
+let nextEventId = 1;
+let pendingPicks = 0;
+let pickDeadline = null;
+// Läuft die Frist ab, erobert der „Server" die restlichen Picks selbst
+// — genau wie clash_expire_pending_picks, nur lazy beim nächsten
+// clash_view()/clash_sig()-Aufruf statt in echter SQL.
+function expirePendingPicks() {
+  if (pendingPicks <= 0 || !pickDeadline) return;
+  if (Date.now() < new Date(pickDeadline).getTime()) return;
+  for (let i = 0; i < pendingPicks; i++) attackOne();
+  pendingPicks = 0;
+  pickDeadline = null;
+}
 
 function hexUnit(r, c) {
   return { x: (c + 0.5) * Math.sqrt(3) + (r % 2 === 1 ? Math.sqrt(3) / 2 : 0), y: (r + 0.5) * 1.5 };
@@ -215,7 +234,11 @@ const RPC = {
   // Die Leben stecken mit in der Signatur — ein Burgtreffer ändert
   // keinen Besitzer, soll aber trotzdem einen neuen Takt auslösen
   // (auf dem Server macht das max(updated_at), siehe 0100).
-  clash_sig: () => ({ ok: true, sig: phase + ':' + tiles.map(t => t.team + '' + (t.hp == null ? '' : t.hp)).join('') + ':' + streak }),
+  clash_sig: () => {
+    expirePendingPicks();
+    return { ok: true, sig: phase + ':' + tiles.map(t => t.team + '' + (t.hp == null ? '' : t.hp)).join('') +
+      ':' + streak + ':' + teamStreak + ':' + pendingPicks };
+  },
 
   /* Der Beamer. Dieselbe Wahrheit, andere Felder — genau die, die
      renderPresenter/fillRosters lesen. Sie ist hier vor allem
@@ -254,45 +277,106 @@ const RPC = {
   clash_room_start: () => { phase = 'running'; return { ok: true }; },
   clash_room_reset: () => { phase = 'lobby'; return { ok: true }; },
 
-  clash_view: () => ({
-    ok: true,
-    phase: phase === 'out' ? 'running' : phase,
-    team_count: TEAMS,
-    factions: factions,
-    countdown_ends_at: new Date(Date.now() + 5000).toISOString(),
-    match_ends_at: new Date(Date.now() + 183000).toISOString(),
-    winner_team: WINNER,
-    broadcast_key: null,
-    rows: ROWS, cols: COLS,
-    tiles: tiles.map(t => ({ ...t })),
-    // Kopfzahlen je Volk — aus denselben Namenslisten wie beim Beamer,
-    // damit sie bei ?teams=8 nicht plötzlich bei null stehen.
-    teams: Object.fromEntries(Array.from({ length: TEAMS },
-      (_, i) => [i, NAMES[i % NAMES.length].length])),
-    team_correct_counts: CORRECT,
-    my_team_members: [
-      { name: 'Lena', me: false }, { name: 'Jonas', me: true },
-      { name: 'Mia', me: false },  { name: 'Ben', me: false }
-    ],
-    online_count: 22, room_total: 24,
-    me: {
-      team: myTeam,
-      alive: phase !== 'out',
-      streak: streak,
-      question: question,
-      seat: 3, name: 'Jonas'
-    }
-  }),
+  clash_view: () => {
+    expirePendingPicks();
+    return {
+      ok: true,
+      phase: phase === 'out' ? 'running' : phase,
+      team_count: TEAMS,
+      factions: factions,
+      countdown_ends_at: new Date(Date.now() + 5000).toISOString(),
+      match_ends_at: new Date(Date.now() + 183000).toISOString(),
+      winner_team: WINNER,
+      broadcast_key: null,
+      rows: ROWS, cols: COLS,
+      tiles: tiles.map(t => ({ ...t })),
+      // Kopfzahlen je Volk — aus denselben Namenslisten wie beim Beamer,
+      // damit sie bei ?teams=8 nicht plötzlich bei null stehen.
+      teams: Object.fromEntries(Array.from({ length: TEAMS },
+        (_, i) => [i, NAMES[i % NAMES.length].length])),
+      team_correct_counts: CORRECT,
+      // 0106: geteilte Team-Serie + die letzten Team-Ereignisse (nur
+      // fürs eigene Volk, wie clash_view es auch server-seitig filtert).
+      team_streak: teamStreak,
+      my_team_events: teamEvents.slice(-20),
+      my_team_members: [
+        { name: 'Lena', me: false }, { name: 'Jonas', me: true },
+        { name: 'Mia', me: false },  { name: 'Ben', me: false }
+      ],
+      online_count: 22, room_total: 24,
+      me: {
+        team: myTeam,
+        alive: phase !== 'out',
+        streak: streak,
+        question: question,
+        seat: 3, name: 'Jonas',
+        pending_picks: pendingPicks,
+        pick_deadline: pickDeadline
+      }
+    };
+  },
   clash_submit_answer: args => {
+    expirePendingPicks();
     const correct = args.p_answer === question.a + question.b;
     let hit = { captured: null, castle_hit: null };
-    // Die richtige Antwort zählt auch in der Völker-Reihe hoch — sonst
-    // stünde die neue Zahl (0099) hier als Standbild da und man sähe
-    // nicht, ob sie überhaupt nachgeführt wird.
-    if (correct) { streak++; CORRECT[myTeam] = (CORRECT[myTeam] || 0) + 1; hit = attackOne(); }
-    else { streak = 0; }
+    if (correct) {
+      // Die richtige Antwort zählt auch in der Völker-Reihe hoch — sonst
+      // stünde die neue Zahl (0099) hier als Standbild da und man sähe
+      // nicht, ob sie überhaupt nachgeführt wird.
+      const oldStreak = streak;
+      streak++;
+      CORRECT[myTeam] = (CORRECT[myTeam] || 0) + 1;
+      hit = attackOne();
+
+      // Einzel-Serie (0106): jedes Vielfache von 10 gibt 2 offene Picks.
+      if (Math.floor((oldStreak + 1) / 10) > Math.floor(oldStreak / 10)) {
+        pendingPicks += 2;
+        pickDeadline = new Date(Date.now() + 6000).toISOString();
+        teamEvents.push({ id: nextEventId++, kind: 'individual_fire',
+          payload: { name: 'Jonas', streak: oldStreak + 1 } });
+      }
+
+      // Team-Serie (0106): jedes Vielfache von 20 erobert automatisch
+      // 7 Felder.
+      const oldTeamStreak = teamStreak;
+      teamStreak++;
+      if (Math.floor(teamStreak / 20) > Math.floor(oldTeamStreak / 20)) {
+        teamEvents.push({ id: nextEventId++, kind: 'team_fire', payload: { streak: teamStreak } });
+        for (let i = 0; i < 7; i++) attackOne();
+      }
+    } else {
+      streak = 0;
+      teamStreak = 0;
+    }
     question = newQuestion();
-    return { ok: true, correct, captured: hit.captured, castle_hit: hit.castle_hit, streak, question };
+    return {
+      ok: true, correct, captured: hit.captured, castle_hit: hit.castle_hit,
+      streak, team_streak: teamStreak, pending_picks: pendingPicks, pick_deadline: pickDeadline,
+      question
+    };
+  },
+  // Manueller Pick (0106) — dieselbe Erobern-Logik wie attackOne(), nur
+  // auf dem genannten Feld statt einem zufälligen Grenzfeld. Die Vorschau
+  // prüft die Legalität nicht noch einmal nach (das tut im Betrieb
+  // clash_capture_specific serverseitig) — hier reicht, dass tool.js
+  // ohnehin nur pickbare Kacheln anklickbar macht.
+  clash_pick_tile: args => {
+    if (pendingPicks <= 0) return { ok: false, error: 'no_pending_picks' };
+    const t = tiles.find(x => x.r === args.p_r && x.c === args.p_c);
+    if (!t || t.team === myTeam) return { ok: false, error: 'already_owned' };
+    const prev = t.team;
+    let captured = null, castle_hit = null;
+    if (t.castle && (t.hp == null ? 3 : t.hp) > 1) {
+      t.hp = (t.hp == null ? 3 : t.hp) - 1;
+      castle_hit = { r: t.r, c: t.c, hp: t.hp, owner: prev };
+    } else {
+      t.team = myTeam;
+      if (t.castle) t.hp = 3;
+      captured = { r: t.r, c: t.c, prev_owner: prev, castle: !!t.castle, hp: 3 };
+    }
+    pendingPicks--;
+    pickDeadline = pendingPicks > 0 ? new Date(Date.now() + 6000).toISOString() : null;
+    return { ok: true, captured, castle_hit, pending_picks: pendingPicks, pick_deadline: pickDeadline };
   }
 };
 

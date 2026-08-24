@@ -844,6 +844,26 @@
 @media (prefers-reduced-motion: reduce) {
   .cm-hex--mine { animation: none; }
 }
+/* Legales Zielfeld für den manuellen Serien-Bonus (0106, siehe
+   legalPickTargets/onMapTileClick in tool.js) — ein goldener Puls, der
+   klar sagt „hier tippen", ohne die Fraktionsfarbe der Kachel selbst
+   zu verändern (die bleibt die Auskunft, wem sie gerade gehört). */
+.cm-hex--pickable {
+  cursor: pointer;
+  stroke: #fff3cf;
+  stroke-width: 3;
+  animation: cmPickPulse 1s ease-in-out infinite;
+}
+@keyframes cmPickPulse {
+  0%, 100% { filter: drop-shadow(0 0 2px #ffd76a) drop-shadow(-1px -1px 0 rgba(255,255,255,.18)) drop-shadow(1px 2px 2px rgba(30,20,5,.35)); }
+  50%      { filter: drop-shadow(0 0 10px #ffe89e) drop-shadow(-1px -1px 0 rgba(255,255,255,.18)) drop-shadow(1px 2px 2px rgba(30,20,5,.35)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-hex--pickable { animation: none; }
+}
+/* Kurz nach dem Antippen, während die Antwort vom Server noch
+   aussteht — verhindert einen zweiten Tipp auf dasselbe Feld. */
+.cm-hex--pickbusy { opacity: .55; pointer-events: none; }
 /* Territoriumsgrenze: dicke Außenlinie je Fraktion um das GANZE
    Gebiet (aus den echten Nachbarschaftskanten, siehe tool.js
    computeBorderSegments) + eine hellere Innenlinie — zusammen die
@@ -1278,6 +1298,31 @@ body.cm-locked { overflow: hidden; }
   color: #ffe0a8;
   box-shadow: 0 0 10px rgba(255,150,40,.45);
 }
+/* Team-Toast (0106): „<Name> ist on fire" / „Ihr seid on fire". Sitzt
+   als Geschwister von .cm-mapov oben mittig im Spielbildschirm, damit
+   er auch sichtbar ist, wenn die Karte gerade zu ist — dieselbe
+   Farbsprache wie .cm-pstreak--hot, nur als eigenständiger Hinweis
+   statt eines Badge-Zustands. */
+.cm-firetoast {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translate(-50%, -14px);
+  z-index: 8;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(120,52,6,.92);
+  border: 1.5px solid #ffb347;
+  color: #ffe0a8;
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: .82rem;
+  box-shadow: 0 6px 18px rgba(0,0,0,.5), 0 0 14px rgba(255,150,40,.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s ease, transform .3s ease;
+}
+.cm-firetoast--show { opacity: 1; transform: translate(-50%, 0); }
 /* Der Knopf zur Karte. Sie ist standardmäßig ZU: der Platz auf dem
    Spielbildschirm gehört der Aufgabe. */
 .cm-pmapbtn {
@@ -1544,6 +1589,43 @@ body.cm-locked { overflow: hidden; }
    Karte nach (`flex: 1 1 auto` + `min-height: 0` schlagen das
    Seitenverhältnis) statt aus dem Fenster zu laufen. */
 .cm-mapov .cm-hexmap { aspect-ratio: 1 / 1; }
+/* Offener Serien-Bonus (0106): die Karte hat sich selbst geöffnet und
+   erwartet eine Aktion, nicht nur einen Blick — auffälligerer Rahmen,
+   der ✕-Knopf ist deaktiviert (closeMap() verweigert das Schließen
+   ohnehin, hier nur die passende Optik dazu). */
+.cm-mapov--forced .cm-mapovbox {
+  border-color: #ffb347;
+  box-shadow: 0 0 0 2px var(--cm-wood) inset, 0 0 0 7px var(--cm-night) inset,
+              0 0 0 9px #ffb347 inset, 0 0 26px rgba(255,150,40,.55), 0 20px 44px rgba(0,0,0,.6);
+}
+.cm-mapov--forced .cm-mapovclose { opacity: .35; pointer-events: none; }
+/* Der Countdown-Banner über der Karte, solange pending_picks offen
+   sind. cmBreathe ist dasselbe Keyframe, das schon die Burg atmen
+   lässt (siehe .cm-spriteinner--castle) — hier statt eines neuen
+   Effekts einfach wiederverwendet. */
+.cm-pickbanner {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #ffb347, #ff8a3d);
+  color: #3a2306;
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: .95rem;
+  box-shadow: 0 3px 10px rgba(0,0,0,.3);
+  animation: cmBreathe 1.6s ease-in-out infinite;
+}
+.cm-pickbanner-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(58,35,6,.18);
+}
 .cm-mapovhead {
   flex: 0 0 auto;
   display: flex;
