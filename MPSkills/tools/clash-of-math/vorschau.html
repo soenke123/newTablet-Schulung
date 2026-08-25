@@ -298,11 +298,163 @@ function addRuinPoints(team, n) {
   return out;
 }
 
-let question = newQuestion();
-function newQuestion() {
+/* ── Aufgabenpool und Aufgaben (Migrationen 0109/0110) ────────────
+   Nachbau, kein zweiter Erzeuger: die Vorschau soll zeigen, wie sich
+   die drei Tastatur-Layouts und die Antwortkacheln anfühlen — ob eine
+   Bruchaufgabe im Kopf lösbar bleibt, entscheidet der Server und wird
+   dort geprüft (siehe Kopfkommentar von 0110). Die Regeln sind hier
+   deshalb absichtlich die einfache Fassung derselben Idee.       */
+let pool = { add100: 'free' };
+
+const CATALOG = [
+  { key: 'basics', label: 'Grundrechenarten', items: [
+    { key: 'add100', label: 'Addition bis 100', example: '37 + 48', free: true, mc: true, choices: 6 }
+  ] },
+  { key: 'frac', label: 'Bruchrechnung', items: [
+    { key: 'frac_addsub',  label: 'Addieren / Subtrahieren',    example: '3/4 + 1/8', free: true,  mc: true, choices: 6 },
+    { key: 'frac_muldiv',  label: 'Multiplizieren / Dividieren', example: '3/5 · 5/6', free: true,  mc: true, choices: 6 },
+    { key: 'frac_reduce',  label: 'Kürzen',                      example: '12/18',     free: true,  mc: true, choices: 6 },
+    { key: 'frac_compare', label: 'Vergleichen (< = >)',         example: '3/4 ▢ 2/3', free: false, mc: true, choices: 3 }
+  ] }
+];
+const TASK = {};
+CATALOG.forEach(g => g.items.forEach(it => { TASK[it.key] = it; }));
+
+const gcd2 = (a, b) => (b ? gcd2(b, a % b) : Math.abs(a));
+const norm = (n, d) => { const g = gcd2(n, d) || 1; return [n / g, d / g]; };
+const ftext = (n, d) => (d === 0 ? null : n === 0 ? '0' : (d === 1 ? String(n) : n + '/' + d));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+// Nennerpaare mit kgV ≤ 24, wie clash_frac_pairs()
+const PAIRS = ['3,3','4,4','5,5','6,6','8,8','2,4','2,6','2,8','2,10','2,12',
+               '3,6','3,12','4,8','4,12','5,10','6,12','2,3','3,4','2,5','4,6','3,8','6,8'];
+const coprimeNum = d => { const c = []; for (let n = 1; n < Math.max(d, 2); n++) if (gcd2(n, d) === 1) c.push(n); return pick(c); };
+
+// Genau wie clash_pool_input: das Tipp-Layout gehört dem RAUM.
+function poolInput() {
+  return Object.keys(pool).some(k => pool[k] === 'free' && TASK[k] && k.indexOf('frac') === 0)
+    ? 'fraction' : 'natural';
+}
+
+function genFor(key) {
+  if (key === 'frac_addsub' || key === 'frac_compare') {
+    let [d1, d2] = pick(PAIRS).split(',').map(Number);
+    if (Math.random() < 0.5) { const s = d1; d1 = d2; d2 = s; }
+    const n1 = coprimeNum(d1), n2 = coprimeNum(d2);
+    if (key === 'frac_compare') {
+      const c = n1 * d2 - n2 * d1;
+      return { text: ftext(n1, d1) + ' ▢ ' + ftext(n2, d2), eq: false,
+        answer: c < 0 ? '<' : c > 0 ? '>' : '=', choices_fixed: ['<', '=', '>'], distract: [] };
+    }
+    const plus = Math.random() < 0.5;
+    const [an, ad] = norm(plus ? n1 * d2 + n2 * d1 : n1 * d2 - n2 * d1, d1 * d2);
+    const [bn, bd] = norm(plus ? n1 * d2 - n2 * d1 : n1 * d2 + n2 * d1, d1 * d2);
+    return {
+      text: ftext(n1, d1) + (plus ? ' + ' : ' − ') + ftext(n2, d2),
+      answer: ftext(an, ad), answer_n: an, answer_d: ad,
+      distract: [ftext(plus ? n1 + n2 : n1 - n2, d1 + d2), ftext(bn, bd),
+                 ftext(n1 * n2, d1 * d2), ftext(an + 1, ad), ftext(an - 1, ad)]
+    };
+  }
+  if (key === 'frac_muldiv') {
+    const d1 = 2 + Math.floor(Math.random() * 8), n1 = coprimeNum(d1);
+    const d2 = 2 + Math.floor(Math.random() * 8), n2 = coprimeNum(d2);
+    const mul = Math.random() < 0.5;
+    const [an, ad] = norm(mul ? n1 * n2 : n1 * d2, mul ? d1 * d2 : d1 * n2);
+    return {
+      text: ftext(n1, d1) + (mul ? ' · ' : ' : ') + ftext(n2, d2),
+      answer: ftext(an, ad), answer_n: an, answer_d: ad,
+      distract: [ftext(mul ? n1 * d2 : n1 * n2, mul ? d1 * n2 : d1 * d2),
+                 ftext(ad, an), ftext(n1 * n2, d1), ftext(an + 1, ad), ftext(an - 1, ad)]
+    };
+  }
+  if (key === 'frac_reduce') {
+    const d = pick([2, 3, 4, 5, 6, 8, 10, 12]), n = coprimeNum(d), k = 2 + Math.floor(Math.random() * 5);
+    // Ein echter Teiler von k: „mit 2 gekürzt, wo 4 nötig gewesen wäre"
+    // ist der häufigste Fehler. Die UNGEKÜRZTE Form darf hier NICHT
+    // stehen — sie ist die Aufgabe selbst.
+    const teiler = []; for (let t = 2; t < k; t++) if (k % t === 0) teiler.push(t);
+    const p = teiler.length ? pick(teiler) : null;
+    return {
+      text: ftext(n * k, d * k), answer: ftext(n, d), answer_n: n, answer_d: d, strict: true,
+      distract: [p ? ftext(n * k / p, d * k / p) : null,
+                 ftext(n, d * k), ftext(n * k, d), ftext(d, n), ftext(n + 1, d)]
+    };
+  }
   const a = 2 + Math.floor(Math.random() * 60);
   const b = 2 + Math.floor(Math.random() * (98 - a));
-  return { a, b };
+  const s = a + b;
+  return { text: a + ' + ' + b, answer: String(s), answer_n: s, answer_d: 1,
+    distract: [String(s + 10), String(s - 10), String(s + 1), String(s - 1), String(s + 9)] };
+}
+
+// Entdoppeln wie clash_q_choices: nach WERT, beim Kürzen nach TEXT.
+function choiceKey(txt, strict) {
+  if (strict) return String(txt).trim();
+  const m = /^(-?\d+)(?:\/(\d+))?$/.exec(String(txt).trim());
+  if (!m) return String(txt).trim();
+  const [n, d] = norm(Number(m[1]), m[2] ? Number(m[2]) : 1);
+  return n + '/' + d;
+}
+
+let question = newQuestion();
+function newQuestion() {
+  const keys = Object.keys(pool).filter(k => TASK[k]);
+  const key = keys.length ? pick(keys) : 'add100';
+  const t = TASK[key];
+  let mode = pool[key] || 'free';
+  if (mode === 'free' && !t.free) mode = 'mc';
+  const g = genFor(key);
+  const q = { type: key, mode: mode, input: mode === 'mc' ? 'choice' : poolInput(),
+              text: g.text, eq: g.eq !== false, answer: g.answer,
+              answer_n: g.answer_n != null ? g.answer_n : null,
+              answer_d: g.answer_d != null ? g.answer_d : null,
+              strict: !!g.strict, choices: null };
+  if (mode === 'mc') {
+    if (g.choices_fixed) q.choices = g.choices_fixed.slice();
+    else {
+      const out = [g.answer], seen = [choiceKey(g.answer, q.strict)];
+      // Eine glatte „0" zwischen lauter Brüchen ist auf einen Blick als
+      // falsch zu erkennen und nimmt der Auswahl eine echte Kachel.
+      const nozero = (q.answer_d || 1) > 1 && q.answer_n !== 0;
+      g.distract.forEach(d => {
+        if (out.length >= t.choices || d == null) return;
+        if (nozero && String(d).trim() === '0') return;
+        const k = choiceKey(d, q.strict);
+        if (seen.indexOf(k) < 0) { out.push(d); seen.push(k); }
+      });
+      let i = 1;
+      while (out.length < t.choices && i < 40) {
+        const nn = q.answer_n + (i % 2 ? (i + 1) / 2 : -(i / 2));
+        const cand = (nozero && nn === 0) ? null : ftext(nn, q.answer_d || 1);
+        const k = choiceKey(cand, q.strict);
+        if (cand != null && seen.indexOf(k) < 0) { out.push(cand); seen.push(k); }
+        i++;
+      }
+      q.choices = out.sort(() => Math.random() - 0.5);
+    }
+  }
+  return q;
+}
+
+// Wie clash_q_public: die Lösung darf das Gerät nicht erreichen.
+function qPublic(q) {
+  const c = Object.assign({}, q);
+  delete c.answer; delete c.answer_n; delete c.answer_d; delete c.strict;
+  return c;
+}
+
+// Wie clash_answer_matches.
+function answerMatches(q, txt) {
+  const v = String(txt == null ? '' : txt).trim();
+  if (!v) return false;
+  if (q.mode === 'mc') return (q.choices || []).indexOf(v) >= 0 && v === q.answer;
+  const m = /^(-?\d+)(?:\/(\d+))?$/.exec(v);
+  if (!m || q.answer_n == null) return false;
+  const rn = Number(m[1]), rd = m[2] ? Number(m[2]) : 1;
+  if (rd === 0) return false;
+  if (q.strict) return rn === q.answer_n && rd === q.answer_d;
+  const [n, d] = norm(rn, rd);
+  return n * q.answer_d === q.answer_n * d;
 }
 
 /* Ein Angriff auf irgendein Feld an der eigenen Grenze — mit
@@ -390,6 +542,9 @@ const RPC = {
       teams: counts,
       team_tile_counts: counts,
       team_correct_counts: CORRECT,
+      // 0109: der Aufgabenpool. Er kommt NUR in der Beamer-Ansicht —
+      // das Tablet sieht seine Aufgabe, nicht den Vorrat.
+      pool: pool,
       team_members: members,
       offline_members: ['Karl', 'Wilma'],
       // 0107: die Serien-Ereignisse ALLER Völker, mit Volk am Eintrag
@@ -404,7 +559,20 @@ const RPC = {
   clash_room_set_factions: a => ({ ok: true, factions: a.p_factions }),
   clash_room_set_match_timer: () => ({ ok: true }),
   clash_room_clear_match_timer: () => ({ ok: true }),
-  clash_room_start: () => { phase = 'running'; return { ok: true }; },
+  // 0109: Katalog und Pool. Der leere Pool wird ausdrücklich ANGENOMMEN
+  // (Zwischenstand beim Umsortieren) — die Sperre sitzt im Start.
+  clash_task_catalog: () => ({ ok: true, groups: CATALOG }),
+  clash_room_set_pool: a => {
+    pool = Object.assign({}, a.p_pool || {});
+    question = newQuestion();
+    return { ok: true, pool: pool };
+  },
+  clash_room_start: () => {
+    if (!Object.keys(pool).length) return { ok: false, error: 'pool_empty' };
+    question = newQuestion();
+    phase = 'running';
+    return { ok: true };
+  },
   clash_room_reset: () => { phase = 'lobby'; return { ok: true }; },
 
   clash_view: () => {
@@ -444,16 +612,20 @@ const RPC = {
         team: myTeam,
         alive: phase !== 'out',
         streak: streak,
-        question: question,
+        // 0110: durch qPublic — die Lösung darf das Gerät nie erreichen.
+        question: qPublic(question),
         seat: 3, name: 'Jonas',
         pending_picks: pendingPicks,
         pick_deadline: pickDeadline
       }
     };
   },
-  clash_submit_answer: args => {
+  // 0110: heißt jetzt clash_submit und nimmt einen TEXT entgegen.
+  clash_submit_answer: args => RPC.clash_submit({ p_answer: String(args.p_answer) }),
+  clash_submit: args => {
     expirePendingPicks();
-    const correct = args.p_answer === question.a + question.b;
+    const correct = answerMatches(question, args.p_answer);
+    const wasQ = question;
     // 0108: „ausgeschieden" in der Vorschau ist die Phase `out` — der
     // Server erkennt es daran, dass das Volk keine Kachel mehr hat.
     const ruined = (phase === 'out');
@@ -500,12 +672,17 @@ const RPC = {
     question = newQuestion();
     return {
       ok: true, correct, eliminated: ruined,
+      // Die Vorschau kennt die Zwei-Versuche-Regel (0101) nicht — sie
+      // löst sofort auf. Damit lässt sich wenigstens die Auflösung
+      // ansehen, die es im Betrieb beim zweiten Fehlversuch gibt.
+      retry: false,
+      reveal: correct ? null : { text: wasQ.answer },
       captured: hit.captured, castle_hit: hit.castle_hit,
       streak, team_streak: teamStreak, pending_picks: pendingPicks, pick_deadline: pickDeadline,
       ruin: ruined ? ruinOf(myTeam) : null,
       shrunk: shrunk,
       board: boardState(),
-      question
+      question: qPublic(question)
     };
   },
   // Manueller Pick (0106) — dieselbe Erobern-Logik wie attackOne(), nur

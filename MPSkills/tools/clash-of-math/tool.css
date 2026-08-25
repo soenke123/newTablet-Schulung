@@ -2592,3 +2592,282 @@ body.cm-locked { overflow: hidden; }
     align-self: flex-end;
   }
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   Aufgabenpool und Bruchrechnung (Migrationen 0109/0110)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Ein Bruch als Bild ──────────────────────────────────────────
+   Dieselben drei Zeilen tragen die AUFGABE oben, die EINGABE daneben
+   und die Antwortkacheln unten — was das Kind tippt, soll aussehen wie
+   das, was dasteht. Der Bruchstrich ist ein border, kein Zeichen: er
+   passt sich damit der Breite der längeren Hälfte an, statt bei „11/12"
+   zu kurz zu sein.
+   `vertical-align: middle` hält ihn auf der Höhe der Zeichen daneben,
+   sonst hinge „3/4 + 1/8" schief. */
+.cm-frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  vertical-align: middle;
+  line-height: 1.05;
+  text-align: center;
+  /* Ein gestapelter Bruch ist doppelt so hoch wie eine Ziffer — etwas
+     kleiner gesetzt bleibt die Zeile so hoch wie vorher. */
+  font-size: .74em;
+}
+.cm-frac > b,
+.cm-frac > i {
+  display: block;
+  font-style: normal;
+  font-weight: inherit;
+  padding: 0 .12em;
+  min-width: .7em;
+}
+.cm-frac > i {
+  border-top: .09em solid currentColor;
+  margin-top: .06em;
+  padding-top: .06em;
+}
+/* Der offene Nenner: hier geht die nächste Ziffer hin. Derselbe
+   blinkende Strich wie im leeren Eingabefeld — für „bitte hier tippen"
+   gibt es keine zweite Sprache. */
+.cm-frac--open > i::after {
+  content: "|";
+  animation: cmCaret 1.1s step-end infinite;
+  opacity: .8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-frac--open > i::after { animation: none; opacity: .5; }
+}
+/* Das Minus steht VOR dem ganzen Bruch, nicht im Zähler: „-3/4" ist
+   der negative Bruch, „(-3)/4" wäre eine Aussage über den Zähler. */
+.cm-insign { margin-right: .1em; }
+
+/* ── Antwortkacheln statt Ziffern ────────────────────────────────
+   Dasselbe Raster (.cm-keys) mit anderer Spaltenzahl, dieselbe
+   Pergament-Optik wie die Tasten — es ist die Tastatur dieser
+   Aufgabenart, kein zweites Bedienelement. Nur größer gesetzt: hier
+   steht eine Antwort drauf, keine einzelne Ziffer. */
+.cm-key--choice {
+  font-size: clamp(1.2rem, 6vw, 2.1rem);
+  padding: 0 6px;
+}
+/* Angetippt und unterwegs zum Server. Die Kachel hält den Blick fest,
+   solange die Antwort läuft — sonst wüsste bei zwei schnellen Tipps
+   niemand, welcher gezählt hat. */
+.cm-key--picked {
+  filter: brightness(1.12);
+  box-shadow: 0 0 0 3px #fff3cf inset, 0 5px 12px rgba(0,0,0,.35);
+}
+.cm-key--ok   { animation: cmKeyOk   .6s ease-out; }
+.cm-key--warn { animation: cmKeyWarn .6s ease-out; }
+@keyframes cmKeyOk {
+  0%   { background: #b9f0c4; border-color: #2f9e52; transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+@keyframes cmKeyWarn {
+  0%   { background: #f7c3bb; border-color: #c4361f; transform: translateX(-5px); }
+  35%  { transform: translateX(5px); }
+  70%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+/* Die Bruch-Taste trägt keine Ziffer, sondern ein Wort — kleiner
+   gesetzt, sonst sprengt „a/b" die Taste. */
+.cm-key--frac { font-size: clamp(.9rem, 4vw, 1.4rem); }
+
+/* ── Die Zusammenfassung in der Lobby ───────────────────────────── */
+.cm-poolsum {
+  font-size: .9rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.cm-poolsum b { color: var(--ink); }
+.cm-poolsum i { font-style: normal; opacity: .75; }
+.cm-poolsumlab { font-weight: 800; color: var(--ink); }
+/* Ohne Aufgaben kein Spiel — dieselbe Zeile sagt dann auch, warum der
+   Startknopf grau ist. */
+/* Rot als Rahmen und Tönung, der Text in der normalen Tintenfarbe:
+   ein fester Rotton wäre im hellen Thema zu blass und im dunklen zu
+   dunkel, um ihn zu lesen. */
+.cm-poolsum--warn {
+  padding: 8px 12px;
+  border-radius: var(--r-sm, 8px);
+  background: color-mix(in srgb, #c4361f 14%, transparent);
+  border: 1px solid color-mix(in srgb, #c4361f 55%, transparent);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ── Das Auswahl-Fenster ─────────────────────────────────────────
+   Muster wie .cm-mapov, aber auf dem BEAMER: `fixed` auf dem sichtbaren
+   Bereich (--vv-h aus viewport.js), das Overlay scrollt, der Kasten
+   sitzt mit margin:auto darin und ist höchstens so hoch wie der Platz.
+   Kein `align-items:center` und kein `90vh` — beides schneidet auf
+   kleinen Geräten oben ab, statt scrollen zu lassen. */
+.cm-poolov {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vv-top, 0px);
+  height: var(--vv-h, 100vh);
+  z-index: 40;
+  display: flex;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  background: rgba(12,7,0,.62);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.cm-poolbox {
+  margin: auto;
+  width: 100%;
+  max-width: 720px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px 18px;
+  border-radius: var(--r-md, 14px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px rgba(0,0,0,.5);
+}
+.cm-poolhead {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cm-pooltitle {
+  flex: 1 1 auto;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.cm-poolclose {
+  flex: 0 0 auto;
+  width: 34px; height: 34px;
+  cursor: pointer;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 1rem;
+  line-height: 1;
+}
+.cm-poolclose:hover { border-color: var(--accent); color: var(--ink); }
+.cm-poolclose:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cm-poolhint {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: .85rem;
+  color: var(--ink-soft);
+}
+.cm-poolhint b { color: var(--ink); }
+/* Die Tabelle selbst scrollt, damit Kopfzeile und Hinweis stehen
+   bleiben — bei acht Kategorien wäre sonst nach dem ersten Blättern
+   nicht mehr zu sehen, worum es geht. */
+.cm-poolbody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cm-poolwait {
+  padding: 20px 4px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+.cm-poolgrp {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm, 10px);
+  overflow: hidden;
+}
+.cm-poolgrphead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 12px;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  border-bottom: 1px solid var(--line);
+}
+.cm-poolgrpname {
+  flex: 1 1 auto;
+  font-weight: 800;
+  color: var(--ink);
+}
+.cm-poolrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+}
+.cm-poolrow + .cm-poolrow {
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+.cm-poolname {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cm-poolname b { font-weight: 700; color: var(--ink); }
+/* Das Beispiel sagt der Lehrkraft in einem Blick mehr über das Niveau
+   als jede Beschreibung — deshalb steht es in der Zeile und nicht in
+   einem Tooltip. */
+.cm-poolex {
+  font-style: normal;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .82rem;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  color: var(--ink-soft);
+}
+
+/* Der Dreier-Schalter: aus · tippen · auswählen. Ein Segment-Knopf
+   statt dreier Auswahlfelder, weil die Zustände sich ausschließen und
+   die Reihe in jeder Zeile gleich breit stehen soll. */
+.cm-poolseg {
+  flex: 0 0 auto;
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.cm-poolseg button {
+  padding: 5px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: .82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cm-poolseg button + button { border-left: 1px solid var(--line); }
+.cm-poolseg button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.cm-poolseg button:disabled { opacity: .35; cursor: not-allowed; }
+.cm-poolseg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cm-poolopt--on,
+.cm-poolall--on {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.cm-poolopt--on:hover,
+.cm-poolall--on:hover { background: var(--accent); }
+/* Die Sammel-Knöpfe der Oberkategorie sind kleiner: sie setzen etwas,
+   sie zeigen nichts an, was nicht auch eine Zeile tiefer stünde. */
+.cm-poolseg--all button { font-size: .75rem; padding: 3px 10px; }

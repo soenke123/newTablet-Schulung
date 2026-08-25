@@ -278,10 +278,27 @@
   // laufender Speicher-Aufrufe — solange der über 0 steht, hat die
   // Anzeige Vorrang vor der Antwort des Servers, siehe Klick-Zuhörer.
   let pickSel = [], pickBusy = 0;
-  // Teilnehmer: der getippte Antwort-Text (Zeichenkette, nicht Zahl —
-  // „-" und „0," sind gültige Zwischenstände, die keine Zahl sind),
-  // die gerade aufgebaute Tastatur und ob das Karten-Fenster offen ist.
-  let answerBuf = '', keyMode = null, mapOpen = false;
+  /* Der Aufgabenpool (Migration 0109) — dieselbe Mechanik eine Ebene
+     weiter: `poolSel` ist die Anzeige, `poolBusy` schützt sie vor einer
+     Server-Antwort von vorhin. `poolCat` ist der Katalog
+     (clash_task_catalog): einmal geholt, danach unverändert — er ist
+     Referenzdaten und ändert sich nur mit einer Migration. */
+  let poolSel = {}, poolBusy = 0, poolCat = null, poolCatBusy = false;
+  // Teilnehmer: die getippte Antwort. Bis 0110 eine Zeichenkette; seit
+  // den Brüchen eine kleine Struktur, weil ein Bruch zwei Felder hat
+  // und der Bruchstrich kein Zeichen im Text ist, sondern der Wechsel
+  // vom Zähler in den Nenner (siehe keyPress).
+  //   { neg: Vorzeichen, num: Zähler/ganze Zahl, den: Nenner oder null }
+  // den === null heißt „noch kein Bruchstrich gedrückt".
+  let answerVal = { neg: false, num: '', den: null };
+  // `keyChoices` sind die Kacheln der laufenden Auswahl-Aufgabe (auch
+  // für die Zifferntasten einer echten Tastatur), `choiceBtn` die
+  // zuletzt angetippte — sie trägt die Rückmeldung, weil es bei einer
+  // Auswahl kein Eingabefeld gibt.
+  let keyMode = null, keyChoices = null, choiceBtn = null, mapOpen = false;
+  // Fingerabdruck der angezeigten Aufgabe — daran erkennt setQuestion,
+  // ob wirklich eine neue da ist (es läuft bei jedem Takt).
+  let lastQSig = null;
   // Serien-Boni (Migration 0106): offene manuelle Picks aus dem
   // Einzel-Bonus (10er-Serie), ihre Frist, der Countdown-Timer dafür,
   // die höchste bereits gezeigte Team-Event-id (Toast-Dedupe) und der
@@ -1310,12 +1327,27 @@
         1  2  3  ✓   ← über zwei Zeilen, unten rechts (Sönkes Vorgabe)
         ‹—— 0 ——›
 
-     Welche Art gerade gilt, sagt später der Server je Frage
-     (`question.input`). Heute schickt er nur `{a, b}` — eine Addition
-     bis 100 —, also greift überall der Rückfall 'natural'. Die
-     übrigen Arten stehen schon da, weil sie beim Hinzufügen sonst
-     wieder eine Layout-Diskussion auslösen würden; erreichbar sind
-     sie erst, wenn der Server sie benennt. */
+     Welche Art gerade gilt, sagt der Server je Frage
+     (`question.input`). Seit Migration 0110 gibt es drei Layouts, und
+     mehr sollen es auch nicht werden (Sönkes Vorgabe — „nicht bei jeder
+     Frage das ganze Button-Layout ändern"):
+
+       natural   der Grundblock, 4 Zeilen
+       fraction  der Grundblock plus EINE Zeile mit ± und a/b
+       choice    kein Grundblock, sondern die Antwortkacheln (2×3, bei
+                 drei möglichen Antworten 1×3)
+
+     Zwischen natural und fraction wechselt es NICHT von Frage zu
+     Frage: der Server entscheidet das einmal je Raum aus dem
+     Aufgabenpool (clash_pool_input, 0110). Steht irgendein Bruchtyp
+     zum Tippen im Pool, haben auch die reinen Additionsaufgaben dieses
+     Raums die Bruchtasten. Nur frei ↔ Auswahl wechselt je Frage, und
+     das ist auf einen Blick zu sehen.
+
+     Die übrigen Arten (Binär, Hexadezimal, Terme, Trigonometrie)
+     stehen weiter da, weil sie beim Hinzufügen sonst wieder eine
+     Layout-Diskussion auslösen würden; erreichbar sind sie erst, wenn
+     der Server sie benennt. */
   const KEY_BASE = [
     { lab: '7', ins: '7', r: 1, c: 1 }, { lab: '8', ins: '8', r: 1, c: 2 }, { lab: '9', ins: '9', r: 1, c: 3 },
     { lab: '4', ins: '4', r: 2, c: 1 }, { lab: '5', ins: '5', r: 2, c: 2 }, { lab: '6', ins: '6', r: 2, c: 3 },
@@ -1332,7 +1364,11 @@
   const KEY_EXTRA = {
     sign:  [{ lab: '±', act: 'sign', aria: 'Vorzeichen wechseln' }],
     dec:   [{ lab: ',', ins: ',' }],
-    frac:  [{ lab: '/', ins: '/', aria: 'Bruchstrich' }],
+    // Kein einzufügendes Zeichen, sondern eine Handlung: der Druck
+    // macht aus dem Getippten den ZÄHLER und öffnet darunter den
+    // Nenner (Sönkes Vorgabe). Ein „/" im Text wäre etwas anderes —
+    // die Eingabe hat danach zwei Felder, nicht ein längeres.
+    frac:  [{ lab: 'a/b', act: 'frac', cls: 'cm-key--frac', aria: 'Bruch: Zähler und Nenner' }],
     pow:   [{ lab: 'x²', ins: '^2' }, { lab: 'xⁿ', ins: '^' }, { lab: '√', ins: '√' }],
     trig:  [{ lab: 'sin', ins: 'sin(' }, { lab: 'cos', ins: 'cos(' }, { lab: 'tan', ins: 'tan(' },
             { lab: ')', ins: ')' }, { lab: 'π', ins: 'π' }],
@@ -1360,7 +1396,49 @@
   };
   const modeOf = name => MODES[name] || MODES.natural;
 
-  function buildKeypad(mode) {
+  /* Ein Bruch als gestapeltes Bild: Zähler über Strich über Nenner.
+     Dieselben Bausteine für die AUFGABE oben und die EINGABE daneben —
+     was das Kind tippt, soll aussehen wie das, was dasteht. `open`
+     markiert den noch leeren Nenner, damit dort der Cursor blinkt. */
+  function fracHTML(num, den, open) {
+    return '<span class="cm-frac' + (open ? ' cm-frac--open' : '') + '">' +
+      '<b>' + ctx.esc(num) + '</b><i>' + ctx.esc(den) + '</i></span>';
+  }
+
+  /* Die Aufgabe kommt als fertiger Text vom Server („3/4 + 1/8"). Jedes
+     WORT, das wie ein Bruch aussieht, wird hier gestapelt; der Rest
+     bleibt Text. So braucht der Server kein zweites Anzeigeformat und
+     eine neue Aufgabenart keine Zeile in dieser Datei. */
+  const FRAC_TOKEN = /^(-?\d+)\/(\d+)$/;
+  function mathHTML(text) {
+    return String(text || '').split(/\s+/).map(tok => {
+      const m = FRAC_TOKEN.exec(tok);
+      return m ? fracHTML(m[1], m[2], false) : ctx.esc(tok);
+    }).join(' ');
+  }
+
+  function buildKeypad(mode, q) {
+    // Auswahl-Aufgaben (Migration 0110): die Tastatur IST die Antwort.
+    // Kein Grundblock, keine Eingabe — ein Tipp schickt ab (Sönkes
+    // Entscheidung: „Tippen = sofort abschicken").
+    if (mode === 'choice') {
+      const list = (q && Array.isArray(q.choices)) ? q.choices : [];
+      // Sechs Kacheln stehen 2×3, drei (Vergleichen: < = >) in einer
+      // Reihe. Beides ist dasselbe Layout mit einer anderen Spaltenzahl
+      // — der Daumen findet die Kacheln an derselben Stelle.
+      const cols = list.length <= 3 ? list.length : 2;
+      const rows = Math.max(1, Math.ceil(list.length / cols));
+      els.keys.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+      els.keys.style.gridTemplateRows    = 'repeat(' + rows + ', 1fr)';
+      els.keys.innerHTML = list.map(c =>
+        '<button type="button" class="cm-key cm-key--choice" data-choice="' + ctx.esc(c) + '">' +
+        mathHTML(c) + '</button>').join('');
+      keyMode = mode;
+      keyChoices = list.slice();
+      choiceBtn = null;   // die alte Kachel ist mit dem innerHTML weg
+      return;
+    }
+
     const m = modeOf(mode);
     const extras = (m.extra || []).reduce((all, k) => all.concat(KEY_EXTRA[k] || []), []);
     const cols = 4;
@@ -1387,46 +1465,77 @@
     els.keys.style.gridTemplateRows    = 'repeat(' + rows + ', 1fr)';
     els.keys.innerHTML = html;
     keyMode = mode;
+    keyChoices = null;
   }
 
-  /* Aus dem getippten Text eine Zahl machen. Heute reicht dafür die
-     Basis der Aufgabenart; sobald Brüche oder Terme dazukommen, ist
-     das die Stelle, an der aus „3/4" etwas anderes wird als eine Zahl
-     — und dann ändert sich auch, was clash_submit_answer entgegen-
-     nimmt (heute: ein int). Bis dahin bewusst schlicht. */
-  function parseAnswer(mode, buf) {
-    const s = String(buf || '').trim();
-    if (!s || s === '-') return null;
-    const n = parseInt(s, modeOf(mode).base);
-    return Number.isFinite(n) ? n : null;
+  /* Aus dem Eingabe-Zustand wird das, was an den Server geht: ein TEXT.
+     Seit Migration 0110 nimmt clash_submit „7", „-7", „7/8" oder
+     „-7/8" entgegen und rechnet selbst nach — eine Zahl könnte einen
+     Bruch gar nicht transportieren.
+     null heißt „das ist noch keine Antwort" (leerer Zähler, offener
+     oder nuller Nenner) — der Aufrufer lässt das Feld dann rot
+     aufblitzen, statt etwas Halbes abzuschicken. */
+  function parseAnswer() {
+    const num = answerVal.num;
+    const den = answerVal.den;
+    if (!num) return null;
+    if (den !== null && (den === '' || /^0+$/.test(den))) return null;
+    return (answerVal.neg ? '-' : '') + num + (den !== null ? '/' + den : '');
   }
 
-  const ANSWER_MAX = 12;   // mehr tippt niemand versehentlich sinnvoll
+  const ANSWER_MAX = 4;   // Zähler und Nenner je höchstens vierstellig
+
+  // In welches der beiden Felder eine Ziffer geht: solange kein
+  // Bruchstrich gedrückt wurde, gibt es nur eines.
+  const answerField = () => (answerVal.den !== null ? 'den' : 'num');
 
   function keyPress(k) {
     if (k.act === 'submit') { onSubmit(); return; }
-    if (k.act === 'back')   { answerBuf = answerBuf.slice(0, -1); }
-    else if (k.act === 'clear') { answerBuf = ''; }
-    else if (k.act === 'sign')  {
-      answerBuf = answerBuf.startsWith('-') ? answerBuf.slice(1) : ('-' + answerBuf);
+
+    if (k.act === 'back') {
+      const f = answerField();
+      if (f === 'den' && answerVal.den === '') {
+        // Der Bruchstrich selbst ist das Letzte, was hier steht —
+        // zurück zur einfachen Zahl, der Zähler bleibt stehen.
+        answerVal.den = null;
+      } else {
+        answerVal[f] = answerVal[f].slice(0, -1);
+      }
     }
-    else if (k.ins != null && answerBuf.length < ANSWER_MAX) {
+    else if (k.act === 'clear') { answerVal = { neg: false, num: '', den: null }; }
+    else if (k.act === 'sign')  { answerVal.neg = !answerVal.neg; }
+    else if (k.act === 'frac') {
+      // Sönkes Vorgabe: „alles vorherig eingetippte kommt in den
+      // Zähler". Ein zweiter Druck tut nichts — Doppelbrüche gibt es
+      // in dieser Aufgabenwelt nicht.
+      if (answerVal.den === null) answerVal.den = '';
+    }
+    else if (k.ins != null) {
+      const f = answerField();
+      if (answerVal[f].length >= ANSWER_MAX) { renderAnswer(); return; }
       // Führende Nullen wegräumen: „007" ist als Antwort dasselbe wie
       // „7", sieht aber aus wie ein Vertipper.
-      if (k.ins === '0' && (answerBuf === '0' || answerBuf === '-0')) return;
-      if (/^-?0$/.test(answerBuf) && /^[1-9]$/.test(k.ins)) {
-        answerBuf = answerBuf.replace(/0$/, k.ins);
-      } else {
-        answerBuf += k.ins;
-      }
+      if (k.ins === '0' && answerVal[f] === '0') { renderAnswer(); return; }
+      if (answerVal[f] === '0' && /^[1-9]$/.test(k.ins)) answerVal[f] = k.ins;
+      else answerVal[f] += k.ins;
     }
     renderAnswer();
   }
 
   function renderAnswer() {
     if (!els.input) return;
-    els.input.textContent = answerBuf;
-    els.input.classList.toggle('cm-in--empty', !answerBuf);
+    const num = answerVal.num;
+    const den = answerVal.den;
+    const sign = answerVal.neg ? '<span class="cm-insign">-</span>' : '';
+    if (den !== null) {
+      // Ein Bruch ist nie „leer": sobald der Strich da ist, steht ein
+      // Bild im Feld, auch wenn eine der Hälften noch fehlt.
+      els.input.classList.remove('cm-in--empty');
+      els.input.innerHTML = sign + fracHTML(num || ' ', den || ' ', !den);
+      return;
+    }
+    els.input.innerHTML = sign + ctx.esc(num);
+    els.input.classList.toggle('cm-in--empty', !num && !answerVal.neg);
   }
 
   /* Eine echte Tastatur darf trotzdem mit — am Rechner der Lehrkraft
@@ -1441,10 +1550,25 @@
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (mapOpen) { if (e.key === 'Escape') { closeMap(); e.preventDefault(); } return; }
     const k = e.key;
+
+    // Auswahl-Aufgaben: die Ziffern 1..n wählen die Kacheln in der
+    // Reihenfolge, in der sie dastehen. Alles andere hat hier keine
+    // Entsprechung — es gibt nichts zu tippen und nichts zu löschen.
+    if (keyMode === 'choice') {
+      const list = keyChoices || [];
+      const i = parseInt(k, 10);
+      if (Number.isInteger(i) && i >= 1 && i <= list.length) {
+        chooseAnswer(list[i - 1], els.keys.querySelectorAll('.cm-key--choice')[i - 1]);
+        e.preventDefault();
+      }
+      return;
+    }
+
     if (k === 'Enter')                         keyPress({ act: 'submit' });
     else if (k === 'Backspace')                keyPress({ act: 'back' });
     else if (k === 'Escape' || k === 'Delete') keyPress({ act: 'clear' });
     else if (k === '-')                        keyPress({ act: 'sign' });
+    else if (k === '/')                        keyPress({ act: 'frac' });
     else if (k.length === 1 && els.keys) {
       const btn = els.keys.querySelector('.cm-key[data-ins="' + k.toUpperCase() + '"]');
       if (!btn || btn.disabled) return;
@@ -1631,7 +1755,10 @@
             '<div class="cm-pask">' +
               '<div class="cm-eq">' +
                 '<span class="cm-q" id="cmQ">? + ?</span>' +
-                '<span class="cm-eqop">=</span>' +
+                // „=" und das Eingabefeld verschwinden bei Aufgaben, die
+                // keine Eingabe haben (Auswahlkacheln, Vergleichen) —
+                // siehe setQuestion.
+                '<span class="cm-eqop" id="cmEqOp">=</span>' +
                 '<span class="cm-in cm-in--empty" id="cmIn"></span>' +
               '</div>' +
               '<div class="cm-feedback" id="cmFeedback"></div>' +
@@ -1704,6 +1831,7 @@
       mapClose: root.querySelector('#cmMapClose'),
       fireToast: root.querySelector('#cmFireToast'),
       q: root.querySelector('#cmQ'),
+      eqop: root.querySelector('#cmEqOp'),
       input: root.querySelector('#cmIn'),
       keys: root.querySelector('#cmKeys'),
       feedback: root.querySelector('#cmFeedback'),
@@ -1726,6 +1854,9 @@
     els.keys.addEventListener('click', ev => {
       const btn = ev.target.closest('.cm-key');
       if (!btn || btn.disabled) return;
+      // Eine Antwortkachel ist keine Taste, die etwas eintippt — sie
+      // IST die Antwort und geht sofort raus.
+      if (btn.dataset.choice != null) { chooseAnswer(btn.dataset.choice, btn); return; }
       keyPress({ ins: btn.dataset.ins, act: btn.dataset.act });
     });
     // Arrow-Wrapper statt der Funktionen direkt (0106): openMap/closeMap
@@ -1929,14 +2060,24 @@
     scheduleGlowRepaint();
   }
 
-  async function onSubmit() {
+  /* Eine Antwortkachel geht sofort raus (Sönkes Entscheidung). Es gibt
+     dabei kein Eingabefeld, in dem die Antwort stehen könnte — die
+     Rückmeldung sitzt deshalb auf der angetippten Kachel selbst, und
+     dafür merken wir sie uns bis zur Antwort des Servers. */
+  function chooseAnswer(text, btn) {
     if (submitting) return;
-    const val = parseAnswer(keyMode, answerBuf);
+    choiceBtn = btn || null;
+    if (choiceBtn) choiceBtn.classList.add('cm-key--picked');
+    onSubmit(String(text));
+  }
+
+  async function onSubmit(forced) {
+    if (submitting) return;
+    const val = (forced != null) ? forced : parseAnswer();
     if (val == null) { flashInput('warn'); return; }
     submitting = true;
-    answerBuf = '';
-    renderAnswer();
-    const r = await ctx.actions.call('clash_submit_answer', { p_answer: val });
+    if (forced == null) { answerVal = { neg: false, num: '', den: null }; renderAnswer(); }
+    const r = await ctx.actions.call('clash_submit', { p_answer: val });
     submitting = false;
     if (!r || !r.ok) {
       setFeedback(ctx.errText((r && r.error) || 'network'), 'warn');
@@ -2027,9 +2168,10 @@
         setFeedback('❌ Leider falsch, versuch’s nochmal!', 'warn');
       } else {
         // Länger stehen lassen als die üblichen 1800ms — hier steht
-        // die richtige Zahl, die soll auch gelesen werden können.
-        const sum = r.reveal && r.reveal.sum;
-        setFeedback(sum != null ? ('❌ Leider falsch. Richtig wäre ' + sum + '.') : '❌ Leider falsch.', 'warn', 3200);
+        // die richtige Antwort, die soll auch gelesen werden können.
+        // Seit 0110 ein Text („7/8", „<"), keine Summe mehr.
+        const sol = r.reveal && r.reveal.text;
+        setFeedback(sol ? ('❌ Leider falsch. Richtig wäre ' + sol + '.') : '❌ Leider falsch.', 'warn', 3200);
       }
       flashInput('warn');
     } else {
@@ -2063,15 +2205,19 @@
   }
   let flashTimer = null;
   function flashInput(kind) {
-    if (!els.input) return;
-    els.input.classList.remove('cm-in--ok', 'cm-in--warn');
+    // Bei einer Auswahl-Aufgabe gibt es kein Eingabefeld — die
+    // Rückmeldung sitzt auf der Kachel, die gerade angetippt wurde.
+    const el = (keyMode === 'choice') ? choiceBtn : els.input;
+    if (!el) return;
+    const pre = (keyMode === 'choice') ? 'cm-key--' : 'cm-in--';
+    el.classList.remove(pre + 'ok', pre + 'warn');
     // Erzwingt einen Neustart der Animation, wenn zweimal hintereinander
     // dasselbe Ergebnis kommt.
-    void els.input.offsetWidth;
-    els.input.classList.add('cm-in--' + kind);
+    void el.offsetWidth;
+    el.classList.add(pre + kind);
     if (flashTimer) clearTimeout(flashTimer);
     flashTimer = setTimeout(() => {
-      if (els.input) els.input.classList.remove('cm-in--ok', 'cm-in--warn');
+      el.classList.remove(pre + 'ok', pre + 'warn', 'cm-key--picked');
     }, 600);
   }
   function setStreak(n) {
@@ -2091,14 +2237,48 @@
     els.teamStreak.querySelector('b').textContent = (n != null) ? String(n) : '–';
     els.teamStreak.classList.toggle('cm-pstreak--hot', (n || 0) >= 3);
   }
+  /* ⚠️ setQuestion läuft bei JEDEM Takt (renderParticipant liest
+     me.question aus der view) — nicht nur, wenn eine neue Aufgabe
+     kommt. Alles, was eine Eingabe zerstören würde, hängt deshalb an
+     `changed`: sonst wäre der halb getippte Nenner beim nächsten Poll
+     weg, und die Antwortkacheln würden neu gezeichnet, während die rote
+     Rückmeldung auf einer von ihnen steht. */
+  function qSig(q) {
+    return [q.type || '', q.text || '', q.mode || '', q.input || '',
+            Array.isArray(q.choices) ? q.choices.join('') : ''].join('|');
+  }
+
   function setQuestion(q) {
     if (!els.q || !q) return;
-    // Heute schickt der Server nur {a, b} für eine Addition. Ein
-    // späterer `text` (fertig gesetzte Aufgabe) hat Vorrang, damit
-    // neue Aufgabenarten hier nichts mehr ändern müssen.
-    els.q.textContent = q.text ? q.text : (q.a + ' + ' + q.b);
+    const sig = qSig(q);
+    const changed = sig !== lastQSig;
+    lastQSig = sig;
+    // Der Server schickt die Aufgabe fertig gesetzt (`text`) — eine
+    // neue Aufgabenart ändert hier nichts mehr. Der zweite Zweig ist
+    // der Rückfall für ein Gerät, das noch eine Antwort der alten
+    // {a, b}-Fassung in der Hand hält (Migration 0110 reicht die alte
+    // RPC durch, damit genau das nicht abbricht).
+    els.q.innerHTML = q.text ? mathHTML(q.text) : ctx.esc(q.a + ' + ' + q.b);
+
     const mode = q.input || 'natural';
-    if (mode !== keyMode) buildKeypad(mode);
+    // „= [ ]" gehört zum Tippen. Bei Antwortkacheln gibt es nichts
+    // einzutippen, und „3/4 ▢ 2/3 = <" liest sich ohnehin nicht — dann
+    // steht die Aufgabe allein da und die Kacheln darunter sind die
+    // Antwort.
+    const withEq = mode !== 'choice' && q.eq !== false;
+    if (els.eqop) els.eqop.classList.toggle('cm-hide', !withEq);
+    if (els.input) els.input.classList.toggle('cm-hide', !withEq);
+
+    // Bei den Tipp-Layouts nur beim Wechsel der Art neu bauen (die
+    // Tasten sind immer dieselben); die Antwortkacheln gehören dagegen
+    // zu genau dieser Frage und werden mit ihr neu gesetzt.
+    if (mode !== keyMode || (mode === 'choice' && changed)) buildKeypad(mode, q);
+
+    // Eine NEUE Aufgabe fängt mit leerem Feld an.
+    if (changed) {
+      answerVal = { neg: false, num: '', den: null };
+      renderAnswer();
+    }
   }
 
   /* ─── Wer wie viel hat ──────────────────────────────────────────
@@ -2357,7 +2537,14 @@
     document.body.classList.toggle('cm-locked', which === 'game');
     // force=true (0106): ein Phasenwechsel (Runde vorbei, ausgeschieden…)
     // muss die Karte auch mitten in einem offenen Serien-Bonus schließen.
-    if (which !== 'game') { closeMap(true); answerBuf = ''; }
+    if (which !== 'game') {
+      closeMap(true);
+      answerVal = { neg: false, num: '', den: null };
+      // Auch der Fingerabdruck der Aufgabe: nach einem Phasenwechsel
+      // ist die nächste Frage in jedem Fall eine neue, selbst wenn sie
+      // zufällig dieselbe wäre.
+      lastQSig = null;
+    }
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -2378,10 +2565,19 @@
           '<div class="cm-setup">' +
             '<div class="cm-setuphead">' +
               '<h3 class="cm-setuptitle">Welche Teams?</h3>' +
+              // Der Aufgabenpool (0109). Er steht neben den Völkern und
+              // nicht in einem Einstellungen-Fach: beides sind
+              // Entscheidungen, die VOR dem Start fallen und danach
+              // fest sind — die Lehrkraft soll sie an einem Ort treffen.
+              '<button type="button" class="cm-btn cm-btn--ghost" id="cmPoolBtn">📚 Aufgaben wählen</button>' +
               '<button type="button" class="cm-btn cm-btn--ghost" id="cmShuffleBtn">🔀 Teams mischen</button>' +
               '<button type="button" class="cm-btn" id="cmStartBtn">▶ Spiel starten</button>' +
             '</div>' +
             '<div class="cm-pick" id="cmPick"></div>' +
+            // Was gerade gewählt ist, in Worten. Ein Knopf allein sagte
+            // nur, dass man etwas wählen KANN — nach einem Neuladen
+            // stünde die Lehrkraft ohne Auskunft da.
+            '<div class="cm-poolsum" id="cmPoolSum"></div>' +
             '<div class="cm-lobbyteams" id="cmLobbyTeams"></div>' +
             '<div class="cm-offline cm-hide" id="cmOffline"></div>' +
           '</div>' +
@@ -2474,11 +2670,32 @@
             '</div>' +
           '</div>' +
         '</div>' +
+        // ── Die Aufgaben-Auswahl ─────────────────────────────────
+        // Ein Fenster über der Lobby, kein weiterer Abschnitt darin:
+        // die Tabelle ist lang, und die Lobby soll ihre Übersicht
+        // behalten. Aufbau nach dem Muster von .cm-mapov — Overlay
+        // scrollt, der Kasten steht mit margin:auto darin (tool.css).
+        '<div class="cm-poolov cm-hide" id="cmPoolOv">' +
+          '<div class="cm-poolbox">' +
+            '<div class="cm-poolhead">' +
+              '<span class="cm-pooltitle">📚 Welche Aufgaben?</span>' +
+              '<button type="button" class="cm-poolclose" id="cmPoolClose" aria-label="Auswahl schließen">✕</button>' +
+            '</div>' +
+            '<p class="cm-poolhint">Beliebig viele Arten lassen sich mischen. ' +
+              '<b>Tippen</b> heißt Taschenrechner, <b>Auswählen</b> heißt Antwortkacheln.</p>' +
+            '<div class="cm-poolbody" id="cmPoolBody"></div>' +
+          '</div>' +
+        '</div>' +
       '</div>';
 
     els = {
       setup: root.querySelector('#cmSetup'),
       pick: root.querySelector('#cmPick'),
+      poolSum: root.querySelector('#cmPoolSum'),
+      poolBtn: root.querySelector('#cmPoolBtn'),
+      poolOv: root.querySelector('#cmPoolOv'),
+      poolBody: root.querySelector('#cmPoolBody'),
+      poolClose: root.querySelector('#cmPoolClose'),
       lobbyTeams: root.querySelector('#cmLobbyTeams'),
       offline: root.querySelector('#cmOffline'),
       startBtn: root.querySelector('#cmStartBtn'),
@@ -2574,11 +2791,46 @@
       tick(true);
     });
 
+    /* ── Die Aufgaben-Auswahl ──────────────────────────────────────
+       Ein Zuhörer auf dem ganzen Kasten statt einer je Knopf: die
+       Tabelle wird bei jeder Änderung neu geschrieben, einzeln
+       angeheftete Zuhörer wären damit jedes Mal weg — dieselbe
+       Überlegung wie bei der Völker-Reihe darüber. */
+    els.poolBtn.addEventListener('click', () => { openPool(); });
+    els.poolClose.addEventListener('click', () => { closePool(); });
+    // Klick neben den Kasten schließt. Der Kasten selbst nicht, sonst
+    // ginge das Fenster bei jedem Häkchen zu.
+    els.poolOv.addEventListener('click', ev => {
+      if (ev.target === els.poolOv) closePool();
+    });
+    els.poolBody.addEventListener('click', ev => {
+      const one = ev.target.closest('.cm-poolopt');
+      if (one && !one.disabled) { setPoolFor([one.dataset.key], one.dataset.val); return; }
+      const all = ev.target.closest('.cm-poolall');
+      if (all && !all.disabled) {
+        const keys = (poolCat || []).reduce((acc, g) =>
+          g.key === all.dataset.group ? acc.concat(g.items.map(it => it.key)) : acc, []);
+        setPoolFor(keys, all.dataset.val);
+      }
+    });
+
     els.startBtn.addEventListener('click', async () => {
       els.startBtn.disabled = true;
       const r = await ctx.actions.call('clash_room_start', {});
       els.startBtn.disabled = false;
-      if (!r || !r.ok) { ctx.toast(ctx.errText((r && r.error) || 'network'), true); return; }
+      if (!r || !r.ok) {
+        // pool_empty kennt ctx.errText nicht (die generischen Texte
+        // setzt die Seite, nicht das Werkzeug) — es stünde sonst
+        // „Unerwarteter Fehler (pool_empty)" da, wo eine Anweisung
+        // hingehört.
+        if (r && r.error === 'pool_empty') {
+          ctx.toast('Wähle zuerst aus, welche Aufgaben drankommen sollen.', true);
+          openPool();
+          return;
+        }
+        ctx.toast(ctx.errText((r && r.error) || 'network'), true);
+        return;
+      }
       nudge();
       tick(true);
     });
@@ -2746,6 +2998,173 @@
     else pickSel = Array.from({ length: v.team_count || 2 }, (_, i) => i);
   }
 
+  /* ══════════════════════════════════════════════════════════════
+     Der Aufgabenpool (Migration 0109/0110)
+     ══════════════════════════════════════════════════════════════
+     Drei Zustände je Unterkategorie: aus (Schlüssel fehlt), 'free'
+     (Taschenrechner) und 'mc' (Antwortkacheln). Die Oberkategorie ist
+     keine eigene Einstellung, sondern nur eine Zeile mit drei Knöpfen,
+     die ihre Unterkategorien alle auf dasselbe setzt — sonst gäbe es
+     zwei Wahrheiten darüber, was gerade gilt.
+
+     Der KATALOG (welche Arten es gibt, was jede kann) kommt vom Server
+     und nicht aus dieser Datei: eine neue Kategorie soll später eine
+     Migration kosten und kein Client-Update. */
+  const POOL_MODE_LABEL = { free: 'tippen', mc: 'auswählen' };
+
+  function syncPoolFromView(v) {
+    if (!v) return;
+    poolSel = (v.pool && typeof v.pool === 'object') ? Object.assign({}, v.pool) : {};
+  }
+
+  // Einmal holen und behalten. Kein Nachladen im Takt: der Katalog ist
+  // Referenzdaten und ändert sich nur mit einer Migration — im
+  // Sekundentakt mitzufahren wäre reine Last.
+  async function ensureCatalog() {
+    if (poolCat || poolCatBusy) return poolCat;
+    poolCatBusy = true;
+    const r = await ctx.actions.call('clash_task_catalog', {});
+    poolCatBusy = false;
+    if (!r || !r.ok || !Array.isArray(r.groups)) return null;
+    poolCat = r.groups;
+    return poolCat;
+  }
+
+  function openPool() {
+    if (!els.poolOv) return;
+    els.poolOv.classList.remove('cm-hide');
+    renderPoolTable();
+    // Der Katalog kann beim ersten Öffnen noch unterwegs sein — dann
+    // steht so lange eine Zeile da und die Tabelle kommt nach.
+    ensureCatalog().then(() => { renderPoolTable(); renderPoolSummary(); });
+  }
+
+  function closePool() {
+    if (els.poolOv) els.poolOv.classList.add('cm-hide');
+  }
+
+  /* Mehrere Schlüssel auf einmal setzen — eine einzelne Unterkategorie
+     ist dabei nur der Sonderfall „ein Schlüssel". Dieselbe
+     Sofort-umschalten-dann-speichern-Mechanik wie bei der Völker-Reihe:
+     ein Klick, der eine halbe Sekunde nichts tut, wird ein zweites Mal
+     geklickt. */
+  async function setPoolFor(keys, mode) {
+    const next = Object.assign({}, poolSel);
+    keys.forEach(k => {
+      if (mode === 'off') delete next[k];
+      else next[k] = mode;
+    });
+    const before = poolSel;
+    poolSel = next;
+    poolBusy++;
+    renderPoolTable();
+    renderPoolSummary();
+
+    // Auch der leere Pool geht an den Server (0109 nimmt ihn an). Er
+    // ist ein Zwischenstand beim Umsortieren — bliebe er hier liegen,
+    // spränge die Anzeige beim nächsten Takt auf die alte Auswahl
+    // zurück, und die Lehrkraft klickte etwas weg, das wiederkommt.
+    const r = await ctx.actions.call('clash_room_set_pool', { p_pool: next });
+    poolBusy--;
+    if (!r || !r.ok) {
+      ctx.toast(ctx.errText((r && r.error) || 'network'), true);
+      poolSel = before;               // die Wahrheit des Servers wieder zulassen
+      if (!poolBusy && lastView) syncPoolFromView(lastView);
+      renderPoolTable();
+      renderPoolSummary();
+      return;
+    }
+    if (r.pool && typeof r.pool === 'object' && !poolBusy) poolSel = Object.assign({}, r.pool);
+    renderPoolTable();
+    renderPoolSummary();
+    tick(true);
+  }
+
+  function renderPoolTable() {
+    if (!els.poolBody) return;
+    if (!poolCat) {
+      els.poolBody.innerHTML = '<div class="cm-poolwait">Aufgabenarten werden geladen …</div>';
+      return;
+    }
+    let out = '';
+    poolCat.forEach(g => {
+      // Woran die Sammel-Knöpfe erkennen, ob die ganze Gruppe schon so
+      // steht: nur dann sind sie „an". Bei gemischten Zuständen ist
+      // keiner an — das ist ehrlicher als der Zustand des ersten
+      // Eintrags.
+      const states = g.items.map(it => poolSel[it.key] || 'off');
+      const allIs  = m => states.every(s => s === m);
+      const canAll = m => m === 'off' || g.items.every(it => it[m]);
+      out += '<div class="cm-poolgrp">' +
+        '<div class="cm-poolgrphead">' +
+          `<span class="cm-poolgrpname">${ctx.esc(g.label)}</span>` +
+          '<span class="cm-poolseg cm-poolseg--all">' +
+            ['off', 'free', 'mc'].map(m =>
+              `<button type="button" class="cm-poolall${allIs(m) ? ' cm-poolall--on' : ''}" ` +
+              `data-group="${ctx.esc(g.key)}" data-val="${m}"${canAll(m) ? '' : ' disabled'}>` +
+              `alle ${m === 'off' ? 'aus' : POOL_MODE_LABEL[m]}</button>`).join('') +
+          '</span>' +
+        '</div>';
+      g.items.forEach(it => {
+        const cur = poolSel[it.key] || 'off';
+        out += '<div class="cm-poolrow">' +
+          '<span class="cm-poolname">' +
+            `<b>${ctx.esc(it.label)}</b>` +
+            (it.example ? `<i class="cm-poolex">${ctx.esc(it.example)}</i>` : '') +
+          '</span>' +
+          '<span class="cm-poolseg">' +
+            ['off', 'free', 'mc'].map(m => {
+              const can = (m === 'off') || !!it[m];
+              const lab = m === 'off' ? 'aus'
+                        : m === 'free' ? 'tippen'
+                        : 'auswählen' + (it.choices !== 6 ? ' (' + it.choices + ')' : '');
+              // Was eine Aufgabenart nicht kann, steht trotzdem da —
+              // aber grau und mit Grund. Die Zeile bekäme sonst je nach
+              // Art zwei oder drei Knöpfe und die Spalten verrutschten.
+              const why = can ? '' :
+                ' title="Diese Aufgabenart hat nur wenige mögliche Antworten — sie geht nur als Auswahl."';
+              return `<button type="button" class="cm-poolopt${cur === m ? ' cm-poolopt--on' : ''}" ` +
+                `data-key="${ctx.esc(it.key)}" data-val="${m}"${can ? '' : ' disabled'}${why}>` +
+                `${lab}</button>`;
+            }).join('') +
+          '</span>' +
+        '</div>';
+      });
+      out += '</div>';
+    });
+    els.poolBody.innerHTML = out;
+  }
+
+  /* Die Zeile in der Lobby. Sie ist die einzige Stelle, an der ohne
+     geöffnetes Fenster steht, was gleich drankommt — und zugleich die
+     Begründung dafür, dass „Spiel starten" gesperrt ist. */
+  function renderPoolSummary() {
+    if (!els.poolSum) return;
+    const keys = Object.keys(poolSel);
+    const empty = !keys.length;
+    if (els.startBtn) els.startBtn.disabled = empty;
+    els.poolSum.classList.toggle('cm-poolsum--warn', empty);
+
+    if (empty) {
+      els.poolSum.innerHTML =
+        '<span class="cm-poolsumlab">Aufgaben:</span> noch keine gewählt — ohne Aufgaben kein Spiel.';
+      return;
+    }
+    if (!poolCat) {
+      els.poolSum.innerHTML = '<span class="cm-poolsumlab">Aufgaben:</span> ' +
+        keys.length + (keys.length === 1 ? ' Art gewählt' : ' Arten gewählt');
+      return;
+    }
+    const parts = [];
+    poolCat.forEach(g => {
+      const on = g.items.filter(it => poolSel[it.key]);
+      if (!on.length) return;
+      parts.push(`<b>${ctx.esc(g.label)}</b> — ` + on.map(it =>
+        ctx.esc(it.label) + ' <i>(' + POOL_MODE_LABEL[poolSel[it.key]] + ')</i>').join(' · '));
+    });
+    els.poolSum.innerHTML = '<span class="cm-poolsumlab">Aufgaben:</span> ' + parts.join(' &nbsp;|&nbsp; ');
+  }
+
   /* Eine Spalte je gewähltem Volk: Gruppenbild, Name mit Kopfzahl,
      darunter die Kinder. Nebeneinander statt untereinander — die Lobby
      hängt am Beamer, und nebeneinander sieht die Klasse auf einen
@@ -2817,10 +3236,19 @@
       show2('setup');
       if (!pickBusy) syncPickFromView(v);
       renderPick();
+      if (!poolBusy) syncPoolFromView(v);
+      // Der Katalog wird schon HIER geholt, nicht erst beim Öffnen des
+      // Fensters: die Zusammenfassung darunter braucht die Namen, und
+      // ohne sie stünde dort nur „3 Arten gewählt".
+      ensureCatalog().then(ok => { if (ok) renderPoolSummary(); });
+      renderPoolSummary();
       renderLobbyTeams(v);
       renderOffline(v);
       return;
     }
+    // Der Pool ist nur in der Lobby änderbar (0109). Ein Fenster, das
+    // beim Start offen stünde, böte Knöpfe an, die der Server ablehnt.
+    closePool();
     if (v.phase === 'countdown') {
       show2('countdownP');
       startCountdown(v.countdown_ends_at);
@@ -2972,7 +3400,12 @@
       els = {}; lastView = null; lastSig = null; busy = false; submitting = false;
       unitSpots = {};   // die Einheiten-Plätze gehören zu DIESEM Raum
       pickSel = []; pickBusy = 0; factions = [0, 1, 2, 3];
-      answerBuf = ''; keyMode = null; mapOpen = false;
+      // Der Katalog fällt mit weg: er gehört zwar allen Räumen, aber
+      // eine Kopie, die eine Migration überlebt, wäre schlimmer als ein
+      // zweiter Abruf beim nächsten Öffnen.
+      poolSel = {}; poolBusy = 0; poolCat = null; poolCatBusy = false;
+      answerVal = { neg: false, num: '', den: null };
+      keyMode = null; keyChoices = null; choiceBtn = null; lastQSig = null; mapOpen = false;
       myPendingPicks = 0; pendingPickDeadlineMs = 0; lastTeamEventId = 0;   // 0106
       resetFx();                                                            // UI 18
       lastRoomEventId = 0; roomEventsPrimed = false; teamEventsPrimed = false;
