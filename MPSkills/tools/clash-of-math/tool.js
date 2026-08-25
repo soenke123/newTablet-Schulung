@@ -1362,13 +1362,25 @@
      buildKeypad() der Reihe nach auf die Zeilen unter dem Grundblock,
      damit ein neues Bündel nirgends nachgerechnet werden muss. */
   const KEY_EXTRA = {
-    sign:  [{ lab: '±', act: 'sign', aria: 'Vorzeichen wechseln' }],
+    // Ein „−", kein „±": auf dem Taschenrechner im Ranzen steht ein
+    // Minus, und genau das sucht das Kind. Die Taste SCHALTET
+    // weiterhin (zweiter Druck nimmt das Minus zurück) — sie behauptet
+    // nur nicht mehr, zwei Zeichen zu sein.
+    sign:  [{ lab: '−', act: 'sign', cls: 'cm-key--sign', aria: 'Minus setzen oder wegnehmen' }],
     dec:   [{ lab: ',', ins: ',' }],
     // Kein einzufügendes Zeichen, sondern eine Handlung: der Druck
     // macht aus dem Getippten den ZÄHLER und öffnet darunter den
     // Nenner (Sönkes Vorgabe). Ein „/" im Text wäre etwas anderes —
     // die Eingabe hat danach zwei Felder, nicht ein längeres.
-    frac:  [{ lab: 'a/b', act: 'frac', cls: 'cm-key--frac', aria: 'Bruch: Zähler und Nenner' }],
+    //
+    // Die Beschriftung ist deshalb auch kein Wort, sondern das Bild
+    // der Sache: ein echter Bruchstrich mit einem leeren Kästchen
+    // darüber und darunter — dieselben drei Zeilen, die gleich in der
+    // Eingabe stehen. `lab` bleibt als Text für die Vorlesehilfe.
+    frac:  [{ lab: 'a/b', act: 'frac', cls: 'cm-key--frac', aria: 'Bruch: Zähler und Nenner',
+              labHtml: '<span class="cm-frac cm-frac--key">' +
+                       '<b><span class="cm-fracbox"></span></b>' +
+                       '<i><span class="cm-fracbox"></span></i></span>' }],
     pow:   [{ lab: 'x²', ins: '^2' }, { lab: 'xⁿ', ins: '^' }, { lab: '√', ins: '√' }],
     trig:  [{ lab: 'sin', ins: 'sin(' }, { lab: 'cos', ins: 'cos(' }, { lab: 'tan', ins: 'tan(' },
             { lab: ')', ins: ')' }, { lab: 'π', ins: 'π' }],
@@ -1451,7 +1463,10 @@
         (k.ins ? ' data-ins="' + ctx.esc(k.ins) + '"' : '') +
         (k.act ? ' data-act="' + k.act + '"' : '') +
         (disabled ? ' disabled' : '') +
-        ' aria-label="' + ctx.esc(k.aria || k.lab) + '">' + ctx.esc(k.lab) + '</button>';
+        // `labHtml` ist die Ausnahme für Tasten, deren Beschriftung ein
+        // Bild ist (der Bruchstrich). Sie kommt aus KEY_EXTRA hier in
+        // der Datei, nie vom Server — sonst wäre das eine offene Tür.
+        ' aria-label="' + ctx.esc(k.aria || k.lab) + '">' + (k.labHtml || ctx.esc(k.lab)) + '</button>';
     };
 
     KEY_BASE.forEach(k => { html += cell(k, k.r, k.c); });
@@ -2573,11 +2588,18 @@
               '<button type="button" class="cm-btn cm-btn--ghost" id="cmShuffleBtn">🔀 Teams mischen</button>' +
               '<button type="button" class="cm-btn" id="cmStartBtn">▶ Spiel starten</button>' +
             '</div>' +
-            '<div class="cm-pick" id="cmPick"></div>' +
-            // Was gerade gewählt ist, in Worten. Ein Knopf allein sagte
-            // nur, dass man etwas wählen KANN — nach einem Neuladen
-            // stünde die Lehrkraft ohne Auskunft da.
-            '<div class="cm-poolsum" id="cmPoolSum"></div>' +
+            // Die Wappenreihe und die Aufgaben stehen in EINER Zeile:
+            // links wer spielt, rechts womit. Beides ist dieselbe Frage
+            // („was ist eingestellt?"), und als eigener Absatz darunter
+            // wirkte die Aufgabenzeile wie eine Meldung.
+            '<div class="cm-pickrow">' +
+              '<div class="cm-pick" id="cmPick"></div>' +
+              // Kurzform, keine Aufzählung: „Bruchrechnung + − · : kürzen".
+              // Ob getippt oder ausgewählt wird, steht hier bewusst
+              // NICHT — das ist eine Frage für das Fenster, nicht für
+              // den Blick über die Lobby.
+              '<div class="cm-poolsum" id="cmPoolSum"></div>' +
+            '</div>' +
             '<div class="cm-lobbyteams" id="cmLobbyTeams"></div>' +
             '<div class="cm-offline cm-hide" id="cmOffline"></div>' +
           '</div>' +
@@ -3012,6 +3034,36 @@
      Migration kosten und kein Client-Update. */
   const POOL_MODE_LABEL = { free: 'tippen', mc: 'auswählen' };
 
+  function poolItem(key) {
+    let hit = null;
+    (poolCat || []).forEach(g => g.items.forEach(it => { if (it.key === key) hit = it; }));
+    return hit;
+  }
+
+  /* Was aus einem Wunsch wird, wenn die Aufgabenart ihn nicht erfüllen
+     kann. „Alle tippen" bei der Bruchrechnung soll gehen, obwohl
+     „Vergleichen" nur drei mögliche Antworten hat (Sönkes Vorgabe):
+     diese eine Zeile rutscht dann auf „auswählen", statt den ganzen
+     Knopf zu sperren. Ein gesperrter Sammelknopf zwingt sonst dazu,
+     drei Zeilen einzeln anzuklicken, um EINE Ausnahme zu umgehen. */
+  function effMode(key, mode) {
+    if (mode === 'off') return 'off';
+    const it = poolItem(key);
+    if (!it) return mode;
+    if (mode === 'free') return it.free ? 'free' : (it.mc ? 'mc' : 'off');
+    return it.mc ? 'mc' : (it.free ? 'free' : 'off');
+  }
+
+  /* Das Kurzzeichen für die Lobby-Zeile („+ −", „kürzen"). Es kommt aus
+     dem Katalog (Migration 0111) — eine neue Kategorie soll auch hier
+     eine Migration kosten und kein Client-Update. Der Rückfall auf den
+     ersten Teil des Namens greift nur, solange 0111 nicht eingespielt
+     ist; er ist länger, aber nie falsch. */
+  function poolShort(it) {
+    if (it.short) return it.short;
+    return String(it.label || '').split(/\s*\/\s*/)[0].replace(/\s*\(.*$/, '');
+  }
+
   function syncPoolFromView(v) {
     if (!v) return;
     poolSel = (v.pool && typeof v.pool === 'object') ? Object.assign({}, v.pool) : {};
@@ -3051,8 +3103,9 @@
   async function setPoolFor(keys, mode) {
     const next = Object.assign({}, poolSel);
     keys.forEach(k => {
-      if (mode === 'off') delete next[k];
-      else next[k] = mode;
+      const m = effMode(k, mode);
+      if (m === 'off') delete next[k];
+      else next[k] = m;
     });
     const before = poolSel;
     poolSel = next;
@@ -3089,35 +3142,47 @@
     let out = '';
     poolCat.forEach(g => {
       // Woran die Sammel-Knöpfe erkennen, ob die ganze Gruppe schon so
-      // steht: nur dann sind sie „an". Bei gemischten Zuständen ist
-      // keiner an — das ist ehrlicher als der Zustand des ersten
-      // Eintrags.
-      const states = g.items.map(it => poolSel[it.key] || 'off');
-      const allIs  = m => states.every(s => s === m);
-      const canAll = m => m === 'off' || g.items.every(it => it[m]);
-      out += '<div class="cm-poolgrp">' +
+      // steht: nur dann sind sie „an". Verglichen wird gegen das, was
+      // der Knopf TATSÄCHLICH setzen würde (effMode) — sonst wäre
+      // „alle tippen" nach dem eigenen Klick nicht an, bloß weil eine
+      // Zeile auf „auswählen" ausweichen musste.
+      const allIs = m => g.items.every(it => (poolSel[it.key] || 'off') === effMode(it.key, m));
+      const onCount = g.items.filter(it => poolSel[it.key]).length;
+      out += `<div class="cm-poolgrp${onCount ? ' cm-poolgrp--on' : ''}">` +
         '<div class="cm-poolgrphead">' +
           `<span class="cm-poolgrpname">${ctx.esc(g.label)}</span>` +
+          `<span class="cm-poolcount${onCount ? ' cm-poolcount--on' : ''}">` +
+            `${onCount} von ${g.items.length}</span>` +
           '<span class="cm-poolseg cm-poolseg--all">' +
-            ['off', 'free', 'mc'].map(m =>
-              `<button type="button" class="cm-poolall${allIs(m) ? ' cm-poolall--on' : ''}" ` +
-              `data-group="${ctx.esc(g.key)}" data-val="${m}"${canAll(m) ? '' : ' disabled'}>` +
-              `alle ${m === 'off' ? 'aus' : POOL_MODE_LABEL[m]}</button>`).join('') +
+            ['off', 'free', 'mc'].map(m => {
+              // Ausweichende Zeilen nennen, statt den Knopf zu sperren.
+              const odd = m === 'off' ? [] : g.items.filter(it => effMode(it.key, m) !== m);
+              const why = odd.length
+                ? ` title="${ctx.esc(odd.map(it => it.label).join(', '))} kann das nicht — ` +
+                  `steht dann auf »${POOL_MODE_LABEL[m === 'free' ? 'mc' : 'free']}«."`
+                : '';
+              return `<button type="button" class="cm-poolall${allIs(m) ? ' cm-poolall--on' : ''}" ` +
+                `data-group="${ctx.esc(g.key)}" data-val="${m}"${why}>` +
+                `alle ${m === 'off' ? 'aus' : POOL_MODE_LABEL[m]}</button>`;
+            }).join('') +
           '</span>' +
         '</div>';
       g.items.forEach(it => {
         const cur = poolSel[it.key] || 'off';
-        out += '<div class="cm-poolrow">' +
+        const on  = cur !== 'off';
+        // Die ganze ZEILE trägt den Zustand, nicht nur der Knopf: beim
+        // Blick über die Tabelle soll zu sehen sein, was drankommt,
+        // ohne drei Segmente je Zeile abzulesen.
+        out += `<div class="cm-poolrow${on ? ' cm-poolrow--on' : ''}">` +
           '<span class="cm-poolname">' +
+            `<span class="cm-poolmark" aria-hidden="true">${on ? '✔' : ''}</span>` +
             `<b>${ctx.esc(it.label)}</b>` +
             (it.example ? `<i class="cm-poolex">${ctx.esc(it.example)}</i>` : '') +
           '</span>' +
           '<span class="cm-poolseg">' +
             ['off', 'free', 'mc'].map(m => {
               const can = (m === 'off') || !!it[m];
-              const lab = m === 'off' ? 'aus'
-                        : m === 'free' ? 'tippen'
-                        : 'auswählen' + (it.choices !== 6 ? ' (' + it.choices + ')' : '');
+              const lab = m === 'off' ? 'aus' : POOL_MODE_LABEL[m];
               // Was eine Aufgabenart nicht kann, steht trotzdem da —
               // aber grau und mit Grund. Die Zeile bekäme sonst je nach
               // Art zwei oder drei Knöpfe und die Spalten verrutschten.
@@ -3135,9 +3200,15 @@
     els.poolBody.innerHTML = out;
   }
 
-  /* Die Zeile in der Lobby. Sie ist die einzige Stelle, an der ohne
+  /* Die Zeile neben den Wappen. Sie ist die einzige Stelle, an der ohne
      geöffnetes Fenster steht, was gleich drankommt — und zugleich die
-     Begründung dafür, dass „Spiel starten" gesperrt ist. */
+     Begründung dafür, dass „Spiel starten" gesperrt ist.
+
+     Kurzform, kein Satz: der Name der Oberkategorie und dahinter die
+     Rechenzeichen ihrer aktiven Unterkategorien („Bruchrechnung + −
+     · : kürzen"). Ob getippt oder ausgewählt wird, fehlt bewusst — es
+     verdoppelte die Zeile, ohne den Blick über die Lobby zu beantworten
+     („was rechnen die gleich?"). */
   function renderPoolSummary() {
     if (!els.poolSum) return;
     const keys = Object.keys(poolSel);
@@ -3146,23 +3217,25 @@
     els.poolSum.classList.toggle('cm-poolsum--warn', empty);
 
     if (empty) {
-      els.poolSum.innerHTML =
-        '<span class="cm-poolsumlab">Aufgaben:</span> noch keine gewählt — ohne Aufgaben kein Spiel.';
+      els.poolSum.innerHTML = '<b>Keine Aufgaben gewählt</b>';
       return;
     }
     if (!poolCat) {
-      els.poolSum.innerHTML = '<span class="cm-poolsumlab">Aufgaben:</span> ' +
-        keys.length + (keys.length === 1 ? ' Art gewählt' : ' Arten gewählt');
+      els.poolSum.innerHTML = '<b>' + keys.length +
+        (keys.length === 1 ? ' Aufgabenart' : ' Aufgabenarten') + '</b>';
       return;
     }
-    const parts = [];
+    let out = '';
     poolCat.forEach(g => {
       const on = g.items.filter(it => poolSel[it.key]);
       if (!on.length) return;
-      parts.push(`<b>${ctx.esc(g.label)}</b> — ` + on.map(it =>
-        ctx.esc(it.label) + ' <i>(' + POOL_MODE_LABEL[poolSel[it.key]] + ')</i>').join(' · '));
+      out += '<span class="cm-poolsumgrp">' +
+        `<b>${ctx.esc(g.label)}</b>` +
+        '<span class="cm-poolsumops">' +
+          on.map(it => `<i>${ctx.esc(poolShort(it))}</i>`).join('') +
+        '</span></span>';
     });
-    els.poolSum.innerHTML = '<span class="cm-poolsumlab">Aufgaben:</span> ' + parts.join(' &nbsp;|&nbsp; ');
+    els.poolSum.innerHTML = out;
   }
 
   /* Eine Spalte je gewähltem Volk: Gruppenbild, Name mit Kopfzahl,

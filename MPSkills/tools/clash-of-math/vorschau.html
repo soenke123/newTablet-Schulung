@@ -308,13 +308,13 @@ let pool = { add100: 'free' };
 
 const CATALOG = [
   { key: 'basics', label: 'Grundrechenarten', items: [
-    { key: 'add100', label: 'Addition bis 100', example: '37 + 48', free: true, mc: true, choices: 6 }
+    { key: 'add100', label: 'Addition bis 100', short: '+', example: '37 + 48', free: true, mc: true, choices: 6 }
   ] },
   { key: 'frac', label: 'Bruchrechnung', items: [
-    { key: 'frac_addsub',  label: 'Addieren / Subtrahieren',    example: '3/4 + 1/8', free: true,  mc: true, choices: 6 },
-    { key: 'frac_muldiv',  label: 'Multiplizieren / Dividieren', example: '3/5 · 5/6', free: true,  mc: true, choices: 6 },
-    { key: 'frac_reduce',  label: 'Kürzen',                      example: '12/18',     free: true,  mc: true, choices: 6 },
-    { key: 'frac_compare', label: 'Vergleichen (< = >)',         example: '3/4 ▢ 2/3', free: false, mc: true, choices: 3 }
+    { key: 'frac_addsub',  label: 'Addieren / Subtrahieren',     short: '+ −',    example: '3/4 + 1/8', free: true,  mc: true, choices: 6 },
+    { key: 'frac_muldiv',  label: 'Multiplizieren / Dividieren', short: '· :',    example: '3/5 · 5/6', free: true,  mc: true, choices: 6 },
+    { key: 'frac_reduce',  label: 'Kürzen',                      short: 'kürzen', example: '12/18',     free: true,  mc: true, choices: 6 },
+    { key: 'frac_compare', label: 'Vergleichen (< = >)',         short: '< >',    example: '3/4 ▢ 2/3', free: false, mc: true, choices: 3 }
   ] }
 ];
 const TASK = {};

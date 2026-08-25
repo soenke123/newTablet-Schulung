@@ -214,10 +214,21 @@
 
    Kein festes Raster: die Knöpfe sind gleich breit und brechen um,
    wenn der Beamer schmal ist. `--team` setzt tool.js je Knopf. */
+/* Wappen links, Aufgaben rechts — eine Zeile. Auf einem schmalen
+   Beamerbild bricht die Aufgabenzeile unter die Wappen; sie behält
+   dank `flex-basis` aber immer genug Breite, um lesbar zu bleiben,
+   statt auf zwei Zeichen zusammenzufallen. */
+.cm-pickrow {
+  display: flex;
+  align-items: center;
+  gap: 8px 18px;
+  flex-wrap: wrap;
+}
 .cm-pick {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  flex: 0 1 auto;
 }
 .cm-pickbtn {
   flex: 0 0 auto;
@@ -2673,32 +2684,78 @@ body.cm-locked { overflow: hidden; }
   70%  { transform: translateX(-2px); }
   100% { transform: translateX(0); }
 }
-/* Die Bruch-Taste trägt keine Ziffer, sondern ein Wort — kleiner
-   gesetzt, sonst sprengt „a/b" die Taste. */
-.cm-key--frac { font-size: clamp(.9rem, 4vw, 1.4rem); }
+/* Die beiden Struktur-Tasten tragen keine Ziffer. Das Minus wird
+   größer gesetzt (ein „−" in Zifferngröße sieht aus wie ein Strich im
+   Nichts), der Bruch trägt statt eines Wortes sein eigenes Bild. */
+.cm-key--sign { font-size: clamp(1.3rem, 6vw, 2rem); line-height: 1; }
+.cm-key--frac { padding: 4px; }
+/* Der Bruchstrich AUF der Taste: dieselben drei Zeilen wie in der
+   Eingabe, nur mit leeren Kästchen statt Ziffern — die Taste zeigt,
+   was sie herstellt. Nicht verkleinert (kein .74em wie im Text): hier
+   steht sie allein und darf die Taste füllen. */
+.cm-frac--key { font-size: 1em; }
+.cm-fracbox {
+  display: block;
+  width: .62em;
+  height: .62em;
+  margin: .06em auto;
+  border: .1em solid currentColor;
+  border-radius: .08em;
+  opacity: .75;
+}
 
-/* ── Die Zusammenfassung in der Lobby ───────────────────────────── */
+/* ── Die Kurzform neben den Wappen ───────────────────────────────
+   Name der Oberkategorie, dahinter die Rechenzeichen als Kette von
+   Chips. Keine Aufzählung mit Klammern und Bindestrichen: die Zeile
+   steht neben acht Wappen und muss in einem Blick lesbar sein. */
 .cm-poolsum {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px 14px;
+  flex-wrap: wrap;
   font-size: .9rem;
-  line-height: 1.5;
   color: var(--ink-soft);
 }
-.cm-poolsum b { color: var(--ink); }
-.cm-poolsum i { font-style: normal; opacity: .75; }
-.cm-poolsumlab { font-weight: 800; color: var(--ink); }
+.cm-poolsumgrp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cm-poolsumgrp > b { font-weight: 800; color: var(--ink); }
+.cm-poolsumops {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cm-poolsumops > i {
+  font-style: normal;
+  font-size: .84rem;
+  line-height: 1.4;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--ink);
+  white-space: nowrap;
+}
 /* Ohne Aufgaben kein Spiel — dieselbe Zeile sagt dann auch, warum der
-   Startknopf grau ist. */
-/* Rot als Rahmen und Tönung, der Text in der normalen Tintenfarbe:
+   Startknopf grau ist.
+   Rot als Rahmen und Tönung, der Text in der normalen Tintenfarbe:
    ein fester Rotton wäre im hellen Thema zu blass und im dunklen zu
    dunkel, um ihn zu lesen. */
+.cm-poolsum > b { font-weight: 700; color: var(--ink); }
 .cm-poolsum--warn {
-  padding: 8px 12px;
-  border-radius: var(--r-sm, 8px);
+  flex: 0 1 auto;              /* als Blase so breit wie ihr Text */
+  padding: 6px 12px;
+  border-radius: 999px;
   background: color-mix(in srgb, #c4361f 14%, transparent);
   border: 1px solid color-mix(in srgb, #c4361f 55%, transparent);
   color: var(--ink);
-  font-weight: 600;
 }
+.cm-poolsum--warn::before { content: "⚠"; margin-right: 2px; }
 
 /* ── Das Auswahl-Fenster ─────────────────────────────────────────
    Muster wie .cm-mapov, aber auf dem BEAMER: `fixed` auf dem sichtbaren
@@ -2788,6 +2845,10 @@ body.cm-locked { overflow: hidden; }
   border-radius: var(--r-sm, 10px);
   overflow: hidden;
 }
+/* Eine Gruppe, aus der etwas drankommt, hebt sich schon als Kasten ab
+   — sonst müsste man in jeder Zeile nachsehen, ob überhaupt etwas
+   gewählt ist. */
+.cm-poolgrp--on { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
 .cm-poolgrphead {
   display: flex;
   align-items: center;
@@ -2802,15 +2863,40 @@ body.cm-locked { overflow: hidden; }
   font-weight: 800;
   color: var(--ink);
 }
+/* „2 von 4" — beantwortet aus der Ferne, ob und wie viel in dieser
+   Oberkategorie ansteht, ohne die Zeilen darunter zu lesen. */
+.cm-poolcount {
+  flex: 0 0 auto;
+  font-size: .74rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+.cm-poolcount--on {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--ink);
+}
 .cm-poolrow {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   padding: 8px 12px;
+  border-left: 3px solid transparent;
+  transition: background .12s, border-color .12s;
 }
 .cm-poolrow + .cm-poolrow {
   border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+/* Der gewählte Zustand gehört der ganzen Zeile: Farbstreifen links,
+   getönter Grund, Name in voller Tinte. Der Segment-Knopf allein war
+   zu klein, um beim Überfliegen der Tabelle aufzufallen. */
+.cm-poolrow--on {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  border-left-color: var(--accent);
 }
 .cm-poolname {
   flex: 1 1 220px;
@@ -2820,7 +2906,16 @@ body.cm-locked { overflow: hidden; }
   gap: 8px;
   flex-wrap: wrap;
 }
-.cm-poolname b { font-weight: 700; color: var(--ink); }
+.cm-poolname b { font-weight: 700; color: var(--ink-soft); }
+.cm-poolrow--on .cm-poolname b { color: var(--ink); }
+/* Fester Platz, auch wenn das Häkchen fehlt — sonst rückten die Namen
+   ausgewählter Zeilen gegen die anderen ein. */
+.cm-poolmark {
+  flex: 0 0 auto;
+  width: 1em;
+  color: var(--accent);
+  font-weight: 900;
+}
 /* Das Beispiel sagt der Lehrkraft in einem Blick mehr über das Niveau
    als jede Beschreibung — deshalb steht es in der Zeile und nicht in
    einem Tooltip. */
