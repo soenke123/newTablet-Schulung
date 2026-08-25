@@ -214,10 +214,20 @@
 
    Kein festes Raster: die Knöpfe sind gleich breit und brechen um,
    wenn der Beamer schmal ist. `--team` setzt tool.js je Knopf. */
+/* Wappen links, Aufgabenliste rechts daneben. `align-items: center`
+   hält die Liste auf der Höhe der Bilder; auf einem schmalen Bild
+   bricht sie unter die Reihe, statt sie über den Rand zu schieben. */
+.cm-pickrow {
+  display: flex;
+  align-items: center;
+  gap: 10px 22px;
+  flex-wrap: wrap;
+}
 .cm-pick {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  flex: 0 1 auto;
 }
 .cm-pickbtn {
   flex: 0 0 auto;
@@ -2645,6 +2655,20 @@ body.cm-locked { overflow: hidden; }
    der negative Bruch, „(-3)/4" wäre eine Aussage über den Zähler. */
 .cm-insign { margin-right: .1em; }
 
+/* Ein Wort in der Aufgabe („kürze 12/18"). Cinzel ist eine
+   Versalienschrift — dort erscheint jedes kleine k als K, und „KÜRZE"
+   schreit die Klasse an. Georgia steht im selben Stapel und bleibt bei
+   der Buchoptik des Pergaments, kann aber Kleinbuchstaben. Etwas
+   kleiner gesetzt: die Zahl ist die Aufgabe, das Wort nur die
+   Anweisung. */
+.cm-qword {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: .74em;
+  font-weight: 600;
+  text-transform: none;
+  font-variant: normal;
+}
+
 /* ── Antwortkacheln statt Ziffern ────────────────────────────────
    Dasselbe Raster (.cm-keys) mit anderer Spaltenzahl, dieselbe
    Pergament-Optik wie die Tasten — es ist die Tastatur dieser
@@ -2693,12 +2717,14 @@ body.cm-locked { overflow: hidden; }
   opacity: .75;
 }
 
-/* ── Die Kurzform unter der Knopfreihe ───────────────────────────
+/* ── Die Kurzform neben den Wappen ───────────────────────────────
    Je Oberkategorie eine Zeile: ihr Name, dahinter die Rechenzeichen als
    Chips. Untereinander statt in einem Fluss — zwei Kategorien
    nebeneinander verschmelzen sonst zu einer Kette, in der nicht mehr zu
    sehen ist, was wozu gehört. */
 .cm-poolsum {
+  flex: 1 1 200px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -2907,18 +2933,24 @@ body.cm-locked { overflow: hidden; }
   white-space: nowrap;
 }
 .cm-poolseg button + button { border-left: 1px solid var(--line); }
+/* Die Füllung der äußeren Knöpfe folgt der Kapsel. `overflow: hidden`
+   oben beschneidet zwar ohnehin — aber erst beim Zeichnen; mit eigenem
+   Radius ist die runde Ecke die Form des Knopfes selbst. */
+.cm-poolseg button:first-child { border-radius: 999px 0 0 999px; }
+.cm-poolseg button:last-child  { border-radius: 0 999px 999px 0; }
 .cm-poolseg button:hover:not(:disabled) {
   background: color-mix(in srgb, var(--ink) 6%, transparent);
 }
 .cm-poolseg button:disabled { opacity: .35; cursor: not-allowed; }
 .cm-poolseg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-/* Der gedrückte Knopf IST die Anzeige — kräftig gefüllt, damit in einer
-   Reihe von drei Segmenten auf einen Blick klar ist, welches gilt. */
+/* Der gedrückte Knopf IST die Anzeige — schlicht mit der Signalfarbe
+   gefüllt. Kein Rahmen und kein Schatten obendrauf: die Reihe ist eine
+   runde Kapsel, und eine zweite eckige Kante darin sah aus wie ein
+   Fehler im Zuschnitt. */
 .cm-poolopt--on {
   background: var(--accent);
   color: #fff;
   font-weight: 800;
-  box-shadow: 0 0 0 1px var(--accent) inset;
 }
 .cm-poolopt--on:hover:not(:disabled) { background: var(--accent); }
 /* „aus" wird ebenso deutlich hervorgehoben, aber neutral: in der
@@ -2926,7 +2958,6 @@ body.cm-locked { overflow: hidden; }
    dran. */
 .cm-poolopt--off {
   background: color-mix(in srgb, var(--ink) 55%, transparent);
-  box-shadow: none;
 }
 .cm-poolopt--off:hover:not(:disabled) {
   background: color-mix(in srgb, var(--ink) 55%, transparent);

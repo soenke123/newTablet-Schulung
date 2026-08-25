@@ -1422,10 +1422,17 @@
      bleibt Text. So braucht der Server kein zweites Anzeigeformat und
      eine neue Aufgabenart keine Zeile in dieser Datei. */
   const FRAC_TOKEN = /^(-?\d+)\/(\d+)$/;
+  const WORD_TOKEN = /[A-Za-zÄÖÜäöüß]/;
   function mathHTML(text) {
     return String(text || '').split(/\s+/).map(tok => {
       const m = FRAC_TOKEN.exec(tok);
-      return m ? fracHTML(m[1], m[2], false) : ctx.esc(tok);
+      if (m) return fracHTML(m[1], m[2], false);
+      // Ein WORT in der Aufgabe („kürze 12/18", 0112) bekommt eine
+      // eigene Schrift: die Anzeigeschrift des Spiels ist Cinzel, eine
+      // Versalienschrift — sie stellt jedes kleine k als K dar, und
+      // „KÜRZE" schreit die Klasse an, statt sie anzuweisen.
+      if (WORD_TOKEN.test(tok)) return '<span class="cm-qword">' + ctx.esc(tok) + '</span>';
+      return ctx.esc(tok);
     }).join(' ');
   }
 
@@ -2588,15 +2595,16 @@
               '<button type="button" class="cm-btn cm-btn--ghost" id="cmShuffleBtn">🔀 Teams mischen</button>' +
               '<button type="button" class="cm-btn" id="cmStartBtn">▶ Spiel starten</button>' +
             '</div>' +
-            // Direkt unter der Knopfreihe, je Oberkategorie eine Zeile:
-            // „Bruchrechnung  + −  · :  kürzen". Sie steht dort, wo der
-            // Knopf sitzt, der sie ändert — und nicht neben den Wappen,
-            // die eine andere Frage beantworten.
-            // Ob getippt oder ausgewählt wird, steht hier bewusst NICHT;
-            // das ist eine Frage für das Fenster, nicht für den Blick
-            // über die Lobby.
-            '<div class="cm-poolsum" id="cmPoolSum"></div>' +
-            '<div class="cm-pick" id="cmPick"></div>' +
+            // Unter der Knopfreihe und rechts neben den Wappen: die
+            // Aufgabenliste füllt den Platz, den die Wappenreihe rechts
+            // frei lässt, statt eine eigene Zeile Höhe zu kosten.
+            // Je Oberkategorie eine Zeile. Ob getippt oder ausgewählt
+            // wird, steht hier bewusst NICHT; das ist eine Frage für das
+            // Fenster, nicht für den Blick über die Lobby.
+            '<div class="cm-pickrow">' +
+              '<div class="cm-pick" id="cmPick"></div>' +
+              '<div class="cm-poolsum" id="cmPoolSum"></div>' +
+            '</div>' +
             '<div class="cm-lobbyteams" id="cmLobbyTeams"></div>' +
             '<div class="cm-offline cm-hide" id="cmOffline"></div>' +
           '</div>' +
