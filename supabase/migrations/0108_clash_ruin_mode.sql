@@ -16,7 +16,8 @@
 --     sie stehen alle bei null Feldern (endRows in tool.js).
 --   • Je 10 gesammelte Ruinen-Punkte verschwindet EIN Feld vom
 --     Spielfeld (clash_shrink_board). Genommen wird es dem aktuell
---     GRÖSSTEN lebenden Volk, immer vom Rand, nie eine Burg.
+--     GRÖSSTEN lebenden Volk, zufällig irgendwo aus dessen Gebiet,
+--     nie eine Burg.
 --   • Serien-Boni zählen dabei wie richtige Antworten: Team-Serie
 --     = 5 Punkte, Einzel-Serie = 2 Punkte, jede richtige Antwort
 --     selbst = 1 Punkt. Sie gehen NICHT in correct_count — die
@@ -30,23 +31,34 @@
 -- Felder, die Einzel-Serie feuert bei jedem Vielfachen von **12**
 -- statt 10.
 --
--- ── Warum Schrumpfen niemanden ausscheiden lassen kann ──────────
--- Zwei Riegel, beide in clash_shrink_board: Burgkacheln sind
--- ausgenommen, UND ein Volk mit nur noch einer einzigen Kachel
--- kommt als Opfer gar nicht erst in Frage. Der zweite Riegel ist
--- nicht doppelt gemoppelt: ein Volk, das seine Burg verloren hat
--- (möglich seit 0100 — Burgen werden übernommen, nicht zerstört),
--- hätte sonst keine geschützte Kachel mehr. Deshalb braucht das
--- Schrumpfen auch kein clash_check_win.
+-- ── Drei Grenzen für den Zufall (alle in clash_shrink_board) ────
+-- Die Kachel wird ZUFÄLLIG gezogen — sie darf mitten aus dem Gebiet
+-- verschwinden, Löcher im Volksgebiet sind ausdrücklich erwünscht
+-- (so vom User entschieden, 2026-08-25). Begrenzt wird der Zufall
+-- durch drei Bedingungen:
 --
--- ── „immer vom Rand aus" ist gemessen, nicht geraten ────────────
--- Die Kachel mit den WENIGSTEN vorhandenen Nachbarn liegt außen
--- (eine Innenkachel hat sechs). Danach entscheidet der Abstand zur
--- nächsten eigenen Burg. Das frisst die Karte von außen nach innen
--- ab und hält sie damit von selbst zusammenhängend — wichtig, weil
--- eine abgetrennte Insel ohne Nachbarschaft zum eigenen Gebiet nie
--- wieder erobert werden könnte (clash_capture_random verlangt
--- Nachbarschaft).
+--   1. Burgen nie. Sie sind das Herz des Volkes, sie fallen nur
+--      durch Eroberung.
+--   2. Kein Volk fällt unter FÜNF Kacheln: als Opfer kommt nur in
+--      Frage, wer mindestens sechs hat. Das ersetzt den früheren
+--      Ein-Kachel-Riegel und ist zugleich der Grund, warum das
+--      Schrumpfen kein clash_check_win braucht — es kann niemanden
+--      ausscheiden lassen. (Der Riegel ist nicht doppelt gemoppelt
+--      zu Punkt 1: seit 0100 werden Burgen übernommen statt
+--      zerstört, ein Volk kann also ganz ohne Burg dastehen.)
+--   3. Das Spielfeld bleibt IMMER zusammenhängend. Löcher — von
+--      Kacheln umschlossene Lücken — sind in Ordnung, abgetrennte
+--      Inseln nicht: clash_capture_random erobert ausschließlich
+--      Kacheln, die an eigenes Gebiet grenzen, eine Insel wäre für
+--      immer unerreichbar und die Runde nicht mehr zu gewinnen.
+--
+-- Punkt 3 wird gemessen, nicht geschätzt: für jede Kandidatenkachel
+-- läuft eine Breitensuche (rekursives CTE über clash_is_neighbor)
+-- über das Feld OHNE sie. Erreicht sie alle übrigen Kacheln, war die
+-- Kandidatin kein Gelenkpunkt und darf gehen; sonst kommt die
+-- nächste dran. Das ist der langweilige, aber offensichtlich
+-- richtige Weg — eine Gelenkpunkt-Formel über den Nachbarring eines
+-- Sechsecks wäre kürzer und deutlich schwerer zu glauben.
 --
 -- ⚠️ Neutrale Kacheln (Slot -1, 0105) werden NIE entfernt. Das sind
 -- Innenlöcher; ihr Verschwinden brächte genau das Loch zurück, das
@@ -163,7 +175,22 @@ as $$
     'removed',       greatest(coalesce(b.initial_tiles, c.n) - c.n, 0),
     'max_removals',  floor(coalesce(b.initial_tiles, c.n) / 2.0)::int,
     'floor_reached', (coalesce(b.initial_tiles, c.n) - c.n)
-                       >= floor(coalesce(b.initial_tiles, c.n) / 2.0)::int
+                       >= floor(coalesce(b.initial_tiles, c.n) / 2.0)::int,
+    -- Gibt es überhaupt noch ein Volk, dem man etwas wegnehmen DARF?
+    -- Die Fünf-Kachel-Untergrenze greift in der Praxis oft vor der
+    -- Halbierung (vier Völker auf 37 Kacheln: bei 20 ist Schluss, die
+    -- Grenze läge bei 19). Ohne dieses Feld verspräche der Banner den
+    -- Ausgeschiedenen weiter ein versinkendes Feld, das nie kommt.
+    -- Der Zusammenhangs-Test steckt NICHT hier drin — er kostet je
+    -- Kachel eine Breitensuche und blockiert höchstens vorübergehend;
+    -- diese Auskunft muss billig genug für jeden clash_view sein.
+    'shrinkable',    exists (select 1
+                               from clash_tiles t
+                              where t.room_id = p_room
+                                and t.owner_team >= 0
+                              group by t.owner_team
+                             having count(*) >= 6
+                                and count(*) filter (where not t.is_castle) >= 1)
   )
   from clash_boards b,
        lateral (select count(*)::int as n from clash_tiles where room_id = p_room) c
@@ -174,8 +201,10 @@ revoke all on function clash_shrink_state(uuid) from public;
 
 comment on function clash_shrink_state(uuid) is
   'Stand des Spielfelds gegenüber seiner Startgröße (0108): wie viele Kacheln noch da sind, wie '
-  'viele verschwunden sind und ob die Halbierungsgrenze erreicht ist. Interner Helfer — die '
-  'Werte kommen über clash_view/clash_room_get als `board` heraus.';
+  'viele verschwunden sind, ob die Halbierungsgrenze erreicht ist (floor_reached) und ob es '
+  'überhaupt noch ein Volk mit genug Kacheln gibt (shrinkable — die Fünf-Kachel-Untergrenze '
+  'greift oft früher als die Halbierung). Interner Helfer — die Werte kommen über '
+  'clash_view/clash_room_get als `board` heraus.';
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -189,9 +218,15 @@ create or replace function clash_shrink_board(p_room uuid, p_by_team int)
 as $$
 declare
   v_board  clash_boards;
+  v_cand   record;
   v_victim int;
   v_r      int;
   v_c      int;
+  v_total  int;
+  v_seed_r int;
+  v_seed_c int;
+  v_reach  int;
+  v_tries  int := 0;
 begin
   -- Die Board-Zeile ist hier die Sperre: Schrumpfen ist selten (alle
   -- zehn richtigen Antworten eines ausgeschiedenen Volkes), die
@@ -206,56 +241,83 @@ begin
     return jsonb_build_object('shrunk', false, 'reason', 'floor_reached');
   end if;
 
-  -- Das Opfer: das lebende Volk mit den MEISTEN Feldern (bei
-  -- Gleichstand zufällig, wie überall sonst in diesem Spiel). Das
-  -- gleicht von selbst aus, ohne dass irgendwo ein Reihum-Zähler
-  -- gepflegt werden müsste. Zwei Bedingungen schützen davor, dass
-  -- das Schrumpfen jemanden ausscheiden lässt: mindestens zwei
-  -- Kacheln insgesamt und mindestens eine, die keine Burg ist.
-  select t.owner_team
-    into v_victim
-    from clash_tiles t
-   where t.room_id = p_room
-     and t.owner_team >= 0
-   group by t.owner_team
-  having count(*) >= 2
-     and count(*) filter (where not t.is_castle) >= 1
-   order by count(*) desc, random()
-   limit 1;
+  select count(*) into v_total from clash_tiles where room_id = p_room;
 
-  if v_victim is null then
-    return jsonb_build_object('shrunk', false, 'reason', 'no_target');
-  end if;
+  -- Die Kandidatinnen: alle Nicht-Burg-Kacheln lebender Völker, die
+  -- danach noch mindestens fünf Kacheln übrig hätten (g.n >= 6).
+  -- Sortiert nach Volksgröße absteigend, innerhalb eines Volkes rein
+  -- zufällig — mitten aus dem Gebiet ist genauso erlaubt wie vom
+  -- Rand. Das größte Volk zuerst gleicht von selbst aus, ohne dass
+  -- irgendwo ein Reihum-Zähler gepflegt werden müsste; sind alle
+  -- seine Kacheln Gelenkpunkte, rutscht die Schleife zum
+  -- nächstgrößeren weiter, statt gar nichts zu tun.
+  -- Neutrale Kacheln (Slot -1) sind über owner_team >= 0 draußen.
+  for v_cand in
+    select t.r, t.c, t.owner_team
+      from clash_tiles t
+      join (select owner_team, count(*) as n
+              from clash_tiles
+             where room_id = p_room
+               and owner_team >= 0
+             group by owner_team) g on g.owner_team = t.owner_team
+     where t.room_id = p_room
+       and t.owner_team >= 0
+       and not t.is_castle
+       and g.n >= 6
+     order by g.n desc, random()
+  loop
+    -- Deckel gegen den pathologischen Fall, dass fast jede Kachel
+    -- ein Gelenkpunkt ist (lange dünne Ketten). Lieber einmal nicht
+    -- schrumpfen als die Antwort des Kindes hängen lassen.
+    v_tries := v_tries + 1;
+    exit when v_tries > 40;
 
-  -- Die Kachel: möglichst weit außen (wenige vorhandene Nachbarn),
-  -- bei Gleichstand möglichst weit weg von der eigenen Burg.
-  -- Abstand als Quadratsumme über r/c — es ist ein Gleichstands-
-  -- Brecher, keine echte Hex-Distanz, und braucht deshalb weder
-  -- Wurzel noch Achsenumrechnung.
-  select t.r, t.c
-    into v_r, v_c
-    from clash_tiles t
-   where t.room_id = p_room
-     and t.owner_team = v_victim
-     and not t.is_castle
-   order by (select count(*)
-               from clash_tiles n
-              where n.room_id = p_room
-                and clash_is_neighbor(t.r, t.c, n.r, n.c)) asc,
-            (select coalesce(min((t.r - k.r) * (t.r - k.r) + (t.c - k.c) * (t.c - k.c)), 0)
-               from clash_tiles k
-              where k.room_id = p_room
-                and k.owner_team = v_victim
-                and k.is_castle) desc,
-            random()
-   limit 1
-     for update of t skip locked;
+    -- Startpunkt der Breitensuche: irgendeine Kachel, die bliebe.
+    select t.r, t.c
+      into v_seed_r, v_seed_c
+      from clash_tiles t
+     where t.room_id = p_room
+       and not (t.r = v_cand.r and t.c = v_cand.c)
+     limit 1;
+    exit when v_seed_r is null;
+
+    -- Zusammenhang OHNE die Kandidatin: von einer Kachel aus alles
+    -- ablaufen, was über Nachbarschaft erreichbar ist. `union`
+    -- (nicht `all`) hält die Suche endlich — jede Kachel wird nur
+    -- einmal aufgenommen.
+    with recursive walk(r, c) as (
+      select v_seed_r, v_seed_c
+      union
+      select t.r, t.c
+        from clash_tiles t
+        join walk w on clash_is_neighbor(w.r, w.c, t.r, t.c)
+       where t.room_id = p_room
+         and not (t.r = v_cand.r and t.c = v_cand.c)
+    )
+    select count(*) into v_reach from walk;
+
+    -- Alle übrigen erreicht ⇒ kein Gelenkpunkt ⇒ diese darf gehen.
+    if v_reach = v_total - 1 then
+      v_victim := v_cand.owner_team;
+      v_r      := v_cand.r;
+      v_c      := v_cand.c;
+      exit;
+    end if;
+  end loop;
 
   if v_r is null then
     return jsonb_build_object('shrunk', false, 'reason', 'no_target');
   end if;
 
-  delete from clash_tiles where room_id = p_room and r = v_r and c = v_c;
+  -- `not is_castle` steht hier ein zweites Mal: zwischen Auswahl und
+  -- Löschen liegt keine Sperre auf der Kachelzeile, und eine Burg
+  -- darf unter keinen Umständen verschwinden.
+  delete from clash_tiles
+   where room_id = p_room and r = v_r and c = v_c and not is_castle;
+
+  if not found then
+    return jsonb_build_object('shrunk', false, 'reason', 'no_target');
+  end if;
 
   perform clash_team_event_insert(p_room, p_by_team, 'board_shrink',
     jsonb_build_object('r', v_r, 'c', v_c, 'victim', v_victim));
@@ -268,9 +330,11 @@ revoke all on function clash_shrink_board(uuid, int) from public;
 
 comment on function clash_shrink_board(uuid, int) is
   'Lässt genau eine Kachel vom Spielfeld verschwinden (0108, Ruinen-Modus). Opfer ist das lebende '
-  'Volk mit den meisten Feldern, die Kachel liegt möglichst weit außen; Burgen und die letzte '
-  'Kachel eines Volkes sind tabu, neutrale Kacheln (Slot -1) ebenso. Trägt das Ereignis für das '
-  'auslösende Volk in clash_team_events ein. Interner Helfer, kein Grant an anon/authenticated.';
+  'Volk mit den meisten Feldern, die Kachel wird zufällig aus dessen Gebiet gezogen — Löcher sind '
+  'erlaubt, aber das Spielfeld bleibt zusammenhängend (Gelenkpunkte werden per Breitensuche '
+  'ausgeschlossen). Tabu: Burgen, neutrale Kacheln (Slot -1) und jedes Volk mit weniger als sechs '
+  'Kacheln, damit keins unter fünf fällt. Trägt das Ereignis für das auslösende Volk in '
+  'clash_team_events ein. Interner Helfer, kein Grant an anon/authenticated.';
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -524,8 +588,9 @@ begin
   end if;
 
   -- Nur ein echter Besitzerwechsel kann ein Volk ausgelöscht haben.
-  -- Das Schrumpfen kann es per Konstruktion nicht (Burgen und die
-  -- letzte Kachel sind tabu), deshalb steht hier weiterhin nur v_taken.
+  -- Das Schrumpfen kann es per Konstruktion nicht (Burgen sind tabu,
+  -- und unter fünf Kacheln fällt niemand), deshalb steht hier
+  -- weiterhin nur v_taken.
   if v_taken then
     perform clash_check_win(v_room.id);
   end if;

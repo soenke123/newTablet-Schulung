@@ -205,12 +205,19 @@ let ruinPoints = {};   // Volk → gesammelte Punkte
 
 function boardState() {
   const max = Math.floor(INITIAL_TILES / 2);
+  // `shrinkable` wie in clash_shrink_state: gibt es noch ein Volk mit
+  // mindestens sechs Kacheln, dem man eine wegnehmen darf? Ohne den
+  // Zusammenhangs-Test — der ist zu teuer für jede Abfrage.
+  const counts = {};
+  tiles.forEach(t => { if (t.team >= 0) counts[t.team] = (counts[t.team] || 0) + 1; });
   return {
     tiles: tiles.length,
     initial_tiles: INITIAL_TILES,
     removed: Math.max(INITIAL_TILES - tiles.length, 0),
     max_removals: max,
-    floor_reached: (INITIAL_TILES - tiles.length) >= max
+    floor_reached: (INITIAL_TILES - tiles.length) >= max,
+    shrinkable: Object.keys(counts).some(s =>
+      counts[s] >= 6 && tiles.some(t => t.team === Number(s) && !t.castle))
   };
 }
 function ruinOf(team) {
@@ -224,29 +231,50 @@ function ruinJson() {
 }
 
 /* Dieselbe Regel wie clash_shrink_board: Opfer ist das lebende Volk
-   mit den MEISTEN Feldern, die Kachel liegt möglichst weit außen
-   (wenigste vorhandene Nachbarn), Burgen und die letzte Kachel eines
-   Volkes sind tabu. Nachgebaut statt vereinfacht — sonst prüfte die
+   mit den MEISTEN Feldern, die Kachel wird ZUFÄLLIG aus dessen Gebiet
+   gezogen — auch mitten heraus, Löcher sind erlaubt. Tabu sind
+   Burgen, Völker mit weniger als sechs Kacheln (keins fällt unter
+   fünf) und jede Kachel, deren Verschwinden das Spielfeld in zwei
+   Teile risse. Nachgebaut statt vereinfacht — sonst prüfte die
    Vorschau eine andere Auswahl als die, die im Betrieb greift. */
-function neighbourCount(t) {
-  const dirs = (t.r % 2 === 1)
+function hexDirs(r) {
+  return (r % 2 === 1)
     ? [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]]
     : [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
-  return dirs.filter(d => tiles.some(x => x.r === t.r + d[0] && x.c === t.c + d[1])).length;
+}
+/* Die Breitensuche des Servers als JS: von einer bleibenden Kachel
+   aus alles ablaufen und zählen. Kommt man an alle heran, war die
+   Kandidatin kein Gelenkpunkt. */
+function staysConnected(drop) {
+  const rest = tiles.filter(x => x !== drop);
+  if (rest.length <= 1) return true;
+  const key = t => t.r + ',' + t.c;
+  const map = new Map(rest.map(t => [key(t), t]));
+  const seen = new Set([key(rest[0])]);
+  const queue = [rest[0]];
+  while (queue.length) {
+    const t = queue.pop();
+    hexDirs(t.r).forEach(d => {
+      const k = (t.r + d[0]) + ',' + (t.c + d[1]);
+      if (map.has(k) && !seen.has(k)) { seen.add(k); queue.push(map.get(k)); }
+    });
+  }
+  return seen.size === rest.length;
 }
 function shrinkBoard() {
   if (boardState().floor_reached) return null;
   const counts = {};
   tiles.forEach(t => { if (t.team >= 0) counts[t.team] = (counts[t.team] || 0) + 1; });
-  const victim = Object.keys(counts).map(Number)
-    .filter(s => counts[s] >= 2 && tiles.some(t => t.team === s && !t.castle))
-    .sort((a, b) => counts[b] - counts[a])[0];
-  if (victim == null) return null;
-  const cand = tiles.filter(t => t.team === victim && !t.castle)
-    .sort((a, b) => neighbourCount(a) - neighbourCount(b));
-  const t = cand[0];
-  tiles = tiles.filter(x => x !== t);
-  return { r: t.r, c: t.c, victim: victim };
+  // Größtes Volk zuerst, innerhalb eines Volkes gewürfelt.
+  const cand = tiles
+    .filter(t => t.team >= 0 && !t.castle && counts[t.team] >= 6)
+    .map(t => ({ t: t, k: Math.random() }))
+    .sort((a, b) => (counts[b.t.team] - counts[a.t.team]) || (a.k - b.k))
+    .map(o => o.t);
+  const hit = cand.find(function (t) { return staysConnected(t); });
+  if (!hit) return null;
+  tiles = tiles.filter(x => x !== hit);
+  return { r: hit.r, c: hit.c, victim: hit.team };
 }
 /* Punkte gutschreiben und für jede überschrittene Zehnerstufe eine
    Kachel versenken — der floor-Vergleich wie im Server. */
@@ -258,7 +286,11 @@ function addRuinPoints(team, n) {
   const out = [];
   for (let i = 0; i < steps; i++) {
     const s = shrinkBoard();
-    if (!s) { out.push({ shrunk: false, reason: 'floor_reached' }); break; }
+    if (!s) {
+      out.push({ shrunk: false,
+                 reason: boardState().floor_reached ? 'floor_reached' : 'no_target' });
+      break;
+    }
     out.push({ shrunk: true, r: s.r, c: s.c, victim: s.victim });
     teamEvents.push({ id: nextEventId++, team: Number(team), kind: 'board_shrink',
       payload: { r: s.r, c: s.c, victim: s.victim } });

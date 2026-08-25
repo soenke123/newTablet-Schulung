@@ -115,8 +115,11 @@
        genau diese Zahl den Platz (endRows: alle stehen bei null
        Feldern).
      • Zusätzlich sammelt sie Ruinen-Punkte (v.ruin). Je 10 Punkte
-       verschwindet EIN Feld beim größten lebenden Volk — höchstens
-       bis das Startfeld halbiert ist (v.board.floor_reached).
+       verschwindet EIN Feld beim größten lebenden Volk — zufällig
+       irgendwo aus dessen Gebiet, auch mitten heraus. Nie eine Burg,
+       nie so, dass ein Volk unter fünf Kacheln fällt oder die Karte
+       in zwei Teile zerfällt (Löcher schon, Inseln nicht), und
+       höchstens bis das Startfeld halbiert ist (v.board.floor_reached).
      • Die Serien-Boni zählen dabei wie richtige Antworten: Team-Serie
        fünf Punkte, Einzel-Serie zwei. In correct_count gehen sie
        NICHT ein, die Endwertung bleibt die echte Zahl beantworteter
@@ -2154,6 +2157,20 @@
     return !!(v && v.me && v.me.team != null && v.me.alive === false);
   }
 
+  /* „Kleiner wird das Feld nicht mehr" hat ZWEI Gründe, und für das
+     Kind vor dem Tablet sind sie derselbe: entweder ist die
+     Halbierungsgrenze erreicht (floor_reached), oder kein lebendes
+     Volk hat noch genug Kacheln, um eine abgeben zu dürfen — keins
+     fällt unter fünf (shrinkable). Der zweite Fall tritt in der Praxis
+     zuerst ein (vier Völker auf 37 Kacheln: Schluss bei 20, die
+     Halbierung läge bei 19). Beide Gründe zusammen, sonst verspricht
+     der Banner ein Feld, das nie versinkt.
+     `shrinkable === false` statt `!shrinkable`: ein Server ohne 0108
+     schickt das Feld gar nicht, und „unbekannt" heißt hier „weiter". */
+  function atMin(board) {
+    return !!(board && (board.floor_reached || board.shrinkable === false));
+  }
+
   function renderStandings(v) {
     const myTeam = v.me.team;
     const counts = tileCounts(v);
@@ -2166,7 +2183,7 @@
       const ru    = v.ruin || {};
       const board = v.board || {};
       const step  = (ru.points || 0) % 10;
-      if (board.floor_reached) {
+      if (atMin(board)) {
         if (els.share)    els.share.textContent = '✓';
         if (els.shareBar) els.shareBar.style.width = '100%';
         if (els.shareLab) els.shareLab.textContent =
@@ -2205,7 +2222,7 @@
     const board = v.board || {};
     const gone  = board.removed || 0;
     const goneT = gone ? ` Schon <b>${gone}</b> ${gone === 1 ? 'Feld' : 'Felder'} versunken.` : '';
-    els.ruinBar.innerHTML = board.floor_reached
+    els.ruinBar.innerHTML = atMin(board)
       ? '<b>🏚️ Ausgeschieden — aber noch lange nicht fertig.</b>' +
         '<span>Das Spielfeld ist so klein, wie es werden kann.' + goneT +
         ' Jede richtige Antwort zählt weiter für euren Platz in der Endwertung.</span>'
@@ -2827,7 +2844,7 @@
       const shrunk = (b.removed || 0) > 0;
       els.boardSize.textContent = shrunk
         ? '🏚️ Spielfeld: ' + b.tiles + ' von ' + b.initial_tiles +
-          (b.floor_reached ? ' — am Minimum' : '')
+          (atMin(b) ? ' — am Minimum' : '')
         : '';
       els.boardSize.classList.toggle('cm-hide', !shrunk);
     }
