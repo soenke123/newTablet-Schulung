@@ -591,6 +591,16 @@
   letter-spacing: .02em;
   color: #4a3216;
 }
+/* 0108: „🏚️ Spielfeld: 38 von 48". Steht direkt hinter dem Titel,
+   nicht am rechten Rand: dort sitzt der Restzeit-Ring, und zwei
+   Auskünfte in derselben Ecke lesen sich als eine. */
+.cm-boardsize {
+  font-weight: 700;
+  font-size: .82rem;
+  letter-spacing: .01em;
+  color: #6b4c22;
+  white-space: nowrap;
+}
 .cm-boardtop .cm-ring { margin-left: auto; }
 
 .cm-ring {
@@ -682,6 +692,12 @@
 }
 /* Ausgeschieden — dieselbe Aussage wie früher .cm-scard--out. */
 .cm-rcard--out { opacity: .45; filter: grayscale(.5); }
+/* 0108: ausgeschieden, aber im Ruinen-Modus noch am Rechnen. Muss NACH
+   der Regel darüber stehen — gleiche Spezifität, es entscheidet die
+   Reihenfolge. 45 % waren für ein Panel gedacht, an dem nichts mehr
+   passiert; hier zählt gerade ein Zähler hoch, und der soll aus vier
+   Metern lesbar sein. Grau bleibt es trotzdem: das Volk ist raus. */
+.cm-rcard--ruin { opacity: .72; filter: grayscale(.3); }
 .cm-rcard--out .cm-rname { text-decoration: line-through; }
 
 /* ══ „on fire" und „gerade ausgeschieden" (UI 18) ════════════════
@@ -708,6 +724,22 @@
    Feldzahl schob sie den Volksnamen in einen Umbruch — das Panel
    sprang bei jedem Serien-Bonus für acht Sekunden in eine andere Form. */
 .cm-rthumb { position: relative; }
+/* 0108: das Ruinen-Zeichen sitzt auf der Figur, nicht neben der Zahl —
+   genau wie das Flammen-Abzeichen und aus demselben Grund: an dieser
+   Stelle kostet es KEINE Breite, und Breite ist in diesem Panel das
+   Knappe (siehe .cm-rruin). Steht bewusst VOR der Flammen-Regel:
+   beides ist derselbe Pseudo-Knoten, und ein Volk kann ausgeschieden
+   sein und trotzdem gerade eine Serie schaffen — dann gilt die
+   Flamme, sie dauert nur acht Sekunden. */
+.cm-rcard--ruin .cm-rthumb::after {
+  content: '🏚️';
+  position: absolute;
+  left: -4px;
+  bottom: -2px;
+  font-size: .92rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(20,12,0,.8));
+}
 .cm-rcard--fire .cm-rthumb::after {
   content: '🔥';
   position: absolute;
@@ -826,6 +858,44 @@
   font-variant-numeric: tabular-nums;
   color: #fff;
   text-shadow: 0 1px 2px rgba(20,12,0,.75), 0 0 6px rgba(20,12,0,.45);
+}
+/* Der Ruinen-Fortschritt eines ausgeschiedenen Volkes (0108) — er
+   steht an DERSELBEN Stelle wie sonst die Feldzahl, nicht daneben:
+   das Panel darf beim Ausscheiden nicht seine Form ändern (dieselbe
+   Überlegung wie beim Flammen-Abzeichen, das deshalb auf der Figur
+   sitzt). Die „7" ist groß, das „/10" klein daneben. */
+/* ⚠️ Die Breite ist hier die eigentliche Anforderung, nicht die
+   Gestaltung: „6/10" NEBENEINANDER war rund 50 px breit statt der
+   ~20 px einer Feldzahl — und weil der Volksname sich den Platz mit
+   diesem Kasten teilt, brach er dadurch in eine Zeile mehr um und
+   wurde bei acht Völkern unten abgeschnitten. Also übereinander,
+   Ziffer groß, „/10" klein darunter (dieselbe Lösung wie bei
+   .cm-fchipnums am Tablet, aus demselben Grund). */
+.cm-rruin {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(20,12,0,.75);
+  /* Das Panel ist beim Ausscheiden grau (.cm-rcard--out/--ruin) — die
+     Entsättigung darf diesen Teil nicht mitnehmen, sonst wäre der
+     einzige lebendige Wert darin der unauffälligste. */
+  filter: saturate(1.7);
+}
+.cm-rruin b {
+  font-family: var(--cm-display);
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: #ffe1a1;
+}
+.cm-rruin i {
+  font-style: normal;
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: rgba(255,235,200,.8);
 }
 
 /* Die Namen der Kinder im Volk — sie bekommen den ganzen Rest des
@@ -1208,11 +1278,58 @@
   100% { transform: translate(-50%, -160%) scale(.9); opacity: 0; }
 }
 
+/* ── Ein Feld versinkt (Ruinen-Modus, 0108) ──────────────────────
+   Der einzige Effekt, der etwas WEGnehmen erzählt statt etwas
+   dazugewinnen. Deshalb drei Umkehrungen gegenüber dem „Pling": die
+   Wolke sackt ab statt aufzugehen, sie ist trüb statt hell, und die
+   Bröckchen fallen nach außen UND nach unten. Farbe ist die des
+   Volkes, dem die Kachel gehört hat — nicht die dessen, der sie hat
+   versinken lassen (der steht in der Ankündigung). */
+.cm-fx--dust {
+  width: var(--fx);
+  height: var(--fx);
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--raw) 40%, #6b5a45) 0%,
+    color-mix(in srgb, var(--raw) 30%, #4a3d2e) 45%,
+    transparent 72%);
+  filter: blur(1px);
+  animation: cmFxDust .9s cubic-bezier(.3, .6, .4, 1) forwards;
+}
+@keyframes cmFxDust {
+  0%   { transform: translate(-50%, -50%) scale(.35); opacity: 0; }
+  20%  { transform: translate(-50%, -50%) scale(.9);  opacity: .95; }
+  100% { transform: translate(-50%, -30%) scale(1.35); opacity: 0; }
+}
+/* Der Brocken fällt, statt zu zerplatzen. */
+.cm-fx--burst--dust { animation: cmFxRubble .9s cubic-bezier(.4, .1, .8, 1) forwards; }
+@keyframes cmFxRubble {
+  0%   { transform: translate(-50%, -50%) scale(.5) rotate(0deg); opacity: 0; }
+  25%  { transform: translate(-50%, -60%) scale(1)  rotate(-12deg); opacity: 1; }
+  100% { transform: translate(-50%, 10%)  scale(.75) rotate(24deg); opacity: 0; }
+}
+/* Bröckchen: wie die Funken EIN Element mit EINER Animation (Winkel
+   und Weg in derselben transform-Kette) — nur eckig statt strichdünn
+   und mit einem Fall nach unten am Ende. */
+.cm-fx--crumb {
+  width: calc(var(--fx) * .17);
+  height: calc(var(--fx) * .17);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--raw) 45%, #57483a);
+  box-shadow: 0 1px 2px rgba(20,12,0,.6);
+  animation: cmFxCrumb .88s cubic-bezier(.25, .6, .5, 1) forwards;
+}
+@keyframes cmFxCrumb {
+  0%   { transform: translate(-50%, -50%) rotate(var(--a)) translateX(calc(var(--fx) * .08)); opacity: 0; }
+  18%  { opacity: 1; }
+  100% { transform: translate(-50%, -10%) rotate(var(--a)) translateX(calc(var(--fx) * .8)); opacity: 0; }
+}
+
 /* Wer Bewegung abbestellt hat, bekommt den Ort trotzdem gezeigt: die
    Effekte blenden dann nur auf und wieder ab, statt zu fliegen. */
 @media (prefers-reduced-motion: reduce) {
-  .cm-fx--spark, .cm-fx--crown { display: none; }
-  .cm-fx--ring, .cm-fx--pop, .cm-fx--flash, .cm-fx--burst {
+  .cm-fx--spark, .cm-fx--crown, .cm-fx--crumb { display: none; }
+  .cm-fx--ring, .cm-fx--pop, .cm-fx--flash, .cm-fx--burst, .cm-fx--dust {
     animation: cmFxFade .7s ease-out forwards;
   }
   @keyframes cmFxFade {
@@ -1256,6 +1373,13 @@
 .cm-announce--out {
   border-color: #b9a08a;
   color: #efe3d4;
+}
+/* 0108: die Ruinen melden sich. Erdig statt golden — es ist kein
+   Triumph auf dem Feld, sondern einer aus dem Abseits. */
+.cm-announce--shrink {
+  border-color: #9c7f5a;
+  color: #f2e5d0;
+  background: rgba(38,24,8,.9);
 }
 
 /* Eine Beschriftung über der Burg (.cm-castlelabel) gab es hier bis
@@ -1482,6 +1606,58 @@ body.cm-locked { overflow: hidden; }
 /* ── Das eigene Volk: Einheit, Anteil, Serien ────────────────────
    Rund ein Viertel des Bildschirms. Die Einheit steht links auf dem
    Boden (align-items:flex-end + Bodenschein), die Zahlen daneben. */
+/* ── Ruinen-Modus: der Banner über dem Spielbildschirm (0108) ────
+   Er ist die Antwort auf „warum tippe ich hier noch?" und muss beim
+   ersten Blick gelesen werden — also breit, mit einer fetten ersten
+   Zeile und einer ruhigen zweiten. `flex: 0 0 auto`: er nimmt seine
+   eigene Höhe, den Rest verteilen Aufgabe und Tastatur unter sich
+   (die 26 % des Kopfes darunter bleiben unangetastet).
+   Erdtöne statt Volksfarbe: die Volksfarbe steht für „das gehört
+   uns", und genau das gilt hier gerade nicht. */
+.cm-ruinbar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 11px 8px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(92,68,34,.55), rgba(24,15,4,.62));
+  border: 2px solid rgba(216,178,90,.55);
+  box-shadow: inset 0 0 0 1px rgba(255,240,200,.12);
+  color: #f6ead4;
+  line-height: 1.25;
+}
+.cm-ruinbar b {
+  font-family: var(--cm-display);
+  font-weight: 800;
+  font-size: .95rem;
+  color: #ffe9bd;
+  text-shadow: 0 1px 2px rgba(20,12,0,.7);
+}
+.cm-ruinbar span {
+  font-size: .74rem;
+  color: rgba(246,234,212,.9);
+}
+.cm-ruinbar span b {
+  font-family: inherit;
+  font-size: inherit;
+  color: #ffd98a;
+}
+/* Der ganze Bildschirm nimmt sich zurück: die Figur des Volkes wird
+   fahl, der Schein um den Kopf blasser. Die FARBE bleibt aber — das
+   Volk ist ausgeschieden, nicht ausgetauscht, und die Kinder erkennen
+   sich weiter daran wieder. */
+.cm-play--ruin .cm-pherounit img { filter: grayscale(.5) drop-shadow(0 6px 6px rgba(20,12,0,.55)); }
+.cm-play--ruin .cm-phero {
+  border-color: color-mix(in srgb, var(--cm-team) 34%, #4a3b28);
+  box-shadow: inset 0 0 0 1px rgba(255,240,200,.1);
+}
+/* Der Balken misst hier keinen Feldanteil mehr, sondern den Weg bis
+   zum nächsten versinkenden Feld — deshalb Gold statt Volksfarbe. */
+.cm-play--ruin .cm-pbar > i {
+  background: linear-gradient(90deg, #b98b3c, #ffd98a);
+}
+
 /* 26 % Höhe, nicht „was übrig bleibt": mit `1 1 auto` verschluckte
    dieser Bereich die gesamte Restfläche und stand auf einem Tablet
    fast doppelt so hoch wie gewollt. Den Überschuss nimmt stattdessen

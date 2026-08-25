@@ -102,6 +102,8 @@
   <button type="button" id="pvFx3" title="ein Volk auslöschen">Volk raus</button>
   <button type="button" id="pvFx4" title="Team-Serie ausgelöst">🔥 Volk</button>
   <button type="button" id="pvFx5" title="Einzel-Serie ausgelöst">🔥 Kind</button>
+  <button type="button" id="pvFx6" title="ein Ruinen-Punkt für ein ausgeschiedenes Volk (0108)">🏚️ +1</button>
+  <button type="button" id="pvFx7" title="bis zur nächsten Zehnerstufe — ein Feld versinkt (0108)">🏚️ Feld weg</button>
 </div>
 
 <div class="pv-note">
@@ -193,6 +195,77 @@ function buildBoard() {
 }
 buildBoard();
 
+/* ── Ruinen-Modus (0108) ─────────────────────────────────────────
+   Ein ausgeschiedenes Volk spielt weiter und sammelt Punkte; je 10
+   davon verschwindet eine Kachel vom Spielfeld. Der Nenner der
+   Halbierungsgrenze steht fest, sobald das Feld gebaut ist — genau
+   wie clash_boards.initial_tiles beim Start. */
+const INITIAL_TILES = tiles.length;
+let ruinPoints = {};   // Volk → gesammelte Punkte
+
+function boardState() {
+  const max = Math.floor(INITIAL_TILES / 2);
+  return {
+    tiles: tiles.length,
+    initial_tiles: INITIAL_TILES,
+    removed: Math.max(INITIAL_TILES - tiles.length, 0),
+    max_removals: max,
+    floor_reached: (INITIAL_TILES - tiles.length) >= max
+  };
+}
+function ruinOf(team) {
+  const p = ruinPoints[team] || 0;
+  return { points: p, to_next: 10 - (p % 10) };
+}
+function ruinJson() {
+  const out = {};
+  Object.keys(ruinPoints).forEach(k => { if (ruinPoints[k] > 0) out[k] = ruinOf(k); });
+  return out;
+}
+
+/* Dieselbe Regel wie clash_shrink_board: Opfer ist das lebende Volk
+   mit den MEISTEN Feldern, die Kachel liegt möglichst weit außen
+   (wenigste vorhandene Nachbarn), Burgen und die letzte Kachel eines
+   Volkes sind tabu. Nachgebaut statt vereinfacht — sonst prüfte die
+   Vorschau eine andere Auswahl als die, die im Betrieb greift. */
+function neighbourCount(t) {
+  const dirs = (t.r % 2 === 1)
+    ? [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]]
+    : [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
+  return dirs.filter(d => tiles.some(x => x.r === t.r + d[0] && x.c === t.c + d[1])).length;
+}
+function shrinkBoard() {
+  if (boardState().floor_reached) return null;
+  const counts = {};
+  tiles.forEach(t => { if (t.team >= 0) counts[t.team] = (counts[t.team] || 0) + 1; });
+  const victim = Object.keys(counts).map(Number)
+    .filter(s => counts[s] >= 2 && tiles.some(t => t.team === s && !t.castle))
+    .sort((a, b) => counts[b] - counts[a])[0];
+  if (victim == null) return null;
+  const cand = tiles.filter(t => t.team === victim && !t.castle)
+    .sort((a, b) => neighbourCount(a) - neighbourCount(b));
+  const t = cand[0];
+  tiles = tiles.filter(x => x !== t);
+  return { r: t.r, c: t.c, victim: victim };
+}
+/* Punkte gutschreiben und für jede überschrittene Zehnerstufe eine
+   Kachel versenken — der floor-Vergleich wie im Server. */
+function addRuinPoints(team, n) {
+  const old = ruinPoints[team] || 0;
+  const now = old + n;
+  ruinPoints[team] = now;
+  const steps = Math.floor(now / 10) - Math.floor(old / 10);
+  const out = [];
+  for (let i = 0; i < steps; i++) {
+    const s = shrinkBoard();
+    if (!s) { out.push({ shrunk: false, reason: 'floor_reached' }); break; }
+    out.push({ shrunk: true, r: s.r, c: s.c, victim: s.victim });
+    teamEvents.push({ id: nextEventId++, team: Number(team), kind: 'board_shrink',
+      payload: { r: s.r, c: s.c, victim: s.victim } });
+  }
+  return out;
+}
+
 let question = newQuestion();
 function newQuestion() {
   const a = 2 + Math.floor(Math.random() * 60);
@@ -251,8 +324,12 @@ const RPC = {
     // nextEventId mit in der Signatur: ein Serien-Ereignis ändert weder
     // Besitzer noch Leben, muss aber trotzdem einen Takt auslösen — auf
     // dem Server macht das seit 0106 max(id) aus clash_team_events.
+    // 0108: die Summe der Ruinen-Punkte gehört mit hinein — sie ändert
+    // sich zwischen zwei Schrumpfungen, ohne dass eine Kachel anders
+    // aussieht (auf dem Server ist es derselbe Zusatzterm).
+    const ruinSum = Object.keys(ruinPoints).reduce((s, k) => s + ruinPoints[k], 0);
     return { ok: true, sig: phase + ':' + tiles.map(t => t.team + '' + (t.hp == null ? '' : t.hp)).join('') +
-      ':' + streak + ':' + teamStreak + ':' + pendingPicks + ':' + nextEventId };
+      ':' + streak + ':' + teamStreak + ':' + pendingPicks + ':' + nextEventId + ':' + ruinSum };
   },
 
   /* Der Beamer. Dieselbe Wahrheit, andere Felder — genau die, die
@@ -286,6 +363,9 @@ const RPC = {
       // 0107: die Serien-Ereignisse ALLER Völker, mit Volk am Eintrag
       // (clash_view liefert nur die des eigenen, siehe unten).
       team_events: teamEvents.slice(-40),
+      // 0108: Ruinen-Stand ALLER Völker + Spielfeldgröße.
+      ruin: ruinJson(),
+      board: boardState(),
       online_count: 22, room_total: 24
     };
   },
@@ -320,6 +400,9 @@ const RPC = {
       // schneidet clash_view die Liste serverseitig zu (0106).
       my_team_events: teamEvents.filter(e => e.team === myTeam)
         .slice(-20).map(e => ({ id: e.id, kind: e.kind, payload: e.payload })),
+      // 0108: nur das eigene Volk (der Beamer bekommt oben alle).
+      ruin: ruinOf(myTeam),
+      board: boardState(),
       my_team_members: [
         { name: 'Lena', me: false }, { name: 'Jonas', me: true },
         { name: 'Mia', me: false },  { name: 'Ben', me: false }
@@ -339,7 +422,11 @@ const RPC = {
   clash_submit_answer: args => {
     expirePendingPicks();
     const correct = args.p_answer === question.a + question.b;
+    // 0108: „ausgeschieden" in der Vorschau ist die Phase `out` — der
+    // Server erkennt es daran, dass das Volk keine Kachel mehr hat.
+    const ruined = (phase === 'out');
     let hit = { captured: null, castle_hit: null };
+    let shrunk = [];
     if (correct) {
       // Die richtige Antwort zählt auch in der Völker-Reihe hoch — sonst
       // stünde die neue Zahl (0099) hier als Standbild da und man sähe
@@ -347,32 +434,45 @@ const RPC = {
       const oldStreak = streak;
       streak++;
       CORRECT[myTeam] = (CORRECT[myTeam] || 0) + 1;
-      hit = attackOne();
+      // Ein ausgeschiedenes Volk erobert nichts — es sammelt.
+      let ruinAdd = ruined ? 1 : 0;
+      if (!ruined) hit = attackOne();
 
-      // Einzel-Serie (0106): jedes Vielfache von 10 gibt 2 offene Picks.
-      if (Math.floor((oldStreak + 1) / 10) > Math.floor(oldStreak / 10)) {
-        pendingPicks += 2;
-        pickDeadline = new Date(Date.now() + 6000).toISOString();
+      // Einzel-Serie: seit 0108 jedes Vielfache von 12 (war 10) — zwei
+      // offene Picks, bei einem ausgeschiedenen Volk zwei Ruinen-Punkte.
+      if (Math.floor((oldStreak + 1) / 12) > Math.floor(oldStreak / 12)) {
+        if (ruined) ruinAdd += 2;
+        else {
+          pendingPicks += 2;
+          pickDeadline = new Date(Date.now() + 6000).toISOString();
+        }
         teamEvents.push({ id: nextEventId++, team: myTeam, kind: 'individual_fire',
           payload: { name: 'Jonas', streak: oldStreak + 1 } });
       }
 
-      // Team-Serie (0106): jedes Vielfache von 20 erobert automatisch
-      // 7 Felder.
+      // Team-Serie: jedes Vielfache von 20 erobert seit 0108 fünf Felder
+      // (waren sieben) bzw. gibt fünf Ruinen-Punkte.
       const oldTeamStreak = teamStreak;
       teamStreak++;
       if (Math.floor(teamStreak / 20) > Math.floor(oldTeamStreak / 20)) {
         teamEvents.push({ id: nextEventId++, team: myTeam, kind: 'team_fire', payload: { streak: teamStreak } });
-        for (let i = 0; i < 7; i++) attackOne();
+        if (ruined) ruinAdd += 5;
+        else for (let i = 0; i < 5; i++) attackOne();
       }
+
+      if (ruined) shrunk = addRuinPoints(myTeam, ruinAdd);
     } else {
       streak = 0;
       teamStreak = 0;
     }
     question = newQuestion();
     return {
-      ok: true, correct, captured: hit.captured, castle_hit: hit.castle_hit,
+      ok: true, correct, eliminated: ruined,
+      captured: hit.captured, castle_hit: hit.castle_hit,
       streak, team_streak: teamStreak, pending_picks: pendingPicks, pick_deadline: pickDeadline,
+      ruin: ruined ? ruinOf(myTeam) : null,
+      shrunk: shrunk,
+      board: boardState(),
       question
     };
   },
@@ -518,7 +618,29 @@ document.getElementById('pvFx5').addEventListener('click', () => {
     ? 'Jonas'
     : list[Math.floor(Math.random() * list.length)];
   teamEvents.push({ id: nextEventId++, team: myTeam, kind: 'individual_fire',
-    payload: { name: name, streak: 10 } });
+    payload: { name: name, streak: 12 } });
+});
+
+/* ── Ruinen-Modus (0108) ────────────────────────────────────────
+   Beide Knöpfe zielen auf ein Volk OHNE Kacheln, wenn es eins gibt —
+   nur dort zeigt der Beamer den Ruinen-Fortschritt (das Panel eines
+   lebenden Volkes behält seine Feldzahl). Erst „Volk raus" drücken,
+   dann hier. Ohne ausgeschiedenes Volk landen die Punkte beim eigenen,
+   damit sich der Fortschritt am Tablet (Phase „ausgeschieden")
+   ebenfalls durchklicken lässt. */
+function ruinTarget() {
+  const counts = {};
+  tiles.forEach(t => { if (t.team >= 0) counts[t.team] = (counts[t.team] || 0) + 1; });
+  for (let i = 0; i < TEAMS; i++) if (!counts[i]) return i;
+  return myTeam;
+}
+document.getElementById('pvFx6').addEventListener('click', () => {
+  addRuinPoints(ruinTarget(), 1);
+});
+document.getElementById('pvFx7').addEventListener('click', () => {
+  // Genau bis zur nächsten Zehnerstufe — ein Feld versinkt, nicht zwei.
+  const t = ruinTarget();
+  addRuinPoints(t, 10 - ((ruinPoints[t] || 0) % 10));
 });
 
 /* Startzustand aus der Adresse: ?fac=4&phase=out&map=1&answer=42

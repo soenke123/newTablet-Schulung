@@ -92,14 +92,39 @@
    Die Serie des VOLKES (v.team_streak) stand hier lange als „–" ohne
    Quelle — seit Migration 0106 liefert der Server sie: ein geteilter
    Zähler je Team (nicht die Summe der Einzel-Serien), der bei 20, 40,
-   60 … automatisch 7 Felder erobert. Die eigene Serie (me.streak)
-   gibt bei 10, 20, 30 … zwei offene manuelle Picks (pending_picks) —
-   die Karte öffnet sich dafür von selbst (siehe openMap(forced),
-   onMapTileClick), mit kurzer Frist, nach der der Server ungenutzte
-   Picks selbst zufällig einlöst (muss „schnell gehen", darf das Spiel
-   nicht aufhalten). Beide Boni benachrichtigen das eigene Team über
-   my_team_events (applyTeamEvents/showFireToast) — andere Völker
-   sehen davon nichts.
+   60 … automatisch fünf Felder erobert (bis 0108: sieben). Die eigene
+   Serie (me.streak) gibt bei 12, 24, 36 … (bis 0108: alle zehn) zwei
+   offene manuelle Picks (pending_picks) — die Karte öffnet sich dafür
+   von selbst (siehe openMap(forced), onMapTileClick), mit kurzer
+   Frist, nach der der Server ungenutzte Picks selbst zufällig einlöst
+   (muss „schnell gehen", darf das Spiel nicht aufhalten). Beide Boni
+   benachrichtigen das eigene Team über my_team_events
+   (applyTeamEvents/showFireToast) — andere Völker sehen davon nichts.
+
+   ── Ausgeschieden heißt weiterspielen (Ruinen-Modus, 0108) ──────
+   Bis 0107 war ein Volk ohne Kachel raus: keine Aufgabe mehr, nur die
+   Zuschauer-Tafel #cmOut. In einer Klasse hieß das, dass ein Viertel
+   der Kinder minutenlang nichts zu tun hatte — und die Runde zog sich,
+   weil das Feld gleich groß blieb. Seit 0108 bekommt ein
+   ausgeschiedenes Volk WEITER Aufgaben (clash_view liefert sie jetzt
+   unabhängig von me.alive), und zwar auf demselben Spielbildschirm,
+   nur mit .cm-play--ruin und einem Banner darüber:
+
+     • Jede richtige Antwort zählt wie bisher in correct_count und
+       damit in die Endwertung — unter den Ausgeschiedenen entscheidet
+       genau diese Zahl den Platz (endRows: alle stehen bei null
+       Feldern).
+     • Zusätzlich sammelt sie Ruinen-Punkte (v.ruin). Je 10 Punkte
+       verschwindet EIN Feld beim größten lebenden Volk — höchstens
+       bis das Startfeld halbiert ist (v.board.floor_reached).
+     • Die Serien-Boni zählen dabei wie richtige Antworten: Team-Serie
+       fünf Punkte, Einzel-Serie zwei. In correct_count gehen sie
+       NICHT ein, die Endwertung bleibt die echte Zahl beantworteter
+       Aufgaben.
+
+   #cmOut gibt es weiterhin — aber nur noch für den einen Fall, für
+   den es nie gedacht war und der trotzdem eintritt: jemand ohne Volk
+   (nach dem Start dazugekommen, noch nicht gelost).
 
    ── Effekte: was gerade passiert, muss man SEHEN (UI 18) ────────
    Bis hierher änderte sich bei einer Eroberung nur eine Farbe auf der
@@ -118,16 +143,24 @@
      „on fire"        Serien-Bonus (0106): das Panel des Volkes leuchtet
                       acht Sekunden, bei einer EINZEL-Serie stattdessen
                       der Name des Kindes in der Namensliste
+     Feld versinkt    Ruinen-Modus (0108): eine absackende Staubwolke,
+                      ein fallender Brocken und Bröckchen nach außen —
+                      in der Farbe des Volkes, dem die Kachel GEHÖRTE.
+                      Dazu eine Ankündigung, wer sie hat versinken
+                      lassen (das steht nicht auf der Karte, sondern
+                      nur im Ereignis)
 
    Zwei Entscheidungen dahinter:
 
-   (1) Die vier Spielfeld-Ereignisse werden NICHT aus RPC-Antworten
+   (1) Die Spielfeld-Ereignisse werden NICHT aus RPC-Antworten
        gelesen, sondern aus dem VERGLEICH zweier Kartenstände
        (boardFx). Sonst bräuchte jeder Weg, auf dem sich eine Kachel
        ändern kann, seine eigene Meldung — und seit 0106 sind das
-       vier (eigene Antwort, manueller Pick, 7er-Team-Bonus,
-       Auto-Ablauf der Frist), von denen der Beamer ohnehin nur die
-       Karte sieht. Ein Vergleich deckt alle ab, auch künftige.
+       vier (eigene Antwort, manueller Pick, Team-Bonus, Auto-Ablauf
+       der Frist), von denen der Beamer ohnehin nur die Karte sieht.
+       Ein Vergleich deckt alle ab, auch künftige — 0108 hat mit dem
+       verschwindenden Feld („gone") genau davon profitiert: eine
+       Zeile im Vergleich, kein fünfter Meldeweg.
    (2) Die Effekte liegen in einer EIGENEN Ebene (.cm-fxlayer) neben
        Sechsecken und Figuren, nicht darin: renderHexMap ersetzt bei
        jedem Takt das ganze SVG und die ganze Figurenebene — eine
@@ -712,6 +745,19 @@
       }
     });
 
+    /* 0108: Kacheln, die es vorher gab und jetzt nicht mehr — der
+       Ruinen-Modus lässt sie vom Spielfeld verschwinden. Bis dahin
+       konnte eine Kachel nur den Besitzer wechseln, nie weggehen;
+       deshalb sah der Vergleich oben nur in EINE Richtung. Die Farbe
+       ist die des VERLIERENDEN Volkes — wer sie hat versinken lassen,
+       steht nicht auf der Karte, sondern im Ereignis (board_shrink,
+       siehe applyRoomEvents/applyTeamEvents). */
+    prev.forEach((p, key) => {
+      if (next.has(key)) return;
+      const c = key.split(',');
+      out.push({ kind: 'gone', r: +c[0], c: +c[1], team: p.team });
+    });
+
     // Ausgeschieden: hatte Felder, hat keine mehr. Über prevCounts,
     // nicht über die Kacheln — ein Volk verschwindet ja gerade daraus.
     Object.keys(prevCounts || {}).forEach(k => {
@@ -790,6 +836,16 @@
     } else if (e.kind === 'hit') {
       addFx(dom, 'cm-fx--ring cm-fx--ring--hit', p.x, p.y, s * 2.2, raw, 620);
       addFx(dom, 'cm-fx--burst', p.x, p.y, s * 1.15, raw, 700, '💥');
+    } else if (e.kind === 'gone') {
+      // 0108: die Kachel ist WEG, nicht erobert — also kein Ring nach
+      // außen (der erzählt „hier ist etwas dazugekommen"), sondern eine
+      // Wolke, die absackt, und Bröckchen, die nach außen fallen. In
+      // der Farbe dessen, der sie verloren hat.
+      addFx(dom, 'cm-fx--dust', p.x, p.y, s * 2.6, raw, 900);
+      addFx(dom, 'cm-fx--burst cm-fx--burst--dust', p.x, p.y, s * 1.2, raw, 900, '🪨');
+      for (let i = 0; i < SPARKS_SMALL; i++) {
+        addFx(dom, 'cm-fx--crumb', p.x, p.y, s * 1.4, raw, 880, '', (360 / SPARKS_SMALL) * i + 30);
+      }
     } else {
       // Das „Pling" beim gewöhnlichen Feld: knapp unter einer Sekunde,
       // in der Farbe des NEUEN Besitzers — es erzählt, wer gerade
@@ -923,7 +979,17 @@
     let maxId = lastRoomEventId;
     events.forEach(e => { if ((e.id || 0) > maxId) maxId = e.id; });
     if (!roomEventsPrimed) { roomEventsPrimed = true; lastRoomEventId = maxId; return; }
-    events.forEach(e => { if ((e.id || 0) > lastRoomEventId) noteFireEvent(e.team, e); });
+    events.forEach(e => {
+      if ((e.id || 0) <= lastRoomEventId) return;
+      noteFireEvent(e.team, e);
+      // 0108: Nur HIER steht, WER das Feld hat versinken lassen — der
+      // Kartenvergleich (boardFx) weiß bloß, wer es verloren hat. Die
+      // Ankündigung gehört deshalb ans Ereignis, der Staub an die Karte.
+      if (e.kind === 'board_shrink') {
+        announce(fLabel(e.team) + ' ' + fV(e.team, 'lassen', 'lässt') + ' ein Feld versinken!',
+                 'cm-announce--shrink');
+      }
+    });
     lastRoomEventId = maxId;
     scheduleGlowRepaint();
   }
@@ -1527,6 +1593,13 @@
             '<div class="cm-pfactions" id="cmPFactions">' +
               '<span class="cm-timeleft cm-hide" id="cmTimeLeftP"></span>' +
             '</div>' +
+            // Der Ruinen-Banner (0108). Steht nur da, solange das eigene
+            // Volk ausgeschieden ist — und dann als ERSTES, noch über
+            // dem eigenen Kopf: er ist die Antwort auf die Frage, die
+            // sich in dem Moment jedes Kind stellt („warum tippe ich
+            // hier noch?"). Sönkes Vorgabe: „steht ganz klar, dass
+            // weiter spielen sich lohnt".
+            '<div class="cm-ruinbar cm-hide" id="cmRuinBar"></div>' +
             '<div class="cm-phero">' +
               '<div class="cm-pherounit"><img id="cmPUnit" src="" alt=""></div>' +
               '<div class="cm-pherostats">' +
@@ -1585,12 +1658,14 @@
           // den Bonus ja gar nicht selbst, nur die Nachricht darüber.
           '<div class="cm-firetoast cm-hide" id="cmFireToast"></div>' +
         '</div>' +
-        // Ausgeschieden: derselbe Blick wie beim Zuschauen auf dem
-        // Beamer, nur ohne Tastatur — die Karte steht jetzt fest da,
-        // statt hinter einem Knopf.
+        // Zuschauen: seit 0108 NUR noch für den, der gar kein Volk hat
+        // (nach dem Start dazugekommen und noch nicht gelost — er
+        // bekommt vom Server auch keine Aufgabe). Ein ausgeschiedenes
+        // VOLK landet hier nicht mehr, es spielt im Ruinen-Modus
+        // weiter (siehe renderParticipant).
         '<div class="cm-pane cm-hide" id="cmOut">' +
-          '<p class="cm-lead">Dein Volk ist ausgeschieden.</p>' +
-          '<p class="cm-hint">Du siehst weiter zu, wie es weitergeht.</p>' +
+          '<p class="cm-lead">Du gehörst noch zu keinem Volk.</p>' +
+          '<p class="cm-hint">Beim nächsten Spielstart bist du dabei — bis dahin siehst du zu.</p>' +
           '<div class="cm-obsmap">' + mapDomHTML('cmOMap', 'cm-hexmap--square') + '</div>' +
         '</div>' +
         // Das Siegerbild. Dieselben Bausteine wie am Beamer, nur ohne
@@ -1618,6 +1693,7 @@
       shareBar: root.querySelector('#cmPBar'),
       streak: root.querySelector('#cmStreak'),
       teamStreak: root.querySelector('#cmTeamStreak'),
+      ruinBar: root.querySelector('#cmRuinBar'),
       mapBtn: root.querySelector('#cmMapBtn'),
       mapOv: root.querySelector('#cmMapOv'),
       pickBanner: root.querySelector('#cmPickBanner'),
@@ -1840,6 +1916,10 @@
         showFireToast('🔥 ' + name + ' ist on fire!');
       } else if (e.kind === 'team_fire') {
         showFireToast('🔥🔥 Ihr seid on fire!');
+      } else if (e.kind === 'board_shrink') {
+        // 0108: Das Ereignis steht beim AUSLÖSENDEN Volk — auf dem
+        // Tablet liest es also genau die Gruppe, die es geschafft hat.
+        showFireToast('💥 Ihr habt ein Feld versinken lassen!');
       }
     });
     lastTeamEventId = maxId;
@@ -1867,29 +1947,71 @@
       // ist der größte Augenblick des Spiels und bekommt eigene Worte —
       // „Feld erobert!" hätte ihn verschluckt.
       let msg = '✅ Richtig!';
+      // 0108: Im Ruinen-Modus erobert eine richtige Antwort nichts —
+      // sie kann aber ein Feld der Gegner versinken lassen. Der Server
+      // schickt je Schrumpfversuch einen Eintrag; die erfolglosen
+      // (Halbierungsgrenze erreicht) interessieren die Anzeige nicht.
+      const gone = Array.isArray(r.shrunk) ? r.shrunk.filter(s => s && s.shrunk) : [];
       if (r.captured) msg = r.captured.castle ? '👑 Burg erobert!' : '✅ Feld erobert!';
       else if (r.castle_hit) msg = '💥 Burg getroffen! Noch ' + r.castle_hit.hp;
+      else if (gone.length) msg = '💥 Ein Feld der Gegner versinkt!';
       setFeedback(msg, 'ok');
       flashInput('ok');
       // Eigene Antwort ist Wahrheit — lokal patchen statt auf den
       // nächsten Takt zu warten, und die anderen anstoßen.
       const hitAt = r.captured || r.castle_hit;
-      if (lastView && hitAt) {
-        const t = (lastView.tiles || []).find(x => x.r === hitAt.r && x.c === hitAt.c);
-        if (t) {
-          if (r.captured) {
-            t.team = lastView.me.team;
-            if (r.captured.castle) t.hp = r.captured.hp;   // übernommen ⇒ wieder voll
-          } else t.hp = r.castle_hit.hp;
+      if (lastView) {
+        if (hitAt) {
+          const t = (lastView.tiles || []).find(x => x.r === hitAt.r && x.c === hitAt.c);
+          if (t) {
+            if (r.captured) {
+              t.team = lastView.me.team;
+              if (r.captured.castle) t.hp = r.captured.hp;   // übernommen ⇒ wieder voll
+            } else t.hp = r.castle_hit.hp;
+          }
         }
-        // Wie beim manuellen Pick: derselbe Vergleich wie im Takt, nur
-        // sofort — die eigene Eroberung darf nicht auf den Server
-        // warten, um zu funkeln.
-        const fx = boardFx(lastView);
-        noteFxState(fx);
-        renderStandings(lastView);
-        renderPlayerMap();
-        flushFx(fx);
+        // Versunkene Kacheln aus der eigenen Kopie nehmen — genau
+        // daraus baut boardFx gleich das „gone"-Ereignis, ohne einen
+        // zweiten Meldeweg.
+        if (gone.length) {
+          lastView.tiles = (lastView.tiles || []).filter(
+            t => !gone.some(s => s.r === t.r && s.c === t.c));
+        }
+        // Ruinen-Punkte und Spielfeldgröße kommen in derselben Antwort
+        // mit: ohne sie stünde der Fortschrittsbalken bis zum nächsten
+        // Takt auf dem alten Wert (derselbe Grund wie bei team_streak).
+        if (r.ruin)  lastView.ruin  = r.ruin;
+        if (r.board) lastView.board = r.board;
+
+        if (hitAt || gone.length) {
+          // 0108: Der Beweis, dass Weiterspielen wirkt, ist das
+          // versinkende Feld selbst — und die Karte ist am Tablet
+          // normalerweise zu. Also einmal kurz aufmachen und von selbst
+          // wieder schließen, wie nach dem letzten Serien-Pick. NICHT
+          // „forced": dort wird eine Handlung erwartet, hier wird nur
+          // etwas gezeigt.
+          if (gone.length && !mapOpen) {
+            openMap(false);
+            if (mapCloseTimer) clearTimeout(mapCloseTimer);
+            mapCloseTimer = setTimeout(() => { mapCloseTimer = null; closeMap(true); }, 1800);
+          }
+          // Wie beim manuellen Pick: derselbe Vergleich wie im Takt, nur
+          // sofort — die eigene Eroberung darf nicht auf den Server
+          // warten, um zu funkeln.
+          const fx = boardFx(lastView);
+          noteFxState(fx);
+          renderStandings(lastView);
+          renderRuinBar(lastView);
+          renderPlayerMap();
+          flushFx(fx);
+        } else if (r.ruin) {
+          // Ruinen-Antwort ohne Wirkung auf der Karte: nur der
+          // Fortschritt rückt vor. Kein boardFx — es hat sich keine
+          // Kachel geändert, und ein Vergleich mit sich selbst würde
+          // hier nur den Vergleichsstand verschieben.
+          renderStandings(lastView);
+          renderRuinBar(lastView);
+        }
       }
       nudge();
     } else if (r.correct === false) {
@@ -2023,10 +2145,40 @@
     if (els.timeLeftP) els.factionRow.appendChild(els.timeLeftP);
   }
 
+  /* Ausgeschieden, aber mit einem Volk — der Ruinen-Modus (0108).
+     Bewusst NICHT über `tileCounts(v)[myTeam] === 0` bestimmt: der
+     Server sagt es mit me.alive, und das ist auch dann noch richtig,
+     wenn eine Antwort gerade das letzte Feld gekostet hat und die
+     Karte im Client einen Takt hinterherhinkt. */
+  function isRuin(v) {
+    return !!(v && v.me && v.me.team != null && v.me.alive === false);
+  }
+
   function renderStandings(v) {
     const myTeam = v.me.team;
     const counts = tileCounts(v);
     renderFactionRow(v, myTeam, counts);
+
+    if (isRuin(v)) {
+      // Dieselben drei Elemente, andere Bedeutung: statt „wie viel vom
+      // Feld gehört uns" (null — das ist ja der Punkt) steht hier, wie
+      // weit es bis zum nächsten versinkenden Feld ist.
+      const ru    = v.ruin || {};
+      const board = v.board || {};
+      const step  = (ru.points || 0) % 10;
+      if (board.floor_reached) {
+        if (els.share)    els.share.textContent = '✓';
+        if (els.shareBar) els.shareBar.style.width = '100%';
+        if (els.shareLab) els.shareLab.textContent =
+          'Spielfeld am Minimum — eure Antworten zählen für die Wertung';
+      } else {
+        if (els.share)    els.share.textContent = step + '/10';
+        if (els.shareBar) els.shareBar.style.width = (step * 10) + '%';
+        if (els.shareLab) els.shareLab.textContent =
+          'bis ein Feld der Gegner versinkt';
+      }
+      return;
+    }
 
     const total = (v.tiles || []).length || 1;
     const own   = counts[myTeam] || 0;
@@ -2038,6 +2190,28 @@
     if (els.share)    els.share.textContent = pct + ' %';
     if (els.shareBar) els.shareBar.style.width = pct + '%';
     if (els.shareLab) els.shareLab.textContent = 'des Spielfelds · ' + own + ' von ' + total;
+  }
+
+  /* Der Banner über dem Spielbildschirm. Er sagt in drei Sätzen, warum
+     Weiterspielen sich lohnt — und wird dabei konkret: die Zahl der
+     schon versunkenen Felder ist der Beweis, dass es wirkt. Ist die
+     Halbierungsgrenze erreicht, verschwindet das Versprechen und es
+     bleibt der Teil, der weiter gilt: die Endwertung. */
+  function renderRuinBar(v) {
+    if (!els.ruinBar) return;
+    const ruin = isRuin(v);
+    els.ruinBar.classList.toggle('cm-hide', !ruin);
+    if (!ruin) { els.ruinBar.innerHTML = ''; return; }
+    const board = v.board || {};
+    const gone  = board.removed || 0;
+    const goneT = gone ? ` Schon <b>${gone}</b> ${gone === 1 ? 'Feld' : 'Felder'} versunken.` : '';
+    els.ruinBar.innerHTML = board.floor_reached
+      ? '<b>🏚️ Ausgeschieden — aber noch lange nicht fertig.</b>' +
+        '<span>Das Spielfeld ist so klein, wie es werden kann.' + goneT +
+        ' Jede richtige Antwort zählt weiter für euren Platz in der Endwertung.</span>'
+      : '<b>🏚️ Ausgeschieden — und trotzdem am Drücker.</b>' +
+        '<span>Alle <b>10</b> richtigen Antworten versinkt ein Feld der Gegner.' + goneT +
+        ' Und eure richtigen Antworten entscheiden über euren Platz.</span>';
   }
 
   /* Das Siegerbild am Tablet: der Sieger groß, das eigene Volk daneben
@@ -2109,14 +2283,23 @@
       return;
     }
     // running
-    if (!v.me.alive) {
+    // 0108: Ein ausgeschiedenes VOLK spielt weiter (Ruinen-Modus) und
+    // bleibt auf dem Spielbildschirm. Zuschauen bleibt allein für den,
+    // der gar keinem Volk angehört — der bekommt vom Server auch keine
+    // Aufgabe, ein Spielbildschirm ohne Aufgabe wäre eine leere Bühne.
+    if (myTeam == null) {
       stopMatchTimer();
       show('out');
-      renderHexMap(els.omap, v, { units: false, highlight: myTeam });
-      requestAnimationFrame(() => renderHexMap(els.omap, v, { units: false, highlight: myTeam }));
+      renderHexMap(els.omap, v, { units: false, highlight: null });
+      requestAnimationFrame(() => renderHexMap(els.omap, v, { units: false, highlight: null }));
       return;
     }
     show('game');
+    // Der Ruinen-Zustand hängt am Spielbildschirm, nicht am Banner
+    // allein: Kopf, Tastatur und Rahmen nehmen daraus ihre gedämpfte
+    // Fassung (tool.css), damit auf den ersten Blick klar ist, dass
+    // hier gerade nichts mehr zu erobern ist.
+    els.game.classList.toggle('cm-play--ruin', isRuin(v));
     // Der ganze Bildschirm trägt die Farbe des eigenen Volkes: Tasten,
     // Rahmen, Schein. Sie steht als eine Variable am Spielbildschirm,
     // alles Weitere mischt tool.css daraus.
@@ -2132,6 +2315,7 @@
     setTeamStreak(v.team_streak);   // 0106: geteilter Team-Zähler statt „–"
     applyTeamEvents(v);   // 0106: Toast für „<Name>/Ihr seid on fire"
     applyPendingPicks((v.me && v.me.pending_picks) || 0, v.me && v.me.pick_deadline);
+    renderRuinBar(v);   // 0108 — vor renderStandings, es teilt sich die Zeile darunter
     renderStandings(v);
     // Muss NACH renderStandings stehen: die Völker-Reihe wird dort neu
     // geschrieben, und applyHeroGlow schaltet Klassen an Elementen, die
@@ -2208,6 +2392,10 @@
             '<div class="cm-fantasytitle">⚔ Kingdoms of Mathoria ⚔</div>' +
             '<div class="cm-boardtop" id="cmBoardTop">' +
               '<span class="cm-boardtitle">Kingdoms of Mathoria</span>' +
+              // 0108: Erscheint erst, wenn das Feld tatsächlich
+              // geschrumpft ist — vorher wäre „48 von 48" eine Zahl
+              // ohne Aussage, die nur den Titel verkürzt.
+              '<span class="cm-boardsize cm-hide" id="cmBoardSize"></span>' +
               '<div class="cm-ring cm-hide" id="cmRing"></div>' +
             '</div>' +
             '<div class="cm-arena" id="cmArena">' +
@@ -2284,6 +2472,7 @@
       frame: root.querySelector('#cmFrame'),
       boardTop: root.querySelector('#cmBoardTop'),
       ring: root.querySelector('#cmRing'),
+      boardSize: root.querySelector('#cmBoardSize'),
       arena: root.querySelector('#cmArena'),
       rosterLeft: root.querySelector('#cmRosterLeft'),
       rosterRight: root.querySelector('#cmRosterRight'),
@@ -2404,7 +2593,7 @@
      mit Wappenbild, Fraktionsnamen und Feldzahl. Teams wechseln sich
      ab (gerade nach links, ungerade nach rechts), damit beide Spalten
      gleich lang bleiben. */
-  function rosterCardHTML(i, count, correct, members) {
+  function rosterCardHTML(i, count, correct, members, ruin) {
     const dead = count === 0;
     // Namensliste. `team_members` kommt erst ab Migration 0096 — läuft
     // sie noch nicht, fehlt der Schlüssel einfach und das Panel zeigt
@@ -2433,8 +2622,23 @@
     // sich nicht aus — ein Volk kann eine Serie schaffen und in
     // derselben Sekunde sein letztes Feld verlieren.
     const cls = 'cm-rcard' + (dead ? ' cm-rcard--out' : '') +
+                // 0108: ausgeschieden UND noch am Rechnen. Das Panel
+                // bleibt grau, aber weniger blass — wer weiterspielt,
+                // darf nicht so aussehen wie einer, der aufgehört hat.
+                ((dead && ruin) ? ' cm-rcard--ruin' : '') +
                 (isFire(teamOutUntil, i) ? ' cm-rcard--justout' : '') +
                 (teamFire(i) ? ' cm-rcard--fire' : '');
+    /* Die große Zahl rechts ist bei einem lebenden Volk die Feldzahl.
+       Bei einem ausgeschiedenen wäre sie dauerhaft „0" — eine Zahl, die
+       nichts mehr erzählt, während das Volk gerade weiterrechnet. An
+       ihrer Stelle steht seit 0108 der Ruinen-Fortschritt: so sieht die
+       Klasse am Beamer, WARUM dort noch getippt wird, und wie nah das
+       nächste versinkende Feld ist. `ruin` fehlt, solange 0108 nicht
+       läuft — dann bleibt es bei der Null wie zuvor. */
+    const scoreHTML = (dead && ruin)
+      ? `<span class="cm-rruin" title="Ruinen: noch ${ruin.to_next} richtige Antworten, bis ein Feld verschwindet">` +
+          `<b>${(ruin.points || 0) % 10}</b><i>/10</i></span>`
+      : `<span class="cm-rcount" title="Felder">${count}</span>`;
     return `<div class="${cls}" style="--team:${fStroke(i)}">` +
       '<div class="cm-rhead">' +
         `<div class="cm-rthumb"><img src="${esrc(fUnit(i))}" alt=""></div>` +
@@ -2442,7 +2646,7 @@
           `<span class="cm-rname">${ctx.esc(fLabel(i))}</span>` +
           `<span class="cm-rcorr" title="richtige Antworten">✓ ${correct} richtig</span>` +
         '</div>' +
-        `<span class="cm-rcount" title="Felder">${count}</span>` +
+        scoreHTML +
       '</div>' +
       memberHTML +
     '</div>';
@@ -2452,11 +2656,12 @@
     if (!els.rosterLeft || !els.rosterRight) return;
     const members = v.team_members || {};
     const correct = v.team_correct_counts || {};
+    const ruin    = v.ruin || {};   // 0108, fehlt ohne die Migration
     let left = '', right = '';
     for (let i = 0; i < v.team_count; i++) {
       const n = (v.team_tile_counts && v.team_tile_counts[String(i)]) || 0;
       const c = parseInt(correct[String(i)], 10) || 0;
-      const html = rosterCardHTML(i, n, c, members[String(i)]);
+      const html = rosterCardHTML(i, n, c, members[String(i)], ruin[String(i)]);
       if (i % 2 === 0) left += html; else right += html;
     }
     els.rosterLeft.innerHTML = left;
@@ -2615,6 +2820,17 @@
     }
     show2('boardWrap');
     fillRosters(v);
+    // 0108: Wie klein ist das Feld inzwischen? Steht nur da, sobald
+    // wirklich etwas verschwunden ist.
+    if (els.boardSize) {
+      const b = v.board || {};
+      const shrunk = (b.removed || 0) > 0;
+      els.boardSize.textContent = shrunk
+        ? '🏚️ Spielfeld: ' + b.tiles + ' von ' + b.initial_tiles +
+          (b.floor_reached ? ' — am Minimum' : '')
+        : '';
+      els.boardSize.classList.toggle('cm-hide', !shrunk);
+    }
     // Ohne Timer steht hier nichts: dass kein Zeitlimit gesetzt ist,
     // sagt schon der fehlende Ring oben rechts.
     if (els.timerState) {
