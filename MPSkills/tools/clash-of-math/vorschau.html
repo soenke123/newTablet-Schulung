@@ -313,7 +313,7 @@ const CATALOG = [
   { key: 'frac', label: 'Bruchrechnung', items: [
     { key: 'frac_addsub',  label: 'Addieren / Subtrahieren',     short: '+ −',    example: '3/4 + 1/8', free: true,  mc: true, choices: 6 },
     { key: 'frac_muldiv',  label: 'Multiplizieren / Dividieren', short: '· :',    example: '3/5 · 5/6', free: true,  mc: true, choices: 6 },
-    { key: 'frac_reduce',  label: 'Kürzen',                      short: 'kürzen', example: '12/18',     free: true,  mc: true, choices: 6 },
+    { key: 'frac_reduce',  label: 'Kürzen',                      short: 'kürzen', example: 'kürze 12/18', free: true,  mc: true, choices: 6 },
     { key: 'frac_compare', label: 'Vergleichen (< = >)',         short: '< >',    example: '3/4 ▢ 2/3', free: false, mc: true, choices: 3 }
   ] }
 ];
@@ -375,7 +375,9 @@ function genFor(key) {
     const teiler = []; for (let t = 2; t < k; t++) if (k % t === 0) teiler.push(t);
     const p = teiler.length ? pick(teiler) : null;
     return {
-      text: ftext(n * k, d * k), answer: ftext(n, d), answer_n: n, answer_d: d, strict: true,
+      // „kürze" davor (0112): ohne das Wort steht ein einzelner Bruch da
+      // und sagt nicht, was mit ihm zu tun ist.
+      text: 'kürze ' + ftext(n * k, d * k), answer: ftext(n, d), answer_n: n, answer_d: d, strict: true,
       distract: [p ? ftext(n * k / p, d * k / p) : null,
                  ftext(n, d * k), ftext(n * k, d), ftext(d, n), ftext(n + 1, d)]
     };

@@ -214,21 +214,10 @@
 
    Kein festes Raster: die Knöpfe sind gleich breit und brechen um,
    wenn der Beamer schmal ist. `--team` setzt tool.js je Knopf. */
-/* Wappen links, Aufgaben rechts — eine Zeile. Auf einem schmalen
-   Beamerbild bricht die Aufgabenzeile unter die Wappen; sie behält
-   dank `flex-basis` aber immer genug Breite, um lesbar zu bleiben,
-   statt auf zwei Zeichen zusammenzufallen. */
-.cm-pickrow {
-  display: flex;
-  align-items: center;
-  gap: 8px 18px;
-  flex-wrap: wrap;
-}
 .cm-pick {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  flex: 0 1 auto;
 }
 .cm-pickbtn {
   flex: 0 0 auto;
@@ -2704,27 +2693,33 @@ body.cm-locked { overflow: hidden; }
   opacity: .75;
 }
 
-/* ── Die Kurzform neben den Wappen ───────────────────────────────
-   Name der Oberkategorie, dahinter die Rechenzeichen als Kette von
-   Chips. Keine Aufzählung mit Klammern und Bindestrichen: die Zeile
-   steht neben acht Wappen und muss in einem Blick lesbar sein. */
+/* ── Die Kurzform unter der Knopfreihe ───────────────────────────
+   Je Oberkategorie eine Zeile: ihr Name, dahinter die Rechenzeichen als
+   Chips. Untereinander statt in einem Fluss — zwei Kategorien
+   nebeneinander verschmelzen sonst zu einer Kette, in der nicht mehr zu
+   sehen ist, was wozu gehört. */
 .cm-poolsum {
-  flex: 1 1 220px;
-  min-width: 0;
   display: flex;
-  align-items: center;
-  gap: 6px 14px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
   font-size: .9rem;
   color: var(--ink-soft);
 }
 .cm-poolsumgrp {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px 10px;
   flex-wrap: wrap;
 }
-.cm-poolsumgrp > b { font-weight: 800; color: var(--ink); }
+/* Feste Breite für den Namen: bei mehreren Kategorien stehen die
+   Zeichen dadurch in einer Spalte untereinander statt versetzt. */
+.cm-poolsumgrp > b {
+  flex: 0 0 auto;
+  min-width: 9.5em;
+  font-weight: 800;
+  color: var(--ink);
+}
 .cm-poolsumops {
   display: inline-flex;
   align-items: center;
@@ -2748,7 +2743,7 @@ body.cm-locked { overflow: hidden; }
    dunkel, um ihn zu lesen. */
 .cm-poolsum > b { font-weight: 700; color: var(--ink); }
 .cm-poolsum--warn {
-  flex: 0 1 auto;              /* als Blase so breit wie ihr Text */
+  align-self: flex-start;      /* als Blase so breit wie ihr Text */
   padding: 6px 12px;
   border-radius: 999px;
   background: color-mix(in srgb, #c4361f 14%, transparent);
@@ -2845,10 +2840,6 @@ body.cm-locked { overflow: hidden; }
   border-radius: var(--r-sm, 10px);
   overflow: hidden;
 }
-/* Eine Gruppe, aus der etwas drankommt, hebt sich schon als Kasten ab
-   — sonst müsste man in jeder Zeile nachsehen, ob überhaupt etwas
-   gewählt ist. */
-.cm-poolgrp--on { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
 .cm-poolgrphead {
   display: flex;
   align-items: center;
@@ -2863,40 +2854,15 @@ body.cm-locked { overflow: hidden; }
   font-weight: 800;
   color: var(--ink);
 }
-/* „2 von 4" — beantwortet aus der Ferne, ob und wie viel in dieser
-   Oberkategorie ansteht, ohne die Zeilen darunter zu lesen. */
-.cm-poolcount {
-  flex: 0 0 auto;
-  font-size: .74rem;
-  font-weight: 700;
-  padding: 2px 9px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  color: var(--ink-soft);
-}
-.cm-poolcount--on {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  color: var(--ink);
-}
 .cm-poolrow {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   padding: 8px 12px;
-  border-left: 3px solid transparent;
-  transition: background .12s, border-color .12s;
 }
 .cm-poolrow + .cm-poolrow {
   border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
-}
-/* Der gewählte Zustand gehört der ganzen Zeile: Farbstreifen links,
-   getönter Grund, Name in voller Tinte. Der Segment-Knopf allein war
-   zu klein, um beim Überfliegen der Tabelle aufzufallen. */
-.cm-poolrow--on {
-  background: color-mix(in srgb, var(--accent) 9%, transparent);
-  border-left-color: var(--accent);
 }
 .cm-poolname {
   flex: 1 1 220px;
@@ -2906,16 +2872,7 @@ body.cm-locked { overflow: hidden; }
   gap: 8px;
   flex-wrap: wrap;
 }
-.cm-poolname b { font-weight: 700; color: var(--ink-soft); }
-.cm-poolrow--on .cm-poolname b { color: var(--ink); }
-/* Fester Platz, auch wenn das Häkchen fehlt — sonst rückten die Namen
-   ausgewählter Zeilen gegen die anderen ein. */
-.cm-poolmark {
-  flex: 0 0 auto;
-  width: 1em;
-  color: var(--accent);
-  font-weight: 900;
-}
+.cm-poolname b { font-weight: 700; color: var(--ink); }
 /* Das Beispiel sagt der Lehrkraft in einem Blick mehr über das Niveau
    als jede Beschreibung — deshalb steht es in der Zeile und nicht in
    einem Tooltip. */
@@ -2955,14 +2912,25 @@ body.cm-locked { overflow: hidden; }
 }
 .cm-poolseg button:disabled { opacity: .35; cursor: not-allowed; }
 .cm-poolseg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.cm-poolopt--on,
-.cm-poolall--on {
+/* Der gedrückte Knopf IST die Anzeige — kräftig gefüllt, damit in einer
+   Reihe von drei Segmenten auf einen Blick klar ist, welches gilt. */
+.cm-poolopt--on {
   background: var(--accent);
   color: #fff;
-  font-weight: 700;
+  font-weight: 800;
+  box-shadow: 0 0 0 1px var(--accent) inset;
 }
-.cm-poolopt--on:hover,
-.cm-poolall--on:hover { background: var(--accent); }
+.cm-poolopt--on:hover:not(:disabled) { background: var(--accent); }
+/* „aus" wird ebenso deutlich hervorgehoben, aber neutral: in der
+   Signalfarbe sähe ein gewähltes „aus" aus, als KÄME diese Aufgabenart
+   dran. */
+.cm-poolopt--off {
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+  box-shadow: none;
+}
+.cm-poolopt--off:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+}
 /* Die Sammel-Knöpfe der Oberkategorie sind kleiner: sie setzen etwas,
    sie zeigen nichts an, was nicht auch eine Zeile tiefer stünde. */
 .cm-poolseg--all button { font-size: .75rem; padding: 3px 10px; }

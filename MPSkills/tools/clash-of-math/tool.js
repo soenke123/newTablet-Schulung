@@ -2588,18 +2588,15 @@
               '<button type="button" class="cm-btn cm-btn--ghost" id="cmShuffleBtn">🔀 Teams mischen</button>' +
               '<button type="button" class="cm-btn" id="cmStartBtn">▶ Spiel starten</button>' +
             '</div>' +
-            // Die Wappenreihe und die Aufgaben stehen in EINER Zeile:
-            // links wer spielt, rechts womit. Beides ist dieselbe Frage
-            // („was ist eingestellt?"), und als eigener Absatz darunter
-            // wirkte die Aufgabenzeile wie eine Meldung.
-            '<div class="cm-pickrow">' +
-              '<div class="cm-pick" id="cmPick"></div>' +
-              // Kurzform, keine Aufzählung: „Bruchrechnung + − · : kürzen".
-              // Ob getippt oder ausgewählt wird, steht hier bewusst
-              // NICHT — das ist eine Frage für das Fenster, nicht für
-              // den Blick über die Lobby.
-              '<div class="cm-poolsum" id="cmPoolSum"></div>' +
-            '</div>' +
+            // Direkt unter der Knopfreihe, je Oberkategorie eine Zeile:
+            // „Bruchrechnung  + −  · :  kürzen". Sie steht dort, wo der
+            // Knopf sitzt, der sie ändert — und nicht neben den Wappen,
+            // die eine andere Frage beantworten.
+            // Ob getippt oder ausgewählt wird, steht hier bewusst NICHT;
+            // das ist eine Frage für das Fenster, nicht für den Blick
+            // über die Lobby.
+            '<div class="cm-poolsum" id="cmPoolSum"></div>' +
+            '<div class="cm-pick" id="cmPick"></div>' +
             '<div class="cm-lobbyteams" id="cmLobbyTeams"></div>' +
             '<div class="cm-offline cm-hide" id="cmOffline"></div>' +
           '</div>' +
@@ -3054,6 +3051,12 @@
     return it.mc ? 'mc' : (it.free ? 'free' : 'off');
   }
 
+  /* Der gedrückte Knopf ist die Anzeige — er allein sagt, was für diese
+     Zeile gilt. „aus" wird dabei anders hervorgehoben als „tippen" und
+     „auswählen": in der Signalfarbe sähe ein gewähltes „aus" aus, als
+     KÄME diese Aufgabenart dran. */
+  const offCls = m => (m === 'off' ? ' cm-poolopt--off' : '');
+
   /* Das Kurzzeichen für die Lobby-Zeile („+ −", „kürzen"). Es kommt aus
      dem Katalog (Migration 0111) — eine neue Kategorie soll auch hier
      eine Migration kosten und kein Client-Update. Der Rückfall auf den
@@ -3147,12 +3150,9 @@
       // „alle tippen" nach dem eigenen Klick nicht an, bloß weil eine
       // Zeile auf „auswählen" ausweichen musste.
       const allIs = m => g.items.every(it => (poolSel[it.key] || 'off') === effMode(it.key, m));
-      const onCount = g.items.filter(it => poolSel[it.key]).length;
-      out += `<div class="cm-poolgrp${onCount ? ' cm-poolgrp--on' : ''}">` +
+      out += '<div class="cm-poolgrp">' +
         '<div class="cm-poolgrphead">' +
           `<span class="cm-poolgrpname">${ctx.esc(g.label)}</span>` +
-          `<span class="cm-poolcount${onCount ? ' cm-poolcount--on' : ''}">` +
-            `${onCount} von ${g.items.length}</span>` +
           '<span class="cm-poolseg cm-poolseg--all">' +
             ['off', 'free', 'mc'].map(m => {
               // Ausweichende Zeilen nennen, statt den Knopf zu sperren.
@@ -3161,7 +3161,7 @@
                 ? ` title="${ctx.esc(odd.map(it => it.label).join(', '))} kann das nicht — ` +
                   `steht dann auf »${POOL_MODE_LABEL[m === 'free' ? 'mc' : 'free']}«."`
                 : '';
-              return `<button type="button" class="cm-poolall${allIs(m) ? ' cm-poolall--on' : ''}" ` +
+              return `<button type="button" class="cm-poolall${allIs(m) ? ' cm-poolopt--on' + offCls(m) : ''}" ` +
                 `data-group="${ctx.esc(g.key)}" data-val="${m}"${why}>` +
                 `alle ${m === 'off' ? 'aus' : POOL_MODE_LABEL[m]}</button>`;
             }).join('') +
@@ -3169,13 +3169,8 @@
         '</div>';
       g.items.forEach(it => {
         const cur = poolSel[it.key] || 'off';
-        const on  = cur !== 'off';
-        // Die ganze ZEILE trägt den Zustand, nicht nur der Knopf: beim
-        // Blick über die Tabelle soll zu sehen sein, was drankommt,
-        // ohne drei Segmente je Zeile abzulesen.
-        out += `<div class="cm-poolrow${on ? ' cm-poolrow--on' : ''}">` +
+        out += '<div class="cm-poolrow">' +
           '<span class="cm-poolname">' +
-            `<span class="cm-poolmark" aria-hidden="true">${on ? '✔' : ''}</span>` +
             `<b>${ctx.esc(it.label)}</b>` +
             (it.example ? `<i class="cm-poolex">${ctx.esc(it.example)}</i>` : '') +
           '</span>' +
@@ -3188,7 +3183,7 @@
               // Art zwei oder drei Knöpfe und die Spalten verrutschten.
               const why = can ? '' :
                 ' title="Diese Aufgabenart hat nur wenige mögliche Antworten — sie geht nur als Auswahl."';
-              return `<button type="button" class="cm-poolopt${cur === m ? ' cm-poolopt--on' : ''}" ` +
+              return `<button type="button" class="cm-poolopt${cur === m ? ' cm-poolopt--on' + offCls(m) : ''}" ` +
                 `data-key="${ctx.esc(it.key)}" data-val="${m}"${can ? '' : ' disabled'}${why}>` +
                 `${lab}</button>`;
             }).join('') +
@@ -3204,11 +3199,13 @@
      geöffnetes Fenster steht, was gleich drankommt — und zugleich die
      Begründung dafür, dass „Spiel starten" gesperrt ist.
 
-     Kurzform, kein Satz: der Name der Oberkategorie und dahinter die
-     Rechenzeichen ihrer aktiven Unterkategorien („Bruchrechnung + −
-     · : kürzen"). Ob getippt oder ausgewählt wird, fehlt bewusst — es
-     verdoppelte die Zeile, ohne den Blick über die Lobby zu beantworten
-     („was rechnen die gleich?"). */
+     Je Oberkategorie EINE Zeile: ihr Name und dahinter die Rechenzeichen
+     der aktiven Unterkategorien („Bruchrechnung  + −  · :  kürzen").
+     Untereinander statt in einem Fluss, damit zwei Kategorien nicht zu
+     einer langen Kette verschmelzen.
+     Ob getippt oder ausgewählt wird, fehlt bewusst — es verdoppelte die
+     Zeile, ohne den Blick über die Lobby zu beantworten („was rechnen
+     die gleich?"). */
   function renderPoolSummary() {
     if (!els.poolSum) return;
     const keys = Object.keys(poolSel);
@@ -3229,11 +3226,11 @@
     poolCat.forEach(g => {
       const on = g.items.filter(it => poolSel[it.key]);
       if (!on.length) return;
-      out += '<span class="cm-poolsumgrp">' +
+      out += '<div class="cm-poolsumgrp">' +
         `<b>${ctx.esc(g.label)}</b>` +
         '<span class="cm-poolsumops">' +
           on.map(it => `<i>${ctx.esc(poolShort(it))}</i>`).join('') +
-        '</span></span>';
+        '</span></div>';
     });
     els.poolSum.innerHTML = out;
   }
