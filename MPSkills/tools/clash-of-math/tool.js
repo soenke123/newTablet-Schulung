@@ -284,6 +284,18 @@
      (clash_task_catalog): einmal geholt, danach unverändert — er ist
      Referenzdaten und ändert sich nur mit einer Migration. */
   let poolSel = {}, poolBusy = 0, poolCat = null, poolCatBusy = false;
+  /* Welche Oberkategorien gerade aufgeklappt sind. Eine ANSICHT, keine
+     Einstellung des Raums — hier geht nichts an den Server, und zwei
+     Lehrkräfte am selben Raum dürfen die Liste verschieden aufgeklappt
+     haben.
+
+     Sönkes Vorgabe (2026-08-26): „am Anfang sollen alle Kategorien
+     eingeklappt sein … es bleibt einfach so stehen, wie ich es
+     hinterlassen habe." Die leere Liste ist deshalb der Anfangszustand,
+     und sie liegt im localStorage — „stehen bleiben" soll auch das
+     Schließen des Fensters überleben, nicht nur das des Auswahl-Dialogs. */
+  const POOL_OPEN_KEY = 'mpskills_clash_poolopen';
+  let poolOpen = [];
   // Teilnehmer: die getippte Antwort. Bis 0110 eine Zeichenkette; seit
   // den Brüchen eine kleine Struktur, weil ein Bruch zwei Felder hat
   // und der Bruchstrich kein Zeichen im Text ist, sondern der Wechsel
@@ -291,6 +303,23 @@
   //   { neg: Vorzeichen, num: Zähler/ganze Zahl, den: Nenner oder null }
   // den === null heißt „noch kein Bruchstrich gedrückt".
   let answerVal = { neg: false, num: '', den: null };
+  /* Term-Aufgaben (Migration 0115): dort ist die Antwort eine FOLGE —
+     „a^2+2ab+b^2", „2y+4", „(a+b)^2". Weder ein Wert noch ein Bruch,
+     also auch kein drittes Feld in answerVal, sondern ein eigener
+     Puffer. Was hier steht, geht Zeichen für Zeichen an den Server;
+     die Struktur macht dort clash_term_parse.
+
+     Dieselbe Bauweise, mit der 0114 die Ziffernfolgen eingezogen hat:
+     ein Zweig ganz oben in keyPress/renderAnswer/parseAnswer und sonst
+     nichts — die Bruch-Eingabe bleibt Wort für Wort, was sie ist. */
+  let termBuf = '';
+  // Beides zusammen leeren. Es gibt fünf Stellen, an denen eine neue
+  // Aufgabe beginnt; bliebe an einer davon der Term-Puffer stehen,
+  // stünde die Antwort von vorhin in der nächsten Aufgabe.
+  const resetAnswer = () => {
+    answerVal = { neg: false, num: '', den: null };
+    termBuf = '';
+  };
   // `keyChoices` sind die Kacheln der laufenden Auswahl-Aufgabe (auch
   // für die Zifferntasten einer echten Tastatur), `choiceBtn` die
   // zuletzt angetippte — sie trägt die Rückmeldung, weil es bei einer
@@ -1401,12 +1430,26 @@
   const KEY_SIGN = { lab: '−', act: 'sign', op: 'sign',
                      cls: 'cm-key--sign', aria: 'Minus setzen oder wegnehmen' };
 
+  /* Das Pluszeichen (Migration 0115). Es teilt sich den Platz mit dem
+     Minus, so wie „(" und „)" sich seit 0114 einen teilen — eine eigene
+     Reihe für ein einziges Zeichen wäre die halbe Tastatur für die
+     Hälfte der Aufgabenarten.
+
+     ⚠️ Es steht bei JEDER Tipp-Aufgabe da und ist ausgegraut, solange
+     die Aufgabenart es nicht in `keys` nennt. Bei einer Bruchaufgabe
+     bliebe es also dunkel: „3/4 + 1/8" wird ausgerechnet, nicht
+     abgeschrieben. Dieselbe Mechanik wie bei Komma, Hochzahl und
+     Klammern seit 0114 — die Tastatur zeigt den ganzen Vorrat, die
+     Aufgabe sagt, was davon gilt. */
+  const KEY_PLUS = { lab: '+', ins: '+', op: 'plus',
+                     cls: 'cm-key--plus', aria: 'Plus' };
+
   const KEY_DEC = [
     { lab: '7', ins: '7', r: 1, c: 1 }, { lab: '8', ins: '8', r: 1, c: 2 }, { lab: '9', ins: '9', r: 1, c: 3 },
     { lab: '4', ins: '4', r: 2, c: 1 }, { lab: '5', ins: '5', r: 2, c: 2 }, { lab: '6', ins: '6', r: 2, c: 3 },
     { lab: '1', ins: '1', r: 3, c: 1 }, { lab: '2', ins: '2', r: 3, c: 2 }, { lab: '3', ins: '3', r: 3, c: 3 },
     { lab: '0', ins: '0', r: 4, c: 1, cs: 2 },
-    Object.assign({ r: 4, c: 3 }, KEY_SIGN)
+    { r: 4, c: 3, pair: [KEY_PLUS, KEY_SIGN] }
   ];
 
   /* Die Variablen-Zeile über dem Ziffernfeld. Fünf Blöcke, weil fünf
@@ -1515,6 +1558,55 @@
       '<sub>' + ctx.esc(base) + '</sub></span>';
   }
 
+  /* Ein Term als Bild (Migration 0115): „4x^2+20x+25" wird
+     4x² + 20x + 25. Dieselben Bausteine für die AUFGABE, die
+     ANTWORTKACHELN und das EINGABEFELD — was das Kind tippt, soll
+     aussehen wie das, was dasteht.
+
+     Drei Regeln, mehr sind es nicht:
+       Variablen  kursiv in Serifenschrift (wie auf ihren Tasten und
+                  wie im Schulbuch — die Anzeigeschrift des Spiels ist
+                  eine Versalienschrift und macht aus jedem x ein X)
+       „^n"       hochgestellt; das „^" selbst verschwindet
+       + − =      mit Luft drumherum, ABER nur als Rechenzeichen. Das
+                  Minus in „−4x+12" gehört zur 4 und rückt deshalb
+                  nicht ab. Woran das zu erkennen ist: ein
+                  Rechenzeichen hat links etwas stehen, ein Vorzeichen
+                  nicht.
+
+     Das Minus wird dabei zum typografischen „−" (U+2212). Der Server
+     schickt den Bindestrich, weil er auf jeder Tastatur liegt; auf dem
+     Bildschirm ist er zu kurz und sitzt zu tief. */
+  function termHTML(s) {
+    const t = String(s == null ? '' : s);
+    let out = '', prev = '', i = 0;
+    while (i < t.length) {
+      const ch = t[i];
+      if (ch === '^') {
+        let j = i + 1, num = '';
+        while (j < t.length && /[0-9]/.test(t[j])) { num += t[j]; j++; }
+        // Die noch leere Hochzahl bekommt dasselbe Kästchen wie der
+        // offene Nenner: der Cursor steht sichtbar OBEN.
+        out += '<sup>' + (num ? ctx.esc(num) : '<i class="cm-inbox"></i>') + '</sup>';
+        prev = num ? '0' : '^';
+        i = j;
+        continue;
+      }
+      if (ch === '+' || ch === '-' || ch === '=') {
+        out += '<b class="cm-op' + (/[0-9a-z)]/.test(prev) ? '' : ' cm-op--pre') + '">' +
+               (ch === '-' ? '−' : ch) + '</b>';
+        prev = ch;
+        i++;
+        continue;
+      }
+      if (/[a-z]/.test(ch)) out += '<i class="cm-var">' + ctx.esc(ch) + '</i>';
+      else                  out += ctx.esc(ch);
+      prev = ch;
+      i++;
+    }
+    return out;
+  }
+
   /* Vierergruppen von rechts: „110011" wird „11 0011". Sönkes Vorgabe —
      die Lücke setzt das Programm, nicht das Kind. Sie ist reine
      Anzeige; was an den Server geht, trägt nie ein Leerzeichen.
@@ -1544,6 +1636,18 @@
   // Anweisungsschrift aus 0112 („kürze"), obwohl es eine Antwort ist.
   // Bewusst ohne eigene Klasse — „37 + 48" soll aussehen wie immer.
   const NUM_TOKEN  = /^[0-9A-F]+$/;
+  /* Ein TERM (Migration 0115): Ziffern, die fünf Variablen und die
+     Rechenzeichen — und mindestens eines, das keine Ziffer ist.
+
+     Das „mindestens eines" ist der ganze Punkt der Vorschau: das
+     einzelne „+" zwischen zwei Brüchen („3/4 + 1/8") bleibt damit, was
+     es seit 0110 war, und „37" auch. Sonst bekäme jede Additionsaufgabe
+     dieser Welt plötzlich einen anderen Satz.
+
+     ⚠️ Nur KLEINbuchstaben. „FF" ist eine Hexzahl (0114) und „a" eine
+     Variable — dieselbe Trennung wie auf der Tastatur, wo die
+     Variablentasten ein eigenes `op` tragen. */
+  const TERM_TOKEN = /^(?=[0-9abcxy+\-^()=]*[abcxy^()=])[0-9abcxy+\-^()=]+$/;
   const WORD_TOKEN = /[A-Za-zÄÖÜäöüß]/;
   function mathHTML(text) {
     // Erst die Vierergruppen wieder einsammeln: „(1011 0011)_2" ist
@@ -1556,6 +1660,7 @@
       if (b) return baseHTML(groupDigits(b[1]), b[2]);
       const m = FRAC_TOKEN.exec(tok);
       if (m) return fracHTML(m[1], m[2], false);
+      if (TERM_TOKEN.test(tok)) return termHTML(tok);
       if (NUM_TOKEN.test(tok)) return ctx.esc(tok);
       // Ein WORT in der Aufgabe („kürze 12/18", 0112) bekommt eine
       // eigene Schrift: die Anzeigeschrift des Spiels ist Cinzel, eine
@@ -1583,6 +1688,17 @@
       // in der Datei, nie vom Server — sonst wäre das eine offene Tür.
       ' aria-label="' + ctx.esc(k.aria || k.lab) + '">' +
       (k.labHtml || ctx.esc(k.lab)) + '</button>';
+  }
+
+  /* Ein PLATZ im Raster — eine Taste oder zwei, die sich einen teilen
+     („(" und „)", „+" und „−"). Eine Funktion für beide Raster, damit
+     ein Paar nicht davon abhängt, ob es im Ziffernfeld oder in der
+     Zusatzspalte sitzt. */
+  function cellHTML(spec, style) {
+    return Array.isArray(spec.pair)
+      ? '<div class="cm-keypair" style="' + style + '">' +
+        spec.pair.map(k => keyHTML(k, null)).join('') + '</div>'
+      : keyHTML(spec, style);
   }
 
   function buildKeypad(mode, q) {
@@ -1627,17 +1743,13 @@
     const at = (r, c, k) =>
       'grid-area:' + r + '/' + c + '/span ' + (k.rs || 1) + '/span ' + (k.cs || 1);
 
-    let pad = base.map(k => keyHTML(k, at(k.r, k.c, k))).join('');
+    let pad = base.map(k => cellHTML(k, at(k.r, k.c, k))).join('');
     // Von UNTEN nach oben (Sönkes Reihenfolge): der erste Eintrag steht
     // in der untersten Zeile, wo der Daumen liegt.
     col.slice(0, 4).forEach((name, i) => {
       const spec = KEY_EXTRA[name];
       if (!spec) return;
-      const style = at(4 - i, cols, spec);
-      pad += Array.isArray(spec.pair)
-        ? '<div class="cm-keypair" style="' + style + '">' +
-          spec.pair.map(k => keyHTML(k, null)).join('') + '</div>'
-        : keyHTML(spec, style);
+      pad += cellHTML(spec, at(4 - i, cols, spec));
     });
 
     els.keys.innerHTML =
@@ -1693,6 +1805,7 @@
      oder nuller Nenner) — der Aufrufer lässt das Feld dann rot
      aufblitzen, statt etwas Halbes abzuschicken. */
   function parseAnswer() {
+    if (isTermQ()) return termAnswer();
     const num = answerVal.num;
     const den = answerVal.den;
     if (!num) return null;
@@ -1700,19 +1813,48 @@
     return (answerVal.neg ? '-' : '') + num + (den !== null ? '/' + den : '');
   }
 
+  /* Dasselbe für Terme (Migration 0115): der Puffer geht so, wie er
+     dasteht, an den Server — clash_term_parse liest „3x+12" ebenso wie
+     „(a+b)^2".
+
+     Hier wird NICHT gerechnet und nichts umgeformt. Was eine gültige
+     Antwort ist, entscheidet der Server; der Client hält nur das
+     offensichtlich Halbe zurück, damit ein Fehlversuch nicht auf die
+     Zwei-Schlag-Regel (0101/0103) angerechnet wird:
+
+       leer                 da steht noch gar nichts
+       Klammern unpaarig    „(a+b" ist ein angefangener Gedanke,
+                            genauso wie ein Bruch ohne Nenner
+       endet auf +, −, ^    dahinter fehlt sichtbar etwas          */
+  function termAnswer() {
+    const s = termBuf.trim();
+    if (!s) return null;
+    if (/[+\-^(]$/.test(s)) return null;
+    let depth = 0;
+    for (const ch of s) {
+      if (ch === '(') depth++;
+      else if (ch === ')') { depth--; if (depth < 0) return null; }
+    }
+    return depth === 0 ? s : null;
+  }
+
   /* Wie viele Stellen ein Feld aufnimmt. Vier bei Brüchen (Zähler und
      Nenner je für sich), sonst so viele, wie die Zielbasis braucht —
      eine zwölfstellige Binärzahl ließe sich bei festen vier gar nicht
      eintippen. Der Server sagt es an der Frage (`maxlen`).
-     Die Obergrenze 16 ist derselbe Riegel wie in clash_num_norm: was
-     länger ist, kann keine Antwort sein. */
+     Die Obergrenze 40 ist derselbe Riegel wie in clash_term_parse: was
+     länger ist, kann keine Antwort sein. (Bis 0114 waren es 16 — ein
+     Term wie „4x^2+20x+25" hätte darin nicht Platz.) */
   const answerMax = () => {
     const n = curQ && parseInt(curQ.maxlen, 10);
-    return (n && n > 0) ? Math.min(n, 16) : 4;
+    return (n && n > 0) ? Math.min(n, 40) : 4;
   };
 
   // Zahlensystem-Aufgaben: die Antwort ist eine Ziffernfolge, kein Wert.
   const isDigitsQ = () => !!(curQ && curQ.kind === 'digits');
+  // Term-Aufgaben (0115): die Antwort ist ein Term — eine Folge aus
+  // Zahlen, Variablen, Rechenzeichen und Klammern.
+  const isTermQ = () => !!(curQ && curQ.kind === 'term');
 
   // In welches der beiden Felder eine Ziffer geht: solange kein
   // Bruchstrich gedrückt wurde, gibt es nur eines.
@@ -1720,6 +1862,28 @@
 
   function keyPress(k) {
     if (k.act === 'submit') { onSubmit(); return; }
+
+    /* Terme (Migration 0115): ein Puffer, an den angehängt wird — kein
+       Vorzeichen, das kippt, und kein Feldwechsel. Das Minus ist hier
+       ein RECHENZEICHEN und keine Umschalttaste: „a-b" ist nicht
+       dasselbe wie „-ab", und ein kippendes Vorzeichen könnte den
+       Unterschied gar nicht ausdrücken.
+
+       Die Hochzahl fügt ihr „^" ein und sonst nichts. Was danach
+       getippt wird, stellt renderAnswer hoch — ein zweites Feld wie
+       beim Bruch bräuchte es nur, wenn nach der Hochzahl noch etwas
+       auf die Grundlinie zurückkäme, und dafür gäbe es keine Taste. */
+    if (isTermQ()) {
+      if (k.act === 'clear')     { termBuf = ''; }
+      else if (k.act === 'back') { termBuf = termBuf.slice(0, -1); }
+      else if (k.act === 'sign') { termBuf += '-'; }
+      else if (k.act === 'exp')  { termBuf += '^'; }
+      else if (k.ins != null)    {
+        if (termBuf.length < answerMax()) termBuf += k.ins;
+      }
+      renderAnswer();
+      return;
+    }
 
     if (k.act === 'back') {
       const f = answerField();
@@ -1731,7 +1895,7 @@
         answerVal[f] = answerVal[f].slice(0, -1);
       }
     }
-    else if (k.act === 'clear') { answerVal = { neg: false, num: '', den: null }; }
+    else if (k.act === 'clear') { resetAnswer(); }
     else if (k.act === 'sign')  { answerVal.neg = !answerVal.neg; }
     else if (k.act === 'frac') {
       // Sönkes Vorgabe: „alles vorherig eingetippte kommt in den
@@ -1763,6 +1927,24 @@
     const num = answerVal.num;
     const den = answerVal.den;
     const sign = answerVal.neg ? '<span class="cm-insign">-</span>' : '';
+
+    /* Terme (0115): dasselbe Bild wie die Aufgabe darüber — Variablen
+       kursiv, Hochzahlen hochgestellt, Luft um die Rechenzeichen. Was
+       das Kind tippt, soll aussehen wie das, was dasteht (dieselbe
+       Überlegung wie beim gestapelten Bruch und bei der Zahl mit
+       Basis).
+
+       Bei „Nach x auflösen" steht die gesuchte Variable im Feld mit
+       davor: „x = ▢". Sie gehört dorthin und nicht in die Aufgabe —
+       „2x = 8y − 2x + 16 = ▢" hätte zwei Gleichheitszeichen in einer
+       Zeile, und das zweite meinte etwas anderes als das erste. */
+    if (isTermQ()) {
+      els.input.classList.remove('cm-in--empty');
+      els.input.innerHTML =
+        (curQ.var ? '<span class="cm-invar">' + termHTML(String(curQ.var)) + ' =</span> ' : '') +
+        (termBuf ? termHTML(termBuf) : '<i class="cm-inbox"></i>');
+      return;
+    }
 
     /* Zahlensysteme (0114): das Feld steht in derselben Klammer mit
        Index wie die Aufgabe daneben — „(11 0011)₂ = (▢)₁₆". Es ist
@@ -1831,8 +2013,17 @@
     else if (k === 'Escape' || k === 'Delete') keyPress({ act: 'clear' });
     else if (k === '-')                        { if (liveAct('sign')) keyPress({ act: 'sign' }); }
     else if (k === '/')                        { if (liveAct('frac')) keyPress({ act: 'frac' }); }
+    // Die Hochzahl (0115). „^" ist auf der deutschen Tastatur eine
+    // Totaste — sie meldet sich erst beim nächsten Anschlag. „²" kommt
+    // dagegen direkt und meint dasselbe.
+    else if (k === '^' || k === '²')           { if (liveAct('exp')) keyPress({ act: 'exp' }); }
     else if (k.length === 1 && els.keys) {
-      const btn = els.keys.querySelector('.cm-key[data-ins="' + k.toUpperCase() + '"]');
+      /* ⚠️ Erst GENAU suchen, dann groß (0115): die Variable „a" und
+         die Hexziffer „A" liegen beide auf der Tastatur, und ein
+         getipptes a fände sonst immer die Hexziffer — die bei einer
+         Term-Aufgabe gar nicht dasteht, weshalb gar nichts passierte. */
+      const btn = els.keys.querySelector('.cm-key[data-ins="' + k + '"]')
+               || els.keys.querySelector('.cm-key[data-ins="' + k.toUpperCase() + '"]');
       if (!btn || btn.disabled) return;
       keyPress({ ins: btn.dataset.ins });
     }
@@ -2338,7 +2529,7 @@
     const val = (forced != null) ? forced : parseAnswer();
     if (val == null) { flashInput('warn'); return; }
     submitting = true;
-    if (forced == null) { answerVal = { neg: false, num: '', den: null }; renderAnswer(); }
+    if (forced == null) { resetAnswer(); renderAnswer(); }
     const r = await ctx.actions.call('clash_submit', { p_answer: val });
     submitting = false;
     if (!r || !r.ok) {
@@ -2531,13 +2722,23 @@
     els.q.innerHTML = q.text ? mathHTML(q.text) : ctx.esc(q.a + ' + ' + q.b);
 
     const mode = q.input || 'natural';
-    // „= [ ]" gehört zum Tippen. Bei Antwortkacheln gibt es nichts
-    // einzutippen, und „3/4 ▢ 2/3 = <" liest sich ohnehin nicht — dann
-    // steht die Aufgabe allein da und die Kacheln darunter sind die
-    // Antwort.
-    const withEq = mode !== 'choice' && q.eq !== false;
+    /* „= [ ]" gehört zum Tippen. Bei Antwortkacheln gibt es nichts
+       einzutippen, und „3/4 ▢ 2/3 = <" liest sich ohnehin nicht — dann
+       steht die Aufgabe allein da und die Kacheln darunter sind die
+       Antwort.
+
+       Seit 0115 sind das ZWEI Fragen und nicht mehr eine: „Nach x
+       auflösen" braucht ein Eingabefeld, aber kein Gleichheitszeichen
+       davor — es steht schon in der Aufgabe („2x = 8y − 2x + 16") und
+       ein zweites daneben meinte etwas anderes. Das Feld trägt sein
+       eigenes: „x = ▢" (siehe renderAnswer).
+
+       Für den bisher einzigen eq:false-Fall (frac_compare, nur
+       Kacheln) ändert das nichts — dort greift schon mode === 'choice'. */
+    const hasInput = mode !== 'choice';
+    const withEq   = hasInput && q.eq !== false && !q.var;
     if (els.eqop) els.eqop.classList.toggle('cm-hide', !withEq);
-    if (els.input) els.input.classList.toggle('cm-hide', !withEq);
+    if (els.input) els.input.classList.toggle('cm-hide', !hasInput);
 
     // Bei den Tipp-Layouts nur beim Wechsel der Art neu bauen (die
     // Tasten sind immer dieselben); die Antwortkacheln gehören dagegen
@@ -2552,7 +2753,7 @@
 
     // Eine NEUE Aufgabe fängt mit leerem Feld an.
     if (changed) {
-      answerVal = { neg: false, num: '', den: null };
+      resetAnswer();
       renderAnswer();
     }
   }
@@ -2815,7 +3016,7 @@
     // muss die Karte auch mitten in einem offenen Serien-Bonus schließen.
     if (which !== 'game') {
       closeMap(true);
-      answerVal = { neg: false, num: '', den: null };
+      resetAnswer();
       // Auch der Fingerabdruck der Aufgabe: nach einem Phasenwechsel
       // ist die nächste Frage in jedem Fall eine neue, selbst wenn sie
       // zufällig dieselbe wäre.
@@ -3098,7 +3299,26 @@
             ? acc.concat(g.items.filter(it => !isDerived(it)).map(it => it.key))
             : acc, []);
         setPoolFor(keys, all.dataset.val);
+        return;
       }
+      // Zuletzt die Kopfzeile: die Sammelknöpfe stehen IN ihr, und wer
+      // „alle tippen" drückt, will die Kategorie nicht zuklappen.
+      // Deshalb erst die Knöpfe (die oben mit return aussteigen), dann
+      // der Rest der Zeile.
+      const head = ev.target.closest('.cm-poolgrphead');
+      if (head && head.dataset.grp) togglePoolGroup(head.dataset.grp);
+    });
+
+    // Die Kopfzeile ist ein Knopf (role="button"), also muss sie auch
+    // auf Leertaste und Eingabe hören — sonst ist die Auswahl mit der
+    // Tastatur allein nicht zu bedienen.
+    els.poolBody.addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter' && ev.key !== ' ' && ev.key !== 'Spacebar') return;
+      const head = ev.target.closest && ev.target.closest('.cm-poolgrphead');
+      if (!head || !head.dataset.grp) return;
+      if (ev.target.closest('button')) return;   // die Sammelknöpfe machen das selbst
+      ev.preventDefault();
+      togglePoolGroup(head.dataset.grp);
     });
 
     els.startBtn.addEventListener('click', async () => {
@@ -3362,6 +3582,25 @@
     poolSel = (v.pool && typeof v.pool === 'object') ? Object.assign({}, v.pool) : {};
   }
 
+  /* Auf- und Zuklappen. Beides in try/catch: localStorage wirft in
+     Safaris privatem Modus schon beim Lesen (dieselbe Vorsicht wie in
+     lib/theme.js). Ein Browser, der nichts speichern will, bekommt
+     jedes Mal die eingeklappte Liste — das ist der Anfangszustand und
+     nichts Kaputtes. */
+  function loadPoolOpen() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(POOL_OPEN_KEY) || '[]');
+      poolOpen = Array.isArray(raw) ? raw.filter(k => typeof k === 'string').slice(0, 20) : [];
+    } catch (e) { poolOpen = []; }
+  }
+
+  function togglePoolGroup(key) {
+    const i = poolOpen.indexOf(key);
+    if (i < 0) poolOpen.push(key); else poolOpen.splice(i, 1);
+    try { localStorage.setItem(POOL_OPEN_KEY, JSON.stringify(poolOpen)); } catch (e) {}
+    renderPoolTable();
+  }
+
   // Einmal holen und behalten. Kein Nachladen im Takt: der Katalog ist
   // Referenzdaten und ändert sich nur mit einer Migration — im
   // Sekundentakt mitzufahren wäre reine Last.
@@ -3378,6 +3617,11 @@
   function openPool() {
     if (!els.poolOv) return;
     els.poolOv.classList.remove('cm-hide');
+    // Beim Öffnen aus dem Speicher lesen und nicht einmal beim Start:
+    // eine zweite Lasche desselben Browsers hat vielleicht inzwischen
+    // etwas anderes aufgeklappt, und die frischere Wahl ist die
+    // richtige.
+    loadPoolOpen();
     renderPoolTable();
     // Der Katalog kann beim ersten Öffnen noch unterwegs sein — dann
     // steht so lange eine Zeile da und die Tabelle kommt nach.
@@ -3444,8 +3688,21 @@
       // an ihnen scheitern.
       const own = g.items.filter(it => !isDerived(it));
       const allIs = m => own.every(it => (poolSel[it.key] || 'off') === effMode(it.key, m));
-      out += '<div class="cm-poolgrp">' +
-        '<div class="cm-poolgrphead">' +
+      /* Auf- oder zugeklappt (2026-08-26). Die drei Sammelknöpfe stehen
+         in BEIDEN Zuständen in der Kopfzeile: „die ganze Kategorie
+         aktivieren" ist der häufige Fall und soll ohne Aufklappen
+         gehen. Was fehlt, ist Absicht — eine Zusammenfassung der
+         aktiven Arten in der Kopfzeile stünde ein zweites Mal da, wo
+         sie schon steht (renderPoolSummary, die Zeile neben den
+         Wappen). */
+      const open = poolOpen.indexOf(g.key) >= 0;
+      out += '<div class="cm-poolgrp' + (open ? '' : ' cm-poolgrp--closed') + '">' +
+        '<div class="cm-poolgrphead" role="button" tabindex="0" ' +
+             `aria-expanded="${open}" data-grp="${ctx.esc(g.key)}">` +
+          // Der Pfeil zeigt nach rechts und dreht sich beim Aufklappen
+          // nach unten (Sönkes Vorgabe). Für Vorlesewerkzeuge ist er
+          // nichts — die Auskunft steckt in aria-expanded.
+          '<span class="cm-poolarrow" aria-hidden="true">›</span>' +
           `<span class="cm-poolgrpname">${ctx.esc(g.label)}</span>` +
           '<span class="cm-poolseg cm-poolseg--all">' +
             ['off', 'free', 'mc'].map(m => {
@@ -3461,7 +3718,11 @@
             }).join('') +
           '</span>' +
         '</div>';
-      g.items.forEach(it => {
+      // Zugeklappt werden die Zeilen gar nicht erst gebaut, statt sie
+      // per CSS zu verstecken: verborgene Knöpfe blieben sonst in der
+      // Tab-Reihenfolge stehen, und die Lehrkraft tabbte durch neun
+      // unsichtbare Schalter.
+      if (open) g.items.forEach(it => {
         // Die abgeleitete Zeile steht nur da, wenn sie gilt — und dann
         // ohne Knöpfe. Sönkes Vorgabe: „wenn beides drin ist." Eine
         // dauerhaft graue Zeile mit einer Bedingung daneben wäre eine
@@ -3794,7 +4055,7 @@
       // eine Kopie, die eine Migration überlebt, wäre schlimmer als ein
       // zweiter Abruf beim nächsten Öffnen.
       poolSel = {}; poolBusy = 0; poolCat = null; poolCatBusy = false;
-      answerVal = { neg: false, num: '', den: null };
+      resetAnswer();
       keyMode = null; keyChoices = null; choiceBtn = null; lastQSig = null; mapOpen = false;
       myPendingPicks = 0; pendingPickDeadlineMs = 0; lastTeamEventId = 0;   // 0106
       resetFx();                                                            // UI 18

@@ -2757,6 +2757,46 @@ body.cm-locked { overflow: hidden; }
   .cm-inbox::before { animation: none; opacity: .5; }
 }
 
+/* ── Terme: 4x² + 20x + 25 ───────────────────────────────────────
+   Migration 0115. Wieder dieselben Bausteine für die AUFGABE, die
+   ANTWORTKACHELN und das EINGABEFELD.
+
+   Die Variable ist kursiv gesetzt und in Serifenschrift — so steht sie
+   im Schulbuch, und so steht sie auf ihrer Taste (.cm-key--var). Der
+   Grund ist derselbe wie bei .cm-qword: die Anzeigeschrift des Spiels
+   ist eine Versalienschrift und macht aus jedem x ein X. Ein großes X
+   neben einer kleinen 2 sähe aus wie zwei verschiedene Dinge. */
+.cm-var {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  text-transform: none;
+  font-variant: normal;
+}
+/* Das Rechenzeichen bekommt Luft, das VORzeichen nicht: „a − b" sind
+   zwei Dinge und eine Rechnung, „−4x" ist ein Ding. Ohne den
+   Unterschied liest sich „−4x+12" wie eine Aufgabe mit drei Gliedern. */
+.cm-op {
+  font-weight: inherit;
+  padding: 0 .22em;
+}
+.cm-op--pre { padding: 0 .04em 0 0; }
+/* Die Hochzahl. Wie der Basis-Index in 0114 von Hand verschoben statt
+   über `vertical-align`: sonst bläht sie die Zeilenhöhe auf, und die
+   Aufgabe rutscht bei jeder Potenz eine Zeile tiefer. */
+.cm-q sup,
+.cm-in sup,
+.cm-key--choice sup {
+  font-size: .55em;
+  vertical-align: baseline;
+  position: relative;
+  top: -.5em;
+  margin-left: .02em;
+}
+/* „x =" vor dem Eingabefeld (nur „Nach x auflösen"). Etwas
+   zurückgenommen: die Antwort ist das, was dahinter entsteht — das
+   Davor sagt bloß, wonach gefragt war. */
+.cm-invar { opacity: .75; }
+
 /* ── Antwortkacheln statt Ziffern ────────────────────────────────
    Dasselbe Raster (.cm-keypad) mit anderer Spaltenzahl, dieselbe
    Pergament-Optik wie die Tasten — es ist die Tastatur dieser
@@ -2805,6 +2845,11 @@ body.cm-locked { overflow: hidden; }
    größer gesetzt (ein „−" in Zifferngröße sieht aus wie ein Strich im
    Nichts), der Bruch trägt statt eines Wortes sein eigenes Bild. */
 .cm-key--sign { font-size: clamp(1.3rem, 6vw, 2rem); line-height: 1; }
+/* Das Plus (Migration 0115) teilt sich seinen Platz mit dem Minus und
+   ist deshalb halb so breit — dieselbe Lage wie bei den Klammern, also
+   dieselbe kleinere Schrift. Das Minus daneben behält seine Größe: es
+   ist nur ein Strich und verschwände sonst. */
+.cm-key--plus { font-size: clamp(1.1rem, 5vw, 1.8rem); line-height: 1; padding: 0 2px; }
 /* Die Klammern stehen zu zweit auf einem Platz und sind deshalb halb
    so breit wie eine normale Taste — kleiner gesetzt, damit sie darin
    nicht anstoßen. */
@@ -3020,6 +3065,9 @@ body.cm-locked { overflow: hidden; }
   border-radius: var(--r-sm, 10px);
   overflow: hidden;
 }
+/* Die Kopfzeile ist seit 2026-08-26 selbst ein Knopf: sie klappt die
+   Kategorie auf und zu. Die drei Sammelknöpfe darin bleiben eigene
+   Klickziele — „alle tippen" soll die Kategorie nicht zuklappen. */
 .cm-poolgrphead {
   display: flex;
   align-items: center;
@@ -3028,6 +3076,32 @@ body.cm-locked { overflow: hidden; }
   padding: 9px 12px;
   background: color-mix(in srgb, var(--ink) 6%, transparent);
   border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.cm-poolgrphead:hover { background: color-mix(in srgb, var(--ink) 10%, transparent); }
+.cm-poolgrphead:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* Zugeklappt ist die Kopfzeile die ganze Schachtel — eine Trennlinie
+   darunter zöge einen Strich unter nichts. */
+.cm-poolgrp--closed .cm-poolgrphead { border-bottom: none; }
+/* Der Pfeil zeigt nach rechts und dreht sich beim Aufklappen nach
+   unten (Sönkes Vorgabe). Eine feste Breite, damit die Namen aller
+   Kategorien untereinander an derselben Stelle beginnen. */
+.cm-poolarrow {
+  flex: 0 0 auto;
+  width: .8em;
+  text-align: center;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  transition: transform .16s ease;
+}
+.cm-poolgrp:not(.cm-poolgrp--closed) > .cm-poolgrphead > .cm-poolarrow {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-poolarrow { transition: none; }
 }
 .cm-poolgrpname {
   flex: 1 1 auto;
