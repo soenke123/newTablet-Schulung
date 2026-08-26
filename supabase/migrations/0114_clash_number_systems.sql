@@ -29,33 +29,48 @@
 -- weg. Sönkes Vorgabe: „0011 0011" und „11 0011" sind BEIDE richtig.
 -- Die Vierergruppen setzt das Programm, nicht das Kind.
 --
--- ── Die Tastatur ───────────────────────────────────────────────
--- Sönkes Vorgabe: eine Tastatur mit den Ziffern 0…F, ohne + und −, und
--- die Ziffern, die die Zielbasis nicht kennt, sind AUSGEGRAUT statt
--- weggenommen. Das Raster steht damit still, nur die Beschaltung
--- wechselt — dieselbe Zusage wie in 0110 („die Tastatur springt nicht
--- von Frage zu Frage").
+-- ── Die Tastatur gehört ab hier der AUFGABE ────────────────────
+-- Bis 0110 galt: das Tipp-Layout entscheidet der Raum einmal
+-- (clash_pool_input), damit die Tastatur nicht bei jeder Frage
+-- umspringt. Sönke hat das am 2026-08-26 aufgehoben:
 --
--- Neu ist nur, dass die Beschaltung jetzt an der FRAGE hängt
--- (`digits`, `ops`, `maxlen`) statt an einer Tabelle im Client: bei
--- „(173)₁₀ = (▢)₂" sind nur 0 und 1 hell, bei „(1010 1111)₂ = (▢)₁₆"
--- alle sechzehn. Das LAYOUT bleibt weiterhin Sache des Raums
--- (clash_pool_input).
+--   „Die Taschenrechnertastatur ändert sich pro Aufgabe:
+--    Zahlensystem-Aufgaben zeigen nur das 4×4-Feld, alle anderen das
+--    andere Feld. Auch während einer Runde wechseln diese Ansichten
+--    (bei Brüche vergleichen wechselt die ja auch)."
+--
+-- Das Argument ist stichhaltig: seit 0110 wechselt die Ansicht ohnehin
+-- je Frage zwischen Tippen und Antwortkacheln. Ein Umschalten war also
+-- nie ausgeschlossen, es war nur unbenannt. Zwei Umrechnungsziffern
+-- neben einem Bruchstrich zu zeigen, den diese Aufgabe nicht braucht,
+-- ist der schlechtere Tausch.
+--
+-- Damit hängt ALLES an der Frage:
+--
+--   input   welches Feld (numsys = 4×4 Hex · sonst = Zehnerfeld ·
+--           choice = Antwortkacheln)
+--   digits  welche Ziffern hell sind — bei „(173)₁₀ = (▢)₂" nur 0 und 1
+--   ops     welche Zusatztasten hell sind (Minus, Komma, Bruch,
+--           Hochzahl, Klammern, Variablen)
+--   maxlen  wie viele Stellen eingetippt werden dürfen
+--
+-- ⚠️ `clash_pool_input` (0110) hat damit keinen Aufrufer mehr — wie
+-- clash_new_question() ohne Argument. Sie bleibt stehen, hier wird sie
+-- nicht mehr angefasst.
 --
 -- ── Warum keine Erweiterung von input_mode ─────────────────────
 -- clash_task_types.input_mode trägt seit 0109 ein
 -- `check (input_mode in ('natural','fraction'))`. Es zu weiten hieße es
 -- zu droppen. Stattdessen: neue Spalte `keypad` mit eigenem Check,
 -- input_mode bleibt als toter Buchstabe stehen — dasselbe Muster wie
--- current_a/current_b in 0110. clash_pool_input liest
+-- current_a/current_b in 0110. Gelesen wird überall
 -- coalesce(keypad, input_mode), damit die fünf Altzeilen auch ohne
 -- Backfill nie ins Leere zeigen.
 --
 -- ⚠️ Neu deklariert werden clash_normalize_pool (Basis 0109),
--- clash_task_catalog (Basis 0111), clash_pool_input, clash_new_question
--- und clash_answer_matches (Basis jeweils 0110) — jede aus ihrer
--- HÖCHSTEN bestehenden Fassung (Regel:
--- feedback_shop_state_merge_regressions).
+-- clash_task_catalog (Basis 0111), clash_new_question und
+-- clash_answer_matches (Basis jeweils 0110) — jede aus ihrer HÖCHSTEN
+-- bestehenden Fassung (Regel: feedback_shop_state_merge_regressions).
 --
 -- Kein DROP (Regel: feedback_supabase_no_drop_statements).
 -- Seed mit `on conflict … do update` (Regel:
@@ -64,9 +79,9 @@
 
 
 -- ─────────────────────────────────────────────────────────────
--- 1) Vier neue Spalten am Katalog
+-- 1) Fünf neue Spalten am Katalog
 -- ─────────────────────────────────────────────────────────────
--- `add column if not exists` genügt für alle vier: es sind reine
+-- `add column if not exists` genügt für alle fünf: es sind reine
 -- Referenzdaten, die der Seed weiter unten ohnehin für jede Zeile setzt.
 -- Es gibt nichts, was ein zweiter Lauf einer Lehrkraft wegnehmen könnte
 -- (anders als bei clash_boards.pool in 0109).
@@ -74,6 +89,20 @@ alter table clash_task_types add column if not exists keypad      text;
 alter table clash_task_types add column if not exists derived     boolean not null default false;
 alter table clash_task_types add column if not exists requires    text[]  not null default '{}';
 alter table clash_task_types add column if not exists answer_kind text    not null default 'number';
+alter table clash_task_types add column if not exists ops         text[]  not null default '{}';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_catalog.pg_constraint
+     where conname  = 'clash_task_types_ops_ck'
+       and conrelid = 'public.clash_task_types'::regclass
+  ) then
+    alter table clash_task_types
+      add constraint clash_task_types_ops_ck
+      check (ops <@ array['sign', 'dec', 'frac', 'exp', 'paren', 'vars']);
+  end if;
+end $$;
 
 do $$
 begin
@@ -103,7 +132,8 @@ end $$;
 
 comment on column clash_task_types.keypad is
   'Tastatur-Layout dieser Art: natural · fraction · numsys. Löst input_mode ab (dessen Check '
-  'kennt nur die ersten beiden). clash_pool_input liest coalesce(keypad, input_mode).';
+  'kennt nur die ersten beiden) — gelesen wird coalesce(keypad, input_mode). Steht seit 0114 an '
+  'der einzelnen FRAGE: das Feld wechselt mit der Aufgabe, nicht mit dem Raum.';
 comment on column clash_task_types.input_mode is
   'Tot seit 0114 — abgelöst durch keypad. Bleibt stehen, weil hier nichts gedroppt wird.';
 comment on column clash_task_types.derived is
@@ -115,14 +145,32 @@ comment on column clash_task_types.requires is
 comment on column clash_task_types.answer_kind is
   'number = die Antwort ist ein Wert (6/8 = 3/4). digits = die Antwort ist eine Ziffernfolge und '
   'wird über clash_num_norm verglichen (führende Nullen und Vierergruppen zählen nicht).';
+comment on column clash_task_types.ops is
+  'Welche ZUSATZTASTEN diese Aufgabenart braucht: sign · dec · frac · exp · paren · vars. Alles, '
+  'was nicht hier steht, ist bei ihren Aufgaben ausgegraut. Leer = nur Ziffern. Die Tastatur zeigt '
+  'immer den ganzen Vorrat; diese Liste sagt, was davon gilt.';
 
--- Die fünf Zeilen aus 0109/0110 bekommen ihr Layout in der neuen Spalte.
--- Gezielte Updates statt eines vollständigen Seeds: sonst müsste hier
--- jede andere Spalte mitgeschleppt und bei jeder späteren Änderung
--- nachgezogen werden (dieselbe Überlegung wie in 0111).
-update clash_task_types set keypad = 'natural'  where key = 'add100';
-update clash_task_types set keypad = 'fraction' where key in
-  ('frac_addsub', 'frac_muldiv', 'frac_reduce', 'frac_compare');
+-- Die fünf Zeilen aus 0109/0110 bekommen Layout und Zusatztasten in den
+-- neuen Spalten. Gezielte Updates statt eines vollständigen Seeds: sonst
+-- müsste hier jede andere Spalte mitgeschleppt und bei jeder späteren
+-- Änderung nachgezogen werden (dieselbe Überlegung wie in 0111).
+--
+-- ⚠️ Die `ops` sind eng gesetzt, weil ausgegraut wird, was die Aufgabe
+-- nicht braucht (Sönkes Vorgabe). Sie folgen aus dem Generator, nicht
+-- aus dem Gefühl:
+--   add100        Summe zweier positiver Zahlen — nichts außer Ziffern.
+--   frac_addsub   kann negativ werden (0110 erlaubt das ausdrücklich),
+--                 also Minus UND Bruchstrich.
+--   frac_muldiv   echte Brüche mal/geteilt durch echte Brüche: immer
+--                 positiv, also KEIN Minus.
+--   frac_reduce   dasselbe, die Aufgabe kürzt einen positiven Bruch.
+--   frac_compare  nur Auswahl (allows_free = false), es gibt keine
+--                 Tastatur, die etwas freigeben könnte.
+update clash_task_types set keypad = 'natural',  ops = '{}'           where key = 'add100';
+update clash_task_types set keypad = 'fraction', ops = '{sign,frac}'  where key = 'frac_addsub';
+update clash_task_types set keypad = 'fraction', ops = '{frac}'       where key in
+  ('frac_muldiv', 'frac_reduce');
+update clash_task_types set keypad = 'fraction', ops = '{}'           where key = 'frac_compare';
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -582,9 +630,10 @@ comment on function clash_num_choices(text, jsonb, int, int, int) is
 --   maxlen     wie viele Stellen eingetippt werden dürfen — die volle
 --              Breite der Zielbasis, damit führende Nullen möglich
 --              sind, aber nicht endlos
---   ops        welche Zusatztasten gelten (hier: keine — kein ±, kein
---              a/b). Leeres Array, nicht fehlend: „keine" ist etwas
---              anderes als „nicht gesagt".
+--
+-- Welche ZUSATZTASTEN gelten, steht nicht hier, sondern im Katalog
+-- (clash_task_types.ops) — bei allen drei Zahlensystem-Arten ist die
+-- Liste leer.
 --
 -- Der Aufgabentext trägt seine Basis als Index mit: „(11 0011)_2". Aus
 -- dem „_2" macht der Client die tiefgestellte Ziffer — der Server
@@ -606,7 +655,6 @@ as $$
     'base_from', p_from,
     'base_to',   p_to,
     'digits',    clash_num_digits(p_to),
-    'ops',       '[]'::jsonb,
     -- Die feste Stellenzahl der Zielbasis (ein Byte hat acht Stellen,
     -- 0…FFF drei). Sie ist zugleich die Tipp-Grenze und die Breite, auf
     -- die clash_num_choices die Kacheln auffüllt. Dezimal hat keine
@@ -789,15 +837,18 @@ revoke all on function clash_gen_num_binhex() from public;
 insert into clash_task_types
   (key, group_key, group_label, label, short_label, example,
    sort_group, sort_item, allows_free, allows_mc, input_mode, keypad,
-   choice_count, strict_reduced, derived, requires, answer_kind)
+   choice_count, strict_reduced, derived, requires, answer_kind, ops)
 values
   ('num_bin',    'numsys', 'Zahlensysteme', 'Binär (0–255)',
    'bin ↔ dez', '(1011 0011)₂ = (▢)₁₀',
-   3, 1, true, true, 'natural', 'numsys', 6, false, false, '{}', 'digits'),
+   -- Umgerechnet wird mit Ziffern. Weder Minus noch Bruch noch Komma
+   -- noch Klammer hat damit etwas zu tun — deshalb bleibt die
+   -- Zusatzspalte bei diesen Aufgaben ganz weg (siehe keypad).
+   3, 1, true, true, 'natural', 'numsys', 6, false, false, '{}', 'digits', '{}'),
 
   ('num_hex',    'numsys', 'Zahlensysteme', 'Hexadezimal (0–255)',
    'dez ↔ hex', '(173)₁₀ = (▢)₁₆',
-   3, 2, true, true, 'natural', 'numsys', 6, false, false, '{}', 'digits'),
+   3, 2, true, true, 'natural', 'numsys', 6, false, false, '{}', 'digits', '{}'),
 
   -- Die abgeleitete Art. allows_free/allows_mc stehen auf true, weil sie
   -- beides KANN — welches von beidem gilt, erbt sie von den beiden
@@ -805,7 +856,7 @@ values
   ('num_binhex', 'numsys', 'Zahlensysteme', 'Bin ↔ Hex (0–FFF)',
    'bin ↔ hex', '(1010 1111)₂ = (▢)₁₆',
    3, 3, true, true, 'natural', 'numsys', 6, false, true,
-   '{num_bin,num_hex}', 'digits')
+   '{num_bin,num_hex}', 'digits', '{}')
 on conflict (key) do update set
   group_key      = excluded.group_key,
   group_label    = excluded.group_label,
@@ -822,7 +873,8 @@ on conflict (key) do update set
   strict_reduced = excluded.strict_reduced,
   derived        = excluded.derived,
   requires       = excluded.requires,
-  answer_kind    = excluded.answer_kind;
+  answer_kind    = excluded.answer_kind,
+  ops            = excluded.ops;
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -936,61 +988,28 @@ comment on function clash_task_catalog(text) is
   'Auswahl holen, nicht im Poll-Takt.';
 
 
+-- 8) clash_pool_input — ersatzlos gestrichen
 -- ─────────────────────────────────────────────────────────────
--- 8) clash_pool_input — Neu-Deklaration auf Basis 0110:604
--- ─────────────────────────────────────────────────────────────
--- Vier Rückgaben statt zwei. Die Regel selbst ist unverändert: das
--- Layout gehört dem RAUM, nicht der Frage — sonst spränge die Tastatur
--- mitten im Spiel.
---
---   natural   nur Ziffern
---   fraction  Ziffern + − + a/b
---   numsys    Ziffern + A…F
---   mixed     alles davon — der Raum, in dem Brüche UND Zahlensysteme
---             frei getippt werden
---
--- „mixed" ist kein Kompromiss, sondern die Fortsetzung derselben Idee:
--- alle Tasten, die der Raum je braucht, stehen von Anfang an da, und
--- je Aufgabe grauen die aus, die gerade nichts zu suchen haben. Der
--- Daumen findet die 7 immer an derselben Stelle.
-create or replace function clash_pool_input(p_pool jsonb)
-  returns text
-  security definer
-  set search_path = public
-  language sql
-  stable
-as $$
-  with k as (
-    select distinct coalesce(t.keypad, t.input_mode) as kp
-      from jsonb_each_text(coalesce(p_pool, '{}'::jsonb)) e
-      join clash_task_types t on t.key = e.key
-     where e.value = 'free'
-  )
-  select case
-    when exists (select 1 from k where kp = 'fraction')
-     and exists (select 1 from k where kp = 'numsys')   then 'mixed'
-    when exists (select 1 from k where kp = 'numsys')   then 'numsys'
-    when exists (select 1 from k where kp = 'fraction') then 'fraction'
-    else 'natural'
-  end;
-$$;
-
-revoke all on function clash_pool_input(jsonb) from public;
-
-comment on function clash_pool_input(jsonb) is
-  'Das Tipp-Layout für ALLE freien Aufgaben eines Raums: natural · fraction · numsys · mixed. '
-  'Bewusst am Pool und nicht an der Frage — sonst spränge die Tastatur mitten im Spiel. Welche '
-  'ZIFFERN eine einzelne Aufgabe zulässt, steht dagegen an der Frage (question.digits).';
+-- Die Funktion stammt aus 0110 und beantwortete die Frage „welches
+-- Tipp-Layout gilt in diesem RAUM?". Seit dem 2026-08-26 gibt es diese
+-- Frage nicht mehr: das Layout gehört der einzelnen Aufgabe
+-- (clash_new_question liest coalesce(keypad, input_mode) der
+-- Aufgabenart). Sie bleibt in der Datenbank stehen — hier wird nichts
+-- gedroppt — hat aber keinen Aufrufer mehr, genau wie
+-- clash_new_question() ohne Argument seit 0110.
 
 
 -- ─────────────────────────────────────────────────────────────
 -- 9) clash_new_question — Neu-Deklaration auf Basis 0110:632
 -- ─────────────────────────────────────────────────────────────
--- Drei Änderungen:
+-- Vier Änderungen:
 --   a) die Ziehung kennt jetzt ABGELEITETE Arten
 --   b) drei neue Generatoren im case
 --   c) die Kacheln kommen je nach answer_kind aus clash_q_choices
 --      (Brüche) oder clash_num_choices (Ziffernfolgen)
+--   d) Tastatur-Layout und Zusatztasten kommen aus der AUFGABENART
+--      (keypad/ops) statt aus dem Raum — die Tastatur wechselt ab hier
+--      mit der Aufgabe
 --
 -- Alles andere Wort für Wort wie in 0110.
 create or replace function clash_new_question(p_pool jsonb)
@@ -1083,7 +1102,11 @@ begin
     end if;
     v_input := 'choice';
   else
-    v_input := clash_pool_input(p_pool);
+    -- Das Tipp-Layout der AUFGABENART, nicht des Raums (Sönkes
+    -- Entscheidung vom 2026-08-26). Eine Zahlensystem-Aufgabe zeigt das
+    -- 4×4-Feld, eine Bruchaufgabe das Zehnerfeld — auch wenn beide in
+    -- derselben Runde drankommen.
+    v_input := coalesce(v_type.keypad, v_type.input_mode, 'natural');
   end if;
 
   return jsonb_build_object(
@@ -1099,24 +1122,23 @@ begin
     'answer_d',  v_gen->'answer_d',
     'strict',    coalesce(v_type.strict_reduced, false),
     -- Die Felder der Zahlensysteme. Bei Brüchen und Addition stehen sie
-    -- auf null — der Client liest daraus „keine Einschränkung" und
-    -- lässt die Tasten hell, also genau das Verhalten von 0110.
+    -- auf null; der Client liest daraus „gibt es hier nicht".
     'base_from', v_gen->'base_from',
     'base_to',   v_gen->'base_to',
     'maxlen',    v_gen->'maxlen',
     -- Welche ZUSATZTASTEN gelten. Wie `digits` steht das Feld immer da,
     -- nie auf null: die Tastatur zeigt seit 2026-08-26 auch Zeichen, die
-    -- heute keine Aufgabenart kann (Komma, Hochzahl — Sönkes Vorgabe
-    -- „Du kannst auch schon die Zeichen zeigen"). Sie sind ausgegraut,
-    -- solange sie hier nicht genannt werden; fehlte das Feld, wären sie
-    -- bedienbar und jede damit getippte Antwort falsch.
+    -- heute keine Aufgabenart kann (Komma, Hochzahl, Klammern,
+    -- Variablen — Sönkes Vorgabe „Du kannst auch schon die Zeichen
+    -- zeigen"). Sie sind ausgegraut, solange sie hier nicht genannt
+    -- werden; fehlte das Feld, wären sie bedienbar und jede damit
+    -- getippte Antwort falsch.
     --
-    -- Bei Zahlen-Antworten sind es „sign" und „frac", weil
-    -- clash_parse_answer genau die zwei Formen liest („-7" und „7/8").
-    -- Auch bei der Addition: wer auf 37 + 48 die Antwort „170/2"
-    -- schreibt, hat richtig gerechnet, und clash_answer_matches gibt ihm
-    -- recht.
-    'ops',       coalesce(v_gen->'ops', '["sign", "frac"]'::jsonb),
+    -- Die Liste kommt aus dem KATALOG und nicht aus einer Fallunter-
+    -- scheidung hier: was eine Aufgabenart braucht, weiß die Aufgabenart
+    -- (clash_task_types.ops). Eine neue Kategorie kostet damit weiterhin
+    -- eine Migration und kein Client-Update.
+    'ops',       to_jsonb(coalesce(v_type.ops, '{}'::text[])),
     -- `digits` steht dagegen IMMER da. In einem Raum, in dem Brüche und
     -- Zahlensysteme zusammen frei getippt werden (Layout „mixed"),
     -- liegen A…F auf der Tastatur — und ein „A" im Zähler eines Bruchs

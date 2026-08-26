@@ -1367,29 +1367,28 @@
      sagt, was davon gilt.
 
      ── Welche Art gerade gilt ───────────────────────────────────
-     Sagt der Server je Frage (`question.input`):
+     Sagt der Server JE FRAGE (`question.input`):
 
        natural   Variablen + Zehnerfeld + Zusatzspalte
        fraction  dasselbe (der Unterschied liegt allein in `ops`)
        numsys    NUR das Hexfeld und die untere Reihe
-       mixed     der Raum, in dem Brüche UND Zahlensysteme frei
-                 getippt werden: Hexfeld + Zusatzspalte + Variablen.
-                 ⚠️ Dort steht statt der Klammern das MINUS in der
-                 Spalte — im Hexfeld ist neben der Null unten links
-                 kein Platz mehr dafür, und ein Bruch kann negativ
-                 werden, eine Klammer wird hier nie gebraucht.
        choice    kein Ziffernfeld und keine Reihen, sondern die
                  Antwortkacheln (2×3, bei drei Antworten 1×3)
 
-     Zwischen den Tipp-Layouts wechselt es NICHT von Frage zu Frage:
-     der Server entscheidet das einmal je Raum aus dem Aufgabenpool
-     (clash_pool_input). Nur frei ↔ Auswahl wechselt je Frage, und das
-     ist auf einen Blick zu sehen.
+     ⚠️ Die Ansicht wechselt MIT DER AUFGABE, auch mitten in einer
+     Runde (Sönkes Entscheidung vom 2026-08-26). Der frühere Grundsatz
+     „das Layout gehört dem Raum" (0110, clash_pool_input) ist damit
+     aufgehoben — er war ohnehin nur halb wahr, weil zwischen Tippen und
+     Antwortkacheln seit jeher je Frage umgeschaltet wird. Ein Raum, in
+     dem Brüche UND Zahlensysteme drankommen, zeigt jetzt zu jeder
+     Aufgabe genau die Tasten, die sie braucht, statt eine Tastatur, die
+     beides halb kann.
 
-     Was je Frage wechselt, ist die BESCHALTUNG: bei „(173)₁₀ = (▢)₂"
-     sind nur 0 und 1 hell, alles andere ist ausgegraut (Sönkes
-     Vorgabe). Das steht an der Frage (`digits`, `ops`) und nicht in
-     dieser Datei — siehe applyKeyLimits.
+     Was zusätzlich je Frage wechselt, ist die BESCHALTUNG: bei
+     „(173)₁₀ = (▢)₂" sind nur 0 und 1 hell, bei einer Bruchaufgabe der
+     Bruchstrich und (wenn sie negativ werden kann) das Minus. Das steht
+     an der Frage (`digits`, `ops`) und nicht in dieser Datei — siehe
+     applyKeyLimits.
 
      ⚠️ Die Leeren-Taste heißt „AC" und nicht „C": im Hexfeld stünde sie
      sonst neben der Hexziffer C, und zwei gleich beschriftete Tasten
@@ -1492,8 +1491,7 @@
   const MODES = {
     natural:  { vars: true, col: ['dec', 'frac', 'exp', 'paren'] },
     fraction: { vars: true, col: ['dec', 'frac', 'exp', 'paren'] },
-    numsys:   { hex: true },
-    mixed:    { hex: true, vars: true, col: ['dec', 'frac', 'exp', 'sign'] }
+    numsys:   { hex: true }
   };
   const modeOf = name => MODES[name] || MODES.natural;
 
