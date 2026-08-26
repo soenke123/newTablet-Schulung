@@ -120,6 +120,15 @@
       word-break:break-word;
     }
 
+    /* Wort darf nicht markiert / kopiert werden (Copy-Paste-Cheat) */
+    .word-box, .word{
+      -webkit-user-select:none;
+      -moz-user-select:none;
+      -ms-user-select:none;
+      user-select:none;
+      -webkit-touch-callout:none;
+    }
+
     /* ── Caps badge (right side of word box) ── */
     .caps-badge {
       position: absolute;
@@ -826,6 +835,7 @@
   let combo          = 0;
   let maxCombo       = 0;
   let prevInputLen   = 0;
+  let prevInputValue = "";
   let totalWords = 0;
   let totalChars = 0;
   let time       = 60;
@@ -1128,8 +1138,10 @@
     inputEl.focus();
     wordElement.classList.remove("sentence");
     message.textContent = "";
+    message.className   = "message";
     timeStatEl.classList.remove("time-danger");
-    prevInputLen = 0;
+    prevInputLen   = 0;
+    prevInputValue = "";
     updateComboFire();
     showWord();
     updateStats();
@@ -1141,8 +1153,55 @@
     renderBoostIndicators('boostIndicators', GAME_ID);
   }
 
+  /* ── Anti-Cheat: Wort kopieren & einfügen unterbinden ── */
+  let pasteWarnTimer = null;
+  function warnPaste() {
+    clearTimeout(pasteWarnTimer);
+    message.textContent = "✋ Einfügen ist nicht erlaubt – bitte tippen!";
+    message.className   = "message wrong";
+    pasteWarnTimer = setTimeout(() => {
+      if (message.textContent.startsWith("✋")) {
+        message.textContent = "";
+        message.className   = "message";
+      }
+    }, 1500);
+  }
+
+  // 1) Wort selbst lässt sich nicht markieren/kopieren (Maus, Rechtsklick, Longpress)
+  ["copy", "cut", "contextmenu", "selectstart", "dragstart"].forEach(evt => {
+    wordBox.addEventListener(evt, e => e.preventDefault());
+  });
+  // Ctrl+A + Ctrl+C über die ganze Seite während des Spiels
+  ["copy", "cut"].forEach(evt => {
+    document.addEventListener(evt, e => { if (gameRunning) e.preventDefault(); });
+  });
+
+  // 2) Einfügen ins Eingabefeld blocken (Tastatur, Kontextmenü, Drag&Drop, Autokorrektur)
+  const BLOCKED_INPUT_TYPES = [
+    "insertFromPaste", "insertFromPasteAsQuotation", "insertFromDrop",
+    "insertFromYank", "insertReplacementText", "insertTranspose"
+  ];
+  inputEl.addEventListener("beforeinput", e => {
+    if (BLOCKED_INPUT_TYPES.includes(e.inputType)) {
+      e.preventDefault();
+      warnPaste();
+    }
+  });
+  ["paste", "drop"].forEach(evt => {
+    inputEl.addEventListener(evt, e => { e.preventDefault(); warnPaste(); });
+  });
+
   inputEl.addEventListener("input", () => {
     if (!gameRunning) return;
+
+    // 3) Backstop: mehr als ein Zeichen auf einmal = kein echtes Tippen
+    if (inputEl.value.length - prevInputLen > 1) {
+      inputEl.value = prevInputValue;
+      combo = 0;
+      updateComboFire();
+      warnPaste();
+      return;
+    }
 
     const typed = inputEl.value.trim();
 
@@ -1151,7 +1210,8 @@
       combo = 0;
       updateComboFire();
     }
-    prevInputLen = inputEl.value.length;
+    prevInputLen   = inputEl.value.length;
+    prevInputValue = inputEl.value;
 
     const next = currentWord[typed.length];
     if (next) highlightKey(next);
@@ -1174,8 +1234,10 @@
       if (comboBonus) showScorePopup("+" + comboBonus + (combo >= 5 ? " 🔥🔥" : " 🔥"), "#ff4500", comboStatEl);
 
       message.textContent = "";
-      inputEl.value = "";
-      prevInputLen  = 0;
+      message.className   = "message";
+      inputEl.value  = "";
+      prevInputLen   = 0;
+      prevInputValue = "";
 
       if (score >= 200 && level === 1) {
         level = 2;
