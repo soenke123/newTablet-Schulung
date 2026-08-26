@@ -1430,10 +1430,7 @@
   const KEY_SIGN = { lab: '−', act: 'sign', op: 'sign',
                      cls: 'cm-key--sign', aria: 'Minus setzen oder wegnehmen' };
 
-  /* Das Pluszeichen (Migration 0115). Es teilt sich den Platz mit dem
-     Minus, so wie „(" und „)" sich seit 0114 einen teilen — eine eigene
-     Reihe für ein einziges Zeichen wäre die halbe Tastatur für die
-     Hälfte der Aufgabenarten.
+  /* Das Pluszeichen (Migration 0115).
 
      ⚠️ Es steht bei JEDER Tipp-Aufgabe da und ist ausgegraut, solange
      die Aufgabenart es nicht in `keys` nennt. Bei einer Bruchaufgabe
@@ -1444,12 +1441,27 @@
   const KEY_PLUS = { lab: '+', ins: '+', op: 'plus',
                      cls: 'cm-key--plus', aria: 'Plus' };
 
+  /* Die unterste Zeile des Ziffernfelds: 0, +, −, jedes eine ganze
+     Taste (Sönkes Vorgabe vom 26.08.2026 — „die 0 kleiner machen,
+     daneben + und − setzen").
+
+     Bis dahin lag die 0 über zwei Spalten und + und − teilten sich den
+     dritten Platz wie die Klammern. Das war für zwei Rechenzeichen zu
+     wenig: sie werden bei den Termen in JEDER Antwort gebraucht, die
+     Klammern dagegen fast nie. Eine breite 0 ist bequem, ein zu
+     schmales Plus ist ein Vertipper.
+
+     Das Minus tut dabei zweierlei, je nach Aufgabe — im Term ist es
+     ein Rechenzeichen („a−b"), sonst schaltet es das Vorzeichen der
+     Zahl um. Eine Taste, zwei Bedeutungen, weil es auf dem
+     Taschenrechner im Ranzen genauso ist (siehe keyPress). */
   const KEY_DEC = [
     { lab: '7', ins: '7', r: 1, c: 1 }, { lab: '8', ins: '8', r: 1, c: 2 }, { lab: '9', ins: '9', r: 1, c: 3 },
     { lab: '4', ins: '4', r: 2, c: 1 }, { lab: '5', ins: '5', r: 2, c: 2 }, { lab: '6', ins: '6', r: 2, c: 3 },
     { lab: '1', ins: '1', r: 3, c: 1 }, { lab: '2', ins: '2', r: 3, c: 2 }, { lab: '3', ins: '3', r: 3, c: 3 },
-    { lab: '0', ins: '0', r: 4, c: 1, cs: 2 },
-    { r: 4, c: 3, pair: [KEY_PLUS, KEY_SIGN] }
+    { lab: '0', ins: '0', r: 4, c: 1 },
+    Object.assign({ r: 4, c: 2 }, KEY_PLUS),
+    Object.assign({ r: 4, c: 3 }, KEY_SIGN)
   ];
 
   /* Die Variablen-Zeile über dem Ziffernfeld. Fünf Blöcke, weil fünf

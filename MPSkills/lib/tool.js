@@ -73,8 +73,16 @@
     /* Cache-Stempel wie bei den Seiten-Skripten. Ohne ihn behält ein
        Gerät, das ein Werkzeug schon einmal geladen hat, dessen altes
        CSS — beim Umbau auf hell/dunkel (19.08.2026) wäre die halbe
-       Kachel im alten Kleid stehengeblieben. */
-    const v = '?v=20260822';
+       Kachel im alten Kleid stehengeblieben.
+
+       ⚠️ DIESE ZEILE GEHÖRT ZU JEDER ÄNDERUNG AN EINER tool.js ODER
+       tool.css. Wird sie vergessen, läuft auf dem Tablet weiter das
+       alte Werkzeug gegen die neue Datenbank — und das sieht nicht aus
+       wie ein alter Stand, sondern wie ein Fehler: beim Einzug der
+       Terme (0115) stand die getippte Variable in Versalien da, die
+       Hochzahl als „^" und die Hochzahl-Taste tat nichts, weil das
+       Gerät noch die tool.js von davor hatte. */
+    const v = '?v=20260826';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf

@@ -2845,11 +2845,10 @@ body.cm-locked { overflow: hidden; }
    größer gesetzt (ein „−" in Zifferngröße sieht aus wie ein Strich im
    Nichts), der Bruch trägt statt eines Wortes sein eigenes Bild. */
 .cm-key--sign { font-size: clamp(1.3rem, 6vw, 2rem); line-height: 1; }
-/* Das Plus (Migration 0115) teilt sich seinen Platz mit dem Minus und
-   ist deshalb halb so breit — dieselbe Lage wie bei den Klammern, also
-   dieselbe kleinere Schrift. Das Minus daneben behält seine Größe: es
-   ist nur ein Strich und verschwände sonst. */
-.cm-key--plus { font-size: clamp(1.1rem, 5vw, 1.8rem); line-height: 1; padding: 0 2px; }
+/* Das Plus (Migration 0115) steht seit dem 26.08.2026 auf einem eigenen
+   Platz neben der 0 und ist damit genauso groß wie das Minus daneben —
+   die beiden gehören zusammen und sollen gleich aussehen. */
+.cm-key--plus { font-size: clamp(1.3rem, 6vw, 2rem); line-height: 1; }
 /* Die Klammern stehen zu zweit auf einem Platz und sind deshalb halb
    so breit wie eine normale Taste — kleiner gesetzt, damit sie darin
    nicht anstoßen. */
