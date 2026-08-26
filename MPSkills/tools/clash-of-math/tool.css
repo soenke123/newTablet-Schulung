@@ -2734,6 +2734,36 @@ body.cm-locked { overflow: hidden; }
   opacity: .72;
 }
 
+/* Die GEGEBENE Funktion über der Aufgabe (Analysis, 0119):
+
+     f(x) = 3x² + 2x
+     f′(x) = ▢
+
+   Anders als .cm-qprompt ist das keine Anweisung, sondern eine Formel —
+   also Formelsatz und keine Anweisungsschrift. Sie steht trotzdem
+   kleiner als die Zeile darunter (etwa vier Fünftel): gefragt ist die
+   Ableitung, die Funktion ist das Material dazu. Ihre Ziffern kommen
+   aus der Anzeigeschrift wie in .cm-q, ihre Variablen aus .cm-var —
+   dieselbe Mischung wie in der Aufgabenzeile, nur eine Nummer kleiner.
+
+   Der Rahmen unten trennt die beiden Zeilen, ohne einen zweiten Kasten
+   aufzumachen: zwei gerahmte Formeln übereinander sähen aus wie zwei
+   Aufgaben. */
+.cm-qgiven {
+  width: 100%;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(90,66,20,.18);
+  font-family: var(--cm-display);
+  font-size: clamp(1.15rem, 5.6vw, 2rem);
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--cm-ink);
+  opacity: .85;
+  overflow-wrap: anywhere;
+}
+
 /* ── Zahl mit Basis: (11 0011)₂ ──────────────────────────────────
    Migration 0114. Dieselben Bausteine für die AUFGABE und für das
    EINGABEFELD — was das Kind tippt, soll aussehen wie das, was
@@ -2811,12 +2841,22 @@ body.cm-locked { overflow: hidden; }
    Aufgabe rutscht bei jeder Potenz eine Zeile tiefer. */
 .cm-q sup,
 .cm-in sup,
+.cm-qgiven sup,
 .cm-key--choice sup {
   font-size: .55em;
   vertical-align: baseline;
   position: relative;
   top: -.5em;
   margin-left: .02em;
+}
+/* Der Ableitungsstrich (0119). Etwas höher gesetzt als das Zeichen von
+   Haus aus sitzt und ohne Luft nach links: er gehört zum f, er steht
+   nicht daneben. */
+.cm-prime {
+  font-family: Georgia, 'Times New Roman', serif;
+  position: relative;
+  top: -.12em;
+  margin-left: -.02em;
 }
 /* „x =" vor dem Eingabefeld (nur „Nach x auflösen"). Etwas
    zurückgenommen: die Antwort ist das, was dahinter entsteht — das
@@ -2985,6 +3025,17 @@ body.cm-locked { overflow: hidden; }
 .cm-poolsumops > i.cm-poolsumauto {
   border-style: dashed;
   background: transparent;
+}
+/* Der Chip eines Schalters (Migration 0118): kein Kasten, sondern nur
+   das Zeichen. Er sagt nicht, WAS gerechnet wird, sondern WIE weit —
+   und stünde er wie eine Aufgabenart da, zählte die Lehrkraft eine zu
+   viel. */
+.cm-poolsumops > i.cm-poolsumflag {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 700;
+  opacity: .85;
 }
 /* Ohne Aufgaben kein Spiel — dieselbe Zeile sagt dann auch, warum der
    Startknopf grau ist.
@@ -3163,6 +3214,25 @@ body.cm-locked { overflow: hidden; }
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   cursor: help;
 }
+/* Die Schalterzeile (Migration 0118): „Ganze Zahlen" und „Rationale
+   Zahlen" sind keine Aufgabenarten, sondern erweitern die Arten
+   darüber. Sie stehen deshalb in derselben Liste — eine eigene
+   Kategorie hätte sie von dem getrennt, worauf sie wirken —, aber
+   abgesetzt: eine kräftigere Trennlinie darüber und ein zurückhaltender
+   Grund, damit die Liste nicht aussieht, als hätte sie sechs
+   Aufgabenarten. */
+.cm-poolrow--flag {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.cm-poolrow--flag + .cm-poolrow--flag { border-top-color: var(--line); }
+.cm-poolrow:not(.cm-poolrow--flag) + .cm-poolrow--flag {
+  border-top: 2px solid color-mix(in srgb, var(--ink) 22%, transparent);
+}
+/* Zwei Knöpfe statt dreier: die Reihe wird schmaler und steht dadurch
+   nicht bündig unter den Dreier-Reihen darüber. Das ist gewollt — sie
+   ist eine andere Art von Einstellung. */
+.cm-poolseg--flag button { padding-left: 16px; padding-right: 16px; }
+
 .cm-poolname {
   flex: 1 1 220px;
   min-width: 0;

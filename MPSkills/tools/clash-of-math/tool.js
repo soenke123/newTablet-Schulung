@@ -1604,15 +1604,53 @@
         i = j;
         continue;
       }
+      /* Ein Bruch-KOEFFIZIENT (Analysis, 0119): „1/3x^3" steht mit
+         gestapeltem Bruchstrich da und nicht mit Schrägstrich — Sönkes
+         Vorgabe „mit Bruchzeichen und dahinter dann das x^3".
+
+         Auf der Leitung bleibt es der Schrägstrich: der Server schreibt
+         ihn, der Parser liest ihn, und die getippte Antwort schickt ihn.
+         Gestapelt wird nur HIER, in der Anzeige — dieselbe Trennung wie
+         bei den Vierergruppen der Zahlensysteme.
+
+         Der halb getippte Bruch („1/") bekommt das offene Kästchen: erst
+         steht der Zähler da, dann blinkt es darunter. */
+      if (/[0-9]/.test(ch)) {
+        let j = i, num = '';
+        while (j < t.length && /[0-9]/.test(t[j])) { num += t[j]; j++; }
+        if (t[j] === '/') {
+          let k = j + 1, den = '';
+          while (k < t.length && /[0-9]/.test(t[k])) { den += t[k]; k++; }
+          out += fracHTML(num, den || ' ', !den);
+          prev = '0';
+          i = k;
+          continue;
+        }
+        out += ctx.esc(num);
+        prev = num[num.length - 1];
+        i = j;
+        continue;
+      }
       if (ch === '+' || ch === '-' || ch === '=') {
-        out += '<b class="cm-op' + (/[0-9a-z)]/.test(prev) ? '' : ' cm-op--pre') + '">' +
+        out += '<b class="cm-op' + (/[0-9a-zA-Z)]/.test(prev) ? '' : ' cm-op--pre') + '">' +
                (ch === '-' ? '−' : ch) + '</b>';
         prev = ch;
         i++;
         continue;
       }
-      if (/[a-z]/.test(ch)) out += '<i class="cm-var">' + ctx.esc(ch) + '</i>';
-      else                  out += ctx.esc(ch);
+      // Der Strich der Ableitung (0119). Der Server schickt den
+      // schlichten Apostroph, weil er auf jeder Tastatur liegt; auf dem
+      // Bildschirm ist das Prime-Zeichen gemeint.
+      if (ch === '\'') {
+        out += '<span class="cm-prime">′</span>';
+        prev = ch;
+        i++;
+        continue;
+      }
+      // Groß wie klein kursiv: die Stammfunktion heißt F, und ein
+      // aufrechtes F neben einem kursiven f sähe aus wie zwei Dinge.
+      if (/[a-zA-Z]/.test(ch)) out += '<i class="cm-var">' + ctx.esc(ch) + '</i>';
+      else                     out += ctx.esc(ch);
       prev = ch;
       i++;
     }
@@ -1658,8 +1696,20 @@
 
      ⚠️ Nur KLEINbuchstaben. „FF" ist eine Hexzahl (0114) und „a" eine
      Variable — dieselbe Trennung wie auf der Tastatur, wo die
-     Variablentasten ein eigenes `op` tragen. */
-  const TERM_TOKEN = /^(?=[0-9abcxy+\-^()=]*[abcxy^()=])[0-9abcxy+\-^()=]+$/;
+     Variablentasten ein eigenes `op` tragen.
+
+     Seit 0119 gehören der Schrägstrich und das Komma dazu: die
+     Antwortkacheln der Analysis tragen Koeffizienten wie „1/3" und
+     „0,5". Beide sind für die Anweisungswörter ungefährlich — „kürze",
+     „Klammern auflösen" und „binom rückwärts" enthalten keines von
+     beiden, und ein reiner Bruch („3/4") wird schon vorher von
+     FRAC_TOKEN abgefangen.
+
+     NICHT dazu gehören Großbuchstaben und der Ableitungsstrich: „F(x)"
+     und „f'(x)" würden die Wortliste gefährlich weit öffnen. Sie
+     brauchen es auch nicht — bei einer Analysis-Aufgabe geht setQuestion
+     ohnehin den eigenen Weg (q.given). */
+  const TERM_TOKEN = /^(?=[0-9abcxy+\-^()=/,]*[abcxy^()=])[0-9abcxy+\-^()=/,]+$/;
   const WORD_TOKEN = /[A-Za-zÄÖÜäöüß]/;
   /* Die Vierergruppen wieder einsammeln: „(1011 0011)_2" ist durch das
      Zerlegen am Leerzeichen zu zwei Stücken geworden. Eigene Funktion,
@@ -1923,6 +1973,25 @@
       else if (k.act === 'back') { termBuf = termBuf.slice(0, -1); }
       else if (k.act === 'sign') { termBuf += '-'; }
       else if (k.act === 'exp')  { termBuf += '^'; }
+      /* Die Bruchtaste im Term (Analysis, 0119). Sie tut dasselbe wie
+         bei den Bruchaufgaben — „alles vorherig eingetippte kommt in den
+         Zähler" —, nur ohne zweites Feld: sie hängt den Bruchstrich an,
+         und renderAnswer stapelt, was davor und danach steht.
+
+         Danach geht es auf der Grundlinie weiter: „1/3" und dann „x^3".
+         Genau das ist Sönkes Vorgabe „mit Bruchzeichen und dahinter dann
+         das x^3" — und es braucht kein Verlassen des Bruchs, weil der
+         Stapel beim ersten Nicht-Zeichen von selbst endet.
+
+         Nur hinter einer Ziffer und nur einmal je Zahl: „x/" wäre kein
+         Koeffizient, und Doppelbrüche gibt es in dieser Aufgabenwelt
+         nicht. */
+      else if (k.act === 'frac') {
+        const tail = (termBuf.match(/[0-9/]*$/) || [''])[0];
+        if (/[0-9]$/.test(termBuf) && tail.indexOf('/') < 0 && termBuf.length < answerMax()) {
+          termBuf += '/';
+        }
+      }
       else if (k.ins != null)    {
         if (termBuf.length < answerMax()) termBuf += k.ins;
       }
@@ -1951,6 +2020,13 @@
     else if (k.ins != null) {
       const f = answerField();
       if (answerVal[f].length >= answerMax()) { renderAnswer(); return; }
+      // Ein zweites Komma (0118) ergäbe keine Zahl mehr. Der Server
+      // wiese „1,2,5" ohnehin ab — nur merkte das Kind es erst nach dem
+      // Abschicken, und die Aufgabe wäre verloren.
+      if (k.ins === ',' && (answerVal[f] === '' || answerVal[f].indexOf(',') >= 0)) {
+        renderAnswer();
+        return;
+      }
       // Führende Nullen wegräumen: „007" ist als Antwort dasselbe wie
       // „7", sieht aber aus wie ein Vertipper.
       //
@@ -2029,7 +2105,9 @@
     if (!els.game || els.game.classList.contains('cm-hide')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (mapOpen) { if (e.key === 'Escape') { closeMap(); e.preventDefault(); } return; }
-    const k = e.key;
+    // Der Punkt des Ziffernblocks meint dasselbe wie das Komma (0118):
+    // wer auf einer echten Tastatur „12.5" tippt, meint 12,5.
+    const k = (e.key === '.') ? ',' : e.key;
 
     // Auswahl-Aufgaben: die Ziffern 1..n wählen die Kacheln in der
     // Reihenfolge, in der sie dastehen. Alles andere hat hier keine
@@ -2256,6 +2334,11 @@
               // beginnt jede Aufgabenart an einer anderen Stelle. Leer
               // und weg, wo keine dabei ist (siehe setQuestion).
               '<div class="cm-qprompt cm-hide" id="cmQPrompt"></div>' +
+              // Die GEGEBENE Funktion (Analysis, 0119). Sie ist keine
+              // Anweisung, sondern eine Formel, und braucht deshalb
+              // ihre eigene Zeile in Formelsatz: „f(x)=3x²+2x" oben,
+              // „f'(x) = ▢" darunter. Zwei Aussagen, zwei Zeilen.
+              '<div class="cm-qgiven cm-hide" id="cmQGiven"></div>' +
               '<div class="cm-eq">' +
                 '<span class="cm-q" id="cmQ">? + ?</span>' +
                 // „=" und das Eingabefeld verschwinden bei Aufgaben, die
@@ -2335,6 +2418,7 @@
       fireToast: root.querySelector('#cmFireToast'),
       q: root.querySelector('#cmQ'),
       qPrompt: root.querySelector('#cmQPrompt'),
+      qGiven: root.querySelector('#cmQGiven'),
       eqop: root.querySelector('#cmEqOp'),
       input: root.querySelector('#cmIn'),
       keys: root.querySelector('#cmKeys'),
@@ -2752,7 +2836,11 @@
     // schon eindeutig festlegen: eine künftige Aufgabenart, die
     // dieselbe Zahl in zwei Zielbasen fragt, wäre sonst zweimal
     // „dieselbe“ Aufgabe, und das halb Getippte bliebe stehen.
-    return [q.type || '', q.text || '', q.mode || '', q.input || '',
+    // `given` MUSS mit hinein (0119): bei einer Analysis-Aufgabe steht in
+    // `text` nur „f'(x)". Zwei Aufgaben hintereinander hätten sonst
+    // denselben Fingerabdruck, und das halb Getippte der ersten bliebe in
+    // der zweiten stehen.
+    return [q.type || '', q.text || '', q.given || '', q.mode || '', q.input || '',
             q.base_to == null ? '' : q.base_to,
             Array.isArray(q.choices) ? q.choices.join('') : ''].join('|');
   }
@@ -2773,11 +2861,29 @@
     // Die Anweisung geht in ihre eigene Zeile darüber, die Aufgabe
     // allein in die Rechenzeile (splitPrompt). Die alte {a, b}-Fassung
     // hat keine Anweisung — dort bleibt die Zeile leer und weg.
-    const parted = q.text ? splitPrompt(q.text) : { prompt: '', body: '' };
-    els.q.innerHTML = q.text ? mathHTML(parted.body) : ctx.esc(q.a + ' + ' + q.b);
+    /* Analysis (0119) geht hier einen eigenen Weg. Zwei Gründe:
+
+       · In `text` steht „f'(x)" bzw. „F(x)" — ein Stück mit Buchstaben,
+         das splitPrompt als ANWEISUNG einsortieren und in die kleine
+         Zeile darüber ziehen würde. Es ist aber die Aufgabe.
+       · Die gegebene Funktion steht in einem eigenen Feld und wird
+         darüber gesetzt, in Formelsatz und nicht als Text.
+
+       Damit bleibt TERM_TOKEN von Großbuchstaben und Ableitungsstrich
+       verschont — die Wortliste, an der „kürze" und „binom rückwärts"
+       hängen, wird nicht angefasst. */
+    const ana    = !!q.given;
+    const parted = (q.text && !ana) ? splitPrompt(q.text) : { prompt: '', body: q.text || '' };
+    els.q.innerHTML = q.text
+      ? (ana ? termHTML(q.text) : mathHTML(parted.body))
+      : ctx.esc(q.a + ' + ' + q.b);
     if (els.qPrompt) {
       els.qPrompt.textContent = parted.prompt;
       els.qPrompt.classList.toggle('cm-hide', !parted.prompt);
+    }
+    if (els.qGiven) {
+      els.qGiven.innerHTML = ana ? termHTML(q.given) : '';
+      els.qGiven.classList.toggle('cm-hide', !ana);
     }
 
     const mode = q.input || 'natural';
@@ -3353,10 +3459,11 @@
         // nie im Pool, und clash_normalize_pool weist einen Pool, der
         // eine nennt, VOLLSTÄNDIG zurück (invalid_pool). „Alle tippen"
         // schlüge damit für die ganze Gruppe fehl.
+        // Schalter (0118) genauso wenig, aus einem anderen Grund: sie
+        // sind keine Aufgabenart, und „alle auswählen" hätte auf ihnen
+        // gar keine Bedeutung.
         const keys = (poolCat || []).reduce((acc, g) =>
-          g.key === all.dataset.group
-            ? acc.concat(g.items.filter(it => !isDerived(it)).map(it => it.key))
-            : acc, []);
+          g.key === all.dataset.group ? acc.concat(ownItems(g).map(it => it.key)) : acc, []);
         setPoolFor(keys, all.dataset.val);
         return;
       }
@@ -3595,6 +3702,24 @@
      Klick nachladen. */
   const isDerived = it => !!(it && it.derived);
 
+  /* ─── Schalter (Migration 0118) ─────────────────────────────────
+     „Ganze Zahlen" und „Rationale Zahlen" stehen in derselben Liste wie
+     die Aufgabenarten, sind aber keine: sie werden nie gezogen, sondern
+     ERWEITERN die Arten ihrer Gruppe. Im Pool tragen sie deshalb den
+     Wert 'on' statt 'free'/'mc'.
+
+     Für diese Datei heißt das an drei Stellen etwas:
+       · zwei Knöpfe statt drei (renderPoolTable),
+       · aus den Sammelknöpfen heraus — „alle tippen" darf keinen
+         Schalter umlegen, und ein Schalter darf nicht darüber
+         entscheiden, ob „alle aus" gerade gilt,
+       · sie zählen nicht als Aufgabe, wenn es darum geht, ob das Spiel
+         starten kann (renderPoolSummary). Genau das prüft der Server
+         seit 0118 noch einmal mit clash_pool_has_task. */
+  const isFlag = it => !!(it && it.flag);
+  // Die WÄHLBAREN Zeilen einer Gruppe: weder abgeleitet noch Schalter.
+  const ownItems = g => g.items.filter(it => !isDerived(it) && !isFlag(it));
+
   // Der geerbte Modus einer abgeleiteten Art — oder null, wenn ihre
   // Bedingung gerade nicht erfüllt ist. Der Rückgabewert ist zugleich
   // die Antwort auf „steht die Zeile überhaupt da?".
@@ -3613,8 +3738,11 @@
      Knopf zu sperren. Ein gesperrter Sammelknopf zwingt sonst dazu,
      drei Zeilen einzeln anzuklicken, um EINE Ausnahme zu umgehen. */
   function effMode(key, mode) {
-    if (mode === 'off') return 'off';
     const it = poolItem(key);
+    // Schalterzeilen (0118) kennen nur an und aus — kein Modus, weder
+    // gewünscht noch ausweichend.
+    if (isFlag(it)) return (mode === 'on') ? 'on' : 'off';
+    if (mode === 'off') return 'off';
     if (!it) return mode;
     if (mode === 'free') return it.free ? 'free' : (it.mc ? 'mc' : 'off');
     return it.mc ? 'mc' : (it.free ? 'free' : 'off');
@@ -3745,8 +3873,11 @@
       // Abgeleitete Arten sind für die Sammel-Knöpfe unsichtbar: sie
       // sind keine Wahl, also kann „alle tippen" sie weder setzen noch
       // an ihnen scheitern.
-      const own = g.items.filter(it => !isDerived(it));
-      const allIs = m => own.every(it => (poolSel[it.key] || 'off') === effMode(it.key, m));
+      // Schalter sind hier genauso unsichtbar wie abgeleitete Arten
+      // (0118): „alle auswählen" soll nicht die Kommazahlen anschalten.
+      const own = ownItems(g);
+      const allIs = m => own.length &&
+        own.every(it => (poolSel[it.key] || 'off') === effMode(it.key, m));
       /* Auf- oder zugeklappt (2026-08-26). Die drei Sammelknöpfe stehen
          in BEIDEN Zuständen in der Kopfzeile: „die ganze Kategorie
          aktivieren" ist der häufige Fall und soll ohne Aufklappen
@@ -3802,6 +3933,33 @@
           '</div>';
           return;
         }
+        /* Die Schalterzeile (0118): zwei Knöpfe statt drei, und eine
+           Erklärzeile unter dem Namen. Sie steht bewusst in derselben
+           Liste und nicht in einer eigenen Kategorie — sie gehört zu den
+           Arten darüber, und ein eigenes Fach hätte sie davon getrennt.
+
+           Die Klasse .cm-poolopt bleibt: damit greift der ERSTE Zweig
+           der Klick-Auswertung, und die Reihenfolge dort
+           (.cm-poolopt → .cm-poolall → .cm-poolgrphead) bleibt, wie sie
+           ist. Ein eigener Selektor müsste vor dem Kopfzeilen-Zweig
+           stehen, sonst klappte jeder Klick auf einen Schalter die
+           Kategorie zu. */
+        if (isFlag(it)) {
+          const on = (poolSel[it.key] || 'off') === 'on';
+          out += '<div class="cm-poolrow cm-poolrow--flag">' +
+            '<span class="cm-poolname">' +
+              `<b>⊕ ${ctx.esc(it.label)}</b>` +
+              (it.example ? `<i class="cm-poolex">${ctx.esc(it.example)}</i>` : '') +
+            '</span>' +
+            '<span class="cm-poolseg cm-poolseg--flag">' +
+              [['off', 'aus'], ['on', 'an']].map(([m, lab]) =>
+                `<button type="button" class="cm-poolopt${(on ? m === 'on' : m === 'off')
+                  ? ' cm-poolopt--on' + offCls(m) : ''}" ` +
+                `data-key="${ctx.esc(it.key)}" data-val="${m}">${lab}</button>`).join('') +
+            '</span>' +
+          '</div>';
+          return;
+        }
         const cur = poolSel[it.key] || 'off';
         out += '<div class="cm-poolrow">' +
           '<span class="cm-poolname">' +
@@ -3843,7 +4001,18 @@
   function renderPoolSummary() {
     if (!els.poolSum) return;
     const keys = Object.keys(poolSel);
-    const empty = !keys.length;
+    /* ⚠️ Ein Pool aus lauter SCHALTERN ist nicht leer, hat aber nichts
+       zu ziehen (0118). Der Startknopf darf daran nicht freigeben —
+       sonst startete das Spiel und würfelte den Notnagel „Addition bis
+       100", obwohl die Lehrkraft gar keine Art gewählt hat. Der Server
+       prüft dasselbe noch einmal (clash_pool_has_task); hier steht es,
+       damit der Knopf gar nicht erst einlädt.
+       Solange der Katalog noch nicht da ist, zählt jeder Schlüssel —
+       ein Pool mit Inhalt ist dann eher eine Aufgabenart als ein
+       Schalter, und die Sperre ist ohnehin doppelt. */
+    const empty = poolCat
+      ? !keys.some(k => { const it = poolItem(k); return !it || !isFlag(it); })
+      : !keys.length;
     if (els.startBtn) els.startBtn.disabled = empty;
     els.poolSum.classList.toggle('cm-poolsum--warn', empty);
 
@@ -3864,11 +4033,15 @@
       // aus „bin ↔ dez" und „dez ↔ hex" von selbst „bin ↔ hex" wird,
       // sieht man sonst nirgends ohne geöffnetes Fenster.
       const on = g.items.filter(it => isDerived(it) ? derivedMode(it) : poolSel[it.key]);
-      if (!on.length) return;
+      // Ein Schalter allein macht keine Zeile: „Grundrechenarten ±"
+      // ohne eine einzige Aufgabenart läse sich, als käme dort etwas
+      // dran (0118).
+      if (!on.some(it => !isFlag(it))) return;
       out += '<div class="cm-poolsumgrp">' +
         `<b>${ctx.esc(g.label)}</b>` +
         '<span class="cm-poolsumops">' +
-          on.map(it => `<i${isDerived(it) ? ' class="cm-poolsumauto"' : ''}>` +
+          on.map(it => `<i${isDerived(it) ? ' class="cm-poolsumauto"'
+                          : (isFlag(it) ? ' class="cm-poolsumflag"' : '')}>` +
                        `${ctx.esc(poolShort(it))}</i>`).join('') +
         '</span></div>';
     });
