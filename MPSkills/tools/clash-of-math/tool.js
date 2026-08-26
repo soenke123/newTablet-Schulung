@@ -1661,13 +1661,24 @@
      Variablentasten ein eigenes `op` tragen. */
   const TERM_TOKEN = /^(?=[0-9abcxy+\-^()=]*[abcxy^()=])[0-9abcxy+\-^()=]+$/;
   const WORD_TOKEN = /[A-Za-zÄÖÜäöüß]/;
+  /* Die Vierergruppen wieder einsammeln: „(1011 0011)_2" ist durch das
+     Zerlegen am Leerzeichen zu zwei Stücken geworden. Eigene Funktion,
+     weil splitPrompt dieselbe Zerlegung braucht — zweimal hingeschrieben
+     würde sie einmal nachgeführt. */
+  const mathNorm = text => String(text || '').replace(
+    /\(([0-9A-F][0-9A-F ]*)\)_(\d+)/g,
+    (all, d, b) => '(' + d.replace(/ /g, '') + ')_' + b);
+  /* Ist dieses Stück ein ANWEISUNGSWORT? Genau dann, wenn es in mathHTML
+     im letzten Zweig landete — also weder Basiszahl noch Bruch noch Term
+     noch Ziffernfolge ist, aber einen Buchstaben trägt. Die Bedingung
+     steht hier und nicht als Wortliste: „kürze", „Klammern auflösen" und
+     „binom rückwärts" kommen vom Server, und der nächste Anweisungstext
+     soll wieder nur eine Migration kosten. */
+  const isPromptWord = tok =>
+    !BASE_TOKEN.test(tok) && !FRAC_TOKEN.test(tok) &&
+    !TERM_TOKEN.test(tok) && !NUM_TOKEN.test(tok) && WORD_TOKEN.test(tok);
   function mathHTML(text) {
-    // Erst die Vierergruppen wieder einsammeln: „(1011 0011)_2" ist
-    // durch das Zerlegen am Leerzeichen zu zwei Stücken geworden.
-    const src = String(text || '').replace(
-      /\(([0-9A-F][0-9A-F ]*)\)_(\d+)/g,
-      (all, d, b) => '(' + d.replace(/ /g, '') + ')_' + b);
-    return src.split(/\s+/).map(tok => {
+    return mathNorm(text).split(/\s+/).map(tok => {
       const b = BASE_TOKEN.exec(tok);
       if (b) return baseHTML(groupDigits(b[1]), b[2]);
       const m = FRAC_TOKEN.exec(tok);
@@ -1681,6 +1692,28 @@
       if (WORD_TOKEN.test(tok)) return '<span class="cm-qword">' + ctx.esc(tok) + '</span>';
       return ctx.esc(tok);
     }).join(' ');
+  }
+
+  /* Die ANWEISUNG von der AUFGABE trennen. Der Server schickt beides in
+     einer Zeile („kürze 12/18", „Klammern auflösen 3(x+4)", „binom
+     rückwärts a^2+2ab+b^2") — auf dem Bildschirm gehören sie
+     untereinander: die Anweisung klein und mittig darüber, die Aufgabe
+     darunter in voller Größe.
+
+     Der Grund ist die REIHE der Aufgaben, nicht die einzelne: mit einem
+     Wort davor stand der Bruch woanders als mit zweien, und die Zahl
+     sprang von Aufgabe zu Aufgabe an eine andere Stelle. In einer
+     eigenen Zeile fängt die Aufgabe immer an derselben an.
+
+     Getrennt wird am ersten Stück, das keine Anweisung mehr ist. */
+  function splitPrompt(text) {
+    const parts = mathNorm(text).split(/\s+/).filter(Boolean);
+    let i = 0;
+    while (i < parts.length && isPromptWord(parts[i])) i++;
+    // Nichts davor, oder ALLES ein Wort: dann ist die ganze Zeile die
+    // Aufgabe und es gibt keine Anweisung dazu.
+    if (i === 0 || i >= parts.length) return { prompt: '', body: parts.join(' ') };
+    return { prompt: parts.slice(0, i).join(' '), body: parts.slice(i).join(' ') };
   }
 
   /* Eine Taste. `style` bekommt sie nur, wenn sie in einem Raster mit
@@ -2218,6 +2251,11 @@
                 '<span class="cm-pmapico">🗺️</span><span>Karte</span></button>' +
             '</div>' +
             '<div class="cm-pask">' +
+              // Die Anweisung („kürze", „binom rückwärts") steht als
+              // eigene Zeile ÜBER der Aufgabe und nicht in ihr — sonst
+              // beginnt jede Aufgabenart an einer anderen Stelle. Leer
+              // und weg, wo keine dabei ist (siehe setQuestion).
+              '<div class="cm-qprompt cm-hide" id="cmQPrompt"></div>' +
               '<div class="cm-eq">' +
                 '<span class="cm-q" id="cmQ">? + ?</span>' +
                 // „=" und das Eingabefeld verschwinden bei Aufgaben, die
@@ -2296,6 +2334,7 @@
       mapClose: root.querySelector('#cmMapClose'),
       fireToast: root.querySelector('#cmFireToast'),
       q: root.querySelector('#cmQ'),
+      qPrompt: root.querySelector('#cmQPrompt'),
       eqop: root.querySelector('#cmEqOp'),
       input: root.querySelector('#cmIn'),
       keys: root.querySelector('#cmKeys'),
@@ -2731,7 +2770,15 @@
     // der Rückfall für ein Gerät, das noch eine Antwort der alten
     // {a, b}-Fassung in der Hand hält (Migration 0110 reicht die alte
     // RPC durch, damit genau das nicht abbricht).
-    els.q.innerHTML = q.text ? mathHTML(q.text) : ctx.esc(q.a + ' + ' + q.b);
+    // Die Anweisung geht in ihre eigene Zeile darüber, die Aufgabe
+    // allein in die Rechenzeile (splitPrompt). Die alte {a, b}-Fassung
+    // hat keine Anweisung — dort bleibt die Zeile leer und weg.
+    const parted = q.text ? splitPrompt(q.text) : { prompt: '', body: '' };
+    els.q.innerHTML = q.text ? mathHTML(parted.body) : ctx.esc(q.a + ' + ' + q.b);
+    if (els.qPrompt) {
+      els.qPrompt.textContent = parted.prompt;
+      els.qPrompt.classList.toggle('cm-hide', !parted.prompt);
+    }
 
     const mode = q.input || 'natural';
     /* „= [ ]" gehört zum Tippen. Bei Antwortkacheln gibt es nichts

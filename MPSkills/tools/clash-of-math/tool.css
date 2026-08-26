@@ -2708,6 +2708,32 @@ body.cm-locked { overflow: hidden; }
   font-variant: normal;
 }
 
+/* Die ANWEISUNG als eigene Zeile über der Aufgabe („kürze", „Klammern
+   auflösen", „binom rückwärts"). Dieselbe Schrift wie .cm-qword — es ist
+   dasselbe Wort, nur an seinem eigenen Platz.
+
+   Sie steht mittig und klein: die Aufgabe darunter ist das, worauf der
+   Blick fällt, die Anweisung sagt nur, was mit ihr zu tun ist. Weil die
+   Zeile eigen ist, fängt die Aufgabe bei jeder Aufgabenart an derselben
+   Stelle an — mit „kürze" davor stand sie vorher woanders als mit
+   „Klammern auflösen".
+
+   .cm-pask ist eine Spalte mit align-items:center; die Breite kommt
+   trotzdem dazu, damit ein langer Text mittig UMBRICHT statt über den
+   Rand zu laufen. */
+.cm-qprompt {
+  width: 100%;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(.85rem, 3.4vw, 1.15rem);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: none;
+  font-variant: normal;
+  color: var(--cm-ink);
+  opacity: .72;
+}
+
 /* ── Zahl mit Basis: (11 0011)₂ ──────────────────────────────────
    Migration 0114. Dieselben Bausteine für die AUFGABE und für das
    EINGABEFELD — was das Kind tippt, soll aussehen wie das, was
