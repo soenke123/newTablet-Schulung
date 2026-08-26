@@ -654,6 +654,11 @@
   }
 
   function decide(i, oi) {
+    // Kartenentscheidungen laufen nicht über RT.actions und brauchen deshalb
+    // einen eigenen Pause-Riegel. Praktisch kaum erreichbar — der Tisch geht
+    // in der Pause gar nicht erst auf, weil die Runden-Uhr steht —, aber eine
+    // Entscheidung ist unumkehrbar, und die soll nirgends durchrutschen.
+    if (RT.pause && RT.pause.blocked()) return;
     var e = ev(), c = e.table[i];
     if (!c || !e.pending) return;
     var def = CARDS[c.id], o = def.opts[oi];

@@ -917,6 +917,7 @@
 
   // Geld einsammeln — erst der Effekt (braucht das Button-Rect), dann die Action.
   function collectMoneyFromField(instanceId, btnEl) {
+    if (RT.pause && RT.pause.blocked()) return;
     var inst = RT.state.getInstance(instanceId);
     if (!inst) return;
     var amount = Math.floor(inst.state.moneyReady || 0);
@@ -928,6 +929,7 @@
 
   // Direkter Collect-Klick auf dem Marketing-Feld.
   function collectFromField(instanceId, btnEl) {
+    if (RT.pause && RT.pause.blocked()) return;
     var inst = RT.state.getInstance(instanceId);
     if (!inst) return;
     var ready = inst.state.ready;
@@ -1011,6 +1013,11 @@
   // hat davon keine, und der Klick lief ins Leere, obwohl der Knopf korrekt
   // „60k 🗃️ ernten" anzeigte.
   function harvestFromField(instanceId, btnEl) {
+    // ⚠️ Die Pause muss VOR dem Effekt geprüft werden, nicht erst in der
+    // Action. Hier fliegt die Bubble zuerst und die Action läuft danach —
+    // ohne diesen Riegel sähe der Spieler in der Pause eine Ernte davonfliegen,
+    // die nie ankommt. Dasselbe gilt für die beiden Collect-Handler darunter.
+    if (RT.pause && RT.pause.blocked()) return;
     var inst = RT.state.getInstance(instanceId);
     if (!inst) return;
     var stacks = Math.max(1, Math.min(RT.state.WATCHTIME_STACK_MAX, inst.state.stacks));
@@ -4380,6 +4387,13 @@
       + '    <button class="rt-shop-btn rt-shop-btn--help" id="rt-help-btn" type="button"'
       + '            title="Erklärung nochmal ansehen"'
       + '            aria-label="Erklärung nochmal ansehen">?</button>'
+      // Pause — steht neben dem "?", weil beide dasselbe anbieten: Zeit zum
+      // Verstehen. Das "?" erklärt, die Pause verschafft die Ruhe, es
+      // nachzuvollziehen. Beschriftung und Zustand setzt syncPauseBtn().
+      + '    <button class="rt-shop-btn rt-shop-btn--help rt-shop-btn--pause"'
+      + '            id="rt-pause-btn" type="button" aria-pressed="false"'
+      + '            title="Pause — alles steht still, alles bleibt lesbar"'
+      + '            aria-label="Pause">⏸️</button>'
       + '  </div>'
       + '  <div class="rt-profile-bar__brand">'
       + '    <span class="rt-profile-bar__platform">' + platform + '</span>'
@@ -4589,6 +4603,7 @@
       trendLabel:     container.querySelector('#rt-trend-harvest-label'),
       trendStacks:    container.querySelector('#rt-trend-stacks'),
       helpBtn:        container.querySelector('#rt-help-btn'),
+      pauseBtn:       container.querySelector('#rt-pause-btn'),
       evBtn:          container.querySelector('#rt-events-btn'),
       evClock:        container.querySelector('#rt-events-clock'),
       evCrises:       container.querySelector('#rt-events-crises'),
@@ -4851,6 +4866,29 @@
       refs.evBtn.addEventListener('click', function () { RT.events.open(); });
     }
 
+    // ── Pause ───────────────────────────────────────────────────────────
+    // Der Knopf trägt seinen eigenen Zustand: ⏸️ = „hier anhalten",
+    // ▶️ = „hier weiterspielen". Das ist die Beschriftung dessen, was der
+    // Klick TUT, nicht dessen, was gerade ist — die zweite Lesart hätte im
+    // pausierten Spiel ein ⏸️ stehen lassen, das nichts mehr anhält.
+    function syncPauseBtn() {
+      if (!refs.pauseBtn || !RT.pause) return;
+      var on = RT.pause.isPaused();
+      refs.pauseBtn.textContent = on ? '▶️' : '⏸️';
+      refs.pauseBtn.classList.toggle('is-paused', on);
+      refs.pauseBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      var t = on ? 'Weiterspielen' : 'Pause — alles steht still, alles bleibt lesbar';
+      refs.pauseBtn.title = t;
+      refs.pauseBtn.setAttribute('aria-label', t);
+    }
+    if (refs.pauseBtn && RT.pause) {
+      refs.pauseBtn.addEventListener('click', function () { RT.pause.toggle(); });
+      // Auch über die Taste „P" erreichbar — der Knopf muss deshalb auf die
+      // Umschaltung hören und darf sie nicht nur auslösen.
+      RT.bus.on('pause:changed', syncPauseBtn);
+      syncPauseBtn();
+    }
+
     // ── Ereigniskarten: Knopf-Countdown und Krisen-Leiste ───────────────
     // Beide zeigen dasselbe aus zwei Entfernungen: der Knopf sagt „wann",
     // die Leiste sagt „was gerade an dir zerrt". Ohne die Leiste stünden
@@ -4961,7 +4999,11 @@
     RT.bus.on('tick', onTick);
 
     // Sparkline-Sample alle 20 Sekunden.
+    // In der Pause NICHT abtasten: die Kurve bekäme sonst eine flache Strecke
+    // eingezeichnet, die aussieht wie Stillstand im Geschäft, obwohl nur der
+    // Spieler gerade liest.
     var sampleTimer = setInterval(function () {
+      if (RT.pause && RT.pause.isPaused()) return;
       if (RT.state.pushSparkSample) RT.state.pushSparkSample();
       drawSparks();
     }, 20000);
@@ -4971,6 +5013,7 @@
       RT.bus.off('tick', onTick);
       RT.bus.off('trend:lost', onTrendLost);
       RT.bus.off('events:clock', refreshEvents);
+      RT.bus.off('pause:changed', syncPauseBtn);
       clearInterval(sampleTimer);
       if (batchTimer) { clearTimeout(batchTimer); batchTimer = null; }
     };

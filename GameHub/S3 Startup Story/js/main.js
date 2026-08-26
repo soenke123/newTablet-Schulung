@@ -185,12 +185,12 @@
   function reportOffline(r) {
     if (!r) return;
     var f = RT.ledger.fmt;
+    // Nur Zeilen, die auf etwas zum ANKLICKEN zeigen (bzw. auf den Verlust).
+    // Offline wird nichts mehr geerntet — es gibt daher weder „Watchtime
+    // produziert" noch „neue User" zu melden, sondern volle Stapel.
     var rows = [];
-    if (r.watchtime   > 0) rows.push(['⏳', 'Watchtime produziert', f.num(r.watchtime)]);
     if (r.wtStacks    > 0) rows.push(['🌾', 'Farmen zum Ernten bereit', r.wtStacks + ' Stapel']);
-    if (r.metadata    > 0) rows.push(['🗃️', 'Metadaten gesammelt', f.num(r.metadata)]);
     if (r.adMoney     > 0) rows.push(['💰', 'Werbedeals eingespielt', f.money(r.adMoney)]);
-    if (r.usersGained > 0) rows.push(['👥', 'neue User', f.num(r.usersGained)]);
     if (r.trendStacks > 0) rows.push(['⭐', 'Trend-Schübe zum Einsammeln', r.trendStacks]);
     if (r.usersLost   > 0) rows.push(['📉', 'User abgewandert', '−' + f.num(r.usersLost)]);
     if (!rows.length) return;
@@ -219,9 +219,9 @@
   }
 
   // Die gemeldete Zeit ist die ECHTE Abwesenheit, nicht das Aufhol-Fenster.
-  // „8 Stunden weg, das kam dabei heraus" ist die ehrliche Aussage — dass
-  // nur die ersten zwei Minuten zählen, steht als Regel im Spiel und nicht
-  // in einer geschönten Zahl.
+  // „8 Stunden weg, das kam dabei heraus" ist die ehrliche Aussage — dass die
+  // Produktion steht, sobald die Farmen voll sind, ist eine Regel des Spiels
+  // und gehört nicht in eine geschönte Zahl.
   function awayLabel(sec) {
     sec = Math.max(0, Math.floor(sec || 0));
     if (sec < 90)   return sec + ' Sekunden';

@@ -544,23 +544,17 @@
   var WATCHTIME_CYCLE_SEC        = 8;   // Zeit für 1 Stapel
   var WATCHTIME_PER_USER_PER_CYCLE = 1; // 1 Watchtime pro User pro Zyklus
 
-  // Wie weit eine Abwesenheit nachgerechnet wird (RT.actions.offlineCatchUp).
+  // ⚠️ Hier stand bis zum 2026-08-26 OFFLINE_CATCHUP_SEC = 120 — ein festes
+  // Fenster, in dem eine Abwesenheit nachgerechnet wurde und in dem der
+  // Überschuss über die Stapelgrenzen hinaus automatisch im Lager bzw. bei den
+  // Usern landete. Die Zahl ist ERSATZLOS RAUS: das Offline-Fenster ergibt
+  // sich jetzt aus dem Spielstand — es endet, sobald die Serverfarmen ihre
+  // WATCHTIME_STACK_MAX Stapel voll haben, und geerntet wird offline nichts
+  // mehr (RT.actions.offlineCatchUp).
   //
-  // Vorher gab es diese Zahl nicht: der Aufholpass war an die Stapelgrenzen
-  // gefesselt und brachte je System 40 s (Watchtime), 60 s (Trend) bzw. einen
-  // Deal weit. Wer über Nacht zumachte, kam auf eine halbe Minute Ertrag
-  // zurück — der Rückkomm-Moment, von dem ein Idle-Spiel lebt, fand nicht statt.
-  //
-  // ⚠️ Die Stapelgrenzen bleiben davon UNBERÜHRT. „Max 5 Stapel, dann steht die
-  // Produktion" ist eine Live-Balance-Regel (sie erzwingt das Ernten); offline
-  // kann niemand ernten, deshalb wird der Überschuss automatisch abgeholt und
-  // landet direkt im Lager bzw. bei den Usern. Wer die Stapelgrenze anhebt,
-  // ändert das Spiel — wer diese Zahl anhebt, nur die Rückkehr.
-  //
-  // ⚠️ Der Wert wirkt am stärksten auf Dauerbetrieb-Deals: offline produzierte
-  // Watchtime landet jetzt wirklich im Lager und speist die Agenturen. Das ist
-  // die Stelle, an der ein deutlich größeres Fenster zuerst kippen würde.
-  var OFFLINE_CATCHUP_SEC        = 120;
+  // Wer am Offline-Ertrag drehen will, dreht damit an WATCHTIME_STACK_MAX oder
+  // WATCHTIME_CYCLE_SEC — also am Spiel selbst, nicht mehr an einer eigenen
+  // Zahl nur für die Rückkehr.
 
   // --- Phase 3: User-Modelle & Metadaten ---
   // Ein User-Modell ist KEIN Bewohner eines Slots, sondern schlicht
@@ -1287,7 +1281,6 @@
     ENERGY_PLANT_MAX:             ENERGY_PLANT_MAX,
     WATCHTIME_STACK_MAX:          WATCHTIME_STACK_MAX,
     WATCHTIME_CYCLE_SEC:          WATCHTIME_CYCLE_SEC,
-    OFFLINE_CATCHUP_SEC:          OFFLINE_CATCHUP_SEC,
     WATCHTIME_PER_USER_PER_CYCLE: WATCHTIME_PER_USER_PER_CYCLE,
     METADATA_STACK_MAX:           METADATA_STACK_MAX,
     METADATA_PER_MODEL:           METADATA_PER_MODEL,
@@ -2735,9 +2728,8 @@
     // User, die die aktuell gebunkerten Stapel einbringen würden.
     // Linear pro Stapel — 5 Stapel bei +3 % sind +15 %, nicht 1,03^5.
     // Was `st` Trend-Schübe an Usern einbringen. Steht getrennt von
-    // trendUsersReady(), weil der Offline-Aufholpass mit einer Stapelzahl
-    // rechnet, die gar nicht in state.current steht — alles über
-    // TREND_STACK_MAX hinaus wird dort direkt gutgeschrieben statt gestapelt.
+    // trendUsersReady(), damit die Formel auch mit einer Stapelzahl rechenbar
+    // ist, die nicht in state.current steht (Vorschau, Balance-Rechnungen).
     // Zwei Kopien derselben Formel wären genau die Sorte Duplikat, die beim
     // nächsten Balance-Pass auseinanderläuft.
     trendUsersFor: function (st) {

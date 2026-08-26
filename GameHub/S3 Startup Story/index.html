@@ -53,6 +53,9 @@
   <script src="js/screens.js"></script>
   <script src="js/clock.js"></script>
   <script src="js/loop.js"></script>
+  <!-- Muss NACH loop.js stehen: pause.js legt beim Laden alle RT.actions
+       hinter die Pause-Sperre, und die gibt es erst, wenn loop.js durch ist. -->
+  <script src="js/pause.js"></script>
   <script src="js/techtree.js"></script>
   <script src="js/camera.js"></script>
   <script src="js/ui.js"></script>

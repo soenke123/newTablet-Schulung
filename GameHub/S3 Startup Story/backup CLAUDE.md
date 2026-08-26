@@ -311,7 +311,7 @@ Er ist am 2026-08-06 dazugekommen, weil zwei gemessene Probleme dieselbe Ursache
 
 Eine zweite Agentur bringt auf der Anteils-Stufe kaum mehr Geld (das Einkommen hängt an der Produktion, nicht an der Zahl der Deals), kostet aber vollen zusätzlichen Trend. **Ab ~6 Agenturen kippt die Plattform ins Minus.** Das ist die wichtigste Botschaft an den Spieler, und sie steht heute nirgends im UI.
 
-⚠️ **Der Offline-Aufholpass braucht seitdem eine ausdrückliche Obergrenze** (`offlineCatchUp`). Vorher ergab sie sich von selbst — ein Deal war nach fünf Zyklen zu Ende. Ein `autoRenew`-Deal hat dieses natürliche Ende nicht; über acht Stunden wären das ~2.900 Video-Zyklen. Die Grenze ist heute das Offline-Fenster, mindestens aber `AD_CYCLES_MAX` Zyklen: `max(AD_CYCLES_MAX, ceil(OFFLINE_CATCHUP_SEC / duration))`. Banner (10 s) kommt damit auf 12 Zyklen, Video (25 s) auf 5 — ohne das Minimum stünde ausgerechnet die Werbeart mit den längsten Zyklen schlechter da als vor der Umstellung. Zusätzlich wird die Rest-Zeit auf einen angefangenen Zyklus gekappt, sonst setzt der erste Live-Tick den übrigen Zeit-Puffer sofort in weitere Zyklen um.
+⚠️ **Der Offline-Aufholpass braucht seitdem eine ausdrückliche Obergrenze** (`offlineCatchUp`). Vorher ergab sie sich von selbst — ein Deal war nach fünf Zyklen zu Ende. Ein `autoRenew`-Deal hat dieses natürliche Ende nicht; über acht Stunden wären das ~2.900 Video-Zyklen. Die Grenze ist heute das Offline-Fenster, mindestens aber `AD_CYCLES_MAX` Zyklen: `max(AD_CYCLES_MAX, ceil(budgetSec / duration))` — seit dem Umbau von 2026-08-26 ist `budgetSec` die Zeit bis zur Vollstapelung der Farmen (≤ 40 s), das Zeitfenster bindet also fast immer zuerst. Das Minimum bleibt trotzdem stehen, damit nicht ausgerechnet die Werbeart mit den längsten Zyklen (Video, 25 s) schlechter dasteht als eine mit kurzen. Zusätzlich wird die Rest-Zeit auf einen angefangenen Zyklus gekappt, sonst setzt der erste Live-Tick den übrigen Zeit-Puffer sofort in weitere Zyklen um.
 
 **Die erste Werbeagentur kauft der Spieler selbst** — 15.000 € im Shop, ab Phase 2. Sie gehört bewusst **nicht** zum Investor-Deal: Phase 2 beginnt damit, dass Watchtime da ist und noch nichts sie in Geld verwandelt. Der Debug-Seed (Phase-2-Sprung) stellt genau diese Belegung her — HQ + eine Huhn-Farm, keine Agentur.
 
@@ -917,19 +917,23 @@ Beide Anteile werden aus dem Techtree **abgeleitet**, nicht gespeichert (`trendB
 
 Beide Richtungen teilen sich `trendCycleTime` — es gibt nur eine Uhr, und die Trend-Richtung entscheidet, was beim Schlag passiert.
 
-**Offline** (`actions.offlineCatchUp`, aufgerufen aus `main.js`): die Abwesenheit wird auf `OFFLINE_CATCHUP_SEC` = **120 s** gedeckelt und in diesem Fenster nachgerechnet. Eine Nacht bringt damit dasselbe wie zwei Minuten.
+**Offline** (`actions.offlineCatchUp`, aufgerufen aus `main.js`): das Spiel läuft in der Abwesenheit weiter, **bis die Serverfarmen ihre 5 Stapel voll haben — und keine Sekunde länger**. Danach pausiert alles.
 
-**Die Stapelgrenzen bleiben unangetastet, der Überschuss wird geerntet.** Watchtime- und Trend-Stapel füllen sich wie bisher bis 5; alles darüber landet direkt im Watchtime-Lager bzw. als User auf dem Konto. Der Grund ist eine Rollenverteilung: „max 5 Stapel, dann steht die Produktion" ist eine **Live**-Regel, sie erzwingt das Ernten. Offline kann niemand ernten — dort wäre sie keine Entscheidung mehr, sondern nur eine Deckelung, und genau die hat den Rückkomm-Moment gekostet, von dem ein Idle-Spiel lebt.
+**Das Fenster ist keine Konstante, sondern steht im Spielstand.** Es ist die Zeit, die die am weitesten zurückliegende Farm bis zur Vollstapelung braucht: eine leer verlassene Farm 5 × 8 s, eine halb volle die Hälfte, eine volle gar nichts. Mehr als `WATCHTIME_STACK_MAX × WATCHTIME_CYCLE_SEC` = **40 s** kann eine Abwesenheit nie bringen, egal wie lang sie war. Stand beim Verlassen schon alles voll, passiert offline **überhaupt nichts** mehr — auch keine Werbedeals, kein Trend.
 
-⚠️ **Der Trend-Überschuss läuft durch `freeUserCapacity()`.** Was nicht mehr in die Serverkapazität passt, verfällt. Der Aufholpass darf die Aussage „Serverkapazität ist der Engpass" nicht umgehen.
+⚠️ **Es wird offline NICHTS automatisch geerntet.** Watchtime, Metadaten und Trend-User landen nicht mehr von selbst im Lager bzw. auf dem Konto; die Stapel stehen beim Wiederkommen voll da und warten auf den Klick. „Max 5 Stapel, dann steht die Produktion" ist damit keine reine Live-Regel mehr, sondern gilt in beiden Zuständen gleich. Was über die Stapelgrenze hinausginge, **verfällt** — bei der Watchtime wie beim Trend.
 
-⚠️ **Nach unten gilt das Fenster NICHT: negativer Trend kostet weiterhin höchstens `TREND_STACK_MAX` = 5 Zyklen.** Die Asymmetrie ist gewollt — das Fenster ist eine Belohnung fürs Wiederkommen und darf nicht ausgerechnet den härter treffen, der ohnehin schon im Minus steht.
+⚠️ **Die langsamste noch nicht volle Farm bestimmt das Fenster für ALLE anderen Mechanismen.** Werbedeals und Trend laufen genau so lange mit, wie irgendwo noch produziert wird. Das ist die Stellschraube: wer am Offline-Ertrag dreht, dreht an `WATCHTIME_STACK_MAX` / `WATCHTIME_CYCLE_SEC` — also am Spiel selbst und nicht mehr an einer eigenen Zahl nur für die Rückkehr (`OFFLINE_CATCHUP_SEC` ist ersatzlos entfallen, 2026-08-26).
 
-⚠️ **Die Reihenfolge im Aufholpass ist seitdem eine Balance-Größe.** Erst die Farmen, dann die Werbedeals: die offline produzierte Watchtime liegt dadurch wirklich im Lager und speist die Agenturen. Ein Dauerbetrieb-Deal wird über eine Abwesenheit spürbar ergiebiger als vorher, und das ist die Stelle, an der ein deutlich größeres Fenster zuerst kippen würde — **wer `OFFLINE_CATCHUP_SEC` anhebt, prüft hier**, nicht bei der Watchtime.
+⚠️ **Das Fenster wird UNGEDROSSELT gerechnet, die Farmen produzieren gedrosselt.** In die Fenster-Länge geht `farmSpeedFactor()` bewusst nicht ein, sonst zöge ausgerechnet eine unversorgte Farm das Fenster in die Länge und schenkte den Werbedeals Zyklen. Eine versorgte Farm wird dadurch garantiert voll, eine gedrosselte kommt in derselben Zeit nicht ganz hin — genau die Aussage der Serverkosten (§4).
+
+⚠️ **Werbedeals bezahlen aus dem Lager, wie es beim Verlassen dastand.** Da die Stapel offline nicht mehr überlaufen, kommt während der Abwesenheit keine Watchtime nach: ein Dauerbetrieb-Deal läuft so weit, wie das gespeicherte Lager trägt. Die Reihenfolge im Aufholpass (erst Farmen, dann Deals) ist dadurch **keine Balance-Größe mehr**.
+
+⚠️ **Nach unten gilt der alte Deckel weiter: negativer Trend kostet höchstens `TREND_STACK_MAX` = 5 Zyklen.** Das Fenster erreicht ihn seit dem Umbau ohnehin nicht mehr — der Deckel bleibt als Zusage stehen, dass eine Abwesenheit niemanden auf null User zurückwirft, unabhängig davon, wie lang das Fenster gerade ausfällt.
 
 **Der Ereigniskarten-Takt bleibt außen vor** (§9.5): auch im Fenster wird höchstens eine Runde gezogen.
 
-⚠️ **Die gemeldete Abwesenheit im Rückkehr-Fenster ist die ECHTE, nicht das Fenster.** „8 Stunden weg, das kam dabei heraus" ist die ehrliche Aussage; dass nur die ersten zwei Minuten zählen, ist eine Spielregel und gehört nicht in eine geschönte Zahl.
+⚠️ **Die gemeldete Abwesenheit im Rückkehr-Fenster ist die ECHTE, nicht das Fenster.** „8 Stunden weg, das kam dabei heraus" ist die ehrliche Aussage; dass die Produktion mit vollen Stapeln steht, ist eine Spielregel und gehört nicht in eine geschönte Zahl. Das Fenster listet deshalb nur noch, was zum **Anklicken** bereitsteht (volle Farm-Stapel, Trend-Schübe, liegen gebliebenes Werbegeld) plus den Verlust durch negativen Trend.
 
 **Wodurch steigt der Trend?** Der **Netzwerkeffekt** (dauerhaft, wächst mit der Plattform, s. o.), Grundinteresse (verebbt), eingesammelte Techtree-Nodes (60 s Rückenwind), **Vertrauens-Features** (dauerhaft, über die Steigung) und die **Anziehungskraft im Marketing-Center** (Creator-Beteiligung / Marken-Profile, beliebig oft, Sektion 7.2).
 **Wodurch sinkt er?** Laufende Werbedeals (`trend50 × (i/0.5)²` je Agentur, siehe Sektion 6) und **Serverprobleme** (siehe unten); später Metadaten-Verkauf, aggressive Kampagnen, Shitstorm-Events.
@@ -1728,7 +1732,7 @@ Die Brutphase ist Phase 0–2, geschlüpft wird bei `PHASE3_USER_THRESHOLD` (1 M
 
 Der **All-Time-Peak** existiert weiterhin, aber nur noch für die Bestenliste (unten).
 
-⚠️ **`usersPeak` wird im Tick gepflegt** (`js/loop.js`, `trackUsersPeak()`), nicht an den sechs Stellen, die `s.users` schreiben — und zusätzlich am Ende von `offlineCatchUp()`, weil der Aufholpass User gutschreibt, ohne durch den Tick zu laufen.
+⚠️ **`usersPeak` wird im Tick gepflegt** (`js/loop.js`, `trackUsersPeak()`), nicht an den sechs Stellen, die `s.users` schreiben. Der Offline-Aufholpass ruft ihn seit 2026-08-26 **nicht mehr** auf: er kann User nur noch verlieren (negativer Trend), und ein Verlust verschiebt den Peak nicht. Wer dort je wieder User gutschreibt, holt den Aufruf zurück.
 
 ### Neustart und Freilassen — zwei Richtungen, eine Regel
 
