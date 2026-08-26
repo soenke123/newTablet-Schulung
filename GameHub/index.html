@@ -388,25 +388,46 @@
         }
       } catch (e) { console.warn('[hub] virus completion trigger failed:', e); }
 
-      // Season 2 Announcement — einmal pro Sitzung zeigen
-      // (nur wenn Season 3 noch nicht aktiv; sonst zeigt S3 den Neu-Banner)
-      if (getUserSeason() === 2
-          && !sessionStorage.getItem('s2_modal_seen')) {
+      // Season-Announcement — höchstens alle 3 Tage zeigen.
+      // sessionStorage reichte nicht: jeder neue Tab (und auf dem Tablet
+      // jedes Neu-Öffnen) ist eine neue Session, der Banner kam also quasi
+      // bei jedem Start. Stempel deshalb in localStorage, pro User-ID —
+      // sonst verschluckt Schüler A den Banner für Schüler B am selben Gerät.
+      const SEASON_MODAL_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000;
+      const seasonModalKey = (id) =>
+        `season_modal_seen_${id}_${window.getSessionUser?.()?.id || 'anon'}`;
+
+      function seasonModalDue(id) {
+        try {
+          const ts = parseInt(localStorage.getItem(seasonModalKey(id)) || '0', 10);
+          // Uhr-Sprünge (ts in der Zukunft) nicht ewig blockieren lassen
+          return !(ts > 0 && Math.abs(Date.now() - ts) < SEASON_MODAL_COOLDOWN_MS);
+        } catch (e) { return true; }
+      }
+      function markSeasonModalSeen(id) {
+        try { localStorage.setItem(seasonModalKey(id), String(Date.now())); } catch (e) {}
+      }
+
+      // Season 2 (nur wenn Season 3 noch nicht aktiv; sonst zeigt S3 den Neu-Banner)
+      if (getUserSeason() === 2 && seasonModalDue('s2')) {
         document.getElementById('s2Modal').hidden = false;
+        // Stempel sofort setzen, nicht erst beim Schließen: wer den Banner
+        // per Tab-Wechsel „wegklickt", soll ihn trotzdem 3 Tage los sein.
+        markSeasonModalSeen('s2');
       }
       document.getElementById('s2Close').addEventListener('click', () => {
         document.getElementById('s2Modal').hidden = true;
-        sessionStorage.setItem('s2_modal_seen', '1');
+        markSeasonModalSeen('s2');
       });
 
-      // Season 3 Announcement — einmal pro Sitzung zeigen
-      if (getUserSeason() >= 3
-          && !sessionStorage.getItem('s3_modal_seen')) {
+      // Season 3
+      if (getUserSeason() >= 3 && seasonModalDue('s3')) {
         document.getElementById('s3Modal').hidden = false;
+        markSeasonModalSeen('s3');
       }
       document.getElementById('s3Close').addEventListener('click', () => {
         document.getElementById('s3Modal').hidden = true;
-        sessionStorage.setItem('s3_modal_seen', '1');
+        markSeasonModalSeen('s3');
       });
 
       document.getElementById('modalClose').addEventListener('click', () => {
