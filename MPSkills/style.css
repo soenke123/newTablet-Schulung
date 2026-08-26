@@ -1109,6 +1109,145 @@ a.btn {
   .csp-in, .csp-in text, .csp-k0, .csp-k1 { transition: none; }
 }
 
+/* ═══════════════════════════════════════════════════════
+   Standbild Kingdoms of Mathoria
+   ═══════════════════════════════════════════════════════
+   Gezeichnet in preview/clash-of-math.js; hier steht nur, wie es
+   aussieht und wann es sich bewegt.
+
+   ⚠️ Diese Kachel kippt NICHT mit dem Kleid der Seite — genau wie
+   die von NeuroLab, und aus demselben Grund, den .tprev--nl schon
+   ausführt: eine Kachel verspricht, was hinter ihr aufgeht. Das
+   Königreich bringt seine eigene Welt mit (Pergament, Gold, Nacht —
+   siehe tools/clash-of-math/tool.css, wo dieselben Farben stehen und
+   ebenfalls in beiden Kleidern gelten). Eine Kachel, die im Dunkeln
+   in Seitenfarben umschlüge, versprächte eine andere Anwendung.
+
+   Der Rasterhintergrund von .tprev fällt weg: das Pergament füllt
+   die Fläche vollständig, ein Raster darunter sähe man nie.
+
+   Die Farbwerte stehen deshalb hier ausgeschrieben und nicht als
+   var(--…) der Seite. Sie sind eine Kopie aus tool.css — dieselbe
+   Sorte Kopie wie die sechs Volksfarben in preview/clash-of-math.js,
+   und aus demselben Grund: tool.css ist beim Zeichnen der Kachel
+   noch gar nicht geladen.                                        */
+.tprev--km {
+  background-color: #2a2115;    /* --cm-night */
+  background-image: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+:root[data-theme="dark"] .tprev--km {
+  background-color: #2a2115;
+  background-image: none;
+}
+
+.kmp { width: 100%; height: 100%; display: block; }
+
+/* Der Zierrahmen: Pergament, Goldkante, dunkle Innenlinie — die
+   drei Schichten, die im Werkzeug vier inset-Schatten sind. */
+.kmp-parch { fill: #efe3c0; }
+.kmp-gold  { fill: none; stroke: #caa457; stroke-width: 3; }
+.kmp-night { fill: none; stroke: #2a2115; stroke-width: 2; opacity: .55; }
+
+/* Dieselbe Mischung wie .cm-hex im Werkzeug: die Volksfarbe zu 54 %
+   über dem Grasgrün des Bodens. Nicht zwei fertige Farben, damit die
+   Kachel dieselbe Rechnung macht wie die Karte, die hinter ihr
+   aufgeht. */
+.kmp-hex {
+  fill: color-mix(in srgb, var(--raw) 54%, #8a9a5c);
+  stroke: rgba(58,38,12,.55);
+  stroke-width: 1.2;
+  transition: fill .5s ease;
+}
+.kmp-castle { fill: rgba(58,38,12,.82); }
+.kmp-gate   { fill: #efe3c0; }
+
+/* Der goldene Ring um das eroberte Feld — im Ruhezustand gibt es ihn
+   nicht. Er ist das einzige Zeichen dafür, dass gerade etwas
+   PASSIERT ist; ohne ihn wechselt unter fünfunddreißig Sechsecken
+   eines still die Farbe. */
+.kmp-ring {
+  fill: none;
+  stroke: #ffe8a3;
+  stroke-width: 2.5;
+  opacity: 0;
+  transition: opacity .45s ease;
+}
+
+/* Die Aufgabe unten: ein dunkles Schild auf dem Pergament, wie die
+   Banner des Werkzeugs. Zwei Zeilen übereinander, eine durchsichtig —
+   die Aufgabe WIRD zur Lösung, sie wandert nicht (dieselbe
+   Überlegung wie beim Schlüssel der Cäsar-Scheibe). */
+.kmp-chip {
+  fill: #2a2115;
+  stroke: #caa457;
+  stroke-width: 1.5;
+}
+.kmp-task { fill: #f2dfae; font-weight: 700; }
+.kmp-s1   { opacity: 0; }
+.kmp-s0, .kmp-s1 { transition: opacity .45s ease; }
+
+/* Nur, wo es ein Zeigegerät gibt — auf einem Tablet bleibt das Bild
+   still und die Bewegung ist einen Tipp entfernt im Schaufenster.
+   Dieselbe Abfrage wie bei den drei anderen Standbildern.
+
+   Gezeigt wird die eine Regel, aus der das ganze Spiel besteht: die
+   Aufgabe geht auf, und das Grenzfeld daneben wechselt das Volk.
+   Beides zusammen — eines ohne das andere wäre die halbe Regel. */
+@media (hover: hover) {
+  .tile--peek:hover .kmp-hex--flip { fill: color-mix(in srgb, var(--raw1) 54%, #8a9a5c); }
+  .tile--peek:hover .kmp-ring { opacity: 1; }
+  .tile--peek:hover .kmp-s0 { opacity: 0; }
+  .tile--peek:hover .kmp-s1 { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kmp-hex, .kmp-ring, .kmp-s0, .kmp-s1 { transition: none; }
+}
+
+/* ── Das Beamerbild auf einem schmalen Gerät ───────────────────
+   Bis hierher zeigte das Schaufenster Tafeln (die WordPool-Wolke
+   fügt sich in jede Breite) oder Anwendungen, die umbrechen können.
+   Die Beamer-Ansicht von Mathoria kann beides nicht: sie ist eine
+   Reihe aus Völker-Spalte · Pergament · Völker-Spalte, und die
+   Spalten haben eine feste Breite (--cm-roster-w in tool.css). Ihre
+   Mindestbreite liegt damit bei rund 620 px — und weil .overlay eine
+   Flex-Reihe ist, wächst der Kasten darin auf diese Mindestbreite
+   MIT, statt sie abzuschneiden. Auf einem Handy stand das
+   Schaufenster dann 140 px über den Rand hinaus und ließ sich
+   seitwärts schieben.
+
+   Umbrechen wäre hier die falsche Antwort. Was am Beamer steht, ist
+   EIN Bild — Karte und Völker nebeneinander, das ist die Aussage.
+   Zwei Spalten untereinander zeigten etwas, das es im Unterricht
+   nicht gibt.
+
+   Also verkleinert: `zoom` und nicht `transform: scale()`, weil zoom
+   die Maße wirklich ändert. Ein transform lässt den Platzbedarf
+   stehen — die Reihe bliebe 620 px breit, der Kasten wüchse
+   weiterhin mit, und unter dem verkleinerten Bild bliebe die
+   Resthöhe als Loch stehen.
+
+   Lesbar ist das kleinste Maß nicht mehr, und das ist in Ordnung:
+   Wer auf dem Handy in die Auslage sieht, soll erkennen, WAS an der
+   Wand steht. Was drinsteht, sagt der Text darunter — und den Skill
+   benutzt später ohnehin ein Beamer.
+
+   ⚠️ Die erste Stufe greift schon bei 900 px und nicht erst bei 760,
+   wo es rechnerisch nötig wäre. Grund ist eine Kante, die man sonst
+   sieht: die Völker-Spalten sind FEST breit, das Spielfeld bekommt
+   nur den Rest. Verkleinern schrumpft die Spalten mit, dem Feld
+   bleibt also anteilig MEHR — bei 758 px war die Karte 257 px breit,
+   bei 778 px (also breiterem Fenster, aber ohne zoom) nur noch 172.
+   Ein Fenster größer zu ziehen und dabei eine kleinere Karte zu
+   bekommen, sieht nach Fehler aus. Die volle Größe gilt deshalb erst,
+   wenn danach auch wirklich Platz für sie ist. */
+@media (max-width: 900px) { .pv-host .cm-host--presenter { zoom: .78; } }
+@media (max-width: 560px) { .pv-host .cm-host--presenter { zoom: .58; } }
+@media (max-width: 430px) { .pv-host .cm-host--presenter { zoom: .46; } }
+
 /* ─── Fuß ─────────────────────────────────────────────── */
 .foot {
   border-top: 1px solid var(--line);

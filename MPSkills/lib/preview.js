@@ -83,7 +83,14 @@
      Generisch, weil das Schema es ist — skill_room_entries kennt
      payload, votes und hidden, ganz gleich welches Werkzeug
      darauf sitzt. Was IN payload steht, wird hier nirgends
-     gelesen. */
+     gelesen.
+
+     ⚠️ Nicht jedes Werkzeug sitzt auf dieser Schicht. Kingdoms of
+     Mathoria bringt eigene Tabellen und eigene RPC-Namen mit
+     (Migration 0093) und benutzt deshalb ausschließlich `call` —
+     den Durchreich-Baustein aus lib/tool.js. Dafür gibt es unten
+     `show.server`: ein Drehbuch legt seinen eigenen erfundenen
+     Spielstand darunter, und die Verben hier rührt so eines nie an. */
   function fakeActions(getView, role) {
     let n = 0;
     const entries = () => (getView().entries || (getView().entries = []));
@@ -173,7 +180,15 @@
       reset() {
         getView().entries = [];
         return Promise.resolve({ ok: true });
-      }
+      },
+
+      /* Der Durchreich-Baustein. Ohne ein `show.server` gibt es hier
+         nichts zu holen — und das ist die richtige Antwort: ein
+         Werkzeug, das ihn ruft, ohne dass sein Drehbuch einen
+         Spielstand mitbringt, hat keinen. Es bekommt dieselbe Form
+         wie vom Server (`{ ok: false, error }`) und nicht `undefined`,
+         damit es an seinem gewohnten Zweig abbiegt statt zu brechen. */
+      call() { return Promise.resolve({ ok: false, error: 'unknown_fn' }); }
     };
   }
 
@@ -310,6 +325,21 @@
       text(sel) {
         const el = q(sel);
         return el ? (el.textContent || '').trim() : null;
+      },
+
+      /* „Sieh noch einmal nach." Für Drehbücher, die nicht klicken,
+         sondern ihren erfundenen Spielstand selbst ändern (show.server):
+         Kingdoms of Mathoria erobert im Drehbuch ein Feld und will es
+         sofort auf der Karte sehen — sein eigener Takt fragt nur alle
+         acht Sekunden nach, und so lange sähe die Auslage nach
+         Standbild aus.
+
+         Dasselbe update(view), das auch der Seiten-Poller im Raum
+         ruft: kein Sonderweg, den es im Betrieb nicht gäbe. */
+      refresh() {
+        if (!alive()) return false;
+        cur.tool.update(cur.view);
+        return true;
       },
 
       // Für Drehbücher, die eine Karte suchen wollen, ohne die
@@ -456,8 +486,17 @@
     cur.tool = tool;
     cur.view = show.view();
 
+    /* Der erfundene Server eines Drehbuchs (show.server) ersetzt NUR
+       `call` — die generischen Verben bleiben stehen. Ein Werkzeug, das
+       beides benutzt, gibt es heute nicht, aber die Schicht muss
+       deswegen nicht entweder-oder sein. */
+    const acts = fakeActions(() => cur && cur.view, show.role || 'participant');
+    if (typeof show.server === 'function') {
+      acts.call = (fn, args) => Promise.resolve(show.server(fn, args || {}));
+    }
+
     const ctx = window.MPTool.makeCtx({
-      actions: fakeActions(() => cur && cur.view, show.role || 'participant'),
+      actions: acts,
       title:   meta.title || '',
       /* „Du stehst in der Auslage und nicht in einer Stunde." Die
          meisten Werkzeuge interessiert das nicht — ihr ganzer Stand

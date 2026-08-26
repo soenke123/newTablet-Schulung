@@ -365,6 +365,14 @@
 
   const MAP_GAP = 12, MAP_MIN = 260, MAP_MAX = 2000;
 
+  /* Die Bühnenhöhe in der Auslage (lib/preview.js). Dort steht das
+     Werkzeug in einem Kasten auf der Landingpage und nicht auf einem
+     Beamer — „bis zum unteren Fensterrand" ist da die falsche Antwort,
+     siehe fitPresenterMap. Der Wert ist auf .pv-modal--wide gerechnet:
+     Kopfzeile, Fuß und Erklärtext des Schaufensters sollen daneben
+     noch Platz haben, ohne dass der Kasten zu rollen anfängt. */
+  const PREVIEW_STAGE_H = 430;
+
   // Höhe der Figuren, in Vielfachen des Sechseck-Radius. Sie stehen
   // mit den Füßen auf dem Kachel-Mittelpunkt und ragen deshalb über
   // ihre Kachel hinaus — die Burg deutlich, damit sie als Hauptstadt
@@ -1095,8 +1103,20 @@
   function fitPresenterMap() {
     if (role !== 'presenter' || !els.boardWrap || !els.mapWrap) return;
     if (els.boardWrap.classList.contains('cm-hide')) return; // unsichtbar hat keine verlässlichen Maße
+    /* Im Betrieb nimmt die Bühne alles, was bis zum unteren Fensterrand
+       übrig ist — der Beamer hat nichts anderes zu zeigen.
+
+       In der Auslage (ctx.preview) gilt das NICHT: dort steht das
+       Werkzeug in einem Kasten mitten auf der Landingpage, und
+       `window.innerHeight - top` wäre der Rest des BROWSERFENSTERS.
+       Die Karte wüchse über den Kasten hinaus, .pv-host schnitte sie
+       unten ab, und das Schaufenster zeigte eine halbe Karte. Feste
+       Höhe stattdessen — alles darunter (Kopfzeile, Rahmen, Karte)
+       rechnet ohnehin aus diesem einen Wert weiter. */
     const top = els.boardWrap.getBoundingClientRect().top;
-    const h = Math.max(MAP_MIN, window.innerHeight - top - spaceBelow(els.boardWrap) - MAP_GAP);
+    const h = (ctx && ctx.preview)
+      ? PREVIEW_STAGE_H
+      : Math.max(MAP_MIN, window.innerHeight - top - spaceBelow(els.boardWrap) - MAP_GAP);
     els.boardWrap.style.height = h + 'px';
 
     // Höhe: alles abziehen, was im Rahmen ÜBER und UNTER der Arena
