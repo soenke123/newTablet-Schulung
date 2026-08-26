@@ -1744,6 +1744,26 @@
     }).join(' ');
   }
 
+  /* Die AUFGELÖSTE Antwort („Richtig wäre …") im selben Satz wie die
+     Aufgabe darüber. Der Server schickt sie so, wie er sie rechnet —
+     „1/3x^3-2x^2", „11 0011", „7/8" —, und ohne Satz stünden dort
+     Schrägstrich und Dach statt Bruchstrich und Hochzahl.
+
+     Welcher der drei Setzer greift, entscheidet die GESCHEITERTE
+     Aufgabe: `curQ` steht hier noch auf ihr, denn setQuestion bekommt
+     die neue erst danach (siehe onSubmit).
+
+       Analysis   ein Term mit Großbuchstaben und Ableitungsstrich —
+                  termHTML unmittelbar, wie bei q.given
+       Zahlensysteme  eine Ziffernfolge; die Vierergruppen setzt wie
+                  überall der Client, nicht der Server
+       sonst      Wort für Wort, wie die Aufgabenzeile (mathHTML) */
+  function solutionHTML(s) {
+    if (curQ && curQ.given) return termHTML(s);
+    if (isDigitsQ())        return ctx.esc(groupDigits(s));
+    return mathHTML(s);
+  }
+
   /* Die ANWEISUNG von der AUFGABE trennen. Der Server schickt beides in
      einer Zeile („kürze 12/18", „Klammern auflösen 3(x+4)", „binom
      rückwärts a^2+2ab+b^2") — auf dem Bildschirm gehören sie
@@ -2758,8 +2778,13 @@
         // Länger stehen lassen als die üblichen 1800ms — hier steht
         // die richtige Antwort, die soll auch gelesen werden können.
         // Seit 0110 ein Text („7/8", „<"), keine Summe mehr.
+        //
+        // Und zwar in FORMELSATZ (solutionHTML): die aufgelöste Antwort
+        // ist dieselbe Formel, die eine Zeile darüber steht — mit „^"
+        // und „/" geschrieben sähe sie aus wie etwas anderes.
         const sol = r.reveal && r.reveal.text;
-        setFeedback(sol ? ('❌ Leider falsch. Richtig wäre ' + sol + '.') : '❌ Leider falsch.', 'warn', 3200);
+        setFeedback(sol ? ('❌ Leider falsch. Richtig wäre ' + solutionHTML(sol) + '.') : '❌ Leider falsch.',
+                    'warn', 3200, !!sol);
       }
       flashInput('warn');
     } else {
@@ -2782,9 +2807,15 @@
      dem Moment, in dem der Finger schon zur nächsten Taste unterwegs
      ist. */
   let feedbackTimer = null;
-  function setFeedback(text, kind, ms) {
+  /* `isHTML`: die Rückmeldung trägt Formelsatz (aufgelöste Antwort,
+     siehe solutionHTML). Alles, was von außen kommt, ist dort schon
+     durch ctx.esc gegangen — der Rest des Satzes steht in dieser
+     Datei. Ohne die Kennzeichnung bleibt es bei textContent: eine
+     Antwort, die zufällig nach einem Tag aussieht, ist Text. */
+  function setFeedback(text, kind, ms, isHTML) {
     if (!els.feedback) return;
-    els.feedback.textContent = text;
+    if (isHTML) els.feedback.innerHTML = text;
+    else        els.feedback.textContent = text;
     els.feedback.className = 'cm-feedback' + (kind ? ' cm-feedback--' + kind : '');
     if (feedbackTimer) clearTimeout(feedbackTimer);
     if (text) feedbackTimer = setTimeout(() => {
@@ -2874,8 +2905,16 @@
        hängen, wird nicht angefasst. */
     const ana    = !!q.given;
     const parted = (q.text && !ana) ? splitPrompt(q.text) : { prompt: '', body: q.text || '' };
+    /* Das Gleichheitszeichen bei ANTWORTKACHELN. Beim Tippen steht es
+       als eigenes Element zwischen Aufgabe und Feld (els.eqop, siehe
+       unten); bei Kacheln gibt es kein Feld, das Element ist weg — und
+       „F(x)" allein ist keine Frage, sondern ein Name. Also trägt die
+       Aufgabe es dann selbst: „F(x) =" und darunter die Kacheln.
+       Nur bei Analysis: überall sonst steht in `text` eine ganze
+       Rechnung („3/4 ▢ 2/3"), die kein „=" braucht. */
+    const anaEq = ana && (q.input || 'natural') === 'choice';
     els.q.innerHTML = q.text
-      ? (ana ? termHTML(q.text) : mathHTML(parted.body))
+      ? (ana ? termHTML(q.text + (anaEq ? '=' : '')) : mathHTML(parted.body))
       : ctx.esc(q.a + ' + ' + q.b);
     if (els.qPrompt) {
       els.qPrompt.textContent = parted.prompt;
@@ -3912,6 +3951,7 @@
       // per CSS zu verstecken: verborgene Knöpfe blieben sonst in der
       // Tab-Reihenfolge stehen, und die Lehrkraft tabbte durch neun
       // unsichtbare Schalter.
+      let flagNoteDone = false;   // der Erklärsatz je Gruppe nur einmal
       if (open) g.items.forEach(it => {
         // Die abgeleitete Zeile steht nur da, wenn sie gilt — und dann
         // ohne Knöpfe. Sönkes Vorgabe: „wenn beides drin ist." Eine
@@ -3946,6 +3986,23 @@
            Kategorie zu. */
         if (isFlag(it)) {
           const on = (poolSel[it.key] || 'off') === 'on';
+          /* Ein Satz ÜBER den Schaltern (Sönke, 26.08.2026): „Ganze
+             Zahlen" und „Rationale Zahlen" sagen als Namen nicht, was
+             sie bewirken — sie sehen aus wie zwei weitere Aufgabenarten,
+             die man auch weglassen kann.
+
+             Der Satz kommt aus dem Katalog (`note`, Migration 0120) und
+             steht nur an der ERSTEN Schalterzeile einer Gruppe: er gilt
+             für den ganzen Block darunter, an jeder Zeile stünde er
+             zweimal. Der Rückfalltext greift, solange 0120 nicht
+             eingespielt ist — er sagt dasselbe, nur ohne den Namen der
+             Kategorie. */
+          if (!flagNoteDone) {
+            flagNoteDone = true;
+            out += '<div class="cm-poolnote">' +
+              ctx.esc(it.note || 'Erweitern die Aufgaben dieser Kategorie um größere Zahlenräume.') +
+            '</div>';
+          }
           out += '<div class="cm-poolrow cm-poolrow--flag">' +
             '<span class="cm-poolname">' +
               `<b>⊕ ${ctx.esc(it.label)}</b>` +

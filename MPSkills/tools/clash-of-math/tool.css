@@ -1971,7 +1971,13 @@ body.cm-locked { overflow: hidden; }
    um ihre eigene Höhe — genau in dem Moment, in dem der Finger schon
    zur nächsten Taste unterwegs ist. */
 .cm-play .cm-feedback {
-  min-height: 1.25em;
+  /* Hoch genug für einen GESTAPELTEN Bruch: seit dem Formelsatz der
+     aufgelösten Antwort (26.08.2026) steht in dieser Zeile mal „7/8"
+     als Bild und mal ein einzeiliger Satz. Bliebe die Höhe bei einer
+     Zeile, schöbe die Rückmeldung die Tastatur genau dann, wenn sie
+     erscheint — also in dem Moment, in dem der Finger schon unterwegs
+     ist. */
+  min-height: 1.9em;
   font-weight: 800;
   font-size: .85rem;
   color: var(--cm-ink-soft);
@@ -2850,13 +2856,15 @@ body.cm-locked { overflow: hidden; }
   margin-left: .02em;
 }
 /* Der Ableitungsstrich (0119). Etwas höher gesetzt als das Zeichen von
-   Haus aus sitzt und ohne Luft nach links: er gehört zum f, er steht
-   nicht daneben. */
+   Haus aus sitzt: er gehört zum f, er steht nicht daneben.
+   Nach links braucht er trotzdem Luft (26.08.2026): das f ist KURSIV
+   und lehnt sich mit seiner Oberlänge genau dorthin, wo der Strich
+   steht — herangezogen berührten sich beide. */
 .cm-prime {
   font-family: Georgia, 'Times New Roman', serif;
   position: relative;
   top: -.12em;
-  margin-left: -.02em;
+  margin-left: .1em;
 }
 /* „x =" vor dem Eingabefeld (nur „Nach x auflösen"). Etwas
    zurückgenommen: die Antwort ist das, was dahinter entsteht — das
@@ -3232,6 +3240,20 @@ body.cm-locked { overflow: hidden; }
    nicht bündig unter den Dreier-Reihen darüber. Das ist gewollt — sie
    ist eine andere Art von Einstellung. */
 .cm-poolseg--flag button { padding-left: 16px; padding-right: 16px; }
+/* Der Satz über den Schaltern (26.08.2026). Er gehört zu ihnen und
+   sitzt deshalb auf demselben Grund, aber ohne Trennlinie dazwischen —
+   Satz und Schalter sind EIN Block, und die kräftige Linie darüber
+   trennt ihn von den Aufgabenarten. Sie steht jetzt HIER: die Regel
+   .cm-poolrow:not(--flag) + --flag greift nicht mehr, weil zwischen
+   beiden der Satz steht. */
+.cm-poolnote {
+  padding: 8px 12px 2px;
+  font-size: .84rem;
+  line-height: 1.35;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  border-top: 2px solid color-mix(in srgb, var(--ink) 22%, transparent);
+}
 
 .cm-poolname {
   flex: 1 1 220px;
