@@ -1990,11 +1990,50 @@ body.cm-locked { overflow: hidden; }
    die Tasten. Sie sind das Einzige hier, das größer immer besser ist,
    und so schließt die unterste Reihe bündig mit dem Bildschirmrand ab
    statt mit einer Lücke darunter. */
+/* Drei Raster übereinander: die Variablen-Zeile (fünf Blöcke), das
+   Ziffernfeld (drei bis fünf Spalten, je nach Aufgabenart) und die
+   feste Reihe ⌫ · AC · ✓ (drei Blöcke). Getrennt, weil ein gemeinsames
+   Raster für 5-und-4-und-3 Spalten ein kleinstes gemeinsames Vielfaches
+   bräuchte — und jede neue Feldbreite eine neue Rechnung.
+
+   Das `flex-grow` verteilt die Höhe in Tastenzeilen: 1 oben, 4 in der
+   Mitte, 1 unten. Damit sind alle Tasten gleich hoch, egal ob die
+   Variablen-Zeile mitkommt. */
 .cm-keys {
   flex: 1 1 50%;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.cm-keyvars {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 7px;
+}
+.cm-keypad {
+  flex: 4 1 0;
+  min-height: 0;
   display: grid;
   gap: 7px;
+}
+.cm-keybar {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+/* Zwei Tasten auf einem Platz des Rasters (Klammer auf/zu). Der Spalt
+   dazwischen ist schmaler als der Abstand der übrigen Tasten: die
+   beiden gehören zusammen und sollen wie EIN Bedienelement aussehen. */
+.cm-keypair {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
 }
 .cm-key {
   min-width: 0;
@@ -2669,14 +2708,79 @@ body.cm-locked { overflow: hidden; }
   font-variant: normal;
 }
 
+/* ── Zahl mit Basis: (11 0011)₂ ──────────────────────────────────
+   Migration 0114. Dieselben Bausteine für die AUFGABE und für das
+   EINGABEFELD — was das Kind tippt, soll aussehen wie das, was
+   dasteht (dieselbe Überlegung wie beim gestapelten Bruch).
+
+   Die Klammern sind gewöhnliche Zeichen im Text, kein Rahmen: eine
+   gezeichnete Klammer müsste in jeder Schriftgröße nachgeführt werden,
+   und in der Aufgabe steht sie ohnehin zwischen Ziffern. */
+.cm-based {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+.cm-based > sub {
+  font-size: .5em;
+  /* `sub` würde die Zeilenhöhe aufblähen — die Verschiebung von Hand
+     hält die Aufgabe auf einer Zeile. */
+  vertical-align: baseline;
+  position: relative;
+  top: .2em;
+  margin-left: .04em;
+  opacity: .8;
+}
+/* Die Ziffernfolge selbst. Feste Ziffernbreite, damit die
+   Vierergruppen untereinander stehen, und ein etwas größerer
+   Wortabstand, damit die Lücke zwischen den Gruppen als Gliederung
+   gelesen wird und nicht als zwei Zahlen. */
+.cm-num {
+  font-variant-numeric: tabular-nums;
+  word-spacing: .08em;
+}
+/* Im Eingabefeld darf die Zahl umbrechen — zwölf Binärstellen passen
+   auf einem schmalen Handy sonst nicht neben die Aufgabe. Der Umbruch
+   trifft dann die Gruppen-Lücke, nicht die Mitte einer Vierergruppe. */
+.cm-based--in { white-space: normal; }
+.cm-based--in > .cm-num { overflow-wrap: break-word; }
+/* Der leere Platz in der Klammer: derselbe blinkende Strich wie im
+   leeren Eingabefeld — für „bitte hier tippen" gibt es keine zweite
+   Sprache. */
+.cm-inbox::before {
+  content: '|';
+  font-style: normal;
+  color: color-mix(in srgb, var(--cm-team) 75%, var(--cm-ink));
+  animation: cmCaret 1.1s step-end infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-inbox::before { animation: none; opacity: .5; }
+}
+
 /* ── Antwortkacheln statt Ziffern ────────────────────────────────
-   Dasselbe Raster (.cm-keys) mit anderer Spaltenzahl, dieselbe
+   Dasselbe Raster (.cm-keypad) mit anderer Spaltenzahl, dieselbe
    Pergament-Optik wie die Tasten — es ist die Tastatur dieser
    Aufgabenart, kein zweites Bedienelement. Nur größer gesetzt: hier
    steht eine Antwort drauf, keine einzelne Ziffer. */
 .cm-key--choice {
   font-size: clamp(1.2rem, 6vw, 2.1rem);
   padding: 0 6px;
+}
+/* Seit 0114 kann auf einer Kachel „1010 1111 0011" stehen. Nur DIESE
+   Kacheln werden kleiner gesetzt und dürfen umbrechen — ein „3/4"
+   soll nicht schrumpfen, bloß weil es woanders lange Antworten gibt.
+   Welche lang ist, entscheidet buildKeypad an der Zeichenzahl.
+   `text-wrap: balance` verteilt die zwölf Stellen auf zwei etwa gleich
+   lange Zeilen statt auf elf und eine; der Umbruch trifft dann die
+   Gruppen-Lücke. Gemessen wird an der Handy-Breite — dort spielen die
+   Teilnehmer. */
+.cm-key--choicelong {
+  font-size: clamp(.9rem, 4.4vw, 1.5rem);
+  line-height: 1.15;
+  padding: 0 4px;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  font-variant-numeric: tabular-nums;
 }
 /* Angetippt und unterwegs zum Server. Die Kachel hält den Blick fest,
    solange die Antwort läuft — sonst wüsste bei zwei schnellen Tipps
@@ -2701,7 +2805,50 @@ body.cm-locked { overflow: hidden; }
    größer gesetzt (ein „−" in Zifferngröße sieht aus wie ein Strich im
    Nichts), der Bruch trägt statt eines Wortes sein eigenes Bild. */
 .cm-key--sign { font-size: clamp(1.3rem, 6vw, 2rem); line-height: 1; }
-.cm-key--frac { padding: 4px; }
+/* Die Klammern stehen zu zweit auf einem Platz und sind deshalb halb
+   so breit wie eine normale Taste — kleiner gesetzt, damit sie darin
+   nicht anstoßen. */
+.cm-key--paren { font-size: clamp(1rem, 4.5vw, 1.7rem); padding: 0 2px; }
+/* Die Variablen sind Buchstaben in einer Ziffern-Tastatur. Kursiv wie
+   in einem Schulbuch, damit auf einen Blick klar ist, dass „x" hier
+   keine Rechenart ist, sondern eine Unbekannte.
+
+   ⚠️ NICHT in der Anzeigeschrift: --cm-display ist Cinzel, eine
+   Versalienschrift — sie stellt jedes kleine a als A dar, und im
+   Zahlensystem-Raum stünde die Variable „a" dann Buchstabe für
+   Buchstabe wie die Hexziffer „A" da. Georgia steht im selben Stapel,
+   bleibt bei der Buchoptik und kann Kleinbuchstaben (dieselbe Abhilfe
+   wie bei .cm-qword). */
+.cm-key--var {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 700;
+  text-transform: none;
+  font-variant: normal;
+  font-size: clamp(1rem, 5vw, 1.7rem);
+}
+.cm-key--frac,
+.cm-key--exp  { padding: 4px; }
+/* Die Hochzahl-Taste: dieselbe Bildsprache wie der Bruch, zwei leere
+   Kästchen, das zweite hochgestellt (Sönkes Vorgabe — „Quadrat hoch
+   Quadrat").
+   ⚠️ Die Hochstellung kommt hier NICHT von `<sup>`: in einem
+   Flex-Container ist jedes Kind ein Flex-Item, und `vertical-align`
+   — also auch das `super` des sup — wird dort schlicht ignoriert.
+   Beide Kästchen stünden nebeneinander auf gleicher Höhe. Gehoben wird
+   deshalb umgekehrt: das GROSSE Kästchen rückt nach unten, und der
+   Höhenunterschied ist die Hochstellung. */
+.cm-pow {
+  display: inline-flex;
+  align-items: flex-start;
+  line-height: 1;
+}
+.cm-pow > .cm-fracbox { margin-top: .3em; }
+.cm-pow > sup {
+  font-size: .68em;
+  margin-left: .1em;
+}
+.cm-pow--key { font-size: 1em; }
 /* Der Bruchstrich AUF der Taste: dieselben drei Zeilen wie in der
    Eingabe, nur mit leeren Kästchen statt Ziffern — die Taste zeigt,
    was sie herstellt. Nicht verkleinert (kein .74em wie im Text): hier
@@ -2761,6 +2908,13 @@ body.cm-locked { overflow: hidden; }
   border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   color: var(--ink);
   white-space: nowrap;
+}
+/* Der Chip einer abgeleiteten Art (Migration 0114): gestrichelt, weil
+   niemand sie angeklickt hat — sie ist dazugekommen. Sie steht
+   trotzdem in der Zeile, denn sie kommt dran. */
+.cm-poolsumops > i.cm-poolsumauto {
+  border-style: dashed;
+  background: transparent;
 }
 /* Ohne Aufgaben kein Spiel — dieselbe Zeile sagt dann auch, warum der
    Startknopf grau ist.
@@ -2889,6 +3043,26 @@ body.cm-locked { overflow: hidden; }
 }
 .cm-poolrow + .cm-poolrow {
   border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+/* Die abgeleitete Zeile (Migration 0114): „Bin ↔ Hex" ist keine Wahl,
+   sondern eine Folge aus zwei Wahlen. Sie steht deshalb erst da, wenn
+   sie gilt — und dann ohne Knöpfe, leicht eingerückt und hinterlegt,
+   damit auf einen Blick klar ist, dass hier nichts zu klicken ist. */
+.cm-poolrow--auto {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  padding-left: 22px;
+}
+.cm-poolauto {
+  flex: 0 0 auto;
+  font-size: .84rem;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--accent) 70%, var(--ink));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  cursor: help;
 }
 .cm-poolname {
   flex: 1 1 220px;

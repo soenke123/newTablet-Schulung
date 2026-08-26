@@ -76,7 +76,7 @@
    (2) Die Karte ist standardmäßig ZU und hängt hinter einem Knopf
        (openMap) — auf dem Spielbildschirm gehört der Platz der
        Aufgabe.
-   (3) Eigene Tastatur statt der des Geräts (KEY_BASE/KEY_EXTRA/
+   (3) Eigene Tastatur statt der des Geräts (KEY_DEC/KEY_HEX/KEY_EXTRA/
        MODES, siehe dort). Sie ist als Beschreibung angelegt, weil
        die kommenden Aufgabenarten — Brüche, Vorzeichen, Variablen,
        Potenzen, Wurzeln, Sinus/Kosinus, Binär, Hexadezimal — je ein
@@ -298,7 +298,10 @@
   let keyMode = null, keyChoices = null, choiceBtn = null, mapOpen = false;
   // Fingerabdruck der angezeigten Aufgabe — daran erkennt setQuestion,
   // ob wirklich eine neue da ist (es läuft bei jedem Takt).
-  let lastQSig = null;
+  // `curQ` ist die Aufgabe selbst: seit 0114 hängen die Tastatur-Grenzen
+  // an ihr (welche Ziffern gelten, wie viele Stellen, welche Zielbasis),
+  // und keyPress/renderAnswer müssen sie erreichen können.
+  let lastQSig = null, curQ = null;
   // Serien-Boni (Migration 0106): offene manuelle Picks aus dem
   // Einzel-Bonus (10er-Serie), ihre Frist, der Countdown-Timer dafür,
   // die höchste bereits gezeigte Team-Event-id (Toast-Dedupe) und der
@@ -1309,65 +1312,141 @@
      jeder Gelegenheit wieder.
 
      Der Aufbau ist deshalb bewusst eine BESCHREIBUNG, kein festes
-     HTML, damit jede kommende Aufgabenart nur eine Zeile hier braucht:
+     HTML, damit jede kommende Aufgabenart nur eine Zeile hier braucht.
+     Die Tastatur besteht aus DREI übereinanderliegenden Teilen
+     (Sönkes Vorgaben, 2026-08-26):
 
-       KEY_BASE    der Grundblock, den ALLE Arten teilen. Die Ziffern
-                   stehen bei jeder Art an derselben Stelle — wer
-                   „Brüche" bekommt, muss die 7 nicht neu suchen.
-       KEY_EXTRA   Zusatztasten, nach Thema gebündelt. Sie hängen sich
-                   als weitere Zeile UNTER den Grundblock, statt ihn
-                   umzustellen.
-       MODES       welche Bündel eine Aufgabenart mitbringt, und
-                   welche Ziffern sie überhaupt zulässt.
+       .cm-keyvars  die Variablen-Zeile ganz oben: a · b · c · x · y,
+                    fünf gleich breite Blöcke. Für binomische Formeln
+                    und Ableitungen — heute noch ohne Wirkung.
+       .cm-keypad   das Ziffernfeld, vier Zeilen hoch, rechts daneben
+                    die Zusatzspalte
+       .cm-keybar   die untere Reihe: ⌫ · AC · ✓, drei gleich breite
+                    Tasten über die volle Breite
 
-     Der Grundblock (4 Spalten × 4 Zeilen):
+     Drei getrennte Raster statt eines gemeinsamen: fünf Blöcke oben,
+     drei bis fünf Spalten in der Mitte, drei unten — in EINEM Raster
+     bräuchte das ein kleinstes gemeinsames Vielfaches und jede neue
+     Breite eine neue Rechnung.
 
-        7  8  9  ⌫
-        4  5  6  C
-        1  2  3  ✓   ← über zwei Zeilen, unten rechts (Sönkes Vorgabe)
-        ‹—— 0 ——›
+     ── Das Ziffernfeld ──────────────────────────────────────────
+     Zwei Anordnungen, mehr sollen es nicht werden:
 
-     Welche Art gerade gilt, sagt der Server je Frage
-     (`question.input`). Seit Migration 0110 gibt es drei Layouts, und
-     mehr sollen es auch nicht werden (Sönkes Vorgabe — „nicht bei jeder
-     Frage das ganze Button-Layout ändern"):
+       ZEHNER (alles außer Zahlensystemen), 3 Spalten:
 
-       natural   der Grundblock, 4 Zeilen
-       fraction  der Grundblock plus EINE Zeile mit ± und a/b
-       choice    kein Grundblock, sondern die Antwortkacheln (2×3, bei
-                 drei möglichen Antworten 1×3)
+          7  8  9        Das Minus teilt sich die unterste Zeile mit
+          4  5  6        der Null — die Null doppelt so breit wie das
+          1  2  3        Minus, weil sie hundertmal öfter gedrückt wird.
+         ‹—0—›  −
 
-     Zwischen natural und fraction wechselt es NICHT von Frage zu
-     Frage: der Server entscheidet das einmal je Raum aus dem
-     Aufgabenpool (clash_pool_input, 0110). Steht irgendein Bruchtyp
-     zum Tippen im Pool, haben auch die reinen Additionsaufgaben dieses
-     Raums die Bruchtasten. Nur frei ↔ Auswahl wechselt je Frage, und
-     das ist auf einen Blick zu sehen.
+       HEX (Zahlensysteme), 4 Spalten, 0 unten links und zeilenweise
+       nach oben — die Null liegt beim Daumen, die Buchstaben oben:
 
-     Die übrigen Arten (Binär, Hexadezimal, Terme, Trigonometrie)
-     stehen weiter da, weil sie beim Hinzufügen sonst wieder eine
-     Layout-Diskussion auslösen würden; erreichbar sind sie erst, wenn
-     der Server sie benennt. */
-  const KEY_BASE = [
+          C  D  E  F
+          8  9  A  B
+          4  5  6  7
+          0  1  2  3
+
+     ── Die Zusatzspalte ─────────────────────────────────────────
+     Rechts NEBEN dem Ziffernfeld, vier Plätze, von UNTEN gefüllt
+     (Sönkes Reihenfolge): Komma · Bruch · Hochzahl · Klammern. Der
+     Daumen liegt unten, und dort steht deshalb das Zeichen, das
+     zuerst gebraucht wird. Die Klammern teilen sich ihren Platz zu
+     zweit — „auf" und „zu" gehören zusammen und kommen nie einzeln.
+
+     Beim ZAHLENSYSTEM gibt es die Spalte gar nicht: dort wird
+     umgerechnet, und weder Bruch noch Komma noch Klammer haben etwas
+     damit zu tun (Sönkes Vorgabe). Nur das 4×4-Feld.
+
+     ⚠️ Komma, Hochzahl, Klammern und die Variablen kann heute keine
+     Aufgabenart — sie stehen trotzdem da (Sönkes Vorgabe: „Du kannst
+     auch schon die Zeichen zeigen") und sind ausgegraut, bis der
+     Server sie in `ops` nennt. Das ist kein Sonderfall, sondern
+     dieselbe Mechanik, die bei einer Binäraufgabe die 2 bis 9
+     abschaltet: die Tastatur zeigt den ganzen Vorrat, die Aufgabe
+     sagt, was davon gilt.
+
+     ── Welche Art gerade gilt ───────────────────────────────────
+     Sagt der Server je Frage (`question.input`):
+
+       natural   Variablen + Zehnerfeld + Zusatzspalte
+       fraction  dasselbe (der Unterschied liegt allein in `ops`)
+       numsys    NUR das Hexfeld und die untere Reihe
+       mixed     der Raum, in dem Brüche UND Zahlensysteme frei
+                 getippt werden: Hexfeld + Zusatzspalte + Variablen.
+                 ⚠️ Dort steht statt der Klammern das MINUS in der
+                 Spalte — im Hexfeld ist neben der Null unten links
+                 kein Platz mehr dafür, und ein Bruch kann negativ
+                 werden, eine Klammer wird hier nie gebraucht.
+       choice    kein Ziffernfeld und keine Reihen, sondern die
+                 Antwortkacheln (2×3, bei drei Antworten 1×3)
+
+     Zwischen den Tipp-Layouts wechselt es NICHT von Frage zu Frage:
+     der Server entscheidet das einmal je Raum aus dem Aufgabenpool
+     (clash_pool_input). Nur frei ↔ Auswahl wechselt je Frage, und das
+     ist auf einen Blick zu sehen.
+
+     Was je Frage wechselt, ist die BESCHALTUNG: bei „(173)₁₀ = (▢)₂"
+     sind nur 0 und 1 hell, alles andere ist ausgegraut (Sönkes
+     Vorgabe). Das steht an der Frage (`digits`, `ops`) und nicht in
+     dieser Datei — siehe applyKeyLimits.
+
+     ⚠️ Die Leeren-Taste heißt „AC" und nicht „C": im Hexfeld stünde sie
+     sonst neben der Hexziffer C, und zwei gleich beschriftete Tasten
+     nebeneinander sind eine Falle. Ein Name für eine Taste, in allen
+     Layouts derselbe. */
+  // Ein „−", kein „±": auf dem Taschenrechner im Ranzen steht ein
+  // Minus, und genau das sucht das Kind. Die Taste SCHALTET weiterhin
+  // (zweiter Druck nimmt das Minus zurück) — sie behauptet nur nicht
+  // mehr, zwei Zeichen zu sein.
+  const KEY_SIGN = { lab: '−', act: 'sign', op: 'sign',
+                     cls: 'cm-key--sign', aria: 'Minus setzen oder wegnehmen' };
+
+  const KEY_DEC = [
     { lab: '7', ins: '7', r: 1, c: 1 }, { lab: '8', ins: '8', r: 1, c: 2 }, { lab: '9', ins: '9', r: 1, c: 3 },
     { lab: '4', ins: '4', r: 2, c: 1 }, { lab: '5', ins: '5', r: 2, c: 2 }, { lab: '6', ins: '6', r: 2, c: 3 },
     { lab: '1', ins: '1', r: 3, c: 1 }, { lab: '2', ins: '2', r: 3, c: 2 }, { lab: '3', ins: '3', r: 3, c: 3 },
-    { lab: '0', ins: '0', r: 4, c: 1, cs: 3 },
-    { lab: '⌫', act: 'back',   r: 1, c: 4, cls: 'cm-key--util', aria: 'Letzte Eingabe löschen' },
-    { lab: 'C', act: 'clear',  r: 2, c: 4, cls: 'cm-key--util', aria: 'Eingabe leeren' },
-    { lab: '✓', act: 'submit', r: 3, c: 4, rs: 2, cls: 'cm-key--go', aria: 'Antwort abschicken' }
+    { lab: '0', ins: '0', r: 4, c: 1, cs: 2 },
+    Object.assign({ r: 4, c: 3 }, KEY_SIGN)
   ];
 
-  /* Die Zusatzbündel. Sie tragen KEINE Position — die verteilt
-     buildKeypad() der Reihe nach auf die Zeilen unter dem Grundblock,
-     damit ein neues Bündel nirgends nachgerechnet werden muss. */
+  /* Die Variablen-Zeile über dem Ziffernfeld. Fünf Blöcke, weil fünf
+     Buchstaben: a, b, c für binomische Formeln, x und y für das
+     Ableiten (Sönkes Vorgabe). Sie tragen `op: 'vars'` und sind damit
+     ausgegraut, solange keine Aufgabenart sie nennt.
+
+     ⚠️ Das `op` ist hier nicht Zierde: die Variable „a" und die
+     Hexziffer „A" sind derselbe Buchstabe. Ohne eigenes Merkmal würde
+     die Ziffernprüfung in applyKeyLimits die Variable im
+     Zahlensystem-Raum aufleuchten lassen. */
+  const KEY_VARS = ['a', 'b', 'c', 'x', 'y'].map(ch =>
+    ({ lab: ch, ins: ch, op: 'vars', cls: 'cm-key--var', aria: 'Variable ' + ch }));
+
+  /* Das Hexfeld. Aus der Zeichenfolge gerechnet statt abgetippt: die
+     Anordnung ist eine REGEL („0 unten links, zeilenweise nach oben"),
+     und eine Regel als sechzehn Koordinatenpaare hinzuschreiben heißt,
+     sie sechzehnmal richtig treffen zu müssen. */
+  const HEX_CHARS = '0123456789ABCDEF';
+  const KEY_HEX = HEX_CHARS.split('').map((ch, i) => ({
+    lab: ch, ins: ch, r: 4 - Math.floor(i / 4), c: (i % 4) + 1
+  }));
+
+  /* Die untere Reihe. Immer dieselben drei, immer gleich breit, immer
+     ganz unten — die einzige Zeile, die in JEDEM Tipp-Layout an
+     derselben Stelle steht. */
+  const KEY_BAR = [
+    { lab: '⌫',  act: 'back',   cls: 'cm-key--util', aria: 'Letzte Eingabe löschen' },
+    { lab: 'AC', act: 'clear',  cls: 'cm-key--util', aria: 'Eingabe leeren' },
+    { lab: '✓',  act: 'submit', cls: 'cm-key--go',   aria: 'Antwort abschicken' }
+  ];
+
+  /* Die Zeichen der Zusatzspalte. Sie tragen KEINE Position —
+     buildKeypad setzt sie von unten nach oben, damit ein neues Zeichen
+     nirgends nachgerechnet werden muss. `pair` sind zwei Tasten, die
+     sich einen Platz teilen. */
   const KEY_EXTRA = {
-    // Ein „−", kein „±": auf dem Taschenrechner im Ranzen steht ein
-    // Minus, und genau das sucht das Kind. Die Taste SCHALTET
-    // weiterhin (zweiter Druck nimmt das Minus zurück) — sie behauptet
-    // nur nicht mehr, zwei Zeichen zu sein.
-    sign:  [{ lab: '−', act: 'sign', cls: 'cm-key--sign', aria: 'Minus setzen oder wegnehmen' }],
-    dec:   [{ lab: ',', ins: ',' }],
+    sign: KEY_SIGN,
+    dec:  { lab: ',', ins: ',', op: 'dec', aria: 'Komma' },
     // Kein einzufügendes Zeichen, sondern eine Handlung: der Druck
     // macht aus dem Getippten den ZÄHLER und öffnet darunter den
     // Nenner (Sönkes Vorgabe). Ein „/" im Text wäre etwas anderes —
@@ -1377,34 +1456,44 @@
     // der Sache: ein echter Bruchstrich mit einem leeren Kästchen
     // darüber und darunter — dieselben drei Zeilen, die gleich in der
     // Eingabe stehen. `lab` bleibt als Text für die Vorlesehilfe.
-    frac:  [{ lab: 'a/b', act: 'frac', cls: 'cm-key--frac', aria: 'Bruch: Zähler und Nenner',
-              labHtml: '<span class="cm-frac cm-frac--key">' +
-                       '<b><span class="cm-fracbox"></span></b>' +
-                       '<i><span class="cm-fracbox"></span></i></span>' }],
-    pow:   [{ lab: 'x²', ins: '^2' }, { lab: 'xⁿ', ins: '^' }, { lab: '√', ins: '√' }],
-    trig:  [{ lab: 'sin', ins: 'sin(' }, { lab: 'cos', ins: 'cos(' }, { lab: 'tan', ins: 'tan(' },
-            { lab: ')', ins: ')' }, { lab: 'π', ins: 'π' }],
-    vars:  [{ lab: 'x', ins: 'x' }, { lab: 'y', ins: 'y' }],
-    // ⚠️ Wenn die Hexadezimal-Aufgaben tatsächlich kommen: das „C"
-    // hier trifft auf das „C" (Leeren) im Grundblock. Zwei gleich
-    // beschriftete Tasten nebeneinander sind eine Falle — dann die
-    // Leeren-Taste umbenennen (z. B. „AC"), nicht die Ziffer.
-    hex:   [{ lab: 'A', ins: 'A' }, { lab: 'B', ins: 'B' }, { lab: 'C', ins: 'C' },
-            { lab: 'D', ins: 'D' }, { lab: 'E', ins: 'E' }, { lab: 'F', ins: 'F' }]
+    frac: { lab: 'a/b', act: 'frac', op: 'frac', cls: 'cm-key--frac',
+            aria: 'Bruch: Zähler und Nenner',
+            labHtml: '<span class="cm-frac cm-frac--key">' +
+                     '<b><span class="cm-fracbox"></span></b>' +
+                     '<i><span class="cm-fracbox"></span></i></span>' },
+    // Dieselbe Bildsprache wie der Bruch: zwei leere Kästchen, eines
+    // hochgestellt (Sönkes Vorgabe — „Zeichen zeigt Quadrat hoch
+    // Quadrat"). Noch ohne Wirkung; die Taste ist ausgegraut, bis eine
+    // Aufgabenart sie in `ops` nennt.
+    exp:  { lab: 'x^n', act: 'exp', op: 'exp', cls: 'cm-key--exp', aria: 'Hochzahl',
+            labHtml: '<span class="cm-pow cm-pow--key">' +
+                     '<span class="cm-fracbox"></span>' +
+                     '<sup><span class="cm-fracbox"></span></sup></span>' },
+    // Zwei schmale Tasten auf einem Platz: „auf" und „zu" gehören
+    // zusammen und werden nie einzeln gebraucht.
+    paren: { pair: [
+      { lab: '(', ins: '(', op: 'paren', cls: 'cm-key--paren', aria: 'Klammer auf' },
+      { lab: ')', ins: ')', op: 'paren', cls: 'cm-key--paren', aria: 'Klammer zu' }
+    ] }
   };
 
-  /* `digits` grenzt den Grundblock ein (Binär kennt nur 0 und 1);
-     fehlt der Schlüssel, sind alle zehn Ziffern erlaubt.
-     `base` ist die Zahlenbasis, mit der parseAnswer liest. */
+  /* Welches Ziffernfeld, welche Zusatzspalte und ob die Variablen-Zeile
+     mitkommt. Welche Tasten gerade GELTEN, steht nicht hier, sondern an
+     der Frage (applyKeyLimits): dieselbe Tastatur trägt bei
+     „(1111)₂ = (▢)₁₆" alle sechzehn Zeichen und bei „(173)₁₀ = (▢)₂"
+     nur zwei.
+
+     `col` steht in der Reihenfolge VON UNTEN — so, wie Sönke sie
+     aufgezählt hat, und so, wie sie auf dem Bildschirm steht.
+
+     natural und fraction sind hier absichtlich gleich: die Tastatur
+     eines Raums soll nicht davon abhängen, ob zufällig ein Bruchtyp
+     gewählt wurde — was das Kind darf, sagt die einzelne Aufgabe. */
   const MODES = {
-    natural: { extra: [],                       base: 10 },
-    integer: { extra: ['sign'],                 base: 10 },
-    decimal: { extra: ['sign', 'dec'],          base: 10 },
-    fraction:{ extra: ['sign', 'frac'],         base: 10 },
-    binary:  { extra: [],  digits: '01',        base: 2  },
-    hexa:    { extra: ['hex'],                  base: 16 },
-    algebra: { extra: ['sign', 'vars', 'pow'],  base: 10 },
-    trig:    { extra: ['dec', 'pow', 'trig'],   base: 10 }
+    natural:  { vars: true, col: ['dec', 'frac', 'exp', 'paren'] },
+    fraction: { vars: true, col: ['dec', 'frac', 'exp', 'paren'] },
+    numsys:   { hex: true },
+    mixed:    { hex: true, vars: true, col: ['dec', 'frac', 'exp', 'sign'] }
   };
   const modeOf = name => MODES[name] || MODES.natural;
 
@@ -1417,16 +1506,59 @@
       '<b>' + ctx.esc(num) + '</b><i>' + ctx.esc(den) + '</i></span>';
   }
 
-  /* Die Aufgabe kommt als fertiger Text vom Server („3/4 + 1/8"). Jedes
-     WORT, das wie ein Bruch aussieht, wird hier gestapelt; der Rest
-     bleibt Text. So braucht der Server kein zweites Anzeigeformat und
-     eine neue Aufgabenart keine Zeile in dieser Datei. */
+  /* Eine Zahl mit ihrer Basis, wie sie in der Aufgabe steht:
+     „(11 0011)₂". Die Klammer gehört dazu — das Eingabefeld daneben
+     steht in derselben Klammer mit der ZIELbasis, und erst dadurch
+     liest sich die Zeile als eine Gleichung (Sönkes Vorgabe:
+     „(1111)2 = ([])16, [] ist das Input-Feld"). */
+  function baseHTML(digits, base) {
+    return '<span class="cm-based">(' +
+      '<span class="cm-num">' + ctx.esc(digits) + '</span>)' +
+      '<sub>' + ctx.esc(base) + '</sub></span>';
+  }
+
+  /* Vierergruppen von rechts: „110011" wird „11 0011". Sönkes Vorgabe —
+     die Lücke setzt das Programm, nicht das Kind. Sie ist reine
+     Anzeige; was an den Server geht, trägt nie ein Leerzeichen.
+     Dieselbe Regel wie clash_num_group in Migration 0114, damit die
+     getippte Antwort genauso aussieht wie die Aufgabe darüber. */
+  function groupDigits(s) {
+    const t = String(s == null ? '' : s).replace(/ /g, '');
+    if (t.length <= 4) return t;
+    let at = t.length % 4 || 4;
+    let out = t.slice(0, at);
+    while (at < t.length) { out += ' ' + t.slice(at, at + 4); at += 4; }
+    return out;
+  }
+
+  /* Die Aufgabe kommt als fertiger Text vom Server („3/4 + 1/8",
+     „(11 0011)_2"). Jedes WORT, das wie ein Bruch oder wie eine Zahl
+     mit Basis aussieht, wird hier gesetzt; der Rest bleibt Text. So
+     braucht der Server kein zweites Anzeigeformat und eine neue
+     Aufgabenart keine Zeile in dieser Datei. */
   const FRAC_TOKEN = /^(-?\d+)\/(\d+)$/;
+  // „(1011 0011)_2" — der Server schickt den Index als „_2", weil eine
+  // tiefgestellte Ziffer kein Zeichen ist, das jede Schrift hat. Das
+  // Leerzeichen der Vierergruppen fällt beim Zerlegen weg und wird hier
+  // neu gesetzt: so ist die Gruppierung an EINER Stelle geregelt.
+  const BASE_TOKEN = /^\(([0-9A-F]+)\)_(\d+)$/;
+  // Reine Ziffern-/Hexfolgen sind KEIN Wort: „FF" bekäme sonst die
+  // Anweisungsschrift aus 0112 („kürze"), obwohl es eine Antwort ist.
+  // Bewusst ohne eigene Klasse — „37 + 48" soll aussehen wie immer.
+  const NUM_TOKEN  = /^[0-9A-F]+$/;
   const WORD_TOKEN = /[A-Za-zÄÖÜäöüß]/;
   function mathHTML(text) {
-    return String(text || '').split(/\s+/).map(tok => {
+    // Erst die Vierergruppen wieder einsammeln: „(1011 0011)_2" ist
+    // durch das Zerlegen am Leerzeichen zu zwei Stücken geworden.
+    const src = String(text || '').replace(
+      /\(([0-9A-F][0-9A-F ]*)\)_(\d+)/g,
+      (all, d, b) => '(' + d.replace(/ /g, '') + ')_' + b);
+    return src.split(/\s+/).map(tok => {
+      const b = BASE_TOKEN.exec(tok);
+      if (b) return baseHTML(groupDigits(b[1]), b[2]);
       const m = FRAC_TOKEN.exec(tok);
       if (m) return fracHTML(m[1], m[2], false);
+      if (NUM_TOKEN.test(tok)) return ctx.esc(tok);
       // Ein WORT in der Aufgabe („kürze 12/18", 0112) bekommt eine
       // eigene Schrift: die Anzeigeschrift des Spiels ist Cinzel, eine
       // Versalienschrift — sie stellt jedes kleine k als K dar, und
@@ -1436,10 +1568,29 @@
     }).join(' ');
   }
 
+  /* Eine Taste. `style` bekommt sie nur, wenn sie in einem Raster mit
+     festen Plätzen sitzt (Ziffernfeld, Zusatzspalte) — in der unteren
+     Reihe und bei den Antwortkacheln ordnet das Raster selbst. */
+  function keyHTML(k, style) {
+    return '<button type="button" class="cm-key ' + (k.cls || '') + '"' +
+      (style ? ' style="' + style + '"' : '') +
+      (k.ins ? ' data-ins="' + ctx.esc(k.ins) + '"' : '') +
+      (k.act ? ' data-act="' + k.act + '"' : '') +
+      // `data-op` ist der Name, unter dem die FRAGE diese Taste
+      // freigibt (question.ops). Ziffern haben keinen — für sie
+      // entscheidet question.digits.
+      (k.op ? ' data-op="' + k.op + '"' : '') +
+      // `labHtml` ist die Ausnahme für Tasten, deren Beschriftung ein
+      // Bild ist (Bruchstrich, Hochzahl). Sie kommt aus KEY_EXTRA hier
+      // in der Datei, nie vom Server — sonst wäre das eine offene Tür.
+      ' aria-label="' + ctx.esc(k.aria || k.lab) + '">' +
+      (k.labHtml || ctx.esc(k.lab)) + '</button>';
+  }
+
   function buildKeypad(mode, q) {
     // Auswahl-Aufgaben (Migration 0110): die Tastatur IST die Antwort.
-    // Kein Grundblock, keine Eingabe — ein Tipp schickt ab (Sönkes
-    // Entscheidung: „Tippen = sofort abschicken").
+    // Kein Ziffernfeld, keine untere Reihe, keine Eingabe — ein Tipp
+    // schickt ab (Sönkes Entscheidung: „Tippen = sofort abschicken").
     if (mode === 'choice') {
       const list = (q && Array.isArray(q.choices)) ? q.choices : [];
       // Sechs Kacheln stehen 2×3, drei (Vergleichen: < = >) in einer
@@ -1447,11 +1598,20 @@
       // — der Daumen findet die Kacheln an derselben Stelle.
       const cols = list.length <= 3 ? list.length : 2;
       const rows = Math.max(1, Math.ceil(list.length / cols));
-      els.keys.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
-      els.keys.style.gridTemplateRows    = 'repeat(' + rows + ', 1fr)';
-      els.keys.innerHTML = list.map(c =>
-        '<button type="button" class="cm-key cm-key--choice" data-choice="' + ctx.esc(c) + '">' +
-        mathHTML(c) + '</button>').join('');
+      // Eine Antwort wie „1010 1111 0011" braucht kleinere Schrift und
+      // darf umbrechen; „3/4" soll deswegen aber nicht schrumpfen.
+      // Entschieden wird an der längsten Kachel, damit die sechs gleich
+      // aussehen — sechs verschieden große Kacheln wären ein Hinweis
+      // darauf, welche die besondere ist.
+      const long = list.some(c => String(c).replace(/ /g, '').length > 4);
+      els.keys.innerHTML =
+        '<div class="cm-keypad" style="grid-template-columns:repeat(' + cols + ',1fr);' +
+        'grid-template-rows:repeat(' + rows + ',1fr)">' +
+        list.map(c =>
+          '<button type="button" class="cm-key cm-key--choice' +
+          (long ? ' cm-key--choicelong' : '') + '" data-choice="' + ctx.esc(c) + '">' +
+          mathHTML(c) + '</button>').join('') +
+        '</div>';
       keyMode = mode;
       keyChoices = list.slice();
       choiceBtn = null;   // die alte Kachel ist mit dem innerHTML weg
@@ -1459,35 +1619,72 @@
     }
 
     const m = modeOf(mode);
-    const extras = (m.extra || []).reduce((all, k) => all.concat(KEY_EXTRA[k] || []), []);
-    const cols = 4;
-    let rows = 4, html = '';
+    const base = m.hex ? KEY_HEX : KEY_DEC;
+    const digitCols = m.hex ? 4 : 3;
+    const col = m.col || [];
+    // Die Zusatzspalte gibt es nur, wenn etwas hineingehört. Beim
+    // Zahlensystem-Umwandeln fällt sie weg — vier Spalten Hexziffern,
+    // sonst nichts (Sönkes Vorgabe).
+    const cols = digitCols + (col.length ? 1 : 0);
+    const at = (r, c, k) =>
+      'grid-area:' + r + '/' + c + '/span ' + (k.rs || 1) + '/span ' + (k.cs || 1);
 
-    const cell = (k, r, c) => {
-      const disabled = (k.ins && m.digits && /^[0-9]$/.test(k.ins) && m.digits.indexOf(k.ins) < 0);
-      const style = 'grid-area:' + r + '/' + c + '/span ' + (k.rs || 1) + '/span ' + (k.cs || 1);
-      return '<button type="button" class="cm-key ' + (k.cls || '') + '" style="' + style + '"' +
-        (k.ins ? ' data-ins="' + ctx.esc(k.ins) + '"' : '') +
-        (k.act ? ' data-act="' + k.act + '"' : '') +
-        (disabled ? ' disabled' : '') +
-        // `labHtml` ist die Ausnahme für Tasten, deren Beschriftung ein
-        // Bild ist (der Bruchstrich). Sie kommt aus KEY_EXTRA hier in
-        // der Datei, nie vom Server — sonst wäre das eine offene Tür.
-        ' aria-label="' + ctx.esc(k.aria || k.lab) + '">' + (k.labHtml || ctx.esc(k.lab)) + '</button>';
-    };
-
-    KEY_BASE.forEach(k => { html += cell(k, k.r, k.c); });
-    extras.forEach((k, i) => {
-      const r = 5 + Math.floor(i / cols);
-      html += cell(k, r, (i % cols) + 1);
-      rows = Math.max(rows, r);
+    let pad = base.map(k => keyHTML(k, at(k.r, k.c, k))).join('');
+    // Von UNTEN nach oben (Sönkes Reihenfolge): der erste Eintrag steht
+    // in der untersten Zeile, wo der Daumen liegt.
+    col.slice(0, 4).forEach((name, i) => {
+      const spec = KEY_EXTRA[name];
+      if (!spec) return;
+      const style = at(4 - i, cols, spec);
+      pad += Array.isArray(spec.pair)
+        ? '<div class="cm-keypair" style="' + style + '">' +
+          spec.pair.map(k => keyHTML(k, null)).join('') + '</div>'
+        : keyHTML(spec, style);
     });
 
-    els.keys.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
-    els.keys.style.gridTemplateRows    = 'repeat(' + rows + ', 1fr)';
-    els.keys.innerHTML = html;
+    els.keys.innerHTML =
+      (m.vars
+        ? '<div class="cm-keyvars">' + KEY_VARS.map(k => keyHTML(k, null)).join('') + '</div>'
+        : '') +
+      '<div class="cm-keypad" style="grid-template-columns:repeat(' + cols + ',1fr);' +
+      'grid-template-rows:repeat(4,1fr)">' + pad + '</div>' +
+      '<div class="cm-keybar">' + KEY_BAR.map(k => keyHTML(k, null)).join('') + '</div>';
     keyMode = mode;
     keyChoices = null;
+  }
+
+  /* Welche Tasten die LAUFENDE Aufgabe zulässt (Migration 0114).
+     Getrennt von buildKeypad, weil das Raster stehen bleiben soll: die
+     Tasten werden nicht neu gebaut, nur an- und abgeschaltet. Sönkes
+     Vorgabe — „bei bin und dez sind die nicht relevanten Ziffern
+     ausgegraut", nicht weg.
+
+     Zwei Quellen, je nach Taste:
+       `data-op`   → die Frage muss den Namen in `question.ops` nennen.
+                     Das gilt für alles, was keine Ziffer ist: Minus,
+                     Komma, Bruch, Hochzahl, Klammern, Variablen.
+       `data-ins`  → die Ziffer muss in `question.digits` stehen.
+     ⌫, AC und ✓ haben weder das eine noch das andere und gelten immer.
+
+     ⚠️ Fehlt `ops` ganz, gilt `sign` + `frac` — nicht „alles". Ein
+     Frontend kann vor seiner Migration ausgeliefert werden; ohne diesen
+     Rückfall wären Komma, Klammern und Variablen bedienbar, obwohl der
+     Server jede damit getippte Antwort als falsch werten müsste. Die
+     zwei sind genau das, was vor 0114 auf der Tastatur lag. */
+  const OPS_FALLBACK = ['sign', 'frac'];
+
+  function applyKeyLimits(q) {
+    if (!els.keys || keyMode === 'choice') return;
+    const digits = (q && typeof q.digits === 'string') ? q.digits.toUpperCase() : null;
+    const ops    = (q && Array.isArray(q.ops)) ? q.ops : OPS_FALLBACK;
+    els.keys.querySelectorAll('.cm-key').forEach(btn => {
+      const op  = btn.dataset.op;
+      const ins = btn.dataset.ins;
+      let off = false;
+      if (op) off = ops.indexOf(op) < 0;
+      else if (ins != null && digits) off = digits.indexOf(ins.toUpperCase()) < 0;
+      btn.disabled = off;
+    });
   }
 
   /* Aus dem Eingabe-Zustand wird das, was an den Server geht: ein TEXT.
@@ -1505,7 +1702,19 @@
     return (answerVal.neg ? '-' : '') + num + (den !== null ? '/' + den : '');
   }
 
-  const ANSWER_MAX = 4;   // Zähler und Nenner je höchstens vierstellig
+  /* Wie viele Stellen ein Feld aufnimmt. Vier bei Brüchen (Zähler und
+     Nenner je für sich), sonst so viele, wie die Zielbasis braucht —
+     eine zwölfstellige Binärzahl ließe sich bei festen vier gar nicht
+     eintippen. Der Server sagt es an der Frage (`maxlen`).
+     Die Obergrenze 16 ist derselbe Riegel wie in clash_num_norm: was
+     länger ist, kann keine Antwort sein. */
+  const answerMax = () => {
+    const n = curQ && parseInt(curQ.maxlen, 10);
+    return (n && n > 0) ? Math.min(n, 16) : 4;
+  };
+
+  // Zahlensystem-Aufgaben: die Antwort ist eine Ziffernfolge, kein Wert.
+  const isDigitsQ = () => !!(curQ && curQ.kind === 'digits');
 
   // In welches der beiden Felder eine Ziffer geht: solange kein
   // Bruchstrich gedrückt wurde, gibt es nur eines.
@@ -1534,12 +1743,19 @@
     }
     else if (k.ins != null) {
       const f = answerField();
-      if (answerVal[f].length >= ANSWER_MAX) { renderAnswer(); return; }
+      if (answerVal[f].length >= answerMax()) { renderAnswer(); return; }
       // Führende Nullen wegräumen: „007" ist als Antwort dasselbe wie
       // „7", sieht aber aus wie ein Vertipper.
-      if (k.ins === '0' && answerVal[f] === '0') { renderAnswer(); return; }
-      if (answerVal[f] === '0' && /^[1-9]$/.test(k.ins)) answerVal[f] = k.ins;
-      else answerVal[f] += k.ins;
+      //
+      // ⚠️ Bei Zahlensystemen NICHT: dort sind sie erlaubt (Sönkes
+      // Vorgabe — „0011 0011 oder 11 0011 ist richtig"), weil ein Byte
+      // nun einmal acht Stellen hat. Der Server räumt sie in
+      // clash_num_norm weg, hier stehen sie einfach da.
+      if (!isDigitsQ()) {
+        if (k.ins === '0' && answerVal[f] === '0') { renderAnswer(); return; }
+        if (answerVal[f] === '0' && /^[1-9]$/.test(k.ins)) { answerVal[f] = k.ins; renderAnswer(); return; }
+      }
+      answerVal[f] += k.ins;
     }
     renderAnswer();
   }
@@ -1549,6 +1765,23 @@
     const num = answerVal.num;
     const den = answerVal.den;
     const sign = answerVal.neg ? '<span class="cm-insign">-</span>' : '';
+
+    /* Zahlensysteme (0114): das Feld steht in derselben Klammer mit
+       Index wie die Aufgabe daneben — „(11 0011)₂ = (▢)₁₆". Es ist
+       damit nie ganz leer, so wie ein angefangener Bruch nie leer ist:
+       die Klammer und die Basis stehen schon da, es fehlt nur die Zahl.
+       Und was getippt wird, gruppiert sich mit (Sönkes Vorgabe). */
+    if (isDigitsQ() && curQ.base_to != null && curQ.mode !== 'mc') {
+      els.input.classList.remove('cm-in--empty');
+      els.input.innerHTML =
+        '<span class="cm-based cm-based--in">(' +
+          '<span class="cm-num">' +
+            (num ? ctx.esc(groupDigits(num)) : '<i class="cm-inbox"></i>') +
+          '</span>)' +
+          '<sub>' + ctx.esc(curQ.base_to) + '</sub></span>';
+      return;
+    }
+
     if (den !== null) {
       // Ein Bruch ist nie „leer": sobald der Strich da ist, steht ein
       // Bild im Feld, auch wenn eine der Hälften noch fehlt.
@@ -1586,11 +1819,20 @@
       return;
     }
 
+    // Auch die Zusatztasten dürfen nur, was der Bildschirm gerade
+    // hergibt: bei einer Umwandlungsaufgabe ist „−" ausgegraut, und
+    // über die Hardware darf es dann genauso wenig gehen — sonst
+    // hebelte sie das Ausgrauen aus (applyKeyLimits).
+    const liveAct = a => {
+      const btn = els.keys && els.keys.querySelector('.cm-key[data-act="' + a + '"]');
+      return !!btn && !btn.disabled;
+    };
+
     if (k === 'Enter')                         keyPress({ act: 'submit' });
     else if (k === 'Backspace')                keyPress({ act: 'back' });
     else if (k === 'Escape' || k === 'Delete') keyPress({ act: 'clear' });
-    else if (k === '-')                        keyPress({ act: 'sign' });
-    else if (k === '/')                        keyPress({ act: 'frac' });
+    else if (k === '-')                        { if (liveAct('sign')) keyPress({ act: 'sign' }); }
+    else if (k === '/')                        { if (liveAct('frac')) keyPress({ act: 'frac' }); }
     else if (k.length === 1 && els.keys) {
       const btn = els.keys.querySelector('.cm-key[data-ins="' + k.toUpperCase() + '"]');
       if (!btn || btn.disabled) return;
@@ -2266,7 +2508,12 @@
      weg, und die Antwortkacheln würden neu gezeichnet, während die rote
      Rückmeldung auf einer von ihnen steht. */
   function qSig(q) {
+    // `base_to` gehört dazu, obwohl Art und Text die Richtung heute
+    // schon eindeutig festlegen: eine künftige Aufgabenart, die
+    // dieselbe Zahl in zwei Zielbasen fragt, wäre sonst zweimal
+    // „dieselbe“ Aufgabe, und das halb Getippte bliebe stehen.
     return [q.type || '', q.text || '', q.mode || '', q.input || '',
+            q.base_to == null ? '' : q.base_to,
             Array.isArray(q.choices) ? q.choices.join('') : ''].join('|');
   }
 
@@ -2275,6 +2522,9 @@
     const sig = qSig(q);
     const changed = sig !== lastQSig;
     lastQSig = sig;
+    // Vor allem anderen: keyPress, renderAnswer und applyKeyLimits
+    // lesen die laufende Aufgabe aus `curQ`.
+    curQ = q;
     // Der Server schickt die Aufgabe fertig gesetzt (`text`) — eine
     // neue Aufgabenart ändert hier nichts mehr. Der zweite Zweig ist
     // der Rückfall für ein Gerät, das noch eine Antwort der alten
@@ -2295,6 +2545,12 @@
     // Tasten sind immer dieselben); die Antwortkacheln gehören dagegen
     // zu genau dieser Frage und werden mit ihr neu gesetzt.
     if (mode !== keyMode || (mode === 'choice' && changed)) buildKeypad(mode, q);
+
+    // Das AUSGRAUEN dagegen bei jedem Takt: es hängt an der Frage, nicht
+    // am Layout, und nach dem ersten Fehlversuch (Zwei-Schlag-Regel,
+    // 0101/0103) bleibt dieselbe Aufgabe stehen, ohne dass die Tasten
+    // neu gebaut würden.
+    applyKeyLimits(q);
 
     // Eine NEUE Aufgabe fängt mit leerem Feld an.
     if (changed) {
@@ -2835,8 +3091,14 @@
       if (one && !one.disabled) { setPoolFor([one.dataset.key], one.dataset.val); return; }
       const all = ev.target.closest('.cm-poolall');
       if (all && !all.disabled) {
+        // ⚠️ Abgeleitete Arten (0114) dürfen hier NICHT mit: sie stehen
+        // nie im Pool, und clash_normalize_pool weist einen Pool, der
+        // eine nennt, VOLLSTÄNDIG zurück (invalid_pool). „Alle tippen"
+        // schlüge damit für die ganze Gruppe fehl.
         const keys = (poolCat || []).reduce((acc, g) =>
-          g.key === all.dataset.group ? acc.concat(g.items.map(it => it.key)) : acc, []);
+          g.key === all.dataset.group
+            ? acc.concat(g.items.filter(it => !isDerived(it)).map(it => it.key))
+            : acc, []);
         setPoolFor(keys, all.dataset.val);
       }
     });
@@ -3045,6 +3307,28 @@
     return hit;
   }
 
+  /* ─── Abgeleitete Aufgabenarten (Migration 0114) ────────────────
+     „Bin ↔ Hex" ist keine Wahl, sondern eine FOLGE aus zwei Wahlen: es
+     kommt dazu, sobald Binär und Hexadezimal beide im Pool stehen und
+     auf derselben Einstellung. Sönkes Vorgabe: „wenn beides drin ist".
+
+     Die Bedingung wird hier ausgewertet und nicht auf dem Server: der
+     Katalog wird EINMAL geholt, die Auswahl ändert sich bei jedem
+     Klick. Käme die Antwort vom Server, müsste die Tabelle nach jedem
+     Klick nachladen. */
+  const isDerived = it => !!(it && it.derived);
+
+  // Der geerbte Modus einer abgeleiteten Art — oder null, wenn ihre
+  // Bedingung gerade nicht erfüllt ist. Der Rückgabewert ist zugleich
+  // die Antwort auf „steht die Zeile überhaupt da?".
+  function derivedMode(it) {
+    const req = Array.isArray(it && it.requires) ? it.requires : [];
+    if (!req.length) return null;
+    const modes = req.map(k => poolSel[k] || null);
+    if (modes.some(m => !m)) return null;
+    return modes.every(m => m === modes[0]) ? modes[0] : null;
+  }
+
   /* Was aus einem Wunsch wird, wenn die Aufgabenart ihn nicht erfüllen
      kann. „Alle tippen" bei der Bruchrechnung soll gehen, obwohl
      „Vergleichen" nur drei mögliche Antworten hat (Sönkes Vorgabe):
@@ -3157,14 +3441,18 @@
       // der Knopf TATSÄCHLICH setzen würde (effMode) — sonst wäre
       // „alle tippen" nach dem eigenen Klick nicht an, bloß weil eine
       // Zeile auf „auswählen" ausweichen musste.
-      const allIs = m => g.items.every(it => (poolSel[it.key] || 'off') === effMode(it.key, m));
+      // Abgeleitete Arten sind für die Sammel-Knöpfe unsichtbar: sie
+      // sind keine Wahl, also kann „alle tippen" sie weder setzen noch
+      // an ihnen scheitern.
+      const own = g.items.filter(it => !isDerived(it));
+      const allIs = m => own.every(it => (poolSel[it.key] || 'off') === effMode(it.key, m));
       out += '<div class="cm-poolgrp">' +
         '<div class="cm-poolgrphead">' +
           `<span class="cm-poolgrpname">${ctx.esc(g.label)}</span>` +
           '<span class="cm-poolseg cm-poolseg--all">' +
             ['off', 'free', 'mc'].map(m => {
               // Ausweichende Zeilen nennen, statt den Knopf zu sperren.
-              const odd = m === 'off' ? [] : g.items.filter(it => effMode(it.key, m) !== m);
+              const odd = m === 'off' ? [] : own.filter(it => effMode(it.key, m) !== m);
               const why = odd.length
                 ? ` title="${ctx.esc(odd.map(it => it.label).join(', '))} kann das nicht — ` +
                   `steht dann auf »${POOL_MODE_LABEL[m === 'free' ? 'mc' : 'free']}«."`
@@ -3176,6 +3464,26 @@
           '</span>' +
         '</div>';
       g.items.forEach(it => {
+        // Die abgeleitete Zeile steht nur da, wenn sie gilt — und dann
+        // ohne Knöpfe. Sönkes Vorgabe: „wenn beides drin ist." Eine
+        // dauerhaft graue Zeile mit einer Bedingung daneben wäre eine
+        // Aufforderung, die niemand gestellt hat.
+        if (isDerived(it)) {
+          const inherited = derivedMode(it);
+          if (!inherited) return;
+          out += '<div class="cm-poolrow cm-poolrow--auto">' +
+            '<span class="cm-poolname">' +
+              `<b>↳ ${ctx.esc(it.label)}</b>` +
+              (it.example ? `<i class="cm-poolex">${ctx.esc(it.example)}</i>` : '') +
+            '</span>' +
+            '<span class="cm-poolauto" ' +
+              `title="Kommt von selbst dazu, weil ${ctx.esc(
+                (it.requires || []).map(k => (poolItem(k) || {}).label || k).join(' und '))} ` +
+              'beide auf derselben Einstellung stehen.">' +
+              `✔ kommt dazu · ${POOL_MODE_LABEL[inherited] || inherited}</span>` +
+          '</div>';
+          return;
+        }
         const cur = poolSel[it.key] || 'off';
         out += '<div class="cm-poolrow">' +
           '<span class="cm-poolname">' +
@@ -3232,12 +3540,18 @@
     }
     let out = '';
     poolCat.forEach(g => {
-      const on = g.items.filter(it => poolSel[it.key]);
+      // Abgeleitete Arten stehen NICHT im Pool (der Server nimmt sie
+      // dort gar nicht an) — sie kommen über ihre Bedingung dazu. Sie
+      // gehören trotzdem in diese Zeile: sie kommen ja dran, und dass
+      // aus „bin ↔ dez" und „dez ↔ hex" von selbst „bin ↔ hex" wird,
+      // sieht man sonst nirgends ohne geöffnetes Fenster.
+      const on = g.items.filter(it => isDerived(it) ? derivedMode(it) : poolSel[it.key]);
       if (!on.length) return;
       out += '<div class="cm-poolsumgrp">' +
         `<b>${ctx.esc(g.label)}</b>` +
         '<span class="cm-poolsumops">' +
-          on.map(it => `<i>${ctx.esc(poolShort(it))}</i>`).join('') +
+          on.map(it => `<i${isDerived(it) ? ' class="cm-poolsumauto"' : ''}>` +
+                       `${ctx.esc(poolShort(it))}</i>`).join('') +
         '</span></div>';
     });
     els.poolSum.innerHTML = out;
