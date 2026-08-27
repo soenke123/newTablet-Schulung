@@ -405,7 +405,7 @@
     if (window.MPTool) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'lib/tool.js?v=20260827d';
+      s.src = 'lib/tool.js?v=20260827e';
       s.onload  = () => window.MPTool ? resolve() : reject(new Error('MPTool fehlt'));
       s.onerror = () => reject(new Error('lib/tool.js nicht gefunden'));
       document.head.appendChild(s);

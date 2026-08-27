@@ -3340,7 +3340,16 @@ body.cm-locked { overflow: hidden; }
   text-align: center;
   color: var(--ink-soft);
 }
+/* `flex: 0 0 auto` ist hier kein Beiwerk, sondern der Grund, warum die
+   Liste überhaupt scrollt: .cm-poolbody ist eine Flex-Spalte, und
+   Flex-Kinder schrumpfen von sich aus unter ihre Inhaltshöhe, sobald es
+   eng wird. Mit mehreren aufgeklappten Kategorien wurde deshalb jede
+   Schachtel zusammengedrückt und (wegen `overflow: hidden`) mitten in
+   einer Zeile abgeschnitten — es sah aus, als schöben sich die
+   Kategorien ineinander, und gescrollt wurde nie, weil ja alles
+   „passte". */
 .cm-poolgrp {
+  flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: var(--r-sm, 10px);
   overflow: hidden;
