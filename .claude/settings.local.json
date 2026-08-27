@@ -76,7 +76,10 @@
       "Bash(sed -i 's|lib/tool.js?v=20260826d|lib/tool.js?v=20260827a|' lib/preview.js)",
       "Bash(sed -i \"s#import { PGlite } from '@electric-sql/pglite';#import { PGlite } from '@electric-sql/pglite';\\\\nimport { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';\\\\nimport { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';#\" _t.mjs)",
       "Bash(sed -i \"s#const db = new PGlite\\(\\);#const db = new PGlite\\({ extensions: { pgcrypto, btree_gist } }\\);#\" _t.mjs)",
-      "Bash(sed -i \"s#^  create schema if not exists auth;#  create extension if not exists pgcrypto;\\\\n  create extension if not exists btree_gist;\\\\n  create schema if not exists auth;#\" _t.mjs)"
+      "Bash(sed -i \"s#^  create schema if not exists auth;#  create extension if not exists pgcrypto;\\\\n  create extension if not exists btree_gist;\\\\n  create schema if not exists auth;#\" _t.mjs)",
+      "Bash(awk '/function clash_capture_random/,/^comment on function clash_capture_random|^grant execute on function clash_capture_random/' 0106_clash_streak_bonuses.sql)",
+      "Bash(awk '/create table if not exists clash_team_streaks/,/;/' 0106_clash_streak_bonuses.sql)",
+      "Bash(awk '/create table if not exists clash_team_events/,/;/' 0106_clash_streak_bonuses.sql)"
     ]
   }
 }

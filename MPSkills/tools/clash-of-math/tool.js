@@ -89,30 +89,41 @@
        sichtbaren Bereich — die Anteile beziehen sich auf den ganzen
        Bildschirm, in einem Kasten in der Seite ergäben sie nichts.
 
-   Die Serie des VOLKES (v.team_streak) stand hier lange als „–" ohne
-   Quelle — seit Migration 0106 liefert der Server sie: ein geteilter
-   Zähler je Team (nicht die Summe der Einzel-Serien), der bei 12, 24,
-   36 … (0106–0122: alle 20) automatisch fünf Felder erobert (bis 0108:
-   sieben). Die eigene Serie (me.streak) gibt bei 7, 14, 21 …
-   (0106: alle zehn, 0108: alle zwölf) zwei
-   offene manuelle Picks (pending_picks) — die Karte öffnet sich dafür
-   von selbst (siehe openMap(forced), onMapTileClick), mit kurzer
-   Frist, nach der der Server ungenutzte Picks selbst zufällig einlöst
-   (muss „schnell gehen", darf das Spiel nicht aufhalten). Beide Boni
-   benachrichtigen das eigene Team über my_team_events
-   (applyTeamEvents/showFireToast) — andere Völker sehen davon nichts.
+   ── Zwei Serien, zwei ganz verschiedene Dinge (0125) ────────────
+   Die EIGENE Serie (me.streak) ist eine Schwelle: alle vier richtigen
+   Antworten in Folge gibt es zwei offene manuelle Picks
+   (pending_picks) — die Karte öffnet sich dafür von selbst (siehe
+   openMap(forced), onMapTileClick), mit kurzer Frist, nach der der
+   Server ungenutzte Picks selbst zufällig einlöst (muss „schnell
+   gehen", darf das Spiel nicht aufhalten). Der Bonus meldet sich beim
+   eigenen Team über my_team_events (applyTeamEvents/showFireToast) —
+   andere Völker sehen davon nichts.
 
-   Die beiden Schwellen stehen NICHT hier, sondern kommen als
-   `streak_goals` aus clash_view/clash_submit (Migration 0123,
-   clash_streak_goals). Der Grund ist der Anlass für 0123: Die Boni
-   waren zwar da, aber kaum ein Kind hat je einen erlebt — zwölf
-   fehlerfreie Antworten am Stück sind selten. Seither zünden sie
-   früher (7 und 12) UND man sieht sie kommen: die Abzeichen zeigen
-   „3/7" statt „3" (paintStreakChip), und ein oder zwei Antworten vor
-   der Schwelle steht ein Banner über dem eigenen Kopf
-   („Nur noch 2 für den Serien-Effekt!", renderStreakBar).
-   `streakGoals` in dieser Datei ist nur der Notnagel, falls ein Tablet
-   gegen einen Server ohne 0123 läuft.
+   Die Serie des VOLKES (v.team_streak) ist seit 0125 KEINE Schwelle
+   mehr, sondern ein Zustand. Sie zahlt nichts aus; sie entscheidet nur,
+   wer vorn liegt. Das Volk mit der längsten laufenden Serie ist „on
+   fire" und damit GESCHÜTZT: die zufällige Eroberungs-Auslosung
+   (clash_capture_random) lässt seine Felder aus, solange irgendein
+   anderes Feld erreichbar ist. Wer geschützt ist, steht in
+   `fire_teams` (clash_view/clash_room_get/clash_submit) — eine Liste
+   von Volk-Slots, meist mit genau einem Eintrag, bei Gleichstand mit
+   mehreren, vor der ersten Dreierserie mit keinem.
+
+   Warum die Umstellung: die alte Team-Schwelle (zwölf fehlerfreie
+   Antworten der ganzen Gruppe) kam praktisch nie zustande — EIN
+   Fehlversuch irgendeines Kindes setzt den geteilten Zähler zurück.
+   Und wenn sie doch fiel, verschenkte sie fünf Felder auf einmal. Der
+   Zustand dagegen gilt immer, wechselt oft und ist auf jedem
+   Bildschirm sichtbar.
+
+   Die Zahlen dahinter stehen NICHT hier, sondern kommen als
+   `streak_goals` aus dem Server (Migration 0123/0125,
+   clash_streak_goals): solo (4), solo_reward (2), fire_min (3). Der
+   Client rechnet daraus „3/4" auf dem Abzeichen (paintStreakChip), das
+   Banner „Nur noch 1 für den Serien-Effekt!" (renderStreakBar) und den
+   Regel-Hinweis im Countdown (countdownInfoHTML). `streakGoals` in
+   dieser Datei ist nur der Notnagel, falls ein Tablet gegen einen
+   älteren Server läuft.
 
    ── Ausgeschieden heißt weiterspielen (Ruinen-Modus, 0108) ──────
    Bis 0107 war ein Volk ohne Kachel raus: keine Aufgabe mehr, nur die
@@ -352,22 +363,35 @@
   // dem Spielbildschirm.
   let myPendingPicks = 0, pendingPickDeadlineMs = 0, pickCountdownTimer = null;
   let lastTeamEventId = 0, fireToastTimer = null, mapCloseTimer = null;
-  /* Die beiden Serien-Schwellen (0123). Der Server ist die Wahrheit —
-     clash_view und clash_submit schicken sie als `streak_goals` mit,
-     weil hier sonst eine zweite Zahl stünde, die beim nächsten
-     Nachjustieren still auseinanderliefe. Diese Werte sind nur der
-     Notnagel für ein Tablet, dessen Server 0123 noch nicht kennt:
-     dann steht „3/7", wo der Server bei 12 zündet — falsch, aber
-     nicht kaputt, und mit dem nächsten Deploy von selbst wieder gerade.
+  /* Die Zahlen der Serien-Regeln (0123, neu gefasst in 0125). Der
+     Server ist die Wahrheit — clash_view, clash_room_get und
+     clash_submit schicken sie als `streak_goals` mit, weil hier sonst
+     eine zweite Zahl stünde, die beim nächsten Nachjustieren still
+     auseinanderliefe. Diese Werte sind nur der Notnagel für ein
+     Tablet, dessen Server die Migration noch nicht kennt: dann steht
+     „3/4", wo der Server bei 7 zündet — falsch, aber nicht kaputt, und
+     mit dem nächsten Deploy von selbst wieder gerade.
      STREAK_HINT_AT: ab wie vielen fehlenden Antworten das Banner
      erscheint („nur noch 2", dann „nur noch 1"). */
-  let streakGoals = { solo: 7, team: 12 };
+  let streakGoals = { solo: 4, soloReward: 2, fireMin: 3 };
   const STREAK_HINT_AT = 2;
   function noteStreakGoals(g) {
     if (!g) return;
     if (+g.solo > 0) streakGoals.solo = +g.solo;
-    if (+g.team > 0) streakGoals.team = +g.team;
+    if (+g.solo_reward > 0) streakGoals.soloReward = +g.solo_reward;
+    if (+g.fire_min > 0) streakGoals.fireMin = +g.fire_min;
   }
+  /* Wer ist gerade geschützt (0125)? Eine Liste von Volk-Slots, wie
+     der Server sie liefert — nicht selbst aus den Serien gerechnet.
+     Der Client kennt die Serien der ANDEREN Völker in der
+     Teilnehmer-Ansicht gar nicht, und zwei Rechenwege für dieselbe
+     Frage wären genau die Sorte Abweichung, die man erst im
+     Klassenzimmer bemerkt. */
+  let fireTeams = [];
+  function noteFireTeams(list) {
+    if (Array.isArray(list)) fireTeams = list.map(Number);
+  }
+  const isProtected = slot => slot != null && slot >= 0 && fireTeams.indexOf(slot) >= 0;
   /* Wie viele fehlen noch bis zum nächsten Vielfachen? Dieselbe
      Rechnung wie der floor-Vergleich im Server (clash_submit): eine
      Serie von 9 bei Schwelle 7 hat einmal gezündet und braucht noch
@@ -868,6 +892,7 @@
   function resetFx() {
     fxTiles = null; fxCounts = null;
     teamFireUntil = {}; memberFireUntil = {}; teamOutUntil = {};
+    fireTeams = [];   // 0125: die Flamme der letzten Partie gilt in der neuen nicht
     if (glowTimer) { clearTimeout(glowTimer); glowTimer = null; }
   }
 
@@ -1025,6 +1050,18 @@
     }
   }
   const isFire   = (m, k) => (m[k] || 0) > Date.now();
+  /* Moment und Zustand sind seit 0125 ZWEI Dinge, und sie bleiben
+     getrennt:
+
+       teamFire(slot)    — acht Sekunden Goldglanz, wenn die Flamme
+                           gerade übergegangen ist (team_fire-Ereignis)
+       isProtected(slot) — der Schutz selbst, kühl und ruhig, solange
+                           das Volk die längste Serie hält
+
+     Sie zusammenzuwerfen wäre bequem gewesen und falsch: der Glanz
+     pulst, und was minutenlang gilt, darf nicht minutenlang pulsen —
+     am Beamer ist genau das der Unterschied zwischen „ich sehe hin"
+     und „ich sehe weg". */
   const teamFire = slot => isFire(teamFireUntil, slot);
   const memberFire = (slot, name) => isFire(memberFireUntil, slot + ' ' + name);
 
@@ -1062,7 +1099,13 @@
      der User man selbst. */
   function applyHeroGlow(myTeam, myName) {
     const mine = myName && memberFire(myTeam, myName);
-    if (els.hero)   els.hero.classList.toggle('cm-phero--fire', teamFire(myTeam));
+    if (els.hero) {
+      els.hero.classList.toggle('cm-phero--fire', teamFire(myTeam));
+      // 0125: der Schutz am eigenen Kopf. Er ist der Grund, warum die
+      // Gegner gerade abprallen — und das soll man nicht erst am
+      // Ausbleiben verlorener Felder merken.
+      els.hero.classList.toggle('cm-phero--shield', isProtected(myTeam));
+    }
     if (els.streak) els.streak.classList.toggle('cm-pstreak--fire', !!mine);
     if (els.teamStreak) els.teamStreak.classList.toggle('cm-pstreak--fire', teamFire(myTeam));
   }
@@ -1085,6 +1128,12 @@
       if (e.kind === 'board_shrink') {
         announce(fLabel(e.team) + ' ' + fV(e.team, 'lassen', 'lässt') + ' ein Feld versinken!',
                  'cm-announce--shrink');
+      } else if (e.kind === 'team_fire') {
+        // 0125: der Wechsel der Flamme ist auf dem Beamer die
+        // interessanteste Meldung der Runde — sie sagt der ganzen
+        // Klasse, wer gerade nicht angreifbar ist.
+        announce('🛡️ ' + fLabel(e.team) + ' ' + fV(e.team, 'haben', 'hat') +
+                 ' die längste Serie — geschützt!', 'cm-announce--shield');
       }
     });
     lastRoomEventId = maxId;
@@ -1292,6 +1341,12 @@
     // das Zeichnen erst anlegt.
     const fx = boardFx(v);
     noteFxState(fx);
+    // 0125: VOR dem Zeichnen — die Völker-Reihe, die Panels und der
+    // eigene Kopf lesen den Schutz beim Zeichnen aus fireTeams. Für
+    // beide Rollen hier, weil beide Ansichten denselben Schlüssel
+    // bekommen (clash_view wie clash_room_get).
+    noteFireTeams(v.fire_teams);
+    noteStreakGoals(v.streak_goals);
     if (role === 'presenter') { applyRoomEvents(v); renderPresenter(v); }
     else renderParticipant(v);
     flushFx(fx);
@@ -1327,6 +1382,7 @@
      die tatsächliche Phase kommt vom Server (clash_maybe_advance_phase). */
   function startCountdown(endsAtIso) {
     stopCountdown();
+    renderCountdownInfo();
     const endsAt = new Date(endsAtIso).getTime();
     const step = () => {
       const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
@@ -1336,6 +1392,52 @@
     };
     step();
     countdownTimer = setInterval(step, 250);
+  }
+
+  /* ─── Die zwei Regeln, die man vorher kennen muss (0125) ────────
+     Sönkes Vorgabe: „Auf dem Ladebildschirm steht bei den Spielern und
+     beim Lehrer eine Info." Die fünf Sekunden vor dem Start sind die
+     einzige Stelle im Spiel, an der alle gleichzeitig auf den
+     Bildschirm sehen und niemand etwas zu tun hat — Erklärtext während
+     der Runde liest kein Kind.
+
+     Erzeugt statt fest im Aufbau, weil die Zahlen aus dem Server
+     kommen (clash_streak_goals): eine „4" im HTML wäre die zweite
+     Quelle, die beim nächsten Nachjustieren stehen bliebe. Beide
+     Rollen bekommen denselben Baustein, nur in verschiedenen Größen
+     (tool.css) — dieselbe Regel darf nicht zweimal verschieden
+     klingen, wenn Lehrkraft und Klasse sie nebeneinander lesen. */
+  function countdownInfoHTML() {
+    const n = streakGoals.solo, r = streakGoals.soloReward;
+    const feld = r === 1 ? 'Bonusfeld' : 'Bonusfelder';
+    return '<div class="cm-rules">' +
+      '<div class="cm-ruletitle">⚔ Zwei Serien, zwei Belohnungen ⚔</div>' +
+      '<div class="cm-rulegrid">' +
+        '<div class="cm-rule cm-rule--solo">' +
+          '<span class="cm-ruleico">🔥</span>' +
+          '<span class="cm-rulekind">Deine Serie</span>' +
+          `<b class="cm-rulebig">${n} richtige in Folge</b>` +
+          `<span class="cm-ruledesc">… und du erspielst <b>${r} ${feld}</b>, ` +
+            'die du dir selbst aussuchen darfst.</span>' +
+        '</div>' +
+        '<div class="cm-rule cm-rule--team">' +
+          '<span class="cm-ruleico">🛡️</span>' +
+          '<span class="cm-rulekind">Serie deines Volkes</span>' +
+          '<b class="cm-rulebig">Die längste Serie zählt</b>' +
+          '<span class="cm-ruledesc">Das Volk mit der längsten Serie ist ' +
+            '<i>on fire</i> — und <b>geschützt vor Eroberungen</b>.</span>' +
+          // Die Kleingedruckte gehört dazu, sonst stimmt die Regel
+          // nicht ganz: mit zwei richtigen in Folge führt man zwar,
+          // ist aber noch nicht geschützt. Klein genug, dass sie den
+          // Satz darüber nicht zerredet.
+          `<span class="cm-rulefoot">ab ${streakGoals.fireMin} richtigen in Folge</span>` +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+  function renderCountdownInfo() {
+    const html = countdownInfoHTML();
+    [els.countInfo, els.countInfoP].forEach(el => { if (el) el.innerHTML = html; });
   }
   function stopCountdown() {
     if (countdownTimer) clearInterval(countdownTimer);
@@ -2370,10 +2472,14 @@
           '</div>' +
           '<p class="cm-hint" id="cmOnlineHint"></p>' +
         '</div>' +
+        // Die fünf Sekunden vor dem Start tragen seit 0125 die beiden
+        // Serien-Regeln (renderCountdownInfo) — die Zahl allein hatte
+        // hier fünf Sekunden Bildschirm für nichts belegt.
         '<div class="cm-pane cm-hide" id="cmCountdown">' +
           '<div class="cm-countdown">' +
             '<div class="cm-count" id="cmCountNum">5</div>' +
             '<p class="cm-hint">Gleich geht’s los …</p>' +
+            '<div class="cm-rulewrap" id="cmCountInfo"></div>' +
           '</div>' +
         '</div>' +
         /* ── Der Spielbildschirm ────────────────────────────────────
@@ -2534,6 +2640,7 @@
       lobby: root.querySelector('#cmLobby'),
       countdown: root.querySelector('#cmCountdown'),
       countNum: root.querySelector('#cmCountNum'),
+      countInfo: root.querySelector('#cmCountInfo'),   // 0125
       game: root.querySelector('#cmGame'),
       factionRow: root.querySelector('#cmPFactions'),
       hero: root.querySelector('.cm-phero'),
@@ -2772,7 +2879,11 @@
         const name = (e.payload && e.payload.name) || 'Jemand';
         showFireToast('🔥 ' + name + ' ist on fire!');
       } else if (e.kind === 'team_fire') {
-        showFireToast('🔥🔥 Ihr seid on fire!');
+        // 0125: Das Ereignis meldet nicht mehr einen Bonus, sondern
+        // einen Zustandswechsel — euer Volk hat die längste Serie und
+        // ist damit geschützt. Der Zustand steht danach dauerhaft am
+        // Abzeichen und im Banner; der Toast ist der Moment dazu.
+        showFireToast('🛡️ Längste Serie — euer Volk ist geschützt!');
       } else if (e.kind === 'board_shrink') {
         // 0108: Das Ereignis steht beim AUSLÖSENDEN Volk — auf dem
         // Tablet liest es also genau die Gruppe, die es geschafft hat.
@@ -3018,7 +3129,14 @@
     // Team-Serie ebenso: der eigene Broadcast schließt den Absender
     // selbst aus (siehe setTeamStreak), sonst stünde sie bis zum
     // nächsten Takt auf dem alten Wert.
+    // 0125: der Schutz aus demselben Grund und VOR setTeamStreak — das
+    // Abzeichen liest den Schild dort. Die eigene Antwort kann die
+    // Flamme gerade geholt oder verloren haben.
+    noteFireTeams(r.fire_teams);
     if (r.team_streak != null) setTeamStreak(r.team_streak);
+    // Der Schein um den eigenen Kopf gehört zu demselben Zustand und
+    // hängt an Elementen, die kein Neuzeichnen braucht.
+    if (lastView && lastView.me) applyHeroGlow(lastView.me.team, lastView.me.name);
     if (r.pending_picks != null) applyPendingPicks(r.pending_picks, r.pick_deadline);
   }
 
@@ -3064,20 +3182,26 @@
      — und den Zustand „gleich ist es so weit" (--near), sobald nur noch
      STREAK_HINT_AT Antworten fehlen. Der Zähler läuft über die Schwelle
      hinaus weiter (die Serie bricht ja nicht), gezeigt wird deshalb der
-     Rest zum NÄCHSTEN Vielfachen: bei Ziel 7 steht nach der neunten
-     richtigen „9/14". */
+     Rest zum NÄCHSTEN Vielfachen: bei Ziel 4 steht nach der sechsten
+     richtigen „6/8".
+     goal <= 0 heißt „diese Serie hat kein Ziel" — seit 0125 der Fall
+     beim Volks-Abzeichen: dort ist die Zahl kein Fortschritt auf etwas
+     zu, sondern der Wert, mit dem das Volk gegen die anderen im Rennen
+     um die Flamme steht. Ein „/12" daneben würde ein Ziel versprechen,
+     das es nicht mehr gibt. */
   function paintStreakChip(el, n, goal, showDash) {
     if (!el) return;
     const num  = el.querySelector('b');
     const goalEl = el.querySelector('.cm-pstreakgoal');
     const known = n != null;
+    const hasGoal = goal > 0;
     if (num) num.textContent = known ? String(n) : (showDash ? '–' : '0');
     // Das nächste Vielfache, gegen das gerade gezählt wird.
     const next = known ? (n + toNextStreak(n, goal)) : goal;
-    if (goalEl) goalEl.textContent = '/' + next;
+    if (goalEl) goalEl.textContent = hasGoal ? ('/' + next) : '';
     el.classList.toggle('cm-pstreak--hot', (n || 0) >= 3);
     el.classList.toggle('cm-pstreak--near',
-      known && toNextStreak(n, goal) <= STREAK_HINT_AT);
+      hasGoal && known && toNextStreak(n, goal) <= STREAK_HINT_AT);
   }
   function setStreak(n) {
     paintStreakChip(els.streak, n || 0, streakGoals.solo, false);
@@ -3091,39 +3215,51 @@
   // aus — ohne diesen Aufruf bliebe das Team-Serien-Badge bis zum
   // nächsten 8s-Sicherheitsnetz-Takt stehen.
   function setTeamStreak(n) {
-    paintStreakChip(els.teamStreak, (n == null ? null : n), streakGoals.team, true);
+    // 0125: ohne Ziel — die Zahl steht für sich. Dafür trägt das
+    // Abzeichen den Schild, sobald das eigene Volk vorn liegt: Symbol,
+    // Farbe und Beschriftung wechseln zusammen, damit auch ein Kind,
+    // das die Farbe nicht unterscheidet, den Unterschied sieht.
+    paintStreakChip(els.teamStreak, (n == null ? null : n), 0, true);
+    const el = els.teamStreak;
+    if (el) {
+      const prot = isProtected(lastView && lastView.me && lastView.me.team);
+      el.classList.toggle('cm-pstreak--shield', prot);
+      const ico = el.querySelector('.cm-pstreakico');
+      if (ico) ico.textContent = prot ? '🛡️' : '⚔️';
+      el.title = prot
+        ? 'Serie deines Volkes — ihr habt die längste Serie und seid vor Eroberungen geschützt'
+        : 'Serie deines Volkes — die längste Serie schützt vor Eroberungen';
+    }
     renderStreakBar();
   }
 
-  /* Der Banner über dem eigenen Kopf (0123). Er zeigt IMMER nur die
-     Serie, die als Nächstes zündet — zwei Zeilen nebeneinander („noch 2
-     … noch 1 …") wären zwei Aufforderungen für dieselbe nächste
-     Aufgabe. Bei Gleichstand gewinnt die eigene: sie liegt in der
-     eigenen Hand, die des Volkes kann auch jemand anders vollmachen. */
+  /* Der Banner über dem eigenen Kopf (0123). Er hat seit 0125 zwei
+     Sachen zu sagen und sagt immer nur EINE — zwei Zeilen übereinander
+     wären zwei Aufforderungen für dieselbe nächste Aufgabe:
+
+       1. „Nur noch 1 …" — die eigene Serie steht kurz vor dem Bonus.
+          Das ist eine Handlungsaufforderung und geht deshalb vor.
+       2. „Euer Volk ist geschützt" — der Zustand, solange das eigene
+          Volk die längste Serie hält. Er steht nur da, wenn gerade
+          nichts Dringenderes anliegt, aber er steht lange: dass die
+          Gegner an einem abprallen, merkt man sonst nicht. */
   function renderStreakBar() {
     if (!els.streakBar) return;
     const solo = els.streak && els.streak.querySelector('b');
-    const team = els.teamStreak && els.teamStreak.querySelector('b');
     const sN = solo ? parseInt(solo.textContent, 10) : NaN;
-    const tN = team ? parseInt(team.textContent, 10) : NaN;
+    const left = Number.isFinite(sN) ? toNextStreak(sN, streakGoals.solo) : Infinity;
+    const prot = isProtected(lastView && lastView.me && lastView.me.team);
 
-    const cands = [];
-    if (Number.isFinite(sN)) {
-      cands.push({ left: toNextStreak(sN, streakGoals.solo), ico: '🔥', what: 'Serien-Effekt' });
+    let text = '', cls = '';
+    if (left <= STREAK_HINT_AT) {
+      text = '🔥 Nur noch ' + left + ' für den Serien-Effekt!';
+    } else if (prot) {
+      text = '🛡️ Längste Serie — euer Volk ist geschützt!';
+      cls = ' cm-streakbar--shield';
     }
-    if (Number.isFinite(tN)) {
-      cands.push({ left: toNextStreak(tN, streakGoals.team), ico: '⚔️', what: 'Volks-Effekt' });
-    }
-    const hit = cands.filter(c => c.left <= STREAK_HINT_AT).sort((a, b) => a.left - b.left)[0];
 
-    if (!hit) {
-      els.streakBar.classList.add('cm-hide');
-      els.streakBar.textContent = '';
-      return;
-    }
-    els.streakBar.textContent =
-      hit.ico + ' Nur noch ' + hit.left + ' für den ' + hit.what + '!';
-    els.streakBar.classList.remove('cm-hide');
+    els.streakBar.className = 'cm-streakbar' + cls + (text ? '' : ' cm-hide');
+    els.streakBar.textContent = text;
   }
   /* ⚠️ setQuestion läuft bei JEDEM Takt (renderParticipant liest
      me.question aus der view) — nicht nur, wenn eine neue Aufgabe
@@ -3262,13 +3398,22 @@
       // Feld hat, muss nicht der Fleißigste gewesen sein — und die
       // kleine Zahl trägt darum das Häkchen als Erklärung mit.
       const c = parseInt(correct[String(i)], 10) || 0;
+      // 0125: Der Schild ist ein eigenes Zeichen, nicht nur ein
+      // Leuchten. Auf einem Tablet in der Sonne ist ein Schein am Rand
+      // eines 30-Pixel-Plättchens nicht zu sehen — und genau diese
+      // Reihe ist der Ort, an dem man ablesen will, wen die eigene
+      // nächste Antwort gerade NICHT treffen kann.
+      const prot = isProtected(i);
       const cls = 'cm-fchip' + (n === 0 ? ' cm-fchip--out' : '') + (i === myTeam ? ' cm-fchip--me' : '') +
                   (isFire(teamOutUntil, i) ? ' cm-fchip--justout' : '') +
+                  (prot ? ' cm-fchip--shield' : '') +
                   (teamFire(i) ? ' cm-fchip--fire' : '');
       out += `<span class="${cls}" style="--team:${fStroke(i)}" ` +
-        `title="${ctx.esc(fLabel(i))}" ` +
-        `aria-label="${ctx.esc(fLabel(i))}: ${n} Felder, ${c} richtige Antworten">` +
+        `title="${ctx.esc(fLabel(i))}${prot ? ' — geschützt (längste Serie)' : ''}" ` +
+        `aria-label="${ctx.esc(fLabel(i))}: ${n} Felder, ${c} richtige Antworten` +
+          `${prot ? ', geschützt' : ''}">` +
         `<img src="${esrc(fUnit(i))}" alt="">` +
+        (prot ? '<span class="cm-fshield">🛡️</span>' : '') +
         `<span class="cm-fchipnums"><b>${n}</b><i>✓${c}</i></span>` +
       '</span>';
     }
@@ -3550,9 +3695,13 @@
             '<div class="cm-offline cm-hide" id="cmOffline"></div>' +
           '</div>' +
         '</div>' +
+        // 0125: dieselben zwei Regeln wie auf den Tablets, nur groß —
+        // die Lehrkraft liest sie in dem Moment vor, in dem alle
+        // gleichzeitig auf denselben Text sehen.
         '<div class="cm-pane cm-hide" id="cmCountdownP">' +
-          '<div class="cm-countdown">' +
+          '<div class="cm-countdown cm-countdown--big">' +
             '<div class="cm-count" id="cmCountNumP">5</div>' +
+            '<div class="cm-rulewrap" id="cmCountInfoP"></div>' +
           '</div>' +
         '</div>' +
         // Der Spielbildschirm ist 1:1 der Aufbau aus dem Showroom,
@@ -3670,6 +3819,7 @@
       shuffleBtn: root.querySelector('#cmShuffleBtn'),
       countdownP: root.querySelector('#cmCountdownP'),
       countNumP: root.querySelector('#cmCountNumP'),
+      countInfoP: root.querySelector('#cmCountInfoP'),   // 0125
       boardWrap: root.querySelector('#cmBoardWrap'),
       frame: root.querySelector('#cmFrame'),
       boardTop: root.querySelector('#cmBoardTop'),
@@ -3856,7 +4006,7 @@
      mit Wappenbild, Fraktionsnamen und Feldzahl. Teams wechseln sich
      ab (gerade nach links, ungerade nach rechts), damit beide Spalten
      gleich lang bleiben. */
-  function rosterCardHTML(i, count, correct, members, ruin) {
+  function rosterCardHTML(i, count, correct, members, ruin, streak) {
     const dead = count === 0;
     // Namensliste. `team_members` kommt erst ab Migration 0096 — läuft
     // sie noch nicht, fehlt der Schlüssel einfach und das Panel zeigt
@@ -3890,6 +4040,11 @@
                 // darf nicht so aussehen wie einer, der aufgehört hat.
                 ((dead && ruin) ? ' cm-rcard--ruin' : '') +
                 (isFire(teamOutUntil, i) ? ' cm-rcard--justout' : '') +
+                // 0125: der Schutz-Zustand (ruhig, kühl, dauerhaft) und
+                // der Flammen-Moment (gold, pulsend, acht Sekunden)
+                // können gleichzeitig gelten — sie zeigen ja auch
+                // Verschiedenes.
+                (isProtected(i) ? ' cm-rcard--shield' : '') +
                 (teamFire(i) ? ' cm-rcard--fire' : '');
     /* Die große Zahl rechts ist bei einem lebenden Volk die Feldzahl.
        Bei einem ausgeschiedenen wäre sie dauerhaft „0" — eine Zahl, die
@@ -3902,12 +4057,31 @@
       ? `<span class="cm-rruin" title="Ruinen: noch ${ruin.to_next} richtige Antworten, bis ein Feld verschwindet">` +
           `<b>${(ruin.points || 0) % 10}</b><i>/10</i></span>`
       : `<span class="cm-rcount" title="Felder">${count}</span>`;
+    /* Die laufende Serie des Volkes (0125). Sie steht in derselben
+       Zeile wie die richtigen Antworten, weil sie zu derselben Frage
+       gehört („wie läuft es gerade?") und nicht zum Besitzstand. Beim
+       geschützten Volk wird daraus der Schild — dieselbe Stelle,
+       anderes Zeichen: die Klasse soll auf dem Beamer sehen können,
+       WARUM dieses Panel leuchtet, ohne dass es jemand erklärt.
+       `streak` fehlt ohne die Migration; dann bleibt die Zeile leer
+       statt „undefined" zu schreiben. */
+    const prot = isProtected(i);
+    const streakHTML = (streak == null)
+      ? ''
+      : (prot
+        ? `<span class="cm-rshield" title="Längste Serie — vor Eroberungen geschützt">` +
+            `🛡️ Serie ${streak} · geschützt</span>`
+        : `<span class="cm-rstreak" title="Serie des Volkes — die längste schützt vor Eroberungen">` +
+            `🔥 Serie ${streak}</span>`);
     return `<div class="${cls}" style="--team:${fStroke(i)}">` +
       '<div class="cm-rhead">' +
         `<div class="cm-rthumb"><img src="${esrc(fUnit(i))}" alt=""></div>` +
         '<div class="cm-rtitle">' +
           `<span class="cm-rname">${ctx.esc(fLabel(i))}</span>` +
-          `<span class="cm-rcorr" title="richtige Antworten">✓ ${correct} richtig</span>` +
+          '<span class="cm-rmeta">' +
+            `<span class="cm-rcorr" title="richtige Antworten">✓ ${correct} richtig</span>` +
+            streakHTML +
+          '</span>' +
         '</div>' +
         scoreHTML +
       '</div>' +
@@ -3920,11 +4094,13 @@
     const members = v.team_members || {};
     const correct = v.team_correct_counts || {};
     const ruin    = v.ruin || {};   // 0108, fehlt ohne die Migration
+    const streaks = v.team_streaks;  // 0125, fehlt ohne die Migration
     let left = '', right = '';
     for (let i = 0; i < v.team_count; i++) {
       const n = (v.team_tile_counts && v.team_tile_counts[String(i)]) || 0;
       const c = parseInt(correct[String(i)], 10) || 0;
-      const html = rosterCardHTML(i, n, c, members[String(i)], ruin[String(i)]);
+      const s = streaks ? (parseInt(streaks[String(i)], 10) || 0) : null;
+      const html = rosterCardHTML(i, n, c, members[String(i)], ruin[String(i)], s);
       if (i % 2 === 0) left += html; else right += html;
     }
     els.rosterLeft.innerHTML = left;

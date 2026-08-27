@@ -419,6 +419,149 @@
   line-height: 1;
 }
 
+/* ── Die zwei Serien-Regeln im Countdown (0125) ─────────────────
+   Sie stehen auf dem Tablet und auf dem Beamer, im selben Moment und
+   im selben Wortlaut. Deshalb EIN Baustein und nur zwei Größen:
+   .cm-countdown--big (Beamer) skaliert alles hoch, sonst ist es
+   dieselbe Karte.
+
+   Bewusst in der Fantasy-Farbsprache des Spiels (dunkles Pergament,
+   Goldrand, Cinzel) statt in den Seitenvariablen: die Regeln gehören
+   zur Spielwelt, nicht zur Bedienoberfläche — und so liest sich die
+   Karte auf einer hellen wie auf einer dunklen Seite gleich, ohne
+   zwei Farbfassungen. Das ist dieselbe Ausnahme, die die Beamer-Karte
+   und die Banner (.cm-streakbar, .cm-firetoast) schon haben.
+
+   Die beiden Regeln stehen NEBENeinander, sobald Platz ist: sie sind
+   gleichrangig und werden verglichen („eine für mich, eine für uns").
+   Untereinander wären sie eine Aufzählung mit einem Ersten. */
+.cm-rulewrap {
+  width: 100%;
+  max-width: 760px;
+  margin: 6px auto 0;
+  padding: 0 4px;
+}
+.cm-rules {
+  border-radius: 16px;
+  padding: 14px 14px 16px;
+  background:
+    radial-gradient(120% 140% at 50% 0%, rgba(255,214,120,.14) 0%, rgba(255,214,120,0) 55%),
+    linear-gradient(180deg, rgba(48,28,8,.96), rgba(28,16,4,.96));
+  border: 1.5px solid var(--cm-gold-dark, #8a6a24);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,226,160,.14);
+  animation: cmRulesIn .45s ease-out both;
+}
+@keyframes cmRulesIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.cm-ruletitle {
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: .82rem;
+  letter-spacing: .08em;
+  text-align: center;
+  color: #f0d69a;
+  opacity: .92;
+  margin-bottom: 12px;
+}
+/* auto-fit statt zwei fester Spalten: auf einem hochkant gehaltenen
+   Tablet stehen sie untereinander, ohne dass es dafür eine
+   Bildschirmbreite als Grenze braucht. */
+.cm-rulegrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.cm-rule {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 3px;
+  padding: 14px 12px 12px;
+  border-radius: 12px;
+  background: rgba(255,238,205,.055);
+  border: 1px solid rgba(255,226,160,.18);
+}
+/* Das Zeichen sitzt in der oberen Kante, halb heraus — es ist die
+   Marke der Regel, kein Aufzählungspunkt. Dieselben zwei Symbole
+   tauchen später am Abzeichen, an der Völker-Reihe und am Panel
+   wieder auf; das ist der ganze Zweck. */
+.cm-ruleico {
+  position: absolute;
+  top: -14px;
+  display: grid;
+  place-items: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  font-size: .95rem;
+  line-height: 1;
+  background: linear-gradient(180deg, #4a2c0a, #2a1704);
+  border: 1.5px solid var(--cm-gold-dark, #8a6a24);
+  box-shadow: 0 2px 8px rgba(0,0,0,.5);
+}
+.cm-rulekind {
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(240,214,154,.7);
+  margin-top: 4px;
+}
+.cm-rulebig {
+  font-family: var(--cm-display);
+  font-weight: 700;
+  font-size: 1.02rem;
+  line-height: 1.15;
+  color: #ffe7b4;
+}
+.cm-ruledesc {
+  font-size: .78rem;
+  line-height: 1.35;
+  color: rgba(255,240,214,.82);
+}
+.cm-ruledesc b { color: #ffd98a; }
+.cm-ruledesc i { font-style: italic; color: #ffc46a; }
+/* Die Bedingung im Kleingedruckten — sie muss dastehen (sonst stimmt
+   die Regel darüber nicht ganz), darf den Satz aber nicht zerreden. */
+.cm-rulefoot {
+  margin-top: 4px;
+  font-size: .68rem;
+  letter-spacing: .02em;
+  color: rgba(255,240,214,.5);
+}
+/* Die eine Regel brennt, die andere hält — der Unterschied steckt
+   nicht nur im Symbol, sondern auch im Schein der Kachel. */
+.cm-rule--solo { box-shadow: inset 0 0 22px rgba(255,150,40,.14); }
+.cm-rule--team { box-shadow: inset 0 0 22px rgba(120,190,255,.14); }
+.cm-rule--team .cm-ruleico {
+  background: linear-gradient(180deg, #123047, #071825);
+  border-color: #6ea8d8;
+}
+.cm-rule--team .cm-rulebig { color: #cfe8ff; }
+.cm-rule--team .cm-ruledesc b { color: #a8d4ff; }
+.cm-rule--team .cm-ruledesc i { color: #ffc46a; }
+
+/* Der Beamer hat die Wand für sich — dort darf alles größer sein.
+   Der Countdown selbst rückt näher an die Regeln heran: die Zahl ist
+   dann nicht mehr der Inhalt, sondern die Uhr daneben. */
+.cm-countdown--big { gap: 14px; padding: 24px 0 32px; }
+.cm-countdown--big .cm-rulewrap { max-width: min(1100px, 92vw); }
+.cm-countdown--big .cm-rules { padding: 20px 22px 24px; border-radius: 22px; }
+.cm-countdown--big .cm-ruletitle { font-size: 1.15rem; margin-bottom: 18px; }
+.cm-countdown--big .cm-rulegrid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.cm-countdown--big .cm-rule { padding: 22px 20px 18px; gap: 5px; }
+.cm-countdown--big .cm-ruleico { width: 42px; height: 42px; top: -21px; font-size: 1.4rem; }
+.cm-countdown--big .cm-rulekind { font-size: .82rem; margin-top: 8px; }
+.cm-countdown--big .cm-rulebig { font-size: 1.7rem; }
+.cm-countdown--big .cm-ruledesc { font-size: 1.05rem; }
+.cm-countdown--big .cm-rulefoot { font-size: .82rem; }
+@media (prefers-reduced-motion: reduce) {
+  .cm-rules { animation: none; }
+}
+
 /* ── Karte ─────────────────────────────────────────────────────
    Der Kasten, in dem eine Karte steht. Der Beamer setzt seine Maße
    in px aus tool.js (fitPresenterMap) und überschreibt das Meiste
@@ -475,7 +618,11 @@
    Palette sonst nicht mit (dieselbe Lage wie .cm-obsmap). */
 .cm-host--presenter,
 .cm-play,
-.cm-endstage {
+.cm-endstage,
+/* 0125: die Regel-Karte im Countdown gehört zur selben Welt, hängt am
+   Tablet aber als gewöhnlicher Block in der Seite (wie .cm-obsmap und
+   das Siegerbild) — ohne diese Zeile fehlten ihr Cinzel und Gold. */
+.cm-rules {
   --cm-gold:       #caa457;
   --cm-gold-dark:  #a9863f;
   --cm-wood:       #6b4a23;
@@ -720,6 +867,19 @@
    gelben Volk wäre kein Unterschied. Acht Sekunden sind lang genug,
    dass eine Klasse quer durch den Raum darauf zeigen kann — deshalb
    pulst es langsam statt zu blinken. */
+/* 0125: geschützt. Der ANDERE Zustand am selben Panel — nicht mit
+   Ablaufzeit, sondern solange das Volk die längste Serie hält. Er
+   pulst deshalb nicht: was minutenlang gilt, wird sonst zum Flackern
+   im Raum. Kühl statt gold, weil Schutz kein Triumph ist; und weil
+   die Farbe an jeder Stelle dieselbe sein muss (Abzeichen, Völker-
+   Reihe, Banner, Ankündigung), damit niemand sie erklären muss.
+   Steht VOR --fire: in den acht Sekunden, in denen ein Volk die
+   Flamme gerade übernommen hat, gewinnt die Feier. */
+.cm-rcard--shield {
+  border-color: #8fc4f0;
+  box-shadow: 0 6px 16px rgba(0,0,0,.35), 0 0 0 2px rgba(143,196,240,.55),
+              0 0 22px 4px rgba(110,180,255,.42);
+}
 .cm-rcard--fire {
   border-color: #ffe6a3;
   animation: cmCardFire 1.5s ease-in-out infinite;
@@ -749,6 +909,20 @@
   font-size: .92rem;
   line-height: 1;
   filter: drop-shadow(0 1px 2px rgba(20,12,0,.8));
+}
+/* 0125: der Schild sitzt an derselben Stelle wie Flamme und Ruine —
+   auf der Figur, ohne Breite zu kosten. Ein ausgeschiedenes Volk kann
+   nie geschützt sein (clash_fire_teams verlangt Land), die beiden
+   Zeichen können sich also nicht in die Quere kommen. Die Flammen-
+   Regel darunter darf ihn acht Sekunden lang ersetzen. */
+.cm-rcard--shield .cm-rthumb::after {
+  content: '🛡️';
+  position: absolute;
+  left: -4px;
+  bottom: -2px;
+  font-size: 1rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(110,180,255,.95));
 }
 .cm-rcard--fire .cm-rthumb::after {
   content: '🔥';
@@ -859,6 +1033,37 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* Richtige Antworten und laufende Serie in EINER Zeile unter dem
+   Namen (0125). Sie umbricht, wenn die Spalte zu schmal wird — die
+   Serie rutscht dann unter das Häkchen, statt den Namen zu verkürzen.
+   Der Name ist das Wichtigste im Panel und darf keinen Platz an eine
+   Zahl verlieren, die sich zehnmal pro Minute ändert. */
+.cm-rmeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  min-width: 0;
+}
+.cm-rstreak, .cm-rshield {
+  font-size: .62rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(20,12,0,.75);
+}
+.cm-rstreak { color: rgba(255,214,150,.9); }
+/* Der Schild ist die Antwort auf die Frage, die dieses Panel gerade
+   stellt („warum leuchtet das?"). Deshalb steht er nicht nur als
+   Symbol da, sondern mit dem Wort — auf dem Beamer liest die ganze
+   Klasse mit, und niemand erklärt ihr die Farbe. */
+.cm-rshield {
+  color: #dbeeff;
+  background: rgba(12,44,72,.72);
+  border: 1px solid rgba(143,196,240,.75);
+  border-radius: 999px;
+  padding: 1px 7px;
 }
 .cm-rcount {
   flex: 0 0 auto;
@@ -1391,6 +1596,16 @@
   color: #f2e5d0;
   background: rgba(38,24,8,.9);
 }
+/* 0125: die Flamme wechselt. Kühl wie der Schild überall sonst —
+   dieselbe Farbe an jeder Stelle, an der es um Schutz geht, damit die
+   Klasse den Zusammenhang zwischen Ankündigung und leuchtendem Panel
+   ohne Erklärung sieht. */
+.cm-announce--shield {
+  border-color: #8fc4f0;
+  color: #e6f3ff;
+  background: rgba(10,40,66,.92);
+  box-shadow: 0 10px 30px rgba(0,0,0,.55), 0 0 26px rgba(110,180,255,.55);
+}
 
 /* Eine Beschriftung über der Burg (.cm-castlelabel) gab es hier bis
    zum Gestaltungs-Durchgang — sie ist ersatzlos weg, Begründung steht
@@ -1572,11 +1787,25 @@ body.cm-locked { overflow: hidden; }
   box-shadow: 0 0 3px rgba(0,0,0,.9);
   transform: rotate(-14deg);
 }
+/* Geschützt (0125): ein kühler Ring um das Plättchen, ruhig.
+   Bewusst NUR über box-shadow und nicht über border/background —
+   .cm-fchip--me steht weiter oben und gibt dem eigenen Volk seinen
+   hellen Rand. Der wäre sonst genau dann weg, wenn das eigene Volk
+   vorn liegt: „das bin ich" darf der Schild nicht überschreiben, er
+   sagt es ja über sein Symbol schon dazu.
+   Steht VOR --fire, damit der Flammen-Moment ihn acht Sekunden lang
+   überstrahlen darf. */
+.cm-fchip--shield {
+  box-shadow: 0 0 0 2px rgba(143,196,240,.8), 0 0 12px rgba(110,180,255,.5);
+}
 /* Serien-Boni am Tablet (UI 18). Am Beamer leuchtet das Panel des
    Volkes am Rand — hier gibt es keine Panels, also leuchtet das
-   Plättchen des eigenen Volkes in derselben Goldfarbe. Andere Völker
-   können hier nie leuchten: das Tablet erfährt nur die Ereignisse
-   SEINES Volkes (clash_view.my_team_events, 0106). */
+   Plättchen in derselben Goldfarbe.
+   Bis 0124 konnte hier nur das EIGENE Volk leuchten (das Tablet
+   erfuhr nur die Ereignisse seines Volkes, clash_view.my_team_events).
+   Seit 0125 kommt der Schutz-Zustand für ALLE Völker mit
+   (clash_view.fire_teams) — und das ist der Punkt: man muss sehen
+   können, wen die eigene nächste Antwort gerade nicht trifft. */
 .cm-fchip--fire {
   border-color: #ffe6a3;
   animation: cmChipFire 1.4s ease-in-out infinite;
@@ -1584,6 +1813,20 @@ body.cm-locked { overflow: hidden; }
 @keyframes cmChipFire {
   0%, 100% { box-shadow: 0 0 8px  2px rgba(255,196,80,.55); }
   50%      { box-shadow: 0 0 18px 5px rgba(255,214,120,.95); }
+}
+/* Der Schild sitzt auf der Schulter der Einheit (0125). Ein Zeichen,
+   kein Schein: in der Sonne auf einem Tablet ist ein Leuchten am Rand
+   eines 30-px-Plättchens nicht zu sehen, ein Symbol schon. Er nimmt
+   keinen Platz in der Reihe (absolut positioniert) — acht Plättchen
+   müssen weiterhin nebeneinander passen. */
+.cm-fshield {
+  position: absolute;
+  top: -6px;
+  left: 12px;
+  font-size: .72rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.8));
+  pointer-events: none;
 }
 /* Gerade ausgeschieden: einmal zucken und hell aufblitzen, danach
    bleibt der graue durchgestrichene Zustand von .cm-fchip--out. */
@@ -1836,6 +2079,22 @@ body.cm-locked { overflow: hidden; }
   0%, 100% { box-shadow: 0 0 8px rgba(255,170,50,.4); }
   50%      { box-shadow: 0 0 18px 3px rgba(255,205,105,.8); }
 }
+/* Der Schild (0125) am Volks-Abzeichen. Er ist KEINE Steigerung von
+   --hot/--near/--fire, sondern eine andere Sache: die drei sind Feuer
+   (eine Serie treibt auf etwas zu), der Schild ist Stein (das Volk
+   hält). Deshalb kühl statt warm und ruhig statt pulsierend — er gilt
+   minutenlang, und was minutenlang gilt, darf nicht blinken.
+   Er steht VOR --fire: gelten beide (das Volk ist geschützt UND hat
+   die Flamme gerade übernommen), soll die acht Sekunden lange Feier
+   gewinnen und danach der Schild übrig bleiben. Die Reihenfolge in
+   dieser Datei IST diese Entscheidung. */
+.cm-pstreak--shield {
+  border-color: #8fc4f0;
+  background: rgba(12,44,72,.72);
+  color: #dbeeff;
+  box-shadow: 0 0 10px rgba(110,180,255,.42);
+  animation: none;
+}
 /* „on fire" ist etwas anderes als „hot" (UI 18): hot heißt „drei
    richtige hintereinander" und steht, solange die Serie hält —
    --fire heißt „gerade eben hat ein Serien-Bonus ausgelöst" und
@@ -1846,6 +2105,13 @@ body.cm-locked { overflow: hidden; }
   background: rgba(160,80,8,.75);
   color: #fff3d0;
   animation: cmChipFire 1.2s ease-in-out infinite;
+}
+/* 0125: der eigene Kopf im Schutz-Zustand. Kein Puls, weil der Schutz
+   Minuten hält — ein Rahmen in der Schild-Farbe und ein stehender
+   Schein reichen. Steht wie das Abzeichen VOR der Feuer-Fassung. */
+.cm-phero--shield {
+  border-color: #8fc4f0;
+  box-shadow: inset 0 0 0 1px rgba(180,220,255,.28), 0 0 20px 3px rgba(110,180,255,.4);
 }
 /* Der Kopf des eigenen Volkes leuchtet mit, wenn das VOLK eine Serie
    geschafft hat — das Gegenstück zum leuchtenden Panel am Beamer. */
@@ -1898,6 +2164,18 @@ body.cm-locked { overflow: hidden; }
 @keyframes cmStreakBarPulse {
   0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,.4), 0 0 12px rgba(255,170,50,.4); }
   50%      { box-shadow: 0 4px 14px rgba(0,0,0,.4), 0 0 26px 5px rgba(255,205,105,.85); }
+}
+/* Dieselbe Zeile, anderer Anlass (0125): „euer Volk ist geschützt"
+   steht, solange es gilt — oft minutenlang. Ein pulsierender Banner
+   wäre nach einer halben Minute nur noch Unruhe im Blickfeld genau
+   über der Aufgabe. Also: einfliegen ja, pulsen nein, und in der
+   kühlen Schild-Farbe statt im Serien-Orange. */
+.cm-streakbar--shield {
+  background: linear-gradient(180deg, rgba(16,64,102,.94), rgba(8,36,60,.94));
+  border-color: #8fc4f0;
+  color: #e6f3ff;
+  box-shadow: 0 4px 14px rgba(0,0,0,.4), 0 0 14px rgba(110,180,255,.4);
+  animation: cmStreakBarIn .28s ease-out;
 }
 /* Team-Toast (0106): „<Name> ist on fire" / „Ihr seid on fire". Sitzt
    als Geschwister von .cm-mapov oben mittig im Spielbildschirm, damit

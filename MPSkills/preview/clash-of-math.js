@@ -156,9 +156,29 @@
 
   let tiles = [];
   let correct = {};
+  let streaks = {};        // 0125: laufende Serie je Volk — daraus die Flamme
   let teamEvents = [];
   let nextEventId = 1;
   let matchEnd = 0;
+
+  /* 0125: Wer ist geschützt? Dieselbe Regel wie im Server
+     (clash_fire_teams): die lebenden Völker mit der höchsten Serie,
+     sofern die mindestens 3 beträgt. Sie steht hier nachgebaut und
+     nicht abgefragt, weil die Auslage keinen Server hat — und sie
+     steht bewusst KURZ: eine Auslage, die eine Spielregel nur
+     ungefähr zeigt, wirbt für ein anderes Spiel. */
+  function fireTeamsOf(tileCounts) {
+    let max = 0;
+    for (let i = 0; i < TEAMS; i++) {
+      if ((tileCounts[i] || 0) > 0) max = Math.max(max, streaks[i] || 0);
+    }
+    if (max < 3) return [];
+    const out = [];
+    for (let i = 0; i < TEAMS; i++) {
+      if ((tileCounts[i] || 0) > 0 && (streaks[i] || 0) === max) out.push(i);
+    }
+    return out;
+  }
 
   /* Ein neuer Durchgang bekommt ein neues Königreich. Das steht in
      view() und nicht in play(), weil lib/preview.js genau dort seinen
@@ -173,6 +193,10 @@
     // Kein Volk startet bei null: die Partie läuft schon eine Weile,
     // und eine Reihe aus lauter Nullen sähe aus, als rechne niemand.
     for (let i = 0; i < TEAMS; i++) correct[i] = 6 + Math.floor(Math.random() * 22);
+    // Die Serien dagegen schon: die Flamme soll in der Auslage
+    // ENTSTEHEN, nicht von Anfang an dastehen — sonst sieht es aus wie
+    // eine Auszeichnung und nicht wie etwas, das man sich holt.
+    streaks = {};
     teamEvents = [];
     nextEventId = 1;
     /* EINMAL gesetzt und danach stehengelassen: der Ring oben rechts
@@ -273,6 +297,11 @@
       team_members: members,
       offline_members: [],
       team_events: teamEvents.slice(-20),
+      // 0125: Serie je Volk und die daraus folgende Flamme. Sie ist
+      // die auffälligste Neuerung des Spiels — eine Auslage ohne sie
+      // zeigte den Stand von vorgestern.
+      team_streaks: streaks,
+      fire_teams: fireTeamsOf(c),
       // Kein Ruinen-Modus in der Auslage (0108): dafür müsste erst ein
       // Volk ausscheiden, und dreißig Züge reichen dafür nicht.
       ruin: {},
@@ -349,16 +378,25 @@
       if (team == null) break;
       captureFor(team);
 
-      /* Alle paar Züge eine Team-Serie. Sie ist im Spiel der Grund,
-         warum ein Volk plötzlich fünf Felder auf einmal nimmt (0106),
-         und sie ist das Einzige auf dem Beamer, das laut wird: die
-         Spalte des Volkes fängt an zu leuchten. Ohne sie sähe die
-         Auslage aus, als ginge es immer gleichmäßig zu. */
-      if (i > 0 && i % 9 === 0) {
-        teamEvents.push({ id: nextEventId++, team: team, kind: 'team_fire',
-                          payload: { streak: 20 } });
-        for (let k = 0; k < 3; k++) captureFor(team);
+      /* Die Serie des Volkes (0125). Wer gerade erobert, hat richtig
+         gerechnet — seine Serie wächst. Damit die Flamme wandert und
+         nicht bei einem Volk klebt, reißt hin und wieder die Serie
+         eines anderen ab; im Spiel besorgt das ein Fehlversuch.
+         Das team_fire-Ereignis wird nur dann ausgelöst, wenn die
+         Flamme wirklich übergeht — auf dem Beamer ist genau das die
+         Ankündigung, die die Auslage zeigen soll. */
+      const fireBefore = fireTeamsOf(counts());
+      streaks[team] = (streaks[team] || 0) + 1;
+      if (i % 4 === 3) {
+        const other = Math.floor(Math.random() * TEAMS);
+        if (other !== team) streaks[other] = 0;
       }
+      fireTeamsOf(counts()).forEach(slot => {
+        if (fireBefore.indexOf(slot) < 0) {
+          teamEvents.push({ id: nextEventId++, team: slot, kind: 'team_fire',
+                            payload: { streak: streaks[slot] || 0 } });
+        }
+      });
 
       // Wer erobert, hat gerechnet — und zwar mehr als einmal, sonst
       // stünde die zweite Zahl in der Spalte still, während die erste

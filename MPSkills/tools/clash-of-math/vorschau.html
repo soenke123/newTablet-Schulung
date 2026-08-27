@@ -100,7 +100,7 @@
   <button type="button" id="pvFx1" title="ein Feld erobern">Feld</button>
   <button type="button" id="pvFx2" title="eine Burg übernehmen">Burg</button>
   <button type="button" id="pvFx3" title="ein Volk auslöschen">Volk raus</button>
-  <button type="button" id="pvFx4" title="Team-Serie ausgelöst">🔥 Volk</button>
+  <button type="button" id="pvFx4" title="eigenes Volk holt sich die Flamme — geschützt (0125)">🛡️ Volk</button>
   <button type="button" id="pvFx5" title="Einzel-Serie ausgelöst">🔥 Kind</button>
   <button type="button" id="pvFx6" title="ein Ruinen-Punkt für ein ausgeschiedenes Volk (0108)">🏚️ +1</button>
   <button type="button" id="pvFx7" title="bis zur nächsten Zehnerstufe — ein Feld versinkt (0108)">🏚️ Feld weg</button>
@@ -140,11 +140,18 @@ let tiles    = [];
 // Karten-Auto-Öffnung, den Countdown-Banner, die pulsierenden Ziele
 // und den Team-Toast ohne echten Server durchzuklicken.
 let teamStreak = 0;
+/* 0125: die Serien ALLER Völker. Bis 0124 reichte die eigene — die
+   Team-Serie war eine private Schwelle. Jetzt ist sie ein Rennen, und
+   ein Rennen mit einem Teilnehmer zeigt nichts: ohne die anderen wäre
+   das eigene Volk immer und sofort geschützt, und der Schild stünde im
+   Prüfstand fest an einer Stelle, an der er im Betrieb wandert.
+   Die fremden Werte bewegen sich von selbst (siehe driftStreaks). */
+let teamStreaks = {};
 // 0123: das Gegenstück zu clash_streak_goals(). EINE Ablage, aus der
 // die Zündschwellen unten UND das an tool.js gereichte streak_goals
 // kommen — sonst prüft der Prüfstand gegen eine andere Zahl, als er
 // anzeigen lässt.
-const GOALS = { solo: 7, team: 12 };
+const GOALS = { solo: 4, solo_reward: 2, fire_min: 3 };
 // 0124: dieselbe Rolle wie GOALS, für die Antwort-Sperre — im Betrieb
 // steht das in clash_answer_lock(). Der Prüfstand braucht sie, weil der
 // Ladekreis sonst nie zu sehen wäre: er hängt allein an `lock_ms`.
@@ -240,6 +247,50 @@ function ruinJson() {
   const out = {};
   Object.keys(ruinPoints).forEach(k => { if (ruinPoints[k] > 0) out[k] = ruinOf(k); });
   return out;
+}
+
+/* ── Die Flamme (0125) ────────────────────────────────────────────
+   streakJson() ist der Stand aller Völker (das eigene aus teamStreak,
+   damit es genau eine Wahrheit dafür gibt), fireTeams() dieselbe Regel
+   wie clash_fire_teams: die noch lebenden Völker mit der höchsten
+   Serie, sofern die mindestens GOALS.fire_min beträgt.
+   Nachgebaut statt vereinfacht — ein Prüfstand, der großzügiger ist
+   als der Server, zeigt einen Schild, den es im Betrieb nicht gibt. */
+function streakJson() {
+  const out = {};
+  for (let i = 0; i < TEAMS; i++) out[i] = (i === myTeam) ? teamStreak : (teamStreaks[i] || 0);
+  return out;
+}
+function fireTeams() {
+  const alive = {};
+  tiles.forEach(t => { if (t.team >= 0) alive[t.team] = true; });
+  const s = streakJson();
+  let max = 0;
+  for (let i = 0; i < TEAMS; i++) if (alive[i]) max = Math.max(max, s[i]);
+  if (max < GOALS.fire_min) return [];
+  const out = [];
+  for (let i = 0; i < TEAMS; i++) if (alive[i] && s[i] === max) out.push(i);
+  return out;
+}
+/* Die fremden Serien bewegen sich bei jeder eigenen Antwort ein Stück
+   — sonst stünde das Rennen still und der Schild klebte nach der
+   vierten richtigen Antwort für immer am eigenen Volk. Emittiert
+   dabei team_fire für jedes Volk, das die Flamme NEU bekommt: genau
+   das tut clash_refresh_fire im Server. */
+function driftStreaks() {
+  const before = fireTeams();
+  for (let i = 0; i < TEAMS; i++) {
+    if (i === myTeam) continue;
+    // Zwei von drei Antworten wachsen, jede dritte reißt ab — die
+    // Größenordnung, in der eine Gruppe von vier Kindern spielt.
+    teamStreaks[i] = (Math.random() < 0.33) ? 0 : (teamStreaks[i] || 0) + 1;
+  }
+  fireTeams().forEach(slot => {
+    if (before.indexOf(slot) < 0) {
+      teamEvents.push({ id: nextEventId++, team: slot, kind: 'team_fire',
+        payload: { streak: streakJson()[slot] } });
+    }
+  });
 }
 
 /* Dieselbe Regel wie clash_shrink_board: Opfer ist das lebende Volk
@@ -526,8 +577,13 @@ const RPC = {
     // sich zwischen zwei Schrumpfungen, ohne dass eine Kachel anders
     // aussieht (auf dem Server ist es derselbe Zusatzterm).
     const ruinSum = Object.keys(ruinPoints).reduce((s, k) => s + ruinPoints[k], 0);
+    // 0125: die Flamme gehört mit hinein. Sie kann wandern, ohne dass
+    // eine Kachel den Besitzer wechselt — ohne diesen Teil bliebe der
+    // Schild bis zur nächsten Eroberung beim falschen Volk stehen.
+    const fireSig = fireTeams().join(',');
     return { ok: true, sig: phase + ':' + tiles.map(t => t.team + '' + (t.hp == null ? '' : t.hp)).join('') +
-      ':' + streak + ':' + teamStreak + ':' + pendingPicks + ':' + nextEventId + ':' + ruinSum };
+      ':' + streak + ':' + teamStreak + ':' + pendingPicks + ':' + nextEventId + ':' + ruinSum +
+      ':' + fireSig };
   },
 
   /* Der Beamer. Dieselbe Wahrheit, andere Felder — genau die, die
@@ -567,6 +623,11 @@ const RPC = {
       // 0108: Ruinen-Stand ALLER Völker + Spielfeldgröße.
       ruin: ruinJson(),
       board: boardState(),
+      // 0125: Serie je Volk, die Flamme daraus, und die Zahlen für den
+      // Regel-Hinweis im Countdown.
+      team_streaks: streakJson(),
+      fire_teams: fireTeams(),
+      streak_goals: GOALS,
       online_count: 22, room_total: 24
     };
   },
@@ -612,8 +673,11 @@ const RPC = {
       team_streak: teamStreak,
       // 0123: die Schwellen kommen vom Server, nicht aus tool.js — der
       // Prüfstand muss sie deshalb genauso mitschicken, sonst zeigt er
-      // „3/7" und zündet bei 12.
+      // „3/4" und zündet bei 7.
       streak_goals: GOALS,
+      // 0125: der Schutz. Für ALLE Völker, auch in der Teilnehmer-
+      // Ansicht — die Völker-Reihe oben zeigt ihn bei jedem Plättchen.
+      fire_teams: fireTeams(),
       // Nur das EIGENE Volk und ohne den team-Schlüssel — genau so
       // schneidet clash_view die Liste serverseitig zu (0106).
       my_team_events: teamEvents.filter(e => e.team === myTeam)
@@ -670,35 +734,33 @@ const RPC = {
       let ruinAdd = ruined ? 1 : 0;
       if (!ruined) hit = attackOne();
 
-      // Einzel-Serie: seit 0123 jedes Vielfache von GOALS.solo (0106: 10,
-      // 0108: 12, 0123: 7) — zwei offene Picks, bei einem
-      // ausgeschiedenen Volk zwei Ruinen-Punkte.
+      // Einzel-Serie: jedes Vielfache von GOALS.solo (0106: 10, 0108: 12,
+      // 0123: 7, 0125: 4) — GOALS.solo_reward offene Picks, bei einem
+      // ausgeschiedenen Volk ebenso viele Ruinen-Punkte.
       if (Math.floor((oldStreak + 1) / GOALS.solo) > Math.floor(oldStreak / GOALS.solo)) {
-        if (ruined) ruinAdd += 2;
+        if (ruined) ruinAdd += GOALS.solo_reward;
         else {
-          pendingPicks += 2;
+          pendingPicks += GOALS.solo_reward;
           pickDeadline = new Date(Date.now() + 6000).toISOString();
         }
         teamEvents.push({ id: nextEventId++, team: myTeam, kind: 'individual_fire',
           payload: { name: 'Jonas', streak: oldStreak + 1 } });
       }
 
-      // Team-Serie: jedes Vielfache von GOALS.team (0106–0122: 20, seit
-      // 0123: 12) erobert seit 0108 fünf Felder (waren sieben) bzw. gibt
-      // fünf Ruinen-Punkte.
-      const oldTeamStreak = teamStreak;
+      // 0125: Die Team-Serie zahlt nichts mehr aus. Sie wächst nur —
+      // und entscheidet damit, wer die Flamme hat.
       teamStreak++;
-      if (Math.floor(teamStreak / GOALS.team) > Math.floor(oldTeamStreak / GOALS.team)) {
-        teamEvents.push({ id: nextEventId++, team: myTeam, kind: 'team_fire', payload: { streak: teamStreak } });
-        if (ruined) ruinAdd += 5;
-        else for (let i = 0; i < 5; i++) attackOne();
-      }
 
       if (ruined) shrunk = addRuinPoints(myTeam, ruinAdd);
     } else {
       streak = 0;
       teamStreak = 0;
     }
+
+    // 0125: Nach JEDEM Ausgang, richtig wie falsch — eine falsche
+    // Antwort kann die Flamme genauso weiterreichen wie eine richtige.
+    // Steht hier, wo im Server clash_refresh_fire steht.
+    driftStreaks();
 
     // 0124: Zähler und Sperre, dieselbe Regel wie im Server. Eine
     // bedachte Antwort löscht den Zähler (richtig oder falsch), eine
@@ -723,6 +785,7 @@ const RPC = {
       reveal: correct ? null : { text: wasQ.answer },
       captured: hit.captured, castle_hit: hit.castle_hit,
       streak, team_streak: teamStreak, streak_goals: GOALS,
+      fire_teams: fireTeams(),   // 0125
       pending_picks: pendingPicks, pick_deadline: pickDeadline,
       ruin: ruined ? ruinOf(myTeam) : null,
       shrunk: shrunk,
@@ -857,9 +920,21 @@ document.getElementById('pvFx3').addEventListener('click', () => {
   tiles.forEach(t => { if (t.team === victim) t.team = myTeam; });
 });
 document.getElementById('pvFx4').addEventListener('click', () => {
-  teamStreak += 20 - (teamStreak % 20);
-  teamEvents.push({ id: nextEventId++, team: myTeam, kind: 'team_fire',
-    payload: { streak: teamStreak } });
+  // 0125: Es gibt keine Team-Schwelle mehr zu zünden — der Knopf holt
+  // stattdessen die FLAMME zum eigenen Volk, indem er dessen Serie über
+  // alle anderen hebt. Nur so lässt sich der Zustand ansehen, der im
+  // Betrieb der Grund ist, warum die Gegner abprallen.
+  const before = fireTeams();
+  let max = 0;
+  const s = streakJson();
+  for (let i = 0; i < TEAMS; i++) if (i !== myTeam) max = Math.max(max, s[i]);
+  teamStreak = Math.max(teamStreak, max + 1, GOALS.fire_min);
+  fireTeams().forEach(slot => {
+    if (before.indexOf(slot) < 0) {
+      teamEvents.push({ id: nextEventId++, team: slot, kind: 'team_fire',
+        payload: { streak: streakJson()[slot] } });
+    }
+  });
 });
 document.getElementById('pvFx5').addEventListener('click', () => {
   // Auf dem Beamer leuchtet damit ein NAME aus der Liste des Volkes —
