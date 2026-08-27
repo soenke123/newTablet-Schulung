@@ -1890,13 +1890,31 @@
       // aussehen — sechs verschieden große Kacheln wären ein Hinweis
       // darauf, welche die besondere ist.
       const long = list.some(c => String(c).replace(/ /g, '').length > 4);
+      /* Zahlensysteme (0114): auf einer Kachel steht nur „1001 0000" —
+         in welchem System das gemeint ist, müsste man sich aus der
+         Aufgabe darüber holen. „1 0011" kann binär, hexadezimal und
+         dezimal dastehen, und zwischen sechs Kacheln ist die Zielbasis
+         genau die Frage. Also trägt jede Kachel sie selbst:
+         „(1001 0000)₂" — dieselbe Schreibweise wie die Aufgabe und wie
+         das Eingabefeld beim freien Tippen (Sönkes Vorgabe vom
+         27.08.2026).
+
+         Die ZIELbasis, nicht die der Aufgabe: auf den Kacheln steht die
+         Antwort. Fehlt sie (Brüche, Terme, Vergleiche), bleibt es beim
+         gewohnten Satz.
+
+         Die Vierergruppen bringt der Server hier schon mit
+         (clash_num_choices), deshalb baseHTML unmittelbar und nicht
+         über mathHTML — das würde die Kachel am Leerzeichen zerlegen
+         und aus einer Zahl zwei machen. */
+      const base = (q && q.kind === 'digits' && q.base_to != null) ? q.base_to : null;
       els.keys.innerHTML =
         '<div class="cm-keypad" style="grid-template-columns:repeat(' + cols + ',1fr);' +
         'grid-template-rows:repeat(' + rows + ',1fr)">' +
         list.map(c =>
           '<button type="button" class="cm-key cm-key--choice' +
           (long ? ' cm-key--choicelong' : '') + '" data-choice="' + ctx.esc(c) + '">' +
-          mathHTML(c) + '</button>').join('') +
+          (base != null ? baseHTML(c, base) : mathHTML(c)) + '</button>').join('') +
         '</div>';
       keyMode = mode;
       keyChoices = list.slice();
@@ -2456,6 +2474,15 @@
               '</div>' +
               '<div class="cm-feedback" id="cmFeedback"></div>' +
             '</div>' +
+            // Der Ladekreis (Migration 0124). Er liegt ÜBER der
+            // Tastatur, nicht an ihrer Stelle: die Aufgabe und die
+            // Kacheln bleiben sichtbar, nur antippen geht kurz nicht.
+            // Genau das ist der Unterschied zwischen „warte einen
+            // Moment" und „du bist raus".
+            //
+            // Als Kind von cm-keys, damit er deren Fläche erbt — und
+            // weil buildKeypad das innerHTML der Tastatur ersetzt, wird
+            // er von applyLock nach jedem Neubau wieder angehängt.
             '<div class="cm-keys" id="cmKeys"></div>' +
           '</div>' +
           // Das Karten-Fenster. Es gehört in den Spielbildschirm und
@@ -2756,25 +2783,126 @@
     scheduleGlowRepaint();
   }
 
+  /* ─── Antwort-Sperre (Migration 0124) ─────────────────────────────
+     Nach mehreren schnellen Fehlversuchen in Folge bleibt die Eingabe
+     ein paar Sekunden zu. Die Regel dahinter steht im Server (siehe
+     clash_answer_lock) — hier ist nur die Anzeige: ein Ladekreis über
+     der Tastatur, der leerläuft.
+
+     Bewusst KEIN Text wie „gesperrt". In dem Moment steht die
+     aufgelöste Aufgabe in der Rückmeldung darüber („Richtig wäre 7/8")
+     — die Sekunden sind Lesezeit, und ein Vorwurf daneben würde genau
+     das kaputtmachen. Wer die Aufgabe liest und sich irrt, sieht den
+     Kreis ohnehin nie: der Zähler im Server wächst nur an Antworten,
+     die schneller kamen, als man die Aufgabe lesen kann.
+
+     Der Riegel selbst ist der Server. Dieser hier spart nur den
+     sinnlosen Roundtrip und macht sichtbar, warum gerade nichts geht. */
+  let lockUntil = 0, lockEl = null, lockTimer = null;
+
+  const lockActive = () => lockUntil > Date.now();
+
+  function ensureLockEl() {
+    if (lockEl) return lockEl;
+    lockEl = document.createElement('div');
+    lockEl.className = 'cm-lock';
+    lockEl.setAttribute('aria-hidden', 'true');
+    lockEl.innerHTML =
+      '<svg class="cm-lockring" viewBox="0 0 48 48">' +
+        '<circle class="cm-lockbg" cx="24" cy="24" r="20"></circle>' +
+        '<circle class="cm-lockfg" cx="24" cy="24" r="20"></circle>' +
+      '</svg>';
+    // Schluckt, was sonst die Kachel darunter träfe. Ohne das käme der
+    // Tipp beim Server an, würde dort mit 'locked' abgewiesen — und das
+    // Kind sähe einen Kreis, unter dem trotzdem etwas passiert.
+    lockEl.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); });
+    return lockEl;
+  }
+
+  /* Hängt den Kreis an die Tastatur und lässt ihn über die RESTzeit
+     leerlaufen. Getrennt von startLock, weil es zwei Anlässe gibt:
+     eine neue Sperre — und eine laufende, deren Overlay buildKeypad
+     gerade mit dem innerHTML der Tastatur weggeräumt hat. Der zweite
+     Fall ist der Normalfall, nicht die Ausnahme: die Sperre beginnt
+     zusammen mit der neuen Aufgabe.
+
+     Beim Wiederanhängen startet die CSS-Animation von vorn — deshalb
+     rechnet die Dauer immer aus dem, was noch übrig ist, und nicht aus
+     dem, was die Sperre einmal lang war. Sonst zeigte ein Kreis nach
+     einem Takt in der Mitte wieder volle fünf Sekunden an. */
+  function paintLock() {
+    const left = lockUntil - Date.now();
+    if (left <= 0 || !els.keys) return;
+    const el = ensureLockEl();
+    if (el.parentNode !== els.keys) els.keys.appendChild(el);
+    const fg = el.querySelector('.cm-lockfg');
+    if (fg) {
+      fg.style.animation = 'none';
+      void fg.offsetWidth;              // Neustart der Animation erzwingen
+      fg.style.animation = '';
+      fg.style.animationDuration = left + 'ms';
+    }
+    el.classList.add('cm-lock--on');
+    if (lockTimer) clearTimeout(lockTimer);
+    lockTimer = setTimeout(clearLock, left);
+  }
+
+  /* Startet eine neue Sperre. Kommt aus der Antwort von clash_submit —
+     die ist die frischeste Quelle, deshalb setzt sie immer neu. */
+  function startLock(ms) {
+    const dur = Math.max(0, ms || 0);
+    if (!dur) return;
+    lockUntil = Date.now() + dur;
+    paintLock();
+  }
+
+  /* Aus clash_view: die RESTzeit einer Sperre, die dieses Gerät
+     womöglich gar nicht kennt (Reload mitten in der Sperre).
+
+     Eine LAUFENDE Anzeige fasst sie nie an — ein Takt, der vor der
+     eigenen Antwort losgeschickt wurde, trägt einen älteren Stand und
+     würde die gerade begonnene Sperre sonst wieder aufheben. Nur wenn
+     das Overlay aus dem Baum gefallen ist (buildKeypad im selben Takt,
+     ein paar Zeilen über dem Aufruf), hängt sie es zurück. */
+  function syncLock(ms) {
+    if (lockActive()) {
+      if (!lockEl || lockEl.parentNode !== els.keys) paintLock();
+      return;
+    }
+    startLock(ms);
+  }
+
+  function clearLock() {
+    lockUntil = 0;
+    if (lockTimer) { clearTimeout(lockTimer); lockTimer = null; }
+    if (lockEl) lockEl.classList.remove('cm-lock--on');
+  }
+
   /* Eine Antwortkachel geht sofort raus (Sönkes Entscheidung). Es gibt
      dabei kein Eingabefeld, in dem die Antwort stehen könnte — die
      Rückmeldung sitzt deshalb auf der angetippten Kachel selbst, und
      dafür merken wir sie uns bis zur Antwort des Servers. */
   function chooseAnswer(text, btn) {
-    if (submitting) return;
+    if (submitting || lockActive()) return;
     choiceBtn = btn || null;
     if (choiceBtn) choiceBtn.classList.add('cm-key--picked');
     onSubmit(String(text));
   }
 
   async function onSubmit(forced) {
-    if (submitting) return;
+    if (submitting || lockActive()) return;
     const val = (forced != null) ? forced : parseAnswer();
     if (val == null) { flashInput('warn'); return; }
     submitting = true;
     if (forced == null) { resetAnswer(); renderAnswer(); }
     const r = await ctx.actions.call('clash_submit', { p_answer: val });
     submitting = false;
+    // 0124: Die Sperre lief noch, als der Tipp losging (die Uhr des
+    // Servers ist die Wahrheit, nicht die des Tablets). Kein Fehlertext
+    // — das ist kein Fehler, sondern genau der Zustand, den der
+    // Ladekreis anzeigt. Der Tipp zählt auch im Server nicht als
+    // Fehlversuch.
+    if (r && !r.ok && r.error === 'locked') { startLock(r.wait_ms); return; }
     if (!r || !r.ok) {
       setFeedback(ctx.errText((r && r.error) || 'network'), 'warn');
       if (r && r.error === 'team_eliminated') tick(true);
@@ -2881,6 +3009,10 @@
     noteStreakGoals(r.streak_goals);   // 0123 — vor setStreak, siehe dort
     if (r.streak != null) setStreak(r.streak);
     if (r.question) setQuestion(r.question);
+    // 0124 — NACH setQuestion: dort baut buildKeypad die Tastatur neu
+    // und wirft das Overlay aus dem Baum. startLock hängt es wieder an,
+    // also muss es die zweite von beiden sein.
+    startLock(r.lock_ms);
     // 0106: aus der eigenen Antwort direkt, ohne auf den nächsten Takt
     // zu warten — genau das macht den Einzel-Bonus „schnell". Die
     // Team-Serie ebenso: der eigene Broadcast schließt den Absender
@@ -3349,6 +3481,10 @@
     if (v.match_ends_at) startMatchTimer(v.match_ends_at); else stopMatchTimer();
     if (v.me.question) setQuestion(v.me.question);
     if (!keyMode) buildKeypad('natural');
+    // 0124 — nach dem Tastaturbau, wie in onSubmit. Deckt den Fall ab,
+    // den die eigene Antwort nicht kennt: neu geladen, während die
+    // Sperre lief. Ohne diese Zeile öffnete ein Reload sie.
+    syncLock(v.me.lock_ms);
     renderAnswer();
     renderPlayerMap();
   }
@@ -4492,6 +4628,10 @@
       poolSel = {}; poolBusy = 0; poolCat = null; poolCatBusy = false;
       resetAnswer();
       keyMode = null; keyChoices = null; choiceBtn = null; lastQSig = null; mapOpen = false;
+      // 0124: Der Kreis hängt an einem els.keys, das es gleich nicht
+      // mehr gibt — der Verweis muss mit weg, sonst hängt der nächste
+      // Raum sein Overlay in einen abgeräumten Baum.
+      clearLock(); lockEl = null;
       myPendingPicks = 0; pendingPickDeadlineMs = 0; lastTeamEventId = 0;   // 0106
       resetFx();                                                            // UI 18
       lastRoomEventId = 0; roomEventsPrimed = false; teamEventsPrimed = false;

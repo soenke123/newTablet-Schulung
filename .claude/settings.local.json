@@ -73,7 +73,10 @@
       "Bash(grep -v \"^ *at \\\\|pglite\\\\\\\\\\\\\\\\dist\")",
       "Bash(rg -n \"skill_rooms_code_shape\" -A3 -B3 *.sql)",
       "Bash(sed -i 's|lib/tool.js?v=20260826e|lib/tool.js?v=20260827a|' j.html lehrer.html)",
-      "Bash(sed -i 's|lib/tool.js?v=20260826d|lib/tool.js?v=20260827a|' lib/preview.js)"
+      "Bash(sed -i 's|lib/tool.js?v=20260826d|lib/tool.js?v=20260827a|' lib/preview.js)",
+      "Bash(sed -i \"s#import { PGlite } from '@electric-sql/pglite';#import { PGlite } from '@electric-sql/pglite';\\\\nimport { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';\\\\nimport { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';#\" _t.mjs)",
+      "Bash(sed -i \"s#const db = new PGlite\\(\\);#const db = new PGlite\\({ extensions: { pgcrypto, btree_gist } }\\);#\" _t.mjs)",
+      "Bash(sed -i \"s#^  create schema if not exists auth;#  create extension if not exists pgcrypto;\\\\n  create extension if not exists btree_gist;\\\\n  create schema if not exists auth;#\" _t.mjs)"
     ]
   }
 }

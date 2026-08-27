@@ -2075,6 +2075,71 @@ body.cm-locked { overflow: hidden; }
   display: flex;
   flex-direction: column;
   gap: 7px;
+  /* Bezugsrahmen für den Ladekreis (0124) — er liegt über der
+     Tastatur und soll genau deren Fläche abdecken. */
+  position: relative;
+}
+
+/* ─── Antwort-Sperre (Migration 0124) ─────────────────────────────
+   Nach mehreren geratenen Antworten in Folge bleibt die Eingabe ein
+   paar Sekunden zu. Der Schleier ist absichtlich dünn: die Kacheln
+   sollen durchscheinen, denn die Aufgabe steht ja noch da und darf
+   gelesen werden — gesperrt ist nur das Antippen.
+
+   Kein display:none im Ruhezustand, sondern Deckkraft: so kann das
+   Auftauchen weich sein, und das Element bleibt an seinem Platz. */
+.cm-lock {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(42, 33, 21, .42);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+}
+.cm-lock--on {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cm-lockring {
+  width: 54px;
+  height: 54px;
+  /* Zwölf Uhr statt drei: ein Kreis, der oben anfängt, liest sich als
+     Uhr — und genau das ist er hier. */
+  transform: rotate(-90deg);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .35));
+}
+.cm-lockbg, .cm-lockfg {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.cm-lockbg { stroke: rgba(239, 227, 192, .28); }
+.cm-lockfg {
+  stroke: var(--cm-gold);
+  /* 2πr bei r = 20. Der Umfang steht hier fest, weil er auch in der
+     Animation unten steht — beide müssen dieselbe Zahl sein. */
+  stroke-dasharray: 125.66;
+  stroke-dashoffset: 0;
+  /* Die DAUER setzt tool.js (startLock), sie ist je Sperre anders. */
+  animation: cm-lockdrain linear forwards;
+}
+@keyframes cm-lockdrain {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: 125.66; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Ohne Bewegung bleibt der Ring einfach stehen — die Sperre endet
+     trotzdem, sie wird von einem Timer beendet und nicht von der
+     Animation. */
+  .cm-lockfg { animation: none; stroke-dashoffset: 0; }
+  .cm-lock { transition: none; }
 }
 .cm-keyvars {
   flex: 1 1 0;
@@ -3012,6 +3077,20 @@ body.cm-locked { overflow: hidden; }
   overflow-wrap: anywhere;
   text-wrap: balance;
   font-variant-numeric: tabular-nums;
+}
+/* Seit dem 27.08.2026 steht die Basis auch auf den Kacheln
+   („(1001 0000)₂", siehe buildKeypad). Auf einer LANGEN Kachel muss die
+   Klammergruppe dafür umbrechen dürfen: .cm-based ist von Haus aus
+   inline-flex und nowrap, damit die Aufgabenzeile auf einer Zeile
+   bleibt — hier bliebe die schließende Klammer dadurch am Ende der
+   ERSTEN Zeile kleben, während die Ziffern darunter weiterlaufen
+   (Klammer und Ziffernfolge sind zwei Flex-Elemente). Als gewöhnlicher
+   Text bricht die Gruppe an der Vierergruppen-Lücke um und die Klammer
+   wandert mit; der tiefgestellte Index sitzt auch inline richtig, er
+   wird ohnehin von Hand verschoben (.cm-based > sub). */
+.cm-key--choicelong .cm-based {
+  display: inline;
+  white-space: normal;
 }
 /* Angetippt und unterwegs zum Server. Die Kachel hält den Blick fest,
    solange die Antwort läuft — sonst wüsste bei zwei schnellen Tipps

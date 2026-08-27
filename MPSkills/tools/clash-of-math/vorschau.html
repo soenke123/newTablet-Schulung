@@ -145,6 +145,13 @@ let teamStreak = 0;
 // kommen — sonst prüft der Prüfstand gegen eine andere Zahl, als er
 // anzeigen lässt.
 const GOALS = { solo: 7, team: 12 };
+// 0124: dieselbe Rolle wie GOALS, für die Antwort-Sperre — im Betrieb
+// steht das in clash_answer_lock(). Der Prüfstand braucht sie, weil der
+// Ladekreis sonst nie zu sehen wäre: er hängt allein an `lock_ms`.
+const LOCK = { fastMs: 2000, free: 2, capS: 5 };
+let fastWrong = 0;          // schnelle Fehlversuche in Folge
+let lockUntil = 0;          // bis wann die Eingabe zu ist (ms-Zeitstempel)
+let qShownAt  = Date.now(); // wann die laufende Aufgabe erschienen ist
 let teamEvents = [];
 let nextEventId = 1;
 let pendingPicks = 0;
@@ -571,12 +578,12 @@ const RPC = {
   clash_task_catalog: () => ({ ok: true, groups: CATALOG }),
   clash_room_set_pool: a => {
     pool = Object.assign({}, a.p_pool || {});
-    question = newQuestion();
+    question = newQuestion(); qShownAt = Date.now();
     return { ok: true, pool: pool };
   },
   clash_room_start: () => {
     if (!Object.keys(pool).length) return { ok: false, error: 'pool_empty' };
-    question = newQuestion();
+    question = newQuestion(); qShownAt = Date.now();
     phase = 'running';
     return { ok: true };
   },
@@ -627,7 +634,10 @@ const RPC = {
         question: qPublic(question),
         seat: 3, name: 'Jonas',
         pending_picks: pendingPicks,
-        pick_deadline: pickDeadline
+        pick_deadline: pickDeadline,
+        // 0124: die RESTzeit der Sperre. Im Betrieb ist das der Weg,
+        // auf dem ein neu geladenes Tablet von ihr erfährt.
+        lock_ms: Math.max(0, lockUntil - Date.now())
       }
     };
   },
@@ -635,8 +645,15 @@ const RPC = {
   clash_submit_answer: args => RPC.clash_submit({ p_answer: String(args.p_answer) }),
   clash_submit: args => {
     expirePendingPicks();
+    // 0124: die Sperre zuerst, vor jedem Zustandswechsel — genau wie im
+    // Server. Ein Tipp währenddessen ist keine Antwort und zählt nicht.
+    if (Date.now() < lockUntil) {
+      return { ok: false, error: 'locked', wait_ms: lockUntil - Date.now() };
+    }
     const correct = answerMatches(question, args.p_answer);
     const wasQ = question;
+    // Schnell = weniger als LOCK.fastMs nach dem Erscheinen der Aufgabe.
+    const fast = (Date.now() - qShownAt) < LOCK.fastMs;
     // 0108: „ausgeschieden" in der Vorschau ist die Phase `out` — der
     // Server erkennt es daran, dass das Volk keine Kachel mehr hat.
     const ruined = (phase === 'out');
@@ -682,12 +699,26 @@ const RPC = {
       streak = 0;
       teamStreak = 0;
     }
+
+    // 0124: Zähler und Sperre, dieselbe Regel wie im Server. Eine
+    // bedachte Antwort löscht den Zähler (richtig oder falsch), eine
+    // richtige schnelle lässt ihn stehen — sonst käme die Sperre bei
+    // wechselndem Glück nie über eine Sekunde hinaus.
+    if (!fast)        fastWrong = 0;
+    else if (!correct) fastWrong++;
+    const lockS = correct ? 0 : Math.min(Math.max(fastWrong - LOCK.free, 0), LOCK.capS);
+    lockUntil = lockS ? Date.now() + lockS * 1000 : 0;
+
     question = newQuestion();
+    // Die Uhr der neuen Aufgabe läuft erst ab dem Moment, in dem wieder
+    // getippt werden darf — sonst wäre das Zeitfenster während einer
+    // langen Sperre schon abgelaufen.
+    qShownAt = Date.now() + lockS * 1000;
     return {
-      ok: true, correct, eliminated: ruined,
-      // Die Vorschau kennt die Zwei-Versuche-Regel (0101) nicht — sie
-      // löst sofort auf. Damit lässt sich wenigstens die Auflösung
-      // ansehen, die es im Betrieb beim zweiten Fehlversuch gibt.
+      ok: true, correct, eliminated: ruined, lock_ms: lockS * 1000,
+      // Die Vorschau löst sofort auf. Für AUSWAHLaufgaben ist das seit
+      // 0124 genau der Betrieb (ein Versuch, dann die Lösung); bei
+      // Tipp-Aufgaben fehlt hier weiterhin der zweite Versuch aus 0101.
       retry: false,
       reveal: correct ? null : { text: wasQ.answer },
       captured: hit.captured, castle_hit: hit.castle_hit,
