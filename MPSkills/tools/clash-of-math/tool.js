@@ -1410,27 +1410,24 @@
   function countdownInfoHTML() {
     const n = streakGoals.solo, r = streakGoals.soloReward;
     const feld = r === 1 ? 'Bonusfeld' : 'Bonusfelder';
+    // Der Countdown dauert drei Sekunden. Alles, was hier steht, muss
+    // in dieser Zeit AUF EINEN BLICK zu lesen sein — also je Kachel
+    // ein einziger großer Satz und kein Kleingedrucktes. Die genaue
+    // Schwelle für den Schutz (fireMin) fehlt deshalb bewusst; sie
+    // steht später im Banner über dem Kopf, wo Zeit dafür ist.
     return '<div class="cm-rules">' +
-      '<div class="cm-ruletitle">⚔ Zwei Serien, zwei Belohnungen ⚔</div>' +
+      '<div class="cm-ruletitle">Zwei Serien, zwei Belohnungen</div>' +
       '<div class="cm-rulegrid">' +
         '<div class="cm-rule cm-rule--solo">' +
           '<span class="cm-ruleico">🔥</span>' +
           '<span class="cm-rulekind">Deine Serie</span>' +
-          `<b class="cm-rulebig">${n} richtige in Folge</b>` +
-          `<span class="cm-ruledesc">… und du erspielst <b>${r} ${feld}</b>, ` +
-            'die du dir selbst aussuchen darfst.</span>' +
+          `<b class="cm-rulebig">${n} richtige in Folge → erspiele ` +
+            `<span class="cm-rulehl">${r} ${feld}</span></b>` +
         '</div>' +
         '<div class="cm-rule cm-rule--team">' +
           '<span class="cm-ruleico">🛡️</span>' +
-          '<span class="cm-rulekind">Serie deines Volkes</span>' +
-          '<b class="cm-rulebig">Die längste Serie zählt</b>' +
-          '<span class="cm-ruledesc">Das Volk mit der längsten Serie ist ' +
-            '<i>on fire</i> — und <b>geschützt vor Eroberungen</b>.</span>' +
-          // Die Kleingedruckte gehört dazu, sonst stimmt die Regel
-          // nicht ganz: mit zwei richtigen in Folge führt man zwar,
-          // ist aber noch nicht geschützt. Klein genug, dass sie den
-          // Satz darüber nicht zerredet.
-          `<span class="cm-rulefoot">ab ${streakGoals.fireMin} richtigen in Folge</span>` +
+          '<b class="cm-rulebig">Das Volk mit der längsten Team-Serie ist ' +
+            '<span class="cm-rulehl">geschützt</span></b>' +
         '</div>' +
       '</div>' +
     '</div>';

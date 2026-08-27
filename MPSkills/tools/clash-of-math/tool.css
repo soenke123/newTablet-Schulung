@@ -434,7 +434,13 @@
 
    Die beiden Regeln stehen NEBENeinander, sobald Platz ist: sie sind
    gleichrangig und werden verglichen („eine für mich, eine für uns").
-   Untereinander wären sie eine Aufzählung mit einem Ersten. */
+   Untereinander wären sie eine Aufzählung mit einem Ersten.
+
+   Der Lesetakt gibt die Größen vor: der Countdown läuft drei Sekunden.
+   Je Kachel steht deshalb EIN Satz, groß genug, um die Kachel zu
+   füllen — Kicker, Beschreibungstext und Kleingedrucktes gab es in
+   der ersten Fassung, sie haben den Bildschirm für die Zeit
+   überladen. Bleiben darf nur, was in einem Blick lesbar ist. */
 .cm-rulewrap {
   width: 100%;
   max-width: 760px;
@@ -455,15 +461,17 @@
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: none; }
 }
+/* Die Überschrift ist die Klammer über beiden Kacheln — sie sagt in
+   drei Worten, worum es geht, und darf deshalb nicht kleiner sein als
+   das, was sie überschreibt. */
 .cm-ruletitle {
   font-family: var(--cm-display);
   font-weight: 700;
-  font-size: .82rem;
-  letter-spacing: .08em;
+  font-size: 1.06rem;
+  letter-spacing: .04em;
   text-align: center;
-  color: #f0d69a;
-  opacity: .92;
-  margin-bottom: 12px;
+  color: #ffe7b4;
+  margin-bottom: 14px;
 }
 /* auto-fit statt zwei fester Spalten: auf einem hochkant gehaltenen
    Tablet stehen sie untereinander, ohne dass es dafür eine
@@ -473,14 +481,19 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
 }
+/* Die eine Kachel hat eine Zeile darüber („Deine Serie"), die andere
+   nicht — deshalb wird der Inhalt MITTIG gesetzt statt oben bündig:
+   so wirken beide gleich gefüllt, obwohl verschieden viel drinsteht. */
 .cm-rule {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
-  gap: 3px;
-  padding: 14px 12px 12px;
+  gap: 4px;
+  min-height: 96px;
+  padding: 16px 14px 14px;
   border-radius: 12px;
   background: rgba(255,238,205,.055);
   border: 1px solid rgba(255,226,160,.18);
@@ -503,35 +516,24 @@
   box-shadow: 0 2px 8px rgba(0,0,0,.5);
 }
 .cm-rulekind {
-  font-size: .64rem;
+  font-size: .78rem;
   font-weight: 800;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: rgba(240,214,154,.7);
-  margin-top: 4px;
+  color: rgba(240,214,154,.75);
+  margin-top: 6px;
 }
+/* Der eine Satz je Kachel — er IST die Kachel und darf sie füllen. */
 .cm-rulebig {
   font-family: var(--cm-display);
   font-weight: 700;
-  font-size: 1.02rem;
-  line-height: 1.15;
+  font-size: 1.16rem;
+  line-height: 1.25;
   color: #ffe7b4;
 }
-.cm-ruledesc {
-  font-size: .78rem;
-  line-height: 1.35;
-  color: rgba(255,240,214,.82);
-}
-.cm-ruledesc b { color: #ffd98a; }
-.cm-ruledesc i { font-style: italic; color: #ffc46a; }
-/* Die Bedingung im Kleingedruckten — sie muss dastehen (sonst stimmt
-   die Regel darüber nicht ganz), darf den Satz aber nicht zerreden. */
-.cm-rulefoot {
-  margin-top: 4px;
-  font-size: .68rem;
-  letter-spacing: .02em;
-  color: rgba(255,240,214,.5);
-}
+/* Die Belohnung im Satz: das eine Wort, an dem das Auge hängen
+   bleiben soll, wenn es für den ganzen Satz nicht reicht. */
+.cm-rulehl { color: #ffd062; }
 /* Die eine Regel brennt, die andere hält — der Unterschied steckt
    nicht nur im Symbol, sondern auch im Schein der Kachel. */
 .cm-rule--solo { box-shadow: inset 0 0 22px rgba(255,150,40,.14); }
@@ -541,8 +543,7 @@
   border-color: #6ea8d8;
 }
 .cm-rule--team .cm-rulebig { color: #cfe8ff; }
-.cm-rule--team .cm-ruledesc b { color: #a8d4ff; }
-.cm-rule--team .cm-ruledesc i { color: #ffc46a; }
+.cm-rule--team .cm-rulehl { color: #8fd0ff; }
 
 /* Der Beamer hat die Wand für sich — dort darf alles größer sein.
    Der Countdown selbst rückt näher an die Regeln heran: die Zahl ist
@@ -550,14 +551,12 @@
 .cm-countdown--big { gap: 14px; padding: 24px 0 32px; }
 .cm-countdown--big .cm-rulewrap { max-width: min(1100px, 92vw); }
 .cm-countdown--big .cm-rules { padding: 20px 22px 24px; border-radius: 22px; }
-.cm-countdown--big .cm-ruletitle { font-size: 1.15rem; margin-bottom: 18px; }
+.cm-countdown--big .cm-ruletitle { font-size: 1.75rem; margin-bottom: 20px; }
 .cm-countdown--big .cm-rulegrid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
-.cm-countdown--big .cm-rule { padding: 22px 20px 18px; gap: 5px; }
+.cm-countdown--big .cm-rule { padding: 26px 22px 22px; gap: 8px; min-height: 160px; }
 .cm-countdown--big .cm-ruleico { width: 42px; height: 42px; top: -21px; font-size: 1.4rem; }
-.cm-countdown--big .cm-rulekind { font-size: .82rem; margin-top: 8px; }
-.cm-countdown--big .cm-rulebig { font-size: 1.7rem; }
-.cm-countdown--big .cm-ruledesc { font-size: 1.05rem; }
-.cm-countdown--big .cm-rulefoot { font-size: .82rem; }
+.cm-countdown--big .cm-rulekind { font-size: 1.05rem; margin-top: 10px; }
+.cm-countdown--big .cm-rulebig { font-size: 2rem; }
 @media (prefers-reduced-motion: reduce) {
   .cm-rules { animation: none; }
 }
