@@ -2285,9 +2285,19 @@
     return rows;
   }
 
-  // Eine Podest-Karte: Gruppenbild, Name, darunter Platz und richtige
-  // Antworten. `cls` bestimmt allein die Größe und den Platz in der
-  // Reihe (tool.css) — der Inhalt ist überall derselbe.
+  const fieldWord = n => (n === 1 ? 'Feld' : 'Felder');
+
+  // Eine Podest-Karte: Gruppenbild, Name, darunter — untereinander —
+  // Platz, Felder und richtige Antworten. `cls` bestimmt allein die
+  // Größe und den Platz in der Reihe (tool.css) — der Inhalt ist
+  // überall derselbe.
+  //
+  // Die Felder stehen dabei ÜBER den richtigen Antworten und größer,
+  // weil sie den Platz entscheiden (endRows sortiert nach tiles, die
+  // richtigen Antworten sind nur der Stichentscheid). Vorher stand nur
+  // die Zahl der richtigen Antworten da — beendet die Lehrkraft die
+  // Runde vorzeitig, sah die Reihenfolge damit willkürlich aus: das
+  // Volk auf Platz 1 konnte weniger richtig haben als das auf Platz 2.
   function podCardHTML(row, cls) {
     return `<div class="cm-pod ${cls}" style="--team:${fStroke(row.slot)}">` +
       `<div class="cm-podmedal">${MEDAL[row.place] || row.place}</div>` +
@@ -2295,19 +2305,24 @@
       `<div class="cm-podname">${ctx.esc(fLabel(row.slot))}</div>` +
       '<div class="cm-podfoot">' +
         `<span class="cm-podplace">Platz ${row.place}</span>` +
+        `<span class="cm-podtiles"><b>${row.tiles}</b> ${fieldWord(row.tiles)}</span>` +
         `<span class="cm-podcorr"><b>${row.correct}</b> richtig</span>` +
       '</div>' +
     '</div>';
   }
 
-  // Ab Platz 4: eine schmale Zeile statt einer Karte. Dieselben drei
-  // Angaben, nur nebeneinander gelegt.
+  // Ab Platz 4: eine schmale Zeile statt einer Karte. Dieselben
+  // Angaben, nur nebeneinander gelegt — die beiden Zahlen als kleiner
+  // Block am rechten Ende, Felder oben.
   function endRowHTML(row) {
     return `<div class="cm-erow" style="--team:${fStroke(row.slot)}">` +
       `<span class="cm-eplace">${row.place}.</span>` +
       `<span class="cm-ethumb"><img src="${esrc(fUnit(row.slot))}" alt=""></span>` +
       `<span class="cm-ename">${ctx.esc(fLabel(row.slot))}</span>` +
-      `<span class="cm-ecorr"><b>${row.correct}</b> richtig</span>` +
+      '<span class="cm-enums">' +
+        `<span class="cm-etiles"><b>${row.tiles}</b> ${fieldWord(row.tiles)}</span>` +
+        `<span class="cm-ecorr"><b>${row.correct}</b> richtig</span>` +
+      '</span>' +
     '</div>';
   }
 
@@ -3228,11 +3243,19 @@
     els.endTitle.innerHTML = endTitleHTML(win.slot);
     els.endPodium.innerHTML = podCardHTML(win, 'cm-pod--1') +
       ((mine && mine.slot !== win.slot) ? podCardHTML(mine, 'cm-pod--mine') : '');
+    // Unter dem Satz noch einmal die beiden Zahlen des eigenen Volkes,
+    // Felder zuerst: sie stehen zwar schon auf der eigenen Podest-Karte,
+    // aber beim Sieger gibt es keine zweite Karte — und genau dann ist
+    // das die einzige Stelle, an der die eigene Bilanz steht.
     els.endPlace.innerHTML = !mine
       ? ''
-      : (mine.slot === win.slot)
-        ? 'Ihr habt gewonnen! 🎉'
-        : `Ihr seid <b>${ORDINAL[mine.place] || (mine.place + '.')}</b>.`;
+      : ((mine.slot === win.slot)
+          ? 'Ihr habt gewonnen! 🎉'
+          : `Ihr seid <b>${ORDINAL[mine.place] || (mine.place + '.')}</b>.`) +
+        '<span class="cm-endnums">' +
+          `<b>${mine.tiles}</b> ${fieldWord(mine.tiles)} · ` +
+          `<b>${mine.correct}</b> richtig` +
+        '</span>';
     els.endPlace.classList.toggle('cm-hide', !mine);
   }
 

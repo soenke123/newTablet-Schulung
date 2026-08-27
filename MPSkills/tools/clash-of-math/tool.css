@@ -2553,17 +2553,22 @@ body.cm-locked { overflow: hidden; }
 }
 .cm-pod--1 .cm-podname { font-size: clamp(.95rem, 1.7vw, 1.5rem); }
 
-/* Platz und richtige Antworten — die beiden Angaben, um derentwillen
-   das Podest überhaupt da ist. Auf einem eigenen dunklen Streifen,
-   damit sie auf jeder Völkerfarbe stehen können. */
+/* Platz, Felder und richtige Antworten — die drei Angaben, um
+   derentwillen das Podest überhaupt da ist. Auf einem eigenen dunklen
+   Streifen, damit sie auf jeder Völkerfarbe stehen können.
+
+   Untereinander, nicht nebeneinander: die Reihenfolge ist eine
+   Rangfolge. Der Platz oben, darunter die Felder (die ihn entscheiden),
+   ganz unten die richtigen Antworten (der Stichentscheid). Drei Zahlen
+   in einer Zeile hätten sich auf der schmalen .cm-pod--3 ohnehin
+   umgebrochen — dann lieber dort, wo es gemeint ist. */
 .cm-podfoot {
   margin-top: 8px;
   width: 100%;
   display: flex;
-  align-items: baseline;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 4px 10px;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
   padding: 6px 8px;
   border-radius: 12px;
   background: rgba(10,6,0,.5);
@@ -2577,19 +2582,34 @@ body.cm-locked { overflow: hidden; }
   white-space: nowrap;
 }
 .cm-pod--1 .cm-podplace { font-size: 1.05rem; }
+/* Die Felder sind die Zahl, die zählt: heller und größer als die
+   richtigen Antworten darunter. */
+.cm-podtiles {
+  font-size: .74rem;
+  color: rgba(255,255,255,.9);
+  white-space: nowrap;
+}
+.cm-podtiles b {
+  font-family: var(--cm-display);
+  font-size: 1.02rem;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.cm-pod--1 .cm-podtiles   { font-size: .86rem; }
+.cm-pod--1 .cm-podtiles b { font-size: 1.28rem; }
 .cm-podcorr {
-  font-size: .72rem;
-  color: rgba(255,255,255,.85);
+  font-size: .68rem;
+  color: rgba(255,255,255,.72);
   white-space: nowrap;
 }
 .cm-podcorr b {
   font-family: var(--cm-display);
-  font-size: .92rem;
+  font-size: .82rem;
   font-variant-numeric: tabular-nums;
-  color: #fff;
+  color: rgba(255,255,255,.92);
 }
-.cm-pod--1 .cm-podcorr   { font-size: .82rem; }
-.cm-pod--1 .cm-podcorr b { font-size: 1.05rem; }
+.cm-pod--1 .cm-podcorr   { font-size: .76rem; }
+.cm-pod--1 .cm-podcorr b { font-size: .95rem; }
 
 /* ── Ab Platz 4: schmale Zeilen neben dem Podest ─────────────────
    Sie stehen bewusst nicht als vierte, fünfte Karte in der Reihe —
@@ -2643,17 +2663,37 @@ body.cm-locked { overflow: hidden; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.cm-ecorr {
+/* Die beiden Zahlen am rechten Ende der Zeile: Felder oben, richtige
+   Antworten darunter — dieselbe Rangfolge wie auf dem Podest. Rechts
+   ausgerichtet, damit die Zahlen der Zeilen untereinander fluchten. */
+.cm-enums {
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+}
+.cm-etiles {
   font-size: .68rem;
-  color: rgba(255,255,255,.82);
+  color: rgba(255,255,255,.88);
+  white-space: nowrap;
+}
+.cm-etiles b {
+  font-family: var(--cm-display);
+  font-size: .86rem;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.cm-ecorr {
+  font-size: .62rem;
+  color: rgba(255,255,255,.66);
   white-space: nowrap;
 }
 .cm-ecorr b {
   font-family: var(--cm-display);
-  font-size: .82rem;
+  font-size: .74rem;
   font-variant-numeric: tabular-nums;
-  color: #fff;
+  color: rgba(255,255,255,.88);
 }
 
 /* ── Der eigene Platz (nur am Tablet) ────────────────────────────
@@ -2666,6 +2706,19 @@ body.cm-locked { overflow: hidden; }
   font-size: clamp(1rem, 4vw, 1.35rem);
   color: #fff2d6;
   text-shadow: 0 1px 2px rgba(20,12,0,.8);
+}
+/* Die eigene Bilanz als eigene Zeile unter dem Satz — kleiner als er,
+   aber mit denselben zwei Zahlen wie am Beamer. */
+.cm-endnums {
+  display: block;
+  margin-top: 3px;
+  font-size: clamp(.78rem, 2.8vw, 1rem);
+  color: rgba(255,242,214,.82);
+}
+.cm-endnums b {
+  font-family: var(--cm-display);
+  font-variant-numeric: tabular-nums;
+  color: #fff;
 }
 .cm-endplace b {
   font-family: var(--cm-display);
