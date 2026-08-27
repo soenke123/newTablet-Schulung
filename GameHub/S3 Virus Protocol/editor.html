@@ -1196,9 +1196,50 @@ document.getElementById('saveBtn').addEventListener('click', () => {
 });
 
 // -----------------------------------------------------------------------------
-// TEST — Level direkt in index.html spielen. Serialisiert nach localStorage,
-// öffnet index.html?test=1 in neuem Tab. Custom-Blöcke werden ignoriert (die
-// Engine kennt sie nicht) — der Editor warnt vorher.
+// ENTWURF — Der Test läuft im selben Tab, der Editor wird dabei entladen.
+// Damit die Arbeit nicht verloren geht, liegt der Bauzustand in localStorage
+// und wird beim nächsten Editor-Start wiederhergestellt.
+// -----------------------------------------------------------------------------
+const DRAFT_STORAGE_KEY = 'baba-it-editor-draft';
+
+function saveDraft() {
+  try {
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+      w: editor.w,
+      h: editor.h,
+      grid: snapshotGrid(),
+      name: document.getElementById('lvlName').value,
+    }));
+  } catch { /* Speicher voll oder gesperrt — Entwurf ist nur Komfort. */ }
+}
+
+function restoreDraft() {
+  let draft;
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return false;
+    draft = JSON.parse(raw);
+  } catch { return false; }
+  if (!draft || !Array.isArray(draft.grid)) return false;
+  const w = clamp(parseInt(draft.w, 10) || 0, 4, 30);
+  const h = clamp(parseInt(draft.h, 10) || 0, 4, 30);
+  if (draft.grid.length !== w * h) return false;
+
+  editor.w = w;
+  editor.h = h;
+  editor.grid = draft.grid.map(cell => Array.isArray(cell) ? cell : []);
+  document.getElementById('lvlW').value = w;
+  document.getElementById('lvlH').value = h;
+  if (typeof draft.name === 'string') document.getElementById('lvlName').value = draft.name;
+  return true;
+}
+
+window.addEventListener('pagehide', saveDraft);
+
+// -----------------------------------------------------------------------------
+// TEST — Level direkt in index.html spielen. Serialisiert nach localStorage
+// und wechselt im selben Tab zu index.html?test=1. Custom-Blöcke werden
+// ignoriert (die Engine kennt sie nicht) — der Editor warnt vorher.
 // -----------------------------------------------------------------------------
 const TEST_STORAGE_KEY = 'baba-it-testlevel';
 document.getElementById('testBtn').addEventListener('click', () => {
@@ -1226,14 +1267,15 @@ document.getElementById('testBtn').addEventListener('click', () => {
     alert('Konnte Level nicht in localStorage speichern: ' + err.message);
     return;
   }
-  window.open('index.html?test=1&t=' + Date.now(), '_blank');
+  saveDraft();
+  window.location.href = 'index.html?test=1&t=' + Date.now();
 });
 
 // -----------------------------------------------------------------------------
 // BOOT
 // -----------------------------------------------------------------------------
 window.addEventListener('resize', renderStage);
-editor.grid = makeEmptyGrid(editor.w, editor.h);
+if (!restoreDraft()) editor.grid = makeEmptyGrid(editor.w, editor.h);
 renderStage();
 </script>
 </body>

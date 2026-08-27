@@ -1802,6 +1802,18 @@ body.cm-locked { overflow: hidden; }
   font-size: .92rem;
   font-variant-numeric: tabular-nums;
 }
+/* Das Ziel hinter der Zahl (0123): „3/7". Kleiner und blasser als der
+   Zählerstand — es ändert sich fast nie, die Zahl davor bei jeder
+   Antwort. Ohne `font-style: normal` stünde es kursiv da (es ist ein
+   <i>, gewählt wegen der Kürze im Markup, nicht wegen der Betonung). */
+.cm-pstreakgoal {
+  font-family: var(--cm-display);
+  font-style: normal;
+  font-size: .78rem;
+  font-variant-numeric: tabular-nums;
+  margin-left: -2px;
+  opacity: .62;
+}
 .cm-pstreakico { font-size: .9rem; line-height: 1; }
 /* Ab drei richtigen hintereinander brennt es. */
 .cm-pstreak--hot {
@@ -1809,6 +1821,20 @@ body.cm-locked { overflow: hidden; }
   background: rgba(120,52,6,.6);
   color: #ffe0a8;
   box-shadow: 0 0 10px rgba(255,150,40,.45);
+}
+/* Kurz vor der Schwelle (0123): eine dritte Stufe zwischen „hot" und
+   „fire". Sie sagt nicht „das war eben", sondern „gleich" — deshalb
+   pulst sie langsamer und heller als --hot, aber ohne den grellen Kern
+   von --fire, der dem tatsächlichen Auslösen gehört. */
+.cm-pstreak--near {
+  border-color: #ffd98a;
+  background: rgba(150,70,6,.68);
+  color: #fff0cc;
+  animation: cmChipNear 1.6s ease-in-out infinite;
+}
+@keyframes cmChipNear {
+  0%, 100% { box-shadow: 0 0 8px rgba(255,170,50,.4); }
+  50%      { box-shadow: 0 0 18px 3px rgba(255,205,105,.8); }
 }
 /* „on fire" ist etwas anderes als „hot" (UI 18): hot heißt „drei
    richtige hintereinander" und steht, solange die Serie hält —
@@ -1832,8 +1858,46 @@ body.cm-locked { overflow: hidden; }
   50%      { box-shadow: inset 0 0 0 1px rgba(255,240,200,.35), 0 0 32px 8px rgba(255,214,120,.9); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cm-pstreak--fire, .cm-phero--fire { animation: none; }
+  .cm-pstreak--fire, .cm-phero--fire, .cm-pstreak--near { animation: none; }
   .cm-phero--fire { box-shadow: inset 0 0 0 1px rgba(255,240,200,.3), 0 0 22px 6px rgba(255,214,120,.8); }
+  .cm-pstreak--near { box-shadow: 0 0 14px 2px rgba(255,205,105,.7); }
+  .cm-streakbar { animation: none; }
+}
+
+/* ── „Nur noch 2 für den Serien-Effekt!" (0123) ──────────────────
+   Eine Zeile, breit wie der Kopf darunter, in derselben Feuerfarbe wie
+   die Abzeichen kurz vor der Schwelle — es ist dieselbe Aussage, nur
+   in Worten und dort, wo der Blick beim Antworten ohnehin hingeht.
+   `flex: 0 0 auto` wie beim Ruinen-Banner: sie nimmt ihre eigene Höhe,
+   die Aufgabe darunter gibt sie her. Sie kommt und geht mitten im
+   Spiel, deshalb ein kurzer Einflug statt eines harten Umschaltens. */
+.cm-streakbar {
+  flex: 0 0 auto;
+  padding: 5px 12px;
+  border-radius: 999px;
+  align-self: center;
+  max-width: 100%;
+  background: linear-gradient(180deg, rgba(170,84,10,.92), rgba(110,46,4,.92));
+  border: 1.5px solid #ffc46a;
+  color: #fff2d4;
+  font-family: var(--cm-display);
+  font-weight: 800;
+  font-size: .82rem;
+  letter-spacing: .01em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 14px rgba(0,0,0,.4), 0 0 14px rgba(255,170,50,.45);
+  animation: cmStreakBarIn .28s ease-out, cmStreakBarPulse 1.6s ease-in-out .28s infinite;
+}
+@keyframes cmStreakBarIn {
+  from { opacity: 0; transform: translateY(-6px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes cmStreakBarPulse {
+  0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,.4), 0 0 12px rgba(255,170,50,.4); }
+  50%      { box-shadow: 0 4px 14px rgba(0,0,0,.4), 0 0 26px 5px rgba(255,205,105,.85); }
 }
 /* Team-Toast (0106): „<Name> ist on fire" / „Ihr seid on fire". Sitzt
    als Geschwister von .cm-mapov oben mittig im Spielbildschirm, damit

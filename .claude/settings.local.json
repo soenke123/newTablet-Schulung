@@ -64,7 +64,16 @@
       "Bash(python3 -)",
       "Bash(sort -t_ -k1 -n)",
       "Bash(git show *)",
-      "Bash(grep -n \"^\\\\s*function \\\\|^\\\\s*const [A-Z_]* =\\\\|^  // ─\\\\|^// ─\\\\|MPTool.register\\\\|=> {$\" tool.js)"
+      "Bash(grep -n \"^\\\\s*function \\\\|^\\\\s*const [A-Z_]* =\\\\|^  // ─\\\\|^// ─\\\\|MPTool.register\\\\|=> {$\" tool.js)",
+      "PowerShell($p='C:\\\\Users\\\\snke\\\\OneDrive\\\\ClaudeProjekte\\\\MPS TabletSchlung\\\\Webauftrtitt\\\\GameHub\\\\script.js'; $b=[System.IO.File]::ReadAllBytes\\($p\\); \"len=$\\($b.Length\\)\"; $idx = for\\($i=0;$i -lt $b.Length;$i++\\){ if\\($b[$i] -eq 0\\){$i} }; \"nul count=$\\(@\\($idx\\).Count\\)\"; @\\($idx\\) | Select-Object -First 10)",
+      "PowerShell($p='C:\\\\Users\\\\snke\\\\OneDrive\\\\ClaudeProjekte\\\\MPS TabletSchlung\\\\Webauftrtitt\\\\GameHub\\\\script.js'; $b=[System.IO.File]::ReadAllBytes\\($p\\); foreach\\($i in 35755,35984\\){ $s=[System.Text.Encoding]::UTF8.GetString\\($b[\\($i-90\\)..\\($i+40\\)]\\); \"IDX $i :: $s\"; \"\" })",
+      "Bash(git diff *)",
+      "Bash(STOP_ON_FAIL=1 node \"C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/7f8a2407-a375-4ab8-9dcb-8649ce86ee9a/scratchpad/runmig.mjs\")",
+      "Bash(rg -n \"^create or replace function \\(skill_room_create|skill_join|skill_room_open|clash_room_start|clash_set_pool|clash_room_pool\\)\" *.sql)",
+      "Bash(grep -v \"^ *at \\\\|pglite\\\\\\\\\\\\\\\\dist\")",
+      "Bash(rg -n \"skill_rooms_code_shape\" -A3 -B3 *.sql)",
+      "Bash(sed -i 's|lib/tool.js?v=20260826e|lib/tool.js?v=20260827a|' j.html lehrer.html)",
+      "Bash(sed -i 's|lib/tool.js?v=20260826d|lib/tool.js?v=20260827a|' lib/preview.js)"
     ]
   }
 }

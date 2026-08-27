@@ -659,14 +659,14 @@ function buildGameCard(game, data, shopData) {
   // Handy sichtbar als Flackern. Ist das Renderergebnis identisch, geben wir
   // denselben Knoten zurück; er behält Bild und Listener.
   const cached = _cardNodeCache.get(game.id);
-  if (cached && cached.sig === cls + ' ' + html) return cached.node;
+  if (cached && cached.sig === cls + '\u0000' + html) return cached.node;
 
   const card = document.createElement('div');
   card.className = cls;
   card.innerHTML = html;
 
   attachCardListeners(card, game, data, isBackupTarget);
-  _cardNodeCache.set(game.id, { sig: cls + ' ' + html, node: card });
+  _cardNodeCache.set(game.id, { sig: cls + '\u0000' + html, node: card });
   return card;
 }
 

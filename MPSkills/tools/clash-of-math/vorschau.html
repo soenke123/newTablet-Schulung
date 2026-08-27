@@ -140,6 +140,11 @@ let tiles    = [];
 // Karten-Auto-Öffnung, den Countdown-Banner, die pulsierenden Ziele
 // und den Team-Toast ohne echten Server durchzuklicken.
 let teamStreak = 0;
+// 0123: das Gegenstück zu clash_streak_goals(). EINE Ablage, aus der
+// die Zündschwellen unten UND das an tool.js gereichte streak_goals
+// kommen — sonst prüft der Prüfstand gegen eine andere Zahl, als er
+// anzeigen lässt.
+const GOALS = { solo: 7, team: 12 };
 let teamEvents = [];
 let nextEventId = 1;
 let pendingPicks = 0;
@@ -598,6 +603,10 @@ const RPC = {
       // 0106: geteilte Team-Serie + die letzten Team-Ereignisse (nur
       // fürs eigene Volk, wie clash_view es auch server-seitig filtert).
       team_streak: teamStreak,
+      // 0123: die Schwellen kommen vom Server, nicht aus tool.js — der
+      // Prüfstand muss sie deshalb genauso mitschicken, sonst zeigt er
+      // „3/7" und zündet bei 12.
+      streak_goals: GOALS,
       // Nur das EIGENE Volk und ohne den team-Schlüssel — genau so
       // schneidet clash_view die Liste serverseitig zu (0106).
       my_team_events: teamEvents.filter(e => e.team === myTeam)
@@ -644,9 +653,10 @@ const RPC = {
       let ruinAdd = ruined ? 1 : 0;
       if (!ruined) hit = attackOne();
 
-      // Einzel-Serie: seit 0108 jedes Vielfache von 12 (war 10) — zwei
-      // offene Picks, bei einem ausgeschiedenen Volk zwei Ruinen-Punkte.
-      if (Math.floor((oldStreak + 1) / 12) > Math.floor(oldStreak / 12)) {
+      // Einzel-Serie: seit 0123 jedes Vielfache von GOALS.solo (0106: 10,
+      // 0108: 12, 0123: 7) — zwei offene Picks, bei einem
+      // ausgeschiedenen Volk zwei Ruinen-Punkte.
+      if (Math.floor((oldStreak + 1) / GOALS.solo) > Math.floor(oldStreak / GOALS.solo)) {
         if (ruined) ruinAdd += 2;
         else {
           pendingPicks += 2;
@@ -656,11 +666,12 @@ const RPC = {
           payload: { name: 'Jonas', streak: oldStreak + 1 } });
       }
 
-      // Team-Serie: jedes Vielfache von 20 erobert seit 0108 fünf Felder
-      // (waren sieben) bzw. gibt fünf Ruinen-Punkte.
+      // Team-Serie: jedes Vielfache von GOALS.team (0106–0122: 20, seit
+      // 0123: 12) erobert seit 0108 fünf Felder (waren sieben) bzw. gibt
+      // fünf Ruinen-Punkte.
       const oldTeamStreak = teamStreak;
       teamStreak++;
-      if (Math.floor(teamStreak / 20) > Math.floor(oldTeamStreak / 20)) {
+      if (Math.floor(teamStreak / GOALS.team) > Math.floor(oldTeamStreak / GOALS.team)) {
         teamEvents.push({ id: nextEventId++, team: myTeam, kind: 'team_fire', payload: { streak: teamStreak } });
         if (ruined) ruinAdd += 5;
         else for (let i = 0; i < 5; i++) attackOne();
@@ -680,7 +691,8 @@ const RPC = {
       retry: false,
       reveal: correct ? null : { text: wasQ.answer },
       captured: hit.captured, castle_hit: hit.castle_hit,
-      streak, team_streak: teamStreak, pending_picks: pendingPicks, pick_deadline: pickDeadline,
+      streak, team_streak: teamStreak, streak_goals: GOALS,
+      pending_picks: pendingPicks, pick_deadline: pickDeadline,
       ruin: ruined ? ruinOf(myTeam) : null,
       shrunk: shrunk,
       board: boardState(),

@@ -91,15 +91,28 @@
 
    Die Serie des VOLKES (v.team_streak) stand hier lange als „–" ohne
    Quelle — seit Migration 0106 liefert der Server sie: ein geteilter
-   Zähler je Team (nicht die Summe der Einzel-Serien), der bei 20, 40,
-   60 … automatisch fünf Felder erobert (bis 0108: sieben). Die eigene
-   Serie (me.streak) gibt bei 12, 24, 36 … (bis 0108: alle zehn) zwei
+   Zähler je Team (nicht die Summe der Einzel-Serien), der bei 12, 24,
+   36 … (0106–0122: alle 20) automatisch fünf Felder erobert (bis 0108:
+   sieben). Die eigene Serie (me.streak) gibt bei 7, 14, 21 …
+   (0106: alle zehn, 0108: alle zwölf) zwei
    offene manuelle Picks (pending_picks) — die Karte öffnet sich dafür
    von selbst (siehe openMap(forced), onMapTileClick), mit kurzer
    Frist, nach der der Server ungenutzte Picks selbst zufällig einlöst
    (muss „schnell gehen", darf das Spiel nicht aufhalten). Beide Boni
    benachrichtigen das eigene Team über my_team_events
    (applyTeamEvents/showFireToast) — andere Völker sehen davon nichts.
+
+   Die beiden Schwellen stehen NICHT hier, sondern kommen als
+   `streak_goals` aus clash_view/clash_submit (Migration 0123,
+   clash_streak_goals). Der Grund ist der Anlass für 0123: Die Boni
+   waren zwar da, aber kaum ein Kind hat je einen erlebt — zwölf
+   fehlerfreie Antworten am Stück sind selten. Seither zünden sie
+   früher (7 und 12) UND man sieht sie kommen: die Abzeichen zeigen
+   „3/7" statt „3" (paintStreakChip), und ein oder zwei Antworten vor
+   der Schwelle steht ein Banner über dem eigenen Kopf
+   („Nur noch 2 für den Serien-Effekt!", renderStreakBar).
+   `streakGoals` in dieser Datei ist nur der Notnagel, falls ein Tablet
+   gegen einen Server ohne 0123 läuft.
 
    ── Ausgeschieden heißt weiterspielen (Ruinen-Modus, 0108) ──────
    Bis 0107 war ein Volk ohne Kachel raus: keine Aufgabe mehr, nur die
@@ -339,6 +352,30 @@
   // dem Spielbildschirm.
   let myPendingPicks = 0, pendingPickDeadlineMs = 0, pickCountdownTimer = null;
   let lastTeamEventId = 0, fireToastTimer = null, mapCloseTimer = null;
+  /* Die beiden Serien-Schwellen (0123). Der Server ist die Wahrheit —
+     clash_view und clash_submit schicken sie als `streak_goals` mit,
+     weil hier sonst eine zweite Zahl stünde, die beim nächsten
+     Nachjustieren still auseinanderliefe. Diese Werte sind nur der
+     Notnagel für ein Tablet, dessen Server 0123 noch nicht kennt:
+     dann steht „3/7", wo der Server bei 12 zündet — falsch, aber
+     nicht kaputt, und mit dem nächsten Deploy von selbst wieder gerade.
+     STREAK_HINT_AT: ab wie vielen fehlenden Antworten das Banner
+     erscheint („nur noch 2", dann „nur noch 1"). */
+  let streakGoals = { solo: 7, team: 12 };
+  const STREAK_HINT_AT = 2;
+  function noteStreakGoals(g) {
+    if (!g) return;
+    if (+g.solo > 0) streakGoals.solo = +g.solo;
+    if (+g.team > 0) streakGoals.team = +g.team;
+  }
+  /* Wie viele fehlen noch bis zum nächsten Vielfachen? Dieselbe
+     Rechnung wie der floor-Vergleich im Server (clash_submit): eine
+     Serie von 9 bei Schwelle 7 hat einmal gezündet und braucht noch
+     fünf bis zum zweiten Mal — nicht „minus zwei". */
+  function toNextStreak(n, goal) {
+    const g = goal > 0 ? goal : 1;
+    return g - ((n || 0) % g);
+  }
 
   /* ── Effekte (UI 18) ──────────────────────────────────────────────
      `fxTiles`/`fxCounts` sind der Kartenstand des letzten Abgleichs —
@@ -2343,6 +2380,14 @@
             // hier noch?"). Sönkes Vorgabe: „steht ganz klar, dass
             // weiter spielen sich lohnt".
             '<div class="cm-ruinbar cm-hide" id="cmRuinBar"></div>' +
+            // Der Serien-Banner (0123). Taucht auf, wenn nur noch ein
+            // oder zwei richtige Antworten bis zum nächsten Bonus
+            // fehlen, und verschwindet danach wieder. Er steht hier —
+            // über dem eigenen Kopf, unter dem Ruinen-Banner — weil er
+            // dasselbe leistet wie der: eine Ansage, warum die nächste
+            // Aufgabe gerade mehr wert ist als die davor. Unter der
+            // Aufgabe wäre er eine Fußnote.
+            '<div class="cm-streakbar cm-hide" id="cmStreakBar"></div>' +
             '<div class="cm-phero">' +
               '<div class="cm-pherounit"><img id="cmPUnit" src="" alt=""></div>' +
               '<div class="cm-pherostats">' +
@@ -2351,16 +2396,23 @@
                     '<b id="cmPShare">0 %</b>' +
                     '<span class="cm-psharelab" id="cmPShareLab">des Spielfelds</span>' +
                   '</div>' +
-                  // Zwei Serien-Anzeigen. Die eigene füttert der Server
-                  // heute schon (me.streak); die des Volkes hat noch
-                  // keine Quelle — sie steht bewusst schon da, mit „–"
-                  // statt einer erfundenen Zahl, damit später nur der
-                  // Wert nachzureichen ist und nicht das Layout.
+                  // Zwei Serien-Anzeigen, beide vom Server gefüttert
+                  // (me.streak und team_streak seit 0106).
+                  //
+                  // 0123: Sie zeigen nicht mehr nur den Zählerstand,
+                  // sondern das ZIEL dazu — „3/7" statt „3". Eine nackte
+                  // 3 ist keine Information, solange niemand weiß, wann
+                  // etwas passiert; genau daran sind die Boni in der
+                  // Klasse vorbeigelaufen. Das Ziel steht als eigenes
+                  // Element, damit es kleiner und ruhiger sein kann als
+                  // die Zahl davor (setStreak/setTeamStreak füllen beide).
                   '<div class="cm-pstreaks">' +
                     '<span class="cm-pstreak" id="cmStreak" title="Deine Serie richtiger Antworten">' +
-                      '<span class="cm-pstreakico">🔥</span><b>0</b></span>' +
+                      '<span class="cm-pstreakico">🔥</span><b>0</b>' +
+                      '<i class="cm-pstreakgoal"></i></span>' +
                     '<span class="cm-pstreak cm-pstreak--team" id="cmTeamStreak" title="Serie deines Volkes">' +
-                      '<span class="cm-pstreakico">⚔️</span><b>–</b></span>' +
+                      '<span class="cm-pstreakico">⚔️</span><b>–</b>' +
+                      '<i class="cm-pstreakgoal"></i></span>' +
                   '</div>' +
                 '</div>' +
                 '<div class="cm-pbar"><i id="cmPBar"></i></div>' +
@@ -2450,6 +2502,7 @@
       streak: root.querySelector('#cmStreak'),
       teamStreak: root.querySelector('#cmTeamStreak'),
       ruinBar: root.querySelector('#cmRuinBar'),
+      streakBar: root.querySelector('#cmStreakBar'),
       mapBtn: root.querySelector('#cmMapBtn'),
       mapOv: root.querySelector('#cmMapOv'),
       pickBanner: root.querySelector('#cmPickBanner'),
@@ -2810,6 +2863,7 @@
     } else {
       setFeedback('', '');
     }
+    noteStreakGoals(r.streak_goals);   // 0123 — vor setStreak, siehe dort
     if (r.streak != null) setStreak(r.streak);
     if (r.question) setQuestion(r.question);
     // 0106: aus der eigenen Antwort direkt, ohne auf den nächsten Takt
@@ -2859,10 +2913,28 @@
       el.classList.remove(pre + 'ok', pre + 'warn', 'cm-key--picked');
     }, 600);
   }
+  /* Beide Abzeichen schreiben dasselbe Muster: Zählerstand, „/", Ziel
+     — und den Zustand „gleich ist es so weit" (--near), sobald nur noch
+     STREAK_HINT_AT Antworten fehlen. Der Zähler läuft über die Schwelle
+     hinaus weiter (die Serie bricht ja nicht), gezeigt wird deshalb der
+     Rest zum NÄCHSTEN Vielfachen: bei Ziel 7 steht nach der neunten
+     richtigen „9/14". */
+  function paintStreakChip(el, n, goal, showDash) {
+    if (!el) return;
+    const num  = el.querySelector('b');
+    const goalEl = el.querySelector('.cm-pstreakgoal');
+    const known = n != null;
+    if (num) num.textContent = known ? String(n) : (showDash ? '–' : '0');
+    // Das nächste Vielfache, gegen das gerade gezählt wird.
+    const next = known ? (n + toNextStreak(n, goal)) : goal;
+    if (goalEl) goalEl.textContent = '/' + next;
+    el.classList.toggle('cm-pstreak--hot', (n || 0) >= 3);
+    el.classList.toggle('cm-pstreak--near',
+      known && toNextStreak(n, goal) <= STREAK_HINT_AT);
+  }
   function setStreak(n) {
-    if (!els.streak) return;
-    els.streak.querySelector('b').textContent = String(n || 0);
-    els.streak.classList.toggle('cm-pstreak--hot', (n || 0) >= 3);
+    paintStreakChip(els.streak, n || 0, streakGoals.solo, false);
+    renderStreakBar();
   }
   // Geteilte Team-Serie (0106). Eigene Funktion statt nur in
   // renderParticipant inline, weil onSubmit sie ZUSÄTZLICH sofort aus
@@ -2872,9 +2944,39 @@
   // aus — ohne diesen Aufruf bliebe das Team-Serien-Badge bis zum
   // nächsten 8s-Sicherheitsnetz-Takt stehen.
   function setTeamStreak(n) {
-    if (!els.teamStreak) return;
-    els.teamStreak.querySelector('b').textContent = (n != null) ? String(n) : '–';
-    els.teamStreak.classList.toggle('cm-pstreak--hot', (n || 0) >= 3);
+    paintStreakChip(els.teamStreak, (n == null ? null : n), streakGoals.team, true);
+    renderStreakBar();
+  }
+
+  /* Der Banner über dem eigenen Kopf (0123). Er zeigt IMMER nur die
+     Serie, die als Nächstes zündet — zwei Zeilen nebeneinander („noch 2
+     … noch 1 …") wären zwei Aufforderungen für dieselbe nächste
+     Aufgabe. Bei Gleichstand gewinnt die eigene: sie liegt in der
+     eigenen Hand, die des Volkes kann auch jemand anders vollmachen. */
+  function renderStreakBar() {
+    if (!els.streakBar) return;
+    const solo = els.streak && els.streak.querySelector('b');
+    const team = els.teamStreak && els.teamStreak.querySelector('b');
+    const sN = solo ? parseInt(solo.textContent, 10) : NaN;
+    const tN = team ? parseInt(team.textContent, 10) : NaN;
+
+    const cands = [];
+    if (Number.isFinite(sN)) {
+      cands.push({ left: toNextStreak(sN, streakGoals.solo), ico: '🔥', what: 'Serien-Effekt' });
+    }
+    if (Number.isFinite(tN)) {
+      cands.push({ left: toNextStreak(tN, streakGoals.team), ico: '⚔️', what: 'Volks-Effekt' });
+    }
+    const hit = cands.filter(c => c.left <= STREAK_HINT_AT).sort((a, b) => a.left - b.left)[0];
+
+    if (!hit) {
+      els.streakBar.classList.add('cm-hide');
+      els.streakBar.textContent = '';
+      return;
+    }
+    els.streakBar.textContent =
+      hit.ico + ' Nur noch ' + hit.left + ' für den ' + hit.what + '!';
+    els.streakBar.classList.remove('cm-hide');
   }
   /* ⚠️ setQuestion läuft bei JEDEM Takt (renderParticipant liest
      me.question aus der view) — nicht nur, wenn eine neue Aufgabe
@@ -3209,6 +3311,7 @@
       if (els.heroUnit.getAttribute('src') !== src) els.heroUnit.setAttribute('src', src);
       els.heroUnit.alt = fLabel(myTeam);
     }
+    noteStreakGoals(v.streak_goals);   // 0123 — VOR den beiden Zeilen darunter
     setStreak(v.me.streak || 0);
     setTeamStreak(v.team_streak);   // 0106: geteilter Team-Zähler statt „–"
     applyTeamEvents(v);   // 0106: Toast für „<Name>/Ihr seid on fire"

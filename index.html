@@ -942,7 +942,6 @@
       <a
         class="card-button gamehub-button"
         id="gamehubLink"
-        target="_blank"
         href="GameHub/index.html"
       >
         <span class="gamehub-title">
@@ -1003,7 +1002,6 @@
         <a
           class="presentation-link"
           href="Dokumente/Schulung1_Block1_Einstieg.pdf"
-          target="_blank"
         >
           <span class="pdf-icon" aria-hidden="true"></span>
           <span class="presentation-name">Schulung 1 Einstieg</span>
@@ -1012,7 +1010,6 @@
         <a
           class="presentation-link"
           href="Dokumente/WS1_Dateiformate.pdf"
-          target="_blank"
         >
           <span class="pdf-icon" aria-hidden="true"></span>
           <span class="presentation-name">Workshop Dateien</span>
@@ -1021,7 +1018,6 @@
         <a
           class="presentation-link"
           href="Dokumente/WS2_Aufmerksamkeit_Fokus.pdf"
-          target="_blank"
         >
           <span class="pdf-icon" aria-hidden="true"></span>
           <span class="presentation-name">Workshop Aufmerksamkeit</span>
@@ -1033,7 +1029,6 @@
           <a
             class="presentation-link"
             href="Dokumente/Schulung2_Recherche_und_LLM.pdf"
-            target="_blank"
           >
             <span class="pdf-icon" aria-hidden="true"></span>
             <span class="presentation-name">Schulung 2 – Recherche &amp; KI</span>
@@ -1042,7 +1037,6 @@
           <a
             class="presentation-link"
             href="Dokumente/Quellenverzeichnis.pdf"
-            target="_blank"
           >
             <span class="pdf-icon" aria-hidden="true"></span>
             <span class="presentation-name">Quellenverzeichnis</span>
@@ -1174,10 +1168,8 @@
       ghLink.classList.toggle('season2', s2 && ghAccessible);
       ghLink.classList.toggle('locked',  !ghAccessible);
       if (ghAccessible) {
-        ghLink.setAttribute('target', '_blank');
         ghLink.setAttribute('href', 'GameHub/index.html');
       } else {
-        ghLink.removeAttribute('target');
         ghLink.setAttribute('href', '#');
       }
       // Hint-Text im Locked-Button je nach Kontext

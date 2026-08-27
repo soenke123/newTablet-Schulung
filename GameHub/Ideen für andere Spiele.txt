@@ -1,8 +1,6 @@
 Bug Fixes:
 
-- am Pc öffnen sich auf dauer zu viele Tabs
 
--
 - (und ja der Bubblebounce-Score ist ledgit, der sieht nur viel aus den könnte man aber noch erheblich höher kriegen)
    -> Schwerer gestalten am Ende
 - einige Monster werden mir in der Leiste, in der sie rumlaufen als ausgewachsen angezeigt, jedoch habe ich nur ein einziges 
@@ -12,4 +10,7 @@ Bug Fixes:
 
 -Bubble bounce
 Im Hintergrund ist nicht das richtige Monster statt vollendet nur ausgewachsen. Amanfang ist es richtig.
+
+- Highscores löschen
+
 
