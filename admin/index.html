@@ -6,7 +6,7 @@
   <title>Admin · Lernwelt</title>
   <link rel="icon" type="image/png" sizes="64x64" href="../icons/favicon-64.png" />
   <link rel="icon" type="image/png" sizes="256x256" href="../icons/favicon-256.png" />
-  <link rel="stylesheet" href="style.css?v=20260820" />
+  <link rel="stylesheet" href="style.css?v=20260827" />
 
 <!-- Schreibt den sichtbaren Bereich (Tastatur, Adressleiste) als
      CSS-Variablen an <html>. Blockierend im <head>, damit ein Modal
@@ -221,6 +221,13 @@
             </select>
           </label>
           <button type="button" class="btn"        id="bulkAssignBtn">Zuweisen</button>
+          <span class="bulk-sep" aria-hidden="true"></span>
+          <span class="bulk-group-label">Lehrkraft (MPSkills)</span>
+          <button type="button" class="btn" id="bulkTeacherGrantBtn"
+                  title="Ausgewählte dürfen in MPSkills Räume öffnen">Rolle geben</button>
+          <button type="button" class="btn" id="bulkTeacherRevokeBtn"
+                  title="Lehrkraft-Rolle der Ausgewählten entfernen">Rolle entziehen</button>
+          <span class="bulk-sep" aria-hidden="true"></span>
           <button type="button" class="btn danger" id="bulkDeleteBtn">Löschen</button>
           <button type="button" class="btn small"  id="bulkClearBtn">Auswahl aufheben</button>
           <span class="form-feedback" id="bulkFeedback"></span>
@@ -246,6 +253,8 @@
         <p class="panel-sub">
           Freischaltung für <strong>MPSkills</strong> — nur dort darf eine freigeschaltete Lehrkraft
           Räume aufmachen. In der Tablet-Schulung bleibt sie ein gewöhnlicher User ohne Sonderrechte.
+          Hier stehen nur Accounts, die mit der Rolle zu tun haben; wer nie einen Antrag gestellt hat,
+          bekommt sie im Tab <strong>User</strong> — über „Rolle ändern" oder die Mehrfachauswahl.
         </p>
       </div>
 
@@ -506,6 +515,15 @@
             <option value="volladmin" id="rcVolladminOption">Volladmin</option>
           </select>
         </label>
+        <!-- teacher_status ist orthogonal zur Rolle (Migration 0077):
+             eine Lehrkraft bleibt auf der Schulungsseite ein gewöhnlicher
+             User. Deshalb ein eigenes Häkchen und kein vierter Eintrag
+             im Rollen-Dropdown. -->
+        <label class="rc-toggle">
+          <input type="checkbox" id="rcTeacher" />
+          <span>MPSkills-Lehrkraft — darf Räume öffnen</span>
+        </label>
+        <p class="modal-hint rc-span" id="rcTeacherHint"></p>
         <div class="form-actions">
           <button type="submit" class="btn primary" id="rcSubmit">Rolle setzen</button>
           <span class="form-feedback" id="rcFeedback"></span>
@@ -536,6 +554,6 @@
   <script src="../supabase-config.js?v=20260723"></script>
   <script src="../session.js?v=20260811"></script>
   <script src="../avatars.js?v=20260721"></script>
-  <script src="app.js?v=20260818"></script>
+  <script src="app.js?v=20260827"></script>
 </body>
 </html>

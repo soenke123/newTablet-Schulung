@@ -564,6 +564,18 @@ html, body {
   font-size: 13px; color: var(--a-muted);
   text-transform: none; letter-spacing: 0;
 }
+/* Trenner zwischen den Aktionsgruppen (Cluster · Lehrkraft · Löschen) —
+   ohne ihn steht „Rolle geben" bündig neben „Zuweisen" und liest sich
+   wie dessen Fortsetzung. */
+.bulk-sep {
+  width: 1px; align-self: stretch;
+  background: var(--a-gold);
+  opacity: 0.35;
+}
+.bulk-group-label {
+  font-size: 12px; color: var(--a-muted);
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
 .bulk-cluster-label select {
   background: var(--a-surface-2);
   border: 1px solid var(--a-border);
@@ -795,7 +807,8 @@ html, body {
   font-size: 12px;
   line-height: 1.5;
 }
-.cb-toggle {
+.cb-toggle,
+.rc-toggle {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -809,7 +822,27 @@ html, body {
   text-transform: none;
   letter-spacing: 0;
 }
-.cb-toggle input { flex-shrink: 0; }
+.cb-toggle input,
+.rc-toggle input { flex-shrink: 0; }
+
+/* ─── Rolle-Ändern-Modal ──────────────────────────────── */
+/* Häkchen und Hinweis gehören zusammen und stehen über die volle
+   Breite des Formulars — sonst rutscht der Hinweis neben das
+   Rollen-Dropdown und liest sich, als gehöre er dorthin. */
+#roleChangeModal .modal-box { max-width: 480px; }
+.rc-toggle, .rc-span { grid-column: 1 / -1; }
+.rc-span { margin: -6px 0 0; }
+/* `.grid-form label` ist spezifischer als `.rc-toggle` und stellt
+   Labels hochkant und in Großbuchstaben — für eine Zeile mit Häkchen
+   und Satz daneben beides falsch. */
+.grid-form .rc-toggle {
+  flex-direction: row;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--a-text);
+}
 .cb-seasons {
   border: 1px solid var(--a-border);
   border-radius: var(--a-radius-sm);

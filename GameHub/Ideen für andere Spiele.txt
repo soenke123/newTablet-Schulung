@@ -2,19 +2,14 @@ Bug Fixes:
 
 - am Pc öffnen sich auf dauer zu viele Tabs
 
-- die Info für die neue Saison geht nicht weg (müsste entweder nach irwie 3 mal weggehen oder durch [ ]nicht mehr anzeigen
-
-- ich glaube das mit dem kopieren beim Tippspiel(also schreiben nicht wetten) hat ihnen Vincent schon mitgeteilt? keine Ahnung, habe
-  ich auch nur gemacht um in jedem Minispiel den Highscore kriegen zu können :)
-
+-
 - (und ja der Bubblebounce-Score ist ledgit, der sieht nur viel aus den könnte man aber noch erheblich höher kriegen)
    -> Schwerer gestalten am Ende
-- einige Monster werden mir in der Leiste, in der sie rumlaufen als ausgewachsen angezeigt, jedoch habe ich nur ein einziges ausgewachsenes Monster, der Rest geht anscheinend nur bis groß?(oder die Anzeige oben ist halt falsch)
+- einige Monster werden mir in der Leiste, in der sie rumlaufen als ausgewachsen angezeigt, jedoch habe ich nur ein einziges 
+  ausgewachsenes Monster, der Rest geht anscheinend nur bis groß?(oder die Anzeige oben ist halt falsch)
 
 - achso und ich habe dort zwei Schneckendrachen, bin mir nicht sicher ob das soll
 
-
-Startup Story:
-- ich würde mir einen Pause Knopf wünschen, um alle Zusammenhänge in Ruhe erfassen zu können.
-- Der Drop Out in Abwesenheit ist zu krass. Es würde reichen wenn die Zeit in Abwesenheit um den Faktor 100 oder so langsamer liefe.
+-Bubble bounce
+Im Hintergrund ist nicht das richtige Monster statt vollendet nur ausgewachsen. Amanfang ist es richtig.
 

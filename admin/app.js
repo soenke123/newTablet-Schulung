@@ -1342,7 +1342,9 @@ async function loadUsers() {
   const tbody = document.getElementById('userTbody');
   try {
     const rows = await api('GET',
-      `profiles?select=id,account_name,display_name,display_name_locked,status,cluster_id,is_admin,is_superadmin,teacher_status,avatar_id,created_at`
+      // teacher_requested_at wird nicht angezeigt, entscheidet aber beim
+      // Entziehen zwischen 'none' und 'rejected' — siehe teacherRevokeStatus().
+      `profiles?select=id,account_name,display_name,display_name_locked,status,cluster_id,is_admin,is_superadmin,teacher_status,teacher_requested_at,avatar_id,created_at`
       + `&school_id=eq.${currentSchoolId}`);
     userCache = rows;
 
@@ -2268,6 +2270,50 @@ async function applyRoleChange(userId, role) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   Lehrkraft-Rolle vergeben (User-Tab)
+   ══════════════════════════════════════════════════════════════
+   Der Lehrkräfte-Tab kann nur entscheiden, was jemand selbst
+   beantragt hat. Vergeben wird die Rolle aber meistens andersherum:
+   im Lehrerzimmer wird gefragt, nicht im Formular. Deshalb hier
+   derselbe Schreibweg (PATCH auf profiles, Policy
+   profiles_admin_update; die Zeitstempel setzt der Trigger
+   profiles_teacher_stamp_trg) — nur eben aus der User-Liste heraus
+   und für mehrere auf einmal.
+   ══════════════════════════════════════════════════════════════ */
+
+// Wohin beim Entziehen? Wer sich beworben hat, behält seine Spur:
+// 'rejected' hält den erledigten Antrag im Lehrkräfte-Tab sichtbar,
+// sonst stünde dort nach dem nächsten Laden wieder ein „Neuantrag".
+// Wer die Rolle ohne Antrag bekommen hat, wird sauber auf 'none'
+// gesetzt — es gab nie etwas zu entscheiden.
+function teacherRevokeStatus(u) {
+  return u?.teacher_requested_at ? 'rejected' : 'none';
+}
+
+// Setzt teacher_status für eine Liste von Usern (ein PATCH für alle)
+// und zieht beide Caches nach. Wirft bei Fehlern — die Aufrufer
+// entscheiden, ob Toast oder Formular-Feedback.
+async function patchTeacherStatus(ids, status) {
+  if (ids.length === 0) return;
+  await api('PATCH', `profiles?id=in.(${ids.join(',')})`, { teacher_status: status });
+  const idSet = new Set(ids);
+  for (const u of [...userCache, ...adminCache]) {
+    if (!idSet.has(u.id)) continue;
+    u.teacher_status = status;
+    // Den Zeitstempel spiegeln, was der Trigger serverseitig tut —
+    // sonst zeigt ein direkt folgendes Entziehen auf den alten Wert.
+    if (status === 'none') u.teacher_requested_at = null;
+  }
+  // Der Lehrkräfte-Tab lädt bei jeder Aktivierung neu; hier reicht es,
+  // vorhandene Zeilen zu korrigieren, damit ein noch offener Cache
+  // nicht widersprüchlich ist.
+  for (const t of teacherCache) {
+    if (idSet.has(t.id)) t.teacher_status = status;
+  }
+  if (status === 'none') teacherCache = teacherCache.filter(t => !idSet.has(t.id));
+}
+
+/* ══════════════════════════════════════════════════════════════
    Bulk-Bar
    ══════════════════════════════════════════════════════════════ */
 
@@ -2277,6 +2323,8 @@ function wireBulkBar() {
     renderUsers();
   });
   document.getElementById('bulkAssignBtn').addEventListener('click', bulkAssignCluster);
+  document.getElementById('bulkTeacherGrantBtn').addEventListener('click', () => bulkTeacher(true));
+  document.getElementById('bulkTeacherRevokeBtn').addEventListener('click', () => bulkTeacher(false));
   document.getElementById('bulkDeleteBtn').addEventListener('click', () => {
     openDeleteModal(Array.from(selectedIds));
   });
@@ -2340,6 +2388,71 @@ async function bulkAssignCluster() {
     fb.classList.add('error');
   } finally {
     btn.disabled = false;
+  }
+}
+
+// Lehrkraft-Rolle für die Auswahl geben (grant=true) oder entziehen.
+//
+// Angefasst wird nur, wo sich wirklich etwas ändert: wer die Rolle schon
+// hat, bleibt beim Vergeben unberührt (sonst schriebe der Trigger einen
+// neuen Entscheidungs-Stempel), und beim Entziehen zählt nur, wer
+// freigeschaltet ist — ein offener Antrag gehört in den Lehrkräfte-Tab.
+async function bulkTeacher(grant) {
+  const ids = Array.from(selectedIds);
+  if (ids.length === 0) return;
+
+  const fb = document.getElementById('bulkFeedback');
+  fb.className = 'form-feedback';
+  fb.textContent = '';
+
+  const picked    = ids.map(id => userCache.find(u => u.id === id)).filter(Boolean);
+  const blocked   = picked.filter(isProtectedFromCaller);
+  const touchable = picked.filter(u => !isProtectedFromCaller(u));
+
+  // Gruppieren nach Zielstatus: beim Vergeben ist das immer 'approved',
+  // beim Entziehen je nach Vorgeschichte 'none' oder 'rejected'.
+  const groups = { approved: [], none: [], rejected: [] };
+  for (const u of touchable) {
+    if (grant) {
+      if (u.teacher_status !== 'approved') groups.approved.push(u.id);
+    } else if (u.teacher_status === 'approved') {
+      groups[teacherRevokeStatus(u)].push(u.id);
+    }
+  }
+  const total = groups.approved.length + groups.none.length + groups.rejected.length;
+
+  if (total === 0) {
+    fb.textContent = blocked.length > 0
+      ? 'Nichts zu tun (Volladmins übersprungen).'
+      : (grant ? 'Alle Ausgewählten sind schon Lehrkraft.'
+               : 'Keiner der Ausgewählten ist freigeschaltet.');
+    return;
+  }
+
+  if (!grant) {
+    const ok = confirm(`${total} ${total === 1 ? 'Person' : 'Personen'} die Lehrkraft-Rolle entziehen?\n\n`
+      + 'Bestehende Räume bleiben bis zu ihrem Ablauf nutzbar, neue lassen sich nicht mehr anlegen.');
+    if (!ok) return;
+  }
+
+  const btns = ['bulkTeacherGrantBtn', 'bulkTeacherRevokeBtn'].map(id => document.getElementById(id));
+  btns.forEach(b => { b.disabled = true; });
+  try {
+    for (const [status, list] of Object.entries(groups)) {
+      await patchTeacherStatus(list, status);
+    }
+    renderUsers();
+    showToast(grant
+      ? `${total} ${total === 1 ? 'Person ist' : 'Personen sind'} für MPSkills freigeschaltet.`
+      : `Lehrkraft-Rolle entzogen: ${total}.`);
+    if (blocked.length > 0) {
+      fb.textContent = `${blocked.length} Volladmin(s) übersprungen — nur ein Volladmin darf die ändern.`;
+    }
+  } catch (err) {
+    fb.textContent = 'Fehler: ' + err.message;
+    fb.classList.add('error');
+  } finally {
+    btns.forEach(b => { b.disabled = false; });
   }
 }
 
@@ -2900,17 +3013,40 @@ function wireRoleChangeModal() {
   close.addEventListener('click', doClose);
   overlay.addEventListener('click', e => { if (e.target === overlay) doClose(); });
 
+  document.getElementById('rcRole').addEventListener('change', updateRcTeacherHint);
+  document.getElementById('rcTeacher').addEventListener('change', updateRcTeacherHint);
+
   form.addEventListener('submit', async e => {
     e.preventDefault();
     if (!roleChangeTargetId) return;
+    const userId = roleChangeTargetId;
+    const u  = userCache.find(x => x.id === userId) || adminCache.find(x => x.id === userId);
     const fb  = document.getElementById('rcFeedback');
     const btn = document.getElementById('rcSubmit');
     fb.className = 'form-feedback';
     fb.textContent = '';
     btn.disabled = true;
     try {
-      const role = document.getElementById('rcRole').value;
-      await applyRoleChange(roleChangeTargetId, role);
+      const role        = document.getElementById('rcRole').value;
+      const wantTeacher = document.getElementById('rcTeacher').checked;
+      const currentRole = u?.is_superadmin ? 'volladmin' : (u?.is_admin ? 'schuladmin' : 'student');
+      const isTeacher   = u?.teacher_status === 'approved';
+
+      // Nur schicken, was sich geändert hat. Die Rollen-API wischt beim
+      // Aufstieg zum Admin den Fortschritt — das darf nicht passieren,
+      // weil jemand bloß das Lehrkraft-Häkchen gesetzt hat.
+      const roleChanged    = role !== currentRole;
+      const teacherChanged = wantTeacher !== isTeacher;
+      if (!roleChanged && !teacherChanged) {
+        fb.textContent = 'Nichts geändert.';
+        return;
+      }
+      if (roleChanged)    await applyRoleChange(userId, role);
+      if (teacherChanged) {
+        await patchTeacherStatus([userId],
+          wantTeacher ? 'approved' : teacherRevokeStatus(u));
+      }
+
       overlay.hidden = true;
       roleChangeTargetId = null;
       renderUsers();
@@ -2918,7 +3054,10 @@ function wireRoleChangeModal() {
         // Admins-Tab live halten
         renderAdmins();
       }
-      showToast(`Rolle gesetzt: ${role}`);
+      const parts = [];
+      if (roleChanged)    parts.push(`Rolle: ${role}`);
+      if (teacherChanged) parts.push(wantTeacher ? 'Lehrkraft freigeschaltet' : 'Lehrkraft-Rolle entzogen');
+      showToast(parts.join(' · '));
     } catch (err) {
       fb.textContent = err.message;
       fb.classList.add('error');
@@ -2926,6 +3065,27 @@ function wireRoleChangeModal() {
       btn.disabled = false;
     }
   });
+}
+
+// Der Hinweis unter dem Häkchen beantwortet die Frage, die sich beim
+// Setzen stellt — und die hängt von der gewählten Rolle ab: Admins
+// dürfen über can_teach() ohnehin Räume öffnen (0077), bei ihnen ist
+// das Häkchen nur für den Fall gedacht, dass sie später wieder
+// gewöhnliche User werden.
+function updateRcTeacherHint() {
+  const role    = document.getElementById('rcRole').value;
+  const checked = document.getElementById('rcTeacher').checked;
+  const hint    = document.getElementById('rcTeacherHint');
+  if (role !== 'student') {
+    hint.textContent = 'Admins dürfen in MPSkills ohnehin Räume öffnen. '
+      + 'Das Häkchen wirkt erst, wenn die Rolle später wieder „Schüler:in" wird.';
+  } else if (checked) {
+    hint.textContent = 'Darf in MPSkills Räume öffnen. Auf der Schulungsseite ändert sich nichts — '
+      + 'Kurs, Fortschritt und Anzeige bleiben, wie sie sind.';
+  } else {
+    hint.textContent = 'Ohne Häkchen: keine MPSkills-Räume. Bestehende Räume laufen ab, '
+      + 'neue lassen sich nicht mehr anlegen.';
+  }
 }
 
 function openRoleChange(userId) {
@@ -2943,6 +3103,11 @@ function openRoleChange(userId) {
   vollOpt.hidden   = !isVolladmin;
   vollOpt.disabled = !isVolladmin;
   roleSel.value = currentRole;
+
+  // Lehrkraft-Häkchen: zeigt teacher_status, nicht can_teach() — sonst
+  // stünde bei jedem Admin ein Haken, den ein Entfernen nicht entfernt.
+  document.getElementById('rcTeacher').checked = u.teacher_status === 'approved';
+  updateRcTeacherHint();
 
   document.getElementById('rcFeedback').textContent = '';
   document.getElementById('roleChangeModal').hidden = false;
@@ -3042,7 +3207,8 @@ async function loadAdmins() {
   const tbody = document.getElementById('adminTbody');
   try {
     const rows = await api('GET',
-      `profiles?select=id,account_name,display_name,school_id,cluster_id,is_admin,is_superadmin`
+      `profiles?select=id,account_name,display_name,school_id,cluster_id,is_admin,is_superadmin,`
+      + `teacher_status,teacher_requested_at`
       + `&or=(is_admin.eq.true,is_superadmin.eq.true)`
       + `&order=is_superadmin.desc,account_name.asc`);
     adminCache = rows;
