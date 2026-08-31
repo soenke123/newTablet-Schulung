@@ -662,14 +662,45 @@
      den Füßen auf dem Kachel-Mittelpunkt und ragt von dort nach oben,
      unter ihr ist Platz. */
   const CASTLE_LIVES = 3;
-  function heartsHTML(p, scale, hp, z) {
-    const left = Math.max(0, Math.min(CASTLE_LIVES, hp == null ? CASTLE_LIVES : hp));
-    let out = '<div class="cm-hearts" style="left:' + p.x.toFixed(1) + 'px;top:' + (p.y + scale * 0.42).toFixed(1) + 'px;' +
-      'font-size:' + Math.max(8, scale * 0.46).toFixed(1) + 'px;z-index:' + z + '">';
-    for (let i = 0; i < CASTLE_LIVES; i++) {
-      out += '<span class="cm-heart' + (i < left ? '' : ' cm-heart--lost') + '">♥</span>';
+  /* Eine Reihe Herzen unter EINER Kachel. `max` ist, wie viele Leben
+     dort einmal waren, `full`, wie viele davon noch stehen — der Rest
+     bleibt als leerer Umriss. Beide Zahlen kommen von außen, weil die
+     Burg (feste drei Leben) und die Rüstung eines gewöhnlichen Feldes
+     (wachsende Zahl, siehe armorHeartsHTML) dieselbe DARSTELLUNG teilen
+     sollen, aber nicht dieselbe Rechnung. */
+  function heartRowHTML(p, scale, full, max, size, z, cls) {
+    let out = '<div class="cm-hearts' + (cls ? ' ' + cls : '') +
+      '" style="left:' + p.x.toFixed(1) + 'px;top:' + (p.y + scale * 0.42).toFixed(1) + 'px;' +
+      'font-size:' + size.toFixed(1) + 'px;z-index:' + z + '">';
+    for (let i = 0; i < max; i++) {
+      out += '<span class="cm-heart' + (i < full ? '' : ' cm-heart--lost') + '">♥</span>';
     }
     return out + '</div>';
+  }
+  function heartsHTML(p, scale, hp, z) {
+    const left = Math.max(0, Math.min(CASTLE_LIVES, hp == null ? CASTLE_LIVES : hp));
+    return heartRowHTML(p, scale, left, CASTLE_LIVES, Math.max(8, scale * 0.46), z, '');
+  }
+
+  /* ─── Die Rüstung eines gewöhnlichen Feldes (PvE, 0126) ───────
+     Im PvE hält JEDES Feld der Klasse ein paar Treffer mehr aus, sobald
+     die Klasse mehr als ihre Startburg hält (clash_ai_armor). Sichtbar
+     war das bisher erst NACH dem ersten Treffer — als Riss in der
+     Kachel (.cm-hex--cracked) — und als Zahl am Kopf des Tablets. Wer
+     auf die Karte sah, sah also nicht, was seine Felder aushalten.
+     Jetzt trägt jedes Feld seine Leben in derselben Sprache wie die
+     Burg: ein Herz je Treffer, den es noch aushält, verbrauchte als
+     leerer Umriss. `dmg` ist die Zahl der schon kassierten Treffer und
+     kommt mit jeder Kachel mit (clash_tiles_json).
+
+     Der Deckel bei 9 ist kein Spielwert, sondern eine Notbremse: käme
+     durch einen späteren Balance-Griff eine große Zahl herein, stünde
+     sonst eine Herzenkette quer über die Karte. */
+  function armorHeartsHTML(p, scale, armor, dmg, z) {
+    const max = Math.max(0, Math.min(9, Math.round(armor) || 0));
+    if (!max) return '';
+    const full = Math.max(0, max - Math.max(0, Math.round(dmg) || 0));
+    return heartRowHTML(p, scale, full, max, Math.max(7, scale * 0.34), z, 'cm-hearts--armor');
   }
 
   /* ─── Wie viele Einheiten ein Volk zeigt und WO sie stehen ─────
@@ -823,6 +854,12 @@
 
     const byTeam = {};
     tiles.forEach(t => (byTeam[t.team] = byTeam[t.team] || []).push(t));
+    /* Wie viele Treffer hält ein Feld der Klasse gerade aus? Die Zahl
+       gilt für ALLE ihre Felder gleichzeitig (sie hängt an der Zahl der
+       Burgen, nicht am einzelnen Feld) und kommt deshalb einmal für die
+       ganze Karte aus aiInfo. Im PvP ist sie 0 und es wird gar nichts
+       gezeichnet. */
+    const armorMax = pveMode ? Math.max(0, Math.round(aiInfo.armor) || 0) : 0;
     let icons = '';
     Object.keys(byTeam).forEach(teamKey => {
       const team = parseInt(teamKey, 10);
@@ -859,6 +896,22 @@
         // und über dieselben Figuren, die auf dem Panel am Rand
         // stehen. Und was hier nicht steht, verdeckt keine Figur.
       });
+      /* Die Rüstung der Klasse, Feld für Feld. Drei Einschränkungen,
+         und alle drei stehen so im Server (clash_ai_capture):
+           · nur im PvE (armorMax ist sonst 0),
+           · nur bei der Klasse — der Computer bekommt keine Rüstung,
+             die Prüfung greift ausschließlich beim Angriff AUF sie,
+           · nicht auf Burgen: die haben ihre eigenen drei Leben und
+             bekommen keine Rüstung obendrauf.
+         Steht bewusst VOR dem withUnits-Ausstieg: am Tablet fallen die
+         Figuren weg, die Leben des eigenen Feldes nicht. */
+      if (armorMax > 0 && !isAi(team)) {
+        teamTiles.forEach(t => {
+          if (t.castle) return;
+          icons += armorHeartsHTML(center(t.r, t.c), scale,
+                                   armorMax, +t.dmg || 0, 1000 + t.r * 10 + 8);
+        });
+      }
       // Nicht jedes eroberte Feld bekommt eine eigene Einheit (bei 40+
       // Feldern wäre das nur noch Gewusel) — die Zahl wächst mit dem
       // Gebiet (siehe planUnits), die Plätze bleiben stehen.
@@ -2881,7 +2934,11 @@
       if (lastView && hitAt) {
         const t = (lastView.tiles || []).find(x => x.r === r && x.c === c);
         if (t) {
-          if (res.captured) { t.team = lastView.me.team; if (res.captured.castle) t.hp = res.captured.hp; }
+          // dmg zurück auf 0: die Rüstung gehört dem BESITZER, nicht
+          // dem Feld (clash_capture_apply setzt armor_hits ebenso
+          // zurück). Ohne diese Zeile stünde ein eben erobertes Feld
+          // bis zum nächsten Takt mit fremden Rissen da.
+          if (res.captured) { t.team = lastView.me.team; t.dmg = 0; if (res.captured.castle) t.hp = res.captured.hp; }
           else t.hp = res.castle_hit.hp;
         }
         // Der Effekt kommt aus demselben Vergleich wie beim Takt (der
@@ -3153,6 +3210,7 @@
           if (t) {
             if (r.captured) {
               t.team = lastView.me.team;
+              t.dmg = 0;                                     // Rüstung gehört dem Besitzer
               if (r.captured.castle) t.hp = r.captured.hp;   // übernommen ⇒ wieder voll
             } else t.hp = r.castle_hit.hp;
           }
@@ -4285,13 +4343,36 @@
        `streak` fehlt ohne die Migration; dann bleibt die Zeile leer
        statt „undefined" zu schreiben. */
     const prot = isProtected(i);
-    const streakHTML = (streak == null)
+    /* 0126: Beim Computer steht dort KEINE Team-Serie. Er hat keine —
+       seine Serien laufen je Bot (clash_ai_bots.streak), nicht am Volk,
+       und clash_team_streaks bekommt für seinen Slot nie eine Zeile.
+       „🔥 Serie 0" stünde also für immer da und läse sich wie ein
+       Gegner, der nichts trifft. An seiner Stelle steht die Stufe. */
+    const streakHTML = (streak == null || (pveMode && isAi(i)))
       ? ''
       : (prot
         ? `<span class="cm-rshield" title="Längste Serie — vor Eroberungen geschützt">` +
             `🛡️ Serie ${streak} · geschützt</span>`
         : `<span class="cm-rstreak" title="Serie des Volkes — die längste schützt vor Eroberungen">` +
             `🔥 Serie ${streak}</span>`);
+    /* Auf welcher Stufe rechnet der Computer GERADE? Sie steht rechts
+       in der Zeile über den Bot-Namen: dort, wo bei den anderen Völkern
+       nichts steht, und direkt über denen, für die sie gilt.
+
+       Zwei Zahlen, nicht eine: `stage` ist die laufende Stufe (die
+       Partie beginnt immer bei 1 und klettert mit jeder Burg, die die
+       Klasse nimmt — die Ramp), `level` die von der Lehrkraft gewählte
+       Obergrenze. „Stufe 2" allein verschwiege, dass da noch fünf
+       kommen; und wenn beide gleich sind, ist die Anzeige zugleich die
+       Antwort auf „warum wird der nicht mehr schneller?". */
+    const levelHTML = (pveMode && isAi(i) && aiInfo.stage)
+      ? `<span class="cm-rlevel${aiInfo.stage >= aiInfo.level ? ' cm-rlevel--max' : ''}" title="` +
+          (aiInfo.stage >= aiInfo.level
+            ? `Der Computer ist auf seiner höchsten Stufe (${aiInfo.stage}) — schneller wird er nicht mehr`
+            : `Der Computer rechnet auf Stufe ${aiInfo.stage} von ${aiInfo.level} — ` +
+              `jede Burg, die ihr ihm abnehmt, bringt ihn eine Stufe weiter`) +
+        `">⚙️ Stufe ${aiInfo.stage}<i>/${aiInfo.level}</i></span>`
+      : '';
     return `<div class="${cls}" style="--team:${fStroke(i)}">` +
       '<div class="cm-rhead">' +
         `<div class="cm-rthumb">${fImg(i, fUnit(i))}</div>` +
@@ -4300,6 +4381,7 @@
           '<span class="cm-rmeta">' +
             `<span class="cm-rcorr" title="richtige Antworten">✓ ${correct} richtig</span>` +
             streakHTML +
+            levelHTML +
           '</span>' +
         '</div>' +
         scoreHTML +

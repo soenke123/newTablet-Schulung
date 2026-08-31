@@ -1139,6 +1139,39 @@
   border-radius: 999px;
   padding: 1px 7px;
 }
+/* Die Stufe des Computers (0126). Sie sitzt am RECHTEN Ende derselben
+   Zeile (margin-left: auto), also unmittelbar über den Bot-Namen und
+   nicht mitten zwischen den Zahlen der anderen Völker — dort, wo bei
+   einem Kinder-Volk nichts steht.
+   Kühles Grau statt Gold oder Farbe: der Gegner ist überall in diesem
+   Modus entfärbt (.cm-aiimg), und ein bunter Kasten auf einer grauen
+   Karte sähe aus, als gehörte er nicht dazu. Erst auf der höchsten
+   Stufe wird er warm — dann ist er eine Warnung und keine Auskunft. */
+.cm-rlevel {
+  margin-left: auto;
+  /* Nicht schrumpfen: „✓ 12 richtig" daneben darf sich kürzen
+     (overflow/ellipsis), eine Stufenangabe nicht — „Stufe 3/" wäre
+     schlimmer als gar keine. */
+  flex: 0 0 auto;
+  font-size: .62rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #e9eef3;
+  background: rgba(24,28,34,.72);
+  border: 1px solid rgba(176,190,204,.7);
+  border-radius: 999px;
+  padding: 1px 7px;
+  text-shadow: 0 1px 2px rgba(20,12,0,.75);
+}
+/* Der Nenner ist die Obergrenze, nicht der Stand — er tritt zurück. */
+.cm-rlevel i { font-style: normal; font-weight: 700; opacity: .62; }
+.cm-rlevel--max {
+  color: #fff0c8;
+  background: rgba(74,50,10,.75);
+  border-color: rgba(255,214,120,.8);
+}
+
 .cm-rcount {
   flex: 0 0 auto;
   font-family: var(--cm-display);
@@ -1408,6 +1441,13 @@
     -1px -1px 0 rgba(255,252,240,.55), 1px -1px 0 rgba(255,252,240,.55),
     -1px  1px 0 rgba(255,252,240,.55), 1px  1px 0 rgba(255,252,240,.55);
 }
+/* ── Die Rüstung eines gewöhnlichen Feldes (PvE, 0126) ───────────
+   Dieselben Herzen wie an der Burg — dieselbe Bedeutung soll auch
+   dasselbe Zeichen haben —, nur kleiner (Größe kommt aus tool.js) und
+   enger zusammen: sie stehen auf JEDEM Feld der Klasse, und was
+   zwanzigmal auf der Karte steht, darf nicht so laut sein wie das, was
+   viermal dort steht. Die Burg behält deshalb ihren Vorsprung. */
+.cm-hearts--armor { gap: .02em; }
 
 /* Sprites: Position (statisch, unten-mittig verankert — die Füße
    stehen exakt auf dem Kachel-Mittelpunkt) und Animation (Wander/
