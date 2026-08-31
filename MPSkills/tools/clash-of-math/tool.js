@@ -427,9 +427,9 @@
      der Server die Wahrheit; das hier ist nur der Notnagel für ein
      Tablet, dessen Server 0126 noch nicht kennt. */
   let aiLevels = {
-    time_factor: [3.00, 2.72, 2.43, 2.15, 1.87, 1.58, 1.30],
-    quote:       [0.60, 0.66, 0.72, 0.78, 0.83, 0.89, 0.95],
-    armor_cap:   3
+    time_factor: [2.50, 2.25, 2.00, 1.75, 1.50, 1.25, 1.00],
+    quote:       [0.75, 0.79, 0.83, 0.87, 0.90, 0.94, 0.98],
+    heart_grant: 8
   };
   function noteAi(v) {
     if (!v) return;
@@ -682,25 +682,25 @@
     return heartRowHTML(p, scale, left, CASTLE_LIVES, Math.max(8, scale * 0.46), z, '');
   }
 
-  /* ─── Die Rüstung eines gewöhnlichen Feldes (PvE, 0126) ───────
-     Im PvE hält JEDES Feld der Klasse ein paar Treffer mehr aus, sobald
-     die Klasse mehr als ihre Startburg hält (clash_ai_armor). Sichtbar
-     war das bisher erst NACH dem ersten Treffer — als Riss in der
-     Kachel (.cm-hex--cracked) — und als Zahl am Kopf des Tablets. Wer
-     auf die Karte sah, sah also nicht, was seine Felder aushalten.
-     Jetzt trägt jedes Feld seine Leben in derselben Sprache wie die
-     Burg: ein Herz je Treffer, den es noch aushält, verbrauchte als
-     leerer Umriss. `dmg` ist die Zahl der schon kassierten Treffer und
-     kommt mit jeder Kachel mit (clash_tiles_json).
+  /* ─── Die Herzen eines gewöhnlichen Feldes (PvE, 0127) ───────
+     Bis 0126 hielt JEDES Feld der Klasse gleich viele Treffer aus, und
+     wie viele, stand nur am Kopf des Tablets; auf der Karte sah man
+     bloß Risse. Seit 0127 liegen acht Herzen auf zufälligen Feldern
+     (je eroberter Computer-Burg), und `hearts` sagt je Kachel, wie
+     viele davon dort noch liegen (clash_tiles_json).
+
+     Damit gibt es hier nichts mehr zu rechnen und keine leeren Umrisse:
+     ein Herz steht für einen Treffer, den dieses Feld noch abfängt. Was
+     weg ist, ist weg — ein Umriss würde einen Vorrat versprechen, der
+     nicht wiederkommt.
 
      Der Deckel bei 9 ist kein Spielwert, sondern eine Notbremse: käme
      durch einen späteren Balance-Griff eine große Zahl herein, stünde
      sonst eine Herzenkette quer über die Karte. */
-  function armorHeartsHTML(p, scale, armor, dmg, z) {
-    const max = Math.max(0, Math.min(9, Math.round(armor) || 0));
-    if (!max) return '';
-    const full = Math.max(0, max - Math.max(0, Math.round(dmg) || 0));
-    return heartRowHTML(p, scale, full, max, Math.max(7, scale * 0.34), z, 'cm-hearts--armor');
+  function armorHeartsHTML(p, scale, hearts, z) {
+    const n = Math.max(0, Math.min(9, Math.round(hearts) || 0));
+    if (!n) return '';
+    return heartRowHTML(p, scale, n, n, Math.max(7, scale * 0.34), z, 'cm-hearts--armor');
   }
 
   /* ─── Wie viele Einheiten ein Volk zeigt und WO sie stehen ─────
@@ -821,14 +821,13 @@
       // Serien-Bonus — nur gesetzt, wenn der Aufrufer ein opts.pickable-
       // Set mitgibt (renderPlayerMap tut das nur, solange pending_picks
       // offen sind).
-      // cm-hex--cracked (0126): die Rüstung dieses Feldes hat schon
-      // einen Treffer abbekommen. Kein eigener Kartenzustand — `dmg`
-      // kommt mit jeder Kachel mit (clash_tiles_json) und ist im PvP
-      // immer 0, die Klasse hängt dort also nie.
+      // Den Riss (cm-hex--cracked, 0126) gibt es seit 0127 nicht mehr:
+      // er stand für „die Rüstung dieses Feldes hat einen Treffer
+      // abbekommen" und war nur zusammen mit einer karteweiten Schwelle
+      // zu lesen. Was ein Feld aushält, steht jetzt als Herzen auf ihm.
       const pickable = opts.pickable && opts.pickable.has(t.r + ',' + t.c);
       const cls = 'cm-hex' + (mine != null && t.team === mine ? ' cm-hex--mine' : '') +
-                  (pickable ? ' cm-hex--pickable' : '') +
-                  (t.dmg > 0 ? ' cm-hex--cracked' : '');
+                  (pickable ? ' cm-hex--pickable' : '');
       poly += '<polygon class="' + cls + '" data-r="' + t.r + '" data-c="' + t.c + '" points="' +
         pts.join(' ') + '" style="--raw:' + fStroke(t.team) + '"></polygon>';
     });
@@ -854,12 +853,6 @@
 
     const byTeam = {};
     tiles.forEach(t => (byTeam[t.team] = byTeam[t.team] || []).push(t));
-    /* Wie viele Treffer hält ein Feld der Klasse gerade aus? Die Zahl
-       gilt für ALLE ihre Felder gleichzeitig (sie hängt an der Zahl der
-       Burgen, nicht am einzelnen Feld) und kommt deshalb einmal für die
-       ganze Karte aus aiInfo. Im PvP ist sie 0 und es wird gar nichts
-       gezeichnet. */
-    const armorMax = pveMode ? Math.max(0, Math.round(aiInfo.armor) || 0) : 0;
     let icons = '';
     Object.keys(byTeam).forEach(teamKey => {
       const team = parseInt(teamKey, 10);
@@ -896,20 +889,23 @@
         // und über dieselben Figuren, die auf dem Panel am Rand
         // stehen. Und was hier nicht steht, verdeckt keine Figur.
       });
-      /* Die Rüstung der Klasse, Feld für Feld. Drei Einschränkungen,
-         und alle drei stehen so im Server (clash_ai_capture):
-           · nur im PvE (armorMax ist sonst 0),
-           · nur bei der Klasse — der Computer bekommt keine Rüstung,
-             die Prüfung greift ausschließlich beim Angriff AUF sie,
+      /* Die Herzen der Klasse, Feld für Feld. Seit 0127 trägt jede
+         Kachel ihre eigene Zahl (t.hearts) — es gibt keinen karteweiten
+         Wert mehr, den man vorher wissen müsste. Zwei Einschränkungen
+         bleiben, und beide stehen so im Server (clash_pve_grant_hearts):
+           · nur bei der Klasse — der Computer bekommt keine Herzen, und
+             ein erobertes Feld verliert seine (clash_capture_apply),
            · nicht auf Burgen: die haben ihre eigenen drei Leben und
-             bekommen keine Rüstung obendrauf.
-         Steht bewusst VOR dem withUnits-Ausstieg: am Tablet fallen die
-         Figuren weg, die Leben des eigenen Feldes nicht. */
-      if (armorMax > 0 && !isAi(team)) {
+             bekommen keine Herzen obendrauf.
+         Im PvP ist t.hearts überall 0, dann zeichnet armorHeartsHTML
+         von selbst nichts. Steht bewusst VOR dem withUnits-Ausstieg: am
+         Tablet fallen die Figuren weg, die Leben des eigenen Feldes
+         nicht. */
+      if (!isAi(team)) {
         teamTiles.forEach(t => {
-          if (t.castle) return;
+          if (t.castle || !(t.hearts > 0)) return;
           icons += armorHeartsHTML(center(t.r, t.c), scale,
-                                   armorMax, +t.dmg || 0, 1000 + t.r * 10 + 8);
+                                   +t.hearts || 0, 1000 + t.r * 10 + 8);
         });
       }
       // Nicht jedes eroberte Feld bekommt eine eigene Einheit (bei 40+
@@ -958,7 +954,7 @@
     const counts = {};
     tiles.forEach(t => {
       next.set(t.r + ',' + t.c, { team: t.team, hp: t.hp, castle: !!t.castle,
-                                  dmg: +t.dmg || 0 });
+                                  hearts: +t.hearts || 0 });
       counts[t.team] = (counts[t.team] || 0) + 1;
     });
 
@@ -983,11 +979,12 @@
       } else if (t.castle && p.hp != null && t.hp != null && t.hp < p.hp) {
         const c = key.split(',');
         out.push({ kind: 'hit', r: +c[0], c: +c[1], team: t.team, hp: t.hp });
-      } else if (t.dmg > p.dmg) {
-        // 0126: Die Rüstung hat gehalten. Genau der Vorteil, den der
-        // Kopfkommentar dieses Vergleichs beschreibt — der Computer
-        // meldet nichts, aber sein Treffer steht im nächsten
-        // Kartenstand, und daraus wird der Effekt.
+      } else if (t.hearts < p.hearts) {
+        // 0127: Ein Herz hat den Treffer abgefangen. Genau der Vorteil,
+        // den der Kopfkommentar dieses Vergleichs beschreibt — der
+        // Computer meldet nichts, aber sein Treffer steht im nächsten
+        // Kartenstand, und daraus wird der Effekt. Umgekehrtes
+        // Vorzeichen als in 0126: gezählt wird jetzt, was noch DA ist.
         const c = key.split(',');
         out.push({ kind: 'armorhit', r: +c[0], c: +c[1], team: t.team });
       }
@@ -1550,9 +1547,12 @@
     /* 0126: Im PvE gilt die halbe Regel — die eigene Serie bleibt, die
        Team-Serie ist ohne Wirkung. An ihrer Stelle die beiden Regeln,
        die es nur hier gibt und die man sonst erst merkt, wenn sie
-       zuschlagen: die Rüstung und die Ramp. */
+       zuschlagen: die Herzen und die Ramp. Seit 0127 steht die Zahl
+       dabei (acht) — sie ist ein abzählbarer Vorrat geworden, und ein
+       Vorrat ohne Zahl ist keine Regel, sondern ein Gefühl. */
     if (pveMode) {
       const bots = aiInfo.bots > 0 ? aiInfo.bots : null;
+      const hg = Math.max(0, Math.round(aiLevels.heart_grant ?? 8));
       return '<div class="cm-rules">' +
         '<div class="cm-ruletitle">Ihr alle gegen den Computer</div>' +
         '<div class="cm-rulegrid">' +
@@ -1564,9 +1564,9 @@
           '</div>' +
           '<div class="cm-rule cm-rule--team">' +
             '<span class="cm-ruleico">🏰</span>' +
-            '<b class="cm-rulebig">Jede eroberte Burg gibt euch ' +
-              '<span class="cm-rulehl">Rüstung</span> — und macht den ' +
-              'Computer <span class="cm-rulehl">schneller</span></b>' +
+            `<b class="cm-rulebig">Jede eroberte Burg legt ` +
+              `<span class="cm-rulehl">${hg} Herzen</span> auf eure Felder ` +
+              `— und macht den Computer <span class="cm-rulehl">schneller</span></b>` +
             (bots ? `<span class="cm-rulekind">Er rechnet mit ${bots} ` +
                     `${bots === 1 ? 'Bot' : 'Bots'}, Stufe ${aiInfo.level} ` +
                     `von 7 — ${aiQuotePct(aiInfo.level)} % richtig</span>` : '') +
@@ -2934,11 +2934,11 @@
       if (lastView && hitAt) {
         const t = (lastView.tiles || []).find(x => x.r === r && x.c === c);
         if (t) {
-          // dmg zurück auf 0: die Rüstung gehört dem BESITZER, nicht
-          // dem Feld (clash_capture_apply setzt armor_hits ebenso
-          // zurück). Ohne diese Zeile stünde ein eben erobertes Feld
-          // bis zum nächsten Takt mit fremden Rissen da.
-          if (res.captured) { t.team = lastView.me.team; t.dmg = 0; if (res.captured.castle) t.hp = res.captured.hp; }
+          // hearts zurück auf 0: die Herzen gehören dem BESITZER, nicht
+          // dem Feld (clash_capture_apply setzt clash_tiles.armor ebenso
+          // zurück). Ohne diese Zeile stünde ein eben erobertes Feld bis
+          // zum nächsten Takt mit fremden Herzen da.
+          if (res.captured) { t.team = lastView.me.team; t.hearts = 0; if (res.captured.castle) t.hp = res.captured.hp; }
           else t.hp = res.castle_hit.hp;
         }
         // Der Effekt kommt aus demselben Vergleich wie beim Takt (der
@@ -3210,7 +3210,7 @@
           if (t) {
             if (r.captured) {
               t.team = lastView.me.team;
-              t.dmg = 0;                                     // Rüstung gehört dem Besitzer
+              t.hearts = 0;                                  // Herzen gehören dem Besitzer
               if (r.captured.castle) t.hp = r.captured.hp;   // übernommen ⇒ wieder voll
             } else t.hp = r.castle_hit.hp;
           }
@@ -3388,9 +3388,14 @@
   function setTeamStreak(n) {
     /* 0126: Im PvE gibt es keine Team-Serie zu zeigen — der Schild ist
        aus, und ein Zähler ohne Wirkung wäre ein Versprechen, das
-       niemand einlöst. An seiner Stelle steht die RÜSTUNG: dieselbe
-       Kachel, dieselbe Größe, andere Bedeutung. Sie ist die einzige
-       Zahl im PvE, die sich durch eigenes Zutun ändert. */
+       niemand einlöst. An seiner Stelle stehen die HERZEN: dieselbe
+       Kachel, dieselbe Größe, andere Bedeutung. Sie sind die einzige
+       Zahl im PvE, die sich durch eigenes Zutun ändert.
+
+       Seit 0127 ist es ein VORRAT, keine Schwelle: die Zahl zählt, wie
+       viele Herzen noch auf der Karte liegen, und sie fällt bei jedem
+       abgefangenen Treffer. Genau deshalb steht sie hier — sie ist das
+       einzige, was zwischen dem Computer und dem nächsten Feld liegt. */
     if (pveMode) {
       const el = els.teamStreak;
       if (el) {
@@ -3399,8 +3404,8 @@
         const ico = el.querySelector('.cm-pstreakico');
         if (ico) ico.textContent = '🛡️';
         el.title = aiInfo.armor > 0
-          ? 'Rüstung: eure Felder halten ' + aiInfo.armor + ' Treffer mehr aus — erobert Burgen für mehr'
-          : 'Rüstung — jede zusätzliche eigene Burg gibt euren Feldern ein Leben mehr';
+          ? 'Herzen: eure Felder fangen noch ' + aiInfo.armor + ' Treffer ab — jede eroberte Burg legt neue nach'
+          : 'Herzen — erobert eine Burg des Computers, dann liegen acht auf euren Feldern';
       }
       renderStreakBar();
       return;
@@ -3449,7 +3454,7 @@
          Modus, die man ohne Ansage nicht bemerkt: dass der Gegner
          schneller wird, WEIL man gewinnt. */
       if (aiInfo.stage < aiInfo.level) {
-        text = '🏰 Nehmt eine Burg: mehr Rüstung — aber der Computer wird schneller.';
+        text = '🏰 Nehmt eine Burg: neue Herzen — aber der Computer wird schneller.';
       } else if (aiInfo.level > 1) {
         text = '⚙️ Der Computer ist auf seiner höchsten Stufe (' + aiInfo.stage + ').';
         cls = ' cm-streakbar--shield';
@@ -4492,10 +4497,19 @@
      aus der Stufe. Stünden sie hier als Text, liefen sie beim ersten
      Nachjustieren der Migration auseinander. */
   function levelText(lv) {
+    /* 0127: Das Tempo steht jetzt mit dabei. Seit Stufe 7 wörtlich
+       „so schnell wie ein starkes Kind" heißt (Faktor 1,00), ist es
+       der Wert, an dem die Lehrkraft die Stufen auseinanderhält — die
+       Quote läuft nur von 75 auf 98 %, das Tempo aber um das
+       Zweieinhalbfache. */
+    const f = aiLevels.time_factor?.[lv - 1];
+    const tempo = f == null ? ''
+      : f <= 1.001 ? ' rechnet so schnell wie ein starkes Kind,'
+      : ' braucht ' + f.toFixed(2).replace('.', ',') + '-mal so lange wie ein starkes Kind,';
     return 'Stufe ' + lv + ' von 7 — der Computer hat ' + lv +
       (lv === 1 ? ' Burg und genauso viele Felder wie ihr'
                 : ' Burgen und ' + lv + '-mal so viele Felder wie ihr') +
-      ', antwortet zu ' + aiQuotePct(lv) + ' % richtig.';
+      ',' + tempo + ' antwortet zu ' + aiQuotePct(lv) + ' % richtig.';
   }
   function renderModeBar() {
     if (!els.modeSeg) return;

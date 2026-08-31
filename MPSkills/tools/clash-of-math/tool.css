@@ -1347,16 +1347,12 @@
 @media (prefers-reduced-motion: reduce) {
   .cm-hex--mine { animation: none; }
 }
-/* Angeknackste Rüstung (0126). Ein Riss, keine zweite Farbe: die
-   Kachel gehört weiterhin demselben Volk, sie hat nur einen Treffer
-   weg. Umgesetzt als dunkle, gestrichelte Kante — sie liest sich als
-   Bruch in der Fuge und funktioniert auf jeder Volksfarbe, weil sie
-   nicht mit ihr mischt. */
-.cm-hex--cracked {
-  stroke: rgba(20,12,2,.85);
-  stroke-width: 3;
-  stroke-dasharray: 7 5;
-}
+/* .cm-hex--cracked (0126) ist mit 0127 ersatzlos weggefallen. Der Riss
+   zeigte „die Rüstung dieses Feldes hat einen Treffer weg" und war nur
+   zusammen mit einer für die ganze Karte geltenden Schwelle zu lesen.
+   Seit die Herzen auf den Feldern selbst liegen (.cm-hearts--armor),
+   steht dort direkt, was das Feld noch abfängt — ein Riss daneben wäre
+   dieselbe Auskunft ein zweites Mal, nur ungenauer. */
 
 /* Legales Zielfeld für den manuellen Serien-Bonus (0106, siehe
    legalPickTargets/onMapTileClick in tool.js) — ein goldener Puls, der

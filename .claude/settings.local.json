@@ -79,7 +79,9 @@
       "Bash(sed -i \"s#^  create schema if not exists auth;#  create extension if not exists pgcrypto;\\\\n  create extension if not exists btree_gist;\\\\n  create schema if not exists auth;#\" _t.mjs)",
       "Bash(awk '/function clash_capture_random/,/^comment on function clash_capture_random|^grant execute on function clash_capture_random/' 0106_clash_streak_bonuses.sql)",
       "Bash(awk '/create table if not exists clash_team_streaks/,/;/' 0106_clash_streak_bonuses.sql)",
-      "Bash(awk '/create table if not exists clash_team_events/,/;/' 0106_clash_streak_bonuses.sql)"
+      "Bash(awk '/create table if not exists clash_team_events/,/;/' 0106_clash_streak_bonuses.sql)",
+      "Bash(sed -i 's/'\\\\''TEST1'\\\\''/'\\\\''TESTAB'\\\\''/' C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f168b958-fe07-4588-9947-5274cd0a429f/scratchpad/t2.mjs)",
+      "Bash(sed -i 's|^const q = async|process.on\\('\\\\''uncaughtException'\\\\'', e => { console.log\\('\\\\''FEHLER:'\\\\'', String\\(e.message\\).split\\('\\\\''\\\\\\\\n'\\\\''\\)[0]\\); process.exit\\(1\\); }\\);\\\\nconst q = async|' C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f168b958-fe07-4588-9947-5274cd0a429f/scratchpad/t2.mjs)"
     ]
   }
 }
