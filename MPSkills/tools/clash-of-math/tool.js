@@ -268,8 +268,15 @@
      Lobby, die von Natur aus über Völker läuft, nicht über Slots. */
   let factions = [0, 1, 2, 3];
   const facOf    = s => (factions[s] != null ? factions[s] : s);
-  const fStroke  = s => FACTION_STROKE[facOf(s)] ?? '#999';
-  const fLabel   = s => FACTION_LABEL[facOf(s)]  ?? ('Team ' + (s + 1));
+  /* 0126: Der Computer bekommt seine eigene Farbe und seinen eigenen
+     Namen. Ein dunkles Schiefergrau, klar dunkler als das '#999' der
+     neutralen Kacheln — die beiden dürfen nicht verwechselbar sein.
+     Die Sprites bleiben die des gezogenen Volkes und werden erst per
+     CSS-Filter entfärbt (siehe fImg / .cm-aiimg): eine Silhouette,
+     die man kennt, in einer Farbe, die nicht dazugehört. */
+  const AI_STROKE = '#3f4756';
+  const fStroke  = s => (isAi(s) ? AI_STROKE : (FACTION_STROKE[facOf(s)] ?? '#999'));
+  const fLabel   = s => (isAi(s) ? 'Computer' : (FACTION_LABEL[facOf(s)] ?? ('Team ' + (s + 1))));
   const fCastle  = s => FACTION_CASTLE[facOf(s)] || FACTION_CASTLE[0];
   const fUnit    = s => FACTION_UNIT[facOf(s)]   || FACTION_UNIT[0];
   const fTeamPic = s => FACTION_TEAM[facOf(s)]   || FACTION_TEAM[0];
@@ -284,12 +291,24 @@
   const fUnitScale = s => FACTION_UNIT_SCALE[facOf(s)] || 1;
   // „gewinnt" oder „gewinnen" — siehe FACTION_PLURAL. Unbekanntes Volk
   // (Rückfall „Team 3") ist Einzahl.
-  const fVerb    = s => (FACTION_PLURAL[facOf(s)] ? 'gewinnen' : 'gewinnt');
+  const fVerb    = s => (isAi(s) ? 'gewinnt' : (FACTION_PLURAL[facOf(s)] ? 'gewinnen' : 'gewinnt'));
   /* Dasselbe für jedes andere Zeitwort, das eine Ankündigung braucht
      („ist/sind ausgeschieden", „erobert/erobern eine Burg"). fVerb
      bleibt daneben stehen, weil es an genau einer Stelle im Siegerbild
      hängt und dort lesbarer ist als fV(slot, 'gewinnen', 'gewinnt'). */
-  const fV = (s, plural, singular) => (FACTION_PLURAL[facOf(s)] ? plural : singular);
+  const fV = (s, plural, singular) =>
+    (isAi(s) ? singular : (FACTION_PLURAL[facOf(s)] ? plural : singular));
+  /* ─── Ein Sprite, an EINER Stelle entfärbt ───────────────────────
+     Es gibt acht Stellen, die ein Volks-Bild ausgeben (Burg und Einheit
+     auf der Karte, Panel, Roster, Podest, Endliste, Lobby). Ohne diesen
+     Helfer stünde in allen acht dieselbe if-Bedingung, und beim
+     nächsten Zusatz liefen sie auseinander. Der Slot entscheidet, nicht
+     der Aufrufer: wer ein Bild für den Gegner-Slot malt, bekommt es
+     grau, ohne davon zu wissen. */
+  const fImg = (slot, file, cls) => {
+    const c = [cls, isAi(slot) ? 'cm-aiimg' : ''].filter(Boolean).join(' ');
+    return '<img' + (c ? ' class="' + c + '"' : '') + ' src="' + esrc(file) + '" alt="">';
+  };
 
   let root = null, ctx = null, role = null;
   let els = {};
@@ -392,6 +411,48 @@
     if (Array.isArray(list)) fireTeams = list.map(Number);
   }
   const isProtected = slot => slot != null && slot >= 0 && fireTeams.indexOf(slot) >= 0;
+  /* ─── PvE (Migration 0126) ───────────────────────────────────────
+     Alles, was der Client über den Computer-Gegner wissen muss, steht
+     in drei Werten, und alle drei kommen vom Server: `pveMode` (spielen
+     wir überhaupt gegen den Computer), `aiSlot` (welcher Slot ist er —
+     daran hängt der Graufilter) und `aiInfo` (Stufe, Rüstung, Bot-Zahl
+     für die Anzeige).
+
+     Der Schild („on fire", 0125) braucht hier KEINEN Sonderfall: der
+     Server liefert im PvE ein leeres fire_teams, damit ist isProtected
+     überall von selbst falsch. */
+  let pveMode = false, aiSlot = null;
+  let aiInfo = { level: 1, stage: 1, armor: 0, bots: 0 };
+  /* Die Zahlen des Gegners (clash_ai_levels). Wie bei streakGoals ist
+     der Server die Wahrheit; das hier ist nur der Notnagel für ein
+     Tablet, dessen Server 0126 noch nicht kennt. */
+  let aiLevels = {
+    time_factor: [3.00, 2.72, 2.43, 2.15, 1.87, 1.58, 1.30],
+    quote:       [0.60, 0.66, 0.72, 0.78, 0.83, 0.89, 0.95],
+    armor_cap:   3
+  };
+  function noteAi(v) {
+    if (!v) return;
+    /* Modus und Stufe sind die einzigen beiden Werte hier, die die
+       LEHRKRAFT setzt — für sie gilt dieselbe Vorrangregel wie für die
+       Wappenreihe: solange ein eigener Klick unterwegs ist (pickBusy),
+       darf eine Antwort von vorhin die frischere Anzeige nicht
+       zurückdrehen. Alles andere (Slot, Ramp, Rüstung, Bot-Zahl) kommt
+       ausschließlich vom Server und wird immer übernommen. */
+    if (typeof v.mode === 'string' && !pickBusy) pveMode = v.mode === 'pve';
+    if (v.ai_slot !== undefined) aiSlot = (v.ai_slot == null ? null : +v.ai_slot);
+    if (v.ai) {
+      if (v.ai.level != null && !pickBusy) aiInfo.level = +v.ai.level;
+      if (v.ai.stage != null) aiInfo.stage = +v.ai.stage;
+      if (v.ai.armor != null) aiInfo.armor = +v.ai.armor;
+      if (v.ai.bots  != null) aiInfo.bots  = +v.ai.bots;
+    }
+    if (v.ai_levels && Array.isArray(v.ai_levels.quote)) aiLevels = v.ai_levels;
+  }
+  const isAi = s => aiSlot != null && s === aiSlot;
+  // Die Quote einer Stufe als Prozentzahl — für den Text der Stufenwahl
+  // und den Regel-Hinweis im Countdown.
+  const aiQuotePct = lv => Math.round((aiLevels.quote?.[lv - 1] ?? 0.6) * 100);
   /* Wie viele fehlen noch bis zum nächsten Vielfachen? Dieselbe
      Rechnung wie der floor-Vergleich im Server (clash_submit): eine
      Serie von 9 bei Schwelle 7 hat einmal gezündet und braucht noch
@@ -729,9 +790,14 @@
       // Serien-Bonus — nur gesetzt, wenn der Aufrufer ein opts.pickable-
       // Set mitgibt (renderPlayerMap tut das nur, solange pending_picks
       // offen sind).
+      // cm-hex--cracked (0126): die Rüstung dieses Feldes hat schon
+      // einen Treffer abbekommen. Kein eigener Kartenzustand — `dmg`
+      // kommt mit jeder Kachel mit (clash_tiles_json) und ist im PvP
+      // immer 0, die Klasse hängt dort also nie.
       const pickable = opts.pickable && opts.pickable.has(t.r + ',' + t.c);
       const cls = 'cm-hex' + (mine != null && t.team === mine ? ' cm-hex--mine' : '') +
-                  (pickable ? ' cm-hex--pickable' : '');
+                  (pickable ? ' cm-hex--pickable' : '') +
+                  (t.dmg > 0 ? ' cm-hex--cracked' : '');
       poly += '<polygon class="' + cls + '" data-r="' + t.r + '" data-c="' + t.c + '" points="' +
         pts.join(' ') + '" style="--raw:' + fStroke(t.team) + '"></polygon>';
     });
@@ -780,7 +846,7 @@
         icons += groundGlowHTML(p, scale * 1.7, scale * 0.94, raw);
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;' +
           '--drop:' + (CASTLE_DROP * 100) + '%;z-index:' + z + '">' +
-          '<div class="cm-spriteinner cm-spriteinner--castle"><img src="' + esrc(fCastle(team)) + '" alt=""></div></div>';
+          '<div class="cm-spriteinner cm-spriteinner--castle">' + fImg(team, fCastle(team)) + '</div></div>';
         icons += heartsHTML(p, scale, castleTile.hp, z + 1);
         // KEINE Beschriftung über der Burg. Der Showroom hatte dort die
         // Farbbezeichnung („Rot", „Türkis") — die ist weg, seit das
@@ -805,7 +871,7 @@
         const h = scale * UNIT_H * uscale;
         icons += groundGlowHTML(p, scale * 0.94, scale * 0.52, raw);
         icons += '<div class="cm-sprite" style="left:' + p.x + 'px;top:' + p.y + 'px;height:' + h + 'px;z-index:' + (1000 + t.r * 10 + 5) + '">' +
-          '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + ((k % 6) * 0.5) + 's"><img src="' + esrc(fUnit(team)) + '" alt=""></div></div>';
+          '<div class="cm-spriteinner cm-spriteinner--unit" style="animation-delay:' + ((k % 6) * 0.5) + 's">' + fImg(team, fUnit(team)) + '</div></div>';
       });
     });
     dom.icons.innerHTML = icons;
@@ -838,7 +904,8 @@
     const next = new Map();
     const counts = {};
     tiles.forEach(t => {
-      next.set(t.r + ',' + t.c, { team: t.team, hp: t.hp, castle: !!t.castle });
+      next.set(t.r + ',' + t.c, { team: t.team, hp: t.hp, castle: !!t.castle,
+                                  dmg: +t.dmg || 0 });
       counts[t.team] = (counts[t.team] || 0) + 1;
     });
 
@@ -863,6 +930,13 @@
       } else if (t.castle && p.hp != null && t.hp != null && t.hp < p.hp) {
         const c = key.split(',');
         out.push({ kind: 'hit', r: +c[0], c: +c[1], team: t.team, hp: t.hp });
+      } else if (t.dmg > p.dmg) {
+        // 0126: Die Rüstung hat gehalten. Genau der Vorteil, den der
+        // Kopfkommentar dieses Vergleichs beschreibt — der Computer
+        // meldet nichts, aber sein Treffer steht im nächsten
+        // Kartenstand, und daraus wird der Effekt.
+        const c = key.split(',');
+        out.push({ kind: 'armorhit', r: +c[0], c: +c[1], team: t.team });
       }
     });
 
@@ -958,6 +1032,12 @@
     } else if (e.kind === 'hit') {
       addFx(dom, 'cm-fx--ring cm-fx--ring--hit', p.x, p.y, s * 2.2, raw, 620);
       addFx(dom, 'cm-fx--burst', p.x, p.y, s * 1.15, raw, 700, '💥');
+    } else if (e.kind === 'armorhit') {
+      // 0126: Die Rüstung hat gehalten. Bewusst der kleinste Effekt im
+      // Spiel und OHNE Ring — ein Ring erzählt „hier hat jemand etwas
+      // gewonnen", und genau das ist hier nicht passiert. Der Schild
+      // blitzt kurz in der Farbe des Verteidigers auf, mehr nicht.
+      addFx(dom, 'cm-fx--burst cm-fx--burst--armor', p.x, p.y, s * 1.15, raw, 640, '🛡');
     } else if (e.kind === 'gone') {
       // 0108: die Kachel ist WEG, nicht erobert — also kein Ring nach
       // außen (der erzählt „hier ist etwas dazugekommen"), sondern eine
@@ -1324,6 +1404,10 @@
     // Die Übersetzungstabelle zuerst — jede Anzeigefunktion darunter
     // schlägt ihre Farben, Namen und Bilder darüber nach.
     if (Array.isArray(v.factions) && v.factions.length) factions = v.factions;
+    // 0126: … und gleich danach, wer von den Slots der Computer ist.
+    // Muss VOR allem Zeichnen stehen: fStroke/fLabel/fImg fragen isAi,
+    // und ein Takt zu spät wäre ein Bild in der falschen Farbe.
+    noteAi(v);
     // Vor der Runde die Einheiten-Plätze vergessen: eine neue Partie
     // beginnt mit einem neuen Spielfeld, alte Plätze wären dort nur
     // zufällig noch gültig. Bei 'ended' bleiben sie ABSICHTLICH
@@ -1410,6 +1494,33 @@
   function countdownInfoHTML() {
     const n = streakGoals.solo, r = streakGoals.soloReward;
     const feld = r === 1 ? 'Bonusfeld' : 'Bonusfelder';
+    /* 0126: Im PvE gilt die halbe Regel — die eigene Serie bleibt, die
+       Team-Serie ist ohne Wirkung. An ihrer Stelle die beiden Regeln,
+       die es nur hier gibt und die man sonst erst merkt, wenn sie
+       zuschlagen: die Rüstung und die Ramp. */
+    if (pveMode) {
+      const bots = aiInfo.bots > 0 ? aiInfo.bots : null;
+      return '<div class="cm-rules">' +
+        '<div class="cm-ruletitle">Ihr alle gegen den Computer</div>' +
+        '<div class="cm-rulegrid">' +
+          '<div class="cm-rule cm-rule--solo">' +
+            '<span class="cm-ruleico">🔥</span>' +
+            '<span class="cm-rulekind">Deine Serie</span>' +
+            `<b class="cm-rulebig">${n} richtige in Folge → erspiele ` +
+              `<span class="cm-rulehl">${r} ${feld}</span></b>` +
+          '</div>' +
+          '<div class="cm-rule cm-rule--team">' +
+            '<span class="cm-ruleico">🏰</span>' +
+            '<b class="cm-rulebig">Jede eroberte Burg gibt euch ' +
+              '<span class="cm-rulehl">Rüstung</span> — und macht den ' +
+              'Computer <span class="cm-rulehl">schneller</span></b>' +
+            (bots ? `<span class="cm-rulekind">Er rechnet mit ${bots} ` +
+                    `${bots === 1 ? 'Bot' : 'Bots'}, Stufe ${aiInfo.level} ` +
+                    `von 7 — ${aiQuotePct(aiInfo.level)} % richtig</span>` : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
     // Der Countdown dauert drei Sekunden. Alles, was hier steht, muss
     // in dieser Zeit AUF EINEN BLICK zu lesen sein — also je Kachel
     // ein einziger großer Satz und kein Kleingedrucktes. Die genaue
@@ -1455,7 +1566,7 @@
       if (i === myTeam) continue;
       const n = (v.teams && v.teams[String(i)]) || 0;
       out += `<div class="cm-other" style="--team:${fStroke(i)}">` +
-        `<div class="cm-otherpic"><img src="${esrc(fUnit(i))}" alt=""></div>` +
+        `<div class="cm-otherpic">${fImg(i, fUnit(i))}</div>` +
         `<span class="cm-othername">${ctx.esc(fLabel(i))}</span>` +
         `<span class="cm-othern">${n}</span>` +
       '</div>';
@@ -2418,7 +2529,7 @@
   function podCardHTML(row, cls) {
     return `<div class="cm-pod ${cls}" style="--team:${fStroke(row.slot)}">` +
       `<div class="cm-podmedal">${MEDAL[row.place] || row.place}</div>` +
-      `<div class="cm-podpic"><img src="${esrc(fTeamPic(row.slot))}" alt=""></div>` +
+      `<div class="cm-podpic">${fImg(row.slot, fTeamPic(row.slot))}</div>` +
       `<div class="cm-podname">${ctx.esc(fLabel(row.slot))}</div>` +
       '<div class="cm-podfoot">' +
         `<span class="cm-podplace">Platz ${row.place}</span>` +
@@ -2434,7 +2545,7 @@
   function endRowHTML(row) {
     return `<div class="cm-erow" style="--team:${fStroke(row.slot)}">` +
       `<span class="cm-eplace">${row.place}.</span>` +
-      `<span class="cm-ethumb"><img src="${esrc(fUnit(row.slot))}" alt=""></span>` +
+      `<span class="cm-ethumb">${fImg(row.slot, fUnit(row.slot))}</span>` +
       `<span class="cm-ename">${ctx.esc(fLabel(row.slot))}</span>` +
       '<span class="cm-enums">' +
         `<span class="cm-etiles"><b>${row.tiles}</b> ${fieldWord(row.tiles)}</span>` +
@@ -3130,6 +3241,11 @@
     // Abzeichen liest den Schild dort. Die eigene Antwort kann die
     // Flamme gerade geholt oder verloren haben.
     noteFireTeams(r.fire_teams);
+    // 0126: aus demselben Grund. Diese Antwort kann gerade die zweite
+    // Burg geholt und damit Rüstung UND Gegnerstufe verändert haben —
+    // beides steht am eigenen Kopf und darf nicht acht Sekunden
+    // hinterherhinken.
+    noteAi(r);
     if (r.team_streak != null) setTeamStreak(r.team_streak);
     // Der Schein um den eigenen Kopf gehört zu demselben Zustand und
     // hängt an Elementen, die kein Neuzeichnen braucht.
@@ -3212,6 +3328,25 @@
   // aus — ohne diesen Aufruf bliebe das Team-Serien-Badge bis zum
   // nächsten 8s-Sicherheitsnetz-Takt stehen.
   function setTeamStreak(n) {
+    /* 0126: Im PvE gibt es keine Team-Serie zu zeigen — der Schild ist
+       aus, und ein Zähler ohne Wirkung wäre ein Versprechen, das
+       niemand einlöst. An seiner Stelle steht die RÜSTUNG: dieselbe
+       Kachel, dieselbe Größe, andere Bedeutung. Sie ist die einzige
+       Zahl im PvE, die sich durch eigenes Zutun ändert. */
+    if (pveMode) {
+      const el = els.teamStreak;
+      if (el) {
+        paintStreakChip(el, aiInfo.armor, 0, true);
+        el.classList.toggle('cm-pstreak--shield', aiInfo.armor > 0);
+        const ico = el.querySelector('.cm-pstreakico');
+        if (ico) ico.textContent = '🛡️';
+        el.title = aiInfo.armor > 0
+          ? 'Rüstung: eure Felder halten ' + aiInfo.armor + ' Treffer mehr aus — erobert Burgen für mehr'
+          : 'Rüstung — jede zusätzliche eigene Burg gibt euren Feldern ein Leben mehr';
+      }
+      renderStreakBar();
+      return;
+    }
     // 0125: ohne Ziel — die Zahl steht für sich. Dafür trägt das
     // Abzeichen den Schild, sobald das eigene Volk vorn liegt: Symbol,
     // Farbe und Beschriftung wechseln zusammen, damit auch ein Kind,
@@ -3250,6 +3385,17 @@
     let text = '', cls = '';
     if (left <= STREAK_HINT_AT) {
       text = '🔥 Nur noch ' + left + ' für den Serien-Effekt!';
+    } else if (pveMode) {
+      /* 0126: Der zweite Platz gehört im PvE nicht dem Schild (den gibt
+         es hier nicht), sondern der Ramp — der einzigen Regel des
+         Modus, die man ohne Ansage nicht bemerkt: dass der Gegner
+         schneller wird, WEIL man gewinnt. */
+      if (aiInfo.stage < aiInfo.level) {
+        text = '🏰 Nehmt eine Burg: mehr Rüstung — aber der Computer wird schneller.';
+      } else if (aiInfo.level > 1) {
+        text = '⚙️ Der Computer ist auf seiner höchsten Stufe (' + aiInfo.stage + ').';
+        cls = ' cm-streakbar--shield';
+      }
     } else if (prot) {
       text = '🛡️ Längste Serie — euer Volk ist geschützt!';
       cls = ' cm-streakbar--shield';
@@ -3409,7 +3555,7 @@
         `title="${ctx.esc(fLabel(i))}${prot ? ' — geschützt (längste Serie)' : ''}" ` +
         `aria-label="${ctx.esc(fLabel(i))}: ${n} Felder, ${c} richtige Antworten` +
           `${prot ? ', geschützt' : ''}">` +
-        `<img src="${esrc(fUnit(i))}" alt="">` +
+        `${fImg(i, fUnit(i))}` +
         (prot ? '<span class="cm-fshield">🛡️</span>' : '') +
         `<span class="cm-fchipnums"><b>${n}</b><i>✓${c}</i></span>` +
       '</span>';
@@ -3668,8 +3814,22 @@
         // steht unten an der Spalte, wo Platz dafür ist.
         '<div class="cm-pane" id="cmSetup">' +
           '<div class="cm-setup">' +
+            // 0126: Zuerst die Frage, gegen WEN gespielt wird — sie
+            // ändert die Bedeutung aller Einstellungen darunter (im PvE
+            // wählt man ein Volk statt mehrerer). Deshalb steht sie über
+            // der Kopfzeile und nicht in ihr.
+            '<div class="cm-modebar">' +
+              '<div class="cm-modeseg" id="cmModeSeg">' +
+                '<button type="button" class="cm-modebtn" data-mode="pvp">⚔️ Teams gegeneinander</button>' +
+                '<button type="button" class="cm-modebtn" data-mode="pve">🤖 Alle gegen den Computer</button>' +
+              '</div>' +
+              '<div class="cm-levelwrap cm-hide" id="cmLevelWrap">' +
+                '<div class="cm-levelrow" id="cmLevelRow"></div>' +
+                '<div class="cm-leveltext" id="cmLevelText"></div>' +
+              '</div>' +
+            '</div>' +
             '<div class="cm-setuphead">' +
-              '<h3 class="cm-setuptitle">Welche Teams?</h3>' +
+              '<h3 class="cm-setuptitle" id="cmSetupTitle">Welche Teams?</h3>' +
               // Der Aufgabenpool (0109). Er steht neben den Völkern und
               // nicht in einem Einstellungen-Fach: beides sind
               // Entscheidungen, die VOR dem Start fallen und danach
@@ -3804,6 +3964,11 @@
 
     els = {
       setup: root.querySelector('#cmSetup'),
+      setupTitle: root.querySelector('#cmSetupTitle'),   // 0126
+      modeSeg: root.querySelector('#cmModeSeg'),         // 0126
+      levelWrap: root.querySelector('#cmLevelWrap'),     // 0126
+      levelRow: root.querySelector('#cmLevelRow'),       // 0126
+      levelText: root.querySelector('#cmLevelText'),     // 0126
       pick: root.querySelector('#cmPick'),
       poolSum: root.querySelector('#cmPoolSum'),
       poolBtn: root.querySelector('#cmPoolBtn'),
@@ -3867,6 +4032,35 @@
       tick(true);
     });
 
+    /* ── Modus und Stufe (0126) ────────────────────────────────────
+       Dieselbe Bauweise wie die Wappenreihe darunter: ein Zuhörer auf
+       dem Behälter, sofortige Anzeige, der Server danach. */
+    if (els.modeSeg) {
+      els.modeSeg.addEventListener('click', ev => {
+        const btn = ev.target.closest('.cm-modebtn');
+        if (!btn) return;
+        const mode = btn.dataset.mode;
+        if ((mode === 'pve') === pveMode) return;
+        pveMode = mode === 'pve';
+        // Beim Wechsel ins PvE bleibt genau EIN Volk übrig — das erste
+        // der bisherigen Auswahl. Andersherum kommt die alte
+        // PvP-Auswahl nicht zurück (der Server kennt sie nicht mehr),
+        // deshalb ein sinnvoller Anfang statt eines leeren Feldes.
+        pickSel = pveMode ? [pickSel[0] ?? 0] : [0, 1, 2, 3];
+        saveMode(mode, aiInfo.level);
+      });
+    }
+    if (els.levelRow) {
+      els.levelRow.addEventListener('click', ev => {
+        const btn = ev.target.closest('.cm-levelbtn');
+        if (!btn) return;
+        const lv = parseInt(btn.dataset.level, 10);
+        if (!Number.isInteger(lv) || lv === aiInfo.level) return;
+        aiInfo.level = lv;
+        saveMode('pve', lv);
+      });
+    }
+
     /* ── Ein Volk an- oder abwählen ────────────────────────────────
        Ein Zuhörer auf der ganzen Reihe statt acht einzelner: die
        Knöpfe werden bei jedem Takt neu gezeichnet, einzeln
@@ -3876,6 +4070,34 @@
       if (!btn || btn.disabled) return;
       const fac = parseInt(btn.dataset.fac, 10);
       if (!Number.isInteger(fac)) return;
+
+      /* 0126: Im PvE ersetzt der Klick die Wahl, statt sie zu ergänzen.
+         Er geht auch an eine andere Stelle — clash_room_set_mode, denn
+         dort hängt das Volk der Klasse mit Modus und Stufe zusammen und
+         clash_normalize_factions verlangt ohnehin mindestens zwei
+         Einträge. */
+      if (pveMode) {
+        if (pickSel[0] === fac) return;
+        pickSel = [fac];
+        pickBusy++;
+        renderPick();
+        const rp = await ctx.actions.call('clash_room_set_mode',
+          { p_mode: 'pve', p_level: aiInfo.level, p_faction: fac });
+        pickBusy--;
+        if (!rp || !rp.ok) {
+          ctx.toast(ctx.errText((rp && rp.error) || 'network'), true);
+          if (!pickBusy) syncPickFromView(lastView);
+          renderPick();
+          return;
+        }
+        if (Array.isArray(rp.factions)) {
+          factions = rp.factions;
+          if (!pickBusy) pickSel = [rp.factions[0]];
+        }
+        renderPick();
+        tick(true);
+        return;
+      }
 
       const on   = pickSel.indexOf(fac) >= 0;
       const next = on ? pickSel.filter(f => f !== fac) : pickSel.concat([fac]);
@@ -4072,7 +4294,7 @@
             `🔥 Serie ${streak}</span>`);
     return `<div class="${cls}" style="--team:${fStroke(i)}">` +
       '<div class="cm-rhead">' +
-        `<div class="cm-rthumb"><img src="${esrc(fUnit(i))}" alt=""></div>` +
+        `<div class="cm-rthumb">${fImg(i, fUnit(i))}</div>` +
         '<div class="cm-rtitle">' +
           `<span class="cm-rname">${ctx.esc(fLabel(i))}</span>` +
           '<span class="cm-rmeta">' +
@@ -4142,10 +4364,15 @@
      Vorlese-Werkzeuge als einzige Auskunft überhaupt. */
   function renderPick() {
     if (!els.pick) return;
-    const locked = pickSel.length <= 2;   // die letzten zwei sind nicht abwählbar
+    /* 0126: Im PvE ist die Reihe eine EINFACHauswahl — genau ein Volk,
+       nämlich das der Klasse. Das Volk des Computers wählt niemand: es
+       wird bei jedem Start neu gezogen und ist ohnehin grau. „Nicht
+       abwählbar" gilt deshalb hier immer: es gibt kein Weniger als
+       eins. */
+    const locked = pveMode ? true : pickSel.length <= 2;
     let out = '';
     for (let f = 0; f < FACTION_COUNT; f++) {
-      const on   = pickSel.indexOf(f) >= 0;
+      const on   = pveMode ? (pickSel[0] === f) : (pickSel.indexOf(f) >= 0);
       const name = FACTION_LABEL[f];
       out += `<button type="button" class="cm-pickbtn${on ? ' cm-pickbtn--on' : ''}" ` +
         `data-fac="${f}" aria-pressed="${on}" aria-label="${ctx.esc(name)}" title="${ctx.esc(name)}" ` +
@@ -4161,8 +4388,80 @@
   // die frischere Anzeige überschreiben.
   function syncPickFromView(v) {
     if (!v) return;
+    // 0126: Im PvE steht in factions[1] das Volk des Computers. Es
+    // gehört nicht in die Auswahl — sonst leuchteten zwei Wappen, und
+    // eines davon ließe sich nicht abwählen.
+    if (v.mode === 'pve') {
+      pickSel = (Array.isArray(v.factions) && v.factions.length) ? [v.factions[0]] : [0];
+      return;
+    }
     if (Array.isArray(v.factions) && v.factions.length) pickSel = v.factions.slice();
     else pickSel = Array.from({ length: v.team_count || 2 }, (_, i) => i);
+  }
+
+  /* ─── Modus und Stufe (Migration 0126) ───────────────────────────
+     Zwei Anzeigen, eine Wahrheit: `pveMode` und `aiInfo.level` kommen
+     aus noteAi und damit vom Server. Gezeichnet wird bei jedem Takt neu
+     (wie die Wappenreihe), die Zuhörer hängen deshalb am Behälter und
+     nicht an den einzelnen Knöpfen.
+
+     Die Stufenbeschreibung wird ERZEUGT, nicht getippt: Burgenzahl,
+     Feldanteil und Quote stehen in clash_ai_levels bzw. folgen direkt
+     aus der Stufe. Stünden sie hier als Text, liefen sie beim ersten
+     Nachjustieren der Migration auseinander. */
+  function levelText(lv) {
+    return 'Stufe ' + lv + ' von 7 — der Computer hat ' + lv +
+      (lv === 1 ? ' Burg und genauso viele Felder wie ihr'
+                : ' Burgen und ' + lv + '-mal so viele Felder wie ihr') +
+      ', antwortet zu ' + aiQuotePct(lv) + ' % richtig.';
+  }
+  function renderModeBar() {
+    if (!els.modeSeg) return;
+    els.modeSeg.querySelectorAll('.cm-modebtn').forEach(b => {
+      const on = (b.dataset.mode === 'pve') === pveMode;
+      b.classList.toggle('cm-modebtn--on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    if (els.levelWrap) els.levelWrap.classList.toggle('cm-hide', !pveMode);
+    if (els.setupTitle) {
+      els.setupTitle.textContent = pveMode ? 'Welches Team seid ihr?' : 'Welche Teams?';
+    }
+    if (!pveMode || !els.levelRow) return;
+    let out = '';
+    for (let lv = 1; lv <= 7; lv++) {
+      const on = lv === aiInfo.level;
+      out += `<button type="button" class="cm-levelbtn${on ? ' cm-levelbtn--on' : ''}" ` +
+        `data-level="${lv}" aria-pressed="${on}" title="${ctx.esc(levelText(lv))}">${lv}</button>`;
+    }
+    els.levelRow.innerHTML = out;
+    if (els.levelText) els.levelText.textContent = levelText(aiInfo.level);
+  }
+
+  // Modus und Stufe gehen über DENSELBEN Aufruf an den Server: er setzt
+  // beides zusammen, weil im PvE die Stufe die Feldgröße bestimmt und
+  // ein halb gesetzter Zustand (Modus da, Stufe noch alt) für die
+  // Lehrkraft aussähe, als hätte ihr Klick nichts getan.
+  async function saveMode(mode, level) {
+    pickBusy++;
+    renderModeBar();
+    renderPick();
+    const r = await ctx.actions.call('clash_room_set_mode',
+      { p_mode: mode, p_level: level, p_faction: (mode === 'pve' ? pickSel[0] : null) });
+    pickBusy--;
+    if (!r || !r.ok) {
+      ctx.toast(ctx.errText((r && r.error) || 'network'), true);
+      if (!pickBusy) { noteAi(lastView); syncPickFromView(lastView); }
+      renderModeBar();
+      renderPick();
+      return;
+    }
+    if (Array.isArray(r.factions)) {
+      factions = r.factions;
+      if (!pickBusy) pickSel = (mode === 'pve') ? [r.factions[0]] : r.factions.slice();
+    }
+    renderModeBar();
+    renderPick();
+    tick(true);
   }
 
   /* ══════════════════════════════════════════════════════════════
@@ -4573,11 +4872,16 @@
     for (let slot = 0; slot < v.team_count; slot++) {
       const names = Array.isArray(members[String(slot)]) ? members[String(slot)] : [];
       const n = (v.teams && v.teams[String(slot)]) || names.length;
+      // 0126: Beim Computer heißt „noch niemand" etwas anderes als bei
+      // einem Volk ohne Kinder — er wartet nicht auf jemanden, seine
+      // Bots entstehen erst mit dem Start (einer je anwesendem Kind).
       const list = names.length
         ? names.map(x => `<li>${ctx.esc(x)}</li>`).join('')
-        : '<li class="cm-lteamempty">noch niemand</li>';
+        : (isAi(slot)
+            ? '<li class="cm-lteamempty">so viele Bots wie ihr Kinder seid</li>'
+            : '<li class="cm-lteamempty">noch niemand</li>');
       out += `<div class="cm-lteam" style="--team:${fStroke(slot)}">` +
-        `<div class="cm-lteampic"><img src="${esrc(FACTION_TEAM[facOf(slot)] || FACTION_TEAM[0])}" alt=""></div>` +
+        `<div class="cm-lteampic">${fImg(slot, FACTION_TEAM[facOf(slot)] || FACTION_TEAM[0])}</div>` +
         '<div class="cm-lteamname">' +
           `<span>${ctx.esc(fLabel(slot))}</span>` +
           `<span class="cm-lteamn">${n}</span>` +
@@ -4630,6 +4934,11 @@
     if (v.phase === 'lobby') {
       show2('setup');
       if (!pickBusy) syncPickFromView(v);
+      // 0126: dieselbe Schutzregel wie bei der Wappenreihe — solange
+      // ein eigener Klick unterwegs ist, hat die Anzeige Vorrang.
+      // (noteAi selbst lief schon in applyView; hier wird nur
+      // gezeichnet.)
+      renderModeBar();
       renderPick();
       if (!poolBusy) syncPoolFromView(v);
       // Der Katalog wird schon HIER geholt, nicht erst beim Öffnen des
@@ -4795,6 +5104,10 @@
       els = {}; lastView = null; lastSig = null; busy = false; submitting = false;
       unitSpots = {};   // die Einheiten-Plätze gehören zu DIESEM Raum
       pickSel = []; pickBusy = 0; factions = [0, 1, 2, 3];
+      // 0126: Der Modus gehört zum RAUM. Bliebe pveMode stehen, zeigte
+      // der nächste (PvP-)Raum seinen zweiten Slot grau und ohne Namen,
+      // bis der erste Takt eintrifft.
+      pveMode = false; aiSlot = null; aiInfo = { level: 1, stage: 1, armor: 0, bots: 0 };
       // Der Katalog fällt mit weg: er gehört zwar allen Räumen, aber
       // eine Kopie, die eine Migration überlebt, wäre schlimmer als ein
       // zweiter Abruf beim nächsten Öffnen.

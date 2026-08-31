@@ -206,6 +206,81 @@
   font-weight: 800;
 }
 
+/* ── Modus und Stufe (Migration 0126) ────────────────────────────
+   Steht über der Kopfzeile, weil die Antwort darauf die Bedeutung
+   aller Einstellungen darunter ändert: im PvE wählt die Lehrkraft EIN
+   Volk statt mehrerer, und die Stufe legt die Feldgröße fest.
+
+   Ein Schalter aus zwei Hälften statt zweier Knöpfe: die Frage hat
+   genau zwei Antworten, und ein Segment zeigt beide gleichzeitig — man
+   sieht, wogegen man sich entscheidet. */
+.cm-modebar {
+  display: flex;
+  align-items: center;
+  gap: 10px 20px;
+  flex-wrap: wrap;
+}
+.cm-modeseg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+.cm-modebtn {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: calc(var(--r-md) - 3px);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .14s, color .14s;
+}
+.cm-modebtn:hover { color: var(--ink); }
+.cm-modebtn--on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0,0,0,.18);
+}
+/* Die Stufenwahl. Sieben Zahlen nebeneinander und EIN Satz darunter:
+   die Zahl allein sagt nichts („Stufe 5" — wovon?), sieben Sätze
+   nebeneinander liest niemand. Also erklärt sich immer nur die
+   gewählte, und der Rest steht im title. */
+.cm-levelwrap {
+  display: flex;
+  align-items: center;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+}
+.cm-levelrow { display: inline-flex; gap: 5px; }
+.cm-levelbtn {
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--line);
+  border-radius: var(--r-sm, 8px);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .14s, color .14s, border-color .14s;
+}
+.cm-levelbtn:hover { border-color: var(--ink-soft); }
+.cm-levelbtn--on {
+  background: #3f4756;          /* dieselbe Farbe wie der Computer auf dem Feld */
+  border-color: #3f4756;
+  color: #fff;
+}
+.cm-leveltext {
+  flex: 1 1 240px;
+  min-width: 0;
+  font-size: .88rem;
+  color: var(--ink-soft);
+}
+
 /* ── Die acht Wappen zum An- und Abwählen ────────────────────────
    Die Lobby bleibt bewusst bei den Seiten-Variablen (--surface/--line)
    statt beim Pergament-Thema der Karte: sie ist Bedienung, kein
@@ -1239,6 +1314,17 @@
 @media (prefers-reduced-motion: reduce) {
   .cm-hex--mine { animation: none; }
 }
+/* Angeknackste Rüstung (0126). Ein Riss, keine zweite Farbe: die
+   Kachel gehört weiterhin demselben Volk, sie hat nur einen Treffer
+   weg. Umgesetzt als dunkle, gestrichelte Kante — sie liest sich als
+   Bruch in der Fuge und funktioniert auf jeder Volksfarbe, weil sie
+   nicht mit ihr mischt. */
+.cm-hex--cracked {
+  stroke: rgba(20,12,2,.85);
+  stroke-width: 3;
+  stroke-dasharray: 7 5;
+}
+
 /* Legales Zielfeld für den manuellen Serien-Bonus (0106, siehe
    legalPickTargets/onMapTileClick in tool.js) — ein goldener Puls, der
    klar sagt „hier tippen", ohne die Fraktionsfarbe der Kachel selbst
@@ -1477,6 +1563,29 @@
   25%  { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
   100% { transform: translate(-50%, -50%) scale(1.25); opacity: 0; }
 }
+/* Der Schild, wenn die Rüstung gehalten hat (0126). Er wächst NICHT
+   wie das 💥 darüber, sondern federt zurück: der Treffer ist
+   abgeprallt, nichts hat sich ausgebreitet. Und er bleibt klein —
+   bei acht Bots wäre ein großer Effekt Dauerbeschuss fürs Auge. */
+.cm-fx--burst--armor {
+  animation: cmFxArmor .64s cubic-bezier(.3, 1.4, .5, 1) forwards;
+}
+@keyframes cmFxArmor {
+  0%   { transform: translate(-50%, -50%) scale(.5); opacity: 0; }
+  30%  { transform: translate(-50%, -50%) scale(1.05); opacity: 1; }
+  55%  { transform: translate(-50%, -50%) scale(.86); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(.9); opacity: 0; }
+}
+
+/* Der graue Gegner (0126). Die Sprites bleiben die des gezogenen
+   Volkes — nur entfärbt und deutlich abgedunkelt: eine Silhouette, die
+   die Klasse kennt, in einer Farbe, die nicht dazugehört. Ein eigener
+   Sprite-Satz wäre acht Bilder Arbeit für dieselbe Aussage.
+   `brightness` allein reichte nicht: Gelb und Türkis blieben nach dem
+   Entfärben so hell, dass sie neben einem echten Volk noch wie eine
+   Farbe wirkten — deshalb zusätzlich Kontrast. */
+.cm-aiimg { filter: grayscale(1) brightness(.42) contrast(1.25); }
+
 /* Die Krone steigt auf und bleibt kurz stehen — sie ist die einzige
    Stelle, an der ein Effekt lange genug lebt, um gelesen zu werden. */
 .cm-fx--crown {

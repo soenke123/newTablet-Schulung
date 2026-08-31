@@ -124,9 +124,19 @@
    (Vorgabe 4). Das Siegerbild sieht bei zwei Völkern anders aus als
    bei acht — ohne diesen Schalter wäre beides nur durch Ändern dieser
    Datei zu sehen, und genau dann sieht es sich niemand an. */
+/* 0126: ?pve=1 … 7 schaltet den PvE-Modus ein — die Zahl ist die
+   Stufe. Dann gibt es genau zwei Völker: die Klasse auf Slot 0 und den
+   Computer auf Slot 1. Alles Weitere hängt an AI_SLOT, das der Client
+   aus ai_slot bekommt: der Graufilter, der Name „Computer", die
+   Rüstungskachel statt der Team-Serie und der andere Regeltext im
+   Countdown. Ohne diesen Schalter wäre der ganze Modus nur mit einem
+   echten Raum, zwei Geräten und einer Klasse anzusehen. */
+const QS = new URLSearchParams(location.search);
+const AI_LEVEL = Math.max(0, Math.min(7, parseInt(QS.get('pve'), 10) || 0));
+const PVE = AI_LEVEL > 0;
 const ROWS = 9, COLS = 9;
-const TEAMS = Math.max(2, Math.min(8,
-  parseInt(new URLSearchParams(location.search).get('teams'), 10) || 4));
+const TEAMS = PVE ? 2 : Math.max(2, Math.min(8,
+  parseInt(QS.get('teams'), 10) || 4));
 // Welche Völker auf den Slots sitzen: jedes zweite, damit die Farben
 // nebeneinander unterscheidbar bleiben — bei mehr als vier sind
 // ohnehin alle acht dabei.
@@ -152,6 +162,28 @@ let teamStreaks = {};
 // kommen — sonst prüft der Prüfstand gegen eine andere Zahl, als er
 // anzeigen lässt.
 const GOALS = { solo: 4, solo_reward: 2, fire_min: 3 };
+/* 0126: das Gegenstück zu clash_ai_levels(). Dieselbe Rolle wie GOALS
+   — die Stufenbeschreibung in der Lobby liest die Quote daraus, und
+   stünde sie hier anders als in der Migration, prüfte der Prüfstand
+   einen Text, den es im Betrieb nicht gibt. */
+const AI_LEVELS = {
+  time_factor: [3.00, 2.72, 2.43, 2.15, 1.87, 1.58, 1.30],
+  quote:       [0.60, 0.66, 0.72, 0.78, 0.83, 0.89, 0.95],
+  variance: 0.10, bot_streak: 10, bot_reward: 2, armor_cap: 3
+};
+// Die Rüstung wächst wie im Betrieb mit den eigenen Burgen (minus der
+// Startburg), gedeckelt bei armor_cap — sie ist damit im Prüfstand
+// genauso wenig geschenkt wie im Spiel.
+const aiArmor = () => !PVE ? 0 : Math.min(AI_LEVELS.armor_cap,
+  Math.max(0, tiles.filter(t => t.team === 0 && t.castle).length - 1));
+const aiBlock = () => !PVE ? null : ({
+  level: AI_LEVEL,
+  // Die Ramp: so weit, wie die Klasse Burgen hält, gedeckelt bei der
+  // eingestellten Stufe.
+  stage: Math.min(AI_LEVEL, Math.max(1, tiles.filter(t => t.team === 0 && t.castle).length)),
+  armor: aiArmor(),
+  bots: 12
+});
 // 0124: dieselbe Rolle wie GOALS, für die Antwort-Sperre — im Betrieb
 // steht das in clash_answer_lock(). Der Prüfstand braucht sie, weil der
 // Ladekreis sonst nie zu sehen wäre: er hängt allein an `lock_ms`.
@@ -208,8 +240,13 @@ function buildBoard() {
       if (d < bd) { bd = d; team = t; }
     });
     const isCastle = castles.indexOf(cell) >= 0;
-    // `hp` nur an Burgen, wie clash_tiles_json es liefert (0100).
-    return { r: cell.r, c: cell.c, team, castle: isCastle, hp: isCastle ? 3 : null };
+    /* `hp` nur an Burgen, wie clash_tiles_json es liefert (0100).
+       `dmg` seit 0126 an jeder Kachel (im PvP immer 0). Im PvE bekommt
+       ein Teil der Klassenfelder von vornherein einen Rüstungstreffer,
+       damit die Riss-Kachel im Prüfstand überhaupt zu sehen ist — sie
+       entsteht im Betrieb nur, während der Computer angreift. */
+    return { r: cell.r, c: cell.c, team, castle: isCastle, hp: isCastle ? 3 : null,
+             dmg: (PVE && team === 0 && !isCastle && (cell.r + cell.c) % 4 === 0) ? 1 : 0 };
   });
 }
 buildBoard();
@@ -262,6 +299,11 @@ function streakJson() {
   return out;
 }
 function fireTeams() {
+  // 0126: Im PvE ist der Schild aus — der Server liefert dort ein
+  // leeres Array, und genau daran (und an nichts sonst) hängt der
+  // Client. Die Zeile hier ist die einzige Stelle im Prüfstand, an der
+  // der Modus den Schild betrifft.
+  if (PVE) return [];
   const alive = {};
   tiles.forEach(t => { if (t.team >= 0) alive[t.team] = true; });
   const s = streakJson();
@@ -598,9 +640,19 @@ const RPC = {
     tiles.forEach(t => { counts[t.team] = (counts[t.team] || 0) + 1; });
     const members = {};
     for (let i = 0; i < TEAMS; i++) members[i] = NAMES[i % NAMES.length];
+    // 0126: Die Bots kommen im SELBEN Feld wie die Kindernamen — genau
+    // so setzt clash_room_get sie ein, und nur deshalb braucht der
+    // Beamer für die Mannschaft des Computers keinen eigenen Zweig.
+    if (PVE) members[1] = Array.from({ length: 12 }, (_, i) => 'Bot ' + (i + 1));
     return {
       ok: true,
       phase: phase === 'out' ? 'running' : phase,
+      mode: PVE ? 'pve' : 'pvp',
+      ai_slot: PVE ? 1 : null,
+      ai: aiBlock(),
+      ai_levels: AI_LEVELS,
+      ai_bots: PVE ? Array.from({ length: 12 },
+        (_, i) => ({ no: i + 1, streak: (i * 3) % 10, correct: 4 + i })) : [],
       team_count: TEAMS,
       factions: factions,
       countdown_ends_at: new Date(Date.now() + 5000).toISOString(),
@@ -632,6 +684,20 @@ const RPC = {
     };
   },
   clash_room_set_factions: a => ({ ok: true, factions: a.p_factions }),
+  /* 0126: Der Prüfstand nimmt Modus und Stufe entgegen, ohne das Feld
+     neu zu bauen — die Geometrie kommt hier ohnehin aus buildBoard()
+     und nicht aus clash_pve_layout. Was er zeigen soll, ist die
+     BEDIENUNG: dass der Schalter umschlägt, die Stufenreihe erscheint
+     und die Wappenreihe zur Einfachauswahl wird. Der Modus selbst
+     hängt an ?pve= und ändert sich beim Klicken nicht — sonst müsste
+     der Prüfstand das halbe Spielfeld neu erfinden. */
+  clash_room_set_mode: a => ({
+    ok: true, mode: a.p_mode, ai_level: a.p_level,
+    factions: a.p_mode === 'pve'
+      ? [a.p_faction == null ? factions[0] : a.p_faction, 6]
+      : factions,
+    team_count: a.p_mode === 'pve' ? 2 : TEAMS
+  }),
   clash_room_set_match_timer: () => ({ ok: true }),
   clash_room_clear_match_timer: () => ({ ok: true }),
   // 0109: Katalog und Pool. Der leere Pool wird ausdrücklich ANGENOMMEN
@@ -655,6 +721,10 @@ const RPC = {
     return {
       ok: true,
       phase: phase === 'out' ? 'running' : phase,
+      mode: PVE ? 'pve' : 'pvp',       // 0126
+      ai_slot: PVE ? 1 : null,
+      ai: aiBlock(),
+      ai_levels: AI_LEVELS,
       team_count: TEAMS,
       factions: factions,
       countdown_ends_at: new Date(Date.now() + 5000).toISOString(),
@@ -786,6 +856,9 @@ const RPC = {
       captured: hit.captured, castle_hit: hit.castle_hit,
       streak, team_streak: teamStreak, streak_goals: GOALS,
       fire_teams: fireTeams(),   // 0125
+      mode: PVE ? 'pve' : 'pvp', // 0126
+      ai_slot: PVE ? 1 : null,
+      ai: aiBlock(),
       pending_picks: pendingPicks, pick_deadline: pickDeadline,
       ruin: ruined ? ruinOf(myTeam) : null,
       shrunk: shrunk,
