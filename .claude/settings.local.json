@@ -81,7 +81,14 @@
       "Bash(awk '/create table if not exists clash_team_streaks/,/;/' 0106_clash_streak_bonuses.sql)",
       "Bash(awk '/create table if not exists clash_team_events/,/;/' 0106_clash_streak_bonuses.sql)",
       "Bash(sed -i 's/'\\\\''TEST1'\\\\''/'\\\\''TESTAB'\\\\''/' C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f168b958-fe07-4588-9947-5274cd0a429f/scratchpad/t2.mjs)",
-      "Bash(sed -i 's|^const q = async|process.on\\('\\\\''uncaughtException'\\\\'', e => { console.log\\('\\\\''FEHLER:'\\\\'', String\\(e.message\\).split\\('\\\\''\\\\\\\\n'\\\\''\\)[0]\\); process.exit\\(1\\); }\\);\\\\nconst q = async|' C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f168b958-fe07-4588-9947-5274cd0a429f/scratchpad/t2.mjs)"
+      "Bash(sed -i 's|^const q = async|process.on\\('\\\\''uncaughtException'\\\\'', e => { console.log\\('\\\\''FEHLER:'\\\\'', String\\(e.message\\).split\\('\\\\''\\\\\\\\n'\\\\''\\)[0]\\); process.exit\\(1\\); }\\);\\\\nconst q = async|' C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/f168b958-fe07-4588-9947-5274cd0a429f/scratchpad/t2.mjs)",
+      "Bash(iconv -f UTF-16LE -t UTF-8 tool.js)",
+      "Read(//c/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/67eecea1-c343-405c-aa54-7e940deb8781/scratchpad/**)",
+      "PowerShell($p=\"C:\\\\Users\\\\snke\\\\OneDrive\\\\ClaudeProjekte\\\\MPS TabletSchlung\\\\Webauftrtitt\\\\MPSkills\\\\tools\\\\clash-of-math\\\\tool.js\"; $b=[System.IO.File]::ReadAllBytes\\($p\\); \\($b[0..3] | ForEach-Object { $_.ToString\\(\"X2\"\\) }\\) -join \" \")",
+      "PowerShell($p=\"C:\\\\Users\\\\snke\\\\OneDrive\\\\ClaudeProjekte\\\\MPS TabletSchlung\\\\Webauftrtitt\\\\MPSkills\\\\tools\\\\clash-of-math\\\\tool.js\"; $b=[System.IO.File]::ReadAllBytes\\($p\\); $idx=@\\(\\); for\\($i=0;$i -lt $b.Length;$i++\\){ if\\($b[$i] -eq 0\\){ $idx += $i } }; \"NUL count: $\\($idx.Count\\)\"; $idx | Select-Object -First 10)",
+      "Bash(sort -u -t: -k3)",
+      "Bash(sed -i \"s/'clash', p.id/'clash-of-math', p.id/\" test.mjs)",
+      "Bash(sed -i \"s/^process.on\\('unhandledRejection'.*/process.on\\('uncaughtException', e => { console.log\\('ABBRUCH:', e.message, '|', e.detail || '', '|', e.query ? String\\(e.query\\).slice\\(0,200\\) : ''\\); process.exit\\(1\\); }\\);/\" test.mjs)"
     ]
   }
 }
