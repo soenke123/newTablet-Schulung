@@ -414,10 +414,24 @@ käme dort nie vor ihm dran. Beim `#advanceBtn` reicht auch das nicht: er blende
 Bild selbst wieder ein (`updateAdvanceBtn` hängt an der Zeit), also räumt ihn eine Klasse am `body`
 per CSS weg.
 
-**Drei Welten je Raum, gerechnet aus dem Raumcode.** `seedsFromCode` in `tool.js` (FNV-1a) liefert
-auf jedem Gerät dieselben drei Zahlen – ohne dass irgendwer etwas schreiben muss. Erst wenn die
-Lehrkraft neu würfelt, stehen sie in `skill_room_state.data.worlds` und gewinnen. Der Seed steht
-sichtbar in der Kopfzeile, weil er die Adresse ist, unter der dieselbe Welt vorne aufgeht.
+**Drei Welten je PERSON, gerechnet statt gespeichert.** `seedsFor(code, seat, salt)` in `tool.js`
+(FNV-1a) liefert derselben Person auf jedem Gerät und nach jedem Neuladen dieselben drei Zahlen –
+und jeder anderen Person andere. Wer neben sich schaut, sieht ein anderes Ökosystem; „welche
+Gruppen hast du?" ist damit nicht mit Abschreiben zu beantworten.
+
+* `seat` kommt aus `view.me.seat`. Der Beamer hat keinen Sitzplatz und rechnet mit 0 – er bekommt
+  drei eigene Welten zum Vorführen, die niemandem gehören.
+* `salt` steht in `skill_room_state.data.salt` und ist das Einzige, was die Lehrkraft würfelt:
+  **eine** Zahl für den ganzen Raum, aus der jede Person wieder ihre eigenen drei rechnet. Eine
+  Liste je Teilnehmer im Raum-Zustand wäre dieselbe Auskunft, nur als Datenhaltung – und wer erst
+  morgen dazukommt, stünde nicht darin.
+
+Verglichen wird über den Beamer: „Stand der Klasse" zeigt **eine Zeile je Person** mit ihren drei
+Welten und der Zahl der Gruppen darin, und ein Tipp legt die Welt auf, die diese Person **gerade**
+ansieht (`payload.cur` + die Gruppen dazu). Deshalb steht `ws` mit im Beitrag: der Beamer soll
+„Welt II" sagen können, ohne die Rechnung jedes Kindes nachzuvollziehen – und nach einem Würfeln
+käme dabei ohnehin das Falsche heraus, weil das Salz von heute nichts über den Beitrag von gestern
+sagt.
 
 **Die Gruppierung gehört zur Welt.** Sie geht über zwei neue Türen in `js/ui/signals.js`:
 `panel.groups()` gibt `[{ m: Signalnummern, c: Farbe }]` heraus, `panel.applyGroups(list)` legt
@@ -431,6 +445,7 @@ Gespeichert wird ein Beitrag je Person (`skill_room_entries`, `kind = 'gruppieru
 
 ```jsonc
 { "cur": 482917, "phase": 2,
+  "ws": [482917, 839214, 205663],          // die eigenen drei, in ihrer Reihenfolge
   "w": { "482917": [ { "m": [3,7,12], "c": "#c8743f" } ] } }
 ```
 

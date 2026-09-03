@@ -27,16 +27,23 @@
    ready · world · clusters, dazu world-pick als Bitte). Mehr ist es
    nicht.
 
-   ── Drei Welten, und warum sie aus dem Raumcode kommen ────────
-   Eine Klasse in vierzig verschiedenen Welten kann über nichts
-   reden; eine Klasse in genau EINER Welt hat keine Wahl. Also drei.
-   Sie stehen in skill_room_state.data, sobald die Lehrkraft neu
-   würfelt — und solange dort nichts steht, werden sie AUS DEM
-   RAUMCODE GERECHNET. Das ist der Unterschied zwischen „funktioniert
-   sofort" und „funktioniert, sobald die Lehrkraft einmal die
-   Beamer-Ansicht geöffnet hat": derselbe Code ergibt auf jedem
-   Gerät dieselben drei Zahlen, ohne dass irgendwer etwas schreiben
-   muss.
+   ── Drei Welten, und jede Person hat ihre eigenen ─────────────
+   Drei, damit es eine Wahl gibt und trotzdem nicht vierzig. Und
+   für JEDE PERSON ANDERE: wer neben sich schaut, sieht ein anderes
+   Ökosystem, und die Frage „welche Gruppen hast du gebildet?" ist
+   nicht mit Abschreiben zu beantworten.
+
+   Gerechnet werden sie aus Raumcode + Sitzplatz + einem Salz
+   (`skill_room_state.data.salt`, gesetzt beim Würfeln der
+   Lehrkraft). Nicht gespeichert, sondern gerechnet — das ist der
+   Unterschied zwischen „funktioniert sofort" und „funktioniert,
+   sobald jemand einmal etwas geschrieben hat": dieselbe Person
+   bekommt auf jedem Gerät und nach jedem Neuladen dieselben drei
+   Zahlen, ohne dass irgendwer sie irgendwo ablegen müsste.
+
+   Vergleichbar bleibt es trotzdem — über den Beamer: „Stand der
+   Klasse" zeigt jede Person mit ihren drei Welten, und ein Tipp
+   legt genau die auf, die sie gerade ansieht.
 
    ── Die Gruppierung gehört zur Welt ───────────────────────────
    Ein Cluster ist eine Menge Kachelnummern, und hinter der „17"
@@ -116,36 +123,55 @@
      Die drei Welten
      ══════════════════════════════════════════════════════════ */
 
-  // FNV-1a. Nicht kryptografisch und muss es nicht sein — verlangt ist
-  // nur, dass derselbe Raumcode auf jedem Gerät dieselbe Zahl ergibt
-  // und zwei Codes selten dieselbe.
+  /* FNV-1a mit Schlussmischung. Nicht kryptografisch und muss es nicht
+     sein — verlangt ist nur, dass dieselbe Person überall dieselben drei
+     Zahlen bekommt und zwei Personen selten dieselbe.
+
+     Die Mischung am Ende (Murmur3-Finalizer) ist aber nicht Zierde: in
+     FNV-1a hängen die UNTEREN Bits fast nur linear an der Eingabe, weil
+     die Multiplikation Bits nur nach oben trägt — und `% 900000` liest
+     genau diese unteren Bits. Ohne sie war messbar, dass zwei Welten
+     desselben Platzes nach dem Würfeln denselben Abstand zueinander
+     behielten. Auf der Leinwand fällt so etwas irgendwann jemandem auf,
+     und dann sieht ein Zufall aus wie ein System. */
   function hash32(text) {
     let h = 2166136261 >>> 0;
     for (let i = 0; i < text.length; i++) {
       h ^= text.charCodeAt(i);
       h = Math.imul(h, 16777619) >>> 0;
     }
-    return h >>> 0;
+    h ^= h >>> 16; h = Math.imul(h, 2246822507) >>> 0;
+    h ^= h >>> 13; h = Math.imul(h, 3266489909) >>> 0;
+    return (h ^ (h >>> 16)) >>> 0;
   }
 
-  /* Drei sechsstellige Seeds aus dem Raumcode. Sechsstellig, weil die
-     Zahl vorgelesen und abgetippt wird („macht mal Welt 482917 auf") —
-     dieselbe Länge, die die Anwendung selbst würfelt. */
-  function seedsFromCode(code) {
+  /* Die drei Welten einer Person: Raumcode + Sitzplatz + Salz.
+     Sechsstellig, weil die Zahl vorgelesen und abgetippt wird
+     („macht mal Welt 482917 auf") — dieselbe Länge, die die Anwendung
+     selbst würfelt.
+
+     Der Sitzplatz macht sie persönlich, das Salz erlaubt der Lehrkraft
+     einen kompletten Neuanfang, und der Raumcode sorgt dafür, dass
+     Sitzplatz 3 in zwei Klassen nicht dieselbe Welt bekommt. */
+  function seedsFor(code, seat, salt) {
+    const stem = String(code || '') + '|' + String(salt || 0) + '|platz' + Number(seat || 0);
     const out = [];
-    let salt = 0;
+    let extra = 0;
     while (out.length < 3) {
-      const n = 100000 + (hash32(String(code || '') + '|welt' + out.length + '|' + salt) % 900000);
-      if (out.indexOf(n) < 0) out.push(n); else salt++;
+      const n = 100000 + (hash32(stem + '|welt' + out.length + '|' + extra) % 900000);
+      if (out.indexOf(n) < 0) out.push(n); else extra++;
     }
     return out;
   }
 
+  /* Der Beamer sitzt auf keinem Platz. Er bekommt trotzdem drei eigene
+     Welten (Platz 0) — die Lehrkraft soll etwas zum Vorführen haben,
+     das niemandem gehört. Was ein einzelnes Kind sieht, holt sie über
+     „Stand der Klasse". */
   function worldsOf(v) {
     const data = (v && v.state && v.state.data) || {};
-    const list = Array.isArray(data.worlds) ? data.worlds.map(Number).filter(n => n > 0) : [];
-    if (list.length === 3) return list;
-    return seedsFromCode(v && v.room ? v.room.code : '');
+    const seat = v && v.me ? v.me.seat : 0;
+    return seedsFor(v && v.room ? v.room.code : '', seat, data.salt);
   }
 
   function phaseOf(v) {
@@ -153,17 +179,14 @@
     return PHASES[n] ? n : 1;
   }
 
-  function rollWorlds() {
-    // Math.random ist hier richtig: eine neue Welt SOLL keinem Muster
-    // folgen. Reproduzierbar ist sie danach über ihren Seed, und der
-    // steht in skill_room_state.data.
-    const out = [];
-    while (out.length < 3) {
-      const n = 100000 + Math.floor(Math.random() * 900000);
-      if (out.indexOf(n) < 0) out.push(n);
-    }
-    return out;
-  }
+  /* Neue Welten für alle: nicht drei Zahlen, sondern ein neues Salz.
+     Jede Person rechnet daraus ihre eigenen drei — der Raum trägt eine
+     Zahl statt einer Liste je Teilnehmer, und wer erst morgen dazukommt,
+     bekommt trotzdem Welten aus demselben Durchgang.
+
+     Math.random ist hier richtig: ein Neuanfang SOLL keinem Muster
+     folgen. Reproduzierbar ist er danach über das Salz. */
+  const rollSalt = () => Date.now() % 100000 + Math.floor(Math.random() * 1000) * 100000;
 
   /* ══════════════════════════════════════════════════════════
      Der Bestand auf dem Gerät
@@ -232,11 +255,11 @@
   function trimmed() {
     const keys = Object.keys(store);
     if (keys.length <= MAX_WORLDS) return store;
-    const roomSeeds = worlds.map(String);
+    const own = worlds.map(String);
     keys.sort((a, b) => {
-      const ra = roomSeeds.indexOf(a) >= 0 ? 1 : 0;
-      const rb = roomSeeds.indexOf(b) >= 0 ? 1 : 0;
-      if (ra !== rb) return rb - ra;               // Raumwelten zuerst
+      const ra = own.indexOf(a) >= 0 ? 1 : 0;
+      const rb = own.indexOf(b) >= 0 ? 1 : 0;
+      if (ra !== rb) return rb - ra;               // die eigenen drei zuerst
       return (touched[b] || 0) - (touched[a] || 0); // dann die zuletzt benutzten
     });
     const out = {};
@@ -250,7 +273,13 @@
     // Festhalten: gespeichert wird auch beim Verlassen, und dabei räumt
     // unmount() gleich danach ctx weg.
     const c = ctx;
-    const payload = { cur: seed || null, phase: phaseOf(view), w: trimmed() };
+    /* `ws` sind die drei eigenen Welten in ihrer Reihenfolge. Sie stehen
+       mit im Beitrag, obwohl sie sich aus Code + Sitzplatz + Salz
+       zurückrechnen ließen: der Beamer soll „Welt II" sagen können, ohne
+       die Rechnung jedes Kindes nachzuvollziehen — und nach einem
+       Würfeln der Lehrkraft käme dabei ohnehin das Falsche heraus, weil
+       das Salz von heute nichts über den Beitrag von gestern sagt. */
+    const payload = { cur: seed || null, phase: phaseOf(view), ws: worlds, w: trimmed() };
     const res = await c.actions.upsert(payload, myEntry, 'gruppierung');
     if (res.ok) {
       if (res.id) myEntry = res.id;
@@ -431,7 +460,8 @@
       <div class="wl-row">
         <span class="wl-label">Welt</span>
         <div class="wl-seg" id="wlWorlds"></div>
-        <button type="button" class="wl-btn wl-ghost" id="wlRoll">⟳ neu würfeln</button>
+        <span class="wl-hint">Ihre eigenen — jedes Kind hat andere.</span>
+        <button type="button" class="wl-btn wl-ghost" id="wlRoll">⟳ neue Welten für alle</button>
       </div>
       <div class="wl-row wl-row--end">
         <button type="button" class="wl-btn wl-ghost" id="wlList" aria-expanded="false">Stand der Klasse</button>
@@ -485,28 +515,40 @@
     paintPeople();
   }
 
-  /* Der Stand der Klasse. Eine Zeile je Person UND Welt: wer in zwei
-     Welten gearbeitet hat, hat zwei Gruppierungen, und die eine ist
-     keine Auskunft über die andere. */
+  /* Der Stand der Klasse. EINE Zeile je Person, und darin ihre drei
+     Welten nebeneinander:
+
+       Mia    Welt I (2 Cluster) · Welt II (4, gerade hier) · Welt III (–)
+
+     Nicht eine Zeile je Welt: gesucht ist „wie weit ist Mia", und das
+     ist eine Zeile. Die drei Zahlen daneben beantworten nebenbei, ob
+     jemand sich durch alle drei geklickt hat, ohne irgendwo anzufangen.
+
+     Ein Tipp auf die Zeile legt die Welt auf, die diese Person GERADE
+     ansieht — samt ihrer Gruppen. Das ist der Fall, für den die Liste
+     da ist: vorne steht dann genau das, was sie vor sich hat. */
   function paintPeople() {
     const box = $('wlPeople');
     if (!box) return;
     box.hidden = !listOpen;
     if (!listOpen) return;
 
-    const rows = [];
-    for (const e of (view.entries || [])) {
-      if (e.kind !== 'gruppierung' || !e.payload) continue;
-      const w = e.payload.w || {};
-      const keys = Object.keys(w);
-      if (!keys.length) { rows.push({ id: e.id, who: e.author, seed: null, n: 0 }); continue; }
-      for (const k of keys) {
-        rows.push({
-          id: e.id, who: e.author, seed: k,
-          n: (w[k] || []).length, cur: String(e.payload.cur) === k
-        });
-      }
-    }
+    const rows = (view.entries || [])
+      .filter(e => e.kind === 'gruppierung' && e.payload)
+      .map(e => {
+        const w = e.payload.w || {};
+        // `ws` sind die drei eigenen Welten in ihrer Reihenfolge, und nur
+        // daraus wird „Welt II". Fehlt die Angabe, bleibt die Reihenfolge,
+        // in der die Welten bearbeitet wurden — die Nummer stimmt dann
+        // vielleicht nicht, aber die Zeile steht.
+        const list = Array.isArray(e.payload.ws) && e.payload.ws.length
+          ? e.payload.ws.map(String) : Object.keys(w);
+        const cur = e.payload.cur != null ? String(e.payload.cur) : null;
+        // Eine selbst eingetippte Welt aus der Auflösungsphase gehört
+        // nicht zu den drei, ist aber das, was die Person gerade ansieht.
+        if (cur && list.indexOf(cur) < 0) list.push(cur);
+        return { id: e.id, who: e.author, cur: cur, list: list, w: w };
+      });
 
     if (!rows.length) {
       box.innerHTML = '<p class="wl-empty">Noch hat niemand gruppiert.</p>';
@@ -514,20 +556,25 @@
     }
 
     rows.sort((a, b) => String(a.who).localeCompare(String(b.who), 'de'));
+
+    const ROMAN = ['I', 'II', 'III'];
     box.innerHTML = rows.map(r => {
-      if (!r.seed) {
-        return `<div class="wl-person"><span class="wl-who">${esc(r.who)}</span>
-                <span class="wl-none">noch nichts</span></div>`;
-      }
-      const roomWorld = worlds.map(String).indexOf(r.seed);
-      const tag = roomWorld >= 0 ? ['I', 'II', 'III'][roomWorld] : 'eigene';
-      return `<div class="wl-person">
+      const worldsHTML = r.list.map((s, i) => {
+        const n = (r.w[s] || []).length;
+        const here = s === r.cur;
+        const name = i < ROMAN.length ? 'Welt ' + ROMAN[i] : 'eigene Welt';
+        const zahl = n === 0 ? '–' : n + (n === 1 ? ' Cluster' : ' Cluster');
+        return `<span class="wl-w${here ? ' wl-w--here' : ''}" title="Seed ${esc(s)}">`
+          + `${esc(name)} <b>(${esc(zahl)}${here ? ', gerade hier' : ''})</b></span>`;
+      }).join('');
+
+      return `<button type="button" class="wl-person" data-eid="${esc(r.id)}"
+                      ${r.cur ? '' : 'disabled'}
+                      title="${esc(r.who)}s aktuelle Sicht auf die Leinwand">
         <span class="wl-who">${esc(r.who)}</span>
-        <span class="wl-world">${esc(tag)} · ${esc(r.seed)}${r.cur ? ' <em>gerade hier</em>' : ''}</span>
-        <span class="wl-count">${r.n} ${r.n === 1 ? 'Gruppe' : 'Gruppen'}</span>
-        <button type="button" class="wl-btn wl-ghost wl-show"
-                data-show="${esc(r.seed)}" data-eid="${esc(r.id)}">▸ zeigen</button>
-      </div>`;
+        <span class="wl-worlds">${worldsHTML || '<span class="wl-none">noch nichts</span>'}</span>
+        <span class="wl-go" aria-hidden="true">▸</span>
+      </button>`;
     }).join('');
   }
 
@@ -548,20 +595,20 @@
 
       if (btn.dataset.seed) { pick(btn.dataset.seed); return; }
 
-      if (btn.dataset.show) {
-        /* Die Arbeit einer Person vorne auflegen: erst die Welt, dann
-           ihre Gruppen. Beides in EINEM Befehl, sonst stünde für einen
-           Moment eine leere Liste da und die Gruppen fielen sichtbar
-           hinterher hinein.
+      if (btn.dataset.eid) {
+        /* Die aktuelle Sicht einer Person vorne auflegen: ihre laufende
+           Welt und die Gruppen, die sie darin gebildet hat. Beides in
+           EINEM Befehl, sonst stünde für einen Moment eine leere Liste
+           da und die Gruppen fielen sichtbar hinterher hinein.
 
            Gesucht wird über die Beitrags-ID und nicht über den Namen:
-           zwei Tablets ohne Namen heißen beide „Tablet 3", sobald eines
+           zwei Tablets ohne Namen heißen beide „User 3", sobald eines
            den Raum verlassen und ein neues denselben Platz bekommen
            hat. */
         const entry = (view.entries || []).find(x => x.id === btn.dataset.eid);
-        const groups = entry && entry.payload && entry.payload.w
-          ? (entry.payload.w[btn.dataset.show] || []) : [];
-        deskSeed = Number(btn.dataset.show);
+        const pay = entry ? entry.payload : null;
+        if (!pay || pay.cur == null) return;
+        deskSeed = Number(pay.cur);
         const p = PHASES[phaseOf(view)];
         post({
           seed: deskSeed,
@@ -569,7 +616,7 @@
           phase: free ? null : p.wc,
           masked: free ? null : p.masked,
           locks: { seed: !free, advance: !free, brand: true },
-          groups: groups
+          groups: (pay.w && pay.w[String(pay.cur)]) || []
         });
         // Der nächste push() soll nicht denken, er habe das schon
         // geschickt - er kennt die Gruppen darin nicht.
@@ -580,12 +627,13 @@
 
       if (btn.id === 'wlRoll') {
         const ok = await ctx.confirm(
-          'Drei neue Welten für alle?\n\n'
-          + 'Die Klasse verliert damit die Welt, in der sie gerade arbeitet — '
-          + 'die Gruppierungen bleiben gespeichert, aber die alten Welten sind '
+          'Neue Welten für alle?\n\n'
+          + 'Jede Person bekommt drei neue, wieder für sie allein. Die Klasse '
+          + 'verliert damit die Welt, in der sie gerade arbeitet — die '
+          + 'Gruppierungen bleiben gespeichert, aber die alten Welten sind '
           + 'nicht mehr zu erreichen.');
         if (!ok) return;
-        const res = await ctx.actions.setData({ worlds: rollWorlds() });
+        const res = await ctx.actions.setData({ salt: rollSalt() });
         if (!res.ok) { ctx.toast(ctx.errText(res.error)); return; }
         deskSeed = null;
         ctx.refresh();
@@ -687,13 +735,12 @@
       if (!seed || (!PHASES[phaseOf(v)].freeSeed && worlds.map(String).indexOf(String(seed)) < 0)) {
         seed = worlds[0];
       }
-      // Am Beamer dasselbe — aber nicht im freien Modus: dort ist eine
-      // selbst gewählte Welt der ganze Zweck, und der Poller dürfte sie
-      // nicht alle drei Sekunden auf Welt I zurückziehen.
-      if (isPresenter() && !free
-          && (!deskSeed || worlds.map(String).indexOf(String(deskSeed)) < 0)) {
-        deskSeed = worlds[0];
-      }
+      /* Am Beamer wird nur eingesprungen, wenn noch gar nichts steht.
+         Nicht „liegt außerhalb der eigenen drei" wie beim Tablet: dort
+         steht regelmäßig die Welt eines Kindes oder eine selbst
+         eingetippte, und der Poller dürfte sie nicht alle drei Sekunden
+         wegziehen. */
+      if (isPresenter() && !deskSeed) deskSeed = worlds[0];
 
       push();
       paintDesk();

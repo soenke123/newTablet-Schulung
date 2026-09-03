@@ -137,42 +137,64 @@
   border-radius: var(--r-sm, 12px);
 }
 
+/* Eine Zeile je Person, und die ganze Zeile ist der Knopf: gesucht ist
+   „wie weit ist Mia" und „zeig mir, was Mia gerade sieht" — zwei Fragen,
+   eine Bewegung. Ein eigener „zeigen"-Knopf am Rand wäre ein Ziel von
+   32 px in einer Zeile, die ohnehin nichts anderes tut. */
 .wl-person {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
+  gap: 12px;
+  width: 100%;
+  padding: 8px;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  background: none;
+  border: 0;
   border-radius: var(--r-xs, 9px);
+  cursor: pointer;
 }
 
-.wl-person:hover { background: var(--surface-2); }
+.wl-person:hover:not(:disabled) { background: var(--surface-2); }
+.wl-person:disabled { cursor: default; opacity: .7; }
 
 .wl-who {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 0 0 auto;
+  max-width: 34%;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.wl-world {
+/* Die drei Welten nebeneinander. Sie umbrechen auf schmalen Geräten,
+   statt zu schrumpfen — „Welt II (4 Cluster)" ist an der Stelle die
+   Auskunft, nicht der Platzhalter dafür. */
+.wl-worlds {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
   font-size: 13px;
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
-.wl-world em {
-  font-style: normal;
-  color: var(--accent-ink);
-}
+.wl-w b { font-weight: 600; }
 
-.wl-count {
+/* Wo die Person gerade steht. Der Akzent ist hier keine Zierde: er
+   beantwortet, was ein Tipp auf die Zeile aufmachen wird. */
+.wl-w--here { color: var(--accent-ink); }
+
+.wl-go {
+  flex: 0 0 auto;
+  color: var(--ink-faint);
   font-size: 13px;
-  color: var(--ink-soft);
-  white-space: nowrap;
 }
+
+.wl-person:disabled .wl-go { visibility: hidden; }
 
 .wl-none, .wl-empty {
   font-size: 13px;
@@ -180,8 +202,6 @@
 }
 
 .wl-empty { margin: 4px 8px; }
-
-.wl-show { min-height: 32px; padding: 4px 10px; font-size: 13px; }
 
 /* Auf schmalen Geräten bis an beide Bildschirmkanten — dieselbe
    Entscheidung wie bei NeuroLab und der Tafel des WordPools: 22 px

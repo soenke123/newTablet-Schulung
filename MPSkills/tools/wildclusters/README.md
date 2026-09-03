@@ -19,18 +19,26 @@ Wild Clusters ist zugleich ein Skill der **MPSkills**-Seite. Die Lehrkraft macht
 auf, die Klasse kommt über Code oder QR herein – und dann steuert der Raum, was auf den Tablets
 passiert:
 
-* **Drei Welten** stehen zur Wahl (`I` `II` `III` oben in der Kopfzeile). Sie gehören dem Raum, und
-  ihr Seed steht sichtbar daneben – unter dieser Zahl macht die Lehrkraft dieselbe Welt am Beamer
-  auf. Wer die Welt wechselt, findet seine Gruppen beim Zurückwechseln wieder vor.
+* **Drei Welten** stehen zur Wahl (`I` `II` `III` oben in der Kopfzeile) – und **jede Person
+  bekommt andere**. Nebenan zu schauen hilft also nicht; die Frage „wen hast du zusammengelegt?"
+  ist nur an der eigenen Karte zu beantworten. Wer die Welt wechselt, findet seine Gruppen beim
+  Zurückwechseln wieder vor.
 * **Drei Phasen**, und weiter schaltet nur die Lehrkraft:
   1. **Gruppieren** – Tag 1–5, verdeckte Sicht. Es gibt nichts als Bewegung.
   2. **Nachzügler** – Tag 6–10. Fünf Fremde sind dazugekommen und stehen als eigenes Cluster da.
   3. **Auflösung** – die Landschaft und die Tiere werden sichtbar. Jetzt zeigt sich, ob in einer
      Gruppe wirklich nur Rehe lagen. Ab hier darf auch ein eigener Seed eingetippt werden.
-* **Am Beamer** sieht die Lehrkraft dieselbe Karte, dazu ein Steuerpult: Phase weiter, Welt zeigen,
-  drei neue Welten würfeln, den Stand der Klasse (wer hat wie viele Gruppen gebildet – und „zeigen"
-  legt genau diese Arbeit vorne auf). Ein **freier Modus** hebt alle Sperren auf, ohne dass die
-  Klasse etwas davon merkt.
+* **Am Beamer** sieht die Lehrkraft dieselbe Karte (drei eigene Welten zum Vorführen), dazu ein
+  Steuerpult: Phase weiter, neue Welten für alle, und den **Stand der Klasse** – eine Zeile je
+  Person:
+
+  ```
+  Mia     Welt I (2 Cluster) · Welt II (4 Cluster, gerade hier) · Welt III (–)     ▸
+  ```
+
+  Ein Tipp auf die Zeile legt vorne genau das auf, was diese Person **gerade** vor sich hat –
+  ihre Welt mit ihren Gruppen. Ein **freier Modus** hebt alle Sperren auf, ohne dass die Klasse
+  etwas davon merkt.
 
 Allein geöffnet ändert sich nichts an dem, was unten steht: dann gibt es weiter Seed-Feld,
 „Neue Welt", alle Tasten und den Knopf „Nächster Tag".
