@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Wild Clusters - Unbekanntes Ökosystem</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <h1>Wild Clusters</h1>
+    <p>Unbekanntes Ökosystem</p>
+  </div>
+
+  <div class="controls">
+    <label class="seed-field" for="seedInput">
+      <span>Seed</span>
+      <input id="seedInput" type="text" inputmode="numeric" autocomplete="off"
+             spellcheck="false" value="482917" aria-label="Seed der Welt">
+    </label>
+    <!-- Verdeckte Sicht: Landschaft und Artmerkmale weg, nur noch Bewegung. -->
+    <button id="viewModeBtn" type="button" class="btn btn-toggle" aria-pressed="false">Verdeckte Sicht</button>
+    <!-- Ohne Spuren: nur die Tiere im Augenblick, ohne die 5 Tage dahinter. -->
+    <button id="trailsBtn" type="button" class="btn btn-toggle" aria-pressed="false">Ohne Spuren</button>
+    <button id="generateBtn" type="button" class="btn btn-primary">Neue Welt</button>
+    <button id="resetViewBtn" type="button" class="btn btn-ghost" hidden>Ansicht zurücksetzen</button>
+  </div>
+</header>
+
+<div class="workspace">
+  <main class="stage">
+    <canvas id="worldCanvas" aria-label="Karte der Welt"></canvas>
+
+    <p class="hint" id="hint">
+      Ziehen zum Verschieben &middot; zwei Finger oder Mausrad zum Zoomen &middot;
+      Tier oder Signal antippen f&uuml;r seine Spur &middot;
+      Signale ineinander ziehen bildet ein Cluster &middot;
+      <kbd>Leertaste</kbd> startet die Zeit &middot;
+      <kbd>V</kbd> verdeckt die Landschaft &middot;
+      <kbd>S</kbd> nimmt die Spuren weg &middot;
+      <kbd>N</kbd> schaltet auf neutrale Formen &middot;
+      <kbd>D</kbd> zeigt Details
+    </p>
+
+    <div id="debugOverlay" class="debug" hidden></div>
+  </main>
+
+  <!-- Ein Signal = ein Tier, nur als Nummer. Die Art bleibt ungenannt. -->
+  <aside class="signals" id="signals" aria-label="Signale">
+    <div class="signals-head">
+      <h2>Signale</h2>
+      <button id="signalAllBtn" type="button" class="signal-eye signal-eye-all"></button>
+    </div>
+    <div class="signals-grid" id="signalGrid"></div>
+  </aside>
+</div>
+
+<!-- Abspieler: 5 aufgezeichnete Tage, 1x = ein Tag in 5 Minuten -->
+<footer class="player" id="player">
+  <button id="playBtn" type="button" class="play" aria-label="Abspielen">&#9654;</button>
+
+  <div class="track">
+    <input id="timeSlider" type="range" min="0" max="1500" step="0.1" value="0"
+           aria-label="Zeitpunkt innerhalb der 5 Tage">
+    <div class="ticks" id="dayTicks" aria-hidden="true"></div>
+  </div>
+
+  <div class="clock">
+    <strong id="timeLabel">Tag 1 &middot; 00:00</strong>
+    <span id="phaseLabel">Nacht</span>
+  </div>
+
+  <div class="speeds" role="group" aria-label="Abspielgeschwindigkeit">
+    <button type="button" data-speed="1" class="on">1&times;</button>
+    <button type="button" data-speed="5">5&times;</button>
+    <button type="button" data-speed="25">25&times;</button>
+  </div>
+
+  <!--
+    Der Übergang in die zweite Phase. Erscheint nur am Ende von Tag 5 und
+    verschwindet danach für immer - es gibt keine dritte Phase.
+
+    Vorläufig: wodurch die zweite Phase freigeschaltet wird, ist noch nicht
+    entschieden (ein Lehrercode, ein Ergebnis der Gruppierungsaufgabe, ein
+    Knopf). Dieser hier hängt an derselben Tür wie alles andere, das später
+    dafür in Frage kommt - app.js, setPhase.
+  -->
+  <button id="advanceBtn" type="button" class="advance" hidden>Nächster Tag &rarr;</button>
+</footer>
+
+<!-- Reihenfolge: core -> world -> sim -> render -> ui -->
+<script src="js/core/rng.js"></script>
+<script src="js/core/noise.js"></script>
+<script src="js/core/grid.js"></script>
+<script src="js/core/geometry.js"></script>
+<script src="js/core/contour.js"></script>
+
+<script src="js/world/config.js"></script>
+<script src="js/world/terrain.js"></script>
+<script src="js/world/rules.js"></script>
+<script src="js/world/objects.js"></script>
+<script src="js/world/validate.js"></script>
+<script src="js/world/world.js"></script>
+
+<script src="js/sim/time.js"></script>
+<script src="js/sim/species.js"></script>
+<script src="js/sim/habitat.js"></script>
+<script src="js/sim/land.js"></script>
+<script src="js/sim/agents.js"></script>
+<script src="js/sim/duck.js"></script>
+<script src="js/sim/perch.js"></script>
+<script src="js/sim/deer.js"></script>
+<script src="js/sim/boar.js"></script>
+<script src="js/sim/rabbit.js"></script>
+<script src="js/sim/bat.js"></script>
+<script src="js/sim/dachs.js"></script>
+<script src="js/sim/fox.js"></script>
+<script src="js/sim/buzzard.js"></script>
+<script src="js/sim/pike.js"></script>
+<script src="js/sim/hedgehog.js"></script>
+<script src="js/sim/recording.js"></script>
+<script src="js/sim/tracker.js"></script>
+<script src="js/sim/simulation.js"></script>
+
+<script src="js/render/palette.js"></script>
+<script src="js/render/shapes.js"></script>
+<script src="js/render/camera.js"></script>
+<script src="js/render/terrainRenderer.js"></script>
+<script src="js/render/objectRenderer.js"></script>
+<script src="js/render/sprites.js"></script>
+<script src="js/render/agentRenderer.js"></script>
+<script src="js/render/renderer.js"></script>
+
+<script src="js/ui/input.js"></script>
+<script src="js/ui/debugOverlay.js"></script>
+<script src="js/ui/player.js"></script>
+<script src="js/ui/clusters.js"></script>
+<script src="js/ui/signals.js"></script>
+<script src="js/ui/app.js"></script>
+<!-- Zuletzt: die Bruecke zum MPSkills-Raum. Ohne Rahmen tut sie nichts. -->
+<script src="js/ui/bridge.js"></script>
+</body>
+</html>

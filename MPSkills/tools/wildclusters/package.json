@@ -1,0 +1,7 @@
+{
+  "name": "wildclusters",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Nur fuer die Pruefwerkzeuge unter tools/. Die package.json der Wurzel stellt das ganze Repository auf ES-Module um (\"type\": \"module\") - dort ist das richtig, weil die Vercel-Functions unter /api/ so geschrieben sind. Die fuenf Node-Werkzeuge hier sind CommonJS (require, module.exports) und liefen deshalb ab dem Tag nicht mehr, an dem dieser Ordner in das Repository gezogen ist: node sucht die naechste package.json, und das war die der Wurzel. Diese Datei ist die naechste. Sie hat keine Abhaengigkeiten und wird nicht installiert - die Anwendung selbst ist weiterhin build- und abhaengigkeitsfrei."
+}

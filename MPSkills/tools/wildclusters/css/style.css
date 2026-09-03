@@ -1,0 +1,793 @@
+/*
+ * Layout: Kopfzeile + Karte fuellen genau die Viewporthoehe, die Seite selbst
+ * scrollt nie. Auf schmalen Displays rutschen die Bedienelemente untereinander
+ * und werden gross genug fuer Finger.
+ */
+
+:root {
+  --bark: #3d3427;
+  --bark-soft: #5c5040;
+  --paper: #f3ece0;
+  --paper-edge: #ded3c0;
+  --leaf: #4f8f3f;
+  --leaf-dark: #3d7431;
+  --shadow: 0 2px 8px rgba(61, 52, 39, 0.14);
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--paper);
+  color: var(--bark);
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ------------------------------------------------------------- Kopfzeile */
+
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 18px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--paper-edge);
+  padding-top: max(10px, env(safe-area-inset-top));
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  /* Zwei Woerter in gemischter Schreibung: 0.14em (aus dem alten Ein-Wort-Titel
+     in Versalien) risse "Wild" und "Clusters" auseinander. */
+  letter-spacing: 0.04em;
+}
+
+.brand p {
+  margin: 1px 0 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--bark-soft);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.seed-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--bark-soft);
+}
+
+.seed-field input {
+  width: 108px;
+  min-height: 44px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--bark);
+  background: #fff;
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius);
+}
+
+.seed-field input:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid rgba(79, 143, 63, 0.5);
+  outline-offset: 2px;
+}
+
+.btn {
+  min-height: 44px;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.05s;
+}
+
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--leaf);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.btn-primary:hover { background: var(--leaf-dark); }
+.btn-primary[disabled] { opacity: 0.6; cursor: progress; }
+
+.btn-ghost {
+  background: #fff;
+  color: var(--bark-soft);
+  border-color: var(--paper-edge);
+}
+
+.btn-ghost:hover { background: #faf6ee; }
+
+/*
+ * Umschalter der Kartensicht: verdeckt / ohne Spuren. Eingerastet sind sie
+ * dunkelblau - dieselbe Farbe, die die Karte in der verdeckten Sicht als
+ * Nachthimmel traegt, damit ohne Beschriftung klar ist, welcher Zustand gerade
+ * gilt. Beide sind so beschriftet, dass gedrueckt der Sonderzustand ist: die
+ * Karte faengt offen und mit Spuren an.
+ */
+.btn-toggle {
+  background: #fff;
+  color: var(--bark-soft);
+  border-color: var(--paper-edge);
+}
+
+.btn-toggle:hover { background: #faf6ee; }
+
+.btn-toggle[aria-pressed="true"] {
+  background: #17305f;
+  border-color: #17305f;
+  color: #f7e6a1;
+}
+
+.btn-toggle[aria-pressed="true"]:hover { background: #1f3d75; }
+
+/* ------------------------------------------------------------------ Karte */
+
+/* Karte und Signalliste teilen sich die Hoehe zwischen Kopf- und Zeitleiste. */
+.workspace {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+}
+
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+#worldCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Ohne das faengt der Browser Wischen und Pinch selbst ab. */
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#worldCanvas.dragging { cursor: grabbing; }
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--bark-soft);
+  background: rgba(243, 236, 224, 0.88);
+  border: 1px solid var(--paper-edge);
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+.hint.faded { opacity: 0; }
+
+kbd {
+  padding: 1px 5px;
+  font: inherit;
+  font-size: 11px;
+  background: #fff;
+  border: 1px solid var(--paper-edge);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+}
+
+/* -------------------------------------------------------- Debug-Anzeige */
+
+.debug {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  max-width: min(340px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  padding: 12px 14px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #f2ede3;
+  background: rgba(45, 39, 30, 0.92);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.debug h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #c9bea8;
+}
+
+.debug table { width: 100%; border-collapse: collapse; }
+.debug td { padding: 1px 0; }
+.debug td + td { text-align: right; font-variant-numeric: tabular-nums; }
+.debug .section { margin-top: 10px; }
+.debug .ok { color: #9cd67c; }
+.debug .warn { color: #e8c46a; }
+.debug .bad { color: #f08a7a; }
+
+/* --------------------------------------------------------------- Signale */
+
+/*
+ * Die Kacheln zeigen eine Nummer und eine Farbe - beides gehoert dem Signal,
+ * nicht der Art. Die Farbe ist das Band zur Karte (dieselbe traegt dort Spur
+ * und Tier) und zugleich die Anzeige der Gruppierung: alle Mitglieder eines
+ * Clusters tragen dessen Farbe. Wer hier eine Farbe *nach Art* ergaenzt,
+ * verraet die Aufgabe.
+ */
+.signals {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  /* Vier Spalten breit genug, dass "01" neben dem Auge nicht umbricht. */
+  width: 268px;
+  min-height: 0;
+  background: var(--paper);
+  border-left: 1px solid var(--paper-edge);
+}
+
+.signals-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--paper-edge);
+}
+
+.signals-head h2 {
+  margin: 0;
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/*
+ * Aussen eine Spalte (Cluster untereinander, darunter der freie Bereich),
+ * innen jeweils vier Spalten Kacheln. Die Anzahl der Tiere schwankt je Seed,
+ * deshalb beliebig hoch statt fest 4x10.
+ */
+.signals-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+}
+
+.loose, .cluster-body {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  align-content: start;
+}
+
+/*
+ * Der freie Bereich ist zugleich Ablageziel: was hier landet, verlaesst sein
+ * Cluster. Er braucht deshalb auch dann eine Flaeche, wenn gerade alles
+ * gruppiert ist - sonst gaebe es keinen Weg zurueck.
+ */
+.loose {
+  /* Waechst in den Rest, schrumpft aber nie: sonst nimmt die Spalte den
+     Clustern darueber Platz weg, statt zu scrollen. */
+  flex: 1 0 auto;
+  min-height: 54px;
+  border-radius: 10px;
+}
+
+/*
+ * Zahl und Auge stehen nebeneinander, nicht uebereinander: uebereinander
+ * braucht die Kachel mehr Hoehe, als vier Spalten an Breite hergeben, und der
+ * untere Knopf wird abgeschnitten.
+ */
+.signal {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  min-height: 34px;
+  border: 1px solid var(--paper-edge);
+  border-radius: 9px;
+  background: #fff;
+  overflow: hidden;
+  /* Senkrecht scrollt die Liste weiter, waagerecht beginnt das Ziehen. */
+  touch-action: pan-y;
+}
+
+/*
+ * Die Signalfarbe liegt auf der Zahl, nicht auf der ganzen Kachel: das Auge
+ * daneben bleibt so auf Weiss und damit bei jeder der rund fuenfzig Farben
+ * gleich gut zu treffen. Die Farbe selbst setzt js/ui/signals.js.
+ */
+.signal-pick {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 1px 4px 3px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  /* Alle Signalfarben haben dieselbe wahrgenommene Helligkeit (CIE L* 58),
+     deshalb reicht *eine* Schriftfarbe fuer alle. */
+  color: #16130c;
+  background: transparent;
+  border: none;
+  cursor: grab;
+}
+
+.signal-pick:active { cursor: grabbing; }
+
+.signal-eye {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--paper-edge);
+  color: var(--bark-soft);
+  cursor: pointer;
+}
+
+.signal-eye .eye {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+}
+
+/* Der Strich durchs Auge erscheint erst im ausgeblendeten Zustand. */
+.signal-eye .eye-slash { opacity: 0; }
+.signal-eye.off .eye-slash,
+.signal.off .eye-slash { opacity: 1; }
+.signal.off .eye-pupil { opacity: 0.35; }
+
+.signal-eye:hover { background: #f5efe4; }
+
+/*
+ * Die Auswahl darf die Signalfarbe nicht ueberdecken - sonst verlaere das
+ * verfolgte Tier genau in dem Moment seine Zuordnung zur Karte, in dem man
+ * sie braucht. Deshalb ein Ring darum statt einer zweiten Fuellung.
+ */
+.signal.on {
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--bark);
+}
+
+/* Ausgeblendet: die Kachel bleibt lesbar, das Tier auf der Karte ist weg. */
+.signal.off { background: #ece5d8; }
+.signal.off .signal-pick { filter: grayscale(1); opacity: 0.42; }
+
+.signal-pick:focus-visible,
+.signal-eye:focus-visible {
+  outline: 3px solid rgba(20, 18, 12, 0.65);
+  outline-offset: -3px;
+}
+
+/* ------------------------------------------------------------- Cluster */
+
+/*
+ * Ein Cluster ist ein Kasten in seiner Farbe: oben der Kopf mit der Anzahl,
+ * dem Auge fuer alle Mitglieder und dem Griff zum Ziehen, darunter die
+ * Kacheln. Der Kopf ist der Griff, nicht der Kasten - am Kasten zu ziehen
+ * kollidierte mit dem Ziehen der Kacheln darin.
+ */
+/*
+ * flex: 0 0 auto ist Pflicht, nicht Feinschliff: als schrumpfbares Flexkind
+ * gaebe der Kasten bei vielen Clustern seine Hoehe her und schnitte wegen des
+ * overflow: hidden seine eigenen Kacheln ab, statt die Liste scrollen zu
+ * lassen. Alle Signale muessen erreichbar bleiben - sonst gruppiert man blind.
+ */
+.cluster {
+  flex: 0 0 auto;
+  border: 2px solid var(--paper-edge);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.cluster-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 10px;
+  min-height: 30px;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.cluster-head:active { cursor: grabbing; }
+
+.cluster-count {
+  flex: 1 1 auto;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #16130c;
+}
+
+/* Auf der Clusterfarbe statt auf Weiss - das Auge braucht eigenen Kontrast. */
+.cluster-head .signal-eye {
+  width: 30px;
+  color: rgba(12, 10, 6, 0.7);
+  border-left-color: rgba(12, 10, 6, 0.18);
+}
+
+.cluster-head .signal-eye:hover { background: rgba(255, 255, 255, 0.3); }
+
+.cluster-body { padding: 6px; }
+
+.cluster.off { opacity: 0.62; }
+
+/*
+ * Derselbe Ring wie um eine ausgewaehlte Kachel, aus demselben Grund: er sagt
+ * "das steht gerade hervorgehoben auf der Karte". Er liegt um den ganzen
+ * Kasten, denn ausgewaehlt ist das Cluster nur, wenn alle Mitglieder es sind -
+ * ein einzelnes daraus traegt seinen eigenen Ring.
+ */
+.cluster.on {
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--bark);
+}
+
+/* ------------------------------------------------- Ziehen und Ablegen */
+
+/*
+ * Punkt 7 der Aufgabe: waehrend des Ziehens muss zu sehen sein, *wo* etwas
+ * zusammengefuegt werden kann. Der heller Rahmen erscheint nur an Zielen, an
+ * denen das Loslassen wirklich etwas bewirkt (js/ui/signals.js, allowedDrop) -
+ * ein Rahmen, der nichts verspricht, ist schlimmer als keiner.
+ */
+/* Ueber .signals-grid geschrieben, damit der Rahmen auch das ausgewaehlte
+   Signal umranden darf - .signal.on waere sonst spezifischer und gewaenne. */
+.signals-grid .drop-target {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--bark);
+}
+
+.loose.drop-target {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.signal.dragging, .cluster.dragging { opacity: 0.34; }
+
+/* Solange gezogen wird, gehoert der Zeiger dem Ziehen. */
+body.signal-dragging { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+
+/*
+ * Der Schwebekasten unter dem Finger. pointer-events: none ist keine Kosmetik:
+ * ohne das faende elementFromPoint waehrend des Ziehens immer nur ihn selbst
+ * und nie das Ziel darunter.
+ *
+ * Er sitzt in der Ecke und wird per transform an den Finger gefahren (siehe
+ * js/ui/signals.js) - left/top waeren bei jeder Fingerbewegung ein neues
+ * Layout, transform nur eine Verschiebung.
+ */
+.signal-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #16130c;
+  border-radius: 9px;
+  box-shadow: 0 6px 18px rgba(30, 25, 15, 0.35);
+  pointer-events: none;
+}
+
+/* Das Auge in der Ueberschrift schaltet alle auf einmal. */
+.signal-eye-all {
+  min-height: 34px;
+  min-width: 34px;
+  border: 1px solid var(--paper-edge);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.signal-eye-all .eye { width: 17px; height: 17px; }
+.signal-eye-all[disabled] { opacity: 0.4; cursor: default; }
+
+/* --------------------------------------------------------------- Zeitleiste */
+
+/*
+ * Der Abspieler steht ueber den aufgezeichneten 5 Tagen. Der Regler ist
+ * bewusst breit und der Griff gross: auf dem Tablet wird hier mit dem Finger
+ * durch die Tage gezogen.
+ */
+.player {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 10px 18px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  background: var(--paper);
+  border-top: 1px solid var(--paper-edge);
+}
+
+.player .play {
+  flex: 0 0 auto;
+  width: 46px;
+  min-height: 46px;
+  font-size: 15px;
+  line-height: 1;
+  color: #fff;
+  background: var(--leaf);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.player .play:hover { background: var(--leaf-dark); }
+.player .play:focus-visible { outline: 3px solid rgba(79, 143, 63, 0.5); outline-offset: 2px; }
+
+.player .track {
+  flex: 1 1 220px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 160px;
+}
+
+/* Tagesgrenzen: fuenf gleich breite Abschnitte hinter dem Regler. */
+.player .ticks {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  top: 50%;
+  height: 14px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to right,
+    rgba(61, 52, 39, 0.28) 0 1px,
+    transparent 1px calc(20% - 1px),
+    rgba(61, 52, 39, 0.28) calc(20% - 1px) 20%
+  );
+}
+
+.player input[type="range"] {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.player input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: var(--paper-edge);
+  border-radius: 3px;
+}
+
+.player input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: var(--paper-edge);
+  border-radius: 3px;
+}
+
+.player input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  background: var(--leaf);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: var(--shadow);
+}
+
+.player input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  background: var(--leaf);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: var(--shadow);
+}
+
+.player input[type="range"]:focus-visible { outline: 3px solid rgba(79, 143, 63, 0.5); outline-offset: 2px; }
+
+.player .clock {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+  min-width: 104px;
+}
+
+.player .clock strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.player .clock span { font-size: 11px; color: var(--bark-soft); }
+
+.player .speeds { flex: 0 0 auto; display: flex; gap: 4px; }
+
+.player .speeds button {
+  min-width: 46px;
+  min-height: 40px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bark-soft);
+  background: #fff;
+  border: 1px solid var(--paper-edge);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.player .speeds button.on {
+  color: #fff;
+  background: var(--leaf);
+  border-color: var(--leaf);
+}
+
+/*
+ * Der Knopf in die zweite Phase. Er steht nur am Ende von Tag 5 da und ist
+ * dann das Einzige im Abspieler, das nach vorn zeigt - deshalb gefuellt und
+ * nicht wie die uebrigen Knoepfe weiss umrandet. Er soll gefunden werden, ohne
+ * dass jemand danach sucht.
+ */
+.player .advance {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--leaf);
+  border: 1px solid var(--leaf);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.player .advance:hover { background: var(--leaf-dark); border-color: var(--leaf-dark); }
+.player .advance:focus-visible { outline: 3px solid rgba(79, 143, 63, 0.5); outline-offset: 2px; }
+.player .advance[hidden] { display: none; }
+
+/* ------------------------------------------------------------ Schmal/Handy */
+
+@media (max-width: 620px) {
+  /* Quer neben der Karte bliebe vom Bild nichts uebrig - also darunter. */
+  .workspace { flex-direction: column; }
+
+  .signals {
+    width: auto;
+    max-height: 32vh;
+    border-left: none;
+    border-top: 1px solid var(--paper-edge);
+  }
+
+  .loose, .cluster-body { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
+
+  .player { gap: 8px 10px; padding: 8px 12px; }
+  .player .clock { min-width: 88px; }
+  .player .clock strong { font-size: 14px; }
+  .player .speeds button { min-width: 40px; font-size: 12px; }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { font-size: 17px; }
+  .brand p { font-size: 11px; }
+
+  .controls { justify-content: space-between; }
+  .seed-field { flex: 1 1 auto; }
+  .seed-field input { width: 100%; }
+  .btn { padding: 10px 14px; font-size: 14px; }
+
+  .hint { font-size: 11px; white-space: normal; text-align: center; max-width: 92%; }
+}
+
+/* ------------------------------------------------- Im Raum (MPSkills)
+ *
+ * Alles hier wirkt nur, wenn Wild Clusters in einem Raum steckt: die Klassen
+ * am body setzt js/ui/bridge.js, und die schlaeft ohne Rahmen. Allein
+ * geoeffnet ist dieser Abschnitt totes Gewicht - und das ist beabsichtigt,
+ * denn die Alternative waere ein zweites Stylesheet, das beim naechsten Umbau
+ * der Kopfzeile stillschweigend zurueckbleibt.
+ */
+
+/* Die drei Welten eines Raums, an der Stelle von Seed-Feld und "Neue Welt". */
+.worlds {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.world-btn {
+  min-width: 52px;
+  padding: 10px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Der Seed steht lesbar daneben und ist nicht bloss Zierde: unter dieser Zahl
+   macht die Lehrkraft genau diese Welt vorne auf. */
+.worlds-seed {
+  margin-left: 4px;
+  font-size: 13px;
+  color: var(--bark-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Der Knopf in die naechste Phase blendet sich bei jedem Bild selbst wieder
+   ein (updateAdvanceBtn haengt an der Zeit, nicht an einem Zustand). Im Raum
+   schaltet die Lehrkraft weiter, also muss die Regel staerker sein als sein
+   eigenes Attribut. */
+body.wc-no-advance #advanceBtn { display: none !important; }
+
+/* Im Raum steht der Titel schon in der Kopfzeile der Seite. Zweimal derselbe
+   Name kostet auf einem Tablet eine Zeile Karte. */
+body.wc-no-brand .brand { display: none; }
+
+/* Kein eigener Seed: in einem Raum soll niemand in einer Welt landen, ueber
+   die keiner mitreden kann. Ab der Aufloesungsphase gibt die Seite beides
+   wieder frei. */
+body.wc-no-seed .seed-field,
+body.wc-no-seed #generateBtn { display: none; }

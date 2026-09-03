@@ -41,6 +41,14 @@ window.TOOLS_OVERLAY = {
   // der eigene Tabellen statt der generischen Inhaltsschicht benutzt.
   // Grundgerüst-Stand: Platzhalterfarben, keine Fraktionsbilder.
   'clash-of-math': { ready: true },
+  // Fünfter Skill (Migration 0129). Liegt unter tools/wildclusters/ —
+  // hier stimmt der Ordnername ausnahmsweise mit der id überein, weil
+  // er beim Einzug umbenannt wurde (er hieß „wild Clusters", mit
+  // Leerzeichen). Zweiter eingerahmter Skill nach NeuroLab, aber der
+  // erste, in dem der Raum wirklich etwas steuert: die Lehrkraft
+  // schaltet die Phase, und die Brücke (js/ui/bridge.js) trägt sie in
+  // den Rahmen hinein.
+  wildclusters: { ready: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   poll:      { ready: false }
 };
