@@ -26,6 +26,10 @@
   box-shadow: var(--shadow);
 }
 
+/* Der Rahmen und der Streifen darüber liegen übereinander — deshalb ein
+   eigener Kasten mit position: relative. */
+.wl-stage { position: relative; }
+
 .wl-frame {
   display: block;      /* sonst setzt die Zeilenbox einen Streifen darunter */
   width: 100%;
@@ -35,6 +39,24 @@
      trägt nur den Moment vor der ersten Messung. */
   height: 70vh;
 }
+
+/* ─────────────────────────────────────────────── hidden gilt hier nicht
+
+   `element.hidden = true` wirkt über eine Regel des Browsers (`[hidden] {
+   display: none }`) — und jede Regel AUS DIESER DATEI ist stärker als die.
+   Wer `.wl-list { display: flex }` schreibt, hat damit versehentlich einen
+   Kasten gebaut, der sich öffnen, aber nie wieder schließen lässt: genau das
+   war der Stand der Klasse.
+
+   Die Liste hier ist deshalb nicht Zierde, sondern Pflicht — jedes Element,
+   das display setzt UND per hidden geschaltet wird, gehört hinein. */
+.wl-stage[hidden],
+.wl-row[hidden],
+.wl-list[hidden],
+.wl-btn[hidden],
+.wl-cap[hidden],
+.wl-cap-x[hidden],
+.wl-person[hidden] { display: none !important; }
 
 /* ─────────────────────────────────────────── Steuerpult (Beamer) */
 
@@ -110,18 +132,124 @@
 
 .wl-seg-btn { font-variant-numeric: tabular-nums; }
 
-/* Der freie Modus muss auffallen, solange er läuft: sonst schaltet
-   jemand vorne die Phase um und wundert sich, dass die Klasse folgt
-   (oder eben nicht). */
-.wl-free {
-  margin: 0;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--accent-ink);
-  background: var(--accent-dim);
-  border: 1px solid var(--accent-edge);
-  border-radius: var(--r-sm, 12px);
+/* ──────────────────────────── Der Streifen über dem Bild
+
+   Er sagt, was vorne läuft, wenn es nicht die eigene Welt ist: „Ansicht von
+   Mia" oder „Freier Modus". Beides muss auffallen — sonst schaltet jemand
+   die Phase um und wundert sich, dass die Klasse folgt (oder eben nicht).
+
+   Er liegt ÜBER dem Bild und nicht darunter, weil er im Vollbild die einzige
+   Bedienung ist, die bleibt. */
+.wl-cap {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+  padding: 8px 10px 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: color-mix(in srgb, var(--ink) 82%, transparent);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(6px);
 }
+
+.wl-cap-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wl-cap--watch { background: color-mix(in srgb, var(--accent) 88%, black); }
+.wl-cap--free  { background: color-mix(in srgb, var(--warn) 88%, black); }
+
+.wl-cap-x {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  background: rgba(255, 255, 255, .16);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.wl-cap-x:hover { background: rgba(255, 255, 255, .3); }
+
+/* Der Ausgang aus dem Vollbild — und nur dort. Außerhalb wäre er ein Knopf
+   für einen Zustand, in dem man nicht ist. */
+.wl-exit { display: none; }
+
+/* ──────────────────────────────────────────────────────── Vollbild
+
+   Auf der Leinwand zählt die Karte. Kopfzeile, Werkzeugleiste und Seitenfuß
+   sind dort nichts als Wand ohne Karte — sie sind weg, das Pult fährt hoch
+   und bleibt mit einem Fingerbreit greifbar, und der Streifen unten links
+   sagt weiter, was zu sehen ist.
+
+   Das !important richtet sich gegen die Inline-Höhe, die tool.js aus der
+   Messung setzt: im Vollbild wird nicht gemessen, sondern gefüllt. */
+.wl-host:fullscreen {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: #000;
+}
+
+/* Das Pult fährt hoch und lässt einen Fingerbreit stehen. Nicht ganz weg:
+   die Phase weiterzuschalten ist genau das, was auf der Leinwand ansteht,
+   und dafür erst das Vollbild zu verlassen wäre jedes Mal ein Bruch. Der
+   Streifen ist die Klinke — darüber fährt es wieder aus (und bleibt, solange
+   ein Knopf darin den Fokus hat, damit Tastaturbedienung nicht ins Leere
+   greift). */
+.wl-host:fullscreen .wl-desk {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  border-bottom: 0;
+  box-shadow: var(--shadow);
+  transform: translateY(calc(-100% + 9px));
+  transition: transform .18s ease;
+}
+
+.wl-host:fullscreen .wl-desk:hover,
+.wl-host:fullscreen .wl-desk:focus-within { transform: none; }
+
+/* Der Griff in dem Fingerbreit, der stehenbleibt. */
+.wl-host:fullscreen .wl-desk::after {
+  content: '⋯';
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  transform: translateX(-50%);
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink-faint);
+}
+
+.wl-host:fullscreen .wl-desk:hover::after,
+.wl-host:fullscreen .wl-desk:focus-within::after { display: none; }
+
+.wl-host:fullscreen .wl-stage {
+  height: 100%;
+  display: block;
+}
+
+.wl-host:fullscreen .wl-frame { height: 100% !important; }
+
+.wl-host:fullscreen .wl-exit { display: inline-flex; }
 
 /* ────────────────────────────────────────── Stand der Klasse */
 
@@ -158,6 +286,17 @@
 
 .wl-person:hover:not(:disabled) { background: var(--surface-2); }
 .wl-person:disabled { cursor: default; opacity: .7; }
+
+/* Wem gerade zugesehen wird. Die Zeile ist ein Schalter und kein Auslöser:
+   derselbe Tipp beendet es wieder, und bis dahin muss zu sehen sein, wessen
+   Bild vorne läuft. */
+.wl-person[aria-pressed="true"] {
+  background: var(--accent-dim);
+  color: var(--accent-ink);
+}
+
+.wl-person[aria-pressed="true"] .wl-worlds,
+.wl-person[aria-pressed="true"] .wl-go { color: var(--accent-ink); }
 
 .wl-who {
   flex: 0 0 auto;

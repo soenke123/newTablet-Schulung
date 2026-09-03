@@ -184,24 +184,71 @@ body {
 
 #worldCanvas.dragging { cursor: grabbing; }
 
-.hint {
-  position: absolute;
-  left: 50%;
-  bottom: max(10px, env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  margin: 0;
-  padding: 7px 14px;
-  font-size: 12px;
-  color: var(--bark-soft);
-  background: rgba(243, 236, 224, 0.88);
-  border: 1px solid var(--paper-edge);
-  border-radius: 999px;
-  white-space: nowrap;
-  pointer-events: none;
-  transition: opacity 0.4s;
+/* ------------------------------------------------------- Bedienung („i")
+ *
+ * An der Stelle des Streifens, der frueher bei jeder neuen Karte unten
+ * aufblendete: er stand quer ueber der Karte, zaehlte Tasten auf, die auf
+ * einem Tablet niemand druecken kann, und kam genau dann, wenn jemand die
+ * neue Welt ansehen wollte. Jetzt ein Knopf oben rechts, der aufgeht, wenn
+ * jemand fragt - im Raum nur in der Ansicht der Lehrkraft (wc-no-info).
+ */
+
+.info-btn {
+  min-width: 44px;
+  padding: 10px 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: 17px;
+  font-weight: 700;
 }
 
-.hint.faded { opacity: 0; }
+.info-box {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  max-width: min(360px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  padding: 12px 16px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--bark);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--paper-edge);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* [hidden] kommt aus dem Stylesheet des Browsers und verliert gegen jede
+   eigene Regel mit display:. Hier steht bisher keine - die Zeile ist der
+   Riegel dagegen, dass die naechste (ein Raster, ein Flex) den Kasten
+   aufmacht und niemand ihn mehr zubekommt. */
+.info-box[hidden] { display: none; }
+
+.info-box h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bark-soft);
+}
+
+.info-box ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.info-box li + li { margin-top: 5px; }
+
+.info-note {
+  margin: 10px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--paper-edge);
+  font-size: 12px;
+  color: var(--bark-soft);
+}
 
 kbd {
   padding: 1px 5px;
@@ -741,7 +788,9 @@ body.signal-dragging { cursor: grabbing; user-select: none; -webkit-user-select:
   .seed-field input { width: 100%; }
   .btn { padding: 10px 14px; font-size: 14px; }
 
-  .hint { font-size: 11px; white-space: normal; text-align: center; max-width: 92%; }
+  /* Schmal steht die Kopfzeile untereinander und die Karte ist kurz: der
+     Kasten haengt dann nicht mehr in der Ecke, sondern nimmt die Breite. */
+  .info-box { left: 12px; right: 12px; max-width: none; font-size: 12px; }
 }
 
 /* ------------------------------------------------- Im Raum (MPSkills)
@@ -791,3 +840,13 @@ body.wc-no-brand .brand { display: none; }
    wieder frei. */
 body.wc-no-seed .seed-field,
 body.wc-no-seed #generateBtn { display: none; }
+
+/* Im Raum entscheidet die Lehrkraft, was aufgedeckt ist - und zwar in zwei
+   Haelften (Welt, Tiere). Der Knopf hier kennt nur zwei Stellungen und koennte
+   drei der vier Zustaende nicht benennen. */
+body.wc-no-view #viewModeBtn { display: none; }
+
+/* Das kleine „i" erklaert Tasten und die Kontrollanzeige - beides gehoert der
+   Lehrkraft. Auf den Tablets der Klasse ist die Karte die Aufgabe, und was zu
+   tun ist, sagt der Raum. */
+body.wc-no-info #infoBtn { display: none; }

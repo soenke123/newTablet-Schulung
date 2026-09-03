@@ -28,6 +28,11 @@
  * die der Abspieler bei JEDEM Bild neu auswertet. Deshalb: Knopf disabled,
  * Taste in der Capture-Phase geschluckt, und der Knopf, der sich selbst
  * wieder einblendet, per CSS-Klasse am body aus dem Weg geraeumt.
+ *
+ * Umgekehrt gibt es eine Sperre ganz OHNE Knopf: die Kontrollanzeige (D)
+ * haengt nur an der Taste. Auf einem Tablet der Klasse nennt sie Arten und
+ * Merkmalswerte - also die Loesung. Sie bleibt deshalb der Ansicht der
+ * Lehrkraft vorbehalten, genau wie das kleine "i" in der Kopfzeile.
  */
 (function (global) {
   'use strict';
@@ -56,7 +61,16 @@
      dasselbe, bliebe der Knopf nach einem Weltwechsel in Phase 3 tot. */
   var pendingMasked;
   var lastSeed = null;
-  var maskedLock = null;      // true/false = erzwungen, null = frei
+  /* null = frei (der Knopf gehoert wieder dem Geraet), sonst {w:bool, a:bool}
+     fuer Landschaft und Tiere getrennt. Getrennt, weil die Aufloesungsphase
+     genau das braucht: erst die Welt aufdecken und die Tiere noch als Nummern
+     stehen lassen - oder umgekehrt. */
+  var maskedLock = null;
+  /* Die Kontrollanzeige (Taste D) gehoert dem Entwickeln und der Lehrkraft,
+     nicht der Klasse: sie nennt Arten, Zustaende und Merkmalswerte - also die
+     Loesung der Aufgabe im Klartext. Sie haengt an keinem Knopf, deshalb ist
+     die geschluckte Taste hier die ganze Sperre. */
+  var noDetails = false;
   var worldsBox = null;
   var shownWorlds = '';
 
@@ -161,6 +175,27 @@
     body.classList.toggle('wc-no-advance', !!locks.advance);
     body.classList.toggle('wc-no-brand', !!locks.brand);
     body.classList.toggle('wc-no-seed', !!locks.seed);
+    // Der Sichtknopf kennt zwei Stellungen, die Lehrkraft schaltet vier
+    // (nichts, Welt, Tiere, beides). Ein Knopf, der den Zustand nicht mehr
+    // benennen kann, gehoert nicht auf ein Tablet - im Raum sagt die
+    // Aufloesung, was zu sehen ist, und nicht mehr das Geraet.
+    body.classList.toggle('wc-no-view', !!locks.view);
+    // Das kleine „i" erklaert Tasten. Auf einem Tablet ist keine davon zu
+    // druecken, und was dort zu tun ist, sagt die Lehrkraft - der Knopf
+    // bleibt deshalb ihrer Ansicht vorbehalten.
+    body.classList.toggle('wc-no-info', !!locks.info);
+    if (locks.info) {
+      var box = document.getElementById('infoBox');
+      var btn0 = document.getElementById('infoBtn');
+      if (box) box.hidden = true;
+      if (btn0) btn0.setAttribute('aria-expanded', 'false');
+    }
+
+    noDetails = !!locks.details;
+    // Ein Befehl kann eintreffen, waehrend die Anzeige offen steht (die
+    // Lehrkraft schaut vor der Stunde nach, die Klasse kommt herein).
+    // Wegnehmen heisst dann auch: zumachen, was schon offen ist.
+    if (noDetails && WC) WC.hideDetails();
 
     var seedInput = document.getElementById('seedInput');
     if (seedInput) seedInput.disabled = !!locks.seed;
@@ -169,23 +204,37 @@
   }
 
   /**
-   * Verdeckte Sicht erzwingen (true), offene erzwingen (false) oder freigeben
-   * (null). Erzwungen heisst: der Knopf ist tot UND die Taste V wirkt nicht -
-   * sonst ist die Sperre nur eine Empfehlung, und in Phase 1 stuende die halbe
+   * Die Sicht erzwingen oder freigeben.
+   *
+   * Angenommen wird dreierlei: null gibt den Knopf wieder frei, ein Wahrheits-
+   * wert schaltet beide Haelften zusammen (verdeckt/offen), und ein Objekt
+   * {w, a} setzt Landschaft und Tiere getrennt - das ist die Aufloesungsphase,
+   * in der die Lehrkraft erst das eine und dann das andere aufdeckt.
+   *
+   * Erzwungen heisst: der Knopf ist tot UND die Taste V wirkt nicht - sonst
+   * ist die Sperre nur eine Empfehlung, und in Phase 1 stuende die halbe
    * Klasse vor der Landschaft, die sie gerade nicht sehen soll.
    */
-  function enforceMasked(flag) {
-    maskedLock = (flag === true || flag === false) ? flag : null;
+  function enforceMasked(spec) {
+    if (spec === true || spec === false) maskedLock = { w: spec, a: spec };
+    else if (spec && typeof spec === 'object') maskedLock = { w: !!spec.w, a: !!spec.a };
+    else maskedLock = null;
+
     var btn = document.getElementById('viewModeBtn');
     if (btn) btn.disabled = maskedLock !== null;
-    if (maskedLock !== null && WC.masked !== maskedLock) WC.setMaskedView(maskedLock);
+    if (!maskedLock) return;
+    if (WC.maskedWorld !== maskedLock.w || WC.maskedAnimals !== maskedLock.a) {
+      WC.setMaskedParts(maskedLock.w, maskedLock.a);
+    }
   }
 
   // Die Taste in der Capture-Phase abfangen: der Zuhoerer der Anwendung haengt
   // am window, ein spaeter angemeldeter zweiter kaeme dort nie vor ihm dran.
   global.addEventListener('keydown', function (e) {
-    if (maskedLock === null || !e.key) return;
-    if (e.key.toLowerCase() === 'v') { e.stopPropagation(); e.preventDefault(); }
+    if (!e.key) return;
+    var key = e.key.toLowerCase();
+    if (maskedLock !== null && key === 'v') { e.stopPropagation(); e.preventDefault(); }
+    if (noDetails && key === 'd') { e.stopPropagation(); e.preventDefault(); }
   }, true);
 
   /* ─── Anschluss ────────────────────────────────────────────────────── */

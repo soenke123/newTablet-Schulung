@@ -365,8 +365,23 @@ und vierzig Zahlen über der Landschaft wären nur Rauschen.
 
 Den Hintergrund malt die Tierebene (`agentRenderer.js`), nicht der Renderer: sie ist die einzige,
 die die Uhrzeit kennt. Der Weltrand wird deshalb in dieser Sicht erst *nach* den dynamischen
-Ebenen gezogen. Beide Schalter (`renderer.setMasked`, `agentLayer.setMasked`) werden an genau
-einer Stelle gesetzt – `setMaskedView` in `js/ui/app.js`.
+Ebenen gezogen.
+
+**Verdeckt sind in Wahrheit zwei Schleier: die Landschaft und die Tiere.** Der Knopf schaltet
+beide zusammen (`setMaskedView` → `setMaskedParts(f, f)` in `js/ui/app.js`), im Raum hebt die
+Lehrkraft sie in der Auflösungsphase einzeln – „erst die Welt, dann die Tiere" ist die spannendere
+Reihenfolge, und „nur die Tiere" beantwortet die Frage der Stunde, ohne zu verraten, wo sie gelebt
+haben. Drei Schalter, an genau einer Stelle gesetzt (`setMaskedParts`):
+
+| | Landschaft | Tiere |
+|---|---|---|
+| `renderer.setMasked(w)` | Terrain und Objekte weg | – |
+| `agentLayer.setMaskedWorld(w)` | die deckende Fläche (`drawBackdrop`) | – |
+| `agentLayer.setMaskedAgents(a)` | – | Silhouette + Nummer, Bau weg, Spur ungeteilt |
+
+Die deckende Fläche hängt an der **Welt** und nicht am Tier: läge sie am Tier-Schleier, wäre die
+aufgedeckte Landschaft im nächsten Bild wieder zugemalt. `agentLayer.setMasked(f)` setzt weiterhin
+beide auf einmal (die Node-Werkzeuge und `preview.js` benutzen das so).
 
 Jede Signalfarbe muss auf beiden Extremen lesbar sein, und der Verlauf dazwischen passiert
 zwangsläufig genau ihre eigene Helligkeit. Deshalb liegt unter jeder Linie ein dunkler Saum
@@ -403,9 +418,15 @@ die Zahl in `setPhase` das Fenster in der Aufzeichnung – sie sind nicht dassel
 |---|---|---|---|
 | 1 Gruppieren | 0 (Tag 1–5) | verdeckt, erzwungen | drei Welten |
 | 2 Nachzügler | 1 (Tag 6–10) | verdeckt, erzwungen | drei Welten |
-| 3 Auflösung | 1 (Tag 6–10) | **frei** | drei Welten + eigener Seed |
+| 3 Auflösung | 1 (Tag 6–10) | **die Lehrkraft deckt auf** (`data.rw` / `data.ra`) | drei Welten + eigener Seed |
 
-Phase 3 nimmt der Karte nichts weg, sie gibt nur den Blick frei. Eine vierte Phase gibt es nicht.
+Phase 3 nimmt der Karte nichts weg, sie gibt nur den Blick frei – und zwar in zwei Hälften:
+`rw` deckt die Landschaft auf, `ra` die Tiere, beide unabhängig (`maskOf(view)` in `tool.js`).
+Beide fehlen anfangs, die Auflösung beginnt also mit demselben Bild wie Phase 2; erst der Griff
+ans Steuerpult macht daraus ein Ereignis. Der Sichtknopf auf dem Tablet bleibt **auch hier**
+gesperrt (sonst deckt das erste Kind alles auf, bevor die Frage gestellt ist) – und weil er nur
+zwei Stellungen kennt, aber vier Zustände möglich sind, blendet `locks.view` ihn im Raum ganz aus.
+Eine vierte Phase gibt es nicht.
 
 **Erzwungen heißt zweimal gesperrt.** Ein Knopf, den man wegnimmt, ist keine Sperre: dieselbe
 Wirkung hängt an einer Taste. `bridge.js` setzt deshalb `viewModeBtn.disabled` **und** schluckt `V`
@@ -414,24 +435,55 @@ käme dort nie vor ihm dran. Beim `#advanceBtn` reicht auch das nicht: er blende
 Bild selbst wieder ein (`updateAdvanceBtn` hängt an der Zeit), also räumt ihn eine Klasse am `body`
 per CSS weg.
 
-**Drei Welten je PERSON, gerechnet statt gespeichert.** `seedsFor(code, seat, salt)` in `tool.js`
-(FNV-1a) liefert derselben Person auf jedem Gerät und nach jedem Neuladen dieselben drei Zahlen –
-und jeder anderen Person andere. Wer neben sich schaut, sieht ein anderes Ökosystem; „welche
-Gruppen hast du?" ist damit nicht mit Abschreiben zu beantworten.
+**Zwei Sperren hängen an der Rolle statt an der Phase** (`locks.info`, `locks.details` – beide
+`!isPresenter()`, in jeder Phase, auch im freien Modus):
+
+* Das kleine **`i`** oben rechts in der Kopfzeile (`#infoBtn` → `#infoBox`) erklärt die Bedienung.
+  Es steht an der Stelle des früheren Streifens am unteren Kartenrand, der bei **jedem** Weltaufbau
+  aufblendete und alle Tasten aufzählte – an der falschen Stelle (quer über der Karte, auf der
+  Leinwand über der Auflösung), für die falschen Leute (auf einem Tablet ist keine dieser Tasten zu
+  drücken) und zum falschen Zeitpunkt. Wer die Tasten braucht, ist die Lehrkraft, und die fragt
+  einmal statt bei jeder Welt. Im Raum blendet `body.wc-no-info` den Knopf auf allen anderen
+  Geräten weg.
+* Die **Kontrollanzeige** (Taste `D`) nennt Arten, Zustände und Merkmalswerte – die Lösung im
+  Klartext. Sie hängt an **keinem Knopf**, die in der Capture-Phase geschluckte Taste ist hier also
+  die ganze Sperre. Steht sie beim Eintreffen des Befehls offen, macht `WC.hideDetails()` sie zu –
+  über diese Tür und nicht per `element.hidden` von außen, denn `debugOverlay.js` führt seinen
+  eigenen `visible`-Zustand, und ein von außen verstecktes Fenster bräuchte danach zwei
+  Tastendrücke.
+
+**Drei Welten je PERSON, gerechnet statt gespeichert.** `seedsFor(code, seat)` in `tool.js`
+(FNV-1a mit Murmur3-Schlussmischung) liefert derselben Person auf jedem Gerät und nach jedem
+Neuladen dieselben drei Zahlen – und jeder anderen Person andere. Wer neben sich schaut, sieht ein
+anderes Ökosystem; „welche Gruppen hast du?" ist damit nicht mit Abschreiben zu beantworten.
 
 * `seat` kommt aus `view.me.seat`. Der Beamer hat keinen Sitzplatz und rechnet mit 0 – er bekommt
   drei eigene Welten zum Vorführen, die niemandem gehören.
-* `salt` steht in `skill_room_state.data.salt` und ist das Einzige, was die Lehrkraft würfelt:
-  **eine** Zahl für den ganzen Raum, aus der jede Person wieder ihre eigenen drei rechnet. Eine
-  Liste je Teilnehmer im Raum-Zustand wäre dieselbe Auskunft, nur als Datenhaltung – und wer erst
-  morgen dazukommt, stünde nicht darin.
+* **Es gibt keinen Knopf zum Neuwürfeln.** Ein neuer Raum ist ein neuer Satz Welten, und das ist
+  die ganze Bedienung; ein Knopf, der der halben Klasse mitten in der Stunde die Arbeitsgrundlage
+  wegzieht, ist ein Fehler, der auf sein Auftreten wartet.
+* Die Schlussmischung ist nicht Zierde: in FNV-1a hängen die *unteren* Bits fast linear an der
+  Eingabe, und genau die liest `% 900000`. Ohne sie behielten zwei Welten desselben Platzes über
+  Räume hinweg denselben Abstand zueinander – auf der Leinwand sieht so ein Zufall aus wie ein
+  System.
 
 Verglichen wird über den Beamer: „Stand der Klasse" zeigt **eine Zeile je Person** mit ihren drei
-Welten und der Zahl der Gruppen darin, und ein Tipp legt die Welt auf, die diese Person **gerade**
-ansieht (`payload.cur` + die Gruppen dazu). Deshalb steht `ws` mit im Beitrag: der Beamer soll
-„Welt II" sagen können, ohne die Rechnung jedes Kindes nachzuvollziehen – und nach einem Würfeln
-käme dabei ohnehin das Falsche heraus, weil das Salz von heute nichts über den Beitrag von gestern
-sagt.
+Welten und der Zahl der Gruppen darin. Ein Tipp legt die Welt auf, die diese Person **gerade**
+ansieht (`payload.cur` + die Gruppen dazu) – und **bleibt dran**: `watchEid` merkt sich die
+Beitrags-ID, `push()` liest bei jedem Poll den neuesten Stand daraus, und wenn das Kind die Welt
+wechselt oder eine Gruppe zieht, geht die Leinwand mit (Verzögerung: 1,5 s Bremse beim Speichern +
+bis zu 3 s Poll). Ein zweiter Tipp beendet es, eine eigene Weltwahl und der freie Modus ebenso –
+zusehen und selbst steuern schließen sich aus.
+
+Deshalb steht `ws` mit im Beitrag: der Beamer hat den Sitzplatz der Verfasserin nicht (ein Beitrag
+trägt einen Namen, keine Nummer) und könnte sonst nur „Welt 482917" sagen, nicht „Welt II".
+
+**Vollbild** (`#wlFull`, `requestFullscreen` auf `.wl-host`): Kopfzeile, Werkzeugleiste und
+Seitenfuß der MPSkills-Seite sind auf einer Leinwand nichts als Wand ohne Karte. Das Steuerpult
+fährt dabei hoch und bleibt an einem Fingerbreit greifbar (`:fullscreen .wl-desk`, `translateY` +
+`:hover`) – die Phase weiterzuschalten ist genau das, was auf der Leinwand ansteht, und dafür jedes
+Mal das Vollbild zu verlassen wäre ein Bruch. Der Streifen unten links (`.wl-cap`) sagt, was läuft
+(„Ansicht von Mia", „Freier Modus") und trägt den Ausgang, denn Esc kennt nicht jede Fernbedienung.
 
 **Die Gruppierung gehört zur Welt.** Sie geht über zwei neue Türen in `js/ui/signals.js`:
 `panel.groups()` gibt `[{ m: Signalnummern, c: Farbe }]` heraus, `panel.applyGroups(list)` legt
@@ -448,6 +500,13 @@ Gespeichert wird ein Beitrag je Person (`skill_room_entries`, `kind = 'gruppieru
   "ws": [482917, 839214, 205663],          // die eigenen drei, in ihrer Reihenfolge
   "w": { "482917": [ { "m": [3,7,12], "c": "#c8743f" } ] } }
 ```
+
+⚠️ **`element.hidden = true` wirkt in `tool.css` nur, wenn es dort auch steht.** `[hidden]`
+kommt aus dem Stylesheet des Browsers, und jede eigene Regel mit `display:` ist stärker – ein
+`.wl-list { display: flex }` baut damit einen Kasten, der sich öffnen, aber nie wieder schließen
+lässt (genau das war der „Stand der Klasse"). Deshalb die Sammelregel `…[hidden] { display: none
+!important }` am Kopf der Datei: jedes Element, das `display` setzt **und** per `hidden`
+geschaltet wird, gehört dort hinein.
 
 ⚠️ **Wer `tool.js` oder `tool.css` anfasst, zieht den Cache-Stempel in `MPSkills/lib/tool.js`
 hoch** – und wer an `index.html` oder etwas unter `js/` arbeitet, zusätzlich das `?v=` an der

@@ -27,6 +27,16 @@
     <button id="trailsBtn" type="button" class="btn btn-toggle" aria-pressed="false">Ohne Spuren</button>
     <button id="generateBtn" type="button" class="btn btn-primary">Neue Welt</button>
     <button id="resetViewBtn" type="button" class="btn btn-ghost" hidden>Ansicht zurücksetzen</button>
+    <!--
+      Das kleine „i" ganz rechts. Es ersetzt den Streifen, der früher bei jeder
+      neuen Karte unten aufblendete und alle Tasten aufzählte: auf einem Tablet
+      ist keine davon zu drücken, und auf der Leinwand stand er quer über der
+      Karte. Wer die Tasten braucht, ist die Lehrkraft – im Raum blendet
+      js/ui/bridge.js diesen Knopf auf allen anderen Geräten weg (wc-no-info).
+    -->
+    <button id="infoBtn" type="button" class="btn btn-ghost info-btn"
+            aria-expanded="false" aria-controls="infoBox"
+            aria-label="Bedienung anzeigen" title="Bedienung">i</button>
   </div>
 </header>
 
@@ -34,16 +44,23 @@
   <main class="stage">
     <canvas id="worldCanvas" aria-label="Karte der Welt"></canvas>
 
-    <p class="hint" id="hint">
-      Ziehen zum Verschieben &middot; zwei Finger oder Mausrad zum Zoomen &middot;
-      Tier oder Signal antippen f&uuml;r seine Spur &middot;
-      Signale ineinander ziehen bildet ein Cluster &middot;
-      <kbd>Leertaste</kbd> startet die Zeit &middot;
-      <kbd>V</kbd> verdeckt die Landschaft &middot;
-      <kbd>S</kbd> nimmt die Spuren weg &middot;
-      <kbd>N</kbd> schaltet auf neutrale Formen &middot;
-      <kbd>D</kbd> zeigt Details
-    </p>
+    <!-- Was hinter dem „i" steckt. Steht bewusst über der Karte und nicht in
+         der Kopfzeile: es geht auf, wenn jemand fragt, und wieder zu. -->
+    <div class="info-box" id="infoBox" role="dialog" aria-label="Bedienung" hidden>
+      <h2>Bedienung</h2>
+      <ul>
+        <li><b>Verschieben</b> ziehen &middot; <b>Zoomen</b> zwei Finger oder Mausrad</li>
+        <li><b>Spur ansehen</b> Tier oder Signal antippen, noch einmal hebt auf</li>
+        <li><b>Gruppieren</b> Signal auf Signal ziehen; nach unten wieder heraus</li>
+        <li><kbd>Leertaste</kbd> Zeit an und aus</li>
+        <li><kbd>&larr;</kbd> <kbd>&rarr;</kbd> eine Stunde, mit <kbd>Shift</kbd> ein ganzer Tag</li>
+        <li><kbd>V</kbd> verdeckte Sicht &middot; <kbd>S</kbd> Spuren &middot;
+            <kbd>N</kbd> neutrale Formen</li>
+        <li><kbd>R</kbd> Gesamtansicht &middot; <kbd>D</kbd> Kontrollanzeige</li>
+      </ul>
+      <p class="info-note">Im Raum entscheidet das Steuerpult über die Sicht &ndash;
+        <kbd>V</kbd> und der Sichtknopf wirken erst im freien Modus.</p>
+    </div>
 
     <div id="debugOverlay" class="debug" hidden></div>
   </main>

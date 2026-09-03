@@ -22,9 +22,21 @@
 --               skill_room_set_state. Die drei sind:
 --                 1  Gruppieren   (Tag 1-5, verdeckte Sicht)
 --                 2  Nachzügler   (Tag 6-10, fünf Fremde kommen)
---                 3  Auflösung    (offene Sicht wird freigegeben)
+--                 3  Auflösung    (die Lehrkraft deckt auf)
 --               Was die Phase im Bild bedeutet, weiß nur das
 --               Werkzeug; der Server zählt sie und hütet die Grenze.
+--
+--               In Phase 3 kommen zwei Schalter aus
+--               skill_room_state.data dazu: `rw` deckt die Landschaft
+--               auf, `ra` die Tiere. Beide fehlen anfangs, und die
+--               Auflösung beginnt deshalb mit demselben Bild wie
+--               Phase 2 — erst der Griff ans Steuerpult macht daraus
+--               ein Ereignis. Zwei getrennte Schalter, weil „erst die
+--               Welt, dann die Tiere" die spannendere Reihenfolge ist
+--               als beides auf einmal.
+--               (Achtung beim Schreiben: skill_room_set_state ersetzt
+--               `data` als Ganzes. Das Werkzeug schickt deshalb immer
+--               beide Schalter.)
 --
 --   max_entries: 1
 --               Ein Eintrag je Person, und in ihm stehen ALLE Welten,

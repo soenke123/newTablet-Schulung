@@ -54,7 +54,15 @@
       sim: null,
       time: 0,
       showTrails: true,
+      /* Zwei Schleier, nicht einer. `masked` meint die TIERE (Farbkreis mit
+         Nummer statt Bild), `maskedWorld` die LANDSCHAFT (deckende Flaeche
+         statt Terrain). Allein geoeffnet wird jeder fuer sich sinnvoll: die
+         Welt ohne die Tiere zeigt, worin sich das Verhalten abgespielt hat,
+         die Tiere ohne die Welt beantworten die Frage der Stunde, ohne sie
+         gleich zu erklaeren. Zusammen geschaltet ergeben sie die alte
+         "verdeckte Sicht" - deshalb setzt setMasked() weiter beide. */
       masked: false,
+      maskedWorld: false,
       _pos: [],
       _order: [],
       _hidden: [],
@@ -155,8 +163,21 @@
      * Verdeckte Sicht: Landschaft weg, Artfarben weg. Der Renderer laesst
      * dafuer sein statisches Bild aus, diese Ebene malt den einheitlichen
      * Hintergrund selbst - sie ist die einzige, die die Uhrzeit kennt.
+     *
+     * Beide Schleier auf einmal - das ist der Knopf "Verdeckte Sicht" und die
+     * Taste V. Wer sie einzeln braucht (die Aufloesungsphase im Unterricht),
+     * nimmt die beiden Setzer darunter.
      */
-    view.setMasked = function (flag) { view.masked = !!flag; };
+    view.setMasked = function (flag) {
+      view.masked = !!flag;
+      view.maskedWorld = !!flag;
+    };
+
+    /** Nur die Landschaft: deckende Flaeche statt Terrain. */
+    view.setMaskedWorld = function (flag) { view.maskedWorld = !!flag; };
+
+    /** Nur die Tiere: Farbkreis mit Nummer statt Bild, Baue bleiben weg. */
+    view.setMaskedAgents = function (flag) { view.masked = !!flag; };
 
     /**
      * Ausgeblendete Tiere. Ausgeblendet heisst wirklich unsichtbar: kein
@@ -203,7 +224,10 @@
     };
 
     view.draw = function (ctx, world, rect, scale) {
-      drawBackdrop(ctx, rect, view.time, view.masked);
+      // Der Hintergrund gehoert zur WELT: die deckende Flaeche ist genau das,
+      // was die Landschaft verbirgt. Haenge sie am Tier-Schleier, waere die
+      // aufgedeckte Welt unter ihr trotzdem nicht zu sehen.
+      drawBackdrop(ctx, rect, view.time, view.maskedWorld);
       if (!view.sim) return;
       var agents = view.sim.agents;
       var order = view._order;

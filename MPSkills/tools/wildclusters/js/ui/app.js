@@ -26,7 +26,8 @@
     var resetViewBtn = document.getElementById('resetViewBtn');
     var viewModeBtn = document.getElementById('viewModeBtn');
     var trailsBtn = document.getElementById('trailsBtn');
-    var hint = document.getElementById('hint');
+    var infoBtn = document.getElementById('infoBtn');
+    var infoBox = document.getElementById('infoBox');
 
     var renderer = new WL.Renderer(canvas);
     var overlay = WL.DebugOverlay.create(document.getElementById('debugOverlay'));
@@ -34,8 +35,10 @@
     var world = null;
     var sim = null;
     var input = null;
-    var hintTimer = 0;
-    var maskedView = false;
+    // Zwei Schleier: die Landschaft und die Tiere. Der Knopf schaltet beide
+    // zusammen, der Unterricht kann sie einzeln oeffnen (siehe setMaskedParts).
+    var maskedWorld = false;
+    var maskedAgents = false;
     var showTrails = true;
     // Wer die Gruppierung mitlesen will. Steht hier oben, weil der Rueckruf der
     // Signalliste ihn braucht, bevor irgendwer ihn setzen kann.
@@ -138,18 +141,36 @@
     }
 
     /**
-     * Offene gegen verdeckte Sicht. Wie bei der Auswahl wird der Zustand an
-     * genau einer Stelle gesetzt: der Renderer laesst die Landschaft weg, die
-     * Tierebene malt Hintergrund und Tiere einfarbig - laufen die beiden
-     * auseinander, sieht man entweder Terrain unter einer deckenden Flaeche
+     * Offene gegen verdeckte Sicht - und zwar in zwei Haelften.
+     *
+     * Verdeckt ist nicht ein Zustand, sondern zwei: die LANDSCHAFT (Terrain
+     * weg, deckende Flaeche darueber) und die TIERE (Farbkreis mit Nummer
+     * statt Bild). Aufloesen heisst im Unterricht nicht zwangslaeufig beides
+     * auf einmal - "erst die Welt, dann die Tiere" ist die spannendere
+     * Reihenfolge, und "nur die Tiere" beantwortet die Frage der Stunde, ohne
+     * gleich zu verraten, wo sie gelebt haben.
+     *
+     * Gesetzt wird weiterhin an genau einer Stelle: der Renderer laesst sein
+     * statisches Bild aus, die Tierebene malt Hintergrund und Tiere - laufen
+     * die beiden auseinander, sieht man Terrain unter einer deckenden Flaeche
      * oder umgekehrt.
      */
-    function setMaskedView(flag) {
-      maskedView = !!flag;
-      renderer.setMasked(maskedView);
-      agentLayer.setMasked(maskedView);
-      viewModeBtn.setAttribute('aria-pressed', maskedView ? 'true' : 'false');
+    function setMaskedParts(worldFlag, agentFlag) {
+      maskedWorld = !!worldFlag;
+      maskedAgents = !!agentFlag;
+      renderer.setMasked(maskedWorld);
+      agentLayer.setMaskedWorld(maskedWorld);
+      agentLayer.setMaskedAgents(maskedAgents);
+      // Der Knopf kennt nur zwei Stellungen. Halb verdeckt ist fuer ihn
+      // verdeckt - er faellt in dem Fall ohnehin unter die Lehrkraft.
+      viewModeBtn.setAttribute('aria-pressed',
+        (maskedWorld || maskedAgents) ? 'true' : 'false');
       renderer.requestDraw();
+    }
+
+    /** Beide Haelften auf einmal - der Knopf und die Taste V. */
+    function setMaskedView(flag) {
+      setMaskedParts(flag, flag);
     }
 
     /**
@@ -170,10 +191,21 @@
       renderer.requestDraw();
     }
 
-    function showHint() {
-      hint.classList.remove('faded');
-      if (hintTimer) clearTimeout(hintTimer);
-      hintTimer = setTimeout(function () { hint.classList.add('faded'); }, 8000);
+    /**
+     * Die Bedienung hinter dem kleinen „i" - auf Nachfrage und nicht von
+     * selbst.
+     *
+     * Frueher blendete bei jeder neuen Karte unten ein Streifen mit allen
+     * Tasten auf. Er war an der falschen Stelle (quer ueber der Karte), fuer
+     * die falschen Leute (auf einem Tablet ist keine dieser Tasten zu
+     * druecken) und kam zum falschen Zeitpunkt (genau dann, wenn jemand die
+     * neue Welt ansehen wollte). Wer die Tasten braucht, ist die Lehrkraft -
+     * und die fragt einmal, nicht bei jeder Welt.
+     */
+    function setInfo(open) {
+      if (!infoBox || !infoBtn) return;
+      infoBox.hidden = !open;
+      infoBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
     /** Seed aus der Adresszeile - macht Welten im Unterricht teilbar. */
@@ -257,7 +289,6 @@
           if (!world.validation.ok) {
             console.warn('Weltgenerator: Regelverstöße', world.validation.violations);
           }
-          showHint();
           // Zuletzt, und wirklich zuletzt: erst hier steht alles, was jemand
           // von aussen anfassen wuerde - Welt, Simulation, Signalliste, Phase.
           if (worldHook) worldHook(world.seed);
@@ -329,13 +360,26 @@
       if (input) input.reset();
     });
 
+    // Halb verdeckt zaehlt als verdeckt: der naechste Druck deckt dann alles
+    // auf. Sonst waere die erste Betaetigung ein Zustandswechsel, den niemand
+    // vorhersagen kann.
     viewModeBtn.addEventListener('click', function () {
-      setMaskedView(!maskedView);
+      setMaskedView(!(maskedWorld || maskedAgents));
     });
 
     trailsBtn.addEventListener('click', function () {
       setTrails(!showTrails);
     });
+
+    if (infoBtn) {
+      infoBtn.addEventListener('click', function () {
+        setInfo(infoBox.hidden);
+      });
+      // Ein Tipp auf die Karte schliesst es wieder: der Kasten liegt ueber ihr,
+      // und ein Erklaerkasten, den man nur ueber denselben kleinen Knopf wieder
+      // los wird, steht auf einer Leinwand laenger als er soll.
+      canvas.addEventListener('pointerdown', function () { setInfo(false); });
+    }
 
     global.addEventListener('keydown', function (e) {
       if (!e.key) return;
@@ -359,7 +403,7 @@
         overlay.toggle();
         overlay.update(world, renderer, sim);
       } else if (key === 'v') {
-        setMaskedView(!maskedView);
+        setMaskedView(!(maskedWorld || maskedAgents));
       } else if (key === 's') {
         setTrails(!showTrails);
       } else if (key === 'n') {
@@ -405,15 +449,27 @@
       get world() { return world; },
       get sim() { return sim; },
       get phase() { return currentPhase; },
-      get masked() { return maskedView; },
+      // `masked` bleibt die Frage "ist ueberhaupt etwas verdeckt" - daran
+      // haengen aeltere Aufrufer. Wer die Haelften einzeln braucht, fragt die
+      // beiden darunter.
+      get masked() { return maskedWorld || maskedAgents; },
+      get maskedWorld() { return maskedWorld; },
+      get maskedAnimals() { return maskedAgents; },
       renderer: renderer,
       player: player,
       agentLayer: agentLayer,
       signals: signals,
       rebuild: build,
       setMaskedView: setMaskedView,
+      setMaskedParts: setMaskedParts,
       setTrails: setTrails,
       setPhase: setPhase,
+      /* Die Kontrollanzeige zumachen, wenn sie offen steht - der Raum nimmt
+         sie den Tablets weg (js/ui/bridge.js). Ueber diese Tuer und nicht per
+         element.hidden von aussen: die Anzeige fuehrt ihren eigenen Zustand,
+         und ein von aussen verstecktes Fenster braeuchte danach zwei
+         Tastendruecke, um wieder aufzugehen. */
+      hideDetails: function () { if (overlay.isVisible()) overlay.toggle(); },
       applyGroups: function (list) { signals.applyGroups(list); },
       setClusterHook: function (fn) { clusterHook = fn || null; },
       setWorldHook: function (fn) { worldHook = fn || null; }

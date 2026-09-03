@@ -555,6 +555,35 @@ console.log('\nTiere:');
   renderer.draw();
   check('Verdeckte Sicht baut keinen Terrain-Puffer', renderer.cache === cacheBefore);
 
+  // ------------------------------------------------------------ halb offen
+  //
+  // Im Unterricht wird nicht in einem Zug aufgedeckt: erst die Landschaft
+  // (worin hat sich das abgespielt?) oder erst die Tiere (wer war das
+  // ueberhaupt?). Die beiden Schleier muessen sich deshalb einzeln heben
+  // lassen - und der haeufigste Fehler dabei ist, dass die deckende Flaeche
+  // der Tierebene an der falschen Haelfte haengt und die aufgedeckte
+  // Landschaft gleich wieder zumalt.
+  console.log('\nHalb aufgedeckt:');
+  const skyNow = () => WL.PALETTE.masked.skyAt(WL.SimTime.daylight(layer.time));
+
+  renderer.setMasked(false);
+  layer.setMaskedWorld(false);
+  layer.setMaskedAgents(true);
+  const worldOnly = new Set(stylesDuring(() => renderer.draw()));
+  check('Nur die Welt: der deckende Himmel ist weg', !worldOnly.has(skyNow()));
+  check('… die Tiere bleiben Nummern',
+    textsDuring(() => renderer.draw()).length === sim.agents.length);
+  check('… und der Bau bleibt weg', !worldOnly.has(burrowRim));
+
+  renderer.setMasked(true);
+  layer.setMaskedWorld(true);
+  layer.setMaskedAgents(false);
+  const agentsOnly = new Set(stylesDuring(() => renderer.draw()));
+  check('Nur die Tiere: die Landschaft ist wieder zugedeckt', agentsOnly.has(skyNow()));
+  check('… und keine Nummer steht mehr auf der Karte',
+    textsDuring(() => renderer.draw()).length === 0);
+  check('… der Bau ist da, er gehoert zum Tier', agentsOnly.has(burrowRim));
+
   renderer.setMasked(false);
   layer.setMasked(false);
   let backError = null;

@@ -26,24 +26,37 @@ passiert:
 * **Drei Phasen**, und weiter schaltet nur die Lehrkraft:
   1. **Gruppieren** – Tag 1–5, verdeckte Sicht. Es gibt nichts als Bewegung.
   2. **Nachzügler** – Tag 6–10. Fünf Fremde sind dazugekommen und stehen als eigenes Cluster da.
-  3. **Auflösung** – die Landschaft und die Tiere werden sichtbar. Jetzt zeigt sich, ob in einer
-     Gruppe wirklich nur Rehe lagen. Ab hier darf auch ein eigener Seed eingetippt werden.
+  3. **Auflösung** – jetzt deckt die Lehrkraft auf, und zwar in zwei Schritten, wenn sie mag:
+     **Welt** (die Landschaft kommt zurück, die Tiere bleiben Nummern) und **Tiere** (die Tiere
+     kommen zurück, die Landschaft bleibt einfarbig) – einzeln oder beides. Jetzt zeigt sich, ob
+     in einer Gruppe wirklich nur Rehe lagen. Ab hier darf auch ein eigener Seed eingetippt
+     werden.
 * **Am Beamer** sieht die Lehrkraft dieselbe Karte (drei eigene Welten zum Vorführen), dazu ein
-  Steuerpult: Phase weiter, neue Welten für alle, und den **Stand der Klasse** – eine Zeile je
+  Steuerpult: Phase weiter, aufdecken, Vollbild – und den **Stand der Klasse**, eine Zeile je
   Person:
 
   ```
   Mia     Welt I (2 Cluster) · Welt II (4 Cluster, gerade hier) · Welt III (–)     ▸
   ```
 
-  Ein Tipp auf die Zeile legt vorne genau das auf, was diese Person **gerade** vor sich hat –
-  ihre Welt mit ihren Gruppen. Ein **freier Modus** hebt alle Sperren auf, ohne dass die Klasse
-  etwas davon merkt.
+  Ein Tipp auf die Zeile legt vorne auf, was diese Person **gerade** vor sich hat – ihre Welt mit
+  ihren Gruppen – und **bleibt dran**: wechselt sie die Welt oder zieht sie eine Gruppe, geht die
+  Leinwand ein paar Sekunden später mit. Ein zweiter Tipp beendet es.
+  Im **Vollbild** ist nur noch die Karte zu sehen; das Steuerpult fährt hoch und kommt zurück,
+  sobald der Zeiger den Streifen am oberen Rand berührt. Unten links steht, wessen Ansicht läuft.
+  Ein **freier Modus** hebt alle Sperren auf, ohne dass die Klasse etwas davon merkt.
+
+Auf den Tablets der Klasse steht **nur die Karte**: kein Erklärkasten, keine Kontrollanzeige.
+Die Bedienung unten erklärt das kleine **`i`** oben rechts, und die Kontrollanzeige (Taste `D`,
+sie nennt Arten und Merkmalswerte) gibt es beide nur in der Ansicht der Lehrkraft – beides gehört
+zur Lösung und nicht auf ein Gerät, das gerade gruppieren soll.
 
 Allein geöffnet ändert sich nichts an dem, was unten steht: dann gibt es weiter Seed-Feld,
-„Neue Welt", alle Tasten und den Knopf „Nächster Tag".
+„Neue Welt", das `i`, alle Tasten und den Knopf „Nächster Tag".
 
 ## Bedienung
+
+Alles davon steht auch im Programm, hinter dem **`i`** oben rechts in der Kopfzeile.
 
 | Aktion | Desktop | Tablet / Handy |
 |---|---|---|
@@ -58,7 +71,8 @@ Allein geöffnet ändert sich nichts an dem, was unten steht: dann gibt es weite
 | Offene ↔ verdeckte Sicht | Taste `V` oder „Verdeckte Sicht" | Button |
 | Spuren an/aus | Taste `S` oder „Ohne Spuren" | Button |
 | Sprite ↔ neutrale Form | Taste `N` | – |
-| Kontrollanzeige | Taste `D` | – |
+| Kontrollanzeige | Taste `D` (im Raum: nur die Lehrkraft) | – |
+| Bedienung nachschlagen | `i` oben rechts (im Raum: nur die Lehrkraft) | Knopf |
 
 Der Seed steht in der Adresszeile (`#seed=482917`) – so lässt sich dieselbe Welt teilen.
 Gleicher Seed erzeugt exakt dieselbe Welt **und denselben Tagesverlauf der Tiere**.
