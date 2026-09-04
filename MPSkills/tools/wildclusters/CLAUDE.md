@@ -464,8 +464,8 @@ tut ohne Rahmen gar nichts – kein Listener, kein DOM, keine Sperre.
 MPSkills-Seite (j.html · lehrer.html)
  └─ tools/wildclusters/tool.js       Rolle, Raum-Zustand, Steuerpult, Ergebnisse
      └─ <iframe> index.html
-          ▲ wc:cmd    { seed, worlds, phase, masked, locks, groups, note, full }
-          ▼ wc:event  ready · world (seed, n) · clusters · world-pick · note · full
+          ▲ wc:cmd    { seed, worlds, phase, masked, locks, groups, note, full, help }
+          ▼ wc:event  ready · world (seed, n) · clusters · world-pick · note · full · help
         js/ui/bridge.js → WILDCLUSTERS.*
 ```
 
@@ -525,7 +525,15 @@ Karten, **ein Bild**: dieselbe Zeichnung der Oberfläche, jedes Mal ein anderer 
 Frage vor dem ersten Griff ist *wo* etwas steht, und vier verschiedene Bildchen beantworten sie
 nicht.
 
-Vier Dinge daran sind nicht offensichtlich:
+⚠️ **Die Karte über die drei Welten sagt ausdrücklich, dass überall dieselben Arten leben.**
+„In jedem leben andere Tiere" stand dort zuerst, und das war falsch herum: es klang nach drei
+Biomen mit je eigenem Bestand. Alle acht Arten kommen in *jeder* Welt vor — `drawPopulation`
+drückt keine Art unter ihre Untergrenze, und die liegt bei allen achten bei ≥ 2. Anders sind nur
+die Landschaft und die Individuen. Die Karte sagt deshalb auch, was zu tun ist: **in einer Welt
+arbeiten**, die beiden anderen sind zum Stöbern. Wer sie für drei getrennte Rätsel hält, fängt
+dreimal von vorn an.
+
+Fünf Dinge daran sind nicht offensichtlich:
 
 * **Sie liegt IM Kasten** (`position: absolute` in `.wl-host`, nicht `fixed`). Das Vollbild nimmt
   genau diesen Kasten; ein `fixed`-Overlay daneben wäre darin unsichtbar — und der Rahmen darunter
@@ -541,6 +549,13 @@ Vier Dinge daran sind nicht offensichtlich:
   im Schaufenster (`ctx.preview`) auch nicht. Gemerkt wird sie im `sessionStorage`
   (`wl:<code>:intro1`) — dieselbe Begründung wie beim Bestand: ein Klassensatz-Tablet wechselt die
   Person.
+* **Es gibt einen Weg zurück: das `?`** in der Kopfzeile des Rahmens (`renderHelp` in `bridge.js`,
+  `cmd.help`, `wc:event help`). Es steht an der Stelle, an der die Lehrkraft ihr `i` hat, und
+  sieht genauso aus (`.info-btn`, nur aufrecht) — beide beantworten dieselbe Frage. Ohne ihn wäre
+  ein zu schnell weggetipptes Modal das Ende der Aufgabenbeschreibung, und das `i` daneben hilft
+  nicht: es erklärt Tasten, die es auf einem Tablet nicht gibt. Der Knopf kennt **keine Phase** —
+  die Lage gilt in Phase 2 genauso, und ein Knopf, der je nach Abschnitt nichts tut, sieht aus wie
+  ein kaputter.
 
 Die Modale vor Phase 2 und 3 gibt es noch nicht; `maybeIntro` steigt bei `phaseOf(view) !== 1`
 aus, und der Schlüssel trägt die Nummer schon im Namen. `tools/roomtest.js` prüft den Ablauf

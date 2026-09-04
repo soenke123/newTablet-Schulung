@@ -546,7 +546,12 @@
          Dokument steht nichts davon. Ohne diese Angabe könnte sein Knopf den
          Zustand nicht benennen, und wer mit Esc herausgeht, hinterließe einen
          Knopf, der weiter „Vollbild beenden" sagt. */
-      full: isFull()
+      full: isFull(),
+      /* Das Fragezeichen in derselben Zeile: der Weg zurück in die
+         Einführung. Es gibt ihn genau dort, wo es die Einführung gibt — am
+         Pult erklärt die Lehrkraft, und im Schaufenster gibt es niemanden,
+         dem etwas zu erklären wäre. */
+      help: !isPresenter() && !(ctx && ctx.preview)
     };
     /* Eine LEERE Gruppierung wird nicht mitgeschickt, und das ist kein
        Sparen: ein Weltwechsel baut die Welt ohnehin neu auf, und dabei
@@ -620,6 +625,11 @@
        entscheidet aber nichts: das Vollbild nimmt den ganzen Kasten (Pult UND
        Rahmen), und den kennt nur diese Seite. */
     if (m.event === 'full') { toggleFull(); return; }
+
+    /* Das Fragezeichen daneben. Es kennt keine Phase: die Lage steht in Phase 2
+       genauso wie in Phase 1, und ein Knopf, der je nach Abschnitt der Stunde
+       nichts tut, sieht aus wie ein kaputter. */
+    if (m.event === 'help') { if ($('wlIntro')) openIntro(); return; }
 
     /* Der Knopf im Streifen oben rechts. Er steckt ebenfalls im Rahmen und
        meldet nur — was „aufhören" bedeutet, weiß nur diese Seite. */
@@ -1141,10 +1151,18 @@
               was für einer Welt leben sie?</li>
           <li>Was du herausfindest, hältst du auf dem <b>Arbeitsblatt</b> fest.</li>
         </ul>` },
-      { kicker: 'Oben', title: 'Deine drei Welten', art: chrome('head'), html:
-        `<p>Drei Ökosysteme gehören dir: <b>I</b>, <b>II</b> und <b>III</b>. In jedem
-         leben andere Tiere — und was du gruppiert hast, steht beim Zurückkommen
-         noch da.</p>` },
+      /* „In jedem leben andere Tiere" stand hier zuerst, und das war falsch
+         herum: es klang nach drei Biomen mit je eigenem Tierbestand. Es sind
+         überall DIESELBEN Arten — anders sind nur die Landschaft und die
+         einzelnen Tiere. Genau darauf beruht die Aufgabe, und wer das für
+         drei getrennte Rätsel hält, fängt dreimal von vorne an. */
+      { kicker: 'Oben', title: 'Drei Welten, dieselben Tiere', art: chrome('head'), html:
+        `<p>Oben wechselst du zwischen <b>I</b>, <b>II</b> und <b>III</b>. Überall leben
+         <b>dieselben Tierarten</b> — anders sind nur die Landschaft und die einzelnen
+         Tiere darin.</p>
+         <p><b>Arbeite in einer Welt.</b> Die anderen beiden sind zum Stöbern: dort
+         siehst du dieselben Arten noch einmal, in einer anderen Gegend. Was du
+         gruppiert hast, steht beim Zurückkommen noch da.</p>` },
       { kicker: 'In der Mitte', title: 'Die Karte', art: chrome('stage'), html:
         `<p>Hier laufen die Tiere, jedes mit seiner eigenen Spur. <b>Ziehen</b>
          verschiebt, <b>zwei Finger</b> zoomen. Tippst du ein Tier an, leuchtet

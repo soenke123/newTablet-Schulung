@@ -94,6 +94,8 @@
   var shownNote = '';
   var fullBtn = null;
   var shownFull = null;
+  var helpBtn = null;
+  var shownHelp = null;
 
   /* ─── nach oben ─────────────────────────────────────────────────────── */
 
@@ -131,6 +133,7 @@
     if (cmd.locks) applyLocks(cmd.locks);
     if (cmd.worlds) renderWorlds(cmd.worlds, cmd.seed);
     if ('full' in cmd) renderFull(!!cmd.full);
+    if ('help' in cmd) renderHelp(!!cmd.help);
     if ('note' in cmd) renderNote(cmd.note);
 
     // Eine Gruppierung kommt nur mit, wenn sie auch aufgelegt werden soll -
@@ -231,6 +234,45 @@
     fullBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
     fullBtn.textContent = on ? '⛶ Vollbild beenden' : '⛶ Vollbild';
     fullBtn.title = on ? 'Vollbild verlassen' : 'Nur noch die Karte';
+  }
+
+  /* ─── Das Fragezeichen ──────────────────────────────────────────────────
+     Der Weg zurueck in die Einfuehrung - und zwar auf den Tablets der Klasse,
+     nicht am Pult.
+
+     Sie kommt einmal beim Betreten und ist danach weg. Wer schnell durchtippt
+     (und das tut man mit zehn Jahren), hat die Aufgabe nicht mehr vor sich;
+     das kleine „i" daneben hilft dabei nicht, es erklaert Tasten, die es auf
+     einem Tablet gar nicht gibt, und gehoert deshalb der Lehrkraft.
+
+     Er steht im Rahmen, weil dort die Zeile ist. Entschieden wird er wie das
+     Vollbild draussen: der Kasten gehoert der Seite (tool.js), also meldet er
+     nur nach oben.                                                          */
+
+  function renderHelp(on) {
+    if (on && !helpBtn) {
+      var controls = document.querySelector('.controls');
+      if (!controls) return;
+      helpBtn = document.createElement('button');
+      helpBtn.type = 'button';
+      helpBtn.id = 'wcHelp';
+      /* Dieselbe Form wie das „i" der Lehrkraft (info-btn): beide beantworten
+         dieselbe Frage, und zwei verschieden aussehende Knoepfe dafuer waeren
+         zwei Dinge, wo es eins ist. */
+      helpBtn.className = 'btn btn-ghost info-btn help-btn';
+      helpBtn.textContent = '?';
+      helpBtn.title = 'Worum geht es hier?';
+      helpBtn.setAttribute('aria-label', 'Die Einführung noch einmal ansehen');
+      // Vor das Vollbild: das bleibt ganz rechts.
+      controls.insertBefore(helpBtn, fullBtn);
+      helpBtn.addEventListener('click', function () { send('help', {}); });
+    }
+    if (!helpBtn || on === shownHelp) return;
+    shownHelp = on;
+    // display und nicht `hidden`: in css/style.css setzt zwar keine Regel
+    // display auf .btn, aber eine, die es taete, waere staerker als das
+    // Attribut - und dann haenge hier ein Knopf, den niemand wegbekommt.
+    helpBtn.style.display = on ? '' : 'none';
   }
 
   /* ─── Was gerade vorne laeuft ───────────────────────────────────────────

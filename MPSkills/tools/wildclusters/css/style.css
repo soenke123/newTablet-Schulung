@@ -915,6 +915,13 @@ body.wc-no-view #viewModeBtn { display: none; }
    tun ist, sagt der Raum. */
 body.wc-no-info #infoBtn { display: none; }
 
+/* Der Weg zurueck in die Einfuehrung - auf den Tablets der Klasse, an der
+   Stelle, an der die Lehrkraft ihr „i" hat. Dieselbe Form (info-btn), aber
+   aufrecht: ein kursives Fragezeichen liest sich als Zierde und nicht als
+   Knopf. Gebaut wird er von js/ui/bridge.js (renderHelp), gefuellt wird der
+   Kasten dahinter von der Seite. */
+.help-btn { font-style: normal; }
+
 /* Was gerade vorne laeuft: „Ansicht von Mia", „Freier Modus". Er steht hinter
    dem „i" in derselben Zeile und nicht mehr als Kasten unten links auf der
    Karte - dort lag er auf dem Abspielknopf.

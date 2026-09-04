@@ -455,11 +455,19 @@ function einfuehrungKommtEinmal() {
   ok('Einführung: sie kommt in der zweiten Welt nicht wieder',
      box.hidden === true, box.hidden);
 
+  /* Das Fragezeichen im Rahmen ist der einzige Weg zurück — wer schnell
+     durchtippt, hat sonst die Aufgabe nicht mehr vor sich. Der Knopf steht
+     dort, entschieden wird er hier. */
+  ok('Fragezeichen: es steht im Befehl an die Klasse', t.last().help === true, t.last().help);
+  t.fromFrame('help', {});
+  ok('Fragezeichen: es holt die Einführung zurück', box.hidden === false, box.hidden);
+
   const p = run('presenter');
   p.fromFrame('ready', {});
   frameAnswers(p, []);
   ok('Einführung: am Pult wird sie gar nicht erst gebaut',
      p.root._kids['#wlIntro'] === undefined);
+  ok('Fragezeichen: am Pult gibt es keins', p.last().help === false, p.last().help);
 }
 
 pultBehaeltSeineWelten();
