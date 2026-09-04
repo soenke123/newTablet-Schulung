@@ -48,6 +48,38 @@
   // Ab hier ist eine Fingerbewegung gemeint und kein Wackeln beim Tippen.
   var DRAG_THRESHOLD = 7;
 
+  /*
+   * Der zweite Weg in die Geste: stillhalten.
+   *
+   * Waagerecht zu ziehen war lange der einzige - senkrecht gehoert dem
+   * Blaettern der Liste (touch-action: pan-y), und der Browser nimmt uns die
+   * Geste weg, sobald er sie fuer ein Blaettern haelt. Nur liegen die Cluster
+   * OBEN und die freien Kacheln darunter: das Ziehen, das die Aufgabe verlangt,
+   * geht damit fast immer nach oben, und genau das ging nicht.
+   *
+   * Wer 220 ms aufsetzt, ohne zu wandern, hat kein Blaettern gemeint. Der
+   * Browser hat zu diesem Zeitpunkt noch nichts angefangen (der Finger stand),
+   * und ab hier haelt der touchmove-Zuhoerer weiter unten das Blaettern auf.
+   * Danach zaehlt jede Richtung.
+   */
+  var HOLD_MS = 220;
+  // Wie weit der Finger dabei wandern darf. Grosszuegiger als die Schwelle
+  // oben: hier soll nur "der wollte blaettern" erkannt werden.
+  var HOLD_SLOP = 9;
+
+  /*
+   * Wo ueberall nachgesehen wird, ob dort etwas liegt, worauf sich ablegen
+   * laesst (Bildschirmpixel um den Finger herum).
+   *
+   * Der Punkt unter dem Finger allein war zu streng: zwischen zwei Kacheln
+   * liegt der freie Bereich, und der nimmt von einer freien Kachel nichts an -
+   * ein Ablegen zwei Pixel neben dem Ziel tat dann gar nichts, und das sah aus
+   * wie ein Aussetzer. Gesucht wird nur weiter, wenn unter dem Finger nichts
+   * Zustaendiges liegt; eine ausdrueckliche Absage (die eigene Kachel, das
+   * eigene Cluster) bleibt eine Absage.
+   */
+  var PROBE = [[0, 0], [0, -14], [0, 14], [-14, 0], [14, 0]];
+
   /**
    * @param elements  { grid, allBtn }
    * @param callbacks { onSelect(agentIndices),
@@ -571,9 +603,46 @@
         ghost: null,
         over: null,
         scroller: 0,
-        frame: 0
+        frame: 0,
+        hold: 0
       };
       if (grid.setPointerCapture) grid.setPointerCapture(e.pointerId);
+      if (drag.touch) armHold();
+    });
+
+    /** Der Finger haelt still - nach HOLD_MS liegt die Kachel in der Hand. */
+    function armHold() {
+      if (typeof setTimeout !== 'function') return;
+      drag.hold = setTimeout(function () {
+        if (!drag || drag.active) return;
+        drag.hold = 0;
+        beginDrag();
+        follow();
+      }, HOLD_MS);
+    }
+
+    function clearHold() {
+      if (!drag || !drag.hold) return;
+      if (typeof clearTimeout === 'function') clearTimeout(drag.hold);
+      drag.hold = 0;
+    }
+
+    /*
+     * Solange die Kachel in der Hand liegt, darf die Liste nicht blaettern.
+     * touch-action: pan-y erlaubt dem Browser genau das, und ein Bild spaeter
+     * waere die Geste bei ihm statt bei uns. Zurueckzunehmen ist das nur von
+     * einem nicht-passiven Zuhoerer - deshalb hier und nicht im CSS.
+     */
+    grid.addEventListener('touchmove', function (e) {
+      if (!drag || !drag.active || !drag.touch) return;
+      if (e.cancelable !== false && e.preventDefault) e.preventDefault();
+    }, { passive: false });
+
+    // Ein Finger, der liegen bleibt, ist fuer das System ein langer Druck -
+    // und der oeffnet auf einem Tablet gern ein Menue. Genau darauf beruht
+    // hier aber das Aufnehmen der Kachel.
+    grid.addEventListener('contextmenu', function (e) {
+      if (drag && drag.active && e.preventDefault) e.preventDefault();
     });
 
     /**
@@ -591,14 +660,26 @@
       if (!drag.active) {
         var dx = drag.x - drag.startX;
         var dy = drag.y - drag.startY;
-        // Mit dem Finger gehoert die senkrechte Bewegung dem Scrollen der
-        // Liste (CSS touch-action: pan-y) - waagerecht ist das Ziehen. Mit der
-        // Maus gibt es nichts zu scrollen, dort zaehlt jede Richtung.
-        var far = drag.touch
-          ? Math.abs(dx) > DRAG_THRESHOLD && Math.abs(dx) > Math.abs(dy)
-          : Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD;
-        if (!far) return;
-        beginDrag();
+        if (drag.touch) {
+          // Waagerecht ist sofort das Ziehen - senkrecht gehoert dem Blaettern
+          // der Liste (CSS touch-action: pan-y). Wer nach oben will, haelt
+          // erst still; dann uebernimmt armHold, und dieser Zweig hier hat
+          // nur noch zu erkennen, dass der Finger stattdessen losgewandert
+          // ist - das war ein Wisch, und der gehoert der Liste.
+          if (Math.abs(dx) > DRAG_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+            clearHold();
+            beginDrag();
+          } else if (Math.abs(dx) > HOLD_SLOP || Math.abs(dy) > HOLD_SLOP) {
+            endDrag();
+            return;
+          } else {
+            return;
+          }
+        } else {
+          // Mit der Maus gibt es nichts zu blaettern, dort zaehlt jede Richtung.
+          if (Math.abs(dx) <= DRAG_THRESHOLD && Math.abs(dy) <= DRAG_THRESHOLD) return;
+          beginDrag();
+        }
       }
       requestFollow();
     });
@@ -702,6 +783,7 @@
     }
 
     function endDrag() {
+      clearHold();
       if (drag.scroller && typeof clearInterval === 'function') clearInterval(drag.scroller);
       if (drag.frame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drag.frame);
       if (drag.active) {
@@ -723,10 +805,37 @@
      * ihn selbst.
      */
     function hoverAt(x, y) {
-      var el = document.elementFromPoint ? document.elementFromPoint(x, y) : null;
-      var dropEl = el ? ancestorWith(el, 'data-drop') : null;
-      if (dropEl && !contains(grid, dropEl)) dropEl = null;
-      markOver(dropEl && allowedDrop(dropEl) ? dropEl : null);
+      markOver(dropUnder(x, y));
+    }
+
+    /**
+     * Worauf zeigt der Finger? Erst genau darunter, dann ein Stueck daneben.
+     *
+     * Der Punkt allein war zu streng: die Kacheln stehen mit 6 px Abstand, und
+     * dazwischen liegt der freie Bereich - der von einer freien Kachel nichts
+     * annimmt. Ein Ablegen zwei Pixel neben der Kachel tat deshalb gar nichts,
+     * und das sah nicht aus wie danebengegriffen, sondern wie ein Aussetzer.
+     *
+     * Weitergesucht wird aber nur, wenn unter dem Finger nichts Zustaendiges
+     * liegt. Wer auf seiner eigenen Kachel oder in seinem eigenen Cluster
+     * loslaesst, meint "nichts tun" - das ist eine Absage und kein Fehlgriff,
+     * und der Nachbar daneben waere die falsche Antwort darauf.
+     */
+    function dropUnder(x, y) {
+      if (!document.elementFromPoint) return null;
+      for (var i = 0; i < PROBE.length; i++) {
+        var el = document.elementFromPoint(x + PROBE[i][0], y + PROBE[i][1]);
+        var dropEl = el ? ancestorWith(el, 'data-drop') : null;
+        if (!dropEl || !contains(grid, dropEl)) continue;
+        if (allowedDrop(dropEl)) return dropEl;
+        if (i === 0 && partOfSource(dropEl)) return null;
+      }
+      return null;
+    }
+
+    /** Gehoert dieses Ziel zu dem, was gerade in der Hand liegt? */
+    function partOfSource(el) {
+      return el === drag.sourceEl || contains(drag.sourceEl, el) || contains(el, drag.sourceEl);
     }
 
     function markOver(el) {

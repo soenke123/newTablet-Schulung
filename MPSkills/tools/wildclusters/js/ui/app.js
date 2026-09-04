@@ -35,10 +35,18 @@
     var world = null;
     var sim = null;
     var input = null;
-    // Zwei Schleier: die Landschaft und die Tiere. Der Knopf schaltet beide
-    // zusammen, der Unterricht kann sie einzeln oeffnen (siehe setMaskedParts).
-    var maskedWorld = false;
-    var maskedAgents = false;
+    /* Zwei Schleier: die Landschaft und die Tiere. Der Knopf schaltet beide
+       zusammen, der Unterricht kann sie einzeln oeffnen (siehe setMaskedParts).
+     *
+     * In einem Rahmen faengt es VERDECKT an, und das ist keine Vorsicht,
+     * sondern ein behobener Fehler: der Aufbau einer Welt ist zweistufig, und
+     * zwischen "Bild steht" und "zehn Tage gerechnet" liegen auf einem Tablet
+     * mehrere Sekunden. Wer den Schleier erst danach setzt (so kam er frueher
+     * ueber die Bruecke), zeigt der Klasse in genau dieser Zeit die Landschaft,
+     * die sie noch nicht sehen soll - beim Neuladen der Seite jedes Mal.
+     * Der Raum darf aufdecken; anfangen muss er zugedeckt. */
+    var maskedWorld = !!global.WC_EMBEDDED;
+    var maskedAgents = !!global.WC_EMBEDDED;
     var showTrails = true;
     // Wer die Gruppierung mitlesen will. Steht hier oben, weil der Rueckruf der
     // Signalliste ihn braucht, bevor irgendwer ihn setzen kann.
@@ -132,6 +140,11 @@
       var more = !!sim && currentPhase < phases - 1;
       advanceBtn.hidden = !(more && player.time() >= player.rangeEnd() - 0.5);
     }
+
+    // Die beiden Schleier auch wirklich haengen, bevor das erste Bild faellt.
+    // Die Variablen oben sind nur die Buchhaltung - gezeichnet wird nach dem,
+    // was Renderer und Tierebene wissen.
+    if (maskedWorld || maskedAgents) setMaskedParts(maskedWorld, maskedAgents);
 
     // Tierbilder laden; bis sie da sind, wird die neutrale Form gezeichnet.
     WL.Sprites.preload(function () { renderer.requestDraw(); });

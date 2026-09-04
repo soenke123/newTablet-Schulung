@@ -26,8 +26,8 @@
   box-shadow: var(--shadow);
 }
 
-/* Der Rahmen und der Streifen darüber liegen übereinander — deshalb ein
-   eigener Kasten mit position: relative. */
+/* Eigener Kasten um den Rahmen: im Vollbild bekommt er die volle Höhe,
+   während das Pult darüber schwebt. */
 .wl-stage { position: relative; }
 
 .wl-frame {
@@ -54,8 +54,6 @@
 .wl-row[hidden],
 .wl-list[hidden],
 .wl-btn[hidden],
-.wl-cap[hidden],
-.wl-cap-x[hidden],
 .wl-person[hidden] { display: none !important; }
 
 /* ─────────────────────────────────────────── Steuerpult (Beamer) */
@@ -76,29 +74,17 @@
   flex-wrap: wrap;
 }
 
-/* Die dritte Reihe (Stand der Klasse · Freier Modus · Arbeitsblatt)
-   sind Werkzeuge der Lehrkraft und keine Fortsetzung der beiden
-   Reihen darüber — rechts gesetzt trennt sie das ohne eine Linie. */
-.wl-row--end { justify-content: flex-end; }
-
-.wl-label {
-  min-width: 48px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink-faint);
-  letter-spacing: .02em;
-}
-
-.wl-hint {
-  font-size: 12px;
-  color: var(--ink-faint);
-}
-
 .wl-seg {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
+
+/* Die Werkzeuge der Lehrkraft (Stand der Klasse · Freier Modus · Vollbild)
+   stehen in derselben Zeile wie die Schritte, aber am anderen Ende: sie
+   gehören nicht zum Ablauf der Stunde, sondern zur Bedienung des Pults.
+   Der Abstand dazwischen trennt das ohne eine Linie. */
+.wl-seg--end { margin-left: auto; }
 
 .wl-btn {
   min-height: 38px;
@@ -132,63 +118,13 @@
 
 .wl-seg-btn { font-variant-numeric: tabular-nums; }
 
-/* ──────────────────────────── Der Streifen über dem Bild
-
-   Er sagt, was vorne läuft, wenn es nicht die eigene Welt ist: „Ansicht von
-   Mia" oder „Freier Modus". Beides muss auffallen — sonst schaltet jemand
-   die Phase um und wundert sich, dass die Klasse folgt (oder eben nicht).
-
-   Er liegt ÜBER dem Bild und nicht darunter, weil er im Vollbild die einzige
-   Bedienung ist, die bleibt. */
-.wl-cap {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: calc(100% - 24px);
-  padding: 8px 10px 8px 14px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--on-accent);
-  background: color-mix(in srgb, var(--ink) 82%, transparent);
-  border-radius: 999px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(6px);
+/* Die laufende Phase, auch wenn ihr Knopf nicht eingerastet ist: „3a" und
+   „3b" rasten erst ein, wenn IHR Schleier oben ist — dass die Auflösung
+   läuft, während noch nichts aufgedeckt ist, muss trotzdem zu sehen sein. */
+.wl-seg-btn[aria-current="step"][aria-pressed="false"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
-
-.wl-cap-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.wl-cap--watch { background: color-mix(in srgb, var(--accent) 88%, black); }
-.wl-cap--free  { background: color-mix(in srgb, var(--warn) 88%, black); }
-
-.wl-cap-x {
-  flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font: inherit;
-  font-size: 13px;
-  color: inherit;
-  background: rgba(255, 255, 255, .16);
-  border: 0;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.wl-cap-x:hover { background: rgba(255, 255, 255, .3); }
-
-/* Der Ausgang aus dem Vollbild — und nur dort. Außerhalb wäre er ein Knopf
-   für einen Zustand, in dem man nicht ist. */
-.wl-exit { display: none; }
 
 /* ──────────────────────────────────────────────────────── Vollbild
 
@@ -248,8 +184,6 @@
 }
 
 .wl-host:fullscreen .wl-frame { height: 100% !important; }
-
-.wl-host:fullscreen .wl-exit { display: inline-flex; }
 
 /* ────────────────────────────────────────── Stand der Klasse */
 
@@ -354,7 +288,7 @@
   }
 
   .wl-desk { padding: 10px; }
-  .wl-label { min-width: 0; }
-  .wl-hint { flex: 1 0 100%; }
-  .wl-row--end { justify-content: flex-start; }
+  /* Schmal passt keine Zeile mit sieben Knöpfen: dann untereinander, und
+     die Werkzeuge fangen wieder links an. */
+  .wl-seg--end { margin-left: 0; }
 }

@@ -23,9 +23,9 @@
    Gegenüber: sie übersetzt den Raum-Zustand in einen Befehl und
    das, was zurückkommt, in einen Beitrag.
 
-   Zwei Nachrichten gehen hin (wc:cmd) und drei zurück (wc:event:
-   ready · world · clusters, dazu world-pick als Bitte). Mehr ist es
-   nicht.
+   Eine Nachricht geht hin (wc:cmd) und drei kommen zurück (wc:event:
+   ready · world · clusters), dazu zwei Bitten: world-pick und note.
+   Mehr ist es nicht.
 
    ── Drei Welten, und jede Person hat ihre eigenen ─────────────
    Drei, damit es eine Wahl gibt und trotzdem nicht vierzig. Und
@@ -66,7 +66,7 @@
      mit neuen Skripten — genau der Fall, in dem ein <script>-Tag fehlt,
      den niemand vermisst, bis die Brücke schweigt. Dieselbe Überlegung
      wie beim ?v= in lib/tool.js. */
-  const V = '?v=20260903c';
+  const V = '?v=20260904a';
 
   /* Was eine Raumphase für die Karte bedeutet. Die Zahl links kennt der
      Server (skill_tools.limits.phases = 3), alles rechts davon nur
@@ -93,6 +93,26 @@
          name: 'Auflösung',
          hint: 'die Lehrkraft deckt auf · eigene Welten erlaubt' }
   };
+
+  /* Die Knöpfe am Pult — vier für drei Phasen.
+     Die Auflösung besteht aus zwei Handgriffen, und die stehen hier als
+     eigene Schritte („3a Welt auflösen", „3b Tiere aufdecken") statt in einer
+     zweiten Reihe darunter: es ist derselbe Ablauf, und wer ihn vorne
+     abarbeitet, sucht die Fortsetzung dort, wo eben noch die Phase stand.
+
+     Ein Schritt mit `veil` schaltet den Schleier UND, falls nötig, die Phase.
+     Umgekehrt nehmen 1 und 2 beide Schleier wieder zurück — sonst käme man
+     nach einem Rücksprung in eine Auflösung, die schon aufgelöst ist. */
+  const STEPS = [
+    { id: '1', phase: 1, label: '1 Gruppieren',
+      title: 'Tag 1–5 · verdeckte Sicht · Signale zu Gruppen ziehen' },
+    { id: '2', phase: 2, label: '2 Nachzügler',
+      title: 'Tag 6–10 · fünf Fremde sind dazugekommen' },
+    { id: '3a', phase: 3, veil: 'rw', label: '3a Welt auflösen',
+      title: 'Die Landschaft wird sichtbar — die Tiere bleiben Nummern' },
+    { id: '3b', phase: 3, veil: 'ra', label: '3b Tiere aufdecken',
+      title: 'Die Tiere bekommen ihr Bild — die Nummer bleibt daneben stehen' }
+  ];
 
   // Mehr als fünf Welten je Person gehen nicht in den payload (4 KB,
   // durchgesetzt von skill_check_payload). Drei gehören dem Raum, zwei
@@ -130,6 +150,20 @@
      sein. Der Poller liefert alle drei Sekunden neue Beiträge; push() nimmt
      daraus jedes Mal den aktuellen Stand. */
   let watchEid = null;
+  /* Und was zuletzt in den Rahmen ging, als jemandem zugesehen wurde. Daran
+     hängt der Unterschied zwischen „das kam gerade von uns" und „die Lehrkraft
+     hat selbst eine Kachel gezogen" — siehe handle(). */
+  let sentGroups = '';
+  /* Wessen Welt am Pult steht, nachdem die Lehrkraft darin selbst gearbeitet
+     hat. Das Zusehen ist damit beendet (sonst überführe der nächste Poll ihre
+     Arbeit), die Welt bleibt aber die des Kindes — und der Streifen oben sagt
+     das auch. */
+  let takeover = null;
+  /* Der Rahmen meldet nach jedem Weltaufbau, was auf der neuen Welt liegt.
+     Das ist sein Bericht und keine Handlung — in Phase 2 schiebt die Anwendung
+     die Nachzügler von sich aus zu einem Haufen zusammen, und ohne diesen
+     Riegel sähe genau das aus wie „die Lehrkraft hat gezogen". */
+  let rebase = false;
   let onFs = null;              // Beamer: Vollbild kam oder ging
 
   const isPresenter = () => ctx && ctx.role === 'presenter';
@@ -333,6 +367,16 @@
     try { frame.contentWindow.postMessage(cmd, location.origin); } catch (e) { /* zu */ }
   }
 
+  /* Eine Gruppierung als Zeichenkette, die nur ihre Einteilung meint: welche
+     Signale liegen zusammen. Ohne Farbe und ohne Reihenfolge — beides kann
+     sich unterwegs ändern, ohne dass jemand etwas anders gruppiert hätte. */
+  function groupsKey(list) {
+    return (list || [])
+      .map(g => ((g && (g.m || g.members)) || []).slice().sort((a, b) => a - b).join('.'))
+      .sort()
+      .join('|');
+  }
+
   /** Der Beitrag, dessen Sicht gerade vorne läuft — oder null. */
   function watched() {
     if (!watchEid || !view) return null;
@@ -386,10 +430,14 @@
            Beides gehört ans Pult und bleibt dort in jeder Phase. */
         info: !isPresenter(),
         details: !isPresenter()
-      }
+      },
+      // Der Streifen in der Kopfzeile des Rahmens. Nur die Lehrkraft bekommt
+      // ihn; auf einem Tablet gibt es nichts zu melden.
+      note: isPresenter() ? noteOf(watch) : null
     };
     if (watch) cmd.groups = watch.groups;
     else if (wechsel) cmd.groups = store[String(want)] || [];
+    if (cmd.groups) sentGroups = groupsKey(cmd.groups);
 
     /* Zweimal denselben Befehl zu schicken kostet nichts, aber es macht die
        Ursachensuche schwer: was im Rahmen passiert, soll auf eine Änderung
@@ -411,6 +459,7 @@
       // Selbst eine Welt zu wählen heißt: nicht mehr jemandem zusehen.
       // Beides gleichzeitig wäre ein Bild, das gleich wieder wegspringt.
       watchEid = null;
+      takeover = null;
       deskSeed = n;
       push();
       paintDesk();
@@ -443,8 +492,33 @@
 
     if (m.event === 'world-pick') { pick(m.seed); return; }
 
+    /* Die beiden Knöpfe im Streifen oben rechts. Sie stecken im Rahmen (dort
+       ist die Zeile), entscheiden aber nichts — was „aufhören" und „Vollbild
+       verlassen" bedeuten, weiß nur diese Seite. */
+    if (m.event === 'note') {
+      if (m.action === 'stop') {
+        watchEid = null;
+        takeover = null;
+        free = false;
+        // „Zurück zur eigenen Welt" heißt wörtlich das: auf dem Pult stand
+        // bis eben die Welt eines Kindes, und die gehört nicht der Lehrkraft.
+        if (worlds.length && worlds.map(String).indexOf(String(deskSeed)) < 0) {
+          deskSeed = worlds[0];
+        }
+        lastCmd = '';
+        push();
+        paintDesk();
+      } else if (m.action === 'exit') {
+        toggleFull();
+      }
+      return;
+    }
+
     if (m.event === 'world') {
       frameSeed = Number(m.seed);
+      // Gleich darauf kommt sein Bericht über die neue Welt — der ist der neue
+      // Vergleichsmaßstab und nicht die Arbeit von jemandem.
+      rebase = true;
       if (isPresenter()) { deskSeed = frameSeed; paintDesk(); }
       else { seed = frameSeed; touched[String(seed)] = Date.now(); saveLocal(); }
       return;
@@ -454,7 +528,30 @@
       // Am Beamer ist die Karte ein Notizblock: dort wird gezeigt und
       // ausprobiert, nicht gearbeitet. Was die Lehrkraft dort zieht,
       // gehört niemandem und wird nirgends gespeichert.
-      if (isPresenter() || (ctx && ctx.preview)) return;
+      if (isPresenter()) {
+        if (rebase) { rebase = false; sentGroups = groupsKey(m.groups); return; }
+        /* Ein Notizblock, auf dem man auch schreiben kann. Wer beim Zusehen
+           selbst eine Kachel zieht, übernimmt: das Zusehen hört auf, die Welt
+           des Kindes bleibt stehen. Vorher lief die Arbeit ins Leere — beim
+           nächsten Poll legte push() die Gruppierung des Kindes wieder auf,
+           und vorne sprang alles zurück.
+
+           Erkannt wird es am Vergleich mit dem, was zuletzt hineingegangen
+           ist: der Rahmen meldet jede aufgelegte Gruppierung zurück, und die
+           soll natürlich nichts auslösen. */
+        if (watchEid && groupsKey(m.groups) !== sentGroups) {
+          const w = watched();
+          takeover = w ? w.who : null;
+          watchEid = null;
+          deskSeed = Number(m.seed) || deskSeed;
+          lastCmd = '';
+          push();
+          paintDesk();
+        }
+        return;
+      }
+      rebase = false;
+      if (ctx && ctx.preview) return;
       const key = String(m.seed);
       store[key] = m.groups || [];
       touched[key] = Date.now();
@@ -507,93 +604,48 @@
 
   const $ = (id) => root && root.querySelector('#' + id);
 
+  /* Eine Zeile, und in ihr alles, was während der Stunde gedrückt wird: links
+     die vier Schritte, rechts die drei Werkzeuge.
+
+     Vorher standen hier vier Reihen — Phase, Aufdecken, Welt, Werkzeuge —,
+     und drei davon waren Auskunft statt Bedienung: die drei Welten der
+     Lehrkraft samt ihren Seeds stehen ohnehin in der Kopfzeile des Rahmens,
+     und die Hinweistexte daneben las nach dem ersten Mal niemand mehr. Was
+     eine Leinwand braucht, ist eine Reihe Knöpfe, die man aus fünf Metern
+     Entfernung noch trifft — und darüber die Karte. */
   function deskHTML() {
     return `
     <div class="wl-desk" id="wlDesk">
       <div class="wl-row">
-        <span class="wl-label">Phase</span>
         <div class="wl-seg" id="wlPhases"></div>
-        <span class="wl-hint" id="wlPhaseHint"></span>
-      </div>
-      <div class="wl-row" id="wlRevealRow" hidden>
-        <span class="wl-label">Aufdecken</span>
-        <div class="wl-seg">
-          <button type="button" class="wl-btn" data-reveal="rw" aria-pressed="false">🗺 Welt</button>
-          <button type="button" class="wl-btn" data-reveal="ra" aria-pressed="false">🐾 Tiere</button>
+        <div class="wl-seg wl-seg--end">
+          <button type="button" class="wl-btn wl-ghost" id="wlList" aria-expanded="false">Stand der Klasse</button>
+          <button type="button" class="wl-btn wl-ghost" id="wlFree" aria-pressed="false">Freier Modus</button>
+          <button type="button" class="wl-btn wl-ghost" id="wlFull" aria-pressed="false">⛶ Vollbild</button>
+          <a class="wl-btn wl-ghost" id="wlSheet" hidden target="_blank" rel="noopener">Arbeitsblatt</a>
         </div>
-        <span class="wl-hint" id="wlRevealHint"></span>
-      </div>
-      <div class="wl-row">
-        <span class="wl-label">Welt</span>
-        <div class="wl-seg" id="wlWorlds"></div>
-        <span class="wl-hint">Ihre eigenen — jedes Kind hat andere.</span>
-      </div>
-      <div class="wl-row wl-row--end">
-        <button type="button" class="wl-btn wl-ghost" id="wlList" aria-expanded="false">Stand der Klasse</button>
-        <button type="button" class="wl-btn wl-ghost" id="wlFree" aria-pressed="false">Freier Modus</button>
-        <button type="button" class="wl-btn wl-ghost" id="wlFull" aria-pressed="false">⛶ Vollbild</button>
-        <a class="wl-btn wl-ghost" id="wlSheet" hidden target="_blank" rel="noopener">Arbeitsblatt</a>
       </div>
       <div class="wl-list" id="wlPeople" hidden></div>
     </div>`;
   }
 
-  /* Was gerade auf der Leinwand läuft, in einem Satz — und zwar AM BILD und
-     nicht im Pult: im Vollbild ist das Pult weg, und dann ist dieser Streifen
-     die einzige Stelle, die „Ansicht von Mia" noch sagen kann. Er ist
-     zugleich der Ausgang: Esc kennt nicht jede Fernbedienung. */
-  const capHTML = `
-    <div class="wl-cap" id="wlCap" hidden>
-      <span class="wl-cap-text" id="wlCapText"></span>
-      <button type="button" class="wl-cap-x" id="wlCapStop" hidden title="zurück zur eigenen Welt">✕</button>
-      <button type="button" class="wl-cap-x wl-exit" id="wlCapExit" title="Vollbild verlassen">⛶</button>
-    </div>`;
-
   function paintDesk() {
     if (!isPresenter() || !root || !view) return;
     const phase = phaseOf(view);
+    const d = (view.state && view.state.data) || {};
 
     const segs = $('wlPhases');
     if (segs) {
-      segs.innerHTML = Object.keys(PHASES).map(n => {
-        const on = Number(n) === phase;
-        return `<button type="button" class="wl-btn wl-seg-btn" data-phase="${n}"
-                  aria-pressed="${on ? 'true' : 'false'}">${n} ${esc(PHASES[n].name)}</button>`;
-      }).join('');
-    }
-    const hint = $('wlPhaseHint');
-    if (hint) hint.textContent = PHASES[phase].hint;
-
-    /* Die beiden Schleier — nur in der Auflösung, denn nur dort tun sie
-       etwas. Ein Knopf, der in Phase 1 dasteht und nichts bewirkt (weil die
-       verdeckte Sicht dort erzwungen ist), erklärt sich niemandem. */
-    const revealRow = $('wlRevealRow');
-    if (revealRow) {
-      const on3 = phase === 3;
-      revealRow.hidden = !on3;
-      if (on3) {
-        const d = (view.state && view.state.data) || {};
-        for (const b of revealRow.querySelectorAll('button[data-reveal]')) {
-          b.setAttribute('aria-pressed', d[b.dataset.reveal] ? 'true' : 'false');
-        }
-        const rh = $('wlRevealHint');
-        if (rh) {
-          rh.textContent = !d.rw && !d.ra
-            ? 'Noch ist alles verdeckt — die Klasse sieht dasselbe wie eben.'
-            : (d.rw && d.ra ? 'Alles offen.'
-              : (d.rw ? 'Die Landschaft ist da, die Tiere bleiben Nummern.'
-                      : 'Die Tiere sind da, die Landschaft bleibt einfarbig.'));
-        }
-      }
-    }
-
-    const box = $('wlWorlds');
-    if (box) {
-      const ROMAN = ['I', 'II', 'III'];
-      box.innerHTML = worlds.map((s, i) => {
-        const on = !watchEid && String(s) === String(deskSeed);
-        return `<button type="button" class="wl-btn wl-seg-btn" data-seed="${s}"
-                  aria-pressed="${on ? 'true' : 'false'}">${ROMAN[i] || (i + 1)} · ${s}</button>`;
+      segs.innerHTML = STEPS.map(s => {
+        // Ein Schritt der Auflösung ist gedrückt, wenn SEIN Schleier oben ist —
+        // nicht schon dann, wenn die Phase läuft. Dass sie läuft, sagt der
+        // Rahmen darum (aria-current).
+        const on = s.veil ? (phase === 3 && !!d[s.veil]) : (phase === s.phase);
+        const now = phase === s.phase;
+        return `<button type="button" class="wl-btn wl-seg-btn" data-step="${s.id}"
+                  title="${esc(s.title)}"
+                  ${now ? 'aria-current="step"' : ''}
+                  aria-pressed="${on ? 'true' : 'false'}">${esc(s.label)}</button>`;
       }).join('');
     }
 
@@ -609,42 +661,45 @@
     const full = $('wlFull');
     if (full) full.setAttribute('aria-pressed', isFull() ? 'true' : 'false');
 
-    paintNow();
     paintPeople();
   }
 
   const isFull = () =>
     !!(document.fullscreenElement && root && document.fullscreenElement === root.querySelector('.wl-host'));
 
-  /* Der Streifen über dem Bild. Er meldet sich, wenn das, was vorne läuft,
-     nicht die eigene Welt der Lehrkraft ist — beim Zusehen und im freien
-     Modus. Der freie Modus MUSS auffallen: sonst schaltet jemand die Phase um
-     und wundert sich, dass die Klasse folgt (oder eben nicht). Im Vollbild
-     steht er immer, denn dort ist er auch der Ausgang. */
-  function paintNow() {
-    const cap = $('wlCap');
-    if (!cap) return;
-    const watch = watched();
-    const stop = $('wlCapStop');
-    const text = $('wlCapText');
-    let label = '';
-    let cls = '';
+  /* Was gerade vorne läuft, in einem Satz. Er geht als `note` in den Rahmen
+     und steht dort in der Kopfzeile hinter dem kleinen „i" — nicht mehr als
+     Kasten unten links über der Karte, wo er genau auf dem Abspielknopf lag.
+
+     Er meldet sich, wenn das, was vorne läuft, nicht die eigene Welt der
+     Lehrkraft ist: beim Zusehen, nach einer Übernahme und im freien Modus.
+     Der freie Modus MUSS auffallen — sonst schaltet jemand die Phase um und
+     wundert sich, dass die Klasse folgt (oder eben nicht). Im Vollbild steht
+     er immer, denn dort trägt er auch den Ausgang: Esc kennt nicht jede
+     Fernbedienung. */
+  function noteOf(watch) {
+    let text = '';
+    let kind = '';
+    let stop = false;
 
     if (watch) {
-      label = 'Ansicht von ' + watch.who + ' — folgt live';
-      cls = 'wl-cap--watch';
+      text = 'Ansicht von ' + watch.who + ' — folgt live';
+      kind = 'watch';
+      stop = true;
+    } else if (takeover) {
+      text = 'Welt von ' + takeover + ' — Sie ziehen selbst';
+      kind = 'own';
+      stop = true;
     } else if (free) {
-      label = 'Freier Modus — die Klasse sieht davon nichts.';
-      cls = 'wl-cap--free';
+      text = 'Freier Modus — die Klasse sieht davon nichts.';
+      kind = 'free';
+      stop = true;
     } else if (isFull()) {
       const i = worlds.map(String).indexOf(String(deskSeed));
-      label = (i >= 0 ? ['Welt I', 'Welt II', 'Welt III'][i] : 'Welt') + ' · ' + (deskSeed || '…');
+      text = (i >= 0 ? ['Welt I', 'Welt II', 'Welt III'][i] : 'Welt') + ' · ' + (deskSeed || '…');
     }
 
-    cap.hidden = !label;
-    cap.className = 'wl-cap' + (cls ? ' ' + cls : '');
-    if (text) text.textContent = label;
-    if (stop) stop.hidden = !watch && !free;
+    return { text: text, kind: kind, stop: stop, exit: isFull() };
   }
 
   /* Der Stand der Klasse. EINE Zeile je Person, und darin ihre drei
@@ -715,27 +770,46 @@
     const btn = e.target.closest ? e.target.closest('button, a') : null;
     if (!btn) return;
 
-    if (btn.dataset.phase) {
-      const res = await ctx.actions.setPhase(Number(btn.dataset.phase));
-      if (!res.ok) { ctx.toast(ctx.errText(res.error)); return; }
-      ctx.refresh();
-      return;
-    }
+    /* Ein Schritt der Stunde. Vier Knöpfe für drei Phasen: „3a" und „3b"
+       schalten die Auflösung ein UND heben ihren Schleier.
 
-    /* Aufdecken. Gesendet werden immer BEIDE Schalter: skill_room_set_state
-       ersetzt `data` als Ganzes (coalesce, kein Merge) — wer nur einen
-       schickt, löscht den anderen. */
-    if (btn.dataset.reveal) {
+       Erst der Schleier, dann die Phase. Andersherum stünde die Klasse für
+       einen Augenblick in Phase 3 mit noch nicht gesetztem Schleier — sichtbar
+       wäre das nur als Zucken, aber genau an dieser Stelle sieht ein Zucken
+       aus wie eine versehentliche Auflösung.
+
+       Gesendet werden immer BEIDE Schalter: skill_room_set_state ersetzt
+       `data` als Ganzes (coalesce, kein Merge) — wer nur einen schickt,
+       löscht den anderen. */
+    if (btn.dataset.step) {
+      const step = STEPS.find(s => s.id === btn.dataset.step);
+      if (!step) return;
+      const phase = phaseOf(view);
       const d = (view.state && view.state.data) || {};
-      const next = { rw: !!d.rw, ra: !!d.ra };
-      next[btn.dataset.reveal] = !next[btn.dataset.reveal];
-      const res = await ctx.actions.setData(next);
-      if (!res.ok) { ctx.toast(ctx.errText(res.error)); return; }
+      let data = null;
+
+      if (step.veil) {
+        data = { rw: !!d.rw, ra: !!d.ra };
+        // In der Auflösung ist der Knopf ein Schalter, von außerhalb ist er
+        // der Weg hinein — und dann ist „aufdecken" gemeint, nicht „umschalten".
+        data[step.veil] = phase === step.phase ? !data[step.veil] : true;
+      } else if (d.rw || d.ra) {
+        // Zurück in Phase 1 oder 2: die Schleier fallen wieder. Sonst wäre die
+        // nächste Auflösung schon aufgelöst, bevor jemand sie eröffnet hat.
+        data = { rw: false, ra: false };
+      }
+
+      if (data) {
+        const res = await ctx.actions.setData(data);
+        if (!res.ok) { ctx.toast(ctx.errText(res.error)); return; }
+      }
+      if (phase !== step.phase) {
+        const res = await ctx.actions.setPhase(step.phase);
+        if (!res.ok) { ctx.toast(ctx.errText(res.error)); return; }
+      }
       ctx.refresh();
       return;
     }
-
-    if (btn.dataset.seed) { pick(btn.dataset.seed); return; }
 
     if (btn.dataset.eid) {
       /* Jemandem zusehen. Der Tipp merkt sich die Beitrags-ID, den Rest macht
@@ -748,6 +822,8 @@
          denselben Platz bekommen hat. */
       watchEid = (watchEid === btn.dataset.eid) ? null : btn.dataset.eid;
       if (watchEid) free = false;
+      takeover = null;
+      lastCmd = '';
       push();
       paintDesk();
       return;
@@ -763,23 +839,14 @@
 
     if (btn.id === 'wlFree') {
       free = !free;
-      if (free) watchEid = null;   // eins von beidem, siehe pick()
+      if (free) { watchEid = null; takeover = null; }   // eins von beidem, siehe pick()
       lastCmd = '';
       push();
       paintDesk();
       return;
     }
 
-    if (btn.id === 'wlCapStop') {
-      watchEid = null;
-      free = false;
-      lastCmd = '';
-      push();
-      paintDesk();
-      return;
-    }
-
-    if (btn.id === 'wlFull' || btn.id === 'wlCapExit') { toggleFull(); return; }
+    if (btn.id === 'wlFull') { toggleFull(); return; }
   }
 
   /* Vollbild: nur noch die Karte. Für den Beamer ist das der Normalfall —
@@ -787,8 +854,8 @@
      keine Karte zeigt. Das Pult fährt hoch und bleibt an einem Fingerbreit
      greifbar (tool.css), denn die Phase weiterzuschalten ist genau das, was
      auf der Leinwand ansteht.
-     Genommen wird der ganze Kasten und nicht der Rahmen selbst: der Streifen
-     mit „Ansicht von Mia" gehört uns und läge sonst außerhalb des Bildes. */
+     Genommen wird der ganze Kasten und nicht der Rahmen selbst: das Pult
+     gehört uns und läge sonst außerhalb des Bildes. */
   function toggleFull() {
     const host = root && root.querySelector('.wl-host');
     if (!host) return;
@@ -803,10 +870,8 @@
   }
 
   function wireDesk() {
-    // Am Kasten und nicht am Pult: der Streifen über dem Bild hat eigene
-    // Knöpfe und steht außerhalb des Pults, damit er im Vollbild bleibt.
-    const host = root && root.querySelector('.wl-host');
-    if (host) host.addEventListener('click', onDeskClick);
+    const desk = $('wlDesk');
+    if (desk) desk.addEventListener('click', onDeskClick);
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -836,6 +901,9 @@
       listOpen = false;
       deskSeed = null;
       watchEid = null;
+      takeover = null;
+      sentGroups = '';
+      rebase = false;
       store = Object.create(null);
       touched = Object.create(null);
       seed = null;
@@ -847,7 +915,6 @@
         + '<div class="wl-stage">'
         +   '<iframe class="wl-frame" src="tools/wildclusters/index.html' + V + '" '
         +           'title="Wild Clusters" loading="eager"></iframe>'
-        +   (pres ? capHTML : '')
         + '</div>'
         + '</div>';
 
@@ -855,8 +922,9 @@
       if (pres) {
         wireDesk();
         // Esc verlässt das Vollbild an jedem Knopf vorbei — der Knopf und der
-        // Streifen müssen das trotzdem mitbekommen.
-        onFs = () => { paintDesk(); fit(); };
+        // Streifen im Rahmen müssen das trotzdem mitbekommen. Der Streifen
+        // trägt den Ausgang, also muss er kommen und gehen wie das Vollbild.
+        onFs = () => { paintDesk(); push(); fit(); };
         document.addEventListener('fullscreenchange', onFs);
       }
 

@@ -122,10 +122,26 @@ const flushFrames = () => {
   due.forEach((fn) => { framesRun++; fn(); });
 };
 
+/*
+ * Der zweite Weg in die Ziehgeste ist das Stillhalten (HOLD_MS in
+ * js/ui/signals.js). Ohne eine Uhr laesst sich das nicht pruefen - und mit
+ * einer echten muesste der Test warten. Der Mock legt die Rueckrufe deshalb
+ * beiseite; hold() zieht die Uhr vor, wenn der Test es will.
+ */
+const pendingHolds = new Map();
+let nextHoldId = 1;
+const runHolds = () => {
+  const due = [...pendingHolds.values()];
+  pendingHolds.clear();
+  due.forEach((fn) => fn());
+};
+
 const sandbox = {
   console, document: documentMock, Math, Object, Array, String, Number, parseInt, isFinite,
   setInterval: () => ++liveTimers,
   clearInterval: () => { liveTimers--; },
+  setTimeout: (fn) => { pendingHolds.set(nextHoldId, fn); return nextHoldId++; },
+  clearTimeout: (id) => { pendingHolds.delete(id); },
   requestAnimationFrame: (fn) => { pendingFrames.set(nextFrameId, fn); return nextFrameId++; },
   cancelAnimationFrame: (id) => { pendingFrames.delete(id); }
 };
@@ -499,7 +515,8 @@ check('Nach dem Ziehen aendert der Klick die Auswahl nicht',
   groupOf(4) >= 0 && auswahl() === nachDemZiehen && auswahl() === tiereHinter(4, 8),
   auswahl());
 
-// Mit dem Finger gehoert die senkrechte Bewegung dem Scrollen der Liste.
+// Mit dem Finger gehoert die senkrechte Bewegung dem Scrollen der Liste -
+// solange der Finger gleich losgewandert ist.
 panel.setSimulation(fakeSim(45));
 documentMock._hit = tileOf(12);
 fire('pointerdown', pickBtn(11), 0, 0, { pointerType: 'touch' });
@@ -507,11 +524,29 @@ fire('pointermove', pickBtn(11), 2, 60, { pointerType: 'touch' });
 fire('pointerup', pickBtn(11), 2, 60, { pointerType: 'touch' });
 check('Senkrecht wischen scrollt und gruppiert nicht',
   clusterBoxes().length === 0, clusterBoxes().length + ' Cluster');
+check('… und laesst keine Uhr laufen', pendingHolds.size === 0, pendingHolds.size + ' offen');
 documentMock._hit = tileOf(12);
 fire('pointerdown', pickBtn(11), 0, 0, { pointerType: 'touch' });
 fire('pointermove', pickBtn(11), 40, 6, { pointerType: 'touch' });
 fire('pointerup', pickBtn(11), 40, 6, { pointerType: 'touch' });
 check('Waagerecht ziehen gruppiert', clusterBoxes().length === 1);
+
+/*
+ * Und der Weg, ohne den die Aufgabe mit dem Finger nicht zu machen ist: die
+ * Cluster stehen OBEN, die freien Kacheln darunter - das Ziehen geht also
+ * fast immer nach oben, und senkrecht gehoert dem Blaettern. Wer vorher
+ * stillhaelt, hat kein Blaettern gemeint; danach zaehlt jede Richtung.
+ */
+panel.setSimulation(fakeSim(45));
+documentMock._hit = tileOf(31);
+fire('pointerdown', pickBtn(30), 0, 0, { pointerType: 'touch' });
+check('Aufsetzen stellt die Uhr', pendingHolds.size === 1);
+runHolds();
+fire('pointermove', pickBtn(30), 1, -70, { pointerType: 'touch' });
+fire('pointerup', pickBtn(30), 1, -70, { pointerType: 'touch' });
+check('Nach dem Stillhalten zieht auch die senkrechte Bewegung',
+  clusterBoxes().length === 1 && groupOf(30) === groupOf(31),
+  clusterBoxes().length + ' Cluster');
 
 // Abbruch: der Browser nimmt die Geste zurueck (Anruf, Systemgeste).
 panel.setSimulation(fakeSim(45));

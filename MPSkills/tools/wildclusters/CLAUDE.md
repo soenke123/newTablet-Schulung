@@ -290,6 +290,21 @@ die Liste, waagerecht beginnt das Ziehen. Der Klick, den der Browser nach einem 
 wird verschluckt (`suppressClick`) – und die Sperre wird **ganz oben im `pointerdown`** wieder
 gelöst, vor jeder Abbruchbedingung, sonst bleibt sie beim Aufsetzen auf ein Auge stehen.
 
+⚠️ **Waagerecht allein reichte nicht, und das war kein Feinschliff.** Die Cluster sammeln sich
+*oben*, die freien Kacheln stehen darunter – das Ziehen, das die Aufgabe verlangt, geht damit fast
+immer nach oben, und genau diese Richtung gehörte dem Blättern. Deshalb gibt es einen zweiten Weg
+in die Geste: **stillhalten** (`HOLD_MS`, 220 ms, `armHold`). Der Browser hat zu diesem Zeitpunkt
+nichts angefangen (der Finger stand), und ab da hält ein **nicht-passiver `touchmove`-Zuhörer** das
+Blättern auf – `touch-action` allein kann das nicht mehr, die Eigenschaft wird zu Beginn der Geste
+ausgewertet. Wandert der Finger vorher los, ist es ein Wisch und die Geste gehört der Liste.
+
+Dazu sucht `dropUnder` das Ziel nicht nur genau unter dem Finger, sondern auch **14 px daneben**
+(`PROBE`): zwischen zwei Kacheln liegt der freie Bereich, und der nimmt von einer freien Kachel
+nichts an – ein Ablegen zwei Pixel neben dem Ziel tat deshalb gar nichts und sah aus wie ein
+Aussetzer. Weitergesucht wird nur, wenn unter dem Finger nichts Zuständiges liegt; die **eigene
+Kachel und das eigene Cluster sind eine Absage** (`partOfSource`) und kein Fehlgriff – der Nachbar
+daneben wäre die falsche Antwort darauf.
+
 Je Kachel zwei getrennte Bedienelemente: die Nummer wählt das Tier aus (wie ein Tipp auf das Tier
 selbst), das Auge blendet es aus. Ein Cluster hat ein eigenes Auge für alle seine Mitglieder, über
 der Liste blendet ein weiteres alle auf einmal aus. Die Anzahl der Tiere schwankt je Seed (36 bis
@@ -354,7 +369,11 @@ Verborgen wird die *Art*, nicht das *Verhalten* – Flug (Schatten) und die Form
 sichtbar, denn genau danach soll gruppiert werden.
 
 **Verdeckt steht an jedem Tier zusätzlich seine Kachelnummer** (`drawLabel` in
-`agentRenderer.js`, gespeist aus `sim.signalOf`). Verdeckt sind alle Tiere gleich groß und gleich
+`agentRenderer.js`, gespeist aus `sim.signalOf`) – und zwar, solange **irgendetwas** verdeckt ist,
+nicht nur solange die Tiere es sind. Der Fall, um den es geht, ist die Auflösung: die Lehrkraft
+deckt die Tiere auf, die Landschaft bleibt zu, und jetzt steht das Bild neben der Zahl („07 ist ein
+Fuchs"). Fiele die Nummer genau da weg, wäre die Zuordnung zur Kachel in dem Augenblick verloren,
+in dem sie gezogen werden soll. Erst ganz offen – Landschaft *und* Tiere – ist sie weg. Verdeckt sind alle Tiere gleich groß und gleich
 geformt; bei rund vierzig Signalen liegen benachbarte Farbtöne dicht genug beieinander, dass die
 Farbe allein die Frage „welche Nummer ist das?" nicht mehr sicher beantwortet. Die Zahl verrät
 nichts – sie ist genau die der Kachel, **gleich aufgefüllt** („07", nicht „7"), sonst wären es zwei
@@ -406,19 +425,20 @@ tut ohne Rahmen gar nichts – kein Listener, kein DOM, keine Sperre.
 MPSkills-Seite (j.html · lehrer.html)
  └─ tools/wildclusters/tool.js       Rolle, Raum-Zustand, Steuerpult, Ergebnisse
      └─ <iframe> index.html
-          ▲ wc:cmd    { seed, worlds, phase, masked, locks, groups }
-          ▼ wc:event  ready · world · clusters · world-pick
+          ▲ wc:cmd    { seed, worlds, phase, masked, locks, groups, note }
+          ▼ wc:event  ready · world · clusters · world-pick · note
         js/ui/bridge.js → WILDCLUSTERS.*
 ```
 
 **Drei Raumphasen, zwei Aufzeichnungsphasen.** Die Zahl im Raum meint den Abschnitt der Stunde,
 die Zahl in `setPhase` das Fenster in der Aufzeichnung – sie sind nicht dasselbe:
 
-| Raum | `setPhase` | Sicht | Kopfzeile |
+| Pult | Raum | `setPhase` | Sicht |
 |---|---|---|---|
-| 1 Gruppieren | 0 (Tag 1–5) | verdeckt, erzwungen | drei Welten |
-| 2 Nachzügler | 1 (Tag 6–10) | verdeckt, erzwungen | drei Welten |
-| 3 Auflösung | 1 (Tag 6–10) | **die Lehrkraft deckt auf** (`data.rw` / `data.ra`) | drei Welten + eigener Seed |
+| 1 Gruppieren | 1 | 0 (Tag 1–5) | verdeckt, erzwungen |
+| 2 Nachzügler | 2 | 1 (Tag 6–10) | verdeckt, erzwungen |
+| 3a Welt auflösen | 3 | 1 (Tag 6–10) | `data.rw = true` – Landschaft offen, Tiere Nummern |
+| 3b Tiere aufdecken | 3 | 1 (Tag 6–10) | `data.ra = true` – Tiere offen, Nummer bleibt daneben |
 
 Phase 3 nimmt der Karte nichts weg, sie gibt nur den Blick frei – und zwar in zwei Hälften:
 `rw` deckt die Landschaft auf, `ra` die Tiere, beide unabhängig (`maskOf(view)` in `tool.js`).
@@ -427,6 +447,25 @@ ans Steuerpult macht daraus ein Ereignis. Der Sichtknopf auf dem Tablet bleibt *
 gesperrt (sonst deckt das erste Kind alles auf, bevor die Frage gestellt ist) – und weil er nur
 zwei Stellungen kennt, aber vier Zustände möglich sind, blendet `locks.view` ihn im Raum ganz aus.
 Eine vierte Phase gibt es nicht.
+
+**Vier Knöpfe für drei Phasen** (`STEPS` in `tool.js`): „3a" und „3b" schalten die Phase *und*
+heben ihren Schleier, erst `setData`, dann `setPhase` (andersherum stünde die Klasse einen
+Augenblick in der Auflösung mit noch nicht gesetztem Schleier). Ein Sprung zurück auf 1 oder 2
+setzt beide Schleier zurück – sonst wäre die nächste Auflösung schon aufgelöst, bevor jemand sie
+eröffnet. Eingerastet ist ein Auflösungsschritt, wenn **sein** Schleier oben ist; dass die Phase
+läuft, sagt `aria-current="step"`.
+
+**Das Pult ist eine Zeile.** Links die vier Schritte, rechts Stand der Klasse · freier Modus ·
+Vollbild. Was früher darüber stand – die drei eigenen Welten mit ihren Seeds und je ein
+Hinweistext pro Reihe – war Auskunft und keine Bedienung: die Welten stehen ohnehin in der
+Kopfzeile des Rahmens (`renderWorlds`), und was auf einer Leinwand zählt, sind Knöpfe, die man
+aus fünf Metern trifft.
+
+⚠️ **Im Rahmen fängt die Karte verdeckt an** (`WC_EMBEDDED` in `app.js`), und der Schleier wird
+über die Brücke **vor** dem Weltaufbau gesetzt, nicht erst im `worldHook`. Der Aufbau ist
+zweistufig (erst das Bild, dann zehn Tage Tierleben) und dauert auf einem Tablet mehrere Sekunden –
+wer den Schleier danach setzt, zeigt der Klasse in genau dieser Zeit die Landschaft, die sie noch
+nicht sehen soll. Beim Neuladen der Seite jedes Mal.
 
 **Erzwungen heißt zweimal gesperrt.** Ein Knopf, den man wegnimmt, ist keine Sperre: dieselbe
 Wirkung hängt an einer Taste. `bridge.js` setzt deshalb `viewModeBtn.disabled` **und** schluckt `V`
@@ -475,6 +514,18 @@ wechselt oder eine Gruppe zieht, geht die Leinwand mit (Verzögerung: 1,5 s Brem
 bis zu 3 s Poll). Ein zweiter Tipp beendet es, eine eigene Weltwahl und der freie Modus ebenso –
 zusehen und selbst steuern schließen sich aus.
 
+**Und wer beim Zusehen selbst eine Kachel zieht, übernimmt** (`takeover`). Vorher lief diese
+Arbeit ins Leere: der nächste Poll legte die Gruppierung des Kindes wieder auf, und vorne sprang
+alles zurück. Erkannt wird es am Vergleich mit `sentGroups` – was zuletzt *hineingegangen* ist,
+meldet der Rahmen zurück, und das darf nichts auslösen. Zwei Berichte des Rahmens sind deshalb
+ausdrücklich ausgenommen:
+
+* alles, was ein Befehl von oben auslöst (`applying` in `bridge.js` – der Wechsel in Phase 2
+  schiebt die Nachzügler von selbst zusammen und meldet das, *bevor* die mitgeschickte
+  Gruppierung aufgelegt ist), und
+* der Bericht direkt nach einem Weltaufbau (`rebase` in `tool.js`, gesetzt beim `world`-Ereignis) –
+  der ist der neue Vergleichsmaßstab und nicht die Arbeit von jemandem.
+
 Deshalb steht `ws` mit im Beitrag: der Beamer hat den Sitzplatz der Verfasserin nicht (ein Beitrag
 trägt einen Namen, keine Nummer) und könnte sonst nur „Welt 482917" sagen, nicht „Welt II".
 
@@ -482,8 +533,16 @@ trägt einen Namen, keine Nummer) und könnte sonst nur „Welt 482917" sagen, n
 Seitenfuß der MPSkills-Seite sind auf einer Leinwand nichts als Wand ohne Karte. Das Steuerpult
 fährt dabei hoch und bleibt an einem Fingerbreit greifbar (`:fullscreen .wl-desk`, `translateY` +
 `:hover`) – die Phase weiterzuschalten ist genau das, was auf der Leinwand ansteht, und dafür jedes
-Mal das Vollbild zu verlassen wäre ein Bruch. Der Streifen unten links (`.wl-cap`) sagt, was läuft
-(„Ansicht von Mia", „Freier Modus") und trägt den Ausgang, denn Esc kennt nicht jede Fernbedienung.
+Mal das Vollbild zu verlassen wäre ein Bruch.
+
+**Was gerade läuft, steht in der Kopfzeile des Rahmens hinter dem `i`** (`note` im Befehl,
+`renderNote` in `bridge.js`): „Ansicht von Mia", „Welt von Mia — Sie ziehen selbst", „Freier
+Modus", im Vollbild die laufende Welt. Er trägt auch den Ausgang aus dem Vollbild, denn Esc kennt
+nicht jede Fernbedienung. Vorher war das ein Kasten über der Karte unten links (`.wl-cap`) – und
+lag damit genau auf dem Abspielknopf. Der Streifen steht im **Rahmen**, obwohl ihn die Seite
+schickt: nur dort gibt es die Zeile, in die er gehört. Seine beiden Knöpfe entscheiden nichts, sie
+melden nach oben (`wc:event note`) – was „aufhören" und „Vollbild verlassen" bedeuten, weiß nur
+die Seite. Der Name darin geht über `textContent` hinein und nie über `innerHTML`.
 
 **Die Gruppierung gehört zur Welt.** Sie geht über zwei neue Türen in `js/ui/signals.js`:
 `panel.groups()` gibt `[{ m: Signalnummern, c: Farbe }]` heraus, `panel.applyGroups(list)` legt

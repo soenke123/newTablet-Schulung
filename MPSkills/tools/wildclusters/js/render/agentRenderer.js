@@ -261,10 +261,20 @@
           colored ? colorOf(view, i) : null);
       }
 
-      // Die Nummern zuletzt und in einem eigenen Durchgang: sonst deckt das
-      // naechste Tier die Zahl des vorigen zu, und gerade dort, wo mehrere
-      // beieinanderstehen, ist sie am noetigsten.
-      if (view.masked) {
+      /* Die Nummern zuletzt und in einem eigenen Durchgang: sonst deckt das
+         naechste Tier die Zahl des vorigen zu, und gerade dort, wo mehrere
+         beieinanderstehen, ist sie am noetigsten.
+
+         Sie stehen, solange irgendetwas verdeckt ist - und nicht nur, solange
+         die TIERE es sind. Der Fall, um den es geht, ist die Aufloesung: die
+         Lehrkraft deckt die Tiere auf, die Landschaft bleibt zu, und jetzt
+         steht das Bild neben der Zahl ("07 ist ein Fuchs"). Faellt die Nummer
+         in diesem Augenblick weg, ist die Zuordnung zur Kachel genau dann
+         verloren, wenn sie gezogen werden soll.
+
+         Erst offen - Landschaft UND Tiere - sind vierzig Zahlen ueber der
+         Karte nur noch Rauschen. */
+      if (view.masked || view.maskedWorld) {
         for (k = 0; k < order.length; k++) {
           i = order[k];
           if (gone(view, i)) continue;
@@ -623,9 +633,11 @@
    * benachbarte Farbtoene dicht genug beieinander, dass "welche Nummer ist
    * das?" auf der Karte nicht mehr sicher zu beantworten ist. Die Zahl macht
    * daraus wieder eine Antwort - und sie verraet nichts, denn sie ist genau
-   * das, was auch auf der Kachel steht. In der offenen Sicht bleibt sie weg:
-   * dort steht das Sprite fuer sich, und vierzig Zahlen ueber der Landschaft
-   * waeren nur Rauschen.
+   * das, was auch auf der Kachel steht. Sie bleibt auch stehen, wenn die
+   * Lehrkraft die TIERE aufdeckt und die Landschaft noch zu ist - dann steht
+   * das Bild neben der Zahl, und genau daraus besteht die Aufloesung. Erst in
+   * der ganz offenen Sicht faellt sie weg: dort steht das Sprite fuer sich,
+   * und vierzig Zahlen ueber der Landschaft waeren nur Rauschen.
    *
    * Schriftgroesse und Abstand rechnen in Bildschirmpixeln (geteilt durch den
    * Zoom), sonst waere die Zahl herausgezoomt groesser als das Tier darunter.

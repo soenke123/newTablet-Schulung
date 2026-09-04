@@ -23,17 +23,18 @@ passiert:
   bekommt andere**. Nebenan zu schauen hilft also nicht; die Frage „wen hast du zusammengelegt?"
   ist nur an der eigenen Karte zu beantworten. Wer die Welt wechselt, findet seine Gruppen beim
   Zurückwechseln wieder vor.
-* **Drei Phasen**, und weiter schaltet nur die Lehrkraft:
+* **Vier Knöpfe für drei Phasen**, und weiter schaltet nur die Lehrkraft:
   1. **Gruppieren** – Tag 1–5, verdeckte Sicht. Es gibt nichts als Bewegung.
   2. **Nachzügler** – Tag 6–10. Fünf Fremde sind dazugekommen und stehen als eigenes Cluster da.
-  3. **Auflösung** – jetzt deckt die Lehrkraft auf, und zwar in zwei Schritten, wenn sie mag:
-     **Welt** (die Landschaft kommt zurück, die Tiere bleiben Nummern) und **Tiere** (die Tiere
-     kommen zurück, die Landschaft bleibt einfarbig) – einzeln oder beides. Jetzt zeigt sich, ob
-     in einer Gruppe wirklich nur Rehe lagen. Ab hier darf auch ein eigener Seed eingetippt
-     werden.
-* **Am Beamer** sieht die Lehrkraft dieselbe Karte (drei eigene Welten zum Vorführen), dazu ein
-  Steuerpult: Phase weiter, aufdecken, Vollbild – und den **Stand der Klasse**, eine Zeile je
-  Person:
+  3. Die **Auflösung** in zwei Handgriffen, und die stehen als eigene Schritte daneben:
+     **3a Welt auflösen** (die Landschaft kommt zurück, die Tiere bleiben Nummern) und
+     **3b Tiere aufdecken** (die Tiere bekommen ihr Bild, die Nummer bleibt daneben stehen) –
+     einzeln, nacheinander oder beides. Jetzt zeigt sich, ob in einer Gruppe wirklich nur Rehe
+     lagen. Ab hier darf auch ein eigener Seed eingetippt werden.
+     Ein Sprung zurück auf 1 oder 2 deckt wieder zu.
+* **Am Beamer** sieht die Lehrkraft dieselbe Karte (drei eigene Welten zum Vorführen, oben in der
+  Kopfzeile zu wählen), dazu eine Reihe Knöpfe: die vier Schritte links, rechts **Stand der
+  Klasse**, **freier Modus** und **Vollbild**. Der Stand der Klasse ist eine Zeile je Person:
 
   ```
   Mia     Welt I (2 Cluster) · Welt II (4 Cluster, gerade hier) · Welt III (–)     ▸
@@ -41,9 +42,13 @@ passiert:
 
   Ein Tipp auf die Zeile legt vorne auf, was diese Person **gerade** vor sich hat – ihre Welt mit
   ihren Gruppen – und **bleibt dran**: wechselt sie die Welt oder zieht sie eine Gruppe, geht die
-  Leinwand ein paar Sekunden später mit. Ein zweiter Tipp beendet es.
-  Im **Vollbild** ist nur noch die Karte zu sehen; das Steuerpult fährt hoch und kommt zurück,
-  sobald der Zeiger den Streifen am oberen Rand berührt. Unten links steht, wessen Ansicht läuft.
+  Leinwand ein paar Sekunden später mit. Ein zweiter Tipp beendet es. Wer stattdessen **selbst
+  eine Kachel zieht**, übernimmt: das Zusehen hört auf, die Welt des Kindes bleibt vorne stehen,
+  und was jetzt gezogen wird, hält (vorher warf der nächste Abgleich es zurück).
+  Im **Vollbild** ist nur noch die Karte zu sehen; die Knopfreihe fährt hoch und kommt zurück,
+  sobald der Zeiger den Streifen am oberen Rand berührt. Was gerade läuft, steht **in der
+  Kopfzeile hinter dem `i`** („Ansicht von Mia", „Freier Modus") – dort steht auch der Ausgang
+  aus dem Vollbild.
   Ein **freier Modus** hebt alle Sperren auf, ohne dass die Klasse etwas davon merkt.
 
 Auf den Tablets der Klasse steht **nur die Karte**: kein Erklärkasten, keine Kontrollanzeige.
@@ -64,7 +69,7 @@ Alles davon steht auch im Programm, hinter dem **`i`** oben rechts in der Kopfze
 | Zoomen | Mausrad, Doppelklick | Zwei Finger, Doppeltipp |
 | Gesamtansicht | Taste `R` oder „Ansicht zurücksetzen" | Button, Doppeltipp |
 | Tier verfolgen | Anklicken | Antippen |
-| Signale gruppieren | Kachel auf Kachel ziehen | Kachel waagerecht auf Kachel ziehen |
+| Signale gruppieren | Kachel auf Kachel ziehen | waagerecht ziehen – oder kurz gedrückt halten, dann in jede Richtung |
 | Aus dem Cluster lösen | In den freien Bereich ziehen | dito |
 | Zeit an/aus | Leertaste | Play-Knopf |
 | Eine Stunde / ein Tag springen | `←` `→` bzw. mit `Shift` | Zeitleiste ziehen |

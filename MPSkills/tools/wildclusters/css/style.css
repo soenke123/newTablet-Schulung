@@ -338,7 +338,14 @@ kbd {
  * innen jeweils vier Spalten Kacheln. Die Anzahl der Tiere schwankt je Seed,
  * deshalb beliebig hoch statt fest 4x10.
  */
+/* Nichts hier ist Text zum Markieren, und der Versuch stoert: mit der Maus
+   faengt ein Druck auf den Clusterkopf sonst eine Auswahl an, die mit dem
+   Ziehen um dieselbe Bewegung kaempft; mit dem Finger blendet ein langer
+   Druck die Lupe ein - und genau darauf beruht hier das Aufnehmen. */
 .signals-grid {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -383,8 +390,17 @@ kbd {
   border-radius: 9px;
   background: #fff;
   overflow: hidden;
-  /* Senkrecht scrollt die Liste weiter, waagerecht beginnt das Ziehen. */
+  /* Senkrecht scrollt die Liste weiter, waagerecht beginnt das Ziehen - und
+     wer stillhaelt, bekommt die Kachel in die Hand (js/ui/signals.js). */
   touch-action: pan-y;
+}
+
+/* Mit dem Finger ist eine 34 px hohe Kachel knapp: sie ist Ziel fuer das
+   Aufsetzen UND fuer das Ablegen, und danebengegriffen heisst hier "es tut
+   nichts". Nur bei grobem Zeiger - mit der Maus kostet es nur Platz. */
+@media (pointer: coarse) {
+  .signal { min-height: 42px; }
+  .signal-eye { width: 28px; }
 }
 
 /*
@@ -850,3 +866,54 @@ body.wc-no-view #viewModeBtn { display: none; }
    Lehrkraft. Auf den Tablets der Klasse ist die Karte die Aufgabe, und was zu
    tun ist, sagt der Raum. */
 body.wc-no-info #infoBtn { display: none; }
+
+/* Was gerade vorne laeuft: „Ansicht von Mia", „Freier Modus". Er steht hinter
+   dem „i" in derselben Zeile und nicht mehr als Kasten unten links auf der
+   Karte - dort lag er auf dem Abspielknopf.
+   Nur die Lehrkraft bekommt ihn (js/ui/bridge.js schickt ihn nur dorthin). */
+.wc-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  max-width: 42vw;
+  padding: 6px 8px 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--bark);
+  border-radius: 999px;
+}
+
+/* [hidden] kommt aus dem Stylesheet des Browsers und verliert gegen jede
+   eigene display-Regel - ohne diese Zeile ginge der Streifen auf und nie
+   wieder zu. */
+.wc-note[hidden] { display: none; }
+
+.wc-note-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wc-note--watch { background: var(--leaf-dark); }
+.wc-note--own { background: var(--bark); }
+.wc-note--free { background: #9a5b18; }
+
+.wc-note-x {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.18);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.wc-note-x:hover { background: rgba(255, 255, 255, 0.32); }

@@ -580,8 +580,11 @@ console.log('\nTiere:');
   layer.setMaskedAgents(false);
   const agentsOnly = new Set(stylesDuring(() => renderer.draw()));
   check('Nur die Tiere: die Landschaft ist wieder zugedeckt', agentsOnly.has(skyNow()));
-  check('… und keine Nummer steht mehr auf der Karte',
-    textsDuring(() => renderer.draw()).length === 0);
+  // Das ist der Augenblick der Aufloesung: das Bild steht neben der Zahl.
+  // Faellt die Nummer hier weg, ist die Zuordnung zur Kachel genau dann
+  // verloren, wenn sie gezogen werden soll.
+  check('… und die Nummer bleibt neben dem Tier stehen',
+    textsDuring(() => renderer.draw()).length === sim.agents.length);
   check('… der Bau ist da, er gehoert zum Tier', agentsOnly.has(burrowRim));
 
   renderer.setMasked(false);

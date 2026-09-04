@@ -82,7 +82,7 @@
        Terme (0115) stand die getippte Variable in Versalien da, die
        Hochzahl als „^" und die Hochzahl-Taste tat nichts, weil das
        Gerät noch die tool.js von davor hatte. */
-    const v = '?v=20260903c';
+    const v = '?v=20260904a';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf

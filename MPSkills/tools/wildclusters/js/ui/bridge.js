@@ -53,6 +53,13 @@
   var WC = null;              // WILDCLUSTERS, sobald es steht
   var ready = false;
   var busy = false;           // zwischen "baue Welt" und "Welt steht"
+  /* Waehrend ein Befehl von oben ausgefuehrt wird. Was die Anwendung dabei an
+     Gruppierung meldet, ist die Folge dieses Befehls und keine Handlung - und
+     nach oben durchgelassen sieht es genau danach aus. Der Fall, an dem es
+     auffiel: ein Wechsel in Phase 2 schiebt die Nachzuegler von selbst zu
+     einem Haufen zusammen und meldet das, noch bevor die mitgeschickte
+     Gruppierung aufgelegt ist. */
+  var applying = false;
   var pendingGroups = null;   // was nach dem Aufbau aufgelegt wird
   var pendingPhase = null;
   /* undefined heisst "war nicht gemeint", null heisst "gib die Sicht frei" -
@@ -73,6 +80,8 @@
   var noDetails = false;
   var worldsBox = null;
   var shownWorlds = '';
+  var noteBox = null;
+  var shownNote = '';
 
   /* ─── nach oben ─────────────────────────────────────────────────────── */
 
@@ -102,8 +111,14 @@
   });
 
   function apply(cmd) {
+    applying = true;
+    try { applyNow(cmd); } finally { applying = false; }
+  }
+
+  function applyNow(cmd) {
     if (cmd.locks) applyLocks(cmd.locks);
     if (cmd.worlds) renderWorlds(cmd.worlds, cmd.seed);
+    if ('note' in cmd) renderNote(cmd.note);
 
     // Eine Gruppierung kommt nur mit, wenn sie auch aufgelegt werden soll -
     // die Seite schickt sie beim Weltwechsel und wenn am Beamer eine fremde
@@ -115,6 +130,13 @@
     if (wantSeed && wantSeed !== String(lastSeed)) {
       pendingPhase = cmd.phase != null ? cmd.phase : null;
       pendingMasked = cmd.masked;
+      /* Der Schleier VOR dem Aufbau und nicht erst danach. Ein Weltaufbau ist
+         zweistufig (Bild, dann zehn Tage Tierleben) und dauert auf einem
+         Tablet mehrere Sekunden - wer erst im worldHook verdeckt, zeigt die
+         Landschaft genau so lange. Nach dem Aufbau wird es trotzdem noch
+         einmal gesetzt (pendingMasked): der Aufbau selbst kann daran nichts
+         aendern, aber verlassen wollen wir uns darauf nicht. */
+      if (cmd.masked !== undefined) enforceMasked(cmd.masked);
       busy = true;
       WC.rebuild(wantSeed);
       return;   // der Rest passiert, wenn die Welt steht
@@ -162,6 +184,57 @@
     }
     html += '<span class="worlds-seed">Welt ' + (current != null ? current : '…') + '</span>';
     worldsBox.innerHTML = html;
+  }
+
+  /* ─── Was gerade vorne laeuft ───────────────────────────────────────────
+     Ein Streifen fuer die Lehrkraft, und zwar IN DER KOPFZEILE hinter dem
+     kleinen „i" - nicht als Kasten ueber der Karte. Dort lag er frueher unten
+     links und damit genau auf dem Abspielknopf; und eine Zeile, die sagt „Sie
+     sehen gerade Mias Welt", gehoert ohnehin zu den anderen Angaben ueber die
+     Ansicht und nicht mitten ins Bild.
+
+     Er steht im Rahmen und nicht darum herum, obwohl die Seite ihn schickt:
+     nur hier gibt es die Zeile, in der er stehen soll. Seine beiden Knoepfe
+     entscheiden deshalb auch nichts, sie melden nur nach oben ('note') - das
+     Zusehen zu beenden und das Vollbild zu verlassen ist Sache der Seite.   */
+
+  function renderNote(note) {
+    var text = note && note.text ? String(note.text) : '';
+    var exit = !!(note && note.exit);
+    var stop = !!(note && note.stop);
+    var kind = (note && note.kind) || '';
+    var key = text + '|' + kind + '|' + (stop ? 1 : 0) + '|' + (exit ? 1 : 0);
+    if (key === shownNote) return;
+    shownNote = key;
+
+    // Auf einem Tablet kommt hier immer "nichts" an. Dafuer muss kein Knoten
+    // entstehen, der dann sein Leben lang leer in der Kopfzeile haengt.
+    if (!noteBox && !text && !exit) return;
+
+    var controls = document.querySelector('.controls');
+    if (!controls) return;
+
+    if (!noteBox) {
+      noteBox = document.createElement('div');
+      // Ans Ende und damit hinter das „i" - das ist die Stelle, an der in
+      // dieser Zeile Auskuenfte ueber die Ansicht stehen.
+      controls.appendChild(noteBox);
+      noteBox.addEventListener('click', function (e) {
+        var b = e.target && e.target.closest ? e.target.closest('button[data-note]') : null;
+        if (b) send('note', { action: b.getAttribute('data-note') });
+      });
+    }
+
+    noteBox.className = 'wc-note' + (kind ? ' wc-note--' + kind : '');
+    noteBox.hidden = !(text || exit);
+    noteBox.innerHTML = '<span class="wc-note-text"></span>'
+      + (stop ? '<button type="button" class="wc-note-x" data-note="stop"'
+        + ' title="zurück zur eigenen Welt">✕</button>' : '')
+      + (exit ? '<button type="button" class="wc-note-x" data-note="exit"'
+        + ' title="Vollbild verlassen">⛶</button>' : '');
+    // textContent und nicht in das HTML hinein: in dem Streifen steht ein
+    // Name, und den hat jemand selbst eingegeben.
+    noteBox.querySelector('.wc-note-text').textContent = text;
   }
 
   /* ─── Sperren ──────────────────────────────────────────────────────── */
@@ -261,7 +334,8 @@
       // Gruppierung (sie baut sich fuer die neue Welt neu auf). Nach oben
       // durchgelassen sieht das aus wie "die Person hat alles aufgeloest" -
       // und der naechste Speichervorgang loeschte ihre Arbeit.
-      if (busy || !lastSeed) return;
+      // Dasselbe gilt fuer alles, was ein Befehl von oben ausloest (applying).
+      if (busy || applying || !lastSeed) return;
       send('clusters', { seed: lastSeed, phase: WC.phase, groups: groups });
     });
 
