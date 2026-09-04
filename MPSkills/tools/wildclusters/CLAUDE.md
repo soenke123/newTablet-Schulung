@@ -640,6 +640,19 @@ schiebt die Anwendung beim Aufbau die Nachzügler von selbst zu einem Haufen zus
 `js/ui/signals.js`), und `applyGroups([])` räumte genau den wieder weg. Beim Zusehen ist es
 umgekehrt – dort **ist** die leere Liste der Stand des Kindes und gehört aufgelegt.
 
+⚠️ **Der Rahmen baut auch von sich aus, und sein Bericht darüber ist keine
+Gruppierung** (`restore` in `tool.js`). Seed-Feld und „Neue Welt" liegen *im*
+Rahmen (ab der Auflösungsphase offen, am Pult im freien Modus); wer eine seiner
+drei Welten so wieder aufmacht, hat keinen der drei Knöpfe getippt – es ging
+also kein Befehl von außen hinein und mit ihm keine Gruppierung, und der
+Bericht direkt danach meldet eine leere Welt. Ohne Riegel schrieb genau diese
+Leere die Arbeit im Bestand tot (`remember`), und zwar endgültig: auf dem
+Gerät, auf dem Server und in jeder Welt, die man danach noch aufmachte.
+Deshalb wird beim **ersten** Bericht nach einem Aufbau (`rebase`) verglichen –
+liegt hier eine Gruppierung zu dieser Welt und meldet der Rahmen eine andere,
+wird sie *aufgelegt* statt überschrieben. Beim Zusehen gilt das nicht: dort
+gehört die Welt dem Kind. `tools/roomtest.js` spielt beide Rollen durch.
+
 ⚠️ **`element.hidden = true` wirkt in `tool.css` nur, wenn es dort auch steht.** `[hidden]`
 kommt aus dem Stylesheet des Browsers, und jede eigene Regel mit `display:` ist stärker – ein
 `.wl-list { display: flex }` baut damit einen Kasten, der sich öffnen, aber nie wieder schließen

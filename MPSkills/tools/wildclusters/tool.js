@@ -420,6 +420,36 @@
       .join('|');
   }
 
+  /**
+   * Der Rahmen hat eine Welt gebaut, ohne dass wir es waren — und weiß nichts
+   * von der Arbeit, die zu ihr gehört.
+   *
+   * Das Seed-Feld und „Neue Welt" liegen IM Rahmen (ab der Auflösungsphase
+   * offen, am Pult im freien Modus). Wer eine seiner drei Welten so wieder
+   * aufmacht, hat nicht auf einen der drei Knöpfe getippt: es ging kein Befehl
+   * von hier hinein, also auch keine Gruppierung — und der Bericht, der gleich
+   * darauf kommt, meldet eine leere Welt. Ohne diesen Riegel schriebe genau
+   * diese Leere die Arbeit im Bestand tot (`remember`), und zwar endgültig:
+   * auf dem Gerät, auf dem Server und in jeder Welt, die man danach noch
+   * aufmacht.
+   *
+   * Auflegen statt überschreiben also. Der Rahmen meldet das nicht zurück
+   * (`applying` in bridge.js hält seinen Bericht an), und das ist richtig so —
+   * es ist ja unser eigener Stand, der da hineingeht.
+   *
+   * @returns true, wenn etwas aufgelegt wurde (dann ist der Bericht erledigt).
+   */
+  function restore(m) {
+    const kept = store[String(m.seed)];
+    if (!kept || !kept.length) return false;
+    // Kam die Welt doch über einen Befehl von hier, liegt die Arbeit längst
+    // drauf und der Bericht sagt genau das. Dann gibt es nichts zu tun.
+    if (groupsKey(kept) === groupsKey(m.groups)) return false;
+    sentGroups = groupsKey(kept);
+    post({ seed: Number(m.seed), groups: kept });
+    return true;
+  }
+
   /** Der Beitrag, dessen Sicht gerade vorne läuft — oder null. */
   function watched() {
     if (!watchEid || !view) return null;
@@ -587,6 +617,18 @@
     }
 
     if (m.event === 'clusters') {
+      /* Der Bericht direkt nach einem Aufbau. Er ist keine Handlung, aber sehr
+         wohl ein Stand — und der kann zweierlei sein: das, was die Anwendung
+         beim Aufbau selbst gebildet hat (in Phase 2 der Haufen der
+         Nachzügler), oder eine leere Welt, weil der Rahmen sie ohne uns gebaut
+         hat. Im zweiten Fall liegt die Arbeit hier und gehört wieder
+         aufgelegt, nicht überschrieben (siehe `restore`). */
+      const erster = rebase;
+      rebase = false;
+      // Beim Zusehen nicht: was dort steht, ist die Arbeit des Kindes, und
+      // unser Bestand hat in seiner Welt nichts zu suchen.
+      if (erster && !watchEid && restore(m)) return;
+
       /* Am Beamer ist die Karte ein Notizblock — aber einer, der zwischen
          zwei Welten nicht verschwindet. Auch die Lehrkraft hat drei eigene
          Welten (Platz 0), und wer darin etwas aufgebaut hat, um es zu
@@ -595,11 +637,7 @@
          und saveLocal() bleiben der Klasse vorbehalten), und was `remember`
          aufnimmt, sind ohnehin nur die eigenen drei. */
       if (isPresenter()) {
-        if (rebase) {
-          // Der Bericht direkt nach einem Aufbau ist keine Handlung, aber
-          // sehr wohl ein Stand: in Phase 2 steht darin der Haufen der
-          // Nachzügler, den die Anwendung selbst gebildet hat.
-          rebase = false;
+        if (erster) {
           sentGroups = groupsKey(m.groups);
           if (!watchEid) remember(m.seed, m.groups);
           return;
@@ -628,7 +666,6 @@
         if (!watchEid) remember(m.seed, m.groups);
         return;
       }
-      rebase = false;
       if (ctx && ctx.preview) return;
       // Ein selbst eingetippter Seed wird nicht bewahrt - dann gibt es auch
       // nichts zu speichern.

@@ -253,6 +253,40 @@ function tabletBewahrtNurDieDrei(next) {
   }, 1800);
 }
 
+/* Der Rahmen baut auch von sich aus: das Seed-Feld und „Neue Welt" liegen in
+   ihm, und wer eine seiner drei Welten so wieder aufmacht, hat sie nicht ueber
+   die drei Knoepfe gewaehlt - es kam also kein Befehl von hier, und mit ihm
+   auch keine Gruppierung. Der Rahmen meldet dann eine leere Welt, und ohne
+   Riegel schriebe genau diese Leere die Arbeit im Bestand tot. */
+function selbstGebauteWeltBehaeltIhreArbeit(rolle) {
+  const t = run(rolle);
+  t.fromFrame('ready', {});
+  const w = frameAnswers(t, []).worlds.slice();
+  const g1 = [{ m: [1, 2], c: '#a' }];
+  t.fromFrame('clusters', { seed: w[0], phase: 0, groups: g1 });
+
+  // Ab der Aufloesungsphase darf ein eigener Seed ins Feld (am Pult im freien
+  // Modus). Der Rahmen baut ihn allein und meldet nur das Ergebnis.
+  t.view.state.phase = 3;
+  t.impl.update(t.view);
+  t.fromFrame('world', { seed: 123456 });
+  t.fromFrame('clusters', { seed: 123456, phase: 1, groups: [] });
+
+  // Und zurueck - ebenfalls ueber das Feld und nicht ueber die drei Knoepfe.
+  t.fromFrame('world', { seed: Number(w[0]) });
+  t.fromFrame('clusters', { seed: Number(w[0]), phase: 1, groups: [] });
+  ok(rolle + ': selbst gebaute Welt bekommt ihre Gruppierung zurück',
+     gleich(t.last().groups, g1), t.last().groups);
+
+  // Und der Bestand steht danach noch: ein Wechsel ueber die Knoepfe hin und
+  // zurueck muss dieselbe Arbeit wieder mitbringen.
+  t.fromFrame('world-pick', { seed: Number(w[1]) });
+  frameAnswers(t, []);
+  t.fromFrame('world-pick', { seed: Number(w[0]) });
+  ok(rolle + ': die Arbeit hat den Umweg überlebt',
+     gleich(t.last().groups, g1), t.last().groups);
+}
+
 /* Ein Beitrag aus einer frueheren Fassung kann Welten tragen, die heute nicht
    mehr bewahrt werden - ein selbst eingetippter Seed, oder die drei eines
    anderen Sitzplatzes. Beim Aufsetzen wird gestutzt, sonst legte push() eine
@@ -319,6 +353,8 @@ function vollbildGehtDurch() {
 
 pultBehaeltSeineWelten();
 pultBehaeltDieNachzuegler();
+selbstGebauteWeltBehaeltIhreArbeit('student');
+selbstGebauteWeltBehaeltIhreArbeit('presenter');
 vollbildGehtDurch();
 tabletBewahrtNurDieDrei(() => alterBestandWirdGestutzt(() => {
   console.log(fails ? '\n' + fails + ' Prüfung(en) offen' : '\nalles grün');
