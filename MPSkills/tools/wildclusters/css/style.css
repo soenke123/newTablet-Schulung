@@ -881,6 +881,13 @@ body.signal-dragging { cursor: grabbing; user-select: none; -webkit-user-select:
   white-space: nowrap;
 }
 
+/* Das Vollbild - ganz rechts in derselben Zeile, und auf jedem Geraet.
+   Es nimmt den Kasten DRAUSSEN (Pult + Rahmen), gedrueckt wird es aber hier:
+   im Vollbild faehrt das Pult nach oben weg, und der Ausgang darf nicht im
+   Weggefahrenen liegen. Die zwei Woerter bleiben zusammen - in einer Zeile,
+   die umbricht, ist ein "beenden" allein in der naechsten Zeile ein Raetsel. */
+.full-btn { white-space: nowrap; }
+
 /* Der Knopf in die naechste Phase blendet sich bei jedem Bild selbst wieder
    ein (updateAdvanceBtn haengt an der Zeit, nicht an einem Zustand). Im Raum
    schaltet die Lehrkraft weiter, also muss die Regel staerker sein als sein

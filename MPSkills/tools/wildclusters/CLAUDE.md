@@ -456,8 +456,8 @@ tut ohne Rahmen gar nichts – kein Listener, kein DOM, keine Sperre.
 MPSkills-Seite (j.html · lehrer.html)
  └─ tools/wildclusters/tool.js       Rolle, Raum-Zustand, Steuerpult, Ergebnisse
      └─ <iframe> index.html
-          ▲ wc:cmd    { seed, worlds, phase, masked, locks, groups, note }
-          ▼ wc:event  ready · world · clusters · world-pick · note
+          ▲ wc:cmd    { seed, worlds, phase, masked, locks, groups, note, full }
+          ▼ wc:event  ready · world · clusters · world-pick · note · full
         js/ui/bridge.js → WILDCLUSTERS.*
 ```
 
@@ -487,10 +487,16 @@ eröffnet. Eingerastet ist ein Auflösungsschritt, wenn **sein** Schleier oben i
 läuft, sagt `aria-current="step"`.
 
 **Das Pult ist eine Zeile.** Links die vier Schritte, rechts Stand der Klasse · freier Modus ·
-Vollbild. Was früher darüber stand – die drei eigenen Welten mit ihren Seeds und je ein
+Arbeitsblatt. Was früher darüber stand – die drei eigenen Welten mit ihren Seeds und je ein
 Hinweistext pro Reihe – war Auskunft und keine Bedienung: die Welten stehen ohnehin in der
 Kopfzeile des Rahmens (`renderWorlds`), und was auf einer Leinwand zählt, sind Knöpfe, die man
 aus fünf Metern trifft.
+
+**Das Arbeitsblatt** (`#wlSheet`) steht als Knopf schon da, die Adresse fehlt noch: sie kommt aus
+`limits.worksheet_url` und wird nachgereicht, sobald das Blatt unter `Dokumente/` liegt (Migration
+0129 begründet, warum das eine eigene Migration braucht). Bis dahin sagt der Knopf das auch – ein
+Knopf, der auf ein Tippen hin nichts tut, sieht aus wie ein kaputter, und das ausgerechnet vor der
+Klasse.
 
 ⚠️ **Im Rahmen fängt die Karte verdeckt an** (`WC_EMBEDDED` in `app.js`), und der Schleier wird
 über die Brücke **vor** dem Weltaufbau gesetzt, nicht erst im `worldHook`. Der Aufbau ist
@@ -560,20 +566,43 @@ ausdrücklich ausgenommen:
 Deshalb steht `ws` mit im Beitrag: der Beamer hat den Sitzplatz der Verfasserin nicht (ein Beitrag
 trägt einen Namen, keine Nummer) und könnte sonst nur „Welt 482917" sagen, nicht „Welt II".
 
-**Vollbild** (`#wlFull`, `requestFullscreen` auf `.wl-host`): Kopfzeile, Werkzeugleiste und
+**Vollbild** (`#wcFull`, `requestFullscreen` auf `.wl-host`): Kopfzeile, Werkzeugleiste und
 Seitenfuß der MPSkills-Seite sind auf einer Leinwand nichts als Wand ohne Karte. Das Steuerpult
 fährt dabei hoch und bleibt an einem Fingerbreit greifbar (`:fullscreen .wl-desk`, `translateY` +
 `:hover`) – die Phase weiterzuschalten ist genau das, was auf der Leinwand ansteht, und dafür jedes
 Mal das Vollbild zu verlassen wäre ein Bruch.
 
+**Der Knopf steht im Rahmen, ganz rechts neben den drei Welten – und auf jedem Gerät**
+(`renderFull` in `bridge.js`). Er lag vorher am Pult, also in genau dem Streifen, der im Vollbild
+nach oben wegfährt: der Ausgang lag im Weggefahrenen, und Esc kennt nicht jede Fernbedienung. Für
+die Klasse ist er neu – ein Kind, das eine Karte ansieht, will sie so groß haben wie die Leinwand
+vorne.
+
+Drei Dinge daran sind nicht offensichtlich:
+
+* **Gedrückt im Rahmen, ausgeführt draußen** (`wc:event full` → `toggleFull`). Das Vollbild nimmt
+  den ganzen Kasten (Pult **und** Rahmen), und den kennt nur die Seite; der Rahmen allein ließe das
+  Pult außerhalb des Bildes.
+* **Der Zustand kommt mit jedem Befehl herein** (`full: isFull()` in `push`). Von innen ist er
+  nicht zu sehen – das Vollbild-Element liegt in einem anderen Dokument. Ohne die Angabe könnte
+  der Knopf seinen Zustand nicht benennen, und wer mit `Esc` (oder auf dem Tablet mit der Wischgeste)
+  herausgeht, hinterließe einen Knopf, der weiter „Vollbild beenden" sagt. Deshalb hängt der
+  `fullscreenchange`-Zuhörer in `mount()` jetzt an **jeder** Rolle, nicht mehr nur am Pult.
+* **Die Nutzergeste trägt über die Rahmengrenze.** `requestFullscreen()` verlangt eine frische
+  Nutzeraktion; ein Klick in einem gleichherkünftigen `<iframe>` gilt auch im Fenster darüber
+  (der Browser trägt die Aktivierung an die Vorfahren weiter), und die 5 Sekunden reichen für den
+  `postMessage` dazwischen um Größenordnungen.
+
 **Was gerade läuft, steht in der Kopfzeile des Rahmens hinter dem `i`** (`note` im Befehl,
 `renderNote` in `bridge.js`): „Ansicht von Mia", „Welt von Mia — Sie ziehen selbst", „Freier
-Modus", im Vollbild die laufende Welt. Er trägt auch den Ausgang aus dem Vollbild, denn Esc kennt
-nicht jede Fernbedienung. Vorher war das ein Kasten über der Karte unten links (`.wl-cap`) – und
+Modus". Sonst schweigt er. Vorher war das ein Kasten über der Karte unten links (`.wl-cap`) – und
 lag damit genau auf dem Abspielknopf. Der Streifen steht im **Rahmen**, obwohl ihn die Seite
-schickt: nur dort gibt es die Zeile, in die er gehört. Seine beiden Knöpfe entscheiden nichts, sie
-melden nach oben (`wc:event note`) – was „aufhören" und „Vollbild verlassen" bedeuten, weiß nur
-die Seite. Der Name darin geht über `textContent` hinein und nie über `innerHTML`.
+schickt: nur dort gibt es die Zeile, in die er gehört. Sein Knopf entscheidet nichts, er meldet
+nach oben (`wc:event note`) – was „aufhören" bedeutet, weiß nur die Seite. Der Name darin geht über
+`textContent` hinein und nie über `innerHTML`. Den Ausgang aus dem Vollbild und die laufende Welt
+trug er früher mit; beides steht jetzt ohnehin in derselben Zeile (der Vollbild-Knopf ganz rechts,
+die Welt in den drei Knöpfen daneben), und zwei ⛶ nebeneinander wären eins zu viel. Er wird deshalb
+**vor** den Vollbild-Knopf gehängt (`insertBefore`), damit der ganz rechts bleibt.
 
 **Die Gruppierung gehört zur Welt.** Sie geht über zwei neue Türen in `js/ui/signals.js`:
 `panel.groups()` gibt `[{ m: Signalnummern, c: Farbe }]` heraus, `panel.applyGroups(list)` legt

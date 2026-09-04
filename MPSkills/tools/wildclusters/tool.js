@@ -24,8 +24,8 @@
    das, was zurückkommt, in einen Beitrag.
 
    Eine Nachricht geht hin (wc:cmd) und drei kommen zurück (wc:event:
-   ready · world · clusters), dazu zwei Bitten: world-pick und note.
-   Mehr ist es nicht.
+   ready · world · clusters), dazu drei Bitten: world-pick, note und
+   full. Mehr ist es nicht.
 
    ── Drei Welten, und jede Person hat ihre eigenen ─────────────
    Drei, damit es eine Wahl gibt und trotzdem nicht vierzig. Und
@@ -77,7 +77,7 @@
      mit neuen Skripten — genau der Fall, in dem ein <script>-Tag fehlt,
      den niemand vermisst, bis die Brücke schweigt. Dieselbe Überlegung
      wie beim ?v= in lib/tool.js. */
-  const V = '?v=20260904b';
+  const V = '?v=20260904c';
 
   /* Was eine Raumphase für die Karte bedeutet. Die Zahl links kennt der
      Server (skill_tools.limits.phases = 3), alles rechts davon nur
@@ -476,7 +476,13 @@
       },
       // Der Streifen in der Kopfzeile des Rahmens. Nur die Lehrkraft bekommt
       // ihn; auf einem Tablet gibt es nichts zu melden.
-      note: isPresenter() ? noteOf(watch) : null
+      note: isPresenter() ? noteOf(watch) : null,
+      /* Ob das Vollbild an ist. Der Rahmen kann es nicht selbst sehen — das
+         Vollbild-Element ist der Kasten hier draußen, in seinem eigenen
+         Dokument steht nichts davon. Ohne diese Angabe könnte sein Knopf den
+         Zustand nicht benennen, und wer mit Esc herausgeht, hinterließe einen
+         Knopf, der weiter „Vollbild beenden" sagt. */
+      full: isFull()
     };
     /* Eine LEERE Gruppierung wird nicht mitgeschickt, und das ist kein
        Sparen: ein Weltwechsel baut die Welt ohnehin neu auf, und dabei
@@ -545,9 +551,14 @@
 
     if (m.event === 'world-pick') { pick(m.seed); return; }
 
-    /* Die beiden Knöpfe im Streifen oben rechts. Sie stecken im Rahmen (dort
-       ist die Zeile), entscheiden aber nichts — was „aufhören" und „Vollbild
-       verlassen" bedeuten, weiß nur diese Seite. */
+    /* Der Vollbild-Knopf ganz rechts in der Kopfzeile des Rahmens — auf jedem
+       Gerät, nicht nur am Pult. Er steckt dort, weil dort die Zeile ist,
+       entscheidet aber nichts: das Vollbild nimmt den ganzen Kasten (Pult UND
+       Rahmen), und den kennt nur diese Seite. */
+    if (m.event === 'full') { toggleFull(); return; }
+
+    /* Der Knopf im Streifen oben rechts. Er steckt ebenfalls im Rahmen und
+       meldet nur — was „aufhören" bedeutet, weiß nur diese Seite. */
     if (m.event === 'note') {
       if (m.action === 'stop') {
         watchEid = null;
@@ -561,8 +572,6 @@
         lastCmd = '';
         push();
         paintDesk();
-      } else if (m.action === 'exit') {
-        toggleFull();
       }
       return;
     }
@@ -674,7 +683,14 @@
   const $ = (id) => root && root.querySelector('#' + id);
 
   /* Eine Zeile, und in ihr alles, was während der Stunde gedrückt wird: links
-     die vier Schritte, rechts die drei Werkzeuge.
+     die vier Schritte, rechts die drei Werkzeuge (Stand der Klasse · freier
+     Modus · Arbeitsblatt).
+
+     Das Vollbild steht nicht mehr dabei, sondern eine Zeile tiefer und ganz
+     rechts — in der Kopfzeile des Rahmens neben den drei Welten, und dort für
+     jeden. Zwei Gründe: im Vollbild fährt genau dieses Pult nach oben weg,
+     der Ausgang lag also im Weggefahrenen; und ein Kind, das eine Karte
+     ansieht, will sie genauso groß haben wie die Leinwand vorne.
 
      Vorher standen hier vier Reihen — Phase, Aufdecken, Welt, Werkzeuge —,
      und drei davon waren Auskunft statt Bedienung: die drei Welten der
@@ -690,8 +706,7 @@
         <div class="wl-seg wl-seg--end">
           <button type="button" class="wl-btn wl-ghost" id="wlList" aria-expanded="false">Stand der Klasse</button>
           <button type="button" class="wl-btn wl-ghost" id="wlFree" aria-pressed="false">Freier Modus</button>
-          <button type="button" class="wl-btn wl-ghost" id="wlFull" aria-pressed="false">⛶ Vollbild</button>
-          <a class="wl-btn wl-ghost" id="wlSheet" hidden target="_blank" rel="noopener">Arbeitsblatt</a>
+          <button type="button" class="wl-btn wl-ghost" id="wlSheet">Arbeitsblatt</button>
         </div>
       </div>
       <div class="wl-list" id="wlPeople" hidden></div>
@@ -718,17 +733,8 @@
       }).join('');
     }
 
-    const sheet = $('wlSheet');
-    const url = view.limits && view.limits.worksheet_url;
-    if (sheet) {
-      sheet.hidden = !url;
-      if (url) sheet.href = url;
-    }
-
     const free_ = $('wlFree');
     if (free_) free_.setAttribute('aria-pressed', free ? 'true' : 'false');
-    const full = $('wlFull');
-    if (full) full.setAttribute('aria-pressed', isFull() ? 'true' : 'false');
 
     paintPeople();
   }
@@ -743,32 +749,22 @@
      Er meldet sich, wenn das, was vorne läuft, nicht die eigene Welt der
      Lehrkraft ist: beim Zusehen, nach einer Übernahme und im freien Modus.
      Der freie Modus MUSS auffallen — sonst schaltet jemand die Phase um und
-     wundert sich, dass die Klasse folgt (oder eben nicht). Im Vollbild steht
-     er immer, denn dort trägt er auch den Ausgang: Esc kennt nicht jede
-     Fernbedienung. */
+     wundert sich, dass die Klasse folgt (oder eben nicht).
+
+     Sonst schweigt er. Er trug früher auch den Ausgang aus dem Vollbild und
+     dazu die laufende Welt; beides steht jetzt in derselben Zeile ohnehin da
+     — der Vollbild-Knopf ganz rechts, die Welt in den drei Knöpfen daneben. */
   function noteOf(watch) {
-    let text = '';
-    let kind = '';
-    let stop = false;
-
     if (watch) {
-      text = 'Ansicht von ' + watch.who + ' — folgt live';
-      kind = 'watch';
-      stop = true;
-    } else if (takeover) {
-      text = 'Welt von ' + takeover + ' — Sie ziehen selbst';
-      kind = 'own';
-      stop = true;
-    } else if (free) {
-      text = 'Freier Modus — die Klasse sieht davon nichts.';
-      kind = 'free';
-      stop = true;
-    } else if (isFull()) {
-      const i = worlds.map(String).indexOf(String(deskSeed));
-      text = (i >= 0 ? ['Welt I', 'Welt II', 'Welt III'][i] : 'Welt') + ' · ' + (deskSeed || '…');
+      return { text: 'Ansicht von ' + watch.who + ' — folgt live', kind: 'watch', stop: true };
     }
-
-    return { text: text, kind: kind, stop: stop, exit: isFull() };
+    if (takeover) {
+      return { text: 'Welt von ' + takeover + ' — Sie ziehen selbst', kind: 'own', stop: true };
+    }
+    if (free) {
+      return { text: 'Freier Modus — die Klasse sieht davon nichts.', kind: 'free', stop: true };
+    }
+    return { text: '', kind: '', stop: false };
   }
 
   /* Der Stand der Klasse. EINE Zeile je Person, und darin ihre drei
@@ -915,7 +911,17 @@
       return;
     }
 
-    if (btn.id === 'wlFull') { toggleFull(); return; }
+    /* Das Arbeitsblatt. Der Knopf steht schon, die Adresse noch nicht: sie
+       kommt aus `limits.worksheet_url` und wird nachgereicht, sobald das
+       Blatt unter Dokumente/ liegt (siehe Migration 0129). Bis dahin sagt er
+       das auch — ein Knopf, der auf ein Tippen hin nichts tut, sieht aus wie
+       ein kaputter, und das ausgerechnet vor der Klasse. */
+    if (btn.id === 'wlSheet') {
+      const url = view && view.limits && view.limits.worksheet_url;
+      if (url) window.open(url, '_blank', 'noopener');
+      else ctx.toast('Das Arbeitsblatt kommt noch.');
+      return;
+    }
   }
 
   /* Vollbild: nur noch die Karte. Für den Beamer ist das der Normalfall —
@@ -992,14 +998,14 @@
         + '</div>';
 
       frame = root.querySelector('.wl-frame');
-      if (pres) {
-        wireDesk();
-        // Esc verlässt das Vollbild an jedem Knopf vorbei — der Knopf und der
-        // Streifen im Rahmen müssen das trotzdem mitbekommen. Der Streifen
-        // trägt den Ausgang, also muss er kommen und gehen wie das Vollbild.
-        onFs = () => { paintDesk(); push(); fit(); };
-        document.addEventListener('fullscreenchange', onFs);
-      }
+      if (pres) wireDesk();
+      /* Esc verlässt das Vollbild an jedem Knopf vorbei, und auf einem Tablet
+         tut es die Wischgeste von oben. Der Knopf im Rahmen muss das trotzdem
+         mitbekommen — er kann den Zustand nicht selbst sehen. Deshalb für
+         jede Rolle: seit das Vollbild im Rahmen sitzt, hat auch die Klasse
+         einen Weg hinein. */
+      onFs = () => { paintDesk(); push(); fit(); };
+      document.addEventListener('fullscreenchange', onFs);
 
       /* Der Rahmen reicht bis an die untere Kante, also darf darunter
          nichts mehr stehen — sonst schöbe der Seitenfuß ihn beim

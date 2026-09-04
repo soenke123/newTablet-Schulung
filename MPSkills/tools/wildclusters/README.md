@@ -32,9 +32,12 @@ passiert:
      einzeln, nacheinander oder beides. Jetzt zeigt sich, ob in einer Gruppe wirklich nur Rehe
      lagen. Ab hier darf auch ein eigener Seed eingetippt werden.
      Ein Sprung zurück auf 1 oder 2 deckt wieder zu.
+* **Vollbild** – ganz rechts in der Kopfzeile, neben den drei Welten, und **auf jedem Gerät**:
+  dann ist nur noch die Karte da. Derselbe Knopf führt wieder heraus.
 * **Am Beamer** sieht die Lehrkraft dieselbe Karte (drei eigene Welten zum Vorführen, oben in der
   Kopfzeile zu wählen), dazu eine Reihe Knöpfe: die vier Schritte links, rechts **Stand der
-  Klasse**, **freier Modus** und **Vollbild**. Der Stand der Klasse ist eine Zeile je Person:
+  Klasse**, **freier Modus** und **Arbeitsblatt** (der Knopf steht, das Blatt kommt noch).
+  Der Stand der Klasse ist eine Zeile je Person:
 
   ```
   Mia     Welt I (2 Cluster) · Welt II (4 Cluster, gerade hier) · Welt III (–)     ▸
@@ -46,9 +49,9 @@ passiert:
   eine Kachel zieht**, übernimmt: das Zusehen hört auf, die Welt des Kindes bleibt vorne stehen,
   und was jetzt gezogen wird, hält (vorher warf der nächste Abgleich es zurück).
   Im **Vollbild** ist nur noch die Karte zu sehen; die Knopfreihe fährt hoch und kommt zurück,
-  sobald der Zeiger den Streifen am oberen Rand berührt. Was gerade läuft, steht **in der
-  Kopfzeile hinter dem `i`** („Ansicht von Mia", „Freier Modus") – dort steht auch der Ausgang
-  aus dem Vollbild.
+  sobald der Zeiger den Streifen am oberen Rand berührt. Der Ausgang steht dabei nicht mit im
+  Weggefahrenen, sondern in der Kopfzeile der Karte. Was gerade läuft, steht **in der Kopfzeile
+  hinter dem `i`** („Ansicht von Mia", „Freier Modus").
   Ein **freier Modus** hebt alle Sperren auf, ohne dass die Klasse etwas davon merkt.
 
 Auf den Tablets der Klasse steht **nur die Karte**: kein Erklärkasten, keine Kontrollanzeige.

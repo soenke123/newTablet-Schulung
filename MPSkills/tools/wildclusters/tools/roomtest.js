@@ -135,7 +135,7 @@ function run(role, entriesFor) {
     }
   };
 
-  return { impl, view, posted, saved, fromFrame, last: () => posted[posted.length - 1] };
+  return { impl, ctx, view, posted, saved, fromFrame, last: () => posted[posted.length - 1] };
 }
 
 /* Die drei Welten haengen nur an Raumcode + Sitzplatz, sind aber in der IIFE
@@ -294,8 +294,32 @@ function alterBestandWirdGestutzt(next) {
   }, 1800);
 }
 
+/* Das Vollbild wird im Rahmen gedrückt und draußen ausgeführt — seit es in
+   der Kopfzeile neben den drei Welten steht, auf JEDEM Gerät und nicht mehr
+   nur am Pult. Zwei Dinge müssen dafür stimmen, und beide sind unsichtbar:
+   der Zustand muss in jeden Befehl (der Rahmen kann ihn nicht selbst sehen),
+   und die Bitte muss auch von einem Tablet aus ankommen.
+
+   Nachgewiesen wird das Ankommen am Toast: der Kasten im Stummel hat kein
+   requestFullscreen, also endet toggleFull() in der Auskunft „geht auf
+   diesem Gerät nicht". Genau die soll hier fallen. */
+function vollbildGehtDurch() {
+  for (const rolle of ['presenter', 'student']) {
+    const t = run(rolle);
+    let gesagt = '';
+    t.ctx.toast = (s) => { gesagt = String(s); };
+
+    t.fromFrame('ready', {});
+    ok(rolle + ': der Vollbild-Zustand steht im Befehl', t.last().full === false, t.last().full);
+
+    t.fromFrame('full', {});
+    ok(rolle + ': der Knopf im Rahmen kommt an', /Vollbild/.test(gesagt), gesagt);
+  }
+}
+
 pultBehaeltSeineWelten();
 pultBehaeltDieNachzuegler();
+vollbildGehtDurch();
 tabletBewahrtNurDieDrei(() => alterBestandWirdGestutzt(() => {
   console.log(fails ? '\n' + fails + ' Prüfung(en) offen' : '\nalles grün');
   process.exit(fails ? 1 : 0);

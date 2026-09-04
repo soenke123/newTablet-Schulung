@@ -82,6 +82,8 @@
   var shownWorlds = '';
   var noteBox = null;
   var shownNote = '';
+  var fullBtn = null;
+  var shownFull = null;
 
   /* ─── nach oben ─────────────────────────────────────────────────────── */
 
@@ -118,6 +120,7 @@
   function applyNow(cmd) {
     if (cmd.locks) applyLocks(cmd.locks);
     if (cmd.worlds) renderWorlds(cmd.worlds, cmd.seed);
+    if ('full' in cmd) renderFull(!!cmd.full);
     if ('note' in cmd) renderNote(cmd.note);
 
     // Eine Gruppierung kommt nur mit, wenn sie auch aufgelegt werden soll -
@@ -186,6 +189,40 @@
     worldsBox.innerHTML = html;
   }
 
+  /* ─── Vollbild ──────────────────────────────────────────────────────────
+     Ganz rechts in derselben Zeile wie die drei Welten - und auf JEDEM
+     Geraet, nicht nur am Pult. Er stand vorher im Steuerpult der Lehrkraft,
+     und das faehrt im Vollbild nach oben weg: wer vorne ohne Maus sitzt, kam
+     nur mit Esc wieder heraus, und Esc kennt nicht jede Fernbedienung.
+
+     Gedrueckt wird er hier, entschieden wird oben ('full'): das Vollbild
+     nimmt den ganzen Kasten - Pult UND Rahmen -, und den kennt nur die Seite.
+     Ob es gerade an ist, kommt mit jedem Befehl herein (cmd.full); von innen
+     ist das nicht zu sehen, denn das Vollbild-Element liegt ausserhalb dieses
+     Dokuments.
+
+     Das Klicken traegt weit genug: die Nutzergeste eines gleichherkuenftigen
+     Rahmens gilt auch im Fenster darueber, sonst lehnte requestFullscreen()
+     dort ab. Nur der Weg hinaus braucht sie ohnehin nicht.                 */
+
+  function renderFull(on) {
+    if (!fullBtn) {
+      var controls = document.querySelector('.controls');
+      if (!controls) return;
+      fullBtn = document.createElement('button');
+      fullBtn.type = 'button';
+      fullBtn.id = 'wcFull';
+      fullBtn.className = 'btn btn-toggle full-btn';
+      controls.appendChild(fullBtn);
+      fullBtn.addEventListener('click', function () { send('full', {}); });
+    }
+    if (on === shownFull) return;
+    shownFull = on;
+    fullBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    fullBtn.textContent = on ? '⛶ Vollbild beenden' : '⛶ Vollbild';
+    fullBtn.title = on ? 'Vollbild verlassen' : 'Nur noch die Karte';
+  }
+
   /* ─── Was gerade vorne laeuft ───────────────────────────────────────────
      Ein Streifen fuer die Lehrkraft, und zwar IN DER KOPFZEILE hinter dem
      kleinen „i" - nicht als Kasten ueber der Karte. Dort lag er frueher unten
@@ -194,31 +231,34 @@
      Ansicht und nicht mitten ins Bild.
 
      Er steht im Rahmen und nicht darum herum, obwohl die Seite ihn schickt:
-     nur hier gibt es die Zeile, in der er stehen soll. Seine beiden Knoepfe
-     entscheiden deshalb auch nichts, sie melden nur nach oben ('note') - das
-     Zusehen zu beenden und das Vollbild zu verlassen ist Sache der Seite.   */
+     nur hier gibt es die Zeile, in der er stehen soll. Sein Knopf entscheidet
+     deshalb auch nichts, er meldet nur nach oben ('note') - was „aufhoeren"
+     bedeutet, weiss nur die Seite.
+
+     Den Ausgang aus dem Vollbild trug er frueher mit. Der steht jetzt als
+     eigener Knopf daneben (renderFull) und gilt fuer alle - zwei ⛶ in
+     derselben Zeile waeren einer zu viel.                                   */
 
   function renderNote(note) {
     var text = note && note.text ? String(note.text) : '';
-    var exit = !!(note && note.exit);
     var stop = !!(note && note.stop);
     var kind = (note && note.kind) || '';
-    var key = text + '|' + kind + '|' + (stop ? 1 : 0) + '|' + (exit ? 1 : 0);
+    var key = text + '|' + kind + '|' + (stop ? 1 : 0);
     if (key === shownNote) return;
     shownNote = key;
 
     // Auf einem Tablet kommt hier immer "nichts" an. Dafuer muss kein Knoten
     // entstehen, der dann sein Leben lang leer in der Kopfzeile haengt.
-    if (!noteBox && !text && !exit) return;
+    if (!noteBox && !text) return;
 
     var controls = document.querySelector('.controls');
     if (!controls) return;
 
     if (!noteBox) {
       noteBox = document.createElement('div');
-      // Ans Ende und damit hinter das „i" - das ist die Stelle, an der in
-      // dieser Zeile Auskuenfte ueber die Ansicht stehen.
-      controls.appendChild(noteBox);
+      // Hinter das „i" - dort stehen in dieser Zeile die Auskuenfte ueber die
+      // Ansicht -, aber VOR den Vollbild-Knopf: der bleibt ganz rechts.
+      controls.insertBefore(noteBox, fullBtn);
       noteBox.addEventListener('click', function (e) {
         var b = e.target && e.target.closest ? e.target.closest('button[data-note]') : null;
         if (b) send('note', { action: b.getAttribute('data-note') });
@@ -226,12 +266,10 @@
     }
 
     noteBox.className = 'wc-note' + (kind ? ' wc-note--' + kind : '');
-    noteBox.hidden = !(text || exit);
+    noteBox.hidden = !text;
     noteBox.innerHTML = '<span class="wc-note-text"></span>'
       + (stop ? '<button type="button" class="wc-note-x" data-note="stop"'
-        + ' title="zurück zur eigenen Welt">✕</button>' : '')
-      + (exit ? '<button type="button" class="wc-note-x" data-note="exit"'
-        + ' title="Vollbild verlassen">⛶</button>' : '');
+        + ' title="zurück zur eigenen Welt">✕</button>' : '');
     // textContent und nicht in das HTML hinein: in dem Streifen steht ein
     // Name, und den hat jemand selbst eingegeben.
     noteBox.querySelector('.wc-note-text').textContent = text;
@@ -338,6 +376,13 @@
       if (busy || applying || !lastSeed) return;
       send('clusters', { seed: lastSeed, phase: WC.phase, groups: groups });
     });
+
+    /* Vor dem ersten Befehl, nicht erst mit ihm: an ihm haengt die Stelle,
+       an der der Streifen eingehaengt wird (insertBefore). Wer ihn erst
+       durch cmd.full entstehen liesse, haette bei einem Befehl mit `note`
+       und ohne `full` die Reihenfolge vertauscht - einmal, und dann fuer
+       den Rest der Stunde. */
+    renderFull(false);
 
     ready = true;
     send('ready', {});
