@@ -287,6 +287,61 @@ function selbstGebauteWeltBehaeltIhreArbeit(rolle) {
      gleich(t.last().groups, g1), t.last().groups);
 }
 
+/* Das Seed-Feld und „Neue Welt" liegen im Rahmen, einen Fingerbreit neben den
+   drei Welt-Knoepfen. Auf einem Tablet gehen sie deshalb erst auf, wenn die
+   Aufloesung DURCH ist - beide Schalter oben, Landschaft und Tiere sichtbar.
+   Am Pult dagegen sofort: dort ist der eigene Seed das Werkzeug zum Vorfuehren. */
+function eigenerSeedErstNachDerAufloesung() {
+  const t = run('student');
+  t.fromFrame('ready', {});
+  frameAnswers(t, []);
+  const zu = () => t.last().locks.seed;
+  const stand = (data, phase) => {
+    t.view.state.phase = phase === undefined ? 3 : phase;
+    t.view.state.data = data;
+    t.impl.update(t.view);
+  };
+
+  ok('Phase 1: Seed-Feld zu', zu() === true, t.last().locks);
+  stand({});
+  ok('Auflösung, noch nichts aufgedeckt: Seed-Feld zu', zu() === true, t.last().locks);
+  stand({ rw: true });
+  ok('nur die Welt aufgedeckt: Seed-Feld bleibt zu', zu() === true, t.last().locks);
+  stand({ ra: true });
+  ok('nur die Tiere aufgedeckt: Seed-Feld bleibt zu', zu() === true, t.last().locks);
+  stand({ rw: true, ra: true });
+  ok('Welt UND Tiere offen: Seed-Feld auf', zu() === false, t.last().locks);
+
+  const p = run('presenter');
+  p.fromFrame('ready', {});
+  frameAnswers(p, []);
+  p.view.state.phase = 3;
+  p.impl.update(p.view);
+  ok('Pult: in der Auflösung sofort auf', p.last().locks.seed === false, p.last().locks);
+}
+
+/* Und wer schon auf einem eigenen Seed sitzt, wenn die Lehrkraft einen
+   Schleier zurücknimmt, kommt an die Arbeit zurück - samt seiner Gruppierung. */
+function schleierZurueckHoltAnDieArbeit() {
+  const t = run('student');
+  t.fromFrame('ready', {});
+  const w = frameAnswers(t, []).worlds.slice();
+  const g = [{ m: [4, 5], c: '#e' }];
+  t.fromFrame('clusters', { seed: w[0], phase: 0, groups: g });
+
+  t.view.state.phase = 3;
+  t.view.state.data = { rw: true, ra: true };
+  t.impl.update(t.view);
+  t.fromFrame('world', { seed: 777333 });
+  t.fromFrame('clusters', { seed: 777333, phase: 1, groups: [] });
+
+  t.view.state.data = { rw: true };          // die Tiere gehen wieder zu
+  t.impl.update(t.view);
+  ok('Schleier zurück: die eigene Welt kommt wieder',
+     String(t.last().seed) === String(w[0]), t.last().seed);
+  ok('Schleier zurück: mit der Gruppierung', gleich(t.last().groups, g), t.last().groups);
+}
+
 /* Ein Beitrag aus einer frueheren Fassung kann Welten tragen, die heute nicht
    mehr bewahrt werden - ein selbst eingetippter Seed, oder die drei eines
    anderen Sitzplatzes. Beim Aufsetzen wird gestutzt, sonst legte push() eine
@@ -355,6 +410,8 @@ pultBehaeltSeineWelten();
 pultBehaeltDieNachzuegler();
 selbstGebauteWeltBehaeltIhreArbeit('student');
 selbstGebauteWeltBehaeltIhreArbeit('presenter');
+eigenerSeedErstNachDerAufloesung();
+schleierZurueckHoltAnDieArbeit();
 vollbildGehtDurch();
 tabletBewahrtNurDieDrei(() => alterBestandWirdGestutzt(() => {
   console.log(fails ? '\n' + fails + ' Prüfung(en) offen' : '\nalles grün');

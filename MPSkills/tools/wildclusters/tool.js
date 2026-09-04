@@ -60,8 +60,9 @@
    es nicht — am Pult bleibt es im Gerät.
 
    Bewahrt werden aber NUR diese drei (`remember`). Ein selbst
-   eingetippter Seed — ab der Auflösungsphase erlaubt, am Pult im
-   freien Modus — lässt sich genauso gruppieren, aber die Arbeit
+   eingetippter Seed — auf dem Tablet erst, wenn die Auflösung durch
+   ist (`freeSeedAllowed`), am Pult schon in Phase 3 und im freien
+   Modus — lässt sich genauso gruppieren, aber die Arbeit
    gilt nur, solange er aufliegt. Er ist ein Ausflug und keine
    vierte Welt; hätte jeder abgetippte Seed Anspruch auf einen
    Platz, ständen die drei, um die es geht, zwischen beliebig
@@ -77,7 +78,7 @@
      mit neuen Skripten — genau der Fall, in dem ein <script>-Tag fehlt,
      den niemand vermisst, bis die Brücke schweigt. Dieselbe Überlegung
      wie beim ?v= in lib/tool.js. */
-  const V = '?v=20260904c';
+  const V = '?v=20260904d';
 
   /* Was eine Raumphase für die Karte bedeutet. Die Zahl links kennt der
      Server (skill_tools.limits.phases = 3), alles rechts davon nur
@@ -102,7 +103,7 @@
        gestellt ist. */
     3: { wc: 1, mask: null, freeSeed: true,
          name: 'Auflösung',
-         hint: 'die Lehrkraft deckt auf · eigene Welten erlaubt' }
+         hint: 'die Lehrkraft deckt auf · eigene Welten, sobald alles offen ist' }
   };
 
   /* Die Knöpfe am Pult — vier für drei Phasen.
@@ -255,6 +256,28 @@
     if (p.mask) return p.mask;
     const d = (v && v.state && v.state.data) || {};
     return { w: !d.rw, a: !d.ra };
+  }
+
+  /**
+   * Darf hier ein eigener Seed ins Feld?
+   *
+   * Auf einem Tablet **erst, wenn die Auflösung durch ist** — beide Schalter
+   * der Lehrkraft oben, Landschaft *und* Tiere sichtbar. Vorher steht der
+   * Aufgabe nichts im Weg als die Neugier: „Neue Welt" ist einen Fingerbreit
+   * von den drei Welt-Knöpfen entfernt, und wer ihn in Phase 3a drückt, hat
+   * seine Gruppierung nicht mehr vor sich, sondern eine fremde leere Welt.
+   * Der Ausflug in einen selbst gewürfelten Seed ist das, was NACH der
+   * Auflösung Spaß macht, und vorher nur ein Weg, sich die Stunde
+   * wegzuklicken.
+   *
+   * Am Pult gilt das nicht: dort ist der eigene Seed das Werkzeug zum
+   * Vorführen, und die Lehrkraft entscheidet ohnehin, wann was offen ist.
+   */
+  function freeSeedAllowed(v) {
+    if (!PHASES[phaseOf(v)].freeSeed) return false;
+    if (isPresenter()) return true;
+    const d = (v && v.state && v.state.data) || {};
+    return !!(d.rw && d.ra);
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -424,8 +447,8 @@
    * Der Rahmen hat eine Welt gebaut, ohne dass wir es waren — und weiß nichts
    * von der Arbeit, die zu ihr gehört.
    *
-   * Das Seed-Feld und „Neue Welt" liegen IM Rahmen (ab der Auflösungsphase
-   * offen, am Pult im freien Modus). Wer eine seiner drei Welten so wieder
+   * Das Seed-Feld und „Neue Welt" liegen IM Rahmen (siehe `freeSeedAllowed`,
+   * am Pult zusätzlich im freien Modus). Wer eine seiner drei Welten so wieder
    * aufmacht, hat nicht auf einen der drei Knöpfe getippt: es ging kein Befehl
    * von hier hinein, also auch keine Gruppierung — und der Bericht, der gleich
    * darauf kommt, meldet eine leere Welt. Ohne diesen Riegel schriebe genau
@@ -493,7 +516,7 @@
       locks: {
         // Im freien Modus darf die Lehrkraft alles: eigener Seed, Phase
         // von Hand, offene Sicht. Nichts davon verlässt ihr Gerät.
-        seed: free ? false : !p.freeSeed,
+        seed: free ? false : !freeSeedAllowed(view),
         advance: !free,
         view: !free,
         brand: true,
@@ -1087,9 +1110,12 @@
         if (e && !myEntry) myEntry = e.id;
       }
 
-      // Eine Welt, die es nicht mehr gibt (die Lehrkraft hat gewürfelt),
-      // ist keine Welt, in der man weiterarbeiten kann.
-      if (!seed || (!PHASES[phaseOf(v)].freeSeed && worlds.map(String).indexOf(String(seed)) < 0)) {
+      /* Eine Welt außerhalb der eigenen drei ist nur so lange in Ordnung, wie
+         ein eigener Seed überhaupt erlaubt ist. Nimmt die Lehrkraft einen
+         Schleier zurück (aus 3b nach 3a oder in Phase 1/2), holt das die Klasse
+         auch aus ihrem Ausflug zurück an die Arbeit — mit ihrer Gruppierung,
+         denn der Wechsel geht über push() und der bringt sie mit. */
+      if (!seed || (!freeSeedAllowed(v) && worlds.map(String).indexOf(String(seed)) < 0)) {
         seed = worlds[0];
       }
       /* Am Beamer wird nur eingesprungen, wenn noch gar nichts steht.

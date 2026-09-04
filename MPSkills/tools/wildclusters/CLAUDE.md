@@ -471,6 +471,16 @@ die Zahl in `setPhase` das Fenster in der Aufzeichnung – sie sind nicht dassel
 | 3a Welt auflösen | 3 | 1 (Tag 6–10) | `data.rw = true` – Landschaft offen, Tiere Nummern |
 | 3b Tiere aufdecken | 3 | 1 (Tag 6–10) | `data.ra = true` – Tiere offen, Nummer bleibt daneben |
 
+**Ein eigener Seed geht auf einem Tablet erst auf, wenn die Auflösung DURCH ist**
+(`freeSeedAllowed` in `tool.js`): Phase 3 **und** beide Schleier oben, Landschaft *und*
+Tiere sichtbar. Nicht schon mit Phase 3 – „Neue Welt" und das Seed-Feld liegen im Rahmen
+einen Fingerbreit neben den drei Welt-Knöpfen, und wer sie in 3a drückt, hat statt seiner
+Gruppierung eine fremde leere Welt vor sich, während vorne aufgelöst wird. Der Ausflug in
+einen gewürfelten Seed ist das, was *nach* der Stunde Spaß macht. Am Pult gilt die
+Bedingung nicht: dort ist der eigene Seed das Werkzeug zum Vorführen. Nimmt die Lehrkraft
+einen Schleier zurück, holt `update()` die Klasse aus dem Ausflug an ihre Welt zurück –
+mit ihrer Gruppierung, denn der Wechsel geht über `push()`.
+
 Phase 3 nimmt der Karte nichts weg, sie gibt nur den Blick frei – und zwar in zwei Hälften:
 `rw` deckt die Landschaft auf, `ra` die Tiere, beide unabhängig (`maskOf(view)` in `tool.js`).
 Beide fehlen anfangs, die Auflösung beginnt also mit demselben Bild wie Phase 2; erst der Griff
@@ -621,8 +631,8 @@ Gespeichert wird ein Beitrag je Person (`skill_room_entries`, `kind = 'gruppieru
 ```
 
 **Bewahrt werden genau diese drei — und sonst nichts** (`remember` in `tool.js`, die einzige Tür
-in den Bestand). Ein selbst eingetippter Seed (ab der Auflösungsphase, `freeSeed`; am Pult im
-freien Modus) lässt sich genauso gruppieren, aber die Arbeit gilt nur, solange er aufliegt: er ist
+in den Bestand). Ein selbst eingetippter Seed (`freeSeedAllowed`: nach der vollständigen
+Auflösung; am Pult schon in Phase 3 und im freien Modus) lässt sich genauso gruppieren, aber die Arbeit gilt nur, solange er aufliegt: er ist
 ein Ausflug und keine vierte Welt. Hätte jeder abgetippte Seed Anspruch auf einen Platz, ständen
 die drei, um die es geht, zwischen beliebig vielen davon — deshalb ist `MAX_WORLDS` auch **3** und
 nicht mehr 5.

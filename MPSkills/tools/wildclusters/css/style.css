@@ -899,8 +899,9 @@ body.wc-no-advance #advanceBtn { display: none !important; }
 body.wc-no-brand .brand { display: none; }
 
 /* Kein eigener Seed: in einem Raum soll niemand in einer Welt landen, ueber
-   die keiner mitreden kann. Ab der Aufloesungsphase gibt die Seite beides
-   wieder frei. */
+   die keiner mitreden kann. Wann die Seite beides wieder freigibt, entscheidet
+   sie (freeSeedAllowed in tool.js) - auf einem Tablet erst, wenn die
+   Aufloesung durch ist, am Pult schon in Phase 3. */
 body.wc-no-seed .seed-field,
 body.wc-no-seed #generateBtn { display: none; }
 
