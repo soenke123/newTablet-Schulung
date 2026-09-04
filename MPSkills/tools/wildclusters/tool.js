@@ -54,7 +54,18 @@
    steckt in einer anderen Welt ein anderes Tier. Bewahrt wird
    deshalb je Welt getrennt (payload.w, Schlüssel ist der Seed) —
    wer zwischen den drei Welten hin und her wechselt, findet seine
-   Arbeit jedes Mal wieder vor.
+   Arbeit jedes Mal wieder vor. Für die Lehrkraft gilt das genauso:
+   sie hat drei eigene Welten (Platz 0), und was sie darin aufbaut,
+   steht nach einem Blick in Welt II noch da. Nur gespeichert wird
+   es nicht — am Pult bleibt es im Gerät.
+
+   Bewahrt werden aber NUR diese drei (`remember`). Ein selbst
+   eingetippter Seed — ab der Auflösungsphase erlaubt, am Pult im
+   freien Modus — lässt sich genauso gruppieren, aber die Arbeit
+   gilt nur, solange er aufliegt. Er ist ein Ausflug und keine
+   vierte Welt; hätte jeder abgetippte Seed Anspruch auf einen
+   Platz, ständen die drei, um die es geht, zwischen beliebig
+   vielen davon.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -114,10 +125,13 @@
       title: 'Die Tiere bekommen ihr Bild — die Nummer bleibt daneben stehen' }
   ];
 
-  // Mehr als fünf Welten je Person gehen nicht in den payload (4 KB,
-  // durchgesetzt von skill_check_payload). Drei gehören dem Raum, zwei
-  // Plätze bleiben für selbst gewählte Seeds aus der Auflösungsphase.
-  const MAX_WORLDS = 5;
+  /* Bewahrt werden die drei Welten des Raums und sonst nichts (siehe
+     `remember`). Mehr Plätze braucht der Bestand deshalb nicht — und
+     nebenbei räumt die Grenze auf, wenn jemand den Sitzplatz wechselt und
+     damit drei neue Welten bekommt: die alten Schlüssel fallen beim
+     nächsten Speichern hinten heraus. Der payload ist auf 4 KB begrenzt
+     (skill_check_payload). */
+  const MAX_WORLDS = 3;
 
   let root = null;
   let ctx = null;
@@ -253,6 +267,35 @@
      richtigen Person. */
 
   const roomKey = () => 'wl:' + ((view && view.room && view.room.code) || 'raum');
+
+  /**
+   * Eine Gruppierung in den Bestand — wenn sie zu einer Welt gehört, die
+   * bewahrt wird.
+   *
+   * **Bewahrt werden genau die drei Welten des Raums.** Sie sind die
+   * Arbeitsgrundlage der Stunde: wer zwischen ihnen hin und her wechselt,
+   * findet seine Arbeit jedes Mal wieder vor, auf jedem Gerät und nach
+   * jedem Neuladen.
+   *
+   * **Ein selbst eingetippter Seed gehört nicht dazu** (Auflösungsphase,
+   * `freeSeed`, und am Pult der freie Modus). Gruppieren lässt er sich —
+   * die Karte kann alles, was sie sonst auch kann —, aber die Arbeit gilt
+   * nur, solange die Welt aufliegt. Sonst hätte jeder abgetippte Seed
+   * Anspruch auf einen Platz im Beitrag, und die drei, um die es geht,
+   * ständen zwischen beliebig vielen Ausflügen.
+   *
+   * Und dieselbe Regel gilt am Pult: die Lehrkraft hat ihre eigenen drei
+   * Welten (Platz 0), und in denen bleibt stehen, was sie gebaut hat. Was
+   * sie in der Welt eines Kindes zieht, gehört dem Notizblock.
+   *
+   * @returns true, wenn die Gruppierung aufgenommen wurde.
+   */
+  function remember(key, groups) {
+    if (worlds.map(String).indexOf(String(key)) < 0) return false;
+    store[String(key)] = groups || [];
+    touched[String(key)] = Date.now();
+    return true;
+  }
 
   function loadLocal() {
     try {
@@ -435,8 +478,18 @@
       // ihn; auf einem Tablet gibt es nichts zu melden.
       note: isPresenter() ? noteOf(watch) : null
     };
+    /* Eine LEERE Gruppierung wird nicht mitgeschickt, und das ist kein
+       Sparen: ein Weltwechsel baut die Welt ohnehin neu auf, und dabei
+       liegt nichts. Ein mitgeschicktes `[]` löschte stattdessen etwas —
+       in Phase 2 schiebt die Anwendung beim Aufbau die Nachzügler von
+       selbst zu einem Haufen zusammen, und `applyGroups([])` räumte
+       genau den wieder weg. Beim Zusehen ist das anders: dort IST die
+       leere Liste der Stand des Kindes und gehört aufgelegt. */
     if (watch) cmd.groups = watch.groups;
-    else if (wechsel) cmd.groups = store[String(want)] || [];
+    else if (wechsel) {
+      const kept = store[String(want)];
+      if (kept && kept.length) cmd.groups = kept;
+    }
     if (cmd.groups) sentGroups = groupsKey(cmd.groups);
 
     /* Zweimal denselben Befehl zu schicken kostet nichts, aber es macht die
@@ -525,11 +578,23 @@
     }
 
     if (m.event === 'clusters') {
-      // Am Beamer ist die Karte ein Notizblock: dort wird gezeigt und
-      // ausprobiert, nicht gearbeitet. Was die Lehrkraft dort zieht,
-      // gehört niemandem und wird nirgends gespeichert.
+      /* Am Beamer ist die Karte ein Notizblock — aber einer, der zwischen
+         zwei Welten nicht verschwindet. Auch die Lehrkraft hat drei eigene
+         Welten (Platz 0), und wer darin etwas aufgebaut hat, um es zu
+         zeigen, will es nach einem Blick in Welt II wiederfinden. Bewahrt
+         wird das nur hier im Gerät: gespeichert wird am Pult nichts (save()
+         und saveLocal() bleiben der Klasse vorbehalten), und was `remember`
+         aufnimmt, sind ohnehin nur die eigenen drei. */
       if (isPresenter()) {
-        if (rebase) { rebase = false; sentGroups = groupsKey(m.groups); return; }
+        if (rebase) {
+          // Der Bericht direkt nach einem Aufbau ist keine Handlung, aber
+          // sehr wohl ein Stand: in Phase 2 steht darin der Haufen der
+          // Nachzügler, den die Anwendung selbst gebildet hat.
+          rebase = false;
+          sentGroups = groupsKey(m.groups);
+          if (!watchEid) remember(m.seed, m.groups);
+          return;
+        }
         /* Ein Notizblock, auf dem man auch schreiben kann. Wer beim Zusehen
            selbst eine Kachel zieht, übernimmt: das Zusehen hört auf, die Welt
            des Kindes bleibt stehen. Vorher lief die Arbeit ins Leere — beim
@@ -548,13 +613,17 @@
           push();
           paintDesk();
         }
+        /* Beim Zusehen meldet der Rahmen nur zurück, was von uns hereinging —
+           das ist die Arbeit des Kindes und gehört ihm. Nach einer Übernahme
+           steht `watchEid` schon auf null, und ab da zählt es wieder. */
+        if (!watchEid) remember(m.seed, m.groups);
         return;
       }
       rebase = false;
       if (ctx && ctx.preview) return;
-      const key = String(m.seed);
-      store[key] = m.groups || [];
-      touched[key] = Date.now();
+      // Ein selbst eingetippter Seed wird nicht bewahrt - dann gibt es auch
+      // nichts zu speichern.
+      if (!remember(m.seed, m.groups)) return;
       saveLocal();
       scheduleSave();
     }
@@ -907,6 +976,10 @@
       store = Object.create(null);
       touched = Object.create(null);
       seed = null;
+      /* Auch die Weltliste, obwohl update() sie gleich wieder setzt: an ihr
+         hängt seit `remember`, was bewahrt wird — und eine Liste aus dem
+         vorigen Raum nähme die falschen drei auf. */
+      worlds = [];
 
       const pres = ctx.role === 'presenter';
       root.innerHTML =
@@ -944,6 +1017,9 @@
 
     update(v) {
       view = v;
+      // Vor dem Einlesen: an der Weltliste hängt, was bewahrt wird.
+      worlds = worldsOf(v);
+
       if (!restored) {
         // Erst das Gerät, dann der Server: was hier liegt, ist aus
         // dieser Sitzung (siehe absorb). Am Beamer gibt es beides nicht -
@@ -953,13 +1029,21 @@
           const e = mine(v);
           if (e) { myEntry = e.id; absorb(e); }
         }
+        /* Beides bringt mit, was irgendwann einmal aufgenommen wurde — aus
+           einer früheren Fassung also auch einen selbst eingetippten Seed,
+           oder die Welten eines anderen Sitzplatzes. Gestutzt wird deshalb
+           beim Aufsetzen, und nicht erst beim Speichern (trimmed): sonst
+           legte push() eine Arbeit auf, die es nicht mehr geben soll. */
+        const eigene = worlds.map(String);
+        for (const k of Object.keys(store)) {
+          if (eigene.indexOf(k) < 0) { delete store[k]; delete touched[k]; }
+        }
         restored = true;
       } else {
         const e = mine(v);
         if (e && !myEntry) myEntry = e.id;
       }
 
-      worlds = worldsOf(v);
       // Eine Welt, die es nicht mehr gibt (die Lehrkraft hat gewürfelt),
       // ist keine Welt, in der man weiterarbeiten kann.
       if (!seed || (!PHASES[phaseOf(v)].freeSeed && worlds.map(String).indexOf(String(seed)) < 0)) {

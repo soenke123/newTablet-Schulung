@@ -93,6 +93,7 @@ node tools/smoketest.js    # 30 Seeds: Regeln, Flächenanteile, Reproduzierbarke
 node tools/rendertest.js   # Shapes/Kamera/Renderer/Tiere gegen einen Canvas-2D-Mock
 node tools/simtest.js      # 10 Seeds x 5 Tage: Regeln, Raten, Reproduzierbarkeit, Merkmale
 node tools/uitest.js       # Signalliste gegen einen DOM-Mock (Auswahl, Ausblenden)
+node tools/roomtest.js     # ../tool.js (die MPSkills-Seite) gegen einen nachgestellten Rahmen
 node tools/preview.js . preview.png 482917,839214          # PNG-Sichtprüfung ohne Browser
 node tools/preview.js . preview.png 482917 --tiere         # dasselbe mit den Spuren der 5 Tage
 node tools/preview.js . preview.png 482917 --tiere --art=fuchs   # nur eine Art zeichnen
@@ -125,6 +126,16 @@ davon lädt nur `uitest.js` einzelne Dateien (`render/palette.js`, `ui/clusters.
 Klicks **nach oben blubbern**, weil das Auge im Clusterkopf sitzt und der Kopf auswählt. Sein
 `requestAnimationFrame` **sammelt** die Bilder, statt sie sofort auszuführen – nur so lässt sich
 prüfen, dass zwanzig Fingerbewegungen ein Bild ergeben und nicht zwanzig.
+**`roomtest.js` lädt gar nichts aus `js/`** – es prüft die Datei *neben* der Anwendung
+(`../tool.js`, die MPSkills-Seite) und stellt dafür beide Gegenüber nach: den Rahmen (ein
+`contentWindow`, das die `wc:cmd` mitschreibt, plus `fromFrame()` für `ready` · `world` ·
+`clusters` · `world-pick`) und den Raum (`ctx` mit den Aktionen, `view` mit Code, Sitzplatz, Phase
+und Beiträgen). Sein DOM ist bewusst ein Stummel: was `tool.js` am Pult zeichnet, ist nicht das,
+was schiefgeht – schiefgehen kann, **welche Gruppierung wann in den Rahmen geht**. Genau diese
+Regel steht dort (siehe „Im Raum": bewahrt werden die drei Welten des Raums und sonst nichts).
+Wer den Beitrag prüft, muss die 1,5-Sekunden-Bremse abwarten (`scheduleSave`) – deshalb laufen die
+letzten beiden Fälle in `setTimeout`-Ketten und nicht hintereinander weg.
+
 `preview.js` erhält seine
 Globals über eine explizite Whitelist im `sandbox`-Objekt; nutzt neuer Code z.B. `Float64Array`,
 muss die dort ergänzt werden.
@@ -572,13 +583,33 @@ und zwar aus `publishColors()`: eine Kachel wechselt ihre Farbe genau dann, wenn
 betritt oder verlässt, also ist das dieselbe Ursache und nicht eine zweite Liste von Aufrufstellen.
 
 Gespeichert wird ein Beitrag je Person (`skill_room_entries`, `kind = 'gruppierung'`), und in ihm
-**alle** Welten:
+**die drei eigenen Welten**:
 
 ```jsonc
 { "cur": 482917, "phase": 2,
   "ws": [482917, 839214, 205663],          // die eigenen drei, in ihrer Reihenfolge
   "w": { "482917": [ { "m": [3,7,12], "c": "#c8743f" } ] } }
 ```
+
+**Bewahrt werden genau diese drei — und sonst nichts** (`remember` in `tool.js`, die einzige Tür
+in den Bestand). Ein selbst eingetippter Seed (ab der Auflösungsphase, `freeSeed`; am Pult im
+freien Modus) lässt sich genauso gruppieren, aber die Arbeit gilt nur, solange er aufliegt: er ist
+ein Ausflug und keine vierte Welt. Hätte jeder abgetippte Seed Anspruch auf einen Platz, ständen
+die drei, um die es geht, zwischen beliebig vielen davon — deshalb ist `MAX_WORLDS` auch **3** und
+nicht mehr 5.
+
+**Am Pult gilt dieselbe Regel, nur ohne Server.** Die Lehrkraft hat drei eigene Welten (Platz 0),
+und was sie darin aufgebaut hat, steht nach einem Blick in Welt II noch da; gespeichert wird davon
+nichts (`save()` und `saveLocal()` sind der Klasse vorbehalten, der Bestand lebt im Gerät). Was sie
+in der Welt eines Kindes zieht, gehört dem Notizblock und ist beim nächsten Wechsel weg. Beim
+**Zusehen** nimmt der Bestand ohnehin nichts auf: was der Rahmen dabei meldet, ist die Arbeit des
+Kindes und ging gerade von uns hinein.
+
+⚠️ **Eine leere Gruppierung wird nicht in den Rahmen geschickt** (`push`). Ein Weltwechsel baut die
+Welt neu auf, und dabei liegt nichts – ein mitgeschicktes `[]` löschte stattdessen etwas: in Phase 2
+schiebt die Anwendung beim Aufbau die Nachzügler von selbst zu einem Haufen zusammen (`setPhase` in
+`js/ui/signals.js`), und `applyGroups([])` räumte genau den wieder weg. Beim Zusehen ist es
+umgekehrt – dort **ist** die leere Liste der Stand des Kindes und gehört aufgelegt.
 
 ⚠️ **`element.hidden = true` wirkt in `tool.css` nur, wenn es dort auch steht.** `[hidden]`
 kommt aus dem Stylesheet des Browsers, und jede eigene Regel mit `display:` ist stärker – ein
