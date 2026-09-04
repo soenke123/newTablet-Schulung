@@ -226,6 +226,7 @@ console.log('\nClustermodell (ohne DOM):');
 
 const grid = El('div');
 const allBtn = El('button');
+const undoBtn = El('button');
 
 // Die Auswahl ist eine Menge von Tieren, kein einzelnes: eine Kachel meint
 // eines, ein Clusterkopf alle seine Mitglieder.
@@ -240,7 +241,7 @@ let dragEvents = [];
 // auf dem Server - und damit, ob eine Welt, die jemand verlaesst, ihre
 // Gruppen behaelt.
 let clusterReports = [];
-const panel = WL.Signals.create({ grid: grid, allBtn: allBtn }, {
+const panel = WL.Signals.create({ grid: grid, allBtn: allBtn, undoBtn: undoBtn }, {
   onSelect: function (list) { selected = list; panel.setSelection(list); },
   onVisibility: function (indices, hidden) { visibility.push([indices, hidden]); },
   onColors: function (c) { colors = c; },
@@ -692,6 +693,120 @@ check('Das Auge im Clusterkopf waehlt nichts aus',
   auswahl() === '' && visibility.length === 1 && visibility[0][1] === true,
   auswahl() + ' / ' + JSON.stringify(visibility));
 tap(headOf(14).children[1]);
+
+/*
+ * Der Weg zurueck.
+ *
+ * Geprueft wird nicht der Knopf, sondern die Regel dahinter: aufgehoben wird
+ * der ganze Stand vor jedem Zug, und zwar nur dann, wenn wirklich etwas
+ * passiert ist. Der Fall, der sonst durchginge, ist das Zusammenziehen zweier
+ * Cluster - danach ist von Hand nicht mehr zu rekonstruieren, welche Kachel in
+ * welchem lag, und genau dafuer gibt es diesen Weg.
+ */
+console.log('\nRueckgaengig:');
+{
+  const welt = fakeSim(20);
+  panel.setSimulation(welt);
+  const stand = () => JSON.stringify(panel.groups());
+
+  check('Am Anfang gibt es nichts zurueckzunehmen',
+    panel.canUndo() === false && undoBtn.disabled === true);
+  check('… und der Knopf sagt das auch', /Nichts/.test(undoBtn.title), undoBtn.title);
+
+  const leer = stand();
+  dragOnto(pickBtn(2), tileOf(6));
+  check('Ein Zug legt einen Schritt an',
+    panel.canUndo() === true && undoBtn.disabled === false);
+
+  check('Der Schritt zurueck meldet sich', panel.undo() === true);
+  check('… und die Gruppierung steht wieder auf Anfang', stand() === leer, stand());
+  check('… die Kacheln stehen wieder im freien Bereich',
+    looseZone().children.length === 20 && clusterBoxes().length === 0);
+  check('… und mehr gibt es nicht zurueckzunehmen',
+    panel.canUndo() === false && panel.undo() === false);
+
+  // Der Kern: zwei gewachsene Cluster ineinander. Herausziehen brauchte
+  // danach die Kenntnis, welche Kachel woher kam - die ist weg.
+  dragOnto(pickBtn(2), tileOf(6));
+  dragOnto(pickBtn(3), tileOf(2));
+  dragOnto(pickBtn(8), tileOf(9));
+  const zwei = stand();
+  dragOnto(headOf(2), boxFor(8));
+  check('Cluster in Cluster ziehen fuegt zusammen',
+    clusterBoxes().length === 1 && groupOf(2) === groupOf(8));
+  panel.undo();
+  check('Ein Schritt zurueck trennt sie wieder', stand() === zwei, stand());
+  check('… mit denselben Mitgliedern in denselben Kaesten',
+    clusterBoxes().length === 2 && groupOf(2) === groupOf(3) &&
+    groupOf(2) === groupOf(6) && groupOf(8) === groupOf(9) && groupOf(2) !== groupOf(8));
+
+  // Die Farbe gehoert zum Stand: sie ist beim Zusammenfuegen die des Ziels und
+  // aus den Mitgliedern allein nicht zurueckzurechnen.
+  check('… und in ihren Farben',
+    colors[welt.signalOrder[2]] === panel.clusters().colorOf(2) &&
+    panel.clusters().colorOf(2) !== panel.clusters().colorOf(8),
+    panel.clusters().colorOf(2) + ' / ' + panel.clusters().colorOf(8));
+
+  // Aufloesen ist auch ein Zug.
+  dragOnto(headOf(2), looseZone());
+  check('Ein aufgeloestes Cluster ist weg', groupOf(2) === -1);
+  panel.undo();
+  check('… und kommt zurueck', groupOf(2) === groupOf(3) && groupOf(2) === groupOf(6));
+
+  // Was von aussen kommt, ist nicht der eigene letzte Zug.
+  panel.applyGroups([{ m: [1, 4], c: '#123456' }]);
+  check('Eine aufgelegte Gruppierung raeumt den Weg zurueck',
+    panel.canUndo() === false && undoBtn.disabled === true);
+
+  /*
+   * Ein Ablegen, das nichts bewirkt, darf keinen Schritt anlegen: der erste
+   * Druck auf den Knopf taete sonst nichts Sichtbares, und das sieht aus wie
+   * ein kaputter Knopf. Geprueft auf leerem Weg, damit ein faelschlich
+   * angelegter Schritt nicht hinter einem echten verschwindet.
+   */
+  dragOnto(pickBtn(1), tileOf(4));       // 1 und 4 liegen schon zusammen
+  check('Ein wirkungsloses Ablegen legt keinen Schritt an',
+    panel.canUndo() === false && stand() === JSON.stringify([{ m: [1, 4], c: '#123456' }]),
+    stand());
+
+  // Zurueckgenommen wird bis zum Anfang, nicht nur einen Schritt.
+  dragOnto(pickBtn(10), tileOf(11));
+  dragOnto(pickBtn(12), tileOf(10));
+  dragOnto(pickBtn(13), tileOf(10));
+  const nachDrei = stand();
+  panel.undo(); panel.undo(); panel.undo();
+  check('Drei Zuege lassen sich einzeln zuruecknehmen',
+    panel.groups().length === 1 && panel.groups()[0].m.join('-') === '1-4', stand());
+  check('… und danach ist der Knopf wieder gesperrt', undoBtn.disabled === true);
+  check('… (Gegenprobe: die drei Zuege waren wirklich drei)',
+    nachDrei !== stand());
+
+  // Der Weg zurueck gehoert der Welt, in der er gegangen wurde: hinter der
+  // "17" steckt in der naechsten ein anderes Tier.
+  dragOnto(pickBtn(5), tileOf(7));
+  panel.setSimulation(fakeSim(20));
+  check('Eine neue Welt raeumt den Weg zurueck', panel.canUndo() === false);
+
+  /*
+   * Und der Bruch bei Tag 5 raeumt ihn auch. Der Nachzuegler-Haufen ist nicht
+   * die Arbeit der Klasse, und er ist nicht wiederherstellbar
+   * (zusammengeschoben wird genau einmal je Welt) - ein Schritt zurueck ueber
+   * ihn hinweg loeste eine Gruppe auf, die niemand zurueckholen kann.
+   */
+  const spaet = fakeSim(20);
+  spaet.baseCount = 16;
+  spaet.newcomers = spaet.signalOrder.slice(16);
+  panel.setSimulation(spaet);
+  panel.setPhase(0);
+  dragOnto(pickBtn(1), tileOf(2));
+  check('Vor dem Bruch laesst sich der Zug zuruecknehmen', panel.canUndo() === true);
+  panel.setPhase(1);
+  check('Über den Bruch hinweg gibt es kein Zurück',
+    panel.canUndo() === false && undoBtn.disabled === true);
+  check('… und die Nachzügler stehen trotzdem zusammen',
+    panel.clusters().groupOf(16) >= 0 && panel.clusters().groupOf(16) === panel.clusters().groupOf(19));
+  nichtsAusgewaehlt();
+}
 
 /*
  * Der Bruch bei Tag 5. Fuenf Tiere kommen dazu, und sie kommen als *ein*

@@ -54,6 +54,8 @@
         <li><b>Gruppieren</b> Signal auf Signal ziehen; nach unten wieder heraus.
             Mit dem Finger: waagerecht ziehen &ndash; oder kurz gedrückt halten,
             dann geht es in jede Richtung</li>
+        <li><b>Rückgängig</b> der Pfeil über der Signalliste &middot;
+            <kbd>Strg</kbd>+<kbd>Z</kbd></li>
         <li><kbd>Leertaste</kbd> Zeit an und aus</li>
         <li><kbd>&larr;</kbd> <kbd>&rarr;</kbd> eine Stunde, mit <kbd>Shift</kbd> ein ganzer Tag</li>
         <li><kbd>V</kbd> verdeckte Sicht &middot; <kbd>S</kbd> Spuren &middot;
@@ -71,6 +73,14 @@
   <aside class="signals" id="signals" aria-label="Signale">
     <div class="signals-head">
       <h2>Signale</h2>
+      <!--
+        Ein Schritt zurück. Herausziehen allein reicht als Weg zurück nicht:
+        wer zwei Cluster zusammengezogen hat, weiß danach nicht mehr, welche
+        Kachel in welchem lag – und genau das braucht er, um es von Hand
+        wieder zu trennen. Der Knopf steht im Kopf der Liste, weil dort die
+        Gruppierung entsteht, die er zurücknimmt.
+      -->
+      <button id="signalUndoBtn" type="button" class="signal-undo" disabled></button>
       <button id="signalAllBtn" type="button" class="signal-eye signal-eye-all"></button>
     </div>
     <div class="signals-grid" id="signalGrid"></div>

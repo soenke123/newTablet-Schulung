@@ -45,6 +45,19 @@
     '<line class="eye-slash" x1="4.2" y1="19.8" x2="19.8" y2="4.2"/>' +
     '</svg>';
 
+  // Der Pfeil, der zurueckgeht. Ohne Beschriftung: im Kopf der Liste steht
+  // "Signale", und daneben ist Platz fuer Zeichen und nicht fuer Woerter.
+  var UNDO_SVG =
+    '<svg class="undo" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M4.5 8.5h9.2a5.5 5.5 0 0 1 0 11H9"/>' +
+    '<path d="M8 5 4.5 8.5 8 12"/>' +
+    '</svg>';
+
+  // Wie viele Schritte zurueckgenommen werden koennen. Eine Stunde Gruppieren
+  // sind ein paar Dutzend Zuege; mehr aufzuheben hiesse, Zustaende zu halten,
+  // an die sich ohnehin niemand mehr erinnert.
+  var HISTORY_MAX = 50;
+
   // Ab hier ist eine Fingerbewegung gemeint und kein Wackeln beim Tippen.
   var DRAG_THRESHOLD = 7;
 
@@ -81,7 +94,7 @@
   var PROBE = [[0, 0], [0, -14], [0, 14], [-14, 0], [14, 0]];
 
   /**
-   * @param elements  { grid, allBtn }
+   * @param elements  { grid, allBtn, undoBtn }
    * @param callbacks { onSelect(agentIndices),
    *                    onVisibility(agentIndices|null, hidden),
    *                    onColors(colorsByAgentIndex),
@@ -96,6 +109,7 @@
   function create(elements, callbacks) {
     var grid = elements.grid;
     var allBtn = elements.allBtn;
+    var undoBtn = elements.undoBtn;
     var onSelect = (callbacks && callbacks.onSelect) || function () {};
     var onVisibility = (callbacks && callbacks.onVisibility) || function () {};
     var onColors = (callbacks && callbacks.onColors) || function () {};
@@ -123,6 +137,9 @@
     // auseinandergenommen bleiben sie auseinander.
     var newcomers = [];
     var newcomersGrouped = false;
+    // Der Weg zurueck: je Eintrag der Stand der Gruppierung VOR einer
+    // Aenderung, in derselben Form wie panel.groups().
+    var history = [];
 
     var panel = {};
 
@@ -165,6 +182,9 @@
       }
       newcomers.sort(function (a, b) { return a - b; });
 
+      // Eine neue Welt, eine neue Aufgabe: die Schritte der alten fuehren hier
+      // auf Kachelnummern, hinter denen jetzt andere Tiere stecken.
+      clearHistory();
       render();
       publishColors();
       return count;
@@ -198,6 +218,16 @@
       }
       render();
       if (!formed) return;
+      /*
+       * Ueber den Bruch hinweg gibt es kein Zurueck.
+       *
+       * Der Nachzuegler-Haufen ist nicht die Arbeit der Klasse, sondern der
+       * Bruch selbst - und er ist nicht wiederherstellbar: zusammengeschoben
+       * wird genau einmal je Welt (newcomersGrouped). Ein Schritt zurueck
+       * ueber ihn hinweg loeste also eine Gruppe auf, die niemand gebildet
+       * hat und die niemand zurueckholen kann.
+       */
+      clearHistory();
       publishColors();
       report(newcomers);
     };
@@ -278,6 +308,44 @@
      * Ein Rest von vorher waere eine Gruppierung, die nie jemand gebildet hat.
      */
     panel.applyGroups = function (list) {
+      restore(list);
+      // Was von aussen kommt, ist nicht der eigene letzte Zug: der Wechsel in
+      // eine andere Welt, ein Neuladen, oder am Beamer die Arbeit einer
+      // anderen Person. Ein Schritt zurueck landete danach in einer
+      // Gruppierung, die zu dem, was gerade zu sehen ist, nicht gehoert.
+      clearHistory();
+    };
+
+    // -------------------------------------------------------- Rueckgaengig
+
+    /*
+     * Ein Schritt zurueck - der Knopf neben "Signale", und Strg+Z.
+     *
+     * Herausziehen allein reicht als Weg zurueck nicht: wer zwei Cluster
+     * zusammenzieht, muesste danach von Hand wissen, welche Kachel in welchem
+     * lag - und genau das weiss man nach dem Fehlgriff nicht mehr. Aufgehoben
+     * wird deshalb der ganze Stand vor jedem Zug und nicht der Zug selbst:
+     * eine Gegenbewegung zu jeder Kombination aus Zusammenfuegen, Herausziehen
+     * und dem Zerfall eines Clusters, dem das vorletzte Mitglied entzogen
+     * wurde, waere dieselbe Logik ein zweites Mal - und die zweite ist die,
+     * die keiner prueft.
+     *
+     * Die Auswahl bleibt dabei stehen. Sie ist keine Gruppierung, sondern der
+     * Blick auf die Karte: nach einem zurueckgenommenen Zug sind genau die
+     * Tiere hervorgehoben, um die es gerade ging, und das ist die Frage, die
+     * zum Rueckgaengigmachen gefuehrt hat.
+     */
+    panel.canUndo = function () { return history.length > 0; };
+
+    panel.undo = function () {
+      if (!history.length) return false;
+      restore(history.pop());
+      updateUndoBtn();
+      return true;
+    };
+
+    /** Einen Stand auflegen, ohne den Weg dorthin anzufassen. */
+    function restore(list) {
       model.clear();
       for (var i = 0; i < (list || []).length; i++) {
         var g = list[i] || {};
@@ -285,7 +353,32 @@
       }
       render();
       publishColors();
-    };
+    }
+
+    function pushHistory(snapshot) {
+      history.push(snapshot);
+      if (history.length > HISTORY_MAX) history.shift();
+      updateUndoBtn();
+    }
+
+    function clearHistory() {
+      history.length = 0;
+      updateUndoBtn();
+    }
+
+    function updateUndoBtn() {
+      if (!undoBtn) return;
+      undoBtn.disabled = history.length === 0;
+      undoBtn.title = history.length
+        ? 'Letzten Schritt rückgängig machen'
+        : 'Nichts zum Rückgängigmachen';
+      undoBtn.setAttribute('aria-label', undoBtn.title);
+    }
+
+    if (undoBtn) {
+      undoBtn.innerHTML = UNDO_SVG;
+      undoBtn.addEventListener('click', function () { panel.undo(); });
+    }
 
     // ------------------------------------------------------------ Aufbau
 
@@ -864,8 +957,14 @@
       // Vor der Aenderung merken: danach gibt es die Gruppe der Quelle unter
       // Umstaenden nicht mehr, aus der sich ihre Mitglieder lesen liessen.
       var moved = model.membersOf(source);
+      // Der Stand vor dem Zug, gerettet bevor es ihn gibt. Aufgehoben wird er
+      // erst, wenn wirklich etwas passiert ist - ein Ablegen, das nichts
+      // bewirkt, darf keinen Schritt in die Liste legen, denn ein Rueckgaengig
+      // ohne sichtbare Wirkung sieht aus wie ein kaputter Knopf.
+      var before = panel.groups();
       var changed = loosen ? model.detach(source) : model.join(source, handleOf(el));
       if (!changed) return;
+      pushHistory(before);
       // Die Auswahl haengt am Signal, nicht an der Kachel - sie ueberlebt den
       // Neuaufbau, weil sie in Signalnummern gefuehrt wird.
       render();
@@ -935,6 +1034,7 @@
     }
 
     updateAll();
+    updateUndoBtn();
     return panel;
   }
 

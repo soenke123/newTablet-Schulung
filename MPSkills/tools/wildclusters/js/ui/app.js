@@ -58,7 +58,8 @@
 
     var signals = WL.Signals.create({
       grid: document.getElementById('signalGrid'),
-      allBtn: document.getElementById('signalAllBtn')
+      allBtn: document.getElementById('signalAllBtn'),
+      undoBtn: document.getElementById('signalUndoBtn')
     }, {
       onSelect: function (indices) { setSelection(indices); },
       onVisibility: function (indices, hiddenFlag) {
@@ -402,6 +403,16 @@
       var tag = e.target && e.target.tagName;
       if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'SELECT' || tag === 'TEXTAREA') return;
       var key = e.key.toLowerCase();
+
+      /* Strg+Z (auf dem Mac Cmd+Z) fuehrt durch dieselbe Tuer wie der Pfeil
+         ueber der Signalliste. Vor der Kette der einzelnen Buchstaben, damit
+         eine Tastenkombination nie nebenbei einen Einzelbuchstaben ausloest. */
+      if ((e.ctrlKey || e.metaKey) && key === 'z') {
+        e.preventDefault();
+        signals.undo();
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
 
       if (key === ' ' || e.key === 'Spacebar') {
         e.preventDefault();

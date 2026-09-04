@@ -602,6 +602,46 @@ body.signal-dragging { cursor: grabbing; user-select: none; -webkit-user-select:
 .signal-eye-all .eye { width: 17px; height: 17px; }
 .signal-eye-all[disabled] { opacity: 0.4; cursor: default; }
 
+/*
+ * Ein Schritt zurueck, gleich daneben und in derselben Form: beide Knoepfe im
+ * Kopf der Liste sind Zeichen ohne Wort, und ungleich gross saehen sie aus wie
+ * zwei verschiedene Dinge. Er ist gesperrt, solange es nichts zurueckzunehmen
+ * gibt - ein Knopf, der nichts tut, ist schlimmer als keiner.
+ */
+.signal-undo {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  min-width: 34px;
+  padding: 0;
+  border: 1px solid var(--paper-edge);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--bark-soft);
+  cursor: pointer;
+}
+
+.signal-undo .undo {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.signal-undo:hover { background: #f5efe4; }
+.signal-undo[disabled] { opacity: 0.4; cursor: default; }
+.signal-undo[disabled]:hover { background: #fff; }
+
+.signal-undo:focus-visible {
+  outline: 3px solid rgba(20, 18, 12, 0.65);
+  outline-offset: -3px;
+}
+
 /* --------------------------------------------------------------- Zeitleiste */
 
 /*

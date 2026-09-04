@@ -71,6 +71,7 @@ Alles davon steht auch im Programm, hinter dem **`i`** oben rechts in der Kopfze
 | Tier verfolgen | Anklicken | Antippen |
 | Signale gruppieren | Kachel auf Kachel ziehen | waagerecht ziehen – oder kurz gedrückt halten, dann in jede Richtung |
 | Aus dem Cluster lösen | In den freien Bereich ziehen | dito |
+| Einen Schritt zurück | Pfeil über der Signalliste oder `Strg`+`Z` | Pfeil über der Signalliste |
 | Zeit an/aus | Leertaste | Play-Knopf |
 | Eine Stunde / ein Tag springen | `←` `→` bzw. mit `Shift` | Zeitleiste ziehen |
 | Offene ↔ verdeckte Sicht | Taste `V` oder „Verdeckte Sicht" | Button |
@@ -81,6 +82,22 @@ Alles davon steht auch im Programm, hinter dem **`i`** oben rechts in der Kopfze
 
 Der Seed steht in der Adresszeile (`#seed=482917`) – so lässt sich dieselbe Welt teilen.
 Gleicher Seed erzeugt exakt dieselbe Welt **und denselben Tagesverlauf der Tiere**.
+
+### Einen Schritt zurück
+
+Neben „Signale" steht ein **Pfeil zurück** – auf dem Tablet der Klasse genauso wie am Beamer.
+Er nimmt den letzten Zug zurück: ein Zusammenziehen, ein Herausziehen, ein aufgelöstes Cluster.
+Mehrfach gedrückt geht er Zug für Zug weiter zurück; ist nichts mehr da, ist er grau.
+
+Herausziehen allein reichte als Weg zurück nicht. Wer zwei gewachsene Cluster zusammenzieht,
+weiß danach nicht mehr, welche Kachel in welchem lag – und genau das bräuchte er, um sie von Hand
+wieder zu trennen. Deshalb wird der ganze Stand vor jedem Zug aufgehoben und nicht der Zug selbst.
+
+Drei Dinge räumen den Weg zurück ab, und zwar mit Absicht: eine **neue Welt** (hinter der „17"
+steckt dann ein anderes Tier), eine **von außen aufgelegte Gruppierung** (der Wechsel zwischen den
+Welten eines Raums, ein Neuladen, am Beamer die Arbeit einer anderen Person) und der **Bruch bei
+Tag 5** – der Nachzügler-Haufen ist nicht die Arbeit der Klasse, und zusammengeschoben wird er nur
+einmal je Welt, ein Schritt darüber hinweg könnte ihn also nicht zurückholen.
 
 ### Verdeckte Sicht
 

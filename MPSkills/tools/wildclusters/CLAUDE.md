@@ -269,6 +269,26 @@ auf. Beim Zusammenfügen gewinnt immer die Farbe des **Ziels** – so bleibt ein
 über alle Schritte derselbe Haufen. Ein Cluster aus einem einzigen Tier gibt es nicht: es zerfällt,
 sobald ihm das vorletzte Mitglied entzogen wird.
 
+**Ein Schritt zurück steht im Kopf der Liste** (`#signalUndoBtn`, dazu `Strg`/`Cmd`+`Z` in
+`app.js`) – auf dem Tablet der Klasse genauso wie am Beamer, denn ein Fehlgriff passiert beiden.
+Aufgehoben wird **der ganze Stand vor jedem Zug** (`panel.groups()` auf einen Stapel, `HISTORY_MAX`
+50) und nicht der Zug selbst: eine Gegenbewegung zu jeder Kombination aus Zusammenfügen,
+Herausziehen und dem Zerfall eines Clusters, dem das vorletzte Mitglied entzogen wurde, wäre
+dieselbe Logik ein zweites Mal – und die zweite ist die, die keiner prüft. Herausziehen allein
+reichte als Weg zurück nicht: wer zwei gewachsene Cluster zusammenzieht, weiß danach nicht mehr,
+welche Kachel in welchem lag.
+
+Angelegt wird ein Schritt nur, wenn wirklich etwas passiert ist (`changed` in `applyDrop`) – ein
+erster Druck ohne sichtbare Wirkung sieht aus wie ein kaputter Knopf. **Drei Dinge räumen den
+Stapel ab, und jedes aus einem eigenen Grund:** `setSimulation` (neue Welt – hinter derselben
+Kachelnummer steckt ein anderes Tier), `applyGroups` (was von außen kommt, ist nicht der eigene
+letzte Zug: Weltwechsel, Neuladen, am Beamer die Arbeit einer anderen Person) und das
+Zusammenschieben der Nachzügler in `setPhase` (der Haufen ist nicht die Arbeit der Klasse und
+**nicht wiederherstellbar** – `newcomersGrouped` ist ein einmaliger Marker je Welt, ein Schritt
+darüber hinweg löste also eine Gruppe auf, die niemand zurückholen kann). Die **Auswahl** bleibt
+beim Zurücknehmen stehen: sie ist keine Gruppierung, sondern der Blick auf die Karte, und nach
+einem zurückgenommenen Zug sind genau die Tiere hervorgehoben, um die es ging.
+
 Arbeitsteilung: **`clusters.js` ist das Modell und fasst kein DOM an** (Zugehörigkeit, Zusammen­
 fügen, Herausziehen, Farbe – die Regeln, die schiefgehen können, und deshalb in `uitest.js`
 prüfbar), `signals.js` ist das Ziehen und das Zeichnen. Gerechnet wird im Modell in

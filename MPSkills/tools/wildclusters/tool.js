@@ -66,7 +66,7 @@
      mit neuen Skripten — genau der Fall, in dem ein <script>-Tag fehlt,
      den niemand vermisst, bis die Brücke schweigt. Dieselbe Überlegung
      wie beim ?v= in lib/tool.js. */
-  const V = '?v=20260904a';
+  const V = '?v=20260904b';
 
   /* Was eine Raumphase für die Karte bedeutet. Die Zahl links kennt der
      Server (skill_tools.limits.phases = 3), alles rechts davon nur
