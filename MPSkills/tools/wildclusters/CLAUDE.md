@@ -93,6 +93,7 @@ node tools/smoketest.js    # 30 Seeds: Regeln, Flächenanteile, Reproduzierbarke
 node tools/rendertest.js   # Shapes/Kamera/Renderer/Tiere gegen einen Canvas-2D-Mock
 node tools/simtest.js      # 10 Seeds x 5 Tage: Regeln, Raten, Reproduzierbarkeit, Merkmale
 node tools/uitest.js       # Signalliste gegen einen DOM-Mock (Auswahl, Ausblenden)
+node tools/bridgetest.js   # js/ui/bridge.js gegen einen nachgestellten Rahmen (die Naht zu app.js)
 node tools/roomtest.js     # ../tool.js (die MPSkills-Seite) gegen einen nachgestellten Rahmen
 node tools/preview.js . preview.png 482917,839214          # PNG-Sichtprüfung ohne Browser
 node tools/preview.js . preview.png 482917 --tiere         # dasselbe mit den Spuren der 5 Tage
@@ -126,6 +127,13 @@ davon lädt nur `uitest.js` einzelne Dateien (`render/palette.js`, `ui/clusters.
 Klicks **nach oben blubbern**, weil das Auge im Clusterkopf sitzt und der Kopf auswählt. Sein
 `requestAnimationFrame` **sammelt** die Bilder, statt sie sofort auszuführen – nur so lässt sich
 prüfen, dass zwanzig Fingerbewegungen ein Bild ergeben und nicht zwanzig.
+**`bridgetest.js` lädt genau eine Datei aus `js/`** – die echte `js/ui/bridge.js`, gegen ein
+Doppel von `WILDCLUSTERS`. Es prüft die eine Regel, an der die Arbeit einer Stunde hängt:
+**während ein Weltaufbau läuft, geht keine Gruppierung nach oben** – egal, wer ihn angestoßen
+hat. Weil ein selbst geschriebenes Doppel nur beweist, was der Schreiber glaubt, prüft es
+zusätzlich die echte `app.js` im Text: `buildHook` muss in `build()` **vor**
+`signals.setSimulation` stehen. Genau diese eine Zeile Abstand war der Fehler (siehe „Im Raum").
+
 **`roomtest.js` lädt gar nichts aus `js/`** – es prüft die Datei *neben* der Anwendung
 (`../tool.js`, die MPSkills-Seite) und stellt dafür beide Gegenüber nach: den Rahmen (ein
 `contentWindow`, das die `wc:cmd` mitschreibt, plus `fromFrame()` für `ready` · `world` ·
@@ -649,6 +657,17 @@ Welt neu auf, und dabei liegt nichts – ein mitgeschicktes `[]` löschte stattd
 schiebt die Anwendung beim Aufbau die Nachzügler von selbst zu einem Haufen zusammen (`setPhase` in
 `js/ui/signals.js`), und `applyGroups([])` räumte genau den wieder weg. Beim Zusehen ist es
 umgekehrt – dort **ist** die leere Liste der Stand des Kindes und gehört aufgelegt.
+
+⚠️ **Ein Weltaufbau ist ein Zeitraum, und in ihm meldet die Anwendung Unsinn.**
+`signals.setSimulation` endet auf `publishColors()` und damit auf `onClusters([])` – mitten im
+Aufbau, während `lastSeed` in der Brücke noch auf die Welt zeigt, die gerade noch dastand. Nach
+oben durchgelassen sieht diese Meldung aus wie „die Person hat in Welt I alles aufgelöst", und der
+nächste Speichervorgang löscht ihre Arbeit: im Gerät **und** auf dem Server. Gesperrt war das
+lange nur für Aufbauten, die von *oben* kamen (`busy` in `applyNow`) – „Neue Welt" und das
+Seed-Feld sitzen aber in der Anwendung selbst, und ein Druck darauf machte die Gruppierung der
+zuletzt bearbeiteten Welt tot, bevor man sie überhaupt wieder aufmachte. Deshalb meldet der Aufbau
+sich an **beiden** Enden: `setBuildHook` (Anfang, ganz oben in `build()`) und `setWorldHook`
+(Ende). `tools/bridgetest.js` hält beides fest.
 
 ⚠️ **Der Rahmen baut auch von sich aus, und sein Bericht darüber ist keine
 Gruppierung** (`restore` in `tool.js`). Seed-Feld und „Neue Welt" liegen *im*

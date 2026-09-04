@@ -55,6 +55,14 @@
     // Aufbau ist zweistufig und laeuft ueber zwei setTimeout - von aussen ist
     // "fertig" sonst nicht abzuwarten, sondern nur zu erraten.
     var worldHook = null;
+    /* Und wer erfahren will, dass einer ANFAENGT. Das ist nicht die Kehrseite
+       aus Symmetrie, sondern der einzige Weg, den Aufbau von aussen als
+       Zeitraum zu sehen: dazwischen meldet die Signalliste eine leere
+       Gruppierung (setSimulation -> publishColors), und wer nur das Ende kennt,
+       haelt diese Meldung fuer die Arbeit eines Menschen an der Welt, die
+       gerade noch dastand. Anfangen kann ein Aufbau auch ohne Zutun von aussen
+       - "Neue Welt" und das Seed-Feld sitzen in dieser Seite. */
+    var buildHook = null;
 
     var signals = WL.Signals.create({
       grid: document.getElementById('signalGrid'),
@@ -265,6 +273,10 @@
 
     function build(seedValue) {
       var seed = WL.parseSeed(seedValue);
+      // Ganz zuerst und nicht erst im Rueckruf: ab hier gilt alles, was diese
+      // Seite ueber die Gruppierung meldet, der neuen Welt - auch das, was sie
+      // noch unter der alten meldet, weil die neue erst am Ende steht.
+      if (buildHook) buildHook();
       generateBtn.disabled = true;
       generateBtn.textContent = 'Erzeuge …';
       player.pause();
@@ -464,10 +476,16 @@
      * Fuer die Konsole, fuer spaetere Phasen - und seit dem Einzug in MPSkills
      * fuer die Bruecke (js/ui/bridge.js), die das hier von aussen bedient.
      *
-     * Die drei Haken (setClusterHook, setWorldHook, applyGroups) sind der
-     * ganze Unterschied zwischen "laeuft allein" und "laeuft in einem Raum".
-     * Sie sind bewusst Haken und keine Ereignisse: es gibt genau einen
+     * Die vier Haken (setBuildHook, setWorldHook, setClusterHook, applyGroups)
+     * sind der ganze Unterschied zwischen "laeuft allein" und "laeuft in einem
+     * Raum". Sie sind bewusst Haken und keine Ereignisse: es gibt genau einen
      * Zuhoerer, und der ist entweder da oder nicht.
+     *
+     * Der Aufbau meldet sich an BEIDEN Enden (setBuildHook, setWorldHook), und
+     * das ist keine Zierde: dazwischen liegen zwei setTimeout, und in dieser
+     * Zeit meldet die Signalliste eine leere Gruppierung - unter dem Seed der
+     * Welt, die gerade noch dastand. Wer nur das Ende kennt, schreibt damit
+     * fremde Arbeit tot.
      */
     global.WILDCLUSTERS = {
       get world() { return world; },
@@ -496,7 +514,8 @@
       hideDetails: function () { if (overlay.isVisible()) overlay.toggle(); },
       applyGroups: function (list) { signals.applyGroups(list); },
       setClusterHook: function (fn) { clusterHook = fn || null; },
-      setWorldHook: function (fn) { worldHook = fn || null; }
+      setWorldHook: function (fn) { worldHook = fn || null; },
+      setBuildHook: function (fn) { buildHook = fn || null; }
     };
   });
 })(typeof window !== 'undefined' ? window : globalThis);

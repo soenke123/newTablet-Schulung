@@ -52,7 +52,17 @@
 
   var WC = null;              // WILDCLUSTERS, sobald es steht
   var ready = false;
-  var busy = false;           // zwischen "baue Welt" und "Welt steht"
+  /* Zwischen "ein Aufbau hat angefangen" und "die Welt steht". Gesetzt wird es
+     an ZWEI Stellen, und die zweite ist die, die gefehlt hat: hier, wenn wir
+     den Aufbau selbst anstossen - und im buildHook, wenn die Seite von sich
+     aus baut ("Neue Welt", Seed-Feld, beide sitzen in ihr drin).
+     Woran das hing: mitten im Aufbau meldet die Signalliste eine leere
+     Gruppierung (setSimulation -> publishColors), und lastSeed zeigt zu diesem
+     Zeitpunkt noch auf die Welt, die gerade noch dastand. Nach oben
+     durchgelassen sah das aus wie "die Person hat in Welt I alles aufgeloest" -
+     und der naechste Speichervorgang loeschte ihre Arbeit. Auf dem Geraet und
+     auf dem Server. */
+  var busy = false;
   /* Waehrend ein Befehl von oben ausgefuehrt wird. Was die Anwendung dabei an
      Gruppierung meldet, ist die Folge dieses Befehls und keine Handlung - und
      nach oben durchgelassen sieht es genau danach aus. Der Fall, an dem es
@@ -353,6 +363,11 @@
   function attach() {
     WC = global.WILDCLUSTERS;
     if (!WC) { global.setTimeout(attach, 30); return; }
+
+    /* Ein Aufbau faengt an - egal wer ihn angestossen hat. Ab hier gehoert
+       alles, was die Signalliste meldet, dem Aufbau und nicht einem Menschen;
+       aufgehoben wird die Sperre im worldHook, wenn die neue Welt steht. */
+    WC.setBuildHook(function () { busy = true; });
 
     WC.setWorldHook(function (seed) {
       lastSeed = seed;
