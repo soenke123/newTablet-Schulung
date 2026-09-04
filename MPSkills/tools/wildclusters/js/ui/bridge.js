@@ -378,7 +378,13 @@
       if (pendingGroups) { WC.applyGroups(pendingGroups); pendingGroups = null; }
       busy = false;
       if (worldsBox) renderWorlds(worldsList(), seed);
-      send('world', { seed: seed });
+      /* `n` ist der Bestand der ERSTEN Aufgabenphase (sim.baseCount) und nicht
+         die Laenge der Tierliste: die Seite sagt der Klasse in ihrer
+         Einfuehrung, wie viele Tiere einen Sender tragen, und diese Zahl darf
+         sich beim Uebergang in Phase 2 nicht rueckwirkend aendern - die fuenf
+         Nachzuegler sind ja gerade die Ueberraschung. Von aussen ist der
+         Bestand sonst nicht zu erfahren; die Signalliste steht im Rahmen. */
+      send('world', { seed: seed, n: (WC.sim && WC.sim.baseCount) || 0 });
       send('clusters', { seed: seed, phase: WC.phase, groups: WC.signals.groups() });
     });
 

@@ -19,6 +19,9 @@
    ══════════════════════════════════════════════════════════════ */
 
 .wl-host {
+  /* Der Bezugspunkt der Einführung: sie liegt IM Kasten, damit sie das
+     Vollbild mitnimmt (siehe tool.js, „Die Einführung"). */
+  position: relative;
   border: 1px solid var(--line);
   border-radius: var(--r-lg, 18px);
   overflow: hidden;
@@ -54,6 +57,7 @@
 .wl-row[hidden],
 .wl-list[hidden],
 .wl-btn[hidden],
+.wl-intro[hidden],
 .wl-person[hidden] { display: none !important; }
 
 /* ─────────────────────────────────────────── Steuerpult (Beamer) */
@@ -276,6 +280,201 @@
 
 .wl-empty { margin: 4px 8px; }
 
+/* ═══════════════════════════════════════════ Die Einführung
+
+   Fünf Karten beim Betreten: die Lage, dann die vier Bereiche der
+   Oberfläche. Sie gehört MPSkills und nicht der Anwendung — dieselbe
+   Entscheidung wie beim Steuerpult: was hier steht, spricht über das
+   Werkzeug und ist nicht Teil davon.
+
+   Sie liegt im Kasten (`position: absolute` statt `fixed`), damit sie
+   das Vollbild mitnimmt; der Kasten selbst ist die Scrollstrecke, und
+   `margin: auto` an der Karte zentriert nur, solange Platz da ist —
+   dasselbe Muster wie `.overlay`/`.modal` in MPSkills/style.css. Ein
+   Kasten von 420 px Höhe ist der enge Fall, den es zu tragen gilt.   */
+
+.wl-intro {
+  position: absolute;
+  inset: 0;
+  z-index: 8;              /* über dem Pult im Vollbild (das liegt auf 3) */
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px;
+  background: var(--overlay);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.wl-i-card {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  margin: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg, 18px);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: wl-i-in .18s ease-out;
+}
+
+@keyframes wl-i-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wl-i-card { animation: none; }
+}
+
+/* Der Ausgang. Er steht über dem Bild und nicht in der Fußzeile: dort
+   unten steht der Weg VORWÄRTS, und ein Abbruch daneben wäre der
+   häufigste Fehlgriff. Ein Kasten ohne Ausgang ist außerdem eine Falle,
+   wenn an den Knöpfen darunter etwas schiefgeht. */
+.wl-i-x {
+  position: absolute;
+  top: 10px; right: 10px;
+  z-index: 1;
+  width: 30px; height: 30px;
+  border: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: .95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wl-i-x:hover { background: var(--surface); color: var(--ink); }
+
+.wl-i-art {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.wl-art { display: block; width: 100%; height: auto; }
+
+.wl-i-body { padding: 16px 20px 2px; }
+
+.wl-i-kicker {
+  margin: 0 0 4px;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+
+.wl-i-title { margin: 0 0 8px; font-size: 1.15rem; letter-spacing: -.01em; }
+
+.wl-i-text { font-size: .92rem; line-height: 1.5; color: var(--ink-soft); }
+.wl-i-text p { margin: 0 0 8px; }
+.wl-i-text b { color: var(--ink); font-weight: 700; }
+
+.wl-facts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.wl-facts li { position: relative; padding-left: 16px; }
+
+.wl-facts li::before {
+  content: '';
+  position: absolute;
+  left: 0; top: .55em;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.wl-tip { font-size: .84rem; color: var(--ink-faint); }
+
+.wl-i-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px 16px;
+}
+
+.wl-i-dots { display: flex; gap: 6px; margin-right: auto; }
+
+.wl-i-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.wl-i-dot.wl-on { background: var(--accent); }
+
+/* Auch im :hover, sonst gewinnt `.wl-btn:hover` — eine Klasse plus
+   Pseudoklasse schlägt eine Klasse. */
+.wl-i-go, .wl-i-go:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ── Die Zeichnungen ───────────────────────────────────────────
+   Ein Bild, viermal, jedes Mal ein anderer Teil hell. Gefärbt wird
+   über Klassen und nicht im SVG: die Seite kippt in den Darkmode,
+   und ein hineingeschriebenes Grau bliebe darin liegen. */
+
+.wl-bg { fill: var(--surface); stroke: var(--line); }
+.wl-box { fill: var(--paper-2); stroke: var(--line); }
+.wl-d, .wl-dot { fill: var(--ink-faint); opacity: .38; }
+.wl-tr { fill: none; stroke: var(--ink-faint); stroke-width: 2; opacity: .38; }
+
+.wl-t {
+  fill: var(--ink-faint);
+  opacity: .5;
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.wl-on .wl-box { fill: var(--accent-dim); stroke: var(--accent); }
+.wl-on .wl-d, .wl-on .wl-dot { fill: var(--accent-ink); opacity: 1; }
+.wl-on .wl-tr { stroke: var(--accent-ink); opacity: 1; }
+.wl-on .wl-t { fill: var(--accent-ink); opacity: 1; }
+
+.wl-drag { fill: var(--accent); }
+.wl-arrowhead { fill: var(--accent-ink); }
+
+/* Die Lage: eine Nachtkarte, und die kippt nicht mit. Sie zeigt die
+   verdeckte Sicht, und die ist in jedem Kleid dunkelblau. */
+.wl-night { fill: #0e1a26; }
+.wl-s1, .wl-s2, .wl-s3 { fill: none; stroke-width: 2.4; stroke-linecap: round; }
+.wl-s1 { stroke: #e28b3e; }
+.wl-s2 { stroke: #4aa8e0; }
+.wl-s3 { stroke: #7ec46a; }
+.wl-p1 { fill: #e28b3e; }
+.wl-p2 { fill: #4aa8e0; }
+.wl-p3 { fill: #7ec46a; }
+
+.wl-num {
+  fill: #e9eef4;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+/* Das Fragezeichen liegt UNTER den Spuren: es ist die Frage zum Bild
+   und nicht ein Schild davor. */
+.wl-qm {
+  fill: rgba(233, 238, 244, .12);
+  font-size: 118px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
 /* Auf schmalen Geräten bis an beide Bildschirmkanten — dieselbe
    Entscheidung wie bei NeuroLab und der Tafel des WordPools: 22 px
    Seitenrand sind auf einem Handy keine Zierde, sondern Karte. */
@@ -291,4 +490,8 @@
   /* Schmal passt keine Zeile mit sieben Knöpfen: dann untereinander, und
      die Werkzeuge fangen wieder links an. */
   .wl-seg--end { margin-left: 0; }
+
+  .wl-intro { padding: 10px; }
+  .wl-i-body { padding: 14px 16px 2px; }
+  .wl-i-foot { padding: 12px 16px 14px; }
 }

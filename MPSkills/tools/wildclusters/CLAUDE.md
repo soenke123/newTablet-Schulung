@@ -465,7 +465,7 @@ MPSkills-Seite (j.html · lehrer.html)
  └─ tools/wildclusters/tool.js       Rolle, Raum-Zustand, Steuerpult, Ergebnisse
      └─ <iframe> index.html
           ▲ wc:cmd    { seed, worlds, phase, masked, locks, groups, note, full }
-          ▼ wc:event  ready · world · clusters · world-pick · note · full
+          ▼ wc:event  ready · world (seed, n) · clusters · world-pick · note · full
         js/ui/bridge.js → WILDCLUSTERS.*
 ```
 
@@ -515,6 +515,36 @@ aus fünf Metern trifft.
 0129 begründet, warum das eine eigene Migration braucht). Bis dahin sagt der Knopf das auch – ein
 Knopf, der auf ein Tippen hin nichts tut, sieht aus wie ein kaputter, und das ausgerechnet vor der
 Klasse.
+
+**Die Einführung** (`.wl-intro` in `tool.js`, `introCards`) kommt **einmal beim Betreten und
+nicht je Welt**: fünf Karten, erst die Lage („*n* Tiere tragen einen Sender, welche Art das ist,
+weiß niemand mehr; fünf Tage sind aufgezeichnet — finde Regelmäßigkeiten und halte sie auf dem
+Arbeitsblatt fest"), dann vier Karten für die vier Bereiche der Oberfläche (oben die drei Welten ·
+in der Mitte die Karte · unten die Zeitleiste · rechts die Signale mit der Ziehgeste). Vier
+Karten, **ein Bild**: dieselbe Zeichnung der Oberfläche, jedes Mal ein anderer Teil hell — die
+Frage vor dem ersten Griff ist *wo* etwas steht, und vier verschiedene Bildchen beantworten sie
+nicht.
+
+Vier Dinge daran sind nicht offensichtlich:
+
+* **Sie liegt IM Kasten** (`position: absolute` in `.wl-host`, nicht `fixed`). Das Vollbild nimmt
+  genau diesen Kasten; ein `fixed`-Overlay daneben wäre darin unsichtbar — und der Rahmen darunter
+  bliebe unbedienbar.
+* **Sie geht erst auf, wenn eine Welt dasteht** (`frameSeed != null`). Ein Weltaufbau dauert auf
+  einem Tablet mehrere Sekunden, und ein Kasten, der eine Oberfläche erklärt, die es noch nicht
+  gibt, erklärt sie zweimal.
+* **Die Zahl kommt aus dem Rahmen.** `bridge.js` schickt `n: sim.baseCount` mit dem
+  `world`-Ereignis — den **Bestand der ersten Phase** und nicht die Länge der Tierliste: die Zahl
+  darf sich beim Übergang in Phase 2 nicht rückwirkend ändern, die fünf Nachzügler sind ja gerade
+  die Überraschung. Fehlt sie, steht dort „Die Tiere hier" statt einer Zahl.
+* **Sie gehört der Klasse.** Am Pult wird sie gar nicht erst gebaut (dort erklärt die Lehrkraft),
+  im Schaufenster (`ctx.preview`) auch nicht. Gemerkt wird sie im `sessionStorage`
+  (`wl:<code>:intro1`) — dieselbe Begründung wie beim Bestand: ein Klassensatz-Tablet wechselt die
+  Person.
+
+Die Modale vor Phase 2 und 3 gibt es noch nicht; `maybeIntro` steigt bei `phaseOf(view) !== 1`
+aus, und der Schlüssel trägt die Nummer schon im Namen. `tools/roomtest.js` prüft den Ablauf
+(aufgehen · zugehen · nicht wiederkommen · am Pult gar nicht).
 
 ⚠️ **Im Rahmen fängt die Karte verdeckt an** (`WC_EMBEDDED` in `app.js`), und der Schleier wird
 über die Brücke **vor** dem Weltaufbau gesetzt, nicht erst im `worldHook`. Der Aufbau ist

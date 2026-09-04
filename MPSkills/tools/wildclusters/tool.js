@@ -67,6 +67,12 @@
    vierte Welt; hätte jeder abgetippte Seed Anspruch auf einen
    Platz, ständen die drei, um die es geht, zwischen beliebig
    vielen davon.
+
+   ── Die Einführung ────────────────────────────────────────────
+   Einmal beim Betreten, nicht je Welt: erst die Lage („x Tiere
+   tragen einen Sender, welche Art das ist, weiß niemand mehr"),
+   dann vier Karten, die die vier Bereiche der Oberfläche zeigen.
+   Sie gehört der Klasse — am Pult erklärt die Lehrkraft.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -78,7 +84,7 @@
      mit neuen Skripten — genau der Fall, in dem ein <script>-Tag fehlt,
      den niemand vermisst, bis die Brücke schweigt. Dieselbe Überlegung
      wie beim ?v= in lib/tool.js. */
-  const V = '?v=20260904e';
+  const V = '?v=20260904f';
 
   /* Was eine Raumphase für die Karte bedeutet. Die Zahl links kennt der
      Server (skill_tools.limits.phases = 3), alles rechts davon nur
@@ -180,6 +186,11 @@
      Riegel sähe genau das aus wie „die Lehrkraft hat gezogen". */
   let rebase = false;
   let onFs = null;              // Beamer: Vollbild kam oder ging
+  /* Die Einführung: -1 ist zu, 0..n die Karte, die gerade aufliegt. */
+  let introStep = -1;
+  /* Wie viele Tiere in Phase 1 einen Sender tragen. Kommt mit dem
+     `world`-Ereignis herein — von außen ist der Bestand nicht zu sehen. */
+  let agentCount = 0;
 
   const isPresenter = () => ctx && ctx.role === 'presenter';
   const esc = (s) => (ctx ? ctx.esc(s) : String(s == null ? '' : s));
@@ -631,11 +642,15 @@
 
     if (m.event === 'world') {
       frameSeed = Number(m.seed);
+      // Der Bestand der ersten Phase. Er ändert sich über alle drei Welten
+      // hinweg kaum (36–40), aber „40 Tiere" in einer Welt mit 37 wäre eine
+      // Zahl, die ein Kind nachzählen kann.
+      if (m.n) agentCount = Number(m.n);
       // Gleich darauf kommt sein Bericht über die neue Welt — der ist der neue
       // Vergleichsmaßstab und nicht die Arbeit von jemandem.
       rebase = true;
       if (isPresenter()) { deskSeed = frameSeed; paintDesk(); }
-      else { seed = frameSeed; touched[String(seed)] = Date.now(); saveLocal(); }
+      else { seed = frameSeed; touched[String(seed)] = Date.now(); saveLocal(); maybeIntro(); }
       return;
     }
 
@@ -1010,6 +1025,230 @@
   }
 
   /* ══════════════════════════════════════════════════════════
+     Die Einführung (nur Klasse, nur Phase 1)
+     ══════════════════════════════════════════════════════════
+     Fünf Karten: erst die Lage, dann die vier Bereiche der
+     Oberfläche. Sie kommt EINMAL beim Betreten und nicht je Welt —
+     wer zwischen Welt I und II wechselt, wechselt die Aufgabe nicht.
+
+     Sie liegt IM Kasten (`.wl-host`) und nicht über der Seite: das
+     Vollbild nimmt genau diesen Kasten, und ein `position: fixed`
+     außerhalb davon wäre darin unsichtbar. Ein Kind, das die Karte
+     groß gemacht hat, bekäme dann eine Einführung, die es nicht
+     sieht, und einen Rahmen, der auf nichts mehr reagiert.
+
+     Am Pult gibt es sie nicht: dort erklärt die Lehrkraft, und ihre
+     Ansicht ist die Leinwand. Im Schaufenster (`ctx.preview`)
+     ebenfalls nicht — dort soll man das Werkzeug sehen und nicht
+     einen Kasten davor.                                          */
+
+  const introKey = () => roomKey() + ':intro1';
+
+  function introSeen() {
+    try { return sessionStorage.getItem(introKey()) === '1'; }
+    catch (e) { return false; }   /* gesperrter Speicher: dann eben jedes Mal */
+  }
+
+  /* Die vier Bereiche als EIN Bild, viermal — jedes Mal ein anderer Teil
+     hell. Vier verschiedene Zeichnungen zeigten vier Dinge; dieselbe
+     Zeichnung mit wandernder Markierung zeigt, WO sie stehen, und das ist
+     die Frage, die ein Kind vor dem ersten Griff hat. */
+  function chrome(hi, extra) {
+    const g = (id, body) => `<g class="wl-part${id === hi ? ' wl-on' : ''}">${body}</g>`;
+    return `<svg class="wl-art" viewBox="0 0 320 180" aria-hidden="true">
+      <rect class="wl-bg" x="4" y="4" width="312" height="172" rx="11"/>
+      ${g('head', `
+        <rect class="wl-box" x="12" y="12" width="296" height="26" rx="7"/>
+        <rect class="wl-d" x="20" y="18" width="19" height="14" rx="4"/>
+        <rect class="wl-d" x="43" y="18" width="19" height="14" rx="4"/>
+        <rect class="wl-d" x="66" y="18" width="19" height="14" rx="4"/>
+        <text class="wl-t" x="29.5" y="28.5">I</text>
+        <text class="wl-t" x="52.5" y="28.5">II</text>
+        <text class="wl-t" x="75.5" y="28.5">III</text>`)}
+      ${g('stage', `
+        <rect class="wl-box" x="12" y="44" width="222" height="94" rx="7"/>
+        <path class="wl-tr" d="M34,122 C56,88 52,64 78,54 C104,44 116,72 108,96"/>
+        <path class="wl-tr" d="M152,126 C178,118 192,90 180,68 C170,50 142,54 138,74"/>
+        <circle class="wl-dot" cx="108" cy="96" r="4"/>
+        <circle class="wl-dot" cx="138" cy="74" r="4"/>`)}
+      ${g('play', `
+        <rect class="wl-box" x="12" y="144" width="296" height="24" rx="7"/>
+        <path class="wl-d" d="M22,150 l11,6 -11,6 z"/>
+        <rect class="wl-d" x="44" y="154.5" width="176" height="3" rx="1.5"/>
+        <rect class="wl-d" x="79" y="161" width="1.5" height="4" rx=".7"/>
+        <rect class="wl-d" x="114" y="161" width="1.5" height="4" rx=".7"/>
+        <rect class="wl-d" x="149" y="161" width="1.5" height="4" rx=".7"/>
+        <rect class="wl-d" x="184" y="161" width="1.5" height="4" rx=".7"/>
+        <circle class="wl-dot" cx="97" cy="156" r="5.5"/>
+        <rect class="wl-d" x="238" y="150" width="20" height="12" rx="4"/>
+        <rect class="wl-d" x="261" y="150" width="20" height="12" rx="4"/>
+        <rect class="wl-d" x="284" y="150" width="20" height="12" rx="4"/>`)}
+      ${g('side', `
+        <rect class="wl-box" x="240" y="44" width="68" height="94" rx="7"/>
+        <rect class="wl-d" x="248" y="52" width="15" height="15" rx="4"/>
+        <rect class="wl-d" x="267" y="52" width="15" height="15" rx="4"/>
+        <rect class="wl-d" x="286" y="52" width="15" height="15" rx="4"/>
+        <rect class="wl-d" x="248" y="71" width="15" height="15" rx="4"/>
+        <rect class="wl-d" x="267" y="71" width="15" height="15" rx="4"/>
+        <rect class="wl-d" x="286" y="71" width="15" height="15" rx="4"/>
+        <rect class="wl-d" x="248" y="118" width="15" height="15" rx="4"/>
+        <rect class="wl-d" x="267" y="118" width="15" height="15" rx="4"/>
+        <rect class="wl-d" x="286" y="118" width="15" height="15" rx="4"/>
+        ${extra || ''}`)}
+    </svg>`;
+  }
+
+  /* Die eine Kachel, die gerade nach oben gezogen wird. „Zieh eine Kachel auf
+     eine andere" ist der einzige Handgriff der ganzen Aufgabe, und ein Bild
+     davon sagt ihn schneller als die Zeile darunter.
+
+     Nach OBEN, weil das die Richtung ist, die es wirklich ist: die Cluster
+     sammeln sich oben in der Liste, die freien Kacheln stehen darunter. Die
+     Lücke zwischen den beiden Reihen im Bild ist genau diese Trennung. */
+  const DRAG_EXTRA = `
+    <rect class="wl-drag" x="250" y="88" width="15" height="15" rx="4"/>
+    <path class="wl-arrowhead" d="M257.5,105 l-6,9 12,0 z"/>`;
+
+  /* Die Lage. Nicht die Oberfläche, sondern die Frage: eine Nachtkarte
+     mit drei Spuren, drei Nummern und keinem einzigen Tiernamen. */
+  const NIGHT_ART = `<svg class="wl-art wl-art--night" viewBox="0 0 320 180" aria-hidden="true">
+    <rect class="wl-night" x="4" y="4" width="312" height="172" rx="11"/>
+    <text class="wl-qm" x="160" y="128">?</text>
+    <path class="wl-s1" d="M38,148 C74,116 60,74 100,58 C134,45 148,80 132,106 C121,124 92,124 86,106"/>
+    <path class="wl-s2" d="M208,152 C240,142 260,110 248,82 C238,56 202,60 198,86 C195,106 216,114 226,102"/>
+    <path class="wl-s3" d="M118,152 C136,150 142,132 156,134 C168,136 168,146 162,148"/>
+    <circle class="wl-p1" cx="86" cy="106" r="5"/>
+    <circle class="wl-p2" cx="226" cy="102" r="5"/>
+    <circle class="wl-p3" cx="162" cy="148" r="5"/>
+    <text class="wl-num" x="86" y="94">07</text>
+    <text class="wl-num" x="226" y="90">23</text>
+    <text class="wl-num" x="162" y="136">11</text>
+  </svg>`;
+
+  function introCards() {
+    // Ohne die Zahl geht es auch: sie kommt aus dem Rahmen, und ein Satz,
+    // der auf sie wartet, wäre ein Kasten, der nie aufgeht.
+    const tiere = agentCount > 0
+      ? '<b>' + agentCount + ' Tiere</b>' : '<b>Die Tiere hier</b>';
+    return [
+      { kicker: 'Die Lage', title: 'Wer läuft da?', art: NIGHT_ART, html:
+        `<ul class="wl-facts">
+          <li>${tiere} tragen einen Sender. Welche Art zu welchem Sender gehört,
+              weiß niemand mehr — die Liste ist weg.</li>
+          <li>Die Sender haben <b>5 Tage</b> aufgezeichnet: jeden Weg, jede Pause,
+              Tag und Nacht.</li>
+          <li><b>Finde Regelmäßigkeiten.</b> Welche Tiere gehören zusammen? Und in
+              was für einer Welt leben sie?</li>
+          <li>Was du herausfindest, hältst du auf dem <b>Arbeitsblatt</b> fest.</li>
+        </ul>` },
+      { kicker: 'Oben', title: 'Deine drei Welten', art: chrome('head'), html:
+        `<p>Drei Ökosysteme gehören dir: <b>I</b>, <b>II</b> und <b>III</b>. In jedem
+         leben andere Tiere — und was du gruppiert hast, steht beim Zurückkommen
+         noch da.</p>` },
+      { kicker: 'In der Mitte', title: 'Die Karte', art: chrome('stage'), html:
+        `<p>Hier laufen die Tiere, jedes mit seiner eigenen Spur. <b>Ziehen</b>
+         verschiebt, <b>zwei Finger</b> zoomen. Tippst du ein Tier an, leuchtet
+         seine Spur auf.</p>` },
+      { kicker: 'Unten', title: 'Die fünf Tage', art: chrome('play'), html:
+        `<p><b>▶</b> spielt die Aufzeichnung ab, <b>1× · 5× · 25×</b> ist das Tempo.
+         Am Regler springst du zu jeder Stunde — die Striche sind die Tage.</p>` },
+      { kicker: 'Rechts', title: 'Die Signale', art: chrome('side', DRAG_EXTRA), html:
+        `<p>Ein Sender ist eine <b>Kachel mit Nummer</b>. <b>Zieh eine Kachel auf eine
+         andere</b> — schon sind die beiden eine Gruppe. Nach unten herausziehen
+         löst sie wieder.</p>
+         <p class="wl-tip">Mit dem Finger: kurz gedrückt halten, dann geht es in
+         jede Richtung.</p>` }
+    ];
+  }
+
+  function introHTML() {
+    return `
+    <div class="wl-intro" id="wlIntro" hidden>
+      <div class="wl-i-card" role="dialog" aria-modal="true" aria-labelledby="wlIntroTitle">
+        <button type="button" class="wl-i-x" data-intro="close"
+                aria-label="Einführung schließen">✕</button>
+        <div class="wl-i-art"></div>
+        <div class="wl-i-body">
+          <p class="wl-i-kicker"></p>
+          <h2 class="wl-i-title" id="wlIntroTitle"></h2>
+          <div class="wl-i-text"></div>
+        </div>
+        <div class="wl-i-foot">
+          <div class="wl-i-dots" aria-hidden="true"></div>
+          <button type="button" class="wl-btn" data-intro="back" hidden>Zurück</button>
+          <button type="button" class="wl-btn wl-i-go" data-intro="next">Weiter</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function paintIntro() {
+    const box = $('wlIntro');
+    if (!box) return;
+    box.hidden = introStep < 0;
+    if (introStep < 0) return;
+
+    const cards = introCards();
+    const i = Math.min(introStep, cards.length - 1);
+    const c = cards[i];
+    const last = cards.length - 1;
+
+    box.querySelector('.wl-i-art').innerHTML = c.art;
+    // „Oben · 1 von 4": die Lage ist kein Schritt der Führung, sondern
+    // die Aufgabe — sie bekommt deshalb keine Nummer.
+    box.querySelector('.wl-i-kicker').textContent =
+      i === 0 ? c.kicker : c.kicker + ' · ' + i + ' von ' + last;
+    box.querySelector('.wl-i-title').textContent = c.title;
+    box.querySelector('.wl-i-text').innerHTML = c.html;
+    box.querySelector('.wl-i-dots').innerHTML = cards
+      .map((_, k) => `<span class="wl-i-dot${k === i ? ' wl-on' : ''}"></span>`).join('');
+
+    box.querySelector('[data-intro="back"]').hidden = i === 0;
+    box.querySelector('[data-intro="next"]').textContent =
+      i === last ? 'Los geht’s' : 'Weiter';
+  }
+
+  function openIntro() {
+    introStep = 0;
+    paintIntro();
+    const go = $('wlIntro') && $('wlIntro').querySelector('.wl-i-go');
+    // preventScroll: der Kasten steht am unteren Ende einer langen Seite,
+    // und ein Sprung dorthin sähe aus, als wäre die Seite verrutscht.
+    if (go) { try { go.focus({ preventScroll: true }); } catch (e) { go.focus(); } }
+  }
+
+  function closeIntro() {
+    introStep = -1;
+    try { sessionStorage.setItem(introKey(), '1'); } catch (e) { /* egal */ }
+    paintIntro();
+  }
+
+  /**
+   * Aufgemacht wird sie erst, wenn wirklich eine Welt dasteht (`frameSeed`).
+   * Vorher rechnet der Rahmen mehrere Sekunden an zehn Tagen Tierleben — eine
+   * Einführung über einer leeren Fläche erklärt eine Oberfläche, die es noch
+   * nicht gibt, und die Zahl der Sender wäre auch noch nicht bekannt.
+   */
+  function maybeIntro() {
+    if (!root || !view || introStep >= 0) return;
+    if (isPresenter() || (ctx && ctx.preview)) return;
+    if (phaseOf(view) !== 1) return;      // 2 und 3 bekommen ihre eigene
+    if (frameSeed == null || introSeen()) return;
+    openIntro();
+  }
+
+  function onIntroClick(e) {
+    const btn = e.target.closest ? e.target.closest('button[data-intro]') : null;
+    if (!btn) return;
+    const what = btn.dataset.intro;
+    if (what === 'close') { closeIntro(); return; }
+    if (what === 'back') { introStep = Math.max(0, introStep - 1); paintIntro(); return; }
+    if (introStep >= introCards().length - 1) { closeIntro(); return; }
+    introStep++;
+    paintIntro();
+  }
+
+  /* ══════════════════════════════════════════════════════════
      Schnittstelle nach außen
      ══════════════════════════════════════════════════════════ */
 
@@ -1039,6 +1278,8 @@
       takeover = null;
       sentGroups = '';
       rebase = false;
+      introStep = -1;
+      agentCount = 0;
       store = Object.create(null);
       touched = Object.create(null);
       seed = null;
@@ -1055,10 +1296,18 @@
         +   '<iframe class="wl-frame" src="tools/wildclusters/index.html' + V + '" '
         +           'title="Wild Clusters" loading="eager"></iframe>'
         + '</div>'
+        /* Im Kasten und nicht über der Seite: das Vollbild nimmt genau
+           diesen Kasten mit, ein `position: fixed` daneben wäre darin
+           unsichtbar — und der Rahmen darunter unbedienbar. */
+        + (pres ? '' : introHTML())
         + '</div>';
 
       frame = root.querySelector('.wl-frame');
       if (pres) wireDesk();
+      else {
+        const intro = $('wlIntro');
+        if (intro) intro.addEventListener('click', onIntroClick);
+      }
       /* Esc verlässt das Vollbild an jedem Knopf vorbei, und auf einem Tablet
          tut es die Wischgeste von oben. Der Knopf im Rahmen muss das trotzdem
          mitbekommen — er kann den Zustand nicht selbst sehen. Deshalb für
@@ -1127,6 +1376,7 @@
 
       push();
       paintDesk();
+      maybeIntro();
     },
 
     unmount() {

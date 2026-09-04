@@ -46,11 +46,18 @@ function el(name) {
     offsetHeight: 0, nextElementSibling: null, parentElement: null,
     classList: { add() {}, remove() {}, toggle() {} },
     setAttribute() {}, getAttribute() { return null; },
-    addEventListener() {}, removeEventListener() {},
+    /* Angemeldete Zuhoerer werden aufgehoben, damit der Pruefstand Knoepfe
+       druecken kann (`fire`) - die Einfuehrung ist ein Kasten mit Weiter und
+       Zurueck, und ob sie wieder zugeht, ist genau die Frage. */
+    addEventListener(type, fn) { (e._on[type] || (e._on[type] = [])).push(fn); },
+    removeEventListener() {},
+    fire(type, target) { for (const fn of (e._on[type] || [])) fn({ target: target || e }); },
+    focus() {},
     appendChild() {}, closest() { return null; },
     getBoundingClientRect() { return { top: 0 }; },
     querySelector(sel) { return e._kids[sel] || (e._kids[sel] = el(sel)); },
-    _kids: Object.create(null)
+    _kids: Object.create(null),
+    _on: Object.create(null)
   };
   return e;
 }
@@ -135,7 +142,8 @@ function run(role, entriesFor) {
     }
   };
 
-  return { impl, ctx, view, posted, saved, fromFrame, last: () => posted[posted.length - 1] };
+  return { impl, ctx, view, root, posted, saved, fromFrame,
+           last: () => posted[posted.length - 1] };
 }
 
 /* Die drei Welten haengen nur an Raumcode + Sitzplatz, sind aber in der IIFE
@@ -406,6 +414,54 @@ function vollbildGehtDurch() {
   }
 }
 
+/* Die Einführung kommt einmal — und dann nicht wieder.
+   ══════════════════════════════════════════════════════════
+   Drei Dinge sind daran zu prüfen, und alle drei sind unsichtbar:
+
+   * Sie geht erst auf, wenn wirklich eine Welt dasteht. Vorher rechnet der
+     Rahmen mehrere Sekunden, und ein Kasten, der eine Oberfläche erklärt,
+     die es noch nicht gibt, erklärt sie zweimal.
+   * Sie geht wieder zu, und zwar am Ende der letzten Karte.
+   * Sie kommt danach nicht wieder — auch nicht beim nächsten Poll oder in
+     der nächsten Welt. Sonst stünde sie der Klasse alle drei Sekunden im
+     Bild, und das an einem Tag, an dem sie zwischen drei Welten wechselt.
+
+   Am Pult gibt es sie gar nicht: dort erklärt die Lehrkraft. */
+function einfuehrungKommtEinmal() {
+  const t = run('student');
+  const box = t.root.querySelector('#wlIntro');
+
+  t.fromFrame('ready', {});
+  frameAnswers(t, []);
+  ok('Einführung: steht offen, sobald die erste Welt steht', box.hidden === false, box.hidden);
+
+  const tippe = (was) => {
+    const b = { dataset: { intro: was } };
+    b.closest = () => b;
+    box.fire('click', b);
+  };
+
+  // Fünf Karten: viermal weiter, und der fünfte Druck macht zu.
+  for (let i = 0; i < 4; i++) tippe('next');
+  ok('Einführung: die vier Karten der Oberfläche halten sie offen',
+     box.hidden === false, box.hidden);
+  tippe('next');
+  ok('Einführung: „Los geht’s" macht sie zu', box.hidden === true, box.hidden);
+
+  // Der Poller und ein Weltwechsel: beides geht durch dieselben zwei Türen.
+  t.impl.update(t.view);
+  t.fromFrame('world-pick', { seed: t.last().worlds[1] });
+  frameAnswers(t, []);
+  ok('Einführung: sie kommt in der zweiten Welt nicht wieder',
+     box.hidden === true, box.hidden);
+
+  const p = run('presenter');
+  p.fromFrame('ready', {});
+  frameAnswers(p, []);
+  ok('Einführung: am Pult wird sie gar nicht erst gebaut',
+     p.root._kids['#wlIntro'] === undefined);
+}
+
 pultBehaeltSeineWelten();
 pultBehaeltDieNachzuegler();
 selbstGebauteWeltBehaeltIhreArbeit('student');
@@ -413,6 +469,7 @@ selbstGebauteWeltBehaeltIhreArbeit('presenter');
 eigenerSeedErstNachDerAufloesung();
 schleierZurueckHoltAnDieArbeit();
 vollbildGehtDurch();
+einfuehrungKommtEinmal();
 tabletBewahrtNurDieDrei(() => alterBestandWirdGestutzt(() => {
   console.log(fails ? '\n' + fails + ' Prüfung(en) offen' : '\nalles grün');
   process.exit(fails ? 1 : 0);
