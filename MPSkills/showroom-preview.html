@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260819u" />
+<link rel="stylesheet" href="style.css?v=20260906" />
 <script src="lib/theme.js?v=20260819d"></script>
 </head>
 <body>
@@ -75,10 +75,12 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="lib/preview.js?v=20260826"></script>
+<script src="lib/preview.js?v=20260826e"></script>
 <script src="preview/wordcloud.js?v=20260819d"></script>
 <script src="preview/neurolab.js?v=20260819b"></script>
 <script src="preview/caesar.js?v=20260820"></script>
+<script src="preview/clash-of-math.js?v=20260827f"></script>
+<script src="preview/wildclusters.js?v=20260906"></script>
 <script>
 /* Der Ersatz für app.js: die Registry als Konstante und die zwei
    Klicks, die die Kachel kennt. Bewusst keine Kopie von toolCard —
@@ -99,7 +101,14 @@ const TOOLS = [
   /* ⚠️ Auch hier weicht der Ordner von der id ab — diesmal wegen
      eines Drehers im Ordnernamen (siehe Migration 0092). */
   { id: 'caesar', title: 'Cäsar-Scheibe', folder: 'Caesercode', icon: '🔐',
-    blurb: 'Inneres Rad drehen, Schlüssel ablesen, Buchstaben umsetzen.' }
+    blurb: 'Inneres Rad drehen, Schlüssel ablesen, Buchstaben umsetzen.' },
+  { id: 'clash-of-math', title: 'Kingdoms of Mathoria', folder: 'clash-of-math', icon: '🏰',
+    blurb: 'Rechnen erobert Felder — vier Völker, eine Karte.' },
+  /* ⚠️ Die Kachel von Wild Clusters zeigt bewusst kein Tier, und das
+     Schaufenster hält vor „3b Tiere aufdecken" an. Wer hier etwas
+     ergänzt, liest zuerst den Kopf von preview/wildclusters.js. */
+  { id: 'wildclusters', title: 'Wild Clusters', folder: 'wildclusters', icon: '🛰️',
+    blurb: 'Spuren statt Namen — die Klasse entscheidet, wer zusammengehört.' }
 ];
 
 // Minimaler Toast, damit die Rückmeldungen des Werkzeugs

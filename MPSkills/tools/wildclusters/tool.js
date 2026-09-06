@@ -84,7 +84,7 @@
      mit neuen Skripten — genau der Fall, in dem ein <script>-Tag fehlt,
      den niemand vermisst, bis die Brücke schweigt. Dieselbe Überlegung
      wie beim ?v= in lib/tool.js. */
-  const V = '?v=20260904f';
+  const V = '?v=20260904g';
 
   /* Was eine Raumphase für die Karte bedeutet. Die Zahl links kennt der
      Server (skill_tools.limits.phases = 3), alles rechts davon nur
@@ -188,9 +188,19 @@
   let onFs = null;              // Beamer: Vollbild kam oder ging
   /* Die Einführung: -1 ist zu, 0..n die Karte, die gerade aufliegt. */
   let introStep = -1;
+  /* Zu welchem Abschnitt der Stunde die Einführung gehört, die gerade offen
+     ist. Nicht dasselbe wie die Phase im Raum: die Lehrkraft kann weiter
+     schalten, während der Kasten aufliegt, und dann gehörte der Haken beim
+     Zumachen dem falschen Abschnitt — die eine Einführung wäre gesehen, ohne
+     dass sie jemand gesehen hat, und die andere käme ein zweites Mal. */
+  let introPhase = 1;
   /* Wie viele Tiere in Phase 1 einen Sender tragen. Kommt mit dem
      `world`-Ereignis herein — von außen ist der Bestand nicht zu sehen. */
   let agentCount = 0;
+  /* Und wie viele Nachzügler in Phase 2 dazukommen. Ebenfalls aus dem Rahmen:
+     die Zahl steht in js/sim/species.js (LATE_ARRIVALS) und hätte hier als
+     abgeschriebene Fünf genau so lange gestimmt, bis sie dort jemand ändert. */
+  let lateCount = 0;
 
   const isPresenter = () => ctx && ctx.role === 'presenter';
   const esc = (s) => (ctx ? ctx.esc(s) : String(s == null ? '' : s));
@@ -626,10 +636,11 @@
        Rahmen), und den kennt nur diese Seite. */
     if (m.event === 'full') { toggleFull(); return; }
 
-    /* Das Fragezeichen daneben. Es kennt keine Phase: die Lage steht in Phase 2
-       genauso wie in Phase 1, und ein Knopf, der je nach Abschnitt der Stunde
-       nichts tut, sieht aus wie ein kaputter. */
-    if (m.event === 'help') { if ($('wlIntro')) openIntro(); return; }
+    /* Das Fragezeichen daneben. Es ist in jedem Abschnitt da — ein Knopf, der
+       je nach Stand der Stunde nichts tut, sieht aus wie ein kaputter — und
+       holt das, was gerade dran ist: in Phase 2 die fünf Nachzügler, sonst
+       den Rundgang. */
+    if (m.event === 'help') { if ($('wlIntro')) openIntro(phaseOf(view)); return; }
 
     /* Der Knopf im Streifen oben rechts. Er steckt ebenfalls im Rahmen und
        meldet nur — was „aufhören" bedeutet, weiß nur diese Seite. */
@@ -656,6 +667,10 @@
       // hinweg kaum (36–40), aber „40 Tiere" in einer Welt mit 37 wäre eine
       // Zahl, die ein Kind nachzählen kann.
       if (m.n) agentCount = Number(m.n);
+      // Die Nachzügler stehen von Anfang an in der Rechnung, auch wenn sie
+      // erst in Phase 2 auftauchen — die Zahl ist also schon beim ersten
+      // Aufbau da und muss nicht auf den Phasenwechsel warten.
+      if (m.late) lateCount = Number(m.late);
       // Gleich darauf kommt sein Bericht über die neue Welt — der ist der neue
       // Vergleichsmaßstab und nicht die Arbeit von jemandem.
       rebase = true;
@@ -1035,11 +1050,17 @@
   }
 
   /* ══════════════════════════════════════════════════════════
-     Die Einführung (nur Klasse, nur Phase 1)
+     Die Einführung (nur Klasse)
      ══════════════════════════════════════════════════════════
-     Fünf Karten: erst die Lage, dann die vier Bereiche der
-     Oberfläche. Sie kommt EINMAL beim Betreten und nicht je Welt —
-     wer zwischen Welt I und II wechselt, wechselt die Aufgabe nicht.
+     Je Abschnitt der Stunde eine, und jede kommt EINMAL — nicht je
+     Welt: wer zwischen Welt I und II wechselt, wechselt die Aufgabe
+     nicht.
+
+     Phase 1 sind fünf Karten: erst die Lage, dann die vier Bereiche
+     der Oberfläche. Phase 2 ist EINE Karte — die Oberfläche ist
+     dieselbe, neu ist nur, was auf ihr liegt. Ein zweiter Rundgang
+     durch dieselben vier Bereiche wäre an dieser Stelle das, was
+     man wegklickt, ohne hinzusehen.
 
      Sie liegt IM Kasten (`.wl-host`) und nicht über der Seite: das
      Vollbild nimmt genau diesen Kasten, und ein `position: fixed`
@@ -1052,10 +1073,12 @@
      ebenfalls nicht — dort soll man das Werkzeug sehen und nicht
      einen Kasten davor.                                          */
 
-  const introKey = () => roomKey() + ':intro1';
+  /* Ein Haken je Abschnitt. Sie sind auseinanderzuhalten, weil sie sich nicht
+     ersetzen: wer die Lage kennt, kennt die fünf Nachzügler noch lange nicht. */
+  const introKey = (p) => roomKey() + ':intro' + p;
 
-  function introSeen() {
-    try { return sessionStorage.getItem(introKey()) === '1'; }
+  function introSeen(p) {
+    try { return sessionStorage.getItem(introKey(p)) === '1'; }
     catch (e) { return false; }   /* gesperrter Speicher: dann eben jedes Mal */
   }
 
@@ -1119,6 +1142,24 @@
     <rect class="wl-drag" x="250" y="88" width="15" height="15" rx="4"/>
     <path class="wl-arrowhead" d="M257.5,105 l-6,9 12,0 z"/>`;
 
+  /* Phase 2: der Kasten der Nachzügler, oben in der Liste. Er deckt die
+     Kacheln darunter zu (deshalb füllt er, statt nur zu umranden) und trägt
+     genau so viele Kacheln, wie wirklich dazukommen — ein Bild mit fünf
+     Kacheln neben einem Satz über vier wäre schlechter als kein Bild.
+
+     Ein Pfeil steht nicht darin. Die Frage vor dem ersten Griff ist nicht
+     „wie ziehe ich?" (das stand in Phase 1 und sitzt), sondern „wo sind die
+     Neuen?" — und darauf antwortet der helle Block. */
+  function arrivalExtra(n) {
+    const cols = [248, 267, 286];
+    let tiles = '';
+    for (let i = 0; i < Math.max(1, Math.min(n || 5, 6)); i++) {
+      tiles += `<rect class="wl-new" x="${cols[i % 3]}" y="${52 + Math.floor(i / 3) * 19}"
+                width="15" height="15" rx="4"/>`;
+    }
+    return `<rect class="wl-newbox" x="244" y="46" width="60" height="44" rx="6"/>` + tiles;
+  }
+
   /* Die Lage. Nicht die Oberfläche, sondern die Frage: eine Nachtkarte
      mit drei Spuren, drei Nummern und keinem einzigen Tiernamen. */
   const NIGHT_ART = `<svg class="wl-art wl-art--night" viewBox="0 0 320 180" aria-hidden="true">
@@ -1135,7 +1176,20 @@
     <text class="wl-num" x="162" y="136">11</text>
   </svg>`;
 
-  function introCards() {
+  /**
+   * Die Karten eines Abschnitts.
+   *
+   * Phase 3 hat keine eigene — dort wird aufgedeckt, und was dabei zu sehen
+   * ist, sagt die Lehrkraft. Das Fragezeichen darf trotzdem nicht ins Leere
+   * greifen, also fällt es auf den Rundgang aus Phase 1 zurück: die
+   * Oberfläche ist noch dieselbe, und die Frage „wie war das nochmal mit dem
+   * Regler?" stellt sich am Ende der Stunde genauso.
+   */
+  function cardsFor(p) {
+    return p === 2 ? arrivalCards() : tourCards();
+  }
+
+  function tourCards() {
     // Ohne die Zahl geht es auch: sie kommt aus dem Rahmen, und ein Satz,
     // der auf sie wartet, wäre ein Kasten, der nie aufgeht.
     const tiere = agentCount > 0
@@ -1179,6 +1233,34 @@
     ];
   }
 
+  /* Phase 2 in einer Karte. Drei Sätze, und jeder trägt eine Tatsache, die
+     ein Kind sonst selbst herausfinden müsste: die Aufzeichnung ist eine
+     andere (Tag 6–10, der Regler fängt wieder von vorn an), die Neuen liegen
+     schon zusammen in einem eigenen Kasten, und die alte Arbeit steht noch.
+
+     Was NICHT drinsteht: dass zwei der Fünf zu gar keiner Gruppe gehören.
+     Das ist die Aufgabe. „Wenn es eine gibt" sagt genug, um niemanden ins
+     Leere laufen zu lassen, und nicht genug, um die Antwort zu verraten. */
+  function arrivalCards() {
+    const neue = lateCount > 0
+      ? '<b>' + lateCount + ' Signale</b>' : '<b>neue Signale</b>';
+    return [
+      { kicker: 'Neu dabei',
+        title: (lateCount > 0 ? lateCount + ' neue Signale' : 'Neue Signale'),
+        art: chrome('side', arrivalExtra(lateCount)), html:
+        `<ul class="wl-facts">
+          <li>Die Sender haben weiter aufgezeichnet: auf der Karte laufen jetzt
+              <b>Tag 6 bis 10</b>.</li>
+          <li>Darin melden sich ${neue}, die es vorher nicht gab. Sie liegen
+              rechts zusammen in einem <b>eigenen hellen Kasten</b> und leuchten
+              auf der Karte.</li>
+          <li><b>Kannst du sie zuordnen?</b> Zieh jedes auf die Gruppe, in die es
+              gehört — wenn es eine gibt.</li>
+        </ul>
+        <p class="wl-tip">Deine Gruppen von vorhin bleiben, wie sie sind.</p>` }
+    ];
+  }
+
   function introHTML() {
     return `
     <div class="wl-intro" id="wlIntro" hidden>
@@ -1206,7 +1288,7 @@
     box.hidden = introStep < 0;
     if (introStep < 0) return;
 
-    const cards = introCards();
+    const cards = cardsFor(introPhase);
     const i = Math.min(introStep, cards.length - 1);
     const c = cards[i];
     const last = cards.length - 1;
@@ -1218,7 +1300,9 @@
       i === 0 ? c.kicker : c.kicker + ' · ' + i + ' von ' + last;
     box.querySelector('.wl-i-title').textContent = c.title;
     box.querySelector('.wl-i-text').innerHTML = c.html;
-    box.querySelector('.wl-i-dots').innerHTML = cards
+    // Ein einzelner Punkt ist kein Weg, sondern ein Fleck: bei einer Karte
+    // (Phase 2) bleibt die Reihe leer.
+    box.querySelector('.wl-i-dots').innerHTML = last === 0 ? '' : cards
       .map((_, k) => `<span class="wl-i-dot${k === i ? ' wl-on' : ''}"></span>`).join('');
 
     box.querySelector('[data-intro="back"]').hidden = i === 0;
@@ -1226,7 +1310,8 @@
       i === last ? 'Los geht’s' : 'Weiter';
   }
 
-  function openIntro() {
+  function openIntro(p) {
+    introPhase = p;
     introStep = 0;
     paintIntro();
     const go = $('wlIntro') && $('wlIntro').querySelector('.wl-i-go');
@@ -1237,7 +1322,9 @@
 
   function closeIntro() {
     introStep = -1;
-    try { sessionStorage.setItem(introKey(), '1'); } catch (e) { /* egal */ }
+    // Der Haken gilt dem Abschnitt, der aufgeschlagen WAR — nicht dem, in dem
+    // die Klasse inzwischen steht (siehe introPhase).
+    try { sessionStorage.setItem(introKey(introPhase), '1'); } catch (e) { /* egal */ }
     paintIntro();
   }
 
@@ -1246,13 +1333,18 @@
    * Vorher rechnet der Rahmen mehrere Sekunden an zehn Tagen Tierleben — eine
    * Einführung über einer leeren Fläche erklärt eine Oberfläche, die es noch
    * nicht gibt, und die Zahl der Sender wäre auch noch nicht bekannt.
+   *
+   * Von selbst kommt sie in Phase 1 und 2. Die Auflösung bekommt keine: dort
+   * deckt die Lehrkraft Schritt für Schritt auf, und ein Kasten, der sich
+   * genau dann vor die Karte legt, nähme der Klasse den Moment.
    */
   function maybeIntro() {
     if (!root || !view || introStep >= 0) return;
     if (isPresenter() || (ctx && ctx.preview)) return;
-    if (phaseOf(view) !== 1) return;      // 2 und 3 bekommen ihre eigene
-    if (frameSeed == null || introSeen()) return;
-    openIntro();
+    const p = phaseOf(view);
+    if (p !== 1 && p !== 2) return;
+    if (frameSeed == null || introSeen(p)) return;
+    openIntro(p);
   }
 
   function onIntroClick(e) {
@@ -1261,7 +1353,7 @@
     const what = btn.dataset.intro;
     if (what === 'close') { closeIntro(); return; }
     if (what === 'back') { introStep = Math.max(0, introStep - 1); paintIntro(); return; }
-    if (introStep >= introCards().length - 1) { closeIntro(); return; }
+    if (introStep >= cardsFor(introPhase).length - 1) { closeIntro(); return; }
     introStep++;
     paintIntro();
   }
@@ -1297,7 +1389,9 @@
       sentGroups = '';
       rebase = false;
       introStep = -1;
+      introPhase = 1;
       agentCount = 0;
+      lateCount = 0;
       store = Object.create(null);
       touched = Object.create(null);
       seed = null;

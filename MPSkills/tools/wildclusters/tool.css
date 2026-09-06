@@ -448,6 +448,26 @@
 .wl-drag { fill: var(--accent); }
 .wl-arrowhead { fill: var(--accent-ink); }
 
+/* Phase 2: der Kasten der Nachzügler. Er FÜLLT (in der Farbe des Bereichs,
+   in dem er liegt) und umrandet nicht bloß — er deckt die Kacheln zu, die im
+   selben Bild schon darunter liegen. Der gestrichelte Rand ist die eine
+   Stelle im ganzen Bilderbogen, an der etwas neu ist. */
+.wl-newbox {
+  fill: var(--accent-dim);
+  stroke: var(--accent-ink);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 3;
+}
+
+/* Und die Kacheln darin hell — im Werkzeug haben sie eine Farbe, die keine
+   selbst gebildete Gruppe haben kann (PALETTE.signals.newcomer). Der Rand
+   trägt sie im hellen Kleid, in dem die Fläche allein zu wenig wäre. */
+.wl-new {
+  fill: #eaf6ff;
+  stroke: var(--accent-ink);
+  stroke-width: 1;
+}
+
 /* Die Lage: eine Nachtkarte, und die kippt nicht mit. Sie zeigt die
    verdeckte Sicht, und die ist in jedem Kleid dunkelblau. */
 .wl-night { fill: #0e1a26; }

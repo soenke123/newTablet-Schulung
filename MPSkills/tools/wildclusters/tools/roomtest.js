@@ -470,6 +470,70 @@ function einfuehrungKommtEinmal() {
   ok('Fragezeichen: am Pult gibt es keins', p.last().help === false, p.last().help);
 }
 
+/* Phase 2 hat ihre eigene, und das ist mehr als eine zweite Karte:
+   ══════════════════════════════════════════════════════════
+   * Sie kommt, obwohl die von Phase 1 schon gesehen ist — die Haken sind
+     getrennt (`:intro1` / `:intro2`), sonst bliebe der Bruch unerklärt.
+   * Sie kommt EINE Karte lang: ein Druck macht zu.
+   * Der Haken gilt dem Abschnitt, der aufgeschlagen war. Wer die Einführung
+     von Phase 1 noch offen hat, wenn die Lehrkraft weiterschaltet, darf mit
+     dem Zumachen nicht die von Phase 2 miterledigen.
+   * Und sie kommt danach nicht wieder — auch nicht in der nächsten Welt. */
+function nachzueglerHabenIhreEigene() {
+  const t = run('student');
+  const box = t.root.querySelector('#wlIntro');
+  const tippe = (was) => {
+    const b = { dataset: { intro: was } };
+    b.closest = () => b;
+    box.fire('click', b);
+  };
+  const weiter = (phase) => { t.view.state.phase = phase; t.impl.update(t.view); };
+
+  t.fromFrame('ready', {});
+  frameAnswers(t, []);
+  for (let i = 0; i < 5; i++) tippe('next');      // Phase 1 durchtippen
+  ok('Phase 2: Phase 1 ist zu', box.hidden === true, box.hidden);
+
+  weiter(2);
+  ok('Phase 2: die Nachzügler bekommen ihre eigene Einführung',
+     box.hidden === false, box.hidden);
+  tippe('next');
+  ok('Phase 2: eine Karte, ein Druck', box.hidden === true, box.hidden);
+
+  t.impl.update(t.view);
+  t.fromFrame('world-pick', { seed: t.last().worlds[1] });
+  frameAnswers(t, []);
+  ok('Phase 2: sie kommt in der zweiten Welt nicht wieder',
+     box.hidden === true, box.hidden);
+  t.fromFrame('help', {});
+  ok('Phase 2: das Fragezeichen holt sie zurück', box.hidden === false, box.hidden);
+  tippe('next');
+
+  /* Die Auflösung bekommt keine von selbst — dort deckt die Lehrkraft auf. */
+  weiter(3);
+  ok('Auflösung: keine Einführung von selbst', box.hidden === true, box.hidden);
+
+  /* Und der Haken darf nicht verrutschen: Phase 1 offen, Lehrkraft schaltet
+     weiter, Kind tippt zu — dann ist Phase 1 erledigt und Phase 2 nicht. */
+  const u = run('student');
+  const ubox = u.root.querySelector('#wlIntro');
+  const utippe = (was) => {
+    const b = { dataset: { intro: was } };
+    b.closest = () => b;
+    ubox.fire('click', b);
+  };
+  u.fromFrame('ready', {});
+  frameAnswers(u, []);
+  ok('Umschalten: Phase 1 liegt noch offen', ubox.hidden === false, ubox.hidden);
+  u.view.state.phase = 2;
+  u.impl.update(u.view);
+  ok('Umschalten: der offene Kasten bleibt der von Phase 1', ubox.hidden === false);
+  utippe('close');
+  u.impl.update(u.view);
+  ok('Umschalten: der Haken traf Phase 1 — Phase 2 kommt trotzdem',
+     ubox.hidden === false, ubox.hidden);
+}
+
 pultBehaeltSeineWelten();
 pultBehaeltDieNachzuegler();
 selbstGebauteWeltBehaeltIhreArbeit('student');
@@ -478,6 +542,7 @@ eigenerSeedErstNachDerAufloesung();
 schleierZurueckHoltAnDieArbeit();
 vollbildGehtDurch();
 einfuehrungKommtEinmal();
+nachzueglerHabenIhreEigene();
 tabletBewahrtNurDieDrei(() => alterBestandWirdGestutzt(() => {
   console.log(fails ? '\n' + fails + ' Prüfung(en) offen' : '\nalles grün');
   process.exit(fails ? 1 : 0);

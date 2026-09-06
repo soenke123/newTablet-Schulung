@@ -465,7 +465,7 @@ MPSkills-Seite (j.html · lehrer.html)
  └─ tools/wildclusters/tool.js       Rolle, Raum-Zustand, Steuerpult, Ergebnisse
      └─ <iframe> index.html
           ▲ wc:cmd    { seed, worlds, phase, masked, locks, groups, note, full, help }
-          ▼ wc:event  ready · world (seed, n) · clusters · world-pick · note · full · help
+          ▼ wc:event  ready · world (seed, n, late) · clusters · world-pick · note · full · help
         js/ui/bridge.js → WILDCLUSTERS.*
 ```
 
@@ -516,8 +516,8 @@ aus fünf Metern trifft.
 Knopf, der auf ein Tippen hin nichts tut, sieht aus wie ein kaputter, und das ausgerechnet vor der
 Klasse.
 
-**Die Einführung** (`.wl-intro` in `tool.js`, `introCards`) kommt **einmal beim Betreten und
-nicht je Welt**: fünf Karten, erst die Lage („*n* Tiere tragen einen Sender, welche Art das ist,
+**Die Einführung** (`.wl-intro` in `tool.js`, `cardsFor`) kommt **einmal je Abschnitt der Stunde
+und nicht je Welt**: fünf Karten, erst die Lage („*n* Tiere tragen einen Sender, welche Art das ist,
 weiß niemand mehr; fünf Tage sind aufgezeichnet — finde Regelmäßigkeiten und halte sie auf dem
 Arbeitsblatt fest"), dann vier Karten für die vier Bereiche der Oberfläche (oben die drei Welten ·
 in der Mitte die Karte · unten die Zeitleiste · rechts die Signale mit der Ziehgeste). Vier
@@ -533,7 +533,16 @@ die Landschaft und die Individuen. Die Karte sagt deshalb auch, was zu tun ist: 
 arbeiten**, die beiden anderen sind zum Stöbern. Wer sie für drei getrennte Rätsel hält, fängt
 dreimal von vorn an.
 
-Fünf Dinge daran sind nicht offensichtlich:
+**Phase 2 ist EINE Karte** (`arrivalCards`): „*n* neue Signale" — die Aufzeichnung läuft jetzt über
+Tag 6–10, die Nachzügler liegen rechts zusammen in einem eigenen hellen Kasten, und die Frage ist,
+in welche Gruppe sie gehören, *„wenn es eine gibt"*. Genau dieser Halbsatz ist der ganze Takt: zwei
+der fünf sind neue Arten und gehören zu keiner, und das soll die Klasse **herausfinden** und nicht
+lesen. Ein zweiter Rundgang durch dieselben vier Bereiche steht dort bewusst nicht — die Oberfläche
+ist dieselbe, neu ist nur, was auf ihr liegt, und ein zweiter Rundgang wäre das, was man wegklickt,
+ohne hinzusehen. Die Auflösung bekommt keine eigene: dort deckt die Lehrkraft Schritt für Schritt
+auf, und ein Kasten, der sich genau dann vor die Karte legt, nähme der Klasse den Moment.
+
+Sechs Dinge daran sind nicht offensichtlich:
 
 * **Sie liegt IM Kasten** (`position: absolute` in `.wl-host`, nicht `fixed`). Das Vollbild nimmt
   genau diesen Kasten; ein `fixed`-Overlay daneben wäre darin unsichtbar — und der Rahmen darunter
@@ -541,25 +550,35 @@ Fünf Dinge daran sind nicht offensichtlich:
 * **Sie geht erst auf, wenn eine Welt dasteht** (`frameSeed != null`). Ein Weltaufbau dauert auf
   einem Tablet mehrere Sekunden, und ein Kasten, der eine Oberfläche erklärt, die es noch nicht
   gibt, erklärt sie zweimal.
-* **Die Zahl kommt aus dem Rahmen.** `bridge.js` schickt `n: sim.baseCount` mit dem
-  `world`-Ereignis — den **Bestand der ersten Phase** und nicht die Länge der Tierliste: die Zahl
-  darf sich beim Übergang in Phase 2 nicht rückwirkend ändern, die fünf Nachzügler sind ja gerade
-  die Überraschung. Fehlt sie, steht dort „Die Tiere hier" statt einer Zahl.
+* **Beide Zahlen kommen aus dem Rahmen.** `bridge.js` schickt sie mit dem `world`-Ereignis:
+  `n: sim.baseCount` ist der **Bestand der ersten Phase** und nicht die Länge der Tierliste — die
+  Zahl darf sich beim Übergang in Phase 2 nicht rückwirkend ändern, die fünf Nachzügler sind ja
+  gerade die Überraschung. `late: sim.newcomers.length` ist ihre Zahl (`WL.LATE_ARRIVALS`, 3
+  bekannte + 2 neue Arten); sie wird schon beim Aufbau mitgeplant, steht also lange vor dem
+  Phasenwechsel bereit. Abgeschrieben wird keine von beiden — eine Fünf im Text stimmte genau so
+  lange, bis sie jemand in `species.js` ändert. Fehlt eine, steht dort „Die Tiere hier" bzw. „neue
+  Signale" statt einer Zahl.
 * **Sie gehört der Klasse.** Am Pult wird sie gar nicht erst gebaut (dort erklärt die Lehrkraft),
   im Schaufenster (`ctx.preview`) auch nicht. Gemerkt wird sie im `sessionStorage`
-  (`wl:<code>:intro1`) — dieselbe Begründung wie beim Bestand: ein Klassensatz-Tablet wechselt die
-  Person.
+  (`wl:<code>:intro<phase>`) — dieselbe Begründung wie beim Bestand: ein Klassensatz-Tablet
+  wechselt die Person.
+* **Der Haken gilt dem Abschnitt, der aufgeschlagen WAR** (`introPhase`), nicht dem, in dem die
+  Klasse gerade steht. Die Lehrkraft kann weiterschalten, während der Kasten offen liegt; ohne
+  diese Unterscheidung wäre die Einführung von Phase 2 abgehakt, ohne dass jemand sie gesehen hat,
+  und die von Phase 1 käme ein zweites Mal.
 * **Es gibt einen Weg zurück: das `?`** in der Kopfzeile des Rahmens (`renderHelp` in `bridge.js`,
   `cmd.help`, `wc:event help`). Es steht an der Stelle, an der die Lehrkraft ihr `i` hat, und
   sieht genauso aus (`.info-btn`, nur aufrecht) — beide beantworten dieselbe Frage. Ohne ihn wäre
   ein zu schnell weggetipptes Modal das Ende der Aufgabenbeschreibung, und das `i` daneben hilft
-  nicht: es erklärt Tasten, die es auf einem Tablet nicht gibt. Der Knopf kennt **keine Phase** —
-  die Lage gilt in Phase 2 genauso, und ein Knopf, der je nach Abschnitt nichts tut, sieht aus wie
-  ein kaputter.
+  nicht: es erklärt Tasten, die es auf einem Tablet nicht gibt. Der Knopf ist in **jedem**
+  Abschnitt da (einer, der je nach Stand der Stunde nichts tut, sieht aus wie ein kaputter) und
+  holt, was gerade dran ist: in Phase 2 die Nachzügler, sonst den Rundgang — in der Auflösung
+  fällt `cardsFor` bewusst auf den Rundgang zurück, denn „wie war das nochmal mit dem Regler?"
+  stellt sich am Ende der Stunde genauso.
 
-Die Modale vor Phase 2 und 3 gibt es noch nicht; `maybeIntro` steigt bei `phaseOf(view) !== 1`
-aus, und der Schlüssel trägt die Nummer schon im Namen. `tools/roomtest.js` prüft den Ablauf
-(aufgehen · zugehen · nicht wiederkommen · am Pult gar nicht).
+`tools/roomtest.js` prüft beide Abläufe (aufgehen · zugehen · nicht wiederkommen · am Pult gar
+nicht · Phase 2 trotz gesehener Phase 1 · Auflösung von selbst gar nicht · und den Fall, dass die
+Lehrkraft mitten in einem offenen Kasten weiterschaltet).
 
 ⚠️ **Im Rahmen fängt die Karte verdeckt an** (`WC_EMBEDDED` in `app.js`), und der Schleier wird
 über die Brücke **vor** dem Weltaufbau gesetzt, nicht erst im `worldHook`. Der Aufbau ist
@@ -738,6 +757,46 @@ geschaltet wird, gehört dort hinein.
 hoch** – und wer an `index.html` oder etwas unter `js/` arbeitet, zusätzlich das `?v=` an der
 Rahmen-URL in `tool.js`. Ohne das läuft auf dem Tablet die alte Seite mit neuen Skripten, und das
 sieht nicht aus wie ein alter Stand, sondern wie ein Fehler.
+
+### Die Kachel im Reiter „Alle Skills" (`MPSkills/preview/wildclusters.js`)
+
+Wie bei den vier anderen Skills: ein **Standbild** in der Kachel, das sich beim Darüberfahren
+bewegt, und dahinter ein **Schaufenster**, in dem das echte Werkzeug läuft (Regisseur:
+`MPSkills/lib/preview.js`). Das Standbild ist ein leichter Nachbau und nicht die Anwendung – für
+sein erstes Bild rechnet die hier zehn Tage Tierleben durch, und eine Kachel, die das tut, hielte
+die ganze Liste an.
+
+⚠️ **Weder Kachel noch Schaufenster verraten, welche Tiere hier leben.** Das ist keine
+Geschmacksfrage: die Aufgabe der Stunde *ist* das Herausfinden, und die Landing steht offen – ein
+Kind kommt genauso dorthin wie eine Lehrkraft. Daraus folgt dreierlei:
+
+* Das Standbild zeigt **kein Tier**: keine Sprites, keine Silhouetten mit Umriss, keine Namen,
+  keine Artfarben. Nur die verdeckte Karte (Spuren, Punkte, Nummern) und die Signalliste – genau
+  das, was die Klasse auch sieht. Auch die **Zahl der Arten** fehlt; sie ist die Zahl der gesuchten
+  Gruppen und damit die halbe Lösung.
+* Das Drehbuch fährt die Stunde bis **„3a Welt auflösen"** und hält dort an. Eine Landschaft
+  verrät niemanden; **„3b Tiere aufdecken" bleibt liegen** – das gehört vor die Klasse und nicht
+  in eine Auslage.
+* Der Beschreibungstext darf sagen, dass es *Tiere* sind (das steht auf der ersten
+  Einführungskarte), nicht **welche**.
+
+Gezeigt wird beim Darüberfahren der eine Vorgang, aus dem die Aufgabe besteht: drei Kacheln werden
+ein Cluster. Dabei gewinnt die Farbe des **Ziels**, die drei Spuren auf der Karte färben mit, und
+die übrigen treten zurück, weil ein frisches Cluster ausgewählt ankommt. Die Signalfarben im
+Standbild sind keine erfundenen Töne, sondern die Rückgaben von `PALETTE.signals.build()` an den
+Stellen 0, 1, 2, 4, 5 und 8 (Rand: `darken(farbe, 0.34)` wie in `signals.js`).
+
+Die Rolle im Schaufenster ist **`presenter`** – anders als bei NeuroLab steuert der Raum hier
+wirklich etwas, und die vier Knöpfe des Pults sind das, was jemand sehen will, der überlegt, ob er
+damit eine Stunde macht. `ctx.preview` hält in `tool.js` ohnehin Einführung und Speichern an.
+
+⚠️ **Der Abspielknopf im Rahmen ist ein Schalter, kein Startknopf.** Ein Drehbuch, das ihn blind
+drückt, startet im ersten Durchgang und hält im zweiten an. Gelesen wird sein Zeichen („▶" gegen
+„❚❚", siehe `js/ui/player.js`), nicht gemerkt, was zuletzt geklickt wurde.
+
+Wer am Standbild oder an `MPSkills/style.css` arbeitet, zieht die Cache-Stempel in
+`MPSkills/index.html` (und `showroom-preview.html`) hoch – dieselbe Regel wie oben, nur eine Ebene
+höher. Ansehen lässt sich beides ohne Anmeldung unter `MPSkills/showroom-preview.html`.
 
 ## Konventionen
 

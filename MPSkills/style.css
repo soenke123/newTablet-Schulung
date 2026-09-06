@@ -1203,6 +1203,140 @@ a.btn {
   .tile--peek:hover .kmp-s1 { opacity: 1; }
 }
 
+/* ═══════════════════════════════════════════════════════
+   Standbild Wild Clusters
+   ═══════════════════════════════════════════════════════
+   Gezeichnet in preview/wildclusters.js; hier steht nur, wie es
+   aussieht und wann es sich bewegt.
+
+   ⚠️ ES IST KEIN TIER DARAUF, und das ist die eine Regel, an der
+   sich hier jede Änderung messen lässt. Die Aufgabe der Stunde ist
+   herauszufinden, welche Arten in der Welt leben — wer auf der
+   Landing eine davon sieht, hat die Antwort, bevor die Frage
+   gestellt ist. Ausführlich steht das im Kopf von
+   preview/wildclusters.js.
+
+   ⚠️ Diese Kachel kippt NICHT mit dem Kleid der Seite — wie die von
+   NeuroLab und die des Königreichs, und aus demselben Grund: eine
+   Kachel verspricht, was hinter ihr aufgeht. Wild Clusters bringt
+   sein eigenes Aussehen mit (Papier #f3ece0, Rinde #3d3427, siehe
+   tools/wildclusters/css/style.css), und der Nachthimmel der
+   verdeckten Sicht ist in beiden Kleidern derselbe.
+
+   Der Rasterhintergrund von .tprev fällt weg: die Karte füllt die
+   linke Hälfte vollständig, das Papier die rechte — ein Raster
+   darunter sähe man nie.                                        */
+.tprev--wc {
+  background-color: #f3ece0;    /* --paper der Anwendung */
+  background-image: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+:root[data-theme="dark"] .tprev--wc {
+  background-color: #f3ece0;
+  background-image: none;
+  /* Hell bleibt hell, aber nicht grell — dieselbe Dämpfung wie bei
+     .tprev--nl, aus demselben Grund. */
+  filter: brightness(.9);
+}
+
+.wcp {
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* Dieselbe Schrift wie in der Anwendung. Outfit ist das Kleid der
+     Seite; die Kachel zeigt aber den Skill. */
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ── Die Spuren ───────────────────────────────────────────
+   Zweimal derselbe Streckenzug: einmal dunkel und breit, einmal in
+   der Signalfarbe darüber. Genau so macht es die Karte auch, und
+   aus demselben Grund — eine Farbe, die einer NUMMER gehört, kennt
+   ihren Untergrund nicht, und in der Dämmerung passiert der Himmel
+   zwangsläufig ihre eigene Helligkeit.
+
+   ⚠️ `--c0`/`--c1` stehen am Element (siehe preview/wildclusters.js),
+   die Auswahl steht hier: umgeschaltet wird, WELCHER der beiden
+   Werte gilt, nie der Wert selbst. Andersherum ginge es nicht — eine
+   Inline-Angabe schlägt jede Regel. */
+.wcp-halo .wcp-tr {
+  fill: none;
+  stroke: #17130c;              /* PALETTE.masked.halo */
+  stroke-width: 3.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .5;
+}
+.wcp-line .wcp-tr {
+  fill: none;
+  stroke: var(--c0);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.wcp-tr { transition: stroke .5s ease, stroke-width .5s ease, opacity .5s ease; }
+
+/* Der Punkt und seine Nummer. Verdeckt sind alle Tiere gleich groß
+   und gleich geformt — ein Kreis für jedes, kein Umriss: eine Form,
+   die sich unterscheidet, wäre schon ein Merkmal. Die Zahl darüber
+   ist die der Kachel, gleich aufgefüllt („01", nicht „1"), wie in
+   agentRenderer.drawLabel. */
+.wcp-dot circle {
+  fill: var(--c0);
+  stroke: #17130c;
+  stroke-width: .9;
+}
+.wcp-dot text {
+  fill: var(--c0);
+  /* Saum und Füllung in einem Zug: ohne `paint-order` läge der Strich
+     ÜBER der Schrift und fräße bei dieser Größe die Hälfte davon. */
+  stroke: #17130c;
+  stroke-width: 1.6;
+  paint-order: stroke;
+}
+.wcp-dot, .wcp-dot circle, .wcp-dot text {
+  transition: fill .5s ease, opacity .5s ease;
+}
+
+/* Die Signalliste: einzeln — oder gruppiert. */
+.wcp-loose, .wcp-group { transition: opacity .45s ease; }
+.wcp-group { opacity: 0; }
+
+/* ── Und jetzt die Bewegung ───────────────────────────────
+   Nur, wo es ein Zeigegerät gibt — auf einem Tablet bleibt das Bild
+   still und die Bewegung ist einen Tipp entfernt im Schaufenster.
+   Dieselbe Abfrage wie bei den vier anderen Standbildern.
+
+   Gezeigt wird der eine Vorgang, aus dem die ganze Aufgabe besteht:
+   drei Kacheln werden ein Cluster. Dabei gewinnt die Farbe des
+   Ziels, die drei Spuren auf der Karte färben mit — die Farbe gehört
+   der Nummer und nicht der Art, genau deshalb ist eine begonnene
+   Gruppierung auf der Karte zu finden —, und weil ein frisches
+   Cluster ausgewählt ankommt, treten die übrigen Spuren zurück. */
+@media (hover: hover) {
+  .tile--peek:hover .wcp-loose { opacity: 0; }
+  .tile--peek:hover .wcp-group { opacity: 1; }
+
+  .tile--peek:hover .wcp-line .wcp-tr { stroke: var(--c1); }
+  .tile--peek:hover .wcp-dot circle,
+  .tile--peek:hover .wcp-dot text { fill: var(--c1); }
+
+  /* Ausgewählt heißt auf der Karte: kräftige Spur. */
+  .tile--peek:hover .wcp-line .wcp-m { stroke-width: 2.6; }
+  .tile--peek:hover .wcp-halo .wcp-m { stroke-width: 4.8; }
+
+  /* Und der Rest tritt zurück. Nicht weg: er gehört weiter zur
+     Aufgabe, er ist nur gerade nicht gemeint. */
+  .tile--peek:hover .wcp-o { opacity: .32; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wcp-tr, .wcp-dot, .wcp-dot circle, .wcp-dot text,
+  .wcp-loose, .wcp-group { transition: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kmp-hex, .kmp-ring, .kmp-s0, .kmp-s1 { transition: none; }
 }

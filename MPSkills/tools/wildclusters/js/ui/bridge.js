@@ -425,8 +425,17 @@
          Einfuehrung, wie viele Tiere einen Sender tragen, und diese Zahl darf
          sich beim Uebergang in Phase 2 nicht rueckwirkend aendern - die fuenf
          Nachzuegler sind ja gerade die Ueberraschung. Von aussen ist der
-         Bestand sonst nicht zu erfahren; die Signalliste steht im Rahmen. */
-      send('world', { seed: seed, n: (WC.sim && WC.sim.baseCount) || 0 });
+         Bestand sonst nicht zu erfahren; die Signalliste steht im Rahmen.
+
+         `late` ist ihre Zahl - fuer die Einfuehrung in Phase 2 ("fuenf neue
+         Signale"). Sie steht in WL.LATE_ARRIVALS und wird beim Aufbau
+         mitgeplant, also lange bevor die Phase umschaltet: die Seite hat sie
+         damit schon, wenn sie sie braucht, und muss sie nicht abschreiben. */
+      send('world', {
+        seed: seed,
+        n: (WC.sim && WC.sim.baseCount) || 0,
+        late: (WC.sim && WC.sim.newcomers) ? WC.sim.newcomers.length : 0
+      });
       send('clusters', { seed: seed, phase: WC.phase, groups: WC.signals.groups() });
     });
 
