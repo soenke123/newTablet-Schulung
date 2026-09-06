@@ -539,10 +539,41 @@ in welche Gruppe sie gehören, *„wenn es eine gibt"*. Genau dieser Halbsatz is
 der fünf sind neue Arten und gehören zu keiner, und das soll die Klasse **herausfinden** und nicht
 lesen. Ein zweiter Rundgang durch dieselben vier Bereiche steht dort bewusst nicht — die Oberfläche
 ist dieselbe, neu ist nur, was auf ihr liegt, und ein zweiter Rundgang wäre das, was man wegklickt,
-ohne hinzusehen. Die Auflösung bekommt keine eigene: dort deckt die Lehrkraft Schritt für Schritt
-auf, und ein Kasten, der sich genau dann vor die Karte legt, nähme der Klasse den Moment.
+ohne hinzusehen.
 
-Sechs Dinge daran sind nicht offensichtlich:
+**Die Auflösung bekommt keine Einführung, sondern eine Frage** (`revealCards`, `revealArt`) — und
+die hängt nicht an der Phase, sondern daran, **was gerade aufgedeckt wurde**. Phase 3 ist ein
+Abschnitt mit *zwei* Ereignissen, und in welcher Reihenfolge sie kommen, entscheidet die Lehrkraft
+vorne am Pult. Deshalb drei Schlüssel statt einer Zahl (`revealKey` in `tool.js`):
+
+| Schlüssel | Zustand | Die Frage |
+|---|---|---|
+| `'3w'` | nur `rw` — Landschaft offen, Tiere sind Nummern | „Welche Tiere könnten das sein? Hilft dir die Gegend?" |
+| `'3t'` | nur `ra` — Tiere offen, Karte bleibt zu | „Kannst du von den Tieren auf die Karte schließen?" |
+| `'3wt'` | beide | „Überprüfe deine Annahmen" — plus eine zweite Karte zu Seed und „Neue Welt" |
+| *(keiner)* | Phase 3, noch nichts aufgedeckt | gar kein Kasten: das Bild ist dasselbe wie in Phase 2 |
+
+Der Kasten steht dabei **nach** dem Aufdecken und nicht davor: die Landschaft ist schon zu sehen,
+und was er hinzufügt, ist die Frage dazu.
+
+Drei Dinge sind daran nicht offensichtlich:
+
+* **Was beim zweiten Handgriff neu ist, steht nirgends im Raum-Zustand** — dort steht nur, dass
+  beides offen ist. Es steht in den *Haken* der ersten beiden Karten: wer `'3w'` gesehen hat, bekam
+  die Landschaft zuerst, und ihm sind gerade die Tiere dazugekommen. Wer keinen von beiden gesehen
+  hat (dazugekommen, während vorne schon alles offen war), bekommt den allgemeinen Satz „Jetzt ist
+  alles offen" — eine geratene Reihenfolge wäre schlechter als keine.
+* **Seed und „Neue Welt" gehören auf die zweite Karte von `'3wt'` und nirgendwo sonst.** Genau dort
+  geht das Feld im Rahmen auf (`freeSeedAllowed`: Phase 3 **und** beide Schleier), und eine
+  Erklärung für einen gesperrten Knopf erklärt nichts.
+* **Ein Tier im Bild ist eine gattungslose Silhouette** (`critter`). Welche Arten in dieser Welt
+  leben, ist die Aufgabe der Stunde; eine Zeichnung mit einem Fuchs darin nähme der Lehrkraft die
+  Auflösung eine Sekunde vor ihr weg. Die Kachelnummer steht daneben, **solange irgendetwas
+  verdeckt ist** — dieselbe Regel wie in der Anwendung (`drawLabel`), und aus demselben Grund. Unter
+  Spur und Tier liegt der dunkle Saum (`.wl-seam` / `.wl-seam-fill`): die grüne „11" läge auf der
+  aufgedeckten Wiese sonst auf ihrer eigenen Helligkeit.
+
+Sechs Dinge an der Einführung sind nicht offensichtlich:
 
 * **Sie liegt IM Kasten** (`position: absolute` in `.wl-host`, nicht `fixed`). Das Vollbild nimmt
   genau diesen Kasten; ein `fixed`-Overlay daneben wäre darin unsichtbar — und der Rahmen darunter
@@ -562,7 +593,7 @@ Sechs Dinge daran sind nicht offensichtlich:
   im Schaufenster (`ctx.preview`) auch nicht. Gemerkt wird sie im `sessionStorage`
   (`wl:<code>:intro<phase>`) — dieselbe Begründung wie beim Bestand: ein Klassensatz-Tablet
   wechselt die Person.
-* **Der Haken gilt dem Abschnitt, der aufgeschlagen WAR** (`introPhase`), nicht dem, in dem die
+* **Der Haken gilt dem Abschnitt, der aufgeschlagen WAR** (`introWhich`), nicht dem, in dem die
   Klasse gerade steht. Die Lehrkraft kann weiterschalten, während der Kasten offen liegt; ohne
   diese Unterscheidung wäre die Einführung von Phase 2 abgehakt, ohne dass jemand sie gesehen hat,
   und die von Phase 1 käme ein zweites Mal.
@@ -572,13 +603,16 @@ Sechs Dinge daran sind nicht offensichtlich:
   ein zu schnell weggetipptes Modal das Ende der Aufgabenbeschreibung, und das `i` daneben hilft
   nicht: es erklärt Tasten, die es auf einem Tablet nicht gibt. Der Knopf ist in **jedem**
   Abschnitt da (einer, der je nach Stand der Stunde nichts tut, sieht aus wie ein kaputter) und
-  holt, was gerade dran ist: in Phase 2 die Nachzügler, sonst den Rundgang — in der Auflösung
-  fällt `cardsFor` bewusst auf den Rundgang zurück, denn „wie war das nochmal mit dem Regler?"
-  stellt sich am Ende der Stunde genauso.
+  holt, was gerade dran ist (`introKeyOf`): in Phase 2 die Nachzügler, in der Auflösung die Frage
+  zum aufgedeckten Teil, sonst den Rundgang. Der eine Fall ohne eigene Karte — Phase 3, noch nichts
+  aufgedeckt — fällt in `cardsFor` bewusst auf den Rundgang zurück, denn „wie war das nochmal mit
+  dem Regler?" stellt sich am Ende der Stunde genauso.
 
 `tools/roomtest.js` prüft beide Abläufe (aufgehen · zugehen · nicht wiederkommen · am Pult gar
-nicht · Phase 2 trotz gesehener Phase 1 · Auflösung von selbst gar nicht · und den Fall, dass die
-Lehrkraft mitten in einem offenen Kasten weiterschaltet).
+nicht · Phase 2 trotz gesehener Phase 1 · Phase 3 ohne aufgedeckten Schleier von selbst gar nicht ·
+und den Fall, dass die Lehrkraft mitten in einem offenen Kasten weiterschaltet) — dazu die
+Auflösung in **beiden** Richtungen: 3a→3b, 3b→3a, beides auf einmal, und dass das Fragezeichen
+dort die Auflösung zurückholt und nicht den Rundgang.
 
 ⚠️ **Im Rahmen fängt die Karte verdeckt an** (`WC_EMBEDDED` in `app.js`), und der Schleier wird
 über die Brücke **vor** dem Weltaufbau gesetzt, nicht erst im `worldHook`. Der Aufbau ist

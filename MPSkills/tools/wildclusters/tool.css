@@ -479,11 +479,54 @@
 .wl-p2 { fill: #4aa8e0; }
 .wl-p3 { fill: #7ec46a; }
 
+/* Die Auflösung: dieselbe Karte, nur mit aufgehobenen Schleiern. Auch
+   diese Farben kippen nicht mit dem Kleid der Seite — sie sind die
+   Landschaft und kein Bedienelement. */
+.wl-grass { fill: #6f9c5c; }
+.wl-wood  { fill: #3d6b46; }
+.wl-water { fill: #3a7ba6; }
+
+/* Der dunkle Saum unter Spur und Endpunkt — dieselbe Begründung wie in der
+   Anwendung: eine Farbe, die einer Nummer gehört, kennt ihren Untergrund
+   nicht. Auf der Wiese läge die grüne Spur sonst auf ihrer eigenen
+   Helligkeit. Für die Endpunkte reicht eine Kontur (`paint-order` legt sie
+   nach außen), die Spur bekommt eine eigene, breitere Linie darunter. */
+.wl-seam {
+  fill: none;
+  stroke: rgba(8, 14, 20, .5);
+  stroke-width: 5.4;
+  stroke-linecap: round;
+}
+
+.wl-seamed {
+  paint-order: stroke;
+  stroke: rgba(8, 14, 20, .5);
+  stroke-width: 1.6px;
+  stroke-linejoin: round;
+}
+
+/* Und beim Tier derselbe Umriss als eigene Zeichnung darunter: es besteht
+   aus sechs sich überlappenden Teilen, und eine Kontur an jedem davon wäre
+   ein Netz von Nähten quer durch die Silhouette. */
+.wl-seam-fill {
+  fill: rgba(8, 14, 20, .5);
+  stroke: rgba(8, 14, 20, .5);
+  stroke-width: 3.2;
+  stroke-linejoin: round;
+}
+
+/* Auf der Nachtkarte hell, auf der Wiese aber auch — deshalb derselbe
+   dunkle Saum wie unter der Spur in der Anwendung. `paint-order` zieht
+   ihn hinter die Schrift, sonst fräße die Kontur sie von innen auf. */
 .wl-num {
   fill: #e9eef4;
   font-size: 9.5px;
   font-weight: 700;
   text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(8, 14, 20, .6);
+  stroke-width: 2.6px;
+  stroke-linejoin: round;
 }
 
 /* Das Fragezeichen liegt UNTER den Spuren: es ist die Frage zum Bild

@@ -73,6 +73,13 @@
    tragen einen Sender, welche Art das ist, weiß niemand mehr"),
    dann vier Karten, die die vier Bereiche der Oberfläche zeigen.
    Sie gehört der Klasse — am Pult erklärt die Lehrkraft.
+
+   In der Auflösung ist es keine Einführung mehr, sondern eine
+   Frage, und die hängt daran, WAS gerade aufgedeckt wurde: die
+   Landschaft zuerst („welche Tiere könnten das sein?"), die Tiere
+   zuerst („auf was für einer Karte leben die?"), und beim zweiten
+   Handgriff „überprüfe deine Annahmen". Drei Zustände, drei
+   Schlüssel (`revealKey`) — die Phase allein wüsste es nicht.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -192,8 +199,12 @@
      ist. Nicht dasselbe wie die Phase im Raum: die Lehrkraft kann weiter
      schalten, während der Kasten aufliegt, und dann gehörte der Haken beim
      Zumachen dem falschen Abschnitt — die eine Einführung wäre gesehen, ohne
-     dass sie jemand gesehen hat, und die andere käme ein zweites Mal. */
-  let introPhase = 1;
+     dass sie jemand gesehen hat, und die andere käme ein zweites Mal.
+
+     Deshalb auch kein reiner Phasenzähler: die Auflösung sind ZWEI Ereignisse
+     in einer Phase, und sie tragen die Schlüssel '3w' · '3t' · '3wt' (siehe
+     `revealKey`). */
+  let introWhich = 1;
   /* Wie viele Tiere in Phase 1 einen Sender tragen. Kommt mit dem
      `world`-Ereignis herein — von außen ist der Bestand nicht zu sehen. */
   let agentCount = 0;
@@ -299,6 +310,41 @@
     if (isPresenter()) return true;
     const d = (v && v.state && v.state.data) || {};
     return !!(d.rw && d.ra);
+  }
+
+  /**
+   * Welcher Augenblick der Auflösung gerade dasteht — oder `null`.
+   *
+   * Die Auflösung ist kein Abschnitt mit einer Einführung, sondern **zwei
+   * Ereignisse in einer Phase**: die Landschaft und die Tiere werden einzeln
+   * aufgedeckt, und in welcher Reihenfolge, entscheidet die Lehrkraft vorne.
+   * Die Frage an die Klasse hängt genau daran und ist in beiden Richtungen
+   * eine andere („welche Tiere passen in diese Landschaft?" gegen „auf was
+   * für einer Karte leben diese Tiere?").
+   *
+   * Deshalb drei Schlüssel und nicht eine Phasenzahl:
+   *
+   * * `'3w'` — nur die Landschaft ist offen, die Tiere sind Nummern
+   * * `'3t'` — nur die Tiere sind offen, die Landschaft bleibt zu
+   * * `'3wt'` — beides
+   *
+   * `null` heißt „Phase 3, aber noch nichts aufgedeckt": die Auflösung
+   * beginnt mit demselben Bild wie Phase 2, und da gibt es nichts zu sagen.
+   */
+  function revealKey(v) {
+    if (phaseOf(v) !== 3) return null;
+    const d = (v && v.state && v.state.data) || {};
+    if (d.rw && d.ra) return '3wt';
+    if (d.rw) return '3w';
+    if (d.ra) return '3t';
+    return null;
+  }
+
+  /* Welche Einführung zum Raum-Zustand gehört. In Phase 1 und 2 ist das die
+     Phase selbst, in der Auflösung der Augenblick darin. */
+  function introKeyOf(v) {
+    const p = phaseOf(v);
+    return p === 3 ? revealKey(v) : p;
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -638,9 +684,15 @@
 
     /* Das Fragezeichen daneben. Es ist in jedem Abschnitt da — ein Knopf, der
        je nach Stand der Stunde nichts tut, sieht aus wie ein kaputter — und
-       holt das, was gerade dran ist: in Phase 2 die fünf Nachzügler, sonst
-       den Rundgang. */
-    if (m.event === 'help') { if ($('wlIntro')) openIntro(phaseOf(view)); return; }
+       holt das, was gerade dran ist: in Phase 2 die fünf Nachzügler, in der
+       Auflösung die Frage zum aufgedeckten Teil, sonst den Rundgang.
+
+       `|| phaseOf(view)` ist der eine Fall ohne eigene Karte: Phase 3, noch
+       nichts aufgedeckt. Die 3 führt in cardsFor auf den Rundgang zurück. */
+    if (m.event === 'help') {
+      if ($('wlIntro')) openIntro(introKeyOf(view) || phaseOf(view));
+      return;
+    }
 
     /* Der Knopf im Streifen oben rechts. Er steckt ebenfalls im Rahmen und
        meldet nur — was „aufhören" bedeutet, weiß nur diese Seite. */
@@ -1062,6 +1114,11 @@
      durch dieselben vier Bereiche wäre an dieser Stelle das, was
      man wegklickt, ohne hinzusehen.
 
+     Die Auflösung hat keine Einführung, sondern eine Frage — und die
+     hängt daran, was gerade aufgedeckt WURDE (`revealKey`). Sie ist
+     in beiden Richtungen eine andere, und deshalb ist der Schlüssel
+     der Zustand der beiden Schleier und nicht die Phase.
+
      Sie liegt IM Kasten (`.wl-host`) und nicht über der Seite: das
      Vollbild nimmt genau diesen Kasten, und ein `position: fixed`
      außerhalb davon wäre darin unsichtbar. Ein Kind, das die Karte
@@ -1177,16 +1234,19 @@
   </svg>`;
 
   /**
-   * Die Karten eines Abschnitts.
+   * Die Karten zu einem Schlüssel — einer Phase (1, 2) oder einem Augenblick
+   * der Auflösung ('3w', '3t', '3wt').
    *
-   * Phase 3 hat keine eigene — dort wird aufgedeckt, und was dabei zu sehen
-   * ist, sagt die Lehrkraft. Das Fragezeichen darf trotzdem nicht ins Leere
-   * greifen, also fällt es auf den Rundgang aus Phase 1 zurück: die
-   * Oberfläche ist noch dieselbe, und die Frage „wie war das nochmal mit dem
-   * Regler?" stellt sich am Ende der Stunde genauso.
+   * Die nackte 3 kommt nur vom Fragezeichen: in Phase 3 mit noch nichts
+   * aufgedecktem gibt es keine eigene Karte, und der Knopf darf trotzdem
+   * nicht ins Leere greifen. Er fällt dann auf den Rundgang aus Phase 1
+   * zurück — die Oberfläche ist noch dieselbe, und die Frage „wie war das
+   * nochmal mit dem Regler?" stellt sich am Ende der Stunde genauso.
    */
   function cardsFor(p) {
-    return p === 2 ? arrivalCards() : tourCards();
+    if (p === 2) return arrivalCards();
+    if (p === '3w' || p === '3t' || p === '3wt') return revealCards(p);
+    return tourCards();
   }
 
   function tourCards() {
@@ -1261,6 +1321,147 @@
     ];
   }
 
+  /* ── Die Auflösung ────────────────────────────────────────────
+     Dieselbe Nachtkarte wie auf der ersten Karte der Stunde, nur mit
+     aufgehobenen Schleiern — und zwar genau denen, die auch im Rahmen
+     oben sind. Das Bild IST die Antwort auf „was ist gerade passiert?",
+     und ein Kind, das den Kasten wegtippt, findet daneben dieselben drei
+     Spuren wieder.
+
+     Ein Tier ist hier eine gattungslose Silhouette. Welche Arten in
+     dieser Welt leben, ist die Aufgabe der Stunde; eine Zeichnung, die
+     einen Fuchs zeigt, nähme der Lehrkraft die Auflösung eine Sekunde
+     vor ihr weg. */
+
+  /* Die Nummer bleibt neben dem Tier stehen, solange IRGENDETWAS verdeckt
+     ist — dieselbe Regel wie in der Anwendung (drawLabel in
+     agentRenderer.js). Genau dann wird sie gebraucht: die Lehrkraft deckt
+     die Tiere auf, und jetzt steht das Bild neben der Kachelnummer. Erst
+     ganz offen ist sie weg. */
+  function critter(cls, x, y) {
+    return `<g class="${cls}" transform="translate(${x},${y})">
+      <ellipse cx="0" cy="-1" rx="7" ry="4"/>
+      <circle cx="6.4" cy="-4.4" r="3.1"/>
+      <path d="M8.6,-6.6 L11,-9.2 L11.6,-7.4 Z"/>
+      <path d="M-6.4,-2.6 C-10,-4.6 -11.4,-7 -9.9,-8.6 L-8.3,-7.5
+               C-9.4,-6.3 -8.5,-4.6 -5.7,-3.4 Z"/>
+      <rect x="-5" y="2" width="1.9" height="4.2" rx=".95"/>
+      <rect x="1.2" y="2" width="1.9" height="4.2" rx=".95"/>
+    </g>`;
+  }
+
+  /* Die drei Spuren, einmal als Weg und einmal als Klasse. Gezeichnet wird
+     jede zweimal: erst der dunkle Saum, dann die Farbe darauf — genau wie in
+     der Anwendung (PALETTE.masked.halo). Eine Farbe, die einer Nummer gehört,
+     kennt ihren Untergrund nicht, und die grüne „11" läge auf der
+     aufgedeckten Wiese sonst auf ihrer eigenen Helligkeit. */
+  const REVEAL_TRAILS = [
+    ['wl-s1', 'M38,148 C74,116 60,74 100,58 C134,45 148,80 132,106 C121,124 92,124 86,106'],
+    ['wl-s2', 'M208,152 C240,142 260,110 248,82 C238,56 202,60 198,86 C195,106 216,114 226,102'],
+    ['wl-s3', 'M118,152 C136,150 142,132 156,134 C168,136 168,146 162,148']
+  ];
+
+  function revealArt(w, a) {
+    const grund = w
+      ? `<rect class="wl-grass" x="4" y="4" width="312" height="172" rx="11"/>
+         <ellipse class="wl-wood" cx="232" cy="76" rx="60" ry="42"/>
+         <ellipse class="wl-water" cx="95" cy="112" rx="52" ry="34"/>`
+      : `<rect class="wl-night" x="4" y="4" width="312" height="172" rx="11"/>`;
+    const saum = REVEAL_TRAILS
+      .map(([, d]) => `<path class="wl-seam" d="${d}"/>`).join('');
+    const spuren = REVEAL_TRAILS
+      .map(([c, d]) => `<path class="${c}" d="${d}"/>`).join('');
+    const enden = [['wl-p1', 86, 106, '07'], ['wl-p2', 226, 102, '23'],
+                   ['wl-p3', 162, 148, '11']]
+      /* Beim Tier liegt der Saum als ZWEITE Zeichnung darunter und nicht als
+         Kontur an jedem Teil: Rumpf, Kopf und Beine überlappen sich, und
+         einzeln umrandet zöge jede Naht eine Linie quer durchs Tier. */
+      .map(([c, x, y, n]) => (a ? critter('wl-seam-fill', x, y) + critter(c, x, y)
+                               : `<circle class="${c} wl-seamed" cx="${x}" cy="${y}" r="5"/>`)
+        + (w && a ? '' : `<text class="wl-num" x="${x}" y="${y - (a ? 13 : 12)}">${n}</text>`))
+      .join('');
+    return `<svg class="wl-art wl-art--night" viewBox="0 0 320 180" aria-hidden="true">
+      ${grund}${saum}${spuren}${enden}
+    </svg>`;
+  }
+
+  /**
+   * Die Karten der Auflösung. Eine je Augenblick — und die Frage darin ist
+   * die, die sich in DIESEM Augenblick stellt:
+   *
+   * * `'3w'` — die Landschaft steht da, die Tiere sind noch Nummern:
+   *   *welche* Tiere könnten das sein, und hilft die Gegend dabei?
+   * * `'3t'` — umgekehrt: die Tiere haben ihr Bild, die Karte ist schwarz.
+   *   Von den Tieren auf die Landschaft schließen.
+   * * `'3wt'` — beides offen: die Annahmen von eben überprüfen.
+   *
+   * Was beim zweiten Aufdecken dazugekommen ist, steht nicht im
+   * Raum-Zustand (dort steht nur, dass beides offen ist) — es steht in den
+   * Haken der beiden ersten Karten. Wer '3w' gesehen hat, bekam die
+   * Landschaft zuerst, und ihm sind gerade die Tiere dazugekommen. Wer
+   * keinen von beiden gesehen hat (dazugekommen, während vorne schon alles
+   * offen war), bekommt den allgemeinen Satz — eine geratene Reihenfolge
+   * wäre schlechter als keine.
+   *
+   * Erst hier steht der eigene Seed offen (`freeSeedAllowed`: Phase 3 UND
+   * beide Schleier), also gehört die Erklärung dazu genau hierhin und in
+   * keinen der beiden ersten Augenblicke.
+   */
+  function revealCards(key) {
+    if (key === '3w') {
+      return [
+        { kicker: 'Die Auflösung', title: 'Jetzt siehst du die Welt',
+          art: revealArt(true, false), html:
+          `<p>Die Landschaft ist aufgedeckt: Wasser, Wald und Wiese liegen
+           da, wo die Spuren die ganze Zeit entlanggelaufen sind. Die Tiere
+           sind weiter <b>nur Nummern</b>.</p>
+           <p><b>Welche Tiere könnten das sein?</b> Sieh dir deine Gruppen
+           an: Wer bleibt am Wasser, wer im Wald, wer läuft über die Wiese?
+           Hilft dir die Landschaft beim Raten — und passen deine Gruppen
+           noch zusammen, jetzt wo du siehst, wo sie leben?</p>` }
+      ];
+    }
+    if (key === '3t') {
+      return [
+        { kicker: 'Die Auflösung', title: 'Jetzt siehst du die Tiere',
+          art: revealArt(false, true), html:
+          `<p>Jedes Signal hat sein Bild bekommen — die <b>Nummer bleibt
+           daneben stehen</b>, damit du deine Kacheln wiederfindest. Die
+           Landschaft ist noch zu.</p>
+           <p><b>Kannst du von den Tieren auf die Karte schließen?</b> Wo
+           muss Wasser sein, wo Wald, wo offene Fläche? Und: Steckt in
+           jeder deiner Gruppen wirklich nur eine Art?</p>` }
+      ];
+    }
+
+    const zuerstWelt = introSeen('3w') && !introSeen('3t');
+    const zuerstTiere = introSeen('3t') && !introSeen('3w');
+    return [
+      { kicker: 'Die Auflösung',
+        title: zuerstWelt ? 'Jetzt siehst du auch die Tiere'
+             : zuerstTiere ? 'Jetzt siehst du auch die Welt'
+             : 'Jetzt ist alles offen',
+        art: revealArt(true, true), html:
+        `<p>Landschaft und Tiere liegen zusammen vor dir — die Nummern
+         brauchst du nicht mehr und sind deshalb weg.</p>
+         <p><b>Überprüfe deine Annahmen.</b> Ist in jeder deiner Gruppen
+         wirklich nur eine Art? Wo lagst du richtig — und wo hat dich eine
+         Spur auf die falsche Fährte gebracht? Halte fest, <b>woran</b> du
+         die Tiere auseinanderhalten konntest, ohne sie zu sehen.</p>` },
+      { kicker: 'Danach', title: 'Eine eigene Welt', art: chrome('head'), html:
+        `<p>Oben in der Kopfzeile stehen jetzt das Feld <b>Seed</b> und der
+         Knopf <b>Neue Welt</b>. Der Seed ist die Zahl, aus der eine Welt
+         gerechnet wird: <b>dieselbe Zahl ergibt überall dieselbe Welt</b> —
+         dieselbe Landschaft, dieselben Tiere. Du kannst sie also jemandem
+         vorlesen, und ihr seht beide dasselbe.</p>
+         <p><b>Neue Welt</b> würfelt eine. Deine drei Welten <b>I</b>,
+         <b>II</b> und <b>III</b> bleiben dabei, wie sie sind.</p>
+         <p class="wl-tip">Was du in einer gewürfelten Welt gruppierst, gilt
+         nur, solange sie aufliegt — sie ist ein Ausflug und keine vierte
+         Welt.</p>` }
+    ];
+  }
+
   function introHTML() {
     return `
     <div class="wl-intro" id="wlIntro" hidden>
@@ -1288,16 +1489,18 @@
     box.hidden = introStep < 0;
     if (introStep < 0) return;
 
-    const cards = cardsFor(introPhase);
+    const cards = cardsFor(introWhich);
     const i = Math.min(introStep, cards.length - 1);
     const c = cards[i];
     const last = cards.length - 1;
 
     box.querySelector('.wl-i-art').innerHTML = c.art;
     // „Oben · 1 von 4": die Lage ist kein Schritt der Führung, sondern
-    // die Aufgabe — sie bekommt deshalb keine Nummer.
+    // die Aufgabe — sie bekommt deshalb keine Nummer. Und bei zwei Karten
+    // steht gar keine da: „1 von 1" ist kein Weg, sondern eine Auskunft
+    // über nichts (die Punkte darunter zeigen es ohnehin).
     box.querySelector('.wl-i-kicker').textContent =
-      i === 0 ? c.kicker : c.kicker + ' · ' + i + ' von ' + last;
+      i === 0 || last < 2 ? c.kicker : c.kicker + ' · ' + i + ' von ' + last;
     box.querySelector('.wl-i-title').textContent = c.title;
     box.querySelector('.wl-i-text').innerHTML = c.html;
     // Ein einzelner Punkt ist kein Weg, sondern ein Fleck: bei einer Karte
@@ -1311,7 +1514,7 @@
   }
 
   function openIntro(p) {
-    introPhase = p;
+    introWhich = p;
     introStep = 0;
     paintIntro();
     const go = $('wlIntro') && $('wlIntro').querySelector('.wl-i-go');
@@ -1323,8 +1526,8 @@
   function closeIntro() {
     introStep = -1;
     // Der Haken gilt dem Abschnitt, der aufgeschlagen WAR — nicht dem, in dem
-    // die Klasse inzwischen steht (siehe introPhase).
-    try { sessionStorage.setItem(introKey(introPhase), '1'); } catch (e) { /* egal */ }
+    // die Klasse inzwischen steht (siehe introWhich).
+    try { sessionStorage.setItem(introKey(introWhich), '1'); } catch (e) { /* egal */ }
     paintIntro();
   }
 
@@ -1334,17 +1537,20 @@
    * Einführung über einer leeren Fläche erklärt eine Oberfläche, die es noch
    * nicht gibt, und die Zahl der Sender wäre auch noch nicht bekannt.
    *
-   * Von selbst kommt sie in Phase 1 und 2. Die Auflösung bekommt keine: dort
-   * deckt die Lehrkraft Schritt für Schritt auf, und ein Kasten, der sich
-   * genau dann vor die Karte legt, nähme der Klasse den Moment.
+   * Von selbst kommt sie in Phase 1 und 2 — und in der Auflösung zu jedem
+   * der beiden Handgriffe (`revealKey`). Der Kasten steht dort nicht VOR dem
+   * Aufdecken, sondern DANACH: die Landschaft ist schon zu sehen, und was er
+   * hinzufügt, ist die Frage dazu. Solange in Phase 3 noch nichts aufgedeckt
+   * ist, kommt gar keiner — dann ist das Bild dasselbe wie in Phase 2, und
+   * dazu ist alles gesagt.
    */
   function maybeIntro() {
     if (!root || !view || introStep >= 0) return;
     if (isPresenter() || (ctx && ctx.preview)) return;
-    const p = phaseOf(view);
-    if (p !== 1 && p !== 2) return;
-    if (frameSeed == null || introSeen(p)) return;
-    openIntro(p);
+    const k = introKeyOf(view);
+    if (k == null) return;
+    if (frameSeed == null || introSeen(k)) return;
+    openIntro(k);
   }
 
   function onIntroClick(e) {
@@ -1353,7 +1559,7 @@
     const what = btn.dataset.intro;
     if (what === 'close') { closeIntro(); return; }
     if (what === 'back') { introStep = Math.max(0, introStep - 1); paintIntro(); return; }
-    if (introStep >= cardsFor(introPhase).length - 1) { closeIntro(); return; }
+    if (introStep >= cardsFor(introWhich).length - 1) { closeIntro(); return; }
     introStep++;
     paintIntro();
   }
@@ -1389,7 +1595,7 @@
       sentGroups = '';
       rebase = false;
       introStep = -1;
-      introPhase = 1;
+      introWhich = 1;
       agentCount = 0;
       lateCount = 0;
       store = Object.create(null);

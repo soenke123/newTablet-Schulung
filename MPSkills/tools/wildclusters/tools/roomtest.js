@@ -534,6 +534,94 @@ function nachzueglerHabenIhreEigene() {
      ubox.hidden === false, ubox.hidden);
 }
 
+/* Die Auflösung fragt — und zwar in der Richtung, in der aufgedeckt wurde.
+   ══════════════════════════════════════════════════════════
+   Phase 3 ist ein Abschnitt mit ZWEI Ereignissen, und welches zuerst kommt,
+   entscheidet die Lehrkraft vorne am Pult. Die Frage an die Klasse ist in
+   beiden Richtungen eine andere, und beim zweiten Handgriff muss der Kasten
+   wissen, was gerade dazugekommen ist — im Raum-Zustand steht das nicht
+   (dort steht nur, dass beides offen ist), sondern nur in den Haken der
+   ersten beiden Karten.
+
+   Vier Fälle, und jeder ist ein eigener Text:
+
+   * Welt zuerst  → „Jetzt siehst du die Welt", danach „… auch die Tiere"
+   * Tiere zuerst → „Jetzt siehst du die Tiere", danach „… auch die Welt"
+   * beides auf einmal (wer später dazukommt) → der allgemeine Satz
+   * und: der Kasten kommt je Augenblick genau einmal.
+
+   Der Seed und „Neue Welt" gehören auf die zweite Karte des letzten
+   Augenblicks — vorher ist das Feld im Rahmen gesperrt
+   (`freeSeedAllowed`), und eine Erklärung für einen gesperrten Knopf
+   erklärt nichts. */
+function aufloesungFragtNach() {
+  const auf = () => {
+    const t = run('student');
+    const box = t.root.querySelector('#wlIntro');
+    t.fromFrame('ready', {});
+    frameAnswers(t, []);
+    const tippe = (was) => {
+      const b = { dataset: { intro: was } };
+      b.closest = () => b;
+      box.fire('click', b);
+    };
+    tippe('close');                       // die Einführung von Phase 1 weg
+    const deckeAuf = (data) => {
+      t.view.state.phase = 3;
+      t.view.state.data = data;
+      t.impl.update(t.view);
+    };
+    const titel = () => box.querySelector('.wl-i-title').textContent;
+    return { t, box, tippe, deckeAuf, titel };
+  };
+
+  // Der übliche Weg: 3a, dann 3b.
+  const a = auf();
+  a.deckeAuf({ rw: true });
+  ok('3a: der Kasten kommt', a.box.hidden === false, a.box.hidden);
+  ok('3a: er fragt nach den Tieren zur Landschaft',
+     /siehst du die Welt/.test(a.titel()), a.titel());
+  a.tippe('next');
+  ok('3a: eine Karte, ein Druck', a.box.hidden === true, a.box.hidden);
+  a.t.impl.update(a.t.view);
+  ok('3a: und er kommt nicht wieder', a.box.hidden === true, a.box.hidden);
+
+  a.deckeAuf({ rw: true, ra: true });
+  ok('3b: er weiß, dass die Tiere dazugekommen sind',
+     /auch die Tiere/.test(a.titel()), a.titel());
+  a.tippe('next');
+  ok('3b: die zweite Karte erklärt den Seed', a.box.hidden === false, a.box.hidden);
+  ok('3b: … und sie heißt auch so',
+     /eigene Welt/i.test(a.titel()), a.titel());
+  a.tippe('next');
+  ok('3b: danach ist zu', a.box.hidden === true, a.box.hidden);
+
+  // Andersherum aufgedeckt: dieselben zwei Augenblicke, andere Frage.
+  const b = auf();
+  b.deckeAuf({ ra: true });
+  ok('3b zuerst: er fragt nach der Karte zu den Tieren',
+     /siehst du die Tiere/.test(b.titel()), b.titel());
+  b.tippe('next');
+  b.deckeAuf({ rw: true, ra: true });
+  ok('3b zuerst: danach ist die Welt das Neue',
+     /auch die Welt/.test(b.titel()), b.titel());
+
+  /* Wer dazukommt, wenn vorne schon alles offen ist, hat keine Reihenfolge
+     gesehen — und bekommt deshalb keine behauptet. */
+  const c = auf();
+  c.deckeAuf({ rw: true, ra: true });
+  ok('Späteinsteiger: der allgemeine Satz',
+     /alles offen/.test(c.titel()), c.titel());
+
+  /* Und das Fragezeichen holt in der Auflösung das, was gerade dran ist —
+     nicht den Rundgang vom Anfang der Stunde. */
+  c.tippe('next'); c.tippe('next');
+  ok('Auflösung: zugetippt', c.box.hidden === true, c.box.hidden);
+  c.t.fromFrame('help', {});
+  ok('Auflösung: das Fragezeichen holt die Auflösung zurück',
+     c.box.hidden === false && /alles offen/.test(c.titel()), c.titel());
+}
+
 pultBehaeltSeineWelten();
 pultBehaeltDieNachzuegler();
 selbstGebauteWeltBehaeltIhreArbeit('student');
@@ -543,6 +631,7 @@ schleierZurueckHoltAnDieArbeit();
 vollbildGehtDurch();
 einfuehrungKommtEinmal();
 nachzueglerHabenIhreEigene();
+aufloesungFragtNach();
 tabletBewahrtNurDieDrei(() => alterBestandWirdGestutzt(() => {
   console.log(fails ? '\n' + fails + ' Prüfung(en) offen' : '\nalles grün');
   process.exit(fails ? 1 : 0);

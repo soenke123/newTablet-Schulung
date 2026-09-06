@@ -88,7 +88,9 @@
       "PowerShell($p=\"C:\\\\Users\\\\snke\\\\OneDrive\\\\ClaudeProjekte\\\\MPS TabletSchlung\\\\Webauftrtitt\\\\MPSkills\\\\tools\\\\clash-of-math\\\\tool.js\"; $b=[System.IO.File]::ReadAllBytes\\($p\\); $idx=@\\(\\); for\\($i=0;$i -lt $b.Length;$i++\\){ if\\($b[$i] -eq 0\\){ $idx += $i } }; \"NUL count: $\\($idx.Count\\)\"; $idx | Select-Object -First 10)",
       "Bash(sort -u -t: -k3)",
       "Bash(sed -i \"s/'clash', p.id/'clash-of-math', p.id/\" test.mjs)",
-      "Bash(sed -i \"s/^process.on\\('unhandledRejection'.*/process.on\\('uncaughtException', e => { console.log\\('ABBRUCH:', e.message, '|', e.detail || '', '|', e.query ? String\\(e.query\\).slice\\(0,200\\) : ''\\); process.exit\\(1\\); }\\);/\" test.mjs)"
+      "Bash(sed -i \"s/^process.on\\('unhandledRejection'.*/process.on\\('uncaughtException', e => { console.log\\('ABBRUCH:', e.message, '|', e.detail || '', '|', e.query ? String\\(e.query\\).slice\\(0,200\\) : ''\\); process.exit\\(1\\); }\\);/\" test.mjs)",
+      "Bash(SCRATCH=C:/Users/snke/AppData/Local/Temp/claude/C--Users-snke-OneDrive-ClaudeProjekte-MPS-TabletSchlung-Webauftrtitt/03794adc-1c1f-41b4-81e0-3a44074180ae/scratchpad node -e ' *)",
+      "Bash(npx --yes playwright@1.49 --version)"
     ]
   }
 }
