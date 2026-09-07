@@ -14,7 +14,16 @@
    Die Farbe eines Volkes kommt IMMER aus --wi-team und nie aus
    einer Regel hier — sie steht in tool.js (TEAMS) und wird als
    Variable hereingereicht. Zwei Wahrheiten über die Farbe eines
-   Volkes wären genau eine zu viel.
+   Volkes wären genau eine zu viel. Die einzige Ausnahme sind die
+   Kacheln der Insel: dort steht die Farbe an der VOLKSNUMMER
+   (.wi-cell[data-t="…"]), weil 500 Polygone keine 500 eigenen
+   Style-Attribute bekommen sollen.
+
+   Die Lobby ist die von Kingdoms of Mathoria (Sönke, 2026-09-07):
+   Wappenreihe, Segment-Schalter, eine Spalte je Volk. Die Namen der
+   Klassen sind eigene (wi-), die Maße und Zustände sind
+   absichtlich dieselben — wer beide Skills bedient, soll nichts
+   Neues lernen müssen.
    ══════════════════════════════════════════════════════════════ */
 
 .wi {
@@ -57,13 +66,6 @@
   color: var(--ink);
 }
 
-.wi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
-  align-items: start;
-}
-
 .wi-btn {
   appearance: none;
   border: 1px solid var(--accent-edge);
@@ -77,11 +79,13 @@
   transition: filter .15s ease;
 }
 .wi-btn:hover { filter: brightness(1.06); }
+.wi-btn:disabled { opacity: .5; cursor: not-allowed; filter: none; }
 .wi-btn--ghost {
   background: transparent;
   color: var(--ink-soft);
   border-color: var(--line);
 }
+.wi-btn--ghost:hover { border-color: var(--accent); }
 .wi-btn--go {
   align-self: center;
   padding: 14px 34px;
@@ -102,11 +106,406 @@
 .wi-ta { resize: vertical; font-family: var(--mono); font-size: 13px; }
 
 .wi-empty { margin: 0; color: var(--ink-faint); font-size: 14px; }
+.wi-hint  { margin: 0; color: var(--ink-soft);  font-size: 13px; }
 
 /* ══════════════════════════════════════════════════════════
    Pult — Lobby
    ══════════════════════════════════════════════════════════ */
-.wi-tabs { display: flex; gap: 6px; }
+.wi-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md, 18px);
+  background: var(--surface);
+}
+
+/* ── Die Einstellungen ───────────────────────────────────────
+   Segment-Schalter statt Auswahlfeldern: die Frage hat zwei oder
+   drei Antworten, und ein Segment zeigt alle gleichzeitig — man
+   sieht, wogegen man sich entscheidet. Sie stehen ÜBER der
+   Kopfzeile, weil sie die Bedeutung dessen ändern, was darunter
+   passiert. */
+.wi-modebar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  align-items: flex-start;
+}
+.wi-modegrp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.wi-modegrp--wide { flex: 1 1 260px; }
+.wi-modelab {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.wi-modeseg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md, 18px);
+  background: var(--paper);
+}
+.wi-modebtn {
+  appearance: none;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: calc(var(--r-md, 18px) - 3px);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .14s ease, color .14s ease;
+}
+.wi-modebtn:hover { color: var(--ink); }
+.wi-modebtn.is-on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+}
+
+/* Die Spieldauer: vier Zahlen nebeneinander und EIN Satz darunter.
+   Die Zahl allein sagt nichts („10" — wovon?), vier Sätze
+   nebeneinander liest niemand. Also erklärt sich immer nur die
+   gewählte. */
+.wi-levelrow { display: inline-flex; gap: 5px; }
+.wi-levelbtn {
+  appearance: none;
+  width: 40px;
+  height: 36px;
+  border: 2px solid var(--line);
+  border-radius: var(--r-sm, 12px);
+  background: var(--paper);
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.wi-levelbtn:hover { border-color: var(--ink-faint); }
+.wi-levelbtn.is-on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.wi-leveltext {
+  font-size: 13px;
+  color: var(--ink-soft);
+  max-width: 46ch;
+}
+
+.wi-setuphead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.wi-setuptitle {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+/* ── Die sechs Wappen zum An- und Abwählen ───────────────────
+   Wappen links, die gewählten Wortlisten rechts daneben.
+   `align-items: center` hält die Liste auf der Höhe der Bilder; auf
+   einem schmalen Beamer bricht sie unter die Reihe, statt sie über
+   den Rand zu schieben. */
+.wi-pickrow {
+  display: flex;
+  align-items: center;
+  gap: 10px 22px;
+  flex-wrap: wrap;
+}
+.wi-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 0 1 auto;
+}
+.wi-pickbtn {
+  appearance: none;
+  flex: 0 0 auto;
+  width: clamp(58px, 9vw, 84px);
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: var(--r-md, 18px);
+  border: 2px solid var(--line);
+  background: var(--paper);
+  /* Abgewählt: farblos und blass. */
+  filter: grayscale(1);
+  opacity: .5;
+  transition: opacity .14s ease, filter .14s ease, border-color .14s ease,
+              box-shadow .14s ease, transform .14s ease;
+}
+.wi-pickbtn img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  pointer-events: none;   /* sonst ist das Bild das Klickziel, nicht der Knopf */
+}
+.wi-pickbtn:hover { opacity: .7; }
+/* Gewählt: volle Farbe, die Volksfarbe als Rand und als Schein. */
+.wi-pickbtn.is-on {
+  filter: none;
+  opacity: 1;
+  border-color: var(--wi-team);
+  background: color-mix(in srgb, var(--wi-team) 14%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wi-team) 28%, transparent),
+              0 4px 12px color-mix(in srgb, var(--wi-team) 30%, transparent);
+}
+.wi-pickbtn.is-on:hover { opacity: 1; transform: translateY(-2px); }
+/* Die letzten zwei lassen sich nicht abwählen — der Klick sagt das
+   auch (Hinweis-Blase in tool.js), der Zeiger schon vorher. */
+.wi-pickbtn.is-on[data-locked] { cursor: not-allowed; }
+.wi-pickbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Was gleich geübt wird ───────────────────────────────────
+   Die Kurzform neben den Wappen. Ohne Wörter kein Spiel — dann sagt
+   dieselbe Zeile auch, warum der Startknopf grau ist. */
+.wi-setsum {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.wi-setsumgrp {
+  display: flex;
+  align-items: center;
+  gap: 4px 10px;
+  flex-wrap: wrap;
+}
+.wi-setsumgrp > b { flex: 0 0 auto; font-weight: 800; color: var(--ink); }
+.wi-setsumops { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.wi-setsumops > i {
+  font-style: normal;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 1px 10px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-edge);
+  color: var(--accent-ink);
+  white-space: nowrap;
+}
+.wi-setsumn { font-size: 12px; color: var(--ink-faint); }
+.wi-setsum--warn {
+  align-self: flex-start;      /* als Blase so breit wie ihr Text */
+  padding: 6px 12px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--warn-dim);
+  border: 1px solid var(--warn-edge);
+  color: var(--warn-ink);
+}
+.wi-setsum--warn::before { content: "⚠"; margin-right: 4px; }
+.wi-setsum > b { font-weight: 700; }
+
+/* ── Eine Spalte je Volk ─────────────────────────────────────
+   Nebeneinander statt untereinander: die Lobby hängt am Beamer, und
+   nebeneinander sieht die Klasse in einem Blick, wer zu wem gehört.
+   Alle Spalten gleich breit, nach oben gedeckelt und die Reihe
+   mittig — bei zwei Völkern stünden sonst zwei riesige, halbleere
+   Spalten an den äußersten Rändern. */
+.wi-lobbyteams {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 10px;
+}
+.wi-lteam {
+  flex: 1 1 0;
+  min-width: 132px;
+  max-width: 250px;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-md, 18px);
+  overflow: hidden;
+  border: 2px solid var(--wi-team);
+  background: color-mix(in srgb, var(--wi-team) 9%, var(--surface));
+}
+/* Das Gruppenbild (Burg + Einheiten). `contain` statt `cover`, weil
+   die Figuren freigestellt sind und angeschnitten albern aussähen. */
+.wi-lteampic {
+  flex: 0 0 auto;
+  height: clamp(104px, 15vh, 176px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 8px 8px 0;
+}
+.wi-lteampic img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .28));
+}
+/* Der Volksname liegt auf der vollen Volksfarbe — weiße Schrift mit
+   hartem Schatten, damit sie auch auf Gelb und Türkis steht.
+   Platz für zwei Zeilen, auch wenn nur eine gebraucht wird: sonst
+   fangen die Namenslisten der Spalten auf verschiedenen Höhen an
+   („Brokkoli-Giraffen" bricht um, „Robo-Enten" nicht). */
+.wi-lteamname {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  min-height: calc(2.4em + 12px);
+  background: var(--wi-team);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.2;
+  text-shadow: 0 1px 2px rgba(20, 12, 0, .7);
+  overflow-wrap: anywhere;
+}
+.wi-lteamname > span:first-child { flex: 1 1 auto; min-width: 0; }
+.wi-lteamn {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+}
+.wi-lteamlist {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 34vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: 8px 10px;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.wi-lteamempty { color: var(--ink-faint); font-style: italic; }
+/* Wer gerade nicht am Tablet ist: blass, aber da. Beim Start
+   verteilt der Server ausnahmslos alle — anders als in Kingdoms. */
+.wi-lteamoff { opacity: .45; }
+.wi-lteamoff::after { content: ' 💤'; }
+
+/* ── Wer noch fehlt ──────────────────────────────────────────
+   Eine eigene Reihe unter den Spalten, nebeneinander. Sie sagt in
+   beiden Fällen ausdrücklich dazu, dass niemand außen vor bleibt. */
+.wi-waiting {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.wi-waitlabel {
+  flex: 0 0 auto;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+.wi-waitname {
+  padding: 4px 10px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+/* ── Das Wörter-Fenster ──────────────────────────────────────
+   Muster wie .cm-poolov: `fixed` auf dem sichtbaren Bereich (--vv-h
+   aus viewport.js), das Overlay scrollt, der Kasten sitzt mit
+   margin:auto darin und ist höchstens so hoch wie der Platz. Kein
+   `align-items:center` und kein `90vh` — beides schneidet auf
+   kleinen Geräten oben ab, statt scrollen zu lassen (Regel:
+   feedback_modal_viewport_pattern). */
+.wi-ov {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vv-top, 0px);
+  height: var(--vv-h, 100vh);
+  z-index: 40;
+  display: flex;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  background: var(--overlay, rgba(12, 7, 0, .62));
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.wi-ovbox {
+  margin: auto;
+  width: 100%;
+  max-width: 720px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px 18px;
+  border-radius: var(--r-md, 18px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+}
+.wi-ovhead {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wi-ovtitle {
+  flex: 1 1 auto;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.wi-ovclose {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1;
+}
+.wi-ovclose:hover { border-color: var(--accent); color: var(--ink); }
+.wi-ovhint { flex: 0 0 auto; margin: 0; font-size: 13px; color: var(--ink-soft); }
+/* Die Liste scrollt, damit Kopfzeile und Hinweis stehen bleiben. */
+.wi-ovbody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wi-tabs { display: flex; gap: 6px; flex: 0 0 auto; }
 .wi-tab {
   appearance: none;
   border: 0;
@@ -155,35 +554,6 @@
 .wi-del:hover { color: var(--warn); }
 
 .wi-import { display: flex; flex-direction: column; gap: 8px; }
-
-.wi-row {
-  display: grid;
-  grid-template-columns: 92px 1fr auto;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--ink-soft);
-}
-.wi-row select {
-  font: inherit;
-  padding: 8px 10px;
-  border-radius: var(--r-sm, 12px);
-  border: 1px solid var(--line);
-  background: var(--paper);
-  color: var(--ink);
-  grid-column: 2 / -1;
-}
-.wi-row output { font-weight: 700; color: var(--ink); }
-
-.wi-people { display: flex; flex-wrap: wrap; gap: 6px; }
-.wi-chip {
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: var(--r-pill, 999px);
-  background: color-mix(in srgb, var(--wi-team) 16%, transparent);
-  border: 1px solid color-mix(in srgb, var(--wi-team) 40%, transparent);
-  color: var(--ink);
-}
 
 /* ══════════════════════════════════════════════════════════
    Pult — Spiel
@@ -292,6 +662,9 @@
   transform-origin: 50% 50%;
 }
 
+/* `data-t` trägt die VOLKSNUMMER, nicht den Slot — tool.js übersetzt
+   beim Malen (paintOwn). Sonst hätte ein Raum mit den Völkern 4 und 5
+   zwei rot-blaue Gebiete und daneben eine lila Kopfzeile. */
 .wi-cell {
   stroke: rgba(0, 0, 0, .18);
   stroke-width: .03;
@@ -334,6 +707,146 @@
    Tablet
    ══════════════════════════════════════════════════════════ */
 .wi--tab { gap: 10px; }
+.wi-pane { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+/* ── Die Wartetafel ──────────────────────────────────────────
+   Das eigene Volk groß und mit den Namen der Gruppe, die anderen
+   als schmale Zeile darunter. Dieselbe Aufteilung wie in Kingdoms —
+   und aus demselben Grund: von acht (hier sechs) Völkern zählt am
+   Tablet genau eines. */
+.wi-pane--lobby { gap: 14px; align-items: stretch; }
+.wi-wait {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+/* Drei atmende Punkte statt eines Ladekreisels: es LÄDT ja nichts,
+   es wartet nur jemand — ein Kreisel würde einen Fehler nahelegen,
+   wenn er zwei Minuten lang dreht. */
+.wi-waitdots { display: inline-flex; gap: 4px; }
+.wi-waitdots i {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: wi-breathe 1.4s ease-in-out infinite;
+}
+.wi-waitdots i:nth-child(2) { animation-delay: .18s; }
+.wi-waitdots i:nth-child(3) { animation-delay: .36s; }
+@keyframes wi-breathe {
+  0%, 60%, 100% { opacity: .28; transform: translateY(0); }
+  30%           { opacity: 1;   transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wi-waitdots i { animation: none; opacity: .6; }
+}
+
+/* Das eigene Volk steht mittig und darf breiter werden als eine
+   Beamer-Spalte — es ist die einzige. Nach oben trotzdem gedeckelt:
+   quer auf dem Tablet wäre eine Spalte über die volle Breite nur
+   noch ein Band mit viel Luft darin.
+   Doppelt geschrieben, damit diese Regeln die der Beamer-Spalte
+   weiter oben schlagen. */
+.wi-myteamwrap { display: flex; justify-content: center; }
+.wi-lteam.wi-lteam--mine {
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--wi-team) 26%, transparent);
+}
+.wi-lteam--mine .wi-lteampic { height: clamp(128px, 22vh, 210px); }
+.wi-lteam--mine .wi-lteamname { font-size: 16px; }
+.wi-lteam--mine .wi-lteamlist { font-size: 14px; }
+/* Der eigene Eintrag. Welcher das ist, sagt der Server
+   (my_team_members[].me) und nicht ein Namensvergleich — in einer
+   Klasse mit zwei „Lena" wäre der schlicht falsch.
+   Hervorgehoben als getönte Zeile, NICHT über die Schriftfarbe: in
+   Volksfarbe geschrieben stünde „du" bei Gelb und Türkis kaum
+   lesbar auf hellem Grund. */
+.wi-lteamme {
+  font-weight: 800;
+  margin: 0 -5px;
+  padding: 0 5px;
+  border-radius: var(--r-xs, 9px);
+  background: color-mix(in srgb, var(--wi-team) 24%, transparent);
+}
+.wi-lteamme::after {
+  content: ' — du';
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* Die anderen Völker: Einheit, Name, Kopfzahl. Mehr nicht. Ein
+   Raster statt einer Spalte — auf dem Handy untereinander, auf dem
+   Tablet zu zweit oder zu dritt nebeneinander, ohne dass hier eine
+   Bildschirmbreite als Zahl steht. */
+.wi-others {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.wi-otherslabel { color: var(--ink-faint); font-size: 12px; font-weight: 700; }
+.wi-otherlist {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 8px;
+}
+.wi-other {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px 6px 6px;
+  border-radius: var(--r-sm, 12px);
+  background: var(--paper);
+  /* Die Volksfarbe als Kante links, nicht als Fläche: die Zeile
+     bleibt ruhig, und fünf davon nebeneinander bleiben lesbar. */
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--wi-team);
+}
+.wi-otherpic {
+  flex: 0 0 auto;
+  width: 30px; height: 34px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.wi-otherpic img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .28));
+}
+.wi-othername {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.wi-othern {
+  flex: 0 0 auto;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+.wi-pane--lobby .wi-btn { align-self: flex-start; }
+
+/* Der Countdown: fünf Sekunden, in denen alle auf dieselbe Zahl
+   sehen. Eine eigene Tafel und nicht eine Zeile über der Aufgabe —
+   es gibt in diesen Sekunden nichts anderes zu tun. */
+.wi-pane--count { align-items: center; justify-content: center; padding: 40px 0; }
+.wi-countnum {
+  font-size: clamp(80px, 30vw, 200px);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent);
+}
 
 .wi-me {
   display: flex;
@@ -375,6 +888,7 @@
 }
 .wi-type { display: flex; gap: 8px; }
 .wi-type .wi-in { font-size: 18px; }
+.wi-back { align-self: flex-start; font-size: 14px; padding: 8px 14px; }
 
 .wi-opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .wi-opts button {

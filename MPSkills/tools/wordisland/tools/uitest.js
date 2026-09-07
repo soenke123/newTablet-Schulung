@@ -11,6 +11,10 @@
  *     Eingabefeld, Schreibweisen-Auswahl, Wort-Auswahl.
  *   · Die freie Wahl schaltet die Karte scharf und schickt r/c.
  *   · Eine neue Runde (anderer map_key) baut die Insel neu.
+ *   · Die Lobby (0133): Wappenreihe, Segment-Schalter, eine Spalte je
+ *     Volk am Pult — und am Tablet das eigene Volk mit den Namen der
+ *     Gruppe. Dazu die Übersetzung Slot → Volk: wählt die Lehrkraft
+ *     die Völker 4 und 5, muss Slot 0 auch LILA werden.
  *
  * Was hier NICHT geprüft wird: das Aussehen. Ob ein Nebelfeld dunkler ist
  * als das Meer, entscheidet tool.css, und das sieht man nur mit Augen.
@@ -40,27 +44,6 @@ function makeEnv() {
   const { window, document } = parseHTML('<!doctype html><html><body><div id="root"></div></body></html>');
   window.document = document;
   if (!document.hidden) document.hidden = false;
-
-  /* linkedom kennt select.value nur als Getter. Im Browser ist es
-     schreibbar, also wird hier die Umgebung nachgerüstet und nicht
-     das Werkzeug verbogen — ein Mock, der weniger kann als das
-     Original, ist kein Grund, das Original umzubauen. */
-  const Sel = window.HTMLSelectElement;
-  if (Sel && !(Object.getOwnPropertyDescriptor(Sel.prototype, 'value') || {}).set) {
-    Object.defineProperty(Sel.prototype, 'value', {
-      configurable: true,
-      get() {
-        const o = this.querySelector('option[selected]') || this.querySelector('option');
-        return o ? (o.getAttribute('value') || o.textContent) : '';
-      },
-      set(v) {
-        for (const o of this.querySelectorAll('option')) {
-          if ((o.getAttribute('value') || o.textContent) === String(v)) o.setAttribute('selected', '');
-          else o.removeAttribute('selected');
-        }
-      }
-    });
-  }
 
   const impls = {};
   window.MPTool = { register: (id, impl) => { impls[id] = impl; } };
@@ -92,8 +75,11 @@ function makeEnv() {
   return { window, document, impls, ctxBase };
 }
 
+const click = (el, doc) => el.dispatchEvent(new doc.defaultView.Event('click', { bubbles: true }));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
 /* ─── Ein erfundener Server ─────────────────────────────────
-   Dieselbe Gestalt wie wi_view/wi_room_get in Migration 0131. */
+   Dieselbe Gestalt wie wi_view/wi_room_get in 0131 + 0133. */
 function island(rows, cols) {
   const cells = [];
   for (let r = 0; r < rows; r++) {
@@ -115,8 +101,13 @@ const OWN_START = '0' + '.'.repeat(MAP.length - 1);
 function viewFor(over, meOver) {
   const v = Object.assign({
     ok: true, role: 'participant', phase: 'running', mode: 'type',
+    team_count: 2, factions: [0, 1],
     teams: [{ i: 0, tiles: 1, ruins: 0, score: 1, people: 3 },
             { i: 1, tiles: 1, ruins: 0, score: 1, people: 3 }],
+    my_team_members: [{ name: 'Ada', me: false, online: true },
+                      { name: 'Tablet 3', me: true, online: true },
+                      { name: 'Cem', me: false, online: false }],
+    online_count: 5, room_total: 6,
     map_key: 'raum:1', map: null, own: OWN_START,
     ends_at: new Date(Date.now() + 300000).toISOString(),
     countdown_ends_at: null,
@@ -128,10 +119,8 @@ function viewFor(over, meOver) {
   return v;
 }
 
-const wait = ms => new Promise(r => setTimeout(r, ms));
-
 /* ═══════════════════════════════════════════════════════════
-   Tablet
+   Tablet — Arena
    ═══════════════════════════════════════════════════════════ */
 async function testTablet() {
   console.log('\n— Tablet —');
@@ -174,6 +163,9 @@ async function testTablet() {
   ok('Landeplatz eingefärbt', cells[0].dataset.t === '0');
   ok('Nebel bleibt Nebel', cells[5].dataset.t === '.');
   ok('Lichtpunkt gezeichnet', root.querySelectorAll('.wi-ruin').length === 1);
+  ok('Spieltafel offen, Wartetafel zu',
+     root.querySelector('[data-part="tplay"]').hidden === false &&
+     root.querySelector('[data-part="tlobby"]').hidden === true);
   ok('Volk im Kopf', /Toast-Ritter/.test(root.querySelector('.wi-me').textContent));
   ok('Wort steht da', root.querySelector('.wi-word').textContent === 'das Haus');
   ok('Frage passt zur Richtung', /Englisch/.test(root.querySelector('.wi-ask').textContent));
@@ -195,8 +187,7 @@ async function testTablet() {
   reply({ ok: true, result: 'correct', streak: 1, picks: 0,
           tile: { r: 0, c: 1, kind: 'fog', ruin: 0 },
           task: { prompt: 'die Schule', dir: 'de_en', stage: 'type', options: [] } });
-  root.querySelectorAll('.wi-opts button')[1].dispatchEvent(
-    new document.defaultView.Event('click', { bubbles: true }));
+  click(root.querySelectorAll('.wi-opts button')[1], document);
   await wait(40);
   ok('gewählte Fassung ging raus',
      calls.some(([fn, a]) => fn === 'wi_answer' && a.p_input === 'house'));
@@ -213,7 +204,7 @@ async function testTablet() {
   ok('Karte ist scharf', root.querySelector('.wi-map').classList.contains('is-picking'));
 
   const target = root.querySelectorAll('.wi-cell')[1];
-  target.dispatchEvent(new document.defaultView.Event('click', { bubbles: true }));
+  click(target, document);
   await wait(40);
   const pick = calls.find(([fn]) => fn === 'wi_pick_tile');
   ok('freie Wahl schickt r/c', !!pick && pick[1].p_r === 0 && pick[1].p_c === 1,
@@ -230,6 +221,91 @@ async function testTablet() {
 
   tool.unmount();
   ok('unmount ohne Krach', true);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Tablet — Wartetafel und Countdown (0133)
+   ═══════════════════════════════════════════════════════════ */
+async function testTabletLobby() {
+  console.log('\n— Tablet: Wartetafel —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+
+  let phase = 'lobby';
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'participant',
+    actions: {
+      role: 'participant',
+      call: (fn, args) => {
+        if (fn !== 'wi_view') return Promise.resolve({ ok: false, error: 'not_allowed' });
+        return Promise.resolve(viewFor({
+          phase,
+          // Wie der echte Server: in der Lobby steht das Board, aber
+          // noch keine Insel — `map` ist dann eine LEERE Liste.
+          map_key: 'raum:' + phase,
+          map: args.p_full ? (phase === 'running' ? MAP : []) : null,
+          // Vier Völker, und zwar die HINTEREN: Slot 0 ist damit Volk 4
+          // (Kosmische Katzen), nicht die Toast-Ritter.
+          team_count: 4, factions: [2, 3, 4, 5],
+          teams: [{ i: 0, tiles: 0, ruins: 0, score: 0, people: 3 },
+                  { i: 1, tiles: 0, ruins: 0, score: 0, people: 2 },
+                  { i: 2, tiles: 0, ruins: 0, score: 0, people: 2 },
+                  { i: 3, tiles: 0, ruins: 0, score: 0, people: 2 }],
+          countdown_ends_at: phase === 'countdown'
+            ? new Date(Date.now() + 4000).toISOString() : null
+        }));
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+
+  ok('Wartetafel offen', root.querySelector('[data-part="tlobby"]').hidden === false);
+  ok('Spieltafel zu',    root.querySelector('[data-part="tplay"]').hidden === true);
+  const mine = root.querySelector('.wi-lteam--mine');
+  ok('eigenes Volk als Spalte', !!mine);
+  ok('Slot 0 ist das gewählte Volk',
+     /Brokkoli-Giraffen/.test(mine.textContent), mine.querySelector('.wi-lteamname').textContent.trim());
+  ok('Namen der Gruppe stehen da', /Ada/.test(mine.textContent) && /Cem/.test(mine.textContent));
+  ok('„du" ist markiert', mine.querySelector('.wi-lteamme').textContent === 'Tablet 3');
+  ok('Abwesender ist markiert', mine.querySelector('.wi-lteamoff').textContent === 'Cem');
+  ok('Kopfzahl vom Server', mine.querySelector('.wi-lteamn').textContent === '3');
+  ok('die anderen drei Völker', root.querySelectorAll('.wi-other').length === 3);
+  ok('keine fremden Namen', !/Ada/.test(root.querySelector('[data-part="others"]').textContent));
+  ok('Hinweis auf Abwesende',
+     /5 von 6/.test(root.querySelector('[data-part="onlinehint"]').textContent));
+
+  /* Üben, bis es losgeht */
+  click(root.querySelector('[data-part="practice"]'), document);
+  await wait(20);
+  ok('Üben öffnet die Aufgabe', root.querySelector('[data-part="tplay"]').hidden === false);
+  ok('Übungsrunde steht im Kopf', /Übungsrunde/.test(root.querySelector('.wi-me').textContent));
+  ok('keine Karte beim Üben', root.querySelector('[data-part="mapwrap"]').hidden === true);
+  click(root.querySelector('[data-part="back"]'), document);
+  await wait(20);
+  ok('Zurück zur Aufstellung', root.querySelector('[data-part="tlobby"]').hidden === false);
+
+  /* Countdown */
+  phase = 'countdown';
+  await tool.update();
+  await wait(300);
+  ok('Countdown-Tafel offen', root.querySelector('[data-part="tcount"]').hidden === false);
+  ok('Wartetafel zu',         root.querySelector('[data-part="tlobby"]').hidden === true);
+  ok('Zahl läuft',            /^[0-5]$|Los/.test(root.querySelector('[data-part="big"]').textContent),
+     root.querySelector('[data-part="big"]').textContent);
+
+  /* Und los: die Insel muss in der Farbe des GEWÄHLTEN Volkes stehen */
+  phase = 'running';
+  await tool.update();
+  await wait(80);
+  ok('Spieltafel offen', root.querySelector('[data-part="tplay"]').hidden === false);
+  ok('Slot 0 wird als Volk 2 gemalt',
+     root.querySelector('.wi-cell').dataset.t === '2',
+     root.querySelector('.wi-cell').dataset.t);
+
+  tool.unmount();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -283,6 +359,9 @@ async function testPult() {
 
   const calls = [];
   let phase = 'lobby';
+  let factions = [0, 1, 2, 3];
+  let mode = 'type', direction = 'mixed', duration = 600;
+
   const ctx = Object.assign({}, ctxBase, {
     role: 'presenter',
     actions: {
@@ -296,17 +375,31 @@ async function testPult() {
             { id: 'm1', title: 'Unit 3', count: 12, level: null,  mine: '1' }
           ] });
         }
+        if (fn === 'wi_room_set_factions') {
+          factions = args.p_factions.slice();
+          return Promise.resolve({ ok: true, factions, team_count: factions.length });
+        }
+        if (fn === 'wi_room_setup') {
+          if (args.p_mode) mode = args.p_mode;
+          if (args.p_direction) direction = args.p_direction;
+          if (args.p_duration) duration = args.p_duration;
+          return Promise.resolve({ ok: true });
+        }
         if (fn === 'wi_room_get') {
           return Promise.resolve({
-            ok: true, role: 'presenter', phase, mode: 'type', direction: 'mixed',
-            team_count: 4, duration: 600, radius: 5, seed: 1,
-            teams: [{ i: 0, tiles: 4, ruins: 3, score: 7, people: 3 },
-                    { i: 1, tiles: 2, ruins: 0, score: 2, people: 3 }],
-            map_key: 'raum:1', map: args.p_full ? MAP : null, own: OWN_START,
+            ok: true, role: 'presenter', phase, mode, direction,
+            team_count: factions.length, factions, duration, radius: 5, seed: 1,
+            teams: factions.map((_, i) => ({ i, tiles: i === 0 ? 4 : 2, ruins: i === 0 ? 3 : 0,
+                                             score: i === 0 ? 7 : 2, people: 1 })),
+            map_key: 'raum:' + phase,
+            map: args.p_full ? (phase === 'lobby' ? [] : MAP) : null,
+            own: phase === 'lobby' ? '' : OWN_START,
             ends_at: new Date(Date.now() + 60000).toISOString(),
             countdown_ends_at: null, winner_team: null, sets: ['s1'],
-            people: [{ seat: 1, name: 'Ada', team: 0, correct: 2, wrong: 1 },
-                     { seat: 2, name: 'Bo',  team: 1, correct: 0, wrong: 0 }]
+            online_count: 2, room_total: 3,
+            people: [{ seat: 1, name: 'Ada', team: 0, online: true,  correct: 2, wrong: 1 },
+                     { seat: 2, name: 'Bo',  team: 1, online: false, correct: 0, wrong: 0 },
+                     { seat: 3, name: 'Cem', team: null, online: true, correct: 0, wrong: 0 }]
           });
         }
         if (fn === 'wi_hard_words') {
@@ -322,31 +415,98 @@ async function testPult() {
   await wait(60);
 
   ok('Lobby offen', root.querySelector('[data-part="lobby"]').hidden === false);
+
+  /* ── Wappenreihe ── */
+  const picks = root.querySelectorAll('.wi-pickbtn');
+  ok('sechs Wappen', picks.length === 6, `${picks.length}`);
+  ok('vier davon gewählt',
+     root.querySelectorAll('.wi-pickbtn.is-on').length === 4);
+  ok('Wappen tragen ihren Namen', picks[4].getAttribute('title') === 'Kosmische Katzen');
+
+  click(picks[4], document);
+  await wait(60);
+  const setFac = calls.find(([fn]) => fn === 'wi_room_set_factions');
+  ok('Wappen-Klick geht an den Server', !!setFac, JSON.stringify(setFac && setFac[1]));
+  ok('Auswahl sortiert übergeben',
+     JSON.stringify(setFac[1].p_factions) === '[0,1,2,3,4]');
+  ok('fünf Wappen leuchten', root.querySelectorAll('.wi-pickbtn.is-on').length === 5);
+  ok('fünf Spalten', root.querySelectorAll('.wi-lteam').length === 5,
+     `${root.querySelectorAll('.wi-lteam').length}`);
+
+  // Abwählen bis auf zwei geht, das dritte Mal nicht mehr.
+  ctxBase.toasts.length = 0;
+  for (const i of [4, 3, 2]) { click(root.querySelectorAll('.wi-pickbtn')[i], document); await wait(40); }
+  ok('zwei Völker bleiben stehen', root.querySelectorAll('.wi-pickbtn.is-on').length === 2);
+  click(root.querySelectorAll('.wi-pickbtn')[1], document);
+  await wait(40);
+  ok('das letzte Paar lässt sich nicht abwählen',
+     root.querySelectorAll('.wi-pickbtn.is-on').length === 2 &&
+     ctxBase.toasts.some(t => /Mindestens zwei/.test(t)));
+
+  /* ── Segment-Schalter ── */
+  ok('Abfrage-Modus markiert',
+     root.querySelector('[data-part="modeseg"] .wi-modebtn.is-on').dataset.mode === 'type');
+  ok('Richtung markiert',
+     root.querySelector('[data-part="dirseg"] .wi-modebtn.is-on').dataset.dir === 'mixed');
+  ok('Spieldauer markiert',
+     root.querySelector('[data-part="durrow"] .wi-levelbtn.is-on').dataset.secs === '600');
+  ok('Dauer erklärt sich', /Insel aus etwa/.test(root.querySelector('[data-part="durtext"]').textContent),
+     root.querySelector('[data-part="durtext"]').textContent);
+
+  click(root.querySelectorAll('[data-part="dirseg"] .wi-modebtn')[2], document);
+  await wait(60);
+  ok('Richtung ging raus',
+     calls.some(([fn, a]) => fn === 'wi_room_setup' && a.p_direction === 'en_de'));
+  ok('Richtung ist übernommen',
+     root.querySelector('[data-part="dirseg"] .wi-modebtn.is-on').dataset.dir === 'en_de');
+
+  click(root.querySelectorAll('[data-part="durrow"] .wi-levelbtn')[3], document);
+  await wait(60);
+  ok('Spieldauer ging raus',
+     calls.some(([fn, a]) => fn === 'wi_room_setup' && a.p_duration === 1200));
+
+  /* ── Spalten und Nachzügler ── */
+  const cols = root.querySelectorAll('.wi-lteam');
+  ok('Ada steht in ihrer Spalte', /Ada/.test(cols[0].textContent));
+  ok('Bo ist als abwesend markiert',
+     cols[1].querySelector('.wi-lteamoff') &&
+     cols[1].querySelector('.wi-lteamoff').textContent === 'Bo');
+  ok('Cem wartet noch auf sein Volk',
+     /Cem/.test(root.querySelector('[data-part="waiting"]').textContent) &&
+     root.querySelector('[data-part="waiting"]').hidden === false);
+  ok('und bekommt beim Start eines',
+     /beim Start/.test(root.querySelector('[data-part="waiting"]').textContent));
+
+  /* ── Das Wörter-Fenster ── */
+  ok('Fenster ist zu', root.querySelector('[data-part="setsov"]').hidden === true);
+  ok('gewählte Liste in der Kurzform',
+     /Schule/.test(root.querySelector('[data-part="setsum"]').textContent));
+  click(root.querySelector('[data-part="setsbtn"]'), document);
+  await wait(20);
+  ok('Fenster geht auf', root.querySelector('[data-part="setsov"]').hidden === false);
   ok('Units als Kacheln', root.querySelectorAll('.wi-set').length === 2,
      `${root.querySelectorAll('.wi-set').length}`);
   ok('gewählte Unit markiert', root.querySelector('.wi-set').classList.contains('is-on'));
-  ok('Aufstellung mit Namen', /Ada/.test(root.querySelector('[data-part="people"]').textContent));
-  ok('Völkerzahl übernommen', root.querySelector('[data-part="teams"]').value === '4');
 
-  // Reiter „Eigene": andere Liste, Import-Formular geht auf
-  root.querySelectorAll('.wi-tab')[1].dispatchEvent(
-    new document.defaultView.Event('click', { bubbles: true }));
+  click(root.querySelectorAll('.wi-tab')[1], document);
   await wait(20);
   ok('eigene Liste sichtbar', /Unit 3/.test(root.querySelector('[data-part="sets"]').textContent));
   ok('Import-Formular offen', root.querySelector('[data-part="import"]').hidden === false);
+  click(root.querySelector('[data-part="setsclose"]'), document);
+  await wait(20);
+  ok('Fenster geht wieder zu', root.querySelector('[data-part="setsov"]').hidden === true);
 
-  // Start
-  root.querySelector('[data-part="start"]').dispatchEvent(
-    new document.defaultView.Event('click', { bubbles: true }));
+  /* ── Start ── */
+  click(root.querySelector('[data-part="start"]'), document);
   phase = 'running';
-  await wait(60);
+  await wait(80);
   ok('Start ging raus', calls.some(([fn]) => fn === 'wi_room_start'));
   ok('Spielfeld offen', root.querySelector('[data-part="play"]').hidden === false);
   ok('Insel am Beamer', root.querySelectorAll('.wi-cell').length === MAP.length);
   ok('Völkerleiste steht', root.querySelectorAll('.wi-team').length === 2);
   ok('Punkte sichtbar', /7/.test(root.querySelector('.wi-score').textContent));
 
-  // Ende
+  /* ── Ende ── */
   phase = 'ended';
   await tool.update();
   await wait(80);
@@ -357,10 +517,56 @@ async function testPult() {
   tool.unmount();
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Ohne Migration 0133: das Alte muss weiterlaufen
+   ═══════════════════════════════════════════════════════════
+   `factions` fehlt in der Antwort — dann gilt Volk = Slot, wie vor
+   der Migration. Ein Werkzeug, das dabei leer bliebe, würde die
+   Klasse genau in der Stunde treffen, in der das Einspielen noch
+   aussteht. */
+async function testOhneMigration() {
+  console.log('\n— Ohne 0133 —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'presenter',
+    actions: {
+      role: 'presenter',
+      call: (fn, args) => {
+        if (fn === 'wi_sets_list') return Promise.resolve({ ok: true, chosen: [], sets: [] });
+        if (fn === 'wi_room_get') {
+          return Promise.resolve({
+            ok: true, role: 'presenter', phase: 'lobby', mode: 'type', direction: 'mixed',
+            team_count: 3, duration: 600,
+            teams: [0, 1, 2].map(i => ({ i, tiles: 0, ruins: 0, score: 0, people: 1 })),
+            map_key: 'raum:1', map: args.p_full ? [] : null, own: '',
+            ends_at: null, countdown_ends_at: null, winner_team: null, sets: [],
+            people: [{ seat: 1, name: 'Ada', team: 0, correct: 0, wrong: 0 }]
+          });
+        }
+        return Promise.resolve({ ok: true });
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+  ok('Lobby steht trotzdem', root.querySelector('[data-part="lobby"]').hidden === false);
+  ok('drei Wappen leuchten (Volk = Slot)',
+     root.querySelectorAll('.wi-pickbtn.is-on').length === 3);
+  ok('drei Spalten', root.querySelectorAll('.wi-lteam').length === 3);
+  ok('ohne Wörter kein Start', root.querySelector('[data-part="start"]').disabled === true);
+  tool.unmount();
+}
+
 (async () => {
   await testTablet();
+  await testTabletLobby();
   await testNewRound();
   await testPult();
+  await testOhneMigration();
   console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');
   process.exit(fails ? 1 : 0);
 })();

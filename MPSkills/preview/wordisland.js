@@ -170,7 +170,13 @@
       case 'wi_room_get':
         return {
           ok: true, role: ROLE, phase: 'running', mode: 'type', direction: 'mixed',
-          teams: scores(), team_count: TEAMS, duration: 600, radius: R, seed: 1,
+          teams: scores(), team_count: TEAMS,
+          // Seit 0133 übersetzt das Werkzeug Slot → Volk. Die Auslage
+          // zeigt die ersten vier Völker, also genau die Zuordnung von
+          // vorher — und das Standbild darunter (TEAM_FILL) stimmt
+          // ohne weiteres Zutun damit überein.
+          factions: [0, 1, 2, 3],
+          duration: 600, radius: R, seed: 1,
           map_key: 'preview:' + startedAt,
           map: (args && args.p_full) ? mapArray() : null,
           own: ownString(),
