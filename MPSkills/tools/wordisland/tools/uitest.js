@@ -163,6 +163,31 @@ async function testTablet() {
   ok('Landeplatz eingefärbt', cells[0].dataset.t === '0');
   ok('Nebel bleibt Nebel', cells[5].dataset.t === '.');
   ok('Lichtpunkt gezeichnet', root.querySelectorAll('.wi-ruin').length === 1);
+
+  /* ── Die Schiffe (08.09.2026) ────────────────────────────────
+     „Die Schiffe sind keine Felder auf dem Spielfeld. Sie fahren von
+     außen an das Spielfeld ran." Also: ein Schiff je Landeplatz, im
+     Wasser NEBEN dem Feld, mit dem Wappen des Volkes an Deck. */
+  const ship = root.querySelector('.wi-ship');
+  ok('ein Schiff je Landeplatz',
+     !!ship && root.querySelectorAll('.wi-ship').length === 1);
+  ok('kein Wappen mehr auf dem Feld', root.querySelectorAll('.wi-home').length === 0);
+  ok('Schiff trägt das Volk des Landeplatzes', ship.dataset.t === '0');
+  ok('Mannschaft an Deck',
+     /ToastKnights/.test(ship.querySelector('.wi-shipcrew').getAttribute('href') || ''),
+     ship.querySelector('.wi-shipcrew').getAttribute('href'));
+  // Der Landeplatz liegt bei (0,0) — das Schiff muss deutlich daneben
+  // liegen, sonst ist es doch wieder ein Feld.
+  const at = /translate\(\s*(-?[\d.]+)\s+(-?[\d.]+)\s*\)/.exec(ship.getAttribute('transform') || '');
+  ok('Schiff liegt im Wasser, nicht auf dem Feld',
+     !!at && Math.hypot(+at[1], +at[2]) > 1, ship.getAttribute('transform'));
+  ok('Planke vom Schiff zum Landeplatz', root.querySelectorAll('.wi-plank').length === 1);
+  // Die Anfahrt: erst weit draußen, kurz danach auf null — daraus
+  // macht der Übergang in tool.css die Fahrt.
+  await wait(90);
+  ok('Schiff fährt heran',
+     /translate\(\s*0px/.test(ship.querySelector('.wi-shipglide').style.transform || ''),
+     ship.querySelector('.wi-shipglide').style.transform);
   ok('Spieltafel offen, Wartetafel zu',
      root.querySelector('[data-part="tplay"]').hidden === false &&
      root.querySelector('[data-part="tlobby"]').hidden === true);
@@ -405,6 +430,11 @@ async function testPult() {
         if (fn === 'wi_hard_words') {
           return Promise.resolve({ ok: true, words: [{ term: 'die Tafel', trans: 'board', wrong: 5, seen: 9 }] });
         }
+        // 0134: aus der Auswertung zurück in die Lobby, ohne Start.
+        if (fn === 'wi_room_to_lobby') {
+          phase = 'lobby';
+          return Promise.resolve({ ok: true, phase: 'lobby' });
+        }
         return Promise.resolve({ ok: true });
       }
     }
@@ -514,6 +544,71 @@ async function testPult() {
   ok('schwerste Wörter geholt', calls.some(([fn]) => fn === 'wi_hard_words'));
   ok('schweres Wort steht da', /Tafel/.test(root.querySelector('[data-part="hard"]').textContent));
 
+  /* ── Zurück in die Lobby (0134) ──────────────────────────────
+     Der Knopf in der Auswertung darf NICHT starten. Sönke,
+     2026-09-08: „Ich will dann erstmal in der Lobby landen, um
+     Sachen zu ändern." */
+  const startsVorher = calls.filter(([fn]) => fn === 'wi_room_start').length;
+  click(root.querySelector('[data-part="again"]'), document);
+  await wait(80);
+  ok('Auswertung führt in die Lobby', calls.some(([fn]) => fn === 'wi_room_to_lobby'));
+  ok('und startet dabei nichts',
+     calls.filter(([fn]) => fn === 'wi_room_start').length === startsVorher);
+  ok('Lobby ist wieder offen', root.querySelector('[data-part="lobby"]').hidden === false);
+  ok('Auswertung ist zu', root.querySelector('[data-part="end"]').hidden === true);
+  ok('Wappen wieder wählbar', root.querySelectorAll('.wi-pickbtn.is-on').length > 0);
+
+  tool.unmount();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Fehlende Migration: der Aufruf, den der Server nicht kennt
+   ═══════════════════════════════════════════════════════════
+   lib/tool.js macht aus einem 404 seit dem 08.09.2026 `fn_missing`
+   statt `network`. Hier wird nur geprüft, dass das Werkzeug den
+   Fehler auch WEITERSAGT und die Auswahl zurückdreht — sonst steht
+   in der Lobby eine Wahl, die der Server nie bekommen hat. */
+async function testFehlendeMigration() {
+  console.log('\n— Fehlende Migration —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'presenter',
+    actions: {
+      role: 'presenter',
+      call: (fn, args) => {
+        if (fn === 'wi_sets_list') return Promise.resolve({ ok: true, chosen: ['s1'], sets: [] });
+        if (fn === 'wi_room_set_factions') return Promise.resolve({ ok: false, error: 'fn_missing' });
+        if (fn === 'wi_room_get') {
+          return Promise.resolve({
+            ok: true, role: 'presenter', phase: 'lobby', mode: 'type', direction: 'mixed',
+            team_count: 2, factions: [0, 1], duration: 600,
+            teams: [0, 1].map(i => ({ i, tiles: 0, ruins: 0, score: 0, people: 1 })),
+            map_key: 'raum:1', map: args.p_full ? [] : null, own: '', sets: ['s1'],
+            people: [], online_count: 1, room_total: 1
+          });
+        }
+        return Promise.resolve({ ok: true });
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+
+  const aus = root.querySelectorAll('.wi-pickbtn:not(.is-on)')[0];
+  click(aus, document);
+  await wait(80);
+  // Und zwar so, dass man weiß, was zu tun ist: die Nummer der
+  // fehlenden Migration steht im Satz.
+  ok('Fehler nennt die fehlende Migration',
+     ctxBase.toasts.some(t => /0133/.test(t)), ctxBase.toasts.join(' | '));
+  ok('Auswahl fällt auf den Serverstand zurück',
+     root.querySelectorAll('.wi-pickbtn.is-on').length === 2,
+     String(root.querySelectorAll('.wi-pickbtn.is-on').length));
+
   tool.unmount();
 }
 
@@ -566,6 +661,7 @@ async function testOhneMigration() {
   await testTabletLobby();
   await testNewRound();
   await testPult();
+  await testFehlendeMigration();
   await testOhneMigration();
   console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');
   process.exit(fails ? 1 : 0);

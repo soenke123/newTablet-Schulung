@@ -178,7 +178,17 @@
       },
       body: JSON.stringify(args || {})
     });
-    if (!res.ok) throw new Error(`${fn} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    if (!res.ok) {
+      // Der Status kommt MIT: „kennt die Funktion nicht" (404) und
+      // „gerade kein Netz" sehen sonst gleich aus, und genau die
+      // Verwechslung kostet in der Stunde die meiste Zeit. Wer den
+      // Fehler auswertet, findet ihn an err.status (siehe safe() in
+      // lib/tool.js).
+      const err = new Error(`${fn} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      err.status = res.status;
+      err.fn = fn;
+      throw err;
+    }
     return res.json();
   }
 

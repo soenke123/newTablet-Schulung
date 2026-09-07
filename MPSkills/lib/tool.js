@@ -82,7 +82,7 @@
        Terme (0115) stand die getippte Variable in Versalien da, die
        Hochzahl als „^" und die Hochzahl-Taste tat nichts, weil das
        Gerät noch die tool.js von davor hatte. */
-    const v = '?v=20260907b';
+    const v = '?v=20260908';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf
@@ -129,12 +129,25 @@
      { ok: false, error: '…' }; Netzfehler werden hier in dasselbe
      Format übersetzt, damit das Werkzeug nur einen Fall kennt. */
 
+  /* Drei Ausgänge statt zwei, seit dem Wordisland-Vorfall vom
+     2026-09-08: eine frisch ausgelieferte Oberfläche rief eine RPC
+     auf, deren Migration noch nicht in der Datenbank stand. PostgREST
+     antwortete mit 404, hier wurde daraus „keine Verbindung" — und
+     die Suche ging eine halbe Stunde lang in die falsche Richtung.
+
+       · 404          → der Server kennt den Aufruf nicht.
+       · sonstiger 4xx/5xx → er kennt ihn und lehnt ab (Einzelheiten
+                        stehen in der Konsole, nicht im Toast: sie
+                        sind für die Lehrkraft unlesbar).
+       · gar keine Antwort → wirklich das Netz.                     */
   async function safe(promise) {
     try {
       const r = await promise;
       return (r && typeof r === 'object') ? r : { ok: false, error: 'bad_response' };
     } catch (e) {
       console.warn('[mpskills] Aufruf fehlgeschlagen:', e.message);
+      if (e && e.status === 404) return { ok: false, error: 'fn_missing', fn: e.fn };
+      if (e && e.status)          return { ok: false, error: 'server_error', fn: e.fn };
       return { ok: false, error: 'network' };
     }
   }
@@ -234,7 +247,11 @@
     phase_invalid:   'Diese Phase gibt es hier nicht.',
     not_authenticated: 'Du bist nicht mehr angemeldet. Lade die Seite neu.',
     bad_response:    'Der Server hat unverständlich geantwortet.',
-    network:         'Keine Verbindung. Gleich noch einmal versuchen.'
+    network:         'Keine Verbindung. Gleich noch einmal versuchen.',
+    fn_missing:      'Diesen Aufruf kennt der Server nicht. In der Datenbank fehlt die '
+                     + 'neueste Migration — bitte einspielen.',
+    server_error:    'Der Server hat den Aufruf abgelehnt. Die Einzelheiten stehen in der '
+                     + 'Browser-Konsole.'
   };
 
   function errText(code, own) {

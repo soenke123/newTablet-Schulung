@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Territory Clash - 13x13 Arena</title>
+    <style>
+        :root {
+            --bg-dark: #000000;
+            --panel-bg: #0c0d12;
+            --panel-border: #1c202d;
+            --text-main: #f1f5f9;
+            --text-sub: #94a3b8;
+            
+            --color-rot: #ef4444;
+            --color-rot-glow: rgba(239, 68, 68, 0.4);
+            --color-blau: #3b82f6;
+            --color-blau-glow: rgba(59, 130, 246, 0.4);
+            --color-gruen: #10b981;
+            --color-gruen-glow: rgba(16, 185, 129, 0.4);
+            --color-gelb: #f59e0b;
+            --color-gelb-glow: rgba(245, 158, 11, 0.4);
+            --color-lila: #a855f7;
+            --color-lila-glow: rgba(168, 85, 247, 0.4);
+            --color-tuerkis: #06b6d4;
+            --color-tuerkis-glow: rgba(6, 182, 212, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 12px;
+            overflow-x: hidden;
+        }
+
+        header {
+            width: 100%;
+            max-width: 850px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            color: var(--text-sub);
+            font-size: 0.85rem;
+        }
+
+        /* Leaderboard / Status Bar */
+        .status-bar {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 8px;
+            width: 100%;
+            max-width: 850px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            margin-bottom: 12px;
+        }
+
+        .team-card {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(10, 14, 23, 0.6);
+            padding: 6px 10px;
+            border-radius: 8px;
+            border-left: 4px solid #fff;
+            transition: all 0.3s ease;
+        }
+
+        .team-card.rot { border-left-color: var(--color-rot); }
+        .team-card.blau { border-left-color: var(--color-blau); }
+        .team-card.gruen { border-left-color: var(--color-gruen); }
+        .team-card.gelb { border-left-color: var(--color-gelb); }
+        .team-card.lila { border-left-color: var(--color-lila); }
+        .team-card.tuerkis { border-left-color: var(--color-tuerkis); }
+
+        .team-card.eliminated {
+            opacity: 0.3;
+            filter: grayscale(100%);
+            text-decoration: line-through;
+        }
+
+        .team-badge {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .rot .team-badge { background: var(--color-rot); box-shadow: 0 0 6px var(--color-rot); }
+        .blau .team-badge { background: var(--color-blau); box-shadow: 0 0 6px var(--color-blau); }
+        .gruen .team-badge { background: var(--color-gruen); box-shadow: 0 0 6px var(--color-gruen); }
+        .gelb .team-badge { background: var(--color-gelb); box-shadow: 0 0 6px var(--color-gelb); }
+        .lila .team-badge { background: var(--color-lila); box-shadow: 0 0 6px var(--color-lila); }
+        .tuerkis .team-badge { background: var(--color-tuerkis); box-shadow: 0 0 6px var(--color-tuerkis); }
+
+        .team-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .team-name {
+            font-weight: 800;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        .team-count {
+            font-size: 0.7rem;
+            color: var(--text-sub);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            width: 100%;
+            max-width: 850px;
+            margin-bottom: 12px;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            padding: 10px 14px;
+            border-radius: 12px;
+        }
+
+        .faction-selector {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .faction-selector label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-sub);
+        }
+
+        .faction-btn {
+            background: rgba(10, 14, 23, 0.6);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .faction-btn.active {
+            background: #2563eb;
+            border-color: #3b82f6;
+            color: white;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: rgba(10, 14, 23, 0.6);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            background: #222f46;
+            border-color: #3b4f70;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            border-color: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-active {
+            background: #10b981;
+            border-color: #34d399;
+            color: white;
+        }
+
+        .game-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 850px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: #000000;
+            border-radius: 16px;
+            border: 2px solid #1e2433;
+            box-shadow: 0 12px 36px rgba(0,0,0,0.9);
+            overflow: hidden;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            max-width: 650px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Interactive Castle Elements */
+        .castle-overlay {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: transform 0.1s ease;
+        }
+
+        .castle-overlay:active {
+            transform: translate(-50%, -50%) scale(0.9);
+        }
+
+        .castle-tag {
+            font-weight: 800;
+            font-size: 0.65rem;
+            letter-spacing: 1px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: rgba(10, 14, 23, 0.9);
+            border: 1px solid var(--panel-border);
+            margin-bottom: 2px;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+
+        .castle-icon-wrap {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--panel-bg);
+            border: 3px solid #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            box-shadow: 0 0 16px rgba(0,0,0,0.7);
+            transition: all 0.3s ease;
+        }
+
+        .castle-count {
+            font-size: 0.65rem;
+            font-weight: 700;
+            margin-top: 2px;
+            background: rgba(10, 14, 23, 0.9);
+            padding: 1px 5px;
+            border-radius: 6px;
+            color: var(--text-sub);
+            pointer-events: none;
+        }
+
+        /* Castle Colors */
+        .castle-rot .castle-tag { color: var(--color-rot); border-color: var(--color-rot); }
+        .castle-rot .castle-icon-wrap { border-color: var(--color-rot); box-shadow: 0 0 16px var(--color-rot-glow); }
+
+        .castle-blau .castle-tag { color: var(--color-blau); border-color: var(--color-blau); }
+        .castle-blau .castle-icon-wrap { border-color: var(--color-blau); box-shadow: 0 0 16px var(--color-blau-glow); }
+
+        .castle-gruen .castle-tag { color: var(--color-gruen); border-color: var(--color-gruen); }
+        .castle-gruen .castle-icon-wrap { border-color: var(--color-gruen); box-shadow: 0 0 16px var(--color-gruen-glow); }
+
+        .castle-gelb .castle-tag { color: var(--color-gelb); border-color: var(--color-gelb); }
+        .castle-gelb .castle-icon-wrap { border-color: var(--color-gelb); box-shadow: 0 0 16px var(--color-gelb-glow); }
+
+        .castle-lila .castle-tag { color: var(--color-lila); border-color: var(--color-lila); }
+        .castle-lila .castle-icon-wrap { border-color: var(--color-lila); box-shadow: 0 0 16px var(--color-lila-glow); }
+
+        .castle-tuerkis .castle-tag { color: var(--color-tuerkis); border-color: var(--color-tuerkis); }
+        .castle-tuerkis .castle-icon-wrap { border-color: var(--color-tuerkis); box-shadow: 0 0 16px var(--color-tuerkis-glow); }
+
+        /* Eliminated Castle */
+        .castle-overlay.eliminated {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .castle-overlay.eliminated .castle-icon-wrap {
+            border-color: #475569 !important;
+            background: #1e293b !important;
+            box-shadow: none !important;
+            filter: grayscale(100%);
+        }
+
+        .castle-overlay.eliminated .castle-tag {
+            text-decoration: line-through;
+            color: #64748b !important;
+            border-color: #334155 !important;
+        }
+
+        .floating-text {
+            position: absolute;
+            font-weight: 900;
+            font-size: 1.1rem;
+            pointer-events: none;
+            animation: floatUp 0.6s ease-out forwards;
+            z-index: 30;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); }
+            50% { transform: translate(-50%, -90%) scale(1.3); }
+            100% { opacity: 0; transform: translate(-50%, -130%) scale(1); }
+        }
+
+        .modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(6, 9, 17, 0.88);
+            backdrop-filter: blur(6px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: var(--panel-bg);
+            border: 2px solid var(--panel-border);
+            padding: 28px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            transform: translateY(20px);
+            transition: transform 0.4s ease;
+            max-width: 90%;
+            width: 340px;
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: translateY(0);
+        }
+
+        .winner-title {
+            font-size: 2rem;
+            font-weight: 900;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+
+        .winner-stats {
+            color: var(--text-sub);
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 600px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .faction-selector {
+                justify-content: center;
+            }
+            .action-btns {
+                justify-content: center;
+            }
+            .castle-icon-wrap {
+                width: 34px;
+                height: 34px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Math Territory Clash</h1>
+        <div class="subtitle">60 Kacheln Arena • Kompaktes Spielfeld & Sofortige Kämpfe</div>
+    </header>
+
+    <div class="status-bar" id="status-bar"></div>
+
+    <div class="controls">
+        <div class="faction-selector">
+            <label>Fraktionen:</label>
+            <button class="faction-btn" data-factions="2">2</button>
+            <button class="faction-btn" data-factions="3">3</button>
+            <button class="faction-btn active" data-factions="4">4</button>
+            <button class="faction-btn" data-factions="5">5</button>
+            <button class="faction-btn" data-factions="6">6</button>
+        </div>
+        <div class="action-btns">
+            <button class="btn" id="btn-sound">🔊 Sound: AN</button>
+            <button class="btn" id="btn-auto">🤖 Auto-Kampf: AUS</button>
+            <button class="btn btn-primary" id="btn-reset">🔄 Neues Spiel</button>
+        </div>
+    </div>
+
+    <div class="game-wrapper">
+        <div class="canvas-container" id="container">
+            <canvas id="hexCanvas"></canvas>
+            <div id="castles-container"></div>
+
+            <div class="modal-overlay" id="victory-modal">
+                <div class="modal-card">
+                    <div class="winner-title" id="winner-title">BLAU GEWINNT!</div>
+                    <div class="winner-stats" id="winner-stats">Das gesamte Spielfeld wurde erobert!</div>
+                    <button class="btn btn-primary" id="btn-modal-reset" style="width: 100%; justify-content: center; padding: 12px; font-size: 1rem;">Erneut Spielen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    audioCtx = new AudioContext();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'expand') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'defeat') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.3);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'win') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(554.37, now + 0.1);
+                    osc.frequency.setValueAtTime(659.25, now + 0.2);
+                    osc.frequency.setValueAtTime(880, now + 0.3);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        const GRID_ROWS = 11;
+        const GRID_COLS = 11;
+        const TARGET_TILES = 60;
+        const STARTING_TILES_PER_TEAM = 10;
+
+        const ALL_TEAMS = {
+            rot:     { id: 'rot',     name: 'ROT',     color: 'rgba(239, 68, 68, 0.7)',  stroke: '#ef4444' },
+            blau:    { id: 'blau',    name: 'BLAU',    color: 'rgba(59, 130, 246, 0.7)', stroke: '#3b82f6' },
+            gruen:   { id: 'gruen',   name: 'GRÜN',    color: 'rgba(16, 185, 129, 0.7)', stroke: '#10b981' },
+            gelb:    { id: 'gelb',    name: 'GELB',    color: 'rgba(245, 158, 11, 0.7)', stroke: '#f59e0b' },
+            lila:    { id: 'lila',    name: 'LILA',    color: 'rgba(168, 85, 247, 0.7)', stroke: '#a855f7' },
+            tuerkis: { id: 'tuerkis', name: 'TÜRKIS',  color: 'rgba(6, 182, 212, 0.7)', stroke: '#06b6d4' }
+        };
+
+        const TEAM_KEYS = ['rot', 'blau', 'gruen', 'gelb', 'lila', 'tuerkis'];
+
+        let selectedFactionCount = 4;
+        let activeTeams = {};
+        let castlePositions = {};
+        let grid = [];
+        let activeTeamsCount = 0;
+        let autoFightInterval = null;
+
+        const canvas = document.getElementById('hexCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('container');
+
+        let hexRadius = 0;
+        let hexWidth = 0;
+        let hexHeight = 0;
+
+        function calculatePolygonVertices(sides, radius) {
+            const centerR = (GRID_ROWS - 1) / 2;
+            const centerC = (GRID_COLS - 1) / 2;
+            const vertices = [];
+
+            if (sides === 2) {
+                vertices.push({ r: centerR, c: centerC - radius });
+                vertices.push({ r: centerR, c: centerC + radius });
+            } else {
+                const startAngle = (sides % 2 !== 0) ? -Math.PI / 2 : -Math.PI / sides;
+                for (let i = 0; i < sides; i++) {
+                    const angle = startAngle + (i * 2 * Math.PI / sides);
+                    const r = centerR + radius * Math.sin(angle);
+                    const c = centerC + radius * Math.cos(angle);
+                    vertices.push({ r, c });
+                }
+            }
+            return vertices;
+        }
+
+        function isPointInPolygon(r, c, vertices) {
+            if (vertices.length === 2) {
+                const centerR = (GRID_ROWS - 1) / 2;
+                return Math.abs(r - centerR) <= 2.2 && c >= vertices[0].c - 0.5 && c <= vertices[1].c + 0.5;
+            }
+
+            let inside = false;
+            for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+                const xi = vertices[i].c, yi = vertices[i].r;
+                const xj = vertices[j].c, yj = vertices[j].r;
+
+                const intersect = ((yi > r) !== (yj > r)) &&
+                    (c < (xj - xi) * (r - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        function initGame() {
+            if (autoFightInterval) {
+                clearInterval(autoFightInterval);
+                autoFightInterval = null;
+                const autoBtn = document.getElementById('btn-auto');
+                autoBtn.classList.remove('btn-active');
+                autoBtn.innerText = '🤖 Auto-Kampf: AUS';
+            }
+
+            document.getElementById('victory-modal').classList.remove('active');
+
+            activeTeams = {};
+            activeTeamsCount = selectedFactionCount;
+            for (let i = 0; i < selectedFactionCount; i++) {
+                const key = TEAM_KEYS[i];
+                activeTeams[key] = {
+                    ...ALL_TEAMS[key],
+                    active: true
+                };
+            }
+
+            // Calibrate radius dynamically so playable cells equal ~60 tiles
+            let arenaVertices = [];
+            let bestDiff = 999;
+            let bestRadius = 3.2;
+
+            for (let testR = 1.8; testR <= 4.8; testR += 0.1) {
+                const testVerts = calculatePolygonVertices(selectedFactionCount, testR);
+                let count = 0;
+                for (let r = 0; r < GRID_ROWS; r++) {
+                    for (let c = 0; c < GRID_COLS; c++) {
+                        if (isPointInPolygon(r, c, testVerts)) count++;
+                    }
+                }
+                if (Math.abs(count - TARGET_TILES) < bestDiff) {
+                    bestDiff = Math.abs(count - TARGET_TILES);
+                    bestRadius = testR;
+                    arenaVertices = testVerts;
+                }
+            }
+
+            const castleRadius = Math.max(1.8, bestRadius * 0.68);
+            const castleVertices = calculatePolygonVertices(selectedFactionCount, castleRadius);
+
+            // Generate Grid
+            grid = [];
+            let totalValidCount = 0;
+            for (let r = 0; r < GRID_ROWS; r++) {
+                grid[r] = [];
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const validTile = isPointInPolygon(r, c, arenaVertices);
+                    if (validTile) totalValidCount++;
+                    grid[r][c] = {
+                        r: r,
+                        c: c,
+                        valid: validTile,
+                        owner: 'neutral',
+                        isCastle: false,
+                        castleOwner: null,
+                        animScale: 1.0
+                    };
+                }
+            }
+
+            // Assign Castle positions
+            castlePositions = {};
+            for (let i = 0; i < selectedFactionCount; i++) {
+                const key = TEAM_KEYS[i];
+                const cv = castleVertices[i];
+                const cr = Math.max(1, Math.min(GRID_ROWS - 2, Math.round(cv.r)));
+                const cc = Math.max(1, Math.min(GRID_COLS - 2, Math.round(cv.c)));
+
+                castlePositions[key] = { r: cr, c: cc };
+
+                grid[cr][cc].valid = true;
+                grid[cr][cc].owner = key;
+                grid[cr][cc].isCastle = true;
+                grid[cr][cc].castleOwner = key;
+
+                getNeighbors(cr, cc).forEach(n => { n.valid = true; });
+            }
+
+            // Cap starting tiles per team if map total space is limited
+            const targetStartingTiles = Math.min(
+                STARTING_TILES_PER_TEAM,
+                Math.floor(totalValidCount / selectedFactionCount)
+            );
+
+            // Assign starting tiles per team using BFS round-robin
+            let tilesAssigned = true;
+            while (tilesAssigned) {
+                tilesAssigned = false;
+                Object.keys(activeTeams).forEach(teamKey => {
+                    if (countTerritory(teamKey) < targetStartingTiles) {
+                        const candidates = [];
+                        for (let r = 0; r < GRID_ROWS; r++) {
+                            for (let c = 0; c < GRID_COLS; c++) {
+                                if (grid[r][c].valid && grid[r][c].owner === teamKey) {
+                                    getNeighbors(r, c).forEach(n => {
+                                        if (n.valid && n.owner === 'neutral' && !candidates.includes(n)) {
+                                            candidates.push(n);
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                        if (candidates.length > 0) {
+                            const chosenTile = candidates[Math.floor(Math.random() * candidates.length)];
+                            chosenTile.owner = teamKey;
+                            tilesAssigned = true;
+                        }
+                    }
+                });
+            }
+
+            renderDynamicUI();
+            resizeCanvas();
+            updateStatsUI();
+        }
+
+        function renderDynamicUI() {
+            const statusBar = document.getElementById('status-bar');
+            statusBar.innerHTML = '';
+            Object.keys(activeTeams).forEach(key => {
+                const team = activeTeams[key];
+                const card = document.createElement('div');
+                card.className = `team-card ${key}`;
+                card.id = `card-${key}`;
+                card.innerHTML = `
+                    <div class="team-badge"></div>
+                    <div class="team-info">
+                        <span class="team-name">${team.name}</span>
+                        <span class="team-count" id="count-${key}">10 Felder</span>
+                    </div>
+                `;
+                statusBar.appendChild(card);
+            });
+
+            const castlesContainer = document.getElementById('castles-container');
+            castlesContainer.innerHTML = '';
+            Object.keys(castlePositions).forEach(key => {
+                const team = activeTeams[key];
+                const overlay = document.createElement('div');
+                overlay.className = `castle-overlay castle-${key}`;
+                overlay.id = `castle-${key}`;
+                overlay.innerHTML = `
+                    <div class="castle-tag">${team.name}</div>
+                    <div class="castle-icon-wrap">🏰</div>
+                    <div class="castle-count" id="castle-count-${key}">10</div>
+                `;
+
+                overlay.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    initAudio();
+                    if (!activeTeams[key] || !activeTeams[key].active) return;
+
+                    const expanded = expandTerritory(key);
+                    if (expanded) {
+                        const rect = overlay.getBoundingClientRect();
+                        const containerRect = container.getBoundingClientRect();
+                        const x = rect.left - containerRect.left + rect.width / 2;
+                        const y = rect.top - containerRect.top + rect.height / 2;
+                        spawnFloatingText(x, y, '+1', activeTeams[key].stroke);
+                    }
+                });
+
+                castlesContainer.appendChild(overlay);
+            });
+        }
+
+        function resizeCanvas() {
+            const rect = container.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+
+            const width = rect.width;
+            const height = rect.height;
+
+            hexRadius = Math.min(
+                width / ((GRID_COLS + 0.5) * Math.sqrt(3)),
+                height / ((GRID_ROWS + 0.5) * 1.5)
+            );
+
+            hexWidth = Math.sqrt(3) * hexRadius;
+            hexHeight = 2 * hexRadius;
+
+            positionCastleOverlays();
+            drawMap();
+        }
+
+        function getHexCenterPixel(r, c) {
+            const xOffset = (r % 2 === 1) ? hexWidth / 2 : 0;
+            const x = (c + 0.5) * hexWidth + xOffset + (container.clientWidth - GRID_COLS * hexWidth) / 2;
+            const y = (r + 0.5) * (hexHeight * 0.75) + (container.clientHeight - GRID_ROWS * hexHeight * 0.75) / 2;
+            return { x, y };
+        }
+
+        function positionCastleOverlays() {
+            Object.keys(castlePositions).forEach(teamKey => {
+                const pos = castlePositions[teamKey];
+                const center = getHexCenterPixel(pos.r, pos.c);
+                const el = document.getElementById(`castle-${teamKey}`);
+                if (el) {
+                    el.style.left = `${center.x}px`;
+                    el.style.top = `${center.y}px`;
+                }
+            });
+        }
+
+        function getNeighbors(r, c) {
+            const neighbors = [];
+            const dirsEven = [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
+            const dirsOdd  = [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]];
+            const dirs = (r % 2 === 1) ? dirsOdd : dirsEven;
+
+            for (let i = 0; i < dirs.length; i++) {
+                const nr = r + dirs[i][0];
+                const nc = c + dirs[i][1];
+                if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS) {
+                    neighbors.push(grid[nr][nc]);
+                }
+            }
+            return neighbors;
+        }
+
+        function expandTerritory(teamKey) {
+            if (!activeTeams[teamKey] || !activeTeams[teamKey].active) return false;
+
+            const candidates = [];
+
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    if (grid[r][c].valid && grid[r][c].owner === teamKey) {
+                        const neighbors = getNeighbors(r, c);
+                        neighbors.forEach(n => {
+                            if (n.valid && n.owner !== teamKey) {
+                                const weight = (n.owner === 'neutral') ? 3 : 1;
+                                for (let w = 0; w < weight; w++) {
+                                    candidates.push(n);
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+
+            if (candidates.length === 0) return false;
+
+            const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+            const previousOwner = chosen.owner;
+
+            chosen.owner = teamKey;
+            chosen.animScale = 0.4;
+
+            playSound('expand');
+
+            // Check if the previous owner lost their absolute last tile
+            if (previousOwner !== 'neutral' && activeTeams[previousOwner] && activeTeams[previousOwner].active) {
+                if (countTerritory(previousOwner) === 0) {
+                    eliminateTeam(previousOwner, teamKey);
+                }
+            }
+
+            updateStatsUI();
+            return true;
+        }
+
+        function eliminateTeam(eliminatedKey, conquerorKey) {
+            const team = activeTeams[eliminatedKey];
+            if (!team || !team.active) return;
+
+            team.active = false;
+            activeTeamsCount--;
+
+            playSound('defeat');
+
+            const el = document.getElementById(`castle-${eliminatedKey}`);
+            if (el) {
+                el.classList.add('eliminated');
+                const icon = el.querySelector('.castle-icon-wrap');
+                if (icon) icon.innerText = '💀';
+            }
+
+            const pos = castlePositions[eliminatedKey];
+            const p = getHexCenterPixel(pos.r, pos.c);
+            spawnFloatingText(p.x, p.y, `${team.name} BESIEGT!`, '#ef4444');
+
+            if (activeTeamsCount <= 1) {
+                const winnerKey = Object.keys(activeTeams).find(k => activeTeams[k].active);
+                triggerVictory(winnerKey);
+            }
+        }
+
+        function triggerVictory(winnerKey) {
+            const winner = activeTeams[winnerKey] || { name: 'NIEMAND', stroke: '#fff' };
+            const modal = document.getElementById('victory-modal');
+            const title = document.getElementById('winner-title');
+            const stats = document.getElementById('winner-stats');
+
+            title.innerText = `${winner.name} GEWINNT!`;
+            title.style.color = winner.stroke;
+
+            const total = countTerritory(winnerKey);
+            stats.innerText = `${winner.name} hat alle Rivalen besiegt und kontrolliert ${total} Kacheln!`;
+
+            modal.classList.add('active');
+            playSound('win');
+
+            if (autoFightInterval) {
+                clearInterval(autoFightInterval);
+                autoFightInterval = null;
+            }
+        }
+
+        function countTerritory(teamKey) {
+            let count = 0;
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    if (grid[r][c].valid && grid[r][c].owner === teamKey) count++;
+                }
+            }
+            return count;
+        }
+
+        function updateStatsUI() {
+            Object.keys(activeTeams).forEach(key => {
+                const count = countTerritory(key);
+                
+                const countEl = document.getElementById(`count-${key}`);
+                const cardEl = document.getElementById(`card-${key}`);
+                const castleCountEl = document.getElementById(`castle-count-${key}`);
+
+                if (countEl) countEl.innerText = `${count} Felder`;
+                if (castleCountEl) castleCountEl.innerText = `${count} Felder`;
+
+                if (cardEl) {
+                    if (!activeTeams[key].active) cardEl.classList.add('eliminated');
+                    else cardEl.classList.remove('eliminated');
+                }
+            });
+        }
+
+        function spawnFloatingText(x, y, text, color) {
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.innerText = text;
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            el.style.color = color;
+            container.appendChild(el);
+
+            setTimeout(() => el.remove(), 600);
+        }
+
+        function drawHexagon(ctx, x, y, radius, fillColor, strokeColor, isCastle, scale) {
+            ctx.save();
+            ctx.beginPath();
+
+            const r = radius * scale;
+
+            for (let i = 0; i < 6; i++) {
+                const angle = (Math.PI / 3) * i - (Math.PI / 6);
+                const hx = x + r * Math.cos(angle);
+                const hy = y + r * Math.sin(angle);
+                if (i === 0) ctx.moveTo(hx, hy);
+                else ctx.lineTo(hx, hy);
+            }
+            ctx.closePath();
+
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+
+            ctx.lineWidth = isCastle ? 2 : 1;
+            ctx.strokeStyle = strokeColor;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function drawMap() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const cell = grid[r][c];
+                    if (!cell.valid) continue;
+
+                    const center = getHexCenterPixel(r, c);
+                    const team = activeTeams[cell.owner] || { color: '#07080c', stroke: '#1c2230' };
+
+                    if (cell.animScale < 1.0) {
+                        cell.animScale += 0.08;
+                        if (cell.animScale > 1.0) cell.animScale = 1.0;
+                    }
+
+                    drawHexagon(
+                        ctx, 
+                        center.x, 
+                        center.y, 
+                        hexRadius - 1.5, 
+                        team.color, 
+                        team.stroke || '#1c2230', 
+                        cell.isCastle, 
+                        cell.animScale
+                    );
+                }
+            }
+
+            requestAnimationFrame(drawMap);
+        }
+
+        function setupEvents() {
+            window.addEventListener('resize', resizeCanvas);
+            document.body.addEventListener('click', initAudio, { once: true });
+
+            const factionBtns = document.querySelectorAll('.faction-btn');
+            factionBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    initAudio();
+                    factionBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedFactionCount = parseInt(btn.dataset.factions, 10);
+                    initGame();
+                });
+            });
+
+            document.getElementById('btn-reset').addEventListener('click', () => { initAudio(); initGame(); });
+            document.getElementById('btn-modal-reset').addEventListener('click', () => { initAudio(); initGame(); });
+
+            const soundBtn = document.getElementById('btn-sound');
+            soundBtn.addEventListener('click', () => {
+                soundEnabled = !soundEnabled;
+                soundBtn.innerText = soundEnabled ? '🔊 Sound: AN' : '🔇 Sound: AUS';
+            });
+
+            const autoBtn = document.getElementById('btn-auto');
+            autoBtn.addEventListener('click', () => {
+                initAudio();
+                if (autoFightInterval) {
+                    clearInterval(autoFightInterval);
+                    autoFightInterval = null;
+                    autoBtn.classList.remove('btn-active');
+                    autoBtn.innerText = '🤖 Auto-Kampf: AUS';
+                } else {
+                    autoBtn.classList.add('btn-active');
+                    autoBtn.innerText = '🤖 Auto-Kampf: AN';
+                    autoFightInterval = setInterval(() => {
+                        const activeKeys = Object.keys(activeTeams).filter(k => activeTeams[k].active);
+                        if (activeKeys.length > 1) {
+                            const randomTeam = activeKeys[Math.floor(Math.random() * activeKeys.length)];
+                            expandTerritory(randomTeam);
+                        }
+                    }, 100);
+                }
+            });
+        }
+
+        window.addEventListener('load', () => {
+            setupEvents();
+            initGame();
+        });
+    </script>
+</body>
+</html>

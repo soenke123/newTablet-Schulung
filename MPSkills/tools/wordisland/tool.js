@@ -49,6 +49,14 @@
    gebaut wird es erst, wenn `map_key` wechselt (= neue Runde, neue
    Insel).
 
+   ── Die Schiffe ───────────────────────────────────────────────
+   Ein Landeplatz ist ein FELD, das Schiff davor ist keines. Es
+   liegt im Wasser neben seinem Landeplatz und fährt beim Bau der
+   Karte von draußen heran — also genau dann, wenn der Countdown
+   läuft. Von dort führt eine Planke auf die Insel: von hier aus
+   wird genommen. Der Server weiß von alldem nichts; er kennt nur
+   `is_home`, und wo das Meer liegt, rechnet buildMap selbst aus.
+
    ── Die Bilder der Völker ─────────────────────────────────────
    ⚠️ VORLÄUFIG geliehen aus tools/clash-of-math/sprites/. Eigene
    Bilder kommen nach; dann ändert sich nur TEAMS[].img/.team und der
@@ -101,7 +109,7 @@
   let mapKey = null;        // welche Insel gerade gezeichnet ist
   let cells = [];           // [[r,c,ruin,home], …] in der Reihenfolge von `own`
   let cellEls = [];         // die Polygone dazu, gleiche Reihenfolge
-  let homeImgs = {};        // Index → <image> auf dem Landeplatz
+  let ships = {};           // Index des Landeplatzes → { g, img } des Schiffs
   let ownPainted = null;    // zuletzt gemalte Besitz-Zeichenkette
   let els = {};
   let sets = { list: [], chosen: [] };
@@ -154,9 +162,99 @@
   const cx = (r, c) => c + 0.5 * (((r % 2) + 2) % 2);
   const cy = r => r * 0.8660254;
 
+  /* Die sechs Nachbarn eines Feldes — dieselbe Versetzung wie im
+     Server (wi_neighbors). Gebraucht wird das hier nur für EINE
+     Frage: auf welcher Seite eines Landeplatzes liegt das Meer? */
+  function neighbors(r, c) {
+    const odd = (((r % 2) + 2) % 2) === 1;
+    const d = odd ? [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]]
+                  : [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
+    return d.map(([dr, dc]) => [r + dr, c + dc]);
+  }
+
+  /* ─── Die Schiffe ───────────────────────────────────────────
+     Sönke, 2026-09-08: „Die Schiffe sind keine Felder auf dem
+     Spielfeld. Sie fahren von außen an das Spielfeld ran (beim
+     Start) und dann werden von da aus die Felder markiert und
+     eingenommen."
+
+     Also liegt das Schiff im WASSER neben seinem Landeplatz, nicht
+     darauf. Die Richtung dorthin ist die Richtung des Meeres: die
+     Summe der Wege zu allen Nachbarn, die keine Insel sind
+     (Landeplätze sind laut wi_build_island immer Küstenfelder, also
+     gibt es mindestens einen). Fällt das aus, zeigt der Weg von der
+     Inselmitte nach außen — auch der endet im Wasser.
+
+     Das Schiff trägt das Wappen des Volkes: dasselbe Bild, das
+     vorher auf dem Feld stand, nur eine Bootslänge weiter draußen.
+     Vom Schiff zum Landeplatz führt eine Planke — sie sagt ohne
+     Worte, von wo aus genommen wird. */
+  const SHIP_OUT   = 1.35;   // Bootslänge vom Landeplatz ins Meer
+  const SHIP_START = 7;      // von so weit draußen fährt es an
+
+  function seaDir(r, c, land, ctr) {
+    let dx = 0, dy = 0;
+    const x = cx(r, c), y = cy(r);
+    for (const [nr, nc] of neighbors(r, c)) {
+      if (land.has(nr + ',' + nc)) continue;
+      dx += cx(nr, nc) - x;
+      dy += cy(nr) - y;
+    }
+    if (Math.hypot(dx, dy) < 0.01) { dx = x - ctr.x; dy = y - ctr.y; }
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: dx / len, y: dy / len };
+  }
+
+  function svgEl(name, attrs) {
+    const el = document.createElementNS(SVGNS, name);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  /* Rumpf, Mast, Segel, Wappen — in Feldbreiten gerechnet, damit ein
+     Schiff auf einer kleinen Insel genauso groß aussieht wie auf
+     einer großen. Der Nullpunkt liegt in der Wasserlinie. */
+  function buildShip(i, ax, ay, dir) {
+    const g = svgEl('g', { class: 'wi-ship', transform: `translate(${ax} ${ay})` });
+    g.dataset.t = '.';
+
+    // Zwei Hüllen: die äußere fährt herein (Übergang), die innere
+    // schaukelt (Endlos-Bewegung). Getrennt, weil sich sonst beide
+    // dieselbe transform-Eigenschaft streitig machen.
+    const glide = svgEl('g', { class: 'wi-shipglide' });
+    const bob   = svgEl('g', { class: 'wi-shipbob' });
+    // Die Anfahrt beginnt weit draußen, in derselben Richtung, in die
+    // das Schiff nachher zeigt — und wird gleich nach dem Einhängen
+    // auf null gesetzt; erst dadurch fährt es.
+    glide.style.transform =
+      `translate(${(dir.x * SHIP_START).toFixed(2)}px, ${(dir.y * SHIP_START).toFixed(2)}px)`;
+    // Jedes Schiff schaukelt für sich, sonst sieht die Bucht aus wie
+    // ein Uhrwerk.
+    bob.style.animationDelay = (i % 7) * -0.9 + 's';
+
+    bob.appendChild(svgEl('path', {          // Segel
+      class: 'wi-sail', d: 'M0.02 -0.72 L0.52 0.02 L0.02 0.02 Z'
+    }));
+    bob.appendChild(svgEl('path', {          // Mast
+      class: 'wi-mast', d: 'M0 0.06 L0 -0.76'
+    }));
+    const im = svgEl('image', {              // das Volk an Deck
+      class: 'wi-shipcrew', x: -0.62, y: -0.66, width: 0.72, height: 0.72
+    });
+    bob.appendChild(im);
+    bob.appendChild(svgEl('path', {          // Rumpf
+      class: 'wi-hull', d: 'M-0.72 0.06 L0.72 0.06 L0.48 0.42 L-0.48 0.42 Z'
+    }));
+
+    glide.appendChild(bob);
+    g.appendChild(glide);
+    ships[i] = { g, img: im, glide };
+    return g;
+  }
+
   function buildMap(svg, list) {
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-    cellEls = []; homeImgs = {}; ownPainted = null;
+    cellEls = []; ships = {}; ownPainted = null;
 
     // In der Lobby gibt es noch keine Insel (wi_tiles ist leer, bis
     // wi_room_start würfelt). Ohne diesen Ausgang stünde im viewBox
@@ -169,14 +267,34 @@
       minX = Math.min(minX, cx(r, c)); maxX = Math.max(maxX, cx(r, c));
       minY = Math.min(minY, cy(r));    maxY = Math.max(maxY, cy(r));
     }
+
+    // Wo die Schiffe liegen, muss VOR dem Ausschnitt feststehen: sie
+    // liegen außerhalb der Insel, und ein Ausschnitt, der nur das Land
+    // fasst, schnitte sie ab.
+    const land = new Set(list.map(([r, c]) => r + ',' + c));
+    const ctr  = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+    const homes = [];
+    list.forEach(([r, c, , home], i) => {
+      if (!home) return;
+      const dir = seaDir(r, c, land, ctr);
+      homes.push({ i, x: cx(r, c), y: cy(r),
+                   ax: cx(r, c) + dir.x * SHIP_OUT, ay: cy(r) + dir.y * SHIP_OUT, dir });
+    });
+    for (const h of homes) {
+      minX = Math.min(minX, h.ax - 0.8); maxX = Math.max(maxX, h.ax + 0.8);
+      minY = Math.min(minY, h.ay - 0.8); maxY = Math.max(maxY, h.ay + 0.8);
+    }
+
     const pad = 0.8;
     svg.setAttribute('viewBox',
       `${minX - pad} ${minY - pad} ${maxX - minX + 2 * pad} ${maxY - minY + 2 * pad}`);
 
     const gTiles = document.createElementNS(SVGNS, 'g');
     const gMarks = document.createElementNS(SVGNS, 'g');
+    const gShips = document.createElementNS(SVGNS, 'g');
     svg.appendChild(gTiles);
     svg.appendChild(gMarks);
+    svg.appendChild(gShips);
 
     list.forEach(([r, c, ruin, home], i) => {
       const x = cx(r, c), y = cy(r);
@@ -200,15 +318,27 @@
         m.setAttribute('class', 'wi-ruin wi-ruin--' + ruin);
         gMarks.appendChild(m);
       }
-      if (home) {
-        const im = document.createElementNS(SVGNS, 'image');
-        im.setAttribute('x', x - 0.55); im.setAttribute('y', y - 0.55);
-        im.setAttribute('width', 1.1); im.setAttribute('height', 1.1);
-        im.setAttribute('class', 'wi-home');
-        gMarks.appendChild(im);
-        homeImgs[i] = im;
-      }
     });
+
+    // Die Schiffe zuletzt: sie liegen über allem, und die Planke
+    // gehört unter das Schiff, aber über die Felder.
+    for (const h of homes) {
+      const plank = svgEl('path', { class: 'wi-plank', d: `M${h.x} ${h.y} L${h.ax} ${h.ay}` });
+      plank.dataset.t = '.';
+      gShips.appendChild(plank);
+      gShips.appendChild(buildShip(h.i, h.ax, h.ay, h.dir));
+      ships[h.i].plank = plank;
+    }
+    // Und los: im nächsten Bild steht der Zielwert, der Übergang in
+    // tool.css macht daraus die Anfahrt. Im selben Bild gesetzt wäre
+    // es keine Fahrt, sondern ein Sprung.
+    if (homes.length) {
+      const glides = homes.map(h => ships[h.i] && ships[h.i].glide).filter(Boolean);
+      setTimeout(() => {
+        if (destroyed) return;
+        glides.forEach(g => { g.style.transform = 'translate(0px, 0px)'; });
+      }, 60);
+    }
   }
 
   /* Nur was sich geändert hat. Bei 500 Feldern und einem Takt alle
@@ -228,10 +358,17 @@
       if (ownPainted && ownPainted[i] === ch) continue;
       const slot = (ch === '.') ? -1 : +ch;
       cellEls[i].dataset.t = (slot < 0) ? '.' : String(facOf(slot));
-      const im = homeImgs[i];
-      if (im && slot >= 0) {
+      const sh = ships[i];
+      if (sh && slot >= 0) {
         const want = esrc(teamOf(slot).img);
-        if (im.getAttribute('href') !== want) im.setAttribute('href', want);
+        if (sh.img.getAttribute('href') !== want) sh.img.setAttribute('href', want);
+        // Farbe von Rumpf, Segel und Planke — wie bei den Feldern über
+        // die Volksnummer, nicht über 500 Style-Attribute.
+        const t = String(facOf(slot));
+        if (sh.g.dataset.t !== t) {
+          sh.g.dataset.t = t;
+          if (sh.plank) sh.plank.dataset.t = t;
+        }
       }
     }
     ownPainted = own;
@@ -432,7 +569,12 @@
           <h3>Diese Wörter sind der Klasse am häufigsten durchgegangen</h3>
           <div data-part="hard"></div>
         </div>
-        <button class="wi-btn wi-btn--go" data-part="again">Neue Runde</button>
+        <!-- Führt in die LOBBY, nicht in die nächste Runde (0134):
+             zwischen zwei Runden ändert sich fast immer etwas, und
+             gestartet wird dort mit „Schiffe klarmachen". -->
+        <button class="wi-btn wi-btn--go" data-part="again">⚓ Neue Runde vorbereiten</button>
+        <p class="wi-endhint">Zurück in die Lobby — dort lassen sich Wörter, Völker,
+          Richtung und Dauer ändern. Gestartet wird von dort.</p>
       </section>
 
       <!-- Die Wörter-Auswahl. Ein Fenster über der Lobby, kein
@@ -522,7 +664,7 @@
       tick(true);
     });
     q('start').addEventListener('click', onStart);
-    q('again').addEventListener('click', onStart);
+    q('again').addEventListener('click', onBackToLobby);
     q('stop').addEventListener('click', async () => {
       if (!await ctx.confirm('Runde jetzt beenden?')) return;
       await ctx.actions.call('wi_room_end', {});
@@ -695,7 +837,15 @@
     const r = await ctx.actions.call('wi_room_set_factions', { p_factions: next });
     pickBusy--;
     if (!r || !r.ok) {
-      ctx.toast(ctx.errText((r && r.error) || 'network'));
+      // fn_missing heißt hier immer dasselbe, und es lohnt sich, das
+      // hinzuschreiben: die Wappenreihe ist die Oberfläche von
+      // Migration 0133. Steht die nicht in der Datenbank, kann JEDER
+      // Klick nur scheitern — und ohne diesen Satz sieht das aus wie
+      // ein Netzproblem (Vorfall 08.09.2026).
+      ctx.toast(r && r.error === 'fn_missing'
+        ? 'Die Völker-Auswahl kennt der Server noch nicht: In der Datenbank fehlt '
+          + 'Migration 0133. Bis dahin bleibt es bei der bisherigen Aufstellung.'
+        : ctx.errText((r && r.error) || 'network'));
       if (!pickBusy) syncPickFromView(view);
       renderPick();
       return;
@@ -803,6 +953,27 @@
     }
     els.waiting.hidden = false;
     els.waiting.innerHTML = out;
+  }
+
+  /* Aus der Auswertung zurück in die Lobby (Migration 0134). Nicht
+     „neu starten": zwischen zwei Runden wird fast immer etwas
+     geändert, und die Insel steht erst, wenn jemand ausdrücklich
+     „Schiffe klarmachen" drückt.
+
+     mapKey auf null, weil der Server die Insel abräumt — sonst
+     bliebe die alte Karte im SVG stehen, bis die nächste Runde
+     einen neuen map_key bringt. */
+  async function onBackToLobby() {
+    const r = await ctx.actions.call('wi_room_to_lobby', {});
+    if (!r.ok) {
+      return ctx.toast(
+        r.error === 'round_running' ? 'Die Runde läuft noch — beende sie zuerst.'
+      : r.error === 'fn_missing'    ? 'Der Weg zurück in die Lobby kennt der Server noch nicht: '
+                                      + 'In der Datenbank fehlt Migration 0134.'
+      : ctx.errText(r.error));
+    }
+    mapKey = null;
+    tick(true);
   }
 
   async function onStart() {
@@ -1216,7 +1387,7 @@
     mount(el, c) {
       root = el; ctx = c; role = ctx.role;
       destroyed = false; busy = false; view = null;
-      mapKey = null; cells = []; cellEls = []; homeImgs = {};
+      mapKey = null; cells = []; cellEls = []; ships = {};
       ownPainted = null; submitting = false; picking = false;
       sets = { list: [], chosen: [] }; setsBusy = 0; tab = 'units'; setsOpen = false;
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
@@ -1251,7 +1422,7 @@
       onResize = null;
       document.body.classList.remove('tool-fill');
       root = ctx = null; role = null; view = null;
-      els = {}; cells = []; cellEls = []; homeImgs = {}; ownPainted = null;
+      els = {}; cells = []; cellEls = []; ships = {}; ownPainted = null;
     }
   });
 })();

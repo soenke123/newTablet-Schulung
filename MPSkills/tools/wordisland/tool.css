@@ -642,6 +642,16 @@
 .wi-hardrow span { color: var(--ink-soft); }
 .wi-hardrow i { font-style: normal; color: var(--warn); font-size: 12px; }
 
+/* Der Satz unter dem Knopf sagt, wohin er führt: in die Lobby und
+   nicht in die nächste Runde (0134). */
+.wi-endhint {
+  margin: -6px 0 0;
+  max-width: 46ch;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
 /* ══════════════════════════════════════════════════════════
    Die Insel
    ══════════════════════════════════════════════════════════ */
@@ -697,7 +707,64 @@
   .wi-ruin { animation: none; }
 }
 
-.wi-home { pointer-events: none; }
+/* ── Die Schiffe ─────────────────────────────────────────────
+   Sie liegen NEBEN der Insel, nicht darauf (Sönke, 2026-09-08).
+   Gefärbt wie die Felder über die Volksnummer in `data-t`; solange
+   niemand gelandet ist, bleiben sie grau.
+
+   Zwei Bewegungen, zwei Hüllen: `.wi-shipglide` fährt einmal herein
+   (Übergang, von tool.js angestoßen), `.wi-shipbob` schaukelt
+   endlos. In einer Hülle würden sie sich dieselbe
+   transform-Eigenschaft streitig machen. */
+.wi-ship, .wi-plank { pointer-events: none; }
+
+.wi-shipglide { transition: transform 2.6s cubic-bezier(.16, .74, .3, 1); }
+
+/* `transform-box: fill-box` ist hier Pflicht und keine Feinheit: bei
+   SVG-Elementen liegt der Drehpunkt sonst in der Mitte des VIEWBOX —
+   das Schaukeln würde die Schiffe quer über die Karte schleudern. */
+.wi-shipbob {
+  transform-box: fill-box;
+  transform-origin: 50% 90%;
+  animation: wi-bob 3.4s ease-in-out infinite;
+}
+@keyframes wi-bob {
+  0%, 100% { transform: translateY(0) rotate(-1.8deg); }
+  50%      { transform: translateY(-.08px) rotate(1.8deg); }
+}
+
+.wi-hull, .wi-sail { fill: #94a3b8; }
+.wi-hull { stroke: rgba(0, 0, 0, .3); stroke-width: .03; }
+.wi-sail { opacity: .92; }
+.wi-mast { stroke: #f1e3c6; stroke-width: .055; stroke-linecap: round; fill: none; }
+
+.wi-ship[data-t="0"] .wi-hull, .wi-ship[data-t="0"] .wi-sail { fill: #ef4444; }
+.wi-ship[data-t="1"] .wi-hull, .wi-ship[data-t="1"] .wi-sail { fill: #3b82f6; }
+.wi-ship[data-t="2"] .wi-hull, .wi-ship[data-t="2"] .wi-sail { fill: #10b981; }
+.wi-ship[data-t="3"] .wi-hull, .wi-ship[data-t="3"] .wi-sail { fill: #f59e0b; }
+.wi-ship[data-t="4"] .wi-hull, .wi-ship[data-t="4"] .wi-sail { fill: #a855f7; }
+.wi-ship[data-t="5"] .wi-hull, .wi-ship[data-t="5"] .wi-sail { fill: #06b6d4; }
+
+/* Die Planke: der Weg vom Schiff auf die Insel. Blass — sie erklärt
+   etwas, sie soll nicht mit den Feldern um Aufmerksamkeit ringen. */
+.wi-plank {
+  stroke: #f1e3c6;
+  stroke-width: .12;
+  stroke-linecap: round;
+  opacity: .45;
+  fill: none;
+}
+.wi-plank[data-t="0"] { stroke: #ef4444; }
+.wi-plank[data-t="1"] { stroke: #3b82f6; }
+.wi-plank[data-t="2"] { stroke: #10b981; }
+.wi-plank[data-t="3"] { stroke: #f59e0b; }
+.wi-plank[data-t="4"] { stroke: #a855f7; }
+.wi-plank[data-t="5"] { stroke: #06b6d4; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wi-shipglide { transition: none; }
+  .wi-shipbob   { animation: none; }
+}
 
 /* Freie Wahl: die Felder werden anfassbar, und man sieht es. */
 .wi-map.is-picking .wi-cell { cursor: pointer; }

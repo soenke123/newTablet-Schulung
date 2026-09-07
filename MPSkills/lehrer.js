@@ -191,7 +191,15 @@ async function trpc(fn, args) {
     },
     body: JSON.stringify(args || {})
   });
-  if (!res.ok) throw new Error(`${fn} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok) {
+    // Mit Status — siehe lib/room.js: safe() in lib/tool.js macht
+    // daraus „der Server kennt den Aufruf nicht" statt „keine
+    // Verbindung".
+    const err = new Error(`${fn} ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    err.status = res.status;
+    err.fn = fn;
+    throw err;
+  }
   return res.json();
 }
 
