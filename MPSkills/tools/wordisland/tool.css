@@ -1,0 +1,427 @@
+/* ══════════════════════════════════════════════════════════════
+   MPSkills — Skill „Myth of Wordisland"  ·  tool.css
+   ══════════════════════════════════════════════════════════════
+   Die Bedienung gehört MPSkills und nimmt dessen Variablen: Karten,
+   Knöpfe, Eingaben kippen mit hell/dunkel wie überall sonst.
+
+   Die INSEL bringt eigene Farben mit und kippt nicht. Sie ist ein
+   Bild und keine Oberfläche — ein Meer, das im Darkmode die Farbe
+   wechselt, wäre kein Meer mehr. Derselbe Gedanke wie bei NeuroLab
+   und Wild Clusters: der Rahmen gehört der Seite, der Inhalt dem
+   Skill. Nur der Nebel ist zweimal gesetzt: er muss sich in beiden
+   Kleidern vom Meer unterscheiden.
+
+   Die Farbe eines Volkes kommt IMMER aus --wi-team und nie aus
+   einer Regel hier — sie steht in tool.js (TEAMS) und wird als
+   Variable hereingereicht. Zwei Wahrheiten über die Farbe eines
+   Volkes wären genau eine zu viel.
+   ══════════════════════════════════════════════════════════════ */
+
+.wi {
+  --wi-sea:    #0d3b52;
+  --wi-fog:    #4d6b7c;
+  --wi-land:   #f2e7cf;
+  --wi-coast:  #d9c9a5;
+  --wi-gold:   #ffcf4d;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* ── hidden gewinnt ────────────────────────────────────────────
+   `el.hidden = true` wirkt über eine Browser-Regel, und JEDE Regel
+   aus dieser Datei ist stärker. Ohne die Sammelregel geht ein
+   Kasten auf und nie wieder zu (Regel:
+   feedback_hidden_attribute_loses_to_display).                   */
+.wi [hidden],
+.wi[hidden] { display: none !important; }
+
+/* ══════════════════════════════════════════════════════════
+   Karten, Knöpfe, Eingaben — die Sprache der Seite
+   ══════════════════════════════════════════════════════════ */
+.wi-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md, 18px);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.wi-card h3 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: .01em;
+  color: var(--ink);
+}
+
+.wi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.wi-btn {
+  appearance: none;
+  border: 1px solid var(--accent-edge);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: var(--r-pill, 999px);
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter .15s ease;
+}
+.wi-btn:hover { filter: brightness(1.06); }
+.wi-btn--ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: var(--line);
+}
+.wi-btn--go {
+  align-self: center;
+  padding: 14px 34px;
+  font-size: 17px;
+}
+
+.wi-in {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm, 12px);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 10px 12px;
+  font: inherit;
+}
+.wi-in:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.wi-ta { resize: vertical; font-family: var(--mono); font-size: 13px; }
+
+.wi-empty { margin: 0; color: var(--ink-faint); font-size: 14px; }
+
+/* ══════════════════════════════════════════════════════════
+   Pult — Lobby
+   ══════════════════════════════════════════════════════════ */
+.wi-tabs { display: flex; gap: 6px; }
+.wi-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font: inherit;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--r-pill, 999px);
+  cursor: pointer;
+}
+.wi-tab.is-on { background: var(--accent-dim); color: var(--accent-ink); }
+
+.wi-sets { display: flex; flex-wrap: wrap; gap: 8px; }
+.wi-set {
+  position: relative;
+  appearance: none;
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--r-sm, 12px);
+  padding: 10px 14px;
+  font: inherit;
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+}
+.wi-set b { font-size: 14px; }
+.wi-set span { font-size: 12px; color: var(--ink-faint); }
+.wi-set.is-on {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.wi-set.is-on span { color: var(--accent-ink); }
+.wi-del {
+  position: absolute;
+  top: 2px; right: 6px;
+  font-style: normal;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--ink-faint);
+  padding: 2px 4px;
+}
+.wi-del:hover { color: var(--warn); }
+
+.wi-import { display: flex; flex-direction: column; gap: 8px; }
+
+.wi-row {
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.wi-row select {
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: var(--r-sm, 12px);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  grid-column: 2 / -1;
+}
+.wi-row output { font-weight: 700; color: var(--ink); }
+
+.wi-people { display: flex; flex-wrap: wrap; gap: 6px; }
+.wi-chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill, 999px);
+  background: color-mix(in srgb, var(--wi-team) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--wi-team) 40%, transparent);
+  color: var(--ink);
+}
+
+/* ══════════════════════════════════════════════════════════
+   Pult — Spiel
+   ══════════════════════════════════════════════════════════ */
+/* position:relative trägt den Countdown (.wi-big liegt darin) — auch
+   ohne body.tool-fill, denn das Schaufenster hat die Klasse nicht. */
+.wi-play {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  flex: 1;
+}
+
+.wi-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.wi-teams { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; }
+.wi-team {
+  display: grid;
+  grid-template-columns: 34px auto;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  padding: 8px 14px 8px 8px;
+  border-radius: var(--r-md, 18px);
+  background: color-mix(in srgb, var(--wi-team) 14%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--wi-team) 45%, transparent);
+}
+.wi-team img { grid-row: 1 / 3; width: 34px; height: 34px; object-fit: contain; }
+.wi-team b { font-size: 14px; color: var(--ink); }
+.wi-team .wi-score {
+  grid-column: 2; grid-row: 1;
+  justify-self: end;
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--wi-team);
+  margin-left: 12px;
+}
+.wi-team .wi-sub { grid-column: 2; font-size: 11px; color: var(--ink-faint); }
+.wi-team.is-win {
+  box-shadow: 0 0 0 2px var(--wi-gold), var(--shadow-pop);
+}
+
+.wi-clock { display: flex; align-items: center; gap: 12px; }
+.wi-clock b {
+  font-variant-numeric: tabular-nums;
+  font-size: 30px;
+  letter-spacing: .02em;
+  color: var(--ink);
+}
+
+.wi-big {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(80px, 22vw, 260px);
+  font-weight: 800;
+  color: var(--wi-gold);
+  text-shadow: 0 6px 30px rgba(0, 0, 0, .5);
+  pointer-events: none;
+}
+
+.wi-end { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.wi-end h2 {
+  margin: 0;
+  display: flex; align-items: center; gap: 12px;
+  font-size: 26px;
+  color: var(--ink);
+}
+.wi-end h2 img { width: 56px; height: 56px; object-fit: contain; }
+.wi-hard { width: min(560px, 100%); }
+.wi-hardrow {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 14px;
+}
+.wi-hardrow span { color: var(--ink-soft); }
+.wi-hardrow i { font-style: normal; color: var(--warn); font-size: 12px; }
+
+/* ══════════════════════════════════════════════════════════
+   Die Insel
+   ══════════════════════════════════════════════════════════ */
+.wi-mapwrap {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+  border-radius: var(--r-md, 18px);
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 0%, #14506e 0%, var(--wi-sea) 60%, #072634 100%);
+  touch-action: none;      /* Zoom und Schieben macht tool.js selbst */
+}
+.wi-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 50%;
+}
+
+.wi-cell {
+  stroke: rgba(0, 0, 0, .18);
+  stroke-width: .03;
+  fill: var(--wi-fog);
+  transition: fill .35s ease;
+}
+/* Nebel: dunkler als das Meer, damit die Insel als geschlossene
+   Fläche erkennbar bleibt, bevor irgendetwas offen ist. */
+.wi-cell[data-t="."] { fill: #3c5766; }
+.wi-cell[data-t="0"] { fill: #ef4444; }
+.wi-cell[data-t="1"] { fill: #3b82f6; }
+.wi-cell[data-t="2"] { fill: #10b981; }
+.wi-cell[data-t="3"] { fill: #f59e0b; }
+.wi-cell[data-t="4"] { fill: #a855f7; }
+.wi-cell[data-t="5"] { fill: #06b6d4; }
+
+.wi-ruin {
+  fill: var(--wi-gold);
+  opacity: .55;
+  pointer-events: none;
+  animation: wi-shimmer 2.8s ease-in-out infinite;
+}
+.wi-ruin--2 { opacity: .7; }
+.wi-ruin--3 { opacity: .9; }
+@keyframes wi-shimmer {
+  0%, 100% { opacity: .45; }
+  50%      { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wi-ruin { animation: none; }
+}
+
+.wi-home { pointer-events: none; }
+
+/* Freie Wahl: die Felder werden anfassbar, und man sieht es. */
+.wi-map.is-picking .wi-cell { cursor: pointer; }
+.wi-map.is-picking .wi-cell:hover { stroke: var(--wi-gold); stroke-width: .12; }
+
+/* ══════════════════════════════════════════════════════════
+   Tablet
+   ══════════════════════════════════════════════════════════ */
+.wi--tab { gap: 10px; }
+
+.wi-me {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--r-md, 18px);
+  background: color-mix(in srgb, var(--wi-team) 16%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--wi-team) 45%, transparent);
+}
+.wi-me img { width: 40px; height: 40px; object-fit: contain; }
+.wi-me div { display: grid; }
+.wi-me b { font-size: 15px; color: var(--ink); }
+.wi-me span { font-size: 12px; color: var(--ink-faint); }
+.wi-me .wi-time {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.wi-task {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--r-md, 18px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.wi-ask { margin: 0; font-size: 13px; color: var(--ink-faint); }
+.wi-word {
+  margin: 0;
+  font-size: clamp(26px, 7vw, 40px);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.wi-type { display: flex; gap: 8px; }
+.wi-type .wi-in { font-size: 18px; }
+
+.wi-opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.wi-opts button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--r-sm, 12px);
+  padding: 14px 10px;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  min-height: 52px;      /* Fingerziel, nicht Mauszeiger-Ziel */
+}
+.wi-opts button:hover { border-color: var(--accent); }
+
+.wi-fb {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--r-sm, 12px);
+}
+.wi-fb.is-ok   { background: var(--ok-dim);   color: var(--ok);   border: 1px solid var(--ok-edge); }
+.wi-fb.is-near { background: var(--wait-dim); color: var(--wait-ink); border: 1px solid var(--wait-edge); }
+.wi-fb.is-warn { background: var(--wait-dim); color: var(--wait-ink); border: 1px solid var(--wait-edge); }
+.wi-fb.is-bad  { background: var(--warn-dim); color: var(--warn-ink); border: 1px solid var(--warn-edge); }
+.wi-fb.is-idle { background: var(--paper);    color: var(--ink-faint); border: 1px solid var(--line); }
+
+/* Zwei Zustände, eine Leiste: das Hinzählen ist ruhig, die
+   Aufforderung leuchtet. */
+.wi-pickbar {
+  padding: 10px 14px;
+  border-radius: var(--r-md, 18px);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.wi-pickbar.is-pick {
+  background: color-mix(in srgb, var(--wi-gold) 22%, var(--surface));
+  border-color: color-mix(in srgb, var(--wi-gold) 55%, transparent);
+  color: var(--ink);
+}
+
+.wi--tab .wi-mapwrap { min-height: 46vh; }
+
+/* Am Beamer nimmt die Insel, was da ist. */
+body.tool-fill .wi--pult { flex: 1; min-height: 0; }
+body.tool-fill .wi--pult .wi-play { position: relative; }

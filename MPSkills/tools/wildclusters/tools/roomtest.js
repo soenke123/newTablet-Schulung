@@ -514,7 +514,13 @@ function nachzueglerHabenIhreEigene() {
   ok('Auflösung: keine Einführung von selbst', box.hidden === true, box.hidden);
 
   /* Und der Haken darf nicht verrutschen: Phase 1 offen, Lehrkraft schaltet
-     weiter, Kind tippt zu — dann ist Phase 1 erledigt und Phase 2 nicht. */
+     weiter, Kind tippt zu — dann ist Phase 1 erledigt und Phase 2 nicht.
+
+     ⚠️ Das Zumachen ist hier der LETZTE Schritt, und das ist der eigentliche
+     Fall: der Poller ruft update() nur bei einer Signaturänderung, also genau
+     einmal je Griff ans Pult. Dieser eine Aufruf ist schon verbraucht (er kam,
+     während der Kasten offen lag) — wenn das Kind jetzt zutippt, muss
+     closeIntro() selbst nachfragen. Ein weiteres update() käme nie. */
   const u = run('student');
   const ubox = u.root.querySelector('#wlIntro');
   const utippe = (was) => {
@@ -529,8 +535,7 @@ function nachzueglerHabenIhreEigene() {
   u.impl.update(u.view);
   ok('Umschalten: der offene Kasten bleibt der von Phase 1', ubox.hidden === false);
   utippe('close');
-  u.impl.update(u.view);
-  ok('Umschalten: der Haken traf Phase 1 — Phase 2 kommt trotzdem',
+  ok('Umschalten: der Haken traf Phase 1 — Phase 2 kommt ohne weiteres update()',
      ubox.hidden === false, ubox.hidden);
 }
 
@@ -605,6 +610,22 @@ function aufloesungFragtNach() {
   b.deckeAuf({ rw: true, ra: true });
   ok('3b zuerst: danach ist die Welt das Neue',
      /auch die Welt/.test(b.titel()), b.titel());
+
+  /* ⚠️ Der Fall aus dem Klassenzimmer: die Lehrkraft drückt 3b, WÄHREND das
+     Kind noch den Kasten von 3a liest. Der eine update()-Aufruf, den es dafür
+     gibt (der Poller meldet sich nur bei einer Signaturänderung), fällt genau
+     in diese Zeit und steigt an `introStep` aus. Ein zweiter kommt nie —
+     also muss das Zutippen selbst nachfragen. Ohne das war der Kasten für
+     „beides" nur noch über das Fragezeichen zu haben. */
+  const d = auf();
+  d.deckeAuf({ rw: true });
+  ok('Weitergeschaltet: 3a liegt offen', d.box.hidden === false, d.box.hidden);
+  d.deckeAuf({ rw: true, ra: true });
+  ok('Weitergeschaltet: der offene Kasten bleibt der von 3a',
+     /siehst du die Welt/.test(d.titel()), d.titel());
+  d.tippe('next');
+  ok('Weitergeschaltet: 3b kommt beim Zutippen von selbst nach',
+     d.box.hidden === false && /auch die Tiere/.test(d.titel()), d.titel());
 
   /* Wer dazukommt, wenn vorne schon alles offen ist, hat keine Reihenfolge
      gesehen — und bekommt deshalb keine behauptet. */

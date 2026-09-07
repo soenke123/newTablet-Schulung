@@ -597,6 +597,13 @@ Sechs Dinge an der Einführung sind nicht offensichtlich:
   Klasse gerade steht. Die Lehrkraft kann weiterschalten, während der Kasten offen liegt; ohne
   diese Unterscheidung wäre die Einführung von Phase 2 abgehakt, ohne dass jemand sie gesehen hat,
   und die von Phase 1 käme ein zweites Mal.
+* ⚠️ **Und aus demselben Grund fragt `closeIntro` sofort nach** (`maybeIntro()` als letzte Zeile).
+  Der Poller ruft `update()` **nur bei einer Signaturänderung** (`lib/room.js`), also genau einmal
+  je Griff ans Pult. Fällt dieser eine Aufruf in die Zeit, in der noch ein Kasten offen liegt,
+  steigt `maybeIntro` an `introStep` aus — und **es kommt kein zweiter, der es nachholt.** Genau so
+  ging in der Auflösung der Kasten für „beides" verloren: 3a auf, 3b gedrückt, während das Kind
+  noch liest, und danach war er nur noch über das `?` zu haben. Eine Schleife ist das nicht, der
+  eben gesetzte Haken sperrt den Abschnitt, aus dem man kommt.
 * **Es gibt einen Weg zurück: das `?`** in der Kopfzeile des Rahmens (`renderHelp` in `bridge.js`,
   `cmd.help`, `wc:event help`). Es steht an der Stelle, an der die Lehrkraft ihr `i` hat, und
   sieht genauso aus (`.info-btn`, nur aufrecht) — beide beantworten dieselbe Frage. Ohne ihn wäre

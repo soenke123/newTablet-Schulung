@@ -49,6 +49,12 @@ window.TOOLS_OVERLAY = {
   // schaltet die Phase, und die Brücke (js/ui/bridge.js) trägt sie in
   // den Rahmen hinein.
   wildclusters: { ready: true },
+  // Sechster Skill (Migrationen 0130–0132), erster im Fach Englisch.
+  // Zweites Team-Spiel mit eigenen Tabellen — und das erste, dessen
+  // INHALT nicht ihm gehört: die Vokabelsätze liegen in vocab_*
+  // daneben, damit das Alleine-Lernen später auf denselben Listen
+  // üben kann.
+  wordisland: { ready: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   poll:      { ready: false }
 };

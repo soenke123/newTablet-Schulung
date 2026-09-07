@@ -1226,6 +1226,28 @@ a.btn {
    Der Rasterhintergrund von .tprev fällt weg: die Karte füllt die
    linke Hälfte vollständig, das Papier die rechte — ein Raster
    darunter sähe man nie.                                        */
+/* ── Myth of Wordisland ───────────────────────────────────
+   Dasselbe Meer wie im Werkzeug (--wi-sea in tools/wordisland/
+   tool.css), und in beiden Kleidern dasselbe: eine Insel im Meer
+   ist kein Bedienelement, das mitkippt. Der Rasterhintergrund
+   fällt weg, weil die Karte die Fläche füllt.
+
+   Die Farbwerte stehen hier ausgeschrieben und nicht als var(--…):
+   tool.css ist beim Zeichnen der Kachel noch gar nicht geladen —
+   dieselbe Sorte Kopie wie bei .tprev--km.                       */
+.tprev--wi {
+  background-color: #0d3b52;
+  background-image: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+:root[data-theme="dark"] .tprev--wi {
+  background-color: #0d3b52;
+  background-image: none;
+}
+.tprev--wi svg { width: 100%; height: 100%; display: block; }
+
 .tprev--wc {
   background-color: #f3ece0;    /* --paper der Anwendung */
   background-image: none;

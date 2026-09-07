@@ -1529,6 +1529,17 @@
     // die Klasse inzwischen steht (siehe introWhich).
     try { sessionStorage.setItem(introKey(introWhich), '1'); } catch (e) { /* egal */ }
     paintIntro();
+    /* ⚠️ Und dann sofort nachfragen, ob der Raum inzwischen weitergegangen ist.
+       Der Poller ruft update() NUR bei einer Signaturänderung (room.js), also
+       genau einmal je Griff ans Pult. Fällt dieser eine Aufruf in die Zeit, in
+       der hier noch ein Kasten offen liegt, steigt maybeIntro() an `introStep`
+       aus — und danach kommt kein zweiter Aufruf mehr, der es nachholen
+       könnte. Genau so ging in der Auflösung der Kasten für „beides"
+       verloren: 3a auf, 3b gedrückt, während das Kind noch liest.
+
+       Eine Schleife ist das nicht: der eben gesetzte Haken sperrt den
+       Abschnitt, aus dem wir gerade kommen. */
+    maybeIntro();
   }
 
   /**
