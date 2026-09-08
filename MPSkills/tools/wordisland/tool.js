@@ -86,21 +86,29 @@
      Gruppenbild mit Burg — es steht nur in der Lobby, wo Platz für
      ein Porträt ist. `ship` ist das Schiff auf der Karte.
 
-     Die Dateinamen sind so, wie sie im Ordner stehen, samt Umlaut
-     und samt Tippfehler („yello schiff.jpg", „yello Team.png").
-     Sie hier zu korrigieren hieße, auf Dateien zu zeigen, die es
-     nicht gibt — und ein fehlendes <image> zeichnet in SVG
-     stillschweigend NICHTS. Beim ersten Anlauf im Showroom lag die
-     Karte deshalb einfach ohne Schiffe da.                      */
+     Die Dateinamen sind so, wie sie im Ordner stehen, samt Umlaut,
+     samt großem S in „Schiff.png" und samt Tippfehler („yello
+     Team.png"). Sie hier zu korrigieren hieße, auf Dateien zu
+     zeigen, die es nicht gibt — und ein fehlendes <image> zeichnet
+     in SVG stillschweigend NICHTS. Beim ersten Anlauf im Showroom
+     lag die Karte deshalb einfach ohne Schiffe da. Der Prüfstand
+     schlägt darauf an (uitest.js prüft, ob die DATEI liegt), das
+     Auge erst beim Suchen.
+
+     Die Schiffe sind seit dem 08.09.2026 Sönkes eigene: freigestellte
+     RGBA-PNG statt der geliehenen JPG auf weißem Grund. ⚠️ Deshalb
+     laufen sie NICHT mehr durch den Freistell-Filter — der schneidet
+     nach Helligkeit, und die hellsten Stellen eines Schiffes sind
+     seine Segel.                                                 */
   const ASSET_DIR = 'tools/clash-of-math/sprites/';
   const SHIP_DIR = 'tools/wordisland/sprites/';
   const TEAMS = [
-    { name: 'Toast-Ritter',      color: '#ef4444', img: 'red ToastKnights.png',       team: 'red Team.png',    ship: 'red schiff.jpg' },
-    { name: 'Robo-Enten',        color: '#3b82f6', img: 'blue roboDucks.png',         team: 'blue Team.png',   ship: 'blue schiff.jpg' },
-    { name: 'Brokkoli-Giraffen', color: '#10b981', img: 'green BrokkoliGiraffen.png', team: 'green Team.png',  ship: 'grün schiff.jpg' },
-    { name: 'Mal-Hasen',         color: '#f59e0b', img: 'yellow PainingBunnies.png',  team: 'yello Team.png',  ship: 'yello schiff.jpg' },
-    { name: 'Kosmische Katzen',  color: '#a855f7', img: 'lila cosmicCat.png',         team: 'lila Team.png',   ship: 'lila schiff.jpg' },
-    { name: 'Okto-Pferdchen',    color: '#06b6d4', img: 'türkis OctoPferdchen.png',   team: 'türkis Team.png', ship: 'türkis schiff.jpg' }
+    { name: 'Toast-Ritter',      color: '#ef4444', img: 'red ToastKnights.png',       team: 'red Team.png',    ship: 'red Schiff.png' },
+    { name: 'Robo-Enten',        color: '#3b82f6', img: 'blue roboDucks.png',         team: 'blue Team.png',   ship: 'blue Schiff.png' },
+    { name: 'Brokkoli-Giraffen', color: '#10b981', img: 'green BrokkoliGiraffen.png', team: 'green Team.png',  ship: 'green Schiff.png' },
+    { name: 'Mal-Hasen',         color: '#f59e0b', img: 'yellow PainingBunnies.png',  team: 'yello Team.png',  ship: 'yellow Schiff.png' },
+    { name: 'Kosmische Katzen',  color: '#a855f7', img: 'lila cosmicCat.png',         team: 'lila Team.png',   ship: 'lila Schiff.png' },
+    { name: 'Okto-Pferdchen',    color: '#06b6d4', img: 'türkis OctoPferdchen.png',   team: 'türkis Team.png', ship: 'türkis Schiff.png' }
   ];
   const TEAM_COUNT = TEAMS.length;
   const esrc = name => encodeURI(ASSET_DIR + name);
@@ -386,27 +394,18 @@
       return f;
     };
 
-    /* Weiß raus. Krücke für die Schiffe, die noch als JPG auf
-       weißem Grund liegen.
+    /* Hier stand ein Freistell-Filter („Weiß raus"). Er ist raus,
+       seit Sönkes eigene Schiffe da sind: die sind freigestellte
+       RGBA-PNG, und der Filter schneidet nach HELLIGKEIT — die
+       hellsten Stellen eines Schiffes sind seine Segel, die wären
+       als Erstes weg gewesen.
 
-       Der naheliegende Weg — eine feColorMatrix, die aus der
-       Helligkeit direkt den Alphakanal rechnet — sieht im Papier
-       richtig aus und liefert im Browser einen SCHWARZEN Kasten:
-       die Matrix setzt Alpha auf 0, lässt die Farbe aber auf Weiß
-       stehen, und beim Hin- und Herrechnen zwischen vor- und
-       nicht-multipliziertem Alpha wird daraus Schwarz mit voller
-       Deckung. Nachgemessen in tools/cuttest.html.
-
-       Der Weg, der trägt: die Helligkeit ZUERST in eine eigene
-       Maske verwandeln, weich abschneiden, und das Originalbild in
-       die Maske hineinstanzen. Das Bild behält seine Farben, weil
-       es nie durch die Matrix läuft. */
-    filt('cut', {}, f => {
-      el('feColorMatrix', { type: 'luminanceToAlpha', result: 'l' }, f);
-      const ct = el('feComponentTransfer', { in: 'l', result: 'm' }, f);
-      el('feFuncA', { type: 'table', tableValues: '1 1 1 1 1 1 1 1 .9 0 0' }, ct);
-      el('feComposite', { in: 'SourceGraphic', in2: 'm', operator: 'in' }, f);
-    });
+       Falls je wieder ein JPG auf weißem Grund einziehen sollte:
+       der Filter steht noch in showroom.html (#wiCut), samt der
+       Begründung, warum der naheliegende Weg (feColorMatrix
+       luminanceToAlpha direkt auf das Bild) einen SCHWARZEN Kasten
+       liefert und nicht ein freigestelltes Schiff. Nachgemessen in
+       tools/cuttest.html. */
 
     /* Die Wolke: verzerren und weichzeichnen. Erst beides zusammen
        macht aus einer Fläche einen Ballen. Mit weniger Auslenkung
@@ -1217,7 +1216,7 @@
          der Konsole für nichts. */
       const bild = el('image', {
         class: 'wi-shipimg', x: -1.3, y: -2.35, width: 2.6, height: 2.6,
-        preserveAspectRatio: 'xMidYMax meet', filter: F('cut')
+        preserveAspectRatio: 'xMidYMax meet'
       }, bob);
       /* Die Planke: der Weg vom Schiff auf die Insel. Blass — sie
          erklärt etwas, sie will nicht mit den Feldern

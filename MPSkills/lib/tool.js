@@ -81,7 +81,24 @@
        wie ein alter Stand, sondern wie ein Fehler: beim Einzug der
        Terme (0115) stand die getippte Variable in Versalien da, die
        Hochzahl als „^" und die Hochzahl-Taste tat nichts, weil das
-       Gerät noch die tool.js von davor hatte. */
+       Gerät noch die tool.js von davor hatte.
+
+       ⚠️⚠️ UND SIE ALLEIN REICHT NICHT. Diese Zeile wirkt erst, wenn
+       DIESE DATEI neu geholt wird — und die hängt an ihrem eigenen
+       Stempel in den Seiten, die sie laden. Vier Stellen, alle vier
+       müssen mit:
+
+           j.html          <script src="lib/tool.js?v=…">
+           lehrer.html     <script src="lib/tool.js?v=…">
+           lib/preview.js  s.src = 'lib/tool.js?v=…'
+           index.html      <script src="preview/…?v=…">  (nur Kachel)
+
+       Wird nur hier gedreht, passiert im Browser NICHTS: er behält
+       die alte lib/tool.js, die den alten Stempel trägt, und lädt
+       damit weiter das alte Werkzeug. Genau so ging am 08.09.2026 die
+       neue Reliefkarte von Wordisland unter — der Umbau war fertig,
+       auf dem Bildschirm stand die alte Karte, und es sah aus, als
+       wäre nichts geschehen. */
     const v = '?v=20260908b';
 
     loading[id] = new Promise((resolve, reject) => {

@@ -130,7 +130,10 @@ body {
    Schiff über der Beschriftung, obwohl der Kasten 84 Pixel hoch ist. */
 .sr-fpic { width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 4px; }
 .sr-fpic img { display: block; height: 76px; max-width: 100%; object-fit: contain; }
-.sr-fpic img.cut { filter: url(#wiCut) drop-shadow(0 4px 6px rgba(0,0,0,.55)); }
+/* Kein url(#wiCut) mehr: die Schiffe sind seit dem 08.09.2026
+   freigestellte PNG. Der Freistell-Filter schneidet nach Helligkeit
+   und nähme ihnen als Erstes die Segel. */
+.sr-fpic img.cut { filter: drop-shadow(0 4px 6px rgba(0,0,0,.55)); }
 .sr-fpic img.small { height: 44px; }
 .sr-fname { font-weight: 800; font-size: .76rem; text-align: center; line-height: 1.2; }
 .sr-fnote { font-size: .63rem; color: #79838f; text-align: center; }
@@ -703,29 +706,39 @@ function shade(h, amt) { return rgb(hx(h).map(c => c * (1 + amt))); }
 /* ══════════════════════════════════════════════════════════════════
    2 · DIE VÖLKER UND IHRE BILDER
    ══════════════════════════════════════════════════════════════════
-   Schiffe sind noch JPG auf weißem Grund (Filter #wiCut), die
-   Einheiten sind fertige PNG mit Transparenz. Neue Bilder werden HIER
+   Schiffe UND Einheiten sind inzwischen fertige PNG mit Transparenz;
+   der Freistell-Filter #wiCut wird nirgends mehr angewendet und steht
+   nur noch als Nachschlagewerk im Dokument. Neue Bilder werden HIER
    eingetragen und nirgends sonst.
 
    Die Burgen sind raus — sie gehören woandershin. Die Dateien liegen
    weiter im Ordner `sprites`; auf der Karte markiert jetzt eine
    kleine Fahne den Landeplatz.                                     */
 
-/* Die Schiffe hießen bis eben `Gemini_Generated_Image_…` und heißen
-   jetzt nach ihrer Farbe. Der Unterschied ist nicht kosmetisch: unter
-   den alten Namen fand der Browser die Dateien nicht mehr, und weil
-   ein fehlendes <image> in SVG stillschweigend nichts zeichnet, lag
-   die Karte einfach ohne Schiffe da. Der Prüfstand sieht so etwas,
-   das Auge erst beim Suchen.
-   „yello" ist kein Tippfehler von mir — so heißt die Datei.        */
-const S = f => 'sprites/' + encodeURIComponent(f + ' schiff.jpg');
-const P = f => 'sprites/' + encodeURIComponent(f);
+/* Die Schiffe. Sie hießen schon „Gemini_Generated_Image_…", dann
+   „<farbe> schiff.jpg" und heißen jetzt „<Farbe> Schiff.png" —
+   Sönkes eigene, freigestellt. Umbenennen ist nicht kosmetisch: unter
+   einem alten Namen findet der Browser die Datei nicht mehr, und weil
+   ein fehlendes <image> in SVG stillschweigend nichts zeichnet, liegt
+   die Karte dann einfach ohne Schiffe da. Der Prüfstand sieht so
+   etwas, das Auge erst beim Suchen.
+   ⚠️ Und weil es jetzt freigestellte RGBA-PNG sind, laufen sie NICHT
+   mehr durch #wiCut: der schneidet nach Helligkeit, und das Hellste
+   an einem Schiff sind die Segel. Der Filter bleibt im Dokument —
+   die Rechnung dahinter ist zu teuer erkauft, um sie wegzuwerfen. */
+const S = f => 'sprites/' + encodeURIComponent(f + ' Schiff.png');
+/* Die Einheiten sind weiter aus Kingdoms geliehen — dieselben
+   Dateien, die auch tool.js nimmt (ASSET_DIR dort). Im Ordner
+   `sprites` liegen zwar `<farbe> crew.jpg`, aber das sind JPG auf
+   weißem Grund: in der Völker-Leiste stünde jedes Volk in einem
+   weißen Kasten. */
+const P = f => '../clash-of-math/sprites/' + encodeURIComponent(f);
 
 const FLEET = [
   { key: 'red',     name: 'Toast-Ritter',      c: '#ef4444', img: S('red'),     note: 'Stahlgaleone' },
   { key: 'rosa',    name: 'Wolken-Piraten',    c: '#f472b6', img: S('rosa'),    note: 'Luftschiff · noch ohne Volk' },
-  { key: 'green',   name: 'Brokkoli-Giraffen', c: '#10b981', img: S('grün'),    note: 'Baumschiff' },
-  { key: 'yellow',  name: 'Mal-Hasen',         c: '#f59e0b', img: S('yello'),   note: 'Kartonsegler' },
+  { key: 'green',   name: 'Brokkoli-Giraffen', c: '#10b981', img: S('green'),    note: 'Baumschiff' },
+  { key: 'yellow',  name: 'Mal-Hasen',         c: '#f59e0b', img: S('yellow'),   note: 'Kartonsegler' },
   { key: 'lila',    name: 'Kosmische Katzen',  c: '#a855f7', img: S('lila'),    note: 'Kristallschiff' },
   { key: 'tuerkis', name: 'Okto-Pferdchen',    c: '#06b6d4', img: S('türkis'),  note: 'Schnecken-U-Boot' },
   { key: 'magenta', name: 'Spuk-Einhorn',      c: '#d946ef', img: S('magenta'), note: 'Geisterschiff · noch ohne Volk' }
@@ -733,12 +746,12 @@ const FLEET = [
 /* Die sechs, die antreten — in der Reihenfolge von tool.js, damit die
    Farben zu den Volksnummern passen. */
 const TEAMS = [
-  { name: 'Toast-Ritter',      c: '#ef4444', ship: S('red'),    unit: P('red crew.jpg') },
-  { name: 'Robo-Enten',        c: '#3b82f6', ship: S('blue'),   unit: P('blue crew.jpg') },
-  { name: 'Brokkoli-Giraffen', c: '#10b981', ship: S('grün'),   unit: P('grün crew.jpg') },
-  { name: 'Mal-Hasen',         c: '#f59e0b', ship: S('yello'),  unit: P('yellow crew.jpg') },
-  { name: 'Kosmische Katzen',  c: '#a855f7', ship: S('lila'),   unit: P('lila crew.jpg') },
-  { name: 'Okto-Pferdchen',    c: '#06b6d4', ship: S('türkis'), unit: P('türkis crew.jpg') }
+  { name: 'Toast-Ritter',      c: '#ef4444', ship: S('red'),    unit: P('red ToastKnights.png') },
+  { name: 'Robo-Enten',        c: '#3b82f6', ship: S('blue'),   unit: P('blue roboDucks.png') },
+  { name: 'Brokkoli-Giraffen', c: '#10b981', ship: S('green'),   unit: P('green BrokkoliGiraffen.png') },
+  { name: 'Mal-Hasen',         c: '#f59e0b', ship: S('yellow'),  unit: P('yellow PainingBunnies.png') },
+  { name: 'Kosmische Katzen',  c: '#a855f7', ship: S('lila'),   unit: P('lila cosmicCat.png') },
+  { name: 'Okto-Pferdchen',    c: '#06b6d4', ship: S('türkis'), unit: P('türkis OctoPferdchen.png') }
 ];
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2016,7 +2029,7 @@ function shipLayer(svg, isl, cfg) {
     el('ellipse', { cx: 0, cy: .14, rx: 1.0, ry: .22, fill: cfg.sea.foam, opacity: .2, filter: 'url(#wiB2)' }, bob);
     img(bob, TEAMS[k].ship, {
       x: -1.3, y: -2.35, width: 2.6, height: 2.6,
-      preserveAspectRatio: 'xMidYMax meet', filter: 'url(#wiCut)'
+      preserveAspectRatio: 'xMidYMax meet'
     });
     /* Die Planke: der Weg vom Schiff auf die Insel. Blass — sie
        erklärt etwas, sie will nicht mit den Feldern konkurrieren. */

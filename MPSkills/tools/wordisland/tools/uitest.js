@@ -180,9 +180,14 @@ async function testTablet() {
      da, nachdem die Dateien umbenannt worden waren. Deshalb wird
      hier nicht nur der Pfad geprüft, sondern die DATEI. */
   const shipHref = ship.querySelector('.wi-shipimg').getAttribute('href') || '';
-  ok('Schiffsbild gesetzt', /wordisland\/sprites\/red%20schiff\.jpg$/.test(shipHref), shipHref);
+  ok('Schiffsbild gesetzt', /wordisland\/sprites\/red%20Schiff\.png$/.test(shipHref), shipHref);
   ok('Schiffsbild liegt auch wirklich da',
      fs.existsSync(path.join(HERE, '..', '..', '..', decodeURI(shipHref))), shipHref);
+  /* Und es läuft NICHT durch den Freistell-Filter. Die Schiffe sind
+     freigestellte RGBA-PNG; der Filter schnitte nach Helligkeit und
+     nähme als Erstes die Segel mit. */
+  ok('Schiffsbild ohne Freistell-Filter',
+     !ship.querySelector('.wi-shipimg').getAttribute('filter'));
   // Der Landeplatz liegt bei (0,0) — das Schiff muss deutlich daneben
   // liegen, sonst ist es doch wieder ein Feld.
   const at = /translate\(\s*(-?[\d.]+)\s+(-?[\d.]+)\s*\)/.exec(ship.getAttribute('transform') || '');
