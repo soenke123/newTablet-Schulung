@@ -205,16 +205,46 @@
   /* ═══════════════════════════════════════════════════════════
      Kachel-Standbild
      ═══════════════════════════════════════════════════════════
-     Ein leichter Nachbau, keine laufende Anwendung: dieselbe
-     Insel, ein paar Felder schon in Farbe, die Lichtpunkte an. In
-     einer 320 px breiten Kachel muss das aus zwei Metern noch als
-     „Insel im Nebel" lesbar sein — mehr soll es nicht.          */
+     Ein leichter Nachbau, keine laufende Anwendung — aber seit dem
+     Umbau der Karte (08.09.2026) einer im RICHTIGEN Kleid: Relief
+     und Tonstufen-Nebel. Die Kachel wirbt sonst mit einer Optik,
+     die es im Raum nicht mehr gibt, und das fällt genau dann auf,
+     wenn jemand zum ersten Mal draufklickt.
+
+     Was hier NICHT nachgebaut wird, sind die Filter: kein
+     Wolkenrand, keine Rauschschlieren, keine Brandung. In einer
+     320 px breiten Kachel mit 250 Feldern ist eine Kachelkante
+     einen Pixel breit — die Sechseckstufen im Nebelrand sieht
+     dort niemand, drei Turbulenzen je Aufruf der Startseite
+     bezahlt aber jeder. Was bleibt, ist das, was aus zwei Metern
+     trägt: einfarbig tiefes Wasser, Land mit Höhe, eine helle
+     Nebelmasse, die zum Rand hin durchsichtig wird, und die
+     Lichtpunkte der besonderen Orte.
+
+     Die Zahlen (Höhen, Töne, Farben) sind dieselben wie in
+     tools/wordisland/tool.js. Wer sie dort dreht, sollte sie hier
+     mitdrehen — sonst wirbt die Kachel für eine andere Insel.  */
   const TEAM_FILL = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b'];
+  const LAND = { sand: '#e3cf9c', gras: '#7fae5c', wald: '#4a8449', fels: '#9aa6ac' };
+  const SEA_DEEP = '#052131';
+  const FOG_BODY = '#e4eef5';
+  /* Zieltöne von außen nach innen — und daraus die Deckung der
+     gestapelten Schichten: von .55 auf .82 zu kommen kostet nicht
+     .82, sondern .60. Dieselbe Rechnung wie stufenDeckung() im
+     Werkzeug. */
+  const FOG_TOENE = [.55, .82, 1];
+
+  const hx = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const rgb = a => '#' + a.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  const mix = (a, b, t) => { const A = hx(a), B = hx(b); return rgb([0, 1, 2].map(i => A[i] + (B[i] - A[i]) * t)); };
+  const shade = (h, amt) => rgb(hx(h).map(c => c * (1 + amt)));
 
   function tileHTML() {
     const w = buildIsland(20260907);
-    // Ein Standbild mitten im Spiel: jedes Volk hat sich ein Stück
-    // vorgearbeitet, der größte Teil liegt noch im Nebel.
+    /* Ein Standbild mitten im Spiel — und zwar in der zweiten
+       Hälfte. Bei zehn eroberten Feldern wäre die Kachel eine
+       weiße Fläche mit vier bunten Punkten; die Karte hat aber
+       nur dann etwas zu zeigen, wenn Land UND Nebel darauf sind. */
     const grow = (team, n) => {
       for (let i = 0; i < n; i++) {
         const mine = w.cells.filter(t => t.own === String(team));
@@ -230,7 +260,54 @@
         cand[0].own = String(team);
       }
     };
-    [9, 7, 8, 5].forEach((n, i) => grow(i, n));
+    /* Ein Drittel erobert. Die Zahlen sind nachgezählt und nicht
+       geschätzt: die Völker fressen sich zur Mitte vor, und ab
+       etwa der Hälfte ist der Nebel nur noch ein Ring — dann hat er
+       keinen Kern mehr, und die Tonstufen zeigen genau das, was
+       sie ausmacht, nicht mehr. Bei einem Drittel bleiben 99 Felder
+       Nebel mit 30 im zweiten Ring und einem geschlossenen Kern. */
+    [14, 11, 13, 9].forEach((n, i) => grow(i, n));
+
+    /* Abstand zum Wasser (Breitensuche von der Küste) — daraus
+       Strand und Höhe, genau wie im Werkzeug. */
+    for (const t of w.cells) t.rand = 1e9;
+    let front = w.cells.filter(t => neighbors(t.r, t.c).some(([nr, nc]) => !w.isLand(nr, nc)));
+    front.forEach(t => { t.rand = 1; });
+    while (front.length) {
+      const next = [];
+      for (const t of front) for (const [nr, nc] of neighbors(t.r, t.c)) {
+        const n = w.at.get(nr + '/' + nc);
+        if (n && n.rand > t.rand + 1) { n.rand = t.rand + 1; next.push(n); }
+      }
+      front = next;
+    }
+    for (const t of w.cells) {
+      const x = cxOf(t.r, t.c), y = cyOf(t.r);
+      const n1 = (Math.sin(x * .62) + Math.sin(y * .71) + Math.sin((x + y) * .43)) / 3;
+      t.boden = t.rand <= 1 ? 'sand'
+              : (t.rand === 2 && n1 > .05) ? 'sand'
+              : n1 > .34 ? 'wald'
+              : 'gras';
+    }
+
+    /* Nebeltiefe: 1 = Randfeld (mindestens ein Nachbar ist nicht
+       verhüllt — auch das offene Meer zählt). */
+    const fog = w.cells.filter(t => t.own === '.');
+    const drin = new Set(fog);
+    const tiefe = new Map();
+    let f2 = fog.filter(t => neighbors(t.r, t.c).some(([nr, nc]) => {
+      const n = w.at.get(nr + '/' + nc); return !n || !drin.has(n);
+    }));
+    f2.forEach(t => tiefe.set(t, 1));
+    while (f2.length) {
+      const next = [];
+      for (const t of f2) for (const [nr, nc] of neighbors(t.r, t.c)) {
+        const n = w.at.get(nr + '/' + nc);
+        if (!n || !drin.has(n) || tiefe.has(n)) continue;
+        tiefe.set(n, tiefe.get(t) + 1); next.push(n);
+      }
+      f2 = next;
+    }
 
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const t of w.cells) {
@@ -243,24 +320,55 @@
       const a = (Math.PI / 180) * (30 + 60 * k);
       hex.push([Math.cos(a) / Math.sqrt(3), Math.sin(a) / Math.sqrt(3)]);
     }
+    const hexPath = (x, y, s) =>
+      hex.map(([dx, dy], i) => (i ? 'L' : 'M') + (x + dx * s).toFixed(2) + ' ' + (y + dy * s).toFixed(2)).join('') + 'Z';
 
-    const cellsSvg = w.cells.map(t => {
-      const x = cxOf(t.r, t.c), y = cyOf(t.r);
-      const fill = t.own === '.' ? '#3c5766' : TEAM_FILL[+t.own];
-      return `<polygon points="${hex.map(([dx, dy]) => `${(x + dx).toFixed(2)},${(y + dy).toFixed(2)}`).join(' ')}"
-                       fill="${fill}" stroke="rgba(0,0,0,.18)" stroke-width=".03"/>`;
+    /* Die Säulen, von hinten nach vorn — sonst steht eine hintere
+       Säule vor einer vorderen. */
+    const cellsSvg = w.cells.slice().sort((a, b) => (a.r - b.r) || (a.c - b.c)).map(t => {
+      const x = cxOf(t.r, t.c), y0 = cyOf(t.r);
+      const on = t.own !== '.';
+      const stufe = t.boden === 'sand' ? .20 : t.rand === 2 ? .40 : .56;
+      const h = on ? stufe : .10;
+      const y = y0 - h + .1;
+      const deck = on
+        ? mix(LAND[t.boden], TEAM_FILL[+t.own], .5 * (t.boden === 'sand' ? .62 : 1))
+        : LAND[t.boden];
+      const seite = on ? shade(deck, -.45) : shade(LAND[t.boden], -.5);
+      /* Die Seitenfläche: der untere Rand des Sechsecks, um die
+         Höhe nach unten verlängert (Ecken 2, 1, 0). */
+      const p = [2, 1, 0].map(i => [x + hex[i][0], y + hex[i][1]]);
+      const side = 'M' + p.map(([a, b]) => `${a.toFixed(2)} ${b.toFixed(2)}`).join('L')
+        + 'L' + p.slice().reverse().map(([a, b]) => `${a.toFixed(2)} ${(b + h + .06).toFixed(2)}`).join('L') + 'Z';
+      return `<path d="${side}" fill="${seite}"/>`
+           + `<path d="${hexPath(x, y, 1)}" fill="${deck}" stroke="rgba(0,0,0,.16)" stroke-width=".015"/>`;
+    }).join('');
+
+    /* Der Nebel in drei gestapelten Schichten: die unterste deckt
+       alles, jede weitere nur noch, was tiefer liegt. Am Rand
+       schimmert dadurch das Land durch. */
+    let vor = 0;
+    const fogSvg = FOG_TOENE.map((ton, i) => {
+      const deck = vor >= 1 ? 1 : (ton - vor) / (1 - vor);
+      vor = ton;
+      const d = fog.filter(t => i === 0 || (tiefe.get(t) || 99) > i)
+        .map(t => hexPath(cxOf(t.r, t.c), cyOf(t.r), 1.06)).join('');
+      return `<path d="${d}" fill="${FOG_BODY}" opacity="${deck.toFixed(2)}"/>`;
     }).join('');
 
     const ruinSvg = w.cells.filter(t => t.ruin > 0).map(t =>
       `<circle cx="${cxOf(t.r, t.c).toFixed(2)}" cy="${cyOf(t.r).toFixed(2)}"
-               r="${(0.13 + 0.05 * t.ruin).toFixed(2)}" fill="#ffcf4d" opacity=".8"/>`).join('');
+               r="${(0.16 + 0.06 * t.ruin).toFixed(2)}" fill="#ffbe2e" opacity=".75"/>`).join('');
 
     return `
       <div class="tprev tprev--wi">
         <svg viewBox="${(minX - pad).toFixed(2)} ${(minY - pad).toFixed(2)}
                       ${(maxX - minX + 2 * pad).toFixed(2)} ${(maxY - minY + 2 * pad).toFixed(2)}"
              preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-          ${cellsSvg}${ruinSvg}
+          <rect x="${(minX - pad - 4).toFixed(2)}" y="${(minY - pad - 4).toFixed(2)}"
+                width="${(maxX - minX + 2 * pad + 8).toFixed(2)}"
+                height="${(maxY - minY + 2 * pad + 8).toFixed(2)}" fill="${SEA_DEEP}"/>
+          ${cellsSvg}${fogSvg}${ruinSvg}
         </svg>
       </div>`;
   }

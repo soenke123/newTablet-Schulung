@@ -45,9 +45,13 @@
    und danach je Takt eine Zeichenkette mit EINEM Zeichen je Feld
    (`own`: '.' = Nebel, '0'..'5' = SLOT). Bei 500 Feldern sind das
    500 Byte statt 12 KB — dreißigmal alle vier Sekunden. Das SVG
-   wird deshalb einmal gebaut und danach nur noch umgefärbt; neu
-   gebaut wird es erst, wenn `map_key` wechselt (= neue Runde, neue
-   Insel).
+   wird deshalb einmal gebaut und danach nur noch umgefärbt und
+   angehoben; neu gebaut wird es erst, wenn `map_key` wechselt
+   (= neue Runde, neue Insel).
+
+   Wie die Karte AUSSIEHT, steht im großen Abschnitt „DIE KARTE"
+   weiter unten: Relief mit Tonstufen-Nebel, übernommen aus
+   showroom.html (Sönke, 08.09.2026).
 
    ── Die Schiffe ───────────────────────────────────────────────
    Ein Landeplatz ist ein FELD, das Schiff davor ist keines. Es
@@ -58,11 +62,15 @@
    `is_home`, und wo das Meer liegt, rechnet buildMap selbst aus.
 
    ── Die Bilder der Völker ─────────────────────────────────────
-   ⚠️ VORLÄUFIG geliehen aus tools/clash-of-math/sprites/. Eigene
-   Bilder kommen nach; dann ändert sich nur TEAMS[].img/.team und der
-   Ordner darunter. Der Pfad ist absichtlich der volle ab MPSkills/:
-   ein in tool.js gebautes <img>/<image> löst relativ zur SEITE auf
-   (j.html, lehrer.html), nicht relativ zu dieser Datei.
+   Zwei Ordner, zwei Sorten Bild:
+     · Einheit und Gruppenbild sind ⚠️ VORLÄUFIG aus
+       tools/clash-of-math/sprites/ geliehen (TEAMS[].img/.team).
+     · Die SCHIFFE liegen schon hier: tools/wordisland/sprites/
+       (TEAMS[].ship). Sönke liefert eigene nach — dann ändert sich
+       genau diese eine Spalte und sonst nichts.
+   Der Pfad ist absichtlich der volle ab MPSkills/: ein in tool.js
+   gebautes <img>/<image> löst relativ zur SEITE auf (j.html,
+   lehrer.html), nicht relativ zu dieser Datei.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -76,19 +84,27 @@
 
      `img` ist die Einheit (Kopfzeile, Karte, Ergebnis), `team` das
      Gruppenbild mit Burg — es steht nur in der Lobby, wo Platz für
-     ein Porträt ist. Der Dateiname von Gelb ist wirklich „yello
-     Team.png": Tippfehler im Ordner, nicht hier.                */
+     ein Porträt ist. `ship` ist das Schiff auf der Karte.
+
+     Die Dateinamen sind so, wie sie im Ordner stehen, samt Umlaut
+     und samt Tippfehler („yello schiff.jpg", „yello Team.png").
+     Sie hier zu korrigieren hieße, auf Dateien zu zeigen, die es
+     nicht gibt — und ein fehlendes <image> zeichnet in SVG
+     stillschweigend NICHTS. Beim ersten Anlauf im Showroom lag die
+     Karte deshalb einfach ohne Schiffe da.                      */
   const ASSET_DIR = 'tools/clash-of-math/sprites/';
+  const SHIP_DIR = 'tools/wordisland/sprites/';
   const TEAMS = [
-    { name: 'Toast-Ritter',      color: '#ef4444', img: 'red ToastKnights.png',       team: 'red Team.png' },
-    { name: 'Robo-Enten',        color: '#3b82f6', img: 'blue roboDucks.png',         team: 'blue Team.png' },
-    { name: 'Brokkoli-Giraffen', color: '#10b981', img: 'green BrokkoliGiraffen.png', team: 'green Team.png' },
-    { name: 'Mal-Hasen',         color: '#f59e0b', img: 'yellow PainingBunnies.png',  team: 'yello Team.png' },
-    { name: 'Kosmische Katzen',  color: '#a855f7', img: 'lila cosmicCat.png',         team: 'lila Team.png' },
-    { name: 'Okto-Pferdchen',    color: '#06b6d4', img: 'türkis OctoPferdchen.png',   team: 'türkis Team.png' }
+    { name: 'Toast-Ritter',      color: '#ef4444', img: 'red ToastKnights.png',       team: 'red Team.png',    ship: 'red schiff.jpg' },
+    { name: 'Robo-Enten',        color: '#3b82f6', img: 'blue roboDucks.png',         team: 'blue Team.png',   ship: 'blue schiff.jpg' },
+    { name: 'Brokkoli-Giraffen', color: '#10b981', img: 'green BrokkoliGiraffen.png', team: 'green Team.png',  ship: 'grün schiff.jpg' },
+    { name: 'Mal-Hasen',         color: '#f59e0b', img: 'yellow PainingBunnies.png',  team: 'yello Team.png',  ship: 'yello schiff.jpg' },
+    { name: 'Kosmische Katzen',  color: '#a855f7', img: 'lila cosmicCat.png',         team: 'lila Team.png',   ship: 'lila schiff.jpg' },
+    { name: 'Okto-Pferdchen',    color: '#06b6d4', img: 'türkis OctoPferdchen.png',   team: 'türkis Team.png', ship: 'türkis schiff.jpg' }
   ];
   const TEAM_COUNT = TEAMS.length;
   const esrc = name => encodeURI(ASSET_DIR + name);
+  const shipSrc = f => (TEAMS[f] && TEAMS[f].ship) ? encodeURI(SHIP_DIR + TEAMS[f].ship) : '';
 
   const SVGNS = 'http://www.w3.org/2000/svg';
   const POLL_MS = { participant: 4000, presenter: 3000 };
@@ -145,26 +161,82 @@
     { name: 'Volk ' + (s + 1), color: '#888', img: '', team: '' };
 
   /* ══════════════════════════════════════════════════════════
-     Die Karte
+     DIE KARTE
      ══════════════════════════════════════════════════════════
-     Spitze oben, versetzte Reihen — dieselbe Geometrie wie im
+     Sönke, 08.09.2026, nach drei Runden Showroom: „wir nehmen
+     relief mit tonstufen nebel". Das hier ist die Übernahme aus
+     `showroom.html` — von fünf Kartenvarianten und fünf Nebelarten
+     bleibt genau eine Paarung übrig, und alles, was nur zum
+     Vergleichen da war, ist raus (Bänder, Verläufe, Schleier,
+     Sturmfront, die Regler).
+
+     Der Showroom bleibt trotzdem stehen. Er ist der Ort, an dem
+     eine Gestaltungsfrage entschieden wird, ohne dafür das Spiel
+     anzufassen; hier steht nur noch das Ergebnis.
+
+     ── Was das Relief ausmacht ───────────────────────────────
+     Jedes Feld ist ein flaches Prisma mit einer Höhe: Strand
+     niedrig, Landesinneres höher, Fels am höchsten — die Insel
+     fällt zum Wasser hin ab. Unter Wasser geht das Gefälle als
+     Stufen weiter: vier Tiefenlinien, jede mit einer eigenen
+     Kante, dahinter einfarbig tiefes Wasser. Verhülltes Land liegt
+     flach, erobertes steht auf. Damit ist „erobert" eine Bewegung
+     und nicht nur eine Farbe.
+
+     ── Was die Tonstufen ausmachen ───────────────────────────
+     Der Nebel deckt im Kern ganz und wird erst an den äußeren zwei
+     Feldern durchsichtig — in zwei festen Stufen, ohne Verlauf.
+     Was tief im Nebel liegt, bleibt unbekannt; was gleich an der
+     Reihe ist, schimmert schon durch. Der Rand ist damit keine
+     Grenze, sondern eine Ankündigung, und er wandert mit.
+
+     ── Woher die Daten kommen ────────────────────────────────
+     Der Showroom hat sich seine Insel selbst gewürfelt und den
+     Fortschritt aus einem Regler gezogen. Hier kommt beides vom
+     Server: die Felder als `map` ([r, c, ruin, home]) und je Takt
+     eine Zeichenkette `own` mit EINEM Zeichen je Feld ('.' =
+     Nebel, '0'..'5' = Slot). Was der Server NICHT schickt und was
+     deshalb hier gerechnet wird:
+
+       rand   Abstand zum Wasser (Breitensuche von der Küste) —
+              daraus die Höhe der Säule und der Strand.
+       boden  Sand, Wiese, Wald, Fels aus zwei überlagerten
+              Sinusfeldern. Deren Phasen hängen am `map_key`:
+              gleiche Runde, gleiches Gelände auf jedem Gerät —
+              und trotzdem jede Runde eine andere Insel.
+       Mitte  Der Server rechnet in seinen eigenen Koordinaten und
+              nicht um den Nullpunkt. Alles, was „nach außen"
+              braucht (Brandung, Schiffsrichtung, Fels in der
+              Inselmitte), rechnet deshalb gegen den Schwerpunkt
+              der Felder und nicht gegen 0,0.
+
+     ── Warum eigene Filter-Nummern je Aufbau ─────────────────
+     Die Filter liegen IM Karten-SVG und nicht im Dokument: so
+     verschwinden sie mit der Karte, wenn eine neue Runde beginnt.
+     Ihre Nummern tragen einen Zähler, damit zwei Karten, die sich
+     kurz überlappen (Neuaufbau bei laufender Runde), sich nicht
+     gegenseitig die Filter wegdefinieren.                       */
+
+  const SQ3 = Math.sqrt(3);
+  const n2 = v => Math.round(v * 100) / 100;
+
+  /* Spitze oben, versetzte Reihen — dieselbe Geometrie wie im
      Server (wi_is_neighbor): waagerechter Abstand 1, senkrechter
      0.866, ungerade Zeilen um eine halbe Breite nach rechts. */
-  const HEX = (() => {
-    const pts = [];
-    for (let k = 0; k < 6; k++) {
-      const a = (Math.PI / 180) * (30 + 60 * k);
-      pts.push([Math.cos(a) / Math.sqrt(3), Math.sin(a) / Math.sqrt(3)]);
-    }
-    return pts;   // in Einheiten des waagerechten Abstands
-  })();
-
+  const HEX = Array.from({ length: 6 }, (_, k) => {
+    const a = (Math.PI / 180) * (30 + 60 * k);
+    return [Math.cos(a) / SQ3, Math.sin(a) / SQ3];
+  });
   const cx = (r, c) => c + 0.5 * (((r % 2) + 2) % 2);
   const cy = r => r * 0.8660254;
 
+  /* Nachbar-Nummer → Kanten-Nummer. Kante e liegt zwischen Ecke e
+     und Ecke e+1. Falsch übersetzt umrandet man die falsche
+     Kachelseite — und das sieht aus wie ein Fehler in den Daten. */
+  const EDGE = [3, 4, 2, 5, 1, 0];
+
   /* Die sechs Nachbarn eines Feldes — dieselbe Versetzung wie im
-     Server (wi_neighbors). Gebraucht wird das hier nur für EINE
-     Frage: auf welcher Seite eines Landeplatzes liegt das Meer? */
+     Server (wi_neighbors). */
   function neighbors(r, c) {
     const odd = (((r % 2) + 2) % 2) === 1;
     const d = odd ? [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]]
@@ -172,205 +244,1112 @@
     return d.map(([dr, dc]) => [r + dr, c + dc]);
   }
 
+  function hexPath(x, y, s) {
+    let d = '';
+    for (let i = 0; i < 6; i++) {
+      d += (i ? 'L' : 'M') + n2(x + HEX[i][0] * s) + ' ' + n2(y + HEX[i][1] * s);
+    }
+    return d + 'Z';
+  }
+  function union(cs, gap) {
+    let d = '';
+    for (const z of cs) d += hexPath(z.x, z.y, gap);
+    return d;
+  }
+
+  /* `null` heißt „dieses Merkmal nicht setzen" und nicht „setz es
+     auf die Zeichenkette null". Der Unterschied ist hier kein
+     Schönheitsfehler: filter="null" zeigt auf einen Filter, den es
+     nicht gibt, und ein Element mit ungültiger Filterangabe wird
+     GAR NICHT gezeichnet — die halbe Karte wäre weg. */
+  function el(name, attrs, parent) {
+    const n = document.createElementNS(SVGNS, name);
+    for (const k in attrs) {
+      const v = attrs[k];
+      if (v === null || v === undefined) continue;
+      n.setAttribute(k, v);
+    }
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function img(parent, href, attrs) {
+    const n = el('image', attrs, parent);
+    n.setAttributeNS('http://www.w3.org/1999/xlink', 'href', href);
+    n.setAttribute('href', href);
+    return n;
+  }
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  /* Aus dem `map_key` eine Zahl. Gebraucht für das Gelände: gleiche
+     Runde → gleiche Wälder, auf jedem Tablet und am Beamer. */
+  function hashKey(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0) || 1;
+  }
+
+  /* Farbe mischen und abdunkeln. Beides wird gebraucht, weil die
+     Volksfarbe die Bodenfarbe EINFÄRBT statt sie zu überdecken —
+     sonst wäre die ganze Insel-Struktur unter sechs Farbeimern
+     weg. */
+  function hx(h) {
+    const n = parseInt(h.slice(1), 16);
+    return [n >> 16 & 255, n >> 8 & 255, n & 255];
+  }
+  const rgb = a => '#' + a.map(v =>
+    Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  function mix(a, b, t) { const A = hx(a), B = hx(b); return rgb([0, 1, 2].map(i => A[i] + (B[i] - A[i]) * t)); }
+  function shade(h, amt) { return rgb(hx(h).map(c => c * (1 + amt))); }
+
+  /* ─── Die Palette ───────────────────────────────────────────
+     Der Eintrag „Relief" aus dem Showroom, unverändert. Er steht
+     als EIN Block hier und nicht verteilt in tool.css, weil die
+     halbe Karte gemischte Farben braucht (Bodenfarbe × Volksfarbe,
+     abgedunkelte Seitenflächen) — und Mischrechnung gehört dorthin,
+     wo die Ausgangsfarben stehen.
+
+     `ink` ist die Farbe der Stufenkante im Wasser — nicht Schwarz,
+     sondern das dunkelste Blau: eine schwarze Kante im Meer liest
+     sich als Riss, eine dunkelblaue als Schatten. Die vier
+     Wassertöne liegen dicht beieinander; weiter auseinander wird
+     aus dem Saum ein leuchtender Ring, der die Insel erschlägt. */
+  const KARTE = {
+    sea: {
+      ink: '#02141f', deep: '#052131', deep2: '#083247', mid: '#0d4c64',
+      shallow: '#176c82', shallow2: '#4096a4', foam: '#dff4fa', wob: .30
+    },
+    land: { sand: '#e3cf9c', gras: '#7fae5c', wald: '#4a8449', fels: '#9aa6ac' },
+    fog: { body: '#e4eef5', puffL: '#ffffff', puffD: '#a3bacb', shadow: '#08283a', shadowOp: .38 },
+    gold: '#ffbe2e', signInk: '#22323b',
+    mix: .5
+  };
+
+  /* Wie weit ein Schiff vor seinem Landeplatz liegt. Steht hier und
+     nicht zweimal im Text: der Bildausschnitt muss die
+     Schiffsplätze mitfassen, sonst säbelt er die Masten ab. */
+  const SHIPD = 2.2;
+
+  /* ─── Die besonderen Orte ───────────────────────────────────
+     Ein Ort ist ein PLATZ, kein Bild: Sockel, Schatten und Größe
+     gehören der Karte, das Bild darin ist austauschbar. Sobald
+     `img` auf eine Datei zeigt, sitzt das Sprite im Platz und das
+     gezeichnete Zeichen verschwindet — ohne dass sonst irgendetwas
+     anzufassen wäre. Der Pfad ist der volle ab MPSkills/, weil ein
+     hier gebautes <image> relativ zur SEITE auflöst.
+
+     `hoch` ist das Verhältnis von Bildhöhe zur Sockelbreite: ein
+     Leuchtfeuer ist schlank und hoch, eine Ruine breit und flach.
+     `gross` ist die Übergröße — die Orte stehen absichtlich größer
+     als eine Kachel da, sonst sind sie am Beamer nicht zu finden. */
+  const PLACES = {
+    1: { name: 'Leuchtfeuer', img: null, gross: 1.20, hoch: 1.55 },
+    2: { name: 'Ruine',       img: null, gross: 1.45, hoch: 1.30 },
+    3: { name: 'Tempel',      img: null, gross: 1.85, hoch: 1.40 }
+  };
+  /* Die Platzhalter-Zeichen, solange keine Sprites da sind. Nicht
+     drei Größen desselben Punktes: ein Kind soll aus zehn Metern
+     sehen, WAS dort steht, nicht nur DASS dort etwas steht. */
+  const MARK = {
+    1: 'M0 -.30 C .17 -.12 .21 .04 .09 .16 C .07 .04 .02 .01 -.03 .16 C -.18 .02 -.11 -.14 0 -.30 Z',
+    2: 'M-.30 .22 L-.30 -.12 L-.16 -.18 L-.16 .22 Z M .04 .22 L .04 -.24 L .20 -.30 L .20 .22 Z '
+     + 'M-.30 -.12 L-.16 -.18 L-.16 -.06 L-.30 -.02 Z',
+    3: 'M-.36 .24 L .36 .24 L .36 .14 L-.36 .14 Z M-.26 .14 L-.26 -.06 L-.16 -.06 L-.16 .14 Z '
+     + 'M-.05 .14 L-.05 -.06 L .05 -.06 L .05 .14 Z M .16 .14 L .16 -.06 L .26 -.06 L .26 .14 Z '
+     + 'M-.34 -.06 L0 -.30 L .34 -.06 Z'
+  };
+
+  /* ─── Die Filter-Werkstatt ──────────────────────────────────
+     ⚠️ Bei ALLEN: die Werte rechnen in BENUTZEREINHEITEN, und eine
+     Einheit ist hier eine Kachel. stdDeviation="3" wäre kein
+     Weichzeichner, sondern ein Nebel über der halben Insel.
+
+     Nur die acht, die Relief + Tonstufen wirklich braucht. Im
+     Showroom liegen mehr; die gehören zu den Varianten, die wir
+     nicht genommen haben. */
+  let FID = 'wi_';
+  const F = n => 'url(#' + FID + n + ')';
+
+  function buildDefs(svg) {
+    const defs = el('defs', {}, svg);
+    const filt = (id, attrs, kinder) => {
+      const f = el('filter', Object.assign({
+        id: FID + id, 'color-interpolation-filters': 'sRGB'
+      }, attrs), defs);
+      kinder(f);
+      return f;
+    };
+
+    /* Weiß raus. Krücke für die Schiffe, die noch als JPG auf
+       weißem Grund liegen.
+
+       Der naheliegende Weg — eine feColorMatrix, die aus der
+       Helligkeit direkt den Alphakanal rechnet — sieht im Papier
+       richtig aus und liefert im Browser einen SCHWARZEN Kasten:
+       die Matrix setzt Alpha auf 0, lässt die Farbe aber auf Weiß
+       stehen, und beim Hin- und Herrechnen zwischen vor- und
+       nicht-multipliziertem Alpha wird daraus Schwarz mit voller
+       Deckung. Nachgemessen in tools/cuttest.html.
+
+       Der Weg, der trägt: die Helligkeit ZUERST in eine eigene
+       Maske verwandeln, weich abschneiden, und das Originalbild in
+       die Maske hineinstanzen. Das Bild behält seine Farben, weil
+       es nie durch die Matrix läuft. */
+    filt('cut', {}, f => {
+      el('feColorMatrix', { type: 'luminanceToAlpha', result: 'l' }, f);
+      const ct = el('feComponentTransfer', { in: 'l', result: 'm' }, f);
+      el('feFuncA', { type: 'table', tableValues: '1 1 1 1 1 1 1 1 .9 0 0' }, ct);
+      el('feComposite', { in: 'SourceGraphic', in2: 'm', operator: 'in' }, f);
+    });
+
+    /* Die Wolke: verzerren und weichzeichnen. Erst beides zusammen
+       macht aus einer Fläche einen Ballen. Mit weniger Auslenkung
+       überleben die 120-Grad-Ecken der Sechsecke den Filter, und
+       man sieht dem Nebel an, dass er aus Kacheln besteht. 0.9 ist
+       knapp eine Kachel — mehr wäre schön und würde anfangen zu
+       lügen, welches Feld noch verdeckt ist. */
+    const wolke = (id, blur) => filt(id, { x: '-18%', y: '-18%', width: '136%', height: '136%' }, f => {
+      el('feTurbulence', { type: 'fractalNoise', baseFrequency: '0.13 0.17', numOctaves: 4, seed: 4, result: 'n' }, f);
+      el('feDisplacementMap', { in: 'SourceGraphic', in2: 'n', scale: '0.90', xChannelSelector: 'R', yChannelSelector: 'G', result: 'd' }, f);
+      el('feGaussianBlur', { in: 'd', stdDeviation: blur }, f);
+    });
+    wolke('cloud', '0.15');
+    /* Der Schatten der Wolke: dieselbe Verzerrung, damit er unter
+       DIESE Wolke passt, nur weicher. */
+    wolke('cloudsh', '0.30');
+
+    /* Die drei Rauschlagen im Nebel. Der Grund, warum die erste
+       Fassung wie ein Haufen Kugeln aussah: sie WAR ein Haufen
+       Kugeln. Nebel hat keine Ballen, er hat Schlieren — und die
+       macht kein Kreis, sondern Rauschen, das QUER gröber ist als
+       LÄNGS.
+
+       Die Turbulenz erzeugt hier nur eine MASKE; die Farbe kommt
+       vom Rechteck darunter. Sonst wäre der Nebel immer weiß, egal
+       welche Palette darunter liegt.
+
+       Die dritte Lage (`fogc`, sehr grob, Wellenlänge um fünfzehn
+       Kacheln) ist die gegen die Gleichförmigkeit: sie macht keine
+       Schlieren, sondern Ballungen — hier steht der Nebel dicht,
+       zwei Kacheln weiter reißt er auf. */
+    const rausch = (id, freq, oct, seed, tab) =>
+      filt(id, { x: '0%', y: '0%', width: '100%', height: '100%' }, f => {
+        el('feTurbulence', { type: 'fractalNoise', baseFrequency: freq, numOctaves: oct, seed, stitchTiles: 'stitch', result: 't' }, f);
+        el('feColorMatrix', { in: 't', type: 'luminanceToAlpha', result: 'a' }, f);
+        const ct = el('feComponentTransfer', { in: 'a', result: 'm' }, f);
+        el('feFuncA', { type: 'table', tableValues: tab }, ct);
+        el('feComposite', { in: 'SourceGraphic', in2: 'm', operator: 'in' }, f);
+      });
+    rausch('foga', '0.19 0.30', 4, 12, '0 0 .18 .62 1');
+    rausch('fogb', '0.38 0.10', 3, 27, '0 0 0 .45 1');
+    rausch('fogc', '0.052 0.07', 2, 44, '0 0 .15 .95 1');
+
+    const blur = (id, sd, m) => filt(id, { x: m, y: m, width: (100 - 2 * parseFloat(m)) + '%', height: (100 - 2 * parseFloat(m)) + '%' }, f => {
+      el('feGaussianBlur', { stdDeviation: sd }, f);
+    });
+    blur('b1', '0.10', '-30%');
+    blur('b2', '0.22', '-30%');
+  }
+
+  /* ─── Aus der Feldliste eine Insel ──────────────────────────
+     Alles, was der Server nicht schickt, aber jede Schicht braucht.
+     Einmal je Runde, nicht je Takt. */
+  function inselDaten(list, key) {
+    const cells = [];
+    const idx = new Map();
+    list.forEach(([r, c, ruin, home], i) => {
+      idx.set(r + ',' + c, i);
+      cells.push({
+        i, r, c, x: cx(r, c), y: cy(r),
+        ruin: ruin | 0, home: !!home, rand: 1e9, boden: 'gras'
+      });
+    });
+    const at = (r, c) => idx.has(r + ',' + c) ? cells[idx.get(r + ',' + c)] : null;
+
+    /* Der Schwerpunkt. Der Server rechnet in seinen Koordinaten,
+       nicht um den Nullpunkt — und „nach außen" ohne Mitte ist
+       geraten. */
+    let sx = 0, sy = 0;
+    for (const z of cells) { sx += z.x; sy += z.y; }
+    const ctr = { x: sx / cells.length, y: sy / cells.length };
+    let R = 0;
+    for (const z of cells) R = Math.max(R, Math.hypot(z.x - ctr.x, z.y - ctr.y));
+    R = R || 1;
+
+    /* Wie weit ist ein Feld vom Wasser entfernt? Breitensuche vom
+       Rand nach innen. 1 = Küstenfeld. Daraus kommt die Höhe der
+       Säule und damit das Gefälle zur Küste. */
+    let f = cells.filter(z => neighbors(z.r, z.c).some(([nr, nc]) => !idx.has(nr + ',' + nc)));
+    f.forEach(z => { z.rand = 1; });
+    while (f.length) {
+      const next = [];
+      for (const z of f) for (const [nr, nc] of neighbors(z.r, z.c)) {
+        const n = at(nr, nc);
+        if (n && n.rand > z.rand + 1) { n.rand = z.rand + 1; next.push(n); }
+      }
+      f = next;
+    }
+
+    /* Der Boden. Zwei überlagerte Sinusfelder statt Würfeln: Wald
+       soll in Stücken stehen und nicht als Konfetti über die Insel
+       gestreut sein. Der Strand ergibt sich AUS `rand` und wird
+       nicht hingemalt — deshalb liegt er zwangsläufig am Rand. */
+    const rnd = mulberry32(hashKey(String(key || 'wi')));
+    const ph = [rnd() * 6.283, rnd() * 6.283, rnd() * 6.283, rnd() * 6.283];
+    for (const z of cells) {
+      const dx = z.x - ctr.x, dy = z.y - ctr.y;
+      const d = Math.hypot(dx, dy);
+      const n1 = (Math.sin(dx * .62 + ph[0]) + Math.sin(dy * .71 + ph[1]) + Math.sin((dx + dy) * .43 + ph[2])) / 3;
+      const n2v = (Math.sin(dx * .31 - ph[3]) + Math.cos(dy * .38 + ph[0])) / 2;
+      z.boden = z.rand <= 1 ? 'sand'
+              : (z.rand === 2 && n1 > .05) ? 'sand'
+              : (d < R * .55 && n2v < -.28) ? 'fels'
+              : n1 > .34 ? 'wald'
+              : 'gras';
+    }
+
+    /* Auf welcher Seite eines Landeplatzes liegt das Meer? Die
+       Summe der Wege zu allen Nachbarn, die kein Land sind
+       (Landeplätze sind laut wi_build_island immer Küstenfelder,
+       also gibt es mindestens einen). Fällt das aus, zeigt der Weg
+       von der Inselmitte nach außen — auch der endet im Wasser. */
+    const homes = cells.filter(z => z.home);
+    for (const h of homes) {
+      let dx = 0, dy = 0;
+      for (const [nr, nc] of neighbors(h.r, h.c)) {
+        if (idx.has(nr + ',' + nc)) continue;
+        dx += cx(nr, nc) - h.x; dy += cy(nr) - h.y;
+      }
+      if (Math.hypot(dx, dy) < 0.01) { dx = h.x - ctr.x; dy = h.y - ctr.y; }
+      const L = Math.hypot(dx, dy) || 1;
+      h.sx = dx / L; h.sy = dy / L;
+    }
+
+    return { cells, idx, at, homes, ctr, R };
+  }
+
+  /* ─── Die Küstenlinie als geschlossener Zug ─────────────────
+     Sie wird gebraucht, weil ein Strich auf der Vereinigung nicht
+     das tut, wonach es aussieht: eine Vereinigung ist ein Pfad aus
+     dreihundert einzelnen Sechsecken. Gefüllt ergibt das eine
+     Fläche, aber ein STRICH umrandet jedes Sechseck einzeln — die
+     bekannte Bienenwabe.
+
+     Also: alle Kanten sammeln, an denen Land ans Wasser stößt, und
+     zu Ringen zusammenhängen. Herauskommen PUNKTE und kein Pfad —
+     das Wasser stapelt seine Tiefenstufen darauf, die Brandung
+     setzt ihre Wellen darauf ab, und beide brauchen die Stellen
+     und nicht die Zeichenkette. */
+  function coastRings(isl, gap) {
+    /* Die Ecken auf HUNDERTSTEL runden, nicht feiner. Zwei Kanten,
+       die von verschiedenen Feldern aus gerechnet wurden, treffen
+       sonst nicht denselben Schlüssel — und die Kette reißt. Als
+       Strich sähe man den Fehler nicht (jedes Stück wird ja
+       gezeichnet), als FLÄCHE wäre die Insel weg. */
+    const K = (x, y) => Math.round(x * 100) + ',' + Math.round(y * 100);
+    const von = new Map();
+    const alle = [];
+    for (const z of isl.cells) {
+      const nb = neighbors(z.r, z.c);
+      for (let i = 0; i < 6; i++) {
+        if (isl.at(nb[i][0], nb[i][1])) continue;
+        const e = EDGE[i], a = HEX[e], b = HEX[(e + 1) % 6];
+        const s = {
+          ax: z.x + a[0] * gap, ay: z.y + a[1] * gap,
+          bx: z.x + b[0] * gap, by: z.y + b[1] * gap, used: false
+        };
+        alle.push(s);
+        const k = K(s.ax, s.ay);
+        if (!von.has(k)) von.set(k, []);
+        von.get(k).push(s);
+      }
+    }
+    const ringe = [];
+    for (const s0 of alle) {
+      if (s0.used) continue;
+      let s = s0; s.used = true;
+      const pts = [[s.ax, s.ay]];
+      for (let guard = 0; guard < 20000; guard++) {
+        pts.push([s.bx, s.by]);
+        const next = (von.get(K(s.bx, s.by)) || []).find(t => !t.used);
+        if (!next) break;
+        next.used = true; s = next;
+      }
+      /* Der letzte Punkt IST der erste — die Ringe kommen ohne
+         Doppelpunkt heraus, sonst muss jeder, der sie benutzt,
+         daran denken. */
+      if (pts.length > 4) ringe.push(pts.slice(0, -1));
+    }
+    return ringe;
+  }
+
+  /* Auslenkung des Küstenzugs. Gebraucht wird sie im Relief nur für
+     die WASSERSTUFEN: die sind mehrere Kopien desselben Zuges, und
+     mit derselben Auslenkung liefen sie exakt parallel — das sähe
+     aus wie der Rand eines Aufklebers. Mit verschobener Phase
+     kriecht jede Tiefenlinie anders um die Insel. */
+  const wOX = (x, y, ph) => Math.sin(x * 1.31 + y * .77 + ph) * .62 + Math.sin(x * .53 - y * 1.11 + ph * 1.7) * .38;
+  const wOY = (x, y, ph) => Math.cos(x * .91 - y * 1.23 + ph) * .62 + Math.cos(x * 1.43 + y * .61 + ph * 1.7) * .38;
+
+  function warpRing(pts, wob, ph) {
+    if (!wob) return pts;
+    return pts.map(([x, y]) => [x + wob * wOX(x, y, ph || 0), y + wob * wOY(x, y, ph || 0)]);
+  }
+
+  function ringsPath(ringe, wob, smooth, ph) {
+    let d = '';
+    for (const pts0 of ringe) {
+      const pts = warpRing(pts0, wob, ph);
+      const n = pts.length;
+      if (!smooth) {
+        d += 'M' + pts.map(([x, y]) => `${n2(x)} ${n2(y)}`).join('L') + 'Z';
+        continue;
+      }
+      /* Der Weg läuft durch die KANTENMITTEN und zieht die Ecken
+         nur an — dadurch verschwinden die 120-Grad-Ecken von
+         allein. */
+      const mid = i => [(pts[i][0] + pts[(i + 1) % n][0]) / 2, (pts[i][1] + pts[(i + 1) % n][1]) / 2];
+      let m = mid(0);
+      d += `M${n2(m[0])} ${n2(m[1])}`;
+      for (let i = 1; i <= n; i++) {
+        const p = pts[i % n], q = mid(i % n);
+        d += `Q${n2(p[0])} ${n2(p[1])} ${n2(q[0])} ${n2(q[1])}`;
+      }
+      d += 'Z';
+    }
+    return d;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Das Meer
+     ══════════════════════════════════════════════════════════
+     Was Wasser zu Wasser macht, ist nicht die Farbe, sondern der
+     ÜBERGANG: flach an der Küste, tief draußen, Brandung
+     dazwischen. Im Relief ist der Meeresgrund dasselbe Bauteil wie
+     die Insel darüber — gestapelte Platten. Das Relief hört damit
+     nicht am Strand auf.
+
+     Eine Stufe ist EIN Strich auf dem Küstenzug mit der doppelten
+     Breite ihres Abstands: die innere Hälfte verschwindet unter der
+     Insel, sichtbar bleibt ein Saum, der außen genau beim Abstand
+     endet. Reihenfolge: von tief nach flach, breit nach schmal.
+
+     Wie laut das Ganze ist, steckt in der Breite der Kante hier
+     unten, ihrer Deckung, und dem Abstand der vier Wasserfarben in
+     KARTE.sea. Sönkes Vorgabe nach der ersten Showroom-Runde:
+     leiser.
+
+     [Abstand von der Küste, Farbe, Breite der Kante]            */
+  const SHELF = [[2.55, 'deep2', .24], [1.66, 'mid', .20], [1.00, 'shallow', .17], [.46, 'shallow2', .14]];
+
+  function seaLayer(svg, isl, vb, dCoast, rings, opt) {
+    const g = el('g', { class: 'wi-sea' }, svg);
+    const M = 9;
+    const box = { x: n2(vb[0] - M), y: n2(vb[1] - M), width: n2(vb[2] + 2 * M), height: n2(vb[3] + 2 * M) };
+    el('rect', Object.assign({ fill: KARTE.sea.deep }, box), g);
+
+    SHELF.forEach(([off, key, shw], i) => {
+      /* Jede Stufe mit eigener Phase und nach außen hin stärker
+         ausgelenkt: die tiefste Linie ist die krummste. */
+      const amp = KARTE.sea.wob * (1 + (SHELF.length - 1 - i) * .22);
+      const d = ringsPath(rings, amp, true, 1.7 + i * 2.3);
+      /* Die Kante in zwei Lagen: außen breit und blass, innen
+         schmal und dunkel. Zusammen ist das ein Schattenverlauf
+         ohne einen einzigen Weichzeichner — und Weichzeichner sind
+         genau das, was diese Kante kaputt machen würde. */
+      el('path', { d, fill: 'none', stroke: KARTE.sea.ink, 'stroke-width': n2(2 * off + 2 * shw), 'stroke-linejoin': 'round', opacity: .13 }, g);
+      el('path', { d, fill: 'none', stroke: KARTE.sea.ink, 'stroke-width': n2(2 * off + shw), 'stroke-linejoin': 'round', opacity: .17 }, g);
+      el('path', { d, fill: 'none', stroke: KARTE.sea[key], 'stroke-width': n2(2 * off), 'stroke-linejoin': 'round' }, g);
+    });
+
+    swellMarks(g, isl, vb, opt);
+
+    /* Die Schaumlinie. Sie läuft — eine stehende Schaumlinie sieht
+       aus wie ein Rand um einen Aufkleber. */
+    el('path', {
+      class: 'wi-foam', d: dCoast, fill: 'none', stroke: KARTE.sea.foam,
+      'stroke-width': .15, 'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+      'stroke-dasharray': '.62 .48', opacity: .8
+    }, g);
+
+    surfMarks(g, isl, rings, opt);
+    return g;
+  }
+
+  /* ─── Die Brandung ──────────────────────────────────────────
+     Eine gestrichelte Linie an der Küste ist Schaum, aber keine
+     Welle: sie hat keine Richtung. Hier läuft je Marke ein kleiner
+     Bogen von außen auf das Land zu und verläuft dort — angehalten
+     sieht man Schaumkämme, in Bewegung sieht man Brandung.
+
+     Die Marken sitzen in gleichmäßigem Abstand AUF DEM WEG und
+     nicht auf den Eckpunkten des Küstenzugs: in einer Bucht liegen
+     die Punkte dicht, auf einer geraden Strecke weit auseinander —
+     nach Punkten verteilt bekäme die Bucht Schaumklumpen und die
+     Gerade nichts. */
+  function surfMarks(g, isl, rings, opt) {
+    const gg = el('g', {}, g);
+    const r = mulberry32(8123);
+    const step = opt.dicht ? 3.4 : 2.5;
+    for (const ring of rings) {
+      if (ring.length < 8) continue;
+      let t = r() * step;
+      for (let i = 0; i < ring.length; i++) {
+        const a = ring[i], b = ring[(i + 1) % ring.length];
+        const dx = b[0] - a[0], dy = b[1] - a[1];
+        const seg = Math.hypot(dx, dy) || 1e-6;
+        while (t < seg) {
+          const f = t / seg;
+          const x = a[0] + dx * f, y = a[1] + dy * f;
+          /* Die Senkrechte zur Küste — und zwar die, die nach
+             AUSSEN zeigt. Welche der beiden das ist, verrät der
+             Punkt selbst: die richtige zeigt von der Inselmitte
+             weg. (Im Showroom stand hier der Nullpunkt; der Server
+             legt seine Insel aber nicht um 0,0.) */
+          let nx = -dy / seg, ny = dx / seg;
+          if (nx * (x - isl.ctr.x) + ny * (y - isl.ctr.y) < 0) { nx = -nx; ny = -ny; }
+          const s = .78 + r() * .5;
+          const gm = el('g', {
+            transform: `translate(${n2(x + nx * .34)} ${n2(y + ny * .34)}) `
+                     + `rotate(${n2(Math.atan2(ny, nx) * 180 / Math.PI)}) scale(${n2(s)})`
+          }, gg);
+          const gi = el('g', { class: 'wi-surf' }, gm);
+          gi.style.animationDelay = n2(-r() * 4.6) + 's';
+          /* Zwei Bögen, nach außen gewölbt: der Wellenkopf und der
+             Schaum dahinter. Nach der Drehung zeigt die örtliche
+             X-Achse nach außen, deshalb wölbt sich der Bogen nach
+             +X. */
+          el('path', { d: 'M0 -.52Q.30 0 0 .52', fill: 'none', stroke: KARTE.sea.foam, 'stroke-width': .12, 'stroke-linecap': 'round', opacity: .85 }, gi);
+          el('path', { d: 'M0 -.29Q.15 0 0 .29', fill: 'none', stroke: KARTE.sea.foam, 'stroke-width': .075, 'stroke-linecap': 'round', opacity: .5 }, gi);
+          t += step * (.55 + r() * .95);
+        }
+        t -= seg;
+      }
+    }
+    return gg;
+  }
+
+  /* ─── Wellen auf hoher See ──────────────────────────────────
+     Vereinzelt, klein, weit genug draußen — und ECKIG (Sönke: „mach
+     die eher eckig wie ein Dach, so wie richtige Wellen"). Ein
+     weicher Bogen ist eine Dünung; eine Welle hat einen Kamm.
+
+     Sie tauchen auf und verschwinden wieder. Das erledigt die
+     Bewegung in tool.css; hier bekommt nur jede Welle ihre eigene
+     Dauer und ihren eigenen Beginn — sonst blinkt das ganze Meer im
+     Takt. Weil jede über die halbe Runde unsichtbar ist, dürfen es
+     mehr sein, als man gleichzeitig sieht.
+
+     Nicht dicht an die Küste: dort ist die Brandung zuständig. */
+  function swellMarks(g, isl, vb, opt) {
+    const gg = el('g', {}, g);
+    const r = mulberry32(5150);
+    const want = opt.dicht ? 12 : 20;
+    const put = [];
+    /* Abstand zur Insel = Abstand zum nächsten Feldmittelpunkt. Das
+       ist billiger als jede Umrissrechnung und für „weit draußen"
+       genau genug. */
+    const frei = (x, y) => {
+      for (const z of isl.cells) if (Math.hypot(z.x - x, z.y - y) < 3.4) return false;
+      for (const h of isl.homes) if (Math.hypot(h.x + h.sx * SHIPD - x, h.y + h.sy * SHIPD - y) < 2.4) return false;
+      return true;
+    };
+    for (let tries = 0; tries < 600 && put.length < want; tries++) {
+      const x = vb[0] + .7 + r() * (vb[2] - 1.4);
+      const y = vb[1] + .7 + r() * (vb[3] - 1.4);
+      if (!frei(x, y)) continue;
+      if (put.some(p => Math.hypot(p[0] - x, p[1] - y) < 2.0)) continue;
+      put.push([x, y]);
+      const s = .8 + r() * .5;
+      /* Ein bisschen aus der Waagerechten gekippt: zwanzig Dächer,
+         alle exakt gerade, sähen aus wie ein Muster. */
+      const gm = el('g', {
+        transform: `translate(${n2(x)} ${n2(y)}) rotate(${n2(-9 + r() * 18)}) scale(${n2(s)})`
+      }, gg);
+      const gi = el('g', { class: 'wi-swell' }, gm);
+      const dur = 6.5 + r() * 5;
+      gi.style.animationDuration = n2(dur) + 's';
+      gi.style.animationDelay = n2(-r() * dur) + 's';
+      /* Zwei Dächer, das zweite kleiner und versetzt: eine einzelne
+         Spitze liest sich als Vogel, zwei als Wellenkamm.
+         `stroke-linejoin: miter` ist der Punkt der ganzen Sache —
+         mit `round` wäre die Ecke wieder ein Bogen. */
+      el('path', {
+        d: 'M-.58 .17L-.29 -.15L0 .17M.14 .34L.32 .14L.5 .34',
+        fill: 'none', stroke: KARTE.sea.foam, 'stroke-width': .085,
+        'stroke-linejoin': 'miter', 'stroke-linecap': 'butt', opacity: .62
+      }, gi);
+    }
+    return gg;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Das Land
+     ══════════════════════════════════════════════════════════
+     Im Relief steht jede Kachel für sich, weil sie eine Höhe hat.
+     Ein Vereinigungspfad ginge hier nicht: eine Seitenfläche gehört
+     zu genau EINEM Feld. Dafür bekommt man etwas, das keine flache
+     Karte kann — Land, das beim Erobern wächst. */
+
+  /* Die Marken EINES Feldes: Bäume, Felsen, Grasbüschel, Kiesel.
+     Immer dieselben — der Würfel hängt an der Feldnummer und nicht
+     am Spielstand, sonst tanzten die Bäume bei jedem Takt. */
+  function dTree(x, y, s) {
+    const w = .13 * s, h = .30 * s, b = .12 * s;
+    return `M${n2(x - w)} ${n2(y + b)}L${n2(x)} ${n2(y - h)}L${n2(x + w)} ${n2(y + b)}Z`;
+  }
+  function dRock(x, y, s) {
+    return `M${n2(x - .13 * s)} ${n2(y + .09 * s)}L${n2(x - .06 * s)} ${n2(y - .09 * s)}`
+         + `L${n2(x + .05 * s)} ${n2(y - .11 * s)}L${n2(x + .13 * s)} ${n2(y + .04 * s)}`
+         + `L${n2(x + .08 * s)} ${n2(y + .10 * s)}Z`;
+  }
+  function dTuft(x, y, s) {
+    let d = '';
+    for (let i = -1; i <= 1; i++) {
+      const bx = x + i * .07 * s;
+      d += `M${n2(bx)} ${n2(y + .07 * s)}Q${n2(bx + i * .03 * s)} ${n2(y)} ${n2(bx + i * .06 * s)} ${n2(y - .10 * s)}`;
+    }
+    return d;
+  }
+  function dDot(x, y, s) {
+    const r = .04 * s;
+    return `M${n2(x - r)} ${n2(y)}a${n2(r)} ${n2(r)} 0 1 0 ${n2(2 * r)} 0a${n2(r)} ${n2(r)} 0 1 0 ${n2(-2 * r)} 0`;
+  }
+  function cellDetail(z) {
+    if (z.home) return '';                      // dort steht die Fahne
+    const r = mulberry32(z.r * 7919 + z.c * 104729 + 17);
+    const k = z.boden;
+    const cnt = k === 'wald' ? 2 + (r() < .5 ? 1 : 0)
+              : k === 'fels' ? 1 + (r() < .5 ? 1 : 0)
+              : k === 'sand' ? 2 : 3;
+    let d = '';
+    for (let i = 0; i < cnt; i++) {
+      const a = r() * 6.283, rad = .10 + r() * .28;
+      const x = z.x + Math.cos(a) * rad, y = z.y + Math.sin(a) * rad * .82;
+      const s = .75 + r() * .55;
+      d += k === 'wald' ? dTree(x, y, s)
+         : k === 'fels' ? dRock(x, y, s)
+         : k === 'sand' ? dDot(x, y, s)
+         : dTuft(x, y, s);
+    }
+    return d;
+  }
+
+  function reliefLand(svg, isl, opt) {
+    const g = el('g', {}, svg);
+    const nodes = [];
+    /* Füllung und Strich je Bodenart: Gras wird gestrichelt
+       (Halme), alles andere gefüllt. */
+    const DK = {
+      wald: [shade(KARTE.land.wald, -.45), 'none'],
+      fels: [shade(KARTE.land.fels, -.30), 'none'],
+      sand: [shade(KARTE.land.sand, -.34), 'none'],
+      gras: ['none', shade(KARTE.land.gras, -.34)]
+    };
+    /* Malerreihenfolge: von hinten nach vorn, sonst steht eine
+       hintere Säule vor einer vorderen. */
+    for (const z of isl.cells.slice().sort((a, b) => a.y - b.y || a.x - b.x)) {
+      const gg = el('g', {}, g);
+      const base = z.ruin
+        ? el('ellipse', { class: 'wi-det', cx: n2(z.x), cy: n2(z.y + .34), rx: .62, ry: .22, fill: 'rgba(0,0,0,.40)', filter: F('b1') }, gg)
+        : null;
+      const side = el('path', { class: 'wi-side', d: '', fill: '#123240' }, gg);
+      const top = el('path', {
+        class: 'wi-cell', d: '', fill: KARTE.land[z.boden],
+        stroke: 'rgba(0,0,0,.16)', 'stroke-width': .015
+      }, gg);
+      top.dataset.i = z.i; top.dataset.r = z.r; top.dataset.c = z.c; top.dataset.t = '.';
+      /* Die Marken fahren mit der Deckfläche nach oben. Ohne sie
+         wäre das Relief die einzige Schicht ohne Insel-Struktur.
+
+         Sie liegen ÜBER der Deckfläche und müssen deshalb für den
+         Finger durchlässig sein (tool.css, .wi-det): bei der freien
+         Wahl sucht onMapClick das nächste `.wi-cell` nach oben, und
+         ein Bäumchen ist keines — ein Tipp genau auf einen Baum
+         täte sonst gar nichts, und zwar nur manchmal. */
+      const det = opt.dicht ? null : el('path', {
+        class: 'wi-det', d: cellDetail(z), fill: DK[z.boden][0], stroke: DK[z.boden][1],
+        'stroke-width': .035, 'stroke-linecap': 'round', opacity: .75
+      }, gg);
+      nodes.push({ z, base, side, top, det });
+      cellEls[z.i] = top;
+    }
+
+    /* Die Seitenfläche: der untere Rand des Sechsecks, um die Höhe
+       nach unten verlängert. Die unteren Ecken sind bei dieser
+       Ausrichtung 2, 1 und 0 (y wächst nach unten). */
+    function sidePath(x, y, s, h) {
+      const pts = [2, 1, 0].map(i => [x + HEX[i][0] * s, y + HEX[i][1] * s]);
+      let d = `M${n2(pts[0][0])} ${n2(pts[0][1])}`;
+      for (let i = 1; i < pts.length; i++) d += `L${n2(pts[i][0])} ${n2(pts[i][1])}`;
+      for (let i = pts.length - 1; i >= 0; i--) d += `L${n2(pts[i][0])} ${n2(pts[i][1] + h)}`;
+      return d + 'Z';
+    }
+
+    return function paint(own) {
+      for (const n of nodes) {
+        const z = n.z, ch = own[z.i];
+        /* Nur was sich geändert hat. Bei 500 Feldern und einem Takt
+           alle vier Sekunden ist das der Unterschied zwischen
+           „lebt" und „ruckelt". */
+        if (ownPainted && ownPainted[z.i] === ch) continue;
+        const on = ch !== '.';
+        const t = on ? facOf(+ch) : -1;
+        const farbe = on ? (TEAMS[t] || { color: '#888' }).color : null;
+        /* Nebel liegt flach, erobertes Land steht auf. Und der
+           Strand bleibt niedriger als das Landesinnere — dadurch
+           fällt die Insel zum Wasser hin ab, statt als Platte im
+           Meer zu schwimmen. */
+        const stufe = z.boden === 'sand' ? .20 : z.boden === 'fels' ? .78 : z.rand === 2 ? .40 : .56;
+        const h = on ? stufe : .10;
+        const y = z.y - h + .1;
+        n.top.setAttribute('d', hexPath(z.x, y, 1.0));
+        n.side.setAttribute('d', sidePath(z.x, y, 1.0, h + .06));
+        const deck = on ? mix(KARTE.land[z.boden], farbe, KARTE.mix * (z.boden === 'sand' ? .62 : 1)) : KARTE.land[z.boden];
+        n.top.setAttribute('fill', deck);
+        n.side.setAttribute('fill', on ? shade(deck, -.45) : shade(KARTE.land[z.boden], -.5));
+        n.top.dataset.t = on ? String(t) : '.';
+        if (n.det) n.det.setAttribute('transform', `translate(0 ${n2(-h + .1)})`);
+      }
+    };
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Der Nebel — Tonstufen
+     ══════════════════════════════════════════════════════════
+     Der Nebel ist kein Zustand einer Kachel, sondern ein Ding, das
+     ÜBER dem Feld liegt: Fläche, Struktur darin, ein Schatten auf
+     dem Land. Reihenfolge im Bild: Schatten → Nebel → alles andere.
+     Der Schatten liegt bewusst NICHT im selben Filter wie der
+     Nebel, sonst verschluckt der Nebel ihn.
+
+     Zieltöne von außen nach innen: Randfeld, zweites Feld, Kern.
+     0.55 heißt „der Nebel deckt zu 55 %", das Land scheint also mit
+     45 % durch — genug zum Erahnen, zu wenig zum Erkennen. DAS ist
+     die Zahl, an der man dreht, wenn es zu viel oder zu wenig
+     verrät; alles andere bleibt, wie es ist. */
+  const FOG_TOENE = [.55, .82, 1];
+
+  /* Wie tief liegt ein verhülltes Feld im Nebel? Breitensuche vom
+     Nebelrand nach innen. 1 = Randfeld, also: mindestens ein
+     Nachbar ist nicht verhüllt. Dass dazu auch das offene Meer
+     zählt, ist Absicht — an der Küste ist der Nebel genauso außen
+     wie an der Front, und dort schimmert dann der Strand durch. */
+  function fogDepth(isl, verhuellt) {
+    const drin = new Set(verhuellt);
+    const tiefe = new Map();
+    let front = [];
+    for (const z of verhuellt) {
+      if (neighbors(z.r, z.c).some(([nr, nc]) => { const n = isl.at(nr, nc); return !n || !drin.has(n); })) {
+        tiefe.set(z, 1); front.push(z);
+      }
+    }
+    while (front.length) {
+      const next = [];
+      for (const z of front) for (const [nr, nc] of neighbors(z.r, z.c)) {
+        const n = isl.at(nr, nc);
+        if (!n || !drin.has(n) || tiefe.has(n)) continue;
+        tiefe.set(n, tiefe.get(z) + 1); next.push(n);
+      }
+      front = next;
+    }
+    return tiefe;
+  }
+
+  /* Aus Zieltönen die Deckung der einzelnen Schichten.
+     Die Schichten liegen ÜBEREINANDER und nicht nebeneinander: die
+     unterste ist der ganze Nebel, die nächste alles ab dem zweiten
+     Feld, die oberste der Kern. Nebeneinander gelegte Bänder
+     müssten sich eine Kante teilen, und an geteilten Kanten steht
+     in SVG immer eine Naht.
+
+     Übereinander addiert sich aber die Deckung, also muss jede
+     Schicht wissen, was unter ihr schon liegt: von .55 auf .82 zu
+     kommen kostet nicht .82, sondern .60 — sonst sind die Töne, die
+     in der Tabelle stehen, nicht die, die man sieht. */
+  function stufenDeckung(toene) {
+    let vor = 0;
+    return toene.map(t => {
+      const a = vor >= 1 ? 1 : (t - vor) / (1 - vor);
+      vor = t;
+      return n2(Math.max(0, Math.min(1, a)));
+    });
+  }
+
+  /* Eine Rauschfläche: Rechteck über die ganze Karte, Farbe vom
+     Rechteck, Form vom Filter, Bewegung von der Klasse. */
+  function wispRect(parent, opt, cls, filt, col, op) {
+    const bb = opt.box;
+    const gw = el('g', { class: cls }, parent);
+    el('rect', { x: bb.x, y: bb.y, width: bb.w, height: bb.h, fill: col, filter: filt, opacity: op }, gw);
+    return gw;
+  }
+
+  function fogLayer(svg, isl, opt, lift) {
+    const gap = 1.06;
+    const gWrap = el('g', { class: 'wi-fog', transform: `translate(0 ${n2(-lift)})` }, svg);
+
+    /* Der Schatten muss weit genug unter dem Nebel hervorkommen, um
+       überhaupt gesehen zu werden — sonst verschluckt ihn dessen
+       eigener weicher Rand, und der Nebel liegt wieder IM Feld
+       statt darüber. */
+    const gSh = el('g', { filter: F('cloudsh'), opacity: n2(KARTE.fog.shadowOp * .85) }, gWrap);
+    const shadow = el('path', { d: '', fill: KARTE.fog.shadow, transform: 'translate(.16 .62)' }, gSh);
+
+    const gCloud = el('g', { filter: F('cloud') }, gWrap);
+    const body = el('path', { class: 'wi-fogbody', d: '', fill: KARTE.fog.body }, gCloud);
+
+    /* ── Die Tonstufen ────────────────────────────────────────
+       Eine Maske über dem GANZEN Nebel — Körper und Schwaden
+       zusammen. Das ist der Punkt: würde man nur den Körper
+       durchsichtig machen, bliebe die Rauschlage darüber voll
+       stehen, und der Rand wäre genauso blickdicht wie vorher, nur
+       heller.
+
+       Die Maske rechnet mit Helligkeit: weiß deckt, dunkelgrau
+       lässt durch. Statt grauer Flächen liegen hier weiße in
+       Gruppen mit `opacity` — Grau wäre eine Wette darauf, in
+       welchem Farbraum der Browser die Helligkeit ausrechnet (SVG
+       1.1 sagt linearRGB, CSS Masking sagt sRGB), und die beiden
+       Antworten liegen weit auseinander. Weiß mit Deckung ist in
+       beiden dasselbe.
+
+       Und die Maske läuft durch DENSELBEN Wolkenfilter wie der
+       Nebel. Ohne das hätte man weiche Nebelränder mit
+       schnurgeraden Sechseck-Stufen darin — eine Bienenwabe im
+       Wattebausch. Mit ihm wandern beide gleich, weil die Turbulenz
+       denselben Startwert hat. */
+    const bb = opt.box;
+    const mk = el('mask', {
+      id: FID + 'fm', maskUnits: 'userSpaceOnUse',
+      x: bb.x, y: bb.y, width: bb.w, height: bb.h
+    }, el('defs', {}, gWrap));
+    const gM = el('g', { filter: F('cloud') }, mk);
+    const stufen = stufenDeckung(FOG_TOENE).map(op =>
+      el('path', { d: '', fill: '#fff' }, el('g', { opacity: op }, gM)));
+    gCloud.setAttribute('mask', `url(#${FID}fm)`);
+
+    /* Was IM Nebel steckt. Es sitzt in der Nebelform
+       (Schnittmaske), und die Maske sitzt INNEN, der Filter AUSSEN
+       — andersherum schnitte die Maske die verzerrte Form wieder
+       scharf ab, und der ganze Rand wäre umsonst. */
+    const cp = el('clipPath', { id: FID + 'fc' }, el('defs', {}, gCloud));
+    const clip = el('path', { d: '' }, cp);
+    const gIn = el('g', { class: 'wi-fogin', 'clip-path': `url(#${FID}fc)` }, gCloud);
+    wispRect(gIn, opt, 'wi-fogc', F('fogc'), KARTE.fog.puffD, .3);
+    wispRect(gIn, opt, 'wi-foga', F('foga'), KARTE.fog.puffL, .6);
+    if (!opt.dicht) wispRect(gIn, opt, 'wi-fogb', F('fogb'), KARTE.fog.puffD, .45);
+
+    let last = null;
+    return function paint(own) {
+      if (own === last) return;
+      last = own;
+      const fog = isl.cells.filter(z => own[z.i] === '.');
+      const d = union(fog, gap);
+      /* Schicht i deckt alles ab Tiefe i+1 — die unterste also den
+         ganzen Nebel, die oberste nur den Kern. Die Tiefe wird bei
+         JEDEM Takt neu gerechnet, und das muss sie auch: der
+         Nebelrand wandert ja gerade. */
+      const tiefe = fogDepth(isl, fog);
+      stufen.forEach((s, i) => {
+        s.setAttribute('d', i === 0 ? d : union(fog.filter(z => (tiefe.get(z) || 99) > i), gap));
+      });
+      body.setAttribute('d', d);
+      clip.setAttribute('d', d);
+      shadow.setAttribute('d', d);
+    };
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Orte, Fahnen, Schiffe
+     ══════════════════════════════════════════════════════════ */
+
+  function placeLayer(svg, isl) {
+    const g = el('g', { class: 'wi-places' }, svg);
+    const marks = [];
+    for (const z of isl.cells) {
+      if (!z.ruin) continue;
+      const def = PLACES[z.ruin] || PLACES[1];
+      const sc = def.gross;
+      const gg = el('g', { class: 'wi-place', transform: `translate(${n2(z.x)} ${n2(z.y)})` }, g);
+      /* Was durch die Wolke dringt, ist der SCHEIN. Der Ort selbst
+         bleibt verdeckt — sonst wäre der Nebel nur ein Farbfilter.
+         Klein halten: mit dem Radius einer ganzen Kachel stehen auf
+         dem Nebel zehn gelbe Flecken, die aussehen wie ein Fehler
+         im Bild. Ein Licht im Nebel ist ein PUNKT mit Schein, keine
+         Scheibe. */
+      const halo = el('circle', { class: 'wi-halo', r: n2(.3 * sc), fill: KARTE.gold, opacity: .6, filter: F('b2') }, gg);
+      const gBody = el('g', { opacity: 0 }, gg);
+      el('ellipse', { cx: 0, cy: n2(.30 * sc), rx: n2(.66 * sc), ry: n2(.22 * sc), fill: 'rgba(0,0,0,.38)', filter: F('b1') }, gBody);
+      /* Der Sockel: gerodeter Boden, auf dem der Ort steht. Er
+         gehört der Karte und bleibt, egal welches Bild darauf
+         kommt. */
+      const plate = el('path', {
+        class: 'wi-plate', d: hexPath(0, 0, sc * 1.02), fill: KARTE.land.sand,
+        stroke: shade(KARTE.land.sand, -.35), 'stroke-width': .05
+      }, gBody);
+      el('path', { d: hexPath(0, 0, sc * 1.02), fill: 'none', stroke: KARTE.gold, 'stroke-width': .06, opacity: .8 }, gBody);
+      const w = 1.55 * sc, h = w * def.hoch;
+      if (def.img) {
+        img(gBody, def.img, {
+          x: n2(-w / 2), y: n2(.22 * sc - h), width: n2(w), height: n2(h),
+          preserveAspectRatio: 'xMidYMax meet'
+        });
+      } else {
+        /* Das Platzhalter-Zeichen bekommt eine helle Kontur:
+           dunkles Grau auf sandfarbenem Sockel ist sonst kaum von
+           der Bodentextur zu unterscheiden. */
+        el('path', {
+          d: MARK[z.ruin], fill: KARTE.signInk, opacity: .92,
+          stroke: 'rgba(255,255,255,.75)', 'stroke-width': .045, 'paint-order': 'stroke',
+          transform: `scale(${n2(sc * 1.3)})`
+        }, gBody);
+      }
+      marks.push({ z, halo, gBody, plate });
+    }
+
+    return function paint(own) {
+      for (const m of marks) {
+        const ch = own[m.z.i];
+        if (ownPainted && ownPainted[m.z.i] === ch) continue;
+        const on = ch !== '.';
+        const t = on ? facOf(+ch) : -1;
+        /* Der Sockel nimmt die Farbe des Volkes an, sobald der Ort
+           gehört — das ist die Meldung „erobert", ohne eine Zahl. */
+        m.plate.setAttribute('fill', on
+          ? mix(KARTE.land.sand, (TEAMS[t] || { color: '#888' }).color, .55)
+          : KARTE.land.sand);
+        m.gBody.setAttribute('opacity', on ? 1 : 0);
+        m.halo.setAttribute('opacity', on ? .3 : .6);
+      }
+    };
+  }
+
+  /* Der Landeplatz. Hier standen einmal Burgen — die sind raus, sie
+     gehören woandershin. Ganz leer darf die Stelle trotzdem nicht
+     bleiben: die gestrichelte Planke vom Schiff braucht ein Ziel,
+     und sechs Anlandungen müssen auf der Karte zu finden sein, ohne
+     die Schiffe abzuzählen.
+
+     Was bleibt, ist das kleinstmögliche Zeichen: ein Stab mit einer
+     Fahne in der Volksfarbe. Kein Bild, kein Sockel — sonst
+     konkurriert der Landeplatz mit den besonderen Orten, und die
+     sind das, worum auf dieser Karte gespielt wird. */
+  function flagLayer(svg, isl) {
+    const g = el('g', { class: 'wi-flags' }, svg);
+    const flags = [];
+    for (const h of isl.homes) {
+      /* Etwas nach oben gesetzt: im Relief steht die Kachel als
+         Säule, und eine Fahne auf Höhe der Grundfläche steckte im
+         Hang. */
+      const gg = el('g', { class: 'wi-flag', transform: `translate(${n2(h.x)} ${n2(h.y - .3)})` }, g);
+      el('ellipse', { cx: 0, cy: .12, rx: .34, ry: .12, fill: 'rgba(0,0,0,.34)', filter: F('b1') }, gg);
+      el('path', {
+        d: 'M0 .1L0 -1.02', stroke: shade(KARTE.land.sand, -.62),
+        'stroke-width': .1, 'stroke-linecap': 'round', fill: 'none'
+      }, gg);
+      /* Die Fahne weht zur Wasserseite — dorthin, wo das Schiff
+         liegt. Sonst zeigt sie bei der Hälfte der Völker ins
+         Landesinnere und sieht aus, als hätte jemand vergessen, sie
+         zu drehen. */
+      const s = h.sx < 0 ? -1 : 1;
+      const tuch = el('path', {
+        d: `M0 -1.0L${n2(s * .62)} -.82L0 -.62Z`, fill: '#94a3b8',
+        stroke: 'rgba(0,0,0,.28)', 'stroke-width': .04, 'stroke-linejoin': 'round'
+      }, gg);
+      flags.push({ z: h, tuch });
+    }
+    return function paint(own) {
+      for (const f of flags) {
+        const ch = own[f.z.i];
+        if (ownPainted && ownPainted[f.z.i] === ch) continue;
+        const on = ch !== '.';
+        f.tuch.setAttribute('fill', on ? (TEAMS[facOf(+ch)] || { color: '#94a3b8' }).color : '#94a3b8');
+      }
+    };
+  }
+
   /* ─── Die Schiffe ───────────────────────────────────────────
-     Sönke, 2026-09-08: „Die Schiffe sind keine Felder auf dem
+     Sönke, 08.09.2026: „Die Schiffe sind keine Felder auf dem
      Spielfeld. Sie fahren von außen an das Spielfeld ran (beim
      Start) und dann werden von da aus die Felder markiert und
      eingenommen."
 
      Also liegt das Schiff im WASSER neben seinem Landeplatz, nicht
-     darauf. Die Richtung dorthin ist die Richtung des Meeres: die
-     Summe der Wege zu allen Nachbarn, die keine Insel sind
-     (Landeplätze sind laut wi_build_island immer Küstenfelder, also
-     gibt es mindestens einen). Fällt das aus, zeigt der Weg von der
-     Inselmitte nach außen — auch der endet im Wasser.
+     darauf, und fährt beim Aufbau der Karte von draußen heran — das
+     ist genau der Moment, in dem der Countdown läuft. Vom Schiff
+     führt eine Planke auf die Insel: von hier aus wird genommen.
 
-     Das Schiff trägt das Wappen des Volkes: dasselbe Bild, das
-     vorher auf dem Feld stand, nur eine Bootslänge weiter draußen.
-     Vom Schiff zum Landeplatz führt eine Planke — sie sagt ohne
-     Worte, von wo aus genommen wird. */
-  const SHIP_OUT   = 1.35;   // Bootslänge vom Landeplatz ins Meer
-  const SHIP_START = 7;      // von so weit draußen fährt es an
+     Welches Bild darauf liegt, weiß erst `own`: der Server kennt
+     nur `is_home`, welchem Volk der Landeplatz gehört, steht in der
+     Besitz-Zeichenkette. Deshalb ist der Bildpfad kein Merkmal des
+     Aufbaus, sondern des Malens. */
+  const SHIP_START = 9;      // von so weit draußen fährt es an
 
-  function seaDir(r, c, land, ctr) {
-    let dx = 0, dy = 0;
-    const x = cx(r, c), y = cy(r);
-    for (const [nr, nc] of neighbors(r, c)) {
-      if (land.has(nr + ',' + nc)) continue;
-      dx += cx(nr, nc) - x;
-      dy += cy(nr) - y;
-    }
-    if (Math.hypot(dx, dy) < 0.01) { dx = x - ctr.x; dy = y - ctr.y; }
-    const len = Math.hypot(dx, dy) || 1;
-    return { x: dx / len, y: dy / len };
-  }
-
-  function svgEl(name, attrs) {
-    const el = document.createElementNS(SVGNS, name);
-    for (const k in attrs) el.setAttribute(k, attrs[k]);
-    return el;
-  }
-
-  /* Rumpf, Mast, Segel, Wappen — in Feldbreiten gerechnet, damit ein
-     Schiff auf einer kleinen Insel genauso groß aussieht wie auf
-     einer großen. Der Nullpunkt liegt in der Wasserlinie. */
-  function buildShip(i, ax, ay, dir) {
-    const g = svgEl('g', { class: 'wi-ship', transform: `translate(${ax} ${ay})` });
-    g.dataset.t = '.';
-
-    // Zwei Hüllen: die äußere fährt herein (Übergang), die innere
-    // schaukelt (Endlos-Bewegung). Getrennt, weil sich sonst beide
-    // dieselbe transform-Eigenschaft streitig machen.
-    const glide = svgEl('g', { class: 'wi-shipglide' });
-    const bob   = svgEl('g', { class: 'wi-shipbob' });
-    // Die Anfahrt beginnt weit draußen, in derselben Richtung, in die
-    // das Schiff nachher zeigt — und wird gleich nach dem Einhängen
-    // auf null gesetzt; erst dadurch fährt es.
-    glide.style.transform =
-      `translate(${(dir.x * SHIP_START).toFixed(2)}px, ${(dir.y * SHIP_START).toFixed(2)}px)`;
-    // Jedes Schiff schaukelt für sich, sonst sieht die Bucht aus wie
-    // ein Uhrwerk.
-    bob.style.animationDelay = (i % 7) * -0.9 + 's';
-
-    bob.appendChild(svgEl('path', {          // Segel
-      class: 'wi-sail', d: 'M0.02 -0.72 L0.52 0.02 L0.02 0.02 Z'
-    }));
-    bob.appendChild(svgEl('path', {          // Mast
-      class: 'wi-mast', d: 'M0 0.06 L0 -0.76'
-    }));
-    const im = svgEl('image', {              // das Volk an Deck
-      class: 'wi-shipcrew', x: -0.62, y: -0.66, width: 0.72, height: 0.72
-    });
-    bob.appendChild(im);
-    bob.appendChild(svgEl('path', {          // Rumpf
-      class: 'wi-hull', d: 'M-0.72 0.06 L0.72 0.06 L0.48 0.42 L-0.48 0.42 Z'
-    }));
-
-    glide.appendChild(bob);
-    g.appendChild(glide);
-    ships[i] = { g, img: im, glide };
-    return g;
-  }
-
-  function buildMap(svg, list) {
-    while (svg.firstChild) svg.removeChild(svg.firstChild);
-    cellEls = []; ships = {}; ownPainted = null;
-
-    // In der Lobby gibt es noch keine Insel (wi_tiles ist leer, bis
-    // wi_room_start würfelt). Ohne diesen Ausgang stünde im viewBox
-    // „Infinity -Infinity NaN NaN" — und das SVG wäre danach kaputt,
-    // nicht bloß leer.
-    if (!list.length) { svg.setAttribute('viewBox', '0 0 1 1'); return; }
-
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (const [r, c] of list) {
-      minX = Math.min(minX, cx(r, c)); maxX = Math.max(maxX, cx(r, c));
-      minY = Math.min(minY, cy(r));    maxY = Math.max(maxY, cy(r));
-    }
-
-    // Wo die Schiffe liegen, muss VOR dem Ausschnitt feststehen: sie
-    // liegen außerhalb der Insel, und ein Ausschnitt, der nur das Land
-    // fasst, schnitte sie ab.
-    const land = new Set(list.map(([r, c]) => r + ',' + c));
-    const ctr  = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
-    const homes = [];
-    list.forEach(([r, c, , home], i) => {
-      if (!home) return;
-      const dir = seaDir(r, c, land, ctr);
-      homes.push({ i, x: cx(r, c), y: cy(r),
-                   ax: cx(r, c) + dir.x * SHIP_OUT, ay: cy(r) + dir.y * SHIP_OUT, dir });
-    });
-    for (const h of homes) {
-      minX = Math.min(minX, h.ax - 0.8); maxX = Math.max(maxX, h.ax + 0.8);
-      minY = Math.min(minY, h.ay - 0.8); maxY = Math.max(maxY, h.ay + 0.8);
-    }
-
-    const pad = 0.8;
-    svg.setAttribute('viewBox',
-      `${minX - pad} ${minY - pad} ${maxX - minX + 2 * pad} ${maxY - minY + 2 * pad}`);
-
-    const gTiles = document.createElementNS(SVGNS, 'g');
-    const gMarks = document.createElementNS(SVGNS, 'g');
-    const gShips = document.createElementNS(SVGNS, 'g');
-    svg.appendChild(gTiles);
-    svg.appendChild(gMarks);
-    svg.appendChild(gShips);
-
-    list.forEach(([r, c, ruin, home], i) => {
-      const x = cx(r, c), y = cy(r);
-      const p = document.createElementNS(SVGNS, 'polygon');
-      p.setAttribute('points', HEX.map(([dx, dy]) => `${x + dx},${y + dy}`).join(' '));
-      p.setAttribute('class', 'wi-cell');
-      p.dataset.i = i;
-      p.dataset.r = r;
-      p.dataset.c = c;
-      p.dataset.t = '.';
-      gTiles.appendChild(p);
-      cellEls.push(p);
-
-      // Die Lichtpunkte schimmern von Anfang an durch den Nebel —
-      // sie sind der Grund, überhaupt irgendwohin zu wollen. Also
-      // werden sie EINMAL gezeichnet und nie wieder angefasst.
-      if (ruin > 0) {
-        const m = document.createElementNS(SVGNS, 'circle');
-        m.setAttribute('cx', x); m.setAttribute('cy', y);
-        m.setAttribute('r', 0.13 + 0.05 * ruin);
-        m.setAttribute('class', 'wi-ruin wi-ruin--' + ruin);
-        gMarks.appendChild(m);
-      }
-    });
-
-    // Die Schiffe zuletzt: sie liegen über allem, und die Planke
-    // gehört unter das Schiff, aber über die Felder.
-    for (const h of homes) {
-      const plank = svgEl('path', { class: 'wi-plank', d: `M${h.x} ${h.y} L${h.ax} ${h.ay}` });
+  function shipLayer(svg, isl) {
+    const g = el('g', { class: 'wi-ships' }, svg);
+    const glides = [];
+    for (const h of isl.homes) {
+      const ax = h.x + h.sx * SHIPD, ay = h.y + h.sy * SHIPD;
+      const sh = el('g', { class: 'wi-ship', transform: `translate(${n2(ax)} ${n2(ay)})` }, g);
+      sh.dataset.t = '.';
+      /* Zwei Hüllen: die äußere fährt herein (Übergang), die innere
+         schaukelt (Endlos-Bewegung). Getrennt, weil sich sonst
+         beide dieselbe transform-Eigenschaft streitig machen. */
+      const glide = el('g', { class: 'wi-shipglide' }, sh);
+      glide.style.transform = `translate(${n2(h.sx * SHIP_START)}px, ${n2(h.sy * SHIP_START)}px)`;
+      const bob = el('g', { class: 'wi-shipbob' }, glide);
+      bob.style.animationDelay = (isl.homes.indexOf(h) * -0.7) + 's';
+      /* Kielwasser: ein heller Fleck unter dem Rumpf. Ohne ihn
+         klebt das Schiff auf dem Wasser statt darin zu liegen — mit
+         zu viel davon liegt es auf einer grauen Pille. */
+      el('ellipse', { cx: 0, cy: .14, rx: 1.0, ry: .22, fill: KARTE.sea.foam, opacity: .2, filter: F('b2') }, bob);
+      /* Ohne href — der kommt beim Malen. Ein <image href=""> ist
+         nicht „leer", sondern ein Verweis auf die SEITE: der
+         Browser lädt j.html und versucht, HTML als Bild zu
+         zeichnen. Das kostet einen Abruf und eine rote Zeile in
+         der Konsole für nichts. */
+      const bild = el('image', {
+        class: 'wi-shipimg', x: -1.3, y: -2.35, width: 2.6, height: 2.6,
+        preserveAspectRatio: 'xMidYMax meet', filter: F('cut')
+      }, bob);
+      /* Die Planke: der Weg vom Schiff auf die Insel. Blass — sie
+         erklärt etwas, sie will nicht mit den Feldern
+         konkurrieren. */
+      const plank = el('path', {
+        class: 'wi-plank', d: `M${n2(h.x)} ${n2(h.y)} L${n2(ax)} ${n2(ay)}`,
+        'stroke-width': .11, 'stroke-linecap': 'round', 'stroke-dasharray': '.28 .3',
+        fill: 'none', opacity: .32
+      }, g);
       plank.dataset.t = '.';
-      gShips.appendChild(plank);
-      gShips.appendChild(buildShip(h.i, h.ax, h.ay, h.dir));
-      ships[h.i].plank = plank;
+      ships[h.i] = { g: sh, img: bild, plank, glide };
+      glides.push(glide);
     }
-    // Und los: im nächsten Bild steht der Zielwert, der Übergang in
-    // tool.css macht daraus die Anfahrt. Im selben Bild gesetzt wäre
-    // es keine Fahrt, sondern ein Sprung.
-    if (homes.length) {
-      const glides = homes.map(h => ships[h.i] && ships[h.i].glide).filter(Boolean);
+    /* Und los: im nächsten Bild steht der Zielwert, der Übergang in
+       tool.css macht daraus die Anfahrt. Im selben Bild gesetzt wäre
+       es keine Fahrt, sondern ein Sprung. */
+    if (glides.length) {
       setTimeout(() => {
         if (destroyed) return;
-        glides.forEach(g => { g.style.transform = 'translate(0px, 0px)'; });
+        glides.forEach(gl => { gl.style.transform = 'translate(0px, 0px)'; });
       }, 60);
     }
+
+    return function paint(own) {
+      for (const key in ships) {
+        const i = +key, sh = ships[i], ch = own[i];
+        if (ownPainted && ownPainted[i] === ch) continue;
+        if (ch === '.') continue;               // noch niemand gelandet
+        const t = String(facOf(+ch));
+        const want = shipSrc(facOf(+ch));
+        if (sh.img.getAttribute('href') !== want) {
+          sh.img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', want);
+          sh.img.setAttribute('href', want);
+        }
+        if (sh.g.dataset.t !== t) { sh.g.dataset.t = t; sh.plank.dataset.t = t; }
+      }
+    };
   }
 
-  /* Nur was sich geändert hat. Bei 500 Feldern und einem Takt alle
-     vier Sekunden ist das der Unterschied zwischen „malt sich neu"
-     und „ruckelt".
+  /* ══════════════════════════════════════════════════════════
+     Eine Karte zusammensetzen
+     ══════════════════════════════════════════════════════════ */
 
-     `own` trägt SLOTS, `data-t` trägt VÖLKER: die Farbe einer Kachel
-     steht in tool.css an der Volksnummer (.wi-cell[data-t="4"] ist
-     Lila), und welches Volk auf Slot 1 sitzt, entscheidet die
-     Lehrkraft. Ohne die Übersetzung hier hätte ein Raum mit den
-     Völkern 4 und 5 zwei rot-blaue Gebiete und daneben eine lila
-     Kopfzeile. */
-  function paintOwn(own) {
-    if (!own || own.length !== cellEls.length) return;
-    for (let i = 0; i < own.length; i++) {
-      const ch = own[i];
-      if (ownPainted && ownPainted[i] === ch) continue;
-      const slot = (ch === '.') ? -1 : +ch;
-      cellEls[i].dataset.t = (slot < 0) ? '.' : String(facOf(slot));
-      const sh = ships[i];
-      if (sh && slot >= 0) {
-        const want = esrc(teamOf(slot).img);
-        if (sh.img.getAttribute('href') !== want) sh.img.setAttribute('href', want);
-        // Farbe von Rumpf, Segel und Planke — wie bei den Feldern über
-        // die Volksnummer, nicht über 500 Style-Attribute.
-        const t = String(facOf(slot));
-        if (sh.g.dataset.t !== t) {
-          sh.g.dataset.t = t;
-          if (sh.plank) sh.plank.dataset.t = t;
-        }
-      }
+  function frame(svg, isl) {
+    let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
+    for (const z of isl.cells) {
+      a = Math.min(a, z.x); b = Math.max(b, z.x);
+      c = Math.min(c, z.y); d = Math.max(d, z.y);
     }
+    /* Das Schiffsbild ragt weit ÜBER seinen Ankerpunkt — ein
+       Ausschnitt, der nur bis zur Wasserlinie reicht, säbelt die
+       Masten ab. */
+    for (const h of isl.homes) {
+      a = Math.min(a, h.x + h.sx * SHIPD - 1.5); b = Math.max(b, h.x + h.sx * SHIPD + 1.5);
+      c = Math.min(c, h.y + h.sy * SHIPD - 2.6); d = Math.max(d, h.y + h.sy * SHIPD + 1.2);
+    }
+    const p = 0.5;
+    const vb = [a - p, c - p, b - a + 2 * p, d - c + 2 * p];
+    svg.setAttribute('viewBox', vb.map(v => n2(v)).join(' '));
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    return vb;
+  }
+
+  let mapSeq = 0;
+  let mapPaint = null;      // die Malfunktion der aufgebauten Karte
+
+  function buildMap(svg, list, key) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    cellEls = []; ships = {}; ownPainted = null; mapPaint = null;
+
+    /* In der Lobby gibt es noch keine Insel (wi_tiles ist leer, bis
+       wi_room_start würfelt). Ohne diesen Ausgang stünde im viewBox
+       „Infinity -Infinity NaN NaN" — und das SVG wäre danach kaputt,
+       nicht bloß leer. */
+    if (!list.length) { svg.setAttribute('viewBox', '0 0 1 1'); return; }
+
+    FID = 'wi' + (++mapSeq) + '_';
+    buildDefs(svg);
+
+    const isl = inselDaten(list, key);
+    const vb = frame(svg, isl);
+    /* „dicht" ist eine Notbremse für sehr große Inseln, und zwar
+       ausdrücklich eine für die RECHENLAST und nicht für die
+       Sichtbarkeit: der Ausschnitt wächst mit der Insel mit, eine
+       Kachel bleibt auf dem Beamer also ungefähr gleich groß, egal
+       ob 200 oder 900 Felder darauf liegen. Sichtbar wären die
+       Bäumchen auch dann noch.
+
+       Zu bezahlen sind sie aber je Feld: bei 900 Feldern kommen
+       900 Pfade dazu, die bei jedem Aufstehen einer Kachel neu
+       verschoben werden. wi_build_island rechnet mit rund 1,6
+       Feldern je Kind und Minute — eine Doppelstunde mit 30 Kindern
+       liegt also durchaus bei 900. Ab 700 fallen deshalb die
+       Kleinteile weg, dazu die dritte Nebellage und ein Teil der
+       Brandung. Nachgezählt: 520 Felder ergeben 2500 Elemente MIT
+       Kleinteilen, 1050 Felder 3700 OHNE. Das Neumalen je Takt
+       kostet dabei rund fünf Millisekunden — teuer ist der Aufbau,
+       und der passiert einmal, während der Countdown läuft. */
+    const opt = {
+      box: { x: n2(vb[0] - 2), y: n2(vb[1] - 2), w: n2(vb[2] + 4), h: n2(vb[3] + 4) },
+      dicht: isl.cells.length > 700
+    };
+
+    /* Die Küstenringe EINMAL. Das Wasser stapelt vier Tiefenstufen
+       darauf und die Brandung setzt ihre Wellen darauf ab — jedes
+       Mal neu aus den Kacheln zu suchen wäre fünfmal dieselbe
+       Arbeit. */
+    const rings = coastRings(isl, 1.0);
+    const dCoast = ringsPath(rings, 0, false, 0);
+
+    seaLayer(svg, isl, vb, dCoast, rings, opt);
+    const land = reliefLand(svg, isl, opt);
+    /* Der Nebel schwebt eine Fingerbreite über dem flachen Land —
+       sonst liegt er IM Feld statt darüber. */
+    const fog = fogLayer(svg, isl, opt, .22);
+    const flag = flagLayer(svg, isl);
+    const place = placeLayer(svg, isl);
+    const ship = shipLayer(svg, isl);
+
+    mapPaint = own => { land(own); fog(own); place(own); flag(own); ship(own); };
+  }
+
+  /* Nur was sich geändert hat — jede Schicht vergleicht selbst
+     gegen `ownPainted`, deshalb wird das hier ZULETZT gesetzt.
+
+     `own` trägt SLOTS, alles Gemalte trägt VÖLKER: welches Volk auf
+     Slot 1 sitzt, entscheidet die Lehrkraft. Ohne die Übersetzung
+     (facOf) hätte ein Raum mit den Völkern 4 und 5 zwei rot-blaue
+     Gebiete und daneben eine lila Kopfzeile. */
+  function paintOwn(own) {
+    if (!own || !mapPaint || own.length !== cells.length) return;
+    mapPaint(own);
     ownPainted = own;
   }
 
@@ -1353,7 +2332,10 @@
        bliebe leer, solange in dem Raum noch keine Runde lief. */
     if (Array.isArray(v.map)) {
       cells = v.map;
-      buildMap(els.map, cells);
+      /* Der `map_key` geht mit hinein: aus ihm würfelt die Karte
+         ihr Gelände (Wald, Fels, Strandbreite). Gleiche Runde →
+         gleiche Insel auf jedem Tablet und am Beamer. */
+      buildMap(els.map, cells, v.map_key);
       mapKey = v.map_key;
     } else if (v.map_key && v.map_key !== mapKey) {
       // Neue Insel, aber wir haben nur die Besitzverhältnisse: die
@@ -1384,10 +2366,13 @@
        für dieselbe Einstellung wären eine Frage zu viel. */
     settingsFields: [],
 
-    mount(el, c) {
-      root = el; ctx = c; role = ctx.role;
+    /* Der erste Wert heißt `host` und nicht `el`: `el()` ist seit
+       dem Umbau auf die Reliefkarte der Bauhelfer für SVG-Knoten,
+       und ein gleichnamiger Parameter verdeckte ihn hier drin. */
+    mount(host, c) {
+      root = host; ctx = c; role = ctx.role;
       destroyed = false; busy = false; view = null;
-      mapKey = null; cells = []; cellEls = []; ships = {};
+      mapKey = null; cells = []; cellEls = []; ships = {}; mapPaint = null;
       ownPainted = null; submitting = false; picking = false;
       sets = { list: [], chosen: [] }; setsBusy = 0; tab = 'units'; setsOpen = false;
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
@@ -1422,7 +2407,7 @@
       onResize = null;
       document.body.classList.remove('tool-fill');
       root = ctx = null; role = null; view = null;
-      els = {}; cells = []; cellEls = []; ships = {}; ownPainted = null;
+      els = {}; cells = []; cellEls = []; ships = {}; ownPainted = null; mapPaint = null;
     }
   });
 })();

@@ -1,0 +1,2522 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Myth of Wordisland — Karten-Showroom</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   MYTH OF WORDISLAND — SHOWROOM DER KARTEN-UI · RUNDE 2
+   ══════════════════════════════════════════════════════════════════
+   Runde 1 hatte fünf Richtungen, aber überall dieselbe Schwäche:
+   das Meer war ein Farbverlauf, der Nebel war eine graue Kachel,
+   das Sechseckraster stand wie ein Drahtgitter im Bild und die
+   Insel hatte keine Insel-Struktur. Runde 2 baut genau diese vier
+   Dinge neu — und zwar EINMAL, gemeinsam für alle Varianten:
+
+     WASSER    Flachwassersaum um die Insel (im Relief vier
+               Tiefenstufen mit Kante), Brandung, die auf die Küste
+               zuläuft, vereinzelte Wellen auf hoher See.
+     NEBEL     etwas ÜBER dem Feld statt eines Kachelzustands — und
+               in Runde 3 in VIER Arten, quer zu den Varianten
+               umschaltbar: Schwaden, Schleier, Unerforscht,
+               Sturmfront.
+     RASTER    die Sechsecke sind nur noch angedeutet — je Kante ein
+               kurzer Strich in der Mitte statt eines Umrisses. Die
+               Küste ist ein eigener Linienzug: Ecken abgerundet,
+               Verlauf ausgelenkt, keine 120-Grad-Kette mehr.
+     LAND      Strand, Wiese, Wald und Fels statt einer Farbe;
+               Strand liegt am Rand, das Volk färbt die Fläche ein,
+               ohne die Struktur zu übermalen.
+
+   Die besonderen Orte sind als SPRITE-PLÄTZE gebaut: Sockel,
+   Schatten und Größe stehen fest, das Bild darin ist austauschbar.
+   Solange keine Sprites da sind, sitzt ein gezeichnetes Zeichen im
+   Platz. Der Schalter „Sprite-Platz" oben zeigt den reservierten
+   Rahmen.
+   ══════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nunito', system-ui, sans-serif;
+  background: #090b0f;
+  color: #e6ebf1;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 90px;
+}
+
+/* ── Kopfleiste: Showroom-Chrom, nicht Teil des Produkts ────────── */
+.sr-top {
+  position: sticky; top: 0; z-index: 300;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 18px;
+  background: rgba(9, 11, 15, .93);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid #1c2028;
+}
+.sr-top h1 { font-size: .9rem; font-weight: 800; letter-spacing: -.01em; }
+.sr-top h1 span { color: #6a7482; font-weight: 500; }
+.sr-switch { display: flex; gap: 5px; flex-wrap: wrap; }
+.sr-sw {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #282e37; background: #14171d; color: #9fa9b6;
+  font: inherit; font-weight: 700; font-size: .78rem;
+  transition: background .13s, color .13s, border-color .13s;
+}
+.sr-sw:hover { background: #1b1f27; color: #fff; }
+.sr-sw.on { background: #eef2f7; border-color: #eef2f7; color: #0d1014; }
+.sr-sw b { font-size: .68rem; opacity: .55; font-variant-numeric: tabular-nums; }
+.sr-sw.on b { opacity: .5; }
+
+.sr-tools { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: wrap; }
+.sr-btn {
+  padding: 6px 13px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #282e37; background: #14171d; color: #c3ccd6;
+  font: inherit; font-weight: 700; font-size: .78rem;
+}
+.sr-btn:hover { background: #1b1f27; color: #fff; }
+.sr-btn.on { background: #2ee8a5; border-color: #2ee8a5; color: #06231a; }
+.sr-range { display: flex; align-items: center; gap: 8px; font-size: .74rem; color: #7b8695; font-weight: 700; }
+.sr-range input { width: 170px; accent-color: #2ee8a5; }
+
+/* Die Nebelart steht quer zu den Varianten — deshalb ein eigener
+   Schalter und nicht noch eine Variante in der Reihe oben. */
+.sr-seglab { font-size: .74rem; color: #7b8695; font-weight: 700; }
+.sr-seg { display: flex; border: 1px solid #282e37; border-radius: 999px; overflow: hidden; background: #14171d; }
+.sr-seg button {
+  padding: 6px 11px; cursor: pointer; border: 0; background: transparent; color: #9fa9b6;
+  font: inherit; font-weight: 700; font-size: .75rem;
+}
+.sr-seg button + button { border-left: 1px solid #282e37; }
+.sr-seg button:hover { color: #fff; }
+.sr-seg button.on { background: #7dd3fc; color: #06212e; }
+
+/* ── Vorspann ───────────────────────────────────────────────────── */
+.sr-lead { max-width: 1180px; margin: 34px auto 0; padding: 0 22px; }
+.sr-lead h2 { font-size: clamp(1.5rem, 3.4vw, 2.15rem); font-weight: 800; letter-spacing: -.025em; font-family: 'Baloo 2', sans-serif; }
+.sr-lead p { color: #8b95a3; margin-top: 10px; max-width: 76ch; line-height: 1.62; font-size: .95rem; }
+.sr-lead p b { color: #d3dae2; font-weight: 700; }
+
+.sr-four { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 20px 0 0; }
+.sr-fbox { background: #10151b; border: 1px solid #1e242d; border-radius: 13px; padding: 12px 14px; border-top: 3px solid #2ee8a5; }
+.sr-fbox h4 { font-family: 'Baloo 2', sans-serif; font-size: .95rem; font-weight: 800; color: #eaf1f6; }
+.sr-fbox p { color: #94a0ad; font-size: .82rem; line-height: 1.5; margin-top: 4px; }
+
+.sr-q {
+  margin: 18px 0 0; padding: 13px 16px;
+  border-left: 3px solid #ffcf4d; border-radius: 0 10px 10px 0;
+  background: #14140f; color: #b9c0c8; font-size: .89rem; line-height: 1.6; max-width: 86ch;
+}
+.sr-q b { color: #f0f4f8; }
+
+/* ── Die Flotte ─────────────────────────────────────────────────── */
+.sr-fleet {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); gap: 11px;
+  max-width: 1180px; margin: 24px auto 0; padding: 0 22px;
+}
+.sr-fcard {
+  background: #10141a; border: 1px solid #1f242d; border-radius: 14px;
+  padding: 9px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  border-top: 3px solid var(--c);
+}
+/* Höhe AM BILD und nicht am Kasten: ein Rasterfeld darf wegen
+   min-height:auto größer werden als sein Behälter — dann steht das
+   Schiff über der Beschriftung, obwohl der Kasten 84 Pixel hoch ist. */
+.sr-fpic { width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 4px; }
+.sr-fpic img { display: block; height: 76px; max-width: 100%; object-fit: contain; }
+.sr-fpic img.cut { filter: url(#wiCut) drop-shadow(0 4px 6px rgba(0,0,0,.55)); }
+.sr-fpic img.small { height: 44px; }
+.sr-fname { font-weight: 800; font-size: .76rem; text-align: center; line-height: 1.2; }
+.sr-fnote { font-size: .63rem; color: #79838f; text-align: center; }
+.sr-fcap { max-width: 1180px; margin: 10px auto 0; padding: 0 22px; font-size: .78rem; color: #69737f; line-height: 1.55; }
+
+/* ══════════════════════════════════════════════════════════════════
+   EINE VARIANTE
+   ══════════════════════════════════════════════════════════════════ */
+.wv { max-width: 1420px; margin: 0 auto; padding: 0 22px; }
+.wv[hidden] { display: none; }
+
+.wv-head { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin: 46px 0 14px; }
+.wv-num { font-family: 'Baloo 2', sans-serif; font-size: 2.7rem; font-weight: 800; line-height: .8; color: #232a33; letter-spacing: -.03em; }
+.wv-headtxt { flex: 1 1 280px; }
+.wv-title { font-family: 'Baloo 2', sans-serif; font-size: 1.34rem; font-weight: 800; letter-spacing: -.015em; color: #f2f5f8; }
+.wv-desc { color: #8b95a3; font-size: .93rem; margin-top: 2px; max-width: 74ch; line-height: 1.5; }
+
+.wv-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 16px 0 18px; }
+.wv-note { background: #0f1319; border: 1px solid #1d222a; border-radius: 12px; padding: 11px 13px; }
+.wv-note h4 { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: #5f6b78; margin-bottom: 5px; }
+.wv-note p { font-size: .84rem; color: #a7b1bd; line-height: 1.55; }
+.wv-note--plus { border-color: #1d3a30; }
+.wv-note--plus h4 { color: #2ee8a5; }
+.wv-note--minus { border-color: #3a2a1d; }
+.wv-note--minus h4 { color: #f0a45c; }
+
+/* ══════════════════════════════════════════════════════════════════
+   DAS SKELETT — für alle Varianten gleich.
+   Die Farben kommen aus der Variantentabelle im Skript und werden
+   als CSS-Variablen gesetzt: die Paletten stehen dort, wo auch die
+   Mischrechnung steht (Volksfarbe × Bodenfarbe), und nicht auf zwei
+   Dateien verteilt.
+   ══════════════════════════════════════════════════════════════════ */
+.wi-demo {
+  --sea-1: #0f4560; --sea-2: #072433;
+  --frame: #0c1218; --frame-line: #1b2530;
+  --ink: #eaf1f6; --ink-soft: #93a3b0; --ink-faint: #64727f;
+  --chip: #121a22; --chip-line: #22303c;
+  --gold: #ffcf4d;
+  --map-radius: 22px;
+  --font-head: 'Baloo 2', sans-serif;
+  position: relative;
+  background: var(--frame);
+  border: 1px solid var(--frame-line);
+  border-radius: 26px;
+  padding: 16px;
+}
+
+/* Beamer: die Variante füllt den Bildschirm. Kein echtes Fullscreen-
+   API — der Showroom soll auch im Zweitfenster funktionieren. */
+.wi-demo.is-beam {
+  position: fixed; inset: 0; z-index: 500;
+  border-radius: 0; padding: 20px;
+  display: flex; flex-direction: column;
+}
+.wi-demo.is-beam .wi-arena { flex: 1; min-height: 0; }
+.wi-demo.is-beam .wi-mapwrap { aspect-ratio: auto; height: 100%; }
+
+.wi-boardtop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.wi-title { font-family: var(--font-head); font-weight: 800; font-size: 1.06rem; color: var(--ink); letter-spacing: -.01em; }
+.wi-phase {
+  font-size: .72rem; font-weight: 800; color: var(--ink-soft);
+  padding: 4px 11px; border-radius: 999px;
+  background: var(--chip); border: 1px solid var(--chip-line);
+}
+.wi-clock {
+  margin-left: auto; display: flex; align-items: center; gap: 8px;
+  font-variant-numeric: tabular-nums; font-weight: 800; font-size: 1.05rem; color: var(--ink);
+}
+.wi-clock i { width: 8px; height: 8px; border-radius: 50%; background: #2ee8a5; box-shadow: 0 0 10px #2ee8a5; }
+.wi-beam {
+  padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--chip-line); background: var(--chip); color: var(--ink-soft);
+  font: inherit; font-weight: 700; font-size: .72rem;
+}
+.wi-beam:hover { color: var(--ink); }
+
+.wi-arena { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; }
+
+.wi-mapwrap {
+  position: relative;
+  flex: 4 1 620px; min-width: 0;
+  aspect-ratio: 16 / 11;
+  border-radius: var(--map-radius);
+  overflow: hidden;
+  background: var(--sea-2);
+}
+.wi-map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* ── Bewegung ───────────────────────────────────────────────────────
+   Alles, was sich bewegt, bewegt sich per CSS und nicht per Takt im
+   Skript: der Regler oben soll den STAND der Eroberung steuern, nicht
+   die Wellen. Sonst steht das Meer still, sobald jemand pausiert. */
+@keyframes wiWaveA { to { transform: translateX(-2.4px); } }
+@keyframes wiWaveB { to { transform: translateX(2.4px); } }
+.wi-wa { animation: wiWaveA 11s linear infinite; }
+.wi-wb { animation: wiWaveB 17s linear infinite; }
+
+@keyframes wiFoam { to { stroke-dashoffset: -2.2; } }
+.wi-foam { animation: wiFoam 4.2s linear infinite; }
+
+/* Brandung: jede Welle läuft von außen auf die Küste zu und
+   verläuft dort. Nach der Drehung des Elternteils zeigt die
+   örtliche X-Achse nach AUSSEN — deshalb heißt „nach innen"
+   hier ein negatives translateX. */
+@keyframes wiSurf {
+  0%   { opacity: 0;   transform: translateX(.30px) scale(.70, .86); }
+  30%  { opacity: .95; }
+  100% { opacity: 0;   transform: translateX(-.14px) scale(1.06, 1.24); }
+}
+.wi-surf {
+  transform-box: fill-box; transform-origin: 50% 50%;
+  animation: wiSurf 4.6s ease-out infinite;
+}
+/* Wellen auf hoher See. Sie ATMEN nicht, sie tauchen auf und
+   verschwinden wieder — eine Welle, die dauerhaft an derselben
+   Stelle steht, ist keine Welle, sondern ein Zeichen auf einer
+   Karte. Über die Hälfte ihrer Runde ist jede unsichtbar; Dauer und
+   Beginn würfelt jede für sich, sonst blinkt das ganze Meer im
+   Takt. */
+@keyframes wiSwell {
+  0%       { opacity: 0;   transform: translateY(.12px) scaleX(.82); }
+  14%      { opacity: .66; }
+  40%      { opacity: .66; transform: translateY(-.05px) scaleX(1.05); }
+  58%, 100% { opacity: 0;  transform: translateY(-.14px) scaleX(1.12); }
+}
+.wi-swell {
+  transform-box: fill-box; transform-origin: 50% 50%;
+  animation: wiSwell 8s ease-in-out infinite;
+}
+
+/* Der Nebel zieht: zwei Rauschlagen wandern gegeneinander. Die
+   Bewegung sitzt auf der Hülle, der Filter auf dem Rechteck darin —
+   so rechnet der Browser das Rauschen einmal und schiebt nur noch
+   das Ergebnis. */
+@keyframes wiFogA { 0%,100% { transform: translate(0,0); } 50% { transform: translate(1.5px,-.5px); } }
+@keyframes wiFogB { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-1.1px,.7px); } }
+@keyframes wiFogC { 0%,100% { transform: translate(0,0); } 50% { transform: translate(.7px,.9px); } }
+.wi-foga { animation: wiFogA 47s ease-in-out infinite; }
+.wi-fogb { animation: wiFogB 71s ease-in-out infinite; }
+.wi-fogc { animation: wiFogC 103s ease-in-out infinite; }
+
+/* Die Sturmfront zieht SCHRÄG — in Richtung ihrer eigenen Streifen.
+   Quer dazu sähe es aus, als würde jemand eine Tapete verschieben. */
+@keyframes wiFrontA { from { transform: translate(2.6px,-1.3px); } to { transform: translate(-2.6px,1.3px); } }
+@keyframes wiFrontB { from { transform: translate(-3.4px,1.7px); } to { transform: translate(3.4px,-1.7px); } }
+.wi-fronta { animation: wiFrontA 26s ease-in-out infinite alternate; }
+.wi-frontb { animation: wiFrontB 41s ease-in-out infinite alternate; }
+
+@keyframes wiGlint {
+  0%, 100% { transform: translate(0, 0); opacity: .30; }
+  50%      { transform: translate(1.1px, -.55px); opacity: .62; }
+}
+.wi-glint { animation: wiGlint 15s ease-in-out infinite; }
+
+/* Zwei Lagen laufen gegeneinander. Eine einzige Lage sähe aus wie
+   ein Bild, das jemand verschiebt. (Benutzt jetzt nur noch die
+   Papierwolke des Papierschnitts — die anderen Nebelarten ziehen
+   mit wiFogA/B/C und wiFrontA/B.) */
+@keyframes wiPuffA { 0%,100% { transform: translate(0,0); } 50% { transform: translate(.55px,-.22px); } }
+@keyframes wiPuffB { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-.42px,.28px); } }
+.wi-puffa { animation: wiPuffA 29s ease-in-out infinite; }
+.wi-puffb { animation: wiPuffB 41s ease-in-out infinite; }
+
+.wi-shipbob {
+  transform-box: fill-box; transform-origin: 50% 92%;
+  animation: wiBob 3.6s ease-in-out infinite;
+}
+@keyframes wiBob {
+  0%, 100% { transform: translateY(0) rotate(-1.6deg); }
+  50%      { transform: translateY(-.06px) rotate(1.6deg); }
+}
+.wi-shipglide { transition: transform 2.4s cubic-bezier(.16,.74,.3,1); }
+
+.wi-halo { animation: wiPulse 3.1s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 50%; }
+@keyframes wiPulse {
+  0%, 100% { opacity: .30; transform: scale(.92); }
+  50%      { opacity: .78; transform: scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wi-wa, .wi-wb, .wi-foam, .wi-glint, .wi-puffa, .wi-puffb,
+  .wi-surf, .wi-swell, .wi-foga, .wi-fogb, .wi-fogc, .wi-fronta, .wi-frontb,
+  .wi-shipbob, .wi-halo { animation: none; }
+  .wi-swell { opacity: .6; }
+  .wi-surf { opacity: .8; }
+  .wi-shipglide { transition: none; }
+}
+/* In den kleinen Vorschaukarten steht alles still: fünf Karten, die
+   gleichzeitig Wellen schlagen, kosten mehr als sie zeigen. */
+.sr-mini .wi-wa, .sr-mini .wi-wb, .sr-mini .wi-foam, .sr-mini .wi-glint,
+.sr-mini .wi-puffa, .sr-mini .wi-puffb, .sr-mini .wi-surf, .sr-mini .wi-swell,
+.sr-mini .wi-foga, .sr-mini .wi-fogb, .sr-mini .wi-fogc,
+.sr-mini .wi-fronta, .sr-mini .wi-frontb,
+.sr-mini .wi-shipbob, .sr-mini .wi-halo { animation: none; }
+/* … und weil Brandung und Wellen ihre Sichtbarkeit aus der Bewegung
+   ziehen, müssen sie im Standbild von Hand sichtbar gemacht
+   werden — sonst ist die Vorschau ein Meer ohne Wellen. */
+.sr-mini .wi-surf { opacity: .8; }
+.sr-mini .wi-swell { opacity: .6; }
+
+/* ── Die Völker-Leiste ──────────────────────────────────────────── */
+.wi-rail { flex: 1 1 190px; display: flex; flex-direction: column; gap: 6px; min-width: 172px; }
+.wi-rrow {
+  display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 8px;
+  padding: 6px 9px 6px 6px;
+  background: var(--chip); border: 1px solid var(--chip-line);
+  border-left: 3px solid var(--tc);
+  border-radius: 11px;
+}
+.wi-rpic { width: 34px; }
+.wi-rpic img { display: block; width: 34px; height: 34px; object-fit: contain; }
+.wi-rname { font-size: .76rem; font-weight: 800; color: var(--ink); line-height: 1.15; overflow-wrap: anywhere; }
+.wi-rsub { font-size: .64rem; color: var(--ink-faint); font-weight: 700; }
+.wi-rnum { font-variant-numeric: tabular-nums; font-weight: 800; font-size: .95rem; color: var(--ink); text-align: right; }
+.wi-rruin { display: block; font-size: .62rem; color: var(--gold); font-weight: 800; }
+
+/* ── Die Legende ────────────────────────────────────────────────── */
+.wi-legend {
+  display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+  margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--frame-line);
+  font-size: .72rem; color: var(--ink-faint); font-weight: 700;
+}
+.wi-lg { display: flex; align-items: center; gap: 6px; }
+.wi-lg svg { width: 24px; height: 24px; overflow: visible; }
+.wi-lg i { width: 14px; height: 14px; border-radius: 3px; display: block; }
+.wi-lg b { color: var(--ink-soft); }
+
+@media (max-width: 720px) {
+  .wi-rail { flex-direction: row; flex-wrap: wrap; }
+  .wi-rrow { flex: 1 1 150px; }
+  .sr-range input { width: 110px; }
+}
+
+/* Der Vergleichsbogen: alle fünf klein nebeneinander. */
+.sr-all { max-width: 1420px; margin: 60px auto 0; padding: 0 22px; }
+.sr-all h3 { font-family: 'Baloo 2', sans-serif; font-size: 1.2rem; font-weight: 800; }
+.sr-all p { color: #8b95a3; font-size: .9rem; margin-top: 4px; }
+.sr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 16px; }
+.sr-mini { border: 1px solid #1d222a; border-radius: 16px; overflow: hidden; background: #0f1319; cursor: pointer; }
+.sr-mini .wi-mapwrap { border-radius: 0; aspect-ratio: 16/11; }
+.sr-minicap { padding: 8px 11px; font-size: .78rem; font-weight: 800; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sr-minicap span { color: #6c7684; font-weight: 700; font-size: .7rem; text-align: right; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     Filter-Werkstatt. Liegt einmal im Dokument, alle Karten teilen
+     sie sich. Wichtig bei ALLEN: die Werte rechnen in
+     BENUTZEREINHEITEN, und eine Einheit ist hier eine Kachel. 3
+     wäre kein Weichzeichner, sondern ein Nebel über der halben
+     Insel.
+     ══════════════════════════════════════════════════════════════ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Weiß raus. Krücke für die Schiffe, die noch als JPG auf
+         weißem Grund liegen.
+
+         Der naheliegende Weg — eine feColorMatrix, die aus der
+         Helligkeit direkt den Alphakanal rechnet — sieht im Papier
+         richtig aus und liefert im Browser einen SCHWARZEN Kasten:
+         die Matrix setzt Alpha auf 0, lässt die Farbe aber auf Weiß
+         stehen, und beim Hin- und Herrechnen zwischen vor- und
+         nicht-multipliziertem Alpha wird daraus Schwarz mit voller
+         Deckung. Nachgemessen in tools/cuttest.html.
+
+         Der Weg, der trägt: die Helligkeit ZUERST in eine eigene
+         Maske verwandeln, weich abschneiden, und das Originalbild
+         in die Maske hineinstanzen. Das Bild behält seine Farben,
+         weil es nie durch die Matrix läuft.
+         Burgen und Einheiten brauchen das nicht — die sind schon
+         freigestellte PNG. -->
+    <filter id="wiCut" color-interpolation-filters="sRGB">
+      <feColorMatrix type="luminanceToAlpha" result="l"/>
+      <feComponentTransfer in="l" result="m">
+        <feFuncA type="table" tableValues="1 1 1 1 1 1 1 1 .9 0 0"/>
+      </feComponentTransfer>
+      <feComposite in="SourceGraphic" in2="m" operator="in"/>
+    </filter>
+
+    <!-- Hier stand einmal ein Verzerrungsfilter für die Küste. Er
+         ist raus: Rauschen mit großen Wellen hat die halbe Insel
+         verschoben, Rauschen mit kleinen hätte die Bäume zerzogen,
+         weil derselbe Filter über dem ganzen Land liegen müsste.
+         Die Küste wird jetzt als Linienzug ausgelenkt (coastPath),
+         und das kostet nebenbei zwei Filter weniger. -->
+
+    <!-- Die Wolke. Verzerren und weichzeichnen — erst beides
+         zusammen macht aus einer Fläche einen Ballen.
+         Runde 3 dreht beides hoch: mit Auslenkung 0.62 und
+         Weichzeichner 0.09 überlebten die 120-Grad-Ecken der
+         Sechsecke den Filter, und man sah dem Nebel an, dass er aus
+         Kacheln besteht. 0.9 ist knapp eine Kachel Auslenkung — mehr
+         wäre schön und würde anfangen zu lügen, welches Feld noch
+         verdeckt ist. -->
+    <filter id="wiCloud" x="-18%" y="-18%" width="136%" height="136%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.13 0.17" numOctaves="4" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="0.90" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="0.15"/>
+    </filter>
+    <!-- Der Schatten der Wolke: dieselbe Verzerrung, damit er unter
+         DIESE Wolke passt, nur weicher. -->
+    <filter id="wiCloudSh" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.13 0.17" numOctaves="4" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="0.90" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="0.30"/>
+    </filter>
+
+    <!-- NEBELSCHWADEN. Der Grund, warum die alte Wolke wie ein Haufen
+         Kugeln aussah: sie WAR ein Haufen Kugeln — siebzig Kreise mit
+         einem Weichzeichner von 0.22, also einem Fünftel Kachel. Jede
+         Kugel blieb einzeln lesbar.
+
+         Nebel hat keine Ballen, er hat Schlieren. Die macht kein
+         Kreis, das macht Rauschen: eine Turbulenz, die QUER gröber
+         ist als LÄNGS (0.19 zu 0.30), ergibt liegende Schwaden. Die
+         Turbulenz erzeugt hier nur eine MASKE — die Farbe kommt vom
+         Rechteck darunter, sonst wäre der Nebel in allen fünf
+         Varianten gleich weiß.
+
+         Zwei Lagen mit verschiedenem Korn und verschiedener Richtung:
+         eine helle, die aufhellt, und eine dunkle, die Tiefe macht.
+         Ohne die zweite ist es Dunst, kein Nebel. -->
+    <filter id="wiFogA" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.19 0.30" numOctaves="4" seed="12" stitchTiles="stitch" result="t"/>
+      <feColorMatrix in="t" type="luminanceToAlpha" result="a"/>
+      <feComponentTransfer in="a" result="m">
+        <feFuncA type="table" tableValues="0 0 .18 .62 1"/>
+      </feComponentTransfer>
+      <feComposite in="SourceGraphic" in2="m" operator="in"/>
+    </filter>
+    <filter id="wiFogB" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.38 0.10" numOctaves="3" seed="27" stitchTiles="stitch" result="t"/>
+      <feColorMatrix in="t" type="luminanceToAlpha" result="a"/>
+      <feComponentTransfer in="a" result="m">
+        <feFuncA type="table" tableValues="0 0 0 .45 1"/>
+      </feComponentTransfer>
+      <feComposite in="SourceGraphic" in2="m" operator="in"/>
+    </filter>
+    <!-- Die dritte Lage, und die gegen die Gleichförmigkeit
+         entscheidende: ein SEHR grobes Rauschen (Wellenlänge um
+         fünfzehn Kacheln) mit hartem Übergang. Es macht keine
+         Schlieren, es macht Ballungen — hier steht der Nebel dicht,
+         zwei Kacheln weiter reißt er auf. Ohne diese Lage ist jede
+         Stelle des Nebels wie jede andere, und genau das war die
+         Klage. -->
+    <filter id="wiFogC" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.052 0.07" numOctaves="2" seed="44" stitchTiles="stitch" result="t"/>
+      <feColorMatrix in="t" type="luminanceToAlpha" result="a"/>
+      <feComponentTransfer in="a" result="m">
+        <feFuncA type="table" tableValues="0 0 .15 .95 1"/>
+      </feComponentTransfer>
+      <feComposite in="SourceGraphic" in2="m" operator="in"/>
+    </filter>
+
+    <!-- Ein Saum GENAU auf dem Rand einer Form, ohne einen Strich zu
+         zeichnen. Ein Strich ginge hier nicht: die Nebelform ist die
+         Vereinigung von zweihundert Sechsecken, und ein Strich darauf
+         umrandet jedes einzeln — die bekannte Bienenwabe.
+         feMorphology schrumpft stattdessen die DECKUNG der Fläche,
+         und was übrig bleibt, wenn man das Geschrumpfte abzieht, ist
+         der Randstreifen. Innenkanten gibt es dort keine, weil die
+         gefüllte Fläche keine hat. -->
+    <filter id="wiRim" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
+      <feMorphology in="SourceAlpha" operator="erode" radius="0.34" result="e"/>
+      <feComposite in="SourceGraphic" in2="e" operator="out"/>
+    </filter>
+
+    <!-- Dieselbe Verzerrung wie bei der Wolke, aber OHNE
+         Weichzeichner: ein ausgefranster, trotzdem scharfer Rand.
+         Für den Nebel, der keiner ist — die unerforschte Fläche
+         soll nach abgerissenem Papier aussehen, nicht nach Wetter. -->
+    <filter id="wiCloudHard" x="-18%" y="-18%" width="136%" height="136%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.13 0.17" numOctaves="4" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="0.90" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+
+    <!-- Körnung: zweimal Rauschen in zwei Maßstäben. Die feine Lage
+         macht Struktur, die grobe macht Flecken — Wiese, die nicht
+         überall gleich grün ist. -->
+    <filter id="wiGrain" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="2.4" numOctaves="3" seed="3" stitchTiles="stitch"/>
+      <feColorMatrix type="luminanceToAlpha"/>
+    </filter>
+    <filter id="wiBlotch" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="2" seed="9" stitchTiles="stitch"/>
+      <feColorMatrix type="luminanceToAlpha"/>
+    </filter>
+
+    <!-- Gelände zusammenlaufen lassen. Weichzeichnen allein gibt
+         verwaschene Flecken; einmal den Alphakanal hart nachziehen
+         macht daraus eine Fläche mit organischer Kante — der
+         klassische „gooey"-Trick. Beides wird gebraucht: die weiche
+         Fassung für die gemalten Varianten, die harte für den
+         Papierschnitt. -->
+    <filter id="wiSoft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="0.30"/></filter>
+    <filter id="wiGoo" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="0.30" result="b"/>
+      <feColorMatrix in="b" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9"/>
+    </filter>
+    <!-- Wasserstreifen. Zwei Dinge machen daraus Wasser und nicht
+         Rauschen: die Wellenzahl ist QUER anders als LÄNGS (0.5 zu
+         0.22), dadurch entstehen liegende Schlieren statt Körner —
+         und der Filter erzeugt sein Weiß selbst (feFlood), weil
+         luminanceToAlpha nur Schwarz mit Alpha liefert. Die Füllung
+         des Rechtecks darunter ist völlig egal. -->
+    <filter id="wiWater" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.5 0.22" numOctaves="2" seed="5" stitchTiles="stitch" result="t"/>
+      <feColorMatrix in="t" type="luminanceToAlpha" result="a"/>
+      <feComponentTransfer in="a" result="m">
+        <feFuncA type="table" tableValues="0 0 .15 .7 1"/>
+      </feComponentTransfer>
+      <feFlood flood-color="#ffffff" result="w"/>
+      <feComposite in="w" in2="m" operator="in"/>
+    </filter>
+    <filter id="wiB1" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="0.10"/></filter>
+    <filter id="wiB2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="0.22"/></filter>
+    <filter id="wiB3" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="0.45"/></filter>
+    <filter id="wiGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="0.14" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+</svg>
+
+<header class="sr-top">
+  <h1>Myth of Wordisland <span>· Karten-Showroom · Runde 2</span></h1>
+  <nav class="sr-switch" id="switch"></nav>
+  <div class="sr-tools">
+    <label class="sr-range">Eroberung
+      <input type="range" id="prog" min="0" max="1000" value="420">
+      <span id="progtxt">42 %</span>
+    </label>
+    <span class="sr-seglab">Nebel</span>
+    <nav class="sr-seg" id="fogsw"></nav>
+    <button class="sr-btn on" id="play">▶ läuft</button>
+    <button class="sr-btn on" id="big">Orte groß</button>
+    <button class="sr-btn" id="slots">Sprite-Platz</button>
+    <button class="sr-btn" id="reroll">neue Insel</button>
+  </div>
+</header>
+
+<section class="sr-lead">
+  <h2>Wasser, Wolke, Insel</h2>
+  <p>
+    Fünf Richtungen, eine Insel: alle Varianten zeigen <b>dieselbe Insel, dieselben besonderen Orte,
+    dieselben sechs Völker und denselben Fortschritt</b> — sonst vergliche man Zufall und nicht
+    Gestaltung. Der Regler oben spult die Eroberung vor und zurück, „Orte groß“ schaltet die
+    besonderen Orte zwischen Kachelgröße und Übergröße, „Sprite-Platz“ zeigt den Rahmen, der für
+    deine kommenden Orts-Sprites reserviert ist. Der Schalter <b>Nebel</b> steht quer zu allem
+    anderen: vier Arten, das Unentdeckte zu zeigen, jede in jeder Variante ansehbar.
+    Zifferntasten 1–5 wechseln die Variante, <b>N</b> die Nebelart,
+    <b>B</b> geht in die Beamer-Ansicht. Ein bestimmter Stand lässt sich verschicken:
+    <b>?v=4&amp;fog=2&amp;p=55&amp;still&amp;beam</b>.
+  </p>
+  <div class="sr-four">
+    <div class="sr-fbox"><h4>Wasser</h4><p>Im Relief vier Tiefenstufen mit Kante, dahinter einfarbig tiefes Wasser. Überall: Brandung, die auf die Küste zuläuft, und vereinzelte Wellen auf hoher See.</p></div>
+    <div class="sr-fbox" id="fogbox"><h4>Nebel · <span id="fogname"></span></h4><p id="fogtext"></p></div>
+    <div class="sr-fbox"><h4>Sechsecke</h4><p>Nur noch angedeutet: je Kante ein kurzer Strich in der Mitte statt eines Umrisses. Die Küste ist ein eigener, geschwungener Linienzug — keine Kette von 120-Grad-Ecken mehr.</p></div>
+    <div class="sr-fbox"><h4>Insel</h4><p>Strand am Rand, dahinter Wiese, Wald und Fels — und zwar quer durch die Felder, nicht in Wabenform. Das Volk färbt die Fläche ein, statt sie zuzudecken.</p></div>
+  </div>
+  <div class="sr-q">
+    <b>Die besonderen Orte sind Sprite-Plätze.</b> Sockel, Schatten, Größe und die Reihenfolge im
+    Bild stehen fest; das Bild darin ist ein Platzhalter, bis deine Sprites da sind. Eintragen musst
+    du sie an genau einer Stelle — in der Tabelle <b>PLACES</b> oben im Skript. Die <b>Burgen</b> sind
+    von der Karte runter (sie gehören woandershin); den Landeplatz markiert jetzt eine kleine Fahne in
+    der Volksfarbe, in der Völker-Leiste stehen weiter deine <b>Einheiten</b>.
+  </div>
+</section>
+
+<div class="sr-fleet" id="fleet"></div>
+<p class="sr-fcap" id="fleetcap"></p>
+
+<main id="stage"></main>
+
+<section class="sr-all">
+  <h3>Alle fünf nebeneinander</h3>
+  <p>Gleicher Stand, gleiche Insel. Klick auf eine Karte springt zur großen Ansicht.</p>
+  <div class="sr-grid" id="grid"></div>
+</section>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   1 · GEOMETRIE — dieselbe wie im Spiel
+   ══════════════════════════════════════════════════════════════════
+   Spitze Sechsecke, versetzte Reihen: waagerechter Abstand 1,
+   senkrechter 0.866, ungerade Zeilen um eine halbe Breite versetzt.
+   Wer hier etwas ändert, muss es auch in wi_is_neighbor ändern —
+   deshalb ändert hier niemand etwas. Sichtbar ist das Raster jetzt
+   fast nicht mehr; gerechnet wird weiter damit.                    */
+
+const SQ3 = Math.sqrt(3);
+const HEX = Array.from({ length: 6 }, (_, k) => {
+  const a = (Math.PI / 180) * (30 + 60 * k);
+  return [Math.cos(a) / SQ3, Math.sin(a) / SQ3];
+});
+const cxf = (r, c) => c + 0.5 * (((r % 2) + 2) % 2);
+const cyf = r => r * 0.8660254;
+const SVGNS = 'http://www.w3.org/2000/svg';
+const n2 = v => (Math.round(v * 100) / 100);
+/* Wie weit ein Schiff vor seinem Landeplatz liegt. Steht hier und
+   nicht zweimal im Text: der Bildausschnitt muss die Schiffsplätze
+   mitfassen, sonst säbelt er die Masten ab. */
+const SHIPD = 2.2;
+
+function hexPath(x, y, s) {
+  let d = '';
+  for (let i = 0; i < 6; i++) {
+    d += (i ? 'L' : 'M') + n2(x + HEX[i][0] * s) + ' ' + n2(y + HEX[i][1] * s);
+  }
+  return d + 'Z';
+}
+/* Nachbar-Nummer → Kanten-Nummer. Kante e liegt zwischen Ecke e und
+   Ecke e+1. Falsch übersetzt zeichnet man Grenzen um die falsche
+   Kachelseite — und das sieht aus wie ein Fehler in den Daten. */
+const EDGE = [3, 4, 2, 5, 1, 0];
+
+function nbrs(r, c) {
+  const odd = (((r % 2) + 2) % 2) === 1;
+  const d = odd ? [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]]
+                : [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
+  return d.map(([dr, dc]) => [r + dr, c + dc]);
+}
+/* `null` heißt „dieses Merkmal nicht setzen" und nicht „setz es auf
+   die Zeichenkette null". Der Unterschied ist hier kein Schönheits-
+   fehler: filter="null" zeigt auf einen Filter, den es nicht gibt,
+   und ein Element mit ungültiger Filterangabe wird GAR NICHT
+   gezeichnet — die halbe Karte wäre weg. */
+function el(name, attrs, parent) {
+  const n = document.createElementNS(SVGNS, name);
+  for (const k in attrs) {
+    const v = attrs[k];
+    if (v === null || v === undefined) continue;
+    n.setAttribute(k, v);
+  }
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function img(parent, href, attrs) {
+  const n = el('image', attrs, parent);
+  n.setAttributeNS('http://www.w3.org/1999/xlink', 'href', href);
+  n.setAttribute('href', href);
+  return n;
+}
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+/* Jede Karte braucht eigene IDs für ihre Schnittmasken: zehn Karten
+   auf einer Seite, und alle hießen sonst gleich. */
+let UID = 0;
+const uid = () => 'w' + (++UID);
+
+/* Farbe mischen und abdunkeln. Beides wird gebraucht, weil die
+   Volksfarbe die Bodenfarbe EINFÄRBT statt sie zu überdecken —
+   sonst wäre die ganze Insel-Struktur unter sechs Farbeimern weg. */
+function hx(h) {
+  const n = parseInt(h.slice(1), 16);
+  return [n >> 16 & 255, n >> 8 & 255, n & 255];
+}
+function rgb(a) { return '#' + a.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join(''); }
+function mix(a, b, t) { const A = hx(a), B = hx(b); return rgb([0, 1, 2].map(i => A[i] + (B[i] - A[i]) * t)); }
+function shade(h, amt) { return rgb(hx(h).map(c => c * (1 + amt))); }
+
+/* ══════════════════════════════════════════════════════════════════
+   2 · DIE VÖLKER UND IHRE BILDER
+   ══════════════════════════════════════════════════════════════════
+   Schiffe sind noch JPG auf weißem Grund (Filter #wiCut), die
+   Einheiten sind fertige PNG mit Transparenz. Neue Bilder werden HIER
+   eingetragen und nirgends sonst.
+
+   Die Burgen sind raus — sie gehören woandershin. Die Dateien liegen
+   weiter im Ordner `sprites`; auf der Karte markiert jetzt eine
+   kleine Fahne den Landeplatz.                                     */
+
+/* Die Schiffe hießen bis eben `Gemini_Generated_Image_…` und heißen
+   jetzt nach ihrer Farbe. Der Unterschied ist nicht kosmetisch: unter
+   den alten Namen fand der Browser die Dateien nicht mehr, und weil
+   ein fehlendes <image> in SVG stillschweigend nichts zeichnet, lag
+   die Karte einfach ohne Schiffe da. Der Prüfstand sieht so etwas,
+   das Auge erst beim Suchen.
+   „yello" ist kein Tippfehler von mir — so heißt die Datei.        */
+const S = f => 'sprites/' + encodeURIComponent(f + ' schiff.jpg');
+const P = f => 'sprites/' + encodeURIComponent(f);
+
+const FLEET = [
+  { key: 'red',     name: 'Toast-Ritter',      c: '#ef4444', img: S('red'),     note: 'Stahlgaleone' },
+  { key: 'rosa',    name: 'Wolken-Piraten',    c: '#f472b6', img: S('rosa'),    note: 'Luftschiff · noch ohne Volk' },
+  { key: 'green',   name: 'Brokkoli-Giraffen', c: '#10b981', img: S('grün'),    note: 'Baumschiff' },
+  { key: 'yellow',  name: 'Mal-Hasen',         c: '#f59e0b', img: S('yello'),   note: 'Kartonsegler' },
+  { key: 'lila',    name: 'Kosmische Katzen',  c: '#a855f7', img: S('lila'),    note: 'Kristallschiff' },
+  { key: 'tuerkis', name: 'Okto-Pferdchen',    c: '#06b6d4', img: S('türkis'),  note: 'Schnecken-U-Boot' },
+  { key: 'magenta', name: 'Spuk-Einhorn',      c: '#d946ef', img: S('magenta'), note: 'Geisterschiff · noch ohne Volk' }
+];
+/* Die sechs, die antreten — in der Reihenfolge von tool.js, damit die
+   Farben zu den Volksnummern passen. */
+const TEAMS = [
+  { name: 'Toast-Ritter',      c: '#ef4444', ship: S('red'),    unit: P('red crew.jpg') },
+  { name: 'Robo-Enten',        c: '#3b82f6', ship: S('blue'),   unit: P('blue crew.jpg') },
+  { name: 'Brokkoli-Giraffen', c: '#10b981', ship: S('grün'),   unit: P('grün crew.jpg') },
+  { name: 'Mal-Hasen',         c: '#f59e0b', ship: S('yello'),  unit: P('yellow crew.jpg') },
+  { name: 'Kosmische Katzen',  c: '#a855f7', ship: S('lila'),   unit: P('lila crew.jpg') },
+  { name: 'Okto-Pferdchen',    c: '#06b6d4', ship: S('türkis'), unit: P('türkis crew.jpg') }
+];
+
+/* ══════════════════════════════════════════════════════════════════
+   3 · DIE BESONDEREN ORTE
+   ══════════════════════════════════════════════════════════════════
+   Ein Ort ist ein PLATZ, kein Bild: Sockel, Schatten und Größe
+   gehören der Karte, das Bild darin ist austauschbar. Sobald `img`
+   auf eine Datei zeigt, sitzt das Sprite im Platz und das gezeichnete
+   Zeichen verschwindet — ohne dass sonst irgendetwas anzufassen wäre.
+
+   `hoch` ist das Verhältnis von Bildhöhe zur Sockelbreite. Ein
+   Leuchtfeuer ist schlank und hoch, eine Ruine breit und flach.    */
+const PLACES = {
+  1: { name: 'Leuchtfeuer', img: null, gross: 1.20, hoch: 1.55, wert: 1 },
+  2: { name: 'Ruine',       img: null, gross: 1.45, hoch: 1.30, wert: 2 },
+  3: { name: 'Tempel',      img: null, gross: 1.85, hoch: 1.40, wert: 3 }
+};
+/* Die Platzhalter-Zeichen, solange keine Sprites da sind. Nicht drei
+   Größen desselben Punktes: ein Kind soll aus zehn Metern sehen, WAS
+   dort steht, nicht nur DASS dort etwas steht. */
+const MARK = {
+  1: 'M0 -.30 C .17 -.12 .21 .04 .09 .16 C .07 .04 .02 .01 -.03 .16 C -.18 .02 -.11 -.14 0 -.30 Z',
+  2: 'M-.30 .22 L-.30 -.12 L-.16 -.18 L-.16 .22 Z M .04 .22 L .04 -.24 L .20 -.30 L .20 .22 Z '
+   + 'M-.30 -.12 L-.16 -.18 L-.16 -.06 L-.30 -.02 Z',
+  3: 'M-.36 .24 L .36 .24 L .36 .14 L-.36 .14 Z M-.26 .14 L-.26 -.06 L-.16 -.06 L-.16 .14 Z '
+   + 'M-.05 .14 L-.05 -.06 L .05 -.06 L .05 .14 Z M .16 .14 L .16 -.06 L .26 -.06 L .26 .14 Z '
+   + 'M-.34 -.06 L0 -.30 L .34 -.06 Z'
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   4 · DIE INSEL
+   ══════════════════════════════════════════════════════════════════
+   Eine Scheibe mit welligem Rand, besondere Orte, sechs Landeplätze.
+   Neu gegenüber Runde 1: jedes Feld weiß, wie weit es vom Wasser weg
+   liegt (`rand`) und was für ein Boden es ist (`boden`). Daraus
+   entstehen Strand, Wiese, Wald und Fels — und der Strand liegt
+   AUTOMATISCH am Rand, weil er als „ein Feld vom Wasser entfernt"
+   definiert ist und nicht von Hand hingemalt wird.                */
+
+function makeIsland(seed) {
+  const rnd = mulberry32(seed);
+  const ph = [rnd() * 6.283, rnd() * 6.283, rnd() * 6.283, rnd() * 6.283];
+  /* Rund 290 Felder — die Größenordnung, die wi_build_island für 25
+     Kinder und eine Viertelstunde ausrechnet. Kleiner wäre bequemer
+     zu zeichnen und würde die entscheidende Frage verstecken: Wie
+     sieht eine Kachel aus, wenn 290 auf einen Beamer müssen? */
+  const R = 10.6;
+
+  const cells = [];
+  const idx = new Map();
+  for (let r = -14; r <= 14; r++) {
+    for (let c = -15; c <= 15; c++) {
+      const x = cxf(r, c), y = cyf(r);
+      const d = Math.hypot(x, y);
+      const a = Math.atan2(y, x);
+      const wob = 0.15 * Math.sin(3 * a + ph[0]) + 0.10 * Math.sin(5 * a + ph[1]) + 0.06 * Math.sin(8 * a + ph[2]);
+      if (d <= R * (0.84 + wob)) {
+        idx.set(r + ',' + c, cells.length);
+        cells.push({ r, c, x, y, d, a, ruin: 0, home: -1 });
+      }
+    }
+  }
+  const at = (r, c) => idx.has(r + ',' + c) ? cells[idx.get(r + ',' + c)] : null;
+  const coast = cells.filter(z => nbrs(z.r, z.c).some(([nr, nc]) => !idx.has(nr + ',' + nc)));
+
+  /* Wie weit ist ein Feld vom Wasser entfernt? Breitensuche vom Rand
+     nach innen. 1 = Küstenfeld. */
+  cells.forEach(z => { z.rand = 1e9; });
+  let f = coast.map(z => { z.rand = 1; return z; });
+  while (f.length) {
+    const next = [];
+    for (const z of f) for (const [nr, nc] of nbrs(z.r, z.c)) {
+      const n = at(nr, nc);
+      if (n && n.rand > z.rand + 1) { n.rand = z.rand + 1; next.push(n); }
+    }
+    f = next;
+  }
+
+  /* Der Boden. Zwei überlagerte Sinusfelder statt Würfeln: Wald soll
+     in Stücken stehen und nicht als Konfetti über die Insel gestreut
+     sein. */
+  for (const z of cells) {
+    const n1 = (Math.sin(z.x * .62 + ph[0]) + Math.sin(z.y * .71 + ph[1]) + Math.sin((z.x + z.y) * .43 + ph[2])) / 3;
+    const n2v = (Math.sin(z.x * .31 - ph[3]) + Math.cos(z.y * .38 + ph[0])) / 2;
+    z.n = n1;
+    z.boden = z.rand <= 1 ? 'sand'
+            : (z.rand === 2 && n1 > .05) ? 'sand'
+            : (z.d < R * .55 && n2v < -.28) ? 'fels'
+            : n1 > .34 ? 'wald'
+            : 'gras';
+  }
+
+  /* Besondere Orte. Je näher an der Mitte, desto wertvoller — und nie
+     zwei nebeneinander, sonst klumpen sie zu einem Fleck. */
+  const wish = Math.max(8, Math.round(cells.length / 30));
+  const taken = [];
+  for (let tries = 0; tries < 1200 && taken.length < wish; tries++) {
+    const z = cells[Math.floor(rnd() * cells.length)];
+    if (z.ruin || z.d > R * 0.72) continue;
+    if (taken.some(t => Math.hypot(t.x - z.x, t.y - z.y) < 3.0)) continue;
+    z.ruin = z.d < R * 0.24 ? 3 : z.d < R * 0.52 ? 2 : 1;
+    taken.push(z);
+  }
+  /* Genau einen Ort der Stufe 3 — der Grund, in die Mitte zu wollen,
+     verträgt keine Konkurrenz. */
+  taken.filter(z => z.ruin === 3).sort((a, b) => a.d - b.d).slice(1).forEach(z => { z.ruin = 2; });
+
+  /* Sechs Landeplätze an der Küste, gleichmäßig verteilt. Der
+     Mindestabstand ist die Sehne zwischen sechs Punkten auf dem
+     Kreis, mit Nachlass: ohne ihn legen zwei Völker in derselben
+     Bucht an, und weil ein Schiff ein Bild und kein Punkt ist,
+     überdecken sie sich. */
+  const homes = [];
+  const off = rnd() * 6.283;
+  const minGap = 1.05 * (R * 0.82) * Math.sin(Math.PI / 6);
+  for (let k = 0; k < 6; k++) {
+    const want = off + k * (Math.PI / 3);
+    let best = null;
+    for (let pass = 0; pass < 2 && !best; pass++) {
+      let bs = -1;
+      for (const z of coast) {
+        if (z.home >= 0 || z.ruin) continue;
+        let da = Math.abs(((z.a - want + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+        da = Math.PI - da;
+        if (da > 0.5) continue;
+        if (pass === 0 && homes.some(h => Math.hypot(h.x - z.x, h.y - z.y) < minGap)) continue;
+        const score = z.d - da * 3;
+        if (score > bs) { bs = score; best = z; }
+      }
+    }
+    if (best) { best.home = k; homes.push(best); }
+  }
+
+  /* Breitensuche von allen Landeplätzen gleichzeitig: wer ist wem am
+     nächsten? Das ergibt die sechs Reiche. */
+  cells.forEach(z => { z.owner = -1; z.dist = 1e9; });
+  let front = homes.map((z, k) => { z.owner = k; z.dist = 0; return z; });
+  while (front.length) {
+    const next = [];
+    for (const z of front) {
+      for (const [nr, nc] of nbrs(z.r, z.c)) {
+        const n = at(nr, nc);
+        if (!n || n.dist <= z.dist + 1) continue;
+        n.dist = z.dist + 1; n.owner = z.owner; next.push(n);
+      }
+    }
+    front = next;
+  }
+
+  /* Der Zeitpunkt. Das ist der Trick, der den Regler ermöglicht:
+     Fortschritt ist eine Zahl, kein Verlauf. Besondere Orte kommen
+     später dran — sie kosten im Spiel mehr Wörter. */
+  const order = cells.slice().sort((a, b) =>
+    (a.dist + a.ruin * 1.7 + mulberry32(a.r * 733 + a.c * 97 + seed)() * 1.3) -
+    (b.dist + b.ruin * 1.7 + mulberry32(b.r * 733 + b.c * 97 + seed)() * 1.3));
+  order.forEach((z, i) => { z.t = 0.02 + 0.98 * (i / Math.max(1, order.length - 1)); });
+  homes.forEach(z => { z.t = 0.015; });
+
+  /* Auf welcher Seite eines Landeplatzes liegt das Meer? Die Summe
+     der Wege zu allen Nachbarn, die kein Land sind. */
+  for (const h of homes) {
+    let dx = 0, dy = 0;
+    for (const [nr, nc] of nbrs(h.r, h.c)) {
+      if (idx.has(nr + ',' + nc)) continue;
+      dx += cxf(nr, nc) - h.x; dy += cyf(nr) - h.y;
+    }
+    if (Math.hypot(dx, dy) < 0.01) { dx = h.x; dy = h.y; }
+    const L = Math.hypot(dx, dy) || 1;
+    h.sx = dx / L; h.sy = dy / L;
+  }
+
+  return { cells, idx, at, homes, R };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   5 · DIE EINZELTEILE DER INSEL
+   ══════════════════════════════════════════════════════════════════
+   Kleines Zeug: Bäume, Felsen, Grasbüschel, Kiesel. Alle Marken
+   EINES Typs landen in EINEM Pfad — 700 Elemente je Karte wären
+   sonst der teuerste Teil des ganzen Bildes, und sie ändern sich
+   nie.                                                            */
+
+function dTree(x, y, s) {
+  const w = .13 * s, h = .30 * s, b = .12 * s;
+  return `M${n2(x - w)} ${n2(y + b)}L${n2(x)} ${n2(y - h)}L${n2(x + w)} ${n2(y + b)}Z`;
+}
+function dRock(x, y, s) {
+  return `M${n2(x - .13 * s)} ${n2(y + .09 * s)}L${n2(x - .06 * s)} ${n2(y - .09 * s)}`
+       + `L${n2(x + .05 * s)} ${n2(y - .11 * s)}L${n2(x + .13 * s)} ${n2(y + .04 * s)}`
+       + `L${n2(x + .08 * s)} ${n2(y + .10 * s)}Z`;
+}
+function dTuft(x, y, s) {
+  let d = '';
+  for (let i = -1; i <= 1; i++) {
+    const bx = x + i * .07 * s;
+    d += `M${n2(bx)} ${n2(y + .07 * s)}Q${n2(bx + i * .03 * s)} ${n2(y)} ${n2(bx + i * .06 * s)} ${n2(y - .10 * s)}`;
+  }
+  return d;
+}
+function dDot(x, y, s) {
+  const r = .04 * s;
+  return `M${n2(x - r)} ${n2(y)}a${n2(r)} ${n2(r)} 0 1 0 ${n2(2 * r)} 0a${n2(r)} ${n2(r)} 0 1 0 ${n2(-2 * r)} 0`;
+}
+
+/* Die Marken EINES Feldes. Immer dieselben: der Würfel hängt an der
+   Feldnummer, nicht am Zeitpunkt — sonst tanzten die Bäume bei jedem
+   Neuzeichnen. */
+function cellDetail(z) {
+  if (z.home >= 0) return '';                  // dort steht die Fahne
+  const r = mulberry32(z.r * 7919 + z.c * 104729 + 17);
+  const k = z.boden;
+  const cnt = k === 'wald' ? 2 + (r() < .5 ? 1 : 0)
+            : k === 'fels' ? 1 + (r() < .5 ? 1 : 0)
+            : k === 'sand' ? 2 : 3;
+  let d = '';
+  for (let i = 0; i < cnt; i++) {
+    const a = r() * 6.283, rad = .10 + r() * .28;
+    const x = z.x + Math.cos(a) * rad, y = z.y + Math.sin(a) * rad * .82;
+    const s = .75 + r() * .55;
+    d += k === 'wald' ? dTree(x, y, s)
+       : k === 'fels' ? dRock(x, y, s)
+       : k === 'sand' ? dDot(x, y, s)
+       : dTuft(x, y, s);
+  }
+  return d;
+}
+function detailPaths(cells) {
+  const out = { wald: '', fels: '', gras: '', sand: '' };
+  for (const z of cells) out[z.boden] += cellDetail(z);
+  return out;
+}
+
+/* Das angedeutete Raster: je Kante zwischen zwei Landfeldern das
+   MITTLERE Stück, nicht die ganze Kante. Ein voller Umriss ist ein
+   Drahtgitter; ein Strich in der Mitte ist eine Ahnung. */
+function hintPath(isl, gap, frac) {
+  let d = '';
+  const seen = new Set();
+  for (const z of isl.cells) {
+    const nb = nbrs(z.r, z.c);
+    for (let i = 0; i < 6; i++) {
+      const [nr, nc] = nb[i];
+      const n = isl.at(nr, nc);
+      if (!n) continue;
+      const key = Math.min(isl.idx.get(z.r + ',' + z.c), isl.idx.get(nr + ',' + nc)) + ':' +
+                  Math.max(isl.idx.get(z.r + ',' + z.c), isl.idx.get(nr + ',' + nc));
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const e = EDGE[i];
+      const a = HEX[e], b = HEX[(e + 1) % 6];
+      const ax = z.x + a[0] * gap, ay = z.y + a[1] * gap;
+      const bx = z.x + b[0] * gap, by = z.y + b[1] * gap;
+      const t0 = (1 - frac) / 2, t1 = 1 - t0;
+      d += `M${n2(ax + (bx - ax) * t0)} ${n2(ay + (by - ay) * t0)}`
+         + `L${n2(ax + (bx - ax) * t1)} ${n2(ay + (by - ay) * t1)}`;
+    }
+  }
+  return d;
+}
+
+function union(cells, gap) {
+  let d = '';
+  for (const z of cells) d += hexPath(z.x, z.y, gap);
+  return d;
+}
+
+/* Die KÜSTENLINIE als geschlossener Zug.
+   Sie wird gebraucht, weil ein Strich auf der Vereinigung nicht das
+   tut, wonach es aussieht: `union()` ist ein Pfad aus 295 einzelnen
+   Sechsecken. Gefüllt ergibt das eine Fläche, aber ein STRICH
+   umrandet jedes Sechseck einzeln — der Strand lag als Ring um jede
+   Kachel und hat die ganze Insel zugedeckt. Nachgemessen im Bild.
+
+   Also: alle Kanten sammeln, an denen Land ans Wasser stößt, und zu
+   Ringen zusammenhängen. Die Ecken werden auf drei Stellen gerundet,
+   damit zwei Kanten, die von verschiedenen Feldern aus gerechnet
+   wurden, denselben Punkt treffen.
+
+   Herauskommen PUNKTE, nicht ein Pfad. Der Pfad ist nur eine von
+   drei Verwendungen: das Wasser stapelt Tiefenstufen darauf, die
+   Brandung setzt Wellen darauf ab — und beides braucht die Stellen,
+   nicht die Zeichenkette. */
+function coastRings(isl, gap) {
+  /* Die Ecken auf HUNDERTSTEL runden, nicht feiner. Zwei Kanten, die
+     von verschiedenen Feldern aus gerechnet wurden, treffen sonst
+     nicht denselben Schlüssel — und die Kette reißt.
+     Und: die Kacheln müssen hier ihre WAHRE Größe haben. Beim ersten
+     Versuch lief der Umriss über die 2 % größer gezeichneten
+     Sechsecke, damit lagen die Ecken zweier Nachbarn 0.02 weit
+     auseinander, die Hälfte aller Ketten riss nach drei Schritten,
+     und die Insel verschwand: als Strich sah man den Fehler nicht
+     (jedes Stück wurde ja gezeichnet), als FLÄCHE war nichts mehr
+     da. */
+  const K = (x, y) => Math.round(x * 100) + ',' + Math.round(y * 100);
+  const von = new Map();
+  const alle = [];
+  for (const z of isl.cells) {
+    const nb = nbrs(z.r, z.c);
+    for (let i = 0; i < 6; i++) {
+      if (isl.at(nb[i][0], nb[i][1])) continue;
+      const e = EDGE[i], a = HEX[e], b = HEX[(e + 1) % 6];
+      const s = {
+        ax: z.x + a[0] * gap, ay: z.y + a[1] * gap,
+        bx: z.x + b[0] * gap, by: z.y + b[1] * gap, used: false
+      };
+      alle.push(s);
+      const k = K(s.ax, s.ay);
+      if (!von.has(k)) von.set(k, []);
+      von.get(k).push(s);
+    }
+  }
+  /* Erst die Ringe schließen … */
+  const ringe = [];
+  for (const s0 of alle) {
+    if (s0.used) continue;
+    let s = s0; s.used = true;
+    const pts = [[s.ax, s.ay]];
+    for (let guard = 0; guard < 5000; guard++) {
+      pts.push([s.bx, s.by]);
+      const next = (von.get(K(s.bx, s.by)) || []).find(t => !t.used);
+      if (!next) break;
+      next.used = true; s = next;
+    }
+    /* Der letzte Punkt IST der erste — die Ringe kommen ohne
+       Doppelpunkt heraus, sonst muss jeder, der sie benutzt, daran
+       denken. */
+    if (pts.length > 4) ringe.push(pts.slice(0, -1));
+  }
+  return ringe;
+}
+
+/* … dann die Ecken abrunden und den Zug leicht auslenken.
+   Das ist der Ersatz für den ersten Versuch, die Küste mit einem
+   Verzerrungsfilter auszubeulen. Der arbeitete auf viel zu großer
+   Skala: er hat die halbe Insel als Ganzes verschoben, statt den
+   Rand zu kräuseln — und weil derselbe Filter über dem ganzen
+   Land lag, hätte eine stärkere Einstellung auch die Bäume
+   zerzogen. Hier wandert nur der Küstenzug selbst, und die
+   120-Grad-Ecken verschwinden von allein, weil der Weg durch die
+   Kantenmitten läuft und die Ecken nur noch anzieht.
+
+   `ph` verschiebt die Auslenkung. Dafür gibt es einen Grund: die
+   Wasserstufen sind mehrere Kopien desselben Zuges. Mit derselben
+   Auslenkung liefen sie exakt parallel und sähen aus wie der
+   Rand eines Aufklebers — mit verschobener Phase kriecht jede
+   Tiefenlinie anders um die Insel. */
+const wOX = (x, y, ph) => Math.sin(x * 1.31 + y * .77 + ph) * .62 + Math.sin(x * .53 - y * 1.11 + ph * 1.7) * .38;
+const wOY = (x, y, ph) => Math.cos(x * .91 - y * 1.23 + ph) * .62 + Math.cos(x * 1.43 + y * .61 + ph * 1.7) * .38;
+
+function warpRing(pts, wob, ph) {
+  if (!wob) return pts;
+  return pts.map(([x, y]) => [x + wob * wOX(x, y, ph || 0), y + wob * wOY(x, y, ph || 0)]);
+}
+
+function ringsPath(ringe, wob, smooth, ph) {
+  let d = '';
+  for (const pts0 of ringe) {
+    const pts = warpRing(pts0, wob, ph);
+    const n = pts.length;
+    if (!smooth) {
+      d += 'M' + pts.map(([x, y]) => `${n2(x)} ${n2(y)}`).join('L') + 'Z';
+      continue;
+    }
+    const mid = i => [(pts[i][0] + pts[(i + 1) % n][0]) / 2, (pts[i][1] + pts[(i + 1) % n][1]) / 2];
+    let m = mid(0);
+    d += `M${n2(m[0])} ${n2(m[1])}`;
+    for (let i = 1; i <= n; i++) {
+      const p = pts[i % n], q = mid(i % n);
+      d += `Q${n2(p[0])} ${n2(p[1])} ${n2(q[0])} ${n2(q[1])}`;
+    }
+    d += 'Z';
+  }
+  return d;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   6 · DAS MEER
+   ══════════════════════════════════════════════════════════════════
+   Was Wasser zu Wasser macht, ist nicht die Farbe, sondern der
+   ÜBERGANG: flach an der Küste, tief draußen, Brandung dazwischen.
+   Der Flachwassersaum entsteht aus dem Inselumriss selbst — ein
+   dicker Strich, der zur Hälfte unter dem Land verschwindet.
+
+   Drei Bauarten stecken hier drin:
+     BÄNDER    (Papierschnitt) drei ausgeschnittene Streifen,
+               harte Kante, sonst nichts.
+     STUFEN    (Relief) dasselbe Prinzip, aber als Meeresgrund:
+               jede Tiefenlinie wirft eine Kante auf die nächste,
+               und jede kriecht anders um die Insel.
+     VERLAUF   (die gemalten Varianten) Farbverlauf, Schlieren,
+               Lichtflecken, Wellenlinien.
+   Brandung und die vereinzelten Wellen auf hoher See gehören
+   keiner davon — die gibt es überall.                             */
+
+/* Die Tiefenstufen. Was Sönke am Papierschnitt gefällt, sind die
+   KANTEN zwischen den Wassertiefen; was dort fehlt, ist der Grund,
+   warum eine Kante zu sehen ist. Hier bekommt sie ihn: vor jeder
+   Stufe liegt derselbe Zug etwas breiter und dunkel — der Schatten,
+   den die Stufe auf die nächsttiefere Ebene wirft. Damit ist der
+   Meeresgrund dasselbe Bauteil wie die Insel darüber, nämlich
+   gestapelte Platten, und das Relief hört nicht am Strand auf.
+
+   Eine Stufe ist EIN Strich auf dem Küstenzug mit der doppelten
+   Breite ihres Abstands: die innere Hälfte verschwindet unter der
+   Insel, sichtbar bleibt ein Saum, der außen genau beim Abstand
+   endet. Reihenfolge: von tief nach flach, breit nach schmal.
+
+   Wie laut das Ganze ist, steckt in zwei Zahlen und einer Palette:
+   der Breite der Kante hier unten, ihrer Deckung weiter unten — und
+   dem Abstand der vier Wasserfarben. Zusammengedrückte Farben und
+   schmale Kanten ergeben ein ruhiges Meer, in dem die Stufen nur
+   noch zu ahnen sind; auseinandergezogene ergeben eine Seekarte.
+   Sönkes Wunsch nach der ersten Runde: leiser.
+
+   [Abstand von der Küste, Farbe, Breite der Kante]                */
+const SHELF = [[2.55, 'deep2', .24], [1.66, 'mid', .20], [1.00, 'shallow', .17], [.46, 'shallow2', .14]];
+
+function seaLayer(svg, isl, cfg, vb, dCoast, rings, opt) {
+  const g = el('g', {}, svg);
+  const M = 9;
+  const box = { x: n2(vb[0] - M), y: n2(vb[1] - M), width: n2(vb[2] + 2 * M), height: n2(vb[3] + 2 * M) };
+  /* „flach" heißt hier: eine Farbe für das tiefe Wasser, kein
+     Verlauf, keine Schlieren. Beide Papier-Bauarten sind flach. */
+  const flat = cfg.sea.bands || cfg.sea.shelf;
+
+  if (cfg.sea.shelf) {
+    el('rect', Object.assign({ fill: cfg.sea.deep }, box), g);
+    SHELF.forEach(([off, key, shw], i) => {
+      /* Jede Stufe mit eigener Phase und nach außen hin stärker
+         ausgelenkt: die tiefste Linie ist die krummste. Dieselbe
+         Phase für alle liefe parallel — das sähe aus wie der Rand
+         eines Aufklebers und nicht wie ein Meeresgrund. */
+      const amp = (cfg.sea.shelfWob || 0) * (1 + (SHELF.length - 1 - i) * .22);
+      const d = ringsPath(rings, amp, true, 1.7 + i * 2.3);
+      /* Die Kante in zwei Lagen: außen breit und blass, innen schmal
+         und dunkel. Zusammen ist das ein Schattenverlauf ohne einen
+         einzigen Weichzeichner — und Weichzeichner sind genau das,
+         was diese Kante kaputt machen würde. */
+      el('path', { d, fill: 'none', stroke: cfg.sea.ink, 'stroke-width': n2(2 * off + 2 * shw), 'stroke-linejoin': 'round', opacity: .13 }, g);
+      el('path', { d, fill: 'none', stroke: cfg.sea.ink, 'stroke-width': n2(2 * off + shw), 'stroke-linejoin': 'round', opacity: .17 }, g);
+      el('path', { d, fill: 'none', stroke: cfg.sea[key], 'stroke-width': n2(2 * off), 'stroke-linejoin': 'round' }, g);
+    });
+  } else if (cfg.sea.bands) {
+    /* Papierschnitt: das Meer besteht aus ausgeschnittenen Bändern.
+       Keine Verläufe, keine Weichzeichner — und trotzdem liest man
+       „flach hier, tief dort", weil die Bänder der Küste folgen. */
+    el('rect', Object.assign({ fill: cfg.sea.deep }, box), g);
+    [[4.6, cfg.sea.deep2], [3.0, cfg.sea.mid], [1.6, cfg.sea.shallow]].forEach(([w, c]) => {
+      el('path', { d: dCoast, fill: 'none', stroke: c, 'stroke-width': w, 'stroke-linejoin': 'round' }, g);
+    });
+  } else {
+    const id = uid();
+    const grad = el('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 }, el('defs', {}, g));
+    el('stop', { offset: 0, 'stop-color': cfg.sea.mid }, grad);
+    el('stop', { offset: 1, 'stop-color': cfg.sea.deep }, grad);
+    el('rect', Object.assign({ fill: `url(#${id})` }, box), g);
+
+    /* Lichtflecken: große, weiche Ovale, die langsam wandern. Sie
+       kosten fast nichts und sind der Unterschied zwischen einer
+       Fläche und einer Wasseroberfläche. */
+    const gl = el('g', { class: 'wi-glint', filter: 'url(#wiB3)' }, g);
+    const r = mulberry32(4711);
+    for (let i = 0; i < (opt.mini ? 5 : 11); i++) {
+      const a = r() * 6.283, rad = isl.R * (1.05 + r() * .55);
+      /* Flach und schwach: rundere oder kräftigere Flecken sehen aus
+         wie Nebel, der aufs Wasser gerutscht ist. */
+      el('ellipse', {
+        cx: n2(Math.cos(a) * rad), cy: n2(Math.sin(a) * rad * .8),
+        rx: n2(1.6 + r() * 2.8), ry: n2(.28 + r() * .42),
+        fill: cfg.sea.glint, opacity: .28,
+        transform: `rotate(${n2(-14 + r() * 28)} ${n2(Math.cos(a) * rad)} ${n2(Math.sin(a) * rad * .8)})`
+      }, gl);
+    }
+
+    /* Wellen in zwei Richtungen und zwei Geschwindigkeiten. Eine
+       Richtung allein sieht aus wie eine Tapete, die verschoben
+       wird. Die Wellenlänge ist 2.4 — genau so weit läuft die
+       Bewegung, dann fängt sie unsichtbar von vorn an. */
+    const per = 2.4;
+    const x0 = vb[0] - M, x1 = vb[0] + vb[2] + M;
+    [['wi-wa', .22, cfg.sea.wave, 15], ['wi-wb', .13, cfg.sea.wave2, 11]].forEach(([cls, amp, col, cnt], li) => {
+      const gw = el('g', { class: cls }, g);
+      /* Anzahl UND Abstand aus derselben Zahl. Halbiert man nur die
+         Anzahl, liegen in der kleinen Vorschau alle Wellen oben. */
+      const N = opt.mini ? Math.round(cnt / 2) : cnt;
+      for (let i = 0; i < N; i++) {
+        const y = vb[1] - M + (i + .5 + li * .5) * ((vb[3] + 2 * M) / N);
+        let d = `M${n2(x0 - per)} ${n2(y)}`;
+        for (let x = x0 - per; x < x1 + per; x += per) {
+          d += `q${n2(per / 4)} ${n2(-amp)} ${n2(per / 2)} 0q${n2(per / 4)} ${n2(amp)} ${n2(per / 2)} 0`;
+        }
+        el('path', { d, fill: 'none', stroke: col, 'stroke-width': .055, opacity: .55 }, gw);
+      }
+    });
+  }
+
+  /* Wasserschlieren und Tiefenflecken. Beide stehen still — was sich
+     bewegt, sind die Wellenlinien und die Lichtflecken darüber. Eine
+     bewegte Textur würde jeden Bildaufbau neu durch den Filter
+     schicken. */
+  if (!flat && !opt.mini) {
+    const bb = { x: n2(vb[0] - 3), y: n2(vb[1] - 3), width: n2(vb[2] + 6), height: n2(vb[3] + 6) };
+    el('rect', Object.assign({ fill: '#000', filter: 'url(#wiBlotch)', opacity: .16 }, bb), g);
+    el('rect', Object.assign({ fill: '#fff', filter: 'url(#wiWater)', opacity: .1 }, bb), g);
+  }
+
+  /* Vereinzelte Wellen auf hoher See. In JEDER Variante: auch dort,
+     wo schon Wellenlinien über das Bild laufen, stören sie nicht —
+     die Linien sind die Oberfläche, die Dächer sind einzelne
+     Wellen, und weil sie kommen und gehen, wird daraus kein zweites
+     Muster. */
+  swellMarks(g, isl, cfg, vb, opt);
+
+  /* Der Flachwassersaum. Drei Strichbreiten übereinander, alle unter
+     dem Land — sichtbar bleibt nur die äußere Hälfte, also ein Saum,
+     der der Küste exakt folgt und nach außen ausläuft. */
+  const gs = el('g', {}, g);
+  if (!flat) {
+    el('path', { d: dCoast, fill: 'none', stroke: cfg.sea.shallow, 'stroke-width': 5.4, 'stroke-linejoin': 'round', opacity: .2, filter: 'url(#wiB3)' }, gs);
+    el('path', { d: dCoast, fill: 'none', stroke: cfg.sea.shallow, 'stroke-width': 3.0, 'stroke-linejoin': 'round', opacity: .42, filter: 'url(#wiB3)' }, gs);
+    el('path', { d: dCoast, fill: 'none', stroke: cfg.sea.shallow2, 'stroke-width': 1.3, 'stroke-linejoin': 'round', opacity: .62, filter: 'url(#wiB2)' }, gs);
+  }
+  /* Die Schaumlinie. Sie läuft — eine stehende Schaumlinie sieht aus
+     wie ein Rand um einen Aufkleber. */
+  if (!flat) {
+    el('path', { d: dCoast, fill: 'none', stroke: cfg.sea.foam, 'stroke-width': .30, 'stroke-linejoin': 'round', opacity: .30, filter: 'url(#wiB1)' }, gs);
+  }
+  el('path', {
+    class: 'wi-foam', d: dCoast, fill: 'none', stroke: cfg.sea.foam,
+    'stroke-width': flat ? .15 : .13, 'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+    'stroke-dasharray': '.62 .48', opacity: flat ? .8 : .75
+  }, gs);
+
+  /* … und darüber die eigentliche Brandung. */
+  surfMarks(g, cfg, rings, opt);
+  return g;
+}
+
+/* ── Die Brandung ───────────────────────────────────────────────────
+   Eine gestrichelte Linie an der Küste ist Schaum, aber keine Welle:
+   sie hat keine Richtung. Hier läuft je Marke ein kleiner Bogen von
+   außen auf das Land zu und verläuft dort — angehalten sieht man
+   Schaumkämme, in Bewegung sieht man Brandung.
+
+   Die Marken sitzen in gleichmäßigem Abstand AUF DEM WEG und nicht
+   auf den Eckpunkten des Küstenzugs: in einer Bucht liegen die
+   Punkte dicht, auf einer geraden Strecke weit auseinander — nach
+   Punkten verteilt bekäme die Bucht Schaumklumpen und die Gerade
+   nichts.                                                          */
+function surfMarks(g, cfg, rings, opt) {
+  const gg = el('g', {}, g);
+  const r = mulberry32(8123);
+  const step = opt.mini ? 3.8 : 2.5;
+  for (const ring0 of rings) {
+    if (ring0.length < 8) continue;
+    const ring = warpRing(ring0, cfg.wobble, 0);
+    let t = r() * step;
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i], b = ring[(i + 1) % ring.length];
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const seg = Math.hypot(dx, dy) || 1e-6;
+      while (t < seg) {
+        const f = t / seg;
+        const x = a[0] + dx * f, y = a[1] + dy * f;
+        /* Die Senkrechte zur Küste — und zwar die, die nach AUSSEN
+           zeigt. Welche der beiden das ist, verrät der Punkt selbst:
+           die Insel liegt um den Ursprung, also zeigt die richtige
+           vom Ursprung weg. */
+        let nx = -dy / seg, ny = dx / seg;
+        if (nx * x + ny * y < 0) { nx = -nx; ny = -ny; }
+        const s = .78 + r() * .5;
+        const gm = el('g', {
+          transform: `translate(${n2(x + nx * .34)} ${n2(y + ny * .34)}) `
+                   + `rotate(${n2(Math.atan2(ny, nx) * 180 / Math.PI)}) scale(${n2(s)})`
+        }, gg);
+        const gi = el('g', { class: 'wi-surf' }, gm);
+        gi.style.animationDelay = n2(-r() * 4.6) + 's';
+        /* Zwei Bögen, nach außen gewölbt: der Wellenkopf und der
+           Schaum dahinter. Nach der Drehung zeigt die örtliche
+           X-Achse nach außen, deshalb wölbt sich der Bogen nach +X. */
+        el('path', { d: 'M0 -.52Q.30 0 0 .52', fill: 'none', stroke: cfg.sea.foam, 'stroke-width': .12, 'stroke-linecap': 'round', opacity: .85 }, gi);
+        el('path', { d: 'M0 -.29Q.15 0 0 .29', fill: 'none', stroke: cfg.sea.foam, 'stroke-width': .075, 'stroke-linecap': 'round', opacity: .5 }, gi);
+        t += step * (.55 + r() * .95);
+      }
+      t -= seg;
+    }
+  }
+  return gg;
+}
+
+/* ── Wellen auf hoher See ───────────────────────────────────────────
+   Vereinzelt, klein, und weit genug draußen. Zwei Änderungen
+   gegenüber dem ersten Versuch, beide von Sönke:
+
+   ECKIG statt rund. Ein weicher Bogen ist eine Dünung; eine Welle
+   hat einen Kamm. Also ein Dach: zwei gerade Striche mit einer
+   spitzen Ecke oben — dieselbe Form, die jedes Kind malt, wenn man
+   „Welle" sagt.
+
+   AUFTAUCHEN und wieder verschwinden. Das erledigt die Bewegung
+   (@keyframes wiSwell); hier wird nur dafür gesorgt, dass jede
+   Welle ihre eigene Dauer und ihren eigenen Beginn bekommt. Weil
+   jede über die halbe Runde unsichtbar ist, dürfen es mehr sein als
+   vorher — zu sehen ist immer nur etwa die Hälfte.
+
+   Nicht dicht an die Küste: dort ist die Brandung zuständig.      */
+function swellMarks(g, isl, cfg, vb, opt) {
+  const gg = el('g', {}, g);
+  const r = mulberry32(5150);
+  const want = opt.mini ? 7 : 20;
+  const put = [];
+  /* Abstand zur Insel = Abstand zum nächsten Feldmittelpunkt. Das
+     ist mit 290 Feldern billiger als jede Umrissrechnung und für
+     „weit draußen" genau genug. */
+  const frei = (x, y) => {
+    for (const z of isl.cells) if (Math.hypot(z.x - x, z.y - y) < 3.4) return false;
+    for (const h of isl.homes) if (Math.hypot(h.x + h.sx * SHIPD - x, h.y + h.sy * SHIPD - y) < 2.4) return false;
+    return true;
+  };
+  for (let tries = 0; tries < 600 && put.length < want; tries++) {
+    const x = vb[0] + .7 + r() * (vb[2] - 1.4);
+    const y = vb[1] + .7 + r() * (vb[3] - 1.4);
+    if (!frei(x, y)) continue;
+    if (put.some(p => Math.hypot(p[0] - x, p[1] - y) < 2.0)) continue;
+    put.push([x, y]);
+    const s = .8 + r() * .5;
+    /* Ein bisschen aus der Waagerechten gekippt: sechs Dächer, alle
+       exakt gerade, sähen aus wie ein Muster. */
+    const gm = el('g', {
+      transform: `translate(${n2(x)} ${n2(y)}) rotate(${n2(-9 + r() * 18)}) scale(${n2(s)})`
+    }, gg);
+    const gi = el('g', { class: 'wi-swell' }, gm);
+    const dur = 6.5 + r() * 5;
+    gi.style.animationDuration = n2(dur) + 's';
+    gi.style.animationDelay = n2(-r() * dur) + 's';
+    /* Zwei Dächer, das zweite kleiner und versetzt: eine einzelne
+       Spitze liest sich als Vogel, zwei als Wellenkamm.
+       `stroke-linejoin: miter` ist der Punkt der ganzen Sache — mit
+       `round` wäre die Ecke wieder ein Bogen. */
+    el('path', {
+      d: 'M-.58 .17L-.29 -.15L0 .17M.14 .34L.32 .14L.5 .34',
+      fill: 'none', stroke: cfg.sea.foam, 'stroke-width': .085,
+      'stroke-linejoin': 'miter', 'stroke-linecap': 'butt', opacity: .62
+    }, gi);
+  }
+  return gg;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   7 · DAS LAND
+   ══════════════════════════════════════════════════════════════════
+   Der wichtigste Entwurfsentscheid dieser Runde: das GELÄNDE ist
+   nicht in Sechsecke geschnitten. Der erste Versuch gab jedem Feld
+   einen Bodentyp und färbte es entsprechend — und damit stand der
+   Wald in Wabenform auf der Insel. Ein sechseckiger Wald IST das
+   Raster; man kann es nicht gleichzeitig andeuten und in
+   Waldstücken ausmalen.
+
+   Deshalb hier zwei getrennte Schichten:
+     · Das Gelände läuft DURCH die Felder hindurch — Wald und Fels
+       als zusammenlaufende Flecken, der Strand als Saum, der der
+       Küste folgt statt den Kanten.
+     · Der Besitz bleibt feldweise, denn er IST feldweise. Er legt
+       sich als durchscheinende Farbe darüber, statt die Struktur
+       zuzudecken.
+   Sichtbar sechseckig bleibt damit nur, was auch sechseckig
+   gemeint ist: die Grenze zwischen zwei Völkern.                  */
+
+const BODEN = ['sand', 'gras', 'wald', 'fels'];
+
+function landLayer(svg, isl, cfg, opt, dCoast) {
+  const gap = 1.02;
+  const gg = el('g', {}, svg);
+  const id = uid();
+  const defs = el('defs', {}, gg);
+  el('path', { d: dCoast }, el('clipPath', { id: id + 'c' }, defs));
+  const clip = `url(#${id}c)`;
+  const weich = cfg.hardFog ? 'url(#wiGoo)' : 'url(#wiSoft)';
+  const dp = opt.mini ? null : detailPaths(isl.cells);
+
+  /* Grundfläche = der Küstenzug selbst. Alles Weitere liegt in einer
+     Gruppe, die daran beschnitten ist — so endet auch die Volksfarbe
+     an der geschwungenen Küste und nicht an einer Kachelkante. */
+  el('path', { d: dCoast, fill: cfg.land.gras }, gg);
+  const g = el('g', { 'clip-path': clip }, gg);
+
+  /* Wald und Fels: je Feld ein Kreis, der über seine Nachbarn
+     hinausreicht, und alle zusammen durch einen Filter. Aus 30
+     Kreisen wird ein Waldstück mit krummem Rand. */
+  const gT = el('g', {}, g);
+  ['wald', 'fels'].forEach(k => {
+    const gk = el('g', { filter: weich }, gT);
+    for (const z of isl.cells) {
+      if (z.boden !== k) continue;
+      el('circle', { cx: n2(z.x), cy: n2(z.y), r: .66, fill: cfg.land[k] }, gk);
+    }
+  });
+
+  /* Körnung und Flecken. Das ist der Unterschied zwischen „grüne
+     Fläche" und „Wiese". */
+  if (cfg.grain && !opt.mini) {
+    const bb = opt.box;
+    el('rect', { x: bb.x, y: bb.y, width: bb.w, height: bb.h, fill: '#000', filter: 'url(#wiBlotch)', opacity: cfg.grain * 1.1 }, g);
+    el('rect', { x: bb.x, y: bb.y, width: bb.w, height: bb.h, fill: '#000', filter: 'url(#wiGrain)', opacity: cfg.grain }, g);
+  }
+
+  /* Bäume, Felsen, Büschel, Kiesel — kleine Marken, die nirgends
+     eine Kante bilden. */
+  if (dp) {
+    el('path', { d: dp.gras, fill: 'none', stroke: shade(cfg.land.gras, -.34), 'stroke-width': .035, 'stroke-linecap': 'round', opacity: .6 }, g);
+    el('path', { d: dp.wald, fill: shade(cfg.land.wald, -.42), opacity: .8 }, g);
+    el('path', { d: dp.fels, fill: shade(cfg.land.fels, -.30), opacity: .72 }, g);
+  }
+
+  /* Das angedeutete Raster. */
+  if (cfg.grid > 0) {
+    el('path', {
+      d: hintPath(isl, gap, .42), fill: 'none', stroke: cfg.land.line,
+      'stroke-width': .05, 'stroke-linecap': 'round', opacity: cfg.grid
+    }, g);
+  }
+
+  /* Der Besitz: EIN Pfad je Volk, durchscheinend. Zwei getrennte
+     Flächen, die sich eine Kante teilen, lassen durch die
+     Kantenglättung eine helle Naht stehen — in einem Pfad gibt es
+     die Naht nicht, weil die Vereinigung in einem Rutsch gefüllt
+     wird. */
+  const areas = TEAMS.map((t, k) => el('path', {
+    class: 'wi-area', d: '', fill: t.c, opacity: cfg.mix, 'data-t': k
+  }, g));
+
+  /* Der Strand. Ein dicker Strich auf dem Inselumriss, auf das Land
+     beschnitten — sichtbar bleibt die innere Hälfte, also ein Saum,
+     der der Küste folgt und nicht den Kacheln. Er liegt ÜBER der
+     Volksfarbe: so zieht sich ein heller Ring um die ganze Insel,
+     egal wem der Abschnitt gerade gehört.
+
+     ACHTUNG bei der Strichbreite: sichtbar ist die HALBE Breite,
+     der Rest liegt außerhalb der Insel. 2.3 klingt nach einem
+     schmalen Saum und war in Wahrheit ein Strand von anderthalb
+     Kacheln — die ganze Insel war Sand. */
+  const gB = el('g', {}, g);
+  el('path', {
+    d: dCoast, fill: 'none', stroke: cfg.land.sand, 'stroke-width': 1.05,
+    'stroke-linejoin': 'round', opacity: .72, filter: cfg.hardFog ? null : 'url(#wiB2)'
+  }, gB);
+  el('path', {
+    d: dCoast, fill: 'none', stroke: shade(cfg.land.sand, .10), 'stroke-width': .5,
+    'stroke-linejoin': 'round', opacity: .8, filter: cfg.hardFog ? null : 'url(#wiB1)'
+  }, gB);
+  if (dp) el('path', { d: dp.sand, fill: shade(cfg.land.sand, -.34), opacity: .5 }, g);
+
+  /* Die Grenzen zwischen den Reichen — NUR dort, wo zwei
+     verschiedene Völker aneinanderstoßen. Der erste Versuch zog die
+     Linie auch gegen den Nebel und gegen das Meer; damit war jedes
+     Feld an der Front einzeln umrandet, und die Karte sah wieder
+     aus wie eine Bienenwabe. Wo der Nebel endet, zeichnet die Wolke
+     die Kante — dafür braucht es keinen Strich. */
+  const borders = TEAMS.map(t => el('path', {
+    d: '', fill: 'none', stroke: cfg.glow ? t.c : shade(t.c, -.45),
+    'stroke-width': cfg.borderW, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    opacity: cfg.glow ? .95 : .8, filter: cfg.glow ? 'url(#wiGlow)' : null
+  }, g));
+
+  let last = null;
+  return function paint(p) {
+    /* Nur neu setzen, wenn sich etwas geändert hat. Bei 295 Feldern
+       und einem Takt alle 110 ms ist das der Unterschied zwischen
+       „lebt" und „ruckelt". */
+    const key = isl.cells.map(z => z.t <= p ? z.owner : -1).join(',');
+    if (key === last) return;
+    last = key;
+
+    const d = TEAMS.map(() => '');
+    for (const z of isl.cells) if (z.t <= p) d[z.owner] += hexPath(z.x, z.y, gap);
+    areas.forEach((a, k) => a.setAttribute('d', d[k]));
+
+    const db = TEAMS.map(() => '');
+    for (const z of isl.cells) {
+      if (z.t > p) continue;
+      const nb = nbrs(z.r, z.c);
+      for (let i = 0; i < 6; i++) {
+        const n = isl.at(nb[i][0], nb[i][1]);
+        if (!n || n.t > p || n.owner === z.owner) continue;
+        const e = EDGE[i], a = HEX[e], b = HEX[(e + 1) % 6];
+        db[z.owner] += `M${n2(z.x + a[0] * gap)} ${n2(z.y + a[1] * gap)}L${n2(z.x + b[0] * gap)} ${n2(z.y + b[1] * gap)}`;
+      }
+    }
+    borders.forEach((b, k) => b.setAttribute('d', db[k]));
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   8 · DER NEBEL — VIER ARTEN
+   ══════════════════════════════════════════════════════════════════
+   Der Nebel ist kein Zustand einer Kachel, sondern ein Ding, das
+   ÜBER dem Feld liegt: Fläche, Struktur darin, ein Rand, und ein
+   Schatten auf dem Land.
+
+   Reihenfolge im Bild: Schatten (auf dem Land) → Nebel → alles
+   andere. Der Schatten liegt bewusst NICHT unter dem Nebel im
+   selben Filter, sonst verschluckt der Nebel ihn.
+
+   WARUM VIER ARTEN. „Zu gleichförmig, zu wattig" ist keine Kritik
+   an einer Einstellung, sondern an einer Grundannahme: dass das
+   Unentdeckte eine WOLKE sein muss. Muss es nicht. Also steht die
+   Art des Nebels jetzt quer zu den fünf Kartenvarianten — jede
+   Karte lässt sich mit jeder Nebelart ansehen, und die Entscheidung
+   fällt am Bild statt am Argument.
+
+   Eine Nebelart bestimmt vier Dinge:
+     fuell   die Farbe der Fläche und wie deckend sie ist
+     kante   wie der Rand entsteht (weiche Wolke / harter Riss)
+     schatt  wie stark der Schatten auf dem Land ist
+     innen   was in der Fläche steckt — und was von der Karte
+             durchscheint
+   Die FORM (welche Felder) gehört keiner Art: die kommt aus dem
+   Spielstand und ist überall dieselbe.                            */
+
+const FOGS = [
+  {
+    key: 'schwaden', n: 'Schwaden',
+    kurz: 'Drei Rauschlagen übereinander: feine Schlieren quer, gröbere längs und sehr grobe Ballungen — dicht hier, aufgerissen dort.',
+    fuell: cfg => cfg.fog.body, deck: 1, kante: 'wolke', schatt: 1,
+    innen(gIn, isl, cfg, opt, id, hart) {
+      /* Hier standen einmal siebzig Kreise mit einem Weichzeichner
+         von einem Fünftel Kachel — und genau so sah es aus: nach
+         Kugeln. Der Fehler war nicht die Größe, es war die Bauart:
+         ein Kreis hat einen Mittelpunkt, Nebel hat keinen.
+
+         Drei RAUSCHFLÄCHEN also, jede ein Rechteck über die ganze
+         Karte, das seine Deckung aus einer Turbulenz bezieht und
+         durch die Nebelform beschnitten wird. Die Farbe kommt vom
+         Rechteck und nicht aus dem Filter — sonst wäre der Nebel in
+         allen Varianten gleich weiß, und die Nachtkarte hätte eine
+         Schneewehe auf der Insel.
+
+         Die dritte Lage (wiFogC, sehr grob) ist die gegen die
+         Gleichförmigkeit: erst sie macht Ballungen statt Textur. */
+      wispRect(gIn, opt, 'wi-fogc', 'url(#wiFogC)', cfg.fog.puffD, .34);
+      wispRect(gIn, opt, 'wi-foga', 'url(#wiFogA)', cfg.fog.puffL, .68);
+      if (!opt.mini) wispRect(gIn, opt, 'wi-fogb', 'url(#wiFogB)', cfg.fog.puffD, .5);
+    }
+  },
+  {
+    key: 'schleier', n: 'Schleier',
+    kurz: 'Durchscheinend: das Land ist als Schemen zu ahnen, Farbe und Einzelheiten fehlen. Ein heller Saum markiert, wo der Schleier endet.',
+    /* Die Gegenprobe zu „wattig": ein Nebel, durch den man SIEHT.
+       Was er verbirgt, sind Besitz und besondere Orte — und die
+       verbirgt er vollständig, weil beide erst gezeichnet werden,
+       wenn ihr Feld entdeckt ist. Zu sehen ist nur Gelände, und das
+       ist genau die Menge Information, die niemandem hilft und
+       trotzdem neugierig macht. */
+    fuell: cfg => cfg.fog.body, deck: .5, kante: 'wolke', schatt: .55,
+    innen(gIn, isl, cfg, opt, id, hart) {
+      wispRect(gIn, opt, 'wi-fogc', 'url(#wiFogC)', cfg.fog.puffL, .3);
+      wispRect(gIn, opt, 'wi-foga', 'url(#wiFogA)', cfg.fog.puffL, .42);
+      if (!opt.mini) wispRect(gIn, opt, 'wi-fogb', 'url(#wiFogB)', cfg.fog.puffD, .26);
+      /* Ohne Saum verliert ein durchscheinender Nebel seine Kante,
+         und damit die Auskunft, wie weit die Klasse gekommen ist.
+         Der Saum wird nicht gestrichelt, sondern aus der Fläche
+         geschält — siehe Filter wiRim. Ohne diesen Filter gibt es
+         keinen Saum, sondern eine zweite volle Fläche: im
+         Papierschnitt bleibt er deshalb weg. Dort trägt die harte
+         Kante die Auskunft von allein. */
+      return hart ? [] : [el('path', {
+        d: '', fill: cfg.fog.puffL, filter: 'url(#wiRim)', opacity: .5
+      }, gIn)];
+    }
+  },
+  {
+    key: 'stufen', n: 'Tonstufen',
+    kurz: 'Der Schleier andersherum: in der Mitte deckt der Nebel ganz, und erst die äußeren zwei Felder werden durchsichtig — in zwei festen Stufen, ohne Verlauf dazwischen.',
+    /* Die interessanteste der fünf, weil sie das Verbergen und das
+       Locken trennt: Was tief im Nebel liegt, bleibt unbekannt.
+       Was gleich an der Reihe ist, schimmert schon durch. Der Rand
+       ist damit keine Grenze mehr, sondern eine Ankündigung — und
+       er wandert mit, während die Klasse vorankommt.
+
+       Ohne Verlauf: die Stufen sind Tonwerte, keine Überblendung.
+       Ein weicher Verlauf über zwei Kacheln sähe aus wie ein
+       schlecht gesetzter Schatten; zwei klare Stufen sehen aus wie
+       Absicht — dieselbe Entscheidung wie beim Wasser. */
+    fuell: cfg => cfg.fog.body, deck: 1, kante: 'wolke', schatt: .85,
+    /* Zieltöne von außen nach innen: Randfeld, zweites Feld, Kern.
+       0.55 heißt „der Nebel deckt zu 55 %", das Land scheint also
+       mit 45 % durch — genug zum Erahnen, zu wenig zum Erkennen.
+       Das ist die Zahl, an der man dreht, wenn es zu viel oder zu
+       wenig verrät; alles andere bleibt, wie es ist.
+       Was daraus an Deckung je Schicht wird, rechnet fogLayer aus —
+       die Schichten liegen übereinander, nicht nebeneinander. */
+    stufen: [.55, .82, 1],
+    innen(gIn, isl, cfg, opt, id, hart) {
+      wispRect(gIn, opt, 'wi-fogc', 'url(#wiFogC)', cfg.fog.puffD, .3);
+      wispRect(gIn, opt, 'wi-foga', 'url(#wiFogA)', cfg.fog.puffL, .6);
+      if (!opt.mini) wispRect(gIn, opt, 'wi-fogb', 'url(#wiFogB)', cfg.fog.puffD, .45);
+    }
+  },
+  {
+    key: 'leer', n: 'Unerforscht',
+    kurz: 'Gar kein Nebel: ein unbeschriebener Teil der Karte. Dunkle Fläche, feine Schraffur, ausgefranste Kante — und die Lichter der besonderen Orte stehen darin wie Leuchtfeuer.',
+    fuell: cfg => mix(cfg.fog.shadow, cfg.fog.body, .16), deck: .92, kante: 'riss', schatt: .5,
+    innen(gIn, isl, cfg, opt, id, hart) {
+      /* Schraffur als Muster und nicht als tausend Striche: eine
+         Kachelvorlage, einmal beschrieben, vom Browser wiederholt.
+         Sie ist der Unterschied zwischen „hier ist es dunkel" und
+         „hier ist noch nichts eingetragen". */
+      const bb = opt.box;
+      const pat = el('pattern', {
+        id: id + 'h', width: .66, height: .66,
+        patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(-34)'
+      }, el('defs', {}, gIn));
+      el('path', { d: 'M0 0L0 .66', stroke: cfg.fog.puffL, 'stroke-width': .075 }, pat);
+      el('rect', { x: bb.x, y: bb.y, width: bb.w, height: bb.h, fill: `url(#${id}h)`, opacity: .12 }, gIn);
+      /* Der goldene Saum ist eine Randlinie und ohne wiRim eine
+         goldene FLÄCHE — im Papierschnitt also lieber keiner. */
+      return hart ? [] : [el('path', {
+        d: '', fill: cfg.gold, filter: 'url(#wiRim)', opacity: .38
+      }, gIn)];
+    }
+  },
+  {
+    key: 'front', n: 'Sturmfront',
+    kurz: 'Gerichtet statt gleichförmig: schräge Schwaden ziehen in zwei Lagen durch das Bild, eine Ecke steht im Dunkeln.',
+    fuell: cfg => mix(cfg.fog.body, cfg.fog.shadow, .28), deck: 1, kante: 'wolke', schatt: 1,
+    innen(gIn, isl, cfg, opt, id, hart) {
+      /* Streifen als gedrehte Ellipsen, zwei Lagen gegeneinander.
+         Rauschen kann man nicht drehen (feTurbulence rechnet immer
+         achsenparallel) — die Schräge ist der ganze Witz dieser
+         Art, also werden die Streifen gezeichnet.
+         Weit ÜBER den Rand hinaus: die Lagen wandern mehrere
+         Kacheln, und ein Streifen, der zur Mitte hin ausgeht, sieht
+         aus wie ein Fehler. */
+      const bb = opt.box;
+      const x0 = +bb.x, y0 = +bb.y, w = +bb.w, h = +bb.h;
+      const lage = (cls, seed, col, op, n, dick) => {
+        const gw = el('g', { class: cls }, gIn);
+        const r = mulberry32(seed);
+        for (let i = 0; i < n; i++) {
+          const x = x0 - 4 + r() * (w + 8), y = y0 - 4 + r() * (h + 8);
+          el('ellipse', {
+            cx: n2(x), cy: n2(y), rx: n2(3.0 + r() * 4.5), ry: n2(dick * (.6 + r() * .7)),
+            fill: col, opacity: op, filter: hart ? null : 'url(#wiB3)',
+            transform: `rotate(-26 ${n2(x)} ${n2(y)})`
+          }, gw);
+        }
+      };
+      lage('wi-fronta', 707, cfg.fog.puffL, .40, opt.mini ? 9 : 22, .42);
+      if (!opt.mini) lage('wi-frontb', 808, cfg.fog.puffD, .34, 16, .30);
+      /* Und ein Gefälle quer zur Zugrichtung: eine Ecke steht im
+         Dunkeln, die gegenüberliegende ist aufgehellt. Ohne das
+         bleibt die Front eine Textur; damit wird sie Wetter. */
+      const gid = id + 'fr';
+      const grad = el('linearGradient', { id: gid, x1: .1, y1: 0, x2: .9, y2: 1 }, el('defs', {}, gIn));
+      el('stop', { offset: 0, 'stop-color': cfg.fog.shadow, 'stop-opacity': .38 }, grad);
+      el('stop', { offset: .55, 'stop-color': cfg.fog.shadow, 'stop-opacity': 0 }, grad);
+      el('stop', { offset: 1, 'stop-color': cfg.fog.puffL, 'stop-opacity': .3 }, grad);
+      el('rect', { x: bb.x, y: bb.y, width: bb.w, height: bb.h, fill: `url(#${gid})` }, gIn);
+    }
+  }
+];
+/* Welche Art gerade läuft. Steht hier und nicht bei der Bedienung:
+   wer den Nebel liest, soll nicht suchen müssen, woher die Zahl
+   kommt. Umschalten baut die Karten neu — der Nebel steckt in
+   Filtern und Mustern, und die lassen sich nicht umfärben. */
+let fogStyle = 0;
+
+/* Wie tief liegt ein verhülltes Feld im Nebel? Breitensuche vom
+   Nebelrand nach innen — dieselbe Rechnung wie `rand` bei der Insel,
+   nur auf der Menge der verhüllten Felder statt auf der Insel. 1 =
+   Randfeld.
+
+   Randfeld heißt: mindestens ein Nachbar ist NICHT verhüllt. Dass
+   dazu auch das offene Meer zählt, ist Absicht — an der Küste ist
+   der Nebel genauso „außen" wie an der Front, und dort schimmert
+   dann der Strand durch.                                          */
+function fogDepth(isl, verhuellt) {
+  const drin = new Set(verhuellt);
+  const tiefe = new Map();
+  let front = [];
+  for (const z of verhuellt) {
+    if (nbrs(z.r, z.c).some(([nr, nc]) => { const n = isl.at(nr, nc); return !n || !drin.has(n); })) {
+      tiefe.set(z, 1); front.push(z);
+    }
+  }
+  while (front.length) {
+    const next = [];
+    for (const z of front) for (const [nr, nc] of nbrs(z.r, z.c)) {
+      const n = isl.at(nr, nc);
+      if (!n || !drin.has(n) || tiefe.has(n)) continue;
+      tiefe.set(n, tiefe.get(z) + 1); next.push(n);
+    }
+    front = next;
+  }
+  return tiefe;
+}
+
+/* Aus Zieltönen die Deckung der einzelnen Schichten.
+   Die Schichten liegen ÜBEREINANDER und nicht nebeneinander: die
+   unterste ist der ganze Nebel, die nächste alles ab dem zweiten
+   Feld, die oberste der Kern. Nebeneinander gelegte Bänder müssten
+   sich eine Kante teilen, und an geteilten Kanten steht in SVG
+   immer eine Naht.
+
+   Übereinander addiert sich aber die Deckung, also muss jede
+   Schicht wissen, was unter ihr schon liegt: aus .40 auf .72 zu
+   kommen kostet nicht .72, sondern .53 — sonst sind die Töne, die
+   in der Tabelle stehen, nicht die, die man sieht.               */
+function stufenDeckung(toene) {
+  let vor = 0;
+  return toene.map(t => {
+    const a = vor >= 1 ? 1 : (t - vor) / (1 - vor);
+    vor = t;
+    return n2(Math.max(0, Math.min(1, a)));
+  });
+}
+
+/* Eine Rauschfläche: Rechteck über die ganze Karte, Farbe vom
+   Rechteck, Form vom Filter, Bewegung von der Klasse. */
+function wispRect(parent, opt, cls, filt, col, op) {
+  const bb = opt.box;
+  const gw = el('g', { class: cls }, parent);
+  el('rect', { x: bb.x, y: bb.y, width: bb.w, height: bb.h, fill: col, filter: filt, opacity: op }, gw);
+  return gw;
+}
+
+function fogLayer(svg, isl, cfg, opt, lift) {
+  const gap = 1.06;
+  const id = uid();
+  const st = FOGS[fogStyle] || FOGS[0];
+  /* `hardFog` ist eine Eigenschaft der KARTE (Papierschnitt kennt
+     keine Weichzeichner), die Nebelart ist eine Eigenschaft der
+     ANSICHT. Beide treffen sich hier: die Art liefert den Inhalt,
+     die Karte entscheidet, ob er weich sein darf. */
+  const hart = !!cfg.hardFog;
+  const gWrap = el('g', { transform: lift ? `translate(0 ${n2(-lift)})` : null }, svg);
+
+  /* Der Schatten muss weit genug unter dem Nebel hervorkommen, um
+     überhaupt gesehen zu werden — sonst verschluckt ihn dessen
+     eigener weicher Rand, und der Nebel liegt wieder IM Feld statt
+     darüber. */
+  const gSh = el('g', { filter: hart ? null : 'url(#wiCloudSh)', opacity: n2(cfg.fog.shadowOp * st.schatt) }, gWrap);
+  const shadow = el('path', { d: '', fill: cfg.fog.shadow, transform: 'translate(.16 .62)' }, gSh);
+
+  const rand = hart ? null : (st.kante === 'riss' ? 'url(#wiCloudHard)' : 'url(#wiCloud)');
+  const gCloud = el('g', { filter: rand }, gWrap);
+  const body = el('path', { class: 'wi-fogbody', d: '', fill: st.fuell(cfg), opacity: st.deck }, gCloud);
+
+  /* ── Tonstufen ────────────────────────────────────────────────────
+     Eine Maske über dem GANZEN Nebel — Körper und Schwaden zusammen.
+     Das ist der Punkt: würde man nur den Körper durchsichtig machen,
+     bliebe die Rauschlage darüber voll stehen, und der Rand wäre
+     genauso blickdicht wie vorher, nur heller.
+
+     Die Maske rechnet mit Helligkeit: weiß deckt, dunkelgrau lässt
+     durch. Statt grauer Flächen liegen hier weiße in Gruppen mit
+     `opacity` — Grau wäre eine Wette darauf, in welchem Farbraum der
+     Browser die Helligkeit ausrechnet (SVG 1.1 sagt linearRGB, CSS
+     Masking sagt sRGB), und die beiden Antworten liegen weit
+     auseinander. Weiß mit Deckung ist in beiden dasselbe.
+
+     Und die Maske läuft durch DENSELBEN Wolkenfilter wie der Nebel.
+     Ohne das hätte man weiche Nebelränder mit schnurgeraden
+     Sechseck-Stufen darin — eine Bienenwabe im Wattebausch. Mit ihm
+     wandern beide gleich, weil die Turbulenz denselben Startwert
+     hat. */
+  let stufen = [];
+  if (st.stufen) {
+    const bb = opt.box;
+    const mk = el('mask', {
+      id: id + 'm', maskUnits: 'userSpaceOnUse',
+      x: bb.x, y: bb.y, width: bb.w, height: bb.h
+    }, el('defs', {}, gWrap));
+    const gM = el('g', { filter: rand }, mk);
+    stufen = stufenDeckung(st.stufen).map(op =>
+      el('path', { d: '', fill: '#fff' }, el('g', { opacity: op }, gM)));
+    gCloud.setAttribute('mask', `url(#${id}m)`);
+  }
+
+  /* Was IM Nebel steckt. Es sitzt in der Nebelform (Schnittmaske),
+     und die Maske sitzt INNEN, der Filter AUSSEN — andersherum
+     schnitte die Maske die verzerrte Form wieder scharf ab, und der
+     ganze Rand wäre umsonst. */
+  const cp = el('clipPath', { id: id + 'f' }, el('defs', {}, gCloud));
+  const clip = el('path', { d: '' }, cp);
+  const gIn = el('g', { class: 'wi-fogin', 'clip-path': `url(#${id}f)` }, gCloud);
+
+  let mit = [];
+  if (hart && st.key === 'schwaden') {
+    /* Papierschnitt: die Wolke ist eine ausgeschnittene Form. Statt
+       Weichzeichner aufgelegte Kreise mit harter Kante — dick genug,
+       dass sie sich überlappen. Der erste Versuch nahm kleinere und
+       ergab eine Perlenkette statt einer Wolke. Die anderen drei
+       Nebelarten kommen ohne Weichzeichner aus und laufen deshalb
+       auch hier durch. */
+    const r = mulberry32(303);
+    const gp = el('g', { class: 'wi-puffa' }, gIn);
+    for (let i = 0; i < (opt.mini ? 18 : 40); i++) {
+      const a = r() * 6.283, rad = Math.sqrt(r()) * isl.R * .9;
+      el('circle', { cx: n2(Math.cos(a) * rad), cy: n2(Math.sin(a) * rad * .95), r: n2(1.0 + r() * 1.1), fill: cfg.fog.puffL, opacity: .45 }, gp);
+    }
+  } else {
+    mit = st.innen(gIn, isl, cfg, opt, id, hart) || [];
+  }
+
+  let last = null;
+  return function paint(p) {
+    const key = isl.cells.map(z => z.t <= p ? 1 : 0).join('');
+    if (key === last) return;
+    last = key;
+    const fog = isl.cells.filter(z => z.t > p);
+    /* Die Form aus Kreisen statt Sechsecken, wenn sie hart bleiben
+       soll: eine Papierwolke mit 120-Grad-Ecken wäre eine
+       Bienenwabe. */
+    const form = (cs) => {
+      if (!hart) return union(cs, gap);
+      let s = '';
+      for (const z of cs) {
+        const r = .92;
+        s += `M${n2(z.x - r)} ${n2(z.y)}a${r} ${r} 0 1 0 ${n2(2 * r)} 0a${r} ${r} 0 1 0 ${n2(-2 * r)} 0`;
+      }
+      return s;
+    };
+    const d = form(fog);
+
+    /* Die Stufen. Schicht i deckt alles ab Tiefe i+1 — die unterste
+       also den ganzen Nebel, die oberste nur den Kern. Die Tiefe
+       wird bei JEDEM Bildaufbau neu gerechnet, und das muss sie
+       auch: der Nebelrand wandert ja gerade. */
+    if (stufen.length) {
+      const tiefe = fogDepth(isl, fog);
+      stufen.forEach((s, i) => {
+        s.setAttribute('d', i === 0 ? d : form(fog.filter(z => (tiefe.get(z) || 99) > i)));
+      });
+    }
+    body.setAttribute('d', d);
+    clip.setAttribute('d', d);
+    shadow.setAttribute('d', d);
+    /* Alles, was die Nebelart zusätzlich an die FORM hängt — bis
+       jetzt nur Säume. Sie müssen mitwandern, sonst steht der Saum
+       um den Nebel von vor zehn Sekunden. */
+    for (const m of mit) m.setAttribute('d', d);
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   9 · ORTE, BURGEN, SCHIFFE
+   ══════════════════════════════════════════════════════════════════ */
+
+function placeLayer(svg, isl, cfg, opt) {
+  const g = el('g', {}, svg);
+  const marks = [];
+  for (const z of isl.cells) {
+    if (!z.ruin) continue;
+    const gg = el('g', { class: 'wi-place', transform: `translate(${n2(z.x)} ${n2(z.y)})` }, g);
+    /* Was durch die Wolke dringt: der Schein. Der Ort selbst bleibt
+       verdeckt — sonst wäre die Wolke nur ein Farbfilter. Der Schein
+       ist der Grund, überhaupt loszufahren.
+       Klein halten: der erste Versuch nahm den Radius einer ganzen
+       Kachel, und auf der weißen Wolke standen zehn gelbe Flecken,
+       die aussahen wie ein Fehler im Bild. Ein Licht im Nebel ist
+       ein PUNKT mit Schein, keine Scheibe. */
+    const halo = el('circle', { class: 'wi-halo', r: .3, fill: cfg.gold, opacity: .55, filter: cfg.hardFog ? null : 'url(#wiB2)' }, gg);
+    const shaft = cfg.shafts
+      ? el('path', { d: 'M-.15 0 L .15 0 L .42 -2.6 L-.42 -2.6 Z', fill: cfg.gold, opacity: .13, filter: 'url(#wiB2)' }, gg)
+      : null;
+    const gBody = el('g', {}, gg);
+    const shadow = el('ellipse', { cx: 0, cy: .30, rx: .66, ry: .22, fill: 'rgba(0,0,0,.38)', filter: cfg.hardFog ? null : 'url(#wiB1)' }, gBody);
+    /* Der Sockel: gerodeter Boden, auf dem der Ort steht. Er gehört
+       der Karte und bleibt, egal welches Bild darauf kommt. */
+    const plate = el('path', { class: 'wi-plate', d: '', fill: cfg.land.sand, stroke: shade(cfg.land.sand, -.35), 'stroke-width': .05 }, gBody);
+    const ring = el('path', { d: '', fill: 'none', stroke: cfg.gold, 'stroke-width': .06, opacity: .8 }, gBody);
+    const slot = el('rect', { class: 'wi-slot', x: 0, y: 0, width: 0, height: 0, fill: 'none', stroke: cfg.gold, 'stroke-width': .04, 'stroke-dasharray': '.16 .12', opacity: .0, rx: .1 }, gBody);
+    const def = PLACES[z.ruin];
+    const pic = def.img ? img(gBody, def.img, { x: 0, y: 0, width: 0, height: 0, preserveAspectRatio: 'xMidYMax meet' }) : null;
+    /* Das Platzhalter-Zeichen bekommt eine helle Kontur: dunkles Grau
+       auf sandfarbenem Sockel ist bei Kachelgröße sonst kaum von der
+       Bodentextur zu unterscheiden. */
+    const sign = pic ? null : el('path', {
+      d: MARK[z.ruin], fill: cfg.signInk, opacity: .92,
+      stroke: 'rgba(255,255,255,.75)', 'stroke-width': .045, 'paint-order': 'stroke'
+    }, gBody);
+    const tag = (z.ruin === 3 && cfg.naming)
+      ? el('text', {
+          x: 0, y: 1.5, 'text-anchor': 'middle', fill: cfg.gold,
+          'font-size': .46, 'font-weight': 800, 'font-family': 'Baloo 2, sans-serif',
+          stroke: 'rgba(3,20,28,.85)', 'stroke-width': .13, 'paint-order': 'stroke'
+        }, gg)
+      : null;
+    if (tag) tag.textContent = 'Tempel der Wörter';
+    marks.push({ z, gg, halo, shaft, gBody, shadow, plate, ring, slot, pic, sign, tag });
+  }
+
+  return function paint(p, big, showSlots) {
+    for (const m of marks) {
+      const def = PLACES[m.z.ruin];
+      const sc = big ? def.gross : 1;
+      const on = m.z.t <= p;
+      m.plate.setAttribute('d', hexPath(0, 0, sc * 1.02));
+      m.ring.setAttribute('d', hexPath(0, 0, sc * 1.02));
+      m.shadow.setAttribute('rx', n2(.66 * sc));
+      m.shadow.setAttribute('cy', n2(.30 * sc));
+      const w = 1.55 * sc, h = w * def.hoch;
+      if (m.pic) {
+        m.pic.setAttribute('x', n2(-w / 2)); m.pic.setAttribute('y', n2(.22 * sc - h));
+        m.pic.setAttribute('width', n2(w)); m.pic.setAttribute('height', n2(h));
+      }
+      if (m.sign) m.sign.setAttribute('transform', `scale(${n2(sc * 1.3)})`);
+      m.slot.setAttribute('x', n2(-w / 2)); m.slot.setAttribute('y', n2(.22 * sc - h));
+      m.slot.setAttribute('width', n2(w)); m.slot.setAttribute('height', n2(h));
+      m.slot.setAttribute('opacity', showSlots ? .85 : 0);
+      /* Der Sockel nimmt die Farbe des Volkes an, sobald der Ort
+         gehört — das ist die Meldung „erobert", ohne eine Zahl. */
+      m.plate.setAttribute('fill', on ? mix(cfg.land.sand, TEAMS[m.z.owner].c, .55) : cfg.land.sand);
+      m.gBody.setAttribute('opacity', on ? 1 : 0);
+      /* Ohne Weichzeichner (Papierschnitt) muss der Schein kleiner
+         sein: ein harter goldener Kreis in Kachelgröße liest sich als
+         Aufkleber, nicht als Licht. */
+      m.halo.setAttribute('r', n2((cfg.hardFog ? .18 : .3) * sc));
+      m.halo.setAttribute('opacity', on ? .3 : (cfg.hardFog ? .85 : .6));
+      if (m.shaft) m.shaft.setAttribute('opacity', on ? 0 : .16);
+      if (m.tag) m.tag.setAttribute('opacity', on ? 1 : 0);
+    }
+  };
+}
+
+/* Der Landeplatz. Hier standen die Burgen — die sind raus, sie
+   gehören woandershin. Ganz leer darf die Stelle trotzdem nicht
+   bleiben: die gestrichelte Planke vom Schiff braucht ein Ziel, und
+   sechs Anlandungen müssen auf der Karte zu finden sein, ohne die
+   Schiffe abzuzählen.
+
+   Was bleibt, ist das kleinstmögliche Zeichen: ein Stab mit einer
+   Fahne in der Volksfarbe. Kein Bild, kein Sockel — sonst konkurriert
+   der Landeplatz mit den besonderen Orten, und die sind das, worum
+   auf dieser Karte gespielt wird. */
+function flagLayer(svg, isl, cfg) {
+  const g = el('g', {}, svg);
+  isl.homes.forEach((h, k) => {
+    /* Etwas nach oben gesetzt: im Relief steht die Kachel als Säule,
+       und eine Fahne auf Höhe der Grundfläche steckte im Hang. */
+    const gg = el('g', { class: 'wi-flag', transform: `translate(${n2(h.x)} ${n2(h.y - (cfg.relief ? .3 : 0))})` }, g);
+    el('ellipse', { cx: 0, cy: .12, rx: .34, ry: .12, fill: 'rgba(0,0,0,.34)', filter: cfg.hardFog ? null : 'url(#wiB1)' }, gg);
+    el('path', {
+      d: 'M0 .1L0 -1.02', stroke: cfg.hardFog ? '#3b2b1c' : shade(cfg.land.sand, -.62),
+      'stroke-width': .1, 'stroke-linecap': 'round', fill: 'none'
+    }, gg);
+    /* Die Fahne weht zur Wasserseite — dorthin, wo das Schiff liegt.
+       Sonst zeigt sie bei drei von sechs Völkern ins Landesinnere und
+       sieht aus, als hätte jemand vergessen, sie zu drehen. */
+    const s = h.sx < 0 ? -1 : 1;
+    el('path', {
+      d: `M0 -1.0L${n2(s * .62)} -.82L0 -.62Z`, fill: TEAMS[k].c,
+      stroke: 'rgba(0,0,0,.28)', 'stroke-width': .04, 'stroke-linejoin': 'round'
+    }, gg);
+  });
+  return g;
+}
+
+/* Ein Schiff. Für alle Varianten gleich gebaut — es ist ein Bild,
+   und ein Bild hat keinen Stil zu haben, den die Karte ihm gibt.
+   Verschieden ist nur, was DARUNTER liegt. */
+function shipLayer(svg, isl, cfg) {
+  const g = el('g', {}, svg);
+  isl.homes.forEach((h, k) => {
+    const ax = h.x + h.sx * SHIPD, ay = h.y + h.sy * SHIPD;
+    const sh = el('g', { class: 'wi-ship', transform: `translate(${n2(ax)} ${n2(ay)})` }, g);
+    const glide = el('g', { class: 'wi-shipglide' }, sh);
+    glide.style.transform = `translate(${n2(h.sx * 9)}px, ${n2(h.sy * 9)}px)`;
+    const bob = el('g', { class: 'wi-shipbob' }, glide);
+    bob.style.animationDelay = (k * -0.7) + 's';
+    /* Kielwasser: ein heller Fleck unter dem Rumpf. Ohne ihn klebt
+       das Schiff auf dem Wasser statt darin zu liegen — mit zu viel
+       davon liegt es auf einer grauen Pille. */
+    el('ellipse', { cx: 0, cy: .14, rx: 1.0, ry: .22, fill: cfg.sea.foam, opacity: .2, filter: 'url(#wiB2)' }, bob);
+    img(bob, TEAMS[k].ship, {
+      x: -1.3, y: -2.35, width: 2.6, height: 2.6,
+      preserveAspectRatio: 'xMidYMax meet', filter: 'url(#wiCut)'
+    });
+    /* Die Planke: der Weg vom Schiff auf die Insel. Blass — sie
+       erklärt etwas, sie will nicht mit den Feldern konkurrieren. */
+    el('path', {
+      d: `M${n2(h.x)} ${n2(h.y)} L${n2(ax)} ${n2(ay)}`, stroke: TEAMS[k].c,
+      'stroke-width': .11, 'stroke-linecap': 'round', 'stroke-dasharray': '.28 .3',
+      fill: 'none', opacity: .32
+    }, g);
+    setTimeout(() => { glide.style.transform = 'translate(0px,0px)'; }, 80 + k * 90);
+  });
+  return g;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   10 · RELIEF — die einzige Variante mit eigenem Landbau
+   ══════════════════════════════════════════════════════════════════
+   Hier steht jede Kachel für sich, weil sie eine Höhe hat. Union-
+   Pfade gehen nicht: eine Seitenfläche gehört zu genau einem Feld.
+   Dafür bekommt man etwas, das keine andere Variante kann — Land,
+   das beim Erobern WÄCHST.                                        */
+
+function reliefLand(svg, isl, cfg, opt) {
+  const g = el('g', {}, svg);
+  const nodes = [];
+  /* Füllung und Strich je Bodenart: Gras wird gestrichelt (Halme),
+     alles andere gefüllt. */
+  const DK = {
+    wald: [shade(cfg.land.wald, -.45), 'none'],
+    fels: [shade(cfg.land.fels, -.30), 'none'],
+    sand: [shade(cfg.land.sand, -.34), 'none'],
+    gras: ['none', shade(cfg.land.gras, -.34)]
+  };
+  /* Malerreihenfolge: von hinten nach vorn, sonst steht eine hintere
+     Säule vor einer vorderen. */
+  for (const z of isl.cells.slice().sort((a, b) => a.y - b.y || a.x - b.x)) {
+    const gg = el('g', {}, g);
+    const base = z.ruin ? el('ellipse', { cx: n2(z.x), cy: n2(z.y + .34), rx: .62, ry: .22, fill: 'rgba(0,0,0,.40)', filter: 'url(#wiB1)' }, gg) : null;
+    const side = el('path', { d: '', fill: '#123240' }, gg);
+    const top = el('path', { class: 'wi-area', d: '', fill: cfg.land[z.boden], stroke: 'rgba(0,0,0,.16)', 'stroke-width': .015 }, gg);
+    /* Auch hier Bäume und Felsen — sie fahren mit der Deckfläche
+       nach oben. Ohne sie ist das Relief die einzige Variante ohne
+       Insel-Struktur, und dann fehlt ihr genau das, worum es in
+       dieser Runde geht. */
+    const det = opt.mini ? null : el('path', {
+      d: cellDetail(z), fill: DK[z.boden][0], stroke: DK[z.boden][1],
+      'stroke-width': .035, 'stroke-linecap': 'round', opacity: .75
+    }, gg);
+    nodes.push({ z, base, side, top, det });
+  }
+  /* Die Seitenfläche: der untere Rand des Sechsecks, um die Höhe
+     nach unten verlängert. Die unteren Ecken sind bei dieser
+     Ausrichtung 2, 1 und 0 (y wächst nach unten). */
+  function sidePath(x, y, s, h) {
+    const pts = [2, 1, 0].map(i => [x + HEX[i][0] * s, y + HEX[i][1] * s]);
+    let d = `M${n2(pts[0][0])} ${n2(pts[0][1])}`;
+    for (let i = 1; i < pts.length; i++) d += `L${n2(pts[i][0])} ${n2(pts[i][1])}`;
+    for (let i = pts.length - 1; i >= 0; i--) d += `L${n2(pts[i][0])} ${n2(pts[i][1] + h)}`;
+    return d + 'Z';
+  }
+  return function paint(p) {
+    for (const n of nodes) {
+      const z = n.z, on = z.t <= p;
+      /* Nebel liegt flach, erobertes Land steht auf. Und der Strand
+         bleibt niedriger als das Landesinnere — dadurch fällt die
+         Insel zum Wasser hin ab, statt als Platte im Meer zu
+         schwimmen. */
+      const stufe = z.boden === 'sand' ? .20 : z.boden === 'fels' ? .78 : z.rand === 2 ? .40 : .56;
+      const h = on ? stufe : .10;
+      const y = z.y - h + .1;
+      n.top.setAttribute('d', hexPath(z.x, y, 1.0));
+      n.side.setAttribute('d', sidePath(z.x, y, 1.0, h + .06));
+      n.top.setAttribute('fill', on ? mix(cfg.land[z.boden], TEAMS[z.owner].c, cfg.mix * (z.boden === 'sand' ? .62 : 1)) : cfg.land[z.boden]);
+      n.side.setAttribute('fill', on ? shade(mix(cfg.land[z.boden], TEAMS[z.owner].c, cfg.mix), -.45) : shade(cfg.land[z.boden], -.5));
+      if (n.det) n.det.setAttribute('transform', `translate(0 ${n2(-h + .1)})`);
+      if (n.base) n.base.setAttribute('cy', n2(z.y + .34));
+    }
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   11 · EINE KARTE ZUSAMMENSETZEN
+   ══════════════════════════════════════════════════════════════════ */
+
+function frame(svg, isl) {
+  let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
+  for (const z of isl.cells) {
+    a = Math.min(a, z.x); b = Math.max(b, z.x);
+    c = Math.min(c, z.y); d = Math.max(d, z.y);
+  }
+  /* Das Schiffsbild ragt weit ÜBER seinen Ankerpunkt — ein
+     Ausschnitt, der nur bis zur Wasserlinie reicht, säbelt die
+     Masten ab. */
+  for (const h of isl.homes) {
+    a = Math.min(a, h.x + h.sx * SHIPD - 1.5); b = Math.max(b, h.x + h.sx * SHIPD + 1.5);
+    c = Math.min(c, h.y + h.sy * SHIPD - 2.6); d = Math.max(d, h.y + h.sy * SHIPD + 1.2);
+  }
+  const p = 0.5;
+  const vb = [a - p, c - p, b - a + 2 * p, d - c + 2 * p];
+  svg.setAttribute('viewBox', vb.map(v => n2(v)).join(' '));
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  return vb;
+}
+
+function buildMap(svg, isl, cfg, opt) {
+  const vb = frame(svg, isl);
+  opt.box = { x: n2(vb[0] - 2), y: n2(vb[1] - 2), w: n2(vb[2] + 4), h: n2(vb[3] + 4) };
+  /* Die Küstenringe EINMAL. Das Wasser stapelt bis zu vier
+     Tiefenstufen darauf und die Brandung setzt ihre Wellen darauf
+     ab — jedes Mal neu aus den Kacheln zu suchen wäre sechsmal
+     dieselbe Arbeit. */
+  const rings = coastRings(isl, 1.0);
+  const dCoast = ringsPath(rings, cfg.wobble, !cfg.relief, 0);
+
+  seaLayer(svg, isl, cfg, vb, dCoast, rings, opt);
+  const land = cfg.relief ? reliefLand(svg, isl, cfg, opt) : landLayer(svg, isl, cfg, opt, dCoast);
+  const fog = fogLayer(svg, isl, cfg, opt, cfg.relief ? .22 : 0);
+  flagLayer(svg, isl, cfg);
+  const place = placeLayer(svg, isl, cfg, opt);
+  shipLayer(svg, isl, cfg);
+
+  return function paint(p, big, slots) {
+    land(p); fog(p); place(p, big, slots);
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   12 · DIE FÜNF VARIANTEN
+   ══════════════════════════════════════════════════════════════════
+   Gleiches Gerüst, fünf Handschriften. Was eine Variante ausmacht,
+   steht vollständig in ihrem Eintrag — Palette, Mischstärke,
+   Rasterandeutung, Körnung, Küstenverzerrung.                     */
+
+const VARIANTS = [
+  {
+    n: 'Lagune',
+    kicker: 'Tageslicht, klares Wasser, heller Strand',
+    desc: 'Türkise Lagune mit hellem Riffsaum, warmer Sand am Rand, dahinter Wiese und Wald. Die Wolke ist weiß und dick, das Sechseck nur zu ahnen.',
+    plus: 'Die freundlichste und lauteste Fassung: funktioniert bei Tageslicht und auf schwachen Beamern, weil alles über Helligkeitsunterschiede läuft und nicht über Leuchten. Der Strand macht die Inselform aus zehn Metern lesbar.',
+    minus: 'Sechs kräftige Volksfarben auf hellem Grund sind viel Farbe auf einmal. Wer noch Karten, Zeit und Punkte drumherum legt, muss dort dann sehr ruhig bleiben.',
+    orte: 'Sockel aus gerodetem Sand, Schatten darunter, Zeichen darauf — und in Übergröße ragt der Ort in die Nachbarfelder. Für deine Sprites ist ein hochformatiger Platz reserviert (Leuchtfeuer schlank, Ruine breit).',
+    ui: { frame: '#0c1218', line: '#1b2530', chip: '#121a22', chipLine: '#22303c', ink: '#eaf1f6', soft: '#93a3b0', faint: '#64727f', radius: '22px' },
+    sea: { deep: '#0a3d5c', mid: '#14688c', shallow: '#4cc8d8', shallow2: '#8fe4e4', foam: '#f2ffff', wave: 'rgba(255,255,255,.55)', wave2: 'rgba(255,255,255,.35)', glint: '#a8f0f4' },
+    land: { sand: '#ecd9a6', gras: '#8cbb62', wald: '#4f8f4f', fels: '#a3aeb2', line: '#20404f' },
+    fog: { body: '#eaf2f7', puffL: '#ffffff', puffD: '#a9c0cf', shadow: '#0a2635', shadowOp: .34 },
+    gold: '#ffb300', signInk: '#26333a',
+    mix: .46, grid: .18, grain: .13, wobble: .22, borderW: .12, glow: false, shafts: false, naming: false, relief: false, hardFog: false
+  },
+  {
+    n: 'Nachtkarte',
+    kicker: 'dunkles Meer, das Land leuchtet von innen',
+    desc: 'Fast schwarzes Wasser mit Mondlicht auf den Wellen, gedämpfte Böden, glühende Grenzen. Die Wolke ist eine dunkle Nebelbank, die besonderen Orte scheinen als Lichtsäulen hindurch.',
+    plus: 'Der stärkste Kontrast im abgedunkelten Klassenraum und die deutlichste Abgrenzung zu Kingdoms: dort helles Pergament am Tag, hier eine Seekarte bei Nacht. Die Nebelschwaden tragen hier am weitesten — dunkler Dunst über dunklem Land, aus dem nur die Lichtsäulen der besonderen Orte herausstehen.',
+    minus: 'Bei offenen Vorhängen verliert sie am meisten. Und die Insel-Struktur, die wir gerade eingebaut haben, sieht man im Dunkeln nur noch halb — Nacht kostet Textur.',
+    orte: 'Was durch die Wolke dringt, ist der Schein: ein Lichtstrahl steht über jedem unentdeckten Ort. Sobald er erobert ist, geht der Strahl aus und der Sockel nimmt die Volksfarbe an.',
+    ui: { frame: '#05090d', line: '#131c25', chip: '#0a1219', chipLine: '#17242f', ink: '#e8f2f8', soft: '#8398a6', faint: '#5a6874', radius: '18px' },
+    sea: { deep: '#02090f', mid: '#07202e', shallow: '#12556b', shallow2: '#1d7f93', foam: '#bfeaf2', wave: 'rgba(150,225,255,.30)', wave2: 'rgba(150,225,255,.18)', glint: '#3d8fa8' },
+    land: { sand: '#6d6b57', gras: '#38553a', wald: '#22402c', fels: '#4a5761', line: '#9fd8e8' },
+    fog: { body: '#16232c', puffL: '#33505f', puffD: '#0d1820', shadow: '#000308', shadowOp: .5 },
+    gold: '#ffd166', signInk: '#0b1a22',
+    mix: .5, grid: .16, grain: .1, wobble: .22, borderW: .09, glow: true, shafts: true, naming: false, relief: false, hardFog: false
+  },
+  {
+    n: 'Papierschnitt',
+    kicker: 'alles ausgeschnitten, nichts weichgezeichnet',
+    desc: 'Das Meer besteht aus drei Bändern, die der Küste folgen, die Wolke ist eine aufgelegte Papierform, das Land liegt in flachen Farbflächen. Keine Verläufe, keine Weichzeichner, keine Körnung.',
+    plus: 'Mit Abstand die billigste Rechenlast — im Kartenbild kein einziger Weichzeichner (nur die Schiffe laufen weiter durch den Freistell-Filter). Läuft auf dem ältesten Tablet flüssig und bleibt beim Beamen gestochen. Gebiete liest man als Formen, nicht als Kachelhaufen.',
+    minus: 'Wasser ohne Weichzeichner bleibt Grafik: es ist erkennbar Meer, aber es ist nicht nass. Und die harte Wolkenkante wirkt eher wie ein Aufkleber als wie Wetter.',
+    orte: 'Der Ort steht auf einer eigenen Platte mit hartem Schlagschatten: er ist nicht heller als seine Umgebung, er ist höher. Für Sprites die dankbarste Variante — flacher Hintergrund, klarer Sockel.',
+    ui: { frame: '#101821', line: '#22303c', chip: '#16212b', chipLine: '#2b3b48', ink: '#f2f7fa', soft: '#9fb0bd', faint: '#6d7e8b', radius: '26px' },
+    sea: { bands: true, deep: '#0b3d55', deep2: '#12586f', mid: '#1d7a91', shallow: '#3fa8b8', shallow2: '#3fa8b8', foam: '#ffffff', wave: '#fff', wave2: '#fff', glint: '#fff' },
+    land: { sand: '#f0dda8', gras: '#84bd63', wald: '#3f8a55', fels: '#9fadb4', line: '#1d3d4a' },
+    fog: { body: '#f4f8fb', puffL: '#ffffff', puffD: '#c8d6e0', shadow: '#0c3346', shadowOp: .28 },
+    gold: '#f2a100', signInk: '#1d3d4a',
+    mix: .52, grid: 0, grain: 0, wobble: .14, borderW: .16, glow: false, shafts: false, naming: false, relief: false, hardFog: true
+  },
+  {
+    n: 'Relief',
+    kicker: 'die Insel hat Höhe — und das Meer auch',
+    desc: 'Jedes Feld ist ein flaches Prisma. Der Strand liegt tiefer als das Landesinnere, Fels am höchsten — die Insel fällt zum Wasser hin ab, und unter Wasser geht das Gefälle als Stufen weiter: vier Tiefenlinien, jede mit einer Kante, dahinter einfarbig tiefes Wasser. Nebel liegt flach, erobertes Land hebt sich, die Wolke schwebt darüber.',
+    plus: 'Die Eroberung wird zur Bewegung: Land, das gewonnen wird, wächst sichtbar. Höhe ist die einzige Eigenschaft, die auch dann noch trägt, wenn zwei Völker ähnlich gefärbt sind — und seit das Wasser dieselbe Sprache spricht, ist es die einzige Variante, die vom Bergrücken bis zur Tiefsee EIN Bauprinzip hat.',
+    minus: 'Die einzige Variante, in der man die Sechsecke deutlich sieht — Höhe braucht Kanten. Dazu die teuerste: die Malerreihenfolge muss stimmen, und auf kleinen Tablets frisst die Schrägsicht Platz.',
+    orte: 'Ein Ort ist hier ohnehin eine Erhebung. Deine Sprites stehen auf der Deckfläche und bekommen den Schatten der Säule mit — von allen fünf der stärkste Unterschied zwischen „Feld" und „Ort".',
+    ui: { frame: '#0b1219', line: '#1c2731', chip: '#111c24', chipLine: '#233440', ink: '#eaf2f7', soft: '#8fa2b0', faint: '#63737f', radius: '22px' },
+    /* `ink` ist die Farbe der Stufenkante — nicht Schwarz, sondern
+       das dunkelste Wasser: eine schwarze Kante im türkisen Meer
+       liest sich als Riss, eine dunkelblaue als Schatten.
+
+       Die vier Wassertöne liegen dicht beieinander. Der erste Anlauf
+       ging von Tiefsee bis Karibik, und damit war die Küste ein
+       leuchtender Ring, der die Insel erschlagen hat. Jetzt reicht
+       der Abstand gerade für die Stufe — man sieht sie, wenn man
+       hinsieht, und übersieht sie, wenn man auf die Insel schaut. */
+    sea: { shelf: true, shelfWob: .30, ink: '#02141f',
+           deep: '#052131', deep2: '#083247', mid: '#0d4c64', shallow: '#176c82', shallow2: '#4096a4',
+           foam: '#dff4fa', wave: 'rgba(255,255,255,.40)', wave2: 'rgba(255,255,255,.24)', glint: '#7fd8e0' },
+    land: { sand: '#e3cf9c', gras: '#7fae5c', wald: '#4a8449', fels: '#9aa6ac', line: '#1d3a47' },
+    fog: { body: '#e4eef5', puffL: '#ffffff', puffD: '#a3bacb', shadow: '#08283a', shadowOp: .38 },
+    gold: '#ffbe2e', signInk: '#22323b',
+    mix: .5, grid: 0, grain: 0, wobble: 0, borderW: .12, glow: false, shafts: false, naming: false, relief: true, hardFog: false
+  },
+  {
+    n: 'Strömung',
+    kicker: 'kein Raster mehr, die Küste franst aus',
+    desc: 'Die stärkste Auslenkung der Küste, die kräftigste Wasserbewegung und keine Rasterandeutung mehr. Das Sechseckraster bleibt unter der Haube — der Server rechnet weiter damit —, sichtbar ist es nicht. Der wichtigste Ort trägt einen Namen.',
+    plus: 'Die eigenständigste Handschrift und die einzige, die nach Insel aussieht statt nach Spielbrett. Ein Name auf der Karte macht aus einem Punktwert ein Ziel, über das die Klasse spricht.',
+    minus: 'Am weitesten weg von Kingdoms — wer beide bedient, muss zweimal hinsehen. Und wo kein Raster zu sehen ist, muss man das einzelne Feld beim Auswählen extra wieder sichtbar machen.',
+    orte: 'Größe, Schein und beim wichtigsten Ort ein Name. Namen skalieren nicht: genau einer trägt ihn, sonst wird die Karte zum Ortsschild-Wald. Für Sprites unkritisch — der Sockel bleibt rund, nur die Küste franst aus.',
+    ui: { frame: '#0a1014', line: '#182129', chip: '#101a20', chipLine: '#1f2f38', ink: '#eaf3f5', soft: '#8fa4ac', faint: '#63757c', radius: '26px' },
+    sea: { deep: '#04252f', mid: '#0c5468', shallow: '#3aada8', shallow2: '#7fdcc4', foam: '#eafff6', wave: 'rgba(255,255,255,.42)', wave2: 'rgba(255,255,255,.26)', glint: '#96e8d2' },
+    land: { sand: '#e8d5a0', gras: '#7cb35e', wald: '#417f4b', fels: '#94a49f', line: '#1b3d3a' },
+    fog: { body: '#e6f0f2', puffL: '#ffffff', puffD: '#9fbcc0', shadow: '#062a30', shadowOp: .36 },
+    gold: '#ffc34d', signInk: '#1b3d3a',
+    mix: .38, grid: 0, grain: .16, wobble: .40, borderW: .14, glow: false, shafts: false, naming: true, relief: false, hardFog: false
+  }
+];
+
+/* ══════════════════════════════════════════════════════════════════
+   13 · AUFBAU UND BEDIENUNG
+   ══════════════════════════════════════════════════════════════════ */
+
+const stage = document.getElementById('stage');
+const grid = document.getElementById('grid');
+const switchEl = document.getElementById('switch');
+const prog = document.getElementById('prog');
+const progtxt = document.getElementById('progtxt');
+const playBtn = document.getElementById('play');
+const bigBtn = document.getElementById('big');
+const slotBtn = document.getElementById('slots');
+
+/* Adresszeile als Fernbedienung: ?v=3&p=55&still&seed=7 zeigt
+   Variante 3 bei 55 Prozent, angehalten, auf Insel 7. Gebraucht für
+   Bildschirmfotos und dafür, jemandem GENAU denselben Zustand zu
+   schicken — „schau mal auf Variante 3" ist sonst eine andere Insel
+   als die, die man selbst gesehen hat. */
+const QS = {};
+try { new URLSearchParams(location.search).forEach((v, k) => { QS[k] = v; }); } catch (e) { /* Prüfstand */ }
+
+let seed = QS.seed ? +QS.seed : 20260908;
+let island = makeIsland(seed);
+let active = Math.min(4, Math.max(0, (+QS.v || 1) - 1));
+let playing = !('still' in QS);
+let big = QS.big !== '0';
+let slots = 'slots' in QS;
+let p = ('p' in QS) ? Math.min(1, Math.max(0, +QS.p / 100)) : 0.42;
+let views = [];
+let minis = [];
+
+document.getElementById('fleet').innerHTML = FLEET.map(f => `
+  <div class="sr-fcard" style="--c:${f.c}">
+    <div class="sr-fpic"><img class="cut" src="${f.img}" alt=""></div>
+    <div class="sr-fname">${f.name}</div>
+    <div class="sr-fnote">${f.note}</div>
+  </div>`).join('') + TEAMS.map(t => `
+  <div class="sr-fcard" style="--c:${t.c}">
+    <div class="sr-fpic"><img src="${t.unit}" alt=""></div>
+    <div class="sr-fname">${t.name}</div>
+    <div class="sr-fnote">Einheit</div>
+  </div>`).join('');
+
+document.getElementById('fleetcap').textContent =
+  'Oben die sieben Schiffe (noch JPG auf weißem Grund — im Showroom schneidet ein Filter das Weiß heraus, '
+  + 'fürs Spiel gehören sie einmal sauber als PNG freigestellt), unten die schon freigestellten '
+  + 'Einheiten; sie stehen in der Völker-Leiste. Die Burgen sind von der Karte runter — den Landeplatz '
+  + 'markiert jetzt nur noch eine kleine Fahne in der Volksfarbe. '
+  + 'Die Robo-Enten fahren noch mit dem Wolken-Luftschiff, Wolken-Piraten und Spuk-Einhorn haben in '
+  + 'Wordisland noch kein Volk. Die neuen Mannschafts-Bögen (Matrose bis Kapitän) sind hier noch nicht '
+  + 'eingebaut — sie gehören eher in die Lobby und in die Auswertung als auf die Karte.';
+
+switchEl.innerHTML = VARIANTS.map((v, i) =>
+  `<button class="sr-sw${i === 0 ? ' on' : ''}" data-i="${i}"><b>0${i + 1}</b>${v.n}</button>`).join('');
+switchEl.addEventListener('click', e => {
+  const b = e.target.closest('.sr-sw'); if (!b) return;
+  show(+b.dataset.i);
+});
+
+/* Die Nebelart. Umschalten heißt neu aufbauen: der Nebel steckt in
+   Filtern, Mustern und Verläufen, und die lassen sich nicht
+   nachträglich umhängen. Insel und Stand bleiben — es ist dieselbe
+   Karte, nur anders verhüllt. */
+const fogsw = document.getElementById('fogsw');
+fogsw.innerHTML = FOGS.map((f, i) => `<button data-i="${i}" title="${f.kurz}">${f.n}</button>`).join('');
+fogsw.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  setFog(+b.dataset.i);
+});
+function setFog(i, still) {
+  fogStyle = ((i % FOGS.length) + FOGS.length) % FOGS.length;
+  [...fogsw.children].forEach((b, k) => b.classList.toggle('on', k === fogStyle));
+  document.getElementById('fogname').textContent = FOGS[fogStyle].n;
+  document.getElementById('fogtext').textContent = FOGS[fogStyle].kurz;
+  if (!still) build();
+}
+
+function railHTML() {
+  return TEAMS.map((t, k) => `
+    <div class="wi-rrow" style="--tc:${t.c}">
+      <div class="wi-rpic"><img src="${t.unit}" alt=""></div>
+      <div>
+        <div class="wi-rname">${t.name}</div>
+        <div class="wi-rsub">${t.tmp ? 'Schiff folgt' : 'an Land'}</div>
+      </div>
+      <div class="wi-rnum" data-k="${k}">0<i class="wi-rruin" data-r="${k}">0 Punkte</i></div>
+    </div>`).join('');
+}
+function legendHTML(cfg) {
+  const one = (lvl) => `
+    <span class="wi-lg">
+      <svg viewBox="-1 -1 2 2"><path d="${MARK[lvl]}" fill="${cfg.gold}"/></svg>
+      <b>${PLACES[lvl].name}</b>
+    </span>`;
+  const boden = (k, txt) => `<span class="wi-lg"><i style="background:${cfg.land[k]}"></i>${txt}</span>`;
+  return one(1) + one(2) + one(3)
+    + boden('sand', 'Strand') + boden('gras', 'Wiese') + boden('wald', 'Wald') + boden('fels', 'Fels')
+    + '<span class="wi-lg">Besondere Orte kosten mehr Wörter und zählen mehr.</span>';
+}
+
+function buildView(i, mini, parent) {
+  const cfg = VARIANTS[i];
+  const wrap = document.createElement('div');
+  wrap.className = 'wi-demo';
+  wrap.dataset.v = i + 1;
+  parent.appendChild(wrap);
+  const u = cfg.ui;
+  [['--frame', u.frame], ['--frame-line', u.line], ['--chip', u.chip], ['--chip-line', u.chipLine],
+   ['--ink', u.ink], ['--ink-soft', u.soft], ['--ink-faint', u.faint], ['--gold', cfg.gold],
+   ['--sea-2', cfg.sea.deep], ['--map-radius', u.radius]].forEach(([k, v]) => wrap.style.setProperty(k, v));
+
+  if (mini) {
+    wrap.innerHTML = `<div class="wi-mapwrap"><svg class="wi-map"></svg></div>`;
+    wrap.style.padding = '0';
+    wrap.style.border = 'none';
+    wrap.style.borderRadius = '0';
+    wrap.style.background = 'transparent';
+  } else {
+    wrap.innerHTML = `
+      <div class="wi-boardtop">
+        <span class="wi-title">Myth of Wordisland</span>
+        <span class="wi-phase">Runde 2 · Eroberung</span>
+        <span class="wi-clock"><i></i>04:12</span>
+        <button class="wi-beam">Beamer</button>
+      </div>
+      <div class="wi-arena">
+        <div class="wi-mapwrap"><svg class="wi-map"></svg></div>
+        <aside class="wi-rail">${railHTML()}</aside>
+      </div>
+      <div class="wi-legend">${legendHTML(cfg)}</div>`;
+  }
+  const svg = wrap.querySelector('.wi-map');
+  const paint = buildMap(svg, island, cfg, { mini });
+  const nums = [...wrap.querySelectorAll('.wi-rnum')];
+  const ruins = [...wrap.querySelectorAll('.wi-rruin')];
+
+  if (!mini) {
+    wrap.querySelector('.wi-beam').addEventListener('click', () => {
+      wrap.classList.toggle('is-beam');
+      document.body.style.overflow = wrap.classList.contains('is-beam') ? 'hidden' : '';
+    });
+  }
+  return {
+    wrap,
+    draw(pp) {
+      paint(pp, big, slots);
+      if (mini) return;
+      const cnt = TEAMS.map(() => [0, 0]);
+      for (const z of island.cells) if (z.t <= pp) { cnt[z.owner][0]++; if (z.ruin) cnt[z.owner][1] += PLACES[z.ruin].wert; }
+      nums.forEach((n, k) => { n.childNodes[0].nodeValue = cnt[k][0]; });
+      ruins.forEach((n, k) => { n.textContent = cnt[k][1] + ' Punkte'; });
+    }
+  };
+}
+
+function build() {
+  stage.innerHTML = ''; grid.innerHTML = '';
+  views = []; minis = [];
+
+  VARIANTS.forEach((v, i) => {
+    const sec = document.createElement('section');
+    sec.className = 'wv';
+    sec.innerHTML = `
+      <div class="wv-head">
+        <div class="wv-num">0${i + 1}</div>
+        <div class="wv-headtxt">
+          <div class="wv-title">${v.n} <span style="color:#5f6b78;font-weight:600;font-size:.9rem">— ${v.kicker}</span></div>
+          <div class="wv-desc">${v.desc}</div>
+        </div>
+      </div>`;
+    stage.appendChild(sec);
+    const view = buildView(i, false, sec);
+    const notes = document.createElement('div');
+    notes.className = 'wv-notes';
+    notes.innerHTML = `
+      <div class="wv-note wv-note--plus"><h4>Dafür</h4><p>${v.plus}</p></div>
+      <div class="wv-note wv-note--minus"><h4>Dagegen</h4><p>${v.minus}</p></div>
+      <div class="wv-note"><h4>Besondere Orte</h4><p>${v.orte}</p></div>`;
+    sec.appendChild(notes);
+    sec.hidden = i !== active;
+    views.push({ sec, view });
+
+    const card = document.createElement('div');
+    card.className = 'sr-mini';
+    grid.appendChild(card);
+    const m = buildView(i, true, card);
+    const cap = document.createElement('div');
+    cap.className = 'sr-minicap';
+    cap.innerHTML = `<span style="color:#e6ebf1;font-weight:800">0${i + 1} ${v.n}</span><span>${v.kicker}</span>`;
+    card.appendChild(cap);
+    card.addEventListener('click', () => { show(i); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    minis.push(m);
+  });
+  paintAll();
+}
+
+function paintAll() {
+  views.forEach(v => { if (!v.sec.hidden) v.view.draw(p); });
+  minis.forEach(m => m.draw(p));
+}
+
+function show(i) {
+  active = i;
+  views.forEach((v, k) => { v.sec.hidden = k !== i; });
+  [...switchEl.children].forEach((b, k) => b.classList.toggle('on', k === i));
+  paintAll();
+}
+
+prog.addEventListener('input', () => {
+  p = +prog.value / 1000;
+  progtxt.textContent = Math.round(p * 100) + ' %';
+  playing = false; playBtn.classList.remove('on'); playBtn.textContent = '❚❚ steht';
+  paintAll();
+});
+playBtn.addEventListener('click', () => {
+  playing = !playing;
+  playBtn.classList.toggle('on', playing);
+  playBtn.textContent = playing ? '▶ läuft' : '❚❚ steht';
+});
+bigBtn.addEventListener('click', () => {
+  big = !big;
+  bigBtn.classList.toggle('on', big);
+  bigBtn.textContent = big ? 'Orte groß' : 'Orte normal';
+  paintAll();
+});
+slotBtn.addEventListener('click', () => {
+  slots = !slots;
+  slotBtn.classList.toggle('on', slots);
+  paintAll();
+});
+document.getElementById('reroll').addEventListener('click', () => {
+  seed = Math.floor(Math.random() * 1e9);
+  island = makeIsland(seed);
+  build();
+});
+document.addEventListener('keydown', e => {
+  if (e.key >= '1' && e.key <= '5') show(+e.key - 1);
+  if (e.key === 'n' || e.key === 'N') setFog(fogStyle + 1);
+  if (e.key === 'b' || e.key === 'B') {
+    const b = views[active].view.wrap.querySelector('.wi-beam');
+    if (b) b.click();
+  }
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.wi-demo.is-beam').forEach(d => d.classList.remove('is-beam'));
+    document.body.style.overflow = '';
+  }
+});
+
+/* Der Takt der Eroberung. Langsam genug, dass man zusehen kann,
+   schnell genug, dass niemand wartet. Wellen und Wolken laufen
+   davon unabhängig weiter — die sind CSS. */
+setInterval(() => {
+  if (!playing) return;
+  p += 0.006;
+  if (p > 1.08) p = 0;
+  const q = Math.min(1, Math.max(0, p));
+  prog.value = Math.round(q * 1000);
+  progtxt.textContent = Math.round(q * 100) + ' %';
+  paintAll();
+}, 110);
+
+/* Nebelart aus der Adresszeile, OHNE neu zu bauen: der Aufbau kommt
+   in der nächsten Zeile ohnehin, und zweimal wäre nur langsam. */
+setFog(+QS.fog || 0, true);
+build();
+
+/* Die Bedienleiste auf den Anfangszustand nachziehen — sonst steht
+   dort „läuft", während die Karte aus der Adresszeile angehalten
+   wurde. */
+show(active);
+prog.value = Math.round(p * 1000);
+progtxt.textContent = Math.round(p * 100) + ' %';
+playBtn.classList.toggle('on', playing);
+playBtn.textContent = playing ? '▶ läuft' : '❚❚ steht';
+bigBtn.classList.toggle('on', big);
+bigBtn.textContent = big ? 'Orte groß' : 'Orte normal';
+slotBtn.classList.toggle('on', slots);
+
+/* ?beam startet direkt in der Beamer-Ansicht — der Weg, eine
+   Variante ohne Showroom-Drumherum anzusehen. */
+if ('beam' in QS) {
+  const b = views[active].view.wrap.querySelector('.wi-beam');
+  if (b) b.click();
+}
+</script>
+</body>
+</html>

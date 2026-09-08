@@ -1,0 +1,33 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+body{background:#0d3b52;margin:0;display:flex;flex-wrap:wrap;gap:8px;padding:8px;font:12px sans-serif;color:#fff}
+figure{margin:0;width:230px}
+img{width:100%;display:block}
+</style></head><body>
+<svg width="0" height="0"><defs>
+  <filter id="a" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -1 -1 -1 0 2.85"/>
+    <feComponentTransfer><feFuncA type="linear" slope="14" intercept="0"/></feComponentTransfer>
+  </filter>
+  <filter id="b" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -1 -1 -1 0 2.85"/>
+  </filter>
+  <filter id="c" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -3 -3 -3 0 8.6"/>
+  </filter>
+  <filter id="d" color-interpolation-filters="sRGB">
+    <feComponentTransfer>
+      <feFuncR type="identity"/><feFuncG type="identity"/><feFuncB type="identity"/>
+    </feComponentTransfer>
+    <feColorMatrix type="luminanceToAlpha" result="l"/>
+    <feComponentTransfer in="l" result="m"><feFuncA type="table" tableValues="1 1 1 1 1 1 1 1 1 .6 0"/></feComponentTransfer>
+    <feComposite in="SourceGraphic" in2="m" operator="in"/>
+  </filter>
+</defs></svg>
+<figure><img src="../sprites/Gemini_Generated_Image_tjiwz4tjiwz4tjiw.jpg"><figcaption>0 ohne</figcaption></figure>
+<figure><img style="filter:url(#a)" src="../sprites/Gemini_Generated_Image_tjiwz4tjiwz4tjiw.jpg"><figcaption>a matrix+transfer</figcaption></figure>
+<figure><img style="filter:url(#b)" src="../sprites/Gemini_Generated_Image_tjiwz4tjiwz4tjiw.jpg"><figcaption>b nur matrix</figcaption></figure>
+<figure><img style="filter:url(#c)" src="../sprites/Gemini_Generated_Image_tjiwz4tjiwz4tjiw.jpg"><figcaption>c steile matrix</figcaption></figure>
+<figure><img style="filter:url(#d)" src="../sprites/Gemini_Generated_Image_tjiwz4tjiwz4tjiw.jpg"><figcaption>d luminanceToAlpha+composite</figcaption></figure>
+<figure><img style="filter:url(#d)" src="../sprites/Gemini_Generated_Image_o60gm8o60gm8o60g.jpg"><figcaption>d hell (U-Boot)</figcaption></figure>
+<figure><img style="mix-blend-mode:multiply" src="../sprites/Gemini_Generated_Image_tjiwz4tjiwz4tjiw.jpg"><figcaption>multiply</figcaption></figure>
+</body></html>

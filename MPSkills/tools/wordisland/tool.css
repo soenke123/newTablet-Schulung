@@ -14,10 +14,16 @@
    Die Farbe eines Volkes kommt IMMER aus --wi-team und nie aus
    einer Regel hier — sie steht in tool.js (TEAMS) und wird als
    Variable hereingereicht. Zwei Wahrheiten über die Farbe eines
-   Volkes wären genau eine zu viel. Die einzige Ausnahme sind die
-   Kacheln der Insel: dort steht die Farbe an der VOLKSNUMMER
-   (.wi-cell[data-t="…"]), weil 500 Polygone keine 500 eigenen
-   Style-Attribute bekommen sollen.
+   Volkes wären genau eine zu viel.
+
+   ⚠️ Die KARTE ist seit dem Umbau auf das Relief (08.09.2026) ganz
+   aus dieser Regel heraus: dort mischt tool.js die Farbe jeder
+   Kachel aus Bodenfarbe UND Volksfarbe und dunkelt die
+   Seitenfläche daraus ab. Eine Regel wie `.wi-cell[data-t="0"]
+   { fill: … }` stünde in der Kaskade ÜBER dem gerechneten
+   Füllattribut und machte aus dem Relief wieder eine Fläche in
+   sechs Eimerfarben. Hier stehen deshalb nur noch Bewegung,
+   Zeigerverhalten und Übergänge.
 
    Die Lobby ist die von Kingdoms of Mathoria (Sönke, 2026-09-07):
    Wappenreihe, Segment-Schalter, eine Spalte je Volk. Die Namen der
@@ -26,11 +32,12 @@
    Neues lernen müssen.
    ══════════════════════════════════════════════════════════════ */
 
+/* Von den Kartenfarben ist nur noch Gold hier übrig: es steht auch
+   außerhalb der Karte (Serien-Abzeichen, freie Wahl). Meer, Nebel,
+   Land und Küste sind mit dem Relief nach tool.js gewandert (KARTE)
+   — dort werden sie gemischt, und hier wären sie eine zweite
+   Wahrheit über dieselbe Farbe. */
 .wi {
-  --wi-sea:    #0d3b52;
-  --wi-fog:    #4d6b7c;
-  --wi-land:   #f2e7cf;
-  --wi-coast:  #d9c9a5;
   --wi-gold:   #ffcf4d;
   display: flex;
   flex-direction: column;
@@ -653,16 +660,31 @@
 }
 
 /* ══════════════════════════════════════════════════════════
-   Die Insel
-   ══════════════════════════════════════════════════════════ */
+   Die Insel — Relief mit Tonstufen-Nebel
+   ══════════════════════════════════════════════════════════
+   Sönke, 08.09.2026, nach dem Showroom: „wir nehmen relief mit
+   tonstufen nebel".
+
+   Was hier steht, ist nur noch BEWEGUNG und ZEIGERVERHALTEN. Alle
+   Farben und Formen der Karte rechnet tool.js (KARTE), weil sie
+   gemischt sind: Kachelfarbe = Bodenfarbe × Volksfarbe,
+   Seitenfläche = dieselbe Mischung abgedunkelt. Eine CSS-Regel auf
+   `fill` schlüge das gerechnete Attribut und machte aus dem Relief
+   wieder eine flache Fläche in sechs Eimerfarben.
+
+   Alles, was sich bewegt, bewegt sich per CSS und nicht per Takt im
+   Skript: das Meer soll auch dann noch leben, wenn gerade niemand
+   antwortet — und die Karte wird nur alle vier Sekunden angefasst. */
 .wi-mapwrap {
   position: relative;
   flex: 1;
   min-height: 220px;
   border-radius: var(--r-md, 18px);
   overflow: hidden;
-  background:
-    radial-gradient(120% 90% at 50% 0%, #14506e 0%, var(--wi-sea) 60%, #072634 100%);
+  /* Dieselbe Tiefseefarbe wie die Wasserfläche im SVG. Zu sehen ist
+     sie nur im Streifen, den das Seitenverhältnis übrig lässt —
+     genau deshalb darf sie keine andere sein. */
+  background: #052131;
   touch-action: none;      /* Zoom und Schieben macht tool.js selbst */
 }
 .wi-map {
@@ -672,52 +694,99 @@
   transform-origin: 50% 50%;
 }
 
-/* `data-t` trägt die VOLKSNUMMER, nicht den Slot — tool.js übersetzt
-   beim Malen (paintOwn). Sonst hätte ein Raum mit den Völkern 4 und 5
-   zwei rot-blaue Gebiete und daneben eine lila Kopfzeile. */
-.wi-cell {
-  stroke: rgba(0, 0, 0, .18);
-  stroke-width: .03;
-  fill: var(--wi-fog);
-  transition: fill .35s ease;
-}
-/* Nebel: dunkler als das Meer, damit die Insel als geschlossene
-   Fläche erkennbar bleibt, bevor irgendetwas offen ist. */
-.wi-cell[data-t="."] { fill: #3c5766; }
-.wi-cell[data-t="0"] { fill: #ef4444; }
-.wi-cell[data-t="1"] { fill: #3b82f6; }
-.wi-cell[data-t="2"] { fill: #10b981; }
-.wi-cell[data-t="3"] { fill: #f59e0b; }
-.wi-cell[data-t="4"] { fill: #a855f7; }
-.wi-cell[data-t="5"] { fill: #06b6d4; }
+/* Die Deckfläche einer Kachel. Der Übergang gilt der FARBE: die
+   Höhe springt (ein Pfad lässt sich nicht überblenden), die Farbe
+   läuft hinterher — zusammen liest sich das als „aufgestanden und
+   eingefärbt" und nicht als Umschalten. */
+.wi-cell { transition: fill .4s ease; }
+.wi-side { transition: fill .4s ease; }
 
-.wi-ruin {
-  fill: var(--wi-gold);
-  opacity: .55;
-  pointer-events: none;
-  animation: wi-shimmer 2.8s ease-in-out infinite;
+/* Nichts von alledem darf den Finger abfangen: getroffen werden
+   soll die Deckfläche der Kachel. Beim Nebel ist das der
+   eigentliche Punkt — man wählt ja gerade ein Feld, das noch
+   verhüllt ist. Bei `.wi-det` (Bäume, Felsen, Büschel) und
+   `.wi-side` ist es genauso wichtig und viel leichter zu
+   übersehen: sie liegen in DERSELBEN Gruppe wie die Deckfläche,
+   und onMapClick sucht von unten nach oben das nächste `.wi-cell`
+   — ein Bäumchen ist keines. Ein Tipp genau auf einen Baum täte
+   sonst gar nichts, und zwar nur manchmal. */
+.wi-sea, .wi-fog, .wi-places, .wi-flags, .wi-ships,
+.wi-ship, .wi-plank, .wi-det, .wi-side { pointer-events: none; }
+
+/* ── Das Meer ────────────────────────────────────────────────
+   Brandung: jede Welle läuft von außen auf die Küste zu und
+   verläuft dort. Nach der Drehung des Elternteils zeigt die
+   örtliche X-Achse nach AUSSEN — deshalb heißt „nach innen" hier
+   ein negatives translateX. */
+@keyframes wi-surf {
+  0%   { opacity: 0;   transform: translateX(.30px) scale(.70, .86); }
+  30%  { opacity: .95; }
+  100% { opacity: 0;   transform: translateX(-.14px) scale(1.06, 1.24); }
 }
-.wi-ruin--2 { opacity: .7; }
-.wi-ruin--3 { opacity: .9; }
-@keyframes wi-shimmer {
-  0%, 100% { opacity: .45; }
-  50%      { opacity: 1; }
+.wi-surf {
+  transform-box: fill-box; transform-origin: 50% 50%;
+  animation: wi-surf 4.6s ease-out infinite;
 }
-@media (prefers-reduced-motion: reduce) {
-  .wi-ruin { animation: none; }
+
+/* Wellen auf hoher See. Sie ATMEN nicht, sie tauchen auf und
+   verschwinden wieder — eine Welle, die dauerhaft an derselben
+   Stelle steht, ist keine Welle, sondern ein Zeichen auf einer
+   Karte. Über die Hälfte ihrer Runde ist jede unsichtbar; Dauer und
+   Beginn würfelt tool.js für jede einzeln, sonst blinkt das ganze
+   Meer im Takt. */
+@keyframes wi-swell {
+  0%        { opacity: 0;   transform: translateY(.12px) scaleX(.82); }
+  14%       { opacity: .66; }
+  40%       { opacity: .66; transform: translateY(-.05px) scaleX(1.05); }
+  58%, 100% { opacity: 0;   transform: translateY(-.14px) scaleX(1.12); }
+}
+.wi-swell {
+  transform-box: fill-box; transform-origin: 50% 50%;
+  animation: wi-swell 8s ease-in-out infinite;
+}
+
+/* Die Schaumlinie läuft — eine stehende sieht aus wie der Rand um
+   einen Aufkleber. */
+@keyframes wi-foam { to { stroke-dashoffset: -2.2; } }
+.wi-foam { animation: wi-foam 4.2s linear infinite; }
+
+/* ── Der Nebel ───────────────────────────────────────────────
+   Er zieht: drei Rauschlagen wandern gegeneinander, jede in ihrem
+   eigenen Tempo. Die Bewegung sitzt auf der HÜLLE, der Filter auf
+   dem Rechteck darin — so rechnet der Browser das Rauschen einmal
+   und schiebt danach nur noch das Ergebnis.
+
+   Die Zeiten sind absichtlich lang und teilerfremd (47/71/103 s):
+   Nebel, dem man beim Ziehen zusieht, ist Rauch. */
+@keyframes wi-foga { 0%,100% { transform: translate(0,0); } 50% { transform: translate(1.5px,-.5px); } }
+@keyframes wi-fogb { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-1.1px,.7px); } }
+@keyframes wi-fogc { 0%,100% { transform: translate(0,0); } 50% { transform: translate(.7px,.9px); } }
+.wi-foga { animation: wi-foga 47s ease-in-out infinite; }
+.wi-fogb { animation: wi-fogb 71s ease-in-out infinite; }
+.wi-fogc { animation: wi-fogc 103s ease-in-out infinite; }
+
+/* ── Die besonderen Orte ─────────────────────────────────────
+   Der Schein ist das, was durch den Nebel dringt — der Ort selbst
+   bleibt verdeckt. Er ist der Grund, überhaupt loszufahren, also
+   pulst er. */
+.wi-halo {
+  transform-box: fill-box; transform-origin: 50% 50%;
+  animation: wi-halo 3.1s ease-in-out infinite;
+}
+@keyframes wi-halo {
+  0%, 100% { opacity: .30; transform: scale(.92); }
+  50%      { opacity: .78; transform: scale(1.08); }
 }
 
 /* ── Die Schiffe ─────────────────────────────────────────────
-   Sie liegen NEBEN der Insel, nicht darauf (Sönke, 2026-09-08).
-   Gefärbt wie die Felder über die Volksnummer in `data-t`; solange
-   niemand gelandet ist, bleiben sie grau.
+   Sie liegen NEBEN der Insel, nicht darauf (Sönke, 08.09.2026),
+   und tragen das Bild ihres Volkes — welches, entscheidet erst die
+   Besitz-Zeichenkette, also tool.js.
 
    Zwei Bewegungen, zwei Hüllen: `.wi-shipglide` fährt einmal herein
    (Übergang, von tool.js angestoßen), `.wi-shipbob` schaukelt
    endlos. In einer Hülle würden sie sich dieselbe
    transform-Eigenschaft streitig machen. */
-.wi-ship, .wi-plank { pointer-events: none; }
-
 .wi-shipglide { transition: transform 2.6s cubic-bezier(.16, .74, .3, 1); }
 
 /* `transform-box: fill-box` ist hier Pflicht und keine Feinheit: bei
@@ -733,27 +802,11 @@
   50%      { transform: translateY(-.08px) rotate(1.8deg); }
 }
 
-.wi-hull, .wi-sail { fill: #94a3b8; }
-.wi-hull { stroke: rgba(0, 0, 0, .3); stroke-width: .03; }
-.wi-sail { opacity: .92; }
-.wi-mast { stroke: #f1e3c6; stroke-width: .055; stroke-linecap: round; fill: none; }
-
-.wi-ship[data-t="0"] .wi-hull, .wi-ship[data-t="0"] .wi-sail { fill: #ef4444; }
-.wi-ship[data-t="1"] .wi-hull, .wi-ship[data-t="1"] .wi-sail { fill: #3b82f6; }
-.wi-ship[data-t="2"] .wi-hull, .wi-ship[data-t="2"] .wi-sail { fill: #10b981; }
-.wi-ship[data-t="3"] .wi-hull, .wi-ship[data-t="3"] .wi-sail { fill: #f59e0b; }
-.wi-ship[data-t="4"] .wi-hull, .wi-ship[data-t="4"] .wi-sail { fill: #a855f7; }
-.wi-ship[data-t="5"] .wi-hull, .wi-ship[data-t="5"] .wi-sail { fill: #06b6d4; }
-
-/* Die Planke: der Weg vom Schiff auf die Insel. Blass — sie erklärt
-   etwas, sie soll nicht mit den Feldern um Aufmerksamkeit ringen. */
-.wi-plank {
-  stroke: #f1e3c6;
-  stroke-width: .12;
-  stroke-linecap: round;
-  opacity: .45;
-  fill: none;
-}
+/* Die Planke: der Weg vom Schiff auf die Insel. Sie ist das einzige
+   Stück Karte, das seine Farbe noch aus einer Regel zieht — ein
+   Strich hat keine Mischung, und die Volksnummer steht ohnehin
+   schon dran. */
+.wi-plank { stroke: #f1e3c6; }
 .wi-plank[data-t="0"] { stroke: #ef4444; }
 .wi-plank[data-t="1"] { stroke: #3b82f6; }
 .wi-plank[data-t="2"] { stroke: #10b981; }
@@ -762,13 +815,26 @@
 .wi-plank[data-t="5"] { stroke: #06b6d4; }
 
 @media (prefers-reduced-motion: reduce) {
+  .wi-surf, .wi-swell, .wi-foam, .wi-halo,
+  .wi-foga, .wi-fogb, .wi-fogc, .wi-shipbob { animation: none; }
   .wi-shipglide { transition: none; }
-  .wi-shipbob   { animation: none; }
+  /* Brandung und Wellen ziehen ihre Sichtbarkeit aus der Bewegung.
+     Ohne sie stünden sie auf opacity 0 — ein Meer ohne Wellen. */
+  .wi-surf  { opacity: .8; }
+  .wi-swell { opacity: .6; }
 }
 
-/* Freie Wahl: die Felder werden anfassbar, und man sieht es. */
+/* ── Freie Wahl ──────────────────────────────────────────────
+   Die Felder werden anfassbar, und man sieht es. Und der Nebel
+   macht Platz: gewählt wird ein Feld, das noch verhüllt ist, also
+   muss man in diesem Moment sehen dürfen, wohin man tippt. Zwei
+   Sekunden Blick unter die Decke sind die Belohnung für die Serie —
+   und der Grund, warum die Tonstufen am Rand ohnehin schon etwas
+   durchlassen. */
 .wi-map.is-picking .wi-cell { cursor: pointer; }
 .wi-map.is-picking .wi-cell:hover { stroke: var(--wi-gold); stroke-width: .12; }
+.wi-fog { transition: opacity .3s ease; }
+.wi-map.is-picking .wi-fog { opacity: .42; }
 
 /* ══════════════════════════════════════════════════════════
    Tablet

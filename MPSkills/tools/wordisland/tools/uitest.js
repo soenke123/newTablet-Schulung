@@ -162,7 +162,7 @@ async function testTablet() {
   ok('alle Felder gezeichnet', cells.length === MAP.length, `${cells.length}/${MAP.length}`);
   ok('Landeplatz eingefärbt', cells[0].dataset.t === '0');
   ok('Nebel bleibt Nebel', cells[5].dataset.t === '.');
-  ok('Lichtpunkt gezeichnet', root.querySelectorAll('.wi-ruin').length === 1);
+  ok('besonderer Ort gezeichnet', root.querySelectorAll('.wi-place').length === 1);
 
   /* ── Die Schiffe (08.09.2026) ────────────────────────────────
      „Die Schiffe sind keine Felder auf dem Spielfeld. Sie fahren von
@@ -173,9 +173,16 @@ async function testTablet() {
      !!ship && root.querySelectorAll('.wi-ship').length === 1);
   ok('kein Wappen mehr auf dem Feld', root.querySelectorAll('.wi-home').length === 0);
   ok('Schiff trägt das Volk des Landeplatzes', ship.dataset.t === '0');
-  ok('Mannschaft an Deck',
-     /ToastKnights/.test(ship.querySelector('.wi-shipcrew').getAttribute('href') || ''),
-     ship.querySelector('.wi-shipcrew').getAttribute('href'));
+  /* Das Schiffsbild kommt aus tools/wordisland/sprites/ und wird
+     erst beim Malen gesetzt — der Server kennt nur `is_home`, nicht
+     das Volk. Ein fehlendes <image> zeichnet in SVG stillschweigend
+     NICHTS: genau so lag die Karte im Showroom einmal ohne Schiffe
+     da, nachdem die Dateien umbenannt worden waren. Deshalb wird
+     hier nicht nur der Pfad geprüft, sondern die DATEI. */
+  const shipHref = ship.querySelector('.wi-shipimg').getAttribute('href') || '';
+  ok('Schiffsbild gesetzt', /wordisland\/sprites\/red%20schiff\.jpg$/.test(shipHref), shipHref);
+  ok('Schiffsbild liegt auch wirklich da',
+     fs.existsSync(path.join(HERE, '..', '..', '..', decodeURI(shipHref))), shipHref);
   // Der Landeplatz liegt bei (0,0) — das Schiff muss deutlich daneben
   // liegen, sonst ist es doch wieder ein Feld.
   const at = /translate\(\s*(-?[\d.]+)\s+(-?[\d.]+)\s*\)/.exec(ship.getAttribute('transform') || '');
@@ -370,6 +377,132 @@ async function testNewRound() {
   ok('zweite Insel ersetzt die erste',
      root.querySelectorAll('.wi-cell').length === MAP2.length,
      `${root.querySelectorAll('.wi-cell').length}`);
+
+  tool.unmount();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Die Reliefkarte mit Tonstufen-Nebel (08.09.2026)
+   ═══════════════════════════════════════════════════════════
+   Übernommen aus showroom.html. Geprüft wird das, was hier
+   lautlos kaputtgehen kann und dann trotzdem „eine Karte" ergibt:
+
+     · Jede Kachel ist eine SÄULE — Deckfläche und Seitenfläche.
+     · Erobertes Land steht HÖHER als verhülltes. Das ist die
+       ganze Idee des Reliefs; fällt sie aus, sieht man es nicht,
+       man merkt es nur daran, dass nichts mehr passiert.
+     · Die Deckfläche trägt eine GEMISCHTE Farbe (Boden × Volk)
+       und nicht die nackte Volksfarbe. Eine CSS-Regel auf `fill`
+       würde genau das kaputtmachen, und zwar unsichtbar für
+       jeden Test, der nur data-t prüft.
+     · Die Tonstufen sind drei ineinanderliegende Maskenschichten.
+       Wäre die unterste kleiner als der Nebel, bliebe außen ein
+       unmaskierter Streifen stehen — ausgerechnet der, der am
+       durchsichtigsten sein soll.
+     · Nirgends NaN. Ein SVG-Attribut mit NaN wird still verworfen,
+       und dann fehlt einfach ein Stück Karte.                  */
+async function testRelief() {
+  console.log('\n— Reliefkarte —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+
+  const BIG = island(9, 9);                       // 81 Felder, tief genug für Stufe 3
+  let own = '0' + '.'.repeat(BIG.length - 1);
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'participant',
+    actions: {
+      role: 'participant',
+      call: (fn, args) => fn === 'wi_view'
+        ? Promise.resolve(viewFor({ map: args.p_full ? BIG : null, own }))
+        : Promise.resolve({ ok: false, error: 'not_allowed' })
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+
+  const tops = [...root.querySelectorAll('.wi-cell')];
+  ok('jede Kachel eine Säule',
+     tops.length === BIG.length && root.querySelectorAll('.wi-side').length === BIG.length,
+     `${tops.length} Deck / ${root.querySelectorAll('.wi-side').length} Seite`);
+
+  /* Der Meeresgrund: vier Tiefenlinien, jede in drei Lagen
+     (zwei Kanten und die Fläche). Dazu Brandung und Wellen. */
+  ok('vier Tiefenstufen im Wasser',
+     root.querySelectorAll('.wi-sea > path').length === 13,   // 12 Stufen + Schaumlinie
+     `${root.querySelectorAll('.wi-sea > path').length}`);
+  ok('Brandung an der Küste', root.querySelectorAll('.wi-surf').length > 8,
+     `${root.querySelectorAll('.wi-surf').length}`);
+  /* Die Prüfinsel ist ein RECHTECK und füllt ihren eigenen
+     Ausschnitt aus — offenes Wasser gibt es hier fast nur um die
+     Schiffsplätze herum, und weiter als 3.4 Kacheln von jedem Feld
+     weg passt kaum etwas. Auf einer runden Insel sind es zwanzig.
+     Geprüft wird deshalb nur, DASS Wellen entstehen. */
+  ok('Wellen auf hoher See', root.querySelectorAll('.wi-swell').length > 0,
+     `${root.querySelectorAll('.wi-swell').length}`);
+
+  const yOf = p => {
+    const m = /^M(-?[\d.]+) (-?[\d.]+)/.exec(p.getAttribute('d') || '');
+    return m ? +m[2] : NaN;
+  };
+  /* Ein Feld im Landesinneren, einmal im Nebel und einmal erobert.
+     Dasselbe Feld, damit nur die Höhe den Unterschied macht: der
+     Strand am Rand steht ohnehin niedriger als die Mitte, ein
+     Vergleich zweier verschiedener Felder verglich also auch das.
+     (2,2) liegt drei Felder von der Küste weg — dort ist der
+     Aufstand am größten.) */
+  const innen = tops.find(p => p.dataset.r === '2' && p.dataset.c === '2');
+  const yVorher = yOf(innen);
+
+  const fill0 = tops[0].getAttribute('fill');
+  ok('Deckfläche ist gemischt, nicht die nackte Volksfarbe',
+     /^#[0-9a-f]{6}$/.test(fill0) && fill0 !== '#ef4444', fill0);
+
+  /* ── Die Tonstufen ─────────────────────────────────────────
+     Jede Maskenschicht ist eine Vereinigung von Sechsecken; jedes
+     Sechseck fängt mit einem M an, also zählt das die Felder. */
+  const felder = d => ((d || '').match(/M/g) || []).length;
+  const lagen = [...root.querySelectorAll('mask path')].map(p => felder(p.getAttribute('d')));
+  ok('drei Tonstufen', lagen.length === 3, JSON.stringify(lagen));
+  ok('Stufen liegen ineinander (außen groß, Kern klein)',
+     lagen[0] > lagen[1] && lagen[1] > lagen[2] && lagen[2] > 0, JSON.stringify(lagen));
+  ok('unterste Stufe deckt sich mit dem Nebel',
+     lagen[0] === felder(root.querySelector('.wi-fogbody').getAttribute('d')),
+     `${lagen[0]} vs ${felder(root.querySelector('.wi-fogbody').getAttribute('d'))}`);
+
+  /* Und der Nebel muss WANDERN: nimmt die Klasse Land, schrumpft
+     jede Schicht mit. Eine Stufenrechnung, die nur beim Aufbau
+     läuft, sähe beim ersten Blick richtig aus und stünde danach
+     für den Rest der Runde still. */
+  own = '0'.repeat(30) + '.'.repeat(BIG.length - 30);
+  await tool.update();
+  await wait(60);
+  const spaeter = [...root.querySelectorAll('mask path')].map(p => felder(p.getAttribute('d')));
+  ok('Nebelrand wandert mit dem Fortschritt',
+     spaeter[0] < lagen[0] && spaeter[1] < lagen[1], JSON.stringify(spaeter));
+
+  /* Und dasselbe Feld steht jetzt auf. Das ist die ganze Idee des
+     Reliefs — fällt sie aus, sieht man keinen Fehler, es passiert
+     nur nichts mehr. */
+  ok('erobertes Land steht höher als verhülltes',
+     yOf(innen) < yVorher - .25, `${yOf(innen)} statt ${yVorher}`);
+  ok('und bekommt eine Seitenfläche',
+     (root.querySelectorAll('.wi-side')[0].getAttribute('d') || '').length > 20);
+
+  /* Nirgends NaN, undefined oder null — ein SVG-Attribut mit so
+     einem Wert wird still verworfen, und dann fehlt ein Stück
+     Karte, ohne dass irgendwo ein Fehler steht. */
+  let kaputt = null;
+  for (const n of root.querySelectorAll('.wi-map *')) {
+    for (const a of (n.attributes || [])) {
+      if (/NaN|undefined|(^|[^-\w])null([^-\w]|$)/.test(a.value)) {
+        kaputt = `${n.tagName}.${a.name}="${a.value}"`; break;
+      }
+    }
+    if (kaputt) break;
+  }
+  ok('keine kaputten Attribute im SVG', !kaputt, kaputt || '');
 
   tool.unmount();
 }
@@ -660,6 +793,7 @@ async function testOhneMigration() {
   await testTablet();
   await testTabletLobby();
   await testNewRound();
+  await testRelief();
   await testPult();
   await testFehlendeMigration();
   await testOhneMigration();
