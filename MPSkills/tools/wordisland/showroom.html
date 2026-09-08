@@ -734,17 +734,24 @@ const S = f => 'sprites/' + encodeURIComponent(f + ' Schiff.png');
    weißen Kasten. */
 const P = f => '../clash-of-math/sprites/' + encodeURIComponent(f);
 
+/* Die Flotte — seit dem 09.09.2026 vollzählig und in der
+   Reihenfolge der Volksnummern aus tool.js. Rosa und Magenta hatten
+   hier lange den Zusatz „noch ohne Volk"; der ist weg, seit Sönke
+   auf acht Völker aufgestockt hat (Migration 0135). */
 const FLEET = [
   { key: 'red',     name: 'Toast-Ritter',      c: '#ef4444', img: S('red'),     note: 'Stahlgaleone' },
-  { key: 'rosa',    name: 'Wolken-Piraten',    c: '#f472b6', img: S('rosa'),    note: 'Luftschiff · noch ohne Volk' },
-  { key: 'green',   name: 'Brokkoli-Giraffen', c: '#10b981', img: S('green'),    note: 'Baumschiff' },
-  { key: 'yellow',  name: 'Mal-Hasen',         c: '#f59e0b', img: S('yellow'),   note: 'Kartonsegler' },
+  { key: 'blue',    name: 'Robo-Enten',        c: '#3b82f6', img: S('blue'),    note: 'Blechkutter' },
+  { key: 'green',   name: 'Brokkoli-Giraffen', c: '#10b981', img: S('green'),   note: 'Baumschiff' },
+  { key: 'yellow',  name: 'Mal-Hasen',         c: '#f59e0b', img: S('yellow'),  note: 'Kartonsegler' },
   { key: 'lila',    name: 'Kosmische Katzen',  c: '#a855f7', img: S('lila'),    note: 'Kristallschiff' },
   { key: 'tuerkis', name: 'Okto-Pferdchen',    c: '#06b6d4', img: S('türkis'),  note: 'Schnecken-U-Boot' },
-  { key: 'magenta', name: 'Spuk-Einhorn',      c: '#d946ef', img: S('magenta'), note: 'Geisterschiff · noch ohne Volk' }
+  { key: 'rosa',    name: 'Wolken-Piraten',    c: '#f472b6', img: S('rosa'),    note: 'Luftschiff' },
+  { key: 'magenta', name: 'Spuk-Einhorn',      c: '#d946ef', img: S('magenta'), note: 'Geisterschiff' }
 ];
-/* Die sechs, die antreten — in der Reihenfolge von tool.js, damit die
-   Farben zu den Volksnummern passen. */
+/* Die sechs, die im Showroom antreten. Die Karte hier zeigt sechs
+   Landeplätze — das war die Zahl, als die Gestaltung entschieden
+   wurde, und für den Vergleich zweier Wasserfarben ist sie so gut
+   wie acht. Im Spiel sind es seit 0135 acht (tool.js, TEAMS). */
 const TEAMS = [
   { name: 'Toast-Ritter',      c: '#ef4444', ship: S('red'),    unit: P('red ToastKnights.png') },
   { name: 'Robo-Enten',        c: '#3b82f6', ship: S('blue'),   unit: P('blue roboDucks.png') },

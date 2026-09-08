@@ -103,12 +103,20 @@
   const ASSET_DIR = 'tools/clash-of-math/sprites/';
   const SHIP_DIR = 'tools/wordisland/sprites/';
   const TEAMS = [
-    { name: 'Toast-Ritter',      color: '#ef4444', img: 'red ToastKnights.png',       team: 'red Team.png',    ship: 'red Schiff.png' },
-    { name: 'Robo-Enten',        color: '#3b82f6', img: 'blue roboDucks.png',         team: 'blue Team.png',   ship: 'blue Schiff.png' },
-    { name: 'Brokkoli-Giraffen', color: '#10b981', img: 'green BrokkoliGiraffen.png', team: 'green Team.png',  ship: 'green Schiff.png' },
-    { name: 'Mal-Hasen',         color: '#f59e0b', img: 'yellow PainingBunnies.png',  team: 'yello Team.png',  ship: 'yellow Schiff.png' },
-    { name: 'Kosmische Katzen',  color: '#a855f7', img: 'lila cosmicCat.png',         team: 'lila Team.png',   ship: 'lila Schiff.png' },
-    { name: 'Okto-Pferdchen',    color: '#06b6d4', img: 'türkis OctoPferdchen.png',   team: 'türkis Team.png', ship: 'türkis Schiff.png' }
+    { name: 'Toast-Ritter',      color: '#ef4444', img: 'red ToastKnights.png',       team: 'red Team.png',     ship: 'red Schiff.png' },
+    { name: 'Robo-Enten',        color: '#3b82f6', img: 'blue roboDucks.png',         team: 'blue Team.png',    ship: 'blue Schiff.png' },
+    { name: 'Brokkoli-Giraffen', color: '#10b981', img: 'green BrokkoliGiraffen.png', team: 'green Team.png',   ship: 'green Schiff.png' },
+    { name: 'Mal-Hasen',         color: '#f59e0b', img: 'yellow PainingBunnies.png',  team: 'yello Team.png',   ship: 'yellow Schiff.png' },
+    { name: 'Kosmische Katzen',  color: '#a855f7', img: 'lila cosmicCat.png',         team: 'lila Team.png',    ship: 'lila Schiff.png' },
+    { name: 'Okto-Pferdchen',    color: '#06b6d4', img: 'türkis OctoPferdchen.png',   team: 'türkis Team.png',  ship: 'türkis Schiff.png' },
+    /* Die beiden letzten (Sönke, 09.09.2026): „ich hätte gerne 8
+       Völker". Sie kommen ans ENDE und nirgends dazwischen — die
+       Nummer ist die Kennung des Volkes und steht in laufenden
+       Räumen in `wi_boards.factions`. Wer hier einschiebt, färbt
+       jedes bestehende Spiel um.
+       „margenta" ist der Dateiname im Ordner, nicht mein Tippfehler. */
+    { name: 'Wolken-Piraten',    color: '#f472b6', img: 'rosa CloudBirdPiraten.png',  team: 'rosa Team.png',    ship: 'rosa Schiff.png' },
+    { name: 'Spuk-Einhorn',      color: '#d946ef', img: 'margenta SpookieUnicorn.png', team: 'magenta Team.png', ship: 'magenta Schiff.png' }
   ];
   const TEAM_COUNT = TEAMS.length;
   const esrc = name => encodeURI(ASSET_DIR + name);
@@ -339,10 +347,11 @@
     mix: .5
   };
 
-  /* Wie weit ein Schiff vor seinem Landeplatz liegt. Steht hier und
-     nicht zweimal im Text: der Bildausschnitt muss die
-     Schiffsplätze mitfassen, sonst säbelt er die Masten ab. */
-  const SHIPD = 2.2;
+  /* Wie weit die MITTE eines Schiffes vor der Mitte seines
+     Landeplatzes liegt. Steht hier und nicht zweimal im Text: der
+     Bildausschnitt muss die Schiffsplätze mitfassen, sonst säbelt er
+     die Masten ab. */
+  const SHIPD = 2.0;
 
   /* ─── Die besonderen Orte ───────────────────────────────────
      Ein Ort ist ein PLATZ, kein Bild: Sockel, Schatten und Größe
@@ -1188,8 +1197,31 @@
      Welches Bild darauf liegt, weiß erst `own`: der Server kennt
      nur `is_home`, welchem Volk der Landeplatz gehört, steht in der
      Besitz-Zeichenkette. Deshalb ist der Bildpfad kein Merkmal des
-     Aufbaus, sondern des Malens. */
+     Aufbaus, sondern des Malens.
+
+     ── Der Ankerpunkt ist die MITTE des Schiffes ─────────────
+     Vorher war es der untere Bildrand („Wasserlinie"), und das war
+     der Fehler, den Sönke am 09.09.2026 gemeldet hat: „die Schiffe
+     (gerade an der oberen Kante) sind viel zu weit vom Festland
+     entfernt."
+
+     Der Grund ist, dass ein Bildkasten in SVG nicht mitdreht. Er
+     hing unter dem Anker, also lag der Schiffskörper IMMER
+     oberhalb davon — egal, auf welcher Seite der Insel der
+     Landeplatz liegt. Im Norden zeigte das Schiff damit von der
+     Insel weg und stand scheinbar doppelt so weit draußen; im
+     Süden ragte es über das Land. Ein Abstand, der nur nach
+     Süden stimmt, ist kein Abstand.
+
+     Mit dem Anker in der Bildmitte heißt „zwei Kacheln vor dem
+     Landeplatz" in alle sechs Richtungen dasselbe. Erst dadurch
+     lässt sich der Abstand überhaupt einstellen — vorher hätte
+     jede Zahl eine Himmelsrichtung bevorzugt.                  */
   const SHIP_START = 9;      // von so weit draußen fährt es an
+  /* Kantenlänge des Bildkastens. Mit SHIPD = 2.0 endet er bei 0.6
+     vom Mittelpunkt des Landeplatzes — die Kachel selbst reicht bis
+     0.5, das Schiff liegt also längsseits. */
+  const SHIP_BOX = 2.8;
 
   function shipLayer(svg, isl) {
     const g = el('g', { class: 'wi-ships' }, svg);
@@ -1207,16 +1239,21 @@
       bob.style.animationDelay = (isl.homes.indexOf(h) * -0.7) + 's';
       /* Kielwasser: ein heller Fleck unter dem Rumpf. Ohne ihn
          klebt das Schiff auf dem Wasser statt darin zu liegen — mit
-         zu viel davon liegt es auf einer grauen Pille. */
-      el('ellipse', { cx: 0, cy: .14, rx: 1.0, ry: .22, fill: KARTE.sea.foam, opacity: .2, filter: F('b2') }, bob);
+         zu viel davon liegt es auf einer grauen Pille. Es sitzt
+         bewusst blass und breit: Sönkes PNG haben unterschiedlich
+         viel durchsichtigen Rand (2 % bis 15 %), der Kiel liegt
+         also nicht bei allen auf derselben Höhe. Ein scharfer
+         Fleck säße bei der Hälfte der Schiffe daneben. */
+      el('ellipse', { cx: 0, cy: 1.02, rx: 1.05, ry: .24, fill: KARTE.sea.foam, opacity: .18, filter: F('b2') }, bob);
       /* Ohne href — der kommt beim Malen. Ein <image href=""> ist
          nicht „leer", sondern ein Verweis auf die SEITE: der
          Browser lädt j.html und versucht, HTML als Bild zu
          zeichnen. Das kostet einen Abruf und eine rote Zeile in
          der Konsole für nichts. */
       const bild = el('image', {
-        class: 'wi-shipimg', x: -1.3, y: -2.35, width: 2.6, height: 2.6,
-        preserveAspectRatio: 'xMidYMax meet'
+        class: 'wi-shipimg',
+        x: n2(-SHIP_BOX / 2), y: n2(-SHIP_BOX / 2), width: SHIP_BOX, height: SHIP_BOX,
+        preserveAspectRatio: 'xMidYMid meet'
       }, bob);
       /* Die Planke: der Weg vom Schiff auf die Insel. Blass — sie
          erklärt etwas, sie will nicht mit den Feldern
@@ -1266,12 +1303,14 @@
       a = Math.min(a, z.x); b = Math.max(b, z.x);
       c = Math.min(c, z.y); d = Math.max(d, z.y);
     }
-    /* Das Schiffsbild ragt weit ÜBER seinen Ankerpunkt — ein
-       Ausschnitt, der nur bis zur Wasserlinie reicht, säbelt die
-       Masten ab. */
+    /* Das Schiffsbild steht um seinen Ankerpunkt herum — ein
+       Ausschnitt, der nur bis zum Anker reicht, säbelt die Masten
+       ab. Seit der Anker in der Bildmitte sitzt, ist der Zuschlag
+       nach allen vier Seiten derselbe: die halbe Kastenbreite. */
+    const m = SHIP_BOX / 2 + .1;
     for (const h of isl.homes) {
-      a = Math.min(a, h.x + h.sx * SHIPD - 1.5); b = Math.max(b, h.x + h.sx * SHIPD + 1.5);
-      c = Math.min(c, h.y + h.sy * SHIPD - 2.6); d = Math.max(d, h.y + h.sy * SHIPD + 1.2);
+      a = Math.min(a, h.x + h.sx * SHIPD - m); b = Math.max(b, h.x + h.sx * SHIPD + m);
+      c = Math.min(c, h.y + h.sy * SHIPD - m); d = Math.max(d, h.y + h.sy * SHIPD + m);
     }
     const p = 0.5;
     const vb = [a - p, c - p, b - a + 2 * p, d - c + 2 * p];

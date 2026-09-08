@@ -90,6 +90,31 @@ function island(rows, cols) {
   return cells;
 }
 
+/* Eine runde Insel mit vier Landeplätzen an der Küste — dieselbe
+   Gestalt, die wi_build_island liefert. Gebraucht für die Karte:
+   ein Rechteck hätte keine Bucht, keine Ecke offenes Wasser und
+   keinen Nebelkern. */
+function rundeInsel(R) {
+  const cells = [];
+  const drin = new Map();
+  for (let r = -R - 1; r <= R + 1; r++) {
+    for (let c = -R - 1; c <= R + 1; c++) {
+      const x = c + 0.5 * (((r % 2) + 2) % 2), y = r * 0.8660254;
+      const d = Math.hypot(x, y);
+      if (d <= R * (0.86 + 0.1 * Math.sin(3 * Math.atan2(y, x)))) {
+        drin.set(r + ',' + c, cells.length);
+        cells.push([r, c, 0, 0, d]);
+      }
+    }
+  }
+  // Vier Ruinen und vier Landeplätze am äußeren Rand, gleichmäßig verteilt.
+  const rand = cells.filter(z => z[4] > R * 0.62).sort((a, b) =>
+    Math.atan2(a[0] * 0.866, a[1]) - Math.atan2(b[0] * 0.866, b[1]));
+  [0, 1, 2, 3].forEach(k => { const z = rand[Math.floor(k * rand.length / 4)]; if (z) z[3] = 1; });
+  cells.filter(z => !z[3] && z[4] < R * 0.5).forEach((z, i) => { if (i % 9 === 0) z[2] = 1 + (i % 3); });
+  return cells.map(z => [z[0], z[1], z[2], z[3]]);
+}
+
 const MAP = island(4, 5);           // 20 Felder
 const OWN_START = '0' + '.'.repeat(MAP.length - 1);
 
@@ -411,7 +436,13 @@ async function testRelief() {
   const { document, impls, ctxBase } = makeEnv();
   const tool = impls.wordisland;
 
-  const BIG = island(9, 9);                       // 81 Felder, tief genug für Stufe 3
+  /* Eine RUNDE Insel und kein Rechteck. Das ist kein Schönheits-
+     wunsch: der Server baut runde (wi_build_island, Umriss aus drei
+     Wellen), und mehreres an der Karte hängt genau daran — die
+     Küstenringe, die Tiefenstufen, und vor allem das offene Wasser
+     in den Ecken des Ausschnitts, in dem die Wellen liegen. Ein
+     Rechteck füllt seinen eigenen Ausschnitt aus und hat gar keins. */
+  const BIG = rundeInsel(7);
   let own = '0' + '.'.repeat(BIG.length - 1);
   const ctx = Object.assign({}, ctxBase, {
     role: 'participant',
@@ -452,12 +483,15 @@ async function testRelief() {
     return m ? +m[2] : NaN;
   };
   /* Ein Feld im Landesinneren, einmal im Nebel und einmal erobert.
-     Dasselbe Feld, damit nur die Höhe den Unterschied macht: der
+     DASSELBE Feld, damit nur die Höhe den Unterschied macht: der
      Strand am Rand steht ohnehin niedriger als die Mitte, ein
      Vergleich zweier verschiedener Felder verglich also auch das.
-     (2,2) liegt drei Felder von der Küste weg — dort ist der
-     Aufstand am größten.) */
-  const innen = tops.find(p => p.dataset.r === '2' && p.dataset.c === '2');
+     Genommen wird das innerste — dort ist der Aufstand am größten. */
+  const mitte = BIG.reduce((best, z, i) => {
+    const d = Math.hypot(z[1] + 0.5 * (((z[0] % 2) + 2) % 2), z[0] * 0.8660254);
+    return d < best.d ? { i, d } : best;
+  }, { i: 0, d: Infinity }).i;
+  const innen = tops.find(p => +p.dataset.r === BIG[mitte][0] && +p.dataset.c === BIG[mitte][1]);
   const yVorher = yOf(innen);
 
   const fill0 = tops[0].getAttribute('fill');
@@ -480,7 +514,7 @@ async function testRelief() {
      jede Schicht mit. Eine Stufenrechnung, die nur beim Aufbau
      läuft, sähe beim ersten Blick richtig aus und stünde danach
      für den Rest der Runde still. */
-  own = '0'.repeat(30) + '.'.repeat(BIG.length - 30);
+  own = BIG.map((z, i) => (i < 30 || i === mitte) ? '0' : '.').join('');
   await tool.update();
   await wait(60);
   const spaeter = [...root.querySelectorAll('mask path')].map(p => felder(p.getAttribute('d')));
@@ -508,6 +542,44 @@ async function testRelief() {
     if (kaputt) break;
   }
   ok('keine kaputten Attribute im SVG', !kaputt, kaputt || '');
+
+  /* ── Die Schiffe liegen längsseits ─────────────────────────
+     Sönke, 09.09.2026: „die schiffe (gerade an der oberen kante)
+     sind viel zu weit vom festland entfernt."
+
+     Die Ursache war die Verankerung. Ein Bildkasten dreht in SVG
+     nicht mit: hing er UNTER dem Anker, lag der Schiffskörper immer
+     oberhalb davon — im Norden zeigte er von der Insel weg und
+     stand scheinbar doppelt so weit draußen, im Süden ragte er
+     über das Land. Geprüft wird deshalb nicht ein Abstand (der war
+     schon vorher „richtig"), sondern dass der Kasten UM seinen
+     Anker steht. Nur dann heißt der Abstand in alle sechs
+     Richtungen dasselbe. */
+  const schiffe = [...root.querySelectorAll('.wi-ship')];
+  ok('ein Schiff je Landeplatz', schiffe.length === 4, `${schiffe.length}`);
+
+  let schief = null, weiten = [];
+  for (const s of schiffe) {
+    const t = /translate\(\s*(-?[\d.]+)\s+(-?[\d.]+)\s*\)/.exec(s.getAttribute('transform') || '');
+    const im = s.querySelector('.wi-shipimg');
+    const bx = +im.getAttribute('x'), by = +im.getAttribute('y');
+    const bw = +im.getAttribute('width'), bh = +im.getAttribute('height');
+    if (Math.abs(bx + bw / 2) > .01 || Math.abs(by + bh / 2) > .01) {
+      schief = `x=${bx} y=${by} ${bw}×${bh}`;
+    }
+    // Abstand Anker ↔ Landeplatz. Das Landefeld ist das nächstgelegene.
+    let nah = Infinity;
+    for (const p of tops) {
+      const z = BIG[+p.dataset.i];
+      const x = z[1] + 0.5 * (((z[0] % 2) + 2) % 2), y = z[0] * 0.8660254;
+      if (z[3]) nah = Math.min(nah, Math.hypot(x - +t[1], y - +t[2]));
+    }
+    weiten.push(Math.round(nah * 100) / 100);
+  }
+  ok('Bildkasten steht um den Anker, nicht darüber', !schief, schief || '');
+  ok('und jedes Schiff gleich weit vor seinem Landeplatz',
+     Math.max(...weiten) - Math.min(...weiten) < .01 && Math.max(...weiten) <= 2.05,
+     JSON.stringify(weiten));
 
   tool.unmount();
 }
@@ -586,7 +658,18 @@ async function testPult() {
 
   /* ── Wappenreihe ── */
   const picks = root.querySelectorAll('.wi-pickbtn');
-  ok('sechs Wappen', picks.length === 6, `${picks.length}`);
+  /* Acht seit dem 09.09.2026 (Sönke: „ich hätte gerne 8 völker") —
+     Wolken-Piraten und Spuk-Einhorn kamen ans Ende der Liste, weil
+     die Nummer eines Volkes in laufenden Räumen gespeichert ist.
+     Steht hier wieder 6, hat jemand eingeschoben statt angehängt. */
+  ok('acht Wappen', picks.length === 8, `${picks.length}`);
+  ok('die beiden neuen stehen hinten',
+     picks[6].getAttribute('title') === 'Wolken-Piraten' &&
+     picks[7].getAttribute('title') === 'Spuk-Einhorn',
+     `${picks[6].getAttribute('title')} · ${picks[7].getAttribute('title')}`);
+  ok('und die alten haben ihre Nummer behalten',
+     picks[0].getAttribute('title') === 'Toast-Ritter' &&
+     picks[5].getAttribute('title') === 'Okto-Pferdchen');
   ok('vier davon gewählt',
      root.querySelectorAll('.wi-pickbtn.is-on').length === 4);
   ok('Wappen tragen ihren Namen', picks[4].getAttribute('title') === 'Kosmische Katzen');

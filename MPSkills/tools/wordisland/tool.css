@@ -813,6 +813,8 @@
 .wi-plank[data-t="3"] { stroke: #f59e0b; }
 .wi-plank[data-t="4"] { stroke: #a855f7; }
 .wi-plank[data-t="5"] { stroke: #06b6d4; }
+.wi-plank[data-t="6"] { stroke: #f472b6; }
+.wi-plank[data-t="7"] { stroke: #d946ef; }
 
 @media (prefers-reduced-motion: reduce) {
   .wi-surf, .wi-swell, .wi-foam, .wi-halo,
