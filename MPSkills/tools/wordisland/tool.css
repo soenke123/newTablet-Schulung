@@ -1074,3 +1074,221 @@
 /* Am Beamer nimmt die Insel, was da ist. */
 body.tool-fill .wi--pult { flex: 1; min-height: 0; }
 body.tool-fill .wi--pult .wi-play { position: relative; }
+
+
+/* ══════════════════════════════════════════════════════════
+   DIE EIGENE INSEL  ·  Rolle `solo`  (Migration 0136)
+   ══════════════════════════════════════════════════════════
+   Anders gebaut als die beiden Raum-Rollen, und zwar aus einem
+   Grund: dort ist die Insel EIN Kasten unter anderen, hier ist sie
+   die Seite. Die Bühne liegt vollflächig, die Bedienung schwebt
+   darüber.
+
+   Dieselbe Regel wie oben gilt weiter: die Insel bringt ihre Farben
+   selbst mit und kippt NICHT mit hell/dunkel — sie ist ein Bild.
+   Die Leiste und die beiden Kästen darüber sind Oberfläche und
+   nehmen die Variablen der Seite.                                */
+
+/* Die Höhe kommt von der SEITE (body.inselseite in style.css) und
+   nicht von hier: die Kopfzeile steht darüber, und 100dvh wäre um
+   genau deren Höhe zu viel. Das Werkzeug nimmt, was übrig ist. */
+.wi--solo {
+  position: relative;
+  gap: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Die Bühne. `touch-action: none`, sonst schiebt der Finger die
+   SEITE statt der Karte. */
+.wi-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* Genau KARTE.sea.deep aus tool.js. Zoomt man heraus, wird das
+     Karten-SVG kleiner als die Bühne — mit einer anderen Farbe
+     dahinter sähe man einen Rahmen um das Meer. */
+  background: #052131;
+  touch-action: none;
+  cursor: grab;
+  overscroll-behavior: none;
+}
+.wi-stage:active { cursor: grabbing; }
+
+/* Der Kamerakasten. Karte und Leinwand werden von DERSELBEN Kamera
+   bewegt — das SVG hier per transform, die Tiere rechnen ihre
+   Stelle selbst aus (tool.js, sxp/syp). Deshalb bleiben sie beim
+   Hineinzoomen scharf. */
+.wi-cam {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.wi-cam .wi-map { width: 100%; height: 100%; display: block; }
+
+/* Die Nacht liegt über der KARTE und unter den Tieren: die
+   bekommen ihren eigenen Schleier auf der Leinwand (source-atop),
+   weil ein Rechteck über allem auch die Funken auslöschte. */
+.wi-night {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 40%,
+    rgba(10, 24, 48, .55) 0%, rgba(4, 10, 24, .92) 100%);
+  opacity: 0;
+  transition: opacity .5s linear;
+}
+
+.wi-cvs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* „Deine Insel wird gebaut …" — das Einfärben der neun Bilder
+   dauert eine knappe Sekunde, und eine Sekunde leeres Meer sieht
+   aus wie ein Fehler. */
+.wi-load {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  padding: 24px;
+  color: #dfe9f2;
+  background: #052131;
+  font-size: 14px;
+}
+.wi-load b { font-size: 17px; font-weight: 800; }
+.wi-load span { color: #8fa6b8; }
+
+/* ── Die Leiste ──────────────────────────────────────────────
+   Sie schwebt UNTEN und nicht oben: oben sitzt schon die
+   Kopfzeile der Seite, und zwei Balken übereinander lassen von der
+   Insel nichts übrig. Unten ist außerdem der Daumen. */
+.wi-sbar {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 12px;
+  border-radius: var(--r-md, 18px);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.wi-sspacer { flex: 1 1 auto; }
+
+.wi-scount { display: flex; align-items: baseline; gap: 5px; }
+.wi-scount b { font-size: 19px; font-weight: 800; color: var(--ink); }
+.wi-scount span { font-size: 12px; color: var(--ink-faint); }
+
+/* Die Legende ist eine AUSKUNFT: sie sagt, wo die Arbeit noch
+   liegt. Die Farben sind die der Stufen und nicht die der Seite —
+   sie gehören zur Insel. */
+.wi-slegend { display: flex; gap: 8px; flex-wrap: wrap; }
+.wi-lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.wi-lg i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.wi-lg--0 { color: #97a3b0; }
+.wi-lg--1 { color: #6fb36a; }
+.wi-lg--2 { color: #3fa9a2; }
+.wi-lg--3 { color: #4f8fe0; }
+.wi-lg--4 { color: var(--wi-gold, #ffcf4d); }
+
+/* ── Die Unit-Kacheln ──────────────────────────────────────── */
+.wi-solosets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.wi-setchip {
+  appearance: none;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm, 12px);
+  border: 2px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-soft);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color .14s ease, background .14s ease, color .14s ease;
+}
+.wi-setchip b { font-size: 14px; font-weight: 700; }
+.wi-setchip span { font-size: 12px; color: var(--ink-faint); }
+.wi-setchip:hover { border-color: var(--accent); }
+.wi-setchip.is-on {
+  border-color: var(--accent);
+  background: var(--accent-dim, var(--surface));
+  color: var(--ink);
+}
+
+/* ── Das Tier auf der Übungskarte ──────────────────────────────
+   Der dunkle Kasten ist kein Zierrat: die Tiere sind für ein Meer
+   gezeichnet, und auf weißem Grund verliert der helle Bauch seinen
+   Umriss. Er kippt deshalb auch nicht mit hell/dunkel. */
+.wi-pmon {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: var(--r-sm, 12px);
+  background: radial-gradient(120% 100% at 50% 30%, #0d3c53 0%, #052131 100%);
+  border: 1px solid #0a2a3c;
+}
+.wi-pmon canvas { display: block; max-width: 100%; height: auto; }
+
+.wi-pstage {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  background: rgba(4, 16, 26, .72);
+  color: #b9cbd8;
+}
+.wi-pstage.is-1 { color: #8fdc88; }
+.wi-pstage.is-2 { color: #63d6cd; }
+.wi-pstage.is-3 { color: #86b7ff; }
+.wi-pstage.is-4 { color: var(--wi-gold, #ffcf4d); }
+
+/* Die Übungskarte ist schmaler als die Einstellungen: eine Frage,
+   ein Wort, ein Feld — mehr Breite macht daraus keine bessere
+   Frage, nur einen leereren Kasten. */
+.wi-ovbox--play { max-width: 460px; }
+
+/* Der Kasten, in den insel.js das Werkzeug hängt. Er muss selbst
+   dehnen, sonst steht die Bühne in einem null Pixel hohen Loch. */
+#inselBox { display: flex; flex: 1 1 auto; min-height: 0; min-width: 0; }

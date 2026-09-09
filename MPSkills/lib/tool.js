@@ -16,16 +16,21 @@
    Einen Ordner mit genau zwei Dateien — tools/<ordner>/tool.js
    und tool.css — und die Bedeutung dessen, was in payload steht.
 
-   ── Ein Werkzeug, zwei Rollen, EIN Modul ──────────────────────
+   ── Ein Werkzeug, mehrere Rollen, EIN Modul ───────────────────
    Die Wolke läuft auf dem Schülertablet und am Beamer. Das ist
    dasselbe Werkzeug in zwei Rollen und nicht zweimal dasselbe
    Werkzeug: ctx.role sagt, wo man ist, und ctx.actions führt in
-   beiden Fällen zum richtigen Serveraufruf.
+   jedem Fall zum richtigen Serveraufruf.
 
    Zwei getrennte Seiten je Werkzeug wären die Alternative
    gewesen. Sie dupliziert Poller, Fehlerbilder und
    Zustandsverwaltung je Werkzeug — beim dritten wird das teuer,
    und spätestens dann laufen Beamer und Tablet auseinander.
+
+   Seit 0136 gibt es eine dritte Rolle: `solo` — ein Werkzeug ganz
+   ohne Raum (MPSkills/insel.html). Sie ist der Beweis, dass die
+   Trennung trägt: dasselbe Modul, dasselbe mount(), nur ein
+   anderer Token in ctx.actions.
 
    ── Der Lebenslauf eines Werkzeugs ────────────────────────────
      mount(el, ctx)   einmal. Baut sein DOM in el.
@@ -85,11 +90,12 @@
 
        ⚠️⚠️ UND SIE ALLEIN REICHT NICHT. Diese Zeile wirkt erst, wenn
        DIESE DATEI neu geholt wird — und die hängt an ihrem eigenen
-       Stempel in den Seiten, die sie laden. Vier Stellen, alle vier
+       Stempel in den Seiten, die sie laden. FÜNF Stellen, alle fünf
        müssen mit:
 
            j.html          <script src="lib/tool.js?v=…">
            lehrer.html     <script src="lib/tool.js?v=…">
+           insel.html      <script src="lib/tool.js?v=…">   (seit 0136)
            lib/preview.js  s.src = 'lib/tool.js?v=…'
            index.html      <script src="preview/…?v=…">  (nur Kachel)
 
@@ -99,7 +105,7 @@
        neue Reliefkarte von Wordisland unter — der Umbau war fertig,
        auf dem Bildschirm stand die alte Karte, und es sah aus, als
        wäre nichts geschehen. */
-    const v = '?v=20260909';
+    const v = '?v=20260910';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf
@@ -241,6 +247,26 @@
     };
   }
 
+  /* Die eigene Insel: kein Raum, keine Lehrkraft, kein Beitritt —
+     und trotzdem dieselbe Bindung wie oben, nur an einen anderen
+     Token. Er ist das Konto, das es nicht gibt (siehe lib/room.js);
+     bei einem angemeldeten Kind ist er null, und der Server nimmt
+     dann auth.uid().
+
+     Alle Raum-Verben sagen Nein. Ein Werkzeug in dieser Rolle soll
+     sie gar nicht erst anbieten — aber wenn doch, ist eine Meldung
+     besser als ein toter Klick. */
+  function soloActions(token) {
+    const rpc = (fn, args) => safe(window.MPRoom.rpc(fn, Object.assign({ p_token: token ?? null }, args)));
+    const nein = () => Promise.resolve({ ok: false, error: 'not_allowed' });
+    return {
+      role: 'solo',
+      call: (fn, args) => rpc(fn, args),
+      upsert: nein, remove: nein, vote: nein,
+      move: nein, hide: nein, setPhase: nein, setData: nein, reset: nein
+    };
+  }
+
   /* ─── Fehlertexte ───────────────────────────────────────────
      Die Fehler der generischen Schicht — jedes Werkzeug erbt sie,
      keines schreibt sie ab. Werkzeug-eigene Fälle ergänzt das
@@ -324,7 +350,7 @@
 
   window.MPTool = {
     register, get, load, defaultSettings,
-    participantActions, presenterActions,
+    participantActions, presenterActions, soloActions,
     makeCtx, errText, ERRORS
   };
 })();

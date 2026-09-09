@@ -72,7 +72,10 @@ function makeEnv() {
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync(TOOL, 'utf8'), sandbox, { filename: 'tool.js' });
 
-  return { window, document, impls, ctxBase };
+  // `sandbox` kommt mit heraus, damit die Solo-Rolle weiter unten
+  // Leinwand, Bild und die Zeichenschleife nachrüsten kann — sie
+  // braucht mehr Browser als die beiden Raum-Rollen.
+  return { window, document, impls, ctxBase, sandbox };
 }
 
 const click = (el, doc) => el.dispatchEvent(new doc.defaultView.Event('click', { bubbles: true }));
@@ -877,6 +880,350 @@ async function testOhneMigration() {
   tool.unmount();
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Die eigene Insel — Rolle `solo` (Migration 0136)
+   ═══════════════════════════════════════════════════════════
+   Die dritte Rolle malt ihre Tiere auf eine LEINWAND, und die gibt
+   es in linkedom nicht. Also dieselbe Fälschung wie in
+   tools/solotest.mjs: ein Kontext, der alles entgegennimmt, und ein
+   Bild, das seine echten Maße aus der echten Datei liest.
+
+   Genau das ist hier mehr als Beiwerk. Ein fehlendes <img> zeichnet
+   stillschweigend NICHTS — die neun Zuschnitte werden erzeugt
+   (tools/solosprites.mjs), und ob sie im Deployment liegen, sagt
+   sonst niemand. */
+
+/* Die echten Maße aus dem PNG-Kopf (IHDR steht immer bei Byte 16). */
+function pngMasse(datei) {
+  const b = fs.readFileSync(datei);
+  return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+}
+
+function machKontext(c) {
+  return {
+    canvas: c,
+    filter: 'none', fillStyle: '#000', globalAlpha: 1,
+    globalCompositeOperation: 'source-over',
+    drawImage() {}, fillRect() {}, clearRect() {},
+    save() {}, restore() {}, translate() {}, scale() {}, setTransform() {},
+    putImageData() {},
+    createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }),
+    createRadialGradient: () => ({ addColorStop() {} }),
+    /* Ein durchgehend grünes Bild — das Ausgangsgrün der Echsen.
+       Damit läuft die Farbrechnung über echte Werte statt über
+       Nullen, und ein NaN darin fiele auf. */
+    getImageData(x, y, w, h) {
+      const d = new Uint8ClampedArray(w * h * 4);
+      for (let i = 0; i < w * h; i++) {
+        const p = i * 4;
+        d[p] = 127; d[p + 1] = 178; d[p + 2] = 92; d[p + 3] = 255;
+      }
+      return { width: w, height: h, data: d };
+    }
+  };
+}
+
+const RECT = { left: 0, top: 0, width: 1200, height: 760, right: 1200, bottom: 760 };
+const MPSKILLS = path.join(HERE, '..', '..', '..');
+
+/* makeEnv() für die Solo-Rolle. Alles, was die Zeichenschleife
+   anfasst — und keinen Halm mehr. */
+function makeSoloEnv() {
+  const env = makeEnv();
+  const { window, document } = env;
+
+  const origCreate = document.createElement.bind(document);
+  document.createElement = tag => {
+    const e = origCreate(tag);
+    if (String(tag).toLowerCase() === 'canvas') {
+      e.width = 300; e.height = 150;
+      e.getContext = () => machKontext(e);
+    }
+    return e;
+  };
+
+  env.fehlendeBilder = [];
+  class FakeImage {
+    constructor() { this.width = 1; this.height = 1; }
+    set src(v) {
+      this._src = v;
+      const datei = path.join(MPSKILLS, decodeURI(String(v)));
+      setTimeout(() => {
+        if (!fs.existsSync(datei)) { env.fehlendeBilder.push(v); this.onerror?.(); return; }
+        const m = pngMasse(datei);
+        this.width = m.w; this.height = m.h;
+        this.onload?.();
+      }, 0);
+    }
+    get src() { return this._src; }
+  }
+
+  env.rafs = 0;
+  Object.assign(window, { devicePixelRatio: 2 });
+  const g = env.sandbox;
+  g.Image = FakeImage;
+  g.requestAnimationFrame = () => { env.rafs++; return env.rafs; };
+  g.cancelAnimationFrame = () => {};
+  g.performance = { now: () => Date.now() };
+  g.Uint8ClampedArray = Uint8ClampedArray;
+  g.Float32Array = Float32Array;
+  g.isFinite = isFinite;
+  return env;
+}
+
+/* Ein erfundener Insel-Server. `stufen` sagt, welches Wort auf
+   welcher Stufe steht — das ist alles, was wi_solo_view an Inhalt
+   trägt. */
+function soloView(n, stufen) {
+  const words = [];
+  for (let i = 0; i < n; i++) {
+    words.push({ i: 'w-' + i, s: stufen ? stufen(i) : 0 });
+  }
+  return {
+    ok: true,
+    learner: {
+      token: 'tok', seed: 4711, settings: {},
+      words: n, grown: words.filter(w => w.s >= 3).length,
+      sets: [{ id: 'set-a', title: 'Unit 1', count: Math.ceil(n / 2) },
+             { id: 'set-b', title: 'Unit 2', count: Math.floor(n / 2) }]
+    },
+    words_list: words,
+    due: 0
+  };
+}
+
+// Die Felder der gebauten Insel als Menge „r,c" — für die Frage,
+// ob eine wachsende Insel wirklich nur DAZU bekommt.
+const felderVon = root => new Set(
+  [...root.querySelectorAll('.wi-cell')].map(e => e.dataset.r + ',' + e.dataset.c));
+
+async function mountSolo(view, extra) {
+  const env = makeSoloEnv();
+  const tool = env.impls.wordisland;
+  const calls = [];
+  const ctx = Object.assign({}, env.ctxBase, {
+    role: 'solo',
+    actions: {
+      role: 'solo',
+      call: (fn, args) => {
+        calls.push([fn, args]);
+        if (fn === 'wi_solo_view') return Promise.resolve(view);
+        if (extra && extra[fn]) return Promise.resolve(extra[fn](args));
+        return Promise.resolve({ ok: false, error: 'not_allowed' });
+      }
+    }
+  });
+  const root = env.document.getElementById('root');
+  tool.mount(root, ctx);
+
+  /* Bühne und Leinwände kommen aus innerHTML und laufen damit NICHT
+     durch createElement — sie brauchen ihre Fälschung hier.
+
+     Die Maße sind kein Beiwerk: ohne sie steht in sicht.s eine
+     Division durch null, und ab da ist jeder Bildschirmpunkt NaN. */
+  for (const el of root.querySelectorAll('*')) el.getBoundingClientRect = () => RECT;
+  for (const c of root.querySelectorAll('canvas')) {
+    if (!c.width) { c.width = RECT.width; c.height = RECT.height; }
+    c.getContext = () => machKontext(c);
+  }
+
+  // Bilder laden (setTimeout 0 je Bild), einfärben, Insel bauen.
+  for (let i = 0; i < 12; i++) await wait(20);
+  return { env, tool, root, calls, ctx, document: env.document };
+}
+
+async function testSolo() {
+  console.log('\n— Meine Insel —');
+  const { env, tool, root, calls } = await mountSolo(soloView(40, i => i % 5));
+
+  ok('die neun Tierbilder liegen wirklich da',
+     env.fehlendeBilder.length === 0, env.fehlendeBilder.join(', '));
+  ok('die Insel wird geholt', calls.some(c => c[0] === 'wi_solo_view'));
+  ok('kein Poller — die Insel ändert sich nur durch mich',
+     calls.filter(c => c[0] === 'wi_solo_view').length === 1);
+  ok('der Ladehinweis ist weg', root.querySelector('[data-part="load"]').hidden === true);
+
+  const felder = root.querySelectorAll('.wi-cell');
+  ok('die Hauptinsel steht', felder.length > 150, String(felder.length));
+  ok('keine Nebelfelder — hier gibt es nichts zu erobern',
+     [...felder].every(f => f.dataset.t === '.'));
+  ok('kein Schiff, keine Flagge, kein Nebel',
+     root.querySelectorAll('.wi-ship, .wi-flag, .wi-fog').length === 0);
+
+  /* Ein NaN in einem Pfad ist der Fehler, der wie „die Karte ist
+     leer" aussieht und sich sonst nirgends zeigt. */
+  const schlecht = [...root.querySelectorAll('path')]
+    .filter(p => /NaN|Infinity|undefined/.test(p.getAttribute('d') || ''));
+  ok('kein NaN in den Pfaden', schlecht.length === 0, String(schlecht.length));
+
+  ok('die Wortzahl steht in der Leiste',
+     root.querySelector('[data-part="swords"]').textContent === '40');
+  /* Die Legende ist eine Auskunft: fünf Stufen, je acht Wörter aus
+     dem `i % 5` oben. Stufen ohne Tiere fielen weg — hier sind alle
+     fünf besetzt. */
+  ok('die Legende zählt alle fünf Stufen',
+     root.querySelectorAll('.wi-slegend .wi-lg').length === 5,
+     String(root.querySelectorAll('.wi-slegend .wi-lg').length));
+
+  ok('die Zeichenschleife läuft', env.rafs > 0);
+  ok('und die beiden Knöpfe sind frei',
+     root.querySelector('[data-part="sgo"]').disabled === false &&
+     root.querySelector('[data-part="ssets"]').disabled === false);
+  tool.unmount();
+}
+
+/* Die Insel WÄCHST — und zwar monoton. Das ist die eine Zusage der
+   Metapher, die man nicht sehen kann, bevor sie gebrochen ist: ein
+   Kind, dessen Hauptinsel sich beim Dazulernen umformt, hat nicht
+   mehr dieselbe Insel. */
+async function testInselWaechst() {
+  console.log('\n— Die Insel wächst —');
+  const klein = await mountSolo(soloView(30));
+  const kleinFelder = felderVon(klein.root);
+  const kleinZahl = kleinFelder.size;
+  klein.tool.unmount();
+
+  const gross = await mountSolo(soloView(700));
+  const grossFelder = felderVon(gross.root);
+
+  ok('mit mehr Wörtern kommt Land dazu', grossFelder.size > kleinZahl,
+     `${kleinZahl} → ${grossFelder.size}`);
+  /* Der Kern: JEDES Feld von vorher liegt noch da. Kommt hier auch
+     nur eines nicht vor, hat sich die Insel umgeformt statt
+     gewachsen. */
+  const fehlt = [...kleinFelder].filter(k => !grossFelder.has(k));
+  ok('und kein einziges altes Feld verschwindet', fehlt.length === 0,
+     fehlt.slice(0, 5).join(' · '));
+  gross.tool.unmount();
+
+  /* Und derselbe Startwert gibt zweimal dieselbe Insel — sonst
+     stünde nach jedem Öffnen eine andere da. */
+  const nochmal = await mountSolo(soloView(30));
+  const gleich = felderVon(nochmal.root);
+  ok('derselbe Startwert, dieselbe Insel',
+     gleich.size === kleinZahl && [...kleinFelder].every(k => gleich.has(k)));
+  nochmal.tool.unmount();
+}
+
+/* Der Antwortweg. Derselbe wie im Raum, nur ohne Feld und ohne
+   Serie — und mit dem Tier als eigentlicher Rückmeldung. */
+async function testSoloUeben() {
+  console.log('\n— Üben auf der eigenen Insel —');
+  let stufe = 1;
+  const { tool, root, calls, document } = await mountSolo(soloView(20, () => 1), {
+    wi_solo_start: () => ({
+      ok: true,
+      task: { item: 'w-3', prompt: 'das Haus', dir: 'de_en', stage: 'type', level: 1, options: [] }
+    }),
+    wi_solo_answer: args => {
+      if (args.p_input === 'house') {
+        stufe = 2;
+        return { ok: true, result: 'correct', item: 'w-3',
+                 level_before: 1, level_after: 2, locked_for: 0,
+                 task: { item: 'w-4', prompt: 'die Tafel', dir: 'de_en',
+                         stage: 'type', level: 0, options: [] } };
+      }
+      return { ok: true, result: 'choice', item: 'w-3',
+               task: { item: 'w-3', prompt: 'das Haus', dir: 'de_en', stage: 'choice',
+                       level: 1, options: ['house', 'mouse', 'horse', 'hose',
+                                           'home', 'hound', 'hour', 'host'] } };
+    },
+    wi_solo_settings: args => ({ ok: true, settings: { sets: args.p_sets || [] } })
+  });
+
+  const play = root.querySelector('[data-part="playov"]');
+  ok('das Üben ist zu, solange niemand darauf tippt', play.hidden === true);
+
+  click(root.querySelector('[data-part="sgo"]'), document);
+  await wait(30);
+  ok('„Vokabeln üben" öffnet den Kasten', play.hidden === false);
+  ok('die Frage steht da',
+     root.querySelector('[data-part="pword"]').textContent === 'das Haus');
+  ok('und das Tier mit seiner Stufe',
+     root.querySelector('[data-part="pstage"]').textContent === 'geschlüpft');
+  /* Die Lösung darf im DOM nirgends stehen — ein Kind mit
+     Entwicklerwerkzeugen liest sie sonst ab, und nach der ersten
+     Stunde steht sie im Klassenchat. */
+  ok('die Lösung steht nirgends im Kasten', !/house/i.test(play.innerHTML));
+
+  const eingabe = root.querySelector('[data-part="pin"]');
+  eingabe.value = 'hauz';
+  root.querySelector('[data-part="pform"]')
+      .dispatchEvent(new document.defaultView.Event('submit', { bubbles: true }));
+  await wait(30);
+  ok('daneben → acht Wörter zur Auswahl',
+     root.querySelectorAll('[data-part="popts"] button').length === 8);
+  ok('und das Eingabefeld tritt zurück',
+     root.querySelector('[data-part="pform"]').hidden === true);
+
+  click([...root.querySelectorAll('[data-part="popts"] button')]
+        .find(b => b.dataset.v === 'house'), document);
+  await wait(30);
+  ok('richtig → das Tier wächst',
+     root.querySelector('.wi-lg--2') !== null && stufe === 2);
+  ok('die nächste Frage kommt gleich mit',
+     root.querySelector('[data-part="pword"]').textContent === 'die Tafel');
+  ok('und sie ist wieder zum Tippen',
+     root.querySelector('[data-part="pform"]').hidden === false);
+
+  /* ── Die Einstellungen ─────────────────────────────────────── */
+  click(root.querySelector('[data-part="ssets"]'), document);
+  await wait(20);
+  const sets = root.querySelector('[data-part="setsov"]');
+  ok('die Einstellungen gehen auf', sets.hidden === false);
+  ok('beide Units stehen zur Wahl', root.querySelectorAll('.wi-setchip').length === 2);
+  ok('und beide sind an — leer heißt „alles"',
+     root.querySelectorAll('.wi-setchip.is-on').length === 2);
+
+  click(root.querySelector('.wi-setchip'), document);
+  await wait(30);
+  const letzte = calls.filter(c => c[0] === 'wi_solo_settings').pop();
+  ok('das Abwählen geht an den Server', !!letzte && Array.isArray(letzte[1].p_sets),
+     JSON.stringify(letzte && letzte[1]));
+  ok('und zwar ohne die abgewählte Unit',
+     letzte && letzte[1].p_sets.length === 1 && letzte[1].p_sets[0] === 'set-b',
+     JSON.stringify(letzte && letzte[1].p_sets));
+
+  click(root.querySelector('[data-part="setsclose"]'), document);
+  ok('und wieder zu', sets.hidden === true);
+  tool.unmount();
+}
+
+/* Ohne Migration 0136 antwortet der Server mit 404 → fn_missing.
+   Die Insel muss das AUSHALTEN und sagen, was FEHLT — nicht „hier
+   ist noch nichts". Die beiden zu verwechseln hat am 08.09.2026
+   eine halbe Stunde gekostet (Regel:
+   feedback_missing_migration_looks_like_network). */
+async function testSoloOhneMigration() {
+  console.log('\n— Ohne 0136 —');
+  const fehlt = await mountSolo({ ok: false, error: 'fn_missing' });
+  const load = fehlt.root.querySelector('[data-part="load"]');
+  ok('die Bühne bleibt stehen', !!fehlt.root.querySelector('.wi--solo'));
+  /* Geprüft wird der CODE und nicht der Satz: den Satz („In der
+     Datenbank fehlt die neueste Migration") liefert ctx.errText aus
+     lib/tool.js, hier steht dafür nur ein Platzhalter. Die Aufgabe
+     der tool.js ist, `fn_missing` überhaupt bis dorthin
+     durchzureichen — genau das fällt sonst weg. */
+  ok('und die Meldung trägt den Fehlercode weiter',
+     !!load && load.hidden !== true && /fn_missing/.test(load.textContent), load?.textContent);
+  ok('und sagt gerade NICHT „hier ist noch nichts"',
+     !!load && !/noch nichts/i.test(load.textContent));
+  /* Und die Knöpfe bleiben gesperrt. Ein „Vokabeln üben", das auf
+     eine Insel führt, die es nicht gibt, wäre die zweite
+     Fehlermeldung für denselben Fehler. */
+  ok('die Knöpfe bleiben gesperrt',
+     fehlt.root.querySelector('[data-part="sgo"]').disabled === true);
+  fehlt.tool.unmount();
+
+  /* Der andere Fall, und er sieht mit Absicht anders aus: die
+     Migration ist da, das Kind war nur noch in keinem Raum. */
+  const leer = await mountSolo({ ok: true, learner: null });
+  const load2 = leer.root.querySelector('[data-part="load"]');
+  ok('ohne Raum: „hier ist noch nichts"',
+     !!load2 && /noch nichts/i.test(load2.textContent), load2?.textContent);
+  leer.tool.unmount();
+}
+
 (async () => {
   await testTablet();
   await testTabletLobby();
@@ -885,6 +1232,10 @@ async function testOhneMigration() {
   await testPult();
   await testFehlendeMigration();
   await testOhneMigration();
+  await testSolo();
+  await testInselWaechst();
+  await testSoloUeben();
+  await testSoloOhneMigration();
   console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');
   process.exit(fails ? 1 : 0);
 })();

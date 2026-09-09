@@ -1,0 +1,2360 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<!-- maximum-scale + user-scalable: der erste der beiden Riegel gegen
+     das Mitzoomen der SEITE. Der zweite (gesturestart) steht unten im
+     Skript — auf dem iPad braucht es beide, einer allein reicht nicht. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=contain">
+<title>Wordisland — Solo-Showroom · Echsen als Karteikasten</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   MYTH OF WORDISLAND — SOLO-SHOWROOM
+   ══════════════════════════════════════════════════════════════════
+   Kein Spiel, sondern ein Prüfstand für EINE Gestaltungsfrage:
+
+     Jede Vokabel ist ein Tier. Ei → geschlüpft → gewachsen →
+     ausgewachsen → funkelnd. Falsch beantwortet schrumpft es wieder.
+
+   Drei Dinge daran kann man nicht ausrechnen, nur ansehen:
+     · Sieht die Insel mit 300–500 Tieren noch nach Insel aus?
+     · Trägt das Leuchten bei Nacht die Stimmung, die es tragen soll?
+     · Bleibt das auf dem iPad flüssig?
+
+   Deshalb sind Anzahl, Stufenverteilung, Größe, Nachtphase, Leucht-
+   Stil und das Farb-Verfahren alle als Regler herausgeführt. Die
+   Bilder-je-Sekunde stehen oben rechts, damit „läuft das noch?" keine
+   Gefühlssache ist.
+
+   Die Karte ist die AUS DEM SPIEL, übernommen aus tool.js (Abschnitt
+   „DIE KARTE") — Relief mit Meeresstufen und Brandung, aber ohne
+   Nebel, Schiffe, Flaggen und besondere Orte: im Einzelspieler gibt
+   es nichts zu erobern. Sie wird hier KOPIERT und nicht ausgelagert;
+   ein gemeinsames Modul wäre sauberer, kostet aber einen Eingriff ins
+   laufende Spiel samt Cache-Stempel an vier Stellen. Wenn die Optik
+   steht, ist das Auslagern der erste Schritt des Einbaus.
+
+   Diese Datei fasst nichts an: kein Server, kein localStorage, keine
+   Migration, keine Änderung an tool.js/tool.css/Registry.
+   ══════════════════════════════════════════════════════════════════ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  /* dvh-Paar: 100vh ist auf dem iPad die Höhe OHNE eingeblendete
+     Browserleiste — damit ragt die Bühne unter die Leiste. */
+  height: 100dvh;
+  overflow: hidden;
+  background: #070910;
+  color: #e8eef5;
+  font-family: 'Nunito', system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+body { display: flex; flex-direction: column; }
+
+/* ── Kopfzeile ──────────────────────────────────────────────────── */
+.sr-top {
+  flex: none; z-index: 300;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 9px 16px;
+  background: rgba(9, 11, 15, .95);
+  border-bottom: 1px solid #1c2028;
+}
+.sr-top h1 { font-size: .88rem; font-weight: 800; letter-spacing: -.01em; }
+.sr-top h1 span { color: #6a7482; font-weight: 500; }
+.sr-spacer { flex: 1 1 auto; }
+
+.sr-btn {
+  padding: 6px 13px; border-radius: 999px; cursor: pointer;
+  border: 1px solid #282e37; background: #14171d; color: #c3ccd6;
+  font: inherit; font-weight: 700; font-size: .78rem; white-space: nowrap;
+}
+.sr-btn:hover { background: #1b1f27; color: #fff; }
+.sr-btn.on { background: #2ee8a5; border-color: #2ee8a5; color: #06231a; }
+.sr-btn.gold { border-color: #4a3c14; background: #1d1809; color: #ffcf4d; }
+.sr-btn.gold:hover { background: #29200b; }
+.sr-btn.rot { border-color: #4a1f22; background: #1d0f10; color: #ff9d9d; }
+.sr-btn.rot:hover { background: #2a1517; }
+
+.sr-seglab { font-size: .72rem; color: #7b8695; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.sr-seg { display: flex; border: 1px solid #282e37; border-radius: 999px; overflow: hidden; background: #14171d; }
+.sr-seg button {
+  padding: 6px 11px; cursor: pointer; border: 0; background: transparent; color: #9fa9b6;
+  font: inherit; font-weight: 700; font-size: .75rem; white-space: nowrap;
+}
+.sr-seg button + button { border-left: 1px solid #282e37; }
+.sr-seg button:hover { color: #fff; }
+.sr-seg button.on { background: #7dd3fc; color: #06212e; }
+
+/* Die Messanzeige. Sie steht in der Kopfzeile und nicht im Bild:
+   was man beurteilen soll, ist die Insel — die Zahl ist Werkzeug. */
+.sr-fps {
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 5px 12px; border-radius: 999px;
+  background: #10151b; border: 1px solid #1e242d;
+  font-variant-numeric: tabular-nums;
+}
+.sr-fps b { font-size: .92rem; font-weight: 800; color: #2ee8a5; }
+.sr-fps.warn b { color: #ffcf4d; }
+.sr-fps.bad  b { color: #ff8080; }
+.sr-fps span { font-size: .7rem; color: #6a7482; font-weight: 700; }
+
+/* ── Bühne ──────────────────────────────────────────────────────── */
+.sr-body { flex: 1 1 auto; display: flex; min-height: 0; }
+
+.sr-stage {
+  position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden;
+  /* Genau KARTE.sea.deep. Zoomt man heraus, wird das Karten-SVG
+     kleiner als die Bühne — mit einer anderen Farbe dahinter sähe man
+     einen Rahmen um das Meer. */
+  background: #052131;
+  /* Ohne das schiebt der Finger die SEITE statt der Karte. */
+  touch-action: none;
+  cursor: grab;
+}
+.sr-stage:active { cursor: grabbing; }
+
+/* Der Träger der Karte. transform-origin oben links, damit die
+   Verschiebung im Skript exakt „Punkt → tx + k·Punkt" ist — mit der
+   Vorgabe 50 % 50 % müsste das Rechnen für das Canvas darüber die
+   Mitte mitschleppen, und genau dort verrutscht es dann. */
+.sr-map {
+  position: absolute; inset: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.sr-map svg { width: 100%; height: 100%; display: block; }
+
+/* Die Nacht über der KARTE. Die Tiere darüber werden im Canvas selbst
+   abgedunkelt (source-atop) — täte man beides mit dieser Schicht,
+   läge sie über dem Leuchten und würde es gleich wieder auslöschen. */
+.sr-night {
+  position: absolute; inset: 0; pointer-events: none;
+  background: #06121f; opacity: 0;
+}
+
+.sr-canvas { position: absolute; inset: 0; pointer-events: none; }
+
+/* Ein leiser Hinweis, der nach der ersten Berührung verschwindet. */
+.sr-hint {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  padding: 6px 14px; border-radius: 999px;
+  background: rgba(9, 11, 15, .82); border: 1px solid #232a34;
+  font-size: .74rem; color: #8b95a3; font-weight: 700; pointer-events: none;
+  transition: opacity .4s;
+}
+
+/* ── Reglertafel ────────────────────────────────────────────────── */
+.sr-panel {
+  flex: none; width: 300px; overflow-y: auto; overscroll-behavior: contain;
+  background: #0b0e14; border-left: 1px solid #1c2028;
+  padding: 14px 16px 40px;
+}
+.sr-grp { margin-bottom: 20px; }
+.sr-grp > h3 {
+  font-family: 'Baloo 2', sans-serif; font-size: .82rem; font-weight: 800;
+  color: #7dd3fc; text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 9px; padding-bottom: 6px; border-bottom: 1px solid #1a1f27;
+}
+.sr-grp > p { font-size: .74rem; color: #6a7482; line-height: 1.5; margin: -4px 0 9px; }
+
+.sr-range { display: block; margin-bottom: 10px; }
+.sr-range .lab {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: .74rem; color: #98a3b1; font-weight: 700; margin-bottom: 3px;
+}
+.sr-range .lab i { font-style: normal; color: #e8eef5; font-variant-numeric: tabular-nums; }
+.sr-range input { width: 100%; accent-color: #2ee8a5; }
+.sr-range.stufe input { accent-color: #7dd3fc; }
+
+.sr-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.sr-row .sr-btn { flex: 1 1 auto; text-align: center; }
+
+/* Die Stufenliste. Sie ist hier nicht Zierde: bei fünf Stufen und
+   acht Farben muss man beim Hinsehen wissen, WAS man da ansieht. */
+.sr-legend { display: flex; flex-direction: column; gap: 5px; }
+.sr-leg {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 8px; border-radius: 8px; background: #10151b; border: 1px solid #1a1f27;
+}
+.sr-leg canvas { width: 34px; height: 34px; flex: none; image-rendering: auto; }
+.sr-leg div { min-width: 0; }
+.sr-leg b { display: block; font-size: .76rem; font-weight: 800; color: #dbe3ec; }
+.sr-leg small { display: block; font-size: .68rem; color: #6a7482; line-height: 1.35; }
+.sr-leg em { font-style: normal; margin-left: auto; font-size: .82rem; font-weight: 800;
+             color: #2ee8a5; font-variant-numeric: tabular-nums; }
+
+.sr-note {
+  font-size: .72rem; color: #7b8695; line-height: 1.55;
+  padding: 9px 11px; border-left: 2px solid #2c3542; border-radius: 0 8px 8px 0;
+  background: #0f131a;
+}
+.sr-note b { color: #c3ccd6; }
+
+/* Der Ladehinweis. Neun Bilder zuschneiden und zweiundsiebzigmal
+   einfärben dauert einen Moment — ohne Hinweis sieht das aus, als
+   wäre die Seite kaputt. */
+.sr-load {
+  position: absolute; inset: 0; z-index: 400;
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+  background: #070910; font-weight: 700; color: #7b8695; font-size: .85rem;
+}
+.sr-load b { color: #2ee8a5; font-family: 'Baloo 2', sans-serif; font-size: 1.1rem; }
+.sr-load[hidden] { display: none; }
+
+/* Auf schmalen Geräten wandert die Tafel unter die Bühne. Sonst
+   bliebe vom Bild, um das es geht, ein Streifen übrig. */
+@media (max-width: 820px) {
+  .sr-body { flex-direction: column; }
+  .sr-panel { width: auto; border-left: 0; border-top: 1px solid #1c2028; max-height: 42%; }
+  .sr-stage { min-height: 46%; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Die Karte — Bewegung
+   ══════════════════════════════════════════════════════════════════
+   Übernommen aus tool.css. Nur das, was Meer und Brandung brauchen;
+   Nebel, Schiffe, Fahnen und Orte gibt es hier nicht.            */
+
+.wi-sea, .wi-det, .wi-side { pointer-events: none; }
+
+@keyframes wi-surf {
+  0%   { opacity: 0;   transform: translateX(.30px) scale(.70, .86); }
+  30%  { opacity: .95; }
+  100% { opacity: 0;   transform: translateX(-.14px) scale(1.06, 1.24); }
+}
+.wi-surf { transform-box: fill-box; transform-origin: 50% 50%; animation: wi-surf 4.6s ease-out infinite; }
+
+@keyframes wi-swell {
+  0%        { opacity: 0;   transform: translateY(.12px) scaleX(.82); }
+  14%       { opacity: .66; }
+  40%       { opacity: .66; transform: translateY(-.05px) scaleX(1.05); }
+  58%, 100% { opacity: 0;   transform: translateY(-.14px) scaleX(1.12); }
+}
+.wi-swell { transform-box: fill-box; transform-origin: 50% 50%; animation: wi-swell 8s ease-in-out infinite; }
+
+@keyframes wi-foam { to { stroke-dashoffset: -2.2; } }
+.wi-foam { animation: wi-foam 4.2s linear infinite; }
+
+/* Sammelregel: ein eigenes display: würde [hidden] sonst schlagen. */
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<header class="sr-top">
+  <h1>Myth of Wordisland <span>· Solo-Showroom · Echsen als Karteikasten</span></h1>
+  <span class="sr-spacer"></span>
+
+  <span class="sr-seglab">Farbe</span>
+  <nav class="sr-seg" id="segFarbe"></nav>
+
+  <span class="sr-seglab">Leuchten</span>
+  <nav class="sr-seg" id="segGlow"></nav>
+
+  <button class="sr-btn on" id="btnPlay">▶ läuft</button>
+  <button class="sr-btn" id="btnInsel">neue Insel</button>
+  <div class="sr-fps" id="fps"><b>–</b><span>B/s</span><b id="fpsN" style="color:#7dd3fc">0</b><span>Tiere</span></div>
+</header>
+
+<div class="sr-body">
+  <div class="sr-stage" id="stage">
+    <div class="sr-map" id="map"><svg id="karte" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="sr-night" id="nightveil"></div>
+    <canvas class="sr-canvas" id="tiere"></canvas>
+    <div class="sr-hint" id="hint">ziehen zum Schieben · Rad oder zwei Finger zum Zoomen · Doppeltipp setzt zurück</div>
+    <div class="sr-load" id="load"><b>Echsen werden vorbereitet …</b><span id="loadTxt">Bilder zuschneiden</span></div>
+  </div>
+
+  <aside class="sr-panel">
+
+    <div class="sr-grp">
+      <h3>Wie viele</h3>
+      <p>Der eigentliche Test: sieht die Insel mit 500 Tieren noch nach Insel aus?</p>
+      <label class="sr-range"><span class="lab">Echsen gesamt <i id="vAnzahl">320</i></span>
+        <input type="range" id="rAnzahl" min="0" max="800" step="10" value="320"></label>
+      <label class="sr-range"><span class="lab">Größe der Tiere <i id="vGroesse">100 %</i></span>
+        <input type="range" id="rGroesse" min="50" max="180" step="5" value="100"></label>
+      <div class="sr-row">
+        <button class="sr-btn" data-preset="jung">jung</button>
+        <button class="sr-btn" data-preset="misch">gemischt</button>
+        <button class="sr-btn" data-preset="reif">reif</button>
+      </div>
+    </div>
+
+    <div class="sr-grp">
+      <h3>Verteilung auf die Stufen</h3>
+      <p>Anteile, keine Stückzahlen — sie werden gegeneinander verrechnet.</p>
+      <div id="stufenRegler"></div>
+    </div>
+
+    <div class="sr-grp">
+      <h3>Tag und Nacht</h3>
+      <p>Der Regler spult die Nacht vor. Ohne ihn wartet man bei jedem Blick eine Minute.</p>
+      <div class="sr-row">
+        <button class="sr-btn on" id="btnAuto">Zyklus läuft</button>
+        <button class="sr-btn" id="btnNacht">volle Nacht</button>
+      </div>
+      <label class="sr-range"><span class="lab">Nacht <i id="vNacht">0 %</i></span>
+        <input type="range" id="rNacht" min="0" max="100" step="1" value="0"></label>
+      <label class="sr-range"><span class="lab">Runde dauert <i id="vTempo">120 s</i></span>
+        <input type="range" id="rTempo" min="10" max="240" step="5" value="120"></label>
+      <label class="sr-range"><span class="lab">Leuchtstärke <i id="vGlow">100 %</i></span>
+        <input type="range" id="rGlow" min="0" max="220" step="5" value="100"></label>
+      <label class="sr-range"><span class="lab">Dunkelheit der Karte <i id="vDunkel">72 %</i></span>
+        <input type="range" id="rDunkel" min="0" max="100" step="1" value="72"></label>
+    </div>
+
+    <div class="sr-grp">
+      <h3>Vokabel üben</h3>
+      <p>Eine zufällige Echse wächst bzw. schrumpft an ihrem Platz — der Moment, den ein Kind später sieht.</p>
+      <div class="sr-row">
+        <button class="sr-btn gold" id="btnRichtig">✓ richtig</button>
+        <button class="sr-btn rot" id="btnFalsch">✕ falsch</button>
+      </div>
+      <div class="sr-row">
+        <button class="sr-btn" id="btnRichtig20">20 auf einmal richtig</button>
+      </div>
+    </div>
+
+    <div class="sr-grp">
+      <h3>Die fünf Stufen</h3>
+      <div class="sr-legend" id="legende"></div>
+    </div>
+
+    <div class="sr-grp">
+      <h3>Woran denken beim Ansehen</h3>
+      <div class="sr-note">
+        <b>Farbe:</b> beim Umschalten auf Umriss, Augen und Flossen achten — der Farbtondreh
+        nimmt sie mit, das luminanzerhaltende Verfahren lässt sie stehen.<br><br>
+        <b>Nacht:</b> sind die Stufen 1–4 am Leuchten auseinanderzuhalten?<br><br>
+        <b>Flüssig:</b> die Zahl oben gilt bei <b>voller Nacht</b> — das ist der teuerste Fall.
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+<!-- Die neun Echsen-Bilder, zugeschnitten und als Daten-Adressen
+     eingebacken. Erzeugt aus sprites/Echse/*.png durch
+     tools/solosprites.mjs — dort steht auch, warum das sein muss:
+     der Showroom rechnet seine acht Farbvarianten selbst aus und muss
+     dafür Bildpunkte lesen, und ein Bild von file:// verfärbt die
+     Leinwand. Ohne dieses Einbacken wäre die Datei per Doppelklick
+     unbrauchbar. -->
+<script src="solo-sprites.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  /* Der zweite Riegel gegen das Mitzoomen der Seite. maximum-scale im
+     Kopf allein reicht auf dem iPad nicht — Safari beachtet es bei
+     einer Kneifgeste in einer Web-App nicht zuverlässig. */
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) {
+    document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+  }
+
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const $ = id => document.getElementById(id);
+
+  /* ════════════════════════════════════════════════════════════════
+     TEIL 1 · DIE KARTE
+     ════════════════════════════════════════════════════════════════
+     Übernahme aus tool.js, Abschnitt „DIE KARTE". Weggelassen sind
+     fogLayer, flagLayer, placeLayer, shipLayer und paintOwn: im
+     Einzelspieler gibt es keinen Nebel zu lichten, keine Völker und
+     keine Landeplätze. Zwei Stellen sind angepasst, beide unten
+     kommentiert (reliefLand, frame).                              */
+
+  const SQ3 = Math.sqrt(3);
+  const n2 = v => Math.round(v * 100) / 100;
+
+  /* Spitze oben, versetzte Reihen — dieselbe Geometrie wie im Spiel
+     und im Server (wi_is_neighbor). */
+  const HEX = Array.from({ length: 6 }, (_, k) => {
+    const a = (Math.PI / 180) * (30 + 60 * k);
+    return [Math.cos(a) / SQ3, Math.sin(a) / SQ3];
+  });
+  const ROWH = 0.8660254;
+  const cx = (r, c) => c + 0.5 * (((r % 2) + 2) % 2);
+  const cy = r => r * ROWH;
+
+  /* Nachbar-Nummer → Kanten-Nummer. Kante e liegt zwischen Ecke e und
+     Ecke e+1. Falsch übersetzt umrandet man die falsche Seite — und
+     das sieht aus wie ein Fehler in den Daten. */
+  const EDGE = [3, 4, 2, 5, 1, 0];
+
+  function neighbors(r, c) {
+    const odd = (((r % 2) + 2) % 2) === 1;
+    const d = odd ? [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]]
+                  : [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]];
+    return d.map(([dr, dc]) => [r + dr, c + dc]);
+  }
+
+  function hexPath(x, y, s) {
+    let d = '';
+    for (let i = 0; i < 6; i++) {
+      d += (i ? 'L' : 'M') + n2(x + HEX[i][0] * s) + ' ' + n2(y + HEX[i][1] * s);
+    }
+    return d + 'Z';
+  }
+
+  /* `null` heißt „dieses Merkmal nicht setzen". Ein Element mit
+     ungültiger Filterangabe wird GAR NICHT gezeichnet. */
+  function el(name, attrs, parent) {
+    const n = document.createElementNS(SVGNS, name);
+    for (const k in attrs) {
+      const v = attrs[k];
+      if (v === null || v === undefined) continue;
+      n.setAttribute(k, v);
+    }
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function hashKey(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0) || 1;
+  }
+
+  function hx(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+  const rgb = a => '#' + a.map(v =>
+    Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  function shade(h, amt) { return rgb(hx(h).map(c => c * (1 + amt))); }
+
+  /* Die Palette. `ink` ist die Farbe der Stufenkante im Wasser —
+     nicht Schwarz, sondern das dunkelste Blau: eine schwarze Kante im
+     Meer liest sich als Riss, eine dunkelblaue als Schatten. */
+  const KARTE = {
+    sea: {
+      ink: '#02141f', deep: '#052131', deep2: '#083247', mid: '#0d4c64',
+      shallow: '#176c82', shallow2: '#4096a4', foam: '#dff4fa', wob: .30
+    },
+    land: { sand: '#e3cf9c', gras: '#7fae5c', wald: '#4a8449', fels: '#9aa6ac' }
+  };
+
+  /* Von der Filter-Werkstatt des Spiels bleibt hier NICHTS übrig, und
+     das ist kein Versehen: alle acht Filter gehörten zum Nebel oder
+     zum Schatten unter einer Ruine. Meer, Brandung und Relief kommen
+     ohne einen einzigen Weichzeichner aus — ihre Kanten sind gestapelte
+     Striche.
+
+     Das ist hier mehr als Aufräumen. Ein SVG mit Weichzeichnern unter
+     einer CSS-transform rastert iOS beim Zoomen unter Umständen neu,
+     und das ruckelt. Ohne Filter kann das gar nicht erst passieren. */
+
+  /* ─── Aus der Feldliste eine Insel ──────────────────────────────
+     Alles, was die Feldliste nicht enthält, aber jede Schicht
+     braucht. Einmal je Aufbau. */
+  function inselDaten(list, key) {
+    const cells = [];
+    const idx = new Map();
+    list.forEach(([r, c], i) => {
+      idx.set(r + ',' + c, i);
+      cells.push({ i, r, c, x: cx(r, c), y: cy(r), rand: 1e9, boden: 'gras', home: false, ruin: 0 });
+    });
+    const at = (r, c) => idx.has(r + ',' + c) ? cells[idx.get(r + ',' + c)] : null;
+
+    let sx = 0, sy = 0;
+    for (const z of cells) { sx += z.x; sy += z.y; }
+    const ctr = { x: sx / cells.length, y: sy / cells.length };
+    let R = 0;
+    for (const z of cells) R = Math.max(R, Math.hypot(z.x - ctr.x, z.y - ctr.y));
+    R = R || 1;
+
+    /* Wie weit ist ein Feld vom Wasser entfernt? Breitensuche vom Rand
+       nach innen. 1 = Küstenfeld. Daraus kommt die Höhe der Säule und
+       damit das Gefälle zur Küste. */
+    let f = cells.filter(z => neighbors(z.r, z.c).some(([nr, nc]) => !idx.has(nr + ',' + nc)));
+    f.forEach(z => { z.rand = 1; });
+    while (f.length) {
+      const next = [];
+      for (const z of f) for (const [nr, nc] of neighbors(z.r, z.c)) {
+        const n = at(nr, nc);
+        if (n && n.rand > z.rand + 1) { n.rand = z.rand + 1; next.push(n); }
+      }
+      f = next;
+    }
+
+    /* Der Boden. Zwei überlagerte Sinusfelder statt Würfeln: Wald soll
+       in Stücken stehen und nicht als Konfetti über die Insel gestreut
+       sein. Der Strand ergibt sich AUS `rand` und wird nicht
+       hingemalt — deshalb liegt er zwangsläufig am Rand. */
+    const rnd = mulberry32(hashKey(String(key || 'ws')));
+    const ph = [rnd() * 6.283, rnd() * 6.283, rnd() * 6.283, rnd() * 6.283];
+    for (const z of cells) {
+      const dx = z.x - ctr.x, dy = z.y - ctr.y;
+      const d = Math.hypot(dx, dy);
+      const n1 = (Math.sin(dx * .62 + ph[0]) + Math.sin(dy * .71 + ph[1]) + Math.sin((dx + dy) * .43 + ph[2])) / 3;
+      const n2v = (Math.sin(dx * .31 - ph[3]) + Math.cos(dy * .38 + ph[0])) / 2;
+      z.boden = z.rand <= 1 ? 'sand'
+              : (z.rand === 2 && n1 > .05) ? 'sand'
+              : (d < R * .55 && n2v < -.28) ? 'fels'
+              : n1 > .34 ? 'wald'
+              : 'gras';
+      /* Die Höhe der Säule. Steht im Spiel in reliefLand; hier steht
+         sie am Feld, weil auch die Tiere sie brauchen — sonst liefen
+         sie durch den Berg statt darüber. */
+      z.hoch = z.boden === 'sand' ? .20 : z.boden === 'fels' ? .78 : z.rand === 2 ? .40 : .56;
+    }
+
+    return { cells, idx, at, homes: [], ctr, R };
+  }
+
+  /* ─── Die Küstenlinie als geschlossener Zug ─────────────────────
+     Ein Strich auf der Vereinigung der Sechsecke ergäbe die bekannte
+     Bienenwabe. Also: alle Kanten sammeln, an denen Land ans Wasser
+     stößt, und zu Ringen zusammenhängen.
+
+     Dass hier MEHRERE Ringe herauskommen dürfen, ist der Grund, warum
+     Hauptinsel und Satelliten als EINE Feldliste durchlaufen können:
+     jede getrennte Landmasse wird von selbst ein eigener Ring, und das
+     Meer stapelt seine Tiefenstufen auf jeden davon. */
+  function coastRings(isl, gap) {
+    /* Die Ecken auf HUNDERTSTEL runden, nicht feiner. Zwei Kanten, von
+       verschiedenen Feldern aus gerechnet, treffen sonst nicht
+       denselben Schlüssel — und die Kette reißt. */
+    const K = (x, y) => Math.round(x * 100) + ',' + Math.round(y * 100);
+    const von = new Map();
+    const alle = [];
+    for (const z of isl.cells) {
+      const nb = neighbors(z.r, z.c);
+      for (let i = 0; i < 6; i++) {
+        if (isl.at(nb[i][0], nb[i][1])) continue;
+        const e = EDGE[i], a = HEX[e], b = HEX[(e + 1) % 6];
+        const s = {
+          ax: z.x + a[0] * gap, ay: z.y + a[1] * gap,
+          bx: z.x + b[0] * gap, by: z.y + b[1] * gap, used: false
+        };
+        alle.push(s);
+        const k = K(s.ax, s.ay);
+        if (!von.has(k)) von.set(k, []);
+        von.get(k).push(s);
+      }
+    }
+    const ringe = [];
+    for (const s0 of alle) {
+      if (s0.used) continue;
+      let s = s0; s.used = true;
+      const pts = [[s.ax, s.ay]];
+      for (let guard = 0; guard < 20000; guard++) {
+        pts.push([s.bx, s.by]);
+        const next = (von.get(K(s.bx, s.by)) || []).find(t => !t.used);
+        if (!next) break;
+        next.used = true; s = next;
+      }
+      if (pts.length > 4) ringe.push(pts.slice(0, -1));
+    }
+    return ringe;
+  }
+
+  /* Auslenkung des Küstenzugs. Gebraucht für die WASSERSTUFEN: die
+     sind mehrere Kopien desselben Zuges, und mit derselben Auslenkung
+     liefen sie exakt parallel — das sähe aus wie der Rand eines
+     Aufklebers. */
+  const wOX = (x, y, ph) => Math.sin(x * 1.31 + y * .77 + ph) * .62 + Math.sin(x * .53 - y * 1.11 + ph * 1.7) * .38;
+  const wOY = (x, y, ph) => Math.cos(x * .91 - y * 1.23 + ph) * .62 + Math.cos(x * 1.43 + y * .61 + ph * 1.7) * .38;
+
+  function warpRing(pts, wob, ph) {
+    if (!wob) return pts;
+    return pts.map(([x, y]) => [x + wob * wOX(x, y, ph || 0), y + wob * wOY(x, y, ph || 0)]);
+  }
+
+  function ringsPath(ringe, wob, smooth, ph) {
+    let d = '';
+    for (const pts0 of ringe) {
+      const pts = warpRing(pts0, wob, ph);
+      const n = pts.length;
+      if (!smooth) {
+        d += 'M' + pts.map(([x, y]) => `${n2(x)} ${n2(y)}`).join('L') + 'Z';
+        continue;
+      }
+      /* Der Weg läuft durch die KANTENMITTEN und zieht die Ecken nur
+         an — dadurch verschwinden die 120-Grad-Ecken von allein. */
+      const mid = i => [(pts[i][0] + pts[(i + 1) % n][0]) / 2, (pts[i][1] + pts[(i + 1) % n][1]) / 2];
+      let m = mid(0);
+      d += `M${n2(m[0])} ${n2(m[1])}`;
+      for (let i = 1; i <= n; i++) {
+        const p = pts[i % n], q = mid(i % n);
+        d += `Q${n2(p[0])} ${n2(p[1])} ${n2(q[0])} ${n2(q[1])}`;
+      }
+      d += 'Z';
+    }
+    return d;
+  }
+
+  /* ─── Das Meer ─────────────────────────────────────────────────
+     [Abstand von der Küste, Farbe, Breite der Kante] */
+  const SHELF = [[2.55, 'deep2', .24], [1.66, 'mid', .20], [1.00, 'shallow', .17], [.46, 'shallow2', .14]];
+
+  function seaLayer(svg, isl, vb, dCoast, rings, mopt) {
+    const g = el('g', { class: 'wi-sea' }, svg);
+    const M = 14;
+    const box = { x: n2(vb[0] - M), y: n2(vb[1] - M), width: n2(vb[2] + 2 * M), height: n2(vb[3] + 2 * M) };
+    el('rect', Object.assign({ fill: KARTE.sea.deep }, box), g);
+
+    SHELF.forEach(([off, key, shw], i) => {
+      const amp = KARTE.sea.wob * (1 + (SHELF.length - 1 - i) * .22);
+      const d = ringsPath(rings, amp, true, 1.7 + i * 2.3);
+      /* Die Kante in zwei Lagen: außen breit und blass, innen schmal
+         und dunkel. Zusammen ein Schattenverlauf ohne einen einzigen
+         Weichzeichner — und genau die würden diese Kante kaputt
+         machen. */
+      el('path', { d, fill: 'none', stroke: KARTE.sea.ink, 'stroke-width': n2(2 * off + 2 * shw), 'stroke-linejoin': 'round', opacity: .13 }, g);
+      el('path', { d, fill: 'none', stroke: KARTE.sea.ink, 'stroke-width': n2(2 * off + shw), 'stroke-linejoin': 'round', opacity: .17 }, g);
+      el('path', { d, fill: 'none', stroke: KARTE.sea[key], 'stroke-width': n2(2 * off), 'stroke-linejoin': 'round' }, g);
+    });
+
+    swellMarks(g, isl, vb, mopt);
+
+    el('path', {
+      class: 'wi-foam', d: dCoast, fill: 'none', stroke: KARTE.sea.foam,
+      'stroke-width': .15, 'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+      'stroke-dasharray': '.62 .48', opacity: .8
+    }, g);
+
+    surfMarks(g, isl, rings, mopt);
+    return g;
+  }
+
+  /* ─── Die Brandung ─────────────────────────────────────────────
+     Die Marken sitzen in gleichmäßigem Abstand AUF DEM WEG und nicht
+     auf den Eckpunkten: in einer Bucht liegen die Punkte dicht, auf
+     einer Geraden weit auseinander — nach Punkten verteilt bekäme die
+     Bucht Schaumklumpen und die Gerade nichts. */
+  function surfMarks(g, isl, rings, mopt) {
+    const gg = el('g', {}, g);
+    const r = mulberry32(8123);
+    const step = mopt.dicht ? 3.4 : 2.5;
+    for (const ring of rings) {
+      if (ring.length < 8) continue;
+      /* Der Schwerpunkt DIESES Rings und nicht der aller Felder. Im
+         Spiel gibt es eine Insel; hier sind es sieben, und mit der
+         gemeinsamen Mitte zeigte die Brandung eines Satelliten zur
+         Hauptinsel — also auf der falschen Seite nach außen. */
+      let mx = 0, my = 0;
+      for (const p of ring) { mx += p[0]; my += p[1]; }
+      mx /= ring.length; my /= ring.length;
+
+      let t = r() * step;
+      for (let i = 0; i < ring.length; i++) {
+        const a = ring[i], b = ring[(i + 1) % ring.length];
+        const dx = b[0] - a[0], dy = b[1] - a[1];
+        const seg = Math.hypot(dx, dy) || 1e-6;
+        while (t < seg) {
+          const f = t / seg;
+          const x = a[0] + dx * f, y = a[1] + dy * f;
+          let nx = -dy / seg, ny = dx / seg;
+          if (nx * (x - mx) + ny * (y - my) < 0) { nx = -nx; ny = -ny; }
+          const s = .78 + r() * .5;
+          const gm = el('g', {
+            transform: `translate(${n2(x + nx * .34)} ${n2(y + ny * .34)}) `
+                     + `rotate(${n2(Math.atan2(ny, nx) * 180 / Math.PI)}) scale(${n2(s)})`
+          }, gg);
+          const gi = el('g', { class: 'wi-surf' }, gm);
+          gi.style.animationDelay = n2(-r() * 4.6) + 's';
+          el('path', { d: 'M0 -.52Q.30 0 0 .52', fill: 'none', stroke: KARTE.sea.foam, 'stroke-width': .12, 'stroke-linecap': 'round', opacity: .85 }, gi);
+          el('path', { d: 'M0 -.29Q.15 0 0 .29', fill: 'none', stroke: KARTE.sea.foam, 'stroke-width': .075, 'stroke-linecap': 'round', opacity: .5 }, gi);
+          t += step * (.55 + r() * .95);
+        }
+        t -= seg;
+      }
+    }
+    return gg;
+  }
+
+  /* ─── Wellen auf hoher See ─────────────────────────────────────
+     Vereinzelt, klein, weit genug draußen — und ECKIG: ein weicher
+     Bogen ist eine Dünung, eine Welle hat einen Kamm. */
+  function swellMarks(g, isl, vb, mopt) {
+    const gg = el('g', {}, g);
+    const r = mulberry32(5150);
+    const want = mopt.dicht ? 14 : 24;
+    const put = [];
+    const frei = (x, y) => {
+      for (const z of isl.cells) if (Math.hypot(z.x - x, z.y - y) < 3.0) return false;
+      return true;
+    };
+    for (let tries = 0; tries < 900 && put.length < want; tries++) {
+      const x = vb[0] + .7 + r() * (vb[2] - 1.4);
+      const y = vb[1] + .7 + r() * (vb[3] - 1.4);
+      if (!frei(x, y)) continue;
+      if (put.some(p => Math.hypot(p[0] - x, p[1] - y) < 2.0)) continue;
+      put.push([x, y]);
+      const s = .8 + r() * .5;
+      const gm = el('g', {
+        transform: `translate(${n2(x)} ${n2(y)}) rotate(${n2(-9 + r() * 18)}) scale(${n2(s)})`
+      }, gg);
+      const gi = el('g', { class: 'wi-swell' }, gm);
+      const dur = 6.5 + r() * 5;
+      gi.style.animationDuration = n2(dur) + 's';
+      gi.style.animationDelay = n2(-r() * dur) + 's';
+      /* `stroke-linejoin: miter` ist der Punkt der ganzen Sache — mit
+         `round` wäre die Ecke wieder ein Bogen. */
+      el('path', {
+        d: 'M-.58 .17L-.29 -.15L0 .17M.14 .34L.32 .14L.5 .34',
+        fill: 'none', stroke: KARTE.sea.foam, 'stroke-width': .085,
+        'stroke-linejoin': 'miter', 'stroke-linecap': 'butt', opacity: .62
+      }, gi);
+    }
+    return gg;
+  }
+
+  /* ─── Das Land ─────────────────────────────────────────────────
+     Die Marken EINES Feldes. Immer dieselben — der Würfel hängt an
+     der Feldnummer und nicht am Spielstand. */
+  function dTree(x, y, s) {
+    const w = .13 * s, h = .30 * s, b = .12 * s;
+    return `M${n2(x - w)} ${n2(y + b)}L${n2(x)} ${n2(y - h)}L${n2(x + w)} ${n2(y + b)}Z`;
+  }
+  function dRock(x, y, s) {
+    return `M${n2(x - .13 * s)} ${n2(y + .09 * s)}L${n2(x - .06 * s)} ${n2(y - .09 * s)}`
+         + `L${n2(x + .05 * s)} ${n2(y - .11 * s)}L${n2(x + .13 * s)} ${n2(y + .04 * s)}`
+         + `L${n2(x + .08 * s)} ${n2(y + .10 * s)}Z`;
+  }
+  function dTuft(x, y, s) {
+    let d = '';
+    for (let i = -1; i <= 1; i++) {
+      const bx = x + i * .07 * s;
+      d += `M${n2(bx)} ${n2(y + .07 * s)}Q${n2(bx + i * .03 * s)} ${n2(y)} ${n2(bx + i * .06 * s)} ${n2(y - .10 * s)}`;
+    }
+    return d;
+  }
+  function dDot(x, y, s) {
+    const r = .04 * s;
+    return `M${n2(x - r)} ${n2(y)}a${n2(r)} ${n2(r)} 0 1 0 ${n2(2 * r)} 0a${n2(r)} ${n2(r)} 0 1 0 ${n2(-2 * r)} 0`;
+  }
+  function cellDetail(z) {
+    const r = mulberry32(z.r * 7919 + z.c * 104729 + 17);
+    const k = z.boden;
+    const cnt = k === 'wald' ? 2 + (r() < .5 ? 1 : 0)
+              : k === 'fels' ? 1 + (r() < .5 ? 1 : 0)
+              : k === 'sand' ? 2 : 3;
+    let d = '';
+    for (let i = 0; i < cnt; i++) {
+      const a = r() * 6.283, rad = .10 + r() * .28;
+      const x = z.x + Math.cos(a) * rad, y = z.y + Math.sin(a) * rad * .82;
+      const s = .75 + r() * .55;
+      d += k === 'wald' ? dTree(x, y, s)
+         : k === 'fels' ? dRock(x, y, s)
+         : k === 'sand' ? dDot(x, y, s)
+         : dTuft(x, y, s);
+    }
+    return d;
+  }
+
+  /* ── ANGEPASST gegenüber tool.js ───────────────────────────────
+     Im Spiel entscheidet die Besitz-Zeichenkette je Takt, ob eine
+     Kachel flach liegt (Nebel) oder aufsteht (erobert, in der
+     Volksfarbe). Hier steht jede Kachel von Anfang an auf ihrer
+     Geländehöhe und behält ihre eigene Bodenfarbe: es gibt nichts zu
+     erobern. Damit fällt auch das Vergleichen gegen den vorigen Stand
+     weg — gemalt wird einmal beim Aufbau. */
+  function reliefLand(svg, isl, mopt) {
+    const g = el('g', {}, svg);
+    const DK = {
+      wald: [shade(KARTE.land.wald, -.45), 'none'],
+      fels: [shade(KARTE.land.fels, -.30), 'none'],
+      sand: [shade(KARTE.land.sand, -.34), 'none'],
+      gras: ['none', shade(KARTE.land.gras, -.34)]
+    };
+
+    function sidePath(x, y, s, h) {
+      /* Die unteren Ecken sind bei dieser Ausrichtung 2, 1 und 0
+         (y wächst nach unten). */
+      const pts = [2, 1, 0].map(i => [x + HEX[i][0] * s, y + HEX[i][1] * s]);
+      let d = `M${n2(pts[0][0])} ${n2(pts[0][1])}`;
+      for (let i = 1; i < pts.length; i++) d += `L${n2(pts[i][0])} ${n2(pts[i][1])}`;
+      for (let i = pts.length - 1; i >= 0; i--) d += `L${n2(pts[i][0])} ${n2(pts[i][1] + h)}`;
+      return d + 'Z';
+    }
+
+    /* Malerreihenfolge: von hinten nach vorn, sonst steht eine hintere
+       Säule vor einer vorderen. Nach derselben Regel sortieren später
+       die Tiere. */
+    for (const z of isl.cells.slice().sort((a, b) => a.y - b.y || a.x - b.x)) {
+      const gg = el('g', {}, g);
+      const h = z.hoch;
+      const y = z.y - h + .1;
+      const deck = KARTE.land[z.boden];
+      el('path', { class: 'wi-side', d: sidePath(z.x, y, 1.0, h + .06), fill: shade(deck, -.5) }, gg);
+      el('path', {
+        class: 'wi-cell', d: hexPath(z.x, y, 1.0), fill: deck,
+        stroke: 'rgba(0,0,0,.16)', 'stroke-width': .015
+      }, gg);
+      if (!mopt.dicht) {
+        el('path', {
+          class: 'wi-det', d: cellDetail(z), fill: DK[z.boden][0], stroke: DK[z.boden][1],
+          'stroke-width': .035, 'stroke-linecap': 'round', opacity: .75,
+          transform: `translate(0 ${n2(-h + .1)})`
+        }, gg);
+      }
+    }
+    return g;
+  }
+
+  /* ── ANGEPASST gegenüber tool.js ───────────────────────────────
+     Die Schleife über die Landeplätze ist raus (sie reserviert nur
+     Platz für Schiffsmasten). Dafür ein größerer Rand: die
+     ausgewachsenen Echsen fliegen über das offene Wasser hinaus, und
+     ein Ausschnitt, der am Strand endet, würde sie abschneiden. */
+  const RAND = 2.4;
+  function frame(svg, isl) {
+    let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
+    for (const z of isl.cells) {
+      a = Math.min(a, z.x); b = Math.max(b, z.x);
+      c = Math.min(c, z.y); d = Math.max(d, z.y);
+    }
+    const vb = [a - RAND, c - RAND, b - a + 2 * RAND, d - c + 2 * RAND];
+    svg.setAttribute('viewBox', vb.map(v => n2(v)).join(' '));
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    return vb;
+  }
+
+  function buildMap(svg, list, key) {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const isl = inselDaten(list, key);
+    const vb = frame(svg, isl);
+    /* „dicht" ist die Notbremse aus dem Spiel: ab einer bestimmten
+       Feldzahl fallen Kleinteile und ein Teil der Brandung weg.
+
+       Sie greift hier SPÄTER als dort (1100 statt 700), und das hat
+       einen Grund: im Spiel wird die Karte je Takt neu eingefärbt und
+       jede Kachel dabei angehoben — dort kostet jedes Element etwas,
+       viermal in der Minute. Hier wird sie EINMAL gebaut und danach
+       nur noch als Ganzes geschoben; die Kleinteile kosten Aufbauzeit
+       und sonst nichts.
+
+       Mit Sönkes Maßen (200–220 plus sechsmal 25–60) liegt die Karte
+       bei rund 460 Feldern und damit ohnehin weit darunter. Die
+       Bremse steht als Sicherung für den Fall, dass jemand an den
+       Zahlen dreht — dann aber weit genug weg, dass nicht dieselbe
+       Karte je nach Wurf mal Bäumchen hat und mal nicht. Ein
+       Prüfstand, der bei jedem „neue Insel" anders aussieht, prüft
+       nichts. */
+    const mopt = { dicht: isl.cells.length > 1100 };
+
+    /* Die Küstenringe EINMAL: das Wasser stapelt vier Tiefenstufen
+       darauf, die Brandung setzt ihre Wellen darauf ab. */
+    const rings = coastRings(isl, 1.0);
+    const dCoast = ringsPath(rings, 0, false, 0);
+
+    seaLayer(svg, isl, vb, dCoast, rings, mopt);
+    reliefLand(svg, isl, mopt);
+    return { isl, vb };
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     TEIL 2 · DER INSELGENERATOR
+     ════════════════════════════════════════════════════════════════
+     Im Spiel kommen die Felder vom Server (wi_build_island). Hier
+     werden sie gewürfelt: eine große Hauptinsel und sechs kleine
+     drumherum.
+
+     Die Form ist sternförmig gedacht — der Radius ist eine Funktion
+     des Winkels. Das klingt nach einer Einschränkung, ist aber genau
+     die, die man will: eine sternförmige Fläche ist IMMER
+     zusammenhängend. Mit freiem Rauschen bekäme man gelegentlich eine
+     abgetrennte Landzunge, auf der dann ein Tier für immer festsäße.
+
+     Alle Inseln gehen als EINE Feldliste weiter. Getrennte Landmassen
+     werden in coastRings von selbst eigene Ringe.                 */
+
+  /* Die Form einer Insel: eine Auslenkung des Radius über dem Winkel.
+     Einmal gewürfelt, danach fest — der Radius selbst wird gleich
+     nachgeregelt, und dabei darf sich die FORM nicht mehr ändern. */
+  function blobForm(rnd) {
+    const ph = [rnd() * 6.283, rnd() * 6.283, rnd() * 6.283];
+    return a => .76 + .14 * Math.sin(a * 3 + ph[0]) + .09 * Math.sin(a * 5 + ph[1]) + .06 * Math.sin(a * 2 + ph[2]);
+  }
+
+  function blobCells(cr, cc, R, wob) {
+    const raus = [];
+    const x0 = cx(cr, cc), y0 = cy(cr);
+    const rowSpan = Math.ceil(R / ROWH) + 2, colSpan = Math.ceil(R) + 2;
+    for (let r = cr - rowSpan; r <= cr + rowSpan; r++) {
+      for (let c = cc - colSpan; c <= cc + colSpan; c++) {
+        const dx = cx(r, c) - x0, dy = cy(r) - y0;
+        const d = Math.hypot(dx, dy);
+        if (d > R * wob(Math.atan2(dy, dx))) continue;
+        raus.push([r, c]);
+      }
+    }
+    return raus;
+  }
+
+  /* ─── Nicht der Radius wird vorgegeben, sondern die FELDZAHL ─────
+     Sönkes Vorgabe steht in Feldern („Hauptinsel 200–220, Nebeninseln
+     25–60"), und Felder sind auch das, was man an der fertigen Karte
+     nachzählen kann. Ein Radius ist dagegen nur ein Mittel: wie viele
+     Sechsecke bei R = 9,2 herauskommen, hängt an der gewürfelten Form
+     und daran, wie das Gitter gerade unter der Fläche liegt.
+
+     Also andersherum. Die Form steht fest, und der Radius wird per
+     Intervallhalbierung so lange eingeengt, bis die Feldzahl passt.
+     Achtzehn Schritte reichen weit über die Genauigkeit hinaus, die
+     ein Sechseckgitter überhaupt hergibt, und kosten nichts: die
+     ganze Suche läuft einmal je Insel beim Aufbau.
+
+     Die Feldzahl springt dabei in Stufen — ein größerer Radius nimmt
+     immer gleich mehrere Felder auf einmal dazu. Getroffen wird
+     deshalb der KLEINSTE Radius, der das Ziel erreicht; heraus kommt
+     die Zielzahl oder ein paar Felder darüber. */
+  function blobMitZiel(cr, cc, ziel, wob) {
+    let lo = .5, hi = 24;
+    for (let i = 0; i < 18; i++) {
+      const m = (lo + hi) / 2;
+      if (blobCells(cr, cc, m, wob).length < ziel) lo = m; else hi = m;
+    }
+    return { R: hi, zellen: blobCells(cr, cc, hi, wob) };
+  }
+
+  /* Grobe Umkehrung für die PLATZIERUNG: wie groß wird eine Insel mit
+     so vielen Feldern ungefähr? Eine Kachel bedeckt √3/2 Flächen-
+     einheiten, die Auslenkung nimmt im Mittel etwas weg — nachgemessen
+     liegt der Faktor bei rund 2,1 Feldern je Radiusquadrat. Genauer
+     muss es nicht sein: der Abstand zwischen zwei Inseln hat ohnehin
+     einen Sicherheitszuschlag. */
+  const rAus = ziel => Math.sqrt(ziel / 2.1);
+
+  /* Sönkes Maße, 09.09.2026. In FELDERN, nicht in Radien — siehe
+     blobMitZiel. Die Hauptinsel liegt fest in ihrer Spanne, die
+     Nebeninseln werden gewürfelt, damit sie nicht wie sechs Kopien
+     aussehen. */
+  const HAUPT_FELDER = [200, 220];
+  const SAT_FELDER = [25, 60];
+  const SAT_ANZAHL = 6;
+
+  /* Wie viel offenes Wasser mindestens zwischen zwei Küsten liegt.
+     Stoßen zwei Inseln aneinander, verschmelzen ihre Küstenringe —
+     aus zwei Inseln wird eine mit einer Landbrücke, und `findeInseln`
+     zählt danach zu Recht nur noch eine. Bei den kleinen Satelliten
+     der ersten Fassung konnte das gar nicht passieren; ab dieser
+     Größe muss die Platzierung es ausdrücklich verhindern. */
+  const WASSER = 2.6;
+  /* Der Formfaktor: `blobCells` lenkt den Radius um bis zu +5 % aus,
+     der äußerste Punkt liegt also etwas weiter draußen als R. */
+  const AUSSEN = 1.05;
+
+  function wuerfelInseln(seed) {
+    const rnd = mulberry32(seed);
+    const out = [], have = new Set();
+
+    const setze = (cr, cc, ziel, wob) => {
+      const b = blobMitZiel(cr, cc, ziel, wob);
+      for (const [r, c] of b.zellen) {
+        const k = r + ',' + c;
+        if (have.has(k)) continue;
+        have.add(k); out.push([r, c]);
+      }
+      return b.R;
+    };
+
+    const hauptZiel = HAUPT_FELDER[0] + rnd() * (HAUPT_FELDER[1] - HAUPT_FELDER[0]);
+    const hauptR = setze(0, 0, hauptZiel, blobForm(rnd));
+
+    /* Sechs Satelliten auf einem Ring, aber mit ABLEHNUNG statt fester
+       Formel: Platz würfeln, prüfen, ob er zu allen bisherigen und zur
+       Hauptinsel genug Abstand hat, sonst neu würfeln. Eine feste
+       Formel müsste den schlimmsten Fall einrechnen und schöbe alle
+       Inseln unnötig weit hinaus; so liegen sie so dicht, wie es
+       gerade geht.
+
+       Für die Abstandsprüfung reicht der GESCHÄTZTE Radius (rAus) —
+       den genauen kennt man erst, wenn die Insel steht, und dafür
+       müsste man sie in jedem der bis zu 240 Versuche bauen. Der
+       Sicherheitszuschlag WASSER deckt die Schätzung ab. */
+    const gesetzt = [{ x: 0, y: 0, R: hauptR }];
+    const a0 = rnd() * 6.283;
+    for (let i = 0; i < SAT_ANZAHL; i++) {
+      const ziel = SAT_FELDER[0] + rnd() * (SAT_FELDER[1] - SAT_FELDER[0]);
+      const R = rAus(ziel);
+      let platz = null;
+      for (let versuch = 0; versuch < 240 && !platz; versuch++) {
+        /* Mit jedem Fehlversuch etwas weiter hinaus — sonst dreht sich
+           die Suche auf einem zu engen Ring endlos im Kreis. */
+        const weite = versuch / 240;
+        const a = a0 + (i + (rnd() - .5) * .5) * 6.283 / SAT_ANZAHL;
+        const D = hauptR + WASSER + R * AUSSEN + rnd() * 3.5 + weite * 9;
+        const x = Math.cos(a) * D, y = Math.sin(a) * D;
+        const frei = gesetzt.every(g =>
+          Math.hypot(g.x - x, g.y - y) >= (g.R + R) * AUSSEN + WASSER);
+        if (frei) platz = { x, y, R };
+      }
+      /* Findet sich keiner, wird diese Insel ausgelassen. Lieber fünf
+         Inseln als zwei, die zusammengewachsen sind. */
+      if (!platz) continue;
+      gesetzt.push(platz);
+      const r = Math.round(platz.y / ROWH);
+      const c = Math.round(platz.x - 0.5 * (((r % 2) + 2) % 2));
+      setze(r, c, ziel, blobForm(rnd));
+    }
+    return out;
+  }
+
+  /* Zusammenhängende Landmassen finden. Die Tiere brauchen das: ein
+     Läufer bleibt auf der Hauptinsel (die erste in der Liste), ein
+     Flieger sucht sich zum Schlafen irgendeine. */
+  function findeInseln(isl) {
+    const seen = new Set(), inseln = [];
+    for (const z of isl.cells) {
+      if (seen.has(z.i)) continue;
+      const stack = [z], grp = [];
+      seen.add(z.i);
+      while (stack.length) {
+        const q = stack.pop();
+        grp.push(q);
+        for (const [nr, nc] of neighbors(q.r, q.c)) {
+          const n = isl.at(nr, nc);
+          if (n && !seen.has(n.i)) { seen.add(n.i); stack.push(n); }
+        }
+      }
+      let sx = 0, sy = 0;
+      for (const q of grp) { sx += q.x; sy += q.y; }
+      inseln.push({ cells: grp, cx: sx / grp.length, cy: sy / grp.length });
+    }
+    /* Die größte zuerst — die Eier liegen auf der Hauptinsel, und die
+       ist definitionsgemäß die mit den meisten Feldern. */
+    inseln.sort((a, b) => b.cells.length - a.cells.length);
+    return inseln;
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     TEIL 3 · DIE BILDER
+     ════════════════════════════════════════════════════════════════
+     Die neun Vorlagen sind AUFEINANDER gezeichnet: dasselbe Blatt
+     (890 × 968), dieselbe Grundlinie. Echse0/1/2 stehen mit den Füßen
+     auf 826, die Schlaf-Fassungen liegen flach auf demselben Boden,
+     und Echse3a hört schon bei 728 auf — der Flieger schwebt, und
+     zwar weil er so GEZEICHNET ist.
+
+     Daraus folgt die Regel, an der der erste Anlauf gescheitert ist:
+     der Maßstab gehört zum BLATT, nicht zum einzelnen Tier. Wer jede
+     Datei auf dieselbe Höhe bringt, bläst die zusammengerollte
+     Schlaf-Echse auf die Größe der stehenden auf — sie wächst dann
+     beim Einschlafen, und das sah aus wie ein Fehler in der Physik.
+
+     Zugeschnitten und auf ein gemeinsames Blatt von 340 px gebracht
+     werden die Bilder beim Einbacken (tools/solosprites.mjs). Von
+     dort kommen sie samt ihrer Lage IM Blatt (`x`/`y`) und dem
+     Ankerpunkt — dem Fleck, den der Showroom ins Gelände setzt.
+
+     Bleibt das Einfärben: je Bild acht Farben, einmal beim Start. Der
+     teure Teil passiert damit EINMAL und nicht sechzigmal je Sekunde;
+     das ist der ganze Grund, warum die Tiere auf einem Canvas liegen
+     und nicht als <img> im DOM.                                    */
+
+  const BILDER = ['ei', 's1', 's1z', 's2', 's2z', 's3a', 's3az', 's3b', 's3bz'];
+
+  /* Das Blatt und der Anker, gefüllt aus solo-sprites.js. */
+  let BLATT = { w: 313, h: 340, ankerX: 160, ankerY: 290 };
+  const LAGE = {};        // Bildschlüssel → { x, y, w, h } in Blatt-Einheiten
+
+  /* Die acht Farben. Der Wert ist der ZIEL-Farbton in Grad; das
+     Ausgangsbild liegt bei rund 95° (dieses Grün). Der erste Eintrag
+     lässt das Bild in Ruhe — eine der acht Echsen soll aussehen wie
+     die gezeichnete. */
+  const FARBEN = [
+    { name: 'Grün',    h: 95,  orig: true },
+    { name: 'Türkis',  h: 165 },
+    { name: 'Blau',    h: 208 },
+    { name: 'Violett', h: 264 },
+    { name: 'Magenta', h: 312 },
+    { name: 'Koralle', h: 352 },
+    { name: 'Orange',  h: 26 },
+    { name: 'Gold',    h: 52 }
+  ];
+  const BASIS_H = 95;
+
+  function rgb2hsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    const l = (mx + mn) / 2;
+    if (mx === mn) return [0, 0, l];
+    const d = mx - mn;
+    const s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+    let h;
+    if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0));
+    else if (mx === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    return [h * 60, s, l];
+  }
+  function hue2rgb(p, q, t) {
+    if (t < 0) t += 1; if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  }
+  function hsl2rgb(h, s, l) {
+    h = ((h % 360) + 360) % 360 / 360;
+    if (s === 0) { const v = l * 255; return [v, v, v]; }
+    const q = l < .5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    return [hue2rgb(p, q, h + 1 / 3) * 255, hue2rgb(p, q, h) * 255, hue2rgb(p, q, h - 1 / 3) * 255];
+  }
+
+  function neuCanvas(w, h) {
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h));
+    return c;
+  }
+
+  function ladeBild(src) {
+    return new Promise((ok, fail) => {
+      const im = new Image();
+      im.onload = () => ok(im);
+      im.onerror = () => fail(new Error('Bild fehlt: ' + src));
+      im.src = src;
+    });
+  }
+
+  /* Die Bilder kommen fertig zugeschnitten und im richtigen Maßstab
+     an; hier werden sie nur noch auf eine Leinwand gelegt, damit
+     faerbeSatz ihre Bildpunkte lesen kann. Nichts wird skaliert —
+     jedes Skalieren an dieser Stelle würde genau den gemeinsamen
+     Maßstab zerstören, für den das ganze Blatt da ist. */
+  function aufLeinwand(im) {
+    const out = neuCanvas(im.width, im.height);
+    out.getContext('2d').drawImage(im, 0, 0);
+    return out;
+  }
+
+  /* Ein Satz von acht eingefärbten Fassungen.
+
+     Das Farbmodell wird EINMAL je Bild gerechnet und danach nur noch
+     neu zusammengesetzt. Andersherum — je Farbe einmal durch alle
+     Pixel — wäre es achtmal dieselbe Arbeit.                       */
+  function faerbeSatz(basis, verfahren) {
+    const w = basis.width, h = basis.height;
+    const bx = basis.getContext('2d', { willReadFrequently: true });
+    const src = bx.getImageData(0, 0, w, h);
+
+    if (verfahren === 'dreh') {
+      /* Verfahren A: der eingebaute Farbtondreh. Eine Zeile — und
+         eine Näherung mit einer Matrix, keine echte Drehung im
+         Farbkreis. Er nimmt deshalb Umriss, Augen und Flossen mit
+         und verschiebt nebenbei die Helligkeit. Genau das soll man
+         hier sehen können. */
+      return FARBEN.map(f => {
+        const c = neuCanvas(w, h);
+        const x = c.getContext('2d');
+        if (!f.orig) x.filter = `hue-rotate(${Math.round(f.h - BASIS_H)}deg)`;
+        x.drawImage(basis, 0, 0);
+        return c;
+      });
+    }
+
+    /* Verfahren B: luminanzerhaltend. Der Farbton wird gedreht, die
+       Helligkeit bleibt — und zwar gewichtet:
+
+         · nach Sättigung: was fast grau ist, bleibt grau. Sonst
+           bekämen die weißen Augäpfel und der helle Bauch einen
+           Farbstich.
+         · nach Helligkeit: was sehr dunkel ist, bleibt dunkel und
+           unbunt. Das ist der braune Umriss — und er ist es, der die
+           Zeichnung zusammenhält. Dreht man ihn mit, sieht das Tier
+           bei Violett aus wie ein Aufkleber.
+
+       Die orange-blauen Flossen wandern mit. Das ist Absicht: das
+       Tier soll EINE Farbfamilie sein und keine Echse mit fremden
+       Flügeln. */
+    const n = w * h;
+    const H = new Float32Array(n), S = new Float32Array(n), L = new Float32Array(n), W = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const p = i * 4;
+      if (src.data[p + 3] < 4) { W[i] = -1; continue; }
+      const [hh, ss, ll] = rgb2hsl(src.data[p], src.data[p + 1], src.data[p + 2]);
+      H[i] = hh; S[i] = ss; L[i] = ll;
+      const wS = Math.min(1, Math.max(0, (ss - .10) / .18));
+      const wL = Math.min(1, Math.max(0, (ll - .26) / .16)) * Math.min(1, Math.max(0, (.985 - ll) / .05));
+      W[i] = wS * wL;
+    }
+
+    return FARBEN.map(f => {
+      const c = neuCanvas(w, h);
+      const x = c.getContext('2d');
+      if (f.orig) { x.drawImage(basis, 0, 0); return c; }
+      const out = x.createImageData(w, h);
+      const delta = f.h - BASIS_H;
+      for (let i = 0; i < n; i++) {
+        const p = i * 4;
+        out.data[p + 3] = src.data[p + 3];
+        if (W[i] < 0) continue;
+        const wgt = W[i];
+        if (wgt <= 0) {
+          out.data[p] = src.data[p]; out.data[p + 1] = src.data[p + 1]; out.data[p + 2] = src.data[p + 2];
+          continue;
+        }
+        const [r, g, b] = hsl2rgb(H[i] + delta * wgt, S[i], L[i]);
+        /* Zurückmischen statt hart ersetzen: an der Kante zwischen
+           „wird gedreht" und „bleibt" gäbe es sonst einen sichtbaren
+           Absatz mitten im Tier. */
+        out.data[p]     = src.data[p]     + (r - src.data[p])     * wgt;
+        out.data[p + 1] = src.data[p + 1] + (g - src.data[p + 1]) * wgt;
+        out.data[p + 2] = src.data[p + 2] + (b - src.data[p + 2]) * wgt;
+      }
+      x.putImageData(out, 0, 0);
+      return c;
+    });
+  }
+
+  /* Der Leuchtfleck. Auch er wird vorgerendert: ein
+     createRadialGradient je Tier und Bild wäre bei 500 Tieren der
+     mit Abstand teuerste Posten der ganzen Schleife. */
+  function leuchtFleck(farbe) {
+    const S = 128, c = neuCanvas(S, S);
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    const [r, gg, b] = hsl2rgb(farbe.h, .95, .62);
+    const rr = Math.round(r), rg = Math.round(gg), rb = Math.round(b);
+    g.addColorStop(0,   `rgba(${rr},${rg},${rb},1)`);
+    g.addColorStop(.22, `rgba(${rr},${rg},${rb},.62)`);
+    g.addColorStop(.55, `rgba(${rr},${rg},${rb},.17)`);
+    g.addColorStop(1,   `rgba(${rr},${rg},${rb},0)`);
+    x.fillStyle = g; x.fillRect(0, 0, S, S);
+    return c;
+  }
+  /* Der weiße Kern der obersten Stufe. Bei acht Farbvarianten wird
+     Farbe allein nie „heller als die anderen" — Weiß schon. */
+  function funkeFleck() {
+    const S = 64, c = neuCanvas(S, S);
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(.3, 'rgba(255,250,225,.55)');
+    g.addColorStop(1, 'rgba(255,240,190,0)');
+    x.fillStyle = g; x.fillRect(0, 0, S, S);
+    return c;
+  }
+
+  /* Der aufsteigende Funke in der Farbe des Tieres. Härter als der
+     Leuchtfleck: ein Funke hat einen KERN, ein Schein hat keinen —
+     mit demselben weichen Verlauf sähen die Funken aus wie kleine
+     Kopien des Glühens, und dann sieht man sie gar nicht. */
+  function funkenFleck(farbe) {
+    const S = 64, c = neuCanvas(S, S);
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    const [r, gg, b] = hsl2rgb(farbe.h, .90, .74);
+    const rr = Math.round(r), rg = Math.round(gg), rb = Math.round(b);
+    g.addColorStop(0,   `rgba(255,255,255,.95)`);
+    g.addColorStop(.20, `rgba(${rr},${rg},${rb},.85)`);
+    g.addColorStop(.50, `rgba(${rr},${rg},${rb},.24)`);
+    g.addColorStop(1,   `rgba(${rr},${rg},${rb},0)`);
+    x.fillStyle = g; x.fillRect(0, 0, S, S);
+    return c;
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     TEIL 4 · DIE ECHSEN
+     ════════════════════════════════════════════════════════════════
+     Fünf Stufen, und die dritte ist die, ab der sich alles ändert:
+
+       0  Ei              liegt auf der Hauptinsel, wippt
+       1  geschlüpft      läuft
+       2  gewachsen       läuft, größer
+       3  ausgewachsen    FLIEGT, darf die Insel verlassen (a oder b)
+       4  funkelnd        wie 3, dazu Funken — kein eigenes Bild
+
+     Geschlafen wird unabhängig von Tag und Nacht. Für die Flieger
+     ist das die einzige Stelle mit einer echten Regel: sie müssen
+     zum Schlafen auf Land. Ein Tier, das über offenem Wasser
+     einschläft und dort in der Luft stehen bleibt, ist genau der
+     Fehler, den man in diesem Prüfstand sehen will.               */
+
+  /* Wie breit das BLATT einer Stufe im Gelände ist, in Kacheln — und
+     nicht, wie hoch das Tier ist. Das ist der Unterschied, an dem der
+     erste Anlauf gescheitert ist: eine Stufe hat EINEN Maßstab, und
+     wie groß das Tier darin erscheint, entscheidet die Zeichnung. Die
+     schlafende Echse ist damit von allein flacher als die stehende,
+     statt auf deren Höhe aufgeblasen zu werden.
+
+     Die Reihe wächst, weil das Tier wächst — der Sprung von 2 auf 3
+     ist der größte: dort wird aus einem Krabbler ein Flieger. */
+  const STUFE_EINHEIT = [1.75, 1.90, 2.05, 2.25, 2.25];
+
+  /* Wie hoch ein Flieger über dem Boden schwebt. Klein, weil die
+     Vorlage von Echse3a den Abstand schon enthält (sie hört 98 px
+     über der Grundlinie auf) — hier kommt nur dazu, was BEWEGUNG ist.
+     Mit dem alten Wert stünden sie doppelt so hoch wie gezeichnet. */
+  const FLUG_HOEHE = .55;
+  const LAUF_TEMPO = [0, .30, .40, 0, 0];
+  const FLUG_TEMPO = 1.15;
+
+  /* Wie stark eine Stufe bei Nacht leuchtet. Die Reihe ist bewusst
+     ungleichmäßig: von 1 auf 2 soll man einen Unterschied ahnen, von
+     2 auf 3 soll man ihn SEHEN. Sonst wäre das Leuchten eine
+     gleichmäßige Rampe und damit keine Auskunft mehr. */
+  const GLUEHEN = [0, .20, .42, 1.00, 1.35];
+
+  /* Wie viele Funken je Stufe aufsteigen. Auch das ist eine Auskunft
+     und keine Zierde: an einem Ei tut sich nichts, ab dem Schlüpfen
+     steigen zwei Fünkchen, und die vierte Stufe sprüht. Der Sprung
+     von 4 auf 9 ist Absicht — „geschafft" soll man von weitem sehen. */
+  const FUNKEN = [0, 2, 3, 5, 9];
+
+  const welt = {
+    isl: null, vb: null, inseln: null,
+    zellen: null,        // Reihenschlüssel → Feld, für die Bodenhöhe
+    tiere: [],
+    seed: 20260909
+  };
+
+  function zufall() { return Math.random(); }
+
+  /* Das Feld unter einem Weltpunkt. Gebraucht für die Bodenhöhe: die
+     Kacheln stehen unterschiedlich hoch, und ein Tier, das die Höhe
+     nicht mitnimmt, steckt im Fels bis zum Bauch.
+
+     Gerundet wird auf den nächsten Gitterpunkt und danach die Nachbar-
+     reihe geprüft: bei versetzten Reihen liegt der nächste Mittelpunkt
+     nicht immer in der gerundeten Reihe. */
+  function feldAt(x, y) {
+    const r0 = Math.round(y / ROWH);
+    let best = null, bd = 1e9;
+    for (let r = r0 - 1; r <= r0 + 1; r++) {
+      const c = Math.round(x - 0.5 * (((r % 2) + 2) % 2));
+      for (let dc = -1; dc <= 1; dc++) {
+        const z = welt.isl.at(r, c + dc);
+        if (!z) continue;
+        const d = (z.x - x) * (z.x - x) + (z.y - y) * (z.y - y);
+        if (d < bd) { bd = d; best = z; }
+      }
+    }
+    return (best && bd < .36) ? best : null;
+  }
+  function bodenY(x, y) {
+    const z = feldAt(x, y);
+    return z ? -z.hoch + .1 : 0;
+  }
+
+  /* Ein Punkt IN einem Feld. Die Auslenkung bleibt unter einer halben
+     Kachel — das ist der Innenkreis des Sechsecks, der Punkt liegt
+     also sicher im Feld und nicht im Wasser nebenan. */
+  function zufallsPunktAuf(insel) {
+    const z = insel.cells[(zufall() * insel.cells.length) | 0];
+    const a = zufall() * 6.283, rad = zufall() * .34;
+    return { x: z.x + Math.cos(a) * rad, y: z.y + Math.sin(a) * rad * .8 };
+  }
+
+  /* Für Läufer: ein Ziel in der NÄHE statt irgendwo auf der Insel.
+
+     Der Grund ist nicht die Gemütlichkeit, sondern die Küste. Ein
+     Läufer geht geradeaus auf sein Ziel zu; liegt das quer über der
+     Insel, führt die Gerade bei jeder Bucht durchs Wasser — und dann
+     spaziert eine Echse über das Meer. Kurze Wege schneiden seltener
+     eine Bucht, und was trotzdem durchrutscht, fängt der Riegel in
+     schritt() ab. */
+  const NAH = 3.2;
+  function zufallsPunktNahe(t) {
+    const insel = welt.inseln[t.inselIdx];
+    const nah = [];
+    for (const z of insel.cells) {
+      if (Math.abs(z.x - t.x) < NAH && Math.abs(z.y - t.y) < NAH) nah.push(z);
+    }
+    const feld = nah.length ? nah[(zufall() * nah.length) | 0]
+                            : insel.cells[(zufall() * insel.cells.length) | 0];
+    const a = zufall() * 6.283, rad = zufall() * .34;
+    return { x: feld.x + Math.cos(a) * rad, y: feld.y + Math.sin(a) * rad * .8 };
+  }
+
+  function neuesTier(id, stufe) {
+    const insel = welt.inseln[0];
+    const p = zufallsPunktAuf(stufe >= 3 ? welt.inseln[(zufall() * welt.inseln.length) | 0] : insel);
+    const t = {
+      id,
+      stufe,
+      farbe: (zufall() * FARBEN.length) | 0,
+      variante: zufall() < .5 ? 'a' : 'b',
+      x: p.x, y: p.y, z: 0,
+      zx: p.x, zy: p.y,
+      inselIdx: 0,
+      flip: zufall() < .5,
+      phase: zufall() * 6.283,
+      zustand: 'laufen',
+      schlafBis: 0,
+      pop: 0,
+      tempo: .85 + zufall() * .3
+    };
+    if (stufe >= 3) { t.zustand = 'fliegen'; t.z = FLUG_HOEHE; }
+    if (stufe === 0) t.zustand = 'ei';
+    /* Auf welcher Insel steht es? Wer nicht fliegen kann, steht auf
+       der Hauptinsel — ohne Wenn und Aber. Nur Flieger suchen sich
+       die Insel, über der sie gerade sind. */
+    t.inselIdx = stufe >= 3 ? naechsteInsel(t.x, t.y) : 0;
+    neuesZiel(t);
+    return t;
+  }
+
+  function naechsteInsel(x, y) {
+    let bi = 0, bd = 1e9;
+    for (let i = 0; i < welt.inseln.length; i++) {
+      const d = Math.hypot(welt.inseln[i].cx - x, welt.inseln[i].cy - y);
+      if (d < bd) { bd = d; bi = i; }
+    }
+    return bi;
+  }
+
+  function neuesZiel(t) {
+    if (t.stufe === 0) { t.zx = t.x; t.zy = t.y; return; }
+    if (t.stufe >= 3) {
+      /* Flieger dürfen aufs offene Wasser. Der Bereich ist der
+         Bildausschnitt plus etwas — weiter draußen sähe man sie nicht
+         mehr, und ein Tier, das nie zurückkommt, fehlt auf der
+         Insel. */
+      const vb = welt.vb, m = 1.5;
+      t.zx = vb[0] - m + zufall() * (vb[2] + 2 * m);
+      t.zy = vb[1] - m + zufall() * (vb[3] + 2 * m);
+      return;
+    }
+    const p = zufallsPunktNahe(t);
+    t.zx = p.x; t.zy = p.y;
+  }
+
+  /* Zum Schlafen braucht ein Flieger festen Boden. Genommen wird die
+     nächstgelegene Insel und darauf ein zufälliges Feld — nicht
+     einfach die Hauptinsel: dann läge nachts die ganze Herde auf einem
+     Haufen, und die Satelliten wären dunkel. */
+  function schlafZiel(t) {
+    const i = naechsteInsel(t.x, t.y);
+    t.inselIdx = i;
+    const p = zufallsPunktAuf(welt.inseln[i]);
+    t.zx = p.x; t.zy = p.y;
+  }
+
+  function schritt(t, dt, jetzt) {
+    if (t.pop > 0) t.pop = Math.max(0, t.pop - dt * 1.6);
+
+    if (t.stufe === 0) return;                       // Eier tun nichts
+
+    if (t.zustand === 'schlafen') {
+      if (t.stufe >= 3) t.z += (0 - t.z) * Math.min(1, dt * 3);
+      if (jetzt >= t.schlafBis) {
+        t.zustand = t.stufe >= 3 ? 'fliegen' : 'laufen';
+        neuesZiel(t);
+      }
+      return;
+    }
+
+    const flieger = t.stufe >= 3;
+    const zielH = flieger ? FLUG_HOEHE : 0;
+    t.z += (zielH - t.z) * Math.min(1, dt * 2.2);
+
+    const dx = t.zx - t.x, dy = t.zy - t.y;
+    const d = Math.hypot(dx, dy);
+    const v = (flieger ? FLUG_TEMPO : LAUF_TEMPO[t.stufe]) * t.tempo;
+
+    if (d < .10) {
+      /* Angekommen. Entweder weiter oder schlafen. Beim Flieger heißt
+         „schlafen" erst einmal: eine Insel ansteuern. */
+      if (t.zustand === 'zumSchlafen') {
+        t.zustand = 'schlafen';
+        t.schlafBis = jetzt + 4 + zufall() * 12;
+        return;
+      }
+      if (zufall() < (flieger ? .30 : .42)) {
+        if (flieger) { t.zustand = 'zumSchlafen'; schlafZiel(t); }
+        else { t.zustand = 'schlafen'; t.schlafBis = jetzt + 3 + zufall() * 10; }
+      } else {
+        neuesZiel(t);
+      }
+      return;
+    }
+
+    const s = Math.min(1, v * dt / d);
+    const nx = t.x + dx * s, ny = t.y + dy * s;
+
+    /* Der Riegel an der Küste. Für Läufer wird JEDER Schritt geprüft:
+       ginge er ins Wasser, wird er nicht gegangen, sondern ein neues
+       Ziel gesucht. Das Tier prallt damit von der Küste ab, statt
+       hindurchzugehen — und weil ein Läufer immer auf einem Feld
+       STEHT, kann er auch nicht darin stecken bleiben.
+
+       Geprüft wird dabei nicht nur „Land", sondern „Hauptinsel". Das
+       ist derselbe Riegel in schärfer: nur Flieger verlassen die
+       Hauptinsel, alles andere bleibt zu Hause.
+
+       Flieger sind davon ausgenommen: über das Meer zu fliegen ist
+       ihr halber Reiz. */
+    if (!flieger) {
+      const z = feldAt(nx, ny);
+      if (!z || !aufHauptinsel(z)) { neuesZiel(t); return; }
+    }
+
+    t.x = nx; t.y = ny;
+    /* Die Blickrichtung. Erst ab einer spürbaren Auslenkung umdrehen,
+       sonst flackert ein Tier, das fast senkrecht läuft. */
+    if (Math.abs(dx) > .02) t.flip = dx < 0;
+  }
+
+  function baueTiere(n, verteilung) {
+    const alt = welt.tiere;
+    const neu = [];
+    /* Vorhandene Tiere behalten, damit ein Zug am Regler nicht die
+       ganze Insel neu würfelt — man will die Änderung sehen und nicht
+       ein neues Bild. */
+    for (let i = 0; i < n; i++) {
+      neu.push(i < alt.length ? alt[i] : neuesTier(i, 1));
+    }
+    /* Die Verteilung neu zuteilen. Sie ist der Regler, nicht der
+       Zustand: wer nachher wie groß ist, entscheidet die Tafel. */
+    const summe = verteilung.reduce((a, b) => a + b, 0) || 1;
+    let k = 0;
+    for (let s = 0; s < 5; s++) {
+      const bis = Math.round(n * verteilung.slice(0, s + 1).reduce((a, b) => a + b, 0) / summe);
+      for (; k < bis && k < n; k++) setzeStufe(neu[k], s, false);
+    }
+    for (; k < n; k++) setzeStufe(neu[k], 4, false);
+
+    /* Die FRISCHEN Flieger übers Archipel verteilen. Sie entstehen als
+       Stufe 1 auf der Hauptinsel und werden erst danach hochgestuft —
+       im Spiel ist das richtig (wer aufsteigt, hebt dort ab, wo er
+       steht), beim Aufbau sieht es aber falsch aus: das erste Bild
+       zeigte dreihundert Tiere auf einem Haufen und sechs leere
+       Inseln, obwohl sie sich Sekunden später verteilen.
+
+       Nur die neuen — sonst würfelte jeder Zug am Regler die ganze
+       Herde um, statt die Änderung zu zeigen. */
+    for (let i = alt.length; i < n; i++) {
+      const t = neu[i];
+      if (t.stufe < 3) continue;
+      const j = (zufall() * welt.inseln.length) | 0;
+      const p = zufallsPunktAuf(welt.inseln[j]);
+      t.inselIdx = j; t.x = p.x; t.y = p.y;
+      neuesZiel(t);
+    }
+    welt.tiere = neu;
+  }
+
+  /* Der Stufenwechsel. Er ist die eine Stelle, an der ein Tier den
+     Zustand wechseln MUSS: wer auf 3 steigt, hebt ab; wer von 3 auf 2
+     fällt, muss landen — und zwar auf Land und nicht dort, wo er
+     gerade über dem Meer stand. */
+  function setzeStufe(t, s, mitPop) {
+    s = Math.max(0, Math.min(4, s));
+    const vorher = t.stufe;
+    t.stufe = s;
+    if (mitPop) t.pop = 1;
+
+    if (s === 0) {
+      t.zustand = 'ei'; t.z = 0;
+      if (vorher >= 3) landeAufLand(t);
+      return;
+    }
+    if (s >= 3) {
+      if (vorher < 3) { t.zustand = 'fliegen'; neuesZiel(t); }
+      else if (t.zustand === 'ei') { t.zustand = 'fliegen'; neuesZiel(t); }
+      return;
+    }
+    /* Stufe 1 oder 2: Läufer. */
+    if (vorher >= 3 || t.zustand === 'ei' || t.zustand === 'fliegen' || t.zustand === 'zumSchlafen') {
+      landeAufLand(t);
+      t.zustand = 'laufen';
+      neuesZiel(t);
+    }
+  }
+
+  /* Landen heißt: auf die HAUPTINSEL. Gerufen wird das nur beim
+     Absteigen unter Stufe 3, und wer nicht mehr fliegen kann, gehört
+     nach Hause — sonst säße nach ein paar falschen Vokabeln ein Baby
+     auf einem Satelliten fest, von dem es nie wieder wegkäme.
+
+     Steht das Tier schon auf der Hauptinsel, bleibt es stehen; das
+     Zurückfallen soll man am Tier sehen und nicht daran, dass es
+     plötzlich woanders ist. */
+  function landeAufLand(t) {
+    t.z = 0;
+    t.inselIdx = 0;
+    const z = feldAt(t.x, t.y);
+    if (z && aufHauptinsel(z)) return;
+    const p = zufallsPunktAuf(welt.inseln[0]);
+    t.x = p.x; t.y = p.y;
+  }
+
+  /* Gehört ein Feld zur Hauptinsel? Die Zellen aus findeInseln sind
+     dieselben Objekte wie in isl.at(), deshalb genügt ein Vergleich
+     der Verweise — kein Nachrechnen über Koordinaten. */
+  let hauptFelder = null;
+  function aufHauptinsel(z) {
+    if (!hauptFelder) hauptFelder = new Set(welt.inseln[0].cells);
+    return hauptFelder.has(z);
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     TEIL 5 · ZEICHNEN
+     ════════════════════════════════════════════════════════════════ */
+
+  const stage = $('stage'), mapEl = $('map'), svg = $('karte');
+  const veil = $('nightveil'), cvs = $('tiere');
+  const ctx = cvs.getContext('2d');
+
+  /* Ansicht und Kamera getrennt: die ANSICHT ist die Einpassung des
+     viewBox in die Bühne (rechnet nach, was preserveAspectRatio="meet"
+     im SVG tut), die KAMERA ist das Schieben und Zoomen. Zusammen
+     ergeben sie „Kachelkoordinate → Bildschirmpunkt", und weil das
+     Canvas seine Tiere je Bild neu zeichnet statt sich mitskalieren zu
+     lassen, bleiben sie beim Hineinzoomen scharf. */
+  const sicht = { s: 1, ox: 0, oy: 0, w: 0, h: 0 };
+  const kamera = { k: 1, tx: 0, ty: 0 };
+
+  function passeAn() {
+    const r = stage.getBoundingClientRect();
+    sicht.w = r.width; sicht.h = r.height;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cvs.width = Math.round(r.width * dpr);
+    cvs.height = Math.round(r.height * dpr);
+    cvs.style.width = r.width + 'px';
+    cvs.style.height = r.height + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (!welt.vb) return;
+    const vb = welt.vb;
+    const s = Math.min(r.width / vb[2], r.height / vb[3]);
+    sicht.s = s;
+    sicht.ox = (r.width - vb[2] * s) / 2 - vb[0] * s;
+    sicht.oy = (r.height - vb[3] * s) / 2 - vb[1] * s;
+  }
+
+  const sx = x => kamera.tx + kamera.k * (sicht.ox + x * sicht.s);
+  const sy = y => kamera.ty + kamera.k * (sicht.oy + y * sicht.s);
+  const ppu = () => kamera.k * sicht.s;      // Bildschirmpunkte je Kachel
+
+  function kameraAnwenden() {
+    mapEl.style.transform = `translate(${kamera.tx}px, ${kamera.ty}px) scale(${kamera.k})`;
+  }
+
+  /* Der Startausschnitt zeigt die EIGENE Insel, nicht das ganze
+     Archipel. Passte man den Ausschnitt an alle Landmassen an, wäre
+     die Hauptinsel nur ein Drittel des Bildes — und genau sie ist
+     das, was ein Kind ansieht. Die kleinen Inseln findet man beim
+     Herauszoomen; dass es sie gibt, verrät der Ring, auf dem die
+     Flieger verschwinden. */
+  function kameraAufHauptinsel() {
+    if (!welt.inseln || !welt.inseln.length) return;
+    const cs = welt.inseln[0].cells;
+    let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
+    for (const z of cs) {
+      a = Math.min(a, z.x); b = Math.max(b, z.x);
+      c = Math.min(c, z.y); d = Math.max(d, z.y);
+    }
+    const w = (b - a) + 2.2, h = (d - c) + 2.2;
+    const mx = (a + b) / 2, my = (c + d) / 2;
+    kamera.k = Math.min(4, Math.max(.6,
+      Math.min(sicht.w * .92 / (w * sicht.s), sicht.h * .92 / (h * sicht.s))));
+    if (startZoom) kamera.k = startZoom;
+    kamera.tx = sicht.w / 2 - kamera.k * (sicht.ox + mx * sicht.s);
+    kamera.ty = sicht.h / 2 - kamera.k * (sicht.oy + my * sicht.s);
+    kameraAnwenden();
+  }
+
+  /* ── Zustand der Bedienung ────────────────────────────────────── */
+  const opt = {
+    anzahl: 320,
+    groesse: 1,
+    verteilung: [.22, .26, .24, .18, .10],
+    farbverfahren: 'lumi',
+    glowStil: 2,           // 0 nur Eigenglühen · 1 + Boden · 2 + Funkeln
+    glowStaerke: 1,
+    dunkel: .72,
+    nacht: 0,
+    nachtAuto: true,
+    rundeSek: 120,
+    laeuft: true
+  };
+
+  let sprites = null;       // { verfahren: { key: [8 Canvas] } }
+  let flecken = null;       // Leuchtflecken je Farbe
+  let funken = null;        // aufsteigende Funken je Farbe
+  let funke = null;         // der weiße Kern der obersten Stufe
+
+  /* Welches der neun Bilder ein Tier gerade zeigt. Getrennt vom
+     Nachschlagen, weil auch die LAGE im Blatt daran hängt. */
+  function schluesselFuer(t) {
+    const schlaeft = t.zustand === 'schlafen';
+    if (t.stufe === 0) return 'ei';
+    if (t.stufe === 1) return schlaeft ? 's1z' : 's1';
+    if (t.stufe === 2) return schlaeft ? 's2z' : 's2';
+    return 's3' + t.variante + (schlaeft ? 'z' : '');
+  }
+  function bildFuer(t) {
+    return sprites[opt.farbverfahren][schluesselFuer(t)][t.farbe];
+  }
+
+  let letzterT = 0, fpsAkku = 0, fpsN = 0, fpsWert = 0;
+  let simZeit = 0;
+
+  function zeichne(now) {
+    requestAnimationFrame(zeichne);
+    if (!sprites || !welt.isl) return;
+
+    const dtRoh = letzterT ? (now - letzterT) / 1000 : 0;
+    letzterT = now;
+    /* Nach oben begrenzen: kommt die Seite aus dem Hintergrund
+       zurück, wäre dt sonst zwanzig Sekunden — und die halbe Herde
+       stünde schlagartig woanders. */
+    const dt = opt.laeuft ? Math.min(.05, dtRoh) : 0;
+    simZeit += dt;
+
+    /* Bilder je Sekunde, gleitend über eine halbe Sekunde. */
+    if (dtRoh > 0) {
+      fpsAkku += dtRoh; fpsN++;
+      if (fpsAkku >= .5) { fpsWert = fpsN / fpsAkku; fpsAkku = 0; fpsN = 0; zeigeFps(); }
+    }
+
+    /* ── Tag und Nacht ────────────────────────────────────────────
+       Rund vier Zehntel Tag, ein Zehntel Übergang, vier Zehntel
+       Nacht, ein Zehntel zurück. Bei der Vorgabe von 120 Sekunden
+       sind das die geforderte Minute Tag und Minute Nacht mit einem
+       kleinen Übergang dazwischen. */
+    if (opt.nachtAuto) {
+      const p = (simZeit % opt.rundeSek) / opt.rundeSek;
+      const rampe = (a, b) => Math.min(1, Math.max(0, (p - a) / (b - a)));
+      const w = p < .5 ? rampe(.40, .50) : 1 - rampe(.90, 1.0);
+      /* Weich machen: eine gerade Rampe knickt an beiden Enden
+         sichtbar, und der Knick liest sich als Fehler im Bild. */
+      opt.nacht = w * w * (3 - 2 * w);
+      spiegleNacht();
+    }
+    veil.style.opacity = (opt.nacht * opt.dunkel).toFixed(3);
+
+    /* ── Bewegen ──────────────────────────────────────────────── */
+    const tiere = welt.tiere;
+    if (dt > 0) for (let i = 0; i < tiere.length; i++) schritt(tiere[i], dt, simZeit);
+
+    /* ── Malen ────────────────────────────────────────────────── */
+    ctx.clearRect(0, 0, sicht.w, sicht.h);
+    const P = ppu();
+
+    /* Was nicht auf dem Schirm ist, wird nicht gemalt. Ohne das kostet
+       das Hineinzoomen genauso viel wie die Übersicht — und die Zahl
+       oben rechts wäre eine Lüge. */
+    const rand = 2.5 * P;
+    const sicht0 = -rand, sicht1 = sicht.w + rand, sichtT = -rand, sichtB = sicht.h + rand;
+
+    /* Die ganze Geometrie EINMAL je Tier und Bild. Bodenhöhe, Anker,
+       der Kasten des Bildes im Gelände und daraus die Mitte — der
+       Lichtschein, das Glühen und die Partikel brauchen alle dasselbe,
+       und viermal gerechnet wäre bei 500 Tieren der teuerste Posten
+       der Schleife. */
+    const zuMalen = [];
+    for (let i = 0; i < tiere.length; i++) {
+      const t = tiere[i];
+      const gy = bodenY(t.x, t.y);
+      const px = sx(t.x), py = sy(t.y + gy - t.z);
+      if (px < sicht0 || px > sicht1 || py < sichtT || py > sichtB) continue;
+
+      const im = bildFuer(t);
+      const m = LAGE[schluesselFuer(t)];
+      /* Bildschirmpunkte je Blatt-Einheit. Der Maßstab hängt an der
+         STUFE, nicht am Bild — deshalb wächst nichts beim Einschlafen. */
+      let e = STUFE_EINHEIT[t.stufe] * opt.groesse * P / BLATT.h;
+      /* Das Zucken beim Wachsen. Kurz über das Ziel hinaus und
+         zurück — ein Sprung ohne Überschwingen liest sich als Ruckler
+         und nicht als Belohnung. */
+      if (t.pop > 0) e *= 1 + Math.sin(t.pop * Math.PI) * .34;
+      /* Das Wippen der Eier. Sie tun sonst gar nichts, und ein völlig
+         reglos liegendes Ei sieht aus wie ein Fehler. */
+      const wob = t.stufe === 0 ? Math.sin(simZeit * 1.6 + t.phase) * .022 * P : 0;
+
+      t._im = im;
+      t._w = im.width * e;
+      t._h = im.height * e;
+      /* Der Anker sitzt auf der Grundlinie des Blattes. Alles andere —
+         dass ein Flieger schwebt, dass eine Schlaf-Echse flach liegt —
+         steht in der Zeichnung und nicht hier. */
+      t._x = px + (m.x - BLATT.ankerX) * e;
+      t._y = py + (m.y - BLATT.ankerY) * e + wob;
+      t._px = px;
+      t._by = sy(t.y + gy);                        // die Füße, für den Bodenschein
+      /* Beim Spiegeln kippt der Kasten um den Anker. */
+      t._mx = t.flip ? 2 * px - t._x - t._w / 2 : t._x + t._w / 2;
+      t._my = t._y + t._h / 2;
+      zuMalen.push(t);
+    }
+    /* Von hinten nach vorn, dieselbe Regel wie beim Relief. Sortiert
+       wird nach der WELT-Reihe und nicht nach dem Bildschirmpunkt:
+       sonst schöbe sich ein fliegendes Tier vor eines, das weiter
+       vorne steht, nur weil es hoch in der Luft ist. */
+    zuMalen.sort((a, b) => a.y - b.y);
+
+    const glow = opt.nacht * opt.glowStaerke;
+
+    /* 1 · Lichtschein auf dem Boden — VOR den Tieren, sonst läge das
+           Licht auf dem Tier statt unter ihm. */
+    if (glow > .01 && opt.glowStil >= 1) {
+      ctx.globalCompositeOperation = 'lighter';
+      for (const t of zuMalen) {
+        const g = GLUEHEN[t.stufe];
+        if (g <= 0) continue;
+        const w = t._h * 1.9;
+        ctx.globalAlpha = Math.min(.6, g * glow * .22);
+        ctx.drawImage(flecken[t.farbe], t._mx - w / 2, t._by - w * .19, w, w * .38);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    /* 2 · Die Tiere. */
+    for (const t of zuMalen) {
+      if (t.flip) {
+        /* Gespiegelt wird um den ANKER und nicht um die Bildmitte:
+           sonst rutscht ein Tier beim Richtungswechsel seitlich weg,
+           und zwar umso weiter, je unsymmetrischer es gezeichnet ist. */
+        ctx.save();
+        ctx.translate(t._px, 0); ctx.scale(-1, 1);
+        ctx.drawImage(t._im, t._x - t._px, t._y, t._w, t._h);
+        ctx.restore();
+      } else {
+        ctx.drawImage(t._im, t._x, t._y, t._w, t._h);
+      }
+    }
+
+    /* 3 · Die Nacht auf den Tieren. `source-atop` und nicht
+           `multiply`: eine Mischart würde in Leinwandbereiche malen,
+           in denen gar kein Tier steht, und aus der halben Bühne
+           einen blauen Kasten machen. So legt sich der Schleier nur
+           dorthin, wo schon etwas gemalt ist. */
+    if (opt.nacht > .01) {
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.fillStyle = `rgba(9,22,40,${(opt.nacht * opt.dunkel * .78).toFixed(3)})`;
+      ctx.fillRect(0, 0, sicht.w, sicht.h);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    /* 4 · Das Eigenglühen — nach dem Schleier, sonst löschte er es
+           gleich wieder aus. */
+    if (glow > .01) {
+      ctx.globalCompositeOperation = 'lighter';
+      for (const t of zuMalen) {
+        const g = GLUEHEN[t.stufe];
+        if (g <= 0) continue;
+        /* Eng. Der erste Anlauf war es nicht — bei 320 Tieren addieren
+           sich weite Scheine über `lighter` zu einem milchigen Nebel,
+           und die Insel darunter war weg. Ein Leuchten, das die Insel
+           auslöscht, sagt nichts mehr darüber aus, WO etwas leuchtet. */
+        const w = t._h * 1.6;
+        /* Ein leises Atmen. Dreihundert exakt gleich helle Punkte
+           sähen aus wie eine Lichterkette. */
+        const puls = .82 + .18 * Math.sin(simZeit * 1.5 + t.phase);
+        ctx.globalAlpha = Math.min(1, g * glow * .38 * puls);
+        ctx.drawImage(flecken[t.farbe], t._mx - w / 2, t._my - w / 2, w, w);
+      }
+
+      /* 5 · Die Funken.
+         ──────────────────────────────────────────────────────────
+         Sie gehören nicht nur zur Stufe 4. Schon ein geschlüpftes
+         Tier lässt zwei Fünkchen steigen, und mit jeder Stufe werden
+         es mehr — dadurch liest sich der Fortschritt nachts nicht nur
+         an der HELLIGKEIT ab, sondern auch an der Betriebsamkeit.
+
+         Jeder Funke hat seinen eigenen Umlauf und steigt darin von
+         etwas unterhalb der Mitte bis über den Kopf, wobei er ein-
+         und wieder ausblendet. Aufgesetzt wird die Bewegung auf die
+         Zeit und nicht gespeichert: fünfhundert Tiere mal acht Funken
+         wären viertausend Kleinteile, die verwaltet werden wollen —
+         gerechnet kosten sie nur eine Zeile. */
+      if (opt.glowStil >= 2) {
+        for (const t of zuMalen) {
+          const n = FUNKEN[t.stufe];
+          if (!n) continue;
+          const H = t._h;
+          const spark = funken[t.farbe];
+          for (let k = 0; k < n; k++) {
+            const eigen = t.phase + k * 2.3994;              // goldener Winkel
+            const dauer = 2.2 + (k % 3) * .55;
+            /* `u` läuft von 0 bis 1 und fängt dann wieder an. Die
+               Verschiebung je Funke sorgt dafür, dass sie nicht im
+               Gleichschritt aufsteigen. */
+            const u = ((simZeit / dauer + eigen) % 1 + 1) % 1;
+            const fx = t._mx + Math.sin(eigen * 3.1 + u * 3.4) * H * .30;
+            const fy = t._my + H * (.22 - 1.15 * u);
+            /* Ein- und ausblenden über den ganzen Umlauf, dazu ein
+               Flackern. Ein Funke, der mit voller Helligkeit auftaucht,
+               ist ein Fehler im Bild und kein Funke. */
+            const auf = Math.sin(u * Math.PI);
+            const flackern = .55 + .45 * Math.sin(simZeit * 5.3 + eigen * 7);
+            const fs = H * (.20 - .09 * u) * (.7 + .3 * auf);
+            ctx.globalAlpha = Math.min(1, glow * auf * flackern * (t.stufe >= 4 ? .95 : .62));
+            ctx.drawImage(spark, fx - fs / 2, fy - fs / 2, fs, fs);
+            /* Die vierte Stufe bekommt zusätzlich einen weißen Kern.
+               Farbe allein wird bei acht Farbvarianten nie „heller als
+               die anderen" — Weiß schon. */
+            if (t.stufe >= 4) {
+              const ws = fs * .5;
+              ctx.drawImage(funke, fx - ws / 2, fy - ws / 2, ws, ws);
+            }
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    /* Die Zahl der gemalten Tiere steht sofort da und wartet nicht auf
+       das nächste Messfenster — sonst steht beim ersten Blick eine
+       Null in der Kopfzeile, und das liest sich wie „nichts geht". */
+    if (gezeichnet !== zuMalen.length) {
+      gezeichnet = zuMalen.length;
+      $('fpsN').textContent = gezeichnet;
+    }
+  }
+
+  let gezeichnet = -1;
+  function zeigeFps() {
+    const b = $('fps');
+    const v = Math.round(fpsWert);
+    b.firstElementChild.textContent = v;
+    b.classList.toggle('warn', v < 45 && v >= 25);
+    b.classList.toggle('bad', v < 25);
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     TEIL 6 · SCHIEBEN, ZOOMEN, BEDIENEN
+     ════════════════════════════════════════════════════════════════ */
+
+  /* Die Zeiger-Ereignisse hängen in der EINFANG-Phase. Sonst schluckt
+     ein stopPropagation() weiter innen die Geste genau über dem
+     Inhalt, um den es geht — dieselbe Regel, der attachPanZoom in
+     tool.js folgt. */
+  function panZoom() {
+    const pts = new Map();
+    let basis = null, zog = false, letzterTipp = 0;
+
+    const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+    const mitte = () => { const [a, b] = [...pts.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+
+    const lokal = e => {
+      const r = stage.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+
+    stage.addEventListener('pointerdown', e => {
+      pts.set(e.pointerId, lokal(e));
+      zog = false;
+      if (pts.size === 2) basis = { d: dist(), m: mitte(), k: kamera.k, tx: kamera.tx, ty: kamera.ty };
+      /* Doppeltipp setzt zurück — der einfachste Ausweg aus jedem
+         verrutschten Bild, und man findet ihn ohne Erklärung. */
+      const jetzt = performance.now();
+      if (jetzt - letzterTipp < 320 && pts.size === 1) kameraAufHauptinsel();
+      letzterTipp = jetzt;
+      versteckeHinweis();
+    }, { capture: true });
+
+    stage.addEventListener('pointermove', e => {
+      if (!pts.has(e.pointerId)) return;
+      const vor = pts.get(e.pointerId);
+      const jetzt = lokal(e);
+      pts.set(e.pointerId, jetzt);
+
+      if (pts.size === 2 && basis) {
+        const f = dist() / (basis.d || 1);
+        const k = Math.min(8, Math.max(.55, basis.k * f));
+        const m = mitte();
+        /* Um die Mitte der beiden Finger zoomen und gleichzeitig der
+           Verschiebung dieser Mitte folgen. Nur eines von beidem, und
+           die Karte rutscht unter den Fingern weg. */
+        kamera.tx = m.x - (k / basis.k) * (basis.m.x - basis.tx);
+        kamera.ty = m.y - (k / basis.k) * (basis.m.y - basis.ty);
+        kamera.k = k;
+        kameraAnwenden();
+        e.preventDefault();
+      } else if (pts.size === 1 && (e.buttons !== 0 || e.pointerType !== 'mouse')) {
+        kamera.tx += jetzt.x - vor.x;
+        kamera.ty += jetzt.y - vor.y;
+        zog = true;
+        kameraAnwenden();
+        e.preventDefault();
+      }
+    }, { capture: true, passive: false });
+
+    const hoch = e => { pts.delete(e.pointerId); if (pts.size < 2) basis = null; };
+    stage.addEventListener('pointerup', hoch, { capture: true });
+    stage.addEventListener('pointercancel', hoch, { capture: true });
+
+    stage.addEventListener('wheel', e => {
+      e.preventDefault();
+      const r = stage.getBoundingClientRect();
+      const px = e.clientX - r.left, py = e.clientY - r.top;
+      const f = Math.exp(-e.deltaY * .0016);
+      const k = Math.min(8, Math.max(.55, kamera.k * f));
+      kamera.tx = px - (k / kamera.k) * (px - kamera.tx);
+      kamera.ty = py - (k / kamera.k) * (py - kamera.ty);
+      kamera.k = k;
+      kameraAnwenden();
+      versteckeHinweis();
+    }, { passive: false });
+  }
+
+  let hinweisWeg = false;
+  function versteckeHinweis() {
+    if (hinweisWeg) return;
+    hinweisWeg = true;
+    const h = $('hint');
+    h.style.opacity = '0';
+    setTimeout(() => { h.hidden = true; }, 500);
+  }
+
+  /* ── Die Tafel ──────────────────────────────────────────────── */
+
+  const STUFEN_TEXT = [
+    ['Ei', 'noch nicht gekonnt · liegt still'],
+    ['Geschlüpft', '1× richtig · läuft herum'],
+    ['Gewachsen', '2× richtig · größer'],
+    ['Ausgewachsen', '3× richtig · fliegt, leuchtet nachts'],
+    ['Funkelnd', '4× richtig · funkelt zusätzlich']
+  ];
+
+  function segmentBauen(nav, eintraege, aktiv, beiWahl) {
+    nav.innerHTML = '';
+    eintraege.forEach((e, i) => {
+      const b = document.createElement('button');
+      b.textContent = e.t;
+      b.className = (e.v === aktiv ? 'on' : '');
+      b.onclick = () => {
+        [...nav.children].forEach(c => c.classList.remove('on'));
+        b.classList.add('on');
+        beiWahl(e.v);
+      };
+      nav.appendChild(b);
+    });
+  }
+
+  function stufenReglerBauen() {
+    const wrap = $('stufenRegler');
+    wrap.innerHTML = '';
+    for (let s = 0; s < 5; s++) {
+      const l = document.createElement('label');
+      l.className = 'sr-range stufe';
+      l.innerHTML = `<span class="lab">${s} · ${STUFEN_TEXT[s][0]} <i id="vSt${s}">0</i></span>`
+                  + `<input type="range" id="rSt${s}" min="0" max="100" step="1" value="${Math.round(opt.verteilung[s] * 100)}">`;
+      wrap.appendChild(l);
+      l.querySelector('input').addEventListener('input', ev => {
+        opt.verteilung[s] = +ev.target.value / 100;
+        anwendenTiere();
+      });
+    }
+  }
+
+  function legendeBauen() {
+    const wrap = $('legende');
+    wrap.innerHTML = '';
+    for (let s = 0; s < 5; s++) {
+      const div = document.createElement('div');
+      div.className = 'sr-leg';
+      const c = neuCanvas(68, 68);
+      const x = c.getContext('2d');
+      const key = s === 0 ? 'ei' : s === 1 ? 's1' : s === 2 ? 's2' : s === 3 ? 's3a' : 's3b';
+      /* Fünf verschiedene Farben, damit die Liste nebenbei zeigt, was
+         das Einfärben aus dem grünen Ausgangsbild macht. */
+      const im = sprites[opt.farbverfahren][key][[0, 2, 4, 6, 3][s]];
+      const m = LAGE[key];
+      /* Auch hier gilt das Blatt und nicht das Bild — sonst stünden in
+         der Liste fünf gleich große Tiere, und die Liste soll gerade
+         den Größenunterschied zeigen. Der Maßstab ist so gewählt, dass
+         die größte Stufe knapp in den Kasten passt. */
+      const e = 58 / BLATT.h * (STUFE_EINHEIT[s] / STUFE_EINHEIT[4]) * 1.55;
+      x.drawImage(im, 34 + (m.x - BLATT.ankerX) * e, 64 + (m.y - BLATT.ankerY) * e,
+                  im.width * e, im.height * e);
+      div.appendChild(c);
+      const d = document.createElement('div');
+      d.innerHTML = `<b>${STUFEN_TEXT[s][0]}</b><small>${STUFEN_TEXT[s][1]}</small>`;
+      div.appendChild(d);
+      const em = document.createElement('em');
+      em.id = 'zaehl' + s;
+      div.appendChild(em);
+      wrap.appendChild(div);
+    }
+    zaehleStufen();
+  }
+
+  function zaehleStufen() {
+    const z = [0, 0, 0, 0, 0];
+    for (const t of welt.tiere) z[t.stufe]++;
+    for (let s = 0; s < 5; s++) {
+      const e = $('zaehl' + s);
+      if (e) e.textContent = z[s];
+      const v = $('vSt' + s);
+      if (v) v.textContent = z[s];
+    }
+  }
+
+  function anwendenTiere() {
+    baueTiere(opt.anzahl, opt.verteilung);
+    zaehleStufen();
+  }
+
+  /* Der Regler wird nur nachgeführt, wenn sich das ganze Prozent
+     ändert. Sechzigmal je Sekunde in ein Eingabefeld zu schreiben ist
+     nicht falsch, aber es ist Arbeit in genau der Schleife, deren
+     Bilder je Sekunde hier gemessen werden. */
+  let nachtGezeigt = -1;
+  function spiegleNacht() {
+    const p = Math.round(opt.nacht * 100);
+    if (p === nachtGezeigt) return;
+    nachtGezeigt = p;
+    $('rNacht').value = p;
+    $('vNacht').textContent = p + ' %';
+  }
+
+  function neueInsel(seed) {
+    welt.seed = seed;
+    const list = wuerfelInseln(seed);
+    const gebaut = buildMap(svg, list, 'solo' + seed);
+    welt.isl = gebaut.isl;
+    welt.vb = gebaut.vb;
+    welt.inseln = findeInseln(welt.isl);
+    hauptFelder = null;          // gehört zur alten Karte
+    welt.tiere = [];
+    passeAn();
+    anwendenTiere();
+    kameraAufHauptinsel();
+  }
+
+  /* ── Vokabel richtig / falsch ───────────────────────────────────
+     Die Vorführung des eigentlichen Spielgedankens. Genommen wird ein
+     zufälliges Tier, das sich überhaupt noch bewegen kann — bei
+     „richtig" eines, das noch nicht auf 4 steht, sonst sähe man nichts
+     passieren. */
+  function ueben(delta, n) {
+    for (let i = 0; i < n; i++) {
+      const kandidaten = welt.tiere.filter(t => delta > 0 ? t.stufe < 4 : t.stufe > 0);
+      if (!kandidaten.length) break;
+      const t = kandidaten[(zufall() * kandidaten.length) | 0];
+      setzeStufe(t, t.stufe + delta, true);
+    }
+    zaehleStufen();
+  }
+
+  /* ── Verdrahtung ──────────────────────────────────────────────── */
+  function bediene() {
+    segmentBauen($('segFarbe'), [
+      { t: 'Farbtondreh', v: 'dreh' },
+      { t: 'luminanzerhaltend', v: 'lumi' }
+    ], opt.farbverfahren, v => { opt.farbverfahren = v; legendeBauen(); });
+
+    segmentBauen($('segGlow'), [
+      { t: 'nur Glühen', v: 0 },
+      { t: '+ Boden', v: 1 },
+      { t: '+ Funkeln', v: 2 }
+    ], opt.glowStil, v => { opt.glowStil = v; });
+
+    const regler = (id, anzeige, fmt, beiWert) => {
+      const inp = $(id);
+      const setz = () => {
+        const v = +inp.value;
+        $(anzeige).textContent = fmt(v);
+        beiWert(v);
+      };
+      inp.addEventListener('input', setz);
+      setz();
+    };
+
+    regler('rAnzahl', 'vAnzahl', v => v, v => { opt.anzahl = v; if (welt.isl) anwendenTiere(); });
+    regler('rGroesse', 'vGroesse', v => v + ' %', v => { opt.groesse = v / 100; });
+    regler('rTempo', 'vTempo', v => v + ' s', v => { opt.rundeSek = v; });
+    regler('rGlow', 'vGlow', v => v + ' %', v => { opt.glowStaerke = v / 100; });
+    regler('rDunkel', 'vDunkel', v => v + ' %', v => { opt.dunkel = v / 100; });
+
+    /* Der Nachtregler schaltet den Zyklus ab, wenn man ihn anfasst:
+       sonst zöge der Zyklus den Regler unter der Hand zurück. */
+    $('rNacht').addEventListener('input', e => {
+      opt.nachtAuto = false;
+      $('btnAuto').classList.remove('on');
+      opt.nacht = +e.target.value / 100;
+      nachtGezeigt = +e.target.value;
+      $('vNacht').textContent = e.target.value + ' %';
+    });
+
+    $('btnAuto').onclick = e => {
+      opt.nachtAuto = !opt.nachtAuto;
+      e.target.classList.toggle('on', opt.nachtAuto);
+      e.target.textContent = opt.nachtAuto ? 'Zyklus läuft' : 'Zyklus aus';
+    };
+    $('btnNacht').onclick = () => {
+      opt.nachtAuto = false;
+      $('btnAuto').classList.remove('on');
+      $('btnAuto').textContent = 'Zyklus aus';
+      opt.nacht = opt.nacht > .5 ? 0 : 1;
+      spiegleNacht();
+    };
+    $('btnPlay').onclick = e => {
+      opt.laeuft = !opt.laeuft;
+      e.target.classList.toggle('on', opt.laeuft);
+      e.target.textContent = opt.laeuft ? '▶ läuft' : '⏸ steht';
+    };
+    $('btnInsel').onclick = () => neueInsel((Math.random() * 1e9) | 0);
+
+    $('btnRichtig').onclick = () => ueben(+1, 1);
+    $('btnFalsch').onclick = () => ueben(-1, 1);
+    $('btnRichtig20').onclick = () => ueben(+1, 20);
+
+    document.querySelectorAll('[data-preset]').forEach(b => {
+      b.onclick = () => {
+        const v = b.dataset.preset === 'jung' ? [.52, .28, .13, .06, .01]
+                : b.dataset.preset === 'reif' ? [.04, .10, .20, .34, .32]
+                : [.22, .26, .24, .18, .10];
+        opt.verteilung = v;
+        for (let s = 0; s < 5; s++) $('rSt' + s).value = Math.round(v[s] * 100);
+        anwendenTiere();
+      };
+    });
+
+    /* Zifferntasten wie im Karten-Showroom: 1/2 Farbverfahren,
+       N schaltet die Nacht, Leertaste hält an. */
+    window.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === '1' || e.key === '2') $('segFarbe').children[+e.key - 1].click();
+      else if (e.key.toLowerCase() === 'n') $('btnNacht').click();
+      else if (e.key === ' ') { e.preventDefault(); $('btnPlay').click(); }
+      else if (e.key.toLowerCase() === 'i') $('btnInsel').click();
+    });
+
+    window.addEventListener('resize', passeAn);
+    panZoom();
+  }
+
+  /* ── Fernsteuerung über die Adresszeile ────────────────────────
+     `?nacht=100&anzahl=500&farbe=dreh` stellt den Showroom ein, ohne
+     dass jemand einen Regler anfasst. Zwei Dinge werden damit erst
+     möglich: einen bestimmten Stand verschicken („sieh dir DAS an"),
+     und Bildschirmfotos, die zweimal dasselbe zeigen.
+
+     Gesetzt wird über die Bedienelemente und nicht über `opt` — sonst
+     stünde der Regler auf einem anderen Wert als das Bild. */
+  function ausAdresse() {
+    const p = new URLSearchParams((window.location && window.location.search) || '');
+    if (!p.toString()) return;
+
+    const schieb = (id, wert) => {
+      if (wert == null) return;
+      const inp = $(id);
+      inp.value = wert;
+      inp.dispatchEvent(new Event('input'));
+    };
+    schieb('rAnzahl', p.get('anzahl'));
+    schieb('rGroesse', p.get('groesse'));
+    schieb('rGlow', p.get('leuchten'));
+    schieb('rDunkel', p.get('dunkel'));
+    schieb('rTempo', p.get('tempo'));
+
+    const st = p.get('stufen');
+    if (st) {
+      const teile = st.split(',').map(Number);
+      for (let s = 0; s < 5 && s < teile.length; s++) schieb('rSt' + s, teile[s]);
+    }
+
+    if (p.get('farbe')) {
+      const i = p.get('farbe') === 'dreh' ? 0 : 1;
+      $('segFarbe').children[i].click();
+    }
+    if (p.get('glow') != null) {
+      const i = Math.max(0, Math.min(2, +p.get('glow')));
+      $('segGlow').children[i].click();
+    }
+    if (p.get('nacht') != null) {
+      $('btnAuto').classList.remove('on');
+      $('btnAuto').textContent = 'Zyklus aus';
+      opt.nachtAuto = false;
+      schieb('rNacht', p.get('nacht'));
+    }
+    /* `still=1` friert die Bewegung ein. Für ein Bildschirmfoto ist
+       eine laufende Herde nämlich vor allem eines: jedes Mal anders. */
+    if (p.get('still') === '1') $('btnPlay').click();
+
+    /* `zoom=` für den Nahblick. Gemerkt und erst nach dem Inselbau
+       angewandt — vorher gibt es keine Kamera, auf die er passt. */
+    if (p.get('zoom')) startZoom = Math.min(8, Math.max(.55, +p.get('zoom')));
+  }
+  let startZoom = 0;
+
+  /* ── Start ────────────────────────────────────────────────────── */
+  async function start() {
+    const txt = $('loadTxt');
+    let basen;
+    try {
+      const S = window.SOLO_SPRITES;
+      if (!S || !S.bilder || !S.blatt) throw new Error('window.SOLO_SPRITES ist leer oder veraltet');
+      BLATT = S.blatt;
+      txt.textContent = 'Bilder laden';
+      const ims = await Promise.all(BILDER.map(k => {
+        if (!S.bilder[k]) throw new Error('Bild „' + k + '" fehlt');
+        return ladeBild(S.bilder[k].d);
+      }));
+      /* Die Lage im Blatt merken. Ohne sie wüsste der Zeichner nur,
+         WIE GROSS ein Bild ist, aber nicht, wo im Blatt es saß — und
+         damit stünde jedes Tier an der falschen Stelle über seinem
+         Ankerpunkt. */
+      BILDER.forEach((k, i) => {
+        LAGE[k] = { x: S.bilder[k].x, y: S.bilder[k].y, w: ims[i].width, h: ims[i].height };
+      });
+      basen = ims.map(aufLeinwand);
+    } catch (err) {
+      $('load').innerHTML = '<b style="color:#ff8080">Die Echsen-Bilder fehlen</b>'
+        + '<span>Erwartet wird <code>solo-sprites.js</code> neben dieser Datei.<br>'
+        + 'Neu erzeugen: <code>node tools/solosprites.mjs</code><br>'
+        + (err && err.message ? err.message : '') + '</span>';
+      return;
+    }
+
+    txt.textContent = 'einfärben (2 Verfahren × 8 Farben)';
+    /* Einen Umlauf abwarten, damit der Hinweis wirklich auf dem Schirm
+       steht, bevor die Rechnung den Faden für einen Moment blockiert. */
+    await new Promise(r => setTimeout(r, 30));
+
+    sprites = { dreh: {}, lumi: {} };
+    BILDER.forEach((k, i) => {
+      sprites.dreh[k] = faerbeSatz(basen[i], 'dreh');
+      sprites.lumi[k] = faerbeSatz(basen[i], 'lumi');
+    });
+    flecken = FARBEN.map(leuchtFleck);
+    funken = FARBEN.map(funkenFleck);
+    funke = funkeFleck();
+
+    txt.textContent = 'Insel bauen';
+    await new Promise(r => setTimeout(r, 10));
+
+    stufenReglerBauen();
+    bediene();
+    /* Erst die Adresszeile, dann die Insel: die Regler stehen damit
+       schon richtig, wenn die Tiere zum ersten Mal gesetzt werden. */
+    ausAdresse();
+    neueInsel(welt.seed);
+    legendeBauen();
+
+    $('load').hidden = true;
+
+    /* Der Prüfhaken. Er kostet nichts und macht die Geometrie von
+       außen nachrechenbar — tools/solotest.mjs hängt daran. Ob eine
+       schlafende Echse über offenem Wasser steht, kann man nämlich
+       zählen; ansehen kann man es erst, wenn es zu spät ist. */
+    window.__solo = { welt, opt, schritt, feldAt, bodenY, findeInseln,
+                      wuerfelInseln, inselDaten, coastRings, setzeStufe,
+                      ueben, baueTiere, naechsteInsel, aufHauptinsel,
+                      FARBEN, GLUEHEN, rgb2hsl, hsl2rgb };
+
+    requestAnimationFrame(zeichne);
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>

@@ -2886,3 +2886,62 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   .beam-main { flex-direction: column; }
   .beam-code { text-align: center; }
 }
+
+
+/* ─── Die eigene Insel (insel.html, Migration 0136) ───────────
+   Die einzige Seite in MPSkills, auf der ein Werkzeug die ganze
+   Fläche unter der Kopfzeile bekommt — ohne Fuß, ohne Scrollen,
+   ohne .wrap. Eine Insel in einer Textspalte wäre keine.
+
+   Gedehnt wird über die FLEX-Kette und nicht über 100dvh im
+   Werkzeug: die Kopfzeile steht darüber, und eine feste Höhe wäre
+   um genau deren Höhe zu viel — auf dem iPad zusätzlich um die
+   Browserleiste (Regel: feedback_ios_viewport_checklist). */
+body.inselseite {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+body.inselseite #inselHost {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* Solange die Insel nicht steht, liegt hier eine ganz normale
+   Karte („noch nichts freigespielt", „lädt", ein Fehler) — die
+   soll oben anfangen und nicht in der Mitte schweben. */
+body.inselseite #inselHost > .wrap { flex: 0 0 auto; }
+/* Steht sie, ist Scrollen ein Fehlerbild: gezogen wird die Karte
+   und nicht die Seite. */
+body.inselseite--voll { overflow: hidden; }
+
+
+/* ─── Meine Insel · die Kachel auf der Landing ────────────────
+   Eine einzige Zeile, breiter als eine Raumkachel und ohne Menü:
+   es gibt genau eine Insel, und man kann sie nicht verlassen.
+   Deshalb hier ein echtes <a> um alles statt des gestreckten
+   Überzugs der .vtile — es liegt kein Knopf darin, der geschützt
+   werden müsste.
+
+   Farblich hebt sie sich ab, aber nur um eine Stufe: sie soll die
+   erste Kachel sein, die man sieht, und nicht die einzige. */
+.myisland { margin-top: 22px; }
+.itile {
+  display: flex; align-items: center; gap: 13px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--accent-edge);
+  box-shadow: var(--shadow);
+  color: inherit; text-decoration: none;
+  transition: border-color .14s ease, transform .14s ease;
+}
+.itile:hover { border-color: var(--accent); transform: translateY(-1px); }
+.itile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.itile-ic { font-size: 1.7rem; line-height: 1; flex: none; }
+.itile-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.itile-txt strong { font-size: .98rem; }
+.itile-meta { font-size: .82rem; color: var(--ink-faint); }
+.itile-go { flex: none; font-size: 1.1rem; color: var(--accent-ink); }

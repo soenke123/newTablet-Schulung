@@ -2,70 +2,59 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Profil · MPSkills</title>
+<!-- maximum-scale + user-scalable ist der ERSTE von zwei Riegeln
+     gegen das Mitzoomen der SEITE. Der zweite (gesturestart) steht
+     in insel.js — auf dem iPad braucht es beide, einer allein reicht
+     nicht (Regel: feedback_ios_viewport_checklist). Diese Seite ist
+     die einzige in MPSkills, die vollflächig gezogen und gezoomt
+     wird; ohne die Riegel zoomt der Finger die Seite statt der
+     Insel. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=contain" />
+<title>Meine Insel · MPSkills</title>
 <meta name="robots" content="noindex" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=20260910" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
-     Browser zeichnet. Steht sie weiter unten, blitzt die helle
-     Seite auf. Siehe Kopf von lib/theme.js. -->
+     Browser zeichnet. Siehe Kopf von lib/theme.js. -->
 <script src="lib/theme.js?v=20260819d"></script>
 <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png" />
 <link rel="icon" type="image/png" sizes="256x256" href="icons/favicon-256.png" />
 
 <!-- Schreibt den sichtbaren Bereich (Tastatur, Adressleiste) als
-     CSS-Variablen an <html>. Blockierend im <head>, damit ein Modal
+     CSS-Variablen an <html>. Blockierend im <head>, damit die Bühne
      nicht erst falsch gezeichnet und dann verschoben wird. -->
 <script src="../viewport.js?v=20260820"></script>
 </head>
-<body>
+<body class="inselseite">
 
+<!-- Eine schmale Kopfzeile, mehr nicht: alles Weitere liegt IN der
+     Insel. Die Anmelde-Ecke steht hier bewusst — wer angemeldet ist,
+     sieht eine andere Insel als das Gerät, und das muss man auf
+     dieser Seite ablesen können, ohne sie zu verlassen. -->
 <header class="topbar">
   <a class="wordmark" href="index.html"><img class="wordmark-logo" src="../LogoMPSkills.png" alt="" /><span class="wordmark-text">MP<span>Skills</span></span></a>
   <div class="topbar-spacer"></div>
   <div id="userbarHost"></div>
 </header>
 
-<main class="wrap">
-  <div id="profHost">
-    <p class="booting">Lade …</p>
-  </div>
-</main>
-
-<footer class="foot">
-  <a href="index.html">MPSkills</a>
-  <span class="sep">·</span>
-  <a href="../index.html">Tablet-Schulung</a>
-  <span class="sep">·</span>
-  Max-Planck-Schule
-</footer>
-
-<!-- ─── Profilbild wählen ───────────────────────────────────
-     Derselbe Katalog wie in der Schulung (../avatars.js). Die
-     Freischaltung hängt am Spielstand des GameHubs — wer nie
-     gespielt hat, hat die Eier. Reiter erscheinen nur für
-     Gruppen, in denen wirklich etwas liegt. -->
-<div class="overlay" id="pickerModal" hidden>
-  <div class="modal picker" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
-    <div class="picker-head">
-      <h2 id="pickerTitle">Profilbild wählen</h2>
-      <button type="button" class="modal-close" id="pickerClose" aria-label="Schließen">×</button>
-    </div>
-    <div class="picker-tabs" id="pickerTabs"></div>
-    <div class="picker-grid" id="pickerGrid"></div>
-  </div>
+<div id="inselHost">
+  <main class="wrap"><p class="booting">Lade …</p></main>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<!-- session.js wird geladen, damit ein ANGEMELDETES Kind seine
+     Konto-Insel bekommt statt der des Geräts. Ohne Anmeldung läuft
+     alles über anon und den Insel-Token aus lib/room.js. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../supabase-config.js"></script>
 <script src="../session.js?v=20260817"></script>
 <script src="../avatars.js?v=20260709"></script>
 <script src="lib/userbar.js?v=20260819c"></script>
-<script src="profil.js?v=20260819a"></script>
+<script src="lib/room.js?v=20260910"></script>
+<script src="lib/tool.js?v=20260910"></script>
+<script src="insel.js?v=20260910"></script>
 </body>
 </html>

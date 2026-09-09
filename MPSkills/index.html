@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260909" />
+<link rel="stylesheet" href="style.css?v=20260910" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -98,6 +98,26 @@
   <p class="pitch" id="pitch">Skills und Spiele, die eine Klasse in
     <span class="pitch-hi">30&nbsp;Sekunden</span> benutzt</p>
 
+  <!-- ─── Meine Insel (Migration 0136) ─────────────────────────
+       Über den besuchten Räumen, und das ist die Aussage: die Räume
+       sind, wo man WAR, die Insel ist, was einem GEHÖRT. Sie
+       überlebt jeden dieser Räume — ein Raum verfällt nach 60 Tagen,
+       die Wörter darauf bleiben.
+
+       Sie ist außerdem der ANKER, hinter den placeVisited() den
+       Abschnitt darunter hängt (app.js). Deshalb steht sie fest
+       hier im HTML, auch wenn sie meistens versteckt ist.
+
+       Leer wird sie nicht angezeigt: vor der ersten
+       Wordisland-Stunde gibt es keine Insel, und eine Kachel, die
+       erklärt, dass sie leer ist, beantwortet keine Frage, die
+       jemand hat. Was dann käme, steht auf insel.html. -->
+  <section class="myisland" id="islandSection" hidden>
+    <h2 class="section-h">Meine Insel
+      <span class="card-h-note" id="islandWho"></span></h2>
+    <div id="islandBox"></div>
+  </section>
+
   <!-- ─── Besuchte Räume ───────────────────────────────────────
        Wo man schon war. Stand bis zum 19.08.2026 als vier blasse
        Chips IM Code-Kasten und war damit ein Anhängsel des
@@ -107,10 +127,10 @@
 
        Wohin der Abschnitt gehört, hängt an der Rolle und
        entscheidet renderState() in app.js: für alle ohne eigene
-       Räume bleibt er hier, unter dem Code-Kasten. Für Lehrkräfte
-       wandert er ans Ende von „Meine Räume" — dort steht dann
-       zuerst, was ihnen gehört, und darunter, wo sie zu Gast
-       waren.
+       Räume bleibt er hier, unter dem Code-Kasten bzw. hinter der
+       eigenen Insel. Für Lehrkräfte wandert er ans Ende von „Meine
+       Räume" — dort steht dann zuerst, was ihnen gehört, und
+       darunter, wo sie zu Gast waren.
 
        Leer wird er nicht angezeigt: ein Abschnitt, der erklärt,
        dass er leer ist, beantwortet keine Frage, die jemand hat. -->
@@ -300,6 +320,32 @@
           Dann heißt jedes Gerät nur <em>Tablet 1, 2, 3 …</em> und nichts lässt sich einer
           Person zuordnen — auch nicht von uns.
         </p>
+
+        <!-- ⚠️ Dieser Absatz gehört zum Bau der eigenen Insel
+             (Migration 0136) und nicht hinterher: die Seite behauptet
+             hier nichts, was nicht im Code steht. Nachprüfbar ist
+             alles — zweites Kennzeichen → localStorage['mpskills_solo']
+             (lib/room.js), zwei getrennte Inseln →
+             wi_solo_learners.token bzw. .user_id, kein Ablaufdatum →
+             wi_solo_sets.from_room mit `on delete set null`. -->
+        <h3>Deine Insel</h3>
+        <p>
+          Wenn du bei <em>Myth of Wordisland</em> mitmachst, entsteht eine eigene Insel für
+          dich. Darauf stehen die <strong>Vokabeln</strong>, die deine Lehrkräfte freigespielt
+          haben, und wie gut du sie schon kannst. Kein Name, keine E-Mail — dein Gerät merkt
+          sich dafür ein <strong>zweites zufälliges Kennzeichen</strong>.
+        </p>
+        <p>
+          Anders als ein Raum <strong>läuft die Insel nicht ab</strong>: sie soll dich über
+          die Schuljahre begleiten. Löschst du den Verlauf deines Browsers, ist das Kennzeichen
+          weg und mit ihm der Weg zu dieser Insel.
+        </p>
+        <p>
+          Meldest du dich an, bekommst du eine <strong>zweite, getrennte</strong> Insel an
+          deinem Konto. Die beiden vermischen sich nie — was du abgemeldet geübt hast, bleibt
+          auf diesem Gerät, und umgekehrt. Auf einem Tablet, das die ganze Klasse benutzt, ist
+          das der Punkt.
+        </p>
       </div>
     </div>
   </div>
@@ -396,7 +442,7 @@
 <script src="../session.js?v=20260817"></script>
 <script src="../avatars.js?v=20260709"></script>
 <script src="lib/userbar.js?v=20260819c"></script>
-<script src="lib/room.js?v=20260908"></script>
+<script src="lib/room.js?v=20260910"></script>
 <!-- Auf der Landing läuft kein Werkzeug, und seit der „Testen"-Knopf
      weg ist (18.08.2026) braucht sie auch lib/tool.js nicht mehr: der
      einzige Aufrufer holte damit die Vorgaben eines Werkzeugs, bevor
@@ -407,13 +453,13 @@
      das Drehbuch je Skill; das Werkzeug selbst (137 KB) kommt erst,
      wenn jemand eine Kachel öffnet — und mit ihm lib/tool.js. Wer
      nur die Liste anschaut, lädt nichts davon. -->
-<script src="lib/preview.js?v=20260908"></script>
+<script src="lib/preview.js?v=20260910"></script>
 <script src="preview/wordcloud.js?v=20260819d"></script>
 <script src="preview/neurolab.js?v=20260819b"></script>
 <script src="preview/caesar.js?v=20260820"></script>
 <script src="preview/clash-of-math.js?v=20260827f"></script>
 <script src="preview/wildclusters.js?v=20260906"></script>
-<script src="preview/wordisland.js?v=20260909"></script>
-<script src="app.js?v=20260819f"></script>
+<script src="preview/wordisland.js?v=20260910"></script>
+<script src="app.js?v=20260910"></script>
 </body>
 </html>

@@ -161,6 +161,60 @@
     forget(code);
   }
 
+  /* ─── Die eigene Insel (Migration 0136) ──────────────────────
+     Ein zweites Kennzeichen im Gerät, nach genau derselben Regel
+     wie die Raumliste: jeder Eintrag gehört jemandem, gelesen wird
+     nur, was zur gerade angemeldeten Person passt.
+
+     Der Unterschied ist, was DARAN hängt. Ein Raum-Token führt in
+     einen Raum, der in 60 Tagen verfällt. Dieser hier führt auf
+     eine Insel, die ein Schuljahr begleitet — verliert man ihn
+     (Verlauf gelöscht, anderes Gerät), ist der Lernstand weg. Ein
+     Kind mit Konto trifft das nicht: dort findet der Server die
+     Insel über auth.uid(), und dieser Speicher wird gar nicht
+     angefasst.
+
+     Genau das ist die Trennung, um die es geht: angemeldet und
+     abgemeldet sind ZWEI Inseln auf dem Server, und zwischen ihnen
+     wandert nichts. Wer sich an einem Klassensatz-Tablet anmeldet,
+     überschreibt nichts; wer sich abmeldet, bekommt die Insel des
+     Geräts zurück. */
+  const SOLO_KEY = 'mpskills_solo';
+
+  function readSolo() {
+    try {
+      const raw = localStorage.getItem(SOLO_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.filter(e => e && e.token) : [];
+    } catch (e) {
+      console.warn('[mpskills] Insel-Kennzeichen unlesbar:', e.message);
+      return [];
+    }
+  }
+
+  // Angemeldete brauchen keinen: der Server findet ihre Insel über
+  // das Konto. Ein trotzdem abgelegter Token wäre ein zweiter
+  // Schlüssel zu denselben Daten, der auf einem geteilten Tablet
+  // liegen bliebe.
+  function soloToken() {
+    if (uid() !== null) return null;
+    const hit = readSolo().find(isMine);
+    return hit ? hit.token : null;
+  }
+
+  function rememberSolo(token) {
+    if (!token || uid() !== null) return;
+    const rest = readSolo().filter(e => !isMine(e));
+    rest.unshift({ uid: uid(), token: String(token), saved_at: Date.now() });
+    try { localStorage.setItem(SOLO_KEY, JSON.stringify(rest.slice(0, 8))); }
+    catch (e) { console.warn('[mpskills] Insel-Kennzeichen nicht gespeichert:', e.message); }
+  }
+
+  function forgetSolo() {
+    try { localStorage.setItem(SOLO_KEY, JSON.stringify(readSolo().filter(e => !isMine(e)))); }
+    catch (e) { console.warn('[mpskills] Insel-Kennzeichen nicht gelöscht:', e.message); }
+  }
+
   /* ─── Serveraufrufe ─────────────────────────────────────── */
   // Teilnehmer sprechen als anon mit der Datenbank und rufen dort
   // ausschließlich die drei benannten Funktionen auf. Ist jemand
@@ -415,6 +469,7 @@
 
   window.MPRoom = {
     list, get, remember, snapshot, forget, touch, leave, uid,
+    soloToken, rememberSolo, forgetSolo,
     rpc, peek, join, view, sig, poll, showNet,
     normalizeCode, isCode, joinUrl, untilText, agoText,
     CODE_RE, POLL_MS

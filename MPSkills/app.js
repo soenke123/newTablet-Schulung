@@ -173,8 +173,60 @@ function placeVisited(intoPane) {
   if (!section) return;
   const pane = intoPane ? document.getElementById('paneRooms') : null;
   if (pane) { pane.appendChild(section); return; }
-  const pitch = document.getElementById('pitch');
-  if (pitch) pitch.insertAdjacentElement('afterend', section);
+  /* Der Anker ist die eigene Insel, wenn es sie gibt, sonst der
+     Satz unter dem Code-Kasten. Reihenfolge mit Aussage: erst was
+     mir gehört, dann wo ich war. */
+  const anker = document.getElementById('islandSection')
+             || document.getElementById('pitch');
+  if (anker) anker.insertAdjacentElement('afterend', section);
+}
+
+/* ─── Meine Insel (Migration 0136) ────────────────────────────
+   Eine Kachel, die es nur gibt, wenn es die Insel gibt. Gefragt
+   wird mit dem Insel-Token des Geräts — ist jemand angemeldet,
+   nimmt der Server dessen Konto und der Token bleibt unbeachtet.
+   Das sind zwei getrennte Inseln, und genau das steht auch in der
+   Kachel: „auf diesem Gerät" gegen den eigenen Namen.
+
+   Fehler sind hier still. Der Abschnitt bleibt dann einfach weg —
+   eine Fehlermeldung über etwas, das man gar nicht angeklickt hat,
+   ist die schlechteste Auskunft von allen. Wer die Insel wirklich
+   öffnet, bekommt auf insel.html eine richtige. */
+async function renderIsland() {
+  const section = document.getElementById('islandSection');
+  const box = document.getElementById('islandBox');
+  const who = document.getElementById('islandWho');
+  if (!section || !box) return;
+
+  let r = null;
+  try {
+    r = await window.MPRoom.rpc('wi_solo_open', { p_token: window.MPRoom.soloToken() });
+  } catch (e) {
+    console.warn('[mpskills] wi_solo_open:', e.message);
+  }
+  if (!r || !r.ok || !r.learner) { section.hidden = true; return; }
+
+  const l = r.learner;
+  const units = (l.sets || []).length;
+  const gewachsen = Number(l.grown || 0);
+  const s = window.getSessionUser?.();
+  who.textContent = s ? `von ${s.display_name || s.account_name || 'dir'}` : 'auf diesem Gerät';
+
+  /* Drei Zahlen und ein Satz. Die dritte („ausgewachsen") ist die
+     einzige, die sich durch Üben ändert — sie ist der Grund, die
+     Kachel überhaupt anzusehen. */
+  box.innerHTML = `
+    <a class="itile" href="insel.html">
+      <span class="itile-ic" aria-hidden="true">🏝️</span>
+      <span class="itile-txt">
+        <strong>${l.words} Wörter aus ${units} ${units === 1 ? 'Unit' : 'Units'}</strong>
+        <span class="itile-meta">${gewachsen
+          ? `${gewachsen} ${gewachsen === 1 ? 'Tier ist' : 'Tiere sind'} ausgewachsen`
+          : 'Noch sind alle Tiere Eier — üben lässt sie schlüpfen.'}</span>
+      </span>
+      <span class="itile-go" aria-hidden="true">→</span>
+    </a>`;
+  section.hidden = false;
 }
 
 // Ort und Inhalt in einem Griff. Getrennt zu haben wäre die
@@ -956,6 +1008,12 @@ function renderState() {
      hier stehen bleibt. Für eine Lehrkraft macht das renderRooms(),
      sobald das Fach steht — sonst könnte er sichtbar werden, bevor
      er an seinem Platz ist. */
+  /* Nicht abgewartet: die Kachel darf nachkommen, die Seite soll
+     nicht auf einen Serveraufruf warten. Für placeVisited unten
+     macht das nichts — der Abschnitt steht fest in index.html und
+     ist auch versteckt der Anker, hinter den sich die besuchten
+     Räume hängen. */
+  renderIsland();
   placeVisited(false);
   if (!acts) renderVisited();
 
