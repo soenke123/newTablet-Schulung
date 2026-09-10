@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════════════
+﻿/* ══════════════════════════════════════════════════════════════
    MPSkills — lib/preview.js   ·   Das Schaufenster
    ══════════════════════════════════════════════════════════════
    Eine Kachel im Reiter „Alle Skills" sagt bisher, wie ein Skill
@@ -405,7 +405,7 @@
     if (window.MPTool) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'lib/tool.js?v=20260910f';
+      s.src = 'lib/tool.js?v=20260910g';
       s.onload  = () => window.MPTool ? resolve() : reject(new Error('MPTool fehlt'));
       s.onerror = () => reject(new Error('lib/tool.js nicht gefunden'));
       document.head.appendChild(s);

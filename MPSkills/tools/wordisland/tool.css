@@ -1276,34 +1276,319 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 .wi-lg--3 { color: #4f8fe0; }
 .wi-lg--4 { color: var(--wi-gold, #ffcf4d); }
 
-/* ── Die Unit-Kacheln ──────────────────────────────────────── */
-.wi-solosets {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+/* ══════════════════════════════════════════════════════════════
+   DIE UNIT-LEISTE
+   ══════════════════════════════════════════════════════════════
+   Links, über der Bühne, vom Boden bis unter die untere Leiste.
+   Sie liegt DARÜBER und schiebt die Insel nicht zusammen — die
+   Kamera zentriert stattdessen auf den Rest (tool.js, randLinks).
+   Der Unterschied ist auf dem Tablet der zwischen einer Insel, die
+   beim Aufklappen springt, und einer, die stehen bleibt.
+
+   Die Kacheln standen bis 10.09.2026 im Einstellungen-Overlay
+   (.wi-setchip). Form und Zustände sind wörtlich von dort
+   übernommen — wer sie kannte, findet sie wieder. */
+.wi-units {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  width: min(320px, 46vw);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  padding: 8px;
+  border-radius: var(--r-md, 18px);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
-.wi-setchip {
+/* Zugeklappt bleibt der Griff — und nur er. Kein halbhoher Kasten,
+   der noch etwas verdeckt, ohne etwas zu sagen. */
+.wi-units.is-zu {
+  bottom: auto;
+  width: auto;
+}
+/* Am Telefon startet die Leiste zugeklappt (tool.js). Macht man sie
+   dort auf, soll sie auch breit genug für eine Vokabelzeile sein —
+   46 % von 390 px sind es nicht. Verdecken darf sie dabei: die Insel
+   ist einen Tipp entfernt.
+
+   Die untere Leiste bricht auf schmalen Geräten um und wird dann
+   höher. Der Abstand nach unten wächst mit. */
+@media (max-width: 720px) {
+  .wi-units {
+    width: min(320px, 80vw);
+    bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.wi-ugriff {
   appearance: none;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: var(--r-sm, 12px);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  cursor: pointer;
+}
+.wi-ugriff:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+/* Das Zeichen zeigt, was ein Klick TUT: offen = zuklappen (‹),
+   zugeklappt = aufklappen (›). */
+.wi-uchev {
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-right: 2px solid var(--ink-faint);
+  border-bottom: 2px solid var(--ink-faint);
+  transform: rotate(135deg);
+  transition: transform .16s ease;
+}
+.wi-units.is-zu .wi-uchev { transform: rotate(-45deg); }
+
+.wi-ubody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  /* Die Liste scrollt, die SEITE nicht. Ohne das zieht der Finger
+     am Ende der Liste die ganze Ansicht mit. */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Eine Unit in der Liste ──────────────────────────────────── */
+.wi-urow {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.wi-utoggle {
+  appearance: none;
+  flex: 1 1 auto;
+  min-width: 0;
   text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
+  gap: 3px;
+  padding: 9px 11px;
   border-radius: var(--r-sm, 12px);
   border: 2px solid var(--line);
   background: var(--paper);
   color: var(--ink-soft);
   font: inherit;
   cursor: pointer;
-  transition: border-color .14s ease, background .14s ease, color .14s ease;
+  /* Blass wie das Tier auf der Insel: dieselbe Aussage, damit man
+     die Verbindung nicht erklären muss. */
+  opacity: .62;
+  transition: border-color .14s ease, background .14s ease,
+              color .14s ease, opacity .14s ease;
 }
-.wi-setchip b { font-size: 14px; font-weight: 700; }
-.wi-setchip span { font-size: 12px; color: var(--ink-faint); }
-.wi-setchip:hover { border-color: var(--accent); }
-.wi-setchip.is-on {
+.wi-utoggle b {
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wi-umeta { font-size: 12px; color: var(--ink-faint); }
+.wi-utoggle:hover { border-color: var(--accent); }
+.wi-urow.is-on .wi-utoggle {
+  opacity: 1;
   border-color: var(--accent);
   background: var(--accent-dim, var(--surface));
   color: var(--ink);
+}
+
+/* Das „i" — Form und Zustände wie beim „i" am Tier (.wi-pinfo). */
+.wi-uinfo {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 30px;
+  border-radius: var(--r-sm, 12px);
+  border: 2px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  font-style: italic;
+  cursor: pointer;
+  transition: border-color .14s ease, background .14s ease, color .14s ease;
+}
+.wi-uinfo:hover { border-color: var(--accent); color: var(--ink); }
+.wi-uinfo.is-on {
+  border-color: var(--wi-gold, #ffcf4d);
+  background: color-mix(in srgb, var(--wi-gold, #ffcf4d) 22%, transparent);
+  color: var(--ink);
+}
+
+.wi-uhint {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+}
+
+/* ── Eine Unit im Einzelnen ──────────────────────────────────── */
+.wi-udet { display: flex; flex-direction: column; gap: 8px; }
+.wi-uhead { display: flex; align-items: center; gap: 6px; }
+.wi-uback {
+  appearance: none;
+  flex: 1 1 auto;
+  text-align: left;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--r-sm, 12px);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wi-uback:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.wi-uswitch {
+  appearance: none;
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wi-uswitch.is-on {
+  border-color: var(--accent);
+  background: var(--accent-dim, var(--surface));
+  color: var(--ink);
+}
+.wi-utitle { font-size: 16px; font-weight: 800; color: var(--ink); }
+
+/* ── Die Vokabelliste ────────────────────────────────────────── */
+.wi-wlist { display: flex; flex-direction: column; gap: 2px; }
+.wi-wrow {
+  appearance: none;
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--r-sm, 12px);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wi-wrow:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.wi-wrow.is-auf { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+/* Das Tier ist auf dem Blatt für ein Meer gezeichnet: auf hellem
+   Grund fehlt dem hellen Bauch der Umriss. Ein dunkles Feld
+   darunter, wie im Übungskasten (.wi-pmon), und es steht wieder. */
+.wi-wmon {
+  width: 34px;
+  height: 30px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #0b2536;
+}
+.wi-wtext {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 13px;
+}
+.wi-wtext b { font-weight: 700; color: var(--ink); }
+.wi-wtext i { font-style: normal; color: var(--ink-faint); }
+.wi-wtext > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Vier Zahlen, beide Richtungen zusammen. Sie stehen in derselben
+   Reihenfolge und denselben Farben wie in der Tabelle darunter —
+   die Zeile ist deren Kurzfassung und nicht eine zweite Auskunft. */
+.wi-wnum {
+  display: flex;
+  gap: 6px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.wi-wnum b { min-width: 14px; text-align: right; }
+.wi-wnum .is-gut  { color: var(--wi-gut,  #2f9e63); }
+.wi-wnum .is-hilf { color: var(--wi-hilf, #b8791a); }
+.wi-wnum .is-bad  { color: var(--wi-bad,  #c25555); }
+.wi-wnum .is-alle { color: var(--ink-faint); }
+.wi-wdet { padding: 4px 6px 10px 48px; }
+
+/* ══════════════════════════════════════════════════════════════
+   DAS KÄRTCHEN AN DER ECHSE
+   ══════════════════════════════════════════════════════════════
+   Es steht dort, wo der Finger war. Deshalb liegen left/top in
+   tool.js und nicht hier: nur das Aussehen gehört hierher. */
+.wi-card {
+  position: absolute;
+  z-index: 30;
+  width: min(300px, 78vw);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 14px;
+  border-radius: var(--r-md, 18px);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation: wi-stin .16s ease-out;
+}
+.wi-cclose {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.wi-cclose:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.wi-cword { font-size: 18px; font-weight: 800; color: var(--ink); padding-right: 26px; }
+.wi-ctrans { font-size: 14px; color: var(--ink-soft); }
+.wi-cmeta {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 4px;
 }
 
 /* ── Das Tier auf der Übungskarte ──────────────────────────────
@@ -1463,19 +1748,60 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   to   { opacity: 1; transform: none; }
 }
 
+/* Die vier Farben stehen als Variablen und nicht als Werte, weil
+   dieselbe Tabelle seit 10.09.2026 an zwei sehr verschiedenen Orten
+   hängt: auf dem schwarzen Tierkasten beim Üben (hell leuchtend) und
+   in der Unit-Leiste auf --surface, die mit hell/dunkel kippt. Ein
+   Mintgrün, das auf Schwarz gut liest, ist auf Weiß ein Gerücht. */
 .wi-stgrid {
+  --wi-gut:  #6ee7a8;
+  --wi-hilf: #fbbf5c;
+  --wi-bad:  #e06a6a;
+  --wi-alle: #cbd9e4;
+  --wi-stkopf: #7d95a6;
+  --wi-strand: rgba(160, 200, 225, .22);
+  --wi-stgleis: rgba(160, 200, 225, .13);
   width: 100%;
   display: grid;
   grid-template-columns: auto repeat(4, 1fr);
   align-items: center;
   gap: 2px 8px;
 }
+/* Dieselbe Tabelle auf der Seitenfarbe. Die Werte sind gedeckter,
+   der Kontrast ist derselbe — geprüft gegen --surface in hell UND
+   dunkel. */
+.wi-stgrid--hell {
+  --wi-gut:  #2f9e63;
+  --wi-hilf: #b8791a;
+  --wi-bad:  #c25555;
+  --wi-alle: var(--ink-soft);
+  --wi-stkopf: var(--ink-faint);
+  --wi-strand: var(--line);
+  --wi-stgleis: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  .wi-stgrid--hell {
+    --wi-gut:  #63d69b;
+    --wi-hilf: #e3ad57;
+    --wi-bad:  #e07d7d;
+  }
+}
+:root[data-theme="dark"] .wi-stgrid--hell {
+  --wi-gut:  #63d69b;
+  --wi-hilf: #e3ad57;
+  --wi-bad:  #e07d7d;
+}
+:root[data-theme="light"] .wi-stgrid--hell {
+  --wi-gut:  #2f9e63;
+  --wi-hilf: #b8791a;
+  --wi-bad:  #c25555;
+}
 .wi-sthead {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .08em;
   text-transform: uppercase;
-  color: #7d95a6;
+  color: var(--wi-stkopf);
   text-align: center;
 }
 /* Die Richtung als Marke und nicht als Satz: „EN→DE" liest sich in
@@ -1486,13 +1812,13 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   gap: 3px;
   padding: 4px 9px;
   border-radius: 999px;
-  border: 1px solid rgba(160, 200, 225, .22);
+  border: 1px solid var(--wi-strand);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: .04em;
-  color: #cfe0ec;
+  color: var(--wi-alle);
 }
-.wi-stdir i { font-style: normal; color: #6f8798; }
+.wi-stdir i { font-style: normal; color: var(--wi-stkopf); }
 .wi-stn {
   text-align: center;
   font-size: 22px;
@@ -1500,10 +1826,10 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
-.wi-stn.is-gut  { color: #6ee7a8; }
-.wi-stn.is-hilf { color: #fbbf5c; }
-.wi-stn.is-bad  { color: #e06a6a; }
-.wi-stn.is-alle { color: #cbd9e4; }
+.wi-stn.is-gut  { color: var(--wi-gut); }
+.wi-stn.is-hilf { color: var(--wi-hilf); }
+.wi-stn.is-bad  { color: var(--wi-bad); }
+.wi-stn.is-alle { color: var(--wi-alle); }
 
 .wi-stbar {
   grid-column: 2 / -1;
@@ -1512,13 +1838,13 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   margin: 2px 0 10px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(160, 200, 225, .13);
+  background: var(--wi-stgleis);
 }
 .wi-stgrid > .wi-stbar:last-child { margin-bottom: 0; }
 .wi-stbar i { display: block; height: 100%; }
-.wi-stbar i.is-gut  { background: #6ee7a8; }
-.wi-stbar i.is-hilf { background: #fbbf5c; }
-.wi-stbar i.is-bad  { background: #e06a6a; }
+.wi-stbar i.is-gut  { background: var(--wi-gut); }
+.wi-stbar i.is-hilf { background: var(--wi-hilf); }
+.wi-stbar i.is-bad  { background: var(--wi-bad); }
 
 .wi-stnote {
   margin: 0;

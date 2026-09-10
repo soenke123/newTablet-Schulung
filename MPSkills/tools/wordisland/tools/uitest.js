@@ -949,6 +949,11 @@ function makeSoloEnv() {
     if (String(tag).toLowerCase() === 'canvas') {
       e.width = 300; e.height = 150;
       e.getContext = () => machKontext(e);
+      /* Seit 10.09.2026 backt das Werkzeug das kleine Monster der
+         Vokabelliste als data:-URL ein (monsterUrl). Ohne diesen
+         Stummel wirft die Zeile — und die Unit-Übersicht bliebe
+         leer, ohne dass irgendwo ein Fehler stünde. */
+      e.toDataURL = () => 'data:image/png;base64,00';
     }
     return e;
   };
@@ -1008,10 +1013,14 @@ function makeSoloEnv() {
 /* Ein erfundener Insel-Server. `stufen` sagt, welches Wort auf
    welcher Stufe steht — das ist alles, was wi_solo_view an Inhalt
    trägt. */
-function soloView(n, stufen) {
+function soloView(n, stufen, ohneUnits) {
   const words = [];
   for (let i = 0; i < n; i++) {
-    words.push({ i: 'w-' + i, s: stufen ? stufen(i) : 0 });
+    const w = { i: 'w-' + i, s: stufen ? stufen(i) : 0 };
+    // `u` seit Migration 0142 — die Unit am Wort. `ohneUnits`
+    // spielt die ältere Datenbank nach.
+    if (!ohneUnits) w.u = i % 2 ? 'set-b' : 'set-a';
+    words.push(w);
   }
   return {
     ok: true,
@@ -1024,6 +1033,56 @@ function soloView(n, stufen) {
     words_list: words,
     due: 0
   };
+}
+
+/* Die Antwort von wi_solo_unit zu einer der beiden Units. Die
+   Zahlenform ist die von wi_solo_task_json.stats:
+   [richtig, mit Hilfe, gesamt, falsch] je Richtung. */
+function soloUnit(setId, n, stufen) {
+  const words = [];
+  for (let i = 0; i < n; i++) {
+    if ((i % 2 ? 'set-b' : 'set-a') !== setId) continue;
+    words.push({
+      i: 'w-' + i, t: 'wort' + i, x: 'Wort ' + i,
+      s: stufen ? stufen(i) : 0,
+      st: i % 4 === 0 ? {} : { en_de: [2, 1, 4, 1], de_en: [3, 0, 3, 0] }
+    });
+  }
+  return {
+    ok: true,
+    set: { id: setId, title: setId === 'set-a' ? 'Unit 1' : 'Unit 2',
+           level: '5', theme: 'Test', count: words.length },
+    total: { en_de: [8, 4, 16, 4], de_en: [12, 0, 12, 0] },
+    words
+  };
+}
+
+/* Ein Zeigerereignis mit Koordinaten. linkedom kennt kein
+   PointerEvent — gebraucht werden ohnehin nur vier Felder. */
+function zeig(el, doc, typ, x, y) {
+  const e = new doc.defaultView.Event(typ, { bubbles: true });
+  e.pointerId = 1; e.pointerType = 'touch'; e.buttons = 1;
+  e.clientX = x; e.clientY = y;
+  e.preventDefault = () => {};
+  el.dispatchEvent(e);
+  return e;
+}
+
+/* Einen Punkt suchen, an dem wirklich ein Tier steht. Wo sie
+   herumlaufen, weiß nur die Zeichenschleife — also wird das Feld
+   abgesucht. Weil zwischen zwei synchronen Tipps kein Bild
+   dazwischenkommt, steht die Herde dabei still. */
+function tippeAufTier(root, document, schritt = 34) {
+  const stage = root.querySelector('[data-part="stage"]');
+  const karte = root.querySelector('[data-part="card"]');
+  for (let y = 20; y < RECT.height; y += schritt) {
+    for (let x = 20; x < RECT.width; x += schritt) {
+      zeig(stage, document, 'pointerdown', x, y);
+      zeig(stage, document, 'pointerup', x, y);
+      if (!karte.hidden) return { x, y };
+    }
+  }
+  return null;
 }
 
 // Die Felder der gebauten Insel als Menge „r,c" — für die Frage,
@@ -1098,9 +1157,12 @@ async function testSolo() {
   /* Die Legende ist eine Auskunft: fünf Stufen, je acht Wörter aus
      dem `i % 5` oben. Stufen ohne Tiere fielen weg — hier sind alle
      fünf besetzt. */
+  /* Gefragt ist die Legende der LEISTE. Seit 10.09.2026 trägt jede
+     Unit-Zeile dieselbe Punktreihe — `.wi-slegend` allein träfe
+     inzwischen drei Kästen. */
   ok('die Legende zählt alle fünf Stufen',
-     root.querySelectorAll('.wi-slegend .wi-lg').length === 5,
-     String(root.querySelectorAll('.wi-slegend .wi-lg').length));
+     root.querySelectorAll('[data-part="slegend"] .wi-lg').length === 5,
+     String(root.querySelectorAll('[data-part="slegend"] .wi-lg').length));
 
   ok('die Zeichenschleife läuft', env.rafs > 0);
   ok('und die beiden Knöpfe sind frei',
@@ -1271,11 +1333,51 @@ async function testSoloUeben() {
   await wait(20);
   const sets = root.querySelector('[data-part="setsov"]');
   ok('die Einstellungen gehen auf', sets.hidden === false);
-  ok('beide Units stehen zur Wahl', root.querySelectorAll('.wi-setchip').length === 2);
-  ok('und beide sind an — leer heißt „alles"',
-     root.querySelectorAll('.wi-setchip.is-on').length === 2);
+  // Die Units sind seit 10.09.2026 in der Leiste. Hier stehen nur
+  // noch Richtung und Abfrage-Art.
+  ok('und tragen keine Unit-Kacheln mehr',
+     root.querySelectorAll('.wi-setchip').length === 0);
+  ok('dafür beide Segment-Schalter',
+     root.querySelectorAll('[data-part="solodir"] .wi-modebtn').length === 3 &&
+     root.querySelectorAll('[data-part="solomode"] .wi-modebtn').length === 2);
 
-  click(root.querySelector('.wi-setchip'), document);
+  click(root.querySelector('[data-part="setsclose"]'), document);
+  ok('und wieder zu', sets.hidden === true);
+  tool.unmount();
+}
+
+/* ══════════════════════════════════════════════════════════
+   Die Unit-Leiste (10.09.2026)
+   ══════════════════════════════════════════════════════════
+   Sönke: „am Rand die Unit-Liste […] Ich kann eine durch
+   Draufklicken aktivieren oder deaktivieren […] Jede Unit hat das i
+   an der Seite."
+
+   Geprüft wird das, was in einer Klasse als „geht nicht" auffiele:
+   die Liste steht, der Schalter geht an den Server, das „i" holt die
+   Unit und schreibt eine Vokabelliste, und die letzte Unit lässt
+   sich nicht abschalten. */
+async function testUnitLeiste() {
+  console.log('\n— Die Unit-Leiste —');
+  const { tool, root, calls, ctx, document } = await mountSolo(soloView(40, i => i % 5), {
+    wi_solo_settings: args => ({ ok: true, settings: { sets: args.p_sets } }),
+    wi_solo_unit: args => soloUnit(args.p_set, 40, i => i % 5)
+  });
+
+  const leiste = root.querySelector('[data-part="units"]');
+  ok('die Leiste steht', leiste && leiste.hidden === false);
+  const zeilen = root.querySelectorAll('.wi-urow');
+  ok('eine Zeile je Unit', zeilen.length === 2, String(zeilen.length));
+  ok('und beide sind an — leer heißt „alles"',
+     root.querySelectorAll('.wi-urow.is-on').length === 2);
+  /* Die Stufenpunkte je Unit kommen aus words_list und nicht vom
+     Server: 20 Wörter je Unit über fünf Stufen. */
+  ok('jede Unit zeigt ihre Stufen',
+     zeilen[0].querySelectorAll('.wi-lg').length === 5,
+     String(zeilen[0].querySelectorAll('.wi-lg').length));
+
+  /* ── Abwählen ─────────────────────────────────────────────── */
+  click(zeilen[0].querySelector('.wi-utoggle'), document);
   await wait(30);
   const letzte = calls.filter(c => c[0] === 'wi_solo_settings').pop();
   ok('das Abwählen geht an den Server', !!letzte && Array.isArray(letzte[1].p_sets),
@@ -1283,9 +1385,176 @@ async function testSoloUeben() {
   ok('und zwar ohne die abgewählte Unit',
      letzte && letzte[1].p_sets.length === 1 && letzte[1].p_sets[0] === 'set-b',
      JSON.stringify(letzte && letzte[1].p_sets));
+  ok('die Zeile ist danach blass',
+     root.querySelectorAll('.wi-urow.is-on').length === 1);
 
-  click(root.querySelector('[data-part="setsclose"]'), document);
-  ok('und wieder zu', sets.hidden === true);
+  /* Die LETZTE bleibt an. Am Server heißt „nichts gewählt" nämlich
+     „alles" — wer sie ausschalten könnte, bekäme alle zurück. */
+  const vorher = calls.filter(c => c[0] === 'wi_solo_settings').length;
+  ctx.toasts.length = 0;
+  click(root.querySelectorAll('.wi-urow')[1].querySelector('.wi-utoggle'), document);
+  await wait(30);
+  ok('die letzte Unit lässt sich nicht abschalten',
+     calls.filter(c => c[0] === 'wi_solo_settings').length === vorher &&
+     ctx.toasts.length === 1, ctx.toasts.join(' · '));
+  ok('und es steht auch da, warum',
+     /Unit/.test(ctx.toasts[0] || ''), ctx.toasts[0]);
+
+  /* ── Das „i" ──────────────────────────────────────────────── */
+  click(root.querySelectorAll('.wi-urow')[0].querySelector('.wi-uinfo'), document);
+  await wait(40);
+  ok('das „i" holt die Unit',
+     calls.some(c => c[0] === 'wi_solo_unit' && c[1].p_set === 'set-a'),
+     JSON.stringify(calls.filter(c => c[0] === 'wi_solo_unit').map(c => c[1])));
+  const det = root.querySelector('[data-part="udet"]');
+  ok('die Übersicht ersetzt die Liste',
+     det.hidden === false && root.querySelector('[data-part="ulist"]').hidden === true);
+  ok('mit der Gesamt-Tabelle der Unit',
+     det.querySelectorAll('.wi-stgrid .wi-stdir').length === 2);
+  const woerter = det.querySelectorAll('.wi-wrow');
+  ok('und einer Zeile je Wort', woerter.length === 20, String(woerter.length));
+  ok('jede Zeile trägt ihr Monster und ihr Wort',
+     woerter[0].querySelector('.wi-wmon') &&
+     /wort0/.test(woerter[0].textContent), woerter[0].textContent.trim().slice(0, 40));
+  ok('und vier Zahlen', woerter[1].querySelectorAll('.wi-wnum b').length === 4);
+
+  /* Die Zahlen der Zeile sind die Summe beider Richtungen —
+     [2,1,4,1] + [3,0,3,0] = richtig 5, mit Hilfe 1, falsch 1,
+     gesamt 7. */
+  const zahlen = [...woerter[1].querySelectorAll('.wi-wnum b')].map(b => b.textContent.trim());
+  ok('und die Summe stimmt', zahlen.join('/') === '5/1/1/7', zahlen.join('/'));
+
+  click(woerter[1], document);
+  await wait(20);
+  ok('ein Tipp auf die Zeile klappt beide Richtungen auf',
+     det.querySelectorAll('.wi-wdet').length === 1 &&
+     det.querySelectorAll('.wi-wdet .wi-stdir').length === 2);
+  click(det.querySelectorAll('.wi-wrow')[1], document);
+  await wait(20);
+  ok('und wieder zu', det.querySelectorAll('.wi-wdet').length === 0);
+
+  /* Zweimal dieselbe Unit = ein Aufruf. Eine Unit ändert sich
+     zwischen zwei Übungen nicht. */
+  const rufe = calls.filter(c => c[0] === 'wi_solo_unit').length;
+  click(det.querySelector('[data-zurueck]'), document);
+  await wait(20);
+  ok('„zurück" zeigt wieder die Liste',
+     root.querySelector('[data-part="ulist"]').hidden === false && det.hidden === true);
+  click(root.querySelectorAll('.wi-urow')[0].querySelector('.wi-uinfo'), document);
+  await wait(40);
+  ok('und die zweite Ansicht kommt aus dem Speicher',
+     calls.filter(c => c[0] === 'wi_solo_unit').length === rufe, String(rufe));
+
+  /* ── Einklappen ───────────────────────────────────────────── */
+  click(root.querySelector('[data-part="ugriff"]'), document);
+  await wait(20);
+  ok('der Griff klappt die Leiste zu',
+     leiste.classList.contains('is-zu') &&
+     root.querySelector('[data-part="ubody"]').hidden === true);
+  click(root.querySelector('[data-part="ugriff"]'), document);
+  await wait(20);
+  ok('und wieder auf',
+     !leiste.classList.contains('is-zu') &&
+     root.querySelector('[data-part="ubody"]').hidden === false);
+
+  tool.unmount();
+}
+
+/* Der Tipp auf eine Echse. Er ist der einzige Griff im ganzen
+   Werkzeug, der nicht auf ein DOM-Element zeigt: die Tiere liegen
+   auf einer Leinwand, getroffen wird gegen das zuletzt gezeichnete
+   Bild. */
+async function testTierTipp() {
+  console.log('\n— Eine Echse antippen —');
+  const { tool, root, calls, document } = await mountSolo(soloView(40, i => i % 5), {
+    wi_solo_unit: args => soloUnit(args.p_set, 40, i => i % 5)
+  }, { live: true });
+  // Ein paar Bilder, damit die Herde steht und ihre Geometrie
+  // frisch ist.
+  await wait(60);
+
+  const karte = root.querySelector('[data-part="card"]');
+  ok('das Kärtchen ist zu, solange niemand tippt', karte.hidden === true);
+
+  const treffer = tippeAufTier(root, document);
+  ok('ein Tipp auf ein Tier öffnet das Kärtchen', !!treffer,
+     treffer ? `bei ${treffer.x}/${treffer.y}` : 'kein Tier getroffen');
+  if (treffer) {
+    await wait(40);
+    ok('und darin steht die Vokabel', /wort\d/.test(karte.textContent),
+       karte.textContent.trim().slice(0, 60).replace(/\s+/g, ' '));
+    ok('mit beiden Richtungen',
+       karte.querySelectorAll('.wi-stgrid .wi-stdir').length === 2);
+    ok('geholt wurde die Unit des Wortes',
+       calls.some(c => c[0] === 'wi_solo_unit'),
+       JSON.stringify(calls.filter(c => c[0] === 'wi_solo_unit').map(c => c[1])));
+
+    click(karte.querySelector('[data-zu]'), document);
+    ok('der Schließer macht es wieder zu', karte.hidden === true);
+  }
+
+  /* Ein Ziehen ist kein Tipp. Ohne diese Trennung wäre das
+     Verschieben der Insel unbenutzbar: bei jedem Loslassen spränge
+     ein Kärtchen auf. */
+  const stage = root.querySelector('[data-part="stage"]');
+  zeig(stage, document, 'pointerdown', 600, 300);
+  zeig(stage, document, 'pointermove', 700, 380);
+  zeig(stage, document, 'pointerup', 700, 380);
+  ok('ein Ziehen öffnet nichts', karte.hidden === true);
+
+  tool.unmount();
+}
+
+/* Eine Datenbank ohne 0142: words_list kommt ohne `u`. Das ist
+   NICHT „die Wörter gehören zu keiner Unit" — es darf also nichts
+   blass werden und nichts abstürzen. */
+async function testUnitsOhneMigration() {
+  console.log('\n— Unit-Leiste ohne Migration 0142 —');
+  const { tool, root, env, document } = await mountSolo(soloView(30, () => 1, true), {
+    wi_solo_unit: () => ({ ok: false, error: 'fn_missing' })
+  }, { live: true });
+  await wait(60);
+
+  ok('die Insel steht trotzdem', root.querySelectorAll('.wi-cell').length > 100);
+  ok('die Leiste auch', root.querySelectorAll('.wi-urow').length === 2);
+  ok('nur ohne Stufenpunkte je Unit',
+     root.querySelectorAll('.wi-urow .wi-lg').length === 0);
+  ok('und die Zeichenschleife läuft ohne Fehler',
+     env.rafFehler.length === 0,
+     env.rafFehler.slice(0, 2).map(e => e.message).join(' · '));
+
+  click(root.querySelector('.wi-uinfo'), document);
+  await wait(40);
+  const det = root.querySelector('[data-part="udet"]');
+  ok('das „i" sagt, dass die Migration fehlt — und nennt die Nummer',
+     /0142/.test(det.textContent), det.textContent.trim().slice(0, 80));
+  tool.unmount();
+}
+
+/* Eine abgewählte Unit wird blass gezeichnet, eine hervorgehobene
+   bekommt einen Ring. Beides passiert auf der Leinwand und ist
+   deshalb nicht abzulesen — was hier geprüft wird, ist, dass die
+   Zeichenschleife dabei nicht auf die Nase fällt. Genau das wäre
+   der teure Fehler: eine Insel, die nach einem Klick stehen
+   bleibt. */
+async function testBlassUndRing() {
+  console.log('\n— Blass und hervorgehoben —');
+  const { tool, root, env, document } = await mountSolo(soloView(40, i => i % 5), {
+    wi_solo_settings: args => ({ ok: true, settings: { sets: args.p_sets } }),
+    wi_solo_unit: args => soloUnit(args.p_set, 40, i => i % 5)
+  }, { live: true });
+  await wait(40);
+
+  click(root.querySelectorAll('.wi-urow')[0].querySelector('.wi-utoggle'), document);
+  await wait(40);
+  click(root.querySelectorAll('.wi-urow')[1].querySelector('.wi-uinfo'), document);
+  await wait(80);
+  const bilder = env.rafs;
+  await wait(60);
+
+  ok('die Schleife läuft weiter', env.rafs > bilder, `${bilder} → ${env.rafs}`);
+  ok('und zwar ohne Fehler', env.rafFehler.length === 0,
+     env.rafFehler.slice(0, 2).map(e => e.message).join(' · '));
   tool.unmount();
 }
 
@@ -1660,6 +1929,10 @@ async function testSoloOhneMigration() {
   await testStats();
   await testPunkte();
   await testSoloOhneMigration();
+  await testUnitLeiste();
+  await testTierTipp();
+  await testUnitsOhneMigration();
+  await testBlassUndRing();
   console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');
   process.exit(fails ? 1 : 0);
 })();

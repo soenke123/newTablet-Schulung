@@ -3239,9 +3239,13 @@
     }
     const w = (b - a) + 2.2, h = (d - c) + 2.2;
     const mx = (a + b) / 2, my = (c + d) / 2;
+    /* Gerechnet wird gegen das FREIE Fenster: die Unit-Leiste liegt
+       über der Bühne, und eine Insel, die brav in der Mitte der
+       Leinwand sitzt, säße zur Hälfte hinter der Leiste. */
+    const frei = Math.max(80, sicht.w - randLinks);
     kamera.k = Math.min(4, Math.max(.6,
-      Math.min(sicht.w * .92 / (w * sicht.s), sicht.h * .92 / (h * sicht.s))));
-    kamera.tx = sicht.w / 2 - kamera.k * (sicht.ox + mx * sicht.s);
+      Math.min(frei * .92 / (w * sicht.s), sicht.h * .92 / (h * sicht.s))));
+    kamera.tx = randLinks + frei / 2 - kamera.k * (sicht.ox + mx * sicht.s);
     kamera.ty = sicht.h / 2 - kamera.k * (sicht.oy + my * sicht.s);
     kameraAnwenden();
   }
@@ -3250,7 +3254,15 @@
      feedback_field_gestures_capture_phase). */
   function soloPanZoom(stage) {
     const pts = new Map();
-    let basis = null, letzterTipp = 0;
+    let basis = null, letzterTipp = 0, letzterOrt = null;
+    /* Ein Tipp ist ein Ziehen, das nicht stattgefunden hat. Gemessen
+       wird der weiteste Weg und nicht der Abstand zwischen Anfang und
+       Ende: wer hin und zurück wischt, hat gezogen und nicht getippt.
+
+       `tippAus` sperrt den zweiten Tipp eines Doppeltipps. Der setzt
+       die Kamera zurück — und würde sonst zusätzlich ein Tier
+       auswählen, das nach dem Sprung ganz woanders steht. */
+    let start = null, weg = 0, startZeit = 0, tippAus = false;
 
     const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
     const mitte = () => { const [a, b] = [...pts.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
@@ -3260,13 +3272,28 @@
     };
 
     stage.addEventListener('pointerdown', e => {
-      pts.set(e.pointerId, lokal(e));
+      const p = lokal(e);
+      pts.set(e.pointerId, p);
       if (pts.size === 2) basis = { d: dist(), m: mitte(), k: kamera.k, tx: kamera.tx, ty: kamera.ty };
-      // Doppeltipp setzt zurück — der einfachste Ausweg aus jedem
-      // verrutschten Bild, und man findet ihn ohne Erklärung.
+      if (pts.size === 1) { start = p; weg = 0; startZeit = performance.now(); tippAus = false; }
+      else { tippAus = true; }
+      /* Doppeltipp setzt zurück — der einfachste Ausweg aus jedem
+         verrutschten Bild, und man findet ihn ohne Erklärung.
+
+         Seit 10.09.2026 zählt dabei auch der ORT: zwei Tipps sind
+         nur dann einer, wenn sie fast an derselben Stelle liegen.
+         Vorher genügte die Zeit — und seit man Tiere antippen kann,
+         wäre das falsch: wer zwei Echsen kurz hintereinander
+         ansieht, hätte statt der zweiten Auskunft einen Kamerasprung
+         bekommen. */
       const jetzt = performance.now();
-      if (jetzt - letzterTipp < 320 && pts.size === 1) kameraAufHauptinsel();
+      const nah = letzterOrt && Math.hypot(p.x - letzterOrt.x, p.y - letzterOrt.y) < 30;
+      if (jetzt - letzterTipp < 320 && nah && pts.size === 1) {
+        kameraAufHauptinsel();
+        tippAus = true;
+      }
       letzterTipp = jetzt;
+      letzterOrt = p;
     }, { capture: true });
 
     stage.addEventListener('pointermove', e => {
@@ -3274,6 +3301,7 @@
       const vor = pts.get(e.pointerId);
       const jetzt = lokal(e);
       pts.set(e.pointerId, jetzt);
+      if (start) weg = Math.max(weg, Math.hypot(jetzt.x - start.x, jetzt.y - start.y));
 
       if (pts.size === 2 && basis) {
         const f = dist() / (basis.d || 1);
@@ -3295,7 +3323,25 @@
       }
     }, { capture: true, passive: false });
 
-    const hoch = e => { pts.delete(e.pointerId); if (pts.size < 2) basis = null; };
+    /* Der Tipp auf ein Tier. Er wird beim LOSLASSEN entschieden und
+       nicht beim Aufsetzen: vorher weiß niemand, ob daraus ein Ziehen
+       wird — und ein Kärtchen, das beim Wischen aufspringt, machte
+       das Verschieben der Insel unbenutzbar.
+
+       Getroffen wird gegen das letzte gezeichnete Bild (tierBei).
+       Daneben getippt heißt: Kärtchen zu. Das ist der Griff, den man
+       ohne Erklärung findet. */
+    const hoch = e => {
+      const war = pts.get(e.pointerId);
+      pts.delete(e.pointerId);
+      if (pts.size < 2) basis = null;
+      if (e.type !== 'pointerup' || pts.size || !war || !start) { start = null; return; }
+      const kurz = performance.now() - startZeit < 700;
+      if (!tippAus && kurz && weg < 10 && solo && welt.isl) {
+        tierWaehlen(tierBei(war.x, war.y), war.x, war.y);
+      }
+      start = null;
+    };
     stage.addEventListener('pointerup', hoch, { capture: true });
     stage.addEventListener('pointercancel', hoch, { capture: true });
 
@@ -3314,15 +3360,118 @@
 
   /* ─── Zeichnen ──────────────────────────────────────────────── */
   let c2d = null, raf = 0, letzterT = 0, simZeit = 0, nacht = 0;
+  /* Die Tiere des letzten Bildes, in Zeichenreihenfolge. Nur sie
+     haben frische Bildschirmkoordinaten — und nur auf sie kann ein
+     Finger deshalb zeigen. */
+  let sichtbar = [];
+
+  /* Das wache Bild. Eigene Funktion, weil es einen zweiten Ort gibt,
+     der es braucht und dem der Schlaf egal ist: das kleine Monster in
+     der Vokabelliste (monsterUrl). Ein schlafendes Tier in einer
+     Liste sähe aus wie ein anderes Tier. */
+  function wachSchluessel(stufe, variante) {
+    if (stufe === 0) return 'ei';
+    if (stufe === 1) return 's1';
+    if (stufe === 2) return 's2';
+    return 's3' + variante;
+  }
 
   function schluesselFuer(t) {
-    const schlaeft = t.zustand === 'schlafen';
-    if (t.stufe === 0) return 'ei';
-    if (t.stufe === 1) return schlaeft ? 's1z' : 's1';
-    if (t.stufe === 2) return schlaeft ? 's2z' : 's2';
-    return 's3' + t.variante + (schlaeft ? 'z' : '');
+    const k = wachSchluessel(t.stufe, t.variante);
+    return (t.zustand === 'schlafen' && t.stufe > 0) ? k + 'z' : k;
   }
   const bildFuer = t => sprites[schluesselFuer(t)][t.farbe];
+
+  /* ─── Blass, weil abgewählt ─────────────────────────────────
+     Sönke: „auf der Insel sind Echsen von deaktivierten Units leicht
+     entsättigt." Das ist die ehrlichste Anzeige für „gehört dir,
+     kommt aber gerade nicht dran": das Tier verschwindet nicht (es
+     ist ja da), es tritt nur zurück.
+
+     Gerechnet wird das EINMAL je Bildschlüssel und Farbe, mit
+     derselben Technik wie das Einfärben (faerbeSatz): Bildpunkte
+     lesen, zur Helligkeit hin mischen, zurückschreiben. Höchstens
+     neun mal acht Bilder, und gebaut nur für das, was wirklich
+     abgewählt ist.
+
+     Kein ctx.filter: der ist auf älteren iPads nicht verlässlich, und
+     ein Filter je Tier und Bild wäre bei fünfhundert Tieren ohnehin
+     der teuerste Posten der Schleife. */
+  const GRAU = .55;
+
+  function grauBild(k, farbe) {
+    const schl = k + '|' + farbe;
+    if (grauCache.has(schl)) return grauCache.get(schl);
+    const im = sprites[k][farbe];
+    let out = im;
+    try {
+      const c = neuCanvas(im.width, im.height);
+      const x = c.getContext('2d');
+      x.drawImage(im, 0, 0);
+      const d = x.getImageData(0, 0, im.width, im.height);
+      const p = d.data;
+      for (let i = 0; i < p.length; i += 4) {
+        if (!p[i + 3]) continue;
+        const l = p[i] * .30 + p[i + 1] * .59 + p[i + 2] * .11;
+        p[i]     += (l - p[i])     * GRAU;
+        p[i + 1] += (l - p[i + 1]) * GRAU;
+        p[i + 2] += (l - p[i + 2]) * GRAU;
+      }
+      x.putImageData(d, 0, 0);
+      out = c;
+    } catch (e) {
+      // Kein Grund, deshalb die Insel abzuschalten: dann ist das
+      // Tier eben bunt wie die anderen.
+      out = im;
+    }
+    grauCache.set(schl, out);
+    return out;
+  }
+
+  /* Ein Wort ohne Unit ist NICHT abgewählt, sondern von einer
+     Datenbank ohne Migration 0142. Solche Tiere bleiben bunt. */
+  function tierBlass(t) {
+    if (!solo) return false;
+    const u = solo.setVon.get(t.id);
+    return u ? !solo.aktiv.has(u) : false;
+  }
+
+  /* Die Ringe unter den hervorgehobenen Tieren. Sie liegen VOR den
+     Tieren auf dem Boden — ein Ring über dem Tier wäre ein Reifen um
+     den Bauch. Das einzelne angetippte Tier pulst, die Tiere einer
+     Unit stehen ruhig: „diese eine" muss sich von „alle diese"
+     unterscheiden, ohne dass es jemand erklärt. */
+  function ringeMalen(liste, zeit) {
+    for (const t of liste) {
+      if (!t._hell) continue;
+      const einzeln = t.id === tierOffen;
+      const puls = einzeln ? .86 + .14 * Math.sin(zeit * 3.2) : 1;
+      const r = t._h * .40 * puls;
+      c2d.beginPath();
+      c2d.ellipse(t._px, t._by, r, r * .42, 0, 0, 6.2832);
+      c2d.fillStyle = einzeln ? 'rgba(255,226,140,.22)' : 'rgba(255,207,77,.14)';
+      c2d.fill();
+      c2d.lineWidth = Math.max(1.4, t._h * (einzeln ? .05 : .035));
+      c2d.strokeStyle = einzeln ? 'rgba(255,232,160,.95)' : 'rgba(255,207,77,.60)';
+      c2d.stroke();
+    }
+  }
+
+  /* Welches Tier liegt unter diesem Punkt? Die Zeichenschleife legt
+     die Geometrie jedes sichtbaren Tieres ohnehin schon hin (_mx,
+     _my, _w, _h — in CSS-Pixeln der Bühne), hier wird sie nur noch
+     gelesen. Rückwärts, weil das ZULETZT gemalte oben liegt.
+
+     Die Zugabe von sechs Pixeln ist für die Eier: sie sind klein,
+     und ein Finger ist es nicht. */
+  function tierBei(x, y) {
+    for (let i = sichtbar.length - 1; i >= 0; i--) {
+      const t = sichtbar[i];
+      const hw = t._w / 2 + 6, hh = t._h / 2 + 6;
+      if (x >= t._mx - hw && x <= t._mx + hw && y >= t._my - hh && y <= t._my + hh) return t;
+    }
+    return null;
+  }
 
   function zeichne(now) {
     if (destroyed || role !== 'solo') { raf = 0; return; }
@@ -3377,6 +3526,11 @@
     /* Die ganze Geometrie EINMAL je Tier und Bild — Lichtschein,
        Glühen und Funken brauchen alle dasselbe, und viermal
        gerechnet wäre bei 500 Tieren der teuerste Posten. */
+    /* Hervorgehoben wird über die Insel und nicht am Tier: solange
+       niemand etwas ausgewählt hat, sind ALLE hell — sonst müsste man
+       den Normalfall erst herstellen. */
+    const etwasHervor = !!(markiert || tierOffen);
+
     const zuMalen = [];
     for (let i = 0; i < tiere.length; i++) {
       const t = tiere[i];
@@ -3384,8 +3538,18 @@
       const px = sxp(t.x), py = syp(t.y + gy - t.z);
       if (px < l0 || px > l1 || py < t0 || py > t1) continue;
 
-      const im = bildFuer(t);
-      const m = ECHSE.bilder[schluesselFuer(t)];
+      const schl = schluesselFuer(t);
+      const blass = tierBlass(t);
+      const im = blass ? grauBild(schl, t.farbe) : sprites[schl][t.farbe];
+      const m = ECHSE.bilder[schl];
+      t._hell = !etwasHervor
+        || (markiert && markiert.has(t.id))
+        || t.id === tierOffen;
+      /* Eine Zahl für beides — Blässe und Zurücktreten wirken auf
+         dasselbe: wie laut dieses Tier gerade sein darf. Glühen und
+         Funken lesen sie mit, sonst leuchtete nachts ein abgewähltes
+         Tier so hell wie ein bearbeitetes. */
+      t._a = (t._hell ? 1 : .32) * (blass ? .82 : 1);
       // Der Maßstab hängt an der STUFE, nicht am Bild — deshalb
       // wächst nichts beim Einschlafen.
       let e = STUFE_EINHEIT[t.stufe] * P / ECHSE.blatt.h;
@@ -3416,6 +3580,9 @@
        eines, das weiter vorne steht, nur weil es hoch in der Luft
        ist. */
     zuMalen.sort((a, b) => a.y - b.y);
+    // Ab hier steht fest, was auf dem Schirm ist und wo — genau das
+    // braucht der Finger (tierBei).
+    sichtbar = zuMalen;
 
     const glow = nacht;
 
@@ -3427,15 +3594,19 @@
         const g = GLUEHEN[t.stufe];
         if (g <= 0) continue;
         const w = t._h * 1.9;
-        c2d.globalAlpha = Math.min(.6, g * glow * .22);
+        c2d.globalAlpha = Math.min(.6, g * glow * .22 * t._a);
         c2d.drawImage(flecken[t.farbe], t._mx - w / 2, t._by - w * .19, w, w * .38);
       }
       c2d.globalAlpha = 1;
       c2d.globalCompositeOperation = 'source-over';
     }
 
-    // 2 · Die Tiere.
+    // 2 · Die Ringe der Hervorgehobenen — unter den Tieren.
+    if (etwasHervor) ringeMalen(zuMalen, simZeit);
+
+    // 3 · Die Tiere.
     for (const t of zuMalen) {
+      c2d.globalAlpha = t._a;
       if (t.flip) {
         /* Gespiegelt wird um den ANKER und nicht um die Bildmitte:
            sonst rutscht ein Tier beim Richtungswechsel seitlich weg,
@@ -3448,8 +3619,9 @@
         c2d.drawImage(t._im, t._x, t._y, t._w, t._h);
       }
     }
+    c2d.globalAlpha = 1;
 
-    /* 3 · Die Nacht auf den Tieren. `source-atop` und nicht
+    /* 4 · Die Nacht auf den Tieren. `source-atop` und nicht
            `multiply`: eine Mischart malte auch dorthin, wo gar kein
            Tier steht, und machte aus der halben Bühne einen blauen
            Kasten. */
@@ -3460,7 +3632,7 @@
       c2d.globalCompositeOperation = 'source-over';
     }
 
-    // 4 · Das Eigenglühen — nach dem Schleier, sonst löschte er es
+    // 5 · Das Eigenglühen — nach dem Schleier, sonst löschte er es
     //     gleich wieder aus.
     if (glow > .01) {
       c2d.globalCompositeOperation = 'lighter';
@@ -3475,11 +3647,11 @@
         // Ein leises Atmen. Dreihundert exakt gleich helle Punkte
         // sähen aus wie eine Lichterkette.
         const puls = .82 + .18 * Math.sin(simZeit * 1.5 + t.phase);
-        c2d.globalAlpha = Math.min(1, g * glow * .38 * puls);
+        c2d.globalAlpha = Math.min(1, g * glow * .38 * puls * t._a);
         c2d.drawImage(flecken[t.farbe], t._mx - w / 2, t._my - w / 2, w, w);
       }
 
-      /* 5 · Die Funken. Sie gehören nicht nur zur Stufe 4: schon ein
+      /* 6 · Die Funken. Sie gehören nicht nur zur Stufe 4: schon ein
              geschlüpftes Tier lässt zwei Fünkchen steigen, und mit
              jeder Stufe werden es mehr — dadurch liest sich der
              Fortschritt nachts nicht nur an der Helligkeit ab,
@@ -3502,7 +3674,7 @@
           const auf = Math.sin(u * Math.PI);
           const flackern = .55 + .45 * Math.sin(simZeit * 5.3 + eigen * 7);
           const fs = H * (.20 - .09 * u) * (.7 + .3 * auf);
-          c2d.globalAlpha = Math.min(1, glow * auf * flackern * (t.stufe >= 4 ? .95 : .62));
+          c2d.globalAlpha = Math.min(1, glow * auf * flackern * t._a * (t.stufe >= 4 ? .95 : .62));
           c2d.drawImage(spark, fx - fs / 2, fy - fs / 2, fs, fs);
           if (t.stufe >= 4) {
             const ws = fs * .5;
@@ -3514,7 +3686,7 @@
       c2d.globalCompositeOperation = 'source-over';
     }
 
-    /* 6 · Der Jubel. Ein Tier, das gerade eine Stufe gestiegen ist,
+    /* 7 · Der Jubel. Ein Tier, das gerade eine Stufe gestiegen ist,
            wirft einen Funkenkranz — und zwar zu JEDER Tageszeit und
            nach dem Nachtschleier, damit man ihn auch am hellen Tag
            sieht.
@@ -3564,6 +3736,31 @@
         </div>
       </div>
 
+      <!-- ── Die Unit-Leiste ────────────────────────────────────
+           Sie liegt ÜBER der Bühne und ist trotzdem deren
+           Geschwister und nicht ihr Kind: soloPanZoom hängt in der
+           Einfang-Phase an der Bühne und schluckte sonst jeden Tipp
+           auf die Leiste (Regel: feedback_field_gestures_capture_phase).
+
+           Die Insel wird nicht verkleinert, sondern auf den REST
+           zentriert — die Tiere laufen weiter über die ganze
+           Leinwand, nur die Kamera weiß von einem linken Rand. -->
+      <aside class="wi-units" data-part="units" hidden>
+        <button type="button" class="wi-ugriff" data-part="ugriff" aria-expanded="true">
+          <span>Units</span><i class="wi-uchev" aria-hidden="true"></i>
+        </button>
+        <div class="wi-ubody" data-part="ubody">
+          <div class="wi-ulist" data-part="ulist"></div>
+          <div class="wi-udet" data-part="udet" hidden></div>
+        </div>
+      </aside>
+
+      <!-- Das Kärtchen an der angetippten Echse. Es steht dort, wo
+           der Finger war, und nicht an einem festen Platz: die Frage
+           heißt „welches Wort ist DIESES Tier", und die Antwort
+           gehört daneben. -->
+      <div class="wi-card" data-part="card" hidden></div>
+
       <header class="wi-sbar">
         <div class="wi-scount">
           <b data-part="swords">0</b><span>Wörter</span>
@@ -3578,22 +3775,22 @@
         <button type="button" class="wi-btn" data-part="sgo" disabled>Vokabeln üben</button>
       </header>
 
-      <!-- Einstellungen: dieselben drei Schalter wie am Pult, nur auf
-           das beschränkt, was freigespielt ist. Kasten, Kopfzeile und
-           Schließer sind wörtlich die des Pults (.wi-ov*) — wer beide
-           Seiten benutzt, soll nichts Neues lernen müssen, und die
-           Regeln dafür stehen schon da. -->
+      <!-- Einstellungen: die zwei Schalter, die nicht auf die Insel
+           gehören. Kasten, Kopfzeile und Schließer sind wörtlich die
+           des Pults (.wi-ov*) — wer beide Seiten benutzt, soll nichts
+           Neues lernen müssen, und die Regeln dafür stehen schon da.
+
+           Die Unit-Kacheln standen bis 10.09.2026 hier oben drüber.
+           Sie sind in die Leiste umgezogen: dort sieht man, was das
+           Auswählen auf der Insel BEWIRKT, und zwei Orte für denselben
+           Schalter wären eine Frage zu viel. -->
       <div class="wi-ov" data-part="setsov" hidden>
         <div class="wi-ovbox">
           <div class="wi-ovhead">
-            <span class="wi-ovtitle">Was übe ich?</span>
+            <span class="wi-ovtitle">Wie übe ich?</span>
             <button type="button" class="wi-ovclose" data-part="setsclose" aria-label="Schließen">×</button>
           </div>
           <div class="wi-ovbody">
-            <span class="wi-modelab">Meine Units</span>
-            <p class="wi-hint">Freigespielt hat sie deine Lehrkraft — hier suchst du aus,
-              woran du gerade arbeitest.</p>
-            <div class="wi-solosets" data-part="solosets"></div>
             <span class="wi-modelab">Richtung</span>
             <div class="wi-modeseg" data-part="solodir"></div>
             <span class="wi-modelab">Wie gefragt wird</span>
@@ -3705,9 +3902,30 @@
      daran. Geholt wird einmal beim Öffnen, danach führt der Client
      die Stufen selbst nach — die Antwort des Servers sagt ihm ja,
      was aus dem Wort geworden ist. */
-  let solo = null;          // { seed, words, sets, settings, stufen: Map }
+  let solo = null;          // { seed, words, sets, settings, stufen: Map, setVon: Map, aktiv: Set }
   let soloTask = null;
   let soloLockT = 0;
+
+  /* ─── Was gerade hervorgehoben ist ──────────────────────────
+     Drei Zustände nebeneinander, und sie meinen verschiedene Dinge:
+
+       markiert   die Tiere EINER Unit (das „i" in der Leiste)
+       tierOffen  das EINE angetippte Tier (das Kärtchen)
+       randLinks  wie viel Platz die Leiste der Insel wegnimmt
+
+     Sie liegen hier draußen und nicht in `solo`, weil die
+     Zeichenschleife sie bei jedem Bild anfasst — und weil sie eine
+     Insel überdauern dürfen, ohne dass jemand sie mitschleppt. */
+  let unitsAuf = false;
+  let unitOffen = null;     // { id, daten|null, auf: Set<itemId> }
+  let markiert = null;      // Set<itemId> | null
+  let tierOffen = null;     // itemId
+  let randLinks = 0;
+  const unitCache = new Map();   // setId → Antwort von wi_solo_unit
+  const grauCache = new Map();   // `${schlüssel}|${farbe}` → blasse Leinwand
+  const monsCache = new Map();   // `${schlüssel}|${farbe}` → data:-URL für die Liste
+
+  const WI_UNITS_KEY = 'mpskills.wordisland.units';
 
   const SOLO_DIR = [
     ['mixed', 'gemischt'], ['de_en', 'Deutsch → Englisch'], ['en_de', 'Englisch → Deutsch']
@@ -3725,7 +3943,9 @@
       stage: q('stage'), mapwrap2: q('mapwrap2'), map: q('map'),
       veil: q('veil'), cvs: q('cvs'), load: q('load'), loadTxt: q('loadtxt'),
       sWords: q('swords'), sLegend: q('slegend'),
-      setsOv: q('setsov'), soloSets: q('solosets'),
+      units: q('units'), uGriff: q('ugriff'), uBody: q('ubody'),
+      uList: q('ulist'), uDet: q('udet'), card: q('card'),
+      setsOv: q('setsov'),
       soloDir: q('solodir'), soloMode: q('solomode'), modeHint: q('modehint'),
       playOv: q('playov'), pMeta: q('pmeta'), pMon: q('pmon'),
       pProg: q('pprog'), pProgI: q('pprogi'), pProgN: q('pprogn'),
@@ -3754,6 +3974,15 @@
       zeigeStats(false);
       zeigeDelta(0);
       kartHalt();
+      /* Wer geübt hat, hat Zahlen verändert — und die Übersichten in
+         der Leiste sind eine Momentaufnahme von vorher. Der Cache
+         geht weg, das Offene wird neu geholt. Beim Üben selbst
+         passiert das absichtlich NICHT: ein Aufruf je Antwort für
+         eine Liste, die gerade niemand ansieht, wäre der teuerste
+         Weg, dasselbe zu erfahren. */
+      unitVergessen();
+      if (unitOffen) unitDetail(unitOffen.id, true);
+      if (tierOffen) kartenNeu();
     });
 
     els.pInfo.addEventListener('click', e => {
@@ -3788,7 +4017,17 @@
       const b = e.target.closest('button');
       if (b) soloSend(b.dataset.v);
     });
-    els.soloSets.addEventListener('click', soloSetsClick);
+
+    /* Die Leiste. Alle drei Zuhörer sitzen an den UMSCHLIESSENDEN
+       Kästen: ihr Inhalt wird bei jeder Änderung neu geschrieben, an
+       den Zeilen selbst wären sie nach dem ersten Klick weg. */
+    els.uGriff.addEventListener('click', () => unitsSetzen(!unitsAuf));
+    els.uList.addEventListener('click', unitListeClick);
+    els.uDet.addEventListener('click', unitDetailClick);
+    els.card.addEventListener('click', e => {
+      if (e.target.closest('[data-zu]')) kartenZu();
+    });
+    unitsLaden();
 
     soloPanZoom(els.stage);
   }
@@ -3804,9 +4043,29 @@
       grown: v.learner.grown | 0,
       sets: v.learner.sets || [],
       settings: v.learner.settings || {},
-      stufen: new Map()
+      stufen: new Map(),
+      /* Wort → Unit. Ohne diese Karte wäre jedes Tier namenlos: die
+         Leiste könnte weder hervorheben noch blass zeichnen, und ein
+         Tipp auf eine Echse wüsste nicht, wo er nachfragen soll.
+         Kommt seit Migration 0142 als `u` mit (feld leer = ältere
+         Datenbank, siehe unitsAlt). */
+      setVon: new Map(),
+      /* Und dieselbe Zuordnung andersherum. Sie wird bei JEDER
+         Antwort gebraucht (die Stufenpunkte je Unit), und über
+         achthundert Wörter zu laufen, um dreißig zu finden, wäre der
+         teuerste Weg zu einer Zahl, die sich nie ändert: welches
+         Wort in welcher Unit liegt, steht für diese Sitzung fest. */
+      proSet: new Map(),
+      aktiv: new Set()
     };
-    for (const w of (v.words_list || [])) solo.stufen.set(w.i, w.s | 0);
+    for (const w of (v.words_list || [])) {
+      solo.stufen.set(w.i, w.s | 0);
+      if (!w.u) continue;
+      solo.setVon.set(w.i, w.u);
+      if (!solo.proSet.has(w.u)) solo.proSet.set(w.u, []);
+      solo.proSet.get(w.u).push(w.i);
+    }
+    aktivMerken();
 
     /* Wie viele Satelliten schon aufgetaucht sind. Die Hauptinsel
        steht immer — die kleinen kommen mit dem Wortschatz. */
@@ -3842,47 +4101,67 @@
       welt.nachStufe.set(id, t);
     }
 
+    /* Erst jetzt: vorher stünde die Leiste über „Deine Insel wird
+       gebaut …" und behauptete „Noch nichts freigespielt" — über eine
+       Insel, die es in diesem Augenblick noch gar nicht gibt. */
+    els.units.hidden = false;
     passeAn();
+    randMessen();
     kameraAufHauptinsel();
     renderSoloBar();
+    renderUnits();
     q('ssets').disabled = false;
     q('sgo').disabled = false;
     els.load.hidden = true;
     if (!raf) raf = requestAnimationFrame(zeichne);
   }
 
-  function renderSoloBar() {
-    if (!solo) return;
-    els.sWords.textContent = solo.words;
+  /* Die Stufen als Punktreihe. Einmal für die ganze Insel (untere
+     Leiste), einmal je Unit (Leiste links) — dieselbe Auskunft in
+     derselben Form, damit man sie nicht zweimal lesen lernen muss. */
+  function stufenLegende(ids) {
     const zaehl = [0, 0, 0, 0, 0];
-    for (const s of solo.stufen.values()) zaehl[Math.max(0, Math.min(4, s))]++;
+    for (const id of ids) {
+      const s = solo.stufen.get(id);
+      if (s === undefined) continue;
+      zaehl[Math.max(0, Math.min(4, s | 0))]++;
+    }
     /* Die Legende ist eine AUSKUNFT und keine Zierde: sie sagt, wo
        die Arbeit noch liegt. Stufen ohne Tiere werden weggelassen —
        eine Null erklärt nichts. */
-    els.sLegend.innerHTML = zaehl.map((n, s) => !n ? '' :
+    return zaehl.map((n, s) => !n ? '' :
       `<span class="wi-lg wi-lg--${s}" title="${esc(STUFEN_NAME[s])}">
          <i></i>${n}</span>`).join('');
   }
 
+  function renderSoloBar() {
+    if (!solo) return;
+    els.sWords.textContent = solo.words;
+    els.sLegend.innerHTML = stufenLegende(solo.stufen.keys());
+    // Nach einem Stufensprung stimmen auch die Punkte an der Unit
+    // sofort — es ist dieselbe Zahl, nur enger gefasst.
+    renderUnits();
+  }
+
   /* ─── Das eigene Menü ───────────────────────────────────────
-     Dieselben drei Schalter wie am Pult. Die Unit-Liste ist auf das
-     Freigespielte beschränkt — den Rest entscheidet das Kind, denn
-     WIE es übt, geht niemanden sonst etwas an. */
+     Nur noch zwei Schalter: WIE gefragt wird. WORAN gearbeitet wird,
+     steht seit 10.09.2026 in der Leiste links — dort sieht man, was
+     das Auswählen auf der Insel bewirkt. */
   function soloChosen() {
     const s = (solo.settings && solo.settings.sets) || [];
     return s.length ? s : solo.sets.map(x => x.id);
   }
 
+  /* Die gewählten Units als Menge, EINMAL gerechnet: die
+     Zeichenschleife fragt sie bei jedem Tier und jedem Bild ab, und
+     `Array.includes` wäre dort fünfhundertmal je Sechzigstel. */
+  function aktivMerken() {
+    if (!solo) return;
+    solo.aktiv = new Set(soloChosen());
+  }
+
   function renderSoloSets() {
     if (!solo) return;
-    const gewaehlt = new Set(soloChosen());
-    els.soloSets.innerHTML = solo.sets.length
-      ? solo.sets.map(s => `
-          <button type="button" class="wi-setchip${gewaehlt.has(s.id) ? ' is-on' : ''}"
-                  data-id="${esc(s.id)}">
-            <b>${esc(s.title)}</b><span>${s.count} Wörter</span>
-          </button>`).join('')
-      : '<p class="wi-hint">Noch nichts freigespielt.</p>';
 
     const seg = (host, paare, jetzt, beiWahl) => {
       host.innerHTML = paare.map(([v, t]) =>
@@ -3913,21 +4192,6 @@
         : 'Was du selbst tippst, bringt dein Tier am weitesten. Mit Hilfe zählt es weniger.');
   }
 
-  /* Die Unit-Kacheln werden bei jeder Änderung neu geschrieben —
-     der Zuhörer sitzt deshalb am UMSCHLIESSENDEN Kasten und wird
-     einmal in buildSolo angemeldet. An den Kacheln selbst wäre er
-     nach dem ersten Klick weg. */
-  function soloSetsClick(e) {
-    const b = e.target.closest('.wi-setchip');
-    if (!b) return;
-    const gewaehlt = new Set(soloChosen());
-    if (gewaehlt.has(b.dataset.id)) gewaehlt.delete(b.dataset.id);
-    else gewaehlt.add(b.dataset.id);
-    // Nichts gewählt heißt am Server „alles" — das ist derselbe
-    // Zustand wie „alles gewählt" und deshalb kein Fehler.
-    soloSetzen({ p_sets: [...gewaehlt] });
-  }
-
   async function soloSetzen(args) {
     const r = await ctx.actions.call('wi_solo_settings', args);
     if (!r.ok) { ctx.toast(ctx.errText(r.error)); return; }
@@ -3935,7 +4199,427 @@
     // Die laufende Aufgabe ist am Server weggefallen (sie könnte aus
     // einer abgewählten Unit stammen) — hier auch.
     soloTask = null;
+    aktivMerken();
     renderSoloSets();
+    renderUnits();
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Die Unit-Leiste
+     ══════════════════════════════════════════════════════════
+     Sönke, 10.09.2026: „am Rand die Unit-Liste […] Ich kann eine
+     durch Draufklicken aktivieren oder deaktivieren. Man spielt nur
+     die aktivierten Units, auf der Insel sind Echsen von
+     deaktivierten Units leicht entsättigt."
+
+     Der Schalter gab es schon (settings.sets), aber er lag als
+     Kachelgitter in einem Overlay: man wählte im Dunkeln und sah
+     nichts davon. Hier steht er neben der Insel, und die Insel
+     antwortet — blass ist, was gerade nicht drankommt.
+
+     Die Leiste macht darüber hinaus etwas, das keine Einstellung
+     kann: sie ERKLÄRT die Insel. Welches Tier gehört zu welcher
+     Unit, wie weit ist die Unit, welche Wörter stecken darin. */
+
+  /* Zugeklappt bleibt nur der Griff. Der Zustand hängt am GERÄT und
+     nicht am Kind: am Telefon ist die Insel schmal, am Rechner
+     breit — das ist eine Frage des Bildschirms und keine des
+     Kontos, und deshalb steht sie im localStorage. */
+  function unitsLaden() {
+    let auf = null;
+    try {
+      const v = localStorage.getItem(WI_UNITS_KEY);
+      if (v === '0' || v === '1') auf = v === '1';
+    } catch (e) { /* egal */ }
+    if (auf === null) {
+      let schmal = false;
+      try {
+        schmal = !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
+      } catch (e) { /* egal */ }
+      auf = !schmal;
+    }
+    unitsSetzen(auf);
+  }
+
+  function unitsSetzen(auf) {
+    unitsAuf = !!auf;
+    if (!els.units) return;
+    els.units.classList.toggle('is-zu', !unitsAuf);
+    els.uGriff.setAttribute('aria-expanded', unitsAuf ? 'true' : 'false');
+    els.uBody.hidden = !unitsAuf;
+    // Zugeklappt gibt es nichts mehr, worauf sich ein Hervorheben
+    // beziehen könnte. Ein goldener Kranz ohne die Liste dazu wäre
+    // ein Rätsel.
+    if (!unitsAuf && unitOffen) unitZurueck();
+    try { localStorage.setItem(WI_UNITS_KEY, unitsAuf ? '1' : '0'); } catch (e) { /* egal */ }
+
+    const alt = randLinks;
+    randMessen();
+    /* Nicht auf die Hauptinsel zurückspringen, sondern SCHIEBEN: wer
+       die Leiste aufmacht, will die Liste sehen und nicht seinen
+       Ausschnitt verlieren. */
+    if (sicht.w && randLinks !== alt) {
+      kamera.tx += (randLinks - alt) / 2;
+      kameraAnwenden();
+    }
+  }
+
+  /* Wie viel Platz die Leiste der Insel wegnimmt. Die Bühne selbst
+     bleibt so groß, wie sie ist — die Tiere laufen weiter über die
+     ganze Leinwand, auch hinter der Leiste. Nur die KAMERA weiß von
+     einem linken Rand und zentriert auf den Rest. */
+  function randMessen() {
+    randLinks = 0;
+    if (!unitsAuf || !els.units || !sicht.w) return;
+    const b = els.units.getBoundingClientRect();
+    if (!b.width) return;
+    // Der Deckel ist der Riegel gegen einen Kasten, der (etwa im
+    // Prüfstand) so breit meldet wie die ganze Bühne.
+    randLinks = Math.min(b.width + 20, sicht.w * .5);
+  }
+
+  /* Fehlt `u` an den Wörtern, ist die Datenbank älter als dieses
+     Werkzeug — und NICHT „die Wörter gehören zu keiner Unit". Die
+     beiden zu verwechseln kostet eine halbe Stunde Suche an der
+     falschen Stelle (Regel: feedback_missing_migration_looks_like_network). */
+  function unitsAlt() {
+    return !!solo && solo.stufen.size > 0 && solo.setVon.size === 0;
+  }
+  const MIG_HINWEIS = 'Diese Übersicht braucht die neueste Fassung der '
+    + 'Datenbank (Migration 0142).';
+
+  const idsVon = setId => (solo && solo.proSet.get(setId)) || [];
+
+  function renderUnits() {
+    if (!solo || !els.uList) return;
+    els.uList.innerHTML = solo.sets.length
+      ? solo.sets.map(s => {
+          const an = solo.aktiv.has(s.id);
+          const ids = idsVon(s.id);
+          return `
+            <div class="wi-urow${an ? ' is-on' : ''}">
+              <button type="button" class="wi-utoggle" data-an="${esc(s.id)}"
+                      aria-pressed="${an}">
+                <b>${esc(s.title)}</b>
+                <span class="wi-umeta">${ids.length || (s.count | 0)} Wörter${
+                  an ? '' : ' · pausiert'}</span>
+                <span class="wi-slegend">${stufenLegende(ids)}</span>
+              </button>
+              <button type="button" class="wi-uinfo${
+                unitOffen && unitOffen.id === s.id ? ' is-on' : ''}"
+                      data-info="${esc(s.id)}"
+                      aria-label="Übersicht zu ${esc(s.title)}">i</button>
+            </div>`;
+        }).join('')
+        + '<p class="wi-uhint">Abgefragt wird nur, was an ist. Die anderen Tiere '
+        + 'bleiben auf deiner Insel — sie sind nur blass.</p>'
+      : '<p class="wi-uhint">Noch nichts freigespielt. Deine Insel wächst, sobald '
+        + 'du bei einer Wordisland-Stunde dabei warst.</p>';
+
+    if (unitOffen) renderUnitDetail();
+  }
+
+  function unitListeClick(e) {
+    const an = e.target.closest('[data-an]');
+    if (an) { unitToggle(an.dataset.an); return; }
+    const info = e.target.closest('[data-info]');
+    if (info) unitOeffnen(info.dataset.info);
+  }
+
+  /* Am Server heißt „nichts gewählt" nämlich „alles" (wi_solo_chosen,
+     0136). Wer die letzte Unit ausschaltet, bekäme also alle zurück —
+     das sähe aus wie ein Fehler und wäre keiner. Also lassen wir die
+     letzte stehen und sagen es. */
+  function unitToggle(id) {
+    const gewaehlt = new Set(soloChosen());
+    if (gewaehlt.has(id)) {
+      if (gewaehlt.size <= 1) {
+        ctx.toast('Eine Unit muss anbleiben — sonst gibt es nichts zu üben.');
+        return;
+      }
+      gewaehlt.delete(id);
+    } else {
+      gewaehlt.add(id);
+    }
+    soloSetzen({ p_sets: [...gewaehlt] });
+  }
+
+  /* ─── Eine Unit im Einzelnen ────────────────────────────────
+     Sie ersetzt die Liste IN der Leiste und nicht die Insel: die
+     hervorgehobenen Tiere sind der halbe Sinn der Übersicht, und ein
+     Vollbild-Kasten läge genau darüber. */
+  function unitOeffnen(id) {
+    if (unitOffen && unitOffen.id === id) { unitZurueck(); return; }
+    unitOffen = { id, daten: null, fehler: null, auf: new Set() };
+    // Sofort, ohne auf den Server zu warten: die Zugehörigkeit steht
+    // schon auf dem Gerät.
+    markiert = new Set(idsVon(id));
+    kartenZu();
+    els.uList.hidden = true;
+    els.uDet.hidden = false;
+    renderUnitDetail();
+    unitDetail(id);
+  }
+
+  function unitZurueck() {
+    unitOffen = null;
+    markiert = null;
+    if (!els.uList) return;
+    els.uList.hidden = false;
+    els.uDet.hidden = true;
+    els.uDet.innerHTML = '';
+    renderUnits();
+  }
+
+  async function unitDetail(id, nurWennOffen) {
+    if (nurWennOffen && !(unitOffen && unitOffen.id === id)) return;
+    const d = await unitDaten(id);
+    if (!unitOffen || unitOffen.id !== id) return;
+    if (d && d.ok) { unitOffen.daten = d; unitOffen.fehler = null; }
+    else { unitOffen.daten = null; unitOffen.fehler = (d && d.error) || 'network'; }
+    renderUnitDetail();
+  }
+
+  function renderUnitDetail() {
+    if (!unitOffen || !els.uDet) return;
+    const s = solo.sets.find(x => x.id === unitOffen.id) || {};
+    const an = solo.aktiv.has(unitOffen.id);
+    const d = unitOffen.daten;
+    const rumpf = d
+      ? statsGitter(d.total, true)
+        + `<div class="wi-wlist">${(d.words || []).map(wortZeile).join('')}</div>`
+      : `<p class="wi-stnote">${unitOffen.fehler
+          ? esc(unitOffen.fehler === 'fn_missing' ? MIG_HINWEIS : ctx.errText(unitOffen.fehler))
+          : 'Einen Moment …'}</p>`;
+
+    els.uDet.innerHTML = `
+      <div class="wi-uhead">
+        <button type="button" class="wi-uback" data-zurueck>‹ Alle Units</button>
+        <button type="button" class="wi-uswitch${an ? ' is-on' : ''}"
+                data-an="${esc(unitOffen.id)}" aria-pressed="${an}">${
+          an ? 'wird geübt' : 'pausiert'}</button>
+      </div>
+      <b class="wi-utitle">${esc(s.title || 'Unit')}</b>
+      <div class="wi-slegend">${stufenLegende(idsVon(unitOffen.id))}</div>
+      ${rumpf}`;
+  }
+
+  /* Eine Zeile der Vokabelliste: Tier, Wort, vier Zahlen. Die vier
+     sind die Summe BEIDER Richtungen — für den Überblick ist „wie
+     oft hatte ich das" die Frage und nicht „in welcher Richtung".
+     Wer es genauer will, tippt die Zeile an. */
+  function wortZeile(w) {
+    const auf = unitOffen.auf.has(w.i);
+    const z = summeVon(w.st);
+    const bild = monsterUrl(w.i);
+    return `
+      <button type="button" class="wi-wrow${auf ? ' is-auf' : ''}" data-i="${esc(w.i)}">
+        ${bild ? `<img class="wi-wmon" src="${bild}" alt="" width="34">`
+               : '<span class="wi-wmon"></span>'}
+        <span class="wi-wtext"><b>${esc(w.t)}</b><i>→</i><span>${esc(w.x)}</span></span>
+        <em class="wi-wnum">
+          <b class="is-gut">${z[0]}</b><b class="is-hilf">${z[1]}</b>
+          <b class="is-bad">${z[2]}</b><b class="is-alle">${z[3]}</b>
+        </em>
+      </button>
+      ${auf ? `<div class="wi-wdet">${statsGitter(w.st, true)}</div>` : ''}`;
+  }
+
+  function unitDetailClick(e) {
+    if (e.target.closest('[data-zurueck]')) { unitZurueck(); return; }
+    const an = e.target.closest('[data-an]');
+    if (an) { unitToggle(an.dataset.an); return; }
+    const row = e.target.closest('[data-i]');
+    if (!row || !unitOffen) return;
+    const id = row.dataset.i;
+    if (unitOffen.auf.has(id)) unitOffen.auf.delete(id);
+    else unitOffen.auf.add(id);
+    renderUnitDetail();
+  }
+
+  /* Der Speicher der Units. Eine Unit ist zwischen zwei Übungen
+     unveränderlich — sie zweimal zu holen, weil jemand zweimal
+     hinsieht, wäre verschenkte Zeit. Nach dem Üben wird der ganze
+     Speicher weggeworfen (siehe pclose), denn dann stimmt er nicht
+     mehr.
+
+     `unitGen` fängt den Fall ab, dass eine Antwort noch unterwegs
+     ist, während der Speicher geleert wird: sie darf nicht mehr
+     hinein. */
+  let unitGen = 0;
+  const unitFlug = new Map();
+
+  function unitVergessen() {
+    unitGen++;
+    unitCache.clear();
+    unitFlug.clear();
+  }
+
+  function unitDaten(setId) {
+    if (unitCache.has(setId)) return Promise.resolve(unitCache.get(setId));
+    if (unitFlug.has(setId)) return unitFlug.get(setId);
+    const gen = unitGen;
+    const p = ctx.actions.call('wi_solo_unit', { p_set: setId }).then(r => {
+      unitFlug.delete(setId);
+      if (r && r.ok && gen === unitGen) unitCache.set(setId, r);
+      return r;
+    }).catch(() => {
+      unitFlug.delete(setId);
+      return { ok: false, error: 'network' };
+    });
+    unitFlug.set(setId, p);
+    return p;
+  }
+
+  /* ─── Das Kärtchen an der Echse ─────────────────────────────
+     Sönke: „ich kann sie anklicken und sehe dann daneben die Vokabel
+     und auch alle States von dieser."
+
+     Es steht an der Tippstelle und bleibt dort stehen, während das
+     Tier weiterläuft. Verbunden bleiben die beiden über den Ring:
+     der läuft mit. */
+  let kartPos = { x: 0, y: 0 };
+
+  function tierWaehlen(t, x, y) {
+    if (!t) { kartenZu(); return; }
+    tierOffen = t.id;
+    kartPos = { x, y };
+    kartenNeu();
+  }
+
+  function kartenZu() {
+    tierOffen = null;
+    if (els.card) { els.card.hidden = true; els.card.innerHTML = ''; }
+  }
+
+  function kartenNeu() {
+    const id = tierOffen;
+    if (!id || !els.card) return;
+    const setId = solo.setVon.get(id);
+    // Erst das, was schon da ist — auf dem iPad soll der Tipp nicht
+    // ins Leere greifen, während der Server antwortet.
+    kartenSchreiben(id, setId ? unitCache.get(setId) : null);
+    if (setId && !unitCache.has(setId)) {
+      unitDaten(setId).then(d => { if (tierOffen === id) kartenSchreiben(id, d); });
+    }
+  }
+
+  function kartenSchreiben(id, d) {
+    const stufe = solo.stufen.get(id) | 0;
+    const w = d && d.ok ? (d.words || []).find(x => x.i === id) : null;
+    const titel = d && d.ok && d.set ? d.set.title : '';
+    let kopf;
+    if (w) {
+      kopf = `<b class="wi-cword">${esc(w.t)}</b>
+              <span class="wi-ctrans">${esc(w.x)}</span>`;
+    } else if (unitsAlt() || (d && !d.ok && d.error === 'fn_missing')) {
+      kopf = `<b class="wi-cword">Dieses Tier</b>
+              <span class="wi-ctrans">${esc(MIG_HINWEIS)}</span>`;
+    } else {
+      kopf = '<b class="wi-cword">…</b><span class="wi-ctrans">wird geholt</span>';
+    }
+    els.card.innerHTML = `
+      <button type="button" class="wi-cclose" data-zu aria-label="Schließen">×</button>
+      ${kopf}
+      <span class="wi-cmeta">${titel ? esc(titel) + ' · ' : ''}${
+        esc(STUFEN_NAME[Math.max(0, Math.min(4, stufe))])}</span>
+      ${w ? statsGitter(w.st, true) : ''}`;
+    els.card.hidden = false;
+    kartenStellen();
+  }
+
+  function kartenStellen() {
+    const c = els.card;
+    if (!c || c.hidden) return;
+    const W = sicht.w || 0, H = sicht.h || 0;
+    if (!W || !H) return;
+    const b = c.getBoundingClientRect();
+    const cw = Math.min(b.width || 260, W - 16);
+    const ch = Math.min(b.height || 180, H - 16);
+    // Rechts vom Finger, wenn dort Platz ist; sonst links. Und
+    // niemals über den Rand hinaus — ein Kärtchen, von dem die Hälfte
+    // fehlt, ist keine Auskunft.
+    let x = kartPos.x + 18;
+    if (x + cw > W - 8) x = kartPos.x - 18 - cw;
+    x = Math.max(8, Math.min(x, Math.max(8, W - cw - 8)));
+    let y = kartPos.y - ch / 2;
+    y = Math.max(8, Math.min(y, Math.max(8, H - ch - 8)));
+    c.style.left = Math.round(x) + 'px';
+    c.style.top = Math.round(y) + 'px';
+  }
+
+  /* ─── Das kleine Monster in der Liste ───────────────────────
+     Dieselben eingefärbten Bilder wie auf der Insel, einmal je
+     Bildschlüssel und Farbe auf Listengröße gerechnet und als
+     data:-URL gemerkt. Höchstens neun mal acht Einträge — und kein
+     zweites Bilderladen. */
+  const MONSTER_H = 44;
+
+  function monsterUrl(id) {
+    const t = welt.nachStufe.get(id);
+    if (!t || !sprites) return '';
+    const k = wachSchluessel(t.stufe, t.variante);
+    const schl = k + '|' + t.farbe;
+    if (monsCache.has(schl)) return monsCache.get(schl);
+    const im = sprites[k] && sprites[k][t.farbe];
+    if (!im) return '';
+    const w = Math.max(1, Math.round(im.width * MONSTER_H / (im.height || 1)));
+    let url = '';
+    try {
+      const c = neuCanvas(w, MONSTER_H);
+      c.getContext('2d').drawImage(im, 0, 0, w, MONSTER_H);
+      url = c.toDataURL('image/png');
+    } catch (e) { url = ''; }
+    monsCache.set(schl, url);
+    return url;
+  }
+
+  /* ─── Die Zahlen ────────────────────────────────────────────
+     Ein Zeichner für drei Orte: das „i" beim Üben, das Kärtchen an
+     der Echse und die Unit-Übersicht. Dieselbe Form heißt: man liest
+     sie einmal und versteht sie überall. */
+  function summeVon(st) {
+    const z = [0, 0, 0, 0];                       // gut, mit Hilfe, falsch, gesamt
+    for (const [dir] of STAT_ZEILEN) {
+      const a = (st && st[dir]) || [0, 0, 0, 0];
+      const gut = a[0] | 0, hilf = a[1] | 0, alle = a[2] | 0;
+      const bad = a.length > 3 ? (a[3] | 0) : Math.max(0, alle - gut - hilf);
+      z[0] += gut; z[1] += hilf; z[2] += bad; z[3] += alle;
+    }
+    return z;
+  }
+
+  function statsGitter(st, hell) {
+    const zeilen = STAT_ZEILEN.map(([dir, von, nach]) => {
+      const z = (st && st[dir]) || [0, 0, 0, 0];
+      const gut = z[0] | 0, hilf = z[1] | 0, alle = z[2] | 0;
+      /* Vier Zahlen seit 0139. Kommen nur drei an, ist die Datenbank
+         älter — dann wird „falsch" wie früher als Rest gerechnet.
+         Das ist die schlechtere Auskunft, aber immer noch besser als
+         eine leere Spalte. */
+      const bad = z.length > 3 ? (z[3] | 0) : Math.max(0, alle - gut - hilf);
+      const p = n => (alle ? n / alle * 100 : 0).toFixed(2) + '%';
+      return `
+        <span class="wi-stdir">${von}<i>→</i>${nach}</span>
+        <b class="wi-stn is-gut">${gut}</b>
+        <b class="wi-stn is-hilf">${hilf}</b>
+        <b class="wi-stn is-bad">${bad}</b>
+        <b class="wi-stn is-alle">${alle}</b>
+        <div class="wi-stbar${alle ? '' : ' is-leer'}">
+          <i class="is-gut"  style="width:${p(gut)}"></i>
+          <i class="is-hilf" style="width:${p(hilf)}"></i>
+          <i class="is-bad"  style="width:${p(bad)}"></i>
+        </div>`;
+    }).join('');
+    return `
+      <div class="wi-stgrid${hell ? ' wi-stgrid--hell' : ''}">
+        <span></span>
+        <span class="wi-sthead">richtig</span>
+        <span class="wi-sthead">mit Hilfe</span>
+        <span class="wi-sthead">falsch</span>
+        <span class="wi-sthead">gesamt</span>
+        ${zeilen}
+      </div>`;
   }
 
   /* ─── Üben ──────────────────────────────────────────────────
@@ -4876,36 +5560,12 @@
         + 'neueste Fassung der Datenbank (Migration 0139).</p>';
       return;
     }
-    const zeilen = STAT_ZEILEN.map(([dir, von, nach]) => {
-      const z = st[dir] || [0, 0, 0, 0];
-      const gut = z[0] | 0, hilf = z[1] | 0, alle = z[2] | 0;
-      /* Vier Zahlen seit 0139. Kommen nur drei an, ist die Datenbank
-         älter — dann wird „falsch" wie früher als Rest gerechnet.
-         Das ist die schlechtere Auskunft, aber immer noch besser als
-         eine leere Spalte. */
-      const bad = z.length > 3 ? (z[3] | 0) : Math.max(0, alle - gut - hilf);
-      const p = n => (alle ? n / alle * 100 : 0).toFixed(2) + '%';
-      return `
-        <span class="wi-stdir">${von}<i>→</i>${nach}</span>
-        <b class="wi-stn is-gut">${gut}</b>
-        <b class="wi-stn is-hilf">${hilf}</b>
-        <b class="wi-stn is-bad">${bad}</b>
-        <b class="wi-stn is-alle">${alle}</b>
-        <div class="wi-stbar${alle ? '' : ' is-leer'}">
-          <i class="is-gut"  style="width:${p(gut)}"></i>
-          <i class="is-hilf" style="width:${p(hilf)}"></i>
-          <i class="is-bad"  style="width:${p(bad)}"></i>
-        </div>`;
-    }).join('');
-    els.pStats.innerHTML = `
-      <div class="wi-stgrid">
-        <span></span>
-        <span class="wi-sthead">richtig</span>
-        <span class="wi-sthead">mit Hilfe</span>
-        <span class="wi-sthead">falsch</span>
-        <span class="wi-sthead">gesamt</span>
-        ${zeilen}
-      </div>`
+    /* Gezeichnet wird woanders (statsGitter): dieselbe Tabelle steht
+       seit 10.09.2026 auch im Kärtchen an der Echse und über der
+       Vokabelliste einer Unit. Drei Orte, ein Zeichner — sonst
+       driften sie auseinander, und der Unterschied fiele erst
+       jemandem auf, der beide nebeneinander hält. */
+    els.pStats.innerHTML = statsGitter(st)
       + (soloTask && soloTask.pass ? '' :
          '<p class="wi-stnote">Der Rundenzähler braucht Migration 0139.</p>');
   }
@@ -4933,6 +5593,8 @@
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
       practice = false; lastPhase = null; soloClaimAt = 0;
       solo = null; soloTask = null; simZeit = 0; letzterT = 0; nacht = 0;
+      unitOffen = null; markiert = null; tierOffen = null; randLinks = 0;
+      sichtbar = []; unitVergessen();
       kart = null; kartAnim = null; feiernd = false; kartZiel = 'karte';
       welt.isl = null; welt.vb = null; welt.inseln = null; welt.haupt = null;
       welt.tiere = []; welt.nachStufe = new Map();
@@ -4944,7 +5606,9 @@
       if (role === 'solo') {
         buildSolo();
         if (!ctx.preview) document.body.classList.add('tool-fill');
-        onResize = () => { passeAn(); kameraAnwenden(); buehneMessen(); };
+        onResize = () => {
+          passeAn(); randMessen(); kameraAnwenden(); buehneMessen(); kartenStellen();
+        };
         window.addEventListener('resize', onResize);
 
         (async () => {
