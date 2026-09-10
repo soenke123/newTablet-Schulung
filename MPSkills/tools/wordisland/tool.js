@@ -3619,6 +3619,21 @@
                     aria-label="Ton an oder aus">♪</button>
             <button type="button" class="wi-ovclose" data-part="pclose" aria-label="Schließen">×</button>
           </div>
+          <!-- Der Balken der Runde. Er steht ÜBER dem scrollenden
+               Rumpf, damit er auf dem iPad neben der Tastatur nicht
+               weggeschoben wird — er ist die einzige Auskunft im
+               Kasten, die über die eine Frage hinausgeht.
+
+               Bis 10.09.2026 stand hier „Runde 2 · noch 30 von 30".
+               Sönke: „die versteht man ja nicht." Der Balken sagt
+               dasselbe ohne Zahlenpaar — und er zählt Kopien statt
+               Wörter, geht also bei JEDER Antwort ein Stück hoch
+               (Migration 0141). -->
+          <div class="wi-prog" data-part="pprog" role="progressbar"
+               aria-valuemin="0" aria-valuemax="100" hidden>
+            <div class="wi-progbar"><i data-part="pprogi"></i></div>
+            <b class="wi-progn" data-part="pprogn"></b>
+          </div>
           <div class="wi-pmon" data-part="pmon">
             <canvas data-part="pcvs" width="600" height="460"></canvas>
             <span class="wi-pstage" data-part="pstage"></span>
@@ -3702,6 +3717,10 @@
 
   function buildSolo() {
     root.innerHTML = SOLO_HTML;
+    // Frischer Kasten, frischer Balken: der leere Balken im neuen
+    // DOM und ein stehengebliebener Rundenstand aus dem alten wären
+    // sonst uneins, und der erste Sprung liefe als Bewegung ab.
+    rundeNo = 0; rundePct = 0;
     els = {
       stage: q('stage'), mapwrap2: q('mapwrap2'), map: q('map'),
       veil: q('veil'), cvs: q('cvs'), load: q('load'), loadTxt: q('loadtxt'),
@@ -3709,6 +3728,7 @@
       setsOv: q('setsov'), soloSets: q('solosets'),
       soloDir: q('solodir'), soloMode: q('solomode'), modeHint: q('modehint'),
       playOv: q('playov'), pMeta: q('pmeta'), pMon: q('pmon'),
+      pProg: q('pprog'), pProgI: q('pprogi'), pProgN: q('pprogn'),
       pCvs: q('pcvs'), pStage: q('pstage'),
       pInfo: q('pinfo'), pStats: q('pstats'),
       pDir: q('pdir'), pDelta: q('pdelta'),
@@ -4233,29 +4253,82 @@
 
   /* ─── Der Stand der Runde ───────────────────────────────────
      Sönkes Wunsch: „ich will schon mal eine ganze Unit
-     durchballern." Genau dafür ist diese Zeile da — sie beantwortet
-     „bin ich einmal rum?", und ohne sie merkt niemand, dass der
+     durchballern." Genau dafür ist das hier da — es beantwortet „bin
+     ich einmal rum?", und ohne diese Anzeige merkt niemand, dass der
      Beutel überhaupt einer ist.
 
-     Gezählt werden WÖRTER und nicht Fragen: bei „gemischt" hat jedes
-     Wort zwei Richtungen, und eine Zahl, die doppelt so hoch ist wie
-     die Wortzahl auf der eigenen Insel, erklärt nichts, sondern
-     wirft eine Frage auf. Der Server zählt deshalb schon in
-     Wörtern (wi_solo_pass).
+     Ein Zahlenpaar war dafür das falsche Mittel. „Noch 30 von 30"
+     stand am Anfang jeder Runde, und dann sechs Antworten lang
+     unverändert da — ein Wort verlässt den Beutel ja erst mit seiner
+     letzten Kopie. Sönke (10.09.2026): „die versteht man ja nicht.
+     lieber einen % balken, der dann bei jeder Vokabel etwas hoch
+     geht."
 
-     Eine Sonderform für „der Beutel ist noch voll" gab es bis
-     10.09.2026 („Runde 2 · 30 Wörter"). Sie war ein Fehler: sie stand
-     genau am Anfang jeder Runde, also immer dann, wenn zum ersten Mal
-     jemand hinsieht — und wer sie sah, sah nie, dass diese Zeile
-     überhaupt herunterzählt. „Noch 30 von 30" ist keine schlechtere
-     Auskunft, sondern dieselbe in der Form, in der man sie
-     wiedererkennt. */
+     Der Balken zählt deshalb KOPIEN und nicht Wörter — die Zahl
+     dafür kommt seit 0141 aus dem Server (`pass.pct`, siehe dort,
+     warum sie nicht ausrechenbar ist). In der Kopfzeile steht nur
+     noch die Runde. */
+  let rundeNo = 0;
+  let rundePct = 0;
+
   function zeigeRunde() {
-    if (!els.pMeta) return;
     const p = soloTask && soloTask.pass;
-    if (!p || !p.gesamt) { els.pMeta.textContent = 'Vokabeln üben'; return; }
-    els.pMeta.textContent =
-      `Runde ${p.no} · noch ${Math.min(p.offen, p.gesamt)} von ${p.gesamt}`;
+    const an = !!(p && p.gesamt);
+    if (els.pMeta) els.pMeta.textContent = an ? `Runde ${p.no}` : 'Vokabeln üben';
+    if (!els.pProg) return;
+    els.pProg.hidden = !an;
+    if (!an) return;
+
+    let pct = anteil(p);
+    if (p.no !== rundeNo) {
+      /* Rundenwechsel: der Balken fängt von vorn an. Ohne diese vier
+         Zeilen LÄUFT er dabei zurück — eine halbe Sekunde lang sieht
+         es aus, als wäre etwas verloren gegangen, und das ist das
+         Gegenteil dessen, was gerade passiert ist. Also ohne
+         Bewegung setzen. */
+      rundeNo = p.no;
+      rundePct = pct;
+      els.pProgI.style.transition = 'none';
+      els.pProgI.style.width = pct.toFixed(1) + '%';
+      void els.pProgI.offsetWidth;
+      els.pProgI.style.transition = '';
+    } else {
+      /* INNERHALB einer Runde geht der Balken nie zurück.
+         Er muss das können, denn die Rechnung erledigt / (erledigt +
+         offen) kann fallen: ein Fehler beim Tippen legt zwei Kopien
+         zurück, wo er eine genommen hat, und ab der Hälfte der Runde
+         wiegt der längere Weg schwerer als der eine Schritt. Es geht
+         um Zehntelprozent — aber ein Balken, der nach einer falschen
+         Antwort schrumpft, bestraft zweimal, und Sönkes Ansage war
+         „geht bei jeder Vokabel etwas hoch".
+
+         Er STOCKT dann, statt zu fallen, und zwar genau eine
+         Antwort lang: die nächste richtige bringt mehr ein, als der
+         Fehler gekostet hat. */
+      pct = rundePct = Math.max(rundePct, pct);
+    }
+    /* Der Balken bekommt den Nachkommawert, die Zahl daneben nicht.
+       Eine Runde hat gut 180 Kopien, eine Antwort ist also ein halbes
+       Prozent: gerundet stünde der Balken bei jeder zweiten Antwort
+       still, und „geht bei jeder Vokabel etwas hoch" wäre wieder
+       dahin. Die Zahl mit Komma zu schreiben wäre die schlechtere
+       Hälfte des Tauschs — sie soll man im Vorbeisehen lesen. */
+    els.pProgI.style.width = pct.toFixed(1) + '%';
+    els.pProgN.textContent = Math.round(pct) + ' %';
+    els.pProg.setAttribute('aria-valuenow', String(Math.round(pct)));
+  }
+
+  /* Wie weit die Runde ist, in Prozent.
+
+     Der Rückfallweg ist für eine Datenbank ohne 0141 da. Er rechnet
+     in Wörtern, ist also grob (Sprünge von 3 % statt .5 %) — aber
+     ein grober Balken ist immer noch die bessere Auskunft als gar
+     keiner, und „kaputt" sieht er nicht aus. */
+  function anteil(p) {
+    if (typeof p.pct === 'number') return Math.max(0, Math.min(100, p.pct));
+    const gesamt = p.gesamt | 0;
+    const offen = Math.min(p.offen | 0, gesamt);
+    return gesamt ? (gesamt - offen) / gesamt * 100 : 0;
   }
 
   /* ─── Das Schildchen am Tier ────────────────────────────────

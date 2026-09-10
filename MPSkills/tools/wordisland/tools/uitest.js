@@ -1432,48 +1432,62 @@ async function testStats() {
   alt.tool.unmount();
 }
 
-/* ─── Das Schildchen und der Rundenstand ────────────────────
-   Beides sind ANZEIGEN von Zahlen bzw. Feldern, die der Server
-   liefert (0139) — geprüft wird deshalb nicht die Regel, sondern die
+/* ─── Das Schildchen und der Balken der Runde ───────────────
+   Beides sind ANZEIGEN von Feldern, die der Server liefert (0139,
+   0141) — geprüft wird deshalb nicht die Regel, sondern die
    Übersetzung:
 
      · Das Schildchen trägt die GEFRAGTE Richtung, nicht die des
        Tiers, und wechselt mit der Frage.
      · Über dem Wort steht keine ausgeschriebene Frage mehr.
-     · Der Rundenzähler zählt Wörter, schreibt sie in die Kopfzeile
-       des Übungskastens und sagt IMMER „noch x von y" — auch am
-       Anfang einer Runde, wo x und y gleich sind. Die Sonderform
-       („Runde 2 · 30 Wörter") war bis 10.09.2026 da und hat genau
-       das Herunterzählen verdeckt, das sie ankündigen sollte.
+     · In der Kopfzeile steht nur noch die Runde. Der Stand steckt im
+       Balken darunter, und der bekommt den NACHKOMMAWERT: eine Runde
+       hat gut 180 Kopien, gerundet stünde er bei jeder zweiten
+       Antwort still. Die Zahl daneben ist gerundet — sie soll man im
+       Vorbeisehen lesen.
+     · Ein Zahlenpaar („noch 12 von 30") stand bis 10.09.2026 hier.
+       Sönke: „die versteht man ja nicht."
      · Nach der Antwort steht die Zahl da (+3 / −3) — SOFORT, nicht
        erst nach der Pause, die eine Feier einlegt.               */
 async function testPunkte() {
-  console.log('\n— Schildchen und Rundenstand —');
+  console.log('\n— Schildchen und Balken der Runde —');
   const { tool, root, document } = await mountSolo(soloView(30, () => 1), {
     wi_solo_start: () => ({
       ok: true,
       task: { item: 'w-1', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 1,
-              options: [], pts: { de_en: 7, en_de: 3 }, pass: { no: 2, offen: 12, gesamt: 30 } }
+              options: [], pts: { de_en: 7, en_de: 3 },
+              pass: { no: 2, offen: 12, gesamt: 30, kopien: 61, erledigt: 9, pct: 12.9 } }
     }),
     wi_solo_answer: () => ({
       ok: true, result: 'correct', item: 'w-1', dir: 'de_en', helped: false,
       delta: 3, points: 10, level_before: 1, level_after: 1, locked_for: 0,
       task: { item: 'w-2', prompt: 'der Stuhl', dir: 'en_de', stage: 'type', level: 0,
-              options: [], pts: { de_en: 0, en_de: 12 }, pass: { no: 2, offen: 11, gesamt: 30 } }
+              options: [], pts: { de_en: 0, en_de: 12 },
+              pass: { no: 2, offen: 11, gesamt: 30, kopien: 60, erledigt: 10, pct: 14.3 } }
     })
   });
   click(root.querySelector('[data-part="sgo"]'), document);
   await wait(30);
 
   const pdir = root.querySelector('[data-part="pdir"]');
+  const prog = root.querySelector('[data-part="pprog"]');
+  const balken = root.querySelector('[data-part="pprogi"]');
+  const zahl = root.querySelector('[data-part="pprogn"]');
   ok('das Schildchen steht da', pdir.hidden === false);
   ok('und trägt die gefragte Richtung — sonst nichts',
      pdir.textContent === 'DE→EN' && pdir.children.length === 0, pdir.innerHTML);
   ok('über dem Wort steht keine ausgeschriebene Frage mehr',
      root.querySelector('[data-part="pask"]') === null);
-  ok('der Rundenstand steht in der Kopfzeile',
-     root.querySelector('[data-part="pmeta"]').textContent === 'Runde 2 · noch 12 von 30',
+
+  ok('in der Kopfzeile steht nur noch die Runde',
+     root.querySelector('[data-part="pmeta"]').textContent === 'Runde 2',
      root.querySelector('[data-part="pmeta"]').textContent);
+  ok('der Balken steht da', prog.hidden === false);
+  ok('und trägt den Anteil auf eine Stelle genau',
+     balken.style.width === '12.9%', balken.style.width);
+  ok('die Zahl daneben ist gerundet', zahl.textContent === '13 %', zahl.textContent);
+  ok('und Vorlesegeräte bekommen denselben Wert',
+     prog.getAttribute('aria-valuenow') === '13', prog.getAttribute('aria-valuenow'));
 
   root.querySelector('[data-part="pin"]').value = 'tree';
   root.querySelector('[data-part="pform"]')
@@ -1494,31 +1508,106 @@ async function testPunkte() {
      root.querySelector('[data-part="pdir"]').textContent);
   ok('die Zahl überlebt den Wechsel der Frage',
      root.querySelector('[data-part="pdelta"]').hidden === false);
-  ok('der Rundenstand ist mitgewandert',
-     root.querySelector('[data-part="pmeta"]').textContent === 'Runde 2 · noch 11 von 30',
-     root.querySelector('[data-part="pmeta"]').textContent);
+  ok('der Balken ist ein Stück gewachsen',
+     balken.style.width === '14.3%' && zahl.textContent === '14 %',
+     balken.style.width + ' / ' + zahl.textContent);
 
   await wait(1500);
   ok('und geht dann von selbst', root.querySelector('[data-part="pdelta"]').hidden === true);
   tool.unmount();
 
-  /* Der Anfang einer Runde: der Beutel ist voll, offen == gesamt.
-     Genau hier stand bis 10.09.2026 „Runde 2 · 30 Wörter" — und weil
-     das der Zustand ist, in dem man den Kasten aufmacht, hat kaum
-     jemand die andere Form je zu sehen bekommen. */
-  const voll = await mountSolo(soloView(30, () => 1), {
+  /* Ein Fehler beim Tippen legt zwei Kopien zurück, wo er eine
+     genommen hat — ab der Hälfte der Runde SINKT der Anteil dadurch
+     um ein paar Zehntel. Der Balken darf das nicht mitmachen: er
+     stockt, statt zu fallen. (Die Zahl vom Server bleibt ehrlich,
+     hier steht nur, was man sieht.) */
+  const rueck = await mountSolo(soloView(30, () => 1), {
+    wi_solo_start: () => ({
+      ok: true,
+      task: { item: 'w-1', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 1,
+              options: [], pass: { no: 2, offen: 10, gesamt: 30, pct: 66.7 } }
+    }),
+    wi_solo_answer: () => ({
+      ok: true, result: 'wrong', solution: 'tree', item: 'w-1', dir: 'de_en',
+      helped: false, delta: -3, points: 4, level_before: 1, level_after: 1, locked_for: 0,
+      task: { item: 'w-2', prompt: 'der Stuhl', dir: 'de_en', stage: 'type', level: 1,
+              options: [], pass: { no: 2, offen: 10, gesamt: 30, pct: 66.3 } }
+    })
+  });
+  click(rueck.root.querySelector('[data-part="sgo"]'), rueck.document);
+  await wait(30);
+  rueck.root.querySelector('[data-part="pin"]').value = 'daneben';
+  rueck.root.querySelector('[data-part="pform"]')
+       .dispatchEvent(new rueck.document.defaultView.Event('submit', { bubbles: true }));
+  await wait(1200);
+  ok('nach einer falschen Antwort stockt der Balken, statt zu fallen',
+     rueck.root.querySelector('[data-part="pprogi"]').style.width === '66.7%',
+     rueck.root.querySelector('[data-part="pprogi"]').style.width);
+  rueck.tool.unmount();
+
+  /* Eine Runde, die gerade neu begonnen hat: erledigt 0, also 0 %.
+     Der Balken muss dabei OHNE Bewegung zurückspringen — ein Balken,
+     der zurückläuft, liest sich wie ein Verlust. Geprüft wird hier,
+     was danach im DOM steht (die Bewegung selbst hat linkedom nicht):
+     die Breite ist gesetzt, und der Übergang ist wieder freigegeben. */
+  const neu = await mountSolo(soloView(30, () => 1), {
     wi_solo_start: () => ({
       ok: true,
       task: { item: 'w-1', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 0,
-              options: [], pass: { no: 3, offen: 30, gesamt: 30 } }
+              options: [],
+              pass: { no: 3, offen: 30, gesamt: 30, kopien: 90, erledigt: 0, pct: 0 } }
     })
   });
-  click(voll.root.querySelector('[data-part="sgo"]'), voll.document);
+  click(neu.root.querySelector('[data-part="sgo"]'), neu.document);
   await wait(30);
-  ok('der volle Beutel zählt in derselben Form herunter',
-     voll.root.querySelector('[data-part="pmeta"]').textContent === 'Runde 3 · noch 30 von 30',
-     voll.root.querySelector('[data-part="pmeta"]').textContent);
-  voll.tool.unmount();
+  const nBalken = neu.root.querySelector('[data-part="pprogi"]');
+  ok('die frische Runde steht bei null',
+     nBalken.style.width === '0.0%'
+     && neu.root.querySelector('[data-part="pprogn"]').textContent === '0 %',
+     nBalken.style.width);
+  ok('und der Übergang ist danach wieder frei',
+     !nBalken.style.transition, nBalken.style.transition);
+  ok('die Runde selbst steht in der Kopfzeile',
+     neu.root.querySelector('[data-part="pmeta"]').textContent === 'Runde 3',
+     neu.root.querySelector('[data-part="pmeta"]').textContent);
+  neu.tool.unmount();
+
+  /* Datenbank ohne 0141: `pct` fehlt. Dann wird in Wörtern gerechnet
+     — gröber (Sprünge von gut 3 %), aber der Balken steht und zeigt
+     etwas Richtiges. Ein leerer Kasten wäre die schlechtere Antwort
+     (Regel: feedback_missing_migration_looks_like_network). */
+  const alt = await mountSolo(soloView(30, () => 1), {
+    wi_solo_start: () => ({
+      ok: true,
+      task: { item: 'w-1', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 0,
+              options: [], pass: { no: 2, offen: 12, gesamt: 30 } }
+    })
+  });
+  click(alt.root.querySelector('[data-part="sgo"]'), alt.document);
+  await wait(30);
+  ok('ohne 0141 rechnet der Balken in Wörtern weiter',
+     alt.root.querySelector('[data-part="pprogi"]').style.width === '60.0%'
+     && alt.root.querySelector('[data-part="pprogn"]').textContent === '60 %',
+     alt.root.querySelector('[data-part="pprogi"]').style.width);
+  alt.tool.unmount();
+
+  /* Und ohne jeden Rundenstand (Datenbank vor 0139) verschwindet der
+     Balken ganz. 0 % wäre eine Behauptung über eine Runde, von der
+     das Gerät nichts weiß. */
+  const ohne = await mountSolo(soloView(30, () => 1), {
+    wi_solo_start: () => ({
+      ok: true,
+      task: { item: 'w-1', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 0, options: [] }
+    })
+  });
+  click(ohne.root.querySelector('[data-part="sgo"]'), ohne.document);
+  await wait(30);
+  ok('ohne Rundenstand kein Balken',
+     ohne.root.querySelector('[data-part="pprog"]').hidden === true);
+  ok('und die Kopfzeile fällt auf ihren Namen zurück',
+     ohne.root.querySelector('[data-part="pmeta"]').textContent === 'Vokabeln üben',
+     ohne.root.querySelector('[data-part="pmeta"]').textContent);
+  ohne.tool.unmount();
 }
 
 /* Ohne Migration 0136 antwortet der Server mit 404 → fn_missing.

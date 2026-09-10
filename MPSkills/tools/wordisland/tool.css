@@ -516,6 +516,48 @@
 }
 .wi-ovclose:hover { border-color: var(--accent); color: var(--ink); }
 .wi-ovhint { flex: 0 0 auto; margin: 0; font-size: 13px; color: var(--ink-soft); }
+
+/* ── Der Balken der Runde ──────────────────────────────────────
+   Eine Zeile zwischen Kopf und Rumpf, also außerhalb des
+   scrollenden Teils: auf dem iPad schiebt die Tastatur den Rumpf
+   auf einen Streifen zusammen, und was dann mit hineinscrollt,
+   sieht während des Übens niemand mehr.
+
+   Er ersetzt „noch 30 von 30" (10.09.2026) und zählt Kopien statt
+   Wörter — deshalb bewegt er sich bei jeder Antwort.             */
+.wi-prog {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: -3px;
+}
+.wi-progbar {
+  flex: 1 1 auto;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(160, 200, 225, .15);
+}
+.wi-progbar i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), #6ee7a8);
+  transition: width .45s ease;
+}
+/* Feste Breite, damit der Balken beim Wechsel von „9 %" auf
+   „10 %" nicht einen Buchstaben kürzer wird. */
+.wi-progn {
+  flex: 0 0 auto;
+  min-width: 3.6em;
+  text-align: right;
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
 /* Die Liste scrollt, damit Kopfzeile und Hinweis stehen bleiben. */
 .wi-ovbody {
   flex: 1 1 auto;
@@ -1564,6 +1606,9 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   .wi-cheer { animation: none; }
   .wi-stats { animation: none; }
   .wi-pdelta.is-on { animation: none; }
+  /* Der Balken springt dann eben. Sein Wert steht als Zahl daneben —
+     die Auskunft geht nicht verloren, nur die Bewegung. */
+  .wi-progbar i { transition: none; }
 }
 
 /* Der Kasten, in den insel.js das Werkzeug hängt. Er muss selbst
