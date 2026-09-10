@@ -3242,10 +3242,10 @@
     /* Gerechnet wird gegen das FREIE Fenster: die Unit-Leiste liegt
        über der Bühne, und eine Insel, die brav in der Mitte der
        Leinwand sitzt, säße zur Hälfte hinter der Leiste. */
-    const frei = Math.max(80, sicht.w - randLinks);
+    const frei = Math.max(80, sicht.w - randRechts);
     kamera.k = Math.min(4, Math.max(.6,
       Math.min(frei * .92 / (w * sicht.s), sicht.h * .92 / (h * sicht.s))));
-    kamera.tx = randLinks + frei / 2 - kamera.k * (sicht.ox + mx * sicht.s);
+    kamera.tx = frei / 2 - kamera.k * (sicht.ox + mx * sicht.s);
     kamera.ty = sicht.h / 2 - kamera.k * (sicht.oy + my * sicht.s);
     kameraAnwenden();
   }
@@ -3338,7 +3338,7 @@
       if (e.type !== 'pointerup' || pts.size || !war || !start) { start = null; return; }
       const kurz = performance.now() - startZeit < 700;
       if (!tippAus && kurz && weg < 10 && solo && welt.isl) {
-        tierWaehlen(tierBei(war.x, war.y), war.x, war.y);
+        tierWaehlen(tierBei(war.x, war.y));
       }
       start = null;
     };
@@ -3397,7 +3397,10 @@
      Kein ctx.filter: der ist auf älteren iPads nicht verlässlich, und
      ein Filter je Tier und Bild wäre bei fünfhundert Tieren ohnehin
      der teuerste Posten der Schleife. */
-  const GRAU = .55;
+  /* .60 und nicht .55 (Sönke, 10.09.2026: „kann 5 % doller sein"):
+     der Unterschied zwischen „übe ich gerade" und „ruht" muss man im
+     Vorbeigehen sehen, nicht suchen. */
+  const GRAU = .60;
 
   function grauBild(k, farbe) {
     const schl = k + '|' + farbe;
@@ -3545,11 +3548,16 @@
       t._hell = !etwasHervor
         || (markiert && markiert.has(t.id))
         || t.id === tierOffen;
-      /* Eine Zahl für beides — Blässe und Zurücktreten wirken auf
-         dasselbe: wie laut dieses Tier gerade sein darf. Glühen und
-         Funken lesen sie mit, sonst leuchtete nachts ein abgewähltes
-         Tier so hell wie ein bearbeitetes. */
-      t._a = (t._hell ? 1 : .32) * (blass ? .82 : 1);
+      /* Hervorheben heißt AUFHELLEN und nicht Abdunkeln (Sönke,
+         10.09.2026): die anderen Tiere bleiben, wie sie sind — sie
+         bekommen nur keinen Ring. Eine halbdurchsichtige Insel als
+         Preis für eine Auskunft wäre ein schlechter Tausch.
+
+         Bleibt die eine Blässe, die etwas BEDEUTET: „diese Unit
+         kommt gerade nicht dran". Glühen und Funken lesen sie mit,
+         sonst leuchtete nachts ein abgewähltes Tier so hell wie ein
+         bearbeitetes. */
+      t._a = blass ? .82 : 1;
       // Der Maßstab hängt an der STUFE, nicht am Bild — deshalb
       // wächst nichts beim Einschlafen.
       let e = STUFE_EINHEIT[t.stufe] * P / ECHSE.blatt.h;
@@ -3744,28 +3752,31 @@
 
            Die Insel wird nicht verkleinert, sondern auf den REST
            zentriert — die Tiere laufen weiter über die ganze
-           Leinwand, nur die Kamera weiß von einem linken Rand. -->
+           Leinwand, nur die Kamera weiß von einem rechten Rand. -->
       <aside class="wi-units" data-part="units" hidden>
+        <!-- Der Kopf sagt, worüber die Liste darunter spricht: alle
+             Units zusammen, so viele Wörter, so weit gewachsen. Bis
+             10.09.2026 stand dieselbe Auskunft unten in der Leiste —
+             also woanders als das, was sie erklärt. -->
         <button type="button" class="wi-ugriff" data-part="ugriff" aria-expanded="true">
-          <span>Units</span><i class="wi-uchev" aria-hidden="true"></i>
+          <span>Units <b data-part="swords">0</b></span>
+          <i class="wi-uchev" aria-hidden="true"></i>
         </button>
+        <div class="wi-slegend wi-usum" data-part="slegend"></div>
         <div class="wi-ubody" data-part="ubody">
           <div class="wi-ulist" data-part="ulist"></div>
           <div class="wi-udet" data-part="udet" hidden></div>
         </div>
       </aside>
 
-      <!-- Das Kärtchen an der angetippten Echse. Es steht dort, wo
-           der Finger war, und nicht an einem festen Platz: die Frage
-           heißt „welches Wort ist DIESES Tier", und die Antwort
-           gehört daneben. -->
-      <div class="wi-card" data-part="card" hidden></div>
+      <!-- Das Kärtchen zur angetippten Echse. Es hat einen FESTEN
+           Platz unten rechts und steht nicht mehr am Finger: neben
+           dem Tier lag es zwangsläufig auf anderen Tieren, und wer
+           eins nach dem anderen antippt, will die Auskunft immer an
+           derselben Stelle lesen und nicht suchen. -->
+      <div class="wi-tcard" data-part="card" hidden></div>
 
       <header class="wi-sbar">
-        <div class="wi-scount">
-          <b data-part="swords">0</b><span>Wörter</span>
-        </div>
-        <div class="wi-slegend" data-part="slegend"></div>
         <div class="wi-sspacer"></div>
         <!-- Beide gesperrt, bis die Insel steht: davor gibt es weder
              Units zum Auswählen noch ein Tier zum Anzeigen, und ein
@@ -3911,7 +3922,7 @@
 
        markiert   die Tiere EINER Unit (das „i" in der Leiste)
        tierOffen  das EINE angetippte Tier (das Kärtchen)
-       randLinks  wie viel Platz die Leiste der Insel wegnimmt
+       randRechts wie viel Platz die Leiste der Insel wegnimmt
 
      Sie liegen hier draußen und nicht in `solo`, weil die
      Zeichenschleife sie bei jedem Bild anfasst — und weil sie eine
@@ -3920,7 +3931,7 @@
   let unitOffen = null;     // { id, daten|null, auf: Set<itemId> }
   let markiert = null;      // Set<itemId> | null
   let tierOffen = null;     // itemId
-  let randLinks = 0;
+  let randRechts = 0;
   const unitCache = new Map();   // setId → Antwort von wi_solo_unit
   const grauCache = new Map();   // `${schlüssel}|${farbe}` → blasse Leinwand
   const monsCache = new Map();   // `${schlüssel}|${farbe}` → data:-URL für die Liste
@@ -4136,7 +4147,11 @@
 
   function renderSoloBar() {
     if (!solo) return;
-    els.sWords.textContent = solo.words;
+    /* „Units (118)" — dieselbe Form wie über einer einzelnen Unit
+       („Schule (24)"). Die Klammer steht hier und nicht im HTML,
+       damit nicht doch einmal ein „Units ()" über einer leeren Insel
+       hängen bleibt. */
+    els.sWords.textContent = solo.words ? '(' + solo.words + ')' : '';
     els.sLegend.innerHTML = stufenLegende(solo.stufen.keys());
     // Nach einem Stufensprung stimmen auch die Punkte an der Unit
     // sofort — es ist dieselbe Zahl, nur enger gefasst.
@@ -4247,19 +4262,23 @@
     els.units.classList.toggle('is-zu', !unitsAuf);
     els.uGriff.setAttribute('aria-expanded', unitsAuf ? 'true' : 'false');
     els.uBody.hidden = !unitsAuf;
+    // Die Stufenpunkte gehören zur Liste und nicht zum Griff: sie
+    // erklären, was darunter steht.
+    if (els.sLegend) els.sLegend.hidden = !unitsAuf;
     // Zugeklappt gibt es nichts mehr, worauf sich ein Hervorheben
     // beziehen könnte. Ein goldener Kranz ohne die Liste dazu wäre
     // ein Rätsel.
     if (!unitsAuf && unitOffen) unitZurueck();
     try { localStorage.setItem(WI_UNITS_KEY, unitsAuf ? '1' : '0'); } catch (e) { /* egal */ }
 
-    const alt = randLinks;
+    const alt = randRechts;
     randMessen();
     /* Nicht auf die Hauptinsel zurückspringen, sondern SCHIEBEN: wer
        die Leiste aufmacht, will die Liste sehen und nicht seinen
-       Ausschnitt verlieren. */
-    if (sicht.w && randLinks !== alt) {
-      kamera.tx += (randLinks - alt) / 2;
+       Ausschnitt verlieren. Die Leiste steht rechts — wird sie
+       breiter, rutscht die Mitte des freien Fensters nach LINKS. */
+    if (sicht.w && randRechts !== alt) {
+      kamera.tx += (alt - randRechts) / 2;
       kameraAnwenden();
     }
   }
@@ -4267,15 +4286,23 @@
   /* Wie viel Platz die Leiste der Insel wegnimmt. Die Bühne selbst
      bleibt so groß, wie sie ist — die Tiere laufen weiter über die
      ganze Leinwand, auch hinter der Leiste. Nur die KAMERA weiß von
-     einem linken Rand und zentriert auf den Rest. */
+     einem rechten Rand und zentriert auf den Rest.
+
+     Dieselbe Zahl bekommt das Stylesheet als `--wi-rand`: das
+     Kärtchen unten rechts muss NEBEN der Leiste stehen und nicht
+     hinter ihr, und wie breit die Leiste gerade ist, weiß nur, wer
+     sie gemessen hat. */
   function randMessen() {
-    randLinks = 0;
-    if (!unitsAuf || !els.units || !sicht.w) return;
-    const b = els.units.getBoundingClientRect();
-    if (!b.width) return;
-    // Der Deckel ist der Riegel gegen einen Kasten, der (etwa im
-    // Prüfstand) so breit meldet wie die ganze Bühne.
-    randLinks = Math.min(b.width + 20, sicht.w * .5);
+    randRechts = 0;
+    if (unitsAuf && els.units && sicht.w) {
+      const b = els.units.getBoundingClientRect();
+      // Der Deckel ist der Riegel gegen einen Kasten, der (etwa im
+      // Prüfstand) so breit meldet wie die ganze Bühne.
+      if (b.width) randRechts = Math.min(b.width + 20, sicht.w * .5);
+    }
+    if (root && root.style) {
+      root.style.setProperty('--wi-rand', Math.round(randRechts) + 'px');
+    }
   }
 
   /* Fehlt `u` an den Wörtern, ist die Datenbank älter als dieses
@@ -4300,10 +4327,14 @@
             <div class="wi-urow${an ? ' is-on' : ''}">
               <button type="button" class="wi-utoggle" data-an="${esc(s.id)}"
                       aria-pressed="${an}">
-                <b>${esc(s.title)}</b>
-                <span class="wi-umeta">${ids.length || (s.count | 0)} Wörter${
-                  an ? '' : ' · pausiert'}</span>
-                <span class="wi-slegend">${stufenLegende(ids)}</span>
+                <b>${esc(s.title)} <span class="wi-uzahl">(${
+                  ids.length || (s.count | 0)})</span></b>
+                <span class="wi-slegend">${stufenLegende(ids)}</span>${
+                  /* „pausiert" steht in einer eigenen Zeile und nicht
+                     hinter dem Titel: der Titel wird bei Bedarf
+                     abgeschnitten, und ausgerechnet der Zustand darf
+                     das nicht sein. */
+                  an ? '' : '<span class="wi-umeta">pausiert</span>'}
               </button>
               <button type="button" class="wi-uinfo${
                 unitOffen && unitOffen.id === s.id ? ' is-on' : ''}"
@@ -4384,6 +4415,7 @@
     if (!unitOffen || !els.uDet) return;
     const s = solo.sets.find(x => x.id === unitOffen.id) || {};
     const an = solo.aktiv.has(unitOffen.id);
+    const ids = idsVon(unitOffen.id);
     const d = unitOffen.daten;
     const rumpf = d
       ? statsGitter(d.total, true)
@@ -4399,8 +4431,9 @@
                 data-an="${esc(unitOffen.id)}" aria-pressed="${an}">${
           an ? 'wird geübt' : 'pausiert'}</button>
       </div>
-      <b class="wi-utitle">${esc(s.title || 'Unit')}</b>
-      <div class="wi-slegend">${stufenLegende(idsVon(unitOffen.id))}</div>
+      <b class="wi-utitle">${esc(s.title || 'Unit')} <span class="wi-uzahl">(${
+        ids.length || (s.count | 0)})</span></b>
+      <div class="wi-slegend">${stufenLegende(ids)}</div>
       ${rumpf}`;
   }
 
@@ -4471,19 +4504,23 @@
     return p;
   }
 
-  /* ─── Das Kärtchen an der Echse ─────────────────────────────
+  /* ─── Das Kärtchen zur Echse ────────────────────────────────
      Sönke: „ich kann sie anklicken und sehe dann daneben die Vokabel
      und auch alle States von dieser."
 
-     Es steht an der Tippstelle und bleibt dort stehen, während das
-     Tier weiterläuft. Verbunden bleiben die beiden über den Ring:
-     der läuft mit. */
-  let kartPos = { x: 0, y: 0 };
+     „Daneben" war zuerst wörtlich gemeint: das Kärtchen stand an der
+     Tippstelle. Das hat sich in der Hand nicht bewährt — neben dem
+     Tier liegen andere Tiere, und wer eins nach dem anderen antippt,
+     sucht die Auskunft jedes Mal woanders. Seit dem 10.09.2026 hat
+     es einen festen Platz unten rechts (Sönke: „wird unten rechts
+     angeheftet und taucht nicht mehr bei den Monstern auf");
+     verbunden bleiben Karte und Tier über den Ring, der mitläuft.
 
-  function tierWaehlen(t, x, y) {
+     Deshalb braucht es hier auch keine Koordinaten mehr — der Platz
+     steht im Stylesheet. */
+  function tierWaehlen(t) {
     if (!t) { kartenZu(); return; }
     tierOffen = t.id;
-    kartPos = { x, y };
     kartenNeu();
   }
 
@@ -4525,27 +4562,6 @@
         esc(STUFEN_NAME[Math.max(0, Math.min(4, stufe))])}</span>
       ${w ? statsGitter(w.st, true) : ''}`;
     els.card.hidden = false;
-    kartenStellen();
-  }
-
-  function kartenStellen() {
-    const c = els.card;
-    if (!c || c.hidden) return;
-    const W = sicht.w || 0, H = sicht.h || 0;
-    if (!W || !H) return;
-    const b = c.getBoundingClientRect();
-    const cw = Math.min(b.width || 260, W - 16);
-    const ch = Math.min(b.height || 180, H - 16);
-    // Rechts vom Finger, wenn dort Platz ist; sonst links. Und
-    // niemals über den Rand hinaus — ein Kärtchen, von dem die Hälfte
-    // fehlt, ist keine Auskunft.
-    let x = kartPos.x + 18;
-    if (x + cw > W - 8) x = kartPos.x - 18 - cw;
-    x = Math.max(8, Math.min(x, Math.max(8, W - cw - 8)));
-    let y = kartPos.y - ch / 2;
-    y = Math.max(8, Math.min(y, Math.max(8, H - ch - 8)));
-    c.style.left = Math.round(x) + 'px';
-    c.style.top = Math.round(y) + 'px';
   }
 
   /* ─── Das kleine Monster in der Liste ───────────────────────
@@ -5593,7 +5609,7 @@
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
       practice = false; lastPhase = null; soloClaimAt = 0;
       solo = null; soloTask = null; simZeit = 0; letzterT = 0; nacht = 0;
-      unitOffen = null; markiert = null; tierOffen = null; randLinks = 0;
+      unitOffen = null; markiert = null; tierOffen = null; randRechts = 0;
       sichtbar = []; unitVergessen();
       kart = null; kartAnim = null; feiernd = false; kartZiel = 'karte';
       welt.isl = null; welt.vb = null; welt.inseln = null; welt.haupt = null;
@@ -5607,7 +5623,7 @@
         buildSolo();
         if (!ctx.preview) document.body.classList.add('tool-fill');
         onResize = () => {
-          passeAn(); randMessen(); kameraAnwenden(); buehneMessen(); kartenStellen();
+          passeAn(); randMessen(); kameraAnwenden(); buehneMessen();
         };
         window.addEventListener('resize', onResize);
 

@@ -1152,8 +1152,15 @@ async function testSolo() {
     .filter(p => /NaN|Infinity|undefined/.test(p.getAttribute('d') || ''));
   ok('kein NaN in den Pfaden', schlecht.length === 0, String(schlecht.length));
 
-  ok('die Wortzahl steht in der Leiste',
-     root.querySelector('[data-part="swords"]').textContent === '40');
+  /* Seit 10.09.2026 steht die Wortzahl im Kopf der Unit-Leiste und
+     nicht mehr unten: „Units (40)". Unten sind nur noch die zwei
+     Knöpfe. */
+  ok('die Wortzahl steht im Kopf der Unit-Leiste',
+     root.querySelector('[data-part="swords"]').textContent === '(40)',
+     root.querySelector('[data-part="swords"]').textContent);
+  ok('die untere Leiste trägt keine Zahlen mehr',
+     !root.querySelector('.wi-sbar .wi-lg') &&
+     !root.querySelector('.wi-sbar [data-part="swords"]'));
   /* Die Legende ist eine Auskunft: fünf Stufen, je acht Wörter aus
      dem `i % 5` oben. Stufen ohne Tiere fielen weg — hier sind alle
      fünf besetzt. */
@@ -1375,6 +1382,11 @@ async function testUnitLeiste() {
   ok('jede Unit zeigt ihre Stufen',
      zeilen[0].querySelectorAll('.wi-lg').length === 5,
      String(zeilen[0].querySelectorAll('.wi-lg').length));
+  /* „Unit 1 (20)" — dieselbe Form wie „Units (40)" darüber. 40
+     Wörter, abwechselnd auf zwei Units verteilt. */
+  ok('und ihre Wortzahl in Klammern',
+     zeilen[0].querySelector('.wi-uzahl').textContent.trim() === '(20)',
+     zeilen[0].querySelector('.wi-uzahl').textContent);
 
   /* ── Abwählen ─────────────────────────────────────────────── */
   click(zeilen[0].querySelector('.wi-utoggle'), document);
@@ -1409,6 +1421,12 @@ async function testUnitLeiste() {
   const det = root.querySelector('[data-part="udet"]');
   ok('die Übersicht ersetzt die Liste',
      det.hidden === false && root.querySelector('[data-part="ulist"]').hidden === true);
+  /* Dasselbe Schema wie im Kopf der Leiste: erst „Titel (Anzahl)",
+     dann die Stufenpunkte, dann die Zahlen. */
+  ok('die Übersicht führt Titel und Wortzahl',
+     det.querySelector('.wi-utitle').textContent.replace(/\s+/g, ' ').trim()
+       === 'Unit 1 (20)',
+     det.querySelector('.wi-utitle').textContent);
   ok('mit der Gesamt-Tabelle der Unit',
      det.querySelectorAll('.wi-stgrid .wi-stdir').length === 2);
   const woerter = det.querySelectorAll('.wi-wrow');
@@ -1446,16 +1464,32 @@ async function testUnitLeiste() {
      calls.filter(c => c[0] === 'wi_solo_unit').length === rufe, String(rufe));
 
   /* ── Einklappen ───────────────────────────────────────────── */
+  /* `--wi-rand` ist die gemessene Breite der Leiste. Zwei lesen
+     sie: die Kamera (sie zentriert die Insel auf den Rest) und das
+     Kärtchen unten rechts (es muss NEBEN die Leiste). Steht die
+     Zahl nicht mehr, liegt beides hinter der Leiste — und das sieht
+     man erst am Gerät. */
+  const rand = () => {
+    const m = /--wi-rand:\s*(\d+)px/.exec(root.getAttribute('style') || '');
+    return m ? +m[1] : null;
+  };
+  ok('die offene Leiste meldet ihre Breite', rand() > 0, String(rand()));
+
   click(root.querySelector('[data-part="ugriff"]'), document);
   await wait(20);
   ok('der Griff klappt die Leiste zu',
      leiste.classList.contains('is-zu') &&
      root.querySelector('[data-part="ubody"]').hidden === true);
+  ok('die Stufenpunkte gehen mit zu',
+     root.querySelector('[data-part="slegend"]').hidden === true);
+  ok('und die Insel bekommt ihren Platz zurück', rand() === 0, String(rand()));
+
   click(root.querySelector('[data-part="ugriff"]'), document);
   await wait(20);
   ok('und wieder auf',
      !leiste.classList.contains('is-zu') &&
-     root.querySelector('[data-part="ubody"]').hidden === false);
+     root.querySelector('[data-part="ubody"]').hidden === false &&
+     root.querySelector('[data-part="slegend"]').hidden === false);
 
   tool.unmount();
 }
@@ -1488,6 +1522,14 @@ async function testTierTipp() {
     ok('geholt wurde die Unit des Wortes',
        calls.some(c => c[0] === 'wi_solo_unit'),
        JSON.stringify(calls.filter(c => c[0] === 'wi_solo_unit').map(c => c[1])));
+    /* Es hängt unten rechts und wird nicht mehr an den Finger
+       gesetzt (Sönke, 10.09.2026). Ein inline gesetztes left/top
+       wäre der Rückfall — dann liefe es wieder über die Tiere. */
+    ok('das Kärtchen hat einen festen Platz und klebt nicht am Finger',
+       !/left|top/.test(karte.getAttribute('style') || ''),
+       karte.getAttribute('style') || '(ohne style)');
+    ok('und trägt seinen eigenen Namen — nicht den der Raum-Karten',
+       karte.classList.contains('wi-tcard') && !karte.classList.contains('wi-card'));
 
     click(karte.querySelector('[data-zu]'), document);
     ok('der Schließer macht es wieder zu', karte.hidden === true);

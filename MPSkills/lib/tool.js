@@ -1,4 +1,4 @@
-﻿/* ══════════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════
    MPSkills — lib/tool.js   ·   Was ein Werkzeug ist
    ══════════════════════════════════════════════════════════════
    Damit die Sammlung wachsen kann, muss „ein Werkzeug hinzufügen"
@@ -105,7 +105,7 @@
        neue Reliefkarte von Wordisland unter — der Umbau war fertig,
        auf dem Bildschirm stand die alte Karte, und es sah aus, als
        wäre nichts geschehen. */
-    const v = '?v=20260910g';
+    const v = '?v=20260910h';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf

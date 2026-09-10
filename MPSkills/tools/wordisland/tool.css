@@ -1236,7 +1236,12 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  /* Kein Umbruch mehr: seit die Zahlen im Kopf der Unit-Leiste
+     stehen, sind hier nur noch zwei Knöpfe, und die passen auch auf
+     ein schmales Telefon. Das ist nicht bloß hübscher — die Leiste
+     hat dadurch eine FESTE Höhe, und genau darauf rechnen die
+     Abstände der Unit-Leiste und des Kärtchens. */
+  flex-wrap: nowrap;
   padding: 9px 12px;
   border-radius: var(--r-md, 18px);
   background: color-mix(in srgb, var(--surface) 86%, transparent);
@@ -1247,9 +1252,10 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 }
 .wi-sspacer { flex: 1 1 auto; }
 
-.wi-scount { display: flex; align-items: baseline; gap: 5px; }
-.wi-scount b { font-size: 19px; font-weight: 800; color: var(--ink); }
-.wi-scount span { font-size: 12px; color: var(--ink-faint); }
+/* Die Zahlen der Insel standen bis 10.09.2026 hier unten — also
+   woanders als die Liste, die sie erklären. Sie sind in den Kopf der
+   Unit-Leiste gezogen (Sönke: „das muss da raus und in die Zeile zu
+   Units"). Unten stehen nur noch die beiden Knöpfe. */
 
 /* Die Legende ist eine AUSKUNFT: sie sagt, wo die Arbeit noch
    liegt. Die Farben sind die der Stufen und nicht die der Seite —
@@ -1279,18 +1285,22 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 /* ══════════════════════════════════════════════════════════════
    DIE UNIT-LEISTE
    ══════════════════════════════════════════════════════════════
-   Links, über der Bühne, vom Boden bis unter die untere Leiste.
+   Rechts, über der Bühne, vom Kopf bis über die untere Leiste.
    Sie liegt DARÜBER und schiebt die Insel nicht zusammen — die
-   Kamera zentriert stattdessen auf den Rest (tool.js, randLinks).
+   Kamera zentriert stattdessen auf den Rest (tool.js, randRechts).
    Der Unterschied ist auf dem Tablet der zwischen einer Insel, die
    beim Aufklappen springt, und einer, die stehen bleibt.
+
+   Eine SPALTE und kein Kasten über die ganze Breite: nur so hat die
+   Liste Platz nach unten, und genau das ist ihre Richtung — eine
+   Unit unter der anderen.
 
    Die Kacheln standen bis 10.09.2026 im Einstellungen-Overlay
    (.wi-setchip). Form und Zustände sind wörtlich von dort
    übernommen — wer sie kannte, findet sie wieder. */
 .wi-units {
   position: absolute;
-  left: 10px;
+  right: 10px;
   top: 10px;
   bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   width: min(320px, 46vw);
@@ -1313,17 +1323,16 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   width: auto;
 }
 /* Am Telefon startet die Leiste zugeklappt (tool.js). Macht man sie
-   dort auf, soll sie auch breit genug für eine Vokabelzeile sein —
-   46 % von 390 px sind es nicht. Verdecken darf sie dabei: die Insel
-   ist einen Tipp entfernt.
+   dort auf, soll sie breit genug für eine Vokabelzeile sein — 46 %
+   von 390 px sind es nicht — aber eben NICHT die ganze Breite: ein
+   Kasten quer über dem Bildschirm ist keine Spalte mehr, und die
+   Liste braucht ihren Weg nach unten.
 
-   Die untere Leiste bricht auf schmalen Geräten um und wird dann
-   höher. Der Abstand nach unten wächst mit. */
+   Der Abstand nach unten bleibt derselbe wie am Rechner: die untere
+   Leiste bricht nicht mehr um, seit die Zahlen aus ihr heraus sind
+   (.wi-sbar, flex-wrap). */
 @media (max-width: 720px) {
-  .wi-units {
-    width: min(320px, 80vw);
-    bottom: calc(118px + env(safe-area-inset-bottom, 0px));
-  }
+  .wi-units { width: min(300px, 68vw); }
 }
 
 .wi-ugriff {
@@ -1356,6 +1365,24 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   transition: transform .16s ease;
 }
 .wi-units.is-zu .wi-uchev { transform: rotate(-45deg); }
+
+/* Die Wortzahl in Klammern, an drei Stellen dieselbe Form: über
+   allen Units, über einer Unit, in der Zeile einer Unit. Sie ist
+   eine Beifügung und kein zweiter Titel — deshalb leiser. */
+.wi-uzahl {
+  font-weight: 700;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Die Stufenpunkte über der Liste: erst wer, dann wie weit. Sie
+   stehen im Kopf und nicht im scrollenden Rumpf — eine Auskunft
+   über das Ganze darf nicht wegscrollen. */
+.wi-usum {
+  flex: 0 0 auto;
+  padding: 0 12px 2px;
+  gap: 10px;
+}
 
 .wi-ubody {
   flex: 1 1 auto;
@@ -1404,6 +1431,7 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.wi-utoggle b .wi-uzahl, .wi-umeta { font-weight: 600; }
 .wi-umeta { font-size: 12px; color: var(--ink-faint); }
 .wi-utoggle:hover { border-color: var(--accent); }
 .wi-urow.is-on .wi-utoggle {
@@ -1500,15 +1528,17 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 }
 .wi-wrow:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
 .wi-wrow.is-auf { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-/* Das Tier ist auf dem Blatt für ein Meer gezeichnet: auf hellem
-   Grund fehlt dem hellen Bauch der Umriss. Ein dunkles Feld
-   darunter, wie im Übungskasten (.wi-pmon), und es steht wieder. */
+/* Ohne Feld darunter. Hier stand bis 10.09.2026 ein dunkler Kasten
+   wie im Übungskasten (.wi-pmon) — der gibt dem hellen Bauch zwar
+   seinen Umriss zurück, macht aus einer ruhigen Liste aber eine
+   Reihe schwarzer Kacheln (Sönke: „das sollte auch transparent
+   sein"). In einer LISTE zählt die Ruhe mehr: die Tiere sind hier
+   Wiedererkennung und nicht das Bild, das man ansieht. */
 .wi-wmon {
   width: 34px;
   height: 30px;
   object-fit: contain;
-  border-radius: 8px;
-  background: #0b2536;
+  background: transparent;
 }
 .wi-wtext {
   min-width: 0;
@@ -1544,13 +1574,30 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 .wi-wdet { padding: 4px 6px 10px 48px; }
 
 /* ══════════════════════════════════════════════════════════════
-   DAS KÄRTCHEN AN DER ECHSE
+   DAS KÄRTCHEN ZUR ECHSE
    ══════════════════════════════════════════════════════════════
-   Es steht dort, wo der Finger war. Deshalb liegen left/top in
-   tool.js und nicht hier: nur das Aussehen gehört hierher. */
-.wi-card {
+   Ein FESTER Platz unten rechts, nicht mehr am Finger. Neben dem
+   Tier lag es zwangsläufig auf anderen Tieren, und wer eine Echse
+   nach der anderen antippt, will die Antwort immer an derselben
+   Stelle lesen (Sönke, 10.09.2026).
+
+   `--wi-rand` ist die Breite der Unit-Leiste, gemessen in tool.js.
+   Ohne sie stünde das Kärtchen hinter der Leiste — beide wollen
+   nach rechts.
+
+   Es heißt `wi-tcard` und nicht `wi-card`: `.wi-card` ist die
+   allgemeine Karte der Raum-Ansichten (ganz oben in dieser Datei),
+   und ein zweiter Satz Regeln auf denselben Namen hätte jede Karte
+   im Lehrer-Pult an den unteren rechten Rand geschoben. */
+.wi-tcard {
   position: absolute;
   z-index: 30;
+  right: calc(var(--wi-rand, 0px) + 10px);
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  max-width: calc(100% - var(--wi-rand, 0px) - 20px);
+  max-height: calc(100% - 150px);
+  overflow: auto;
+  overscroll-behavior: contain;
   width: min(300px, 78vw);
   display: flex;
   flex-direction: column;
