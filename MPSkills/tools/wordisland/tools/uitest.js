@@ -1252,6 +1252,21 @@ async function testSoloUeben() {
      Stunde steht sie im Klassenchat. */
   ok('die Lösung steht nirgends im Kasten', !/house/i.test(play.innerHTML));
 
+  /* ── Was die Tastatur nicht wegschieben darf ──────────────────
+     Eine Lage-Zusage und keine Optik-Zusage: das Eingabefeld und
+     die Rückmeldung liegen AUSSERHALB des scrollenden Teils
+     (.wi-ovbody). Solange das gilt, kann der Streifen, der neben
+     einer Bildschirmtastatur übrig bleibt, sie nicht verschlucken —
+     genau das war der Fehler vom 10.09.2026. Höhen und Abstände
+     stehen in tool.css und werden hier nicht geprüft. */
+  const scroller = play.querySelector('.wi-ovbody');
+  ok('das Eingabefeld steht außerhalb des scrollenden Teils',
+     !scroller.contains(root.querySelector('[data-part="pin"]')));
+  ok('die Rückmeldung ebenso',
+     !scroller.contains(root.querySelector('[data-part="pfb"]')));
+  ok('die Frage aber steht darin — sie klebt oben',
+     scroller.contains(root.querySelector('[data-part="pword"]')));
+
   const eingabe = root.querySelector('[data-part="pin"]');
   eingabe.value = 'hauz';
   root.querySelector('[data-part="pform"]')

@@ -1645,18 +1645,47 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 .wi-pmon {
   position: relative;
   flex: 0 0 auto;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
+  padding: var(--wi-monpad, 6px);
   border-radius: var(--r-sm, 12px);
   background: radial-gradient(120% 100% at 50% 30%, #0d3c53 0%, #052131 100%);
   border: 1px solid #0a2a3c;
 }
-/* Die Leinwand trägt doppelt so viele Bildpunkte, wie sie breit ist
-   (600 auf 340). Die Höhe folgt aus dem Seitenverhältnis — eine
-   feste Höhe würde die Tiere auf schmalen Geräten stauchen. */
-.wi-pmon canvas { display: block; width: 340px; max-width: 100%; height: auto; }
+/* Die Leinwand trägt doppelt so viele Bildpunkte, wie sie gezeigt
+   wird (600×460 auf höchstens 340×260).
+
+   BEIDE Maße sind Höchstwerte und beide Eigenmaße stehen auf `auto`.
+   Das ist kein Umweg, sondern die einzige Schreibweise, bei der ein
+   ersetztes Element sein Seitenverhältnis behält, wenn mal die
+   Breite (schmales Telefon) und mal die Höhe (offene Tastatur) der
+   engere Deckel ist. Mit fester Breite und gedeckelter Höhe wären
+   die Tiere gestaucht.
+
+   Die Höhe kommt aus dem SICHTBAREN Bereich: `--vv-h` schrumpft mit
+   der Tastatur (viewport.js), `--wi-chrome` ist das, was im Kasten
+   sonst noch steht. So gibt das Tier von selbst Platz ab, statt das
+   Eingabefeld hinauszuschieben. */
+.wi-pmon canvas {
+  display: block;
+  width: auto;
+  height: auto;
+  /* Zuerst die einfache Fassung: ein Browser ohne min()/max()
+     überspringt die Zeilen darunter und bekommt die alte Größe
+     statt einer 600 px breiten Leinwand im 320er Telefon. */
+  max-width: 100%;
+  max-height: 260px;
+  max-width: min(340px, 100%);
+  max-height: min(var(--wi-monmax, 260px),
+                  max(var(--wi-monmin, 44px),
+                      calc(var(--vv-h, 100vh) - var(--wi-chrome, 280px))));
+}
+/* Solange die Chronik offen ist, braucht der Kasten seine zwei
+   Zeilen — auch bei offener Tastatur (tool.js: `is-stats`). */
+.wi-pmon.is-stats { min-height: var(--wi-stmin, 150px); }
+.wi-stats { overflow-y: auto; }
 
 /* ══════════════════════════════════════════════════════════════
    DIE BÜHNE FÜR DEN STUFENSPRUNG
@@ -1965,10 +1994,105 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 .wi-pstage.is-3 { color: #86b7ff; }
 .wi-pstage.is-4 { color: var(--wi-gold, #ffcf4d); }
 
-/* Die Übungskarte ist schmaler als die Einstellungen: eine Frage,
+/* ══════════════════════════════════════════════════════════════
+   DER ÜBUNGSKASTEN AUF KLEINEN GERÄTEN
+   ══════════════════════════════════════════════════════════════
+   Die Übungskarte ist schmaler als die Einstellungen: eine Frage,
    ein Wort, ein Feld — mehr Breite macht daraus keine bessere
-   Frage, nur einen leereren Kasten. */
-.wi-ovbox--play { max-width: 460px; }
+   Frage, nur einen leereren Kasten.
+
+   Alles, was am Platz dreht, steht als Zahl an dieser EINEN Stelle
+   und wird unten nur noch gelesen. Drei Größen des Kastens:
+
+     normal    Rechner und Tablet im Hochformat
+     knapp     niedriges Fenster (Telefon quer, geteilter Bildschirm)
+     Tastatur  `kb-open` von viewport.js — der härteste Fall
+
+   Warum zwei Wege für „wenig Platz": eine Bildschirmtastatur
+   verkleinert das LAYOUT-Fenster nicht, `@media (max-height)` merkt
+   also nichts von ihr. Umgekehrt gibt es niedrige Fenster ohne
+   Tastatur. Beide Wege setzen dieselben Variablen; die
+   Tastatur-Regel ist die spezifischere und gewinnt.                */
+.wi-ovbox--play {
+  max-width: 460px;
+  --wi-pad: 16px;      /* Innenrand des Kastens */
+  --wi-gap: 10px;      /* Abstand seiner Zeilen */
+  --wi-monpad: 6px;    /* Innenrand des Tierkastens */
+  --wi-monmax: 260px;  /* volle Höhe der Leinwand (= 340 px breit) */
+  --wi-monmin: 44px;   /* darunter ist es kein Tier mehr */
+  --wi-chrome: 280px;  /* was außer der Leinwand im Kasten steht */
+  --wi-stmin: 150px;   /* Untergrenze, solange die Chronik offen ist */
+  --wi-wordsz: clamp(26px, 7vw, 40px);
+  --wi-headsz: 17px;
+  --wi-btnsz: 34px;
+  padding: var(--wi-pad) 18px calc(var(--wi-pad) + 2px);
+  gap: var(--wi-gap);
+}
+@media (max-height: 620px) {
+  .wi-ovbox--play {
+    --wi-pad: 10px;
+    --wi-gap: 7px;
+    --wi-monpad: 4px;
+    --wi-monmax: 190px;
+    --wi-chrome: 220px;
+    --wi-stmin: 128px;
+    --wi-wordsz: clamp(21px, 5.4vw, 30px);
+    --wi-headsz: 15px;
+    --wi-btnsz: 30px;
+  }
+}
+:root.kb-open .wi-ovbox--play {
+  --wi-pad: 9px;
+  --wi-gap: 7px;
+  --wi-monpad: 4px;
+  --wi-monmax: 150px;
+  --wi-chrome: 215px;
+  --wi-stmin: 120px;
+  --wi-wordsz: clamp(21px, 5.4vw, 28px);
+  --wi-headsz: 15px;
+  --wi-btnsz: 30px;
+}
+/* Auch das Overlay selbst gibt seinen Rand her — 16 px oben und
+   unten sind neben einer Tastatur ein Zehntel der Resthöhe. */
+:root.kb-open .wi-ov { padding: 6px; }
+
+.wi-ovbox--play .wi-ovtitle { font-size: var(--wi-headsz); }
+.wi-ovbox--play .wi-ovclose { width: var(--wi-btnsz); height: var(--wi-btnsz); }
+.wi-ovbox--play .wi-word { font-size: var(--wi-wordsz); }
+/* Nie unter 16 px: iOS zoomt sonst beim Hineintippen in das Feld —
+   und dann steht der Kasten schief, nicht nur eng. */
+.wi-ovbox--play .wi-in { padding: var(--wi-gap) 12px; font-size: 17px; }
+:root.kb-open .wi-pmon .wi-stn { font-size: 17px; }
+:root.kb-open .wi-pmon .wi-stbar { margin-bottom: 6px; }
+
+/* Der scrollende Teil: nur Frage und Kacheln. Er WÄCHST nicht
+   (`0 1 auto`) — sonst klaffte im Tipp-Modus eine leere Fläche
+   zwischen Wort und Eingabefeld, sobald der Kasten die volle Höhe
+   bekommt. Schrumpfen darf er, und dann scrollt er.
+
+   Die Untergrenze ist die Zeile mit der Frage. `.wi-ovbody` bringt
+   `min-height: 0` mit, damit ein Scroller überhaupt schrumpfen kann
+   — ohne diese Zeile schrumpfte er auf einem sehr flachen Schirm
+   aber bis auf null, und dann steht die Frage in einem 8 px hohen
+   Schlitz. Enger als hier wird nicht mehr verteilt: das Tier ist
+   dann schon auf seiner Mindesthöhe. */
+.wi-pbody { flex: 0 1 auto; min-height: 2.6em; }
+/* Die Frage klebt oben. Sie ist das Einzige, was man beim Blättern
+   durch acht Kacheln nicht verlieren darf — ohne sie weiß niemand
+   mehr, wonach gefragt war. */
+.wi-pbody > .wi-word {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-bottom: 4px;
+  background: var(--surface);
+}
+/* Von oben füllen: bei zwei Kacheln sollen die nicht auseinander-
+   gezogen werden, nur weil gerade Platz da ist. */
+.wi-pbody > .wi-opts { align-content: start; }
+/* Rückmeldung und Feld stehen fest am unteren Rand. */
+.wi-ovbox--play > .wi-fb,
+.wi-ovbox--play > .wi-type { flex: 0 0 auto; }
 
 /* Wer Bewegung abbestellt hat, bekommt die Auskunft trotzdem: der
    Satz steht da, das Tier hat seine neue Stufe. Nur springt und

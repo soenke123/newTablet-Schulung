@@ -2611,6 +2611,12 @@
      nicht, wie hoch das Tier ist. Eine Stufe hat EINEN Maßstab, und
      wie groß das Tier darin erscheint, entscheidet die Zeichnung. */
   const STUFE_EINHEIT = [1.75, 1.90, 2.05, 2.25, 2.25];
+  /* Ein gemeinsamer Faktor über ALLE Stufen — er verschiebt die
+     Verhältnisse also nicht. Die Zahl kommt aus dem Solo-Showroom
+     (Regler „Größe der Tiere"): dort hat Sönke die Insel eingestellt,
+     hier steht das Ergebnis. Vier Zahlen gehören zusammen und stehen
+     deshalb beieinander: GROESSE, TAG_SEK, GLOW_STAERKE, NACHT_TIEFE. */
+  const TIER_GROESSE = .75;
   /* Wie hoch ein Flieger schwebt. Klein, weil die Vorlage von
      Echse3a den Abstand schon enthält — hier kommt nur dazu, was
      BEWEGUNG ist. */
@@ -2624,11 +2630,18 @@
   /* Wie viele Funken je Stufe steigen. Auch das ist Auskunft und
      keine Zierde — „geschafft" soll man von weitem sehen. */
   const FUNKEN = [0, 2, 3, 5, 9];
+  /* Wie stark das Leuchten insgesamt ausfällt (Showroom-Regler
+     „Leuchtstärke"). Er sitzt hier und nicht in GLUEHEN, weil die
+     Tabelle das VERHÄLTNIS der Stufen festlegt und diese Zahl die
+     Lautstärke — zwei Fragen, zwei Regler. */
+  const GLOW_STAERKE = 2.0;
 
-  /* Ein Tag-und-Nacht-Umlauf. Sönkes Maß aus dem Prüfstand: eine
-     Minute hell, eine Minute dunkel, dazwischen ein Übergang. */
-  const TAG_SEK = 120;
-  const NACHT_TIEFE = .72;
+  /* Ein Tag-und-Nacht-Umlauf. Aus dem Solo-Showroom übernommen
+     („Runde dauert", „Dunkelheit der Karte"): rund halb so lang wie
+     der erste Entwurf, dafür wird die Nacht deutlicher — sonst
+     wartet man eine Minute darauf, dass die Insel etwas erzählt. */
+  const TAG_SEK = 80;
+  const NACHT_TIEFE = .85;
 
   /* ─── Wie die Insel wächst ──────────────────────────────────
      Die Hauptinsel steht immer. Die sechs Satelliten tauchen nach
@@ -3560,7 +3573,7 @@
       t._a = blass ? .82 : 1;
       // Der Maßstab hängt an der STUFE, nicht am Bild — deshalb
       // wächst nichts beim Einschlafen.
-      let e = STUFE_EINHEIT[t.stufe] * P / ECHSE.blatt.h;
+      let e = STUFE_EINHEIT[t.stufe] * TIER_GROESSE * P / ECHSE.blatt.h;
       // Das Zucken beim Wachsen: kurz über das Ziel hinaus und
       // zurück. Ein Sprung ohne Überschwingen liest sich als
       // Ruckler und nicht als Belohnung.
@@ -3592,7 +3605,7 @@
     // braucht der Finger (tierBei).
     sichtbar = zuMalen;
 
-    const glow = nacht;
+    const glow = nacht * GLOW_STAERKE;
 
     // 1 · Lichtschein auf dem Boden — VOR den Tieren, sonst läge das
     //     Licht auf dem Tier statt unter ihm.
@@ -3816,9 +3829,13 @@
            Blick zu bewegen.
 
            Die Leinwand ist doppelt so groß, wie sie gezeigt wird
-           (600×460 auf 300×230): auf dem iPad ist genau das der
-           Unterschied zwischen einem gezeichneten Tier und einem
-           verwaschenen. -->
+           (600×460 auf höchstens 340×260): auf dem iPad ist genau
+           das der Unterschied zwischen einem gezeichneten Tier und
+           einem verwaschenen. Wie groß sie WIRKLICH erscheint,
+           entscheidet der Platz — die Deckel dafür stehen in
+           tool.css (--wi-monmax, --wi-chrome), gemessen am
+           sichtbaren Bereich. Steht die Tastatur, gibt das Tier
+           Platz ab; das Eingabefeld gibt keinen ab. -->
       <div class="wi-ov" data-part="playov" hidden>
         <div class="wi-ovbox wi-ovbox--play">
           <div class="wi-ovhead">
@@ -3870,16 +3887,29 @@
             <b class="wi-pdelta" data-part="pdelta" hidden></b>
             <div class="wi-stats" data-part="pstats" hidden></div>
           </div>
-          <div class="wi-ovbody">
+          <!-- ── Was scrollt und was steht ────────────────────────
+               Nur die Frage und die acht Kacheln liegen im
+               scrollenden Teil. Rückmeldung und Eingabefeld sind
+               GESCHWISTER davon und stehen fest am unteren Rand des
+               Kastens.
+
+               Der Grund ist die Bildschirmtastatur: sie schiebt den
+               sichtbaren Bereich auf einen Streifen zusammen
+               (--vv-h), und alles, was dann noch mitscrollt,
+               verschwindet als Erstes. Das Eingabefeld war genau das
+               — man tippte in etwas, das man nicht sah (Sönke,
+               10.09.2026). Das Wort bleibt trotzdem im Blick: es
+               klebt oben am Scroller (position: sticky). -->
+          <div class="wi-ovbody wi-pbody">
             <p class="wi-word" data-part="pword"></p>
-            <form class="wi-type" data-part="pform">
-              <input class="wi-in" data-part="pin" autocomplete="off" autocapitalize="off"
-                     autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="Antwort">
-              <button class="wi-btn" type="submit">Prüfen</button>
-            </form>
             <div class="wi-opts" data-part="popts" hidden></div>
-            <p class="wi-fb" data-part="pfb" hidden></p>
           </div>
+          <p class="wi-fb" data-part="pfb" hidden></p>
+          <form class="wi-type" data-part="pform">
+            <input class="wi-in" data-part="pin" autocomplete="off" autocapitalize="off"
+                   autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="Antwort">
+            <button class="wi-btn" type="submit">Prüfen</button>
+          </form>
         </div>
       </div>
 
@@ -5562,6 +5592,12 @@
     if (an) renderStats();
     els.pStats.hidden = !an;
     els.pInfo.classList.toggle('is-on', !!an);
+    /* Der Tierkasten schrumpft mit der Tastatur (siehe --wi-monmax in
+       tool.css). Die Tabelle liegt aber IN ihm und braucht ihre zwei
+       Zeilen — also bekommt er für diese Zeit eine Untergrenze. Ohne
+       sie stünden bei offener Tastatur zwei Zahlenreihen in einem
+       60 px hohen Streifen. */
+    if (els.pMon) els.pMon.classList.toggle('is-stats', !!an);
   }
 
   function renderStats() {
