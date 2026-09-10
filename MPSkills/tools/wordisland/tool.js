@@ -3626,6 +3626,18 @@
                  Tier entsteht: „wie oft hatte ich das schon?" -->
             <button type="button" class="wi-pinfo" data-part="pinfo"
                     aria-label="Wie oft hattest du dieses Wort?">i</button>
+            <!-- Drei Kästchen bis zur nächsten Stufe, für die GERADE
+                 gefragte Richtung. Sie sind der Grund, warum das
+                 Punktekonto überhaupt in Dritteln rechnet: „noch ein
+                 Kästchen" versteht ein Kind ohne ein einziges Wort
+                 Erklärung, „7 von 9 Punkten" nicht.
+
+                 Die Zahl daneben (+3 / +1 / −3) kommt nur für einen
+                 Augenblick — sie sagt, WARUM sich gerade etwas
+                 bewegt hat, und verschwindet mit der nächsten
+                 Frage. -->
+            <div class="wi-ppts" data-part="ppts" hidden></div>
+            <b class="wi-pdelta" data-part="pdelta" hidden></b>
             <div class="wi-stats" data-part="pstats" hidden></div>
           </div>
           <div class="wi-ovbody">
@@ -3693,6 +3705,7 @@
       playOv: q('playov'), pMeta: q('pmeta'), pMon: q('pmon'),
       pCvs: q('pcvs'), pStage: q('pstage'),
       pInfo: q('pinfo'), pStats: q('pstats'),
+      pPts: q('ppts'), pDelta: q('pdelta'),
       cheer: q('cheer'), cCvs: q('ccvs'),
       pLevel: q('plevel'), pLevelB: q('plevelb'), pLevelS: q('plevels'),
       pTon: q('pton'),
@@ -3713,6 +3726,7 @@
       clearTimeout(feierT);
       feiernd = false;
       zeigeStats(false);
+      zeigeDelta(0);
       kartHalt();
     });
 
@@ -3861,9 +3875,16 @@
        schlüpft, wenn sein Wort in BEIDE Richtungen saß — wer nur
        eine Richtung übt, sieht auf seiner Insel nichts passieren,
        und das wäre die undurchschaubarste Enttäuschung von allen. */
-    els.modeHint.textContent = (solo.settings.dir || 'mixed') === 'mixed'
+    /* Dazu der Satz zum Abfrage-Modus. Er muss die Folge erklären,
+       ohne zu rechnen: „zählt ein Drittel" ist wahr und trotzdem
+       falsch formuliert — ein Bruch in einem Menü, das ein Kind
+       allein bedient, ist eine Hürde und keine Auskunft. */
+    els.modeHint.textContent = ((solo.settings.dir || 'mixed') === 'mixed'
       ? 'Ein Tier schlüpft erst, wenn du sein Wort in beide Richtungen kannst.'
-      : 'Achtung: In nur einer Richtung wachsen deine Tiere nicht weiter.';
+      : 'Achtung: In nur einer Richtung wachsen deine Tiere nicht weiter.')
+      + ' ' + ((solo.settings.mode || 'type') === 'choice'
+        ? 'Beim Auswählen wachsen deine Tiere langsamer — dafür kostet ein Fehler fast nichts.'
+        : 'Was du selbst tippst, bringt dein Tier am weitesten. Mit Hilfe zählt es weniger.');
   }
 
   /* Die Unit-Kacheln werden bei jeder Änderung neu geschrieben —
@@ -3901,6 +3922,7 @@
     els.setsOv.hidden = true;
     els.playOv.hidden = false;
     soloFeedback(null);
+    zeigeDelta(0);
     buehneZu();
     clearTimeout(feierT); feiernd = false;
     const r = await ctx.actions.call('wi_solo_start', {});
@@ -3930,10 +3952,20 @@
         return;
       }
 
+      /* „Richtig — mit Hilfe" statt nur „Richtig": die Antwort war
+         richtig, sie zählt nur weniger, und ein Kind, dem die
+         Kästchen nur ein Drittel weiterrücken, hat ein Recht darauf
+         zu erfahren, warum. Der Server sagt es (r.helped) — der
+         Client rät es nicht aus der Zwischenstufe zusammen. */
       if (r.result === 'spell')       soloFeedback('near', 'Fast! Welche Schreibweise stimmt?');
       else if (r.result === 'choice') soloFeedback('warn', 'Welches Wort ist es?');
-      else if (r.result === 'correct') soloFeedback('ok', 'Richtig!');
+      else if (r.result === 'correct') soloFeedback('ok', r.helped ? 'Richtig — mit Hilfe.' : 'Richtig!');
       else                            soloFeedback('bad', 'Es heißt: ' + r.solution);
+
+      // Die Kästchen bewegen sich SOFORT, auch wenn gleich eine
+      // Feier dazwischenkommt: sie gehören zur Antwort von eben, und
+      // soloTask trägt bis zum Ende der Pause noch das alte Wort.
+      if (r.delta) { zeigePunkte(r.dir, r.points); zeigeDelta(r.delta); }
 
       // Das Tier zuerst, dann die nächste Frage: was gerade passiert
       // ist, gehört zum Wort von eben. Das gefragte Wort muss JETZT
@@ -4185,7 +4217,89 @@
       els.pOpts.innerHTML = opts
         .map(o => `<button type="button" data-v="${esc(o)}">${esc(o)}</button>`).join('');
     }
+    zeigeRunde();
+    zeigePunkte();
     zeichneTierKarte();
+  }
+
+  /* ─── Der Stand der Runde ───────────────────────────────────
+     Sönkes Wunsch: „ich will schon mal eine ganze Unit
+     durchballern." Genau dafür ist diese Zeile da — sie beantwortet
+     „bin ich einmal rum?", und ohne sie merkt niemand, dass der
+     Beutel überhaupt einer ist.
+
+     Gezählt werden WÖRTER und nicht Fragen: bei „gemischt" hat jedes
+     Wort zwei Richtungen, und eine Zahl, die doppelt so hoch ist wie
+     die Wortzahl auf der eigenen Insel, erklärt nichts, sondern
+     wirft eine Frage auf. Der Server zählt deshalb schon in
+     Wörtern (wi_solo_pass). */
+  function zeigeRunde() {
+    if (!els.pMeta) return;
+    const p = soloTask && soloTask.pass;
+    if (!p || !p.gesamt) { els.pMeta.textContent = 'Vokabeln üben'; return; }
+    els.pMeta.textContent = p.offen >= p.gesamt
+      ? `Runde ${p.no} · ${p.gesamt} Wörter`
+      : `Runde ${p.no} · noch ${p.offen} von ${p.gesamt}`;
+  }
+
+  /* ─── Die drei Kästchen ─────────────────────────────────────
+     Sie zeigen das Punktekonto der GEFRAGTEN Richtung — nicht das
+     des Tiers. Das ist Absicht: das Tier steht auf der schwächeren
+     der beiden Richtungen, und wer wissen will, warum es nicht
+     weitergeht, muss sehen, welche der beiden klemmt.
+
+     Bei vollem Konto (12 Punkte, funkelnd) leuchten alle drei und
+     bewegen sich nicht mehr — es gibt nichts mehr zu holen. */
+  const DIR_KURZ = { de_en: 'DE→EN', en_de: 'EN→DE' };
+
+  function zeigePunkte(dirNeu, punkteNeu) {
+    if (!els.pPts) return;
+    const dir = dirNeu || (soloTask && soloTask.dir);
+    const roh = punkteNeu != null
+      ? punkteNeu
+      : (soloTask && soloTask.pts && soloTask.pts[dir]);
+    /* Fehlt das Feld ganz, ist die Datenbank älter als dieses
+       Werkzeug — dann bleiben die Kästchen weg, statt eine Null zu
+       behaupten (Regel: feedback_missing_migration_looks_like_network,
+       die Nummer steht in renderStats). */
+    if (!dir || roh == null) { els.pPts.hidden = true; return; }
+
+    const pts  = Math.max(0, Math.min(12, roh | 0));
+    const max  = pts >= 12;
+    const voll = max ? 3 : pts % 3;
+    els.pPts.hidden = false;
+    els.pPts.className = 'wi-ppts' + (max ? ' is-max' : '');
+    els.pPts.innerHTML = `<span>${DIR_KURZ[dir] || ''}</span>`
+      + [0, 1, 2].map(i => `<i${i < voll ? ' class="is-on"' : ''}></i>`).join('');
+  }
+
+  /* Die kleine Zahl. Sie gehört zur Antwort von eben und geht nach
+     einem Augenblick von selbst.
+
+     Sie darf ausdrücklich NICHT von soloRenderTask weggenommen
+     werden: ohne Stufensprung steht die nächste Frage sofort da, und
+     die Zahl wäre schon weg, bevor jemand sie gesehen hat. Sie darf
+     aber auch nicht bleiben — sie sitzt über den Kästchen, und über
+     den Kästchen des NÄCHSTEN Wortes läse sie sich wie deren
+     Bewegung. Also ein Zeitgeber. */
+  let deltaT = 0;
+
+  function zeigeDelta(d) {
+    if (!els.pDelta) return;
+    clearTimeout(deltaT);
+    if (!d) { els.pDelta.hidden = true; return; }
+    deltaT = setTimeout(() => {
+      if (destroyed || !els.pDelta) return;
+      els.pDelta.hidden = true;
+    }, 1400);
+    els.pDelta.textContent = (d > 0 ? '+' : '−') + Math.abs(d);
+    els.pDelta.className = 'wi-pdelta is-' + (d > 0 ? 'plus' : 'minus');
+    els.pDelta.hidden = false;
+    // Neu anstoßen — zweimal dieselbe Klasse spielt sonst keine
+    // zweite Bewegung ab (wie bei feierText).
+    els.pDelta.classList.remove('is-on');
+    void els.pDelta.offsetWidth;
+    els.pDelta.classList.add('is-on');
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -4621,7 +4735,10 @@
      einmal und danach in der Schleife: was zu sehen ist, soll nicht
      erst beim nächsten Bild da sein. */
   function zeichneTierKarte() {
-    els.pMeta.textContent = '';
+    /* pMeta gehört seit 0139 dem Rundenzähler (zeigeRunde) und wird
+       hier NICHT mehr geleert: diese Funktion läuft am Ende von
+       soloRenderTask und wischte die Zeile sonst gleich wieder weg,
+       nachdem sie eben geschrieben wurde. */
     feierText(null);
     kartAnim = null;
     if (!sprites || !soloTask || !soloTask.item) {
@@ -4649,14 +4766,18 @@
   }
 
   /* ─── Wie oft hattest du dieses Wort? ───────────────────────
-     Sönkes Vorgabe: zwei Zeilen, vier Spalten, oben EN→DE, unten
-     DE→EN; die Spalten richtig, mit Hilfe und insgesamt.
+     Sönkes Vorgabe: zwei Zeilen, oben EN→DE, unten DE→EN; die
+     Spalten richtig, mit Hilfe, falsch und gesamt.
 
-     Die Zahlen fahren in der Aufgabe mit (`stats`, Migration 0138),
-     es geht also kein Ruf zum Server — die Übersicht ist SOFORT da.
-     Der Balken darunter ist die vierte Zahl, die keine Spalte
-     bekommen hat: was von „insgesamt" übrig bleibt, war falsch. So
-     steht sie im Bild, ohne dass ein Wort dafür nötig wäre. */
+     „Falsch" hat seit 0139 eine eigene Spalte und wird nicht mehr
+     als Rest gerechnet. Der Unterschied ist nicht kosmetisch: für
+     alles, was vor der Chronik geübt wurde, war der Rest zu hoch —
+     die Übersicht behauptete Fehler, die niemand gemacht hatte. Was
+     jetzt in der Summe fehlt, bleibt im Balken grau: ehrlich
+     unbekannt.
+
+     Die Zahlen fahren in der Aufgabe mit (`stats`), es geht also
+     kein Ruf zum Server — die Übersicht ist SOFORT da. */
   const STAT_ZEILEN = [['en_de', 'EN', 'DE'], ['de_en', 'DE', 'EN']];
 
   function zeigeStats(an) {
@@ -4675,18 +4796,23 @@
        darum steht die Nummer hier im Klartext. */
     if (!st) {
       els.pStats.innerHTML = '<p class="wi-stnote">Diese Übersicht braucht die '
-        + 'neueste Fassung der Datenbank (Migration 0138).</p>';
+        + 'neueste Fassung der Datenbank (Migration 0139).</p>';
       return;
     }
     const zeilen = STAT_ZEILEN.map(([dir, von, nach]) => {
-      const z = st[dir] || [0, 0, 0];
+      const z = st[dir] || [0, 0, 0, 0];
       const gut = z[0] | 0, hilf = z[1] | 0, alle = z[2] | 0;
-      const bad = Math.max(0, alle - gut - hilf);
+      /* Vier Zahlen seit 0139. Kommen nur drei an, ist die Datenbank
+         älter — dann wird „falsch" wie früher als Rest gerechnet.
+         Das ist die schlechtere Auskunft, aber immer noch besser als
+         eine leere Spalte. */
+      const bad = z.length > 3 ? (z[3] | 0) : Math.max(0, alle - gut - hilf);
       const p = n => (alle ? n / alle * 100 : 0).toFixed(2) + '%';
       return `
         <span class="wi-stdir">${von}<i>→</i>${nach}</span>
         <b class="wi-stn is-gut">${gut}</b>
         <b class="wi-stn is-hilf">${hilf}</b>
+        <b class="wi-stn is-bad">${bad}</b>
         <b class="wi-stn is-alle">${alle}</b>
         <div class="wi-stbar${alle ? '' : ' is-leer'}">
           <i class="is-gut"  style="width:${p(gut)}"></i>
@@ -4699,9 +4825,12 @@
         <span></span>
         <span class="wi-sthead">richtig</span>
         <span class="wi-sthead">mit Hilfe</span>
+        <span class="wi-sthead">falsch</span>
         <span class="wi-sthead">gesamt</span>
         ${zeilen}
-      </div>`;
+      </div>`
+      + (soloTask && soloTask.pass ? '' :
+         '<p class="wi-stnote">Der Rundenzähler braucht Migration 0139.</p>');
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -4812,6 +4941,7 @@
       kartHalt();
       clearTimeout(soloLockT);
       clearTimeout(feierT);
+      clearTimeout(deltaT);
       feiernd = false;
       if (onResize) window.removeEventListener('resize', onResize);
       onResize = null;

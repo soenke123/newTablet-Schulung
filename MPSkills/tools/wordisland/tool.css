@@ -1410,9 +1410,9 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 .wi-stgrid {
   width: 100%;
   display: grid;
-  grid-template-columns: auto 1fr 1fr 1fr;
+  grid-template-columns: auto repeat(4, 1fr);
   align-items: center;
-  gap: 2px 10px;
+  gap: 2px 8px;
 }
 .wi-sthead {
   font-size: 10px;
@@ -1439,13 +1439,14 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 .wi-stdir i { font-style: normal; color: #6f8798; }
 .wi-stn {
   text-align: center;
-  font-size: 25px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 .wi-stn.is-gut  { color: #6ee7a8; }
 .wi-stn.is-hilf { color: #fbbf5c; }
+.wi-stn.is-bad  { color: #e06a6a; }
 .wi-stn.is-alle { color: #cbd9e4; }
 
 .wi-stbar {
@@ -1469,6 +1470,72 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   line-height: 1.5;
   color: #b9cbd8;
   text-align: center;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DIE DREI KÄSTCHEN
+   ══════════════════════════════════════════════════════════════
+   Der Weg zur nächsten Stufe, in der gerade gefragten Richtung.
+   Drei Kästchen, weil eine Stufe drei Punkte kostet — die Einheit
+   ist damit im Bild, und der Bruch, aus dem sie stammt, muss
+   nirgends erscheinen.
+
+   Sie sitzen unten rechts und damit dem Stufennamen (unten links)
+   gegenüber: das eine sagt, wo das Tier steht, das andere, wie weit
+   es noch ist. */
+.wi-ppts {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(4, 16, 26, .72);
+}
+.wi-ppts span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: #7d95a6;
+}
+.wi-ppts i {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  border: 1px solid rgba(160, 200, 225, .35);
+  background: rgba(160, 200, 225, .1);
+  transition: background .22s ease, border-color .22s ease;
+}
+.wi-ppts i.is-on { background: #6ee7a8; border-color: #6ee7a8; }
+/* Volles Konto: es gibt nichts mehr zu holen, und das soll man
+   sehen, ohne die Kästchen zu zählen. */
+.wi-ppts.is-max i {
+  background: var(--wi-gold, #ffcf4d);
+  border-color: var(--wi-gold, #ffcf4d);
+}
+
+/* Die Zahl zur Antwort. Sie steigt kurz auf und bleibt dann stehen,
+   bis die nächste Frage kommt — ein Wert, der wegblendet, während
+   man noch hinsieht, wird zur Frage statt zur Auskunft. */
+.wi-pdelta {
+  position: absolute;
+  right: 14px;
+  bottom: 36px;
+  font-size: 19px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .65);
+  pointer-events: none;
+}
+.wi-pdelta.is-plus  { color: #6ee7a8; }
+.wi-pdelta.is-minus { color: #e06a6a; }
+.wi-pdelta.is-on    { animation: wi-delta .8s ease-out; }
+@keyframes wi-delta {
+  from { opacity: 0; transform: translateY(9px); }
+  30%  { opacity: 1; transform: none; }
+  to   { opacity: 1; transform: translateY(-4px); }
 }
 
 .wi-pstage {
@@ -1501,6 +1568,8 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   .wi-plevel.is-on { animation: none; }
   .wi-cheer { animation: none; }
   .wi-stats { animation: none; }
+  .wi-pdelta.is-on { animation: none; }
+  .wi-ppts i { transition: none; }
 }
 
 /* Der Kasten, in den insel.js das Werkzeug hängt. Er muss selbst

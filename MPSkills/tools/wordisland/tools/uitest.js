@@ -1337,15 +1337,17 @@ async function testSchluepfen() {
 }
 
 /* „Wie oft hattest du dieses Wort?" — das kleine i beim Tier.
-   Die Zahlen fahren in der Aufgabe mit (Migration 0138), es geht
-   also kein Ruf zum Server. Geprüft wird deshalb genau zweierlei:
-   dass die Zahlen an der richtigen Stelle landen, und dass eine
-   fehlende Migration NICHT wie „noch nie geübt" aussieht. */
+   Die Zahlen fahren in der Aufgabe mit (Migration 0138, seit 0139
+   mit einer vierten), es geht also kein Ruf zum Server. Geprüft
+   wird deshalb genau zweierlei: dass die Zahlen an der richtigen
+   Stelle landen, und dass eine fehlende Migration NICHT wie „noch
+   nie geübt" aussieht. */
 async function testStats() {
   console.log('\n— Wie oft hattest du das Wort? —');
   const AUFGABE = {
     item: 'w-1', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 2, options: [],
-    stats: { en_de: [7, 2, 11], de_en: [4, 3, 8] }
+    pts: { de_en: 7, en_de: 6 }, pass: { no: 1, offen: 10, gesamt: 10 },
+    stats: { en_de: [7, 2, 11, 2], de_en: [4, 3, 8, 1] }
   };
   const { tool, root, document } = await mountSolo(soloView(10, () => 2), {
     wi_solo_start: () => ({ ok: true, task: AUFGABE })
@@ -1361,20 +1363,20 @@ async function testStats() {
   ok('das i klappt sie auf', panel.hidden === false);
 
   const kopf = [...panel.querySelectorAll('.wi-sthead')].map(e => e.textContent);
-  ok('drei Spalten: richtig, mit Hilfe, gesamt',
-     js(kopf) === js(['richtig', 'mit Hilfe', 'gesamt']), js(kopf));
+  ok('vier Spalten: richtig, mit Hilfe, falsch, gesamt',
+     js(kopf) === js(['richtig', 'mit Hilfe', 'falsch', 'gesamt']), js(kopf));
 
   const dirs = [...panel.querySelectorAll('.wi-stdir')].map(e => e.textContent);
   ok('oben EN→DE, unten DE→EN', js(dirs) === js(['EN→DE', 'DE→EN']), js(dirs));
 
   const zahlen = [...panel.querySelectorAll('.wi-stn')].map(e => e.textContent);
   ok('und die Zahlen stehen in ihrer Zeile',
-     js(zahlen) === js(['7', '2', '11', '4', '3', '8']), js(zahlen));
+     js(zahlen) === js(['7', '2', '2', '11', '4', '3', '1', '8']), js(zahlen));
 
-  /* Der Balken trägt die vierte Zahl, die keine Spalte hat: 11 − 7 −
-     2 = 2 falsch, das sind 18,18 %. Gerechnet und nicht geraten —
-     ein Balken, der die Reste verschluckt, behauptet, es hätte nie
-     einen Fehler gegeben. */
+  /* „Falsch" kommt seit 0139 vom Server und wird NICHT mehr als Rest
+     gerechnet: 2 von 11 sind 18,18 %. Der Unterschied fällt erst bei
+     Altdaten auf — dort ist der Rest zu hoch, weil die Chronik erst
+     mit 0138 zu zählen begann. */
   const bad = panel.querySelector('.wi-stbar i.is-bad');
   ok('der Balken zeigt auch die falschen',
      bad && /18\.18%/.test(bad.getAttribute('style') || ''), bad?.getAttribute('style'));
@@ -1383,6 +1385,25 @@ async function testStats() {
   await wait(10);
   ok('noch ein Tipp aufs i macht sie wieder zu', panel.hidden === true);
   tool.unmount();
+
+  /* Eine Datenbank auf dem Stand von 0138 schickt drei Zahlen. Dann
+     bleibt die Spalte nicht leer, sondern wird wie früher aus dem
+     Rest gerechnet — schlechter, aber nicht falsch aussehend. */
+  const drei = await mountSolo(soloView(10, () => 2), {
+    wi_solo_start: () => ({
+      ok: true,
+      task: { item: 'w-1', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 2,
+              options: [], stats: { de_en: [4, 3, 8] } }
+    })
+  });
+  click(drei.root.querySelector('[data-part="sgo"]'), drei.document);
+  await wait(30);
+  click(drei.root.querySelector('[data-part="pinfo"]'), drei.document);
+  await wait(10);
+  const dreiZ = [...drei.root.querySelectorAll('.wi-stn')].map(e => e.textContent);
+  ok('kommen nur drei Zahlen, wird „falsch" wie früher als Rest gerechnet',
+     js(dreiZ.slice(4)) === js(['4', '3', '1', '8']), js(dreiZ));
+  drei.tool.unmount();
 
   /* Und der Fall, der sonst wie „dieses Wort hattest du noch nie"
      aussähe: die Datenbank ist älter als das Werkzeug. Die beiden
@@ -1398,9 +1419,87 @@ async function testStats() {
   click(alt.root.querySelector('[data-part="pinfo"]'), alt.document);
   await wait(10);
   const note = alt.root.querySelector('[data-part="pstats"]');
-  ok('ohne 0138 keine erfundenen Nullen',
-     !note.querySelector('.wi-stn') && /0138/.test(note.textContent), note.textContent);
+  ok('ohne die Chronik keine erfundenen Nullen',
+     !note.querySelector('.wi-stn') && /0139/.test(note.textContent), note.textContent);
+  ok('und ohne sie auch keine leeren Kästchen',
+     alt.root.querySelector('[data-part="ppts"]').hidden === true);
   alt.tool.unmount();
+}
+
+/* ─── Die drei Kästchen und der Rundenstand ─────────────────
+   Beides sind ANZEIGEN von Zahlen, die der Server rechnet (0139) —
+   geprüft wird deshalb nicht die Regel, sondern die Übersetzung:
+
+     · Ein Konto von 7 Punkten ist Stufe 2 plus EIN Drittel. Also
+       genau ein volles Kästchen, nicht zwei und nicht sieben.
+     · Volles Konto (12) leuchtet ganz und heißt is-max.
+     · Die Kästchen gehören zur GEFRAGTEN Richtung, nicht zum Tier.
+     · Nach der Antwort steht die Zahl da (+3 / −3) und die Kästchen
+       stehen SOFORT auf dem neuen Stand — nicht erst nach der Pause,
+       die eine Feier einlegt.
+     · Der Rundenzähler zählt Wörter und schreibt sie in die
+       Kopfzeile des Übungskastens.                                */
+async function testPunkte() {
+  console.log('\n— Drei Kästchen und der Rundenstand —');
+  const { tool, root, document } = await mountSolo(soloView(30, () => 1), {
+    wi_solo_start: () => ({
+      ok: true,
+      task: { item: 'w-1', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 1,
+              options: [], pts: { de_en: 7, en_de: 3 }, pass: { no: 2, offen: 12, gesamt: 30 } }
+    }),
+    wi_solo_answer: () => ({
+      ok: true, result: 'correct', item: 'w-1', dir: 'de_en', helped: false,
+      delta: 3, points: 10, level_before: 1, level_after: 1, locked_for: 0,
+      task: { item: 'w-2', prompt: 'der Stuhl', dir: 'en_de', stage: 'type', level: 0,
+              options: [], pts: { de_en: 0, en_de: 12 }, pass: { no: 2, offen: 11, gesamt: 30 } }
+    })
+  });
+  const voll = () => [...root.querySelectorAll('[data-part="ppts"] i')]
+    .filter(e => (e.className || '').includes('is-on')).length;
+
+  click(root.querySelector('[data-part="sgo"]'), document);
+  await wait(30);
+
+  const ppts = root.querySelector('[data-part="ppts"]');
+  ok('die Kästchen stehen da', ppts.hidden === false);
+  ok('sieben Punkte sind ein volles Kästchen von dreien',
+     voll() === 1 && ppts.querySelectorAll('i').length === 3, `${voll()} von 3`);
+  ok('und sie tragen die gefragte Richtung',
+     ppts.querySelector('span').textContent === 'DE→EN',
+     ppts.querySelector('span').textContent);
+  ok('der Rundenstand steht in der Kopfzeile',
+     root.querySelector('[data-part="pmeta"]').textContent === 'Runde 2 · noch 12 von 30',
+     root.querySelector('[data-part="pmeta"]').textContent);
+
+  root.querySelector('[data-part="pin"]').value = 'tree';
+  root.querySelector('[data-part="pform"]')
+      .dispatchEvent(new document.defaultView.Event('submit', { bubbles: true }));
+  await wait(40);
+
+  const delta = root.querySelector('[data-part="pdelta"]');
+  ok('nach der Antwort steht die Zahl da', delta.hidden === false && delta.textContent === '+3',
+     delta.textContent);
+  ok('und sie ist als Gewinn gefärbt', /is-plus/.test(delta.className), delta.className);
+
+  /* Ohne Stufensprung steht die nächste Frage SOFORT da — genau
+     deshalb darf sie die Zahl nicht mitnehmen. Sie hat einen eigenen
+     Zeitgeber; hier steht sie also noch, obwohl das Wort schon
+     gewechselt hat. */
+  ok('die nächste Frage bringt die andere Richtung mit',
+     root.querySelector('[data-part="ppts"] span').textContent === 'EN→DE',
+     root.querySelector('[data-part="ppts"] span').textContent);
+  ok('ein volles Konto leuchtet ganz',
+     voll() === 3 && /is-max/.test(root.querySelector('[data-part="ppts"]').className),
+     root.querySelector('[data-part="ppts"]').className);
+  ok('die Zahl überlebt den Wechsel der Frage',
+     root.querySelector('[data-part="pdelta"]').hidden === false);
+  ok('der Rundenstand ist mitgewandert',
+     root.querySelector('[data-part="pmeta"]').textContent === 'Runde 2 · noch 11 von 30',
+     root.querySelector('[data-part="pmeta"]').textContent);
+
+  await wait(1500);
+  ok('und geht dann von selbst', root.querySelector('[data-part="pdelta"]').hidden === true);
+  tool.unmount();
 }
 
 /* Ohne Migration 0136 antwortet der Server mit 404 → fn_missing.
@@ -1451,6 +1550,7 @@ async function testSoloOhneMigration() {
   await testSoloUeben();
   await testSchluepfen();
   await testStats();
+  await testPunkte();
   await testSoloOhneMigration();
   console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');
   process.exit(fails ? 1 : 0);
