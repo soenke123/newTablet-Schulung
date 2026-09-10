@@ -1421,26 +1421,34 @@ async function testStats() {
   const note = alt.root.querySelector('[data-part="pstats"]');
   ok('ohne die Chronik keine erfundenen Nullen',
      !note.querySelector('.wi-stn') && /0139/.test(note.textContent), note.textContent);
-  ok('und ohne sie auch keine leeren Kästchen',
-     alt.root.querySelector('[data-part="ppts"]').hidden === true);
+  /* Das Schildchen mit der Richtung hängt an KEINER gerechneten Zahl
+     — deshalb steht es auch hier. Genau das unterscheidet es von den
+     drei Kästchen, die bis 10.09.2026 an derselben Stelle saßen und
+     ohne Punktekonto verschwanden. */
+  ok('das Schildchen mit der Richtung braucht die Chronik nicht',
+     alt.root.querySelector('[data-part="pdir"]').hidden === false
+     && alt.root.querySelector('[data-part="pdir"]').textContent === 'DE→EN',
+     alt.root.querySelector('[data-part="pdir"]').textContent);
   alt.tool.unmount();
 }
 
-/* ─── Die drei Kästchen und der Rundenstand ─────────────────
-   Beides sind ANZEIGEN von Zahlen, die der Server rechnet (0139) —
-   geprüft wird deshalb nicht die Regel, sondern die Übersetzung:
+/* ─── Das Schildchen und der Rundenstand ────────────────────
+   Beides sind ANZEIGEN von Zahlen bzw. Feldern, die der Server
+   liefert (0139) — geprüft wird deshalb nicht die Regel, sondern die
+   Übersetzung:
 
-     · Ein Konto von 7 Punkten ist Stufe 2 plus EIN Drittel. Also
-       genau ein volles Kästchen, nicht zwei und nicht sieben.
-     · Volles Konto (12) leuchtet ganz und heißt is-max.
-     · Die Kästchen gehören zur GEFRAGTEN Richtung, nicht zum Tier.
-     · Nach der Antwort steht die Zahl da (+3 / −3) und die Kästchen
-       stehen SOFORT auf dem neuen Stand — nicht erst nach der Pause,
-       die eine Feier einlegt.
-     · Der Rundenzähler zählt Wörter und schreibt sie in die
-       Kopfzeile des Übungskastens.                                */
+     · Das Schildchen trägt die GEFRAGTE Richtung, nicht die des
+       Tiers, und wechselt mit der Frage.
+     · Über dem Wort steht keine ausgeschriebene Frage mehr.
+     · Der Rundenzähler zählt Wörter, schreibt sie in die Kopfzeile
+       des Übungskastens und sagt IMMER „noch x von y" — auch am
+       Anfang einer Runde, wo x und y gleich sind. Die Sonderform
+       („Runde 2 · 30 Wörter") war bis 10.09.2026 da und hat genau
+       das Herunterzählen verdeckt, das sie ankündigen sollte.
+     · Nach der Antwort steht die Zahl da (+3 / −3) — SOFORT, nicht
+       erst nach der Pause, die eine Feier einlegt.               */
 async function testPunkte() {
-  console.log('\n— Drei Kästchen und der Rundenstand —');
+  console.log('\n— Schildchen und Rundenstand —');
   const { tool, root, document } = await mountSolo(soloView(30, () => 1), {
     wi_solo_start: () => ({
       ok: true,
@@ -1454,19 +1462,15 @@ async function testPunkte() {
               options: [], pts: { de_en: 0, en_de: 12 }, pass: { no: 2, offen: 11, gesamt: 30 } }
     })
   });
-  const voll = () => [...root.querySelectorAll('[data-part="ppts"] i')]
-    .filter(e => (e.className || '').includes('is-on')).length;
-
   click(root.querySelector('[data-part="sgo"]'), document);
   await wait(30);
 
-  const ppts = root.querySelector('[data-part="ppts"]');
-  ok('die Kästchen stehen da', ppts.hidden === false);
-  ok('sieben Punkte sind ein volles Kästchen von dreien',
-     voll() === 1 && ppts.querySelectorAll('i').length === 3, `${voll()} von 3`);
-  ok('und sie tragen die gefragte Richtung',
-     ppts.querySelector('span').textContent === 'DE→EN',
-     ppts.querySelector('span').textContent);
+  const pdir = root.querySelector('[data-part="pdir"]');
+  ok('das Schildchen steht da', pdir.hidden === false);
+  ok('und trägt die gefragte Richtung — sonst nichts',
+     pdir.textContent === 'DE→EN' && pdir.children.length === 0, pdir.innerHTML);
+  ok('über dem Wort steht keine ausgeschriebene Frage mehr',
+     root.querySelector('[data-part="pask"]') === null);
   ok('der Rundenstand steht in der Kopfzeile',
      root.querySelector('[data-part="pmeta"]').textContent === 'Runde 2 · noch 12 von 30',
      root.querySelector('[data-part="pmeta"]').textContent);
@@ -1486,11 +1490,8 @@ async function testPunkte() {
      Zeitgeber; hier steht sie also noch, obwohl das Wort schon
      gewechselt hat. */
   ok('die nächste Frage bringt die andere Richtung mit',
-     root.querySelector('[data-part="ppts"] span').textContent === 'EN→DE',
-     root.querySelector('[data-part="ppts"] span').textContent);
-  ok('ein volles Konto leuchtet ganz',
-     voll() === 3 && /is-max/.test(root.querySelector('[data-part="ppts"]').className),
-     root.querySelector('[data-part="ppts"]').className);
+     root.querySelector('[data-part="pdir"]').textContent === 'EN→DE',
+     root.querySelector('[data-part="pdir"]').textContent);
   ok('die Zahl überlebt den Wechsel der Frage',
      root.querySelector('[data-part="pdelta"]').hidden === false);
   ok('der Rundenstand ist mitgewandert',
@@ -1500,6 +1501,24 @@ async function testPunkte() {
   await wait(1500);
   ok('und geht dann von selbst', root.querySelector('[data-part="pdelta"]').hidden === true);
   tool.unmount();
+
+  /* Der Anfang einer Runde: der Beutel ist voll, offen == gesamt.
+     Genau hier stand bis 10.09.2026 „Runde 2 · 30 Wörter" — und weil
+     das der Zustand ist, in dem man den Kasten aufmacht, hat kaum
+     jemand die andere Form je zu sehen bekommen. */
+  const voll = await mountSolo(soloView(30, () => 1), {
+    wi_solo_start: () => ({
+      ok: true,
+      task: { item: 'w-1', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 0,
+              options: [], pass: { no: 3, offen: 30, gesamt: 30 } }
+    })
+  });
+  click(voll.root.querySelector('[data-part="sgo"]'), voll.document);
+  await wait(30);
+  ok('der volle Beutel zählt in derselben Form herunter',
+     voll.root.querySelector('[data-part="pmeta"]').textContent === 'Runde 3 · noch 30 von 30',
+     voll.root.querySelector('[data-part="pmeta"]').textContent);
+  voll.tool.unmount();
 }
 
 /* Ohne Migration 0136 antwortet der Server mit 404 → fn_missing.

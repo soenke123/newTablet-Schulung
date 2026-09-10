@@ -3626,22 +3626,28 @@
                  Tier entsteht: „wie oft hatte ich das schon?" -->
             <button type="button" class="wi-pinfo" data-part="pinfo"
                     aria-label="Wie oft hattest du dieses Wort?">i</button>
-            <!-- Drei Kästchen bis zur nächsten Stufe, für die GERADE
-                 gefragte Richtung. Sie sind der Grund, warum das
-                 Punktekonto überhaupt in Dritteln rechnet: „noch ein
-                 Kästchen" versteht ein Kind ohne ein einziges Wort
-                 Erklärung, „7 von 9 Punkten" nicht.
+            <!-- Die gefragte Richtung, mehr nicht: „EN→DE". Sie sitzt
+                 dem Stufennamen (unten links) gegenüber und ersetzt
+                 die ausgeschriebene Frage über dem Wort — zwei Zeilen
+                 für dieselbe Auskunft sind eine zu viel.
+
+                 Bis 10.09.2026 standen hier zusätzlich drei Kästchen
+                 (Punktekonto der Richtung bis zur nächsten Stufe).
+                 Sönke: „der Kasten en-de mit den 3 quadraten versteht
+                 keiner und der ist auch manchmal falsch." Sie sind
+                 raus — und mit ihnen die einzige Anzeige, die von
+                 einer Zahl abhing, die zwischen Antwort und nächster
+                 Frage veralten konnte.
 
                  Die Zahl daneben (+3 / +1 / −3) kommt nur für einen
                  Augenblick — sie sagt, WARUM sich gerade etwas
                  bewegt hat, und verschwindet mit der nächsten
                  Frage. -->
-            <div class="wi-ppts" data-part="ppts" hidden></div>
+            <div class="wi-pdir" data-part="pdir" hidden></div>
             <b class="wi-pdelta" data-part="pdelta" hidden></b>
             <div class="wi-stats" data-part="pstats" hidden></div>
           </div>
           <div class="wi-ovbody">
-            <p class="wi-ask" data-part="pask"></p>
             <p class="wi-word" data-part="pword"></p>
             <form class="wi-type" data-part="pform">
               <input class="wi-in" data-part="pin" autocomplete="off" autocapitalize="off"
@@ -3705,11 +3711,11 @@
       playOv: q('playov'), pMeta: q('pmeta'), pMon: q('pmon'),
       pCvs: q('pcvs'), pStage: q('pstage'),
       pInfo: q('pinfo'), pStats: q('pstats'),
-      pPts: q('ppts'), pDelta: q('pdelta'),
+      pDir: q('pdir'), pDelta: q('pdelta'),
       cheer: q('cheer'), cCvs: q('ccvs'),
       pLevel: q('plevel'), pLevelB: q('plevelb'), pLevelS: q('plevels'),
       pTon: q('pton'),
-      pAsk: q('pask'), pWord: q('pword'), pForm: q('pform'), pIn: q('pin'),
+      pWord: q('pword'), pForm: q('pform'), pIn: q('pin'),
       pOpts: q('popts'), pFb: q('pfb')
     };
 
@@ -3962,10 +3968,10 @@
       else if (r.result === 'correct') soloFeedback('ok', r.helped ? 'Richtig — mit Hilfe.' : 'Richtig!');
       else                            soloFeedback('bad', 'Es heißt: ' + r.solution);
 
-      // Die Kästchen bewegen sich SOFORT, auch wenn gleich eine
-      // Feier dazwischenkommt: sie gehören zur Antwort von eben, und
+      // Die Zahl kommt SOFORT, auch wenn gleich eine Feier
+      // dazwischenkommt: sie gehört zur Antwort von eben, und
       // soloTask trägt bis zum Ende der Pause noch das alte Wort.
-      if (r.delta) { zeigePunkte(r.dir, r.points); zeigeDelta(r.delta); }
+      if (r.delta) zeigeDelta(r.delta);
 
       // Das Tier zuerst, dann die nächste Frage: was gerade passiert
       // ist, gehört zum Wort von eben. Das gefragte Wort muss JETZT
@@ -4198,10 +4204,13 @@
     els.pFb.textContent = text;
   }
 
+  /* Über dem Wort steht KEINE ausgeschriebene Frage mehr („Wie heißt
+     das auf Deutsch?"). Die Richtung steht als EN→DE am Tier, und
+     zweimal dasselbe in zwei Zeilen macht den Kasten nur voller, nicht
+     klarer (Sönke, 10.09.2026). Im Raum bleibt die Frage stehen —
+     dort gibt es das Tier mit dem Schildchen nicht. */
   function soloRenderTask() {
     const has = soloTask && soloTask.prompt;
-    els.pAsk.textContent = !has ? ''
-      : (soloTask.dir === 'en_de' ? 'Wie heißt das auf Deutsch?' : 'Wie heißt das auf Englisch?');
     els.pWord.textContent = has ? soloTask.prompt : 'Keine Wörter gewählt.';
 
     const opts = (has && soloTask.options) || [];
@@ -4218,7 +4227,7 @@
         .map(o => `<button type="button" data-v="${esc(o)}">${esc(o)}</button>`).join('');
     }
     zeigeRunde();
-    zeigePunkte();
+    zeigeRichtung();
     zeichneTierKarte();
   }
 
@@ -4232,45 +4241,41 @@
      Wort zwei Richtungen, und eine Zahl, die doppelt so hoch ist wie
      die Wortzahl auf der eigenen Insel, erklärt nichts, sondern
      wirft eine Frage auf. Der Server zählt deshalb schon in
-     Wörtern (wi_solo_pass). */
+     Wörtern (wi_solo_pass).
+
+     Eine Sonderform für „der Beutel ist noch voll" gab es bis
+     10.09.2026 („Runde 2 · 30 Wörter"). Sie war ein Fehler: sie stand
+     genau am Anfang jeder Runde, also immer dann, wenn zum ersten Mal
+     jemand hinsieht — und wer sie sah, sah nie, dass diese Zeile
+     überhaupt herunterzählt. „Noch 30 von 30" ist keine schlechtere
+     Auskunft, sondern dieselbe in der Form, in der man sie
+     wiedererkennt. */
   function zeigeRunde() {
     if (!els.pMeta) return;
     const p = soloTask && soloTask.pass;
     if (!p || !p.gesamt) { els.pMeta.textContent = 'Vokabeln üben'; return; }
-    els.pMeta.textContent = p.offen >= p.gesamt
-      ? `Runde ${p.no} · ${p.gesamt} Wörter`
-      : `Runde ${p.no} · noch ${p.offen} von ${p.gesamt}`;
+    els.pMeta.textContent =
+      `Runde ${p.no} · noch ${Math.min(p.offen, p.gesamt)} von ${p.gesamt}`;
   }
 
-  /* ─── Die drei Kästchen ─────────────────────────────────────
-     Sie zeigen das Punktekonto der GEFRAGTEN Richtung — nicht das
-     des Tiers. Das ist Absicht: das Tier steht auf der schwächeren
-     der beiden Richtungen, und wer wissen will, warum es nicht
-     weitergeht, muss sehen, welche der beiden klemmt.
+  /* ─── Das Schildchen am Tier ────────────────────────────────
+     Es sagt EIN Ding: in welche Richtung gerade gefragt wird. Damit
+     ist es der Ersatz für die ausgeschriebene Frage über dem Wort und
+     nicht deren Ergänzung.
 
-     Bei vollem Konto (12 Punkte, funkelnd) leuchten alle drei und
-     bewegen sich nicht mehr — es gibt nichts mehr zu holen. */
+     Es hängt bewusst nur an `dir` und an keiner gerechneten Zahl. Die
+     drei Kästchen davor hingen am Punktekonto, das zwischen Antwort
+     und nächster Frage aus zwei Quellen kam — genau daher kam Sönkes
+     „der ist auch manchmal falsch". Was nichts rechnet, kann sich
+     nicht verrechnen. */
   const DIR_KURZ = { de_en: 'DE→EN', en_de: 'EN→DE' };
 
-  function zeigePunkte(dirNeu, punkteNeu) {
-    if (!els.pPts) return;
+  function zeigeRichtung(dirNeu) {
+    if (!els.pDir) return;
     const dir = dirNeu || (soloTask && soloTask.dir);
-    const roh = punkteNeu != null
-      ? punkteNeu
-      : (soloTask && soloTask.pts && soloTask.pts[dir]);
-    /* Fehlt das Feld ganz, ist die Datenbank älter als dieses
-       Werkzeug — dann bleiben die Kästchen weg, statt eine Null zu
-       behaupten (Regel: feedback_missing_migration_looks_like_network,
-       die Nummer steht in renderStats). */
-    if (!dir || roh == null) { els.pPts.hidden = true; return; }
-
-    const pts  = Math.max(0, Math.min(12, roh | 0));
-    const max  = pts >= 12;
-    const voll = max ? 3 : pts % 3;
-    els.pPts.hidden = false;
-    els.pPts.className = 'wi-ppts' + (max ? ' is-max' : '');
-    els.pPts.innerHTML = `<span>${DIR_KURZ[dir] || ''}</span>`
-      + [0, 1, 2].map(i => `<i${i < voll ? ' class="is-on"' : ''}></i>`).join('');
+    els.pDir.hidden = !DIR_KURZ[dir];
+    if (!DIR_KURZ[dir]) return;
+    els.pDir.textContent = DIR_KURZ[dir];
   }
 
   /* Die kleine Zahl. Sie gehört zur Antwort von eben und geht nach
@@ -4279,9 +4284,8 @@
      Sie darf ausdrücklich NICHT von soloRenderTask weggenommen
      werden: ohne Stufensprung steht die nächste Frage sofort da, und
      die Zahl wäre schon weg, bevor jemand sie gesehen hat. Sie darf
-     aber auch nicht bleiben — sie sitzt über den Kästchen, und über
-     den Kästchen des NÄCHSTEN Wortes läse sie sich wie deren
-     Bewegung. Also ein Zeitgeber. */
+     aber auch nicht bleiben — neben dem NÄCHSTEN Wort läse sie sich
+     wie dessen Ausbeute. Also ein Zeitgeber. */
   let deltaT = 0;
 
   function zeigeDelta(d) {

@@ -109,7 +109,21 @@
   padding: 10px 12px;
   font: inherit;
 }
-.wi-in:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Der grüne Rahmen liegt INNEN (outline-offset negativ) und nicht
+   außen. Grund: das Feld steht in .wi-ovbody, und die scrollt
+   (overflow-y). Ein Kasten, der auf einer Achse scrollt, schneidet
+   auch auf der anderen ab — ein Rahmen 1px außerhalb des Feldes war
+   damit links und unten weg, je nach Gerät verschieden viel.
+   Innen kann ihn niemand abschneiden, und die Breite des Feldes
+   ändert sich dadurch um nichts.
+
+   Zusätzlich die Rahmenfarbe: sonst säße der Ring auf einer grauen
+   Linie und sähe auf dem iPad wie ein Doppelrand aus. */
+.wi-in:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-color: var(--accent);
+}
 .wi-ta { resize: vertical; font-family: var(--mono); font-size: 13px; }
 
 .wi-empty { margin: 0; color: var(--ink-faint); font-size: 14px; }
@@ -1473,47 +1487,28 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 }
 
 /* ══════════════════════════════════════════════════════════════
-   DIE DREI KÄSTCHEN
+   DAS SCHILDCHEN MIT DER RICHTUNG
    ══════════════════════════════════════════════════════════════
-   Der Weg zur nächsten Stufe, in der gerade gefragten Richtung.
-   Drei Kästchen, weil eine Stufe drei Punkte kostet — die Einheit
-   ist damit im Bild, und der Bruch, aus dem sie stammt, muss
-   nirgends erscheinen.
+   „EN→DE", unten rechts, dem Stufennamen (unten links) gegenüber
+   und in derselben Form: das eine sagt, wo das Tier steht, das
+   andere, in welche Richtung gerade gefragt wird. Über dem Wort
+   steht dafür keine ausgeschriebene Frage mehr.
 
-   Sie sitzen unten rechts und damit dem Stufennamen (unten links)
-   gegenüber: das eine sagt, wo das Tier steht, das andere, wie weit
-   es noch ist. */
-.wi-ppts {
+   Hier standen bis 10.09.2026 noch drei Kästchen (Punktekonto bis
+   zur nächsten Stufe). Sönke: „versteht keiner und ist auch manchmal
+   falsch." Die Stufe selbst steht links, und das Tier wächst sichtbar
+   — das reicht. */
+.wi-pdir {
   position: absolute;
-  right: 8px;
+  right: 10px;
   bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 9px;
+  padding: 3px 9px;
   border-radius: 999px;
-  background: rgba(4, 16, 26, .72);
-}
-.wi-ppts span {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: .06em;
-  color: #7d95a6;
-}
-.wi-ppts i {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
-  border: 1px solid rgba(160, 200, 225, .35);
-  background: rgba(160, 200, 225, .1);
-  transition: background .22s ease, border-color .22s ease;
-}
-.wi-ppts i.is-on { background: #6ee7a8; border-color: #6ee7a8; }
-/* Volles Konto: es gibt nichts mehr zu holen, und das soll man
-   sehen, ohne die Kästchen zu zählen. */
-.wi-ppts.is-max i {
-  background: var(--wi-gold, #ffcf4d);
-  border-color: var(--wi-gold, #ffcf4d);
+  letter-spacing: .04em;
+  background: rgba(4, 16, 26, .72);
+  color: #b9cbd8;
 }
 
 /* Die Zahl zur Antwort. Sie steigt kurz auf und bleibt dann stehen,
@@ -1569,7 +1564,6 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   .wi-cheer { animation: none; }
   .wi-stats { animation: none; }
   .wi-pdelta.is-on { animation: none; }
-  .wi-ppts i { transition: none; }
 }
 
 /* Der Kasten, in den insel.js das Werkzeug hängt. Er muss selbst
