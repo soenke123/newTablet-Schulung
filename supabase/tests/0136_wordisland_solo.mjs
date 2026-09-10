@@ -24,6 +24,11 @@ const REPO = 'C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Webauftrti
 const db = new PGlite();
 
 const STUBS = `
+/* Der Suchpfad der SITZUNG wie in Supabase. Spalten-Defaults (etwa
+   wi_boards.broadcast_key in 0131) lösen ihre Funktionsnamen beim
+   create table auf, nicht beim Einfügen — die brauchen extensions
+   hier, nicht im Kopf einer Funktion. */
+set search_path = public, extensions;
 create schema if not exists auth;
 create table if not exists schools (id uuid primary key default gen_random_uuid(), slug text);
 create table if not exists profiles (id uuid primary key default gen_random_uuid(), school_id uuid references schools(id));
@@ -39,7 +44,16 @@ create table if not exists skill_participants (
 create table if not exists _who (uid uuid);
 create or replace function auth.uid() returns uuid language sql stable as $$ select uid from _who limit 1 $$;
 create or replace function can_teach() returns boolean language sql stable as $$ select true $$;
-create or replace function gen_random_bytes(n int) returns bytea language sql as
+/* ⚠️ In SCHEMA extensions, nicht in public — wie in Supabase, wo
+   pgcrypto dort installiert ist. Das ist keine Kosmetik: stand der
+   Stub in public, funktionierte hier auch eine Funktion mit
+   \`set search_path = public\`, die in der echten Datenbank mit
+   42883 „function gen_random_bytes(integer) does not exist"
+   abbricht. Genau so ist 0136 am 10.09.2026 grün durchgelaufen und
+   beim ersten Raumbeitritt gescheitert (Nachbesserung 0137).
+   Ein Stub, der großzügiger ist als der Ernstfall, prüft nichts. */
+create schema if not exists extensions;
+create or replace function extensions.gen_random_bytes(n int) returns bytea language sql as
   $$ select decode(md5(random()::text) || md5(random()::text), 'hex') $$;
 create table if not exists skill_tools (
   id text primary key, title text not null, blurb text, icon text, folder text not null,
@@ -77,7 +91,12 @@ await run(mig('0133_wordisland_lobby.sql'), '0133');
 await run(mig('0134_wordisland_back_to_lobby.sql'), '0134');
 await run(mig('0135_wordisland_eight_factions.sql'), '0135');
 await run(mig('0136_wordisland_solo.sql'), '0136');
-console.log('— 0130 … 0136 laufen durch —\n');
+/* 0137 gehört zwingend dazu: erst sie gibt wi_solo_create den
+   Suchpfad, mit dem sie pgcrypto findet. Ohne diese Zeile bricht
+   die allererste Zusage unten ab — und zwar mit genau dem Fehler,
+   den Sönke am 10.09.2026 im Browser hatte. */
+await run(mig('0137_wordisland_solo_pgcrypto.sql'), '0137');
+console.log('— 0130 … 0137 laufen durch —\n');
 
 /* ── Bühne: zwei Räume einer Lehrkraft, zwei Units ──────────── */
 const SCHOOL = 'd0000000-0000-4000-8000-000000000001';
