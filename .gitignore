@@ -15,3 +15,6 @@ Thumbs.db
 
 # Node (falls später mal Tooling dazukommt)
 node_modules/
+
+# GIMP-Quellen — zu groß für GitHub, gehören nicht ins Deployment
+*.xcf

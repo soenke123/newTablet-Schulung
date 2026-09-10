@@ -38,6 +38,20 @@
    erobern. Die Schalter dafür stehen in buildMap, reliefLand und
    frame und sind dort einzeln kommentiert.
 
+   ── Der Stufensprung ist DER Moment ───────────────────────────
+   Eine Vokabel steigt eine Stufe, wenn sie in BEIDE Richtungen
+   sitzt (wi_solo_stages rechnet das Minimum). Das ist der einzige
+   Augenblick des ganzen Werkzeugs, in dem jemand für etwas belohnt
+   wird, das er weiß — und er bekommt deshalb Zeit und Platz:
+   die Übungskarte spielt die Verwandlung ab (das Ei springt auf,
+   das Tier wächst, der Flieger hebt ab), ein Satz sagt mit dem Wort
+   darin, was passiert ist, ein Dreiklang steigt mit der Stufe, und
+   die nächste Frage WARTET so lange. Draußen wirft das Tier auf der
+   Insel im selben Moment einen Funkenkranz.
+   Alles davon steht im Abschnitt „DIE ÜBUNGSKARTE" (kartZeichne)
+   und in feierStufe. Der Server weiß davon nichts: er liefert seit
+   0136 `level_before` und `level_after`, mehr braucht es nicht.
+
    ── Die Lobby ist die von Kingdoms ────────────────────────────
    Sönkes Vorgabe (2026-09-07). Beide Spiele stellen dieselbe Frage
    („wer spielt mit, und wie?"), und sie sollen sie gleich stellen:
@@ -3056,7 +3070,7 @@
       flip: rnd() < .5,
       phase: rnd() * 6.283,
       zustand: 'laufen',
-      schlafBis: 0, pop: 0,
+      schlafBis: 0, pop: 0, burst: 0,
       tempo: .85 + rnd() * .3
     };
     if (stufe >= 3) { t.zustand = 'fliegen'; t.z = FLUG_HOEHE; }
@@ -3066,6 +3080,7 @@
 
   function schritt(t, dt, jetzt) {
     if (t.pop > 0) t.pop = Math.max(0, t.pop - dt * 1.6);
+    if (t.burst > 0) t.burst = Math.max(0, t.burst - dt * .85);
     if (t.stufe === 0) return;                       // Eier tun nichts
 
     if (t.zustand === 'schlafen') {
@@ -3144,6 +3159,11 @@
     const vorher = t.stufe;
     t.stufe = s;
     if (mitPop) t.pop = 1;
+    /* Der Funkenkranz gehört zum AUFSTIEG. Beim Absteigen zuckt das
+       Tier zwar auch, aber es feiert nicht — sonst sähen Erfolg und
+       Rückfall aus dem Augenwinkel gleich aus, und genau das darf
+       eine Rückmeldung nie. */
+    if (mitPop && s > vorher) t.burst = 1;
 
     if (s === 0) {
       t.zustand = 'ei'; t.z = 0;
@@ -3493,6 +3513,37 @@
       c2d.globalAlpha = 1;
       c2d.globalCompositeOperation = 'source-over';
     }
+
+    /* 6 · Der Jubel. Ein Tier, das gerade eine Stufe gestiegen ist,
+           wirft einen Funkenkranz — und zwar zu JEDER Tageszeit und
+           nach dem Nachtschleier, damit man ihn auch am hellen Tag
+           sieht.
+
+           Der Kasten mit der Vokabel steht zwar davor, aber er ist
+           schmal: das Aufblitzen liegt im Augenwinkel, und genau
+           dorthin gehört es. Man soll merken, dass draußen etwas
+           passiert ist — nachsehen kann man später. */
+    let jubel = false;
+    for (const t of zuMalen) if (t.burst > 0) { jubel = true; break; }
+    if (jubel) {
+      c2d.globalCompositeOperation = 'lighter';
+      for (const t of zuMalen) {
+        if (!(t.burst > 0)) continue;
+        const u = 1 - t.burst;                    // 0 → frisch, 1 → vorbei
+        const R = t._h * (.30 + 1.25 * u);
+        const spark = funken[t.farbe];
+        for (let k = 0; k < 7; k++) {
+          const a = t.phase + k * .8976;          // goldener Winkel
+          const gr = t._h * .30 * (1 - .5 * u);
+          const fx = t._mx + Math.cos(a) * R;
+          const fy = t._my + Math.sin(a) * R * .75 + t._h * .5 * u * u;
+          c2d.globalAlpha = Math.min(1, 1.8 * (1 - u));
+          c2d.drawImage(spark, fx - gr / 2, fy - gr / 2, gr, gr);
+        }
+      }
+      c2d.globalAlpha = 1;
+      c2d.globalCompositeOperation = 'source-over';
+    }
   }
 
   /* ─── Die Oberfläche der eigenen Insel ──────────────────────
@@ -3554,16 +3605,28 @@
 
       <!-- Üben. Das Tier steht ÜBER der Frage und nicht daneben:
            es ist die Rückmeldung, und die soll man sehen, ohne den
-           Blick zu bewegen. -->
+           Blick zu bewegen.
+
+           Die Leinwand ist doppelt so groß, wie sie gezeigt wird
+           (600×460 auf 300×230): auf dem iPad ist genau das der
+           Unterschied zwischen einem gezeichneten Tier und einem
+           verwaschenen. -->
       <div class="wi-ov" data-part="playov" hidden>
         <div class="wi-ovbox wi-ovbox--play">
           <div class="wi-ovhead">
             <span class="wi-ovtitle" data-part="pmeta">Vokabeln üben</span>
+            <button type="button" class="wi-ovclose wi-pton" data-part="pton"
+                    aria-label="Ton an oder aus">♪</button>
             <button type="button" class="wi-ovclose" data-part="pclose" aria-label="Schließen">×</button>
           </div>
-          <div class="wi-pmon">
-            <canvas data-part="pcvs" width="300" height="230"></canvas>
+          <div class="wi-pmon" data-part="pmon">
+            <canvas data-part="pcvs" width="600" height="460"></canvas>
             <span class="wi-pstage" data-part="pstage"></span>
+            <!-- Das „i" sitzt beim Tier, weil die Frage dahinter beim
+                 Tier entsteht: „wie oft hatte ich das schon?" -->
+            <button type="button" class="wi-pinfo" data-part="pinfo"
+                    aria-label="Wie oft hattest du dieses Wort?">i</button>
+            <div class="wi-stats" data-part="pstats" hidden></div>
           </div>
           <div class="wi-ovbody">
             <p class="wi-ask" data-part="pask"></p>
@@ -3576,6 +3639,30 @@
             <div class="wi-opts" data-part="popts" hidden></div>
             <p class="wi-fb" data-part="pfb" hidden></p>
           </div>
+        </div>
+      </div>
+
+      <!-- ── Die Bühne für den Stufensprung ──────────────────────
+           Sönkes Ansage (10.09.2026): „ich würde diese Animation
+           gerne auf dem Display sehen als direkt in der Ansicht, in
+           der ich die Vokabeln trainiere."
+
+           Und er hat recht, und zwar aus einem Grund, den man am
+           Schreibtisch nicht sieht: beim Tippen steht auf dem iPad
+           die Tastatur, der Übungskasten ist auf einen Streifen
+           zusammengeschoben, und die kleine Karte darin liegt genau
+           dort, wo gerade niemand hinsieht. Eine Belohnung, die man
+           suchen muss, ist keine.
+
+           Also liegt sie jetzt ÜBER allem, groß, mit der eigenen
+           Insel als Hintergrund — der Übungskasten tritt dafür kurz
+           zurück. Dieselbe Zeichenschleife, nur eine andere
+           Leinwand. -->
+      <div class="wi-cheer" data-part="cheer" hidden>
+        <canvas data-part="ccvs"></canvas>
+        <div class="wi-plevel" data-part="plevel" hidden>
+          <b data-part="plevelb"></b>
+          <span data-part="plevels"></span>
         </div>
       </div>
     </div>`;
@@ -3603,7 +3690,12 @@
       sWords: q('swords'), sLegend: q('slegend'),
       setsOv: q('setsov'), soloSets: q('solosets'),
       soloDir: q('solodir'), soloMode: q('solomode'), modeHint: q('modehint'),
-      playOv: q('playov'), pMeta: q('pmeta'), pCvs: q('pcvs'), pStage: q('pstage'),
+      playOv: q('playov'), pMeta: q('pmeta'), pMon: q('pmon'),
+      pCvs: q('pcvs'), pStage: q('pstage'),
+      pInfo: q('pinfo'), pStats: q('pstats'),
+      cheer: q('cheer'), cCvs: q('ccvs'),
+      pLevel: q('plevel'), pLevelB: q('plevelb'), pLevelS: q('plevels'),
+      pTon: q('pton'),
       pAsk: q('pask'), pWord: q('pword'), pForm: q('pform'), pIn: q('pin'),
       pOpts: q('popts'), pFb: q('pfb')
     };
@@ -3614,6 +3706,32 @@
     q('pclose').addEventListener('click', () => {
       els.playOv.hidden = true;
       soloTask = null;
+      /* Auch der wartende Zeitgeber muss weg. Sonst reicht er nach
+         einer Sekunde die nächste Frage in einen Kasten nach, den
+         gerade jemand zugemacht hat — und beim nächsten Öffnen
+         stünde dort ein Wort ohne Anfang. */
+      clearTimeout(feierT);
+      feiernd = false;
+      zeigeStats(false);
+      kartHalt();
+    });
+
+    els.pInfo.addEventListener('click', e => {
+      e.stopPropagation();
+      zeigeStats(els.pStats.hidden);
+    });
+    // Ein Tipp irgendwo auf das Tier schließt die Übersicht wieder.
+    // Ein zweiter Knopf zum Zumachen wäre ein Knopf zu viel.
+    els.pMon.addEventListener('click', () => { if (!els.pStats.hidden) zeigeStats(false); });
+
+    tonLaden();
+    zeigeTonKnopf();
+    els.pTon.addEventListener('click', () => {
+      tonSetzen(!tonAn);
+      zeigeTonKnopf();
+      // Wer den Ton einschaltet, soll ihn sofort hören — sonst weiß
+      // er erst bei der nächsten richtigen Antwort, ob er laut ist.
+      if (tonAn) tonSpiel(2);
     });
     // Ein Tipp neben den Kasten schließt ihn. Auf dem Tablet ist das
     // der Griff, den man ohne Erklärung findet.
@@ -3783,6 +3901,8 @@
     els.setsOv.hidden = true;
     els.playOv.hidden = false;
     soloFeedback(null);
+    buehneZu();
+    clearTimeout(feierT); feiernd = false;
     const r = await ctx.actions.call('wi_solo_start', {});
     if (!r.ok) { ctx.toast(ctx.errText(r.error)); els.playOv.hidden = true; return; }
     soloTask = r.task;
@@ -3791,7 +3911,11 @@
   }
 
   async function soloSend(value) {
-    if (submitting) return;
+    /* `feiernd` ist kein Zierriegel: die acht Wahlknöpfe der eben
+       beantworteten Frage stehen während der Verwandlung noch da,
+       und ein zweiter Tipp darauf schickte eine Antwort auf ein Wort,
+       das schon durch ist. */
+    if (submitting || feiernd) return;
     submitting = true;
     els.pIn.disabled = true;
     try {
@@ -3812,38 +3936,213 @@
       else                            soloFeedback('bad', 'Es heißt: ' + r.solution);
 
       // Das Tier zuerst, dann die nächste Frage: was gerade passiert
-      // ist, gehört zum Wort von eben.
-      if (r.item && r.level_after != null) soloWachsen(r.item, r.level_after);
+      // ist, gehört zum Wort von eben. Das gefragte Wort muss JETZT
+      // gelesen werden — gleich steht in soloTask das nächste.
+      const wort = soloTask && soloTask.prompt;
+      const halt = (r.item && r.level_after != null)
+        ? soloWachsen(r.item, r.level_after, wort) : 0;
       if (r.result === 'wrong') soloLock(r.locked_for);
 
       els.pIn.value = '';
-      soloTask = r.task;
-      soloRenderTask();
+
+      /* Die Pause. Sie ist der Unterschied zwischen „es lief eine
+         Bewegung" und „ich habe etwas geschafft": solange die
+         Verwandlung läuft, kommt keine neue Frage und das Feld
+         bleibt zu.
+
+         Auch beim Zurückfallen. Dort ist sie kürzer und still, aber
+         ohne sie schnitte die nächste Frage das Schrumpfen mitten
+         entzwei — und ein Kind, das nicht sieht, was es verloren
+         hat, hat es nicht verloren, sondern nur nicht gewonnen. */
+      if (halt > 0) {
+        feiernd = true;
+        // Die Frage von eben tritt zurück, statt zu verschwinden: ein
+        // Kasten, der mitten in der Feier zusammenklappt, nimmt ihr
+        // den Platz.
+        els.pOpts.classList.add('is-wait');
+        els.pForm.classList.add('is-wait');
+        const naechste = r.task;
+        clearTimeout(feierT);
+        feierT = setTimeout(() => {
+          feiernd = false;
+          if (destroyed || !els.pIn) return;
+          buehneZu();
+          soloTask = naechste;
+          soloRenderTask();
+          if (!els.pIn.dataset.locked) { els.pIn.disabled = false; els.pIn.focus(); }
+        }, halt);
+      } else {
+        soloTask = r.task;
+        soloRenderTask();
+      }
     } finally {
       submitting = false;
-      if (!els.pIn.dataset.locked) els.pIn.disabled = false;
-      els.pIn.focus();
+      if (!els.pIn.dataset.locked && !feiernd) { els.pIn.disabled = false; els.pIn.focus(); }
     }
   }
 
   /* Die eigentliche Belohnung. Der Server hat die neue Stufe schon
-     gerechnet — hier wird sie nur ins Bild getragen, mit `pop` für
-     das Zucken. */
-  function soloWachsen(id, stufe) {
+     gerechnet — hier wird sie ins Bild getragen: auf die Insel (mit
+     `pop` und einem Funkenkranz) und auf die Übungskarte, wo die
+     Verwandlung ABGESPIELT wird.
+
+     Zurück kommt, wie lange die nächste Frage noch warten soll. Das
+     ist die eine Zahl, die soloSend braucht — die Feier selbst
+     verwaltet sich hier. */
+  function soloWachsen(id, stufe, wort) {
     /* Ein Wort, das die geladene Insel gar nicht kennt, wird
        ignoriert statt nachgetragen: es hätte kein Tier, und die
        Zahlen in der Leiste liefen gegen die gezeigten Tiere
        auseinander. Vorkommen kann das nur, wenn zwischen dem Öffnen
        und dieser Antwort eine Unit dazugekommen ist — und dafür
        muss man diese Seite verlassen haben. */
-    if (!solo.stufen.has(id)) return;
+    if (!solo.stufen.has(id)) return 0;
     const alt = solo.stufen.get(id);
-    if (alt === stufe) return;
+    if (alt === stufe) return 0;
     solo.stufen.set(id, stufe);
     const t = welt.nachStufe.get(id);
     if (t) setzeStufe(t, stufe, true);
     solo.grown = [...solo.stufen.values()].filter(s => s >= 3).length;
     renderSoloBar();
+    return feierStufe(id, alt, stufe, wort);
+  }
+
+  /* ─── Der Moment ────────────────────────────────────────────
+     Hier ist der ganze Sinn der Metapher zu Hause. Eine Vokabel,
+     die man in BEIDE Richtungen kann, hebt die Stufe des Tieres —
+     und das ist der einzige Augenblick, in dem das Kind etwas
+     bekommt, das es weder erwarten noch erzwingen kann.
+
+     Drei Dinge zusammen, weil eines allein untergeht:
+       · die Verwandlung auf der Karte (das Ei bricht auf, das Tier
+         wächst, der Flieger hebt ab),
+       · ein Satz, der SAGT, was passiert ist, mit dem Wort darin,
+       · ein Dreiklang, der mit der Stufe steigt.
+     Dazu hält die nächste Frage kurz an. Ohne diese Pause liefe die
+     Belohnung zwar ab, aber angesehen hätte sie niemand: das neue
+     Wort stünde schon da, und der Blick wäre unten. */
+  /* EINE Zahl je Verwandlung, und sie ist zugleich die Pause bis zur
+     nächsten Frage. Zwei Zahlen wären verlockend — „die Feier darf
+     noch nachklingen, während schon weitergefragt wird" —, aber die
+     Karte zeigt dann längst das Tier des NÄCHSTEN Wortes: der
+     Nachklang würde nicht ausklingen, sondern abgeschnitten.
+
+     Deshalb sind sie gleich, und deshalb sind sie kurz. Sie kosten
+     nur bei einem Stufensprung Zeit, nicht bei jeder Antwort. */
+  const FEIER_DAUER = { hatch: 1400, grow: 1150, shrink: 750 };
+
+  const FEIER_TEXT = [
+    null,
+    ['Geschlüpft!',            w => w ? `»${w}« kannst du jetzt in beide Richtungen.` : 'In beide Richtungen richtig.'],
+    ['Gewachsen!',             w => w ? `»${w}« sitzt immer besser.` : 'Es sitzt immer besser.'],
+    ['Ausgewachsen — es fliegt!', w => w ? `»${w}« kannst du. Jetzt darf es die Insel verlassen.` : 'Jetzt darf es die Insel verlassen.'],
+    ['Es funkelt!',            w => w ? `»${w}« sitzt. Richtig gut.` : 'Sitzt. Richtig gut.']
+  ];
+
+  function feierStufe(id, von, nach, wort) {
+    const art = nach < von ? 'shrink' : (von <= 0 ? 'hatch' : 'grow');
+    const dauer = FEIER_DAUER[art];
+
+    /* Die Karte zeigt bis eben das Tier der beantworteten Vokabel.
+       Sie behält es — nur die Stufe darin wandert jetzt von `von`
+       nach `nach`. Steht dort gerade gar nichts (kein Bildersatz,
+       kein Tier), bleibt der Satz trotzdem: er ist die Auskunft, das
+       Bild ist die Zugabe. */
+    if (kart && kart.id === id) {
+      kartAnim = {
+        art, von, nach, t0: null, dauer,
+        teile: kartFunkenSatz(art === 'shrink' ? 0 : 26,
+                              mulberry32(hashKey(String(id)) ^ nach))
+      };
+      kart.stufe = nach;
+      els.pStage.textContent = STUFEN_NAME[Math.max(0, Math.min(4, nach))];
+      els.pStage.className = 'wi-pstage is-' + nach;
+      zeigeStats(false);
+      buehneAuf();
+      kartLauf();
+    }
+    feierText(art === 'shrink' ? null : nach, wort);
+    tonSpiel(art === 'shrink' ? 'ab' : nach);
+    return dauer;
+  }
+
+  function feierText(nach, wort) {
+    if (!els.pLevel) return;
+    const t = nach != null && FEIER_TEXT[Math.max(0, Math.min(4, nach))];
+    if (!t) { els.pLevel.hidden = true; return; }
+    els.pLevelB.textContent = t[0];
+    els.pLevelS.textContent = t[1](wort);
+    els.pLevel.hidden = false;
+    /* Neu anstoßen, nicht nur einblenden: zweimal dieselbe Klasse
+       spielt keine zweite Bewegung ab, und genau das passiert bei
+       zwei Stufensprüngen hintereinander. */
+    els.pLevel.classList.remove('is-on');
+    void els.pLevel.offsetWidth;
+    els.pLevel.classList.add('is-on');
+  }
+
+  /* ─── Der Ton ───────────────────────────────────────────────
+     Kein Tonschnipsel im Deployment: drei Sinustöne aus dem
+     Webaudio-Baukasten kosten keine Datei, kein Laden und keinen
+     Rechtefall — und ein Dreiklang, der mit der Stufe HÖHER wird,
+     sagt dasselbe wie das Bild, nur schneller.
+
+     Angelegt wird der Tonapparat erst beim ersten Ton, und der
+     kommt immer aus einem Tipp des Kindes. Anders ließe iOS ihn
+     ohnehin nicht laufen. */
+  const TON_FOLGE = {
+    1:  [523.25, 659.25, 783.99],
+    2:  [587.33, 739.99, 880.00],
+    3:  [659.25, 830.61, 987.77, 1318.51],
+    4:  [783.99, 987.77, 1174.66, 1567.98, 2093.00],
+    ab: [392.00, 311.13]
+  };
+  const TON_KEY = 'mpskills_wi_ton';
+  let audio = null;
+  let tonAn = true;
+
+  function tonLaden() {
+    try { tonAn = localStorage.getItem(TON_KEY) !== '0'; } catch (e) { tonAn = true; }
+  }
+  function tonSetzen(an) {
+    tonAn = !!an;
+    try { localStorage.setItem(TON_KEY, tonAn ? '1' : '0'); } catch (e) { /* egal */ }
+  }
+  function zeigeTonKnopf() {
+    if (!els.pTon) return;
+    els.pTon.classList.toggle('is-off', !tonAn);
+    els.pTon.setAttribute('aria-pressed', tonAn ? 'true' : 'false');
+    els.pTon.title = tonAn ? 'Ton aus' : 'Ton an';
+  }
+
+  function tonSpiel(art) {
+    if (!tonAn) return;
+    const noten = TON_FOLGE[art];
+    if (!noten) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!audio) audio = new AC();
+      if (audio.state === 'suspended') audio.resume();
+      const t0 = audio.currentTime + .02;
+      const leise = art === 'ab';
+      noten.forEach((f, i) => {
+        const o = audio.createOscillator();
+        const g = audio.createGain();
+        const letzte = i === noten.length - 1;
+        const a = t0 + i * (leise ? .11 : .075);
+        const d = letzte ? .55 : .30;
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(f, a);
+        /* Kein harter Einsatz: ein Rechteck-Start knackt, und ein
+           Knacken hört man als Fehler und nicht als Belohnung. */
+        g.gain.setValueAtTime(.0001, a);
+        g.gain.exponentialRampToValueAtTime(leise ? .06 : .16, a + .014);
+        g.gain.exponentialRampToValueAtTime(.0001, a + d);
+        o.connect(g); g.connect(audio.destination);
+        o.start(a); o.stop(a + d + .03);
+      });
+    } catch (e) { /* Der Ton ist Zugabe, nicht Bedingung. */ }
   }
 
   function soloLock(secs) {
@@ -3876,6 +4175,12 @@
     const opts = (has && soloTask.options) || [];
     els.pOpts.hidden = !opts.length;
     els.pForm.hidden = !has || opts.length > 0;
+    els.pOpts.classList.remove('is-wait');
+    els.pForm.classList.remove('is-wait');
+    // Die Übersicht gehört zum Wort, nicht zum Kasten: neues Wort,
+    // zugeklappt.
+    zeigeStats(false);
+    els.pInfo.hidden = !has;
     if (opts.length) {
       els.pOpts.innerHTML = opts
         .map(o => `<button type="button" data-v="${esc(o)}">${esc(o)}</button>`).join('');
@@ -3883,40 +4188,520 @@
     zeichneTierKarte();
   }
 
-  /* Das Tier zur laufenden Vokabel, groß. Eigene kleine Leinwand
-     statt eines Ausschnitts der großen: hier soll es stillstehen und
-     ganz zu sehen sein, und beides kann die Bühne nicht. */
-  function zeichneTierKarte() {
-    const c = els.pCvs;
+  /* ══════════════════════════════════════════════════════════
+     DIE ÜBUNGSKARTE
+     ══════════════════════════════════════════════════════════
+     Das Tier zur laufenden Vokabel, groß. Eigene kleine Leinwand
+     statt eines Ausschnitts der großen: hier soll es GANZ zu sehen
+     sein und in Ruhe stehen, und beides kann die Bühne nicht.
+
+     Sie ist bewusst mehr als ein Standbild. Auf der Insel ist ein
+     Tier zwei Zentimeter groß und läuft irgendwo herum; hier ist es
+     das Bild dieser einen Vokabel — und wenn es die Stufe wechselt,
+     ist das der einzige Augenblick des ganzen Werkzeugs, in dem
+     jemand für etwas belohnt wird, das er WEISS.
+
+     ── Der gemeinsame Anker ──────────────────────────────────
+     Gezeichnet wird am ANKER des Blattes und nicht bildmittig. Der
+     Unterschied ist die halbe Aussage: am Anker steht das Ei unten
+     am Boden, das gewachsene Tier daneben ist größer, und der
+     Flieger schwebt darüber. Bildmittig wären alle drei gleich groß
+     an derselben Stelle — und die Verwandlung wäre ein Austausch
+     statt einer Entwicklung. */
+
+  let kart = null;      // { id, farbe, variante, stufe } — das gezeigte Tier
+  let kartAnim = null;  // die laufende Verwandlung
+  let kartRaf = 0;
+  let feierT = 0;       // Timer, der die nächste Frage nachreicht
+  let feiernd = false;  // solange bleibt das Eingabefeld zu
+
+  /* Wer Bewegung abbestellt hat, bekommt die Auskunft trotzdem: das
+     neue Tier, den Satz, den Ton — nur ohne Zittern, Funken und
+     Schweben. */
+  const sparsam = (() => {
+    try {
+      return !!(window.matchMedia &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) { return false; }
+  })();
+
+  /* Der GEMEINSAME Maßstab, nicht „füll den Kasten": ein Ei muss
+     kleiner aussehen als ein Flieger. Eingepasst wird das größte
+     Blatt, alles andere bekommt seinen Anteil daran. */
+  function kartMasse(c, fuell) {
+    // größtes Blatt plus Rand; `fuell` < 1 lässt es kleiner werden,
+    // ohne dass sich die Verhältnisse der Stufen verschieben.
+    const MAX = STUFE_EINHEIT[4] * 1.16 / (fuell || 1);
+    const P = Math.min(c.height / MAX, c.width / (MAX * ECHSE.blatt.w / ECHSE.blatt.h));
+    const bh = STUFE_EINHEIT[4] * P;
+    return {
+      P,
+      ax: c.width / 2,
+      ay: (c.height - bh) / 2 + bh * (ECHSE.blatt.ankerY / ECHSE.blatt.h)
+    };
+  }
+
+  /* Wo ein Tier einer Stufe auf der Karte läge — gerechnet, nicht
+     gemalt. Zwei Dinge brauchen dieselbe Rechnung: das Malen und
+     die aufspringende Eischale. */
+  function kartGeo(m, stufe, variante, farbe, s) {
+    const st = Math.max(0, Math.min(4, stufe));
+    const key = st === 0 ? 'ei' : st === 1 ? 's1' : st === 2 ? 's2' : 's3' + variante;
+    const im = sprites[key][farbe], b = ECHSE.bilder[key];
+    const e = STUFE_EINHEIT[st] * m.P / ECHSE.blatt.h * (s || 1);
+    return {
+      im, e,
+      x: m.ax + (b.x - ECHSE.blatt.ankerX) * e,
+      y: m.ay + (b.y - ECHSE.blatt.ankerY) * e,
+      w: im.width * e, h: im.height * e
+    };
+  }
+
+  /* Gedreht wird um den ANKER und nicht um die Bildmitte — dieselbe
+     Regel wie beim Spiegeln auf der Insel, und aus demselben Grund:
+     sonst rutscht das Tier beim Kippen seitlich weg. */
+  function kartMal(x, m, g, dy, dreh, alpha) {
+    x.save();
+    x.globalAlpha = alpha;
+    if (dreh) { x.translate(m.ax, m.ay); x.rotate(dreh); x.translate(-m.ax, -m.ay); }
+    x.drawImage(g.im, g.x, g.y + dy, g.w, g.h);
+    x.restore();
+    x.globalAlpha = 1;
+  }
+
+  /* Der Schatten macht aus dem leeren Kasten einen Boden. Ohne ihn
+     hängt ein Ei im Nichts, und der Flieger schwebt über gar
+     nichts. */
+  function kartSchatten(x, m, breite, staerke) {
+    if (breite <= 0 || staerke <= 0) return;
+    const g = x.createRadialGradient(m.ax, m.ay, 0, m.ax, m.ay, breite);
+    g.addColorStop(0, `rgba(1,10,17,${staerke.toFixed(3)})`);
+    g.addColorStop(.55, `rgba(1,10,17,${(staerke * .42).toFixed(3)})`);
+    g.addColorStop(1, 'rgba(1,10,17,0)');
+    x.save();
+    x.translate(m.ax, m.ay); x.scale(1, .28); x.translate(-m.ax, -m.ay);
+    x.fillStyle = g;
+    x.beginPath(); x.arc(m.ax, m.ay, breite, 0, 6.2832); x.fill();
+    x.restore();
+  }
+
+  /* Die Eischale springt auf. Geschnitten wird NACH dem Verschieben
+     und Drehen: der Schnitt gehört zum Bruchstück und nicht zum
+     Bildschirm — andersherum wüchse die obere Hälfte, während sie
+     wegfliegt. */
+  function kartSchalen(x, m, g, u) {
+    const mitte = g.y + g.h * .46;
+    for (const oben of [true, false]) {
+      const dx = (oben ? -1 : 1) * g.w * .40 * u;
+      const dy = oben ? (-g.h * .75 * u + g.h * 1.15 * u * u) : g.h * .16 * u;
+      x.save();
+      x.globalAlpha = Math.max(0, 1 - u * 1.3);
+      x.translate(g.x + g.w / 2 + dx, mitte + dy);
+      x.rotate((oben ? -1 : 1) * 1.6 * u);
+      x.translate(-(g.x + g.w / 2), -mitte);
+      x.beginPath();
+      if (oben) x.rect(g.x - g.w, g.y - g.h * 2, g.w * 3, mitte - g.y + g.h * 2);
+      else      x.rect(g.x - g.w, mitte, g.w * 3, g.h * 2);
+      x.clip();
+      x.drawImage(g.im, g.x, g.y, g.w, g.h);
+      x.restore();
+    }
+    x.globalAlpha = 1;
+  }
+
+  /* Die Funken der Verwandlung. Aus dem Wort gewürfelt und nicht aus
+     dem Zufall: derselbe Sprung sieht zweimal gleich aus, und das
+     macht ihn zu einem Ereignis statt zu einem Effekt. */
+  function kartFunkenSatz(n, rnd) {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      out.push({
+        a: (i / n) * 6.2832 + rnd() * .55,
+        v: .55 + rnd() * .95,
+        r: rnd(),
+        t0: rnd() * .14
+      });
+    }
+    return out;
+  }
+
+  // Sanftes Überschwingen: kurz über das Ziel hinaus und zurück. Ein
+  // Sprung ohne Überschwingen liest sich als Ruckler.
+  function ueber(q) {
+    if (q <= 0) return 0;
+    if (q >= 1) return 1;
+    const p = q - 1;
+    return 1 + 2.9 * p * p * p + 1.9 * p * p;
+  }
+
+  /* ─── Die große Bühne ───────────────────────────────────────
+     Dieselbe Zeichenschleife, nur eine andere Leinwand: `kartZiel`
+     sagt, wohin gemalt wird. Ein zweiter Zeichner für dasselbe Tier
+     wäre nach der ersten Verbesserung ein anderes Tier — dieselbe
+     Überlegung wie bei der Karte im Raum und im Solo.
+
+     `BUEHNE_FUELL` ist der einzige Unterschied im Bild: es darf
+     nicht die ganze Höhe füllen, sonst steht da eine Tapete und
+     kein Tier, und der Satz darüber hätte keinen Platz. */
+  const BUEHNE_FUELL = .62;
+  let kartZiel = 'karte';
+
+  function buehneAuf() {
+    if (!els.cheer || !els.cCvs) return;
+    els.cheer.hidden = false;
+    // Der Übungskasten tritt zurück, statt zu verschwinden: er kommt
+    // gleich wieder, und ein Kasten, der weg ist und wiederkommt,
+    // liest sich als Sprung.
+    els.playOv.classList.add('is-cheer');
+    buehneMessen();
+    kartZiel = 'buehne';
+  }
+
+  /* ⚠️ Gemessen wird ERST, wenn der Kasten offen ist. Ein `hidden`
+     Element ist null mal null Bildpunkte groß, und eine Leinwand,
+     die man in diesem Moment misst, bleibt für immer leer.
+
+     Und gemessen wird in JEDEM Bild der Feier. Das ist kein
+     Übereifer: auf dem iPad schließt sich die Tastatur genau in
+     diesem Moment (das Eingabefeld wird gesperrt), `--vv-h` springt
+     dabei um mehrere hundert Punkte, und das kommt als
+     visualViewport-Ereignis und nicht immer als `resize` am Fenster
+     an. Eine Leinwand mit altem Seitenverhältnis wird vom
+     Browser GEZOGEN — das Tier wäre in der Mitte der Feier plötzlich
+     zu lang. Die Zeile darunter macht daraus einen Vergleich, der
+     fast immer nichts tut. */
+  function buehneMessen() {
+    const c = els.cCvs;
+    if (!c || !els.cheer || els.cheer.hidden) return;
+    const r = els.cheer.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+    if (c.width === w && c.height === h) return;
+    c.width = w; c.height = h;
+  }
+
+  function buehneZu() {
+    kartZiel = 'karte';
+    if (!els.cheer) return;
+    els.cheer.hidden = true;
+    els.playOv.classList.remove('is-cheer');
+    feierText(null);
+  }
+
+  function kartHalt() {
+    if (kartRaf) cancelAnimationFrame(kartRaf);
+    kartRaf = 0;
+    kartAnim = null;
+    buehneZu();
+  }
+
+  function kartLauf() {
+    if (kartRaf || destroyed) return;
+    kartRaf = requestAnimationFrame(kartSchleife);
+  }
+
+  function kartSchleife(now) {
+    kartRaf = 0;
+    if (destroyed || role !== 'solo') return;
+    const buehne = kartZiel === 'buehne';
+    const c = buehne ? els.cCvs : els.pCvs;
+    if (!c) return;
+    if (buehne) buehneMessen();
+    kartZeichne(now, c, buehne ? BUEHNE_FUELL : 1);
+
+    /* Ist die Verwandlung durch und wartet auch niemand mehr auf
+       sie, geht die Bühne von selbst zu. Im Normalfall macht das
+       der Zeitgeber in soloSend — das hier ist der Riegel für den
+       Fall, dass es ihn nicht gibt. */
+    if (buehne && !kartAnim && !feiernd) { buehneZu(); return; }
+
+    /* Steht der Übungskasten zu, hört auch die Karte auf. Und wer
+       keine Bewegung will, bekommt nach der Verwandlung wieder ein
+       Standbild statt einer Schleife, die nichts tut. */
+    if (!buehne && els.playOv && els.playOv.hidden) return;
+    if (sparsam && !kartAnim) return;
+    kartRaf = requestAnimationFrame(kartSchleife);
+  }
+
+  function kartZeichne(now, c, fuell) {
     const x = c && c.getContext('2d');
     // Ohne Leinwand geht die Übung trotzdem weiter: die Frage steht
     // im DOM, das Tier ist die Zugabe. Ein Absturz hier nähme beides.
     if (!x) return;
     x.clearRect(0, 0, c.width, c.height);
-    els.pStage.textContent = '';
+    if (!sprites || !kart) return;
+
+    const m = kartMasse(c, fuell);
+    const t = (now || 0) / 1000;
+    const ruhe = sparsam ? 0 : 1;
+
+    /* Die Verwandlung. `u` läuft von 0 bis 1 durch die ganze Feier;
+       alles darunter sind Abschnitte davon. */
+    let a = kartAnim;
+    let u = 1;
+    if (a) {
+      if (a.t0 == null) a.t0 = now;
+      u = Math.min(1, (now - a.t0) / a.dauer);
+      if (u >= 1) { kartAnim = null; a = null; }
+    }
+
+    const stufe = kart.stufe;
+    const farbe = kart.farbe, vari = kart.variante;
+    const flieger = stufe >= 3;
+
+    /* ── Das ruhende Bild ──────────────────────────────────────
+       Auch ohne Verwandlung steht das Tier nicht still: das Ei
+       wippt, der Läufer atmet, der Flieger schwebt. Ein völlig
+       reglos liegendes Ei sieht aus wie ein Fehler — dieselbe
+       Beobachtung wie auf der Insel. */
+    let dy = 0, dreh = 0, s = 1;
+    if (stufe === 0)      dreh = .055 * Math.sin(t * 1.7) * ruhe;
+    else if (stufe <= 2)  { dy = -m.P * .02 * (1 + Math.sin(t * 2.3)) * ruhe;
+                            s = 1 + .012 * Math.sin(t * 2.3 + 1.6) * ruhe; }
+    else                  { dy = -m.P * .05 * (1 + Math.sin(t * 1.5)) * ruhe;
+                            dreh = .028 * Math.sin(t * .9) * ruhe; }
+
+    // Der Flieger wirft einen kleineren, weicheren Schatten — daran
+    // sieht man die Höhe, ohne dass es jemand sagen muss.
+    kartSchatten(x, m, m.P * (flieger ? .42 : .55), flieger ? .30 : .46);
+
+    /* ── Der Schein dahinter ───────────────────────────────────
+       Er gehört zur Stufe und nicht zur Feier: eine Vokabel, die
+       sitzt, LEUCHTET auch im Ruhezustand. Genau das ist die
+       Auskunft, für die die Karte da ist. */
+    const scheinB = m.P * 1.5;
+    let schein = GLUEHEN[stufe] * .26 * (.86 + .14 * Math.sin(t * 1.4) * ruhe);
+    if (a && a.art !== 'shrink') {
+      // Beim Sprung blüht er kurz auf.
+      schein += 1.5 * Math.max(0, Math.sin(Math.min(1, Math.max(0, (u - .22) / .5)) * Math.PI));
+    }
+    if (schein > .01) {
+      x.save();
+      x.globalCompositeOperation = 'lighter';
+      x.globalAlpha = Math.min(1, schein);
+      x.drawImage(flecken[farbe], m.ax - scheinB / 2, m.ay - scheinB * .62, scheinB, scheinB);
+      x.restore();
+      x.globalAlpha = 1;
+    }
+
+    if (!a) {
+      kartMal(x, m, kartGeo(m, stufe, vari, farbe, s), dy, dreh, 1);
+      kartIdleFunken(x, m, stufe, farbe, t, ruhe);
+      return;
+    }
+
+    /* ── Die drei Verwandlungen ────────────────────────────────
+       Sie haben denselben Aufbau: das alte Tier tritt ab, ein Blitz
+       trennt beide, das neue kommt mit Überschwingen. Unterschieden
+       wird nur, WIE das alte abtritt — und das ist der ganze
+       Unterschied zwischen „es ist geschlüpft" und „es ist
+       gewachsen". */
+    const altGeo = q => kartGeo(m, a.von, vari, farbe, q);
+    const neuAb  = a.art === 'hatch' ? .34 : a.art === 'shrink' ? .30 : .28;
+    const neuU   = Math.max(0, (u - neuAb) / (1 - neuAb));
+
+    if (a.art === 'hatch') {
+      if (u < .30) {
+        /* Es zittert. Schneller und weiter, je näher der Bruch —
+           das ist die ganze Spannung, die diese Karte hat. */
+        const auf = u / .30;
+        const g = altGeo(1 + .05 * auf);
+        kartMal(x, m, g, 0, .11 * auf * Math.sin(u * 78) * ruhe, 1);
+      } else {
+        kartSchalen(x, m, altGeo(1.05), Math.min(1, (u - .30) / .45));
+      }
+    } else if (a.art === 'shrink') {
+      // Kein Spektakel. Ein Zurückfallen soll man sehen und nicht
+      // vorgeführt bekommen.
+      if (u < .40) kartMal(x, m, altGeo(1 - .35 * (u / .40)), m.P * .10 * (u / .40),
+                           0, Math.max(0, 1 - u / .40));
+    } else {
+      if (u < .22) {
+        // Ausholen: kurz kleiner werden, bevor es größer wird.
+        kartMal(x, m, altGeo(1 - .12 * Math.sin(u / .22 * Math.PI)), 0, 0, 1);
+      } else if (u < .42) {
+        const q = (u - .22) / .20;
+        kartMal(x, m, altGeo(1 + .38 * q), 0, 0, 1 - q);
+      }
+    }
+
+    if (neuU > 0) {
+      const e = ueber(Math.min(1, neuU / .62));
+      /* Wer auf Stufe 3 steigt, HEBT AB: das neue Bild kommt vom
+         Boden herauf an seinen Schwebeplatz. Der Aufstieg ist die
+         Belohnung, also muss man ihn sehen. */
+      const hebt = a.nach >= 3 && a.von < 3 ? (1 - e) * m.P * .75 : 0;
+      const gN = kartGeo(m, a.nach, vari, farbe, .28 + .72 * e);
+      kartMal(x, m, gN, dy + hebt, dreh, Math.min(1, neuU * 4));
+    }
+
+    /* Der Blitz. Er trennt die beiden Bilder — ohne ihn sieht man
+       zwei Tiere übereinander, mit ihm eine Verwandlung. */
+    if (a.art !== 'shrink') {
+      const f = Math.max(0, 1 - Math.abs(u - neuAb) / .14);
+      if (f > .01) {
+        const R = m.P * 2.6;
+        x.save();
+        x.globalCompositeOperation = 'lighter';
+        x.globalAlpha = Math.min(1, f * f * .95);
+        x.drawImage(funke, m.ax - R, m.ay - m.P * .55 - R, R * 2, R * 2);
+        x.restore();
+        x.globalAlpha = 1;
+      }
+    }
+
+    /* Ring und Funken. Beide laufen auf DERSELBEN Uhr wie das neue
+       Tier (`neuU`) und nicht auf der der ganzen Feier: sie sind die
+       Folge des Bruchs und nicht seine Ankündigung. */
+    const uu = neuU;
+    if (uu > 0 && a.teile.length && !sparsam) {
+      const cx = m.ax, cy = m.ay - m.P * .55;
+      x.save();
+      x.globalCompositeOperation = 'lighter';
+
+      if (uu < .8) {
+        const rU = uu / .8;
+        x.strokeStyle = `rgba(255,246,214,${(.5 * (1 - rU)).toFixed(3)})`;
+        x.lineWidth = Math.max(1, m.P * .10 * (1 - rU));
+        x.beginPath();
+        x.arc(cx, cy, m.P * (.22 + 1.7 * rU), 0, 6.2832);
+        x.stroke();
+      }
+
+      const spark = funken[farbe];
+      const R = m.P * 1.7;
+      for (const p of a.teile) {
+        const pu = (uu - p.t0) / (1 - p.t0);
+        if (pu <= 0 || pu >= 1) continue;
+        const px = cx + Math.cos(p.a) * p.v * R * pu;
+        const py = cy + Math.sin(p.a) * p.v * R * pu + R * .95 * pu * pu;
+        const gr = m.P * .26 * (1 - .45 * pu) * (.55 + .45 * p.r);
+        x.globalAlpha = Math.min(1, 2.4 * (1 - pu));
+        x.drawImage(spark, px - gr / 2, py - gr / 2, gr, gr);
+        if (a.nach >= 4) {
+          const ws = gr * .45;
+          x.drawImage(funke, px - ws / 2, py - ws / 2, ws, ws);
+        }
+      }
+      x.restore();
+      x.globalAlpha = 1;
+    }
+  }
+
+  /* Die Funken im Ruhezustand — dieselbe Rechnung wie auf der Insel,
+     nur leiser. Sie sind auch hier Auskunft und keine Zierde: je
+     besser das Wort sitzt, desto betriebsamer ist sein Tier. */
+  function kartIdleFunken(x, m, stufe, farbe, t, ruhe) {
+    const n = FUNKEN[stufe];
+    if (!n || !ruhe) return;
+    const spark = funken[farbe], H = m.P * 1.3;
+    x.save();
+    x.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < n; k++) {
+      const eigen = k * 2.3994;
+      const dauer = 2.4 + (k % 3) * .55;
+      const q = ((t / dauer + eigen) % 1 + 1) % 1;
+      const fx = m.ax + Math.sin(eigen * 3.1 + q * 3.4) * H * .38;
+      const fy = m.ay - m.P * .5 + H * (.30 - 1.25 * q);
+      const auf = Math.sin(q * Math.PI);
+      const fs = H * (.20 - .09 * q) * (.7 + .3 * auf);
+      x.globalAlpha = Math.min(1, auf * (stufe >= 4 ? .8 : .5));
+      x.drawImage(spark, fx - fs / 2, fy - fs / 2, fs, fs);
+      if (stufe >= 4) {
+        const ws = fs * .5;
+        x.drawImage(funke, fx - ws / 2, fy - ws / 2, ws, ws);
+      }
+    }
+    x.restore();
+    x.globalAlpha = 1;
+  }
+
+  /* Die Karte auf die laufende Vokabel stellen. Gemalt wird SOFORT
+     einmal und danach in der Schleife: was zu sehen ist, soll nicht
+     erst beim nächsten Bild da sein. */
+  function zeichneTierKarte() {
     els.pMeta.textContent = '';
-    if (!sprites || !soloTask || !soloTask.item) return;
+    feierText(null);
+    kartAnim = null;
+    if (!sprites || !soloTask || !soloTask.item) {
+      kart = null;
+      els.pStage.textContent = '';
+      if (els.pCvs && els.pCvs.getContext) {
+        const x = els.pCvs.getContext('2d');
+        if (x) x.clearRect(0, 0, els.pCvs.width, els.pCvs.height);
+      }
+      return;
+    }
 
     const t = welt.nachStufe.get(soloTask.item)
            || neuesTier(soloTask.item, soloTask.level | 0);
     const stufe = solo.stufen.has(soloTask.item)
       ? solo.stufen.get(soloTask.item) : (soloTask.level | 0);
-    const schl = stufe === 0 ? 'ei' : stufe === 1 ? 's1' : stufe === 2 ? 's2' : 's3' + t.variante;
-    const im = sprites[schl][t.farbe];
 
-    /* Der GEMEINSAME Maßstab, nicht „füll den Kasten": ein Ei muss
-       kleiner aussehen als ein Flieger, sonst nimmt die Karte dem
-       Wachsen genau die Aussage, für die sie da ist. Gerechnet wird
-       deshalb über das Blatt (STUFE_EINHEIT), und nur der größte
-       Fall wird eingepasst. */
-    const MAX = STUFE_EINHEIT[4] * 1.08;      // größtes Blatt plus Rand
-    const P = Math.min(c.height / MAX, c.width / (MAX * ECHSE.blatt.w / ECHSE.blatt.h));
-    const e = STUFE_EINHEIT[stufe] * P / ECHSE.blatt.h;
-    x.drawImage(im, (c.width - im.width * e) / 2, (c.height - im.height * e) / 2,
-                im.width * e, im.height * e);
-
+    kart = { id: soloTask.item, farbe: t.farbe, variante: t.variante, stufe };
     els.pStage.textContent = STUFEN_NAME[stufe];
     els.pStage.className = 'wi-pstage is-' + stufe;
+
+    kartZeichne(typeof performance !== 'undefined' ? performance.now() : Date.now(),
+                els.pCvs, 1);
+    kartLauf();
+  }
+
+  /* ─── Wie oft hattest du dieses Wort? ───────────────────────
+     Sönkes Vorgabe: zwei Zeilen, vier Spalten, oben EN→DE, unten
+     DE→EN; die Spalten richtig, mit Hilfe und insgesamt.
+
+     Die Zahlen fahren in der Aufgabe mit (`stats`, Migration 0138),
+     es geht also kein Ruf zum Server — die Übersicht ist SOFORT da.
+     Der Balken darunter ist die vierte Zahl, die keine Spalte
+     bekommen hat: was von „insgesamt" übrig bleibt, war falsch. So
+     steht sie im Bild, ohne dass ein Wort dafür nötig wäre. */
+  const STAT_ZEILEN = [['en_de', 'EN', 'DE'], ['de_en', 'DE', 'EN']];
+
+  function zeigeStats(an) {
+    if (!els.pStats) return;
+    if (an) renderStats();
+    els.pStats.hidden = !an;
+    els.pInfo.classList.toggle('is-on', !!an);
+  }
+
+  function renderStats() {
+    const st = soloTask && soloTask.stats;
+    /* Fehlt das Feld ganz, ist nicht „noch nichts geübt", sondern
+       die Datenbank ist älter als dieses Werkzeug. Die beiden zu
+       verwechseln kostet eine halbe Stunde Suche an der falschen
+       Stelle (Regel: feedback_missing_migration_looks_like_network),
+       darum steht die Nummer hier im Klartext. */
+    if (!st) {
+      els.pStats.innerHTML = '<p class="wi-stnote">Diese Übersicht braucht die '
+        + 'neueste Fassung der Datenbank (Migration 0138).</p>';
+      return;
+    }
+    const zeilen = STAT_ZEILEN.map(([dir, von, nach]) => {
+      const z = st[dir] || [0, 0, 0];
+      const gut = z[0] | 0, hilf = z[1] | 0, alle = z[2] | 0;
+      const bad = Math.max(0, alle - gut - hilf);
+      const p = n => (alle ? n / alle * 100 : 0).toFixed(2) + '%';
+      return `
+        <span class="wi-stdir">${von}<i>→</i>${nach}</span>
+        <b class="wi-stn is-gut">${gut}</b>
+        <b class="wi-stn is-hilf">${hilf}</b>
+        <b class="wi-stn is-alle">${alle}</b>
+        <div class="wi-stbar${alle ? '' : ' is-leer'}">
+          <i class="is-gut"  style="width:${p(gut)}"></i>
+          <i class="is-hilf" style="width:${p(hilf)}"></i>
+          <i class="is-bad"  style="width:${p(bad)}"></i>
+        </div>`;
+    }).join('');
+    els.pStats.innerHTML = `
+      <div class="wi-stgrid">
+        <span></span>
+        <span class="wi-sthead">richtig</span>
+        <span class="wi-sthead">mit Hilfe</span>
+        <span class="wi-sthead">gesamt</span>
+        ${zeilen}
+      </div>`;
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -3942,6 +4727,7 @@
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
       practice = false; lastPhase = null; soloClaimAt = 0;
       solo = null; soloTask = null; simZeit = 0; letzterT = 0; nacht = 0;
+      kart = null; kartAnim = null; feiernd = false; kartZiel = 'karte';
       welt.isl = null; welt.vb = null; welt.inseln = null; welt.haupt = null;
       welt.tiere = []; welt.nachStufe = new Map();
 
@@ -3952,7 +4738,7 @@
       if (role === 'solo') {
         buildSolo();
         if (!ctx.preview) document.body.classList.add('tool-fill');
-        onResize = () => { passeAn(); kameraAnwenden(); };
+        onResize = () => { passeAn(); kameraAnwenden(); buehneMessen(); };
         window.addEventListener('resize', onResize);
 
         (async () => {
@@ -4023,7 +4809,10 @@
          greift auf `els` zu, das gleich leer ist. */
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
+      kartHalt();
       clearTimeout(soloLockT);
+      clearTimeout(feierT);
+      feiernd = false;
       if (onResize) window.removeEventListener('resize', onResize);
       onResize = null;
       document.body.classList.remove('tool-fill');
@@ -4034,7 +4823,7 @@
          wer die Insel schließt und wieder öffnet, soll nicht warten.
          Der Weltzustand geht dagegen weg: er gehört zu einer
          bestimmten Insel. */
-      solo = null; soloTask = null; c2d = null;
+      solo = null; soloTask = null; c2d = null; kart = null;
       welt.isl = null; welt.vb = null; welt.inseln = null; welt.haupt = null;
       welt.tiere = []; welt.nachStufe = new Map();
     }

@@ -1265,7 +1265,211 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   background: radial-gradient(120% 100% at 50% 30%, #0d3c53 0%, #052131 100%);
   border: 1px solid #0a2a3c;
 }
-.wi-pmon canvas { display: block; max-width: 100%; height: auto; }
+/* Die Leinwand trägt doppelt so viele Bildpunkte, wie sie breit ist
+   (600 auf 340). Die Höhe folgt aus dem Seitenverhältnis — eine
+   feste Höhe würde die Tiere auf schmalen Geräten stauchen. */
+.wi-pmon canvas { display: block; width: 340px; max-width: 100%; height: auto; }
+
+/* ══════════════════════════════════════════════════════════════
+   DIE BÜHNE FÜR DEN STUFENSPRUNG
+   ══════════════════════════════════════════════════════════════
+   Sie liegt über allem und füllt den SICHTBAREN Bereich — beim
+   Tippen steht auf dem Tablet die Tastatur, und `--vv-h` ist das,
+   was davon übrig bleibt (viewport.js, dieselbe Regel wie bei jedem
+   Kasten hier). Darunter ist die eigene Insel zu sehen: der Verlauf
+   dunkelt nur die Ränder ab, damit die Mitte trägt.
+
+   Anfassen kann man sie nicht. Sie dauert gut eine Sekunde, und in
+   dieser Sekunde gibt es nichts zu entscheiden. */
+.wi-cheer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vv-top, 0px);
+  height: var(--vv-h, 100vh);
+  /* Über dem Übungskasten (40) und über allem, was die Seite sonst
+     an Kästen hat — aber UNTER den Meldungen (Toast 60, Netzleiste
+     200). Eine Feier, die eine Fehlermeldung verdeckt, feiert im
+     falschen Moment. */
+  z-index: 55;
+  pointer-events: none;
+  background: radial-gradient(58% 52% at 50% 58%,
+              rgba(3, 14, 24, .10) 0%, rgba(3, 14, 24, .78) 100%);
+  animation: wi-cheerin .26s ease-out;
+}
+.wi-cheer canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+@keyframes wi-cheerin { from { opacity: 0; } to { opacity: 1; } }
+
+/* Der Übungskasten tritt zurück, statt zu verschwinden: er kommt
+   gleich wieder, und ein Kasten, der weg ist und wiederkommt, liest
+   sich als Sprung. */
+.wi-ov { transition: opacity .22s ease; }
+.wi-ov.is-cheer { opacity: 0; pointer-events: none; }
+
+/* Der Satz dazu. Oben, weil das Tier unten steht — und groß genug,
+   dass man ihn quer durch den Raum noch liest. */
+.wi-plevel {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 9%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+  pointer-events: none;
+}
+.wi-plevel b {
+  font-size: clamp(26px, 6.2vw, 44px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -.015em;
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(3, 18, 30, .95), 0 0 40px rgba(255, 214, 102, .5);
+}
+.wi-plevel span {
+  font-size: clamp(13px, 2.6vw, 17px);
+  font-weight: 600;
+  color: #d7e9f6;
+  text-shadow: 0 1px 12px rgba(3, 18, 30, .98);
+}
+/* Von unten heran und einmal über das Ziel hinaus — dieselbe
+   Bewegung wie beim Tier darunter, damit beide als EIN Ereignis
+   gelesen werden. */
+.wi-plevel.is-on { animation: wi-plevel .62s cubic-bezier(.18, 1.5, .42, 1) both; }
+@keyframes wi-plevel {
+  0%   { opacity: 0; transform: translateY(14px) scale(.86); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+
+/* Die beantwortete Frage tritt zurück, solange die Verwandlung
+   läuft. Anfassbar ist sie dabei nicht — der Riegel dagegen steht
+   in tool.js, das hier ist nur die Auskunft darüber. */
+.wi-opts.is-wait, .wi-type.is-wait {
+  opacity: .35;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+
+/* Der Tonschalter. Er sieht aus wie der Schließer daneben, weil er
+   an derselben Stelle dasselbe tut: eine Kleinigkeit umstellen. */
+.wi-pton { font-size: 17px; }
+.wi-pton.is-off { color: var(--ink-faint); opacity: .6; text-decoration: line-through; }
+
+/* ══════════════════════════════════════════════════════════════
+   WIE OFT HATTEST DU DIESES WORT?
+   ══════════════════════════════════════════════════════════════
+   Zwei Zeilen, vier Spalten, keine Erklärung. Die Farben tragen die
+   Bedeutung: grün ist gekonnt, gelb ist gekonnt-mit-Hilfe, grau ist
+   die Summe. Der Balken darunter zeigt die vierte Zahl, die keine
+   Spalte bekommen hat — was weder grün noch gelb ist, war falsch.
+
+   Der Kasten sitzt IM Tierfenster und nicht daneben: die Frage
+   entsteht dort, und dort wird sie beantwortet. */
+.wi-pinfo {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  appearance: none;
+  cursor: pointer;
+  border-radius: 50%;
+  border: 1px solid rgba(160, 200, 225, .38);
+  background: rgba(4, 20, 32, .66);
+  color: #b9cbd8;
+  font: italic 700 14px/1 Georgia, 'Times New Roman', serif;
+  transition: border-color .14s ease, color .14s ease, background .14s ease;
+}
+.wi-pinfo:hover { color: #fff; border-color: rgba(160, 200, 225, .85); }
+.wi-pinfo.is-on {
+  background: #0d3c53;
+  color: #fff;
+  border-color: var(--wi-gold, #ffcf4d);
+}
+
+.wi-stats {
+  position: absolute;
+  inset: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 14px;
+  border-radius: var(--r-sm, 12px);
+  background: rgba(3, 17, 27, .94);
+  animation: wi-stin .18s ease-out;
+}
+@keyframes wi-stin {
+  from { opacity: 0; transform: scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.wi-stgrid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr 1fr 1fr;
+  align-items: center;
+  gap: 2px 10px;
+}
+.wi-sthead {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #7d95a6;
+  text-align: center;
+}
+/* Die Richtung als Marke und nicht als Satz: „EN→DE" liest sich in
+   einem Blick, „Englisch nach Deutsch" nicht. */
+.wi-stdir {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(160, 200, 225, .22);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: #cfe0ec;
+}
+.wi-stdir i { font-style: normal; color: #6f8798; }
+.wi-stn {
+  text-align: center;
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.wi-stn.is-gut  { color: #6ee7a8; }
+.wi-stn.is-hilf { color: #fbbf5c; }
+.wi-stn.is-alle { color: #cbd9e4; }
+
+.wi-stbar {
+  grid-column: 2 / -1;
+  display: flex;
+  height: 5px;
+  margin: 2px 0 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(160, 200, 225, .13);
+}
+.wi-stgrid > .wi-stbar:last-child { margin-bottom: 0; }
+.wi-stbar i { display: block; height: 100%; }
+.wi-stbar i.is-gut  { background: #6ee7a8; }
+.wi-stbar i.is-hilf { background: #fbbf5c; }
+.wi-stbar i.is-bad  { background: #e06a6a; }
+
+.wi-stnote {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #b9cbd8;
+  text-align: center;
+}
 
 .wi-pstage {
   position: absolute;
@@ -1288,6 +1492,16 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    ein Wort, ein Feld — mehr Breite macht daraus keine bessere
    Frage, nur einen leereren Kasten. */
 .wi-ovbox--play { max-width: 460px; }
+
+/* Wer Bewegung abbestellt hat, bekommt die Auskunft trotzdem: der
+   Satz steht da, das Tier hat seine neue Stufe. Nur springt und
+   pocht nichts mehr. Die Leinwand nimmt sich in tool.js dieselbe
+   Auskunft (`sparsam`). */
+@media (prefers-reduced-motion: reduce) {
+  .wi-plevel.is-on { animation: none; }
+  .wi-cheer { animation: none; }
+  .wi-stats { animation: none; }
+}
 
 /* Der Kasten, in den insel.js das Werkzeug hängt. Er muss selbst
    dehnen, sonst steht die Bühne in einem null Pixel hohen Loch. */

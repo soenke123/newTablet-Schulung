@@ -33,6 +33,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TOOL = path.join(HERE, '..', 'tool.js');
 
 let fails = 0;
+const js = v => JSON.stringify(v);
 const ok = (label, cond, extra = '') => {
   if (!cond) fails++;
   console.log(`${cond ? 'ok  ' : 'FAIL'}  ${label}${extra ? '   ' + extra : ''}`);
@@ -904,11 +905,21 @@ function machKontext(c) {
     canvas: c,
     filter: 'none', fillStyle: '#000', globalAlpha: 1,
     globalCompositeOperation: 'source-over',
+    strokeStyle: '#000', lineWidth: 1,
     drawImage() {}, fillRect() {}, clearRect() {},
     save() {}, restore() {}, translate() {}, scale() {}, setTransform() {},
     putImageData() {},
+    /* Ab der Verwandlung auf der Übungskarte kommen Pfade dazu:
+       Bodenschatten, Ring und die aufspringende Eischale zeichnen
+       nicht mehr nur Bilder. Fehlt einer dieser Stummel, fällt die
+       Zeichenschleife mit einem TypeError aus — und der sieht dann
+       aus, als sei die Karte leer. */
+    rotate() {}, beginPath() {}, closePath() {}, clip() {},
+    rect() {}, arc() {}, ellipse() {}, moveTo() {}, lineTo() {},
+    fill() {}, stroke() {},
     createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }),
     createRadialGradient: () => ({ addColorStop() {} }),
+    createLinearGradient: () => ({ addColorStop() {} }),
     /* Ein durchgehend grünes Bild — das Ausgangsgrün der Echsen.
        Damit läuft die Farbrechnung über echte Werte statt über
        Nullen, und ein NaN darin fiele auf. */
@@ -958,11 +969,34 @@ function makeSoloEnv() {
     get src() { return this._src; }
   }
 
+  /* Die Zeichenschleife läuft normalerweise INS LEERE: gezählt wird
+     nur, dass sie sich anmeldet. Das reicht, solange sie beim ersten
+     Bild alles anfasst.
+
+     Für die Verwandlung reicht es nicht. Sie ist ein VERLAUF —
+     Eischale, Blitz und Funken kommen erst in ihrer Mitte, und ein
+     Tippfehler darin fiele beim ersten Bild nie auf. Mit `rafLive`
+     ruft die Attrappe deshalb wirklich zurück; was dabei fliegt,
+     wird eingesammelt statt den Prozess zu zerlegen. Ohne den Fang
+     stünde da ein nackter Stapelauszug ohne die Frage, zu der er
+     gehört. */
   env.rafs = 0;
+  env.rafLive = false;
+  env.rafFehler = [];
   Object.assign(window, { devicePixelRatio: 2 });
   const g = env.sandbox;
   g.Image = FakeImage;
-  g.requestAnimationFrame = () => { env.rafs++; return env.rafs; };
+  g.requestAnimationFrame = fn => {
+    env.rafs++;
+    // Der Deckel ist ein Riegel gegen eine Schleife, die niemand
+    // mehr abbestellt — kein Maß für irgendetwas.
+    if (env.rafLive && env.rafs < 6000) {
+      setTimeout(() => {
+        try { fn(Date.now()); } catch (e) { env.rafFehler.push(e); }
+      }, 4);
+    }
+    return env.rafs;
+  };
   g.cancelAnimationFrame = () => {};
   g.performance = { now: () => Date.now() };
   g.Uint8ClampedArray = Uint8ClampedArray;
@@ -997,8 +1031,11 @@ function soloView(n, stufen) {
 const felderVon = root => new Set(
   [...root.querySelectorAll('.wi-cell')].map(e => e.dataset.r + ',' + e.dataset.c));
 
-async function mountSolo(view, extra) {
+async function mountSolo(view, extra, opt) {
   const env = makeSoloEnv();
+  // Vor dem Aufhängen, nicht danach: eine Schleife, die einmal ins
+  // Leere gelaufen ist, bestellt sich nie wieder.
+  env.rafLive = !!(opt && opt.live);
   const tool = env.impls.wordisland;
   const calls = [];
   const ctx = Object.assign({}, env.ctxBase, {
@@ -1110,7 +1147,7 @@ async function testInselWaechst() {
 async function testSoloUeben() {
   console.log('\n— Üben auf der eigenen Insel —');
   let stufe = 1;
-  const { tool, root, calls, document } = await mountSolo(soloView(20, () => 1), {
+  const { env, tool, root, calls, document } = await mountSolo(soloView(20, () => 1), {
     wi_solo_start: () => ({
       ok: true,
       task: { item: 'w-3', prompt: 'das Haus', dir: 'de_en', stage: 'type', level: 1, options: [] }
@@ -1129,7 +1166,7 @@ async function testSoloUeben() {
                                            'home', 'hound', 'hour', 'host'] } };
     },
     wi_solo_settings: args => ({ ok: true, settings: { sets: args.p_sets || [] } })
-  });
+  }, { live: true });
 
   const play = root.querySelector('[data-part="playov"]');
   ok('das Üben ist zu, solange niemand darauf tippt', play.hidden === true);
@@ -1156,15 +1193,78 @@ async function testSoloUeben() {
   ok('und das Eingabefeld tritt zurück',
      root.querySelector('[data-part="pform"]').hidden === true);
 
+  // In diesem Prüflauf zeichnen beide Schleifen wirklich: die Karte
+  // ihre Verwandlung, die Insel ihren Funkenkranz.
+  const rafsVor = env.rafs;
+
   click([...root.querySelectorAll('[data-part="popts"] button')]
         .find(b => b.dataset.v === 'house'), document);
   await wait(30);
   ok('richtig → das Tier wächst',
      root.querySelector('.wi-lg--2') !== null && stufe === 2);
-  ok('die nächste Frage kommt gleich mit',
+
+  /* ── Der Moment ────────────────────────────────────────────────
+     Der Stufensprung ist die einzige Belohnung, die dieses Werkzeug
+     zu vergeben hat. Geprüft wird nicht, wie sie aussieht — das
+     sieht man —, sondern dass sie überhaupt STATTFINDET und dass
+     ihr niemand dazwischenfunkt. */
+  const jubel = root.querySelector('[data-part="plevel"]');
+  ok('die Verwandlung wird angesagt',
+     jubel.hidden === false &&
+     /Gewachsen/.test(root.querySelector('[data-part="plevelb"]').textContent),
+     root.querySelector('[data-part="plevelb"]').textContent);
+  ok('und das Wort steht darin',
+     /das Haus/.test(root.querySelector('[data-part="plevels"]').textContent),
+     root.querySelector('[data-part="plevels"]').textContent);
+  ok('die Stufe steht schon auf der neuen',
+     root.querySelector('[data-part="pstage"]').textContent === 'gewachsen');
+
+  /* Sönkes Ansage vom 10.09.2026: die Verwandlung gehört aufs
+     DISPLAY und nicht in den Übungskasten. Beim Tippen steht auf
+     dem Tablet die Tastatur, und der Kasten ist dann ein Streifen —
+     eine Belohnung, die man suchen muss, ist keine. */
+  const buehne = root.querySelector('[data-part="cheer"]');
+  ok('die Feier läuft auf der großen Bühne', buehne.hidden === false);
+  ok('und der Übungskasten tritt dafür zurück',
+     play.classList.contains('is-cheer'));
+  ok('der Jubel steht auf der Bühne und nicht in der Karte',
+     jubel.closest('[data-part="cheer"]') === buehne);
+  /* Der Kern der Pause: solange die Verwandlung läuft, steht noch
+     das Wort von eben da. Käme die nächste Frage sofort, liefe die
+     Belohnung zwar ab, aber der Blick wäre schon unten. */
+  ok('solange wartet die nächste Frage',
+     root.querySelector('[data-part="pword"]').textContent === 'das Haus');
+  ok('und es lässt sich nichts antworten',
+     root.querySelector('[data-part="pin"]').disabled === true &&
+     root.querySelector('[data-part="popts"]').classList.contains('is-wait'));
+
+  /* Und ein zweiter Tipp auf die alte Auswahl darf NICHT durchgehen:
+     die acht Knöpfe stehen noch da, das Wort ist aber durch. */
+  const vorher = calls.filter(c => c[0] === 'wi_solo_answer').length;
+  click([...root.querySelectorAll('[data-part="popts"] button')]
+        .find(b => b.dataset.v === 'mouse'), document);
+  await wait(20);
+  ok('ein zweiter Tipp während der Feier geht ins Leere',
+     calls.filter(c => c[0] === 'wi_solo_answer').length === vorher);
+
+  await wait(1200);
+  ok('danach kommt die nächste Frage',
      root.querySelector('[data-part="pword"]').textContent === 'die Tafel');
   ok('und sie ist wieder zum Tippen',
      root.querySelector('[data-part="pform"]').hidden === false);
+  ok('der Jubel ist wieder weg', jubel.hidden === true);
+  ok('die Bühne auch', buehne.hidden === true && !play.classList.contains('is-cheer'));
+  ok('und das Feld ist frei',
+     root.querySelector('[data-part="pin"]').disabled === false);
+
+  /* Und sie ist DURCHgezeichnet worden. Eischale, Blitz und Funken
+     liegen in der Mitte des Verlaufs — wer nur das erste Bild prüft,
+     prüft von dieser Feier genau nichts. */
+  ok('die Verwandlung läuft ohne Fehler durch',
+     env.rafFehler.length === 0,
+     env.rafFehler.slice(0, 2).map(e => e.message).join(' · '));
+  ok('und sie hat viele Bilder gebraucht', env.rafs - rafsVor > 40,
+     `${env.rafs - rafsVor} Bilder`);
 
   /* ── Die Einstellungen ─────────────────────────────────────── */
   click(root.querySelector('[data-part="ssets"]'), document);
@@ -1187,6 +1287,120 @@ async function testSoloUeben() {
   click(root.querySelector('[data-part="setsclose"]'), document);
   ok('und wieder zu', sets.hidden === true);
   tool.unmount();
+}
+
+/* Der eine Sprung, der anders aussieht als alle anderen: aus dem Ei
+   kommt etwas heraus. Er hat eigenen Code — die Schale wird in zwei
+   Hälften geschnitten und weggeschleudert —, und der wird von keiner
+   anderen Stufe angefasst. */
+async function testSchluepfen() {
+  console.log('\n— Es schlüpft —');
+  const { env, tool, root, document } = await mountSolo(soloView(12, () => 0), {
+    wi_solo_start: () => ({
+      ok: true,
+      task: { item: 'w-2', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 0, options: [] }
+    }),
+    wi_solo_answer: () => ({
+      ok: true, result: 'correct', item: 'w-2',
+      level_before: 0, level_after: 1, locked_for: 0,
+      task: { item: 'w-5', prompt: 'der Stuhl', dir: 'de_en', stage: 'type', level: 0, options: [] }
+    })
+  }, { live: true });
+
+  click(root.querySelector('[data-part="sgo"]'), document);
+  await wait(40);
+  ok('vor der Antwort liegt ein Ei da',
+     root.querySelector('[data-part="pstage"]').textContent === 'Eier');
+
+  const fehlerVor = env.rafFehler.length;
+  root.querySelector('[data-part="pin"]').value = 'tree';
+  root.querySelector('[data-part="pform"]')
+      .dispatchEvent(new document.defaultView.Event('submit', { bubbles: true }));
+
+  /* Mitten in den Verlauf hinein: bei rund 700 ms ist die Schale
+     gebrochen und die Hälften fliegen. Genau dort steht der Code,
+     der sonst nirgends läuft. */
+  await wait(700);
+  ok('es schlüpft',
+     /Geschlüpft/.test(root.querySelector('[data-part="plevelb"]').textContent),
+     root.querySelector('[data-part="plevelb"]').textContent);
+  ok('die neue Stufe steht schon da',
+     root.querySelector('[data-part="pstage"]').textContent === 'geschlüpft');
+  ok('und die Schale zerbricht ohne Fehler',
+     env.rafFehler.length === fehlerVor,
+     env.rafFehler.slice(-1).map(e => e.message).join(''));
+
+  await wait(900);
+  ok('danach kommt die nächste Frage',
+     root.querySelector('[data-part="pword"]').textContent === 'der Stuhl');
+  tool.unmount();
+}
+
+/* „Wie oft hattest du dieses Wort?" — das kleine i beim Tier.
+   Die Zahlen fahren in der Aufgabe mit (Migration 0138), es geht
+   also kein Ruf zum Server. Geprüft wird deshalb genau zweierlei:
+   dass die Zahlen an der richtigen Stelle landen, und dass eine
+   fehlende Migration NICHT wie „noch nie geübt" aussieht. */
+async function testStats() {
+  console.log('\n— Wie oft hattest du das Wort? —');
+  const AUFGABE = {
+    item: 'w-1', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 2, options: [],
+    stats: { en_de: [7, 2, 11], de_en: [4, 3, 8] }
+  };
+  const { tool, root, document } = await mountSolo(soloView(10, () => 2), {
+    wi_solo_start: () => ({ ok: true, task: AUFGABE })
+  });
+
+  click(root.querySelector('[data-part="sgo"]'), document);
+  await wait(30);
+  const panel = root.querySelector('[data-part="pstats"]');
+  ok('die Übersicht ist zu, bis jemand auf das i tippt', panel.hidden === true);
+
+  click(root.querySelector('[data-part="pinfo"]'), document);
+  await wait(10);
+  ok('das i klappt sie auf', panel.hidden === false);
+
+  const kopf = [...panel.querySelectorAll('.wi-sthead')].map(e => e.textContent);
+  ok('drei Spalten: richtig, mit Hilfe, gesamt',
+     js(kopf) === js(['richtig', 'mit Hilfe', 'gesamt']), js(kopf));
+
+  const dirs = [...panel.querySelectorAll('.wi-stdir')].map(e => e.textContent);
+  ok('oben EN→DE, unten DE→EN', js(dirs) === js(['EN→DE', 'DE→EN']), js(dirs));
+
+  const zahlen = [...panel.querySelectorAll('.wi-stn')].map(e => e.textContent);
+  ok('und die Zahlen stehen in ihrer Zeile',
+     js(zahlen) === js(['7', '2', '11', '4', '3', '8']), js(zahlen));
+
+  /* Der Balken trägt die vierte Zahl, die keine Spalte hat: 11 − 7 −
+     2 = 2 falsch, das sind 18,18 %. Gerechnet und nicht geraten —
+     ein Balken, der die Reste verschluckt, behauptet, es hätte nie
+     einen Fehler gegeben. */
+  const bad = panel.querySelector('.wi-stbar i.is-bad');
+  ok('der Balken zeigt auch die falschen',
+     bad && /18\.18%/.test(bad.getAttribute('style') || ''), bad?.getAttribute('style'));
+
+  click(root.querySelector('[data-part="pinfo"]'), document);
+  await wait(10);
+  ok('noch ein Tipp aufs i macht sie wieder zu', panel.hidden === true);
+  tool.unmount();
+
+  /* Und der Fall, der sonst wie „dieses Wort hattest du noch nie"
+     aussähe: die Datenbank ist älter als das Werkzeug. Die beiden
+     zu verwechseln hat am 08.09.2026 eine halbe Stunde gekostet. */
+  const alt = await mountSolo(soloView(10, () => 2), {
+    wi_solo_start: () => ({
+      ok: true,
+      task: { item: 'w-1', prompt: 'der Baum', dir: 'de_en', stage: 'type', level: 2, options: [] }
+    })
+  });
+  click(alt.root.querySelector('[data-part="sgo"]'), alt.document);
+  await wait(30);
+  click(alt.root.querySelector('[data-part="pinfo"]'), alt.document);
+  await wait(10);
+  const note = alt.root.querySelector('[data-part="pstats"]');
+  ok('ohne 0138 keine erfundenen Nullen',
+     !note.querySelector('.wi-stn') && /0138/.test(note.textContent), note.textContent);
+  alt.tool.unmount();
 }
 
 /* Ohne Migration 0136 antwortet der Server mit 404 → fn_missing.
@@ -1235,6 +1449,8 @@ async function testSoloOhneMigration() {
   await testSolo();
   await testInselWaechst();
   await testSoloUeben();
+  await testSchluepfen();
+  await testStats();
   await testSoloOhneMigration();
   console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');
   process.exit(fails ? 1 : 0);
