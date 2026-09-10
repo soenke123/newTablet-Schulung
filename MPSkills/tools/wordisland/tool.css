@@ -1226,12 +1226,22 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 /* ── Die Leiste ──────────────────────────────────────────────
    Sie schwebt UNTEN und nicht oben: oben sitzt schon die
    Kopfzeile der Seite, und zwei Balken übereinander lassen von der
-   Insel nichts übrig. Unten ist außerdem der Daumen. */
+   Insel nichts übrig. Unten ist außerdem der Daumen.
+
+   Seit 10.09.2026 ist sie ein KASTEN unten rechts und kein Balken
+   über die ganze Breite (Sönke: „unten rechts ist ein Feld
+   Einstellungen und Vokabeln üben"). Der Grund ist die Unit-Leiste
+   auf der anderen Seite: sie geht jetzt bis ganz nach unten, und
+   ein Balken quer darüber hätte sie unten abgeschnitten. So teilen
+   sich beide die untere Kante — Liste links, Knöpfe rechts. */
 .wi-sbar {
   position: absolute;
-  left: 10px;
+  left: auto;
   right: 10px;
   bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  /* Nie unter die Unit-Leiste wachsen: `--wi-rand` ist deren
+     gemessene Breite (tool.js, randLinks). */
+  max-width: calc(100% - var(--wi-rand, 0px) - 20px);
   z-index: 20;
   display: flex;
   align-items: center;
@@ -1250,7 +1260,10 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
-.wi-sspacer { flex: 1 1 auto; }
+/* Der Abstandhalter ist weg: er schob die Knöpfe an das rechte Ende
+   eines Balkens, der über die ganze Breite ging. Der Kasten steht
+   jetzt selbst rechts und ist nur so breit wie seine zwei Knöpfe. */
+.wi-sbar > .wi-btn { flex: 0 0 auto; }
 
 /* Die Zahlen der Insel standen bis 10.09.2026 hier unten — also
    woanders als die Liste, die sie erklären. Sie sind in den Kopf der
@@ -1285,9 +1298,9 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 /* ══════════════════════════════════════════════════════════════
    DIE UNIT-LEISTE
    ══════════════════════════════════════════════════════════════
-   Rechts, über der Bühne, vom Kopf bis über die untere Leiste.
+   Links, über der Bühne, vom Kopf bis ganz nach unten.
    Sie liegt DARÜBER und schiebt die Insel nicht zusammen — die
-   Kamera zentriert stattdessen auf den Rest (tool.js, randRechts).
+   Kamera zentriert stattdessen auf den Rest (tool.js, randLinks).
    Der Unterschied ist auf dem Tablet der zwischen einer Insel, die
    beim Aufklappen springt, und einer, die stehen bleibt.
 
@@ -1300,9 +1313,14 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    übernommen — wer sie kannte, findet sie wieder. */
 .wi-units {
   position: absolute;
-  right: 10px;
+  left: 10px;
+  right: auto;
   top: 10px;
-  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  /* Bis ganz nach unten (Sönke, 10.09.2026). Sie muss nicht mehr
+     über der unteren Leiste enden, weil die zu einem Kasten am
+     rechten Rand geworden ist — die beiden stehen nebeneinander
+     und nicht übereinander. */
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   width: min(320px, 46vw);
   z-index: 20;
   display: flex;
@@ -1328,11 +1346,16 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    Kasten quer über dem Bildschirm ist keine Spalte mehr, und die
    Liste braucht ihren Weg nach unten.
 
-   Der Abstand nach unten bleibt derselbe wie am Rechner: die untere
-   Leiste bricht nicht mehr um, seit die Zahlen aus ihr heraus sind
-   (.wi-sbar, flex-wrap). */
+   Hier endet sie ÜBER dem Knopf-Kasten und nicht an der unteren
+   Kante: auf 390 px Breite passen eine 265 px breite Spalte und
+   zwei Knöpfe nicht nebeneinander, und ein Kasten, der die Liste
+   unten verdeckt, ist schlimmer als eine Liste, die früher aufhört.
+   Am Rechner und am Tablet ist Platz für beides. */
 @media (max-width: 720px) {
-  .wi-units { width: min(300px, 68vw); }
+  .wi-units {
+    width: min(300px, 68vw);
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .wi-ugriff {
@@ -1581,9 +1604,14 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    nach der anderen antippt, will die Antwort immer an derselben
    Stelle lesen (Sönke, 10.09.2026).
 
+   Genauer: DIREKT ÜBER den beiden Knöpfen, in derselben Spalte —
+   Kärtchen und Kasten haben denselben rechten Rand, das Kärtchen
+   sitzt auf dem Kasten auf. So gibt es unten rechts EINEN Ort für
+   alles, was nicht die Insel ist.
+
    `--wi-rand` ist die Breite der Unit-Leiste, gemessen in tool.js.
-   Ohne sie stünde das Kärtchen hinter der Leiste — beide wollen
-   nach rechts.
+   Sie steht links; die Zahl deckelt hier nur die BREITE, damit das
+   Kärtchen auf schmalen Geräten nicht unter die Liste läuft.
 
    Es heißt `wi-tcard` und nicht `wi-card`: `.wi-card` ist die
    allgemeine Karte der Raum-Ansichten (ganz oben in dieser Datei),
@@ -1592,7 +1620,7 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 .wi-tcard {
   position: absolute;
   z-index: 30;
-  right: calc(var(--wi-rand, 0px) + 10px);
+  right: 10px;
   bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   max-width: calc(100% - var(--wi-rand, 0px) - 20px);
   max-height: calc(100% - 150px);

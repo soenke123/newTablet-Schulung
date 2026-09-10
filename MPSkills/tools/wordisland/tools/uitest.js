@@ -1161,6 +1161,15 @@ async function testSolo() {
   ok('die untere Leiste trägt keine Zahlen mehr',
      !root.querySelector('.wi-sbar .wi-lg') &&
      !root.querySelector('.wi-sbar [data-part="swords"]'));
+  /* Sie ist ein KASTEN unten rechts und kein Balken über die ganze
+     Breite: der Abstandhalter, der die Knöpfe ans rechte Ende schob,
+     wäre in einem Kasten eine unsichtbare Sperre gegen die eigene
+     Breite. Er ist weg und darf nicht zurückkommen — sonst steht der
+     Kasten wieder quer über der Unit-Leiste, die bis ganz nach unten
+     reicht (Sönke, 10.09.2026). */
+  ok('und ist nur so breit wie ihre zwei Knöpfe',
+     !root.querySelector('.wi-sspacer') &&
+     root.querySelectorAll('.wi-sbar > *').length === 2);
   /* Die Legende ist eine Auskunft: fünf Stufen, je acht Wörter aus
      dem `i % 5` oben. Stufen ohne Tiere fielen weg — hier sind alle
      fünf besetzt. */

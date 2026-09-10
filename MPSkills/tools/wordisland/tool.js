@@ -3254,11 +3254,13 @@
     const mx = (a + b) / 2, my = (c + d) / 2;
     /* Gerechnet wird gegen das FREIE Fenster: die Unit-Leiste liegt
        über der Bühne, und eine Insel, die brav in der Mitte der
-       Leinwand sitzt, säße zur Hälfte hinter der Leiste. */
-    const frei = Math.max(80, sicht.w - randRechts);
+       Leinwand sitzt, säße zur Hälfte hinter der Leiste. Sie steht
+       links, das freie Fenster fängt also erst bei `randLinks` an —
+       darum die Verschiebung vor der halben Breite. */
+    const frei = Math.max(80, sicht.w - randLinks);
     kamera.k = Math.min(4, Math.max(.6,
       Math.min(frei * .92 / (w * sicht.s), sicht.h * .92 / (h * sicht.s))));
-    kamera.tx = frei / 2 - kamera.k * (sicht.ox + mx * sicht.s);
+    kamera.tx = randLinks + frei / 2 - kamera.k * (sicht.ox + mx * sicht.s);
     kamera.ty = sicht.h / 2 - kamera.k * (sicht.oy + my * sicht.s);
     kameraAnwenden();
   }
@@ -3765,7 +3767,7 @@
 
            Die Insel wird nicht verkleinert, sondern auf den REST
            zentriert — die Tiere laufen weiter über die ganze
-           Leinwand, nur die Kamera weiß von einem rechten Rand. -->
+           Leinwand, nur die Kamera weiß von einem linken Rand. -->
       <aside class="wi-units" data-part="units" hidden>
         <!-- Der Kopf sagt, worüber die Liste darunter spricht: alle
              Units zusammen, so viele Wörter, so weit gewachsen. Bis
@@ -3789,8 +3791,13 @@
            derselben Stelle lesen und nicht suchen. -->
       <div class="wi-tcard" data-part="card" hidden></div>
 
+      <!-- Der Kasten unten RECHTS. Er ging bis 10.09.2026 als Balken
+           über die ganze Breite und hätte damit die Unit-Leiste
+           unten abgeschnitten, seit die bis zur unteren Kante
+           reicht. Jetzt ist er nur so breit wie seine zwei Knöpfe;
+           der Abstandhalter, der sie ans rechte Ende schob, ist
+           deshalb weg. -->
       <header class="wi-sbar">
-        <div class="wi-sspacer"></div>
         <!-- Beide gesperrt, bis die Insel steht: davor gibt es weder
              Units zum Auswählen noch ein Tier zum Anzeigen, und ein
              Knopf, der ins Leere greift, ist schlimmer als einer,
@@ -3952,7 +3959,7 @@
 
        markiert   die Tiere EINER Unit (das „i" in der Leiste)
        tierOffen  das EINE angetippte Tier (das Kärtchen)
-       randRechts wie viel Platz die Leiste der Insel wegnimmt
+       randLinks  wie viel Platz die Leiste der Insel wegnimmt
 
      Sie liegen hier draußen und nicht in `solo`, weil die
      Zeichenschleife sie bei jedem Bild anfasst — und weil sie eine
@@ -3961,7 +3968,7 @@
   let unitOffen = null;     // { id, daten|null, auf: Set<itemId> }
   let markiert = null;      // Set<itemId> | null
   let tierOffen = null;     // itemId
-  let randRechts = 0;
+  let randLinks = 0;
   const unitCache = new Map();   // setId → Antwort von wi_solo_unit
   const grauCache = new Map();   // `${schlüssel}|${farbe}` → blasse Leinwand
   const monsCache = new Map();   // `${schlüssel}|${farbe}` → data:-URL für die Liste
@@ -4301,14 +4308,14 @@
     if (!unitsAuf && unitOffen) unitZurueck();
     try { localStorage.setItem(WI_UNITS_KEY, unitsAuf ? '1' : '0'); } catch (e) { /* egal */ }
 
-    const alt = randRechts;
+    const alt = randLinks;
     randMessen();
     /* Nicht auf die Hauptinsel zurückspringen, sondern SCHIEBEN: wer
        die Leiste aufmacht, will die Liste sehen und nicht seinen
-       Ausschnitt verlieren. Die Leiste steht rechts — wird sie
-       breiter, rutscht die Mitte des freien Fensters nach LINKS. */
-    if (sicht.w && randRechts !== alt) {
-      kamera.tx += (alt - randRechts) / 2;
+       Ausschnitt verlieren. Die Leiste steht links — wird sie
+       breiter, rutscht die Mitte des freien Fensters nach RECHTS. */
+    if (sicht.w && randLinks !== alt) {
+      kamera.tx += (randLinks - alt) / 2;
       kameraAnwenden();
     }
   }
@@ -4316,22 +4323,22 @@
   /* Wie viel Platz die Leiste der Insel wegnimmt. Die Bühne selbst
      bleibt so groß, wie sie ist — die Tiere laufen weiter über die
      ganze Leinwand, auch hinter der Leiste. Nur die KAMERA weiß von
-     einem rechten Rand und zentriert auf den Rest.
+     einem linken Rand und zentriert auf den Rest.
 
-     Dieselbe Zahl bekommt das Stylesheet als `--wi-rand`: das
-     Kärtchen unten rechts muss NEBEN der Leiste stehen und nicht
-     hinter ihr, und wie breit die Leiste gerade ist, weiß nur, wer
-     sie gemessen hat. */
+     Dieselbe Zahl bekommt das Stylesheet als `--wi-rand`: Kärtchen
+     und Knopf-Kasten stehen rechts und dürfen auf einem schmalen
+     Gerät nicht unter die Leiste wachsen — wie breit die gerade
+     ist, weiß nur, wer sie gemessen hat. */
   function randMessen() {
-    randRechts = 0;
+    randLinks = 0;
     if (unitsAuf && els.units && sicht.w) {
       const b = els.units.getBoundingClientRect();
       // Der Deckel ist der Riegel gegen einen Kasten, der (etwa im
       // Prüfstand) so breit meldet wie die ganze Bühne.
-      if (b.width) randRechts = Math.min(b.width + 20, sicht.w * .5);
+      if (b.width) randLinks = Math.min(b.width + 20, sicht.w * .5);
     }
     if (root && root.style) {
-      root.style.setProperty('--wi-rand', Math.round(randRechts) + 'px');
+      root.style.setProperty('--wi-rand', Math.round(randLinks) + 'px');
     }
   }
 
@@ -5645,7 +5652,7 @@
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
       practice = false; lastPhase = null; soloClaimAt = 0;
       solo = null; soloTask = null; simZeit = 0; letzterT = 0; nacht = 0;
-      unitOffen = null; markiert = null; tierOffen = null; randRechts = 0;
+      unitOffen = null; markiert = null; tierOffen = null; randLinks = 0;
       sichtbar = []; unitVergessen();
       kart = null; kartAnim = null; feiernd = false; kartZiel = 'karte';
       welt.isl = null; welt.vb = null; welt.inseln = null; welt.haupt = null;
