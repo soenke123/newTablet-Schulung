@@ -82,6 +82,22 @@ function makeEnv() {
 const click = (el, doc) => el.dispatchEvent(new doc.defaultView.Event('click', { bubbles: true }));
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
+/* ─── Eine Antwort abschicken ───────────────────────────────
+   Das Antwortfeld ist seit 11.09.2026 kein <input> in einem <form>
+   mehr, sondern ein contenteditable (kein Formularfeld = keine
+   Ausfüll-Leiste von Chrome über der Tastatur; siehe feldBauen in
+   tool.js). Getippt wird deshalb in `textContent`, und abgeschickt
+   wird mit Enter statt mit `submit`. */
+function antworte(root, doc, text, sel = '.wi-in') {
+  const el = root.querySelector(sel);
+  if (!el) return null;
+  el.textContent = text;
+  const ev = new doc.defaultView.Event('keydown', { bubbles: true });
+  ev.key = 'Enter';
+  el.dispatchEvent(ev);
+  return el;
+}
+
 /* ─── Ein erfundener Server ─────────────────────────────────
    Dieselbe Gestalt wie wi_view/wi_room_get in 0131 + 0133. */
 function island(rows, cols) {
@@ -236,18 +252,31 @@ async function testTablet() {
   ok('Wort steht da', root.querySelector('.wi-word').textContent === 'das Haus');
   ok('Frage passt zur Richtung', /Englisch/.test(root.querySelector('.wi-ask').textContent));
   ok('Eingabefeld offen', !root.querySelector('.wi-type').hidden);
+  /* Warum das kein <input> in einem <form> sein darf, steht in
+     tool.js bei feldBauen(): Chrome auf Android legt über jedes
+     Formularfeld seine Ausfüll-Leiste (Passkey · Karte · Standort),
+     und die frisst auf einem Telefon genau die Zeile, an der es eng
+     ist. Wer hier wieder ein Formularfeld einbaut, holt sie zurück —
+     ohne dass es am Rechner auffiele. */
+  ok('das Antwortfeld ist kein Formularfeld',
+     !root.querySelector('.wi-task form, .wi-task input, .wi-task textarea'));
+  ok('und trotzdem beschreibbar',
+     root.querySelector('.wi-in').getAttribute('contenteditable') != null);
 
   /* Fast richtig → Schreibweisen */
   reply({ ok: true, result: 'spell', streak: 0, picks: 0,
           task: { prompt: 'das Haus', dir: 'de_en', stage: 'spell',
                   options: ['hous', 'house', 'housse', 'huose'] } });
-  root.querySelector('.wi-in').value = 'hous';
-  root.querySelector('.wi-type').dispatchEvent(new document.defaultView.Event('submit'));
+  antworte(root, document, 'hous');
   await wait(40);
   ok('Antwort ging raus', calls.some(([fn, a]) => fn === 'wi_answer' && a.p_input === 'hous'));
   ok('Schreibweisen als Knöpfe', root.querySelectorAll('.wi-opts button').length === 4);
   ok('Eingabefeld weicht der Auswahl', root.querySelector('.wi-type').hidden === true);
   ok('Rückmeldung „fast"', /Fast/.test(root.querySelector('.wi-fb').textContent));
+  /* Und das Feld ist leer — bei einem contenteditable ist das keine
+     Selbstverständlichkeit: `textContent = ''` lässt gern ein <br>
+     zurück, und dann käme der Platzhalter nie wieder. */
+  ok('das Feld ist danach leer', root.querySelector('.wi-in').innerHTML === '');
 
   /* Auswahl richtig → Feld */
   reply({ ok: true, result: 'correct', streak: 1, picks: 0,
@@ -263,8 +292,7 @@ async function testTablet() {
   /* Serie → freie Wahl */
   reply({ ok: true, result: 'correct', streak: 3, picks: 1, tile: null,
           task: { prompt: 'das Buch', dir: 'de_en', stage: 'type', options: [] } });
-  root.querySelector('.wi-in').value = 'school';
-  root.querySelector('.wi-type').dispatchEvent(new document.defaultView.Event('submit'));
+  antworte(root, document, 'school');
   await wait(40);
   ok('Aufforderung zur freien Wahl', !root.querySelector('.wi-pickbar').hidden);
   ok('Karte ist scharf', root.querySelector('.wi-map').classList.contains('is-picking'));
@@ -279,11 +307,13 @@ async function testTablet() {
   /* Falsch → Lösung und Sperre */
   reply({ ok: true, result: 'wrong', streak: 0, picks: 0, solution: 'book',
           locked_for: 2, task: { prompt: 'das Heft', dir: 'de_en', stage: 'type', options: [] } });
-  root.querySelector('.wi-in').value = 'blubb';
-  root.querySelector('.wi-type').dispatchEvent(new document.defaultView.Event('submit'));
+  antworte(root, document, 'blubb');
   await wait(40);
   ok('Lösung wird gezeigt', /book/.test(root.querySelector('.wi-fb').textContent));
-  ok('Eingabe gesperrt', root.querySelector('.wi-in').disabled === true);
+  /* Gesperrt heißt seit 11.09.2026 `is-locked` und nicht mehr
+     `disabled`: das Feld behält den Fokus, damit auf dem Handy
+     zwischen zwei Fragen nicht die Tastatur ein- und ausfährt. */
+  ok('Eingabe gesperrt', root.querySelector('.wi-in').classList.contains('is-locked'));
 
   tool.unmount();
   ok('unmount ohne Krach', true);
@@ -1271,15 +1301,17 @@ async function testSoloUeben() {
   const scroller = play.querySelector('.wi-ovbody');
   ok('das Eingabefeld steht außerhalb des scrollenden Teils',
      !scroller.contains(root.querySelector('[data-part="pin"]')));
+  /* Dieselbe Zusage wie im Raum, und aus demselben Grund: kein
+     Formularfeld, keine Ausfüll-Leiste von Chrome über der
+     Tastatur (Sönke, 11.09.2026). */
+  ok('auch beim Üben ist das Antwortfeld kein Formularfeld',
+     !play.querySelector('form, input, textarea'));
   ok('die Rückmeldung ebenso',
      !scroller.contains(root.querySelector('[data-part="pfb"]')));
   ok('die Frage aber steht darin — sie klebt oben',
      scroller.contains(root.querySelector('[data-part="pword"]')));
 
-  const eingabe = root.querySelector('[data-part="pin"]');
-  eingabe.value = 'hauz';
-  root.querySelector('[data-part="pform"]')
-      .dispatchEvent(new document.defaultView.Event('submit', { bubbles: true }));
+  const eingabe = antworte(root, document, 'hauz', '[data-part="pin"]');
   await wait(30);
   ok('daneben → acht Wörter zur Auswahl',
      root.querySelectorAll('[data-part="popts"] button').length === 8);
@@ -1328,7 +1360,7 @@ async function testSoloUeben() {
   ok('solange wartet die nächste Frage',
      root.querySelector('[data-part="pword"]').textContent === 'das Haus');
   ok('und es lässt sich nichts antworten',
-     root.querySelector('[data-part="pin"]').disabled === true &&
+     root.querySelector('[data-part="pin"]').classList.contains('is-locked') &&
      root.querySelector('[data-part="popts"]').classList.contains('is-wait'));
 
   /* Und ein zweiter Tipp auf die alte Auswahl darf NICHT durchgehen:
@@ -1348,7 +1380,7 @@ async function testSoloUeben() {
   ok('der Jubel ist wieder weg', jubel.hidden === true);
   ok('die Bühne auch', buehne.hidden === true && !play.classList.contains('is-cheer'));
   ok('und das Feld ist frei',
-     root.querySelector('[data-part="pin"]').disabled === false);
+     !root.querySelector('[data-part="pin"]').classList.contains('is-locked'));
 
   /* Und sie ist DURCHgezeichnet worden. Eischale, Blitz und Funken
      liegen in der Mitte des Verlaufs — wer nur das erste Bild prüft,
@@ -1648,9 +1680,7 @@ async function testSchluepfen() {
      root.querySelector('[data-part="pstage"]').textContent === 'Eier');
 
   const fehlerVor = env.rafFehler.length;
-  root.querySelector('[data-part="pin"]').value = 'tree';
-  root.querySelector('[data-part="pform"]')
-      .dispatchEvent(new document.defaultView.Event('submit', { bubbles: true }));
+  antworte(root, document, 'tree', '[data-part="pin"]');
 
   /* Mitten in den Verlauf hinein: bei rund 700 ms ist die Schale
      gebrochen und die Hälften fliegen. Genau dort steht der Code,
@@ -1824,9 +1854,7 @@ async function testPunkte() {
   ok('und Vorlesegeräte bekommen denselben Wert',
      prog.getAttribute('aria-valuenow') === '13', prog.getAttribute('aria-valuenow'));
 
-  root.querySelector('[data-part="pin"]').value = 'tree';
-  root.querySelector('[data-part="pform"]')
-      .dispatchEvent(new document.defaultView.Event('submit', { bubbles: true }));
+  antworte(root, document, 'tree', '[data-part="pin"]');
   await wait(40);
 
   const delta = root.querySelector('[data-part="pdelta"]');
@@ -1871,9 +1899,7 @@ async function testPunkte() {
   });
   click(rueck.root.querySelector('[data-part="sgo"]'), rueck.document);
   await wait(30);
-  rueck.root.querySelector('[data-part="pin"]').value = 'daneben';
-  rueck.root.querySelector('[data-part="pform"]')
-       .dispatchEvent(new rueck.document.defaultView.Event('submit', { bubbles: true }));
+  antworte(rueck.root, rueck.document, 'daneben', '[data-part="pin"]');
   await wait(1200);
   ok('nach einer falschen Antwort stockt der Balken, statt zu fallen',
      rueck.root.querySelector('[data-part="pprogi"]').style.width === '66.7%',

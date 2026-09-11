@@ -124,6 +124,52 @@
   outline-offset: -2px;
   border-color: var(--accent);
 }
+
+/* ── Das Antwortfeld ist ein contenteditable ───────────────────
+   Kein <input> — der Grund steht in tool.js bei feldBauen(): Chrome
+   auf Android legt über jedes Formularfeld seine Ausfüll-Leiste
+   (Passkey · Karte · Standort), und die will beim Vokabelüben
+   niemand. Was ein <input> von selbst mitbringt, steht hier:
+   eine Zeile, die seitlich wegläuft statt umzubrechen, ein
+   Platzhalter, und ein sichtbarer Zustand für „gerade gesperrt". */
+.wi-in[contenteditable] {
+  display: block;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  line-height: 1.35;
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
+  /* Ein leeres Feld hat trotzdem eine Zeile — sonst springt der
+     Kasten beim ersten Buchstaben. */
+  min-height: 1.35em;
+}
+/* Ein <input> zeigt beim Überlaufen keinen Balken — dieses Feld
+   soll das auch nicht. */
+.wi-in[contenteditable] { scrollbar-width: none; }
+.wi-in[contenteditable]::-webkit-scrollbar { display: none; }
+.wi-in[contenteditable]:empty::before {
+  content: attr(data-ph);
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+/* Gesperrt statt `disabled`: der Fokus bleibt stehen, damit auf dem
+   Handy zwischen zwei Fragen nicht jedes Mal die Tastatur ein- und
+   ausfährt. Abgewiesen wird die Eingabe in tool.js; hier steht nur,
+   dass man es sieht. */
+.wi-in.is-locked {
+  opacity: .5;
+  cursor: not-allowed;
+}
+/* Der Knopf daneben ist mitgesperrt (tool.js weist ihn ab) und soll
+   auch so aussehen — sonst ist er das einzige helle Ding in einer
+   Zeile, die gerade nichts tut. */
+.wi-in.is-locked ~ .wi-btn {
+  opacity: .5;
+  cursor: not-allowed;
+  filter: none;
+}
 .wi-ta { resize: vertical; font-family: var(--mono); font-size: 13px; }
 
 .wi-empty { margin: 0; color: var(--ink-faint); font-size: 14px; }
@@ -1669,11 +1715,37 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 /* ── Das Tier auf der Übungskarte ──────────────────────────────
    Der dunkle Kasten ist kein Zierrat: die Tiere sind für ein Meer
    gezeichnet, und auf weißem Grund verliert der helle Bauch seinen
-   Umriss. Er kippt deshalb auch nicht mit hell/dunkel. */
+   Umriss. Er kippt deshalb auch nicht mit hell/dunkel.
+
+   Er ist zugleich das EINZIGE im Übungskasten, das Platz abgibt,
+   bevor die Frage Platz abgibt — und beide geben her, bevor
+   Rückmeldung und Eingabefeld auch nur einen Pixel hergeben. Das
+   steht als Flex-Angabe da und nicht mehr als Rechnung:
+
+     Grundmaß   --wi-monmax (so groß, wie das Tier sein DARF)
+     Schrumpfen 8 gegen die 1 der Frage — das Tier zuerst
+     Untermaß   --wi-monmin (darunter ist es kein Tier mehr)
+
+   Bis 11.09.2026 stand hier `flex: 0 0 auto`, und die Leinwand
+   deckelte sich selbst mit `calc(--vv-h - --wi-chrome)`: einer
+   geschätzten Zahl für „was sonst noch im Kasten steht". Die
+   Schätzung war zu klein, sobald die Rückmeldung („Richtig!")
+   dazukam — dann war der Kasten voller als hoch, und weil ein
+   Flex-Kind mit `flex: 0 0 auto` nicht nachgibt, rutschte das
+   Eingabefeld unten aus dem weißen Kasten heraus und klebte an der
+   Tastatur (Sönke, 11.09.2026). Jetzt gibt es keine Zahl mehr zu
+   schätzen: der Tierkasten nimmt, was übrig ist.
+
+   --wi-monmax/-monmin sind Maße der LEINWAND; der Kasten ist um
+   seinen Innenrand und seine Linie größer — daher die zwei calc().  */
 .wi-pmon {
   position: relative;
-  flex: 0 0 auto;
-  min-height: 0;
+  flex: 0 8 auto;
+  flex-basis: calc(var(--wi-monmax, 260px) + 2 * var(--wi-monpad, 6px) + 2px);
+  min-height: calc(var(--wi-monmin, 44px) + 2 * var(--wi-monpad, 6px) + 2px);
+  /* Die Kinder liegen alle absolut darin (Leinwand, Schildchen,
+     Chronik). Die Mitten-Ausrichtung steht trotzdem da: sie kostet
+     nichts und fängt auf, was hier später noch hineinwächst. */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1692,23 +1764,28 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    engere Deckel ist. Mit fester Breite und gedeckelter Höhe wären
    die Tiere gestaucht.
 
-   Die Höhe kommt aus dem SICHTBAREN Bereich: `--vv-h` schrumpft mit
-   der Tastatur (viewport.js), `--wi-chrome` ist das, was im Kasten
-   sonst noch steht. So gibt das Tier von selbst Platz ab, statt das
-   Eingabefeld hinauszuschieben. */
+   Sie liegt ABSOLUT im Tierkasten und nicht in dessen Fluss. Das ist
+   der Kern der Sache: ein Kind im Fluss würde den Kasten von innen
+   aufhalten, und dann müsste die Leinwand ihre Höchsthöhe selbst aus
+   dem sichtbaren Bereich ausrechnen — genau die Schätzung, die den
+   Kasten überlaufen ließ. Außerhalb des Flusses ist es umgekehrt:
+   der Kasten bekommt vom Flex-Layout eine Höhe, und `100%` misst
+   sich daran. Wer schrumpft, entscheidet oben; hier steht nur noch,
+   dass das Tier mitgeht.                                          */
 .wi-pmon canvas {
   display: block;
+  position: absolute;
+  inset: var(--wi-monpad, 6px);
+  margin: auto;
   width: auto;
   height: auto;
-  /* Zuerst die einfache Fassung: ein Browser ohne min()/max()
+  /* Zuerst die einfache Fassung: ein Browser ohne min()/calc()
      überspringt die Zeilen darunter und bekommt die alte Größe
      statt einer 600 px breiten Leinwand im 320er Telefon. */
   max-width: 100%;
-  max-height: 260px;
-  max-width: min(340px, 100%);
-  max-height: min(var(--wi-monmax, 260px),
-                  max(var(--wi-monmin, 44px),
-                      calc(var(--vv-h, 100vh) - var(--wi-chrome, 280px))));
+  max-height: 100%;
+  max-width: min(340px, calc(100% - 2 * var(--wi-monpad, 6px)));
+  max-height: calc(100% - 2 * var(--wi-monpad, 6px));
 }
 /* Solange die Chronik offen ist, braucht der Kasten seine zwei
    Zeilen — auch bei offener Tastatur (tool.js: `is-stats`). */
@@ -2040,7 +2117,13 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    verkleinert das LAYOUT-Fenster nicht, `@media (max-height)` merkt
    also nichts von ihr. Umgekehrt gibt es niedrige Fenster ohne
    Tastatur. Beide Wege setzen dieselben Variablen; die
-   Tastatur-Regel ist die spezifischere und gewinnt.                */
+   Tastatur-Regel ist die spezifischere und gewinnt.
+
+   Was hier NICHT mehr steht: `--wi-chrome`, die geschätzte Höhe von
+   „alles außer dem Tier". Diese Zahl musste jedes Mal nachgezogen
+   werden, wenn im Kasten eine Zeile dazukam — und wenn man es
+   vergaß, lief er über. Die Verteilung macht jetzt das Flex-Layout
+   (siehe .wi-pmon).                                                */
 .wi-ovbox--play {
   max-width: 460px;
   --wi-pad: 16px;      /* Innenrand des Kastens */
@@ -2048,7 +2131,6 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   --wi-monpad: 6px;    /* Innenrand des Tierkastens */
   --wi-monmax: 260px;  /* volle Höhe der Leinwand (= 340 px breit) */
   --wi-monmin: 44px;   /* darunter ist es kein Tier mehr */
-  --wi-chrome: 280px;  /* was außer der Leinwand im Kasten steht */
   --wi-stmin: 150px;   /* Untergrenze, solange die Chronik offen ist */
   --wi-wordsz: clamp(26px, 7vw, 40px);
   --wi-headsz: 17px;
@@ -2062,7 +2144,6 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
     --wi-gap: 7px;
     --wi-monpad: 4px;
     --wi-monmax: 190px;
-    --wi-chrome: 220px;
     --wi-stmin: 128px;
     --wi-wordsz: clamp(21px, 5.4vw, 30px);
     --wi-headsz: 15px;
@@ -2074,7 +2155,6 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   --wi-gap: 7px;
   --wi-monpad: 4px;
   --wi-monmax: 150px;
-  --wi-chrome: 215px;
   --wi-stmin: 120px;
   --wi-wordsz: clamp(21px, 5.4vw, 28px);
   --wi-headsz: 15px;

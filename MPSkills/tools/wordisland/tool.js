@@ -217,6 +217,113 @@
     { name: 'Volk ' + (s + 1), color: '#888', img: '', team: '' };
 
   /* ══════════════════════════════════════════════════════════
+     DAS ANTWORTFELD
+     ══════════════════════════════════════════════════════════
+     Es ist bewusst KEIN <input>, und der Grund liegt nicht im
+     Aussehen, sondern über der Tastatur: Chrome auf Android legt
+     über jedes fokussierte FORMULARFELD seine Ausfüll-Leiste —
+     Passkey, Karte, Standort. Sie ist nicht abschaltbar;
+     `autocomplete="off"` ignoriert Chrome für diese Leiste seit
+     Jahren. Auf einem Telefon frisst sie eine Zeile genau dort, wo
+     der Kasten ohnehin am engsten ist, und sie bietet einem Kind
+     beim Vokabelüben Kreditkarten an (Sönke, 11.09.2026: „das
+     brauche ich hier wirklich nicht").
+
+     Ein `contenteditable` ist für die Ausfüllhilfe kein Feld: es
+     gibt nichts, was sie auszufüllen hätte, und die Leiste bleibt
+     weg. Bezahlt wird das mit den vier Dingen, die ein <input> von
+     selbst mitbringt und die hier von Hand nachkommen:
+
+       Wert         `textContent` statt `value` (feldWert/feldLeer)
+       Platzhalter  ein ::before auf dem leeren Feld (tool.css)
+       Enter        kein Formular, das absendet — keydown/beforeinput
+       Sperre       eine Klasse statt `disabled`
+
+     Die Sperre ist dabei kein Ersatz aus Verlegenheit, sondern die
+     bessere Lösung: `disabled` nimmt dem Feld den Fokus, und auf
+     dem Handy fährt damit zwischen zwei Fragen jedes Mal die
+     Tastatur ein und wieder aus. Der Kasten wird bei jedem Wechsel
+     zweimal neu vermessen (--vv-h), und das sah man. Die Klasse
+     lässt den Fokus stehen; getippt wird trotzdem nichts, weil
+     `beforeinput` abgewiesen wird.                                */
+  const feldWert = el => ((el && el.textContent) || '').replace(/\s+/g, ' ').trim();
+  const feldLeer = el => { if (el) el.innerHTML = ''; };
+  const feldOffen = el => !!el && !el.classList.contains('is-locked');
+  const feldZu = (el, an) => { if (el) el.classList.toggle('is-locked', !!an); };
+  /* Nur holen, wenn es nicht schon steht: ein `focus()` auf ein
+     Feld, in dem der Finger gerade tippt, setzt den Cursor an den
+     Anfang. */
+  const feldHer = el => { if (el && el.ownerDocument.activeElement !== el) el.focus(); };
+
+  /* Verdrahtet ein Feld mit seinem Absenden. `senden` bekommt den
+     fertigen Wert; ist das Feld leer oder gesperrt, passiert nichts. */
+  function feldBauen(el, senden) {
+    if (!el) return;
+    /* `plaintext-only` hält Zeilenumbrüche und eingefügte
+       Formatierung draußen. Ältere Browser kennen den Wert nicht —
+       dort wirft die Zuweisung oder sie bleibt einfach nicht stehen,
+       und `true` plus eigener Einfüge-Weg tut dasselbe von Hand.
+       Der Rückfall MUSS sein: ein ungültiger Wert bedeutet „nicht
+       editierbar", und dann steht das Kind vor einem Feld, in das
+       es nicht tippen kann. */
+    try { el.contentEditable = 'plaintext-only'; } catch (e) { /* gleich unten */ }
+    if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true';
+
+    const los = () => {
+      if (!feldOffen(el)) return;
+      const v = feldWert(el);
+      if (v) senden(v);
+    };
+
+    el.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      los();
+    });
+    el.addEventListener('beforeinput', e => {
+      /* Gesperrt heißt gesperrt — auch für die Tastatur, die noch
+         steht. */
+      if (!feldOffen(el)) { e.preventDefault(); return; }
+      /* Zweiter Weg zum Absenden: manche Bildschirmtastaturen
+         schicken für ihre Senden-Taste kein keydown, sondern nur
+         diesen Eingabetyp. Doppelt abgeschickt wird deshalb nichts —
+         wo keydown zuerst kommt, verhindert es die Eingabe, und
+         damit auch dieses Ereignis. */
+      if (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak') {
+        e.preventDefault();
+        los();
+      }
+    });
+    el.addEventListener('input', () => {
+      /* Ein leergetipptes contenteditable behält im Browser ein
+         <br>. Ohne diese Zeile ist es nicht mehr `:empty` — und der
+         Platzhalter käme nach dem ersten Buchstaben nie wieder. */
+      if (!el.textContent.trim() && el.innerHTML) el.innerHTML = '';
+    });
+    el.addEventListener('paste', e => {
+      if (el.contentEditable === 'plaintext-only') return;   // macht der Browser
+      e.preventDefault();
+      const t = ((e.clipboardData || window.clipboardData || {}).getData('text') || '')
+        .replace(/\s+/g, ' ');
+      try { el.ownerDocument.execCommand('insertText', false, t); } catch (err) { /* egal */ }
+    });
+  }
+
+  /* Der Knopf neben dem Feld. `mousedown` abzuweisen ist der ganze
+     Trick: sonst nimmt der Knopf beim Antippen den Fokus, das Feld
+     verliert ihn, und auf dem Handy fährt die Tastatur ein — für
+     einen Klick, nach dem sofort die nächste Frage kommt. */
+  function feldKnopf(btn, el, senden) {
+    if (!btn) return;
+    btn.addEventListener('mousedown', e => e.preventDefault());
+    btn.addEventListener('click', () => {
+      if (!feldOffen(el)) return;
+      const v = feldWert(el);
+      if (v) senden(v);
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════
      DIE KARTE
      ══════════════════════════════════════════════════════════
      Sönke, 08.09.2026, nach drei Runden Showroom: „wir nehmen
@@ -2177,11 +2284,15 @@
         <section class="wi-task" data-part="task">
           <p class="wi-ask" data-part="ask"></p>
           <p class="wi-word" data-part="word"></p>
-          <form class="wi-type" data-part="typeform">
-            <input class="wi-in" data-part="input" autocomplete="off" autocapitalize="off"
-                   autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="Antwort">
-            <button class="wi-btn" type="submit">Prüfen</button>
-          </form>
+          <!-- Kein <form> und kein <input>: warum, steht bei
+               feldBauen() weiter oben. -->
+          <div class="wi-type" data-part="typeform">
+            <span class="wi-in" data-part="input" contenteditable="true"
+                  role="textbox" aria-label="Antwort" data-ph="Antwort"
+                  autocapitalize="off" autocorrect="off" spellcheck="false"
+                  enterkeyhint="send" inputmode="text"></span>
+            <button class="wi-btn" type="button" data-part="typego">Prüfen</button>
+          </div>
           <div class="wi-opts" data-part="opts" hidden></div>
           <p class="wi-fb" data-part="fb" hidden></p>
           <button type="button" class="wi-btn wi-btn--ghost wi-back" data-part="back" hidden>
@@ -2205,12 +2316,8 @@
       pickbar: q('pickbar'), map: q('map'), mapwrap: q('mapwrap')
     };
 
-    els.form.addEventListener('submit', e => {
-      e.preventDefault();
-      const val = els.input.value;
-      if (!val.trim()) return;
-      send(val);
-    });
+    feldBauen(els.input, send);
+    feldKnopf(q('typego'), els.input, send);
     els.opts.addEventListener('click', e => {
       const b = e.target.closest('button');
       if (b) send(b.dataset.v);
@@ -2224,7 +2331,7 @@
   async function send(value) {
     if (submitting) return;
     submitting = true;
-    els.input.disabled = true;
+    feldZu(els.input, true);
     try {
       const r = await ctx.actions.call('wi_answer', { p_input: value });
       if (!r.ok) {
@@ -2253,7 +2360,7 @@
         view.me.streak = r.streak;
         view.me.picks  = r.picks;
       }
-      els.input.value = '';
+      feldLeer(els.input);
       renderTask(r.task, r.streak, r.picks);
       // Die Karte hat sich bewegt — sofort nachfragen, nicht bis
       // zum nächsten Takt warten. Ein Feld, das vier Sekunden
@@ -2261,20 +2368,20 @@
       if (r.result === 'correct') tick(true);
     } finally {
       submitting = false;
-      if (!els.input.dataset.locked) els.input.disabled = false;
-      els.input.focus();
+      if (!els.input.dataset.locked) feldZu(els.input, false);
+      feldHer(els.input);
     }
   }
 
   function lockInput(secs) {
     if (!secs) return;
-    els.input.disabled = true;
+    feldZu(els.input, true);
     els.input.dataset.locked = '1';
     setTimeout(() => {
       if (destroyed || !els.input) return;
       delete els.input.dataset.locked;
-      els.input.disabled = false;
-      els.input.focus();
+      feldZu(els.input, false);
+      feldHer(els.input);
     }, secs * 1000);
   }
 
@@ -3839,10 +3946,10 @@
            (600×460 auf höchstens 340×260): auf dem iPad ist genau
            das der Unterschied zwischen einem gezeichneten Tier und
            einem verwaschenen. Wie groß sie WIRKLICH erscheint,
-           entscheidet der Platz — die Deckel dafür stehen in
-           tool.css (--wi-monmax, --wi-chrome), gemessen am
-           sichtbaren Bereich. Steht die Tastatur, gibt das Tier
-           Platz ab; das Eingabefeld gibt keinen ab. -->
+           entscheidet der Platz: der Tierkasten ist das einzige
+           Kind des Kastens, das nachgibt (tool.css, .wi-pmon).
+           Steht die Tastatur, gibt das Tier Platz ab; Rückmeldung
+           und Eingabefeld geben keinen ab. -->
       <div class="wi-ov" data-part="playov" hidden>
         <div class="wi-ovbox wi-ovbox--play">
           <div class="wi-ovhead">
@@ -3912,11 +4019,17 @@
             <div class="wi-opts" data-part="popts" hidden></div>
           </div>
           <p class="wi-fb" data-part="pfb" hidden></p>
-          <form class="wi-type" data-part="pform">
-            <input class="wi-in" data-part="pin" autocomplete="off" autocapitalize="off"
-                   autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="Antwort">
-            <button class="wi-btn" type="submit">Prüfen</button>
-          </form>
+          <!-- Kein <form> und kein <input>: warum, steht bei
+               feldBauen() weiter oben. Auf dem Telefon ist das der
+               Unterschied zwischen einer Zeile Kasten und einer
+               Zeile Chrome-Ausfüllhilfe. -->
+          <div class="wi-type" data-part="pform">
+            <span class="wi-in" data-part="pin" contenteditable="true"
+                  role="textbox" aria-label="Antwort" data-ph="Antwort"
+                  autocapitalize="off" autocorrect="off" spellcheck="false"
+                  enterkeyhint="send" inputmode="text"></span>
+            <button class="wi-btn" type="button" data-part="pgo">Prüfen</button>
+          </div>
         </div>
       </div>
 
@@ -4056,11 +4169,8 @@
       ov.addEventListener('click', e => { if (e.target === ov) ov.hidden = true; });
     }
 
-    els.pForm.addEventListener('submit', e => {
-      e.preventDefault();
-      const v = els.pIn.value;
-      if (v.trim()) soloSend(v);
-    });
+    feldBauen(els.pIn, soloSend);
+    feldKnopf(q('pgo'), els.pIn, soloSend);
     els.pOpts.addEventListener('click', e => {
       const b = e.target.closest('button');
       if (b) soloSend(b.dataset.v);
@@ -4692,7 +4802,7 @@
     if (!r.ok) { ctx.toast(ctx.errText(r.error)); els.playOv.hidden = true; return; }
     soloTask = r.task;
     soloRenderTask();
-    els.pIn.focus();
+    feldHer(els.pIn);
   }
 
   async function soloSend(value) {
@@ -4702,7 +4812,7 @@
        das schon durch ist. */
     if (submitting || feiernd) return;
     submitting = true;
-    els.pIn.disabled = true;
+    feldZu(els.pIn, true);
     try {
       const r = await ctx.actions.call('wi_solo_answer', { p_input: value });
       if (!r.ok) {
@@ -4738,7 +4848,7 @@
         ? soloWachsen(r.item, r.level_after, wort) : 0;
       if (r.result === 'wrong') soloLock(r.locked_for);
 
-      els.pIn.value = '';
+      feldLeer(els.pIn);
 
       /* Die Pause. Sie ist der Unterschied zwischen „es lief eine
          Bewegung" und „ich habe etwas geschafft": solange die
@@ -4764,7 +4874,7 @@
           buehneZu();
           soloTask = naechste;
           soloRenderTask();
-          if (!els.pIn.dataset.locked) { els.pIn.disabled = false; els.pIn.focus(); }
+          if (!els.pIn.dataset.locked) { feldZu(els.pIn, false); feldHer(els.pIn); }
         }, halt);
       } else {
         soloTask = r.task;
@@ -4772,7 +4882,7 @@
       }
     } finally {
       submitting = false;
-      if (!els.pIn.dataset.locked && !feiernd) { els.pIn.disabled = false; els.pIn.focus(); }
+      if (!els.pIn.dataset.locked && !feiernd) { feldZu(els.pIn, false); feldHer(els.pIn); }
     }
   }
 
@@ -4942,14 +5052,14 @@
 
   function soloLock(secs) {
     if (!secs) return;
-    els.pIn.disabled = true;
+    feldZu(els.pIn, true);
     els.pIn.dataset.locked = '1';
     clearTimeout(soloLockT);
     soloLockT = setTimeout(() => {
       if (destroyed || !els.pIn) return;
       delete els.pIn.dataset.locked;
-      els.pIn.disabled = false;
-      els.pIn.focus();
+      feldZu(els.pIn, false);
+      feldHer(els.pIn);
     }, secs * 1000);
   }
 
