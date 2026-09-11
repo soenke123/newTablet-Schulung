@@ -101,7 +101,9 @@
       "Bash(OUT=bogen4.png F=3 node sheet.mjs 3 Echse3e.png Echse3eswim.png Echse3esnooze.png)",
       "Bash(node MPSkills/tools/wordisland/tools/uitest.js)",
       "Bash(echo \"exit $?\")",
-      "Bash(echo \"uitest exit $?\")"
+      "Bash(echo \"uitest exit $?\")",
+      "Bash(cp tool.js /tmp/tool.bak.js)",
+      "Bash(sed -i 's/const HELD_SKAL = \\\\[.7, .7, .9, .7, .7, .7, .7, .7\\\\];/const HELD_SKAL = [1,1,1,1,1,1,1,1];/; s/const BOOT_BREIT = 3.96;/const BOOT_BREIT = 3.6;/' tool.js)"
     ]
   }
 }

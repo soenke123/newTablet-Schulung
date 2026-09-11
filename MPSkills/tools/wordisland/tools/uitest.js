@@ -930,13 +930,24 @@ function pngMasse(datei) {
   return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
 }
 
-function machKontext(c) {
+/* `gemalt` sammelt, WIE GROSS ein Bild gezeichnet wurde. Gebraucht
+   wird das seit dem 11.09.2026: die Figur hat einen Maßstab je Volk
+   (HELD_SKAL), und ob der wirklich bis auf die Leinwand durchkommt,
+   steht in keinem Attribut — nur im Aufruf. */
+function machKontext(c, gemalt) {
   return {
     canvas: c,
     filter: 'none', fillStyle: '#000', globalAlpha: 1,
     globalCompositeOperation: 'source-over',
     strokeStyle: '#000', lineWidth: 1,
-    drawImage() {}, fillRect() {}, clearRect() {},
+    drawImage(im, ...a) {
+      // drawImage(im, dx, dy, dw, dh) und drawImage(im, sx…, dw, dh):
+      // die Zielmaße sind in beiden Formen die letzten beiden Zahlen.
+      if (gemalt && im && im._src && a.length >= 4) {
+        gemalt.push({ src: String(im._src), w: a[a.length - 2], h: a[a.length - 1] });
+      }
+    },
+    fillRect() {}, clearRect() {},
     save() {}, restore() {}, translate() {}, scale() {}, setTransform() {},
     putImageData() {},
     /* Ab der Verwandlung auf der Übungskarte kommen Pfade dazu:
@@ -978,7 +989,7 @@ function makeSoloEnv() {
     const e = origCreate(tag);
     if (String(tag).toLowerCase() === 'canvas') {
       e.width = 300; e.height = 150;
-      e.getContext = () => machKontext(e);
+      e.getContext = () => machKontext(e, env.gemalt);
       /* Seit 10.09.2026 backt das Werkzeug das kleine Monster der
          Vokabelliste als data:-URL ein (monsterUrl). Ohne diesen
          Stummel wirft die Zeile — und die Unit-Übersicht bliebe
@@ -993,6 +1004,8 @@ function makeSoloEnv() {
   // Aufstellen und dann bei jedem Volkswechsel geholt — dass das
   // RICHTIGE Bild geholt wird, sieht man nur hier.
   env.geladeneBilder = [];
+  // Was die Zeichenschleife gemalt hat, mit Zielmaßen (machKontext).
+  env.gemalt = [];
   class FakeImage {
     constructor() { this.width = 1; this.height = 1; }
     set src(v) {
@@ -1127,8 +1140,10 @@ function tippeAufTier(root, document, schritt = 34) {
    Tipps, die weniger als 30 px auseinanderliegen und schnell
    aufeinander folgen, sind ein Doppeltipp — der setzt die Kamera
    zurück und unterdrückt die Auswahl. Getroffen wird trotzdem: die
-   Figur ist rund 43 × 81 Bildpunkte groß, das Schiff mehr als
-   doppelt so breit. */
+   Figur der Giraffen ist rund 39 × 73 Bildpunkte groß, das Schiff
+   dreimal so breit. (Seit 11.09.2026 sind die anderen sieben Völker
+   30 % kleiner — deren Figur allein wäre schmaler als der Schritt,
+   gefunden würde dann ihr Schiff.) */
 function tippeAufFigur(root, document, schritt = 34) {
   const stage = root.querySelector('[data-part="stage"]');
   const kasten = root.querySelector('[data-part="volkov"]');
@@ -1177,7 +1192,7 @@ async function mountSolo(view, extra, opt) {
   for (const el of root.querySelectorAll('*')) el.getBoundingClientRect = () => RECT;
   for (const c of root.querySelectorAll('canvas')) {
     if (!c.width) { c.width = RECT.width; c.height = RECT.height; }
-    c.getContext = () => machKontext(c);
+    c.getContext = () => machKontext(c, env.gemalt);
   }
 
   // Bilder laden (setTimeout 0 je Bild), einfärben, Insel bauen.
@@ -1632,6 +1647,15 @@ async function testTierTipp() {
     ok('und trägt seinen eigenen Namen — nicht den der Raum-Karten',
        karte.classList.contains('wi-tcard') && !karte.classList.contains('wi-card'));
 
+    /* Derselbe nachgereichte Klick wie beim Volks-Kasten: das
+       Kärtchen steht unten rechts, und wer dort eine Echse antippt,
+       trifft danach sein eigenes Schließkreuz. Es ginge auf und im
+       selben Augenblick wieder zu. */
+    click(karte.querySelector('[data-zu]'), document);
+    ok('der Klick, der dem Tipp hinterherkommt, macht es NICHT zu',
+       karte.hidden === false);
+
+    await wait(470);
     click(karte.querySelector('[data-zu]'), document);
     ok('der Schließer macht es wieder zu', karte.hidden === true);
   }
@@ -1673,6 +1697,18 @@ async function testFigur() {
   ok('und sein Schiff',
      env.geladeneBilder.includes('tools/wordisland/sprites/boot/2.png'));
 
+  /* Die Maße, mit denen wirklich gemalt wurde. Sie stehen in keinem
+     Attribut — nur im Aufruf, den machKontext mitschreibt. */
+  const gemalt = teil => {
+    for (let i = env.gemalt.length - 1; i >= 0; i--) {
+      if (env.gemalt[i].src.includes(teil)) return env.gemalt[i];
+    }
+    return null;
+  };
+  const figur2 = gemalt('sprites/held/2.png');
+  const schiff2 = gemalt('sprites/boot/2.png');
+  ok('beide werden auch gezeichnet', !!figur2 && !!schiff2);
+
   const kasten = root.querySelector('[data-part="volkov"]');
   const karte = root.querySelector('[data-part="card"]');
   ok('der Kasten ist zu, solange niemand tippt', kasten.hidden === true);
@@ -1698,6 +1734,21 @@ async function testFigur() {
   ok('kein Hinweis, solange der Server mitspielt',
      root.querySelector('[data-part="vhint"]').hidden === true);
 
+  /* ⚠️ Der Klick, der dem Tipp hinterherkommt. Auf dem Tablet
+     schickt der Browser nach dem Loslassen an DERSELBEN Stelle noch
+     einen Klick nach — und dort steht jetzt einer der acht Knöpfe.
+     Sönkes Meldung vom 11.09.2026. Hier steht er als das, was er
+     ist: ein Klick unmittelbar nach dem Tipp. */
+  click(knoepfe[5], document);
+  await wait(30);
+  ok('der Klick, der dem Tipp hinterherkommt, wählt NICHTS',
+     root.querySelector('[data-part="vname"]').textContent === 'Brokkoli-Giraffen'
+     && gesetzt.length === 0, js(gesetzt));
+  click(root.querySelector('[data-part="volkclose"]'), document);
+  ok('und macht den Kasten auch nicht gleich wieder zu', kasten.hidden === false);
+
+  // Nach der Sperre (450 ms) ist wieder jeder Klick gemeint.
+  await wait(470);
   click(knoepfe[5], document);
   await wait(30);
   ok('ein anderes Volk wird sofort übernommen',
@@ -1709,6 +1760,34 @@ async function testFigur() {
   ok('gesetzt wird über wi_solo_avatar und nicht über wi_solo_settings',
      calls.some(c => c[0] === 'wi_solo_avatar')
      && !calls.some(c => c[0] === 'wi_solo_settings'));
+
+  /* ── Die Maßstäbe (Sönke, 11.09.2026) ────────────────────────
+     „Das Schiff kann 10 % größer. Die Brokkoli-Giraffen 10 %
+     kleiner. Die anderen Völker 30 % kleiner (die Giraffen sind
+     halt lang und dünn)."
+
+     Gemessen wird die HÖHE der Figur: sie ist das, was HELD_SKAL
+     stellt, und sie hängt nicht am Seitenverhältnis des Bildes.
+     Zwischen den beiden Messungen bewegt sich die Kamera nicht,
+     die Kachelgröße ist also dieselbe. */
+  await wait(80);
+  const figur5 = gemalt('sprites/held/5.png');
+  ok('auch die neue Figur wird gezeichnet', !!figur5);
+  if (figur2 && figur5) {
+    const v = figur5.h / figur2.h;
+    ok('die Giraffen sind größer als die anderen sieben Völker (7 zu 9)',
+       Math.abs(v - 7 / 9) < .02, v.toFixed(3));
+  }
+  if (figur2 && schiff2) {
+    /* Das Schiff wird über seine BREITE gestellt (BOOT_BREIT). Vor
+       dem 11.09.2026 stand es bei 3.6 zu 2.6 Kacheln = 1.38 mal der
+       Figurenhöhe, jetzt bei 3.96 zu 2.34 = 1.69. Die Grenze liegt
+       dazwischen: sie fällt, wenn eine der beiden Zahlen still
+       zurückgedreht wird. */
+    const v = schiff2.w / figur2.h;
+    ok('und das Schiff überragt die Figur deutlicher als vorher',
+       v > 1.6, v.toFixed(3));
+  }
 
   // Ein Ziehen ist kein Tipp — dieselbe Trennung wie bei den Echsen.
   const stage = root.querySelector('[data-part="stage"]');
@@ -1736,6 +1815,7 @@ async function testFigurOhneMigration() {
   ok('die Figur steht auch ohne 0143 auf der Insel', !!treffer);
   if (!treffer) { tool.unmount(); return; }
 
+  await wait(470);   // die Sperre gegen den nachgereichten Klick
   click([...root.querySelectorAll('.wi-vbtn')][7], document);
   await wait(30);
   ok('die Wahl gilt trotzdem sofort',

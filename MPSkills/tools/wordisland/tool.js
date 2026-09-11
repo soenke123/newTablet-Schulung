@@ -3455,7 +3455,21 @@
      etwas größer als eine ausgewachsene Echse (2.25) — man soll sie
      in der Herde finden, ohne dass sie darüber thront. */
   const HELD_HOCH  = 2.6;
-  const BOOT_BREIT = 3.6;
+
+  /* ⚠️ Eine Höhe für alle acht Völker geht NICHT auf. Gemessen wird
+     die Figur an ihrer Höhe, und die Brokkoli-Giraffen sind lang und
+     dünn — bei gleicher Höhe füllen alle anderen ein Vielfaches der
+     Fläche und thronen über der Herde. Also ein Faktor je Volk,
+     Reihenfolge wie in TEAMS.
+
+     Sönkes Zahlen vom 11.09.2026 nach dem ersten Blick aufs Gerät:
+     Giraffen 10 % kleiner, alle anderen 30 %. Sie stehen hier als
+     Anteile von HELD_HOCH und nicht als fertige Kachelmaße, damit
+     sich die Grundgröße an EINER Stelle nachregeln lässt. Ein
+     neuntes Volk ohne Eintrag bekommt .7 — die Mehrheit. */
+  const HELD_SKAL = [.7, .7, .9, .7, .7, .7, .7, .7];
+
+  const BOOT_BREIT = 3.96;
   /* Wie weit der Kiel vom äußersten Feld der Hauptinsel wegbleibt.
      Gemessen am größten Radius und nicht an der nächsten Küste: eine
      Bahn, die jeder Bucht folgt, ist kein Kurs, sondern ein Zickzack. */
@@ -3641,7 +3655,8 @@
   function heldMasse(P) {
     const h = spieler.held, im = spieler.imHeld;
     if (!im || !im.width) return null;
-    const hoch = HELD_HOCH * P, breit = hoch * (im.width / im.height);
+    const hoch = HELD_HOCH * (HELD_SKAL[spieler.volk] || .7) * P;
+    const breit = hoch * (im.width / im.height);
     const gy = bodenY(h.x, h.y);
     const px = sxp(h.x), py = syp(h.y + gy);
     h._im = im;
@@ -3861,6 +3876,48 @@
       kameraAnwenden();
     }, { passive: false });
   }
+
+  /* ⚠️ ─── Der Klick, der HINTERHERKOMMT ──────────────────────
+     Was auf der Insel aufgeht, geht beim LOSLASSEN auf (siehe oben:
+     vorher weiß niemand, ob aus dem Tipp ein Ziehen wird). Der
+     Browser ist damit aber noch nicht fertig: nach `pointerup`
+     schickt er an DERSELBEN Bildschirmstelle noch die nachgereichten
+     Maus-Ereignisse hinterher — auf dem Tablet ist das der übliche
+     Weg, mit dem ein Tipp zum Klick wird. Getroffen wird dabei, was
+     dort JETZT liegt, und das ist der Kasten, der gerade erschienen
+     ist.
+
+     Sönkes Meldung vom 11.09.2026: „wenn ich auf meine Figur klicke,
+     wird das Volk gewählt, was genau an dieser Position ist." Genau
+     das. Ein Tipp auf die eigene Figur macht den Kasten auf UND
+     drückt den Knopf darunter; beim Echsen-Kärtchen fällt dasselbe
+     als „geht auf und sofort wieder zu" auf.
+
+     Was gerade von der Insel aus aufgegangen ist, hört deshalb einen
+     Moment lang nicht zu. Es ist EIN Zeitstempel für alle drei
+     Griffe, die unter dem Finger erscheinen können (die acht
+     Völker, der Schließer, der Grund neben dem Kasten) und für das
+     Schließkreuz des Kärtchens — ein Tipp, eine Sperre.
+
+     ⚠️ Zwei naheliegende Griffe, die hier NICHT stehen:
+     • `pointer-events: none` auf dem Kasten macht ihn nicht taub,
+       sondern DURCHSICHTIG — der Klick landete auf der Insel
+       dahinter, und der Zeiger-Buchführung von soloPanZoom (`pts`)
+       fehlte das Loslassen zu einem gezählten Aufsetzen.
+     • Ein Schlucker in der EINFANG-Phase an der Wurzel des Kastens
+       wäre im Browser richtig, aber der Prüfstand kann ihn nicht
+       sehen: linkedom kennt die Einfang-Phase nicht und ruft solche
+       Zuhörer NACH dem Knopf. Ein grüner Prüfstand bei kaputtem
+       Gerät ist schlimmer als gar keiner — also fragt jeder
+       betroffene Zuhörer selbst.
+
+     450 ms: der nachgereichte Klick kommt innerhalb von 300 ms. Wer
+     in dieser Zeit absichtlich auf einen Knopf zielt, tippt ihn eben
+     ein zweites Mal. */
+  const NACHKLICK_MS = 450;
+  let nachklickBis = 0;
+  const nachklickSperren = () => { nachklickBis = performance.now() + NACHKLICK_MS; };
+  const nachklick = () => performance.now() < nachklickBis;
 
   /* ─── Zeichnen ──────────────────────────────────────────────── */
   let c2d = null, raf = 0, letzterT = 0, simZeit = 0, nacht = 0;
@@ -4571,10 +4628,17 @@
 
     q('ssets').addEventListener('click', () => { els.setsOv.hidden = false; renderSoloSets(); });
     q('setsclose').addEventListener('click', () => { els.setsOv.hidden = true; });
-    q('volkclose').addEventListener('click', () => { els.volkOv.hidden = true; });
+    q('volkclose').addEventListener('click', () => {
+      if (nachklick()) return;
+      els.volkOv.hidden = true;
+    });
     // Am umschließenden Kasten und nicht an den acht Knöpfen: die
     // Reihe wird bei jeder Wahl neu geschrieben.
     els.vRow.addEventListener('click', e => {
+      // Der Klick, der dem Tipp auf die Figur hinterherkommt —
+      // siehe nachklickSperren. Er zeigt auf den Knopf, der hier
+      // gerade erschienen ist, und meint ihn nicht.
+      if (nachklick()) return;
       const b = e.target.closest('button');
       if (b) volkSetzen(+b.dataset.v);
     });
@@ -4622,7 +4686,14 @@
     // Ein Tipp neben den Kasten schließt ihn. Auf dem Tablet ist das
     // der Griff, den man ohne Erklärung findet.
     for (const ov of [els.setsOv, els.playOv, els.volkOv]) {
-      ov.addEventListener('click', e => { if (e.target === ov) ov.hidden = true; });
+      ov.addEventListener('click', e => {
+        // Nur der Volks-Kasten geht von der Insel aus auf; der
+        // nachgereichte Klick trifft bei ihm den Grund genauso oft
+        // wie einen Knopf. Die beiden anderen hängen an einem
+        // Knopf und kennen das Problem nicht.
+        if (ov === els.volkOv && nachklick()) return;
+        if (e.target === ov) ov.hidden = true;
+      });
     }
 
     feldBauen(els.pIn, soloSend);
@@ -4639,6 +4710,10 @@
     els.uList.addEventListener('click', unitListeClick);
     els.uDet.addEventListener('click', unitDetailClick);
     els.card.addEventListener('click', e => {
+      // Auch hier der nachgereichte Klick: das Kärtchen erscheint
+      // unten rechts, und wer dort eine Echse antippt, drückt sonst
+      // sein eigenes Schließkreuz.
+      if (nachklick()) return;
       if (e.target.closest('[data-zu]')) kartenZu();
     });
     unitsLaden();
@@ -4842,6 +4917,10 @@
     kartenZu();
     els.volkOv.hidden = false;
     renderVolk();
+    /* Der Tipp auf die Figur ist noch nicht zu Ende — siehe
+       nachklickSperren. Ohne diese Zeile wählt er das Volk, dessen
+       Knopf zufällig unter dem Finger erscheint. */
+    nachklickSperren();
   }
 
   function renderVolk() {
@@ -5220,6 +5299,11 @@
     if (!t) { kartenZu(); return; }
     tierOffen = t.id;
     kartenNeu();
+    /* Dasselbe wie beim Volks-Kasten: wer unten rechts eine Echse
+       antippt, bekommt das Kärtchen genau dorthin — und der
+       nachgereichte Klick träfe sein Schließkreuz. Das Kärtchen
+       ginge auf und im selben Augenblick wieder zu. */
+    nachklickSperren();
   }
 
   function kartenZu() {
