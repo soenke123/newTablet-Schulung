@@ -95,7 +95,13 @@
       "Bash(grep -n \"^\\\\.wi-\\\\|^  \\\\.wi-\\\\|^\\\\/\\\\* \\\\|═══\" tool.css)",
       "Bash(grep -n \"^\\\\.wi-\\\\|^\\\\/\\\\* ─\\\\|^   [A-ZÄÖÜ].*$\\\\|═══\" tool.css)",
       "Bash(grep -n \"^\\\\.wi-\\\\|^@media\\\\|^   ─\\\\|^\\\\/\\\\* ─\" tool.css)",
-      "Bash(awk -F: '$1>1630')"
+      "Bash(awk -F: '$1>1630')",
+      "Bash(OUT=bogen2.png F=4 node sheet.mjs 3 Echse2.png Echse2a.png Echse2b.png Echse2snooze.png Echse2asnooze.png Echse2bsnooze.png)",
+      "Bash(OUT=bogen3.png F=4 node sheet.mjs 5 Echse3a.png Echse3b.png Echse3c.png Echse3d.png Echse3e.png Echse3asnooze.png Echse3bsnooze.png Echse3csnooze.png Echse3dsnooze.png Echse3esnooze.png)",
+      "Bash(OUT=bogen4.png F=3 node sheet.mjs 3 Echse3e.png Echse3eswim.png Echse3esnooze.png)",
+      "Bash(node MPSkills/tools/wordisland/tools/uitest.js)",
+      "Bash(echo \"exit $?\")",
+      "Bash(echo \"uitest exit $?\")"
     ]
   }
 }

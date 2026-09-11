@@ -1189,8 +1189,18 @@ async function testSolo() {
   console.log('\n— Meine Insel —');
   const { env, tool, root, calls } = await mountSolo(soloView(40, i => i % 5));
 
-  ok('die neun Tierbilder liegen wirklich da',
+  /* Seit dem 11.09.2026 sind es zwanzig: drei Fassungen der
+     gewachsenen Echse, fünf der ausgewachsenen, dazu das Wasserbild
+     der Schwimmerin. Ein fehlendes <img> zeichnet still NICHTS —
+     gezählt wird deshalb, dass ALLE geholten Bilder da waren. */
+  ok('alle Tierbilder liegen wirklich da',
      env.fehlendeBilder.length === 0, env.fehlendeBilder.join(', '));
+  const tierBilder = env.geladeneBilder.filter(v => /sprites\/tier\//.test(v));
+  ok('und es sind die zwanzig Fassungen', tierBilder.length === 20,
+     String(tierBilder.length));
+  for (const n of ['s2a.png', 's2bz.png', 's3c.png', 's3d.png', 's3e.png', 's3es.png']) {
+    ok('  · ' + n, tierBilder.some(v => v.endsWith('/' + n)));
+  }
   ok('die Insel wird geholt', calls.some(c => c[0] === 'wi_solo_view'));
   ok('kein Poller — die Insel ändert sich nur durch mich',
      calls.filter(c => c[0] === 'wi_solo_view').length === 1);

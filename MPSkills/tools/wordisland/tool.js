@@ -26,7 +26,10 @@
 
    ── Die Tiere (Rolle solo) ────────────────────────────────────
    Jede Vokabel ist ein Tier, und seine Stufe ist ihr Lernstand:
-   Ei → geschlüpft → gewachsen → ausgewachsen (fliegt) → funkelnd.
+   Ei → geschlüpft → gewachsen → ausgewachsen (verlässt die Insel)
+   → funkelnd. Ab der gewachsenen Stufe gibt es VARIANTEN (VAR2/VAR3):
+   drei gewachsene, fünf ausgewachsene — vier davon fliegen, die
+   fünfte schwimmt von Insel zu Insel.
    Gezeichnet werden sie auf einer LEINWAND über dem Karten-SVG und
    nicht als SVG-Elemente: bei 400 Tieren, die alle laufen, wären
    das 400 Elemente, die sechzigmal in der Sekunde ihre Attribute
@@ -2671,12 +2674,12 @@
      ══════════════════════════════════════════════════════════ */
 
   /* ─── Die Bilder ────────────────────────────────────────────
-     Neun Vorlagen, alle auf DEMSELBEN Blatt gezeichnet: gemeinsame
-     Grundlinie, gemeinsamer Maßstab. Daraus folgt die Regel, an der
-     der erste Anlauf gescheitert ist: verkleinert wird mit dem
-     BLATT und nicht mit dem einzelnen Tier — sonst wächst die
-     zusammengerollte Schlaf-Echse beim Einschlafen auf die Größe
-     der stehenden.
+     Zwanzig Vorlagen (seit 11.09.2026; vorher neun), alle auf
+     DEMSELBEN Blatt gezeichnet: gemeinsame Grundlinie, gemeinsamer
+     Maßstab. Daraus folgt die Regel, an der der erste Anlauf
+     gescheitert ist: verkleinert wird mit dem BLATT und nicht mit
+     dem einzelnen Tier — sonst wächst die zusammengerollte
+     Schlaf-Echse beim Einschlafen auf die Größe der stehenden.
 
      Die Zahlen darunter kommen aus dem Zuschnitt und werden von
      tools/solosprites.mjs HINEINGESCHRIEBEN. Von Hand geändert
@@ -2693,15 +2696,64 @@
       s1z:   { x: 108.18, y: 191.43, w: 130, h: 110 },
       s2:    { x:   28.8, y: 110.29, w: 252, h: 179 },
       s2z:   { x:  11.94, y: 177.38, w: 290, h: 123 },
+      s2a:   { x:   5.97, y:  59.01, w: 275, h: 232 },
+      s2az:  { x:   0.35, y:  71.65, w: 290, h: 227 },
+      s2b:   { x:  28.45, y:  87.81, w: 254, h: 201 },
+      s2bz:  { x:   5.97, y: 125.39, w: 295, h: 131 },
       s3a:   { x:  35.83, y:  32.31, w: 247, h: 224 },
       s3az:  { x:  16.51, y: 170.35, w: 282, h: 122 },
       s3b:   { x:  35.48, y:  26.69, w: 248, h: 282 },
-      s3bz:  { x:  54.09, y: 166.49, w: 226, h: 131 }
+      s3bz:  { x:  54.09, y: 166.49, w: 226, h: 131 },
+      s3c:   { x:  39.34, y:      0, w: 262, h: 339 },
+      s3cz:  { x:   7.38, y: 108.53, w: 292, h: 231 },
+      s3d:   { x:  34.07, y:  22.13, w: 250, h: 277 },
+      s3dz:  { x:  23.88, y:  44.26, w: 265, h: 252 },
+      s3e:   { x:  22.83, y:  21.78, w: 272, h: 292 },
+      s3ez:  { x:  44.96, y:   56.9, w: 226, h: 227 },
+      s3es:  { x:  31.26, y:  63.93, w: 271, h: 179 }
     }
   };
   /* ENDE ERZEUGT */
 
-  const BILDER = ['ei', 's1', 's1z', 's2', 's2z', 's3a', 's3az', 's3b', 's3bz'];
+  const BILDER = Object.keys(ECHSE.bilder);
+
+  /* ─── Die Varianten ────────────────────────────────────────────
+     Sönke, 11.09.2026: „damit die insel bunter wird." Aus zwei
+     Fassungen der ausgewachsenen Echse sind fünf geworden, und die
+     gewachsene (Stufe 2) hat jetzt drei.
+
+     Gezogen wird aus einem TOPF und nicht aus einer Tabelle mit
+     Gewichten: a, b und c liegen zweimal darin, d und e einmal —
+     also kommen die beiden seltenen halb so oft wie die anderen
+     drei, genau wie vorgegeben. Eine Zeile, die man nachzählen
+     kann, statt einer Summe, die man nachrechnen muss.
+
+     Gewürfelt wird aus der id des WORTES (siehe neuesTier): dieselbe
+     Vokabel hat auf jedem Gerät dieselbe Echse. „Zufällig beim
+     Wachsen" heißt für das Kind trotzdem zufällig — es sieht die
+     Variante ja erst, wenn das Tier die Stufe erreicht. */
+  const VAR2 = ['', 'a', 'b'];
+  const VAR3 = ['a', 'a', 'b', 'b', 'c', 'c', 'd', 'e'];
+
+  /* Die eine, die nicht fliegt. Sie läuft an Land, schläft an Land
+     und schwimmt von Insel zu Insel — deshalb hat sie als einzige
+     ein drittes Bild. Steht hier als Name und nicht als 'e' verstreut
+     im Quelltext: wer später eine zweite Schwimmerin zeichnet, sucht
+     genau diese Zeile. */
+  const SCHWIMMT = 'e';
+
+  /* ⚠️ Die Wasserlinie ist INS BILD gezeichnet. Bei Echse3eswim sind
+     die Kringel das Unterste, was auf dem Blatt steht — und genau sie
+     gehören auf die Meeresoberfläche, nicht die gemeinsame
+     Grundlinie der Landtiere. Für dieses eine Bild ist der Anker
+     deshalb seine eigene Unterkante; ohne das schwebte die
+     Schwimmerin gut ein Viertel Kachel über dem Wasser.
+
+     Als Tabelle und nicht als Abfrage in der Zeichenschleife: dort
+     wäre es ein `if` je Tier und Bild, hier ist es ein Nachschlagen. */
+  const ANKER_Y = {};
+  for (const k of BILDER) ANKER_Y[k] = ECHSE.blatt.ankerY;
+  if (ECHSE.bilder.s3es) ANKER_Y.s3es = ECHSE.bilder.s3es.y + ECHSE.bilder.s3es.h;
 
   /* Die acht Farben als ZIEL-Farbton in Grad; die Vorlage liegt bei
      rund 95° (dieses Grün). Der erste Eintrag lässt das Bild in
@@ -2730,6 +2782,12 @@
   const FLUG_HOEHE = .55;
   const LAUF_TEMPO = [0, .30, .40, 0, 0];
   const FLUG_TEMPO = 1.15;
+  /* Die Schwimmerin ist langsamer als ein Flieger und schneller als
+     ein Läufer — sonst wäre die Reise zum Nachbarinsel-Strand
+     entweder keine Reise oder keine, die man abwartet. An Land
+     bewegt sie sich wie eine gewachsene Echse. */
+  const SCHWIMM_TEMPO = .62;
+  const WATT_TEMPO = .40;
   /* Wie stark eine Stufe bei Nacht leuchtet. Bewusst ungleichmäßig:
      von 1 auf 2 soll man einen Unterschied ahnen, von 2 auf 3 soll
      man ihn SEHEN. Eine gleichmäßige Rampe wäre keine Auskunft. */
@@ -3148,6 +3206,22 @@
 
   function neuesZiel(t) {
     if (t.stufe === 0) { t.zx = t.x; t.zy = t.y; return; }
+    /* Die Schwimmerin reist von INSEL zu INSEL und nicht auf einen
+       Punkt im offenen Meer. Das ist der Unterschied zwischen
+       „schwimmt herum" und „schwimmt irgendwohin": ein Ziel an Land
+       gibt der Fahrt ein Ende, an dem sie wieder läuft — und beim
+       Ankommen sieht man den Wechsel der Bilder.
+
+       Sie darf dabei auch die Insel wählen, auf der sie schon steht:
+       eine Schwimmerin, die nach jeder Landung sofort wieder ablegen
+       MÜSSTE, käme nie zur Ruhe. */
+    if (t.stufe >= 3 && schwimmt(t)) {
+      const i = (Math.random() * welt.inseln.length) | 0;
+      t.inselIdx = i;
+      const p = zufallsPunktAuf(welt.inseln[i], Math.random);
+      t.zx = p.x; t.zy = p.y;
+      return;
+    }
     if (t.stufe >= 3) {
       /* Flieger dürfen aufs offene Wasser. Der Bereich ist der
          Bildausschnitt plus etwas — weiter draußen sähe man sie
@@ -3173,7 +3247,7 @@
   }
 
   /* Ein Tier gehört zu EINEM Wort, und alles Feste an ihm kommt aus
-     dessen id: Farbe und Flügelform sind damit über Geräte und
+     dessen id: Farbe und beide Varianten sind damit über Geräte und
      Sitzungen hinweg dieselben, ohne dass sie jemand speichern
      müsste. Zufällig ist nur, wo es gerade steht. */
   function neuesTier(id, stufe) {
@@ -3184,7 +3258,12 @@
     const t = {
       id, stufe,
       farbe: h % FARBEN.length,
-      variante: (h >>> 8) % 2 ? 'a' : 'b',
+      /* Zwei Varianten, zwei verschiedene Stellen im Hash: die eine
+         entscheidet über die gewachsene Echse, die andere über die
+         ausgewachsene. Aus DERSELBEN Stelle gezogen hinge die Stufe 3
+         an der Stufe 2, und aus fünf Fassungen würden drei. */
+      v2: VAR2[(h >>> 8) % VAR2.length],
+      v3: VAR3[(h >>> 14) % VAR3.length],
       x: p.x, y: p.y, z: 0, zx: p.x, zy: p.y,
       inselIdx: 0,
       flip: rnd() < .5,
@@ -3193,10 +3272,23 @@
       schlafBis: 0, pop: 0, burst: 0,
       tempo: .85 + rnd() * .3
     };
-    if (stufe >= 3) { t.zustand = 'fliegen'; t.z = FLUG_HOEHE; }
+    if (stufe >= 3) {
+      if (schwimmt(t)) { t.zustand = 'schwimmen'; t.z = 0; }
+      else { t.zustand = 'fliegen'; t.z = FLUG_HOEHE; }
+    }
     if (stufe === 0) t.zustand = 'ei';
     return t;
   }
+
+  /* Die drei Fragen, die das Verhalten auseinanderhalten. `schwimmt`
+     gilt auch unter Stufe 3 — dort läuft sie ohnehin wie jede andere,
+     aber die Zeile bleibt so eine Aussage über das TIER und nicht
+     über seinen jetzigen Zustand. */
+  const schwimmt = t => t.v3 === SCHWIMMT;
+  const fliegt = t => t.stufe >= 3 && !schwimmt(t);
+  /* Unterwegs auf offenem Wasser — die Schwimmerin darf das als
+     einziges Landtier, und nur daran hängt ihr drittes Bild. */
+  const treibt = t => t.stufe >= 3 && schwimmt(t) && t.imWasser;
 
   function schritt(t, dt, jetzt) {
     if (t.pop > 0) t.pop = Math.max(0, t.pop - dt * 1.6);
@@ -3206,18 +3298,24 @@
     if (t.zustand === 'schlafen') {
       if (t.stufe >= 3) t.z += (0 - t.z) * Math.min(1, dt * 3);
       if (jetzt >= t.schlafBis) {
-        t.zustand = t.stufe >= 3 ? 'fliegen' : 'laufen';
+        t.zustand = t.stufe < 3 ? 'laufen' : (schwimmt(t) ? 'schwimmen' : 'fliegen');
         neuesZiel(t);
       }
       return;
     }
 
-    const flieger = t.stufe >= 3;
+    const flieger = fliegt(t);
     t.z += ((flieger ? FLUG_HOEHE : 0) - t.z) * Math.min(1, dt * 2.2);
 
     const dx = t.zx - t.x, dy = t.zy - t.y;
     const d = Math.hypot(dx, dy);
-    const v = (flieger ? FLUG_TEMPO : LAUF_TEMPO[t.stufe]) * t.tempo;
+    /* Drei Gangarten. Die Schwimmerin hat zwei davon, und welche
+       gilt, hängt nicht an ihrem Zustand, sondern daran, ob gerade
+       Land unter ihr ist — dieselbe Frage, die auch ihr Bild
+       auswählt. */
+    const v = (flieger ? FLUG_TEMPO
+             : t.stufe >= 3 ? (t.imWasser ? SCHWIMM_TEMPO : WATT_TEMPO)
+             : LAUF_TEMPO[t.stufe]) * t.tempo;
 
     if (d < .10) {
       if (t.zustand === 'zumSchlafen') {
@@ -3243,14 +3341,21 @@
        hindurchzugehen — und weil ein Läufer immer auf einem Feld
        STEHT, kann er auch nicht darin stecken bleiben.
 
-       Geprüft wird „Hauptinsel" und nicht bloß „Land": nur Flieger
-       verlassen sie, alles andere bleibt zu Hause. */
-    if (!flieger) {
+       Geprüft wird „Hauptinsel" und nicht bloß „Land": wer die
+       Hauptinsel verlässt, tut das als Belohnung fürs
+       Ausgewachsensein — in der Luft oder seit dem 11.09.2026 auch
+       auf dem Wasser. Beides ist Stufe 3, und genau daran hängt der
+       Riegel: darunter läuft AUCH die Schwimmerin nur zu Hause. */
+    if (t.stufe < 3) {
       const z = feldAt(nx, ny);
       if (!z || !aufHauptinsel(z)) { neuesZiel(t); return; }
     }
 
     t.x = nx; t.y = ny;
+    /* Ob Land unter ihr ist, entscheidet bei der Schwimmerin über
+       Bild UND Tempo. Einmal je Bild gefragt und gemerkt, statt an
+       beiden Stellen noch einmal. */
+    if (t.stufe >= 3 && schwimmt(t)) t.imWasser = !feldAt(t.x, t.y);
     // Erst ab einer spürbaren Auslenkung umdrehen, sonst flackert
     // ein Tier, das fast senkrecht läuft.
     if (Math.abs(dx) > .02) t.flip = dx < 0;
@@ -3263,7 +3368,7 @@
      das Zurückfallen soll man am Tier sehen und nicht daran, dass
      es plötzlich woanders ist. */
   function landeAufLand(t) {
-    t.z = 0; t.inselIdx = 0;
+    t.z = 0; t.inselIdx = 0; t.imWasser = false;
     const z = feldAt(t.x, t.y);
     if (z && aufHauptinsel(z)) return;
     const p = zufallsPunktAuf(welt.inseln[0], Math.random);
@@ -3291,10 +3396,17 @@
       return;
     }
     if (s >= 3) {
-      if (vorher < 3 || t.zustand === 'ei') { t.zustand = 'fliegen'; neuesZiel(t); }
+      if (vorher < 3 || t.zustand === 'ei') {
+        /* Vier von fünf heben ab, die fünfte geht ins Wasser. Beides
+           ist derselbe Augenblick — „ab jetzt darfst du die Insel
+           verlassen" —, nur mit zwei verschiedenen Bildern dafür. */
+        t.zustand = schwimmt(t) ? 'schwimmen' : 'fliegen';
+        neuesZiel(t);
+      }
       return;
     }
-    if (vorher >= 3 || t.zustand === 'ei' || t.zustand === 'fliegen' || t.zustand === 'zumSchlafen') {
+    if (vorher >= 3 || t.zustand === 'ei' || t.zustand === 'fliegen'
+        || t.zustand === 'schwimmen' || t.zustand === 'zumSchlafen') {
       landeAufLand(t);
       t.zustand = 'laufen';
       neuesZiel(t);
@@ -3761,16 +3873,21 @@
      der es braucht und dem der Schlaf egal ist: das kleine Monster in
      der Vokabelliste (monsterUrl). Ein schlafendes Tier in einer
      Liste sähe aus wie ein anderes Tier. */
-  function wachSchluessel(stufe, variante) {
+  function wachSchluessel(stufe, v2, v3) {
     if (stufe === 0) return 'ei';
     if (stufe === 1) return 's1';
-    if (stufe === 2) return 's2';
-    return 's3' + variante;
+    if (stufe === 2) return 's2' + (v2 || '');
+    return 's3' + (v3 || 'a');
   }
 
   function schluesselFuer(t) {
-    const k = wachSchluessel(t.stufe, t.variante);
-    return (t.zustand === 'schlafen' && t.stufe > 0) ? k + 'z' : k;
+    const k = wachSchluessel(t.stufe, t.v2, t.v3);
+    if (t.zustand === 'schlafen' && t.stufe > 0) return k + 'z';
+    /* Das dritte Bild der Schwimmerin. Es hängt am ORT und nicht am
+       Zustand: sie trägt es, solange kein Feld unter ihr liegt —
+       auch auf dem Weg zum Schlafplatz, solange der noch über dem
+       Meer verläuft. */
+    return treibt(t) ? k + 's' : k;
   }
   const bildFuer = t => sprites[schluesselFuer(t)][t.farbe];
 
@@ -3975,7 +4092,7 @@
       // Der Anker sitzt auf der Grundlinie des Blattes. Alles
       // andere steht in der Zeichnung und nicht hier.
       t._x = px + (m.x - ECHSE.blatt.ankerX) * e;
-      t._y = py + (m.y - ECHSE.blatt.ankerY) * e + wob;
+      t._y = py + (m.y - ANKER_Y[schl]) * e + wob;
       t._px = px;
       t._by = syp(t.y + gy);
       t._mx = t.flip ? 2 * px - t._x - t._w / 2 : t._x + t._w / 2;
@@ -5155,7 +5272,7 @@
   function monsterUrl(id) {
     const t = welt.nachStufe.get(id);
     if (!t || !sprites) return '';
-    const k = wachSchluessel(t.stufe, t.variante);
+    const k = wachSchluessel(t.stufe, t.v2, t.v3);
     const schl = k + '|' + t.farbe;
     if (monsCache.has(schl)) return monsCache.get(schl);
     const im = sprites[k] && sprites[k][t.farbe];
@@ -5377,6 +5494,13 @@
     ['Ausgewachsen — es fliegt!', w => w ? `»${w}« kannst du. Jetzt darf es die Insel verlassen.` : 'Jetzt darf es die Insel verlassen.'],
     ['Es funkelt!',            w => w ? `»${w}« sitzt. Richtig gut.` : 'Sitzt. Richtig gut.']
   ];
+  /* Eine von acht ausgewachsenen Echsen fliegt nicht, sie schwimmt.
+     Die Überschrift muss das sagen: sie steht genau neben dem Bild,
+     auf dem kein Flügel und kein Propeller zu sehen ist — und eine
+     Feier, die etwas anderes behauptet als das Bild daneben, liest
+     sich als Fehler. Der zweite Satz stimmt für beide: die Insel
+     verlassen dürfen sie ab hier so oder so. */
+  const FEIER_TITEL3_SCHWIMM = 'Ausgewachsen — es schwimmt!';
 
   function feierStufe(id, von, nach, wort) {
     const art = nach < von ? 'shrink' : (von <= 0 ? 'hatch' : 'grow');
@@ -5407,9 +5531,11 @@
 
   function feierText(nach, wort) {
     if (!els.pLevel) return;
-    const t = nach != null && FEIER_TEXT[Math.max(0, Math.min(4, nach))];
+    const stufe = Math.max(0, Math.min(4, nach));
+    const t = nach != null && FEIER_TEXT[stufe];
     if (!t) { els.pLevel.hidden = true; return; }
-    els.pLevelB.textContent = t[0];
+    els.pLevelB.textContent = (stufe === 3 && kart && kart.v3 === SCHWIMMT)
+      ? FEIER_TITEL3_SCHWIMM : t[0];
     els.pLevelS.textContent = t[1](wort);
     els.pLevel.hidden = false;
     /* Neu anstoßen, nicht nur einblenden: zweimal dieselbe Klasse
@@ -5681,7 +5807,7 @@
      an derselben Stelle — und die Verwandlung wäre ein Austausch
      statt einer Entwicklung. */
 
-  let kart = null;      // { id, farbe, variante, stufe } — das gezeigte Tier
+  let kart = null;      // { id, farbe, v2, v3, stufe } — das gezeigte Tier
   let kartAnim = null;  // die laufende Verwandlung
   let kartRaf = 0;
   let feierT = 0;       // Timer, der die nächste Frage nachreicht
@@ -5716,15 +5842,21 @@
   /* Wo ein Tier einer Stufe auf der Karte läge — gerechnet, nicht
      gemalt. Zwei Dinge brauchen dieselbe Rechnung: das Malen und
      die aufspringende Eischale. */
-  function kartGeo(m, stufe, variante, farbe, s) {
+  /* `vari` ist das gezeigte Tier selbst (es trägt v2 und v3) und
+     nicht ein Buchstabe: die Karte zeigt IMMER dieselbe Echse, nur
+     auf verschiedenen Stufen — und welches Bild eine Stufe hat, weiß
+     wachSchluessel. Die Schwimmerin steht hier auf dem Trockenen;
+     ihr Wasserbild gehört auf die Insel und nicht in einen Kasten
+     ohne Meer. */
+  function kartGeo(m, stufe, vari, farbe, s) {
     const st = Math.max(0, Math.min(4, stufe));
-    const key = st === 0 ? 'ei' : st === 1 ? 's1' : st === 2 ? 's2' : 's3' + variante;
+    const key = wachSchluessel(st, vari && vari.v2, vari && vari.v3);
     const im = sprites[key][farbe], b = ECHSE.bilder[key];
     const e = STUFE_EINHEIT[st] * m.P / ECHSE.blatt.h * (s || 1);
     return {
       im, e,
       x: m.ax + (b.x - ECHSE.blatt.ankerX) * e,
-      y: m.ay + (b.y - ECHSE.blatt.ankerY) * e,
+      y: m.ay + (b.y - ANKER_Y[key]) * e,
       w: im.width * e, h: im.height * e
     };
   }
@@ -5919,8 +6051,13 @@
     }
 
     const stufe = kart.stufe;
-    const farbe = kart.farbe, vari = kart.variante;
-    const flieger = stufe >= 3;
+    const farbe = kart.farbe, vari = kart;
+    /* Eine von fünf ausgewachsenen Echsen fliegt nicht. Auf der Karte
+       ist das kein Nebensatz: sie bekommt den vollen Bodenschatten,
+       atmet statt zu schweben, und beim Stufensprung hebt sie nicht
+       ab. Alles drei hängt an DIESER Zeile — stünde überall `stufe >= 3`,
+       müsste man die Ausnahme dreimal nachtragen. */
+    const flieger = stufe >= 3 && kart.v3 !== SCHWIMMT;
 
     /* ── Das ruhende Bild ──────────────────────────────────────
        Auch ohne Verwandlung steht das Tier nicht still: das Ei
@@ -5928,11 +6065,11 @@
        reglos liegendes Ei sieht aus wie ein Fehler — dieselbe
        Beobachtung wie auf der Insel. */
     let dy = 0, dreh = 0, s = 1;
-    if (stufe === 0)      dreh = .055 * Math.sin(t * 1.7) * ruhe;
-    else if (stufe <= 2)  { dy = -m.P * .02 * (1 + Math.sin(t * 2.3)) * ruhe;
-                            s = 1 + .012 * Math.sin(t * 2.3 + 1.6) * ruhe; }
-    else                  { dy = -m.P * .05 * (1 + Math.sin(t * 1.5)) * ruhe;
-                            dreh = .028 * Math.sin(t * .9) * ruhe; }
+    if (stufe === 0)  dreh = .055 * Math.sin(t * 1.7) * ruhe;
+    else if (!flieger) { dy = -m.P * .02 * (1 + Math.sin(t * 2.3)) * ruhe;
+                         s = 1 + .012 * Math.sin(t * 2.3 + 1.6) * ruhe; }
+    else              { dy = -m.P * .05 * (1 + Math.sin(t * 1.5)) * ruhe;
+                        dreh = .028 * Math.sin(t * .9) * ruhe; }
 
     // Der Flieger wirft einen kleineren, weicheren Schatten — daran
     // sieht man die Höhe, ohne dass es jemand sagen muss.
@@ -6003,7 +6140,7 @@
       /* Wer auf Stufe 3 steigt, HEBT AB: das neue Bild kommt vom
          Boden herauf an seinen Schwebeplatz. Der Aufstieg ist die
          Belohnung, also muss man ihn sehen. */
-      const hebt = a.nach >= 3 && a.von < 3 ? (1 - e) * m.P * .75 : 0;
+      const hebt = a.nach >= 3 && a.von < 3 && flieger ? (1 - e) * m.P * .75 : 0;
       const gN = kartGeo(m, a.nach, vari, farbe, .28 + .72 * e);
       kartMal(x, m, gN, dy + hebt, dreh, Math.min(1, neuU * 4));
     }
@@ -6114,7 +6251,7 @@
     const stufe = solo.stufen.has(soloTask.item)
       ? solo.stufen.get(soloTask.item) : (soloTask.level | 0);
 
-    kart = { id: soloTask.item, farbe: t.farbe, variante: t.variante, stufe };
+    kart = { id: soloTask.item, farbe: t.farbe, v2: t.v2, v3: t.v3, stufe };
     els.pStage.textContent = STUFEN_NAME[stufe];
     els.pStage.className = 'wi-pstage is-' + stufe;
 

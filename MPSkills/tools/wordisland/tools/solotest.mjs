@@ -166,11 +166,23 @@ const S = window.__solo;
 pass('Aufbau läuft durch (Bilder, Einfärben, Insel, Bedienung)');
 
 /* ── 1 · Die eingebackenen Bilder ──────────────────────────────── */
-const SOLL = ['ei', 's1', 's1z', 's2', 's2z', 's3a', 's3az', 's3b', 's3bz'];
+/* Seit 11.09.2026 sind es zwanzig: drei Fassungen der gewachsenen
+   Echse, fünf der ausgewachsenen — jede wach und schlafend — und
+   dazu das Wasserbild der Schwimmerin, die als einzige nicht
+   fliegt. */
+const SOLL = ['ei', 's1', 's1z',
+              's2', 's2z', 's2a', 's2az', 's2b', 's2bz',
+              's3a', 's3az', 's3b', 's3bz', 's3c', 's3cz',
+              's3d', 's3dz', 's3e', 's3ez', 's3es'];
 {
   const B = SOLO_SPRITES.bilder;
   const da = SOLL.filter(k => B[k]);
-  pruef(da.length === 9, `solo-sprites.js hat alle neun Bilder (${da.length})`);
+  pruef(da.length === SOLL.length,
+    `solo-sprites.js hat alle ${SOLL.length} Bilder (${da.length})`);
+  /* Und keines mehr: eine Vorlage, die niemand nennt, wird auch
+     nirgends gezeichnet — sie fiele nur als fehlende Variante auf. */
+  pruef(Object.keys(B).length === SOLL.length,
+    `und keines zu viel (${Object.keys(B).length})`);
 
   /* Die PNG-Signatur steht am Anfang der Daten: 89 50 4E 47 →
      base64 „iVBORw0KGgo". Ein Bild, das anders anfängt, ist keines. */
@@ -178,7 +190,7 @@ const SOLL = ['ei', 's1', 's1z', 's2', 's2z', 's3a', 's3az', 's3b', 's3bz'];
   pruef(falsch.length === 0, 'alle tragen die PNG-Signatur');
 
   const kb = SOLL.reduce((a, k) => a + (B[k] ? B[k].d.length : 0), 0) / 1024;
-  pruef(kb > 200 && kb < 2000, `zusammen ${Math.round(kb)} kB — plausibel, nicht leer und nicht ausufernd`);
+  pruef(kb > 200 && kb < 4000, `zusammen ${Math.round(kb)} kB — plausibel, nicht leer und nicht ausufernd`);
 
   const bl = SOLO_SPRITES.blatt;
   pruef(bl && bl.h > 0 && bl.w > 0 && bl.ankerX > 0 && bl.ankerY > 0,
@@ -199,38 +211,74 @@ const SOLL = ['ei', 's1', 's1z', 's2', 's2z', 's3a', 's3az', 's3b', 's3bz'];
    Ein zusammengerolltes Tier ist FLACHER als ein stehendes; wenn das
    hier je wieder kippt, ist der gemeinsame Maßstab kaputt. */
 {
-  /* Die SIGNATUR des Fehlers ist, dass alle neun gleich hoch werden —
-     das war ja die Vorschrift, an der er hing. Neun verschiedene Höhen
-     heißt: es wird mit dem Blatt skaliert und nicht mit dem Tier. */
+  /* Die SIGNATUR des Fehlers ist, dass alle Bilder gleich hoch
+     werden — das war ja die Vorschrift, an der er hing. Viele
+     verschiedene Höhen heißt: es wird mit dem Blatt skaliert und
+     nicht mit dem Tier. */
   const hoehen = SOLL.map(k => MASSE[k].h);
-  pruef(new Set(hoehen).size >= 7,
-    `die neun Bilder haben eigene Höhen (${new Set(hoehen).size} verschiedene: ${hoehen.join(', ')})`);
+  pruef(new Set(hoehen).size >= SOLL.length - 4,
+    `die Bilder haben eigene Höhen (${new Set(hoehen).size} verschiedene: ${hoehen.join(', ')})`);
 
   /* Und keines darf beim Einschlafen nennenswert WACHSEN. Nicht auf
      null geprüft: Echse1snooze ist als Zeichnung fünf Vorlagen-Pixel
      höher als Echse1 — ein zusammengerollter Ball ist eben etwas
      höher als ein flach kriechendes Tier. Der Fehler war ein Faktor
      zwei, nicht ein Prozent. */
-  const paare = [['s1', 's1z'], ['s2', 's2z'], ['s3a', 's3az'], ['s3b', 's3bz']];
+  /* Die Paare ergeben sich aus den Namen: zu jedem wachen Bild das
+     gleichnamige mit `z`. Von Hand gepflegt wäre die Liste beim
+     nächsten Nachschärfen die erste, die jemand vergisst — und
+     genau dann prüft sie nichts mehr. */
+  const paare = SOLL.filter(k => SOLL.includes(k + 'z')).map(k => [k, k + 'z']);
+  pruef(paare.length === 9, `neun Wach/Schlaf-Paare gefunden (${paare.length})`);
   const gewachsen = [];
   const text = [];
   for (const [wach, schlaf] of paare) {
     const a = MASSE[wach].h, b = MASSE[schlaf].h;
-    if (b > a * 1.15) gewachsen.push(`${wach}→${schlaf}`);
+    if (b > a * 1.15) gewachsen.push(`${wach}→${schlaf} (${a}→${b})`);
     text.push(`${wach} ${a} → ${schlaf} ${b}`);
   }
   pruef(gewachsen.length === 0,
     'keines wächst beim Einschlafen: ' + text.join(' · '));
 
-  /* Und die Grundlinie: alle neun müssen mit ihrer Unterkante nahe am
-     Anker liegen oder darüber schweben — keines darf tief darunter
-     hängen, sonst steckt es im Boden. Ausnahme ist Echse3b, deren
-     Schwanz absichtlich herunterhängt. */
+  /* Und die Grundlinie. Geprüft wird nur, was auf dem BODEN steht:
+     Ei, Baby und die gewachsene Echse samt ihren Schlaf-Fassungen.
+     Die ausgewachsenen sind absichtlich anders gezeichnet — der
+     Propeller-Flieger schwebt (Unterkante ÜBER dem Anker), andere
+     lassen Schwanz oder Flossen deutlich darunter hängen, und die
+     Schwimmerin bringt ihre Wasserlinie gleich mit. Für sie alle
+     wäre eine Schranke hier eine Behauptung über eine Zeichnung, die
+     der Prüfstand nicht kennt.
+
+     Die Zahlen werden trotzdem für ALLE ausgegeben: ein Bild, das
+     eines Tages im Boden steckt, sieht man dann in dieser Zeile,
+     bevor man es auf der Insel sucht. */
   const bl = SOLO_SPRITES.blatt, B = SOLO_SPRITES.bilder;
-  const tief = SOLL.filter(k => k !== 's3b' &&
-    (B[k].y + MASSE[k].h) - bl.ankerY > bl.h * .06);
-  pruef(tief.length === 0,
-    'keines hängt merklich unter der Grundlinie' + (tief.length ? ' — ' + tief.join(', ') : ''));
+  const abstand = k => +((B[k].y + MASSE[k].h) - bl.ankerY).toFixed(1);
+  console.log('      Abstand zur Grundlinie (+ = hängt darunter): '
+    + SOLL.map(k => `${k} ${abstand(k) >= 0 ? '+' : ''}${abstand(k)}`).join(' · '));
+
+  const AM_BODEN = SOLL.filter(k => /^(ei|s1|s2)z?$/.test(k) || /^s2[ab]z?$/.test(k));
+  pruef(AM_BODEN.length === 9, `neun Bilder gehören auf den Boden (${AM_BODEN.length})`);
+
+  /* ⚠️ BEKANNTE ABWEICHUNG, 11.09.2026: Echse2bsnooze ist im Blatt
+     rund 98 Vorlagen-Pixel zu HOCH gezeichnet (die beiden anderen
+     Schlaf-Fassungen der Stufe 2 liegen bei +22 und +28). Die
+     schlafende Echse schwebt dadurch etwa ein Sechstel Kachel über
+     dem Boden.
+
+     Das ist eine Sache der VORLAGE und nicht des Programms: wer sie
+     hier im Zeichner ausgleicht, baut eine Zahl ein, die beim
+     nächsten Neu-Exportieren des Bildes falsch wird. Steht deshalb
+     als benannte Ausnahme da — und verschwindet, sobald das Bild im
+     Blatt nach unten gerückt ist. */
+  const BEKANNT = { s2bz: 'im Blatt zu hoch gezeichnet (Vorlage)' };
+  for (const k of AM_BODEN) {
+    if (BEKANNT[k]) console.log(`      ⚠️  ${k}: ${abstand(k)} — ${BEKANNT[k]}`);
+  }
+  const daneben = AM_BODEN.filter(k => !BEKANNT[k] && Math.abs(abstand(k)) > bl.h * .06);
+  pruef(daneben.length === 0,
+    'Ei, Baby und die gewachsene Echse stehen auf der gemeinsamen Grundlinie'
+    + (daneben.length ? ' — NICHT: ' + daneben.map(k => `${k} ${abstand(k)}`).join(', ') : ''));
 }
 
 /* ── 2 · Die Karte ─────────────────────────────────────────────── */
@@ -390,6 +438,23 @@ const svg = document.getElementById('karte');
   pruef(schlafend > 0, `es wird überhaupt geschlafen (${schlafend} von 500)`);
   pruef(schlafImWasser === 0,
     `keine schlafende Echse über offenem Wasser (${schlafImWasser} gefunden)`);
+  /* Auch die Schwimmerin schläft an Land. Sie ist der einzige Fall,
+     in dem „über Wasser" ein erlaubter Aufenthaltsort ist — deshalb
+     wird sie hier eigens gezählt, sonst könnte der Satz oben allein
+     dadurch wahr sein, dass es keine gibt. */
+  const schwimmerinnen = w.tiere.filter(t => t.stufe >= 3 && S.schwimmt(t));
+  pruef(schwimmerinnen.length > 0,
+    `es gibt überhaupt Schwimmerinnen (${schwimmerinnen.length} von 500)`);
+  pruef(schwimmerinnen.every(t => t.zustand !== 'schlafen' || S.feldAt(t.x, t.y)),
+    'auch die Schwimmerin schläft nur an Land');
+  /* Und sie ist wirklich unterwegs auf dem Meer — sonst wäre das
+     dritte Bild umsonst gezeichnet. */
+  const aufSee = schwimmerinnen.filter(t => !S.feldAt(t.x, t.y));
+  pruef(aufSee.length > 0, `${aufSee.length} sind gerade auf dem Wasser`);
+  pruef(aufSee.every(t => S.schluesselFuer(t) === 's3es'),
+    'und tragen dort ihr Wasserbild');
+  pruef(schwimmerinnen.every(t => t.z === 0),
+    'keine Schwimmerin hebt ab (z bleibt 0)');
 
   /* Läufer bleiben an Land — auch nach 2000 Schritten. */
   let laeuferImWasser = 0;
@@ -427,6 +492,60 @@ const svg = document.getElementById('karte');
     `die kleinen Inseln werden beflogen (${besucht.size} von 7 Landmassen belegt)`);
 }
 
+/* ── 5b · Die Varianten (11.09.2026) ───────────────────────────────
+   Sönkes Vorgabe: die drei Fassungen der gewachsenen Echse gleich
+   wahrscheinlich, bei den ausgewachsenen a/b/c gleich und d/e nur
+   halb so oft. Geprüft wird der TOPF und nicht die Ziehung — eine
+   Stichprobe von 500 schwankt zu stark, um daran eine Vorgabe
+   festzumachen; der Topf dagegen sagt die Verteilung exakt. Die
+   Stichprobe kommt trotzdem dazu, denn sie beweist, dass der Topf
+   auch benutzt wird. */
+{
+  const zaehl = liste => liste.reduce((m, v) => m.set(v, (m.get(v) || 0) + 1), new Map());
+
+  const t2 = zaehl(S.VAR2);
+  pruef(S.VAR2.length === 3 && [...t2.values()].every(n => n === 1),
+    `Stufe 2: drei Fassungen, jede gleich oft im Topf (${S.VAR2.map(v => "'" + v + "'").join(', ')})`);
+
+  const t3 = zaehl(S.VAR3);
+  pruef(t3.size === 5, `Stufe 3: fünf Fassungen (${[...t3.keys()].join(', ')})`);
+  pruef(['a', 'b', 'c'].every(k => t3.get(k) === 2) && t3.get('d') === 1 && t3.get('e') === 1,
+    'a, b und c doppelt, d und e einfach — also halb so wahrscheinlich');
+  pruef(t3.get(S.SCHWIMMT) === 1,
+    `die Schwimmerin ist eine der seltenen ('${S.SCHWIMMT}')`);
+
+  /* Jede Fassung braucht ihre Bilder, sonst zeichnet der Browser an
+     dieser einen Stelle still nichts. */
+  const fehlt = [];
+  for (const v of new Set(S.VAR2)) for (const z of ['', 'z']) {
+    if (!S.LAGE['s2' + v + z]) fehlt.push('s2' + v + z);
+  }
+  for (const v of new Set(S.VAR3)) for (const z of ['', 'z']) {
+    if (!S.LAGE['s3' + v + z]) fehlt.push('s3' + v + z);
+  }
+  if (!S.LAGE['s3' + S.SCHWIMMT + 's']) fehlt.push('s3' + S.SCHWIMMT + 's');
+  pruef(fehlt.length === 0,
+    'zu jeder Fassung liegen wach, schlafend (und beim Schwimmer das Wasserbild) vor'
+    + (fehlt.length ? ' — fehlt: ' + fehlt.join(', ') : ''));
+
+  /* Der Anker der Schwimmerin ist ihre eigene Unterkante: dort sind
+     die Kringel gezeichnet, und die gehören auf die Oberfläche. */
+  const sw = 's3' + S.SCHWIMMT + 's';
+  pruef(S.ANKER_Y[sw] !== S.ANKER_Y.s2 &&
+        Math.abs(S.ANKER_Y[sw] - (S.LAGE[sw].y + S.LAGE[sw].h)) < .01,
+    `die Wasserlinie ist der Anker von ${sw} (${Math.round(S.ANKER_Y[sw])} statt ${Math.round(S.ANKER_Y.s2)})`);
+
+  /* Und die Ziehung benutzt ihn auch. */
+  const g2 = zaehl(S.welt.tiere.map(t => t.v2));
+  const g3 = zaehl(S.welt.tiere.map(t => t.v3));
+  pruef(g2.size === 3 && g3.size === 5,
+    `500 Tiere zeigen alle Fassungen (Stufe 2: ${g2.size}, Stufe 3: ${g3.size})`);
+  const selten = (g3.get('d') || 0) + (g3.get('e') || 0);
+  const haeufig = (g3.get('a') || 0) + (g3.get('b') || 0) + (g3.get('c') || 0);
+  pruef(selten > 0 && selten < haeufig,
+    `d und e sind zusammen seltener als a, b und c (${selten} zu ${haeufig})`);
+}
+
 /* ── 6 · Wachsen und Schrumpfen ────────────────────────────────── */
 {
   const w = S.welt;
@@ -440,8 +559,14 @@ const svg = document.getElementById('karte');
      ankommt, danach gezielt auslösen. */
   for (let i = 0; i < 12; i++) S.ueben(+1, 200);
   pruef(w.tiere.every(t => t.stufe === 4), 'oft genug richtig → alle auf Stufe 4');
-  pruef(w.tiere.every(t => ['fliegen', 'zumSchlafen', 'schlafen'].includes(t.zustand)),
-    'alle Stufe-4-Tiere sind in einem Flieger-Zustand');
+  pruef(w.tiere.every(t => ['fliegen', 'schwimmen', 'zumSchlafen', 'schlafen'].includes(t.zustand)),
+    'alle Stufe-4-Tiere sind unterwegs — in der Luft oder auf dem Wasser');
+  /* Und zwar je nach Variante das eine ODER das andere. Ohne diese
+     Zeile könnten alle fliegen und der Test wäre trotzdem grün. */
+  pruef(w.tiere.some(t => S.schwimmt(t)) && w.tiere.some(t => !S.schwimmt(t)),
+    'beide Arten kommen vor');
+  pruef(w.tiere.every(t => t.zustand !== 'schwimmen' || S.schwimmt(t)),
+    'und nur die Schwimmerin schwimmt');
 
   /* Erst ein Stück fliegen lassen, damit ein Teil der Herde wirklich
      über offenem Wasser steht — sonst prüft der nächste Schritt
@@ -508,6 +633,41 @@ const svg = document.getElementById('karte');
   let fehler = null;
   try { rafCb(performance.now()); } catch (e) { fehler = e; }
   pruef(!fehler, 'ein Bild malen wirft keinen Fehler' + (fehler ? ': ' + fehler.message : ''));
+}
+
+/* ── 9 · Showroom und Spiel sagen dasselbe ─────────────────────────
+   Der Showroom ist eine ZWEITE Fassung derselben Herde — er hat seine
+   eigene Kopie von schritt(), schluesselFuer() und den Tabellen. Das
+   ist Absicht (er soll ohne Server laufen), hat aber eine Kehrseite:
+   alles hier oben kann grün sein, während im Spiel noch die alten
+   zwei Varianten stehen. Genau dieser Fall sähe auf dem Tablet nach
+   „ich sehe keine neuen Echsen" aus und nach sonst nichts.
+
+   Verglichen wird deshalb der QUELLTEXT der Tabellen — nicht ihr
+   Verhalten, denn das Verhalten der einen sagt nichts über die
+   andere. Die Maßtabelle ist ausgenommen: die schreibt der Erzeuger
+   in beide. */
+{
+  const toolJs = readFileSync(join(hier, '..', 'tool.js'), 'utf8');
+  const norm = s => s.replace(/\s+/g, ' ').trim();
+  const hol = (quelle, name) => {
+    const m = quelle.match(new RegExp('const\\s+' + name + '\\s*=\\s*([^;]+);'));
+    return m ? norm(m[1]) : null;
+  };
+  for (const name of ['VAR2', 'VAR3', 'SCHWIMMT', 'SCHWIMM_TEMPO', 'WATT_TEMPO',
+                      'STUFE_EINHEIT', 'FLUG_HOEHE', 'LAUF_TEMPO', 'FLUG_TEMPO']) {
+    const a = hol(toolJs, name), b = hol(html, name);
+    pruef(a !== null && a === b,
+      `${name} steht in tool.js und im Showroom gleich: ${a === b ? a : a + '  ≠  ' + b}`);
+  }
+
+  /* Und das Spiel kennt dieselben Bilder. Es leitet seine Liste aus
+     der erzeugten Maßtabelle ab, der Showroom schreibt sie aus —
+     beide müssen auf dieselben zwanzig Schlüssel kommen. */
+  const tab = toolJs.match(/ERZEUGT VON tools\/solosprites\.mjs[\s\S]*?ENDE ERZEUGT/);
+  const keys = tab ? [...tab[0].matchAll(/^\s{6}(\w+):\s*\{/gm)].map(m => m[1]) : [];
+  pruef(keys.length === SOLL.length && SOLL.every(k => keys.includes(k)),
+    `die Maßtabelle in tool.js führt dieselben ${SOLL.length} Bilder (${keys.length})`);
 }
 
 console.log('\n' + (ok ? '  ALLES DURCH' : '  FEHLER — siehe oben') + '\n');

@@ -1062,11 +1062,31 @@ body { display: flex; flex-direction: column; }
      das ist der ganze Grund, warum die Tiere auf einem Canvas liegen
      und nicht als <img> im DOM.                                    */
 
-  const BILDER = ['ei', 's1', 's1z', 's2', 's2z', 's3a', 's3az', 's3b', 's3bz'];
+  const BILDER = ['ei', 's1', 's1z',
+                  's2', 's2z', 's2a', 's2az', 's2b', 's2bz',
+                  's3a', 's3az', 's3b', 's3bz', 's3c', 's3cz',
+                  's3d', 's3dz', 's3e', 's3ez', 's3es'];
+
+  /* ─── Die Varianten (11.09.2026) ───────────────────────────────
+     Gezogen wird aus einem TOPF: a, b und c liegen zweimal darin,
+     d und e einmal — die beiden seltenen kommen also halb so oft.
+     Eine Zeile, die man nachzählen kann, statt einer Summe, die man
+     nachrechnen muss. Dieselben zwei Zeilen stehen in tool.js. */
+  const VAR2 = ['', 'a', 'b'];
+  const VAR3 = ['a', 'a', 'b', 'b', 'c', 'c', 'd', 'e'];
+  /* Die eine, die nicht fliegt: sie läuft an Land, schläft an Land
+     und schwimmt von Insel zu Insel. Deshalb hat sie als einzige ein
+     drittes Bild (s3es). */
+  const SCHWIMMT = 'e';
 
   /* Das Blatt und der Anker, gefüllt aus solo-sprites.js. */
   let BLATT = { w: 313, h: 340, ankerX: 160, ankerY: 290 };
   const LAGE = {};        // Bildschlüssel → { x, y, w, h } in Blatt-Einheiten
+  /* Der Anker je Bild. Für alle die Grundlinie des Blattes — außer
+     beim Wasserbild der Schwimmerin: dort sind die gezeichneten
+     Kringel das Unterste auf dem Blatt, und genau sie gehören auf
+     die Meeresoberfläche. Gefüllt zusammen mit LAGE. */
+  const ANKER_Y = {};
 
   /* Die acht Farben. Der Wert ist der ZIEL-Farbton in Grad; das
      Ausgangsbild liegt bei rund 95° (dieses Grün). Der erste Eintrag
@@ -1299,6 +1319,10 @@ body { display: flex; flex-direction: column; }
   const FLUG_HOEHE = .55;
   const LAUF_TEMPO = [0, .30, .40, 0, 0];
   const FLUG_TEMPO = 1.15;
+  /* Die Schwimmerin: langsamer als ein Flieger, schneller als ein
+     Läufer. An Land geht sie wie eine gewachsene Echse. */
+  const SCHWIMM_TEMPO = .62;
+  const WATT_TEMPO = .40;
 
   /* Wie stark eine Stufe bei Nacht leuchtet. Die Reihe ist bewusst
      ungleichmäßig: von 1 auf 2 soll man einen Unterschied ahnen, von
@@ -1384,7 +1408,8 @@ body { display: flex; flex-direction: column; }
       id,
       stufe,
       farbe: (zufall() * FARBEN.length) | 0,
-      variante: zufall() < .5 ? 'a' : 'b',
+      v2: VAR2[(zufall() * VAR2.length) | 0],
+      v3: VAR3[(zufall() * VAR3.length) | 0],
       x: p.x, y: p.y, z: 0,
       zx: p.x, zy: p.y,
       inselIdx: 0,
@@ -1395,15 +1420,24 @@ body { display: flex; flex-direction: column; }
       pop: 0,
       tempo: .85 + zufall() * .3
     };
-    if (stufe >= 3) { t.zustand = 'fliegen'; t.z = FLUG_HOEHE; }
+    if (stufe >= 3) {
+      if (schwimmt(t)) { t.zustand = 'schwimmen'; t.z = 0; }
+      else { t.zustand = 'fliegen'; t.z = FLUG_HOEHE; }
+    }
     if (stufe === 0) t.zustand = 'ei';
-    /* Auf welcher Insel steht es? Wer nicht fliegen kann, steht auf
-       der Hauptinsel — ohne Wenn und Aber. Nur Flieger suchen sich
-       die Insel, über der sie gerade sind. */
+    /* Auf welcher Insel steht es? Wer die Hauptinsel nicht verlassen
+       kann, steht dort — ohne Wenn und Aber. Flieger und Schwimmerin
+       suchen sich die Insel, bei der sie gerade sind. */
     t.inselIdx = stufe >= 3 ? naechsteInsel(t.x, t.y) : 0;
     neuesZiel(t);
     return t;
   }
+
+  /* Die drei Fragen, die das Verhalten auseinanderhalten — wortgleich
+     in tool.js. */
+  const schwimmt = t => t.v3 === SCHWIMMT;
+  const fliegt = t => t.stufe >= 3 && !schwimmt(t);
+  const treibt = t => t.stufe >= 3 && schwimmt(t) && t.imWasser;
 
   function naechsteInsel(x, y) {
     let bi = 0, bd = 1e9;
@@ -1416,6 +1450,16 @@ body { display: flex; flex-direction: column; }
 
   function neuesZiel(t) {
     if (t.stufe === 0) { t.zx = t.x; t.zy = t.y; return; }
+    /* Die Schwimmerin reist von INSEL zu INSEL und nicht auf einen
+       Punkt im offenen Meer: ein Ziel an Land gibt der Fahrt ein
+       Ende, an dem sie wieder läuft. */
+    if (t.stufe >= 3 && schwimmt(t)) {
+      const i = (zufall() * welt.inseln.length) | 0;
+      t.inselIdx = i;
+      const p = zufallsPunktAuf(welt.inseln[i]);
+      t.zx = p.x; t.zy = p.y;
+      return;
+    }
     if (t.stufe >= 3) {
       /* Flieger dürfen aufs offene Wasser. Der Bereich ist der
          Bildausschnitt plus etwas — weiter draußen sähe man sie nicht
@@ -1449,19 +1493,24 @@ body { display: flex; flex-direction: column; }
     if (t.zustand === 'schlafen') {
       if (t.stufe >= 3) t.z += (0 - t.z) * Math.min(1, dt * 3);
       if (jetzt >= t.schlafBis) {
-        t.zustand = t.stufe >= 3 ? 'fliegen' : 'laufen';
+        t.zustand = t.stufe < 3 ? 'laufen' : (schwimmt(t) ? 'schwimmen' : 'fliegen');
         neuesZiel(t);
       }
       return;
     }
 
-    const flieger = t.stufe >= 3;
+    const flieger = fliegt(t);
     const zielH = flieger ? FLUG_HOEHE : 0;
     t.z += (zielH - t.z) * Math.min(1, dt * 2.2);
 
     const dx = t.zx - t.x, dy = t.zy - t.y;
     const d = Math.hypot(dx, dy);
-    const v = (flieger ? FLUG_TEMPO : LAUF_TEMPO[t.stufe]) * t.tempo;
+    /* Drei Gangarten. Welche für die Schwimmerin gilt, hängt nicht an
+       ihrem Zustand, sondern daran, ob gerade Land unter ihr ist —
+       dieselbe Frage, die auch ihr Bild auswählt. */
+    const v = (flieger ? FLUG_TEMPO
+             : t.stufe >= 3 ? (t.imWasser ? SCHWIMM_TEMPO : WATT_TEMPO)
+             : LAUF_TEMPO[t.stufe]) * t.tempo;
 
     if (d < .10) {
       /* Angekommen. Entweder weiter oder schlafen. Beim Flieger heißt
@@ -1490,17 +1539,19 @@ body { display: flex; flex-direction: column; }
        STEHT, kann er auch nicht darin stecken bleiben.
 
        Geprüft wird dabei nicht nur „Land", sondern „Hauptinsel". Das
-       ist derselbe Riegel in schärfer: nur Flieger verlassen die
-       Hauptinsel, alles andere bleibt zu Hause.
-
-       Flieger sind davon ausgenommen: über das Meer zu fliegen ist
-       ihr halber Reiz. */
-    if (!flieger) {
+       ist derselbe Riegel in schärfer: wer die Hauptinsel verlässt,
+       tut das als Belohnung fürs Ausgewachsensein — in der Luft oder
+       auf dem Wasser. Beides ist Stufe 3, und genau daran hängt der
+       Riegel: darunter läuft AUCH die Schwimmerin nur zu Hause. */
+    if (t.stufe < 3) {
       const z = feldAt(nx, ny);
       if (!z || !aufHauptinsel(z)) { neuesZiel(t); return; }
     }
 
     t.x = nx; t.y = ny;
+    /* Ob Land unter ihr ist, entscheidet bei der Schwimmerin über
+       Bild UND Tempo. Einmal je Bild gefragt und gemerkt. */
+    if (t.stufe >= 3 && schwimmt(t)) t.imWasser = !feldAt(t.x, t.y);
     /* Die Blickrichtung. Erst ab einer spürbaren Auslenkung umdrehen,
        sonst flackert ein Tier, das fast senkrecht läuft. */
     if (Math.abs(dx) > .02) t.flip = dx < 0;
@@ -1561,12 +1612,15 @@ body { display: flex; flex-direction: column; }
       return;
     }
     if (s >= 3) {
-      if (vorher < 3) { t.zustand = 'fliegen'; neuesZiel(t); }
-      else if (t.zustand === 'ei') { t.zustand = 'fliegen'; neuesZiel(t); }
+      /* Vier von fünf heben ab, die fünfte geht ins Wasser. */
+      const los = schwimmt(t) ? 'schwimmen' : 'fliegen';
+      if (vorher < 3) { t.zustand = los; neuesZiel(t); }
+      else if (t.zustand === 'ei') { t.zustand = los; neuesZiel(t); }
       return;
     }
     /* Stufe 1 oder 2: Läufer. */
-    if (vorher >= 3 || t.zustand === 'ei' || t.zustand === 'fliegen' || t.zustand === 'zumSchlafen') {
+    if (vorher >= 3 || t.zustand === 'ei' || t.zustand === 'fliegen'
+        || t.zustand === 'schwimmen' || t.zustand === 'zumSchlafen') {
       landeAufLand(t);
       t.zustand = 'laufen';
       neuesZiel(t);
@@ -1584,6 +1638,7 @@ body { display: flex; flex-direction: column; }
   function landeAufLand(t) {
     t.z = 0;
     t.inselIdx = 0;
+    t.imWasser = false;
     const z = feldAt(t.x, t.y);
     if (z && aufHauptinsel(z)) return;
     const p = zufallsPunktAuf(welt.inseln[0]);
@@ -1685,14 +1740,18 @@ body { display: flex; flex-direction: column; }
   let funken = null;        // aufsteigende Funken je Farbe
   let funke = null;         // der weiße Kern der obersten Stufe
 
-  /* Welches der neun Bilder ein Tier gerade zeigt. Getrennt vom
+  /* Welches der zwanzig Bilder ein Tier gerade zeigt. Getrennt vom
      Nachschlagen, weil auch die LAGE im Blatt daran hängt. */
   function schluesselFuer(t) {
     const schlaeft = t.zustand === 'schlafen';
     if (t.stufe === 0) return 'ei';
     if (t.stufe === 1) return schlaeft ? 's1z' : 's1';
-    if (t.stufe === 2) return schlaeft ? 's2z' : 's2';
-    return 's3' + t.variante + (schlaeft ? 'z' : '');
+    if (t.stufe === 2) return 's2' + (t.v2 || '') + (schlaeft ? 'z' : '');
+    const k = 's3' + (t.v3 || 'a');
+    if (schlaeft) return k + 'z';
+    /* Das dritte Bild der Schwimmerin hängt am ORT und nicht am
+       Zustand: sie trägt es, solange kein Feld unter ihr liegt. */
+    return treibt(t) ? k + 's' : k;
   }
   function bildFuer(t) {
     return sprites[opt.farbverfahren][schluesselFuer(t)][t.farbe];
@@ -1762,7 +1821,8 @@ body { display: flex; flex-direction: column; }
       if (px < sicht0 || px > sicht1 || py < sichtT || py > sichtB) continue;
 
       const im = bildFuer(t);
-      const m = LAGE[schluesselFuer(t)];
+      const schl = schluesselFuer(t);
+      const m = LAGE[schl];
       /* Bildschirmpunkte je Blatt-Einheit. Der Maßstab hängt an der
          STUFE, nicht am Bild — deshalb wächst nichts beim Einschlafen. */
       let e = STUFE_EINHEIT[t.stufe] * opt.groesse * P / BLATT.h;
@@ -1779,9 +1839,10 @@ body { display: flex; flex-direction: column; }
       t._h = im.height * e;
       /* Der Anker sitzt auf der Grundlinie des Blattes. Alles andere —
          dass ein Flieger schwebt, dass eine Schlaf-Echse flach liegt —
-         steht in der Zeichnung und nicht hier. */
+         steht in der Zeichnung und nicht hier. Einzige Ausnahme ist
+         das Wasserbild der Schwimmerin (siehe ANKER_Y). */
       t._x = px + (m.x - BLATT.ankerX) * e;
-      t._y = py + (m.y - BLATT.ankerY) * e + wob;
+      t._y = py + (m.y - ANKER_Y[schl]) * e + wob;
       t._px = px;
       t._by = sy(t.y + gy);                        // die Füße, für den Bodenschein
       /* Beim Spiegeln kippt der Kasten um den Anker. */
@@ -2304,7 +2365,10 @@ body { display: flex; flex-direction: column; }
          Ankerpunkt. */
       BILDER.forEach((k, i) => {
         LAGE[k] = { x: S.bilder[k].x, y: S.bilder[k].y, w: ims[i].width, h: ims[i].height };
+        ANKER_Y[k] = BLATT.ankerY;
       });
+      // Die Wasserlinie steht IM Bild — siehe ANKER_Y oben.
+      if (LAGE.s3es) ANKER_Y.s3es = LAGE.s3es.y + LAGE.s3es.h;
       basen = ims.map(aufLeinwand);
     } catch (err) {
       $('load').innerHTML = '<b style="color:#ff8080">Die Echsen-Bilder fehlen</b>'
@@ -2348,7 +2412,10 @@ body { display: flex; flex-direction: column; }
     window.__solo = { welt, opt, schritt, feldAt, bodenY, findeInseln,
                       wuerfelInseln, inselDaten, coastRings, setzeStufe,
                       ueben, baueTiere, naechsteInsel, aufHauptinsel,
-                      FARBEN, GLUEHEN, rgb2hsl, hsl2rgb };
+                      FARBEN, GLUEHEN, rgb2hsl, hsl2rgb,
+                      /* seit 11.09.2026: die Varianten und ihre Bilder */
+                      BILDER, VAR2, VAR3, SCHWIMMT, LAGE, ANKER_Y,
+                      schluesselFuer, schwimmt, fliegt };
 
     requestAnimationFrame(zeichne);
   }
