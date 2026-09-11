@@ -105,7 +105,7 @@
        neue Reliefkarte von Wordisland unter — der Umbau war fertig,
        auf dem Bildschirm stand die alte Karte, und es sah aus, als
        wäre nichts geschehen. */
-    const v = '?v=20260911c';
+    const v = '?v=20260911d';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf

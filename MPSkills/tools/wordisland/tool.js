@@ -3301,6 +3301,265 @@
     }
   }
 
+  /* ══════════════════════════════════════════════════════════
+     DU SELBST  ·  Figur und Schiff  (11.09.2026)
+     ══════════════════════════════════════════════════════════
+     Sönke: „Ich würde gerne, dass man selbst auch auf der Insel
+     repräsentiert wird. […] Schritt 1 ist aber erstmal, dass man ein
+     Charakter und ein Schiff bekommt."
+
+     Bis hierher war die Insel ein Schaukasten: lauter Vokabeln, die
+     herumlaufen, und niemand, der dort wohnt. Die Figur ist der
+     Unterschied zwischen „meine Vokabeln" und „mein Ort".
+
+     ── Zwei Dinge, ein Volk ──────────────────────────────────
+     Figur und Schiff hängen an EINER Zahl: der Volksnummer aus
+     TEAMS (0…7, dieselbe wie in wi_boards.factions). Sie steht in
+     wi_solo_learners.settings.faction; solange Migration 0143 nicht
+     eingespielt ist, merkt sie sich das Gerät allein (siehe
+     volkSetzen).
+
+     Die Figur ist das ERSTE Bild der Crew ihres Volkes. Später
+     kommt hier das eigene Level dazu und mit ihm ein anderes Bild —
+     deshalb geht alles, was das Aussehen bestimmt, schon jetzt durch
+     `volkBild()` und nicht direkt durch den Dateinamen.
+
+     ── Warum auf der Leinwand und nicht im SVG ───────────────
+     Die Schiffe im RAUM sind SVG-Knoten (sie stehen still und
+     schaukeln nur). Hier fahren sie. Auf der Leinwand liegen sie in
+     derselben Kamera und derselben Tiefenordnung wie die Tiere —
+     und eine Figur, die hinter einer Echse verschwindet, während
+     sie an ihr vorbeiläuft, ist der halbe Grund, warum die Insel
+     lebendig aussieht.                                          */
+
+  const HELD_DIR = 'tools/wordisland/sprites/held/';
+  const BOOT_DIR = 'tools/wordisland/sprites/boot/';
+
+  /* Die Voreinstellung ist Sönkes Vorgabe: „Diese sind Default von
+     den Brokkoli Giraffen." Das ist Volk 2 in TEAMS. */
+  const VOLK_STD = 2;
+
+  /* Maße in KACHELN, wie überall auf dieser Insel. Die Figur ist
+     etwas größer als eine ausgewachsene Echse (2.25) — man soll sie
+     in der Herde finden, ohne dass sie darüber thront. */
+  const HELD_HOCH  = 2.6;
+  const BOOT_BREIT = 3.6;
+  /* Wie weit der Kiel vom äußersten Feld der Hauptinsel wegbleibt.
+     Gemessen am größten Radius und nicht an der nächsten Küste: eine
+     Bahn, die jeder Bucht folgt, ist kein Kurs, sondern ein Zickzack. */
+  const BOOT_ABSTAND = 1.8;
+
+  const HELD_TEMPO = .42;      // Kacheln je Sekunde
+  const BOOT_TEMPO = .30;      // dito, auf der BAHN und nicht im Winkel
+
+  const WI_VOLK_KEY = 'mpskills.wordisland.volk';
+
+  let spieler = null;
+  /* Gegen Bilder, die zu spät kommen: wer zweimal schnell
+     umschaltet, bekäme sonst das Schiff des ersten Klicks unter die
+     Figur des zweiten. */
+  let volkGen = 0;
+  /* Hat der Server das Volk abgelehnt, weil er die Funktion nicht
+     kennt? Dann steht es im Kasten — „gemerkt" und „nur hier
+     gemerkt" dürfen nicht gleich aussehen. */
+  let volkNurHier = false;
+
+  const volkName = n => (TEAMS[n] && TEAMS[n].name) || ('Volk ' + (n + 1));
+  const volkBild  = n => HELD_DIR + n + '.png';
+  const volkDaumen = n => HELD_DIR + n + 'k.png';
+  const volkBoot  = n => BOOT_DIR + n + '.png';
+
+  /* Woher das Volk kommt, in dieser Reihenfolge: Server, Gerät,
+     Voreinstellung. Der Server gewinnt — er ist der Ort, an dem die
+     Insel steht. Das Gerät ist nur der Notnagel für den Fall, dass
+     0143 noch nicht eingespielt ist. */
+  function volkAusStand() {
+    const s = solo && solo.settings ? solo.settings.faction : null;
+    if (Number.isInteger(s) && s >= 0 && s < TEAMS.length) return s;
+    try {
+      const v = parseInt(localStorage.getItem(WI_VOLK_KEY), 10);
+      if (v >= 0 && v < TEAMS.length) return v;
+    } catch (e) { /* egal */ }
+    return VOLK_STD;
+  }
+
+  function volkBilderLaden() {
+    const n = spieler.volk, gen = ++volkGen;
+    const nimm = (pfad, feld) => ladeBild(pfad).then(im => {
+      if (gen === volkGen && spieler) spieler[feld] = im;
+    }).catch(e => {
+      /* Ein fehlendes Bild zeichnet still NICHTS — genau die Falle,
+         die bei den Schiffen im Raum schon einmal eine Stunde
+         gekostet hat. Also sagt es wenigstens die Konsole. */
+      console.warn('[wordisland] ' + e.message);
+    });
+    nimm(volkBild(n), 'imHeld');
+    nimm(volkBoot(n), 'imBoot');
+  }
+
+  /* Figur und Schiff aufstellen. Gerufen aus soloBuild, NACH den
+     Inseln: beide brauchen die Hauptinsel — die eine, um darauf zu
+     laufen, das andere, um sie zu umrunden. */
+  function spielerAufstellen() {
+    const insel = welt.inseln[0];
+    const p = zufallsPunktAuf(insel, Math.random);
+    let R = 0;
+    for (const z of insel.cells) {
+      R = Math.max(R, Math.hypot(z.x - insel.cx, z.y - insel.cy));
+    }
+    spieler = {
+      volk: volkAusStand(),
+      imHeld: null, imBoot: null,
+      held: {
+        x: p.x, y: p.y, zx: p.x, zy: p.y,
+        flip: false, ruheBis: 0, held: true, stufe: 0, _a: 1, _hell: false
+      },
+      boot: { winkel: Math.random() * 6.283, r: R + BOOT_ABSTAND, x: 0, y: 0, flip: false }
+    };
+    /* Die Bahn gleich einmal ausrechnen. Im ersten Bild ist dt noch
+       null, bootSchritt läuft also nicht — und ein Schiff, das einen
+       Wimpernschlag lang mitten auf der Insel liegt, sieht aus wie
+       ein Fehler, weil es einer wäre. */
+    bootOrt();
+    volkBilderLaden();
+  }
+
+  function heldZiel() {
+    const h = spieler.held;
+    /* Dasselbe Ziel-in-der-Nähe wie bei den Läufern, und aus
+       demselben Grund: eine Gerade quer über die Insel führt bei
+       jeder Bucht durchs Wasser. */
+    const p = zufallsPunktNahe({ x: h.x, y: h.y, inselIdx: 0 });
+    h.zx = p.x; h.zy = p.y;
+  }
+
+  function heldSchritt(dt, jetzt) {
+    const h = spieler.held;
+    if (jetzt < h.ruheBis) return;
+    const dx = h.zx - h.x, dy = h.zy - h.y;
+    const d = Math.hypot(dx, dy);
+    if (d < .10) {
+      // Stehenbleiben ist die Hälfte des Gehens: eine Figur, die
+      // ununterbrochen unterwegs ist, wirkt gehetzt.
+      if (Math.random() < .45) h.ruheBis = jetzt + 2 + Math.random() * 7;
+      heldZiel();
+      return;
+    }
+    const s = Math.min(1, HELD_TEMPO * dt / d);
+    const nx = h.x + dx * s, ny = h.y + dy * s;
+    /* Derselbe Küsten-Riegel wie bei den Läufern: ginge der Schritt
+       ins Wasser, wird er nicht gegangen. Die Figur prallt ab und
+       sucht sich ein neues Ziel. */
+    const z = feldAt(nx, ny);
+    if (!z || !aufHauptinsel(z)) { heldZiel(); return; }
+    h.x = nx; h.y = ny;
+    if (Math.abs(dx) > .02) h.flip = dx < 0;
+  }
+
+  /* Wo das Schiff auf seiner Bahn gerade liegt — und in welche
+     Richtung es schaut. */
+  function bootOrt() {
+    const b = spieler.boot, insel = welt.inseln[0];
+    for (let i = 0; i < 8; i++) {
+      b.x = insel.cx + Math.cos(b.winkel) * b.r;
+      b.y = insel.cy + Math.sin(b.winkel) * b.r;
+      /* Land unterm Kiel: hinausrücken. Der Radius wächst dabei und
+         schrumpft nie wieder — nach einer Runde umfährt die Bahn
+         alles. Ließe man ihn zurückfedern, führe das Schiff bei
+         jeder Umrundung an derselben Stelle wieder auf Grund. */
+      if (!feldAt(b.x, b.y)) break;
+      b.r += .5;
+    }
+    /* Das Bild schaut nach LINKS (der Bug liegt links), gespiegelt
+       wird also bei Fahrt nach rechts. Gelesen wird das aus dem
+       WINKEL und nicht aus „x ist größer als vorhin": die Insel
+       liegt um (0,0), das Schiff fährt zweimal je Runde durch x ≈ 0
+       — und genau dort stünde ein Vergleich still. */
+    b.flip = Math.sin(b.winkel) < 0;
+  }
+
+  function bootSchritt(dt) {
+    const b = spieler.boot;
+    /* Der Winkel wächst mit der BAHNgeschwindigkeit geteilt durch den
+       Radius. Ein fester Winkel je Sekunde ließe das Schiff um eine
+       große Insel rasen und um eine kleine kriechen — dieselbe Zahl
+       hieße dann nicht mehr dasselbe. */
+    b.winkel = (b.winkel + BOOT_TEMPO / Math.max(1, b.r) * dt) % 6.283185;
+    bootOrt();
+  }
+
+  /* Das Schiff. Es wird VOR allem anderen gemalt: es liegt auf dem
+     Wasser, also hinter jedem Tier, das gerade darüber hinwegfliegt.
+
+     Gemalt wird um die Bildmitte und gedreht wird ein wenig — beides
+     zusammen ist das Schaukeln. Der Kiel sitzt auf der Wasserlinie,
+     weil der Zuschnitt unten am Rumpf endet (heldsprites.mjs). */
+  function bootMalen(P) {
+    const b = spieler.boot, im = spieler.imBoot;
+    if (!im || !im.width) return;
+    const w = BOOT_BREIT * P, h = w * (im.height / im.width);
+    const wiege = Math.sin(simZeit * .55 + 1.3) * .055 * P;
+    const px = sxp(b.x), py = syp(b.y) + wiege;
+    b._mx = px; b._my = py - h / 2; b._w = w; b._h = h;
+    if (px < -w || px > sicht.w + w || py < -h || py > sicht.h + h) return;
+
+    // Der Schatten auf dem Wasser. Ohne ihn klebt das Schiff auf dem
+    // Meer, statt darin zu liegen.
+    c2d.beginPath();
+    c2d.ellipse(px, py - h * .02, w * .34, h * .05, 0, 0, 6.2832);
+    c2d.fillStyle = 'rgba(6, 26, 45, .22)';
+    c2d.fill();
+
+    c2d.save();
+    c2d.translate(px, py);
+    c2d.rotate(Math.sin(simZeit * .42) * .035);
+    if (b.flip) c2d.scale(-1, 1);
+    c2d.drawImage(im, -w / 2, -h, w, h);
+    c2d.restore();
+  }
+
+  /* Die Figur wird nicht selbst gemalt, sondern in die Liste der
+     Tiere GEHÄNGT (zuMalen). Nur so steht sie richtig zwischen
+     ihnen: vor dem, was weiter hinten ist, hinter dem, was weiter
+     vorn steht.
+
+     Sie trägt dafür `stufe: 0` und `_hell: false` — damit gehen
+     Glühen, Funken und der goldene Ring von allein an ihr vorbei,
+     ohne dass in jeder der vier Schleifen eine Ausnahme steht. */
+  function heldMasse(P) {
+    const h = spieler.held, im = spieler.imHeld;
+    if (!im || !im.width) return null;
+    const hoch = HELD_HOCH * P, breit = hoch * (im.width / im.height);
+    const gy = bodenY(h.x, h.y);
+    const px = sxp(h.x), py = syp(h.y + gy);
+    h._im = im;
+    h._w = breit; h._h = hoch;
+    h._x = px - breit / 2; h._y = py - hoch;
+    h._px = px; h._by = py;
+    h._mx = px; h._my = py - hoch / 2;
+    return h;
+  }
+
+  function heldSchatten(h) {
+    c2d.beginPath();
+    c2d.ellipse(h._px, h._by, h._w * .30, h._h * .055, 0, 0, 6.2832);
+    c2d.fillStyle = 'rgba(12, 30, 20, .26)';
+    c2d.fill();
+  }
+
+  /* Wer liegt unter diesem Punkt — die Figur oder das Schiff?
+     Die Figur zuerst: sie ist kleiner, und wo sich beide
+     überschneiden, ist sie die nähere. */
+  function spielerBei(x, y) {
+    if (!spieler) return null;
+    const drin = e => e && e._w
+      && x >= e._mx - e._w / 2 && x <= e._mx + e._w / 2
+      && y >= e._my - e._h / 2 && y <= e._my + e._h / 2;
+    if (drin(spieler.held)) return 'held';
+    if (drin(spieler.boot)) return 'boot';
+    return null;
+  }
+
   /* ─── Kamera ────────────────────────────────────────────────
      Ansicht und Kamera getrennt: die ANSICHT ist die Einpassung des
      viewBox in die Bühne (rechnet nach, was preserveAspectRatio
@@ -3357,7 +3616,14 @@
       a = Math.min(a, z.x); b = Math.max(b, z.x);
       c = Math.min(c, z.y); d = Math.max(d, z.y);
     }
-    const w = (b - a) + 2.2, h = (d - c) + 2.2;
+    /* Wasser rundum — und zwar so viel, dass das eigene Schiff im
+       Startbild MIT drauf ist. Es fährt eine knappe Kachel weiter
+       draußen als das äußerste Feld (BOOT_ABSTAND), und ein
+       Ausschnitt, der am Strand endet, versteckt genau das, was man
+       anklicken soll. Die Insel wird dadurch etwas kleiner; das ist
+       der Preis dafür, dass man zu Hause ist und nicht nur hinsieht. */
+    const rand = 2 * (BOOT_ABSTAND + 1.1);
+    const w = (b - a) + rand, h = (d - c) + rand;
     const mx = (a + b) / 2, my = (c + d) / 2;
     /* Gerechnet wird gegen das FREIE Fenster: die Unit-Leiste liegt
        über der Bühne, und eine Insel, die brav in der Mitte der
@@ -3460,7 +3726,11 @@
       if (e.type !== 'pointerup' || pts.size || !war || !start) { start = null; return; }
       const kurz = performance.now() - startZeit < 700;
       if (!tippAus && kurz && weg < 10 && solo && welt.isl) {
-        tierWaehlen(tierBei(war.x, war.y));
+        /* Erst du selbst, dann die Vokabeln. Figur und Schiff sind
+           größer als eine Echse und liegen im Zweifel obenauf — wer
+           auf sein Schiff tippt, meint sein Schiff. */
+        if (spielerBei(war.x, war.y)) volkOeffnen();
+        else tierWaehlen(tierBei(war.x, war.y));
       }
       start = null;
     };
@@ -3592,6 +3862,9 @@
   function tierBei(x, y) {
     for (let i = sichtbar.length - 1; i >= 0; i--) {
       const t = sichtbar[i];
+      // Die eigene Figur läuft in derselben Liste mit, ist aber
+      // keine Vokabel — für sie gibt es spielerBei().
+      if (t.held) continue;
       const hw = t._w / 2 + 6, hh = t._h / 2 + 6;
       if (x >= t._mx - hw && x <= t._mx + hw && y >= t._my - hh && y <= t._my + hh) return t;
     }
@@ -3639,9 +3912,14 @@
 
     const tiere = welt.tiere;
     if (dt > 0) for (let i = 0; i < tiere.length; i++) schritt(tiere[i], dt, simZeit);
+    if (dt > 0 && spieler) { heldSchritt(dt, simZeit); bootSchritt(dt); }
 
     c2d.clearRect(0, 0, sicht.w, sicht.h);
     const P = ppu();
+
+    /* Das eigene Schiff ganz hinten: es liegt auf dem Wasser, und
+       alles andere ist entweder an Land oder fliegt darüber. */
+    if (spieler) bootMalen(P);
 
     /* Was nicht auf dem Schirm ist, wird nicht gemalt. Ohne das
        kostet das Hineinzoomen genauso viel wie die Übersicht. */
@@ -3704,6 +3982,11 @@
       t._my = t._y + t._h / 2;
       zuMalen.push(t);
     }
+    /* Und du selbst, mitten unter ihnen. */
+    if (spieler) {
+      const h = heldMasse(P);
+      if (h) zuMalen.push(h);
+    }
     /* Von hinten nach vorn, dieselbe Regel wie beim Relief.
        Sortiert nach der WELT-Reihe und nicht nach dem
        Bildschirmpunkt: sonst schöbe sich ein fliegendes Tier vor
@@ -3736,6 +4019,9 @@
 
     // 3 · Die Tiere.
     for (const t of zuMalen) {
+      // Die Figur bekommt als einzige einen Bodenschatten: sie ist
+      // groß genug, dass sie ohne ihn über dem Gelände schwebt.
+      if (t.held) heldSchatten(t);
       c2d.globalAlpha = t._a;
       if (t.flip) {
         /* Gespiegelt wird um den ANKER und nicht um die Bildmitte:
@@ -3952,6 +4238,36 @@
         </div>
       </div>
 
+      <!-- ── Wer bin ich? ───────────────────────────────────────
+           Aufgemacht wird er von der INSEL aus: ein Tipp auf die
+           Figur oder auf das Schiff. Einen Knopf dafür gibt es
+           bewusst nicht — die Figur IST der Knopf, und wer sie
+           antippt, hat die Frage schon gestellt.
+
+           Im Kasten steht die Figur und nicht das Schiff (Sönkes
+           Vorgabe): das Schiff ist das, was man von weitem sieht,
+           die Figur das, was man ist. Das Schiff ändert sich mit. -->
+      <div class="wi-ov" data-part="volkov" hidden>
+        <div class="wi-ovbox wi-ovbox--volk">
+          <div class="wi-ovhead">
+            <span class="wi-ovtitle">Wer bist du?</span>
+            <button type="button" class="wi-ovclose" data-part="volkclose" aria-label="Schließen">×</button>
+          </div>
+          <div class="wi-ovbody">
+            <div class="wi-vhero">
+              <img class="wi-vbig" data-part="vbig" alt="" />
+              <div class="wi-vtxt">
+                <b data-part="vname"></b>
+                <span data-part="vsub"></span>
+              </div>
+            </div>
+            <span class="wi-modelab">Zu welchem Volk gehörst du?</span>
+            <div class="wi-vrow" data-part="vrow"></div>
+            <p class="wi-hint" data-part="vhint" hidden></p>
+          </div>
+        </div>
+      </div>
+
       <!-- Üben. Das Tier steht ÜBER der Frage und nicht daneben:
            es ist die Rückmeldung, und die soll man sehen, ohne den
            Blick zu bewegen.
@@ -4121,6 +4437,8 @@
       units: q('units'), uGriff: q('ugriff'), uBody: q('ubody'),
       uList: q('ulist'), uDet: q('udet'), card: q('card'), sBar: q('sbar'),
       setsOv: q('setsov'),
+      volkOv: q('volkov'), vBig: q('vbig'), vName: q('vname'),
+      vSub: q('vsub'), vRow: q('vrow'), vHint: q('vhint'),
       soloDir: q('solodir'), soloMode: q('solomode'), modeHint: q('modehint'),
       playOv: q('playov'), pMeta: q('pmeta'), pMon: q('pmon'),
       pProg: q('pprog'), pProgI: q('pprogi'), pProgN: q('pprogn'),
@@ -4136,6 +4454,13 @@
 
     q('ssets').addEventListener('click', () => { els.setsOv.hidden = false; renderSoloSets(); });
     q('setsclose').addEventListener('click', () => { els.setsOv.hidden = true; });
+    q('volkclose').addEventListener('click', () => { els.volkOv.hidden = true; });
+    // Am umschließenden Kasten und nicht an den acht Knöpfen: die
+    // Reihe wird bei jeder Wahl neu geschrieben.
+    els.vRow.addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (b) volkSetzen(+b.dataset.v);
+    });
     q('sgo').addEventListener('click', soloStart);
     q('pclose').addEventListener('click', () => {
       els.playOv.hidden = true;
@@ -4179,7 +4504,7 @@
     });
     // Ein Tipp neben den Kasten schließt ihn. Auf dem Tablet ist das
     // der Griff, den man ohne Erklärung findet.
-    for (const ov of [els.setsOv, els.playOv]) {
+    for (const ov of [els.setsOv, els.playOv, els.volkOv]) {
       ov.addEventListener('click', e => { if (e.target === ov) ov.hidden = true; });
     }
 
@@ -4272,6 +4597,11 @@
       welt.tiere.push(t);
       welt.nachStufe.set(id, t);
     }
+
+    /* Und zuletzt du selbst. Nach den Inseln, weil Figur und Schiff
+       beide die Hauptinsel brauchen — und nach den Tieren, weil die
+       Figur zwischen ihnen steht und nicht vor ihnen. */
+    spielerAufstellen();
 
     /* Erst jetzt: vorher stünde die Leiste über „Deine Insel wird
        gebaut …" und behauptete „Noch nichts freigespielt" — über eine
@@ -4378,6 +4708,77 @@
     aktivMerken();
     renderSoloSets();
     renderUnits();
+  }
+
+  /* ─── Dein Volk ─────────────────────────────────────────────
+     Der Kasten hinter der Figur. Er zeigt sie groß und darunter die
+     acht Völker zur Wahl — mehr steht hier noch nicht, und das ist
+     Absicht: das eigene Level kommt als Nächstes, und es gehört
+     genau hierher. */
+  function volkOeffnen() {
+    if (!spieler || !els.volkOv) return;
+    /* Das Kärtchen der zuletzt angetippten Echse geht mit zu. Beide
+       beantworten dieselbe Frage („was ist das da?"), und wer auf
+       sich selbst tippt, hat die alte Antwort damit weggelegt — ein
+       Kärtchen, das unter dem offenen Kasten stehen bleibt, ist beim
+       Schließen eine Überraschung. */
+    kartenZu();
+    els.volkOv.hidden = false;
+    renderVolk();
+  }
+
+  function renderVolk() {
+    if (!spieler || !els.volkOv || els.volkOv.hidden) return;
+    const n = spieler.volk;
+    els.vBig.src = volkBild(n);
+    els.vBig.alt = volkName(n);
+    els.vName.textContent = volkName(n);
+    els.vSub.textContent = 'Deine Figur läuft über die Insel, dein Schiff fährt davor.';
+
+    /* Die Reihe zeigt die FIGUR jedes Volkes und nicht sein Wappen:
+       gewählt wird, wer man ist. Der Daumennagel ist derselbe
+       Zuschnitt, nur klein (heldsprites.mjs) — also genau das Bild,
+       das man danach auf der Insel wiederfindet. */
+    els.vRow.innerHTML = TEAMS.map((t, i) =>
+      `<button type="button" class="wi-vbtn${i === n ? ' is-on' : ''}" data-v="${i}"
+               style="--vf:${t.color}" aria-pressed="${i === n}">
+         <img src="${esc(volkDaumen(i))}" alt="" loading="lazy" />
+         <span>${esc(t.name)}</span>
+       </button>`).join('');
+
+    /* „Gemerkt" und „nur hier gemerkt" dürfen nie gleich aussehen.
+       Fehlt Migration 0143, funktioniert die Wahl trotzdem — sie
+       bleibt dann aber an diesem Gerät, und das steht dann da. */
+    els.vHint.hidden = !volkNurHier;
+    els.vHint.textContent = volkNurHier
+      ? 'Dein Volk merkt sich gerade nur dieses Gerät — in der Datenbank fehlt die neueste Migration.'
+      : '';
+  }
+
+  async function volkSetzen(n) {
+    if (!spieler || !(n >= 0 && n < TEAMS.length) || n === spieler.volk) return;
+    /* Sofort umschalten, den Server danach fragen — dasselbe Muster
+       wie bei den Wappen in der Lobby. Ein Kind, das sein Volk
+       wechselt, soll die Figur wechseln sehen und nicht auf eine
+       Antwort warten. */
+    spieler.volk = n;
+    volkBilderLaden();
+    if (solo) solo.settings = Object.assign({}, solo.settings, { faction: n });
+    try { localStorage.setItem(WI_VOLK_KEY, String(n)); } catch (e) { /* egal */ }
+    renderVolk();
+
+    const r = await ctx.actions.call('wi_solo_avatar', { p_faction: n });
+    if (r.ok) {
+      if (r.settings) solo.settings = r.settings;
+      volkNurHier = false;
+    } else {
+      /* Eine fehlende Migration ist kein Netzfehler und keine
+         Ablehnung: die Wahl steht, sie steht nur nicht am Server.
+         Alles andere ist ein echter Fehler und gehört in den Toast. */
+      volkNurHier = true;
+      if (r.error !== 'fn_missing') ctx.toast(ctx.errText(r.error));
+    }
+    renderVolk();
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -5795,6 +6196,7 @@
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
       practice = false; lastPhase = null; soloClaimAt = 0;
       solo = null; soloTask = null; simZeit = 0; letzterT = 0; nacht = 0;
+      spieler = null; volkGen = 0; volkNurHier = false;
       unitOffen = null; markiert = null; tierOffen = null; randLinks = 0;
       sichtbar = []; unitVergessen();
       kart = null; kartAnim = null; feiernd = false; kartZiel = 'karte';
@@ -5897,6 +6299,9 @@
          Der Weltzustand geht dagegen weg: er gehört zu einer
          bestimmten Insel. */
       solo = null; soloTask = null; c2d = null; kart = null;
+      /* Figur und Schiff gehören zu EINER Insel — anders als die
+         eingefärbten Tierbilder, die an keinem Kind hängen. */
+      spieler = null;
       welt.isl = null; welt.vb = null; welt.inseln = null; welt.haupt = null;
       welt.tiere = []; welt.nachStufe = new Map();
     }

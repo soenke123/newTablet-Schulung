@@ -1748,6 +1748,95 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   margin-bottom: 4px;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   WER BIST DU  ·  Figur und Volk
+   ══════════════════════════════════════════════════════════════
+   Aufgemacht wird dieser Kasten von der Insel aus — ein Tipp auf die
+   eigene Figur oder auf das eigene Schiff. Er benutzt die Hülle der
+   anderen beiden Kästen (.wi-ov/.wi-ovbox) und bringt nur seinen
+   Inhalt mit; das eigene Präfix `wi-v` ist Pflicht und keine Zier:
+   eine tool.css bedient alle drei Rollen, und ein zweiter Satz
+   Regeln auf einen bestehenden Namen verschöbe das Lehrer-Pult
+   (Regel: feedback_css_class_collision_one_stylesheet).
+
+   Schmaler als die anderen (520 statt 720): darin stehen eine Figur
+   und acht Knöpfe, sonst nichts. Ein Kasten, der breiter ist als
+   sein Inhalt, sieht aus, als fehle etwas — und hier fehlt bewusst
+   etwas, nämlich das Level. Das kommt als Nächstes. */
+.wi-ovbox--volk { max-width: 520px; }
+
+/* Die Figur groß, der Name daneben. Der dunkle Grund ist derselbe
+   wie beim Tier auf der Übungskarte und aus demselben Grund: die
+   Vorlagen sind für ein Meer gezeichnet, auf Weiß verliert der helle
+   Bauch seinen Umriss. */
+.wi-vhero {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: var(--r-md, 18px);
+  background: linear-gradient(180deg, #172c3e 0%, #0e1c2a 100%);
+  border: 1px solid rgba(120, 160, 190, .22);
+}
+.wi-vbig {
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  max-width: 40%;
+  max-height: clamp(120px, 26vh, 210px);
+  object-fit: contain;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .45));
+}
+.wi-vtxt { display: grid; gap: 4px; min-width: 0; }
+.wi-vtxt > b { font-size: 20px; font-weight: 800; color: #f2f7fb; }
+.wi-vtxt > span { font-size: 13px; color: #9db3c4; }
+
+/* Die acht Völker. Ein Raster und keine Zeile: auf dem Telefon
+   passen zwei nebeneinander, auf dem Tablet vier — ohne dass hier
+   eine Bildschirmbreite als Zahl steht. */
+.wi-vrow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 8px;
+}
+.wi-vbtn {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px 6px;
+  cursor: pointer;
+  border-radius: var(--r-sm, 12px);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  opacity: .62;
+  transition: opacity .14s ease, border-color .14s ease, transform .14s ease;
+}
+.wi-vbtn img {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  object-position: bottom;
+}
+.wi-vbtn:hover { opacity: .85; }
+/* Gewählt: volle Farbe, die Volksfarbe als Rand und als Schein —
+   dieselbe Sprache wie die Wappenreihe in der Lobby (.wi-pickbtn). */
+.wi-vbtn.is-on {
+  opacity: 1;
+  color: var(--ink);
+  border-color: var(--vf, var(--accent));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--vf, var(--accent)) 40%, transparent);
+  background: color-mix(in srgb, var(--vf, var(--accent)) 12%, var(--paper));
+}
+.wi-vbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* ── Das Tier auf der Übungskarte ──────────────────────────────
    Der dunkle Kasten ist kein Zierrat: die Tiere sind für ein Meer
    gezeichnet, und auf weißem Grund verliert der helle Bauch seinen

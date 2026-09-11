@@ -989,10 +989,15 @@ function makeSoloEnv() {
   };
 
   env.fehlendeBilder = [];
+  // Womit angefangen wurde: Figur und Schiff werden erst beim
+  // Aufstellen und dann bei jedem Volkswechsel geholt — dass das
+  // RICHTIGE Bild geholt wird, sieht man nur hier.
+  env.geladeneBilder = [];
   class FakeImage {
     constructor() { this.width = 1; this.height = 1; }
     set src(v) {
       this._src = v;
+      env.geladeneBilder.push(String(v));
       const datei = path.join(MPSKILLS, decodeURI(String(v)));
       setTimeout(() => {
         if (!fs.existsSync(datei)) { env.fehlendeBilder.push(v); this.onerror?.(); return; }
@@ -1110,6 +1115,28 @@ function tippeAufTier(root, document, schritt = 34) {
       zeig(stage, document, 'pointerdown', x, y);
       zeig(stage, document, 'pointerup', x, y);
       if (!karte.hidden) return { x, y };
+    }
+  }
+  return null;
+}
+
+/* Dasselbe für die eigene Figur (oder das Schiff): suchen, bis der
+   Kasten „Wer bist du?" aufgeht.
+
+   Der Schritt bleibt bei 34 und darf NICHT kleiner werden: zwei
+   Tipps, die weniger als 30 px auseinanderliegen und schnell
+   aufeinander folgen, sind ein Doppeltipp — der setzt die Kamera
+   zurück und unterdrückt die Auswahl. Getroffen wird trotzdem: die
+   Figur ist rund 43 × 81 Bildpunkte groß, das Schiff mehr als
+   doppelt so breit. */
+function tippeAufFigur(root, document, schritt = 34) {
+  const stage = root.querySelector('[data-part="stage"]');
+  const kasten = root.querySelector('[data-part="volkov"]');
+  for (let y = 20; y < RECT.height; y += schritt) {
+    for (let x = 20; x < RECT.width; x += schritt) {
+      zeig(stage, document, 'pointerdown', x, y);
+      zeig(stage, document, 'pointerup', x, y);
+      if (!kasten.hidden) return { x, y };
     }
   }
   return null;
@@ -1611,6 +1638,105 @@ async function testTierTipp() {
   tool.unmount();
 }
 
+/* Die eigene Figur und das eigene Schiff (11.09.2026).
+
+   Geprüft wird, was man am Schreibtisch prüfen kann: dass die
+   Bilder wirklich daliegen, dass ein Tipp auf die Figur den richtigen
+   Kasten öffnet (und nicht das Kärtchen der Echsen), dass die
+   Voreinstellung die Brokkoli-Giraffen sind und dass ein Wechsel
+   sofort gilt und am Server ankommt. Wie es AUSSIEHT, prüft linkedom
+   nicht — das bleibt der Blick aufs Gerät. */
+async function testFigur() {
+  console.log('\n— Figur und Schiff —');
+  const gesetzt = [];
+  const { tool, root, env, calls, document } = await mountSolo(soloView(40, i => i % 5), {
+    wi_solo_avatar: args => { gesetzt.push(args.p_faction); return { ok: true, settings: { faction: args.p_faction } }; },
+    wi_solo_unit: args => soloUnit(args.p_set, 40, i => i % 5)
+  }, { live: true });
+  await wait(60);
+
+  ok('die Bilder von Figur und Schiff liegen wirklich da',
+     env.fehlendeBilder.length === 0, env.fehlendeBilder.join(', '));
+  // Voreinstellung: Brokkoli-Giraffen, also Volk 2 (Sönkes Vorgabe).
+  ok('geladen wird die Figur des voreingestellten Volkes',
+     env.geladeneBilder.includes('tools/wordisland/sprites/held/2.png'));
+  ok('und sein Schiff',
+     env.geladeneBilder.includes('tools/wordisland/sprites/boot/2.png'));
+
+  const kasten = root.querySelector('[data-part="volkov"]');
+  const karte = root.querySelector('[data-part="card"]');
+  ok('der Kasten ist zu, solange niemand tippt', kasten.hidden === true);
+
+  const treffer = tippeAufFigur(root, document);
+  ok('ein Tipp auf Figur oder Schiff öffnet ihn', !!treffer,
+     treffer ? `bei ${treffer.x}/${treffer.y}` : 'nichts getroffen');
+  if (!treffer) { tool.unmount(); return; }
+
+  /* Und zwar IHN und nicht das Kärtchen der Echsen. Beide hängen am
+     selben Tipp; wer das verwechselt, merkt es sonst erst am Gerät. */
+  ok('und nicht das Kärtchen einer Vokabel', karte.hidden === true);
+  ok('darin steht die Figur, nicht das Schiff',
+     /held\/2\.png$/.test(root.querySelector('[data-part="vbig"]').getAttribute('src') || ''),
+     root.querySelector('[data-part="vbig"]').getAttribute('src'));
+  ok('der Name des Volkes steht daneben',
+     root.querySelector('[data-part="vname"]').textContent === 'Brokkoli-Giraffen');
+
+  const knoepfe = [...root.querySelectorAll('.wi-vbtn')];
+  ok('alle acht Völker stehen zur Wahl', knoepfe.length === 8, String(knoepfe.length));
+  ok('das eigene ist hervorgehoben',
+     knoepfe.filter(b => b.classList.contains('is-on')).map(b => b.dataset.v).join() === '2');
+  ok('kein Hinweis, solange der Server mitspielt',
+     root.querySelector('[data-part="vhint"]').hidden === true);
+
+  click(knoepfe[5], document);
+  await wait(30);
+  ok('ein anderes Volk wird sofort übernommen',
+     root.querySelector('[data-part="vname"]').textContent === 'Okto-Pferdchen');
+  ok('und beim Server gemerkt', gesetzt.join() === '5', js(gesetzt));
+  ok('die neuen Bilder werden geholt',
+     env.geladeneBilder.includes('tools/wordisland/sprites/held/5.png')
+     && env.geladeneBilder.includes('tools/wordisland/sprites/boot/5.png'));
+  ok('gesetzt wird über wi_solo_avatar und nicht über wi_solo_settings',
+     calls.some(c => c[0] === 'wi_solo_avatar')
+     && !calls.some(c => c[0] === 'wi_solo_settings'));
+
+  // Ein Ziehen ist kein Tipp — dieselbe Trennung wie bei den Echsen.
+  const stage = root.querySelector('[data-part="stage"]');
+  click(root.querySelector('[data-part="volkclose"]'), document);
+  ok('der Schließer macht ihn wieder zu', kasten.hidden === true);
+  zeig(stage, document, 'pointerdown', treffer.x, treffer.y);
+  zeig(stage, document, 'pointermove', treffer.x + 90, treffer.y + 70);
+  zeig(stage, document, 'pointerup', treffer.x + 90, treffer.y + 70);
+  ok('ein Ziehen über die Figur öffnet nichts', kasten.hidden === true);
+
+  tool.unmount();
+}
+
+/* Dieselbe Wahl an einer Datenbank ohne 0143. Sie muss GELTEN (das
+   Gerät merkt sie sich) und sie muss SICHTBAR anders sein als eine
+   gemerkte — sonst wundert sich am nächsten Tablet jemand. */
+async function testFigurOhneMigration() {
+  console.log('\n— Volk wählen ohne Migration 0143 —');
+  const { tool, root, document } = await mountSolo(soloView(30, () => 1), {
+    wi_solo_avatar: () => ({ ok: false, error: 'fn_missing' })
+  }, { live: true });
+  await wait(60);
+
+  const treffer = tippeAufFigur(root, document);
+  ok('die Figur steht auch ohne 0143 auf der Insel', !!treffer);
+  if (!treffer) { tool.unmount(); return; }
+
+  click([...root.querySelectorAll('.wi-vbtn')][7], document);
+  await wait(30);
+  ok('die Wahl gilt trotzdem sofort',
+     root.querySelector('[data-part="vname"]').textContent === 'Spuk-Einhorn');
+  const hint = root.querySelector('[data-part="vhint"]');
+  ok('und der Kasten sagt, dass sie nur an diesem Gerät hängt',
+     hint.hidden === false && /Gerät/.test(hint.textContent), hint.textContent);
+
+  tool.unmount();
+}
+
 /* Eine Datenbank ohne 0142: words_list kommt ohne `u`. Das ist
    NICHT „die Wörter gehören zu keiner Unit" — es darf also nichts
    blass werden und nichts abstürzen. */
@@ -2031,6 +2157,8 @@ async function testSoloOhneMigration() {
   await testSoloOhneMigration();
   await testUnitLeiste();
   await testTierTipp();
+  await testFigur();
+  await testFigurOhneMigration();
   await testUnitsOhneMigration();
   await testBlassUndRing();
   console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');
