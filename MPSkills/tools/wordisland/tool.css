@@ -1200,6 +1200,13 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+  /* Die Linie, auf der alles endet, was ÜBER dem Knopf-Kasten steht:
+     dessen eigener Abstand zur Kante (10) + seine GEMESSENE Höhe
+     (tool.js, randMessen) + eine saubere Lücke (14). Der Ersatzwert
+     gilt nur für den Augenblick vor der ersten Messung.
+     Vorher stand an beiden Stellen eine geratene 76 — und 76 war
+     eben nicht mehr als die Leiste hoch ist. */
+  --wi-ueber: calc(24px + var(--wi-sbar-h, 62px) + env(safe-area-inset-bottom, 0px));
 }
 
 /* Die Bühne. `touch-action: none`, sonst schiebt der Finger die
@@ -1285,9 +1292,13 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   left: auto;
   right: 10px;
   bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  /* Nie unter die Unit-Leiste wachsen: `--wi-rand` ist deren
-     gemessene Breite (tool.js, randLinks). */
-  max-width: calc(100% - var(--wi-rand, 0px) - 20px);
+  /* KEINE Höchstbreite aus `--wi-rand` mehr (Sönke, 11.09.2026:
+     „die soll stabil bleiben und nicht von den units weggeschoben
+     werden"). Die Breite schrumpfte beim Aufklappen der Unit-Leiste,
+     die zwei Knöpfe darin schrumpfen aber nicht — sie quollen also
+     rechts aus ihrem eigenen Kasten heraus. Nötig war die Rechnung
+     ohnehin nie: auf schmalen Geräten endet die Unit-Leiste ÜBER
+     diesem Kasten, auf breiten ist links wie rechts Platz. */
   z-index: 20;
   display: flex;
   align-items: center;
@@ -1310,6 +1321,25 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    eines Balkens, der über die ganze Breite ging. Der Kasten steht
    jetzt selbst rechts und ist nur so breit wie seine zwei Knöpfe. */
 .wi-sbar > .wi-btn { flex: 0 0 auto; }
+
+/* Das Zahnrad. Ein Kreis statt einer Pille: es ist ein Zeichen und
+   kein Wort, und eine Pille um ein einzelnes Zeichen sieht aus wie
+   ein Knopf, dem die Beschriftung abhandengekommen ist.
+   Die Höhe kommt vom Nachbarn („Vokabeln üben"), damit beide auf
+   derselben Linie sitzen — 42px sind dessen 10er-Polsterung plus
+   Zeile plus Rahmen. */
+.wi-sgear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--ink-soft);
+}
+.wi-sgear svg { width: 21px; height: 21px; display: block; }
+.wi-sgear:hover { color: var(--ink); }
 
 /* Die Zahlen der Insel standen bis 10.09.2026 hier unten — also
    woanders als die Liste, die sie erklären. Sie sind in den Kopf der
@@ -1400,7 +1430,7 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 @media (max-width: 720px) {
   .wi-units {
     width: min(300px, 68vw);
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    bottom: var(--wi-ueber);
   }
 }
 
@@ -1650,10 +1680,16 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    nach der anderen antippt, will die Antwort immer an derselben
    Stelle lesen (Sönke, 10.09.2026).
 
-   Genauer: DIREKT ÜBER den beiden Knöpfen, in derselben Spalte —
-   Kärtchen und Kasten haben denselben rechten Rand, das Kärtchen
-   sitzt auf dem Kasten auf. So gibt es unten rechts EINEN Ort für
-   alles, was nicht die Insel ist.
+   Genauer: ÜBER den beiden Knöpfen, in derselben Spalte — Kärtchen
+   und Kasten haben denselben rechten Rand. So gibt es unten rechts
+   EINEN Ort für alles, was nicht die Insel ist.
+
+   Dazwischen liegt eine echte Lücke (Sönke, 11.09.2026: „hier hätte
+   ich gerne etwas abstand, eine saubere lücke"). Bis dahin saß das
+   Kärtchen dem Kasten auf: die 76 hier waren geraten und trafen die
+   Höhe der Leiste fast auf den Pixel. Jetzt kommt die Höhe gemessen
+   aus tool.js (`--wi-sbar-h`), und `--wi-ueber` legt die Lücke
+   darauf — dieselbe Linie, an der auch die Unit-Leiste endet.
 
    `--wi-rand` ist die Breite der Unit-Leiste, gemessen in tool.js.
    Sie steht links; die Zahl deckelt hier nur die BREITE, damit das
@@ -1667,7 +1703,7 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   position: absolute;
   z-index: 30;
   right: 10px;
-  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  bottom: var(--wi-ueber);
   max-width: calc(100% - var(--wi-rand, 0px) - 20px);
   max-height: calc(100% - 150px);
   overflow: auto;

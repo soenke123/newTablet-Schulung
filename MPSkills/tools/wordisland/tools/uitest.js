@@ -1392,6 +1392,14 @@ async function testSoloUeben() {
      `${env.rafs - rafsVor} Bilder`);
 
   /* ── Die Einstellungen ─────────────────────────────────────── */
+  /* Seit 11.09.2026 trägt der Knopf nur noch ein Zahnrad. Ein Bild
+     ohne aria-label ist für die Vorlesefunktion ein leerer Knopf —
+     und das sieht man am Bildschirm nie. */
+  const zahnrad = root.querySelector('[data-part="ssets"]');
+  ok('das Zahnrad sagt trotzdem, was es ist',
+     zahnrad.getAttribute('aria-label') === 'Einstellungen' &&
+     zahnrad.querySelector('svg') !== null &&
+     zahnrad.textContent.trim() === '');
   click(root.querySelector('[data-part="ssets"]'), document);
   await wait(20);
   const sets = root.querySelector('[data-part="setsov"]');

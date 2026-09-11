@@ -3904,12 +3904,26 @@
            reicht. Jetzt ist er nur so breit wie seine zwei Knöpfe;
            der Abstandhalter, der sie ans rechte Ende schob, ist
            deshalb weg. -->
-      <header class="wi-sbar">
+      <header class="wi-sbar" data-part="sbar">
         <!-- Beide gesperrt, bis die Insel steht: davor gibt es weder
              Units zum Auswählen noch ein Tier zum Anzeigen, und ein
              Knopf, der ins Leere greift, ist schlimmer als einer,
-             der kurz grau ist. soloBuild macht sie frei. -->
-        <button type="button" class="wi-btn wi-btn--ghost" data-part="ssets" disabled>Einstellungen</button>
+             der kurz grau ist. soloBuild macht sie frei.
+
+             Die Einstellungen sind seit 11.09.2026 nur noch das
+             Zahnrad (Sönke). Das Wort daneben machte den Kasten auf
+             dem Telefon fast so breit wie die halbe Bühne, und ein
+             Zahnrad muss niemand lesen. Für die Vorlesefunktion ist
+             ein Bild leer — deshalb bleibt die Beschriftung als
+             aria-label stehen. -->
+        <button type="button" class="wi-btn wi-btn--ghost wi-sgear" data-part="ssets"
+                disabled aria-label="Einstellungen" title="Einstellungen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="3.2"></circle>
+            <path d="M19.9 15.2a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56v.18a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3.4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.08a1.7 1.7 0 0 0 1.03-1.56V3.4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.08a1.7 1.7 0 0 0 1.56 1.03h.18a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.56 1.03z"></path>
+          </svg>
+        </button>
         <button type="button" class="wi-btn" data-part="sgo" disabled>Vokabeln üben</button>
       </header>
 
@@ -4105,7 +4119,7 @@
       veil: q('veil'), cvs: q('cvs'), load: q('load'), loadTxt: q('loadtxt'),
       sWords: q('swords'), sLegend: q('slegend'),
       units: q('units'), uGriff: q('ugriff'), uBody: q('ubody'),
-      uList: q('ulist'), uDet: q('udet'), card: q('card'),
+      uList: q('ulist'), uDet: q('udet'), card: q('card'), sBar: q('sbar'),
       setsOv: q('setsov'),
       soloDir: q('solodir'), soloMode: q('solomode'), modeHint: q('modehint'),
       playOv: q('playov'), pMeta: q('pmeta'), pMon: q('pmon'),
@@ -4435,10 +4449,19 @@
      ganze Leinwand, auch hinter der Leiste. Nur die KAMERA weiß von
      einem linken Rand und zentriert auf den Rest.
 
-     Dieselbe Zahl bekommt das Stylesheet als `--wi-rand`: Kärtchen
-     und Knopf-Kasten stehen rechts und dürfen auf einem schmalen
-     Gerät nicht unter die Leiste wachsen — wie breit die gerade
-     ist, weiß nur, wer sie gemessen hat. */
+     Dieselbe Zahl bekommt das Stylesheet als `--wi-rand`: das
+     Kärtchen steht rechts und darf auf einem schmalen Gerät nicht
+     unter die Leiste wachsen — wie breit die gerade ist, weiß nur,
+     wer sie gemessen hat.
+
+     Der Knopf-Kasten liest die Zahl NICHT mehr (Sönke, 11.09.2026:
+     „die soll stabil bleiben"). Er hatte daraus eine Höchstbreite
+     gemacht, und weil seine zwei Knöpfe nicht schrumpfen, quollen
+     sie beim Aufklappen der Unit-Leiste rechts aus ihrem eigenen
+     Kasten heraus — es sah aus, als würde er weggeschoben. Er steht
+     jetzt fest an der rechten unteren Ecke; untereinander geraten
+     die beiden trotzdem nie, weil die Unit-Leiste auf schmalen
+     Geräten über ihm endet (tool.css, @media). */
   function randMessen() {
     randLinks = 0;
     if (unitsAuf && els.units && sicht.w) {
@@ -4449,6 +4472,16 @@
     }
     if (root && root.style) {
       root.style.setProperty('--wi-rand', Math.round(randLinks) + 'px');
+    }
+    /* Wie hoch der Knopf-Kasten ist. Kärtchen und Unit-Leiste enden
+       DARÜBER, und dafür stand bis 11.09.2026 an zwei Stellen im
+       Stylesheet eine 76 — geraten aus Polsterung und Schriftgröße.
+       Die Rechnung ging knapp auf, und „knapp" heißt: das Kärtchen
+       saß dem Kasten auf. Gemessen hält der Abstand auch dann, wenn
+       die Schrift größer wird. */
+    if (els.sBar && root && root.style) {
+      const s = els.sBar.getBoundingClientRect();
+      if (s.height) root.style.setProperty('--wi-sbar-h', Math.round(s.height) + 'px');
     }
   }
 
