@@ -4379,10 +4379,19 @@
       </div>
 
       <!-- ── Das eigene Level ────────────────────────────────────
-           Sönke, 13.09.2026: ein Balken, der auf einen Blick zeigt,
-           wo man gerade steht — die Abstiegsgrenze links, die
-           Aufstiegsgrenze rechts, der eigene Schnitt dazwischen. Er
-           liegt ÜBER der Bühne wie die Unit-Leiste und der Kasten
+           Sönke, 13.09.2026: „ein Balken von Level 1 bis Level 5,
+           jede Levelgrenze ist markiert, und die Grenzen verschieben
+           sich beim Auf- und Abstieg."
+
+           Der Balken ist deshalb die GANZE Leiter und nicht mehr nur
+           das Fenster des aktuellen Levels: eine Zeitachse von 0 bis
+           LVL_ENDE mit vier Strichen darauf. Wo die Striche liegen,
+           hängt am Level — nach oben gilt die Aufstiegsgrenze, nach
+           unten die (niedrigere) Abstiegsgrenze, siehe lvlGrenzen.
+           Damit ist der Abschnitt, in dem der eigene Strich steht,
+           genau das Level, das der Server rechnet.
+
+           Er liegt ÜBER der Bühne wie die Unit-Leiste und der Kasten
            unten rechts, und ist ein eigener Knopf zur Figur: derselbe
            „Wer bist du?"-Kasten, den auch ein Tipp auf die Figur
            selbst öffnet (volkOeffnen). -->
@@ -4394,6 +4403,10 @@
                aria-valuemin="0" aria-valuemax="100">
             <div class="wi-lvlfill" data-part="lvlfill"></div>
             <div class="wi-lvlbonus" data-part="lvlbonus"></div>
+            <!-- Abschnitte, Grenzstriche und die heutige Nadel. Sie
+                 liegen ÜBER den zwei Füllungen und werden von
+                 renderLevel geschrieben. -->
+            <div class="wi-lvlmarks" data-part="lvlmarks"></div>
           </div>
         </button>
         <span class="wi-lvltoday" data-part="lvltoday"></span>
@@ -4494,7 +4507,14 @@
 
            Im Kasten steht die Figur und nicht das Schiff (Sönkes
            Vorgabe): das Schiff ist das, was man von weitem sieht,
-           die Figur das, was man ist. Das Schiff ändert sich mit. -->
+           die Figur das, was man ist. Das Schiff ändert sich mit.
+
+           Seit 13.09.2026 geht es hier um das, was man ERREICHT hat,
+           und nicht mehr ums Umziehen: die acht Völker sind in ihren
+           eigenen Kasten gezogen (volkwov), erreichbar über das
+           kleine Zeichen an der Figur. Sönke: „in der Charakter-
+           Ansicht geht es in erster Linie um die ganzen States,
+           welche man erreicht hat." -->
       <div class="wi-ov" data-part="volkov" hidden>
         <div class="wi-ovbox wi-ovbox--volk">
           <div class="wi-ovhead">
@@ -4508,23 +4528,48 @@
                 <b data-part="vname"></b>
                 <span data-part="vsub"></span>
               </div>
+              <!-- Der Weg zum Umziehen. Er sitzt AN der Figur, weil
+                   er sie meint — ein Knopf in einer Knopfreihe wäre
+                   ein zweiter Hauptgegenstand in einem Kasten, der
+                   von Erreichtem handeln soll. -->
+              <button type="button" class="wi-vswap" data-part="vswap"
+                      aria-label="Volk wechseln" title="Volk wechseln">⇄</button>
             </div>
-            <span class="wi-modelab">Zu welchem Volk gehörst du?</span>
-            <div class="wi-vrow" data-part="vrow"></div>
-            <p class="wi-hint" data-part="vhint" hidden></p>
 
             <!-- ── Das eigene Level, ausführlich ──────────────────
-                 Hier und nicht im Balken oben: der Balken zeigt den
-                 Augenblick, das hier zeigt die Woche. Die Historie
-                 wird erst geladen, wenn der Kasten wirklich aufgeht
-                 (wi_solo_level_history) — beim Üben braucht sie
-                 niemand. -->
-            <span class="wi-modelab wi-vlvl-lab">Dein Level</span>
+                 Hier und nicht im Balken oben: der Balken oben zeigt
+                 den Augenblick, das hier zeigt die Woche. Die
+                 Historie wird erst geladen, wenn der Kasten wirklich
+                 aufgeht (wi_solo_level_history) — beim Üben braucht
+                 sie niemand. -->
             <div class="wi-vlvl" data-part="vlvl"></div>
+            <!-- Dieselbe Leiter wie oben, nur groß: mit den Zeiten an
+                 den Grenzen, dem heutigen Stand und dem Schnitt, der
+                 über das Level entscheidet. -->
+            <div class="wi-vbar" data-part="vbar"></div>
             <div class="wi-vhist" data-part="vhist" hidden>
-              <div class="wi-vhistrows" data-part="vhistrows"></div>
+              <span class="wi-modelab">Deine Woche</span>
+              <div class="wi-vdays" data-part="vdays"></div>
+              <p class="wi-vweak" data-part="vweak"></p>
               <div class="wi-vtot" data-part="vtot"></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Volk wechseln ──────────────────────────────────────
+           Der zweite Kasten liegt ÜBER dem ersten (er steht später
+           im DOM) und macht ihn nicht zu: wer sein Volk gewählt hat,
+           ist wieder da, wo er hergekommen ist. -->
+      <div class="wi-ov" data-part="volkwov" hidden>
+        <div class="wi-ovbox wi-ovbox--volk">
+          <div class="wi-ovhead">
+            <span class="wi-ovtitle">Zu welchem Volk gehörst du?</span>
+            <button type="button" class="wi-ovclose" data-part="volkwclose" aria-label="Schließen">×</button>
+          </div>
+          <div class="wi-ovbody">
+            <div class="wi-vrow" data-part="vrow"></div>
+            <p class="wi-hint" data-part="vhint" hidden></p>
           </div>
         </div>
       </div>
@@ -4700,11 +4745,13 @@
       setsOv: q('setsov'),
       lvl: q('lvl'), lvlBtn: q('lvlbtn'), lvlNum: q('lvlnum'),
       lvlCrown: q('lvlcrown'), lvlBar: q('lvlbar'), lvlFill: q('lvlfill'),
-      lvlBonus: q('lvlbonus'), lvlToday: q('lvltoday'), lvlToast: q('lvltoast'),
+      lvlBonus: q('lvlbonus'), lvlMarks: q('lvlmarks'),
+      lvlToday: q('lvltoday'), lvlToast: q('lvltoast'),
       volkOv: q('volkov'), vBig: q('vbig'), vName: q('vname'),
-      vSub: q('vsub'), vRow: q('vrow'), vHint: q('vhint'),
-      vLvl: q('vlvl'), vHist: q('vhist'),
-      vHistRows: q('vhistrows'), vTot: q('vtot'),
+      vSub: q('vsub'), vSwap: q('vswap'),
+      volkWOv: q('volkwov'), vRow: q('vrow'), vHint: q('vhint'),
+      vLvl: q('vlvl'), vBar: q('vbar'), vHist: q('vhist'),
+      vDays: q('vdays'), vWeak: q('vweak'), vTot: q('vtot'),
       soloDir: q('solodir'), soloMode: q('solomode'), modeHint: q('modehint'),
       playOv: q('playov'), pMeta: q('pmeta'), pMon: q('pmon'),
       pProg: q('pprog'), pProgI: q('pprogi'), pProgN: q('pprogn'),
@@ -4727,6 +4774,14 @@
       if (nachklick()) return;
       els.volkOv.hidden = true;
     });
+    /* Das Zeichen an der Figur. Auch hier der nachgereichte Klick:
+       der Kasten geht beim Loslassen auf, und das Zeichen sitzt mitten
+       im Bild — also genau dort, wo der Finger gerade war. */
+    els.vSwap.addEventListener('click', () => {
+      if (nachklick()) return;
+      volkWechselOeffnen();
+    });
+    q('volkwclose').addEventListener('click', () => { els.volkWOv.hidden = true; });
     // Am umschließenden Kasten und nicht an den acht Knöpfen: die
     // Reihe wird bei jeder Wahl neu geschrieben.
     els.vRow.addEventListener('click', e => {
@@ -4780,7 +4835,7 @@
     });
     // Ein Tipp neben den Kasten schließt ihn. Auf dem Tablet ist das
     // der Griff, den man ohne Erklärung findet.
-    for (const ov of [els.setsOv, els.playOv, els.volkOv]) {
+    for (const ov of [els.setsOv, els.playOv, els.volkOv, els.volkWOv]) {
       ov.addEventListener('click', e => {
         // Nur der Volks-Kasten geht von der Insel aus auf; der
         // nachgereichte Klick trifft bei ihm den Grund genauso oft
@@ -5021,6 +5076,15 @@
     nachklickSperren();
   }
 
+  /* Der Kasten mit den acht Völkern. Er geht ÜBER dem „Wer bist
+     du?"-Kasten auf und lässt ihn stehen — das Umziehen ist ein
+     Abstecher und kein anderer Ort. */
+  function volkWechselOeffnen() {
+    if (!spieler || !els.volkWOv) return;
+    els.volkWOv.hidden = false;
+    renderVolkReihe();
+  }
+
   function renderVolk() {
     if (!spieler || !els.volkOv || els.volkOv.hidden) return;
     const n = spieler.volk;
@@ -5031,6 +5095,16 @@
     els.vName.textContent = volkName(n);
     els.vSub.textContent = 'Deine Figur läuft über die Insel, dein Schiff fährt davor.';
 
+    /* Die acht Knöpfe werden hier NICHT geschrieben: sie stehen im
+       Wechsel-Kasten, und der schreibt sie sich beim Aufgehen selbst.
+       Acht Bilder in einem Kasten vorzuhalten, den die meisten nie
+       öffnen, ist Ladezeit für nichts. */
+    renderVolkLevel();
+  }
+
+  function renderVolkReihe() {
+    if (!spieler || !els.vRow) return;
+    const n = spieler.volk;
     /* Die Reihe zeigt die FIGUR jedes Volkes und nicht sein Wappen:
        gewählt wird, wer man ist. Der Daumennagel ist derselbe
        Zuschnitt, nur klein (heldsprites.mjs) — also genau das Bild,
@@ -5049,8 +5123,6 @@
     els.vHint.textContent = volkNurHier
       ? 'Dein Volk merkt sich gerade nur dieses Gerät — in der Datenbank fehlt die neueste Migration.'
       : '';
-
-    renderVolkLevel();
   }
 
   /* ─── Das eigene Level, im „Wer bist du?"-Kasten ────────────
@@ -5064,11 +5136,80 @@
     const m = Math.floor(s / 60), r = s % 60;
     return m + ':' + String(r).padStart(2, '0') + ' min';
   }
+  // Dieselbe Zahl ohne die Einheit — für die sieben Tagesbalken und
+  // die vier Grenzen, wo „min" siebenmal nebeneinander stünde.
+  const minSekKurz = s => minSek(s).replace(' min', '');
+
+  /* ══════════════════════════════════════════════════════════
+     DIE LEITER DER FÜNF LEVEL
+     ══════════════════════════════════════════════════════════
+     Der Server (0145) schickt nur die ZWEI Grenzen des Levels, in
+     dem man gerade steht (up_secs/down_secs) — er braucht nicht
+     mehr. Ein Balken über alle fünf Level braucht alle vier, und
+     hier ist die einzige Stelle, an der die Tabelle aus der
+     Migration ein zweites Mal steht.
+
+     ⚠️ Die Grenzen sind NICHT symmetrisch: zwischen Aufstiegs- und
+     Abstiegsgrenze liegt der Puffer (0145 „schnell rauf, langsam
+     runter"). Für jemanden auf Level 3 liegt die Grenze nach oben
+     bei 7:00, die nach unten aber bei 3:00 und nicht bei 5:00. Die
+     Striche WANDERN deshalb, sobald man auf- oder absteigt — genau
+     das soll man sehen (Sönke, 13.09.2026).
+
+     Und es geht auf: der Abschnitt, in dem der eigene Strich steht,
+     ist immer genau das Level, das wi_solo_level_calc rechnet —
+     auch über mehrere Stufen hinweg (die Kaskade in
+     wi_solo_level_refresh benutzt dieselben Zahlen). */
+  const LVL_AUF = [null, 120, 300, 420, 600, null];   // Index = Level
+  const LVL_AB  = [null, null, 60, 180, 360, 480];    // Index = Level
+  /* Das Ende der Skala: die höchste Schwelle (10:00 = Level 5) plus
+     zwei Minuten Luft. Ohne die Luft wäre Level 5 ein Strich am Rand
+     und kein Abschnitt, in dem man stehen kann. Die Skala ist fest
+     und nicht mitwandernd: nur so bedeutet eine Länge auf diesem
+     Balken morgen dasselbe wie heute. */
+  const LVL_ENDE = 720;
+
+  function lvlGrenzen(p) {
+    const lvl = Math.max(1, Math.min(5, p.level || 1));
+    const g = [];
+    for (let k = 1; k <= 4; k++) g.push(k >= lvl ? LVL_AUF[k] : LVL_AB[k + 1]);
+    /* Über die zwei Grenzen, die er selbst schickt, hat der Server
+       das letzte Wort. Ändert eine spätere Migration die Schwellen,
+       stimmt wenigstens die eigene Nachbarschaft sofort — und die
+       ist die, an der man ablesen will, was noch fehlt. */
+    if (lvl <= 4 && p.up_secs   != null) g[lvl - 1] = p.up_secs;
+    if (lvl >= 2 && p.down_secs != null) g[lvl - 2] = p.down_secs;
+    for (let k = 1; k < 4; k++) if (g[k] < g[k - 1]) g[k] = g[k - 1];
+    return g;
+  }
+
+  /* Alles, was beide Balken brauchen — einmal gerechnet: die vier
+     Grenzen, die fünf Abschnitte in Prozent, der eigene Stand mit
+     und ohne Bonus und der heutige Tag. */
+  function lvlLeiter(p) {
+    const g = lvlGrenzen(p);
+    const ende = Math.max(LVL_ENDE, g[3] + 60);
+    const pos = s => Math.max(0, Math.min(100, 100 * Math.max(0, s || 0) / ende));
+    const abschnitte = [];
+    for (let k = 1; k <= 5; k++) {
+      const von = k === 1 ? 0 : g[k - 2];
+      const bis = k === 5 ? ende : g[k - 1];
+      abschnitte.push({ k, von, bis, links: pos(von), breite: pos(bis) - pos(von) });
+    }
+    const avg = p.avg_secs || 0, bonus = p.bonus_secs || 0;
+    return {
+      g, ende, pos, abschnitte,
+      lvl: Math.max(1, Math.min(5, p.level || 1)),
+      avg: pos(avg), mitBonus: pos(avg + bonus), heute: pos(p.today_secs)
+    };
+  }
+
+  const pz = x => x.toFixed(1) + '%';
 
   function renderVolkLevel() {
     if (!els.vLvl) return;
     const p = solo && solo.player;
-    if (!p) { els.vLvl.innerHTML = ''; return; }
+    if (!p) { els.vLvl.innerHTML = ''; renderVolkBalken(null); return; }
     const krone = p.level_max > p.level;
     els.vLvl.innerHTML =
       `<b>Level ${p.level} — ${esc(LEVEL_NAME[p.level] || '')}</b>` +
@@ -5081,12 +5222,65 @@
       (p.down_secs != null
         ? `<span class="wi-vlvlzeile wi-vlvlzeile--warn">Level ${p.level} geht verloren unter ${minSek(p.down_secs)}</span>`
         : '');
+    renderVolkBalken(p);
   }
 
-  /* Die Woche als Balken plus die Gesamtstatistik — ein eigener,
+  /* Die große Leiter. Sie trägt zwei Zeiger, und das ist Sönkes
+     Vorgabe: „an dem Balken sieht man, wo man heute ist und wo der
+     aktuelle Wert ist." Beide messen dasselbe (Sekunden an EINEM
+     Tag) und sind deshalb vergleichbar — der heutige Tag ist die
+     Hand am Hebel, der Schnitt ist das, was gilt. */
+  function renderVolkBalken(p) {
+    if (!els.vBar) return;
+    if (!p) { els.vBar.innerHTML = ''; els.vBar.hidden = true; return; }
+    els.vBar.hidden = false;
+    const L = lvlLeiter(p);
+
+    const segs = L.abschnitte.map(a =>
+      `<span class="wi-vseg${a.k === L.lvl ? ' is-on' : ''}"
+             style="left:${pz(a.links)};width:${pz(a.breite)}"><b>${a.k}</b></span>`).join('');
+    const marken = L.g.map(s =>
+      `<span class="wi-vmark" style="left:${pz(L.pos(s))}">${minSekKurz(s)}</span>`).join('');
+
+    els.vBar.innerHTML =
+      `<div class="wi-vmarks">${marken}</div>` +
+      `<div class="wi-vtrack">` +
+        `<i class="wi-vfill" style="width:${pz(L.avg)}"></i>` +
+        `<i class="wi-vbonus" style="left:${pz(L.avg)};width:${pz(Math.max(0, L.mitBonus - L.avg))}"></i>` +
+        segs +
+        `<i class="wi-vnow" style="left:${pz(L.heute)}"></i>` +
+      `</div>` +
+      /* Stehen die zwei Zeiger dicht beieinander (wer gleichmäßig
+         lernt, hat heute ungefähr seinen Schnitt!), liegen ihre
+         Beschriftungen übereinander. Dann untereinander statt
+         nebeneinander — die Zahlen selbst bleiben, wo sie hingehören. */
+      `<div class="wi-vzeiger${Math.abs(L.heute - L.mitBonus) < 16 ? ' is-eng' : ''}">` +
+        `<span class="wi-vz wi-vz--heute" style="left:${pz(L.heute)}">Heute ${minSekKurz(p.today_secs)}</span>` +
+        `<span class="wi-vz wi-vz--avg" style="left:${pz(L.mitBonus)}">Schnitt ${minSekKurz((p.avg_secs || 0) + (p.bonus_secs || 0))}</span>` +
+      `</div>` +
+      `<p class="wi-vbonhint">` + (p.bonus_secs
+        ? `<i class="wi-vbonchip"></i> <b>+ ${minSek(p.bonus_secs)}</b> Bonus für ` +
+          `${Math.round(p.pct_max || 0)} % funkelnde Wörter`
+        : `Ab der Hälfte funkelnder Wörter gibt es Bonus-Zeit auf den Schnitt — ` +
+          `du hast ${Math.round(p.pct_max || 0)} %.`) + `</p>`;
+  }
+
+  /* Die Woche als Säulen plus die Gesamtstatistik — ein eigener,
      erst bei Bedarf geholter Aufruf (wie wi_solo_unit), damit der
      heiße Pfad (jede Antwort) diese Auskunft nicht mitschleppt. */
   let volkHistGen = 0;
+
+  /* Der schwächste der sieben Tage — der, den die 6-von-7-Regel
+     herauswirft. ⚠️ Dieselbe Auswahl wie in wi_solo_level_avg_secs:
+     `order by secs asc, day asc`. Die Liste kommt nach Tagen
+     aufsteigend, ein striktes Kleiner behält bei Gleichstand also
+     den FRÜHEREN. Ein anderer Tag hier als dort wäre schlimmer als
+     gar keine Markierung: der Balken behauptete dann etwas über die
+     Rechnung, das nicht stimmt. */
+  const schwaechsterTag = days =>
+    days.reduce((a, d) => (a == null || d.secs < a.secs ? d : a), null);
+
+  const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
   async function ladeVolkHistorie() {
     if (!els.vHist) return;
@@ -5096,18 +5290,33 @@
     if (!r.ok) { els.vHist.hidden = true; return; }
     els.vHist.hidden = false;
 
+    /* Der stärkste Tag ist der Maßstab und nicht die Schwelle: eine
+       Woche mit lauter kurzen Tagen soll trotzdem ein lesbares Bild
+       geben. Die Untergrenze von einer Minute hält den Maßstab
+       ruhig, solange fast nichts da ist. */
     const maxSecs = Math.max(60, ...r.days.map(d => d.secs));
     const heute = r.days[r.days.length - 1] && r.days[r.days.length - 1].day;
-    const TAGE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-    els.vHistRows.innerHTML = r.days.map(d => {
-      const pct = Math.max(2, Math.round(100 * d.secs / maxSecs));
-      const label = TAGE[new Date(d.day + 'T00:00:00').getDay()];
-      return `<div class="wi-vhrow${d.day === heute ? ' is-heute' : ''}">
-                <span class="wi-vhrow__label">${label}</span>
-                <span class="wi-vhrow__bar"><span class="wi-vhrow__fill" style="width:${pct}%"></span></span>
-                <span class="wi-vhrow__val">${minSek(d.secs)}</span>
+    const schwach = schwaechsterTag(r.days);
+
+    els.vDays.innerHTML = r.days.map(d => {
+      const hoch = Math.max(2, Math.round(100 * d.secs / maxSecs));
+      const tag = WOCHENTAG[new Date(d.day + 'T00:00:00').getDay()];
+      const klassen = (d.day === heute ? ' is-heute' : '')
+                    + (schwach && d.day === schwach.day ? ' is-schwach' : '');
+      return `<div class="wi-vday${klassen}">
+                <span class="wi-vday__val">${minSekKurz(d.secs)}</span>
+                <span class="wi-vday__bar"><i style="height:${hoch}%"></i></span>
+                <span class="wi-vday__lab">${tag}</span>
               </div>`;
     }).join('');
+
+    /* Warum ein Tag blass ist, muss dastehen. Sonst sieht es aus wie
+       ein Fehler — und der Satz ist zugleich die gute Nachricht des
+       ganzen Levelsystems: ein schwacher Tag kostet nichts. */
+    els.vWeak.textContent = schwach
+      ? 'Der schwächste Tag (' + WOCHENTAG[new Date(schwach.day + 'T00:00:00').getDay()]
+        + ') zählt nicht mit — ein einzelner schwacher Tag kostet dich kein Level.'
+      : '';
 
     const t = r.totals;
     els.vTot.innerHTML =
@@ -5127,7 +5336,12 @@
     volkBilderLaden();
     if (solo) solo.settings = Object.assign({}, solo.settings, { faction: n });
     try { localStorage.setItem(WI_VOLK_KEY, String(n)); } catch (e) { /* egal */ }
+    /* Beide Kästen: die Figur im einen, die Hervorhebung im anderen.
+       Die Reihe wird eigens gerufen, weil renderVolk aussteigt,
+       solange „Wer bist du?" zu ist — und der Wechsel-Kasten kann
+       auch für sich allein offen stehen. */
     renderVolk();
+    renderVolkReihe();
 
     const r = await ctx.actions.call('wi_solo_avatar', { p_faction: n });
     if (r.ok) {
@@ -5141,6 +5355,7 @@
       if (r.error !== 'fn_missing') ctx.toast(ctx.errText(r.error));
     }
     renderVolk();
+    renderVolkReihe();
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -5821,18 +6036,26 @@
     els.lvlBtn.setAttribute('aria-label', 'Dein Level: ' + p.level
       + (p.level_max > p.level ? ' (höchstes je erreichtes Level: ' + p.level_max + ')' : ''));
 
-    // Die Skala des Balkens: links die Abstiegsgrenze (0 bei Level 1),
-    // rechts die Aufstiegsgrenze (bei Level 5 dekorativ jenseits der
-    // Abstiegsgrenze — dort gibt es kein Ziel mehr, nur noch „viel").
-    const lo = p.down_secs == null ? 0 : p.down_secs;
-    const hi = p.up_secs == null ? lo + 240 : p.up_secs;
-    const spanne = Math.max(1, hi - lo);
-    const basis = Math.max(0, (p.avg_secs || 0) - lo) / spanne * 100;
-    const mitBonus = Math.max(0, (p.avg_secs || 0) + (p.bonus_secs || 0) - lo) / spanne * 100;
-    els.lvlFill.style.width = Math.min(100, basis).toFixed(1) + '%';
-    els.lvlBonus.style.left = Math.min(100, basis).toFixed(1) + '%';
-    els.lvlBonus.style.width = Math.max(0, Math.min(100, mitBonus) - Math.min(100, basis)).toFixed(1) + '%';
-    els.lvlBar.setAttribute('aria-valuenow', String(Math.round(Math.min(100, mitBonus))));
+    /* Die Skala ist die ganze Leiter (0 … LVL_ENDE) und nicht mehr
+       nur das Fenster des aktuellen Levels. Ein Balken, der bei
+       jedem Aufstieg wieder von vorn anfängt, verschweigt genau
+       das, was man sehen will: wie weit man insgesamt gekommen ist.
+       Die vier Grenzstriche stehen dafür da, wo sie JETZT gelten —
+       siehe lvlGrenzen. */
+    const L = lvlLeiter(p);
+    els.lvlFill.style.width = pz(L.avg);
+    els.lvlBonus.style.left = pz(L.avg);
+    els.lvlBonus.style.width = pz(Math.max(0, L.mitBonus - L.avg));
+    /* Abschnitte (der eigene hell), Grenzstriche und die Nadel des
+       heutigen Tages. Ein einziges innerHTML: es sind zehn kurze
+       Kästchen, und sie ändern sich nur, wenn sich das Level ändert
+       — eine Buchführung darüber wäre teurer als das Schreiben. */
+    els.lvlMarks.innerHTML =
+      L.abschnitte.map(a =>
+        `<i class="wi-lvlseg${a.k === L.lvl ? ' is-on' : ''}"
+            style="left:${pz(a.links)};width:${pz(a.breite)}"></i>`).join('') +
+      `<i class="wi-lvlnow" style="left:${pz(L.heute)}"></i>`;
+    els.lvlBar.setAttribute('aria-valuenow', String(Math.round(L.mitBonus)));
 
     els.lvlToday.textContent = 'Heute: ' + minSek(p.today_secs);
   }
