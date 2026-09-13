@@ -3491,9 +3491,38 @@
   let volkNurHier = false;
 
   const volkName = n => (TEAMS[n] && TEAMS[n].name) || ('Volk ' + (n + 1));
-  const volkBild  = n => HELD_DIR + n + '.png';
   const volkDaumen = n => HELD_DIR + n + 'k.png';
   const volkBoot  = n => BOOT_DIR + n + '.png';
+
+  /* ── Die Figur nach Level ────────────────────────────────────
+     Vier gezeichnete Fassungen je Volk (Level 1…4), Level 5 ist die
+     vierte mit einem goldenen Filter beim Zeichnen — kein eigenes
+     fünftes Bild (HELD_GOLD_FILTER, gesetzt in heldMasse und
+     renderVolk).
+
+     ⚠️ DIE EINE ZEILE, DIE SÖNKE UMLEGT, wenn die Bilder liegen:
+     HELD_LEVEL_BILDER. Solange sie `false` ist, tragen alle Level
+     dieselbe alte Figur (held/{volk}.png) — das eigene Level ist
+     dann am Balken zu sehen und nicht an der Figur.
+
+     Warum ein Schalter und nicht einfach der Rückfall auf das alte
+     Bild: ein Pfad, den es nicht gibt, ist eine fehlgeschlagene
+     Anfrage JE AUFBAU und JE KIND. Der Rückfall unten fängt sie
+     zwar auf, aber er soll die Notbremse sein und nicht der
+     Normalfall — und ein Prüfstand, der „alle Bilder liegen da"
+     sagt, kann das nur prüfen, solange nichts absichtlich ins Leere
+     zeigt.
+
+     Erwartet werden dann:  sprites/held/{volk}_{1..4}.png         */
+  const HELD_LEVEL_BILDER = false;
+  const HELD_STUFEN = 4;
+  const heldTier = lvl => Math.min(Math.max(lvl | 0 || 1, 1), HELD_STUFEN);
+  const volkBildBasis = n => HELD_DIR + n + '.png';
+  const volkBild = (n, lvl) => HELD_LEVEL_BILDER
+    ? HELD_DIR + n + '_' + heldTier(lvl) + '.png'
+    : volkBildBasis(n);
+  const HELD_GOLD_FILTER =
+    'sepia(.6) saturate(3.2) hue-rotate(-12deg) brightness(1.12)';
 
   /* Woher das Volk kommt, in dieser Reihenfolge: Server, Gerät,
      Voreinstellung. Der Server gewinnt — er ist der Ort, an dem die
@@ -3511,15 +3540,19 @@
 
   function volkBilderLaden() {
     const n = spieler.volk, gen = ++volkGen;
-    const nimm = (pfad, feld) => ladeBild(pfad).then(im => {
-      if (gen === volkGen && spieler) spieler[feld] = im;
-    }).catch(e => {
-      /* Ein fehlendes Bild zeichnet still NICHTS — genau die Falle,
-         die bei den Schiffen im Raum schon einmal eine Stunde
-         gekostet hat. Also sagt es wenigstens die Konsole. */
-      console.warn('[wordisland] ' + e.message);
-    });
-    nimm(volkBild(n), 'imHeld');
+    const lvl = (solo && solo.player && solo.player.level) || 1;
+    const nimm = (pfad, feld, basis) => ladeBild(pfad)
+      // Fällt auf das alte einzelne Bild zurück, solange die vier
+      // Level-Fassungen noch fehlen — kein Blocker fürs Übrige.
+      .catch(() => basis ? ladeBild(basis) : Promise.reject(new Error('Bild fehlt: ' + pfad)))
+      .then(im => { if (gen === volkGen && spieler) spieler[feld] = im; })
+      .catch(e => {
+        /* Ein fehlendes Bild zeichnet still NICHTS — genau die Falle,
+           die bei den Schiffen im Raum schon einmal eine Stunde
+           gekostet hat. Also sagt es wenigstens die Konsole. */
+        console.warn('[wordisland] ' + e.message);
+      });
+    nimm(volkBild(n, lvl), 'imHeld', volkBildBasis(n));
     nimm(volkBoot(n), 'imBoot');
   }
 
@@ -3529,16 +3562,21 @@
   function spielerAufstellen() {
     const insel = welt.inseln[0];
     const p = zufallsPunktAuf(insel, Math.random);
+    const volk = volkAusStand();
     let R = 0;
     for (const z of insel.cells) {
       R = Math.max(R, Math.hypot(z.x - insel.cx, z.y - insel.cy));
     }
     spieler = {
-      volk: volkAusStand(),
+      volk,
       imHeld: null, imBoot: null,
       held: {
         x: p.x, y: p.y, zx: p.x, zy: p.y,
-        flip: false, ruheBis: 0, held: true, stufe: 0, _a: 1, _hell: false
+        flip: false, ruheBis: 0, held: true, stufe: 0, _a: 1, _hell: false,
+        // Nur für den Funkenkranz eines Level-Aufstiegs gebraucht (die
+        // Jubel-Passage im Zeichenschritt liest bei JEDEM Tier farbe
+        // und phase) — die Volksfarbe, nicht die einer Vokabel.
+        farbe: volk % FARBEN.length, phase: 0, burst: 0
       },
       boot: { winkel: Math.random() * 6.283, r: R + BOOT_ABSTAND, x: 0, y: 0, flip: false }
     };
@@ -3664,6 +3702,16 @@
     h._x = px - breit / 2; h._y = py - hoch;
     h._px = px; h._by = py;
     h._mx = px; h._my = py - hoch / 2;
+    // Level 5 malt Stufe 4 mit einem goldenen Filter statt einem
+    // eigenen fünften Bild (siehe HELD_GOLD_FILTER).
+    h._gold = ((solo && solo.player && solo.player.level) || 1) >= 5;
+    // Der Funkenkranz eines Level-Aufstiegs (feierSpielerStart) —
+    // zeitgestempelt statt gezählt, damit hier kein dt gebraucht wird.
+    if (h.burstAt != null) {
+      const dauer = h._burstDauer || 1.2;
+      h.burst = Math.max(0, 1 - (simZeit - h.burstAt) / dauer);
+      if (h.burst <= 0) h.burstAt = null;
+    }
     return h;
   }
 
@@ -4197,6 +4245,9 @@
       // groß genug, dass sie ohne ihn über dem Gelände schwebt.
       if (t.held) heldSchatten(t);
       c2d.globalAlpha = t._a;
+      // Level 5: dasselbe Bild wie Level 4, nur golden — siehe
+      // HELD_GOLD_FILTER (heldMasse setzt t._gold nur für die Figur).
+      if (t._gold) c2d.filter = HELD_GOLD_FILTER;
       if (t.flip) {
         /* Gespiegelt wird um den ANKER und nicht um die Bildmitte:
            sonst rutscht ein Tier beim Richtungswechsel seitlich weg,
@@ -4208,6 +4259,7 @@
       } else {
         c2d.drawImage(t._im, t._x, t._y, t._w, t._h);
       }
+      if (t._gold) c2d.filter = 'none';
     }
     c2d.globalAlpha = 1;
 
@@ -4326,6 +4378,28 @@
         </div>
       </div>
 
+      <!-- ── Das eigene Level ────────────────────────────────────
+           Sönke, 13.09.2026: ein Balken, der auf einen Blick zeigt,
+           wo man gerade steht — die Abstiegsgrenze links, die
+           Aufstiegsgrenze rechts, der eigene Schnitt dazwischen. Er
+           liegt ÜBER der Bühne wie die Unit-Leiste und der Kasten
+           unten rechts, und ist ein eigener Knopf zur Figur: derselbe
+           „Wer bist du?"-Kasten, den auch ein Tipp auf die Figur
+           selbst öffnet (volkOeffnen). -->
+      <header class="wi-lvl" data-part="lvl" hidden>
+        <button type="button" class="wi-lvlbtn" data-part="lvlbtn" aria-label="Dein Level">
+          <b class="wi-lvlnum" data-part="lvlnum"></b>
+          <i class="wi-lvlcrown" data-part="lvlcrown" hidden aria-hidden="true">👑</i>
+          <div class="wi-lvlbar" data-part="lvlbar" role="progressbar"
+               aria-valuemin="0" aria-valuemax="100">
+            <div class="wi-lvlfill" data-part="lvlfill"></div>
+            <div class="wi-lvlbonus" data-part="lvlbonus"></div>
+          </div>
+        </button>
+        <span class="wi-lvltoday" data-part="lvltoday"></span>
+        <div class="wi-lvltoast" data-part="lvltoast" hidden></div>
+      </header>
+
       <!-- ── Die Unit-Leiste ────────────────────────────────────
            Sie liegt ÜBER der Bühne und ist trotzdem deren
            Geschwister und nicht ihr Kind: soloPanZoom hängt in der
@@ -4438,6 +4512,19 @@
             <span class="wi-modelab">Zu welchem Volk gehörst du?</span>
             <div class="wi-vrow" data-part="vrow"></div>
             <p class="wi-hint" data-part="vhint" hidden></p>
+
+            <!-- ── Das eigene Level, ausführlich ──────────────────
+                 Hier und nicht im Balken oben: der Balken zeigt den
+                 Augenblick, das hier zeigt die Woche. Die Historie
+                 wird erst geladen, wenn der Kasten wirklich aufgeht
+                 (wi_solo_level_history) — beim Üben braucht sie
+                 niemand. -->
+            <span class="wi-modelab wi-vlvl-lab">Dein Level</span>
+            <div class="wi-vlvl" data-part="vlvl"></div>
+            <div class="wi-vhist" data-part="vhist" hidden>
+              <div class="wi-vhistrows" data-part="vhistrows"></div>
+              <div class="wi-vtot" data-part="vtot"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -4611,8 +4698,13 @@
       units: q('units'), uGriff: q('ugriff'), uBody: q('ubody'),
       uList: q('ulist'), uDet: q('udet'), card: q('card'), sBar: q('sbar'),
       setsOv: q('setsov'),
+      lvl: q('lvl'), lvlBtn: q('lvlbtn'), lvlNum: q('lvlnum'),
+      lvlCrown: q('lvlcrown'), lvlBar: q('lvlbar'), lvlFill: q('lvlfill'),
+      lvlBonus: q('lvlbonus'), lvlToday: q('lvltoday'), lvlToast: q('lvltoast'),
       volkOv: q('volkov'), vBig: q('vbig'), vName: q('vname'),
       vSub: q('vsub'), vRow: q('vrow'), vHint: q('vhint'),
+      vLvl: q('vlvl'), vHist: q('vhist'),
+      vHistRows: q('vhistrows'), vTot: q('vtot'),
       soloDir: q('solodir'), soloMode: q('solomode'), modeHint: q('modehint'),
       playOv: q('playov'), pMeta: q('pmeta'), pMon: q('pmon'),
       pProg: q('pprog'), pProgI: q('pprogi'), pProgN: q('pprogn'),
@@ -4628,6 +4720,9 @@
 
     q('ssets').addEventListener('click', () => { els.setsOv.hidden = false; renderSoloSets(); });
     q('setsclose').addEventListener('click', () => { els.setsOv.hidden = true; });
+    // Derselbe Kasten wie beim Tipp auf die Figur — der Balken ist
+    // nur ein zweiter Weg dorthin.
+    if (els.lvlBtn) els.lvlBtn.addEventListener('click', () => volkOeffnen());
     q('volkclose').addEventListener('click', () => {
       if (nachklick()) return;
       els.volkOv.hidden = true;
@@ -4732,6 +4827,7 @@
       grown: v.learner.grown | 0,
       sets: v.learner.sets || [],
       settings: v.learner.settings || {},
+      player: v.learner.player || null,
       stufen: new Map(),
       /* Wort → Unit. Ohne diese Karte wäre jedes Tier namenlos: die
          Leiste könnte weder hervorheben noch blass zeichnen, und ein
@@ -4804,6 +4900,7 @@
     kameraAufHauptinsel();
     renderSoloBar();
     renderUnits();
+    renderLevel();
     q('ssets').disabled = false;
     q('sgo').disabled = false;
     els.load.hidden = true;
@@ -4903,10 +5000,10 @@
   }
 
   /* ─── Dein Volk ─────────────────────────────────────────────
-     Der Kasten hinter der Figur. Er zeigt sie groß und darunter die
-     acht Völker zur Wahl — mehr steht hier noch nicht, und das ist
-     Absicht: das eigene Level kommt als Nächstes, und es gehört
-     genau hierher. */
+     Der Kasten hinter der Figur. Er zeigt sie groß, darunter die
+     acht Völker zur Wahl — und seit 0145 das eigene Level: Name und
+     Krone sofort, die Woche und die Gesamtstatistik erst, wenn der
+     Kasten wirklich aufgeht (wi_solo_level_history, siehe unten). */
   function volkOeffnen() {
     if (!spieler || !els.volkOv) return;
     /* Das Kärtchen der zuletzt angetippten Echse geht mit zu. Beide
@@ -4917,6 +5014,7 @@
     kartenZu();
     els.volkOv.hidden = false;
     renderVolk();
+    ladeVolkHistorie();
     /* Der Tipp auf die Figur ist noch nicht zu Ende — siehe
        nachklickSperren. Ohne diese Zeile wählt er das Volk, dessen
        Knopf zufällig unter dem Finger erscheint. */
@@ -4926,7 +5024,9 @@
   function renderVolk() {
     if (!spieler || !els.volkOv || els.volkOv.hidden) return;
     const n = spieler.volk;
-    els.vBig.src = volkBild(n);
+    const lvl = (solo && solo.player && solo.player.level) || 1;
+    els.vBig.src = volkBild(n, lvl);
+    els.vBig.onerror = () => { els.vBig.onerror = null; els.vBig.src = volkBildBasis(n); };
     els.vBig.alt = volkName(n);
     els.vName.textContent = volkName(n);
     els.vSub.textContent = 'Deine Figur läuft über die Insel, dein Schiff fährt davor.';
@@ -4949,6 +5049,71 @@
     els.vHint.textContent = volkNurHier
       ? 'Dein Volk merkt sich gerade nur dieses Gerät — in der Datenbank fehlt die neueste Migration.'
       : '';
+
+    renderVolkLevel();
+  }
+
+  /* ─── Das eigene Level, im „Wer bist du?"-Kasten ────────────
+     Name, Krone und die drei Stellgrößen (Schnitt, Bonus, die
+     nächste bzw. die verlorene Grenze) — dieselben Zahlen wie im
+     Balken oben, nur ausgeschrieben statt gemalt. */
+  const LEVEL_NAME = ['', 'Anfänger', 'Lernende', 'Geübt', 'Erfahren', 'Meister'];
+
+  function minSek(sekunden) {
+    const s = Math.max(0, Math.round(sekunden || 0));
+    const m = Math.floor(s / 60), r = s % 60;
+    return m + ':' + String(r).padStart(2, '0') + ' min';
+  }
+
+  function renderVolkLevel() {
+    if (!els.vLvl) return;
+    const p = solo && solo.player;
+    if (!p) { els.vLvl.innerHTML = ''; return; }
+    const krone = p.level_max > p.level;
+    els.vLvl.innerHTML =
+      `<b>Level ${p.level} — ${esc(LEVEL_NAME[p.level] || '')}</b>` +
+      (krone ? `<span class="wi-vlvlkrone">👑 Level ${p.level_max} schon erreicht</span>` : '') +
+      `<span class="wi-vlvlzeile">Schnitt der letzten 7 Tage: ${minSek(p.avg_secs)}` +
+      (p.bonus_secs ? ` <i>+ ${minSek(p.bonus_secs)} Bonus</i>` : '') + `</span>` +
+      (p.up_secs != null
+        ? `<span class="wi-vlvlzeile">Noch ${minSek(Math.max(0, p.up_secs - p.avg_secs - (p.bonus_secs || 0)))} bis Level ${p.level + 1}</span>`
+        : `<span class="wi-vlvlzeile">Höchstes Level erreicht.</span>`) +
+      (p.down_secs != null
+        ? `<span class="wi-vlvlzeile wi-vlvlzeile--warn">Level ${p.level} geht verloren unter ${minSek(p.down_secs)}</span>`
+        : '');
+  }
+
+  /* Die Woche als Balken plus die Gesamtstatistik — ein eigener,
+     erst bei Bedarf geholter Aufruf (wie wi_solo_unit), damit der
+     heiße Pfad (jede Antwort) diese Auskunft nicht mitschleppt. */
+  let volkHistGen = 0;
+
+  async function ladeVolkHistorie() {
+    if (!els.vHist) return;
+    const gen = ++volkHistGen;
+    const r = await ctx.actions.call('wi_solo_level_history', {});
+    if (gen !== volkHistGen || !els.volkOv || els.volkOv.hidden) return;
+    if (!r.ok) { els.vHist.hidden = true; return; }
+    els.vHist.hidden = false;
+
+    const maxSecs = Math.max(60, ...r.days.map(d => d.secs));
+    const heute = r.days[r.days.length - 1] && r.days[r.days.length - 1].day;
+    const TAGE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    els.vHistRows.innerHTML = r.days.map(d => {
+      const pct = Math.max(2, Math.round(100 * d.secs / maxSecs));
+      const label = TAGE[new Date(d.day + 'T00:00:00').getDay()];
+      return `<div class="wi-vhrow${d.day === heute ? ' is-heute' : ''}">
+                <span class="wi-vhrow__label">${label}</span>
+                <span class="wi-vhrow__bar"><span class="wi-vhrow__fill" style="width:${pct}%"></span></span>
+                <span class="wi-vhrow__val">${minSek(d.secs)}</span>
+              </div>`;
+    }).join('');
+
+    const t = r.totals;
+    els.vTot.innerHTML =
+      `<span><b>${t.active_days}</b> aktive Lerntage</span>` +
+      `<span><b>${t.total_days}</b> Tage dabei</span>` +
+      `<span><b>${minSek(t.total_secs)}</b> gesamte Lernzeit</span>`;
   }
 
   async function volkSetzen(n) {
@@ -4958,6 +5123,7 @@
        wechselt, soll die Figur wechseln sehen und nicht auf eine
        Antwort warten. */
     spieler.volk = n;
+    if (spieler.held) spieler.held.farbe = n % FARBEN.length;
     volkBilderLaden();
     if (solo) solo.settings = Object.assign({}, solo.settings, { faction: n });
     try { localStorage.setItem(WI_VOLK_KEY, String(n)); } catch (e) { /* egal */ }
@@ -5460,6 +5626,14 @@
         return;
       }
 
+      // Das eigene Level hängt an JEDER Antwort, nicht nur an
+      // entschiedenen — siehe 0145: der Server zählt schon die
+      // Zwischenstufe als aktive Zeit. Ein Aufstieg feiert sich
+      // NEBENHER (Balken + Funkenkranz an der Figur) und hält den
+      // Übungsfluss nicht an, anders als die Tier-Feier unten.
+      anwendenPlayer(r.player);
+      pruefeLevelAufstieg(r.player);
+
       /* „Richtig — mit Hilfe" statt nur „Richtig": die Antwort war
          richtig, sie zählt nur weniger, und ein Kind, dem die
          Kästchen nur ein Drittel weiterrücken, hat ein Recht darauf
@@ -5630,6 +5804,85 @@
     els.pLevel.classList.add('is-on');
   }
 
+  /* ─── Das eigene Level ──────────────────────────────────────
+     Anders als die Tier-Feier läuft ein Level-Aufstieg NEBENHER:
+     kein Halt vor der nächsten Frage, keine Bühne. Er ist ein
+     Erfolg über die Woche, kein Ereignis an EINEM Wort — deshalb
+     reicht ein Banner am Balken plus ein Funkenkranz an der Figur
+     selbst (dieselbe Zeichnung wie bei einem Tier, siehe die
+     Jubel-Passage im Zeichenschritt und heldMasse). */
+  function renderLevel() {
+    if (!els.lvl) return;
+    const p = solo && solo.player;
+    if (!p) { els.lvl.hidden = true; return; }
+    els.lvl.hidden = false;
+    els.lvlNum.textContent = 'Level ' + p.level;
+    els.lvlCrown.hidden = !(p.level_max > p.level);
+    els.lvlBtn.setAttribute('aria-label', 'Dein Level: ' + p.level
+      + (p.level_max > p.level ? ' (höchstes je erreichtes Level: ' + p.level_max + ')' : ''));
+
+    // Die Skala des Balkens: links die Abstiegsgrenze (0 bei Level 1),
+    // rechts die Aufstiegsgrenze (bei Level 5 dekorativ jenseits der
+    // Abstiegsgrenze — dort gibt es kein Ziel mehr, nur noch „viel").
+    const lo = p.down_secs == null ? 0 : p.down_secs;
+    const hi = p.up_secs == null ? lo + 240 : p.up_secs;
+    const spanne = Math.max(1, hi - lo);
+    const basis = Math.max(0, (p.avg_secs || 0) - lo) / spanne * 100;
+    const mitBonus = Math.max(0, (p.avg_secs || 0) + (p.bonus_secs || 0) - lo) / spanne * 100;
+    els.lvlFill.style.width = Math.min(100, basis).toFixed(1) + '%';
+    els.lvlBonus.style.left = Math.min(100, basis).toFixed(1) + '%';
+    els.lvlBonus.style.width = Math.max(0, Math.min(100, mitBonus) - Math.min(100, basis)).toFixed(1) + '%';
+    els.lvlBar.setAttribute('aria-valuenow', String(Math.round(Math.min(100, mitBonus))));
+
+    els.lvlToday.textContent = 'Heute: ' + minSek(p.today_secs);
+  }
+
+  // Server → Client: p ist { level, level_max, today_secs, avg_secs,
+  // bonus_secs, pct_max, up_secs, down_secs[, level_before] } —
+  // dieselbe Form aus wi_solo_open/_view (Laden) und wi_solo_answer
+  // (jede Antwort), nur letztere trägt level_before dazu.
+  function anwendenPlayer(p) {
+    if (!p || !solo) return;
+    const altesLevel = solo.player && solo.player.level;
+    solo.player = p;
+    renderLevel();
+    if (!els.volkOv.hidden) renderVolkLevel();
+    /* Die Figur neu laden, wenn sich die Stufe ihres Bildes ändert —
+       sonst liefe sie bis zum nächsten Öffnen noch in der alten.
+       Ohne die Level-Bilder gibt es nichts nachzuladen: es wäre
+       zweimal dasselbe Bild. */
+    if (HELD_LEVEL_BILDER && spieler
+        && heldTier(altesLevel) !== heldTier(p.level)) volkBilderLaden();
+  }
+
+  function pruefeLevelAufstieg(p) {
+    if (p && p.level_before != null && p.level > p.level_before) feierSpielerStart(p.level_before, p.level);
+  }
+
+  let lvlToastT = 0;
+
+  function feierSpielerStart(von, nach) {
+    if (els.lvlToast) {
+      els.lvlToast.textContent = 'Level ' + nach + ' erreicht!' + (nach >= 5 ? ' 👑' : '');
+      els.lvlToast.hidden = false;
+      // Neu anstoßen wie bei feierText — zwei Aufstiege kurz
+      // hintereinander sollen zweimal aufblitzen, nicht einmal.
+      els.lvlToast.classList.remove('is-on');
+      void els.lvlToast.offsetWidth;
+      els.lvlToast.classList.add('is-on');
+      clearTimeout(lvlToastT);
+      lvlToastT = setTimeout(() => { if (els.lvlToast) els.lvlToast.hidden = true; }, 2600 + nach * 350);
+    }
+    if (spieler && spieler.held) {
+      spieler.held.burstAt = simZeit;
+      // „ein bisschen mehr und von Level zu Level ansteigend"
+      // (Sönke) — die Dauer ist der ganze Hebel, die Zeichnung
+      // selbst bleibt dieselbe wie beim Tier-Jubel.
+      spieler.held._burstDauer = .9 + nach * .35;
+    }
+    tonSpiel('spieler' + nach);
+  }
+
   /* ─── Der Ton ───────────────────────────────────────────────
      Kein Tonschnipsel im Deployment: drei Sinustöne aus dem
      Webaudio-Baukasten kosten keine Datei, kein Laden und keinen
@@ -5644,7 +5897,13 @@
     2:  [587.33, 739.99, 880.00],
     3:  [659.25, 830.61, 987.77, 1318.51],
     4:  [783.99, 987.77, 1174.66, 1567.98, 2093.00],
-    ab: [392.00, 311.13]
+    ab: [392.00, 311.13],
+    // Das eigene Level — dieselbe Reihe wie oben, eine Terz höher
+    // angesetzt, damit sie sich vom Tier-Dreiklang unterscheidet.
+    spieler2: [659.25, 830.61],
+    spieler3: [698.46, 880.00, 1046.50],
+    spieler4: [783.99, 987.77, 1174.66, 1567.98],
+    spieler5: [880.00, 1108.73, 1318.51, 1760.00, 2217.46]
   };
   const TON_KEY = 'mpskills_wi_ton';
   let audio = null;

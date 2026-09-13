@@ -1322,6 +1322,102 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    jetzt selbst rechts und ist nur so breit wie seine zwei Knöpfe. */
 .wi-sbar > .wi-btn { flex: 0 0 auto; }
 
+/* ══════════════════════════════════════════════════════════════
+   DAS EIGENE LEVEL — der Balken oben
+   ══════════════════════════════════════════════════════════════
+   Migration 0145. Derselbe schwebende, blasse Kasten wie .wi-sbar,
+   nur oben links statt unten rechts — die beiden stehen sich
+   gegenüber und nicht im Weg. Ein Tipp öffnet denselben „Wer bist
+   du?"-Kasten wie ein Tipp auf die Figur selbst. */
+.wi-lvl {
+  position: absolute;
+  left: 10px;
+  top: calc(10px + var(--vv-top, 0px));
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(78vw, 320px);
+  padding: 8px 12px;
+  border-radius: var(--r-md, 18px);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.wi-lvlbtn {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.wi-lvlnum { flex: 0 0 auto; font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+.wi-lvlcrown { flex: 0 0 auto; font-size: 15px; line-height: 1; }
+.wi-lvlbar {
+  flex: 1 1 auto;
+  min-width: 46px;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  background: rgba(160, 200, 225, .15);
+}
+.wi-lvlfill {
+  position: absolute; inset: 0 auto 0 0;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), #6ee7a8);
+  transition: width .45s ease;
+}
+/* Der Bonus liegt als ZWEITE SCHICHT über dem Basis-Füllstand —
+   eine geriffelte Farbe, die zeigt, wie viel die Mastery zusätzlich
+   bringt (Sönke: „der Bonus wird visuell auf dem Levelbalken
+   angezeigt"). */
+.wi-lvlbonus {
+  position: absolute; inset: 0 auto 0 0;
+  left: 0; width: 0;
+  border-radius: 999px;
+  background: repeating-linear-gradient(45deg,
+              rgba(255, 214, 102, .85) 0 6px, rgba(255, 186, 60, .85) 6px 12px);
+  transition: left .45s ease, width .45s ease;
+}
+.wi-lvltoday { flex: 0 0 auto; font-size: 11.5px; font-weight: 700; color: var(--ink-faint); white-space: nowrap; }
+
+/* Der Aufstieg feiert NEBENHER — kein Halt, keine Bühne, nur ein
+   Banner, das kurz über dem Balken aufblitzt (siehe feierSpielerStart
+   in tool.js; den Funkenkranz an der Figur zeichnet dieselbe Stelle
+   wie beim Tier-Jubel, ohne eigene CSS). */
+.wi-lvltoast {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: calc(100% + 8px);
+  padding: 7px 12px;
+  border-radius: var(--r-sm, 12px);
+  background: linear-gradient(135deg, #ffd666, #ffb43c);
+  color: #2a1c00;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+}
+.wi-lvltoast.is-on { animation: wi-lvltoast 2.2s ease both; }
+@keyframes wi-lvltoast {
+  0%   { opacity: 0; transform: translateY(6px) scale(.92); }
+  12%  { opacity: 1; transform: none; }
+  82%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
 /* Das Zahnrad. Ein Kreis statt einer Pille: es ist ein Zeichen und
    kein Wort, und eine Pille um ein einzelnes Zeichen sieht aus wie
    ein Knopf, dem die Beschriftung abhandengekommen ist.
@@ -1759,11 +1855,49 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    Regeln auf einen bestehenden Namen verschöbe das Lehrer-Pult
    (Regel: feedback_css_class_collision_one_stylesheet).
 
-   Schmaler als die anderen (520 statt 720): darin stehen eine Figur
-   und acht Knöpfe, sonst nichts. Ein Kasten, der breiter ist als
-   sein Inhalt, sieht aus, als fehle etwas — und hier fehlt bewusst
-   etwas, nämlich das Level. Das kommt als Nächstes. */
-.wi-ovbox--volk { max-width: 520px; }
+   Schmaler als die anderen (560 statt 720): Figur, acht Knöpfe und
+   seit 0145 das eigene Level, sonst nichts — kein Kasten, der breiter
+   ist als sein Inhalt. */
+.wi-ovbox--volk { max-width: 560px; }
+
+/* ── Level, ausführlich ────────────────────────────────────────
+   Text statt Balken: hier ist Platz für die Zahlen, die am Balken
+   oben keinen Platz hätten. */
+.wi-vlvl {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm, 12px);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.wi-vlvl > b { font-size: 15px; font-weight: 800; color: var(--ink); }
+.wi-vlvlkrone { display: block; font-size: 12.5px; font-weight: 700; color: #c8891f; }
+.wi-vlvlzeile { display: block; font-size: 12.5px; color: var(--ink-soft); }
+.wi-vlvlzeile i { font-style: normal; color: #c8891f; font-weight: 700; }
+.wi-vlvlzeile--warn { color: var(--ink-faint); }
+
+/* Die letzten 7 Tage — dieselbe Balkenform wie im Admin-Panel
+   (admin/style.css .activity-row), hierher übernommen: Label, Balken
+   und Zahl in einer Zeile, der heutige Tag hervorgehoben. */
+.wi-vhist { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.wi-vhistrows { display: flex; flex-direction: column; gap: 4px; }
+.wi-vhrow {
+  display: grid;
+  grid-template-columns: 2.4em 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.wi-vhrow__label { color: var(--ink-faint); font-weight: 700; }
+.wi-vhrow__bar { height: 7px; border-radius: 999px; background: rgba(160, 200, 225, .15); overflow: hidden; }
+.wi-vhrow__fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), #6ee7a8); }
+.wi-vhrow.is-heute .wi-vhrow__fill { background: linear-gradient(90deg, #ffd666, #ffb43c); }
+.wi-vhrow.is-heute .wi-vhrow__label { color: var(--ink); }
+.wi-vhrow__val { min-width: 4.4em; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.wi-vtot { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink-soft); }
+.wi-vtot b { color: var(--ink); font-size: 14px; }
 
 /* Die Figur groß, der Name daneben. Der dunkle Grund ist derselbe
    wie beim Tier auf der Übungskarte und aus demselben Grund: die
@@ -2336,6 +2470,8 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   .wi-cheer { animation: none; }
   .wi-stats { animation: none; }
   .wi-pdelta.is-on { animation: none; }
+  .wi-lvltoast.is-on { animation: none; opacity: 1; transform: none; }
+  .wi-lvlfill, .wi-lvlbonus { transition: none; }
   /* Der Balken springt dann eben. Sein Wert steht als Zahl daneben —
      die Auskunft geht nicht verloren, nur die Bewegung. */
   .wi-progbar i { transition: none; }

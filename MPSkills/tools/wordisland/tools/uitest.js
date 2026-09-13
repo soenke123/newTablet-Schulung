@@ -944,7 +944,12 @@ function machKontext(c, gemalt) {
       // drawImage(im, dx, dy, dw, dh) und drawImage(im, sx…, dw, dh):
       // die Zielmaße sind in beiden Formen die letzten beiden Zahlen.
       if (gemalt && im && im._src && a.length >= 4) {
-        gemalt.push({ src: String(im._src), w: a[a.length - 2], h: a[a.length - 1] });
+        /* Der FILTER kommt mit. Ohne ihn wäre das Gold von Level 5
+           (0145) nicht prüfbar: es steht in keinem Attribut und in
+           keinem Maß — nur in der Einstellung, die im Augenblick des
+           Zeichnens gilt. */
+        gemalt.push({ src: String(im._src), w: a[a.length - 2], h: a[a.length - 1],
+                      filter: this.filter });
       }
     },
     fillRect() {}, clearRect() {},
@@ -1060,8 +1065,12 @@ function makeSoloEnv() {
 
 /* Ein erfundener Insel-Server. `stufen` sagt, welches Wort auf
    welcher Stufe steht — das ist alles, was wi_solo_view an Inhalt
-   trägt. */
-function soloView(n, stufen, ohneUnits) {
+   trägt.
+
+   `player` (Migration 0145) kommt nur mit, wenn es angefragt wird:
+   ohne die Migration gibt es den Block nicht, und das ist ein Fall,
+   den das Werkzeug überleben muss (testLevelOhneMigration). */
+function soloView(n, stufen, ohneUnits, player) {
   const words = [];
   for (let i = 0; i < n; i++) {
     const w = { i: 'w-' + i, s: stufen ? stufen(i) : 0 };
@@ -1070,17 +1079,28 @@ function soloView(n, stufen, ohneUnits) {
     if (!ohneUnits) w.u = i % 2 ? 'set-b' : 'set-a';
     words.push(w);
   }
-  return {
-    ok: true,
-    learner: {
-      token: 'tok', seed: 4711, settings: {},
-      words: n, grown: words.filter(w => w.s >= 3).length,
-      sets: [{ id: 'set-a', title: 'Unit 1', count: Math.ceil(n / 2) },
-             { id: 'set-b', title: 'Unit 2', count: Math.floor(n / 2) }]
-    },
-    words_list: words,
-    due: 0
+  const learner = {
+    token: 'tok', seed: 4711, settings: {},
+    words: n, grown: words.filter(w => w.s >= 3).length,
+    sets: [{ id: 'set-a', title: 'Unit 1', count: Math.ceil(n / 2) },
+           { id: 'set-b', title: 'Unit 2', count: Math.floor(n / 2) }]
   };
+  if (player) learner.player = player;
+  return { ok: true, learner, words_list: words, due: 0 };
+}
+
+/* Der Stand, den wi_solo_level_refresh zurückgibt — dieselben
+   Schwellen wie in der Migration (Sekunden). Von Hand gesetzte
+   Zahlen wären hier eine zweite Wahrheit; die Tabelle steht deshalb
+   an EINER Stelle und rechnet up/down aus dem Level. */
+const AUF = { 1: 120, 2: 300, 3: 420, 4: 600, 5: null };
+const AB  = { 1: null, 2: 60, 3: 180, 4: 360, 5: 480 };
+function playerStand(level, avg, over) {
+  return Object.assign({
+    level, level_max: level, today_secs: 0, avg_secs: avg,
+    bonus_secs: 0, pct_max: 0,
+    up_secs: AUF[level], down_secs: AB[level]
+  }, over || {});
 }
 
 /* Die Antwort von wi_solo_unit zu einer der beiden Units. Die
@@ -1827,6 +1847,340 @@ async function testFigurOhneMigration() {
   tool.unmount();
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Das eigene Level — Migration 0145
+   ═══════════════════════════════════════════════════════════
+   Der Balken ist die einzige Stelle im Werkzeug, an der eine ZAHL
+   zu einer Länge wird, und seine Skala ist nicht 0…100: sie geht
+   von der Abstiegs- bis zur Aufstiegsgrenze des Levels, in dem man
+   gerade steht. Ein Vorzeichenfehler darin sähe nicht nach einem
+   Fehler aus — der Balken stünde nur immer voll oder immer leer,
+   und niemand wüsste, ob das nun am Lernen liegt.
+
+   Deshalb steht hier die Rechnung als SOLLWERT und nicht als
+   Nachbau: „Level 4, 8 Minuten Schnitt → halb voll" ist eine
+   Aussage, die man nachrechnen kann, ohne den Code zu lesen. */
+const breite = el => parseFloat(el.style.width || '0');
+
+// Sieben Tage bis heute, mit Ortsdatum (nicht UTC — der Client liest
+// den Wochentag mit new Date(tag) lokal ein).
+function histTage(secs) {
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+                 + `-${String(d.getDate()).padStart(2, '0')}`;
+  const heute = new Date();
+  return secs.map((s, i) => {
+    const d = new Date(heute);
+    d.setDate(heute.getDate() - (secs.length - 1 - i));
+    return { day: iso(d), secs: s };
+  });
+}
+
+async function testLevel() {
+  console.log('\n— Das eigene Level —');
+  /* Level 4, Schnitt 8:00 min. Die Skala läuft von 6:00 (Abstieg)
+     bis 10:00 (Aufstieg) — 8:00 liegt genau in der Mitte. */
+  const { tool, root, document, calls } = await mountSolo(
+    soloView(40, i => i % 5, false, playerStand(4, 480, { today_secs: 95 })),
+    { wi_solo_level_history: () => ({
+        ok: true,
+        days: histTage([480, 420, 0, 540, 360, 480, 300]),
+        totals: { active_days: 6, total_days: 9, total_secs: 2580 } }) },
+    { live: true });
+  await wait(40);
+
+  const bar = root.querySelector('[data-part="lvl"]');
+  ok('der Balken steht auf der Insel', bar.hidden === false);
+  ok('und nennt das Level',
+     root.querySelector('[data-part="lvlnum"]').textContent === 'Level 4',
+     root.querySelector('[data-part="lvlnum"]').textContent);
+  /* Die Krone ist der DAUERHAFTE Erfolg und darf nur dastehen, wenn
+     es wirklich einen gibt: level_max === level heißt „noch nichts
+     verloren", und dann wäre sie eine Auszeichnung fürs Jetzt. */
+  ok('keine Krone, solange das Höchste das Jetzige ist',
+     root.querySelector('[data-part="lvlcrown"]').hidden === true);
+  ok('8:00 min bei Level 4 füllen den Balken halb (Skala 6:00…10:00)',
+     Math.abs(breite(root.querySelector('[data-part="lvlfill"]')) - 50) < .6,
+     breite(root.querySelector('[data-part="lvlfill"]')) + '%');
+  ok('ohne Mastery ist der Bonus-Abschnitt leer',
+     breite(root.querySelector('[data-part="lvlbonus"]')) === 0);
+  ok('die heutige Lernzeit steht daneben',
+     root.querySelector('[data-part="lvltoday"]').textContent === 'Heute: 1:35 min',
+     root.querySelector('[data-part="lvltoday"]').textContent);
+  /* Die Historie ist teuer und wird NICHT beim Aufbau geholt — sie
+     hängt am Öffnen des Kastens. Ein Aufruf je Insel-Aufbau wäre
+     eine Auskunft, die dabei niemand ansieht. */
+  ok('die Wochen-Historie wird beim Aufbau noch nicht geholt',
+     !calls.some(c => c[0] === 'wi_solo_level_history'));
+
+  /* ── Der Kasten dahinter ──────────────────────────────────── */
+  const kasten = root.querySelector('[data-part="volkov"]');
+  click(root.querySelector('[data-part="lvlbtn"]'), document);
+  await wait(40);
+  ok('ein Tipp auf den Balken öffnet „Wer bist du?"', kasten.hidden === false);
+  ok('jetzt wird die Historie geholt',
+     calls.some(c => c[0] === 'wi_solo_level_history'));
+
+  const lvlText = root.querySelector('[data-part="vlvl"]').textContent;
+  ok('der Kasten nennt Level und Namen', /Level 4/.test(lvlText) && /Erfahren/.test(lvlText), lvlText);
+  ok('und den Schnitt der Woche', /8:00 min/.test(lvlText), lvlText);
+  ok('sagt, was noch fehlt (10:00 − 8:00 = 2:00)', /Noch 2:00 min bis Level 5/.test(lvlText), lvlText);
+  /* Und was man VERLIEREN kann. Das ist der halbe Sinn des Puffers:
+     ein Kind soll wissen, dass ein schwacher Tag nichts kostet. */
+  ok('und ab wann das Level verloren geht', /unter 6:00 min/.test(lvlText), lvlText);
+
+  const zeilen = [...root.querySelectorAll('.wi-vhrow')];
+  ok('sieben Tage als Balken', zeilen.length === 7, String(zeilen.length));
+  ok('der heutige Tag ist hervorgehoben',
+     zeilen.filter(z => z.classList.contains('is-heute')).length === 1 &&
+     zeilen[6].classList.contains('is-heute'));
+  /* Der stärkste Tag (9:00) ist der Maßstab, nicht die Schwelle:
+     eine Woche mit lauter kurzen Tagen soll trotzdem einen lesbaren
+     Balken haben. */
+  ok('der stärkste Tag füllt die Zeile ganz',
+     Math.abs(breite(zeilen[3].querySelector('.wi-vhrow__fill')) - 100) < .6,
+     breite(zeilen[3].querySelector('.wi-vhrow__fill')) + '%');
+  ok('und ein Tag ohne Lernzeit bleibt fast leer',
+     breite(zeilen[2].querySelector('.wi-vhrow__fill')) <= 2,
+     breite(zeilen[2].querySelector('.wi-vhrow__fill')) + '%');
+  const tot = root.querySelector('[data-part="vtot"]').textContent;
+  ok('die Gesamtzahlen stehen da',
+     /6/.test(tot) && /aktive Lerntage/.test(tot) && /9/.test(tot) && /43:00 min/.test(tot), tot);
+
+  tool.unmount();
+}
+
+/* Die Ränder der Skala. Level 1 hat keine Abstiegsgrenze, Level 5
+   keine Aufstiegsgrenze — an beiden Enden fehlt also die Zahl, aus
+   der die Skala sonst gebaut wird. Ein `null`, das hier als 0
+   durchrutscht, ergäbe einen Balken, der immer voll ist. */
+async function testLevelRaender() {
+  console.log('\n— Level: die Ränder der Skala —');
+
+  // Level 1: Skala 0…2:00, Schnitt 1:00 → halb voll.
+  {
+    const { tool, root } = await mountSolo(
+      soloView(20, () => 1, false, playerStand(1, 60)));
+    await wait(20);
+    ok('Level 1 rechnet von null an (1:00 von 2:00 = halb)',
+       Math.abs(breite(root.querySelector('[data-part="lvlfill"]')) - 50) < .6,
+       breite(root.querySelector('[data-part="lvlfill"]')) + '%');
+    tool.unmount();
+  }
+
+  // Level 5: keine Aufstiegsgrenze mehr.
+  {
+    const { tool, root, env, document } = await mountSolo(
+      soloView(20, () => 4, false, playerStand(5, 600, { level_max: 5 })),
+      { wi_solo_level_history: () => ({ ok: true, days: histTage([600, 600, 600, 600, 600, 600, 600]),
+                                        totals: { active_days: 7, total_days: 7, total_secs: 4200 } }) },
+      { live: true });
+    await wait(40);
+    const b = breite(root.querySelector('[data-part="lvlfill"]'));
+    ok('Level 5 füllt den Balken, ohne ihn zu überlaufen', b > 0 && b <= 100, b + '%');
+    click(root.querySelector('[data-part="lvlbtn"]'), document);
+    await wait(40);
+    const t = root.querySelector('[data-part="vlvl"]').textContent;
+    ok('und sagt, dass es das höchste ist', /Höchstes Level erreicht/.test(t), t);
+    ok('nennt aber weiter die Abstiegsgrenze', /unter 8:00 min/.test(t), t);
+
+    /* ── Das Gold ──────────────────────────────────────────────
+       Level 5 bekommt kein fünftes Bild, sondern die vierte Figur
+       mit einem Filter. Der steht in keinem Attribut und in keinem
+       Maß — nur in der Einstellung, die im Augenblick des Zeichnens
+       gilt, und die hält machKontext fest. Ohne diese Prüfung wäre
+       die ganze Belohnung von Level 5 unbelegt. */
+    await wait(80);
+    const figur = env.gemalt.filter(g => /sprites\/held\//.test(g.src)).pop();
+    ok('die Figur wird gezeichnet', !!figur, figur ? figur.src : 'nichts');
+    if (figur) {
+      ok('und zwar mit dem goldenen Filter',
+         /sepia/.test(figur.filter || ''), String(figur.filter));
+    }
+    /* Und die Tiere daneben NICHT — der Filter gilt für die Figur
+       und wird danach zurückgenommen. Bliebe er stehen, wäre die
+       ganze Insel golden. */
+    const tier = env.gemalt.filter(g => /sprites\/tier\//.test(g.src)).pop();
+    if (tier) {
+      ok('die Echsen bleiben dabei ungefärbt',
+         !/sepia/.test(tier.filter || ''), String(tier.filter));
+    }
+    tool.unmount();
+  }
+
+  // Ein Schnitt weit über der Aufstiegsgrenze darf nicht überlaufen.
+  {
+    const { tool, root } = await mountSolo(
+      soloView(20, () => 1, false, playerStand(2, 9999)));
+    await wait(20);
+    ok('ein sehr hoher Schnitt läuft nicht über 100 %',
+       breite(root.querySelector('[data-part="lvlfill"]')) === 100,
+       breite(root.querySelector('[data-part="lvlfill"]')) + '%');
+    tool.unmount();
+  }
+}
+
+/* Der Mastery-Bonus. Er ist ein Bonus auf die MESSGRÖSSE und keine
+   eigene Zone — auf dem Balken muss er deshalb als zweiter
+   Abschnitt HINTER dem eigenen Stand liegen und nicht an dessen
+   Stelle. Läge er darunter, sähe ein Kind seine echte Lernzeit
+   nicht mehr. */
+async function testLevelBonus() {
+  console.log('\n— Level: der Mastery-Bonus —');
+  /* Level 4, Schnitt 7:00, Bonus 2:00. Skala 6:00…10:00 (240 s):
+     der eigene Stand liegt bei 25 %, mit Bonus bei 75 %. */
+  const { tool, root, document } = await mountSolo(
+    soloView(40, () => 4, false,
+             playerStand(4, 420, { bonus_secs: 120, pct_max: 80, level_max: 4 })),
+    { wi_solo_level_history: () => ({ ok: true, days: histTage([420, 420, 420, 420, 420, 420, 420]),
+                                      totals: { active_days: 7, total_days: 7, total_secs: 2940 } }) },
+    { live: true });
+  await wait(40);
+
+  const f = breite(root.querySelector('[data-part="lvlfill"]'));
+  const bo = root.querySelector('[data-part="lvlbonus"]');
+  ok('der eigene Stand steht bei 25 % (7:00 auf der Skala 6:00…10:00)',
+     Math.abs(f - 25) < .6, f + '%');
+  ok('der Bonus setzt genau dort an und nicht bei null',
+     Math.abs(parseFloat(bo.style.left || '0') - 25) < .6, bo.style.left);
+  ok('und trägt die zwei Bonus-Minuten (50 % der Skala)',
+     Math.abs(breite(bo) - 50) < .6, bo.style.width);
+
+  click(root.querySelector('[data-part="lvlbtn"]'), document);
+  await wait(40);
+  const t = root.querySelector('[data-part="vlvl"]').textContent;
+  ok('der Kasten weist den Bonus aus', /\+ 2:00 min Bonus/.test(t), t);
+  /* Und das Restliche rechnet MIT ihm: 10:00 − 7:00 − 2:00 = 1:00.
+     Ohne den Bonus in dieser Zeile stünde dort 3:00, und das Kind
+     käme schon bei 2:00 vorher an. */
+  ok('und rechnet ihn auf das Restliche an', /Noch 1:00 min bis Level 5/.test(t), t);
+
+  tool.unmount();
+}
+
+/* Der Aufstieg. Er läuft NEBENHER — kein Halt, keine Bühne, kein
+   Warten auf die nächste Frage: das eigene Level ist ein Erfolg über
+   die Woche und kein Ereignis an einem Wort. Geprüft wird deshalb
+   beides: dass er gefeiert wird UND dass er das Üben nicht anhält. */
+async function testLevelAufstieg() {
+  console.log('\n— Level: der Aufstieg —');
+  let stand = playerStand(2, 290, { level_max: 2, today_secs: 60 });
+  const { tool, root, document } = await mountSolo(
+    soloView(20, () => 1, false, stand),
+    {
+      wi_solo_start: () => ({ ok: true,
+        task: { item: 'w-3', prompt: 'das Haus', dir: 'de_en', stage: 'type', level: 1, options: [] } }),
+      wi_solo_answer: () => ({
+        ok: true, result: 'correct', item: 'w-3',
+        // Das Tier bleibt, wo es ist — sonst wäre nicht zu trennen,
+        // welche der beiden Feiern gerade läuft.
+        level_before: 1, level_after: 1, locked_for: 0,
+        player: playerStand(3, 310, { level_max: 3, today_secs: 80, level_before: 2 }),
+        task: { item: 'w-4', prompt: 'die Tafel', dir: 'de_en', stage: 'type', level: 1, options: [] } })
+    }, { live: true });
+  await wait(40);
+
+  ok('vorher steht Level 2 da',
+     root.querySelector('[data-part="lvlnum"]').textContent === 'Level 2');
+  const toast = root.querySelector('[data-part="lvltoast"]');
+  ok('und niemand feiert', toast.hidden === true);
+
+  click(root.querySelector('[data-part="sgo"]'), document);
+  await wait(30);
+  antworte(root, document, 'house', '[data-part="pin"]');
+  await wait(40);
+
+  ok('der Aufstieg wird gefeiert',
+     toast.hidden === false && /Level 3 erreicht/.test(toast.textContent), toast.textContent);
+  ok('der Balken steht auf dem neuen Level',
+     root.querySelector('[data-part="lvlnum"]').textContent === 'Level 3',
+     root.querySelector('[data-part="lvlnum"]').textContent);
+  ok('und die heutige Zeit ist nachgeführt',
+     root.querySelector('[data-part="lvltoday"]').textContent === 'Heute: 1:20 min');
+  /* Der Kern: die Bühne der TIER-Feier bleibt zu, und die nächste
+     Frage steht schon da. Ein Level-Aufstieg mitten im Üben darf den
+     Fluss nicht anhalten — dafür ist er zu selten und zu langsam. */
+  ok('die große Bühne bleibt dafür zu',
+     root.querySelector('[data-part="cheer"]').hidden === true);
+  ok('und die nächste Frage kommt sofort',
+     root.querySelector('[data-part="pword"]').textContent === 'die Tafel');
+
+  tool.unmount();
+}
+
+/* Kein Aufstieg, keine Feier. Der Server schickt `player` bei JEDER
+   Antwort mit — käme der Jubel schon davon, blitzte er bei jeder
+   Vokabel auf und wäre nach zwei Minuten Tapete. */
+async function testLevelKeinAufstieg() {
+  console.log('\n— Level: ohne Aufstieg keine Feier —');
+  const { tool, root, document } = await mountSolo(
+    soloView(20, () => 1, false, playerStand(3, 400, { level_max: 4 })),
+    {
+      wi_solo_start: () => ({ ok: true,
+        task: { item: 'w-3', prompt: 'das Haus', dir: 'de_en', stage: 'type', level: 1, options: [] } }),
+      wi_solo_answer: () => ({
+        ok: true, result: 'correct', item: 'w-3',
+        level_before: 1, level_after: 1, locked_for: 0,
+        player: playerStand(3, 405, { level_max: 4, level_before: 3 }),
+        task: { item: 'w-4', prompt: 'die Tafel', dir: 'de_en', stage: 'type', level: 1, options: [] } })
+    }, { live: true });
+  await wait(40);
+
+  /* Die Krone. Hier ist sie wirklich verdient: level_max 4 über
+     einem aktuellen Level 3 — einmal erreicht, nie wieder weg. */
+  ok('die Krone steht, wenn das Höchste über dem Jetzigen liegt',
+     root.querySelector('[data-part="lvlcrown"]').hidden === false);
+
+  click(root.querySelector('[data-part="sgo"]'), document);
+  await wait(30);
+  antworte(root, document, 'house', '[data-part="pin"]');
+  await wait(40);
+  ok('eine Antwort ohne Aufstieg feiert nicht',
+     root.querySelector('[data-part="lvltoast"]').hidden === true);
+  ok('der Balken steht trotzdem noch da',
+     root.querySelector('[data-part="lvl"]').hidden === false);
+
+  tool.unmount();
+}
+
+/* Eine Datenbank ohne 0145: `player` fehlt in der Antwort. Dann gibt
+   es kein Level — und das darf nicht bedeuten, dass es keine Insel
+   gibt. Derselbe Fall wie bei 0142/0143, und derselbe Anspruch. */
+async function testLevelOhneMigration() {
+  console.log('\n— Level ohne Migration 0145 —');
+  const { tool, root, env, document } = await mountSolo(soloView(30, () => 1), {
+    wi_solo_level_history: () => ({ ok: false, error: 'fn_missing' }),
+    wi_solo_avatar: args => ({ ok: true, settings: { faction: args.p_faction } })
+  }, { live: true });
+  await wait(60);
+
+  ok('die Insel steht trotzdem', root.querySelectorAll('.wi-cell').length > 100);
+  ok('der Level-Balken bleibt einfach weg',
+     root.querySelector('[data-part="lvl"]').hidden === true);
+  ok('und die Zeichenschleife läuft ohne Krach',
+     env.rafs > 0 && env.rafFehler.length === 0,
+     env.rafFehler.map(e => e.message).join(' | '));
+  /* Die Figur muss weiter da sein — sie hängt an 0143 und nicht an
+     0145. Ohne die Level-Bilder trägt sie ihr altes Bild, und genau
+     das ist der Sinn des Schalters HELD_LEVEL_BILDER. */
+  ok('die Figur trägt ihr altes Bild',
+     env.geladeneBilder.includes('tools/wordisland/sprites/held/2.png'));
+  ok('und es fehlt kein einziges Bild',
+     env.fehlendeBilder.length === 0, env.fehlendeBilder.join(', '));
+
+  const treffer = tippeAufFigur(root, document);
+  ok('der Kasten „Wer bist du?" geht weiter auf', !!treffer);
+  if (treffer) {
+    ok('nur ohne Wochen-Historie',
+       root.querySelector('[data-part="vhist"]').hidden === true);
+    ok('und ohne Level-Angabe',
+       root.querySelector('[data-part="vlvl"]').textContent === '');
+    ok('die acht Völker stehen aber zur Wahl',
+       root.querySelectorAll('.wi-vbtn').length === 8);
+  }
+
+  tool.unmount();
+}
+
 /* Eine Datenbank ohne 0142: words_list kommt ohne `u`. Das ist
    NICHT „die Wörter gehören zu keiner Unit" — es darf also nichts
    blass werden und nichts abstürzen. */
@@ -2249,6 +2603,12 @@ async function testSoloOhneMigration() {
   await testTierTipp();
   await testFigur();
   await testFigurOhneMigration();
+  await testLevel();
+  await testLevelRaender();
+  await testLevelBonus();
+  await testLevelAufstieg();
+  await testLevelKeinAufstieg();
+  await testLevelOhneMigration();
   await testUnitsOhneMigration();
   await testBlassUndRing();
   console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');
