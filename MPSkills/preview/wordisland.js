@@ -98,13 +98,22 @@
       if (best) { best.home = k; best.own = String(k); }
     }
 
+    /* Die Orte wie in wi_build_island (0146): die drei Großen innen,
+       Tore und Klos gestreut. `ruin` ist die KLASSE (1 klein, 2 groß)
+       und trägt die Größe des Lichtpunkts, `wert` die Wertigkeit für
+       die Punktzahl. Beides sind dieselben Zahlen wie im Spiel — eine
+       Vorschau, die anders rechnet als das, was sie zeigt, ist eine
+       Werbung für ein anderes Spiel. */
     const ruins = [];
-    for (let i = 0; i < 10; i++) {
-      const free = cells.filter(t => t.home < 0 && !t.ruin && ruins.every(s =>
+    const ARTEN = [[2, 5], [2, 5], [2, 4], [1, 10], [1, 10], [1, 10], [1, 5], [1, 5], [1, 5]];
+    for (const [klasse, wert] of ARTEN) {
+      const free = cells.filter(t => t.home < 0 && !t.ruin &&
+        (klasse === 1 || t.d < 0.45 * R) && ruins.every(s =>
         Math.hypot(cxOf(s.r, s.c) - cxOf(t.r, t.c), (s.r - t.r) * 0.8660254) >= 3));
-      if (!free.length) break;
+      if (!free.length) continue;
       const t = free[Math.floor(rnd() * free.length)];
-      t.ruin = t.d < 0.30 * R ? 3 : t.d < 0.62 * R ? 2 : 1;
+      t.ruin = klasse;
+      t.wert = wert;
       ruins.push(t);
     }
 
@@ -124,8 +133,9 @@
       out.push({
         i,
         tiles: mine.length,
-        ruins: mine.reduce((s, t) => s + t.ruin, 0),
-        score: mine.length + mine.reduce((s, t) => s + t.ruin, 0),
+        // Der MEHRwert über die 1 hinaus — genauso rechnet wi_teams_json.
+        ruins: mine.reduce((s, t) => s + (t.wert ? t.wert - 1 : 0), 0),
+        score: mine.length + mine.reduce((s, t) => s + (t.wert ? t.wert - 1 : 0), 0),
         people: [7, 6, 6, 7][i]
       });
     }
@@ -358,7 +368,7 @@
 
     const ruinSvg = w.cells.filter(t => t.ruin > 0).map(t =>
       `<circle cx="${cxOf(t.r, t.c).toFixed(2)}" cy="${cyOf(t.r).toFixed(2)}"
-               r="${(0.16 + 0.06 * t.ruin).toFixed(2)}" fill="#ffbe2e" opacity=".75"/>`).join('');
+               r="${(0.18 + 0.10 * t.ruin).toFixed(2)}" fill="#ffbe2e" opacity=".75"/>`).join('');
 
     return `
       <div class="tprev tprev--wi">

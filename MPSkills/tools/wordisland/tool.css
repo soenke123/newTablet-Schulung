@@ -813,7 +813,11 @@
    — ein Bäumchen ist keines. Ein Tipp genau auf einen Baum täte
    sonst gar nichts, und zwar nur manchmal. */
 .wi-sea, .wi-fog, .wi-places, .wi-flags, .wi-ships,
-.wi-ship, .wi-plank, .wi-det, .wi-side { pointer-events: none; }
+.wi-ship, .wi-plank, .wi-det, .wi-side,
+/* Dieselbe Falle, neu seit den Ruinen (0146): ein Herz über einem
+   Feld ist genau das, worauf das Kind zielt — und würde den Tipp
+   schlucken, wenn es ihn annähme. */
+.wi-hearts, .wi-guards { pointer-events: none; }
 
 /* ── Das Meer ────────────────────────────────────────────────
    Brandung: jede Welle läuft von außen auf die Küste zu und
@@ -937,6 +941,9 @@
    durchlassen. */
 .wi-map.is-picking .wi-cell { cursor: pointer; }
 .wi-map.is-picking .wi-cell:hover { stroke: var(--wi-gold); stroke-width: .12; }
+/* Beim Nebelkranz wird nicht am eigenen Rand gewählt, sondern
+   irgendwo — die andere Farbe sagt genau das. */
+.wi-map.is-shadow .wi-cell:hover { stroke: #a78bfa; stroke-width: .14; }
 .wi-fog { transition: opacity .3s ease; }
 .wi-map.is-picking .wi-fog { opacity: .42; }
 
@@ -1169,6 +1176,114 @@
   background: color-mix(in srgb, var(--wi-gold) 22%, var(--surface));
   border-color: color-mix(in srgb, var(--wi-gold) 55%, transparent);
   color: var(--ink);
+}
+/* Der Nebelkranz ist selten und mächtig — er bekommt die einzige
+   Farbe, die sonst nirgends auf dieser Oberfläche vorkommt. */
+.wi-pickbar.is-shadow {
+  background: color-mix(in srgb, #6d28d9 26%, var(--surface));
+  border-color: color-mix(in srgb, #6d28d9 60%, transparent);
+  color: var(--ink);
+}
+.wi-pickhint {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.wi-pickbar.is-pick .wi-pickhint,
+.wi-pickbar.is-shadow .wi-pickhint { color: inherit; opacity: .78; }
+
+/* ── Die Sonderregeln in der Lobby (0146) ────────────────────
+   Zwei Kacheln, eine Frage, und die Antwort erst auf Tippen. Eigener
+   Präfix `wi-rul*`: eine tool.css bedient hier alle drei Rollen.
+
+   Die Kacheln sind KNÖPFE und keine Kästen mit Klickzuhörer — auf
+   dem Tablet entscheidet darüber, ob der Finger eine Rückmeldung
+   bekommt, und am Pult, ob die Tabulatortaste hinkommt. */
+.wi-rulwrap { margin-top: 4px; }
+.wi-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.wi-rultitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-wrap: balance;
+}
+.wi-rulrow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.wi-rulcard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 8px;
+  border-radius: var(--r-md, 18px);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+.wi-rulcard:hover { border-color: color-mix(in srgb, var(--wi-gold) 55%, var(--line)); }
+.wi-rulcard.is-open {
+  background: color-mix(in srgb, var(--wi-gold) 18%, var(--surface));
+  border-color: color-mix(in srgb, var(--wi-gold) 60%, transparent);
+}
+.wi-rulpic { display: flex; align-items: flex-end; gap: 2px; flex: 0 0 auto; }
+.wi-rulpic img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  object-position: bottom;
+}
+.wi-rulname { font-size: 14px; }
+
+.wi-rulbody {
+  padding: 10px 12px;
+  border-radius: var(--r-md, 18px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.wi-rulsatz { margin: 0 0 8px; font-size: 14px; color: var(--ink); }
+.wi-rullist { list-style: none; margin: 0; padding: 0; display: flex;
+  flex-direction: column; gap: 6px; }
+.wi-rulitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.wi-rulmini { width: 28px; height: 28px; object-fit: contain; object-position: bottom; }
+.wi-rulwer { font-weight: 700; color: var(--ink); min-width: 7.5em; }
+.wi-rulherz { color: #e23c50; letter-spacing: 1px; }
+.wi-rulpkt { font-variant-numeric: tabular-nums; }
+/* Die Fähigkeit ist der Grund, warum man hinschaut — sie steht
+   deshalb rechts allein und nicht im Fließtext der Zeile. */
+.wi-rulkann {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+}
+.wi-rulfuss { margin: 8px 0 0; font-size: 12px; color: var(--ink-faint); }
+
+/* Auf dem Handy untereinander: zwei Kacheln nebeneinander sind bei
+   360 px zwei Wortfetzen mit einem Bild davor. */
+@media (max-width: 420px) {
+  .wi-rulrow { grid-template-columns: 1fr; }
+  .wi-rulkann { margin-left: 0; width: 100%; text-align: left; }
+  .wi-rulitem { flex-wrap: wrap; }
 }
 
 .wi--tab .wi-mapwrap { min-height: 46vh; }

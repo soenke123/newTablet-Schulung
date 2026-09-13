@@ -195,6 +195,7 @@
   let timerHandle = null;
   let onResize = null;
   let picking = false;      // Tablet: wartet auf einen Fingertipp aufs Feld
+  let shadowPick = 0;       // offene Nebelkränze aus dem Schattentempel (0146)
   let practice = false;     // Tablet: üben statt warten
   let lastPhase = null;
 
@@ -510,32 +511,65 @@
 
   /* ─── Die besonderen Orte ───────────────────────────────────
      Ein Ort ist ein PLATZ, kein Bild: Sockel, Schatten und Größe
-     gehören der Karte, das Bild darin ist austauschbar. Sobald
-     `img` auf eine Datei zeigt, sitzt das Sprite im Platz und das
-     gezeichnete Zeichen verschwindet — ohne dass sonst irgendetwas
-     anzufassen wäre. Der Pfad ist der volle ab MPSkills/, weil ein
-     hier gebautes <image> relativ zur SEITE auflöst.
+     gehören der Karte, das Bild darin ist austauschbar.
 
-     `hoch` ist das Verhältnis von Bildhöhe zur Sockelbreite: ein
-     Leuchtfeuer ist schlank und hoch, eine Ruine breit und flach.
-     `gross` ist die Übergröße — die Orte stehen absichtlich größer
-     als eine Kachel da, sonst sind sie am Beamer nicht zu finden. */
+     Der PLATZ kennt seit den Ruinen (0146) nur noch zwei Größen —
+     die KLASSE, die auch der Server schickt: 1 klein (Klo,
+     Torbogen), 2 groß (Arena, Tempel). Mehr steht nicht in der
+     Karte, und das ist der Kern der Regel: im Nebel sieht man, dass
+     sich ein Angriff lohnt, aber nicht, worauf.
+
+     `hoch` ist das Verhältnis von Bildhöhe zur Sockelbreite,
+     `gross` die Übergröße — die Orte stehen absichtlich größer als
+     eine Kachel da, sonst sind sie am Beamer nicht zu finden. */
   const PLACES = {
-    1: { name: 'Leuchtfeuer', img: null, gross: 1.20, hoch: 1.55 },
-    2: { name: 'Ruine',       img: null, gross: 1.45, hoch: 1.30 },
-    3: { name: 'Tempel',      img: null, gross: 1.85, hoch: 1.40 }
+    1: { gross: 1.30, hoch: 1.05 },
+    2: { gross: 1.80, hoch: 1.05 }
   };
-  /* Die Platzhalter-Zeichen, solange keine Sprites da sind. Nicht
-     drei Größen desselben Punktes: ein Kind soll aus zehn Metern
-     sehen, WAS dort steht, nicht nur DASS dort etwas steht. */
+  /* Die Platzhalter-Zeichen, solange kein Sprite geladen ist: eine
+     Mauer für die kleinen, ein Tempel für die großen. Ein Kind soll
+     aus zehn Metern sehen, WAS dort steht, nicht nur DASS dort
+     etwas steht. */
   const MARK = {
-    1: 'M0 -.30 C .17 -.12 .21 .04 .09 .16 C .07 .04 .02 .01 -.03 .16 C -.18 .02 -.11 -.14 0 -.30 Z',
-    2: 'M-.30 .22 L-.30 -.12 L-.16 -.18 L-.16 .22 Z M .04 .22 L .04 -.24 L .20 -.30 L .20 .22 Z '
+    1: 'M-.30 .22 L-.30 -.12 L-.16 -.18 L-.16 .22 Z M .04 .22 L .04 -.24 L .20 -.30 L .20 .22 Z '
      + 'M-.30 -.12 L-.16 -.18 L-.16 -.06 L-.30 -.02 Z',
-    3: 'M-.36 .24 L .36 .24 L .36 .14 L-.36 .14 Z M-.26 .14 L-.26 -.06 L-.16 -.06 L-.16 .14 Z '
+    2: 'M-.36 .24 L .36 .24 L .36 .14 L-.36 .14 Z M-.26 .14 L-.26 -.06 L-.16 -.06 L-.16 .14 Z '
      + 'M-.05 .14 L-.05 -.06 L .05 -.06 L .05 .14 Z M .16 .14 L .16 -.06 L .26 -.06 L .26 .14 Z '
      + 'M-.34 -.06 L0 -.30 L .34 -.06 Z'
   };
+
+  /* ─── Die fünf Ruinen ───────────────────────────────────────
+     Der Schlüssel ist das Zeichen aus `ruins` (wi_ruin_string), die
+     Zahlen sind die von wi_ruin_def in Migration 0146.
+
+     ⚠️ Dieselbe Balance steht damit zwangsläufig in zwei Dateien —
+     im Browser und in Postgres. Prüfstand `uitest.js` liest BEIDE
+     und vergleicht sie; ohne das zeigt die Lobby irgendwann fünf
+     Herzen an, während der Server mit vieren rechnet, und beides
+     sieht für sich plausibel aus.
+
+     `leben` ist Sönkes Zahl (das Feld selbst zählt mit), `herzen`
+     die Anzeige — ein Herz weniger. */
+  const RUIN_DIR = 'tools/wordisland/sprites/ruine/';
+  const RUINEN = {
+    K: { art: 'klo',      name: 'Klo',            leben: 2, herzen: 1, wert: 5,
+         gross: false, img: 'klo.png',      kann: null },
+    T: { art: 'tor',      name: 'Torbogen',       leben: 3, herzen: 2, wert: 10,
+         gross: false, img: 'tor.png',      kann: null },
+    A: { art: 'arena',    name: 'Arena',          leben: 4, herzen: 3, wert: 4,
+         gross: true,  img: 'arena.png',    kann: 'Nimm mehr Land ein' },
+    L: { art: 'licht',    name: 'Lichttempel',    leben: 5, herzen: 4, wert: 5,
+         gross: true,  img: 'licht.png',    kann: 'Schütze deine Felder' },
+    S: { art: 'schatten', name: 'Schattentempel', leben: 5, herzen: 4, wert: 5,
+         gross: true,  img: 'schatten.png', kann: 'Hol den Nebel zurück' }
+  };
+  const ruinSrc = k => RUINEN[k] ? encodeURI(RUIN_DIR + RUINEN[k].img) : '';
+
+  /* Ein Herz. Gezeichnet und nicht als Zeichen gesetzt: auf der
+     Karte wird alles in Kacheln gerechnet, und ein ❤ in einem
+     <text> hinge an der Schriftart des Geräts. */
+  const HERZ = 'M0 .26 C-.36 .02 -.30 -.30 -.10 -.30 C-.03 -.30 0 -.24 0 -.19 '
+             + 'C0 -.24 .03 -.30 .10 -.30 C .30 -.30 .36 .02 0 .26 Z';
 
   /* ─── Die Filter-Werkstatt ──────────────────────────────────
      ⚠️ Bei ALLEN: die Werte rechnen in BENUTZEREINHEITEN, und eine
@@ -1250,6 +1284,24 @@
      Orte, Fahnen, Schiffe
      ══════════════════════════════════════════════════════════ */
 
+  /* Eine Reihe Herzen über einem Ort. Sie werden bei jeder Änderung
+     neu gesetzt und nicht ein- und ausgeblendet: es sind höchstens
+     vier Pfade, und ein Vorrat versteckter Herzen wäre genau die
+     Sorte Zustand, die man beim nächsten Umbau übersieht. */
+  function herzReihe(g, anzahl, y, gr) {
+    while (g.firstChild) g.removeChild(g.firstChild);
+    if (!anzahl) return;
+    const b = gr * 1.15;
+    const x0 = -(anzahl - 1) * b / 2;
+    for (let i = 0; i < anzahl; i++) {
+      el('path', {
+        d: HERZ, fill: '#e23c50', stroke: 'rgba(255,255,255,.92)',
+        'stroke-width': .07, 'paint-order': 'stroke',
+        transform: `translate(${n2(x0 + i * b)} ${n2(y)}) scale(${n2(gr)})`
+      }, g);
+    }
+  }
+
   function placeLayer(svg, isl) {
     const g = el('g', { class: 'wi-places' }, svg);
     const marks = [];
@@ -1276,37 +1328,99 @@
       }, gBody);
       el('path', { d: hexPath(0, 0, sc * 1.02), fill: 'none', stroke: KARTE.gold, 'stroke-width': .06, opacity: .8 }, gBody);
       const w = 1.55 * sc, h = w * def.hoch;
-      if (def.img) {
-        img(gBody, def.img, {
-          x: n2(-w / 2), y: n2(.22 * sc - h), width: n2(w), height: n2(h),
-          preserveAspectRatio: 'xMidYMax meet'
-        });
-      } else {
-        /* Das Platzhalter-Zeichen bekommt eine helle Kontur:
-           dunkles Grau auf sandfarbenem Sockel ist sonst kaum von
-           der Bodentextur zu unterscheiden. */
-        el('path', {
-          d: MARK[z.ruin], fill: KARTE.signInk, opacity: .92,
-          stroke: 'rgba(255,255,255,.75)', 'stroke-width': .045, 'paint-order': 'stroke',
-          transform: `scale(${n2(sc * 1.3)})`
-        }, gBody);
-      }
-      marks.push({ z, halo, gBody, plate });
+      /* EIN Bildknoten je Ort, dessen Quelle erst beim Aufdecken
+         gesetzt wird. Fünf Knoten je Ort (einer je Ruinenart) wären
+         fünfmal so viel Ladung für vier Bilder, die nie zu sehen
+         sind; ein leeres <image> lädt nichts. */
+      const bild = img(gBody, '', {
+        x: n2(-w / 2), y: n2(.22 * sc - h), width: n2(w), height: n2(h),
+        preserveAspectRatio: 'xMidYMax meet', opacity: 0
+      });
+      /* Das Platzhalter-Zeichen bekommt eine helle Kontur: dunkles
+         Grau auf sandfarbenem Sockel ist sonst kaum von der
+         Bodentextur zu unterscheiden. Es steht, solange das Sprite
+         nicht da ist — und bei einem Ordner ohne Bilder für immer. */
+      const zeichen = el('path', {
+        d: MARK[z.ruin] || MARK[1], fill: KARTE.signInk, opacity: .92,
+        stroke: 'rgba(255,255,255,.75)', 'stroke-width': .045, 'paint-order': 'stroke',
+        transform: `scale(${n2(sc * 1.3)})`
+      }, gBody);
+      /* Die Herzen hängen AM ORT und nicht am Körper: sie sollen
+         auch dann stehen, wenn das Gebäude gerade niemandem gehört. */
+      const herzen = el('g', { class: 'wi-hearts' }, gg);
+      marks.push({ z, halo, gBody, plate, bild, zeichen, herzen,
+                   hy: n2(.22 * sc - h - .30), sc, last: null, quelle: '' });
     }
 
-    return function paint(own) {
+    return function paint(own, ruins, hearts) {
       for (const m of marks) {
         const ch = own[m.z.i];
-        if (ownPainted && ownPainted[m.z.i] === ch) continue;
+        const art = ruins[m.z.i];
+        const hp = (hearts.charCodeAt(m.z.i) - 48) | 0;
+        /* Drei Zeichenketten, ein Vergleich: der Ort malt sich neu,
+           wenn sich SEIN Zustand geändert hat — Besitz, Art oder
+           Herzen. Der Vergleich gegen `ownPainted` allein hätte
+           einen Treffer ohne Besitzwechsel verschluckt. */
+        const jetzt = ch + art + hp;
+        if (m.last === jetzt) continue;
+        m.last = jetzt;
+
         const on = ch !== '.';
+        const auf = art !== '.';
         const t = on ? facOf(+ch) : -1;
         /* Der Sockel nimmt die Farbe des Volkes an, sobald der Ort
            gehört — das ist die Meldung „erobert", ohne eine Zahl. */
         m.plate.setAttribute('fill', on
           ? mix(KARTE.land.sand, (TEAMS[t] || { color: '#888' }).color, .55)
           : KARTE.land.sand);
-        m.gBody.setAttribute('opacity', on ? 1 : 0);
-        m.halo.setAttribute('opacity', on ? .3 : .6);
+
+        /* Sichtbar wird das Gebäude mit dem ERSTEN TREFFER, nicht
+           mit dem Besitz: „aber was verbirgt sich da?" ist die Frage,
+           die der Schein im Nebel stellt, und ein Angriff ist die
+           Antwort darauf. Der Nebel bleibt dabei liegen — die
+           Orte-Schicht liegt über ihm. */
+        m.gBody.setAttribute('opacity', auf ? 1 : 0);
+        m.halo.setAttribute('opacity', on ? .3 : auf ? .45 : .6);
+
+        if (auf && RUINEN[art] && m.quelle !== art) {
+          m.quelle = art;
+          m.bild.setAttributeNS('http://www.w3.org/1999/xlink', 'href', ruinSrc(art));
+          m.bild.setAttribute('href', ruinSrc(art));
+          m.bild.setAttribute('opacity', 1);
+          m.zeichen.setAttribute('opacity', 0);
+        }
+        herzReihe(m.herzen, auf ? hp : 0, m.hy, .34 * m.sc);
+      }
+    };
+  }
+
+  /* ─── Schutzherzen auf ganz normalen Feldern ────────────────
+     Der Lichttempel verteilt sie; auf der Karte sind sie dieselbe
+     Auskunft wie die Herzen einer Ruine — „hier musst du zweimal
+     treffen". Deshalb dasselbe Zeichen, nur kleiner.
+
+     Ruinenfelder überspringt diese Schicht immer: ihre Herzen malt
+     placeLayer, und zwar erst, wenn sie aufgedeckt sind. */
+  function guardLayer(svg, isl) {
+    const g = el('g', { class: 'wi-guards' }, svg);
+    const knoten = new Map();
+    let last = null;
+    return function paint(own, ruins, hearts) {
+      if (hearts === last) return;
+      last = hearts;
+      for (const z of isl.cells) {
+        if (z.ruin) continue;
+        const hp = (hearts.charCodeAt(z.i) - 48) | 0;
+        let k = knoten.get(z.i);
+        if (!hp) {
+          if (k) { g.removeChild(k); knoten.delete(z.i); }
+          continue;
+        }
+        if (!k) {
+          k = el('g', { transform: `translate(${n2(z.x)} ${n2(z.y - .42)})` }, g);
+          knoten.set(z.i, k);
+        }
+        herzReihe(k, hp, 0, .26);
       }
     };
   }
@@ -1572,9 +1686,14 @@
     const fog = fogLayer(svg, isl, opt, .22);
     const flag = flagLayer(svg, isl);
     const place = placeLayer(svg, isl);
+    const guard = guardLayer(svg, isl);
     const ship = shipLayer(svg, isl);
 
-    mapPaint = own => { land(own); fog(own); place(own); flag(own); ship(own); };
+    mapPaint = (own, ruins, hearts) => {
+      land(own); fog(own);
+      place(own, ruins, hearts); guard(own, ruins, hearts);
+      flag(own); ship(own);
+    };
     return isl;
   }
 
@@ -1585,9 +1704,17 @@
      Slot 1 sitzt, entscheidet die Lehrkraft. Ohne die Übersetzung
      (facOf) hätte ein Raum mit den Völkern 4 und 5 zwei rot-blaue
      Gebiete und daneben eine lila Kopfzeile. */
-  function paintOwn(own) {
+  function paintOwn(own, ruins, hearts) {
     if (!own || !mapPaint || own.length !== cells.length) return;
-    mapPaint(own);
+    /* Der Rückfallweg ohne Migration 0146 steht genau hier: ein
+       Server, der `ruins`/`hearts` nicht kennt, bekommt lauter Punkte
+       und lauter Nullen — die Karte zeichnet dann die Lichtpunkte von
+       früher und keine Herzen. Alt, nicht kaputt. */
+    const R = (typeof ruins === 'string' && ruins.length === own.length)
+      ? ruins : '.'.repeat(own.length);
+    const H = (typeof hearts === 'string' && hearts.length === own.length)
+      ? hearts : '0'.repeat(own.length);
+    mapPaint(own, R, H);
     ownPainted = own;
   }
 
@@ -1766,6 +1893,9 @@
 
           <div class="wi-lobbyteams" data-part="lobbyteams"></div>
           <div class="wi-waiting" data-part="waiting" hidden></div>
+          <!-- Dieselben zwei Kacheln wie am Tablet: was am Beamer
+               steht, kann die Lehrkraft vorlesen. -->
+          <div class="wi-rulwrap" data-part="rulwrap"></div>
         </div>
       </section>
 
@@ -1838,8 +1968,11 @@
       start: q('start'),
       teamsRow: q('teams-row'), clock: q('clock'), big: q('big'),
       map: q('map'), mapwrap: q('mapwrap'),
-      winner: q('winner'), endTeams: q('end-teams'), hard: q('hard')
+      winner: q('winner'), endTeams: q('end-teams'), hard: q('hard'),
+      rulWrap: q('rulwrap')
     };
+    els.rulWrap.innerHTML = rulesHTML();
+    bindRules(root);
 
     root.querySelectorAll('.wi-tab').forEach(b => b.addEventListener('click', () => {
       tab = b.dataset.tab;
@@ -2221,6 +2354,8 @@
       renderWaiting(v);
       syncSetsFromView(v);
       renderSetSum();
+      // Ohne 0146 gibt es keine Ruinen — dann auch keine Erklärung.
+      els.rulWrap.hidden = (v.ruins == null);
       return;
     }
 
@@ -2272,6 +2407,10 @@
           <div class="wi-otherslabel">Diese Völker landen mit euch</div>
           <div class="wi-otherlist" data-part="others"></div>
         </div>
+        <!-- Die Sonderregeln. Leer im Rohbau und erst beim Bauen
+             gefüllt: rulesHTML() steht weiter unten in dieser Datei,
+             und ein Aufruf hier würde beim Laden ausgewertet. -->
+        <div class="wi-rulwrap" data-part="rulwrap"></div>
         <p class="wi-hint" data-part="onlinehint" hidden></p>
         <button type="button" class="wi-btn wi-btn--ghost" data-part="practice">Bis dahin üben</button>
       </section>
@@ -2316,8 +2455,11 @@
       big: q('big'), back: q('back'),
       me: q('me'), ask: q('ask'), word: q('word'),
       form: q('typeform'), input: q('input'), opts: q('opts'), fb: q('fb'),
-      pickbar: q('pickbar'), map: q('map'), mapwrap: q('mapwrap')
+      pickbar: q('pickbar'), map: q('map'), mapwrap: q('mapwrap'),
+      rulWrap: q('rulwrap')
     };
+    els.rulWrap.innerHTML = rulesHTML();
+    bindRules(root);
 
     feldBauen(els.input, send);
     feldKnopf(q('typego'), els.input, send);
@@ -2352,7 +2494,13 @@
       } else if (r.result === 'choice') {
         feedback('warn', 'Welches Wort ist es?');
       } else if (r.result === 'correct') {
-        feedback('ok', r.tile ? 'Richtig — ein Feld ist frei!' : 'Richtig!');
+        /* Ein Zufallsgriff kann seit 0146 auch auf ein geschütztes
+           Feld laufen: dann ist die Antwort richtig, aber das Feld
+           bleibt, wo es war. Das MUSS dastehen — sonst sucht das
+           Kind auf der Karte nach einem Feld, das es nicht gibt. */
+        feedback('ok', !r.tile ? 'Richtig!'
+          : r.tile.kind === 'guard' ? 'Richtig — aber das Feld ist geschützt. Ein Herz weniger!'
+          : 'Richtig — ein Feld ist frei!');
       } else {
         feedback('bad', 'Es heißt: ' + r.solution);
         lockInput(r.locked_for);
@@ -2364,7 +2512,7 @@
         view.me.picks  = r.picks;
       }
       feldLeer(els.input);
-      renderTask(r.task, r.streak, r.picks);
+      renderTask(r.task, r.streak, r.picks, view && view.me.shadow_pick);
       // Die Karte hat sich bewegt — sofort nachfragen, nicht bis
       // zum nächsten Takt warten. Ein Feld, das vier Sekunden
       // später auftaucht, gehört gefühlt zur nächsten Antwort.
@@ -2394,7 +2542,7 @@
     els.fb.textContent = text;
   }
 
-  function renderTask(task, streak, picks) {
+  function renderTask(task, streak, picks, shadow) {
     const has = task && task.prompt;
     els.ask.textContent = !has ? ''
       : (task.dir === 'en_de' ? 'Wie heißt das auf Deutsch?' : 'Wie heißt das auf Englisch?');
@@ -2413,17 +2561,106 @@
        („noch 2"), dann fordert sie auf („zeig, wohin"). Zwei
        getrennte Kästen hätten einen davon immer leer stehen lassen. */
     const goal = Math.max(0, STREAK_GOAL - (streak || 0));
-    els.pickbar.hidden = !(picks > 0 || (streak > 0 && goal > 0));
-    els.pickbar.classList.toggle('is-pick', picks > 0);
-    if (picks > 0) {
+    shadowPick = shadow || 0;
+    els.pickbar.hidden = !(shadowPick > 0 || picks > 0 || (streak > 0 && goal > 0));
+    els.pickbar.classList.toggle('is-pick', picks > 0 && !shadowPick);
+    els.pickbar.classList.toggle('is-shadow', shadowPick > 0);
+    if (shadowPick > 0) {
+      /* Der Nebelkranz hat VORRANG vor der freien Wahl: er ist selten,
+         er ist mächtig, und zwei Aufforderungen nebeneinander wären
+         eine zu viel. Die freie Wahl wartet so lange — sie verfällt
+         mit der Serie, der Kranz nicht. */
       els.pickbar.innerHTML =
-        `<b>Zeig, wohin!</b> Tipp auf ein Feld an eurem Rand${picks > 1 ? ` (${picks} frei)` : ''}.`;
+        `<b>Schattentempel!</b> Tipp auf ein Feld — es und alles drum herum wird wieder Nebel.`;
+    } else if (picks > 0) {
+      els.pickbar.innerHTML =
+        `<b>Zeig, wohin!</b> Tipp auf ein Feld an eurem Rand${picks > 1 ? ` (${picks} frei)` : ''}.`
+        + `<span class="wi-pickhint">Auf einer Ruine kostet das ein Herz.</span>`;
     } else if (streak > 0 && goal > 0) {
       els.pickbar.innerHTML =
-        `Serie ${streak} — noch ${goal} richtige, dann zeigst du selbst, welches Feld fällt.`;
+        `Serie ${streak} — noch ${goal} richtige, dann zeigst du selbst, welches Feld fällt.`
+        + `<span class="wi-pickhint">Nur so kommst du an die Ruinen.</span>`;
     }
-    picking = picks > 0;
+    picking = picks > 0 || shadowPick > 0;
     els.map.classList.toggle('is-picking', picking);
+    els.map.classList.toggle('is-shadow', shadowPick > 0);
+  }
+
+  /* ─── „Was verbirgt sich da?" ───────────────────────────────
+     Die Sonderregeln, wie Sönke sie vorgegeben hat: eine Frage, zwei
+     Kacheln, und die Antwort erst auf Tippen. Wenig Text ist hier
+     keine Sparsamkeit, sondern der Inhalt — in der Lobby wird nicht
+     gelesen, sondern gewartet.
+
+     Ein Baustein für ZWEI Oberflächen (Wartetafel am Tablet und
+     Lobby am Beamer). Aufgeklappt wird im DOM, nicht im Zustand:
+     welche Kachel offen ist, steht als Klasse am Knopf — ein Kasten,
+     der in zwei Ansichten gleichzeitig lebt, hätte sonst zwei
+     Wahrheiten.
+
+     ⚠️ Die Zahlen kommen aus RUINEN und werden NICHT abgeschrieben.
+     Eine Lobby, die vier Herzen verspricht, während der Server mit
+     fünf rechnet, ist schlimmer als gar keine Erklärung. */
+  const RUL_KLEIN = ['K', 'T'];
+  const RUL_GROSS = ['L', 'S', 'A'];
+
+  function ruinZeile(k) {
+    const R = RUINEN[k];
+    return `<li class="wi-rulitem">
+        <img class="wi-rulmini" src="${esc(ruinSrc(k))}" alt="">
+        <span class="wi-rulwer">${esc(R.name)}</span>
+        <span class="wi-rulherz" aria-label="${R.leben} Leben">${'♥'.repeat(R.herzen)}</span>
+        <span class="wi-rulpkt">${R.wert} Punkte</span>
+        ${R.kann ? `<span class="wi-rulkann">${esc(R.kann)}</span>` : ''}
+      </li>`;
+  }
+
+  function rulesHTML() {
+    const bild = k => `<img src="${esc(ruinSrc(k))}" alt="">`;
+    return `
+      <div class="wi-rules" data-part="rules">
+        <p class="wi-rultitle">Nimm mit richtigen Antworten Teile der Insel ein —
+          aber was verbirgt sich da?</p>
+        <div class="wi-rulrow">
+          <button type="button" class="wi-rulcard" data-rul="klein" aria-expanded="false">
+            <span class="wi-rulpic">${bild('K')}${bild('T')}</span>
+            <span class="wi-rulname">Kleine Ruinen</span>
+          </button>
+          <button type="button" class="wi-rulcard" data-rul="gross" aria-expanded="false">
+            <span class="wi-rulpic">${bild('L')}${bild('S')}</span>
+            <span class="wi-rulname">Große Ruinen</span>
+          </button>
+        </div>
+        <div class="wi-rulbody" data-part="rulbody" hidden></div>
+      </div>`;
+  }
+
+  /* Ein Zuhörer an der Wurzel, kein Knopf-Karussell: die Kacheln
+     entstehen mit dem HTML und verschwinden mit ihm. */
+  function bindRules(wurzel) {
+    wurzel.addEventListener('click', e => {
+      const b = e.target.closest('.wi-rulcard');
+      if (!b) return;
+      const box = b.closest('.wi-rules');
+      const body = box.querySelector('.wi-rulbody');
+      const offen = b.getAttribute('aria-expanded') === 'true';
+      box.querySelectorAll('.wi-rulcard').forEach(x => {
+        x.setAttribute('aria-expanded', 'false');
+        x.classList.remove('is-open');
+      });
+      if (offen) { body.hidden = true; return; }
+      b.setAttribute('aria-expanded', 'true');
+      b.classList.add('is-open');
+      const klein = b.dataset.rul === 'klein';
+      body.innerHTML = klein
+        ? `<p class="wi-rulsatz">Die geben dir Bonus-Punkte, solange sie dir gehören.</p>
+           <ul class="wi-rullist">${RUL_KLEIN.map(ruinZeile).join('')}</ul>
+           <p class="wi-rulfuss">Ein Herz = ein Treffer mehr. Ruinen fallen nur mit einer Serie.</p>`
+        : `<p class="wi-rulsatz">Nimm sie ein und erhalte ihre Fähigkeiten.</p>
+           <ul class="wi-rullist">${RUL_GROSS.map(ruinZeile).join('')}</ul>
+           <p class="wi-rulfuss">Ein Herz = ein Treffer mehr. Ruinen fallen nur mit einer Serie.</p>`;
+      body.hidden = false;
+    });
   }
 
   /* Die anderen Völker: Bild, Name, Kopfzahl. Mehr nicht — wer sonst
@@ -2470,6 +2707,11 @@
       : '';
     els.onlineHint.textContent = hint;
     els.onlineHint.hidden = !hint;
+
+    /* Ohne Migration 0146 gibt es die Ruinen nicht — dann darf die
+       Lobby sie auch nicht versprechen. Erkennungsmerkmal ist das
+       Feld, das erst 0146 mitschickt. */
+    els.rulWrap.hidden = (v.ruins == null);
   }
 
   function renderTab(v) {
@@ -2503,26 +2745,77 @@
     if (!arena && els.fb.hidden) {
       feedback('idle', 'Die Arena läuft gerade nicht — üben kannst du trotzdem.');
     }
-    renderTask(v.me.task, v.me.streak, v.me.picks);
+    renderTask(v.me.task, v.me.streak, v.me.picks, v.me.shadow_pick);
     if (v.me.locked_for > 0) lockInput(v.me.locked_for);
+  }
+
+  /* Was nach einem Schlag dasteht. Die Zahl `hearts` ist das, was
+     NACH diesem Treffer noch übrig ist — und weil das Feld selbst
+     das letzte Leben ist, heißt „0 Herzen" nicht „kaputt", sondern
+     „der nächste Schlag nimmt es". Genau so steht es da. */
+  function schlagText(t, effect) {
+    const R = Object.values(RUINEN).find(x => x.art === t.ruin);
+    const name = R ? R.name : 'Die Ruine';
+    if (t.result === 'guard') return 'Ein Schutzherz weniger — das Feld hält noch.';
+    if (t.result === 'hit') {
+      return t.hearts > 0
+        ? `Treffer! ${name}: noch ${t.hearts} ${t.hearts === 1 ? 'Herz' : 'Herzen'}.`
+        : `Treffer! Der nächste Schlag nimmt ${name === 'Die Ruine' ? 'sie' : 'ihn'}.`;
+    }
+    if (!effect) return R ? `${name} gehört euch!` : 'Feld genommen!';
+    if (effect.kind === 'arena')    return 'Arena erobert — drei freie Züge für dich!';
+    if (effect.kind === 'licht')    return `Lichttempel erobert — ${effect.guarded} eurer Felder sind geschützt!`;
+    if (effect.kind === 'schatten') return 'Schattentempel erobert — hol den Nebel zurück!';
+    return `${name} gehört euch!`;
   }
 
   async function onMapClick(e) {
     if (!picking) return;
     const cell = e.target.closest('.wi-cell');
     if (!cell) return;
-    const r = await ctx.actions.call('wi_pick_tile',
-      { p_r: +cell.dataset.r, p_c: +cell.dataset.c });
+    const r_ = +cell.dataset.r, c_ = +cell.dataset.c;
+
+    /* Der Nebelkranz zuerst — er hat in der Leiste Vorrang, also
+       muss er ihn auch beim Tippen haben. Sonst verbrauchte derselbe
+       Fingertipp eine freie Wahl. */
+    if (shadowPick > 0) {
+      const s = await ctx.actions.call('wi_shadow_strike', { p_r: r_, p_c: c_ });
+      if (!s.ok) {
+        ctx.toast(s.error === 'not_reachable' ? 'Dieses Feld gibt es nicht.'
+          : s.error === 'fn_missing' ? 'Der Schattentempel braucht ein Update der Datenbank.'
+          : ctx.errText(s.error));
+        return;
+      }
+      feedback('ok', `Der Nebel ist zurück — ${s.fogged} Felder sind wieder frei zu haben.`);
+      if (view) view.me.shadow_pick = s.shadow_pick;
+      renderTask(view && view.me.task, view && view.me.streak,
+                 view && view.me.picks, s.shadow_pick);
+      tick(true);
+      return;
+    }
+
+    const r = await ctx.actions.call('wi_pick_tile', { p_r: r_, p_c: c_ });
     if (!r.ok) {
       ctx.toast(r.error === 'not_reachable'
         ? 'Das Feld grenzt nicht an euer Gebiet.'
-        : r.error === 'tile_busy'
-          ? 'Zu spät — da war gerade jemand anders.'
-          : ctx.errText(r.error));
+        : r.error === 'own_tile'
+          ? 'Das gehört euch schon.'
+          : r.error === 'home_tile'
+            ? 'Landeplätze sind unantastbar.'
+            : r.error === 'tile_busy'
+              ? 'Zu spät — da war gerade jemand anders.'
+              : ctx.errText(r.error));
       return;
     }
-    if (view) view.me.picks = r.picks;
-    renderTask(view && view.me.task, view && view.me.streak, r.picks);
+    if (r.tile && (r.tile.ruin || r.tile.result === 'guard')) {
+      feedback('ok', schlagText(r.tile, r.effect));
+    }
+    if (view) {
+      view.me.picks = r.picks;
+      if (r.shadow_pick != null) view.me.shadow_pick = r.shadow_pick;
+    }
+    renderTask(view && view.me.task, view && view.me.streak, r.picks,
+               view && view.me.shadow_pick);
     tick(true);
   }
 
@@ -2588,7 +2881,7 @@
       setTimeout(() => tick(true), 0);
       return;
     }
-    if (mapKey) paintOwn(v.own);
+    if (mapKey) paintOwn(v.own, v.ruins, v.hearts);
 
     if (role === 'presenter') renderPult(v); else { renderTab(v); soloClaim(); }
   }
@@ -7099,7 +7392,7 @@
       root = host; ctx = c; role = ctx.role;
       destroyed = false; busy = false; view = null;
       mapKey = null; cells = []; cellEls = []; ships = {}; mapPaint = null;
-      ownPainted = null; submitting = false; picking = false;
+      ownPainted = null; submitting = false; picking = false; shadowPick = 0;
       sets = { list: [], chosen: [] }; setsBusy = 0; tab = 'units'; setsOpen = false;
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
       practice = false; lastPhase = null; soloClaimAt = 0;

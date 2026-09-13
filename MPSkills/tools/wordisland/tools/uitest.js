@@ -104,7 +104,9 @@ function island(rows, cols) {
   const cells = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      cells.push([r, c, (r === 1 && c === 2) ? 3 : 0, (r === 0 && c === 0) ? 1 : 0]);
+      // Das dritte Element ist seit 0146 die KLASSE des Ortes:
+      // 0 nichts, 1 klein (Klo, Tor), 2 groß (Arena, Tempel).
+      cells.push([r, c, (r === 1 && c === 2) ? 2 : 0, (r === 0 && c === 0) ? 1 : 0]);
     }
   }
   return cells;
@@ -131,7 +133,7 @@ function rundeInsel(R) {
   const rand = cells.filter(z => z[4] > R * 0.62).sort((a, b) =>
     Math.atan2(a[0] * 0.866, a[1]) - Math.atan2(b[0] * 0.866, b[1]));
   [0, 1, 2, 3].forEach(k => { const z = rand[Math.floor(k * rand.length / 4)]; if (z) z[3] = 1; });
-  cells.filter(z => !z[3] && z[4] < R * 0.5).forEach((z, i) => { if (i % 9 === 0) z[2] = 1 + (i % 3); });
+  cells.filter(z => !z[3] && z[4] < R * 0.5).forEach((z, i) => { if (i % 9 === 0) z[2] = 1 + (i % 2); });
   return cells.map(z => [z[0], z[1], z[2], z[3]]);
 }
 
@@ -2904,6 +2906,333 @@ async function testSoloOhneMigration() {
   leer.tool.unmount();
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Die Ruinen (Migration 0146)
+   ═══════════════════════════════════════════════════════════ */
+
+/* Eine Karte mit zwei Orten: ein großer (Klasse 2) und ein kleiner
+   (Klasse 1). Vier mal fünf Felder, Landeplatz oben links. */
+function ruinInsel() {
+  const cells = [];
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 5; c++) {
+      const kl = (r === 1 && c === 2) ? 2 : (r === 2 && c === 3) ? 1 : 0;
+      cells.push([r, c, kl, (r === 0 && c === 0) ? 1 : 0]);
+    }
+  }
+  return cells;
+}
+const RMAP = ruinInsel();
+const R_GROSS = 1 * 5 + 2;      // Index des großen Ortes
+const R_KLEIN = 2 * 5 + 3;      // Index des kleinen
+const zeichenkette = (len, belegt, leer) => {
+  const a = new Array(len).fill(leer);
+  for (const k in belegt) a[k] = belegt[k];
+  return a.join('');
+};
+const platz = (root, i) => root.querySelectorAll('.wi-place')[i];
+const koerper = p => p.querySelector('g:not(.wi-hearts)');
+const herzZahl = p => p.querySelector('.wi-hearts').querySelectorAll('path').length;
+
+/* Ein Tablet mit Ruinen. `stand` ist der Server: was er jetzt sagt,
+   kommt beim nächsten Takt an. */
+async function mountRuinen(stand, mehr) {
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+  const calls = [];
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'participant',
+    actions: {
+      role: 'participant',
+      call: (fn, args) => {
+        calls.push([fn, args]);
+        if (fn === 'wi_view') {
+          return Promise.resolve(viewFor(Object.assign(
+            { map: args.p_full ? RMAP : null, own: stand.own,
+              ruins: stand.ruins, hearts: stand.hearts }, stand.over || {}), stand.me));
+        }
+        if (mehr && mehr[fn]) return Promise.resolve(mehr[fn](args));
+        return Promise.resolve({ ok: false, error: 'not_allowed' });
+      }
+    }
+  });
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+  return { tool, root, document, calls };
+}
+
+async function testRuinen() {
+  console.log('\n— Die Ruinen auf der Karte —');
+  const len = RMAP.length;
+  const stand = {
+    own: zeichenkette(len, { 0: '0' }, '.'),
+    ruins: '.'.repeat(len),
+    // Der Server schickt die Herzen auch für unaufgedeckte Ruinen —
+    // verraten wird dadurch nichts, weil sie erst mit dem Gebäude
+    // gezeichnet werden.
+    hearts: zeichenkette(len, { [R_GROSS]: '4', [R_KLEIN]: '1' }, '0'),
+    me: { picks: 1, streak: 3 }
+  };
+  let getroffen = null;
+  const { tool, root, document, calls } = await mountRuinen(stand, {
+    wi_pick_tile: args => {
+      getroffen = args;
+      // Der erste Schlag deckt auf und nimmt ein Herz.
+      stand.ruins = zeichenkette(len, { [R_GROSS]: 'L' }, '.');
+      stand.hearts = zeichenkette(len, { [R_GROSS]: '3', [R_KLEIN]: '1' }, '0');
+      return { ok: true, picks: 0, shadow_pick: 0, effect: null,
+               tile: { r: args.p_r, c: args.p_c, result: 'hit', ruin: 'licht', hearts: 3 } };
+    }
+  });
+
+  ok('beide Orte stehen auf der Karte', root.querySelectorAll('.wi-place').length === 2,
+     `${root.querySelectorAll('.wi-place').length}`);
+  /* Im Nebel sieht man die KLASSE und sonst nichts: der große Ort hat
+     den größeren Schein, das Gebäude ist unsichtbar, Herzen gibt es
+     keine. Das ist Sönkes „aber was verbirgt sich da?". */
+  const gr = +platz(root, 0).querySelector('.wi-halo').getAttribute('r');
+  const kl = +platz(root, 1).querySelector('.wi-halo').getAttribute('r');
+  ok('der große Ort schimmert breiter', gr > kl, `${gr} / ${kl}`);
+  ok('im Nebel steht kein Gebäude da',
+     koerper(platz(root, 0)).getAttribute('opacity') === '0' &&
+     koerper(platz(root, 1)).getAttribute('opacity') === '0');
+  ok('und keine Herzen', herzZahl(platz(root, 0)) === 0 && herzZahl(platz(root, 1)) === 0);
+
+  /* Ein Schlag mit der freien Wahl. */
+  ok('die Karte ist scharf', root.querySelector('.wi-map').classList.contains('is-picking'));
+  click(root.querySelectorAll('.wi-cell')[R_GROSS], document);
+  await wait(60);
+  ok('der Schlag ging an wi_pick_tile', !!getroffen && getroffen.p_r === 1 && getroffen.p_c === 2,
+     js(getroffen));
+  const fb = root.querySelector('.wi-fb').textContent;
+  ok('die Rückmeldung nennt Ruine und Rest', /Lichttempel/.test(fb) && /3/.test(fb), fb);
+
+  /* Und die Karte zeigt jetzt, was dort steht — noch im Nebel, denn
+     erobert ist er nicht. */
+  ok('das Gebäude ist aufgedeckt',
+     koerper(platz(root, 0)).getAttribute('opacity') === '1');
+  const href = platz(root, 0).querySelector('image').getAttribute('href') || '';
+  ok('und es ist der Lichttempel', /sprites\/ruine\/licht\.png$/.test(href), href);
+  /* Ein fehlendes <image> zeichnet in SVG stillschweigend NICHTS —
+     deshalb wird die DATEI geprüft und nicht nur der Pfad (dieselbe
+     Falle wie bei den Schiffen). */
+  ok('das Bild liegt auch wirklich da',
+     fs.existsSync(path.join(HERE, '..', '..', '..', decodeURI(href))), href);
+  ok('drei Herzen über dem Tempel', herzZahl(platz(root, 0)) === 3,
+     `${herzZahl(platz(root, 0))}`);
+  ok('der kleine Ort bleibt geheim',
+     koerper(platz(root, 1)).getAttribute('opacity') === '0' && herzZahl(platz(root, 1)) === 0);
+
+  tool.unmount();
+}
+
+/* Der zweite Weg, auf dem ein Herz fällt: nicht die freie Wahl,
+   sondern der ganz normale Zufallsgriff nach einer richtigen
+   Antwort. Er landet seit 0146 manchmal auf einem geschützten Feld
+   — und dann MUSS das dastehen, sonst sucht das Kind auf der Karte
+   nach einem Feld, das es nicht bekommen hat. */
+async function testAntwortAufSchild() {
+  console.log('\n— Richtig, aber geschützt —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+  let answer = null, srv = null;
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'participant',
+    actions: {
+      role: 'participant',
+      call: (fn, args) => {
+        if (fn === 'wi_view') return Promise.resolve(viewFor(args.p_full ? { map: RMAP } : {}, srv));
+        if (fn === 'wi_answer') return Promise.resolve(answer);
+        return Promise.resolve({ ok: false, error: 'not_allowed' });
+      }
+    }
+  });
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+
+  answer = { ok: true, result: 'correct', streak: 1, picks: 0,
+             tile: { r: 1, c: 0, kind: 'guard', hearts: 0 },
+             task: { prompt: 'die Schule', dir: 'de_en', stage: 'type', options: [] } };
+  srv = { task: answer.task, streak: 1, picks: 0 };
+  antworte(root, document, 'house');
+  await wait(40);
+  const fb = root.querySelector('.wi-fb').textContent;
+  ok('die Rückmeldung sagt, dass das Feld geschützt war',
+     /Richtig/.test(fb) && /geschützt/.test(fb), fb);
+
+  answer = Object.assign({}, answer, { tile: { r: 1, c: 0, kind: 'fog' } });
+  antworte(root, document, 'school');
+  await wait(40);
+  ok('ein normaler Griff meldet weiter „ein Feld ist frei"',
+     /Feld ist frei/.test(root.querySelector('.wi-fb').textContent),
+     root.querySelector('.wi-fb').textContent);
+
+  tool.unmount();
+}
+
+async function testSchildUndSchatten() {
+  console.log('\n— Schutzherzen und der Nebelkranz —');
+  const len = RMAP.length;
+  const stand = {
+    own: zeichenkette(len, { 0: '0', 5: '0', 6: '0' }, '.'),
+    ruins: '.'.repeat(len),
+    hearts: zeichenkette(len, { 5: '2', [R_GROSS]: '4' }, '0'),
+    me: { picks: 0, streak: 0, shadow_pick: 1 }
+  };
+  let strike = null;
+  const { tool, root, document, calls } = await mountRuinen(stand, {
+    wi_shadow_strike: args => {
+      strike = args;
+      stand.me = { picks: 0, streak: 0, shadow_pick: 0 };
+      stand.own = zeichenkette(len, { 0: '0' }, '.');
+      stand.hearts = zeichenkette(len, { [R_GROSS]: '4' }, '0');
+      return { ok: true, fogged: 7, shadow_pick: 0 };
+    },
+    wi_pick_tile: () => ({ ok: false, error: 'no_pick' })
+  });
+
+  /* Ein Schutzherz ist dieselbe Auskunft wie ein Ruinenherz: „hier
+     musst du zweimal treffen". Auf einem normalen Feld malt es die
+     eigene Schicht — die Orte malen ihre selbst. */
+  const guards = root.querySelector('.wi-guards');
+  ok('das geschützte Feld trägt zwei Herzen',
+     guards.querySelectorAll('path').length === 2,
+     `${guards.querySelectorAll('path').length}`);
+  ok('die Ruine ist dabei nicht mitgezählt', guards.querySelectorAll('g').length === 1);
+
+  /* Der Nebelkranz hat Vorrang vor der freien Wahl — und ohne
+     picks > 0 wäre die Karte sonst gar nicht scharf. */
+  ok('die Leiste fordert zum Nebelkranz auf',
+     root.querySelector('.wi-pickbar').classList.contains('is-shadow') &&
+     /Schattentempel/.test(root.querySelector('.wi-pickbar').textContent),
+     root.querySelector('.wi-pickbar').textContent);
+  ok('die Karte ist auch ohne freie Wahl scharf',
+     root.querySelector('.wi-map').classList.contains('is-picking') &&
+     root.querySelector('.wi-map').classList.contains('is-shadow'));
+
+  click(root.querySelectorAll('.wi-cell')[8], document);
+  await wait(60);
+  ok('der Tipp geht an wi_shadow_strike, nicht an wi_pick_tile',
+     !!strike && !calls.some(([fn]) => fn === 'wi_pick_tile'), js(strike));
+  ok('und er schickt das getippte Feld', strike.p_r === 1 && strike.p_c === 3, js(strike));
+  ok('die Rückmeldung zählt die Felder',
+     /7/.test(root.querySelector('.wi-fb').textContent),
+     root.querySelector('.wi-fb').textContent);
+  ok('danach ist die Aufforderung weg',
+     !root.querySelector('.wi-pickbar').classList.contains('is-shadow'));
+  ok('die Schutzherzen sind mit dem Nebel verschwunden',
+     root.querySelector('.wi-guards').querySelectorAll('path').length === 0);
+
+  tool.unmount();
+}
+
+async function testRuinenOhneMigration() {
+  console.log('\n— Ruinen ohne Migration 0146 —');
+  const len = RMAP.length;
+  /* Ein Server ohne 0146 schickt weder `ruins` noch `hearts`. Dann
+     zeichnet die Karte die alten Lichtpunkte und KEINE Herzen —
+     alt, nicht kaputt. Und die Lobby verspricht keine Regeln, die
+     es nicht gibt. */
+  const stand = { own: zeichenkette(len, { 0: '0' }, '.'), me: { picks: 0 },
+                  over: { phase: 'lobby' } };
+  const { tool, root } = await mountRuinen(stand);
+  ok('die Karte steht trotzdem', root.querySelectorAll('.wi-place').length === 2);
+  ok('keine Herzen auf der Karte',
+     root.querySelector('.wi-guards').querySelectorAll('path').length === 0 &&
+     herzZahl(platz(root, 0)) === 0);
+  ok('kein Gebäude aufgedeckt', koerper(platz(root, 0)).getAttribute('opacity') === '0');
+  ok('und die Lobby erklärt keine Ruinen',
+     root.querySelector('[data-part="rulwrap"]').hidden === true);
+  tool.unmount();
+}
+
+async function testLobbyRegeln() {
+  console.log('\n— Die Sonderregeln in der Lobby —');
+  const len = RMAP.length;
+  const stand = {
+    own: zeichenkette(len, { 0: '0' }, '.'),
+    ruins: '.'.repeat(len), hearts: '0'.repeat(len),
+    over: { phase: 'lobby' }, me: { picks: 0 }
+  };
+  const { tool, root, document } = await mountRuinen(stand);
+  const wrap = root.querySelector('[data-part="rulwrap"]');
+  ok('die Erklärung steht in der Wartetafel', wrap.hidden === false);
+  ok('sie stellt Sönkes Frage',
+     /was verbirgt sich da/i.test(root.querySelector('.wi-rultitle').textContent));
+  const karten = root.querySelectorAll('.wi-rulcard');
+  ok('zwei Kacheln: kleine und große Ruinen', karten.length === 2 &&
+     /Kleine/.test(karten[0].textContent) && /Große/.test(karten[1].textContent));
+  ok('und nichts davon steht schon offen da',
+     root.querySelector('.wi-rulbody').hidden === true);
+
+  click(karten[1], document);
+  const body = root.querySelector('.wi-rulbody');
+  ok('große Ruinen: die drei Fähigkeiten',
+     body.hidden === false &&
+     /Schütze deine Felder/.test(body.textContent) &&
+     /Hol den Nebel zurück/.test(body.textContent) &&
+     /Nimm mehr Land ein/.test(body.textContent), body.textContent.replace(/\s+/g, ' '));
+
+  click(karten[0], document);
+  ok('kleine Ruinen: Bonuspunkte und Zahlen',
+     /Bonus-Punkte/.test(body.textContent) && /10 Punkte/.test(body.textContent),
+     body.textContent.replace(/\s+/g, ' '));
+  ok('immer nur eine Kachel offen',
+     karten[0].getAttribute('aria-expanded') === 'true' &&
+     karten[1].getAttribute('aria-expanded') === 'false');
+  click(karten[0], document);
+  ok('noch einmal tippen macht sie wieder zu', body.hidden === true);
+
+  tool.unmount();
+}
+
+/* Die Balance steht zwangsläufig in zwei Dateien: im Browser
+   (RUINEN) und in Postgres (wi_ruin_def). Hier wird zugesagt, dass
+   es dieselben Zahlen sind — dasselbe Muster wie beim Uhr-Deckel.
+   Ohne diese Zusage verspricht die Lobby irgendwann vier Herzen,
+   während der Server mit fünf rechnet, und beides sieht für sich
+   plausibel aus. */
+async function testRuinTabelle() {
+  console.log('\n— Dieselben Zahlen wie im Server —');
+  const quelle = fs.readFileSync(TOOL, 'utf8');
+  const imTool = {};
+  const re = /\b[KTALS]: \{ art: '(\w+)',\s*name: '[^']+',\s*leben: (\d+), herzen: (\d+), wert: (\d+),\s*gross: (true|false)/g;
+  let m;
+  while ((m = re.exec(quelle))) {
+    imTool[m[1]] = { herzen: +m[3], leben: +m[2], wert: +m[4], gross: m[5] === 'true' };
+  }
+  ok('das Gerät kennt fünf Ruinen', Object.keys(imTool).length === 5, js(Object.keys(imTool)));
+
+  const sqlDatei = path.join(HERE, '..', '..', '..', '..',
+                             'supabase', 'migrations', '0146_wordisland_ruins.sql');
+  const sql = fs.existsSync(sqlDatei) ? fs.readFileSync(sqlDatei, 'utf8') : '';
+  const imServer = {};
+  const re2 = /\('(klo|tor|arena|licht|schatten)',\s*(\d+),\s*(\d+),\s*(true|false)\)/g;
+  while ((m = re2.exec(sql))) {
+    imServer[m[1]] = { herzen: +m[2], wert: +m[3], gross: m[4] === 'true' };
+  }
+  ok('der Server auch', Object.keys(imServer).length === 5, js(Object.keys(imServer)));
+
+  let gleich = true, wo = '';
+  for (const art in imTool) {
+    const a = imTool[art], b = imServer[art];
+    if (!b || a.herzen !== b.herzen || a.wert !== b.wert || a.gross !== b.gross) {
+      gleich = false; wo += ` ${art}: ${js(a)} ≠ ${js(b)}`;
+    }
+    // Sönkes Zahl ist „Leben", die Anzeige zeigt Herzen — das Feld
+    // selbst ist das letzte Leben.
+    if (a.leben !== a.herzen + 1) { gleich = false; wo += ` ${art}: Leben ≠ Herzen + 1`; }
+  }
+  ok('Herzen, Wertigkeit und Klasse stimmen überein', gleich, wo);
+
+  for (const art in imTool) {
+    const datei = path.join(HERE, '..', 'sprites', 'ruine', art + '.png');
+    ok(`das Bild für ${art} liegt da`, fs.existsSync(datei));
+  }
+}
+
 (async () => {
   await testTablet();
   await testTabletLobby();
@@ -2932,6 +3261,12 @@ async function testSoloOhneMigration() {
   await testUhr();
   await testUnitsOhneMigration();
   await testBlassUndRing();
+  await testRuinen();
+  await testAntwortAufSchild();
+  await testSchildUndSchatten();
+  await testRuinenOhneMigration();
+  await testLobbyRegeln();
+  await testRuinTabelle();
   console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');
   process.exit(fails ? 1 : 0);
 })();
