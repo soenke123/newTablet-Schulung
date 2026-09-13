@@ -1040,7 +1040,7 @@ body { display: flex; flex-direction: column; }
   /* ════════════════════════════════════════════════════════════════
      TEIL 3 · DIE BILDER
      ════════════════════════════════════════════════════════════════
-     Die neun Vorlagen sind AUFEINANDER gezeichnet: dasselbe Blatt
+     Die einunddreißig Vorlagen sind AUFEINANDER gezeichnet: dasselbe Blatt
      (890 × 968), dieselbe Grundlinie. Echse0/1/2 stehen mit den Füßen
      auf 826, die Schlaf-Fassungen liegen flach auf demselben Boden,
      und Echse3a hört schon bei 728 auf — der Flieger schwebt, und
@@ -1065,7 +1065,12 @@ body { display: flex; flex-direction: column; }
   const BILDER = ['ei', 's1', 's1z',
                   's2', 's2z', 's2a', 's2az', 's2b', 's2bz',
                   's3a', 's3az', 's3b', 's3bz', 's3c', 's3cz',
-                  's3d', 's3dz', 's3e', 's3ez', 's3es'];
+                  's3d', 's3dz', 's3e', 's3ez', 's3es',
+                  /* Stufe 4 hat seit 13.09.2026 eigene Zeichnungen —
+                     zu jeder ausgewachsenen Fassung eine funkelnde mit
+                     demselben Buchstaben. */
+                  's4a', 's4az', 's4b', 's4bz', 's4c', 's4cz',
+                  's4d', 's4dz', 's4e', 's4ez', 's4es'];
 
   /* ─── Die Varianten (11.09.2026) ───────────────────────────────
      Gezogen wird aus einem TOPF: a, b und c liegen zweimal darin,
@@ -1266,6 +1271,32 @@ body { display: flex; flex-direction: column; }
     return c;
   }
 
+  /* Der Glitzerstern der obersten Stufe (13.09.2026). Vier Spitzen
+     und ein heller Kern — die Form, die man als „das funkelt" liest,
+     ohne dass es dunkel sein muss. Dieselbe Zeichnung wie in
+     tool.js. */
+  function glitzerFleck() {
+    const S = 64, c = neuCanvas(S, S);
+    const x = c.getContext('2d');
+    const m = S / 2, r = S / 2, w = S * .085;
+    const g = x.createRadialGradient(m, m, 0, m, m, r);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(.22, 'rgba(255,252,236,.85)');
+    g.addColorStop(.6, 'rgba(255,244,196,.30)');
+    g.addColorStop(1, 'rgba(255,238,170,0)');
+    x.fillStyle = g;
+    x.beginPath();
+    x.moveTo(m, m - r);
+    x.quadraticCurveTo(m + w, m - w, m + r, m);
+    x.quadraticCurveTo(m + w, m + w, m, m + r);
+    x.quadraticCurveTo(m - w, m + w, m - r, m);
+    x.quadraticCurveTo(m - w, m - w, m, m - r);
+    x.closePath();
+    x.fill();
+    x.beginPath(); x.arc(m, m, S * .13, 0, 6.2832); x.fill();
+    return c;
+  }
+
   /* Der aufsteigende Funke in der Farbe des Tieres. Härter als der
      Leuchtfleck: ein Funke hat einen KERN, ein Schein hat keinen —
      mit demselben weichen Verlauf sähen die Funken aus wie kleine
@@ -1333,8 +1364,19 @@ body { display: flex; flex-direction: column; }
   /* Wie viele Funken je Stufe aufsteigen. Auch das ist eine Auskunft
      und keine Zierde: an einem Ei tut sich nichts, ab dem Schlüpfen
      steigen zwei Fünkchen, und die vierte Stufe sprüht. Der Sprung
-     von 4 auf 9 ist Absicht — „geschafft" soll man von weitem sehen. */
-  const FUNKEN = [0, 2, 3, 5, 9];
+     von 5 auf 14 ist Absicht — „geschafft" soll man von weitem sehen. */
+  const FUNKEN = [0, 2, 3, 5, 14];
+  /* Und die oberste Stufe funkelt AUCH AM TAG (13.09.2026, Sönke:
+     „die funkelnden Echsen erkennt man gar nicht"). Vorher hing jedes
+     Funkeln am Nachtwert, und der ist vier Zehntel des Umlaufs lang
+     genau null — bei Sonne funkelte also nichts. Die Stufen 1–3
+     bleiben eine Nacht-Auskunft; dieselben drei Zahlen stehen in
+     tool.js. */
+  const FUNKEL_TAG = .95;
+  const FUNKEL_GROSS = 1.45;
+  const GLITZER = 3;
+  const GLITZER_GROSS = .40;   // Anteil der Tierhöhe
+  const GLITZER_SEK = 2.1;     // ein Auf und Ab
 
   const welt = {
     isl: null, vb: null, inseln: null,
@@ -1739,15 +1781,19 @@ body { display: flex; flex-direction: column; }
   let flecken = null;       // Leuchtflecken je Farbe
   let funken = null;        // aufsteigende Funken je Farbe
   let funke = null;         // der weiße Kern der obersten Stufe
+  let glitzer = null;       // ihr vierzackiger Stern
 
-  /* Welches der zwanzig Bilder ein Tier gerade zeigt. Getrennt vom
+  /* Welches der einunddreißig Bilder ein Tier gerade zeigt. Getrennt vom
      Nachschlagen, weil auch die LAGE im Blatt daran hängt. */
   function schluesselFuer(t) {
     const schlaeft = t.zustand === 'schlafen';
     if (t.stufe === 0) return 'ei';
     if (t.stufe === 1) return schlaeft ? 's1z' : 's1';
     if (t.stufe === 2) return 's2' + (t.v2 || '') + (schlaeft ? 'z' : '');
-    const k = 's3' + (t.v3 || 'a');
+    /* Stufe 4 trägt seit 13.09.2026 ihre eigene Zeichnung, und zwar
+       mit DEMSELBEN Buchstaben: ein Wort behält sein Tier, es wird
+       nur größer. */
+    const k = (t.stufe >= 4 && LAGE['s4' + (t.v3 || 'a')] ? 's4' : 's3') + (t.v3 || 'a');
     if (schlaeft) return k + 'z';
     /* Das dritte Bild der Schwimmerin hängt am ORT und nicht am
        Zustand: sie trägt es, solange kein Feld unter ihr liegt. */
@@ -1918,8 +1964,11 @@ body { display: flex; flex-direction: column; }
         ctx.globalAlpha = Math.min(1, g * glow * .38 * puls);
         ctx.drawImage(flecken[t.farbe], t._mx - w / 2, t._my - w / 2, w, w);
       }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
 
-      /* 5 · Die Funken.
+    /* 5 · Die Funken.
          ──────────────────────────────────────────────────────────
          Sie gehören nicht nur zur Stufe 4. Schon ein geschlüpftes
          Tier lässt zwei Fünkchen steigen, und mit jeder Stufe werden
@@ -1931,11 +1980,24 @@ body { display: flex; flex-direction: column; }
          und wieder ausblendet. Aufgesetzt wird die Bewegung auf die
          Zeit und nicht gespeichert: fünfhundert Tiere mal acht Funken
          wären viertausend Kleinteile, die verwaltet werden wollen —
-         gerechnet kosten sie nur eine Zeile. */
-      if (opt.glowStil >= 2) {
+         gerechnet kosten sie nur eine Zeile.
+
+         ⚠️ Seit 13.09.2026 steht dieser Block NEBEN dem Nacht-Block
+         und nicht mehr darin: die oberste Stufe funkelt auch am Tag.
+         Vorher war das Funkeln vier Zehntel jedes Umlaufs lang gar
+         nicht da — und genau daran ist „man erkennt sie nicht"
+         hängengeblieben. */
+    if (opt.glowStil >= 2) {
+      let funkelt = glow > .01;
+      if (!funkelt) for (const t of zuMalen) if (t.stufe >= 4) { funkelt = true; break; }
+      if (funkelt) {
+        ctx.globalCompositeOperation = 'lighter';
         for (const t of zuMalen) {
           const n = FUNKEN[t.stufe];
           if (!n) continue;
+          const oben = t.stufe >= 4;
+          const gl = oben ? Math.max(glow, FUNKEL_TAG) : glow;
+          if (gl <= .01) continue;
           const H = t._h;
           const spark = funken[t.farbe];
           for (let k = 0; k < n; k++) {
@@ -1945,28 +2007,44 @@ body { display: flex; flex-direction: column; }
                Verschiebung je Funke sorgt dafür, dass sie nicht im
                Gleichschritt aufsteigen. */
             const u = ((simZeit / dauer + eigen) % 1 + 1) % 1;
-            const fx = t._mx + Math.sin(eigen * 3.1 + u * 3.4) * H * .30;
+            const fx = t._mx + Math.sin(eigen * 3.1 + u * 3.4) * H * (oben ? .42 : .30);
             const fy = t._my + H * (.22 - 1.15 * u);
             /* Ein- und ausblenden über den ganzen Umlauf, dazu ein
                Flackern. Ein Funke, der mit voller Helligkeit auftaucht,
                ist ein Fehler im Bild und kein Funke. */
             const auf = Math.sin(u * Math.PI);
             const flackern = .55 + .45 * Math.sin(simZeit * 5.3 + eigen * 7);
-            const fs = H * (.20 - .09 * u) * (.7 + .3 * auf);
-            ctx.globalAlpha = Math.min(1, glow * auf * flackern * (t.stufe >= 4 ? .95 : .62));
+            const fs = H * (.20 - .09 * u) * (.7 + .3 * auf) * (oben ? FUNKEL_GROSS : 1);
+            ctx.globalAlpha = Math.min(1, gl * auf * flackern * (oben ? .95 : .62));
             ctx.drawImage(spark, fx - fs / 2, fy - fs / 2, fs, fs);
             /* Die vierte Stufe bekommt zusätzlich einen weißen Kern.
                Farbe allein wird bei acht Farbvarianten nie „heller als
                die anderen" — Weiß schon. */
-            if (t.stufe >= 4) {
-              const ws = fs * .5;
+            if (oben) {
+              const ws = fs * .55;
               ctx.drawImage(funke, fx - ws / 2, fy - ws / 2, ws, ws);
             }
           }
+          /* Und die Glitzersterne AUF dem Tier: drei Stück, die
+             nacheinander aufblitzen. Sie sind der Teil, den man aus
+             der Übersicht heraus erkennt. */
+          if (oben) {
+            for (let k = 0; k < GLITZER; k++) {
+              const eigen = t.phase * 1.7 + k * 2.3994;
+              const q = ((simZeit / GLITZER_SEK + k / GLITZER + t.phase) % 1 + 1) % 1;
+              const auf = Math.pow(Math.max(0, Math.sin(q * Math.PI)), 3);
+              if (auf < .02) continue;
+              const gx = t._mx + Math.cos(eigen * 2.7) * t._w * .30;
+              const gy = t._my + Math.sin(eigen * 3.3) * H * .28;
+              const gr = H * GLITZER_GROSS * (.5 + .5 * auf);
+              ctx.globalAlpha = Math.min(1, gl * auf * .95);
+              ctx.drawImage(glitzer, gx - gr / 2, gy - gr / 2, gr, gr);
+            }
+          }
         }
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
       }
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = 'source-over';
     }
 
     /* Die Zahl der gemalten Tiere steht sofort da und wartet nicht auf
@@ -2367,8 +2445,12 @@ body { display: flex; flex-direction: column; }
         LAGE[k] = { x: S.bilder[k].x, y: S.bilder[k].y, w: ims[i].width, h: ims[i].height };
         ANKER_Y[k] = BLATT.ankerY;
       });
-      // Die Wasserlinie steht IM Bild — siehe ANKER_Y oben.
-      if (LAGE.s3es) ANKER_Y.s3es = LAGE.s3es.y + LAGE.s3es.h;
+      // Die Wasserlinie steht IM Bild — siehe ANKER_Y oben. Seit
+      // 13.09.2026 gilt das für BEIDE Wasserbilder der Schwimmerin.
+      for (const st of [3, 4]) {
+        const k = 's' + st + SCHWIMMT + 's';
+        if (LAGE[k]) ANKER_Y[k] = LAGE[k].y + LAGE[k].h;
+      }
       basen = ims.map(aufLeinwand);
     } catch (err) {
       $('load').innerHTML = '<b style="color:#ff8080">Die Echsen-Bilder fehlen</b>'
@@ -2391,6 +2473,7 @@ body { display: flex; flex-direction: column; }
     flecken = FARBEN.map(leuchtFleck);
     funken = FARBEN.map(funkenFleck);
     funke = funkeFleck();
+    glitzer = glitzerFleck();
 
     txt.textContent = 'Insel bauen';
     await new Promise(r => setTimeout(r, 10));
@@ -2415,7 +2498,9 @@ body { display: flex; flex-direction: column; }
                       FARBEN, GLUEHEN, rgb2hsl, hsl2rgb,
                       /* seit 11.09.2026: die Varianten und ihre Bilder */
                       BILDER, VAR2, VAR3, SCHWIMMT, LAGE, ANKER_Y,
-                      schluesselFuer, schwimmt, fliegt };
+                      schluesselFuer, schwimmt, fliegt,
+                      /* seit 13.09.2026: das Funkeln der obersten Stufe */
+                      FUNKEN, FUNKEL_TAG };
 
     requestAnimationFrame(zeichne);
   }

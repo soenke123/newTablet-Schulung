@@ -29,7 +29,11 @@
    Ei → geschlüpft → gewachsen → ausgewachsen (verlässt die Insel)
    → funkelnd. Ab der gewachsenen Stufe gibt es VARIANTEN (VAR2/VAR3):
    drei gewachsene, fünf ausgewachsene — vier davon fliegen, die
-   fünfte schwimmt von Insel zu Insel.
+   fünfte schwimmt von Insel zu Insel. Zu jeder ausgewachsenen
+   Fassung gehört seit 13.09.2026 eine funkelnde mit demselben
+   Buchstaben: ein Wort behält sein Tier, es wird nur größer.
+   ⚠️ Auf dem Schirm heißen die Stufen EINS bis FÜNF (stufeText) —
+   im Quelltext und am Server bleiben sie 0…4.
    Gezeichnet werden sie auf einer LEINWAND über dem Karten-SVG und
    nicht als SVG-Elemente: bei 400 Tieren, die alle laufen, wären
    das 400 Elemente, die sechzigmal in der Sekunde ihre Attribute
@@ -2943,7 +2947,11 @@
        1  geschlüpft      läuft
        2  gewachsen       läuft, größer
        3  ausgewachsen    FLIEGT, darf die Insel verlassen
-       4  funkelnd        wie 3, dazu Funken — kein eigenes Bild
+       4  funkelnd        eigene Zeichnung, dazu Funken bei TAG und Nacht
+
+     ⚠️ Die Zahlen links sind die des Servers. Auf dem Schirm steht
+     „Stufe 1" bis „Stufe 5" (stufeText) — Sönke, 13.09.2026:
+     „Schüler fangen mit 0 an zu zählen :D".
 
      ── Warum eine Leinwand und kein SVG ──────────────────────
      400 Tiere, die alle laufen, wären 400 SVG-Knoten, deren
@@ -2967,7 +2975,7 @@
      ══════════════════════════════════════════════════════════ */
 
   /* ─── Die Bilder ────────────────────────────────────────────
-     Zwanzig Vorlagen (seit 11.09.2026; vorher neun), alle auf
+     Einunddreißig Vorlagen (seit 13.09.2026; vorher zwanzig), alle auf
      DEMSELBEN Blatt gezeichnet: gemeinsame Grundlinie, gemeinsamer
      Maßstab. Daraus folgt die Regel, an der der erste Anlauf
      gescheitert ist: verkleinert wird mit dem BLATT und nicht mit
@@ -3003,7 +3011,18 @@
       s3dz:  { x:  23.88, y:  44.26, w: 265, h: 252 },
       s3e:   { x:  22.83, y:  21.78, w: 272, h: 292 },
       s3ez:  { x:  44.96, y:   56.9, w: 226, h: 227 },
-      s3es:  { x:  31.26, y:  63.93, w: 271, h: 179 }
+      s3es:  { x:  31.26, y:  63.93, w: 271, h: 179 },
+      s4a:   { x:  34.42, y:   27.4, w: 249, h: 299 },
+      s4az:  { x:  35.83, y:  75.87, w: 233, h: 223 },
+      s4b:   { x:  31.61, y:  25.99, w: 264, h: 303 },
+      s4bz:  { x:  21.78, y:   57.6, w: 261, h: 252 },
+      s4c:   { x:  40.04, y:    0.7, w: 242, h: 338 },
+      s4cz:  { x:  40.04, y:   0.35, w: 243, h: 338 },
+      s4d:   { x:  34.07, y:  11.94, w: 250, h: 321 },
+      s4dz:  { x:  25.29, y:  42.85, w: 261, h: 259 },
+      s4e:   { x:  13.35, y:  32.31, w: 279, h: 270 },
+      s4ez:  { x:     13, y:  82.89, w: 288, h: 184 },
+      s4es:  { x:  30.21, y:  31.96, w: 273, h: 207 }
     }
   };
   /* ENDE ERZEUGT */
@@ -3024,7 +3043,12 @@
      Gewürfelt wird aus der id des WORTES (siehe neuesTier): dieselbe
      Vokabel hat auf jedem Gerät dieselbe Echse. „Zufällig beim
      Wachsen" heißt für das Kind trotzdem zufällig — es sieht die
-     Variante ja erst, wenn das Tier die Stufe erreicht. */
+     Variante ja erst, wenn das Tier die Stufe erreicht.
+
+     VAR3 gilt seit 13.09.2026 für ZWEI Stufen: die ausgewachsene
+     (s3<v>) und die funkelnde (s4<v>). Ein zweiter Topf wäre der
+     nächstliegende Fehler — dann würde aus der Echse beim letzten
+     Aufstieg ein anderes Tier, und die Belohnung wäre ein Tausch. */
   const VAR2 = ['', 'a', 'b'];
   const VAR3 = ['a', 'a', 'b', 'b', 'c', 'c', 'd', 'e'];
 
@@ -3046,7 +3070,14 @@
      wäre es ein `if` je Tier und Bild, hier ist es ein Nachschlagen. */
   const ANKER_Y = {};
   for (const k of BILDER) ANKER_Y[k] = ECHSE.blatt.ankerY;
-  if (ECHSE.bilder.s3es) ANKER_Y.s3es = ECHSE.bilder.s3es.y + ECHSE.bilder.s3es.h;
+  /* Beide Wasserbilder der Schwimmerin — das ausgewachsene und seit
+     13.09.2026 das funkelnde. Aus SCHWIMMT abgeleitet und nicht als
+     zwei Zeilen hingeschrieben: wer die Schwimmerin später auf einen
+     anderen Buchstaben legt, ändert dann eine Stelle. */
+  for (const st of [3, 4]) {
+    const k = 's' + st + SCHWIMMT + 's';
+    if (ECHSE.bilder[k]) ANKER_Y[k] = ECHSE.bilder[k].y + ECHSE.bilder[k].h;
+  }
 
   /* Die acht Farben als ZIEL-Farbton in Grad; die Vorlage liegt bei
      rund 95° (dieses Grün). Der erste Eintrag lässt das Bild in
@@ -3087,7 +3118,30 @@
   const GLUEHEN = [0, .20, .42, 1.00, 1.35];
   /* Wie viele Funken je Stufe steigen. Auch das ist Auskunft und
      keine Zierde — „geschafft" soll man von weitem sehen. */
-  const FUNKEN = [0, 2, 3, 5, 9];
+  const FUNKEN = [0, 2, 3, 5, 14];
+  /* ─── „Die funkelnden erkennt man gar nicht" ─────────────────
+     Sönke, 13.09.2026. Der Grund stand eine Ebene tiefer: die Funken
+     hingen am Nachtwert (`glow`), und der ist vier Zehntel eines
+     Umlaufs lang GENAU NULL. Wer bei Tag auf die Insel sah, sah
+     überhaupt kein Funkeln — nur ein Tier, das damals auch noch
+     dasselbe Bild trug wie ein ausgewachsenes.
+
+     Die oberste Stufe funkelt deshalb jetzt AUCH AM TAG, mit dieser
+     festen Stärke; die Stufen 1–3 bleiben eine Nacht-Auskunft. Das
+     ist der Unterschied, den es zu sehen gibt: „kann ich" leuchtet
+     rund um die Uhr, alles davor nur, wenn die Insel schläft. */
+  const FUNKEL_TAG = .95;
+  /* Und sie funkelt größer. Ein Funke in Läufergröße geht bei Sonne
+     im Gelände unter, egal wie viele es sind. */
+  const FUNKEL_GROSS = 1.45;
+  /* Dazu die Glitzersterne AUF dem Tier (glitzerFleck): drei Stück,
+     die nacheinander aufblitzen. Ein runder Funke ist bei Tag ein
+     heller Fleck — vier Spitzen liest man auch dann als „funkelt".
+     Die Zahl ist bewusst klein: drei Sterne je Tier sind bei 200
+     funkelnden Wörtern schon 600 Bilder je Takt. */
+  const GLITZER = 3;
+  const GLITZER_GROSS = .40;   // Anteil der Tierhöhe
+  const GLITZER_SEK = 2.1;     // ein Auf und Ab
   /* Wie stark das Leuchten insgesamt ausfällt (Showroom-Regler
      „Leuchtstärke"). Er sitzt hier und nicht in GLUEHEN, weil die
      Tabelle das VERHÄLTNIS der Stufen festlegt und diese Zahl die
@@ -3263,6 +3317,39 @@
     x.fillStyle = g; x.fillRect(0, 0, S, S);
     return c;
   }
+  /* Der Glitzerstern der obersten Stufe (13.09.2026). Vier Spitzen
+     und ein heller Kern — die Form, die man als „das funkelt" liest,
+     ohne dass es dunkel sein muss. Gezeichnet aus vier Bögen um die
+     Mitte: eine Spitze, die schlank anfängt und in der Mitte dick
+     wird, sieht aus wie ein Lichtreflex; vier gerade Dreiecke sähen
+     aus wie ein Windrad.
+
+     Wie alles hier: EINMAL vorgerendert. Ein Pfad je Tier und Bild
+     wäre bei zweihundert funkelnden Wörtern der teuerste Posten. */
+  function glitzerFleck() {
+    const S = 64, c = neuCanvas(S, S);
+    const x = c.getContext('2d');
+    const m = S / 2, r = S / 2, w = S * .085;
+    const g = x.createRadialGradient(m, m, 0, m, m, r);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(.22, 'rgba(255,252,236,.85)');
+    g.addColorStop(.6, 'rgba(255,244,196,.30)');
+    g.addColorStop(1, 'rgba(255,238,170,0)');
+    x.fillStyle = g;
+    x.beginPath();
+    x.moveTo(m, m - r);
+    x.quadraticCurveTo(m + w, m - w, m + r, m);
+    x.quadraticCurveTo(m + w, m + w, m, m + r);
+    x.quadraticCurveTo(m - w, m + w, m - r, m);
+    x.quadraticCurveTo(m - w, m - w, m, m - r);
+    x.closePath();
+    x.fill();
+    // Der Kern. Ohne ihn ist der Stern in der Mitte am dünnsten —
+    // genau dort, wo das Licht herkommen soll.
+    x.beginPath(); x.arc(m, m, S * .13, 0, 6.2832); x.fill();
+    return c;
+  }
+
   /* Härter als der Leuchtfleck: ein Funke hat einen KERN, ein
      Schein hat keinen — mit demselben weichen Verlauf sähen die
      Funken aus wie kleine Kopien des Glühens. */
@@ -3284,6 +3371,7 @@
   let flecken = null;   // Leuchtfleck je Farbe
   let funken = null;    // Funke je Farbe
   let funke = null;     // der weiße Kern
+  let glitzer = null;   // der vierzackige Stern der obersten Stufe
 
   async function ladeSprites() {
     if (sprites) return sprites;
@@ -3300,6 +3388,7 @@
     flecken = FARBEN.map(leuchtFleck);
     funken = FARBEN.map(funkenFleck);
     funke = funkeFleck();
+    glitzer = glitzerFleck();
     sprites = satz;
     return sprites;
   }
@@ -4275,7 +4364,18 @@
     if (stufe === 0) return 'ei';
     if (stufe === 1) return 's1';
     if (stufe === 2) return 's2' + (v2 || '');
-    return 's3' + (v3 || 'a');
+    const v = v3 || 'a';
+    /* Seit 13.09.2026 hat die oberste Stufe ihre EIGENE Zeichnung —
+       zu jeder der fünf ausgewachsenen Fassungen gehört eine
+       funkelnde mit demselben Buchstaben. Vorher trug sie das Bild
+       der Stufe 3 und unterschied sich nur durch Funken; genau
+       deshalb hat Sönke sie „gar nicht erkannt".
+
+       Fehlt das Bild (ältere Auslieferung, Ordner nicht mit
+       hochgeladen), bleibt das der Stufe 3 stehen: ein kleineres
+       Tier ist eine Ungenauigkeit, ein leeres Feld wäre ein Fehler. */
+    if (stufe >= 4 && ECHSE.bilder['s4' + v]) return 's4' + v;
+    return 's3' + v;
   }
 
   function schluesselFuer(t) {
@@ -4364,6 +4464,32 @@
       c2d.lineWidth = Math.max(1.4, t._h * (einzeln ? .05 : .035));
       c2d.strokeStyle = einzeln ? 'rgba(255,232,160,.95)' : 'rgba(255,207,77,.60)';
       c2d.stroke();
+    }
+  }
+
+  /* Die Glitzersterne der obersten Stufe (13.09.2026). Drei Stück je
+     Tier, die NACHEINANDER aufblitzen — gleichzeitig sähe es aus wie
+     ein Blinklicht, versetzt sieht es aus wie ein Reflex, der über
+     das Tier wandert.
+
+     Die Plätze stehen fest (aus der Phase des Tieres gewürfelt) und
+     wandern nicht mit der Zeit: ein Stern, der auch noch herumläuft,
+     ist ein Funke — und die gibt es eine Zeile weiter oben schon.
+     Erwartet wird `lighter` als Mischart; gesetzt hat sie der Aufrufer. */
+  function glitzerMalen(t, gl) {
+    const H = t._h;
+    for (let k = 0; k < GLITZER; k++) {
+      const eigen = t.phase * 1.7 + k * 2.3994;
+      const q = ((simZeit / GLITZER_SEK + k / GLITZER + t.phase) % 1 + 1) % 1;
+      // Ein kurzes Aufblitzen und ein langes Nichts: hoch potenziert
+      // steht der Stern die meiste Zeit gar nicht da.
+      const auf = Math.pow(Math.max(0, Math.sin(q * Math.PI)), 3);
+      if (auf < .02) continue;
+      const gx = t._mx + Math.cos(eigen * 2.7) * t._w * .30;
+      const gy = t._my + Math.sin(eigen * 3.3) * H * .28;
+      const gr = H * GLITZER_GROSS * (.5 + .5 * auf);
+      c2d.globalAlpha = Math.min(1, gl * auf * .95 * t._a);
+      c2d.drawImage(glitzer, gx - gr / 2, gy - gr / 2, gr, gr);
     }
   }
 
@@ -4585,37 +4711,64 @@
         c2d.globalAlpha = Math.min(1, g * glow * .38 * puls * t._a);
         c2d.drawImage(flecken[t.farbe], t._mx - w / 2, t._my - w / 2, w, w);
       }
+      c2d.globalAlpha = 1;
+      c2d.globalCompositeOperation = 'source-over';
+    }
 
-      /* 6 · Die Funken. Sie gehören nicht nur zur Stufe 4: schon ein
-             geschlüpftes Tier lässt zwei Fünkchen steigen, und mit
-             jeder Stufe werden es mehr — dadurch liest sich der
-             Fortschritt nachts nicht nur an der Helligkeit ab,
-             sondern auch an der Betriebsamkeit.
+    /* 6 · Die Funken. Sie gehören nicht nur zur Stufe 4: schon ein
+           geschlüpftes Tier lässt zwei Fünkchen steigen, und mit
+           jeder Stufe werden es mehr — dadurch liest sich der
+           Fortschritt nicht nur an der Helligkeit ab, sondern auch
+           an der Betriebsamkeit.
 
-             Aufgesetzt wird die Bewegung auf die Zeit und nicht
-             gespeichert: fünfhundert Tiere mal acht Funken wären
-             viertausend Kleinteile, die verwaltet werden wollen —
-             gerechnet kosten sie eine Zeile. */
+           ⚠️ Dieser Block stand bis 13.09.2026 IM Nacht-Block und
+           war damit vier Zehntel jedes Umlaufs lang gar nicht da.
+           Für die Stufen 1–3 ist das richtig (ihr Funkeln ist die
+           Nacht-Auskunft), für die oberste war es der Grund, warum
+           man sie „gar nicht erkennt": am Tag funkelte nichts.
+           Jetzt hat jedes Tier seinen eigenen Wert — die oberste
+           Stufe mindestens FUNKEL_TAG, alle anderen den der Nacht.
+
+           Aufgesetzt wird die Bewegung auf die Zeit und nicht
+           gespeichert: fünfhundert Tiere mal acht Funken wären
+           viertausend Kleinteile, die verwaltet werden wollen —
+           gerechnet kosten sie eine Zeile. */
+    let funkelt = glow > .01;
+    if (!funkelt) {
+      for (const t of zuMalen) if (t.stufe >= 4) { funkelt = true; break; }
+    }
+    if (funkelt) {
+      c2d.globalCompositeOperation = 'lighter';
       for (const t of zuMalen) {
         const n = FUNKEN[t.stufe];
         if (!n) continue;
+        const oben = t.stufe >= 4;
+        // Die oberste Stufe funkelt auch bei Sonne; darunter ist das
+        // Funkeln eine Nacht-Auskunft und bleibt es.
+        const gl = oben ? Math.max(glow, FUNKEL_TAG) : glow;
+        if (gl <= .01) continue;
         const H = t._h, spark = funken[t.farbe];
         for (let k = 0; k < n; k++) {
           const eigen = t.phase + k * 2.3994;              // goldener Winkel
           const dauer = 2.2 + (k % 3) * .55;
           const u = ((simZeit / dauer + eigen) % 1 + 1) % 1;
-          const fx = t._mx + Math.sin(eigen * 3.1 + u * 3.4) * H * .30;
+          const fx = t._mx + Math.sin(eigen * 3.1 + u * 3.4) * H * (oben ? .42 : .30);
           const fy = t._my + H * (.22 - 1.15 * u);
           const auf = Math.sin(u * Math.PI);
           const flackern = .55 + .45 * Math.sin(simZeit * 5.3 + eigen * 7);
-          const fs = H * (.20 - .09 * u) * (.7 + .3 * auf);
-          c2d.globalAlpha = Math.min(1, glow * auf * flackern * t._a * (t.stufe >= 4 ? .95 : .62));
+          const fs = H * (.20 - .09 * u) * (.7 + .3 * auf) * (oben ? FUNKEL_GROSS : 1);
+          c2d.globalAlpha = Math.min(1, gl * auf * flackern * t._a * (oben ? .95 : .62));
           c2d.drawImage(spark, fx - fs / 2, fy - fs / 2, fs, fs);
-          if (t.stufe >= 4) {
-            const ws = fs * .5;
+          if (oben) {
+            const ws = fs * .55;
             c2d.drawImage(funke, fx - ws / 2, fy - ws / 2, ws, ws);
           }
         }
+        /* Und die Glitzersterne auf dem Tier selbst. Sie sind der
+           Teil, den man aus der Übersicht heraus erkennt: die Funken
+           steigen auf und sind dabei klein, ein Stern sitzt auf dem
+           Tier und blitzt. */
+        if (oben) glitzerMalen(t, gl);
       }
       c2d.globalAlpha = 1;
       c2d.globalCompositeOperation = 'source-over';
@@ -5073,7 +5226,19 @@
     ['mixed', 'gemischt'], ['de_en', 'Deutsch → Englisch'], ['en_de', 'Englisch → Deutsch']
   ];
   const SOLO_MODE = [['type', 'tippen'], ['choice', 'auswählen']];
-  const STUFEN_NAME = ['Eier', 'geschlüpft', 'gewachsen', 'ausgewachsen', 'funkelnd'];
+  /* ─── Wie eine Stufe heißt ──────────────────────────────────
+     ⚠️ Der Index ist die Zahl des SERVERS (0…4). Auf dem Schirm
+     steht eine Stufe HÖHER — Sönke, 13.09.2026: „Schüler fangen mit
+     0 an zu zählen :D". Die oberste ist damit Stufe 5, und genau so
+     steht sie auch im Satz über die Bonus-Zeit.
+
+     Umgerechnet wird ausschließlich hier. Zwei Zahlen für dieselbe
+     Sache sind eine zu viel: wer im Quelltext `stufe === 4` liest,
+     soll nicht überlegen müssen, welche gemeint ist. */
+  const STUFEN_NAME = ['Ei', 'geschlüpft', 'gewachsen', 'ausgewachsen', 'funkelnd'];
+  const STUFE_HOCH = STUFEN_NAME.length;      // die oberste, wie sie dasteht: 5
+  const stufeZahl = s => Math.max(0, Math.min(4, s | 0)) + 1;
+  const stufeText = s => 'Stufe ' + stufeZahl(s) + ' · ' + STUFEN_NAME[stufeZahl(s) - 1];
 
   function buildSolo() {
     root.innerHTML = SOLO_HTML;
@@ -5331,7 +5496,7 @@
        die Arbeit noch liegt. Stufen ohne Tiere werden weggelassen —
        eine Null erklärt nichts. */
     return zaehl.map((n, s) => !n ? '' :
-      `<span class="wi-lg wi-lg--${s}" title="${esc(STUFEN_NAME[s])}">
+      `<span class="wi-lg wi-lg--${s}" title="${esc(stufeText(s))}">
          <i></i>${n}</span>`).join('');
   }
 
@@ -5630,11 +5795,16 @@
         `<span class="wi-vz wi-vz--avg${zKlasse}" style="left:${pz(zLinks)}">` +
           `Ø ${minSekKurz((p.avg_secs || 0) + (p.bonus_secs || 0))}</span>` +
       `</div>` +
+      /* ⚠️ Hier stand „% funkelnde Wörter" — ein Wort aus der
+         Bilderwelt an der Stelle, an der es um eine Rechnung geht
+         (Sönke, 13.09.2026: „müssen wir umformulieren"). Gemeint ist
+         der Anteil der Wörter auf der HÖCHSTEN Stufe, und die heißt
+         auf dem Schirm 5. Genau so steht es jetzt da. */
       `<p class="wi-vbonhint">` + (p.bonus_secs
-        ? `<i class="wi-vbonchip"></i> <b>+ ${minSek(p.bonus_secs)}</b> Bonus für ` +
-          `${Math.round(p.pct_max || 0)} % funkelnde Wörter`
-        : `Ab der Hälfte funkelnder Wörter gibt es Bonus-Zeit auf den Schnitt — ` +
-          `du hast ${Math.round(p.pct_max || 0)} %.`) + `</p>`;
+        ? `<i class="wi-vbonchip"></i> <b>+ ${minSek(p.bonus_secs)}</b> Bonus — ` +
+          `${Math.round(p.pct_max || 0)} % deiner Wörter stehen auf Stufe ${STUFE_HOCH}`
+        : `Ab 50 % deiner Wörter auf Stufe ${STUFE_HOCH} gibt es Bonus-Zeit auf den ` +
+          `Schnitt — du hast ${Math.round(p.pct_max || 0)} %.`) + `</p>`;
   }
 
   /* Die Woche als Säulen plus die Gesamtstatistik — ein eigener,
@@ -6106,7 +6276,7 @@
       <button type="button" class="wi-cclose" data-zu aria-label="Schließen">×</button>
       ${kopf}
       <span class="wi-cmeta">${titel ? esc(titel) + ' · ' : ''}${
-        esc(STUFEN_NAME[Math.max(0, Math.min(4, stufe))])}</span>
+        esc(stufeText(stufe))}</span>
       ${w ? statsGitter(w.st, true) : ''}`;
     els.card.hidden = false;
   }
@@ -6384,7 +6554,7 @@
                               mulberry32(hashKey(String(id)) ^ nach))
       };
       kart.stufe = nach;
-      els.pStage.textContent = STUFEN_NAME[Math.max(0, Math.min(4, nach))];
+      els.pStage.textContent = stufeText(nach);
       els.pStage.className = 'wi-pstage is-' + nach;
       zeigeStats(false);
       buehneAuf();
@@ -7268,6 +7438,7 @@
   function kartIdleFunken(x, m, stufe, farbe, t, ruhe) {
     const n = FUNKEN[stufe];
     if (!n || !ruhe) return;
+    const oben = stufe >= 4;
     const spark = funken[farbe], H = m.P * 1.3;
     x.save();
     x.globalCompositeOperation = 'lighter';
@@ -7275,15 +7446,32 @@
       const eigen = k * 2.3994;
       const dauer = 2.4 + (k % 3) * .55;
       const q = ((t / dauer + eigen) % 1 + 1) % 1;
-      const fx = m.ax + Math.sin(eigen * 3.1 + q * 3.4) * H * .38;
+      const fx = m.ax + Math.sin(eigen * 3.1 + q * 3.4) * H * (oben ? .48 : .38);
       const fy = m.ay - m.P * .5 + H * (.30 - 1.25 * q);
       const auf = Math.sin(q * Math.PI);
-      const fs = H * (.20 - .09 * q) * (.7 + .3 * auf);
-      x.globalAlpha = Math.min(1, auf * (stufe >= 4 ? .8 : .5));
+      const fs = H * (.20 - .09 * q) * (.7 + .3 * auf) * (oben ? FUNKEL_GROSS : 1);
+      x.globalAlpha = Math.min(1, auf * (oben ? .9 : .5));
       x.drawImage(spark, fx - fs / 2, fy - fs / 2, fs, fs);
-      if (stufe >= 4) {
-        const ws = fs * .5;
+      if (oben) {
+        const ws = fs * .55;
         x.drawImage(funke, fx - ws / 2, fy - ws / 2, ws, ws);
+      }
+    }
+    /* Dieselben Glitzersterne wie draußen auf der Insel — dieselbe
+       Tabelle, dieselbe Rechnung, nur um den Anker des Kastens statt
+       um die Bildmitte eines Tieres. Wer die Karte ansieht, soll
+       dasselbe sehen, was ihm später auf der Insel auffällt. */
+    if (oben) {
+      for (let k = 0; k < GLITZER; k++) {
+        const eigen = k * 2.3994;
+        const q = ((t / GLITZER_SEK + k / GLITZER) % 1 + 1) % 1;
+        const auf = Math.pow(Math.max(0, Math.sin(q * Math.PI)), 3);
+        if (auf < .02) continue;
+        const gx = m.ax + Math.cos(eigen * 2.7) * H * .34;
+        const gy = m.ay - m.P * .55 + Math.sin(eigen * 3.3) * H * .30;
+        const gr = H * GLITZER_GROSS * (.5 + .5 * auf);
+        x.globalAlpha = Math.min(1, auf * .95);
+        x.drawImage(glitzer, gx - gr / 2, gy - gr / 2, gr, gr);
       }
     }
     x.restore();
@@ -7316,7 +7504,7 @@
       ? solo.stufen.get(soloTask.item) : (soloTask.level | 0);
 
     kart = { id: soloTask.item, farbe: t.farbe, v2: t.v2, v3: t.v3, stufe };
-    els.pStage.textContent = STUFEN_NAME[stufe];
+    els.pStage.textContent = stufeText(stufe);
     els.pStage.className = 'wi-pstage is-' + stufe;
 
     kartZeichne(typeof performance !== 'undefined' ? performance.now() : Date.now(),

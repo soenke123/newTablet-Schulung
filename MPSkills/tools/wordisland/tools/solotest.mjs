@@ -168,12 +168,15 @@ pass('Aufbau läuft durch (Bilder, Einfärben, Insel, Bedienung)');
 /* ── 1 · Die eingebackenen Bilder ──────────────────────────────── */
 /* Seit 11.09.2026 sind es zwanzig: drei Fassungen der gewachsenen
    Echse, fünf der ausgewachsenen — jede wach und schlafend — und
-   dazu das Wasserbild der Schwimmerin, die als einzige nicht
-   fliegt. */
+   dazu das Wasserbild der Schwimmerin, die als einzige nicht fliegt.
+   Seit 13.09.2026 einunddreißig: die funkelnde Stufe hat zu jeder
+   ausgewachsenen Fassung eine eigene Zeichnung. */
 const SOLL = ['ei', 's1', 's1z',
               's2', 's2z', 's2a', 's2az', 's2b', 's2bz',
               's3a', 's3az', 's3b', 's3bz', 's3c', 's3cz',
-              's3d', 's3dz', 's3e', 's3ez', 's3es'];
+              's3d', 's3dz', 's3e', 's3ez', 's3es',
+              's4a', 's4az', 's4b', 's4bz', 's4c', 's4cz',
+              's4d', 's4dz', 's4e', 's4ez', 's4es'];
 {
   const B = SOLO_SPRITES.bilder;
   const da = SOLL.filter(k => B[k]);
@@ -520,20 +523,56 @@ const svg = document.getElementById('karte');
   for (const v of new Set(S.VAR2)) for (const z of ['', 'z']) {
     if (!S.LAGE['s2' + v + z]) fehlt.push('s2' + v + z);
   }
-  for (const v of new Set(S.VAR3)) for (const z of ['', 'z']) {
-    if (!S.LAGE['s3' + v + z]) fehlt.push('s3' + v + z);
+  /* Beide oberen Stufen: die ausgewachsene und seit 13.09.2026 die
+     funkelnde. Sie teilen sich den Topf VAR3 — ein Wort behält sein
+     Tier, es wird nur größer. */
+  for (const st of [3, 4]) {
+    for (const v of new Set(S.VAR3)) for (const z of ['', 'z']) {
+      if (!S.LAGE['s' + st + v + z]) fehlt.push('s' + st + v + z);
+    }
+    if (!S.LAGE['s' + st + S.SCHWIMMT + 's']) fehlt.push('s' + st + S.SCHWIMMT + 's');
   }
-  if (!S.LAGE['s3' + S.SCHWIMMT + 's']) fehlt.push('s3' + S.SCHWIMMT + 's');
   pruef(fehlt.length === 0,
     'zu jeder Fassung liegen wach, schlafend (und beim Schwimmer das Wasserbild) vor'
     + (fehlt.length ? ' — fehlt: ' + fehlt.join(', ') : ''));
 
   /* Der Anker der Schwimmerin ist ihre eigene Unterkante: dort sind
      die Kringel gezeichnet, und die gehören auf die Oberfläche. */
-  const sw = 's3' + S.SCHWIMMT + 's';
-  pruef(S.ANKER_Y[sw] !== S.ANKER_Y.s2 &&
-        Math.abs(S.ANKER_Y[sw] - (S.LAGE[sw].y + S.LAGE[sw].h)) < .01,
-    `die Wasserlinie ist der Anker von ${sw} (${Math.round(S.ANKER_Y[sw])} statt ${Math.round(S.ANKER_Y.s2)})`);
+  for (const st of [3, 4]) {
+    const sw = 's' + st + S.SCHWIMMT + 's';
+    pruef(S.ANKER_Y[sw] !== S.ANKER_Y.s2 &&
+          Math.abs(S.ANKER_Y[sw] - (S.LAGE[sw].y + S.LAGE[sw].h)) < .01,
+      `die Wasserlinie ist der Anker von ${sw} (${Math.round(S.ANKER_Y[sw])} statt ${Math.round(S.ANKER_Y.s2)})`);
+  }
+
+  /* Und die oberste Stufe zeigt auch WIRKLICH ihr eigenes Bild. Ohne
+     diese Zusage wäre alles oben grün, während auf der Insel eine
+     funkelnde Echse weiter wie eine ausgewachsene aussieht — genau
+     der Zustand, den Sönke am 13.09.2026 gemeldet hat. */
+  {
+    const falsch = [];
+    for (const v of new Set(S.VAR3)) {
+      const t = { stufe: 4, v2: '', v3: v, zustand: 'fliegen', imWasser: false };
+      const k = S.schluesselFuer(t);
+      if (k !== 's4' + v) falsch.push(v + '→' + k);
+      const z = S.schluesselFuer({ ...t, zustand: 'schlafen' });
+      if (z !== 's4' + v + 'z') falsch.push(v + ' (schlafend) →' + z);
+    }
+    pruef(falsch.length === 0,
+      'Stufe 4 zeigt die Stufe-4-Zeichnung derselben Fassung'
+      + (falsch.length ? ' — falsch: ' + falsch.join(', ') : ''));
+    const sw = S.schluesselFuer({ stufe: 4, v3: S.SCHWIMMT, zustand: 'schwimmen', imWasser: true });
+    pruef(sw === 's4' + S.SCHWIMMT + 's',
+      `und die funkelnde Schwimmerin ihr Wasserbild (${sw})`);
+  }
+
+  /* Das Funkeln hängt seit 13.09.2026 NICHT mehr allein am Nachtwert.
+     Vier Zehntel jedes Umlaufs ist der genau null — solange war die
+     oberste Stufe von einer ausgewachsenen nicht zu unterscheiden. */
+  pruef(S.FUNKEL_TAG > .5,
+    `die oberste Stufe funkelt auch am Tag (FUNKEL_TAG ${S.FUNKEL_TAG})`);
+  pruef(S.FUNKEN[4] >= 2 * S.FUNKEN[3],
+    `und sie sprüht deutlich mehr als die ausgewachsene (${S.FUNKEN[4]} zu ${S.FUNKEN[3]})`);
 
   /* Und die Ziehung benutzt ihn auch. */
   const g2 = zaehl(S.welt.tiere.map(t => t.v2));
@@ -655,7 +694,13 @@ const svg = document.getElementById('karte');
     return m ? norm(m[1]) : null;
   };
   for (const name of ['VAR2', 'VAR3', 'SCHWIMMT', 'SCHWIMM_TEMPO', 'WATT_TEMPO',
-                      'STUFE_EINHEIT', 'FLUG_HOEHE', 'LAUF_TEMPO', 'FLUG_TEMPO']) {
+                      'STUFE_EINHEIT', 'FLUG_HOEHE', 'LAUF_TEMPO', 'FLUG_TEMPO',
+                      /* seit 13.09.2026: wie laut die oberste Stufe funkelt.
+                         Stünde die Zahl nur in einer der beiden Dateien,
+                         entschiede der Showroom etwas anderes als das Spiel —
+                         und er ist der Ort, an dem entschieden wird. */
+                      'FUNKEN', 'FUNKEL_TAG', 'FUNKEL_GROSS',
+                      'GLITZER', 'GLITZER_GROSS', 'GLITZER_SEK']) {
     const a = hol(toolJs, name), b = hol(html, name);
     pruef(a !== null && a === b,
       `${name} steht in tool.js und im Showroom gleich: ${a === b ? a : a + '  ≠  ' + b}`);

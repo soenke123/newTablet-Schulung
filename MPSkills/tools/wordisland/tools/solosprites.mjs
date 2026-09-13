@@ -15,7 +15,8 @@
    und verfärbt nichts. Also werden die Bilder eingebacken.
 
    ── Alle Vorlagen teilen EIN Blatt ───────────────────────────────────
-   Die Vorlagen sind 890 × 968, und sie sind aufeinander gezeichnet.
+   Die Vorlagen sind 890 × 968 (seit 13.09.2026 einunddreißig Stück),
+   und sie sind aufeinander gezeichnet.
    Nachgemessen:
 
      Echse0/1/2 stehen mit der Unterkante auf 826 / 826 / 823 —
@@ -126,7 +127,28 @@ const DATEIEN = [
      treibend. Das ist der einzige Schlüssel mit `s` am Ende. */
   ['s3e',  'Echse3e.png'],
   ['s3ez', 'Echse3esnooze.png'],
-  ['s3es', 'Echse3eswim.png']
+  ['s3es', 'Echse3eswim.png'],
+
+  /* Stufe 4 — seit 13.09.2026 eine EIGENE Zeichnung je Fassung
+     (Sönke: „ich habe für jede Stufe-3-Echse eine Stufe-4-Echse
+     erstellt"). Vorher trug die funkelnde Echse das Bild der
+     ausgewachsenen und unterschied sich nur durch Funken — genau
+     das war der Grund, warum man sie „gar nicht erkennt".
+
+     Die BUCHSTABEN sind dieselben wie auf Stufe 3: ein Wort behält
+     sein Tier, es wird nur größer. Also auch hier `e` als die, die
+     schwimmt, und damit ein zweites Wasserbild. */
+  ['s4a',  'Echse4a.png'],
+  ['s4az', 'Echse4asnooze.png'],
+  ['s4b',  'Echse4b.png'],
+  ['s4bz', 'Echse4bsnooze.png'],
+  ['s4c',  'Echse4c.png'],
+  ['s4cz', 'Echse4csnooze.png'],
+  ['s4d',  'Echse4d.png'],
+  ['s4dz', 'Echse4dsnooze.png'],
+  ['s4e',  'Echse4e.png'],
+  ['s4ez', 'Echse4esnooze.png'],
+  ['s4es', 'Echse4eswim.png']
 ];
 
 /* Die Bild-Werkstatt (lesePNG/schreibePNG/kasten/verkleinere) steht
