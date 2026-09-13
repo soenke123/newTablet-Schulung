@@ -2023,14 +2023,23 @@ async function testLevel() {
   const marken = [...root.querySelectorAll('.wi-vmark')].map(e => e.textContent.trim());
   ok('die Zeiten stehen an den Grenzen',
      marken.join(' ') === '1:00 3:00 6:00 10:00', marken.join(' '));
-  const zHeute = root.querySelector('.wi-vz--heute');
-  const zAvg   = root.querySelector('.wi-vz--avg');
-  ok('ein Zeiger sagt, wo man heute steht',
-     /Heute 1:35/.test(zHeute.textContent) && Math.abs(links(zHeute) - pct(95)) < .6,
-     zHeute.textContent + ' @ ' + zHeute.style.left);
-  ok('und einer, welcher Wert gerade zählt',
-     /Schnitt 8:00/.test(zAvg.textContent) && Math.abs(links(zAvg) - pct(480)) < .6,
+  /* ⚠️ EIN Zeiger, nicht zwei (Sönke, 13.09.2026: „das ‚Heute 4:24'
+     kannst du rausnehmen"). Der heutige Tag hat auf dieser Skala
+     nichts mehr zu suchen — er entscheidet nichts, und er steht
+     unten in der Woche mit einem Ring um seinen Namen. Beides wird
+     hier zugesagt: dass die Nadel weg ist UND dass der Ersatz da
+     ist (weiter unten bei den Säulen). */
+  ok('der heutige Tag steht nicht mehr am großen Balken',
+     !root.querySelector('.wi-vz--heute') && !root.querySelector('.wi-vnow'));
+  const zAvg = root.querySelector('.wi-vz--avg');
+  ok('ein Zeiger sagt, welcher Wert gerade zählt — mit dem Ø davor',
+     /^Ø 8:00$/.test(zAvg.textContent.trim()) && Math.abs(links(zAvg) - pct(480)) < .6,
      zAvg.textContent + ' @ ' + zAvg.style.left);
+  /* Bei 8:00 von 12:00 steht er mitten im Balken: dort hängt er um
+     seinen Mittelpunkt und braucht keinen der beiden Randgriffe. */
+  ok('und hängt in der Mitte an seinem Wert',
+     !zAvg.classList.contains('is-links') && !zAvg.classList.contains('is-rechts'),
+     zAvg.className);
   ok('ohne Mastery lädt der Kasten dazu ein, sie zu holen',
      /funkelnde/.test(root.querySelector('.wi-vbonhint').textContent),
      root.querySelector('.wi-vbonhint').textContent);
@@ -2044,6 +2053,11 @@ async function testLevel() {
   ok('die Zeit steht über der Säule',
      saeulen[0].querySelector('.wi-vday__val').textContent === '8:00',
      saeulen[0].querySelector('.wi-vday__val').textContent);
+  /* Der heutige Tag ist hervorgehoben — und seit dem 13.09.2026 ist
+     das die EINZIGE Stelle, an der „heute" noch steht (der Ring um
+     den Wochentag hängt in tool.css an dieser Klasse). Steht sie
+     nicht oder steht sie zweimal, ist die Auskunft „heute" ganz weg
+     oder doppelt. */
   ok('der heutige Tag ist hervorgehoben',
      saeulen.filter(z => z.classList.contains('is-heute')).length === 1 &&
      saeulen[6].classList.contains('is-heute'));
@@ -2101,6 +2115,14 @@ async function testLevelRaender() {
        s.map(a => a.links.toFixed(1)).join(' | '));
     const wo = abschnittMit(root, playerStand(1, 60));
     ok('der Stand liegt im ersten Abschnitt', wo && wo.k === 1 && wo.an);
+    /* 1:00 von 12:00 sind 8 % — um seinen Mittelpunkt gesetzt, hinge
+       die Beschriftung dort halb aus dem Kasten (Sönke: „achte
+       drauf, dass das nicht aus dem Fenster fällt"). Am linken Rand
+       hängt sie deshalb an ihrer linken Kante. */
+    const z = root.querySelector('.wi-vz--avg');
+    ok('am linken Rand fällt der Zeiger nicht aus dem Kasten',
+       z.classList.contains('is-links') && !z.classList.contains('is-rechts'),
+       z.className + ' @ ' + z.style.left);
     tool.unmount();
   }
 
@@ -2165,12 +2187,21 @@ async function testLevelRaender() {
 
   // Ein Schnitt weit über der Aufstiegsgrenze darf nicht überlaufen.
   {
-    const { tool, root } = await mountSolo(
+    const { tool, root, document } = await mountSolo(
       soloView(20, () => 1, false, playerStand(2, 9999)));
     await wait(20);
     ok('ein sehr hoher Schnitt läuft nicht über 100 %',
        Math.abs(ring(root.querySelector('[data-part="avgarc"]')) - 100) < .01,
        ring(root.querySelector('[data-part="avgarc"]')).toFixed(1) + '%');
+    /* Und derselbe Fall am großen Balken: bei 100 % hinge die
+       Beschriftung halb rechts heraus. Dort hängt sie an ihrer
+       rechten Kante — die Gegenprobe zum linken Rand oben. */
+    click(root.querySelector('[data-part="lvlbtn"]'), document);
+    await wait(20);
+    const z = root.querySelector('.wi-vz--avg');
+    ok('am rechten Rand ebenso wenig',
+       z.classList.contains('is-rechts') && !z.classList.contains('is-links'),
+       z.className + ' @ ' + z.style.left);
     tool.unmount();
   }
 }
@@ -2363,6 +2394,111 @@ async function testLevelOhneMigration() {
   }
 
   tool.unmount();
+}
+
+/* ── Die Uhr beim Üben (13.09.2026) ───────────────────────────
+   Sönke: „eine Uhr, die hochzählt, wenn ich aktiv lerne, und
+   stoppt, wenn ich nichts mache. Ein ehrlicher Hinweis."
+
+   Geprüft wird genau diese Ehrlichkeit, und zwar an drei Stellen:
+   sie steht auf der Zahl des Servers, sie läuft nach einer Antwort
+   weiter, und sie rechnet mit DEMSELBEN Deckel wie Migration 0145.
+   Der Deckel ist der Punkt, an dem eine Uhr sonst lügt: zwanzig
+   Minuten Kasten-offen sind zwanzig SEKUNDEN Lernzeit. */
+async function testUhr() {
+  console.log('\n— Die Uhr beim Üben —');
+
+  /* Der Deckel steht in zwei Dateien, und das muss so sein (die
+     eine läuft im Browser, die andere in Postgres). Hier wird
+     zugesagt, dass es dieselbe Zahl ist — sonst zählt die Uhr
+     etwas anderes als die Datenbank, und niemand merkt es, weil
+     beide für sich plausibel aussehen. */
+  const toolQuelle = fs.readFileSync(TOOL, 'utf8');
+  const deckel = (toolQuelle.match(/UHR_DECKEL\s*=\s*(\d+)/) || [])[1];
+  const sqlDatei = path.join(HERE, '..', '..', '..', '..',
+                             'supabase', 'migrations', '0145_wordisland_solo_level.sql');
+  const sql = fs.existsSync(sqlDatei) ? fs.readFileSync(sqlDatei, 'utf8') : '';
+  const sqlDeckel = (sql.match(/least\(greatest\(extract\(epoch from \(p_now - p_prev\)\)::int, 0\), (\d+)\)/) || [])[1];
+  ok('die Uhr rechnet mit demselben Deckel wie der Server',
+     !!deckel && deckel === sqlDeckel, deckel + ' / ' + sqlDeckel);
+
+  let heute = 95;                       // 1:35, wie sie der Server kennt
+  const { tool, root, document } = await mountSolo(
+    soloView(20, () => 1, false, playerStand(3, 300, { today_secs: heute })), {
+      wi_solo_start: () => ({
+        ok: true,
+        task: { item: 'w-3', prompt: 'das Haus', dir: 'de_en', stage: 'type', level: 1, options: [] }
+      }),
+      /* Der Server verbucht bei jeder Antwort den gedeckelten
+         Abstand — hier zwölf Sekunden. Genau diese Zahl muss die
+         Uhr danach zeigen: sie läuft der Antwort nicht davon und
+         fällt nicht hinter sie zurück. */
+      wi_solo_answer: () => {
+        heute += 12;
+        return { ok: true, result: 'correct', item: 'w-3',
+                 player: playerStand(3, 300, { today_secs: heute }),
+                 task: { item: 'w-4', prompt: 'die Tafel', dir: 'de_en',
+                         stage: 'type', level: 0, options: [] } };
+      }
+    }, { live: true });
+
+  const uhr = root.querySelector('[data-part="puhr"]');
+  const zahl = () => root.querySelector('[data-part="puhrnum"]').textContent;
+  ok('vor dem Üben gibt es keine Uhr', uhr.hidden === true);
+
+  click(root.querySelector('[data-part="sgo"]'), document);
+  await wait(40);
+  ok('der Übungskasten bringt sie mit', uhr.hidden === false);
+  ok('sie steht auf der heutigen Lernzeit des Servers', zahl() === '1:35', zahl());
+  /* Noch keine Antwort, also steht sie — und sagt das auch. Ein
+     Zähler, der aussieht, als liefe er, und dabei steht, ist eine
+     Lüge mit Ziffern. */
+  ok('und sie steht still, solange nichts beantwortet wurde',
+     uhr.classList.contains('is-still'), uhr.className);
+
+  antworte(root, document, 'house', '[data-part="pin"]');
+  await wait(40);
+  ok('nach einer Antwort steht die Zahl des Servers da (1:35 + 12 s)',
+     zahl() === '1:47', zahl());
+  ok('und die Uhr läuft', !uhr.classList.contains('is-still'), uhr.className);
+
+  // Eine Sekunde später ist sie eine Sekunde weiter. Das ist der
+  // ganze Unterschied zur Anzeige von vorher, die nur bei Antworten
+  // sprang — und es ist der Grund für den Zeitgeber.
+  await wait(1100);
+  /* Eine Spanne und keine Zahl: der Prüfstand rechnet mit echten
+     Zeitgebern, und eine ausgelastete Maschine braucht für eine
+     Sekunde manchmal anderthalb. Die Zusage ist „sie zählt weiter",
+     nicht „sie zählt auf die Millisekunde genau". */
+  ok('eine Sekunde später zählt sie weiter',
+     ['1:48', '1:49'].includes(zahl()), zahl());
+
+  /* Zumachen hält sie an. Ohne das liefe ein Zeitgeber auf einer
+     Anzeige weiter, die niemand sieht — und beim nächsten Öffnen
+     stünde dort eine Zahl, die der Server nie verbuchen wird. */
+  click(root.querySelector('[data-part="pclose"]'), document);
+  const stand = zahl();
+  await wait(1100);
+  ok('der geschlossene Kasten hält sie an', zahl() === stand, zahl() + ' statt ' + stand);
+
+  tool.unmount();
+
+  /* Ohne Migration 0145 gibt es keine Lernzeit. Dann steht dort
+     nichts — und nicht 0:00: „der Server kennt die Frage nicht" und
+     „du hast heute nichts getan" dürfen nie gleich aussehen. */
+  {
+    const { tool, root, document } = await mountSolo(soloView(20, () => 1), {
+      wi_solo_start: () => ({
+        ok: true,
+        task: { item: 'w-1', prompt: 'das Haus', dir: 'de_en', stage: 'type', level: 1, options: [] }
+      })
+    }, { live: true });
+    click(root.querySelector('[data-part="sgo"]'), document);
+    await wait(40);
+    ok('ohne 0145 bleibt die Uhr weg statt auf 0:00 zu stehen',
+       root.querySelector('[data-part="puhr"]').hidden === true);
+    tool.unmount();
+  }
 }
 
 /* Eine Datenbank ohne 0142: words_list kommt ohne `u`. Das ist
@@ -2793,6 +2929,7 @@ async function testSoloOhneMigration() {
   await testLevelAufstieg();
   await testLevelKeinAufstieg();
   await testLevelOhneMigration();
+  await testUhr();
   await testUnitsOhneMigration();
   await testBlassUndRing();
   console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');

@@ -4622,6 +4622,26 @@
         <div class="wi-ovbox wi-ovbox--play">
           <div class="wi-ovhead">
             <span class="wi-ovtitle" data-part="pmeta">Vokabeln üben</span>
+            <!-- Die Uhr. Sönke, 13.09.2026: „ich hätte gerne eine
+                 Anzeige, wie lange ich schon lerne … die hochzählt,
+                 wenn ich aktiv lerne, und stoppt, wenn ich nichts
+                 mache. Ein ehrlicher Hinweis."
+
+                 Sie zeigt die HEUTIGE Lernzeit und damit dieselbe
+                 Zahl wie der dritte Kreis unten — nur lebendig.
+                 Zwei verschiedene Lernzeiten nebeneinander (heute /
+                 diese Sitzung) wären eine Frage, die sich niemand
+                 stellen sollte. Warum sie ehrlich ist und wann sie
+                 stehen bleibt, steht bei zeigeUhr in tool.js.
+
+                 Kein Knopf: ein anklickbares Ding in der Kopfzeile
+                 nähme beim Üben den Fokus vom Antwortfeld, und auf
+                 dem iPad heißt das, dass die Tastatur zufährt. -->
+            <span class="wi-puhr" data-part="puhr" hidden>
+              <i class="wi-puhrdot" aria-hidden="true"></i>
+              <span class="wi-puhrlab">heute</span>
+              <b class="wi-puhrnum" data-part="puhrnum">0:00</b>
+            </span>
             <button type="button" class="wi-ovclose wi-pton" data-part="pton"
                     aria-label="Ton an oder aus">♪</button>
             <button type="button" class="wi-ovclose" data-part="pclose" aria-label="Schließen">×</button>
@@ -4768,6 +4788,9 @@
     // DOM und ein stehengebliebener Rundenstand aus dem alten wären
     // sonst uneins, und der erste Sprung liefe als Bewegung ab.
     rundeNo = 0; rundePct = 0;
+    // Die Uhr gehört zu EINER Insel: ein neues Kind am selben Gerät
+    // erbt keine Lernzeit.
+    uhrBasis = 0; uhrAb = 0; uhrLauf(false);
     els = {
       stage: q('stage'), mapwrap2: q('mapwrap2'), map: q('map'),
       veil: q('veil'), cvs: q('cvs'), load: q('load'), loadTxt: q('loadtxt'),
@@ -4793,7 +4816,7 @@
       pDir: q('pdir'), pDelta: q('pdelta'),
       cheer: q('cheer'), cCvs: q('ccvs'),
       pLevel: q('plevel'), pLevelB: q('plevelb'), pLevelS: q('plevels'),
-      pTon: q('pton'),
+      pTon: q('pton'), pUhr: q('puhr'), pUhrNum: q('puhrnum'),
       pWord: q('pword'), pForm: q('pform'), pIn: q('pin'),
       pOpts: q('popts'), pFb: q('pfb')
     };
@@ -4840,6 +4863,10 @@
       zeigeStats(false);
       zeigeDelta(0);
       kartHalt();
+      // Die Uhr läuft nur, solange man sie sehen kann. Der Stand
+      // bleibt stehen, wo er ist — beim nächsten Öffnen geht es von
+      // dort weiter.
+      uhrLauf(false);
       /* Wer geübt hat, hat Zahlen verändert — und die Übersichten in
          der Leiste sind eine Momentaufnahme von vorher. Der Cache
          geht weg, das Offene wird neu geholt. Beim Üben selbst
@@ -5218,9 +5245,14 @@
     return g;
   }
 
-  /* Alles, was beide Balken brauchen — einmal gerechnet: die vier
-     Grenzen, die fünf Abschnitte in Prozent, der eigene Stand mit
-     und ohne Bonus und der heutige Tag. */
+  /* Alles, was Leiter und Kreise brauchen — einmal gerechnet: die
+     vier Grenzen, die fünf Abschnitte in Prozent und der eigene
+     Stand mit und ohne Bonus.
+
+     Der heutige Tag stand hier bis zum 13.09.2026 als eigene
+     Position mit drin; er hat auf dieser Skala keinen Platz mehr
+     (siehe renderVolkBalken). Der Ring unten rechnet ihn selbst und
+     gegen eine andere Bezugsgröße — die Grenze zum nächsten Level. */
   function lvlLeiter(p) {
     const g = lvlGrenzen(p);
     const ende = Math.max(LVL_ENDE, g[3] + 60);
@@ -5235,7 +5267,7 @@
     return {
       g, ende, pos, abschnitte,
       lvl: Math.max(1, Math.min(5, p.level || 1)),
-      avg: pos(avg), mitBonus: pos(avg + bonus), heute: pos(p.today_secs)
+      avg: pos(avg), mitBonus: pos(avg + bonus)
     };
   }
 
@@ -5260,11 +5292,16 @@
     renderVolkBalken(p);
   }
 
-  /* Die große Leiter. Sie trägt zwei Zeiger, und das ist Sönkes
-     Vorgabe: „an dem Balken sieht man, wo man heute ist und wo der
-     aktuelle Wert ist." Beide messen dasselbe (Sekunden an EINEM
-     Tag) und sind deshalb vergleichbar — der heutige Tag ist die
-     Hand am Hebel, der Schnitt ist das, was gilt. */
+  /* Die große Leiter. Sie trägt EINEN Zeiger: den Schnitt — den
+     Wert, der über das Level entscheidet.
+
+     Bis zum 13.09.2026 stand hier eine zweite Nadel für den heutigen
+     Tag. Sönke: „beim Levelbalken kannst du das ‚Heute 4:24'
+     rausnehmen. Dafür mache unten im Balkendiagramm einen Kreis um
+     den heutigen Tag." Beides zusammen ist eine Verschiebung und
+     kein Verlust: heute entscheidet nichts, heute ist einer von
+     sieben Tagen — und genau dort steht er jetzt, markiert als der
+     von jetzt (.wi-vday.is-heute, ein Ring um den Wochentag). */
   function renderVolkBalken(p) {
     if (!els.vBar) return;
     if (!p) { els.vBar.innerHTML = ''; els.vBar.hidden = true; return; }
@@ -5277,21 +5314,28 @@
     const marken = L.g.map(s =>
       `<span class="wi-vmark" style="left:${pz(L.pos(s))}">${minSekKurz(s)}</span>`).join('');
 
+    /* Der Zeiger klebt an seinem Wert — außer an den Rändern. Er
+       ist um seinen Mittelpunkt gesetzt, und bei 0 % oder 100 %
+       hinge damit die halbe Beschriftung außerhalb des Kastens: bei
+       Level 1 mit wenig Schnitt links, bei Level 5 rechts. Dort
+       wandert der Ankerpunkt an die Kante (is-links / is-rechts),
+       die Zahl selbst bleibt, wo sie hingehört. */
+    const zLinks = L.mitBonus;
+    const zKlasse = zLinks < 14 ? ' is-links' : (zLinks > 86 ? ' is-rechts' : '');
+
     els.vBar.innerHTML =
       `<div class="wi-vmarks">${marken}</div>` +
       `<div class="wi-vtrack">` +
         `<i class="wi-vfill" style="width:${pz(L.avg)}"></i>` +
         `<i class="wi-vbonus" style="left:${pz(L.avg)};width:${pz(Math.max(0, L.mitBonus - L.avg))}"></i>` +
         segs +
-        `<i class="wi-vnow" style="left:${pz(L.heute)}"></i>` +
       `</div>` +
-      /* Stehen die zwei Zeiger dicht beieinander (wer gleichmäßig
-         lernt, hat heute ungefähr seinen Schnitt!), liegen ihre
-         Beschriftungen übereinander. Dann untereinander statt
-         nebeneinander — die Zahlen selbst bleiben, wo sie hingehören. */
-      `<div class="wi-vzeiger${Math.abs(L.heute - L.mitBonus) < 16 ? ' is-eng' : ''}">` +
-        `<span class="wi-vz wi-vz--heute" style="left:${pz(L.heute)}">Heute ${minSekKurz(p.today_secs)}</span>` +
-        `<span class="wi-vz wi-vz--avg" style="left:${pz(L.mitBonus)}">Schnitt ${minSekKurz((p.avg_secs || 0) + (p.bonus_secs || 0))}</span>` +
+      /* Das Ø steht auch am großen Balken (Sönke, 13.09.2026) — es
+         ist dasselbe Zeichen wie am mittleren Kreis unten, und ein
+         Wort dafür braucht es an keiner der beiden Stellen. */
+      `<div class="wi-vzeiger">` +
+        `<span class="wi-vz wi-vz--avg${zKlasse}" style="left:${pz(zLinks)}">` +
+          `Ø ${minSekKurz((p.avg_secs || 0) + (p.bonus_secs || 0))}</span>` +
       `</div>` +
       `<p class="wi-vbonhint">` + (p.bonus_secs
         ? `<i class="wi-vbonchip"></i> <b>+ ${minSek(p.bonus_secs)}</b> Bonus für ` +
@@ -5857,6 +5901,15 @@
     if (!solo) return;
     els.setsOv.hidden = true;
     els.playOv.hidden = false;
+    /* Die Uhr übernimmt den Stand, den der Server zuletzt gesagt
+       hat — `uhrAb` wird dabei NICHT zurückgesetzt. Wer den Kasten
+       zumacht und gleich wieder aufmacht, hat durchgeübt, und der
+       Server rechnet den Abstand über das Zumachen hinweg genauso.
+       Eine Uhr, die beim Öffnen stehen bleibt, obwohl sie beim
+       Server weiterläuft, wäre die erste Lüge. */
+    uhrBasis = (solo.player && solo.player.today_secs) || 0;
+    zeigeUhr();
+    uhrLauf(true);
     soloFeedback(null);
     zeigeDelta(0);
     buehneZu();
@@ -6144,6 +6197,66 @@
     el.style.visibility = len > .01 ? '' : 'hidden';
   }
 
+  /* ─── Die Uhr beim Üben ─────────────────────────────────────
+     Sönke, 13.09.2026: „die Lernzeit wächst ja nur im Übungs-Kasten,
+     und sobald der zugeht, ist das wieder weg. Ich hätte gerne eine
+     Anzeige, wie lange ich schon lerne — eine Uhr, die hochzählt,
+     wenn ich aktiv lerne, und stoppt, wenn ich nichts mache. Ein
+     ehrlicher Hinweis."
+
+     Ehrlich heißt: dieselbe Rechnung wie am Server. Der zählt nicht
+     die Zeit, die der Kasten offen steht, sondern bei JEDER Antwort
+     den Abstand zur vorigen — gedeckelt auf zwanzig Sekunden
+     (wi_solo_time_add, Migration 0145). Wer die Frage ansieht und
+     weggeht, bekommt dafür zwanzig Sekunden und keine Viertelstunde.
+
+     Genau das tut die Uhr: nach einer Antwort läuft sie mit, nach
+     zwanzig Sekunden ohne Antwort bleibt sie stehen. Kommt die
+     nächste Antwort, schreibt der Server dieselbe Zahl fort, die
+     hier schon steht — die Uhr springt nie zurück und läuft nie
+     vor. Deshalb darf der Deckel hier keine eigene Zahl sein: er
+     ist die aus 0145, und wenn die sich ändert, ändert sich beides.
+
+     Der Preis dafür ist eine Uhr, die stillsteht, während jemand
+     nachdenkt. Das ist kein Fehler, sondern die Aussage: gezählt
+     wird Üben, nicht Dasitzen. Damit niemand sie für kaputt hält,
+     sagt der Punkt daneben, ob sie läuft. */
+  const UHR_DECKEL = 20;   // = wi_solo_time_add(prev, now), Migration 0145
+  let uhrBasis = 0;        // today_secs, Stand der letzten Antwort
+  let uhrAb = 0;           // Date.now() dieser Antwort; 0 = noch keine
+  let uhrT = 0;
+
+  function uhrStand() {
+    if (!uhrAb) return uhrBasis;
+    return uhrBasis + Math.min(UHR_DECKEL, Math.max(0, (Date.now() - uhrAb) / 1000));
+  }
+
+  function zeigeUhr() {
+    if (!els.pUhr) return;
+    const p = solo && solo.player;
+    /* Ohne Migration 0145 gibt es keine Lernzeit — dann steht hier
+       nichts. Eine Uhr, die 0:00 zeigt, weil der Server die Frage
+       nicht kennt, sähe aus wie „du hast heute nichts getan"
+       (siehe feedback_missing_migration_looks_like_network). */
+    if (!p || p.today_secs == null) { els.pUhr.hidden = true; return; }
+    els.pUhr.hidden = false;
+    els.pUhrNum.textContent = minSekKurz(uhrStand());
+    const laeuft = !!uhrAb && Date.now() - uhrAb < UHR_DECKEL * 1000;
+    els.pUhr.classList.toggle('is-still', !laeuft);
+    els.pUhr.title = laeuft
+      ? 'Deine Lernzeit heute. Sie läuft, solange du antwortest.'
+      : 'Deine Lernzeit heute. Die Uhr steht — sie läuft weiter, sobald du antwortest.';
+  }
+
+  /* Zweimal je Sekunde und nicht einmal: die Anzeige springt auf
+     ganze Sekunden, und ein Zeitgeber im Sekundentakt läuft je nach
+     Anfangszeitpunkt bis zu einer ganzen Sekunde daneben. */
+  function uhrLauf(an) {
+    if (uhrT) clearInterval(uhrT);
+    uhrT = 0;
+    if (an) uhrT = setInterval(zeigeUhr, 500);
+  }
+
   // Server → Client: p ist { level, level_max, today_secs, avg_secs,
   // bonus_secs, pct_max, up_secs, down_secs[, level_before] } —
   // dieselbe Form aus wi_solo_open/_view (Laden) und wi_solo_answer
@@ -6152,6 +6265,14 @@
     if (!p || !solo) return;
     const altesLevel = solo.player && solo.player.level;
     solo.player = p;
+    /* Diese Stelle ist der ANTWORTWEG und nur er (soloSend) — beim
+       Aufbau der Insel kommt der Spielerstand direkt in `solo`.
+       Genau deshalb darf die Uhr hier anspringen: „es kam gerade
+       eine Antwort" ist dasselbe Ereignis, das auch der Server
+       verbucht hat. */
+    uhrBasis = p.today_secs || 0;
+    uhrAb = Date.now();
+    zeigeUhr();
     renderLevel();
     if (!els.volkOv.hidden) renderVolkLevel();
     /* Die Figur neu laden, wenn sich die Stufe ihres Bildes ändert —
@@ -7071,6 +7192,7 @@
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
       kartHalt();
+      uhrLauf(false);
       clearTimeout(soloLockT);
       clearTimeout(feierT);
       clearTimeout(deltaT);

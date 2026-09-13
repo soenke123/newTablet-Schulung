@@ -1989,18 +1989,11 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 }
 .wi-vseg.is-on { background: rgba(255, 255, 255, .18); }
 .wi-vseg.is-on > b { color: var(--ink); }
-.wi-vnow {
-  position: absolute; top: -2px; bottom: -2px;
-  width: 2px;
-  margin-left: -1px;
-  background: var(--ink);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, .55);
-}
+/* Die Nadel des heutigen Tages (.wi-vnow) stand bis zum 13.09.2026
+   auf dieser Skala. Sie ist weg — der heutige Tag markiert sich in
+   der Woche darunter, und der Balken handelt nur noch von dem einen
+   Wert, der über das Level entscheidet. */
 .wi-vzeiger { position: relative; height: 16px; }
-/* Zwei Beschriftungen an fast derselben Stelle: untereinander. Die
-   Zeiger selbst bleiben stehen, wo ihre Zahl steht. */
-.wi-vzeiger.is-eng { height: 30px; }
-.wi-vzeiger.is-eng .wi-vz--avg { top: 15px; }
 .wi-vz {
   position: absolute;
   top: 1px;
@@ -2010,8 +2003,12 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.wi-vz--heute { color: var(--ink); }
-.wi-vz--avg   { color: var(--accent); }
+/* An den Rändern hinge die um ihren Mittelpunkt gesetzte
+   Beschriftung halb aus dem Kasten. Dort hängt sie an ihrer Kante —
+   ihre Position (`left`) ist in beiden Fällen dieselbe. */
+.wi-vz.is-links  { transform: translateX(0); }
+.wi-vz.is-rechts { transform: translateX(-100%); }
+.wi-vz--avg { color: var(--accent); }
 .wi-vbonhint { margin: 4px 0 0; font-size: 12px; color: var(--ink-soft); }
 .wi-vbonhint b { color: #c8891f; }
 .wi-vbonchip {
@@ -2058,14 +2055,57 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   border-radius: 5px;
   background: linear-gradient(180deg, #6ee7a8, var(--accent));
 }
-.wi-vday__lab { font-size: 11px; font-weight: 700; color: var(--ink-faint); }
+.wi-vday__lab {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  /* Die Maße stehen schon hier und nicht erst bei is-heute: der
+     Ring darf die Säule nicht verschieben, wenn er dazukommt —
+     sonst ruckt die ganze Reihe um Mitternacht einen Tag weiter. */
+  min-width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
 .wi-vday.is-heute .wi-vday__bar > i { background: linear-gradient(180deg, #ffd666, #ffb43c); }
 .wi-vday.is-heute .wi-vday__lab,
 .wi-vday.is-heute .wi-vday__val { color: var(--ink); }
+/* Der Kreis um den heutigen Tag (Sönke, 13.09.2026). Er ersetzt die
+   Nadel „Heute 4:24" am großen Balken darüber: dort war heute eine
+   zweite Zahl auf einer Skala, die über das Level entscheidet — hier
+   ist er das, was er ist, nämlich einer von sieben Tagen und der von
+   jetzt. Dieselben zwei Gelbtöne wie seine Säule. */
+.wi-vday.is-heute .wi-vday__lab {
+  background: rgba(255, 214, 102, .20);
+  box-shadow: inset 0 0 0 2px #ffb43c;
+}
 /* Ausgegraut, nicht weg: der schwächste Tag wird von der 6-von-7-
-   Regel herausgeworfen, aber gelernt wurde an ihm trotzdem. */
-.wi-vday.is-schwach .wi-vday__bar > i { background: color-mix(in srgb, var(--ink) 22%, transparent); }
-.wi-vday.is-schwach .wi-vday__val { color: var(--ink-faint); }
+   Regel herausgeworfen, aber gelernt wurde an ihm trotzdem.
+
+   Seit dem 13.09.2026 deutlich (Sönke: „den gestrichenen Tag kannst
+   du noch deutlicher rausnehmen, ausgrauen — das fällt gerade nicht
+   so richtig auf"). Vier Dinge zusammen, weil eines allein in einer
+   Reihe von sieben Säulen untergeht: die ganze Spalte tritt zurück,
+   die Säule wird schraffiert statt gefüllt, ihr Bett verliert die
+   Farbe, und die Zahl bekommt einen Strich — „zählt nicht mit" ist
+   genau das, was ein durchgestrichener Wert sagt. */
+.wi-vday.is-schwach { opacity: .5; }
+.wi-vday.is-schwach .wi-vday__bar {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 16%, transparent);
+}
+.wi-vday.is-schwach .wi-vday__bar > i {
+  background: repeating-linear-gradient(45deg,
+              color-mix(in srgb, var(--ink) 26%, transparent) 0 4px,
+              color-mix(in srgb, var(--ink) 10%, transparent) 4px 8px);
+}
+.wi-vday.is-schwach .wi-vday__val {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+.wi-vday.is-schwach .wi-vday__lab { color: var(--ink-faint); }
 .wi-vweak { margin: 0; font-size: 11.5px; color: var(--ink-faint); }
 .wi-vtot { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink-soft); }
 .wi-vtot b { color: var(--ink); font-size: 14px; }
@@ -2333,6 +2373,69 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    an derselben Stelle dasselbe tut: eine Kleinigkeit umstellen. */
 .wi-pton { font-size: 17px; }
 .wi-pton.is-off { color: var(--ink-faint); opacity: .6; text-decoration: line-through; }
+
+/* ── Die Uhr in der Kopfzeile ──────────────────────────────────
+   Sönkes Vorgabe: „im üblichen heute-Stil, so wie die Uhr unten
+   angezeigt ist." Übernommen ist deshalb alles, was diesen Stil
+   ausmacht — die kleine Beschriftung „heute", die Tinte des
+   heute-Rings (62 % ink) und Ziffern gleicher Breite. Nicht
+   übernommen ist die runde FORM: neben Titel, Ton und Schließer
+   wäre ein 44-px-Ring ein Klotz, und ein 22er wäre eine Zahl, die
+   man nicht mehr liest.
+
+   Ziffern gleicher Breite sind hier keine Feinheit: eine Uhr, deren
+   Breite sich jede Sekunde ändert, schiebt den Titel daneben hin
+   und her. */
+.wi-puhr {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+  line-height: 1;
+}
+.wi-puhrlab {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--ink-faint);
+}
+.wi-puhrnum {
+  font-size: 13px;
+  font-weight: 800;
+  color: color-mix(in srgb, var(--ink) 62%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+/* Der Punkt ist der ehrliche Hinweis: er pulst, solange die Uhr
+   läuft, und ist grau, sobald sie steht. Ohne ihn sähe eine
+   stehende Uhr genauso aus wie eine laufende, die gerade zwischen
+   zwei Sekunden ist — und dann müsste ein Kind raten, ob seine Zeit
+   noch gezählt wird. */
+.wi-puhrdot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: wi-puhrpuls 1.6s ease-in-out infinite;
+}
+.wi-puhr.is-still { opacity: .55; }
+.wi-puhr.is-still .wi-puhrdot {
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+  animation: none;
+}
+@keyframes wi-puhrpuls { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) {
+  .wi-puhrdot { animation: none; }
+}
+/* Auf dem Telefon teilen sich Titel, Uhr, Ton und Schließer keine
+   370 px. Das Wort geht, die Zahl bleibt — sie ist die Auskunft,
+   „heute" nur ihre Überschrift, und der Kasten heißt ohnehin
+   „Vokabeln üben". */
+@media (max-width: 430px) {
+  .wi-puhrlab { display: none; }
+}
 
 /* ══════════════════════════════════════════════════════════════
    WIE OFT HATTEST DU DIESES WORT?
