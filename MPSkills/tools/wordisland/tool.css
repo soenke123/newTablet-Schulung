@@ -1202,11 +1202,12 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   overflow: hidden;
   /* Die Linie, auf der alles endet, was ÜBER dem Knopf-Kasten steht:
      dessen eigener Abstand zur Kante (10) + seine GEMESSENE Höhe
-     (tool.js, randMessen) + eine saubere Lücke (14). Der Ersatzwert
-     gilt nur für den Augenblick vor der ersten Messung.
-     Vorher stand an beiden Stellen eine geratene 76 — und 76 war
-     eben nicht mehr als die Leiste hoch ist. */
-  --wi-ueber: calc(24px + var(--wi-sbar-h, 62px) + env(safe-area-inset-bottom, 0px));
+     (tool.js, sbarMessen) + eine saubere Lücke (14). Der Ersatzwert
+     gilt nur für den Augenblick vor der ersten Messung; er steht auf
+     der Höhe MIT den drei Level-Kreisen (13.09.2026), weil die der
+     Normalfall sind. Vorher stand an beiden Stellen eine geratene
+     76 — und 76 war eben nicht mehr als die Leiste hoch ist. */
+  --wi-ueber: calc(24px + var(--wi-sbar-h, 78px) + env(safe-area-inset-bottom, 0px));
 }
 
 /* Die Bühne. `touch-action: none`, sonst schiebt der Finger die
@@ -1281,33 +1282,31 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    Kopfzeile der Seite, und zwei Balken übereinander lassen von der
    Insel nichts übrig. Unten ist außerdem der Daumen.
 
-   Seit 10.09.2026 ist sie ein KASTEN unten rechts und kein Balken
-   über die ganze Breite (Sönke: „unten rechts ist ein Feld
-   Einstellungen und Vokabeln üben"). Der Grund ist die Unit-Leiste
-   auf der anderen Seite: sie geht jetzt bis ganz nach unten, und
-   ein Balken quer darüber hätte sie unten abgeschnitten. So teilen
-   sich beide die untere Kante — Liste links, Knöpfe rechts. */
+   Vom 10. bis zum 13.09.2026 war sie ein KASTEN unten rechts und
+   kein Balken über die ganze Breite. Seit die drei Level-Kreise
+   darin wohnen, geht sie wieder über die ganze Breite (Sönke:
+   „mache unten vor das einstellungssymbol in das Panel 3 Elemente
+   so dass das auf die volle Breite kommt") — die Kreise verteilen
+   sich links, Zahnrad und „Vokabeln üben" bleiben rechts.
+
+   Die Unit-Leiste endet dafür wieder ÜBER ihr und nicht an der
+   unteren Kante: zwei Kästen übereinander hieße, dass der untere
+   die Liste abschneidet. */
 .wi-sbar {
   position: absolute;
-  left: auto;
+  left: 10px;
   right: 10px;
   bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  /* KEINE Höchstbreite aus `--wi-rand` mehr (Sönke, 11.09.2026:
-     „die soll stabil bleiben und nicht von den units weggeschoben
-     werden"). Die Breite schrumpfte beim Aufklappen der Unit-Leiste,
-     die zwei Knöpfe darin schrumpfen aber nicht — sie quollen also
-     rechts aus ihrem eigenen Kasten heraus. Nötig war die Rechnung
-     ohnehin nie: auf schmalen Geräten endet die Unit-Leiste ÜBER
-     diesem Kasten, auf breiten ist links wie rechts Platz. */
   z-index: 20;
   display: flex;
-  align-items: center;
+  /* Unten ausgerichtet: die Kreise sind höher als die Knöpfe, und
+     die Beschriftung unter ihnen soll auf der Grundlinie der Knöpfe
+     stehen und nicht darunter hängen. */
+  align-items: flex-end;
   gap: 10px;
-  /* Kein Umbruch mehr: seit die Zahlen im Kopf der Unit-Leiste
-     stehen, sind hier nur noch zwei Knöpfe, und die passen auch auf
-     ein schmales Telefon. Das ist nicht bloß hübscher — die Leiste
-     hat dadurch eine FESTE Höhe, und genau darauf rechnen die
-     Abstände der Unit-Leiste und des Kärtchens. */
+  /* Kein Umbruch: die Leiste hat dadurch eine FESTE Höhe, und genau
+     darauf rechnen die Abstände der Unit-Leiste und des Kärtchens
+     (`--wi-sbar-h`, gemessen in tool.js). */
   flex-wrap: nowrap;
   padding: 9px 12px;
   border-radius: var(--r-md, 18px);
@@ -1317,42 +1316,49 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
-/* Der Abstandhalter ist weg: er schob die Knöpfe an das rechte Ende
-   eines Balkens, der über die ganze Breite ging. Der Kasten steht
-   jetzt selbst rechts und ist nur so breit wie seine zwei Knöpfe. */
+/* Die zwei Knöpfe schrumpfen nicht. An das rechte Ende schiebt sie
+   die Level-Gruppe, die als einzige wächst (`flex: 1 1 auto`) — und
+   wenn die einmal nicht da ist (Datenbank ohne 0145), das `auto` am
+   Zahnrad. Ohne das stünden die Knöpfe dann links in einem Balken
+   über die ganze Breite. */
 .wi-sbar > .wi-btn { flex: 0 0 auto; }
+.wi-sbar > .wi-sgear { margin-left: auto; }
 
 /* ══════════════════════════════════════════════════════════════
-   DAS EIGENE LEVEL — der Balken oben
+   DAS EIGENE LEVEL — die drei Kreise unten
    ══════════════════════════════════════════════════════════════
-   Migration 0145. Derselbe schwebende, blasse Kasten wie .wi-sbar,
-   nur oben links statt unten rechts — die beiden stehen sich
-   gegenüber und nicht im Weg. Ein Tipp öffnet denselben „Wer bist
-   du?"-Kasten wie ein Tipp auf die Figur selbst. */
+   Migration 0145. Bis zum 13.09.2026 ein Balken oben links — also
+   unter der Unit-Leiste, die dort ebenfalls anfängt und ihn zudeckte.
+   Jetzt drei Kreise im Kasten unten, links vom Zahnrad, über die
+   freie Breite verteilt (Sönke: „so dass das auf die volle Breite
+   kommt").
+
+   Die Gruppe ist `position: relative`, weil das Aufstiegs-Banner
+   (.wi-lvltoast) an ihr hängt und über ihr aufblitzt. */
 .wi-lvl {
-  position: absolute;
-  left: 10px;
-  top: calc(10px + var(--vv-top, 0px));
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: min(78vw, 320px);
-  padding: 8px 12px;
-  border-radius: var(--r-md, 18px);
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow-lg);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-}
-.wi-lvlbtn {
-  appearance: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  position: relative;
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  /* Verteilt und nicht gedrängt: die drei sollen die Breite
+     ausfüllen, die der Kasten hergibt. */
+  justify-content: space-evenly;
+  gap: 6px;
+}
+/* Gegen die eigene display-Regel schützt die Sammelregel ganz oben
+   in dieser Datei (`.wi [hidden]`) — sonst ginge die Gruppe auf und
+   nie wieder zu (Regel: feedback_hidden_attribute_loses_to_display). */
+
+/* Ein Kreis mit seiner Beschriftung. Ein Knopf, weil er etwas tut:
+   alle drei öffnen denselben Kasten „Wer bist du?". */
+.wi-lvlc {
+  appearance: none;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
   padding: 0;
   border: none;
   background: none;
@@ -1360,69 +1366,100 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   color: inherit;
   font: inherit;
 }
-.wi-lvlnum { flex: 0 0 auto; font-size: 13px; font-weight: 800; color: var(--ink); white-space: nowrap; }
-.wi-lvlcrown { flex: 0 0 auto; font-size: 15px; line-height: 1; }
-.wi-lvlbar {
-  flex: 1 1 auto;
-  min-width: 84px;
-  height: 12px;
-  border-radius: 999px;
-  overflow: hidden;
+.wi-lvlring {
   position: relative;
-  background: rgba(160, 200, 225, .15);
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
 }
-.wi-lvlfill {
-  position: absolute; inset: 0 auto 0 0;
-  width: 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), #6ee7a8);
-  transition: width .45s ease;
+/* Der erste Kreis ist keine Anzeige, sondern ein Abzeichen: eine
+   Zahl auf der Farbe, die im ganzen Werkzeug „Level" heißt (dieselbe
+   wie die Füllung des großen Balkens). */
+.wi-lvlring--lvl {
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #6ee7a8);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent),
+              inset 0 0 0 1px rgba(255, 255, 255, .35);
 }
-/* Der Bonus liegt als ZWEITE SCHICHT über dem Basis-Füllstand —
-   eine geriffelte Farbe, die zeigt, wie viel die Mastery zusätzlich
-   bringt (Sönke: „der Bonus wird visuell auf dem Levelbalken
-   angezeigt"). */
+.wi-lvlring--lvl .wi-lvlnum {
+  font-size: 19px;
+  /* Auf dem farbigen Abzeichen steht die Zahl dunkel — sie muss in
+     beiden Themen auf demselben Grün lesbar sein, also nicht
+     `--ink`. */
+  color: #04261a;
+}
+/* Die Krone sitzt AM Abzeichen und nicht darin: der Kreis trägt das
+   jetzige Level, die Krone das höchste je erreichte. */
+.wi-lvlcrown {
+  position: absolute;
+  top: -5px; right: -5px;
+  font-size: 14px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .45));
+}
+/* Die zwei Ringe. Das SVG füllt den Kreis, die Zahl liegt darin. */
+.wi-lvlring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Der Bogen beginnt oben und nicht rechts. */
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+.wi-lvlring circle {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.wi-lvltrack { stroke: color-mix(in srgb, var(--ink) 14%, transparent); }
+.wi-lvlarc {
+  stroke: var(--accent);
+  transition: stroke-dasharray .45s ease;
+}
+/* Oben angekommen: kein „bis zum nächsten Level" mehr, also die
+   Farbe, die im Werkzeug für „fertig" steht. */
+.wi-lvlring.is-max .wi-lvlarc { stroke: var(--wi-gold, #ffcf4d); }
+/* Der Bonus aus der Mastery — dieselbe goldene Zutat wie am großen
+   Balken, nur als Bogen, der dort ansetzt, wo der eigene Stand
+   endet. */
 .wi-lvlbonus {
-  position: absolute; inset: 0 auto 0 0;
-  left: 0; width: 0;
-  border-radius: 999px;
-  background: repeating-linear-gradient(45deg,
-              rgba(255, 214, 102, .85) 0 6px, rgba(255, 186, 60, .85) 6px 12px);
-  transition: left .45s ease, width .45s ease;
+  stroke: rgba(255, 200, 70, .95);
+  transition: stroke-dasharray .45s ease, stroke-dashoffset .45s ease;
 }
-/* ── Die fünf Abschnitte, ihre Grenzen und der heutige Tag ─────
-   Sönke, 13.09.2026: „ein Balken von Level 1 bis Level 5, jeder
-   Levelsprung ist markiert." Die Kästchen schreibt renderLevel; sie
-   liegen ÜBER den zwei Füllungen und dürfen sie nicht verdecken —
-   also kein Hintergrund außer beim eigenen Abschnitt, und der nur
-   angedeutet.
-
-   Die Grenze ist die LINKE Kante jedes Abschnitts. Die des ersten
-   liegt auf der Balkenkante und ist damit von selbst unsichtbar,
-   ohne dass eine Ausnahme nötig wäre. */
-.wi-lvlmarks { position: absolute; inset: 0; pointer-events: none; }
-.wi-lvlseg {
-  position: absolute;
-  top: 0; bottom: 0;
-  border-left: 1px solid color-mix(in srgb, var(--ink) 38%, transparent);
+/* Der heutige Tag ist kein Fortschritt, sondern eine Messung: derselbe
+   Ring, aber in der Tinte der Nadel, die er ersetzt. */
+.wi-lvlring--heute .wi-lvlarc { stroke: color-mix(in srgb, var(--ink) 62%, transparent); }
+.wi-lvlnum {
+  position: relative;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  line-height: 1;
 }
-.wi-lvlseg.is-on { background: rgba(255, 255, 255, .16); }
-/* Der heutige Tag als Nadel. Er misst dasselbe wie die Füllung
-   (Sekunden an EINEM Tag) und ist deshalb auf derselben Skala
-   ablesbar: steht er rechts vom Füllstand, zieht der Schnitt an. */
-.wi-lvlnow {
-  position: absolute;
-  top: -1px; bottom: -1px;
-  width: 2px;
-  margin-left: -1px;
-  border-radius: 2px;
-  background: var(--ink);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, .55);
+.wi-lvllab {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--ink-faint);
+  white-space: nowrap;
 }
-.wi-lvltoday { flex: 0 0 auto; font-size: 11.5px; font-weight: 700; color: var(--ink-faint); white-space: nowrap; }
+/* Am Telefon teilen sich drei Kreise, ein Zahnrad und „Vokabeln
+   üben" 370 px. Die Kreise geben nach, nicht die Knöpfe: ein Knopf,
+   dessen Beschriftung umbricht, ist unbrauchbar, ein Kreis mit 38 px
+   ist nur kleiner. */
+@media (max-width: 480px) {
+  .wi-lvlring { width: 38px; height: 38px; }
+  .wi-lvlring--lvl .wi-lvlnum { font-size: 16px; }
+  .wi-lvlnum { font-size: 11.5px; }
+  .wi-lvllab { font-size: 9.5px; }
+}
 
 /* Der Aufstieg feiert NEBENHER — kein Halt, keine Bühne, nur ein
-   Banner, das kurz über dem Balken aufblitzt (siehe feierSpielerStart
+   Banner, das kurz über den Kreisen aufblitzt (siehe feierSpielerStart
    in tool.js; den Funkenkranz an der Figur zeichnet dieselbe Stelle
    wie beim Tier-Jubel, ohne eigene CSS). */
 .wi-lvltoast {
@@ -1517,11 +1554,12 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   left: 10px;
   right: auto;
   top: 10px;
-  /* Bis ganz nach unten (Sönke, 10.09.2026). Sie muss nicht mehr
-     über der unteren Leiste enden, weil die zu einem Kasten am
-     rechten Rand geworden ist — die beiden stehen nebeneinander
-     und nicht übereinander. */
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  /* ÜBER dem Knopf-Kasten und nicht bis zur unteren Kante: der geht
+     seit 13.09.2026 wieder über die ganze Breite (die Level-Kreise
+     wohnen darin), und eine Liste, die darunter weiterläuft, wäre
+     unten abgeschnitten. Die Linie ist dieselbe wie beim Kärtchen
+     und kommt aus der GEMESSENEN Höhe des Kastens. */
+  bottom: var(--wi-ueber);
   width: min(320px, 46vw);
   z-index: 20;
   display: flex;
@@ -1547,16 +1585,10 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    Kasten quer über dem Bildschirm ist keine Spalte mehr, und die
    Liste braucht ihren Weg nach unten.
 
-   Hier endet sie ÜBER dem Knopf-Kasten und nicht an der unteren
-   Kante: auf 390 px Breite passen eine 265 px breite Spalte und
-   zwei Knöpfe nicht nebeneinander, und ein Kasten, der die Liste
-   unten verdeckt, ist schlimmer als eine Liste, die früher aufhört.
-   Am Rechner und am Tablet ist Platz für beides. */
+   Die untere Kante steht nicht mehr hier: sie ist seit 13.09.2026 in
+   jeder Breite `--wi-ueber`. */
 @media (max-width: 720px) {
-  .wi-units {
-    width: min(300px, 68vw);
-    bottom: var(--wi-ueber);
-  }
+  .wi-units { width: min(300px, 68vw); }
 }
 
 .wi-ugriff {

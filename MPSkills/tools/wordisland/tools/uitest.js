@@ -1263,15 +1263,15 @@ async function testSolo() {
   ok('die untere Leiste trägt keine Zahlen mehr',
      !root.querySelector('.wi-sbar .wi-lg') &&
      !root.querySelector('.wi-sbar [data-part="swords"]'));
-  /* Sie ist ein KASTEN unten rechts und kein Balken über die ganze
-     Breite: der Abstandhalter, der die Knöpfe ans rechte Ende schob,
-     wäre in einem Kasten eine unsichtbare Sperre gegen die eigene
-     Breite. Er ist weg und darf nicht zurückkommen — sonst steht der
-     Kasten wieder quer über der Unit-Leiste, die bis ganz nach unten
-     reicht (Sönke, 10.09.2026). */
-  ok('und ist nur so breit wie ihre zwei Knöpfe',
+  /* Drinnen stehen genau drei Dinge: die Level-Gruppe, das Zahnrad
+     und „Vokabeln üben" (13.09.2026). Der alte Abstandhalter ist weg
+     und darf nicht zurückkommen — die Knöpfe schiebt die Gruppe an
+     das rechte Ende, weil sie als einzige wächst. */
+  ok('und trägt die Level-Gruppe plus die zwei Knöpfe',
      !root.querySelector('.wi-sspacer') &&
-     root.querySelectorAll('.wi-sbar > *').length === 2);
+     [...root.querySelectorAll('.wi-sbar > *')].map(e => e.dataset.part).join() ===
+       'lvl,ssets,sgo',
+     [...root.querySelectorAll('.wi-sbar > *')].map(e => e.dataset.part).join());
   /* Die Legende ist eine Auskunft: fünf Stufen, je acht Wörter aus
      dem `i % 5` oben. Stufen ohne Tiere fielen weg — hier sind alle
      fünf besetzt. */
@@ -1878,11 +1878,11 @@ async function testFigurOhneMigration() {
 /* ═══════════════════════════════════════════════════════════
    Das eigene Level — Migration 0145
    ═══════════════════════════════════════════════════════════
-   Der Balken ist die einzige Stelle im Werkzeug, an der eine ZAHL
-   zu einer Länge wird. Seine Skala ist die ganze Leiter: 0 bis
-   LVL_ENDE = 12:00 min (13.09.2026 — vorher nur das Fenster des
-   aktuellen Levels). Ein Vorzeichenfehler darin sähe nicht nach
-   einem Fehler aus — der Balken stünde nur immer voll oder immer
+   Hier werden ZAHLEN zu Längen, und zwar an zwei Orten: die drei
+   Kreise unten im Knopf-Kasten (seit 13.09.2026; davor ein Balken
+   oben links, den die Unit-Leiste zudeckte) und die ganze Leiter im
+   Kasten „Wer bist du?". Ein Vorzeichenfehler darin sähe nicht nach
+   einem Fehler aus — der Ring stünde nur immer voll oder immer
    leer, und niemand wüsste, ob das nun am Lernen liegt.
 
    Deshalb steht hier die Rechnung als SOLLWERT und nicht als
@@ -1890,16 +1890,25 @@ async function testFigurOhneMigration() {
    man nachrechnen kann, ohne den Code zu lesen. */
 const breite = el => parseFloat(el.style.width || '0');
 const links  = el => parseFloat(el.style.left  || '0');
-// Die Skala des Balkens (Sekunden → Prozent), wie in tool.js.
+// Die Skala der LEITER (Sekunden → Prozent), wie in tool.js.
 const ENDE = 720;
 const pct = s => 100 * s / ENDE;
+
+/* Die Ringe der zwei Kreise. Ihre Länge steht als Bogenlänge in
+   `stroke-dasharray: <Länge> <Umfang>` — zurück in Prozent gerechnet
+   heißt das dasselbe wie vorher die Breite des Balkens. Der Umfang
+   steht auch in tool.js (RING_U): r = 19 im 44er-Feld. */
+const RING_U = 2 * Math.PI * 19;
+const ring = el => 100 * parseFloat(el.style.strokeDasharray || '0') / RING_U;
+// Wo der Bogen ANSETZT — der Versatz ist negativ (nach vorn).
+const ringAb = el => -100 * parseFloat(el.style.strokeDashoffset || '0') / RING_U;
 
 /* Die Kernzusage der Leiter: der Abschnitt, in dem der eigene
    Strich steht, IST das Level, das der Server rechnet. Geprüft wird
    sie an den gezeichneten Kästchen und nicht an der Formel — nur so
    fällt sie auf, wenn jemand die Abschnitte anders sortiert, als er
    sie füllt. */
-function abschnitte(root, wahl = '.wi-lvlseg') {
+function abschnitte(root, wahl = '.wi-vseg') {
   return [...root.querySelectorAll(wahl)].map((e, i) => ({
     k: i + 1, links: links(e), rechts: links(e) + breite(e),
     an: e.classList.contains('is-on')
@@ -1938,44 +1947,36 @@ async function testLevel() {
     { live: true });
   await wait(40);
 
+  /* ── Die drei Kreise (13.09.2026) ───────────────────────────
+     Level · Schnitt · heute, unten im Knopf-Kasten. Die zwei Ringe
+     messen von NULL bis zur Grenze des nächsten Levels (hier 10:00):
+     voller Kreis = nächstes Level. */
   const bar = root.querySelector('[data-part="lvl"]');
-  ok('der Balken steht auf der Insel', bar.hidden === false);
-  ok('und nennt das Level',
-     root.querySelector('[data-part="lvlnum"]').textContent === 'Level 4',
+  ok('die drei Kreise stehen im Kasten unten', bar.hidden === false);
+  ok('der erste nennt nur die Zahl',
+     root.querySelector('[data-part="lvlnum"]').textContent === '4',
      root.querySelector('[data-part="lvlnum"]').textContent);
   /* Die Krone ist der DAUERHAFTE Erfolg und darf nur dastehen, wenn
      es wirklich einen gibt: level_max === level heißt „noch nichts
      verloren", und dann wäre sie eine Auszeichnung fürs Jetzt. */
   ok('keine Krone, solange das Höchste das Jetzige ist',
      root.querySelector('[data-part="lvlcrown"]').hidden === true);
-  ok('8:00 min füllen zwei Drittel der Leiter (Skala 0…12:00)',
-     Math.abs(breite(root.querySelector('[data-part="lvlfill"]')) - pct(480)) < .6,
-     breite(root.querySelector('[data-part="lvlfill"]')) + '%');
-  ok('ohne Mastery ist der Bonus-Abschnitt leer',
-     breite(root.querySelector('[data-part="lvlbonus"]')) === 0);
-  ok('die heutige Lernzeit steht daneben',
-     root.querySelector('[data-part="lvltoday"]').textContent === 'Heute: 1:35 min',
+  ok('der zweite Kreis nennt den Schnitt der Woche',
+     root.querySelector('[data-part="avgnum"]').textContent === '8:00',
+     root.querySelector('[data-part="avgnum"]').textContent);
+  ok('und sein Ring steht bei 8:00 von 10:00 (vier Fünftel)',
+     Math.abs(ring(root.querySelector('[data-part="avgarc"]')) - 80) < .6,
+     ring(root.querySelector('[data-part="avgarc"]')).toFixed(1) + '%');
+  ok('ohne Mastery bleibt der Bonus-Bogen leer',
+     ring(root.querySelector('[data-part="avgbonus"]')) === 0);
+  ok('der dritte Kreis nennt die heutige Lernzeit',
+     root.querySelector('[data-part="lvltoday"]').textContent === '1:35',
      root.querySelector('[data-part="lvltoday"]').textContent);
-
-  /* ── Die Leiter (13.09.2026) ────────────────────────────────
-     Fünf Abschnitte, vier Grenzen. Auf Level 4 liegen die drei
-     unteren Grenzen auf den ABSTIEGS-Werten (1:00 · 3:00 · 6:00)
-     und nur die obere auf dem Aufstiegswert (10:00) — genau das
-     meint „die Levelgrenzen verschieben sich beim Aufstieg". */
-  const segs = abschnitte(root);
-  ok('der Balken zeigt alle fünf Level', segs.length === 5, String(segs.length));
-  ok('die vier Grenzen stehen auf 1:00 · 3:00 · 6:00 · 10:00',
-     [60, 180, 360, 600].every((s, i) => Math.abs(segs[i + 1].links - pct(s)) < .6),
-     segs.map(a => a.links.toFixed(1)).join(' | '));
-  ok('der eigene Abschnitt ist hervorgehoben — und nur er',
-     segs.filter(a => a.an).map(a => a.k).join() === '4');
-  /* Die Kernzusage: der Strich steht in dem Abschnitt, dessen
-     Nummer der Server als Level schickt. */
-  const wo = abschnittMit(root, playerStand(4, 480));
-  ok('und der eigene Stand liegt genau darin', wo && wo.k === 4, wo ? String(wo.k) : 'daneben');
-  ok('die Nadel des heutigen Tages steht bei 1:35 von 12:00',
-     Math.abs(links(root.querySelector('.wi-lvlnow')) - pct(95)) < .6,
-     links(root.querySelector('.wi-lvlnow')) + '%');
+  /* Derselbe Maßstab wie beim Schnitt — nur so sagt der Vergleich
+     der zwei Kreise etwas: 1:35 von 10:00 sind knapp 16 %. */
+  ok('und sein Ring misst auf derselben Skala (1:35 von 10:00)',
+     Math.abs(ring(root.querySelector('[data-part="todayarc"]')) - 100 * 95 / 600) < .6,
+     ring(root.querySelector('[data-part="todayarc"]')).toFixed(1) + '%');
   /* Die Historie ist teuer und wird NICHT beim Aufbau geholt — sie
      hängt am Öffnen des Kastens. Ein Aufruf je Insel-Aufbau wäre
      eine Auskunft, die dabei niemand ansieht. */
@@ -1986,7 +1987,7 @@ async function testLevel() {
   const kasten = root.querySelector('[data-part="volkov"]');
   click(root.querySelector('[data-part="lvlbtn"]'), document);
   await wait(40);
-  ok('ein Tipp auf den Balken öffnet „Wer bist du?"', kasten.hidden === false);
+  ok('ein Tipp auf einen Kreis öffnet „Wer bist du?"', kasten.hidden === false);
   ok('jetzt wird die Historie geholt',
      calls.some(c => c[0] === 'wi_solo_level_history'));
 
@@ -1998,17 +1999,27 @@ async function testLevel() {
      ein Kind soll wissen, dass ein schwacher Tag nichts kostet. */
   ok('und ab wann das Level verloren geht', /unter 6:00 min/.test(lvlText), lvlText);
 
-  /* ── Dieselbe Leiter, groß ──────────────────────────────────
-     Im Kasten ist Platz für das, was oben nicht hinpasst: die
-     Zeiten an den Grenzen und die zwei Zeiger. Sönke: „an dem
-     Balken sieht man, wo man heute ist und wo der aktuelle Wert
-     ist." */
-  const gross = abschnitte(root, '.wi-vseg');
-  ok('der große Balken zeigt dieselben fünf Abschnitte',
-     gross.length === 5 && gross.filter(a => a.an).map(a => a.k).join() === '4',
-     gross.filter(a => a.an).map(a => a.k).join());
-  ok('mit denselben Grenzen wie oben',
-     gross.every((a, i) => Math.abs(a.links - segs[i].links) < .05));
+  /* ── Die ganze Leiter ───────────────────────────────────────
+     Sie steht seit 13.09.2026 nur noch HIER, im Kasten: fünf
+     Abschnitte, vier Grenzen, die Zeiten daran und die zwei Zeiger.
+     Sönke: „an dem Balken sieht man, wo man heute ist und wo der
+     aktuelle Wert ist."
+
+     Auf Level 4 liegen die drei unteren Grenzen auf den ABSTIEGS-
+     Werten (1:00 · 3:00 · 6:00) und nur die obere auf dem
+     Aufstiegswert (10:00) — genau das meint „die Levelgrenzen
+     verschieben sich beim Aufstieg". */
+  const gross = abschnitte(root);
+  ok('der große Balken zeigt alle fünf Level', gross.length === 5, String(gross.length));
+  ok('die vier Grenzen stehen auf 1:00 · 3:00 · 6:00 · 10:00',
+     [60, 180, 360, 600].every((s, i) => Math.abs(gross[i + 1].links - pct(s)) < .6),
+     gross.map(a => a.links.toFixed(1)).join(' | '));
+  ok('der eigene Abschnitt ist hervorgehoben — und nur er',
+     gross.filter(a => a.an).map(a => a.k).join() === '4');
+  /* Die Kernzusage: der Strich steht in dem Abschnitt, dessen
+     Nummer der Server als Level schickt. */
+  const wo = abschnittMit(root, playerStand(4, 480));
+  ok('und der eigene Stand liegt genau darin', wo && wo.k === 4, wo ? String(wo.k) : 'daneben');
   const marken = [...root.querySelectorAll('.wi-vmark')].map(e => e.textContent.trim());
   ok('die Zeiten stehen an den Grenzen',
      marken.join(' ') === '1:00 3:00 6:00 10:00', marken.join(' '));
@@ -2065,20 +2076,25 @@ async function testLevel() {
 /* Die Ränder der Skala. Level 1 hat keine Abstiegsgrenze, Level 5
    keine Aufstiegsgrenze — an beiden Enden fehlt also die Zahl, aus
    der die Skala sonst gebaut wird. Ein `null`, das hier als 0
-   durchrutscht, ergäbe einen Balken, der immer voll ist. */
+   durchrutscht, ergäbe einen Ring, der immer voll ist. */
 async function testLevelRaender() {
   console.log('\n— Level: die Ränder der Skala —');
 
   /* Level 1: alle vier Grenzen sind AUFSTIEGS-Grenzen (2:00 · 5:00 ·
      7:00 · 10:00) — unter Level 1 gibt es nichts, was man verlieren
-     könnte. Schnitt 1:00 → im ersten Abschnitt. */
+     könnte. Schnitt 1:00, Grenze zu Level 2 bei 2:00 → halber Ring. */
   {
-    const { tool, root } = await mountSolo(
-      soloView(20, () => 1, false, playerStand(1, 60)));
+    const { tool, root, document } = await mountSolo(
+      soloView(20, () => 1, false, playerStand(1, 60)),
+      { wi_solo_level_history: () => ({ ok: true, days: histTage([60, 60, 60, 60, 60, 60, 60]),
+                                        totals: { active_days: 7, total_days: 7, total_secs: 420 } }) },
+      { live: true });
     await wait(20);
-    ok('Level 1 rechnet von null an (1:00 von 12:00)',
-       Math.abs(breite(root.querySelector('[data-part="lvlfill"]')) - pct(60)) < .6,
-       breite(root.querySelector('[data-part="lvlfill"]')) + '%');
+    ok('Level 1 rechnet von null an (1:00 von 2:00)',
+       Math.abs(ring(root.querySelector('[data-part="avgarc"]')) - 50) < .6,
+       ring(root.querySelector('[data-part="avgarc"]')).toFixed(1) + '%');
+    click(root.querySelector('[data-part="lvlbtn"]'), document);
+    await wait(40);
     const s = abschnitte(root);
     ok('und zeigt lauter Aufstiegsgrenzen (2:00 · 5:00 · 7:00 · 10:00)',
        [120, 300, 420, 600].every((x, i) => Math.abs(s[i + 1].links - pct(x)) < .6),
@@ -2096,8 +2112,17 @@ async function testLevelRaender() {
                                         totals: { active_days: 7, total_days: 7, total_secs: 4200 } }) },
       { live: true });
     await wait(40);
-    const b = breite(root.querySelector('[data-part="lvlfill"]'));
-    ok('Level 5 füllt den Balken, ohne ihn zu überlaufen', b > 0 && b <= 100, b + '%');
+    /* Ohne Aufstiegsgrenze tritt das Ende der Skala an ihre Stelle
+       (12:00): der Ring füllt sich auf 10:00/12:00 und läuft NICHT
+       über. Ein `null`, das als 0 durchrutscht, gäbe hier eine
+       Division durch null. */
+    const r = ring(root.querySelector('[data-part="avgarc"]'));
+    ok('Level 5 füllt den Ring, ohne ihn zu überlaufen',
+       Math.abs(r - 100 * 600 / 720) < .6, r.toFixed(1) + '%');
+    ok('und der Ring ist als „oben angekommen" gezeichnet',
+       root.querySelector('[data-part="avgring"]').classList.contains('is-max'));
+    click(root.querySelector('[data-part="lvlbtn"]'), document);
+    await wait(40);
     /* Oben angekommen sind ALLE vier Grenzen Abstiegsgrenzen
        (1:00 · 3:00 · 6:00 · 8:00) — die Leiter, die man hinter sich
        hat, sieht anders aus als die, die man vor sich hatte. Und
@@ -2110,8 +2135,6 @@ async function testLevelRaender() {
     const wo = abschnittMit(root, playerStand(5, 600));
     ok('und der Stand steht im fünften Abschnitt', wo && wo.k === 5 && wo.an,
        wo ? String(wo.k) : 'daneben');
-    click(root.querySelector('[data-part="lvlbtn"]'), document);
-    await wait(40);
     const t = root.querySelector('[data-part="vlvl"]').textContent;
     ok('und sagt, dass es das höchste ist', /Höchstes Level erreicht/.test(t), t);
     ok('nennt aber weiter die Abstiegsgrenze', /unter 8:00 min/.test(t), t);
@@ -2146,21 +2169,21 @@ async function testLevelRaender() {
       soloView(20, () => 1, false, playerStand(2, 9999)));
     await wait(20);
     ok('ein sehr hoher Schnitt läuft nicht über 100 %',
-       breite(root.querySelector('[data-part="lvlfill"]')) === 100,
-       breite(root.querySelector('[data-part="lvlfill"]')) + '%');
+       Math.abs(ring(root.querySelector('[data-part="avgarc"]')) - 100) < .01,
+       ring(root.querySelector('[data-part="avgarc"]')).toFixed(1) + '%');
     tool.unmount();
   }
 }
 
 /* Der Mastery-Bonus. Er ist ein Bonus auf die MESSGRÖSSE und keine
-   eigene Zone — auf dem Balken muss er deshalb als zweiter
-   Abschnitt HINTER dem eigenen Stand liegen und nicht an dessen
-   Stelle. Läge er darunter, sähe ein Kind seine echte Lernzeit
-   nicht mehr. */
+   eigene Zone — im Ring muss er deshalb als zweiter Bogen HINTER
+   dem eigenen Stand liegen und nicht an dessen Stelle. Läge er
+   darunter, sähe ein Kind seine echte Lernzeit nicht mehr. */
 async function testLevelBonus() {
   console.log('\n— Level: der Mastery-Bonus —');
-  /* Level 4, Schnitt 7:00, Bonus 2:00. Auf der Skala 0…12:00 liegt
-     der eigene Stand bei 7/12, der Bonus trägt 2/12 dazu. */
+  /* Level 4, Schnitt 7:00, Bonus 2:00, Grenze zu Level 5 bei 10:00.
+     Im Ring liegt der eigene Stand bei 7/10, der Bonus trägt 2/10
+     dazu — zusammen 90 %, also knapp unter dem vollen Kreis. */
   const { tool, root, document } = await mountSolo(
     soloView(40, () => 4, false,
              playerStand(4, 420, { bonus_secs: 120, pct_max: 80, level_max: 4 })),
@@ -2169,31 +2192,33 @@ async function testLevelBonus() {
     { live: true });
   await wait(40);
 
-  const f = breite(root.querySelector('[data-part="lvlfill"]'));
-  const bo = root.querySelector('[data-part="lvlbonus"]');
-  ok('der eigene Stand steht bei 7:00 von 12:00',
-     Math.abs(f - pct(420)) < .6, f + '%');
+  const f = ring(root.querySelector('[data-part="avgarc"]'));
+  const bo = root.querySelector('[data-part="avgbonus"]');
+  ok('der eigene Stand steht bei 7:00 von 10:00', Math.abs(f - 70) < .6, f.toFixed(1) + '%');
   ok('der Bonus setzt genau dort an und nicht bei null',
-     Math.abs(links(bo) - pct(420)) < .6, bo.style.left);
+     Math.abs(ringAb(bo) - 70) < .6, ringAb(bo).toFixed(1) + '%');
   ok('und trägt die zwei Bonus-Minuten',
-     Math.abs(breite(bo) - pct(120)) < .6, bo.style.width);
+     Math.abs(ring(bo) - 20) < .6, ring(bo).toFixed(1) + '%');
   /* 7:00 + 2:00 = 9:00, die Grenze zu Level 5 liegt bei 10:00: der
      Bonus schiebt den Stand an die Grenze heran, aber nicht darüber.
      Genau so rechnet der Server (0145: der Bonus zählt mit, BEVOR
      die Schwellen geprüft werden), und genau das muss man sehen —
-     sonst stünde der Balken in Abschnitt 5 und der Satz daneben
-     sagte „noch 1:00 min bis Level 5". */
-  const segs = abschnitte(root);
-  const wo = abschnittMit(root, playerStand(4, 420, { bonus_secs: 120 }));
-  ok('mit Bonus steht er weiter in Abschnitt 4 …',
-     wo && wo.k === 4, wo ? String(wo.k) : 'daneben');
-  ok('… und reicht bis kurz vor die Grenze zu Level 5',
-     links(bo) + breite(bo) < segs[4].links
-     && links(bo) + breite(bo) > segs[4].links - pct(90),
-     (links(bo) + breite(bo)).toFixed(1) + '% vs. ' + segs[4].links.toFixed(1) + '%');
+     sonst wäre der Kreis voll und der Satz im Kasten sagte
+     „noch 1:00 min bis Level 5". */
+  ok('… und reicht bis kurz vor den vollen Kreis',
+     ringAb(bo) + ring(bo) > 85 && ringAb(bo) + ring(bo) < 99.5,
+     (ringAb(bo) + ring(bo)).toFixed(1) + '%');
+  ok('die Zahl im Kreis ist die, die zählt (7:00 + 2:00)',
+     root.querySelector('[data-part="avgnum"]').textContent === '9:00',
+     root.querySelector('[data-part="avgnum"]').textContent);
 
   click(root.querySelector('[data-part="lvlbtn"]'), document);
   await wait(40);
+  /* Und auf der ganzen Leiter im Kasten bleibt der Stand MIT Bonus
+     im Abschnitt 4 — er reicht an die Grenze heran, nicht darüber. */
+  const wo = abschnittMit(root, playerStand(4, 420, { bonus_secs: 120 }));
+  ok('mit Bonus steht er weiter in Abschnitt 4 …',
+     wo && wo.k === 4, wo ? String(wo.k) : 'daneben');
   const t = root.querySelector('[data-part="vlvl"]').textContent;
   ok('der Kasten weist den Bonus aus', /\+ 2:00 min Bonus/.test(t), t);
   ok('und sagt, woher er kommt',
@@ -2231,7 +2256,7 @@ async function testLevelAufstieg() {
   await wait(40);
 
   ok('vorher steht Level 2 da',
-     root.querySelector('[data-part="lvlnum"]').textContent === 'Level 2');
+     root.querySelector('[data-part="lvlnum"]').textContent === '2');
   const toast = root.querySelector('[data-part="lvltoast"]');
   ok('und niemand feiert', toast.hidden === true);
 
@@ -2242,11 +2267,12 @@ async function testLevelAufstieg() {
 
   ok('der Aufstieg wird gefeiert',
      toast.hidden === false && /Level 3 erreicht/.test(toast.textContent), toast.textContent);
-  ok('der Balken steht auf dem neuen Level',
-     root.querySelector('[data-part="lvlnum"]').textContent === 'Level 3',
+  ok('der Kreis steht auf dem neuen Level',
+     root.querySelector('[data-part="lvlnum"]').textContent === '3',
      root.querySelector('[data-part="lvlnum"]').textContent);
   ok('und die heutige Zeit ist nachgeführt',
-     root.querySelector('[data-part="lvltoday"]').textContent === 'Heute: 1:20 min');
+     root.querySelector('[data-part="lvltoday"]').textContent === '1:20',
+     root.querySelector('[data-part="lvltoday"]').textContent);
   /* Der Kern: die Bühne der TIER-Feier bleibt zu, und die nächste
      Frage steht schon da. Ein Level-Aufstieg mitten im Üben darf den
      Fluss nicht anhalten — dafür ist er zu selten und zu langsam. */
@@ -2287,7 +2313,7 @@ async function testLevelKeinAufstieg() {
   await wait(40);
   ok('eine Antwort ohne Aufstieg feiert nicht',
      root.querySelector('[data-part="lvltoast"]').hidden === true);
-  ok('der Balken steht trotzdem noch da',
+  ok('die Kreise stehen trotzdem noch da',
      root.querySelector('[data-part="lvl"]').hidden === false);
 
   tool.unmount();
@@ -2305,7 +2331,7 @@ async function testLevelOhneMigration() {
   await wait(60);
 
   ok('die Insel steht trotzdem', root.querySelectorAll('.wi-cell').length > 100);
-  ok('der Level-Balken bleibt einfach weg',
+  ok('die Level-Kreise bleiben einfach weg',
      root.querySelector('[data-part="lvl"]').hidden === true);
   ok('und die Zeichenschleife läuft ohne Krach',
      env.rafs > 0 && env.rafFehler.length === 0,

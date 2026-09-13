@@ -4378,40 +4378,10 @@
         </div>
       </div>
 
-      <!-- ── Das eigene Level ────────────────────────────────────
-           Sönke, 13.09.2026: „ein Balken von Level 1 bis Level 5,
-           jede Levelgrenze ist markiert, und die Grenzen verschieben
-           sich beim Auf- und Abstieg."
-
-           Der Balken ist deshalb die GANZE Leiter und nicht mehr nur
-           das Fenster des aktuellen Levels: eine Zeitachse von 0 bis
-           LVL_ENDE mit vier Strichen darauf. Wo die Striche liegen,
-           hängt am Level — nach oben gilt die Aufstiegsgrenze, nach
-           unten die (niedrigere) Abstiegsgrenze, siehe lvlGrenzen.
-           Damit ist der Abschnitt, in dem der eigene Strich steht,
-           genau das Level, das der Server rechnet.
-
-           Er liegt ÜBER der Bühne wie die Unit-Leiste und der Kasten
-           unten rechts, und ist ein eigener Knopf zur Figur: derselbe
-           „Wer bist du?"-Kasten, den auch ein Tipp auf die Figur
-           selbst öffnet (volkOeffnen). -->
-      <header class="wi-lvl" data-part="lvl" hidden>
-        <button type="button" class="wi-lvlbtn" data-part="lvlbtn" aria-label="Dein Level">
-          <b class="wi-lvlnum" data-part="lvlnum"></b>
-          <i class="wi-lvlcrown" data-part="lvlcrown" hidden aria-hidden="true">👑</i>
-          <div class="wi-lvlbar" data-part="lvlbar" role="progressbar"
-               aria-valuemin="0" aria-valuemax="100">
-            <div class="wi-lvlfill" data-part="lvlfill"></div>
-            <div class="wi-lvlbonus" data-part="lvlbonus"></div>
-            <!-- Abschnitte, Grenzstriche und die heutige Nadel. Sie
-                 liegen ÜBER den zwei Füllungen und werden von
-                 renderLevel geschrieben. -->
-            <div class="wi-lvlmarks" data-part="lvlmarks"></div>
-          </div>
-        </button>
-        <span class="wi-lvltoday" data-part="lvltoday"></span>
-        <div class="wi-lvltoast" data-part="lvltoast" hidden></div>
-      </header>
+      <!-- Das eigene Level stand bis 13.09.2026 als Balken hier
+           oben links — also genau dort, wo auch die Unit-Leiste
+           beginnt, und die deckte ihn zu. Es sitzt jetzt als drei
+           Kreise unten im Knopf-Kasten (siehe .wi-lvl dort). -->
 
       <!-- ── Die Unit-Leiste ────────────────────────────────────
            Sie liegt ÜBER der Bühne und ist trotzdem deren
@@ -4445,13 +4415,75 @@
            derselben Stelle lesen und nicht suchen. -->
       <div class="wi-tcard" data-part="card" hidden></div>
 
-      <!-- Der Kasten unten RECHTS. Er ging bis 10.09.2026 als Balken
-           über die ganze Breite und hätte damit die Unit-Leiste
-           unten abgeschnitten, seit die bis zur unteren Kante
-           reicht. Jetzt ist er nur so breit wie seine zwei Knöpfe;
-           der Abstandhalter, der sie ans rechte Ende schob, ist
-           deshalb weg. -->
+      <!-- Der Kasten unten. Er war vom 10.09. bis zum 13.09.2026 nur
+           so breit wie seine zwei Knöpfe und steht seit Sönkes
+           Vorgabe „so dass das auf die volle Breite kommt" wieder
+           über die ganze Breite — denn links in ihm wohnen jetzt die
+           drei Level-Kreise, und die brauchen den Platz. Die
+           Unit-Leiste endet dafür wieder ÜBER ihm (tool.css). -->
       <header class="wi-sbar" data-part="sbar">
+        <!-- ── Das eigene Level: drei Kreise ───────────────────────
+             Sönke, 13.09.2026: „3 Kreise. 1. Kreis ist das Leben
+             [Level] einfach eine Zahl in einem coolen Kreis. 2. Kreis
+             […] die durchschnittliche Spielzeit der letzten 7 Tage
+             […] der Kreis ist gefüllt bis zu dem Punkt bis zum
+             nächsten Level (Kreis ganz voll = nächstes Level). Kreis
+             drei beinhaltet die heute Spielzeit."
+
+             Die ganze Leiter über alle fünf Level gibt es weiter —
+             aber im Kasten „Wer bist du?" (.wi-vbar), wo Platz für
+             die Zeiten an den Grenzen ist. Hier unten steht nur, was
+             ein Kind während des Übens wissen will: wo bin ich, wie
+             weit ist das nächste Level, und was habe ich heute
+             getan. Jeder der drei Kreise öffnet denselben Kasten.
+
+             Ring 2 und 3 messen dasselbe und auf derselben Skala —
+             dem Abschnitt des aktuellen Levels. Nur so sind sie
+             vergleichbar: steht „Heute" voller als „Ø", zieht der
+             Schnitt an. Dieselbe Aussage wie die zwei Zeiger am
+             großen Balken. -->
+        <div class="wi-lvl" data-part="lvl" hidden>
+          <button type="button" class="wi-lvlc" data-part="lvlbtn" aria-label="Dein Level">
+            <span class="wi-lvlring wi-lvlring--lvl">
+              <b class="wi-lvlnum" data-part="lvlnum"></b>
+              <i class="wi-lvlcrown" data-part="lvlcrown" hidden aria-hidden="true">👑</i>
+            </span>
+            <span class="wi-lvllab">Level</span>
+          </button>
+
+          <button type="button" class="wi-lvlc" data-part="avgbtn"
+                  aria-label="Schnitt der letzten 7 Tage">
+            <span class="wi-lvlring" data-part="avgring" role="progressbar"
+                  aria-valuemin="0" aria-valuemax="100">
+              <!-- Der Ring als SVG und nicht als conic-gradient: ein
+                   Bogen aus zwei Zahlen (Länge, Versatz) ist
+                   nachrechenbar, und der Bonus braucht einen zweiten
+                   Bogen, der genau dort ansetzt, wo der erste endet. -->
+              <svg viewBox="0 0 44 44" aria-hidden="true" focusable="false">
+                <circle class="wi-lvltrack" cx="22" cy="22" r="19"></circle>
+                <circle class="wi-lvlbonus" data-part="avgbonus" cx="22" cy="22" r="19"></circle>
+                <circle class="wi-lvlarc" data-part="avgarc" cx="22" cy="22" r="19"></circle>
+              </svg>
+              <b class="wi-lvlnum" data-part="avgnum"></b>
+            </span>
+            <span class="wi-lvllab">Ø</span>
+          </button>
+
+          <button type="button" class="wi-lvlc" data-part="todaybtn"
+                  aria-label="Heute gelernt">
+            <span class="wi-lvlring wi-lvlring--heute">
+              <svg viewBox="0 0 44 44" aria-hidden="true" focusable="false">
+                <circle class="wi-lvltrack" cx="22" cy="22" r="19"></circle>
+                <circle class="wi-lvlarc" data-part="todayarc" cx="22" cy="22" r="19"></circle>
+              </svg>
+              <b class="wi-lvlnum" data-part="lvltoday"></b>
+            </span>
+            <span class="wi-lvllab">heute</span>
+          </button>
+
+          <div class="wi-lvltoast" data-part="lvltoast" hidden></div>
+        </div>
+
         <!-- Beide gesperrt, bis die Insel steht: davor gibt es weder
              Units zum Auswählen noch ein Tier zum Anzeigen, und ein
              Knopf, der ins Leere greift, ist schlimmer als einer,
@@ -4744,8 +4776,9 @@
       uList: q('ulist'), uDet: q('udet'), card: q('card'), sBar: q('sbar'),
       setsOv: q('setsov'),
       lvl: q('lvl'), lvlBtn: q('lvlbtn'), lvlNum: q('lvlnum'),
-      lvlCrown: q('lvlcrown'), lvlBar: q('lvlbar'), lvlFill: q('lvlfill'),
-      lvlBonus: q('lvlbonus'), lvlMarks: q('lvlmarks'),
+      lvlCrown: q('lvlcrown'),
+      avgRing: q('avgring'), avgArc: q('avgarc'), avgBonus: q('avgbonus'),
+      avgNum: q('avgnum'), todayArc: q('todayarc'),
       lvlToday: q('lvltoday'), lvlToast: q('lvltoast'),
       volkOv: q('volkov'), vBig: q('vbig'), vName: q('vname'),
       vSub: q('vsub'), vSwap: q('vswap'),
@@ -4767,9 +4800,11 @@
 
     q('ssets').addEventListener('click', () => { els.setsOv.hidden = false; renderSoloSets(); });
     q('setsclose').addEventListener('click', () => { els.setsOv.hidden = true; });
-    // Derselbe Kasten wie beim Tipp auf die Figur — der Balken ist
-    // nur ein zweiter Weg dorthin.
-    if (els.lvlBtn) els.lvlBtn.addEventListener('click', () => volkOeffnen());
+    /* Derselbe Kasten wie beim Tipp auf die Figur — die Kreise sind
+       nur ein zweiter Weg dorthin. Der Horcher hängt an der GRUPPE
+       und nicht an den drei Knöpfen: welchen der drei man antippt,
+       ändert nichts am Ziel. */
+    if (els.lvl) els.lvl.addEventListener('click', () => volkOeffnen());
     q('volkclose').addEventListener('click', () => {
       if (nachklick()) return;
       els.volkOv.hidden = true;
@@ -5451,12 +5486,24 @@
     if (root && root.style) {
       root.style.setProperty('--wi-rand', Math.round(randLinks) + 'px');
     }
-    /* Wie hoch der Knopf-Kasten ist. Kärtchen und Unit-Leiste enden
-       DARÜBER, und dafür stand bis 11.09.2026 an zwei Stellen im
-       Stylesheet eine 76 — geraten aus Polsterung und Schriftgröße.
-       Die Rechnung ging knapp auf, und „knapp" heißt: das Kärtchen
-       saß dem Kasten auf. Gemessen hält der Abstand auch dann, wenn
-       die Schrift größer wird. */
+    sbarMessen();
+  }
+
+  /* Wie hoch der Knopf-Kasten ist. Kärtchen und Unit-Leiste enden
+     DARÜBER, und dafür stand bis 11.09.2026 an zwei Stellen im
+     Stylesheet eine 76 — geraten aus Polsterung und Schriftgröße.
+     Die Rechnung ging knapp auf, und „knapp" heißt: das Kärtchen saß
+     dem Kasten auf. Gemessen hält der Abstand auch dann, wenn die
+     Schrift größer wird.
+
+     Eine eigene Funktion, seit die drei Level-Kreise im Kasten
+     wohnen: die erscheinen erst mit der ersten Antwort des Servers
+     und machen ihn dabei höher. renderLevel misst dann nach — aber
+     nur die Höhe, nicht den linken Rand: randMessen verrechnet
+     dessen Änderung mit der Kamera, und ein Sprung der Insel beim
+     Erscheinen der Kreise wäre ein Fehler, den niemand hier suchen
+     würde. */
+  function sbarMessen() {
     if (els.sBar && root && root.style) {
       const s = els.sBar.getBoundingClientRect();
       if (s.height) root.style.setProperty('--wi-sbar-h', Math.round(s.height) + 'px');
@@ -6023,41 +6070,78 @@
      Anders als die Tier-Feier läuft ein Level-Aufstieg NEBENHER:
      kein Halt vor der nächsten Frage, keine Bühne. Er ist ein
      Erfolg über die Woche, kein Ereignis an EINEM Wort — deshalb
-     reicht ein Banner am Balken plus ein Funkenkranz an der Figur
+     reicht ein Banner über den Kreisen plus ein Funkenkranz an der Figur
      selbst (dieselbe Zeichnung wie bei einem Tier, siehe die
      Jubel-Passage im Zeichenschritt und heldMasse). */
   function renderLevel() {
     if (!els.lvl) return;
     const p = solo && solo.player;
     if (!p) { els.lvl.hidden = true; return; }
+    const warWeg = els.lvl.hidden;
     els.lvl.hidden = false;
-    els.lvlNum.textContent = 'Level ' + p.level;
+    els.lvlNum.textContent = String(p.level);
     els.lvlCrown.hidden = !(p.level_max > p.level);
     els.lvlBtn.setAttribute('aria-label', 'Dein Level: ' + p.level
       + (p.level_max > p.level ? ' (höchstes je erreichtes Level: ' + p.level_max + ')' : ''));
 
-    /* Die Skala ist die ganze Leiter (0 … LVL_ENDE) und nicht mehr
-       nur das Fenster des aktuellen Levels. Ein Balken, der bei
-       jedem Aufstieg wieder von vorn anfängt, verschweigt genau
-       das, was man sehen will: wie weit man insgesamt gekommen ist.
-       Die vier Grenzstriche stehen dafür da, wo sie JETZT gelten —
-       siehe lvlGrenzen. */
-    const L = lvlLeiter(p);
-    els.lvlFill.style.width = pz(L.avg);
-    els.lvlBonus.style.left = pz(L.avg);
-    els.lvlBonus.style.width = pz(Math.max(0, L.mitBonus - L.avg));
-    /* Abschnitte (der eigene hell), Grenzstriche und die Nadel des
-       heutigen Tages. Ein einziges innerHTML: es sind zehn kurze
-       Kästchen, und sie ändern sich nur, wenn sich das Level ändert
-       — eine Buchführung darüber wäre teurer als das Schreiben. */
-    els.lvlMarks.innerHTML =
-      L.abschnitte.map(a =>
-        `<i class="wi-lvlseg${a.k === L.lvl ? ' is-on' : ''}"
-            style="left:${pz(a.links)};width:${pz(a.breite)}"></i>`).join('') +
-      `<i class="wi-lvlnow" style="left:${pz(L.heute)}"></i>`;
-    els.lvlBar.setAttribute('aria-valuenow', String(Math.round(L.mitBonus)));
+    /* Die Skala der zwei Ringe: von NULL bis zur Grenze, an der das
+       nächste Level anfängt. Voller Kreis = nächstes Level (Sönkes
+       Vorgabe), und beide Ringe messen dasselbe — Sekunden an einem
+       Tag —, sind also unmittelbar vergleichbar.
 
-    els.lvlToday.textContent = 'Heute: ' + minSek(p.today_secs);
+       Von null und nicht vom unteren Ende des aktuellen Levels: ein
+       Ring, der bei jedem Aufstieg auf leer zurückfällt und einen
+       schwachen Tag als „nichts geschafft" zeichnet, sagt über das
+       Üben weniger als einer, der einfach mitwächst. Die Grenze
+       selbst kommt aus derselben Leiter wie der große Balken im
+       Kasten (lvlLeiter) — auf Level 5 gibt es keine mehr, dann ist
+       es das Ende der Skala. */
+    const L = lvlLeiter(p);
+    const ziel = Math.max(1, p.up_secs != null ? p.up_secs : L.abschnitte[4].bis);
+    const anteil = s => Math.max(0, Math.min(100, 100 * Math.max(0, s || 0) / ziel));
+
+    const avg = p.avg_secs || 0, bonus = p.bonus_secs || 0;
+    const basis = anteil(avg);
+    const gesamt = anteil(avg + bonus);
+    ringSetzen(els.avgArc, basis);
+    // Der Bonus als zweiter Bogen HINTER dem eigenen Stand und nicht
+    // an dessen Stelle (wie am großen Balken): sonst sähe ein Kind
+    // seine echte Lernzeit nicht mehr.
+    ringSetzen(els.avgBonus, Math.max(0, gesamt - basis), basis);
+    els.avgNum.textContent = minSekKurz(avg + bonus);
+    els.avgRing.classList.toggle('is-max', p.up_secs == null);
+    els.avgRing.setAttribute('aria-valuenow', String(Math.round(gesamt)));
+
+    /* Der heutige Tag auf DERSELBEN Skala. Beide messen Sekunden an
+       einem Tag und sind damit vergleichbar — steht „heute" voller
+       als „Ø", zieht der Schnitt an. */
+    ringSetzen(els.todayArc, anteil(p.today_secs));
+    els.lvlToday.textContent = minSekKurz(p.today_secs);
+
+    // Mit den Kreisen wird der Kasten unten höher, und auf dessen
+    // Höhe rechnen Unit-Leiste und Kärtchen. Beim ersten Erscheinen
+    // also neu messen — siehe sbarMessen.
+    if (warWeg) sbarMessen();
+  }
+
+  /* Der Umfang des Rings (r = 19 im 44er-Feld). Er steht hier und
+     nicht in der CSS, weil die Bogenlänge eine Rechnung ist:
+     `pathLength="100"` wäre kürzer, wird von Safari an <circle> aber
+     erst spät unterstützt — und ein Ring, der auf dem iPad immer
+     voll ist, wäre schlimmer als eine Zeile Mathematik. */
+  const RING_U = 2 * Math.PI * 19;
+
+  function ringSetzen(el, pct, ab = 0) {
+    if (!el) return;
+    const len = RING_U * Math.max(0, Math.min(100, pct)) / 100;
+    el.style.strokeDasharray = len.toFixed(2) + ' ' + RING_U.toFixed(2);
+    // Negativer Versatz schiebt den Bogen NACH VORN — so setzt der
+    // Bonus-Bogen genau dort an, wo der Basis-Bogen endet.
+    el.style.strokeDashoffset = (-RING_U * ab / 100).toFixed(2);
+    /* Bei Länge null bleibt der runde Abschluss als PUNKT stehen —
+       ein Kringel auf zwölf Uhr, der aussieht wie ein angefangener
+       Fortschritt, den es nicht gibt (heute 0:00, kein Bonus). */
+    el.style.visibility = len > .01 ? '' : 'hidden';
   }
 
   // Server → Client: p ist { level, level_max, today_secs, avg_secs,
