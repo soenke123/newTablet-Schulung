@@ -1791,8 +1791,10 @@ async function testFigur() {
   ok('die Bilder von Figur und Schiff liegen wirklich da',
      env.fehlendeBilder.length === 0, env.fehlendeBilder.join(', '));
   // Voreinstellung: Brokkoli-Giraffen, also Volk 2 (Sönkes Vorgabe).
+  // Ohne Serverstand ist das eigene Level 1, also die erste der vier
+  // Bildstufen (`_1`) — siehe testFigurLevel für die anderen.
   ok('geladen wird die Figur des voreingestellten Volkes',
-     env.geladeneBilder.includes('tools/wordisland/sprites/held/2.png'));
+     env.geladeneBilder.includes('tools/wordisland/sprites/held/2_1.png'));
   ok('und sein Schiff',
      env.geladeneBilder.includes('tools/wordisland/sprites/boot/2.png'));
 
@@ -1804,7 +1806,7 @@ async function testFigur() {
     }
     return null;
   };
-  const figur2 = gemalt('sprites/held/2.png');
+  const figur2 = gemalt('sprites/held/2_1.png');
   const schiff2 = gemalt('sprites/boot/2.png');
   ok('beide werden auch gezeichnet', !!figur2 && !!schiff2);
 
@@ -1821,7 +1823,7 @@ async function testFigur() {
      selben Tipp; wer das verwechselt, merkt es sonst erst am Gerät. */
   ok('und nicht das Kärtchen einer Vokabel', karte.hidden === true);
   ok('darin steht die Figur, nicht das Schiff',
-     /held\/2\.png$/.test(root.querySelector('[data-part="vbig"]').getAttribute('src') || ''),
+     /held\/2_1\.png$/.test(root.querySelector('[data-part="vbig"]').getAttribute('src') || ''),
      root.querySelector('[data-part="vbig"]').getAttribute('src'));
   ok('der Name des Volkes steht daneben',
      root.querySelector('[data-part="vname"]').textContent === 'Brokkoli-Giraffen');
@@ -1871,7 +1873,7 @@ async function testFigur() {
      root.querySelector('[data-part="vname"]').textContent === 'Okto-Pferdchen');
   ok('und beim Server gemerkt', gesetzt.join() === '5', js(gesetzt));
   ok('die neuen Bilder werden geholt',
-     env.geladeneBilder.includes('tools/wordisland/sprites/held/5.png')
+     env.geladeneBilder.includes('tools/wordisland/sprites/held/5_1.png')
      && env.geladeneBilder.includes('tools/wordisland/sprites/boot/5.png'));
   ok('gesetzt wird über wi_solo_avatar und nicht über wi_solo_settings',
      calls.some(c => c[0] === 'wi_solo_avatar')
@@ -1887,7 +1889,7 @@ async function testFigur() {
      Zwischen den beiden Messungen bewegt sich die Kamera nicht,
      die Kachelgröße ist also dieselbe. */
   await wait(80);
-  const figur5 = gemalt('sprites/held/5.png');
+  const figur5 = gemalt('sprites/held/5_1.png');
   ok('auch die neue Figur wird gezeichnet', !!figur5);
   if (figur2 && figur5) {
     const v = figur5.h / figur2.h;
@@ -1911,7 +1913,7 @@ async function testFigur() {
   ok('das Wechselmenü lässt den Charakter-Kasten zurück',
      wechsel.hidden === true && kasten.hidden === false);
   ok('und der zeigt das neue Volk',
-     /held\/5\.png$/.test(root.querySelector('[data-part="vbig"]').getAttribute('src') || ''),
+     /held\/5_1\.png$/.test(root.querySelector('[data-part="vbig"]').getAttribute('src') || ''),
      root.querySelector('[data-part="vbig"]').getAttribute('src'));
 
   // Ein Ziehen ist kein Tipp — dieselbe Trennung wie bei den Echsen.
@@ -1924,6 +1926,109 @@ async function testFigur() {
   ok('ein Ziehen über die Figur öffnet nichts', kasten.hidden === true);
 
   tool.unmount();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Die Figur trägt ihr Level — 14.09.2026
+   ═══════════════════════════════════════════════════════════
+   Sönke: „ich bin mit meinem Charakter eigentlich Level 2, habe aber
+   immer noch das Sprite von Level 1. […] und alle Icons in der
+   Auswahl [sollen] auf Level 2 gehen."
+
+   Es ist ein Prüfstand mit zwei Hälften, und die zweite ist die
+   wichtigere:
+
+   1. Der PFAD stimmt — held/<volk>_<stufe>.png, und die Stufe kommt
+      aus dem Level und nicht aus der Luft.
+   2. Die DATEI liegt da. Das ist der Teil, der den Fehler vom
+      14.09.2026 überhaupt erst möglich gemacht hat: der Pfad war
+      schon richtig gebaut, nur zeigte er ins Leere, und der
+      onerror-Rückfall hat das so gründlich verdeckt, dass es nach
+      „das Sprite ändert sich nicht" aussah statt nach „das Bild
+      fehlt". Ein Prüfstand, der nur Zeichenketten vergleicht,
+      wäre an genau diesem Fehler grün geblieben.
+
+   Deshalb werden die acht Daumennägel hier vom Blatt gelesen und auf
+   der Platte nachgeschlagen — die Attrappe FakeImage sieht sie
+   nicht, weil sie <img>-Knoten im Blatt sind und keine `new Image`. */
+async function testFigurLevel() {
+  console.log('\n— Die Figur trägt ihr Level —');
+
+  const pfadDa = p => fs.existsSync(path.join(MPSKILLS, decodeURI(String(p))));
+  const src = el => (el && el.getAttribute('src')) || '';
+
+  /* Level 2, Volk bleibt die Voreinstellung (Brokkoli-Giraffen). */
+  const m = await mountSolo(
+    soloView(30, () => 1, false, playerStand(2, 290, { level_max: 2 })),
+    { wi_solo_avatar: args => ({ ok: true, settings: { faction: args.p_faction } }) },
+    { live: true });
+  await wait(60);
+
+  ok('auf der Insel läuft die zweite Fassung',
+     m.env.geladeneBilder.includes('tools/wordisland/sprites/held/2_2.png'),
+     m.env.geladeneBilder.filter(v => /held\//.test(v)).join(', '));
+  ok('und keine davon fehlt', m.env.fehlendeBilder.length === 0,
+     m.env.fehlendeBilder.join(', '));
+
+  ok('der Tipp auf die Figur öffnet den Kasten', !!tippeAufFigur(m.root, m.document));
+  ok('darin steht dieselbe zweite Fassung',
+     /held\/2_2\.png$/.test(src(m.root.querySelector('[data-part="vbig"]'))),
+     src(m.root.querySelector('[data-part="vbig"]')));
+
+  await wait(470);   // die Sperre gegen den nachgereichten Klick
+  click(m.root.querySelector('[data-part="vswap"]'), m.document);
+  await wait(30);
+
+  const daumen = [...m.root.querySelectorAll('.wi-vbtn img')];
+  ok('in der Auswahl stehen acht Daumennägel', daumen.length === 8, String(daumen.length));
+  /* Alle acht auf Level 2 — nicht nur das eigene Volk. Genau das war
+     Sönkes zweiter Satz: man wählt eine Gestalt und soll sehen,
+     welche man bekommt, und das ist die auf dem eigenen Stand. */
+  ok('und alle acht tragen die zweite Fassung',
+     daumen.every((im, i) => new RegExp('held/' + i + '_2k\\.png$').test(src(im))),
+     daumen.map(src).join(', '));
+  ok('alle acht Bilder liegen wirklich auf der Platte',
+     daumen.every(im => pfadDa(src(im))),
+     daumen.map(src).filter(p => !pfadDa(p)).join(', ') || '—');
+  ok('und keines davon trägt Gold',
+     daumen.every(im => !(im.getAttribute('style') || '').includes('sepia')));
+  m.tool.unmount();
+
+  /* ── Level 5: vier Bilder, fünf Level ────────────────────────
+     Die oberste Stufe hat KEIN eigenes Bild. Sie ist die vierte in
+     Gold (HELD_GOLD_FILTER) — sonst müsste Sönke acht Bilder mehr
+     zeichnen, um „noch etwas mehr als Stufe 4" zu sagen. */
+  const g = await mountSolo(
+    soloView(30, () => 4, false, playerStand(5, 700, { level_max: 5 })),
+    { wi_solo_avatar: args => ({ ok: true, settings: { faction: args.p_faction } }) },
+    { live: true });
+  await wait(60);
+
+  ok('Level 5 holt kein fünftes Bild, sondern das vierte',
+     g.env.geladeneBilder.includes('tools/wordisland/sprites/held/2_4.png')
+     && !g.env.geladeneBilder.some(v => /held\/\d+_5/.test(v)),
+     g.env.geladeneBilder.filter(v => /held\//.test(v)).join(', '));
+  ok('und auch bei Level 5 fehlt kein Bild', g.env.fehlendeBilder.length === 0,
+     g.env.fehlendeBilder.join(', '));
+
+  tippeAufFigur(g.root, g.document);
+  const gross = g.root.querySelector('[data-part="vbig"]');
+  ok('im Kasten steht die vierte Fassung',
+     /held\/2_4\.png$/.test(src(gross)), src(gross));
+  ok('und sie trägt Gold',
+     (gross.getAttribute('style') || '').includes('sepia'),
+     gross.getAttribute('style'));
+
+  await wait(470);
+  click(g.root.querySelector('[data-part="vswap"]'), g.document);
+  await wait(30);
+  const gDaumen = [...g.root.querySelectorAll('.wi-vbtn img')];
+  ok('auch die acht Daumennägel sind golden',
+     gDaumen.length === 8
+     && gDaumen.every(im => (im.getAttribute('style') || '').includes('sepia')
+                         && /_4k\.png$/.test(src(im))),
+     gDaumen.map(src).join(', '));
+  g.tool.unmount();
 }
 
 /* Dieselbe Wahl an einer Datenbank ohne 0143. Sie muss GELTEN (das
@@ -2145,6 +2250,21 @@ async function testLevel() {
   ok('der heutige Tag ist hervorgehoben',
      saeulen.filter(z => z.classList.contains('is-heute')).length === 1 &&
      saeulen[6].classList.contains('is-heute'));
+  /* ── Gold gehört dem besten Tag (14.09.2026) ────────────────
+     Sönke: „der letzte Tag ist ja immer heute, der Kreis markiert es.
+     Gerade ist er aber noch gold. Ich will, dass der beste Tag gold
+     ist." Zwei Auszeichnungen an einer Reihe müssen zwei
+     verschiedene Dinge sagen — sonst ist eine davon umsonst.
+
+     Hier ist heute (5:00) ausdrücklich NICHT der beste (9:00): nur
+     so fällt auf, wenn das Gold wieder ans Ende rutscht. */
+  ok('golden ist der stärkste Tag — und nur er',
+     saeulen.filter(z => z.classList.contains('is-best'))
+            .map(z => saeulen.indexOf(z)).join() === '3',
+     saeulen.filter(z => z.classList.contains('is-best')).length + ' Stück');
+  ok('und heute ist nicht mehr golden, nur noch markiert',
+     saeulen[6].classList.contains('is-heute')
+     && !saeulen[6].classList.contains('is-best'));
   /* Der stärkste Tag (9:00) ist der Maßstab, nicht die Schwelle:
      eine Woche mit lauter kurzen Tagen soll trotzdem ein lesbares
      Bild geben. */
@@ -2169,6 +2289,50 @@ async function testLevel() {
      /6/.test(tot) && /aktive Lerntage/.test(tot) && /9/.test(tot) && /43:00 min/.test(tot), tot);
 
   tool.unmount();
+}
+
+/* Die zwei Wochen, in denen „der beste Tag" keine Selbstverständ-
+   lichkeit ist. Beides sind echte erste Wochen und keine Spitzfindig-
+   keiten: die leere Woche sieht jedes Kind am ersten Tag, die
+   gleichmäßige jedes, das jeden Tag seine Runde macht. */
+async function testBesterTagRaender() {
+  console.log('\n— Der goldene Tag in Grenzfällen —');
+
+  const woche = async secs => {
+    const m = await mountSolo(
+      soloView(20, () => 1, false, playerStand(1, 60)),
+      { wi_solo_level_history: () => ({
+          ok: true, days: histTage(secs),
+          totals: { active_days: secs.filter(s => s > 0).length,
+                    total_days: 7, total_secs: secs.reduce((a, b) => a + b, 0) } }) },
+      { live: true });
+    await wait(20);
+    click(m.root.querySelector('[data-part="lvlbtn"]'), m.document);
+    await wait(40);
+    const s = [...m.root.querySelectorAll('.wi-vday')];
+    const wer = k => s.filter(z => z.classList.contains(k)).map(z => s.indexOf(z)).join();
+    const r = { best: wer('is-best'), schwach: wer('is-schwach'), heute: wer('is-heute') };
+    m.tool.unmount();
+    return r;
+  };
+
+  /* Eine Woche ohne eine einzige Minute. Eine goldene Null wäre ein
+     Lob für nichts — und schlimmer: sie behauptete, dieser Tag sei
+     besser gewesen als die anderen sechs. */
+  const leer = await woche([0, 0, 0, 0, 0, 0, 0]);
+  ok('in einer leeren Woche bleibt die Reihe ohne Gold', leer.best === '', leer.best);
+  ok('der Ring um heute steht trotzdem', leer.heute === '6', leer.heute);
+
+  /* Sieben gleich lange Tage. Hier zeigt sich, warum die beiden
+     Auswahlregeln bei Gleichstand in verschiedene Richtungen
+     greifen (besterTag: der spätere, schwaechsterTag: der frühere) —
+     sonst stünde derselbe Balken blass UND golden da, und das ist
+     keine Auszeichnung mehr, sondern ein Widerspruch. */
+  const gleich = await woche([60, 60, 60, 60, 60, 60, 60]);
+  ok('bei lauter gleichen Tagen ist der beste der letzte', gleich.best === '6', gleich.best);
+  ok('und der gestrichene der erste', gleich.schwach === '0', gleich.schwach);
+  ok('nie derselbe Balken golden und blass',
+     gleich.best !== gleich.schwach && leer.best !== leer.schwach);
 }
 
 /* Die Ränder der Skala. Level 1 hat keine Abstiegsgrenze, Level 5
@@ -2545,10 +2709,12 @@ async function testLevelOhneMigration() {
      env.rafs > 0 && env.rafFehler.length === 0,
      env.rafFehler.map(e => e.message).join(' | '));
   /* Die Figur muss weiter da sein — sie hängt an 0143 und nicht an
-     0145. Ohne die Level-Bilder trägt sie ihr altes Bild, und genau
-     das ist der Sinn des Schalters HELD_LEVEL_BILDER. */
-  ok('die Figur trägt ihr altes Bild',
-     env.geladeneBilder.includes('tools/wordisland/sprites/held/2.png'));
+     0145. Ohne Level gibt es keine Bildstufe: dann greift `meinLevel`
+     auf 1 zurück, und das ist die erste Fassung. Nicht das alte
+     einzelne Bild (das ist der onerror-Rückfall) und schon gar kein
+     leerer Rahmen. */
+  ok('die Figur trägt die erste Fassung',
+     env.geladeneBilder.includes('tools/wordisland/sprites/held/2_1.png'));
   ok('und es fehlt kein einziges Bild',
      env.fehlendeBilder.length === 0, env.fehlendeBilder.join(', '));
 
@@ -3429,8 +3595,10 @@ async function testRuinTabelle() {
   await testTierTipp();
   await testFunkelBild();
   await testFigur();
+  await testFigurLevel();
   await testFigurOhneMigration();
   await testLevel();
+  await testBesterTagRaender();
   await testLevelRaender();
   await testLevelBonus();
   await testLevelAufstieg();

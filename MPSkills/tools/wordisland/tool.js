@@ -3873,38 +3873,61 @@
   let volkNurHier = false;
 
   const volkName = n => (TEAMS[n] && TEAMS[n].name) || ('Volk ' + (n + 1));
-  const volkDaumen = n => HELD_DIR + n + 'k.png';
   const volkBoot  = n => BOOT_DIR + n + '.png';
 
   /* ── Die Figur nach Level ────────────────────────────────────
-     Vier gezeichnete Fassungen je Volk (Level 1…4), Level 5 ist die
-     vierte mit einem goldenen Filter beim Zeichnen — kein eigenes
-     fünftes Bild (HELD_GOLD_FILTER, gesetzt in heldMasse und
-     renderVolk).
+     Vier gezeichnete Fassungen je Volk (Bildstufe 1…4), Level 5 ist
+     die vierte mit einem goldenen Filter — kein eigenes fünftes
+     Bild (HELD_GOLD_FILTER).
 
-     ⚠️ DIE EINE ZEILE, DIE SÖNKE UMLEGT, wenn die Bilder liegen:
-     HELD_LEVEL_BILDER. Solange sie `false` ist, tragen alle Level
-     dieselbe alte Figur (held/{volk}.png) — das eigene Level ist
-     dann am Balken zu sehen und nicht an der Figur.
+     Sönke, 14.09.2026: „ich bin mit meinem Charakter eigentlich
+     Level 2, habe aber immer noch das Sprite von Level 1." Die
+     Vorlagen lagen längst da (sprites/crew/<farbe> 1…4 crew.png),
+     nur der Zuschnitt fehlte — heldsprites.mjs backt sie jetzt alle
+     vier, und deshalb steht der Schalter unten seitdem auf `true`.
 
-     Warum ein Schalter und nicht einfach der Rückfall auf das alte
-     Bild: ein Pfad, den es nicht gibt, ist eine fehlgeschlagene
-     Anfrage JE AUFBAU und JE KIND. Der Rückfall unten fängt sie
-     zwar auf, aber er soll die Notbremse sein und nicht der
-     Normalfall — und ein Prüfstand, der „alle Bilder liegen da"
-     sagt, kann das nur prüfen, solange nichts absichtlich ins Leere
-     zeigt.
+     ⚠️ Vier Bilder, FÜNF Level. `heldTier` deckelt bei 4, und das
+     ist kein Notbehelf, sondern die Regel: wer Level 5 erreicht,
+     bekommt keine neue Gestalt, sondern dieselbe in Gold. Wer hier
+     eine fünfte Datei einträgt, muss auch den Filter herausnehmen —
+     sonst steht ein goldenes Bild noch einmal unter Gold.
 
-     Erwartet werden dann:  sprites/held/{volk}_{1..4}.png         */
-  const HELD_LEVEL_BILDER = false;
+     HELD_LEVEL_BILDER bleibt als Notbremse stehen: auf `false`
+     tragen wieder alle Level held/{volk}.png. Der Rückfall je Bild
+     (onerror) fängt einzelne fehlende Dateien ohnehin ab — der
+     Schalter ist für den Fall, dass der ganze Satz fehlt, denn
+     achtmal ins Leere zu greifen ist kein Rückfall mehr, sondern
+     eine fehlgeschlagene Anfrage je Aufbau und je Kind.          */
+  const HELD_LEVEL_BILDER = true;
   const HELD_STUFEN = 4;
   const heldTier = lvl => Math.min(Math.max(lvl | 0 || 1, 1), HELD_STUFEN);
   const volkBildBasis = n => HELD_DIR + n + '.png';
   const volkBild = (n, lvl) => HELD_LEVEL_BILDER
     ? HELD_DIR + n + '_' + heldTier(lvl) + '.png'
     : volkBildBasis(n);
+
+  /* Der Daumennagel derselben Fassung — derselbe Zuschnitt, nur
+     klein (heldsprites.mjs). Sönke, 14.09.2026: „alle Icons in der
+     Auswahl [sollen] auf Level 2 gehen." Die Auswahlreihe zeigt
+     also nicht acht Anfängerfiguren, sondern acht Figuren auf DEM
+     Stand, auf dem man selbst steht — sonst wählte man ein Bild und
+     bekäme ein anderes. */
+  const volkDaumenBasis = n => HELD_DIR + n + 'k.png';
+  const volkDaumen = (n, lvl) => HELD_LEVEL_BILDER
+    ? HELD_DIR + n + '_' + heldTier(lvl) + 'k.png'
+    : volkDaumenBasis(n);
+
   const HELD_GOLD_FILTER =
     'sepia(.6) saturate(3.2) hue-rotate(-12deg) brightness(1.12)';
+  /* Dasselbe Gold auf einem <img> statt auf der Leinwand. Es steht
+     bewusst NICHT ein zweites Mal in der CSS: zwei Goldtöne, die
+     auseinanderlaufen, wären an der Figur und an ihrem Daumennagel
+     nebeneinander zu sehen. */
+  const goldSetzen = (el, an) => { if (el) el.style.filter = an ? HELD_GOLD_FILTER : ''; };
+  /* Das eigene Level, wo immer es gerade zu haben ist. Vor dem
+     ersten Serverstand gibt es keines — dann ist es 1 und nicht 0:
+     die Bildstufen fangen bei 1 an. */
+  const meinLevel = () => (solo && solo.player && solo.player.level) || 1;
 
   /* Woher das Volk kommt, in dieser Reihenfolge: Server, Gerät,
      Voreinstellung. Der Server gewinnt — er ist der Ort, an dem die
@@ -3922,7 +3945,7 @@
 
   function volkBilderLaden() {
     const n = spieler.volk, gen = ++volkGen;
-    const lvl = (solo && solo.player && solo.player.level) || 1;
+    const lvl = meinLevel();
     const nimm = (pfad, feld, basis) => ladeBild(pfad)
       // Fällt auf das alte einzelne Bild zurück, solange die vier
       // Level-Fassungen noch fehlen — kein Blocker fürs Übrige.
@@ -4086,7 +4109,7 @@
     h._mx = px; h._my = py - hoch / 2;
     // Level 5 malt Stufe 4 mit einem goldenen Filter statt einem
     // eigenen fünften Bild (siehe HELD_GOLD_FILTER).
-    h._gold = ((solo && solo.player && solo.player.level) || 1) >= 5;
+    h._gold = meinLevel() >= 5;
     // Der Funkenkranz eines Level-Aufstiegs (feierSpielerStart) —
     // zeitgestempelt statt gezählt, damit hier kein dt gebraucht wird.
     if (h.burstAt != null) {
@@ -5677,10 +5700,13 @@
   function renderVolk() {
     if (!spieler || !els.volkOv || els.volkOv.hidden) return;
     const n = spieler.volk;
-    const lvl = (solo && solo.player && solo.player.level) || 1;
+    const lvl = meinLevel();
     els.vBig.src = volkBild(n, lvl);
     els.vBig.onerror = () => { els.vBig.onerror = null; els.vBig.src = volkBildBasis(n); };
     els.vBig.alt = volkName(n);
+    // Level 5 trägt kein eigenes Bild, sondern Gold (HELD_GOLD_FILTER)
+    // — hier wie auf der Insel und wie in der Auswahlreihe.
+    goldSetzen(els.vBig, lvl >= 5);
     els.vName.textContent = volkName(n);
     els.vSub.textContent = 'Deine Figur läuft über die Insel, dein Schiff fährt davor.';
 
@@ -5694,16 +5720,29 @@
   function renderVolkReihe() {
     if (!spieler || !els.vRow) return;
     const n = spieler.volk;
+    const lvl = meinLevel();
     /* Die Reihe zeigt die FIGUR jedes Volkes und nicht sein Wappen:
        gewählt wird, wer man ist. Der Daumennagel ist derselbe
        Zuschnitt, nur klein (heldsprites.mjs) — also genau das Bild,
-       das man danach auf der Insel wiederfindet. */
+       das man danach auf der Insel wiederfindet. Und zwar auf dem
+       EIGENEN Stand: acht Figuren auf Level 2, wenn man Level 2 ist
+       (Sönke, 14.09.2026). Das eigene Level ist nichts, was man mit
+       dem Volk verliert — es hängt am Kind, nicht an der Fahne.
+
+       Der Rückfall steht am Bild und nicht am Aufruf: fehlt eine
+       einzelne Fassung, soll genau dieser eine Knopf die Grundfigur
+       zeigen und nicht die ganze Reihe. */
+    const goldStil = lvl >= 5 ? ` style="filter:${HELD_GOLD_FILTER}"` : '';
     els.vRow.innerHTML = TEAMS.map((t, i) =>
       `<button type="button" class="wi-vbtn${i === n ? ' is-on' : ''}" data-v="${i}"
                style="--vf:${t.color}" aria-pressed="${i === n}">
-         <img src="${esc(volkDaumen(i))}" alt="" loading="lazy" />
+         <img src="${esc(volkDaumen(i, lvl))}" alt="" loading="lazy"${goldStil}
+              data-basis="${esc(volkDaumenBasis(i))}" />
          <span>${esc(t.name)}</span>
        </button>`).join('');
+    els.vRow.querySelectorAll('img[data-basis]').forEach(im => {
+      im.onerror = () => { im.onerror = null; im.src = im.getAttribute('data-basis'); };
+    });
 
     /* „Gemerkt" und „nur hier gemerkt" dürfen nie gleich aussehen.
        Fehlt Migration 0143, funktioniert die Wahl trotzdem — sie
@@ -5891,6 +5930,28 @@
   const schwaechsterTag = days =>
     days.reduce((a, d) => (a == null || d.secs < a.secs ? d : a), null);
 
+  /* Und der stärkste — der, der GOLD bekommt.
+
+     Sönke, 14.09.2026: „der letzte Tag ist ja immer heute, der Kreis
+     markiert es. Gerade ist er aber noch gold. Ich will, dass der
+     beste Tag gold ist." Zwei Auszeichnungen an derselben Reihe
+     müssen zwei verschiedene Dinge sagen: der Ring sagt WANN
+     (heute), das Gold sagt WIE GUT. Solange beides am letzten Tag
+     hing, hieß Gold nichts weiter als „rechts".
+
+     Zwei Feinheiten, beide absichtlich:
+     • Bei Gleichstand gewinnt der SPÄTERE (`>=` auf einer nach Tagen
+       aufsteigenden Liste). Das ist genau andersherum als bei
+       schwaechsterTag, und daran hängt mehr als Geschmack: der
+       schwächste nimmt bei Gleichstand den früheren, der stärkste
+       den späteren — so können in einer Woche aus lauter gleichen
+       Tagen nie derselbe Balken blass UND golden sein.
+     • Ein Tag ohne Lernzeit wird nie der beste. Eine goldene Null
+       wäre ein Lob für nichts; in einer leeren Woche bleibt die
+       Reihe lieber ganz ohne Gold. */
+  const besterTag = days =>
+    days.reduce((a, d) => (d.secs > 0 && (a == null || d.secs >= a.secs) ? d : a), null);
+
   const WOCHENTAG = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
   async function ladeVolkHistorie() {
@@ -5908,11 +5969,13 @@
     const maxSecs = Math.max(60, ...r.days.map(d => d.secs));
     const heute = r.days[r.days.length - 1] && r.days[r.days.length - 1].day;
     const schwach = schwaechsterTag(r.days);
+    const best = besterTag(r.days);
 
     els.vDays.innerHTML = r.days.map(d => {
       const hoch = Math.max(2, Math.round(100 * d.secs / maxSecs));
       const tag = WOCHENTAG[new Date(d.day + 'T00:00:00').getDay()];
       const klassen = (d.day === heute ? ' is-heute' : '')
+                    + (best && d.day === best.day ? ' is-best' : '')
                     + (schwach && d.day === schwach.day ? ' is-schwach' : '');
       return `<div class="wi-vday${klassen}">
                 <span class="wi-vday__val">${minSekKurz(d.secs)}</span>
@@ -6856,7 +6919,11 @@
     uhrAb = Date.now();
     zeigeUhr();
     renderLevel();
-    if (!els.volkOv.hidden) renderVolkLevel();
+    if (!els.volkOv.hidden) renderVolk();
+    /* Auch die acht Daumennägel hängen am eigenen Level. Sie stehen
+       in einem zweiten Kasten, der für sich allein offen sein kann —
+       renderVolk erreicht sie nicht. */
+    if (els.volkWOv && !els.volkWOv.hidden) renderVolkReihe();
     /* Die Figur neu laden, wenn sich die Stufe ihres Bildes ändert —
        sonst liefe sie bis zum nächsten Öffnen noch in der alten.
        Ohne die Level-Bilder gibt es nichts nachzuladen: es wäre
@@ -6977,6 +7044,10 @@
       lvupSprungT = 0;
       if (destroyed || !els.lvup || els.lvup.hidden) return;
       if (bereit) els.lvupImg.src = neu;
+      /* Auch wenn das Bild nicht kam: Level 5 ist golden. Der Sprung
+         von 4 auf 5 hätte sonst als einziger gar nichts zu zeigen —
+         dieselbe Gestalt, dieselbe Farbe, nur eine andere Zahl. */
+      goldSetzen(els.lvupImg, nach >= 5);
       els.lvupNum.textContent = String(nach);
       els.lvupNum.classList.add('is-up');
       els.lvupTitle.textContent = 'Level ' + nach + (nach >= STUFE_HOCH ? ' 👑' : '');
@@ -6998,6 +7069,11 @@
       if (els.lvupImg.src !== basis) els.lvupImg.src = basis;
     };
     els.lvupImg.src = volkBild(volk, lvl);
+    /* Das Gold gehört zum Sprung und nicht zum Kasten: wer von 4 auf
+       5 steigt, sieht dieselbe Gestalt — sie wird golden. Das IST
+       hier der ganze Unterschied, also darf er nicht schon vorher
+       dastehen. */
+    goldSetzen(els.lvupImg, lvl >= 5);
   }
 
   function lvupZu() {

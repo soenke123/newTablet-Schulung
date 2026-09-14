@@ -2185,18 +2185,35 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   border-radius: 50%;
   box-sizing: border-box;
 }
-.wi-vday.is-heute .wi-vday__bar > i { background: linear-gradient(180deg, #ffd666, #ffb43c); }
+/* ── Zwei Auszeichnungen, zwei Aussagen ───────────────────────
+   Bis zum 14.09.2026 trug der heutige Tag beides: den Ring UND das
+   Gold. Sönke: „der letzte Tag ist ja immer heute, der Kreis
+   markiert es. Gerade ist er aber noch gold. Ich will, dass der
+   beste Tag gold ist."
+
+   Der Ring sagt seitdem nur noch WANN — er ist eine Ortsangabe und
+   keine Note, und deshalb trägt er die Farbe der gewöhnlichen Säule
+   und nicht die der besten. Das Gold sagt WIE GUT und sitzt am
+   höchsten Balken. Fallen beide auf denselben Tag, ist das kein
+   Sonderfall, sondern die beste Nachricht der Woche: ein goldener
+   Balken mit einem Ring darunter. */
 .wi-vday.is-heute .wi-vday__lab,
 .wi-vday.is-heute .wi-vday__val { color: var(--ink); }
-/* Der Kreis um den heutigen Tag (Sönke, 13.09.2026). Er ersetzt die
-   Nadel „Heute 4:24" am großen Balken darüber: dort war heute eine
-   zweite Zahl auf einer Skala, die über das Level entscheidet — hier
-   ist er das, was er ist, nämlich einer von sieben Tagen und der von
-   jetzt. Dieselben zwei Gelbtöne wie seine Säule. */
 .wi-vday.is-heute .wi-vday__lab {
-  background: rgba(255, 214, 102, .20);
-  box-shadow: inset 0 0 0 2px #ffb43c;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
+
+/* Der beste der sieben Tage. Dieselben zwei Gelbtöne wie überall
+   sonst in diesem Werkzeug, wo etwas herausragt (Bonus-Chip,
+   Krone) — Gold heißt hier immer dasselbe.
+
+   Die Zeile steht NACH is-heute und VOR is-schwach: der Ring darf
+   das Gold nicht überschreiben, und ein Tag, der beides wäre
+   (siehe besterTag: kann nur bei 0 Sekunden vorkommen, und dann
+   gibt es gar kein Gold), bliebe blass. */
+.wi-vday.is-best .wi-vday__bar > i { background: linear-gradient(180deg, #ffd666, #ffb43c); }
+.wi-vday.is-best .wi-vday__val { color: var(--ink); }
 /* Ausgegraut, nicht weg: der schwächste Tag wird von der 6-von-7-
    Regel herausgeworfen, aber gelernt wurde an ihm trotzdem.
 
