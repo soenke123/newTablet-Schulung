@@ -5190,6 +5190,42 @@
           <span data-part="plevels"></span>
         </div>
       </div>
+
+      <!-- ── Der eigene Aufstieg ─────────────────────────────────
+           Sönke, 14.09.2026: „Level-up des Charakters funktioniert
+           nicht. Hier muss das Spiel kurz unterbrochen werden und ich
+           sehe, wie mein Charakter das nächste Level erreicht. Also
+           da steht dann Level 2, das neue Sprite wird geladen."
+
+           Bis dahin lief der Aufstieg NEBENHER — ein Banner über den
+           Kreisen unten. Und das war genau die falsche Entscheidung,
+           aus demselben Grund, aus dem der Stufensprung des Tieres
+           eine eigene Bühne bekommen hat: beim Tippen steht auf dem
+           Tablet die Tastatur, die Kreise liegen unter dem
+           Übungskasten, und das Banner blitzte dort auf, wo in diesem
+           Moment niemand hinsieht. Ein Erfolg, der vier Level lang
+           auf sich warten lässt, darf nicht am Rand stattfinden.
+
+           Eigener Kasten und nicht die Tier-Bühne: die Tier-Bühne ist
+           eine Leinwand mit einem gezeichneten Tier darauf, hier
+           steht ein Bild der Figur. Und beide können in derselben
+           Antwort vorkommen — dann läuft erst das Tier, dann die
+           Figur (siehe soloSend). -->
+      <div class="wi-lvup" data-part="lvup" hidden>
+        <div class="wi-lvup__rays" aria-hidden="true"></div>
+        <div class="wi-lvup__box">
+          <span class="wi-lvup__kicker">Level geschafft</span>
+          <div class="wi-lvup__fig">
+            <!-- Das Bild der Figur. Welches, entscheidet volkBild —
+                 sobald die vier Level-Fassungen liegen, wechselt es
+                 hier mitten in der Feier (siehe lvupSprung). -->
+            <img class="wi-lvup__held" data-part="lvupimg" alt="" />
+            <b class="wi-lvup__badge" data-part="lvupnum"></b>
+          </div>
+          <b class="wi-lvup__title" data-part="lvuptitle"></b>
+          <span class="wi-lvup__sub" data-part="lvupsub"></span>
+        </div>
+      </div>
     </div>`;
 
   /* Der Stand der eigenen Insel. Anders als im Raum gibt es hier
@@ -5234,11 +5270,23 @@
 
      Umgerechnet wird ausschließlich hier. Zwei Zahlen für dieselbe
      Sache sind eine zu viel: wer im Quelltext `stufe === 4` liest,
-     soll nicht überlegen müssen, welche gemeint ist. */
+     soll nicht überlegen müssen, welche gemeint ist.
+
+     ⚠️ Am Tier steht nur noch die ZAHL — Sönke, 14.09.2026: „Bei den
+     Echsen steht jetzt ‚Level 4 ausgewachsen', schreibe nur Level 4,
+     das reicht." Und er hat recht: neben dem Tier ist der Name
+     überflüssig, weil das Bild ihn schon sagt. Ein Ei sieht aus wie
+     ein Ei.
+
+     Der Name bleibt genau an EINER Stelle stehen: im Tooltip der
+     Stufenlegende (stufeLang). Dort stehen farbige Punkte ohne Bild
+     daneben, und ein Punkt, der nur „Stufe 4" sagt, erklärt seine
+     Farbe nicht. */
   const STUFEN_NAME = ['Ei', 'geschlüpft', 'gewachsen', 'ausgewachsen', 'funkelnd'];
   const STUFE_HOCH = STUFEN_NAME.length;      // die oberste, wie sie dasteht: 5
   const stufeZahl = s => Math.max(0, Math.min(4, s | 0)) + 1;
-  const stufeText = s => 'Stufe ' + stufeZahl(s) + ' · ' + STUFEN_NAME[stufeZahl(s) - 1];
+  const stufeText = s => 'Stufe ' + stufeZahl(s);
+  const stufeLang = s => stufeText(s) + ' · ' + STUFEN_NAME[stufeZahl(s) - 1];
 
   function buildSolo() {
     root.innerHTML = SOLO_HTML;
@@ -5273,6 +5321,8 @@
       pInfo: q('pinfo'), pStats: q('pstats'),
       pDir: q('pdir'), pDelta: q('pdelta'),
       cheer: q('cheer'), cCvs: q('ccvs'),
+      lvup: q('lvup'), lvupImg: q('lvupimg'), lvupNum: q('lvupnum'),
+      lvupTitle: q('lvuptitle'), lvupSub: q('lvupsub'),
       pLevel: q('plevel'), pLevelB: q('plevelb'), pLevelS: q('plevels'),
       pTon: q('pton'), pUhr: q('puhr'), pUhrNum: q('puhrnum'),
       pWord: q('pword'), pForm: q('pform'), pIn: q('pin'),
@@ -5317,7 +5367,10 @@
          gerade jemand zugemacht hat — und beim nächsten Öffnen
          stünde dort ein Wort ohne Anfang. */
       clearTimeout(feierT);
+      clearTimeout(lvupT);
+      feierWeiter = null;
       feiernd = false;
+      lvupZu();
       zeigeStats(false);
       zeigeDelta(0);
       kartHalt();
@@ -5334,6 +5387,22 @@
       unitVergessen();
       if (unitOffen) unitDetail(unitOffen.id, true);
       if (tierOffen) kartenNeu();
+    });
+
+    /* Die Level-Feier lässt sich wegtippen. Anders als die Tier-
+       Bühne (eine gute Sekunde, da gibt es nichts zu entscheiden)
+       dauert sie rund drei — und wer zum zweiten Mal aufsteigt, hat
+       sie schon gesehen.
+
+       Aber erst NACH dem Sprung: ein Tipp, der sie in der ersten
+       halben Sekunde wegnimmt, zeigt nur die alte Zahl und nimmt
+       genau das weg, wofür sie da ist. Und der Tipp, mit dem eben
+       die Antwort abgeschickt wurde, kommt manchmal noch hinterher
+       (Regel: feedback_pointerup_opens_ghost_click) — beides deckt
+       dieselbe Sperre ab. */
+    if (els.lvup) els.lvup.addEventListener('click', () => {
+      if (!lvupAb || performance.now() - lvupAb < LVUP_SPRUNG + 260) return;
+      if (feierWeiter) feierWeiter();
     });
 
     els.pInfo.addEventListener('click', e => {
@@ -5496,7 +5565,7 @@
        die Arbeit noch liegt. Stufen ohne Tiere werden weggelassen —
        eine Null erklärt nichts. */
     return zaehl.map((n, s) => !n ? '' :
-      `<span class="wi-lg wi-lg--${s}" title="${esc(stufeText(s))}">
+      `<span class="wi-lg wi-lg--${s}" title="${esc(stufeLang(s))}">
          <i></i>${n}</span>`).join('');
   }
 
@@ -6376,7 +6445,9 @@
     soloFeedback(null);
     zeigeDelta(0);
     buehneZu();
-    clearTimeout(feierT); feiernd = false;
+    lvupZu();
+    clearTimeout(feierT); clearTimeout(lvupT);
+    feierWeiter = null; feiernd = false;
     const r = await ctx.actions.call('wi_solo_start', {});
     if (!r.ok) { ctx.toast(ctx.errText(r.error)); els.playOv.hidden = true; return; }
     soloTask = r.task;
@@ -6404,13 +6475,17 @@
         return;
       }
 
-      // Das eigene Level hängt an JEDER Antwort, nicht nur an
-      // entschiedenen — siehe 0145: der Server zählt schon die
-      // Zwischenstufe als aktive Zeit. Ein Aufstieg feiert sich
-      // NEBENHER (Balken + Funkenkranz an der Figur) und hält den
-      // Übungsfluss nicht an, anders als die Tier-Feier unten.
+      /* Das eigene Level hängt an JEDER Antwort, nicht nur an
+         entschiedenen — siehe 0145: der Server zählt schon die
+         Zwischenstufe als aktive Zeit.
+
+         ⚠️ Die Kreise werden SOFORT nachgeführt, gefeiert wird
+         später: ein Aufstieg hält seit dem 14.09.2026 das Üben an
+         (Sönke), und zwar HINTER der Tier-Feier, falls beides in
+         derselben Antwort steckt. Zwei Feiern übereinander wären
+         keine zwei Erfolge, sondern ein Durcheinander. */
       anwendenPlayer(r.player);
-      pruefeLevelAufstieg(r.player);
+      const aufstieg = levelAufstieg(r.player);
 
       /* „Richtig — mit Hilfe" statt nur „Richtig": die Antwort war
          richtig, sie zählt nur weniger, und ein Kind, dem die
@@ -6431,8 +6506,16 @@
       // ist, gehört zum Wort von eben. Das gefragte Wort muss JETZT
       // gelesen werden — gleich steht in soloTask das nächste.
       const wort = soloTask && soloTask.prompt;
-      const halt = (r.item && r.level_after != null)
+      const tierHalt = (r.item && r.level_after != null)
         ? soloWachsen(r.item, r.level_after, wort) : 0;
+      /* Die zweite Feier reiht sich HINTER die erste. Beide zusammen
+         kommen selten vor (ein Wort, das die Stufe hebt, in genau
+         der Antwort, die auch das eigene Level hebt) — aber wenn,
+         dann sind es zwei Dinge, und zwei Dinge nacheinander sind
+         zwei Dinge. Übereinander wären sie eins, und zwar ein
+         unleserliches. */
+      const lvHalt = aufstieg ? LVUP_DAUER(aufstieg.nach) : 0;
+      const halt = tierHalt + lvHalt;
       if (r.result === 'wrong') soloLock(r.locked_for);
 
       feldLeer(els.pIn);
@@ -6455,14 +6538,43 @@
         els.pForm.classList.add('is-wait');
         const naechste = r.task;
         clearTimeout(feierT);
-        feierT = setTimeout(() => {
+        clearTimeout(lvupT);
+
+        /* Das Ende der ganzen Kette, an EINER Stelle. Es gibt zwei
+           Wege hierher — der Zeitgeber und der Tipp auf die
+           Level-Feier (vorspulen) —, und beide müssen dasselbe tun,
+           sonst bleibt beim Abkürzen irgendwo ein Riegel zu. */
+        feierWeiter = () => {
+          feierWeiter = null;
+          clearTimeout(feierT); feierT = 0;
+          clearTimeout(lvupT);  lvupT = 0;
           feiernd = false;
+          lvupZu();
           if (destroyed || !els.pIn) return;
           buehneZu();
           soloTask = naechste;
           soloRenderTask();
           if (!els.pIn.dataset.locked) { feldZu(els.pIn, false); feldHer(els.pIn); }
-        }, halt);
+        };
+
+        /* Der Aufstieg wartet, bis das Tier fertig ist. Steht keine
+           Tier-Feier an (tierHalt = 0), fängt er sofort an — dann ist
+           `setTimeout(…, 0)` genau richtig und nicht etwa ein
+           direkter Aufruf: `feiernd` ist gesetzt, der Kasten tritt
+           zurück, und beides soll im Bild stehen, bevor die Figur
+           kommt. */
+        if (aufstieg) {
+          lvupT = setTimeout(() => {
+            lvupT = 0;
+            if (destroyed || !feiernd) return;
+            // Die Bühne des Tieres geht zu, bevor die der Figur
+            // aufgeht — sonst lägen zwei Feiern übereinander.
+            buehneZu();
+            feierSpielerStart(aufstieg.von, aufstieg.nach);
+          }, tierHalt);
+        }
+
+        feierT = setTimeout(() => { if (feierWeiter) feierWeiter(); }, halt);
       } else {
         soloTask = r.task;
         soloRenderTask();
@@ -6583,12 +6695,19 @@
   }
 
   /* ─── Das eigene Level ──────────────────────────────────────
-     Anders als die Tier-Feier läuft ein Level-Aufstieg NEBENHER:
-     kein Halt vor der nächsten Frage, keine Bühne. Er ist ein
-     Erfolg über die Woche, kein Ereignis an EINEM Wort — deshalb
-     reicht ein Banner über den Kreisen plus ein Funkenkranz an der Figur
-     selbst (dieselbe Zeichnung wie bei einem Tier, siehe die
-     Jubel-Passage im Zeichenschritt und heldMasse). */
+     Die drei Kreise unten im Kasten. Sie werden bei JEDER Antwort
+     nachgeführt, auch wenn sich nichts ändert — sie sind der Stand
+     und nicht das Ereignis.
+
+     Das Ereignis ist der Aufstieg, und der hält seit dem 14.09.2026
+     das Üben an (lvupAuf, .wi-lvup): eigener Kasten über allem, die
+     Figur, und die Zahl springt von der alten auf die neue. Bis
+     dahin lief er nebenher — ein Banner über diesen Kreisen —, und
+     das ist beim Tippen genau der Fleck, auf den niemand sieht.
+     Der Funkenkranz an der Figur auf der Insel läuft weiter mit
+     (dieselbe Zeichnung wie bei einem Tier, siehe die Jubel-Passage
+     im Zeichenschritt und heldMasse) — er ist das, was übrig bleibt,
+     wenn der Kasten wieder zu ist. */
   function renderLevel() {
     if (!els.lvl) return;
     const p = solo && solo.player;
@@ -6746,13 +6865,61 @@
         && heldTier(altesLevel) !== heldTier(p.level)) volkBilderLaden();
   }
 
-  function pruefeLevelAufstieg(p) {
-    if (p && p.level_before != null && p.level > p.level_before) feierSpielerStart(p.level_before, p.level);
+  /* Hat diese Antwort das eigene Level gehoben? Nur die Auskunft,
+     ohne zu feiern — WANN gefeiert wird, entscheidet soloSend: nach
+     der Tier-Feier, wenn es eine gab. */
+  function levelAufstieg(p) {
+    if (!p || p.level_before == null || !(p.level > p.level_before)) return null;
+    return { von: p.level_before, nach: p.level };
   }
 
+  /* ─── Der eigene Aufstieg ───────────────────────────────────
+     Sönke, 14.09.2026: „das Spiel [muss] kurz unterbrochen werden,
+     und ich sehe, wie mein Charakter das nächste Level erreicht."
+
+     Der Ablauf in drei Schlägen — die Zahlen unten sind der ganze
+     Takt, die Bewegung selbst steht in der CSS:
+
+       0 ms          die Figur steht da, mit dem ALTEN Level am
+                     Abzeichen. Das ist der Ausgangspunkt, ohne den
+                     ein Sprung kein Sprung ist, sondern nur eine
+                     Zahl.
+       LVUP_SPRUNG   der Schlag: die Zahl springt auf das neue
+                     Level, das neue Bild der Figur wird
+                     eingesetzt, der Kranz geht auf, der Dreiklang
+                     kommt.
+       LVUP_DAUER    Schluss, die nächste Frage kommt.
+
+     Warum überhaupt zwei Zahlen und nicht einfach „neues Level
+     zeigen": weil das Kind sonst nicht sieht, dass sich etwas
+     geändert hat. Ein Abzeichen, das von Anfang an 3 sagt, ist eine
+     Feststellung. Eines, das von 2 auf 3 springt, ist ein Ereignis. */
+  const LVUP_SPRUNG = 760;
+  const LVUP_DAUER = nach => 2200 + nach * 200;
+
+  /* Ein Satz je Level. Er sagt, WOFÜR es das Level gab — und das ist
+     bei diesem Level immer dasselbe: regelmäßig geübte Zeit, nicht
+     richtige Antworten. Ein Kind, das für einen guten Tag ein Level
+     erwartet, wartet sonst vergeblich und weiß nicht, warum. */
+  const LVUP_SATZ = [
+    null, null,
+    'Du übst regelmäßig — und das sieht man dir an.',
+    'Dein Wochenschnitt wächst. Weiter so.',
+    'Starke Woche. So sieht Übung aus.',
+    'Die höchste Stufe. Mehr geht nicht.'
+  ];
+
   let lvlToastT = 0;
+  let lvupT = 0;        // Zeitgeber bis zum Beginn der Feier
+  let lvupSprungT = 0;  // Zeitgeber bis zum Sprung darin
+  let lvupAb = 0;       // wann sie aufging — gegen den Nachklick
+  let feierWeiter = null;   // die Fortsetzung, die der Tipp vorspulen darf
 
   function feierSpielerStart(von, nach) {
+    /* Das Banner unten bleibt — es ist die Auskunft für den Fall,
+       dass der große Kasten gar nicht erst aufgeht (kein DOM, keine
+       Figur). Sichtbar ist es ohnehin nur, wenn der Übungskasten zu
+       ist; während des Übens liegt der Kasten darüber. */
     if (els.lvlToast) {
       els.lvlToast.textContent = 'Level ' + nach + ' erreicht!' + (nach >= 5 ? ' 👑' : '');
       els.lvlToast.hidden = false;
@@ -6771,7 +6938,75 @@
       // selbst bleibt dieselbe wie beim Tier-Jubel.
       spieler.held._burstDauer = .9 + nach * .35;
     }
-    tonSpiel('spieler' + nach);
+    lvupAuf(von, nach);
+  }
+
+  function lvupAuf(von, nach) {
+    const box = els.lvup;
+    if (!box) { tonSpiel('spieler' + nach); return; }
+
+    const volk = (spieler && spieler.volk != null) ? spieler.volk : volkAusStand();
+
+    /* Erst das ALTE Bild und die ALTE Zahl. Die Feier fängt da an,
+       wo das Kind gerade steht. */
+    lvupBild(volk, von);
+    els.lvupNum.textContent = String(von);
+    els.lvupNum.classList.remove('is-up');
+    els.lvupTitle.textContent = 'Level ' + von;
+    els.lvupSub.textContent = '';
+    box.classList.remove('is-up');
+    box.hidden = false;
+    // Die Bewegung neu anstoßen (wie bei feierText): zweimal
+    // dieselbe Klasse spielt keine zweite Bewegung ab.
+    box.classList.remove('is-on');
+    void box.offsetWidth;
+    box.classList.add('is-on');
+    lvupAb = performance.now();
+
+    /* Das neue Bild wird JETZT geholt, nicht erst beim Sprung: ein
+       Bild, das im Augenblick des Sprungs noch lädt, macht aus dem
+       Schlag ein Flackern. Ist es nicht da (die Level-Fassungen
+       liegen noch nicht, HELD_LEVEL_BILDER), bleibt einfach das
+       alte stehen — die Zahl springt trotzdem. */
+    const neu = volkBild(volk, nach);
+    let bereit = false;
+    ladeBild(neu).then(() => { bereit = true; }).catch(() => { bereit = false; });
+
+    clearTimeout(lvupSprungT);
+    lvupSprungT = setTimeout(() => {
+      lvupSprungT = 0;
+      if (destroyed || !els.lvup || els.lvup.hidden) return;
+      if (bereit) els.lvupImg.src = neu;
+      els.lvupNum.textContent = String(nach);
+      els.lvupNum.classList.add('is-up');
+      els.lvupTitle.textContent = 'Level ' + nach + (nach >= STUFE_HOCH ? ' 👑' : '');
+      els.lvupSub.textContent = LVUP_SATZ[nach] || '';
+      els.lvup.classList.add('is-up');
+      tonSpiel('spieler' + nach);
+    }, LVUP_SPRUNG);
+  }
+
+  /* Das Bild der Figur im Kasten — mit demselben Rückfall wie auf
+     der Insel (volkBilderLaden): fehlt die Level-Fassung, steht das
+     alte einzelne Bild da. Ein leerer Rahmen mitten in der Feier
+     wäre das Schlechteste von allem. */
+  function lvupBild(volk, lvl) {
+    if (!els.lvupImg) return;
+    const basis = volkBildBasis(volk);
+    els.lvupImg.onerror = () => {
+      els.lvupImg.onerror = null;
+      if (els.lvupImg.src !== basis) els.lvupImg.src = basis;
+    };
+    els.lvupImg.src = volkBild(volk, lvl);
+  }
+
+  function lvupZu() {
+    clearTimeout(lvupSprungT);
+    lvupSprungT = 0;
+    lvupAb = 0;
+    if (!els.lvup) return;
+    els.lvup.hidden = true;
+    els.lvup.classList.remove('is-on', 'is-up');
   }
 
   /* ─── Der Ton ───────────────────────────────────────────────
@@ -7589,6 +7824,7 @@
       unitOffen = null; markiert = null; tierOffen = null; randLinks = 0;
       sichtbar = []; unitVergessen();
       kart = null; kartAnim = null; feiernd = false; kartZiel = 'karte';
+      feierWeiter = null; lvupAb = 0;
       welt.isl = null; welt.vb = null; welt.inseln = null; welt.haupt = null;
       welt.tiere = []; welt.nachStufe = new Map();
 
@@ -7677,6 +7913,10 @@
       clearTimeout(soloLockT);
       clearTimeout(feierT);
       clearTimeout(deltaT);
+      clearTimeout(lvupT);
+      clearTimeout(lvupSprungT);
+      clearTimeout(lvlToastT);
+      feierWeiter = null;
       feiernd = false;
       if (onResize) window.removeEventListener('resize', onResize);
       onResize = null;

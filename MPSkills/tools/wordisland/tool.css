@@ -1573,10 +1573,11 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   .wi-lvllab { font-size: 9.5px; }
 }
 
-/* Der Aufstieg feiert NEBENHER — kein Halt, keine Bühne, nur ein
-   Banner, das kurz über den Kreisen aufblitzt (siehe feierSpielerStart
-   in tool.js; den Funkenkranz an der Figur zeichnet dieselbe Stelle
-   wie beim Tier-Jubel, ohne eigene CSS). */
+/* Das Banner über den Kreisen. Es war bis zum 14.09.2026 die GANZE
+   Feier des Aufstiegs; seitdem ist es nur noch die Auskunft für den
+   Fall, dass der große Kasten (.wi-lvup weiter unten) nicht
+   aufgeht — und für den Blick auf die Insel, wenn der Übungskasten
+   wieder zu ist. Während des Übens liegt .wi-lvup darüber. */
 .wi-lvltoast {
   position: absolute;
   left: 0; right: 0;
@@ -2475,6 +2476,174 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   100% { opacity: 1; transform: none; }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   DER EIGENE AUFSTIEG — Level 1 … 5
+   ══════════════════════════════════════════════════════════════
+   Sönke, 14.09.2026: „Das Spiel [muss] kurz unterbrochen werden und
+   ich sehe, wie mein Charakter das nächste Level erreicht."
+
+   Derselbe Platz und dieselbe Regel wie die Tier-Bühne darüber
+   (fester Kasten im SICHTBAREN Bereich, --vv-h), aber ein eigener
+   Kasten: dort wird ein Tier GEZEICHNET, hier steht ein Bild der
+   Figur. Und weil beides in derselben Antwort vorkommen kann, muss
+   es zwei Kästen geben — nacheinander, nie übereinander (tool.js,
+   soloSend).
+
+   Anfassbar ist sie, anders als die Tier-Bühne: sie dauert gut drei
+   Sekunden, und wer schon einmal aufgestiegen ist, darf sie
+   wegtippen. Erst nach dem Sprung — der Riegel dafür steht in
+   tool.js. */
+.wi-lvup {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vv-top, 0px);
+  height: var(--vv-h, 100vh);
+  /* Einen über der Tier-Bühne (55) und weiter unter den Meldungen
+     (Toast 60): geht ausnahmsweise beides zugleich auf, liegt das
+     Spätere oben. */
+  z-index: 56;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  cursor: pointer;
+  /* Dunkler als die Tier-Bühne: dort soll die eigene Insel darunter
+     noch durchkommen, hier geht es einen Augenblick lang nur um die
+     Figur. */
+  background: radial-gradient(60% 55% at 50% 50%,
+              rgba(6, 20, 34, .88) 0%, rgba(2, 9, 16, .96) 100%);
+}
+.wi-lvup.is-on { animation: wi-lvupin .24s ease-out; }
+@keyframes wi-lvupin { from { opacity: 0; } to { opacity: 1; } }
+
+/* Der Strahlenkranz. Er dreht sich langsam und liegt HINTER der
+   Figur — ein Hintergrund, der sagt „hier ist die Mitte", ohne
+   selbst etwas zu bedeuten. Vor dem Sprung ist er blass, danach
+   ganz da (.is-up). */
+.wi-lvup__rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(150vw, 150vh);
+  height: min(150vw, 150vh);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: .12;
+  transition: opacity .5s ease;
+  background: repeating-conic-gradient(from 0deg at 50% 50%,
+              rgba(255, 214, 102, .55) 0deg 6deg,
+              transparent 6deg 18deg);
+  /* Nach außen auslaufen lassen, sonst steht ein harter Kreisrand
+     mitten im Bild. */
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 12%, transparent 62%);
+          mask-image: radial-gradient(circle at 50% 50%, #000 12%, transparent 62%);
+  animation: wi-lvuprays 26s linear infinite;
+}
+.wi-lvup.is-up .wi-lvup__rays { opacity: .4; }
+@keyframes wi-lvuprays { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+.wi-lvup__box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  max-width: 460px;
+  pointer-events: none;
+}
+
+/* Die kleine Zeile über allem. Sie sagt, WORUM es geht, bevor die
+   Zahl springt — sonst steht in der ersten halben Sekunde nur eine
+   Figur mit einer Zahl da, und niemand weiß, was gleich passiert. */
+.wi-lvup__kicker {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--wi-gold, #ffcf4d);
+  text-shadow: 0 1px 10px rgba(3, 18, 30, .9);
+}
+
+.wi-lvup__fig {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+/* Die Figur gibt nach, wenn der Platz knapp wird (Tastatur), die
+   Schrift darunter nicht — dieselbe Rangfolge wie im Übungskasten:
+   das Bild ist die Zugabe, der Satz die Auskunft. */
+.wi-lvup__held {
+  width: auto;
+  height: min(34vh, 240px);
+  max-width: 78vw;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, .6));
+  transition: filter .45s ease, transform .45s cubic-bezier(.18, 1.5, .42, 1);
+}
+.wi-lvup.is-up .wi-lvup__held {
+  transform: scale(1.06);
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, .6))
+          drop-shadow(0 0 26px rgba(255, 214, 102, .75));
+}
+
+/* Das Abzeichen mit der Zahl — dieselbe Zutat wie der erste der drei
+   Kreise unten (.wi-lvlring--lvl), damit man es wiedererkennt: was
+   hier springt, steht gleich dort. */
+.wi-lvup__badge {
+  position: absolute;
+  right: -6px;
+  bottom: -4px;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #6ee7a8);
+  color: #04261a;
+  font-size: 27px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .5), inset 0 0 0 2px rgba(255, 255, 255, .4);
+}
+/* Der Schlag. Einmal deutlich über das Ziel hinaus — das ist der
+   Augenblick, den Sönke sehen wollte. */
+.wi-lvup__badge.is-up { animation: wi-lvupnum .55s cubic-bezier(.18, 1.7, .4, 1) both; }
+@keyframes wi-lvupnum {
+  0%   { transform: scale(.6) rotate(-14deg); }
+  55%  { transform: scale(1.32) rotate(4deg); }
+  100% { transform: none; }
+}
+
+.wi-lvup__title {
+  font-size: clamp(30px, 7.4vw, 52px);
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: -.02em;
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(3, 18, 30, .95), 0 0 44px rgba(255, 214, 102, .55);
+  transition: transform .4s cubic-bezier(.18, 1.5, .42, 1);
+}
+.wi-lvup.is-up .wi-lvup__title { transform: scale(1.04); }
+.wi-lvup__sub {
+  min-height: 1.3em;
+  font-size: clamp(13px, 2.8vw, 17px);
+  font-weight: 600;
+  color: #d7e9f6;
+  text-shadow: 0 1px 12px rgba(3, 18, 30, .98);
+}
+
+/* Am Telefon mit stehender Tastatur bleibt wenig übrig. Dann ist die
+   Figur das Erste, was nachgibt — die Zahl und der Satz sind die
+   Auskunft, das Bild die Zugabe. */
+@media (max-height: 520px) {
+  .wi-lvup__held { height: min(26vh, 150px); }
+  .wi-lvup__badge { width: 46px; height: 46px; font-size: 22px; }
+}
+
 /* Die beantwortete Frage tritt zurück, solange die Verwandlung
    läuft. Anfassbar ist sie dabei nicht — der Riegel dagegen steht
    in tool.js, das hier ist nur die Auskunft darüber. */
@@ -2885,6 +3054,15 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   .wi-stats { animation: none; }
   .wi-pdelta.is-on { animation: none; }
   .wi-lvltoast.is-on { animation: none; opacity: 1; transform: none; }
+  /* Der Aufstieg bleibt eine Unterbrechung — er hört nur auf, sich
+     zu bewegen. Die Zahl springt trotzdem von der alten auf die
+     neue: das IST die Auskunft und keine Verzierung. */
+  .wi-lvup.is-on { animation: none; }
+  .wi-lvup__rays { animation: none; }
+  .wi-lvup__badge.is-up { animation: none; }
+  .wi-lvup__held, .wi-lvup__title { transition: none; }
+  .wi-lvup.is-up .wi-lvup__held { transform: none; }
+  .wi-lvup.is-up .wi-lvup__title { transform: none; }
   .wi-lvlfill, .wi-lvlbonus { transition: none; }
   /* Der Balken springt dann eben. Sein Wert steht als Zahl daneben —
      die Auskunft geht nicht verloren, nur die Bewegung. */

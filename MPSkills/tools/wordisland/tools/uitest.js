@@ -945,14 +945,26 @@ function machKontext(c, gemalt) {
     drawImage(im, ...a) {
       // drawImage(im, dx, dy, dw, dh) und drawImage(im, sx…, dw, dh):
       // die Zielmaße sind in beiden Formen die letzten beiden Zahlen.
-      if (gemalt && im && im._src && a.length >= 4) {
-        /* Der FILTER kommt mit. Ohne ihn wäre das Gold von Level 5
-           (0145) nicht prüfbar: es steht in keinem Attribut und in
-           keinem Maß — nur in der Einstellung, die im Augenblick des
-           Zeichnens gilt. */
-        gemalt.push({ src: String(im._src), w: a[a.length - 2], h: a[a.length - 1],
-                      filter: this.filter });
-      }
+      if (!gemalt || !im || a.length < 4) return;
+      /* Die Echsen kommen NICHT als <img> auf die Leinwand, sondern
+         als eingefärbte Leinwand — sie haben also kein `_src`, an dem
+         man sie erkennen könnte. Woran man sie trotzdem erkennt, ist
+         ihr ZUSCHNITT (iw/ih): jede der einunddreißig Vorlagen hat
+         ihre eigene Größe. Nur so ist seit dem 13.09.2026 prüfbar,
+         dass eine funkelnde Echse wirklich ihr eigenes Bild trägt und
+         nicht das der ausgewachsenen.
+
+         Gedeckelt, weil in dieser Liste sonst jeder Funke jedes Tieres
+         in jedem Bild landet. */
+      if (!im._src && gemalt.length >= 20000) return;
+      /* Der FILTER kommt mit. Ohne ihn wäre das Gold von Level 5
+         (0145) nicht prüfbar: es steht in keinem Attribut und in
+         keinem Maß — nur in der Einstellung, die im Augenblick des
+         Zeichnens gilt. */
+      gemalt.push({ src: String(im._src || ''),
+                    iw: im.width | 0, ih: im.height | 0,
+                    w: a[a.length - 2], h: a[a.length - 1],
+                    filter: this.filter });
     },
     fillRect() {}, clearRect() {},
     save() {}, restore() {}, translate() {}, scale() {}, setTransform() {},
@@ -964,6 +976,9 @@ function machKontext(c, gemalt) {
        aus, als sei die Karte leer. */
     rotate() {}, beginPath() {}, closePath() {}, clip() {},
     rect() {}, arc() {}, ellipse() {}, moveTo() {}, lineTo() {},
+    /* Seit dem Glitzerstern der obersten Stufe (13.09.2026) auch
+       Bögen — er wird aus vier davon gezeichnet. */
+    quadraticCurveTo() {}, bezierCurveTo() {},
     fill() {}, stroke() {},
     createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }),
     createRadialGradient: () => ({ addColorStop() {} }),
@@ -1228,14 +1243,17 @@ async function testSolo() {
 
   /* Seit dem 11.09.2026 sind es zwanzig: drei Fassungen der
      gewachsenen Echse, fünf der ausgewachsenen, dazu das Wasserbild
-     der Schwimmerin. Ein fehlendes <img> zeichnet still NICHTS —
-     gezählt wird deshalb, dass ALLE geholten Bilder da waren. */
+     der Schwimmerin. Seit dem 13.09.2026 einunddreißig — die
+     funkelnde Stufe hat eigene Zeichnungen, eine je Fassung. Ein
+     fehlendes <img> zeichnet still NICHTS — gezählt wird deshalb,
+     dass ALLE geholten Bilder da waren. */
   ok('alle Tierbilder liegen wirklich da',
      env.fehlendeBilder.length === 0, env.fehlendeBilder.join(', '));
   const tierBilder = env.geladeneBilder.filter(v => /sprites\/tier\//.test(v));
-  ok('und es sind die zwanzig Fassungen', tierBilder.length === 20,
+  ok('und es sind die einunddreißig Fassungen', tierBilder.length === 31,
      String(tierBilder.length));
-  for (const n of ['s2a.png', 's2bz.png', 's3c.png', 's3d.png', 's3e.png', 's3es.png']) {
+  for (const n of ['s2a.png', 's2bz.png', 's3c.png', 's3d.png', 's3e.png', 's3es.png',
+                   's4a.png', 's4cz.png', 's4d.png', 's4es.png']) {
     ok('  · ' + n, tierBilder.some(v => v.endsWith('/' + n)));
   }
   ok('die Insel wird geholt', calls.some(c => c[0] === 'wi_solo_view'));
@@ -1358,8 +1376,15 @@ async function testSoloUeben() {
   ok('„Vokabeln üben" öffnet den Kasten', play.hidden === false);
   ok('die Frage steht da',
      root.querySelector('[data-part="pword"]').textContent === 'das Haus');
+  /* Die Aufschrift zählt ab EINS (13.09.2026): am Server ist das
+     Stufe 1, auf dem Schirm steht „Stufe 2".
+
+     Nur die Zahl, seit dem 14.09.2026 — Sönke: „schreibe nur Level 4,
+     das reicht". Der Name der Stufe („geschlüpft") stand daneben und
+     sagte dasselbe wie das Bild darüber. */
   ok('und das Tier mit seiner Stufe',
-     root.querySelector('[data-part="pstage"]').textContent === 'geschlüpft');
+     root.querySelector('[data-part="pstage"]').textContent === 'Stufe 2',
+     root.querySelector('[data-part="pstage"]').textContent);
   /* Die Lösung darf im DOM nirgends stehen — ein Kind mit
      Entwicklerwerkzeugen liest sie sonst ab, und nach der ersten
      Stunde steht sie im Klassenchat. */
@@ -1416,7 +1441,8 @@ async function testSoloUeben() {
      /das Haus/.test(root.querySelector('[data-part="plevels"]').textContent),
      root.querySelector('[data-part="plevels"]').textContent);
   ok('die Stufe steht schon auf der neuen',
-     root.querySelector('[data-part="pstage"]').textContent === 'gewachsen');
+     root.querySelector('[data-part="pstage"]').textContent === 'Stufe 3',
+     root.querySelector('[data-part="pstage"]').textContent);
 
   /* Sönkes Ansage vom 10.09.2026: die Verwandlung gehört aufs
      DISPLAY und nicht in den Übungskasten. Beim Tippen steht auf
@@ -1692,6 +1718,57 @@ async function testTierTipp() {
   ok('ein Ziehen öffnet nichts', karte.hidden === true);
 
   tool.unmount();
+}
+
+/* Die funkelnde Stufe hat ihr eigenes Bild (13.09.2026).
+
+   Sönkes Meldung war „die funkelnden Echsen erkennt man gar nicht",
+   und der erste Grund dafür war der einfachste: sie trugen das Bild
+   der ausgewachsenen. Das ist seitdem anders — und weil man es auf
+   der Leinwand nicht ablesen kann (die Tiere sind eingefärbte
+   Leinwände ohne Adresse), wird hier der ZUSCHNITT geprüft: jede
+   Vorlage hat ihre eigene Größe, und die Größen der Stufe 4 sind
+   andere als die der Stufe 3.
+
+   Ohne diese Zusage wäre der Prüfstand grün, während auf dem Tablet
+   weiter eine ausgewachsene Echse steht — genau der Zustand, der
+   gemeldet wurde. */
+async function testFunkelBild() {
+  console.log('\n— Die funkelnde Stufe —');
+  const dir = path.join(HERE, '..', 'sprites', 'tier');
+  const masse = k => { const m = pngMasse(path.join(dir, k + '.png')); return m.w + '×' + m.h; };
+  const KEYS = fs.readdirSync(dir).filter(f => f.endsWith('.png')).map(f => f.slice(0, -4));
+  const tierMasse = new Map();           // „249×299" → Schlüssel
+  for (const k of KEYS) tierMasse.set(masse(k), k);
+  ok('die Zuschnitte sind unterscheidbar', tierMasse.size === KEYS.length,
+     `${tierMasse.size} von ${KEYS.length}`);
+
+  // Eine Insel, auf der JEDES Wort ganz gelernt ist.
+  const { env, tool } = await mountSolo(soloView(24, () => 4), null, { live: true });
+  await wait(60);
+
+  const gemalteTiere = env.gemalt
+    .map(g => tierMasse.get(g.iw + '×' + g.ih))
+    .filter(Boolean);
+  ok('die Tiere werden gezeichnet', gemalteTiere.length > 0,
+     String(gemalteTiere.length));
+  const falsch = [...new Set(gemalteTiere.filter(k => !/^s4/.test(k)))];
+  ok('und auf einer Insel aus lauter Stufe-4-Wörtern sind es die Stufe-4-Bilder',
+     falsch.length === 0, falsch.join(', ') || [...new Set(gemalteTiere)].join(', '));
+  tool.unmount();
+
+  /* Die Gegenprobe: eine Insel aus ausgewachsenen Wörtern darf KEIN
+     Stufe-4-Bild zeigen. Sonst wäre die Zusage oben auch dann grün,
+     wenn alle Tiere dasselbe Bild tragen. */
+  {
+    const m3 = await mountSolo(soloView(24, () => 3), null, { live: true });
+    await wait(60);
+    const k3 = m3.env.gemalt.map(g => tierMasse.get(g.iw + '×' + g.ih)).filter(Boolean);
+    const zuHoch = [...new Set(k3.filter(k => /^s4/.test(k)))];
+    ok('und die ausgewachsene bleibt bei ihrem', k3.length > 0 && zuHoch.length === 0,
+       zuHoch.join(', ') || [...new Set(k3)].join(', '));
+    m3.tool.unmount();
+  }
 }
 
 /* Die eigene Figur und das eigene Schiff (11.09.2026).
@@ -2042,8 +2119,13 @@ async function testLevel() {
   ok('und hängt in der Mitte an seinem Wert',
      !zAvg.classList.contains('is-links') && !zAvg.classList.contains('is-rechts'),
      zAvg.className);
+  /* ⚠️ Der Satz sprach bis 13.09.2026 von „funkelnden Wörtern" —
+     ein Wort aus der Bilderwelt an einer Stelle, an der es um eine
+     Rechnung geht (Sönke: „müssen wir umformulieren"). Jetzt steht
+     dort die Stufe, und zwar die, wie sie auf dem Schirm heißt: 5. */
   ok('ohne Mastery lädt der Kasten dazu ein, sie zu holen',
-     /funkelnde/.test(root.querySelector('.wi-vbonhint').textContent),
+     /Stufe 5/.test(root.querySelector('.wi-vbonhint').textContent) &&
+     !/funkelnd/.test(root.querySelector('.wi-vbonhint').textContent),
      root.querySelector('.wi-vbonhint').textContent);
 
   /* ── Die Woche als Säulen (13.09.2026) ──────────────────────
@@ -2266,10 +2348,22 @@ async function testLevelBonus() {
   tool.unmount();
 }
 
-/* Der Aufstieg. Er läuft NEBENHER — kein Halt, keine Bühne, kein
-   Warten auf die nächste Frage: das eigene Level ist ein Erfolg über
-   die Woche und kein Ereignis an einem Wort. Geprüft wird deshalb
-   beides: dass er gefeiert wird UND dass er das Üben nicht anhält. */
+/* Der Aufstieg. Er UNTERBRICHT das Üben — Sönke, 14.09.2026: „das
+   Spiel [muss] kurz unterbrochen werden und ich sehe, wie mein
+   Charakter das nächste Level erreicht. Also da steht dann Level 2,
+   das neue Sprite wird geladen."
+
+   Bis dahin lief er nebenher (ein Banner über den Kreisen), und
+   genau das prüfte dieser Prüfstand vorher — mit der Begründung, ein
+   Aufstieg sei „zu selten", um anzuhalten. Die Begründung war
+   falsch herum: WEIL er selten ist, muss man ihn sehen.
+
+   Geprüft wird die ganze Kette:
+     · Der Kasten geht auf und zeigt zuerst das ALTE Level.
+     · Nach LVUP_SPRUNG springt die Zahl auf das neue, der Satz
+       kommt dazu, das Bild der Figur wird neu gesetzt.
+     · Solange er steht, kommt KEINE neue Frage.
+     · Danach kommt sie, und der Kasten ist wieder zu. */
 async function testLevelAufstieg() {
   console.log('\n— Level: der Aufstieg —');
   let stand = playerStand(2, 290, { level_max: 2, today_secs: 60 });
@@ -2290,29 +2384,103 @@ async function testLevelAufstieg() {
 
   ok('vorher steht Level 2 da',
      root.querySelector('[data-part="lvlnum"]').textContent === '2');
-  const toast = root.querySelector('[data-part="lvltoast"]');
-  ok('und niemand feiert', toast.hidden === true);
+  const lvup = root.querySelector('[data-part="lvup"]');
+  ok('und niemand feiert', lvup.hidden === true);
 
   click(root.querySelector('[data-part="sgo"]'), document);
   await wait(30);
   antworte(root, document, 'house', '[data-part="pin"]');
   await wait(40);
 
-  ok('der Aufstieg wird gefeiert',
-     toast.hidden === false && /Level 3 erreicht/.test(toast.textContent), toast.textContent);
-  ok('der Kreis steht auf dem neuen Level',
+  /* ── Der erste Schlag: der Kasten steht, mit dem ALTEN Level ── */
+  ok('der Aufstieg macht einen eigenen Kasten auf', lvup.hidden === false);
+  ok('und zeigt zuerst das alte Level',
+     root.querySelector('[data-part="lvupnum"]').textContent === '2',
+     root.querySelector('[data-part="lvupnum"]').textContent);
+  ok('die Figur steht darin',
+     /held\//.test(root.querySelector('[data-part="lvupimg"]').getAttribute('src') || ''),
+     root.querySelector('[data-part="lvupimg"]').getAttribute('src'));
+  /* Der Kern von Sönkes Ansage: das Üben steht. Die Antwort war
+     richtig, die nächste Frage ist längst da — sie darf nur nicht
+     im Kasten stehen. */
+  ok('das Üben ist unterbrochen — die nächste Frage kommt NICHT sofort',
+     root.querySelector('[data-part="pword"]').textContent === 'das Haus',
+     root.querySelector('[data-part="pword"]').textContent);
+
+  ok('der Kreis unten steht schon auf dem neuen Level',
      root.querySelector('[data-part="lvlnum"]').textContent === '3',
      root.querySelector('[data-part="lvlnum"]').textContent);
   ok('und die heutige Zeit ist nachgeführt',
      root.querySelector('[data-part="lvltoday"]').textContent === '1:20',
      root.querySelector('[data-part="lvltoday"]').textContent);
-  /* Der Kern: die Bühne der TIER-Feier bleibt zu, und die nächste
-     Frage steht schon da. Ein Level-Aufstieg mitten im Üben darf den
-     Fluss nicht anhalten — dafür ist er zu selten und zu langsam. */
-  ok('die große Bühne bleibt dafür zu',
-     root.querySelector('[data-part="cheer"]').hidden === true);
-  ok('und die nächste Frage kommt sofort',
-     root.querySelector('[data-part="pword"]').textContent === 'die Tafel');
+
+  /* ── Der zweite Schlag: die Zahl springt (LVUP_SPRUNG = 760) ── */
+  await wait(900);
+  ok('dann springt die Zahl auf das neue Level',
+     root.querySelector('[data-part="lvupnum"]').textContent === '3',
+     root.querySelector('[data-part="lvupnum"]').textContent);
+  ok('die Überschrift sagt es in Worten',
+     /Level 3/.test(root.querySelector('[data-part="lvuptitle"]').textContent),
+     root.querySelector('[data-part="lvuptitle"]').textContent);
+  ok('und ein Satz sagt, wofür es das Level gab',
+     (root.querySelector('[data-part="lvupsub"]').textContent || '').length > 10,
+     root.querySelector('[data-part="lvupsub"]').textContent);
+  ok('das Üben steht immer noch',
+     root.querySelector('[data-part="pword"]').textContent === 'das Haus');
+
+  /* ── Der Schluss: LVUP_DAUER(3) = 2200 + 600 = 2800 ms ──────── */
+  await wait(2100);
+  ok('danach ist der Kasten wieder zu', lvup.hidden === true);
+  ok('und die nächste Frage steht da',
+     root.querySelector('[data-part="pword"]').textContent === 'die Tafel',
+     root.querySelector('[data-part="pword"]').textContent);
+
+  tool.unmount();
+}
+
+/* Beide Feiern in EINER Antwort: das Wort steigt eine Stufe UND das
+   eigene Level steigt. Sie dürfen nicht übereinander liegen — erst
+   das Tier auf seiner Bühne, dann die Figur in ihrem Kasten. */
+async function testLevelAufstiegMitTier() {
+  console.log('\n— Level: Aufstieg zusammen mit einem Stufensprung —');
+  const { tool, root, document } = await mountSolo(
+    soloView(20, () => 1, false, playerStand(1, 110, { level_max: 1, today_secs: 60 })),
+    {
+      wi_solo_start: () => ({ ok: true,
+        task: { item: 'w-3', prompt: 'das Haus', dir: 'de_en', stage: 'type', level: 1, options: [] } }),
+      wi_solo_answer: () => ({
+        ok: true, result: 'correct', item: 'w-3',
+        // Diesmal steigt auch das Tier: von Stufe 1 auf 2.
+        level_before: 1, level_after: 2, locked_for: 0,
+        player: playerStand(2, 130, { level_max: 2, today_secs: 80, level_before: 1 }),
+        task: { item: 'w-4', prompt: 'die Tafel', dir: 'de_en', stage: 'type', level: 1, options: [] } })
+    }, { live: true });
+  await wait(40);
+
+  click(root.querySelector('[data-part="sgo"]'), document);
+  await wait(30);
+  antworte(root, document, 'house', '[data-part="pin"]');
+  await wait(40);
+
+  const cheer = root.querySelector('[data-part="cheer"]');
+  const lvup  = root.querySelector('[data-part="lvup"]');
+  ok('zuerst feiert das Tier auf seiner Bühne', cheer.hidden === false);
+  ok('und die Figur wartet noch', lvup.hidden === true);
+
+  // FEIER_DAUER.grow = 1150 ms — danach gehört die Bühne der Figur.
+  await wait(1300);
+  ok('dann geht die Tier-Bühne zu', cheer.hidden === true);
+  ok('und die Figur ist dran', lvup.hidden === false);
+  ok('die Frage ist immer noch die alte',
+     root.querySelector('[data-part="pword"]').textContent === 'das Haus');
+
+  // LVUP_DAUER(2) = 2200 + 400 = 2600 ms ab dem Beginn der Figur.
+  await wait(2500);
+  ok('erst danach kommt die nächste Frage',
+     root.querySelector('[data-part="pword"]').textContent === 'die Tafel',
+     root.querySelector('[data-part="pword"]').textContent);
+  ok('und beide Kästen sind zu',
+     cheer.hidden === true && lvup.hidden === true);
 
   tool.unmount();
 }
@@ -2345,7 +2513,14 @@ async function testLevelKeinAufstieg() {
   antworte(root, document, 'house', '[data-part="pin"]');
   await wait(40);
   ok('eine Antwort ohne Aufstieg feiert nicht',
-     root.querySelector('[data-part="lvltoast"]').hidden === true);
+     root.querySelector('[data-part="lvltoast"]').hidden === true
+     && root.querySelector('[data-part="lvup"]').hidden === true);
+  /* Und sie hält deshalb auch nichts an: der Kasten, der beim
+     Aufstieg das Üben unterbricht, darf bei jeder normalen Antwort
+     nicht einmal eine Zehntelsekunde kosten. */
+  ok('und hält das Üben nicht an',
+     root.querySelector('[data-part="pword"]').textContent === 'die Tafel',
+     root.querySelector('[data-part="pword"]').textContent);
   ok('die Kreise stehen trotzdem noch da',
      root.querySelector('[data-part="lvl"]').hidden === false);
 
@@ -2577,7 +2752,8 @@ async function testSchluepfen() {
   click(root.querySelector('[data-part="sgo"]'), document);
   await wait(40);
   ok('vor der Antwort liegt ein Ei da',
-     root.querySelector('[data-part="pstage"]').textContent === 'Eier');
+     root.querySelector('[data-part="pstage"]').textContent === 'Stufe 1',
+     root.querySelector('[data-part="pstage"]').textContent);
 
   const fehlerVor = env.rafFehler.length;
   antworte(root, document, 'tree', '[data-part="pin"]');
@@ -2590,7 +2766,8 @@ async function testSchluepfen() {
      /Geschlüpft/.test(root.querySelector('[data-part="plevelb"]').textContent),
      root.querySelector('[data-part="plevelb"]').textContent);
   ok('die neue Stufe steht schon da',
-     root.querySelector('[data-part="pstage"]').textContent === 'geschlüpft');
+     root.querySelector('[data-part="pstage"]').textContent === 'Stufe 2',
+     root.querySelector('[data-part="pstage"]').textContent);
   ok('und die Schale zerbricht ohne Fehler',
      env.rafFehler.length === fehlerVor,
      env.rafFehler.slice(-1).map(e => e.message).join(''));
@@ -3250,12 +3427,14 @@ async function testRuinTabelle() {
   await testSoloOhneMigration();
   await testUnitLeiste();
   await testTierTipp();
+  await testFunkelBild();
   await testFigur();
   await testFigurOhneMigration();
   await testLevel();
   await testLevelRaender();
   await testLevelBonus();
   await testLevelAufstieg();
+  await testLevelAufstiegMitTier();
   await testLevelKeinAufstieg();
   await testLevelOhneMigration();
   await testUhr();

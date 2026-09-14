@@ -22,6 +22,17 @@
    Was er NICHT kann: sagen, ob die Insel mit 500 Tieren schön
    aussieht. Dafür ist der Showroom selbst da.
 
+   ⚠️ EINGEFROREN, 14.09.2026. Sönkes Ansage: „nimm die Showrooms
+   raus, die sollst du nicht updaten". solo-showroom.html wird ab
+   jetzt NICHT mehr mitgezogen, wenn sich in tool.js etwas ändert.
+   Damit spricht dieser Prüfstand nur noch über den Showroom in dem
+   Zustand, in dem er steht — er sagt NICHTS mehr über das Spiel.
+   Der Abgleich „Showroom und Spiel sagen dasselbe" stand deshalb
+   bis heute hier und ist entfernt: er wäre rot geworden, sobald
+   jemand eine Zahl im Spiel ändert, und die einzige Reparatur wäre
+   genau das gewesen, was nicht mehr passieren soll. Was das Spiel
+   tut, prüft uitest.js.
+
    Aufruf:  node MPSkills/tools/wordisland/tools/solotest.mjs        */
 
 import { readFileSync } from 'node:fs';
@@ -71,6 +82,11 @@ function machKontext(c) {
     drawImage() {}, fillRect() {}, clearRect() {},
     save() {}, restore() {}, translate() {}, scale() {}, setTransform() {},
     putImageData() {},
+    /* Die Pfad-Stummel. Seit dem Glitzerstern (13.09.2026) wird hier
+       auch gezeichnet und nicht nur gefüllt — ohne sie stirbt der
+       Aufbau, und das sieht aus wie „der Showroom ist kaputt". */
+    beginPath() {}, closePath() {}, moveTo() {}, lineTo() {},
+    quadraticCurveTo() {}, arc() {}, ellipse() {}, fill() {}, stroke() {},
     createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }),
     createRadialGradient: () => ({ addColorStop() {} }),
     /* Ein durchgehend grünes Bild — das Ausgangsgrün der Echsen.
@@ -218,8 +234,12 @@ const SOLL = ['ei', 's1', 's1z',
      werden — das war ja die Vorschrift, an der er hing. Viele
      verschiedene Höhen heißt: es wird mit dem Blatt skaliert und
      nicht mit dem Tier. */
+  /* Drei Viertel verschiedene Höhen und nicht „alle bis auf vier":
+     mit einunddreißig Bildern treffen sich zwangsläufig ein paar auf
+     derselben Zahl. Die Signatur des Fehlers wäre EINE Höhe für alle,
+     und davon ist das hier weit entfernt. */
   const hoehen = SOLL.map(k => MASSE[k].h);
-  pruef(new Set(hoehen).size >= SOLL.length - 4,
+  pruef(new Set(hoehen).size >= Math.ceil(SOLL.length * .75),
     `die Bilder haben eigene Höhen (${new Set(hoehen).size} verschiedene: ${hoehen.join(', ')})`);
 
   /* Und keines darf beim Einschlafen nennenswert WACHSEN. Nicht auf
@@ -232,7 +252,10 @@ const SOLL = ['ei', 's1', 's1z',
      nächsten Nachschärfen die erste, die jemand vergisst — und
      genau dann prüft sie nichts mehr. */
   const paare = SOLL.filter(k => SOLL.includes(k + 'z')).map(k => [k, k + 'z']);
-  pruef(paare.length === 9, `neun Wach/Schlaf-Paare gefunden (${paare.length})`);
+  /* Vierzehn seit 13.09.2026 (vorher neun): jedes Tier außer dem Ei
+     hat eine Schlaf-Fassung, und die oberste Stufe hat seither fünf
+     eigene Zeichnungen. */
+  pruef(paare.length === 14, `vierzehn Wach/Schlaf-Paare gefunden (${paare.length})`);
   const gewachsen = [];
   const text = [];
   for (const [wach, schlaf] of paare) {
@@ -454,7 +477,11 @@ const svg = document.getElementById('karte');
      dritte Bild umsonst gezeichnet. */
   const aufSee = schwimmerinnen.filter(t => !S.feldAt(t.x, t.y));
   pruef(aufSee.length > 0, `${aufSee.length} sind gerade auf dem Wasser`);
-  pruef(aufSee.every(t => S.schluesselFuer(t) === 's3es'),
+  /* Seit 13.09.2026 gibt es ZWEI Wasserbilder: das der ausgewachsenen
+     und das der funkelnden Schwimmerin. Welches gilt, hängt an der
+     Stufe — fest auf 's3es' geprüft wäre der Test grün gewesen,
+     solange niemand eine Vokabel ganz gelernt hat. */
+  pruef(aufSee.every(t => S.schluesselFuer(t) === 's' + Math.min(4, t.stufe) + S.SCHWIMMT + 's'),
     'und tragen dort ihr Wasserbild');
   pruef(schwimmerinnen.every(t => t.z === 0),
     'keine Schwimmerin hebt ab (z bleibt 0)');
@@ -674,41 +701,19 @@ const svg = document.getElementById('karte');
   pruef(!fehler, 'ein Bild malen wirft keinen Fehler' + (fehler ? ': ' + fehler.message : ''));
 }
 
-/* ── 9 · Showroom und Spiel sagen dasselbe ─────────────────────────
-   Der Showroom ist eine ZWEITE Fassung derselben Herde — er hat seine
-   eigene Kopie von schritt(), schluesselFuer() und den Tabellen. Das
-   ist Absicht (er soll ohne Server laufen), hat aber eine Kehrseite:
-   alles hier oben kann grün sein, während im Spiel noch die alten
-   zwei Varianten stehen. Genau dieser Fall sähe auf dem Tablet nach
-   „ich sehe keine neuen Echsen" aus und nach sonst nichts.
+/* ── 9 · Das Spiel kennt dieselben Bilder ──────────────────────────
+   Was hier bleibt, ist die eine Zusage, die NICHT am Showroom hängt:
+   die Maßtabelle in tool.js kommt aus demselben Erzeuger
+   (tools/solosprites.mjs) wie solo-sprites.js. Stimmen die beiden
+   nicht überein, zeichnet das Spiel an einer Stelle still nichts —
+   und das hat mit dem eingefrorenen Showroom nichts zu tun.
 
-   Verglichen wird deshalb der QUELLTEXT der Tabellen — nicht ihr
-   Verhalten, denn das Verhalten der einen sagt nichts über die
-   andere. Die Maßtabelle ist ausgenommen: die schreibt der Erzeuger
-   in beide. */
+   Der Vergleich der TABELLEN (VAR3, FUNKEN, …) zwischen tool.js und
+   dem Showroom stand bis zum 14.09.2026 hier. Siehe Kopf der Datei:
+   der Showroom wird nicht mehr mitgezogen, also darf er auch nichts
+   mehr erzwingen. */
 {
   const toolJs = readFileSync(join(hier, '..', 'tool.js'), 'utf8');
-  const norm = s => s.replace(/\s+/g, ' ').trim();
-  const hol = (quelle, name) => {
-    const m = quelle.match(new RegExp('const\\s+' + name + '\\s*=\\s*([^;]+);'));
-    return m ? norm(m[1]) : null;
-  };
-  for (const name of ['VAR2', 'VAR3', 'SCHWIMMT', 'SCHWIMM_TEMPO', 'WATT_TEMPO',
-                      'STUFE_EINHEIT', 'FLUG_HOEHE', 'LAUF_TEMPO', 'FLUG_TEMPO',
-                      /* seit 13.09.2026: wie laut die oberste Stufe funkelt.
-                         Stünde die Zahl nur in einer der beiden Dateien,
-                         entschiede der Showroom etwas anderes als das Spiel —
-                         und er ist der Ort, an dem entschieden wird. */
-                      'FUNKEN', 'FUNKEL_TAG', 'FUNKEL_GROSS',
-                      'GLITZER', 'GLITZER_GROSS', 'GLITZER_SEK']) {
-    const a = hol(toolJs, name), b = hol(html, name);
-    pruef(a !== null && a === b,
-      `${name} steht in tool.js und im Showroom gleich: ${a === b ? a : a + '  ≠  ' + b}`);
-  }
-
-  /* Und das Spiel kennt dieselben Bilder. Es leitet seine Liste aus
-     der erzeugten Maßtabelle ab, der Showroom schreibt sie aus —
-     beide müssen auf dieselben zwanzig Schlüssel kommen. */
   const tab = toolJs.match(/ERZEUGT VON tools\/solosprites\.mjs[\s\S]*?ENDE ERZEUGT/);
   const keys = tab ? [...tab[0].matchAll(/^\s{6}(\w+):\s*\{/gm)].map(m => m[1]) : [];
   pruef(keys.length === SOLL.length && SOLL.every(k => keys.includes(k)),
