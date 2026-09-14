@@ -109,12 +109,19 @@
    `is_home`, und wo das Meer liegt, rechnet buildMap selbst aus.
 
    ── Die Bilder der Völker ─────────────────────────────────────
-   Zwei Ordner, zwei Sorten Bild:
-     · Einheit und Gruppenbild sind ⚠️ VORLÄUFIG aus
-       tools/clash-of-math/sprites/ geliehen (TEAMS[].img/.team).
-     · Die SCHIFFE liegen schon hier: tools/wordisland/sprites/
-       (TEAMS[].ship). Sönke liefert eigene nach — dann ändert sich
-       genau diese eine Spalte und sonst nichts.
+   Seit dem 14.09.2026 sind alle aus diesem Ordner; aus
+   clash-of-math ist NICHTS mehr geliehen (Sönke: „auf der Landing
+   page sind noch Sprites von Kingdoms of Mathoria"). Zwei Sorten,
+   und sie sagen zwei verschiedene Sachen:
+     · Ein VOLK ist seine Figur — die Crew auf Stufe 1
+       (sprites/held/<n>_1.png, klein `<n>_1k.png`). Immer Stufe 1:
+       im Raum gibt es kein eigenes Level, das gehört der Insel.
+     · Ein TEAM ist sein SCHIFF (sprites/boot/<n>.png). Dort, wo
+       eine Gruppe gemeint ist (Lobby-Spalte, Punktestand am
+       Beamer), steht das Schiff — es ist das Bild, mit dem die
+       Gruppe an der Insel ankommt.
+   Burgen und Gruppenbilder gibt es nicht mehr; das Wappenbild vom
+   Landeplatz ist schon am 08.09.2026 zur Fahne geworden.
    Der Pfad ist absichtlich der volle ab MPSkills/: ein in tool.js
    gebautes <img>/<image> löst relativ zur SEITE auf (j.html,
    lehrer.html), nicht relativ zu dieser Datei.
@@ -125,49 +132,55 @@
 
   /* ─── Die Völker ────────────────────────────────────────────
      Index = VOLK (nicht Slot), in allen Listen dieselbe
-     Reihenfolge. Namen und Bilder kommen aus Kingdoms; die Farben
-     sind dieselben wie dort, damit ein Kind, das beide Spiele
-     kennt, sich nicht umgewöhnen muss.
+     Reihenfolge. Namen und Farben sind die aus Kingdoms, damit ein
+     Kind, das beide Spiele kennt, sich nicht umgewöhnen muss — die
+     BILDER sind seit dem 14.09.2026 eigene (siehe oben).
 
-     `img` ist die Einheit (Kopfzeile, Karte, Ergebnis), `team` das
-     Gruppenbild mit Burg — es steht nur in der Lobby, wo Platz für
-     ein Porträt ist. `ship` ist das Schiff auf der Karte.
+     In der Tabelle steht deshalb nur noch Name und Farbe: welches
+     Bild ein Volk hat, folgt aus seiner NUMMER (`held/<n>_1.png`,
+     `boot/<n>.png`) und muss nicht dabeistehen. Vorher standen hier
+     drei Dateinamen je Zeile, jeder mit Sönkes Schreibweise samt
+     Umlaut und Tippfehler — die leben jetzt nur noch im Erzeuger
+     (tools/heldsprites.mjs), der aus ihnen die numerierten
+     Zuschnitte backt.
 
-     Die Dateinamen sind so, wie sie im Ordner stehen, samt Umlaut,
-     samt großem S in „Schiff.png" und samt Tippfehler („yello
-     Team.png"). Sie hier zu korrigieren hieße, auf Dateien zu
-     zeigen, die es nicht gibt — und ein fehlendes <image> zeichnet
-     in SVG stillschweigend NICHTS. Beim ersten Anlauf im Showroom
-     lag die Karte deshalb einfach ohne Schiffe da. Der Prüfstand
-     schlägt darauf an (uitest.js prüft, ob die DATEI liegt), das
-     Auge erst beim Suchen.
-
-     Die Schiffe sind seit dem 08.09.2026 Sönkes eigene: freigestellte
-     RGBA-PNG statt der geliehenen JPG auf weißem Grund. ⚠️ Deshalb
-     laufen sie NICHT mehr durch den Freistell-Filter — der schneidet
-     nach Helligkeit, und die hellsten Stellen eines Schiffes sind
-     seine Segel.                                                 */
-  const ASSET_DIR = 'tools/clash-of-math/sprites/';
-  const SHIP_DIR = 'tools/wordisland/sprites/';
+     ⚠️ Die Reihenfolge ist die Kennung: Volk 6 und 7 (Sönke,
+     09.09.2026: „ich hätte gerne 8 Völker") stehen am ENDE und
+     nirgends dazwischen. Die Nummer steht in laufenden Räumen in
+     `wi_boards.factions` — wer hier einschiebt, färbt jedes
+     bestehende Spiel um.                                          */
+  const HELD_DIR = 'tools/wordisland/sprites/held/';
+  const BOOT_DIR = 'tools/wordisland/sprites/boot/';
   const TEAMS = [
-    { name: 'Toast-Ritter',      color: '#ef4444', img: 'red ToastKnights.png',       team: 'red Team.png',     ship: 'red Schiff.png' },
-    { name: 'Robo-Enten',        color: '#3b82f6', img: 'blue roboDucks.png',         team: 'blue Team.png',    ship: 'blue Schiff.png' },
-    { name: 'Brokkoli-Giraffen', color: '#10b981', img: 'green BrokkoliGiraffen.png', team: 'green Team.png',   ship: 'green Schiff.png' },
-    { name: 'Mal-Hasen',         color: '#f59e0b', img: 'yellow PainingBunnies.png',  team: 'yello Team.png',   ship: 'yellow Schiff.png' },
-    { name: 'Kosmische Katzen',  color: '#a855f7', img: 'lila cosmicCat.png',         team: 'lila Team.png',    ship: 'lila Schiff.png' },
-    { name: 'Okto-Pferdchen',    color: '#06b6d4', img: 'türkis OctoPferdchen.png',   team: 'türkis Team.png',  ship: 'türkis Schiff.png' },
-    /* Die beiden letzten (Sönke, 09.09.2026): „ich hätte gerne 8
-       Völker". Sie kommen ans ENDE und nirgends dazwischen — die
-       Nummer ist die Kennung des Volkes und steht in laufenden
-       Räumen in `wi_boards.factions`. Wer hier einschiebt, färbt
-       jedes bestehende Spiel um.
-       „margenta" ist der Dateiname im Ordner, nicht mein Tippfehler. */
-    { name: 'Wolken-Piraten',    color: '#f472b6', img: 'rosa CloudBirdPiraten.png',  team: 'rosa Team.png',    ship: 'rosa Schiff.png' },
-    { name: 'Spuk-Einhorn',      color: '#d946ef', img: 'margenta SpookieUnicorn.png', team: 'magenta Team.png', ship: 'magenta Schiff.png' }
+    { name: 'Toast-Ritter',      color: '#ef4444' },
+    { name: 'Robo-Enten',        color: '#3b82f6' },
+    { name: 'Brokkoli-Giraffen', color: '#10b981' },
+    { name: 'Mal-Hasen',         color: '#f59e0b' },
+    { name: 'Kosmische Katzen',  color: '#a855f7' },
+    { name: 'Okto-Pferdchen',    color: '#06b6d4' },
+    { name: 'Wolken-Piraten',    color: '#f472b6' },
+    { name: 'Spuk-Einhorn',      color: '#d946ef' }
   ];
   const TEAM_COUNT = TEAMS.length;
-  const esrc = name => encodeURI(ASSET_DIR + name);
-  const shipSrc = f => (TEAMS[f] && TEAMS[f].ship) ? encodeURI(SHIP_DIR + TEAMS[f].ship) : '';
+
+  /* Die drei Bildwege. Getrennte Funktionen und kein Feld in der
+     Tabelle: so gibt es für „Volk klein", „Volk groß" und „Schiff"
+     je EINE Stelle, an der der Pfad entsteht.
+
+     Im RAUM trägt die Figur immer Stufe 1 — das eigene Level gehört
+     der Insel (0145) und nicht dem Volk, dem die Lehrkraft ein Kind
+     zuteilt. `_1` steht deshalb fest da und kommt nicht aus einer
+     Variablen.
+
+     ⚠️ Das Schiff kommt seit dem 14.09.2026 aus `boot/` und nicht
+     mehr aus der Vorlage `sprites/<Farbe> Schiff.png`: die ist
+     1984 × 2176 groß (3,4 MB je Volk), gezeichnet wird sie 2,6
+     Kacheln breit. Bei 30 Tablets war das eine halbe Gigabyte je
+     Runde. Der Zuschnitt hat dasselbe Seitenverhältnis, das Bild
+     sitzt also unverändert. */
+  const volkSrc  = f => HELD_DIR + (f | 0) + '_1.png';
+  const volkMini = f => HELD_DIR + (f | 0) + '_1k.png';
+  const shipSrc  = f => BOOT_DIR + (f | 0) + '.png';
 
   const SVGNS = 'http://www.w3.org/2000/svg';
   const POLL_MS = { participant: 4000, presenter: 3000 };
@@ -200,6 +213,10 @@
   let onResize = null;
   let picking = false;      // Tablet: wartet auf einen Fingertipp aufs Feld
   let shadowPick = 0;       // offene Nebelkränze aus dem Schattentempel (0146)
+  let pickHand = false;     // hat das Kind den Wahl-Kasten selbst zugemacht?
+  let pickWar = 0;          // wie viele Wahlen standen beim letzten Malen offen
+  let panInline = null, panPick = null;   // die zwei Zoom-Hüllen der Karte
+  let markPaint = null;     // malt die erreichbaren Felder (freie Wahl)
   let practice = false;     // Tablet: üben statt warten
   let lastPhase = null;
 
@@ -221,8 +238,14 @@
   let pickSel = [], pickBusy = 0;
 
   const esc = s => (ctx ? ctx.esc(s) : String(s == null ? '' : s));
-  const teamOf = s => TEAMS[facOf(s)] ||
-    { name: 'Volk ' + (s + 1), color: '#888', img: '', team: '' };
+  const teamOf = s => TEAMS[facOf(s)] || { name: 'Volk ' + (s + 1), color: '#888' };
+  /* Bild eines SLOTS. Die beiden Wege oben nehmen ein Volk; hier
+     steht die Übersetzung, damit sie nicht an jeder Aufrufstelle
+     wiederholt wird — genau da ist sie beim ersten Bau der Lobby
+     einmal vergessen worden (0133). */
+  const slotMini = s => volkMini(facOf(s));
+  const slotBild = s => volkSrc(facOf(s));
+  const slotShip = s => shipSrc(facOf(s));
 
   /* ══════════════════════════════════════════════════════════
      DAS ANTWORTFELD
@@ -523,13 +546,34 @@
      Karte, und das ist der Kern der Regel: im Nebel sieht man, dass
      sich ein Angriff lohnt, aber nicht, worauf.
 
-     `hoch` ist das Verhältnis von Bildhöhe zur Sockelbreite,
-     `gross` die Übergröße — die Orte stehen absichtlich größer als
-     eine Kachel da, sonst sind sie am Beamer nicht zu finden. */
+     ⚠️ Der SOCKEL ist seit dem 14.09.2026 genau EINE Kachel groß,
+     und zwar in beiden Klassen. Sönke: „Die Ruinen sind nicht gut
+     klickbar, da sie zu viel Platz wegnehmen. Mach sie mal so groß
+     wie alle Felder … die Felder sind gleich groß." Vorher war der
+     Sockel selbst 1,3 bzw. 1,8 Kacheln breit — ein großer Ort lag
+     damit über seinen sechs Nachbarn, und wer einen davon antippen
+     wollte, traf die Ruine. Die Kachel ist die Trefferfläche, also
+     muss sie so groß sein wie jede andere.
+
+     Überlappen darf nur noch das BILD, und das ist der Unterschied
+     zwischen den Klassen: `bild` ist die Breite des Gebäudes in
+     Kacheln (klein leicht darüber, groß etwas mehr — genau Sönkes
+     Abstufung), `hoch` das Verhältnis von Bildhöhe zur Breite. Ein
+     Gebäude, das über den Rand ragt, verdeckt einen Nachbarn ein
+     wenig, nimmt ihm aber keinen Fingertipp weg: die Orte-Schicht ist
+     für Zeiger durchlässig (tool.css).
+
+     `halo` ist der Lichtpunkt im Nebel — er trägt die Klasse. Er
+     darf größer sein als der Sockel: er verrät nur, DASS dort etwas
+     ist. */
   const PLACES = {
-    1: { gross: 1.30, hoch: 1.05 },
-    2: { gross: 1.80, hoch: 1.05 }
+    1: { bild: 1.16, hoch: 1.05, halo: .30 },
+    2: { bild: 1.44, hoch: 1.05, halo: .40 }
   };
+  /* Das Feld, auf dem ein Ort steht — dieselbe 1.0 wie im Relief.
+     Als Konstante und nicht als Zahl an vier Stellen: sie IST die
+     Zusage „die Felder sind gleich groß". */
+  const PLACE_PLATTE = 1.0;
   /* Die Platzhalter-Zeichen, solange kein Sprite geladen ist: eine
      Mauer für die kleinen, ein Tempel für die großen. Ein Kind soll
      aus zehn Metern sehen, WAS dort steht, nicht nur DASS dort
@@ -1312,7 +1356,10 @@
     for (const z of isl.cells) {
       if (!z.ruin) continue;
       const def = PLACES[z.ruin] || PLACES[1];
-      const sc = def.gross;
+      /* `sc` war bis zum 14.09.2026 die Übergröße des ganzen Platzes
+         und steckte in jeder Zahl hier drin. Jetzt ist der Platz eine
+         Kachel; was mit der Klasse wächst, sind Bild, Lichtpunkt und
+         Herzenreihe — und die stehen einzeln da. */
       const gg = el('g', { class: 'wi-place', transform: `translate(${n2(z.x)} ${n2(z.y)})` }, g);
       /* Was durch die Wolke dringt, ist der SCHEIN. Der Ort selbst
          bleibt verdeckt — sonst wäre der Nebel nur ein Farbfilter.
@@ -1320,24 +1367,28 @@
          dem Nebel zehn gelbe Flecken, die aussehen wie ein Fehler
          im Bild. Ein Licht im Nebel ist ein PUNKT mit Schein, keine
          Scheibe. */
-      const halo = el('circle', { class: 'wi-halo', r: n2(.3 * sc), fill: KARTE.gold, opacity: .6, filter: F('b2') }, gg);
+      const halo = el('circle', { class: 'wi-halo', r: n2(def.halo), fill: KARTE.gold, opacity: .6, filter: F('b2') }, gg);
       const gBody = el('g', { opacity: 0 }, gg);
-      el('ellipse', { cx: 0, cy: n2(.30 * sc), rx: n2(.66 * sc), ry: n2(.22 * sc), fill: 'rgba(0,0,0,.38)', filter: F('b1') }, gBody);
+      el('ellipse', { cx: 0, cy: .30, rx: n2(.42 * def.bild), ry: .16, fill: 'rgba(0,0,0,.38)', filter: F('b1') }, gBody);
       /* Der Sockel: gerodeter Boden, auf dem der Ort steht. Er
          gehört der Karte und bleibt, egal welches Bild darauf
-         kommt. */
+         kommt — und er ist genau eine Kachel. */
       const plate = el('path', {
-        class: 'wi-plate', d: hexPath(0, 0, sc * 1.02), fill: KARTE.land.sand,
+        class: 'wi-plate', d: hexPath(0, 0, PLACE_PLATTE), fill: KARTE.land.sand,
         stroke: shade(KARTE.land.sand, -.35), 'stroke-width': .05
       }, gBody);
-      el('path', { d: hexPath(0, 0, sc * 1.02), fill: 'none', stroke: KARTE.gold, 'stroke-width': .06, opacity: .8 }, gBody);
-      const w = 1.55 * sc, h = w * def.hoch;
+      el('path', { d: hexPath(0, 0, PLACE_PLATTE), fill: 'none', stroke: KARTE.gold, 'stroke-width': .06, opacity: .8 }, gBody);
+      const w = def.bild, h = w * def.hoch;
       /* EIN Bildknoten je Ort, dessen Quelle erst beim Aufdecken
          gesetzt wird. Fünf Knoten je Ort (einer je Ruinenart) wären
          fünfmal so viel Ladung für vier Bilder, die nie zu sehen
          sind; ein leeres <image> lädt nichts. */
+      /* Die Unterkante steht auf dem Sockel (.22 unter der Mitte,
+         also im vorderen Drittel der Kachel) — das Gebäude wächst von
+         dort nach oben aus dem Feld heraus. */
+      const fuss = .22;
       const bild = img(gBody, '', {
-        x: n2(-w / 2), y: n2(.22 * sc - h), width: n2(w), height: n2(h),
+        x: n2(-w / 2), y: n2(fuss - h), width: n2(w), height: n2(h),
         preserveAspectRatio: 'xMidYMax meet', opacity: 0
       });
       /* Das Platzhalter-Zeichen bekommt eine helle Kontur: dunkles
@@ -1347,13 +1398,16 @@
       const zeichen = el('path', {
         d: MARK[z.ruin] || MARK[1], fill: KARTE.signInk, opacity: .92,
         stroke: 'rgba(255,255,255,.75)', 'stroke-width': .045, 'paint-order': 'stroke',
-        transform: `scale(${n2(sc * 1.3)})`
+        transform: `scale(${n2(w)})`
       }, gBody);
       /* Die Herzen hängen AM ORT und nicht am Körper: sie sollen
-         auch dann stehen, wenn das Gebäude gerade niemandem gehört. */
+         auch dann stehen, wenn das Gebäude gerade niemandem gehört.
+         Ihre Größe hängt NICHT mehr an der Klasse: vier Herzen über
+         einem Tempel und eines über einem Klo sind dieselbe Auskunft
+         und sollen gleich groß dastehen. */
       const herzen = el('g', { class: 'wi-hearts' }, gg);
       marks.push({ z, halo, gBody, plate, bild, zeichen, herzen,
-                   hy: n2(.22 * sc - h - .30), sc, last: null, quelle: '' });
+                   hy: n2(fuss - h - .26), last: null, quelle: '' });
     }
 
     return function paint(own, ruins, hearts) {
@@ -1393,7 +1447,7 @@
           m.bild.setAttribute('opacity', 1);
           m.zeichen.setAttribute('opacity', 0);
         }
-        herzReihe(m.herzen, auf ? hp : 0, m.hy, .34 * m.sc);
+        herzReihe(m.herzen, auf ? hp : 0, m.hy, .30);
       }
     };
   }
@@ -1425,6 +1479,80 @@
           knoten.set(z.i, k);
         }
         herzReihe(k, hp, 0, .26);
+      }
+    };
+  }
+
+  /* ─── Die erreichbaren Felder ───────────────────────────────
+     Sönke, 14.09.2026: „Die klickbaren Felder sind leicht markiert.
+     Der Nebel ist nicht weg! Der bleibt."
+
+     Beides zusammen ist der eigentliche Entwurf. Bis dahin machte
+     die Karte beim Wählen den Nebel durchsichtig (.is-picking .wi-fog
+     auf .42) — damit verriet eine Serie, was unter der Decke liegt,
+     und genau das soll sie nicht: „im Nebel sieht man, dass sich ein
+     Angriff lohnt, aber nicht worauf" (0146). Der Ersatz ist eine
+     Marke, die nicht ins Feld sieht, sondern es UMREISST.
+
+     Sie liegt deshalb GANZ OBEN und nicht bei der Kachel: unter dem
+     Nebel wäre der Ring im Kern unsichtbar, und ausgerechnet die
+     erreichbaren Felder liegen am Nebelrand. Über allem gezogen ist
+     er in jeder Lage gleich gut zu sehen.
+
+     Gerechnet wird im Gerät und nicht gefragt: die Regel steht in
+     wi_pick_tile (0146) und ist kurz — ein Feld gehört dazu, wenn es
+     nicht Landeplatz ist, nicht dem eigenen Volk gehört und an ein
+     eigenes Feld grenzt. Ein eigener RPC dafür wäre ein Gang zum
+     Server je Antwort, und die Antwort stünde vier Sekunden zu spät
+     da. ⚠️ Wer die Regel dort ändert, muss sie hier mitändern; der
+     Server bleibt die Wahrheit, das hier ist nur der Hinweis.
+
+     Beim Schattentempel gibt es keine Marken: dort ist die ganze
+     Insel erlaubt, und eine Karte mit 400 goldenen Ringen sagt
+     nichts. */
+  function markLayer(svg, isl) {
+    const g = el('g', { class: 'wi-marks' }, svg);
+    const knoten = new Map();
+    let last = '';
+    return function paint(own, mein, an) {
+      /* Ein Schlüssel aus allem, was die Marken bestimmt. Ohne ihn
+         würden bei jedem Takt 400 Nachbarschaften durchgerechnet,
+         obwohl sich meist nichts geändert hat. */
+      const key = !an ? '' : mein + '|' + own;
+      if (key === last) return;
+      last = key;
+
+      const zeigen = new Set();
+      if (an && own && mein != null && mein >= 0) {
+        const ich = String(mein);
+        for (const z of isl.cells) {
+          if (own[z.i] !== ich) continue;
+          for (const [nr, nc] of neighbors(z.r, z.c)) {
+            const n = isl.at(nr, nc);
+            if (!n || n.home || own[n.i] === ich) continue;
+            zeigen.add(n);
+          }
+        }
+      }
+
+      for (const [i, k] of knoten) {
+        if (!zeigen.has(isl.cells[i])) { g.removeChild(k); knoten.delete(i); }
+      }
+      for (const z of zeigen) {
+        /* Die Marke sitzt auf der DECKFLÄCHE und damit auf der Höhe,
+           auf der die Kachel gerade steht: Nebel liegt flach (.10),
+           erobertes Land steht auf. Dieselben zwei Zahlen wie im
+           Relief — stünde hier eine dritte, läge der Ring in der
+           Luft. */
+        const h = own[z.i] !== '.' ? z.hoch : .10;
+        const d = hexPath(z.x, z.y - h + .1, .88);
+        let k = knoten.get(z.i);
+        if (!k) {
+          k = el('path', { class: 'wi-mark', d }, g);
+          knoten.set(z.i, k);
+        } else {
+          k.setAttribute('d', d);
+        }
       }
     };
   }
@@ -1629,7 +1757,7 @@
   function buildMap(svg, list, key, mopt) {
     const solo = !!(mopt && mopt.solo);
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-    cellEls = []; ships = {}; ownPainted = null; mapPaint = null;
+    cellEls = []; ships = {}; ownPainted = null; mapPaint = null; markPaint = null;
 
     /* In der Lobby gibt es noch keine Insel (wi_tiles ist leer, bis
        wi_room_start würfelt). Ohne diesen Ausgang stünde im viewBox
@@ -1692,12 +1820,21 @@
     const place = placeLayer(svg, isl);
     const guard = guardLayer(svg, isl);
     const ship = shipLayer(svg, isl);
+    /* Ganz oben, also NACH den Schiffen: die Marken der freien Wahl
+       müssen auch über dem Nebel liegen (siehe markLayer). */
+    const mark = markLayer(svg, isl);
 
     mapPaint = (own, ruins, hearts) => {
       land(own); fog(own);
       place(own, ruins, hearts); guard(own, ruins, hearts);
       flag(own); ship(own);
+      /* Die Marken hängen nicht nur am Besitz, sondern auch an
+         `picks` — deshalb laufen sie über einen eigenen Aufruf
+         (markieren) und werden hier nur mitgezogen, wenn sich die
+         Karte bewegt hat. */
+      mark(own, meinSlot(), picking && !shadowPick);
     };
+    markPaint = mark;
     return isl;
   }
 
@@ -1708,6 +1845,18 @@
      Slot 1 sitzt, entscheidet die Lehrkraft. Ohne die Übersetzung
      (facOf) hätte ein Raum mit den Völkern 4 und 5 zwei rot-blaue
      Gebiete und daneben eine lila Kopfzeile. */
+  /* Der eigene Slot — und `null`, wo es keinen gibt (Beamer, Lobby).
+     Die Marken der freien Wahl brauchen ihn, und sie hängen an
+     derselben Zahl wie die Aufgabe. */
+  const meinSlot = () => (view && view.me && view.me.team != null) ? view.me.team : null;
+
+  /* Nur die Marken neu, ohne die Karte anzufassen. Gerufen von
+     renderTask (picks haben sich geändert) und nach jedem Malen. */
+  function markieren() {
+    if (!markPaint || !ownPainted) return;
+    markPaint(ownPainted, meinSlot(), picking && !shadowPick);
+  }
+
   function paintOwn(own, ruins, hearts) {
     if (!own || !mapPaint || own.length !== cells.length) return;
     /* Der Rückfallweg ohne Migration 0146 steht genau hier: ein
@@ -1777,27 +1926,43 @@
     wrap.addEventListener('pointercancel', up, { capture: true });
     // Doppeltipp setzt zurück — der einfachste Ausweg aus jedem
     // verrutschten Bild, und man findet ihn ohne Erklärung.
-    wrap.addEventListener('dblclick', () => { scale = 1; tx = ty = 0; apply(); });
+    const zurueck = () => { scale = 1; tx = ty = 0; pts.clear(); base = null; apply(); };
+    wrap.addEventListener('dblclick', zurueck);
+    /* Herausgegeben, weil die Karte am Tablet seit dem 14.09.2026
+       zwischen zwei Hüllen wandert (der eingebetteten und dem
+       Wahl-Kasten). Jede Hülle führt ihren eigenen Stand; beim
+       Umhängen muss der abgebende auf null, sonst schreibt der
+       andere sein „scale 1" über eine Karte, die dreifach gezoomt
+       dasteht. */
+    return { reset: zurueck };
   }
 
   /* ══════════════════════════════════════════════════════════
      Gemeinsame Bausteine
      ══════════════════════════════════════════════════════════ */
+  /* Die Karte eines Teams: Schiff, Name, Punktestand, darunter die
+     Aufschlüsselung. Sie steht am Beamer in den beiden Spalten links
+     und rechts der Insel und in der Auswertung als Reihe — dieselbe
+     Auskunft, also dasselbe Stück.
+
+     Das Bild ist das SCHIFF (Sönke, 14.09.2026: „bei den Teams die
+     Schiffe"). Es passt auch der Sache nach: was hier steht, ist
+     nicht das Volk, sondern was die GRUPPE erobert hat. */
+  function teamCard(t, v) {
+    const T = teamOf(t.i);
+    return `<div class="wi-team${v.winner_team === t.i ? ' is-win' : ''}"
+                 style="--wi-team:${T.color}">
+              <div class="wi-teampic"><img src="${esc(slotShip(t.i))}" alt=""></div>
+              <b class="wi-teamname">${esc(T.name)}</b>
+              <span class="wi-score">${t.score}</span>
+              <span class="wi-sub">${t.tiles} Felder · ${t.ruins} aus Ruinen · ${t.people} Kinder</span>
+            </div>`;
+  }
   function teamRow(v) {
-    const teams = v.teams || [];
-    return teams.map(t => {
-      const T = teamOf(t.i);
-      return `<div class="wi-team${v.winner_team === t.i ? ' is-win' : ''}"
-                   style="--wi-team:${T.color}">
-                <img src="${esc(esrc(T.img))}" alt="">
-                <b>${esc(T.name)}</b>
-                <span class="wi-score">${t.score}</span>
-                <span class="wi-sub">${t.tiles} Felder · ${t.ruins} aus Ruinen · ${t.people} Kinder</span>
-              </div>`;
-    }).join('');
+    return (v.teams || []).map(t => teamCard(t, v)).join('');
   }
 
-  /* Eine Spalte je Volk: Gruppenbild, Name mit Kopfzahl, darunter die
+  /* Eine Spalte je Volk: Schiff, Name mit Kopfzahl, darunter die
      Kinder. Dasselbe Stück am Beamer (eine Spalte je Volk) und am
      Tablet (nur die eigene, dafür groß) — Kingdoms macht es genauso
      und aus demselben Grund: es ist dieselbe Auskunft.
@@ -1816,7 +1981,7 @@
       ? members.map(li).join('')
       : '<li class="wi-lteamempty">noch niemand</li>';
     return `<div class="wi-lteam${o.mine ? ' wi-lteam--mine' : ''}" style="--wi-team:${T.color}">
-              <div class="wi-lteampic"><img src="${esc(esrc(T.team || T.img))}" alt=""></div>
+              <div class="wi-lteampic"><img src="${esc(slotShip(slot))}" alt=""></div>
               <div class="wi-lteamname">
                 <span>${esc(T.name)}</span>
                 <span class="wi-lteamn">${o.count != null ? o.count : (members || []).length}</span>
@@ -1837,7 +2002,10 @@
     stopTimer();
     timerHandle = setInterval(() => {
       if (!view) return;
-      if (els.clock) els.clock.textContent = fmtLeft(view.ends_at);
+      /* Seit dem 14.09.2026 hat auch das Tablet seine Uhr im Kopf —
+         darum die Prüfung auf `hidden`: beim Üben läuft keine Runde,
+         und eine Restzeit ohne Runde ist eine falsche Auskunft. */
+      if (els.clock && !els.clock.hidden) els.clock.textContent = fmtLeft(view.ends_at);
       if (view.countdown_ends_at && view.phase === 'countdown') {
         const s = Math.max(0, Math.ceil((new Date(view.countdown_ends_at).getTime() - Date.now()) / 1000));
         if (els.big) els.big.textContent = s > 0 ? s : 'Los!';
@@ -1903,13 +2071,42 @@
         </div>
       </section>
 
+      <!-- ── Das Spielbild am Beamer ──────────────────────────────
+           Sönke, 14.09.2026: „Die Karte auf dem Beamer ganz zu sehen
+           sein. Mache das Layout so wie bei Kingdoms of Mathoria …
+           links und rechts die Teams, in der Mitte die Karte."
+
+           Vorher war es eine Spalte: eine Völkerleiste ÜBER der
+           Karte, die bei vier Völkern umbrach und der Insel damit
+           zwei Zeilen Höhe wegnahm — auf einem 16:9-Beamer geht die
+           Höhe der Karte aber genau einmal, und dann ist sie weg.
+           Zwei Spalten kosten BREITE, und die ist übrig: die Insel
+           ist rund.
+
+           Die Reihenfolge hier IST die Anordnung: links · Arena ·
+           rechts. Die Völker verteilen sich abwechselnd (0,2,4 …
+           links, 1,3,5 … rechts), genau wie fillRosters in Kingdoms
+           — so stehen bei zwei Völkern zwei Spalten da und nicht
+           eine Spalte mit zwei Karten. -->
       <section class="wi-play" data-part="play" hidden>
-        <header class="wi-bar">
-          <div class="wi-teams" data-part="teams-row"></div>
-          <div class="wi-clock"><b data-part="clock">–</b>
-            <button class="wi-btn wi-btn--ghost" data-part="stop">Runde beenden</button></div>
-        </header>
-        <div class="wi-mapwrap" data-part="mapwrap"><svg class="wi-map" data-part="map"></svg></div>
+        <!-- ⚠️ „wi-beam" und nicht „wi-stage": das ist schon die
+             Bühne der eigenen Insel (SOLO_HTML), und eine tool.css
+             bedient alle drei Rollen. Eine Höhe, die hier gesetzt
+             wird, hätte dort die Leinwand verschoben.
+             (Keine Backticks in Kommentaren dieser Zeichenkette —
+             sie beenden das Template-Literal.) -->
+        <div class="wi-beam" data-part="beam">
+          <div class="wi-rost wi-rost--left" data-part="rost-left"></div>
+          <div class="wi-arena">
+            <header class="wi-bar">
+              <span class="wi-arenatitle">⛵ Myth of Wordisland</span>
+              <div class="wi-clock"><b data-part="clock">–</b>
+                <button class="wi-btn wi-btn--ghost" data-part="stop">Runde beenden</button></div>
+            </header>
+            <div class="wi-mapwrap" data-part="mapwrap"><svg class="wi-map" data-part="map"></svg></div>
+          </div>
+          <div class="wi-rost wi-rost--right" data-part="rost-right"></div>
+        </div>
         <div class="wi-big" data-part="big" hidden></div>
       </section>
 
@@ -1970,7 +2167,8 @@
       durRow: q('durrow'), durText: q('durtext'),
       pick: q('pick'), lobbyTeams: q('lobbyteams'), waiting: q('waiting'),
       start: q('start'),
-      teamsRow: q('teams-row'), clock: q('clock'), big: q('big'),
+      beam: q('beam'), rostLeft: q('rost-left'), rostRight: q('rost-right'),
+      clock: q('clock'), big: q('big'),
       map: q('map'), mapwrap: q('mapwrap'),
       winner: q('winner'), endTeams: q('end-teams'), hard: q('hard'),
       rulWrap: q('rulwrap')
@@ -2237,7 +2435,7 @@
         `data-fac="${f}" aria-pressed="${on}" aria-label="${esc(TEAMS[f].name)}" ` +
         `title="${esc(TEAMS[f].name)}" style="--wi-team:${TEAMS[f].color}"` +
         `${on && locked ? ' data-locked="1"' : ''}>` +
-        `<img src="${esc(esrc(TEAMS[f].img))}" alt=""></button>`;
+        `<img src="${esc(volkMini(f))}" alt=""></button>`;
     }
     els.pick.innerHTML = out;
   }
@@ -2366,7 +2564,7 @@
     if (ended) {
       const win = (v.teams || []).find(t => t.i === v.winner_team);
       els.winner.innerHTML = win
-        ? `<img src="${esc(esrc(teamOf(win.i).img))}" alt="">
+        ? `<img src="${esc(slotBild(win.i))}" alt="">
            ${esc(teamOf(win.i).name)} — ${win.score} Punkte`
         : 'Runde beendet.';
       els.endTeams.innerHTML = teamRow(v);
@@ -2374,9 +2572,70 @@
       return;
     }
 
-    els.teamsRow.innerHTML = teamRow(v);
+    fuelleRoster(v);
     els.clock.textContent = fmtLeft(v.ends_at);
     els.big.hidden = (v.phase !== 'countdown');
+    /* Nach jedem Zeichnen messen: die Spalten werden gerade neu
+       gefüllt, und ihre Breite entscheidet, wie breit die Karte sein
+       darf. Ein `requestAnimationFrame` wäre hier falsch — die
+       Auslage auf der Landing läuft in linkedom-Prüfständen ohne
+       eines, und die Zahl muss auch dort stehen. */
+    passeBeamAn();
+  }
+
+  /* Die Völker abwechselnd nach links und rechts — dasselbe wie
+     fillRosters in Kingdoms. Zwei Spalten sind bei zwei Völkern eine
+     Spiegelung und bei acht ein Rahmen; eine Liste nur links wäre
+     beides nicht. */
+  function fuelleRoster(v) {
+    if (!els.rostLeft) return;
+    let l = '', r = '';
+    (v.teams || []).forEach((t, k) => { if (k % 2 === 0) l += teamCard(t, v); else r += teamCard(t, v); });
+    els.rostLeft.innerHTML = l;
+    els.rostRight.innerHTML = r;
+    els.rostRight.hidden = !r;
+  }
+
+  /* ─── „Die Karte soll ganz zu sehen sein" ───────────────────
+     Die Bühne bekommt eine Höhe in Bildpunkten. Das klingt nach
+     einem Rückschritt hinter CSS, ist aber die einzige Rechnung, die
+     stimmt: `flex: 1` braucht eine Kette von Eltern mit fester Höhe
+     bis zum <body>, und die hat eine Werkzeugseite nicht — unter der
+     Karte steht der Seitenfuß, darüber die Kopfzeile der Seite.
+     Kingdoms rechnet aus demselben Grund seit 0094 selbst
+     (fitPresenterMap); `spaceBelow` ist von dort übernommen.
+
+     In der AUSLAGE gilt das nicht: dort steht das Werkzeug in einem
+     Kasten mitten auf der Landingpage, und „bis zum Fensterrand"
+     wäre der Rest der Seite — die Karte wüchse aus ihrem Schaufenster
+     heraus. Deshalb dort eine feste Höhe. */
+  const BEAM_MIN = 300, BEAM_LUFT = 14, VORSCHAU_HOCH = 430;
+
+  function platzUnten(node) {
+    let sum = 0;
+    for (let n = node; n && n.parentElement && n !== document.body; n = n.parentElement) {
+      const pcs = getComputedStyle(n.parentElement);
+      sum += (parseFloat(pcs.paddingBottom) || 0) + (parseFloat(pcs.borderBottomWidth) || 0);
+      sum += (parseFloat(getComputedStyle(n).marginBottom) || 0);
+      for (let s = n.nextElementSibling; s; s = s.nextElementSibling) {
+        const scs = getComputedStyle(s);
+        if (scs.display === 'none' || scs.position === 'fixed' || scs.position === 'absolute') continue;
+        sum += s.offsetHeight + (parseFloat(scs.marginTop) || 0) + (parseFloat(scs.marginBottom) || 0);
+      }
+    }
+    return sum;
+  }
+
+  function passeBeamAn() {
+    if (role !== 'presenter' || !els.beam || !els.play || els.play.hidden) return;
+    /* Ohne Messwerkzeug (linkedom im Prüfstand) gibt es nichts zu
+       rechnen — und eine Höhe aus NaN wäre schlimmer als keine. */
+    if (typeof getComputedStyle !== 'function' || !els.beam.getBoundingClientRect) return;
+    const oben = els.beam.getBoundingClientRect().top;
+    const h = (ctx && ctx.preview)
+      ? VORSCHAU_HOCH
+      : Math.max(BEAM_MIN, (window.innerHeight || 0) - oben - platzUnten(els.beam) - BEAM_LUFT);
+    if (h > 0) els.beam.style.height = Math.round(h) + 'px';
   }
 
   async function loadHard() {
@@ -2425,7 +2684,44 @@
       </section>
 
       <section class="wi-pane" data-part="tplay" hidden>
-        <header class="wi-me" data-part="me"></header>
+        <!-- ── Der eigene Kopf ────────────────────────────────────
+             Er stand bis zum 14.09.2026 als eine Zeichenkette in
+             renderTab und wurde bei jedem Takt neu gesetzt. Jetzt
+             steht er im Rohbau und wird nur noch GEFÜLLT — denn das
+             Serien-Abzeichen daneben ändert sich bei jeder Antwort
+             und nicht alle vier Sekunden. Ein Knoten, der viermal
+             die Minute neu entsteht, kann keinen eigenen Zustand
+             tragen.
+
+             Das Bild ist die Crew des eigenen Volkes auf Stufe 1
+             (Sönke: „bei den Völkern die Level 1 Sprites der Crew").
+
+             Das Abzeichen ist das Muster von Kingdoms (.cm-pstreak):
+             Flamme, Zahl, Ziel. Sönke, 14.09.2026: „Die Streak-
+             Anzeige muss klein nach rechts … der Text ist doof. Mache
+             einfach eine Flamme und dann ein x von y." Der Satz, der
+             bis dahin in der Leiste darunter stand, ist damit weg —
+             er erklärte dreimal je Runde dasselbe. -->
+        <header class="wi-me" data-part="me">
+          <img class="wi-mepic" data-part="mepic" src="" alt="">
+          <div class="wi-meinfo">
+            <b data-part="mename"></b>
+            <span data-part="mesub"></span>
+          </div>
+          <span class="wi-streak" data-part="streak" hidden
+                title="Deine Serie richtiger Antworten">
+            <span class="wi-streakico" aria-hidden="true">🔥</span
+            ><b data-part="streakn">0</b
+            ><i class="wi-streakgoal" data-part="streakgoal"></i>
+          </span>
+          <!-- Der Weg zurück zur Karte, wenn das Kind den Wahl-Kasten
+               zugemacht hat. Er steht NUR dann da: ein Knopf, der
+               meistens nichts zu öffnen hat, wäre eine Einladung ins
+               Leere. -->
+          <button type="button" class="wi-pickback" data-part="pickback" hidden>
+            🎯 <span data-part="pickbackn"></span></button>
+          <span class="wi-time" data-part="clock"></span>
+        </header>
 
         <section class="wi-task" data-part="task">
           <p class="wi-ask" data-part="ask"></p>
@@ -2445,9 +2741,35 @@
             ← Zurück zur Aufstellung</button>
         </section>
 
-        <div class="wi-pickbar" data-part="pickbar" hidden></div>
         <div class="wi-mapwrap" data-part="mapwrap"><svg class="wi-map" data-part="map"></svg></div>
       </section>
+
+      <!-- ── Der Wahl-Kasten ──────────────────────────────────────
+           Sönke, 14.09.2026: „Sobald ich eine Streak habe, öffnet
+           sich das Feld." Er geht von SELBST auf, sobald eine freie
+           Wahl gutgeschrieben ist — und zwar als Kasten über allem
+           und nicht als Karte unter der Aufgabe. Der Grund ist
+           derselbe wie bei der Feier auf der Insel (10.09.2026):
+           beim Tippen steht auf dem Tablet die Tastatur, und die
+           eingebettete Karte liegt dann genau dort, wo niemand
+           hinsieht.
+
+           Die Karte darin ist DIESELBE — das SVG wandert beim
+           Aufgehen aus „mapwrap" hierher und beim Zumachen zurück.
+           Eine zweite Karte wäre eine zweite Wahrheit: cellEls,
+           ships und mapPaint stehen einmal im Modul, zwei Inseln
+           könnten sie sich nicht teilen. -->
+      <div class="wi-ov wi-ov--pick" data-part="pickov" hidden>
+        <div class="wi-ovbox wi-ovbox--pick">
+          <div class="wi-ovhead">
+            <span class="wi-ovtitle" data-part="picktitle">Zeig, wohin!</span>
+            <button type="button" class="wi-ovclose" data-part="pickclose"
+                    aria-label="Karte schließen">✕</button>
+          </div>
+          <p class="wi-pickhint" data-part="pickhint"></p>
+          <div class="wi-mapwrap wi-mapwrap--pick" data-part="pickwrap"></div>
+        </div>
+      </div>
     </div>`;
 
   function buildTab() {
@@ -2457,9 +2779,14 @@
       waitText: q('waittext'), myTeam: q('myteam'),
       othersBox: q('othersbox'), others: q('others'), onlineHint: q('onlinehint'),
       big: q('big'), back: q('back'),
-      me: q('me'), ask: q('ask'), word: q('word'),
+      me: q('me'), mePic: q('mepic'), meName: q('mename'), meSub: q('mesub'),
+      streak: q('streak'), streakN: q('streakn'), streakGoal: q('streakgoal'),
+      pickBack: q('pickback'), pickBackN: q('pickbackn'), clock: q('clock'),
+      ask: q('ask'), word: q('word'),
       form: q('typeform'), input: q('input'), opts: q('opts'), fb: q('fb'),
-      pickbar: q('pickbar'), map: q('map'), mapwrap: q('mapwrap'),
+      map: q('map'), mapwrap: q('mapwrap'),
+      pickOv: q('pickov'), pickWrap: q('pickwrap'),
+      pickTitle: q('picktitle'), pickHint: q('pickhint'),
       rulWrap: q('rulwrap')
     };
     els.rulWrap.innerHTML = rulesHTML();
@@ -2474,7 +2801,40 @@
     q('practice').addEventListener('click', () => { practice = true; if (view) renderTab(view); });
     els.back.addEventListener('click', () => { practice = false; if (view) renderTab(view); });
     els.map.addEventListener('click', onMapClick);
-    attachPanZoom(els.mapwrap, els.map);
+    /* Zwei Hüllen, ein SVG: die Geste gehört dem Kasten, in dem die
+       Karte GERADE hängt. Beide Zuhörer schreiben `svg.style.
+       transform`, deshalb setzt pickOffen/pickZu das Bild beim
+       Umhängen auf null zurück — sonst rechnet der eine weiter auf
+       dem Stand des anderen. */
+    panInline = attachPanZoom(els.mapwrap, els.map);
+    panPick   = attachPanZoom(els.pickWrap, els.map);
+    q('pickclose').addEventListener('click', () => pickZu(true));
+    els.pickBack.addEventListener('click', () => pickOeffnen());
+  }
+
+  /* ─── Der Wahl-Kasten geht auf und zu ───────────────────────
+     Zwei Zustände und eine Regel dazwischen: aufgehen tut er von
+     selbst (eine neue freie Wahl), zumachen darf ihn auch das Kind.
+     `pickHand` merkt sich genau das — sonst stünde der Kasten beim
+     nächsten Takt vier Sekunden später wieder da, und das sähe aus
+     wie ein Fehler.
+
+     Eine NEUE Wahl hebt die Handentscheidung auf: wer weiter tippt
+     und sich die zweite Wahl verdient, will sie auch sehen. */
+  function pickOeffnen() {
+    if (!els.pickOv || els.pickOv.hidden === false) { pickHand = false; return; }
+    pickHand = false;
+    els.pickOv.hidden = false;
+    if (els.map.parentNode !== els.pickWrap) els.pickWrap.appendChild(els.map);
+    if (panPick) panPick.reset();
+    if (els.pickBack) els.pickBack.hidden = true;
+  }
+  function pickZu(vonHand) {
+    if (vonHand) pickHand = true;
+    if (!els.pickOv || els.pickOv.hidden) return;
+    els.pickOv.hidden = true;
+    if (els.map.parentNode !== els.mapwrap) els.mapwrap.appendChild(els.map);
+    if (panInline) panInline.reset();
   }
 
   async function send(value) {
@@ -2560,34 +2920,71 @@
         .map(o => `<button type="button" data-v="${esc(o)}">${esc(o)}</button>`).join('');
     }
 
-    /* Dieselbe Leiste trägt zwei Sachen, und das ist Absicht: sie ist
-       der Ort, an dem die Serie sichtbar wird. Erst zählt sie hin
-       („noch 2"), dann fordert sie auf („zeig, wohin"). Zwei
-       getrennte Kästen hätten einen davon immer leer stehen lassen. */
-    const goal = Math.max(0, STREAK_GOAL - (streak || 0));
-    shadowPick = shadow || 0;
-    els.pickbar.hidden = !(shadowPick > 0 || picks > 0 || (streak > 0 && goal > 0));
-    els.pickbar.classList.toggle('is-pick', picks > 0 && !shadowPick);
-    els.pickbar.classList.toggle('is-shadow', shadowPick > 0);
-    if (shadowPick > 0) {
-      /* Der Nebelkranz hat VORRANG vor der freien Wahl: er ist selten,
-         er ist mächtig, und zwei Aufforderungen nebeneinander wären
-         eine zu viel. Die freie Wahl wartet so lange — sie verfällt
-         mit der Serie, der Kranz nicht. */
-      els.pickbar.innerHTML =
-        `<b>Schattentempel!</b> Tipp auf ein Feld — es und alles drum herum wird wieder Nebel.`;
-    } else if (picks > 0) {
-      els.pickbar.innerHTML =
-        `<b>Zeig, wohin!</b> Tipp auf ein Feld an eurem Rand${picks > 1 ? ` (${picks} frei)` : ''}.`
-        + `<span class="wi-pickhint">Auf einer Ruine kostet das ein Herz.</span>`;
-    } else if (streak > 0 && goal > 0) {
-      els.pickbar.innerHTML =
-        `Serie ${streak} — noch ${goal} richtige, dann zeigst du selbst, welches Feld fällt.`
-        + `<span class="wi-pickhint">Nur so kommst du an die Ruinen.</span>`;
-    }
-    picking = picks > 0 || shadowPick > 0;
+    zeigeSerie(streak);
+
+    /* ── Die freie Wahl ────────────────────────────────────────
+       Der Nebelkranz hat VORRANG: er ist selten, er ist mächtig, und
+       zwei Aufforderungen nebeneinander wären eine zu viel. Die
+       freie Wahl wartet so lange — sie verfällt mit der Serie, der
+       Kranz nicht. */
+    /* ⚠️ Gewählt wird nur, wenn die Arena läuft. Beim ÜBEN (die Klasse
+       wartet, das Kind übt weiter) gibt es keine Insel — ein
+       Wahl-Kasten mit einer leeren Karte darin wäre eine Aufforderung,
+       die ins Nichts führt. Erkennungsmerkmal ist die eingebettete
+       Karte: renderTab blendet sie außerhalb der Arena aus. */
+    const arena = !els.mapwrap.hidden;
+    shadowPick = arena ? (shadow || 0) : 0;
+    const frei = arena ? (picks || 0) + shadowPick : 0;
+    picking = frei > 0;
     els.map.classList.toggle('is-picking', picking);
     els.map.classList.toggle('is-shadow', shadowPick > 0);
+
+    els.pickOv.classList.toggle('is-shadow', shadowPick > 0);
+    if (picking) {
+      els.pickTitle.textContent = shadowPick > 0 ? 'Schattentempel!' : 'Zeig, wohin!';
+      els.pickHint.textContent = shadowPick > 0
+        ? 'Tipp auf ein Feld — es und alles drum herum wird wieder Nebel.'
+        : 'Tipp auf ein markiertes Feld an eurem Rand.'
+          + (picks > 1 ? ` Du hast ${picks} Wahlen frei.` : '')
+          + ' Auf einer Ruine kostet das ein Herz.';
+      els.pickBackN.textContent = shadowPick > 0 ? 'Nebel zurückholen'
+        : picks > 1 ? `${picks} Felder wählen` : 'Feld wählen';
+      // Neu dazugekommen? Dann geht der Kasten auch dann wieder auf,
+      // wenn er vorher von Hand zugemacht wurde.
+      if (frei > pickWar) pickHand = false;
+      if (pickHand) { els.pickBack.hidden = false; } else { pickOeffnen(); }
+    } else {
+      pickHand = false;
+      els.pickBack.hidden = true;
+      pickZu(false);
+    }
+    pickWar = frei;
+    /* Die Marken sind eine eigene Schicht ÜBER dem Nebel und hängen
+       deshalb nicht an paintOwn: sie ändern sich, sobald picks sich
+       ändern, und nicht erst, wenn ein Feld den Besitzer wechselt. */
+    markieren();
+  }
+
+  /* ─── Das Serien-Abzeichen ──────────────────────────────────
+     Flamme, Zahl, Ziel — und das Ziel nur, solange es eines gibt.
+     Ab STREAK_GOAL bringt JEDE richtige Antwort eine freie Wahl; ein
+     „5/3" wäre dort falsch und ein „5/6" ein Versprechen, das der
+     Server nicht kennt. Dann brennt das Abzeichen und trägt nur noch
+     die Zahl.
+
+     Bei Serie 0 ist es ganz weg: eine Flamme, die „0" sagt, ist
+     keine Auskunft, sondern ein Vorwurf. */
+  function zeigeSerie(streak) {
+    if (!els.streak) return;
+    const n = streak || 0;
+    const offen = n < STREAK_GOAL;
+    els.streak.hidden = (n <= 0);
+    els.streakN.textContent = String(n);
+    els.streakGoal.textContent = offen ? '/' + STREAK_GOAL : '';
+    els.streak.classList.toggle('is-hot', !offen);
+    els.streak.title = offen
+      ? `Serie ${n} von ${STREAK_GOAL} — dann zeigst du selbst, welches Feld fällt`
+      : `Serie ${n} — jede richtige Antwort bringt ein Feld deiner Wahl`;
   }
 
   /* ─── „Was verbirgt sich da?" ───────────────────────────────
@@ -2676,7 +3073,7 @@
       if (t.i === myTeam) return;
       const T = teamOf(t.i);
       out += `<div class="wi-other" style="--wi-team:${T.color}">
-                <div class="wi-otherpic"><img src="${esc(esrc(T.img))}" alt=""></div>
+                <div class="wi-otherpic"><img src="${esc(slotMini(t.i))}" alt=""></div>
                 <span class="wi-othername">${esc(T.name)}</span>
                 <span class="wi-othern">${t.people}</span>
               </div>`;
@@ -2736,13 +3133,16 @@
     const mine = (v.teams || []).find(t => t.i === v.me.team);
 
     els.me.style.setProperty('--wi-team', T.color);
-    els.me.innerHTML = `
-      <img src="${esc(esrc(T.img))}" alt="">
-      <div>
-        <b>${esc(T.name)}</b>
-        <span>${arena ? `${mine ? mine.score : 0} Punkte · Serie ${v.me.streak}` : 'Übungsrunde'}</span>
-      </div>
-      <span class="wi-time">${arena ? fmtLeft(v.ends_at) : ''}</span>`;
+    /* Nur bei Wechsel: `src` neu zuzuweisen ist auch mit demselben
+       Wert ein Ladevorgang, und renderTab läuft viermal die Minute. */
+    const wappen = slotBild(v.me.team);
+    if (els.mePic.getAttribute('src') !== wappen) els.mePic.setAttribute('src', wappen);
+    els.meName.textContent = T.name;
+    els.meSub.textContent = arena
+      ? `${mine ? mine.score : 0} Punkte · ${mine ? mine.tiles : 0} Felder`
+      : 'Übungsrunde';
+    els.clock.textContent = arena ? fmtLeft(v.ends_at) : '';
+    els.clock.hidden = !arena;
 
     els.mapwrap.hidden = !arena;
     els.back.hidden = arena;
@@ -3826,8 +4226,9 @@
      sie an ihr vorbeiläuft, ist der halbe Grund, warum die Insel
      lebendig aussieht.                                          */
 
-  const HELD_DIR = 'tools/wordisland/sprites/held/';
-  const BOOT_DIR = 'tools/wordisland/sprites/boot/';
+  /* HELD_DIR und BOOT_DIR stehen seit dem 14.09.2026 ganz oben bei
+     den Völkern: seit die Raum-Rollen dieselben Bilder nehmen, gibt
+     es die zwei Ordner nicht mehr nur für die Insel. */
 
   /* Die Voreinstellung ist Sönkes Vorgabe: „Diese sind Default von
      den Brokkoli Giraffen." Das ist Volk 2 in TEAMS. */
@@ -7891,6 +8292,7 @@
       root = host; ctx = c; role = ctx.role;
       destroyed = false; busy = false; view = null;
       mapKey = null; cells = []; cellEls = []; ships = {}; mapPaint = null;
+      markPaint = null; pickHand = false; pickWar = 0; panInline = panPick = null;
       ownPainted = null; submitting = false; picking = false; shadowPick = 0;
       sets = { list: [], chosen: [] }; setsBusy = 0; tab = 'units'; setsOpen = false;
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
@@ -7961,7 +8363,9 @@
         document.body.classList.add('tool-fill');
       }
 
-      onResize = () => { if (view) { /* das SVG skaliert selbst */ } };
+      /* Die Karte selbst skaliert mit ihrem viewBox — gemessen werden
+         muss nur die Höhe der Beamer-Bühne (siehe passeBeamAn). */
+      onResize = () => { passeBeamAn(); };
       window.addEventListener('resize', onResize);
 
       startTimer();
@@ -7999,6 +8403,7 @@
       document.body.classList.remove('tool-fill');
       root = ctx = null; role = null; view = null;
       els = {}; cells = []; cellEls = []; ships = {}; ownPainted = null; mapPaint = null;
+      markPaint = null; panInline = panPick = null;
       /* Die eingefärbten Bilder bleiben. Sie hängen an keinem Raum
          und an keinem Kind, kosten aber eine gute Sekunde Rechnen —
          wer die Insel schließt und wieder öffnet, soll nicht warten.

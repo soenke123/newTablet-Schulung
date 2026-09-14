@@ -411,8 +411,10 @@
   border: 2px solid var(--wi-team);
   background: color-mix(in srgb, var(--wi-team) 9%, var(--surface));
 }
-/* Das Gruppenbild (Burg + Einheiten). `contain` statt `cover`, weil
-   die Figuren freigestellt sind und angeschnitten albern aussähen. */
+/* Das SCHIFF des Teams (seit 14.09.2026 — vorher das geliehene
+   Gruppenbild mit Burg aus Kingdoms; Sönke: „Burgen und die Teamups
+   brauche ich nicht"). `contain` statt `cover`, weil es freigestellt
+   ist und ein angeschnittener Mast albern aussähe. */
 .wi-lteampic {
   flex: 0 0 auto;
   height: clamp(104px, 15vh, 176px);
@@ -678,40 +680,115 @@
   flex: 1;
 }
 
+/* ── Die Bühne am Beamer ─────────────────────────────────────
+   Links die Völker, in der Mitte die Insel, rechts die Völker
+   (Sönke, 14.09.2026 — Vorbild Kingdoms, .cm-stage). Die Höhe setzt
+   tool.js in Bildpunkten (passeBeamAn); hier steht nur, wie sie
+   aufgeteilt wird.
+
+   Die Spalten haben eine feste Breite und schrumpfen zuerst
+   (`flex: 0 1 auto`): die Karte soll mit der Fensterbreite wachsen,
+   nicht die Namensliste. */
+.wi-beam {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.wi-rost {
+  flex: 0 1 auto;
+  width: clamp(150px, 16vw, 250px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Bei acht Völkern stehen vier Karten in einer Spalte. Passen sie
+     nicht in die gesetzte Höhe, darf die SPALTE scrollen — die Karte
+     in der Mitte niemals. */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.wi-rost[hidden] { display: none; }
+.wi-arena {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .wi-bar {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 16px;
-  flex-wrap: wrap;
 }
-.wi-teams { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; }
+.wi-arenatitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: clamp(15px, 1.6vw, 22px);
+  font-weight: 800;
+  letter-spacing: .01em;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Die Karte eines Teams. Zwei Reihen, drei Spalten: Schiff links
+   über beide Reihen, Name und Punktzahl oben, die Aufschlüsselung
+   darunter. Dieselbe Karte steht in der Auswertung in einer Reihe
+   (.wi-teams) — deshalb bringt sie ihre Breite nicht selbst mit. */
+.wi-teams { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .wi-team {
   display: grid;
-  grid-template-columns: 34px auto;
-  grid-template-rows: auto auto;
+  grid-template-columns: auto 1fr auto;
   column-gap: 8px;
   align-items: center;
-  padding: 8px 14px 8px 8px;
+  padding: 8px 12px 8px 8px;
   border-radius: var(--r-md, 18px);
   background: color-mix(in srgb, var(--wi-team) 14%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--wi-team) 45%, transparent);
 }
-.wi-team img { grid-row: 1 / 3; width: 34px; height: 34px; object-fit: contain; }
-.wi-team b { font-size: 14px; color: var(--ink); }
-.wi-team .wi-score {
+/* Das Schiff (14.09.2026). Es ist breiter als ein Wappen und soll es
+   sein: man erkennt es am Rumpf, nicht am Umriss. */
+.wi-teampic {
+  grid-row: 1 / 3;
+  width: clamp(44px, 4.4vw, 72px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wi-teampic img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.wi-teamname {
   grid-column: 2; grid-row: 1;
+  font-size: clamp(13px, 1.2vw, 16px);
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wi-team .wi-score {
+  grid-column: 3; grid-row: 1;
   justify-self: end;
   font-weight: 800;
-  font-size: 18px;
+  font-size: clamp(18px, 1.9vw, 26px);
   color: var(--wi-team);
-  margin-left: 12px;
+  font-variant-numeric: tabular-nums;
+  margin-left: 8px;
 }
-.wi-team .wi-sub { grid-column: 2; font-size: 11px; color: var(--ink-faint); }
+.wi-team .wi-sub {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
 .wi-team.is-win {
   box-shadow: 0 0 0 2px var(--wi-gold), var(--shadow-pop);
 }
 
-.wi-clock { display: flex; align-items: center; gap: 12px; }
+.wi-clock { flex: 0 0 auto; display: flex; align-items: center; gap: 12px; }
 .wi-clock b {
   font-variant-numeric: tabular-nums;
   font-size: 30px;
@@ -816,8 +893,12 @@
 .wi-ship, .wi-plank, .wi-det, .wi-side,
 /* Dieselbe Falle, neu seit den Ruinen (0146): ein Herz über einem
    Feld ist genau das, worauf das Kind zielt — und würde den Tipp
-   schlucken, wenn es ihn annähme. */
-.wi-hearts, .wi-guards { pointer-events: none; }
+   schlucken, wenn es ihn annähme.
+   Und noch einmal dieselbe, jetzt an der schlimmstmöglichen Stelle:
+   die Marken der freien Wahl (14.09.2026) liegen als OBERSTE Schicht
+   genau auf den Feldern, die angetippt werden sollen. Ohne diese
+   Zeile markiert die Karte das Ziel und schluckt den Tipp. */
+.wi-hearts, .wi-guards, .wi-marks { pointer-events: none; }
 
 /* ── Das Meer ────────────────────────────────────────────────
    Brandung: jede Welle läuft von außen auf die Küste zu und
@@ -933,19 +1014,44 @@
 }
 
 /* ── Freie Wahl ──────────────────────────────────────────────
-   Die Felder werden anfassbar, und man sieht es. Und der Nebel
-   macht Platz: gewählt wird ein Feld, das noch verhüllt ist, also
-   muss man in diesem Moment sehen dürfen, wohin man tippt. Zwei
-   Sekunden Blick unter die Decke sind die Belohnung für die Serie —
-   und der Grund, warum die Tonstufen am Rand ohnehin schon etwas
-   durchlassen. */
+   Die Felder werden anfassbar, und man sieht es.
+
+   ⚠️ Der NEBEL BLEIBT (Sönke, 14.09.2026: „Der Nebel ist nicht weg!
+   Der bleibt."). Bis dahin ging er beim Wählen auf `opacity: .42` —
+   damit verriet eine Serie, was unter der Decke liegt, und das ist
+   genau das Gegenteil der Regel von 0146: im Nebel sieht man, dass
+   sich ein Angriff lohnt, aber nicht, worauf. Wer hier wieder eine
+   Regel auf `.wi-fog` setzt, nimmt dem Spiel seine Frage.
+
+   Gezeigt wird stattdessen, WELCHE Felder erreichbar sind — als
+   Ring um die Kachel, in einer Schicht über dem Nebel (markLayer in
+   tool.js). Ein Umriss verrät nichts über den Inhalt. */
 .wi-map.is-picking .wi-cell { cursor: pointer; }
 .wi-map.is-picking .wi-cell:hover { stroke: var(--wi-gold); stroke-width: .12; }
 /* Beim Nebelkranz wird nicht am eigenen Rand gewählt, sondern
-   irgendwo — die andere Farbe sagt genau das. */
+   irgendwo — die andere Farbe sagt genau das, und Marken gibt es
+   dort keine (jedes Feld ist erlaubt). */
 .wi-map.is-shadow .wi-cell:hover { stroke: #a78bfa; stroke-width: .14; }
-.wi-fog { transition: opacity .3s ease; }
-.wi-map.is-picking .wi-fog { opacity: .42; }
+
+/* Die Marke selbst: goldener Ring mit ganz wenig Füllung. „Leicht
+   markiert" ist wörtlich gemeint — sie soll das Feld finden helfen
+   und nicht die Karte übermalen. Sie pulst langsam, weil auf einem
+   Tablet zwischen Kachel und Fingerkuppe sonst nicht viel
+   Unterschied bleibt. */
+.wi-mark {
+  fill: rgba(255, 190, 46, .16);
+  stroke: var(--wi-gold);
+  stroke-width: .085;
+  stroke-linejoin: round;
+  animation: wi-mark 1.9s ease-in-out infinite;
+}
+@keyframes wi-mark {
+  0%, 100% { opacity: .62; }
+  50%      { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wi-mark { animation: none; opacity: .9; }
+}
 
 /* ══════════════════════════════════════════════════════════
    Tablet
@@ -1101,10 +1207,17 @@
   background: color-mix(in srgb, var(--wi-team) 16%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--wi-team) 45%, transparent);
 }
-.wi-me img { width: 40px; height: 40px; object-fit: contain; }
-.wi-me div { display: grid; }
-.wi-me b { font-size: 15px; color: var(--ink); }
-.wi-me span { font-size: 12px; color: var(--ink-faint); }
+/* Die Crew des eigenen Volkes auf Stufe 1 (14.09.2026). `contain`,
+   weil die Figuren freigestellt sind und angeschnitten albern
+   aussähen. */
+.wi-mepic { width: 42px; height: 42px; object-fit: contain; flex: 0 0 auto; }
+.wi-meinfo { display: grid; min-width: 0; }
+.wi-meinfo b { font-size: 15px; color: var(--ink); }
+.wi-meinfo span {
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
 .wi-me .wi-time {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
@@ -1112,6 +1225,73 @@
   font-weight: 700;
   color: var(--ink-soft);
 }
+/* Steht die Uhr nicht da (Übungsrunde), soll trotzdem alles rechts
+   bleiben, was rechts hingehört. */
+.wi-me .wi-time[hidden] { display: none; }
+.wi-me .wi-streak, .wi-me .wi-pickback { margin-left: auto; }
+.wi-me .wi-streak ~ .wi-time,
+.wi-me .wi-streak ~ .wi-pickback,
+.wi-me .wi-pickback ~ .wi-time { margin-left: 0; }
+
+/* ── Das Serien-Abzeichen ────────────────────────────────────
+   Sönke, 14.09.2026: „klein nach rechts … einfach eine Flamme und
+   dann ein x von y … so wie bei Kingdoms of Mathoria." Also genau
+   das Muster von .cm-pstreak: Zeichen, Zahl, Ziel — das Ziel kleiner
+   und blasser, weil es sich fast nie ändert und die Zahl davor bei
+   jeder Antwort.
+
+   Der Satz, der bis dahin unter der Aufgabe stand („Serie 2 — noch 1
+   richtige, dann …"), ist damit weg. Er erklärte bei jeder dritten
+   Antwort wieder dasselbe, und das Abzeichen sagt es in zwei
+   Zeichen. */
+.wi-streak {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 9px;
+  border-radius: var(--r-pill, 999px);
+  border: 1.5px solid color-mix(in srgb, var(--wi-gold) 55%, transparent);
+  background: color-mix(in srgb, var(--wi-gold) 14%, var(--surface));
+  color: var(--ink);
+  font-size: 13px;
+}
+.wi-streak[hidden] { display: none; }
+.wi-streakico { font-size: 13px; line-height: 1; }
+.wi-streak b { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.wi-streakgoal {
+  font-style: normal;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  opacity: .62;
+  margin-left: -1px;
+}
+/* Ab der Serie, die zählt, brennt es: von hier an bringt JEDE
+   richtige Antwort ein Feld der eigenen Wahl, und das ist der
+   Zustand, den man am Tablet aus dem Augenwinkel erkennen soll. */
+.wi-streak.is-hot {
+  border-color: #ffb347;
+  background: color-mix(in srgb, #ff9628 26%, var(--surface));
+  box-shadow: 0 0 10px color-mix(in srgb, #ff9628 45%, transparent);
+}
+
+/* Der Weg zurück in den Wahl-Kasten, wenn er von Hand zugemacht
+   wurde. Er trägt die Goldfarbe der freien Wahl — dieselbe Aussage
+   wie der Kasten selbst, nur zusammengefaltet. */
+.wi-pickback {
+  appearance: none;
+  flex: 0 0 auto;
+  cursor: pointer;
+  padding: 5px 11px;
+  border-radius: var(--r-pill, 999px);
+  border: 1.5px solid color-mix(in srgb, var(--wi-gold) 65%, transparent);
+  background: color-mix(in srgb, var(--wi-gold) 24%, var(--surface));
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+.wi-pickback[hidden] { display: none; }
 
 .wi-task {
   display: flex;
@@ -1162,36 +1342,37 @@
 .wi-fb.is-bad  { background: var(--warn-dim); color: var(--warn-ink); border: 1px solid var(--warn-edge); }
 .wi-fb.is-idle { background: var(--paper);    color: var(--ink-faint); border: 1px solid var(--line); }
 
-/* Zwei Zustände, eine Leiste: das Hinzählen ist ruhig, die
-   Aufforderung leuchtet. */
-.wi-pickbar {
-  padding: 10px 14px;
-  border-radius: var(--r-md, 18px);
-  background: var(--paper);
-  border: 1px solid var(--line);
-  font-size: 14px;
+/* ── Der Wahl-Kasten ─────────────────────────────────────────
+   Die Leiste unter der Aufgabe (`.wi-pickbar`) ist am 14.09.2026
+   weggefallen. Sie trug drei Sätze, von denen zwei nur erklärten,
+   was jetzt das Serien-Abzeichen in zwei Zeichen sagt — und der
+   dritte („zeig, wohin") stand über einer Karte, die bei offener
+   Tastatur nicht zu sehen war. Jetzt geht die Karte selbst auf.
+
+   Breiter als die anderen Kästen, weil der Inhalt eine INSEL ist:
+   bei 720 px bliebe von einer runden Karte ein Handteller. */
+.wi-ovbox--pick { max-width: min(96vw, 1000px); }
+.wi-pickhint {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: 13px;
   color: var(--ink-soft);
 }
-.wi-pickbar.is-pick {
-  background: color-mix(in srgb, var(--wi-gold) 22%, var(--surface));
-  border-color: color-mix(in srgb, var(--wi-gold) 55%, transparent);
-  color: var(--ink);
-}
+/* Die Karte nimmt den ganzen Rest — und mindestens so viel, dass
+   eine Kachel zu treffen ist. `min-height` in dvh und nicht in
+   Prozent: der Kasten selbst hat keine feste Höhe. */
+.wi-mapwrap--pick { flex: 1 1 auto; min-height: min(52dvh, 420px); }
 /* Der Nebelkranz ist selten und mächtig — er bekommt die einzige
-   Farbe, die sonst nirgends auf dieser Oberfläche vorkommt. */
-.wi-pickbar.is-shadow {
-  background: color-mix(in srgb, #6d28d9 26%, var(--surface));
+   Farbe, die sonst nirgends auf dieser Oberfläche vorkommt. Die
+   Klasse setzt renderTask und nicht `:has()`: die älteren iPads in
+   der Schule kennen das noch nicht, und eine Farbe, die dort
+   ausfällt, wäre genau bei den Geräten weg, für die sie gedacht
+   ist. */
+.wi-ov--pick.is-shadow .wi-ovbox--pick {
   border-color: color-mix(in srgb, #6d28d9 60%, transparent);
-  color: var(--ink);
+  box-shadow: var(--shadow-lg), 0 0 0 2px color-mix(in srgb, #6d28d9 40%, transparent);
 }
-.wi-pickhint {
-  display: block;
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--ink-faint);
-}
-.wi-pickbar.is-pick .wi-pickhint,
-.wi-pickbar.is-shadow .wi-pickhint { color: inherit; opacity: .78; }
+.wi-ov--pick.is-shadow .wi-ovtitle { color: color-mix(in srgb, #6d28d9 70%, var(--ink)); }
 
 /* ── Die Sonderregeln in der Lobby (0146) ────────────────────
    Zwei Kacheln, eine Frage, und die Antwort erst auf Tippen. Eigener
@@ -1288,9 +1469,30 @@
 
 .wi--tab .wi-mapwrap { min-height: 46vh; }
 
-/* Am Beamer nimmt die Insel, was da ist. */
+/* Am Beamer nimmt die Insel, was da ist. Die HÖHE der Bühne rechnet
+   seit dem 14.09.2026 tool.js aus (passeBeamAn) und schreibt sie in
+   Bildpunkten auf `.wi-beam` — `flex: 1` allein reichte nicht, weil
+   dafür jede Hülle bis zum <body> eine feste Höhe bräuchte, und die
+   Werkzeugseite hat über und unter dem Werkzeug noch etwas stehen.
+   Genau daran war die Karte unten abgeschnitten. */
 body.tool-fill .wi--pult { flex: 1; min-height: 0; }
 body.tool-fill .wi--pult .wi-play { position: relative; }
+
+/* Auf einem schmalen Schirm (die Lehrkraft schaut am Laptop nach,
+   ohne Beamer) haben zwei Spalten neben der Insel keinen Platz. Dann
+   wieder untereinander: erst die Karte, danach die Völker als Reihe —
+   die Reihenfolge im DOM steht dem nicht entgegen, `order` dreht sie. */
+@media (max-width: 820px) {
+  .wi-beam { flex-direction: column; }
+  .wi-arena { order: -1; min-height: 46vh; }
+  .wi-rost {
+    width: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  .wi-rost .wi-team { flex: 1 1 190px; }
+}
 
 
 /* ══════════════════════════════════════════════════════════

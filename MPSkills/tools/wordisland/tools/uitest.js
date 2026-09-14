@@ -227,7 +227,12 @@ async function testTablet() {
      da, nachdem die Dateien umbenannt worden waren. Deshalb wird
      hier nicht nur der Pfad geprüft, sondern die DATEI. */
   const shipHref = ship.querySelector('.wi-shipimg').getAttribute('href') || '';
-  ok('Schiffsbild gesetzt', /wordisland\/sprites\/red%20Schiff\.png$/.test(shipHref), shipHref);
+  /* Seit dem 14.09.2026 der ZUSCHNITT aus sprites/boot/ und nicht
+     mehr Sönkes Vorlage „red Schiff.png": die ist 1984 × 2176 groß
+     und wird 2,6 Kacheln breit gezeichnet — bei 30 Tablets eine halbe
+     Gigabyte je Runde. Das Seitenverhältnis ist dasselbe, das Bild
+     sitzt also unverändert. */
+  ok('Schiffsbild gesetzt', /wordisland\/sprites\/boot\/0\.png$/.test(shipHref), shipHref);
   ok('Schiffsbild liegt auch wirklich da',
      fs.existsSync(path.join(HERE, '..', '..', '..', decodeURI(shipHref))), shipHref);
   /* Und es läuft NICHT durch den Freistell-Filter. Die Schiffe sind
@@ -251,6 +256,18 @@ async function testTablet() {
      root.querySelector('[data-part="tplay"]').hidden === false &&
      root.querySelector('[data-part="tlobby"]').hidden === true);
   ok('Volk im Kopf', /Toast-Ritter/.test(root.querySelector('.wi-me').textContent));
+  /* Das Bild im Kopf ist die Crew des eigenen Volkes auf Stufe 1
+     (14.09.2026, Sönke: „bei den Völkern die Level 1 Sprites der
+     Crew"). Geprüft wird der Pfad UND die Datei: aus clash-of-math
+     ist hier nichts mehr geliehen, und ein <img> auf eine Datei, die
+     es nicht gibt, zeigt am Tablet ein kaputtes Bild. */
+  const kopfBild = root.querySelector('.wi-mepic').getAttribute('src') || '';
+  ok('Crew Stufe 1 im Kopf', /sprites\/held\/0_1\.png$/.test(kopfBild), kopfBild);
+  ok('und das Bild liegt auch da',
+     fs.existsSync(path.join(HERE, '..', '..', '..', decodeURI(kopfBild))), kopfBild);
+  ok('keine Leihgabe aus Kingdoms mehr',
+     !/clash-of-math\/sprites/.test(root.innerHTML) &&
+     !/clash-of-math\/sprites/.test(fs.readFileSync(TOOL, 'utf8')));
   ok('Wort steht da', root.querySelector('.wi-word').textContent === 'das Haus');
   ok('Frage passt zur Richtung', /Englisch/.test(root.querySelector('.wi-ask').textContent));
   ok('Eingabefeld offen', !root.querySelector('.wi-type').hidden);
@@ -291,13 +308,69 @@ async function testTablet() {
   ok('neues Wort steht da', root.querySelector('.wi-word').textContent === 'die Schule');
   ok('Eingabefeld ist zurück', root.querySelector('.wi-type').hidden === false);
 
+  /* ── Das Serien-Abzeichen (14.09.2026) ───────────────────────
+     „Klein nach rechts … einfach eine Flamme und dann ein x von y."
+     Bei Serie 0 steht es gar nicht da, unterhalb des Ziels zählt es
+     hin, ab dem Ziel trägt es nur die Zahl und brennt — dort bringt
+     jede weitere richtige Antwort eine Wahl, ein „5/3" wäre also
+     falsch. */
+  const chip = root.querySelector('.wi-streak');
+  ok('Serien-Abzeichen im Kopf, nicht als Satz', !!chip && !root.querySelector('.wi-pickbar'));
+  ok('Flamme steht dran', /🔥/.test(chip.textContent));
+  reply({ ok: true, result: 'correct', streak: 2, picks: 0, tile: { r: 0, c: 2, kind: 'fog', ruin: 0 },
+          task: { prompt: 'der Stift', dir: 'de_en', stage: 'type', options: [] } });
+  antworte(root, document, 'school');
+  await wait(40);
+  ok('Serie 2 von 3', chip.hidden === false &&
+     root.querySelector('[data-part="streakn"]').textContent === '2' &&
+     root.querySelector('[data-part="streakgoal"]').textContent === '/3',
+     chip.textContent.trim());
+  ok('und brennt noch nicht', !chip.classList.contains('is-hot'));
+
   /* Serie → freie Wahl */
   reply({ ok: true, result: 'correct', streak: 3, picks: 1, tile: null,
           task: { prompt: 'das Buch', dir: 'de_en', stage: 'type', options: [] } });
-  antworte(root, document, 'school');
+  antworte(root, document, 'pen');
   await wait(40);
-  ok('Aufforderung zur freien Wahl', !root.querySelector('.wi-pickbar').hidden);
+  ok('ab dem Ziel brennt es und zählt nicht weiter hin',
+     chip.classList.contains('is-hot') &&
+     root.querySelector('[data-part="streakgoal"]').textContent === '',
+     chip.textContent.trim());
   ok('Karte ist scharf', root.querySelector('.wi-map').classList.contains('is-picking'));
+
+  /* ── Der Wahl-Kasten geht von selbst auf ─────────────────────
+     Sönke: „Sobald ich eine Streak habe, öffnet sich das Feld." Und
+     die Karte ist DIESELBE — sie hängt jetzt im Kasten und nicht
+     mehr in der eingebetteten Hülle. */
+  const ov = root.querySelector('[data-part="pickov"]');
+  ok('Wahl-Kasten steht offen', ov.hidden === false);
+  ok('und die Karte hängt darin',
+     root.querySelector('[data-part="pickwrap"] .wi-map') === root.querySelector('.wi-map'));
+  ok('Aufforderung im Kopf des Kastens',
+     /Zeig, wohin/.test(root.querySelector('[data-part="picktitle"]').textContent));
+
+  /* ── Die erreichbaren Felder sind markiert, der Nebel bleibt ──
+     Beides gehört zusammen: markiert wird, WELCHES Feld geht, und
+     zwar ohne zu verraten, was darunter liegt. Feld 0 gehört dem
+     eigenen Volk (OWN_START), Feld 1 und 5 grenzen daran — aber Feld
+     0 ist der Landeplatz und darf selbst nicht markiert sein. */
+  const marken = root.querySelectorAll('.wi-mark');
+  ok('erreichbare Felder markiert', marken.length > 0, `${marken.length}`);
+  ok('Marken liegen ÜBER dem Nebel',
+     [...root.querySelectorAll('.wi-map > g')].findIndex(g => g.classList.contains('wi-marks')) >
+     [...root.querySelectorAll('.wi-map > g')].findIndex(g => g.classList.contains('wi-fog')));
+  /* Und die Marken nehmen keinen Fingertipp weg — sie liegen genau
+     dort, wohin gezielt wird. Geprüft wird die Regel in tool.css,
+     weil man das im DOM nicht sieht. */
+  const css = fs.readFileSync(path.join(HERE, '..', 'tool.css'), 'utf8');
+  ok('Markenschicht ist für Zeiger durchlässig',
+     /\.wi-marks[^{]*\{[^}]*pointer-events:\s*none/.test(css.replace(/\n/g, ' ')));
+  /* ⚠️ Die Kernzusage dieses Tages: der Nebel wird beim Wählen NICHT
+     aufgehellt (Sönke: „Der Nebel ist nicht weg! Der bleibt."). Eine
+     Regel, die .wi-fog beim Wählen durchsichtig macht, verrät genau
+     das, was der Nebel verbergen soll. */
+  ok('der Nebel bleibt beim Wählen stehen',
+     !/is-picking[^{]*\.wi-fog/.test(css));
 
   const target = root.querySelectorAll('.wi-cell')[1];
   click(target, document);
@@ -305,6 +378,10 @@ async function testTablet() {
   const pick = calls.find(([fn]) => fn === 'wi_pick_tile');
   ok('freie Wahl schickt r/c', !!pick && pick[1].p_r === 0 && pick[1].p_c === 1,
      JSON.stringify(pick && pick[1]));
+  ok('Kasten geht mit der verbrauchten Wahl zu', ov.hidden === true);
+  ok('und die Karte ist wieder eingebettet',
+     root.querySelector('[data-part="mapwrap"] .wi-map') === root.querySelector('.wi-map'));
+  ok('ohne Wahl keine Marken', root.querySelectorAll('.wi-mark').length === 0);
 
   /* Falsch → Lösung und Sperre */
   reply({ ok: true, result: 'wrong', streak: 0, picks: 0, solution: 'book',
@@ -351,7 +428,9 @@ async function testTabletLobby() {
                   { i: 3, tiles: 0, ruins: 0, score: 0, people: 2 }],
           countdown_ends_at: phase === 'countdown'
             ? new Date(Date.now() + 4000).toISOString() : null
-        }));
+        }, /* Eine Serie und zwei offene Wahlen aus der Runde davor —
+              gebraucht für die Zusage „kein Wahl-Kasten beim Üben". */
+           { streak: 3, picks: 2 }));
       }
     }
   });
@@ -381,6 +460,16 @@ async function testTabletLobby() {
   ok('Üben öffnet die Aufgabe', root.querySelector('[data-part="tplay"]').hidden === false);
   ok('Übungsrunde steht im Kopf', /Übungsrunde/.test(root.querySelector('.wi-me').textContent));
   ok('keine Karte beim Üben', root.querySelector('[data-part="mapwrap"]').hidden === true);
+  /* ⚠️ Und deshalb auch kein Wahl-Kasten, obwohl der Server zwei
+     offene Wahlen meldet: er ginge über einer LEEREN Karte auf (in der
+     Lobby gibt es keine Insel) und forderte zu einem Tipp auf, den
+     wi_pick_tile mit „phase_locked" abweist. */
+  ok('und kein Wahl-Kasten beim Üben',
+     root.querySelector('[data-part="pickov"]').hidden === true &&
+     root.querySelector('[data-part="pickback"]').hidden === true);
+  ok('die Serie steht trotzdem im Kopf',
+     root.querySelector('.wi-streak').hidden === false &&
+     root.querySelector('[data-part="streakn"]').textContent === '3');
   click(root.querySelector('[data-part="back"]'), document);
   await wait(20);
   ok('Zurück zur Aufstellung', root.querySelector('[data-part="tlobby"]').hidden === false);
@@ -755,6 +844,18 @@ async function testPult() {
   /* ── Spalten und Nachzügler ── */
   const cols = root.querySelectorAll('.wi-lteam');
   ok('Ada steht in ihrer Spalte', /Ada/.test(cols[0].textContent));
+  /* In der Lobby-Spalte stand bis zum 14.09.2026 das geliehene
+     Gruppenbild mit Burg aus Kingdoms („Burgen und die Teamups
+     brauche ich nicht"). Jetzt das Schiff des Teams. */
+  const spaltenBild = cols[0].querySelector('.wi-lteampic img').getAttribute('src') || '';
+  ok('Lobby-Spalte zeigt das Schiff', /sprites\/boot\/\d\.png$/.test(spaltenBild), spaltenBild);
+  /* Und die Wappenreihe zeigt die Crew auf Stufe 1 — die VÖLKER, also
+     Figuren, nicht Schiffe. */
+  const wappenBild = root.querySelector('.wi-pickbtn img').getAttribute('src') || '';
+  ok('Wappenreihe zeigt die Crew (Stufe 1)',
+     /sprites\/held\/0_1k\.png$/.test(wappenBild), wappenBild);
+  ok('und der Daumennagel liegt da',
+     fs.existsSync(path.join(HERE, '..', '..', '..', decodeURI(wappenBild))), wappenBild);
   ok('Bo ist als abwesend markiert',
      cols[1].querySelector('.wi-lteamoff') &&
      cols[1].querySelector('.wi-lteamoff').textContent === 'Bo');
@@ -792,6 +893,36 @@ async function testPult() {
   ok('Insel am Beamer', root.querySelectorAll('.wi-cell').length === MAP.length);
   ok('Völkerleiste steht', root.querySelectorAll('.wi-team').length === 2);
   ok('Punkte sichtbar', /7/.test(root.querySelector('.wi-score').textContent));
+
+  /* ── Links · Karte · rechts (14.09.2026) ─────────────────────
+     Sönkes Vorgabe: „links und rechts die Teams, in der Mitte die
+     Karte." Zwei Spalten, abwechselnd gefüllt — bei zwei Völkern also
+     eines links und eines rechts. Und die Reihenfolge im DOM IST die
+     Anordnung: die linke Spalte steht vor der Arena, die rechte
+     dahinter. Das prüft linkedom, die Optik nicht. */
+  const beam = root.querySelector('[data-part="beam"]');
+  const kinder = [...beam.children];
+  ok('Bühne mit drei Teilen', kinder.length === 3, `${kinder.length}`);
+  ok('links · Arena · rechts',
+     kinder[0].classList.contains('wi-rost--left') &&
+     kinder[1].classList.contains('wi-arena') &&
+     kinder[2].classList.contains('wi-rost--right'),
+     kinder.map(k => k.className).join(' | '));
+  ok('die Karte liegt in der Mitte', !!kinder[1].querySelector('.wi-map'));
+  ok('je ein Volk links und rechts',
+     kinder[0].querySelectorAll('.wi-team').length === 1 &&
+     kinder[2].querySelectorAll('.wi-team').length === 1);
+  /* ⚠️ Die Bühne heißt `wi-beam` und nicht `wi-stage` — das ist schon
+     die Leinwand-Bühne der eigenen Insel, und eine tool.css bedient
+     alle drei Rollen. Ein gesetzte Höhe hätte dort die Tiere
+     verschoben. */
+  ok('und sie heißt nicht wie die Insel-Bühne', !beam.classList.contains('wi-stage'));
+  /* Das Bild einer Team-Karte ist das SCHIFF (Sönke: „bei den Teams
+     die Schiffe"). Pfad UND Datei, wie beim Schiff auf der Karte. */
+  const kartenBild = kinder[0].querySelector('.wi-teampic img').getAttribute('src') || '';
+  ok('Team-Karte zeigt das Schiff', /sprites\/boot\/0\.png$/.test(kartenBild), kartenBild);
+  ok('und das Schiff liegt da',
+     fs.existsSync(path.join(HERE, '..', '..', '..', decodeURI(kartenBild))), kartenBild);
 
   /* ── Ende ── */
   phase = 'ended';
@@ -3367,6 +3498,36 @@ async function testRuinen() {
   ok('der kleine Ort bleibt geheim',
      koerper(platz(root, 1)).getAttribute('opacity') === '0' && herzZahl(platz(root, 1)) === 0);
 
+  /* ── Ein Ort ist so groß wie ein Feld (14.09.2026) ────────────
+     Sönke: „Die Ruinen sind nicht gut klickbar, da sie zu viel Platz
+     wegnehmen. Mach sie mal so groß wie alle Felder … die Felder sind
+     gleich groß." Der SOCKEL ist damit in beiden Klassen genau eine
+     Kachel — gemessen an der Deckfläche eines gewöhnlichen Feldes,
+     nicht an einer Zahl im Quelltext. Überlappen darf nur das
+     Gebäudebild: klein leicht, groß etwas mehr.
+
+     Gemessen wird die Breite aus dem Pfad (Sechseck um 0/0, also die
+     Spanne zwischen dem kleinsten und größten x). */
+  const spanne = d => {
+    const xs = (d.match(/-?\d+(?:\.\d+)?(?= )/g) || []).map(Number);
+    return xs.length ? Math.max(...xs) - Math.min(...xs) : 0;
+  };
+  const feldBreit = spanne(root.querySelector('.wi-cell').getAttribute('d'));
+  const sockelG = spanne(platz(root, 0).querySelector('.wi-plate').getAttribute('d'));
+  const sockelK = spanne(platz(root, 1).querySelector('.wi-plate').getAttribute('d'));
+  ok('beide Sockel sind genau ein Feld breit',
+     Math.abs(sockelG - feldBreit) < .02 && Math.abs(sockelK - feldBreit) < .02,
+     `Feld ${feldBreit.toFixed(2)} · groß ${sockelG.toFixed(2)} · klein ${sockelK.toFixed(2)}`);
+  const bildG = +platz(root, 0).querySelector('image').getAttribute('width');
+  const bildK = +platz(root, 1).querySelector('image').getAttribute('width');
+  ok('das große Gebäude überlappt mehr als das kleine',
+     bildG > bildK && bildK > feldBreit, `groß ${bildG} · klein ${bildK}`);
+  /* Und nicht beliebig weit: ein Bild, das über den Nachbarn hinaus
+     ragt, deckt genau das Feld zu, das man als nächstes antippen
+     will. Eine halbe Kachel Überstand ist die Grenze. */
+  ok('und keines weiter als eine halbe Kachel', bildG <= feldBreit * 1.5,
+     `${bildG} / ${feldBreit}`);
+
   tool.unmount();
 }
 
@@ -3446,11 +3607,17 @@ async function testSchildUndSchatten() {
   ok('die Ruine ist dabei nicht mitgezählt', guards.querySelectorAll('g').length === 1);
 
   /* Der Nebelkranz hat Vorrang vor der freien Wahl — und ohne
-     picks > 0 wäre die Karte sonst gar nicht scharf. */
-  ok('die Leiste fordert zum Nebelkranz auf',
-     root.querySelector('.wi-pickbar').classList.contains('is-shadow') &&
-     /Schattentempel/.test(root.querySelector('.wi-pickbar').textContent),
-     root.querySelector('.wi-pickbar').textContent);
+     picks > 0 wäre die Karte sonst gar nicht scharf. Seit dem
+     14.09.2026 steht die Aufforderung im Wahl-Kasten und nicht mehr
+     in einer Leiste unter der Aufgabe. */
+  const kasten = root.querySelector('[data-part="pickov"]');
+  ok('der Wahl-Kasten fordert zum Nebelkranz auf',
+     kasten.hidden === false && kasten.classList.contains('is-shadow') &&
+     /Schattentempel/.test(root.querySelector('[data-part="picktitle"]').textContent),
+     root.querySelector('[data-part="picktitle"]').textContent);
+  /* Und zwar OHNE Marken: beim Nebelkranz ist die ganze Insel
+     erlaubt, und 400 goldene Ringe sagen nichts. */
+  ok('keine Marken beim Nebelkranz', root.querySelectorAll('.wi-mark').length === 0);
   ok('die Karte ist auch ohne freie Wahl scharf',
      root.querySelector('.wi-map').classList.contains('is-picking') &&
      root.querySelector('.wi-map').classList.contains('is-shadow'));
@@ -3464,7 +3631,7 @@ async function testSchildUndSchatten() {
      /7/.test(root.querySelector('.wi-fb').textContent),
      root.querySelector('.wi-fb').textContent);
   ok('danach ist die Aufforderung weg',
-     !root.querySelector('.wi-pickbar').classList.contains('is-shadow'));
+     kasten.hidden === true && !kasten.classList.contains('is-shadow'));
   ok('die Schutzherzen sind mit dem Nebel verschwunden',
      root.querySelector('.wi-guards').querySelectorAll('path').length === 0);
 
