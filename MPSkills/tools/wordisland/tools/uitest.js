@@ -60,8 +60,22 @@ function makeEnv() {
     preview: false
   };
 
+  /* Ein echter Ablagestub statt gar keiner. Bis 15.09.2026 gab es
+     hier nichts, und jeder Zugriff der tool.js lief in sein
+     try/catch — geprüft war damit nie, ob das Werkzeug sich etwas
+     MERKT, sondern nur, dass es am Fehlen nicht zerbricht. Der
+     Unit-Baum (0150) merkt sich, welche Unit zugeklappt ist, und
+     genau das gehört geprüft. */
+  const store = new Map();
+  const localStorage = {
+    getItem: k => (store.has(String(k)) ? store.get(String(k)) : null),
+    setItem: (k, v) => { store.set(String(k), String(v)); },
+    removeItem: k => { store.delete(String(k)); },
+    clear: () => store.clear()
+  };
+
   const sandbox = {
-    window, document,
+    window, document, localStorage,
     setInterval: (...a) => setInterval(...a),
     clearInterval: (...a) => clearInterval(...a),
     setTimeout: (...a) => setTimeout(...a),
@@ -76,7 +90,7 @@ function makeEnv() {
   // `sandbox` kommt mit heraus, damit die Solo-Rolle weiter unten
   // Leinwand, Bild und die Zeichenschleife nachrüsten kann — sie
   // braucht mehr Browser als die beiden Raum-Rollen.
-  return { window, document, impls, ctxBase, sandbox };
+  return { window, document, impls, ctxBase, sandbox, store, localStorage };
 }
 
 const click = (el, doc) => el.dispatchEvent(new doc.defaultView.Event('click', { bubbles: true }));
@@ -764,6 +778,136 @@ async function testRelief() {
   tool.unmount();
 }
 
+/* ══════════════════════════════════════════════════════════
+   Das Wörter-Fenster mit Units (15.09.2026, Migration 0150)
+   ══════════════════════════════════════════════════════════
+   Dieselbe Gliederung wie in der Leiste der Insel, nur in der
+   Optik des Pults. Sönke wollte sie ausdrücklich in BEIDEN Rollen.
+
+   Ein eigenes, schlankes Pult statt testPult zu erweitern: dort
+   hängen dreißig Zusagen an drei Sätzen OHNE Units, und die sind
+   der Rückfallweg (Datenbank ohne 0150) — den will ich nicht
+   verlieren, indem ich ihm Units unterschiebe. */
+async function testPultUnits() {
+  console.log('\n— Wörter-Fenster mit Units —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+  const calls = [];
+  let gewaehlt = ['b1'];
+
+  const SETS = [
+    { id: 'a1', title: 'Station 1 — Schule', count: 30, mine: '0',
+      unit: 'u-test', utitle: 'Test', grade: 5, island: 'en:5', station: 1 },
+    { id: 'a2', title: 'Station 2 — Zuhause', count: 30, mine: '0',
+      unit: 'u-test', utitle: 'Test', grade: 5, island: 'en:5', station: 2 },
+    { id: 'a3', title: 'Station 3 — Essen', count: 30, mine: '0',
+      unit: 'u-test', utitle: 'Test', grade: 5, island: 'en:5', station: 3 },
+    { id: 'b1', title: 'Food', count: 24, mine: '0',
+      unit: 'u-food', utitle: 'Food', grade: 6, island: 'en:6', station: 1 }
+  ];
+
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'presenter',
+    actions: {
+      role: 'presenter',
+      call: (fn, args) => {
+        calls.push([fn, args]);
+        if (fn === 'wi_sets_list') {
+          return Promise.resolve({ ok: true, chosen: gewaehlt.slice(), sets: SETS });
+        }
+        if (fn === 'wi_room_setup') {
+          if (args.p_sets) gewaehlt = args.p_sets.slice();
+          return Promise.resolve({ ok: true });
+        }
+        if (fn === 'wi_room_get') {
+          return Promise.resolve({
+            ok: true, role: 'presenter', phase: 'lobby', mode: 'type',
+            direction: 'mixed', team_count: 2, factions: [0, 1], duration: 600,
+            radius: 5, seed: 1, teams: [], map_key: 'raum:lobby', map: [],
+            own: '', ends_at: null, countdown_ends_at: null, winner_team: null,
+            sets: gewaehlt.slice(), online_count: 0, room_total: 0, people: []
+          });
+        }
+        return Promise.resolve({ ok: true });
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+  click(root.querySelector('[data-part="setsbtn"]'), document);
+  await wait(20);
+
+  /* ── Die Gliederung ───────────────────────────────────────── */
+  const grp = [...root.querySelectorAll('.wi-sgrp')].map(e => e.textContent.trim());
+  ok('zwei Jahrgangs-Überschriften', grp.length === 2, JSON.stringify(grp));
+  ok('… und sie nennen den Jahrgang',
+     grp[0] === 'Jahrgang 5' && grp[1] === 'Jahrgang 6', JSON.stringify(grp));
+
+  const kisten = root.querySelectorAll('.wi-sunit');
+  ok('genau EINE Unit ist aufklappbar', kisten.length === 1, String(kisten.length));
+  ok('… mit ihren drei Stationen als Kacheln',
+     kisten[0].querySelectorAll('.wi-sstats .wi-set').length === 3,
+     String(kisten[0].querySelectorAll('.wi-sstats .wi-set').length));
+  /* Eine Unit am Stück bleibt eine einzelne Kachel — genau wie das
+     ganze Fenster vor 0150 aussah. */
+  ok('die Unit am Stück steht als einzelne Kachel da',
+     root.querySelectorAll('.wi-srow > .wi-set').length === 1,
+     String(root.querySelectorAll('.wi-srow > .wi-set').length));
+  ok('die Unit-Zeile zählt Stationen und Wörter',
+     /3 Stationen/.test(kisten[0].textContent) && /90 Wörter/.test(kisten[0].textContent),
+     kisten[0].querySelector('.wi-suall span').textContent);
+
+  /* ── Auf- und Zuklappen ───────────────────────────────────── */
+  ok('bei wenigen Stationen steht sie offen',
+     kisten[0].querySelector('.wi-sstats').hidden === false);
+  const rufeVorher = calls.filter(c => c[0] === 'wi_room_setup').length;
+  click(kisten[0].querySelector('[data-sauf]'), document);
+  await wait(20);
+  ok('der Pfeil klappt die Stationen zu',
+     root.querySelector('.wi-sstats').hidden === true);
+  /* ⚠️ Zuklappen ist eine Ansichtssache und keine Auswahl. Ginge es
+     an den Server, verlöre die Lehrkraft beim Aufräumen ihre
+     Wörter. */
+  ok('… ohne etwas an den Server zu schicken',
+     calls.filter(c => c[0] === 'wi_room_setup').length === rufeVorher);
+  click(root.querySelector('[data-sauf]'), document);
+  await wait(20);
+  ok('und wieder auf', root.querySelector('.wi-sstats').hidden === false);
+
+  /* ── Der Sammelschalter ───────────────────────────────────── */
+  click(root.querySelector('[data-sall]'), document);
+  await wait(30);
+  let letzte = calls.filter(c => c[0] === 'wi_room_setup').pop();
+  ok('der Sammelschalter geht an den Server', !!letzte && !!letzte[1].p_sets,
+     JSON.stringify(letzte && letzte[1]));
+  ok('… und wählt ALLE drei Stationen auf einmal',
+     ['a1', 'a2', 'a3'].every(x => letzte[1].p_sets.includes(x)),
+     JSON.stringify(letzte[1].p_sets));
+  /* ⚠️ Nach außen bleibt es eine FLACHE Liste von Satz-Nummern.
+     Der Server kennt keine Units (wi_room_sets ist set-basiert),
+     und eine Unit-Nummer darin wäre dort ein Fremdkörper. */
+  ok('… als flache Liste von Satz-Nummern, ohne Unit-Nummer',
+     letzte[1].p_sets.every(x => /^[ab]\d$/.test(x)),
+     JSON.stringify(letzte[1].p_sets));
+  ok('die Unit-Zeile ist danach ganz an',
+     root.querySelector('.wi-suhead').classList.contains('is-on'));
+
+  /* Eine einzelne Station abwählen macht die Unit „teilweise". */
+  click(root.querySelector('.wi-sstats .wi-set'), document);
+  await wait(30);
+  const kopf = root.querySelector('.wi-suhead');
+  ok('eine Station ab macht die Unit „teilweise"',
+     kopf.classList.contains('is-halb') && !kopf.classList.contains('is-on'),
+     kopf.className);
+  ok('… und die Zeile sagt, wie viele gewählt sind',
+     /2 gewählt/.test(kopf.textContent),
+     kopf.querySelector('.wi-suall span').textContent);
+
+  tool.unmount();
+}
+
 /* ═══════════════════════════════════════════════════════════
    Pult
    ═══════════════════════════════════════════════════════════ */
@@ -1290,6 +1434,45 @@ function soloView(n, stufen, ohneUnits, player) {
   };
   if (player) learner.player = player;
   return { ok: true, learner, words_list: words, due: 0 };
+}
+
+/* Dieselbe Insel, aber mit dem Unit-Dach aus Migration 0150. Drei
+   Ebenen, damit der Baum etwas zu tun hat:
+
+     Jahrgang 5 · Unit „Test"   → drei Stationen   (aufklappbar)
+     Jahrgang 6 · Unit „Food"   → eine  Station    (am Stück)
+     ohne Jahrgang · „Klassenarbeit" → eine Station (am Stück)
+
+   Die Wörter verteilen sich reihum auf die fünf Sätze — so trägt
+   jede Station Tiere, und die Stufenpunkte der Unit sind wirklich
+   die Summe ihrer Stationen und keine abgeschriebene Zahl. */
+const BAUM_SETS = [
+  { id: 'set-a', title: 'Station 1 — Schule',  unit: 'u-test', utitle: 'Test',
+    grade: 5, island: 'en:5', station: 1 },
+  { id: 'set-b', title: 'Station 2 — Zuhause', unit: 'u-test', utitle: 'Test',
+    grade: 5, island: 'en:5', station: 2 },
+  { id: 'set-c', title: 'Station 3 — Essen',   unit: 'u-test', utitle: 'Test',
+    grade: 5, island: 'en:5', station: 3 },
+  { id: 'set-d', title: 'Food',                unit: 'u-food', utitle: 'Food',
+    grade: 6, island: 'en:6', station: 1 },
+  { id: 'set-e', title: 'Klassenarbeit',       unit: 'u-eig',  utitle: 'Klassenarbeit',
+    grade: null, island: 'en:x', station: 1 }
+];
+
+function soloBaum(n, stufen) {
+  const words = [];
+  for (let i = 0; i < n; i++) {
+    words.push({ i: 'w-' + i, s: stufen ? stufen(i) : 0,
+                 u: BAUM_SETS[i % BAUM_SETS.length].id });
+  }
+  const sets = BAUM_SETS.map(s => Object.assign({}, s, {
+    count: words.filter(w => w.u === s.id).length }));
+  return {
+    ok: true,
+    learner: { token: 'tok', seed: 4711, settings: {},
+               words: n, grown: words.filter(w => w.s >= 3).length, sets },
+    words_list: words, due: 0
+  };
 }
 
 /* Der Stand, den wi_solo_level_refresh zurückgibt — dieselben
@@ -1840,6 +2023,147 @@ async function testUnitLeiste() {
      !leiste.classList.contains('is-zu') &&
      root.querySelector('[data-part="ubody"]').hidden === false &&
      root.querySelector('[data-part="slegend"]').hidden === false);
+
+  tool.unmount();
+}
+
+/* ══════════════════════════════════════════════════════════
+   Der Unit-Baum (15.09.2026, Migration 0150)
+   ══════════════════════════════════════════════════════════
+   Sönke: „unit anklicken und auswählen und in der unit die
+   unterkathegorien wählen".
+
+   Geprüft wird, was in einer Klasse als „geht nicht" auffiele: die
+   Stationen stecken unter ihrer Unit, der Pfeil klappt sie auf und
+   zu und merkt sich das, der Sammelschalter legt alle auf einmal
+   um — und die letzte Station lässt sich auch über ihn nicht
+   abschalten. */
+async function testUnitBaum() {
+  console.log('\n— Der Unit-Baum —');
+  const { env, tool, root, calls, ctx, document } = await mountSolo(
+    soloBaum(40, i => i % 5), {
+      wi_solo_settings: args => ({ ok: true, settings: { sets: args.p_sets } })
+    });
+
+  /* ── Die Gliederung ───────────────────────────────────────── */
+  const grp = [...root.querySelectorAll('.wi-ugrp')].map(e => e.textContent.trim());
+  ok('drei Jahrgangs-Überschriften', grp.length === 3, JSON.stringify(grp));
+  ok('… und sie heißen nach dem Jahrgang',
+     grp[0] === 'Jahrgang 5' && grp[1] === 'Jahrgang 6', JSON.stringify(grp));
+  /* Eine eigene Liste hat keinen Jahrgang. „Jahrgang null" wäre
+     eine Behauptung — sie bekommt eine eigene Überschrift. */
+  ok('… die jahrgangslose Liste steht unter „Eigene Listen"',
+     grp[2] === 'Eigene Listen', JSON.stringify(grp));
+
+  const kisten = root.querySelectorAll('.wi-ubox');
+  ok('genau EINE Unit ist aufklappbar', kisten.length === 1, String(kisten.length));
+  ok('… nämlich die mit drei Stationen',
+     kisten[0].querySelectorAll('.wi-ustat').length === 3,
+     String(kisten[0].querySelectorAll('.wi-ustat').length));
+  ok('die beiden Units am Stück stehen als eine Zeile da',
+     root.querySelectorAll('.wi-uone').length === 2,
+     String(root.querySelectorAll('.wi-uone').length));
+  /* ⚠️ Das ist die Zusage hinter „eine Unit mit einer Station IST
+     eine Unit am Stück": ein Pfeil, der eine einzige Zeile
+     freilegt, ist eine Bitte um einen Klick ohne Gegenwert. */
+  ok('… und tragen KEINEN Aufklapp-Pfeil',
+     root.querySelectorAll('.wi-uone .wi-uchevb').length === 0);
+  ok('die Unit am Stück trägt ihr „i" selbst',
+     root.querySelectorAll('.wi-uone .wi-uinfo').length === 2);
+
+  /* Die Zahl an der Unit ist die Summe ihrer Stationen: 40 Wörter
+     reihum auf fünf Sätze = 8 je Satz, drei Stationen = 24. */
+  const kopf = kisten[0].querySelector('.wi-utop');
+  ok('die Unit zählt die Wörter ihrer Stationen',
+     kopf.querySelector('.wi-uzahl').textContent.trim() === '(24)',
+     kopf.querySelector('.wi-uzahl').textContent);
+
+  /* ── Auf- und Zuklappen ───────────────────────────────────── */
+  ok('bei wenigen Units steht sie offen',
+     kisten[0].classList.contains('is-auf') &&
+     kisten[0].querySelector('.wi-ustats').hidden === false);
+  click(kopf.querySelector('.wi-uchevb'), document);
+  await wait(20);
+  const zu = root.querySelector('.wi-ubox');
+  ok('der Pfeil klappt die Stationen zu',
+     !zu.classList.contains('is-auf') &&
+     zu.querySelector('.wi-ustats').hidden === true);
+  /* ⚠️ Nicht bloß „unsichtbar": das Zuklappen muss die Wahl der
+     Stationen UNBERÜHRT lassen. Wer zuklappt, hört nicht auf zu
+     üben. */
+  ok('… ohne etwas an den Server zu schicken',
+     calls.filter(c => c[0] === 'wi_solo_settings').length === 0);
+  ok('… und es ist gemerkt',
+     /u-test/.test(env.localStorage.getItem('mpskills.wordisland.unitklapp') || ''),
+     env.localStorage.getItem('mpskills.wordisland.unitklapp'));
+  click(root.querySelector('.wi-ubox .wi-uchevb'), document);
+  await wait(20);
+  ok('und wieder auf',
+     root.querySelector('.wi-ubox').classList.contains('is-auf'));
+
+  /* ── Der Sammelschalter ─────────────────────────────────────
+     Gezählt wird, was WÖRTER trägt: drei Stationen und zwei Units
+     am Stück. Die Unit-Kopfzeile ist auch eine `.wi-urow` und wäre
+     hier eine sechste, die nichts eigenes anschaltet. */
+  const anZahl = () => root.querySelectorAll('.wi-ustat.is-on, .wi-uone.is-on').length;
+  ok('am Anfang sind alle an — leer heißt „alles"', anZahl() === 5, String(anZahl()));
+
+  click(root.querySelector('.wi-utop .wi-utoggle'), document);
+  await wait(30);
+  let letzte = calls.filter(c => c[0] === 'wi_solo_settings').pop();
+  ok('der Sammelschalter geht an den Server', !!letzte,
+     JSON.stringify(letzte && letzte[1]));
+  ok('… und nimmt ALLE drei Stationen auf einmal weg',
+     letzte && letzte[1].p_sets.length === 2 &&
+     !letzte[1].p_sets.some(x => ['set-a', 'set-b', 'set-c'].includes(x)),
+     JSON.stringify(letzte && letzte[1].p_sets));
+  ok('die Stationen sind danach alle blass',
+     root.querySelectorAll('.wi-ustat.is-on').length === 0);
+
+  /* Zurück: eine halb angeschaltete Unit geht ZUERST ganz an.
+     „teilweise" ist ein Zustand, den man ohne drei Tipps verlassen
+     können muss. */
+  click(root.querySelector('.wi-ustat .wi-utoggle'), document);
+  await wait(30);
+  const halb = root.querySelector('.wi-utop');
+  ok('eine Station an macht die Unit „teilweise"',
+     halb.classList.contains('is-halb') &&
+     /teilweise/.test(halb.textContent), halb.textContent.replace(/\s+/g, ' ').trim());
+  click(halb.querySelector('.wi-utoggle'), document);
+  await wait(30);
+  letzte = calls.filter(c => c[0] === 'wi_solo_settings').pop();
+  ok('… und der Sammelschalter macht daraus GANZ an',
+     ['set-a', 'set-b', 'set-c'].every(x => letzte[1].p_sets.includes(x)),
+     JSON.stringify(letzte[1].p_sets));
+
+  /* ── Die letzte Station bleibt an ─────────────────────────── */
+  /* Erst die beiden Einzel-Units aus, dann die Unit mit den drei
+     Stationen — die darf nicht gehen. Am Server heißt „nichts
+     gewählt" nämlich „alles" (wi_solo_chosen, 0136). */
+  /* ⚠️ Nach JEDEM Klick neu suchen: renderUnits zeichnet die Liste
+     neu, und eine vorher eingesammelte Knotenliste zeigt danach auf
+     Elemente, die nicht mehr im Dokument hängen. Ein Klick darauf
+     geht ins Leere — und der Prüfstand hielte den zweiten Schalter
+     für kaputt. */
+  for (let i = 0; i < 2; i++) {
+    const one = root.querySelector('.wi-uone.is-on .wi-utoggle');
+    if (!one) break;
+    click(one, document);
+    await wait(30);
+  }
+  ok('die beiden Einzel-Units lassen sich abschalten',
+     root.querySelectorAll('.wi-uone.is-on').length === 0,
+     String(root.querySelectorAll('.wi-uone.is-on').length));
+
+  const vorher = calls.filter(c => c[0] === 'wi_solo_settings').length;
+  ctx.toasts.length = 0;
+  click(root.querySelector('.wi-utop .wi-utoggle'), document);
+  await wait(30);
+  ok('⚠️ der Sammelschalter kann die LETZTE Unit nicht abschalten',
+     calls.filter(c => c[0] === 'wi_solo_settings').length === vorher &&
+     ctx.toasts.length === 1, ctx.toasts.join(' · '));
+  ok('… und sagt auch, warum',
+     /Station/.test(ctx.toasts[0] || ''), ctx.toasts[0]);
 
   tool.unmount();
 }
@@ -4120,6 +4444,7 @@ async function testRuinTabelle() {
   await testNewRound();
   await testRelief();
   await testPult();
+  await testPultUnits();
   await testFehlendeMigration();
   await testOhneMigration();
   await testSolo();
@@ -4130,6 +4455,7 @@ async function testRuinTabelle() {
   await testPunkte();
   await testSoloOhneMigration();
   await testUnitLeiste();
+  await testUnitBaum();
   await testTierTipp();
   await testFunkelBild();
   await testFigur();

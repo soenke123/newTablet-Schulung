@@ -217,7 +217,11 @@
   let ships = {};           // Index des Landeplatzes → { g, img } des Schiffs
   let ownPainted = null;    // zuletzt gemalte Besitz-Zeichenkette
   let els = {};
-  let sets = { list: [], chosen: [] };
+  /* `zu` sind die zugeklappten Units im Wörter-Fenster (0150). Sie
+     leben in der SITZUNG und nicht im localStorage: anders als das
+     Kind an seiner Insel macht die Lehrkraft dieses Fenster für eine
+     Auswahl auf und danach wieder zu. */
+  let sets = { list: [], chosen: [], zu: new Set() };
   let setsBusy = 0;         // wie pickBusy: eigener Klick schlägt Server-Antwort
   let tab = 'units';
   let setsOpen = false;
@@ -254,6 +258,51 @@
 
   const esc = s => (ctx ? ctx.esc(s) : String(s == null ? '' : s));
   const teamOf = s => TEAMS[facOf(s)] || { name: 'Volk ' + (s + 1), color: '#888' };
+
+  /* ══════════════════════════════════════════════════════════
+     JAHRGANG → UNIT → STATION (Migration 0150)
+     ══════════════════════════════════════════════════════════
+     Seit 0150 ist ein Vokabelsatz eine STATION und hängt unter
+     einer Unit. Beide Auswahl-Oberflächen gruppieren danach — das
+     Wörter-Fenster am Pult und die Unit-Leiste der eigenen Insel —,
+     und beide bekommen dieselben Felder vom Server
+     (vocab_sets_list / wi_solo_open). Die Gruppierung steht deshalb
+     HIER und nicht zweimal: sonst sortiert die Lehrkraft nach einer
+     anderen Ordnung als das Kind, dem sie die Wörter freischaltet.
+
+     Die Reihenfolge kommt schon richtig vom Server (Jahrgang, Unit,
+     Station); eine Map behält sie bei.
+
+     ⚠️ Ein Satz OHNE `unit` — Datenbank ohne 0150 — wird seine
+     eigene Gruppe und damit eine Unit am Stück. Die Oberfläche
+     sieht dann aus wie vorher, statt alles in einen Topf
+     „undefined" zu werfen. */
+  function gruppiereNachUnit(liste) {
+    const grp = new Map();
+    for (const s of (liste || [])) {
+      const uid = s.unit || ('einzeln:' + s.id);
+      let g = grp.get(uid);
+      if (!g) {
+        g = { id: uid, title: s.utitle || s.title,
+              grade: (s.grade === 0 || s.grade) ? s.grade : null, sets: [] };
+        grp.set(uid, g);
+      }
+      g.sets.push(s);
+    }
+    // Eine Unit mit genau EINER Station ist eine Unit am Stück.
+    for (const g of grp.values()) g.stueck = g.sets.length === 1;
+    return [...grp.values()];
+  }
+
+  /* Die Überschrift einer Jahrgangs-Gruppe. Eine eigene Liste hat
+     keinen Jahrgang — „Jahrgang null" wäre eine Behauptung. */
+  const jahrgangText = g =>
+    g == null ? 'Eigene Listen' : 'Jahrgang ' + esc(String(g));
+
+  /* Ab wie vielen Stationen die Units zugeklappt starten — „so viel
+     passt in die Ansicht, ohne dass man sucht". Ein ganzer Jahrgang
+     (~40 Stationen) kommt damit zu, die Testdaten stehen offen. */
+  const SETS_AUF_MAX = 12;
   /* Bild eines SLOTS. Die beiden Wege oben nehmen ein Volk; hier
      steht die Übersetzung, damit sie nicht an jeder Aufrufstelle
      wiederholt wird — genau da ist sie beim ersten Bau der Lobby
@@ -2412,10 +2461,51 @@
     if (!r || !r.ok) return;
     sets.list = r.sets || [];
     sets.chosen = (r.chosen || []).map(String);
+
+    /* Wie viele Stationen stünden aufgeklappt da? Bei einem ganzen
+       Lehrwerk sind das leicht vierzig, und dann sucht die Lehrkraft
+       ihre Unit im Gescrolle. Gezählt wird in Zeilen und nicht in
+       Units: drei Units mit je einer Station sind drei Zeilen, drei
+       Units eines Buchs sind zwölf. Dieselbe Zahl wie in der
+       Unit-Leiste der Insel. */
+    sets.zu = new Set();
+    for (const t of ['0', '1']) {
+      const baum = gruppiereNachUnit(sets.list.filter(s => s.mine === t));
+      if (baum.reduce((n, g) => n + g.sets.length, 0) > SETS_AUF_MAX) {
+        for (const g of baum) if (!g.stueck) sets.zu.add(g.id);
+      }
+    }
+
     renderSets();
     renderSetSum();
   }
 
+  /* Eine Station als Kachel — die Form, die das Fenster seit 0131
+     hat. Neu ist nur, wo sie steht: unter ihrer Unit. */
+  function setKachel(s, mine) {
+    return `
+      <button class="wi-set${sets.chosen.includes(String(s.id)) ? ' is-on' : ''}"
+              data-id="${esc(s.id)}">
+        <b>${esc(s.title)}</b>
+        <span>${s.count} Wörter${s.level ? ' · Klasse ' + esc(s.level) : ''}</span>
+        ${mine ? `<i class="wi-del" data-del="${esc(s.id)}" title="Liste löschen">×</i>` : ''}
+      </button>`;
+  }
+
+  /* Das Wörter-Fenster gliedert seit 0150 nach Jahrgang → Unit →
+     Station. Sönke: „unit anklicken und auswählen und in der unit
+     die unterkathegorien wählen … sowohl im solo mode als auch im
+     multiplayer (lehrkraft)."
+
+     Gebaut ist es wie die Leiste der Insel, nur in der Optik des
+     Pults: Kopfzeile mit Sammelschalter und Aufklapp-Pfeil, darunter
+     die Stations-Kacheln. Eine Unit am Stück bleibt eine einzelne
+     Kachel — wie vor 0150.
+
+     ⚠️ Nach außen ändert sich NICHTS: `saveSetup({p_sets})` bekommt
+     weiterhin eine flache Liste von Satz-Nummern. Der Server kennt
+     keine Units (wi_room_sets ist set-basiert), und das soll so
+     bleiben. */
   function renderSets() {
     const mine = tab === 'own';
     const list = sets.list.filter(s => (s.mine === '1') === mine);
@@ -2425,13 +2515,56 @@
         : 'Keine mitgelieferten Units gefunden.'}</p>`;
       return;
     }
-    els.sets.innerHTML = list.map(s => `
-      <button class="wi-set${sets.chosen.includes(String(s.id)) ? ' is-on' : ''}"
-              data-id="${esc(s.id)}">
-        <b>${esc(s.title)}</b>
-        <span>${s.count} Wörter${s.level ? ' · Klasse ' + esc(s.level) : ''}</span>
-        ${mine ? `<i class="wi-del" data-del="${esc(s.id)}" title="Liste löschen">×</i>` : ''}
-      </button>`).join('');
+
+    const baum = gruppiereNachUnit(list);
+    const mehrere = baum.some(g => g.grade !== baum[0].grade);
+    let html = '';
+    let jahrgang = false;
+
+    /* Aufeinanderfolgende Units am Stück kommen in EINE Reihe und
+       stehen darin nebeneinander — so wie das ganze Fenster vor
+       0150 aussah. Untereinander wären fünf eigene Listen fünf
+       Zeilen Gescrolle für fünf kurze Titel. */
+    let reihe = [];
+    const reiheAbschliessen = () => {
+      if (!reihe.length) return;
+      html += `<div class="wi-srow">${reihe.join('')}</div>`;
+      reihe = [];
+    };
+
+    for (const g of baum) {
+      if (mehrere && g.grade !== jahrgang) {
+        reiheAbschliessen();
+        jahrgang = g.grade;
+        html += `<div class="wi-sgrp">${jahrgangText(g.grade)}</div>`;
+      }
+
+      if (g.stueck) { reihe.push(setKachel(g.sets[0], mine)); continue; }
+      reiheAbschliessen();
+
+      const an     = g.sets.filter(s => sets.chosen.includes(String(s.id))).length;
+      const zu     = sets.zu.has(g.id);
+      const woerter = g.sets.reduce((n, s) => n + (parseInt(s.count, 10) || 0), 0);
+      html += `<div class="wi-sunit${zu ? '' : ' is-auf'}">
+          <div class="wi-suhead${an === g.sets.length ? ' is-on' : ''}${
+            an && an < g.sets.length ? ' is-halb' : ''}">
+            <button type="button" class="wi-uchevb${zu ? '' : ' is-auf'}"
+                    data-sauf="${esc(g.id)}" aria-expanded="${!zu}"
+                    aria-label="Stationen ${zu ? 'ausklappen' : 'einklappen'}"
+                    ><i class="wi-schev" aria-hidden="true"></i></button>
+            <button type="button" class="wi-suall" data-sall="${esc(g.id)}"
+                    aria-pressed="${an === g.sets.length}">
+              <b>${esc(g.title)}</b>
+              <span>${g.sets.length} Stationen · ${woerter} Wörter${
+                an ? ` · <i>${an} gewählt</i>` : ''}</span>
+            </button>
+          </div>
+          <div class="wi-sstats"${zu ? ' hidden' : ''}>${
+            g.sets.map(s => setKachel(s, mine)).join('')}</div>
+        </div>`;
+    }
+    reiheAbschliessen();
+    els.sets.innerHTML = html;
   }
 
   /* Die Kurzform neben den Wappen: welche Listen gewählt sind und wie
@@ -2474,6 +2607,42 @@
       await loadSets();
       return;
     }
+
+    /* Auf- und Zuklappen ändert an der Auswahl nichts und geht
+       deshalb auch nicht an den Server. Es steht VOR dem
+       Sammelschalter: der Pfeil liegt in derselben Kopfzeile, und
+       wer zuerst nach dem Schalter sucht, klappt nie. */
+    const auf = e.target.closest('[data-sauf]');
+    if (auf) {
+      const id = auf.dataset.sauf;
+      if (sets.zu.has(id)) sets.zu.delete(id); else sets.zu.add(id);
+      renderSets();
+      return;
+    }
+
+    /* Der Sammelschalter einer Unit: alle an → alle aus, sonst alle
+       an. Auch eine halb gewählte Unit geht also zuerst GANZ an —
+       „teilweise" muss man ohne drei Klicks verlassen können. */
+    const all = e.target.closest('[data-sall]');
+    if (all) {
+      const g = gruppiereNachUnit(sets.list).find(x => x.id === all.dataset.sall);
+      if (!g) return;
+      const ids = g.sets.map(s => String(s.id));
+      const rest = sets.chosen.filter(x => !ids.includes(x));
+      sets.chosen = ids.every(i => sets.chosen.includes(i)) ? rest : rest.concat(ids);
+      if (!sets.chosen.length) {
+        // Ein Raum ohne Wörter ist kein Raum.
+        sets.chosen = ids;
+        ctx.toast('Mindestens eine Liste muss gewählt sein.');
+      }
+      renderSets();
+      renderSetSum();
+      setsBusy++;
+      await saveSetup({ p_sets: sets.chosen });
+      setsBusy--;
+      return;
+    }
+
     const b = e.target.closest('.wi-set');
     if (!b) return;
     const id = b.dataset.id;
@@ -5990,6 +6159,10 @@
   const monsCache = new Map();   // `${schlüssel}|${farbe}` → data:-URL für die Liste
 
   const WI_UNITS_KEY = 'mpskills.wordisland.units';
+  /* Welche Unit auf- und welche zugeklappt ist, je Unit-Nummer.
+     Eine Unit ohne Eintrag hat noch niemand angefasst und folgt der
+     Voreinstellung (siehe unitAufgeklappt). */
+  const WI_UKLAPP_KEY = 'mpskills.wordisland.unitklapp';
 
   const SOLO_DIR = [
     ['mixed', 'gemischt'], ['de_en', 'Deutsch → Englisch'], ['en_de', 'Englisch → Deutsch']
@@ -6871,44 +7044,196 @@
 
   const idsVon = setId => (solo && solo.proSet.get(setId)) || [];
 
+  /* ─── Der Unit-Baum ─────────────────────────────────────────
+     Seit 0150 ist ein Satz eine STATION und hängt unter einer Unit
+     (Jahrgang → Unit → Station). Das Lehrwerk bringt ~1000 Wörter je
+     Jahrgang mit; flach wären das vierzig Zeilen untereinander, und
+     die Leiste wäre nicht mehr zu bedienen.
+
+     Gruppiert wird HIER und nicht im Server: `solo.sets` kommt schon
+     in der richtigen Reihenfolge (Jahrgang, Unit, Station), und eine
+     Map behält sie bei. Trägt ein Satz keine Unit — Datenbank ohne
+     0150 —, wird er seine eigene Gruppe, und die Leiste sieht aus
+     wie vorher. So sagt sie im Zweifel die Wahrheit, statt alles in
+     einen Topf „undefined" zu werfen. */
+  function unitBaum() {
+    const baum = gruppiereNachUnit((solo && solo.sets) || []);
+    for (const g of baum) {
+      /* Die Zahl an der Unit ist die Summe ihrer Stationen — aus den
+         TIEREN gerechnet, nicht aus `count`. Nur so stimmt sie nach
+         einem Stufensprung sofort; `count` ist der Bestand der Liste
+         und weiß von der Insel nichts. */
+      g.ids    = [].concat(...g.sets.map(s => idsVon(s.id)));
+      g.anzahl = g.ids.length || g.sets.reduce((n, s) => n + (s.count | 0), 0);
+      g.an     = g.sets.filter(s => solo.aktiv.has(s.id)).length;
+    }
+    return baum;
+  }
+
+  /* Eine Zeile — für die Unit wie für die Station dieselbe Form.
+     `ziel` ist, was der Schalter umlegt: eine Unit- oder eine
+     Satz-Nummer. */
+  function unitZeile(o) {
+    const pfeil = o.auf === undefined ? '' :
+      `<button type="button" class="wi-uchevb${o.auf ? ' is-auf' : ''}"
+               data-auf="${esc(o.ziel)}" aria-expanded="${o.auf}"
+               aria-label="Stationen ${o.auf ? 'einklappen' : 'ausklappen'}"
+               ><i class="wi-schev" aria-hidden="true"></i></button>`;
+    const knopf = `<button type="button" class="wi-utoggle"
+              data-${o.unit ? 'anunit' : 'an'}="${esc(o.ziel)}"
+              aria-pressed="${o.zustand === 'an'}">
+        <b>${esc(o.titel)} <span class="wi-uzahl">(${o.anzahl})</span></b>
+        <span class="wi-slegend">${stufenLegende(o.ids)}</span>${
+          /* „pausiert" steht in einer eigenen Zeile und nicht hinter
+             dem Titel: der Titel wird bei Bedarf abgeschnitten, und
+             ausgerechnet der Zustand darf das nicht sein. */
+          o.zustand === 'an' ? ''
+            : `<span class="wi-umeta">${
+                 o.zustand === 'halb' ? 'teilweise' : 'pausiert'}</span>`}
+      </button>`;
+    const i = !o.info ? '' : `<button type="button" class="wi-uinfo${
+        unitOffen && unitOffen.id === o.info ? ' is-on' : ''}"
+              data-info="${esc(o.info)}"
+              aria-label="Übersicht zu ${esc(o.titel)}">i</button>`;
+    return `<div class="${o.klasse}${o.zustand === 'an' ? ' is-on' : ''}${
+      o.zustand === 'halb' ? ' is-halb' : ''}">${pfeil}${knopf}${i}</div>`;
+  }
+
   function renderUnits() {
     if (!solo || !els.uList) return;
-    els.uList.innerHTML = solo.sets.length
-      ? solo.sets.map(s => {
-          const an = solo.aktiv.has(s.id);
-          const ids = idsVon(s.id);
-          return `
-            <div class="wi-urow${an ? ' is-on' : ''}">
-              <button type="button" class="wi-utoggle" data-an="${esc(s.id)}"
-                      aria-pressed="${an}">
-                <b>${esc(s.title)} <span class="wi-uzahl">(${
-                  ids.length || (s.count | 0)})</span></b>
-                <span class="wi-slegend">${stufenLegende(ids)}</span>${
-                  /* „pausiert" steht in einer eigenen Zeile und nicht
-                     hinter dem Titel: der Titel wird bei Bedarf
-                     abgeschnitten, und ausgerechnet der Zustand darf
-                     das nicht sein. */
-                  an ? '' : '<span class="wi-umeta">pausiert</span>'}
-              </button>
-              <button type="button" class="wi-uinfo${
-                unitOffen && unitOffen.id === s.id ? ' is-on' : ''}"
-                      data-info="${esc(s.id)}"
-                      aria-label="Übersicht zu ${esc(s.title)}">i</button>
-            </div>`;
-        }).join('')
-        + '<p class="wi-uhint">Abgefragt wird nur, was an ist. Die anderen Tiere '
-        + 'bleiben auf deiner Insel — sie sind nur blass.</p>'
-      : '<p class="wi-uhint">Noch nichts freigespielt. Deine Insel wächst, sobald '
+    const baum = unitBaum();
+    if (!baum.length) {
+      els.uList.innerHTML =
+        '<p class="wi-uhint">Noch nichts freigespielt. Deine Insel wächst, sobald '
         + 'du bei einer Wordisland-Stunde dabei warst.</p>';
+      return;
+    }
+
+    /* Überschriften nur, wenn es wirklich mehrere Jahrgänge gibt.
+       Bei einem einzigen wäre die Zeile eine Trennung, die nichts
+       trennt — und sie kostet in der schmalen Leiste eine Zeile. */
+    const mehrere = baum.some(g => g.grade !== baum[0].grade);
+    let html = '';
+    let jahrgang = false;
+
+    for (const g of baum) {
+      if (mehrere && g.grade !== jahrgang) {
+        jahrgang = g.grade;
+        html += `<div class="wi-ugrp">${g.grade == null
+          ? 'Eigene Listen' : 'Jahrgang ' + esc(String(g.grade))}</div>`;
+      }
+
+      /* Eine Unit am Stück bekommt keinen Aufklapp-Pfeil und trägt
+         das „i" ihrer einzigen Station selbst. Ein Pfeil, der eine
+         einzige Zeile freilegt, ist eine Bitte um einen Klick ohne
+         Gegenwert. */
+      if (g.stueck) {
+        html += unitZeile({
+          klasse: 'wi-urow wi-uone', ziel: g.sets[0].id, unit: false,
+          titel: g.title, anzahl: g.anzahl, ids: g.ids,
+          zustand: solo.aktiv.has(g.sets[0].id) ? 'an' : 'aus',
+          info: g.sets[0].id });
+        continue;
+      }
+
+      const auf = unitAufgeklappt(g.id, baum);
+      const zustand = g.an === g.sets.length ? 'an' : g.an ? 'halb' : 'aus';
+      /* ⚠️ `wi-ubox` und nicht `wi-unit`: die Leiste selbst heißt
+         `.wi-units`, und `.wi-uhead` ist schon der Kopf der
+         Detail-Ansicht weiter unten in dieser Datei
+         (Regel: feedback_css_class_collision_one_stylesheet). */
+      html += `<div class="wi-ubox${auf ? ' is-auf' : ''}">`
+        + unitZeile({
+            klasse: 'wi-urow wi-utop', ziel: g.id, unit: true,
+            titel: g.title, anzahl: g.anzahl, ids: g.ids, zustand, auf })
+        + `<div class="wi-ustats"${auf ? '' : ' hidden'}>`
+        + g.sets.map(s => unitZeile({
+            klasse: 'wi-urow wi-ustat', ziel: s.id, unit: false,
+            titel: s.title, anzahl: idsVon(s.id).length || (s.count | 0),
+            ids: idsVon(s.id),
+            zustand: solo.aktiv.has(s.id) ? 'an' : 'aus', info: s.id })).join('')
+        + '</div></div>';
+    }
+
+    els.uList.innerHTML = html
+      + '<p class="wi-uhint">Abgefragt wird nur, was an ist. Die anderen Tiere '
+      + 'bleiben auf deiner Insel — sie sind nur blass.</p>';
 
     if (unitOffen) renderUnitDetail();
   }
 
   function unitListeClick(e) {
+    /* Reihenfolge nicht vertauschen: der Pfeil liegt IN der
+       Unit-Zeile, und `data-anunit` ist auf demselben Weg nach oben
+       erreichbar. Wer zuerst nach dem Schalter sucht, klappt nie. */
+    const auf = e.target.closest('[data-auf]');
+    if (auf) { unitKlappen(auf.dataset.auf); return; }
+    const alle = e.target.closest('[data-anunit]');
+    if (alle) { unitSammel(alle.dataset.anunit); return; }
     const an = e.target.closest('[data-an]');
     if (an) { unitToggle(an.dataset.an); return; }
     const info = e.target.closest('[data-info]');
     if (info) unitOeffnen(info.dataset.info);
+  }
+
+  /* ─── Auf- und Zuklappen ────────────────────────────────────
+     Gemerkt wird je Unit eine ausdrückliche Entscheidung. Nur „was
+     ist zu" zu speichern ginge auch, aber dann wäre eine Unit aus
+     dem nächsten Halbjahr stumm zugeklappt, obwohl niemand sie je
+     zugeklappt hat.
+
+     Ohne Eintrag entscheidet, wie lang die Liste AUFGEKLAPPT wäre —
+     gezählt in Zeilen und nicht in Units. Die Zahl der Units sagt
+     darüber nichts: drei Units mit je einer Station sind drei
+     Zeilen, drei Units eines Lehrwerks sind zwölf.
+
+     Die Schwelle ist dieselbe wie im Wörter-Fenster der Lehrkraft
+     (SETS_AUF_MAX): eine Zahl für „so viel passt in die Ansicht,
+     ohne dass man sucht". Zwei verschiedene wären hier ein Rätsel —
+     dieselbe Unit stünde beim Kind offen und bei der Lehrkraft zu. */
+  function unitKlappStand() {
+    try {
+      const v = JSON.parse(localStorage.getItem(WI_UKLAPP_KEY) || '{}');
+      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+    } catch (e) { return {}; }
+  }
+
+  function unitAufgeklappt(uid, baum) {
+    const st = unitKlappStand();
+    if (typeof st[uid] === 'boolean') return st[uid];
+    return baum.reduce((n, g) => n + g.sets.length, 0) <= SETS_AUF_MAX;
+  }
+
+  function unitKlappen(uid) {
+    const baum = unitBaum();
+    const st = unitKlappStand();
+    st[uid] = !unitAufgeklappt(uid, baum);
+    try { localStorage.setItem(WI_UKLAPP_KEY, JSON.stringify(st)); } catch (e) { /* egal */ }
+    renderUnits();
+  }
+
+  /* ─── Der Sammelschalter einer Unit ─────────────────────────
+     Alle an → alle aus, sonst alle an. Auch eine halb angeschaltete
+     Unit geht also zuerst GANZ an — „teilweise" ist ein Zustand, den
+     man verlassen können muss, ohne dreimal zu tippen.
+
+     Die Sperre aus unitToggle gilt hier genauso: am Server heißt
+     „nichts gewählt" nämlich „alles" (wi_solo_chosen, 0136), und wer
+     die letzte Station ausschaltet, bekäme sie alle zurück. */
+  function unitSammel(uid) {
+    const g = unitBaum().find(x => x.id === uid);
+    if (!g) return;
+    const gewaehlt = new Set(soloChosen());
+    if (g.sets.every(s => gewaehlt.has(s.id))) {
+      for (const s of g.sets) gewaehlt.delete(s.id);
+      if (!gewaehlt.size) {
+        ctx.toast('Eine Station muss anbleiben — sonst gibt es nichts zu üben.');
+        return;
+      }
+    } else {
+      for (const s of g.sets) gewaehlt.add(s.id);
+    }
+    soloSetzen({ p_sets: [...gewaehlt] });
   }
 
   /* Am Server heißt „nichts gewählt" nämlich „alles" (wi_solo_chosen,
@@ -8605,7 +8930,8 @@
       pickGrund = 'serie';
       if (flashTimer) { clearTimeout(flashTimer); flashTimer = null; }
       ownPainted = null; submitting = false; picking = false; shadowPick = 0;
-      sets = { list: [], chosen: [] }; setsBusy = 0; tab = 'units'; setsOpen = false;
+      sets = { list: [], chosen: [], zu: new Set() };
+      setsBusy = 0; tab = 'units'; setsOpen = false;
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
       practice = false; lastPhase = null; soloClaimAt = 0;
       solo = null; soloTask = null; simZeit = 0; letzterT = 0; nacht = 0;

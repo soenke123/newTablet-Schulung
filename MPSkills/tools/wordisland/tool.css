@@ -630,7 +630,74 @@
 }
 .wi-tab.is-on { background: var(--accent-dim); color: var(--accent-ink); }
 
-.wi-sets { display: flex; flex-wrap: wrap; gap: 8px; }
+/* ── Jahrgang → Unit → Station im Wörter-Fenster (0150) ───────
+   Die Kacheln bleiben, was sie waren; neu ist das Dach darüber.
+   `column`, weil die Gliederung untereinander läuft — die KACHELN
+   einer Unit stehen weiter nebeneinander (.wi-sstats). */
+.wi-sets { display: flex; flex-direction: column; gap: 8px; }
+/* Units am Stück stehen nebeneinander — so wie das ganze Fenster
+   vor 0150 aussah. Ohne Units (Datenbank ohne 0150) ist ALLES eine
+   solche Reihe, und die Ansicht sieht unverändert aus. */
+.wi-srow { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.wi-sgrp {
+  margin: 6px 2px 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.wi-sgrp:first-child { margin-top: 0; }
+
+.wi-sunit { display: flex; flex-direction: column; gap: 6px; }
+
+.wi-suhead {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm, 12px);
+  background: var(--paper);
+  padding: 2px;
+}
+.wi-suhead.is-on {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+/* „teilweise" — einige Stationen gewählt. Gestrichelt, damit sich
+   halb auch ohne Farbe von ganz unterscheidet. */
+.wi-suhead.is-halb { border-style: dashed; border-color: var(--accent); }
+
+.wi-suall {
+  appearance: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.wi-suall b { font-size: 14px; }
+.wi-suall span { font-size: 12px; color: var(--ink-faint); }
+.wi-suall span i { font-style: normal; color: var(--accent-ink); font-weight: 700; }
+
+/* Die Stationen rücken ein und bekommen eine Linie an die Seite —
+   dieselbe Sprache wie in der Unit-Leiste der Insel. */
+.wi-sstats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+.wi-sunit.is-auf > .wi-sstats { border-left-color: var(--accent-edge, var(--accent)); }
 .wi-set {
   position: relative;
   appearance: none;
@@ -2180,6 +2247,83 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   font-size: 12px;
   line-height: 1.45;
   color: var(--ink-faint);
+}
+
+/* ── Der Unit-Baum (0150) ─────────────────────────────────────
+   Jahrgang → Unit → Station. Eigene Namen statt Erweitern von
+   `.wi-urow`: eine tool.css bedient alle Rollen, und `.wi-uhead`
+   ist weiter unten schon der Kopf der Detail-Ansicht
+   (Regel: feedback_css_class_collision_one_stylesheet). */
+
+/* Die Jahrgangs-Überschrift. Sie steht nur da, wenn es wirklich
+   mehrere gibt — bei einem einzigen trennt sie nichts. */
+.wi-ugrp {
+  margin: 8px 2px 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.wi-ugrp:first-child { margin-top: 0; }
+
+.wi-ubox { display: flex; flex-direction: column; gap: 4px; }
+
+/* Die Stationen rücken ein und bekommen eine Linie an die Seite:
+   die Einrückung allein reicht bei zwei Ebenen nicht, wenn die
+   Leiste schmal ist und die Titel umbrechen. */
+.wi-ustats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: 10px;
+  padding-left: 8px;
+  border-left: 2px solid var(--line);
+}
+.wi-ubox.is-auf > .wi-ustats { border-left-color: var(--accent); }
+
+/* Eine Station ist leiser als ihre Unit — der Titel trägt die
+   Nummer, und die Unit darüber sagt schon, worum es geht. */
+.wi-ustat .wi-utoggle { padding: 7px 10px; }
+.wi-ustat .wi-utoggle b { font-size: 13px; }
+.wi-ustat .wi-uinfo { width: 26px; font-size: 12px; }
+
+/* Der Aufklapp-Pfeil. Eigene Klasse `.wi-schev` statt `.wi-uchev`:
+   der gehört dem Griff der ganzen Leiste, und `.wi-units.is-zu
+   .wi-uchev` würde sonst auch hier drehen. */
+.wi-uchevb {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm, 12px);
+  border: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+}
+.wi-uchevb:hover { border-color: var(--line); }
+.wi-schev {
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--ink-faint);
+  border-bottom: 2px solid var(--ink-faint);
+  /* zu = nach rechts (›), offen = nach unten (⌄) */
+  transform: rotate(-45deg);
+  transition: transform .16s ease;
+}
+.wi-uchevb.is-auf .wi-schev { transform: rotate(45deg); }
+
+/* „teilweise" — einige Stationen an, andere nicht. Ein eigener
+   Zustand und nicht bloß „aus": sonst sagt die zugeklappte Unit,
+   es passiere nichts, während darunter geübt wird. Gestrichelt,
+   damit sich „halb" auch ohne Farbe von „ganz" unterscheidet. */
+.wi-urow.is-halb .wi-utoggle {
+  opacity: .88;
+  border-style: dashed;
+  border-color: var(--accent);
+  color: var(--ink);
 }
 
 /* ── Eine Unit im Einzelnen ──────────────────────────────────── */
