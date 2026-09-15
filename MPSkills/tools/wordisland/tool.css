@@ -880,6 +880,25 @@
 .wi-cell { transition: fill .4s ease; }
 .wi-side { transition: fill .4s ease; }
 
+/* ── Der Grenzstrich ─────────────────────────────────────────
+   Sönke, 14.09.2026: „dass ich die Felder eindeutig erkenne".
+   Er liegt auf der Deckfläche der Kachel, zieht sich nur an den
+   Kanten zu FREMDEM entlang (Nebel, Meer, anderes Volk) und trägt
+   die aufgehellte Volksfarbe — gesetzt wird sie im Skript, weil sie
+   aus der Mischung kommt.
+
+   Breite und Enden stehen dagegen hier: eine Zahl, die für alle
+   fünfhundert Striche gilt, gehört ins Blatt und nicht fünfhundertmal
+   ins Merkmal. .085 ist knapp ein Zehntel Kachel — dick genug, um auf
+   dem Beamer zu tragen, dünn genug, dass die Kachel nicht zum Knopf
+   wird. */
+.wi-edge {
+  stroke-width: .085;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .95;
+}
+
 /* Nichts von alledem darf den Finger abfangen: getroffen werden
    soll die Deckfläche der Kachel. Beim Nebel ist das der
    eigentliche Punkt — man wählt ja gerade ein Feld, das noch
@@ -891,6 +910,10 @@
    sonst gar nichts, und zwar nur manchmal. */
 .wi-sea, .wi-fog, .wi-places, .wi-flags, .wi-ships,
 .wi-ship, .wi-plank, .wi-det, .wi-side,
+/* Der Grenzstrich (14.09.2026) liegt in DERSELBEN Gruppe wie die
+   Deckfläche und genau auf ihrem Rand — also auf der Stelle, die man
+   beim Zielen auf ein Randfeld am ehesten trifft. */
+.wi-edge,
 /* Dieselbe Falle, neu seit den Ruinen (0146): ein Herz über einem
    Feld ist genau das, worauf das Kind zielt — und würde den Tipp
    schlucken, wenn es ihn annähme.
@@ -1266,9 +1289,20 @@
   opacity: .62;
   margin-left: -1px;
 }
-/* Ab der Serie, die zählt, brennt es: von hier an bringt JEDE
-   richtige Antwort ein Feld der eigenen Wahl, und das ist der
-   Zustand, den man am Tablet aus dem Augenwinkel erkennen soll. */
+/* Noch EINE richtige, dann gibt es ein Feld: das Abzeichen wird
+   wärmer, ohne schon zu brennen. Seit 0148 (Takt statt Schwelle)
+   kommt dieser Zustand alle drei Antworten wieder — er darf deshalb
+   nicht schreien. */
+.wi-streak.is-near {
+  border-color: color-mix(in srgb, var(--wi-gold) 80%, transparent);
+  background: color-mix(in srgb, var(--wi-gold) 22%, var(--surface));
+}
+/* Gerade eben verdient. Seit 0148 ist das ein EREIGNIS und kein
+   Dauerzustand: es hält genau eine Antwort lang (bei Serie 3, 6, 9 …)
+   und meldet „du hast dir ein Feld deiner Wahl geholt" — der
+   Augenblick, den man am Tablet aus dem Augenwinkel sehen soll.
+   Vorher trug dieselbe Klasse „ab jetzt bringt jede Antwort eine
+   Wahl", und genau das war der gemeldete Fehler. */
 .wi-streak.is-hot {
   border-color: #ffb347;
   background: color-mix(in srgb, #ff9628 26%, var(--surface));

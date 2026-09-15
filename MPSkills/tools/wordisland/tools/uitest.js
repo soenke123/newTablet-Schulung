@@ -310,10 +310,15 @@ async function testTablet() {
 
   /* ── Das Serien-Abzeichen (14.09.2026) ───────────────────────
      „Klein nach rechts … einfach eine Flamme und dann ein x von y."
-     Bei Serie 0 steht es gar nicht da, unterhalb des Ziels zählt es
-     hin, ab dem Ziel trägt es nur die Zahl und brennt — dort bringt
-     jede weitere richtige Antwort eine Wahl, ein „5/3" wäre also
-     falsch. */
+     Bei Serie 0 steht es gar nicht da; sonst zählt es zum NÄCHSTEN
+     VIELFACHEN von drei hin.
+
+     Der Takt ist der zweite Auftrag desselben Tages: „Eine Streak ist
+     alle 3 richtige. Also zuerst 3, dann 6 und so weiter. Das sollte
+     auch die UI zeigen." Bis Migration 0148 stand hier eine Schwelle
+     — ab drei brannte das Abzeichen dauerhaft und trug gar kein Ziel
+     mehr, weil ab dort jede Antwort eine Wahl brachte. Genau das war
+     der Fehler; die Anzeige war nur ehrlich. */
   const chip = root.querySelector('.wi-streak');
   ok('Serien-Abzeichen im Kopf, nicht als Satz', !!chip && !root.querySelector('.wi-pickbar'));
   ok('Flamme steht dran', /🔥/.test(chip.textContent));
@@ -325,18 +330,35 @@ async function testTablet() {
      root.querySelector('[data-part="streakn"]').textContent === '2' &&
      root.querySelector('[data-part="streakgoal"]').textContent === '/3',
      chip.textContent.trim());
-  ok('und brennt noch nicht', !chip.classList.contains('is-hot'));
+  ok('noch eine: es wird wärmer, brennt aber nicht',
+     chip.classList.contains('is-near') && !chip.classList.contains('is-hot'));
 
   /* Serie → freie Wahl */
   reply({ ok: true, result: 'correct', streak: 3, picks: 1, tile: null,
           task: { prompt: 'das Buch', dir: 'de_en', stage: 'type', options: [] } });
   antworte(root, document, 'pen');
   await wait(40);
-  ok('ab dem Ziel brennt es und zählt nicht weiter hin',
-     chip.classList.contains('is-hot') &&
-     root.querySelector('[data-part="streakgoal"]').textContent === '',
+  ok('bei drei brennt es', chip.classList.contains('is-hot') &&
+     !chip.classList.contains('is-near'), chip.textContent.trim());
+  ok('… und zählt sofort zur SECHS weiter (0148)',
+     root.querySelector('[data-part="streakn"]').textContent === '3' &&
+     root.querySelector('[data-part="streakgoal"]').textContent === '/6',
      chip.textContent.trim());
   ok('Karte ist scharf', root.querySelector('.wi-map').classList.contains('is-picking'));
+
+  /* Die vierte richtige bringt KEINE Wahl mehr (0148) — das
+     Abzeichen zählt zur sechs weiter und hört auf zu brennen. Genau
+     hier stand Sönkes Meldung: „gerade habe ich bei allem > 3 eine
+     Streak". Die Wahl von eben bleibt offen, deshalb picks weiter 1. */
+  reply({ ok: true, result: 'correct', streak: 4, picks: 1, tile: { r: 0, c: 3, kind: 'fog', ruin: 0 },
+          task: { prompt: 'das Heft', dir: 'de_en', stage: 'type', options: [] } });
+  antworte(root, document, 'book');
+  await wait(40);
+  ok('Serie 4 zeigt 4/6 und brennt nicht mehr',
+     !chip.classList.contains('is-hot') &&
+     root.querySelector('[data-part="streakn"]').textContent === '4' &&
+     root.querySelector('[data-part="streakgoal"]').textContent === '/6',
+     chip.textContent.trim());
 
   /* ── Der Wahl-Kasten geht von selbst auf ─────────────────────
      Sönke: „Sobald ich eine Streak habe, öffnet sich das Feld." Und
@@ -3698,6 +3720,192 @@ async function testLobbyRegeln() {
   tool.unmount();
 }
 
+/* ═══════════════════════════════════════════════════════════
+   „Wem gehört dieses Feld?" (14.09.2026)
+   ═══════════════════════════════════════════════════════════
+   Sönke nach dem ersten Durchgang im Raum: „Man kann am Boden nicht
+   gut erkennen, was zu welchem Volk gehört — gelber Strand und
+   grüner Wald sind sehr nah an dem dran, was Team Grün und Team Rot
+   haben. Hier muss die UI sich besser abheben, dass ich die Felder
+   eindeutig erkenne."
+
+   Geprüft wird nicht die Zahl im Quelltext, sondern die FARBE, die
+   auf der Kachel landet — gegen die beiden Tabellen, aus denen sie
+   entsteht (KARTE.land und TEAMS, beide aus tool.js gelesen). Eine
+   Zusage über `KARTE.mix = .82` wäre genau so lange richtig, bis
+   jemand die Mischung anders rechnet. */
+const hex2 = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const farbAbstand = (a, b) => {
+  const A = hex2(a), B = hex2(b);
+  return Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]);
+};
+/* Die beiden Tabellen aus tool.js — dieselbe Technik wie
+   testRuinTabelle. */
+function palette() {
+  const quelle = fs.readFileSync(TOOL, 'utf8');
+  const l = /land: \{ sand: '(#\w+)', gras: '(#\w+)', wald: '(#\w+)', fels: '(#\w+)' \}/.exec(quelle);
+  const voelker = [];
+  const re = /\{ name: '[^']+',\s*color: '(#\w+)' \}/g;
+  let m;
+  while ((m = re.exec(quelle))) voelker.push(m[1]);
+  return { boden: l ? l.slice(1, 5) : [], voelker };
+}
+
+async function testBesitzKlar() {
+  console.log('\n— Wem gehört dieses Feld? —');
+  const { boden, voelker } = palette();
+  ok('vier Bodenfarben aus tool.js gelesen', boden.length === 4, js(boden));
+  ok('acht Volksfarben aus tool.js gelesen', voelker.length === 8, `${voelker.length}`);
+
+  const len = RMAP.length;
+  /* Feld 0 und 1 gehören Slot 0, Feld 5 gehört Slot 1. Feld 0 und 1
+     sind Nachbarn (gerade Zeile: (0,0) → (0,1) und (1,0)), Feld 5 ist
+     (1,0) — also liegt zwischen 0 und 5 eine echte Grenze und
+     zwischen 0 und 1 keine. */
+  const stand = {
+    own: zeichenkette(len, { 0: '0', 1: '0', 5: '1' }, '.'),
+    ruins: '.'.repeat(len),
+    hearts: '0'.repeat(len),
+    me: { picks: 0, streak: 0 }
+  };
+  const { tool, root } = await mountRuinen(stand);
+
+  /* ── Die Einfärbung ──────────────────────────────────────── */
+  const zellen = [...root.querySelectorAll('.wi-cell')];
+  const meine = zellen.filter(c => c.dataset.t !== '.');
+  ok('drei Felder sind in Besitz', meine.length === 3, `${meine.length}`);
+  let klar = true, wo = '';
+  for (const c of meine) {
+    const fill = c.getAttribute('fill');
+    const volk = voelker[+c.dataset.t];
+    const zuVolk = farbAbstand(fill, volk);
+    const zuBoden = Math.min(...boden.map(b => farbAbstand(fill, b)));
+    if (!(zuVolk < zuBoden)) { klar = false; wo += ` ${fill}: Volk ${zuVolk.toFixed(0)} ≥ Boden ${zuBoden.toFixed(0)}`; }
+  }
+  ok('eine eroberte Kachel liegt näher an ihrer Volksfarbe als an JEDER Bodenfarbe',
+     klar, wo);
+  /* Und die Bodenart bleibt trotzdem lesbar. Das lässt sich an der
+     Testinsel nicht ablesen — sie hat vier Reihen und ist damit
+     ringsum Küste, also überall Strand. Geprüft wird deshalb die
+     Rechnung selbst: die vier Bodenfarben, mit DERSELBEN Volksfarbe
+     gemischt, müssen vier unterscheidbare Töne ergeben. Wäre der
+     Anteil 1.0, läge die ganze Insel unter einem Farbeimer, und die
+     erste Zusage oben wäre trotzdem grün. */
+  const quelle = fs.readFileSync(TOOL, 'utf8');
+  const anteil = parseFloat((/\n\s*mix: ([\d.]+)/.exec(quelle) || [])[1]);
+  ok('KARTE.mix steht in tool.js', anteil > 0 && anteil <= 1, `${anteil}`);
+  const misch = (a, b, t) => {
+    const A = hex2(a), B = hex2(b);
+    return '#' + [0, 1, 2].map(i => Math.round(A[i] + (B[i] - A[i]) * t)
+      .toString(16).padStart(2, '0')).join('');
+  };
+  const toene = boden.map(b => misch(b, voelker[0], anteil));
+  let unterscheidbar = true;
+  for (let i = 0; i < toene.length; i++) {
+    for (let j = i + 1; j < toene.length; j++) {
+      if (farbAbstand(toene[i], toene[j]) < 6) unterscheidbar = false;
+    }
+  }
+  ok('der Boden scheint durch die Volksfarbe noch durch', unterscheidbar, js(toene));
+
+  /* ── Der Grenzstrich ─────────────────────────────────────── */
+  const kante = i => {
+    const p = root.querySelectorAll('.wi-cell')[i].parentNode.querySelector('.wi-edge');
+    return p ? (p.getAttribute('d') || '') : '';
+  };
+  const stuecke = d => (d.match(/M/g) || []).length;
+  ok('ein Nebelfeld bekommt gar keinen Strich', kante(2) === '', kante(2));
+  /* Feld 0: vier Kanten zeigen aufs Meer, eine auf Feld 5 (fremdes
+     Volk) — und die sechste auf Feld 1, das demselben Volk gehört.
+     Genau die darf nicht gezogen werden, sonst ist der Grenzstrich
+     eine Bienenwabe und sagt nichts mehr. */
+  ok('Feld 0 zieht fünf von sechs Kanten', stuecke(kante(0)) === 5, `${stuecke(kante(0))}`);
+  ok('die Kante zum eigenen Nachbarn fehlt', stuecke(kante(0)) < 6);
+  ok('auch das fremde Feld zieht seinen eigenen Strich', stuecke(kante(5)) > 0,
+     `${stuecke(kante(5))}`);
+  /* Die Farbe ist die aufgehellte Volksfarbe — heller als sie, und
+     näher an ihr als an der des anderen Volkes. */
+  const strich = root.querySelectorAll('.wi-cell')[0].parentNode
+                     .querySelector('.wi-edge').getAttribute('stroke');
+  ok('der Strich trägt die eigene Volksfarbe, aufgehellt',
+     farbAbstand(strich, voelker[0]) < farbAbstand(strich, voelker[1]) &&
+     hex2(strich).reduce((a, b) => a + b, 0) > hex2(voelker[0]).reduce((a, b) => a + b, 0),
+     `${strich} gegen ${voelker[0]}`);
+  /* ⚠️ Er liegt genau auf dem Rand der Deckfläche — also dort, wohin
+     man beim Zielen auf ein Randfeld tippt. Ohne die Sammelregel
+     markiert die Karte das Ziel und schluckt den Tipp. */
+  const css2 = fs.readFileSync(path.join(HERE, '..', 'tool.css'), 'utf8').replace(/\n/g, ' ');
+  ok('der Grenzstrich ist für Zeiger durchlässig',
+     /\.wi-edge[^{]*\{[^}]*pointer-events:\s*none/.test(css2));
+
+  tool.unmount();
+}
+
+/* Die Ruine in der Volksfarbe und die Herzen darauf — Sönkes zwei
+   Nachsätze vom 14.09.2026: „Können auch die Bilder der Ruinen die
+   Farbe des Volkes einnehmen? Und die Herzen der Ruinen sollten auf
+   der Ruine sein." */
+async function testRuineInVolksfarbe() {
+  console.log('\n— Die Ruine trägt die Farbe ihres Volkes —');
+  const len = RMAP.length;
+  const { voelker } = palette();
+  const stand = {
+    // Der große Ort ist erobert (Slot 1), der kleine nur aufgedeckt.
+    own: zeichenkette(len, { 0: '0', [R_GROSS]: '1' }, '.'),
+    ruins: zeichenkette(len, { [R_GROSS]: 'L', [R_KLEIN]: 'K' }, '.'),
+    hearts: zeichenkette(len, { [R_GROSS]: '4', [R_KLEIN]: '1' }, '0'),
+    me: { picks: 0, streak: 0 }
+  };
+  const { tool, root } = await mountRuinen(stand);
+
+  const gross = platz(root, 0), klein = platz(root, 1);
+  const bilder = gross.querySelectorAll('image');
+  ok('der Tempel steht als Bild UND als Wasche da', bilder.length === 2, `${bilder.length}`);
+  ok('beide zeigen dieselbe Datei',
+     bilder[0].getAttribute('href') === bilder[1].getAttribute('href'),
+     bilder[1].getAttribute('href'));
+  /* Die Wasche liegt ÜBER dem Bild und deckt es nicht zu: sichtbar,
+     aber durchsichtig. Wäre sie voll, stünde dort eine Silhouette
+     ohne Gebäude. */
+  const ton = +bilder[1].getAttribute('opacity');
+  ok('die Wasche ist sichtbar, aber durchsichtig', ton > .2 && ton < .9, `${ton}`);
+  ok('und sie läuft durch den Farbfilter des Volkes',
+     /tint1\)$/.test(bilder[1].getAttribute('filter') || ''),
+     bilder[1].getAttribute('filter'));
+  /* Der Filter muss es auch geben — ein `filter="url(#…)"`, das ins
+     Leere zeigt, lässt das Element GAR NICHT zeichnen (dieselbe
+     Falle wie bei `el()`), der Tempel wäre also weg. Und er muss die
+     richtige Farbe fluten. */
+  const fid = (bilder[1].getAttribute('filter') || '').replace(/^url\(#|\)$/g, '');
+  const flut = root.querySelector(`#${fid} feFlood`);
+  ok('den Filter gibt es, und er flutet die Volksfarbe',
+     !!flut && flut.getAttribute('flood-color').toLowerCase() === voelker[1].toLowerCase(),
+     flut && flut.getAttribute('flood-color'));
+  /* Eine Ruine, die niemandem gehört, trägt keine Farbe. */
+  ok('der neutrale Ort bleibt ungefärbt',
+     +klein.querySelectorAll('image')[1].getAttribute('opacity') === 0);
+
+  /* ── Die Herzen sitzen AUF dem Gebäude ────────────────────── */
+  const bild = bilder[0];
+  const oben = +bild.getAttribute('y');
+  const hoch = +bild.getAttribute('height');
+  const herz = gross.querySelector('.wi-hearts path');
+  const hy = +/translate\([-\d.]+ ([-\d.]+)\)/.exec(herz.getAttribute('transform'))[1];
+  ok('vier Herzen am Tempel', herzZahl(gross) === 4, `${herzZahl(gross)}`);
+  ok('sie liegen zwischen Dach und Sockel, nicht darüber',
+     hy > oben && hy < oben + hoch, `Bild ${oben}…${(oben + hoch).toFixed(2)}, Herzen ${hy}`);
+  /* Und sie bekommen ein Kissen: auf einer gezeichneten Fassade
+     zerfällt eine Reihe weiß umrandeter Herzen sonst optisch. */
+  ok('ein dunkles Kissen trägt die Reihe',
+     !!gross.querySelector('.wi-hearts rect'));
+  /* Schutzherzen auf einem gewöhnlichen Feld bekommen KEINS — dort
+     wäre es ein Fleck ohne Grund. */
+  ok('ein Schutzherz auf freiem Feld kommt ohne Kissen aus',
+     !root.querySelector('.wi-guards rect'));
+
+  tool.unmount();
+}
+
 /* Die Balance steht zwangsläufig in zwei Dateien: im Browser
    (RUINEN) und in Postgres (wi_ruin_def). Hier wird zugesagt, dass
    es dieselben Zahlen sind — dasselbe Muster wie beim Uhr-Deckel.
@@ -3775,6 +3983,8 @@ async function testRuinTabelle() {
   await testUhr();
   await testUnitsOhneMigration();
   await testBlassUndRing();
+  await testBesitzKlar();
+  await testRuineInVolksfarbe();
   await testRuinen();
   await testAntwortAufSchild();
   await testSchildUndSchatten();

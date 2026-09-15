@@ -236,6 +236,11 @@
      mitdrehen — sonst wirbt die Kachel für eine andere Insel.  */
   const TEAM_FILL = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b'];
   const LAND = { sand: '#e3cf9c', gras: '#7fae5c', wald: '#4a8449', fels: '#9aa6ac' };
+  /* Wie stark die Volksfarbe den Boden einfärbt — KARTE.mix im
+     Werkzeug. Und die Übersetzung Nachbar-Nummer → Kanten-Nummer für
+     den Grenzstrich (EDGE dort). */
+  const MIX = .82;
+  const EDGE = [3, 4, 2, 5, 1, 0];
   const SEA_DEEP = '#052131';
   const FOG_BODY = '#e4eef5';
   /* Zieltöne von außen nach innen — und daraus die Deckung der
@@ -341,17 +346,36 @@
       const stufe = t.boden === 'sand' ? .20 : t.rand === 2 ? .40 : .56;
       const h = on ? stufe : .10;
       const y = y0 - h + .1;
-      const deck = on
-        ? mix(LAND[t.boden], TEAM_FILL[+t.own], .5 * (t.boden === 'sand' ? .62 : 1))
-        : LAND[t.boden];
+      /* MIX ist seit dem 14.09.2026 .82 und gilt für alle vier
+         Bodenarten gleich — der Strand hatte bis dahin einen eigenen,
+         kleineren Anteil. Grund und Rechnung stehen bei KARTE.mix in
+         tools/wordisland/tool.js. */
+      const deck = on ? mix(LAND[t.boden], TEAM_FILL[+t.own], MIX) : LAND[t.boden];
       const seite = on ? shade(deck, -.45) : shade(LAND[t.boden], -.5);
       /* Die Seitenfläche: der untere Rand des Sechsecks, um die
          Höhe nach unten verlängert (Ecken 2, 1, 0). */
       const p = [2, 1, 0].map(i => [x + hex[i][0], y + hex[i][1]]);
       const side = 'M' + p.map(([a, b]) => `${a.toFixed(2)} ${b.toFixed(2)}`).join('L')
         + 'L' + p.slice().reverse().map(([a, b]) => `${a.toFixed(2)} ${(b + h + .06).toFixed(2)}`).join('L') + 'Z';
+      /* Der Grenzstrich (14.09.2026): eine Kante bekommt ihn, wenn
+         dahinter NICHT dasselbe Volk liegt — auch gegen Nebel und
+         gegen Meer. Kantenweise und nicht als Umriss, weil jede
+         Kachel auf ihrer eigenen Höhe steht. */
+      let rand = '';
+      if (on) {
+        const nb = neighbors(t.r, t.c);
+        for (let i = 0; i < 6; i++) {
+          const m = w.at.get(nb[i][0] + '/' + nb[i][1]);
+          if (m && m.own === t.own) continue;
+          const e = EDGE[i], a = hex[e], b = hex[(e + 1) % 6];
+          rand += `M${(x + a[0]).toFixed(2)} ${(y + a[1]).toFixed(2)}`
+                + `L${(x + b[0]).toFixed(2)} ${(y + b[1]).toFixed(2)}`;
+        }
+      }
       return `<path d="${side}" fill="${seite}"/>`
-           + `<path d="${hexPath(x, y, 1)}" fill="${deck}" stroke="rgba(0,0,0,.16)" stroke-width=".015"/>`;
+           + `<path d="${hexPath(x, y, 1)}" fill="${deck}" stroke="rgba(0,0,0,.16)" stroke-width=".015"/>`
+           + (rand ? `<path d="${rand}" fill="none" stroke="${mix(TEAM_FILL[+t.own], '#ffffff', .52)}"`
+                   + ` stroke-width=".085" stroke-linecap="round" opacity=".95"/>` : '');
     }).join('');
 
     /* Der Nebel in drei gestapelten Schichten: die unterste deckt

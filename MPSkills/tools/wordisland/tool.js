@@ -185,9 +185,13 @@
   const SVGNS = 'http://www.w3.org/2000/svg';
   const POLL_MS = { participant: 4000, presenter: 3000 };
 
-  /* Eine Serie ab drei — dieselbe Zahl steht im Server
-     (wi_answer). Hier nur für den Text „noch 2 bis zur freien
-     Wahl"; entschieden wird es dort. */
+  /* Eine Serie sind DREI, und seit Migration 0148 ist das ein TAKT
+     und keine Schwelle: jede dritte sofort richtige Antwort in Folge
+     (3, 6, 9 …) bringt eine freie Feldwahl, die beiden dazwischen ein
+     zufälliges Nachbarfeld. Dieselbe Zahl steht im Server
+     (wi_answer, `v_pl.streak % 3 = 0`) — entschieden wird es dort,
+     hier wird nur gezählt und gezeigt. uitest.js liest beide Stellen
+     und vergleicht sie. */
   const STREAK_GOAL = 3;
 
   /* Die Spieldauer als Reihe statt als Auswahlfeld (Kingdoms-Muster:
@@ -527,7 +531,27 @@
     land: { sand: '#e3cf9c', gras: '#7fae5c', wald: '#4a8449', fels: '#9aa6ac' },
     fog: { body: '#e4eef5', puffL: '#ffffff', puffD: '#a3bacb', shadow: '#08283a', shadowOp: .38 },
     gold: '#ffbe2e', signInk: '#22323b',
-    mix: .5
+    /* ── Wie stark die Volksfarbe den Boden einfärbt ──────────
+       Sönke, 14.09.2026: „Man kann am Boden nicht gut erkennen, was
+       zu welchem Volk gehört — gelber Strand und grüner Wald sind
+       sehr nah an dem dran, was Team Grün und Team Rot haben. Hier
+       muss die UI sich besser abheben, dass ich die Felder eindeutig
+       erkenne."
+
+       Der Grund stand in dieser einen Zahl: bei .5 war eine eroberte
+       Kachel halb Boden und halb Volk. Grasgrün (#7fae5c) und die
+       Brokkoli-Giraffen (#10b981) treffen sich dann in der Mitte, und
+       wildes Land sieht aus wie erobertes. Bei .82 gewinnt die
+       Volksfarbe eindeutig; die 18 % Boden reichen weiter für den
+       Unterschied zwischen Strand, Wiese, Wald und Fels — sichtbar
+       als HELLIGKEIT, und die kollidiert mit keiner Volksfarbe.
+
+       Der Strand hatte bis dahin einen eigenen, KLEINEREN Anteil
+       (.62 davon), weil er so hell ist. Genau er war der zweite Teil
+       der Meldung — ein Strand, der nur zu 31 % eingefärbt ist,
+       bleibt ein Strand. Die Ausnahme ist weg; was von der Bodenart
+       bleiben soll, bleibt für alle vier gleich viel. */
+    mix: .82
   };
 
   /* Wie weit die MITTE eines Schiffes vor der Mitte seines
@@ -574,6 +598,10 @@
      Als Konstante und nicht als Zahl an vier Stellen: sie IST die
      Zusage „die Felder sind gleich groß". */
   const PLACE_PLATTE = 1.0;
+  /* Wo die Herzenreihe auf dem Gebäude sitzt, als Anteil der
+     Bildhöhe über dem Sockel. Sönke, 14.09.2026: „Die Herzen der
+     Ruinen sollten auf der Ruine sein." Siehe placeLayer. */
+  const HERZ_HOCH = .42;
   /* Die Platzhalter-Zeichen, solange kein Sprite geladen ist: eine
      Mauer für die kleinen, ein Tempel für die großen. Ein Kind soll
      aus zehn Metern sehen, WAS dort steht, nicht nur DASS dort
@@ -700,7 +728,35 @@
     });
     blur('b1', '0.10', '-30%');
     blur('b2', '0.22', '-30%');
+
+    /* ─── Die Ruine in der Volksfarbe ──────────────────────────
+       Sönke, 14.09.2026: „Können auch die Bilder der Ruinen die
+       Farbe des Volkes einnehmen?" — Ja, und zwar als WASCHE über
+       dem Bild und nicht als Ersatz dafür: `feFlood` füllt die
+       Fläche mit der Volksfarbe, `feComposite operator="in"` schneidet
+       sie auf die Silhouette des Bildes zu. Darüber gelegt (halb
+       durchsichtig, RUIN_TON) behält der Tempel seine Schattierung
+       und bekommt trotzdem eindeutig die Farbe.
+
+       Warum nicht `feBlend mode="color"`, was genau das eine
+       könnte? Weil die erweiterten Mischarten auf älteren iPads
+       fehlen, und dort stünde dann ein Tempel ganz ohne Einfärbung
+       — also genau der Zustand, der hier abgeschafft werden soll.
+       feFlood und feComposite gibt es überall.
+
+       Acht Filter, einer je Volk: ein Filter ist geteilt, seine
+       Farbe kann also nicht am Element hängen. Sie kosten nichts,
+       solange kein Bild sie benutzt. */
+    TEAMS.forEach((tm, i) => filt('tint' + i, { x: '0%', y: '0%', width: '100%', height: '100%' }, f => {
+      el('feFlood', { 'flood-color': tm.color, result: 'c' }, f);
+      el('feComposite', { in: 'c', in2: 'SourceGraphic', operator: 'in' }, f);
+    }));
   }
+
+  /* Wie stark die Volksfarbe über dem Ruinenbild liegt. Eine Zahl,
+     und sie ist ein Kompromiss mit sich selbst: darunter erkennt man
+     die Farbe nicht, darüber das Gebäude nicht mehr. */
+  const RUIN_TON = .58;
 
   /* ─── Aus der Feldliste eine Insel ──────────────────────────
      Alles, was der Server nicht schickt, aber jede Schicht braucht.
@@ -1132,7 +1188,15 @@
         class: 'wi-det', d: cellDetail(z), fill: DK[z.boden][0], stroke: DK[z.boden][1],
         'stroke-width': .035, 'stroke-linecap': 'round', opacity: .75
       }, gg);
-      nodes.push({ z, base, side, top, det });
+      /* Die sechs Nachbarn als INDEX, einmal beim Aufbau. Der
+         Grenzstrich (unten) braucht sie bei jedem Takt, und
+         `isl.at` je Feld und Takt wäre dreitausendmal dieselbe
+         Suche. -1 heißt „da ist Meer". */
+      const nb = neighbors(z.r, z.c).map(([nr, nc]) => {
+        const m = isl.at(nr, nc);
+        return m ? m.i : -1;
+      });
+      nodes.push({ z, nb, gg, base, side, top, det, kante: null });
       cellEls[z.i] = top;
     }
 
@@ -1145,6 +1209,42 @@
       for (let i = 1; i < pts.length; i++) d += `L${n2(pts[i][0])} ${n2(pts[i][1])}`;
       for (let i = pts.length - 1; i >= 0; i--) d += `L${n2(pts[i][0])} ${n2(pts[i][1] + h)}`;
       return d + 'Z';
+    }
+
+    /* ─── Der Grenzstrich ───────────────────────────────────────
+       Die zweite Hälfte von Sönkes Meldung („dass ich die Felder
+       eindeutig erkenne"). Die kräftigere Einfärbung sagt, WELCHES
+       Volk eine Kachel hat; der Strich sagt, WO sein Gebiet aufhört
+       — und das ist die Auskunft, die man auf dem Beamer aus zehn
+       Metern braucht.
+
+       Gezogen wird KANTENWEISE und nicht als Umriss der Vereinigung.
+       Der naheliegende Weg (alle eigenen Kacheln in einen Pfad, den
+       umranden) kann es hier gar nicht geben: im Relief steht jede
+       Kachel auf ihrer eigenen Geländehöhe, ein gemeinsamer Umriss
+       läge also quer durch die Säulen. Kante für Kante liegt jeder
+       Strich auf der Deckfläche, zu der er gehört.
+
+       Eine Kante wird gezogen, wenn der Nachbar dahinter NICHT
+       demselben Volk gehört — also auch gegen Nebel und gegen Meer.
+       Gegen den Nebel ist das Absicht: dort steht die Front, und
+       genau die will man sehen. Zwei benachbarte Völker ziehen jedes
+       seinen eigenen Strich in seiner eigenen Farbe; die Doppellinie
+       IST die Grenze.
+
+       Aufgehellt statt abgedunkelt: ein dunkler Strich verschwindet
+       im Schatten der Säule dahinter, ein heller steht auf jeder
+       Bodenart. */
+    function kantenPfad(n, own, ch, y) {
+      const z = n.z;
+      let d = '';
+      for (let i = 0; i < 6; i++) {
+        const j = n.nb[i];
+        if (j >= 0 && own[j] === ch) continue;
+        const e = EDGE[i], a = HEX[e], b = HEX[(e + 1) % 6];
+        d += `M${n2(z.x + a[0])} ${n2(y + a[1])}L${n2(z.x + b[0])} ${n2(y + b[1])}`;
+      }
+      return d;
     }
 
     /* `own === null` heißt SOLO: kein Nebel, kein Besitz, keine
@@ -1163,8 +1263,15 @@
         const z = n.z, ch = own ? own[z.i] : null;
         /* Nur was sich geändert hat. Bei 500 Feldern und einem Takt
            alle vier Sekunden ist das der Unterschied zwischen
-           „lebt" und „ruckelt". */
-        if (own && ownPainted && ownPainted[z.i] === ch) continue;
+           „lebt" und „ruckelt".
+           ⚠️ Seit dem Grenzstrich reicht „meine Kachel ist gleich
+           geblieben" nicht mehr: verliert der NACHBAR sein Feld,
+           ändert sich mein Strich, ohne dass sich mein Zeichen
+           ändert. Ohne die zweite Zeile bliebe eine Grenze stehen,
+           die es nicht mehr gibt — und zwar bis diese Kachel selbst
+           den Besitzer wechselt. */
+        if (own && ownPainted && ownPainted[z.i] === ch
+            && n.nb.every(j => j < 0 || ownPainted[j] === own[j])) continue;
         const on = own ? ch !== '.' : true;
         const t = (own && on) ? facOf(+ch) : -1;
         const farbe = (own && on) ? (TEAMS[t] || { color: '#888' }).color : null;
@@ -1173,11 +1280,24 @@
         const y = z.y - h + .1;
         n.top.setAttribute('d', hexPath(z.x, y, 1.0));
         n.side.setAttribute('d', sidePath(z.x, y, 1.0, h + .06));
-        const deck = farbe ? mix(KARTE.land[z.boden], farbe, KARTE.mix * (z.boden === 'sand' ? .62 : 1)) : KARTE.land[z.boden];
+        const deck = farbe ? mix(KARTE.land[z.boden], farbe, KARTE.mix) : KARTE.land[z.boden];
         n.top.setAttribute('fill', deck);
         n.side.setAttribute('fill', shade(deck, farbe ? -.45 : -.5));
         n.top.dataset.t = farbe ? String(t) : '.';
         if (n.det) n.det.setAttribute('transform', `translate(0 ${n2(-h + .1)})`);
+
+        /* Der Grenzstrich, und zwar SPÄT angelegt: Nebelfelder und
+           das Innere eines Gebiets bekommen nie einen, und das sind
+           die allermeisten. Ein leerer Pfad je Kachel wäre auf einer
+           großen Insel ein halbes Tausend Knoten für nichts. */
+        const dK = farbe ? kantenPfad(n, own, ch, y) : '';
+        if (dK && !n.kante) {
+          n.kante = el('path', { class: 'wi-edge', d: '', fill: 'none' }, n.gg);
+        }
+        if (n.kante) {
+          n.kante.setAttribute('d', dK);
+          if (dK) n.kante.setAttribute('stroke', mix(farbe, '#ffffff', .52));
+        }
       }
     };
   }
@@ -1336,11 +1456,25 @@
      neu gesetzt und nicht ein- und ausgeblendet: es sind höchstens
      vier Pfade, und ein Vorrat versteckter Herzen wäre genau die
      Sorte Zustand, die man beim nächsten Umbau übersieht. */
-  function herzReihe(g, anzahl, y, gr) {
+  function herzReihe(g, anzahl, y, gr, platte) {
     while (g.firstChild) g.removeChild(g.firstChild);
     if (!anzahl) return;
     const b = gr * 1.15;
     const x0 = -(anzahl - 1) * b / 2;
+    /* Ein dunkles Kissen darunter — nur dort, wo die Reihe AUF einem
+       Bild liegt (seit die Herzen auf der Ruine sitzen). Ein weiß
+       umrandetes Herz steht für sich zwar auf jedem Untergrund, aber
+       auf einer gezeichneten Tempelfassade mit Fugen und Schatten
+       zerfällt die Reihe optisch — und abzählen soll man sie. Auf
+       einem einfarbigen Feld (Schutzherzen) wäre das Kissen dagegen
+       ein Fleck ohne Grund, deshalb der Schalter. */
+    if (platte) {
+      const w = (anzahl - 1) * b + gr * 1.22;
+      el('rect', {
+        x: n2(-w / 2), y: n2(y - gr * .58), width: n2(w), height: n2(gr * 1.16),
+        rx: n2(gr * .58), fill: 'rgba(9,18,26,.52)'
+      }, g);
+    }
     for (let i = 0; i < anzahl; i++) {
       el('path', {
         d: HERZ, fill: '#e23c50', stroke: 'rgba(255,255,255,.92)',
@@ -1387,10 +1521,19 @@
          also im vorderen Drittel der Kachel) — das Gebäude wächst von
          dort nach oben aus dem Feld heraus. */
       const fuss = .22;
-      const bild = img(gBody, '', {
+      const masse = {
         x: n2(-w / 2), y: n2(fuss - h), width: n2(w), height: n2(h),
-        preserveAspectRatio: 'xMidYMax meet', opacity: 0
-      });
+        preserveAspectRatio: 'xMidYMax meet'
+      };
+      const bild = img(gBody, '', Object.assign({ opacity: 0 }, masse));
+      /* Dasselbe Bild ein zweites Mal, nur durch den Farbfilter —
+         die Wasche in der Volksfarbe (Sönke, 14.09.2026: „Können auch
+         die Bilder der Ruinen die Farbe des Volkes einnehmen?").
+         Sie liegt ÜBER dem Bild und deckt es nicht ab: RUIN_TON, und
+         die Schattierung des Gebäudes scheint durch. Solange die
+         Ruine niemandem gehört, steht sie auf 0 und lädt zwar
+         dieselbe Datei, kostet aber nichts weiter. */
+      const wasche = img(gBody, '', Object.assign({ opacity: 0 }, masse));
       /* Das Platzhalter-Zeichen bekommt eine helle Kontur: dunkles
          Grau auf sandfarbenem Sockel ist sonst kaum von der
          Bodentextur zu unterscheiden. Es steht, solange das Sprite
@@ -1404,10 +1547,20 @@
          auch dann stehen, wenn das Gebäude gerade niemandem gehört.
          Ihre Größe hängt NICHT mehr an der Klasse: vier Herzen über
          einem Tempel und eines über einem Klo sind dieselbe Auskunft
-         und sollen gleich groß dastehen. */
+         und sollen gleich groß dastehen.
+
+         ⚠️ Seit dem 14.09.2026 liegen sie AUF dem Gebäude (Sönke:
+         „die Herzen der Ruinen sollten auf der Ruine sein") und nicht
+         mehr darüber in der Luft. Das ist mehr als Geschmack: über
+         dem Bild lagen sie bei einem hohen Tempel schon auf dem
+         Nachbarfeld, und wer vier Herzen sah, konnte nicht sagen, zu
+         welcher der beiden Kacheln sie gehören. HERZ_HOCH ist der
+         Anteil der Bildhöhe über dem Sockel — .42 trifft die untere
+         Hälfte, wo bei allen fünf Ruinen Mauerwerk steht und keine
+         Silhouette. */
       const herzen = el('g', { class: 'wi-hearts' }, gg);
-      marks.push({ z, halo, gBody, plate, bild, zeichen, herzen,
-                   hy: n2(fuss - h - .26), last: null, quelle: '' });
+      marks.push({ z, halo, gBody, plate, bild, wasche, zeichen, herzen,
+                   hy: n2(fuss - h * HERZ_HOCH), last: null, quelle: '' });
     }
 
     return function paint(own, ruins, hearts) {
@@ -1428,8 +1581,12 @@
         const t = on ? facOf(+ch) : -1;
         /* Der Sockel nimmt die Farbe des Volkes an, sobald der Ort
            gehört — das ist die Meldung „erobert", ohne eine Zahl. */
+        /* Derselbe Anteil wie im Relief (KARTE.mix) und nicht mehr
+           ein eigener: bei .55 gegen .82 sah der Sockel einer
+           eroberten Ruine aus wie ein Feld eines ANDEREN Volkes —
+           blasser als alles ringsum, aber in derselben Farbfamilie. */
         m.plate.setAttribute('fill', on
-          ? mix(KARTE.land.sand, (TEAMS[t] || { color: '#888' }).color, .55)
+          ? mix(KARTE.land.sand, (TEAMS[t] || { color: '#888' }).color, KARTE.mix)
           : KARTE.land.sand);
 
         /* Sichtbar wird das Gebäude mit dem ERSTEN TREFFER, nicht
@@ -1442,12 +1599,21 @@
 
         if (auf && RUINEN[art] && m.quelle !== art) {
           m.quelle = art;
-          m.bild.setAttributeNS('http://www.w3.org/1999/xlink', 'href', ruinSrc(art));
-          m.bild.setAttribute('href', ruinSrc(art));
+          for (const nd of [m.bild, m.wasche]) {
+            nd.setAttributeNS('http://www.w3.org/1999/xlink', 'href', ruinSrc(art));
+            nd.setAttribute('href', ruinSrc(art));
+          }
           m.bild.setAttribute('opacity', 1);
           m.zeichen.setAttribute('opacity', 0);
         }
-        herzReihe(m.herzen, auf ? hp : 0, m.hy, .30);
+        /* Die Wasche in der Volksfarbe. Sie hängt am BESITZ und nicht
+           am Aufdecken: eine Ruine, die noch niemandem gehört, hat
+           keine Farbe zu tragen. Der Filter wird hier gesetzt und
+           nicht beim Aufbau — er ist einer von acht, und welcher
+           gilt, entscheidet sich erst mit dem Volk. */
+        m.wasche.setAttribute('opacity', on && m.quelle ? RUIN_TON : 0);
+        if (on) m.wasche.setAttribute('filter', F('tint' + t));
+        herzReihe(m.herzen, auf ? hp : 0, m.hy, .30, true);
       }
     };
   }
@@ -2966,25 +3132,48 @@
   }
 
   /* ─── Das Serien-Abzeichen ──────────────────────────────────
-     Flamme, Zahl, Ziel — und das Ziel nur, solange es eines gibt.
-     Ab STREAK_GOAL bringt JEDE richtige Antwort eine freie Wahl; ein
-     „5/3" wäre dort falsch und ein „5/6" ein Versprechen, das der
-     Server nicht kennt. Dann brennt das Abzeichen und trägt nur noch
-     die Zahl.
+     Flamme, Zahl, Ziel — und das Ziel ist seit Migration 0148 das
+     NÄCHSTE VIELFACHE von drei. Sönke, 14.09.2026: „Eine Streak ist
+     alle 3 richtige. Also zuerst 3, dann 6 und so weiter. Gerade
+     habe ich bei allem > 3 eine Streak, so soll das nicht. Das
+     sollte auch die UI zeigen."
 
-     Bei Serie 0 ist es ganz weg: eine Flamme, die „0" sagt, ist
-     keine Auskunft, sondern ein Vorwurf. */
+     Bis dahin stand hier eine SCHWELLE: unter drei „2/3", ab drei
+     nur noch die brennende Zahl, weil von dort an jede Antwort eine
+     Wahl brachte. Das war die getreue Anzeige des damaligen Servers.
+     Jetzt zählt er im Takt, also zählt das Abzeichen mit — genau das
+     Muster von Kingdoms (toNextStreak/paintStreakChip, dort seit
+     0106): bei Serie 4 steht „4/6".
+
+     Drei Zustände statt zweien:
+       normal  es läuft, das Ziel steht daneben
+       is-near noch EINE richtige, dann gibt es ein Feld
+       is-hot  gerade eben verdient — das ist der Augenblick, den man
+               am Tablet aus dem Augenwinkel sehen soll. Er hält
+               genau eine Antwort lang, und das ist richtig so: er
+               meldet ein Ereignis und keinen Dauerzustand.
+
+     Bei Serie 0 ist das Abzeichen ganz weg: eine Flamme, die „0"
+     sagt, ist keine Auskunft, sondern ein Vorwurf. */
   function zeigeSerie(streak) {
     if (!els.streak) return;
     const n = streak || 0;
-    const offen = n < STREAK_GOAL;
+    /* Wie viele richtige Antworten noch bis zur nächsten Wahl. Bei
+       einem Vielfachen sind es wieder volle drei — die Wahl von eben
+       ist ja schon gutgeschrieben. */
+    const rest = STREAK_GOAL - (n % STREAK_GOAL);
+    const ziel = n + rest;
+    const eben = n > 0 && rest === STREAK_GOAL;
     els.streak.hidden = (n <= 0);
     els.streakN.textContent = String(n);
-    els.streakGoal.textContent = offen ? '/' + STREAK_GOAL : '';
-    els.streak.classList.toggle('is-hot', !offen);
-    els.streak.title = offen
-      ? `Serie ${n} von ${STREAK_GOAL} — dann zeigst du selbst, welches Feld fällt`
-      : `Serie ${n} — jede richtige Antwort bringt ein Feld deiner Wahl`;
+    els.streakGoal.textContent = '/' + ziel;
+    els.streak.classList.toggle('is-hot', eben);
+    els.streak.classList.toggle('is-near', !eben && rest === 1);
+    els.streak.title = eben
+      ? `Serie ${n} — ein Feld deiner Wahl ist dir gutgeschrieben`
+      : rest === 1
+        ? `Serie ${n} — noch eine richtige, dann zeigst du selbst, welches Feld fällt`
+        : `Serie ${n} von ${ziel} — jede dritte richtige bringt ein Feld deiner Wahl`;
   }
 
   /* ─── „Was verbirgt sich da?" ───────────────────────────────
