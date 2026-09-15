@@ -368,8 +368,32 @@ async function testTablet() {
   ok('Wahl-Kasten steht offen', ov.hidden === false);
   ok('und die Karte hängt darin',
      root.querySelector('[data-part="pickwrap"] .wi-map') === root.querySelector('.wi-map'));
-  ok('Aufforderung im Kopf des Kastens',
-     /Zeig, wohin/.test(root.querySelector('[data-part="picktitle"]').textContent));
+
+  /* ── Wenig Text, klare Worte, große Zahl (15.09.2026) ────────
+     Sönke: „Die Info, was ich auf dem Streak- oder Ruinen-Effekt-
+     Bildschirm machen muss, ist nicht gut lesbar. Hier muss wenig
+     Text sein und klare Worte. Und die Zahl groß. ‚Nimm 1 Feld
+     gezielt ein!' (die 1 größer)."
+
+     Geprüft wird der ganze Satz und nicht ein Wort daraus: „wenig
+     Text" ist die Zusage, und ein zweiter Satz, der sich
+     dazuschleicht, fiele sonst niemandem auf. */
+  const gross = root.querySelector('[data-part="pickbig"]');
+  ok('die Ansage ist EIN Satz mit der Zahl darin',
+     gross.textContent.replace(/\s+/g, ' ') === 'Nimm 1 Feld gezielt ein!',
+     gross.textContent);
+  /* Die Ziffer ist ein eigener Knoten — nur so kann sie größer sein
+     als der Satz drumherum. Eine „1" im Fließtext wäre genau das,
+     was gemeldet war. */
+  const ziffer = gross.querySelector('.wi-picknum');
+  ok('und die Ziffer steht als eigener Knoten da',
+     !!ziffer && ziffer.textContent === '1', gross.innerHTML);
+  ok('bei der gewöhnlichen Serie steht nichts darüber',
+     root.querySelector('[data-part="picktitle"]').textContent === '',
+     root.querySelector('[data-part="picktitle"]').textContent);
+  const hinweis = root.querySelector('[data-part="pickhint"]').textContent;
+  ok('der Handgriff steht klein darunter, in einem kurzen Satz',
+     /markiertes Feld/.test(hinweis) && hinweis.length <= 34, hinweis);
 
   /* ── Die erreichbaren Felder sind markiert, der Nebel bleibt ──
      Beides gehört zusammen: markiert wird, WELCHES Feld geht, und
@@ -387,6 +411,15 @@ async function testTablet() {
   const css = fs.readFileSync(path.join(HERE, '..', 'tool.css'), 'utf8');
   ok('Markenschicht ist für Zeiger durchlässig',
      /\.wi-marks[^{]*\{[^}]*pointer-events:\s*none/.test(css.replace(/\n/g, ' ')));
+  /* „Die 1 größer" ist eine Aussage über die CSS und im DOM nicht zu
+     sehen: die Ziffer muss ein Vielfaches der Satzgröße tragen. In
+     `em` gemessen, damit die Zusage auch dann hält, wenn der Satz
+     selbst eines Tages anders groß ist. */
+  const zifferGross = /\.wi-picknum[^{]*\{[^}]*font-size:\s*([\d.]+)em/
+    .exec(css.replace(/\n/g, ' '));
+  ok('die Ziffer ist größer als der Satz um sie herum',
+     !!zifferGross && parseFloat(zifferGross[1]) >= 1.6,
+     zifferGross ? zifferGross[1] + 'em' : 'keine Regel');
   /* ⚠️ Die Kernzusage dieses Tages: der Nebel wird beim Wählen NICHT
      aufgehellt (Sönke: „Der Nebel ist nicht weg! Der bleibt."). Eine
      Regel, die .wi-fog beim Wählen durchsichtig macht, verrät genau
@@ -3637,6 +3670,19 @@ async function testSchildUndSchatten() {
      kasten.hidden === false && kasten.classList.contains('is-shadow') &&
      /Schattentempel/.test(root.querySelector('[data-part="picktitle"]').textContent),
      root.querySelector('[data-part="picktitle"]').textContent);
+  /* Und zwar mit Sönkes Worten vom 15.09.2026: „Beim Schattentempel
+     steht: Erzeuge Nebel. Wähle ein Feld." Zwei kurze Sätze, keine
+     Erklärung, wie der Nebelkranz wirkt — das steht in der Lobby. */
+  ok('„Erzeuge Nebel." steht groß da',
+     root.querySelector('[data-part="pickbig"]').textContent.trim() === 'Erzeuge Nebel.',
+     root.querySelector('[data-part="pickbig"]').textContent);
+  ok('„Wähle ein Feld." steht klein darunter',
+     root.querySelector('[data-part="pickhint"]').textContent.trim() === 'Wähle ein Feld.',
+     root.querySelector('[data-part="pickhint"]').textContent);
+  /* Beim Nebelkranz gibt es keine Zahl: er ist einer, und „Nimm 1"
+     wäre hier die falsche Aufforderung. */
+  ok('und keine Ziffer, wo keine hingehört',
+     !root.querySelector('[data-part="pickbig"] .wi-picknum'));
   /* Und zwar OHNE Marken: beim Nebelkranz ist die ganze Insel
      erlaubt, und 400 goldene Ringe sagen nichts. */
   ok('keine Marken beim Nebelkranz', root.querySelectorAll('.wi-mark').length === 0);
@@ -3656,6 +3702,123 @@ async function testSchildUndSchatten() {
      kasten.hidden === true && !kasten.classList.contains('is-shadow'));
   ok('die Schutzherzen sind mit dem Nebel verschwunden',
      root.querySelector('.wi-guards').querySelectorAll('path').length === 0);
+
+  tool.unmount();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Was auf dem Bildschirm steht, wenn etwas zu tun ist (15.09.2026)
+   ═══════════════════════════════════════════════════════════
+   Sönkes Ansage in vier Teilen: „Nimm 1 Feld gezielt ein!" (die 1
+   größer) · „beim 12 dann 2 und bei der Arena 3" · bei der Arena
+   steht darüber „Arena eingenommen" · „beim Lichttempel kommt nur
+   eine Nachricht kurz".
+
+   Geprüft wird jedes Mal der VOLLSTÄNDIGE Satz. Die Zusage ist ja
+   gerade, dass wenig dasteht — ein `/Arena/`-Test wäre auch dann
+   grün, wenn drei Nebensätze danebenstünden. */
+async function testAnsagen() {
+  console.log('\n— Die Ansage im Wahl-Kasten —');
+  const len = RMAP.length;
+  const stand = {
+    own: zeichenkette(len, { 0: '0' }, '.'),
+    ruins: '.'.repeat(len),
+    hearts: zeichenkette(len, { [R_GROSS]: '0' }, '0'),
+    me: { picks: 1, streak: 3 }
+  };
+  let antwort = null;
+  const { tool, root, document } = await mountRuinen(stand, {
+    wi_pick_tile: args => antwort(args)
+  });
+  const titel = () => root.querySelector('[data-part="picktitle"]').textContent.trim();
+  const satz  = () => root.querySelector('[data-part="pickbig"]').textContent.replace(/\s+/g, ' ').trim();
+  const num   = () => {
+    const b = root.querySelector('[data-part="pickbig"] .wi-picknum');
+    return b ? b.textContent : null;
+  };
+
+  /* ── Die Arena schenkt drei ───────────────────────────────── */
+  antwort = args => {
+    // 0146: die Arena wechselt den Besitzer und schenkt drei Wahlen;
+    // die eine, mit der zugeschlagen wurde, ist verbraucht.
+    stand.me = { picks: 3, streak: 3 };
+    return { ok: true, picks: 3, shadow_pick: 0,
+             effect: { kind: 'arena', guarded: 0 },
+             tile: { r: args.p_r, c: args.p_c, result: 'taken', ruin: 'arena', hearts: 3 } };
+  };
+  click(root.querySelectorAll('.wi-cell')[R_GROSS], document);
+  await wait(60);
+  ok('Arena: der Grund steht über der Ansage', titel() === 'Arena eingenommen', titel());
+  ok('Arena: drei Felder, und die Drei ist die Ziffer',
+     satz() === 'Nimm 3 Felder gezielt ein!' && num() === '3', satz());
+  /* ⚠️ Und KEINE zweite Meldung unter der Aufgabe: die Ruine sagt
+     sich einmal an, dort, wo es weitergeht. */
+  ok('Arena: keine zweite Meldung unter der Aufgabe',
+     root.querySelector('.wi-fb').hidden === true,
+     root.querySelector('.wi-fb').textContent);
+
+  /* ── Zwölf richtige am Stück bringen zwei (0149) ─────────────
+     ⚠️ Erst alle Wahlen aufbrauchen. Solange noch eine offene Wahl
+     aus der Arena steht, ist „Arena eingenommen" ja richtig — der
+     Grund verfällt mit der letzten Wahl und nicht mit der nächsten
+     Antwort. */
+  stand.me = { picks: 0, streak: 11 };
+  await tool.update();
+  await wait(60);
+  ok('ohne offene Wahl ist der Kasten zu',
+     root.querySelector('[data-part="pickov"]').hidden === true);
+  stand.me = { picks: 2, streak: 12 };
+  await tool.update();
+  await wait(60);
+  ok('Serie 12: zwei Felder, und die Zwei ist die Ziffer',
+     satz() === 'Nimm 2 Felder gezielt ein!' && num() === '2', satz());
+  ok('Serie 12: und wieder nichts darüber — die Arena ist vorbei',
+     titel() === '', titel());
+  const chip = root.querySelector('.wi-streak');
+  ok('Serie 12: das Abzeichen brennt und verspricht ZWEI',
+     chip.classList.contains('is-hot') && /ZWEI/.test(chip.title), chip.title);
+  /* Angekündigt wird der große Schritt VORHER: bei 10 steht „/12",
+     und das Ziel ist hervorgehoben. */
+  stand.me = { picks: 0, streak: 10 };
+  await tool.update();
+  await wait(60);
+  ok('Serie 10: das Ziel ist der Zwölferschritt und sticht hervor',
+     root.querySelector('[data-part="streakgoal"]').textContent === '/12' &&
+     chip.classList.contains('is-big'), chip.textContent.trim());
+
+  /* ── Der Lichttempel verlangt nichts ───────────────────────── */
+  stand.me = { picks: 1, streak: 3 };
+  await tool.update();
+  await wait(60);
+  antwort = args => {
+    stand.me = { picks: 0, streak: 3 };
+    return { ok: true, picks: 0, shadow_pick: 0,
+             effect: { kind: 'licht', guarded: 5 },
+             tile: { r: args.p_r, c: args.p_c, result: 'taken', ruin: 'licht', hearts: 4 } };
+  };
+  click(root.querySelectorAll('.wi-cell')[R_GROSS], document);
+  await wait(60);
+  const tafel = root.querySelector('[data-part="flash"]');
+  ok('Lichttempel: eine kurze Tafel statt eines Kastens',
+     tafel.hidden === false &&
+     root.querySelector('[data-part="pickov"]').hidden === true);
+  ok('Lichttempel: und sie sagt es in einem Satz',
+     root.querySelector('[data-part="flashbig"]').textContent === 'Deine Felder sind beschützt!',
+     root.querySelector('[data-part="flashbig"]').textContent);
+  ok('Lichttempel: darüber steht, woher es kommt',
+     root.querySelector('[data-part="flashkick"]').textContent === 'Lichttempel eingenommen');
+  ok('Lichttempel: keine zweite Meldung unter der Aufgabe',
+     root.querySelector('.wi-fb').hidden === true,
+     root.querySelector('.wi-fb').textContent);
+  /* ⚠️ Sie liegt über der Karte — und darf deshalb keinen Fingertipp
+     schlucken. Das steht nur in der CSS. */
+  const css = fs.readFileSync(path.join(HERE, '..', 'tool.css'), 'utf8');
+  ok('die Tafel nimmt keinen Fingertipp weg',
+     /\.wi-flash[^{-][^{]*\{[^}]*pointer-events:\s*none/.test(css.replace(/\n/g, ' ')));
+
+  /* „Nur kurz" ist die halbe Zusage: sie geht von selbst wieder. */
+  await wait(3000);
+  ok('… und sie geht von selbst wieder weg', tafel.hidden === true);
 
   tool.unmount();
 }
@@ -3988,6 +4151,7 @@ async function testRuinTabelle() {
   await testRuinen();
   await testAntwortAufSchild();
   await testSchildUndSchatten();
+  await testAnsagen();
   await testRuinenOhneMigration();
   await testLobbyRegeln();
   await testRuinTabelle();

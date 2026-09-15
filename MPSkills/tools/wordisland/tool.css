@@ -1308,6 +1308,16 @@
   background: color-mix(in srgb, #ff9628 26%, var(--surface));
   box-shadow: 0 0 10px color-mix(in srgb, #ff9628 45%, transparent);
 }
+/* Das nächste Ziel ist ein Zwölferschritt und bringt ZWEI Felder
+   (Migration 0149). Angekündigt wird das am Ziel und nicht an der
+   Zahl davor: „/12" ist die Stelle, an der die Belohnung steht. Ein
+   Ring statt einer weiteren Farbe — die drei Wärmestufen des
+   Abzeichens sollen weiter für sich sprechen. */
+.wi-streak.is-big .wi-streakgoal {
+  opacity: 1;
+  font-weight: 800;
+  color: var(--wi-gold);
+}
 
 /* Der Weg zurück in den Wahl-Kasten, wenn er von Hand zugemacht
    wurde. Er trägt die Goldfarbe der freien Wahl — dieselbe Aussage
@@ -1386,10 +1396,45 @@
    Breiter als die anderen Kästen, weil der Inhalt eine INSEL ist:
    bei 720 px bliebe von einer runden Karte ein Handteller. */
 .wi-ovbox--pick { max-width: min(96vw, 1000px); }
+/* ── Drei Zeilen, und die Ziffer ist die größte ───────────────
+   Sönke, 15.09.2026: „Die Info, was ich auf dem Streak- oder
+   Ruinen-Effekt-Bildschirm machen muss, ist nicht gut lesbar. Hier
+   muss wenig Text sein und klare Worte. Und die Zahl groß."
+
+   Vorher standen hier zwei blasse 13-px-Sätze über einer Karte, die
+   den ganzen Kasten füllt — auf dem Tablet las die niemand. Jetzt
+   trägt der Kopf den Grund (und bleibt bei der gewöhnlichen Serie
+   leer), die große Zeile den Auftrag, die kleine den Handgriff.
+
+   Kein `text-wrap: balance` und keine feste Höhe: die Zeile ist kurz
+   genug, um in einer Zeile zu bleiben, und wenn sie doch umbricht,
+   darf sie das. */
+.wi-pickbig {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: clamp(20px, 4.2vw, 28px);
+  font-weight: 800;
+  line-height: 1.18;
+  color: var(--ink);
+}
+/* Die Ziffer ist die Aussage — doppelt so hoch wie der Satz und in
+   der Goldfarbe der freien Wahl, damit sie dieselbe Sprache spricht
+   wie die Marken auf der Karte. `line-height: 0` hält die Zeile
+   trotzdem auf ihrer Höhe: ein 2em-Zeichen würde den Kasten sonst
+   bei jeder Wahl anders hoch machen. */
+.wi-picknum {
+  font-size: 2em;
+  font-weight: 900;
+  line-height: 0;
+  vertical-align: -.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--wi-gold);
+  margin: 0 .05em;
+}
 .wi-pickhint {
   flex: 0 0 auto;
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink-soft);
 }
 /* Die Karte nimmt den ganzen Rest — und mindestens so viel, dass
@@ -1407,6 +1452,64 @@
   box-shadow: var(--shadow-lg), 0 0 0 2px color-mix(in srgb, #6d28d9 40%, transparent);
 }
 .wi-ov--pick.is-shadow .wi-ovtitle { color: color-mix(in srgb, #6d28d9 70%, var(--ink)); }
+/* Dieselbe Sonderfarbe trägt die große Zeile — sie sagt beim
+   Schattentempel etwas anderes („Erzeuge Nebel.") als sonst, und das
+   soll man am Ton sehen, bevor man liest. */
+.wi-ov--pick.is-shadow .wi-pickbig { color: color-mix(in srgb, #6d28d9 62%, var(--ink)); }
+
+/* ── Die kurze Nachricht (15.09.2026) ────────────────────────
+   Der Lichttempel verlangt nichts, also bekommt er keinen Kasten,
+   den jemand wegtippen muss: eine Tafel, die aufblendet und nach
+   knapp drei Sekunden von selbst geht.
+
+   `pointer-events: none` auf der Hülle ist Pflicht — sie liegt über
+   der Karte, und wer in diesem Augenblick sein nächstes Feld
+   antippt, darf nicht ins Leere greifen. */
+.wi-flash {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vv-top, 0px);
+  z-index: 55;
+  display: flex;
+  justify-content: center;
+  padding: 14px 16px;
+  pointer-events: none;
+}
+.wi-flashbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 560px;
+  padding: 12px 22px;
+  text-align: center;
+  border-radius: var(--r-md, 18px);
+  background: var(--surface);
+  border: 1px solid var(--ok-edge, var(--line));
+  box-shadow: var(--shadow-lg);
+}
+.wi-flash.is-in .wi-flashbox { animation: wi-flashin .24s ease-out both; }
+.wi-flashkick {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.wi-flashbig {
+  font-size: clamp(17px, 3.6vw, 23px);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ok, var(--ink));
+}
+@keyframes wi-flashin {
+  from { opacity: 0; transform: translateY(-12px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wi-flash.is-in .wi-flashbox { animation: none; }
+}
 
 /* ── Die Sonderregeln in der Lobby (0146) ────────────────────
    Zwei Kacheln, eine Frage, und die Antwort erst auf Tippen. Eigener

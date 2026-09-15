@@ -194,6 +194,15 @@
      und vergleicht sie. */
   const STREAK_GOAL = 3;
 
+  /* Und jede VIERTE Serie zählt doppelt. Sönke, 15.09.2026: „Ich
+     möchte, dass man bei 4 Streaks in Folge (also bei 12) 2 Felder
+     aufdecken kann." Gerechnet wird auch das im Server (Migration
+     0149, `streak % 12 = 0` → zwei statt einer Wahl); hier steht die
+     Zahl nur für die Anzeige — das Abzeichen kündigt den großen
+     Schritt an, statt ihn zur Überraschung zu machen. uitest.js liest
+     beide Stellen und vergleicht sie. */
+  const STREAK_BIG = 12;
+
   /* Die Spieldauer als Reihe statt als Auswahlfeld (Kingdoms-Muster:
      .cm-levelrow). Vier Knöpfe nebeneinander und EIN Satz darunter,
      der die gewählte erklärt. */
@@ -219,6 +228,8 @@
   let shadowPick = 0;       // offene Nebelkränze aus dem Schattentempel (0146)
   let pickHand = false;     // hat das Kind den Wahl-Kasten selbst zugemacht?
   let pickWar = 0;          // wie viele Wahlen standen beim letzten Malen offen
+  let pickGrund = 'serie';  // woher die offenen Wahlen kommen: 'serie' | 'arena'
+  let flashTimer = null;    // die kurze Nachricht (Lichttempel) räumt sich selbst weg
   let panInline = null, panPick = null;   // die zwei Zoom-Hüllen der Karte
   let markPaint = null;     // malt die erreichbaren Felder (freie Wahl)
   let practice = false;     // Tablet: üben statt warten
@@ -2927,13 +2938,38 @@
            könnten sie sich nicht teilen. -->
       <div class="wi-ov wi-ov--pick" data-part="pickov" hidden>
         <div class="wi-ovbox wi-ovbox--pick">
+          <!-- ⚠️ Drei Zeilen und keine vierte. Sönke, 15.09.2026:
+               „Die Info, was ich auf dem Streak- oder Ruinen-Effekt-
+               Bildschirm machen muss, ist nicht gut lesbar. Hier muss
+               wenig Text sein und klare Worte. Und die Zahl groß."
+               Darum: der Kopf sagt WOHER (und steht leer, wenn es die
+               gewöhnliche Serie war — „Serie" sagt schon die Flamme
+               im Kopf), die große Zeile sagt WAS, die kleine WIE.
+               Die Ziffer ist ein eigener Knoten, weil sie die
+               eigentliche Aussage ist. -->
           <div class="wi-ovhead">
-            <span class="wi-ovtitle" data-part="picktitle">Zeig, wohin!</span>
+            <span class="wi-ovtitle" data-part="picktitle"></span>
             <button type="button" class="wi-ovclose" data-part="pickclose"
                     aria-label="Karte schließen">✕</button>
           </div>
+          <p class="wi-pickbig" data-part="pickbig"></p>
           <p class="wi-pickhint" data-part="pickhint"></p>
           <div class="wi-mapwrap wi-mapwrap--pick" data-part="pickwrap"></div>
+        </div>
+      </div>
+
+      <!-- ── Die kurze Nachricht ────────────────────────────────
+           Der Lichttempel verlangt nichts — er hat schon gewirkt.
+           Sönke, 15.09.2026: „Beim Lichttempel kommt nur eine
+           Nachricht kurz: du hast deine Felder beschützt oder so."
+           Also kein Kasten, den jemand wegtippen muss, sondern eine
+           Tafel, die von selbst wieder geht. Sie liegt über dem
+           Wahl-Kasten (40) und unter Toast (60): eine Fehlermeldung
+           darf sie nicht verdecken. -->
+      <div class="wi-flash" data-part="flash" hidden aria-live="polite">
+        <div class="wi-flashbox">
+          <span class="wi-flashkick" data-part="flashkick"></span>
+          <span class="wi-flashbig" data-part="flashbig"></span>
         </div>
       </div>
     </div>`;
@@ -2952,7 +2988,8 @@
       form: q('typeform'), input: q('input'), opts: q('opts'), fb: q('fb'),
       map: q('map'), mapwrap: q('mapwrap'),
       pickOv: q('pickov'), pickWrap: q('pickwrap'),
-      pickTitle: q('picktitle'), pickHint: q('pickhint'),
+      pickTitle: q('picktitle'), pickBig: q('pickbig'), pickHint: q('pickhint'),
+      flash: q('flash'), flashKick: q('flashkick'), flashBig: q('flashbig'),
       rulWrap: q('rulwrap')
     };
     els.rulWrap.innerHTML = rulesHTML();
@@ -3003,6 +3040,48 @@
     if (panInline) panInline.reset();
   }
 
+  /* ─── Die große Ansage ──────────────────────────────────────
+     „Nimm 1 Feld gezielt ein!" — und die Ziffer ist doppelt so groß
+     wie der Satz drumherum. Deshalb steht sie als eigener Knoten da
+     und nicht als Zeichen im Text: eine Zahl, die man mitten im Satz
+     suchen muss, ist genau das, was Sönke am 15.09.2026 gemeldet
+     hat. Ohne `zahl` bleibt es ein reiner Satz (Schattentempel). */
+  function pickGross(vor, zahl, nach) {
+    if (!els.pickBig) return;
+    els.pickBig.textContent = '';
+    if (vor) els.pickBig.appendChild(document.createTextNode(vor));
+    if (zahl != null) {
+      const b = document.createElement('b');
+      b.className = 'wi-picknum';
+      b.textContent = String(zahl);
+      els.pickBig.appendChild(b);
+    }
+    if (nach) els.pickBig.appendChild(document.createTextNode(nach));
+  }
+
+  /* Die kurze Nachricht: aufblenden, stehenbleiben, weg. Sie räumt
+     sich selbst ab — ein Kind, das sie wegtippen müsste, tippt in
+     dem Augenblick auf die Karte darunter. */
+  const FLASH_MS = 2800;
+  function flash(oben, text) {
+    if (!els.flash) return;
+    els.flashKick.textContent = oben || '';
+    els.flashKick.hidden = !oben;
+    els.flashBig.textContent = text || '';
+    els.flash.hidden = false;
+    /* Neu anstoßen, auch wenn sie schon steht: ohne das Aus und Ein
+       liefe die Einblendung beim zweiten Mal gar nicht. */
+    els.flash.classList.remove('is-in');
+    void els.flash.offsetWidth;
+    els.flash.classList.add('is-in');
+    if (flashTimer) clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => {
+      flashTimer = null;
+      if (destroyed || !els.flash) return;
+      els.flash.hidden = true;
+    }, FLASH_MS);
+  }
+
   async function send(value) {
     if (submitting) return;
     submitting = true;
@@ -3036,6 +3115,10 @@
         lockInput(r.locked_for);
       }
 
+      /* Eine Wahl, die aus der SERIE kommt — der Kasten soll dann
+         nicht weiter von der Arena erzählen, die zwei Antworten
+         vorher gefallen ist. */
+      if (view && (r.picks | 0) > (view.me.picks | 0)) pickGrund = 'serie';
       if (view) {
         view.me.task   = r.task;
         view.me.streak = r.streak;
@@ -3107,14 +3190,23 @@
 
     els.pickOv.classList.toggle('is-shadow', shadowPick > 0);
     if (picking) {
-      els.pickTitle.textContent = shadowPick > 0 ? 'Schattentempel!' : 'Zeig, wohin!';
-      els.pickHint.textContent = shadowPick > 0
-        ? 'Tipp auf ein Feld — es und alles drum herum wird wieder Nebel.'
-        : 'Tipp auf ein markiertes Feld an eurem Rand.'
-          + (picks > 1 ? ` Du hast ${picks} Wahlen frei.` : '')
-          + ' Auf einer Ruine kostet das ein Herz.';
-      els.pickBackN.textContent = shadowPick > 0 ? 'Nebel zurückholen'
-        : picks > 1 ? `${picks} Felder wählen` : 'Feld wählen';
+      /* Drei Ansagen, je eine Zeile. Der Kopf steht LEER, wenn die
+         Wahl aus der gewöhnlichen Serie kommt: „Serie" sagt schon die
+         Flamme daneben, und ein Titel, der bei jeder dritten Antwort
+         dasselbe wiederholt, ist genau der Text, der das Wesentliche
+         zudeckt. */
+      const n = Math.max(1, picks | 0);
+      if (shadowPick > 0) {
+        els.pickTitle.textContent = 'Schattentempel';
+        pickGross('Erzeuge Nebel.');
+        els.pickHint.textContent = 'Wähle ein Feld.';
+        els.pickBackN.textContent = 'Nebel zurückholen';
+      } else {
+        els.pickTitle.textContent = pickGrund === 'arena' ? 'Arena eingenommen' : '';
+        pickGross('Nimm ', n, n === 1 ? ' Feld gezielt ein!' : ' Felder gezielt ein!');
+        els.pickHint.textContent = 'Tipp auf ein markiertes Feld.';
+        els.pickBackN.textContent = n > 1 ? `${n} Felder wählen` : 'Feld wählen';
+      }
       // Neu dazugekommen? Dann geht der Kasten auch dann wieder auf,
       // wenn er vorher von Hand zugemacht wurde.
       if (frei > pickWar) pickHand = false;
@@ -3123,6 +3215,9 @@
       pickHand = false;
       els.pickBack.hidden = true;
       pickZu(false);
+      // Alles verbraucht — die nächste Wahl kommt wieder aus der
+      // Serie, bis eine Arena etwas anderes meldet.
+      pickGrund = 'serie';
     }
     pickWar = frei;
     /* Die Marken sind eine eigene Schicht ÜBER dem Nebel und hängen
@@ -3164,16 +3259,24 @@
     const rest = STREAK_GOAL - (n % STREAK_GOAL);
     const ziel = n + rest;
     const eben = n > 0 && rest === STREAK_GOAL;
+    /* Wie viele Felder das nächste (oder das gerade erreichte) Ziel
+       bringt: jede vierte Serie ist doppelt so viel wert (0149). */
+    const wert  = ziel % STREAK_BIG === 0 ? 2 : 1;
+    const wertJ = (eben ? n : ziel) % STREAK_BIG === 0 ? 2 : 1;
     els.streak.hidden = (n <= 0);
     els.streakN.textContent = String(n);
     els.streakGoal.textContent = '/' + ziel;
     els.streak.classList.toggle('is-hot', eben);
     els.streak.classList.toggle('is-near', !eben && rest === 1);
+    /* Der große Schritt wird ANGEKÜNDIGT und nicht überrascht: wer
+       weiß, dass bei 12 zwei Felder warten, tippt die drei Wörter
+       davor mit anderem Gesicht. */
+    els.streak.classList.toggle('is-big', !eben && wert === 2);
     els.streak.title = eben
-      ? `Serie ${n} — ein Feld deiner Wahl ist dir gutgeschrieben`
+      ? `Serie ${n} — ${wertJ === 2 ? 'ZWEI Felder deiner Wahl sind' : 'ein Feld deiner Wahl ist'} dir gutgeschrieben`
       : rest === 1
-        ? `Serie ${n} — noch eine richtige, dann zeigst du selbst, welches Feld fällt`
-        : `Serie ${n} von ${ziel} — jede dritte richtige bringt ein Feld deiner Wahl`;
+        ? `Serie ${n} — noch eine richtige, dann zeigst du selbst, ${wert === 2 ? 'welche ZWEI Felder fallen' : 'welches Feld fällt'}`
+        : `Serie ${n} von ${ziel} — jede dritte richtige bringt ein Feld deiner Wahl, jede zwölfte zwei`;
   }
 
   /* ─── „Was verbirgt sich da?" ───────────────────────────────
@@ -3345,8 +3448,14 @@
   /* Was nach einem Schlag dasteht. Die Zahl `hearts` ist das, was
      NACH diesem Treffer noch übrig ist — und weil das Feld selbst
      das letzte Leben ist, heißt „0 Herzen" nicht „kaputt", sondern
-     „der nächste Schlag nimmt es". Genau so steht es da. */
-  function schlagText(t, effect) {
+     „der nächste Schlag nimmt es". Genau so steht es da.
+
+     ⚠️ Die drei Ruinen, die etwas AUSLÖSEN, stehen seit dem
+     15.09.2026 nicht mehr hier: Arena und Schattentempel sagen sich
+     im Wahl-Kasten an, der gleich darauf aufgeht, der Lichttempel als
+     kurze Tafel. Zwei Meldungen über dasselbe sind eine zu viel —
+     und die hier wäre die kleinere von beiden. */
+  function schlagText(t) {
     const R = Object.values(RUINEN).find(x => x.art === t.ruin);
     const name = R ? R.name : 'Die Ruine';
     if (t.result === 'guard') return 'Ein Schutzherz weniger — das Feld hält noch.';
@@ -3355,11 +3464,7 @@
         ? `Treffer! ${name}: noch ${t.hearts} ${t.hearts === 1 ? 'Herz' : 'Herzen'}.`
         : `Treffer! Der nächste Schlag nimmt ${name === 'Die Ruine' ? 'sie' : 'ihn'}.`;
     }
-    if (!effect) return R ? `${name} gehört euch!` : 'Feld genommen!';
-    if (effect.kind === 'arena')    return 'Arena erobert — drei freie Züge für dich!';
-    if (effect.kind === 'licht')    return `Lichttempel erobert — ${effect.guarded} eurer Felder sind geschützt!`;
-    if (effect.kind === 'schatten') return 'Schattentempel erobert — hol den Nebel zurück!';
-    return `${name} gehört euch!`;
+    return R ? `${name} gehört euch!` : 'Feld genommen!';
   }
 
   async function onMapClick(e) {
@@ -3400,8 +3505,23 @@
               : ctx.errText(r.error));
       return;
     }
-    if (r.tile && (r.tile.ruin || r.tile.result === 'guard')) {
-      feedback('ok', schlagText(r.tile, r.effect));
+    /* Eine eingenommene Ruine sagt sich SELBST an, und zwar dort, wo
+       es weitergeht: Arena und Schattentempel im Wahl-Kasten, der
+       gleich darauf aufgeht (der Kopf trägt den Grund), der
+       Lichttempel als kurze Tafel — er verlangt nichts, er hat schon
+       gewirkt. Deshalb steht in diesen drei Fällen keine zusätzliche
+       Zeile unter der Aufgabe: zwei Meldungen über dasselbe sind eine
+       zu viel. */
+    /* ⚠️ `effect` kommt bei JEDER eroberten Ruine mit, auch bei Klo
+       und Tor (die können nichts, die zählen nur Punkte). Gemeint
+       sind hier die drei, die etwas auslösen. */
+    const eff = r.effect && r.effect.kind;
+    if (eff === 'arena') pickGrund = 'arena';
+    if (eff === 'licht') {
+      flash('Lichttempel eingenommen', 'Deine Felder sind beschützt!');
+    } else if (eff !== 'arena' && eff !== 'schatten'
+               && r.tile && (r.tile.ruin || r.tile.result === 'guard')) {
+      feedback('ok', schlagText(r.tile));
     }
     if (view) {
       view.me.picks = r.picks;
@@ -8482,6 +8602,8 @@
       destroyed = false; busy = false; view = null;
       mapKey = null; cells = []; cellEls = []; ships = {}; mapPaint = null;
       markPaint = null; pickHand = false; pickWar = 0; panInline = panPick = null;
+      pickGrund = 'serie';
+      if (flashTimer) { clearTimeout(flashTimer); flashTimer = null; }
       ownPainted = null; submitting = false; picking = false; shadowPick = 0;
       sets = { list: [], chosen: [] }; setsBusy = 0; tab = 'units'; setsOpen = false;
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
@@ -8585,6 +8707,8 @@
       clearTimeout(lvupT);
       clearTimeout(lvupSprungT);
       clearTimeout(lvlToastT);
+      clearTimeout(flashTimer);
+      flashTimer = null;
       feierWeiter = null;
       feiernd = false;
       if (onResize) window.removeEventListener('resize', onResize);
