@@ -988,7 +988,29 @@
    die Marken der freien Wahl (14.09.2026) liegen als OBERSTE Schicht
    genau auf den Feldern, die angetippt werden sollen. Ohne diese
    Zeile markiert die Karte das Ziel und schluckt den Tipp. */
-.wi-hearts, .wi-guards, .wi-marks { pointer-events: none; }
+.wi-hearts, .wi-guards, .wi-marks,
+/* Auf der flachen Karte (16.09.2026) kommen zwei Schichten dazu, die
+   beide über den Kacheln liegen: die Unterlage in der Naht und der
+   Rahmen um ein Volksgebiet. Der Rahmen ist der gefährlichere von
+   beiden — er läuft genau an der Front entlang, also dort, wo bei der
+   freien Wahl gezielt wird. */
+.wi-naht, .wi-areas { pointer-events: none; }
+
+/* ── Die flache Karte: der Rahmen um ein Volksgebiet ─────────
+   Ein geschlossener Zug je Volk, in zwei Lagen übereinander (dunkel
+   breit, hell schmal). Farbe und Breite rechnet tool.js — sie hängen
+   am Volk und daran, ob es das eigene ist. Hier steht nur, was für
+   jeden Rahmen gilt: runde Ecken, damit der Zug den runden Waben
+   folgt und nicht gegen sie arbeitet.
+
+   Kein Übergang auf `d`: ein Umriss ändert mit jedem eroberten Feld
+   seine Anzahl Stützpunkte, und zwei Pfade verschiedener Länge lassen
+   sich nicht überblenden — heraus käme ein Sprung MIT Verzögerung
+   statt einem ohne. */
+.wi-area {
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
 
 /* ── Das Meer ────────────────────────────────────────────────
    Brandung: jede Welle läuft von außen auf die Küste zu und
@@ -1413,6 +1435,19 @@
   background: var(--surface);
   border: 1px solid var(--line);
 }
+/* Frage und Serien-Abzeichen in einer Zeile (16.09.2026, Sönke:
+   „die Streak-Anzeige gehört ja zur Vokabel"). Das Abzeichen behält
+   sein Aussehen aus dem Kopf — es ist dasselbe Stück, es steht nur
+   eine Ebene tiefer. `min-height`, damit die Zeile nicht springt,
+   wenn die Serie bei null anfängt und das Abzeichen verschwindet. */
+.wi-taskhead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 24px;
+}
+.wi-taskhead .wi-ask { flex: 1 1 auto; min-width: 0; }
+.wi-taskhead .wi-streak { margin-left: auto; }
 .wi-ask { margin: 0; font-size: 13px; color: var(--ink-faint); }
 .wi-word {
   margin: 0;
@@ -1672,6 +1707,19 @@
 }
 
 .wi--tab .wi-mapwrap { min-height: 46vh; }
+
+/* ── Der Rahmen um die Karte (16.09.2026) ────────────────────
+   Nur am Tablet, und nur seit die Karte dort flach ist: eine
+   helle Linie außen, ein tiefblauer Ring innen. Der Ring ist der
+   eigentliche Rahmen — die flache Karte hat keine Brandung und
+   keine Tiefenstufen mehr, mit denen sie sich vom Hintergrund
+   absetzt, und ohne ihn franst das Meer in die Seite aus.
+   Am Beamer bleibt der Kasten randlos: dort ist die Karte die
+   ganze Fläche und braucht keine Einfassung. */
+.wi--tab .wi-mapwrap {
+  border: 1px solid #2a6a84;
+  box-shadow: inset 0 0 0 4px #052131, 0 8px 22px rgba(0, 0, 0, .35);
+}
 
 /* Am Beamer nimmt die Insel, was da ist. Die HÖHE der Bühne rechnet
    seit dem 14.09.2026 tool.js aus (passeBeamAn) und schreibt sie in

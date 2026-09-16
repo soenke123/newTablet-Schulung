@@ -180,6 +180,22 @@ function viewFor(over, meOver) {
   return v;
 }
 
+/* Dasselbe für die Pult-Rolle. Sie bekommt keine eigene Aufgabe und
+   kein `me`, dafür die Leute im Raum — und sie ist die einzige
+   Rolle, die noch die Reliefkarte sieht (16.09.2026). */
+function pultView(over) {
+  return Object.assign({
+    ok: true, role: 'presenter', phase: 'running', mode: 'type', direction: 'mixed',
+    team_count: 4, factions: [0, 1, 2, 3], duration: 600, radius: 7, seed: 3,
+    teams: [0, 1, 2, 3].map(i => ({ i, tiles: i ? 1 : 4, ruins: 0, score: i ? 1 : 4, people: 1 })),
+    map_key: 'raum:relief', map: null, own: OWN_START,
+    ends_at: new Date(Date.now() + 300000).toISOString(),
+    countdown_ends_at: null, winner_team: null, sets: ['s1'],
+    online_count: 2, room_total: 3,
+    people: [{ seat: 1, name: 'Ada', team: 0, online: true, correct: 2, wrong: 1 }]
+  }, over || {});
+}
+
 /* ═══════════════════════════════════════════════════════════
    Tablet — Arena
    ═══════════════════════════════════════════════════════════ */
@@ -638,13 +654,17 @@ async function testRelief() {
      Rechteck füllt seinen eigenen Ausschnitt aus und hat gar keins. */
   const BIG = rundeInsel(7);
   let own = '0' + '.'.repeat(BIG.length - 1);
+  /* ⚠️ PULT-Rolle, seit dem 16.09.2026. Bis dahin lief dieser
+     Prüfstand am Tablet — dort gibt es das Relief nicht mehr (siehe
+     testFlach). Die Karte selbst ist dieselbe Funktion, nur der
+     Schalter `mini` unterscheidet sie, und der hängt an der Rolle. */
   const ctx = Object.assign({}, ctxBase, {
-    role: 'participant',
+    role: 'presenter',
     actions: {
-      role: 'participant',
-      call: (fn, args) => fn === 'wi_view'
-        ? Promise.resolve(viewFor({ map: args.p_full ? BIG : null, own }))
-        : Promise.resolve({ ok: false, error: 'not_allowed' })
+      role: 'presenter',
+      call: (fn, args) => fn === 'wi_room_get'
+        ? Promise.resolve(pultView({ map: args.p_full ? BIG : null, own }))
+        : Promise.resolve({ ok: true })
     }
   });
 
@@ -774,6 +794,26 @@ async function testRelief() {
   ok('und jedes Schiff gleich weit vor seinem Landeplatz',
      Math.max(...weiten) - Math.min(...weiten) < .01 && Math.max(...weiten) <= 2.05,
      JSON.stringify(weiten));
+
+  /* ── Der Grenzstrich ───────────────────────────────────────
+     Er gehört seit dem 16.09.2026 ausschließlich hierher: am Tablet
+     ist die Karte flach und zieht stattdessen einen Rahmen um das
+     ganze Gebiet (testBesitzKlar). Im Relief geht das nicht — jede
+     Kachel steht auf ihrer eigenen Höhe, ein gemeinsamer Umriss
+     liefe quer durch die Säulen.
+
+     Gezogen wird an den Kanten zu FREMDEM (Nebel, Meer, anderes
+     Volk) und nirgends sonst: `own` ist hier „Feld 0 gehört Slot 0,
+     alles andere Nebel", also müssen alle sechs Kanten stehen. */
+  const striche = [...root.querySelectorAll('.wi-cell')].map(c => {
+    const e = c.parentNode.querySelector('.wi-edge');
+    return { t: c.dataset.t, n: e ? ((e.getAttribute('d') || '').match(/M/g) || []).length : 0 };
+  });
+  ok('erobertes Land zieht einen Grenzstrich',
+     striche.some(s => s.t !== '.' && s.n > 0));
+  ok('ein Nebelfeld bekommt keinen', striche.every(s => s.t !== '.' || s.n === 0));
+  ok('und keiner zieht mehr als sechs Kanten', striche.every(s => s.n <= 6),
+     JSON.stringify(striche.filter(s => s.n > 6).slice(0, 3)));
 
   tool.unmount();
 }
@@ -4353,35 +4393,60 @@ async function testBesitzKlar() {
   }
   ok('der Boden scheint durch die Volksfarbe noch durch', unterscheidbar, js(toene));
 
-  /* ── Der Grenzstrich ─────────────────────────────────────── */
-  const kante = i => {
-    const p = root.querySelectorAll('.wi-cell')[i].parentNode.querySelector('.wi-edge');
-    return p ? (p.getAttribute('d') || '') : '';
-  };
-  const stuecke = d => (d.match(/M/g) || []).length;
-  ok('ein Nebelfeld bekommt gar keinen Strich', kante(2) === '', kante(2));
-  /* Feld 0: vier Kanten zeigen aufs Meer, eine auf Feld 5 (fremdes
-     Volk) — und die sechste auf Feld 1, das demselben Volk gehört.
-     Genau die darf nicht gezogen werden, sonst ist der Grenzstrich
-     eine Bienenwabe und sagt nichts mehr. */
-  ok('Feld 0 zieht fünf von sechs Kanten', stuecke(kante(0)) === 5, `${stuecke(kante(0))}`);
-  ok('die Kante zum eigenen Nachbarn fehlt', stuecke(kante(0)) < 6);
-  ok('auch das fremde Feld zieht seinen eigenen Strich', stuecke(kante(5)) > 0,
-     `${stuecke(kante(5))}`);
+  /* ── Der Rahmen um ein Volksgebiet (16.09.2026) ──────────────
+     Am Tablet ist die Karte flach, und damit tritt an die Stelle des
+     Grenzstrichs (Kante für Kante, siehe testRelief am Pult) ein
+     geschlossener Zug um das ganze Gebiet. Sönke: „damit man sofort
+     sieht, das gehört zusammen."
+
+     Feld 0 und 1 gehören Slot 0 und sind Nachbarn, Feld 5 gehört
+     Slot 1. Es müssen also ZWEI Gebiete umrissen sein, und der Zug
+     um die beiden zusammenhängenden Felder darf ihre gemeinsame
+     Kante NICHT enthalten — sonst ist er eine Wabenkette und sagt
+     nichts mehr. Zehn Kanten um zwei Waben, nicht zwölf. */
+  const rahmen = [...root.querySelectorAll('.wi-area')].filter(p => (p.getAttribute('d') || '').length > 2);
+  ok('zwei Völker, zwei Rahmen (je zwei Lagen)', rahmen.length === 4, `${rahmen.length}`);
+  const kantenZahl = d => (d.match(/Q/g) || []).length;
+  const zuege = rahmen.map(p => kantenZahl(p.getAttribute('d'))).sort((a, b) => a - b);
+  ok('der Zug um zwei Felder hat zehn Kanten, nicht zwölf',
+     zuege[3] === 10 && zuege[0] === 6, js(zuege));
   /* Die Farbe ist die aufgehellte Volksfarbe — heller als sie, und
      näher an ihr als an der des anderen Volkes. */
-  const strich = root.querySelectorAll('.wi-cell')[0].parentNode
-                     .querySelector('.wi-edge').getAttribute('stroke');
-  ok('der Strich trägt die eigene Volksfarbe, aufgehellt',
-     farbAbstand(strich, voelker[0]) < farbAbstand(strich, voelker[1]) &&
-     hex2(strich).reduce((a, b) => a + b, 0) > hex2(voelker[0]).reduce((a, b) => a + b, 0),
-     `${strich} gegen ${voelker[0]}`);
-  /* ⚠️ Er liegt genau auf dem Rand der Deckfläche — also dort, wohin
-     man beim Zielen auf ein Randfeld tippt. Ohne die Sammelregel
-     markiert die Karte das Ziel und schluckt den Tipp. */
+  const hell = rahmen.map(p => p.getAttribute('stroke'))
+                     .filter(s => /^#/.test(s || ''));
+  ok('die helle Lage trägt die Volksfarbe, aufgehellt',
+     hell.length === 2 &&
+     farbAbstand(hell[0], voelker[0]) < farbAbstand(hell[0], voelker[1]) &&
+     hex2(hell[0]).reduce((a, b) => a + b, 0) > hex2(voelker[0]).reduce((a, b) => a + b, 0),
+     `${js(hell)} gegen ${voelker[0]}`);
+  /* ⚠️ Der Rahmen läuft genau an der Front entlang — also dort, wohin
+     man bei der freien Wahl tippt. Ohne die Sammelregel markiert die
+     Karte das Ziel und schluckt den Tipp. */
   const css2 = fs.readFileSync(path.join(HERE, '..', 'tool.css'), 'utf8').replace(/\n/g, ' ');
   ok('der Grenzstrich ist für Zeiger durchlässig',
      /\.wi-edge[^{]*\{[^}]*pointer-events:\s*none/.test(css2));
+  ok('der Areal-Rahmen ist es auch',
+     /\.wi-areas[^{]*\{[^}]*pointer-events:\s*none/.test(css2));
+
+  /* ── Und die flache Karte ist wirklich flach ─────────────────
+     Die drei Zusagen, an denen die ganze Umstellung hängt: keine
+     Säulen, kein Nebel, kein Filter. Fällt eine davon, ist die
+     Reliefkarte zurück auf dem Handy und niemand merkt es, außer
+     dass es ruckelt. */
+  ok('die Karte weist sich als flach aus',
+     root.querySelector('.wi-map').classList.contains('wi-map--flach'));
+  ok('keine Säulen am Tablet', root.querySelectorAll('.wi-side').length === 0,
+     `${root.querySelectorAll('.wi-side').length}`);
+  ok('kein Nebel am Tablet', root.querySelectorAll('.wi-fog').length === 0);
+  ok('kein Weichzeichner und keine Wolke',
+     root.querySelectorAll('feGaussianBlur, feTurbulence, feDisplacementMap, mask').length === 0);
+  ok('und kein Element verweist auf einen Filter',
+     [...root.querySelectorAll('.wi-map *')].every(n => !n.getAttribute('filter')
+        || /tint/.test(n.getAttribute('filter'))));
+  /* Eine Kachel ist EIN Pfad. Das ist der Grund für alles andere. */
+  ok('eine Wabe je Feld, mehr nicht',
+     root.querySelectorAll('.wi-cell').length === RMAP.length,
+     `${root.querySelectorAll('.wi-cell').length} von ${RMAP.length}`);
 
   tool.unmount();
 }

@@ -520,6 +520,37 @@
     return d;
   }
 
+  /* Dieselbe Wabe mit RUNDEN Ecken. Sie gehört der flachen Karte
+     (Tablet): ohne Relief, ohne Nebel und ohne Kleinteile wäre ein
+     spitzes Sechsecknetz ein Tabellenblatt. Die Rundung kostet
+     zwölf Wegbefehle statt sechs und keinen einzigen Filter —
+     „schematisch" soll freundlich heißen und nicht technisch. */
+  function wabe(x, y, s, rad) {
+    const p = HEX.map(([hx_, hy_]) => [x + hx_ * s, y + hy_ * s]);
+    const zu = (a, b, t) => {
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const L = Math.hypot(dx, dy) || 1;
+      return [a[0] + dx / L * t, a[1] + dy / L * t];
+    };
+    const r = rad * s;
+    let d = '';
+    for (let i = 0; i < 6; i++) {
+      const A = p[i], V = p[(i + 5) % 6], N = p[(i + 1) % 6];
+      const e1 = zu(A, V, r), e2 = zu(A, N, r);
+      d += (i ? 'L' : 'M') + n2(e1[0]) + ' ' + n2(e1[1])
+         + 'Q' + n2(A[0]) + ' ' + n2(A[1]) + ' ' + n2(e2[0]) + ' ' + n2(e2[1]);
+    }
+    return d + 'Z';
+  }
+
+  /* Ein Feld, wie es die jeweilige Karte zeichnet: am Beamer das
+     spitze Sechseck, am Tablet die runde Wabe. Gebraucht von allem,
+     was AUF einem Feld sitzt und dessen Form treffen muss — der
+     Sockel einer Ruine und die Marke der freien Wahl. Stünde dort
+     hexPath, säße auf der flachen Karte ein spitzer Sockel auf einer
+     runden Kachel. */
+  const feldPfad = (x, y, s) => FLACH ? wabe(x, y, s * MINI.wabe, MINI.ecke) : hexPath(x, y, s);
+
   /* `null` heißt „dieses Merkmal nicht setzen" und nicht „setz es
      auf die Zeichenkette null". Der Unterschied ist hier kein
      Schönheitsfehler: filter="null" zeigt auf einen Filter, den es
@@ -718,7 +749,18 @@
   let FID = 'wi_';
   const F = n => 'url(#' + FID + n + ')';
 
-  function buildDefs(svg) {
+  /* ⚠️ Auf dem Tablet gibt es KEINE Filter (siehe „DIE FLACHE
+     KARTE" weiter unten). `FB` ist deshalb der Weg, auf dem die
+     gemeinsamen Schichten — Orte, Fahnen, Schiffe — ihre kleinen
+     Weichzeichner anfordern: am Beamer bekommen sie einen, am
+     Tablet `null`, und `el()` lässt das Merkmal dann weg.
+
+     Nicht „filter=''" und nicht „url(#gibtsnicht)": ein Element mit
+     ungültiger Filterangabe wird GAR NICHT gezeichnet. */
+  let FLACH = false;
+  const FB = n => FLACH ? null : F(n);
+
+  function buildDefs(svg, mini) {
     const defs = el('defs', {}, svg);
     const filt = (id, attrs, kinder) => {
       const f = el('filter', Object.assign({
@@ -747,6 +789,21 @@
        man sieht dem Nebel an, dass er aus Kacheln besteht. 0.9 ist
        knapp eine Kachel — mehr wäre schön und würde anfangen zu
        lügen, welches Feld noch verdeckt ist. */
+    /* Die acht teuren gibt es nur am Beamer. Auf dem Tablet ist
+       nicht bloß der Nebel weg, der sie bräuchte — ein gefiltertes
+       SVG muss bei JEDER Zoomstufe neu gerastert werden, und genau
+       das ist der Grund, warum das Zoomen auf dem Handy hakt.
+       Der Farbfilter der Ruinen bleibt in beiden Rollen: er liegt
+       auf zehn kleinen Bildern und trägt eine Auskunft (wem die
+       Ruine gehört). */
+    if (mini) {
+      TEAMS.forEach((tm, i) => filt('tint' + i, { x: '0%', y: '0%', width: '100%', height: '100%' }, f => {
+        el('feFlood', { 'flood-color': tm.color, result: 'c' }, f);
+        el('feComposite', { in: 'c', in2: 'SourceGraphic', operator: 'in' }, f);
+      }));
+      return;
+    }
+
     const wolke = (id, blur) => filt(id, { x: '-18%', y: '-18%', width: '136%', height: '136%' }, f => {
       el('feTurbulence', { type: 'fractalNoise', baseFrequency: '0.13 0.17', numOctaves: 4, seed: 4, result: 'n' }, f);
       el('feDisplacementMap', { in: 'SourceGraphic', in2: 'n', scale: '0.90', xChannelSelector: 'R', yChannelSelector: 'G', result: 'd' }, f);
@@ -917,7 +974,12 @@
      das Wasser stapelt seine Tiefenstufen darauf, die Brandung
      setzt ihre Wellen darauf ab, und beide brauchen die Stellen
      und nicht die Zeichenkette. */
-  function coastRings(isl, gap) {
+  /* Seit der flachen Karte (16.09.2026) ist die Frage nach dem
+     Nachbarn ein Parameter: `dazu(r, c)` sagt, ob dort dieselbe
+     Menge weitergeht. Für die Küste heißt das „ist da Land", für
+     den Rahmen um ein Volksgebiet „gehört das demselben Volk".
+     Eine Funktion, zwei Umrisse. */
+  function umriss(menge, dazu, gap) {
     /* Die Ecken auf HUNDERTSTEL runden, nicht feiner. Zwei Kanten,
        die von verschiedenen Feldern aus gerechnet wurden, treffen
        sonst nicht denselben Schlüssel — und die Kette reißt. Als
@@ -926,10 +988,10 @@
     const K = (x, y) => Math.round(x * 100) + ',' + Math.round(y * 100);
     const von = new Map();
     const alle = [];
-    for (const z of isl.cells) {
+    for (const z of menge) {
       const nb = neighbors(z.r, z.c);
       for (let i = 0; i < 6; i++) {
-        if (isl.at(nb[i][0], nb[i][1])) continue;
+        if (dazu(nb[i][0], nb[i][1])) continue;
         const e = EDGE[i], a = HEX[e], b = HEX[(e + 1) % 6];
         const s = {
           ax: z.x + a[0] * gap, ay: z.y + a[1] * gap,
@@ -958,6 +1020,23 @@
       if (pts.length > 4) ringe.push(pts.slice(0, -1));
     }
     return ringe;
+  }
+
+  /* Die Küste: Land gegen Meer. */
+  const coastRings = (isl, gap) => umriss(isl.cells, (r, c) => !!isl.at(r, c), gap);
+
+  /* Das Gebiet eines Volkes: eigene Kachel gegen alles andere —
+     gegen fremde Völker, gegen Nebel und gegen das Meer. Liegen zwei
+     Stücke getrennt, kommen zwei Ringe heraus; ein eingeschlossenes
+     fremdes Feld bekommt seinen eigenen Innenring. Beides fällt beim
+     Ketten von selbst an. */
+  function gebietsRinge(isl, own, ch, gap) {
+    const menge = isl.cells.filter(z => own[z.i] === ch);
+    if (!menge.length) return [];
+    return umriss(menge, (r, c) => {
+      const n = isl.at(r, c);
+      return !!n && own[n.i] === ch;
+    }, gap);
   }
 
   /* Auslenkung des Küstenzugs. Gebraucht wird sie im Relief nur für
@@ -1363,6 +1442,176 @@
   }
 
   /* ══════════════════════════════════════════════════════════
+     DIE FLACHE KARTE (Tablet)
+     ══════════════════════════════════════════════════════════
+     Sönke, 16.09.2026: „Ich möchte, dass die Map auf den Handys der
+     Schüler bisschen einfacher designt ist: kein Nebel (nur anders
+     farbende Waben), auch die Felder sind simpler und die Höhen-
+     unterschiede sind weg … schneller geladen, flüssiger beim
+     Zoomen und Scrollen. Die Sprites der Ruinen und der Schiffe
+     sowie die Landungspunkte können beibehalten werden."
+
+     Entschieden am Standbild in `mini-showroom.html`. Am BEAMER
+     bleibt alles, wie es war — dort steht ein Rechner, die Karte
+     wird nicht angefasst, und das Relief trägt über zehn Meter.
+
+     ── Was das Tablet nicht mehr bekommt ────────────────────────
+       · keinen einzigen Filter (Wolke, Rauschen, Weichzeichner):
+         ein gefiltertes SVG rastert bei JEDER Zoomstufe neu, und
+         genau daran hakt das Schieben auf dem Handy;
+       · keinen Nebel als Wolke — verhülltes Land ist eine gedeckt
+         eingefärbte Wabe;
+       · kein Relief: eine Kachel ist EIN Pfad statt vier Knoten;
+       · keine Kleinteile und keine laufende Brandung (bis zu
+         dreihundert bewegte Gruppen an der Küste).
+     Gemessen: rund 500 Elemente für 430 Felder statt gut 2500.
+
+     ── Was es dafür bekommt ─────────────────────────────────────
+     Einen RAHMEN um jedes Volksgebiet (Sönke, 16.09.2026: „damit
+     man sofort sieht, das gehört zusammen"). Am Beamer geht das
+     nicht — dort steht jede Kachel auf ihrer eigenen Geländehöhe,
+     ein gemeinsamer Umriss läge quer durch die Säulen, deshalb
+     zieht das Relief seinen Grenzstrich Kante für Kante. Flach ist
+     der geschlossene Zug möglich, und er sagt etwas, das fünfhundert
+     Strichlein nie sagen können.                                  */
+
+  /* Kachelbreite und Eckenrundung. Der Rest bis 1.0 ist die NAHT:
+     durch sie scheint die dunkle Unterlage, und daraus entsteht das
+     Wabenmuster — ohne dass eine einzige Kante gezeichnet wird. */
+  const MINI = {
+    wabe: .93, ecke: .16,
+    naht: '#0c2233',
+    /* Wohin wildes (verhülltes) Land entsättigt wird. Es soll
+       zurückstehen, ohne zu verschwinden: was man sieht, ist die
+       Insel, was man liest, sind die Gebiete. */
+    wild: '#7f8f96', wildAnt: .26,
+    /* Das Meer in drei Tönen statt in fünf, jeder ein Strich auf dem
+       Küstenzug. Ohne Auslenkung: die vier parallelen Tiefenlinien
+       brauchten sie, drei Säume kommen ohne aus. */
+    see: [[3.4, '#11516b'], [1.3, '#2b86a2']],
+    /* Der Rahmen um ein Gebiet, in zwei Lagen: darunter breit und
+       dunkel (damit die Linie auf jeder Bodenfarbe steht), darüber
+       schmal in der aufgehellten Volksfarbe — die Volksfarbe selbst
+       wäre auf dem eigenen Gebiet unsichtbar. Das EIGENE Volk
+       bekommt den kräftigeren Zug; es ist die einzige Stelle, die
+       „ich" von „die anderen" unterscheidet. */
+    randDunkel: 'rgba(7,22,33,.50)',
+    randBreit: [.21, .27], randSchmal: [.11, .16], randHell: [.46, .62]
+  };
+
+  /* Die Farbe einer Kachel. Dieselbe Mischung wie im Relief
+     (KARTE.mix), damit ein Volk auf beiden Karten dieselbe Farbe
+     hat — am Beamer und auf dem Tablet wird über dasselbe Spiel
+     geredet. */
+  function miniFill(z, ch) {
+    const grund = KARTE.land[z.boden];
+    if (ch === '.') return mix(grund, MINI.wild, MINI.wildAnt);
+    const t = facOf(+ch);
+    return mix(grund, (TEAMS[t] || { color: '#888' }).color, KARTE.mix);
+  }
+
+  /* Das Meer: Hintergrund, zwei Säume, eine Schaumlinie. Die
+     Schaumlinie läuft weiter (CSS, ein Element) — eine stehende
+     sieht aus wie der Rand eines Aufklebers. Brandung und Wellen
+     gibt es hier nicht. */
+  function flachSee(svg, vb, dCoast) {
+    const g = el('g', { class: 'wi-sea' }, svg);
+    const M = 9;
+    el('rect', {
+      x: n2(vb[0] - M), y: n2(vb[1] - M), width: n2(vb[2] + 2 * M), height: n2(vb[3] + 2 * M),
+      fill: KARTE.sea.deep
+    }, g);
+    for (const [w, col] of MINI.see) {
+      el('path', { d: dCoast, fill: 'none', stroke: col, 'stroke-width': w, 'stroke-linejoin': 'round' }, g);
+    }
+    el('path', {
+      class: 'wi-foam', d: dCoast, fill: 'none', stroke: KARTE.sea.foam,
+      'stroke-width': .13, 'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+      'stroke-dasharray': '.7 .5', opacity: .75
+    }, g);
+    return g;
+  }
+
+  /* Das Land. Eine Unterlage, ein Pfad je Feld, ein Umriss je Volk.
+     Zurück kommt dieselbe Malfunktion wie beim Relief: paint(own). */
+  function flachLand(svg, isl) {
+    /* Die Unterlage: die ganze Insel einmal in Tintenblau, unter den
+       Waben. Sie ist der Grund, warum in der Naht kein Meerblau
+       durchblitzt. */
+    let dU = '';
+    for (const z of isl.cells) dU += hexPath(z.x, z.y, 1.02);
+    el('path', { class: 'wi-naht', d: dU, fill: MINI.naht }, svg);
+
+    const gLand = el('g', {}, svg);
+    /* EIN Pfad-Text für alle Kacheln, jede verschoben: das spart bei
+       900 Feldern 900 lange `d`-Angaben, und geändert wird ohnehin
+       nur die Farbe. */
+    const dWabe = wabe(0, 0, MINI.wabe, MINI.ecke);
+    const nodes = [];
+    for (const z of isl.cells) {
+      const t = el('path', {
+        class: 'wi-cell', transform: `translate(${n2(z.x)} ${n2(z.y)})`,
+        d: dWabe, fill: miniFill(z, '.')
+      }, gLand);
+      t.dataset.i = z.i; t.dataset.r = z.r; t.dataset.c = z.c; t.dataset.t = '.';
+      nodes.push({ z, top: t });
+      cellEls[z.i] = t;
+    }
+
+    /* Die Rahmen liegen ÜBER den Kacheln und unter allem anderen.
+       Zwei Pfade je Volk, angelegt beim ersten Auftreten. */
+    const gRing = el('g', { class: 'wi-areas' }, svg);
+    const rahmen = new Map();
+
+    return function paint(own) {
+      /* Hat sich gar nichts bewegt, ist nichts zu tun — und das ist
+         der Normalfall, denn der Takt läuft alle vier Sekunden und
+         nicht jedes Kind antwortet in jedem. `ownPainted` ist dabei
+         genau die richtige Bezugsgröße: es steht auf `null`, wenn
+         die Völker gewechselt haben, und erzwingt dann den vollen
+         Neuanstrich. */
+      if (ownPainted === own) return;
+      for (const n of nodes) {
+        const ch = own[n.z.i];
+        if (ownPainted && ownPainted[n.z.i] === ch) continue;
+        n.top.setAttribute('fill', miniFill(n.z, ch));
+        n.top.dataset.t = ch === '.' ? '.' : String(facOf(+ch));
+      }
+
+      /* Die Rahmen: je Volk ein geschlossener Zug. Die Kantenkette
+         sieht jede Kachel einmal an, das ist billig genug für einen
+         Takt alle vier Sekunden — und rückwärts gerechnet lässt sich
+         ein Umriss nicht: verliert ein Volk ein Feld irgendwo, ändert
+         sich der ganze Ring. */
+      for (let s = 0; s < TEAM_COUNT; s++) {
+        const ch = String(s);
+        const ringe = gebietsRinge(isl, own, ch, 1.0);
+        let k = rahmen.get(s);
+        if (!ringe.length) {
+          if (k) { k.dunkel.setAttribute('d', ''); k.hell.setAttribute('d', ''); }
+          continue;
+        }
+        const d = ringsPath(ringe, 0, true, 0);
+        const mein = meinSlot() === s;
+        const i = mein ? 1 : 0;
+        if (!k) {
+          k = {
+            dunkel: el('path', { class: 'wi-area', fill: 'none', stroke: MINI.randDunkel }, gRing),
+            hell: el('path', { class: 'wi-area', fill: 'none' }, gRing)
+          };
+          rahmen.set(s, k);
+        }
+        k.dunkel.setAttribute('d', d);
+        k.dunkel.setAttribute('stroke-width', MINI.randBreit[i]);
+        k.hell.setAttribute('d', d);
+        k.hell.setAttribute('stroke-width', MINI.randSchmal[i]);
+        k.hell.setAttribute('stroke',
+          mix((TEAMS[facOf(s)] || { color: '#888' }).color, '#ffffff', MINI.randHell[i]));
+      }
+    };
+  }
+
+  /* ══════════════════════════════════════════════════════════
      Der Nebel — Tonstufen
      ══════════════════════════════════════════════════════════
      Der Nebel ist kein Zustand einer Kachel, sondern ein Ding, das
@@ -1561,17 +1810,17 @@
          dem Nebel zehn gelbe Flecken, die aussehen wie ein Fehler
          im Bild. Ein Licht im Nebel ist ein PUNKT mit Schein, keine
          Scheibe. */
-      const halo = el('circle', { class: 'wi-halo', r: n2(def.halo), fill: KARTE.gold, opacity: .6, filter: F('b2') }, gg);
+      const halo = el('circle', { class: 'wi-halo', r: n2(def.halo), fill: KARTE.gold, opacity: .6, filter: FB('b2') }, gg);
       const gBody = el('g', { opacity: 0 }, gg);
-      el('ellipse', { cx: 0, cy: .30, rx: n2(.42 * def.bild), ry: .16, fill: 'rgba(0,0,0,.38)', filter: F('b1') }, gBody);
+      el('ellipse', { cx: 0, cy: .30, rx: n2(.42 * def.bild), ry: .16, fill: 'rgba(0,0,0,.38)', filter: FB('b1') }, gBody);
       /* Der Sockel: gerodeter Boden, auf dem der Ort steht. Er
          gehört der Karte und bleibt, egal welches Bild darauf
          kommt — und er ist genau eine Kachel. */
       const plate = el('path', {
-        class: 'wi-plate', d: hexPath(0, 0, PLACE_PLATTE), fill: KARTE.land.sand,
+        class: 'wi-plate', d: feldPfad(0, 0, PLACE_PLATTE), fill: KARTE.land.sand,
         stroke: shade(KARTE.land.sand, -.35), 'stroke-width': .05
       }, gBody);
-      el('path', { d: hexPath(0, 0, PLACE_PLATTE), fill: 'none', stroke: KARTE.gold, 'stroke-width': .06, opacity: .8 }, gBody);
+      el('path', { d: feldPfad(0, 0, PLACE_PLATTE), fill: 'none', stroke: KARTE.gold, 'stroke-width': .06, opacity: .8 }, gBody);
       const w = def.bild, h = w * def.hoch;
       /* EIN Bildknoten je Ort, dessen Quelle erst beim Aufdecken
          gesetzt wird. Fünf Knoten je Ort (einer je Ruinenart) wären
@@ -1769,9 +2018,10 @@
            auf der die Kachel gerade steht: Nebel liegt flach (.10),
            erobertes Land steht auf. Dieselben zwei Zahlen wie im
            Relief — stünde hier eine dritte, läge der Ring in der
-           Luft. */
-        const h = own[z.i] !== '.' ? z.hoch : .10;
-        const d = hexPath(z.x, z.y - h + .1, .88);
+           Luft. Auf der flachen Karte gibt es keine Höhe und also
+           auch keinen Versatz. */
+        const h = FLACH ? .1 : (own[z.i] !== '.' ? z.hoch : .10);
+        const d = feldPfad(z.x, z.y - h + .1, .88);
         let k = knoten.get(z.i);
         if (!k) {
           k = el('path', { class: 'wi-mark', d }, g);
@@ -1801,7 +2051,7 @@
          Säule, und eine Fahne auf Höhe der Grundfläche steckte im
          Hang. */
       const gg = el('g', { class: 'wi-flag', transform: `translate(${n2(h.x)} ${n2(h.y - .3)})` }, g);
-      el('ellipse', { cx: 0, cy: .12, rx: .34, ry: .12, fill: 'rgba(0,0,0,.34)', filter: F('b1') }, gg);
+      el('ellipse', { cx: 0, cy: .12, rx: .34, ry: .12, fill: 'rgba(0,0,0,.34)', filter: FB('b1') }, gg);
       el('path', {
         d: 'M0 .1L0 -1.02', stroke: shade(KARTE.land.sand, -.62),
         'stroke-width': .1, 'stroke-linecap': 'round', fill: 'none'
@@ -1888,7 +2138,7 @@
          viel durchsichtigen Rand (2 % bis 15 %), der Kiel liegt
          also nicht bei allen auf derselben Höhe. Ein scharfer
          Fleck säße bei der Hälfte der Schiffe daneben. */
-      el('ellipse', { cx: 0, cy: 1.02, rx: 1.05, ry: .24, fill: KARTE.sea.foam, opacity: .18, filter: F('b2') }, bob);
+      el('ellipse', { cx: 0, cy: 1.02, rx: 1.05, ry: .24, fill: KARTE.sea.foam, opacity: .18, filter: FB('b2') }, bob);
       /* Ohne href — der kommt beim Malen. Ein <image href=""> ist
          nicht „leer", sondern ein Verweis auf die SEITE: der
          Browser lädt j.html und versucht, HTML als Bild zu
@@ -1982,8 +2232,17 @@
      beiden Rollen derselbe sein. */
   function buildMap(svg, list, key, mopt) {
     const solo = !!(mopt && mopt.solo);
+    /* `mini` ist die flache Karte des Tablets. Sie steht als
+       Schalter neben `solo` und nicht als eigene Datei: Ausschnitt,
+       Insel-Daten, Küste, Orte, Fahnen, Schiffe und Marken sind in
+       allen drei Fassungen dieselben — verschieden sind nur Meer und
+       Land. Zwei Dateien wären nach der ersten Verbesserung zwei
+       Karten. */
+    const mini = !!(mopt && mopt.mini);
+    FLACH = mini;
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     cellEls = []; ships = {}; ownPainted = null; mapPaint = null; markPaint = null;
+    svg.classList.toggle('wi-map--flach', mini);
 
     /* In der Lobby gibt es noch keine Insel (wi_tiles ist leer, bis
        wi_room_start würfelt). Ohne diesen Ausgang stünde im viewBox
@@ -1992,7 +2251,7 @@
     if (!list.length) { svg.setAttribute('viewBox', '0 0 1 1'); return; }
 
     FID = 'wi' + (++mapSeq) + '_';
-    buildDefs(svg);
+    buildDefs(svg, mini);
 
     const isl = inselDaten(list, key);
     const vb = frame(svg, isl, solo);
@@ -2036,8 +2295,12 @@
     const rings = coastRings(isl, 1.0);
     const dCoast = ringsPath(rings, 0, false, 0);
 
-    seaLayer(svg, isl, vb, dCoast, rings, opt);
-    const land = reliefLand(svg, isl, opt);
+    /* Auf dem Tablet ist die Küste GLATT gezogen (durch die
+       Kantenmitten): ohne Brandung davor liest sich der harte
+       Wabenrand als Fehler, mit weichem Zug als Strand. */
+    const land = mini
+      ? (flachSee(svg, vb, ringsPath(rings, 0, true, 0)), flachLand(svg, isl))
+      : (seaLayer(svg, isl, vb, dCoast, rings, opt), reliefLand(svg, isl, opt));
 
     if (solo) {
       /* Einmal malen und fertig. `null` sagt dem Relief „kein
@@ -2051,8 +2314,12 @@
     }
 
     /* Der Nebel schwebt eine Fingerbreite über dem flachen Land —
-       sonst liegt er IM Feld statt darüber. */
-    const fog = fogLayer(svg, isl, opt, .22);
+       sonst liegt er IM Feld statt darüber. Auf dem Tablet gibt es
+       ihn nicht: dort IST das verhüllte Feld seine eigene Farbe
+       (Sönke, 16.09.2026: „kein Nebel, nur anders farbende Waben").
+       Was er verbirgt, verbirgt die flache Karte genauso — eine
+       gedeckte Wabe sagt „hier war noch niemand" und nichts sonst. */
+    const fog = mini ? null : fogLayer(svg, isl, opt, .22);
     const flag = flagLayer(svg, isl);
     const place = placeLayer(svg, isl);
     const guard = guardLayer(svg, isl);
@@ -2062,7 +2329,7 @@
     const mark = markLayer(svg, isl);
 
     mapPaint = (own, ruins, hearts) => {
-      land(own); fog(own);
+      land(own); if (fog) fog(own);
       place(own, ruins, hearts); guard(own, ruins, hearts);
       flag(own); ship(own);
       /* Die Marken hängen nicht nur am Besitz, sondern auch an
@@ -3065,12 +3332,11 @@
             <b data-part="mename"></b>
             <span data-part="mesub"></span>
           </div>
-          <span class="wi-streak" data-part="streak" hidden
-                title="Deine Serie richtiger Antworten">
-            <span class="wi-streakico" aria-hidden="true">🔥</span
-            ><b data-part="streakn">0</b
-            ><i class="wi-streakgoal" data-part="streakgoal"></i>
-          </span>
+          <!-- Das Serien-Abzeichen stand hier bis zum 16.09.2026.
+               Sönke: „Die Streak-Anzeige gehört ja zur Vokabel, also
+               muss das eine Ebene weiter runter." Es sitzt jetzt in
+               der Aufgabe, neben der Frage. Im Kopf steht dafür, was
+               zum VOLK gehört: sein Name und sein Stand. -->
           <!-- Der Weg zurück zur Karte, wenn das Kind den Wahl-Kasten
                zugemacht hat. Er steht NUR dann da: ein Knopf, der
                meistens nichts zu öffnen hat, wäre eine Einladung ins
@@ -3081,7 +3347,18 @@
         </header>
 
         <section class="wi-task" data-part="task">
-          <p class="wi-ask" data-part="ask"></p>
+          <!-- Frage und Serie in einer Zeile: beide gehören zu DIESER
+               Vokabel. Die Serie zählt sofort richtige Antworten, und
+               was sie zählt, steht direkt darüber. -->
+          <div class="wi-taskhead">
+            <p class="wi-ask" data-part="ask"></p>
+            <span class="wi-streak" data-part="streak" hidden
+                  title="Deine Serie richtiger Antworten">
+              <span class="wi-streakico" aria-hidden="true">🔥</span
+              ><b data-part="streakn">0</b
+              ><i class="wi-streakgoal" data-part="streakgoal"></i>
+            </span>
+          </div>
           <p class="wi-word" data-part="word"></p>
           <!-- Kein <form> und kein <input>: warum, steht bei
                feldBauen() weiter oben. -->
@@ -3610,8 +3887,21 @@
     const wappen = slotBild(v.me.team);
     if (els.mePic.getAttribute('src') !== wappen) els.mePic.setAttribute('src', wappen);
     els.meName.textContent = T.name;
+    /* Sönke, 16.09.2026: „Wie viele Felder (und wie viel % der Karte)
+       das eigene Volk hat, sollte oben bei seinem Volk stehen, die
+       anderen Völker sehe ich hier nicht."
+
+       Der Anteil misst die GANZE Insel, nicht den schon erkämpften
+       Teil — sonst stünde bei zwei Feldern am Anfang „50 %". Unter
+       zehn Prozent mit einer Nachkommastelle: ein Feld von 430 sind
+       0,23 %, auf ganze Prozent gerundet bliebe die Zahl in der
+       ersten Viertelstunde auf null stehen, während die Karte schon
+       sichtbar wächst. */
+    const felder = mine ? mine.tiles : 0;
+    const anteil = cells.length ? felder * 100 / cells.length : 0;
+    const anteilText = anteil < 10 ? anteil.toFixed(1).replace('.', ',') : Math.round(anteil);
     els.meSub.textContent = arena
-      ? `${mine ? mine.score : 0} Punkte · ${mine ? mine.tiles : 0} Felder`
+      ? `${felder} Felder · ${anteilText} % der Insel`
       : 'Übungsrunde';
     els.clock.textContent = arena ? fmtLeft(v.ends_at) : '';
     els.clock.hidden = !arena;
@@ -3759,7 +4049,12 @@
       /* Der `map_key` geht mit hinein: aus ihm würfelt die Karte
          ihr Gelände (Wald, Fels, Strandbreite). Gleiche Runde →
          gleiche Insel auf jedem Tablet und am Beamer. */
-      buildMap(els.map, cells, v.map_key);
+      /* Am Beamer die reiche Karte, am Tablet die flache (16.09.2026).
+         Die Rolle entscheidet und nicht die Bildschirmbreite: ein
+         Pult in einem schmalen Fenster ist immer noch ein Rechner
+         mit einem Beamer daran, und ein iPad im Querformat ist immer
+         noch ein iPad. */
+      buildMap(els.map, cells, v.map_key, { mini: role !== 'presenter' });
       mapKey = v.map_key;
     } else if (v.map_key && v.map_key !== mapKey) {
       // Neue Insel, aber wir haben nur die Besitzverhältnisse: die
