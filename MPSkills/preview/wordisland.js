@@ -465,7 +465,7 @@
       <p>Zwei bis sechs Völker landen mit ihren Schiffen rundum an einer
          <strong>vernebelten Insel</strong>. Jede gekonnte Vokabel lüftet ein Feld am
          eigenen Rand — die Klasse tippt auf den Tablets, an der Wand wächst das Land.</p>
-      <p>Wer <strong>drei richtige in Folge</strong> hat, würfelt nicht mehr, sondern zeigt
+      <p>Wer eine <strong>Serie richtiger Antworten</strong> hält, würfelt nicht mehr, sondern zeigt
          selbst, wohin es geht — und steuert auf die Lichtpunkte zu, die von Anfang an
          durch den Nebel schimmern. Dort liegen <strong>Ruinen</strong>: sie zählen extra,
          sind zur Inselmitte hin wertvoller und wechseln mit dem Feld den Besitzer.

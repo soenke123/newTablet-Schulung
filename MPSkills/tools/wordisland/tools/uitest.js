@@ -363,11 +363,30 @@ async function testTablet() {
   ok('noch eine: es wird wärmer, brennt aber nicht',
      chip.classList.contains('is-near') && !chip.classList.contains('is-hot'));
 
+  /* ── Die Tastatur geht weg, wenn die Karte aufgeht ───────────
+     Sönke, 16.09.2026: „Wenn sich die Map öffnet, um eine Streak oder
+     einen Effekt zu nutzen, dann muss sich die Tastatur schließen."
+
+     Sichtbar ist das hier nur an zwei Aufrufen: linkedom kennt kein
+     `activeElement`, wohl aber `focus()`/`blur()`. Gezählt wird
+     deshalb, wer gerufen wird — und die zweite Zusage ist die
+     wichtigere: NACH dem blur darf niemand den Fokus zurückholen.
+     Genau das tat das Werkzeug bis zum 16.09.2026, in der finally-
+     Zeile von `send` (feldHer), einen Wimpernschlag nach dem
+     Aufgehen des Kastens. */
+  const feld = root.querySelector('.wi-in');
+  let blurs = 0, fokus = 0;
+  const echtBlur = feld.blur.bind(feld), echtFokus = feld.focus.bind(feld);
+  feld.blur  = () => { blurs++; echtBlur(); };
+  feld.focus = () => { fokus++; echtFokus(); };
+
   /* Serie → freie Wahl */
   reply({ ok: true, result: 'correct', streak: 3, picks: 1, tile: null,
           task: { prompt: 'das Buch', dir: 'de_en', stage: 'type', options: [] } });
   antworte(root, document, 'pen');
   await wait(40);
+  ok('der Wahl-Kasten schickt die Tastatur weg', blurs === 1, `blur ×${blurs}`);
+  ok('… und niemand holt sie gleich wieder', fokus === 0, `focus ×${fokus}`);
   ok('bei drei brennt es', chip.classList.contains('is-hot') &&
      !chip.classList.contains('is-near'), chip.textContent.trim());
   ok('… und zählt sofort zur SECHS weiter (0148)',
@@ -466,6 +485,9 @@ async function testTablet() {
   ok('Kasten geht mit der verbrauchten Wahl zu', ov.hidden === true);
   ok('und die Karte ist wieder eingebettet',
      root.querySelector('[data-part="mapwrap"] .wi-map') === root.querySelector('.wi-map'));
+  /* Und erst JETZT darf die Tastatur zurück — sonst wäre das
+     Wegschicken oben nur eine Schikane. */
+  ok('nach dem Schließen ist das Feld wieder dran', fokus > 0, `focus ×${fokus}`);
   ok('ohne Wahl keine Marken', root.querySelectorAll('.wi-mark').length === 0);
 
   /* Falsch → Lösung und Sperre */
@@ -4561,8 +4583,171 @@ async function testRuinTabelle() {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Auswahl-Modus: der Takt kommt vom Server (0151)
+   ═══════════════════════════════════════════════════════════
+   Sönke, 16.09.2026: „Wenn die Lehrkraft ‚nur auswählen' auswählt,
+   gibt es gerade keine Streaks … hier brauchen wir auch eine Streak
+   (alle 5 wählen und alle 20 2 wählen)."
+
+   Die Zahlen stehen seit 0151 im Server (wi_streak_goals) und fahren
+   in jeder Antwort und in jedem wi_view mit. Geprüft wird deshalb
+   nicht „steht 5 in der tool.js", sondern: das Gerät RECHNET mit dem,
+   was es bekommt. Der bisherige Tablet-Test liefert gar keine
+   streak_goals — er ist damit zugleich die Zusage über den Rückfall
+   (3/12, der Tipp-Modus), und die beiden zusammen sind die ganze
+   Aussage. */
+async function testAuswahlTakt() {
+  console.log('\n— Auswahl-Modus: Takt 5/20 —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+
+  const ZIELE = { step: 5, big: 20 };
+  const OPTS = ['book', 'pen', 'house', 'school', 'chair', 'table', 'door', 'window'];
+  const aufgabe = () => ({ prompt: 'das Buch', dir: 'de_en', stage: 'choice', options: OPTS });
+  let me = { seat: 3, name: 'Tablet 3', team: 0, streak: 0, picks: 0,
+             correct: 0, wrong: 0, locked_for: 0, task: aufgabe() };
+  let antwort = null;
+
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'participant',
+    actions: {
+      role: 'participant',
+      call: (fn, args) => {
+        if (fn === 'wi_view') {
+          return Promise.resolve(viewFor(
+            Object.assign({ mode: 'choice', streak_goals: ZIELE },
+                          args.p_full ? { map: MAP } : {}), me));
+        }
+        if (fn === 'wi_answer') return Promise.resolve(antwort);
+        return Promise.resolve({ ok: false, error: 'not_allowed' });
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+
+  const chip  = root.querySelector('.wi-streak');
+  const zahl  = () => root.querySelector('[data-part="streakn"]').textContent;
+  const ziel  = () => root.querySelector('[data-part="streakgoal"]').textContent;
+  const opts  = root.querySelector('[data-part="opts"]');
+  /* Geantwortet wird hier durch Antippen einer Kachel — im
+     Auswahl-Modus steht gar kein Feld da. */
+  const tippe = async (a) => {
+    antwort = a;
+    me = Object.assign({}, me, { streak: a.streak, picks: a.picks, task: a.task });
+    click(opts.querySelector('button'), document);
+    await wait(40);
+  };
+
+  ok('acht Kacheln statt eines Feldes',
+     opts.hidden === false && opts.querySelectorAll('button').length === 8 &&
+     root.querySelector('[data-part="typeform"]').hidden === true);
+
+  await tippe({ ok: true, result: 'correct', streak: 2, picks: 0, streak_goals: ZIELE,
+                tile: { r: 0, c: 2, kind: 'fog', ruin: 0 }, task: aufgabe() });
+  ok('Serie 2 zählt zur FÜNF, nicht zur drei',
+     chip.hidden === false && zahl() === '2' && ziel() === '/5', chip.textContent.trim());
+
+  await tippe({ ok: true, result: 'correct', streak: 4, picks: 0, streak_goals: ZIELE,
+                tile: { r: 0, c: 3, kind: 'fog', ruin: 0 }, task: aufgabe() });
+  ok('bei vier wird es warm', chip.classList.contains('is-near') &&
+     !chip.classList.contains('is-hot'), chip.textContent.trim());
+
+  await tippe({ ok: true, result: 'correct', streak: 5, picks: 1, streak_goals: ZIELE,
+                tile: null, task: aufgabe() });
+  ok('die FÜNFTE bringt die freie Wahl', chip.classList.contains('is-hot') &&
+     zahl() === '5' && ziel() === '/10', chip.textContent.trim());
+  ok('und der Wahl-Kasten geht auf',
+     root.querySelector('[data-part="pickov"]').hidden === false);
+  ok('die Ansage nennt EIN Feld',
+     root.querySelector('[data-part="pickbig"]').textContent.replace(/\s+/g, ' ').trim()
+       === 'Nimm 1 Feld gezielt ein!');
+
+  /* Der große Schlag wird ANGEKÜNDIGT und nicht überrascht. Drei
+     Stufen, und sie hängen alle am Takt vom Server:
+       15  gerade verdient, das nächste Ziel ist die ZWANZIG
+       18  das Ziel sticht hervor (dort warten zwei Felder)
+       19  noch eine — und der Satz sagt, dass es ZWEI werden */
+  await tippe({ ok: true, result: 'correct', streak: 15, picks: 4, streak_goals: ZIELE,
+                tile: null, task: aufgabe() });
+  ok('Serie 15: verdient, und das nächste Ziel ist die ZWANZIG',
+     chip.classList.contains('is-hot') && ziel() === '/20', chip.textContent.trim());
+
+  await tippe({ ok: true, result: 'correct', streak: 18, picks: 4, streak_goals: ZIELE,
+                tile: { r: 1, c: 2, kind: 'fog', ruin: 0 }, task: aufgabe() });
+  ok('Serie 18: das Ziel sticht hervor — dort warten zwei Felder',
+     ziel() === '/20' && chip.classList.contains('is-big') &&
+     !chip.classList.contains('is-hot'), chip.textContent.trim());
+
+  await tippe({ ok: true, result: 'correct', streak: 19, picks: 4, streak_goals: ZIELE,
+                tile: { r: 1, c: 3, kind: 'fog', ruin: 0 }, task: aufgabe() });
+  ok('Serie 19: noch eine — und der Satz verspricht ZWEI Felder',
+     chip.classList.contains('is-near') && /ZWEI/.test(chip.title), chip.title);
+
+  await tippe({ ok: true, result: 'correct', streak: 20, picks: 6, streak_goals: ZIELE,
+                tile: null, task: aufgabe() });
+  ok('Serie 20: zwei auf einmal sind gutgeschrieben',
+     chip.classList.contains('is-hot') && /ZWEI Felder/.test(chip.title), chip.title);
+
+  /* ── Die Sperre muss man SEHEN ────────────────────────────────
+     Im Auswahl-Modus gibt es kein Eingabefeld, das grau werden
+     könnte — die acht Kacheln SIND die Eingabe. Ohne diese Zeile
+     tippt ein Kind weiter und bekommt nur Fehlermeldungen zurück. */
+  await tippe({ ok: true, result: 'wrong', streak: 0, picks: 0, streak_goals: ZIELE,
+                solution: 'book', locked_for: 2, task: aufgabe() });
+  ok('eine Sperre legt die acht Kacheln still',
+     opts.classList.contains('is-wait'));
+  await wait(2100);
+  ok('… und gibt sie von selbst wieder frei',
+     !opts.classList.contains('is-wait'));
+
+  /* Ohne Sperre (die bedachte falsche Antwort seit 0151) passiert
+     genau nichts — das ist der eigentliche Gewinn der Migration. */
+  await tippe({ ok: true, result: 'wrong', streak: 0, picks: 0, streak_goals: ZIELE,
+                solution: 'pen', locked_for: 0, task: aufgabe() });
+  ok('eine bedachte falsche Antwort hält niemanden auf',
+     !opts.classList.contains('is-wait'));
+  ok('… zeigt aber die Lösung', /pen/.test(root.querySelector('.wi-fb').textContent),
+     root.querySelector('.wi-fb').textContent);
+
+  tool.unmount();
+}
+
+/* Der Takt steht zwangsläufig an zwei Orten: als Rückfall im Gerät
+   und maßgeblich im Server. Hier wird zugesagt, dass der Rückfall
+   der TIPP-Modus ist — fehlt 0151 in der Datenbank, zählt der Server
+   in Dreien, und das Abzeichen muss dasselbe tun. */
+async function testTaktTabelle() {
+  console.log('\n— Der Takt: Gerät und Server —');
+  const quelle = fs.readFileSync(TOOL, 'utf8');
+  const m = /TAKT_RUECKFALL = \{ step: (\d+), big: (\d+) \}/.exec(quelle);
+  ok('das Gerät hat einen Rückfall', !!m, m && m[0]);
+
+  const sqlDatei = path.join(HERE, '..', '..', '..', '..',
+                             'supabase', 'migrations', '0151_wordisland_choice_streak_lock.sql');
+  const sql = fs.existsSync(sqlDatei) ? fs.readFileSync(sqlDatei, 'utf8') : '';
+  const tipp = /else jsonb_build_object\('step', (\d+), 'big', (\d+)\)/.exec(sql);
+  const wahl = /then jsonb_build_object\('step', (\d+), 'big', (\d+)\)/.exec(sql);
+  ok('der Server kennt beide Takte', !!tipp && !!wahl,
+     `${tipp && tipp[0]} | ${wahl && wahl[0]}`);
+  if (!m || !tipp || !wahl) return;
+  ok('der Rückfall im Gerät ist der Tipp-Modus des Servers',
+     m[1] === tipp[1] && m[2] === tipp[2], `${m[1]}/${m[2]} ↔ ${tipp[1]}/${tipp[2]}`);
+  ok('Sönkes Zahlen für den Auswahl-Modus: 5 und 20',
+     wahl[1] === '5' && wahl[2] === '20', `${wahl[1]}/${wahl[2]}`);
+  /* ⚠️ Der große Schlag muss auf eine Antwort fallen, die ohnehin
+     eine Wahl bringt — sonst fiele er ins Leere. */
+  ok('big ist in beiden Modi ein Vielfaches von step',
+     +tipp[2] % +tipp[1] === 0 && +wahl[2] % +wahl[1] === 0);
+}
+
 (async () => {
   await testTablet();
+  await testAuswahlTakt();
+  await testTaktTabelle();
   await testTabletLobby();
   await testNewRound();
   await testRelief();

@@ -185,23 +185,39 @@
   const SVGNS = 'http://www.w3.org/2000/svg';
   const POLL_MS = { participant: 4000, presenter: 3000 };
 
-  /* Eine Serie sind DREI, und seit Migration 0148 ist das ein TAKT
-     und keine Schwelle: jede dritte sofort richtige Antwort in Folge
-     (3, 6, 9 …) bringt eine freie Feldwahl, die beiden dazwischen ein
-     zufälliges Nachbarfeld. Dieselbe Zahl steht im Server
-     (wi_answer, `v_pl.streak % 3 = 0`) — entschieden wird es dort,
-     hier wird nur gezählt und gezeigt. uitest.js liest beide Stellen
-     und vergleicht sie. */
-  const STREAK_GOAL = 3;
+  /* ─── Der Serien-Takt ────────────────────────────────────────
+     Seit Migration 0148 ist die Serie ein TAKT und keine Schwelle:
+     jede `step`-te sofort richtige Antwort in Folge bringt eine freie
+     Feldwahl, die dazwischen ein zufälliges Nachbarfeld. Jede VIERTE
+     dieser Serien zählt doppelt (0149) — das ist `big`.
 
-  /* Und jede VIERTE Serie zählt doppelt. Sönke, 15.09.2026: „Ich
-     möchte, dass man bei 4 Streaks in Folge (also bei 12) 2 Felder
-     aufdecken kann." Gerechnet wird auch das im Server (Migration
-     0149, `streak % 12 = 0` → zwei statt einer Wahl); hier steht die
-     Zahl nur für die Anzeige — das Abzeichen kündigt den großen
-     Schritt an, statt ihn zur Überraschung zu machen. uitest.js liest
-     beide Stellen und vergleicht sie. */
-  const STREAK_BIG = 12;
+     Seit 0151 hängen beide Zahlen am MODUS und kommen deshalb vom
+     Server (`streak_goals` in wi_view und in jeder Antwort):
+
+        tippen     3 / 12
+        auswählen  5 / 20
+
+     Eine Auswahl aus acht Wörtern trifft man auch mit halbem Wissen,
+     ein getipptes Wort nicht — derselbe Takt hieße, dass der
+     bequemere Modus schneller Felder verteilt.
+
+     Hier steht nur noch der RÜCKFALL, und er ist der Tipp-Modus:
+     fehlt 0151 in der Datenbank, zählt der Server weiter in Dreien
+     und das Abzeichen zeigt genau das. Gerechnet wird ohnehin
+     ausschließlich im Server; das Gerät zählt mit und kündigt an. */
+  const TAKT_RUECKFALL = { step: 3, big: 12 };
+  let takt = { ...TAKT_RUECKFALL };
+
+  /* Zwei Zahlen, drei Wege hinein (wi_view, jede Antwort, die
+     Zwischenstufe) — deshalb eine Stelle, die prüft, statt drei, die
+     zuweisen. Unsinn vom Server (0, negativ, fehlend) darf das
+     Abzeichen nicht in eine Division durch null schicken. */
+  function setzeTakt(g) {
+    if (!g) return;
+    const step = Math.max(1, g.step | 0);
+    const big  = Math.max(step, g.big | 0);
+    takt = { step, big };
+  }
 
   /* Die Spieldauer als Reihe statt als Auswahlfeld (Kingdoms-Muster:
      .cm-levelrow). Vier Knöpfe nebeneinander und EIN Satz darunter,
@@ -234,6 +250,7 @@
   let pickWar = 0;          // wie viele Wahlen standen beim letzten Malen offen
   let pickGrund = 'serie';  // woher die offenen Wahlen kommen: 'serie' | 'arena'
   let flashTimer = null;    // die kurze Nachricht (Lichttempel) räumt sich selbst weg
+  let lockTimer = null;     // wann die Antwort-Sperre (0151) wieder aufgeht
   let panInline = null, panPick = null;   // die zwei Zoom-Hüllen der Karte
   let markPaint = null;     // malt die erreichbaren Felder (freie Wahl)
   let practice = false;     // Tablet: üben statt warten
@@ -3481,10 +3498,27 @@
 
      Eine NEUE Wahl hebt die Handentscheidung auf: wer weiter tippt
      und sich die zweite Wahl verdient, will sie auch sehen. */
+  const pickOffen = () => !!els.pickOv && els.pickOv.hidden === false;
+
+  /* ⚠️ Die Tastatur muss WEG, wenn die Karte aufgeht (Sönke,
+     16.09.2026). Das Antwortfeld behält seinen Fokus absichtlich über
+     die Fragen hinweg — sonst fährt die Tastatur am iPad zwischen
+     zwei Wörtern jedes Mal ein und aus (siehe „DAS ANTWORTFELD").
+     Genau das schlägt hier ins Gegenteil um: der Wahl-Kasten zeigt
+     eine Karte, auf die getippt werden soll, und die Tastatur deckt
+     die untere Hälfte davon zu. Ein Kind, das erst wegtippen muss,
+     um sein Feld zu sehen, verliert die Wahl zweimal — einmal an
+     Zeit und einmal an Übersicht.
+
+     `blur()` und nicht `is-locked`: die Klasse hält das Tippen an,
+     aber die Tastatur steht weiter. Zurück kommt der Fokus beim
+     Schließen (feldZurueck) — und nur dann, wenn überhaupt getippt
+     wird. */
   function pickOeffnen() {
     if (!els.pickOv || els.pickOv.hidden === false) { pickHand = false; return; }
     pickHand = false;
     els.pickOv.hidden = false;
+    if (els.input) els.input.blur();
     if (els.map.parentNode !== els.pickWrap) els.pickWrap.appendChild(els.map);
     if (panPick) panPick.reset();
     if (els.pickBack) els.pickBack.hidden = true;
@@ -3495,6 +3529,19 @@
     els.pickOv.hidden = true;
     if (els.map.parentNode !== els.mapwrap) els.mapwrap.appendChild(els.map);
     if (panInline) panInline.reset();
+    feldZurueck();
+  }
+
+  /* Der Fokus zurück ins Feld — aber nur, wenn er dort auch etwas zu
+     suchen hat. Zwei Fälle, in denen er das nicht hat: der Wahl-
+     Kasten steht offen (dann holte er die Tastatur direkt wieder
+     hoch, die pickOeffnen gerade weggeschickt hat), und es wird gar
+     nicht getippt — im Auswahl-Modus und in der Zwischenstufe steht
+     statt des Feldes die Vorschlagsreihe da. */
+  function feldZurueck() {
+    if (pickOffen()) return;
+    if (!els.form || els.form.hidden) return;
+    feldHer(els.input);
   }
 
   /* ─── Die große Ansage ──────────────────────────────────────
@@ -3572,6 +3619,11 @@
         lockInput(r.locked_for);
       }
 
+      /* Der Takt fährt bei JEDER Antwort mit (0151) — auch bei der
+         Zwischenstufe. So stimmt das Abzeichen schon beim ersten
+         Wort, ohne auf den nächsten wi_view-Takt zu warten. */
+      setzeTakt(r.streak_goals);
+
       /* Eine Wahl, die aus der SERIE kommt — der Kasten soll dann
          nicht weiter von der Arena erzählen, die zwei Antworten
          vorher gefallen ist. */
@@ -3590,19 +3642,30 @@
     } finally {
       submitting = false;
       if (!els.input.dataset.locked) feldZu(els.input, false);
-      feldHer(els.input);
+      feldZurueck();
     }
   }
 
+  /* Die Sperre sichtbar machen. Sie steht im Server (0151: „falsch
+     ohne hinzusehen"), hier wird sie nur ANGEZEIGT — und das muss für
+     BEIDE Eingaben gelten: im Tipp-Modus ist das Feld die Eingabe, im
+     Auswahl-Modus sind es die acht Kacheln. Ohne die zweite Zeile
+     tippt ein Kind im Auswahl-Modus weiter ins Leere und bekommt nur
+     Fehlermeldungen zurück — eine Sperre, die man nicht sieht, wirkt
+     wie ein kaputtes Spiel. */
   function lockInput(secs) {
     if (!secs) return;
     feldZu(els.input, true);
     els.input.dataset.locked = '1';
-    setTimeout(() => {
+    if (els.opts) els.opts.classList.add('is-wait');
+    if (lockTimer) clearTimeout(lockTimer);
+    lockTimer = setTimeout(() => {
+      lockTimer = null;
       if (destroyed || !els.input) return;
       delete els.input.dataset.locked;
       feldZu(els.input, false);
-      feldHer(els.input);
+      if (els.opts) els.opts.classList.remove('is-wait');
+      feldZurueck();
     }, secs * 1000);
   }
 
@@ -3711,15 +3774,16 @@
     if (!els.streak) return;
     const n = streak || 0;
     /* Wie viele richtige Antworten noch bis zur nächsten Wahl. Bei
-       einem Vielfachen sind es wieder volle drei — die Wahl von eben
-       ist ja schon gutgeschrieben. */
-    const rest = STREAK_GOAL - (n % STREAK_GOAL);
+       einem Vielfachen ist es wieder der volle Takt — die Wahl von
+       eben ist ja schon gutgeschrieben. */
+    const { step, big } = takt;
+    const rest = step - (n % step);
     const ziel = n + rest;
-    const eben = n > 0 && rest === STREAK_GOAL;
+    const eben = n > 0 && rest === step;
     /* Wie viele Felder das nächste (oder das gerade erreichte) Ziel
        bringt: jede vierte Serie ist doppelt so viel wert (0149). */
-    const wert  = ziel % STREAK_BIG === 0 ? 2 : 1;
-    const wertJ = (eben ? n : ziel) % STREAK_BIG === 0 ? 2 : 1;
+    const wert  = ziel % big === 0 ? 2 : 1;
+    const wertJ = (eben ? n : ziel) % big === 0 ? 2 : 1;
     els.streak.hidden = (n <= 0);
     els.streakN.textContent = String(n);
     els.streakGoal.textContent = '/' + ziel;
@@ -3733,7 +3797,7 @@
       ? `Serie ${n} — ${wertJ === 2 ? 'ZWEI Felder deiner Wahl sind' : 'ein Feld deiner Wahl ist'} dir gutgeschrieben`
       : rest === 1
         ? `Serie ${n} — noch eine richtige, dann zeigst du selbst, ${wert === 2 ? 'welche ZWEI Felder fallen' : 'welches Feld fällt'}`
-        : `Serie ${n} von ${ziel} — jede dritte richtige bringt ein Feld deiner Wahl, jede zwölfte zwei`;
+        : `Serie ${n} von ${ziel} — jede ${step}. richtige bringt ein Feld deiner Wahl, jede ${big}. zwei`;
   }
 
   /* ─── „Was verbirgt sich da?" ───────────────────────────────
@@ -4029,6 +4093,12 @@
 
   function applyView(v) {
     view = v;
+
+    /* Der Serien-Takt hängt am eingestellten Modus (0151) und kann
+       sich zwischen zwei Runden ändern — die Lehrkraft stellt in der
+       Lobby von „tippen" auf „auswählen" um. Deshalb bei jedem Blick
+       nachführen und nicht einmal beim Öffnen. */
+    setzeTakt(v.streak_goals);
 
     // Erst die Völker, dann alles, was Farben und Namen daraus zieht.
     if (Array.isArray(v.factions) && v.factions.length &&
@@ -9273,6 +9343,8 @@
       markPaint = null; pickHand = false; pickWar = 0; panInline = panPick = null;
       pickGrund = 'serie';
       if (flashTimer) { clearTimeout(flashTimer); flashTimer = null; }
+      if (lockTimer) { clearTimeout(lockTimer); lockTimer = null; }
+      takt = { ...TAKT_RUECKFALL };
       ownPainted = null; submitting = false; picking = false; shadowPick = 0;
       sets = { list: [], chosen: [], zu: new Set() };
       setsBusy = 0; tab = 'units'; setsOpen = false;
@@ -9379,6 +9451,8 @@
       clearTimeout(lvlToastT);
       clearTimeout(flashTimer);
       flashTimer = null;
+      clearTimeout(lockTimer);
+      lockTimer = null;
       feierWeiter = null;
       feiernd = false;
       if (onResize) window.removeEventListener('resize', onResize);
