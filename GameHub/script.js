@@ -211,7 +211,7 @@ const GAMES_CONFIG = [
   // Runden-Items. Wachstumstrank und Stein der Vollendung wirken weiter —
   // beide greifen im Hub am Monster an, nicht im Spiel.
   { id: 'game18', season: 3, title: 'Startup Story',       icon: '🚀', url: 'S3 Startup Story/index.html', standalone: true },
-  { id: 'game17', season: 3, title: 'Bubble Bounce',       icon: '🫧', url: 'S3 BubbleBounce/index.html' },
+  { id: 'game17', season: 2, title: 'Bubble Bounce',       icon: '🫧', url: 'S2 BubbleBounce/index.html' },
   // collab: kein Spiel, sondern ein gemeinsamer Arbeitsraum des Kurses.
   // Die Daten liegen cluster-weit auf dem Server (Migration 0062), nicht
   // im Spielstand des einzelnen Users. Wie standalone meldet die Kachel

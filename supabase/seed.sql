@@ -39,7 +39,9 @@ on conflict (id) do update set
 insert into games (id, season, folder, title, icon, password_hash, requires_login, active) values
   ('game12', 2, 'S2 Quellen Tinder',      'Quellen-Tinder',      '🃏', '1d75fc98b5dc89c3612274e343f3271776c57ccdd8a7022650d38eea7db7cea3', false, true),
   ('game15', 2, 'S2 LLMaster',            'LLMaster',            '💬', '7625ae9cd8c2645149cb2016e7ed931638d49fd51f96b1aef9db7add759c1dd5', false, true),
-  ('game14', 2, 'S2 Reinforce Yourself!', 'Reinforce Yourself!', '🤖', '71391cf2eb6d22058056461195b0134a2933352f21faa98ff9992513ac7e8fb4', false, true)
+  ('game14', 2, 'S2 Reinforce Yourself!', 'Reinforce Yourself!', '🤖', '71391cf2eb6d22058056461195b0134a2933352f21faa98ff9992513ac7e8fb4', false, true),
+  ('game17', 2, 'S2 BubbleBounce',        'Bubble Bounce',        '🫧',
+   '143d9b39f43e4cb468a95238047aa6674d6ef735748170599e9a8a0fc55a0cc7', false, true)
 on conflict (id) do update set
   season         = excluded.season,
   folder         = excluded.folder,
@@ -52,9 +54,7 @@ on conflict (id) do update set
 -- Season 3
 insert into games (id, season, folder, title, icon, password_hash, requires_login, active) values
   ('game16', 3, 'S3 LegiTrainer',   'Legi-Trainer',  '🌈', null, false, true),
-  ('game18', 3, 'S3 Startup Story', 'Startup Story', '🚀', null, false, true),
-  ('game17', 3, 'S3 BubbleBounce',  'Bubble Bounce', '🫧',
-   '143d9b39f43e4cb468a95238047aa6674d6ef735748170599e9a8a0fc55a0cc7', false, true)
+  ('game18', 3, 'S3 Startup Story', 'Startup Story', '🚀', null, false, true)
 on conflict (id) do update set
   season         = excluded.season,
   folder         = excluded.folder,
