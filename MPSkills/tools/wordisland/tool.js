@@ -241,6 +241,12 @@
   let setsBusy = 0;         // wie pickBusy: eigener Klick schlägt Server-Antwort
   let tab = 'units';
   let setsOpen = false;
+  /* Die offene Wörterliste einer Station (0154): {id, daten, fehler}
+     oder null, wenn die Auswahl zu sehen ist. Der Speicher daneben
+     lebt so lange wie der Listen-Stand — geleert wird er in
+     loadSets(), also nach jedem Import und jedem Löschen. */
+  let woerter = null;
+  const wortCache = new Map();
   let submitting = false;
   let timerHandle = null;
   let onResize = null;
@@ -2652,7 +2658,7 @@
            das Overlay scrollt, der Kasten sitzt mit margin:auto
            darin (Regel: feedback_modal_viewport_pattern). -->
       <div class="wi-ov" data-part="setsov" hidden>
-        <div class="wi-ovbox">
+        <div class="wi-ovbox" data-part="setsbox">
           <div class="wi-ovhead">
             <span class="wi-ovtitle">📚 Welche Wörter?</span>
             <button type="button" class="wi-ovclose" data-part="setsclose" aria-label="Auswahl schließen">✕</button>
@@ -2673,6 +2679,25 @@
             </form>
           </div>
         </div>
+
+        <!-- Die Wörter EINER Station (0154). Sie ersetzt die Auswahl
+             IM selben Fenster und liegt nicht darüber: zwei gestapelte
+             Overlays wären zwei verdunkelte Hintergründe und zwei Wege
+             zurück. Der Kasten ist breiter als die Auswahl — zwei
+             Sprachspalten nebeneinander sind der ganze Zweck.
+
+             Kopf, Zeile mit der Anzahl und Tabelle sind drei Stücke:
+             nur die Tabelle scrollt, damit die Spaltenköpfe bei
+             vierzig Wörtern stehen bleiben. -->
+        <div class="wi-ovbox wi-ovbox--words" data-part="wordsbox" hidden>
+          <div class="wi-ovhead">
+            <button type="button" class="wi-vback" data-part="wordsback">‹ Zurück</button>
+            <span class="wi-ovtitle" data-part="wordstitle">Wörter</span>
+            <button type="button" class="wi-ovclose" data-part="wordsclose" aria-label="Fenster schließen">✕</button>
+          </div>
+          <p class="wi-ovhint" data-part="wordshint"></p>
+          <div class="wi-ovbody" data-part="wordsbody"></div>
+        </div>
       </div>
     </div>`;
 
@@ -2683,7 +2708,9 @@
     els = {
       lobby: q('lobby'), play: q('play'), end: q('end'),
       sets: q('sets'), imp: q('import'),
-      setsOv: q('setsov'), setSum: q('setsum'),
+      setsOv: q('setsov'), setSum: q('setsum'), setsBox: q('setsbox'),
+      wordsBox: q('wordsbox'), wordsTitle: q('wordstitle'),
+      wordsHint: q('wordshint'), wordsBody: q('wordsbody'),
       modeSeg: q('modeseg'), dirSeg: q('dirseg'),
       durRow: q('durrow'), durText: q('durtext'),
       pick: q('pick'), lobbyTeams: q('lobbyteams'), waiting: q('waiting'),
@@ -2727,9 +2754,16 @@
 
     q('setsbtn').addEventListener('click', () => openSets());
     q('setsclose').addEventListener('click', () => closeSets());
+    q('wordsback').addEventListener('click', () => wortZu());
+    q('wordsclose').addEventListener('click', () => closeSets());
     // Klick neben den Kasten schließt. Der Kasten selbst nicht, sonst
-    // ginge das Fenster bei jeder gewählten Liste zu.
-    els.setsOv.addEventListener('click', ev => { if (ev.target === els.setsOv) closeSets(); });
+    // ginge das Fenster bei jeder gewählten Liste zu. Steht die
+    // Wörterliste offen, führt derselbe Klick eine Stufe zurück und
+    // nicht ganz hinaus — sonst ist die mühsam aufgeklappte Unit weg.
+    els.setsOv.addEventListener('click', ev => {
+      if (ev.target !== els.setsOv) return;
+      if (woerter) wortZu(); else closeSets();
+    });
 
     q('shuffle').addEventListener('click', async () => {
       const r = await ctx.actions.call('wi_room_shuffle', {});
@@ -2749,11 +2783,15 @@
   }
 
   function openSets() { setsOpen = true; els.setsOv.hidden = false; }
-  function closeSets() { setsOpen = false; els.setsOv.hidden = true; }
+  function closeSets() { setsOpen = false; els.setsOv.hidden = true; wortZu(); }
 
   async function loadSets() {
     const r = await ctx.actions.call('wi_sets_list', {});
     if (!r || !r.ok) return;
+    // Die Wortlisten gehören zu diesem Stand. Nach einem Import oder
+    // einer gelöschten Liste wäre der Speicher eine Behauptung über
+    // etwas, das es so nicht mehr gibt.
+    wortCache.clear();
     sets.list = r.sets || [];
     sets.chosen = (r.chosen || []).map(String);
 
@@ -2776,13 +2814,22 @@
   }
 
   /* Eine Station als Kachel — die Form, die das Fenster seit 0131
-     hat. Neu ist nur, wo sie steht: unter ihrer Unit. */
+     hat. Neu ist, wo sie steht (seit 0150: unter ihrer Unit) und das
+     Listen-Zeichen rechts oben (0154): ein Blick in die Wörter, ohne
+     die Station dafür wählen zu müssen.
+
+     Es ist ein <i> und kein zweiter Knopf, weil die Kachel selbst
+     schon ein <button> ist — verschachtelte Knöpfe sind ungültig.
+     Genau die Bauart, die das Löschzeichen seit 0131 hat; der
+     Klickweg unten fängt beide ab, bevor er die Auswahl umschaltet. */
   function setKachel(s, mine) {
     return `
-      <button class="wi-set${sets.chosen.includes(String(s.id)) ? ' is-on' : ''}"
+      <button class="wi-set${mine ? ' wi-set--mine' : ''}${
+                sets.chosen.includes(String(s.id)) ? ' is-on' : ''}"
               data-id="${esc(s.id)}">
         <b>${esc(s.title)}</b>
         <span>${s.count} Wörter${s.level ? ' · Klasse ' + esc(s.level) : ''}</span>
+        <i class="wi-peek" data-peek="${esc(s.id)}" title="Wörter dieser Station ansehen">☰</i>
         ${mine ? `<i class="wi-del" data-del="${esc(s.id)}" title="Liste löschen">×</i>` : ''}
       </button>`;
   }
@@ -2893,6 +2940,16 @@
   }
 
   async function onSetClick(e) {
+    /* Das Listen-Zeichen zuerst: es liegt IN der Kachel, und ohne
+       diesen Ausgang würde ein Blick in die Wörter die Station
+       nebenbei an- oder abwählen. */
+    const peek = e.target.closest('[data-peek]');
+    if (peek) {
+      e.preventDefault();
+      wortAuf(peek.dataset.peek);
+      return;
+    }
+
     const del = e.target.closest('[data-del]');
     if (del) {
       e.preventDefault();
@@ -2956,6 +3013,116 @@
     setsBusy++;
     await saveSetup({ p_sets: sets.chosen });
     setsBusy--;
+  }
+
+  /* ══ Die Wörter einer Station (0154) ═══════════════════════════
+     Sönkes Wunsch: „an jeder Station ein icon, was zu der
+     vokabelliste führt … simple einfache tabelle, in der man die
+     vokabeln gut lesen kann auch bei langen listen > als 30."
+
+     Also eine Tabelle und keine Kärtchen: Nummer, Wort, Übersetzung,
+     Zeile für Zeile. Die Spaltenköpfe bleiben beim Scrollen stehen
+     (`position: sticky`), und weil nur der Tabellenteil scrollt,
+     stehen Kopfzeile und Anzahl immer da. Die Nummer ist keine
+     Zierde: sie beantwortet „wo bin ich" in einer Liste, die länger
+     ist als der Bildschirm.
+
+     Keine Zahlen zum Lernstand. Die Frage hier ist „welche Wörter
+     stehen in Station 2", nicht „wer kann sie" — das steht am
+     Rundenende (wi_hard_words) und dort ohne Namen. */
+  const WORT_MIG = 'Diese Übersicht braucht die neueste Fassung der '
+    + 'Datenbank (Migration 0154).';
+
+  const SPRACHEN = {
+    de: 'Deutsch', en: 'Englisch', fr: 'Französisch', es: 'Spanisch',
+    la: 'Latein', it: 'Italienisch', tr: 'Türkisch', ru: 'Russisch'
+  };
+  // Unbekannte Kürzel groß hinschreiben statt zu raten: „NL" ist eine
+  // ehrliche Spaltenüberschrift, „Deutsch" an falscher Stelle nicht.
+  const sprachName = c =>
+    SPRACHEN[String(c || '').toLowerCase()] || String(c || '').toUpperCase();
+
+  function wortAuf(id) {
+    woerter = { id, daten: wortCache.get(id) || null, fehler: null };
+    els.setsBox.hidden = true;
+    els.wordsBox.hidden = false;
+    renderWords();
+    if (!woerter.daten) ladeWoerter(id);
+  }
+
+  function wortZu() {
+    woerter = null;
+    if (!els.wordsBox) return;
+    els.wordsBox.hidden = true;
+    els.setsBox.hidden = false;
+  }
+
+  async function ladeWoerter(id) {
+    const r = await ctx.actions.call('wi_set_words', { p_set: id });
+    if (r && r.ok) wortCache.set(id, r);
+    // Inzwischen zurückgeblättert oder eine andere Station geöffnet:
+    // die Antwort ist dann nur noch für den Speicher gut.
+    if (!woerter || woerter.id !== id) return;
+    if (r && r.ok) { woerter.daten = r; woerter.fehler = null; }
+    else { woerter.daten = null; woerter.fehler = (r && r.error) || 'network'; }
+    renderWords();
+  }
+
+  /* Nebenformen klein hinter dem Wort. Sie wegzulassen wäre eine
+     Behauptung: „pupil / student" steht im Import in EINER Zeile,
+     und wer nur „pupil" liest, hält „student" für falsch. */
+  function nebenform(list) {
+    if (!Array.isArray(list) || !list.length) return '';
+    return ` <i class="wi-valt">${list.map(x => esc(x)).join(' · ')}</i>`;
+  }
+
+  function renderWords() {
+    if (!woerter || !els.wordsBody) return;
+    const kachel = sets.list.find(s => String(s.id) === String(woerter.id)) || {};
+    const d = woerter.daten;
+    const s = (d && d.set) || {};
+
+    // Der Titel steht sofort, auch solange die Wörter unterwegs sind:
+    // die Kachel, die eben angetippt wurde, kennt ihn schon.
+    els.wordsTitle.textContent = s.title || kachel.title || 'Wörter';
+
+    if (!d) {
+      els.wordsHint.textContent = '';
+      els.wordsBody.innerHTML = `<p class="wi-empty">${esc(woerter.fehler
+        ? (woerter.fehler === 'fn_missing' ? WORT_MIG : ctx.errText(woerter.fehler))
+        : 'Einen Moment …')}</p>`;
+      return;
+    }
+
+    const ws = d.words || [];
+    const teile = [`${ws.length} ${ws.length === 1 ? 'Wort' : 'Wörter'}`];
+    if (s.utitle && s.utitle !== s.title) teile.push(esc(s.utitle));
+    if (s.grade) teile.push(`Jahrgang ${esc(s.grade)}`);
+    else if (kachel.level) teile.push(`Klasse ${esc(kachel.level)}`);
+    els.wordsHint.innerHTML = teile.join(' · ');
+
+    if (!ws.length) {
+      els.wordsBody.innerHTML =
+        '<p class="wi-empty">In dieser Station steht noch kein Wort.</p>';
+      return;
+    }
+
+    const von  = sprachName(s.from || kachel.from || 'de');
+    const nach = sprachName(s.to   || kachel.to   || 'en');
+    els.wordsBody.innerHTML = `
+      <div class="wi-vtab">
+        <div class="wi-vrow wi-vhead">
+          <span class="wi-vnum">#</span>
+          <span>${esc(von)}</span>
+          <span>${esc(nach)}</span>
+        </div>
+        ${ws.map((w, i) => `
+          <div class="wi-vrow">
+            <span class="wi-vnum">${i + 1}</span>
+            <b>${esc(w.t)}${nebenform(w.at)}</b>
+            <span>${esc(w.x)}${nebenform(w.a)}</span>
+          </div>`).join('')}
+      </div>`;
   }
 
   /* Die Auswahl steht in JEDER Antwort des Servers (`sets`) — nicht

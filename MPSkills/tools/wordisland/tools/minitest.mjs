@@ -16,11 +16,17 @@
    Was er NICHT kann: sagen, ob sie schön aussieht. Dafür ist die
    Seite selbst da.                                                 */
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { parseHTML } from 'linkedom';
 
+/* fileURLToPath statt `.pathname`: der Projektpfad enthält ein
+   Leerzeichen („MPS TabletSchlung"), und in einer URL steht dort
+   %20. Der alte Handgriff schnitt nur den Laufwerksbuchstaben
+   zurecht und ließ das %20 stehen — der Prüfstand stürzte seitdem
+   beim Lesen ab, ohne je eine Zusage geprüft zu haben. */
 const file = process.argv[2]
-  || new URL('../mini-showroom.html', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+  || fileURLToPath(new URL('../mini-showroom.html', import.meta.url));
 const html = readFileSync(file, 'utf8');
 const code = html.match(/<script>([\s\S]*)<\/script>\s*<\/body>/)[1];
 

@@ -20,6 +20,9 @@
  * als das Meer, entscheidet tool.css, und das sieht man nur mit Augen.
  *
  * Aufruf:  node MPSkills/tools/wordisland/tools/uitest.js
+ *          … uitest.js insel          nur einen Bereich (siehe BEREICHE
+ *                                     ganz unten: raum · insel · level · ruinen)
+ *          WI_MASS_TEILER=1 node …    mit den echten Bildmaßen, viermal langsamer
  */
 // ESM, weil package.json "type": "module" trägt — die Prüfstände von
 // Wild Clusters sind älter und laufen noch über require.
@@ -971,6 +974,225 @@ async function testPultUnits() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   Die Wörter einer Station (0154)
+   ═══════════════════════════════════════════════════════════
+   Sönkes Wunsch: „an jeder Station ein icon, was zu der vokabelliste
+   führt … simple einfache tabelle". Geprüft wird das, was in der
+   Klasse auffiele: das Zeichen ist da, es öffnet die Liste OHNE die
+   Auswahl zu verändern, die Tabelle trägt jede Vokabel genau einmal,
+   und der Weg zurück führt zur Auswahl und nicht hinaus. */
+async function testPultWoerter() {
+  console.log('\n— Wörter einer Station —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+  const calls = [];
+  let gewaehlt = ['a1'];
+
+  const SETS = [
+    { id: 'a1', title: 'Station 1 — Schule', count: 3, mine: '0', from: 'de', to: 'en',
+      unit: 'u-test', utitle: 'Unit 1', grade: 5, island: 'en:5', station: 1 },
+    { id: 'm1', title: 'Eigene Liste', count: 1, mine: '1', from: 'de', to: 'en',
+      unit: 'u-m1', utitle: 'Eigene Liste', grade: null, island: null, station: 1 }
+  ];
+  const WOERTER = {
+    a1: {
+      ok: true,
+      set: { id: 'a1', title: 'Station 1 — Schule', from: 'de', to: 'en',
+             unit: 'u-test', utitle: 'Unit 1', grade: 5 },
+      words: [
+        { t: 'die Schule', x: 'school', a: [], at: [] },
+        { t: 'der Schüler', x: 'pupil', a: ['student'], at: [] },
+        { t: 'die Tafel', x: 'board', a: [], at: [] }
+      ]
+    },
+    m1: { ok: true, set: { id: 'm1', title: 'Eigene Liste', from: 'de', to: 'en' },
+          words: [{ t: 'das Haus', x: 'house', a: [], at: [] }] }
+  };
+
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'presenter',
+    actions: {
+      role: 'presenter',
+      call: (fn, args) => {
+        calls.push([fn, args]);
+        if (fn === 'wi_sets_list')
+          return Promise.resolve({ ok: true, chosen: gewaehlt.slice(), sets: SETS });
+        if (fn === 'wi_set_words')
+          return Promise.resolve(WOERTER[args.p_set] || { ok: false, error: 'not_found' });
+        if (fn === 'wi_room_setup') {
+          if (args.p_sets) gewaehlt = args.p_sets.slice();
+          return Promise.resolve({ ok: true });
+        }
+        if (fn === 'wi_room_get') {
+          return Promise.resolve({
+            ok: true, role: 'presenter', phase: 'lobby', mode: 'type',
+            direction: 'mixed', team_count: 2, factions: [0, 1], duration: 600,
+            radius: 5, seed: 1, teams: [], map_key: 'raum:lobby', map: [],
+            own: '', ends_at: null, countdown_ends_at: null, winner_team: null,
+            sets: gewaehlt.slice(), online_count: 0, room_total: 0, people: []
+          });
+        }
+        return Promise.resolve({ ok: true });
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+  click(root.querySelector('[data-part="setsbtn"]'), document);
+  await wait(20);
+
+  /* ── Das Zeichen steht auf JEDER Kachel ─────────────────────
+     Die eigenen Listen haben ihr eigenes Blatt („Eigene"), deshalb
+     wird auch dort nachgesehen. */
+  const kacheln = [...root.querySelectorAll('.wi-set')];
+  ok('die mitgelieferte Station trägt ein Listen-Zeichen',
+     kacheln.length === 1 && !!kacheln[0].querySelector('[data-peek]'),
+     String(kacheln.length));
+
+  click([...root.querySelectorAll('.wi-tab')].find(b => b.dataset.tab === 'own'), document);
+  await wait(20);
+  const eigene = root.querySelector('.wi-set');
+  ok('die eigene Liste auch', !!eigene && !!eigene.querySelector('[data-peek]'),
+     eigene && eigene.className);
+  /* ⚠️ Auf eigenen Listen sitzt schon das Löschzeichen in derselben
+     Ecke. Stünden beide übereinander, träfe ein Fingertipp das
+     falsche — und das Falsche ist hier „endgültig löschen". */
+  ok('… und beide Zeichen stehen nebeneinander, nicht übereinander',
+     !!eigene && !!eigene.querySelector('[data-del]') &&
+     eigene.classList.contains('wi-set--mine'),
+     eigene && eigene.className);
+
+  click([...root.querySelectorAll('.wi-tab')].find(b => b.dataset.tab === 'units'), document);
+  await wait(20);
+
+  /* ── Ein Blick in die Wörter ändert die Auswahl NICHT ──────── */
+  const setupVorher = calls.filter(c => c[0] === 'wi_room_setup').length;
+  click(root.querySelector('.wi-set [data-peek]'), document);
+  await wait(30);
+  ok('das Zeichen fragt die Wörter dieser Station an',
+     (calls.find(c => c[0] === 'wi_set_words') || [])[1].p_set === 'a1',
+     js(calls.filter(c => c[0] === 'wi_set_words')));
+  ok('… und wählt die Station dabei nicht an oder ab',
+     calls.filter(c => c[0] === 'wi_room_setup').length === setupVorher);
+
+  /* ── Die Tabelle ──────────────────────────────────────────── */
+  const box = root.querySelector('[data-part="wordsbox"]');
+  ok('die Wörterliste ist offen, die Auswahl dahinter zu',
+     box.hidden === false && root.querySelector('[data-part="setsbox"]').hidden === true);
+  ok('das Fenster selbst bleibt offen',
+     root.querySelector('[data-part="setsov"]').hidden === false);
+  ok('der Kopf nennt die Station',
+     /Station 1/.test(root.querySelector('[data-part="wordstitle"]').textContent),
+     root.querySelector('[data-part="wordstitle"]').textContent);
+  ok('die Zeile darunter zählt die Wörter',
+     /3 Wörter/.test(root.querySelector('[data-part="wordshint"]').textContent),
+     root.querySelector('[data-part="wordshint"]').textContent);
+
+  const zeilen = [...box.querySelectorAll('.wi-vrow')];
+  ok('Spaltenkopf plus drei Zeilen', zeilen.length === 4, String(zeilen.length));
+  ok('der Spaltenkopf nennt beide Sprachen',
+     /Deutsch/.test(zeilen[0].textContent) && /Englisch/.test(zeilen[0].textContent),
+     zeilen[0].textContent.replace(/\s+/g, ' ').trim());
+  /* Der Kopf muss beim Scrollen stehen bleiben — sonst weiß bei
+     vierzig Wörtern niemand mehr, welche Spalte welche ist. Dass er
+     `sticky` ist, entscheidet tool.css; hier wird nur zugesagt, dass
+     er die Klasse trägt, an der die Regel hängt. */
+  ok('… und trägt die Klasse, an der die stehende Kopfzeile hängt',
+     zeilen[0].classList.contains('wi-vhead'), zeilen[0].className);
+  ok('jede Vokabel steht mit beiden Seiten da',
+     /die Schule/.test(zeilen[1].textContent) && /school/.test(zeilen[1].textContent),
+     zeilen[1].textContent.replace(/\s+/g, ' ').trim());
+  ok('die Zeilen sind durchnummeriert',
+     zeilen.slice(1).map(z => z.querySelector('.wi-vnum').textContent).join(',') === '1,2,3',
+     zeilen.slice(1).map(z => z.querySelector('.wi-vnum').textContent).join(','));
+  /* Nebenformen sind Inhalt: „pupil / student" steht im Import in
+     EINER Zeile, und wer nur „pupil" liest, hält „student" für
+     falsch. */
+  ok('Nebenformen stehen klein daneben',
+     /student/.test(zeilen[2].textContent) &&
+     !!zeilen[2].querySelector('.wi-valt'),
+     zeilen[2].textContent.replace(/\s+/g, ' ').trim());
+
+  /* ── Zurück führt zur Auswahl, nicht hinaus ────────────────── */
+  click(root.querySelector('[data-part="wordsback"]'), document);
+  await wait(20);
+  ok('zurück zeigt wieder die Auswahl',
+     root.querySelector('[data-part="setsbox"]').hidden === false &&
+     root.querySelector('[data-part="wordsbox"]').hidden === true);
+  ok('… im selben Fenster',
+     root.querySelector('[data-part="setsov"]').hidden === false);
+
+  /* ── Zweiter Blick: aus dem Speicher ───────────────────────── */
+  const rufe = calls.filter(c => c[0] === 'wi_set_words').length;
+  click(root.querySelector('.wi-set [data-peek]'), document);
+  await wait(30);
+  ok('derselbe zweite Blick fragt den Server nicht noch einmal',
+     calls.filter(c => c[0] === 'wi_set_words').length === rufe,
+     String(calls.filter(c => c[0] === 'wi_set_words').length));
+  ok('… und zeigt die Wörter trotzdem',
+     root.querySelectorAll('[data-part="wordsbox"] .wi-vrow').length === 4);
+
+  /* ── Und die Auswahl ist unversehrt ───────────────────────── */
+  click(root.querySelector('[data-part="wordsclose"]'), document);
+  await wait(20);
+  ok('das Kreuz schließt das ganze Fenster',
+     root.querySelector('[data-part="setsov"]').hidden === true);
+  ok('die gewählte Station ist dieselbe geblieben',
+     js(gewaehlt) === js(['a1']), js(gewaehlt));
+
+  tool.unmount();
+}
+
+/* Fehlt 0154 in der Datenbank, sagt das Fenster genau das — und
+   nicht „Fehler: fn_missing". Sonst sucht jemand eine halbe Stunde
+   am Netz (Regel: feedback_missing_migration_looks_like_network). */
+async function testWoerterOhneMigration() {
+  console.log('\n— Wörterliste ohne Migration 0154 —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+
+  const SETS = [{ id: 'a1', title: 'Station 1', count: 3, mine: '0',
+                  unit: 'u1', utitle: 'Unit 1', grade: 5, station: 1 }];
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'presenter',
+    actions: {
+      role: 'presenter',
+      call: (fn) => {
+        if (fn === 'wi_sets_list')
+          return Promise.resolve({ ok: true, chosen: ['a1'], sets: SETS });
+        if (fn === 'wi_set_words')
+          return Promise.resolve({ ok: false, error: 'fn_missing' });
+        if (fn === 'wi_room_get') {
+          return Promise.resolve({
+            ok: true, role: 'presenter', phase: 'lobby', mode: 'type',
+            direction: 'mixed', team_count: 2, factions: [0, 1], duration: 600,
+            radius: 5, seed: 1, teams: [], map_key: 'raum:lobby', map: [],
+            own: '', ends_at: null, countdown_ends_at: null, winner_team: null,
+            sets: ['a1'], online_count: 0, room_total: 0, people: []
+          });
+        }
+        return Promise.resolve({ ok: true });
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+  click(root.querySelector('[data-part="setsbtn"]'), document);
+  await wait(20);
+  click(root.querySelector('[data-peek]'), document);
+  await wait(30);
+
+  const txt = root.querySelector('[data-part="wordsbody"]').textContent;
+  ok('die Meldung nennt die fehlende Migration', /0154/.test(txt), txt.trim());
+  ok('… und nicht den nackten Fehlernamen', !/fn_missing/.test(txt), txt.trim());
+  tool.unmount();
+}
+
+/* ═══════════════════════════════════════════════════════════
    Pult
    ═══════════════════════════════════════════════════════════ */
 async function testPult() {
@@ -1318,10 +1540,51 @@ async function testOhneMigration() {
    (tools/solosprites.mjs), und ob sie im Deployment liegen, sagt
    sonst niemand. */
 
-/* Die echten Maße aus dem PNG-Kopf (IHDR steht immer bei Byte 16). */
-function pngMasse(datei) {
-  const b = fs.readFileSync(datei);
+/* Die echten Maße aus dem PNG-Kopf (IHDR steht immer bei Byte 16) —
+   VERKLEINERT.
+
+   Warum: die teuerste Rechnung des ganzen Werkzeugs ist faerbeSatz().
+   Sie dreht jeden Bildpunkt jeder Vorlage in acht Völkerfarben — bei
+   echten Maßen sind das rund 14 Millionen Punkte JE Aufbau, und der
+   Prüfstand baut vierzigmal auf. Das waren allein dafür gut zwei
+   Minuten.
+
+   Geprüft wird davon nichts. Der Kontext-Stummel liefert ein
+   durchgehend grünes Bild und wirft das Ergebnis weg (putImageData
+   ist leer) — beweisbar ist also nur, dass die Farbrechnung über
+   echte Werte läuft und kein NaN erzeugt. Das fällt bei 62×75
+   Punkten genauso auf wie bei 249×299.
+
+   Was hier NICHT wegfallen darf, ist die UNTERSCHEIDBARKEIT der
+   Zuschnitte: `gemalt` erkennt die einunddreißig Tiervorlagen allein
+   an ihren Maßen (testFunkelBild). Nach dem Teilen fallen manche
+   zusammen — deshalb wird der ganze Ordner auf einmal vergeben, nach
+   Namen sortiert, und eine Dopplung um einen Punkt in der Breite
+   aufgelöst. Sortiert, damit dabei nicht zählt, wer zuerst fragt.
+
+   WI_MASS_TEILER=1 stellt die echten Maße wieder her — für den Tag,
+   an dem eine Frage doch am Zuschnitt selbst hängt. */
+const MASS_TEILER = Number(process.env.WI_MASS_TEILER || 4);
+const massRoh = d => {
+  const b = fs.readFileSync(d);
   return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+};
+const massCache = new Map();
+function pngMasse(datei) {
+  if (!(MASS_TEILER > 1)) return massRoh(datei);
+  const key = path.resolve(datei);
+  if (massCache.has(key)) return massCache.get(key);
+  const belegt = new Set();
+  for (const f of fs.readdirSync(path.dirname(key)).filter(x => /\.png$/i.test(x)).sort()) {
+    const q = path.join(path.dirname(key), f);
+    const m = massRoh(q);
+    let w = Math.max(2, Math.round(m.w / MASS_TEILER));
+    const h = Math.max(2, Math.round(m.h / MASS_TEILER));
+    while (belegt.has(w + '×' + h)) w++;
+    belegt.add(w + '×' + h);
+    massCache.set(q, { w, h });
+  }
+  return massCache.get(key) || massRoh(key);
 }
 
 /* `gemalt` sammelt, WIE GROSS ein Bild gezeichnet wurde. Gebraucht
@@ -1584,45 +1847,60 @@ function zeig(el, doc, typ, x, y) {
   return e;
 }
 
-/* Einen Punkt suchen, an dem wirklich ein Tier steht. Wo sie
-   herumlaufen, weiß nur die Zeichenschleife — also wird das Feld
-   abgesucht. Weil zwischen zwei synchronen Tipps kein Bild
-   dazwischenkommt, steht die Herde dabei still. */
-function tippeAufTier(root, document, schritt = 34) {
+/* Einen Punkt suchen, an dem wirklich etwas steht. Wo Tiere und
+   Figur herumlaufen, weiß nur die Zeichenschleife — also wird das
+   Feld abgesucht. Weil zwischen zwei synchronen Tipps kein Bild
+   dazwischenkommt, steht die Herde dabei still.
+
+   Abgesucht wird in MEHREREN DURCHGÄNGEN mit versetztem Anfang, und
+   das hat einen Grund in jede Richtung:
+
+     · Feiner als 34 darf ein einzelner Durchgang nicht werden. Zwei
+       Tipps, die weniger als 30 px auseinanderliegen und schnell
+       aufeinander folgen, sind ein DOPPELTIPP — der setzt die Kamera
+       zurück und unterdrückt die Auswahl.
+     · Gröber als das Ziel darf das Raster aber auch nicht sein, und
+       genau das war es geworden. Der alte Kommentar rechnete mit
+       einer Figur von 39 × 73 Bildpunkten; gemessen sind es heute
+       rund 20 × 46. Die Hauptinsel ist am 15.09.2026 von ~210 auf
+       435 Felder gewachsen, die Kacheln wurden kleiner, und die
+       Figur hängt über HELD_HOCH an der Kachel. Zwanzig Punkte sind
+       SCHMALER als der Schritt: je nachdem, wo die Figur gerade
+       stand, rutschte das Raster an ihr vorbei — und der Prüfstand
+       war in etwa jedem vierten Lauf ohne eigenes Zutun rot.
+
+   Der Versatz löst beides: innerhalb eines Durchgangs bleibt der
+   Abstand 34, zusammen decken die Durchgänge ein Raster von 11 × 17
+   ab. Gefunden wird fast immer im ersten. */
+const VERSATZ = [];
+for (const dy of [0, 17]) for (const dx of [0, 11, 22]) VERSATZ.push([dx, dy]);
+
+function suchePunkt(root, document, offen, schritt = 34) {
   const stage = root.querySelector('[data-part="stage"]');
-  const karte = root.querySelector('[data-part="card"]');
-  for (let y = 20; y < RECT.height; y += schritt) {
-    for (let x = 20; x < RECT.width; x += schritt) {
-      zeig(stage, document, 'pointerdown', x, y);
-      zeig(stage, document, 'pointerup', x, y);
-      if (!karte.hidden) return { x, y };
+  for (const [dx, dy] of VERSATZ) {
+    for (let y = 20 + dy; y < RECT.height; y += schritt) {
+      for (let x = 20 + dx; x < RECT.width; x += schritt) {
+        zeig(stage, document, 'pointerdown', x, y);
+        zeig(stage, document, 'pointerup', x, y);
+        if (offen()) return { x, y };
+      }
     }
   }
   return null;
 }
 
-/* Dasselbe für die eigene Figur (oder das Schiff): suchen, bis der
-   Kasten „Wer bist du?" aufgeht.
+function tippeAufTier(root, document, schritt = 34) {
+  const karte = root.querySelector('[data-part="card"]');
+  return suchePunkt(root, document, () => !karte.hidden, schritt);
+}
 
-   Der Schritt bleibt bei 34 und darf NICHT kleiner werden: zwei
-   Tipps, die weniger als 30 px auseinanderliegen und schnell
-   aufeinander folgen, sind ein Doppeltipp — der setzt die Kamera
-   zurück und unterdrückt die Auswahl. Getroffen wird trotzdem: die
-   Figur der Giraffen ist rund 39 × 73 Bildpunkte groß, das Schiff
-   dreimal so breit. (Seit 11.09.2026 sind die anderen sieben Völker
-   30 % kleiner — deren Figur allein wäre schmaler als der Schritt,
-   gefunden würde dann ihr Schiff.) */
+/* Dasselbe für die eigene Figur (oder das Schiff): suchen, bis der
+   Kasten „Wer bist du?" aufgeht. Das Schiff ist rund dreimal so
+   breit wie die Figur und wird deshalb ohnehin früher gefunden —
+   seit 11.09.2026 sind sieben der acht Völker 30 % kleiner. */
 function tippeAufFigur(root, document, schritt = 34) {
-  const stage = root.querySelector('[data-part="stage"]');
   const kasten = root.querySelector('[data-part="volkov"]');
-  for (let y = 20; y < RECT.height; y += schritt) {
-    for (let x = 20; x < RECT.width; x += schritt) {
-      zeig(stage, document, 'pointerdown', x, y);
-      zeig(stage, document, 'pointerup', x, y);
-      if (!kasten.hidden) return { x, y };
-    }
-  }
-  return null;
+  return suchePunkt(root, document, () => !kasten.hidden, schritt);
 }
 
 // Die Felder der gebauten Insel als Menge „r,c" — für die Frage,
@@ -1691,8 +1969,26 @@ async function mountSolo(view, extra, opt) {
     c.getContext = () => machKontext(c, env.gemalt);
   }
 
-  // Bilder laden (setTimeout 0 je Bild), einfärben, Insel bauen.
-  for (let i = 0; i < 12; i++) await wait(20);
+  /* Bilder laden (setTimeout 0 je Bild), einfärben, Insel bauen.
+
+     Das ist eine KETTE: ein geladenes Bild zieht das nächste nach
+     sich, und jedes Glied braucht seinen eigenen Durchlauf der
+     Schlange. Früher standen hier zwölf feste Pausen à 20 ms — bei
+     vierzig Aufbauten acht Sekunden, die zum größten Teil
+     Liegenbleiben waren, und bei der Figur mit ihren vier Fassungen
+     trotzdem manchmal zu wenig.
+
+     Jetzt wird gewartet, bis nichts mehr NACHGEFORDERT wird: drei
+     stille Durchgänge, dann ist die Kette durch. Der Deckel ist ein
+     Riegel gegen eine Kette, die nie zur Ruhe kommt — kein Maß für
+     irgendetwas. */
+  let still = 0;
+  for (let i = 0, vorher = -1; i < 60 && still < 3; i++) {
+    const jetzt = env.geladeneBilder.length;
+    still = jetzt === vorher ? still + 1 : 0;
+    vorher = jetzt;
+    await wait(4);
+  }
   return { env, tool, root, calls, ctx, document: env.document };
 }
 
@@ -4820,52 +5116,55 @@ async function testTaktTabelle() {
      +tipp[2] % +tipp[1] === 0 && +wahl[2] % +wahl[1] === 0);
 }
 
+/* ─── Was wann läuft ────────────────────────────────────────
+   Vier Bereiche, geschnitten nach dem, was man an EINEM Tag anfasst.
+   Wer an den Ruinen arbeitet, braucht die Level-Feier nicht — und
+   umgekehrt.
+
+     node …/uitest.js            alles (vor dem Einspielen)
+     node …/uitest.js raum       Tablet, Pult, Lobby
+     node …/uitest.js insel      die eigene Insel
+     node …/uitest.js level      Figur, Level, Uhr
+     node …/uitest.js ruinen     Ruinen und Ansagen
+     node …/uitest.js insel level    mehrere Bereiche
+
+   Eine Prüfung darf in mehreren Bereichen stehen; gelaufen wird sie
+   trotzdem nur einmal. */
+const BEREICHE = {
+  raum: [testTablet, testAuswahlTakt, testTaktTabelle, testTabletLobby,
+         testNewRound, testRelief, testPult, testPultUnits,
+         testPultWoerter, testWoerterOhneMigration,
+         testFehlendeMigration, testOhneMigration, testLobbyRegeln,
+         testStillgelegt],
+  insel: [testSolo, testInselWaechst, testSoloUeben, testSchluepfen,
+          testStats, testPunkte, testSoloOhneMigration, testUnitLeiste,
+          testUnitBaum, testTierTipp, testFunkelBild, testUnitsOhneMigration],
+  level: [testFigur, testFigurLevel, testFigurOhneMigration, testLevel,
+          testBesterTagRaender, testLevelRaender, testLevelBonus,
+          testLevelAufstieg, testLevelAufstiegMitTier, testLevelKeinAufstieg,
+          testLevelOhneMigration, testUhr],
+  ruinen: [testBlassUndRing, testBesitzKlar, testRuineInVolksfarbe, testRuinen,
+           testAntwortAufSchild, testSchildUndSchatten, testAnsagen,
+           testRuinenOhneMigration, testRuinTabelle]
+};
+
 (async () => {
-  await testTablet();
-  await testAuswahlTakt();
-  await testTaktTabelle();
-  await testTabletLobby();
-  await testNewRound();
-  await testRelief();
-  await testPult();
-  await testPultUnits();
-  await testFehlendeMigration();
-  await testOhneMigration();
-  await testSolo();
-  await testInselWaechst();
-  await testSoloUeben();
-  await testSchluepfen();
-  await testStats();
-  await testPunkte();
-  await testSoloOhneMigration();
-  await testUnitLeiste();
-  await testUnitBaum();
-  await testTierTipp();
-  await testFunkelBild();
-  await testFigur();
-  await testFigurLevel();
-  await testFigurOhneMigration();
-  await testLevel();
-  await testBesterTagRaender();
-  await testLevelRaender();
-  await testLevelBonus();
-  await testLevelAufstieg();
-  await testLevelAufstiegMitTier();
-  await testLevelKeinAufstieg();
-  await testLevelOhneMigration();
-  await testUhr();
-  await testUnitsOhneMigration();
-  await testBlassUndRing();
-  await testBesitzKlar();
-  await testRuineInVolksfarbe();
-  await testRuinen();
-  await testAntwortAufSchild();
-  await testSchildUndSchatten();
-  await testAnsagen();
-  await testRuinenOhneMigration();
-  await testLobbyRegeln();
-  await testStillgelegt();
-  await testRuinTabelle();
-  console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');
+  const wahl = process.argv.slice(2).filter(a => !a.startsWith('-'));
+  const unbekannt = wahl.filter(b => !BEREICHE[b]);
+  if (unbekannt.length) {
+    console.error(`Unbekannter Bereich: ${unbekannt.join(', ')}\n` +
+                  `Bekannt sind: ${Object.keys(BEREICHE).join(', ')}`);
+    process.exit(2);
+  }
+  const lauf = [];
+  for (const b of (wahl.length ? wahl : Object.keys(BEREICHE)))
+    for (const t of BEREICHE[b]) if (!lauf.includes(t)) lauf.push(t);
+
+  const start = Date.now();
+  for (const t of lauf) await t();
+  const dauer = ((Date.now() - start) / 1000).toFixed(1);
+  const umfang = wahl.length ? wahl.join(' + ') : 'alles';
+  console.log(fails ? `\n${fails} Fehler.   (${umfang}, ${dauer} s)`
+                    : `\nfertig, alles grün.   (${umfang}, ${dauer} s)`);
   process.exit(fails ? 1 : 0);
 })();
