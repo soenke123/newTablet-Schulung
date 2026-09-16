@@ -4538,6 +4538,82 @@ async function testRuineInVolksfarbe() {
   tool.unmount();
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Stillgelegt (0152) und die Wörter DIESER Runde (0153)
+   ═══════════════════════════════════════════════════════════
+   Zwei Meldungen von Sönke in einem Durchgang: ein gesperrtes Tablet
+   darf in keiner Volksspalte stehen, und die Auswertung am Ende darf
+   nicht tagelang dieselben Wörter zeigen. */
+async function testStillgelegt() {
+  console.log('\n— Stillgelegte und die Wörter der Runde —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+  let phase = 'lobby';
+  let scope = 'round';
+
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'presenter',
+    actions: {
+      role: 'presenter',
+      call: (fn, args) => {
+        if (fn === 'wi_sets_list') return Promise.resolve({ ok: true, chosen: ['s1'],
+          sets: [{ id: 's1', title: 'Schule', count: 30, level: '5/6', mine: '0' }] });
+        if (fn === 'wi_room_get') return Promise.resolve({
+          ok: true, role: 'presenter', phase, mode: 'type', direction: 'mixed',
+          team_count: 2, factions: [0, 1], duration: 600, radius: 5, seed: 1,
+          teams: [{ i: 0, tiles: 4, ruins: 0, score: 4, people: 1 },
+                  { i: 1, tiles: 2, ruins: 0, score: 2, people: 1 }],
+          map_key: 'raum:' + phase,
+          map: args.p_full ? (phase === 'lobby' ? [] : MAP) : null,
+          own: phase === 'lobby' ? '' : OWN_START,
+          ends_at: new Date(Date.now() + 60000).toISOString(),
+          countdown_ends_at: null, winner_team: 0, sets: ['s1'],
+          online_count: 3, room_total: 3,
+          people: [{ seat: 1, name: 'Ada', team: 0, online: true, blocked: false, correct: 0, wrong: 0 },
+                   { seat: 2, name: 'Bo',  team: 1, online: true, blocked: false, correct: 0, wrong: 0 },
+                   { seat: 3, name: 'Cem', team: 0, online: true, blocked: true,  correct: 0, wrong: 0 }]
+        });
+        if (fn === 'wi_hard_words') {
+          const r = { ok: true, words: [{ term: 'die Tafel', trans: 'board', wrong: 5, seen: 9 }] };
+          if (scope) r.scope = scope;
+          return Promise.resolve(r);
+        }
+        return Promise.resolve({ ok: true });
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+
+  const spalten = [...root.querySelectorAll('.wi-lteam')].map(c => c.textContent).join(' ');
+  ok('ein stillgelegtes Kind steht in keiner Volksspalte', !/Cem/.test(spalten), spalten);
+  const warte = root.querySelector('[data-part="waiting"]');
+  ok('es steht aber in einer eigenen Zeile darunter',
+     warte.hidden === false && /Stillgelegt \(1\)/.test(warte.textContent) && /Cem/.test(warte.textContent),
+     warte.textContent.replace(/\s+/g, ' '));
+  ok('und die Inselgröße rechnet mit zwei Kindern, nicht mit dreien',
+     /bei 2 Kindern/.test(root.querySelector('[data-part="durtext"]').textContent),
+     root.querySelector('[data-part="durtext"]').textContent);
+
+  phase = 'ended';
+  await tool.update();
+  await wait(80);
+  const hart = () => root.querySelector('[data-part="hard"]').textContent;
+  ok('die Auswertung zeigt das Wort', /Tafel/.test(hart()));
+  ok('und sagt nichts von einer fehlenden Migration', !/0153/.test(hart()), hart());
+
+  /* Ohne `scope` ist 0153 nicht eingespielt — dann steht das da,
+     statt dass die Überschrift still etwas Falsches behauptet. */
+  scope = null;
+  phase = 'lobby'; await tool.update(); await wait(40);
+  phase = 'ended'; await tool.update(); await wait(80);
+  ok('ohne 0153 steht der Hinweis darunter', /0153/.test(hart()), hart());
+
+  tool.unmount();
+}
+
 /* Die Balance steht zwangsläufig in zwei Dateien: im Browser
    (RUINEN) und in Postgres (wi_ruin_def). Hier wird zugesagt, dass
    es dieselben Zahlen sind — dasselbe Muster wie beim Uhr-Deckel.
@@ -4788,6 +4864,7 @@ async function testTaktTabelle() {
   await testAnsagen();
   await testRuinenOhneMigration();
   await testLobbyRegeln();
+  await testStillgelegt();
   await testRuinTabelle();
   console.log(fails ? `\n${fails} Fehler.` : '\nfertig, alles grün.');
   process.exit(fails ? 1 : 0);

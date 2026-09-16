@@ -501,6 +501,21 @@
   font-size: 12px;
 }
 
+/* Stillgelegt (Migration 0152). Die dritte Zeile sagt das Gegenteil
+   der ersten beiden — dort bleibt niemand außen vor, hier schon —,
+   also darf sie nicht genauso aussehen. Gestrichelter Rand und
+   blasser Text: erkennbar dieselbe Reihe, erkennbar nicht dabei.
+   Kein Rot: es ist kein Fehler, sondern eine Entscheidung der
+   Lehrkraft. */
+.wi-waitlabel--off { color: var(--ink-faint); }
+.wi-waitname--off {
+  background: transparent;
+  border-style: dashed;
+  color: var(--ink-faint);
+  text-decoration: line-through;
+  text-decoration-color: var(--line);
+}
+
 /* ── Das Wörter-Fenster ──────────────────────────────────────
    Muster wie .cm-poolov: `fixed` auf dem sichtbaren Bereich (--vv-h
    aus viewport.js), das Overlay scrollt, der Kasten sitzt mit

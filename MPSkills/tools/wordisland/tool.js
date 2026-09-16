@@ -3100,7 +3100,10 @@
      im Server auseinander. */
   function durText(v) {
     const min = Math.round((v.duration || 600) / 60);
-    const kids = (v.people || []).length;
+    // Stillgelegte zählen nicht mit (0152) — der Server baut die
+    // Insel für dieselbe Menge, und zwei Zahlen, die dasselbe meinen
+    // und auseinanderlaufen, sind schlimmer als eine ungenaue.
+    const kids = mitspieler(v).length;
     const tiles = Math.round(Math.max(80, Math.min(900, Math.max(kids, 4) * 1.6 * min)));
     return `${min} Minuten` + (kids
       ? ` — bei ${kids} ${kids === 1 ? 'Kind' : 'Kindern'} eine Insel aus etwa ${tiles} Feldern.`
@@ -3108,10 +3111,24 @@
       ' Der Nebel ist nach knapp der halben Zeit weg; danach nimmt man sich Land.';
   }
 
+  /* Wer in dieser Runde überhaupt vorkommt. Ein stillgelegtes Tablet
+     (skill_participants.blocked, 0081) bekommt seit Migration 0152
+     kein Volk mehr und zählt für nichts — es steht am Pult aber
+     weiter da, nur in einer eigenen Zeile. Ohne den Filter hier
+     stünde ein gesperrter Name in einer Volksspalte, die er nie
+     betritt.
+
+     `p.blocked` fehlt, wenn 0152 nicht eingespielt ist: dann ist der
+     Wert undefined, der Filter lässt alle durch, und es bleibt beim
+     alten Verhalten. */
+  function mitspieler(v) {
+    return (v.people || []).filter(p => !p.blocked);
+  }
+
   /* Eine Spalte je Volk, nebeneinander. Ein Volk ohne Anwesende
      bleibt stehen: es SPIELT mit, es ist nur noch niemand da. */
   function renderLobbyTeams(v) {
-    const people = v.people || [];
+    const people = mitspieler(v);
     let out = '';
     for (let slot = 0; slot < v.team_count; slot++) {
       const mine = people.filter(p => p.team === slot);
@@ -3120,29 +3137,42 @@
     els.lobbyTeams.innerHTML = out;
   }
 
-  /* Wer noch kein Volk hat und wer gerade nicht am Tablet ist. Zwei
-     Sätze, eine Zeile — und beide sagen ausdrücklich, dass niemand
-     dadurch außen vor bleibt: wi_room_start verteilt alle Teilnehmer
-     des Raums, anders als in Kingdoms. Die Zeile verschwindet ganz,
-     wenn es nichts zu sagen gibt; eine leere Überschrift wäre nur
-     Lärm. */
+  /* Wer noch kein Volk hat, wer gerade nicht am Tablet ist — und wer
+     stillgelegt wurde. Drei Sätze, eine Zeile. Die ersten beiden
+     sagen ausdrücklich, dass niemand dadurch außen vor bleibt:
+     wi_room_start verteilt alle Teilnehmer des Raums, anders als in
+     Kingdoms. Der dritte sagt genauso ausdrücklich das Gegenteil —
+     das ist ja der Zweck des Knopfes.
+
+     Stillgelegte werden nicht einfach ausgeblendet: die Lehrkraft hat
+     sie gerade selbst gesperrt, und eine Liste, aus der jemand
+     spurlos verschwindet, sieht aus wie ein Fehler.
+
+     Die Zeile verschwindet ganz, wenn es nichts zu sagen gibt; eine
+     leere Überschrift wäre nur Lärm. */
   function renderWaiting(v) {
-    const people = v.people || [];
-    const ohne = people.filter(p => p.team == null);
-    const off  = people.filter(p => p.team != null && p.online === false);
-    if (!ohne.length && !off.length) {
+    const spielen = mitspieler(v);
+    const ohne  = spielen.filter(p => p.team == null);
+    const off   = spielen.filter(p => p.team != null && p.online === false);
+    const still = (v.people || []).filter(p => p.blocked);
+    if (!ohne.length && !off.length && !still.length) {
       els.waiting.hidden = true;
       els.waiting.innerHTML = '';
       return;
     }
+    const namen = list => list.map(p => `<span class="wi-waitname">${esc(p.name)}</span>`).join('');
     let out = '';
     if (ohne.length) {
-      out += `<span class="wi-waitlabel">Noch ohne Volk (${ohne.length}) — beim Start werden sie mit verteilt:</span>` +
-        ohne.map(p => `<span class="wi-waitname">${esc(p.name)}</span>`).join('');
+      out += `<span class="wi-waitlabel">Noch ohne Volk (${ohne.length}) — beim Start werden sie mit verteilt:</span>`
+           + namen(ohne);
     }
     if (off.length) {
-      out += `<span class="wi-waitlabel">Gerade nicht am Tablet (${off.length}) — sie spielen trotzdem mit:</span>` +
-        off.map(p => `<span class="wi-waitname">${esc(p.name)}</span>`).join('');
+      out += `<span class="wi-waitlabel">Gerade nicht am Tablet (${off.length}) — sie spielen trotzdem mit:</span>`
+           + namen(off);
+    }
+    if (still.length) {
+      out += `<span class="wi-waitlabel wi-waitlabel--off">Stillgelegt (${still.length}) — sie bekommen kein Volk:</span>`
+           + still.map(p => `<span class="wi-waitname wi-waitname--off">🔇 ${esc(p.name)}</span>`).join('');
     }
     els.waiting.hidden = false;
     els.waiting.innerHTML = out;
@@ -3279,14 +3309,27 @@
     if (h > 0) els.beam.style.height = Math.round(h) + 'px';
   }
 
+  /* Seit Migration 0153 zählt der Server die Strichliste DIESER Runde
+     (wi_round_words) statt der Karteikasten-Summe des ganzen Raums.
+     Der Unterschied ist nicht kosmetisch: ein Raum lebt 60 Tage, und
+     vorher standen hier tagelang dieselben Wörter.
+
+     `scope` sagt, worüber gezählt wurde. Fehlt der Schlüssel, ist die
+     Migration nicht eingespielt — dann steht das als Satz darunter,
+     statt dass die Überschrift still etwas Falsches behauptet
+     (feedback_missing_migration_looks_like_network). */
   async function loadHard() {
     const r = await ctx.actions.call('wi_hard_words', {});
     if (!r || !r.ok) return;
-    els.hard.innerHTML = r.words.length
+    const alt = r.scope !== 'round'
+      ? '<p class="wi-hint">Diese Liste zählt noch alle Runden dieses Raums zusammen — '
+        + 'in der Datenbank fehlt die Migration 0153.</p>'
+      : '';
+    els.hard.innerHTML = (r.words.length
       ? r.words.map(w => `<div class="wi-hardrow">
             <b>${esc(w.term)}</b><span>${esc(w.trans)}</span>
             <i>${w.wrong}× daneben</i></div>`).join('')
-      : '<p class="wi-empty">Nichts ist reihenweise schiefgegangen — schöner Tag.</p>';
+      : '<p class="wi-empty">Nichts ist reihenweise schiefgegangen — schöner Tag.</p>') + alt;
   }
 
   /* ══════════════════════════════════════════════════════════
