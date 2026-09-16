@@ -2012,10 +2012,21 @@
        Brandung. Nachgezählt: 520 Felder ergeben 2500 Elemente MIT
        Kleinteilen, 1050 Felder 3700 OHNE. Das Neumalen je Takt
        kostet dabei rund fünf Millisekunden — teuer ist der Aufbau,
-       und der passiert einmal, während der Countdown läuft. */
+       und der passiert einmal, während der Countdown läuft.
+
+       ⚠️ Auf der eigenen Insel liegt die Grenze höher (15.09.2026).
+       Nicht aus Großzügigkeit: dort steht die Karte still, sie wird
+       einmal gebaut und danach nur noch geschoben — es gibt gar
+       kein Aufstehen einer Kachel, das je Takt Pfade verschöbe.
+       Vor allem aber wächst sie mit dem Wortschatz, und mit der
+       alten 700 hätte dasselbe Kind bei 300 Wörtern Bäumchen gehabt
+       und bei 700 keine mehr. Eine Insel, die beim Dazulernen ihre
+       Ausstattung verliert, ist genauso wenig die eigene wie eine,
+       die sich umformt. 1100 liegt über allem, was hier entstehen
+       kann (Hauptinsel 460 + drei Satelliten à 170 = 970). */
     const opt = {
       box: { x: n2(vb[0] - 2), y: n2(vb[1] - 2), w: n2(vb[2] + 4), h: n2(vb[3] + 4) },
-      dicht: isl.cells.length > 700
+      dicht: isl.cells.length > (solo ? 1100 : 700)
     };
 
     /* Die Küstenringe EINMAL. Das Wasser stapelt vier Tiefenstufen
@@ -4034,7 +4045,7 @@
   const NACHT_TIEFE = .85;
 
   /* ─── Wie die Insel wächst ──────────────────────────────────
-     Die Hauptinsel steht immer. Die sechs Satelliten tauchen nach
+     Die Hauptinsel steht immer. Die Satelliten tauchen nach
      Wortzahl auf — dadurch wächst die Welt mit dem Wortschatz,
      ohne dass sich die Hauptinsel je umformt.
 
@@ -4043,15 +4054,38 @@
      Wachsen von allein monoton — eine Insel, die sich beim
      Dazulernen umformt, wäre nicht mehr die eigene.
 
+     ⚠️ DREI GROSSE statt sechs kleiner (15.09.2026, Sönkes Ansage:
+     „hauptinsel größer 3 große satelliten, einer gleich die anderen
+     kommen mit der vokabel zahl"). Der Anlass ist ein Lehrwerk mit
+     rund 1000 Vokabeln je Jahrgang, und der Engpass dabei war NICHT
+     die Gesamtfläche, sondern die Hauptinsel: Ei, Stufe 1 und
+     Stufe 2 sind an sie gebunden (`aufHauptinsel`), nur Flieger
+     dürfen hinaus. Im September sind 1000 frische Wörter 1000 Eier —
+     auf den alten ~210 Feldern wären das fünf je Sechseck, während
+     sechs Satelliten leer danebenliegen. Darum wächst die
+     HAUPTINSEL auf gut das Doppelte, und die Satelliten werden so
+     groß, dass sie zusammen noch einmal dasselbe tragen.
+
+     Der erste Satellit ist von Anfang an da (Schwelle 0): eine
+     Insel ganz allein im Meer sieht nicht aus wie ein Archipel, das
+     noch wächst, sondern wie eines, das es nicht gibt.
+
+     ⚠️ Diese drei Zahlen zu ändern zeichnet JEDE bestehende Insel
+     neu — die Form hängt am Würfelstrom, und der hängt an ihnen.
+     Heute ist das gratis (es gibt noch keine Insel, die ein Kind
+     wiedererkennen würde). Sobald in Etappe C jede Insel ihren
+     eigenen Seed bekommt, braucht sie daneben eine `geo_version`,
+     und dann gelten neue Maße nur noch für NEUE Inseln.
+
      Die Schwellen sind Richtwerte und ausdrücklich zum Drehen da:
-     eine Unit hat rund 30 Wörter, die erste Insel kommt also nach
-     zwei Units. */
-  const SAT_SCHWELLEN = [60, 140, 240, 360, 500, 660];
+     eine Unit hat rund 30 Wörter, der zweite Satellit kommt also
+     nach rund zehn Units — etwa zur Halbzeit eines Jahrgangs. */
+  const SAT_SCHWELLEN = [0, 300, 650];
 
   /* Wie viele Felder die Hauptinsel hat und wie groß die Satelliten
      werden. In FELDERN und nicht in Radien (siehe blobMitZiel). */
-  const HAUPT_FELDER = [200, 220];
-  const SAT_FELDER = [25, 60];
+  const HAUPT_FELDER = [420, 460];
+  const SAT_FELDER = [110, 170];
   const WASSER = 2.6;      // offenes Wasser zwischen zwei Küsten
   const AUSSEN = 1.05;     // blobCells lenkt den Radius um bis zu +5 % aus
 
@@ -4297,8 +4331,16 @@
     return raus;
   }
 
+  /* ⚠️ `hi` ist die obere Schranke der Suche. Liegt sie unter dem
+     verlangten Radius, liefert die Halbierung still `hi` zurück und
+     die Insel ist zu KLEIN — nichts meldet sich, die Zahl ist
+     einfach falsch. Für die 460 Felder der Hauptinsel reichten die
+     alten 24 noch (nachgemessen: dieselben 435 Felder wie mit 40),
+     die Luft ist also Vorsorge für das nächste Mal. Abgefangen wird
+     der Deckel inzwischen auch von außen — uitest besteht auf einer
+     Hauptinsel von mindestens 400 Feldern. */
   function blobMitZiel(cr, cc, ziel, wob) {
-    let lo = .5, hi = 24;
+    let lo = .5, hi = 40;
     for (let i = 0; i < 18; i++) {
       const m = (lo + hi) / 2;
       if (blobCells(cr, cc, m, wob).length < ziel) lo = m; else hi = m;
@@ -4338,10 +4380,16 @@
        schlimmsten Fall einrechnen und schöbe alle Inseln unnötig
        weit hinaus.
 
-       ⚠️ Die Schleife läuft über ALLE sechs, auch wenn nur zwei
-       gezeigt werden: sonst hinge die Lage der zweiten Insel daran,
+       ⚠️ Die Schleife läuft über ALLE drei, auch wenn nur einer
+       gezeigt wird: sonst hinge die Lage der zweiten Insel daran,
        wie viele Wörter das Kind gerade hat — und die Insel
-       verschöbe sich beim Dazulernen. */
+       verschöbe sich beim Dazulernen.
+
+       Dass die Zahl der Plätze im WINKEL steckt, ist derselbe
+       Gedanke von der anderen Seite: drei Satelliten teilen sich
+       den Kreis in Drittel. Wer die Liste verlängert, dreht damit
+       alle bestehenden Inseln — siehe die Warnung bei
+       SAT_SCHWELLEN. */
     const gesetzt = [{ x: 0, y: 0, R: hauptR }];
     const a0 = rnd() * 6.283;
     for (let i = 0; i < SAT_SCHWELLEN.length; i++) {
@@ -6403,7 +6451,8 @@
     aktivMerken();
 
     /* Wie viele Satelliten schon aufgetaucht sind. Die Hauptinsel
-       steht immer — die kleinen kommen mit dem Wortschatz. */
+       steht immer, der erste Satellit auch (Schwelle 0) — die
+       beiden anderen kommen mit dem Wortschatz. */
     const sat = SAT_SCHWELLEN.filter(s => solo.words >= s).length;
     const list = wuerfelInseln(solo.seed, sat);
 
@@ -6423,8 +6472,8 @@
       const t = neuesTier(id, st);
       /* Frisch aufgestellte Flieger übers Archipel verteilen. Sie
          entstehen auf der Hauptinsel und würden sonst als Haufen
-         dastehen, während sechs Inseln leer sind — im Spiel ist das
-         richtig (wer aufsteigt, hebt dort ab, wo er steht), beim
+         dastehen, während die Satelliten leer sind — im Spiel ist
+         das richtig (wer aufsteigt, hebt dort ab, wo er steht), beim
          AUFBAU sieht es falsch aus. */
       if (st >= 3 && welt.inseln.length > 1) {
         const j = (Math.random() * welt.inseln.length) | 0;

@@ -1568,6 +1568,34 @@ function tippeAufFigur(root, document, schritt = 34) {
 const felderVon = root => new Set(
   [...root.querySelectorAll('.wi-cell')].map(e => e.dataset.r + ',' + e.dataset.c));
 
+/* Zusammenhängende Landmassen aus so einer Menge — dasselbe, was
+   `findeInseln` drinnen macht, aber von außen und nur aus dem, was
+   im DOM steht. Die Hex-Nachbarschaft ist die von cx(): ungerade
+   Zeilen liegen eine halbe Spalte weiter rechts, ihre schrägen
+   Nachbarn sind also c und c+1 statt c-1 und c. */
+function landmassen(felder) {
+  const offen = new Set(felder), raus = [];
+  while (offen.size) {
+    const start = offen.values().next().value;
+    offen.delete(start);
+    const stapel = [start], grp = [];
+    while (stapel.length) {
+      const k = stapel.pop(); grp.push(k);
+      const [r, c] = k.split(',').map(Number);
+      const s = ((r % 2) + 2) % 2 ? 1 : -1;   // Versatz der Nachbarzeilen
+      for (const [nr, nc] of [[r, c - 1], [r, c + 1],
+                              [r - 1, c], [r - 1, c + s],
+                              [r + 1, c], [r + 1, c + s]]) {
+        const n = nr + ',' + nc;
+        if (!offen.has(n)) continue;
+        offen.delete(n); stapel.push(n);
+      }
+    }
+    raus.push(grp);
+  }
+  return raus.sort((a, b) => b.length - a.length);   // größte zuerst
+}
+
 async function mountSolo(view, extra, opt) {
   const env = makeSoloEnv();
   // Vor dem Aufhängen, nicht danach: eine Schleife, die einmal ins
@@ -1687,19 +1715,49 @@ async function testInselWaechst() {
   const klein = await mountSolo(soloView(30));
   const kleinFelder = felderVon(klein.root);
   const kleinZahl = kleinFelder.size;
+  const kleinTeile = klein.root.querySelectorAll('.wi-det').length;
+  const kleinMassen = landmassen(kleinFelder);
+
+  /* Drei große statt sechs kleiner (15.09.2026). Die Hauptinsel
+     trägt Ei, Stufe 1 und Stufe 2 ganz allein — bei rund 1000
+     Wörtern je Jahrgang ist SIE das Maß, nicht die Gesamtfläche. */
+  ok('die Hauptinsel trägt ein ganzes Lehrwerk', kleinMassen[0].length >= 400,
+     kleinMassen[0].length + ' Felder');
+  /* Und schon das erste Bild zeigt ein Archipel: eine einzelne
+     Insel sähe nicht aus wie eine, die noch wächst. */
+  ok('von Anfang an liegt ein Satellit daneben', kleinMassen.length === 2,
+     kleinMassen.map(m => m.length).join(' · '));
   klein.tool.unmount();
 
   const gross = await mountSolo(soloView(700));
   const grossFelder = felderVon(gross.root);
+  const grossMassen = landmassen(grossFelder);
 
   ok('mit mehr Wörtern kommt Land dazu', grossFelder.size > kleinZahl,
      `${kleinZahl} → ${grossFelder.size}`);
+  ok('am Ende stehen drei Satelliten', grossMassen.length === 4,
+     grossMassen.map(m => m.length).join(' · '));
+  /* „Groß" ist die halbe Ansage. Sechs Inseln à 25 Feldern trugen
+     zusammen so viel wie ein Viertel der Hauptinsel — auf drei
+     davon soll am Jahresende die Mehrheit der Tiere leben. */
+  ok('und die Satelliten sind groß',
+     grossMassen.slice(1).every(m => m.length >= 100),
+     grossMassen.slice(1).map(m => m.length).join(' · '));
   /* Der Kern: JEDES Feld von vorher liegt noch da. Kommt hier auch
      nur eines nicht vor, hat sich die Insel umgeformt statt
      gewachsen. */
   const fehlt = [...kleinFelder].filter(k => !grossFelder.has(k));
   ok('und kein einziges altes Feld verschwindet', fehlt.length === 0,
      fehlt.slice(0, 5).join(' · '));
+  /* Die Kostenbremse `dicht` darf auf der eigenen Insel nirgends
+     greifen: sie nähme der Karte die Bäumchen, und zwar irgendwann
+     mitten im Schuljahr. Eine Insel, die beim Dazulernen ihre
+     Ausstattung verliert, ist so wenig die eigene wie eine, die
+     sich umformt. */
+  const grossTeile = gross.root.querySelectorAll('.wi-det').length;
+  ok('die Karte behält ihre Kleinteile, auch wenn sie wächst',
+     kleinTeile > 0 && grossTeile > kleinTeile,
+     `${kleinTeile} → ${grossTeile}`);
   gross.tool.unmount();
 
   /* Und derselbe Startwert gibt zweimal dieselbe Insel — sonst
