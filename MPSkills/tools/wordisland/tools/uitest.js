@@ -4648,7 +4648,12 @@ function palette() {
   const quelle = fs.readFileSync(TOOL, 'utf8');
   const l = /land: \{ sand: '(#\w+)', gras: '(#\w+)', wald: '(#\w+)', fels: '(#\w+)' \}/.exec(quelle);
   const voelker = [];
-  const re = /\{ name: '[^']+',\s*color: '(#\w+)' \}/g;
+  /* Hinter der Farbe darf noch etwas stehen: seit dem 18.09.2026
+     trägt jede Zeile zusätzlich `viele` (Ein- oder Mehrzahl des
+     Namens, fürs Siegerbild). Ein Muster, das auf `' }` endete, fand
+     danach KEINE einzige Farbe mehr — und der Prüfstand zerbrach
+     erst zwei Zusagen später an einem `undefined`. */
+  const re = /\{ name: '[^']+',\s*color: '(#\w+)'/g;
   let m;
   while ((m = re.exec(quelle))) voelker.push(m[1]);
   return { boden: l ? l.slice(1, 5) : [], voelker };
@@ -5126,16 +5131,241 @@ async function testTaktTabelle() {
      node …/uitest.js insel      die eigene Insel
      node …/uitest.js level      Figur, Level, Uhr
      node …/uitest.js ruinen     Ruinen und Ansagen
+     node …/uitest.js sieger     das Siegerbild beider Rollen
      node …/uitest.js insel level    mehrere Bereiche
 
    Eine Prüfung darf in mehreren Bereichen stehen; gelaufen wird sie
    trotzdem nur einmal. */
+/* ═══════════════════════════════════════════════════════════
+   DAS SIEGERBILD  (18.09.2026)
+   ═══════════════════════════════════════════════════════════
+   Sönke: „wir brauchen sowohl am Tablet als auch am Beamer ein
+   richtig guten Siegerscreen (analog zu Mathoria)."
+
+   Geprüft wird, was man an EINEM Blick festmachen kann: wer oben
+   steht, in welcher Reihenfolge die Karten in der DOM liegen, ob
+   das Kind seinen eigenen Platz erfährt — und die zwei Fälle, in
+   denen frühere Wordisland-Fehler saßen:
+
+     · Der Sieger kommt vom SERVER (winner_team) und wird nicht aus
+       den Punkten geraten. Steht dort ein Volk, das nach Punkten
+       zweiter wäre, gewinnt trotzdem es.
+     · Ohne Migration 0158 fehlt `correct`. Dann darf die Karte die
+       Angabe WEGLASSEN und nicht „0 richtig" behaupten.
+
+   Das Aussehen prüft das hier nicht — ob das Podest wirklich als
+   2·1·3 dasteht, entscheidet tool.css (order), und das sieht man
+   nur mit Augen. Geprüft ist die DOM-Reihenfolge 1·2·3: sie ist die
+   Vorlese-Reihenfolge und die Grundlage der CSS-Regel.            */
+const podNamen = root =>
+  [...root.querySelectorAll('.wi-pod')].map(p =>
+    p.querySelector('.wi-podname').textContent.trim());
+
+async function testSiegerPult() {
+  console.log('\n— Siegerbild am Beamer —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+
+  /* Fünf Völker, damit es ein Podest UND Zeilen darunter gibt.
+     Die Völker sind wieder die HINTEREN (factions), sonst deckt
+     Slot = Volk den Fehler zu, der uns hierher gebracht hat. */
+  let correct = true;
+  let sieger = 1;
+  const teams = [
+    { i: 0, tiles: 3, ruins: 1, score: 4, people: 2, correct: 11 },
+    { i: 1, tiles: 8, ruins: 2, score: 10, people: 2, correct: 20 },
+    { i: 2, tiles: 5, ruins: 0, score: 5, people: 2, correct: 9  },
+    { i: 3, tiles: 0, ruins: 0, score: 0, people: 2, correct: 3  },
+    { i: 4, tiles: 0, ruins: 0, score: 0, people: 2, correct: 1  }
+  ];
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'presenter',
+    actions: {
+      role: 'presenter',
+      call: (fn, args) => {
+        if (fn === 'wi_hard_words') return Promise.resolve({ ok: true, scope: 'round', words: [] });
+        if (fn !== 'wi_room_get') return Promise.resolve({ ok: true });
+        /* ⚠️ Die Karte MUSS mitkommen, sobald sie erfragt wird. Ohne
+           sie sieht applyView einen neuen map_key ohne `map`, fordert
+           nach — und bekommt wieder keine: die Tafel bliebe leer, und
+           der Prüfstand meldete einen Fehler, der keiner ist. */
+        return Promise.resolve(pultView({
+          phase: 'ended', winner_team: sieger,
+          map_key: 'raum:ended', map: args && args.p_full ? MAP : null,
+          team_count: 5, factions: [2, 3, 4, 5, 7],
+          teams: teams.map(t => {
+            const c = Object.assign({}, t);
+            if (!correct) delete c.correct;
+            return c;
+          })
+        }));
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(80);
+
+  const end = root.querySelector('[data-part="end"]');
+  ok('Siegertafel offen', end.hidden === false);
+  /* Slot 1 ist bei factions [2,3,4,5,7] das Volk 3 — die Mal-Hasen.
+     Genau darum steht hier ein Name und keine Slot-Nummer: stünde in
+     der Überschrift „Brokkoli-Giraffen" (Volk 2, also Slot 0), wäre
+     die Übersetzung Slot → Volk wieder kaputt. */
+  ok('die Überschrift nennt das Siegervolk',
+     /Mal-Hasen/.test(root.querySelector('[data-part="winner"]').textContent),
+     root.querySelector('[data-part="winner"]').textContent.replace(/\s+/g, ' ').trim());
+  /* Slot 1 → Volk 3 (Mal-Hasen) ist Mehrzahl, Slot 4 → Volk 7
+     (Spuk-Einhorn) wäre Einzahl. Das Verb muss sich beugen. */
+  ok('und beugt das Verb in die Mehrzahl',
+     /gewinnen!/.test(root.querySelector('[data-part="winner"]').textContent));
+
+  ok('drei Karten auf dem Podest', root.querySelectorAll('.wi-pod').length === 3);
+  /* Sieger zuerst in der DOM — 2·1·3 macht erst tool.css daraus.
+     Slot 1 = Mal-Hasen (10 P.), Slot 2 = Kosmische Katzen (5 P.),
+     Slot 0 = Brokkoli-Giraffen (4 P.). */
+  ok('und zwar in der Vorlese-Reihenfolge 1·2·3',
+     js(podNamen(root)) === js(['Mal-Hasen', 'Kosmische Katzen', 'Brokkoli-Giraffen']),
+     podNamen(root).join(' · '));
+  ok('der Sieger trägt Gold',
+     root.querySelector('.wi-pod--1 .wi-podmedal').textContent.trim() === '🥇');
+  ok('die Punkte stehen auf der Karte',
+     /10/.test(root.querySelector('.wi-pod--1 .wi-podscore').textContent),
+     root.querySelector('.wi-pod--1 .wi-podscore').textContent.trim());
+  ok('darunter Felder, Ruinen und richtige Wörter',
+     /8 Felder/.test(root.querySelector('.wi-pod--1 .wi-podsub').textContent) &&
+     /2 aus Ruinen/.test(root.querySelector('.wi-pod--1 .wi-podsub').textContent) &&
+     /20 richtig/.test(root.querySelector('.wi-pod--1 .wi-podsub').textContent),
+     root.querySelector('.wi-pod--1 .wi-podsub').textContent.replace(/\s+/g, ' ').trim());
+
+  const rest = root.querySelector('[data-part="end-rest"]');
+  ok('ab Platz 4 stehen Zeilen', rest.hidden === false &&
+     rest.querySelectorAll('.wi-erow').length === 2);
+  /* Slot 3 und 4 stehen beide auf 0 Punkten — den Stichentscheid
+     macht `correct` (3 gegen 1), also bleibt die Reihenfolge, aber
+     die PLÄTZE sind verschieden. Wären auch die gleich, müsste
+     zweimal dieselbe Zahl dastehen. */
+  ok('und tragen verschiedene Plätze, weil correct entscheidet',
+     js([...rest.querySelectorAll('.wi-eplace')].map(e => e.textContent.trim())) === js(['4.', '5.']),
+     [...rest.querySelectorAll('.wi-eplace')].map(e => e.textContent.trim()).join(' '));
+
+  /* ── Der Sieger kommt vom Server ───────────────────────────── */
+  sieger = 2;            // nach Punkten wäre das nur der Zweite
+  await tool.update();
+  await wait(60);
+  ok('ein vom Server gesetzter Sieger steht vorn, auch gegen die Punkte',
+     podNamen(root)[0] === 'Kosmische Katzen' &&
+     /Kosmische Katzen/.test(root.querySelector('[data-part="winner"]').textContent),
+     podNamen(root).join(' · '));
+  ok('und die Karte dahinter ist die punktstärkste',
+     podNamen(root)[1] === 'Mal-Hasen', podNamen(root).join(' · '));
+
+  /* ── Ohne 0158 fehlt `correct` ─────────────────────────────── */
+  correct = false; sieger = 1;
+  await tool.update();
+  await wait(60);
+  const sub = root.querySelector('.wi-pod--1 .wi-podsub').textContent;
+  ok('ohne 0158 fehlt die Wortzahl, statt „0 richtig" zu behaupten',
+     !/richtig/.test(sub) && /8 Felder/.test(sub), sub.replace(/\s+/g, ' ').trim());
+
+  tool.unmount();
+}
+
+async function testSiegerTablet() {
+  console.log('\n— Siegerbild am Tablet —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+
+  let meinVolk = 2;          // Slot 2 → nicht der Sieger
+  let richtig = 14, falsch = 5;
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'participant',
+    actions: {
+      role: 'participant',
+      call: (fn, args) => {
+        if (fn !== 'wi_view') return Promise.resolve({ ok: true });
+        return Promise.resolve(viewFor({
+          phase: 'ended', winner_team: 0,
+          team_count: 4, factions: [2, 3, 4, 5],
+          map_key: 'raum:ended', map: args && args.p_full ? MAP : null,
+          teams: [{ i: 0, tiles: 9, ruins: 1, score: 10, people: 2, correct: 21 },
+                  { i: 1, tiles: 6, ruins: 0, score: 6,  people: 2, correct: 15 },
+                  { i: 2, tiles: 4, ruins: 1, score: 5,  people: 2, correct: 12 },
+                  { i: 3, tiles: 1, ruins: 0, score: 1,  people: 2, correct: 4  }]
+        }, { team: meinVolk, correct: richtig, wrong: falsch }));
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(80);
+
+  ok('Siegertafel offen',   root.querySelector('[data-part="tend"]').hidden === false);
+  ok('Wartetafel zu',       root.querySelector('[data-part="tlobby"]').hidden === true);
+  ok('Spieltafel zu',       root.querySelector('[data-part="tplay"]').hidden === true);
+  ok('die Überschrift nennt das Siegervolk',
+     /Brokkoli-Giraffen/.test(root.querySelector('[data-part="twinner"]').textContent),
+     root.querySelector('[data-part="twinner"]').textContent.replace(/\s+/g, ' ').trim());
+
+  /* Zwei Karten: der Sieger und das eigene Volk — die anderen zwei
+     fehlen mit Absicht. */
+  ok('zwei Karten: Sieger und eigenes Volk',
+     js(podNamen(root)) === js(['Brokkoli-Giraffen', 'Kosmische Katzen']),
+     podNamen(root).join(' · '));
+  ok('die eigene Karte ist als solche gezeichnet',
+     !!root.querySelector('.wi-pod--mine') &&
+     /Kosmische Katzen/.test(root.querySelector('.wi-pod--mine').textContent));
+  ok('der eigene Platz steht als Satz da',
+     /Ihr seid/.test(root.querySelector('[data-part="tplace"]').textContent) &&
+     /Dritte/.test(root.querySelector('[data-part="tplace"]').textContent),
+     root.querySelector('[data-part="tplace"]').textContent.trim());
+
+  /* ── Die eigene Wort-Bilanz (Sönkes Wunsch) ────────────────── */
+  const tally = root.querySelector('[data-part="tmine"]');
+  ok('die eigene Bilanz steht darunter', tally.hidden === false &&
+     /14/.test(tally.textContent) && /5/.test(tally.textContent),
+     tally.textContent.replace(/\s+/g, ' ').trim());
+
+  /* ── Üben nach der Runde ───────────────────────────────────── */
+  click(root.querySelector('[data-part="epractice"]'), document);
+  await wait(20);
+  ok('„üben" öffnet die Aufgabe', root.querySelector('[data-part="tplay"]').hidden === false);
+  ok('und räumt das Siegerbild weg', root.querySelector('[data-part="tend"]').hidden === true);
+  click(root.querySelector('[data-part="back"]'), document);
+  await wait(20);
+  ok('zurück führt aufs Siegerbild, nicht in die Lobby',
+     root.querySelector('[data-part="tend"]').hidden === false &&
+     root.querySelector('[data-part="tlobby"]').hidden === true);
+
+  /* ── Wer selbst gewonnen hat, sieht EINE Karte ─────────────── */
+  meinVolk = 0;
+  await tool.update();
+  await wait(60);
+  ok('im Siegervolk steht die eigene Karte nicht zweimal da',
+     root.querySelectorAll('.wi-pod').length === 1, podNamen(root).join(' · '));
+  ok('und der Satz feiert statt zu zählen',
+     /gewonnen/.test(root.querySelector('[data-part="tplace"]').textContent),
+     root.querySelector('[data-part="tplace"]').textContent.trim());
+
+  /* ── Wer kein Wort beantwortet hat, bekommt keine Bilanz ───── */
+  richtig = 0; falsch = 0;
+  await tool.update();
+  await wait(60);
+  ok('ohne eine einzige Antwort fehlt die Bilanz ganz',
+     root.querySelector('[data-part="tmine"]').hidden === true);
+
+  tool.unmount();
+}
+
 const BEREICHE = {
   raum: [testTablet, testAuswahlTakt, testTaktTabelle, testTabletLobby,
          testNewRound, testRelief, testPult, testPultUnits,
          testPultWoerter, testWoerterOhneMigration,
          testFehlendeMigration, testOhneMigration, testLobbyRegeln,
-         testStillgelegt],
+         testStillgelegt, testSiegerPult, testSiegerTablet],
+  sieger: [testSiegerPult, testSiegerTablet],
   insel: [testSolo, testInselWaechst, testSoloUeben, testSchluepfen,
           testStats, testPunkte, testSoloOhneMigration, testUnitLeiste,
           testUnitBaum, testTierTipp, testFunkelBild, testUnitsOhneMigration],

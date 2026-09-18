@@ -118,8 +118,8 @@
        im Raum gibt es kein eigenes Level, das gehört der Insel.
      · Ein TEAM ist sein SCHIFF (sprites/boot/<n>.png). Dort, wo
        eine Gruppe gemeint ist (Lobby-Spalte, Punktestand am
-       Beamer), steht das Schiff — es ist das Bild, mit dem die
-       Gruppe an der Insel ankommt.
+       Beamer, Podest-Karte am Rundenende), steht das Schiff — es
+       ist das Bild, mit dem die Gruppe an der Insel ankommt.
    Burgen und Gruppenbilder gibt es nicht mehr; das Wappenbild vom
    Landeplatz ist schon am 08.09.2026 zur Fahne geworden.
    Der Pfad ist absichtlich der volle ab MPSkills/: ein in tool.js
@@ -151,15 +151,21 @@
      bestehende Spiel um.                                          */
   const HELD_DIR = 'tools/wordisland/sprites/held/';
   const BOOT_DIR = 'tools/wordisland/sprites/boot/';
+  /* `viele` sagt, ob der Name eine Mehrzahl ist — „Toast-Ritter
+     GEWINNEN", aber „Spuk-Einhorn GEWINNT". Das braucht allein das
+     Siegerbild (18.09.2026) und es ist dasselbe Feld wie
+     FACTION_PLURAL in Kingdoms. Es steht hier und nicht in einer
+     zweiten Liste daneben, damit ein neues Volk seine Beugung nicht
+     vergessen kann. */
   const TEAMS = [
-    { name: 'Toast-Ritter',      color: '#ef4444' },
-    { name: 'Robo-Enten',        color: '#3b82f6' },
-    { name: 'Brokkoli-Giraffen', color: '#10b981' },
-    { name: 'Mal-Hasen',         color: '#f59e0b' },
-    { name: 'Kosmische Katzen',  color: '#a855f7' },
-    { name: 'Okto-Pferdchen',    color: '#06b6d4' },
-    { name: 'Wolken-Piraten',    color: '#f472b6' },
-    { name: 'Spuk-Einhorn',      color: '#d946ef' }
+    { name: 'Toast-Ritter',      color: '#ef4444', viele: true  },
+    { name: 'Robo-Enten',        color: '#3b82f6', viele: true  },
+    { name: 'Brokkoli-Giraffen', color: '#10b981', viele: true  },
+    { name: 'Mal-Hasen',         color: '#f59e0b', viele: true  },
+    { name: 'Kosmische Katzen',  color: '#a855f7', viele: true  },
+    { name: 'Okto-Pferdchen',    color: '#06b6d4', viele: true  },
+    { name: 'Wolken-Piraten',    color: '#f472b6', viele: true  },
+    { name: 'Spuk-Einhorn',      color: '#d946ef', viele: false }
   ];
   const TEAM_COUNT = TEAMS.length;
 
@@ -281,7 +287,7 @@
   let pickSel = [], pickBusy = 0;
 
   const esc = s => (ctx ? ctx.esc(s) : String(s == null ? '' : s));
-  const teamOf = s => TEAMS[facOf(s)] || { name: 'Volk ' + (s + 1), color: '#888' };
+  const teamOf = s => TEAMS[facOf(s)] || { name: 'Volk ' + (s + 1), color: '#888', viele: false };
 
   /* ══════════════════════════════════════════════════════════
      JAHRGANG → UNIT → STATION (Migration 0150)
@@ -2470,8 +2476,12 @@
      ══════════════════════════════════════════════════════════ */
   /* Die Karte eines Teams: Schiff, Name, Punktestand, darunter die
      Aufschlüsselung. Sie steht am Beamer in den beiden Spalten links
-     und rechts der Insel und in der Auswertung als Reihe — dieselbe
-     Auskunft, also dasselbe Stück.
+     und rechts der Insel, WÄHREND die Runde läuft.
+
+     Am Rundenende steht sie nicht mehr: dort sind es seit dem
+     18.09.2026 Podest-Karten (podCard), die dieselben Zahlen tragen
+     und zusätzlich den Platz. Die Reihe darunter (`teamRow`) ist
+     damit weggefallen.
 
      Das Bild ist das SCHIFF (Sönke, 14.09.2026: „bei den Teams die
      Schiffe"). Es passt auch der Sache nach: was hier steht, ist
@@ -2485,9 +2495,6 @@
               <span class="wi-score">${t.score}</span>
               <span class="wi-sub">${t.tiles} Felder · ${t.ruins} aus Ruinen · ${t.people} Kinder</span>
             </div>`;
-  }
-  function teamRow(v) {
-    return (v.teams || []).map(t => teamCard(t, v)).join('');
   }
 
   /* Eine Spalte je Volk: Schiff, Name mit Kopfzahl, darunter die
@@ -2516,6 +2523,121 @@
               </div>
               <ul class="wi-lteamlist">${list}</ul>
             </div>`;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     DAS SIEGERBILD  ·  für BEIDE Rollen dieselben Bausteine
+     ══════════════════════════════════════════════════════════
+     Sönke, 18.09.2026: „wir brauchen sowohl am Tablet als auch am
+     Beamer ein richtig guten Siegerscreen (analog zu Mathoria)."
+
+     Vorher stand am Pult eine Zeile (Bild, Name, Punkte) und am
+     TABLET gar nichts: dort fiel die beendete Runde in die
+     Wartetafel zurück („Runde vorbei — warten auf die nächste …").
+     Das Kind erfuhr nicht einmal, wer gewonnen hatte.
+
+     Jetzt wie in Kingdoms (endRows/podCardHTML/endRowHTML): der
+     Beamer zeigt alle Völker — die ersten drei auf dem Podest, den
+     Rest als schmale Zeilen —, das Tablet nur zwei davon, den Sieger
+     und das eigene Volk. Die Karte, der Platz und die Zahlen sind in
+     beiden Fällen dasselbe Stück HTML: was an der Wand steht, soll
+     das Kind auf seinem Gerät wiedererkennen.
+
+     ⚠️ Der SIEGER wird hier NICHT ausgerechnet. Welches Volk
+     gewonnen hat, sagt der Server (`winner_team`, bei Gleichstand
+     per Los in wi_maybe_advance). Eine zweite Rechnung im Gerät
+     könnte der eigenen Überschrift widersprechen — sortiert wird
+     deshalb um den gesetzten Sieger HERUM.                        */
+
+  /* Mehrzahl, weil „ihr" eine Gruppe ist: „Ihr seid Dritte." */
+  const ORDINAL = ['', 'Erste', 'Zweite', 'Dritte', 'Vierte',
+                   'Fünfte', 'Sechste', 'Siebte', 'Achte'];
+  const MEDAILLE = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+  const feldWort = n => (n === 1 ? 'Feld' : 'Felder');
+
+  /* Die Rangliste am Rundenende. Sie sortiert nach PUNKTEN (Felder +
+     Ruinenwert) — das ist die Zahl, die das Spiel entscheidet und die
+     während der Runde schon in jeder Team-Karte steht. Stichentscheid
+     sind die richtig beantworteten Wörter (`correct`, Migration
+     0158): zwei Völker mit gleich vielen Feldern haben nicht gleich
+     viel dafür getan.
+
+     Geteilte Plätze ab Rang 2 (4·4·6 statt 4·5·6). Das trifft vor
+     allem Völker, die bei null Punkten stehen — eine erfundene
+     Reihenfolge unter ihnen wäre nichts als die Slot-Nummer, groß an
+     die Wand geworfen. Platz 1 teilt niemand: es gibt genau einen
+     Sieger, und den hat der Server bestimmt. */
+  function endRows(v) {
+    const sieger = v.winner_team;
+    const rows = (v.teams || []).map(t => ({
+      slot:    t.i,
+      score:   t.score   | 0,
+      tiles:   t.tiles   | 0,
+      ruins:   t.ruins   | 0,
+      // `correct` gibt es erst seit 0158. Ohne die Migration steht
+      // hier null — und dann fällt die Angabe ganz weg, statt ein
+      // falsches „0 richtig" zu behaupten.
+      correct: (t.correct == null ? null : t.correct | 0)
+    }));
+    rows.sort((a, b) => {
+      if (a.slot === sieger) return -1;
+      if (b.slot === sieger) return 1;
+      return (b.score - a.score)
+          || ((b.correct || 0) - (a.correct || 0))
+          || (a.slot - b.slot);
+    });
+    rows.forEach((r, i) => {
+      const vor = rows[i - 1];
+      r.platz = (i > 1 && vor.score === r.score && vor.correct === r.correct)
+        ? vor.platz : i + 1;
+    });
+    return rows;
+  }
+
+  /* Eine Podest-Karte: Schiff, Name, darunter Medaille, Punkte und
+     die Aufschlüsselung. `cls` bestimmt allein Größe und Platz in der
+     Reihe (tool.css) — der Inhalt ist überall derselbe.
+
+     Das Bild ist das SCHIFF und nicht die Crew: hier steht nicht das
+     Volk, sondern was die GRUPPE erobert hat (14.09.2026, dieselbe
+     Entscheidung wie in teamCard). */
+  function podCard(r, cls) {
+    const T = teamOf(r.slot);
+    return `<div class="wi-pod ${cls}" style="--wi-team:${T.color}">
+              <div class="wi-podmedal">${MEDAILLE[r.platz] || r.platz}</div>
+              <div class="wi-podpic"><img src="${esc(slotShip(r.slot))}" alt=""></div>
+              <div class="wi-podname">${esc(T.name)}</div>
+              <div class="wi-podfoot">
+                <span class="wi-podplace">Platz ${r.platz}</span>
+                <span class="wi-podscore"><b>${r.score}</b> Punkte</span>
+                <span class="wi-podsub">${r.tiles} ${feldWort(r.tiles)}${
+                  r.ruins ? ` · ${r.ruins} aus Ruinen` : ''}${
+                  r.correct == null ? '' : ` · ${r.correct} richtig`}</span>
+              </div>
+            </div>`;
+  }
+
+  /* Ab Platz 4: eine schmale Zeile statt einer Karte. Dieselben
+     Angaben, nur nebeneinander gelegt. */
+  function endRow(r) {
+    const T = teamOf(r.slot);
+    return `<div class="wi-erow" style="--wi-team:${T.color}">
+              <span class="wi-eplace">${r.platz}.</span>
+              <span class="wi-ethumb"><img src="${esc(slotShip(r.slot))}" alt=""></span>
+              <span class="wi-ename">${esc(T.name)}</span>
+              <span class="wi-enums">
+                <span class="wi-escore"><b>${r.score}</b> Punkte</span>
+                <span class="wi-esub">${r.tiles} ${feldWort(r.tiles)}${
+                  r.correct == null ? '' : ` · ${r.correct} richtig`}</span>
+              </span>
+            </div>`;
+  }
+
+  function endTitel(slot) {
+    const T = teamOf(slot);
+    return `<span class="wi-endname">${esc(T.name)}</span> ` +
+           `<span class="wi-endverb">${T.viele ? 'gewinnen' : 'gewinnt'}!</span>`;
   }
 
   function fmtLeft(iso) {
@@ -2638,9 +2760,15 @@
         <div class="wi-big" data-part="big" hidden></div>
       </section>
 
+      <!-- Das Siegerbild (18.09.2026). Die Podest-Karten stehen in
+           der DOM in der Reihenfolge 1·2·3 und werden erst von
+           tool.css auf 2·1·3 umgestellt — wer die Seite vorlesen
+           lässt, hört den Sieger zuerst und nicht den Zweiten.
+           Dieselbe Entscheidung wie bei .cm-podium in Kingdoms. -->
       <section class="wi-end" data-part="end" hidden>
-        <h2 data-part="winner"></h2>
-        <div class="wi-teams" data-part="end-teams"></div>
+        <h2 class="wi-endtitle" data-part="winner"></h2>
+        <div class="wi-podium" data-part="podium"></div>
+        <div class="wi-erows" data-part="end-rest" hidden></div>
         <div class="wi-card wi-hard">
           <h3>Diese Wörter sind der Klasse am häufigsten durchgegangen</h3>
           <div data-part="hard"></div>
@@ -2719,7 +2847,7 @@
       beam: q('beam'), rostLeft: q('rost-left'), rostRight: q('rost-right'),
       clock: q('clock'), big: q('big'),
       map: q('map'), mapwrap: q('mapwrap'),
-      winner: q('winner'), endTeams: q('end-teams'), hard: q('hard'),
+      winner: q('winner'), podium: q('podium'), endRest: q('end-rest'), hard: q('hard'),
       rulWrap: q('rulwrap')
     };
     els.rulWrap.innerHTML = rulesHTML();
@@ -3401,12 +3529,7 @@
     }
 
     if (ended) {
-      const win = (v.teams || []).find(t => t.i === v.winner_team);
-      els.winner.innerHTML = win
-        ? `<img src="${esc(slotBild(win.i))}" alt="">
-           ${esc(teamOf(win.i).name)} — ${win.score} Punkte`
-        : 'Runde beendet.';
-      els.endTeams.innerHTML = teamRow(v);
+      renderEndPult(v);
       loadHard();
       return;
     }
@@ -3477,6 +3600,36 @@
     if (h > 0) els.beam.style.height = Math.round(h) + 'px';
   }
 
+  /* Das Siegerbild am Beamer: alle Völker, die ersten drei auf dem
+     Podest, der Rest als Zeilen darunter. Die ganze Tafel nimmt einen
+     Hauch der Siegerfarbe an (--wi-win) — dezent, weil die Karten
+     darauf schon farbig genug sind. */
+  function renderEndPult(v) {
+    const rows = endRows(v);
+    if (!rows.length) {
+      // Eine Runde ohne Völker gibt es nicht — außer der Server
+      // antwortet gerade unvollständig. Dann lieber ein ehrlicher
+      // Satz als ein leeres Podest.
+      els.winner.textContent = 'Runde beendet.';
+      els.podium.innerHTML = '';
+      els.endRest.hidden = true;
+      return;
+    }
+    const win = rows[0];
+    els.end.style.setProperty('--wi-win', teamOf(win.slot).color);
+    els.winner.innerHTML = endTitel(win.slot);
+
+    const oben = rows.slice(0, 3);
+    els.podium.innerHTML = oben.map((r, i) => podCard(r, 'wi-pod--' + (i + 1))).join('');
+    // Zwei Völker sind kein Podest: ohne dritte Stufe stünde der
+    // Sieger sonst rechts außen statt in der Mitte.
+    els.podium.classList.toggle('wi-podium--duo', oben.length < 3);
+
+    const rest = rows.slice(3);
+    els.endRest.innerHTML = rest.map(endRow).join('');
+    els.endRest.hidden = !rest.length;
+  }
+
   /* Seit Migration 0153 zählt der Server die Strichliste DIESER Runde
      (wi_round_words) statt der Karteikasten-Summe des ganzen Raums.
      Der Unterschied ist nicht kosmetisch: ein Raum lebt 60 Tage, und
@@ -3528,6 +3681,29 @@
         <div class="wi-rulwrap" data-part="rulwrap"></div>
         <p class="wi-hint" data-part="onlinehint" hidden></p>
         <button type="button" class="wi-btn wi-btn--ghost" data-part="practice">Bis dahin üben</button>
+      </section>
+
+      <!-- ── Das Siegerbild am Tablet (18.09.2026) ───────────────
+           Bis dahin fiel die beendete Runde hier in die Wartetafel
+           zurück: „Runde vorbei — warten auf die nächste …", und das
+           war alles. Wer gewonnen hatte, stand nur am Beamer.
+
+           Jetzt derselbe Aufbau wie dort, nur auf zwei Karten
+           eingedampft: der Sieger und das EIGENE Volk. Die anderen
+           fehlen mit Absicht — am Tablet zählt, wie die eigene
+           Gruppe abgeschnitten hat, und die ganze Rangliste steht
+           zwei Meter weiter an der Wand.
+
+           Der Üben-Knopf steht auch hier: nach der Runde ist die
+           Insel offen, und das ist genau der Moment, in dem ein Kind
+           weitermachen darf. -->
+      <section class="wi-pane wi-pane--end" data-part="tend" hidden>
+        <h2 class="wi-endtitle" data-part="twinner"></h2>
+        <div class="wi-podium wi-podium--tab" data-part="tpodium"></div>
+        <p class="wi-endplace" data-part="tplace" hidden></p>
+        <div class="wi-mytally" data-part="tmine" hidden></div>
+        <p class="wi-hint">Gleich geht es weiter — die Lehrkraft macht die nächste Runde klar.</p>
+        <button type="button" class="wi-btn wi-btn--ghost" data-part="epractice">Bis dahin üben</button>
       </section>
 
       <section class="wi-pane wi-pane--count" data-part="tcount" hidden>
@@ -3663,6 +3839,8 @@
     root.innerHTML = TAB_HTML;
     els = {
       tlobby: q('tlobby'), tcount: q('tcount'), tplay: q('tplay'),
+      tend: q('tend'), tWinner: q('twinner'), tPodium: q('tpodium'),
+      tPlace: q('tplace'), tMine: q('tmine'),
       waitText: q('waittext'), myTeam: q('myteam'),
       othersBox: q('othersbox'), others: q('others'), onlineHint: q('onlinehint'),
       big: q('big'), back: q('back'),
@@ -3686,7 +3864,10 @@
       const b = e.target.closest('button');
       if (b) send(b.dataset.v);
     });
-    q('practice').addEventListener('click', () => { practice = true; if (view) renderTab(view); });
+    // Zwei Knöpfe, ein Verhalten: vor der Runde (Wartetafel) und
+    // nach ihr (Siegerbild) führt „üben" an dieselbe Stelle.
+    [q('practice'), q('epractice')].forEach(b =>
+      b.addEventListener('click', () => { practice = true; if (view) renderTab(view); }));
     els.back.addEventListener('click', () => { practice = false; if (view) renderTab(view); });
     els.map.addEventListener('click', onMapClick);
     /* Zwei Hüllen, ein SVG: die Geste gehört dem Kasten, in dem die
@@ -4108,9 +4289,10 @@
   function renderTabLobby(v) {
     const myTeam = v.me.team;
     const mine = (v.teams || []).find(t => t.i === myTeam);
-    els.waitText.textContent = (v.phase === 'ended')
-      ? 'Runde vorbei — warten auf die nächste …'
-      : 'Warten auf den Spielstart …';
+    /* Seit dem 18.09.2026 kommt die beendete Runde hier nicht mehr an
+       — sie hat ihre eigene Tafel (renderTabEnd). Die Wartetafel ist
+       damit wieder das, was ihr Name sagt: die Zeit VOR dem Start. */
+    els.waitText.textContent = 'Warten auf den Spielstart …';
 
     // myTeam ist für den Aufrufer praktisch immer gesetzt (wer
     // wi_view aufruft, ist per Definition online) — die Prüfung ist
@@ -4139,6 +4321,56 @@
     els.rulWrap.hidden = (v.ruins == null);
   }
 
+  /* Das Siegerbild am Tablet: der Sieger groß, das eigene Volk
+     daneben (nur wenn es ein anderes ist — sonst stünde dasselbe Volk
+     zweimal da), darunter der eigene Platz als Satz und die eigene
+     Wort-Bilanz dieser Runde.
+
+     Die Bilanz ist Sönkes Wunsch vom 18.09.2026 und sie ist die
+     einzige Zahl hier, die NUR diesem Kind gehört: alles andere auf
+     der Tafel gilt für die ganze Gruppe. Sie kommt aus `me` und wird
+     nicht aus der Volkszahl heruntergerechnet.
+
+     Ohne eigenes Volk (wer erst nach dem Start dazukam) bleibt es
+     beim Sieger allein — eine Karte in der Farbe von „Volk NaN" wäre
+     schlimmer als eine Karte weniger. */
+  function renderTabEnd(v) {
+    const rows = endRows(v);
+    if (!rows.length) {
+      els.tWinner.textContent = 'Runde beendet.';
+      els.tPodium.innerHTML = '';
+      els.tPlace.hidden = true;
+      els.tMine.hidden = true;
+      return;
+    }
+    const win  = rows[0];
+    const mein = v.me.team;
+    const mine = (mein == null) ? null : rows.find(r => r.slot === mein);
+
+    els.tend.style.setProperty('--wi-win', teamOf(win.slot).color);
+    els.tWinner.innerHTML = endTitel(win.slot);
+    els.tPodium.innerHTML = podCard(win, 'wi-pod--1') +
+      ((mine && mine.slot !== win.slot) ? podCard(mine, 'wi-pod--mine') : '');
+
+    els.tPlace.innerHTML = !mine ? '' : (mine.slot === win.slot
+      ? 'Ihr habt gewonnen! 🎉'
+      : `Ihr seid <b>${ORDINAL[mine.platz] || (mine.platz + '.')}</b>.`);
+    els.tPlace.hidden = !mine;
+
+    /* Die eigene Strichliste. `wrong` sagt nichts Schlimmes — bei
+       Vokabeln ist eine falsche Antwort der Normalfall des Übens
+       (siehe Kopf von 0151) —, deshalb steht sie klein daneben und
+       nicht als Vorwurf. Wer kein einziges Wort beantwortet hat,
+       bekommt die Zeile gar nicht: „0 richtig, 0 daneben" ist keine
+       Bilanz, sondern eine leere Behauptung. */
+    const r = v.me.correct | 0, f = v.me.wrong | 0;
+    els.tMine.innerHTML = (r + f === 0) ? '' :
+      `<span class="wi-tallylab">Deine Wörter</span>
+       <span class="wi-tallyok"><b>${r}</b> richtig</span>
+       <span class="wi-tallyno"><b>${f}</b> daneben</span>`;
+    els.tMine.hidden = (r + f === 0);
+  }
+
   function renderTab(v) {
     const arena = (v.phase === 'running');
     const count = (v.phase === 'countdown');
@@ -4153,11 +4385,22 @@
       soloClaimAt = 0;
     }
 
+    /* Vier Tafeln statt drei (18.09.2026): das Rundenende hat seine
+       eigene. Vorher fiel es in die Wartetafel — dieselbe Ansicht wie
+       VOR dem Spiel, nur mit einem anderen Satz darüber.
+
+       Das Üben sticht auch hier: wer nach der Runde weiterübt, sieht
+       seine Aufgabe und nicht das Podest. Der Zurück-Knopf bringt ihn
+       aufs Siegerbild, nicht in die Lobby. */
+    const ended   = (v.phase === 'ended');
     const showPlay = arena || (!count && practice);
-    els.tlobby.hidden = arena || count || practice;
+    const showEnd  = ended && !showPlay && !count;
+    els.tlobby.hidden = arena || count || practice || ended;
+    els.tend.hidden   = !showEnd;
     els.tcount.hidden = !count;
     els.tplay.hidden  = !showPlay;
     if (count) return;          // fünf Sekunden nur die Zahl
+    if (showEnd)   { renderTabEnd(v); return; }
     if (!showPlay) { renderTabLobby(v); return; }
 
     const T = teamOf(v.me.team);
