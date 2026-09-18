@@ -81,15 +81,23 @@ async function loadSchools() {
 // die Liste ist ein Netzaufruf, und solange der Zugang zugeklappt
 // ist, braucht ihn niemand.
 let schoolsFilled = false;
+// MPS ist die Heimatschule und steht vorne — die Liste kommt nach Namen
+// sortiert, da gewinnt sonst „Hogwarts" das Alphabet. `selected` als
+// Attribut UND .value, damit ein späteres Zurücksetzen des Formulars
+// nicht wieder auf die erste Option fällt.
+const DEFAULT_SCHOOL_SLUG = 'mps';
 async function fillSchoolSelects() {
   if (schoolsFilled) return;
   const schools = await loadSchools();
+  const hasDefault = schools.some(s => s.slug === DEFAULT_SCHOOL_SLUG);
   const html = schools
-    .map(s => `<option value="${esc(s.slug)}">${esc(s.name)}</option>`)
+    .map(s => `<option value="${esc(s.slug)}"${s.slug === DEFAULT_SCHOOL_SLUG ? ' selected' : ''}>${esc(s.name)}</option>`)
     .join('');
   for (const id of ['loginSchool', 'regSchool']) {
     const el = document.getElementById(id);
-    if (el) el.innerHTML = html;
+    if (!el) continue;
+    el.innerHTML = html;
+    if (hasDefault) el.value = DEFAULT_SCHOOL_SLUG;
   }
   schoolsFilled = true;
 }

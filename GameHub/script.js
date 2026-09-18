@@ -1679,7 +1679,7 @@ const SHOP_ITEMS_P3 = [
   { id: 'resetKarte',        icon: '🔄', name: 'Reset-Karte',       description: 'Alle Kacheln geben beim nächsten Spielen wieder den täglichen +20-Bonbon-Bonus.', price: 250, consumable: true, bonbonItem: true, bonbonMilestone: 75 },
   // Team-Joker (Migration 0047) — bewusst NICHT in loadShopData-Whitelist,
   // Bestand kommt aus window.__clusterJokerStatus (Server-Aggregat).
-  { id: 'jokerGemeinsam', icon: '🃏', name: 'Joker: gemeinsam gewinnen', description: 'Ein Monster weniger nötig für „Gemeinsam siegen". Maximal 2 pro Kurs.', price: 400, consumable: true, clusterScoped: true, bonbonMilestone: 100, hiddenUntilUnlocked: true },
+  { id: 'jokerGemeinsam', icon: '🃏', name: 'Joker: gemeinsam gewinnen', description: 'Ein Monster weniger nötig für \u201eGemeinsam siegen\u201c. Maximal 5 pro Kurs.', price: 400, consumable: true, clusterScoped: true, bonbonMilestone: 100, hiddenUntilUnlocked: true },
 ];
 
 function openShopModal() {
@@ -1913,7 +1913,7 @@ function _buildStandardShopItemElement(item, shopData, allData, available, s2Ope
   const giftCapReached = item.giftItem && giftsCount >= (item.cap || 5);
   // Migration 0047: Cluster-Joker — Bestand + Cap kommen aus Server-Aggregat.
   const clusterUsed     = item.clusterScoped ? (window.__clusterJokerStatus?.used ?? 0) : 0;
-  const clusterCap      = item.clusterScoped ? (window.__clusterJokerStatus?.cap ?? 2) : 0;
+  const clusterCap      = item.clusterScoped ? (window.__clusterJokerStatus?.cap ?? 5) : 0;
   const clusterSoldOut  = item.clusterScoped && clusterUsed >= clusterCap;
   const winTaskDone     = item.clusterScoped && window.__winTaskReady === true;
   const btnDisabled = soldOut || isActive || !canAfford || !hasMaxedCreature || giftCapReached || clusterSoldOut || winTaskDone;

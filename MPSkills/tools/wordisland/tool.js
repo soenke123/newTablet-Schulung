@@ -261,6 +261,7 @@
   let markPaint = null;     // malt die erreichbaren Felder (freie Wahl)
   let practice = false;     // Tablet: üben statt warten
   let lastPhase = null;
+  let lastSetsChangedAt = null; // 0157: zuletzt gesehener sets_changed_at-Wert
 
   /* ─── Slot → Volk (Migration 0133) ──────────────────────────
      `factions` ist die Übersetzungstabelle des Servers:
@@ -4145,6 +4146,13 @@
     // soll die Klasse wieder auf dieselbe Tafel sehen.
     if (v.phase !== lastPhase) { practice = false; lastPhase = v.phase; }
 
+    // 0157: Lehrkraft hat ihre Units geändert → sofort wi_solo_claim auslösen.
+    // sets_changed_at kommt nur dann, wenn 0157 eingespielt ist.
+    if (v.sets_changed_at && v.sets_changed_at !== lastSetsChangedAt) {
+      lastSetsChangedAt = v.sets_changed_at;
+      soloClaimAt = 0;
+    }
+
     const showPlay = arena || (!count && practice);
     els.tlobby.hidden = arena || count || practice;
     els.tcount.hidden = !count;
@@ -4393,6 +4401,22 @@
            — dort führt das Konto zur Insel, und rememberSolo legt
            dann bewusst nichts ab. */
         if (r.token) window.MPRoom.rememberSolo(r.token);
+
+        /* 0157: Benachrichtigung über neu hinzugefügte Stationen.
+           Nur im Wartebereich (Lobby/ended), nicht während einer
+           laufenden Runde oder im Countdown — dort hat das Kind
+           Wichtigeres zu tun. */
+        const newSets = Array.isArray(r.new_sets) ? r.new_sets : [];
+        if (newSets.length > 0 && view &&
+            view.phase !== 'running' && view.phase !== 'countdown') {
+          const namen = newSets.map(s =>
+            s.unit ? `${s.unit} – ${s.station}` : s.station
+          );
+          const auflistung = namen.length <= 3
+            ? namen.join(', ')
+            : namen.slice(0, 2).join(', ') + ` & ${namen.length - 2} weitere`;
+          flash('🏝 Neue Vokabeln auf deiner Insel', auflistung);
+        }
       })
       .catch(e => console.warn('[wordisland] Insel-Haken:', e.message));
   }

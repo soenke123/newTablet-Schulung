@@ -1295,10 +1295,19 @@
       return _schoolsCache;
     }
 
+    // MPS ist die Heimatschule — sie steht vorne, auch wenn die Liste
+    // nach Namen sortiert kommt (sonst gewinnt „Hogwarts" das Alphabet).
+    // `selected` als Attribut, nicht nur .value: registerForm.reset()
+    // fällt sonst wieder auf die erste Option zurück.
+    const DEFAULT_SCHOOL_SLUG = 'mps';
     async function fillSchoolSelect(selectEl) {
       const schools = await loadSchools();
-      const list = schools.length ? schools : [{ slug: 'mps', name: 'MPS' }];
-      selectEl.innerHTML = list.map(s => `<option value="${s.slug}">${s.name}</option>`).join('');
+      const list = schools.length ? schools : [{ slug: DEFAULT_SCHOOL_SLUG, name: 'MPS' }];
+      const hasDefault = list.some(s => s.slug === DEFAULT_SCHOOL_SLUG);
+      selectEl.innerHTML = list.map(s =>
+        `<option value="${s.slug}"${s.slug === DEFAULT_SCHOOL_SLUG ? ' selected' : ''}>${s.name}</option>`
+      ).join('');
+      if (hasDefault) selectEl.value = DEFAULT_SCHOOL_SLUG;
     }
 
     function openLoginModal() {
