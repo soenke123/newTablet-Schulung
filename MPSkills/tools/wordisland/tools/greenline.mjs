@@ -1,22 +1,26 @@
 /* ══════════════════════════════════════════════════════════════
    MPSkills — Lehrwerksliste → Wordisland
    ══════════════════════════════════════════════════════════════
-   Macht aus einer Klett-Vokabelliste (PDF, „Green Line 2021")
-   zwei Dateien:
+   Macht aus einer Klett-Vokabelliste (PDF, „Green Line 2021") eine
+   Migration und eine Kontrolldatei:
 
-     <Name>_kontrolle.tsv   zum Drüberlesen, eine Zeile je Wort
-     <Name>_einspielen.sql  zum Einfügen im Supabase-Dashboard
+     supabase/migrations/NNNN_vocab_greenline_<J>.sql
+     <Ordner des PDF>/Klasse<J>_kontrolle.tsv   zum Drüberlesen
 
    Aufruf:
      node MPSkills/tools/wordisland/tools/greenline.mjs \
-          "…/Vokabelliste_Klasse 5.pdf" --jahrgang 5 --konto soenke
+          "…/Vokabelliste_Klasse 5.pdf" --jahrgang 5
 
-   ⚠️ DER INHALT GEHÖRT NICHT INS REPO. Eine Wortliste ist als
-   Sammlung geschützt (dieselbe Überlegung wie in Migration 0130:
-   mitgeliefert wird nur, was selbst zusammengestellt ist). Deshalb
-   steht hier die REGEL und nicht das Ergebnis — und deshalb
-   schreibt das Werkzeug seine Dateien neben das PDF, in einen
-   Ordner, den .gitignore aussperrt.
+   Läuft er ein zweites Mal für denselben Jahrgang, schreibt er
+   DIESELBE Migration neu — und nicht die nächste Nummer.
+
+   ⚠️ Das PDF selbst bleibt draußen: `.gitignore` sperrt den Ordner
+   mit den Verlagslisten aus, im Repo stehen nur die daraus
+   gewonnenen Wortpaare. Dass der Bestand als Migration mitgeliefert
+   wird, ist Sönkes Entscheid vom 20.09.2026 („ich migriere das
+   gerne … das soll ganz allgemein drin sein") und weicht bewusst von
+   der Notiz in 0130 ab, die Lehrwerksinhalt beim Import der
+   Lehrkraft sah.
 
    ── Warum überhaupt ein Werkzeug ───────────────────────────────
    914 Wortpaare von Hand zu übertragen ist keine Frage von Fleiß,
@@ -31,6 +35,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 
@@ -406,98 +411,117 @@ function nummer(schluessel) {
 const q = s => `'` + String(s).replace(/'/g, `''`) + `'`;
 const arr = liste => liste.length ? `array[${liste.map(q).join(', ')}]::text[]` : `'{}'::text[]`;
 
-/* Die Besitzerfrage, einmal formuliert. Steht in drei Anweisungen
-   und liest beide Male dieselbe Sitzungseinstellung von ganz oben. */
-const LOOKUP =
-  `(select p.id, p.school_id from profiles p join schools s on s.id = p.school_id
-     where lower(p.account_name) = lower(current_setting('wordisland.konto'))
-       and (current_setting('wordisland.schule') = ''
-            or lower(s.slug) = lower(current_setting('wordisland.schule'))))`;
+/* Der Bestand ist MITGELIEFERT: owner_id und school_id bleiben null,
+   wie bei den drei Beispiellisten aus 0130. Das ist die Form, die es
+   ohne jede Zuordnung gibt — kein Konto, an dem sie hängt, keine
+   Schule, die sie besitzt, und nichts, was beim Löschen eines
+   Profils mitginge (Sönke, 20.09.2026: „das soll ganz allgemein
+   drin sein").
 
-function sql(units, jahrgang, konto, schule) {
+   Herauskommt eine MIGRATION und kein Skript zum Einfügen: sie soll
+   bei jedem Aufsetzen der Datenbank mitlaufen, an derselben Stelle
+   wie die Beispielvokabeln. */
+function migration(units, jahrgang, nummerText) {
   const insel = `en:${jahrgang}`;
   const zeilen = [];
   const P = s => zeilen.push(s);
+  const wörter = units.reduce((n, u) => n + u.stationen.reduce((m, s) => m + s.woerter.size, 0), 0);
+  const stationen = units.reduce((n, u) => n + u.stationen.length, 0);
 
   P(`-- ══════════════════════════════════════════════════════════════`);
-  P(`-- ${BUCH[jahrgang].titel} · Jahrgang ${jahrgang} → Myth of Wordisland`);
-  P(`-- Erzeugt von MPSkills/tools/wordisland/tools/greenline.mjs`);
+  P(`-- Migration ${nummerText} — ${BUCH[jahrgang].titel}, Jahrgang ${jahrgang}`);
+  P(`-- ══════════════════════════════════════════════════════════════`);
+  P(`-- ${wörter} Wortpaare in ${stationen} Stationen unter ${units.length} Kapiteln.`);
   P(`--`);
-  P(`-- Im Supabase-Dashboard einfügen und ausführen. Läuft mehrfach:`);
-  P(`-- Nummern sind aus dem Inhalt gerechnet, jeder weitere Lauf`);
-  P(`-- aktualisiert dieselben Zeilen und legt keine Kopien an.`);
+  P(`-- ⚠️ ERZEUGT — nicht von Hand ändern. Die Quelle ist die`);
+  P(`-- Vokabelliste des Verlags (PDF), die Regel steht in`);
+  P(`-- MPSkills/tools/wordisland/tools/greenline.mjs:`);
   P(`--`);
-  P(`-- Setzt Migration 0159 voraus (Spalte \`shared\`).`);
+  P(`--   node MPSkills/tools/wordisland/tools/greenline.mjs \\`);
+  P(`--        "…/Vokabelliste_Klasse ${jahrgang}.pdf" --jahrgang ${jahrgang}`);
+  P(`--`);
+  P(`-- Was dort passiert, in einem Satz: der Verlag trennt`);
+  P(`-- Bedeutungen mit „;" und benutzt „/" INNERHALB von Wörtern`);
+  P(`-- („Freund/-in"), Wordisland macht es andersherum — die`);
+  P(`-- Umrechnung steht an EINER Stelle und nicht ${wörter}-mal hier.`);
+  P(`--`);
+  P(`-- ── Mitgeliefert ──────────────────────────────────────────────`);
+  P(`-- owner_id und school_id bleiben null: der Bestand gehört`);
+  P(`-- niemandem und ist für jede Lehrkraft da, genau wie die drei`);
+  P(`-- Beispiellisten aus 0130.`);
+  P(`--`);
+  P(`-- ── Die Kürzel des Buchs ──────────────────────────────────────`);
+  P(`-- Spalte „Lektion" im PDF sind zwei Spalten: Kapitel und`);
+  P(`-- Abschnitt. Sie werden hier zu Unit und Station —`);
+  P(`-- CI Check-in · S1–S3 Station 1–3 · ST Story · UT Unit task ·`);
+  P(`-- CO Check-out. Kapitel ohne Abschnitte (Media smart, Across`);
+  P(`-- cultures, Trailer) sind eine Unit am Stück (0150).`);
+  P(`--`);
+  P(`-- ── Feste Nummern ─────────────────────────────────────────────`);
+  P(`-- Aus dem Inhalt gerechnet und nicht gewürfelt. Ein zweiter Lauf`);
+  P(`-- der Migration trifft damit dieselben Zeilen (\`on conflict do`);
+  P(`-- update\`) — und der Lernstand jedes Kindes bleibt stehen, auch`);
+  P(`-- wenn eine Korrektur nachgeschoben wird.`);
+  P(`--`);
+  P(`-- Setzt 0159 voraus: „Ich bin aus …" gilt dort mit und ohne`);
+  P(`-- Punkte, „skates (pl)" auch als „skates".`);
+  P(`--`);
+  P(`-- Kein DROP — Idempotenz per \`on conflict\`.`);
   P(`-- ══════════════════════════════════════════════════════════════`);
   P(``);
-  P(`-- ── EINE Stelle zum Eintragen ─────────────────────────────────`);
-  P(`-- Wem gehört das Lehrwerk? Es liegt auf einem Lehrkraft-Konto und`);
-  P(`-- ist für die ganze Schule sichtbar (shared). Der Schul-Kurzname`);
-  P(`-- darf leer bleiben, solange es den Kontonamen nur einmal gibt.`);
-  P(`select set_config('wordisland.konto',  ${q(konto)}, false),`);
-  P(`       set_config('wordisland.schule', ${q(schule || '')}, false);`);
-  P(``);
-  P(`-- Stimmt der Name nicht, bricht das Skript ab, statt still nichts`);
-  P(`-- zu tun: ein \`cross join\` ohne Treffer fügt geräuschlos null`);
-  P(`-- Zeilen ein, und das sähe wie Erfolg aus.`);
-  P(`do $$`);
-  P(`declare v_n int;`);
-  P(`begin`);
-  P(`  select count(*) into v_n from ${LOOKUP} k;`);
-  P(`  if v_n <> 1 then`);
-  P(`    raise exception 'Kein eindeutiges Lehrkraft-Konto für %, gefunden: %',`);
-  P(`      current_setting('wordisland.konto'), v_n;`);
-  P(`  end if;`);
-  P(`end $$;`);
-  P(``);
 
-  // Units
-  P(`-- ── Die Kapitel ───────────────────────────────────────────────`);
-  P(`insert into vocab_units (id, title, lang_from, lang_to, grade, sort_order, owner_id, school_id, shared)`);
-  P(`select v.id, v.titel, 'de', 'en', ${jahrgang}, v.ord, p.id, p.school_id, true`);
-  P(`  from (values`);
+  P(`-- ─────────────────────────────────────────────────────────────`);
+  P(`-- 1) Die Kapitel`);
+  P(`-- ─────────────────────────────────────────────────────────────`);
+  P(`-- \`grade\` trägt den Jahrgang und damit den Inselschlüssel:`);
+  P(`-- vocab_units.island_key ist daraus generiert und steht für alle`);
+  P(`-- neun auf '${insel}'.`);
+  P(`insert into vocab_units (id, title, lang_from, lang_to, grade, sort_order) values`);
   P(units.map(u =>
-    `        (${q(nummer(`${insel}|${u.code}`))}::uuid, ${q(u.titel)}, ${u.ord})`).join(',\n'));
-  P(`       ) as v(id, titel, ord)`);
-  P(`  cross join ${LOOKUP} p`);
+    `  (${q(nummer(`${insel}|${u.code}`))}, ${q(u.titel)}, 'de', 'en', ${jahrgang}, ${u.ord})`
+  ).join(',\n'));
   P(`on conflict (id) do update set`);
-  P(`  title = excluded.title, grade = excluded.grade,`);
-  P(`  sort_order = excluded.sort_order, shared = excluded.shared,`);
-  P(`  owner_id = excluded.owner_id, school_id = excluded.school_id;`);
+  P(`  title = excluded.title, grade = excluded.grade, sort_order = excluded.sort_order;`);
   P(``);
 
-  // Stationen
-  P(`-- ── Die Stationen ─────────────────────────────────────────────`);
-  P(`insert into vocab_sets (id, title, lang_from, lang_to, level, unit_id, sort_order, owner_id, school_id, shared)`);
-  P(`select v.id, v.titel, 'de', 'en', ${q(String(jahrgang))}, v.unit, v.ord, p.id, p.school_id, true`);
-  P(`  from (values`);
+  P(`-- ─────────────────────────────────────────────────────────────`);
+  P(`-- 2) Die Stationen`);
+  P(`-- ─────────────────────────────────────────────────────────────`);
+  P(`-- \`sort_order\` ist die Nummer innerhalb der Unit und damit die`);
+  P(`-- Reihenfolge im Pult und auf der Insel.`);
+  P(`insert into vocab_sets (id, title, lang_from, lang_to, level, unit_id, sort_order) values`);
   const sZeilen = [];
   for (const u of units) {
     for (const st of u.stationen) {
-      sZeilen.push(`        (${q(nummer(`${insel}|${u.code}|${st.titel}`))}::uuid, ${q(st.titel)}, ` +
-                   `${q(nummer(`${insel}|${u.code}`))}::uuid, ${st.ord})`);
+      sZeilen.push(`  (${q(nummer(`${insel}|${u.code}|${st.titel}`))}, ${q(st.titel)}, ` +
+                   `'de', 'en', ${q(String(jahrgang))}, ${q(nummer(`${insel}|${u.code}`))}, ${st.ord})`);
     }
   }
   P(sZeilen.join(',\n'));
-  P(`       ) as v(id, titel, unit, ord)`);
-  P(`  cross join ${LOOKUP} p`);
   P(`on conflict (id) do update set`);
-  P(`  title = excluded.title, unit_id = excluded.unit_id,`);
-  P(`  sort_order = excluded.sort_order, shared = excluded.shared,`);
-  P(`  owner_id = excluded.owner_id, school_id = excluded.school_id;`);
+  P(`  title = excluded.title, level = excluded.level,`);
+  P(`  unit_id = excluded.unit_id, sort_order = excluded.sort_order;`);
   P(``);
 
-  // Wörter
-  P(`-- ── Die Wörter ────────────────────────────────────────────────`);
+  P(`-- ─────────────────────────────────────────────────────────────`);
+  P(`-- 3) Die Wörter`);
+  P(`-- ─────────────────────────────────────────────────────────────`);
   P(`-- term = Deutsch, translation = Englisch (so herum seit 0130).`);
-  P(`-- alt / alt_term sind die weiteren gültigen Fassungen.`);
+  P(`-- alt und alt_term sind die weiteren gültigen Fassungen: „Freund"`);
+  P(`-- und „Freundin" sind EIN Wortpaar mit zwei Lösungen, nicht zwei.`);
+  P(`--`);
+  P(`-- Der Riegel \`(set_id, lower(term))\` aus 0130 ist hier die Angel`);
+  P(`-- des \`on conflict\`. Zwei englische Wörter mit derselben`);
+  P(`-- deutschen Bedeutung hat der Umwandler deshalb schon`);
+  P(`-- zusammengelegt — sonst verschluckte der Riegel hier still das`);
+  P(`-- zweite.`);
   P(`insert into vocab_items (set_id, term, translation, alt, alt_term, sort_order) values`);
   const wZeilen = [];
   for (const u of units) {
     for (const st of u.stationen) {
       const set = nummer(`${insel}|${u.code}|${st.titel}`);
       for (const w of st.woerter.values()) {
-        wZeilen.push(`  (${q(set)}::uuid, ${q(w.de[0])}, ${q(w.en[0])}, ` +
+        wZeilen.push(`  (${q(set)}, ${q(w.de[0])}, ${q(w.en[0])}, ` +
                      `${arr(w.en.slice(1))}, ${arr(w.de.slice(1))}, ${w.nr})`);
       }
     }
@@ -506,16 +530,6 @@ function sql(units, jahrgang, konto, schule) {
   P(`on conflict (set_id, lower(term)) do update set`);
   P(`  translation = excluded.translation, alt = excluded.alt,`);
   P(`  alt_term = excluded.alt_term, sort_order = excluded.sort_order;`);
-  P(``);
-  P(`-- ── Was jetzt drinsteht ───────────────────────────────────────`);
-  P(`select u.sort_order as unit_nr, u.title as unit, s.sort_order as st_nr,`);
-  P(`       s.title as station, count(i.id) as woerter`);
-  P(`  from vocab_units u`);
-  P(`  join vocab_sets  s on s.unit_id = u.id`);
-  P(`  left join vocab_items i on i.set_id = s.id`);
-  P(` where u.island_key = ${q(insel)} and u.shared`);
-  P(` group by 1, 2, 3, 4`);
-  P(` order by 1, 3;`);
 
   return zeilen.join('\n') + '\n';
 }
@@ -605,19 +619,25 @@ const wert = (name, vorgabe) => {
   return i >= 0 ? args[i + 1] : vorgabe;
 };
 // Alles, was weder Schalter noch Wert eines Schalters ist, ist der
-// Pfad. Sonst schluckt „--konto soenke" sein eigenes Argument.
+// Pfad. Sonst schluckt „--jahrgang 5" sein eigenes Argument.
 const frei = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--')));
 const pdf = frei[0];
 
 if (!pdf) {
-  console.error('Aufruf: node greenline.mjs "<pfad zur Vokabelliste.pdf>" --jahrgang 5 --konto <account_name> [--schule mps]');
+  console.error('Aufruf: node greenline.mjs "<pfad zur Vokabelliste.pdf>" --jahrgang 5 [--nr 0160]');
   process.exit(1);
 }
 
 const jahrgang = Number(wert('jahrgang', 5));
-const konto = wert('konto', 'LEHRKRAFT-KONTO-EINTRAGEN');
-const schule = wert('schule', '');
+// Die Kontrolldateien liegen beim PDF (und damit außerhalb des
+// Repos), die Migration liegt bei den Migrationen.
 const ziel = wert('ziel', path.dirname(pdf));
+const migDir = wert('migrationen',
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../supabase/migrations'));
+if (!fs.existsSync(migDir)) {
+  console.error(`Kein Migrationsordner unter ${migDir} — mit --migrationen <pfad> nachhelfen.`);
+  process.exit(1);
+}
 const hand = wert('hand', path.join(ziel, `Klasse${jahrgang}_nachbessern.tsv`));
 
 HANDBUCH = handLies(hand);
@@ -632,9 +652,22 @@ if (fehler.length) {
   process.exit(2);
 }
 
+/* Die Migrationsnummer: gegeben oder die nächste freie. Gesucht wird
+   nach einer, die diesen Jahrgang schon trägt — sonst bekäme jede
+   Korrektur eine neue Nummer, und in der Datenbank stünde derselbe
+   Bestand zweimal untereinander. */
+const migName = (() => {
+  const da = fs.existsSync(migDir) ? fs.readdirSync(migDir) : [];
+  const schon = da.find(f => f.includes(`greenline_${jahrgang}`));
+  if (schon) return schon;
+  const nr = wert('nr', String(Math.max(0, ...da.map(f => parseInt(f, 10) || 0)) + 1).padStart(4, '0'));
+  return `${nr}_vocab_greenline_${jahrgang}.sql`;
+})();
+
 const name = `Klasse${jahrgang}`;
 fs.writeFileSync(path.join(ziel, `${name}_kontrolle.tsv`), tsv(units, meldungen), 'utf8');
-fs.writeFileSync(path.join(ziel, `${name}_einspielen.sql`), sql(units, jahrgang, konto, schule), 'utf8');
+fs.writeFileSync(path.join(migDir, migName),
+                 migration(units, jahrgang, migName.slice(0, 4)), 'utf8');
 
 const gesamt = units.reduce((n, u) => n + u.stationen.reduce((m, s) => m + s.woerter.size, 0), 0);
 console.log(`${BUCH[jahrgang].titel} · Jahrgang ${jahrgang}`);
@@ -648,7 +681,8 @@ console.log(`  ${'—'.repeat(32)} ${String(gesamt).padStart(4)} Wörter in ` +
 const offen = meldungen.filter(m => m[0] === 'mehrwort').map(m => m[3]);
 const neu = handSchreib(hand, offen, VORSCHLAG);
 
-console.log(`\nGeschrieben nach ${ziel}`);
+console.log(`\nMigration:  supabase/migrations/${migName}`);
+console.log(`Kontrolle:  ${path.join(ziel, `${name}_kontrolle.tsv`)}`);
 if (meldungen.length) console.log(`${meldungen.length} Zeilen zum Nachsehen — unten in der Kontrolldatei.`);
 if (neu) console.log(`${neu} strittige Zelle(n) in ${path.basename(hand)} — dort geraderücken und noch einmal laufen lassen.`);
 else if (HANDBUCH.size) console.log(`${HANDBUCH.size} Zelle(n) aus ${path.basename(hand)} übernommen.`);
