@@ -2466,7 +2466,13 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
      unten abgeschnitten. Die Linie ist dieselbe wie beim Kärtchen
      und kommt aus der GEMESSENEN Höhe des Kastens. */
   bottom: var(--wi-ueber);
-  width: min(320px, 46vw);
+  /* Seit 20.09.2026 breiter (Sönke). Die Stufenpunkte sollen HINTER
+     den Titel passen und nicht grundsätzlich eine Zeile tiefer
+     stehen (siehe .wi-utoggle) — bei 320 px passte das bei keinem
+     Lehrwerk-Titel. Der Deckel bleibt in vw: die Leiste nimmt der
+     Insel Platz weg, und knapp die Hälfte ist die Grenze dessen,
+     was eine Spalte neben einer Karte sein darf. */
+  width: min(400px, 46vw);
   z-index: 20;
   display: flex;
   flex-direction: column;
@@ -2494,7 +2500,7 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    Die untere Kante steht nicht mehr hier: sie ist seit 13.09.2026 in
    jeder Breite `--wi-ueber`. */
 @media (max-width: 720px) {
-  .wi-units { width: min(300px, 68vw); }
+  .wi-units { width: min(340px, 78vw); }
 }
 
 .wi-ugriff {
@@ -2570,9 +2576,26 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   flex: 1 1 auto;
   min-width: 0;
   text-align: left;
+  /* Eine ZEILE mit Umbruch und keine Spalte mehr (Sönke,
+     20.09.2026: „die Fortschrittspunkte, wenn es passt, hinter dem
+     Unit/Station-Titel; falls nicht, dann geht es in die nächste
+     Zeile").
+
+     Das kann Flexbox von selbst, wenn man es lässt: der Titel steht
+     auf `nowrap` und meldet damit seine volle Breite an. Passen
+     Titel und Punkte zusammen in die Leiste, stehen sie
+     nebeneinander; passen sie nicht, rutschen die Punkte auf die
+     zweite Zeile — und der Titel hat dann die ganze erste für sich
+     und wird erst dort abgeschnitten (min-width: 0 unten).
+
+     ⚠️ `row-gap`/`column-gap` einzeln und kein `gap: 3px`: zwischen
+     Titel und Punkten braucht es sichtbaren Abstand, zwischen zwei
+     Zeilen aber nur einen Hauch. */
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 9px;
+  row-gap: 3px;
   padding: 9px 11px;
   border-radius: var(--r-sm, 12px);
   border: 2px solid var(--line);
@@ -2587,14 +2610,28 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
               color .14s ease, opacity .14s ease;
 }
 .wi-utoggle b {
+  /* Nicht wachsen, aber schrumpfen dürfen: `1 1 auto` schöbe die
+     Punkte an den rechten Rand, und dann stünden sie auf der ersten
+     Zeile rechts und nach einem Umbruch links — zwei Orte für
+     dieselbe Auskunft. */
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 14px;
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Die Punkte brechen als Ganzes um und nicht in sich selbst. */
+.wi-utoggle .wi-slegend { flex: 0 0 auto; flex-wrap: nowrap; }
+/* Eine Unit ohne Tiere hat keine Punkte. Ein leerer Flex-Kasten
+   bliebe ein Element mit Grundlinie und machte die Zeile höher. */
+.wi-utoggle .wi-slegend:empty { display: none; }
 .wi-utoggle b .wi-uzahl, .wi-umeta { font-weight: 600; }
-.wi-umeta { font-size: 12px; color: var(--ink-faint); }
+/* „pausiert"/„teilweise" erzwingt seine eigene Zeile — siehe
+   unitZeile in tool.js: ausgerechnet der Zustand darf nicht
+   abgeschnitten werden. */
+.wi-umeta { flex: 1 0 100%; font-size: 12px; color: var(--ink-faint); }
 .wi-utoggle:hover { border-color: var(--accent); }
 .wi-urow.is-on .wi-utoggle {
   opacity: 1;

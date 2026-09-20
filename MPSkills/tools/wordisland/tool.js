@@ -7826,7 +7826,12 @@
     unitsSetzen(auf);
   }
 
-  function unitsSetzen(auf) {
+  /* `nichtMerken` ist für das Zuklappen beim Übenstart: das ist
+     keine Entscheidung des Kindes über sein Gerät, sondern eine
+     Folge des Knopfdrucks. Würde sie gemerkt, käme die Leiste beim
+     nächsten Aufruf der Insel zugeklappt hoch — und niemand hätte
+     sie zugeklappt. */
+  function unitsSetzen(auf, nichtMerken) {
     unitsAuf = !!auf;
     if (!els.units) return;
     els.units.classList.toggle('is-zu', !unitsAuf);
@@ -7839,7 +7844,9 @@
     // beziehen könnte. Ein goldener Kranz ohne die Liste dazu wäre
     // ein Rätsel.
     if (!unitsAuf && unitOffen) unitZurueck();
-    try { localStorage.setItem(WI_UNITS_KEY, unitsAuf ? '1' : '0'); } catch (e) { /* egal */ }
+    if (!nichtMerken) {
+      try { localStorage.setItem(WI_UNITS_KEY, unitsAuf ? '1' : '0'); } catch (e) { /* egal */ }
+    }
 
     const alt = randLinks;
     randMessen();
@@ -8405,6 +8412,16 @@
     if (!solo) return;
     els.setsOv.hidden = true;
     els.playOv.hidden = false;
+    /* Die Unit-Leiste klappt zu (Sönke, 20.09.2026). Der Übenkasten
+       liegt zwar darüber — aber bei jedem gefeierten Stufensprung
+       wird er für einen Moment durchsichtig (.wi-ov.is-cheer), und
+       dann liegt seit heute eine 400 px breite Spalte auf der
+       Insel, auf der gerade das Tier wächst.
+
+       Ohne Merken: siehe unitsSetzen. Wer weiterschauen will, macht
+       sie mit dem Griff wieder auf — sie liegt beim Üben ja nicht im
+       Weg. */
+    if (unitsAuf) unitsSetzen(false, true);
     /* Die Uhr übernimmt den Stand, den der Server zuletzt gesagt
        hat — `uhrAb` wird dabei NICHT zurückgesetzt. Wer den Kasten
        zumacht und gleich wieder aufmacht, hat durchgeübt, und der

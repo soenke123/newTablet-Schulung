@@ -53,7 +53,11 @@ const BUCH = {
   5: {
     titel: 'Green Line 1',
     units: [
-      ['GRS', 'Hello! (Grundschulübergang)'],
+      /* Nur „Hello!" und nicht „Hello! (Grundschulübergang)"
+         (Sönke, 20.09.2026, Migration 0162): der Zusatz erklärt der
+         Lehrkraft etwas, das dem Kind in der Unit-Leiste nur Platz
+         wegnimmt. */
+      ['GRS', 'Hello!'],
       ['U1',  'Unit 1 — A new school'],
       ['MS1', 'Media smart 1'],
       ['U2',  'Unit 2 — At home'],
