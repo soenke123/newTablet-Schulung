@@ -265,8 +265,6 @@
   let lockTimer = null;     // wann die Antwort-Sperre (0151) wieder aufgeht
   let panInline = null, panPick = null;   // die zwei Zoom-Hüllen der Karte
   let markPaint = null;     // malt die erreichbaren Felder (freie Wahl)
-  let practice = false;     // Tablet: üben statt warten
-  let lastPhase = null;
   let lastSetsChangedAt = null; // 0157: zuletzt gesehener sets_changed_at-Wert
 
   /* ─── Slot → Volk (Migration 0133) ──────────────────────────
@@ -3657,14 +3655,20 @@
      Tablet
      ══════════════════════════════════════════════════════════
      Vier Tafeln, wie in Kingdoms: warten · Countdown · spielen ·
-     (üben). Die Wartetafel zeigt das EIGENE Volk groß und mit den
+     Ergebnis. Die Wartetafel zeigt das EIGENE Volk groß und mit den
      Namen der Gruppe — vor dem Start ist das die einzige Auskunft,
      die am Tablet wirklich zählt; die anderen Völker stehen als
      schmale Zeile darunter.
 
-     Das Üben bleibt erreichbar (die Einzelübung läuft im Server
-     ohnehin weiter), aber es steht hinter einem Knopf: wer eine
-     Aufgabe vor der Nase hat, sieht nicht mehr, wo er hingehört. */
+     ⚠️ Das „Bis dahin üben" der Wartetafel und des Siegerbildes ist
+     am 20.09.2026 ERSATZLOS weg (Sönkes Ansage). Wer im Raum wartet,
+     wartet — und wer üben will, hat dafür seine eigene Insel
+     (Rolle `solo`, insel.html). Zwei Orte für dieselbe Übung hießen
+     am Tablet: die halbe Klasse sitzt beim Start in einer Aufgabe
+     statt auf der Aufstellung. Damit sind auch der Zurück-Knopf und
+     die Sonderfälle „Aufgabe ohne Arena" in renderTab entfallen —
+     die Spieltafel steht ab jetzt NUR während einer laufenden
+     Runde. */
   const TAB_HTML = `
     <div class="wi wi--tab">
       <section class="wi-pane wi-pane--lobby" data-part="tlobby" hidden>
@@ -3680,7 +3684,6 @@
              und ein Aufruf hier würde beim Laden ausgewertet. -->
         <div class="wi-rulwrap" data-part="rulwrap"></div>
         <p class="wi-hint" data-part="onlinehint" hidden></p>
-        <button type="button" class="wi-btn wi-btn--ghost" data-part="practice">Bis dahin üben</button>
       </section>
 
       <!-- ── Das Siegerbild am Tablet (18.09.2026) ───────────────
@@ -3692,18 +3695,13 @@
            eingedampft: der Sieger und das EIGENE Volk. Die anderen
            fehlen mit Absicht — am Tablet zählt, wie die eigene
            Gruppe abgeschnitten hat, und die ganze Rangliste steht
-           zwei Meter weiter an der Wand.
-
-           Der Üben-Knopf steht auch hier: nach der Runde ist die
-           Insel offen, und das ist genau der Moment, in dem ein Kind
-           weitermachen darf. -->
+           zwei Meter weiter an der Wand. -->
       <section class="wi-pane wi-pane--end" data-part="tend" hidden>
         <h2 class="wi-endtitle" data-part="twinner"></h2>
         <div class="wi-podium wi-podium--tab" data-part="tpodium"></div>
         <p class="wi-endplace" data-part="tplace" hidden></p>
         <div class="wi-mytally" data-part="tmine" hidden></div>
         <p class="wi-hint">Gleich geht es weiter — die Lehrkraft macht die nächste Runde klar.</p>
-        <button type="button" class="wi-btn wi-btn--ghost" data-part="epractice">Bis dahin üben</button>
       </section>
 
       <section class="wi-pane wi-pane--count" data-part="tcount" hidden>
@@ -3775,8 +3773,6 @@
           </div>
           <div class="wi-opts" data-part="opts" hidden></div>
           <p class="wi-fb" data-part="fb" hidden></p>
-          <button type="button" class="wi-btn wi-btn--ghost wi-back" data-part="back" hidden>
-            ← Zurück zur Aufstellung</button>
         </section>
 
         <div class="wi-mapwrap" data-part="mapwrap"><svg class="wi-map" data-part="map"></svg></div>
@@ -3843,7 +3839,7 @@
       tPlace: q('tplace'), tMine: q('tmine'),
       waitText: q('waittext'), myTeam: q('myteam'),
       othersBox: q('othersbox'), others: q('others'), onlineHint: q('onlinehint'),
-      big: q('big'), back: q('back'),
+      big: q('big'),
       me: q('me'), mePic: q('mepic'), meName: q('mename'), meSub: q('mesub'),
       streak: q('streak'), streakN: q('streakn'), streakGoal: q('streakgoal'),
       pickBack: q('pickback'), pickBackN: q('pickbackn'), clock: q('clock'),
@@ -3864,11 +3860,6 @@
       const b = e.target.closest('button');
       if (b) send(b.dataset.v);
     });
-    // Zwei Knöpfe, ein Verhalten: vor der Runde (Wartetafel) und
-    // nach ihr (Siegerbild) führt „üben" an dieselbe Stelle.
-    [q('practice'), q('epractice')].forEach(b =>
-      b.addEventListener('click', () => { practice = true; if (view) renderTab(view); }));
-    els.back.addEventListener('click', () => { practice = false; if (view) renderTab(view); });
     els.map.addEventListener('click', onMapClick);
     /* Zwei Hüllen, ein SVG: die Geste gehört dem Kasten, in dem die
        Karte GERADE hängt. Beide Zuhörer schreiben `svg.style.
@@ -4088,11 +4079,14 @@
        zwei Aufforderungen nebeneinander wären eine zu viel. Die
        freie Wahl wartet so lange — sie verfällt mit der Serie, der
        Kranz nicht. */
-    /* ⚠️ Gewählt wird nur, wenn die Arena läuft. Beim ÜBEN (die Klasse
-       wartet, das Kind übt weiter) gibt es keine Insel — ein
-       Wahl-Kasten mit einer leeren Karte darin wäre eine Aufforderung,
-       die ins Nichts führt. Erkennungsmerkmal ist die eingebettete
-       Karte: renderTab blendet sie außerhalb der Arena aus. */
+    /* ⚠️ Gewählt wird nur, wenn die Arena läuft — ein Wahl-Kasten über
+       einer leeren Karte wäre eine Aufforderung, die ins Nichts führt
+       (wi_pick_tile weist sie mit „phase_locked" ab). Seit das Üben im
+       Raum weg ist (20.09.2026), steht die Spieltafel ohnehin nur noch
+       während der Runde; der Riegel bleibt trotzdem, weil renderTask
+       auch aus dem Antwortweg gerufen wird und dort eine Antwort
+       eintreffen kann, die der Server gerade abgepfiffen hat.
+       Erkennungsmerkmal ist die eingebettete Karte. */
     const arena = !els.mapwrap.hidden;
     shadowPick = arena ? (shadow || 0) : 0;
     const frei = arena ? (picks || 0) + shadowPick : 0;
@@ -4374,9 +4368,6 @@
   function renderTab(v) {
     const arena = (v.phase === 'running');
     const count = (v.phase === 'countdown');
-    // Ein Phasenwechsel beendet das Üben: nach dem Ende einer Runde
-    // soll die Klasse wieder auf dieselbe Tafel sehen.
-    if (v.phase !== lastPhase) { practice = false; lastPhase = v.phase; }
 
     // 0157: Lehrkraft hat ihre Units geändert → sofort wi_solo_claim auslösen.
     // sets_changed_at kommt nur dann, wenn 0157 eingespielt ist.
@@ -4389,19 +4380,18 @@
        eigene. Vorher fiel es in die Wartetafel — dieselbe Ansicht wie
        VOR dem Spiel, nur mit einem anderen Satz darüber.
 
-       Das Üben sticht auch hier: wer nach der Runde weiterübt, sieht
-       seine Aufgabe und nicht das Podest. Der Zurück-Knopf bringt ihn
-       aufs Siegerbild, nicht in die Lobby. */
-    const ended   = (v.phase === 'ended');
-    const showPlay = arena || (!count && practice);
-    const showEnd  = ended && !showPlay && !count;
-    els.tlobby.hidden = arena || count || practice || ended;
-    els.tend.hidden   = !showEnd;
+       Seit dem 20.09.2026 entscheidet allein die PHASE, welche Tafel
+       steht: die Spieltafel gehört der laufenden Runde und sonst
+       niemandem. Vorher konnte das Üben sie in jede andere Phase
+       hineinholen — daher stand unten überall „arena ? … : …". */
+    const ended = (v.phase === 'ended');
+    els.tlobby.hidden = arena || count || ended;
+    els.tend.hidden   = !ended;
     els.tcount.hidden = !count;
-    els.tplay.hidden  = !showPlay;
+    els.tplay.hidden  = !arena;
     if (count) return;          // fünf Sekunden nur die Zahl
-    if (showEnd)   { renderTabEnd(v); return; }
-    if (!showPlay) { renderTabLobby(v); return; }
+    if (ended) { renderTabEnd(v); return; }
+    if (!arena) { renderTabLobby(v); return; }
 
     const T = teamOf(v.me.team);
     const mine = (v.teams || []).find(t => t.i === v.me.team);
@@ -4425,17 +4415,10 @@
     const felder = mine ? mine.tiles : 0;
     const anteil = cells.length ? felder * 100 / cells.length : 0;
     const anteilText = anteil < 10 ? anteil.toFixed(1).replace('.', ',') : Math.round(anteil);
-    els.meSub.textContent = arena
-      ? `${felder} Felder · ${anteilText} % der Insel`
-      : 'Übungsrunde';
-    els.clock.textContent = arena ? fmtLeft(v.ends_at) : '';
-    els.clock.hidden = !arena;
-
-    els.mapwrap.hidden = !arena;
-    els.back.hidden = arena;
-    if (!arena && els.fb.hidden) {
-      feedback('idle', 'Die Arena läuft gerade nicht — üben kannst du trotzdem.');
-    }
+    els.meSub.textContent = `${felder} Felder · ${anteilText} % der Insel`;
+    els.clock.textContent = fmtLeft(v.ends_at);
+    els.clock.hidden = false;
+    els.mapwrap.hidden = false;
     renderTask(v.me.task, v.me.streak, v.me.picks, v.me.shadow_pick);
     if (v.me.locked_for > 0) lockInput(v.me.locked_for);
   }
@@ -9826,7 +9809,7 @@
       sets = { list: [], chosen: [], zu: new Set() };
       setsBusy = 0; tab = 'units'; setsOpen = false;
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
-      practice = false; lastPhase = null; soloClaimAt = 0;
+      soloClaimAt = 0;
       solo = null; soloTask = null; simZeit = 0; letzterT = 0; nacht = 0;
       spieler = null; volkGen = 0; volkNurHier = false;
       unitOffen = null; markiert = null; tierOffen = null; randLinks = 0;

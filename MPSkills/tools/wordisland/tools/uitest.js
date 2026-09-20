@@ -539,7 +539,7 @@ async function testTabletLobby() {
           countdown_ends_at: phase === 'countdown'
             ? new Date(Date.now() + 4000).toISOString() : null
         }, /* Eine Serie und zwei offene Wahlen aus der Runde davor —
-              gebraucht für die Zusage „kein Wahl-Kasten beim Üben". */
+              gebraucht für die Zusage „in der Lobby geht nichts auf". */
            { streak: 3, picks: 2 }));
       }
     }
@@ -564,25 +564,22 @@ async function testTabletLobby() {
   ok('Hinweis auf Abwesende',
      /5 von 6/.test(root.querySelector('[data-part="onlinehint"]').textContent));
 
-  /* Üben, bis es losgeht */
-  click(root.querySelector('[data-part="practice"]'), document);
-  await wait(20);
-  ok('Üben öffnet die Aufgabe', root.querySelector('[data-part="tplay"]').hidden === false);
-  ok('Übungsrunde steht im Kopf', /Übungsrunde/.test(root.querySelector('.wi-me').textContent));
-  ok('keine Karte beim Üben', root.querySelector('[data-part="mapwrap"]').hidden === true);
-  /* ⚠️ Und deshalb auch kein Wahl-Kasten, obwohl der Server zwei
-     offene Wahlen meldet: er ginge über einer LEEREN Karte auf (in der
-     Lobby gibt es keine Insel) und forderte zu einem Tipp auf, den
-     wi_pick_tile mit „phase_locked" abweist. */
-  ok('und kein Wahl-Kasten beim Üben',
+  /* ── Das Üben im Raum ist WEG (20.09.2026) ───────────────────
+     Sönkes Ansage: „die Funktion ‚Vokabeln in der Lobby üben‘ … muss
+     raus." Wer im Raum wartet, wartet; geübt wird auf der eigenen
+     Insel (Rolle `solo`). Der Prüfstand hält beides fest — den
+     verschwundenen Knopf UND die Folge daraus: in der Lobby ist die
+     Spieltafel zu, obwohl der Server eine Serie und zwei offene
+     Wahlen meldet. (Genau die waren früher der Grund für einen
+     Wahl-Kasten über einer leeren Karte.) */
+  ok('kein Üben-Knopf auf der Wartetafel',
+     root.querySelector('[data-part="practice"]') === null);
+  ok('und kein Zurück-Knopf mehr', root.querySelector('[data-part="back"]') === null);
+  ok('die Spieltafel bleibt in der Lobby zu',
+     root.querySelector('[data-part="tplay"]').hidden === true);
+  ok('und der Wahl-Kasten auch',
      root.querySelector('[data-part="pickov"]').hidden === true &&
      root.querySelector('[data-part="pickback"]').hidden === true);
-  ok('die Serie steht trotzdem im Kopf',
-     root.querySelector('.wi-streak').hidden === false &&
-     root.querySelector('[data-part="streakn"]').textContent === '3');
-  click(root.querySelector('[data-part="back"]'), document);
-  await wait(20);
-  ok('Zurück zur Aufstellung', root.querySelector('[data-part="tlobby"]').hidden === false);
 
   /* Countdown */
   phase = 'countdown';
@@ -5328,16 +5325,14 @@ async function testSiegerTablet() {
      /14/.test(tally.textContent) && /5/.test(tally.textContent),
      tally.textContent.replace(/\s+/g, ' ').trim());
 
-  /* ── Üben nach der Runde ───────────────────────────────────── */
-  click(root.querySelector('[data-part="epractice"]'), document);
-  await wait(20);
-  ok('„üben" öffnet die Aufgabe', root.querySelector('[data-part="tplay"]').hidden === false);
-  ok('und räumt das Siegerbild weg', root.querySelector('[data-part="tend"]').hidden === true);
-  click(root.querySelector('[data-part="back"]'), document);
-  await wait(20);
-  ok('zurück führt aufs Siegerbild, nicht in die Lobby',
-     root.querySelector('[data-part="tend"]').hidden === false &&
-     root.querySelector('[data-part="tlobby"]').hidden === true);
+  /* ── Auch nach der Runde wird im Raum nicht mehr geübt ──────
+     Der zweite „Bis dahin üben"-Knopf ist am 20.09.2026 mit dem
+     ersten gegangen: zwei Wege in dieselbe Übung, und die Übung
+     gehört auf die eigene Insel. Das Siegerbild bleibt stehen, bis
+     die Lehrkraft weitermacht. */
+  ok('kein Üben-Knopf auf dem Siegerbild',
+     root.querySelector('[data-part="epractice"]') === null);
+  ok('das Siegerbild bleibt stehen', root.querySelector('[data-part="tend"]').hidden === false);
 
   /* ── Wer selbst gewonnen hat, sieht EINE Karte ─────────────── */
   meinVolk = 0;

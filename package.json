@@ -9,5 +9,10 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "linkedom": "^0.18.13",
+    "pdfjs-dist": "^4.10.38"
   }
 }

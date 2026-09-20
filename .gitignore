@@ -18,3 +18,10 @@ node_modules/
 
 # GIMP-Quellen — zu groß für GitHub, gehören nicht ins Deployment
 *.xcf
+
+# Lehrwerks-Vokabellisten (Verlags-PDFs und alles, was daraus
+# entsteht). Eine Wortliste ist als Sammlung geschützt; dieses Repo
+# ist öffentlich. Die Regel steht in
+# MPSkills/tools/wordisland/tools/greenline.mjs, der Inhalt bleibt
+# lokal und geht von dort direkt in die Datenbank.
+MPSkills/tools/wordisland/Englisch Greenline Vokabellisten/

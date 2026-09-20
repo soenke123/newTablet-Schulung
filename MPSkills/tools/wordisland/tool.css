@@ -1793,7 +1793,8 @@
 }
 .wi-type { display: flex; gap: 8px; }
 .wi-type .wi-in { font-size: 18px; }
-.wi-back { align-self: flex-start; font-size: 14px; padding: 8px 14px; }
+/* `.wi-back` („← Zurück zur Aufstellung") ist am 20.09.2026 mit dem
+   Üben im Raum entfallen — es gab keinen zweiten Träger. */
 
 .wi-opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .wi-opts button {
