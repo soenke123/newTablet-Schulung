@@ -245,7 +245,11 @@
      Auswahl auf und danach wieder zu. */
   let sets = { list: [], chosen: [], zu: new Set() };
   let setsBusy = 0;         // wie pickBusy: eigener Klick schlägt Server-Antwort
-  let tab = 'units';
+  /* Welcher Reiter im Wörter-Fenster vorn liegt. Leer heißt „noch
+     keiner" — welche es überhaupt gibt, weiß erst `loadSets`, und
+     ein hier erfundener Vorgabewert wäre die eine Stelle, an der ein
+     Jahrgang zweimal geschrieben steht. */
+  let tab = '';
   let setsOpen = false;
   /* Die offene Wörterliste einer Station (0154): {id, daten, fehler}
      oder null, wenn die Auswahl zu sehen ist. Der Speicher daneben
@@ -326,6 +330,18 @@
      keinen Jahrgang — „Jahrgang null" wäre eine Behauptung. */
   const jahrgangText = g =>
     g == null ? 'Eigene Listen' : 'Jahrgang ' + esc(String(g));
+
+  /* Dieselbe Angabe für eine Reihe, in der sie NEBENEINANDER steht:
+     die Reiter am Pult und die Chips in der Leiste der Insel. Sechs
+     Jahrgänge plus „Eigene" sind sieben Schaltflächen in einer Zeile,
+     und „Jahrgang 10" siebenmal nebeneinander bricht jede davon um.
+
+     Zwei Schreibweisen für dieselbe Sache sind sonst eine zu viel —
+     hier tragen sie verschiedene Lasten: das Schild auf der Karte und
+     die Zeile in der Liste haben Platz und erklären sich selbst, die
+     Reihe hat ihn nicht. */
+  const jahrgangKurz = g =>
+    g == null ? 'Eigene' : 'Jhg ' + esc(String(g));
 
   /* Ab wie vielen Stationen die Units zugeklappt starten — „so viel
      passt in die Ansicht, ohne dass man sucht". Ein ganzer Jahrgang
@@ -2892,10 +2908,12 @@
           </div>
           <p class="wi-ovhint">Mehrere Listen lassen sich mischen — Wiederholung über zwei Themen
             ist der Normalfall. Mindestens eine muss gewählt sein.</p>
-          <div class="wi-tabs" role="tablist">
-            <button type="button" class="wi-tab is-on" data-tab="units">Units</button>
-            <button type="button" class="wi-tab" data-tab="own">Eigene</button>
-          </div>
+          <!-- Die Reiter werden gerechnet und stehen nicht fest:
+               seit 0163 gibt es zwei Lehrwerksbände, und es sollen
+               mehr werden. „Units" als einziger Reiter hätte ab da
+               fünfundsiebzig Stationen hinter EINEM Wort versteckt.
+               Gefüllt von renderTabs(). -->
+          <div class="wi-tabs" role="tablist" data-part="tabs"></div>
           <div class="wi-ovbody">
             <div class="wi-sets" data-part="sets"></div>
             <form class="wi-import" data-part="import" hidden>
@@ -2934,7 +2952,7 @@
     root.innerHTML = PULT_HTML;
     els = {
       lobby: q('lobby'), play: q('play'), end: q('end'),
-      sets: q('sets'), imp: q('import'),
+      sets: q('sets'), imp: q('import'), tabs: q('tabs'),
       setsOv: q('setsov'), setSum: q('setsum'), setsBox: q('setsbox'),
       wordsBox: q('wordsbox'), wordsTitle: q('wordstitle'),
       wordsHint: q('wordshint'), wordsBody: q('wordsbody'),
@@ -2951,12 +2969,16 @@
     els.rulWrap.innerHTML = rulesHTML();
     bindRules(root);
 
-    root.querySelectorAll('.wi-tab').forEach(b => b.addEventListener('click', () => {
+    /* Ein Zuhörer am Kasten und nicht an den Knöpfen: die Reiter
+       werden bei jedem `loadSets` neu geschrieben — nach einem
+       Import gibt es unter Umständen einen mehr. */
+    els.tabs.addEventListener('click', ev => {
+      const b = ev.target.closest('.wi-tab');
+      if (!b) return;
       tab = b.dataset.tab;
-      root.querySelectorAll('.wi-tab').forEach(x => x.classList.toggle('is-on', x === b));
-      els.imp.hidden = (tab !== 'own');
+      renderTabs();
       renderSets();
-    }));
+    });
 
     els.sets.addEventListener('click', onSetClick);
     els.imp.addEventListener('submit', onImport);
@@ -3027,17 +3049,92 @@
        ihre Unit im Gescrolle. Gezählt wird in Zeilen und nicht in
        Units: drei Units mit je einer Station sind drei Zeilen, drei
        Units eines Buchs sind zwölf. Dieselbe Zahl wie in der
-       Unit-Leiste der Insel. */
+       Unit-Leiste der Insel.
+
+       ⚠️ Je REITER gezählt, nicht über alle mitgelieferten Sätze:
+       seit es einen Reiter je Jahrgang gibt, sieht die Lehrkraft nie
+       mehr als einen Band auf einmal. Über alles gerechnet wäre jeder
+       Band zugeklappt, sobald ein zweiter dazukommt — auch der mit
+       vier Units. */
+    const reiter = setsReiter();
     sets.zu = new Set();
-    for (const t of ['0', '1']) {
-      const baum = gruppiereNachUnit(sets.list.filter(s => s.mine === t));
+    for (const r of reiter) {
+      const baum = gruppiereNachUnit(sets.list.filter(s => reiterVon(s) === r.key));
       if (baum.reduce((n, g) => n + g.sets.length, 0) > SETS_AUF_MAX) {
         for (const g of baum) if (!g.stueck) sets.zu.add(g.id);
       }
     }
 
+    /* Der gemerkte Reiter kann weg sein — eine gelöschte eigene Liste
+       nimmt ihren Reiter mit. Dann auf den ersten zurück, statt ein
+       leeres Fenster zu zeigen. */
+    if (!reiter.some(r => r.key === tab)) tab = (reiter[0] || {}).key || 'own';
+
+    renderTabs();
     renderSets();
     renderSetSum();
+  }
+
+  /* ─── Die Reiter des Wörter-Fensters ────────────────────────
+     Sönke, 20.09.2026: „beim Lehrer am Board sollen oben statt Units
+     Jhg 5, Jhg 6, … eigene stehen."
+
+     Bis dahin standen dort zwei feste Reiter: „Units" (alles
+     Mitgelieferte) und „Eigene". Mit einem Lehrwerksband ging das —
+     mit zweien (0163) lagen fünfundsiebzig Stationen hinter dem einen
+     Wort „Units", getrennt nur durch eine graue Zwischenüberschrift,
+     die mitscrollte. Ein Reiter je Jahrgang ist dieselbe Gliederung
+     eine Ebene höher: was man nicht sucht, ist gar nicht erst da.
+
+     Die Reiter sind GERECHNET und nicht aufgezählt — ein Jahrgang 7
+     im nächsten Sommer braucht keine Zeile hier. Die Reihenfolge
+     kommt vom Server (o_mine, o_grade): Bände aufsteigend, ohne
+     Jahrgang ans Ende, Eigenes zuletzt.
+
+     ⚠️ Ein mitgelieferter Satz OHNE Jahrgang (Datenbank ohne 0150,
+     oder eine schuleigene Liste ohne Unit) bekommt einen eigenen
+     Reiter „Ohne Jahrgang" und NICHT den Reiter „Eigene": „eigene"
+     heißt hier „von dieser Lehrkraft angelegt", und das wäre über
+     einen mitgelieferten Satz gelogen. */
+  const reiterVon = s => s.mine === '1' ? 'own'
+    : 'jg:' + ((s.grade === 0 || s.grade) ? s.grade : 'x');
+
+  function setsReiter() {
+    const raus = [];
+    const gesehen = new Set();
+    for (const s of sets.list) {
+      const key = reiterVon(s);
+      if (gesehen.has(key)) continue;
+      gesehen.add(key);
+      raus.push({ key, titel: key === 'own' ? 'Eigene' : jahrgangKurz(s.grade) });
+    }
+    /* Der Reiter ohne Jahrgang heißt „Units", solange er der EINZIGE
+       mitgelieferte ist — das ist der Rückfallweg ohne 0150, und
+       dort sah das Fenster genau so aus. Erst neben echten
+       Jahrgängen braucht er einen Namen, der sich von ihnen
+       abgrenzt. */
+    const ohne = raus.filter(r => r.key !== 'own');
+    for (const r of ohne) {
+      if (r.key === 'jg:x') r.titel = ohne.length === 1 ? 'Units' : 'Ohne Jahrgang';
+    }
+    /* „Eigene" steht immer da, auch ohne eine einzige eigene Liste:
+       er ist der Weg zum Einfügeformular. Ein Reiter, der erst
+       auftaucht, wenn man schon hat, was man dort anlegen wollte,
+       wäre eine Sackgasse. */
+    if (!gesehen.has('own')) raus.push({ key: 'own', titel: 'Eigene' });
+    return raus;
+  }
+
+  function renderTabs() {
+    if (!els.tabs) return;
+    const reiter = setsReiter();
+    els.tabs.innerHTML = reiter.map(r =>
+      `<button type="button" class="wi-tab${r.key === tab ? ' is-on' : ''}"
+               role="tab" aria-selected="${r.key === tab}"
+               data-tab="${esc(r.key)}">${esc(r.titel)}</button>`).join('');
+    // Das Einfügeformular gehört zu „Eigene" — bei einem Lehrwerk
+    // gibt es nichts einzufügen.
+    if (els.imp) els.imp.hidden = (tab !== 'own');
   }
 
   /* Eine Station als Kachel — die Form, die das Fenster seit 0131
@@ -3077,7 +3174,11 @@
      bleiben. */
   function renderSets() {
     const mine = tab === 'own';
-    const list = sets.list.filter(s => (s.mine === '1') === mine);
+    /* Ein Reiter ist ein Jahrgang — die Zwischenüberschrift
+       (`.wi-sgrp`), die bis zum 20.09.2026 hier stand, ist damit
+       überflüssig geworden: sie wiederholte den Reiter, unter dem sie
+       hängt. */
+    const list = sets.list.filter(s => reiterVon(s) === tab);
     if (!list.length) {
       els.sets.innerHTML = `<p class="wi-empty">${mine
         ? 'Noch keine eigene Liste. Füge unten eine ein — eine Zeile je Wortpaar.'
@@ -3086,9 +3187,7 @@
     }
 
     const baum = gruppiereNachUnit(list);
-    const mehrere = baum.some(g => g.grade !== baum[0].grade);
     let html = '';
-    let jahrgang = false;
 
     /* Aufeinanderfolgende Units am Stück kommen in EINE Reihe und
        stehen darin nebeneinander — so wie das ganze Fenster vor
@@ -3102,12 +3201,6 @@
     };
 
     for (const g of baum) {
-      if (mehrere && g.grade !== jahrgang) {
-        reiheAbschliessen();
-        jahrgang = g.grade;
-        html += `<div class="wi-sgrp">${jahrgangText(g.grade)}</div>`;
-      }
-
       if (g.stueck) { reihe.push(setKachel(g.sets[0], mine)); continue; }
       reiheAbschliessen();
 
@@ -7102,15 +7195,41 @@
            zentriert — die Tiere laufen weiter über die ganze
            Leinwand, nur die Kamera weiß von einem linken Rand. -->
       <aside class="wi-units" data-part="units" hidden>
-        <!-- Der Kopf sagt, worüber die Liste darunter spricht: alle
-             Units zusammen, so viele Wörter, so weit gewachsen. Bis
-             10.09.2026 stand dieselbe Auskunft unten in der Leiste —
-             also woanders als das, was sie erklärt. -->
+        <!-- ── Der Kopf: erst das Ganze, dann die Jahrgänge ───────
+             Sönke, 20.09.2026: „bei Schülern … dadrüber stehen
+             einfach die Gesamtwerte, x Tiere und dann die Punkte und
+             Anzahlen. Drunter dann nebeneinander Jhg 5, Jhg 6 …
+             klicke ich einen Jahrgang an, sehe ich darunter die
+             Stats. Bei den Units darunter bleibt alles gleich."
+
+             Bis dahin stand hier „Units (118)". Das war richtig,
+             solange die Liste darunter aus Units bestand — seit der
+             Inselwelt besteht sie aus Jahrgängen, und die Zahl in
+             Klammern zählte ohnehin nie Units, sondern Wörter. Also
+             sagt der Kopf jetzt, was er zählt: Tiere. Ein Wort, ein
+             Tier — dieselbe Zahl, nur ehrlich benannt, und es ist
+             das Wort, in dem ein Kind über seine Insel denkt.
+
+             Die drei Zeilen beantworten drei verschiedene Fragen und
+             gehören deshalb nicht zusammengelegt:
+               Griff   wie viele Tiere habe ich insgesamt
+               Chips   welche Jahrgänge habe ich, und welcher schläft
+               Zahlen  wie weit bin ich in DIESEM einen
+
+             Die Chips WÄHLEN nichts aus — das tut die Liste
+             darunter. Sie sind eine Auskunft; deshalb ein eigener
+             Zustand (is-on) und keine Verbindung zum Beutel.
+
+             ⚠️ Keine Rückwärts-Anführungszeichen in diesem Kommentar:
+             er steht in einer Vorlagen-Zeichenkette, und eines davon
+             beendet sie mitten im HTML. -->
         <button type="button" class="wi-ugriff" data-part="ugriff" aria-expanded="true">
-          <span>Units <b data-part="swords">0</b></span>
+          <span><b data-part="swords">0</b> Tiere</span>
           <i class="wi-uchev" aria-hidden="true"></i>
         </button>
         <div class="wi-slegend wi-usum" data-part="slegend"></div>
+        <div class="wi-jchips" data-part="jchips" hidden></div>
+        <div class="wi-jstat" data-part="jstat" hidden></div>
         <div class="wi-ubody" data-part="ubody">
           <div class="wi-ulist" data-part="ulist"></div>
           <div class="wi-udet" data-part="udet" hidden></div>
@@ -7569,6 +7688,7 @@
       veil: q('veil'), cvs: q('cvs'), load: q('load'), loadTxt: q('loadtxt'),
       schilder: q('schilder'),
       sWords: q('swords'), sLegend: q('slegend'),
+      jChips: q('jchips'), jStat: q('jstat'),
       units: q('units'), uGriff: q('ugriff'), uBody: q('ubody'),
       uList: q('ulist'), uDet: q('udet'), card: q('card'), sBar: q('sbar'),
       setsOv: q('setsov'),
@@ -7714,6 +7834,10 @@
        Kästen: ihr Inhalt wird bei jeder Änderung neu geschrieben, an
        den Zeilen selbst wären sie nach dem ersten Klick weg. */
     els.uGriff.addEventListener('click', () => unitsSetzen(!unitsAuf));
+    els.jChips.addEventListener('click', e => {
+      const b = e.target.closest('[data-jchip]');
+      if (b) jChipTipp(b.dataset.jchip);
+    });
     els.uList.addEventListener('click', unitListeClick);
     els.uDet.addEventListener('click', unitDetailClick);
     els.card.addEventListener('click', e => {
@@ -8090,15 +8214,74 @@
 
   function renderSoloBar() {
     if (!solo) return;
-    /* „Units (118)" — dieselbe Form wie über einer einzelnen Unit
-       („Schule (24)"). Die Klammer steht hier und nicht im HTML,
-       damit nicht doch einmal ein „Units ()" über einer leeren Insel
-       hängen bleibt. */
-    els.sWords.textContent = solo.words ? '(' + solo.words + ')' : '';
+    /* „118 Tiere" — die Gesamtzahl über allem, was auf der Welt des
+       Kindes lebt, wache wie schlafende. Nicht nur die gewählten:
+       eine Zahl, die beim Abwählen einer Unit kleiner wird, läse sich
+       wie ein Verlust, und verloren geht nichts. */
+    els.sWords.textContent = solo.words || 0;
     els.sLegend.innerHTML = stufenLegende(solo.stufen.keys());
     // Nach einem Stufensprung stimmen auch die Punkte an der Unit
-    // sofort — es ist dieselbe Zahl, nur enger gefasst.
+    // sofort — es ist dieselbe Zahl, nur enger gefasst. Die Chips
+    // zieht renderUnits mit; sie hängen am selben Baum.
     renderUnits();
+  }
+
+  /* ─── Die Jahrgangs-Chips ───────────────────────────────────
+     Eine Reihe zwischen dem Ganzen und den Units: welche Jahrgänge
+     habe ich, und wie weit bin ich in einem davon?
+
+     Sie sind bewusst KEIN Schalter. Angetippt wird ein Jahrgang hier,
+     um nachzusehen — an- und ausgeschaltet wird er in der Liste
+     darunter (`jahrgangSammel`) oder auf der Karte. Zwei Griffe für
+     dasselbe wären an der Stelle besonders teuer: der eine legt eine
+     ganze Insel schlafen, und das darf nicht nebenbei passieren, wenn
+     jemand nur Zahlen sehen wollte.
+
+     Bei einem einzigen Jahrgang fällt die Reihe weg — ein Chip, der
+     das wiederholt, was zwei Zeilen höher steht, ist eine Zeile in
+     einer Leiste, die neben einer Karte steht. Dieselbe Regel wie bei
+     den Schildern und bei den Jahrgangs-Zeilen der Liste. */
+  let jgOffen = null;      // welcher Chip seine Zahlen zeigt (null: keiner)
+
+  function renderJChips(baum) {
+    if (!els.jChips || !els.jStat) return;
+    const jgs = solo ? jahrgangsBaum(baum || unitBaum()) : [];
+    if (jgs.length < 2) {
+      jgOffen = null;
+      els.jChips.hidden = true; els.jChips.innerHTML = '';
+      els.jStat.hidden = true;  els.jStat.innerHTML = '';
+      return;
+    }
+    /* Der aufgeklappte Jahrgang kann verschwunden sein — ein Kind
+       wechselt die Schule, und die Stationen von damals sind weg. */
+    if (jgOffen && !jgs.some(j => j.key === jgOffen)) jgOffen = null;
+
+    els.jChips.hidden = !unitsAuf;
+    els.jChips.innerHTML = jgs.map(j => `
+      <button type="button" class="wi-jchip${j.key === jgOffen ? ' is-on' : ''}${
+        j.zustand === 'aus' ? ' is-schlaf' : ''}"
+              data-jchip="${esc(j.key)}" aria-pressed="${j.key === jgOffen}"
+              title="${esc(j.titel)}${j.zustand === 'aus' ? ' · schläft' : ''}"
+        >${esc(jahrgangKurz(j.grade))}</button>`).join('');
+
+    const j = jgs.find(x => x.key === jgOffen);
+    els.jStat.hidden = !j || !unitsAuf;
+    /* Dieselbe Form wie der Kopf darüber — Zahl, Wort, Punktreihe.
+       Wer die obere Zeile gelesen hat, liest diese ohne Umstellung;
+       es ist dieselbe Auskunft, nur auf einen Jahrgang verengt. */
+    if (j) els.jStat.innerHTML =
+      `<span class="wi-jstatn"><b>${j.anzahl}</b> Tiere</span>`
+      + `<span class="wi-slegend">${stufenLegende(j.ids)}</span>`
+      + `<i class="wi-jstatz">${j.zustand === 'aus' ? 'schläft'
+          : j.zustand === 'halb' ? 'teils wach' : 'wach'}</i>`;
+  }
+
+  /* Ein zweiter Tipp auf denselben Chip macht ihn wieder zu: die
+     Zahlen sind eine Nachfrage und keine Dauereinrichtung, und
+     zugeklappt bleibt mehr Platz für die Liste. */
+  function jChipTipp(key) {
+    jgOffen = (jgOffen === key) ? null : key;
+    renderJChips();
   }
 
   /* ─── Das eigene Menü ───────────────────────────────────────
@@ -8583,8 +8766,10 @@
     els.uGriff.setAttribute('aria-expanded', unitsAuf ? 'true' : 'false');
     els.uBody.hidden = !unitsAuf;
     // Die Stufenpunkte gehören zur Liste und nicht zum Griff: sie
-    // erklären, was darunter steht.
+    // erklären, was darunter steht. Für die Jahrgangs-Chips gilt
+    // dasselbe — zugeklappt bleibt NUR der Griff stehen.
     if (els.sLegend) els.sLegend.hidden = !unitsAuf;
+    if (els.jChips) renderJChips();
     // Zugeklappt gibt es nichts mehr, worauf sich ein Hervorheben
     // beziehen könnte. Ein goldener Kranz ohne die Liste dazu wäre
     // ein Rätsel.
@@ -8766,6 +8951,12 @@
   function renderUnits() {
     if (!solo || !els.uList) return;
     const baum = unitBaum();
+    /* Die Chips hängen am selben Baum und ziehen deshalb HIER mit:
+       wer in der Liste den letzten Jahrgang abschaltet, sieht seinen
+       Chip im selben Augenblick einschlafen. Stünde der Aufruf in
+       renderSoloBar, bliebe er nach jedem Weg stehen, der nur die
+       Liste neu schreibt (soloSetzen, Klappen, Wecken). */
+    renderJChips(baum);
     if (!baum.length) {
       els.uList.innerHTML =
         '<p class="wi-uhint">Noch nichts freigespielt. Deine Insel wächst, sobald '
@@ -10716,7 +10907,7 @@
       takt = { ...TAKT_RUECKFALL };
       ownPainted = null; submitting = false; picking = false; shadowPick = 0;
       sets = { list: [], chosen: [], zu: new Set() };
-      setsBusy = 0; tab = 'units'; setsOpen = false;
+      setsBusy = 0; tab = ''; setsOpen = false;
       factions = [0, 1, 2, 3]; pickSel = []; pickBusy = 0;
       soloClaimAt = 0;
       solo = null; soloTask = null; simZeit = 0; letzterT = 0; nacht = 0;

@@ -631,7 +631,11 @@
   gap: 12px;
 }
 
-.wi-tabs { display: flex; gap: 6px; flex: 0 0 auto; }
+/* Ein Reiter je Jahrgang (20.09.2026), also nicht mehr zwei, sondern
+   so viele, wie die Schule Bände hat. `wrap`, weil sieben davon auf
+   einem Tablet im Hochformat nicht in eine Zeile passen — und lieber
+   zwei Zeilen Reiter als eine mit abgeschnittenem Ende. */
+.wi-tabs { display: flex; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; }
 .wi-tab {
   appearance: none;
   border: 0;
@@ -655,15 +659,10 @@
    solche Reihe, und die Ansicht sieht unverändert aus. */
 .wi-srow { display: flex; flex-wrap: wrap; gap: 8px; }
 
-.wi-sgrp {
-  margin: 6px 2px 0;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-.wi-sgrp:first-child { margin-top: 0; }
+/* Die Zwischenüberschrift `.wi-sgrp` stand hier bis zum 20.09.2026.
+   Sie ist mit den Jahrgangs-Reitern weggefallen: ein Reiter IST ein
+   Jahrgang, und eine Überschrift, die den Reiter darüber wiederholt,
+   sagt nichts. */
 
 .wi-sunit { display: flex; flex-direction: column; gap: 6px; }
 
@@ -2598,6 +2597,84 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   flex: 0 0 auto;
   padding: 0 12px 2px;
   gap: 10px;
+}
+
+/* ── Die Jahrgangs-Chips (20.09.2026) ─────────────────────────
+   Zwischen dem Gesamtstand und der Liste: welche Jahrgänge habe ich?
+
+   Eigener Name und nicht `.wi-tab`: die Reiter am Pult schalten
+   Inhalte um, diese Chips klappen nur eine Zeile Zahlen auf. Sie
+   sehen sich ähnlich, und genau deshalb dürfen sie nicht dieselbe
+   Regel teilen — der Tag, an dem einer von beiden anders aussehen
+   soll, kommt sonst als Überraschung
+   (Regel: feedback_css_class_collision_one_stylesheet).
+
+   `wrap`, weil sechs Jahrgänge plus „Eigene" in einer 400 px breiten
+   Leiste nicht in eine Zeile gehen. */
+.wi-jchips {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 8px 2px;
+}
+.wi-jchip {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--r-pill, 999px);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.wi-jchip:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.wi-jchip.is-on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+/* Ein schlafender Jahrgang sieht aus wie seine Insel: da, aber
+   blass. Damit ist die Chip-Reihe nebenbei eine Karte der Welt —
+   man liest an ihr ab, woran gerade gearbeitet wird, ohne
+   herauszuzoomen. Die Blässe ist DIESELBE wie die der schlafenden
+   Tiere (.70), damit beides als dieselbe Aussage gelesen wird. */
+.wi-jchip.is-schlaf { opacity: .70; border-style: dashed; }
+.wi-jchip.is-schlaf.is-on { opacity: 1; }
+
+/* Die Zahlen des angetippten Jahrgangs. Dieselbe Reihenfolge wie im
+   Kopf darüber — Zahl, Wort, Punktreihe —, damit man sie nicht
+   zweimal lesen lernen muss. */
+.wi-jstat {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0 8px 2px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm, 12px);
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.wi-jstatn { color: var(--ink-soft); }
+.wi-jstatn b {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.wi-jstat .wi-slegend { flex: 1 1 auto; gap: 8px; }
+/* „schläft" steht rechts außen und ist der einzige Teil der Zeile,
+   der etwas behauptet statt zu zählen. */
+.wi-jstatz {
+  font-style: normal;
+  font-weight: 700;
+  margin-left: auto;
 }
 
 .wi-ubody {

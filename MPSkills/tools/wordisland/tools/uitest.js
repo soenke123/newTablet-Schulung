@@ -901,31 +901,79 @@ async function testPultUnits() {
   click(root.querySelector('[data-part="setsbtn"]'), document);
   await wait(20);
 
-  /* ── Die Gliederung ───────────────────────────────────────── */
-  const grp = [...root.querySelectorAll('.wi-sgrp')].map(e => e.textContent.trim());
-  ok('zwei Jahrgangs-Überschriften', grp.length === 2, JSON.stringify(grp));
-  ok('… und sie nennen den Jahrgang',
-     grp[0] === 'Jahrgang 5' && grp[1] === 'Jahrgang 6', JSON.stringify(grp));
+  /* ── Die Reiter: ein Jahrgang je Reiter (20.09.2026) ─────────
+     Sönke: „beim Lehrer am Board sollen oben statt Units Jhg 5,
+     Jhg 6, … eigene stehen." Bis dahin waren es zwei feste Reiter
+     und eine graue Zwischenüberschrift je Jahrgang. */
+  const reiter = () => [...root.querySelectorAll('.wi-tab')];
+  const namen = reiter().map(b => b.textContent.trim());
+  ok('drei Reiter: zwei Jahrgänge und „Eigene"',
+     namen.length === 3, JSON.stringify(namen));
+  ok('… und sie nennen den Jahrgang kurz',
+     namen[0] === 'Jhg 5' && namen[1] === 'Jhg 6' && namen[2] === 'Eigene',
+     JSON.stringify(namen));
+  /* „Eigene" steht da, obwohl es keine einzige eigene Liste gibt:
+     er ist der Weg zum Einfügeformular. */
+  ok('„Eigene" steht auch ohne eine einzige eigene Liste da',
+     namen[2] === 'Eigene', JSON.stringify(namen));
+  ok('der erste Jahrgang liegt vorn',
+     reiter()[0].classList.contains('is-on'), reiter()[0].className);
+  /* Die Überschrift IM Fenster ist damit weg — sie wiederholte nur
+     den Reiter, unter dem sie hing. */
+  ok('keine Jahrgangs-Überschrift mehr in der Liste',
+     root.querySelectorAll('.wi-sgrp').length === 0,
+     String(root.querySelectorAll('.wi-sgrp').length));
 
+  /* ── Was unter dem Reiter steht ───────────────────────────── */
   const kisten = root.querySelectorAll('.wi-sunit');
   ok('genau EINE Unit ist aufklappbar', kisten.length === 1, String(kisten.length));
   ok('… mit ihren drei Stationen als Kacheln',
      kisten[0].querySelectorAll('.wi-sstats .wi-set').length === 3,
      String(kisten[0].querySelectorAll('.wi-sstats .wi-set').length));
-  /* Eine Unit am Stück bleibt eine einzelne Kachel — genau wie das
-     ganze Fenster vor 0150 aussah. */
-  ok('die Unit am Stück steht als einzelne Kachel da',
-     root.querySelectorAll('.wi-srow > .wi-set').length === 1,
-     String(root.querySelectorAll('.wi-srow > .wi-set').length));
   ok('die Unit-Zeile zählt Stationen und Wörter',
      /3 Stationen/.test(kisten[0].textContent) && /90 Wörter/.test(kisten[0].textContent),
      kisten[0].querySelector('.wi-suall span').textContent);
+  /* ⚠️ Der andere Jahrgang ist NICHT da. Das ist der ganze Zweck:
+     bei zwei Lehrwerksbänden lägen sonst fünfundsiebzig Stationen
+     untereinander in einem scrollenden Kasten. */
+  ok('der zweite Jahrgang steht nicht mit im Fenster',
+     root.querySelectorAll('.wi-srow > .wi-set').length === 0,
+     String(root.querySelectorAll('.wi-srow > .wi-set').length));
 
-  /* ── Auf- und Zuklappen ───────────────────────────────────── */
+  /* Und auf seinem Reiter steht er — als einzelne Kachel, genau wie
+     das ganze Fenster vor 0150 aussah. Ein Reiterwechsel ist eine
+     Ansichtssache: er darf nichts an den Server schicken. */
+  const vorWechsel = calls.filter(c => c[0] === 'wi_room_setup').length;
+  click(reiter()[1], document);
+  await wait(20);
+  ok('der zweite Reiter zeigt die Unit am Stück als einzelne Kachel',
+     root.querySelectorAll('.wi-srow > .wi-set').length === 1,
+     String(root.querySelectorAll('.wi-srow > .wi-set').length));
+  ok('… und den ersten Jahrgang nicht mehr',
+     root.querySelectorAll('.wi-sunit').length === 0,
+     String(root.querySelectorAll('.wi-sunit').length));
+  ok('ein Reiterwechsel schickt nichts an den Server',
+     calls.filter(c => c[0] === 'wi_room_setup').length === vorWechsel);
+  /* Das Einfügeformular gehört zu „Eigene" — bei einem Lehrwerk gibt
+     es nichts einzufügen. */
+  ok('das Einfügeformular ist auf einem Jahrgangs-Reiter zu',
+     root.querySelector('[data-part="import"]').hidden === true);
+  click(reiter()[2], document);
+  await wait(20);
+  ok('… und auf „Eigene" offen',
+     root.querySelector('[data-part="import"]').hidden === false);
+
+  click(reiter()[0], document);
+  await wait(20);
+
+  /* ── Auf- und Zuklappen ─────────────────────────────────────
+     ⚠️ Frisch gesucht und nicht `kisten` von oben: der Reiterwechsel
+     hat das Fenster neu geschrieben, die alten Knoten hängen an
+     nichts mehr. */
   ok('bei wenigen Stationen steht sie offen',
-     kisten[0].querySelector('.wi-sstats').hidden === false);
+     root.querySelector('.wi-sunit .wi-sstats').hidden === false);
   const rufeVorher = calls.filter(c => c[0] === 'wi_room_setup').length;
-  click(kisten[0].querySelector('[data-sauf]'), document);
+  click(root.querySelector('.wi-sunit [data-sauf]'), document);
   await wait(20);
   ok('der Pfeil klappt die Stationen zu',
      root.querySelector('.wi-sstats').hidden === true);
@@ -968,6 +1016,82 @@ async function testPultUnits() {
      kopf.querySelector('.wi-suall span').textContent);
 
   tool.unmount();
+
+  /* ── Die Klapp-Vorgabe gilt je REITER ───────────────────────
+     Ein großer Band klappt zu, damit die Lehrkraft ihre Unit nicht
+     im Gescrolle sucht (SETS_AUF_MAX). Gerechnet wurde das bis zum
+     20.09.2026 über ALLES Mitgelieferte — und das ist falsch, seit
+     jeder Band seinen eigenen Reiter hat: der kleine Band stünde
+     zugeklappt da, nur weil daneben ein großer existiert, den man
+     gerade gar nicht sieht. */
+  const eng = makeEnv();
+  const VIELE = [];
+  for (let i = 1; i <= 7; i++) {
+    VIELE.push({ id: 'g' + i, title: 'Station ' + i, count: 10, mine: '0',
+                 unit: 'u-gross', utitle: 'Großer Band', grade: 5,
+                 island: 'en:5', station: i });
+  }
+  VIELE.push(
+    { id: 'h1', title: 'Station 1', count: 10, mine: '0', unit: 'u-klein',
+      utitle: 'Auch groß', grade: 5, island: 'en:5', station: 1 },
+    { id: 'h2', title: 'Station 2', count: 10, mine: '0', unit: 'u-klein',
+      utitle: 'Auch groß', grade: 5, island: 'en:5', station: 2 },
+    { id: 'h3', title: 'Station 3', count: 10, mine: '0', unit: 'u-klein',
+      utitle: 'Auch groß', grade: 5, island: 'en:5', station: 3 },
+    { id: 'h4', title: 'Station 4', count: 10, mine: '0', unit: 'u-klein',
+      utitle: 'Auch groß', grade: 5, island: 'en:5', station: 4 },
+    { id: 'h5', title: 'Station 5', count: 10, mine: '0', unit: 'u-klein',
+      utitle: 'Auch groß', grade: 5, island: 'en:5', station: 5 },
+    { id: 'h6', title: 'Station 6', count: 10, mine: '0', unit: 'u-klein',
+      utitle: 'Auch groß', grade: 5, island: 'en:5', station: 6 },
+    /* Der kleine Band: EINE Unit mit zwei Stationen. Allein läge er
+       weit unter der Schwelle. */
+    { id: 'k1', title: 'Station 1', count: 10, mine: '0', unit: 'u-jg6',
+      utitle: 'Kleiner Band', grade: 6, island: 'en:6', station: 1 },
+    { id: 'k2', title: 'Station 2', count: 10, mine: '0', unit: 'u-jg6',
+      utitle: 'Kleiner Band', grade: 6, island: 'en:6', station: 2 });
+
+  const engCtx = Object.assign({}, eng.ctxBase, {
+    role: 'presenter',
+    actions: {
+      role: 'presenter',
+      call: fn => {
+        if (fn === 'wi_sets_list')
+          return Promise.resolve({ ok: true, chosen: [], sets: VIELE });
+        if (fn === 'wi_room_get') {
+          return Promise.resolve({
+            ok: true, role: 'presenter', phase: 'lobby', mode: 'type',
+            direction: 'mixed', team_count: 2, factions: [0, 1], duration: 600,
+            radius: 5, seed: 1, teams: [], map_key: 'raum:lobby', map: [],
+            own: '', ends_at: null, countdown_ends_at: null, winner_team: null,
+            sets: [], online_count: 0, room_total: 0, people: []
+          });
+        }
+        return Promise.resolve({ ok: true });
+      }
+    }
+  });
+  const engRoot = eng.document.getElementById('root');
+  eng.impls.wordisland.mount(engRoot, engCtx);
+  await wait(60);
+  click(engRoot.querySelector('[data-part="setsbtn"]'), eng.document);
+  await wait(20);
+
+  ok('der große Band startet zugeklappt',
+     [...engRoot.querySelectorAll('.wi-sunit')].every(
+       k => k.querySelector('.wi-sstats').hidden === true),
+     [...engRoot.querySelectorAll('.wi-sunit')]
+       .map(k => k.querySelector('.wi-sstats').hidden).join(','));
+
+  const reiter6 = [...engRoot.querySelectorAll('.wi-tab')]
+    .find(b => b.dataset.tab === 'jg:6');
+  click(reiter6, eng.document);
+  await wait(20);
+  ok('… der kleine daneben aber NICHT',
+     engRoot.querySelector('.wi-sunit .wi-sstats').hidden === false,
+     engRoot.querySelector('.wi-sunit').className);
+
+  eng.impls.wordisland.unmount();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1061,7 +1185,7 @@ async function testPultWoerter() {
      eigene.classList.contains('wi-set--mine'),
      eigene && eigene.className);
 
-  click([...root.querySelectorAll('.wi-tab')].find(b => b.dataset.tab === 'units'), document);
+  click([...root.querySelectorAll('.wi-tab')].find(b => b.dataset.tab === 'jg:5'), document);
   await wait(20);
 
   /* ── Ein Blick in die Wörter ändert die Auswahl NICHT ──────── */
@@ -2037,12 +2161,16 @@ async function testSolo() {
     .filter(p => /NaN|Infinity|undefined/.test(p.getAttribute('d') || ''));
   ok('kein NaN in den Pfaden', schlecht.length === 0, String(schlecht.length));
 
-  /* Seit 10.09.2026 steht die Wortzahl im Kopf der Unit-Leiste und
-     nicht mehr unten: „Units (40)". Unten sind nur noch die zwei
-     Knöpfe. */
-  ok('die Wortzahl steht im Kopf der Unit-Leiste',
-     root.querySelector('[data-part="swords"]').textContent === '(40)',
+  /* Seit 10.09.2026 steht die Zahl im Kopf der Unit-Leiste und nicht
+     mehr unten; seit dem 20.09.2026 zählt sie ausgeschrieben TIERE
+     statt „Units (40)" — dieselbe Zahl, nur bei ihrem Namen genannt
+     (Sönke: „einfach die Gesamtwerte, x Tiere"). */
+  ok('die Zahl im Kopf der Unit-Leiste zählt Tiere',
+     root.querySelector('[data-part="swords"]').textContent === '40',
      root.querySelector('[data-part="swords"]').textContent);
+  ok('… und das Wort „Tiere" steht daneben',
+     /40\s*Tiere/.test(root.querySelector('[data-part="ugriff"]').textContent),
+     root.querySelector('[data-part="ugriff"]').textContent.trim());
   ok('die untere Leiste trägt keine Zahlen mehr',
      !root.querySelector('.wi-sbar .wi-lg') &&
      !root.querySelector('.wi-sbar [data-part="swords"]'));
@@ -2612,6 +2740,104 @@ async function testJahrgangsLeiste() {
      root.querySelectorAll('.wi-cell').length + ' Kacheln');
 
   tool.unmount();
+}
+
+/* ─── Die Jahrgangs-Chips im Kopf der Leiste ──────────────────────
+   Sönke, 20.09.2026: „dadrüber stehen einfach die Gesamtwerte, x
+   Tiere und dann die Punkte und Anzahlen. Drunter dann nebeneinander
+   Jhg 5, Jhg 6 … klicke ich einen Jahrgang an, sehe ich darunter die
+   Stats. Bei den Units darunter bleibt alles gleich."
+
+   Die eine Zusage, an der alles hängt: die Chips sind eine AUSKUNFT
+   und kein Schalter. Sie dürfen den Beutel nicht anfassen — sonst
+   legt ein Blick auf die Zahlen nebenbei eine Insel schlafen. */
+async function testJahrgangsChips() {
+  console.log('\n— Die Jahrgangs-Chips —');
+
+  const PLAN = [
+    { key: 'en:5', grade: 5, woerter: 40 },
+    { key: 'en:6', grade: 6, woerter: 30 },
+    { key: 'en:x', woerter: 10 }
+  ];
+  const { tool, root, calls, document } = await mountSolo(
+    soloWelt(PLAN), {
+      wi_solo_settings: args => ({ ok: true, settings: { sets: args.p_sets } })
+    });
+
+  /* ── Oben das Ganze ──────────────────────────────────────── */
+  ok('der Kopf zählt ALLE Tiere, auch die schlafenden',
+     root.querySelector('[data-part="swords"]').textContent === '80',
+     root.querySelector('[data-part="swords"]').textContent);
+  ok('… mit der Stufenreihe darunter',
+     root.querySelectorAll('[data-part="slegend"] .wi-lg').length > 0);
+
+  /* ── Darunter die Jahrgänge ──────────────────────────────── */
+  const chips = () => [...root.querySelectorAll('.wi-jchip')];
+  ok('ein Chip je Jahrgang', chips().length === 3, chips().length + '');
+  ok('… kurz beschriftet, „Eigene" für die Listen ohne Jahrgang',
+     chips().map(c => c.textContent.trim()).join('|') === 'Jhg 5|Jhg 6|Eigene',
+     chips().map(c => c.textContent.trim()).join('|'));
+
+  /* Die Zahlen kommen erst auf Nachfrage — sonst stünden drei
+     Auskünfte übereinander, bevor die Liste anfängt. */
+  const stat = () => root.querySelector('[data-part="jstat"]');
+  ok('die Zahlen eines Jahrgangs stehen noch nicht da',
+     stat().hidden === true);
+
+  const vorher = calls.filter(c => c[0] === 'wi_solo_settings').length;
+  click(chips()[1], document);
+  await wait(30);
+  ok('ein Tipp auf „Jhg 6" klappt seine Zahlen auf',
+     stat().hidden === false && /30\s*Tiere/.test(stat().textContent),
+     stat().textContent.trim());
+  ok('… mit derselben Stufenreihe wie oben',
+     stat().querySelectorAll('.wi-lg').length > 0);
+  ok('… und der Chip ist markiert',
+     chips()[1].classList.contains('is-on'), chips()[1].className);
+
+  /* ⚠️ DIE Zusage: ein Blick ist kein Eingriff. */
+  ok('… ohne dass etwas an den Server geht',
+     calls.filter(c => c[0] === 'wi_solo_settings').length === vorher);
+  ok('… und ohne dass eine Insel einschläft',
+     tool.stand().archipele.filter(a => a.wach).length === 3,
+     tool.stand().archipele.map(a => a.key + ':' + a.wach).join(' · '));
+
+  /* Ein zweiter Tipp macht wieder zu. */
+  click(chips()[1], document);
+  await wait(30);
+  ok('derselbe Chip klappt die Zahlen wieder weg', stat().hidden === true);
+
+  /* ── Der Chip zeigt, was die Insel tut ───────────────────────
+     Abgeschaltet wird weiter in der Liste darunter — und der Chip
+     zieht mit. Damit ist die Reihe nebenbei eine kleine Karte der
+     Welt: man liest an ihr ab, woran gerade gearbeitet wird. */
+  ok('noch schläft kein Chip',
+     chips().every(c => !c.classList.contains('is-schlaf')),
+     chips().map(c => c.className).join(' | '));
+  click([...root.querySelectorAll('.wi-jrow')][1].querySelector('.wi-utoggle'), document);
+  await wait(40);
+  ok('ein in der Liste abgeschalteter Jahrgang schläft auch als Chip',
+     chips()[1].classList.contains('is-schlaf')
+       && !chips()[0].classList.contains('is-schlaf'),
+     chips().map(c => c.className).join(' | '));
+  ok('… und die Unit-Liste darunter bleibt, was sie war',
+     root.querySelectorAll('.wi-jrow').length === 3,
+     root.querySelectorAll('.wi-jrow').length + ' Jahrgangs-Zeilen');
+
+  tool.unmount();
+
+  /* ── Ein einziger Jahrgang: keine Reihe ─────────────────────
+     Dieselbe Regel wie bei den Schildern und den Jahrgangs-Zeilen.
+     Ein Chip, der wiederholt, was zwei Zeilen höher steht, kostet in
+     einer Leiste neben einer Karte eine Zeile und sagt nichts. */
+  const allein = await mountSolo(soloWelt([{ key: 'en:5', grade: 5, woerter: 40 }]));
+  ok('bei einem einzigen Jahrgang steht keine Chip-Reihe da',
+     allein.root.querySelectorAll('.wi-jchip').length === 0 &&
+     allein.root.querySelector('[data-part="jchips"]').hidden === true);
+  ok('… der Gesamtstand steht trotzdem im Kopf',
+     allein.root.querySelector('[data-part="swords"]').textContent === '40',
+     allein.root.querySelector('[data-part="swords"]').textContent);
+  allein.tool.unmount();
 }
 
 /* Der Antwortweg. Derselbe wie im Raum, nur ohne Feld und ohne
@@ -5861,7 +6087,7 @@ const BEREICHE = {
          testStillgelegt, testSiegerPult, testSiegerTablet],
   sieger: [testSiegerPult, testSiegerTablet],
   insel: [testSolo, testInselWaechst, testInselwelt, testSchlafendeInsel,
-          testSchlafendeTiere, testWecken, testJahrgangsLeiste,
+          testSchlafendeTiere, testWecken, testJahrgangsLeiste, testJahrgangsChips,
           testSoloUeben, testSchluepfen,
           testStats, testPunkte, testSoloOhneMigration, testUnitLeiste,
           testUnitBaum, testTierTipp, testFunkelBild, testUnitsOhneMigration],
