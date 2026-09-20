@@ -2162,6 +2162,54 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   pointer-events: none;
 }
 
+/* ─── Die Schilder der Archipele ────────────────────────────────
+   Ein Schild je Jahrgang, über dem oberen Rand seiner Insel. Es
+   liegt über der Bühne und NICHT im Karten-SVG: mitskaliert wäre
+   die Schrift aus der Übersicht unlesbar und aus der Nähe riesig.
+
+   Der Kasten ist für den Finger durchlässig, die Schilder selbst
+   sind es nicht — sonst ließe sich unter ihnen die Insel nicht mehr
+   verschieben, und gerade beim Herauszoomen liegen sie im Weg. */
+.wi-schilder {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.wi-schild {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 10px 6px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .28);
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+.wi-schild b { font-weight: 700; }
+.wi-schild i { font-size: 11px; font-style: normal; color: var(--muted); }
+.wi-schild .wi-slegend { gap: 6px; flex-wrap: nowrap; }
+
+/* Das wache Archipel bekommt einen Rand in der Akzentfarbe — „hier
+   arbeitest du gerade" ist dieselbe Auskunft wie die lebende Insel
+   darunter, nur auch dann lesbar, wenn beide Inseln klein sind. */
+.wi-schild.is-wach {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .28),
+              0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
 /* „Deine Insel wird gebaut …" — das Einfärben der neun Bilder
    dauert eine knappe Sekunde, und eine Sekunde leeres Meer sieht
    aus wie ein Fehler. */
@@ -2676,8 +2724,50 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    ist weiter unten schon der Kopf der Detail-Ansicht
    (Regel: feedback_css_class_collision_one_stylesheet). */
 
-/* Die Jahrgangs-Überschrift. Sie steht nur da, wenn es wirklich
-   mehrere gibt — bei einem einzigen trennt sie nichts. */
+/* ─── Der Jahrgang ──────────────────────────────────────────────
+   Seit der Inselwelt ist er keine Überschrift mehr, sondern eine
+   Zeile mit Schalter und Pfeil — dieselbe Form wie eine Unit, nur
+   eine Ebene höher. Der Schalter ist zugleich der einzige Weg, eine
+   Insel wieder schlafen zu legen.
+
+   `.wi-jbox` / `.wi-jrow` / `.wi-jbody` und nicht `.wi-gbox`:
+   „g" wäre in dieser Datei weder für Gruppe noch für Grade
+   eindeutig, und `.wi-ugrp` unten ist die alte Überschrift, die als
+   Rückfallweg stehen bleibt. */
+.wi-jbox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+.wi-jbox:first-child { margin-top: 0; }
+
+/* Die Jahrgangszeile trägt kräftiger auf als eine Unit: sie steht
+   für eine ganze INSEL, und die Leiste soll auf einen Blick sagen,
+   welche davon gerade lebt. */
+.wi-jrow .wi-utoggle {
+  background: var(--surface-2);
+  border-color: var(--line);
+}
+.wi-jrow .wi-utoggle b { font-size: 14px; font-weight: 800; }
+.wi-jrow.is-on .wi-utoggle {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+.wi-jbody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Ein schlafender Jahrgang tritt zurück — dieselbe Aussage wie die
+   Silhouette auf der Karte, nur in der Liste. */
+.wi-jbox:not(.is-auf) > .wi-jbody { display: none; }
+
+/* Die alte Jahrgangs-Überschrift. Sie steht nur da, wenn es wirklich
+   mehrere gibt — bei einem einzigen trennt sie nichts. Seit der
+   Inselwelt wird sie in der Solo-Leiste nicht mehr gesetzt; im
+   Wörter-Fenster der Lehrkraft (renderWords) steht sie weiter. */
 .wi-ugrp {
   margin: 8px 2px 0;
   font-size: 11px;

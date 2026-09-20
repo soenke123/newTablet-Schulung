@@ -1844,6 +1844,17 @@ function zeig(el, doc, typ, x, y) {
   return e;
 }
 
+/* Dasselbe, aber auf etwas, das AUF der Bühne liegt (ein Schild).
+   Ausgelöst wird am Ziel, gehört wird an der Bühne — nur so trägt
+   das Ereignis sein `target`, und genau daran erkennt tool.js, dass
+   jemand ein Schild gemeint hat und nicht das Wasser darunter.
+   `stage` steht im Aufruf, damit die Absicht („die Bühne hört zu")
+   an der Aufrufstelle lesbar bleibt. */
+function zeigAuf(stage, ziel, doc, typ, x, y) {
+  if (!stage.contains(ziel)) throw new Error('Ziel liegt nicht auf der Bühne');
+  return zeig(ziel, doc, typ, x, y);
+}
+
 /* Einen Punkt suchen, an dem wirklich etwas steht. Wo Tiere und
    Figur herumlaufen, weiß nur die Zeichenschleife — also wird das
    Feld abgesucht. Weil zwischen zwei synchronen Tipps kein Bild
@@ -2122,6 +2133,485 @@ async function testInselWaechst() {
   ok('derselbe Startwert, dieselbe Insel',
      gleich.size === kleinZahl && [...kleinFelder].every(k => gleich.has(k)));
   nochmal.tool.unmount();
+}
+
+/* ─── Die Inselwelt ───────────────────────────────────────────────
+   Ein Archipel je `island_key`. Eine Ansicht, in der genau die
+   Inseln vorkommen, die man vorgibt — mit einer Station je Insel,
+   damit „so viele Wörter" auch „so viele Wörter DORT" heißt. */
+const weltSetId = key => 'set-' + key.replace(':', '-');
+
+function soloWelt(plan, gewaehlt) {
+  const sets = [], words = [];
+  let n = 0;
+  for (const p of plan) {
+    const id = weltSetId(p.key);
+    sets.push({ id, title: 'Station 1', unit: 'u-' + id, utitle: p.key,
+                grade: p.grade === undefined ? null : p.grade,
+                island: p.key, station: 1, count: p.woerter });
+    for (let i = 0; i < p.woerter; i++) words.push({ i: 'w-' + (n++), s: 0, u: id });
+  }
+  /* `gewaehlt` sind die Stationen im Beutel. Ohne Angabe ist am
+     Server „nichts gewählt" gleich „alles" (wi_solo_chosen) — dann
+     sind alle Archipele wach, so wie bei einem Kind, das noch nie
+     etwas abgewählt hat. */
+  const settings = gewaehlt ? { sets: gewaehlt.map(weltSetId) } : {};
+  return {
+    ok: true,
+    learner: { token: 'tok', seed: 4711, settings,
+               words: words.length, grown: 0, sets },
+    words_list: words, due: 0
+  };
+}
+
+/* Feldschlüssel „r,c" → Weltkoordinaten. Dieselbe Rechnung wie cx()
+   und cy() in tool.js: ungerade Zeilen liegen eine halbe Spalte
+   weiter rechts, der Zeilenabstand ist √3/2. */
+const ROWH_T = 0.8660254;
+const ortVon = k => {
+  const [r, c] = k.split(',').map(Number);
+  return { x: c + 0.5 * (((r % 2) + 2) % 2), y: r * ROWH_T };
+};
+
+/* Der kleinste Abstand zwischen zwei Feldmengen. Die einzige Zahl,
+   die „diese beiden Archipele sind nicht zusammengewachsen"
+   wirklich belegt — eine Zählung der Landmassen tut es nicht: zwei
+   zusammengewachsene sind EINE, und das sähe nach einer Insel
+   weniger aus und nicht nach einem Fehler. */
+function abstand(a, b) {
+  const A = [...a].map(ortVon), B = [...b].map(ortVon);
+  let d = Infinity;
+  for (const p of A) for (const q of B) {
+    d = Math.min(d, Math.hypot(p.x - q.x, p.y - q.y));
+  }
+  return d;
+}
+
+async function testInselwelt() {
+  console.log('\n— Die Inselwelt —');
+
+  /* Ein Jahrgang allein: genau eine Insel plus ihr erster Satellit,
+     also der Stand von vorher. Die Inselwelt darf ein Kind, das nur
+     Klasse 5 hat, nicht anders behandeln als bisher. */
+  const nur5 = await mountSolo(soloWelt([{ key: 'en:5', grade: 5, woerter: 120 }]));
+  const f5 = felderVon(nur5.root);
+  const m5 = landmassen(f5);
+  ok('ein Jahrgang allein ergibt ein Archipel', m5.length === 2,
+     m5.map(m => m.length).join(' · '));
+  ok('und seine Hauptinsel trägt ein ganzes Lehrwerk', m5[0].length >= 400,
+     m5[0].length + ' Felder');
+  nur5.tool.unmount();
+
+  /* Klasse 6 kommt dazu. Das ist der Kern: Klasse 5 darf sich dabei
+     nicht um ein einziges Feld bewegen — sonst hat sich die Insel
+     umgeformt und nicht die Welt erweitert. */
+  const beide = await mountSolo(soloWelt([
+    { key: 'en:5', grade: 5, woerter: 120 },
+    { key: 'en:6', grade: 6, woerter: 120 }
+  ]));
+  const fB = felderVon(beide.root);
+  const mB = landmassen(fB);
+  ok('zwei Jahrgänge ergeben zwei Archipele', mB.length === 4,
+     mB.map(m => m.length).join(' · '));
+
+  const fehlt = [...f5].filter(k => !fB.has(k));
+  ok('Klasse 5 behält JEDES Feld, wenn Klasse 6 dazukommt',
+     fehlt.length === 0, fehlt.slice(0, 5).join(' · '));
+
+  /* Was nicht zu Klasse 5 gehört, ist Klasse 6 — der Trick, mit dem
+     die Zusage ohne eine Zuordnung von außen auskommt. */
+  const f6 = new Set([...fB].filter(k => !f5.has(k)));
+  ok('und Klasse 6 ist wirklich dazugekommen', f6.size > 400, f6.size + ' Felder');
+  const d = abstand(f5, f6);
+  ok('die beiden Archipele sind nicht zusammengewachsen', d >= 10,
+     'kleinster Abstand ' + d.toFixed(1) + ' Kacheln');
+
+  /* Die Hauptinsel von Klasse 6 ist genauso groß wie die von
+     Klasse 5: das Archipel wächst nicht über einen Lehrwerksband
+     hinaus, es kommt eines dazu. */
+  const eigen = landmassen(f6);
+  ok('Klasse 6 bekommt ihre eigene Hauptinsel', eigen[0].length >= 400,
+     eigen[0].length + ' Felder');
+
+  /* Die Kostenbremse darf auch bei zwei wachen Archipelen nicht
+     greifen — 1762 Felder liegen über der 1100, und ohne eine
+     Entscheidung JE ARCHIPEL verlöre Klasse 5 ihre Bäumchen in dem
+     Augenblick, in dem Klasse 6 auftaucht. */
+  ok('und die Karte behält ihre Kleinteile',
+     beide.root.querySelectorAll('.wi-det').length > 0,
+     beide.root.querySelectorAll('.wi-det').length + ' Kleinteile');
+  beide.tool.unmount();
+
+  /* Eine neue SPRACHE darf die bestehenden Jahrgänge genauso wenig
+     verschieben. Genau daran ist der naheliegende Weg gescheitert
+     (Winkel = i/N·2π wie bei den Satelliten): dort dreht jeder neue
+     Platz alle alten mit. */
+  const mitLatein = await mountSolo(soloWelt([
+    { key: 'en:5', grade: 5, woerter: 120 },
+    { key: 'en:6', grade: 6, woerter: 120 },
+    { key: 'la:6', grade: 6, woerter: 80 }
+  ]));
+  const fL = felderVon(mitLatein.root);
+  const fehltL = [...fB].filter(k => !fL.has(k));
+  ok('Latein verschiebt kein Feld von Englisch', fehltL.length === 0,
+     fehltL.slice(0, 5).join(' · '));
+  ok('… und bringt ein drittes Archipel mit',
+     landmassen(fL).length === 6, landmassen(fL).map(m => m.length).join(' · '));
+  mitLatein.tool.unmount();
+
+  /* ⚠️ Die eigentliche Zusage der Slot-Spirale: ein Jahrgang, der
+     sich VOR die bestehenden schiebt. Ein Kind hat Klasse 6 und
+     eigene Listen, die Lehrkraft schaltet danach Klasse-5-Stationen
+     frei — Slot 4 kommt also vor Slot 5 und 13 dazu. Würde der Platz
+     aus der Reihenfolge der belegten Slots kommen (der naheliegende
+     Weg), rutschte hier alles um einen Platz weiter und beide alten
+     Archipele lägen woanders. */
+  const spaet5a = await mountSolo(soloWelt([
+    { key: 'en:6', grade: 6, woerter: 120 },
+    { key: 'en:x', grade: null, woerter: 40 }
+  ]));
+  const fVor = felderVon(spaet5a.root);
+  spaet5a.tool.unmount();
+
+  const spaet5b = await mountSolo(soloWelt([
+    { key: 'en:5', grade: 5, woerter: 120 },
+    { key: 'en:6', grade: 6, woerter: 120 },
+    { key: 'en:x', grade: null, woerter: 40 }
+  ]));
+  const fNach = felderVon(spaet5b.root);
+  const fehltV = [...fVor].filter(k => !fNach.has(k));
+  ok('ein Jahrgang, der sich davorschiebt, verrückt nichts',
+     fehltV.length === 0, fehltV.slice(0, 5).join(' · '));
+  spaet5b.tool.unmount();
+
+  /* Eigene Listen einer Lehrkraft haben keinen Jahrgang. Sie
+     bekommen ihren eigenen Platz und wandern nicht auf die Insel
+     des zuletzt freigeschalteten Jahrgangs. */
+  const mitEigen = await mountSolo(soloWelt([
+    { key: 'en:5', grade: 5, woerter: 120 },
+    { key: 'en:x', grade: null, woerter: 40 }
+  ]));
+  const fE = felderVon(mitEigen.root);
+  const eigene = new Set([...fE].filter(k => !f5.has(k)));
+  ok('eigene Listen bekommen ein eigenes Archipel', eigene.size > 0,
+     eigene.size + ' Felder');
+  ok('… und liegen nicht an der Insel des Jahrgangs',
+     abstand(f5, eigene) >= 10,
+     'kleinster Abstand ' + abstand(f5, eigene).toFixed(1) + ' Kacheln');
+  mitEigen.tool.unmount();
+}
+
+/* ─── Die schlafende Insel ────────────────────────────────────────
+   Ein Archipel, an dem gerade nicht gearbeitet wird, wird zur
+   Silhouette: kein Relief, keine Bäumchen, keine Brandung. Das ist
+   nicht Zierde, sondern die Statik — ohne sie wären sechs Jahrgänge
+   rund 31.000 SVG-Knoten. */
+async function testSchlafendeInsel() {
+  console.log('\n— Die schlafende Insel —');
+
+  const PLAN = [
+    { key: 'en:5', grade: 5, woerter: 120 },
+    { key: 'en:6', grade: 6, woerter: 120 }
+  ];
+
+  const wach = await mountSolo(soloWelt(PLAN));
+  const wachFelder = wach.root.querySelectorAll('.wi-cell').length;
+  const wachTeile = wach.root.querySelectorAll('.wi-det').length;
+  const wachSurf = wach.root.querySelectorAll('.wi-surf').length;
+  ok('beide wach: beide Archipele stehen im Relief', wachFelder > 1100,
+     wachFelder + ' Kacheln');
+  ok('… und keine Silhouette weit und breit',
+     wach.root.querySelectorAll('.wi-schlaf').length === 0);
+  wach.tool.unmount();
+
+  /* Jetzt ist nur Klasse 5 im Beutel. */
+  const halb = await mountSolo(soloWelt(PLAN, ['en:5']));
+  const halbFelder = halb.root.querySelectorAll('.wi-cell').length;
+  const schlaf = halb.root.querySelectorAll('.wi-schlaf');
+  ok('schläft Klasse 6, wird sie eine Silhouette', schlaf.length === 1,
+     schlaf.length + ' Silhouetten');
+  ok('… und ihre Kacheln sind gar nicht erst gebaut',
+     halbFelder > 400 && halbFelder < wachFelder * .62,
+     `${wachFelder} → ${halbFelder} Kacheln`);
+
+  /* Die eigentliche Zusage: es ist BILLIGER, nicht bloß anders.
+     Eine Silhouette kostet zwei Elemente je Landmasse. */
+  ok('eine Silhouette kostet fast nichts',
+     schlaf[0].querySelectorAll('path').length <= 4,
+     schlaf[0].querySelectorAll('path').length + ' Pfade für zwei Landmassen');
+  ok('… und die schlafende Insel bekommt keine Brandung',
+     halb.root.querySelectorAll('.wi-surf').length < wachSurf * .62,
+     `${wachSurf} → ${halb.root.querySelectorAll('.wi-surf').length} Wellen`);
+
+  /* Klasse 5 verliert dabei NICHTS. Eine Insel, die ihre
+     Ausstattung verliert, weil nebenan eine zweite eingeschlafen
+     ist, wäre derselbe Fehler wie eine, die sich umformt. */
+  ok('Klasse 5 behält ihr Relief samt Kleinteilen',
+     halb.root.querySelectorAll('.wi-det').length > wachTeile * .38,
+     `${wachTeile} → ${halb.root.querySelectorAll('.wi-det').length} Kleinteile`);
+
+  /* Das Meer bleibt EIN Meer: die Tiefenstufen laufen um alles
+     herum, auch um das, was schläft. Sonst endete die Welt an der
+     Küste der wachen Insel. */
+  ok('das Meer umschließt weiter die ganze Welt',
+     halb.root.querySelectorAll('.wi-sea').length === 1);
+  halb.tool.unmount();
+}
+
+/* Und die Tiere darauf. Der Prüfstand braucht dafür echte Bilder
+   (`live: true`) — mit der Attrappe wäre von jeder Bewegung immer
+   nur das erste gesehen, und „bewegt sich nicht" ließe sich gar
+   nicht von „bewegt sich" unterscheiden. */
+async function testSchlafendeTiere() {
+  console.log('\n— Die Tiere schlafen mit —');
+
+  const PLAN = [
+    { key: 'en:5', grade: 5, woerter: 40 },
+    { key: 'en:6', grade: 6, woerter: 40 }
+  ];
+  /* Stufe 1, damit sie laufen: ein Ei bewegt sich auch wach nicht,
+     und dann bewiese ein Stillstand gar nichts. */
+  const view = soloWelt(PLAN, ['en:5']);
+  for (const w of view.words_list) w.s = 1;
+
+  const { env, tool, root } = await mountSolo(view, null, { live: true });
+  const welt = tool.stand();
+  ok('die Welt gibt ihren Stand preis', !!welt && welt.archipele.length === 2,
+     welt ? welt.archipele.length + ' Archipele' : 'kein Zugriff');
+
+  const wach = welt.tiere.filter(t => !t.schlaeft);
+  const schlaf = welt.tiere.filter(t => t.schlaeft);
+  ok('die Tiere der wachen Insel sind wach', wach.length === 40, wach.length + '');
+  ok('die der schlafenden schlafen', schlaf.length === 40, schlaf.length + '');
+  ok('und nur die wachen stehen in der Schrittliste',
+     welt.wachTiere.length === 40, welt.wachTiere.length + '');
+  ok('ein schlafendes Tier trägt sein Schlafbild',
+     schlaf.every(t => t.zustand === 'schlafen'));
+
+  /* Der Kern: über mehrere Bilder hinweg rührt sich auf der
+     schlafenden Insel nichts, auf der wachen schon. */
+  const merk = ts => ts.map(t => t.x.toFixed(4) + ',' + t.y.toFixed(4)).join('|');
+  const schlafVor = merk(schlaf), wachVor = merk(wach);
+  await wait(260);
+  ok('die schlafenden Tiere rühren sich über Sekunden nicht',
+     merk(schlaf) === schlafVor);
+  ok('die wachen dagegen schon', merk(wach) !== wachVor);
+  ok('und die Zeichenschleife lief dabei wirklich',
+     env.rafs > 3 && env.rafFehler.length === 0,
+     env.rafs + ' Bilder ' + (env.rafFehler[0] || ''));
+
+  /* Solange man auf der wachen Insel steht, ist die schlafende gar
+     nicht im Bild — und was nicht im Bild ist, wird nicht gezeichnet
+     (`_a` bleibt unbesetzt). Das ist die Sichtfeld-Auslese, und sie
+     ist der Grund, warum die Zusage darunter erst nach einem
+     Doppeltipp etwas zu messen hat. */
+  ok('vom Nachbar-Archipel wird nichts gezeichnet, solange man woanders steht',
+     schlaf.every(t => t._a === undefined) && wach.some(t => t._a !== undefined));
+
+  /* Jetzt hinüberfahren. Der Weg wird gerechnet und nicht geraten:
+     die Mittelpunkte beider Archipele stehen in `stand()`, der
+     Maßstab der Bühne folgt aus viewBox und Bühnengröße, und die
+     Zoomstufe steht im `transform` der Karte. Ein geratener Wisch
+     wäre ein Prüfstand, der bei jeder Maßänderung rot wird.
+
+     ⚠️ Herausgezoomt geht das NICHT: dort wäre ein Tier ein bis zwei
+     Bildpunkte, und genau dann lässt die Karte die Schläfer
+     absichtlich weg (SCHLAF_SICHT_PX). Die Ferne ist der Silhouette
+     und ihrem Schild vorbehalten. */
+  const stage = root.querySelector('[data-part="stage"]');
+  const wrap = root.querySelector('[data-part="mapwrap2"]')
+            || root.querySelector('.wi-mapwrap2');
+  const k = Number((/scale\(([-\d.]+)\)/.exec(wrap.style.transform) || [])[1] || 1);
+  const s = Math.min(RECT.width / welt.vb[2], RECT.height / welt.vb[3]);
+  const P = s * k;
+  const dx = (welt.archipele[1].mx - welt.archipele[0].mx) * P;
+  const dy = (welt.archipele[1].my - welt.archipele[0].my) * P;
+
+  const mx = RECT.width / 2, my = RECT.height / 2;
+  zeig(stage, env.document, 'pointerdown', mx, my);
+  for (let i = 1; i <= 6; i++) {
+    zeig(stage, env.document, 'pointermove',
+         mx - dx * i / 6, my - dy * i / 6);
+  }
+  zeig(stage, env.document, 'pointerup', mx - dx, my - dy);
+  await wait(120);
+
+  const gemalt = schlaf.filter(t => t._a !== undefined);
+  ok('auf der schlafenden Insel stehen die Tiere sichtbar herum',
+     gemalt.length > 0, gemalt.length + ' von ' + schlaf.length);
+
+  /* Sönkes Ansage: „nur schlafen und nicht leuchten." Nachts würde
+     ein Tier der Stufe 1 sonst mitglühen; `_a` ist die EINE Zahl
+     dafür, wie laut ein Tier sein darf. */
+  ok('… und keiner von ihnen leuchtet',
+     gemalt.every(t => t._a <= .72),
+     'lautester ' + Math.max(0, ...gemalt.map(t => t._a)).toFixed(2));
+
+  tool.unmount();
+}
+
+/* ─── Wecken ──────────────────────────────────────────────────────
+   Sönkes Entscheid vom 20.09.2026: ein Tipp auf eine schlafende
+   Insel fliegt hin UND weckt den ganzen Jahrgang. */
+async function testWecken() {
+  console.log('\n— Eine Insel wecken —');
+
+  const PLAN = [
+    { key: 'en:5', grade: 5, woerter: 40 },
+    { key: 'en:6', grade: 6, woerter: 40 }
+  ];
+  const view = soloWelt(PLAN, ['en:5']);
+  for (const w of view.words_list) w.s = 1;
+
+  const { env, tool, root, calls } = await mountSolo(view, {
+    wi_solo_settings: args => ({ ok: true, settings: { sets: args.p_sets } })
+  });
+  const welt = tool.stand();
+
+  /* Das Schild ist die Trefferfläche: aus der Übersicht ist eine
+     Insel klein, ein beschriftetes Schild nicht. */
+  const schilder = [...root.querySelectorAll('.wi-schild')];
+  ok('jedes Archipel bekommt ein Schild', schilder.length === 2,
+     schilder.length + '');
+  ok('… und genau eines ist als wach ausgezeichnet',
+     schilder.filter(s => s.className.includes('is-wach')).length === 1);
+  const schlafend = schilder.find(s => !s.className.includes('is-wach'));
+  ok('… das schlafende sagt, was ein Tipp bewirkt',
+     /antippen/i.test(schlafend.textContent), schlafend.textContent.trim());
+  ok('… und beide tragen ihren Jahrgang',
+     schilder.map(s => s.querySelector('b').textContent).join(' · ')
+       === 'Jahrgang 5 · Jahrgang 6',
+     schilder.map(s => s.querySelector('b').textContent).join(' · '));
+
+  const felderVor = root.querySelectorAll('.wi-cell').length;
+  const wachVor = welt.wachTiere.length;
+
+  /* Tippen. Der Weg ist derselbe wie mit dem Finger: aufsetzen und
+     loslassen auf dem Schild, und die Bühne fängt beides in der
+     Einfang-Phase ab. */
+  const stage = root.querySelector('[data-part="stage"]');
+  zeigAuf(stage, schlafend, env.document, 'pointerdown', 300, 200);
+  zeigAuf(stage, schlafend, env.document, 'pointerup', 300, 200);
+  await wait(30);
+
+  const setz = calls.filter(c => c[0] === 'wi_solo_settings');
+  ok('der Tipp schickt eine neue Auswahl an den Server', setz.length === 1,
+     JSON.stringify(setz));
+  ok('… und darin liegt der GANZE Jahrgang',
+     setz.length === 1 && setz[0][1].p_sets.length === 2
+       && setz[0][1].p_sets.includes('set-en-6'),
+     setz.length ? JSON.stringify(setz[0][1].p_sets) : '—');
+
+  ok('die geweckte Insel steht jetzt im Relief',
+     root.querySelectorAll('.wi-cell').length > felderVor * 1.6,
+     `${felderVor} → ${root.querySelectorAll('.wi-cell').length} Kacheln`);
+  ok('… ihre Silhouette ist weg',
+     root.querySelectorAll('.wi-schlaf').length === 0);
+  ok('… ihre Tiere sind aufgewacht',
+     tool.stand().wachTiere.length === wachVor * 2,
+     `${wachVor} → ${tool.stand().wachTiere.length}`);
+  ok('… und beide Schilder sind wach',
+     [...root.querySelectorAll('.wi-schild')]
+       .every(s => s.className.includes('is-wach')));
+
+  /* Die Gegenrichtung ist ausdrücklich NICHT der Tipp: wer auf
+     seiner eigenen Insel herumtippt, darf nicht aus Versehen den
+     Jahrgang abwählen, an dem er gerade arbeitet. */
+  const jetztWach = root.querySelector('.wi-schild');
+  zeigAuf(stage, jetztWach, env.document, 'pointerdown', 300, 200);
+  zeigAuf(stage, jetztWach, env.document, 'pointerup', 300, 200);
+  await wait(30);
+  ok('ein Tipp auf eine WACHE Insel ändert nichts',
+     calls.filter(c => c[0] === 'wi_solo_settings').length === 1);
+
+  tool.unmount();
+}
+
+/* ─── Die Jahrgangs-Ebene ─────────────────────────────────────────
+   Der Jahrgang ist seit der Inselwelt ein Schalter mit Dreizustand
+   — und der EINZIGE Weg, eine Insel wieder schlafen zu legen. */
+async function testJahrgangsLeiste() {
+  console.log('\n— Der Jahrgang in der Leiste —');
+
+  const PLAN = [
+    { key: 'en:5', grade: 5, woerter: 40 },
+    { key: 'en:6', grade: 6, woerter: 40 }
+  ];
+  const { env, tool, root, calls, ctx, document } = await mountSolo(
+    soloWelt(PLAN), {
+      wi_solo_settings: args => ({ ok: true, settings: { sets: args.p_sets } })
+    });
+
+  const zeilen = [...root.querySelectorAll('.wi-jrow')];
+  ok('jeder Jahrgang bekommt eine Zeile', zeilen.length === 2, zeilen.length + '');
+  ok('… beide an, solange nichts abgewählt ist',
+     zeilen.every(z => z.className.includes('is-on')));
+
+  /* Der Sammelschalter legt den ganzen Jahrgang schlafen. */
+  click(zeilen[1].querySelector('.wi-utoggle'), document);
+  await wait(40);
+  const letzte = calls.filter(c => c[0] === 'wi_solo_settings').pop();
+  ok('der Sammelschalter nimmt ALLE Stationen des Jahrgangs weg',
+     letzte && letzte[1].p_sets.length === 1 && letzte[1].p_sets[0] === 'set-en-5',
+     letzte ? JSON.stringify(letzte[1].p_sets) : '—');
+  ok('… und die Insel schläft daraufhin ein',
+     root.querySelectorAll('.wi-schlaf').length === 1,
+     root.querySelectorAll('.wi-schlaf').length + ' Silhouetten');
+  ok('… ihre Tiere auch',
+     tool.stand().wachTiere.length === 40, tool.stand().wachTiere.length + '');
+  ok('… und ihre Zeile klappt mit zu',
+     root.querySelectorAll('.wi-jbox')[1].className.includes('is-auf') === false);
+
+  /* Und wieder an. */
+  click([...root.querySelectorAll('.wi-jrow')][1].querySelector('.wi-utoggle'), document);
+  await wait(40);
+  ok('derselbe Schalter weckt sie wieder',
+     root.querySelectorAll('.wi-schlaf').length === 0
+       && tool.stand().wachTiere.length === 80,
+     tool.stand().wachTiere.length + ' wache Tiere');
+
+  /* ⚠️ Der Fehler, der beim Bauen aufgefallen ist: eine UNIT
+     abzuschalten darf den Jahrgang nicht zuklappen. Sonst
+     verschwindet mit ihr die Zeile, über die man sie zurückholt —
+     eine Liste, die sich selbst wegräumt. */
+  const unit = root.querySelector('.wi-uone.is-on .wi-utoggle');
+  click(unit, document);
+  await wait(40);
+  const kisten = [...root.querySelectorAll('.wi-jbox')];
+  ok('eine Unit abzuschalten klappt den Jahrgang NICHT zu',
+     kisten.every(k => k.className.includes('is-auf')),
+     kisten.map(k => k.className).join(' | '));
+  ok('… und man kommt wieder an sie heran',
+     !!root.querySelector('.wi-uone .wi-utoggle'));
+
+  /* Der letzte Jahrgang lässt sich nicht abschalten: am Server
+     heißt „nichts gewählt" nämlich „alles" (wi_solo_chosen). */
+  /* ⚠️ Nach JEDEM Klick neu suchen: renderUnits zeichnet die Liste
+     neu, und eine vorher eingesammelte Knotenliste zeigt danach auf
+     Elemente, die nicht mehr im Dokument hängen. Ein Klick darauf
+     geht ins Leere — und der Prüfstand hielte den Schalter für
+     kaputt. (Dieselbe Falle steht schon bei testUnitBaum.) */
+  ctx.toasts.length = 0;
+  for (let i = 0; i < 6; i++) {
+    const z = root.querySelector('.wi-jrow.is-on, .wi-jrow.is-halb');
+    if (!z) break;
+    click(z.querySelector('.wi-utoggle'), document);
+    await wait(30);
+  }
+  ok('der letzte Jahrgang bleibt an',
+     tool.stand().archipele.filter(a => a.wach).length === 1,
+     tool.stand().archipele.map(a => a.key + ':' + a.wach).join(' · '));
+  ok('… und es wird gesagt, warum',
+     ctx.toasts.some(t => /Jahrgang muss anbleiben/.test(t)),
+     JSON.stringify(ctx.toasts));
+  /* Und die Welt bleibt heil: genau eine Insel lebt, die andere
+     schläft — kein Meer aus lauter Silhouetten. */
+  ok('… also lebt weiter genau eine Insel',
+     root.querySelectorAll('.wi-schlaf').length === 1
+       && root.querySelectorAll('.wi-cell').length > 400,
+     root.querySelectorAll('.wi-cell').length + ' Kacheln');
+
+  tool.unmount();
 }
 
 /* Der Antwortweg. Derselbe wie im Raum, nur ohne Feld und ohne
@@ -2458,15 +2948,24 @@ async function testUnitBaum() {
       wi_solo_settings: args => ({ ok: true, settings: { sets: args.p_sets } })
     });
 
-  /* ── Die Gliederung ───────────────────────────────────────── */
-  const grp = [...root.querySelectorAll('.wi-ugrp')].map(e => e.textContent.trim());
-  ok('drei Jahrgangs-Überschriften', grp.length === 3, JSON.stringify(grp));
+  /* ── Die Gliederung ─────────────────────────────────────────
+     Seit der Inselwelt ist der Jahrgang keine Überschrift mehr,
+     sondern eine Zeile mit Schalter und Pfeil — je eine Insel. */
+  const grp = [...root.querySelectorAll('.wi-jrow b')]
+    .map(e => e.textContent.replace(/\s*\(\d+\)\s*$/, '').trim());
+  ok('drei Jahrgangs-Zeilen', grp.length === 3, JSON.stringify(grp));
   ok('… und sie heißen nach dem Jahrgang',
      grp[0] === 'Jahrgang 5' && grp[1] === 'Jahrgang 6', JSON.stringify(grp));
   /* Eine eigene Liste hat keinen Jahrgang. „Jahrgang null" wäre
-     eine Behauptung — sie bekommt eine eigene Überschrift. */
+     eine Behauptung — sie bekommt eine eigene Zeile. */
   ok('… die jahrgangslose Liste steht unter „Eigene Listen"',
      grp[2] === 'Eigene Listen', JSON.stringify(grp));
+  /* Jede Jahrgangszeile zählt die Wörter ihrer ganzen Insel — das
+     ist dieselbe Zahl, die auf dem Schild draußen steht. */
+  const jZahlen = [...root.querySelectorAll('.wi-jrow .wi-uzahl')]
+    .map(e => Number(e.textContent.replace(/\D/g, '')));
+  ok('… und jede zählt die Wörter ihrer Insel',
+     jZahlen.reduce((a, b) => a + b, 0) === 40, JSON.stringify(jZahlen));
 
   const kisten = root.querySelectorAll('.wi-ubox');
   ok('genau EINE Unit ist aufklappbar', kisten.length === 1, String(kisten.length));
@@ -5361,7 +5860,9 @@ const BEREICHE = {
          testFehlendeMigration, testOhneMigration, testLobbyRegeln,
          testStillgelegt, testSiegerPult, testSiegerTablet],
   sieger: [testSiegerPult, testSiegerTablet],
-  insel: [testSolo, testInselWaechst, testSoloUeben, testSchluepfen,
+  insel: [testSolo, testInselWaechst, testInselwelt, testSchlafendeInsel,
+          testSchlafendeTiere, testWecken, testJahrgangsLeiste,
+          testSoloUeben, testSchluepfen,
           testStats, testPunkte, testSoloOhneMigration, testUnitLeiste,
           testUnitBaum, testTierTipp, testFunkelBild, testUnitsOhneMigration],
   level: [testFigur, testFigurLevel, testFigurOhneMigration, testLevel,

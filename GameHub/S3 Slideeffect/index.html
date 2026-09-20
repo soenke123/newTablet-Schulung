@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="arcade" data-arcade-color="magenta">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SlideEffect – Schätzspiel</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="themes.css">
+</head>
+<body>
+
+  <!-- Confetti Canvas für Volltreffer & Spielende -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <div class="quiz-container">
+    
+    <!-- HEADER -->
+    <header class="quiz-header">
+      <div class="brand-title">
+        <span>🎯 SlideEffect</span>
+      </div>
+      <div class="score-badge" id="header-score-badge">
+        <span class="score-icon">★</span>
+        <span id="header-score-val">0</span> Pkt
+      </div>
+    </header>
+
+    <!-- 1. START SCREEN -->
+    <section id="start-screen" class="screen active">
+      <div class="start-content">
+        <!-- Cooles Animiertes SlideEffect Arcade Badge -->
+        <div class="hero-icon-wrap">
+          <svg class="hero-badge-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="12" y="12" width="76" height="76" rx="22" class="svg-badge-border" stroke="url(#hero-grad-prim)" stroke-width="3.5"/>
+            <path d="M26 50 H74" stroke="rgba(255,255,255,0.2)" stroke-width="6" stroke-linecap="round"/>
+            <path d="M26 50 H52" stroke="url(#hero-grad-prim)" stroke-width="6" stroke-linecap="round"/>
+            
+            <line x1="28" y1="37" x2="28" y2="43" stroke="#fff" stroke-width="2" opacity="0.6"/>
+            <line x1="50" y1="35" x2="50" y2="43" stroke="#fff" stroke-width="2.5" opacity="0.9"/>
+            <line x1="72" y1="37" x2="72" y2="43" stroke="#fff" stroke-width="2" opacity="0.6"/>
+            
+            <g class="svg-animated-thumb">
+              <circle cx="50" cy="50" r="13" fill="#090014" stroke="url(#hero-grad-sec)" stroke-width="3"/>
+              <circle cx="50" cy="50" r="6" fill="url(#hero-grad-prim)"/>
+              <path d="M50 43 V45 M50 55 V57 M43 50 H45 M55 50 H57" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+            </g>
+
+            <path d="M30 67 L42 67" stroke="url(#hero-grad-sec)" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+            <path d="M24 73 L46 73" stroke="url(#hero-grad-prim)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+
+            <defs>
+              <linearGradient id="hero-grad-prim" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="var(--arcade-hl-secondary, #06b6d4)" />
+                <stop offset="100%" stop-color="var(--arcade-hl-primary, #ec4899)" />
+              </linearGradient>
+              <linearGradient id="hero-grad-sec" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff" />
+                <stop offset="100%" stop-color="var(--arcade-hl-secondary, #06b6d4)" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        <h1 class="hero-title">SlideEffect</h1>
+        <p class="hero-subtitle">
+          Schätze Fakten per Schieberegler so nah wie möglich an die Wahrheit.
+        </p>
+
+        <!-- 4 Info-Punkte (Desktop: Grid, Mobile: wischbares Karussell) -->
+        <div class="rules-carousel-wrap">
+          <div class="rules-grid" id="rules-grid">
+            <div class="rule-card">
+              <span class="rule-icon">🎲</span>
+              <div>
+                <strong>8 Zufallsfragen</strong>
+                <p>Jede Runde wählt 8 spannende Fragen zufällig aus dem Pool.</p>
+              </div>
+            </div>
+            <div class="rule-card">
+              <span class="rule-icon">🎚️</span>
+              <div>
+                <strong>Schieberegler</strong>
+                <p>Stelle deine Schätzung ein oder tippe auf + / - zur Feinjustierung.</p>
+              </div>
+            </div>
+            <div class="rule-card">
+              <span class="rule-icon">📐</span>
+              <div>
+                <strong>20% Toleranzregel</strong>
+                <p>Unter 20% Abweichung gibt es Punkte – je näher, desto mehr!</p>
+              </div>
+            </div>
+            <div class="rule-card">
+              <span class="rule-icon">⭐</span>
+              <div>
+                <strong>Volltreffer-Bonus</strong>
+                <p>Triffst du exakt ins Schwarze, sicherst du dir 120 Punkte!</p>
+              </div>
+            </div>
+          </div>
+          <!-- Swipe-Indikatoren / Punkte (nur auf mobilen Geräten sichtbar) -->
+          <div class="rules-dots" id="rules-dots">
+            <button type="button" class="rule-dot active" data-index="0" aria-label="Punkt 1"></button>
+            <button type="button" class="rule-dot" data-index="1" aria-label="Punkt 2"></button>
+            <button type="button" class="rule-dot" data-index="2" aria-label="Punkt 3"></button>
+            <button type="button" class="rule-dot" data-index="3" aria-label="Punkt 4"></button>
+          </div>
+        </div>
+
+        <button id="btn-start-game" class="btn-primary">
+          Starte deine Slide
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+
+        <!-- Farbwahl (3 Farbflächen) -->
+        <div class="arcade-color-picker">
+          <div class="color-picker-label">Farbtheme</div>
+          <div class="color-swatches">
+            <button type="button" class="color-swatch-btn swatch-magenta active" data-color="magenta" onclick="setArcadeColor('magenta')" aria-label="Neon Magenta">
+              <span class="swatch-check">✓</span>
+            </button>
+            <button type="button" class="color-swatch-btn swatch-green" data-color="green" onclick="setArcadeColor('green')" aria-label="Laser Grün">
+              <span class="swatch-check">✓</span>
+            </button>
+            <button type="button" class="color-swatch-btn swatch-orange" data-color="orange" onclick="setArcadeColor('orange')" aria-label="Solar Orange">
+              <span class="swatch-check">✓</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. GAME SCREEN (Frage) -->
+    <section id="game-screen" class="screen">
+      <!-- Fortschrittsbalken -->
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+
+      <div class="question-meta">
+        <span class="question-counter" id="question-counter">Frage 1 von 8</span>
+        <span id="question-unit-tag">Einheit</span>
+      </div>
+
+      <div class="question-box">
+        <h2 class="question-text" id="question-text">Hier steht die Frage?</h2>
+      </div>
+
+      <!-- Eingestellter Wert -->
+      <div class="guess-display-wrap">
+        <div class="guess-label">Deine Schätzung</div>
+        <div class="guess-display">
+          <span class="guess-value" id="guess-value-display">0</span>
+          <span class="guess-unit" id="guess-unit-display"></span>
+        </div>
+        <!-- Live-Vergleichsbox (z.B. für Gigawatt-Kraftwerke) -->
+        <div class="live-comparison-hint" id="live-comparison-hint" style="display: none;"></div>
+      </div>
+
+      <!-- Schieberegler & Stepper Buttons -->
+      <div class="slider-control-group">
+        <button class="step-btn" id="btn-step-minus" aria-label="Schritt kleiner">−</button>
+        <div class="slider-wrapper">
+          <input type="range" id="guess-slider" class="range-slider" min="0" max="100" step="1" value="50">
+          <div class="range-labels">
+            <span id="range-min-label">0</span>
+            <span id="range-max-label">100</span>
+          </div>
+        </div>
+        <button class="step-btn" id="btn-step-plus" aria-label="Schritt größer">+</button>
+      </div>
+
+      <!-- Aktionen -->
+      <div class="game-actions">
+        <button id="btn-submit-guess" class="btn-primary">
+          Antwort einloggen
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. FEEDBACK SCREEN (Auflösung) -->
+    <section id="feedback-screen" class="screen">
+      <div class="feedback-card">
+        
+        <!-- Status Banner -->
+        <div class="feedback-status-banner" id="feedback-banner">
+          <div class="status-title" id="feedback-status-title">Volltreffer!</div>
+          <div class="status-subtitle" id="feedback-status-subtitle">Errechnete Punkte</div>
+        </div>
+
+        <!-- Visueller Vergleichsstrahl -->
+        <div class="visual-comparison-box">
+          <div class="comparison-track-wrap" id="comparison-track">
+            <div class="comparison-diff-bar" id="comparison-diff-bar"></div>
+            
+            <!-- Dein Tipp Marker -->
+            <div class="track-pin pin-guess" id="pin-guess">
+              <span class="pin-label-top" id="pin-guess-label">Tipp: 42</span>
+            </div>
+
+            <!-- Tatsächlicher Wert Marker -->
+            <div class="track-pin pin-actual" id="pin-actual">
+              <span class="pin-label-bottom" id="pin-actual-label">Richtig: 45</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistiken zur Antwort -->
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-item-label">Dein Tipp</div>
+            <div class="stat-item-val" id="stat-guess-val">--</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-item-label">Tatsächlich</div>
+            <div class="stat-item-val" id="stat-actual-val">--</div>
+          </div>
+          <div class="stat-item highlight-stat">
+            <div class="stat-item-label">Abweichung / Punkte</div>
+            <div class="stat-item-val" id="stat-points-val">+0 Pkt</div>
+          </div>
+        </div>
+
+        <!-- Wissens-Erklärung -->
+        <div class="fact-explanation" id="feedback-explanation">
+          Hier steht die spannende Erklärung zum Fakt.
+        </div>
+
+        <!-- BUTTON ZUR QUELLE (Wichtig!) -->
+        <div class="source-section">
+          <a id="feedback-source-link" class="btn-source" href="#" target="_blank" rel="noopener noreferrer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            </svg>
+            <span id="feedback-source-text">📖 Quelle ansehen</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.7;">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+          </a>
+        </div>
+
+        <!-- Button für nächste Frage -->
+        <div class="game-actions">
+          <button id="btn-next-question" class="btn-primary">
+            Nächste Frage
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 4. END SCREEN (Auswertung) -->
+    <section id="end-screen" class="screen">
+      <div class="end-content">
+        <h2 class="final-title">Quiz abgeschlossen!</h2>
+        <div class="final-rank" id="final-rank">Fakten-Champion</div>
+
+        <div class="final-score-box">
+          <span class="final-score-val" id="final-score-val">0</span>
+          <span class="final-score-max">/ 960 Pkt</span>
+        </div>
+
+        <!-- Runden-Detailansicht: Tabs 1-8 für die Fragen -->
+        <div class="review-nav-wrap">
+          <div class="review-nav-label">Frage auswählen:</div>
+          <div class="review-tabs" id="review-tabs">
+            <!-- Dynamische Tabs 1 bis 8 -->
+          </div>
+        </div>
+
+        <!-- Die eine aktive Detail-Karte (kein Glitch, alles auf einen Blick) -->
+        <div class="review-active-card" id="review-active-card">
+          <!-- Dynamischer Inhalt der ausgewählten Frage -->
+        </div>
+
+        <!-- Vor / Zurück Buttons zum Blättern -->
+        <div class="review-nav-controls">
+          <button type="button" class="btn-review-nav" id="btn-prev-review" onclick="navigateReview(-1)">
+            ‹ Vorherige
+          </button>
+          <span class="review-nav-counter" id="review-nav-counter">Frage 1 von 8</span>
+          <button type="button" class="btn-review-nav" id="btn-next-review" onclick="navigateReview(1)">
+            Nächste ›
+          </button>
+        </div>
+
+        <button id="btn-restart-game" class="btn-primary" onclick="goToStartScreen()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <polyline points="23 20 23 14 17 14"></polyline>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+          </svg>
+          Nochmal
+        </button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="questions.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

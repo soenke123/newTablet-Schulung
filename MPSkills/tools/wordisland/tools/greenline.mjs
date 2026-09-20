@@ -86,6 +86,25 @@ const BUCH = {
   }
 };
 
+/* ─── Lücken im Buch ────────────────────────────────────────────
+   Zeilen, bei denen in der Vorlage das Stationskürzel schlicht
+   FEHLT, obwohl das Kapitel Stationen hat. Das ist etwas anderes
+   als ein Kapitel ohne Stationen (Media smart, Across cultures,
+   Trailer, die Texte) — dort ist die leere Spalte der Normalfall.
+
+   Green Line 2, Seite 18: „respect / Respekt" steht als erste
+   Zeile unter der Kopfzeile bei `U4` ohne Kürzel, unmittelbar über
+   dem Check-in-Block, dessen Wörter alle `CI` tragen. Ohne Eintrag
+   hier bekäme dieses eine Wort eine eigene Station, die den Titel
+   der Unit trägt und noch vor dem Check-in steht.
+
+   Eingetragen wird von HAND und je Jahrgang, damit die Entscheidung
+   im Quelltext steht und nicht in einer Ausgabedatei. Eine neue
+   Lücke meldet sich von selbst (siehe `baue`). */
+const LUECKEN = {
+  6: { 'U4|respect': 'CI' }
+};
+
 /* Die Abschnitte innerhalb einer Unit, in Buchreihenfolge. Die Zahl
    ist `vocab_sets.sort_order` — die Stationsnummer, nach der beide
    Oberflächen sortieren. */
@@ -333,6 +352,13 @@ function baue(zeilen, jahrgang, meldungen) {
 
   const reihe = new Map(buch.units.map(([k], i) => [k, i + 1]));
   const units = new Map();
+  const luecken = LUECKEN[jahrgang] || {};
+
+  /* Welche Kapitel überhaupt Stationen haben. Erst damit lässt sich
+     „leere Spalte" von „fehlendes Kürzel" unterscheiden: bei Media
+     smart ist leer richtig, bei Unit 4 ist leer ein Setzfehler. */
+  const mitStationen = new Set();
+  for (const z of zeilen) if (STATION[z.station]) mitStationen.add(z.unit);
 
   for (const z of zeilen) {
     if (!reihe.has(z.unit)) { meldungen.push(['unbekannt', z.unit, z.en, z.de]); continue; }
@@ -351,7 +377,22 @@ function baue(zeilen, jahrgang, meldungen) {
 
     // Kapitel ohne Stationen (Media smart, Across cultures, Trailer)
     // werden eine „Unit am Stück": ein Dach, eine Station (0150).
-    const sKey = STATION[z.station] ? z.station : '—';
+    //
+    // ⚠️ LEER heißt „dieses Kapitel hat keine Stationen" und ist der
+    // Normalfall. Etwas ANDERES als ein bekanntes Kürzel heißt „hier
+    // ist beim Lesen etwas verrutscht" — und das darf nicht dasselbe
+    // sein. Ohne diese Meldung landet so eine Zeile still in einer
+    // Station, die den Titel der Unit trägt, und in einem Kapitel mit
+    // Stationen steht sie dann VOR dem Check-in (Klasse 6, Unit 4).
+    let code = z.station;
+    if (!code && mitStationen.has(uKey)) {
+      code = luecken[uKey + '|' + z.en] || '';
+      if (!code) meldungen.push(['Station fehlt im Buch', uKey, z.en, z.de]);
+    }
+    const sKey = STATION[code] ? code : '—';
+    if (code && !STATION[code]) {
+      meldungen.push(['Stationskürzel unbekannt: ' + code, uKey, z.en, z.de]);
+    }
     if (!unit.stationen.has(sKey)) {
       unit.stationen.set(sKey, {
         titel: STATION[sKey] ? STATION[sKey][0] : unit.titel,
@@ -459,7 +500,7 @@ function migration(units, jahrgang, nummerText) {
   P(`-- Abschnitt. Sie werden hier zu Unit und Station —`);
   P(`-- CI Check-in · S1–S3 Station 1–3 · ST Story · UT Unit task ·`);
   P(`-- CO Check-out. Kapitel ohne Abschnitte (Media smart, Across`);
-  P(`-- cultures, Trailer) sind eine Unit am Stück (0150).`);
+  P(`-- cultures, Trailer, die Texte) sind eine Unit am Stück (0150).`);
   P(`--`);
   P(`-- ── Feste Nummern ─────────────────────────────────────────────`);
   P(`-- Aus dem Inhalt gerechnet und nicht gewürfelt. Ein zweiter Lauf`);
@@ -479,7 +520,7 @@ function migration(units, jahrgang, nummerText) {
   P(`-- ─────────────────────────────────────────────────────────────`);
   P(`-- \`grade\` trägt den Jahrgang und damit den Inselschlüssel:`);
   P(`-- vocab_units.island_key ist daraus generiert und steht für alle`);
-  P(`-- neun auf '${insel}'.`);
+  P(`-- ${units.length} auf '${insel}'.`);
   P(`insert into vocab_units (id, title, lang_from, lang_to, grade, sort_order) values`);
   P(units.map(u =>
     `  (${q(nummer(`${insel}|${u.code}`))}, ${q(u.titel)}, 'de', 'en', ${jahrgang}, ${u.ord})`

@@ -1,0 +1,1050 @@
+/* ==========================================================================
+   THEMES.CSS – 5 VÖLLIG UNTERSCHIEDLICHE DESIGN-WELTEN (SHOWROOM)
+   ========================================================================== */
+
+/* Google Fonts für charakterstarke Typografie */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,800;1,9..144,400&family=Outfit:wght@400;600;800&family=Plus+Jakarta+Sans:wght@500;700;800&family=Space+Grotesk:wght@500;700&family=Space+Mono:wght@400;700&family=VT323&display=swap');
+
+/* ==========================================================================
+   STYLE 1: "NEO-BRUTALISM" (Pop-Art, Comic, Game-Show, frech & auffällig)
+   Harte schwarze Schatten, fette Rahmen, leuchtende Farben, Retro-Pop
+   ========================================================================== */
+[data-theme="neo-brutalist"] {
+  --bg-gradient: #fef08a; /* Knalliges Warmgelb */
+  background: #fef08a !important;
+  color: #18181b !important;
+  font-family: 'Space Grotesk', -apple-system, sans-serif !important;
+
+  --card-bg: #ffffff;
+  --card-border: #18181b;
+  --card-shadow: 8px 8px 0px #18181b;
+
+  --text-main: #18181b;
+  --text-muted: #52525b;
+  --text-light: #27272a;
+
+  --accent-primary: #a855f7;
+  --accent-secondary: #06b6d4;
+  --color-success: #22c55e;
+  --color-danger: #f43f5e;
+  --color-gold: #eab308;
+}
+
+[data-theme="neo-brutalist"] body {
+  background: #fdf2b8;
+  background-image: radial-gradient(#d4c382 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+  color: #18181b;
+}
+
+[data-theme="neo-brutalist"] .quiz-container {
+  background: #ffffff !important;
+  border: 4px solid #18181b !important;
+  box-shadow: 10px 10px 0px #18181b !important;
+  border-radius: 20px !important;
+}
+
+[data-theme="neo-brutalist"] .brand-title {
+  background: none !important;
+  -webkit-text-fill-color: #18181b !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.03em;
+}
+
+[data-theme="neo-brutalist"] .working-tag {
+  background: #fde047 !important;
+  border: 2px solid #18181b !important;
+  color: #18181b !important;
+  -webkit-text-fill-color: #18181b !important;
+  font-weight: 800;
+  box-shadow: 2px 2px 0px #18181b;
+}
+
+[data-theme="neo-brutalist"] .score-badge {
+  background: #bbf7d0 !important;
+  border: 3px solid #18181b !important;
+  color: #18181b !important;
+  box-shadow: 3px 3px 0px #18181b;
+  font-weight: 900;
+}
+
+[data-theme="neo-brutalist"] .rule-card {
+  background: #f4f4f5 !important;
+  border: 3px solid #18181b !important;
+  box-shadow: 4px 4px 0px #18181b !important;
+  border-radius: 12px !important;
+}
+[data-theme="neo-brutalist"] .rule-card strong {
+  color: #18181b !important;
+}
+
+[data-theme="neo-brutalist"] .question-box {
+  background: #fed7aa !important;
+  border: 3px solid #18181b !important;
+  box-shadow: 5px 5px 0px #18181b !important;
+  border-radius: 16px !important;
+}
+[data-theme="neo-brutalist"] .question-text {
+  color: #18181b !important;
+  font-weight: 800 !important;
+}
+
+[data-theme="neo-brutalist"] .guess-display {
+  background: #ffffff !important;
+  border: 4px solid #18181b !important;
+  box-shadow: 6px 6px 0px #18181b !important;
+  border-radius: 16px !important;
+}
+[data-theme="neo-brutalist"] .guess-value {
+  color: #18181b !important;
+}
+
+[data-theme="neo-brutalist"] .step-btn {
+  background: #fecdd3 !important;
+  border: 3px solid #18181b !important;
+  box-shadow: 3px 3px 0px #18181b !important;
+  color: #18181b !important;
+  border-radius: 12px !important;
+}
+[data-theme="neo-brutalist"] .step-btn:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: 1px 1px 0px #18181b !important;
+}
+
+[data-theme="neo-brutalist"] .range-slider {
+  height: 20px !important;
+  background: #e4e4e7 !important;
+  border: 3px solid #18181b !important;
+  border-radius: 99px !important;
+}
+[data-theme="neo-brutalist"] .range-slider::-webkit-slider-thumb {
+  background: #a855f7 !important;
+  border: 3px solid #18181b !important;
+  box-shadow: 3px 3px 0px #18181b !important;
+  width: 40px !important;
+  height: 40px !important;
+}
+
+[data-theme="neo-brutalist"] .btn-primary {
+  background: #38bdf8 !important;
+  border: 3px solid #18181b !important;
+  box-shadow: 5px 5px 0px #18181b !important;
+  color: #18181b !important;
+  font-weight: 900 !important;
+  border-radius: 14px !important;
+}
+[data-theme="neo-brutalist"] .btn-primary:active {
+  transform: translate(3px, 3px) !important;
+  box-shadow: 2px 2px 0px #18181b !important;
+}
+
+[data-theme="neo-brutalist"] .btn-source {
+  background: #fef08a !important;
+  border: 3px solid #18181b !important;
+  box-shadow: 4px 4px 0px #18181b !important;
+  color: #18181b !important;
+  font-weight: 800 !important;
+}
+[data-theme="neo-brutalist"] .stat-item {
+  background: #f4f4f5 !important;
+  border: 2px solid #18181b !important;
+  box-shadow: 3px 3px 0px #18181b !important;
+  color: #18181b !important;
+}
+[data-theme="neo-brutalist"] .stat-item-val {
+  color: #18181b !important;
+}
+[data-theme="neo-brutalist"] .fact-explanation {
+  background: #fef9c3 !important;
+  border: 3px solid #18181b !important;
+  box-shadow: 4px 4px 0px #18181b !important;
+  color: #18181b !important;
+}
+
+
+/* ==========================================================================
+   STYLE 2: "EDITORIAL / FEUILLETON" (Buchdruck, Magazin, Zeitlos, Serif)
+   Cremefarbenes Papier, satte Buchdruckerschwärze, Waldgrün & Terracotta
+   ========================================================================== */
+[data-theme="editorial"] {
+  --bg-gradient: #fbf7ee;
+  background: #fbf7ee !important;
+  color: #27231e !important;
+  font-family: 'Fraunces', Georgia, serif !important;
+
+  --card-bg: #fffdf9;
+  --card-border: #e3d9c6;
+  --card-shadow: 0 15px 35px rgba(50, 40, 30, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  --text-main: #1f1b18;
+  --text-muted: #6e6459;
+  --text-light: #3d352e;
+
+  --accent-primary: #8b3a2b; /* Terracotta / Siegellack */
+  --accent-secondary: #2d5a43; /* Klassisches Jägergrün */
+  --color-success: #2d5a43;
+  --color-danger: #a82828;
+  --color-gold: #b45309;
+}
+
+[data-theme="editorial"] body {
+  background: #f7f2e7;
+  color: #27231e;
+  font-family: 'Fraunces', Georgia, serif;
+}
+
+[data-theme="editorial"] .quiz-container {
+  background: #fffdfa !important;
+  border: 1px solid #dfd4c0 !important;
+  box-shadow: 0 20px 50px rgba(60, 45, 30, 0.08) !important;
+  border-radius: 4px !important;
+}
+
+[data-theme="editorial"] .brand-title {
+  background: none !important;
+  -webkit-text-fill-color: #1f1b18 !important;
+  font-family: 'Fraunces', Georgia, serif !important;
+  letter-spacing: -0.02em;
+  font-style: italic;
+  font-weight: 700 !important;
+}
+
+[data-theme="editorial"] .working-tag {
+  background: #efe7d5 !important;
+  color: #6e6459 !important;
+  -webkit-text-fill-color: #6e6459 !important;
+  border-radius: 2px !important;
+  font-family: -apple-system, sans-serif;
+  letter-spacing: 0.12em;
+}
+
+[data-theme="editorial"] .score-badge {
+  background: #efe7d5 !important;
+  border: 1px solid #dcd0ba !important;
+  color: #1f1b18 !important;
+  border-radius: 2px !important;
+  font-family: -apple-system, sans-serif;
+}
+
+[data-theme="editorial"] .rule-card {
+  background: #faf6ed !important;
+  border: 1px solid #e7ddca !important;
+  border-radius: 2px !important;
+}
+[data-theme="editorial"] .rule-card strong {
+  color: #1f1b18 !important;
+  font-family: 'Fraunces', serif;
+}
+
+[data-theme="editorial"] .question-box {
+  background: transparent !important;
+  border-top: 2px solid #1f1b18 !important;
+  border-bottom: 2px solid #1f1b18 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-radius: 0 !important;
+  padding: 30px 10px !important;
+}
+[data-theme="editorial"] .question-text {
+  color: #1f1b18 !important;
+  font-family: 'Fraunces', Georgia, serif !important;
+  font-size: clamp(1.4rem, 3.2vw, 1.9rem) !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
+[data-theme="editorial"] .guess-display {
+  background: #faf6ed !important;
+  border: 1px solid #dcd0ba !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+}
+[data-theme="editorial"] .guess-value {
+  color: #8b3a2b !important;
+  font-family: 'Fraunces', serif;
+}
+[data-theme="editorial"] .guess-unit {
+  color: #6e6459 !important;
+}
+
+[data-theme="editorial"] .step-btn {
+  background: #faf6ed !important;
+  border: 1px solid #d4c7b0 !important;
+  color: #1f1b18 !important;
+  border-radius: 2px !important;
+}
+
+[data-theme="editorial"] .range-slider {
+  background: #e3d9c6 !important;
+  height: 6px !important;
+  border-radius: 0 !important;
+}
+[data-theme="editorial"] .range-slider::-webkit-slider-thumb {
+  background: #8b3a2b !important;
+  border: 2px solid #fff !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+  border-radius: 2px !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+[data-theme="editorial"] .btn-primary {
+  background: #1f1b18 !important;
+  border-radius: 2px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+  font-family: -apple-system, sans-serif !important;
+  letter-spacing: 0.05em;
+}
+[data-theme="editorial"] .btn-primary:hover {
+  background: #8b3a2b !important;
+}
+
+[data-theme="editorial"] .btn-source {
+  background: transparent !important;
+  border: 1px solid #1f1b18 !important;
+  border-radius: 2px !important;
+  color: #1f1b18 !important;
+  font-family: -apple-system, sans-serif;
+}
+[data-theme="editorial"] .btn-source:hover {
+  background: #1f1b18 !important;
+  color: #fff !important;
+}
+
+[data-theme="editorial"] .fact-explanation {
+  background: #faf6ed !important;
+  border-left: 3px solid #8b3a2b !important;
+  color: #2c2520 !important;
+  font-style: italic;
+  font-family: 'Fraunces', serif;
+  font-size: 1.05rem !important;
+}
+
+
+/* ==========================================================================
+   STYLE 3: "SWISS / BAUHAUS" (Studio Nord, Clean, Präzise, Akzentfarbe)
+   Starkes Weiß, Schiefergrau, klares Internationales Typografie-Design
+   ========================================================================== */
+[data-theme="swiss"] {
+  --bg-gradient: #f8fafc;
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 0 0 1px #e2e8f0;
+
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-light: #334155;
+
+  --accent-primary: #0284c7; /* Precision Blue */
+  --accent-secondary: #0ea5e9;
+  --color-success: #059669;
+  --color-danger: #e11d48;
+  --color-gold: #d97706;
+}
+
+[data-theme="swiss"] body {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+
+[data-theme="swiss"] .quiz-container {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06) !important;
+  border-radius: 12px !important;
+}
+
+[data-theme="swiss"] .brand-title {
+  background: none !important;
+  -webkit-text-fill-color: #0f172a !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.04em;
+}
+
+[data-theme="swiss"] .working-tag {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-radius: 4px !important;
+}
+
+[data-theme="swiss"] .score-badge {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  border-radius: 6px !important;
+}
+
+[data-theme="swiss"] .rule-card {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+}
+[data-theme="swiss"] .rule-card strong {
+  color: #0f172a !important;
+}
+
+[data-theme="swiss"] .question-box {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+}
+[data-theme="swiss"] .question-text {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+}
+
+[data-theme="swiss"] .guess-display {
+  background: #f8fafc !important;
+  border: 2px solid #0284c7 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+[data-theme="swiss"] .guess-value {
+  color: #0284c7 !important;
+}
+
+[data-theme="swiss"] .step-btn {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  border-radius: 6px !important;
+}
+
+[data-theme="swiss"] .range-slider {
+  background: #e2e8f0 !important;
+  height: 8px !important;
+  border-radius: 4px !important;
+}
+[data-theme="swiss"] .range-slider::-webkit-slider-thumb {
+  background: #0284c7 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 6px !important;
+}
+
+[data-theme="swiss"] .btn-primary {
+  background: #0284c7 !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+}
+[data-theme="swiss"] .btn-primary:hover {
+  background: #0369a1 !important;
+}
+
+[data-theme="swiss"] .btn-source {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  color: #0284c7 !important;
+}
+[data-theme="swiss"] .btn-source:hover {
+  background: #e0f2fe !important;
+}
+
+[data-theme="swiss"] .fact-explanation {
+  background: #f8fafc !important;
+  border-left: 3px solid #0284c7 !important;
+  border-radius: 0 6px 6px 0 !important;
+  color: #334155 !important;
+}
+
+
+/* ==========================================================================
+   STYLE 4: "RETRO ARCADE 1984" (Neon, 80s, Cyber, Pixel-Vibe)
+   3 Highlight-Farbmodi: Magenta, Laser Grün, Solar Orange
+   ========================================================================== */
+[data-theme="arcade"] {
+  /* Standard-Farbmodus: Magenta / Neon Pink */
+  --arcade-hl-primary: #ec4899;
+  --arcade-hl-secondary: #06b6d4;
+  --arcade-glow-primary: rgba(236, 72, 153, 0.5);
+  --arcade-glow-secondary: rgba(6, 182, 212, 0.4);
+  --arcade-bg-card: #120224;
+  --arcade-bg-body: #090014;
+  --arcade-grid-line: rgba(236, 72, 153, 0.08);
+
+  --bg-gradient: var(--arcade-bg-body);
+  background: var(--arcade-bg-body) !important;
+  color: #fdf4ff !important;
+  font-family: 'Space Mono', monospace !important;
+
+  --card-bg: var(--arcade-bg-card);
+  --card-border: var(--arcade-hl-primary);
+  --card-shadow: 0 0 30px var(--arcade-glow-primary), inset 0 0 15px var(--arcade-glow-secondary);
+
+  --text-main: #fdf4ff;
+  --text-muted: #d946ef;
+  --text-light: #f5d0fe;
+
+  --accent-primary: var(--arcade-hl-primary);
+  --accent-secondary: var(--arcade-hl-secondary);
+  --color-success: #10b981;
+  --color-danger: #ef4444;
+  --color-gold: #facc15;
+}
+
+/* Modus 2: Laser Grün (Matrix & Cyber Terminal) */
+[data-theme="arcade"][data-arcade-color="green"],
+[data-arcade-color="green"] [data-theme="arcade"] {
+  --arcade-hl-primary: #10b981;
+  --arcade-hl-secondary: #06b6d4;
+  --arcade-glow-primary: rgba(16, 185, 129, 0.5);
+  --arcade-glow-secondary: rgba(6, 182, 212, 0.35);
+  --arcade-bg-card: #031c14;
+  --arcade-bg-body: #010f0a;
+  --arcade-grid-line: rgba(16, 185, 129, 0.08);
+
+  --text-muted: #34d399;
+  --text-light: #a7f3d0;
+}
+
+/* Modus 3: Solar Orange (Outrun Sunset / 80s Miami Vice) */
+[data-theme="arcade"][data-arcade-color="orange"],
+[data-arcade-color="orange"] [data-theme="arcade"] {
+  --arcade-hl-primary: #ff5500;
+  --arcade-hl-secondary: #facc15;
+  --arcade-glow-primary: rgba(255, 85, 0, 0.5);
+  --arcade-glow-secondary: rgba(250, 204, 21, 0.4);
+  --arcade-bg-card: #1f0a00;
+  --arcade-bg-body: #0f0400;
+  --arcade-grid-line: rgba(255, 85, 0, 0.08);
+
+  --text-muted: #fb923c;
+  --text-light: #fed7aa;
+}
+
+[data-theme="arcade"] body {
+  background: var(--arcade-bg-body);
+  background-image: 
+    linear-gradient(var(--arcade-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--arcade-grid-line) 1px, transparent 1px);
+  background-size: 30px 30px;
+  color: #fdf4ff;
+}
+
+[data-theme="arcade"] .quiz-container {
+  background: var(--arcade-bg-card) !important;
+  border: 2px solid var(--arcade-hl-primary) !important;
+  box-shadow: 0 0 30px var(--arcade-glow-primary), inset 0 0 20px var(--arcade-glow-secondary) !important;
+  border-radius: 4px !important;
+}
+
+[data-theme="arcade"] .brand-title {
+  background: linear-gradient(135deg, var(--arcade-hl-secondary) 0%, var(--arcade-hl-primary) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  font-family: 'Space Mono', monospace !important;
+  text-shadow: 0 0 10px var(--arcade-glow-primary);
+}
+
+/* Großer SlideEffect Hero-Titel im Retro Arcade Style */
+[data-theme="arcade"] .hero-title {
+  font-size: clamp(2.5rem, 7vw, 4.2rem) !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  font-family: 'Space Mono', monospace !important;
+  background: linear-gradient(135deg, #ffffff 10%, var(--arcade-hl-secondary) 55%, var(--arcade-hl-primary) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  filter: drop-shadow(0 0 20px var(--arcade-glow-primary));
+  margin-bottom: 8px !important;
+  line-height: 1.1 !important;
+}
+
+/* Animiertes Hero-Icon (Cooles Arcade Slider Badge) */
+.hero-icon-wrap {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-badge-svg {
+  width: clamp(84px, 16vw, 110px);
+  height: clamp(84px, 16vw, 110px);
+  filter: drop-shadow(0 0 16px var(--arcade-glow-primary));
+  animation: heroPulse 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes heroPulse {
+  0% {
+    filter: drop-shadow(0 0 12px var(--arcade-glow-primary));
+    transform: scale(1);
+  }
+  100% {
+    filter: drop-shadow(0 0 26px var(--arcade-glow-secondary)) drop-shadow(0 0 10px var(--arcade-glow-primary));
+    transform: scale(1.04);
+  }
+}
+
+.svg-animated-thumb {
+  animation: glideThumb 2.6s ease-in-out infinite alternate;
+  transform-origin: 50% 50%;
+}
+
+@keyframes glideThumb {
+  0% {
+    transform: translateX(-15px);
+  }
+  100% {
+    transform: translateX(15px);
+  }
+}
+
+.svg-badge-border {
+  transition: stroke 0.3s ease;
+}
+
+[data-theme="arcade"] .working-tag {
+  background: var(--arcade-hl-secondary) !important;
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
+  border-radius: 2px !important;
+  font-weight: bold;
+}
+
+[data-theme="arcade"] .score-badge {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid var(--arcade-hl-primary) !important;
+  color: #fdf4ff !important;
+  box-shadow: 0 0 12px var(--arcade-glow-primary);
+  border-radius: 2px !important;
+}
+
+[data-theme="arcade"] .question-box {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid var(--arcade-hl-secondary) !important;
+  box-shadow: 0 0 15px var(--arcade-glow-secondary) !important;
+  border-radius: 2px !important;
+}
+[data-theme="arcade"] .question-text {
+  color: #fdf4ff !important;
+  font-family: 'Space Mono', monospace !important;
+}
+
+[data-theme="arcade"] .guess-display {
+  background: #000000 !important;
+  border: 2px solid var(--arcade-hl-secondary) !important;
+  box-shadow: 0 0 20px var(--arcade-glow-secondary) !important;
+  border-radius: 2px !important;
+}
+[data-theme="arcade"] .guess-value {
+  color: var(--arcade-hl-secondary) !important;
+  text-shadow: 0 0 10px var(--arcade-hl-secondary);
+}
+
+[data-theme="arcade"] .step-btn {
+  background: rgba(0, 0, 0, 0.6) !important;
+  border: 1.5px solid var(--arcade-hl-primary) !important;
+  color: var(--arcade-hl-primary) !important;
+  box-shadow: 0 0 8px var(--arcade-glow-primary) !important;
+  border-radius: 2px !important;
+}
+[data-theme="arcade"] .step-btn:hover {
+  background: var(--arcade-hl-primary) !important;
+  color: #000 !important;
+}
+
+[data-theme="arcade"] .range-slider {
+  background: rgba(0, 0, 0, 0.6) !important;
+  border: 1px solid var(--arcade-hl-secondary) !important;
+  height: 14px !important;
+  border-radius: 0 !important;
+}
+[data-theme="arcade"] .range-slider::-webkit-slider-thumb {
+  background: var(--arcade-hl-primary) !important;
+  border: 2px solid #fff !important;
+  box-shadow: 0 0 15px var(--arcade-hl-primary) !important;
+  border-radius: 0 !important;
+  width: 34px !important;
+  height: 34px !important;
+}
+[data-theme="arcade"] .range-slider::-moz-range-thumb {
+  background: var(--arcade-hl-primary) !important;
+  border: 2px solid #fff !important;
+  box-shadow: 0 0 15px var(--arcade-hl-primary) !important;
+  border-radius: 0 !important;
+  width: 34px !important;
+  height: 34px !important;
+}
+
+[data-theme="arcade"] .btn-primary {
+  background: linear-gradient(90deg, var(--arcade-hl-primary) 0%, var(--arcade-hl-secondary) 100%) !important;
+  border: 1px solid #ffffff !important;
+  box-shadow: 0 0 20px var(--arcade-glow-primary) !important;
+  border-radius: 2px !important;
+  font-family: 'Space Mono', monospace !important;
+  color: #000 !important;
+  font-weight: 900 !important;
+}
+[data-theme="arcade"] .btn-primary:hover {
+  box-shadow: 0 0 30px var(--arcade-glow-primary) !important;
+  filter: brightness(1.1);
+}
+
+[data-theme="arcade"] .btn-source {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1.5px solid var(--arcade-hl-secondary) !important;
+  color: var(--arcade-hl-secondary) !important;
+  border-radius: 2px !important;
+  box-shadow: 0 0 12px var(--arcade-glow-secondary);
+}
+[data-theme="arcade"] .btn-source:hover {
+  background: var(--arcade-hl-secondary) !important;
+  color: #000 !important;
+}
+
+/* Live-Vergleichs-Kasten im Arcade-Stil (Eckig, leuchtend, extra Abstand) */
+[data-theme="arcade"] .live-comparison-hint {
+  border-radius: 2px !important;
+  background: rgba(0, 0, 0, 0.75) !important;
+  border: 1.5px solid var(--arcade-hl-secondary) !important;
+  box-shadow: 0 0 16px var(--arcade-glow-secondary) !important;
+  color: #ffffff !important;
+  font-family: 'Space Mono', monospace !important;
+}
+
+/* Arcade Review Cards & Tabs im Endbildschirm */
+[data-theme="arcade"] .review-tab-btn {
+  background: rgba(0, 0, 0, 0.5) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 2px !important;
+  font-family: 'Space Mono', monospace !important;
+}
+
+[data-theme="arcade"] .review-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: var(--arcade-hl-secondary) !important;
+}
+
+[data-theme="arcade"] .review-tab-btn.active {
+  border-color: var(--arcade-hl-secondary) !important;
+  background: rgba(6, 182, 212, 0.25) !important;
+  box-shadow: 0 0 14px var(--arcade-glow-secondary) !important;
+}
+
+[data-theme="arcade"] .review-tab-btn.active.exact {
+  border-color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.25) !important;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.5) !important;
+}
+
+[data-theme="arcade"] .review-active-card {
+  background: rgba(0, 0, 0, 0.65) !important;
+  border: 1.5px solid var(--arcade-hl-primary) !important;
+  border-radius: 2px !important;
+  box-shadow: 0 0 20px var(--arcade-glow-primary) !important;
+}
+
+[data-theme="arcade"] .review-card-question {
+  font-family: 'Space Mono', monospace !important;
+  color: #ffffff !important;
+}
+
+[data-theme="arcade"] .review-answer-box {
+  background: rgba(0, 0, 0, 0.5) !important;
+  border-radius: 2px !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+[data-theme="arcade"] .review-answer-box.guess-box {
+  border-left: 3px solid var(--arcade-hl-secondary) !important;
+}
+
+[data-theme="arcade"] .review-answer-box.actual-box {
+  border-left: 3px solid #10b981 !important;
+}
+
+[data-theme="arcade"] .review-card-explanation {
+  background: rgba(0, 0, 0, 0.5) !important;
+  border-left: 3px solid var(--arcade-hl-secondary) !important;
+  border-radius: 0 2px 2px 0 !important;
+}
+
+[data-theme="arcade"] .btn-review-source {
+  background: rgba(0, 0, 0, 0.6) !important;
+  border: 1.5px solid var(--arcade-hl-secondary) !important;
+  color: var(--arcade-hl-secondary) !important;
+  border-radius: 2px !important;
+  box-shadow: 0 0 10px var(--arcade-glow-secondary) !important;
+  font-family: 'Space Mono', monospace !important;
+}
+
+[data-theme="arcade"] .btn-review-source:hover {
+  background: var(--arcade-hl-secondary) !important;
+  color: #000000 !important;
+  box-shadow: 0 0 18px var(--arcade-glow-secondary) !important;
+}
+
+[data-theme="arcade"] .btn-review-nav {
+  background: rgba(0, 0, 0, 0.5) !important;
+  border: 1px solid var(--arcade-hl-secondary) !important;
+  color: var(--arcade-hl-secondary) !important;
+  border-radius: 2px !important;
+  font-family: 'Space Mono', monospace !important;
+}
+
+[data-theme="arcade"] .btn-review-nav:hover:not(:disabled) {
+  background: var(--arcade-hl-secondary) !important;
+  color: #000 !important;
+  box-shadow: 0 0 10px var(--arcade-glow-secondary) !important;
+}
+
+[data-theme="arcade"] .rule-dot {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border: 1px solid var(--arcade-hl-secondary) !important;
+  border-radius: 2px !important;
+}
+
+[data-theme="arcade"] .rule-dot.active {
+  background: var(--arcade-hl-secondary) !important;
+  box-shadow: 0 0 10px var(--arcade-glow-secondary) !important;
+  border-color: #ffffff !important;
+}
+
+/* Color Mode Picker Container (Kompakt & minimalistisch) */
+.arcade-color-picker {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.color-picker-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  font-weight: 800;
+  font-family: inherit;
+}
+
+.color-swatches {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Farbflächen Buttons (Touch-optimiert, 60px x 42px) */
+.color-swatch-btn {
+  width: 62px;
+  height: 42px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  outline: none;
+  pointer-events: auto !important;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.color-swatch-btn:hover {
+  transform: translateY(-2px) scale(1.06);
+}
+
+.color-swatch-btn:active {
+  transform: scale(0.94);
+}
+
+/* Die 3 Farbflächen */
+.color-swatch-btn.swatch-magenta {
+  background: linear-gradient(135deg, #ec4899 0%, #06b6d4 100%);
+}
+.color-swatch-btn.swatch-magenta:hover {
+  box-shadow: 0 0 16px rgba(236, 72, 153, 0.7);
+}
+
+.color-swatch-btn.swatch-green {
+  background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+}
+.color-swatch-btn.swatch-green:hover {
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.7);
+}
+
+.color-swatch-btn.swatch-orange {
+  background: linear-gradient(135deg, #ff5500 0%, #facc15 100%);
+}
+.color-swatch-btn.swatch-orange:hover {
+  box-shadow: 0 0 16px rgba(255, 85, 0, 0.7);
+}
+
+/* Aktiver Zustand: Fetter weißer Leuchtrahmen & Häkchen */
+.color-swatch-btn.active {
+  border: 3px solid #ffffff !important;
+  transform: scale(1.1);
+}
+
+.color-swatch-btn.swatch-magenta.active {
+  box-shadow: 0 0 22px rgba(236, 72, 153, 0.9), 0 0 0 2px #ffffff;
+}
+
+.color-swatch-btn.swatch-green.active {
+  box-shadow: 0 0 22px rgba(16, 185, 129, 0.9), 0 0 0 2px #ffffff;
+}
+
+.color-swatch-btn.swatch-orange.active {
+  box-shadow: 0 0 22px rgba(255, 85, 0, 0.9), 0 0 0 2px #ffffff;
+}
+
+.swatch-check {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
+  display: none;
+}
+
+.color-swatch-btn.active .swatch-check {
+  display: block;
+}
+
+
+/* ==========================================================================
+   STYLE 5: "WARM TERRA / NATURE BOTANIC" (Organisch, Salbei, Terracotta, Ruhe)
+   Beruhigendes Salbeigrün, warmes Leinen, samtige weiche Kurven
+   ========================================================================== */
+[data-theme="botanic"] {
+  --bg-gradient: #eef2eb;
+  background: #eef2eb !important;
+  color: #2d3b2f !important;
+  font-family: 'Outfit', sans-serif !important;
+
+  --card-bg: #ffffff;
+  --card-border: #d4ded0;
+  --card-shadow: 0 20px 40px -10px rgba(45, 59, 47, 0.08);
+
+  --text-main: #2d3b2f;
+  --text-muted: #627264;
+  --text-light: #445446;
+
+  --accent-primary: #3d6a50; /* Deep Sage Forest */
+  --accent-secondary: #d97746; /* Terracotta */
+  --color-success: #3d6a50;
+  --color-danger: #c2410c;
+  --color-gold: #d97746;
+}
+
+[data-theme="botanic"] body {
+  background: #eef2eb;
+  color: #2d3b2f;
+  font-family: 'Outfit', sans-serif;
+}
+
+[data-theme="botanic"] .quiz-container {
+  background: #ffffff !important;
+  border: 1px solid #d4ded0 !important;
+  box-shadow: 0 20px 40px -10px rgba(45, 59, 47, 0.08) !important;
+  border-radius: 28px !important;
+}
+
+[data-theme="botanic"] .brand-title {
+  background: none !important;
+  -webkit-text-fill-color: #2d3b2f !important;
+  font-weight: 800 !important;
+}
+
+[data-theme="botanic"] .working-tag {
+  background: #e1ebde !important;
+  color: #3d6a50 !important;
+  -webkit-text-fill-color: #3d6a50 !important;
+}
+
+[data-theme="botanic"] .score-badge {
+  background: #eef5eb !important;
+  border: 1px solid #c9d8c4 !important;
+  color: #2d3b2f !important;
+}
+
+[data-theme="botanic"] .rule-card {
+  background: #f7faf5 !important;
+  border: 1px solid #e1ebe0 !important;
+  border-radius: 20px !important;
+}
+[data-theme="botanic"] .rule-card strong {
+  color: #2d3b2f !important;
+}
+
+[data-theme="botanic"] .question-box {
+  background: #f7faf5 !important;
+  border: 1px solid #e1ebe0 !important;
+  border-radius: 20px !important;
+}
+[data-theme="botanic"] .question-text {
+  color: #2d3b2f !important;
+}
+
+[data-theme="botanic"] .guess-display {
+  background: #f7faf5 !important;
+  border: 2px solid #3d6a50 !important;
+  border-radius: 20px !important;
+  box-shadow: none !important;
+}
+[data-theme="botanic"] .guess-value {
+  color: #3d6a50 !important;
+}
+
+[data-theme="botanic"] .step-btn {
+  background: #f7faf5 !important;
+  border: 1px solid #d4ded0 !important;
+  color: #2d3b2f !important;
+  border-radius: 16px !important;
+}
+
+[data-theme="botanic"] .range-slider {
+  background: #dce6d8 !important;
+  height: 14px !important;
+  border-radius: 99px !important;
+}
+[data-theme="botanic"] .range-slider::-webkit-slider-thumb {
+  background: #3d6a50 !important;
+  border: 3px solid #ffffff !important;
+  box-shadow: 0 4px 12px rgba(61, 106, 80, 0.3) !important;
+  width: 36px !important;
+  height: 36px !important;
+}
+
+[data-theme="botanic"] .btn-primary {
+  background: #3d6a50 !important;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 20px rgba(61, 106, 80, 0.25) !important;
+}
+[data-theme="botanic"] .btn-primary:hover {
+  background: #325741 !important;
+}
+
+[data-theme="botanic"] .btn-source {
+  background: #f7faf5 !important;
+  border: 1.5px solid #c9d8c4 !important;
+  color: #3d6a50 !important;
+  border-radius: 16px !important;
+}
+[data-theme="botanic"] .btn-source:hover {
+  background: #eef5eb !important;
+}
+
+[data-theme="botanic"] .fact-explanation {
+  background: #f7faf5 !important;
+  border-left: 4px solid #d97746 !important;
+  color: #2d3b2f !important;
+  border-radius: 0 16px 16px 0 !important;
+}

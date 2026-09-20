@@ -1177,6 +1177,13 @@
     const step = opt.dicht ? 3.4 : 2.5;
     for (const ring of rings) {
       if (ring.length < 8) continue;
+      /* Keine Brandung um schlafende Archipele. Sie ist die einzige
+         Schicht des Meeres, deren Elementzahl mit der Zahl der
+         Landmassen wächst — und jede ihrer Marken läuft in einer
+         eigenen CSS-Bewegung. Gefragt wird EIN Punkt des Rings: zwei
+         Archipele liegen über hundert Kacheln auseinander, ein Ring
+         kann also nicht halb hier und halb dort liegen. */
+      if (opt.wachOrt && !opt.wachOrt(ring[0][0], ring[0][1])) continue;
       let t = r() * step;
       for (let i = 0; i < ring.length; i++) {
         const a = ring[i], b = ring[(i + 1) % ring.length];
@@ -1319,9 +1326,14 @@
     return d;
   }
 
-  function reliefLand(svg, isl, opt) {
+  /* `zellen` schränkt ein, was gebaut wird — seit der Inselwelt
+     wird das Relief je WACHEM Archipel einmal gerufen. Ohne
+     Einschränkung ist es die ganze Karte, und alles andere bleibt,
+     wie es war. */
+  function reliefLand(svg, isl, opt, zellen) {
     const g = el('g', {}, svg);
     const nodes = [];
+    const liste = zellen || isl.cells;
     /* Füllung und Strich je Bodenart: Gras wird gestrichelt
        (Halme), alles andere gefüllt. */
     const DK = {
@@ -1332,7 +1344,7 @@
     };
     /* Malerreihenfolge: von hinten nach vorn, sonst steht eine
        hintere Säule vor einer vorderen. */
-    for (const z of isl.cells.slice().sort((a, b) => a.y - b.y || a.x - b.x)) {
+    for (const z of liste.slice().sort((a, b) => a.y - b.y || a.x - b.x)) {
       const gg = el('g', {}, g);
       const base = z.ruin
         ? el('ellipse', { class: 'wi-det', cx: n2(z.x), cy: n2(z.y + .34), rx: .62, ry: .22, fill: 'rgba(0,0,0,.40)', filter: F('b1') }, gg)
@@ -1467,6 +1479,45 @@
         }
       }
     };
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     DIE SCHLAFENDE INSEL
+     ══════════════════════════════════════════════════════════
+     Ein Archipel, an dem gerade nicht gearbeitet wird, wird nicht
+     aus der Nähe betrachtet: entweder steht man woanders, oder man
+     ist herausgezoomt und es ist eine Handbreit groß. Es braucht
+     also keine Säulen, keine Bäumchen, keinen Strand — und genau
+     daran hängt, ob die Inselwelt überhaupt aufgeht.
+
+     Die Rechnung: ein Relief kostet rund sechs Elemente je Feld
+     (gemessen 2500 für 430 Felder). Sechs Jahrgänge wären ~5300
+     Felder und damit gut 31.000 Knoten; kein iPad trägt das. Eine
+     Silhouette kostet zwei Elemente je LANDMASSE — vier statt
+     fünftausend je Archipel.
+
+     Gezeichnet wird der Umriss und nicht die Vereinigung der
+     Sechsecke: ein Strich auf der Vereinigung umrandet jede Wabe
+     einzeln (siehe `umriss`). Zwei Lagen, damit die Insel eine Kante
+     zum Wasser hat und nicht wie ein Fleck aussieht. */
+  function silhouetteLand(svg, isl, zellen) {
+    const g = el('g', { class: 'wi-schlaf' }, svg);
+    const menge = new Set(zellen.map(z => z.r + ',' + z.c));
+    const drin = (r, c) => menge.has(r + ',' + c);
+    const ringe = umriss(zellen, drin, 1.0);
+    const d = ringsPath(ringe, KARTE.sea.wob * .6, true, 3.1);
+    /* Erst ein dunkler Saum nach außen, dann die Fläche darauf. Der
+       Saum ist kein Schatten, sondern die Kante: ohne ihn steht die
+       Insel im Wasser wie ein aufgeklebtes Stück Papier. */
+    el('path', {
+      d, fill: 'none', stroke: KARTE.sea.ink, 'stroke-width': .55,
+      'stroke-linejoin': 'round', opacity: .5
+    }, g);
+    el('path', {
+      d, fill: shade(KARTE.land.gras, -.30), stroke: shade(KARTE.land.gras, -.52),
+      'stroke-width': .12, 'stroke-linejoin': 'round', opacity: .92
+    }, g);
+    return g;
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -2258,6 +2309,27 @@
      einer zweiten Fassung: was übrig bleibt (Meer, Brandung,
      Wellen, Relief) ist der weitaus größere Teil, und er soll in
      beiden Rollen derselbe sein. */
+  /* Die Felder der Welt nach Archipelen sortiert, in derselben
+     Reihenfolge wie `welt.archipele`. Steht hier und nicht drüben
+     bei der Welt, weil buildMap der einzige Leser ist — und weil
+     die Karte nichts von `welt` wissen soll: sie bekommt eine
+     Feldtabelle und eine Menge wacher Nummern, mehr nicht.
+
+     Ohne die Angaben (Raum, Beamer, Prüfstand ohne Inselwelt) ist
+     alles EIN wacher Teil — dann verhält sich die Karte wie vorher. */
+  function soloTeile(isl, mopt) {
+    const heim = mopt && mopt.heimVonFeld;
+    if (!heim) return [{ zellen: isl.cells, wach: true }];
+    const wach = (mopt && mopt.wach) || new Set();
+    const teile = new Map();
+    for (const z of isl.cells) {
+      const nr = heim.get(z.r + ',' + z.c) | 0;
+      if (!teile.has(nr)) teile.set(nr, { nr, zellen: [], wach: wach.has(nr) });
+      teile.get(nr).zellen.push(z);
+    }
+    return [...teile.values()].sort((a, b) => a.nr - b.nr);
+  }
+
   function buildMap(svg, list, key, mopt) {
     const solo = !!(mopt && mopt.solo);
     /* `mini` ist die flache Karte des Tablets. Sie steht als
@@ -2310,10 +2382,19 @@
        und bei 700 keine mehr. Eine Insel, die beim Dazulernen ihre
        Ausstattung verliert, ist genauso wenig die eigene wie eine,
        die sich umformt. 1100 liegt über allem, was hier entstehen
-       kann (Hauptinsel 460 + drei Satelliten à 170 = 970). */
+       kann (Hauptinsel 460 + drei Satelliten à 170 = 970).
+
+       ⚠️ Seit der Inselwelt entscheidet im Solo der AUFRUFER
+       (`mopt.dicht`), und zwar je ARCHIPEL. Über alles gezählt wären
+       zwei Jahrgänge 1762 Felder und lägen über der Grenze — Klasse 5
+       verlöre ihre Bäumchen genau in dem Augenblick, in dem Klasse 6
+       auftaucht. Das ist derselbe Fehler wie eine Insel, die beim
+       Dazulernen ihre Ausstattung verliert, nur eine Ebene höher. */
     const opt = {
       box: { x: n2(vb[0] - 2), y: n2(vb[1] - 2), w: n2(vb[2] + 4), h: n2(vb[3] + 4) },
-      dicht: isl.cells.length > (solo ? 1100 : 700)
+      dicht: (mopt && mopt.dicht !== undefined)
+        ? !!mopt.dicht
+        : isl.cells.length > (solo ? 1100 : 700)
     };
 
     /* Die Küstenringe EINMAL. Das Wasser stapelt vier Tiefenstufen
@@ -2323,23 +2404,42 @@
     const rings = coastRings(isl, 1.0);
     const dCoast = ringsPath(rings, 0, false, 0);
 
+    /* Auf der eigenen Insel entscheidet das Meer selbst, wo es laut
+       sein darf: die Brandung läuft nur um wache Archipele. Sie ist
+       die einzige Schicht des Meeres, deren Elementzahl mit der Zahl
+       der Landmassen wächst — und eine Brandung, die um sechs
+       Archipele gleichzeitig läuft, ist Rechenzeit für Inseln, die
+       gerade niemand ansieht. Tiefenstufen und Schaumlinie bleiben
+       durchgehend: das Meer ist EIN Meer. */
+    if (solo && mopt && mopt.wachOrt) opt.wachOrt = mopt.wachOrt;
+
+    if (solo) {
+      /* Das Meer EINMAL über die ganze Welt, das Land je Archipel.
+         Wach heißt Relief, schlafend heißt Silhouette — und die
+         Entscheidung fällt hier und nicht in reliefLand, weil sie
+         nicht die Karte betrifft, sondern das Kind: es arbeitet
+         gerade an genau einem Jahrgang.
+
+         Einmal malen und fertig. `null` sagt dem Relief „kein
+         Besitz": jede Kachel steht auf ihrer Geländehöhe in ihrer
+         eigenen Farbe. Danach ändert sich an dieser Karte nichts
+         mehr — was sich bewegt, sind die Tiere auf der Leinwand
+         darüber. */
+      seaLayer(svg, isl, vb, dCoast, rings, opt);
+      for (const teil of soloTeile(isl, mopt)) {
+        if (teil.wach) reliefLand(svg, isl, opt, teil.zellen)(null);
+        else silhouetteLand(svg, isl, teil.zellen);
+      }
+      mapPaint = null;
+      return isl;
+    }
+
     /* Auf dem Tablet ist die Küste GLATT gezogen (durch die
        Kantenmitten): ohne Brandung davor liest sich der harte
        Wabenrand als Fehler, mit weichem Zug als Strand. */
     const land = mini
       ? (flachSee(svg, vb, ringsPath(rings, 0, true, 0)), flachLand(svg, isl))
       : (seaLayer(svg, isl, vb, dCoast, rings, opt), reliefLand(svg, isl, opt));
-
-    if (solo) {
-      /* Einmal malen und fertig. `null` sagt dem Relief „kein
-         Besitz": jede Kachel steht auf ihrer Geländehöhe in ihrer
-         eigenen Farbe. Danach ändert sich an dieser Karte nichts
-         mehr — was sich bewegt, sind die Tiere auf der Leinwand
-         darüber. */
-      mapPaint = null;
-      land(null);
-      return isl;
-    }
 
     /* Der Nebel schwebt eine Fingerbreite über dem flachen Land —
        sonst liegt er IM Feld statt darüber. Auf dem Tablet gibt es
@@ -5179,16 +5279,122 @@
      ohnehin einen Sicherheitszuschlag (WASSER). */
   const rAus = ziel => Math.sqrt(ziel / 2.1);
 
+  /* ─── Die Inselwelt ─────────────────────────────────────────
+     Ein Archipel je Insel-Schlüssel (`vocab_units.island_key`, seit
+     0150 — 'en:5', 'en:6', 'en:x' für Listen ohne Jahrgang). Ein
+     Jahrgang ist rund 1000 Wörter und füllt ein Archipel allein;
+     sechs Jahre Englisch auf einer Insel wären ~6000 Tiere auf 881
+     Feldern.
+
+     Das Entscheidende daran ist, was damit NICHT mehr passieren
+     muss: das Archipel wächst nie über einen Lehrwerksband hinaus.
+     Zehn Jahrgänge sind zehnmal dieselbe Insel, und SAT_SCHWELLEN /
+     HAUPT_FELDER / SAT_FELDER bleiben, wie sie sind.
+
+     ⚠️ Der PLATZ eines Archipels darf nur an seinem eigenen Slot
+     hängen und an nichts sonst. Käme er aus der Zahl der belegten
+     Slots (wie bei den Satelliten aus dem Winkel `i/N·2π`), würde
+     Klasse 5 sich verschieben, sobald Klasse 6 dazukommt — und
+     Latein in drei Jahren schöbe alles noch einmal. Deshalb ein
+     festes Gitter, das an Platz `i` dieselbe Stelle hat, ganz gleich
+     wie viele Plätze besetzt sind. */
+
+  /* Die Sprachen in fester Reihenfolge. Anhängen ist erlaubt,
+     Umsortieren nicht — die Stelle in dieser Liste IST der halbe
+     Platz im Meer.
+
+     ⚠️ `INSEL_SPRACHEN` und nicht `SPRACHEN`: das ist schon die
+     Tabelle der Sprach-NAMEN für die Spaltenköpfe der Wortliste
+     (Regel: feedback_css_class_collision_one_stylesheet, hier für
+     Bezeichner — eine Datei, alle Rollen). Dort geht es um
+     „Englisch", hier um die Reihenfolge; zwei Fragen, zwei Namen. */
+  const INSEL_SPRACHEN = ['en', 'la', 'fr', 'es', 'it', 'ru', 'tr'];
+  const JG_PLAETZE = 14;            // Jahrgang 1–13, dazu „ohne Jahrgang"
+
+  /* island_key → Platznummer. Eine unbekannte Sprache bekommt einen
+     Block hinter den bekannten statt still auf Englisch zu landen. */
+  function inselSlot(key) {
+    const teile = String(key || 'en:x').split(':');
+    const lang = teile[0] || 'en';
+    const jg = teile[1];
+    const si = INSEL_SPRACHEN.indexOf(lang);
+    const sprache = si >= 0 ? si : INSEL_SPRACHEN.length + (hashKey(lang) % 8);
+    const jahr = /^\d+$/.test(jg)
+      ? Math.max(0, Math.min(JG_PLAETZE - 2, Number(jg) - 1))
+      : JG_PLAETZE - 1;
+    return sprache * JG_PLAETZE + jahr;
+  }
+
+  /* Der Platz selbst: ein Sechseck-Gitter, von innen nach außen
+     abgezählt. Nachbarn im Gitter sind auch Nachbarn in der
+     Nummernfolge — Klasse 5 und Klasse 6 liegen also
+     nebeneinander und nicht an zwei Enden des Meeres.
+
+     Ring 0 ist ein Platz, Ring k hat 6k. Gerechnet in axialen
+     Koordinaten (q, r), danach ins Kartenmaß umgerechnet. */
+  function gitterPlatz(i) {
+    if (i <= 0) return { q: 0, r: 0 };
+    /* In welchem Ring liegt i? Ring k endet bei 3k(k+1). */
+    let k = 1;
+    while (3 * k * (k + 1) < i) k++;
+    const vorher = 3 * k * (k - 1);        // letzter Platz des Rings k−1
+    let n = i - vorher - 1;                // 0 … 6k−1 innerhalb des Rings
+    /* Am Anfang der Kante starten und den Ring entlanglaufen. Die
+       sechs Richtungen sind die Nachbarn im axialen Gitter. */
+    const RICHTUNG = [[1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1]];
+    let q = RICHTUNG[4][0] * k, r = RICHTUNG[4][1] * k;
+    for (let seite = 0; seite < 6; seite++) {
+      for (let s = 0; s < k; s++) {
+        if (n-- === 0) return { q, r };
+        q += RICHTUNG[seite][0]; r += RICHTUNG[seite][1];
+      }
+    }
+    return { q, r };
+  }
+
+  /* Wie weit ein Archipel vom eigenen Mittelpunkt reicht — der
+     schlimmste Fall, nicht der heutige. Die PLATZIERUNG darf nicht
+     an der jetzigen Größe hängen, sonst rückt ein Archipel weg,
+     sobald sein Kind den nächsten Satelliten freischaltet.
+     Nachgerechnet: Hauptinsel R ≤ 14,8 · Satellit bis D = 14,8 +
+     WASSER + 9,45 + 3,5 + 9 ≈ 39,4, dazu sein eigener Radius 9,0.
+     uitest besteht darauf, dass kein Archipel darüber hinausgeht. */
+  const ARCHIPEL_R = 50;
+  const ARCHIPEL_WASSER = 14;
+  const GITTER = 2 * ARCHIPEL_R + ARCHIPEL_WASSER;
+
+  /* Der Mittelpunkt eines Archipels in Weltkoordinaten. Die
+     Auslenkung nimmt dem Gitter das Gitterhafte, ohne die Zusage zu
+     brechen: sie hängt am Slot und am Startwert des Kindes, also an
+     nichts, was sich beim Dazulernen ändert. */
+  function inselOrt(seed, slot) {
+    const g = gitterPlatz(slot);
+    const rnd = mulberry32(hashKey(seed + ':ort:' + slot));
+    const x = GITTER * (g.q + g.r / 2);
+    const y = GITTER * g.r * 0.866;
+    const a = rnd() * 6.283, d = rnd() * ARCHIPEL_WASSER * .45;
+    return { x: x + Math.cos(a) * d, y: y + Math.sin(a) * d };
+  }
+
   /* Hauptinsel plus `satelliten` Satelliten, immer dieselbe
      Reihenfolge aus demselben Startwert. Genau daran hängt das
      monotone Wachsen: mit einem Satelliten mehr kommt EINE Insel
-     dazu, und alle vorigen liegen unverändert da, wo sie lagen. */
-  function wuerfelInseln(seed, satelliten) {
+     dazu, und alle vorigen liegen unverändert da, wo sie lagen.
+
+     `mx`/`my` ist der Mittelpunkt in Weltkoordinaten. Gewürfelt wird
+     weiter um den Nullpunkt und erst am Ende verschoben — so bleibt
+     die Form eines Archipels unabhängig davon, wo es liegt. */
+  function wuerfelInseln(seed, satelliten, mx, my) {
     const rnd = mulberry32(seed >>> 0 || 1);
     const out = [], have = new Set();
+    const mr = Math.round((my || 0) / ROWH);
+    const mc = Math.round((mx || 0) - 0.5 * (((mr % 2) + 2) % 2));
 
+    /* Gewürfelt wird um (0,0), abgelegt wird um den Mittelpunkt des
+       Archipels. Der Versatz steht NUR hier: so rechnet alles
+       darunter — Form, Abstände, Platzsuche — weiter im Kleinen. */
     const setze = (cr, cc, ziel, wob) => {
-      const b = blobMitZiel(cr, cc, ziel, wob);
+      const b = blobMitZiel(cr + mr, cc + mc, ziel, wob);
       for (const [r, c] of b.zellen) {
         const k = r + ',' + c;
         if (have.has(k)) continue;
@@ -5269,11 +5475,34 @@
     return inseln;
   }
 
-  /* ─── Die Welt ──────────────────────────────────────────────── */
+  /* ─── Die Welt ──────────────────────────────────────────────────
+     Zwei Ebenen, seit es je Jahrgang ein Archipel gibt: die Welt
+     hält die Archipele, ein Archipel seine Landmassen. `welt.isl`
+     bleibt EINE Feldliste über alles — Meer, Küstenlinien und
+     Gelände sollen durchgehen, und `findeInseln` macht aus einer
+     Liste von selbst so viele Landmassen, wie darin stecken.
+
+     Ein Tier trägt seitdem zwei Nummern: `heim` sagt, zu welchem
+     Archipel sein Wort gehört (über Unit → island_key, also fest),
+     `inselIdx` die Landmasse INNERHALB dieses Archipels. */
   const welt = {
-    isl: null, vb: null, inseln: null, haupt: null,
-    tiere: [], nachStufe: new Map()   // item-id → Tier
+    isl: null, vb: null,
+    archipele: [],                    // in Slot-Reihenfolge
+    vonKey: new Map(),                // island_key → Archipel
+    tiere: [],
+    /* Nur die Tiere der wachen Archipele. `schritt` läuft über
+       DIESE Liste: bei sechs Jahrgängen sind das ein paar hundert
+       statt sechstausend Schritten je Bild — und genau davon lebt
+       die ganze Inselwelt. */
+    wachTiere: [],
+    nachStufe: new Map()              // item-id → Tier
   };
+
+  /* Das Archipel eines Tieres, und ein Rückfallweg, der nie `null`
+     liefert: eine einzige Stelle, die `undefined.inseln` liest,
+     macht aus einer Insel ein leeres Meer. */
+  const archipelVon = t => welt.archipele[t.heim] || welt.archipele[0];
+  const heimInseln = t => archipelVon(t).inseln;
 
   function feldAt(x, y) {
     const r0 = Math.round(y / ROWH);
@@ -5297,9 +5526,15 @@
     return z ? -z.hoch + .1 : 0;
   }
 
-  function aufHauptinsel(z) {
-    if (!welt.haupt) welt.haupt = new Set(welt.inseln[0].cells);
-    return welt.haupt.has(z);
+  /* „Zu Hause" ist seit der Inselwelt eine Frage MIT Archipel: die
+     Hauptinsel von Klasse 6 ist für ein Wort aus Klasse 5 fremdes
+     Land. Ohne den zweiten Parameter liefe ein Läufer auf dem
+     Nachbararchipel herum, sobald er einmal dort stünde. */
+  function aufHauptinsel(z, heim) {
+    const a = welt.archipele[heim] || welt.archipele[0];
+    if (!a || !a.inseln.length) return false;
+    if (!a.haupt) a.haupt = new Set(a.inseln[0].cells);
+    return a.haupt.has(z);
   }
 
   /* Ein Punkt IN einem Feld. Die Auslenkung bleibt unter einer
@@ -5317,7 +5552,8 @@
      jeder Bucht durchs Wasser. */
   const NAH = 3.2;
   function zufallsPunktNahe(t) {
-    const insel = welt.inseln[t.inselIdx] || welt.inseln[0];
+    const heim = heimInseln(t);
+    const insel = heim[t.inselIdx] || heim[0];
     const nah = [];
     for (const z of insel.cells) {
       if (Math.abs(z.x - t.x) < NAH && Math.abs(z.y - t.y) < NAH) nah.push(z);
@@ -5328,10 +5564,15 @@
     return { x: feld.x + Math.cos(a) * rad, y: feld.y + Math.sin(a) * rad * .8 };
   }
 
-  function naechsteInsel(x, y) {
+  /* Die nächste Landmasse — innerhalb des EIGENEN Archipels. Ein
+     Flieger, der zum Schlafen einfach das nächstgelegene Land
+     nähme, könnte auf dem Nachbararchipel aufwachen; von dort
+     führte ihn jedes weitere Ziel noch tiefer hinein. */
+  function naechsteInsel(t) {
+    const heim = heimInseln(t);
     let bi = 0, bd = 1e9;
-    for (let i = 0; i < welt.inseln.length; i++) {
-      const d = Math.hypot(welt.inseln[i].cx - x, welt.inseln[i].cy - y);
+    for (let i = 0; i < heim.length; i++) {
+      const d = Math.hypot(heim[i].cx - t.x, heim[i].cy - t.y);
       if (d < bd) { bd = d; bi = i; }
     }
     return bi;
@@ -5349,18 +5590,21 @@
        eine Schwimmerin, die nach jeder Landung sofort wieder ablegen
        MÜSSTE, käme nie zur Ruhe. */
     if (t.stufe >= 3 && schwimmt(t)) {
-      const i = (Math.random() * welt.inseln.length) | 0;
+      const heim = heimInseln(t);
+      const i = (Math.random() * heim.length) | 0;
       t.inselIdx = i;
-      const p = zufallsPunktAuf(welt.inseln[i], Math.random);
+      const p = zufallsPunktAuf(heim[i], Math.random);
       t.zx = p.x; t.zy = p.y;
       return;
     }
     if (t.stufe >= 3) {
-      /* Flieger dürfen aufs offene Wasser. Der Bereich ist der
-         Bildausschnitt plus etwas — weiter draußen sähe man sie
-         nicht mehr, und ein Tier, das nie zurückkommt, fehlt auf
-         der Insel. */
-      const vb = welt.vb, m = 1.5;
+      /* Flieger dürfen aufs offene Wasser. Der Bereich ist das
+         eigene ARCHIPEL plus etwas — nicht mehr die ganze Welt:
+         zwischen zwei Archipelen liegen über hundert Kacheln, und
+         ein Tier, das dorthin aufbricht, ist für Minuten weg.
+         Zwischen den Inseln seines Archipels ist es weiter
+         unterwegs, so wie vorher. */
+      const vb = archipelVon(t).vb, m = 1.5;
       t.zx = vb[0] - m + Math.random() * (vb[2] + 2 * m);
       t.zy = vb[1] - m + Math.random() * (vb[3] + 2 * m);
       return;
@@ -5373,9 +5617,9 @@
      NÄCHSTGELEGENE Insel, nicht einfach die Hauptinsel: sonst läge
      nachts die ganze Herde auf einem Haufen. */
   function schlafZiel(t) {
-    const i = naechsteInsel(t.x, t.y);
+    const i = naechsteInsel(t);
     t.inselIdx = i;
-    const p = zufallsPunktAuf(welt.inseln[i], Math.random);
+    const p = zufallsPunktAuf(heimInseln(t)[i], Math.random);
     t.zx = p.x; t.zy = p.y;
   }
 
@@ -5383,13 +5627,18 @@
      dessen id: Farbe und beide Varianten sind damit über Geräte und
      Sitzungen hinweg dieselben, ohne dass sie jemand speichern
      müsste. Zufällig ist nur, wo es gerade steht. */
-  function neuesTier(id, stufe) {
+  function neuesTier(id, stufe, heim) {
     const h = hashKey(String(id));
     const rnd = mulberry32(h);
-    const insel = welt.inseln[0];
+    /* Die Heimat kommt aus dem WORT (Unit → island_key) und nicht
+       aus dem Ort: ein Tier gehört zu einem Jahrgang, auch wenn es
+       als Flieger gerade über einer anderen Insel seines Archipels
+       steht. */
+    const a = welt.archipele[heim | 0] || welt.archipele[0];
+    const insel = a.inseln[0];
     const p = zufallsPunktAuf(insel, Math.random);
     const t = {
-      id, stufe,
+      id, stufe, heim: a.nr,
       farbe: h % FARBEN.length,
       /* Zwei Varianten, zwei verschiedene Stellen im Hash: die eine
          entscheidet über die gewachsene Echse, die andere über die
@@ -5481,7 +5730,7 @@
        Riegel: darunter läuft AUCH die Schwimmerin nur zu Hause. */
     if (t.stufe < 3) {
       const z = feldAt(nx, ny);
-      if (!z || !aufHauptinsel(z)) { neuesZiel(t); return; }
+      if (!z || !aufHauptinsel(z, t.heim)) { neuesZiel(t); return; }
     }
 
     t.x = nx; t.y = ny;
@@ -5503,9 +5752,69 @@
   function landeAufLand(t) {
     t.z = 0; t.inselIdx = 0; t.imWasser = false;
     const z = feldAt(t.x, t.y);
-    if (z && aufHauptinsel(z)) return;
-    const p = zufallsPunktAuf(welt.inseln[0], Math.random);
+    if (z && aufHauptinsel(z, t.heim)) return;
+    const p = zufallsPunktAuf(heimInseln(t)[0], Math.random);
     t.x = p.x; t.y = p.y;
+  }
+
+  /* ─── Schlafen und Wecken ───────────────────────────────────────
+     Die eine Regel: ein Tier ist wach, wenn sein Wort im Beutel
+     liegt. Alles andere folgt daraus — die Insel ist keine Anzeige
+     der Auswahl, sie IST die Auswahl.
+
+     Einschlafen heißt nicht „stehenbleiben": ein Flieger über dem
+     Meer sähe schlafend aus wie ein abgestürztes Tier. Wer keinen
+     Boden unter sich hat, kommt vorher an Land — dieselbe Regel wie
+     bei `landeAufLand`, nur ohne den Zwang zur Hauptinsel: ein
+     Ausgewachsener hat sich seinen Satelliten verdient und soll dort
+     auch schlafen dürfen. */
+  function tierSchlafenLegen(t) {
+    t.schlaeft = true;
+    t.zustand = 'schlafen';
+    t.schlafBis = Infinity;
+    t.z = 0; t.imWasser = false;
+    if (!feldAt(t.x, t.y)) {
+      const heim = heimInseln(t);
+      const i = t.stufe >= 3 ? naechsteInsel(t) : 0;
+      const p = zufallsPunktAuf(heim[i] || heim[0], Math.random);
+      t.x = p.x; t.y = p.y; t.inselIdx = heim[i] ? i : 0;
+    }
+    t.zx = t.x; t.zy = t.y;
+    t._gy = undefined;          // die gemerkte Geländehöhe gilt am neuen Ort nicht
+  }
+
+  /* Aufwachen: zurück in den Zustand, den die Stufe vorgibt. Der
+     Umweg über `setzeStufe` wäre naheliegend, führte aber eine
+     Feier auf (`pop`, `burst`) — hier ist nichts passiert, es geht
+     nur wieder los. */
+  function tierWecken(t) {
+    t.schlaeft = false;
+    t._gy = undefined;
+    if (t.stufe === 0) { t.zustand = 'ei'; return; }
+    t.zustand = t.stufe < 3 ? 'laufen' : (schwimmt(t) ? 'schwimmen' : 'fliegen');
+    t.schlafBis = 0;
+    neuesZiel(t);
+  }
+
+  /* Wer läuft und wer liegt — nach jedem Wecken neu. Die Liste ist
+     das, worüber `zeichne` seine Schritte macht; sie zu vergessen
+     hieße, dass ein geweckter Jahrgang stumm stehen bleibt.
+
+     ⚠️ Sie ist eine KOSTENBREMSE und keine Sicherung. Dass ein
+     schlafendes Tier sich nicht bewegt, liegt an `schlafBis =
+     Infinity` in `tierSchlafenLegen` — `schritt` steigt dort sofort
+     wieder aus. Die Liste spart nur den Aufruf, und genau das ist
+     bei sechstausend Tieren der Punkt. (Gegenprobe gefahren: läuft
+     die Schleife über alle, steht die Herde trotzdem still.) */
+  function wachTiereMerken() {
+    welt.wachTiere = [];
+    for (const t of welt.tiere) {
+      const a = welt.archipele[t.heim];
+      const soll = !a || a.wach;
+      if (soll && t.schlaeft) tierWecken(t);
+      else if (!soll && !t.schlaeft) tierSchlafenLegen(t);
+      if (soll) welt.wachTiere.push(t);
+    }
   }
 
   /* Der Stufenwechsel — die eine Stelle, an der ein Tier den Zustand
@@ -5715,9 +6024,15 @@
 
   /* Figur und Schiff aufstellen. Gerufen aus soloBuild, NACH den
      Inseln: beide brauchen die Hauptinsel — die eine, um darauf zu
-     laufen, das andere, um sie zu umrunden. */
+     laufen, das andere, um sie zu umrunden.
+
+     Seit der Inselwelt ist „die Hauptinsel" eine Frage: du stehst
+     auf dem Archipel, an dem gerade gearbeitet wird (`welt.hier`),
+     und ziehst mit, wenn ein anderer Jahrgang geweckt wird. Die
+     Figur ist schließlich DU und nicht ein Denkmal. */
   function spielerAufstellen() {
-    const insel = welt.inseln[0];
+    const a = welt.archipele[welt.hier] || welt.archipele[0];
+    const insel = a.inseln[0];
     const p = zufallsPunktAuf(insel, Math.random);
     const volk = volkAusStand();
     let R = 0;
@@ -5725,10 +6040,10 @@
       R = Math.max(R, Math.hypot(z.x - insel.cx, z.y - insel.cy));
     }
     spieler = {
-      volk,
+      volk, heim: a.nr,
       imHeld: null, imBoot: null,
       held: {
-        x: p.x, y: p.y, zx: p.x, zy: p.y,
+        x: p.x, y: p.y, zx: p.x, zy: p.y, heim: a.nr, inselIdx: 0,
         flip: false, ruheBis: 0, held: true, stufe: 0, _a: 1, _hell: false,
         // Nur für den Funkenkranz eines Level-Aufstiegs gebraucht (die
         // Jubel-Passage im Zeichenschritt liest bei JEDEM Tier farbe
@@ -5750,7 +6065,7 @@
     /* Dasselbe Ziel-in-der-Nähe wie bei den Läufern, und aus
        demselben Grund: eine Gerade quer über die Insel führt bei
        jeder Bucht durchs Wasser. */
-    const p = zufallsPunktNahe({ x: h.x, y: h.y, inselIdx: 0 });
+    const p = zufallsPunktNahe(h);
     h.zx = p.x; h.zy = p.y;
   }
 
@@ -5772,7 +6087,7 @@
        ins Wasser, wird er nicht gegangen. Die Figur prallt ab und
        sucht sich ein neues Ziel. */
     const z = feldAt(nx, ny);
-    if (!z || !aufHauptinsel(z)) { heldZiel(); return; }
+    if (!z || !aufHauptinsel(z, h.heim)) { heldZiel(); return; }
     h.x = nx; h.y = ny;
     if (Math.abs(dx) > .02) h.flip = dx < 0;
   }
@@ -5780,7 +6095,8 @@
   /* Wo das Schiff auf seiner Bahn gerade liegt — und in welche
      Richtung es schaut. */
   function bootOrt() {
-    const b = spieler.boot, insel = welt.inseln[0];
+    const b = spieler.boot;
+    const insel = (welt.archipele[spieler.heim] || welt.archipele[0]).inseln[0];
     for (let i = 0; i < 8; i++) {
       b.x = insel.cx + Math.cos(b.winkel) * b.r;
       b.y = insel.cy + Math.sin(b.winkel) * b.r;
@@ -5939,22 +6255,19 @@
      Archipel: passte man ihn an alle Landmassen an, wäre die
      Hauptinsel ein Drittel des Bildes — und genau sie ist das, was
      ein Kind ansieht. Dass es die kleinen gibt, verrät der Ring, auf
-     dem die Flieger verschwinden. */
-  function kameraAufHauptinsel() {
-    if (!welt.inseln || !welt.inseln.length || !sicht.w) return;
-    const cs = welt.inseln[0].cells;
+     dem die Flieger verschwinden.
+
+     Seit der Inselwelt nimmt die Funktion einen Ausschnitt entgegen:
+     die Hauptinsel eines Archipels (`kameraAufArchipel`) oder die
+     ganze Welt (`kameraAufWelt`). Gerechnet wird beides gleich —
+     verschieden ist nur, was hineingelegt wird. */
+  function kameraAuf(cs, rand) {
+    if (!cs || !cs.length || !sicht.w) return;
     let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
     for (const z of cs) {
       a = Math.min(a, z.x); b = Math.max(b, z.x);
       c = Math.min(c, z.y); d = Math.max(d, z.y);
     }
-    /* Wasser rundum — und zwar so viel, dass das eigene Schiff im
-       Startbild MIT drauf ist. Es fährt eine knappe Kachel weiter
-       draußen als das äußerste Feld (BOOT_ABSTAND), und ein
-       Ausschnitt, der am Strand endet, versteckt genau das, was man
-       anklicken soll. Die Insel wird dadurch etwas kleiner; das ist
-       der Preis dafür, dass man zu Hause ist und nicht nur hinsieht. */
-    const rand = 2 * (BOOT_ABSTAND + 1.1);
     const w = (b - a) + rand, h = (d - c) + rand;
     const mx = (a + b) / 2, my = (c + d) / 2;
     /* Gerechnet wird gegen das FREIE Fenster: die Unit-Leiste liegt
@@ -5963,12 +6276,53 @@
        links, das freie Fenster fängt also erst bei `randLinks` an —
        darum die Verschiebung vor der halben Breite. */
     const frei = Math.max(80, sicht.w - randLinks);
-    kamera.k = Math.min(4, Math.max(.6,
+    kamera.k = Math.min(K_MAX, Math.max(kMin(),
       Math.min(frei * .92 / (w * sicht.s), sicht.h * .92 / (h * sicht.s))));
     kamera.tx = randLinks + frei / 2 - kamera.k * (sicht.ox + mx * sicht.s);
     kamera.ty = sicht.h / 2 - kamera.k * (sicht.oy + my * sicht.s);
     kameraAnwenden();
   }
+
+  /* Die Grenzen des Zoomens. Feste Zahlen gingen, solange die Welt
+     eine Insel war; mit sechs Archipelen umfasst die viewBox das
+     ganze Meer, `sicht.s` wird damit klein — und `.6` hieße
+     plötzlich „du kannst nicht mehr herauszoomen, als auf ein
+     Drittel der Welt". Also wird die Untergrenze gerechnet: so
+     weit, dass ALLES ins Bild passt, und nie weniger weit als
+     früher. */
+  const K_MAX = 6;
+  /* Steht die Kamera gerade auf der ganzen Welt? Nur für den
+     Doppeltipp, der zwischen beiden Ausschnitten wechselt. */
+  let weltSicht = false;
+  function kMin() {
+    if (!welt.vb || !sicht.w || !sicht.s) return .6;
+    const w = welt.vb[2] * sicht.s, h = welt.vb[3] * sicht.s;
+    if (!w || !h) return .6;
+    return Math.min(.6, Math.min(sicht.w * .94 / w, sicht.h * .94 / h));
+  }
+
+  /* Die Hauptinsel eines Archipels, mit so viel Wasser rundum, dass
+     das eigene Schiff mit drauf ist: es fährt eine knappe Kachel
+     weiter draußen als das äußerste Feld (BOOT_ABSTAND), und ein
+     Ausschnitt, der am Strand endet, versteckt genau das, was man
+     anklicken soll. */
+  function kameraAufArchipel(nr) {
+    const a = welt.archipele[nr] || welt.archipele[0];
+    if (!a || !a.inseln.length) return;
+    kameraAuf(a.inseln[0].cells, 2 * (BOOT_ABSTAND + 1.1));
+  }
+
+  /* Alle Inseln auf einmal. Der Rand ist knapp: hier zählt, dass
+     man die Archipele nebeneinander SIEHT, nicht das Meer dazwischen. */
+  function kameraAufWelt() {
+    if (!welt.isl) return;
+    kameraAuf(welt.isl.cells, 6);
+  }
+
+  /* Der Startausschnitt. Heißt weiter so, wie er hieß — gerufen
+     wird er an vier Stellen, und „auf die Hauptinsel" ist nach wie
+     vor, was er tut. */
+  const kameraAufHauptinsel = () => kameraAufArchipel(welt.hier);
 
   /* Die Zeiger-Ereignisse hängen in der EINFANG-Phase (Regel:
      feedback_field_gestures_capture_phase). */
@@ -6009,7 +6363,12 @@
       const jetzt = performance.now();
       const nah = letzterOrt && Math.hypot(p.x - letzterOrt.x, p.y - letzterOrt.y) < 30;
       if (jetzt - letzterTipp < 320 && nah && pts.size === 1) {
-        kameraAufHauptinsel();
+        /* Mit mehreren Archipelen wechselt der Doppeltipp zwischen
+           „meine Insel" und „alle Inseln". Bei nur einem bliebe der
+           Wechsel unsichtbar (Welt = Archipel), dort setzt er wie
+           bisher bloß den Ausschnitt zurück. */
+        if (welt.archipele.length > 1 && !weltSicht) { weltSicht = true; kameraAufWelt(); }
+        else { weltSicht = false; kameraAufHauptinsel(); }
         tippAus = true;
       }
       letzterTipp = jetzt;
@@ -6025,7 +6384,7 @@
 
       if (pts.size === 2 && basis) {
         const f = dist() / (basis.d || 1);
-        const k = Math.min(8, Math.max(.55, basis.k * f));
+        const k = Math.min(K_MAX * 1.4, Math.max(kMin() * .92, basis.k * f));
         const m = mitte();
         /* Um die Mitte der beiden Finger zoomen UND der Verschiebung
            dieser Mitte folgen. Nur eines von beidem, und die Karte
@@ -6058,11 +6417,35 @@
       if (e.type !== 'pointerup' || pts.size || !war || !start) { start = null; return; }
       const kurz = performance.now() - startZeit < 700;
       if (!tippAus && kurz && weg < 10 && solo && welt.isl) {
-        /* Erst du selbst, dann die Vokabeln. Figur und Schiff sind
-           größer als eine Echse und liegen im Zweifel obenauf — wer
-           auf sein Schiff tippt, meint sein Schiff. */
+        /* Erst du selbst, dann die Vokabeln, dann das Land. Die
+           Reihenfolge ist die Größe: Figur und Schiff sind größer
+           als eine Echse und liegen im Zweifel obenauf, eine Echse
+           ist größer als nichts — und eine ganze Insel ist das
+           Letzte, was jemand gemeint haben kann.
+
+           ⚠️ Eine SCHLAFENDE Insel weckt sich, eine wache tut
+           nichts. Das ist mit Absicht unsymmetrisch: Wecken ist eine
+           Entdeckung, Schlafenlegen eine Entscheidung — und wer auf
+           seiner eigenen Insel herumtippt, darf nicht aus Versehen
+           den Jahrgang abwählen, an dem er gerade arbeitet. Der Weg
+           zurück ist der Sammelschalter in der Leiste. */
+        /* Das Schild zuerst — es liegt als HTML ÜBER der Bühne, und
+           wer es liest, hat es auch gemeint. Ohne diesen Zweig
+           entschiede die Rechnung darunter, und die kennt nur Land:
+           ein Schild steht aber über dem oberen Rand seiner Insel,
+           also schon im Wasser. */
+        const schild = e.target && e.target.closest
+          && e.target.closest('.wi-schild');
+        if (schild) {
+          const a = welt.archipele[schild.dataset.nr | 0];
+          if (a && !a.wach) weckeArchipel(a);
+          start = null;
+          return;
+        }
+        const tier = spielerBei(war.x, war.y) ? null : tierBei(war.x, war.y);
         if (spielerBei(war.x, war.y)) volkOeffnen();
-        else tierWaehlen(tierBei(war.x, war.y));
+        else if (tier) tierWaehlen(tier);
+        else if (!inselTipp(war.x, war.y)) tierWaehlen(null);
       }
       start = null;
     };
@@ -6074,12 +6457,69 @@
       const r = stage.getBoundingClientRect();
       const px = e.clientX - r.left, py = e.clientY - r.top;
       const f = Math.exp(-e.deltaY * .0016);
-      const k = Math.min(8, Math.max(.55, kamera.k * f));
+      const k = Math.min(K_MAX * 1.4, Math.max(kMin() * .92, kamera.k * f));
       kamera.tx = px - (k / kamera.k) * (px - kamera.tx);
       kamera.ty = py - (k / kamera.k) * (py - kamera.ty);
       kamera.k = k;
       kameraAnwenden();
     }, { passive: false });
+  }
+
+  /* ─── Ein Tipp auf das Land ─────────────────────────────────
+     Bildschirmpunkt zurück in die Welt rechnen (die Umkehrung von
+     sxp/syp) und nachsehen, welches Archipel dort liegt. Schläft
+     es, wacht es auf.
+
+     Getroffen werden muss nicht unbedingt eine Kachel: aus der
+     Übersicht ist ein Sechseck ein paar Bildpunkte groß, und ein
+     Kind, das erkennbar auf eine Insel zielt, hat sie auch gemeint.
+     Darum zählt auch der Kasten um ein Archipel — aber eben nur
+     der, und nicht das halbe Meer. */
+  function inselTipp(px, py) {
+    if (!welt.isl || !sicht.s || !kamera.k) return false;
+    const wx = ((px - kamera.tx) / kamera.k - sicht.ox) / sicht.s;
+    const wy = ((py - kamera.ty) / kamera.k - sicht.oy) / sicht.s;
+
+    const z = feldAt(wx, wy);
+    let nr = z ? welt.archipelVonFeld.get(z.r + ',' + z.c) : undefined;
+    if (nr === undefined) {
+      const M = 2.5;   // Kacheln Zugabe rund um den Kasten
+      for (const a of welt.archipele) {
+        if (!a.inseln.length) continue;
+        const [x0, y0, w, h] = a.vb;
+        if (wx >= x0 - M && wx <= x0 + w + M && wy >= y0 - M && wy <= y0 + h + M) {
+          nr = a.nr; break;
+        }
+      }
+    }
+    const a = welt.archipele[nr | 0];
+    if (nr === undefined || !a || a.wach) return false;
+    weckeArchipel(a);
+    return true;
+  }
+
+  /* Wecken heißt: alle Stationen dieses Jahrgangs in den Beutel.
+     Sönkes Entscheid vom 20.09.2026 — nicht „der zuletzt gewählte
+     Stand", sondern der ganze Jahrgang. Die Folge ist ein großer
+     Beutel; sie steht in der Meldung, damit niemand raten muss. */
+  async function weckeArchipel(a) {
+    const dazu = (solo.sets || [])
+      .filter(s => (s.island || 'en:x') === a.key)
+      .map(s => s.id);
+    if (!dazu.length) return;
+    const gewaehlt = new Set(soloChosen());
+    for (const id of dazu) gewaehlt.add(id);
+    welt.hier = a.nr;
+    weltSicht = false;
+    /* Die Leiste klappt mit auf: wer eine Insel weckt, will ihre
+       Units sehen. Der gespeicherte Stand (nicht die Vorgabe) —
+       sonst hätte ein früheres Zuklappen von Hand hier Vorrang und
+       die geweckte Insel bliebe in der Liste unsichtbar. */
+    const st = unitKlappStand();
+    st['jg:' + a.key] = true;
+    try { localStorage.setItem(WI_UKLAPP_KEY, JSON.stringify(st)); } catch (e) { /* egal */ }
+    await soloSetzen({ p_sets: [...gewaehlt] });
+    ctx.toast(`${a.titel} geweckt · ${a.ids.length} Wörter`);
   }
 
   /* ⚠️ ─── Der Klick, der HINTERHERKOMMT ──────────────────────
@@ -6125,6 +6565,11 @@
   const nachklick = () => performance.now() < nachklickBis;
 
   /* ─── Zeichnen ──────────────────────────────────────────────── */
+  /* Ab welcher Bildgröße ein schlafendes Tier überhaupt gezeichnet
+     wird (Bildschirmpunkte für ein Tier der Stufe 1). Darunter ist
+     es ein Farbpunkt, und die Auskunft „was wohnt hier" steht dann
+     auf dem Schild des Archipels. */
+  const SCHLAF_SICHT_PX = 9;
   let c2d = null, raf = 0, letzterT = 0, simZeit = 0, nacht = 0;
   /* Die Tiere des letzten Bildes, in Zeichenreihenfolge. Nur sie
      haben frische Bildschirmkoordinaten — und nur auf sie kann ein
@@ -6327,11 +6772,23 @@
     if (els.veil) els.veil.style.opacity = (nacht * NACHT_TIEFE).toFixed(3);
 
     const tiere = welt.tiere;
-    if (dt > 0) for (let i = 0; i < tiere.length; i++) schritt(tiere[i], dt, simZeit);
+    /* ⚠️ Nur die WACHEN laufen. Das ist die Zeile, an der die
+       Inselwelt hängt: sechs Jahrgänge sind rund 6000 Tiere, und
+       jeder Schritt fragt die Geländehöhe (`feldAt`, eine 3×3-Suche)
+       und bei Läufern zusätzlich den Küsten-Riegel. Über alle
+       gerechnet wäre das der teuerste Posten des Bildes — über die
+       paar hundert eines Archipels kostet es so viel wie vorher.
+
+       Die Schläfer bleiben trotzdem in `welt.tiere`: sie werden
+       gezeichnet, sie lassen sich antippen, und sie wachen auf,
+       sobald ihr Jahrgang in den Beutel kommt. Sie tun nur nichts. */
+    const wache = welt.wachTiere;
+    if (dt > 0) for (let i = 0; i < wache.length; i++) schritt(wache[i], dt, simZeit);
     if (dt > 0 && spieler) { heldSchritt(dt, simZeit); bootSchritt(dt); }
 
     c2d.clearRect(0, 0, sicht.w, sicht.h);
     const P = ppu();
+    schildeSetzen();
 
     /* Das eigene Schiff ganz hinten: es liegt auf dem Wasser, und
        alles andere ist entweder an Land oder fliegt darüber. */
@@ -6350,15 +6807,30 @@
        den Normalfall erst herstellen. */
     const etwasHervor = !!(markiert || tierOffen);
 
+    /* Aus der Ferne sind die Schläfer Farbpunkte, und Farbpunkte
+       sagen nichts: was auf einer schlafenden Insel wohnt, steht auf
+       ihrem Schild. Also werden sie erst gezeichnet, wenn man sie
+       auch erkennen könnte. Für die WACHEN gilt das nicht — auf sie
+       sieht man ja gerade. */
+    const schlafSicht = P * TIER_GROESSE * STUFE_EINHEIT[1] >= SCHLAF_SICHT_PX;
+
     const zuMalen = [];
     for (let i = 0; i < tiere.length; i++) {
       const t = tiere[i];
-      const gy = bodenY(t.x, t.y);
+      if (t.schlaeft && !schlafSicht) continue;
+      /* Die Geländehöhe ist eine 3×3-Feldsuche. Wer schläft, bewegt
+         sich nicht — für ihn wird sie einmal gerechnet und gemerkt.
+         Bei sechstausend Tieren ist das der Unterschied zwischen
+         „kostet nichts" und „kostet sechsundfünfzigtausend Suchen je
+         Bild". */
+      const gy = t.schlaeft
+        ? (t._gy !== undefined ? t._gy : (t._gy = bodenY(t.x, t.y)))
+        : bodenY(t.x, t.y);
       const px = sxp(t.x), py = syp(t.y + gy - t.z);
       if (px < l0 || px > l1 || py < t0 || py > t1) continue;
 
       const schl = schluesselFuer(t);
-      const blass = tierBlass(t);
+      const blass = t.schlaeft || tierBlass(t);
       const im = blass ? grauBild(schl, t.farbe) : sprites[schl][t.farbe];
       const m = ECHSE.bilder[schl];
       t._hell = !etwasHervor
@@ -6372,8 +6844,14 @@
          Bleibt die eine Blässe, die etwas BEDEUTET: „diese Unit
          kommt gerade nicht dran". Glühen und Funken lesen sie mit,
          sonst leuchtete nachts ein abgewähltes Tier so hell wie ein
-         bearbeitetes. */
-      t._a = blass ? .82 : 1;
+         bearbeitetes.
+
+         Wer auf einer schlafenden Insel wohnt, tritt noch einen
+         Schritt weiter zurück. Das ist dieselbe Aussage eine Ebene
+         höher — „dieser ganze Jahrgang kommt gerade nicht dran" —
+         und `t._a` ist ausdrücklich die EINE Zahl dafür, wie laut
+         ein Tier sein darf. */
+      t._a = t.schlaeft ? .70 : blass ? .82 : 1;
       // Der Maßstab hängt an der STUFE, nicht am Bild — deshalb
       // wächst nichts beim Einschlafen.
       let e = STUFE_EINHEIT[t.stufe] * TIER_GROESSE * P / ECHSE.blatt.h;
@@ -6421,7 +6899,7 @@
       c2d.globalCompositeOperation = 'lighter';
       for (const t of zuMalen) {
         const g = GLUEHEN[t.stufe];
-        if (g <= 0) continue;
+        if (g <= 0 || t.schlaeft) continue;
         const w = t._h * 1.9;
         c2d.globalAlpha = Math.min(.6, g * glow * .22 * t._a);
         c2d.drawImage(flecken[t.farbe], t._mx - w / 2, t._by - w * .19, w, w * .38);
@@ -6474,7 +6952,7 @@
       c2d.globalCompositeOperation = 'lighter';
       for (const t of zuMalen) {
         const g = GLUEHEN[t.stufe];
-        if (g <= 0) continue;
+        if (g <= 0 || t.schlaeft) continue;
         /* Eng. Bei 320 Tieren addieren sich weite Scheine über
            `lighter` zu einem milchigen Nebel, und die Insel darunter
            ist weg — ein Leuchten, das die Insel auslöscht, sagt
@@ -6510,13 +6988,17 @@
            gerechnet kosten sie eine Zeile. */
     let funkelt = glow > .01;
     if (!funkelt) {
-      for (const t of zuMalen) if (t.stufe >= 4) { funkelt = true; break; }
+      for (const t of zuMalen) if (t.stufe >= 4 && !t.schlaeft) { funkelt = true; break; }
     }
     if (funkelt) {
       c2d.globalCompositeOperation = 'lighter';
       for (const t of zuMalen) {
         const n = FUNKEN[t.stufe];
-        if (!n) continue;
+        /* Sönkes Ansage zur schlafenden Insel: „die Monster dort nur
+           schlafen und nicht leuchten." Hart übersprungen und nicht
+           bloß über `t._a` gedämpft — eine funkelnde Echse auf einer
+           Silhouette wäre genau das Gegenteil der Aussage. */
+        if (!n || t.schlaeft) continue;
         const oben = t.stufe >= 4;
         // Die oberste Stufe funkelt auch bei Sonne; darunter ist das
         // Funkeln eine Nacht-Auskunft und bleibt es.
@@ -6593,6 +7075,12 @@
         <div class="wi-cam" data-part="mapwrap2"><svg class="wi-map" data-part="map"></svg></div>
         <div class="wi-night" data-part="veil"></div>
         <canvas class="wi-cvs" data-part="cvs"></canvas>
+        <!-- Die Schilder der Archipele. Bewusst HTML über der Bühne
+             und nicht IM Karten-SVG: mitskaliert wäre die Schrift
+             aus der Übersicht unlesbar und aus der Nähe riesig. So
+             bleibt sie immer gleich groß, und auf einer schlafenden
+             Insel ist sie das Einzige, was Auskunft gibt. -->
+        <div class="wi-schilder" data-part="schilder"></div>
         <div class="wi-load" data-part="load">
           <b>Deine Insel wird gebaut …</b>
           <span data-part="loadtxt">Tiere werden eingefärbt</span>
@@ -7079,6 +7567,7 @@
     els = {
       stage: q('stage'), mapwrap2: q('mapwrap2'), map: q('map'),
       veil: q('veil'), cvs: q('cvs'), load: q('load'), loadTxt: q('loadtxt'),
+      schilder: q('schilder'),
       sWords: q('swords'), sLegend: q('slegend'),
       units: q('units'), uGriff: q('ugriff'), uBody: q('ubody'),
       uList: q('ulist'), uDet: q('udet'), card: q('card'), sBar: q('sbar'),
@@ -7239,6 +7728,250 @@
     soloPanZoom(els.stage);
   }
 
+  /* ─── Die Welt würfeln ──────────────────────────────────────
+     Ein Archipel je Insel-Schlüssel, in Slot-Reihenfolge. Jedes
+     bekommt seinen EIGENEN Würfelstrom (`seed:key`) — damit hängt
+     die Form von Klasse 5 an nichts, was Klasse 6 tut, und ein
+     neuer Jahrgang zeichnet keine bestehende Insel um. */
+  function weltWuerfeln() {
+    /* Station → Insel. Ein Satz ohne `island` (Datenbank ohne 0150)
+       kommt zu den Listen ohne Jahrgang; „irgendwohin" wäre besser
+       als „nirgendwohin", aber „zu den anderen ohne Jahrgang" ist
+       richtig. */
+    const inselVonSet = new Map();
+    for (const s of (solo.sets || [])) inselVonSet.set(s.id, s.island || 'en:x');
+    solo.inselVonSet = inselVonSet;
+
+    const kopf = new Map();          // island_key → { grade, titel }
+    for (const s of (solo.sets || [])) {
+      const k = s.island || 'en:x';
+      if (!kopf.has(k)) {
+        kopf.set(k, { grade: (s.grade === 0 || s.grade) ? s.grade : null });
+      }
+    }
+
+    /* Die Wörter je Insel. Daraus kommt die GRÖSSE des Archipels —
+       jedes zählt für sich, sonst hätte ein Kind mit zwei halben
+       Jahrgängen zwei ausgewachsene Inseln. */
+    const proInsel = new Map();
+    for (const id of solo.stufen.keys()) {
+      const set = solo.setVon.get(id);
+      const k = (set && inselVonSet.get(set)) || 'en:x';
+      if (!proInsel.has(k)) proInsel.set(k, []);
+      proInsel.get(k).push(id);
+    }
+    /* Noch kein einziges Wort: trotzdem eine Insel. „Deine Insel
+       wird gebaut …" und danach leeres Meer wäre die schlechteste
+       aller Antworten auf einen ersten Besuch. */
+    if (!proInsel.size) proInsel.set([...kopf.keys()][0] || 'en:x', []);
+
+    welt.archipele = [];
+    welt.vonKey = new Map();
+    for (const key of [...proInsel.keys()].sort((a, b) => inselSlot(a) - inselSlot(b))) {
+      const ids = proInsel.get(key);
+      const slot = inselSlot(key);
+      const ort = inselOrt(solo.seed, slot);
+      /* Wie viele Satelliten schon aufgetaucht sind. Die Hauptinsel
+         steht immer, der erste Satellit auch (Schwelle 0) — die
+         beiden anderen kommen mit dem Wortschatz DIESER Insel. */
+      const sat = SAT_SCHWELLEN.filter(s => ids.length >= s).length;
+      const k = kopf.get(key) || { grade: null };
+      const a = {
+        nr: welt.archipele.length, key, slot,
+        grade: k.grade,
+        titel: jahrgangText(k.grade),
+        zellen: wuerfelInseln(hashKey(solo.seed + ':' + key), sat, ort.x, ort.y),
+        ids,
+        inseln: [], haupt: null, vb: [0, 0, 1, 1], mx: ort.x, my: ort.y,
+        wach: false
+      };
+      welt.vonKey.set(key, a);
+      welt.archipele.push(a);
+    }
+
+    /* Welches Feld zu welchem Archipel gehört. Gebraucht wird es
+       zweimal: um die Landmassen nach dem Bauen zuzuordnen, und um
+       einen Tipp auf die Karte zu beantworten. */
+    welt.archipelVonFeld = new Map();
+    for (const a of welt.archipele) {
+      for (const [r, c] of a.zellen) welt.archipelVonFeld.set(r + ',' + c, a.nr);
+    }
+    welt.hier = 0;
+  }
+
+  /* Wach ist ein Archipel, wenn wenigstens eine seiner Stationen im
+     Beutel liegt. Das ist die EINE Regel, aus der die ganze
+     Inselwelt folgt: die Insel ist keine Anzeige der Auswahl, sie
+     IST die Auswahl. Zwei lebende Archipele heißen „du übst beide
+     Jahrgänge", und das muss niemand erklären. */
+  function wachMerken() {
+    for (const a of welt.archipele) a.wach = false;
+    for (const s of (solo.sets || [])) {
+      if (!solo.aktiv.has(s.id)) continue;
+      const a = welt.vonKey.get(s.island || 'en:x');
+      if (a) a.wach = true;
+    }
+    /* Kein einziges waches Archipel gibt es eigentlich nicht
+       (`wi_solo_chosen` liest „nichts gewählt" als „alles"), aber
+       eine Welt aus lauter schlafenden Inseln wäre so kaputt, dass
+       sie sich nicht auf eine Vermutung verlassen darf. */
+    if (!welt.archipele.some(a => a.wach) && welt.archipele.length) {
+      welt.archipele[0].wach = true;
+    }
+    /* Wo du stehst: das erste wache Archipel — es sei denn, du
+       stehst schon auf einem wachen. Sonst spränge die Kamera bei
+       jedem Wecken eines zweiten Jahrgangs zurück auf den ersten. */
+    if (!(welt.archipele[welt.hier] || {}).wach) {
+      welt.hier = welt.archipele.findIndex(a => a.wach);
+      if (welt.hier < 0) welt.hier = 0;
+    }
+  }
+
+  /* Die Karte bauen. Getrennt von `weltWuerfeln`, weil sie beim
+     Wecken eines Jahrgangs NEU entsteht, die gewürfelten Felder
+     aber dieselben bleiben — sonst formte sich die Welt bei jedem
+     Antippen um. */
+  function weltZeichnen() {
+    wachMerken();
+    const list = [].concat(...welt.archipele.map(a => a.zellen));
+    /* Die Kostenbremse je ARCHIPEL, nicht über die ganze Welt —
+       siehe die Warnung in buildMap. Ein Archipel kann 970 Felder
+       haben, liegt also nie darüber; die Zeile ist trotzdem keine
+       Attrappe, sondern die Stelle, an der später ein Regler säße. */
+    const dicht = welt.archipele.some(a => a.zellen.length > 1100);
+    const wach = new Set(welt.archipele.filter(a => a.wach).map(a => a.nr));
+    welt.isl = buildMap(els.map, list, 'solo' + solo.seed, {
+      solo: true, dicht,
+      heimVonFeld: welt.archipelVonFeld,
+      wach,
+      /* Für die Brandung: liegt dieser Punkt an einem wachen
+         Archipel? Gegen die Mittelpunkte gerechnet — die Archipele
+         liegen weit genug auseinander, dass „das nächste" eindeutig
+         ist. */
+      wachOrt: (x, y) => {
+        let best = null, bd = 1e9;
+        for (const a of welt.archipele) {
+          const d = Math.hypot(a.mx - x, a.my - y);
+          if (d < bd) { bd = d; best = a; }
+        }
+        return !best || best.wach;
+      }
+    });
+    welt.vb = els.map.getAttribute('viewBox').split(' ').map(Number);
+  }
+
+  /* Nach buildMap: die Landmassen der ganzen Welt auf die Archipele
+     verteilen. `findeInseln` weiß nichts von Jahrgängen — es sucht
+     Zusammenhängendes, und welches Archipel das ist, steht in der
+     Feldtabelle von oben. */
+  function landmassenVerteilen() {
+    for (const a of welt.archipele) { a.inseln = []; a.haupt = null; }
+    for (const m of findeInseln(welt.isl)) {
+      const z = m.cells[0];
+      const nr = welt.archipelVonFeld.get(z.r + ',' + z.c) | 0;
+      (welt.archipele[nr] || welt.archipele[0]).inseln.push(m);
+    }
+    for (const a of welt.archipele) {
+      // Die größte zuerst — auf ihr wohnt alles, was nicht fliegen kann.
+      a.inseln.sort((x, y) => y.cells.length - x.cells.length);
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const m of a.inseln) for (const z of m.cells) {
+        x0 = Math.min(x0, z.x); x1 = Math.max(x1, z.x);
+        y0 = Math.min(y0, z.y); y1 = Math.max(y1, z.y);
+      }
+      a.vb = a.inseln.length ? [x0, y0, x1 - x0, y1 - y0] : [0, 0, 1, 1];
+      a.mx = a.inseln.length ? (x0 + x1) / 2 : a.mx;
+      a.my = a.inseln.length ? (y0 + y1) / 2 : a.my;
+    }
+  }
+
+  /* ─── Die Schilder ──────────────────────────────────────────────
+     Ein Schild je Archipel: Name und Stufenpunkte. Auf einer wachen
+     Insel ist es Beschriftung, auf einer schlafenden ist es die
+     ganze Auskunft — dort leuchtet nichts, und nachts sähe man
+     sonst gar nicht, was dort wohnt.
+
+     Es ist zugleich die Trefferfläche zum Wecken: aus der Übersicht
+     ist eine Insel klein, ein beschriftetes Schild nicht. Bei einem
+     einzigen Archipel entfällt es — „Jahrgang 5" über der einzigen
+     Insel, die es gibt, erklärt niemandem etwas. */
+  function schildeZeichnen() {
+    if (!els.schilder) return;
+    if (welt.archipele.length < 2) { els.schilder.innerHTML = ''; return; }
+    els.schilder.innerHTML = welt.archipele.map(a => `
+      <div class="wi-schild${a.wach ? ' is-wach' : ''}" data-nr="${a.nr}">
+        <b>${esc(a.titel)}</b>
+        <span class="wi-slegend">${stufenLegende(a.ids)}</span>
+        ${a.wach ? '' : '<i>schläft — antippen zum Wecken</i>'}
+      </div>`).join('');
+  }
+
+  /* Je Bild nachgeführt: die Schilder hängen an Weltkoordinaten, die
+     Kamera bewegt sich. Bei höchstens einer Handvoll Schildern ist
+     das Schreiben ins DOM billiger als jede Buchführung darüber, ob
+     sich etwas geändert hat. */
+  function schildeSetzen() {
+    if (!els.schilder || !els.schilder.children.length || !sicht.s) return;
+    for (const el2 of els.schilder.children) {
+      const a = welt.archipele[el2.dataset.nr | 0];
+      if (!a) continue;
+      /* Über den oberen Rand des Archipels, nicht über seine Mitte:
+         in der Mitte läge es auf den Tieren. */
+      const x = sxp(a.mx), y = syp(a.vb[1]) - 6;
+      el2.style.left = Math.round(x) + 'px';
+      el2.style.top = Math.round(y) + 'px';
+      /* Außerhalb des Bildes gar nicht erst zeigen — ein Schild, das
+         am Rand klebt, zeigt auf eine Insel, die man nicht sieht. */
+      const drin = x > -80 && x < sicht.w + 80 && y > -40 && y < sicht.h + 40;
+      el2.style.visibility = drin ? '' : 'hidden';
+    }
+  }
+
+  /* Die Welt an eine geänderte Auswahl anpassen. Die FELDER bleiben
+     dieselben — gewürfelt wird nicht noch einmal, sonst formte sich
+     die Welt bei jedem Häkchen um. Neu sind nur Karte (Relief statt
+     Silhouette und zurück), Landmassen und der Schlaf der Tiere.
+
+     Gerufen aus `soloSetzen`, also nach JEDER Änderung der Auswahl —
+     auch aus der Leiste. */
+  function weltNachfuehren() {
+    if (!solo || !welt.archipele.length || !els.map) return;
+    const vorher = welt.hier;
+    weltZeichnen();
+    landmassenVerteilen();
+    wachTiereMerken();
+    if (welt.hier !== vorher) spielerUmziehen();
+    schildeZeichnen();
+  }
+
+  /* Die Figur zieht auf das Archipel um, an dem jetzt gearbeitet
+     wird. Nicht `spielerAufstellen`: das würfelte auch Volk und
+     Bilder neu, und beides hat sich nicht geändert. */
+  function spielerUmziehen() {
+    if (!spieler) return;
+    const a = welt.archipele[welt.hier] || welt.archipele[0];
+    if (!a || !a.inseln.length) return;
+    const insel = a.inseln[0];
+    const p = zufallsPunktAuf(insel, Math.random);
+    const h = spieler.held;
+    spieler.heim = a.nr;
+    h.heim = a.nr; h.inselIdx = 0;
+    h.x = p.x; h.y = p.y; h.zx = p.x; h.zy = p.y; h.ruheBis = 0;
+    let R = 0;
+    for (const z of insel.cells) R = Math.max(R, Math.hypot(z.x - insel.cx, z.y - insel.cy));
+    spieler.boot.r = R + BOOT_ABSTAND;
+    bootOrt();
+  }
+
+  /* Die Heimat eines Wortes: Wort → Station → Insel → Archipel.
+     Steht für die ganze Sitzung fest. */
+  function heimatVon(id) {
+    const set = solo.setVon.get(id);
+    const key = (set && solo.inselVonSet.get(set)) || 'en:x';
+    const a = welt.vonKey.get(key);
+    return a ? a.nr : 0;
+  }
+
   /* Die Insel aufbauen. Drei Dinge in einer festen Reihenfolge, und
      die Reihenfolge ist keine Bequemlichkeit: die Felder kommen aus
      dem Startwert, das Relief aus den Feldern, und die Tiere
@@ -7275,40 +8008,44 @@
     }
     aktivMerken();
 
-    /* Wie viele Satelliten schon aufgetaucht sind. Die Hauptinsel
-       steht immer, der erste Satellit auch (Schwelle 0) — die
-       beiden anderen kommen mit dem Wortschatz. */
-    const sat = SAT_SCHWELLEN.filter(s => solo.words >= s).length;
-    const list = wuerfelInseln(solo.seed, sat);
+    weltWuerfeln();
 
     /* Derselbe Startwert für das Gelände wie für die Form: Wald,
        Fels und Strandbreite sollen zur Insel gehören und nicht bei
        jedem Öffnen anders liegen. */
-    welt.haupt = null;
-    welt.isl = buildMap(els.map, list, 'solo' + solo.seed, { solo: true });
-    welt.vb = els.map.getAttribute('viewBox').split(' ').map(Number);
-    welt.inseln = findeInseln(welt.isl);
+    weltZeichnen();
+    landmassenVerteilen();
 
     /* Ein Tier je Wort. Reihenfolge und Zuordnung kommen aus der
        id — dieselbe Vokabel ist auf jedem Gerät dasselbe Tier. */
     welt.tiere = [];
     welt.nachStufe = new Map();
     for (const [id, st] of solo.stufen) {
-      const t = neuesTier(id, st);
+      const t = neuesTier(id, st, heimatVon(id));
       /* Frisch aufgestellte Flieger übers Archipel verteilen. Sie
          entstehen auf der Hauptinsel und würden sonst als Haufen
          dastehen, während die Satelliten leer sind — im Spiel ist
          das richtig (wer aufsteigt, hebt dort ab, wo er steht), beim
-         AUFBAU sieht es falsch aus. */
-      if (st >= 3 && welt.inseln.length > 1) {
-        const j = (Math.random() * welt.inseln.length) | 0;
-        const p = zufallsPunktAuf(welt.inseln[j], Math.random);
+         AUFBAU sieht es falsch aus.
+
+         ⚠️ Über das EIGENE Archipel, nicht über die Welt: ein Tier
+         aus Klasse 5 hat auf der Insel von Klasse 6 nichts zu
+         suchen, auch nicht als Flieger. */
+      const heim = heimInseln(t);
+      if (st >= 3 && heim.length > 1) {
+        const j = (Math.random() * heim.length) | 0;
+        const p = zufallsPunktAuf(heim[j], Math.random);
         t.inselIdx = j; t.x = p.x; t.y = p.y;
       }
       neuesZiel(t);
       welt.tiere.push(t);
       welt.nachStufe.set(id, t);
     }
+    /* Wer auf einer schlafenden Insel wohnt, legt sich hin — und
+       zwar JETZT, nicht beim ersten Bild: ein Tier, das eine halbe
+       Sekunde lang wach über eine Silhouette läuft, ist genau die
+       Art Zucken, die man beim Öffnen sieht und nicht erklären kann. */
+    wachTiereMerken();
 
     /* Und zuletzt du selbst. Nach den Inseln, weil Figur und Schiff
        beide die Hauptinsel brauchen — und nach den Tieren, weil die
@@ -7319,6 +8056,8 @@
        gebaut …" und behauptete „Noch nichts freigespielt" — über eine
        Insel, die es in diesem Augenblick noch gar nicht gibt. */
     els.units.hidden = false;
+    jgVorgabeSetzen();
+    schildeZeichnen();
     passeAn();
     randMessen();
     kameraAufHauptinsel();
@@ -7419,6 +8158,12 @@
     // einer abgewählten Unit stammen) — hier auch.
     soloTask = null;
     aktivMerken();
+    /* Und die Insel zieht nach. Sie steht hier und nicht bei den
+       Weck-Wegen, weil sie zur AUSWAHL gehört und nicht zum Tipp:
+       wer eine Unit in der Leiste abschaltet, legt damit unter
+       Umständen den letzten wachen Jahrgang schlafen — und die
+       Insel muss das zeigen, egal über welchen Griff es kam. */
+    weltNachfuehren();
     renderSoloSets();
     renderUnits();
   }
@@ -7951,17 +8696,55 @@
     return baum;
   }
 
-  /* Eine Zeile — für die Unit wie für die Station dieselbe Form.
-     `ziel` ist, was der Schalter umlegt: eine Unit- oder eine
-     Satz-Nummer. */
+  /* ─── Der Jahrgangs-Baum ────────────────────────────────────
+     Eine Ebene über den Units, seit ein Kind mehr als einen
+     Jahrgang haben kann. Gerechnet wird aus demselben Baum, den die
+     Leiste ohnehin baut — eine zweite Gruppierung wäre eine zweite
+     Wahrheit über dieselben Stationen.
+
+     `key` ist der Insel-Schlüssel und nicht der Jahrgang: er ist
+     das, woran die Karte ihre Archipele erkennt, und ein Schalter,
+     der etwas anderes benennt als die Insel, die er schlafen legt,
+     ist einer zu viel. */
+  function jahrgangsBaum(baum) {
+    const raus = [];
+    for (const g of baum) {
+      const key = (g.sets[0] && g.sets[0].island) || 'en:x';
+      let j = raus.find(x => x.key === key);
+      if (!j) {
+        j = { key, grade: g.grade, titel: jahrgangText(g.grade),
+              gruppen: [], sets: [], ids: [], anzahl: 0, an: 0 };
+        raus.push(j);
+      }
+      j.gruppen.push(g);
+      j.sets.push(...g.sets);
+      j.ids.push(...g.ids);
+      j.anzahl += g.anzahl;
+      j.an += g.an;          // unitBaum setzt es für JEDE Gruppe, auch die am Stück
+    }
+    for (const j of raus) {
+      j.zustand = j.an === j.sets.length ? 'an' : j.an ? 'halb' : 'aus';
+    }
+    return raus;
+  }
+
+  /* Eine Zeile — für Jahrgang, Unit und Station dieselbe Form.
+     `ziel` ist, was der Schalter umlegt: ein Insel-Schlüssel, eine
+     Unit- oder eine Satz-Nummer. */
   function unitZeile(o) {
+    /* ⚠️ Eigenes Merkmal je Ebene (`data-jauf` / `data-auf`). Ein
+       gemeinsames ginge fast immer gut und einmal nicht: ein
+       Insel-Schlüssel und eine Unit-Nummer sind beides Text, und
+       wer „en:5" an `unitKlappen` gibt, klappt still gar nichts. */
     const pfeil = o.auf === undefined ? '' :
       `<button type="button" class="wi-uchevb${o.auf ? ' is-auf' : ''}"
-               data-auf="${esc(o.ziel)}" aria-expanded="${o.auf}"
-               aria-label="Stationen ${o.auf ? 'einklappen' : 'ausklappen'}"
+               data-${o.jahrgang ? 'jauf' : 'auf'}="${esc(o.ziel)}"
+               aria-expanded="${o.auf}"
+               aria-label="${o.jahrgang ? 'Units' : 'Stationen'} ${
+                 o.auf ? 'einklappen' : 'ausklappen'}"
                ><i class="wi-schev" aria-hidden="true"></i></button>`;
     const knopf = `<button type="button" class="wi-utoggle"
-              data-${o.unit ? 'anunit' : 'an'}="${esc(o.ziel)}"
+              data-${o.jahrgang ? 'anjg' : o.unit ? 'anunit' : 'an'}="${esc(o.ziel)}"
               aria-pressed="${o.zustand === 'an'}">
         <b>${esc(o.titel)} <span class="wi-uzahl">(${o.anzahl})</span></b>
         <span class="wi-slegend">${stufenLegende(o.ids)}</span>${
@@ -7992,17 +8775,31 @@
 
     /* Überschriften nur, wenn es wirklich mehrere Jahrgänge gibt.
        Bei einem einzigen wäre die Zeile eine Trennung, die nichts
-       trennt — und sie kostet in der schmalen Leiste eine Zeile. */
-    const mehrere = baum.some(g => g.grade !== baum[0].grade);
+       trennt — und sie kostet in der schmalen Leiste eine Zeile.
+
+       Seit der Inselwelt ist die Überschrift ein SCHALTER: derselbe
+       Dreizustand wie eine Unit, nur eine Ebene höher. Sie ist
+       zugleich der einzige Weg, eine Insel wieder schlafen zu legen
+       — der Tipp auf die Karte weckt nur (siehe soloPanZoom). */
+    const jgs = jahrgangsBaum(baum);
+    const mehrere = jgs.length > 1;
     let html = '';
-    let jahrgang = false;
+    let offen = false;
 
     for (const g of baum) {
-      if (mehrere && g.grade !== jahrgang) {
-        jahrgang = g.grade;
-        html += `<div class="wi-ugrp">${g.grade == null
-          ? 'Eigene Listen' : 'Jahrgang ' + esc(String(g.grade))}</div>`;
+      const jg = jgs.find(j => j.gruppen.includes(g));
+      if (mehrere && jg !== offen) {
+        if (offen) html += '</div></div>';
+        offen = jg;
+        const auf = jahrgangAufgeklappt(jg);
+        html += `<div class="wi-jbox${auf ? ' is-auf' : ''}">`
+          + unitZeile({
+              klasse: 'wi-urow wi-jrow', ziel: jg.key, jahrgang: true,
+              titel: jg.titel, anzahl: jg.anzahl, ids: jg.ids,
+              zustand: jg.zustand, auf })
+          + `<div class="wi-jbody"${auf ? '' : ' hidden'}>`;
       }
+      if (mehrere && !jahrgangAufgeklappt(jg)) continue;
 
       /* Eine Unit am Stück bekommt keinen Aufklapp-Pfeil und trägt
          das „i" ihrer einzigen Station selbst. Ein Pfeil, der eine
@@ -8035,10 +8832,13 @@
             zustand: solo.aktiv.has(s.id) ? 'an' : 'aus', info: s.id })).join('')
         + '</div></div>';
     }
+    if (offen) html += '</div></div>';
 
     els.uList.innerHTML = html
       + '<p class="wi-uhint">Abgefragt wird nur, was an ist. Die anderen Tiere '
-      + 'bleiben auf deiner Insel — sie sind nur blass.</p>';
+      + 'bleiben auf deiner Insel — sie sind nur blass.'
+      + (mehrere ? ' Ein ganzer Jahrgang aus heißt: seine Insel schläft.' : '')
+      + '</p>';
 
     if (unitOffen) renderUnitDetail();
   }
@@ -8047,8 +8847,12 @@
     /* Reihenfolge nicht vertauschen: der Pfeil liegt IN der
        Unit-Zeile, und `data-anunit` ist auf demselben Weg nach oben
        erreichbar. Wer zuerst nach dem Schalter sucht, klappt nie. */
+    const jauf = e.target.closest('[data-jauf]');
+    if (jauf) { jahrgangKlappen(jauf.dataset.jauf); return; }
     const auf = e.target.closest('[data-auf]');
     if (auf) { unitKlappen(auf.dataset.auf); return; }
+    const jalle = e.target.closest('[data-anjg]');
+    if (jalle) { jahrgangSammel(jalle.dataset.anjg); return; }
     const alle = e.target.closest('[data-anunit]');
     if (alle) { unitSammel(alle.dataset.anunit); return; }
     const an = e.target.closest('[data-an]');
@@ -8091,6 +8895,82 @@
     st[uid] = !unitAufgeklappt(uid, baum);
     try { localStorage.setItem(WI_UKLAPP_KEY, JSON.stringify(st)); } catch (e) { /* egal */ }
     renderUnits();
+  }
+
+  /* ─── Der Jahrgang auf- und zuklappen ───────────────────────
+     Eigener Stand neben dem der Units, unter demselben Schlüssel.
+     Voreinstellung ist das Naheliegende: der Jahrgang, an dem
+     gearbeitet wird, steht offen, die schlafenden sind zu. Ein Kind
+     mit sechs Jahrgängen sähe sonst vierzig Zeilen, von denen
+     fünfunddreißig ruhen. */
+  /* ⚠️ Die Vorgabe wird EINMAL beim Aufbau festgehalten und danach
+     nicht mehr gerechnet. Sie aus dem jetzigen Zustand abzuleiten
+     („offen, wenn wach") sieht richtig aus und ist es nicht: wer
+     die letzte Unit eines Jahrgangs abschaltet, klappte ihn damit
+     zu — und käme an sie nicht mehr heran, weil die Zeile, die sie
+     zurückholt, gerade verschwunden ist. Eine Liste darf sich nicht
+     selbst wegräumen.
+
+     Wer selbst klappt, gewinnt trotzdem: der gespeicherte Stand
+     steht vor der Vorgabe. */
+  let jgVorgabe = new Map();
+
+  function jahrgangAufgeklappt(jg) {
+    if (!jg) return true;
+    const st = unitKlappStand();
+    const k = 'jg:' + jg.key;
+    if (typeof st[k] === 'boolean') return st[k];
+    if (jgVorgabe.has(jg.key)) return jgVorgabe.get(jg.key);
+    return true;
+  }
+
+  /* Beim Öffnen der Insel: der Jahrgang, an dem gearbeitet wird,
+     steht offen, die schlafenden sind zu. Ein Kind mit sechs
+     Jahrgängen sähe sonst vierzig Zeilen, von denen fünfunddreißig
+     ruhen. */
+  function jgVorgabeSetzen() {
+    jgVorgabe = new Map();
+    for (const a of welt.archipele) jgVorgabe.set(a.key, !!a.wach);
+  }
+
+  function jahrgangKlappen(key) {
+    const jg = jahrgangsBaum(unitBaum()).find(j => j.key === key);
+    if (!jg) return;
+    const st = unitKlappStand();
+    st['jg:' + key] = !jahrgangAufgeklappt(jg);
+    try { localStorage.setItem(WI_UKLAPP_KEY, JSON.stringify(st)); } catch (e) { /* egal */ }
+    renderUnits();
+  }
+
+  /* ─── Der Sammelschalter eines Jahrgangs ────────────────────
+     Derselbe Dreizustand wie bei der Unit, eine Ebene höher — und
+     zugleich der EINZIGE Weg, eine Insel wieder schlafen zu legen.
+     Der Tipp auf die Karte weckt nur (siehe soloPanZoom): Wecken ist
+     eine Entdeckung, Schlafenlegen eine Entscheidung.
+
+     ⚠️ Die Klappung zieht mit: wer einen Jahrgang schlafen legt,
+     will seine vierzig Zeilen nicht weiter vor sich haben — und wer
+     ihn weckt, will sie sehen. Ohne das bliebe ein geweckter
+     Jahrgang in der Leiste zugeklappt, und die Insel lebte, ohne
+     dass die Liste es zeigt. */
+  function jahrgangSammel(key) {
+    const jg = jahrgangsBaum(unitBaum()).find(j => j.key === key);
+    if (!jg) return;
+    const gewaehlt = new Set(soloChosen());
+    const alle = jg.sets.every(s => gewaehlt.has(s.id));
+    if (alle) {
+      for (const s of jg.sets) gewaehlt.delete(s.id);
+      if (!gewaehlt.size) {
+        ctx.toast('Ein Jahrgang muss anbleiben — sonst gibt es nichts zu üben.');
+        return;
+      }
+    } else {
+      for (const s of jg.sets) gewaehlt.add(s.id);
+    }
+    const st = unitKlappStand();
+    st['jg:' + key] = !alle;
+    try { localStorage.setItem(WI_UKLAPP_KEY, JSON.stringify(st)); } catch (e) { /* egal */ }
+    soloSetzen({ p_sets: [...gewaehlt] });
   }
 
   /* ─── Der Sammelschalter einer Unit ─────────────────────────
@@ -9736,7 +10616,7 @@
     }
 
     const t = welt.nachStufe.get(soloTask.item)
-           || neuesTier(soloTask.item, soloTask.level | 0);
+           || neuesTier(soloTask.item, soloTask.level | 0, heimatVon(soloTask.item));
     const stufe = solo.stufen.has(soloTask.item)
       ? solo.stufen.get(soloTask.item) : (soloTask.level | 0);
 
@@ -9810,6 +10690,18 @@
        für dieselbe Einstellung wären eine Frage zu viel. */
     settingsFields: [],
 
+    /* ─── Ein Fenster für den Prüfstand ────────────────────────
+       Die Tiere liegen auf einer Leinwand und nicht im DOM: wo sie
+       stehen, ob sie schlafen und zu welchem Archipel sie gehören,
+       lässt sich von außen nirgends ablesen. Ohne diesen Griff wäre
+       die halbe Inselwelt unprüfbar — und eine Zusage, die man nicht
+       schreiben kann, wird nicht geschrieben.
+
+       Bewusst eine FUNKTION und kein Feld: sie gibt den Stand
+       heraus, wie er gerade ist, und niemand kann darüber etwas
+       verändern, ohne es zu wollen. Im Browser ruft sie niemand. */
+    stand() { return role === 'solo' ? welt : null; },
+
     /* Der erste Wert heißt `host` und nicht `el`: `el()` ist seit
        dem Umbau auf die Reliefkarte der Bauhelfer für SVG-Knoten,
        und ein gleichnamiger Parameter verdeckte ihn hier drin. */
@@ -9833,8 +10725,9 @@
       sichtbar = []; unitVergessen();
       kart = null; kartAnim = null; feiernd = false; kartZiel = 'karte';
       feierWeiter = null; lvupAb = 0;
-      welt.isl = null; welt.vb = null; welt.inseln = null; welt.haupt = null;
-      welt.tiere = []; welt.nachStufe = new Map();
+      welt.isl = null; welt.vb = null;
+      welt.archipele = []; welt.vonKey = new Map(); welt.archipelVonFeld = null;
+      welt.tiere = []; welt.wachTiere = []; welt.nachStufe = new Map();
 
       /* ── Die eigene Insel ──────────────────────────────────
          Kein Raum, kein Poller, kein Takt: außer dem Kind selbst
@@ -9947,8 +10840,9 @@
       /* Figur und Schiff gehören zu EINER Insel — anders als die
          eingefärbten Tierbilder, die an keinem Kind hängen. */
       spieler = null;
-      welt.isl = null; welt.vb = null; welt.inseln = null; welt.haupt = null;
-      welt.tiere = []; welt.nachStufe = new Map();
+      welt.isl = null; welt.vb = null;
+      welt.archipele = []; welt.vonKey = new Map(); welt.archipelVonFeld = null;
+      welt.tiere = []; welt.wachTiere = []; welt.nachStufe = new Map();
     }
   });
 })();
