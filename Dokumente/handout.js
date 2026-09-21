@@ -1,32 +1,12 @@
 'use strict';
 
 /* ==========================================
-   Schulung 2 – Sichtbarkeit (gesteuert via Backend-Session)
-   ========================================== */
-function applySeasonVisibility() {
-  const s2Open = typeof window.getUserSeason === 'function' && window.getUserSeason() >= 2;
-  if (!s2Open) {
-    ['ch-12', 'ch-13', 'ch-14', 'ch-15', 'ch-16', 'ch-17'].forEach(id => {
-      document.getElementById(id)?.remove();
-      document.querySelector(`.chapter-btn[data-target="${id}"]`)?.remove();
-    });
-  } else {
-    const eyebrow = document.getElementById('s2-eyebrow');
-    if (eyebrow) eyebrow.style.display = '';
-  }
-}
-
-if (window.waitForSession) {
-  window.waitForSession().then(applySeasonVisibility);
-} else {
-  applySeasonVisibility();
-}
-
-/* ==========================================
    State & DOM References
    ========================================== */
-const sections  = Array.from(document.querySelectorAll('.chapter-section'));
-const navBtns   = Array.from(document.querySelectorAll('.chapter-btn'));
+// sections/navBtns werden nach dem Ausblenden gesperrter Kapitel neu
+// eingesammelt (rebuildIndex) – sonst zählt die Suche entfernte Kapitel mit.
+let sections = [];
+let navBtns  = [];
 const searchInput  = document.getElementById('searchInput');
 const searchClear  = document.getElementById('searchClear');
 const resultsInfo  = document.getElementById('resultsInfo');
@@ -35,9 +15,66 @@ const siteHeader   = document.querySelector('.site-header');
 
 // Cache original inner HTML before any modifications (needed to reset highlighting)
 const originalHTML = new Map();
-sections.forEach(sec => {
-  originalHTML.set(sec.id, sec.querySelector('.chapter-content-inner').innerHTML);
-});
+
+function rebuildIndex() {
+  sections = Array.from(document.querySelectorAll('.chapter-section'));
+  navBtns  = Array.from(document.querySelectorAll('.chapter-btn'));
+  originalHTML.clear();
+  sections.forEach(sec => {
+    originalHTML.set(sec.id, sec.querySelector('.chapter-content-inner').innerHTML);
+  });
+}
+
+rebuildIndex();
+
+/* ==========================================
+   Kapitel-Freischaltung nach Schulung (Backend-Session)
+   ========================================== */
+const SEASON_CHAPTERS = {
+  2: ['ch-12', 'ch-13', 'ch-14', 'ch-15', 'ch-16', 'ch-17'],
+  3: ['ch-18', 'ch-19', 'ch-20', 'ch-21', 'ch-22', 'ch-23', 'ch-24']
+};
+
+function applySeasonVisibility() {
+  const season = typeof window.getUserSeason === 'function'
+    ? (window.getUserSeason() || 1)
+    : 1;
+
+  Object.keys(SEASON_CHAPTERS).forEach(key => {
+    const needed = Number(key);
+    if (season >= needed) {
+      // Kopfzeile und Fußzeile der Schulung einblenden
+      ['eyebrow', 'foot'].forEach(part => {
+        const el = document.getElementById(`s${needed}-${part}`);
+        if (el) el.style.display = '';
+      });
+    } else {
+      SEASON_CHAPTERS[needed].forEach(id => {
+        document.getElementById(id)?.remove();
+        document.querySelector(`.chapter-btn[data-target="${id}"]`)?.remove();
+      });
+    }
+  });
+
+  // Die "Neu"-Hervorhebung trägt immer nur die zuletzt freigeschaltete Schulung.
+  if (season >= 3) {
+    SEASON_CHAPTERS[2].forEach(id => {
+      document.querySelector(`.chapter-btn[data-target="${id}"]`)
+        ?.classList.remove('chapter-btn--new');
+    });
+    document.querySelectorAll('.chapter-btn--s3').forEach(btn => {
+      btn.classList.add('chapter-btn--new');
+    });
+  }
+
+  rebuildIndex();
+}
+
+if (window.waitForSession) {
+  window.waitForSession().then(applySeasonVisibility);
+} else {
+  applySeasonVisibility();
+}
 
 /* ==========================================
    Accordion Helpers

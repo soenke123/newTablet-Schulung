@@ -6,6 +6,10 @@
   <title>SlideEffect – Schätzspiel</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="themes.css">
+  <!-- Lernwelt-Anbindung: CREATURE_IMAGE_BASE MUSS vor creatures.js stehen,
+       sonst sucht das Skript die Tier-Bilder im eigenen Spielordner. -->
+  <script>window.CREATURE_IMAGE_BASE = '../data/';</script>
+  <script src="../creatures.js"></script>
 </head>
 <body>
 
@@ -16,8 +20,9 @@
     
     <!-- HEADER -->
     <header class="quiz-header">
+      <button type="button" class="hub-btn-header" onclick="resetAndGoHub()">← Hub</button>
       <div class="brand-title">
-        <span>🎯 SlideEffect</span>
+        <span>🎚️ SlideEffect</span>
       </div>
       <div class="score-badge" id="header-score-badge">
         <span class="score-icon">★</span>
@@ -254,52 +259,68 @@
       </div>
     </section>
 
-    <!-- 4. END SCREEN (Auswertung) -->
+    <!-- 4. END SCREEN (Auswertung) — zweispaltig: links das Spiel, rechts die Lernwelt -->
     <section id="end-screen" class="screen">
-      <div class="end-content">
-        <h2 class="final-title">Quiz abgeschlossen!</h2>
-        <div class="final-rank" id="final-rank">Fakten-Champion</div>
+      <div class="win-card">
 
-        <div class="final-score-box">
-          <span class="final-score-val" id="final-score-val">0</span>
-          <span class="final-score-max">/ 960 Pkt</span>
-        </div>
+        <div class="win-col-game">
+          <h2 class="final-title">Quiz abgeschlossen!</h2>
+          <div class="final-rank" id="final-rank">Fakten-Champion</div>
 
-        <!-- Runden-Detailansicht: Tabs 1-8 für die Fragen -->
-        <div class="review-nav-wrap">
-          <div class="review-nav-label">Frage auswählen:</div>
-          <div class="review-tabs" id="review-tabs">
-            <!-- Dynamische Tabs 1 bis 8 -->
+          <div class="final-score-box">
+            <span class="final-score-val" id="final-score-val">0</span>
+            <span class="final-score-max">/ 900 Pkt</span>
+          </div>
+
+          <!-- Runden-Detailansicht: Tabs 1-8 für die Fragen -->
+          <div class="review-nav-wrap">
+            <div class="review-nav-label">Frage auswählen:</div>
+            <div class="review-tabs" id="review-tabs">
+              <!-- Dynamische Tabs 1 bis 8 -->
+            </div>
+          </div>
+
+          <!-- Die eine aktive Detail-Karte (kein Glitch, alles auf einen Blick) -->
+          <div class="review-active-card" id="review-active-card">
+            <!-- Dynamischer Inhalt der ausgewählten Frage -->
+          </div>
+
+          <!-- Vor / Zurück Buttons zum Blättern -->
+          <div class="review-nav-controls">
+            <button type="button" class="btn-review-nav" id="btn-prev-review" onclick="navigateReview(-1)">
+              ‹ Vorherige
+            </button>
+            <span class="review-nav-counter" id="review-nav-counter">Frage 1 von 8</span>
+            <button type="button" class="btn-review-nav" id="btn-next-review" onclick="navigateReview(1)">
+              Nächste ›
+            </button>
           </div>
         </div>
 
-        <!-- Die eine aktive Detail-Karte (kein Glitch, alles auf einen Blick) -->
-        <div class="review-active-card" id="review-active-card">
-          <!-- Dynamischer Inhalt der ausgewählten Frage -->
+        <!-- Hub-Spalte: Kreatur, Münzen, Item, Navigation -->
+        <div class="win-col-hub">
+          <div id="win-creature"></div>
+          <div id="win-creature-label"></div>
+          <div id="win-coins"></div>
+          <div class="win-btns">
+            <div id="win-item-btn-wrap"></div>
+            <button type="button" class="btn-end" onclick="restartGame()">🔄 Nochmal spielen</button>
+            <button type="button" class="btn-end btn-end-secondary" onclick="resetAndGoHub()">← Zurück zum Hub</button>
+          </div>
         </div>
 
-        <!-- Vor / Zurück Buttons zum Blättern -->
-        <div class="review-nav-controls">
-          <button type="button" class="btn-review-nav" id="btn-prev-review" onclick="navigateReview(-1)">
-            ‹ Vorherige
-          </button>
-          <span class="review-nav-counter" id="review-nav-counter">Frage 1 von 8</span>
-          <button type="button" class="btn-review-nav" id="btn-next-review" onclick="navigateReview(1)">
-            Nächste ›
-          </button>
-        </div>
-
-        <button id="btn-restart-game" class="btn-primary" onclick="goToStartScreen()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="1 4 1 10 7 10"></polyline>
-            <polyline points="23 20 23 14 17 14"></polyline>
-            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-          </svg>
-          Nochmal
-        </button>
       </div>
     </section>
 
+  </div>
+
+  <!-- Begleiter-Widget der Lernwelt (Ei/Kreatur + aktive Items) -->
+  <div id="companion-widget">
+    <div id="eggVisual"></div>
+    <div id="companion-item-icon"></div>
+    <div id="eggStageLabel"></div>
+    <div id="eggProgressBar"><div id="eggProgressFill"></div></div>
+    <div id="se-boost-bar" class="boost-bar"></div>
   </div>
 
   <!-- Scripts -->

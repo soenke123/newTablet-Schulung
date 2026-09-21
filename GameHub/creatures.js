@@ -434,11 +434,14 @@ function isRare(creature) { return RARE_CREATURES.has(creature); }
 /* Welches Season-Rare droppen kann bei welchem Spiel */
 /* Season 1: Biene + Oktopus können in allen Season-1-Spielen droppen (50/50)
    Season 2: Ente droppt in allen Season-2-Spielen (inkl. Bubble Bounce / game17)
-   Season 3: Libelle — Einträge werden ergänzt, sobald S3-Spiele in GAMES_CONFIG registriert sind. */
+   Season 3: Libelle droppt in SlideEffect (game21). Die übrigen S3-Kacheln stehen
+   bewusst nicht hier: game16 (Einhornkatze), game18 (standalone) und game19 (collab)
+   laufen alle an determineCreature() vorbei — ein Eintrag wäre toter Code. */
 const GAME_SEASON_RARE = {
   game1: ['biene','oktopus'], game3: ['biene','oktopus'], game7: ['biene','oktopus'], game8: ['biene','oktopus'],
   game5: ['biene','oktopus'], game9: ['biene','oktopus'], game10: ['biene','oktopus'], game11: ['biene','oktopus'],
   game6: ['ente'], game12: ['ente'], game15: ['ente'], game14: ['ente'], game17: ['ente'],
+  game21: ['libelle'],
 };
 
 /* ─── Epische Tiere ─── */

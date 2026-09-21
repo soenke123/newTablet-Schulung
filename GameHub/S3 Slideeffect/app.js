@@ -9,6 +9,23 @@ const MAX_ERROR_PERCENT = 20.0;
 const BASE_MAX_POINTS = 100;
 const EXACT_BONUS_POINTS = 20; // Gesamt 120 Punkte bei Volltreffer (100 Basis + 20 Bonus)
 
+// =====================================================================
+// LERNWELT-ANBINDUNG
+// =====================================================================
+// Rechnerisch erreichbar sind 8 × 120 = 960 Punkte. Als volle Leistung
+// zählen aber 900 — wer die schafft, bekommt das beste Monster. Alles
+// darunter wird anteilig gerechnet, die 60 Punkte darüber gekappt.
+// Diese Zahl ist die Bezugsgröße für ALLES Richtung Hub: Kreaturtyp,
+// Wachstum, Münzen, Bonbons — und für die Prozentanzeige im Spiel,
+// damit „100 %" hier und dort dasselbe bedeutet.
+const MAX_HUB_SCORE = 900;
+
+const gameId  = new URLSearchParams(window.location.search).get('id') || 'game21';
+const eggType = new URLSearchParams(window.location.search).get('egg'); // null = kein Nest-Ei
+
+let gd = (typeof getGameData === 'function') ? getGameData(gameId) : null;
+let coinsGained = 0;
+
 // Spielzustand
 let roundQuestions = [];
 let currentIndex = 0;
@@ -64,7 +81,6 @@ const reviewActiveCard = document.getElementById('review-active-card');
 const reviewNavCounter = document.getElementById('review-nav-counter');
 const btnPrevReview = document.getElementById('btn-prev-review');
 const btnNextReview = document.getElementById('btn-next-review');
-const btnRestartGame = document.getElementById('btn-restart-game');
 const btnStartGame = document.getElementById('btn-start-game');
 
 let activeReviewIndex = 0;
@@ -122,6 +138,9 @@ function showScreen(screenKey) {
   if (screens[screenKey]) {
     screens[screenKey].classList.add('active');
   }
+  // Das Begleiter-Widget hängt per CSS daran: auf dem End-Screen steht die
+  // Kreatur schon groß in der Hub-Spalte, da wäre es doppelt.
+  document.body.dataset.screen = screenKey;
 }
 
 /**
@@ -174,6 +193,47 @@ function startNewQuiz() {
 
   loadQuestion(currentIndex);
   showScreen('game');
+  updateCompanion();
+}
+
+/**
+ * Begleiter-Widget: Ei/Kreatur, Wachstumsvorschau, aktives Item.
+ * Läuft bei jedem Schritt der Runde mit — nicht nur am Ende.
+ */
+function updateCompanion() {
+  if (!gd || typeof updateGameEggDisplay !== 'function') return;
+
+  // Ei-Risse folgen dem Rundenfortschritt, nicht der Punktzahl: das Ei
+  // schlüpft am Ende der Runde, egal wie gut geschätzt wurde.
+  const crack = gd.creature
+    ? 4
+    : Math.min(3, Math.floor(currentIndex / QUESTIONS_PER_ROUND * 4));
+
+  // Live-Vorschau: wie weit waere das Tier nach dieser Runde gewachsen?
+  let liveGrowth = null;
+  if (gd.creature && typeof computeSessionGrowth === 'function') {
+    const sdPrev = (typeof loadShopData === 'function') ? loadShopData() : {};
+    let contrib = computeSessionGrowth(Math.min(totalScore, MAX_HUB_SCORE), MAX_HUB_SCORE);
+    if (sdPrev.wachstumsBooster) contrib *= 2;
+    liveGrowth = Math.min(gd.growth + contrib, GROWTH_MAX);
+  }
+  updateGameEggDisplay(gd, crack, false, liveGrowth);
+
+  const sd = (typeof loadShopData === 'function') ? loadShopData() : {};
+  const icon = sd.wachstumsBooster ? '⚡'
+             : sd.coinsx3          ? '🎰'
+             : sd.lockmittel       ? '🧲'
+             : sd.glucksklee       ? '🍀'
+             : null;
+  const badge = document.getElementById('companion-item-icon');
+  if (badge) {
+    badge.textContent = icon || '';
+    badge.classList.toggle('active', !!icon);
+  }
+
+  if (typeof renderBoostIndicators === 'function') {
+    renderBoostIndicators('se-boost-bar', gameId);
+  }
 }
 
 /**
@@ -220,6 +280,7 @@ function loadQuestion(index) {
   guessUnitDisplay.textContent = q.unit;
 
   updateSliderDisplay();
+  updateCompanion();
 }
 
 /**
@@ -373,6 +434,7 @@ function submitGuess() {
 
   totalScore += points;
   updateHeaderScore();
+  updateCompanion();
 
   // Für Historie speichern
   roundHistory.push({
@@ -506,15 +568,22 @@ function nextStep() {
  * End-Screen anzeigen mit Auswertung aller 8 Fragen
  */
 function renderEndScreen() {
-  const maxPossible = roundQuestions.length * (BASE_MAX_POINTS + EXACT_BONUS_POINTS); // 8 * 150 = 1200
+  // Bezugsgröße ist MAX_HUB_SCORE (900), nicht das rechnerische Maximum
+  // von 960 — siehe Kommentar oben. Angezeigt wird trotzdem der echte
+  // Punktestand: wer die 900 knackt, soll seine 940 sehen und nicht
+  // glauben, das Spiel habe sich verzählt. Gewertet wird cappedScore.
+  const maxPossible = MAX_HUB_SCORE;
+  const cappedScore = Math.max(0, Math.min(totalScore, maxPossible));
   finalScoreVal.textContent = totalScore;
   const maxScoreEl = document.querySelector('.final-score-max');
   if (maxScoreEl) {
     maxScoreEl.textContent = `/ ${maxPossible} Pkt`;
   }
 
+  commitRoundToHub(cappedScore);
+
   // Rang bestimmen (geschlechtsneutral & zeitgemäß)
-  const percentOfMax = (totalScore / maxPossible) * 100;
+  const percentOfMax = (cappedScore / maxPossible) * 100;
   if (percentOfMax >= 80) {
     finalRank.textContent = "Fakten-Genie";
     triggerConfetti();
@@ -533,7 +602,113 @@ function renderEndScreen() {
   renderReviewTabs();
   renderActiveReviewCard();
 
+  populateWinHub(cappedScore);
   showScreen('end');
+}
+
+/**
+ * Rundenergebnis in die Lernwelt buchen: Kreatur (nur beim ersten Mal),
+ * Wachstum, Münzen. Läuft genau einmal pro abgeschlossener Runde — ein
+ * Abbruch mitten im Quiz speichert wie überall nichts.
+ */
+function commitRoundToHub(cappedScore) {
+  coinsGained = 0;
+  if (!gd || typeof computeRoundResult !== 'function') return;
+
+  // 0-10 für die Kreatur-Leiter: 900 Punkte = 10 = bestes Monster.
+  const norm = Math.min(10, Math.round(cappedScore / MAX_HUB_SCORE * 10));
+
+  // Erstschlupf IMMER an der Kreatur prüfen, nie an roundsPlayed:
+  // ein Startmonster aus der Starthilfe liegt schon ohne gespielte Runde drin.
+  const isFirst = !gd.creature;
+  const sd = loadShopData();
+
+  if (isFirst) {
+    if (eggType) {
+      gd.creature = determineEggCreature(eggType, norm);
+    } else {
+      gd.creature = sd.lockmittel
+        ? determineCreatureWithLockmittel(norm, gameId)
+        : sd.glucksklee
+          ? determineCreatureWithGlucksklee(norm, gameId)
+          : determineCreature(norm, true, gameId);
+      // Migration 0042: Verbrauch = Bool clearen + Spent++ (max-Merge-fest).
+      if (sd.lockmittel) {
+        sd.lockmittel      = false;
+        sd.lockmittelSpent = (sd.lockmittelSpent || 0) + 1;
+        saveShopData(sd);
+      } else if (sd.glucksklee) {
+        sd.glucksklee      = false;
+        sd.gluckskleeSpent = (sd.gluckskleeSpent || 0) + 1;
+        saveShopData(sd);
+      }
+    }
+    gd.growth = 0;
+  }
+
+  coinsGained = computeRoundResult(gd, cappedScore, MAX_HUB_SCORE, sd, isFirst);
+  gd.points       = (gd.points || 0) + norm;
+  gd.roundsPlayed = (gd.roundsPlayed || 0) + 1;
+
+  // Items VOR saveGameData clearen: bei Nest-IDs spiegelt saveGameData intern
+  // gd → sd.nests[i].hatched. Ein danach gespeicherter sd-Schnappschuss mit
+  // alten Werten würde diese Spiegelung wieder plätten.
+  if (sd.wachstumsBooster) { sd.wachstumsBooster = false; sd.wachstumsBoosterSpent = (sd.wachstumsBoosterSpent || 0) + 1; saveShopData(sd); }
+  if (sd.coinsx3)          { sd.coinsx3          = false; sd.coinsx3Spent          = (sd.coinsx3Spent          || 0) + 1; saveShopData(sd); }
+
+  saveGameData(gameId, gd);
+}
+
+/**
+ * Hub-Spalte des End-Screens füllen: Kreatur, Münzen, Bonbons, Item-Button.
+ */
+function populateWinHub(cappedScore) {
+  if (!gd || typeof getCreatureHTML !== 'function') return;
+
+  const stage   = getGrowthStage(gd.growth);
+  const creatEl = document.getElementById('win-creature');
+  if (creatEl) {
+    creatEl.innerHTML = gd.creature
+      ? getCreatureHTML(gd.creature, stage)
+      : (typeof getEggSVG === 'function' ? getEggSVG(4) : '');
+  }
+
+  const lbl = document.getElementById('win-creature-label');
+  if (lbl) {
+    const stageName = ['Ei', 'Stufe 1', 'Stufe 2', 'Stufe 3', 'Stufe 4', 'Stufe 5'][stage] ?? '';
+    lbl.textContent = gd.creature
+      ? ((CREATURE_NAMES?.[gd.creature] ?? gd.creature) + ' – ' + stageName)
+      : 'Ei schlummert…';
+  }
+
+  if (typeof renderCoinBank === 'function') renderCoinBank('win-coins', coinsGained);
+  // Season-3-Bonbons. Die Funktion skaliert Werte über 20 selbst auf 0-10.
+  window.awardBonbonsAndRender?.(gameId, cappedScore, MAX_HUB_SCORE, 'win-coins');
+
+  if (typeof renderResultItemButton === 'function') {
+    renderResultItemButton('win-item-btn-wrap', gameId, () => {
+      restartGame();
+    });
+  }
+}
+
+/**
+ * „Nochmal spielen" — frischen Spielstand ziehen (das Item wurde gerade
+ * aktiviert) und direkt eine neue Runde starten.
+ */
+function restartGame() {
+  gd = (typeof getGameData === 'function') ? getGameData(gameId) : gd;
+  coinsGained = 0;
+  startNewQuiz();
+}
+
+/**
+ * „Zurück zum Hub" — nie als reiner Link: erst den Startbildschirm setzen,
+ * damit das Spiel beim nächsten Aufruf nicht im alten Zustand aufgeht.
+ */
+function resetAndGoHub() {
+  goToStartScreen();
+  window.location.href = '../index.html';
 }
 
 /**
@@ -678,6 +853,8 @@ function goToStartScreen() {
 window.selectReview = selectReview;
 window.navigateReview = navigateReview;
 window.goToStartScreen = goToStartScreen;
+window.restartGame = restartGame;
+window.resetAndGoHub = resetAndGoHub;
 
 /**
  * Schlankes Canvas-Konfetti für Volltreffer & Spielende (ohne externe CDNs)
@@ -785,7 +962,6 @@ window.addEventListener('keydown', (e) => {
 btnStartGame.addEventListener('click', startNewQuiz);
 btnSubmitGuess.addEventListener('click', submitGuess);
 btnNextQuestion.addEventListener('click', nextStep);
-btnRestartGame.addEventListener('click', goToStartScreen);
 
 // Farbmodus Buttons (Retro Arcade Farbflächen)
 document.querySelectorAll('.color-swatch-btn').forEach(btn => {
@@ -845,3 +1021,9 @@ function initRulesCarousel() {
 initTheme();
 initRulesCarousel();
 showScreen('start');
+
+// Begleiter beim Boot zeigen (Ei oder bereits geschlüpfte Kreatur).
+if (gd && typeof updateGameEggDisplay === 'function') {
+  updateGameEggDisplay(gd, 0);
+  updateCompanion();
+}

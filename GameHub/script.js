@@ -225,6 +225,12 @@ const GAMES_CONFIG = [
   // zeigt nur. Freilassen gibt es hier deshalb nicht: der Auslöser
   // kommt genau einmal und lässt sich nicht nachspielen.
   { id: 'game19', season: 3, title: 'Reality Check',       icon: '🧭', url: 'S3 Zukunftsboard/index.html', collab: true },
+  // Das erste ganz normale Runden-Spiel der Season 3 — und deshalb der
+  // erste S3-Eintrag in GAME_SEASON_RARE (Libelle, creatures.js). game16
+  // ist die Einhornkatze, game18 standalone, game19 collab: keines davon
+  // läuft durch determineCreature(). Acht Schätzfragen pro Runde, 900 von
+  // 960 möglichen Punkten zählen als volle Leistung.
+  { id: 'game21', season: 3, title: 'SlideEffect',         icon: '🎚️', url: 'S3 Slideeffect/index.html' },
 ];
 
 // „Kachel ohne Runden": Startup Story (standalone) und Reality Check

@@ -2655,31 +2655,43 @@ async function testWecken() {
   tool.unmount();
 }
 
-/* ─── Die Jahrgangs-Ebene ─────────────────────────────────────────
-   Der Jahrgang ist seit der Inselwelt ein Schalter mit Dreizustand
-   — und der EINZIGE Weg, eine Insel wieder schlafen zu legen. */
+/* ─── Der Jahrgangs-Schalter im Kopf ──────────────────────────────
+   Der Jahrgang ist seit der Inselwelt ein Schalter mit Dreizustand —
+   und der EINZIGE Weg, eine Insel wieder schlafen zu legen. Er stand
+   bis zum 20.09.2026 als Zeile in der Liste; seit Sönkes „das ist
+   doppelt drin … nur oben als Chip" ist er der antippbare Zustand
+   rechts in der Zahlen-Zeile (`.wi-jschlaf`). */
 async function testJahrgangsLeiste() {
-  console.log('\n— Der Jahrgang in der Leiste —');
+  console.log('\n— Der Jahrgang im Kopf der Leiste —');
 
   const PLAN = [
     { key: 'en:5', grade: 5, woerter: 40 },
     { key: 'en:6', grade: 6, woerter: 40 }
   ];
-  const { env, tool, root, calls, ctx, document } = await mountSolo(
+  const { tool, root, calls, ctx, document } = await mountSolo(
     soloWelt(PLAN), {
       wi_solo_settings: args => ({ ok: true, settings: { sets: args.p_sets } })
     });
 
-  const zeilen = [...root.querySelectorAll('.wi-jrow')];
-  ok('jeder Jahrgang bekommt eine Zeile', zeilen.length === 2, zeilen.length + '');
-  ok('… beide an, solange nichts abgewählt ist',
-     zeilen.every(z => z.className.includes('is-on')));
+  const chips = () => [...root.querySelectorAll('.wi-jchip')];
+  const chip = n => chips().find(c => c.textContent.trim() === n);
+  const schalter = () => root.querySelector('.wi-jschlaf');
 
-  /* Der Sammelschalter legt den ganzen Jahrgang schlafen. */
-  click(zeilen[1].querySelector('.wi-utoggle'), document);
+  ok('die Jahrgangs-Zeilen sind aus der Liste verschwunden',
+     root.querySelectorAll('.wi-jrow').length === 0,
+     root.querySelectorAll('.wi-jrow').length + ' Zeilen');
+  ok('dafür steht der Zustand als Schalter im Kopf',
+     !!schalter() && schalter().textContent.trim() === 'wach',
+     schalter() ? schalter().textContent.trim() : '—');
+
+  /* Er legt den GEWÄHLTEN Jahrgang schlafen — den, dessen Units
+     darunter stehen. */
+  click(chip('Jhg 6'), document);
+  await wait(30);
+  click(schalter(), document);
   await wait(40);
   const letzte = calls.filter(c => c[0] === 'wi_solo_settings').pop();
-  ok('der Sammelschalter nimmt ALLE Stationen des Jahrgangs weg',
+  ok('der Schalter nimmt ALLE Stationen des Jahrgangs weg',
      letzte && letzte[1].p_sets.length === 1 && letzte[1].p_sets[0] === 'set-en-5',
      letzte ? JSON.stringify(letzte[1].p_sets) : '—');
   ok('… und die Insel schläft daraufhin ein',
@@ -2687,45 +2699,42 @@ async function testJahrgangsLeiste() {
      root.querySelectorAll('.wi-schlaf').length + ' Silhouetten');
   ok('… ihre Tiere auch',
      tool.stand().wachTiere.length === 40, tool.stand().wachTiere.length + '');
-  ok('… und ihre Zeile klappt mit zu',
-     root.querySelectorAll('.wi-jbox')[1].className.includes('is-auf') === false);
+  ok('… und der Schalter sagt es jetzt selbst',
+     schalter().textContent.trim() === 'schläft', schalter().textContent.trim());
+  ok('… ebenso der Chip', chip('Jhg 6').classList.contains('is-schlaf'),
+     chip('Jhg 6').className);
+
+  /* ⚠️ Die Liste räumt sich nicht selbst weg: ein schlafender
+     Jahrgang bleibt gewählt, seine Units stehen weiter da — nur
+     alle pausiert. Sonst käme man an den Schalter nicht zurück. */
+  ok('der schlafende Jahrgang bleibt gewählt',
+     chip('Jhg 6').classList.contains('is-on'), chip('Jhg 6').className);
+  ok('… und seine Units stehen weiter in der Liste',
+     root.querySelectorAll('.wi-uone').length === 1 &&
+     root.querySelectorAll('.wi-uone.is-on').length === 0,
+     root.querySelectorAll('.wi-uone').length + ' Zeilen');
 
   /* Und wieder an. */
-  click([...root.querySelectorAll('.wi-jrow')][1].querySelector('.wi-utoggle'), document);
+  click(schalter(), document);
   await wait(40);
   ok('derselbe Schalter weckt sie wieder',
      root.querySelectorAll('.wi-schlaf').length === 0
        && tool.stand().wachTiere.length === 80,
      tool.stand().wachTiere.length + ' wache Tiere');
 
-  /* ⚠️ Der Fehler, der beim Bauen aufgefallen ist: eine UNIT
-     abzuschalten darf den Jahrgang nicht zuklappen. Sonst
-     verschwindet mit ihr die Zeile, über die man sie zurückholt —
-     eine Liste, die sich selbst wegräumt. */
-  const unit = root.querySelector('.wi-uone.is-on .wi-utoggle');
-  click(unit, document);
-  await wait(40);
-  const kisten = [...root.querySelectorAll('.wi-jbox')];
-  ok('eine Unit abzuschalten klappt den Jahrgang NICHT zu',
-     kisten.every(k => k.className.includes('is-auf')),
-     kisten.map(k => k.className).join(' | '));
-  ok('… und man kommt wieder an sie heran',
-     !!root.querySelector('.wi-uone .wi-utoggle'));
-
   /* Der letzte Jahrgang lässt sich nicht abschalten: am Server
      heißt „nichts gewählt" nämlich „alles" (wi_solo_chosen). */
-  /* ⚠️ Nach JEDEM Klick neu suchen: renderUnits zeichnet die Liste
-     neu, und eine vorher eingesammelte Knotenliste zeigt danach auf
-     Elemente, die nicht mehr im Dokument hängen. Ein Klick darauf
-     geht ins Leere — und der Prüfstand hielte den Schalter für
-     kaputt. (Dieselbe Falle steht schon bei testUnitBaum.) */
+  /* ⚠️ Nach JEDEM Klick neu suchen: renderJChips zeichnet die Zeile
+     neu, und ein vorher eingesammelter Knoten hängt danach nicht
+     mehr im Dokument. Ein Klick darauf geht ins Leere — und der
+     Prüfstand hielte den Schalter für kaputt. */
   ctx.toasts.length = 0;
-  for (let i = 0; i < 6; i++) {
-    const z = root.querySelector('.wi-jrow.is-on, .wi-jrow.is-halb');
-    if (!z) break;
-    click(z.querySelector('.wi-utoggle'), document);
-    await wait(30);
-  }
+  click(schalter(), document);          // Jhg 6 schläft
+  await wait(40);
+  click(chip('Jhg 5'), document);
+  await wait(30);
+  click(schalter(), document);          // … und Jhg 5 soll nicht mehr
+  await wait(40);
   ok('der letzte Jahrgang bleibt an',
      tool.stand().archipele.filter(a => a.wach).length === 1,
      tool.stand().archipele.map(a => a.key + ':' + a.wach).join(' · '));
@@ -2743,14 +2752,17 @@ async function testJahrgangsLeiste() {
 }
 
 /* ─── Die Jahrgangs-Chips im Kopf der Leiste ──────────────────────
-   Sönke, 20.09.2026: „dadrüber stehen einfach die Gesamtwerte, x
-   Tiere und dann die Punkte und Anzahlen. Drunter dann nebeneinander
-   Jhg 5, Jhg 6 … klicke ich einen Jahrgang an, sehe ich darunter die
-   Stats. Bei den Units darunter bleibt alles gleich."
+   Sönke, 20.09.2026: „die Werte von alle Tiere ganz oben … müssen
+   hinter alle Tiere … in eine Zeile. Hier sollen die Chips Jhg 5 /
+   Jhg 6 und so auch für die Auswahl sein … im Bereich darunter gibt
+   es jetzt gerade auch noch Jahrgang 5 und Jahrgang 6 … das ist
+   doppelt drin … nur oben als Chip."
 
-   Die eine Zusage, an der alles hängt: die Chips sind eine AUSKUNFT
-   und kein Schalter. Sie dürfen den Beutel nicht anfassen — sonst
-   legt ein Blick auf die Zahlen nebenbei eine Insel schlafen. */
+   Drei Zusagen, an denen alles hängt:
+     · der Gesamtstand steht in EINER Zeile — Zahl, Wort, Punkte
+     · der Chip WÄHLT: darunter steht genau ein Jahrgang
+     · und er wählt nur — der Beutel bleibt unberührt, sonst legt
+       ein Blick nebenbei eine Insel schlafen */
 async function testJahrgangsChips() {
   console.log('\n— Die Jahrgangs-Chips —');
 
@@ -2764,65 +2776,92 @@ async function testJahrgangsChips() {
       wi_solo_settings: args => ({ ok: true, settings: { sets: args.p_sets } })
     });
 
-  /* ── Oben das Ganze ──────────────────────────────────────── */
+  /* ── Oben das Ganze, in EINER Zeile ──────────────────────── */
+  const griff = root.querySelector('[data-part="ugriff"]');
   ok('der Kopf zählt ALLE Tiere, auch die schlafenden',
      root.querySelector('[data-part="swords"]').textContent === '80',
      root.querySelector('[data-part="swords"]').textContent);
-  ok('… mit der Stufenreihe darunter',
-     root.querySelectorAll('[data-part="slegend"] .wi-lg').length > 0);
+  ok('… und die Stufenreihe steht HINTER der Zahl, im selben Griff',
+     griff.querySelectorAll('[data-part="slegend"] .wi-lg').length > 0,
+     griff.textContent.replace(/\s+/g, ' ').trim());
 
   /* ── Darunter die Jahrgänge ──────────────────────────────── */
   const chips = () => [...root.querySelectorAll('.wi-jchip')];
+  const chip = n => chips().find(c => c.textContent.trim() === n);
   ok('ein Chip je Jahrgang', chips().length === 3, chips().length + '');
   ok('… kurz beschriftet, „Eigene" für die Listen ohne Jahrgang',
      chips().map(c => c.textContent.trim()).join('|') === 'Jhg 5|Jhg 6|Eigene',
      chips().map(c => c.textContent.trim()).join('|'));
 
-  /* Die Zahlen kommen erst auf Nachfrage — sonst stünden drei
-     Auskünfte übereinander, bevor die Liste anfängt. */
+  /* Einer ist immer gewählt: die Liste darunter muss ja etwas
+     zeigen. Voreingestellt ist der Jahrgang, an dem gearbeitet wird
+     — das ist der, der in der Karte in der Mitte liegt. */
   const stat = () => root.querySelector('[data-part="jstat"]');
-  ok('die Zahlen eines Jahrgangs stehen noch nicht da',
-     stat().hidden === true);
+  ok('beim Öffnen ist genau ein Chip an',
+     chips().filter(c => c.classList.contains('is-on')).length === 1,
+     chips().map(c => c.className).join(' | '));
+  ok('… und die Zahlen dieses Jahrgangs stehen darunter',
+     stat().hidden === false && /40\s*Tiere/.test(stat().textContent),
+     stat().textContent.replace(/\s+/g, ' ').trim());
+  /* Die Units heißen in dieser Ansicht nach ihrem Insel-Schlüssel
+     (soloWelt setzt `utitle: p.key`) — so sieht man an der Zeile
+     selbst, aus welchem Jahrgang sie kommt. */
+  ok('… und die Liste zeigt nur SEINE Unit',
+     root.querySelectorAll('.wi-uone').length === 1 &&
+     /en:5/.test(root.querySelector('.wi-uone').textContent),
+     root.querySelector('.wi-uone').textContent.replace(/\s+/g, ' ').trim());
 
   const vorher = calls.filter(c => c[0] === 'wi_solo_settings').length;
-  click(chips()[1], document);
+  click(chip('Jhg 6'), document);
   await wait(30);
-  ok('ein Tipp auf „Jhg 6" klappt seine Zahlen auf',
-     stat().hidden === false && /30\s*Tiere/.test(stat().textContent),
-     stat().textContent.trim());
+  ok('ein Tipp auf „Jhg 6" bringt seine Zahlen',
+     /30\s*Tiere/.test(stat().textContent),
+     stat().textContent.replace(/\s+/g, ' ').trim());
   ok('… mit derselben Stufenreihe wie oben',
      stat().querySelectorAll('.wi-lg').length > 0);
-  ok('… und der Chip ist markiert',
-     chips()[1].classList.contains('is-on'), chips()[1].className);
+  ok('… der Chip ist markiert, der andere nicht mehr',
+     chip('Jhg 6').classList.contains('is-on') &&
+     !chip('Jhg 5').classList.contains('is-on'),
+     chips().map(c => c.className).join(' | '));
+  ok('… und die Liste darunter hat gewechselt',
+     root.querySelectorAll('.wi-uone').length === 1 &&
+     /en:6/.test(root.querySelector('.wi-uone').textContent),
+     root.querySelector('.wi-uone').textContent.replace(/\s+/g, ' ').trim());
+  ok('⚠️ und nirgends steht der Jahrgang ein zweites Mal',
+     root.querySelectorAll('.wi-jrow').length === 0);
 
-  /* ⚠️ DIE Zusage: ein Blick ist kein Eingriff. */
+  /* ⚠️ DIE Zusage: wählen ist kein Eingriff. */
   ok('… ohne dass etwas an den Server geht',
      calls.filter(c => c[0] === 'wi_solo_settings').length === vorher);
   ok('… und ohne dass eine Insel einschläft',
      tool.stand().archipele.filter(a => a.wach).length === 3,
      tool.stand().archipele.map(a => a.key + ':' + a.wach).join(' · '));
 
-  /* Ein zweiter Tipp macht wieder zu. */
-  click(chips()[1], document);
+  /* Ein zweiter Tipp auf denselben Chip ist folgenlos: irgendein
+     Jahrgang steht immer unten, sonst wäre die Liste leer, ohne dass
+     jemand etwas abgeschaltet hätte. */
+  click(chip('Jhg 6'), document);
   await wait(30);
-  ok('derselbe Chip klappt die Zahlen wieder weg', stat().hidden === true);
+  ok('derselbe Chip noch einmal lässt alles, wie es ist',
+     chip('Jhg 6').classList.contains('is-on') &&
+     root.querySelectorAll('.wi-uone').length === 1,
+     chips().map(c => c.className).join(' | '));
 
   /* ── Der Chip zeigt, was die Insel tut ───────────────────────
-     Abgeschaltet wird weiter in der Liste darunter — und der Chip
-     zieht mit. Damit ist die Reihe nebenbei eine kleine Karte der
-     Welt: man liest an ihr ab, woran gerade gearbeitet wird. */
+     Damit ist die Reihe nebenbei eine kleine Karte der Welt: man
+     liest an ihr ab, woran gerade gearbeitet wird. */
   ok('noch schläft kein Chip',
      chips().every(c => !c.classList.contains('is-schlaf')),
      chips().map(c => c.className).join(' | '));
-  click([...root.querySelectorAll('.wi-jrow')][1].querySelector('.wi-utoggle'), document);
+  click(root.querySelector('.wi-jschlaf'), document);
   await wait(40);
-  ok('ein in der Liste abgeschalteter Jahrgang schläft auch als Chip',
-     chips()[1].classList.contains('is-schlaf')
-       && !chips()[0].classList.contains('is-schlaf'),
+  ok('ein schlafend gelegter Jahrgang ist auch als Chip blass',
+     chip('Jhg 6').classList.contains('is-schlaf')
+       && !chip('Jhg 5').classList.contains('is-schlaf'),
      chips().map(c => c.className).join(' | '));
-  ok('… und die Unit-Liste darunter bleibt, was sie war',
-     root.querySelectorAll('.wi-jrow').length === 3,
-     root.querySelectorAll('.wi-jrow').length + ' Jahrgangs-Zeilen');
+  ok('… und der Gesamtstand oben bleibt, was er war',
+     root.querySelector('[data-part="swords"]').textContent === '80',
+     root.querySelector('[data-part="swords"]').textContent);
 
   tool.unmount();
 
@@ -3175,52 +3214,79 @@ async function testUnitBaum() {
     });
 
   /* ── Die Gliederung ─────────────────────────────────────────
-     Seit der Inselwelt ist der Jahrgang keine Überschrift mehr,
-     sondern eine Zeile mit Schalter und Pfeil — je eine Insel. */
-  const grp = [...root.querySelectorAll('.wi-jrow b')]
-    .map(e => e.textContent.replace(/\s*\(\d+\)\s*$/, '').trim());
-  ok('drei Jahrgangs-Zeilen', grp.length === 3, JSON.stringify(grp));
+     Seit dem 20.09.2026 wählt der Chip im Kopf den Jahrgang, und
+     die Liste zeigt GENAU DIESEN einen. Die Jahrgangs-Zeilen, die
+     vorher zwischen den Units standen, sind weg — Sönke: „das ist
+     doppelt drin … nur oben als Chip." */
+  const chips = () => [...root.querySelectorAll('.wi-jchip')];
+  const chip = n => chips().find(c => c.textContent.trim() === n);
+  const grp = chips().map(c => c.textContent.trim());
+  ok('drei Jahrgangs-Chips', grp.length === 3, JSON.stringify(grp));
   ok('… und sie heißen nach dem Jahrgang',
-     grp[0] === 'Jahrgang 5' && grp[1] === 'Jahrgang 6', JSON.stringify(grp));
+     grp[0] === 'Jhg 5' && grp[1] === 'Jhg 6', JSON.stringify(grp));
   /* Eine eigene Liste hat keinen Jahrgang. „Jahrgang null" wäre
-     eine Behauptung — sie bekommt eine eigene Zeile. */
-  ok('… die jahrgangslose Liste steht unter „Eigene Listen"',
-     grp[2] === 'Eigene Listen', JSON.stringify(grp));
-  /* Jede Jahrgangszeile zählt die Wörter ihrer ganzen Insel — das
-     ist dieselbe Zahl, die auf dem Schild draußen steht. */
-  const jZahlen = [...root.querySelectorAll('.wi-jrow .wi-uzahl')]
-    .map(e => Number(e.textContent.replace(/\D/g, '')));
-  ok('… und jede zählt die Wörter ihrer Insel',
-     jZahlen.reduce((a, b) => a + b, 0) === 40, JSON.stringify(jZahlen));
+     eine Behauptung — sie bekommt einen eigenen Chip. */
+  ok('… die jahrgangslose Liste steht unter „Eigene"',
+     grp[2] === 'Eigene', JSON.stringify(grp));
+  ok('… und keine davon steht ein zweites Mal in der Liste',
+     root.querySelectorAll('.wi-jrow').length === 0);
+  /* Die Zahlen-Zeile zählt die Wörter der gewählten Insel — das ist
+     dieselbe Zahl, die auf dem Schild draußen steht. 40 Wörter
+     reihum auf fünf Sätze = 8 je Satz, Jahrgang 5 hat drei. */
+  const stat = () => root.querySelector('[data-part="jstat"]');
+  ok('… die Zahlen-Zeile zählt die Tiere des gewählten Jahrgangs',
+     /\b24\s*Tiere/.test(stat().textContent),
+     stat().textContent.replace(/\s+/g, ' ').trim());
 
   const kisten = root.querySelectorAll('.wi-ubox');
-  ok('genau EINE Unit ist aufklappbar', kisten.length === 1, String(kisten.length));
+  ok('Jahrgang 5 bringt genau EINE aufklappbare Unit',
+     kisten.length === 1, String(kisten.length));
   ok('… nämlich die mit drei Stationen',
      kisten[0].querySelectorAll('.wi-ustat').length === 3,
      String(kisten[0].querySelectorAll('.wi-ustat').length));
-  ok('die beiden Units am Stück stehen als eine Zeile da',
-     root.querySelectorAll('.wi-uone').length === 2,
+  ok('… und keine Unit am Stück',
+     root.querySelectorAll('.wi-uone').length === 0,
      String(root.querySelectorAll('.wi-uone').length));
+
+  /* Die Zahl an der Unit ist die Summe ihrer Stationen. */
+  ok('die Unit zählt die Wörter ihrer Stationen',
+     kisten[0].querySelector('.wi-utop .wi-uzahl').textContent.trim() === '(24)',
+     kisten[0].querySelector('.wi-utop .wi-uzahl').textContent);
+
+  /* ── Der Chip wechselt die Liste ────────────────────────────
+     Die beiden anderen Jahrgänge bringen je eine Unit am Stück. */
+  click(chip('Jhg 6'), document);
+  await wait(20);
+  ok('der Chip „Jhg 6" bringt seine Unit am Stück',
+     root.querySelectorAll('.wi-uone').length === 1 &&
+     root.querySelectorAll('.wi-ubox').length === 0,
+     root.querySelectorAll('.wi-uone').length + ' am Stück, ' +
+     root.querySelectorAll('.wi-ubox').length + ' aufklappbar');
   /* ⚠️ Das ist die Zusage hinter „eine Unit mit einer Station IST
      eine Unit am Stück": ein Pfeil, der eine einzige Zeile
      freilegt, ist eine Bitte um einen Klick ohne Gegenwert. */
-  ok('… und tragen KEINEN Aufklapp-Pfeil',
+  ok('… und trägt KEINEN Aufklapp-Pfeil',
      root.querySelectorAll('.wi-uone .wi-uchevb').length === 0);
-  ok('die Unit am Stück trägt ihr „i" selbst',
-     root.querySelectorAll('.wi-uone .wi-uinfo').length === 2);
+  ok('… dafür ihr „i" selbst',
+     root.querySelectorAll('.wi-uone .wi-uinfo').length === 1);
+  click(chip('Eigene'), document);
+  await wait(20);
+  ok('„Eigene" bringt die Liste ohne Jahrgang',
+     /Klassenarbeit/.test((root.querySelector('.wi-uone') || {}).textContent || ''),
+     (root.querySelector('.wi-uone') || {}).textContent);
 
-  /* Die Zahl an der Unit ist die Summe ihrer Stationen: 40 Wörter
-     reihum auf fünf Sätze = 8 je Satz, drei Stationen = 24. */
-  const kopf = kisten[0].querySelector('.wi-utop');
-  ok('die Unit zählt die Wörter ihrer Stationen',
-     kopf.querySelector('.wi-uzahl').textContent.trim() === '(24)',
-     kopf.querySelector('.wi-uzahl').textContent);
+  click(chip('Jhg 5'), document);
+  await wait(20);
 
-  /* ── Auf- und Zuklappen ───────────────────────────────────── */
+  /* ── Auf- und Zuklappen ─────────────────────────────────────
+     ⚠️ Neu suchen: die Chip-Klicks oben haben die Liste dreimal neu
+     gezeichnet, und `kisten` von vorhin hängt nicht mehr im
+     Dokument. */
+  const kiste = root.querySelector('.wi-ubox');
   ok('bei wenigen Units steht sie offen',
-     kisten[0].classList.contains('is-auf') &&
-     kisten[0].querySelector('.wi-ustats').hidden === false);
-  click(kopf.querySelector('.wi-uchevb'), document);
+     kiste.classList.contains('is-auf') &&
+     kiste.querySelector('.wi-ustats').hidden === false);
+  click(kiste.querySelector('.wi-utop .wi-uchevb'), document);
   await wait(20);
   const zu = root.querySelector('.wi-ubox');
   ok('der Pfeil klappt die Stationen zu',
@@ -3240,11 +3306,12 @@ async function testUnitBaum() {
      root.querySelector('.wi-ubox').classList.contains('is-auf'));
 
   /* ── Der Sammelschalter ─────────────────────────────────────
-     Gezählt wird, was WÖRTER trägt: drei Stationen und zwei Units
-     am Stück. Die Unit-Kopfzeile ist auch eine `.wi-urow` und wäre
-     hier eine sechste, die nichts eigenes anschaltet. */
+     Gezählt wird, was WÖRTER trägt und gerade dasteht: die drei
+     Stationen von Jahrgang 5. Die Unit-Kopfzeile ist auch eine
+     `.wi-urow` und wäre hier eine vierte, die nichts eigenes
+     anschaltet. */
   const anZahl = () => root.querySelectorAll('.wi-ustat.is-on, .wi-uone.is-on').length;
-  ok('am Anfang sind alle an — leer heißt „alles"', anZahl() === 5, String(anZahl()));
+  ok('am Anfang sind alle an — leer heißt „alles"', anZahl() === 3, String(anZahl()));
 
   click(root.querySelector('.wi-utop .wi-utoggle'), document);
   await wait(30);
@@ -3275,23 +3342,28 @@ async function testUnitBaum() {
      JSON.stringify(letzte[1].p_sets));
 
   /* ── Die letzte Station bleibt an ─────────────────────────── */
-  /* Erst die beiden Einzel-Units aus, dann die Unit mit den drei
-     Stationen — die darf nicht gehen. Am Server heißt „nichts
+  /* Erst die beiden Einzel-Units aus — die wohnen in den anderen
+     beiden Jahrgängen, also über den Chip —, dann die Unit mit den
+     drei Stationen: die darf nicht gehen. Am Server heißt „nichts
      gewählt" nämlich „alles" (wi_solo_chosen, 0136). */
   /* ⚠️ Nach JEDEM Klick neu suchen: renderUnits zeichnet die Liste
      neu, und eine vorher eingesammelte Knotenliste zeigt danach auf
      Elemente, die nicht mehr im Dokument hängen. Ein Klick darauf
      geht ins Leere — und der Prüfstand hielte den zweiten Schalter
      für kaputt. */
-  for (let i = 0; i < 2; i++) {
+  for (const name of ['Jhg 6', 'Eigene']) {
+    click(chip(name), document);
+    await wait(20);
     const one = root.querySelector('.wi-uone.is-on .wi-utoggle');
-    if (!one) break;
+    if (!one) continue;
     click(one, document);
     await wait(30);
+    ok(`die Einzel-Unit in „${name}" lässt sich abschalten`,
+       root.querySelectorAll('.wi-uone.is-on').length === 0,
+       String(root.querySelectorAll('.wi-uone.is-on').length));
   }
-  ok('die beiden Einzel-Units lassen sich abschalten',
-     root.querySelectorAll('.wi-uone.is-on').length === 0,
-     String(root.querySelectorAll('.wi-uone.is-on').length));
+  click(chip('Jhg 5'), document);
+  await wait(20);
 
   const vorher = calls.filter(c => c[0] === 'wi_solo_settings').length;
   ctx.toasts.length = 0;

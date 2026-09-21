@@ -1046,8 +1046,17 @@
         <!-- ── Season 3 / Schulung 3 (sichtbar wenn Session-Season >= 3) ── -->
         <div class="season3-only" style="display:none">
           <div class="schulung-divider">Schulung 3</div>
+
+          <a
+            class="presentation-link"
+            href="Dokumente/Quellenverzeichnis_Tabletschulung%20S3.pdf"
+          >
+            <span class="pdf-icon" aria-hidden="true"></span>
+            <span class="presentation-name">Quellenverzeichnis</span>
+          </a>
+
           <div class="presentation-placeholder">
-            Präsentationen folgen — Schulung 3 ist in Vorbereitung.
+            Die Präsentation zu Schulung 3 folgt in Kürze.
           </div>
         </div>
 
@@ -1186,13 +1195,12 @@
         el.style.display = season >= 3 ? 'contents' : 'none';
       });
 
-      if (s2) {
-        handoutLink.href = 'Dokumente/Handout_Tablet-Schulung v2.pdf';
-        handoutLink.download = 'Handout_Tablet-Schulung v2.pdf';
-      } else {
-        handoutLink.href = 'Dokumente/Handout_Tablet-Schulung.pdf';
-        handoutLink.download = 'Handout_Tablet-Schulung.pdf';
-      }
+      // Handout-PDF: jede Schulung bringt eine neue Fassung mit.
+      const handoutFile = season >= 3
+        ? 'Handout_Tablet-Schulung v3.pdf'
+        : (s2 ? 'Handout_Tablet-Schulung v2.pdf' : 'Handout_Tablet-Schulung.pdf');
+      handoutLink.href = 'Dokumente/' + handoutFile;
+      handoutLink.download = handoutFile;
     }
 
     // Klick auf GameHub-Button abfangen wenn nicht eingeloggt oder noch pending

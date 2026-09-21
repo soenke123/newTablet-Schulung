@@ -6604,13 +6604,10 @@
     for (const id of dazu) gewaehlt.add(id);
     welt.hier = a.nr;
     weltSicht = false;
-    /* Die Leiste klappt mit auf: wer eine Insel weckt, will ihre
-       Units sehen. Der gespeicherte Stand (nicht die Vorgabe) —
-       sonst hätte ein früheres Zuklappen von Hand hier Vorrang und
-       die geweckte Insel bliebe in der Liste unsichtbar. */
-    const st = unitKlappStand();
-    st['jg:' + a.key] = true;
-    try { localStorage.setItem(WI_UKLAPP_KEY, JSON.stringify(st)); } catch (e) { /* egal */ }
+    /* Die Leiste zieht mit: wer eine Insel weckt, will ihre Units
+       sehen. Seit die Chips auswählen, ist das ein Wort — der Chip
+       dieses Jahrgangs geht an, und darunter steht seine Liste. */
+    jgWahl = a.key;
     await soloSetzen({ p_sets: [...gewaehlt] });
     ctx.toast(`${a.titel} geweckt · ${a.ids.length} Wörter`);
   }
@@ -7196,11 +7193,10 @@
            Leinwand, nur die Kamera weiß von einem linken Rand. -->
       <aside class="wi-units" data-part="units" hidden>
         <!-- ── Der Kopf: erst das Ganze, dann die Jahrgänge ───────
-             Sönke, 20.09.2026: „bei Schülern … dadrüber stehen
-             einfach die Gesamtwerte, x Tiere und dann die Punkte und
-             Anzahlen. Drunter dann nebeneinander Jhg 5, Jhg 6 …
-             klicke ich einen Jahrgang an, sehe ich darunter die
-             Stats. Bei den Units darunter bleibt alles gleich."
+             Sönke, 20.09.2026: „die Werte von alle Tiere ganz oben …
+             müssen hinter alle Tiere … also 350 Tiere *grau* 300
+             *grün* 30 … in eine Zeile. Hier sollen die Chips Jhg 5 /
+             Jhg 6 und so auch für die Auswahl sein."
 
              Bis dahin stand hier „Units (118)". Das war richtig,
              solange die Liste darunter aus Units bestand — seit der
@@ -7210,24 +7206,30 @@
              Tier — dieselbe Zahl, nur ehrlich benannt, und es ist
              das Wort, in dem ein Kind über seine Insel denkt.
 
-             Die drei Zeilen beantworten drei verschiedene Fragen und
-             gehören deshalb nicht zusammengelegt:
-               Griff   wie viele Tiere habe ich insgesamt
-               Chips   welche Jahrgänge habe ich, und welcher schläft
-               Zahlen  wie weit bin ich in DIESEM einen
+             Drei Zeilen für drei verschiedene Fragen:
+               Griff   wie viele Tiere habe ich insgesamt — die
+                       Stufenreihe steht HINTER der Zahl und nicht
+                       mehr darunter: es ist eine Auskunft, also
+                       eine Zeile
+               Chips   welchen Jahrgang sehe ich mir gerade an
+               Zahlen  wie weit bin ich in DIESEM einen, und schläft
+                       seine Insel
 
-             Die Chips WÄHLEN nichts aus — das tut die Liste
-             darunter. Sie sind eine Auskunft; deshalb ein eigener
-             Zustand (is-on) und keine Verbindung zum Beutel.
+             Die Chips sind seit dem 20.09.2026 die AUSWAHL: darunter
+             stehen die Units genau eines Jahrgangs. Die Jahrgangs-
+             Zeilen in der Liste sind dafür weg — sie sagten dasselbe
+             ein zweites Mal. Was an ihnen hing (eine Insel schlafen
+             legen), ist der antippbare Zustand rechts in der
+             Zahlen-Zeile: dort, wo auch steht, wie viel dort lebt.
 
              ⚠️ Keine Rückwärts-Anführungszeichen in diesem Kommentar:
              er steht in einer Vorlagen-Zeichenkette, und eines davon
              beendet sie mitten im HTML. -->
         <button type="button" class="wi-ugriff" data-part="ugriff" aria-expanded="true">
-          <span><b data-part="swords">0</b> Tiere</span>
+          <span class="wi-ugn"><b data-part="swords">0</b> Tiere</span>
+          <span class="wi-slegend wi-usum" data-part="slegend"></span>
           <i class="wi-uchev" aria-hidden="true"></i>
         </button>
-        <div class="wi-slegend wi-usum" data-part="slegend"></div>
         <div class="wi-jchips" data-part="jchips" hidden></div>
         <div class="wi-jstat" data-part="jstat" hidden></div>
         <div class="wi-ubody" data-part="ubody">
@@ -7830,13 +7832,21 @@
       if (b) soloSend(b.dataset.v);
     });
 
-    /* Die Leiste. Alle drei Zuhörer sitzen an den UMSCHLIESSENDEN
+    /* Die Leiste. Alle Zuhörer sitzen an den UMSCHLIESSENDEN
        Kästen: ihr Inhalt wird bei jeder Änderung neu geschrieben, an
        den Zeilen selbst wären sie nach dem ersten Klick weg. */
     els.uGriff.addEventListener('click', () => unitsSetzen(!unitsAuf));
     els.jChips.addEventListener('click', e => {
       const b = e.target.closest('[data-jchip]');
       if (b) jChipTipp(b.dataset.jchip);
+    });
+    /* `data-anjg` heißt hier dasselbe wie früher in der Liste — der
+       Sammelschalter eines ganzen Jahrgangs. Er sitzt nur woanders,
+       und deshalb braucht er seinen eigenen Zuhörer: die Zahlen-Zeile
+       liegt ÜBER dem Rumpf und nicht darin. */
+    els.jStat.addEventListener('click', e => {
+      const b = e.target.closest('[data-anjg]');
+      if (b) jahrgangSammel(b.dataset.anjg);
     });
     els.uList.addEventListener('click', unitListeClick);
     els.uDet.addEventListener('click', unitDetailClick);
@@ -8180,7 +8190,11 @@
        gebaut …" und behauptete „Noch nichts freigespielt" — über eine
        Insel, die es in diesem Augenblick noch gar nicht gibt. */
     els.units.hidden = false;
-    jgVorgabeSetzen();
+    /* Die Chip-Wahl fängt bei jedem Aufbau von vorn an: `jgAktuell`
+       nimmt dann den Jahrgang, an dem gearbeitet wird (welt.hier).
+       Sie hier stehen zu lassen hieße, dass eine zweite Insel im
+       selben Fenster die Wahl der ersten erbt. */
+    jgWahl = null;
     schildeZeichnen();
     passeAn();
     randMessen();
@@ -8227,61 +8241,95 @@
   }
 
   /* ─── Die Jahrgangs-Chips ───────────────────────────────────
-     Eine Reihe zwischen dem Ganzen und den Units: welche Jahrgänge
-     habe ich, und wie weit bin ich in einem davon?
+     Eine Reihe zwischen dem Ganzen und den Units, und seit dem
+     20.09.2026 die AUSWAHL: ein Chip ist an, und die Liste darunter
+     zeigt genau diesen einen Jahrgang.
 
-     Sie sind bewusst KEIN Schalter. Angetippt wird ein Jahrgang hier,
-     um nachzusehen — an- und ausgeschaltet wird er in der Liste
-     darunter (`jahrgangSammel`) oder auf der Karte. Zwei Griffe für
-     dasselbe wären an der Stelle besonders teuer: der eine legt eine
-     ganze Insel schlafen, und das darf nicht nebenbei passieren, wenn
-     jemand nur Zahlen sehen wollte.
+     Vorher war der Chip eine bloße Auskunft und der Jahrgang stand
+     ZUSÄTZLICH als Überschrift in der Liste. Sönke: „das ist doppelt
+     drin … nur oben als Chip." Die Überschriften sind deshalb weg
+     (renderUnits), und mit ihnen zwei Griffe, die der Chip übernimmt:
+     das Auf- und Zuklappen (überflüssig — es steht ohnehin nur noch
+     ein Jahrgang da) und das Schlafenlegen. Letzteres ist jetzt der
+     Zustand rechts in der Zahlen-Zeile (`wi-jschlaf`): getrennt vom
+     Chip, damit ein Blick weiter kein Eingriff ist.
 
      Bei einem einzigen Jahrgang fällt die Reihe weg — ein Chip, der
-     das wiederholt, was zwei Zeilen höher steht, ist eine Zeile in
-     einer Leiste, die neben einer Karte steht. Dieselbe Regel wie bei
-     den Schildern und bei den Jahrgangs-Zeilen der Liste. */
-  let jgOffen = null;      // welcher Chip seine Zahlen zeigt (null: keiner)
+     das wiederholt, was eine Zeile höher steht, kostet in einer
+     Leiste neben einer Karte Platz und sagt nichts. Dieselbe Regel
+     wie bei den Schildern auf der Karte. */
+  let jgWahl = null;       // welcher Jahrgang unten steht (Insel-Schlüssel)
+
+  /* Der gewählte Jahrgang, geprüft gegen den JETZIGEN Bestand: die
+     Wahl überlebt jedes Neuzeichnen, die Stationen von damals nicht
+     unbedingt (ein Kind wechselt die Schule). Fällt sie ins Leere,
+     nimmt sie den Jahrgang, an dem gerade gearbeitet wird — nicht
+     einfach den ersten: die Leiste soll beim Öffnen das zeigen, was
+     auf der Karte in der Mitte liegt. */
+  function jgAktuell(jgs) {
+    if (!jgs.length) return null;
+    let j = jgs.find(x => x.key === jgWahl);
+    if (!j) {
+      const a = welt.archipele[welt.hier];
+      j = (a && jgs.find(x => x.key === a.key))
+          || jgs.find(x => x.zustand !== 'aus') || jgs[0];
+      jgWahl = j.key;
+    }
+    return j;
+  }
 
   function renderJChips(baum) {
     if (!els.jChips || !els.jStat) return;
     const jgs = solo ? jahrgangsBaum(baum || unitBaum()) : [];
+    /* Auch bei einem einzigen Jahrgang: renderUnits filtert danach,
+       und eine Wahl, die nur bei zweien gesetzt wird, wäre beim
+       ersten zusätzlichen Jahrgang null. */
+    const jetzt = jgAktuell(jgs);
     if (jgs.length < 2) {
-      jgOffen = null;
       els.jChips.hidden = true; els.jChips.innerHTML = '';
       els.jStat.hidden = true;  els.jStat.innerHTML = '';
       return;
     }
-    /* Der aufgeklappte Jahrgang kann verschwunden sein — ein Kind
-       wechselt die Schule, und die Stationen von damals sind weg. */
-    if (jgOffen && !jgs.some(j => j.key === jgOffen)) jgOffen = null;
 
     els.jChips.hidden = !unitsAuf;
     els.jChips.innerHTML = jgs.map(j => `
-      <button type="button" class="wi-jchip${j.key === jgOffen ? ' is-on' : ''}${
+      <button type="button" class="wi-jchip${j === jetzt ? ' is-on' : ''}${
         j.zustand === 'aus' ? ' is-schlaf' : ''}"
-              data-jchip="${esc(j.key)}" aria-pressed="${j.key === jgOffen}"
+              data-jchip="${esc(j.key)}" aria-pressed="${j === jetzt}"
               title="${esc(j.titel)}${j.zustand === 'aus' ? ' · schläft' : ''}"
         >${esc(jahrgangKurz(j.grade))}</button>`).join('');
 
-    const j = jgs.find(x => x.key === jgOffen);
-    els.jStat.hidden = !j || !unitsAuf;
+    els.jStat.hidden = !unitsAuf;
     /* Dieselbe Form wie der Kopf darüber — Zahl, Wort, Punktreihe.
        Wer die obere Zeile gelesen hat, liest diese ohne Umstellung;
-       es ist dieselbe Auskunft, nur auf einen Jahrgang verengt. */
-    if (j) els.jStat.innerHTML =
-      `<span class="wi-jstatn"><b>${j.anzahl}</b> Tiere</span>`
-      + `<span class="wi-slegend">${stufenLegende(j.ids)}</span>`
-      + `<i class="wi-jstatz">${j.zustand === 'aus' ? 'schläft'
-          : j.zustand === 'halb' ? 'teils wach' : 'wach'}</i>`;
+       es ist dieselbe Auskunft, nur auf einen Jahrgang verengt.
+
+       Rechts außen der einzige Teil, der etwas behauptet statt zu
+       zählen — und er ist ein Schalter: „wach" antippen legt die
+       ganze Insel schlafen, „schläft" weckt sie. Das ist seit dem
+       Wegfall der Jahrgangs-Zeilen der einzige Weg dorthin; der Tipp
+       auf die Karte weckt weiterhin nur. */
+    els.jStat.innerHTML =
+      `<span class="wi-jstatn"><b>${jetzt.anzahl}</b> Tiere</span>`
+      + `<span class="wi-slegend">${stufenLegende(jetzt.ids)}</span>`
+      + `<button type="button" class="wi-jschlaf is-${jetzt.zustand}"
+                 data-anjg="${esc(jetzt.key)}"
+                 aria-pressed="${jetzt.zustand !== 'aus'}"
+                 title="${jetzt.zustand === 'aus'
+                   ? 'Diesen Jahrgang wieder wecken'
+                   : 'Diesen Jahrgang schlafen legen'}"
+          >${jetzt.zustand === 'aus' ? 'schläft'
+              : jetzt.zustand === 'halb' ? 'teils wach' : 'wach'}</button>`;
   }
 
-  /* Ein zweiter Tipp auf denselben Chip macht ihn wieder zu: die
-     Zahlen sind eine Nachfrage und keine Dauereinrichtung, und
-     zugeklappt bleibt mehr Platz für die Liste. */
+  /* Ein Tipp wählt — und wählt nicht ab: irgendein Jahrgang steht
+     immer unten, sonst wäre die Liste leer, ohne dass jemand etwas
+     abgeschaltet hätte. Ein zweiter Tipp auf denselben Chip ist
+     deshalb folgenlos. */
   function jChipTipp(key) {
-    jgOffen = (jgOffen === key) ? null : key;
-    renderJChips();
+    if (key === jgWahl) return;
+    jgWahl = key;
+    renderUnits();
   }
 
   /* ─── Das eigene Menü ───────────────────────────────────────
@@ -8765,9 +8813,10 @@
     els.units.classList.toggle('is-zu', !unitsAuf);
     els.uGriff.setAttribute('aria-expanded', unitsAuf ? 'true' : 'false');
     els.uBody.hidden = !unitsAuf;
-    // Die Stufenpunkte gehören zur Liste und nicht zum Griff: sie
-    // erklären, was darunter steht. Für die Jahrgangs-Chips gilt
-    // dasselbe — zugeklappt bleibt NUR der Griff stehen.
+    // Die Stufenpunkte stehen seit dem 20.09.2026 IM Griff, hinter
+    // der Zahl. Zugeklappt fallen sie trotzdem weg: der Griff ist
+    // dann ein Knopf am Rand der Insel und keine Auskunft mehr, und
+    // er soll schmal sein. Dasselbe gilt für die Chips.
     if (els.sLegend) els.sLegend.hidden = !unitsAuf;
     if (els.jChips) renderJChips();
     // Zugeklappt gibt es nichts mehr, worauf sich ein Hervorheben
@@ -8913,23 +8962,21 @@
     return raus;
   }
 
-  /* Eine Zeile — für Jahrgang, Unit und Station dieselbe Form.
-     `ziel` ist, was der Schalter umlegt: ein Insel-Schlüssel, eine
-     Unit- oder eine Satz-Nummer. */
+  /* Eine Zeile — für Unit und Station dieselbe Form. `ziel` ist,
+     was der Schalter umlegt: eine Unit- oder eine Satz-Nummer.
+
+     Die dritte Fassung (`jahrgang: true`, mit `data-jauf` und
+     `data-anjg`) ist am 20.09.2026 weggefallen: der Jahrgang steht
+     als Chip im Kopf und nicht mehr als Überschrift in der Liste. */
   function unitZeile(o) {
-    /* ⚠️ Eigenes Merkmal je Ebene (`data-jauf` / `data-auf`). Ein
-       gemeinsames ginge fast immer gut und einmal nicht: ein
-       Insel-Schlüssel und eine Unit-Nummer sind beides Text, und
-       wer „en:5" an `unitKlappen` gibt, klappt still gar nichts. */
     const pfeil = o.auf === undefined ? '' :
       `<button type="button" class="wi-uchevb${o.auf ? ' is-auf' : ''}"
-               data-${o.jahrgang ? 'jauf' : 'auf'}="${esc(o.ziel)}"
+               data-auf="${esc(o.ziel)}"
                aria-expanded="${o.auf}"
-               aria-label="${o.jahrgang ? 'Units' : 'Stationen'} ${
-                 o.auf ? 'einklappen' : 'ausklappen'}"
+               aria-label="Stationen ${o.auf ? 'einklappen' : 'ausklappen'}"
                ><i class="wi-schev" aria-hidden="true"></i></button>`;
     const knopf = `<button type="button" class="wi-utoggle"
-              data-${o.jahrgang ? 'anjg' : o.unit ? 'anunit' : 'an'}="${esc(o.ziel)}"
+              data-${o.unit ? 'anunit' : 'an'}="${esc(o.ziel)}"
               aria-pressed="${o.zustand === 'an'}">
         <b>${esc(o.titel)} <span class="wi-uzahl">(${o.anzahl})</span></b>
         <span class="wi-slegend">${stufenLegende(o.ids)}</span>${
@@ -8964,34 +9011,27 @@
       return;
     }
 
-    /* Überschriften nur, wenn es wirklich mehrere Jahrgänge gibt.
-       Bei einem einzigen wäre die Zeile eine Trennung, die nichts
-       trennt — und sie kostet in der schmalen Leiste eine Zeile.
+    /* Die Liste zeigt GENAU EINEN Jahrgang — den, dessen Chip oben an
+       ist. Bis zum 20.09.2026 standen hier alle untereinander, jeder
+       unter seiner eigenen Überschrift. Sönke: „das ist doppelt drin
+       … nur oben als Chip." Stimmt: die Überschrift sagte Namen,
+       Zahl, Stufenreihe und Zustand — alles vier steht im Chip und in
+       der Zahlen-Zeile darüber, nur ohne zu scrollen.
 
-       Seit der Inselwelt ist die Überschrift ein SCHALTER: derselbe
-       Dreizustand wie eine Unit, nur eine Ebene höher. Sie ist
-       zugleich der einzige Weg, eine Insel wieder schlafen zu legen
-       — der Tipp auf die Karte weckt nur (siehe soloPanZoom). */
+       Mit der Überschrift fällt auch das Klappen je Jahrgang weg: es
+       war die Antwort darauf, dass sechs Jahrgänge vierzig Zeilen
+       machen. Bei einem Jahrgang gibt es die Frage nicht mehr. */
     const jgs = jahrgangsBaum(baum);
     const mehrere = jgs.length > 1;
+    const jetzt = jgAktuell(jgs);
+    /* Die Units, die JETZT dastehen — und damit auch das Maß, an dem
+       `unitAufgeklappt` seine Vorgabe misst. Stünde dort weiter der
+       ganze Baum, entschiede ein Jahrgang, den man gerade gar nicht
+       sieht, ob die Units des sichtbaren offen oder zu sind. */
+    const sicht = mehrere ? jetzt.gruppen : baum;
     let html = '';
-    let offen = false;
 
-    for (const g of baum) {
-      const jg = jgs.find(j => j.gruppen.includes(g));
-      if (mehrere && jg !== offen) {
-        if (offen) html += '</div></div>';
-        offen = jg;
-        const auf = jahrgangAufgeklappt(jg);
-        html += `<div class="wi-jbox${auf ? ' is-auf' : ''}">`
-          + unitZeile({
-              klasse: 'wi-urow wi-jrow', ziel: jg.key, jahrgang: true,
-              titel: jg.titel, anzahl: jg.anzahl, ids: jg.ids,
-              zustand: jg.zustand, auf })
-          + `<div class="wi-jbody"${auf ? '' : ' hidden'}>`;
-      }
-      if (mehrere && !jahrgangAufgeklappt(jg)) continue;
-
+    for (const g of sicht) {
       /* Eine Unit am Stück bekommt keinen Aufklapp-Pfeil und trägt
          das „i" ihrer einzigen Station selbst. Ein Pfeil, der eine
          einzige Zeile freilegt, ist eine Bitte um einen Klick ohne
@@ -9005,7 +9045,7 @@
         continue;
       }
 
-      const auf = unitAufgeklappt(g.id, baum);
+      const auf = unitAufgeklappt(g.id, sicht);
       const zustand = g.an === g.sets.length ? 'an' : g.an ? 'halb' : 'aus';
       /* ⚠️ `wi-ubox` und nicht `wi-unit`: die Leiste selbst heißt
          `.wi-units`, und `.wi-uhead` ist schon der Kopf der
@@ -9023,12 +9063,14 @@
             zustand: solo.aktiv.has(s.id) ? 'an' : 'aus', info: s.id })).join('')
         + '</div></div>';
     }
-    if (offen) html += '</div></div>';
 
     els.uList.innerHTML = html
       + '<p class="wi-uhint">Abgefragt wird nur, was an ist. Die anderen Tiere '
       + 'bleiben auf deiner Insel — sie sind nur blass.'
-      + (mehrere ? ' Ein ganzer Jahrgang aus heißt: seine Insel schläft.' : '')
+      /* Der Satz zeigt nach OBEN, seit der Schalter dort sitzt: sonst
+         sucht man ihn in der Liste, in der er bis heute stand. */
+      + (mehrere ? ' Oben tippst du auf „wach", und der ganze Jahrgang '
+                 + 'legt sich schlafen.' : '')
       + '</p>';
 
     if (unitOffen) renderUnitDetail();
@@ -9038,12 +9080,11 @@
     /* Reihenfolge nicht vertauschen: der Pfeil liegt IN der
        Unit-Zeile, und `data-anunit` ist auf demselben Weg nach oben
        erreichbar. Wer zuerst nach dem Schalter sucht, klappt nie. */
-    const jauf = e.target.closest('[data-jauf]');
-    if (jauf) { jahrgangKlappen(jauf.dataset.jauf); return; }
     const auf = e.target.closest('[data-auf]');
     if (auf) { unitKlappen(auf.dataset.auf); return; }
-    const jalle = e.target.closest('[data-anjg]');
-    if (jalle) { jahrgangSammel(jalle.dataset.anjg); return; }
+    /* `data-anjg` und `data-jauf` standen hier bis zum 20.09.2026 —
+       die Jahrgangs-Zeile. Sie ist weg; der Sammelschalter hängt
+       jetzt an der Zahlen-Zeile im Kopf (siehe dort). */
     const alle = e.target.closest('[data-anunit]');
     if (alle) { unitSammel(alle.dataset.anunit); return; }
     const an = e.target.closest('[data-an]');
@@ -9088,50 +9129,13 @@
     renderUnits();
   }
 
-  /* ─── Der Jahrgang auf- und zuklappen ───────────────────────
-     Eigener Stand neben dem der Units, unter demselben Schlüssel.
-     Voreinstellung ist das Naheliegende: der Jahrgang, an dem
-     gearbeitet wird, steht offen, die schlafenden sind zu. Ein Kind
-     mit sechs Jahrgängen sähe sonst vierzig Zeilen, von denen
-     fünfunddreißig ruhen. */
-  /* ⚠️ Die Vorgabe wird EINMAL beim Aufbau festgehalten und danach
-     nicht mehr gerechnet. Sie aus dem jetzigen Zustand abzuleiten
-     („offen, wenn wach") sieht richtig aus und ist es nicht: wer
-     die letzte Unit eines Jahrgangs abschaltet, klappte ihn damit
-     zu — und käme an sie nicht mehr heran, weil die Zeile, die sie
-     zurückholt, gerade verschwunden ist. Eine Liste darf sich nicht
-     selbst wegräumen.
-
-     Wer selbst klappt, gewinnt trotzdem: der gespeicherte Stand
-     steht vor der Vorgabe. */
-  let jgVorgabe = new Map();
-
-  function jahrgangAufgeklappt(jg) {
-    if (!jg) return true;
-    const st = unitKlappStand();
-    const k = 'jg:' + jg.key;
-    if (typeof st[k] === 'boolean') return st[k];
-    if (jgVorgabe.has(jg.key)) return jgVorgabe.get(jg.key);
-    return true;
-  }
-
-  /* Beim Öffnen der Insel: der Jahrgang, an dem gearbeitet wird,
-     steht offen, die schlafenden sind zu. Ein Kind mit sechs
-     Jahrgängen sähe sonst vierzig Zeilen, von denen fünfunddreißig
-     ruhen. */
-  function jgVorgabeSetzen() {
-    jgVorgabe = new Map();
-    for (const a of welt.archipele) jgVorgabe.set(a.key, !!a.wach);
-  }
-
-  function jahrgangKlappen(key) {
-    const jg = jahrgangsBaum(unitBaum()).find(j => j.key === key);
-    if (!jg) return;
-    const st = unitKlappStand();
-    st['jg:' + key] = !jahrgangAufgeklappt(jg);
-    try { localStorage.setItem(WI_UKLAPP_KEY, JSON.stringify(st)); } catch (e) { /* egal */ }
-    renderUnits();
-  }
+  /* Das Auf- und Zuklappen JE JAHRGANG stand bis zum 20.09.2026
+     hier (`jahrgangAufgeklappt`, `jahrgangKlappen`, `jgVorgabe`). Es
+     war die Antwort auf eine Liste, in der alle Jahrgänge
+     untereinander standen — sechs davon sind vierzig Zeilen. Seit die
+     Chips auswählen, steht genau einer da, und die Frage stellt sich
+     nicht mehr. Alte Einträge `jg:…` im gespeicherten Klappstand
+     stören nicht; sie werden nur nie wieder gelesen. */
 
   /* ─── Der Sammelschalter eines Jahrgangs ────────────────────
      Derselbe Dreizustand wie bei der Unit, eine Ebene höher — und
@@ -9139,11 +9143,9 @@
      Der Tipp auf die Karte weckt nur (siehe soloPanZoom): Wecken ist
      eine Entdeckung, Schlafenlegen eine Entscheidung.
 
-     ⚠️ Die Klappung zieht mit: wer einen Jahrgang schlafen legt,
-     will seine vierzig Zeilen nicht weiter vor sich haben — und wer
-     ihn weckt, will sie sehen. Ohne das bliebe ein geweckter
-     Jahrgang in der Leiste zugeklappt, und die Insel lebte, ohne
-     dass die Liste es zeigt. */
+     Er sitzt seit dem 20.09.2026 im Kopf der Leiste (`wi-jschlaf` in
+     renderJChips) und nicht mehr in der Liste. Angefasst wird immer
+     der GEWÄHLTE Jahrgang — der, dessen Units darunter stehen. */
   function jahrgangSammel(key) {
     const jg = jahrgangsBaum(unitBaum()).find(j => j.key === key);
     if (!jg) return;
@@ -9158,9 +9160,10 @@
     } else {
       for (const s of jg.sets) gewaehlt.add(s.id);
     }
-    const st = unitKlappStand();
-    st['jg:' + key] = !alle;
-    try { localStorage.setItem(WI_UKLAPP_KEY, JSON.stringify(st)); } catch (e) { /* egal */ }
+    /* Die Wahl bleibt, wo sie ist — gerade beim Schlafenlegen: die
+       Units bleiben stehen, nur alle pausiert, und derselbe Knopf
+       holt den Jahrgang zurück. Eine Liste, die sich nach dem
+       Abschalten selbst wegräumt, lässt einen nicht mehr heran. */
     soloSetzen({ p_sets: [...gewaehlt] });
   }
 

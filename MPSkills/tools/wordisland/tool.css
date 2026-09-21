@@ -2590,23 +2590,41 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   font-variant-numeric: tabular-nums;
 }
 
-/* Die Stufenpunkte über der Liste: erst wer, dann wie weit. Sie
-   stehen im Kopf und nicht im scrollenden Rumpf — eine Auskunft
-   über das Ganze darf nicht wegscrollen. */
+/* Die Stufenpunkte stehen HINTER der Gesamtzahl, in derselben Zeile
+   (Sönke, 20.09.2026: „350 Tiere *grau* 300 *grün* 30 … in eine
+   Zeile"). Sie sind eine Auskunft über dieselbe Sache, und zwei
+   Zeilen übereinander lasen sich wie zwei.
+
+   Sie liegen IM Griff — der Griff ist die ganze Kopfzeile, und ein
+   Klick darauf klappt die Leiste zu. Das gilt auch für einen Klick
+   auf die Punkte: ein Kind zielt auf die Zeile und nicht auf ein
+   Element. Ihre Titel („ausgewachsen" usw.) bleiben trotzdem
+   lesbar — deshalb kein `pointer-events: none`.
+
+   `min-width: 0` und `overflow: hidden`, damit eine lange Reihe die
+   Zeile nicht über die Leiste hinausdrückt — das Zeichen rechts
+   bleibt an seinem Platz. */
 .wi-usum {
-  flex: 0 0 auto;
-  padding: 0 12px 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
   gap: 10px;
+  flex-wrap: nowrap;
 }
+/* Die Zahl vorn bricht nicht um: sie ist der Titel der Zeile. */
+.wi-ugn { flex: 0 0 auto; white-space: nowrap; }
+.wi-ugn b { font-variant-numeric: tabular-nums; }
 
 /* ── Die Jahrgangs-Chips (20.09.2026) ─────────────────────────
-   Zwischen dem Gesamtstand und der Liste: welche Jahrgänge habe ich?
+   Zwischen dem Gesamtstand und der Liste — und seit dem Abend
+   desselben Tages die AUSWAHL: ein Chip ist an, und darunter steht
+   genau dieser Jahrgang.
 
-   Eigener Name und nicht `.wi-tab`: die Reiter am Pult schalten
-   Inhalte um, diese Chips klappen nur eine Zeile Zahlen auf. Sie
-   sehen sich ähnlich, und genau deshalb dürfen sie nicht dieselbe
-   Regel teilen — der Tag, an dem einer von beiden anders aussehen
-   soll, kommt sonst als Überraschung
+   Eigener Name und nicht `.wi-tab`: die Reiter am Pult sehen
+   ähnlich aus, und genau deshalb dürfen sie nicht dieselbe Regel
+   teilen — der Tag, an dem einer von beiden anders aussehen soll,
+   kommt sonst als Überraschung
    (Regel: feedback_css_class_collision_one_stylesheet).
 
    `wrap`, weil sechs Jahrgänge plus „Eigene" in einer 400 px breiten
@@ -2645,9 +2663,10 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 .wi-jchip.is-schlaf { opacity: .70; border-style: dashed; }
 .wi-jchip.is-schlaf.is-on { opacity: 1; }
 
-/* Die Zahlen des angetippten Jahrgangs. Dieselbe Reihenfolge wie im
+/* Die Zahlen des GEWÄHLTEN Jahrgangs. Dieselbe Reihenfolge wie im
    Kopf darüber — Zahl, Wort, Punktreihe —, damit man sie nicht
-   zweimal lesen lernen muss. */
+   zweimal lesen lernen muss. Rechts außen der Zustand, und der ist
+   ein Schalter. */
 .wi-jstat {
   flex: 0 0 auto;
   display: flex;
@@ -2669,13 +2688,37 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
   font-variant-numeric: tabular-nums;
 }
 .wi-jstat .wi-slegend { flex: 1 1 auto; gap: 8px; }
-/* „schläft" steht rechts außen und ist der einzige Teil der Zeile,
-   der etwas behauptet statt zu zählen. */
-.wi-jstatz {
-  font-style: normal;
-  font-weight: 700;
+
+/* „wach" / „schläft" steht rechts außen: der einzige Teil der Zeile,
+   der etwas behauptet statt zu zählen — und seit dem 20.09.2026 der
+   Griff, der es ändert. Er sieht deshalb aus wie ein Knopf und nicht
+   wie eine Beschriftung: er ist der einzige Weg, eine Insel wieder
+   schlafen zu legen (der Tipp auf die Karte weckt nur). */
+.wi-jschlaf {
+  appearance: none;
   margin-left: auto;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill, 999px);
+  padding: 2px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  color: var(--ink-soft);
+  white-space: nowrap;
 }
+.wi-jschlaf:hover { background: color-mix(in srgb, var(--ink) 12%, transparent); }
+/* Wach heißt: die Insel lebt. Dieselbe Farbe wie ein angeschalteter
+   Chip, damit oben und hier dasselbe Grün dasselbe bedeutet. */
+.wi-jschlaf.is-an {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+/* Und schlafend dieselbe Blässe wie der Chip und die Tiere. */
+.wi-jschlaf.is-aus { opacity: .8; border-style: dashed; }
 
 .wi-ubody {
   flex: 1 1 auto;
@@ -2802,44 +2845,11 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    (Regel: feedback_css_class_collision_one_stylesheet). */
 
 /* ─── Der Jahrgang ──────────────────────────────────────────────
-   Seit der Inselwelt ist er keine Überschrift mehr, sondern eine
-   Zeile mit Schalter und Pfeil — dieselbe Form wie eine Unit, nur
-   eine Ebene höher. Der Schalter ist zugleich der einzige Weg, eine
-   Insel wieder schlafen zu legen.
-
-   `.wi-jbox` / `.wi-jrow` / `.wi-jbody` und nicht `.wi-gbox`:
-   „g" wäre in dieser Datei weder für Gruppe noch für Grade
-   eindeutig, und `.wi-ugrp` unten ist die alte Überschrift, die als
-   Rückfallweg stehen bleibt. */
-.wi-jbox {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 10px;
-}
-.wi-jbox:first-child { margin-top: 0; }
-
-/* Die Jahrgangszeile trägt kräftiger auf als eine Unit: sie steht
-   für eine ganze INSEL, und die Leiste soll auf einen Blick sagen,
-   welche davon gerade lebt. */
-.wi-jrow .wi-utoggle {
-  background: var(--surface-2);
-  border-color: var(--line);
-}
-.wi-jrow .wi-utoggle b { font-size: 14px; font-weight: 800; }
-.wi-jrow.is-on .wi-utoggle {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
-}
-
-.wi-jbody {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* Ein schlafender Jahrgang tritt zurück — dieselbe Aussage wie die
-   Silhouette auf der Karte, nur in der Liste. */
-.wi-jbox:not(.is-auf) > .wi-jbody { display: none; }
+   Er hatte vom 20.09.2026 morgens bis abends eine eigene ZEILE in
+   der Liste (`.wi-jbox` / `.wi-jrow` / `.wi-jbody`) — mit Schalter,
+   Pfeil und Stufenreihe. Sönke: „das ist doppelt drin … nur oben als
+   Chip." Die Regeln sind deshalb weg; der Jahrgang lebt oben im Kopf
+   (`.wi-jchips`, `.wi-jstat`), und die Liste zeigt nur noch Units. */
 
 /* Die alte Jahrgangs-Überschrift. Sie steht nur da, wenn es wirklich
    mehrere gibt — bei einem einzigen trennt sie nichts. Seit der
