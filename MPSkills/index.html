@@ -94,9 +94,27 @@
        Seite ist genau deshalb kurz geworden.
 
        Er klebt am Kasten und wandert mit ihm — siehe renderState()
-       in app.js. Eine Regel, ein Satz: der steht unter dem Kasten. -->
-  <p class="pitch" id="pitch">Skills und Spiele, die eine Klasse in
-    <span class="pitch-hi">30&nbsp;Sekunden</span> benutzt</p>
+       in app.js. Eine Regel, ein Satz: der steht unter dem Kasten.
+
+       Rechts daneben steht seit dem 22.09.2026 der Weg zur Antwort
+       auf die Frage, die dieser Satz aufwirft: „welche denn?". Er
+       gehört genau hierhin und nirgendwo sonst — die Behauptung und
+       ihr Beleg in einer Zeile. Ein eigener Abschnitt weiter unten
+       wäre eine zweite Seite gewesen, die niemand sucht; ein Modal
+       kostet nichts, solange es niemand öffnet.
+
+       #pitch trägt jetzt die REIHE und nicht mehr der Satz: was
+       renderState() verschiebt und showTab() wegnimmt, ist von hier
+       an beides zusammen. -->
+  <div class="pitchrow" id="pitch">
+    <p class="pitch">Skills und Spiele, die eine Klasse in
+      <span class="pitch-hi">30&nbsp;Sekunden</span> benutzt</p>
+    <!-- Nur für alle ohne eigene Räume sichtbar: eine Lehrkraft hat
+         dieselbe Liste als Reiter, und zwei Wege zu derselben Sache
+         auf einem Bildschirm sind einer zu viel. Siehe renderState(). -->
+    <button type="button" class="btn btn--primary pitch-cta" id="skillsOpen" hidden>
+      Alle Skills ansehen</button>
+  </div>
 
   <!-- ─── Meine Insel (Migration 0136) ─────────────────────────
        Über den besuchten Räumen, und das ist die Aussage: die Räume
@@ -146,42 +164,6 @@
        Antrags. Inhalt kommt aus app.js — was hier steht, hängt an
        der Rolle, und die kennt erst das Skript. -->
   <div id="stateHost"></div>
-
-  <!-- ─── Alle Skills, auch ohne Konto ─────────────────────────
-       Was es hier überhaupt gibt — seit dem 22.09.2026 auch für
-       jemanden, der weder angemeldet noch freigeschaltet ist.
-
-       Vorher gab es die Liste nur hinter der Anmeldung, und damit
-       war die häufigste Frage einer Lehrkraft, die zum ersten Mal
-       auf dieser Seite steht, genau die eine, die sie hier nicht
-       beantwortet bekam: Lohnt sich der Antrag? Die Antwort darauf
-       ist ein Bild und keine Zusage — deshalb sind die Kacheln
-       anklickbar und zeigen den Skill in Bewegung.
-
-       An DIESER Stelle und nicht weiter oben: wer mit einem Code
-       von der Tafel kommt, ist schon oben fertig, und der Kasten
-       dafür darf von nichts nach unten geschoben werden. Wer aber
-       bis hierher liest, sucht kein Textfeld, sondern ein Angebot
-       — und findet direkt darunter den Zugang, der daraus folgt.
-
-       Gefüllt wird der Abschnitt aus skill_tools (Migration 0078,
-       für anon lesbar) — siehe renderGuestTools() in app.js. Er
-       bleibt versteckt, wenn nichts zu zeigen ist. -->
-  <section class="gtools" id="guestTools" hidden>
-    <!-- Der Titel steckt in einem eigenen Span: .section-h ist ein
-         Flex-Kasten, und ein nackter Text neben einem Span wären
-         zwei Kästchen mit 9 px Luft mitten im Wort. Das Wort
-         „Skills" trägt dieselbe Farbe wie im Reiter der Lehrkraft
-         und in der Wortmarke oben. -->
-    <h2 class="section-h"><span>Alle <span class="tab-accent">Skills</span></span>
-      <span class="card-h-note">was es hier gibt</span></h2>
-    <p class="gtools-lead">
-      Tipp auf eine Kachel — der Skill läuft dann als Vorschau mit erfundenen Beiträgen,
-      so wie er später an der Wand steht. Zum Mitmachen brauchst du nur den Code von
-      deiner Lehrkraft, zum Eröffnen ein freigeschaltetes Konto.
-    </p>
-    <div id="paneToolsGuest"></div>
-  </section>
 
   <!-- ─── 2. Zugang für Lehrkräfte ─────────────────────────────
        Zugeklappt, weil es die Frage der Minderheit ist. Aufgeklappt
@@ -435,6 +417,40 @@
     <button type="button" class="modal-close" data-close="authModal" aria-label="Schließen">×</button>
     <div id="authBody"></div>
     <p class="switch-line" id="authSwitch"></p>
+  </div>
+</div>
+
+<!-- ─── Alle Skills ─────────────────────────────────────────
+     Das Sortiment, auch ohne Konto (22.09.2026). Bis dahin gab es
+     die Liste nur hinter der Anmeldung, mit der Begründung, sie
+     beantworte keine Frage eines Gastes. Das stimmt für den, der
+     gerade einen Code abtippt — aber nicht für die Lehrkraft, die
+     zum ersten Mal auf dieser Seite steht und genau eines wissen
+     will: lohnt sich der Antrag?
+
+     Als Modal und nicht als Abschnitt in der Seite: die Antwort
+     darauf sucht man absichtlich, und was man absichtlich sucht,
+     darf hinter einem Knopf liegen. Die Seite bleibt damit so kurz
+     wie vorher — der Code von der Tafel ist weiterhin das Erste und
+     Größte, und nichts schiebt ihn nach unten.
+
+     Die Kacheln darin öffnen das Schaufenster eine Ebene weiter.
+     Dieses Modal bleibt dabei offen und liegt darunter: nach der
+     Vorstellung steht man wieder in der Liste und nicht auf einer
+     Seite, zu der man sich zurückarbeiten muss.
+
+     Gefüllt aus skill_tools (Migration 0078, für anon lesbar) —
+     siehe openSkills() in app.js. -->
+<div class="overlay" id="skillsModal" hidden>
+  <div class="modal modal--wide" role="dialog" aria-modal="true" aria-labelledby="skillsTitle">
+    <button type="button" class="modal-close" data-close="skillsModal" aria-label="Schließen">×</button>
+    <h2 id="skillsTitle">Alle <span class="tab-accent">Skills</span></h2>
+    <p class="skills-lead">
+      Tipp auf eine Kachel — der Skill läuft dann als Vorschau mit erfundenen Beiträgen,
+      so wie er später an der Wand steht. Zum Mitmachen brauchst du nur den Code von
+      deiner Lehrkraft, zum Eröffnen ein freigeschaltetes Konto.
+    </p>
+    <div id="paneToolsModal"><p class="booting">Skills werden geladen …</p></div>
   </div>
 </div>
 

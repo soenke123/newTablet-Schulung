@@ -446,7 +446,7 @@ a.btn {
    hängen und nicht an der Fensterbreite — sonst steht der Satz auf
    einem breiten Beamer in einer einzigen langen Zeile da. */
 .pitch {
-  margin: 0 0 34px;
+  margin: 0;
   max-width: 26ch;
   font-size: clamp(1.5rem, 4.8vw, 2.35rem);
   font-weight: 700;
@@ -456,6 +456,36 @@ a.btn {
   text-wrap: balance;
 }
 .pitch-hi { color: var(--accent-ink); }
+
+/* ─── Satz und Knopf in einer Zeile (22.09.2026) ──────────────
+   Der Satz behauptet etwas, der Knopf daneben belegt es. Deshalb
+   stehen sie nebeneinander und nicht untereinander: zwei Zeilen
+   wären zwei Aussagen, eine Zeile ist eine.
+
+   Der Abstand nach unten (früher an .pitch) gehört jetzt der Reihe
+   — sonst klebte der Knopf am nächsten Abschnitt.
+
+   `align-items: flex-end` und nicht center: der Satz ist zwei- bis
+   dreizeilig, der Knopf einzeilig. An der Mitte ausgerichtet hinge
+   er im Nichts; an der Grundlinie des letzten Wortes sitzt er auf
+   derselben Kante wie der Text.
+
+   Umbrechen darf die Reihe: unter etwa 440 px bliebe dem Satz
+   sonst eine Spalte von acht Zeichen. Dann steht der Knopf unter
+   ihm — und weil er dort als einzelnes Ding in der Zeile steht,
+   bekommt er die volle Breite (siehe .pitch-cta). */
+.pitchrow {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 14px 22px;
+  margin: 0 0 34px;
+}
+.pitchrow[hidden] { display: none; }
+.pitch-cta { flex: 0 0 auto; }
+@media (max-width: 440px) {
+  .pitch-cta { flex: 1 0 100%; }
+}
 
 /* ══════════════════════════════════════════════════════════════
    Landing 2 — Zugang für Lehrkräfte
@@ -682,23 +712,18 @@ a.btn {
 }
 
 /* ─── Das Sortiment ohne Konto (22.09.2026) ───────────────────
-   Für Lehrkräfte stehen dieselben Kacheln in einem Reiter, der
-   oben in der Seite beginnt. Hier ist es ein Abschnitt unter allem
-   anderen und trägt deshalb dieselbe Überschrift-Bauart wie
-   „Besuchte Räume" (.section-h) — die Seite soll für einen
-   Abschnitt nicht zwei Formen kennen.
+   Dieselben Kacheln wie im Reiter der Lehrkraft, nur in einem
+   Fenster. Der Vorspann ist EIN Satz und steht über dem Gitter:
+   er sagt, was ein Klick auf eine Kachel tut, und das weiß sonst
+   niemand, der zum ersten Mal hier ist.
 
-   Der Vorspann ist EIN Satz und steht über dem Gitter, nicht unter
-   der Überschrift als zweite Zeile: er sagt, was ein Klick auf
-   eine Kachel tut, und das weiß sonst niemand, der zum ersten Mal
-   hier ist. */
-.gtools { margin: 34px 0 30px; }
-.gtools[hidden] { display: none; }
-.gtools-lead {
-  margin: -2px 0 14px;
+   Das Fenster selbst braucht keine eigene Bauart — .modal--wide
+   trägt zwei Kachelspalten, und mehr als zwei wären in einem
+   Fenster ohnehin eine Wand. */
+.skills-lead {
+  margin: 8px 0 18px;
   font-size: .9rem;
   color: var(--ink-soft);
-  max-width: 62ch;
 }
 
 /* Breiter als früher (252 px): seit über der Kachel eine kleine

@@ -726,17 +726,17 @@ async function renderRooms() {
      · für Lehrkräfte und Admins der zweite Reiter in #stateHost —
        dort ist die Liste ein Sortiment, aus dem man einen Raum
        eröffnet;
-     · für alle anderen der feste Abschnitt #guestTools weit unten
-       in der Seite (22.09.2026).
+     · für alle anderen das Fenster #skillsModal hinter dem Knopf
+       neben dem Satz oben auf der Seite (22.09.2026).
 
    Bis dahin gab es sie ohne Konto gar nicht, mit der Begründung,
    sie beantworte keine Frage eines Gastes. Das stimmt für den, der
    gerade einen Code abtippt — aber nicht für den, der auf dieser
    Seite landet und wissen will, was es hier überhaupt gibt. Beides
-   geht zusammen, solange die Reihenfolge stimmt: der Code bleibt
-   oben und ohne Vorrede, das Sortiment steht UNTER allem, was
-   jemand mit Code sucht, und über dem Zugang für Lehrkräfte — denn
-   genau dorthin führt es, wenn es überzeugt hat.
+   geht zusammen, weil die Liste hinter einem Knopf liegt: der Code
+   bleibt das Erste und Größte, nichts schiebt ihn nach unten, und
+   wer das Sortiment sucht, findet es dort, wo die Seite ihr
+   Versprechen ausspricht.
 
    Ohne Konto ist es eine AUSLAGE und keine Werkbank: die Kacheln
    öffnen die Vorschau, „+ Raum öffnen" gibt es dort nicht (der
@@ -934,10 +934,16 @@ document.addEventListener('click', ev => {
   const b = ev.target.closest('#pvOpen');
   if (!b) return;
   if (roleOf(window.getSessionUser?.() ?? null) === 'guest') {
-    // Erst die Vorstellung beenden: close() stellt die Seite dorthin
-    // zurück, wo sie beim Öffnen stand — danach zu scrollen ist
-    // eine Bewegung, davor wäre es keine.
+    /* Beide Fenster gehen zu, und zwar in dieser Reihenfolge: die
+       Vorstellung liegt über der Liste, die Liste über der Seite,
+       und der Zugangs-Kasten steht ganz unten IN der Seite. Bliebe
+       die Liste offen, scrollte die Seite hinter einem Vorhang.
+
+       close() stellt dabei die Seite dorthin zurück, wo sie beim
+       Öffnen stand — danach zu scrollen ist eine Bewegung, davor
+       wäre es keine. */
     window.MPPreview?.close();
+    closeSkills();
     openAccess();
     return;
   }
@@ -1003,30 +1009,26 @@ async function renderTools(host, guest) {
 }
 
 /* ─── Das Sortiment für alle ohne eigene Räume ────────────────
-   Derselbe Aufruf, anderes Fach. Der Abschnitt steht fest in
-   index.html und ist versteckt; sichtbar wird er erst, wenn
-   wirklich Kacheln darin stehen — eine Überschrift über einer
-   Fehlermeldung („gerade nicht erreichbar") ist ein Versprechen,
-   das die Seite in diesem Moment nicht hält, und für einen Gast ist
-   sie ohnehin kein Grund, hier zu sein.
+   Derselbe Aufruf, anderes Fach: das Modal hinter dem Knopf neben
+   dem Satz oben. Es wird bei JEDEM Öffnen neu gezeichnet und nicht
+   nur beim ersten — die Liste selbst kostet nichts (toolsCache),
+   und das ready-Flag einer Kachel kann sich zwischendurch geändert
+   haben, wenn die Seite lange offen steht.
 
-   Nicht abgewartet von renderState: die Liste ist ein Netzaufruf,
-   und der Code-Kasten oben soll nicht darauf warten. */
-async function renderGuestTools() {
-  const sec  = document.getElementById('guestTools');
-  const host = document.getElementById('paneToolsGuest');
-  if (!sec || !host) return;
+   Geöffnet wird VOR dem Zeichnen: was der Knopf verspricht, soll
+   sofort da sein: ein Kasten mit „Skills werden geladen …" ist eine
+   Antwort, ein halbe Sekunde lang gar nichts zu tun ist keine. */
+async function openSkills() {
+  const el   = document.getElementById('skillsModal');
+  const host = document.getElementById('paneToolsModal');
+  if (!el || !host) return;
+  el.hidden = false;
   await renderTools(host, true);
+}
 
-  /* Die Rolle noch einmal, und zwar JETZT: zwischen dem Aufruf und
-     dieser Zeile liegt ein Netzaufruf, und in der Zeit kann die
-     Sitzung durchgekommen sein. Ohne die zweite Frage stünde das
-     Gast-Gitter unter dem Reiter einer Lehrkraft — ausgerechnet
-     der Fall, der beim Laden der Seite jedes Mal eintritt. */
-  const role = roleOf(window.getSessionUser?.() ?? null);
-  if (role === 'teacher' || role === 'admin') return;
-
-  sec.hidden = !host.querySelector('.tile');
+function closeSkills() {
+  const el = document.getElementById('skillsModal');
+  if (el) el.hidden = true;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1136,17 +1138,18 @@ function renderState() {
   placeVisited(false);
   if (!acts) renderVisited();
 
-  /* Das Sortiment steht für alle ohne eigene Räume unten in der
-     Seite, für Lehrkräfte und Admins im zweiten Reiter. Nie an
-     beiden Orten: zweimal dieselben Kacheln auf einer Seite wären
-     zweimal dieselbe Frage.
-     Der Abschnitt geht dabei jedes Mal erst zu und wird nur für die
-     Rollen wieder gefüllt, die ihn behalten — sonst bliebe nach dem
-     Anmelden einer Lehrkraft das Gast-Gitter unter ihrem Reiter
-     stehen. */
-  const gtools = document.getElementById('guestTools');
-  if (gtools) gtools.hidden = true;
-  if (!acts) renderGuestTools();
+  /* Das Sortiment liegt für alle ohne eigene Räume hinter dem Knopf
+     neben dem Satz, für Lehrkräfte und Admins im zweiten Reiter.
+     Nie beides: zwei Wege zu derselben Liste auf einem Bildschirm
+     sind einer zu viel.
+
+     Und wenn der Knopf verschwindet, muss auch das Fenster dahinter
+     zu — sonst stünde nach dem Anmelden einer Lehrkraft das Modal
+     über ihrer eigenen Raumliste, und der Knopf, der es wieder
+     zumachte, wäre in derselben Sekunde weg. */
+  const skillsBtn = document.getElementById('skillsOpen');
+  if (skillsBtn) skillsBtn.hidden = acts;
+  if (acts) closeSkills();
 
   // Der Zugang gilt nur Gästen. Wer angemeldet ist, sieht statt der
   // beiden Formulare seinen Zustand — das ist dieselbe Frage, eine
@@ -1485,12 +1488,18 @@ document.getElementById('infobar').addEventListener('click', (e) => {
   if (btn) openInfo(btn.dataset.info);
 });
 
+// Der Knopf neben dem Satz. Steht fest im HTML und ist nur für
+// Lehrkräfte versteckt — also einmal verdrahtet und nie wieder.
+document.getElementById('skillsOpen').addEventListener('click', openSkills);
+
 // Klick auf den dunklen Grund schließt — aber nur dort, nicht im Kasten.
-for (const id of ['privacyModal', 'aboutModal', 'authModal']) {
+for (const id of ['privacyModal', 'aboutModal', 'authModal', 'skillsModal']) {
   const el = document.getElementById(id);
   el.addEventListener('click', (e) => {
     if (e.target !== el && !e.target.closest('[data-close]')) return;
-    if (id === 'authModal') closeAuth(); else closeInfos();
+    if (id === 'authModal') closeAuth();
+    else if (id === 'skillsModal') closeSkills();
+    else closeInfos();
   });
 }
 
@@ -1534,6 +1543,13 @@ document.addEventListener('keydown', (e) => {
   closeInfos();
   closeAuth();
   closeRowMenus();
+
+  // Die Liste nur dann, wenn nicht gerade eine Vorstellung darüber
+  // läuft: die schließt lib/preview.js auf dasselbe Escape, und
+  // zwei Fenster auf einen Tastendruck sind ein Fenster zu viel —
+  // der Weg zurück führt in die Liste und nicht auf die Seite.
+  const pv = document.getElementById('previewModal');
+  if (!pv || pv.hidden) closeSkills();
 });
 
 window.addEventListener('lernwelt:session-changed', renderState);
