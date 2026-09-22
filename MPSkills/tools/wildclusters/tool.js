@@ -139,6 +139,19 @@
       title: 'Die Tiere bekommen ihr Bild — die Nummer bleibt daneben stehen' }
   ];
 
+  /* ⚠️ Im Schaufenster (`ctx.preview`) gibt es den letzten Schritt nicht.
+     „3b Tiere aufdecken" setzt jedem Punkt sein Bild daneben — und damit
+     steht auf der offenen Landing, welche Arten hier leben. Genau das ist
+     die Aufgabe der Stunde, und ein Kind kommt dorthin wie eine Lehrkraft
+     (dieselbe Regel wie im Kopf von MPSkills/preview/wildclusters.js).
+
+     Das Drehbuch dort hält von sich aus bei „3a" an. Das reicht nicht: die
+     Auslage ist das echte Werkzeug und bedienbar, ein Finger trifft den
+     Knopf daneben. Weggenommen statt gesperrt — ein Knopf, der auf ein
+     Tippen hin nichts tut, sieht aus wie ein kaputter. */
+  const stepsShown = () =>
+    (ctx && ctx.preview) ? STEPS.filter(s => s.id !== '3b') : STEPS;
+
   /* Bewahrt werden die drei Welten des Raums und sonst nichts (siehe
      `remember`). Mehr Plätze braucht der Bestand deshalb nicht — und
      nebenbei räumt die Grenze auf, wenn jemand den Sitzplatz wechselt und
@@ -872,7 +885,7 @@
 
     const segs = $('wlPhases');
     if (segs) {
-      segs.innerHTML = STEPS.map(s => {
+      segs.innerHTML = stepsShown().map(s => {
         // Ein Schritt der Auflösung ist gedrückt, wenn SEIN Schleier oben ist —
         // nicht schon dann, wenn die Phase läuft. Dass sie läuft, sagt der
         // Rahmen darum (aria-current).
@@ -999,7 +1012,9 @@
        `data` als Ganzes (coalesce, kein Merge) — wer nur einen schickt,
        löscht den anderen. */
     if (btn.dataset.step) {
-      const step = STEPS.find(s => s.id === btn.dataset.step);
+      // `stepsShown` und nicht `STEPS`: im Schaufenster gibt es „3b" nicht,
+      // und ein Drehbuch, das ihn doch anspricht, soll dort ins Leere gehen.
+      const step = stepsShown().find(s => s.id === btn.dataset.step);
       if (!step) return;
       const phase = phaseOf(view);
       const d = (view.state && view.state.data) || {};

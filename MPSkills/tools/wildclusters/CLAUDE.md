@@ -817,7 +817,11 @@ Kind kommt genauso dorthin wie eine Lehrkraft. Daraus folgt dreierlei:
   Gruppen und damit die halbe Lösung.
 * Das Drehbuch fährt die Stunde bis **„3a Welt auflösen"** und hält dort an. Eine Landschaft
   verrät niemanden; **„3b Tiere aufdecken" bleibt liegen** – das gehört vor die Klasse und nicht
-  in eine Auslage.
+  in eine Auslage. ⚠️ Das Drehbuch allein ist dafür nur die halbe Sicherung: die Auslage **ist**
+  das Werkzeug und bedienbar, ein Finger trifft den Knopf auch ohne Drehbuch. Unter `ctx.preview`
+  steht er deshalb gar nicht erst am Pult (`stepsShown` in `tool.js`, gelesen von `paintDesk`
+  *und* `onDeskClick`) – dort sind es drei Knöpfe, und der dritte ist der letzte. Weggenommen und
+  nicht gesperrt: ein Knopf, der auf ein Tippen hin nichts tut, sieht aus wie ein kaputter.
 * Der Beschreibungstext darf sagen, dass es *Tiere* sind (das steht auf der ersten
   Einführungskarte), nicht **welche**.
 

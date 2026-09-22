@@ -31,6 +31,13 @@
        jedem Punkt sein Bild daneben; das gehört vor die Klasse und
        nicht in eine Auslage.
 
+       Dass das Drehbuch ihn auslässt, ist dabei nur die halbe
+       Sicherung: die Auslage ist das echte Werkzeug und bedienbar,
+       ein Finger trifft den Knopf auch ohne Drehbuch. Deshalb steht
+       er unter `ctx.preview` gar nicht erst am Pult (`stepsShown`
+       in tools/wildclusters/tool.js) — hier bleibt es bei drei
+       Knöpfen, und der dritte ist der letzte.
+
    (3) Der Beschreibungstext nennt keine Art. Er darf sagen, dass es
        Tiere sind — das steht auf der ersten Einführungskarte des
        Skills selbst („n Tiere tragen einen Sender, welche Art das
