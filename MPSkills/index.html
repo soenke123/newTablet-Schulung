@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260910" />
+<link rel="stylesheet" href="style.css?v=20260922" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -146,6 +146,42 @@
        Antrags. Inhalt kommt aus app.js — was hier steht, hängt an
        der Rolle, und die kennt erst das Skript. -->
   <div id="stateHost"></div>
+
+  <!-- ─── Alle Skills, auch ohne Konto ─────────────────────────
+       Was es hier überhaupt gibt — seit dem 22.09.2026 auch für
+       jemanden, der weder angemeldet noch freigeschaltet ist.
+
+       Vorher gab es die Liste nur hinter der Anmeldung, und damit
+       war die häufigste Frage einer Lehrkraft, die zum ersten Mal
+       auf dieser Seite steht, genau die eine, die sie hier nicht
+       beantwortet bekam: Lohnt sich der Antrag? Die Antwort darauf
+       ist ein Bild und keine Zusage — deshalb sind die Kacheln
+       anklickbar und zeigen den Skill in Bewegung.
+
+       An DIESER Stelle und nicht weiter oben: wer mit einem Code
+       von der Tafel kommt, ist schon oben fertig, und der Kasten
+       dafür darf von nichts nach unten geschoben werden. Wer aber
+       bis hierher liest, sucht kein Textfeld, sondern ein Angebot
+       — und findet direkt darunter den Zugang, der daraus folgt.
+
+       Gefüllt wird der Abschnitt aus skill_tools (Migration 0078,
+       für anon lesbar) — siehe renderGuestTools() in app.js. Er
+       bleibt versteckt, wenn nichts zu zeigen ist. -->
+  <section class="gtools" id="guestTools" hidden>
+    <!-- Der Titel steckt in einem eigenen Span: .section-h ist ein
+         Flex-Kasten, und ein nackter Text neben einem Span wären
+         zwei Kästchen mit 9 px Luft mitten im Wort. Das Wort
+         „Skills" trägt dieselbe Farbe wie im Reiter der Lehrkraft
+         und in der Wortmarke oben. -->
+    <h2 class="section-h"><span>Alle <span class="tab-accent">Skills</span></span>
+      <span class="card-h-note">was es hier gibt</span></h2>
+    <p class="gtools-lead">
+      Tipp auf eine Kachel — der Skill läuft dann als Vorschau mit erfundenen Beiträgen,
+      so wie er später an der Wand steht. Zum Mitmachen brauchst du nur den Code von
+      deiner Lehrkraft, zum Eröffnen ein freigeschaltetes Konto.
+    </p>
+    <div id="paneToolsGuest"></div>
+  </section>
 
   <!-- ─── 2. Zugang für Lehrkräfte ─────────────────────────────
        Zugeklappt, weil es die Frage der Minderheit ist. Aufgeklappt
@@ -460,6 +496,6 @@
 <script src="preview/clash-of-math.js?v=20260827f"></script>
 <script src="preview/wildclusters.js?v=20260922"></script>
 <script src="preview/wordisland.js?v=20260910"></script>
-<script src="app.js?v=20260918"></script>
+<script src="app.js?v=20260922"></script>
 </body>
 </html>

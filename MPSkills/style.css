@@ -340,6 +340,12 @@ a.btn {
   font-size: .875rem;
 }
 .btn--sm { padding: 6px 12px; font-size: .84rem; }
+/* Ein Knopf, der sich wegnehmen lässt. Für <button> täte es das
+   Browser-Standardblatt allein, für a.btn nicht — dort steht drei
+   Zeilen weiter oben ein eigenes display, und eigene Regeln
+   schlagen [hidden]. Eine Regel für beide, damit niemand beim
+   nächsten Mal danach suchen muss. */
+.btn[hidden] { display: none; }
 
 /* ─── Seitenrumpf ─────────────────────────────────────── */
 .wrap {
@@ -673,6 +679,26 @@ a.btn {
   border-radius: 14px;
   padding: 16px 18px;
   margin: 0;
+}
+
+/* ─── Das Sortiment ohne Konto (22.09.2026) ───────────────────
+   Für Lehrkräfte stehen dieselben Kacheln in einem Reiter, der
+   oben in der Seite beginnt. Hier ist es ein Abschnitt unter allem
+   anderen und trägt deshalb dieselbe Überschrift-Bauart wie
+   „Besuchte Räume" (.section-h) — die Seite soll für einen
+   Abschnitt nicht zwei Formen kennen.
+
+   Der Vorspann ist EIN Satz und steht über dem Gitter, nicht unter
+   der Überschrift als zweite Zeile: er sagt, was ein Klick auf
+   eine Kachel tut, und das weiß sonst niemand, der zum ersten Mal
+   hier ist. */
+.gtools { margin: 34px 0 30px; }
+.gtools[hidden] { display: none; }
+.gtools-lead {
+  margin: -2px 0 14px;
+  font-size: .9rem;
+  color: var(--ink-soft);
+  max-width: 62ch;
 }
 
 /* Breiter als früher (252 px): seit über der Kachel eine kleine

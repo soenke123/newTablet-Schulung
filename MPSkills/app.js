@@ -719,10 +719,30 @@ async function renderRooms() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   Reiter „Alle Skills"
+   „Alle Skills"
    ══════════════════════════════════════════════════════════
-   Für Gäste gibt es die Liste nicht — sie beantwortet keine Frage,
-   die ein Gast hat, und schob den Code-Kasten nach unten.
+   Zwei Orte, ein Gitter:
+
+     · für Lehrkräfte und Admins der zweite Reiter in #stateHost —
+       dort ist die Liste ein Sortiment, aus dem man einen Raum
+       eröffnet;
+     · für alle anderen der feste Abschnitt #guestTools weit unten
+       in der Seite (22.09.2026).
+
+   Bis dahin gab es sie ohne Konto gar nicht, mit der Begründung,
+   sie beantworte keine Frage eines Gastes. Das stimmt für den, der
+   gerade einen Code abtippt — aber nicht für den, der auf dieser
+   Seite landet und wissen will, was es hier überhaupt gibt. Beides
+   geht zusammen, solange die Reihenfolge stimmt: der Code bleibt
+   oben und ohne Vorrede, das Sortiment steht UNTER allem, was
+   jemand mit Code sucht, und über dem Zugang für Lehrkräfte — denn
+   genau dorthin führt es, wenn es überzeugt hat.
+
+   Ohne Konto ist es eine AUSLAGE und keine Werkbank: die Kacheln
+   öffnen die Vorschau, „+ Raum öffnen" gibt es dort nicht (der
+   Knopf führte in eine Fehlermeldung). Lesen darf sie jeder —
+   skill_tools ist für anon freigegeben, solange active = true
+   (Policy skill_tools_select_public, Migration 0078).
 
    Quelle ist skill_tools (Migration 0078), NICHT tools.js. Dort
    steht nur das ready-Flag — siehe Kopfkommentar in tools.js. */
@@ -792,7 +812,7 @@ function previewOf(t) {
   return (isReady(t.id) && window.MPPreview?.has(t.id)) ? window.MPPreview : null;
 }
 
-function toolCard(t) {
+function toolCard(t, guest) {
   const ready = isReady(t.id);
   const badges = [
     ready ? '' : '<span class="tag tag--soon">Skill in Vorbereitung</span>',
@@ -811,6 +831,26 @@ function toolCard(t) {
                aria-label="${esc(t.title)} in Aktion ansehen"></button>`
     : '';
 
+  /* Der Fuß ist das einzig Unterschiedliche zwischen Auslage und
+     Werkbank. Ohne Freischaltung führt „+ Raum öffnen" in eine
+     Fehlermeldung, also steht dort der Weg, den es wirklich gibt:
+     die Vorschau. Sie ist derselbe Klick wie auf die Kachel — aber
+     als beschrifteter Knopf, weil eine Fläche ohne Aufschrift
+     niemandem sagt, dass man sie drücken kann.
+
+     Kein Fuß, wenn es nichts zu zeigen gibt: ein „in Vorbereitung"
+     hat keine Vorschau, und eine leere Leiste unter dem Text wäre
+     nur ein Strich. */
+  const foot = guest
+    ? (pv
+        ? `<div class="tile-foot">
+             <button type="button" class="btn btn--sm" data-act="peek" data-tool="${esc(t.id)}">Vorschau ansehen</button>
+           </div>`
+        : '')
+    : `<div class="tile-foot">
+         <button type="button" class="btn btn--sm btn--primary" data-act="open" data-tool="${esc(t.id)}"${off}>+ Raum öffnen</button>
+       </div>`;
+
   return `<article class="tile${ready ? '' : ' tile--soon'}${pv ? ' tile--peek' : ''}">
       ${peek}
       ${still}
@@ -820,9 +860,7 @@ function toolCard(t) {
       </div>
       ${badges ? `<div class="tile-tags">${badges}</div>` : ''}
       <p class="tile-blurb">${esc(t.blurb || '')}</p>
-      <div class="tile-foot">
-        <button type="button" class="btn btn--sm btn--primary" data-act="open" data-tool="${esc(t.id)}"${off}>+ Raum öffnen</button>
-      </div>
+      ${foot}
       ${ready ? '' : '<p class="tile-note">Der Raum funktioniert schon — der Skill darin kommt noch.</p>'}
     </article>`;
 }
@@ -839,8 +877,11 @@ function toolCard(t) {
    von hier nur nicht mehr angefordert. */
 const newRoomHref = id => 'lehrer.html?new=' + encodeURIComponent(id);
 
-function wireToolButtons() {
-  document.querySelectorAll('#paneTools button[data-act="open"]').forEach(btn => {
+// Am Gitter entlang und nicht am Dokument: dasselbe Gitter gibt es
+// an zwei Orten (Reiter und Gast-Abschnitt), und ein fest auf
+// #paneTools verdrahteter Selektor fände im Gast-Abschnitt nichts.
+function wireToolButtons(host) {
+  host.querySelectorAll('button[data-act="open"]').forEach(btn => {
     btn.addEventListener('click', () => { location.href = newRoomHref(btn.dataset.tool); });
   });
 
@@ -848,24 +889,67 @@ function wireToolButtons() {
   // der Registry und nicht aus dem Drehbuch: wie ein Skill heißt,
   // entscheidet die Datenbank (0078), nicht das ausgelieferte
   // Frontend.
-  document.querySelectorAll('#paneTools button[data-act="peek"]').forEach(btn => {
+  host.querySelectorAll('button[data-act="peek"]').forEach(btn => {
     btn.addEventListener('click', () => {
       const t = (toolsCache || []).find(x => x.id === btn.dataset.tool);
-      if (t) window.MPPreview?.open({ id: t.id, title: t.title, folder: t.folder });
+      if (!t) return;
+      syncPreviewCta();
+      window.MPPreview?.open({ id: t.id, title: t.title, folder: t.folder });
     });
   });
 }
 
-/* Der Knopf im Schaufenster führt dorthin, wo auch der auf der
-   Kachel hinführt. Delegiert, weil das Modal fest im HTML steht
-   und beim Öffnen nur gefüllt wird. */
+/* ─── Der Knopf unter der Vorstellung ─────────────────────────
+   Er heißt nicht für alle gleich, weil er nicht für alle dasselbe
+   kann. Eine Lehrkraft eröffnet von hier aus den Raum; wer keinen
+   Zugang hat, käme dort nur in eine Fehlermeldung — für sie führt
+   derselbe Knopf an die Stelle, an der dieser Zugang beginnt.
+
+   Für Angemeldete ohne Freischaltung ist er weg: ihr Antrag läuft
+   oder ist abgelehnt, und ein Knopf, der sie zu dem Kasten
+   schickte, den sie gerade nicht sehen, verspräche einen Weg, den
+   es für sie im Moment nicht gibt. Ihr Zustand steht oben auf der
+   Seite und sagt es genauer, als dieser Knopf es könnte.
+
+   Gesetzt beim Öffnen und nicht erst beim Klicken: die Aufschrift
+   ist die Auskunft, der Klick nur ihre Einlösung. */
+function syncPreviewCta() {
+  const b = document.getElementById('pvOpen');
+  if (!b) return;
+  const role = roleOf(window.getSessionUser?.() ?? null);
+  if (role === 'teacher' || role === 'admin') {
+    b.hidden = false;
+    b.textContent = '+ Raum eröffnen';
+  } else if (role === 'guest') {
+    b.hidden = false;
+    b.textContent = 'Zugang für Lehrkräfte';
+  } else {
+    b.hidden = true;
+  }
+}
+
+/* Delegiert, weil das Modal fest im HTML steht und beim Öffnen nur
+   gefüllt wird. */
 document.addEventListener('click', ev => {
   const b = ev.target.closest('#pvOpen');
-  if (b && b.dataset.tool) location.href = newRoomHref(b.dataset.tool);
+  if (!b) return;
+  if (roleOf(window.getSessionUser?.() ?? null) === 'guest') {
+    // Erst die Vorstellung beenden: close() stellt die Seite dorthin
+    // zurück, wo sie beim Öffnen stand — danach zu scrollen ist
+    // eine Bewegung, davor wäre es keine.
+    window.MPPreview?.close();
+    openAccess();
+    return;
+  }
+  if (b.dataset.tool) location.href = newRoomHref(b.dataset.tool);
 });
 
-async function renderTools() {
-  const host = document.getElementById('paneTools');
+/* `host` ist das Fach, in das gezeichnet wird — der Reiter oder der
+   Gast-Abschnitt. `guest` entscheidet nur über den Fuß der Kacheln
+   (siehe toolCard). Beides als Parameter und nicht aus der Rolle
+   abgeleitet: welches Fach gemeint ist, weiß der Aufrufer, und der
+   Lesefluss soll nicht zweimal durch die Rollenweiche. */
+async function renderTools(host, guest) {
   if (!host) return;
   const tools = await loadTools();
 
@@ -913,9 +997,36 @@ async function renderTools() {
   const secs = [...groups.values()].sort((a, b) => a.rank - b.rank);
   host.innerHTML = secs.map(s =>
     (secs.length > 1 ? `<h3 class="tools-sec">${esc(s.name)}</h3>` : '')
-    + `<div class="tile-grid">${s.items.map(toolCard).join('')}</div>`
+    + `<div class="tile-grid">${s.items.map(t => toolCard(t, guest)).join('')}</div>`
   ).join('');
-  wireToolButtons();
+  wireToolButtons(host);
+}
+
+/* ─── Das Sortiment für alle ohne eigene Räume ────────────────
+   Derselbe Aufruf, anderes Fach. Der Abschnitt steht fest in
+   index.html und ist versteckt; sichtbar wird er erst, wenn
+   wirklich Kacheln darin stehen — eine Überschrift über einer
+   Fehlermeldung („gerade nicht erreichbar") ist ein Versprechen,
+   das die Seite in diesem Moment nicht hält, und für einen Gast ist
+   sie ohnehin kein Grund, hier zu sein.
+
+   Nicht abgewartet von renderState: die Liste ist ein Netzaufruf,
+   und der Code-Kasten oben soll nicht darauf warten. */
+async function renderGuestTools() {
+  const sec  = document.getElementById('guestTools');
+  const host = document.getElementById('paneToolsGuest');
+  if (!sec || !host) return;
+  await renderTools(host, true);
+
+  /* Die Rolle noch einmal, und zwar JETZT: zwischen dem Aufruf und
+     dieser Zeile liegt ein Netzaufruf, und in der Zeit kann die
+     Sitzung durchgekommen sein. Ohne die zweite Frage stünde das
+     Gast-Gitter unter dem Reiter einer Lehrkraft — ausgerechnet
+     der Fall, der beim Laden der Seite jedes Mal eintritt. */
+  const role = roleOf(window.getSessionUser?.() ?? null);
+  if (role === 'teacher' || role === 'admin') return;
+
+  sec.hidden = !host.querySelector('.tile');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1025,6 +1136,18 @@ function renderState() {
   placeVisited(false);
   if (!acts) renderVisited();
 
+  /* Das Sortiment steht für alle ohne eigene Räume unten in der
+     Seite, für Lehrkräfte und Admins im zweiten Reiter. Nie an
+     beiden Orten: zweimal dieselben Kacheln auf einer Seite wären
+     zweimal dieselbe Frage.
+     Der Abschnitt geht dabei jedes Mal erst zu und wird nur für die
+     Rollen wieder gefüllt, die ihn behalten — sonst bliebe nach dem
+     Anmelden einer Lehrkraft das Gast-Gitter unter ihrem Reiter
+     stehen. */
+  const gtools = document.getElementById('guestTools');
+  if (gtools) gtools.hidden = true;
+  if (!acts) renderGuestTools();
+
   // Der Zugang gilt nur Gästen. Wer angemeldet ist, sieht statt der
   // beiden Formulare seinen Zustand — das ist dieselbe Frage, eine
   // Stufe weiter.
@@ -1088,7 +1211,7 @@ function renderState() {
     // wartete man beim Umschalten auf das Netz, und das ist genau
     // der Moment, in dem man etwas sucht.
     renderRooms();
-    renderTools();
+    renderTools(document.getElementById('paneTools'), false);
     return;
   }
 
