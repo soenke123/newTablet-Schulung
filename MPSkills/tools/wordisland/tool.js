@@ -1878,12 +1878,26 @@
   /* Eine Reihe Herzen über einem Ort. Sie werden bei jeder Änderung
      neu gesetzt und nicht ein- und ausgeblendet: es sind höchstens
      vier Pfade, und ein Vorrat versteckter Herzen wäre genau die
-     Sorte Zustand, die man beim nächsten Umbau übersieht. */
-  function herzReihe(g, anzahl, y, gr, platte) {
+     Sorte Zustand, die man beim nächsten Umbau übersieht.
+
+     ⚠️ `gesamt` (22.09.2026) ist Sönkes „2/2". Bis dahin stand hier
+     nur die RESTZAHL — und eine Reihe aus zwei Herzen sagt nicht, ob
+     sie bei zwei angefangen hat oder bei vier. Beim Schattentempel
+     (drei Herzen) heißt das: wer zweimal trifft, sieht ♥ und weiß
+     nicht, wie weit er ist. Jetzt stehen IMMER alle Herzen der Art
+     da, die verlorenen als dunkle Hülle. Das ist dieselbe Auskunft
+     wie „1 von 3", nur ohne Zahl — auf einer Kachel von anderthalb
+     Zentimetern ist das der Unterschied zwischen lesbar und nicht.
+
+     Zurück kommt die Liste der Herz-Pfade: der Aufrufer braucht
+     genau eines davon, nämlich das gerade verlorene, um es kurz
+     aufblitzen zu lassen. */
+  function herzReihe(g, anzahl, y, gr, platte, gesamt) {
     while (g.firstChild) g.removeChild(g.firstChild);
-    if (!anzahl) return;
+    const voll = Math.max(anzahl | 0, gesamt | 0);
+    if (!voll) return [];
     const b = gr * 1.15;
-    const x0 = -(anzahl - 1) * b / 2;
+    const x0 = -(voll - 1) * b / 2;
     /* Ein dunkles Kissen darunter — nur dort, wo die Reihe AUF einem
        Bild liegt (seit die Herzen auf der Ruine sitzen). Ein weiß
        umrandetes Herz steht für sich zwar auf jedem Untergrund, aber
@@ -1892,19 +1906,27 @@
        einem einfarbigen Feld (Schutzherzen) wäre das Kissen dagegen
        ein Fleck ohne Grund, deshalb der Schalter. */
     if (platte) {
-      const w = (anzahl - 1) * b + gr * 1.22;
+      const w = (voll - 1) * b + gr * 1.22;
       el('rect', {
         x: n2(-w / 2), y: n2(y - gr * .58), width: n2(w), height: n2(gr * 1.16),
         rx: n2(gr * .58), fill: 'rgba(9,18,26,.52)'
       }, g);
     }
-    for (let i = 0; i < anzahl; i++) {
-      el('path', {
-        d: HERZ, fill: '#e23c50', stroke: 'rgba(255,255,255,.92)',
+    const reihe = [];
+    for (let i = 0; i < voll; i++) {
+      /* Die vollen links, die leeren rechts: so schrumpft die Reihe
+         beim Treffen von rechts nach links und nicht von irgendwo. */
+      const da = i < anzahl;
+      reihe.push(el('path', {
+        class: da ? 'wi-herz' : 'wi-herz wi-herz--weg',
+        d: HERZ,
+        fill: da ? '#e23c50' : 'rgba(9,18,26,.62)',
+        stroke: da ? 'rgba(255,255,255,.92)' : 'rgba(255,255,255,.52)',
         'stroke-width': .07, 'paint-order': 'stroke',
         transform: `translate(${n2(x0 + i * b)} ${n2(y)}) scale(${n2(gr)})`
-      }, g);
+      }, g));
     }
+    return reihe;
   }
 
   function placeLayer(svg, isl) {
@@ -2022,7 +2044,8 @@
          Silhouette. */
       const herzen = el('g', { class: 'wi-hearts' }, gg);
       marks.push({ z, halo, gBody, plate, bild, wasche, zeichen, herzen,
-                   hy: n2(fuss - h * HERZ_HOCH), last: null, quelle: '' });
+                   hy: n2(fuss - h * HERZ_HOCH), last: null, quelle: '',
+                   hp: null });   // zuletzt gemalte Restherzen, siehe paint()
     }
 
     return function paint(own, ruins, hearts) {
@@ -2075,7 +2098,29 @@
            gilt, entscheidet sich erst mit dem Volk. */
         m.wasche.setAttribute('opacity', on && m.quelle ? RUIN_TON : 0);
         if (on) m.wasche.setAttribute('filter', F('tint' + t));
-        herzReihe(m.herzen, auf ? hp : 0, m.hy, .30, true);
+
+        /* Die volle Zahl kommt aus RUINEN und nicht aus dem Server:
+           `hearts` trägt nur den Rest. Beide Zahlen zusammen sind
+           Sönkes „2/2". Die Tabelle stimmt mit wi_ruin_def überein —
+           dafür gibt es die Zusage in uitest (testRuinTabelle). */
+        const voll = (auf && RUINEN[art]) ? RUINEN[art].herzen : 0;
+        const reihe = herzReihe(m.herzen, auf ? hp : 0, m.hy, .30, true, voll);
+
+        /* „dass man sieht, dass was passiert ist": das gerade
+           verlorene Herz blitzt einmal auf. Es ist das ERSTE leere,
+           also genau `reihe[hp]` — die vollen stehen links.
+
+           Nur beim echten Rückwärtsgang, und nur wenn vorher schon
+           einmal gemalt wurde: beim Aufbau der Karte trägt jeder Ort
+           seinen Stand zum ersten Mal ein, und ein Feuerwerk über
+           zwanzig Ruinen wäre genau die Meldung, die niemand liest.
+           Der Schattentempel füllt beim Besitzerwechsel wieder auf
+           (hp steigt) — auch das ist kein Verlust. */
+        if (auf && m.hp != null && hp < m.hp && reihe[hp]) {
+          const herz = reihe[hp];
+          herz.classList.add('is-bruch');
+        }
+        m.hp = auf ? hp : null;
       }
     };
   }
@@ -4062,6 +4107,11 @@
              gefüllt: rulesHTML() steht weiter unten in dieser Datei,
              und ein Aufruf hier würde beim Laden ausgewertet. -->
         <div class="wi-rulwrap" data-part="rulwrap"></div>
+        <!-- Die Datenbank ist älter als das Werkzeug (22.09.2026).
+             Siehe dbStand() weiter unten — steht hier und nicht in
+             einem Toast, weil der Satz die ganze Wartezeit über
+             lesbar bleiben muss. -->
+        <p class="wi-dbhint" data-part="dbhint" hidden></p>
         <p class="wi-hint" data-part="onlinehint" hidden></p>
       </section>
 
@@ -4218,6 +4268,7 @@
       tPlace: q('tplace'), tMine: q('tmine'),
       waitText: q('waittext'), myTeam: q('myteam'),
       othersBox: q('othersbox'), others: q('others'), onlineHint: q('onlinehint'),
+      dbHint: q('dbhint'),
       big: q('big'),
       me: q('me'), mePic: q('mepic'), meName: q('mename'), meSub: q('mesub'),
       streak: q('streak'), streakN: q('streakn'), streakGoal: q('streakgoal'),
@@ -4467,7 +4518,23 @@
        eintreffen kann, die der Server gerade abgepfiffen hat.
        Erkennungsmerkmal ist die eingebettete Karte. */
     const arena = !els.mapwrap.hidden;
-    shadowPick = arena ? (shadow || 0) : 0;
+    /* ⚠️ `undefined` heißt „der Server hat davon nichts gesagt" und
+       NICHT „null offene Nebelkränze" (22.09.2026).
+
+       Der Unterschied ist der ganze Fehler: wi_pick_tile liefert
+       `shadow_pick` seit 0146 selbst mit, der Kasten ging nach dem
+       Einnehmen also auf. Direkt danach ruft onMapClick tick() —
+       und wenn wi_view das Feld nicht kennt (Datenbank ohne 0158),
+       kam hier `undefined` an, wurde zu 0, und die Aufforderung war
+       nach weniger als einer Sekunde stumm wieder weg. Sönke:
+       „habe gerade den Schattentempel eingenommen und konnte nicht
+       die Nebel setzen."
+
+       Jetzt behält das Gerät, was es weiß, bis ihm jemand eine ZAHL
+       nennt. Auf einer vollständigen Datenbank ändert die Zeile
+       nichts — dort steht in jeder Antwort eine. */
+    const offen = (shadow == null) ? shadowPick : (shadow | 0);
+    shadowPick = arena ? offen : 0;
     const frei = arena ? (picks || 0) + shadowPick : 0;
     picking = frei > 0;
     els.map.classList.toggle('is-picking', picking);
@@ -4700,10 +4767,54 @@
     els.onlineHint.textContent = hint;
     els.onlineHint.hidden = !hint;
 
-    /* Ohne Migration 0146 gibt es die Ruinen nicht — dann darf die
-       Lobby sie auch nicht versprechen. Erkennungsmerkmal ist das
-       Feld, das erst 0146 mitschickt. */
-    els.rulWrap.hidden = (v.ruins == null);
+    /* ⚠️ Hier stand bis zum 22.09.2026 `els.rulWrap.hidden =
+       (v.ruins == null)`. Gemeint war „ohne Migration 0146 gibt es
+       keine Ruinen, dann darf die Lobby sie nicht versprechen" —
+       geprüft wurde aber ein Feld, das erst 0158 mitschickt. Als
+       0157 die Funktion vom Stand 0131 aus neu schrieb, verschwand
+       damit die ganze Übersicht vom Tablet, während sie am Beamer
+       stehen blieb (wi_room_get hat sie seit 0146).
+
+       Sönkes Meldung dazu: „auf den user displays in der lobby will
+       ich auch, dass man hier die ruinen funktionen sieht". Die
+       Übersicht ist reines Regelwissen aus der Tabelle RUINEN und
+       braucht vom Server gar nichts — sie steht jetzt IMMER. Was der
+       Server nicht liefert, sagt der Satz darunter. */
+    dbStand(v);
+  }
+
+  /* ─── Wenn die Datenbank älter ist als das Werkzeug ──────────
+     Der Vorfall vom 22.09.2026 in einem Satz: `wi_view` stand in der
+     Datenbank auf der 0157-Fassung, und die ist vom Stand 0131 aus
+     geschrieben. Vier Felder fehlten damit auf einmal — und das
+     Tablet hat aus allen vieren still etwas Falsches gemacht:
+     Volksfarbe aus dem Slot statt aus `factions`, Karte ohne Ruinen
+     und ohne Herzen, Schattentempel-Wahl, die nach vier Sekunden
+     von selbst wieder verschwindet. Nichts davon sah nach einem
+     fehlenden Update aus; es sah nach vier verschiedenen Fehlern aus.
+
+     Deshalb diese Funktion. Sie behebt nichts — sie SAGT es. Der
+     Rückfallweg bleibt in jedem einzelnen Fall bestehen (das Spiel
+     läuft weiter), aber er läuft nicht mehr stumm.
+
+     Geprüft wird nur, was wi_view liefern MUSS, sobald die
+     zugehörige Migration da ist; ein leeres `ruins` ist eine
+     Zeichenkette aus Punkten und kein fehlendes Feld.
+     Siehe auch die Regel in feedback_missing_migration_looks_like_network. */
+  function dbStand(v) {
+    if (!els.dbHint) return;
+    const fehlt = [];
+    if (!Array.isArray(v.factions) || !v.factions.length) fehlt.push('die Volksfarben');
+    if (v.ruins == null || v.hearts == null)               fehlt.push('Ruinen und Herzen');
+    if (v.me && v.me.shadow_pick === undefined)            fehlt.push('der Schattentempel');
+    if (!fehlt.length) { els.dbHint.hidden = true; els.dbHint.textContent = ''; return; }
+    /* Aufgezählt mit Mittelpunkt und nicht mit „und": die Stücke sind
+       eine Liste und kein Satzteil, und bei dreien liest sich „a, b
+       und c" an dieser Stelle wie ein zusammengehöriges Ding. */
+    els.dbHint.textContent =
+      '⚠️ Die Datenbank ist älter als dieses Werkzeug. Am Tablet fehlen: '
+      + fehlt.join(' · ') + '. Bitte der Lehrkraft zeigen: Migration 0158 einspielen.';
+    els.dbHint.hidden = false;
   }
 
   /* Das Siegerbild am Tablet: der Sieger groß, das eigene Volk
@@ -4829,8 +4940,17 @@
     const name = R ? R.name : 'Die Ruine';
     if (t.result === 'guard') return 'Ein Schutzherz weniger — das Feld hält noch.';
     if (t.result === 'hit') {
+      /* „noch 2 Herzen" allein sagt nicht, wie weit man ist — beim
+         Schattentempel könnte das der erste oder der zweite Treffer
+         gewesen sein. Deshalb dieselbe Auskunft wie auf der Karte:
+         Rest VON gesamt. Kennt das Gerät die Art nicht (ein Server
+         mit einer Ruine, die es hier noch nicht gibt), fällt der
+         Nenner weg statt falsch zu sein. */
+      const voll = R ? R.herzen : 0;
       return t.hearts > 0
-        ? `Treffer! ${name}: noch ${t.hearts} ${t.hearts === 1 ? 'Herz' : 'Herzen'}.`
+        ? (voll > t.hearts
+            ? `Treffer! ${name}: noch ${t.hearts} von ${voll} Herzen.`
+            : `Treffer! ${name}: noch ${t.hearts} ${t.hearts === 1 ? 'Herz' : 'Herzen'}.`)
         : `Treffer! Der nächste Schlag nimmt ${name === 'Die Ruine' ? 'sie' : 'ihn'}.`;
     }
     return R ? `${name} gehört euch!` : 'Feld genommen!';

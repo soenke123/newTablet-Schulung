@@ -5531,6 +5531,146 @@ async function testAnsagen() {
   tool.unmount();
 }
 
+/* ── Die Herzen einer Ruine, seit dem 22.09.2026 ──────────────
+   Sönke: „außerdem müsste ich die leben der ruinen sehen. dass da
+   bei denen mit leben > 1 dann ein 2/2 steht und man dann 1
+   verliert … dass man sieht, dass was passiert ist."
+
+   Die Zusage ist deshalb NICHT „es stehen Herzen da" — das war schon
+   so —, sondern „es stehen IMMER SO VIELE da, wie die Ruine hat".
+   Eine Zusage über die reine Anzahl (herzZahl) wäre grün geblieben,
+   als die Reihe nur den Rest zeigte. */
+const herzAlle = p => Array.from(p.querySelector('.wi-hearts').querySelectorAll('path'));
+const istLeer  = h => /wi-herz--weg/.test(h.getAttribute('class') || '');
+const herzVoll = p => herzAlle(p).filter(h => !istLeer(h)).length;
+const herzLeer = p => herzAlle(p).filter(istLeer).length;
+const herzBruch = p => herzAlle(p).filter(h => /is-bruch/.test(h.getAttribute('class') || ''));
+
+async function testHerzenVollUndLeer() {
+  console.log('\n— „2 von 3": volle und verbrauchte Herzen —');
+  const len = RMAP.length;
+  const stand = {
+    own: zeichenkette(len, { 0: '0' }, '.'),
+    // Ein aufgedeckter Schattentempel (3 Herzen), einer ist schon weg.
+    ruins:  zeichenkette(len, { [R_GROSS]: 'S', [R_KLEIN]: 'T' }, '.'),
+    hearts: zeichenkette(len, { [R_GROSS]: '2', [R_KLEIN]: '1' }, '0'),
+    me: { picks: 0 }
+  };
+  const { tool, root } = await mountRuinen(stand);
+  const p = platz(root, 0);
+  ok('der Schattentempel zeigt ALLE drei Herzen', herzZahl(p) === 3, `${herzZahl(p)}`);
+  ok('davon zwei volle und eines verbraucht',
+     herzVoll(p) === 2 && herzLeer(p) === 1, `${herzVoll(p)} voll · ${herzLeer(p)} leer`);
+  /* Die Richtung ist die halbe Auskunft: die Reihe soll von rechts
+     leerlaufen, nicht von der Mitte oder von links. */
+  ok('die vollen stehen links, die leeren rechts',
+     herzAlle(p).map(istLeer).join(',') === 'false,false,true',
+     herzAlle(p).map(istLeer).join(','));
+
+  /* Der Torbogen hat genau EIN Herz. „1 von 1" braucht keine zweite
+     Hülle daneben — sonst behauptete die Karte ein Leben, das es
+     bei dieser Art nie gab. */
+  const k = platz(root, 1);
+  ok('der Torbogen zeigt sein einziges Herz, und nur das',
+     herzZahl(k) === 1 && herzVoll(k) === 1 && herzLeer(k) === 0,
+     `${herzVoll(k)} voll · ${herzLeer(k)} leer`);
+  tool.unmount();
+}
+
+async function testHerzBruch() {
+  console.log('\n— Das verlorene Herz blitzt einmal auf —');
+  const len = RMAP.length;
+  const stand = {
+    own: zeichenkette(len, { 0: '0' }, '.'),
+    ruins:  zeichenkette(len, { [R_GROSS]: 'S' }, '.'),
+    hearts: zeichenkette(len, { [R_GROSS]: '3' }, '0'),
+    me: { picks: 1, streak: 3 }
+  };
+  const { tool, root, document } = await mountRuinen(stand, {
+    wi_pick_tile: args => {
+      stand.hearts = zeichenkette(len, { [R_GROSS]: '2' }, '0');
+      stand.me = { picks: 0, streak: 3 };
+      return { ok: true, picks: 0, shadow_pick: 0, effect: null,
+               tile: { r: args.p_r, c: args.p_c, result: 'hit',
+                       ruin: 'schatten', hearts: 2 } };
+    }
+  });
+  /* Beim AUFBAU trägt jeder Ort seinen Stand zum ersten Mal ein. Ein
+     Feuerwerk über zwanzig Ruinen wäre genau die Meldung, die
+     niemand liest — deshalb ist das hier eine eigene Zusage. */
+  ok('beim Aufbau blitzt nichts', herzBruch(platz(root, 0)).length === 0);
+
+  click(root.querySelectorAll('.wi-cell')[R_GROSS], document);
+  await wait(60);
+  const p = platz(root, 0);
+  ok('nach dem Treffer zwei volle und eine Hülle',
+     herzVoll(p) === 2 && herzLeer(p) === 1, `${herzVoll(p)} / ${herzLeer(p)}`);
+  const blitz = herzBruch(p);
+  ok('genau EIN Herz blitzt', blitz.length === 1, `${blitz.length}`);
+  ok('und zwar das gerade verlorene, also das dritte',
+     blitz.length === 1 && herzAlle(p).indexOf(blitz[0]) === 2,
+     blitz.length ? `${herzAlle(p).indexOf(blitz[0])}` : '—');
+  const fb = root.querySelector('.wi-fb').textContent;
+  ok('der Satz darunter sagt „2 von 3"', /2 von 3 Herzen/.test(fb), fb);
+  tool.unmount();
+}
+
+/* ── Der Fehler vom 22.09.2026, als Prüfstand ─────────────────
+   Sönke: „habe gerade den schatten tempel eingenommen und konnte
+   nicht die nebel setzen."
+
+   Der Ablauf, der ihn erzeugt hat: wi_pick_tile liefert
+   `shadow_pick` seit 0146 selbst mit — die Aufforderung ging also
+   auf. Direkt danach ruft onMapClick tick(), und wi_view kannte das
+   Feld nicht (Datenbank auf der 0157-Fassung). `undefined` wurde zu
+   null gelesen, und der Kasten war weg, bevor ein Finger ihn
+   erreichen konnte.
+
+   Der Prüfstand bildet genau diese Datenbank nach: `me` OHNE
+   shadow_pick. */
+async function testNebelUeberlebtDenTakt() {
+  console.log('\n— Die Nebelwahl überlebt den nächsten Takt —');
+  const len = RMAP.length;
+  const stand = {
+    own: zeichenkette(len, { 0: '0' }, '.'),
+    ruins:  zeichenkette(len, { [R_GROSS]: 'S' }, '.'),
+    hearts: zeichenkette(len, { [R_GROSS]: '0' }, '0'),
+    me: { picks: 1, streak: 3 }          // ⚠️ kein shadow_pick
+  };
+  const { tool, root, document } = await mountRuinen(stand, {
+    wi_pick_tile: args => {
+      stand.own = zeichenkette(len, { 0: '0', [R_GROSS]: '0' }, '.');
+      stand.me = { picks: 0, streak: 3 };
+      return { ok: true, picks: 0, shadow_pick: 1,
+               effect: { kind: 'schatten' },
+               tile: { r: args.p_r, c: args.p_c, result: 'taken',
+                       ruin: 'schatten', hearts: 3 } };
+    }
+  });
+  click(root.querySelectorAll('.wi-cell')[R_GROSS], document);
+  await wait(60);
+  const titel = root.querySelector('[data-part="picktitle"]');
+  const karte = root.querySelector('.wi-map');
+  ok('der Schattentempel fordert den Nebel an',
+     /Schattentempel/.test(titel.textContent), titel.textContent);
+  ok('und die Karte steht im Nebel-Modus', karte.classList.contains('is-shadow'));
+
+  /* Der Takt, an dem es gescheitert ist. onMapClick hat ihn selbst
+     ausgelöst, er ist also schon durch — die Zusage prüft, was er
+     hinterlassen hat. */
+  ok('nach dem eigenen Takt steht die Aufforderung immer noch',
+     /Schattentempel/.test(titel.textContent) && karte.classList.contains('is-shadow'),
+     titel.textContent);
+
+  /* Und nach einem ganz gewöhnlichen Poller-Takt ebenso. */
+  await wait(4300);
+  ok('auch nach dem Poller ist sie da',
+     /Schattentempel/.test(titel.textContent) && karte.classList.contains('is-shadow'),
+     titel.textContent);
+  ok('der Kasten steht offen', root.querySelector('[data-part="pickov"]').hidden === false);
+  tool.unmount();
+}
+
 async function testRuinenOhneMigration() {
   console.log('\n— Ruinen ohne Migration 0146 —');
   const len = RMAP.length;
@@ -5538,16 +5678,60 @@ async function testRuinenOhneMigration() {
      zeichnet die Karte die alten Lichtpunkte und KEINE Herzen —
      alt, nicht kaputt. Und die Lobby verspricht keine Regeln, die
      es nicht gibt. */
+  /* ⚠️ `factions: undefined` gehört dazu und ist kein Beiwerk: die
+     0157-Fassung von wi_view hat NICHT nur ruins/hearts verloren,
+     sondern auch die Völkerliste. Ein Prüfstand, der hier die
+     Vorgabe aus viewFor stehen lässt, bildet einen Zustand nach, den
+     es nie gab — und übersieht genau den Teil, den Sönke am
+     22.09.2026 als Erstes gemeldet hat („ich war rot, am Display
+     war es blau"). */
   const stand = { own: zeichenkette(len, { 0: '0' }, '.'), me: { picks: 0 },
-                  over: { phase: 'lobby' } };
+                  over: { phase: 'lobby', factions: undefined } };
   const { tool, root } = await mountRuinen(stand);
   ok('die Karte steht trotzdem', root.querySelectorAll('.wi-place').length === 2);
   ok('keine Herzen auf der Karte',
      root.querySelector('.wi-guards').querySelectorAll('path').length === 0 &&
      herzZahl(platz(root, 0)) === 0);
   ok('kein Gebäude aufgedeckt', koerper(platz(root, 0)).getAttribute('opacity') === '0');
-  ok('und die Lobby erklärt keine Ruinen',
-     root.querySelector('[data-part="rulwrap"]').hidden === true);
+  /* ⚠️ Hier stand bis zum 22.09.2026 „und die Lobby erklärt keine
+     Ruinen" — die Übersicht war ausgeblendet, sobald `ruins` fehlte.
+     Die Zusage hat den Fehler festgeschrieben, statt ihn zu finden:
+     geprüft wurde ein Feld, das erst 0158 mitschickt, gemeint war
+     0146. Als wi_view auf der 0157-Fassung stand, verschwand die
+     Übersicht vom Tablet und niemand konnte sagen, warum.
+
+     Die Übersicht ist reines Regelwissen aus RUINEN. Sie steht
+     jetzt immer — und was der Server NICHT liefert, sagt ein Satz
+     darunter, der dieselbe Prüfung ablegen muss. */
+  ok('die Lobby erklärt die Ruinen trotzdem',
+     root.querySelector('[data-part="rulwrap"]').hidden === false);
+  const hint = root.querySelector('[data-part="dbhint"]');
+  ok('dafür steht da, dass die Datenbank älter ist',
+     hint.hidden === false && /Migration 0158/.test(hint.textContent),
+     hint.textContent);
+  ok('… und der Satz nennt alle drei Stücke einzeln',
+     /Volksfarben/.test(hint.textContent) &&
+     /Ruinen und Herzen/.test(hint.textContent) &&
+     /Schattentempel/.test(hint.textContent),
+     hint.textContent);
+  tool.unmount();
+}
+
+/* Der Gegenfall: eine vollständige Datenbank sagt gar nichts. Ein
+   Warnsatz, der immer dasteht, ist keiner. */
+async function testDbHinweisSchweigt() {
+  console.log('\n— Vollständige Datenbank —');
+  const len = RMAP.length;
+  const stand = {
+    own: zeichenkette(len, { 0: '0' }, '.'),
+    ruins: '.'.repeat(len), hearts: '0'.repeat(len),
+    over: { phase: 'lobby', factions: [0, 1] }, me: { picks: 0, shadow_pick: 0 }
+  };
+  const { tool, root } = await mountRuinen(stand);
+  const hint = root.querySelector('[data-part="dbhint"]');
+  ok('kein Hinweis, wenn nichts fehlt', hint.hidden === true, hint.textContent);
+  ok('und die Übersicht steht',
+     root.querySelector('[data-part="rulwrap"]').hidden === false);
   tool.unmount();
 }
 
@@ -6357,7 +6541,8 @@ const BEREICHE = {
           testLevelOhneMigration, testUhr],
   ruinen: [testBlassUndRing, testBesitzKlar, testRuineInVolksfarbe, testRuinen,
            testSchleier, testAntwortAufSchild, testSchildUndSchatten, testAnsagen,
-           testRuinenOhneMigration, testRuinTabelle]
+           testHerzenVollUndLeer, testHerzBruch, testNebelUeberlebtDenTakt,
+           testRuinenOhneMigration, testDbHinweisSchweigt, testRuinTabelle]
 };
 
 (async () => {
