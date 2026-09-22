@@ -270,6 +270,7 @@
   let panInline = null, panPick = null;   // die zwei Zoom-Hüllen der Karte
   let markPaint = null;     // malt die erreichbaren Felder (freie Wahl)
   let lastSetsChangedAt = null; // 0157: zuletzt gesehener sets_changed_at-Wert
+  let endeBusy = false;     // 0167: das Rundenende wird gerade nachgestellt
 
   /* ─── Slot → Volk (Migration 0133) ──────────────────────────
      `factions` ist die Übersetzungstabelle des Servers:
@@ -3095,8 +3096,22 @@
           <div class="wi-arena">
             <header class="wi-bar">
               <span class="wi-arenatitle">⛵ Myth of Wordisland</span>
+              <!-- Ein Auswahlfeld statt des einen Knopfes (0167,
+                   Vorbild Kingdoms). Es ist ein BEFEHL und keine
+                   Zustandsanzeige: nach jeder Wahl springt es auf
+                   den Platzhalter zurück, und was gerade gilt, steht
+                   links daneben in der Uhr. So kann es nach einem
+                   Neuladen nichts Falsches behaupten — die gewählte
+                   Restzeit steht nirgends auf dem Server (0167). -->
               <div class="wi-clock"><b data-part="clock">–</b>
-                <button class="wi-btn wi-btn--ghost" data-part="stop">Runde beenden</button></div>
+                <select class="wi-endsel" data-part="endsel" aria-label="Rundenende">
+                  <option value="" selected>Runde beenden …</option>
+                  <option value="now">jetzt beenden</option>
+                  <option value="60">in 1 Minute</option>
+                  <option value="120">in 2 Minuten</option>
+                  <option value="180">in 3 Minuten</option>
+                  <option value="300">in 5 Minuten</option>
+                </select></div>
             </header>
             <div class="wi-mapwrap" data-part="mapwrap"><svg class="wi-map" data-part="map"></svg></div>
           </div>
@@ -3192,7 +3207,7 @@
       pick: q('pick'), lobbyTeams: q('lobbyteams'), waiting: q('waiting'),
       start: q('start'),
       beam: q('beam'), rostLeft: q('rost-left'), rostRight: q('rost-right'),
-      clock: q('clock'), big: q('big'),
+      clock: q('clock'), endSel: q('endsel'), big: q('big'),
       map: q('map'), mapwrap: q('mapwrap'),
       winner: q('winner'), podium: q('podium'), endRest: q('end-rest'), hard: q('hard'),
       rulWrap: q('rulwrap')
@@ -3252,9 +3267,51 @@
     });
     q('start').addEventListener('click', onStart);
     q('again').addEventListener('click', onBackToLobby);
-    q('stop').addEventListener('click', async () => {
-      if (!await ctx.confirm('Runde jetzt beenden?')) return;
-      await ctx.actions.call('wi_room_end', {});
+    /* ── Das Rundenende (0167) ─────────────────────────────────
+       Sönke: „der Countdown läuft, aber ich kann die Zeit
+       nachträglich ändern." Zwei verschiedene Vorgänge in einem
+       Feld, und das mit Absicht: die Lehrkraft denkt an dieser
+       Stelle über das Ende der Runde nach, nicht über zwei
+       Werkzeuge.
+
+       „Jetzt" geht weiter über wi_room_end — das setzt Phase und
+       Sieger selbst. Eine Restzeit von null Sekunden täte das
+       nicht, sie wartete auf den nächsten Takt.
+
+       Gefragt wird nur beim sofortigen Beenden: eine Runde, die in
+       drei Minuten endet, lässt sich in derselben Sekunde wieder
+       umstellen — ein Rückfragefenster dafür wäre eine Bremse ohne
+       Nutzen. */
+    els.endSel.addEventListener('change', async () => {
+      const wahl = els.endSel.value;
+      els.endSel.value = '';                 // das Feld zeigt keinen Zustand an
+      if (!wahl) return;
+
+      if (wahl === 'now') {
+        if (!await ctx.confirm('Runde jetzt beenden?')) return;
+        endeBusy = true; els.endSel.disabled = true;
+        const r = await ctx.actions.call('wi_room_end', {});
+        endeBusy = false; els.endSel.disabled = false;
+        if (r && !r.ok) return ctx.toast(ctx.errText(r.error));
+        tick(true);
+        return;
+      }
+
+      const secs = parseInt(wahl, 10);
+      endeBusy = true; els.endSel.disabled = true;
+      const r = await ctx.actions.call('wi_room_set_end', { p_secs: secs });
+      endeBusy = false; els.endSel.disabled = false;
+      if (!r || !r.ok) {
+        /* 'not_running' kennt die allgemeine Liste in lib/tool.js
+           nicht — und „Unerwarteter Fehler (not_running)" wäre in
+           der Sekunde, in der die Runde gerade abgelaufen ist, eine
+           Zumutung. */
+        return ctx.toast((r && r.error) === 'not_running'
+          ? 'Die Runde läuft gerade nicht.'
+          : ctx.errText((r && r.error) || 'network'));
+      }
+      ctx.toast(`Die Runde endet in ${secs / 60} ` +
+                `${secs === 60 ? 'Minute' : 'Minuten'}.`);
       tick(true);
     });
 
@@ -3812,21 +3869,28 @@
   }
 
   /* Der Satz unter der Dauer wird ERZEUGT, nicht getippt: die Größe
-     der Insel folgt aus Kinderzahl und Dauer (wi_build_island, 1,6
-     Felder je Kind und Minute, gedeckelt auf 80..900). Stünde hier
-     eine feste Zahl, liefe sie beim ersten Nachjustieren des Faktors
-     im Server auseinander. */
+     der Insel folgt aus Kinderzahl und Dauer (wi_build_island,
+     gedeckelt auf 80..900 Felder). Stünde hier eine feste Zahl,
+     liefe sie beim ersten Nachjustieren im Server auseinander.
+
+     Seit 0166 ist der Faktor kein Erfahrungswert mehr, sondern ein
+     Produkt: Antworten je Kind und Minute (2,0) mal dem Anteil der
+     Runde, der dem Aufdecken gehört (ein Drittel). Die Zahl der
+     VÖLKER geht nicht ein — sie ändert nur, wie weit die Landeplätze
+     auseinanderliegen. */
+  const FELDER_JE_KIND_MIN = 2.0 / 3;   // spiegelt c_per_kid im Server
   function durText(v) {
     const min = Math.round((v.duration || 600) / 60);
     // Stillgelegte zählen nicht mit (0152) — der Server baut die
     // Insel für dieselbe Menge, und zwei Zahlen, die dasselbe meinen
     // und auseinanderlaufen, sind schlimmer als eine ungenaue.
     const kids = mitspieler(v).length;
-    const tiles = Math.round(Math.max(80, Math.min(900, Math.max(kids, 4) * 1.6 * min)));
+    const tiles = Math.round(Math.max(80, Math.min(900,
+                    Math.max(kids, 4) * FELDER_JE_KIND_MIN * min)));
     return `${min} Minuten` + (kids
       ? ` — bei ${kids} ${kids === 1 ? 'Kind' : 'Kindern'} eine Insel aus etwa ${tiles} Feldern.`
       : ' — die Größe der Insel folgt aus Dauer und Zahl der Kinder.') +
-      ' Der Nebel ist nach knapp der halben Zeit weg; danach nimmt man sich Land.';
+      ' Der Nebel ist nach rund einem Drittel der Zeit weg; danach geht es um Land und Ruinen.';
   }
 
   /* Wer in dieser Runde überhaupt vorkommt. Ein stillgelegtes Tablet
@@ -3958,6 +4022,11 @@
 
     fuelleRoster(v);
     els.clock.textContent = fmtLeft(v.ends_at);
+    /* Während der fünf Sekunden Countdown gibt es noch kein
+       `ends_at` — es entsteht erst beim Umschalten auf 'running' und
+       überschriebe alles hier Gesetzte (0167). Statt den Aufruf ins
+       Leere laufen zu lassen, steht das Feld so lange still. */
+    if (els.endSel) els.endSel.disabled = endeBusy || (v.phase !== 'running');
     els.big.hidden = (v.phase !== 'countdown');
     /* Nach jedem Zeichnen messen: die Spalten werden gerade neu
        gefüllt, und ihre Breite entscheidet, wie breit die Karte sein

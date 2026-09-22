@@ -49,6 +49,35 @@ function makeEnv() {
   window.document = document;
   if (!document.hidden) document.hidden = false;
 
+  /* ⚠️ `select.value` ist in linkedom NUR lesbar — im Browser ist es
+     beschreibbar, und das Rundenende (0167) setzt es nach jeder Wahl
+     auf den Platzhalter zurück. Ohne diese Nachrüstung wirft die
+     echte tool.js hier eine Ausnahme, die es im Browser nicht gibt.
+     Gesetzt wird, was ein Browser auch tut: die passende Option wird
+     zur gewählten. */
+  const selProto = Object.getPrototypeOf(document.createElement('select'));
+  const optWert = o => (o.getAttribute('value') != null ? o.getAttribute('value') : o.textContent);
+  Object.defineProperty(selProto, 'value', {
+    configurable: true,
+    /* Ohne Markierung gilt die erste Option — das tut ein Browser
+       auch, und unsere Platzhalter-Option trägt sie ohnehin. */
+    get() {
+      const o = this.querySelector('option[selected]') || this.querySelector('option');
+      return o ? optWert(o) : '';
+    },
+    /* ⚠️ Hier werden ATTRIBUTE gesetzt und nicht `option.selected`.
+       Linkedoms Setter räumt bei JEDEM Schreiben die bisher gewählte
+       Option ab — auch beim Schreiben von `false`. Eine Schleife
+       „alle false, die passende true" löscht ihre eigene Wahl damit
+       wieder, sobald danach noch eine Option kommt. */
+    set(v) {
+      for (const o of this.querySelectorAll('option')) {
+        if (optWert(o) === String(v)) o.setAttribute('selected', '');
+        else o.removeAttribute('selected');
+      }
+    }
+  });
+
   const impls = {};
   window.MPTool = { register: (id, impl) => { impls[id] = impl; } };
 
@@ -98,6 +127,12 @@ function makeEnv() {
 
 const click = (el, doc) => el.dispatchEvent(new doc.defaultView.Event('click', { bubbles: true }));
 const wait = ms => new Promise(r => setTimeout(r, ms));
+/* Eine Wahl in einem Auswahlfeld — setzen UND melden, in dieser
+   Reihenfolge, genau wie es ein Finger täte. */
+const waehle = (el, wert, doc) => {
+  el.value = wert;
+  return el.dispatchEvent(new doc.defaultView.Event('change', { bubbles: true }));
+};
 
 /* ─── Eine Antwort abschicken ───────────────────────────────
    Das Antwortfeld ist seit 11.09.2026 kein <input> in einem <form>
@@ -6523,9 +6558,218 @@ async function testSiegerTablet() {
   tool.unmount();
 }
 
+/* ─── Die versprochene Inselgröße (0166) ─────────────────────────
+   Der Satz unter der Dauer („eine Insel aus etwa 320 Feldern")
+   rechnet im GERÄT, die Insel entsteht im SERVER. Das sind zwei
+   Stellen mit derselben Zahl — also wird hier nicht geprüft, ob 320
+   dasteht, sondern ob beide Stellen dasselbe sagen: die Konstanten
+   werden aus der jüngsten Migration gelesen, die wi_build_island
+   erklärt. Dieselbe Bauweise wie testRuinTabelle.
+
+   Ohne diese Zusage verspricht die Lobby nach dem nächsten
+   Nachjustieren eine Insel, die der Server gar nicht baut — und das
+   fällt niemandem auf, weil beide Zahlen für sich plausibel sind. */
+async function testInselgroesse() {
+  console.log('\n— Inselgröße: Lobby und Server rechnen gleich —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+
+  const KINDER = 24, MINUTEN = 20;
+  const leute = [];
+  for (let i = 1; i <= KINDER; i++)
+    leute.push({ seat: i, name: 'Kind ' + i, team: i % 4, online: true, correct: 0, wrong: 0 });
+
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'presenter',
+    actions: {
+      role: 'presenter',
+      call: (fn, args) => {
+        if (fn === 'wi_sets_list') return Promise.resolve({ ok: true, chosen: [], sets: [] });
+        if (fn === 'wi_room_get') {
+          return Promise.resolve({
+            ok: true, role: 'presenter', phase: 'lobby', mode: 'type', direction: 'mixed',
+            team_count: 4, factions: [0, 1, 2, 3], duration: MINUTEN * 60, radius: 5, seed: 1,
+            teams: [], map_key: 'raum:lobby', map: [], own: '',
+            ends_at: null, countdown_ends_at: null, winner_team: null, sets: [],
+            online_count: KINDER, room_total: KINDER, people: leute
+          });
+        }
+        return Promise.resolve({ ok: true });
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+
+  const satz = root.querySelector('[data-part="durtext"]').textContent;
+  const traf = /eine Insel aus etwa (\d+) Feldern/.exec(satz);
+  ok('die Lobby nennt eine Feldzahl', !!traf, satz);
+  ok('… und sagt, wie lange davon Nebel liegt',
+     /einem Drittel/.test(satz), satz);
+
+  /* Die jüngste Migration, die wi_build_island erklärt. */
+  const migDir = path.join(HERE, '..', '..', '..', '..', 'supabase', 'migrations');
+  const quellen = fs.readdirSync(migDir).filter(f => f.endsWith('.sql')).sort()
+    .filter(f => /create or replace function wi_build_island/
+                   .test(fs.readFileSync(path.join(migDir, f), 'utf8')));
+  ok('es gibt eine Migration mit wi_build_island', quellen.length >= 1, quellen.join(' '));
+  const sql = fs.readFileSync(path.join(migDir, quellen[quellen.length - 1]), 'utf8');
+
+  /* c_per_kid steht seit 0166 als PRODUKT da (Antworten je Minute ×
+     Nebel-Anteil). Gelesen wird beides einzeln — wer nur eine der
+     zwei Zahlen ändert, soll hier auflaufen. */
+  const mA = /c_antworten constant real := ([\d.]+)/.exec(sql);
+  const mN = /c_nebel\s+constant real := ([\d.]+)\s*\/\s*([\d.]+)/.exec(sql);
+  ok('der Server nennt Antworten je Minute und Nebel-Anteil',
+     !!mA && !!mN, `${mA && mA[1]} · ${mN && mN[1]}/${mN && mN[2]}`);
+
+  const jeKindMin = (+mA[1]) * (+mN[1] / +mN[2]);
+  const erwartet = Math.round(Math.max(80, Math.min(900, KINDER * jeKindMin * MINUTEN)));
+  ok(`${KINDER} Kinder × ${MINUTEN} min: Lobby und Server kommen auf dieselbe Zahl`,
+     +traf[1] === erwartet, `Lobby ${traf[1]} · Server ${erwartet}`);
+  /* Der Deckel darf hier nicht greifen, sonst wäre die Zusage oben
+     grün, ohne je den Faktor angesehen zu haben. */
+  ok('… und die Zahl kommt wirklich aus dem Faktor, nicht aus einem Deckel',
+     erwartet > 80 && erwartet < 900, String(erwartet));
+
+  tool.unmount();
+}
+
+/* ─── Das Rundenende lässt sich nachstellen (0167) ───────────────
+   Sönke, 22.09.2026: „der Countdown läuft, aber ich kann die Zeit
+   nachträglich ändern … jetzt beenden, in 1 min, in 2 min, in 3 min
+   oder in 5 min."
+
+   Geprüft wird das, was eine Lehrkraft mitten in der Stunde merken
+   würde und sonst niemand: dass die Wahl wirklich als Sekundenzahl
+   hinausgeht, dass das Feld danach nicht behauptet, die Runde ende
+   „in 3 Minuten" (es ist ein Befehl und keine Anzeige), dass nur das
+   sofortige Beenden eine Rückfrage stellt — und dass der Satz bei
+   einer abgelehnten Antwort verständlich bleibt. */
+async function testRundenende() {
+  console.log('\n— Rundenende nachstellen (0167) —');
+  const { document, impls, ctxBase } = makeEnv();
+  const tool = impls.wordisland;
+
+  const calls = [];
+  let phase = 'running';
+  let antwort = { ok: true };       // was wi_room_set_end sagt
+  let gefragt = 0, jaSagen = true;  // die Rückfrage
+
+  const ctx = Object.assign({}, ctxBase, {
+    role: 'presenter',
+    confirm: () => { gefragt++; return Promise.resolve(jaSagen); },
+    actions: {
+      role: 'presenter',
+      call: (fn, args) => {
+        calls.push([fn, args]);
+        if (fn === 'wi_sets_list') return Promise.resolve({ ok: true, chosen: [], sets: [] });
+        if (fn === 'wi_room_set_end') return Promise.resolve(antwort);
+        if (fn === 'wi_room_get') {
+          return Promise.resolve({
+            ok: true, role: 'presenter', phase, mode: 'type', direction: 'mixed',
+            team_count: 2, factions: [0, 1], duration: 600, radius: 5, seed: 1,
+            teams: [{ i: 0, tiles: 4, ruins: 0, score: 4, people: 1 },
+                    { i: 1, tiles: 2, ruins: 0, score: 2, people: 1 }],
+            map_key: 'raum:1', map: args && args.p_full ? MAP : null, own: OWN_START,
+            ends_at: new Date(Date.now() + 420000).toISOString(),
+            countdown_ends_at: null, winner_team: null, sets: [],
+            online_count: 2, room_total: 2, people: []
+          });
+        }
+        return Promise.resolve({ ok: true });
+      }
+    }
+  });
+
+  const root = document.getElementById('root');
+  tool.mount(root, ctx);
+  await wait(60);
+
+  const feld = root.querySelector('[data-part="endsel"]');
+  ok('das Rundenende steht als Auswahlfeld in der Uhrenzeile',
+     !!feld && feld.closest('.wi-clock') !== null);
+  const werte = [...feld.querySelectorAll('option')].map(o => o.getAttribute('value'));
+  ok('Platzhalter, „jetzt" und vier Zeiten',
+     js(werte) === js(['', 'now', '60', '120', '180', '300']), js(werte));
+  ok('der Platzhalter nennt den alten Knopf beim Namen',
+     /Runde beenden/.test(feld.querySelector('option').textContent),
+     feld.querySelector('option').textContent);
+
+  /* ── Eine Zeit wählen ─────────────────────────────────────── */
+  ctxBase.toasts.length = 0;
+  waehle(feld, '180', document);
+  await wait(60);
+  const setzen = calls.find(([fn]) => fn === 'wi_room_set_end');
+  ok('die Wahl geht als Sekundenzahl an den Server',
+     !!setzen && setzen[1].p_secs === 180, js(setzen && setzen[1]));
+  ok('… ohne Rückfrage — das lässt sich sofort wieder umstellen',
+     gefragt === 0, String(gefragt));
+  /* Das Feld ist ein BEFEHL: stünde „in 3 Minuten" darin, behauptete
+     es nach jedem Neuladen etwas, das der Server gar nicht speichert. */
+  ok('das Feld springt auf den Platzhalter zurück',
+     feld.value === '', js(feld.value));
+  ok('und sagt kurz, was jetzt gilt',
+     ctxBase.toasts.some(t => /3 Minuten/.test(t)), js(ctxBase.toasts));
+
+  /* ── Eine Minute heißt EINE Minute ────────────────────────── */
+  ctxBase.toasts.length = 0;
+  waehle(feld, '60', document);
+  await wait(60);
+  ok('bei einer Minute steht die Einzahl da',
+     ctxBase.toasts.some(t => /in 1 Minute\./.test(t)), js(ctxBase.toasts));
+
+  /* ── Der Server lehnt ab ──────────────────────────────────── */
+  ctxBase.toasts.length = 0;
+  antwort = { ok: false, error: 'not_running' };
+  waehle(feld, '120', document);
+  await wait(60);
+  /* 'not_running' steht in keiner allgemeinen Fehlerliste — ohne
+     eigenen Satz stünde hier „Fehler: not_running" (im Browser:
+     „Unerwarteter Fehler (not_running)"). */
+  ok('eine abgelehnte Antwort wird übersetzt',
+     ctxBase.toasts.length === 1 && !/not_running/.test(ctxBase.toasts[0]),
+     js(ctxBase.toasts));
+  ok('… und das Feld bleibt bedienbar', feld.disabled === false);
+  antwort = { ok: true };
+
+  /* ── „Jetzt beenden" ist der andere Vorgang ───────────────── */
+  calls.length = 0;
+  jaSagen = false;
+  waehle(feld, 'now', document);
+  await wait(60);
+  ok('sofortiges Beenden fragt nach', gefragt === 1, String(gefragt));
+  ok('… und tut bei „nein" nichts',
+     !calls.some(([fn]) => fn === 'wi_room_end'), js(calls.map(c => c[0])));
+
+  jaSagen = true;
+  waehle(feld, 'now', document);
+  await wait(60);
+  ok('bei „ja" geht wi_room_end hinaus — nicht wi_room_set_end',
+     calls.some(([fn]) => fn === 'wi_room_end') &&
+     !calls.some(([fn]) => fn === 'wi_room_set_end'),
+     js(calls.map(c => c[0])));
+
+  /* ── Im Countdown gibt es noch kein Rundenende ──────────────
+     Gewartet wird auf den echten Takt des Pults (POLL_MS.presenter,
+     3 s) und nicht auf ein von Hand ausgelöstes tick(): dass die
+     Sperre auch dann greift, wenn NIEMAND etwas anfasst, ist genau
+     die Zusage. */
+  phase = 'countdown';
+  await wait(3300);
+  ok('während des Countdowns steht das Feld still', feld.disabled === true);
+  phase = 'running';
+  await wait(3300);
+  ok('… und danach wieder zur Verfügung', feld.disabled === false);
+
+  tool.unmount();
+}
+
 const BEREICHE = {
   raum: [testTablet, testAuswahlTakt, testTaktTabelle, testTabletLobby,
-         testNewRound, testRelief, testPult, testPultUnits,
+         testNewRound, testRelief, testPult, testInselgroesse, testRundenende, testPultUnits,
          testPultWoerter, testWoerterOhneMigration,
          testFehlendeMigration, testOhneMigration, testLobbyRegeln,
          testStillgelegt, testSiegerPult, testSiegerTablet],

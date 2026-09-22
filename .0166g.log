@@ -1,0 +1,16 @@
+— 0130 … 0158 + 0165 laufen durch —
+
+  vorher:  22 Kinder × 10 min → 411 Felder
+
+— 0166 läuft durch —
+
+  nachher: 22 Kinder × 10 min → 451 Felder
+
+FAIL  22 Kinder × 10 min: Nebel nach rund einem Drittel weg   451 Felder von 440 Antworten = 102 %
+FAIL  30 Kinder × 10 min: Nebel nach rund einem Drittel weg   616 Felder von 600 Antworten = 103 %
+FAIL  24 Kinder × 20 min: Nebel nach rund einem Drittel weg   884 Felder von 960 Antworten = 92 %
+FAIL  16 Kinder × 15 min: Nebel nach rund einem Drittel weg   491 Felder von 480 Antworten = 102 %
+FAIL  30 Kinder × 20 min: Nebel nach rund einem Drittel weg   885 Felder von 1200 Antworten = 74 %
+FAIL  Sönkes Runde: aus rund 400 Feldern werden rund 150   411 → 451
+FAIL  doppelte Zeit, doppelte Insel   492 → 884
+FAIL  halb so viele Kinder, halbe Insel   884 → 492

@@ -109,7 +109,18 @@
       "WebFetch(domain:api.github.com)",
       "Bash(git check-ignore *)",
       "Bash(python -c \"import pypdf; print\\('pypdf ok'\\)\")",
-      "PowerShell(Get-CimInstance *)"
+      "PowerShell(Get-CimInstance *)",
+      "Bash(iconv -f UTF-16LE -t UTF-8 MPSkills/tools/clash-of-math/tool.js)",
+      "Read(//tmp/**)",
+      "PowerShell(Select-String *)",
+      "Bash(cp supabase/migrations/0166_wordisland_bigger_islands.sql .tmptest/0166.bak)",
+      "Bash(sed -i 's|c_groesse  constant real := 1.2;|c_groesse  constant real := 1.0;|' supabase/migrations/0166_wordisland_bigger_islands.sql)",
+      "Bash(sed -n '/create table if not exists wi_players/,/\\);/p' supabase/migrations/0131_wordisland_game.sql)",
+      "Bash(sed -n '/create table if not exists wi_tiles/,/\\);/p' supabase/migrations/0131_wordisland_game.sql)",
+      "Bash(sed -n '/create table if not exists wi_round_words/,/\\);/p' supabase/migrations/0153_wordisland_round_words.sql)",
+      "Bash(node supabase/tests/migrationscheck.mjs)",
+      "Bash(rm -f .mc.log)",
+      "Bash(grep -E \"^FAIL|Fehler\\\\.$|^ok\" .0166g.log)"
     ]
   }
 }

@@ -1004,6 +1004,33 @@
   letter-spacing: .02em;
   color: var(--ink);
 }
+/* Das Rundenende (0167). Sieht aus wie der Knopf, der hier vorher
+   stand (.wi-btn--ghost) — es ist derselbe Griff, nur mit mehr
+   Antworten. `appearance: none` samt eigenem Pfeil, sonst malt jedes
+   System etwas anderes neben eine Leiste, die am Beamer hängt. */
+.wi-endsel {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  border-radius: var(--r-pill, 999px);
+  padding: 10px 34px 10px 18px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-size: 6px 6px, 6px 6px;
+  background-position: right 17px center, right 11px center;
+  background-repeat: no-repeat;
+  transition: border-color .15s ease;
+}
+.wi-endsel:hover { border-color: var(--accent); }
+.wi-endsel:disabled { opacity: .5; cursor: not-allowed; }
+/* Die Liste selbst erbt das nicht — sie wird vom System gemalt, und
+   auf dunklem Grund wäre sie sonst weiß auf weiß. */
+.wi-endsel option { color: var(--ink); background: var(--paper); }
 
 .wi-big {
   position: absolute;

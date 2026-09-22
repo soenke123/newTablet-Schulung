@@ -94,6 +94,18 @@ pruef(nr, was, treffer, merkmal) as (
      (select hearts_full = 0 from wi_ruin_def('klo')),
      'ohne: jede Ruine kostet einen Treffer mehr'),
 
+    -- Erkennbar nur am Rumpf: die Signatur ist seit 0131 dieselbe.
+    -- ⚠️ Gesucht wird `c_nebel`. Eine frueher verschickte, nie
+    -- eingespielte Fassung von 0166 hatte statt dessen `c_groesse`
+    -- und machte die Inseln GROESSER — die meldet hier FEHLT.
+    ('0166', 'Inselgroesse aus dem Nebel-Anteil',
+     (select bool_or(src like '%c_nebel%') from def where proname = 'wi_build_island'),
+     'ohne: Insel rund dreimal zu gross, die Runde besteht nur aus Nebel'),
+
+    ('0167', 'wi_room_set_end',
+     (select count(*) > 0 from funk where proname = 'wi_room_set_end'),
+     'ohne: Rundenende laesst sich nicht nachstellen (Fehlermeldung am Pult)'),
+
     -- ── Die eigene Insel ───────────────────────────────────────
     ('0136', 'wi_solo_learners',
      (select count(*) > 0 from spalte where tab = 'wi_solo_learners' and sp = 'token'),
