@@ -1314,6 +1314,10 @@
    genau auf den Feldern, die angetippt werden sollen. Ohne diese
    Zeile markiert die Karte das Ziel und schluckt den Tipp. */
 .wi-hearts, .wi-guards, .wi-marks,
+/* Und die schlimmste von allen: der Schleier (22.09.2026) deckt beim
+   Wählen zwei Drittel der Insel ab. Ohne diese Zeile wäre die Karte
+   in genau dem Augenblick tot, in dem sie angetippt werden soll. */
+.wi-veil,
 /* Auf der flachen Karte (16.09.2026) kommen zwei Schichten dazu, die
    beide über den Kacheln liegen: die Unterlage in der Naht und der
    Rahmen um ein Volksgebiet. Der Rahmen ist der gefährlichere von
@@ -1486,8 +1490,66 @@
   0%, 100% { opacity: .62; }
   50%      { opacity: 1; }
 }
+
+/* ── Eine einnehmbare RUINE ──────────────────────────────────
+   Sönke, 22.09.2026: „wenn sie einnehmbar sind, muss das noch besser
+   gehighlightet sein." Derselbe Ring, kräftiger — und darum herum
+   ein zweiter, weiterer, der GEGENLÄUFIG pulst. Zwei Ringe im
+   gleichen Takt wären ein dicker Ring; gegenläufig entsteht die
+   Bewegung von innen nach außen, die man aus dem Augenwinkel sieht.
+
+   Der äußere liegt außerhalb der Kachel (MARK_AURA in tool.js) und
+   bleibt damit sichtbar, wenn der Finger schon auf dem Feld steht. */
+.wi-mark--ruin {
+  fill: rgba(255, 190, 46, .30);
+  stroke-width: .15;
+}
+.wi-aura {
+  fill: none;
+  stroke: var(--wi-gold);
+  stroke-width: .10;
+  stroke-linejoin: round;
+  animation: wi-aura 1.9s ease-in-out infinite;
+}
+@keyframes wi-aura {
+  0%, 100% { opacity: .70; }
+  50%      { opacity: .18; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wi-mark { animation: none; opacity: .9; }
+  .wi-aura { animation: none; opacity: .5; }
+}
+
+/* ── Der Schleier ────────────────────────────────────────────
+   Beim Wählen wird alles blass, was weder einem selbst gehört noch
+   erreichbar ist (veilLayer in tool.js). Hier steht nur der
+   Übergang: die Karte soll nicht umspringen, sondern zurücktreten —
+   und beim Zumachen genauso wiederkommen. Farbe und Deckung rechnet
+   tool.js, sie gehören zur Karte und nicht zum Blatt. */
+.wi-veil { transition: opacity .35s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .wi-veil { transition: none; }
+}
+
+/* ── Die Fassung um einen besonderen Ort ─────────────────────
+   Nur auf der flachen Karte, und dort IMMER — auch solange niemand
+   weiß, was dort steht. Zwei Striche auf demselben Weg: der breite
+   dunkle trägt, der schmale helle leuchtet darin.
+
+   Elfenbein und nicht Gold: Gold heißt auf dieser Karte „das kannst
+   du jetzt einnehmen". Ein Ort, der immer golden eingefasst wäre,
+   nähme der freien Wahl genau die Auskunft, die sie geben soll. */
+.wi-fass {
+  fill: none;
+  stroke: rgba(6, 20, 31, .68);
+  stroke-width: .19;
+  stroke-linejoin: round;
+}
+.wi-fass--hell {
+  stroke: #ffeec2;
+  stroke-width: .075;
+  opacity: .92;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -2022,6 +2084,16 @@
 .wi-rulmini { width: 28px; height: 28px; object-fit: contain; object-position: bottom; }
 .wi-rulwer { font-weight: 700; color: var(--ink); min-width: 7.5em; }
 .wi-rulherz { color: #e23c50; letter-spacing: 1px; }
+/* Das Klo hat seit 0165 gar kein Herz mehr — dort steht „sofort".
+   Kleiner und in Gold, damit die Spalte nicht so aussieht, als wäre
+   ein Wort in die Herzen gerutscht. */
+.wi-rulsofort {
+  color: var(--wi-gold);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
 .wi-rulpkt { font-variant-numeric: tabular-nums; }
 /* Die Fähigkeit ist der Grund, warum man hinschaut — sie steht
    deshalb rechts allein und nicht im Fließtext der Zeile. */

@@ -729,6 +729,17 @@
     1: { bild: 1.16, hoch: 1.05, halo: .30 },
     2: { bild: 1.44, hoch: 1.05, halo: .40 }
   };
+  /* Auf der flachen Karte ist der Schein GRÖSSER (Sönke, 22.09.2026:
+     „Die Ruinen müssen klarer erkennbar sein, gerade in der User-
+     Ansicht klar als besonderer Punkt"). Dort gibt es keinen
+     Weichzeichner — der Punkt ist eine harte kleine Scheibe und geht
+     zwischen den Waben unter, während er am Beamer weich ausläuft
+     und dadurch viel weiter reicht, als sein Radius sagt. */
+  const HALO_FLACH = 1.45;
+  /* Der weite Ring um eine EINNEHMBARE Ruine, in Kacheln. Er liegt
+     bewusst außerhalb des Feldes (> 1): innen ist schon die Marke,
+     und zwei Ringe auf derselben Fläche sind ein dicker Ring. */
+  const MARK_AURA = 1.32;
   /* Das Feld, auf dem ein Ort steht — dieselbe 1.0 wie im Relief.
      Als Konstante und nicht als Zahl an vier Stellen: sie IST die
      Zusage „die Felder sind gleich groß". */
@@ -760,18 +771,26 @@
      sieht für sich plausibel aus.
 
      `leben` ist Sönkes Zahl (das Feld selbst zählt mit), `herzen`
-     die Anzeige — ein Herz weniger. */
+     die Anzeige — ein Herz weniger.
+
+     ⚠️ Seit Migration 0165 (22.09.2026) hat jede Ruine ein Herz
+     WENIGER als in 0146: „Gebe alle Ruinen ein Herz weniger, sodass
+     sie schneller einnehmbar sind." Das Klo steht damit bei NULL
+     Herzen — das ist kein Fehlwert, sondern die Aussage „eine
+     einzige freie Wahl nimmt es ein". Erreichbar bleibt es trotzdem
+     nur über die Serie; das hängt am Server und nicht an den
+     Herzen. */
   const RUIN_DIR = 'tools/wordisland/sprites/ruine/';
   const RUINEN = {
-    K: { art: 'klo',      name: 'Klo',            leben: 2, herzen: 1, wert: 5,
+    K: { art: 'klo',      name: 'Klo',            leben: 1, herzen: 0, wert: 5,
          gross: false, img: 'klo.png',      kann: null },
-    T: { art: 'tor',      name: 'Torbogen',       leben: 3, herzen: 2, wert: 10,
+    T: { art: 'tor',      name: 'Torbogen',       leben: 2, herzen: 1, wert: 10,
          gross: false, img: 'tor.png',      kann: null },
-    A: { art: 'arena',    name: 'Arena',          leben: 4, herzen: 3, wert: 4,
+    A: { art: 'arena',    name: 'Arena',          leben: 3, herzen: 2, wert: 4,
          gross: true,  img: 'arena.png',    kann: 'Nimm mehr Land ein' },
-    L: { art: 'licht',    name: 'Lichttempel',    leben: 5, herzen: 4, wert: 5,
+    L: { art: 'licht',    name: 'Lichttempel',    leben: 4, herzen: 3, wert: 5,
          gross: true,  img: 'licht.png',    kann: 'Schütze deine Felder' },
-    S: { art: 'schatten', name: 'Schattentempel', leben: 5, herzen: 4, wert: 5,
+    S: { art: 'schatten', name: 'Schattentempel', leben: 4, herzen: 3, wert: 5,
          gross: true,  img: 'schatten.png', kann: 'Hol den Nebel zurück' }
   };
   const ruinSrc = k => RUINEN[k] ? encodeURI(RUIN_DIR + RUINEN[k].img) : '';
@@ -1899,13 +1918,52 @@
          Kachel; was mit der Klasse wächst, sind Bild, Lichtpunkt und
          Herzenreihe — und die stehen einzeln da. */
       const gg = el('g', { class: 'wi-place', transform: `translate(${n2(z.x)} ${n2(z.y)})` }, g);
+
+      /* ── Die Fassung ───────────────────────────────────────
+         Sönke, 22.09.2026: „Die Ruinen müssen klarer erkennbar sein,
+         die sollen gerade in der User-Ansicht klar als besonderer
+         Punkt erkennbar sein."
+
+         Auf der flachen Karte war ein unaufgedeckter Ort bis dahin
+         ein gelber Punkt von drei Zehntel Kachel — mehr nicht, denn
+         alles andere (Sockel, Gebäude, Herzen) steckt in `gBody` und
+         wird erst mit dem ersten Treffer sichtbar. Zwischen
+         vierhundert Waben ist das nichts.
+
+         Die Fassung liegt deshalb AUSSERHALB von gBody: sie ist
+         immer da. Sie sagt „hier ist ein Ort" und kein Wort darüber,
+         WELCHER — das bleibt die Frage aus 0146, und die Größe des
+         Scheins verrät weiterhin nur die Klasse.
+
+         Zwei Striche auf demselben Weg: außen ein breiter dunkler
+         (damit die Fassung auf jeder Bodenfarbe steht, auch auf
+         blassem Nebelgrau), darin ein schmaler elfenbeinfarbener.
+         ⚠️ Nicht in GOLD: Gold ist auf dieser Karte die Farbe für
+         „das kannst du jetzt einnehmen" (wi-mark). Eine goldene
+         Fassung an jedem Ort würde beim Wählen genau die
+         Unterscheidung einebnen, um die es Sönke im selben Satz
+         geht.
+
+         Nur am Tablet. Am Beamer steht jede Kachel auf ihrer eigenen
+         Geländehöhe, ein flacher Ring auf Höhe null läge quer durch
+         die Säule — und dort ist die Karte groß genug, dass die
+         Frage sich nicht stellt („am Board alles gut"). */
+      if (FLACH) {
+        const dFass = feldPfad(0, 0, PLACE_PLATTE);
+        el('path', { class: 'wi-fass', d: dFass }, gg);
+        el('path', { class: 'wi-fass wi-fass--hell', d: dFass }, gg);
+      }
+
       /* Was durch die Wolke dringt, ist der SCHEIN. Der Ort selbst
          bleibt verdeckt — sonst wäre der Nebel nur ein Farbfilter.
          Klein halten: mit dem Radius einer ganzen Kachel stehen auf
          dem Nebel zehn gelbe Flecken, die aussehen wie ein Fehler
          im Bild. Ein Licht im Nebel ist ein PUNKT mit Schein, keine
          Scheibe. */
-      const halo = el('circle', { class: 'wi-halo', r: n2(def.halo), fill: KARTE.gold, opacity: .6, filter: FB('b2') }, gg);
+      const halo = el('circle', {
+        class: 'wi-halo', r: n2(def.halo * (FLACH ? HALO_FLACH : 1)),
+        fill: KARTE.gold, opacity: .6, filter: FB('b2')
+      }, gg);
       const gBody = el('g', { opacity: 0 }, gg);
       el('ellipse', { cx: 0, cy: .30, rx: n2(.42 * def.bild), ry: .16, fill: 'rgba(0,0,0,.38)', filter: FB('b1') }, gBody);
       /* Der Sockel: gerodeter Boden, auf dem der Ort steht. Er
@@ -2053,6 +2111,115 @@
     };
   }
 
+  /* ─── Wohin darf ich? Einmal gerechnet, zweimal gebraucht ───
+     Die Marken (goldene Ringe) und der Schleier (alles andere wird
+     blass) sind zwei Seiten derselben Frage und liegen in zwei
+     Schichten weit auseinander — die eine ganz oben, die andere
+     direkt über dem Land. Gerechnet wird die Menge trotzdem nur
+     EINMAL je Zustand.
+
+     Die Regel steht in wi_pick_tile (0146) und ist kurz: ein Feld
+     gehört dazu, wenn es nicht Landeplatz ist, nicht dem eigenen
+     Volk gehört und an ein eigenes Feld grenzt. Ein eigener RPC
+     dafür wäre ein Gang zum Server je Antwort, und die Antwort
+     stünde vier Sekunden zu spät da. ⚠️ Wer die Regel dort ändert,
+     muss sie hier mitändern; der Server bleibt die Wahrheit, das
+     hier ist nur der Hinweis.
+
+     Der Schlüssel ist alles, was die Menge bestimmt. Ohne ihn würden
+     bei jedem Takt 400 Nachbarschaften durchgerechnet, obwohl sich
+     meist nichts geändert hat. `pickKey = null` heißt „noch gar
+     nichts gerechnet" und nicht „gerade wird nicht gewählt" — das
+     ist der leere String, und beides darf nicht dasselbe sein. */
+  let pickKey = null;
+  let pickMenge = new Set();
+  function pickCells(isl, own, mein, an) {
+    const key = !an ? '' : mein + '|' + own;
+    if (key === pickKey) return pickMenge;
+    pickKey = key;
+    const s = new Set();
+    if (an && own && mein != null && mein >= 0) {
+      const ich = String(mein);
+      for (const z of isl.cells) {
+        if (own[z.i] !== ich) continue;
+        for (const [nr, nc] of neighbors(z.r, z.c)) {
+          const n = isl.at(nr, nc);
+          if (!n || n.home || own[n.i] === ich) continue;
+          s.add(n);
+        }
+      }
+    }
+    pickMenge = s;
+    return s;
+  }
+
+  /* Auf welcher Höhe liegt die Deckfläche gerade? Nebel liegt flach
+     (.10), erobertes Land steht auf. Dieselben zwei Zahlen wie im
+     Relief — stünde hier eine dritte, läge der Ring in der Luft. Auf
+     der flachen Karte gibt es keine Höhe und also auch keinen
+     Versatz. */
+  const deckHoehe = (z, own) => FLACH ? .1 : (own[z.i] !== '.' ? z.hoch : .10);
+
+  /* ─── Der Schleier ──────────────────────────────────────────
+     Sönke, 22.09.2026: „Wenn ich Effekte nutzen will, muss auf der
+     Map klar gekennzeichnet sein, wo man etwas einnehmen kann —
+     vielleicht kann man den Teil entsättigen, der nicht einnehmbar
+     ist und nicht zu seinem Volk gehört?"
+
+     Genau das, und zwar wörtlich: NICHT einnehmbar UND NICHT meines.
+     Mein eigenes Gebiet bleibt kräftig, denn es ist die Antwort auf
+     „wo stehe ich", und die Ringe liegen an seinem Rand.
+
+     Entsättigt wird mit einer neutralen Wäsche und nicht mit
+     `filter: saturate()` oder einer Mischart: die erweiterten
+     Mischarten fehlen auf älteren iPads (siehe die Wasche auf den
+     Ruinen), und ein SVG-Filter rastert auf dem Tablet bei jeder
+     Zoomstufe neu — genau das, was die flache Karte losgeworden ist.
+     Eine halbdurchsichtige Fläche kostet nichts und tut optisch
+     dasselbe: die Farben rücken zusammen, die Helligkeit bleibt.
+
+     EIN Pfad für alle Felder. Das ist nicht nur billig, es ist die
+     Bedingung: zweihundert einzelne Kacheln mit .5 Deckung würden
+     sich an den Rändern überlappen und ein Wabenmuster aus doppelt
+     gedeckten Nähten zeichnen. In einem Pfad wird jede Fläche genau
+     einmal gefüllt, auch wo sich die Sechsecke überschneiden.
+
+     Er liegt ÜBER dem Land und UNTER den Orten, Fahnen und Schiffen:
+     ein Tempel oder ein Schiff hört nicht auf, ein besonderer Punkt
+     zu sein, nur weil man gerade nicht hinkommt — und Sönkes Satz
+     sagt „der Teil der Karte", nicht „alles". */
+  const SCHLEIER = '#55606f';
+  const SCHLEIER_DECK = .58;
+
+  function veilLayer(svg, isl) {
+    const p = el('path', {
+      class: 'wi-veil', d: '', fill: SCHLEIER, opacity: 0
+    }, svg);
+    let last = null;
+    return function paint(own, mein, an) {
+      const key = !an ? '' : mein + '|' + own;
+      if (key === last) return;
+      last = key;
+      if (!an) {
+        /* Der Pfad bleibt stehen: er blendet aus (CSS-Übergang), und
+           eine Fläche, die man gerade noch löscht, kann das nicht. */
+        p.setAttribute('opacity', 0);
+        return;
+      }
+      const frei = pickCells(isl, own, mein, an);
+      const ich = String(mein);
+      let d = '';
+      for (const z of isl.cells) {
+        if (own[z.i] === ich || frei.has(z)) continue;
+        /* 1.02 und nicht 1.0: die Naht zwischen zwei blassen Feldern
+           soll nicht als heller Strich stehen bleiben. */
+        d += feldPfad(z.x, z.y - deckHoehe(z, own) + .1, 1.02);
+      }
+      p.setAttribute('d', d);
+      p.setAttribute('opacity', SCHLEIER_DECK);
+    };
+  }
+
   /* ─── Die erreichbaren Felder ───────────────────────────────
      Sönke, 14.09.2026: „Die klickbaren Felder sind leicht markiert.
      Der Nebel ist nicht weg! Der bleibt."
@@ -2069,60 +2236,58 @@
      erreichbaren Felder liegen am Nebelrand. Über allem gezogen ist
      er in jeder Lage gleich gut zu sehen.
 
-     Gerechnet wird im Gerät und nicht gefragt: die Regel steht in
-     wi_pick_tile (0146) und ist kurz — ein Feld gehört dazu, wenn es
-     nicht Landeplatz ist, nicht dem eigenen Volk gehört und an ein
-     eigenes Feld grenzt. Ein eigener RPC dafür wäre ein Gang zum
-     Server je Antwort, und die Antwort stünde vier Sekunden zu spät
-     da. ⚠️ Wer die Regel dort ändert, muss sie hier mitändern; der
-     Server bleibt die Wahrheit, das hier ist nur der Hinweis.
+     Die Menge kommt aus pickCells (siehe oben) — dieselbe, aus der
+     auch der Schleier entsteht.
 
      Beim Schattentempel gibt es keine Marken: dort ist die ganze
      Insel erlaubt, und eine Karte mit 400 goldenen Ringen sagt
-     nichts. */
+     nichts.
+
+     ⚠️ Eine einnehmbare RUINE bekommt mehr (Sönke, 22.09.2026:
+     „wenn sie einnehmbar sind, muss das noch besser gehighlightet
+     sein"): denselben Ring kräftiger und darum herum einen zweiten,
+     weiteren, der gegenläufig pulst. Der zweite ist der eigentliche
+     Unterschied — er liegt AUSSERHALB der Kachel und ist damit auch
+     dann noch zu sehen, wenn der Finger schon auf dem Feld steht.
+     Gefragt wird `z.ruin`, also die KLASSE aus der Karte: die gibt
+     es auch im Nebel, und sie verrät weiterhin nicht, welcher Ort
+     dort steht. */
   function markLayer(svg, isl) {
     const g = el('g', { class: 'wi-marks' }, svg);
     const knoten = new Map();
     let last = '';
     return function paint(own, mein, an) {
-      /* Ein Schlüssel aus allem, was die Marken bestimmt. Ohne ihn
-         würden bei jedem Takt 400 Nachbarschaften durchgerechnet,
-         obwohl sich meist nichts geändert hat. */
       const key = !an ? '' : mein + '|' + own;
       if (key === last) return;
       last = key;
 
-      const zeigen = new Set();
-      if (an && own && mein != null && mein >= 0) {
-        const ich = String(mein);
-        for (const z of isl.cells) {
-          if (own[z.i] !== ich) continue;
-          for (const [nr, nc] of neighbors(z.r, z.c)) {
-            const n = isl.at(nr, nc);
-            if (!n || n.home || own[n.i] === ich) continue;
-            zeigen.add(n);
-          }
-        }
-      }
+      const zeigen = pickCells(isl, own, mein, an);
 
       for (const [i, k] of knoten) {
-        if (!zeigen.has(isl.cells[i])) { g.removeChild(k); knoten.delete(i); }
+        if (!zeigen.has(isl.cells[i])) { g.removeChild(k.el); knoten.delete(i); }
       }
       for (const z of zeigen) {
         /* Die Marke sitzt auf der DECKFLÄCHE und damit auf der Höhe,
-           auf der die Kachel gerade steht: Nebel liegt flach (.10),
-           erobertes Land steht auf. Dieselben zwei Zahlen wie im
-           Relief — stünde hier eine dritte, läge der Ring in der
-           Luft. Auf der flachen Karte gibt es keine Höhe und also
-           auch keinen Versatz. */
-        const h = FLACH ? .1 : (own[z.i] !== '.' ? z.hoch : .10);
-        const d = feldPfad(z.x, z.y - h + .1, .88);
+           auf der die Kachel gerade steht (deckHoehe). */
+        const y = z.y - deckHoehe(z, own) + .1;
+        const d = feldPfad(z.x, y, .88);
         let k = knoten.get(z.i);
         if (!k) {
-          k = el('path', { class: 'wi-mark', d }, g);
+          if (z.ruin) {
+            const gg = el('g', { class: 'wi-markruin' }, g);
+            k = {
+              el: gg,
+              aura: el('path', { class: 'wi-aura', d: feldPfad(z.x, y, MARK_AURA) }, gg),
+              mark: el('path', { class: 'wi-mark wi-mark--ruin', d }, gg)
+            };
+          } else {
+            const p = el('path', { class: 'wi-mark', d }, g);
+            k = { el: p, mark: p, aura: null };
+          }
           knoten.set(z.i, k);
         } else {
-          k.setAttribute('d', d);
+          k.mark.setAttribute('d', d);
+          if (k.aura) k.aura.setAttribute('d', feldPfad(z.x, y, MARK_AURA));
         }
       }
     };
@@ -2358,6 +2523,11 @@
     FLACH = mini;
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     cellEls = []; ships = {}; ownPainted = null; mapPaint = null; markPaint = null;
+    /* ⚠️ Der Speicher der erreichbaren Felder gehört zur KARTE: die
+       neue hat andere Zellobjekte, und ein Satz aus der alten würde
+       in `frei.has(z)` nie wieder treffen — der Schleier läge dann
+       auch über den Feldern, auf die man tippen soll. */
+    pickKey = null; pickMenge = new Set();
     svg.classList.toggle('wi-map--flach', mini);
 
     /* In der Lobby gibt es noch keine Insel (wi_tiles ist leer, bis
@@ -2464,6 +2634,19 @@
        Was er verbirgt, verbirgt die flache Karte genauso — eine
        gedeckte Wabe sagt „hier war noch niemand" und nichts sonst. */
     const fog = mini ? null : fogLayer(svg, isl, opt, .22);
+    /* Der Schleier direkt über dem Land und dem Nebel — und unter
+       allem, was auf der Karte STEHT (Orte, Fahnen, Schiffe). Siehe
+       veilLayer: entsättigt wird der Teil der Karte, nicht das Spiel
+       darauf. */
+    const veil = veilLayer(svg, isl);
+    /* ⚠️ Der Rahmen um ein Volksgebiet gehört ÜBER den Schleier.
+       flachLand legt ihn direkt über die Kacheln, also unter den
+       Schleier — und ein blass gewaschener Rahmen nähme der Karte
+       genau die Auskunft, für die er da ist („damit man sofort
+       sieht, das gehört zusammen"). Entsättigt wird die FLÄCHE; wem
+       sie gehört, bleibt scharf. Am Beamer gibt es ihn nicht. */
+    const areas = svg.querySelector('.wi-areas');
+    if (areas) svg.appendChild(areas);
     const flag = flagLayer(svg, isl);
     const place = placeLayer(svg, isl);
     const guard = guardLayer(svg, isl);
@@ -2476,13 +2659,16 @@
       land(own); if (fog) fog(own);
       place(own, ruins, hearts); guard(own, ruins, hearts);
       flag(own); ship(own);
-      /* Die Marken hängen nicht nur am Besitz, sondern auch an
-         `picks` — deshalb laufen sie über einen eigenen Aufruf
+      /* Marken und Schleier hängen nicht nur am Besitz, sondern auch
+         an `picks` — deshalb laufen sie über einen eigenen Aufruf
          (markieren) und werden hier nur mitgezogen, wenn sich die
          Karte bewegt hat. */
-      mark(own, meinSlot(), picking && !shadowPick);
+      markPaint(own, meinSlot(), picking && !shadowPick);
     };
-    markPaint = mark;
+    /* Beide zusammen, damit es an keiner Stelle nur die eine Hälfte
+       gibt: ein Schleier ohne Ringe wäre eine graue Karte ohne
+       Ausweg, Ringe ohne Schleier der Stand von gestern. */
+    markPaint = (own, mein, an) => { veil(own, mein, an); mark(own, mein, an); };
     return isl;
   }
 
@@ -4396,13 +4582,25 @@
      fünf rechnet, ist schlimmer als gar keine Erklärung. */
   const RUL_KLEIN = ['K', 'T'];
   const RUL_GROSS = ['L', 'S', 'A'];
+  /* Der Satz unter beiden Listen. Seit 0165 sagt er auch, was
+     „sofort" bedeutet — sonst wäre das Wort in der Herzenspalte eine
+     zweite Frage statt einer Antwort. */
+  const RUL_FUSS = 'Ein Herz = ein Treffer mehr, „sofort" = eine Wahl genügt. '
+                 + 'Ruinen fallen nur mit einer Serie.';
 
   function ruinZeile(k) {
     const R = RUINEN[k];
+    /* Null Herzen (Klo, seit 0165) ist eine AUSSAGE und keine
+       fehlende Angabe: eine Wahl genügt. Eine leere Spalte sähe aus,
+       als hätte jemand vergessen, die Zahl einzutragen — deshalb
+       steht dort ein Wort. */
+    const herz = R.herzen
+      ? `<span class="wi-rulherz" aria-label="${R.leben} Leben">${'♥'.repeat(R.herzen)}</span>`
+      : `<span class="wi-rulherz wi-rulsofort" aria-label="1 Leben">sofort</span>`;
     return `<li class="wi-rulitem">
         <img class="wi-rulmini" src="${esc(ruinSrc(k))}" alt="">
         <span class="wi-rulwer">${esc(R.name)}</span>
-        <span class="wi-rulherz" aria-label="${R.leben} Leben">${'♥'.repeat(R.herzen)}</span>
+        ${herz}
         <span class="wi-rulpkt">${R.wert} Punkte</span>
         ${R.kann ? `<span class="wi-rulkann">${esc(R.kann)}</span>` : ''}
       </li>`;
@@ -4448,10 +4646,10 @@
       body.innerHTML = klein
         ? `<p class="wi-rulsatz">Die geben dir Bonus-Punkte, solange sie dir gehören.</p>
            <ul class="wi-rullist">${RUL_KLEIN.map(ruinZeile).join('')}</ul>
-           <p class="wi-rulfuss">Ein Herz = ein Treffer mehr. Ruinen fallen nur mit einer Serie.</p>`
+           <p class="wi-rulfuss">${RUL_FUSS}</p>`
         : `<p class="wi-rulsatz">Nimm sie ein und erhalte ihre Fähigkeiten.</p>
            <ul class="wi-rullist">${RUL_GROSS.map(ruinZeile).join('')}</ul>
-           <p class="wi-rulfuss">Ein Herz = ein Treffer mehr. Ruinen fallen nur mit einer Serie.</p>`;
+           <p class="wi-rulfuss">${RUL_FUSS}</p>`;
       body.hidden = false;
     });
   }

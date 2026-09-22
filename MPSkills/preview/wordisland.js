@@ -104,8 +104,14 @@
        die Punktzahl. Beides sind dieselben Zahlen wie im Spiel — eine
        Vorschau, die anders rechnet als das, was sie zeigt, ist eine
        Werbung für ein anderes Spiel. */
+    /* ⚠️ Seit 0165 hängt die ANZAHL an der Inselgröße (ein Ort je
+       rund zwanzig Felder). Diese Insel hier hat R = 9, also knapp
+       150 Felder — nach derselben Rechnung je ein großer Ort und je
+       vier Tore und Klos. */
     const ruins = [];
-    const ARTEN = [[2, 5], [2, 5], [2, 4], [1, 10], [1, 10], [1, 10], [1, 5], [1, 5], [1, 5]];
+    const ARTEN = [[2, 5], [2, 5], [2, 4],
+                   [1, 10], [1, 10], [1, 10], [1, 10],
+                   [1, 5], [1, 5], [1, 5], [1, 5]];
     for (const [klasse, wert] of ARTEN) {
       const free = cells.filter(t => t.home < 0 && !t.ruin &&
         (klasse === 1 || t.d < 0.45 * R) && ruins.every(s =>

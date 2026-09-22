@@ -108,7 +108,8 @@
       "Bash(python -c \"print\\(1\\)\")",
       "WebFetch(domain:api.github.com)",
       "Bash(git check-ignore *)",
-      "Bash(python -c \"import pypdf; print\\('pypdf ok'\\)\")"
+      "Bash(python -c \"import pypdf; print\\('pypdf ok'\\)\")",
+      "PowerShell(Get-CimInstance *)"
     ]
   }
 }

@@ -5120,6 +5120,180 @@ async function testRuinen() {
   tool.unmount();
 }
 
+/* ═══════════════════════════════════════════════════════════
+   Der Schleier und die einnehmbare Ruine (22.09.2026)
+   ═══════════════════════════════════════════════════════════
+   Sönke: „Wenn ich Effekte nutzen will, muss auf der Map klar
+   gekennzeichnet sein, wo man etwas einnehmen kann — vielleicht kann
+   man den Teil entsättigen, der nicht einnehmbar ist und nicht zu
+   seinem Volk gehört? … Die Ruinen müssen klarer erkennbar sein …
+   und wenn sie einnehmbar sind, muss das noch besser gehighlightet
+   sein."
+
+   Geprüft wird nicht „es gibt einen Pfad", sondern WELCHE Felder
+   darunter liegen. Dafür wird der Schleierpfad rückwärts gelesen:
+   jede Teilfläche bekommt ihren Mittelpunkt, und der wird der
+   nächstgelegenen Kachel zugeordnet. Eine Zusage über die ANZAHL
+   allein wäre grün, auch wenn der Schleier genau auf den
+   erreichbaren Feldern läge. */
+function veilFelder(root) {
+  const p = root.querySelector('.wi-veil');
+  if (!p) return null;
+  const zellen = [...root.querySelectorAll('.wi-cell')].map(c => {
+    const m = /translate\(\s*(-?[\d.]+)\s+(-?[\d.]+)\s*\)/.exec(c.getAttribute('transform') || '');
+    return { i: +c.dataset.i, x: m ? +m[1] : 0, y: m ? +m[2] : 0 };
+  });
+  const out = new Set();
+  for (const teil of (p.getAttribute('d') || '').split('M').slice(1)) {
+    const ns = (teil.match(/-?\d+(?:\.\d+)?/g) || []).map(Number);
+    if (ns.length < 4) continue;
+    const xs = ns.filter((_, k) => k % 2 === 0), ys = ns.filter((_, k) => k % 2 === 1);
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    let best = null, bd = 9;
+    for (const z of zellen) {
+      const d = Math.hypot(z.x - cx, z.y - cy);
+      if (d < bd) { bd = d; best = z; }
+    }
+    if (best && bd < .3) out.add(best.i);
+  }
+  return out;
+}
+
+async function testSchleier() {
+  console.log('\n— Der Schleier und die einnehmbare Ruine —');
+  const len = RMAP.length;
+  /* Drei eigene Felder in einer Reihe (Landeplatz 0, dann 6 und 11).
+     Der GROSSE Ort liegt neben 6 und ist damit erreichbar, der kleine
+     liegt weit weg — so steht in einer Karte beides nebeneinander:
+     eine Ruine, die man jetzt holen kann, und eine, die man sieht,
+     aber nicht bekommt. */
+  const MEINE = [0, 6, 11];
+  const stand = {
+    own: zeichenkette(len, { 0: '0', 6: '0', 11: '0' }, '.'),
+    ruins: '.'.repeat(len),
+    hearts: zeichenkette(len, { [R_GROSS]: '3' }, '0'),
+    me: { picks: 1, streak: 3 }
+  };
+  const { tool, root, document } = await mountRuinen(stand, {
+    wi_pick_tile: () => {
+      /* Auch der SERVER hat die Wahl jetzt verbucht. Ein Mock, der
+         weiter `picks: 1` meldet, holt den Schleier beim nächsten
+         Takt zurück — und der Prüfstand sähe eine Kehrtwende, die es
+         gar nicht gibt. */
+      stand.me = { picks: 0, streak: 3 };
+      stand.ruins = zeichenkette(len, { [R_GROSS]: 'L' }, '.');
+      stand.hearts = zeichenkette(len, { [R_GROSS]: '2' }, '0');
+      return { ok: true, picks: 0, shadow_pick: 0, effect: null,
+               tile: { r: 1, c: 2, result: 'hit', ruin: 'licht', hearts: 2 } };
+    }
+  });
+
+  const marken = [...root.querySelectorAll('.wi-mark')];
+  ok('die erreichbaren Felder sind markiert', marken.length === 8, `${marken.length}`);
+
+  const blass = veilFelder(root);
+  ok('es gibt einen Schleier', !!blass);
+  ok('kein eigenes Feld liegt darunter',
+     MEINE.every(i => !blass.has(i)), [...blass].join(','));
+  ok('kein erreichbares Feld liegt darunter — auch die Ruine nicht',
+     !blass.has(R_GROSS) && !blass.has(2) && !blass.has(16), [...blass].join(','));
+  ok('alles andere schon', blass.size === len - MEINE.length - marken.length,
+     `${blass.size} von ${len}`);
+  ok('die Ruine, an die man nicht herankommt, ist blass',
+     blass.has(R_KLEIN), [...blass].join(','));
+  ok('und der Schleier ist auch wirklich zu sehen',
+     +root.querySelector('.wi-veil').getAttribute('opacity') > .3,
+     root.querySelector('.wi-veil').getAttribute('opacity'));
+
+  /* Die Reihenfolge im Bild ist die halbe Aussage: über dem Land
+     (sonst entsättigt er nichts) und unter den Orten, Fahnen und
+     Schiffen (die hören nicht auf zu gelten, nur weil man gerade
+     nicht hinkommt). */
+  const kinder = [...root.querySelectorAll('.wi-map > *')];
+  const lagen = kinder.map(x => x.getAttribute('class') || '(Land)');
+  const wo = k => kinder.findIndex(x => (x.getAttribute('class') || '').split(' ').includes(k));
+  ok('der Schleier liegt über dem Land',
+     wo('wi-veil') > kinder.indexOf(root.querySelector('.wi-cell').parentNode),
+     lagen.join(' | '));
+  /* Der Gebietsrahmen gehört darüber: entsättigt wird die FLÄCHE,
+     wem sie gehört bleibt scharf. */
+  ok('und unter Gebietsrahmen, Orten und Marken',
+     wo('wi-veil') < wo('wi-areas') && wo('wi-veil') < wo('wi-places') &&
+     wo('wi-veil') < wo('wi-marks'), lagen.join(' | '));
+  const css = fs.readFileSync(path.join(HERE, '..', 'tool.css'), 'utf8');
+  ok('und er nimmt keinen Fingertipp weg',
+     /\.wi-veil[^{]*\{[^}]*pointer-events:\s*none/.test(css.replace(/\n/g, ' ')));
+
+  /* ── Die einnehmbare Ruine sticht hervor ──────────────────── */
+  const ruinMarke = root.querySelectorAll('.wi-mark--ruin');
+  ok('die Ruine trägt eine eigene, kräftigere Marke', ruinMarke.length === 1,
+     `${ruinMarke.length}`);
+  ok('und einen zweiten Ring außen herum',
+     root.querySelectorAll('.wi-aura').length === 1);
+  const breite = sel => {
+    const m = new RegExp('\\' + sel + '[^{]*\\{[^}]*stroke-width:\\s*([\\d.]+)')
+      .exec(css.replace(/\n/g, ' '));
+    return m ? parseFloat(m[1]) : 0;
+  };
+  ok('die Ruinen-Marke ist dicker als eine gewöhnliche',
+     breite('.wi-mark--ruin') > breite('.wi-mark'),
+     `${breite('.wi-mark--ruin')} / ${breite('.wi-mark')}`);
+  /* Der äußere Ring liegt AUSSERHALB der Kachel — sonst ist er beim
+     Zielen unter dem Finger. Gemessen an der Deckfläche eines
+     gewöhnlichen Feldes und nicht an der Zahl im Quelltext.
+
+     ⚠️ Nur die GERADEN Zahlen eines Pfades sind x-Werte. Der ältere
+     Messer in testRuinen nimmt „alles, worauf ein Leerzeichen folgt"
+     — das geht nur bei einem Pfad um 0/0 gut, wo x und y denselben
+     Bereich haben. Ein Ring an seiner echten Stelle auf der Karte
+     bekäme sonst die Spanne von x UND y und wäre dreimal zu breit. */
+  const spanne = d => {
+    const ns = (d.match(/-?\d+(?:\.\d+)?/g) || []).map(Number);
+    const xs = ns.filter((_, k) => k % 2 === 0);
+    return xs.length ? Math.max(...xs) - Math.min(...xs) : 0;
+  };
+  const feldBreit = spanne(root.querySelector('.wi-cell').getAttribute('d'));
+  const aura = root.querySelector('.wi-aura');
+  const auraBreit = aura ? spanne(aura.getAttribute('d')) : 0;
+  ok('der äußere Ring steht über das Feld hinaus',
+     auraBreit > feldBreit * 1.15, `${auraBreit.toFixed(2)} / ${feldBreit.toFixed(2)}`);
+
+  /* ── Die Fassung: ein Ort ist auch UNAUFGEDECKT ein Ort ───── */
+  const fass = platz(root, 1).querySelector('.wi-fass');
+  ok('jeder Ort hat eine Fassung', !!fass && root.querySelectorAll('.wi-fass').length === 4);
+  ok('sie liegt außerhalb des Gebäudes — also auch im Nebel sichtbar',
+     !!fass && fass.parentNode.classList.contains('wi-place') &&
+     koerper(platz(root, 1)).getAttribute('opacity') === '0');
+  const fassBreit = fass ? spanne(fass.getAttribute('d')) : 0;
+  ok('die Fassung ist genau ein Feld breit',
+     Math.abs(fassBreit - feldBreit) < .02,
+     `${fassBreit.toFixed(2)} / ${feldBreit.toFixed(2)}`);
+  /* ⚠️ Nicht in Gold: Gold heißt auf dieser Karte „jetzt
+     einnehmbar". Eine goldene Fassung an jedem Ort nähme der freien
+     Wahl genau die Auskunft, um die es in derselben Meldung geht. */
+  ok('und nicht in der Farbe der freien Wahl',
+     !/\.wi-fass--hell[^{]*\{[^}]*var\(--wi-gold\)/.test(css.replace(/\n/g, ' ')));
+  /* Der Schein war auf dem Tablet der einzige Hinweis und dafür zu
+     klein — er misst jetzt mindestens vier Fünftel einer Kachel. */
+  const schein = 2 * +platz(root, 1).querySelector('.wi-halo').getAttribute('r');
+  ok('der Schein ist am Tablet groß genug zum Finden',
+     schein > feldBreit * .8, `${schein.toFixed(2)} / ${feldBreit.toFixed(2)}`);
+
+  /* ── Und wieder weg ────────────────────────────────────────
+     Der Schleier ist ein Zustand des WÄHLENS. Bleibt er nach der
+     verbrauchten Wahl stehen, ist die halbe Insel dauerhaft blass. */
+  click(root.querySelectorAll('.wi-cell')[R_GROSS], document);
+  await wait(60);
+  ok('nach der verbrauchten Wahl sind die Marken weg',
+     root.querySelectorAll('.wi-mark').length === 0);
+  ok('und der Schleier ist ausgeblendet',
+     +root.querySelector('.wi-veil').getAttribute('opacity') === 0,
+     root.querySelector('.wi-veil').getAttribute('opacity'));
+
+  tool.unmount();
+}
+
 /* Der zweite Weg, auf dem ein Herz fällt: nicht die freie Wahl,
    sondern der ganz normale Zufallsgriff nach einer richtigen
    Antwort. Er landet seit 0146 manchmal auf einem geschützten Feld
@@ -5726,9 +5900,23 @@ async function testRuinTabelle() {
   }
   ok('das Gerät kennt fünf Ruinen', Object.keys(imTool).length === 5, js(Object.keys(imTool)));
 
-  const sqlDatei = path.join(HERE, '..', '..', '..', '..',
-                             'supabase', 'migrations', '0146_wordisland_ruins.sql');
-  const sql = fs.existsSync(sqlDatei) ? fs.readFileSync(sqlDatei, 'utf8') : '';
+  /* ⚠️ NICHT fest auf 0146 zeigen. Die Balance steht in wi_ruin_def,
+     und die Funktion wird neu deklariert, sobald sich die Zahlen
+     ändern (0165: je ein Herz weniger). Maßgeblich ist immer die
+     HÖCHSTE Migration, die sie deklariert — genau die Regel, an der
+     schon einmal Zwischenstände verlorengegangen sind
+     (feedback_shop_state_merge_regressions). Gelesen wird deshalb
+     der Ordner und nicht eine Datei. */
+  const migDir = path.join(HERE, '..', '..', '..', '..', 'supabase', 'migrations');
+  const quellen = fs.existsSync(migDir)
+    ? fs.readdirSync(migDir).filter(f => f.endsWith('.sql')).sort()
+        .filter(f => /create or replace function wi_ruin_def/
+                       .test(fs.readFileSync(path.join(migDir, f), 'utf8')))
+    : [];
+  ok('genau eine Migration ist die jüngste Fassung von wi_ruin_def',
+     quellen.length >= 1, quellen.join(' '));
+  const sql = quellen.length
+    ? fs.readFileSync(path.join(migDir, quellen[quellen.length - 1]), 'utf8') : '';
   const imServer = {};
   const re2 = /\('(klo|tor|arena|licht|schatten)',\s*(\d+),\s*(\d+),\s*(true|false)\)/g;
   while ((m = re2.exec(sql))) {
@@ -6168,7 +6356,7 @@ const BEREICHE = {
           testLevelAufstieg, testLevelAufstiegMitTier, testLevelKeinAufstieg,
           testLevelOhneMigration, testUhr],
   ruinen: [testBlassUndRing, testBesitzKlar, testRuineInVolksfarbe, testRuinen,
-           testAntwortAufSchild, testSchildUndSchatten, testAnsagen,
+           testSchleier, testAntwortAufSchild, testSchildUndSchatten, testAnsagen,
            testRuinenOhneMigration, testRuinTabelle]
 };
 
