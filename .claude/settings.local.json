@@ -107,7 +107,8 @@
       "Bash(cp supabase/migrations/0149_wordisland_streak_twelve.sql /tmp/0149.bak)",
       "Bash(python -c \"print\\(1\\)\")",
       "WebFetch(domain:api.github.com)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(python -c \"import pypdf; print\\('pypdf ok'\\)\")"
     ]
   }
 }
