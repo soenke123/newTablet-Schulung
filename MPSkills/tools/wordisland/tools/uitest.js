@@ -2014,6 +2014,17 @@ function zeigAuf(stage, ziel, doc, typ, x, y) {
   return zeig(ziel, doc, typ, x, y);
 }
 
+/* Ein Mausrad-Ereignis. Am Gerät zoomt man mit zwei Fingern, hier
+   mit dem Rad — es ist DERSELBE Riegel (kMin/kMax), nur die
+   Aufrufstelle ist eine andere und braucht keine zwei Zeiger. */
+function rad(stage, doc, x, y, dy) {
+  const e = new doc.defaultView.Event('wheel', { bubbles: true });
+  e.clientX = x; e.clientY = y; e.deltaY = dy;
+  e.preventDefault = () => {};
+  stage.dispatchEvent(e);
+  return e;
+}
+
 /* Einen Punkt suchen, an dem wirklich etwas steht. Wo Tiere und
    Figur herumlaufen, weiß nur die Zeichenschleife — also wird das
    Feld abgesucht. Weil zwischen zwei synchronen Tipps kein Bild
@@ -6767,6 +6778,90 @@ async function testRundenende() {
   tool.unmount();
 }
 
+/* ─── Nah genug heran ─────────────────────────────────────────────
+   Sönke am 22.09.2026: „ich möchte bei der Singleplayer Insel wieder
+   näher ran zoomen können, sodass ich die Monster gut auf dem Handy
+   sehen kann."
+
+   Das „wieder" ist der Hinweis: kaputtgegangen ist nichts am Zoomen,
+   sondern eine EINHEIT. Die Obergrenze stand als feste Zahl im
+   Kamerafaktor `k` — und der sagt für sich genommen gar nichts. Was
+   man sieht, ist `k * sicht.s`: Bildpunkte je Kachel. Solange die
+   viewBox eine Insel umfasste, hieß `k = 6` „ganz nah dran". Seit
+   die Inselwelt das ganze Meer umfasst, wird `sicht.s` klein, und
+   dieselbe 6 zeigt eine Echse als Farbfleck.
+
+   Geprüft wird deshalb die Größe auf dem Schirm und nicht die Zahl
+   im transform. Die Umrechnung steht in tool.js an einer Stelle
+   (`e = STUFE_EINHEIT[stufe] * TIER_GROESSE * P / blatt.h`); hier
+   stehen die beiden Zahlen der Stufe 1 noch einmal, weil eine Zusage
+   ihre Maße selbst nennen muss. */
+async function testNahZoom() {
+  console.log('\n— Nah genug heran —');
+
+  const TIER1 = 1.90 * .75;        // STUFE_EINHEIT[1] × TIER_GROESSE
+  const REICHT = 60;               // so hoch muss ein Tier werden können
+
+  /* Wie nah kommt man in dieser Welt heran? Zurück kommt, was zählt:
+     Bildpunkte je Kachel am Anschlag. */
+  const nah = async (plan) => {
+    const { tool, root, document } = await mountSolo(soloWelt(plan));
+    const welt = tool.stand();
+    const stage = root.querySelector('[data-part="stage"]');
+    const wrap = root.querySelector('[data-part="mapwrap2"]')
+              || root.querySelector('.wi-mapwrap2');
+    /* Derselbe Maßstab, den passeAn() rechnet: viewBox in die Bühne
+       einpassen. */
+    const s = Math.min(RECT.width / welt.vb[2], RECT.height / welt.vb[3]);
+    /* Bis zum Anschlag hineindrehen. Vierzig Schritte sind weit mehr
+       als nötig — geprüft wird ja der Riegel und nicht der Weg. */
+    for (let i = 0; i < 40; i++)
+      rad(stage, document, RECT.width / 2, RECT.height / 2, -500);
+    const k = Number((/scale\(([-\d.]+)\)/.exec(wrap.style.transform) || [])[1] || 1);
+    tool.unmount();
+    return { s, k, P: k * s };
+  };
+
+  /* Eine Welt, wie sie nach ein paar Schuljahren aussieht: vier
+     Archipele, und damit eine viewBox, die zum größten Teil Meer ist. */
+  const viel = await nah([
+    { key: 'en:5', grade: 5, woerter: 120 },
+    { key: 'en:6', grade: 6, woerter: 120 },
+    { key: 'en:7', grade: 7, woerter: 120 },
+    { key: 'la:6', grade: 6, woerter: 120 }
+  ]);
+
+  /* Erst die Vorbedingung — ohne sie prüfte der Rest nichts. Genau
+     hier lag der Fehler: mit der alten festen Obergrenze 6 blieb
+     eine Kachel unter dreißig Bildpunkten, ein Tier also unter
+     vierzig. */
+  ok('in der großen Welt ist der Bühnenmaßstab klein', viel.s < 6,
+     viel.s.toFixed(2) + ' px je Kachel bei k = 1');
+  ok('… die alte feste Obergrenze 6 wäre dort zu weit weg',
+     6 * viel.s * TIER1 < REICHT,
+     'ein Tier wäre ' + (6 * viel.s * TIER1).toFixed(0) + ' px hoch');
+
+  ok('man kommt bis auf Tuchfühlung heran', viel.P >= 72,
+     viel.P.toFixed(0) + ' px je Kachel');
+  ok('… und ein Tier der Stufe 1 wird dabei groß genug für ein Telefon',
+     viel.P * TIER1 >= REICHT * 1.5,
+     (viel.P * TIER1).toFixed(0) + ' px hoch');
+
+  /* Nach oben offen darf es aber auch nicht sein: über dem Anschlag
+     wären die Sprites nur noch weichgezeichnete Flecken (sie sind
+     zwei- bis dreihundert Bildpunkte breit gezeichnet). */
+  ok('und weiter geht es nicht', viel.P <= 101, viel.P.toFixed(0));
+
+  /* Ein einziger Jahrgang auf einem großen Schirm: dort war nie
+     etwas kaputt, und die feste 6 bleibt als Untergrenze der
+     Obergrenze stehen — es darf also nicht plötzlich WENIGER nah
+     sein als vorher. */
+  const wenig = await nah([{ key: 'en:5', grade: 5, woerter: 120 }]);
+  ok('auf einer kleinen Welt bleibt es mindestens so nah wie bisher',
+     wenig.k >= 6 - 1e-6 && wenig.P >= 72,
+     'k = ' + wenig.k.toFixed(1) + ' · ' + wenig.P.toFixed(0) + ' px je Kachel');
+}
+
 const BEREICHE = {
   raum: [testTablet, testAuswahlTakt, testTaktTabelle, testTabletLobby,
          testNewRound, testRelief, testPult, testInselgroesse, testRundenende, testPultUnits,
@@ -6774,7 +6869,7 @@ const BEREICHE = {
          testFehlendeMigration, testOhneMigration, testLobbyRegeln,
          testStillgelegt, testSiegerPult, testSiegerTablet],
   sieger: [testSiegerPult, testSiegerTablet],
-  insel: [testSolo, testInselWaechst, testInselwelt, testSchlafendeInsel,
+  insel: [testSolo, testInselWaechst, testInselwelt, testNahZoom, testSchlafendeInsel,
           testSchlafendeTiere, testWecken, testJahrgangsLeiste, testJahrgangsChips,
           testSoloUeben, testSchluepfen,
           testStats, testPunkte, testSoloOhneMigration, testUnitLeiste,

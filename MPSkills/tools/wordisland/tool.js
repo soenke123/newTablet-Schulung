@@ -6756,7 +6756,7 @@
        links, das freie Fenster fängt also erst bei `randLinks` an —
        darum die Verschiebung vor der halben Breite. */
     const frei = Math.max(80, sicht.w - randLinks);
-    kamera.k = Math.min(K_MAX, Math.max(kMin(),
+    kamera.k = Math.min(kMax(), Math.max(kMin(),
       Math.min(frei * .92 / (w * sicht.s), sicht.h * .92 / (h * sicht.s))));
     kamera.tx = randLinks + frei / 2 - kamera.k * (sicht.ox + mx * sicht.s);
     kamera.ty = sicht.h / 2 - kamera.k * (sicht.oy + my * sicht.s);
@@ -6770,7 +6770,28 @@
      Drittel der Welt". Also wird die Untergrenze gerechnet: so
      weit, dass ALLES ins Bild passt, und nie weniger weit als
      früher. */
-  const K_MAX = 6;
+  const K_MAX_FEST = 6;
+  /* Und die OBERGRENZE hat dasselbe Problem, nur andersherum — das
+     ist beim Bau der Inselwelt durchgerutscht. `6` hieß „ganz nah
+     dran", solange die viewBox eine Insel umfasste. Umfasst sie das
+     ganze Meer, wird `sicht.s` klein, und dieselbe 6 zeigt eine
+     Echse als zwanzig Bildpunkte hohen Farbfleck. Auf dem Telefon
+     ist das genau der Punkt, an dem man die Tiere nicht mehr
+     erkennt.
+
+     Gerechnet wird deshalb in der Einheit, die hier etwas bedeutet:
+     Bildpunkte je KACHEL (`ppu`). NAH_PX ist, wie groß eine Kachel
+     im nächsten Ausschnitt werden darf; ein Tier der Stufe 1 ist
+     davon STUFE_EINHEIT[1] * TIER_GROESSE ≈ 1,4 mal so hoch, bei 72
+     also gut hundert Bildpunkte. Die alte feste 6 bleibt als
+     Untergrenze der Obergrenze stehen: auf einer kleinen Welt (ein
+     einziges Archipel, großer Schirm) ist `sicht.s` groß, und dort
+     war nie etwas kaputt. */
+  const NAH_PX = 72;
+  function kMax() {
+    if (!sicht.s) return K_MAX_FEST;
+    return Math.max(K_MAX_FEST, NAH_PX / sicht.s);
+  }
   /* Steht die Kamera gerade auf der ganzen Welt? Nur für den
      Doppeltipp, der zwischen beiden Ausschnitten wechselt. */
   let weltSicht = false;
@@ -6864,7 +6885,7 @@
 
       if (pts.size === 2 && basis) {
         const f = dist() / (basis.d || 1);
-        const k = Math.min(K_MAX * 1.4, Math.max(kMin() * .92, basis.k * f));
+        const k = Math.min(kMax() * 1.4, Math.max(kMin() * .92, basis.k * f));
         const m = mitte();
         /* Um die Mitte der beiden Finger zoomen UND der Verschiebung
            dieser Mitte folgen. Nur eines von beidem, und die Karte
@@ -6937,7 +6958,7 @@
       const r = stage.getBoundingClientRect();
       const px = e.clientX - r.left, py = e.clientY - r.top;
       const f = Math.exp(-e.deltaY * .0016);
-      const k = Math.min(K_MAX * 1.4, Math.max(kMin() * .92, kamera.k * f));
+      const k = Math.min(kMax() * 1.4, Math.max(kMin() * .92, kamera.k * f));
       kamera.tx = px - (k / kamera.k) * (px - kamera.tx);
       kamera.ty = py - (k / kamera.k) * (py - kamera.ty);
       kamera.k = k;
