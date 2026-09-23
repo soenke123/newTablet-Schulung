@@ -273,6 +273,13 @@ a { text-decoration: none; color: inherit; }
   text-align: center;
   position: relative;
   z-index: 4; /* über transparentem PNG-Rand der Kreatur */
+  /* „Projekt_FINAL_v7_NEU" ist für den Umbruch EIN Wort — Unterstriche
+     sind keine Trennstelle. Ohne diese Zeile stand der Titel 54 px über
+     der Kachel und 15 px über dem Bildschirmrand hinaus (gemessen bei
+     375 px). `anywhere` statt `break-word`, weil nur `anywhere` auch in
+     die Mindestbreite der Grid-Spalte eingeht — sonst bleibt die Spalte
+     so breit wie das längste Wort und schiebt das Raster auf. */
+  overflow-wrap: anywhere;
 }
 
 /* ── Ei in der Kachel ──────────────────────────── */
@@ -2417,6 +2424,68 @@ body.s2-active .hud-kristalle { display: flex; }
     grid-column: 2;
     grid-row: 3;
   }
+}
+
+/* ══════════════════════════════════════════════════
+   TABLET — 481 px bis 1200 px
+   ══════════════════════════════════════════════════
+
+   Bis hier kannte das Stylesheet nur zwei Zustände: „Handy" (≤480) und
+   „alles andere". Jedes iPad fiel damit in den Desktop-Zweig — und dort
+   liegt die fixierte HUD-Pille oben rechts genau auf der zentrierten
+   Überschrift. Gemessen auf dem iPad hochkant: 260 px Text unter der
+   Pille, der Titel praktisch unlesbar.
+
+   Nebeneinander passen die beiden erst, wenn der halbe Titel plus die
+   volle Pille in die halbe Bildschirmbreite passen — das ist ab rund
+   1200 px der Fall. Darunter bekommt die Pille ein eigenes Band, und
+   die Überschrift rückt darunter.
+
+   Bewusst auf `min-width: 481px` begrenzt: unterhalb gilt weiter der
+   Handy-Block darüber, der die Pille mittig setzt. Ohne diese Grenze
+   würden beide Blöcke greifen und der spätere (dieser) gewinnen. */
+/* Der Anzeigename hatte keinerlei Breitenbegrenzung: ein langer Name
+   schob die Pille unbegrenzt nach links. Zwölf Zeichen reichen zum
+   Wiedererkennen, der Rest wird abgekürzt.
+
+   Reicht bis 1400 px und damit weiter als der Block darunter: bei
+   1280 px passen Titel und Pille grundsätzlich nebeneinander, es
+   fehlten gemessen nur 22 px. Die schmalere Pille schafft die — dafür
+   muss dort nicht die ganze Überschrift nach unten rücken. */
+@media (min-width: 481px) and (max-width: 1400px) {
+  .hub-auth-name {
+    display: inline-block;
+    max-width: 12ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 1200px) {
+  /* Platz für die Pille. Der Theme-Knopf hängt auf dem Desktop absolut
+     unter der Pille — deshalb wandert er weiter unten in die Pille
+     hinein, sonst müsste dieses Polster noch einmal 36 px größer sein. */
+  .hub-header { padding-top: 84px; }
+
+  /* Theme-Knopf in die Pille holen (wie auf dem Handy), statt ihn
+     darunter hängen zu lassen. Macht die Pille zu einem geschlossenen
+     Block, dessen Höhe planbar ist. */
+  .theme-cycle-btn {
+    position: static;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 1.35rem;
+    background: none;
+    border: none;
+    color: inherit;
+    letter-spacing: 0;
+    white-space: normal;
+  }
+  .theme-cycle-btn__label { display: none; }
 }
 
 @media (min-width: 700px) {
@@ -4946,4 +5015,87 @@ input[type="password"]::-webkit-textfield-decoration-container {
 .legi-task--virus-done {
   border-color: rgba(102, 209, 107, 0.5) !important;
   background: rgba(102, 209, 107, 0.06);
+}
+
+/* ══════════════════════════════════════════════════
+   TIPPFLÄCHEN — Finger statt Maus
+   ══════════════════════════════════════════════════
+
+   `pointer: coarse` trifft Finger-Bedienung, unabhängig von der
+   Bildschirmbreite — ein 1024 px breites iPad ist genauso betroffen wie
+   ein Handy. Apple und Google nennen beide 44 px als Mindestmaß;
+   gemessen lagen hier Werte von 20 bis 42 px.
+
+   Der Block steht bewusst am DATEIENDE: mehrere der betroffenen
+   Basisregeln (z. B. .book-info-btn, Zeile ~2545) stehen weiter unten
+   im Stylesheet als die Responsive-Sektion. Bei gleicher Spezifität
+   gewinnt die spätere Regel — von weiter oben käme dieser Block also
+   gar nicht erst an. */
+@media (pointer: coarse) {
+  /* Die runden HUD-Knöpfe. Der Theme-Knopf ist ausgenommen: ab 1201 px
+     ist er die breite Variante mit Beschriftung, die ein erzwungenes
+     44×44-Quadrat zerdrücken würde. Er wird weiter unten behandelt. */
+  .hud-btn:not(.theme-cycle-btn) { width: 44px; height: 44px; }
+
+  /* min-width ebenfalls: im Hochformat wird der Name ausgeblendet, dann
+     bleibt nur der 34 px breite Avatar übrig. */
+  .hub-auth-btn { min-height: 44px; min-width: 44px; }
+
+  .modal-close,
+  .shop-modal-close {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .book-info-btn { width: 44px; height: 44px; }
+
+  .shop-tab { min-height: 44px; }
+
+  /* Kauf-Knöpfe im Shop (41×35) und die Reiter im Buch der Monster
+     (50×32) — beide werden im Unterricht ständig getippt. */
+  .shop-list-item__btn { min-height: 44px; min-width: 44px; }
+  .book-tab { min-height: 44px; }
+
+  /* Die Mail-Adresse im Shop-Banner ist zum Antippen gedacht, war aber
+     als reine Textzeile nur 18 px hoch. */
+  .shop-challenge-banner__mail {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .game-card__btn,
+  .game-card__use-btn { min-height: 44px; }
+
+  /* Freilassen (32×26) ist der kleinste Knopf im Hub. Er behält seine
+     Optik — ein größerer roter Kasten auf jeder Kachel wäre laut — und
+     bekommt die Trefferfläche über ein Pseudo-Element dazu: 26+18=44.
+     Unbedenklich, weil dahinter der „Freilassen?"-Dialog steht; ein
+     Fehlgriff öffnet also nur eine Rückfrage. */
+  .game-card__release::after {
+    content: '';
+    position: absolute;
+    /* Feste 44 px statt eines negativen `inset`: der Bezugsrahmen eines
+       absolut gesetzten Kindes ist die POLSTER-Kante, nicht der Rahmen.
+       `inset: -9px` ergab deshalb 42 statt 44 px — zwei Pixel, die man
+       nicht sieht und die der Prüfstand trotzdem zu Recht bemängelt.
+       `max(44px, 100%)`, damit die Fläche mitwächst, falls der Knopf
+       später größer wird. */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: max(44px, 100%);
+    height: max(44px, 100%);
+    border-radius: inherit;
+  }
+}
+
+/* Nur wo der Theme-Knopf rund in der Pille sitzt (siehe Tablet-Block).
+   Ab 1201 px bleibt die breite Variante mit Text unangetastet. */
+@media (pointer: coarse) and (max-width: 1200px) {
+  .theme-cycle-btn { width: 44px; height: 44px; }
 }

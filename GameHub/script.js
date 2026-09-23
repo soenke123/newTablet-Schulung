@@ -6691,6 +6691,14 @@ function openBackupConfirmModal(creature, stage, maxStage) {
 const _walkers = [];
 let _walkRafId = null;
 let _walkLast  = 0;
+/* Breite der Leiste beim letzten Bild — daran wird erkannt, ob gedreht
+   oder die Fenstergröße geändert wurde. */
+let _walkBarW  = 0;
+/* Nur noch Rückfallwert. Die tatsächliche Breite steht im CSS
+   (.gallery-walker) und wird aus offsetWidth gelesen. Eine feste Zahl
+   an dieser Stelle wäre ein Grenzwert in der falschen Einheit: wer die
+   Läufer per CSS verkleinert (etwa für kleine Bildschirme), verschöbe
+   sonst still die Laufgrenze, ohne dass es im CSS sichtbar wäre. */
 const WALKER_SIZE = 158;
 
 const CREATURE_SPEEDS = {
@@ -6709,17 +6717,20 @@ function initGalleryWalk() {
   if (!els.length) return;
 
   const barW = bar.clientWidth;
+  _walkBarW  = barW;
   els.forEach(el => {
     const img      = el.querySelector('.creature-img');
     const stage    = parseInt(img?.dataset.stage ?? '0');
     const creature = el.dataset.creature ?? 'salamander';
     const speed    = CREATURE_SPEEDS[creature] ?? 45;
-    const x        = Math.random() * Math.max(0, barW - WALKER_SIZE);
+    const size     = el.offsetWidth || WALKER_SIZE;
+    const x        = Math.random() * Math.max(0, barW - size);
 
     el.style.left = x + 'px';
     _walkers.push({
       el,
       x,
+      size,
       dir:        Math.random() < 0.5 ? 1 : -1,
       speed,
       pauseUntil: 0,
@@ -6740,9 +6751,28 @@ function _walkStep(ts) {
   _walkLast = ts;
 
   const bar  = document.getElementById('galleryBar');
-  const maxX = Math.max(0, (bar ? bar.clientWidth : 600) - WALKER_SIZE);
+  const barW = bar ? bar.clientWidth : 600;
+  /* Hat sich die Leiste geändert (Drehen, Fenstergröße, Tastatur), müssen
+     die Läuferbreiten neu gemessen werden — aber nur dann: offsetWidth
+     erzwingt ein Reflow, und fünfzehn davon pro Bild wären auf dem
+     Tablet teuer. */
+  const resized = barW !== _walkBarW;
+  if (resized) _walkBarW = barW;
 
   for (const w of _walkers) {
+    if (resized) w.size = w.el.offsetWidth || WALKER_SIZE;
+    const maxX = Math.max(0, barW - w.size);
+
+    /* Das Einklemmen steht VOR dem Ausstieg für stehende Tiere. Vorher
+       kam ein Tier, das im Querformat weit rechts platziert wurde, beim
+       Drehen ins Hochformat nicht mit: es behielt sein `left` und
+       verschwand hinter dem `overflow:hidden` der Leiste. Gemessen beim
+       Wechsel 1024→768: zwei Tiere 117 px und 220 px daneben.
+       Ein resize-Listener ist dafür nicht nötig — diese Schleife läuft
+       ohnehin in jedem Bild, und neu würfeln dürfte sie nicht: die Tiere
+       würden beim Drehen quer über die Leiste springen. */
+    if (w.x > maxX) { w.x = maxX; w.el.style.left = w.x + 'px'; }
+
     if (w.stationary) continue;
     if (ts < w.pauseUntil) continue;
 

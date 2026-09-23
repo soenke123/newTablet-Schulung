@@ -354,6 +354,14 @@
       body { padding: 1.25rem 0.7rem 3rem; }
       .card { padding: 1.2rem 0.85rem; }
     }
+
+    /* Tippflächen für Finger. Zurück-Link 20 px hoch, die Umschalter
+       zwischen den Ranglisten 40 px — vier Pixel unter dem Maß. */
+    @media (pointer: coarse) {
+      .back-link { min-height: 44px; }
+      .scope-switch button,
+      .board-chip { min-height: 44px; }
+    }
   </style>
 
 <!-- Schreibt den sichtbaren Bereich (Tastatur, Adressleiste) als

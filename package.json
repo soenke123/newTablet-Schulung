@@ -13,6 +13,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
     "linkedom": "^0.18.13",
-    "pdfjs-dist": "^4.10.38"
+    "pdfjs-dist": "^4.10.38",
+    "playwright-core": "^1.63.0"
   }
 }

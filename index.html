@@ -812,6 +812,16 @@
     .kurs-info strong { font-weight: 600; }
 
 
+    /* Die Anmelde-Leiste liegt fest oben rechts und ist 222 px breit.
+       Zwischen 761 und 1023 px ist die Überschrift mit 5vw am größten,
+       während die Leiste noch ihre volle Breite hat — dort lief der
+       Titel darunter (gemessen 8 px bei 844×390). Deshalb wird genau in
+       diesem Band Platz reserviert; darunter greifen die Regeln weiter
+       unten, darüber ist von selbst genug Raum. */
+    @media (min-width: 761px) and (max-width: 1023px) {
+      .title-row { padding-right: 15.5rem; }
+    }
+
     /* Responsive */
     @media (max-width: 760px) {
       .button-layout {
@@ -848,6 +858,21 @@
       .auth-btn, .auth-user-btn {
         padding: 0.4rem 0.9rem;
         font-size: 0.85rem;
+      }
+    }
+
+    /* Tippflächen für Finger. Gemessen lagen Anmelden/Registrieren bei
+       33–38 px Höhe; 44 px ist das Mindestmaß von Apple und Google.
+       `pointer: coarse` statt einer Breite, weil ein iPad im Querformat
+       1024 px breit ist und trotzdem mit dem Finger bedient wird. */
+    @media (pointer: coarse) {
+      .auth-btn, .auth-user-btn { min-height: 44px; }
+      /* Der MPSkills-Link im Fuß ist der einzige Weg in den zweiten
+         Anwendungsbereich, war als reine Textzeile aber nur 18 px hoch. */
+      .site-foot a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
       }
     }
   </style>

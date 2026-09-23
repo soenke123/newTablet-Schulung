@@ -16,6 +16,11 @@ Thumbs.db
 # Node (falls später mal Tooling dazukommt)
 node_modules/
 
+# Bildschirmfotos des Responsive-Prüfstands (responsivecheck.js).
+# Werden bei jedem Lauf neu erzeugt — über hundert PNGs, die niemand
+# versionieren will. Der Prüfstand selbst gehört ins Repo.
+shots/
+
 # GIMP-Quellen — zu groß für GitHub, gehören nicht ins Deployment
 *.xcf
 

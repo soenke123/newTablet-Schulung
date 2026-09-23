@@ -99,6 +99,14 @@
       .avatar-column { justify-self: center; }
     }
 
+    /* Tippflächen für Finger (Mindestmaß 44 px). Gemessen: Zurück-Link
+       20 px hoch, Avatar-Knopf 38, Passwort-Knopf 42. */
+    @media (pointer: coarse) {
+      .back-link { min-height: 44px; }
+      .avatar-change-btn,
+      #pwSubmit { min-height: 44px; }
+    }
+
     .avatar-column {
       display: flex;
       flex-direction: column;
