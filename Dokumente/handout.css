@@ -66,65 +66,93 @@ body {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
-  padding: 2rem 1rem 1.75rem;
-  text-align: center;
+  padding: 0.7rem 1.25rem;
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
+/* Drei Spalten: Schulungen | Titel | Suche */
+.header-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-seasons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
 .header-eyebrow {
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
   color: var(--accent);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0;
+}
+
+.header-titleblock {
+  text-align: center;
+  min-width: 0;
 }
 
 .header-title {
-  font-size: clamp(1.5rem, 5vw, 2.4rem);
+  font-size: clamp(1.05rem, 2.4vw, 1.7rem);
   font-weight: 800;
   letter-spacing: -0.025em;
   background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin-bottom: 0.25rem;
-  line-height: 1.15;
+  margin-bottom: 0;
+  line-height: 1.2;
 }
 
 .header-subtitle {
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
   font-weight: 400;
-  margin-bottom: 1.4rem;
+  line-height: 1.3;
+  margin-bottom: 0;
 }
 
 /* ==========================================
    Search
    ========================================== */
+.header-search {
+  justify-self: end;
+  width: 100%;
+  max-width: 290px;
+  min-width: 0;
+}
+
 .search-wrapper {
-  max-width: 520px;
-  margin: 0 auto;
   position: relative;
 }
 
 .search-icon {
   position: absolute;
-  left: 1.1rem;
+  left: 0.95rem;
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-light);
   pointer-events: none;
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.8rem 3rem 0.8rem 3rem;
-  font-size: 0.97rem;
+  padding: 0.5rem 2.6rem 0.5rem 2.6rem;
+  font-size: 0.92rem;
   font-family: inherit;
   border: 2px solid var(--border);
   border-radius: 50px;
@@ -144,7 +172,7 @@ body {
 
 .search-clear {
   position: absolute;
-  right: 0.8rem;
+  right: 0.5rem;
   top: 50%;
   transform: translateY(-50%);
   background: none;
@@ -163,13 +191,16 @@ body {
 .search-clear:hover { background: var(--bg); }
 .search-clear.visible { display: flex; }
 
+/* Nimmt nur Platz ein, wenn wirklich ein Ergebnis-Text drin steht. */
 .search-results-info {
-  text-align: center;
-  font-size: 0.82rem;
+  text-align: right;
+  font-size: 0.75rem;
   color: var(--text-muted);
-  margin-top: 0.5rem;
-  min-height: 1.2em;
+  margin-top: 0.3rem;
+  line-height: 1.2;
 }
+
+.search-results-info:empty { display: none; }
 
 /* ==========================================
    Page Wrapper
@@ -596,9 +627,33 @@ mark.highlight {
 /* ==========================================
    Responsive
    ========================================== */
+/* Schmale Fenster: Kopfzeile stapelt sich statt drei Spalten.
+   Die Schulungs-Zeilen links brauchen sonst zu viel Breite und die
+   Kopfzeile würde durch Umbrüche wieder hoch. */
+@media (max-width: 1023px) {
+  .header-inner {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .header-seasons {
+    align-items: center;
+    text-align: center;
+  }
+
+  .header-subtitle { display: none; }
+
+  .header-search {
+    justify-self: stretch;
+    max-width: 100%;
+  }
+
+  .search-results-info { text-align: center; }
+}
+
 @media (max-width: 639px) {
   .site-header {
-    padding: 1.25rem 1rem 1rem;
+    padding: 0.6rem 0.9rem;
     position: relative;
   }
 

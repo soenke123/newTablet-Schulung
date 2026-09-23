@@ -20,38 +20,52 @@
      HEADER – Titel + Suche
 ══════════════════════════════════════════════ -->
 <header class="site-header">
-  <p class="header-eyebrow">Schulung 1: Einstieg &amp; Grundlagen</p>
-  <p class="header-eyebrow" id="s2-eyebrow" style="display:none">Schulung 2: Quellenrecherche &amp; KI-Grundlagen</p>
-  <p class="header-eyebrow" id="s3-eyebrow" style="display:none">Schulung 3: Social Media, Dark Patterns &amp; KI-Zukunftskompetenz</p>
-  <h1 class="header-title">Tablet-Schulung Handout</h1>
-  <p class="header-subtitle">Alle wichtigen Infos für den Schulalltag</p>
+  <div class="header-inner">
 
-  <div class="search-wrapper">
-    <!-- Such-Icon (SVG Lupe) -->
-    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-         fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-    </svg>
+    <!-- links: freigeschaltete Schulungen -->
+    <div class="header-seasons">
+      <p class="header-eyebrow">Schulung 1: Einstieg &amp; Grundlagen</p>
+      <p class="header-eyebrow" id="s2-eyebrow" style="display:none">Schulung 2: Quellenrecherche &amp; KI-Grundlagen</p>
+      <p class="header-eyebrow" id="s3-eyebrow" style="display:none">Schulung 3: Social Media, Dark Patterns &amp; KI-Zukunftskompetenz</p>
+    </div>
 
-    <input
-      type="search"
-      id="searchInput"
-      class="search-input"
-      placeholder="Begriff suchen…"
-      autocomplete="off"
-      aria-label="Inhalte durchsuchen"
-    />
+    <!-- mitte: Titel -->
+    <div class="header-titleblock">
+      <h1 class="header-title">Tablet-Schulung Handout</h1>
+      <p class="header-subtitle">Alle wichtigen Infos für den Schulalltag</p>
+    </div>
 
-    <!-- X-Button zum Leeren -->
-    <button class="search-clear" id="searchClear" aria-label="Suche leeren">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-      </svg>
-    </button>
+    <!-- rechts: Suche -->
+    <div class="header-search">
+      <div class="search-wrapper">
+        <!-- Such-Icon (SVG Lupe) -->
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+
+        <input
+          type="search"
+          id="searchInput"
+          class="search-input"
+          placeholder="Begriff suchen…"
+          autocomplete="off"
+          aria-label="Inhalte durchsuchen"
+        />
+
+        <!-- X-Button zum Leeren -->
+        <button class="search-clear" id="searchClear" aria-label="Suche leeren">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <p class="search-results-info" id="resultsInfo"></p>
+    </div>
+
   </div>
-
-  <p class="search-results-info" id="resultsInfo"></p>
 </header>
 
 
@@ -431,7 +445,7 @@
           <h3>4b) Standard bei Abgaben</h3>
           <p>Grundsätzlich werden Abgaben im PDF-Format abgegeben. Längere Texte werden getippt und sauber formatiert. Dies ist nicht nur in der Schule sondern auch in der Arbeitswelt ein gängiger Standard. Ein einheitlicher Dateiname erleichtert Lehrkräften die Zuordnung erheblich. Das Standardformat lautet:</p>
 
-          <div class="code-box">Nachname_Vorname_LK-Kürzel_Aufgabe.pdf</div>
+          <div class="code-box">Nachname_Vorname_Klasse_Fach_Aufgabe.pdf</div>
 
           <p>Das genaue Format kann je nach Aufgabenstellung von der Lehrkraft abweichen. Dieses gilt, wenn nichts anderes vereinbart wurde.</p>
 
