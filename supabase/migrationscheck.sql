@@ -106,6 +106,10 @@ pruef(nr, was, treffer, merkmal) as (
      (select count(*) > 0 from funk where proname = 'wi_room_set_end'),
      'ohne: Rundenende laesst sich nicht nachstellen (Fehlermeldung am Pult)'),
 
+    ('0168', 'wi_room_solo_claim',
+     (select count(*) > 0 from funk where proname = 'wi_room_solo_claim'),
+     'ohne: keine Trainer-Insel — "Zeige Trainer-Insel" meldet die fehlende Migration'),
+
     -- ── Die eigene Insel ───────────────────────────────────────
     ('0136', 'wi_solo_learners',
      (select count(*) > 0 from spalte where tab = 'wi_solo_learners' and sp = 'token'),

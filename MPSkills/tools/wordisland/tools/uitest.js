@@ -6862,9 +6862,201 @@ async function testNahZoom() {
      'k = ' + wenig.k.toFixed(1) + ' · ' + wenig.P.toFixed(0) + ' px je Kachel');
 }
 
+/* ─── Vom Raum auf die eigene Insel (23.09.2026, Migration 0168) ──
+   Sönke: „ich brauche eine Verknüpfung vom Multiplayer zum
+   Singleplayer … aber ich brauche hier eine Nachricht, die mich
+   darauf hinweist, dass ich dann den Gruppenmodus verlasse."
+
+   Vier Zusagen, die man sonst erst im Unterricht merkt:
+     · Der Knopf steht in der LOBBY und nirgends sonst. Wer mitten in
+       der Runde geht, fehlt seiner Gruppe — und am Pult beendet
+       Weggehen nach zwei Minuten sogar die Runde (wi_maybe_advance).
+     · „Hierbleiben" bleibt wirklich hier: kein Seitenwechsel.
+     · Das Kind braucht keinen Serveraufruf (seine Insel füllt
+       soloClaim längst), die Lehrkraft schon (0168).
+     · Eine fehlende Migration und ein Raum ohne Wörter sagen ES —
+       statt eine Insel zu zeigen, auf der nichts steht.
+
+   ⚠️ Der MPRoom-Stub weckt den sonst schlafenden soloClaim-Pfad
+   (tool.js steigt dort an `!window.MPRoom` aus): der erfundene
+   Server muss wi_solo_claim mitbeantworten. */
+async function testInselWeg() {
+  console.log('\n— Vom Raum auf die eigene Insel (0168) —');
+
+  /* ── Am Tablet ─────────────────────────────────────────────── */
+  {
+    const { window, document, impls, ctxBase } = makeEnv();
+    const tool = impls.wordisland;
+    let gegangen = 0, vergessen = 0;
+    window.MPRoom = {
+      soloToken: () => 'insel-tok',
+      rememberSolo: () => {},
+      goSolo: () => { gegangen++; },
+      forgetBack: () => { vergessen++; }
+    };
+
+    const calls = [];
+    let phase = 'lobby';
+    const ctx = Object.assign({}, ctxBase, {
+      role: 'participant',
+      actions: {
+        role: 'participant',
+        call: (fn, args) => {
+          calls.push(fn);
+          if (fn === 'wi_solo_claim') return Promise.resolve({ ok: true, new_sets: [] });
+          if (fn !== 'wi_view') return Promise.resolve({ ok: false, error: 'not_allowed' });
+          return Promise.resolve(viewFor({
+            phase,
+            map_key: 'raum:' + phase,
+            map: args.p_full ? (phase === 'running' ? MAP : []) : null
+          }));
+        }
+      }
+    });
+
+    const root = document.getElementById('root');
+    tool.mount(root, ctx);
+    await wait(60);
+
+    const knopf = root.querySelector('[data-part="soloway"]');
+    const ov    = root.querySelector('[data-part="leaveov"]');
+    ok('der Knopf steht auf der Wartetafel',
+       !!knopf && knopf.closest('[data-part="tlobby"]') !== null);
+    ok('… und nicht auf der Spieltafel oder dem Siegerbild',
+       root.querySelector('[data-part="tplay"] [data-part="soloway"]') === null &&
+       root.querySelector('[data-part="tend"] [data-part="soloway"]') === null);
+    ok('der Kasten ist zu, solange niemand drückt', !!ov && ov.hidden === true);
+
+    click(knopf, document);
+    await wait(20);
+    ok('ein Druck öffnet die Nachricht', ov.hidden === false);
+    const gross = root.querySelector('[data-part="leavebig"]').textContent;
+    const klein = root.querySelector('[data-part="leavesub"]').textContent;
+    ok('sie sagt dem Kind, was es verlässt', /verlässt.*Gruppenspiel/.test(gross), gross);
+    ok('… und wie es zurückkommt', /Zurück zum Raum/.test(klein), klein);
+
+    click(root.querySelector('[data-part="leaveno"]'), document);
+    await wait(20);
+    ok('„Hierbleiben" macht den Kasten zu und bleibt hier',
+       ov.hidden === true && gegangen === 0, String(gegangen));
+
+    calls.length = 0;
+    click(knopf, document);
+    await wait(20);
+    click(root.querySelector('[data-part="leaveyes"]'), document);
+    await wait(40);
+    ok('„Zur Insel" geht genau einmal hinüber', gegangen === 1, String(gegangen));
+    ok('… und das Kind braucht dafür keine Freischaltung',
+       !calls.includes('wi_room_solo_claim'), js(calls));
+    ok('… und der Kasten ist danach zu', ov.hidden === true);
+
+    /* Während der Runde ist die Wartetafel weg — und mit ihr der
+       Knopf. Geprüft wird beides, denn er existiert im DOM weiter. */
+    phase = 'running';
+    await tool.update();
+    await wait(80);
+    ok('in der laufenden Runde ist der Knopf nicht erreichbar',
+       root.querySelector('[data-part="tlobby"]').hidden === true &&
+       knopf.closest('[data-part="tlobby"]').hidden === true);
+
+    tool.unmount();
+  }
+
+  /* ── Am Pult ───────────────────────────────────────────────── */
+  {
+    const { window, document, impls, ctxBase } = makeEnv();
+    const tool = impls.wordisland;
+    let gegangen = 0;
+    window.MPRoom = { soloToken: () => null, rememberSolo: () => {}, goSolo: () => { gegangen++; } };
+
+    const calls = [];
+    let phase = 'lobby';
+    let claim = { ok: true, added: 1, words: 30 };
+    const ctx = Object.assign({}, ctxBase, {
+      role: 'presenter',
+      actions: {
+        role: 'presenter',
+        call: (fn, args) => {
+          calls.push(fn);
+          if (fn === 'wi_sets_list') return Promise.resolve({ ok: true, chosen: [], sets: [] });
+          if (fn === 'wi_room_solo_claim') return Promise.resolve(claim);
+          if (fn === 'wi_room_get') {
+            return Promise.resolve(pultView({
+              phase, map_key: 'raum:1', map: args && args.p_full ? MAP : null
+            }));
+          }
+          return Promise.resolve({ ok: true });
+        }
+      }
+    });
+
+    const root = document.getElementById('root');
+    tool.mount(root, ctx);
+    await wait(60);
+
+    const knopf = root.querySelector('[data-part="trainer"]');
+    const ov    = root.querySelector('[data-part="leaveov"]');
+    ok('der Knopf steht in der Kopfzeile der Lobby',
+       !!knopf && knopf.closest('.wi-setuphead') !== null);
+    ok('… also in einem Abschnitt, der während der Runde zu ist',
+       !!knopf && knopf.closest('[data-part="lobby"]') !== null);
+    ok('… und trägt die Trainer-Insel im Namen',
+       /Trainer-Insel/.test(knopf.textContent), knopf.textContent);
+
+    click(knopf, document);
+    await wait(20);
+    const gross = root.querySelector('[data-part="leavebig"]').textContent;
+    const klein = root.querySelector('[data-part="leavesub"]').textContent;
+    ok('die Lehrkraft liest, dass der Raum bestehen bleibt',
+       /verlässt.*Gruppenmodus/.test(gross) && /Raum bleibt/.test(klein),
+       gross + ' · ' + klein);
+    /* Der Satz, der den 2-Minuten-Riegel in Unterrichtssprache sagt.
+       Er darf nicht wegfallen, solange wi_maybe_advance so rechnet. */
+    ok('… und dass es nur ohne laufende Runde gefahrlos ist',
+       /keine Runde läuft/.test(klein), klein);
+
+    calls.length = 0;
+    click(root.querySelector('[data-part="leaveyes"]'), document);
+    await wait(60);
+    ok('sie holt sich erst die Wörter dieses Raums (0168)',
+       calls.includes('wi_room_solo_claim'), js(calls));
+    ok('… und geht dann hinüber', gegangen === 1, String(gegangen));
+
+    /* ── Ein Raum ohne Wörter ──────────────────────────────────
+       Hinübergehen zeigte „Deine Insel gibt es noch nicht" — als
+       Vorführung genau das Gegenteil von hilfreich. */
+    ctxBase.toasts.length = 0;
+    claim = { ok: true, added: 0, words: 0 };
+    click(knopf, document);
+    await wait(20);
+    click(root.querySelector('[data-part="leaveyes"]'), document);
+    await wait(60);
+    ok('ohne Wörter im Raum bleibt sie hier',
+       gegangen === 1 && ctxBase.toasts.length === 1, String(gegangen));
+    ok('… und liest, was zu tun ist',
+       /Wörter/.test(ctxBase.toasts[0]), js(ctxBase.toasts));
+
+    /* ── Ohne Migration 0168 ───────────────────────────────────
+       Muss nach fehlender Migration klingen und nicht nach Netz
+       (feedback_missing_migration_looks_like_network). */
+    ctxBase.toasts.length = 0;
+    claim = { ok: false, error: 'fn_missing' };
+    click(knopf, document);
+    await wait(20);
+    click(root.querySelector('[data-part="leaveyes"]'), document);
+    await wait(60);
+    ok('fehlt 0168, sagt es die Nummer',
+       gegangen === 1 && /0168/.test(ctxBase.toasts[0] || ''), js(ctxBase.toasts));
+
+    ok('der Kasten steht danach nicht offen', ov.hidden === true);
+    tool.unmount();
+  }
+}
+
 const BEREICHE = {
   raum: [testTablet, testAuswahlTakt, testTaktTabelle, testTabletLobby,
-         testNewRound, testRelief, testPult, testInselgroesse, testRundenende, testPultUnits,
+         testNewRound, testRelief, testPult, testInselgroesse, testRundenende,
+         testInselWeg, testPultUnits,
          testPultWoerter, testWoerterOhneMigration,
          testFehlendeMigration, testOhneMigration, testLobbyRegeln,
          testStillgelegt, testSiegerPult, testSiegerTablet],

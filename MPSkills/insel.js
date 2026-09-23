@@ -133,8 +133,37 @@ async function oeffne() {
    Konto landen und umgekehrt. */
 window.addEventListener('lernwelt:session-changed', () => { oeffne(); });
 
+/* ─── Zurück in den Raum (23.09.2026) ─────────────────────────
+   Wer aus einem Gruppenspiel hierher abgebogen ist, soll ohne
+   Nachdenken zurückkommen. Die Adresse dafür hat lib/room.js beim
+   Abbiegen gemerkt (goSolo) — hier steht nur, wie sie aussieht.
+
+   Kein eigenes CSS: `.btn--ghost` und `.btn--sm` gibt es in
+   style.css, und eine Kopfzeile ist kein Ort für einen Sonderknopf.
+
+   Der Merker wird beim Klick gelöscht. Sonst zeigte die Leiste auch
+   dann noch in den Raum, wenn die Insel später über die Startseite
+   geöffnet wird — sie führte in einen echten Raum, aber in einen,
+   nach dem gerade niemand gefragt hat. */
+function renderBack() {
+  const host = document.getElementById('backHost');
+  const back = window.MPRoom?.backRoom?.();
+  if (!host || !back) return;
+  /* Zusammengesetzt und nicht als innerHTML: die Adresse kommt aus
+     der Ablage des Geräts, und eine Adresse in eine Zeichenkette mit
+     Anführungszeichen zu kleben ist genau die Stelle, an der man es
+     später bereut. */
+  const a = document.createElement('a');
+  a.className = 'btn btn--ghost btn--sm';
+  a.setAttribute('href', back.url);
+  a.textContent = '‹ Zurück zum Raum';
+  a.addEventListener('click', () => window.MPRoom.forgetBack());
+  host.appendChild(a);
+}
+
 (async function boot() {
   window.MPUserBar?.mount();
+  renderBack();
   await (window.waitForSession?.() ?? Promise.resolve());
   oeffne();
 })();

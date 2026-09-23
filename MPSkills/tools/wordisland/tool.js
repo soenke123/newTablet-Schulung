@@ -3012,6 +3012,114 @@
   function stopTimer() { if (timerHandle) clearInterval(timerHandle); timerHandle = null; }
 
   /* ══════════════════════════════════════════════════════════
+     DER WEG AUF DIE EIGENE INSEL  (23.09.2026)
+     ══════════════════════════════════════════════════════════
+     Sönke: „ich brauche eine Verknüpfung vom Multiplayer zum
+     Singleplayer … und bei den Schülern ein ‚zur eigenen Insel'.
+     Aber ich brauche hier eine Nachricht, die mich darauf hinweist,
+     dass ich dann den Gruppenmodus verlasse."
+
+     Beide Rollen gehen denselben Weg: Rückfrage → (bei der Lehrkraft
+     zusätzlich die Freischaltung) → lib/room.js merkt sich den
+     Rückweg und lädt insel.html. Das Werkzeug schreibt dabei keine
+     Adresse hin; es kennt seinen Raum-Code gar nicht (ctx trägt ihn
+     bewusst nicht).
+
+     ⚠️ WARUM DER KNOPF NUR IN DER LOBBY STEHT, und zwar in beiden
+     Rollen: `wi_maybe_advance` beendet eine LAUFENDE Runde, sobald
+     das Pult zwei Minuten nicht gesehen wurde (0131, zuletzt 0146).
+     Eine Lehrkraft, die mitten im Spiel zur Insel wechselt, macht
+     also nach zwei Minuten still Schluss. Und am Tablet gilt
+     dasselbe wie beim „Bis dahin üben", das am 20.09.2026 wieder
+     herausflog: wer beim Start woanders ist, ist nicht dabei. In der
+     Lobby kostet der Abstecher dagegen nichts.
+
+     Der Kasten ist einer von zwei Zwillingen in EINER Zeichenkette —
+     beide Rohbauten hängen ihn ein, der Text kommt beim Öffnen. */
+  const LEAVE_HTML = `
+      <div class="wi-ov wi-ov--leave" data-part="leaveov" hidden>
+        <div class="wi-ovbox wi-ovbox--leave">
+          <div class="wi-ovhead">
+            <span class="wi-ovtitle">🏝 Zur eigenen Insel</span>
+            <button type="button" class="wi-ovclose" data-part="leaveno2"
+                    aria-label="Hierbleiben">✕</button>
+          </div>
+          <p class="wi-leavebig" data-part="leavebig"></p>
+          <p class="wi-leavesub" data-part="leavesub"></p>
+          <div class="wi-leaverow">
+            <button type="button" class="wi-btn wi-btn--ghost" data-part="leaveno">Hierbleiben</button>
+            <button type="button" class="wi-btn" data-part="leaveyes">Zur Insel</button>
+          </div>
+        </div>
+      </div>`;
+
+  /* Der Kasten geht auf. Zwei Texte, ein Kasten: was jemand aufgibt,
+     ist in den beiden Rollen etwas anderes — das Kind seine Gruppe
+     für die nächsten Minuten, die Lehrkraft die Tafel. */
+  function leaveOeffnen() {
+    if (!els.leaveOv) return;
+    const lehrer = (role === 'presenter');
+    els.leaveBig.textContent = lehrer
+      ? 'Du verlässt damit den Gruppenmodus.'
+      : 'Du verlässt damit das Gruppenspiel.';
+    els.leaveSub.textContent = lehrer
+      ? 'Der Raum bleibt bestehen und die Kinder bleiben drin. Solange keine Runde '
+        + 'läuft, passiert hier nichts. Oben links auf der Insel geht es zurück.'
+      : 'Deine Gruppe spielt ohne dich weiter. Über „‹ Zurück zum Raum" oben auf der '
+        + 'Insel kommst du jederzeit wieder herein.';
+    els.leaveOv.hidden = false;
+  }
+  function leaveZu() { if (els.leaveOv) els.leaveOv.hidden = true; }
+
+  /* Hinüber. Beim Kind ist das ein reiner Seitenwechsel — seine Insel
+     füllt `soloClaim` längst im Hintergrund. Die Lehrkraft holt sich
+     die Stationen dieses Raums erst hier ab (0168): sie hat keinen
+     Teilnehmer-Token und kommt an wi_solo_claim gar nicht heran. */
+  async function zurInsel() {
+    leaveZu();
+    if (!window.MPRoom) return ctx.toast('Das geht auf diesem Gerät gerade nicht.', true);
+
+    if (role === 'presenter') {
+      const r = await ctx.actions.call('wi_room_solo_claim', {});
+      if (!r || !r.ok) {
+        /* Eine fehlende Migration darf nicht wie ein Netzfehler
+           aussehen (feedback_missing_migration_looks_like_network). */
+        return ctx.toast(r && r.error === 'fn_missing'
+          ? 'Dafür fehlt in der Datenbank die Migration 0168 — bitte einspielen.'
+          : ctx.errText((r && r.error) || 'network'), true);
+      }
+      /* Keine Wörter, keine Insel: hinübergehen würde „Deine Insel
+         gibt es noch nicht" zeigen, und das wäre als Vorführung das
+         Gegenteil von hilfreich. */
+      if (!r.words) {
+        return ctx.toast('Diesem Raum sind noch keine Wörter zugeordnet — '
+                         + 'wähle erst Wörter aus.', true);
+      }
+    }
+
+    window.MPRoom.goSolo();
+  }
+
+  /* Beide Rohbauten binden mit derselben Zeile. */
+  function bindLeave() {
+    els.leaveOv  = q('leaveov');
+    els.leaveBig = q('leavebig');
+    els.leaveSub = q('leavesub');
+    q('leaveno').addEventListener('click', leaveZu);
+    q('leaveno2').addEventListener('click', leaveZu);
+    q('leaveyes').addEventListener('click', zurInsel);
+    // Klick neben den Kasten heißt hierbleiben — dieselbe Regel wie
+    // bei der Wörter-Auswahl.
+    els.leaveOv.addEventListener('click', ev => {
+      if (ev.target === els.leaveOv) leaveZu();
+    });
+    // Am Tablet heißt der Knopf „soloway", am Pult „trainer" — es
+    // gibt immer genau einen von beiden.
+    const auf = q('soloway') || q('trainer');
+    if (auf) auf.addEventListener('click', leaveOeffnen);
+  }
+
+  /* ══════════════════════════════════════════════════════════
      Pult
      ══════════════════════════════════════════════════════════
      Aufbau der Lobby von oben nach unten, wie in Kingdoms:
@@ -3050,6 +3158,10 @@
           <div class="wi-setuphead">
             <h3 class="wi-setuptitle">Welche Völker?</h3>
             <button type="button" class="wi-btn wi-btn--ghost" data-part="setsbtn">📚 Wörter wählen</button>
+            <!-- Die Trainer-Insel (0168). Steht hier und nur hier:
+                 in der Lobby läuft keine Runde, die man durch
+                 Weggehen beenden könnte. -->
+            <button type="button" class="wi-btn wi-btn--ghost" data-part="trainer">🏝 Trainer-Insel zeigen</button>
             <button type="button" class="wi-btn wi-btn--ghost" data-part="shuffle">🔀 Völker mischen</button>
             <button type="button" class="wi-btn" data-part="start">⛵ Schiffe klarmachen</button>
           </div>
@@ -3190,6 +3302,7 @@
           <div class="wi-ovbody" data-part="wordsbody"></div>
         </div>
       </div>
+${LEAVE_HTML}
     </div>`;
 
   function q(part) { return root.querySelector(`[data-part="${part}"]`); }
@@ -3214,6 +3327,7 @@
     };
     els.rulWrap.innerHTML = rulesHTML();
     bindRules(root);
+    bindLeave();
 
     /* Ein Zuhörer am Kasten und nicht an den Knöpfen: die Reiter
        werden bei jedem `loadSets` neu geschrieben — nach einem
@@ -4168,6 +4282,18 @@
         <div class="wi-wait"><span class="wi-waitdots"><i></i><i></i><i></i></span>
           <span data-part="waittext">Warten auf den Spielstart …</span></div>
         <div class="wi-myteamwrap" data-part="myteam"></div>
+        <!-- ── Der Weg auf die eigene Insel (23.09.2026) ─────────
+             Nur hier, auf der Wartetafel. Nicht auf der Spieltafel
+             und nicht auf dem Siegerbild: wer beim Start woanders
+             ist, ist nicht dabei — dieselbe Überlegung, die am
+             20.09.2026 das „Bis dahin üben" wieder herausgeworfen
+             hat. Der Unterschied ist, dass dies ein sichtbarer
+             Seitenwechsel mit Rückfrage ist und keine Aufgabe in
+             derselben Ansicht. -->
+        <div class="wi-soloway">
+          <button type="button" class="wi-btn wi-btn--ghost" data-part="soloway">🏝 Zur eigenen Insel</button>
+          <span class="wi-hint">Dort üben die Wörter aus dieser Stunde weiter.</span>
+        </div>
         <div class="wi-others" data-part="othersbox" hidden>
           <div class="wi-otherslabel">Diese Völker landen mit euch</div>
           <div class="wi-otherlist" data-part="others"></div>
@@ -4327,6 +4453,7 @@
           <span class="wi-flashbig" data-part="flashbig"></span>
         </div>
       </div>
+${LEAVE_HTML}
     </div>`;
 
   function buildTab() {
@@ -4352,6 +4479,7 @@
     };
     els.rulWrap.innerHTML = rulesHTML();
     bindRules(root);
+    bindLeave();
 
     feldBauen(els.input, send);
     feldKnopf(q('typego'), els.input, send);

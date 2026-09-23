@@ -52,7 +52,8 @@ const KETTE = [
   '0153_wordisland_round_words.sql', '0154_vocab_set_words.sql',
   '0157_wordisland_sets_push.sql', '0158_wordisland_view_restore.sql',
   '0165_wordisland_ruins_balance.sql',
-  '0166_wordisland_island_size.sql', '0167_wordisland_round_end_timer.sql'
+  '0166_wordisland_island_size.sql', '0167_wordisland_round_end_timer.sql',
+  '0168_wordisland_trainer_island.sql'
 ];
 
 async function lauf(ohne) {

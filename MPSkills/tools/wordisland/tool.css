@@ -4315,3 +4315,46 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
 /* Der Kasten, in den insel.js das Werkzeug hängt. Er muss selbst
    dehnen, sonst steht die Bühne in einem null Pixel hohen Loch. */
 #inselBox { display: flex; flex: 1 1 auto; min-height: 0; min-width: 0; }
+
+/* ── Der Weg auf die eigene Insel (23.09.2026) ─────────────────
+   Auf der Wartetafel eine Zeile unter dem eigenen Volk: Knopf und
+   ein Halbsatz, der sagt, was dort zu holen ist. Mittig, weil die
+   ganze Tafel mittig ist; auf schmalen Geräten untereinander.
+
+   ⚠️ `.wi-pane--lobby .wi-btn { align-self: flex-start }` steht
+   weiter oben in dieser Datei und zieht den Knopf sonst an den
+   linken Rand — deshalb hier ausdrücklich `align-self: center`. */
+.wi-soloway {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  text-align: center;
+}
+.wi-pane--lobby .wi-soloway .wi-btn { align-self: center; }
+
+/* ── „Du verlässt den Gruppenmodus" ───────────────────────────
+   Ein schmaler Kasten: drei Zeilen und zwei Knöpfe, mehr steht hier
+   nicht. Die Aussage ist die erste Zeile, darum ist sie groß. */
+.wi-ovbox--leave { max-width: 460px; }
+.wi-leavebig {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.wi-leavesub {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.wi-leaverow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}

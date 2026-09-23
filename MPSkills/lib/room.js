@@ -215,6 +215,78 @@
     catch (e) { console.warn('[mpskills] Insel-Kennzeichen nicht gelöscht:', e.message); }
   }
 
+  /* ─── Vom Raum auf die Insel und zurück (23.09.2026) ────────
+     Die Insel ist eine eigene SEITE (insel.html), der Raum eine
+     andere (j.html bzw. lehrer.html). Wer im Unterricht von hier
+     nach dort geht, braucht deshalb einen Weg zurück — und der ist
+     nicht „Browser-Zurück", solange auf einem Klassensatz-Tablet
+     niemand weiß, wie viele Seiten er schon offen hat.
+
+     Warum das HIER steht und nicht im Werkzeug: ein Werkzeug kennt
+     seinen Raum-Code nicht. `ctx` trägt bewusst weder Token noch
+     Code (siehe Kopf von lib/tool.js), es kann sich die Adresse also
+     gar nicht bauen. Diese Datei kennt dagegen beides — die Ablage
+     und die Seite, auf der sie gerade läuft.
+
+     sessionStorage und nicht localStorage: der Rückweg gilt für
+     diesen Tab und diese Stunde. Und er steht nicht in der Adresse
+     — der Raum-Code gehört der Tafel (0091), eine URL wird
+     weitergeschickt und landet im Verlauf. */
+  const BACK_KEY = 'mpskills_back';
+
+  function rememberBack() {
+    try {
+      sessionStorage.setItem(BACK_KEY, JSON.stringify({
+        // Pfad UND Hash: der Code steht im Hash (j.html#ABCDEF), und
+        // ohne ihn führte der Weg zurück auf die Code-Eingabe.
+        url: location.pathname + location.hash,
+        saved_at: Date.now()
+      }));
+    } catch (e) {
+      // Privater Modus oder voller Speicher: der Abstecher findet
+      // trotzdem statt, nur die Zurück-Leiste fehlt dann.
+      console.warn('[mpskills] Rückweg nicht gespeichert:', e.message);
+    }
+  }
+
+  /* Der Rückweg, falls es einen gibt. Geprüft wird die Gestalt und
+     nicht nur die Anwesenheit: in der Ablage kann alles stehen, und
+     ein `href` aus fremder Hand wäre die eine Stelle, an der das
+     wehtut. Erlaubt ist nur eine der beiden Raumseiten mit einem
+     Code im Hash.
+
+     ⚠️ Kein `^[^:]*`-Riegel gegen Adressen mit Schema: unter file://
+     enthält `location.pathname` auf Windows den Laufwerksbuchstaben
+     (/C:/Users/…), und die Leiste wäre beim Öffnen einer Datei ohne
+     Server tot. Ausgeschlossen wird stattdessen `//` — das hat kein
+     Dateipfad, aber jede vollständige Adresse. */
+  function backRoom() {
+    try {
+      const raw = sessionStorage.getItem(BACK_KEY);
+      const e = raw ? JSON.parse(raw) : null;
+      const url = e && typeof e.url === 'string' ? e.url : '';
+      if (url.includes('//')) return null;
+      if (!/(^|\/)(j|lehrer)\.html(#[0-9A-Za-z]{0,12})?$/.test(url)) return null;
+      return { url, saved_at: e.saved_at || 0 };
+    } catch (e) {
+      console.warn('[mpskills] Rückweg unlesbar:', e.message);
+      return null;
+    }
+  }
+
+  function forgetBack() {
+    try { sessionStorage.removeItem(BACK_KEY); }
+    catch (e) { console.warn('[mpskills] Rückweg nicht gelöscht:', e.message); }
+  }
+
+  /* Der Umzug selbst: merken, wo wir herkommen, dann hinüber. Eine
+     Funktion für beide Rollen — das Werkzeug sagt nur „jetzt zur
+     Insel" und schreibt keine Adresse hin. */
+  function goSolo() {
+    rememberBack();
+    location.assign('insel.html');
+  }
+
   /* ─── Serveraufrufe ─────────────────────────────────────── */
   // Teilnehmer sprechen als anon mit der Datenbank und rufen dort
   // ausschließlich die drei benannten Funktionen auf. Ist jemand
@@ -470,6 +542,7 @@
   window.MPRoom = {
     list, get, remember, snapshot, forget, touch, leave, uid,
     soloToken, rememberSolo, forgetSolo,
+    goSolo, backRoom, forgetBack,
     rpc, peek, join, view, sig, poll, showNet,
     normalizeCode, isCode, joinUrl, untilText, agoText,
     CODE_RE, POLL_MS
