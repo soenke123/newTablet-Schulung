@@ -26,6 +26,15 @@
   --indigo: #6366f1;
   --indigo-light: #eef2ff;
 
+  /* Eine Farbe je Schulung. Kacheln, Kopfzeile und Kapitel-Badge teilen sie sich,
+     damit man einer Kachel ansieht, aus welcher Schulung sie stammt. */
+  --season-1: #2563eb;
+  --season-1-light: #eff6ff;
+  --season-2: #047857;
+  --season-2-light: #ecfdf5;
+  --season-3: #7c3aed;
+  --season-3-light: #f5f3ff;
+
   --border: rgba(0, 0, 0, 0.08);
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -58,6 +67,15 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
+
+/* ==========================================
+   Schulungs-Farben
+   Alles, was zu einer Schulung gehört, trägt data-season und erbt
+   darüber --season-color / --season-bg.
+   ========================================== */
+[data-season="1"] { --season-color: var(--season-1); --season-bg: var(--season-1-light); }
+[data-season="2"] { --season-color: var(--season-2); --season-bg: var(--season-2-light); }
+[data-season="3"] { --season-color: var(--season-3); --season-bg: var(--season-3-light); }
 
 /* ==========================================
    Header
@@ -95,7 +113,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   line-height: 1.35;
-  color: var(--accent);
+  color: var(--season-color, var(--accent));
   margin-bottom: 0;
 }
 
@@ -273,12 +291,27 @@ body {
   pointer-events: none;
 }
 
-/* Color variants */
-.chapter-btn[data-color="blue"] { --btn-color: var(--accent); --btn-bg: var(--accent-light); }
-.chapter-btn[data-color="purple"] { --btn-color: var(--purple); --btn-bg: var(--purple-light); }
-.chapter-btn[data-color="green"] { --btn-color: var(--green); --btn-bg: var(--green-light); }
-.chapter-btn[data-color="amber"] { --btn-color: var(--amber); --btn-bg: var(--amber-bg); }
-.chapter-btn[data-color="red"] { --btn-color: var(--red); --btn-bg: var(--red-light); }
+/* Farbe kommt aus der Schulung, zu der das Kapitel gehört */
+.chapter-btn {
+  --btn-color: var(--season-color, var(--accent));
+  --btn-bg: var(--season-bg, var(--accent-light));
+}
+
+/* Streifen an der linken Kante: zeigt auch im Ruhezustand die Schulung an */
+.chapter-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--btn-color);
+  opacity: 0.55;
+  transition: opacity var(--transition);
+}
+
+.chapter-btn:hover::before,
+.chapter-btn.active::before { opacity: 1; }
 
 .chapter-btn::after { background: var(--btn-color); }
 .chapter-btn:hover { border-color: var(--btn-color); }
@@ -294,7 +327,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--text-muted);
+  color: var(--btn-color, var(--text-muted));
   transition: color var(--transition);
 }
 .chapter-label {
@@ -351,6 +384,11 @@ body {
   border-bottom: 1.5px solid var(--bg);
 }
 
+/* Trennlinie unter der Kapitel-Überschrift in der Schulungsfarbe */
+[data-season] .panel-heading {
+  border-bottom-color: color-mix(in srgb, var(--season-color) 20%, transparent);
+}
+
 .panel-heading-icon { font-size: 2rem; line-height: 1; flex-shrink: 0; }
 
 .panel-heading-meta { flex: 1; }
@@ -363,8 +401,8 @@ body {
   letter-spacing: 0.08em;
   padding: 2px 9px;
   border-radius: 20px;
-  background: var(--bg);
-  color: var(--text-muted);
+  background: var(--season-bg, var(--bg));
+  color: var(--season-color, var(--text-muted));
   margin-bottom: 0.2rem;
 }
 
@@ -636,8 +674,9 @@ mark.highlight {
     gap: 0.5rem;
   }
 
+  /* kein align-items:center – sonst bekommen die Zeilen ihre Inhaltsbreite
+     und die lange Schulung-3-Zeile schiebt die Seite seitlich raus */
   .header-seasons {
-    align-items: center;
     text-align: center;
   }
 
