@@ -510,11 +510,31 @@ Hinweistext pro Reihe – war Auskunft und keine Bedienung: die Welten stehen oh
 Kopfzeile des Rahmens (`renderWorlds`), und was auf einer Leinwand zählt, sind Knöpfe, die man
 aus fünf Metern trifft.
 
-**Das Arbeitsblatt** (`#wlSheet`) steht als Knopf schon da, die Adresse fehlt noch: sie kommt aus
-`limits.worksheet_url` und wird nachgereicht, sobald das Blatt unter `Dokumente/` liegt (Migration
-0129 begründet, warum das eine eigene Migration braucht). Bis dahin sagt der Knopf das auch – ein
-Knopf, der auf ein Tippen hin nichts tut, sieht aus wie ein kaputter, und das ausgerechnet vor der
-Klasse.
+**Das Arbeitsblatt** (`#wlSheet`) öffnet kein Dokument, sondern einen Kasten mit **zwei
+Fassungen**: das **PDF** geht in einem neuen Tab auf (ansehen, ausdrucken), die **DOCX** wird
+heruntergeladen (in Word ändern). Das ist keine Verdopplung – die beiden beantworten zwei
+verschiedene Fragen, und welche gerade gemeint ist, weiß nur die Lehrkraft. Wer heute ausdruckt,
+will nicht Word dazwischen; wer es an seine Klasse anpasst, braucht genau das.
+
+Drei Dinge daran sind nicht offensichtlich:
+
+* **Die Dateien liegen neben dem Werkzeug** (`tools/wildclusters/WildClusters Arbeitsblatt.pdf`
+  bzw. `.docx`) und nicht unter `Dokumente/` am Wurzelverzeichnis: sie gehören zu diesem Skill,
+  werden mit ihm zusammen bewegt und sind mit ihm zusammen zu finden. Damit ist auch
+  `limits.worksheet_url` weg – eine Einstellung je Raum für eine Datei, die im selben Ordner
+  liegt, wäre ein Feld, das jeder leer lässt. Der Name steht in `tool.js` genau einmal
+  (`SHEET_NAME`), `encodeURIComponent` trägt das Leerzeichen.
+* **Der Kasten ist derselbe wie die Einführung**, nur mit anderem Inhalt: `absolute` statt
+  `fixed` (das Vollbild nimmt ihn mit), und Ausgang, Vorzeile und Überschrift borgt er sich bei
+  ihr (`.wl-i-x`, `.wl-i-kicker`, `.wl-i-title`). Eine zweite Fassung derselben Regeln wäre die,
+  die beim nächsten Mal nicht mitgezogen wird. `.wl-sheet[hidden]` gehört deshalb in die
+  Sammelregel am Kopf von `tool.css` – sonst geht er auf und nie wieder zu.
+* **Am Tablet gibt es ihn nicht.** Der Knopf steht am Pult, das Blatt teilt die Lehrkraft aus.
+
+`tools/roomtest.js` hält das fest: auf, zu über alle drei Wege (Datei · ✕ · Fläche daneben), beide
+Adressen im Markup – und dass die beiden Dateien **wirklich im Ordner liegen**. Ein Umbenennen ist
+der wahrscheinlichste Weg, diese Links zu brechen, und gemerkt würde es sonst erst beim Tippen vor
+der Klasse.
 
 **Die Einführung** (`.wl-intro` in `tool.js`, `cardsFor`) kommt **einmal je Abschnitt der Stunde
 und nicht je Welt**: fünf Karten, erst die Lage („*n* Tiere tragen einen Sender, welche Art das ist,
@@ -815,15 +835,23 @@ Kind kommt genauso dorthin wie eine Lehrkraft. Daraus folgt dreierlei:
   keine Artfarben. Nur die verdeckte Karte (Spuren, Punkte, Nummern) und die Signalliste – genau
   das, was die Klasse auch sieht. Auch die **Zahl der Arten** fehlt; sie ist die Zahl der gesuchten
   Gruppen und damit die halbe Lösung.
-* Das Drehbuch fährt die Stunde bis **„3a Welt auflösen"** und hält dort an. Eine Landschaft
-  verrät niemanden; **„3b Tiere aufdecken" bleibt liegen** – das gehört vor die Klasse und nicht
-  in eine Auslage. ⚠️ Das Drehbuch allein ist dafür nur die halbe Sicherung: die Auslage **ist**
-  das Werkzeug und bedienbar, ein Finger trifft den Knopf auch ohne Drehbuch. Unter `ctx.preview`
-  steht er deshalb gar nicht erst am Pult (`stepsShown` in `tool.js`, gelesen von `paintDesk`
-  *und* `onDeskClick`) – dort sind es drei Knöpfe, und der dritte ist der letzte. Weggenommen und
-  nicht gesperrt: ein Knopf, der auf ein Tippen hin nichts tut, sieht aus wie ein kaputter.
+* Das Drehbuch fährt die **Arbeit** vor und nicht die Auflösung: Tag 1–5, dann „2 Nachzügler",
+  dann zurück auf „1 Gruppieren". **Phase 3 kommt im Schaufenster gar nicht vor** – weder
+  „3b Tiere aufdecken" (jeder Punkt bekäme sein Bild daneben) noch „3a Welt auflösen" (die Gegend,
+  in der die Tiere leben). Beides ist das Ende der Stunde, und ein Ende, das auf der offenen
+  Landing mitläuft, lässt sich vorne nicht mehr halten. ⚠️ Das Drehbuch allein ist dafür nur die
+  halbe Sicherung: die Auslage **ist** das Werkzeug und bedienbar, ein Finger trifft den Knopf
+  auch ohne Drehbuch. Unter `ctx.preview` stehen beide Schritte deshalb gar nicht erst am Pult
+  (`stepsShown` in `tool.js`, gefiltert über `s.phase !== 3` und gelesen von `paintDesk` *und*
+  `onDeskClick`) – dort sind es zwei Knöpfe, und der zweite ist der letzte. Weggenommen und nicht
+  gesperrt: ein Knopf, der auf ein Tippen hin nichts tut, sieht aus wie ein kaputter.
+  `tools/roomtest.js` hält beide Enden fest (`run(role, entriesFor, preview)`): der Knopf wird
+  nicht gezeichnet, **und** ein Tipp darauf löst keine Aktion aus – am Pult im Raum dagegen stehen
+  weiter alle vier.
 * Der Beschreibungstext darf sagen, dass es *Tiere* sind (das steht auf der ersten
-  Einführungskarte), nicht **welche**.
+  Einführungskarte), nicht **welche**. Dass am Ende aufgedeckt wird, darf er dagegen sagen: der
+  Satz ist das, was eine Lehrkraft vor der Stunde wissen will, das Bild dazu das, was ein Kind
+  vorher nicht sehen soll.
 
 Gezeigt wird beim Darüberfahren der eine Vorgang, aus dem die Aufgabe besteht: drei Kacheln werden
 ein Cluster. Dabei gewinnt die Farbe des **Ziels**, die drei Spuren auf der Karte färben mit, und
@@ -832,8 +860,14 @@ Standbild sind keine erfundenen Töne, sondern die Rückgaben von `PALETTE.signa
 Stellen 0, 1, 2, 4, 5 und 8 (Rand: `darken(farbe, 0.34)` wie in `signals.js`).
 
 Die Rolle im Schaufenster ist **`presenter`** – anders als bei NeuroLab steuert der Raum hier
-wirklich etwas, und die vier Knöpfe des Pults sind das, was jemand sehen will, der überlegt, ob er
+wirklich etwas, und die Knöpfe des Pults sind das, was jemand sehen will, der überlegt, ob er
 damit eine Stunde macht. `ctx.preview` hält in `tool.js` ohnehin Einführung und Speichern an.
+
+**Der Beschreibungstext daneben nennt das Arbeitsblatt als eigenen Absatz**, und zwar fest im
+Drehbuch (`blurb` in `MPSkills/preview/wildclusters.js`) statt in der Registry: die beiden Dateien
+liegen im Ordner des Skills, gehören also zum ausgelieferten Werkzeug und nicht zu einer
+Einstellung je Raum (siehe `limits.worksheet_url`, das aus genau diesem Grund weg ist). Wer
+überlegt, ob er eine Stunde damit macht, fragt als Zweites nach dem Material.
 
 ⚠️ **Der Abspielknopf im Rahmen ist ein Schalter, kein Startknopf.** Ein Drehbuch, das ihn blind
 drückt, startet im ersten Durchgang und hält im zweiten an. Gelesen wird sein Zeichen („▶" gegen

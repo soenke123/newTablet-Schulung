@@ -139,18 +139,22 @@
       title: 'Die Tiere bekommen ihr Bild — die Nummer bleibt daneben stehen' }
   ];
 
-  /* ⚠️ Im Schaufenster (`ctx.preview`) gibt es den letzten Schritt nicht.
-     „3b Tiere aufdecken" setzt jedem Punkt sein Bild daneben — und damit
-     steht auf der offenen Landing, welche Arten hier leben. Genau das ist
-     die Aufgabe der Stunde, und ein Kind kommt dorthin wie eine Lehrkraft
-     (dieselbe Regel wie im Kopf von MPSkills/preview/wildclusters.js).
+  /* ⚠️ Im Schaufenster (`ctx.preview`) gibt es die AUFLÖSUNG nicht — weder
+     „3b" noch „3a". „3b Tiere aufdecken" setzt jedem Punkt sein Bild daneben,
+     und „3a Welt auflösen" zeigt die Gegend, in der sie leben; beides ist das
+     Ende der Stunde, und es stünde auf der offenen Landing, zu der ein Kind
+     genauso kommt wie eine Lehrkraft (dieselbe Regel wie im Kopf von
+     MPSkills/preview/wildclusters.js).
 
-     Das Drehbuch dort hält von sich aus bei „3a" an. Das reicht nicht: die
-     Auslage ist das echte Werkzeug und bedienbar, ein Finger trifft den
-     Knopf daneben. Weggenommen statt gesperrt — ein Knopf, der auf ein
-     Tippen hin nichts tut, sieht aus wie ein kaputter. */
+     Dass das Drehbuch dort von sich aus anhält, reicht nicht: die Auslage ist
+     das echte Werkzeug und bedienbar, ein Finger trifft den Knopf daneben.
+     Weggenommen statt gesperrt — ein Knopf, der auf ein Tippen hin nichts tut,
+     sieht aus wie ein kaputter.
+
+     Gefiltert wird über die PHASE und nicht über die beiden ids: käme die
+     Auflösung je in drei Handgriffen, wäre der dritte sonst wieder da. */
   const stepsShown = () =>
-    (ctx && ctx.preview) ? STEPS.filter(s => s.id !== '3b') : STEPS;
+    (ctx && ctx.preview) ? STEPS.filter(s => s.phase !== 3) : STEPS;
 
   /* Bewahrt werden die drei Welten des Raums und sonst nichts (siehe
      `remember`). Mehr Plätze braucht der Bestand deshalb nicht — und
@@ -1012,8 +1016,8 @@
        `data` als Ganzes (coalesce, kein Merge) — wer nur einen schickt,
        löscht den anderen. */
     if (btn.dataset.step) {
-      // `stepsShown` und nicht `STEPS`: im Schaufenster gibt es „3b" nicht,
-      // und ein Drehbuch, das ihn doch anspricht, soll dort ins Leere gehen.
+      // `stepsShown` und nicht `STEPS`: im Schaufenster gibt es die Auflösung
+      // nicht, und ein Drehbuch, das sie doch anspricht, soll ins Leere gehen.
       const step = stepsShown().find(s => s.id === btn.dataset.step);
       if (!step) return;
       const phase = phaseOf(view);
@@ -1078,16 +1082,80 @@
       return;
     }
 
-    /* Das Arbeitsblatt. Der Knopf steht schon, die Adresse noch nicht: sie
-       kommt aus `limits.worksheet_url` und wird nachgereicht, sobald das
-       Blatt unter Dokumente/ liegt (siehe Migration 0129). Bis dahin sagt er
-       das auch — ein Knopf, der auf ein Tippen hin nichts tut, sieht aus wie
-       ein kaputter, und das ausgerechnet vor der Klasse. */
+    /* Das Arbeitsblatt. Es geht nicht direkt auf, sondern fragt erst nach
+       der Fassung — die beiden beantworten zwei verschiedene Fragen (siehe
+       sheetHTML), und welche gerade gemeint ist, weiß nur die Lehrkraft. */
     if (btn.id === 'wlSheet') {
-      const url = view && view.limits && view.limits.worksheet_url;
-      if (url) window.open(url, '_blank', 'noopener');
-      else ctx.toast('Das Arbeitsblatt kommt noch.');
+      openSheet();
       return;
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Das Arbeitsblatt
+     ══════════════════════════════════════════════════════════ */
+
+  /* Es liegt NEBEN dem Werkzeug (`tools/wildclusters/`) und nicht unter
+     `Dokumente/` am Wurzelverzeichnis: es gehört zu diesem Skill, wird mit
+     ihm zusammen bewegt und ist mit ihm zusammen zu finden. Deshalb auch
+     keine Adresse aus `limits` mehr — eine Einstellung je Raum für eine
+     Datei, die im selben Ordner liegt, wäre ein Feld, das jeder leer lässt.
+
+     Zwei Fassungen, und das ist keine Verdopplung: das PDF wird ausgeteilt,
+     die Word-Datei umgeschrieben. Wer es an seine Klasse anpassen will,
+     braucht die zweite; wer es heute ausdruckt, will die erste und nicht
+     Word dazwischen. Der Name steht genau einmal hier — die Dateien im
+     Ordner heißen so, und `encodeURIComponent` trägt das Leerzeichen. */
+  const SHEET_NAME = 'WildClusters Arbeitsblatt';
+  const sheetUrl = (ext) =>
+    'tools/wildclusters/' + encodeURIComponent(SHEET_NAME + '.' + ext);
+
+  function sheetHTML() {
+    return `
+    <div class="wl-sheet" id="wlSheetBox" hidden>
+      <div class="wl-s-card" role="dialog" aria-modal="true" aria-labelledby="wlSheetTitle">
+        <button type="button" class="wl-i-x" data-sheet="close"
+                aria-label="Fenster schließen">✕</button>
+        <div class="wl-s-head">
+          <p class="wl-i-kicker">Zur Stunde</p>
+          <h2 class="wl-i-title" id="wlSheetTitle">Arbeitsblatt</h2>
+          <p class="wl-s-sub">Darauf hält die Klasse fest, woran sie die Gruppen
+            auseinandergehalten hat — ohne die Tiere zu sehen.</p>
+        </div>
+        <div class="wl-s-files">
+          <a class="wl-s-file" href="${esc(sheetUrl('pdf'))}"
+             target="_blank" rel="noopener">
+            <span class="wl-s-ext">PDF</span>
+            <span class="wl-s-txt"><b>Ansehen und ausdrucken</b>
+              <span>Geht in einem neuen Tab auf.</span></span>
+          </a>
+          <a class="wl-s-file" href="${esc(sheetUrl('docx'))}"
+             download="${esc(SHEET_NAME + '.docx')}">
+            <span class="wl-s-ext">DOCX</span>
+            <span class="wl-s-txt"><b>In Word ändern</b>
+              <span>Wird heruntergeladen.</span></span>
+          </a>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function openSheet() { const b = $('wlSheetBox'); if (b) b.hidden = false; }
+  function closeSheet() { const b = $('wlSheetBox'); if (b) b.hidden = true; }
+
+  function onSheetClick(e) {
+    const t = e.target;
+    /* Ein Tipp auf eine der beiden Dateien schließt den Kasten mit. Der
+       Browser lädt sie dabei in seinem eigenen Tempo herunter; ein Fenster,
+       das danach unverändert dasteht, sieht aus, als wäre nichts passiert —
+       und der zweite Tipp darauf holt die Datei ein zweites Mal. */
+    if (t.closest && t.closest('a.wl-s-file')) { closeSheet(); return; }
+    // Der Ausgang: das ✕ und die Fläche daneben. Beides ist ein Weg zurück,
+    // und der Kasten deckt vorne die ganze Karte zu. Verglichen wird mit dem
+    // Kasten selbst und nicht mit `e.currentTarget` — dasselbe Ergebnis, aber
+    // ohne ein Feld, das ein nachgestelltes Ereignis erst mitbringen muss.
+    if ((t.closest && t.closest('[data-sheet="close"]')) || t === $('wlSheetBox')) {
+      closeSheet();
     }
   }
 
@@ -1642,13 +1710,22 @@
         + '</div>'
         /* Im Kasten und nicht über der Seite: das Vollbild nimmt genau
            diesen Kasten mit, ein `position: fixed` daneben wäre darin
-           unsichtbar — und der Rahmen darunter unbedienbar. */
-        + (pres ? '' : introHTML())
+           unsichtbar — und der Rahmen darunter unbedienbar. Für das
+           Arbeitsblatt gilt dasselbe: sein Knopf steht am Pult, und das
+           Pult ist im Vollbild noch da. */
+        + (pres ? sheetHTML() : introHTML())
         + '</div>';
 
       frame = root.querySelector('.wl-frame');
-      if (pres) wireDesk();
-      else {
+      if (pres) {
+        wireDesk();
+        const sheet = $('wlSheetBox');
+        if (sheet) sheet.addEventListener('click', onSheetClick);
+        /* Zu, und zwar von hier aus. Das `hidden` steht zwar auch im
+           Markup — aber der Zustand dieses Kastens gehört dem Code, der
+           ihn auf- und zumacht, und nicht einer Zeichenkette daneben. */
+        closeSheet();
+      } else {
         const intro = $('wlIntro');
         if (intro) intro.addEventListener('click', onIntroClick);
       }

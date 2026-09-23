@@ -24,31 +24,35 @@
        sie ist die Anzahl der gesuchten Gruppen und damit die halbe
        Lösung.
 
-   (2) Das Drehbuch fasst „3b Tiere aufdecken" NICHT an. Die
-       Auflösung ist im Schaufenster genau einen Schritt weit
-       vorführbar — „3a Welt auflösen" gibt die Landschaft frei, und
-       eine Landschaft verrät niemanden. Der zweite Schritt setzt
-       jedem Punkt sein Bild daneben; das gehört vor die Klasse und
-       nicht in eine Auslage.
+   (2) Das Drehbuch fasst die AUFLÖSUNG nicht an — weder „3b Tiere
+       aufdecken" noch „3a Welt auflösen". Der zweite Schritt setzt
+       jedem Punkt sein Bild daneben, der erste zeigt die Gegend, in
+       der die Tiere leben; beides ist das Ende der Stunde, und ein
+       Ende, das auf der offenen Startseite mitläuft, lässt sich
+       vorne nicht mehr halten. Vorgeführt wird die ARBEIT (Tag 1–5,
+       dann die Nachzügler) und nicht, was dabei herauskommt.
 
-       Dass das Drehbuch ihn auslässt, ist dabei nur die halbe
+       Dass das Drehbuch sie auslässt, ist dabei nur die halbe
        Sicherung: die Auslage ist das echte Werkzeug und bedienbar,
-       ein Finger trifft den Knopf auch ohne Drehbuch. Deshalb steht
-       er unter `ctx.preview` gar nicht erst am Pult (`stepsShown`
-       in tools/wildclusters/tool.js) — hier bleibt es bei drei
-       Knöpfen, und der dritte ist der letzte.
+       ein Finger trifft den Knopf auch ohne Drehbuch. Deshalb stehen
+       beide Schritte unter `ctx.preview` gar nicht erst am Pult
+       (`stepsShown` in tools/wildclusters/tool.js) — hier bleibt es
+       bei zwei Knöpfen, und der zweite ist der letzte.
 
    (3) Der Beschreibungstext nennt keine Art. Er darf sagen, dass es
        Tiere sind — das steht auf der ersten Einführungskarte des
        Skills selbst („n Tiere tragen einen Sender, welche Art das
-       ist, weiß niemand mehr"). Er darf nicht sagen, welche.
+       ist, weiß niemand mehr"). Er darf nicht sagen, welche. Dass
+       am Ende aufgedeckt wird, darf er dagegen sagen: ein Satz
+       darüber, DASS die Lehrkraft auflöst, verrät nichts — das Bild
+       dazu schon.
 
    ── Warum die Rolle 'presenter' ist ───────────────────────────
    Anders als bei NeuroLab steuert der Raum hier wirklich etwas: die
    Lehrkraft schaltet die Abschnitte der Stunde, und das ist der
    Teil, den jemand sehen will, der überlegt, ob er damit eine Stunde
-   macht. Am Pult sind die vier Knöpfe da, und das Drehbuch drückt
-   dieselben, die vorne auch ein Finger drückt.
+   macht. Am Pult stehen die Knöpfe der Arbeitsphasen, und das
+   Drehbuch drückt dieselben, die vorne auch ein Finger drückt.
 
    Nebenbei ist es die einzige Rolle, in der die Auslage nichts
    Falsches tut: `ctx.preview` hält in tool.js ohnehin die
@@ -93,21 +97,23 @@
      entsteht erst mit `signals.setSimulation`, ist also der einzige
      ehrliche Beleg dafür, dass es etwas zu sehen gibt.
 
-     Danach vier Bilder, und jedes beantwortet eine eigene Frage:
+     Danach drei Bilder, und jedes beantwortet eine eigene Frage:
 
        1. Die Uhr läuft (`#playBtn`).       Was ist das überhaupt?
        2. „2 Nachzügler".                   Was passiert in der Stunde?
-       3. „3a Welt auflösen".               Worauf läuft es hinaus?
-       4. Zurück auf „1 Gruppieren".        Anfang für den nächsten Lauf.
+       3. Zurück auf „1 Gruppieren".        Anfang für den nächsten Lauf.
 
-     Bedient wird über die vier Knöpfe des Pults (`[data-step]`) und den
+     Worauf es hinausläuft, beantwortet der Text daneben und nicht das
+     Bild — siehe (2) im Kopf dieser Datei.
+
+     Bedient wird über die Knöpfe des Pults (`[data-step]`) und den
      Abspielknopf im Rahmen. An der Signalliste wird NICHTS gezogen: das
      Gruppieren ist eine Zeigergeste über mehrere Ereignisse, und der
      Regisseur kann klicken, aber nicht ziehen (siehe makeApi in
      lib/preview.js). Die Kachel zeigt diesen einen Vorgang dafür im
      Kleinen — das ist die Arbeitsteilung, nicht ein Mangel.
 
-     ⚠️ „3b Tiere aufdecken" bleibt liegen. Warum, steht oben. */
+     ⚠️ Die Auflösung („3a" und „3b") bleibt liegen. Warum, steht oben. */
 
   const BUILD = 40000;   // so lange darf der Aufbau dauern
 
@@ -137,12 +143,10 @@
     api.click('[data-step="2"]');
     if (!await api.wait(900)) return;
     goOn(api);
-    if (!await api.wait(4600)) return;
-
-    api.click('[data-step="3a"]');
-    if (!await api.wait(900)) return;
-    goOn(api);
-    if (!await api.wait(4900)) return;
+    // Etwas länger als das erste Bild: die Nachzügler sind jetzt das letzte,
+    // was zu sehen ist, und der Haufen rechts braucht einen Moment, bis man
+    // ihn als neu erkennt.
+    if (!await api.wait(6000)) return;
 
     api.click('[data-step="1"]');
     await api.wait(1600);
@@ -398,7 +402,19 @@
 
     /* ⚠️ Kein Wort darüber, welche Tiere hier leben, und auch nicht,
        wie viele Arten es sind — die Zahl der Arten ist die Zahl der
-       gesuchten Gruppen. Begründung im Kopf dieser Datei. */
+       gesuchten Gruppen. Begründung im Kopf dieser Datei.
+
+       Die Auflösung DARF hier stehen, obwohl sie oben nicht mehr
+       läuft: ein Satz darüber, dass die Lehrkraft am Ende aufdeckt,
+       ist das, was eine Lehrkraft vor der Stunde wissen will — das
+       aufgedeckte Bild ist das, was ein Kind vorher nicht sehen soll.
+
+       Der letzte Absatz gehört dem Arbeitsblatt. Es steht fest im
+       Text und nicht in der Registry: die beiden Dateien liegen im
+       Ordner des Skills (`tools/wildclusters/`), gehören also zum
+       ausgelieferten Werkzeug und nicht zu einer Einstellung, die
+       jemand je Raum pflegen müsste (siehe `limits.worksheet_url` in
+       Migration 0129 — genau deshalb gibt es das Feld nicht mehr). */
     blurb: `
       <p>Ein unbekanntes Ökosystem von oben. Rund vierzig Tiere tragen einen Sender,
          <strong>welche Art das ist, weiß niemand mehr</strong> — sichtbar ist nur ihre
@@ -407,11 +423,14 @@
          fällt.</p>
       <p>Nach Tag 5 kommen <strong>Nachzügler</strong> dazu, und die spannende Frage ist,
          in welche Gruppe sie gehören — <em>wenn es eine gibt</em>. Am Ende deckt die
-         Lehrkraft Schritt für Schritt auf: erst die Landschaft, dann die Tiere. Oben
-         läuft der erste Schritt; den zweiten hebt sich die Auslage auf, sonst stünde
-         die Lösung auf der Startseite.</p>
+         Lehrkraft Schritt für Schritt auf: erst die Landschaft, dann die Tiere. Die
+         Auflösung läuft oben <em>nicht</em> mit — sie gehört vor die Klasse und nicht
+         auf eine offene Startseite.</p>
       <p>Jede Person bekommt <strong>drei eigene Welten</strong>, gerechnet aus Raumcode
          und Sitzplatz — abschreiben geht nicht. Am Beamer zeigt „Stand der Klasse“ jede
-         Person mit ihren drei Welten, und ein Tipp legt die auf, die sie gerade ansieht.</p>`
+         Person mit ihren drei Welten, und ein Tipp legt die auf, die sie gerade ansieht.</p>
+      <p>Zum Skill gehört ein <strong>Arbeitsblatt</strong>: als PDF zum Ausdrucken und
+         als Word-Datei zum Anpassen an die eigene Klasse. Es liegt im Steuerpult der
+         Lehrkraft — ein Knopf, zwei Fassungen, kein Suchen in einem Downloadordner.</p>`
   });
 })();

@@ -69,8 +69,10 @@ function el(name) {
  * @param entriesFor  optional: (worlds) => Beitraege, die VOR dem ersten
  *                    update() im Raum liegen. Nur so laeuft absorb() - danach
  *                    steht `restored` und der Server kommt zu spaet.
+ * @param preview     optional: die Auslage auf der Landing (`ctx.preview`).
+ *                    Dieselbe Rolle wie am Pult, aber ohne die Auflösung.
  */
-function run(role, entriesFor) {
+function run(role, entriesFor, preview) {
   const posted = [];
   const frameWin = { postMessage(m) { posted.push(JSON.parse(JSON.stringify(m))); } };
 
@@ -113,7 +115,7 @@ function run(role, entriesFor) {
 
   const saved = [];
   const ctx = {
-    role, preview: false,
+    role, preview: !!preview,
     esc: (s) => String(s == null ? '' : s),
     toast() {}, errText: (s) => s, refresh() {},
     actions: {
@@ -643,7 +645,116 @@ function aufloesungFragtNach() {
      c.box.hidden === false && /alles offen/.test(c.titel()), c.titel());
 }
 
+/* Das Arbeitsblatt
+   ══════════════════════════════════════════════════════════
+   Der Knopf am Pult öffnet kein Dokument, sondern fragt nach der Fassung —
+   PDF zum Austeilen, DOCX zum Umschreiben. Drei Dinge sind daran zu halten:
+
+   * Der Kasten geht auf UND wieder zu. Eine eigene `display`-Regel in
+     tool.css schlägt sonst `[hidden]`, und was aufgeht, bliebe offen —
+     vorne auf der Leinwand, über der Karte.
+   * Beide Adressen zeigen neben das Werkzeug, mit dem Leerzeichen im
+     Namen sauber kodiert. Eine tote Adresse sieht aus wie ein kaputter
+     Knopf, und das ausgerechnet vor der Klasse.
+   * Und die Dateien liegen wirklich da. Ein Umbenennen im Ordner ist der
+     wahrscheinlichste Weg, diese beiden Links zu brechen; gemerkt würde es
+     sonst erst beim Tippen. */
+function arbeitsblattFragtNachDerFassung() {
+  const t = run('presenter');
+  t.fromFrame('ready', {});
+  frameAnswers(t, []);
+
+  const desk = t.root.querySelector('#wlDesk');
+  const box = t.root.querySelector('#wlSheetBox');
+  ok('Arbeitsblatt: zu, solange niemand fragt', box.hidden === true, box.hidden);
+
+  const knopf = { id: 'wlSheet', dataset: {} };
+  knopf.closest = () => knopf;
+  const tippeIm = (sel) => {
+    const e = {};
+    e.closest = (s) => (s === sel ? e : null);
+    box.fire('click', e);
+  };
+
+  desk.fire('click', knopf);
+  ok('Arbeitsblatt: der Knopf am Pult macht ihn auf', box.hidden === false, box.hidden);
+
+  tippeIm('a.wl-s-file');
+  ok('Arbeitsblatt: ein Tipp auf eine Fassung macht ihn zu', box.hidden === true, box.hidden);
+
+  desk.fire('click', knopf);
+  tippeIm('[data-sheet="close"]');
+  ok('Arbeitsblatt: das ✕ auch', box.hidden === true, box.hidden);
+
+  desk.fire('click', knopf);
+  box.fire('click', box);
+  ok('Arbeitsblatt: die Fläche daneben auch', box.hidden === true, box.hidden);
+
+  for (const ext of ['pdf', 'docx']) {
+    const url = 'tools/wildclusters/WildClusters%20Arbeitsblatt.' + ext;
+    ok('Arbeitsblatt: ' + ext.toUpperCase() + ' steht mit seiner Adresse drin',
+       t.root.innerHTML.includes('"' + url + '"'), url);
+    ok('Arbeitsblatt: ' + ext.toUpperCase() + ' liegt auch wirklich im Ordner',
+       fs.existsSync(path.join(__dirname, '..', 'WildClusters Arbeitsblatt.' + ext)));
+  }
+
+  // Am Tablet gibt es ihn nicht: das Blatt teilt die Lehrkraft aus.
+  const s = run('student');
+  ok('Arbeitsblatt: am Tablet wird er gar nicht erst gebaut',
+     s.root._kids['#wlSheetBox'] === undefined);
+}
+
+/* Die Auslage auf der Landing (`ctx.preview`)
+   ══════════════════════════════════════════════════════════
+   Dieselbe Rolle wie am Pult, aber die AUFLOESUNG gibt es dort nicht - weder
+   „3a Welt auflösen" (die Gegend, in der die Tiere leben) noch „3b Tiere
+   aufdecken" (jeder Punkt bekaeme sein Bild daneben). Beides ist das Ende der
+   Stunde, und die Landing steht offen: ein Kind kommt dorthin wie eine
+   Lehrkraft.
+
+   Geprueft wird an beiden Enden, weil `stepsShown` an beiden gelesen wird:
+   der Knopf wird gar nicht erst gezeichnet (`paintDesk`), UND ein Tipp darauf
+   geht ins Leere (`onDeskClick`) - ein Drehbuch, das den Schritt doch
+   anspricht, darf die Auflösung nicht doch noch schalten. */
+function auslageZeigtDieAufloesungNicht() {
+  const t = run('presenter', null, true);
+  t.fromFrame('ready', {});
+  frameAnswers(t, []);
+
+  const html = t.root.querySelector('#wlPhases').innerHTML;
+  ok('Auslage: „1 Gruppieren" steht da', html.includes('data-step="1"'), html);
+  ok('Auslage: „2 Nachzügler" auch', html.includes('data-step="2"'), html);
+  ok('Auslage: „3a Welt auflösen" nicht', !html.includes('data-step="3a"'), html);
+  ok('Auslage: „3b Tiere aufdecken" nicht', !html.includes('data-step="3b"'), html);
+
+  /* Und der Tipp darauf: gezaehlt wird, ob eine Aktion hinausgeht. `setData`
+     und `setPhase` sind die beiden Tueren in den Raum-Zustand. */
+  let rufe = 0;
+  t.ctx.actions.setData  = async () => { rufe++; return { ok: true }; };
+  t.ctx.actions.setPhase = async () => { rufe++; return { ok: true }; };
+  const desk = t.root.querySelector('#wlDesk');
+  const tippe = (id) => {
+    const b = { dataset: { step: id } };
+    b.closest = () => b;
+    desk.fire('click', b);
+  };
+  tippe('3a');
+  tippe('3b');
+  ok('Auslage: ein Tipp auf die Auflösung geht ins Leere', rufe === 0, rufe);
+  tippe('2');
+  ok('Auslage: „2 Nachzügler" schaltet weiterhin', rufe > 0, rufe);
+
+  // Am Pult im Raum sind alle vier da - dort gehoert die Auflösung hin.
+  const p = run('presenter');
+  p.fromFrame('ready', {});
+  const pult = p.root.querySelector('#wlPhases').innerHTML;
+  ok('Pult: dort stehen alle vier Schritte',
+     ['1', '2', '3a', '3b'].every(id => pult.includes('data-step="' + id + '"')), pult);
+}
+
 pultBehaeltSeineWelten();
+auslageZeigtDieAufloesungNicht();
+arbeitsblattFragtNachDerFassung();
 pultBehaeltDieNachzuegler();
 selbstGebauteWeltBehaeltIhreArbeit('student');
 selbstGebauteWeltBehaeltIhreArbeit('presenter');

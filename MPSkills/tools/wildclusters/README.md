@@ -36,7 +36,9 @@ passiert:
   dann ist nur noch die Karte da. Derselbe Knopf führt wieder heraus.
 * **Am Beamer** sieht die Lehrkraft dieselbe Karte (drei eigene Welten zum Vorführen, oben in der
   Kopfzeile zu wählen), dazu eine Reihe Knöpfe: die vier Schritte links, rechts **Stand der
-  Klasse**, **freier Modus** und **Arbeitsblatt** (der Knopf steht, das Blatt kommt noch).
+  Klasse**, **freier Modus** und **Arbeitsblatt**. Das Arbeitsblatt fragt nach der Fassung:
+  **PDF** zum Ansehen und Ausdrucken (geht in einem neuen Tab auf) oder **DOCX** zum Ändern in
+  Word (wird heruntergeladen). Beide liegen in diesem Ordner.
   Der Stand der Klasse ist eine Zeile je Person:
 
   ```
