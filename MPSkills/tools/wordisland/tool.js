@@ -292,6 +292,54 @@
   const esc = s => (ctx ? ctx.esc(s) : String(s == null ? '' : s));
   const teamOf = s => TEAMS[facOf(s)] || { name: 'Volk ' + (s + 1), color: '#888', viele: false };
 
+  /* ─── Wenn die Vokabel ein ganzer Satz ist ──────────────────
+     Seit dem Lehrwerkswechsel (0170) darf ein Eintrag 120 Zeichen
+     haben: die deutsche Seite einer Lehrwerksliste ist manchmal eine
+     Erklärung und kein Wort — „Haggis (schottisches Gericht aus in
+     einem Schafsmagen gekochten Schafsinnereien und Haferschrot)",
+     96 Zeichen.
+
+     Bei den 40 px von `.wi-word` wären das auf einem Telefon sechs
+     Zeilen, und weil beim Tippen die Tastatur steht, schöbe das
+     Eingabefeld aus dem sichtbaren Bereich — der Kasten ist genau
+     dafür gebaut (`--vv-h`), und ein einziger langer Eintrag machte
+     die Übung unbedienbar.
+
+     Zwei Stufen statt einer stufenlosen Rechnung: eine Vokabel ist
+     ein Wort (groß), eine Wendung (mittel) oder eine Erklärung
+     (klein). Die Grenzen sind an den drei Bänden abgezählt: von den
+     5572 Seiten (beide Richtungen aller 2761 Wortpaare) sind 19
+     länger als 40 Zeichen und 2 länger als 72. Alles andere sieht
+     aus wie bisher. Die Schriftgrößen stehen in tool.css.
+
+     Gemessen wird der TEXT und nicht die gerenderte Höhe: eine
+     Messung im Aufbau kostet einen Reflow je Frage und läge bei
+     geschlossener Tastatur trotzdem falsch. */
+  const zeigeWort = (el) => {
+    const n = (el.textContent || '').length;
+    el.classList.toggle('is-lang', n > 40 && n <= 72);
+    el.classList.toggle('is-satz', n > 72);
+  };
+
+  /* ─── Ein Knopf, der grau ist und trotzdem antwortet ────────
+     `disabled` nimmt einem Knopf nicht nur die Wirkung, sondern
+     auch den KLICK: kein Ereignis, kein Hinweis, und die Frage
+     „warum geht das nicht?" bleibt stehen. Seit dem 23.09.2026
+     sperren beide Startknöpfe (Pult „Schiffe klarmachen", Insel
+     „Vokabeln üben") deshalb über `aria-disabled` — gleiche Optik
+     (tool.css), gleiche Auskunft an die Vorlesefunktion, aber der
+     Griff kommt an und sagt, was fehlt.
+
+     `disabled` bleibt für den anderen Fall: „noch nicht bereit"
+     (die Insel wird gerade gebaut). Dafür gibt es nichts zu sagen,
+     das ist in einer Sekunde vorbei. */
+  const aus = (el, ja) => {
+    if (!el) return;
+    el.classList.toggle('is-aus', !!ja);
+    if (ja) el.setAttribute('aria-disabled', 'true');
+    else el.removeAttribute('aria-disabled');
+  };
+
   /* ══════════════════════════════════════════════════════════
      JAHRGANG → UNIT → STATION (Migration 0150)
      ══════════════════════════════════════════════════════════
@@ -3641,7 +3689,13 @@ ${LEAVE_HTML}
   function renderSetSum() {
     if (!els.setSum) return;
     const chosen = sets.list.filter(s => sets.chosen.includes(String(s.id)));
-    if (els.start) els.start.disabled = !sets.chosen.length;
+    /* Grau, aber anfassbar (23.09.2026). Ein `disabled`-Knopf gibt
+       gar keinen Klick her — und dann bleibt die Frage „warum ist
+       der grau?" unbeantwortet, wenn der Kasten mit den Listen
+       gerade zu ist. `aria-disabled` sieht genauso aus (tool.css),
+       sagt derselben Vorlesefunktion dasselbe und lässt den Hinweis
+       in onStart durch. */
+    if (els.start) aus(els.start, !sets.chosen.length);
     els.setSum.classList.toggle('wi-setsum--warn', !sets.chosen.length);
     if (!sets.chosen.length) {
       els.setSum.innerHTML = '<b>Keine Wörter gewählt</b>';
@@ -3704,11 +3758,6 @@ ${LEAVE_HTML}
       const ids = g.sets.map(s => String(s.id));
       const rest = sets.chosen.filter(x => !ids.includes(x));
       sets.chosen = ids.every(i => sets.chosen.includes(i)) ? rest : rest.concat(ids);
-      if (!sets.chosen.length) {
-        // Ein Raum ohne Wörter ist kein Raum.
-        sets.chosen = ids;
-        ctx.toast('Mindestens eine Liste muss gewählt sein.');
-      }
       renderSets();
       renderSetSum();
       setsBusy++;
@@ -3720,16 +3769,16 @@ ${LEAVE_HTML}
     const b = e.target.closest('.wi-set');
     if (!b) return;
     const id = b.dataset.id;
+    /* Bis zum 23.09.2026 ließ sich die letzte Liste hier nicht
+       abwählen („Ein Raum ohne Wörter ist kein Raum"). Der Satz
+       stimmt — nur ist die Auswahl kein Raum, sondern ein Zettel,
+       auf dem man gerade arbeitet. Sönke: „das macht es beim
+       Umswitchen einfacher." Wer von Unit 3 auf Unit 7 will, räumt
+       jetzt erst leer und wählt dann; den Riegel hält der
+       Startknopf, und der sagt auch, warum (renderSetSum/onStart). */
     sets.chosen = sets.chosen.includes(id)
       ? sets.chosen.filter(x => x !== id)
       : sets.chosen.concat(id);
-    if (!sets.chosen.length) {
-      // Ein Raum ohne Wörter ist kein Raum. Die letzte Unit lässt
-      // sich deshalb nicht abwählen — nur durch eine andere
-      // ersetzen.
-      sets.chosen = [id];
-      ctx.toast('Mindestens eine Liste muss gewählt sein.');
-    }
     renderSets();
     renderSetSum();
     setsBusy++;
@@ -4096,6 +4145,13 @@ ${LEAVE_HTML}
   }
 
   async function onStart() {
+    /* Der Hinweis zum grauen Knopf. Er steht hier und nicht im
+       Zuhörer der Kachel, weil der Kasten mit den Listen beim
+       Starten längst wieder zu ist — gefragt wird also genau
+       dann, wenn die Antwort nicht mehr danebensteht. */
+    if (!sets.chosen.length) {
+      return ctx.toast('Erst Wörter wählen: „📚 Wörter wählen" und mindestens eine Station antippen.');
+    }
     const r = await ctx.actions.call('wi_room_start', {});
     if (!r.ok) {
       return ctx.toast(r.error === 'no_sets'
@@ -4690,6 +4746,7 @@ ${LEAVE_HTML}
     els.ask.textContent = !has ? ''
       : (task.dir === 'en_de' ? 'Wie heißt das auf Deutsch?' : 'Wie heißt das auf Englisch?');
     els.word.textContent = has ? task.prompt : 'Keine Wörter gewählt.';
+    zeigeWort(els.word);
 
     const opts = (has && task.options) || [];
     els.opts.hidden = !opts.length;
@@ -7869,7 +7926,17 @@ ${LEAVE_HTML}
             <path d="M19.9 15.2a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56v.18a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3.4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.55-1.1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.08a1.7 1.7 0 0 0 1.03-1.56V3.4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.08a1.7 1.7 0 0 0 1.56 1.03h.18a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.56 1.03z"></path>
           </svg>
         </button>
-        <button type="button" class="wi-btn" data-part="sgo" disabled>Vokabeln üben</button>
+        <!-- Die Zahl unter der Beschriftung (Sönke, 23.09.2026):
+             „sodass ich immer sehe: ich arbeite gerade an 100
+             Worten." Sie steht IM Knopf und nicht daneben, weil sie
+             genau das beziffert, was er tut — und weil die Leiste
+             eine Zeile ist (tool.css, .wi-sbar: flex-wrap nowrap).
+             Ihre Höhe misst sbarMessen ohnehin nach, die zweite
+             Zeile verschiebt also nichts. -->
+        <button type="button" class="wi-btn wi-sgo" data-part="sgo" disabled>
+          <span>Vokabeln üben</span>
+          <small class="wi-sgon" data-part="sgon"></small>
+        </button>
       </header>
 
       <!-- Einstellungen: die zwei Schalter, die nicht auf die Insel
@@ -8229,6 +8296,7 @@ ${LEAVE_HTML}
       jChips: q('jchips'), jStat: q('jstat'),
       units: q('units'), uGriff: q('ugriff'), uBody: q('ubody'),
       uList: q('ulist'), uDet: q('udet'), card: q('card'), sBar: q('sbar'),
+      sGo: q('sgo'), sGoN: q('sgon'),
       setsOv: q('setsov'),
       lvl: q('lvl'), lvlBtn: q('lvlbtn'), lvlNum: q('lvlnum'),
       lvlCrown: q('lvlcrown'),
@@ -8481,16 +8549,19 @@ ${LEAVE_HTML}
       const a = welt.vonKey.get(s.island || 'en:x');
       if (a) a.wach = true;
     }
-    /* Kein einziges waches Archipel gibt es eigentlich nicht
-       (`wi_solo_chosen` liest „nichts gewählt" als „alles"), aber
-       eine Welt aus lauter schlafenden Inseln wäre so kaputt, dass
-       sie sich nicht auf eine Vermutung verlassen darf. */
-    if (!welt.archipele.some(a => a.wach) && welt.archipele.length) {
-      welt.archipele[0].wach = true;
-    }
+    /* Hier stand bis zum 23.09.2026 ein Notnagel: ist kein einziges
+       Archipel wach, wird das erste wach gemacht. Er war richtig,
+       solange „nichts gewählt" am Server „alles" hieß — eine ganz
+       schlafende Welt konnte damals nur ein Fehler sein.
+       Seit 0169 ist sie ein ZUSTAND: leer geräumt, und das darf man.
+       Der Notnagel hätte ihn verdeckt (eine Insel leuchtet, der Topf
+       ist leer). Der Rückweg steht weiter offen — ein Tipp auf eine
+       schlafende Insel weckt sie samt ihren Stationen
+       (weckeArchipel). */
     /* Wo du stehst: das erste wache Archipel — es sei denn, du
        stehst schon auf einem wachen. Sonst spränge die Kamera bei
-       jedem Wecken eines zweiten Jahrgangs zurück auf den ersten. */
+       jedem Wecken eines zweiten Jahrgangs zurück auf den ersten.
+       Schläft alles, bleibt die Kamera, wo sie ist (findIndex −1). */
     if (!(welt.archipele[welt.hier] || {}).wach) {
       welt.hier = welt.archipele.findIndex(a => a.wach);
       if (welt.hier < 0) welt.hier = 0;
@@ -8740,6 +8811,7 @@ ${LEAVE_HTML}
     renderLevel();
     q('ssets').disabled = false;
     q('sgo').disabled = false;
+    zeigePool();
     els.load.hidden = true;
     if (!raf) raf = requestAnimationFrame(zeichne);
   }
@@ -8872,9 +8944,61 @@ ${LEAVE_HTML}
      Nur noch zwei Schalter: WIE gefragt wird. WORAN gearbeitet wird,
      steht seit 10.09.2026 in der Leiste links — dort sieht man, was
      das Auswählen auf der Insel bewirkt. */
+  /* ⚠️ Unterschieden wird am SCHLÜSSEL und nicht an der Länge —
+     genau wie in wi_solo_chosen seit 0169. Drei Zustände:
+
+       settings ohne 'sets'  → alles Freigespielte (erster Tag)
+       settings.sets = []    → NICHTS (bewusst leer geräumt)
+       settings.sets = [a]   → a
+
+     Bis zum 23.09.2026 stand hier `s.length ? s : alle` — und
+     deshalb musste das Gerät verhindern, dass jemand die letzte
+     Station abwählt: „leer" wäre als „alles" zurückgekommen. Das
+     ist der Grund, warum die drei Sammelschalter unten keine
+     Sperre mehr brauchen.
+
+     Eine ältere Datenbank (ohne 0169) liest ein leeres Array
+     weiterhin als „alles". Das Gerät zeigt dann 0 gewählte
+     Stationen und der Server übt auf allen — unschön, aber nicht
+     kaputt, und beim nächsten Antippen ist es wieder eindeutig. */
   function soloChosen() {
-    const s = (solo.settings && solo.settings.sets) || [];
-    return s.length ? s : solo.sets.map(x => x.id);
+    const s = solo.settings && solo.settings.sets;
+    return Array.isArray(s) ? s : solo.sets.map(x => x.id);
+  }
+
+  /* Wie viele Wörter gerade im Topf liegen. Sönke, 23.09.2026:
+     „ich würde gerne sehen, wie viele Vokabeln ich im Pool gerade
+     drin habe … sodass ich immer sehe: ich arbeite gerade an 100
+     Worten." Gezählt werden WÖRTER und nicht Fragen — bei
+     „gemischt" wäre die Zahl sonst doppelt so hoch wie das, was auf
+     der Insel steht (dieselbe Regel wie beim Rundenzähler).
+
+     Gerechnet aus `proSet` und damit ohne einen Serveraufruf: welche
+     Vokabel in welcher Station liegt, steht für diese Sitzung fest.
+     Ohne Migration 0142 gibt es die Zuordnung nicht — dann ist die
+     ehrliche Antwort die Gesamtzahl und nicht eine Null. */
+  function poolWoerter() {
+    if (!solo) return 0;
+    if (unitsAlt()) return solo.words | 0;
+    let n = 0;
+    for (const id of soloChosen()) n += (solo.proSet.get(id) || []).length;
+    return n;
+  }
+
+  /* Die Zahl an den Knopf schreiben — und den Knopf ausgrauen, wenn
+     sie null ist. Beides in einer Funktion, weil es dieselbe
+     Auskunft ist: „hier liegt gerade nichts" und „hier ist gerade
+     nichts zu tun" dürfen nicht auseinanderlaufen.
+
+     Danach einmal nachmessen: die zweite Zeile macht den Knopf
+     höher, und an der Höhe der Leiste hängen die Unterkanten von
+     Unit-Leiste und Kärtchen (--wi-sbar-h). */
+  function zeigePool() {
+    if (!els.sGoN) return;
+    const n = poolWoerter();
+    els.sGoN.textContent = n === 1 ? '1 Wort' : `${n} Wörter`;
+    aus(els.sGo, n === 0);
+    sbarMessen();
   }
 
   /* Die gewählten Units als Menge, EINMAL gerechnet: die
@@ -8933,6 +9057,7 @@ ${LEAVE_HTML}
     weltNachfuehren();
     renderSoloSets();
     renderUnits();
+    zeigePool();
   }
 
   /* ─── Dein Volk ─────────────────────────────────────────────
@@ -9689,10 +9814,6 @@ ${LEAVE_HTML}
     const alle = jg.sets.every(s => gewaehlt.has(s.id));
     if (alle) {
       for (const s of jg.sets) gewaehlt.delete(s.id);
-      if (!gewaehlt.size) {
-        ctx.toast('Ein Jahrgang muss anbleiben — sonst gibt es nichts zu üben.');
-        return;
-      }
     } else {
       for (const s of jg.sets) gewaehlt.add(s.id);
     }
@@ -9706,42 +9827,28 @@ ${LEAVE_HTML}
   /* ─── Der Sammelschalter einer Unit ─────────────────────────
      Alle an → alle aus, sonst alle an. Auch eine halb angeschaltete
      Unit geht also zuerst GANZ an — „teilweise" ist ein Zustand, den
-     man verlassen können muss, ohne dreimal zu tippen.
-
-     Die Sperre aus unitToggle gilt hier genauso: am Server heißt
-     „nichts gewählt" nämlich „alles" (wi_solo_chosen, 0136), und wer
-     die letzte Station ausschaltet, bekäme sie alle zurück. */
+     man verlassen können muss, ohne dreimal zu tippen. */
   function unitSammel(uid) {
     const g = unitBaum().find(x => x.id === uid);
     if (!g) return;
     const gewaehlt = new Set(soloChosen());
     if (g.sets.every(s => gewaehlt.has(s.id))) {
       for (const s of g.sets) gewaehlt.delete(s.id);
-      if (!gewaehlt.size) {
-        ctx.toast('Eine Station muss anbleiben — sonst gibt es nichts zu üben.');
-        return;
-      }
     } else {
       for (const s of g.sets) gewaehlt.add(s.id);
     }
     soloSetzen({ p_sets: [...gewaehlt] });
   }
 
-  /* Am Server heißt „nichts gewählt" nämlich „alles" (wi_solo_chosen,
-     0136). Wer die letzte Unit ausschaltet, bekäme also alle zurück —
-     das sähe aus wie ein Fehler und wäre keiner. Also lassen wir die
-     letzte stehen und sagen es. */
+  /* Bis zum 23.09.2026 stand an dieser Stelle (und in den beiden
+     Sammelschaltern darüber) eine Sperre: die letzte Unit ließ sich
+     nicht abwählen, weil am Server „nichts gewählt" noch „alles"
+     hieß. Seit 0169 heißt es nichts — und damit ist das Leerräumen
+     der normale erste Schritt beim Umschalten und kein Fehler mehr.
+     Was dann fehlt, sagt der Knopf „Vokabeln üben". */
   function unitToggle(id) {
     const gewaehlt = new Set(soloChosen());
-    if (gewaehlt.has(id)) {
-      if (gewaehlt.size <= 1) {
-        ctx.toast('Eine Unit muss anbleiben — sonst gibt es nichts zu üben.');
-        return;
-      }
-      gewaehlt.delete(id);
-    } else {
-      gewaehlt.add(id);
-    }
+    if (gewaehlt.has(id)) gewaehlt.delete(id); else gewaehlt.add(id);
     soloSetzen({ p_sets: [...gewaehlt] });
   }
 
@@ -10020,6 +10127,13 @@ ${LEAVE_HTML}
      damit er sie vergleichen kann, hat sie auch im Netzwerk-Tab. */
   async function soloStart() {
     if (!solo) return;
+    /* Leerer Topf: der Knopf ist grau (zeigePool), aber anfassbar —
+       und hier steht, was fehlt. Der Hinweis nennt den Griff und
+       nicht das Problem: „nichts gewählt" weiß man schon, wenn man
+       gerade alles abgewählt hat. */
+    if (poolWoerter() === 0) {
+      return ctx.toast('Wähle rechts in der Liste mindestens eine Station aus — dann geht es los.');
+    }
     els.setsOv.hidden = true;
     els.playOv.hidden = false;
     /* Die Unit-Leiste klappt zu (Sönke, 20.09.2026). Der Übenkasten
@@ -10720,6 +10834,7 @@ ${LEAVE_HTML}
   function soloRenderTask() {
     const has = soloTask && soloTask.prompt;
     els.pWord.textContent = has ? soloTask.prompt : 'Keine Wörter gewählt.';
+    zeigeWort(els.pWord);
 
     const opts = (has && soloTask.options) || [];
     els.pOpts.hidden = !opts.length;

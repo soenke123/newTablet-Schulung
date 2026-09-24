@@ -1651,11 +1651,13 @@ async function testOhneMigration() {
   const { document, impls, ctxBase } = makeEnv();
   const tool = impls.wordisland;
 
+  const gerufen = [];
   const ctx = Object.assign({}, ctxBase, {
     role: 'presenter',
     actions: {
       role: 'presenter',
       call: (fn, args) => {
+        gerufen.push(fn);
         if (fn === 'wi_sets_list') return Promise.resolve({ ok: true, chosen: [], sets: [] });
         if (fn === 'wi_room_get') {
           return Promise.resolve({
@@ -1679,7 +1681,21 @@ async function testOhneMigration() {
   ok('drei Wappen leuchten (Volk = Slot)',
      root.querySelectorAll('.wi-pickbtn.is-on').length === 3);
   ok('drei Spalten', root.querySelectorAll('.wi-lteam').length === 3);
-  ok('ohne Wörter kein Start', root.querySelector('[data-part="start"]').disabled === true);
+  /* Grau, aber anfassbar (23.09.2026): `disabled` gäbe keinen Klick
+     her, und dann bliebe die Frage „warum geht der Start nicht?"
+     unbeantwortet — der Kasten mit den Listen ist beim Starten ja
+     längst wieder zu. */
+  const start = root.querySelector('[data-part="start"]');
+  ok('ohne Wörter kein Start',
+     start.getAttribute('aria-disabled') === 'true' && start.disabled === false);
+  ctx.toasts.length = 0;
+  click(start, document);
+  await wait(30);
+  ok('… und der Griff darauf sagt, was fehlt',
+     ctx.toasts.length === 1 && /Wörter wählen/.test(ctx.toasts[0]),
+     JSON.stringify(ctx.toasts));
+  ok('… ohne dass eine Runde losgeht',
+     !gerufen.includes('wi_room_start'), JSON.stringify(gerufen));
   tool.unmount();
 }
 
@@ -2243,6 +2259,13 @@ async function testSolo() {
   ok('und die beiden Knöpfe sind frei',
      root.querySelector('[data-part="sgo"]').disabled === false &&
      root.querySelector('[data-part="ssets"]').disabled === false);
+  /* ⚠️ Die Zahl steht SOFORT da (23.09.2026, Sönke: „sodass ich
+     immer sehe: ich arbeite gerade an 100 Worten") — nicht erst,
+     wenn jemand eine Unit anfasst. Ohne den Aufruf in soloBuild ist
+     der Knopf beim Öffnen einzeilig und schweigt. */
+  ok('„Vokabeln üben" nennt die Wörter im Topf',
+     /40 Wörter/.test(root.querySelector('[data-part="sgon"]').textContent),
+     root.querySelector('[data-part="sgo"]').textContent.trim());
   tool.unmount();
 }
 
@@ -2768,8 +2791,11 @@ async function testJahrgangsLeiste() {
        && tool.stand().wachTiere.length === 80,
      tool.stand().wachTiere.length + ' wache Tiere');
 
-  /* Der letzte Jahrgang lässt sich nicht abschalten: am Server
-     heißt „nichts gewählt" nämlich „alles" (wi_solo_chosen). */
+  /* Seit dem 23.09.2026 (Migration 0169) darf auch der LETZTE
+     Jahrgang schlafen gehen: am Server heißt „nichts gewählt" jetzt
+     nichts und nicht mehr „alles". Die Zusage ist deshalb
+     umgedreht — geprüft wird, dass es geht UND dass der Knopf
+     „Vokabeln üben" das auffängt. */
   /* ⚠️ Nach JEDEM Klick neu suchen: renderJChips zeichnet die Zeile
      neu, und ein vorher eingesammelter Knoten hängt danach nicht
      mehr im Dokument. Ein Klick darauf geht ins Leere — und der
@@ -2779,20 +2805,37 @@ async function testJahrgangsLeiste() {
   await wait(40);
   click(chip('Jhg 5'), document);
   await wait(30);
-  click(schalter(), document);          // … und Jhg 5 soll nicht mehr
+  click(schalter(), document);          // … und Jhg 5 jetzt auch
   await wait(40);
-  ok('der letzte Jahrgang bleibt an',
-     tool.stand().archipele.filter(a => a.wach).length === 1,
+  ok('auch der letzte Jahrgang darf schlafen gehen',
+     tool.stand().archipele.filter(a => a.wach).length === 0,
      tool.stand().archipele.map(a => a.key + ':' + a.wach).join(' · '));
-  ok('… und es wird gesagt, warum',
-     ctx.toasts.some(t => /Jahrgang muss anbleiben/.test(t)),
+  ok('… ohne Belehrung', ctx.toasts.length === 0, JSON.stringify(ctx.toasts));
+  /* Und die Welt bleibt heil: beide Inseln stehen als Silhouette da,
+     keine ist verschwunden. Relief gibt es dann nirgends mehr — die
+     Kacheln gehören zum WACHEN Land (buildMap: `if (teil.wach)`),
+     und genau das ist die Aussage: es liegt nichts im Beutel. */
+  ok('… beide Inseln stehen weiter da, als Silhouette',
+     root.querySelectorAll('.wi-schlaf').length === 2
+       && root.querySelectorAll('.wi-cell').length === 0,
+     root.querySelectorAll('.wi-schlaf').length + ' Silhouetten, '
+       + root.querySelectorAll('.wi-cell').length + ' Kacheln');
+
+  /* Der Riegel sitzt jetzt am Knopf: grau, aber anfassbar, und er
+     sagt, was fehlt. `disabled` wäre hier falsch — dann käme der
+     Klick gar nicht an (tool.js `aus`). */
+  const go = root.querySelector('[data-part="sgo"]');
+  ok('„Vokabeln üben" ist grau und zeigt 0 Wörter',
+     go.getAttribute('aria-disabled') === 'true' && go.disabled === false
+       && /\b0 Wörter\b/.test(go.textContent), go.textContent.trim());
+  ctx.toasts.length = 0;
+  click(go, document);
+  await wait(20);
+  ok('… und ein Griff darauf sagt, was fehlt',
+     ctx.toasts.length === 1 && /Station/.test(ctx.toasts[0]),
      JSON.stringify(ctx.toasts));
-  /* Und die Welt bleibt heil: genau eine Insel lebt, die andere
-     schläft — kein Meer aus lauter Silhouetten. */
-  ok('… also lebt weiter genau eine Insel',
-     root.querySelectorAll('.wi-schlaf').length === 1
-       && root.querySelectorAll('.wi-cell').length > 400,
-     root.querySelectorAll('.wi-cell').length + ' Kacheln');
+  ok('… der Übungskasten bleibt zu',
+     root.querySelector('[data-part="playov"]').hidden === true);
 
   tool.unmount();
 }
@@ -3101,6 +3144,83 @@ async function testSoloUeben() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   Wenn die Vokabel ein ganzer Satz ist (24.09.2026)
+   ══════════════════════════════════════════════════════════
+   Mit dem Lehrwerkswechsel (0170) darf ein Eintrag 120 Zeichen
+   haben — die deutsche Seite einer Lehrwerksliste ist manchmal eine
+   Erklärung und kein Wort. Bei den 40 px von `.wi-word` wären 96
+   Zeichen auf einem Telefon sechs Zeilen, und weil beim Tippen die
+   Tastatur steht, schöbe das das Eingabefeld aus dem Bild.
+
+   Geprüft wird die ENTSCHEIDUNG (welche Stufe bei welcher Länge) und
+   nicht die Schriftgröße: die steht in tool.css und gehört dorthin.
+   Die Ränder sind dabei die halbe Zusage — eine Stufenregel, die nur
+   in der Mitte stimmt, ist keine.
+
+   Die Wörter kommen aus dem echten Bestand (Green Line G9 3): das
+   Haggis-Gericht ist der längste Eintrag der drei Bände. */
+async function testLangeVokabel() {
+  console.log('\n— Wenn die Vokabel ein ganzer Satz ist —');
+
+  const HAGGIS = 'Haggis (schottisches Gericht aus in einem Schafsmagen '
+                 + 'gekochten Schafsinnereien und Haferschrot)';
+  const FAELLE = [
+    ['das Haus',                     '',        'ein Wort'],
+    ['x'.repeat(40),                 '',        'genau 40 Zeichen — noch groß'],
+    ['x'.repeat(41),                 'is-lang', '41 — eine Wendung'],
+    ['x'.repeat(72),                 'is-lang', 'genau 72 — noch Wendung'],
+    ['x'.repeat(73),                 'is-satz', '73 — eine Erklärung'],
+    [HAGGIS,                         'is-satz', `der längste Eintrag (${HAGGIS.length})`]
+  ];
+
+  let i = 0;
+  const { tool, root, document } = await mountSolo(soloView(20, () => 1), {
+    /* Jede Antwort bringt den nächsten Fall. So läuft der Text durch
+       DENSELBEN Weg wie im Betrieb (soloRenderTask) und nicht durch
+       ein von Hand gesetztes textContent. */
+    wi_solo_start: () => ({
+      ok: true,
+      task: { item: 'w-0', prompt: FAELLE[0][0], dir: 'de_en',
+              stage: 'type', level: 1, options: [] }
+    }),
+    wi_solo_answer: () => {
+      i++;
+      return { ok: true, result: 'correct', item: 'w-' + i,
+               level_before: 1, level_after: 1, locked_for: 0,
+               task: { item: 'w-' + i, prompt: (FAELLE[i] || FAELLE[0])[0],
+                       dir: 'de_en', stage: 'type', level: 1, options: [] } };
+    }
+  });
+
+  click(root.querySelector('[data-part="sgo"]'), document);
+  await wait(30);
+
+  const wort = root.querySelector('[data-part="pword"]');
+  for (let k = 0; k < FAELLE.length; k++) {
+    const [text, klasse, wie] = FAELLE[k];
+    ok(`${wie}`, wort.textContent === text,
+       wort.textContent.slice(0, 24) + (wort.textContent.length > 24 ? '…' : ''));
+    ok(`  → ${klasse || 'keine Sonderstufe'}`,
+       (klasse === '' && !wort.classList.contains('is-lang')
+                      && !wort.classList.contains('is-satz'))
+       || (klasse !== '' && wort.classList.contains(klasse)),
+       [...wort.classList].join(' '));
+    /* Nie beide: die Stufen sind eine Entscheidung und keine
+       Sammlung. Ein `toggle`, das nur hinzufügt, fiele erst beim
+       kurzen Wort NACH einem langen auf. */
+    ok('  → und nie beide zugleich',
+       !(wort.classList.contains('is-lang') && wort.classList.contains('is-satz')));
+
+    if (k < FAELLE.length - 1) {
+      antworte(root, document, 'egal', '[data-part="pin"]');
+      await wait(30);
+    }
+  }
+
+  tool.unmount();
+}
+
+/* ══════════════════════════════════════════════════════════
    Die Unit-Leiste (10.09.2026)
    ══════════════════════════════════════════════════════════
    Sönke: „am Rand die Unit-Liste […] Ich kann eine durch
@@ -3147,17 +3267,29 @@ async function testUnitLeiste() {
   ok('die Zeile ist danach blass',
      root.querySelectorAll('.wi-urow.is-on').length === 1);
 
-  /* Die LETZTE bleibt an. Am Server heißt „nichts gewählt" nämlich
-     „alles" — wer sie ausschalten könnte, bekäme alle zurück. */
+  /* Auch die LETZTE geht (0169). Sie ging bis zum 23.09.2026 nicht,
+     weil „nichts gewählt" am Server „alles" hieß. */
   const vorher = calls.filter(c => c[0] === 'wi_solo_settings').length;
   ctx.toasts.length = 0;
   click(root.querySelectorAll('.wi-urow')[1].querySelector('.wi-utoggle'), document);
   await wait(30);
-  ok('die letzte Unit lässt sich nicht abschalten',
-     calls.filter(c => c[0] === 'wi_solo_settings').length === vorher &&
-     ctx.toasts.length === 1, ctx.toasts.join(' · '));
-  ok('und es steht auch da, warum',
-     /Unit/.test(ctx.toasts[0] || ''), ctx.toasts[0]);
+  const leer = calls.filter(c => c[0] === 'wi_solo_settings').pop();
+  ok('auch die letzte Unit lässt sich abschalten',
+     calls.filter(c => c[0] === 'wi_solo_settings').length === vorher + 1 &&
+     leer[1].p_sets.length === 0, JSON.stringify(leer && leer[1].p_sets));
+  ok('… ohne Belehrung', ctx.toasts.length === 0, ctx.toasts.join(' · '));
+  ok('… und der Knopf zeigt 0 Wörter und ist grau',
+     root.querySelector('[data-part="sgo"]').getAttribute('aria-disabled') === 'true' &&
+     /\b0 Wörter\b/.test(root.querySelector('[data-part="sgo"]').textContent),
+     root.querySelector('[data-part="sgo"]').textContent.trim());
+
+  /* Und wieder an — die Zahl im Knopf zählt mit. */
+  click(root.querySelectorAll('.wi-urow')[1].querySelector('.wi-utoggle'), document);
+  await wait(30);
+  ok('… und beim Wiedereinschalten steht die Zahl wieder da',
+     root.querySelector('[data-part="sgo"]').getAttribute('aria-disabled') === null &&
+     /\b20 Wörter\b/.test(root.querySelector('[data-part="sgo"]').textContent),
+     root.querySelector('[data-part="sgo"]').textContent.trim());
 
   /* ── Das „i" ──────────────────────────────────────────────── */
   click(root.querySelectorAll('.wi-urow')[0].querySelector('.wi-uinfo'), document);
@@ -3387,11 +3519,13 @@ async function testUnitBaum() {
      ['set-a', 'set-b', 'set-c'].every(x => letzte[1].p_sets.includes(x)),
      JSON.stringify(letzte[1].p_sets));
 
-  /* ── Die letzte Station bleibt an ─────────────────────────── */
+  /* ── Auch die letzte Station darf gehen (0169) ────────────── */
   /* Erst die beiden Einzel-Units aus — die wohnen in den anderen
      beiden Jahrgängen, also über den Chip —, dann die Unit mit den
-     drei Stationen: die darf nicht gehen. Am Server heißt „nichts
-     gewählt" nämlich „alles" (wi_solo_chosen, 0136). */
+     drei Stationen. Bis zum 23.09.2026 blieb die letzte stehen,
+     weil „nichts gewählt" am Server „alles" hieß; seit 0169 heißt
+     es nichts, und Leerräumen ist der normale erste Schritt beim
+     Umschalten. */
   /* ⚠️ Nach JEDEM Klick neu suchen: renderUnits zeichnet die Liste
      neu, und eine vorher eingesammelte Knotenliste zeigt danach auf
      Elemente, die nicht mehr im Dokument hängen. Ein Klick darauf
@@ -3415,11 +3549,18 @@ async function testUnitBaum() {
   ctx.toasts.length = 0;
   click(root.querySelector('.wi-utop .wi-utoggle'), document);
   await wait(30);
-  ok('⚠️ der Sammelschalter kann die LETZTE Unit nicht abschalten',
-     calls.filter(c => c[0] === 'wi_solo_settings').length === vorher &&
-     ctx.toasts.length === 1, ctx.toasts.join(' · '));
-  ok('… und sagt auch, warum',
-     /Station/.test(ctx.toasts[0] || ''), ctx.toasts[0]);
+  const zuletzt = calls.filter(c => c[0] === 'wi_solo_settings').pop();
+  ok('der Sammelschalter räumt auch die LETZTE Unit leer',
+     calls.filter(c => c[0] === 'wi_solo_settings').length === vorher + 1 &&
+     Array.isArray(zuletzt[1].p_sets) && zuletzt[1].p_sets.length === 0,
+     JSON.stringify(zuletzt && zuletzt[1]));
+  ok('… ohne Belehrung', ctx.toasts.length === 0, ctx.toasts.join(' · '));
+  /* ⚠️ Ein LEERES Array und „gar kein p_sets" sind zwei
+     verschiedene Aussagen — am Server heißt das eine „nichts" und
+     das andere „nicht anfassen". Wer hier `p_sets: undefined`
+     schickt, räumt nichts leer und merkt es nicht. */
+  ok('… und schickt ein leeres Array, nicht „nichts"',
+     'p_sets' in zuletzt[1] && zuletzt[1].p_sets !== undefined);
 
   tool.unmount();
 }
@@ -7063,7 +7204,7 @@ const BEREICHE = {
   sieger: [testSiegerPult, testSiegerTablet],
   insel: [testSolo, testInselWaechst, testInselwelt, testNahZoom, testSchlafendeInsel,
           testSchlafendeTiere, testWecken, testJahrgangsLeiste, testJahrgangsChips,
-          testSoloUeben, testSchluepfen,
+          testSoloUeben, testLangeVokabel, testSchluepfen,
           testStats, testPunkte, testSoloOhneMigration, testUnitLeiste,
           testUnitBaum, testTierTipp, testFunkelBild, testUnitsOhneMigration],
   level: [testFigur, testFigurLevel, testFigurOhneMigration, testLevel,

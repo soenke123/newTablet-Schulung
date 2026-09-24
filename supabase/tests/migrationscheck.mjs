@@ -53,14 +53,29 @@ const KETTE = [
   '0157_wordisland_sets_push.sql', '0158_wordisland_view_restore.sql',
   '0165_wordisland_ruins_balance.sql',
   '0166_wordisland_island_size.sql', '0167_wordisland_round_end_timer.sql',
-  '0168_wordisland_trainer_island.sql'
+  '0168_wordisland_trainer_island.sql',
+  '0169_vocab_apostroph_und_leerer_topf.sql',
+  /* Seit 24.09.2026 gehört der INHALT in die Kette. Vorher stand hier
+     nur die Mechanik — und eine Zeile wie „der alte Bestand ist von
+     Bord" wäre dann immer grün gewesen, weil er nie da war. */
+  '0159_vocab_lehrwerk.sql', '0160_vocab_greenline_5.sql',
+  '0161_vocab_test_units_out.sql', '0162_vocab_greenline_5_hello.sql',
+  '0163_vocab_greenline_6.sql',
+  '0170_vocab_lehrwerkwechsel.sql', '0171_vocab_greenline_g9_5.sql',
+  '0172_vocab_greenline_g9_6.sql', '0173_vocab_greenline_g9_7.sql'
 ];
 
+/* `ohne` ist eine Liste von Nummern-Anfängen. Sie muss eine Liste
+   sein und keine einzelne: 0171–0173 brauchen die Längengrenze aus
+   0170 und brächen sonst mit einer Fehlermeldung ab, statt eine
+   Zeile FEHLT zu melden. Wer 0170 auslässt, lässt sie alle aus —
+   genau so sähe es auch im Dashboard aus. */
 async function lauf(ohne) {
+  const liste = ohne ? (Array.isArray(ohne) ? ohne : [ohne]) : [];
   const db = new PGlite();
   await db.exec(STUBS);
   for (const f of KETTE) {
-    if (ohne && f.startsWith(ohne)) continue;
+    if (liste.some(n => f.startsWith(n))) continue;
     try { await db.exec(mig(f)); }
     catch (e) { console.error(`FEHLER in ${f}: ${e.message}`); process.exit(1); }
   }
@@ -92,4 +107,33 @@ console.log(genau
   ? 'ok    genau die 0158-Zeilen kippen (0152 gehoert dazu, siehe oben)\n'
   : `FAIL  erwartet ${erwartet.join(', ')}\n`);
 
-process.exit((fehlen.length === 0 && genau) ? 0 : 1);
+/* 0169 hat zwei Zeilen, und sie suchen an zwei verschiedenen Orten
+   (eine Funktion, die es vorher nicht gab — und ein Textstueck im
+   Rumpf einer, die es schon gab). Die zweite ist die anfaellige:
+   `create or replace` mit gleicher Signatur sieht von aussen aus
+   wie vorher. */
+console.log('═══ 3) Gegenprobe: 0169 weggelassen ═══');
+const ohne69 = await lauf('0169');
+const erw69 = ['0169a', '0169b'];
+const kipp69 = ohne69.filter(r => r.status !== 'DRIN').map(r => r.nr);
+console.log('meldet FEHLT:', kipp69.join(', ') || '(nichts)');
+const genau69 = erw69.every(n => kipp69.includes(n)) && kipp69.length === erw69.length;
+console.log(genau69
+  ? 'ok    genau die beiden 0169-Zeilen kippen\n'
+  : `FAIL  erwartet ${erw69.join(', ')}\n`);
+
+/* Der Lehrwerkswechsel hängt an einem Stück: ohne 0170 passen die
+   langen Einträge nicht in die Spalte, also kommen auch 0171–0173
+   nicht herein. Fünf Zeilen, eine Ursache — und genau so soll es im
+   Dashboard aussehen, damit niemand an drei Stellen sucht. */
+console.log('═══ 4) Gegenprobe: der Lehrwerkswechsel fehlt ═══');
+const ohne70 = await lauf(['0170', '0171', '0172', '0173']);
+const erw70 = ['0170a', '0170b', '0171', '0172', '0173'];
+const kipp70 = ohne70.filter(r => r.status !== 'DRIN').map(r => r.nr);
+console.log('meldet FEHLT:', kipp70.join(', ') || '(nichts)');
+const genau70 = erw70.every(n => kipp70.includes(n)) && kipp70.length === erw70.length;
+console.log(genau70
+  ? 'ok    genau die fuenf Zeilen des Wechsels kippen\n'
+  : `FAIL  erwartet ${erw70.join(', ')}\n`);
+
+process.exit((fehlen.length === 0 && genau && genau69 && genau70) ? 0 : 1);

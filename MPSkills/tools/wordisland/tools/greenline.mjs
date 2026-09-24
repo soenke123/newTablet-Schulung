@@ -1,18 +1,26 @@
 /* ══════════════════════════════════════════════════════════════
    MPSkills — Lehrwerksliste → Wordisland
    ══════════════════════════════════════════════════════════════
-   Macht aus einer Klett-Vokabelliste (PDF, „Green Line 2021") eine
-   Migration und eine Kontrolldatei:
+   Macht aus einer Klett-Vokabelliste (PDF, „Green Line G9 2019")
+   eine Migration und eine Kontrolldatei:
 
-     supabase/migrations/NNNN_vocab_greenline_<J>.sql
-     <Ordner des PDF>/Klasse<J>_kontrolle.tsv   zum Drüberlesen
+     supabase/migrations/NNNN_vocab_greenline_g9_<J>.sql
+     <Ordner des PDF>/Klasse<J>_G9_kontrolle.tsv   zum Drüberlesen
 
    Aufruf:
      node MPSkills/tools/wordisland/tools/greenline.mjs \
-          "…/Vokabelliste_Klasse 5.pdf" --jahrgang 5
+          "…/Vokabelliste_Klasse 5_G9.pdf" --jahrgang 5
 
    Läuft er ein zweites Mal für denselben Jahrgang, schreibt er
    DIESELBE Migration neu — und nicht die nächste Nummer.
+
+   ⚠️ „dieselbe" heißt: dieselbe Datei DIESES Lehrwerks. Gesucht wird
+   nach `greenline_g9_<J>`, und das trifft die alten Dateien 0160 und
+   0163 (Green Line 2021, `greenline_<J>`) absichtlich NICHT. Sie sind
+   längst eingespielt; Supabase sieht eine Migration genau einmal an,
+   und eine Datei neu zu schreiben, die schon gelaufen ist, ändert an
+   der Datenbank nichts und an der Chronik alles. Der alte Bestand
+   geht statt dessen in 0170 von Bord.
 
    ⚠️ Das PDF selbst bleibt draußen: `.gitignore` sperrt den Ordner
    mit den Verlagslisten aus, im Repo stehen nur die daraus
@@ -40,48 +48,83 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 
 /* ─── 1) Das Buch ───────────────────────────────────────────────
-   Die Kürzel der ersten beiden Spalten. Belegt über die Reihenfolge
-   im Inhaltsverzeichnis (klett.de) und das Lehrerbuch, das die
-   Abschnitte einer Unit beim Namen nennt: Check-in, Station 1–3,
-   Story, Check-out.
+   Die Kürzel der ersten beiden Spalten. Belegt über das
+   Inhaltsverzeichnis des jeweiligen Bandes (assets.klett.de,
+   `8350…_IHV.pdf`) — dort stehen Kapitelfolge, Kapiteltitel und die
+   Abschnittsnamen einer Unit.
 
-   Zwei Kürzel sind erschlossen und nicht belegt: `UT` (nur wenige
-   Wörter, steht immer zwischen Story und Check-out — „Unit task")
-   und `GRS` (Position ist eindeutig das Auftaktkapitel). Wenn sich
-   herausstellt, dass sie anders heißen, ist das hier EINE Zeile. */
+   `kennung` geht in JEDE Nummer dieses Bandes ein (siehe `nummer`).
+   Sie ist der Grund, warum der alte Bestand und dieser hier sich
+   nicht ins Gehege kommen: „Unit 1 · Check-in" von Green Line 2021
+   und von Green Line G9 sind zwei verschiedene Stationen, auch wenn
+   Kürzel und Abschnittsname gleich lauten. Ohne die Kennung bekämen
+   sie dieselbe uuid, und eine Stationsauswahl, die irgendwo als
+   blankes JSON liegt (`wi_solo_learners.settings->'sets'`), zeigte
+   nach dem Austausch stillschweigend auf fremden Inhalt.
+
+   Die Titel stehen so da, wie der Verlag sie führt. Wo das
+   Inhaltsverzeichnis einem Kapitel keine Überschrift gibt (Trailer
+   in Band 2 und 3, Across cultures in Band 3), steht hier auch
+   keine — eine erfundene wäre eine Behauptung über das Buch. */
 const BUCH = {
   5: {
-    titel: 'Green Line 1',
+    titel: 'Green Line G9 1',
+    kennung: 'glg9:1',
+    kurz: 'Klasse5_G9',
     units: [
-      /* Nur „Hello!" und nicht „Hello! (Grundschulübergang)"
-         (Sönke, 20.09.2026, Migration 0162): der Zusatz erklärt der
-         Lehrkraft etwas, das dem Kind in der Unit-Leiste nur Platz
-         wegnimmt. */
-      ['GRS', 'Hello!'],
-      ['U1',  'Unit 1 — A new school'],
-      ['MS1', 'Media smart 1'],
-      ['U2',  'Unit 2 — At home'],
-      ['AC1', 'Across cultures 1'],
-      ['U3',  'Unit 3 — Our Greenwich'],
-      ['AC2', 'Across cultures 2'],
-      ['U4',  'Unit 4 — Happy Birthday'],
-      ['TR',  'Trailer']
+      ['PUA', 'Pick-up A — We’re from Greenwich'],
+      ['U1',  'Unit 1 — It’s fun at home'],
+      ['PUB', 'Pick-up B — This is fun!'],
+      ['U2',  'Unit 2 — I’m new at TTS'],
+      ['U3',  'Unit 3 — I like my busy days'],
+      ['AC1', 'Across cultures 1 — How to be polite in English'],
+      ['U4',  'Unit 4 — Let’s do something fun'],
+      ['U5',  'Unit 5 — Let’s go shopping'],
+      ['AC2', 'Across cultures 2 — Food in the UK'],
+      ['TR1', 'Trailer — Plans for the school holidays']
     ]
   },
   6: {
-    titel: 'Green Line 2',
+    titel: 'Green Line G9 2',
+    kennung: 'glg9:2',
+    kurz: 'Klasse6_G9',
+    /* ⚠️ Reihenfolge nach dem BUCH und nicht nach der Vokabelliste:
+       das Inhaltsverzeichnis setzt Across cultures 2 zwischen Unit 5
+       und Unit 6, die Liste des Verlags hängt es hinter Unit 6. Die
+       Unit-Leiste soll neben dem aufgeschlagenen Heft stimmen
+       (Sönke, 24.09.2026: „mach es so wie im buch"). */
     units: [
-      ['WB',  'Welcome back!'],
-      ['U1',  'Unit 1 — The new boy'],
-      ['MS1', 'Media smart 1'],
-      ['AC1', 'Across cultures 1'],
-      ['U2',  'Unit 2 — London: Wow!'],
-      ['U3',  'Unit 3 — Star of the internet'],
-      ['AC2', 'Across cultures 2'],
-      ['U4',  'Unit 4 — What’s your sport?'],
-      ['U5',  'Unit 5 — Scotland, here we come!'],
-      ['T1',  'Text 1'], ['T2', 'Text 2'], ['T3', 'Text 3'],
-      ['T4',  'Text 4'], ['T5', 'Text 5'], ['T6', 'Text 6']
+      ['AC1', 'Across cultures 1 — Let’s discover TTS'],
+      ['U1',  'Unit 1 — It’s my party'],
+      ['U2',  'Unit 2 — My friends and I'],
+      ['U3',  'Unit 3 — London is amazing!'],
+      ['U4',  'Unit 4 — Sport is good for you!'],
+      ['U5',  'Unit 5 — Stay in touch'],
+      ['AC2', 'Across cultures 2 — British legends and stories'],
+      ['U6',  'Unit 6 — Goodbye Greenwich'],
+      ['TR1', 'Trailer 1'], ['TR2', 'Trailer 2'], ['TR3', 'Trailer 3']
+    ]
+  },
+  7: {
+    titel: 'Green Line G9 3',
+    kennung: 'glg9:3',
+    kurz: 'Klasse7_G9',
+    /* `TMS` ist der Lehrgang „Text and media smart", den Band 3 neu
+       mitbringt — zwei Kapitel mit eigenen Stationen, Klett nennt
+       ihre Themen „Songs and poems" und „On- and offline
+       communication". Der Wortschatz passt dazu (songwriter, poet,
+       shape poem · informal, recipient, to abbreviate). */
+    units: [
+      ['U1',   'Unit 1 — Find your place'],
+      ['TMS1', 'Text and media smart 1 — Songs and poems'],
+      ['AC1',  'Across cultures 1'],
+      ['U2',   'Unit 2 — Let’s go to Scotland!'],
+      ['AC2',  'Across cultures 2'],
+      ['U3',   'Unit 3 — What was it like?'],
+      ['TMS2', 'Text and media smart 2 — On- and offline communication'],
+      ['AC3',  'Across cultures 3'],
+      ['U4',   'Unit 4 — On the move'],
+      ['TR1',  'Trailer 1'], ['TR2', 'Trailer 2'], ['TR3', 'Trailer 3']
     ]
   }
 };
@@ -89,33 +132,53 @@ const BUCH = {
 /* ─── Lücken im Buch ────────────────────────────────────────────
    Zeilen, bei denen in der Vorlage das Stationskürzel schlicht
    FEHLT, obwohl das Kapitel Stationen hat. Das ist etwas anderes
-   als ein Kapitel ohne Stationen (Media smart, Across cultures,
-   Trailer, die Texte) — dort ist die leere Spalte der Normalfall.
+   als ein Kapitel ohne Stationen (Across cultures, Trailer,
+   Pick-up) — dort ist die leere Spalte der Normalfall.
 
-   Green Line 2, Seite 18: „respect / Respekt" steht als erste
-   Zeile unter der Kopfzeile bei `U4` ohne Kürzel, unmittelbar über
-   dem Check-in-Block, dessen Wörter alle `CI` tragen. Ohne Eintrag
-   hier bekäme dieses eine Wort eine eigene Station, die den Titel
-   der Unit trägt und noch vor dem Check-in steht.
+   Beide Fälle sind dasselbe Muster: das TITELWORT der Unit steht
+   als erste Zeile unter der Kopfzeile, ohne Kürzel, unmittelbar
+   über dem Check-in-Block. Ohne Eintrag hier bekäme dieses eine
+   Wort eine eigene Station, die den Titel der Unit trägt und noch
+   vor dem Check-in steht.
 
    Eingetragen wird von HAND und je Jahrgang, damit die Entscheidung
    im Quelltext steht und nicht in einer Ausgabedatei. Eine neue
    Lücke meldet sich von selbst (siehe `baue`). */
 const LUECKEN = {
-  6: { 'U4|respect': 'CI' }
+  6: { 'U5|to stay in touch (with)': 'CI' }
 };
 
-/* Die Abschnitte innerhalb einer Unit, in Buchreihenfolge. Die Zahl
-   ist `vocab_sets.sort_order` — die Stationsnummer, nach der beide
-   Oberflächen sortieren. */
+/* Die Abschnitte innerhalb einer Unit. Nur der NAME steht hier; die
+   Reihenfolge kommt aus der Liste selbst (siehe `baue`).
+
+   ⚠️ Eine feste Reihenfolge hat es bis Green Line 2021 getan und
+   trägt bei G9 nicht mehr: das Buch ordnet je Unit anders — Band 1
+   Unit 2 hat Skills → Unit task → Story, Band 2 Unit 3 hat
+   Action UK! → Skills → Unit task → Story, Band 2 Unit 2 hat Story
+   → Unit task. Eine Tabelle wäre bei der Hälfte der Units falsch,
+   und zwar unauffällig falsch.
+
+   Die angehängte Ziffer bei SK/ST/UT steht wirklich so in der Zelle,
+   wechselt aber unmotiviert (Band 2: SK1 in Unit 1–2, SK2 ab Unit 3;
+   Band 1 nur SK2, dafür ST und UT ohne Ziffer). Sie darf wegfallen,
+   weil jedes dieser Kürzel INNERHALB einer Unit höchstens einmal
+   vorkommt — nachgezählt über alle 33 Units der drei Bände.
+
+   `FP` ist die Filmseite „Action UK!". Belegt über die Stelle (immer
+   dort, wo das Inhaltsverzeichnis Action UK! führt) und über den
+   Inhalt: Band 1 Unit 4, Action UK! S. 86 heißt im IHV „Ein
+   Outdoor-Hobby kennenlernen", und U4/FP führt geocaching, GPS
+   device, cache. */
 const STATION = {
-  CI: ['Check-in',  1],
-  S1: ['Station 1', 2],
-  S2: ['Station 2', 3],
-  S3: ['Station 3', 4],
-  ST: ['Story',     5],
-  UT: ['Unit task', 6],
-  CO: ['Check-out', 7]
+  CI:  'Check-in',
+  S1:  'Station 1',
+  S2:  'Station 2',
+  S3:  'Station 3',
+  SK:  'Skills',    SK1: 'Skills',    SK2: 'Skills',
+  UT:  'Unit task', UT1: 'Unit task', UT2: 'Unit task',
+  ST:  'Story',     ST1: 'Story',     ST2: 'Story',
+  FP:  'Action UK!',
+  CO:  'Check-out'
 };
 
 
@@ -152,9 +215,31 @@ async function lies(pdf) {
       .map(i => ({ x: i.transform[4], y: i.transform[5], s: i.str }))
       .sort((a, b) => (b.y - a.y) || (a.x - b.x));
 
+    /* Eine Zeile fängt an, wenn der Abstand nach oben zu groß ist —
+       ODER wenn ein Unit-Kürzel auf einer ANDEREN Höhe steht als die
+       Zeile, die gerade läuft.
+
+       ⚠️ Der zweite Fall sieht nach Feinschliff aus und ist ein
+       Datenverlust. Green Line G9 3, Seite 7: „haggis" hat eine
+       dreizeilige deutsche Zelle, und deren letzte Zeile (y 118,08)
+       liegt nur 1,68 über der nächsten Wortzeile „tartan" (y 116,40).
+       Mit der 3er-Toleranz allein wird beides EINE Zeile: die Spalte
+       Deutsch bekommt zwei Stücke aneinandergeklebt, „tartan" erbt
+       den Schwanz von „haggis" — und weil die Zeile ein Kürzel hat,
+       wird sie eine neue Zeile und der Rest von haggis ist weg.
+
+       Die Toleranz zu senken wäre die falsche Antwort: innerhalb
+       einer echten Zeile haben alle Stücke exakt dieselbe Höhe, der
+       Abstand zur Fortsetzungszeile darüber schwankt aber mit der
+       Zeilenzahl der Zelle. Das Kürzel ist das verlässliche
+       Merkmal — es steht immer am Anfang seiner eigenen Zeile. */
     let lauf = null;
     for (const st of stuecke) {
-      if (!lauf || Math.abs(lauf.y - st.y) > 3) { lauf = { y: st.y, teile: [] }; zeilen.push(lauf); }
+      const kuerzel = st.x < SPALTE[0];
+      if (!lauf || Math.abs(lauf.y - st.y) > 3 || (kuerzel && Math.abs(lauf.y - st.y) > .5)) {
+        lauf = { y: st.y, teile: [] };
+        zeilen.push(lauf);
+      }
       lauf.teile.push(st);
     }
   }
@@ -389,14 +474,20 @@ function baue(zeilen, jahrgang, meldungen) {
       code = luecken[uKey + '|' + z.en] || '';
       if (!code) meldungen.push(['Station fehlt im Buch', uKey, z.en, z.de]);
     }
-    const sKey = STATION[code] ? code : '—';
     if (code && !STATION[code]) {
       meldungen.push(['Stationskürzel unbekannt: ' + code, uKey, z.en, z.de]);
     }
+    /* Der NAME ist der Schlüssel und nicht das Kürzel: SK1 und SK2
+       heißen beide „Skills" und müssten, stünden sie je zusammen in
+       einer Unit, auch in derselben Station landen. */
+    const sName = STATION[code] || null;
+    const sKey  = sName || '—';
     if (!unit.stationen.has(sKey)) {
       unit.stationen.set(sKey, {
-        titel: STATION[sKey] ? STATION[sKey][0] : unit.titel,
-        ord: STATION[sKey] ? STATION[sKey][1] : 1,
+        titel: sName || unit.titel,
+        /* Die Reihenfolge ist die des ersten Auftretens in der Liste,
+           und die Liste steht in Buchreihenfolge. Siehe STATION. */
+        ord: unit.stationen.size + 1,
         woerter: new Map()
       });
     }
@@ -408,13 +499,23 @@ function baue(zeilen, jahrgang, meldungen) {
     if (!de.length || !en.length) { meldungen.push(['leer', uKey + ' ' + sKey, z.en, z.de]); continue; }
     for (const m of merk) meldungen.push(['mehrwort', uKey + ' ' + sKey, z.en, m]);
 
-    // vocab_items: term und translation dürfen 60 Zeichen haben.
-    // Passt die erste Fassung nicht, rückt die kürzeste vor — und
-    // die Zeile steht in der Kontrolldatei.
+    /* vocab_items: term und translation dürfen 120 Zeichen haben
+       (0170 — bis dahin waren es 60). Passt die erste Fassung nicht,
+       rückt die kürzeste vor — und die Zeile steht in der
+       Kontrolldatei.
+
+       Warum 60 nicht reichte: die deutsche Seite einer
+       Lehrwerksliste ist nicht immer ein Wort, manchmal ist sie eine
+       Erklärung — „cyber bully → jemand, der andere in sozialen
+       Netzwerken belästigt oder mobbt". In Green Line G9 sind das
+       sechs Einträge, und bei DREIEN davon war es genau EIN Zeichen
+       zu viel. Eine Grenze, die für ein Zeichen ein Wort verschluckt,
+       ist für diese Daten die falsche Grenze. */
+    const GRENZE = 120;
     const kurz = (liste, was) => {
-      if (liste[0].length <= 60) return liste;
+      if (liste[0].length <= GRENZE) return liste;
       const beste = [...liste].sort((a, b) => a.length - b.length)[0];
-      if (beste.length > 60) return null;
+      if (beste.length > GRENZE) return null;
       meldungen.push(['gekürzt/' + was, uKey + ' ' + sKey, z.en, liste[0]]);
       return [beste, ...liste.filter(s => s !== beste)];
     };
@@ -442,7 +543,13 @@ function baue(zeilen, jahrgang, meldungen) {
    Aus dem Schlüssel gerechnet statt gewürfelt. Nur so trifft ein
    zweiter Lauf des Skripts dieselben Zeilen (`on conflict do
    update`) — und nur so bleibt der Lernstand jedes Kindes stehen,
-   wenn eine Korrektur nachgeschoben wird. */
+   wenn eine Korrektur nachgeschoben wird.
+
+   Der Schlüssel fängt mit der `kennung` des Bandes an und nicht mit
+   dem Inselschlüssel. Der Unterschied fällt erst bei einem Wechsel
+   des Lehrwerks auf, und dann sofort: „en:5|U1|Check-in" ist in
+   jedem Englischbuch für Klasse 5 derselbe Text und wäre damit
+   dieselbe uuid. */
 function nummer(schluessel) {
   const h = crypto.createHash('md5').update('wordisland:vocab:' + schluessel).digest();
   h[6] = (h[6] & 0x0f) | 0x40;
@@ -468,6 +575,7 @@ const arr = liste => liste.length ? `array[${liste.map(q).join(', ')}]::text[]` 
    wie die Beispielvokabeln. */
 function migration(units, jahrgang, nummerText) {
   const insel = `en:${jahrgang}`;
+  const kenn = BUCH[jahrgang].kennung;
   const zeilen = [];
   const P = s => zeilen.push(s);
   const wörter = units.reduce((n, u) => n + u.stationen.reduce((m, s) => m + s.woerter.size, 0), 0);
@@ -483,7 +591,7 @@ function migration(units, jahrgang, nummerText) {
   P(`-- MPSkills/tools/wordisland/tools/greenline.mjs:`);
   P(`--`);
   P(`--   node MPSkills/tools/wordisland/tools/greenline.mjs \\`);
-  P(`--        "…/Vokabelliste_Klasse ${jahrgang}.pdf" --jahrgang ${jahrgang}`);
+  P(`--        "…/Vokabelliste_Klasse ${jahrgang}_G9.pdf" --jahrgang ${jahrgang}`);
   P(`--`);
   P(`-- Was dort passiert, in einem Satz: der Verlag trennt`);
   P(`-- Bedeutungen mit „;" und benutzt „/" INNERHALB von Wörtern`);
@@ -495,21 +603,34 @@ function migration(units, jahrgang, nummerText) {
   P(`-- niemandem und ist für jede Lehrkraft da, genau wie die drei`);
   P(`-- Beispiellisten aus 0130.`);
   P(`--`);
+  P(`-- ── Setzt 0170 voraus ─────────────────────────────────────────`);
+  P(`-- Dort geht der alte Bestand (Green Line 2021, Migrationen 0160`);
+  P(`-- bis 0163) von Bord. Beides nebeneinander wäre zweimal Klasse`);
+  P(`-- ${jahrgang} in derselben Unit-Leiste.`);
+  P(`--`);
   P(`-- ── Die Kürzel des Buchs ──────────────────────────────────────`);
   P(`-- Spalte „Lektion" im PDF sind zwei Spalten: Kapitel und`);
   P(`-- Abschnitt. Sie werden hier zu Unit und Station —`);
-  P(`-- CI Check-in · S1–S3 Station 1–3 · ST Story · UT Unit task ·`);
-  P(`-- CO Check-out. Kapitel ohne Abschnitte (Media smart, Across`);
-  P(`-- cultures, Trailer, die Texte) sind eine Unit am Stück (0150).`);
+  P(`-- CI Check-in · S1–S3 Station 1–3 · SK Skills · UT Unit task ·`);
+  P(`-- ST Story · FP Action UK! · CO Check-out. Kapitel ohne`);
+  P(`-- Abschnitte (Pick-up, Across cultures, Trailer) sind eine Unit`);
+  P(`-- am Stück (0150).`);
+  P(`--`);
+  P(`-- Die REIHENFOLGE der Stationen kommt aus der Liste und nicht`);
+  P(`-- aus einer Tabelle: G9 ordnet je Unit anders (mal Skills vor`);
+  P(`-- der Story, mal danach, mal Action UK! vor Skills).`);
   P(`--`);
   P(`-- ── Feste Nummern ─────────────────────────────────────────────`);
   P(`-- Aus dem Inhalt gerechnet und nicht gewürfelt. Ein zweiter Lauf`);
   P(`-- der Migration trifft damit dieselben Zeilen (\`on conflict do`);
   P(`-- update\`) — und der Lernstand jedes Kindes bleibt stehen, auch`);
-  P(`-- wenn eine Korrektur nachgeschoben wird.`);
+  P(`-- wenn eine Korrektur nachgeschoben wird. In den Schlüssel geht`);
+  P(`-- die Kennung des Bandes ('${kenn}') ein, damit keine Nummer`);
+  P(`-- dieses Bestands je einer aus einem anderen Lehrwerk gleicht.`);
   P(`--`);
   P(`-- Setzt 0159 voraus: „Ich bin aus …" gilt dort mit und ohne`);
-  P(`-- Punkte, „skates (pl)" auch als „skates".`);
+  P(`-- Punkte, „skates (pl)" auch als „skates". Und 0169: „BC`);
+  P(`-- (= before Christ)" gilt auch als „before Christ".`);
   P(`--`);
   P(`-- Kein DROP — Idempotenz per \`on conflict\`.`);
   P(`-- ══════════════════════════════════════════════════════════════`);
@@ -523,7 +644,7 @@ function migration(units, jahrgang, nummerText) {
   P(`-- ${units.length} auf '${insel}'.`);
   P(`insert into vocab_units (id, title, lang_from, lang_to, grade, sort_order) values`);
   P(units.map(u =>
-    `  (${q(nummer(`${insel}|${u.code}`))}, ${q(u.titel)}, 'de', 'en', ${jahrgang}, ${u.ord})`
+    `  (${q(nummer(`${kenn}|${u.code}`))}, ${q(u.titel)}, 'de', 'en', ${jahrgang}, ${u.ord})`
   ).join(',\n'));
   P(`on conflict (id) do update set`);
   P(`  title = excluded.title, grade = excluded.grade, sort_order = excluded.sort_order;`);
@@ -538,8 +659,8 @@ function migration(units, jahrgang, nummerText) {
   const sZeilen = [];
   for (const u of units) {
     for (const st of u.stationen) {
-      sZeilen.push(`  (${q(nummer(`${insel}|${u.code}|${st.titel}`))}, ${q(st.titel)}, ` +
-                   `'de', 'en', ${q(String(jahrgang))}, ${q(nummer(`${insel}|${u.code}`))}, ${st.ord})`);
+      sZeilen.push(`  (${q(nummer(`${kenn}|${u.code}|${st.titel}`))}, ${q(st.titel)}, ` +
+                   `'de', 'en', ${q(String(jahrgang))}, ${q(nummer(`${kenn}|${u.code}`))}, ${st.ord})`);
     }
   }
   P(sZeilen.join(',\n'));
@@ -564,7 +685,7 @@ function migration(units, jahrgang, nummerText) {
   const wZeilen = [];
   for (const u of units) {
     for (const st of u.stationen) {
-      const set = nummer(`${insel}|${u.code}|${st.titel}`);
+      const set = nummer(`${kenn}|${u.code}|${st.titel}`);
       for (const w of st.woerter.values()) {
         wZeilen.push(`  (${q(set)}, ${q(w.de[0])}, ${q(w.en[0])}, ` +
                      `${arr(w.en.slice(1))}, ${arr(w.de.slice(1))}, ${w.nr})`);
@@ -669,11 +790,16 @@ const frei = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1]
 const pdf = frei[0];
 
 if (!pdf) {
-  console.error('Aufruf: node greenline.mjs "<pfad zur Vokabelliste.pdf>" --jahrgang 5 [--nr 0160]');
+  console.error('Aufruf: node greenline.mjs "<pfad zur Vokabelliste.pdf>" --jahrgang 5 [--nr 0171]');
   process.exit(1);
 }
 
 const jahrgang = Number(wert('jahrgang', 5));
+if (!BUCH[jahrgang]) {
+  console.error(`Für Jahrgang ${jahrgang} steht kein Buch in BUCH — bekannt sind ${Object.keys(BUCH).join(', ')}.`);
+  process.exit(1);
+}
+const kurz = BUCH[jahrgang].kurz;
 // Die Kontrolldateien liegen beim PDF (und damit außerhalb des
 // Repos), die Migration liegt bei den Migrationen.
 const ziel = wert('ziel', path.dirname(pdf));
@@ -683,7 +809,12 @@ if (!fs.existsSync(migDir)) {
   console.error(`Kein Migrationsordner unter ${migDir} — mit --migrationen <pfad> nachhelfen.`);
   process.exit(1);
 }
-const hand = wert('hand', path.join(ziel, `Klasse${jahrgang}_nachbessern.tsv`));
+/* Die Nachbesserungsdatei trägt die Kennung des Bandes im Namen: was
+   für Green Line 2021 von Hand geradegerückt wurde, ist keine Aussage
+   über G9 — von den zwölf alten Einträgen kommen in den neuen Listen
+   noch zwei vor. Eine gemeinsame Datei wäre also zu neun Zehnteln
+   Karteileiche, und man sähe ihr das nicht an. */
+const hand = wert('hand', path.join(ziel, `${kurz}_nachbessern.tsv`));
 
 HANDBUCH = handLies(hand);
 
@@ -698,19 +829,22 @@ if (fehler.length) {
 }
 
 /* Die Migrationsnummer: gegeben oder die nächste freie. Gesucht wird
-   nach einer, die diesen Jahrgang schon trägt — sonst bekäme jede
-   Korrektur eine neue Nummer, und in der Datenbank stünde derselbe
-   Bestand zweimal untereinander. */
+   nach einer, die diesen Jahrgang DIESES Lehrwerks schon trägt —
+   sonst bekäme jede Korrektur eine neue Nummer, und in der Datenbank
+   stünde derselbe Bestand zweimal untereinander.
+
+   ⚠️ `greenline_g9_5` und nicht `greenline_5`: das zweite trifft auch
+   0160 und 0163, die Dateien des alten Lehrwerks. Die sind
+   eingespielt und werden nie wieder angesehen. */
 const migName = (() => {
   const da = fs.existsSync(migDir) ? fs.readdirSync(migDir) : [];
-  const schon = da.find(f => f.includes(`greenline_${jahrgang}`));
+  const schon = da.find(f => f.includes(`greenline_g9_${jahrgang}`));
   if (schon) return schon;
   const nr = wert('nr', String(Math.max(0, ...da.map(f => parseInt(f, 10) || 0)) + 1).padStart(4, '0'));
-  return `${nr}_vocab_greenline_${jahrgang}.sql`;
+  return `${nr}_vocab_greenline_g9_${jahrgang}.sql`;
 })();
 
-const name = `Klasse${jahrgang}`;
-fs.writeFileSync(path.join(ziel, `${name}_kontrolle.tsv`), tsv(units, meldungen), 'utf8');
+fs.writeFileSync(path.join(ziel, `${kurz}_kontrolle.tsv`), tsv(units, meldungen), 'utf8');
 fs.writeFileSync(path.join(migDir, migName),
                  migration(units, jahrgang, migName.slice(0, 4)), 'utf8');
 
@@ -718,16 +852,16 @@ const gesamt = units.reduce((n, u) => n + u.stationen.reduce((m, s) => m + s.woe
 console.log(`${BUCH[jahrgang].titel} · Jahrgang ${jahrgang}`);
 for (const u of units) {
   const n = u.stationen.reduce((m, s) => m + s.woerter.size, 0);
-  console.log(`  ${u.titel.padEnd(32)} ${String(n).padStart(4)} Wörter  ` +
+  console.log(`  ${u.titel.padEnd(56)} ${String(n).padStart(4)} Wörter  ` +
               u.stationen.map(s => `${s.titel}:${s.woerter.size}`).join(' '));
 }
-console.log(`  ${'—'.repeat(32)} ${String(gesamt).padStart(4)} Wörter in ` +
+console.log(`  ${'—'.repeat(56)} ${String(gesamt).padStart(4)} Wörter in ` +
             `${units.reduce((n, u) => n + u.stationen.length, 0)} Stationen`);
 const offen = meldungen.filter(m => m[0] === 'mehrwort').map(m => m[3]);
 const neu = handSchreib(hand, offen, VORSCHLAG);
 
 console.log(`\nMigration:  supabase/migrations/${migName}`);
-console.log(`Kontrolle:  ${path.join(ziel, `${name}_kontrolle.tsv`)}`);
+console.log(`Kontrolle:  ${path.join(ziel, `${kurz}_kontrolle.tsv`)}`);
 if (meldungen.length) console.log(`${meldungen.length} Zeilen zum Nachsehen — unten in der Kontrolldatei.`);
 if (neu) console.log(`${neu} strittige Zelle(n) in ${path.basename(hand)} — dort geraderücken und noch einmal laufen lassen.`);
 else if (HANDBUCH.size) console.log(`${HANDBUCH.size} Zelle(n) aus ${path.basename(hand)} übernommen.`);

@@ -87,6 +87,12 @@
 }
 .wi-btn:hover { filter: brightness(1.06); }
 .wi-btn:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+/* Grau, aber anfassbar (23.09.2026, tool.js `aus`). Ein echtes
+   `disabled` gibt keinen Klick her — und damit keinen Hinweis
+   darauf, WARUM der Knopf grau ist. Optik und Auskunft an die
+   Vorlesefunktion sind dieselben, nur das Ereignis kommt an. */
+.wi-btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+.wi-btn[aria-disabled="true"]:hover { filter: none; }
 .wi-btn--ghost {
   background: transparent;
   color: var(--ink-soft);
@@ -1925,6 +1931,17 @@
   line-height: 1.1;
   color: var(--ink);
 }
+/* Eine Wendung und eine Erklärung sind auch Vokabeln — seit dem
+   Lehrwerkswechsel (0170) dürfen sie 120 Zeichen haben. Bei 40 px
+   wären 96 Zeichen auf einem Telefon sechs Zeilen, und weil beim
+   Tippen die Tastatur steht, schöbe das das Eingabefeld aus dem
+   Bild. Welche Stufe gilt, entscheidet `zeigeWort` in tool.js an
+   der Zeichenzahl (> 40 und > 72); hier steht nur, wie groß.
+
+   Die Zeilenhöhe wächst mit: 1.1 ist für EIN Wort gerechnet und
+   klebt bei drei Zeilen zusammen. */
+.wi-word.is-lang { font-size: clamp(20px, 4.4vw, 26px); line-height: 1.25; }
+.wi-word.is-satz { font-size: clamp(17px, 3.4vw, 20px); line-height: 1.35; }
 .wi-type { display: flex; gap: 8px; }
 .wi-type .wi-in { font-size: 18px; }
 /* `.wi-back` („← Zurück zur Aufstellung") ist am 20.09.2026 mit dem
@@ -2420,6 +2437,30 @@ body.tool-fill .wi--pult .wi-play { position: relative; }
    über die ganze Breite. */
 .wi-sbar > .wi-btn { flex: 0 0 auto; }
 .wi-sbar > .wi-sgear { margin-left: auto; }
+
+/* „Vokabeln üben" trägt seit dem 23.09.2026 die Zahl im Topf
+   (Sönke: „sodass ich immer sehe: ich arbeite gerade an 100
+   Worten"). Zwei Zeilen in EINEM Knopf: die Zahl gehört zu dem,
+   was er tut, und nicht in eine eigene Zeile der Leiste — die hat
+   `flex-wrap: nowrap` und damit nur eine.
+
+   Die Leiste wird dadurch höher; gemessen wird sie ohnehin
+   (`--wi-sbar-h`, tool.js sbarMessen), gerechnet ist nichts. */
+.wi-sgo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  line-height: 1.2;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.wi-sgon {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  opacity: .8;
+}
 
 /* ══════════════════════════════════════════════════════════════
    DAS EIGENE LEVEL — die drei Kreise unten

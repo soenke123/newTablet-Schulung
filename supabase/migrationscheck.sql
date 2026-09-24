@@ -21,7 +21,7 @@ with def as (
     join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public'
      and p.proname in ('wi_view', 'wi_answer', 'wi_teams_json',
-                       'wi_solo_answer', 'wi_solo_create',
+                       'wi_solo_answer', 'wi_solo_create', 'wi_solo_chosen',
                        'wi_normalize_factions', 'wi_build_island')
 ),
 spalte as (
@@ -110,6 +110,16 @@ pruef(nr, was, treffer, merkmal) as (
      (select count(*) > 0 from funk where proname = 'wi_room_solo_claim'),
      'ohne: keine Trainer-Insel — "Zeige Trainer-Insel" meldet die fehlende Migration'),
 
+    -- Zwei Zeilen, weil 0169 zwei ganz verschiedene Dinge bringt und
+    -- jedes fuer sich auffaellt.
+    ('0169a', 'vocab_forms (Apostroph + "(= …)")',
+     (select count(*) > 0 from funk where proname = 'vocab_forms'),
+     'ohne: "I''d like" mit geradem Apostroph gilt als Schreibfehler'),
+
+    ('0169b', 'leere Stationsauswahl auf der eigenen Insel',
+     (select bool_or(src like '%? ''sets''%') from def where proname = 'wi_solo_chosen'),
+     'ohne: alles abgewaehlt heisst am Server "alles" — der Topf fuellt sich von selbst'),
+
     -- ── Die eigene Insel ───────────────────────────────────────
     ('0136', 'wi_solo_learners',
      (select count(*) > 0 from spalte where tab = 'wi_solo_learners' and sp = 'token'),
@@ -158,7 +168,44 @@ pruef(nr, was, treffer, merkmal) as (
 
     ('0154', 'wi_set_words',
      (select count(*) > 0 from funk where proname = 'wi_set_words'),
-     'ohne: Woerterliste einer Station nicht aufklappbar')
+     'ohne: Woerterliste einer Station nicht aufklappbar'),
+
+    -- ── Der Lehrwerkswechsel (24.09.2026) ──────────────────────
+    -- Erkennbar am Ergebnis und nicht an einer Funktion: 0170 bis
+    -- 0173 schieben ZEILEN. Deshalb wird hier gezaehlt.
+    ('0170a', 'Platz fuer lange Einträge (120 Zeichen)',
+     (select position('120' in pg_get_constraintdef(c.oid)) > 0
+        from pg_catalog.pg_constraint c
+       where c.conname = 'vocab_items_term_len'
+         and c.conrelid = 'public.vocab_items'::regclass),
+     'ohne: 0171-0173 brechen ab (sechs Eintraege sind laenger als 60 Zeichen)'),
+
+    ('0170b', 'der alte Bestand ist von Bord',
+     (select count(*) = 0 from vocab_units
+       where id in ('b535cb16-66f3-4c5a-8e69-7c9471212c90',
+                    'e95eb07e-4c2c-4b01-87b6-d1e2cc5b28e0')),
+     'ohne: Green Line 2021 steht neben G9 — zweimal Klasse 5 in der Unit-Leiste'),
+
+    ('0171', 'Green Line G9 1 (Jahrgang 5)',
+     (select count(*) = 827 from vocab_items i
+        join vocab_sets s  on s.id = i.set_id
+        join vocab_units u on u.id = s.unit_id
+       where u.grade = 5 and u.owner_id is null),
+     'ohne: keine Insel en:5'),
+
+    ('0172', 'Green Line G9 2 (Jahrgang 6)',
+     (select count(*) = 1119 from vocab_items i
+        join vocab_sets s  on s.id = i.set_id
+        join vocab_units u on u.id = s.unit_id
+       where u.grade = 6 and u.owner_id is null),
+     'ohne: keine Insel en:6'),
+
+    ('0173', 'Green Line G9 3 (Jahrgang 7)',
+     (select count(*) = 815 from vocab_items i
+        join vocab_sets s  on s.id = i.set_id
+        join vocab_units u on u.id = s.unit_id
+       where u.grade = 7 and u.owner_id is null),
+     'ohne: keine Insel en:7 — Klasse 7 hat gar nichts zu ueben')
 )
 select nr,
        case when treffer then 'DRIN' else '>>> FEHLT <<<' end as status,
