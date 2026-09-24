@@ -893,14 +893,14 @@ async function testPultUnits() {
   let gewaehlt = ['b1'];
 
   const SETS = [
-    { id: 'a1', title: 'Station 1 — Schule', count: 30, mine: '0',
-      unit: 'u-test', utitle: 'Test', grade: 5, island: 'en:5', station: 1 },
-    { id: 'a2', title: 'Station 2 — Zuhause', count: 30, mine: '0',
-      unit: 'u-test', utitle: 'Test', grade: 5, island: 'en:5', station: 2 },
-    { id: 'a3', title: 'Station 3 — Essen', count: 30, mine: '0',
-      unit: 'u-test', utitle: 'Test', grade: 5, island: 'en:5', station: 3 },
-    { id: 'b1', title: 'Food', count: 24, mine: '0',
-      unit: 'u-food', utitle: 'Food', grade: 6, island: 'en:6', station: 1 }
+    { id: 'a1', title: 'Check-in', count: 30, mine: '0', unit: 'u-test',
+      utitle: 'Unit 1 — It’s fun at home', grade: 5, island: 'en:5', station: 1 },
+    { id: 'a2', title: 'Station 1', count: 30, mine: '0', unit: 'u-test',
+      utitle: 'Unit 1 — It’s fun at home', grade: 5, island: 'en:5', station: 2 },
+    { id: 'a3', title: 'Skills', count: 30, mine: '0', unit: 'u-test',
+      utitle: 'Unit 1 — It’s fun at home', grade: 5, island: 'en:5', station: 3 },
+    { id: 'b1', title: 'Check-out', count: 24, mine: '0', unit: 'u-food',
+      utitle: 'Across cultures 2 — Food in the UK', grade: 6, island: 'en:6', station: 1 }
   ];
 
   const ctx = Object.assign({}, ctxBase, {
@@ -968,6 +968,15 @@ async function testPultUnits() {
   ok('die Unit-Zeile zählt Stationen und Wörter',
      /3 Stationen/.test(kisten[0].textContent) && /90 Wörter/.test(kisten[0].textContent),
      kisten[0].querySelector('.wi-suall span').textContent);
+  /* ⚠️ Die Gegenseite zu „nur Unit 1" auf der Insel (24.09.2026):
+     HIER bleibt der Untertitel stehen. Die Lehrkraft sucht das
+     Kapitel im Buch, und „Unit 1" allein gibt es in drei Bänden.
+     Ohne diese Zusage kürzt der nächste, der den Helfer findet,
+     versehentlich beide Rollen. */
+  ok('… und trägt den Untertitel des Lehrwerks',
+     kisten[0].querySelector('.wi-suall b').textContent.trim()
+       === 'Unit 1 — It’s fun at home',
+     kisten[0].querySelector('.wi-suall b').textContent);
   /* ⚠️ Der andere Jahrgang ist NICHT da. Das ist der ganze Zweck:
      bei zwei Lehrwerksbänden lägen sonst fünfundsiebzig Stationen
      untereinander in einem scrollenden Kasten. */
@@ -1942,18 +1951,22 @@ function soloView(n, stufen, ohneUnits, player) {
 
    Die Wörter verteilen sich reihum auf die fünf Sätze — so trägt
    jede Station Tiere, und die Stufenpunkte der Unit sind wirklich
-   die Summe ihrer Stationen und keine abgeschriebene Zahl. */
+   die Summe ihrer Stationen und keine abgeschriebene Zahl.
+
+   Die Kapitelnamen tragen ihren Untertitel wie im Lehrwerk („Unit 1
+   — It’s fun at home"): die Leiste des Kindes muss ihn abschneiden,
+   die eigene Liste der Lehrkraft dagegen nicht. */
 const BAUM_SETS = [
-  { id: 'set-a', title: 'Station 1 — Schule',  unit: 'u-test', utitle: 'Test',
-    grade: 5, island: 'en:5', station: 1 },
-  { id: 'set-b', title: 'Station 2 — Zuhause', unit: 'u-test', utitle: 'Test',
-    grade: 5, island: 'en:5', station: 2 },
-  { id: 'set-c', title: 'Station 3 — Essen',   unit: 'u-test', utitle: 'Test',
-    grade: 5, island: 'en:5', station: 3 },
-  { id: 'set-d', title: 'Food',                unit: 'u-food', utitle: 'Food',
-    grade: 6, island: 'en:6', station: 1 },
-  { id: 'set-e', title: 'Klassenarbeit',       unit: 'u-eig',  utitle: 'Klassenarbeit',
-    grade: null, island: 'en:x', station: 1 }
+  { id: 'set-a', title: 'Check-in',   unit: 'u-test',
+    utitle: 'Unit 1 — It’s fun at home',  grade: 5, island: 'en:5', station: 1 },
+  { id: 'set-b', title: 'Station 1',  unit: 'u-test',
+    utitle: 'Unit 1 — It’s fun at home',  grade: 5, island: 'en:5', station: 2 },
+  { id: 'set-c', title: 'Skills',     unit: 'u-test',
+    utitle: 'Unit 1 — It’s fun at home',  grade: 5, island: 'en:5', station: 3 },
+  { id: 'set-d', title: 'Check-out',  unit: 'u-food',
+    utitle: 'Across cultures 2 — Food in the UK', grade: 6, island: 'en:6', station: 1 },
+  { id: 'set-e', title: 'Klassenarbeit', unit: 'u-eig',
+    utitle: 'Klassenarbeit — Woche 3',    grade: null, island: 'en:x', station: 1 }
 ];
 
 function soloBaum(n, stufen) {
@@ -3431,6 +3444,27 @@ async function testUnitBaum() {
      kisten[0].querySelector('.wi-utop .wi-uzahl').textContent.trim() === '(24)',
      kisten[0].querySelector('.wi-utop .wi-uzahl').textContent);
 
+  /* ── Der Untertitel bleibt am Pult (24.09.2026) ─────────────
+     Im Lehrwerk heißt das Kapitel „Unit 1 — It’s fun at home"; die
+     Lehrkraft sucht danach im Buch. In der 300 px breiten Leiste des
+     Kindes wäre derselbe Satz nur abgeschnitten. Sönke: „in der
+     Schüler singleplayer UI nerven die. da soll nur Unit 1 stehen."
+
+     ⚠️ Geprüft wird die GANZE Zeile und nicht bloß „enthält Unit 1":
+     der Untertitel verschwindet sonst in einem `includes` und der
+     Prüfstand meldet trotzdem grün. */
+  const kopfText = el => el.textContent.replace(/\s+/g, ' ').trim();
+  ok('die Unit-Zeile trägt den Kapitelnamen ohne Untertitel',
+     kopfText(kisten[0].querySelector('.wi-utop .wi-utoggle b')) === 'Unit 1 (24)',
+     kopfText(kisten[0].querySelector('.wi-utop .wi-utoggle b')));
+  /* Und die Stationen darunter heißen weiter, wie sie heißen — an
+     ihnen war nie ein Untertitel. */
+  ok('… die Stationen darunter bleiben unangetastet',
+     [...kisten[0].querySelectorAll('.wi-ustat .wi-utoggle b')]
+       .map(b => kopfText(b).replace(/ \(\d+\)$/, '')).join('|')
+       === 'Check-in|Station 1|Skills',
+     [...kisten[0].querySelectorAll('.wi-ustat .wi-utoggle b')].map(kopfText).join(' | '));
+
   /* ── Der Chip wechselt die Liste ────────────────────────────
      Die beiden anderen Jahrgänge bringen je eine Unit am Stück. */
   click(chip('Jhg 6'), document);
@@ -3447,11 +3481,20 @@ async function testUnitBaum() {
      root.querySelectorAll('.wi-uone .wi-uchevb').length === 0);
   ok('… dafür ihr „i" selbst',
      root.querySelectorAll('.wi-uone .wi-uinfo').length === 1);
+  ok('… und auch sie nur „Across cultures 2"',
+     kopfText(root.querySelector('.wi-uone .wi-utoggle b')) === 'Across cultures 2 (8)',
+     kopfText(root.querySelector('.wi-uone .wi-utoggle b')));
   click(chip('Eigene'), document);
   await wait(20);
   ok('„Eigene" bringt die Liste ohne Jahrgang',
      /Klassenarbeit/.test((root.querySelector('.wi-uone') || {}).textContent || ''),
      (root.querySelector('.wi-uone') || {}).textContent);
+  /* Die Gegenprobe: eine eigene Liste hat keinen Jahrgang und damit
+     kein Kapitel. Ihr Name ist der, den die Lehrkraft getippt hat —
+     ein Gedankenstrich darin ist kein Untertitel. */
+  ok('… und behält ihren ganzen Namen',
+     kopfText(root.querySelector('.wi-uone .wi-utoggle b')) === 'Klassenarbeit — Woche 3 (8)',
+     kopfText(root.querySelector('.wi-uone .wi-utoggle b')));
 
   click(chip('Jhg 5'), document);
   await wait(20);

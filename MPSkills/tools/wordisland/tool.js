@@ -375,6 +375,33 @@
     return [...grp.values()];
   }
 
+  /* Derselbe Kapitelname OHNE seinen Untertitel — nur für die Leiste
+     der eigenen Insel.
+
+     Am Pult ist „Unit 1 — It’s fun at home" hilfreich: die Lehrkraft
+     sucht das Kapitel im Buch und will es wiedererkennen. In der
+     Leiste des Kindes steht derselbe Satz in einer 300 px breiten
+     Zeile, wird abgeschnitten und sagt nichts, was der Schalter
+     daneben nicht schon sagt. Sönke am 24.09.2026: „in der Schüler
+     singleplayer UI nerven die. da soll nur Unit 1 stehen."
+
+     Getrennt wird am Gedankenstrich MIT Leerzeichen — genau der
+     Form, die der Umwandler setzt (tools/greenline.mjs). Ein
+     Halbgeviertstrich ohne Leerzeichen („Bronzezeit (ca. 2200–800
+     v. Chr.)") ist Teil eines Wortes und bleibt stehen.
+
+     ⚠️ Nur für Listen MIT Jahrgang. Eine eigene Liste heißt, wie die
+     Lehrkraft sie genannt hat; „Klassenarbeit — Woche 3" ist kein
+     Kapitel mit Untertitel, und ihr den halben Namen zu nehmen wäre
+     geraten. Denselben Unterschied macht `jahrgangText` schon für
+     die Überschrift („Eigene Listen"). */
+  function unitKurz(g) {
+    const t = (g && g.title) || '';
+    if (!g || g.grade == null) return t;
+    const i = t.indexOf(' — ');
+    return i > 0 ? t.slice(0, i) : t;
+  }
+
   /* Die Überschrift einer Jahrgangs-Gruppe. Eine eigene Liste hat
      keinen Jahrgang — „Jahrgang null" wäre eine Behauptung. */
   const jahrgangText = g =>
@@ -9700,7 +9727,7 @@ ${LEAVE_HTML}
       if (g.stueck) {
         html += unitZeile({
           klasse: 'wi-urow wi-uone', ziel: g.sets[0].id, unit: false,
-          titel: g.title, anzahl: g.anzahl, ids: g.ids,
+          titel: unitKurz(g), anzahl: g.anzahl, ids: g.ids,
           zustand: solo.aktiv.has(g.sets[0].id) ? 'an' : 'aus',
           info: g.sets[0].id });
         continue;
@@ -9715,7 +9742,7 @@ ${LEAVE_HTML}
       html += `<div class="wi-ubox${auf ? ' is-auf' : ''}">`
         + unitZeile({
             klasse: 'wi-urow wi-utop', ziel: g.id, unit: true,
-            titel: g.title, anzahl: g.anzahl, ids: g.ids, zustand, auf })
+            titel: unitKurz(g), anzahl: g.anzahl, ids: g.ids, zustand, auf })
         + `<div class="wi-ustats"${auf ? '' : ' hidden'}>`
         + g.sets.map(s => unitZeile({
             klasse: 'wi-urow wi-ustat', ziel: s.id, unit: false,
