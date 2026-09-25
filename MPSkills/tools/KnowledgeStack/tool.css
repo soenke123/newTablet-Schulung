@@ -1,8 +1,8 @@
 @import url('creatures.css');
 
 /* ══════════════════════════════════════════════════════════════
-   Knowledge Stack — tool.css
-   Neo-Brutalist Arcade Pop Style (Dark & Punchy)
+   Knowledge Stack — tool.css (v2)
+   Neo-Brutalist Arcade Pop Style (Dark & Punchy, Mobile-Optimiert)
    ══════════════════════════════════════════════════════════════ */
 
 .ks-container {
@@ -21,20 +21,42 @@
   overflow-x: hidden;
 }
 
+/* ─── Layout Container ─── */
+.ks-center-col {
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.ks-mobile-col {
+  max-width: 520px;
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* ─── Brutalist Utility Classes ─── */
 .ks-card {
   background: #181a26;
   border: 3px solid #000000;
   border-radius: 20px;
-  box-shadow: 6px 6px 0px 0px #000000;
+  box-shadow: 5px 5px 0px 0px #000000;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
 }
 
 .ks-card-white {
   background: #181a26;
   border: 3px solid #ffffff;
   border-radius: 20px;
-  box-shadow: 6px 6px 0px 0px #ffffff;
+  box-shadow: 5px 5px 0px 0px #ffffff;
+  box-sizing: border-box;
 }
 
 .ks-btn {
@@ -50,10 +72,11 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  box-sizing: border-box;
 }
 
 .ks-btn:active {
-  transform: translate(3px, 3px);
+  transform: translate(2px, 2px);
   box-shadow: 1px 1px 0px 0px #000000;
 }
 
@@ -62,9 +85,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
   border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .ks-badge {
@@ -74,16 +99,16 @@
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
   font-weight: 800;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 12px;
   border: 2px solid #000000;
-  box-shadow: 3px 3px 0px 0px #000000;
+  box-shadow: 2px 2px 0px 0px #000000;
 }
 
 .ks-timer-pill {
   background: #ffe600;
   color: #000000;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .ks-pin-pill {
@@ -95,7 +120,7 @@
 .ks-lobby-grid {
   display: grid;
   grid-template-columns: 320px 1fr;
-  gap: 24px;
+  gap: 20px;
   flex: 1;
 }
 
@@ -108,24 +133,24 @@
 .ks-lobby-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .ks-player-wall {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
   align-content: start;
-  max-height: 70vh;
+  max-height: 65vh;
   overflow-y: auto;
-  padding: 10px;
+  padding: 8px;
 }
 
 .ks-player-card {
   background: #141724;
   border: 2px solid #2e354f;
   border-radius: 16px;
-  padding: 10px 8px;
+  padding: 10px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -140,9 +165,9 @@
 
 .ks-player-name {
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
   margin-top: 6px;
-  max-width: 90px;
+  max-width: 84px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -160,93 +185,69 @@
 .ks-question-box {
   background: #161827;
   border: 4px solid #ffffff;
-  border-radius: 28px;
-  padding: 24px 32px;
+  border-radius: 24px;
+  padding: 20px 24px;
   text-align: center;
-  margin-bottom: 24px;
-  box-shadow: 8px 8px 0px 0px #ffffff;
+  margin-bottom: 18px;
+  box-shadow: 6px 6px 0px 0px #ffffff;
+  box-sizing: border-box;
 }
 
 .ks-question-text {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1.35;
   margin: 0;
-}
-
-@media (max-width: 700px) {
-  .ks-question-text { font-size: 20px; }
-}
-
-.ks-timer-bar-wrap {
-  width: 100%;
-  height: 12px;
-  background: #252a3d;
-  border-radius: 8px;
-  border: 2px solid #000;
-  overflow: hidden;
-  margin-bottom: 20px;
-}
-
-.ks-timer-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981, #facc15, #ef4444);
-  transition: width 1s linear;
 }
 
 /* 4 Choices Grid */
 .ks-answers-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 14px;
   flex: 1;
 }
 
-@media (max-width: 600px) {
-  .ks-answers-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 .ks-ans-card {
-  border: 4px solid #000000;
-  border-radius: 22px;
-  padding: 20px 24px;
+  border: 3px solid #000000;
+  border-radius: 20px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-size: 20px;
+  gap: 14px;
+  font-size: 18px;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 6px 6px 0px 0px #000000;
+  box-shadow: 5px 5px 0px 0px #000000;
   transition: transform 0.1s, box-shadow 0.1s, opacity 0.2s;
   user-select: none;
-  min-height: 80px;
+  min-height: 72px;
+  box-sizing: border-box;
 }
 
 .ks-ans-card:active {
-  transform: translate(4px, 4px);
+  transform: translate(3px, 3px);
   box-shadow: 1px 1px 0px 0px #000000;
 }
 
-.ks-ans-card.c-0 { background: #e11d48; color: #ffffff; } /* Rot 🔺 */
-.ks-ans-card.c-1 { background: #0284c7; color: #ffffff; } /* Blau 🔷 */
-.ks-ans-card.c-2 { background: #eab308; color: #000000; } /* Gelb 🟡 */
-.ks-ans-card.c-3 { background: #10b981; color: #ffffff; } /* Grün 🟢 */
+.ks-ans-card.c-0 { background: #e11d48; color: #ffffff; } /* A: Rot */
+.ks-ans-card.c-1 { background: #0284c7; color: #ffffff; } /* B: Blau */
+.ks-ans-card.c-2 { background: #eab308; color: #000000; } /* C: Gelb */
+.ks-ans-card.c-3 { background: #10b981; color: #ffffff; } /* D: Grün */
 
 .ks-ans-card.selected {
-  outline: 6px solid #ffffff;
+  outline: 5px solid #ffffff;
   transform: scale(1.02);
 }
 
 .ks-ans-card.disabled {
-  opacity: 0.6;
+  opacity: 0.65;
   cursor: not-allowed;
   pointer-events: none;
 }
 
 .ks-ans-card.correct-highlight {
-  outline: 6px solid #00f0ff;
+  outline: 5px solid #00f0ff;
   animation: pulse-ring 1s infinite alternate;
 }
 
@@ -254,17 +255,36 @@
   opacity: 0.35;
 }
 
-.ks-ans-shape {
-  font-size: 24px;
+.ks-ans-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 900;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 10px;
   border: 2px solid rgba(0, 0, 0, 0.3);
   flex-shrink: 0;
+}
+
+.ks-ans-text {
+  flex: 1;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.ks-ans-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
 }
 
 /* ─── Beamer Leaderboard (Top 5 nebeneinander) ─── */
@@ -272,12 +292,13 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 16px;
-  height: 380px;
-  margin: 30px auto;
+  gap: 14px;
+  height: 360px;
+  margin: 20px auto;
   width: 100%;
-  max-width: 900px;
-  padding: 0 10px;
+  max-width: 860px;
+  padding: 0 8px;
+  box-sizing: border-box;
 }
 
 .ks-podium-slot {
@@ -285,8 +306,19 @@
   flex-direction: column;
   align-items: center;
   flex: 1;
-  max-width: 160px;
+  max-width: 150px;
   transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ks-pod-name {
+  font-weight: 800;
+  font-size: 14px;
+  margin: 8px 0 3px 0;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
 }
 
 .ks-pedestal {
@@ -298,46 +330,55 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding-top: 10px;
+  padding-top: 8px;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 900;
+  box-sizing: border-box;
+}
+
+.ks-pod-rank {
+  font-size: 22px;
+}
+
+.ks-pod-pts {
+  font-size: 12px;
+  opacity: 0.9;
 }
 
 /* Platz-Höhen & Farben */
 .ks-podium-slot.rank-1 .ks-pedestal {
-  height: 180px;
+  height: 170px;
   background: #facc15;
   color: #000000;
-  border-color: #000000;
 }
 .ks-podium-slot.rank-2 .ks-pedestal {
-  height: 140px;
+  height: 130px;
   background: #cbd5e1;
   color: #000000;
 }
 .ks-podium-slot.rank-3 .ks-pedestal {
-  height: 110px;
+  height: 100px;
   background: #d97706;
   color: #ffffff;
 }
 .ks-podium-slot.rank-4 .ks-pedestal {
-  height: 80px;
+  height: 75px;
   background: #475569;
   color: #ffffff;
 }
 .ks-podium-slot.rank-5 .ks-pedestal {
-  height: 60px;
+  height: 55px;
   background: #334155;
   color: #ffffff;
 }
 
 .ks-podium-delta {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 8px;
-  margin-top: 6px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  margin-bottom: 5px;
 }
 .ks-podium-delta.up { background: #10b981; color: #fff; }
 .ks-podium-delta.down { background: #ef4444; color: #fff; }
@@ -348,59 +389,62 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  margin: 30px auto;
-  max-width: 600px;
+  gap: 14px;
+  margin: 16px auto;
+  max-width: 500px;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .ks-neighbor-card {
   flex: 1;
   background: #181a27;
   border: 2px dashed #475569;
-  border-radius: 20px;
-  padding: 16px;
+  border-radius: 18px;
+  padding: 12px 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  opacity: 0.8;
-  transform: scale(0.88);
+  opacity: 0.85;
+  transform: scale(0.9);
+  box-sizing: border-box;
 }
 
 .ks-my-center-card {
   flex: 1.4;
   background: #1e1b4b;
   border: 4px solid #facc15;
-  border-radius: 26px;
-  box-shadow: 8px 8px 0px 0px #000000;
-  padding: 24px;
+  border-radius: 24px;
+  box-shadow: 6px 6px 0px 0px #000000;
+  padding: 18px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  transform: scale(1.05);
+  box-sizing: border-box;
 }
 
 /* ─── Participant Avatar Picker ─── */
 .ks-picker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-  gap: 10px;
-  max-height: 280px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  max-height: 220px;
   overflow-y: auto;
-  padding: 8px;
+  padding: 6px;
   background: #13141f;
   border: 2px solid #2e354f;
-  border-radius: 16px;
-  margin-bottom: 16px;
+  border-radius: 14px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
 }
 
 .ks-picker-item {
   cursor: pointer;
   border: 2px solid transparent;
-  border-radius: 12px;
-  padding: 6px;
+  border-radius: 10px;
+  padding: 4px 2px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -409,12 +453,12 @@
 
 .ks-picker-item:hover {
   transform: scale(1.1);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .ks-picker-item.active {
   border-color: #facc15;
-  background: rgba(250, 204, 21, 0.15);
+  background: rgba(250, 204, 21, 0.18);
 }
 
 /* Emote Bar */
@@ -422,21 +466,66 @@
   display: flex;
   gap: 10px;
   justify-content: center;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .ks-emote-btn {
   font-size: 22px;
-  padding: 10px 16px;
+  padding: 8px 14px;
   background: #181a26;
   border: 2px solid #fff;
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow: 3px 3px 0px 0px #fff;
   cursor: pointer;
-  transition: transform 0.1s;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .ks-emote-btn:active {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0px 0px #fff;
+}
+
+/* ─── Mobile Optimierungen (Smartphone) ─── */
+@media (max-width: 600px) {
+  .ks-container {
+    padding: 10px;
+  }
+  .ks-question-box {
+    padding: 14px 16px;
+    border-width: 3px;
+    border-radius: 18px;
+    margin-bottom: 12px;
+  }
+  .ks-question-text {
+    font-size: 18px;
+  }
+  .ks-answers-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .ks-ans-card {
+    padding: 12px 14px;
+    font-size: 16px;
+    min-height: 60px;
+    border-radius: 16px;
+    gap: 12px;
+  }
+  .ks-ans-label {
+    width: 32px;
+    height: 32px;
+    font-size: 17px;
+  }
+  .ks-my-rank-stage {
+    gap: 6px;
+  }
+  .ks-my-center-card {
+    padding: 14px 8px;
+  }
+  .ks-neighbor-card {
+    padding: 10px 4px;
+  }
+  .ks-picker-grid {
+    grid-template-columns: repeat(4, 1fr);
+    max-height: 200px;
+  }
 }
