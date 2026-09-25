@@ -724,7 +724,7 @@
      WERKZEUG-SCHNITTSTELLE (lib/tool.js)
      ══════════════════════════════════════════════════════════════ */
 
-  window.MPTools.register('knowledgestack', {
+  window.MPTool.register('knowledgestack', {
     mount: async function (el, context) {
       root = el;
       ctx = context;

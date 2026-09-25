@@ -476,9 +476,10 @@ begin
            'score',          score,
            'rank',           curr_rank,
            'rank_change',    (old_rank - curr_rank)
-         ) order by curr_rank asc limit 5), '[]'::jsonb)
+         ) order by curr_rank asc), '[]'::jsonb)
     into v_top5
-    from ranked;
+    from ranked
+   where curr_rank <= 5;
 
   -- Alle Spieler für Lobby-Ansicht (Wesen, Emotes)
   select coalesce(jsonb_agg(jsonb_build_object(
