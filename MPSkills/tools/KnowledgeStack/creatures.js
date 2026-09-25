@@ -4,7 +4,55 @@
 (function() {
   'use strict';
 
-  const CREATURES = [];
+  /* Die 36 Wesen. Bis zum 26.09.2026 stand hier `const CREATURES = []`
+     und sonst nichts — die Liste wurde nie gefüllt. Die Auswahl auf dem
+     Schülergerät blieb dadurch LEER, und weil daneben eine Vorschau mit
+     einem Wesen stand, sah es nicht aus wie eine fehlende Liste, sondern
+     wie ein kaputtes Raster. Die Angaben kommen aus showroom-36-wesen.html
+     (creaturesData) — das ist die Quelle, aus der auch PALETTES und
+     SVG_BODIES erzeugt wurden.
+
+     `skins` trägt die Namen der drei Farbfassungen. Sie stehen auf den
+     Farbknöpfen: „Neon Slime" sagt mehr als „Farbe 1", und es ist
+     dieselbe Benennung wie im Showroom. */
+  const CREATURES = [
+    { id: 0, name: "Puddl", gruppe: "absurd", skins: ["Neon Slime","Toxic Lime","Ocean Slime"] },
+    { id: 1, name: "Spark", gruppe: "animal", skins: ["Elektro Violett","Solar Gold","Midnight Shadow"] },
+    { id: 2, name: "Plop", gruppe: "animal", skins: ["Klassik Moos","Poison Dart","Golden Toad"] },
+    { id: 3, name: "Bubbles", gruppe: "animal", skins: ["Cyan Splash","Koralle Pop","Deep Abyss"] },
+    { id: 4, name: "Snooze", gruppe: "animal", skins: ["Honigbraun","Polarbär","Panda Bicolor"] },
+    { id: 5, name: "Beep", gruppe: "tech", skins: ["Gameboy Classic","Cyberpunk Neon","Arcade Red"] },
+    { id: 6, name: "Chompy", gruppe: "animal", skins: ["Lava Orange","Frost Drache","Jade Drache"] },
+    { id: 7, name: "Nubi", gruppe: "nature", skins: ["Himmelblau","Sonnenuntergang","Gewitterlila"] },
+    { id: 8, name: "Zorp", gruppe: "magic", skins: ["Alien Lime","Marsianer Rot","Void Purple"] },
+    { id: 9, name: "Lotti", gruppe: "animal", skins: ["Bubblegum Pink","Albino Pearl","Neon Mint"] },
+    { id: 10, name: "Grumbl", gruppe: "nature", skins: ["Granit & Smaragd","Vulkan & Rubin","Amethyst Höhle"] },
+    { id: 11, name: "Mochi", gruppe: "absurd", skins: ["Erdbeer Sahne","Matcha Creme","Schoko Vanille"] },
+    { id: 12, name: "Sprout", gruppe: "nature", skins: ["Rote Bete","Goldene Rübe","Mystische Alraune"] },
+    { id: 13, name: "Bzz", gruppe: "animal", skins: ["Klassik Honig","Neon Wasp","Kirschblüten-Biene"] },
+    { id: 14, name: "Crunch", gruppe: "tech", skins: ["Retro Mint","Chrom Silber","Pop-Art Gelb"] },
+    { id: 15, name: "Tiki", gruppe: "absurd", skins: ["Dschungel Teak","Vulkan Asche","Ozean Koralle"] },
+    { id: 16, name: "Clawdy", gruppe: "animal", skins: ["Espresso Italiano","Cappuccino Creme","Matcha Latte"] },
+    { id: 17, name: "Mimi", gruppe: "magic", skins: ["Washi Kirschrot","Mitternachts-Folie","Sonnengelb Washi"] },
+    { id: 18, name: "Fuzz", gruppe: "absurd", skins: ["Rußmännchen","Zuckerwatte","Kamin-Staub"] },
+    { id: 19, name: "Snip", gruppe: "animal", skins: ["Regenbogen Dschungel","Cyber Chamäleon","Wüsten-Tarnung"] },
+    { id: 20, name: "Boomer", gruppe: "tech", skins: ["Retro Messing","Neon Alarm","Pastell Wecker"] },
+    { id: 21, name: "Pebbl", gruppe: "animal", skins: ["Kaiser-Pinguin","Eisblumen Blau","Karamell Pinguin"] },
+    { id: 22, name: "Glitch", gruppe: "tech", skins: ["Gameboy Grün","CGA Cyberpunk","Virtual Boy"] },
+    { id: 23, name: "Cacti", gruppe: "nature", skins: ["Sonora Grün","Blaukaktus","Sonnenuntergang"] },
+    { id: 24, name: "Nacho", gruppe: "absurd", skins: ["Cheddar Gold","Sweet Chili","Blue Corn Bat"] },
+    { id: 25, name: "Pips", gruppe: "magic", skins: ["Magier Weiß","Casino Samt","Shadow D6"] },
+    { id: 26, name: "Waddl", gruppe: "animal", skins: ["Klassik Ente","Erpel Dschungel","Lavendel Duck"] },
+    { id: 27, name: "Yoyo", gruppe: "absurd", skins: ["Pastell Türkis","Flieder Traum","Koralle Garn"] },
+    { id: 28, name: "Turbo", gruppe: "tech", skins: ["Formula Red","Gulf Racing","Stealth Carbon"] },
+    { id: 29, name: "Lumi", gruppe: "magic", skins: ["Tiefsee Cyan","Sonnen-Angler","Korallen Pink"] },
+    { id: 30, name: "Umbra", gruppe: "spooky", skins: ["Void Purple","Blood Moon","Banshee Frost"] },
+    { id: 31, name: "Grimjaw", gruppe: "spooky", skins: ["Cursed Gold","Abyss Iron","Crimson Tomb"] },
+    { id: 32, name: "Astris", gruppe: "magic", skins: ["Deep Cosmos","Nebula Dream","Solar Eclipse"] },
+    { id: 33, name: "Arcana", gruppe: "magic", skins: ["Mystic Violet","Emerald Chrono","Forbidden Shadow"] },
+    { id: 34, name: "Zephyr", gruppe: "animal", skins: ["Midnight Starlight","Aurora Feather","Solar Twilight"] },
+    { id: 35, name: "Spindle", gruppe: "spooky", skins: ["Schwarze Witwe","Toxic Cave","Geister Albino"] }
+  ];
 
   const PALETTES = {
   "0": {

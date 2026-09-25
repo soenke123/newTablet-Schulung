@@ -1,531 +1,1088 @@
-@import url('creatures.css');
-
 /* ══════════════════════════════════════════════════════════════
-   Knowledge Stack — tool.css (v2)
-   Neo-Brutalist Arcade Pop Style (Dark & Punchy, Mobile-Optimiert)
+   Knowledge Stack — tool.css
+   ══════════════════════════════════════════════════════════════
+   Ein Quiz ist ein Bild und keine Seite: dunkel, kontraststark,
+   harte Kanten. Es kippt deshalb NICHT mit hell/dunkel — genau wie
+   die Insel von Wordisland bringt es seine Farben selbst mit. Die
+   Seite darum (Kopfzeile, Reiterleiste, Code) bleibt Oberfläche und
+   nimmt die Variablen aus style.css.
+
+   ── Die eine Regel, die alles trägt ───────────────────────────
+   --ks-h ist die GEMESSENE Höhe des Rahmens (tool.js, fit()). Jede
+   Größe hier rechnet daraus, und keine einzige aus vh. Das ist der
+   Unterschied zwischen „passt" und „passt auf meinem Bildschirm":
+   über dem Werkzeug steht je Rolle und je Breite etwas anderes
+   (Kopfzeile, Reiterleiste), und vh weiß davon nichts. In der
+   ersten Fassung stand hier `min-height: 100vh` — die Bühne war
+   damit garantiert höher als der Bildschirm, am Beamer rutschte die
+   Auflösung nach unten weg und auf dem Tablet fehlte der vierte
+   Antwortknopf.
+
+   Jede clamp() hat deshalb dieselbe Form: (Untergrenze, Anteil von
+   --ks-h, Obergrenze). Die Untergrenze sagt „darunter ist es nicht
+   mehr lesbar", die Obergrenze „darüber ist es albern groß".
+
+   ── Schrift ───────────────────────────────────────────────────
+   Outfit und JetBrains Mono, weil die Seiten (j.html, lehrer.html)
+   genau die laden. Die erste Fassung verlangte 'Space Grotesk' —
+   das lädt niemand, also stand dort system-ui, und deshalb sah es
+   „irgendwie off" aus, ohne dass man den Finger drauflegen konnte.
+
+   ── Namen ─────────────────────────────────────────────────────
+   Alles trägt ks-. creatures.css liegt daneben und bringt die Wesen
+   mit (.creature-svg, .wave-7, .state-cheer …) — dort wird nichts
+   umbenannt und von hier nichts hineingeschrieben.
    ══════════════════════════════════════════════════════════════ */
 
-.ks-container {
+/* ─── Farben ──────────────────────────────────────────────── */
+.ks-frame {
+  --ks-bg:     #0c0e15;
+  --ks-flaeche:#171a26;
+  --ks-linie:  #2b3148;
+  --ks-ink:    #ffffff;
+  --ks-soft:   #94a3b8;
+  --ks-gold:   #facc15;
+  --ks-cyan:   #22d3ee;
+  --ks-gruen:  #10b981;
+  --ks-rot:    #ef4444;
+
+  /* Die vier Antwortfarben. Bewusst nicht die Ampel: „richtig" darf
+     nicht an der Farbe der Kachel hängen, sonst rät die Klasse nach
+     Grün. Erkennbar bleiben sie über Buchstabe UND Farbe. */
+  --ks-a0: #e11d48;
+  --ks-a1: #2563eb;
+  --ks-a2: #eab308;
+  --ks-a3: #059669;
+
+  font-family: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--ks-ink);
+}
+
+/* ─── Der gemessene Rahmen ────────────────────────────────── */
+.ks-frame {
+  position: relative;
+  width: 100%;
+  height: var(--ks-h, 520px);     /* von tool.js gesetzt */
+  box-sizing: border-box;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--ks-bg);
+  background-image: radial-gradient(rgba(255, 255, 255, .09) 1.4px, transparent 1.4px);
+  background-size: 22px 22px;
+  border: 1px solid #000;
+}
+
+/* Die Bühne füllt den Rahmen und teilt ihn in Zeilen. `min-height:0`
+   an jedem Kind, sonst gibt Flex es nicht her und der letzte Block
+   rutscht unten heraus. */
+.ks-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, calc(var(--ks-h) * .018), 16px);
+  padding: clamp(8px, calc(var(--ks-h) * .022), 20px);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.ks-stage > * { min-height: 0; }
+
+/* Sammelregel gegen die Kastenkinder: eine eigene display-Regel
+   schlägt sonst [hidden], und ein Kasten geht auf, aber nie wieder
+   zu (feedback_hidden_attribute_loses_to_display). */
+.ks-stage [hidden] { display: none !important; }
+
+.ks-booting {
+  margin: auto;
+  color: var(--ks-soft);
+  font-size: 15px;
+  text-align: center;
+  padding: 0 20px;
+}
+
+/* ─── Bausteine ───────────────────────────────────────────── */
+/* Ein Wesen füllt seinen Kasten in BEIDEN Richtungen — und das SVG
+   macht daraus von selbst ein Quadrat in der Mitte: es hat ein
+   viewBox und damit das voreingestellte `preserveAspectRatio:
+   xMidYMid meet`.
+
+   Hier stand am 26.09.2026 kurz `width: auto; aspect-ratio: 1;
+   height: 100%` je Kasten, und das war falsch: in einem Kasten, der
+   höher als breit ist (die Nachbarspalten auf einem Handy), wird das
+   Quadrat dann breiter als die Spalte. `max-width: 100%` fängt das
+   nicht auf — es begrenzt die Kastenbreite, während `aspect-ratio`
+   die Höhe behält, und weil die Karten `overflow: hidden` tragen,
+   sah man kein Überlaufen, sondern ein angeschnittenes Wesen.
+   fitcheck.js hat das über getBoundingClientRect gefunden. */
+.ks-wesen {
+  display: block;
   width: 100%;
   height: 100%;
-  min-height: 100vh;
-  box-sizing: border-box;
-  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  color: #ffffff;
-  background-color: #0e1017;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, transparent 1.5px);
-  background-size: 22px 22px;
-  display: flex;
-  flex-direction: column;
-  padding: 16px;
-  overflow-x: hidden;
+  min-width: 0;
 }
-
-/* ─── Layout Container ─── */
-.ks-center-col {
-  max-width: 960px;
-  margin: 0 auto;
+.ks-wesen > svg {
+  display: block;
   width: 100%;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  height: 100%;
+  overflow: visible;
 }
 
-.ks-mobile-col {
-  max-width: 520px;
-  margin: 0 auto;
-  width: 100%;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+/* Jeder Kasten, in dem ein Wesen steht, ist ein FESTES Fenster: das
+   Wesen liegt absolut darin und kann deshalb nie größer werden als
+   sein Kasten.
 
-/* ─── Brutalist Utility Classes ─── */
-.ks-card {
-  background: #181a26;
-  border: 3px solid #000000;
-  border-radius: 20px;
-  box-shadow: 5px 5px 0px 0px #000000;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-sizing: border-box;
-}
+   Warum nicht einfach `height: 100%`? Weil ein <svg> mit viewBox eine
+   eigene Größe HAT. Steht es in einem Kasten, dessen Höhe nicht
+   feststeht, rechnet der Browser die Höhe aus der Breite und dem
+   Seitenverhältnis des viewBox — bei einer 800 Punkte breiten
+   Vorschau im Querformat werden daraus 800 Punkte Höhe. Genau das
+   hat fitcheck.js am 26.09.2026 als „unten+555" gemeldet: nicht ein
+   zu großes Wesen, sondern ein Kasten ohne Höhe.
 
-.ks-card-white {
-  background: #181a26;
-  border: 3px solid #ffffff;
-  border-radius: 20px;
-  box-shadow: 5px 5px 0px 0px #ffffff;
-  box-sizing: border-box;
+   `inset: 0` beendet die Frage. Die Mitte und das Seitenverhältnis
+   macht dann das SVG selbst (preserveAspectRatio). */
+.ks-spic, .ks-npic, .ks-ipic, .ks-kpic, .ks-vorschau, .ks-tme {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
+.ks-spic > .ks-wesen,
+.ks-npic > .ks-wesen,
+.ks-ipic > .ks-wesen,
+.ks-kpic > .ks-wesen,
+.ks-vorschau > .ks-wesen,
+.ks-tme > .ks-wesen { position: absolute; inset: 0; }
 
-.ks-btn {
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 800;
-  cursor: pointer;
-  border: 3px solid #000000;
-  border-radius: 16px;
-  box-shadow: 4px 4px 0px 0px #000000;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-  user-select: none;
+.ks-pill {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(11px, calc(var(--ks-h) * .022), 17px);
+  font-weight: 700;
+  padding: .3em .7em;
+  border-radius: 10px;
+  background: #1f2437;
+  border: 2px solid #000;
+  color: var(--ks-ink);
+  white-space: nowrap;
+}
+.ks-pill b { color: var(--ks-gold); }
+
+.ks-go,
+.ks-now,
+.ks-fertig,
+.ks-wechsel {
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  border: 2px solid #000;
+  border-radius: 12px;
+  box-shadow: 3px 3px 0 0 #000;
+  padding: .5em 1.1em;
+  white-space: nowrap;
+  transition: transform .08s, box-shadow .08s, filter .12s;
+}
+.ks-go:active,
+.ks-now:active,
+.ks-fertig:active,
+.ks-wechsel:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 #000; }
+.ks-go:disabled { opacity: .45; cursor: not-allowed; box-shadow: 3px 3px 0 0 #000; }
+
+.ks-go     { background: var(--ks-gruen); color: #04130d;
+             font-size: clamp(13px, calc(var(--ks-h) * .028), 21px); }
+.ks-now    { background: var(--ks-gold);  color: #1a1400;
+             font-size: clamp(11px, calc(var(--ks-h) * .022), 16px);
+             /* Auch am Beamer ein Fingerziel: die Lehrkraft bedient
+                die Lehrerseite oft auf dem iPad. */
+             min-height: 44px; }
+/* Beide sind Fingerziele und tragen deshalb das Fingermaß — der
+   Prüfstand fitcheck.js hat sie am 26.09.2026 mit 38 px erwischt. */
+.ks-fertig { background: var(--ks-cyan);  color: #04181c; font-size: 14px; min-height: 44px; }
+.ks-wechsel{ background: #232838; color: var(--ks-soft); font-size: 13px;
+             align-self: center; box-shadow: none; border-color: var(--ks-linie);
+             min-height: 44px; }
+
+.ks-delta {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(9px, calc(var(--ks-h) * .017), 14px);
+  font-weight: 800;
+  padding: .1em .45em;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.ks-delta--up   { background: var(--ks-gruen); color: #04130d; }
+.ks-delta--down { background: var(--ks-rot);   color: #fff; }
+.ks-delta--same { background: #37405c;         color: var(--ks-soft); }
+
+/* ══════════════════════════════════════════════════════════
+   Kopfzeilen
+   ══════════════════════════════════════════════════════════ */
+.ks-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, calc(var(--ks-h) * .02), 18px);
+  padding-bottom: clamp(5px, calc(var(--ks-h) * .014), 12px);
+  border-bottom: 2px solid rgba(255, 255, 255, .12);
+}
+.ks-headl { display: flex; align-items: baseline; gap: 14px; min-width: 0; flex: 1 1 auto; }
+.ks-headr { display: flex; align-items: center; gap: 10px; margin-left: auto; flex: 0 0 auto; }
+
+.ks-title {
+  margin: 0;
+  font-size: clamp(17px, calc(var(--ks-h) * .045), 34px);
+  font-weight: 800;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+}
+
+.ks-catwrap {
+  display: flex; align-items: center; gap: 7px;
+  font-size: clamp(10px, calc(var(--ks-h) * .019), 14px);
+  color: var(--ks-soft);
+  min-width: 0;
+}
+.ks-cat {
+  font: inherit;
+  font-size: clamp(11px, calc(var(--ks-h) * .021), 15px);
+  font-weight: 600;
+  background: #1f2437;
+  color: var(--ks-ink);
+  border: 2px solid var(--ks-linie);
+  border-radius: 10px;
+  padding: .35em .6em;
+  max-width: min(46vw, 420px);
+}
+
+/* Der Kopf der Frage: Nummer · Zeitbalken · Uhr. Der Balken nimmt,
+   was übrig ist — er ist das, was aus der letzten Reihe noch zu
+   erkennen ist, auch wenn die Sekundenzahl zu klein dafür wäre. */
+.ks-head--q { align-items: center; }
+.ks-qnr {
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(11px, calc(var(--ks-h) * .024), 18px);
+  font-weight: 800;
+  color: var(--ks-cyan);
+  white-space: nowrap;
+}
+.ks-qnr i { font-style: normal; color: var(--ks-soft); }
+
+.ks-barwrap {
+  flex: 1 1 auto;
+  min-width: 40px;
+  height: clamp(8px, calc(var(--ks-h) * .018), 16px);
+  border-radius: 999px;
+  background: #212637;
+  border: 2px solid #000;
+  overflow: hidden;
+}
+/* Auf dem Tablet steht der Balken als eigene Zeile unter dem Kopf
+   und nicht IN ihm. `flex: 1 1 auto` gilt dort in der Senkrechten —
+   ohne diese Zeile wuchs der Balken auf ein Viertel des
+   Bildschirms und sah aus wie eine Pille. */
+.ks-stage > .ks-barwrap { flex: 0 0 auto; width: 100%; }
+.ks-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--ks-cyan);
+  /* 260 ms und linear: der Takt der Uhr ist 250 ms, also geht der
+     Balken ohne Ruckeln von einem Wert in den nächsten. */
+  transition: width .26s linear, background-color .3s;
+}
+.ks-bar--eilig { background: var(--ks-rot); }
+
+.ks-clock {
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(16px, calc(var(--ks-h) * .05), 40px);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ks-gold);
+  min-width: 2.2ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ks-clock--eilig { color: var(--ks-rot); animation: ks-puls .7s ease-in-out infinite alternate; }
+@keyframes ks-puls { from { transform: scale(1); } to { transform: scale(1.12); } }
+
+/* Auflösung: die Frage bleibt oben stehen, aber klein — die Klasse
+   soll wissen, worum es ging, ohne dass es dem Podest Platz nimmt. */
+.ks-head--rv { align-items: center; }
+.ks-qsmall {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: clamp(11px, calc(var(--ks-h) * .026), 20px);
+  font-weight: 600;
+  color: var(--ks-soft);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+}
+.ks-head--end { justify-content: space-between; }
+
+/* ══════════════════════════════════════════════════════════
+   Die Frage am Beamer
+   ══════════════════════════════════════════════════════════
+   `flex: 0 1 auto` und nicht `0 0 auto`: wenn die Frage lang ist
+   UND der Bildschirm flach, muss der Kasten hergeben, bevor die
+   Antwortkacheln schrumpfen. Die Antworten sind das, worauf
+   gezeigt wird. */
+.ks-qbox {
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 8px;
-  box-sizing: border-box;
+  padding: clamp(8px, calc(var(--ks-h) * .025), 26px) clamp(12px, calc(var(--ks-h) * .03), 34px);
+  background: var(--ks-flaeche);
+  border: 3px solid #fff;
+  border-radius: 18px;
+  box-shadow: 5px 5px 0 0 #fff;
+  overflow: hidden;
+}
+.ks-q {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(16px, calc(var(--ks-h) * .058), 46px);
+  font-weight: 800;
+  line-height: 1.22;
+  letter-spacing: -.015em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  line-clamp: 4;
 }
 
-.ks-btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px 0px #000000;
-}
-
-/* ─── Top Bar ─── */
-.ks-topbar {
+.ks-meta {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
-
-.ks-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  font-weight: 800;
-  padding: 5px 12px;
-  border-radius: 12px;
-  border: 2px solid #000000;
-  box-shadow: 2px 2px 0px 0px #000000;
+.ks-antz {
+  font-size: clamp(11px, calc(var(--ks-h) * .024), 18px);
+  font-weight: 600;
+  color: var(--ks-soft);
 }
+.ks-antz b { color: var(--ks-ink); font-weight: 800; }
 
-.ks-timer-pill {
-  background: #ffe600;
-  color: #000000;
-  font-size: 15px;
-}
-
-.ks-pin-pill {
-  background: #00f0ff;
-  color: #000000;
-}
-
-/* ─── Lobby Screen ─── */
-.ks-lobby-grid {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 20px;
-  flex: 1;
-}
-
-@media (max-width: 800px) {
-  .ks-lobby-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.ks-lobby-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.ks-player-wall {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 12px;
-  align-content: start;
-  max-height: 65vh;
-  overflow-y: auto;
-  padding: 8px;
-}
-
-.ks-player-card {
-  background: #141724;
-  border: 2px solid #2e354f;
-  border-radius: 16px;
-  padding: 10px 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  position: relative;
-  transition: transform 0.2s;
-}
-
-.ks-player-card:hover {
-  transform: scale(1.05);
-}
-
-.ks-player-name {
-  font-weight: 700;
-  font-size: 12px;
-  margin-top: 6px;
-  max-width: 84px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ks-player-emote {
-  position: absolute;
-  top: -8px;
-  right: -6px;
-  font-size: 20px;
-  animation: floatUpFade 1.2s ease forwards;
-}
-
-/* ─── Question Screen ─── */
-.ks-question-box {
-  background: #161827;
-  border: 4px solid #ffffff;
-  border-radius: 24px;
-  padding: 20px 24px;
-  text-align: center;
-  margin-bottom: 18px;
-  box-shadow: 6px 6px 0px 0px #ffffff;
-  box-sizing: border-box;
-}
-
-.ks-question-text {
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 1.35;
+.ks-expl {
+  flex: 0 0 auto;
   margin: 0;
+  padding: .5em .8em;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, .14);
+  border-left: 4px solid var(--ks-gruen);
+  color: #a7f3d0;
+  font-size: clamp(11px, calc(var(--ks-h) * .023), 17px);
+  font-weight: 600;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
 }
 
-/* 4 Choices Grid */
-.ks-answers-grid {
+/* ══════════════════════════════════════════════════════════
+   Die vier Antwortfelder
+   ══════════════════════════════════════════════════════════
+   Derselbe Kasten an derselben Stelle in allen drei Rollen (still ·
+   wahl · fuell). Das ist keine Sparsamkeit, sondern der Kern: in
+   der Auflösung soll niemand die Antwort suchen müssen, die er
+   gerade gewählt hat — sie steht da, wo sie war, nur mit einem
+   Füllstand dahinter.
+
+   Das Raster nimmt die ganze Resthöhe (`flex: 1 1 auto`), und die
+   Zeilen teilen sie sich gleichmäßig (`grid-auto-rows: 1fr`). So
+   ist die Kachel immer so groß, wie der Bildschirm hergibt — und
+   nie größer. */
+.ks-kacheln {
+  flex: 1 1 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  flex: 1;
+  grid-auto-rows: 1fr;
+  gap: clamp(6px, calc(var(--ks-h) * .018), 16px);
+  min-height: 0;
 }
+.ks-kacheln[data-n="2"] { grid-template-columns: 1fr; }
+.ks-kacheln[data-n="3"] { grid-template-columns: 1fr 1fr; }
 
-.ks-ans-card {
-  border: 3px solid #000000;
-  border-radius: 20px;
-  padding: 16px 20px;
+.ks-k {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
-  font-size: 18px;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 5px 5px 0px 0px #000000;
-  transition: transform 0.1s, box-shadow 0.1s, opacity 0.2s;
-  user-select: none;
-  min-height: 72px;
+  gap: clamp(8px, calc(var(--ks-h) * .022), 18px);
+  padding: clamp(8px, calc(var(--ks-h) * .022), 22px);
+  border: 3px solid #000;
+  border-radius: 16px;
+  box-shadow: 4px 4px 0 0 #000;
   box-sizing: border-box;
+  overflow: hidden;
+  font: inherit;
+  text-align: left;
+  color: #fff;
+  /* Auf dem Tablet ist die Kachel ein Knopf. 48 px sind das
+     Fingermaß — darunter darf sie nie fallen, auch wenn --ks-h
+     klein ist. Deshalb hier `min-height` und nicht `min-height: 0`:
+     das Raster gibt lieber oben etwas her (die Frage ist `0 1 auto`)
+     als eine Kachel unter das Fingermaß zu drücken. */
+  min-height: 48px;
+}
+.ks-k--0 { background: var(--ks-a0); }
+.ks-k--1 { background: var(--ks-a1); }
+.ks-k--2 { background: var(--ks-a2); color: #1a1400; }
+.ks-k--3 { background: var(--ks-a3); }
+
+button.ks-k { cursor: pointer; transition: transform .08s, box-shadow .08s, opacity .2s; }
+button.ks-k:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 0 #000; }
+button.ks-k:disabled { cursor: default; }
+
+/* Nur auf dem Tablet: „du hast schon geantwortet". */
+.ks-k.is-still { opacity: .5; }
+/* In der Auflösung die falschen Antworten. .62 und nicht .38: sie
+   sollen zurücktreten, aber aus der letzten Reihe noch lesbar sein —
+   die Klasse bespricht sie ja gerade. */
+.ks-k.is-blass { opacity: .62; }
+
+.ks-k.is-meine { outline: 4px solid #fff; outline-offset: -8px; }
+.ks-k.is-richtig {
+  outline: 4px solid var(--ks-cyan);
+  outline-offset: -8px;
+  animation: ks-richtig 1s ease-in-out infinite alternate;
+}
+@keyframes ks-richtig {
+  from { box-shadow: 4px 4px 0 0 #000, 0 0 0 0 rgba(34, 211, 238, .55); }
+  to   { box-shadow: 4px 4px 0 0 #000, 0 0 0 14px rgba(34, 211, 238, 0); }
 }
 
-.ks-ans-card:active {
-  transform: translate(3px, 3px);
-  box-shadow: 1px 1px 0px 0px #000000;
+.ks-kk {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width:  clamp(26px, calc(var(--ks-h) * .062), 54px);
+  height: clamp(26px, calc(var(--ks-h) * .062), 54px);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, .3);
+  border: 2px solid rgba(0, 0, 0, .35);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(14px, calc(var(--ks-h) * .04), 32px);
+  font-weight: 800;
+  line-height: 1;
+}
+.ks-kt {
+  flex: 1 1 auto;
+  font-size: clamp(13px, calc(var(--ks-h) * .033), 27px);
+  font-weight: 700;
+  line-height: 1.22;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  line-clamp: 3;
+  overflow-wrap: anywhere;
 }
 
-.ks-ans-card.c-0 { background: #e11d48; color: #ffffff; } /* A: Rot */
-.ks-ans-card.c-1 { background: #0284c7; color: #ffffff; } /* B: Blau */
-.ks-ans-card.c-2 { background: #eab308; color: #000000; } /* C: Gelb */
-.ks-ans-card.c-3 { background: #10b981; color: #ffffff; } /* D: Grün */
-
-.ks-ans-card.selected {
-  outline: 5px solid #ffffff;
-  transform: scale(1.02);
-}
-
-.ks-ans-card.disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
+/* Der Füllstand. Waagerecht und nicht senkrecht: die Kacheln sind
+   breiter als hoch, und vier Balken, die alle links anfangen, lassen
+   sich mit einem Blick vergleichen. Die Prozentzahl steht deshalb
+   NICHT dabei — sie steht im Balken. Daneben die absolute Zahl, denn
+   „60 %" bei drei Antwortenden ist etwas anderes als bei 28. */
+.ks-fuell {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  background: rgba(255, 255, 255, .3);
+  border-right: 3px solid rgba(255, 255, 255, .75);
+  transition: width .7s cubic-bezier(.2, .8, .25, 1);
   pointer-events: none;
 }
+.ks-k--2 .ks-fuell { background: rgba(0, 0, 0, .22); border-right-color: rgba(0, 0, 0, .55); }
 
-.ks-ans-card.correct-highlight {
-  outline: 5px solid #00f0ff;
-  animation: pulse-ring 1s infinite alternate;
-}
-
-.ks-ans-card.wrong-fade {
-  opacity: 0.35;
-}
-
-.ks-ans-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 20px;
-  font-weight: 900;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  background: rgba(0, 0, 0, 0.28);
-  border-radius: 10px;
-  border: 2px solid rgba(0, 0, 0, 0.3);
-  flex-shrink: 0;
-}
-
-.ks-ans-text {
-  flex: 1;
-  word-break: break-word;
-  line-height: 1.3;
-}
-
-.ks-ans-count {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  background: rgba(0, 0, 0, 0.35);
-  padding: 4px 8px;
-  border-radius: 8px;
-  color: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  white-space: nowrap;
-}
-
-/* ─── Beamer Leaderboard (Top 5 nebeneinander) ─── */
-.ks-podium-stage {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 14px;
-  height: 360px;
-  margin: 20px auto;
-  width: 100%;
-  max-width: 860px;
-  padding: 0 8px;
-  box-sizing: border-box;
-}
-
-.ks-podium-slot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-  max-width: 150px;
-  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.ks-pod-name {
+.ks-kn {
+  position: relative;
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(15px, calc(var(--ks-h) * .045), 36px);
   font-weight: 800;
-  font-size: 14px;
-  margin: 8px 0 3px 0;
-  max-width: 110px;
+  line-height: 1;
+  padding: .18em .45em;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, .42);
+  font-variant-numeric: tabular-nums;
+}
+.ks-k--2 .ks-kn { background: rgba(0, 0, 0, .3); color: #fff; }
+
+.ks-kmein {
+  position: absolute;
+  right: 8px; top: 6px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Das Podest: die fünf Ersten
+   ══════════════════════════════════════════════════════════
+   Von links nach rechts Platz 1 … Platz 5, und zwar genau so und
+   nicht als Treppe um die Mitte: „links ist vorn" ist die einzige
+   Ordnung, die eine Klasse ohne Erklärung liest. Name darüber,
+   Punkte darunter.
+
+   Es steht an derselben Stelle wie vorher die Frage — das ist die
+   Absicht dahinter: der Blick bleibt, wo er war, und was sich
+   ändert, ist der Inhalt. */
+/* `minmax(0, 1fr)` aus demselben Grund wie bei .ks-trio: die Namen
+   stehen auf einer Zeile, und ihre min-content-Breite würde die
+   Spalte sonst aufziehen. */
+.ks-podest {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(4px, calc(var(--ks-h) * .014), 14px);
+  min-height: 0;
+  min-width: 0;
+  align-items: stretch;
+}
+.ks-podest--leer {
+  display: grid; place-items: center;
+  color: var(--ks-soft); font-size: 15px;
+}
+/* In der Siegerehrung steht unter dem Podest die Wand mit ALLEN
+   Wesen — und die hat beliebig viel Inhalt. Deshalb bekommt das
+   Podest hier ein festes Maß (`flex: 0 0 …`) statt eines Anteils:
+   mit `flex: 1.6 1 auto` rechnete der Browser beide Grundmaße aus
+   dem Inhalt, die Wand mit 28 Karten gewann, und vom Podest blieb
+   eine Leiste mit Namen übrig — die fünf Ersten waren in ihrer
+   eigenen Siegerehrung nicht zu sehen. */
+.ks-podest--end { flex: 0 0 clamp(110px, calc(var(--ks-h) * .34), 300px); }
+
+.ks-slot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  align-items: center;
+  justify-items: center;
+  gap: 2px;
+  min-height: 0;
+  min-width: 0;
+  padding: clamp(4px, calc(var(--ks-h) * .012), 12px) 4px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, 0));
+  border: 2px solid var(--ks-linie);
+  overflow: hidden;
+}
+/* Platz 1 hebt sich ab, ohne die Reihe zu verbiegen: derselbe
+   Kasten, nur Gold. Eine echte Treppe (verschiedene Höhen) kostet
+   bei fünf Plätzen genau die Höhe, die das Wesen bräuchte. */
+.ks-slot--1 { border-color: var(--ks-gold); background: rgba(250, 204, 21, .12); }
+/* Die Krone sitzt im CSS und nicht im HTML: sie gehört zum PLATZ und
+   nicht zum Kind, und beim Flicken wechseln die Kinder, die Plätze
+   nicht. */
+.ks-slot--1 .ks-sname::before { content: '👑 '; }
+.ks-slot--2 { border-color: #cbd5e1; }
+.ks-slot--3 { border-color: #d97706; }
+
+.ks-sname {
+  font-size: clamp(9px, calc(var(--ks-h) * .022), 17px);
+  font-weight: 800;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: center;
 }
-
-.ks-pedestal {
+.ks-spic {
   width: 100%;
-  border: 3px solid #000000;
-  border-radius: 16px 16px 0 0;
-  box-shadow: 4px 4px 0px 0px #000000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding-top: 8px;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 900;
-  box-sizing: border-box;
-}
-
-.ks-pod-rank {
-  font-size: 22px;
-}
-
-.ks-pod-pts {
-  font-size: 12px;
-  opacity: 0.9;
-}
-
-/* Platz-Höhen & Farben */
-.ks-podium-slot.rank-1 .ks-pedestal {
-  height: 170px;
-  background: #facc15;
-  color: #000000;
-}
-.ks-podium-slot.rank-2 .ks-pedestal {
-  height: 130px;
-  background: #cbd5e1;
-  color: #000000;
-}
-.ks-podium-slot.rank-3 .ks-pedestal {
-  height: 100px;
-  background: #d97706;
-  color: #ffffff;
-}
-.ks-podium-slot.rank-4 .ks-pedestal {
-  height: 75px;
-  background: #475569;
-  color: #ffffff;
-}
-.ks-podium-slot.rank-5 .ks-pedestal {
-  height: 55px;
-  background: #334155;
-  color: #ffffff;
-}
-
-.ks-podium-delta {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 6px;
-  margin-bottom: 5px;
-}
-.ks-podium-delta.up { background: #10b981; color: #fff; }
-.ks-podium-delta.down { background: #ef4444; color: #fff; }
-.ks-podium-delta.same { background: #64748b; color: #fff; }
-
-/* ─── Tablet Leaderboard (Ich + Nachbarn) ─── */
-.ks-my-rank-stage {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin: 16px auto;
-  max-width: 500px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.ks-neighbor-card {
-  flex: 1;
-  background: #181a27;
-  border: 2px dashed #475569;
-  border-radius: 18px;
-  padding: 12px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  opacity: 0.85;
-  transform: scale(0.9);
-  box-sizing: border-box;
-}
-
-.ks-my-center-card {
-  flex: 1.4;
-  background: #1e1b4b;
-  border: 4px solid #facc15;
-  border-radius: 24px;
-  box-shadow: 6px 6px 0px 0px #000000;
-  padding: 18px 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  box-sizing: border-box;
-}
-
-/* ─── Participant Avatar Picker ─── */
-.ks-picker-grid {
+  min-height: 0;
+  height: 100%;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
-  max-height: 220px;
+  place-items: center;
+}
+.ks-sfoot { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.ks-srank {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(10px, calc(var(--ks-h) * .024), 19px);
+  font-weight: 800;
+  color: var(--ks-soft);
+}
+.ks-slot--1 .ks-srank { color: var(--ks-gold); }
+.ks-spkt {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(10px, calc(var(--ks-h) * .024), 19px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Die Wesenwand (Lobby am Beamer · Siegerehrung)
+   ══════════════════════════════════════════════════════════
+   auto-fit mit einer Mindestbreite aus --ks-h: bei 28 Kindern
+   entstehen von selbst so viele Spalten, dass alle hineinpassen,
+   ohne dass irgendwo eine Zahl steht, die bei 29 falsch wäre. */
+.ks-wall {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(64px, calc(var(--ks-h) * .17), 132px), 1fr));
+  gap: clamp(5px, calc(var(--ks-h) * .015), 14px);
+  /* `safe center`: solange alle hineinpassen, steht die Klasse in
+     der Mitte der Fläche; sobald es mehr werden als Platz ist,
+     fällt es auf `start` zurück. Ein blankes `center` würde beim
+     Überlaufen die ERSTE Reihe nach oben aus dem Kasten schieben —
+     und die wäre dann nicht mehr erreichbar. */
+  align-content: safe center;
+  justify-content: center;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.ks-karte {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  justify-items: center;
+  gap: 1px;
+  padding: clamp(4px, calc(var(--ks-h) * .012), 10px) 4px;
+  border-radius: 14px;
+  background: #131726;
+  border: 2px solid #252b40;
+  overflow: visible;
+  animation: ks-rein .32s cubic-bezier(.2, .9, .3, 1.3);
+}
+@keyframes ks-rein {
+  from { transform: scale(.7); opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
+}
+/* Wer schon geantwortet hat, leuchtet grün — das ist am Beamer die
+   ehrlichste Fortschrittsanzeige, die es gibt. */
+.ks-karte.is-fertig { border-color: var(--ks-gruen); background: rgba(16, 185, 129, .12); }
+
+.ks-kpic {
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+.ks-kname {
+  font-size: clamp(9px, calc(var(--ks-h) * .019), 14px);
+  font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ks-kpkt {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(8px, calc(var(--ks-h) * .017), 13px);
+  font-weight: 700;
+  color: var(--ks-gold);
+}
+.ks-kbubble {
+  position: absolute;
+  top: -10px; right: -4px;
+  font-size: clamp(15px, calc(var(--ks-h) * .035), 26px);
+  line-height: 1;
+  pointer-events: none;
+  z-index: 3;
+  /* floatUpFade steht in creatures.css und ist dieselbe Bewegung
+     wie im Showroom. */
+  animation: floatUpFade 1.3s cubic-bezier(.2, .8, .3, 1) forwards;
+}
+
+.ks-leer {
+  flex: 0 0 auto;
+  margin: 0;
+  text-align: center;
+  color: var(--ks-soft);
+  font-size: clamp(11px, calc(var(--ks-h) * .022), 16px);
+}
+
+/* ══════════════════════════════════════════════════════════
+   TABLET
+   ══════════════════════════════════════════════════════════ */
+.ks-thead {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid rgba(255, 255, 255, .12);
+}
+.ks-thead--q { gap: clamp(8px, calc(var(--ks-h) * .022), 16px); }
+
+/* Das eigene Wesen steht da, wo am Beamer die Frage steht. Genau
+   das ist die Spielregel: die Frage gehört nach vorn, das Gesicht
+   gehört auf das Gerät in der Hand. */
+.ks-tme {
+  flex: 0 0 auto;
+  width:  clamp(44px, calc(var(--ks-h) * .13), 108px);
+  height: clamp(44px, calc(var(--ks-h) * .13), 108px);
+}
+.ks-tinfo {
+  display: flex; flex-direction: column;
+  min-width: 0; flex: 1 1 auto;
+  /* Beides einzeilig mit Auslassung: „Platz 4 · 3.620 Pkt" brach
+     sonst auf dem Handy um und schob die Uhr aus der Zeile. */
+  overflow: hidden;
+}
+.ks-tinfo > * { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ks-tname {
+  font-size: clamp(13px, calc(var(--ks-h) * .03), 22px);
+  font-weight: 800;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ks-trang {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(10px, calc(var(--ks-h) * .022), 16px);
+  font-weight: 700;
+  color: var(--ks-gold);
+}
+.ks-twait { margin-left: auto; color: var(--ks-soft); font-size: 13px; font-weight: 600; }
+
+.ks-gesperrt {
+  flex: 0 0 auto;
+  margin: 0;
+  text-align: center;
+  font-size: clamp(11px, calc(var(--ks-h) * .022), 16px);
+  font-weight: 700;
+  color: var(--ks-gold);
+}
+
+/* ─── Auflösung auf dem Tablet ────────────────────────────── */
+.ks-urteil {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: .5em;
+  flex-wrap: wrap;
+  text-align: center;
+  /* Kleiner als es die Fläche hergäbe: die Rückmeldung ist ein
+     Satz, kein Plakat. Der Platz gehört der Reihe darunter — dort
+     steht, wer vor und hinter mir liegt, und das ist das, worüber
+     in der Klasse geredet wird. */
+  font-size: clamp(14px, calc(var(--ks-h) * .034), 26px);
+  font-weight: 800;
+  line-height: 1.15;
+  padding: .3em .6em;
+  border-radius: 14px;
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0 0 #000;
+}
+.ks-urteil i { font-style: normal; font-size: .72em; opacity: .85; }
+.ks-urteil--ok   { background: var(--ks-gruen); color: #04130d; }
+.ks-urteil--nein { background: var(--ks-rot);   color: #fff; }
+.ks-urteil--weg  { background: #2a3145; color: var(--ks-soft); }
+.ks-urteil--end  { background: var(--ks-gold);  color: #1a1400; }
+
+/* Ich in der Mitte, größer; links der vor mir, rechts der hinter
+   mir. `align-items: center` und drei feste Spalten: so bleibt mein
+   Wesen in der Mitte stehen, auch wenn ich Erster bin und links
+   niemand ist. */
+/* ⚠️ `minmax(0, …)` und nicht `1fr`, und `min-width: 0` an jedem
+   Kind. Das ist die Falle, in die diese Reihe am 26.09.2026 gelaufen
+   ist: die Namen darin stehen auf `white-space: nowrap`, und die
+   Mindestbreite einer Spalte ist die MIN-CONTENT-Breite ihres
+   Inhalts. „Maximiliane" in einer Zeile ist auf einem 375er Gerät
+   breiter als ein Drittel des Bildschirms — also wuchs die Spalte,
+   die Reihe wurde breiter als der Rahmen, und das Wesen des Nachbarn
+   ragte 120 px rechts heraus. `overflow: hidden` am Namen hilft dort
+   NICHT: es kürzt den Text erst, nachdem die Spalte schon gewachsen
+   ist. */
+.ks-trio {
+  flex: 1 1 auto;
+  display: grid;
+  /* 0,8 · 2 · 0,8 und nicht 1 · 1,45 · 1: das Bild ist BREITEN-
+     begrenzt (siehe .ks-ipic), also entscheidet diese Zeile, wie
+     groß das eigene Wesen wird. Und die Nachbarn sollen ohnehin
+     kleiner sein — sie sind die Nebensache. */
+  grid-template-columns: minmax(0, .8fr) minmax(0, 2fr) minmax(0, .8fr);
+  align-items: center;
+  gap: clamp(4px, calc(var(--ks-h) * .015), 14px);
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Die Karten sind so hoch wie ihr Inhalt und stehen in der Mitte der
+   Reihe — NICHT auf voller Höhe mit einer `1fr`-Bildzeile. Das war
+   die erste Fassung, und sie sah leer aus: das Wesen schwebte klein
+   in einem hohen Kasten, weil das SVG sich auf die schmalere Seite
+   einpasst. Jetzt bestimmt die BREITE der Spalte das Bild, und das
+   ist auf einem Handy die knappe Richtung. */
+.ks-nb {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(4, auto);
+  min-width: 0;
+  justify-items: center;
+  align-self: center;
+  gap: 1px;
+  min-height: 0;
+  padding: 6px 3px;
+  border-radius: 16px;
+  background: #131726;
+  border: 2px dashed #39405a;
+  opacity: .9;
+  overflow: hidden;
+}
+.ks-nb--leer { border-color: transparent; background: transparent; }
+.ks-npic {
+  width: 100%;
+  aspect-ratio: 1;             /* Breite ist bestimmt → Höhe auch */
+  max-height: clamp(44px, calc(var(--ks-h) * .22), 190px);
+}
+.ks-nnr {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(9px, calc(var(--ks-h) * .02), 15px);
+  font-weight: 800; color: var(--ks-soft);
+}
+.ks-nname {
+  font-size: clamp(9px, calc(var(--ks-h) * .019), 14px);
+  font-weight: 700;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ks-npkt {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(9px, calc(var(--ks-h) * .018), 13px);
+  font-weight: 700; color: var(--ks-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.ks-ich {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(5, auto);
+  min-width: 0;
+  justify-items: center;
+  align-self: center;
+  gap: 2px;
+  min-height: 0;
+  padding: clamp(6px, calc(var(--ks-h) * .018), 16px) 6px;
+  border-radius: 20px;
+  background: #1b1d3a;
+  border: 3px solid var(--ks-gold);
+  box-shadow: 5px 5px 0 0 #000;
+  overflow: hidden;
+}
+.ks-ipic {
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: clamp(64px, calc(var(--ks-h) * .3), 250px);
+}
+.ks-inr {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(14px, calc(var(--ks-h) * .04), 30px);
+  font-weight: 800; color: var(--ks-gold); line-height: 1;
+}
+.ks-iname {
+  font-size: clamp(11px, calc(var(--ks-h) * .024), 18px);
+  font-weight: 800;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ks-ipkt {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(12px, calc(var(--ks-h) * .03), 24px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Emote-Leiste ────────────────────────────────────────── */
+/* Ganz unten, vier Knöpfe, volle Breite. Sie gibt KEINEN Platz her
+   (`flex: 0 0 auto`): ein Knopf, der auf einem flachen Gerät zu
+   40 px schrumpft, ist keiner mehr. */
+.ks-emobar {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(6px, calc(var(--ks-h) * .016), 14px);
+}
+.ks-emo {
+  font: inherit;
+  font-size: clamp(20px, calc(var(--ks-h) * .05), 34px);
+  line-height: 1;
+  min-height: 52px;
+  padding: .3em 0;
+  cursor: pointer;
+  background: #1d2235;
+  color: #fff;
+  border: 2px solid #3a4260;
+  border-radius: 14px;
+  box-shadow: 3px 3px 0 0 #000;
+  transition: transform .1s, box-shadow .1s, background-color .15s, border-color .15s;
+}
+.ks-emo:active,
+.ks-emo.is-gedrueckt {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 #000;
+  background: var(--ks-gold);
+  border-color: var(--ks-gold);
+}
+
+/* ─── Wesenwahl ───────────────────────────────────────────── */
+/* Feste Höhe und nicht `min-height`: siehe die Sammelregel oben —
+   ein Kasten ohne Höhe macht aus dem Wesen ein Quadrat in
+   Kastenbreite. */
+/* `flex: 0 0 auto` und nicht `0 1 auto`: in dieser Spalte steht ein
+   Kasten, der scrollen DARF (die Wesenwahl), und genau der soll
+   nachgeben. Gab die Vorschau mit nach, schrumpfte das eigene Wesen
+   auf Daumennagelgröße, während unten Platz frei blieb. */
+.ks-vorschau {
+  flex: 0 0 auto;
+  height: clamp(56px, calc(var(--ks-h) * .22), 200px);
+}
+
+.ks-wname {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: clamp(13px, calc(var(--ks-h) * .03), 22px);
+  font-weight: 800;
+  color: var(--ks-gold);
+  letter-spacing: -.01em;
+}
+
+.ks-skins { flex: 0 0 auto; display: flex; gap: 6px; justify-content: center; }
+.ks-skin {
+  font: inherit; font-size: 11px; font-weight: 700;
+  padding: .45em .7em;
+  min-height: 44px;                    /* Fingermaß, siehe .ks-wechsel */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  cursor: pointer;
+  background: #1d2235; color: var(--ks-soft);
+  border: 2px solid #3a4260; border-radius: 11px;
+}
+.ks-skin.is-on { background: var(--ks-gold); color: #1a1400; border-color: var(--ks-gold); }
+
+/* Das Raster der 36 Wesen. Es ist das EINZIGE, was hier scrollt —
+   und das mit Absicht: 36 Wesen auf einen Handybildschirm zu
+   quetschen macht sie zu Punkten, die man nicht auseinanderhalten
+   kann. Alles andere im Bild bleibt stehen. */
+.ks-picker {
+  flex: 1 1 auto;
+  display: grid;
+  /* Schmaler als es „schön" wäre, und mit Absicht: je mehr Wesen auf
+     einmal zu sehen sind, desto weniger wird gescrollt — und gescrollt
+     wird in der Lobby, während vorn alle warten. */
+  grid-template-columns: repeat(auto-fill, minmax(clamp(52px, calc(var(--ks-h) * .085), 78px), 1fr));
+  gap: 4px;
+  min-height: 0;
   overflow-y: auto;
   padding: 6px;
-  background: #13141f;
-  border: 2px solid #2e354f;
+  background: #101422;
+  border: 2px solid #252b40;
   border-radius: 14px;
-  margin-bottom: 10px;
-  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
 }
-
-.ks-picker-item {
+.ks-pick {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
+  gap: 1px;
+  padding: 3px 2px;
+  min-height: 48px;
   cursor: pointer;
+  background: none;
   border: 2px solid transparent;
   border-radius: 10px;
-  padding: 4px 2px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transition: transform 0.1s, border-color 0.1s;
+  color: var(--ks-soft);
+  font: inherit;
+  overflow: hidden;
+}
+.ks-pick > span {
+  font-size: 8.5px; font-weight: 700; line-height: 1.1;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ks-pick.is-on {
+  border-color: var(--ks-gold);
+  background: rgba(250, 204, 21, .16);
+  color: var(--ks-gold);
 }
 
-.ks-picker-item:hover {
-  transform: scale(1.1);
-  background: rgba(255, 255, 255, 0.06);
+.ks-twarte {
+  flex: 0 0 auto;
+  margin: 0; text-align: center;
+  color: var(--ks-soft); font-size: 12px;
 }
 
-.ks-picker-item.active {
-  border-color: #facc15;
-  background: rgba(250, 204, 21, 0.18);
+/* ══════════════════════════════════════════════════════════
+   Flache Rahmen
+   ══════════════════════════════════════════════════════════
+   Gesetzt von tool.js, wenn der gemessene Rahmen unter 360 Punkte
+   fällt: Handy im Querformat, oder ein Tablet mit offener Tastatur.
+
+   Es ist KEINE Media Query, und das ist der Punkt: gemessen wird der
+   Rahmen und nicht der Bildschirm. Ein 1024 Punkte hohes iPad mit
+   drei Reiterleisten darüber kann denselben Rahmen haben wie ein
+   Handy im Querformat, und eine Regel auf `max-height` sähe den
+   Unterschied nicht.
+
+   Weg fällt, was begleitet. Stehen bleibt, was bedient wird: die
+   Kacheln, die Emote-Knöpfe, die Wesenwahl.                        */
+.ks-frame--flach .ks-twarte,
+.ks-frame--flach .ks-wname,
+.ks-frame--flach .ks-leer,
+.ks-frame--flach .ks-expl,
+.ks-frame--flach .ks-gesperrt { display: none; }
+
+.ks-frame--flach .ks-vorschau { height: clamp(44px, calc(var(--ks-h) * .17), 90px); }
+.ks-frame--flach .ks-skin { min-height: 44px; padding: .2em .6em; }
+.ks-frame--flach .ks-head,
+.ks-frame--flach .ks-thead { padding-bottom: 3px; }
+/* Der Fragetext am Beamer darf schrumpfen, die Kacheln nicht. */
+.ks-frame--flach .ks-qbox { padding: 4px 10px; }
+
+/* ══════════════════════════════════════════════════════════
+   Schmale Geräte
+   ══════════════════════════════════════════════════════════
+   Fast alles rechnet schon aus --ks-h und braucht hier nichts. Was
+   bleibt, sind die zwei Stellen, an denen die BREITE entscheidet:
+   die Antwortkacheln (zwei Spalten sind auf 375 px zu schmal für
+   einen Satz) und die Kopfzeile am Beamer, wenn jemand die
+   Lehrerseite auf dem Handy öffnet. */
+@media (max-width: 560px) {
+  .ks-kacheln { grid-template-columns: 1fr; }
+  /* Eine Spalte heißt schmaler, nicht kürzer: die Antwort darf drei
+     Zeilen brauchen. „Nachname_Vorname_Klasse_Fach_Aufgabe.pdf" ist
+     ein einziges Wort und passt in zwei nicht hinein. */
+  .ks-kt {
+    -webkit-line-clamp: 3; line-clamp: 3;
+    font-size: clamp(13px, calc(var(--ks-h) * .027), 22px);
+  }
+  .ks-head { flex-wrap: wrap; }
+  .ks-headl { flex-wrap: wrap; gap: 6px; }
+  .ks-cat { max-width: 100%; }
+  .ks-podest { grid-template-columns: repeat(5, 1fr); gap: 3px; }
+  .ks-slot { padding: 3px 1px; border-radius: 10px; }
 }
 
-/* Emote Bar */
-.ks-emote-bar {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 10px;
+/* Grobzeiger (Finger): keine Hover-Zustände, die auf einem Tablet
+   hängenbleiben, bis man woanders hintippt. */
+@media (hover: hover) and (pointer: fine) {
+  .ks-karte:hover { transform: translateY(-2px); }
+  .ks-pick:hover  { background: rgba(255, 255, 255, .07); }
+  .ks-emo:hover   { border-color: var(--ks-gold); }
 }
 
-.ks-emote-btn {
-  font-size: 22px;
-  padding: 8px 14px;
-  background: #181a26;
-  border: 2px solid #fff;
-  border-radius: 14px;
-  box-shadow: 3px 3px 0px 0px #fff;
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-
-.ks-emote-btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px 0px #fff;
-}
-
-/* ─── Mobile Optimierungen (Smartphone) ─── */
-@media (max-width: 600px) {
-  .ks-container {
-    padding: 10px;
-  }
-  .ks-question-box {
-    padding: 14px 16px;
-    border-width: 3px;
-    border-radius: 18px;
-    margin-bottom: 12px;
-  }
-  .ks-question-text {
-    font-size: 18px;
-  }
-  .ks-answers-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-  .ks-ans-card {
-    padding: 12px 14px;
-    font-size: 16px;
-    min-height: 60px;
-    border-radius: 16px;
-    gap: 12px;
-  }
-  .ks-ans-label {
-    width: 32px;
-    height: 32px;
-    font-size: 17px;
-  }
-  .ks-my-rank-stage {
-    gap: 6px;
-  }
-  .ks-my-center-card {
-    padding: 14px 8px;
-  }
-  .ks-neighbor-card {
-    padding: 10px 4px;
-  }
-  .ks-picker-grid {
-    grid-template-columns: repeat(4, 1fr);
-    max-height: 200px;
-  }
+/* Wer Bewegung abgestellt hat, bekommt keine. Die Wesen selbst
+   bringen ihre Bewegung aus creatures.css mit — hier steht nur, was
+   diese Datei selbst anwirft. */
+@media (prefers-reduced-motion: reduce) {
+  .ks-karte { animation: none; }
+  .ks-kbubble { animation: none; opacity: 1; }
+  .ks-clock--eilig { animation: none; }
+  .ks-k.is-richtig { animation: none; }
+  .ks-fuell { transition: none; }
 }
