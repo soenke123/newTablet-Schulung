@@ -3601,7 +3601,8 @@ function renderSkillRooms() {
       return `<tr>
         <td><strong>${escapeHtml(r.title)}</strong><br>
             <code>${escapeHtml(r.code)}</code> ${tags}</td>
-        <td>${escapeHtml(r.tool_icon || '')} ${escapeHtml(r.tool_title || r.tool_id)}</td>
+        <td><span class="skillcell">${
+          window.MPIcons.label(r.tool_id, r.tool_title || r.tool_id)}</span></td>
         <td>${escapeHtml(r.owner || '—')}</td>
         ${showSchool ? `<td>${escapeHtml(r.school_name || '—')}</td>` : ''}
         <td>${r.people}${r.online ? ` <span class="hint">(${r.online} jetzt)</span>` : ''}</td>

@@ -225,7 +225,7 @@ async function renderIsland() {
      Kachel überhaupt anzusehen. */
   box.innerHTML = `
     <a class="itile" href="insel.html">
-      <span class="itile-ic" aria-hidden="true">🏝️</span>
+      <span class="itile-ic">${window.MPIcons.svg('wordisland')}</span>
       <span class="itile-txt">
         <strong>${l.words} Wörter aus ${units} ${units === 1 ? 'Unit' : 'Units'}</strong>
         <span class="itile-meta">${gewachsen
@@ -267,7 +267,7 @@ function visitedTile(v) {
   return `<article class="vtile" data-code="${esc(v.code)}">
       <a class="vtile-a" href="j.html#${esc(v.code)}"
          aria-label="${esc(v.title)}${v.owner ? ' von ' + esc(v.owner) : ''} öffnen"></a>
-      <span class="vtile-ic" aria-hidden="true">${esc(v.tool_icon || '🧩')}</span>
+      <span class="vtile-ic">${window.MPIcons.svg(v.tool_id)}</span>
       <div class="vtile-txt">
         <strong>${esc(v.title)}${by}</strong>
         <span class="vtile-meta">${bits.join(' · ')}</span>
@@ -315,7 +315,11 @@ async function renderVisited() {
     title: r.room?.title || r.code,
     owner: r.room?.owner_name || '',
     tool_title: r.room?.tool_title || '',
-    tool_icon: r.room?.tool_icon || '',
+    // Seit dem Umstieg auf gezeichnete Zeichen (lib/icons.js) ist
+    // die id der Schlüssel und nicht mehr das Emoji. Abschriften von
+    // vor diesem Tag kennen sie nicht — die bekommen bis zum
+    // nächsten Öffnen des Raums das neutrale Zeichen.
+    tool_id: r.room?.tool_id || '',
     seen: r.seen_at || r.saved_at || 0
   }));
 
@@ -330,7 +334,7 @@ async function renderVisited() {
           title: r.room?.title || r.room?.code,
           owner: r.room?.owner_name || '',
           tool_title: r.room?.tool_title || '',
-          tool_icon: r.room?.tool_icon || '',
+          tool_id: r.room?.tool_id || '',
           seen: new Date(r.last_seen_at || r.joined_at).getTime()
         })).filter(r => r.code);
 
@@ -553,7 +557,7 @@ function roomRow(r) {
 
   return `<li class="roomlist-row${r.expired ? ' roomlist-row--dead' : ''}" data-code="${esc(r.code)}">
       <a class="roomlist-a" href="lehrer.html#${esc(r.code)}">
-        <span class="roomlist-ic">${esc(r.tool_icon || '🧩')}</span>
+        <span class="roomlist-ic">${window.MPIcons.svg(r.tool_id)}</span>
         <span class="roomlist-txt">
           <strong>${esc(r.title)}</strong>
           <span>${bits.join(' · ')}</span>
@@ -678,9 +682,12 @@ async function renderRooms() {
   // Die erreichte Obergrenze gehört dorthin, wo die Räume stehen, und
   // nicht erst in die Fehlermeldung beim Anlegen. Aber nur dann: eine
   // Dauerzeile „2 von 5" beantwortet keine Frage.
+  /* Nur der Titel, kein Zeichen davor: das hier ist ein SATZ
+     („Wortwolke: 2 von 5 Räumen belegt") und keine Liste. In einem
+     Satz wäre eine Marke ohne Aufgabe. */
   const full = Object.values(data.tools || {})
     .filter(t => t.live >= (t.multi_room ? t.max_rooms : 1))
-    .map(t => `${esc(t.icon || '')} ${esc(t.title)}: ${t.live} von ${t.multi_room ? t.max_rooms : 1}`);
+    .map(t => `${esc(t.title)}: ${t.live} von ${t.multi_room ? t.max_rooms : 1}`);
 
   pane.innerHTML = `
       <div class="pane-head">
@@ -752,7 +759,12 @@ let toolsError = null;
 // folder mit dabei: das Schaufenster lädt das Werkzeug über
 // MPTool.load(id, folder), und der Ordner darf sich von der ID
 // unterscheiden (0078) — genau dafür gibt es die Spalte.
-const TOOL_COLS = 'id,title,blurb,icon,folder,multi_room,active,sort_order';
+//
+// icon NICHT mehr: das Zeichen wird gezeichnet (lib/icons.js) und
+// über die id nachgeschlagen. Die Spalte steht noch in skill_tools,
+// aber niemand liest sie mehr — sie hier weiter mitzuholen hieße,
+// den nächsten Leser danach suchen zu lassen, wo sie landet.
+const TOOL_COLS = 'id,title,blurb,folder,multi_room,active,sort_order';
 
 async function fetchTools(cols) {
   const token = window.__accessToken || window.SUPABASE_ANON_KEY;
@@ -855,7 +867,7 @@ function toolCard(t, guest) {
       ${peek}
       ${still}
       <div class="tile-head">
-        <span class="tile-ic">${esc(t.icon || '🧩')}</span>
+        <span class="tile-ic">${window.MPIcons.svg(t.id)}</span>
         <h3>${esc(t.title)}</h3>
       </div>
       ${badges ? `<div class="tile-tags">${badges}</div>` : ''}

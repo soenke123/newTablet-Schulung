@@ -124,8 +124,8 @@ function renderTabs(code, room) {
         <button type="button" class="rtab" role="tab" data-pane="room" aria-selected="false">
           <span class="rtab-t">Raum</span></button>
         <button type="button" class="rtab" role="tab" data-pane="tool" aria-selected="false">
-          <span class="rtab-t" id="jToolName">${esc((room?.tool_icon || '🧩') + ' '
-            + (room?.tool_title || 'Skill'))}</span></button>
+          <span class="rtab-t" id="jToolName">${
+            window.MPIcons.label(room?.tool_id, room?.tool_title || 'Skill')}</span></button>
       </div>
     </nav>`;
   tabHost().querySelectorAll('.rtab').forEach(b => {
@@ -234,7 +234,7 @@ function renderAsk(prefill, errorMsg) {
           ${mine.map(r => `
             <li>
               <a href="#${esc(r.code)}" class="roomlist-a">
-                <span class="roomlist-ic">${esc(r.room?.tool_icon || '🧩')}</span>
+                <span class="roomlist-ic">${window.MPIcons.svg(r.room?.tool_id)}</span>
                 <span class="roomlist-txt">
                   <strong>${esc(r.room?.title || 'Raum')}</strong>
                   <span>${esc(r.room?.tool_title || '')} · als ${esc(r.name || '—')}</span>
@@ -326,7 +326,7 @@ async function renderDoor(code) {
   host().innerHTML = `
     <div class="card card--join">
       <div class="door-tool">
-        <span class="door-ic">${esc(info.tool_icon || '🧩')}</span>
+        <span class="door-ic">${window.MPIcons.svg(info.tool_id)}</span>
         <span>${esc(info.tool_title || '')}</span>
       </div>
       <h1 class="join-h">${esc(info.title)}</h1>
@@ -465,7 +465,7 @@ function renderRoom(code, token) {
            mehr (19.08.2026). Wer hier ist, ist drin. -->
       <div class="room-head">
         <div>
-          <div class="door-tool"><span class="door-ic" id="rTip">🧩</span><span id="rTool"></span></div>
+          <div class="door-tool"><span class="door-ic" id="rTip"></span><span id="rTool"></span></div>
           <h1 class="join-h" id="rTitle">…</h1>
         </div>
       </div>
@@ -567,12 +567,12 @@ function paintRoom(data, token) {
   MPRoom.snapshot(r.code, r);
   document.getElementById('rTitle').textContent = r.title;
   document.getElementById('rTool').textContent  = r.tool_title || '';
-  document.getElementById('rTip').textContent   = r.tool_icon  || '🧩';
+  document.getElementById('rTip').innerHTML     = window.MPIcons.svg(r.tool_id);
   // Der Reiter trug bis hierher, was im Gerätespeicher stand — das
   // kann von gestern sein. Ab jetzt steht der Name des Skills drauf,
   // den der Server nennt.
   const tabName = document.getElementById('jToolName');
-  if (tabName) tabName.textContent = `${r.tool_icon || '🧩'} ${r.tool_title || 'Skill'}`;
+  if (tabName) tabName.innerHTML = window.MPIcons.label(r.tool_id, r.tool_title || 'Skill');
   document.getElementById('rMe').textContent    = `Du bist dabei als ${me.name}.`;
   document.title = r.title + ' · MPSkills';
 

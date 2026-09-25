@@ -756,6 +756,35 @@ a.btn {
 }
 .tools-sec:first-child { margin-top: 0; }
 
+/* ── Skill-Zeichen ─────────────────────────────────────────────
+   Die Zeichnungen stehen in lib/icons.js, die Bildsprache steht
+   hier: Strichstärke und Enden gehören dem Kleid. Wer die Ikonen
+   eines Tages kräftiger will, dreht EINE Zahl und nicht neun
+   Zeichnungen.
+
+   Die Größe kommt aus der jeweiligen Umgebung (siehe .tile-ic,
+   .vtile-ic, …) — 1em ist nur der Rückfall für Stellen, die nichts
+   sagen. Die Farbe kommt immer von currentColor: damit ist jedes
+   Zeichen im Darkmode und auf dem Akzentgrund ohne Zutun richtig. */
+.mpic {
+  width: 1em; height: 1em;
+  flex: none;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Volle Punkte (die Messwerte bei Wild Clusters) dürfen den Strich
+   nicht mitnehmen, sonst sind sie um eine Strichstärke zu dick. Sie
+   bringen ihr stroke="none" selbst mit — das hier ist das Netz für
+   den Tag, an dem jemand eine gefüllte Form ohne schreibt. */
+.mpic [fill="currentColor"] { stroke: none; }
+/* Zeichen + Name in einem Element (Reiter, Tür): siehe
+   MPIcons.label(). Der Name darf kürzen, das Zeichen nicht. */
+.mpic-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .tile {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -775,11 +804,20 @@ a.btn {
   gap: 11px;
   margin-bottom: 8px;
 }
+/* Die Skill-Kachel bekommt das Zeichen in einer eigenen runden
+   Kachel auf Akzentgrund — die Form, die im Showroom für die
+   Kachelköpfe vorgesehen war. Ein Emoji brachte seine Farbe selbst
+   mit und hätte darin nur bunt gestört; ein Strichzeichen braucht
+   den Grund, um neben der Überschrift zu bestehen. */
 .tile-ic {
-  font-size: 1.5rem;
-  line-height: 1;
+  width: 40px; height: 40px;
   flex: none;
+  display: grid; place-items: center;
+  border-radius: 12px;
+  background: var(--accent-dim);
+  color: var(--accent-ink);
 }
+.tile-ic .mpic { width: 23px; height: 23px; }
 .tile-head h3 {
   margin: 0;
   font-size: 1rem;
@@ -1836,7 +1874,8 @@ body.pv-lock { overflow: hidden; }
   text-transform: uppercase; color: var(--accent-ink);
   margin-bottom: 9px;
 }
-.door-ic { font-size: 1.1rem; }
+.door-ic { display: grid; place-items: center; }
+.door-ic .mpic { width: 19px; height: 19px; }
 
 /* Sechs Einzelfelder: auf einem Tablet leichter zu treffen als ein
    langes Feld, und die Länge des Codes ist sofort sichtbar. */
@@ -1933,7 +1972,11 @@ body.pv-lock { overflow: hidden; }
 }
 .vtile-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.vtile-ic  { font-size: 1.35rem; line-height: 1; flex: none; }
+/* Kein Akzentgrund wie auf der Skill-Kachel: hier steht das Zeichen
+   für den Skill NEBEN dem Raumtitel und ist die Nebenangabe. Ein
+   farbiges Feld machte es zur Hauptsache. */
+.vtile-ic  { flex: none; display: grid; place-items: center; color: var(--ink-soft); }
+.vtile-ic .mpic { width: 22px; height: 22px; }
 .vtile-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 /* Ein langer Raumtitel bricht nicht um, sondern hört auf: die
    Kacheln stehen in einem Raster und sollen gleich hoch sein. */
@@ -1976,7 +2019,8 @@ body.pv-lock { overflow: hidden; }
   border-radius: 12px;
 }
 .roomlist-a:hover { background: var(--paper); }
-.roomlist-ic { font-size: 1.35rem; flex: none; }
+.roomlist-ic { flex: none; display: grid; place-items: center; color: var(--ink-soft); }
+.roomlist-ic .mpic { width: 22px; height: 22px; }
 .roomlist-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .roomlist-txt strong { font-size: .93rem; }
 .roomlist-txt span { font-size: .78rem; color: var(--ink-faint); }
@@ -2642,7 +2686,11 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   background: var(--paper-2); color: var(--ink-faint);
 }
 .rtab.on .rtab-n { background: var(--accent); color: var(--on-accent); }
-.rtab-t { overflow: hidden; text-overflow: ellipsis; }
+/* Der Reiter des Werkzeugs trägt sein Zeichen vor dem Namen. Die
+   Ellipse sitzt deshalb am Namen (.mpic-t) und nicht mehr hier —
+   sonst kürzte der Reiter das Zeichen weg statt den Text. */
+.rtab-t { display: flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; }
+.rtab-t .mpic { width: 17px; height: 17px; }
 
 /* Der Code steht in der Leiste und damit auf JEDEM Fach — auch auf
    dem Werkzeug-Fach, wo sonst nichts mehr an den Raum erinnert. */
@@ -2719,6 +2767,11 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   background: var(--paper-2);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* Das Feld trägt den Skill mit seinem Zeichen. Die Kürzung wandert
+   dabei auf den Namen (.mpic-t), sonst schnitte das Feld erst das
+   Zeichen ab. */
+.field--static strong.field-tool { display: flex; align-items: center; gap: 8px; }
+.field--static strong.field-tool .mpic { width: 18px; height: 18px; color: var(--ink-soft); }
 
 .setfield { font-size: .82rem; font-weight: 600; color: var(--ink-soft); }
 .setfield-l { display: block; margin-bottom: 5px; }
@@ -2991,7 +3044,8 @@ body.inselseite--voll { overflow: hidden; }
 }
 .itile:hover { border-color: var(--accent); transform: translateY(-1px); }
 .itile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.itile-ic { font-size: 1.7rem; line-height: 1; flex: none; }
+.itile-ic { flex: none; display: grid; place-items: center; color: var(--accent-ink); }
+.itile-ic .mpic { width: 27px; height: 27px; }
 .itile-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .itile-txt strong { font-size: .98rem; }
 .itile-meta { font-size: .82rem; color: var(--ink-faint); }

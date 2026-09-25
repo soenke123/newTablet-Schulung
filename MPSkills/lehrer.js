@@ -304,10 +304,13 @@ function showPane(which) {
 function renderShell() {
   const creating = !S.code;
   const t = S.view?.room;
+  /* Fertiges HTML und kein Text mehr: das Zeichen vor dem Namen ist
+     eine Zeichnung (lib/icons.js). Deshalb steht der Aufruf hier
+     ohne esc() — MPIcons.label() maskiert den Namen selbst. */
   const toolLabel = t
-    ? `${t.tool_icon || '🧩'} ${t.tool_title || 'Skill'}`
+    ? MPIcons.label(t.tool_id, t.tool_title || 'Skill')
     : (S.tools[S.toolId]
-        ? `${S.tools[S.toolId].icon || '🧩'} ${S.tools[S.toolId].title}`
+        ? MPIcons.label(S.toolId, S.tools[S.toolId].title)
         : 'Skill');
 
   /* „beamer" ist der Marker für „hier schaut eine Klasse drauf" — die
@@ -327,7 +330,7 @@ function renderShell() {
           <span class="rtab-n">2</span><span class="rtab-t">Onboarding</span></button>
         <button type="button" class="rtab" role="tab" data-pane="tool" aria-selected="false"
                 ${creating ? 'disabled title="Erst den Raum anlegen."' : ''}>
-          <span class="rtab-n">3</span><span class="rtab-t" id="rtToolName">${esc(toolLabel)}</span></button>
+          <span class="rtab-n">3</span><span class="rtab-t" id="rtToolName">${toolLabel}</span></button>
       </div>
       <div class="rtabs-side">
         ${creating ? '' : `<code class="rtabs-code" id="rtCode" title="Code dieses Raums">${esc(S.code)}</code>`}
@@ -588,13 +591,17 @@ function renderSettings() {
          <select id="setTool" data-req>
            ${usable.map(([id, t]) => {
              const full = !t.multi_room ? t.live >= 1 : t.live >= t.max_rooms;
+             // Kein Zeichen davor: in ein <option> passt kein SVG,
+             // und ein Emoji zwischen lauter gezeichneten Zeichen
+             // wäre der einzige Ausreißer der Seite.
              return `<option value="${esc(id)}"${full ? ' disabled' : ''}${id === S.toolId ? ' selected' : ''}>`
-                  + `${esc(t.icon || '')} ${esc(t.title)}${full ? ' — Kontingent voll' : ''}</option>`;
+                  + `${esc(t.title)}${full ? ' — Kontingent voll' : ''}</option>`;
            }).join('')}
          </select>
        </label>`
     : `<div class="field field--static">Skill
-         <strong>${esc((room?.tool_icon || '') + ' ' + (room?.tool_title || ''))}</strong>
+         <strong class="field-tool">${
+           MPIcons.label(room?.tool_id, room?.tool_title || '')}</strong>
        </div>`;
 
   /* Zwei Knöpfe in einer Zeile statt zweier untereinanderstehender
@@ -684,8 +691,8 @@ function renderSettings() {
   if (creating) {
     $('setTool').addEventListener('change', async (ev) => {
       S.toolId = ev.target.value;
-      $('rtToolName').textContent =
-        `${S.tools[S.toolId]?.icon || '🧩'} ${S.tools[S.toolId]?.title || 'Skill'}`;
+      $('rtToolName').innerHTML =
+        MPIcons.label(S.toolId, S.tools[S.toolId]?.title || 'Skill');
       await loadFields();
       $('setToolFields').innerHTML = toolFieldsBlock(false);
       updateGo();
@@ -1192,7 +1199,7 @@ function paintRoom(data) {
   if (box) box.hidden = true;
 
   document.title = r.title + ' · MPSkills';
-  $('rtToolName').textContent = `${r.tool_icon || '🧩'} ${r.tool_title || 'Skill'}`;
+  $('rtToolName').innerHTML = MPIcons.label(r.tool_id, r.tool_title || 'Skill');
 
   const url = MPRoom.joinUrl(S.code);
   $('bUrl').textContent  = url.replace(/^https?:\/\//, '');

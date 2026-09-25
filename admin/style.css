@@ -1006,3 +1006,20 @@ html, body {
   padding: 1px 6px; letter-spacing: 0.08em; font-size: 0.86em;
 }
 #skillRoomSummary { margin-top: 10px; }
+
+/* Die Skill-Zeichen kommen aus MPSkills/lib/icons.js, ihre
+   Bildsprache steht dort in MPSkills/style.css — und die gilt hier
+   nicht, das Admin-Panel hat sein eigenes (goldenes) Kleid. Also
+   dieselben Werte noch einmal, aber in dieser Farbwelt: die
+   Zeichnungen nehmen per currentColor das Gold der Tabelle an. */
+/* Ein <span> IN der Zelle und nicht die Zelle selbst: ein <td> mit
+   display:flex ist keine Tabellenzelle mehr und fällt aus der
+   Spaltenausrichtung. */
+.skillcell { display: inline-flex; align-items: center; gap: 8px; }
+.skillcell .mpic {
+  width: 17px; height: 17px; flex: none;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  color: var(--a-muted);
+}
+.skillcell .mpic [fill="currentColor"] { stroke: none; }
