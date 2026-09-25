@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arcade Pop – Responsive Experience (Handy, Tablet & Beamer)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;900&family=JetBrains+Mono:wght@800&family=Unbounded:wght@800;900&display=swap');
+    
+    .font-brand { font-family: 'Unbounded', 'Space Grotesk', system-ui, sans-serif; }
+    .font-sans-heavy { font-family: 'Space Grotesk', sans-serif; }
+    .font-mono-tech { font-family: 'JetBrains Mono', monospace; }
+
+    /* Hard Shadows - Lightmode */
+    .shadow-hard-black {
+      box-shadow: 6px 6px 0px 0px #000000;
+    }
+    .shadow-hard-black-sm {
+      box-shadow: 3px 3px 0px 0px #000000;
+    }
+    .shadow-hard-black-xs {
+      box-shadow: 2px 2px 0px 0px #000000;
+    }
+
+    /* Hard Shadows - Darkmode */
+    .shadow-hard-white {
+      box-shadow: 6px 6px 0px 0px #ffffff;
+    }
+    .shadow-hard-white-sm {
+      box-shadow: 3px 3px 0px 0px #ffffff;
+    }
+
+    /* Tactile Click Feel: Physical Sink */
+    .btn-brutal:active {
+      transform: translate(4px, 4px) !important;
+      box-shadow: 0px 0px 0px 0px currentColor !important;
+    }
+
+    /* Dot Patterns */
+    .bg-dots-light {
+      background-image: radial-gradient(rgba(0,0,0,0.18) 1.5px, transparent 1.5px);
+      background-size: 20px 20px;
+    }
+    .bg-dots-dark {
+      background-image: radial-gradient(rgba(255,255,255,0.15) 1.5px, transparent 1.5px);
+      background-size: 22px 22px;
+    }
+  </style>
+</head>
+<body id="page-body" class="bg-[#0e1017] text-white p-4 md:p-8 min-h-screen font-sans-heavy transition-colors duration-300">
+
+  <!-- Header & Controls -->
+  <header class="max-w-6xl mx-auto mb-8 border-b border-slate-800 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg border-2 border-yellow-400 bg-yellow-400 text-black text-xs font-mono-tech font-black uppercase mb-2 shadow-hard-black-sm">
+        🕹️ Arcade Pop &bull; Responsive Design
+      </div>
+      <h1 class="text-3xl md:text-4xl font-brand font-black tracking-tight text-white">
+        Handy, Tablet & Beamer
+      </h1>
+      <p class="text-slate-400 text-sm mt-1">Perfekt für Tablet-Klassen (iPad): 2x2 Grid, kein Scrollen, riesige Touch-Flächen.</p>
+    </div>
+
+    <!-- Toggle Controls -->
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Dark / Light -->
+      <div class="flex items-center bg-black p-1.5 rounded-2xl border-2 border-slate-700">
+        <button id="btn-theme-dark" onclick="setTheme('dark')" class="px-3 py-1.5 rounded-xl text-xs font-mono-tech font-black transition-all bg-yellow-400 text-black shadow-hard-black-sm border-2 border-black">
+          🌙 Dark
+        </button>
+        <button id="btn-theme-light" onclick="setTheme('light')" class="px-3 py-1.5 rounded-xl text-xs font-mono-tech font-bold transition-all text-slate-400 hover:text-white">
+          ☀️ Light
+        </button>
+      </div>
+
+      <!-- Device Switcher (3 Devices) -->
+      <div class="flex items-center bg-black p-1.5 rounded-2xl border-2 border-slate-700">
+        <button id="view-mobile" onclick="switchView('mobile')" class="px-3 py-1.5 rounded-xl text-xs font-mono-tech font-bold text-slate-400 hover:text-white transition-all">
+          📱 Handy
+        </button>
+        <button id="view-tablet" onclick="switchView('tablet')" class="px-3 py-1.5 rounded-xl text-xs font-mono-tech font-black transition-all bg-emerald-400 text-black shadow-hard-black-sm border-2 border-black">
+          📟 Tablet (iPad)
+        </button>
+        <button id="view-beamer" onclick="switchView('beamer')" class="px-3 py-1.5 rounded-xl text-xs font-mono-tech font-bold text-slate-400 hover:text-white transition-all">
+          🖥️ Beamer
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Interactive Stage Wrapper -->
+  <main class="max-w-6xl mx-auto">
+    
+    <!-- Tablet Orientation Sub-Toggle (visible only in Tablet view) -->
+    <div id="tablet-orientation-bar" class="flex justify-center mb-4 gap-2">
+      <span class="text-xs font-mono-tech text-slate-400 self-center mr-2">Tablet-Ausrichtung:</span>
+      <button id="btn-tab-portrait" onclick="setTabletOrientation('portrait')" class="px-3 py-1 rounded-lg border border-slate-700 bg-slate-900 text-xs font-mono-tech font-bold text-emerald-400 border-emerald-400">
+        📄 Hochformat (Portrait)
+      </button>
+      <button id="btn-tab-landscape" onclick="setTabletOrientation('landscape')" class="px-3 py-1 rounded-lg border border-slate-700 bg-slate-900 text-xs font-mono-tech text-slate-400 hover:text-white">
+        🖥️ Querformat (Landscape)
+      </button>
+    </div>
+
+    <!-- The Simulated Device Shell -->
+    <div id="stage-wrapper" class="w-full max-w-[720px] mx-auto transition-all duration-300 border-[10px] border-slate-800 rounded-[40px] p-3 bg-slate-950 shadow-2xl">
+      
+      <!-- Inside Screen -->
+      <div id="stage" class="relative rounded-[28px] p-6 md:p-8 border-[3px] border-white transition-all duration-300 overflow-hidden shadow-hard-white bg-[#13111c] text-white bg-dots-dark min-h-[580px] flex flex-col justify-between">
+        
+        <!-- ================= TOP STATUS BAR (Adaptive) ================= -->
+        <div id="top-status-bar" class="flex items-center justify-between pb-4 border-b-2 border-white/20 mb-4">
+          <div class="flex items-center gap-3">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="q-counter-badge" class="font-mono-tech text-xs font-black text-slate-200">FRAGE 07 / 12</span>
+            <span id="topic-badge" class="hidden sm:inline-block font-mono-tech text-[11px] font-bold px-2 py-0.5 rounded border border-white/30 bg-black/40 text-slate-300">
+              GEOGRAFIE
+            </span>
+          </div>
+
+          <!-- Compact Countdown Timer -->
+          <div class="flex items-center gap-2">
+            <div id="timer-pill" class="px-3.5 py-1.5 rounded-xl border-2 border-black bg-[#ffe600] text-black font-mono-tech font-black text-xs md:text-sm shadow-hard-black-xs flex items-center gap-1.5">
+              <span>⏱️</span>
+              <span id="timer-val">14s</span>
+            </div>
+            <!-- Beamer-Only PIN Badge -->
+            <div id="beamer-pin" class="hidden font-mono-tech text-xs font-black px-3 py-1.5 rounded-xl border-2 border-white bg-black shadow-hard-white text-white">
+              PIN: <span class="text-yellow-400">#941-205</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= BEAMER-ONLY BOSS BAR ================= -->
+        <div id="beamer-boss-section" class="hidden mb-6 p-4 rounded-2xl border-[3px] border-white/80 bg-[#1c1929] shadow-hard-white">
+          <div class="flex justify-between items-center mb-1.5 font-mono-tech text-xs font-black">
+            <span>👾 KLASSEN-CHALLENGE: „TITAN-BOSS“</span>
+            <span class="px-2 py-0.5 rounded border border-white">HP: 520 / 1.000</span>
+          </div>
+          <div class="w-full h-4 rounded-full overflow-hidden p-0.5 border-2 border-white bg-black">
+            <div class="h-full rounded-full bg-[#00f0ff] border-r-2 border-white" style="width: 52%;"></div>
+          </div>
+        </div>
+
+        <!-- ================= THE QUESTION ================= -->
+        <div class="my-auto py-2">
+          <h2 id="question-headline" class="text-xl sm:text-2xl md:text-3xl font-brand font-black leading-snug tracking-tight text-white">
+            Welcher Ozean besitzt die tiefste gemessene Stelle der Erde?
+          </h2>
+        </div>
+
+        <!-- ================= THE 4 ANSWER BUTTONS ================= -->
+        <div id="answers-container" class="grid grid-cols-2 gap-4 my-auto w-full">
+          
+          <!-- Answer A -->
+          <button onclick="pickAnswer(0)" id="card-0" class="btn-brutal text-left p-5 md:p-6 rounded-2xl border-[3px] border-black flex items-center justify-between cursor-pointer transition-all shadow-hard-white bg-[#ff0055]">
+            <div class="flex items-center gap-3 md:gap-4">
+              <span class="key-badge w-9 h-9 md:w-11 md:h-11 rounded-xl flex items-center justify-center font-mono-tech font-black text-sm md:text-lg bg-black text-white border-2 border-black shrink-0">A</span>
+              <span class="card-text font-black text-base sm:text-lg md:text-xl text-black">Atlantischer Ozean</span>
+            </div>
+            <span class="feedback-badge font-mono-tech text-xs font-black px-2 py-1 rounded border-2 border-black bg-white text-black opacity-0"></span>
+          </button>
+
+          <!-- Answer B (Correct) -->
+          <button onclick="pickAnswer(1)" id="card-1" class="btn-brutal text-left p-5 md:p-6 rounded-2xl border-[3px] border-black flex items-center justify-between cursor-pointer transition-all shadow-hard-white bg-[#00d9ff]">
+            <div class="flex items-center gap-3 md:gap-4">
+              <span class="key-badge w-9 h-9 md:w-11 md:h-11 rounded-xl flex items-center justify-center font-mono-tech font-black text-sm md:text-lg bg-black text-white border-2 border-black shrink-0">B</span>
+              <span class="card-text font-black text-base sm:text-lg md:text-xl text-black">Pazifischer Ozean</span>
+            </div>
+            <span class="feedback-badge font-mono-tech text-xs font-black px-2 py-1 rounded border-2 border-black bg-white text-black opacity-0"></span>
+          </button>
+
+          <!-- Answer C -->
+          <button onclick="pickAnswer(2)" id="card-2" class="btn-brutal text-left p-5 md:p-6 rounded-2xl border-[3px] border-black flex items-center justify-between cursor-pointer transition-all shadow-hard-white bg-[#ffc400]">
+            <div class="flex items-center gap-3 md:gap-4">
+              <span class="key-badge w-9 h-9 md:w-11 md:h-11 rounded-xl flex items-center justify-center font-mono-tech font-black text-sm md:text-lg bg-black text-white border-2 border-black shrink-0">C</span>
+              <span class="card-text font-black text-base sm:text-lg md:text-xl text-black">Indischer Ozean</span>
+            </div>
+            <span class="feedback-badge font-mono-tech text-xs font-black px-2 py-1 rounded border-2 border-black bg-white text-black opacity-0"></span>
+          </button>
+
+          <!-- Answer D -->
+          <button onclick="pickAnswer(3)" id="card-3" class="btn-brutal text-left p-5 md:p-6 rounded-2xl border-[3px] border-black flex items-center justify-between cursor-pointer transition-all shadow-hard-white bg-[#00e676]">
+            <div class="flex items-center gap-3 md:gap-4">
+              <span class="key-badge w-9 h-9 md:w-11 md:h-11 rounded-xl flex items-center justify-center font-mono-tech font-black text-sm md:text-lg bg-black text-white border-2 border-black shrink-0">D</span>
+              <span class="card-text font-black text-base sm:text-lg md:text-xl text-black">Arktischer Ozean</span>
+            </div>
+            <span class="feedback-badge font-mono-tech text-xs font-black px-2 py-1 rounded border-2 border-black bg-white text-black opacity-0"></span>
+          </button>
+
+        </div>
+
+        <!-- ================= BOTTOM STATUS BAR ================= -->
+        <div id="footer-status" class="pt-3 text-center border-t border-white/10 mt-3">
+          <p id="status-hint" class="font-mono-tech text-xs text-slate-400">
+            Tippe auf deine Antwort &bull; Sofortiges haptisches Feedback
+          </p>
+        </div>
+
+        <!-- ================= BEAMER-ONLY FOOTER ================= -->
+        <div id="beamer-footer-extra" class="hidden pt-6 border-t-[3px] border-white/20 flex flex-wrap items-center justify-between gap-4 mt-6">
+          <div class="flex items-center gap-3">
+            <span class="font-mono-tech text-xs font-black">STREAK:</span>
+            <span class="font-mono-tech text-xs font-black bg-[#ffe600] text-black px-2 py-0.5 rounded border-2 border-black">
+              4 IN A ROW! 🔥
+            </span>
+          </div>
+          <div class="flex items-center gap-2 font-mono-tech text-xs px-3 py-1.5 rounded-xl border-2 border-white bg-[#00ff85] text-black shadow-hard-white">
+            <span>🌊 <strong>MERKSATZ:</strong> Der Marianengraben im Pazifik reicht knapp 11.000 Meter tief!</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentTheme = 'dark';
+    let currentDevice = 'tablet';
+    let tabletOrientation = 'portrait';
+
+    function setTheme(theme) {
+      currentTheme = theme;
+      const btnDark = document.getElementById('btn-theme-dark');
+      const btnLight = document.getElementById('btn-theme-light');
+      const stage = document.getElementById('stage');
+      const qHeadline = document.getElementById('question-headline');
+      const cards = [
+        document.getElementById('card-0'),
+        document.getElementById('card-1'),
+        document.getElementById('card-2'),
+        document.getElementById('card-3')
+      ];
+
+      if (theme === 'dark') {
+        btnDark.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-black transition-all bg-yellow-400 text-black shadow-hard-black-sm border-2 border-black";
+        btnLight.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-bold transition-all text-slate-400 hover:text-white";
+        
+        stage.className = "relative rounded-[28px] p-6 md:p-8 border-[3px] border-white transition-all duration-300 overflow-hidden shadow-hard-white bg-[#13111c] text-white bg-dots-dark min-h-[580px] flex flex-col justify-between";
+        qHeadline.classList.remove('text-slate-950');
+        qHeadline.classList.add('text-white');
+
+        const darkCandyFills = ['#ff0055', '#00d9ff', '#ffc400', '#00e676'];
+        cards.forEach((c, i) => {
+          c.style.backgroundColor = darkCandyFills[i];
+          c.classList.add('shadow-hard-white');
+          c.classList.remove('shadow-hard-black');
+        });
+      } else {
+        btnLight.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-black transition-all bg-yellow-400 text-black shadow-hard-black-sm border-2 border-black";
+        btnDark.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-bold transition-all text-slate-400 hover:text-white";
+
+        stage.className = "relative rounded-[28px] p-6 md:p-8 border-[3px] border-black transition-all duration-300 overflow-hidden shadow-hard-black bg-[#faf8f5] text-slate-950 bg-dots-light min-h-[580px] flex flex-col justify-between";
+        qHeadline.classList.remove('text-white');
+        qHeadline.classList.add('text-slate-950');
+
+        const lightFills = ['#ff5c7c', '#00e5ff', '#ffeb3b', '#00e676'];
+        cards.forEach((c, i) => {
+          c.style.backgroundColor = lightFills[i];
+          c.classList.add('shadow-hard-black');
+          c.classList.remove('shadow-hard-white');
+        });
+      }
+    }
+
+    function switchView(device) {
+      currentDevice = device;
+      const wrapper = document.getElementById('stage-wrapper');
+      const btnMobile = document.getElementById('view-mobile');
+      const btnTablet = document.getElementById('view-tablet');
+      const btnBeamer = document.getElementById('view-beamer');
+      const answersGrid = document.getElementById('answers-container');
+      const beamerBoss = document.getElementById('beamer-boss-section');
+      const beamerPin = document.getElementById('beamer-pin');
+      const beamerFooter = document.getElementById('beamer-footer-extra');
+      const tabletBar = document.getElementById('tablet-orientation-bar');
+
+      [btnMobile, btnTablet, btnBeamer].forEach(b => {
+        b.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-bold text-slate-400 hover:text-white transition-all";
+      });
+
+      if (device === 'mobile') {
+        btnMobile.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-black transition-all bg-cyan-400 text-black shadow-hard-black-sm border-2 border-black";
+        wrapper.className = "w-full max-w-sm mx-auto transition-all duration-300 border-[8px] border-slate-800 rounded-[50px] p-2 bg-black shadow-2xl";
+        answersGrid.className = "grid grid-cols-1 gap-3 my-auto w-full";
+        tabletBar.classList.add('hidden');
+        beamerBoss.classList.add('hidden');
+        beamerPin.classList.add('hidden');
+        beamerFooter.classList.add('hidden');
+      } 
+      else if (device === 'tablet') {
+        btnTablet.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-black transition-all bg-emerald-400 text-black shadow-hard-black-sm border-2 border-black";
+        tabletBar.classList.remove('hidden');
+        setTabletOrientation(tabletOrientation);
+        beamerBoss.classList.add('hidden');
+        beamerPin.classList.add('hidden');
+        beamerFooter.classList.add('hidden');
+      } 
+      else if (device === 'beamer') {
+        btnBeamer.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-black transition-all bg-yellow-400 text-black shadow-hard-black-sm border-2 border-black";
+        wrapper.className = "w-full max-w-5xl mx-auto transition-all duration-300 border-[4px] border-slate-700 rounded-3xl p-0 bg-transparent shadow-none";
+        answersGrid.className = "grid grid-cols-2 gap-4 my-6 w-full";
+        tabletBar.classList.add('hidden');
+        beamerBoss.classList.remove('hidden');
+        beamerPin.classList.remove('hidden');
+        beamerFooter.classList.remove('hidden');
+      }
+    }
+
+    function setTabletOrientation(orientation) {
+      tabletOrientation = orientation;
+      const wrapper = document.getElementById('stage-wrapper');
+      const answersGrid = document.getElementById('answers-container');
+      const btnP = document.getElementById('btn-tab-portrait');
+      const btnL = document.getElementById('btn-tab-landscape');
+
+      if (orientation === 'portrait') {
+        wrapper.className = "w-full max-w-[620px] mx-auto transition-all duration-300 border-[10px] border-slate-800 rounded-[40px] p-3 bg-slate-950 shadow-2xl";
+        answersGrid.className = "grid grid-cols-2 gap-4 my-auto w-full";
+        btnP.className = "px-3 py-1 rounded-lg border border-emerald-400 bg-slate-900 text-xs font-mono-tech font-bold text-emerald-400";
+        btnL.className = "px-3 py-1 rounded-lg border border-slate-700 bg-slate-900 text-xs font-mono-tech text-slate-400 hover:text-white";
+      } else {
+        wrapper.className = "w-full max-w-[860px] mx-auto transition-all duration-300 border-[10px] border-slate-800 rounded-[40px] p-3 bg-slate-950 shadow-2xl";
+        answersGrid.className = "grid grid-cols-2 gap-4 my-auto w-full";
+        btnL.className = "px-3 py-1 rounded-lg border border-emerald-400 bg-slate-900 text-xs font-mono-tech font-bold text-emerald-400";
+        btnP.className = "px-3 py-1 rounded-lg border border-slate-700 bg-slate-900 text-xs font-mono-tech text-slate-400 hover:text-white";
+      }
+    }
+
+    function pickAnswer(idx) {
+      const cards = [
+        document.getElementById('card-0'),
+        document.getElementById('card-1'),
+        document.getElementById('card-2'),
+        document.getElementById('card-3')
+      ];
+      const hint = document.getElementById('status-hint');
+
+      cards.forEach((c, i) => {
+        const badge = c.querySelector('.feedback-badge');
+        badge.classList.remove('opacity-0');
+
+        if (i === 1) { // Answer B is correct
+          badge.innerText = "✓ KORREKT";
+          badge.className = "feedback-badge font-mono-tech text-xs font-black px-2 py-0.5 rounded border-2 border-black bg-white text-black shadow-hard-black-xs";
+        } else if (i === idx && idx !== 1) {
+          badge.innerText = "✕ FALSCH";
+          badge.className = "feedback-badge font-mono-tech text-xs font-black px-2 py-0.5 rounded border-2 border-black bg-black text-white shadow-hard-black-xs";
+        }
+      });
+
+      if (idx === 1) {
+        hint.innerHTML = "<span class='text-emerald-400 font-black font-mono-tech'>🔥 BOOM! +950 PUNKTE EINGELOGGT</span>";
+      } else {
+        hint.innerHTML = "<span class='text-rose-400 font-black font-mono-tech'>💥 Leider falsch eingeloggt!</span>";
+      }
+    }
+
+    // Default to Tablet & Dark
+    setTheme('dark');
+    switchView('tablet');
+  </script>
+</body>
+</html>

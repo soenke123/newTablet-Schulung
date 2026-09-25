@@ -55,6 +55,8 @@ window.TOOLS_OVERLAY = {
   // daneben, damit das Alleine-Lernen später auf denselben Listen
   // üben kann.
   wordisland: { ready: true },
+  // Siebter Skill (Migration 0174) — Live-Quiz mit 36 Wesen & Leaderboard
+  knowledgestack: { ready: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   poll:      { ready: false }
 };

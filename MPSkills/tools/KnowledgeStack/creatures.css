@@ -1,0 +1,1366 @@
+
+    /* Neo-Brutalist Hard Edge Shadows & Tactile Buttons */
+    .brutal-card {
+      box-shadow: 6px 6px 0px 0px #000000;
+      transition: all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .brutal-card:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 8px 8px 0px 0px #000000;
+    }
+    .brutal-card-sm {
+      box-shadow: 3px 3px 0px 0px #000000;
+    }
+    .btn-tactile {
+      transition: all 0.1s ease;
+    }
+    .btn-tactile:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px 0px #000000 !important;
+    }
+
+    /* Floating particles for emote celebration */
+    @keyframes floatUpFade {
+      0% { transform: translateY(0) scale(0.8); opacity: 1; }
+      100% { transform: translateY(-55px) scale(1.4); opacity: 0; }
+    }
+    .float-particle {
+      position: absolute;
+      pointer-events: none;
+      animation: floatUpFade 1s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+      z-index: 60;
+      font-size: 1.6rem;
+    }
+
+    /* ================= PALETTES (36 CREATURES x 3 SKINS = 108 SKINS) ================= */
+.creature-card[data-id="0"].pal-0, #spotlight-card.creature-0.pal-0 { --p-main: #ff007f; --p-sub: #00f0ff; --p-accent: #ffe600; --p-shine: #ff80bf; }
+.creature-card[data-id="0"].pal-1, #spotlight-card.creature-0.pal-1 { --p-main: #10b981; --p-sub: #f59e0b; --p-accent: #a855f7; --p-shine: #6ee7b7; }
+.creature-card[data-id="0"].pal-2, #spotlight-card.creature-0.pal-2 { --p-main: #0284c7; --p-sub: #ec4899; --p-accent: #facc15; --p-shine: #7dd3fc; }
+.creature-card[data-id="1"].pal-0, #spotlight-card.creature-1.pal-0 { --p-main: #c084fc; --p-sub: #a855f7; --p-accent: #ffe600; --p-ear: #ff77b4; }
+.creature-card[data-id="1"].pal-1, #spotlight-card.creature-1.pal-1 { --p-main: #fbbf24; --p-sub: #f59e0b; --p-accent: #06b6d4; --p-ear: #f43f5e; }
+.creature-card[data-id="1"].pal-2, #spotlight-card.creature-1.pal-2 { --p-main: #334155; --p-sub: #1e293b; --p-accent: #38bdf8; --p-ear: #c084fc; }
+.creature-card[data-id="2"].pal-0, #spotlight-card.creature-2.pal-0 { --p-main: #00e676; --p-sub: #00c853; --p-cap: #ff1744; --p-tie: #ffe600; }
+.creature-card[data-id="2"].pal-1, #spotlight-card.creature-2.pal-1 { --p-main: #0284c7; --p-sub: #0369a1; --p-cap: #f59e0b; --p-tie: #ec4899; }
+.creature-card[data-id="2"].pal-2, #spotlight-card.creature-2.pal-2 { --p-main: #eab308; --p-sub: #ca8a04; --p-cap: #8b5cf6; --p-tie: #06b6d4; }
+.creature-card[data-id="3"].pal-0, #spotlight-card.creature-3.pal-0 { --p-main: #00f0ff; --p-sub: #0284c7; --p-wing: #ff6d00; --p-blush: #ff007f; }
+.creature-card[data-id="3"].pal-1, #spotlight-card.creature-3.pal-1 { --p-main: #f43f5e; --p-sub: #e11d48; --p-wing: #facc15; --p-blush: #38bdf8; }
+.creature-card[data-id="3"].pal-2, #spotlight-card.creature-3.pal-2 { --p-main: #1e1b4b; --p-sub: #312e81; --p-wing: #10b981; --p-blush: #f43f5e; }
+.creature-card[data-id="4"].pal-0, #spotlight-card.creature-4.pal-0 { --p-main: #fbbf24; --p-sub: #f59e0b; --p-cap: #38bdf8; --p-belly: #fef3c7; }
+.creature-card[data-id="4"].pal-1, #spotlight-card.creature-4.pal-1 { --p-main: #e2e8f0; --p-sub: #cbd5e1; --p-cap: #f43f5e; --p-belly: #ffffff; }
+.creature-card[data-id="4"].pal-2, #spotlight-card.creature-4.pal-2 { --p-main: #1e293b; --p-sub: #0f172a; --p-cap: #10b981; --p-belly: #f8fafc; }
+.creature-card[data-id="5"].pal-0, #spotlight-card.creature-5.pal-0 { --p-main: #e2e8f0; --p-sub: #94a3b8; --p-screen: #0f172a; --p-glow: #00f0ff; }
+.creature-card[data-id="5"].pal-1, #spotlight-card.creature-5.pal-1 { --p-main: #0f172a; --p-sub: #1e293b; --p-screen: #1e1b4b; --p-glow: #ec4899; }
+.creature-card[data-id="5"].pal-2, #spotlight-card.creature-5.pal-2 { --p-main: #f43f5e; --p-sub: #be123c; --p-screen: #0f172a; --p-glow: #ffe600; }
+.creature-card[data-id="6"].pal-0, #spotlight-card.creature-6.pal-0 { --p-main: #ff3d00; --p-belly: #ffe600; --p-horn: #ffe600; --p-wing: #ffb703; }
+.creature-card[data-id="6"].pal-1, #spotlight-card.creature-6.pal-1 { --p-main: #0284c7; --p-belly: #bae6fd; --p-horn: #e0f2fe; --p-wing: #38bdf8; }
+.creature-card[data-id="6"].pal-2, #spotlight-card.creature-6.pal-2 { --p-main: #059669; --p-belly: #fef08a; --p-horn: #fbbf24; --p-wing: #34d399; }
+.creature-card[data-id="7"].pal-0, #spotlight-card.creature-7.pal-0 { --p-main: #e0f2fe; --p-feet: #38bdf8; --p-sun: #facc15; --p-blush: #f43f5e; }
+.creature-card[data-id="7"].pal-1, #spotlight-card.creature-7.pal-1 { --p-main: #fce7f3; --p-feet: #f43f5e; --p-sun: #fb923c; --p-blush: #f59e0b; }
+.creature-card[data-id="7"].pal-2, #spotlight-card.creature-7.pal-2 { --p-main: #e9d5ff; --p-feet: #a855f7; --p-sun: #38bdf8; --p-blush: #ec4899; }
+.creature-card[data-id="8"].pal-0, #spotlight-card.creature-8.pal-0 { --p-main: #84cc16; --p-sub: #65a30d; --p-gold: #facc15; --p-iris: #00f0ff; }
+.creature-card[data-id="8"].pal-1, #spotlight-card.creature-8.pal-1 { --p-main: #f43f5e; --p-sub: #be123c; --p-gold: #38bdf8; --p-iris: #ffe600; }
+.creature-card[data-id="8"].pal-2, #spotlight-card.creature-8.pal-2 { --p-main: #8b5cf6; --p-sub: #6d28d9; --p-gold: #facc15; --p-iris: #10b981; }
+.creature-card[data-id="9"].pal-0, #spotlight-card.creature-9.pal-0 { --p-main: #fbcfe8; --p-gills: #f43f5e; --p-tiara: #ffe600; --p-belly: #fdf2f8; }
+.creature-card[data-id="9"].pal-1, #spotlight-card.creature-9.pal-1 { --p-main: #f8fafc; --p-gills: #fb7185; --p-tiara: #38bdf8; --p-belly: #ffffff; }
+.creature-card[data-id="9"].pal-2, #spotlight-card.creature-9.pal-2 { --p-main: #a7f3d0; --p-gills: #059669; --p-tiara: #facc15; --p-belly: #ecfdf5; }
+.creature-card[data-id="10"].pal-0, #spotlight-card.creature-10.pal-0 { --p-main: #64748b; --p-stone: #475569; --p-crystal: #10b981; --p-moss: #84cc16; }
+.creature-card[data-id="10"].pal-1, #spotlight-card.creature-10.pal-1 { --p-main: #475569; --p-stone: #334155; --p-crystal: #ef4444; --p-moss: #f97316; }
+.creature-card[data-id="10"].pal-2, #spotlight-card.creature-10.pal-2 { --p-main: #334155; --p-stone: #1e293b; --p-crystal: #c084fc; --p-moss: #06b6d4; }
+.creature-card[data-id="11"].pal-0, #spotlight-card.creature-11.pal-0 { --p-main: #fff1f2; --p-cheek: #fda4af; --p-hat: #ffffff; --p-whisk: #f43f5e; }
+.creature-card[data-id="11"].pal-1, #spotlight-card.creature-11.pal-1 { --p-main: #f0fdf4; --p-cheek: #86efac; --p-hat: #ffffff; --p-whisk: #10b981; }
+.creature-card[data-id="11"].pal-2, #spotlight-card.creature-11.pal-2 { --p-main: #fefce8; --p-cheek: #fde047; --p-hat: #78350f; --p-whisk: #f59e0b; }
+.creature-card[data-id="12"].pal-0, #spotlight-card.creature-12.pal-0 { --p-main: #e11d48; --p-belly: #fecdd3; --p-leaf: #22c55e; --p-root: #be123c; }
+.creature-card[data-id="12"].pal-1, #spotlight-card.creature-12.pal-1 { --p-main: #eab308; --p-belly: #fef9c3; --p-leaf: #16a34a; --p-root: #ca8a04; }
+.creature-card[data-id="12"].pal-2, #spotlight-card.creature-12.pal-2 { --p-main: #9333ea; --p-belly: #f3e8ff; --p-leaf: #06b6d4; --p-root: #7e22ce; }
+.creature-card[data-id="13"].pal-0, #spotlight-card.creature-13.pal-0 { --p-main: #facc15; --p-stripe: #1e293b; --p-wing: #bae6fd; --p-glass: #d97706; }
+.creature-card[data-id="13"].pal-1, #spotlight-card.creature-13.pal-1 { --p-main: #00f0ff; --p-stripe: #0f172a; --p-wing: #f43f5e; --p-glass: #ffe600; }
+.creature-card[data-id="13"].pal-2, #spotlight-card.creature-13.pal-2 { --p-main: #f472b6; --p-stripe: #831843; --p-wing: #ffffff; --p-glass: #0284c7; }
+.creature-card[data-id="14"].pal-0, #spotlight-card.creature-14.pal-0 { --p-main: #a7f3d0; --p-metal: #6ee7b7; --p-toast: #fde047; --p-dial: #065f46; }
+.creature-card[data-id="14"].pal-1, #spotlight-card.creature-14.pal-1 { --p-main: #e2e8f0; --p-metal: #cbd5e1; --p-toast: #f59e0b; --p-dial: #ef4444; }
+.creature-card[data-id="14"].pal-2, #spotlight-card.creature-14.pal-2 { --p-main: #facc15; --p-metal: #eab308; --p-toast: #ffffff; --p-dial: #ec4899; }
+.creature-card[data-id="15"].pal-0, #spotlight-card.creature-15.pal-0 { --p-wood: #92400e; --p-feather: #facc15; --p-flame: #ef4444; --p-paint: #06b6d4; }
+.creature-card[data-id="15"].pal-1, #spotlight-card.creature-15.pal-1 { --p-wood: #374151; --p-feather: #f97316; --p-flame: #fbbf24; --p-paint: #ef4444; }
+.creature-card[data-id="15"].pal-2, #spotlight-card.creature-15.pal-2 { --p-wood: #0891b2; --p-feather: #f43f5e; --p-flame: #ffe600; --p-paint: #ffffff; }
+.creature-card[data-id="16"].pal-0, #spotlight-card.creature-16.pal-0 { --p-cup: #ffffff; --p-gold: #f59e0b; --p-crab: #ef4444; --p-claw: #dc2626; }
+.creature-card[data-id="16"].pal-1, #spotlight-card.creature-16.pal-1 { --p-cup: #fef3c7; --p-gold: #b45309; --p-crab: #f97316; --p-claw: #ea580c; }
+.creature-card[data-id="16"].pal-2, #spotlight-card.creature-16.pal-2 { --p-cup: #ecfdf5; --p-gold: #10b981; --p-crab: #06b6d4; --p-claw: #0891b2; }
+.creature-card[data-id="17"].pal-0, #spotlight-card.creature-17.pal-0 { --p-paper: #fff1f2; --p-fold: #f43f5e; --p-tip: #be123c; --p-accent: #ffe600; }
+.creature-card[data-id="17"].pal-1, #spotlight-card.creature-17.pal-1 { --p-paper: #1e293b; --p-fold: #38bdf8; --p-tip: #0ea5e9; --p-accent: #fbbf24; }
+.creature-card[data-id="17"].pal-2, #spotlight-card.creature-17.pal-2 { --p-paper: #fefce8; --p-fold: #facc15; --p-tip: #ca8a04; --p-accent: #ec4899; }
+.creature-card[data-id="18"].pal-0, #spotlight-card.creature-18.pal-0 { --p-fur: #1e293b; --p-rim: #facc15; --p-pom: #38bdf8; --p-lens: #e0f2fe; }
+.creature-card[data-id="18"].pal-1, #spotlight-card.creature-18.pal-1 { --p-fur: #f472b6; --p-rim: #ffffff; --p-pom: #fde047; --p-lens: #ffffff; }
+.creature-card[data-id="18"].pal-2, #spotlight-card.creature-18.pal-2 { --p-fur: #64748b; --p-rim: #ef4444; --p-pom: #22c55e; --p-lens: #e0f2fe; }
+.creature-card[data-id="19"].pal-0, #spotlight-card.creature-19.pal-0 { --p-body: #10b981; --p-belly: #facc15; --p-tail: #06b6d4; --p-eye: #ec4899; }
+.creature-card[data-id="19"].pal-1, #spotlight-card.creature-19.pal-1 { --p-body: #8b5cf6; --p-belly: #00f0ff; --p-tail: #f43f5e; --p-eye: #ffe600; }
+.creature-card[data-id="19"].pal-2, #spotlight-card.creature-19.pal-2 { --p-body: #f59e0b; --p-belly: #fef3c7; --p-tail: #d97706; --p-eye: #10b981; }
+.creature-card[data-id="20"].pal-0, #spotlight-card.creature-20.pal-0 { --p-metal: #fef3c7; --p-bell: #f59e0b; --p-face: #ffffff; --p-feet: #b45309; }
+.creature-card[data-id="20"].pal-1, #spotlight-card.creature-20.pal-1 { --p-metal: #0f172a; --p-bell: #f43f5e; --p-face: #00f0ff; --p-feet: #facc15; }
+.creature-card[data-id="20"].pal-2, #spotlight-card.creature-20.pal-2 { --p-metal: #e0f2fe; --p-bell: #fbcfe8; --p-face: #ffffff; --p-feet: #38bdf8; }
+.creature-card[data-id="21"].pal-0, #spotlight-card.creature-21.pal-0 { --p-coat: #0f172a; --p-belly: #ffffff; --p-scarf: #f43f5e; --p-muffs: #facc15; }
+.creature-card[data-id="21"].pal-1, #spotlight-card.creature-21.pal-1 { --p-coat: #1e3a8a; --p-belly: #f0fdf4; --p-scarf: #38bdf8; --p-muffs: #f472b6; }
+.creature-card[data-id="21"].pal-2, #spotlight-card.creature-21.pal-2 { --p-coat: #78350f; --p-belly: #fefce8; --p-scarf: #22c55e; --p-muffs: #ea580c; }
+.creature-card[data-id="22"].pal-0, #spotlight-card.creature-22.pal-0 { --p-block: #84cc16; --p-dark: #3f6212; --p-screen: #14532d; --p-glow: #bef264; }
+.creature-card[data-id="22"].pal-1, #spotlight-card.creature-22.pal-1 { --p-block: #ec4899; --p-dark: #831843; --p-screen: #0891b2; --p-glow: #00f0ff; }
+.creature-card[data-id="22"].pal-2, #spotlight-card.creature-22.pal-2 { --p-block: #ef4444; --p-dark: #7f1d1d; --p-screen: #450a0a; --p-glow: #fca5a5; }
+.creature-card[data-id="23"].pal-0, #spotlight-card.creature-23.pal-0 { --p-cactus: #15803d; --p-flower: #f43f5e; --p-pot: #ea580c; --p-thorn: #bbf7d0; }
+.creature-card[data-id="23"].pal-1, #spotlight-card.creature-23.pal-1 { --p-cactus: #0891b2; --p-flower: #facc15; --p-pot: #9333ea; --p-thorn: #a5f3fc; }
+.creature-card[data-id="23"].pal-2, #spotlight-card.creature-23.pal-2 { --p-cactus: #ca8a04; --p-flower: #ec4899; --p-pot: #c2410c; --p-thorn: #fef08a; }
+.creature-card[data-id="24"].pal-0, #spotlight-card.creature-24.pal-0 { --p-bat: #f59e0b; --p-wing: #fde047; --p-hat: #16a34a; --p-cheese: #ea580c; }
+.creature-card[data-id="24"].pal-1, #spotlight-card.creature-24.pal-1 { --p-bat: #dc2626; --p-wing: #fca5a5; --p-hat: #ca8a04; --p-cheese: #fef08a; }
+.creature-card[data-id="24"].pal-2, #spotlight-card.creature-24.pal-2 { --p-bat: #4338ca; --p-wing: #a5b4fc; --p-hat: #dc2626; --p-cheese: #fde047; }
+.creature-card[data-id="25"].pal-0, #spotlight-card.creature-25.pal-0 { --p-cube: #ffffff; --p-pips: #0f172a; --p-hat: #1e293b; --p-wand: #facc15; }
+.creature-card[data-id="25"].pal-1, #spotlight-card.creature-25.pal-1 { --p-cube: #dc2626; --p-pips: #ffffff; --p-hat: #0f172a; --p-wand: #fbbf24; }
+.creature-card[data-id="25"].pal-2, #spotlight-card.creature-25.pal-2 { --p-cube: #581c87; --p-pips: #38bdf8; --p-hat: #0f172a; --p-wand: #ec4899; }
+.creature-card[data-id="26"].pal-0, #spotlight-card.creature-26.pal-0 { --p-duck: #facc15; --p-boot: #ef4444; --p-hat: #eab308; --p-beak: #f97316; }
+.creature-card[data-id="26"].pal-1, #spotlight-card.creature-26.pal-1 { --p-duck: #047857; --p-boot: #eab308; --p-hat: #065f46; --p-beak: #facc15; }
+.creature-card[data-id="26"].pal-2, #spotlight-card.creature-26.pal-2 { --p-duck: #c084fc; --p-boot: #06b6d4; --p-hat: #a855f7; --p-beak: #fb923c; }
+.creature-card[data-id="27"].pal-0, #spotlight-card.creature-27.pal-0 { --p-wool: #2dd4bf; --p-btn1: #facc15; --p-btn2: #f43f5e; --p-thread: #14b8a6; }
+.creature-card[data-id="27"].pal-1, #spotlight-card.creature-27.pal-1 { --p-wool: #c084fc; --p-btn1: #38bdf8; --p-btn2: #facc15; --p-thread: #a855f7; }
+.creature-card[data-id="27"].pal-2, #spotlight-card.creature-27.pal-2 { --p-wool: #fb7185; --p-btn1: #ffffff; --p-btn2: #38bdf8; --p-thread: #e11d48; }
+.creature-card[data-id="28"].pal-0, #spotlight-card.creature-28.pal-0 { --p-snail: #a3e635; --p-shell: #dc2626; --p-pipe: #e2e8f0; --p-stripe: #ffffff; }
+.creature-card[data-id="28"].pal-1, #spotlight-card.creature-28.pal-1 { --p-snail: #facc15; --p-shell: #0284c7; --p-pipe: #f97316; --p-stripe: #f97316; }
+.creature-card[data-id="28"].pal-2, #spotlight-card.creature-28.pal-2 { --p-snail: #38bdf8; --p-shell: #1e293b; --p-pipe: #fbbf24; --p-stripe: #facc15; }
+.creature-card[data-id="29"].pal-0, #spotlight-card.creature-29.pal-0 { --p-fish: #0891b2; --p-glow: #00f0ff; --p-belly: #bae6fd; --p-fin: #06b6d4; }
+.creature-card[data-id="29"].pal-1, #spotlight-card.creature-29.pal-1 { --p-fish: #d97706; --p-glow: #facc15; --p-belly: #fef3c7; --p-fin: #f59e0b; }
+.creature-card[data-id="29"].pal-2, #spotlight-card.creature-29.pal-2 { --p-fish: #db2777; --p-glow: #fde047; --p-belly: #fce7f3; --p-fin: #f43f5e; }
+.creature-card[data-id="30"].pal-0, #spotlight-card.creature-30.pal-0 { --p-cloak: #0f0c1b; --p-flame: #a855f7; --p-wax: #e9d5ff; --p-soul: #4ade80; }
+.creature-card[data-id="30"].pal-1, #spotlight-card.creature-30.pal-1 { --p-cloak: #1c1917; --p-flame: #dc2626; --p-wax: #fca5a5; --p-soul: #f97316; }
+.creature-card[data-id="30"].pal-2, #spotlight-card.creature-30.pal-2 { --p-cloak: #334155; --p-flame: #00f0ff; --p-wax: #f8fafc; --p-soul: #38bdf8; }
+.creature-card[data-id="31"].pal-0, #spotlight-card.creature-31.pal-0 { --p-wood: #451a03; --p-iron: #78350f; --p-teeth: #fef08a; --p-tongue: #c084fc; }
+.creature-card[data-id="31"].pal-1, #spotlight-card.creature-31.pal-1 { --p-wood: #0f172a; --p-iron: #cbd5e1; --p-teeth: #e2e8f0; --p-tongue: #00f0ff; }
+.creature-card[data-id="31"].pal-2, #spotlight-card.creature-31.pal-2 { --p-wood: #881337; --p-iron: #facc15; --p-teeth: #fefce8; --p-tongue: #f43f5e; }
+.creature-card[data-id="32"].pal-0, #spotlight-card.creature-32.pal-0 { --p-fur: #0f172a; --p-rings: #00f0ff; --p-galaxy: #facc15; --p-stars: #ffffff; }
+.creature-card[data-id="32"].pal-1, #spotlight-card.creature-32.pal-1 { --p-fur: #581c87; --p-rings: #f43f5e; --p-galaxy: #2dd4bf; --p-stars: #fde047; }
+.creature-card[data-id="32"].pal-2, #spotlight-card.creature-32.pal-2 { --p-fur: #18181b; --p-rings: #fbbf24; --p-galaxy: #ea580c; --p-stars: #fed7aa; }
+.creature-card[data-id="33"].pal-0, #spotlight-card.creature-33.pal-0 { --p-leather: #4c1d95; --p-gold: #f59e0b; --p-rune: #06b6d4; --p-paper: #fef3c7; }
+.creature-card[data-id="33"].pal-1, #spotlight-card.creature-33.pal-1 { --p-leather: #064e3b; --p-gold: #ca8a04; --p-rune: #34d399; --p-paper: #ecfdf5; }
+.creature-card[data-id="33"].pal-2, #spotlight-card.creature-33.pal-2 { --p-leather: #172554; --p-gold: #e2e8f0; --p-rune: #ec4899; --p-paper: #f8fafc; }
+.creature-card[data-id="34"].pal-0, #spotlight-card.creature-34.pal-0 { --p-feathers: #0f172a; --p-moon: #facc15; --p-face: #e2e8f0; --p-stars: #38bdf8; }
+.creature-card[data-id="34"].pal-1, #spotlight-card.creature-34.pal-1 { --p-feathers: #06b6d4; --p-moon: #10b981; --p-face: #f8fafc; --p-stars: #ffe600; }
+.creature-card[data-id="34"].pal-2, #spotlight-card.creature-34.pal-2 { --p-feathers: #581c87; --p-moon: #fbbf24; --p-face: #f43f5e; --p-stars: #fde047; }
+.creature-card[data-id="35"].pal-0, #spotlight-card.creature-35.pal-0 { --p-body: #09090b; --p-mark: #ef4444; --p-eyes: #8b5cf6; --p-thread: #ffffff; }
+.creature-card[data-id="35"].pal-1, #spotlight-card.creature-35.pal-1 { --p-body: #334155; --p-mark: #22c55e; --p-eyes: #a855f7; --p-thread: #4ade80; }
+.creature-card[data-id="35"].pal-2, #spotlight-card.creature-35.pal-2 { --p-body: #f8fafc; --p-mark: #b91c1c; --p-eyes: #38bdf8; --p-thread: #94a3b8; }
+
+    
+    /* =========================================================================
+       BASE KEYFRAMES & UTILITIES
+       ========================================================================= */
+    .c-idle .head-node, .c-idle .body-base {
+      animation: base-breathe 2.5s ease-in-out infinite alternate;
+    }
+    @keyframes base-breathe {
+      0% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(3px) scale(1.02, 0.98); }
+    }
+
+    /* Standard Limb Anchors */
+    .origin-l-arm { transform-origin: 26px 54px; }
+    .origin-r-arm { transform-origin: 74px 54px; }
+    .origin-hip-l { transform-origin: 38px 80px; }
+    .origin-hip-r { transform-origin: 62px 80px; }
+    .origin-tail { transform-origin: 22px 65px; }
+    .origin-head { transform-origin: 50px 50px; }
+    .origin-dial { transform-origin: 50px 54px; }
+
+    /* Facial Expression State Visibility */
+    .state-cheer .eye-happy { display: block !important; }
+    .state-cheer .eye-normal { display: none !important; }
+    .state-cheer .mouth-open { display: block !important; }
+    .state-cheer .mouth-normal { display: none !important; }
+
+    .state-sleep .eye-sleep { display: block !important; }
+    .state-sleep .eye-normal { display: none !important; }
+    .state-sleep .eye-happy { display: none !important; }
+    .state-sleep .mouth-sleep { display: block !important; }
+    .state-sleep .mouth-normal { display: none !important; }
+
+    .state-sad .eye-sad { display: block !important; }
+    .state-sad .eye-normal { display: none !important; }
+    .state-sad .mouth-sad { display: block !important; }
+    .state-sad .mouth-normal { display: none !important; }
+    .state-sad .sad-tears { display: block !important; animation: tear-drop-flow 1s ease-in-out infinite; }
+    @keyframes tear-drop-flow {
+      0% { transform: translateY(0); opacity: 0.4; }
+      50% { transform: translateY(4px); opacity: 1; }
+      100% { transform: translateY(8px); opacity: 0.1; }
+    }
+
+    /* Container Overflow Settings for High Jump Leaps out of the card */
+    .creature-card {
+      overflow: visible !important;
+    }
+    .creature-card .creature-stage {
+      overflow: visible !important;
+    }
+    .creature-svg {
+      overflow: visible !important;
+    }
+    .state-jump, [class*="jump-"] {
+      z-index: 50 !important;
+      position: relative !important;
+    }
+
+    /* =========================================================================
+       36 DYNAMISCHE WINK-BEWEGUNGEN (👋)
+       ========================================================================= */
+    .wave-0 .arm-r { animation: p-wave-arm 0.28s ease-in-out infinite alternate; }
+    @keyframes p-wave-arm { 0% { transform: rotate(-90deg); } 100% { transform: rotate(-20deg); } }
+    .wave-1 .arm-r { animation: s-wave-arm 0.26s ease-in-out infinite alternate; }
+    .wave-1 .tail-wiggle { animation: s-wave-tail 0.26s ease-in-out infinite alternate; }
+    @keyframes s-wave-arm { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-25deg); } }
+    @keyframes s-wave-tail { 0% { transform: rotate(-25deg); } 100% { transform: rotate(30deg); } }
+    .wave-2 .arm-r { animation: f-wave-arm 0.3s ease-in-out infinite alternate; }
+    @keyframes f-wave-arm { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-15deg); } }
+    .wave-3 .t-wave-1 { animation: b-tentacle 0.28s ease-in-out infinite alternate; }
+    @keyframes b-tentacle { 0% { transform: rotate(-30deg); } 100% { transform: rotate(40deg); } }
+    .wave-4 .arm-r { animation: bear-wave 0.35s ease-in-out infinite alternate; }
+    @keyframes bear-wave { 0% { transform: rotate(-85deg); } 100% { transform: rotate(-15deg); } }
+    .wave-5 .arm-r { animation: robo-wave 0.2s steps(2) infinite alternate; }
+    @keyframes robo-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-5deg); } }
+    .wave-6 .arm-r { animation: d-dragon-wave 0.3s ease-in-out infinite alternate; transform-origin: 66px 52px; }
+    .wave-6 .wing-r { animation: d-wing-flap 0.3s ease-in-out infinite alternate; transform-origin: 40px 42px; }
+    @keyframes d-dragon-wave { 0% { transform: rotate(-115deg); } 100% { transform: rotate(-30deg); } }
+    @keyframes d-wing-flap { 0% { transform: rotate(0); } 100% { transform: rotate(22deg); } }
+    .wave-7 .arm-r { animation: n-cloud-wave 0.3s ease-in-out infinite alternate; transform-origin: 74px 56px; }
+    .wave-7 .body-base { animation: n-float 0.9s ease-in-out infinite alternate; }
+    @keyframes n-cloud-wave { 0% { transform: rotate(-95deg) translateY(-8px); } 100% { transform: rotate(-25deg) translateY(0); } }
+    @keyframes n-float { 0% { transform: translateY(-8px); } 100% { transform: translateY(5px); } }
+    .wave-8 .arm-l { animation: z-wave-l 0.24s linear infinite alternate; transform-origin: 28px 54px; }
+    .wave-8 .arm-r { animation: z-wave-r 0.24s ease-in-out infinite alternate; transform-origin: 72px 54px; }
+    @keyframes z-wave-l { 0% { transform: rotate(-35deg); } 100% { transform: rotate(35deg); } }
+    @keyframes z-wave-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-35deg); } }
+    .wave-9 .gills { animation: axo-gills-wave 0.28s ease-in-out infinite alternate; }
+    .wave-9 .arm-r { animation: axo-hand-wave 0.28s ease-in-out infinite alternate; transform-origin: 70px 52px; }
+    @keyframes axo-gills-wave { 0% { transform: rotate(-10deg) scaleY(1.15); } 100% { transform: rotate(10deg) scaleY(0.85); } }
+    @keyframes axo-hand-wave { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-30deg); } }
+    .wave-10 .arm-r { animation: gr-arm-wave 0.35s ease-in-out infinite alternate; }
+    @keyframes gr-arm-wave { 0% { transform: rotate(-75deg); } 100% { transform: rotate(-10deg); } }
+    .wave-11 .arm-r { animation: mo-arm-wave 0.26s ease-in-out infinite alternate; }
+    @keyframes mo-arm-wave { 0% { transform: rotate(-105deg); } 100% { transform: rotate(-25deg); } }
+    .wave-12 .arm-r { animation: sp-arm-wave 0.28s ease-in-out infinite alternate; }
+    .wave-12 .leaf-top { animation: sp-leaf-sway 0.28s ease-in-out infinite alternate; transform-origin: 50px 22px; }
+    @keyframes sp-arm-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-15deg); } }
+    @keyframes sp-leaf-sway { 0% { transform: rotate(-18deg); } 100% { transform: rotate(18deg); } }
+    .wave-13 .arm-r { animation: bz-arm-wave 0.22s ease-in-out infinite alternate; transform-origin: 72px 58px; }
+    .wave-13 .wing-l { animation: bz-wing-buzz-l 0.08s linear infinite alternate; transform-origin: 26px 30px; }
+    .wave-13 .wing-r { animation: bz-wing-buzz-r 0.08s linear infinite alternate; transform-origin: 74px 30px; }
+    @keyframes bz-arm-wave { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-35deg); } }
+    @keyframes bz-wing-buzz-l { 0% { transform: rotate(-35deg) scaleY(0.8); } 100% { transform: rotate(-15deg) scaleY(1.2); } }
+    @keyframes bz-wing-buzz-r { 0% { transform: rotate(35deg) scaleY(0.8); } 100% { transform: rotate(15deg) scaleY(1.2); } }
+    .wave-14 .arm-r { animation: cr-lever-bounce 0.26s ease-in-out infinite alternate; transform-origin: 76px 54px; }
+    @keyframes cr-lever-bounce { 0% { transform: rotate(-105deg); } 100% { transform: rotate(-30deg); } }
+    .wave-15 .arm-r { animation: tk-drum-tap 0.22s ease-in-out infinite alternate; }
+    @keyframes tk-drum-tap { 0% { transform: rotate(-90deg); } 100% { transform: rotate(-15deg); } }
+    .wave-16 .arm-r { animation: cl-pincer-wave 0.22s ease-in-out infinite alternate; }
+    @keyframes cl-pincer-wave { 0% { transform: rotate(-55deg) scale(1.15); } 100% { transform: rotate(15deg) scale(0.9); } }
+    .wave-17 .arm-r { animation: mm-fold-wave 0.28s ease-in-out infinite alternate; }
+    .wave-17 .tail-wiggle { animation: mm-tail-sway 0.28s ease-in-out infinite alternate; }
+    @keyframes mm-fold-wave { 0% { transform: rotate(-85deg); } 100% { transform: rotate(-10deg); } }
+    @keyframes mm-tail-sway { 0% { transform: rotate(-25deg); } 100% { transform: rotate(25deg); } }
+    .wave-18 .arm-r { animation: fz-fuzz-wave 0.25s ease-in-out infinite alternate; transform-origin: 76px 56px; }
+    @keyframes fz-fuzz-wave { 0% { transform: rotate(-105deg); } 100% { transform: rotate(-25deg); } }
+    .wave-19 .arm-r { animation: snp-claw-wave 0.28s ease-in-out infinite alternate; transform-origin: 66px 56px; }
+    .wave-19 .turret-eye-r { animation: snp-turret-roll 0.6s linear infinite; transform-origin: 64px 46px; }
+    @keyframes snp-claw-wave { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-30deg); } }
+    @keyframes snp-turret-roll { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+    .wave-20 .arm-r { animation: bm-hand-wave 0.22s steps(3) infinite alternate; }
+    @keyframes bm-hand-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-5deg); } }
+    .wave-21 .arm-r { animation: pb-flipper-wave 0.28s ease-in-out infinite alternate; }
+    @keyframes pb-flipper-wave { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-20deg); } }
+    .wave-22 .arm-r { animation: gl-pixel-wave 0.18s steps(2) infinite alternate; }
+    @keyframes gl-pixel-wave { 0% { transform: translateY(-14px) rotate(-65deg); } 100% { transform: translateY(0) rotate(0deg); } }
+    .wave-23 .arm-r { animation: ct-branch-wave 0.32s ease-in-out infinite alternate; }
+    @keyframes ct-branch-wave { 0% { transform: rotate(-85deg); } 100% { transform: rotate(-10deg); } }
+    .wave-24 .arm-r { animation: nc-wing-wave 0.25s ease-in-out infinite alternate; }
+    @keyframes nc-wing-wave { 0% { transform: rotate(-75deg); } 100% { transform: rotate(15deg); } }
+    .wave-25 .arm-r { animation: pip-wand-wave 0.28s ease-in-out infinite alternate; }
+    @keyframes pip-wand-wave { 0% { transform: rotate(-55deg); } 100% { transform: rotate(20deg); } }
+    .wave-26 .arm-r { animation: wd-wing-wave 0.28s ease-in-out infinite alternate; }
+    @keyframes wd-wing-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-15deg); } }
+    .wave-27 .arm-r { animation: yo-paw-wave 0.28s ease-in-out infinite alternate; }
+    @keyframes yo-paw-wave { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-20deg); } }
+    .wave-28 .head-node { animation: tb-head-tilt 0.3s ease-in-out infinite alternate; }
+    @keyframes tb-head-tilt { 0% { transform: rotate(-12deg); } 100% { transform: rotate(12deg); } }
+    .wave-29 .arm-r { animation: lm-fin-wave 0.28s ease-in-out infinite alternate; }
+    .wave-29 .angler-lantern { animation: lm-lantern-bob 0.45s ease-in-out infinite alternate; transform-origin: 64px 16px; }
+    @keyframes lm-fin-wave { 0% { transform: rotate(-65deg); } 100% { transform: rotate(25deg); } }
+    @keyframes lm-lantern-bob { 0% { transform: scale(0.85); } 100% { transform: scale(1.3); } }
+    .wave-30 .arm-r { animation: um-lantern-wave 0.28s ease-in-out infinite alternate; }
+    @keyframes um-lantern-wave { 0% { transform: rotate(-75deg) translateY(-5px); } 100% { transform: rotate(-5deg); } }
+    .wave-31 .arm-r { animation: gj-handle-clatter 0.22s steps(3) infinite alternate; }
+    .wave-31 .mimic-tongue { animation: gj-tongue-flick 0.22s ease-in-out infinite alternate; }
+    @keyframes gj-handle-clatter { 0% { transform: rotate(-35deg); } 100% { transform: rotate(35deg); } }
+    @keyframes gj-tongue-flick { 0% { transform: scaleY(0.7); } 100% { transform: scaleY(1.4); } }
+    .wave-32 .arm-r { animation: as-star-wave 0.28s ease-in-out infinite alternate; }
+    .wave-32 .saturn-rings { animation: as-rings-tilt 0.5s ease-in-out infinite alternate; transform-origin: 50px 22px; }
+    @keyframes as-star-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-15deg); } }
+    @keyframes as-rings-tilt { 0% { transform: rotate(-30deg) scale(0.9); } 100% { transform: rotate(0deg) scale(1.1); } }
+    .wave-33 .arm-r { animation: ar-page-flap 0.28s ease-in-out infinite alternate; }
+    .wave-33 .rune-orb-2 { animation: ar-orb-pulse 0.28s ease-in-out infinite alternate; }
+    @keyframes ar-page-flap { 0% { transform: rotate(-50deg); } 100% { transform: rotate(20deg); } }
+    @keyframes ar-orb-pulse { 0% { transform: translateY(-5px); } 100% { transform: translateY(5px); } }
+    .wave-34 .arm-r { animation: zp-feather-wave 0.28s ease-in-out infinite alternate; }
+    .wave-34 .moon-crown { animation: zp-moon-glow 0.35s ease-in-out infinite alternate; }
+    @keyframes zp-feather-wave { 0% { transform: rotate(-85deg); } 100% { transform: rotate(-10deg); } }
+    @keyframes zp-moon-glow { 0% { transform: scale(0.9); } 100% { transform: scale(1.25); } }
+    .wave-35 .arm-r { animation: sp-leg-tap 0.18s ease-in-out infinite alternate; }
+    @keyframes sp-leg-tap { 0% { transform: rotate(-45deg); } 100% { transform: rotate(25deg); } }
+
+    /* =========================================================================
+       36 EXPLOSIVE HIGH JUMPS (🚀) - SPRINGEN VOLLSTÄNDIG AUS DEM KASTEN HERAUS!
+       ========================================================================= */
+    .jump-0 { animation: jump-blast-0 0.8s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
+    @keyframes jump-blast-0 {
+      0%, 100% { transform: translateY(0) scale(1.35, 0.65); }
+      18% { transform: translateY(8px) scale(1.5, 0.5); } /* Tiefes Einknicken */
+      45% { transform: translateY(-118px) scale(0.7, 1.45); } /* WEIT AUS DEM KASTEN! */
+      68% { transform: translateY(-108px) scale(1.05, 0.95); }
+      85% { transform: translateY(0) scale(1.4, 0.6); }
+    }
+
+    .jump-1 { animation: jump-blast-1 0.85s cubic-bezier(0.2, 0.8, 0.3, 1.2) infinite; }
+    @keyframes jump-blast-1 {
+      0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+      18% { transform: translateY(6px) scale(1.2, 0.8); }
+      48% { transform: translateY(-120px) rotate(180deg) scale(0.85, 1.25); }
+      75% { transform: translateY(-70px) rotate(300deg); }
+      92% { transform: translateY(0) rotate(360deg) scale(1.3, 0.7); }
+    }
+
+    .jump-2 { animation: jump-blast-2 0.8s cubic-bezier(0.18, 0.9, 0.25, 1.25) infinite; }
+    .jump-2 .leg-l { animation: f-leg-leap-l 0.8s ease-in-out infinite; transform-origin: 32px 70px; }
+    .jump-2 .leg-r { animation: f-leg-leap-r 0.8s ease-in-out infinite; transform-origin: 68px 70px; }
+    @keyframes jump-blast-2 {
+      0%, 100% { transform: translateY(0) scale(1.2, 0.8); }
+      18% { transform: translateY(10px) scale(1.45, 0.6); }
+      48% { transform: translateY(-125px) scale(0.8, 1.35); }
+      72% { transform: translateY(-90px) scale(1, 1); }
+      88% { transform: translateY(0) scale(1.35, 0.7); }
+    }
+    @keyframes f-leg-leap-l { 0%, 100% { transform: rotate(0); } 48% { transform: rotate(-26deg) scaleY(1.4) translateY(4px); } }
+    @keyframes f-leg-leap-r { 0%, 100% { transform: rotate(0); } 48% { transform: rotate(26deg) scaleY(1.4) translateY(4px); } }
+
+    .jump-3 { animation: jump-blast-3 0.8s cubic-bezier(0.15, 0.9, 0.25, 1.2) infinite; }
+    @keyframes jump-blast-3 {
+      0%, 100% { transform: translateY(0) scale(1.25, 0.75); }
+      45% { transform: translateY(-122px) scale(0.7, 1.4) rotate(16deg); }
+      88% { transform: translateY(0) scale(1.3, 0.7); }
+    }
+
+    .jump-4 { animation: jump-blast-4 0.82s cubic-bezier(0.2, 0.8, 0.3, 1.2) infinite; }
+    @keyframes jump-blast-4 {
+      0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
+      20% { transform: translateY(10px) scale(1.5, 0.55); }
+      50% { transform: translateY(-105px) scale(0.85, 1.25); }
+      85% { transform: translateY(0) scale(1.4, 0.6); }
+    }
+
+    .jump-5 { animation: jump-blast-5 0.75s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
+    @keyframes jump-blast-5 {
+      0%, 100% { transform: translateY(0); }
+      15% { transform: translateY(6px); }
+      42% { transform: translateY(-120px) scale(0.8, 1.3); }
+      85% { transform: translateY(0) scale(1.3, 0.7); }
+    }
+
+    .jump-6 { animation: jump-blast-6 0.85s ease-in-out infinite; }
+    .jump-6 .wing-l { animation: d-wings-beat-l 0.2s ease-in-out infinite alternate; transform-origin: 28px 46px; }
+    .jump-6 .wing-r { animation: d-wings-beat-r 0.2s ease-in-out infinite alternate; transform-origin: 40px 42px; }
+    @keyframes jump-blast-6 {
+      0%, 100% { transform: translateY(0) scale(1); }
+      48% { transform: translateY(-124px) scale(0.9, 1.2); }
+      88% { transform: translateY(0) scale(1.2, 0.8); }
+    }
+    @keyframes d-wings-beat-l { 0% { transform: scale(0.7) rotate(-25deg); } 100% { transform: scale(1.35) rotate(25deg); } }
+    @keyframes d-wings-beat-r { 0% { transform: scale(0.7) rotate(-20deg); } 100% { transform: scale(1.35) rotate(22deg); } }
+
+    .jump-7 { animation: jump-blast-7 0.9s ease-in-out infinite; }
+    @keyframes jump-blast-7 {
+      0%, 100% { transform: translateY(0) scale(1); opacity: 1; }
+      50% { transform: translateY(-130px) scale(1.4); opacity: 0.5; }
+    }
+
+    .jump-8 { animation: jump-blast-8 0.75s cubic-bezier(0.18, 0.9, 0.25, 1.2) infinite; }
+    @keyframes jump-blast-8 {
+      0%, 100% { transform: translateY(0) scaleX(1.3); }
+      48% { transform: translateY(-120px) scaleX(0.4) scaleY(1.4); }
+      88% { transform: translateY(0) scaleX(1.4) scaleY(0.6); }
+    }
+
+    .jump-9 { animation: jump-blast-9 0.85s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
+    @keyframes jump-blast-9 {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-122px) rotate(30deg) scale(0.9, 1.2); }
+      88% { transform: translateY(0) scale(1.3, 0.7); }
+    }
+
+    .jump-10 { animation: jump-blast-10 0.85s ease-in-out infinite; }
+    @keyframes jump-blast-10 {
+      0%, 100% { transform: translateY(0) scale(1.35, 0.65); }
+      20% { transform: translateY(12px) scale(1.5, 0.5); }
+      48% { transform: translateY(-110px) scale(0.8, 1.3); }
+      85% { transform: translateY(0) scale(1.45, 0.55); }
+    }
+
+    .jump-11 { animation: jump-blast-11 0.78s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
+    @keyframes jump-blast-11 {
+      0%, 100% { transform: translateY(0) scale(1.4, 0.6); }
+      18% { transform: translateY(8px) scale(1.6, 0.45); }
+      46% { transform: translateY(-122px) scale(0.65, 1.5); }
+      88% { transform: translateY(0) scale(1.45, 0.55); }
+    }
+
+    .jump-12 { animation: jump-blast-12 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
+    @keyframes jump-blast-12 {
+      0%, 100% { transform: translateY(0) scale(1); }
+      20% { transform: translateY(12px) scale(1.3, 0.7); }
+      48% { transform: translateY(-125px) scale(0.75, 1.35); }
+      85% { transform: translateY(0) scale(1.35, 0.65); }
+    }
+
+    .jump-13 { animation: jump-blast-13 0.85s ease-in-out infinite; }
+    @keyframes jump-blast-13 {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      30% { transform: translateY(-120px) rotate(-18deg) scale(1.1); }
+      70% { transform: translateY(-90px) rotate(18deg) scale(0.95); }
+      92% { transform: translateY(0) scale(1.2, 0.8); }
+    }
+
+    .jump-14 { animation: jump-blast-14 0.78s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
+    @keyframes jump-blast-14 {
+      0%, 100% { transform: translateY(0); }
+      15% { transform: translateY(8px) scale(1.2, 0.8); }
+      42% { transform: translateY(-120px) scale(0.75, 1.35); }
+      85% { transform: translateY(0) scale(1.3, 0.7); }
+    }
+
+    .jump-15 { animation: jump-blast-15 0.82s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
+    @keyframes jump-blast-15 {
+      0%, 100% { transform: translateY(0) scale(1.2, 0.8); }
+      46% { transform: translateY(-118px) scale(0.8, 1.3) rotate(8deg); }
+      88% { transform: translateY(0) scale(1.3, 0.7); }
+    }
+
+    .jump-16 { animation: jump-blast-16 0.78s ease-in-out infinite; }
+    @keyframes jump-blast-16 {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      46% { transform: translateY(-115px) rotate(-18deg) scale(0.85, 1.25); }
+      88% { transform: translateY(0) scale(1.25, 0.75); }
+    }
+
+    .jump-17 { animation: jump-blast-17 0.88s ease-in-out infinite; }
+    @keyframes jump-blast-17 {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      45% { transform: translateY(-126px) rotate(22deg) scale(0.9, 1.2); }
+      75% { transform: translateY(-75px) rotate(-12deg); }
+      92% { transform: translateY(0) scale(1.2, 0.8); }
+    }
+
+    .jump-18 { animation: jump-blast-18 0.75s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
+    @keyframes jump-blast-18 {
+      0%, 100% { transform: translateY(0) scale(1.4, 0.6); }
+      18% { transform: translateY(10px) scale(1.6, 0.45); }
+      44% { transform: translateY(-125px) scale(0.7, 1.45); }
+      88% { transform: translateY(0) scale(1.45, 0.55); }
+    }
+
+    .jump-19 { animation: jump-blast-19 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
+    @keyframes jump-blast-19 {
+      0%, 100% { transform: translateY(0) scale(1.25, 0.75); }
+      45% { transform: translateY(-120px) scale(0.75, 1.35); }
+      88% { transform: translateY(0) scale(1.35, 0.65); }
+    }
+
+    .jump-20 { animation: jump-blast-20 0.78s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
+    @keyframes jump-blast-20 {
+      0%, 100% { transform: translateY(0); }
+      15% { transform: translateY(8px); }
+      42% { transform: translateY(-118px) rotate(10deg) scale(0.85, 1.25); }
+      88% { transform: translateY(0) scale(1.3, 0.7); }
+    }
+
+    .jump-21 { animation: jump-blast-21 0.85s ease-in-out infinite; }
+    @keyframes jump-blast-21 {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      48% { transform: translateY(-116px) rotate(28deg) scale(0.9, 1.2); }
+      88% { transform: translateY(0) scale(1.3, 0.7); }
+    }
+
+    .jump-22 { animation: jump-blast-22 0.75s steps(4) infinite; }
+    @keyframes jump-blast-22 {
+      0%, 100% { transform: translateY(0); }
+      42% { transform: translateY(-118px); }
+      85% { transform: translateY(0); }
+    }
+
+    .jump-23 { animation: jump-blast-23 0.8s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
+    @keyframes jump-blast-23 {
+      0%, 100% { transform: translateY(0) scale(1.2, 0.8); }
+      45% { transform: translateY(-115px) scale(0.8, 1.3); }
+      88% { transform: translateY(0) scale(1.35, 0.65); }
+    }
+
+    .jump-24 { animation: jump-blast-24 0.8s ease-in-out infinite; }
+    @keyframes jump-blast-24 {
+      0%, 100% { transform: translateY(0); }
+      46% { transform: translateY(-122px) rotate(-14deg) scale(0.85, 1.25); }
+      88% { transform: translateY(0) scale(1.25, 0.75); }
+    }
+
+    .jump-25 { animation: jump-blast-25 0.88s ease-in-out infinite; }
+    @keyframes jump-blast-25 {
+      0% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-125px) rotate(180deg) scale(0.8, 1.3); }
+      100% { transform: translateY(0) rotate(360deg); }
+    }
+
+    .jump-26 { animation: jump-blast-26 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
+    @keyframes jump-blast-26 {
+      0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
+      45% { transform: translateY(-120px) scale(0.75, 1.35); }
+      88% { transform: translateY(0) scale(1.4, 0.6); }
+    }
+
+    .jump-27 { animation: jump-blast-27 0.78s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
+    @keyframes jump-blast-27 {
+      0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
+      45% { transform: translateY(-124px) scale(0.75, 1.4); }
+      88% { transform: translateY(0) scale(1.35, 0.65); }
+    }
+
+    .jump-28 { animation: jump-blast-28 0.78s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
+    @keyframes jump-blast-28 {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      45% { transform: translateY(-118px) rotate(-26deg) scale(0.8, 1.3); }
+      88% { transform: translateY(0) scale(1.3, 0.7); }
+    }
+
+    .jump-29 { animation: jump-blast-29 0.88s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
+    @keyframes jump-blast-29 {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      48% { transform: translateY(-124px) rotate(24deg) scale(0.85, 1.25); }
+      88% { transform: translateY(0) scale(1.3, 0.7); }
+    }
+
+    .jump-30 { animation: jump-blast-30 0.82s ease-in-out infinite; }
+    @keyframes jump-blast-30 {
+      0%, 100% { transform: translateY(0); }
+      48% { transform: translateY(-126px) scale(0.8, 1.35); }
+      88% { transform: translateY(0) scale(1.2, 0.8); }
+    }
+
+    .jump-31 { animation: jump-blast-31 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
+    @keyframes jump-blast-31 {
+      0%, 100% { transform: translateY(0) scale(1.25, 0.75); }
+      45% { transform: translateY(-118px) scale(0.8, 1.3); }
+      88% { transform: translateY(0) scale(1.35, 0.65); }
+    }
+
+    .jump-32 { animation: jump-blast-32 0.88s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
+    @keyframes jump-blast-32 {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      48% { transform: translateY(-128px) rotate(18deg) scale(0.8, 1.3); }
+      88% { transform: translateY(0) scale(1.25, 0.75); }
+    }
+
+    .jump-33 { animation: jump-blast-33 0.82s ease-in-out infinite; }
+    @keyframes jump-blast-33 {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      50% { transform: translateY(-122px) rotate(-16deg) scale(0.85, 1.25); }
+      88% { transform: translateY(0) scale(1.2, 0.8); }
+    }
+
+    .jump-34 { animation: jump-blast-34 0.88s ease-in-out infinite; }
+    @keyframes jump-blast-34 {
+      0%, 100% { transform: translateY(0); }
+      48% { transform: translateY(-128px) scale(0.85, 1.3); }
+      88% { transform: translateY(0) scale(1.25, 0.75); }
+    }
+
+    .jump-35 { animation: jump-blast-35 0.75s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
+    @keyframes jump-blast-35 {
+      0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
+      45% { transform: translateY(-126px) scale(0.75, 1.4); }
+      88% { transform: translateY(0) scale(1.35, 0.65); }
+    }
+
+    /* =========================================================================
+       36 INDIVIDUELLE KULT-TÄNZE (🕺)
+       ========================================================================= */
+    .c-dance-0 .body-base { animation: p-dance-jelly 0.38s ease-in-out infinite alternate; }
+    .c-dance-0 .arm-l { animation: p-dance-arm-l 0.38s ease-in-out infinite alternate; transform-origin: 30px 50px; }
+    .c-dance-0 .arm-r { animation: p-dance-arm-r 0.38s ease-in-out infinite alternate; transform-origin: 70px 50px; }
+    @keyframes p-dance-jelly { 0% { transform: skewX(-16deg) scaleY(1.08); } 100% { transform: skewX(16deg) scaleY(0.92); } }
+    @keyframes p-dance-arm-l { 0% { transform: rotate(-80deg); } 100% { transform: rotate(30deg); } }
+    @keyframes p-dance-arm-r { 0% { transform: rotate(30deg); } 100% { transform: rotate(-80deg); } }
+
+    .c-dance-1 .arm-l { animation: s-dance-paw-l 0.22s ease-in-out infinite alternate; transform-origin: 32px 50px; }
+    .c-dance-1 .arm-r { animation: s-dance-paw-r 0.22s ease-in-out infinite alternate; transform-origin: 68px 50px; }
+    .c-dance-1 .tail-wiggle { animation: s-dance-tail 0.22s ease-in-out infinite alternate; }
+    .c-dance-1 .body-base { animation: s-dance-bounce 0.22s ease-in-out infinite alternate; }
+    @keyframes s-dance-paw-l { 0% { transform: rotate(-60deg) translateY(-6px); } 100% { transform: rotate(20deg); } }
+    @keyframes s-dance-paw-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-60deg) translateY(-6px); } }
+    @keyframes s-dance-tail { 0% { transform: rotate(-35deg); } 100% { transform: rotate(45deg); } }
+    @keyframes s-dance-bounce { 0% { transform: translateY(-6px) rotate(-4deg); } 100% { transform: translateY(0) rotate(4deg); } }
+
+    .c-dance-2 .leg-l { animation: f-dance-kick-l 0.32s ease-in-out infinite alternate; transform-origin: 32px 70px; }
+    .c-dance-2 .leg-r { animation: f-dance-kick-r 0.32s ease-in-out infinite alternate; transform-origin: 68px 70px; }
+    .c-dance-2 .body-base { animation: f-dance-squat 0.32s ease-in-out infinite alternate; }
+    @keyframes f-dance-kick-l { 0% { transform: rotate(-45deg) scaleX(1.3); } 100% { transform: rotate(10deg); } }
+    @keyframes f-dance-kick-r { 0% { transform: rotate(10deg); } 100% { transform: rotate(45deg) scaleX(1.3); } }
+    @keyframes f-dance-squat { 0% { transform: translateY(6px); } 100% { transform: translateY(-6px); } }
+
+    .c-dance-3 .body-base { animation: b-dance-tornado 0.65s linear infinite; }
+    .c-dance-3 .t-wave-1 { animation: b-dance-t1 0.32s ease-in-out infinite alternate; }
+    .c-dance-3 .t-wave-2 { animation: b-dance-t2 0.32s ease-in-out infinite alternate; }
+    @keyframes b-dance-tornado { 0% { transform: rotate(0deg) scale(1.05); } 50% { transform: rotate(180deg) scale(0.95); } 100% { transform: rotate(360deg) scale(1.05); } }
+    @keyframes b-dance-t1 { 0% { transform: rotate(-40deg); } 100% { transform: rotate(40deg); } }
+    @keyframes b-dance-t2 { 0% { transform: rotate(40deg); } 100% { transform: rotate(-40deg); } }
+
+    .c-dance-4 .body-base { animation: sn-dance-belly 0.36s ease-in-out infinite alternate; }
+    .c-dance-4 .arm-l, .c-dance-4 .arm-r { animation: sn-dance-arms 0.36s ease-in-out infinite alternate; transform-origin: 50px 50px; }
+    @keyframes sn-dance-belly { 0% { transform: rotate(-12deg) translateX(-8px); } 100% { transform: rotate(12deg) translateX(8px); } }
+    @keyframes sn-dance-arms { 0% { transform: rotate(-40deg); } 100% { transform: rotate(40deg); } }
+
+    .c-dance-5 .arm-l { animation: bp-dance-arm-l 0.36s steps(3) infinite alternate; }
+    .c-dance-5 .arm-r { animation: bp-dance-arm-r 0.36s steps(3) infinite alternate; }
+    .c-dance-5 .body-base { animation: bp-dance-body 0.36s steps(2) infinite alternate; }
+    @keyframes bp-dance-arm-l { 0% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } 100% { transform: rotate(-140deg); } }
+    @keyframes bp-dance-arm-r { 0% { transform: rotate(90deg); } 50% { transform: rotate(0deg); } 100% { transform: rotate(-90deg); } }
+    @keyframes bp-dance-body { 0% { transform: translateY(0); } 100% { transform: translateY(-7px) rotate(5deg); } }
+
+    .c-dance-6 .leg-l { animation: ch-stomp-l 0.28s ease-in-out infinite alternate; transform-origin: 34px 74px; }
+    .c-dance-6 .leg-r { animation: ch-stomp-r 0.28s ease-in-out infinite alternate; transform-origin: 58px 74px; }
+    .c-dance-6 .wing-l { animation: ch-wings-beat-l 0.14s ease-in-out infinite alternate; transform-origin: 28px 46px; }
+    .c-dance-6 .wing-r { animation: ch-wings-beat-r 0.14s ease-in-out infinite alternate; transform-origin: 40px 42px; }
+    .c-dance-6 .body-base { animation: ch-headbang 0.28s ease-in-out infinite alternate; }
+    .c-dance-6 .tail-wiggle { animation: ch-tail-thrash 0.28s ease-in-out infinite alternate; }
+    @keyframes ch-stomp-l { 0% { transform: translateY(-10px) rotate(-15deg); } 100% { transform: translateY(0); } }
+    @keyframes ch-stomp-r { 0% { transform: translateY(0); } 100% { transform: translateY(-10px) rotate(15deg); } }
+    @keyframes ch-wings-beat-l { 0% { transform: scale(0.9) rotate(-10deg); } 100% { transform: scale(1.2) rotate(15deg); } }
+    @keyframes ch-wings-beat-r { 0% { transform: scale(0.9) rotate(-10deg); } 100% { transform: scale(1.2) rotate(15deg); } }
+    @keyframes ch-headbang { 0% { transform: rotate(-6deg) translateY(-4px); } 100% { transform: rotate(6deg) translateY(2px); } }
+    @keyframes ch-tail-thrash { 0% { transform: rotate(-25deg); } 100% { transform: rotate(25deg); } }
+
+    .c-dance-7 .body-base { animation: nb-dance-waltz 0.55s ease-in-out infinite alternate; }
+    .c-dance-7 .arm-l, .c-dance-7 .arm-r { animation: nb-dance-paws 0.55s ease-in-out infinite alternate; }
+    @keyframes nb-dance-waltz { 0% { transform: rotate(-18deg) translateY(-12px); } 100% { transform: rotate(18deg) translateY(6px); } }
+    @keyframes nb-dance-paws { 0% { transform: rotate(-35deg); } 100% { transform: rotate(35deg); } }
+
+    .c-dance-8 .arm-l { animation: zp-windmill-l 0.24s linear infinite; transform-origin: 26px 48px; }
+    .c-dance-8 .arm-r { animation: zp-windmill-r 0.24s linear infinite; transform-origin: 74px 48px; }
+    .c-dance-8 .body-base { animation: zp-jitter 0.24s linear infinite alternate; }
+    @keyframes zp-windmill-l { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes zp-windmill-r { 0% { transform: rotate(360deg); } 100% { transform: rotate(0deg); } }
+    @keyframes zp-jitter { 0% { transform: skewX(-15deg) translateY(-4px); } 100% { transform: skewX(15deg) translateY(4px); } }
+
+    .c-dance-9 .body-base { animation: lt-wave-swim 0.6s ease-in-out infinite alternate; }
+    .c-dance-9 .arm-l { animation: lt-fin-l 0.3s ease-in-out infinite alternate; transform-origin: 30px 52px; }
+    .c-dance-9 .arm-r { animation: lt-fin-r 0.3s ease-in-out infinite alternate; transform-origin: 70px 52px; }
+    .c-dance-9 .gills { animation: lt-gills-flutter 0.3s ease-in-out infinite alternate; }
+    @keyframes lt-wave-swim { 0% { transform: rotate(-14deg) scaleX(1); } 100% { transform: rotate(14deg) scaleX(0.94); } }
+    @keyframes lt-fin-l { 0% { transform: rotate(-70deg); } 100% { transform: rotate(20deg); } }
+    @keyframes lt-fin-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-70deg); } }
+    @keyframes lt-gills-flutter { 0% { transform: scale(0.9); } 100% { transform: scale(1.15); } }
+
+    .c-dance-10 .body-base { animation: gr-rock-groove 0.35s ease-in-out infinite alternate; }
+    .c-dance-10 .arm-l { animation: gr-punch-l 0.35s ease-in-out infinite alternate; }
+    .c-dance-10 .arm-r { animation: gr-punch-r 0.35s ease-in-out infinite alternate; }
+    @keyframes gr-rock-groove { 0% { transform: rotate(-8deg) translateY(-4px); } 100% { transform: rotate(8deg) translateY(2px); } }
+    @keyframes gr-punch-l { 0% { transform: rotate(-40deg); } 100% { transform: rotate(40deg); } }
+    @keyframes gr-punch-r { 0% { transform: rotate(40deg); } 100% { transform: rotate(-40deg); } }
+
+    .c-dance-11 .body-base { animation: mo-roll-jiggle 0.3s ease-in-out infinite alternate; }
+    .c-dance-11 .arm-r { animation: mo-spoon-spin 0.3s linear infinite; }
+    @keyframes mo-roll-jiggle { 0% { transform: skewX(-14deg) scaleY(1.05); } 100% { transform: skewX(14deg) scaleY(0.95); } }
+    @keyframes mo-spoon-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+
+    .c-dance-12 .body-base { animation: sp-salsa-hips 0.32s ease-in-out infinite alternate; }
+    .c-dance-12 .arm-l, .c-dance-12 .arm-r { animation: sp-salsa-arms 0.32s ease-in-out infinite alternate; }
+    @keyframes sp-salsa-hips { 0% { transform: rotate(-14deg) translateX(-5px); } 100% { transform: rotate(14deg) translateX(5px); } }
+    @keyframes sp-salsa-arms { 0% { transform: rotate(-60deg); } 100% { transform: rotate(60deg); } }
+
+    .c-dance-13 .body-base { animation: bz-waggle-shimmy 0.18s ease-in-out infinite alternate; }
+    .c-dance-13 .wing-pair { animation: bz-wing-buzz 0.1s linear infinite alternate; }
+    @keyframes bz-waggle-shimmy { 0% { transform: translateX(-8px) rotate(-10deg); } 100% { transform: translateX(8px) rotate(10deg); } }
+
+    .c-dance-14 .body-base { animation: cr-shuffle-click 0.35s steps(3) infinite alternate; }
+    .c-dance-14 .arm-r { animation: cr-lever-bounce 0.35s steps(2) infinite alternate; }
+    @keyframes cr-shuffle-click { 0% { transform: translateX(-6px) rotate(-5deg); } 100% { transform: translateX(6px) rotate(5deg); } }
+
+    .c-dance-15 .body-base { animation: tk-haka-stomp 0.28s ease-in-out infinite alternate; }
+    .c-dance-15 .tongue-tiki { display: block !important; animation: tk-tongue-wag 0.28s ease-in-out infinite alternate; }
+    .c-dance-15 .arm-l { animation: tk-drum-l 0.28s ease-in-out infinite alternate; }
+    .c-dance-15 .arm-r { animation: tk-drum-r 0.28s ease-in-out infinite alternate; }
+    @keyframes tk-haka-stomp { 0% { transform: translateY(-6px) rotate(-6deg); } 100% { transform: translateY(2px) rotate(6deg); } }
+    @keyframes tk-tongue-wag { 0% { transform: scaleY(0.8); } 100% { transform: scaleY(1.3); } }
+    @keyframes tk-drum-l { 0% { transform: rotate(-60deg); } 100% { transform: rotate(20deg); } }
+    @keyframes tk-drum-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-60deg); } }
+
+    .c-dance-16 .body-base { animation: cl-scuttle-body 0.26s ease-in-out infinite alternate; }
+    .c-dance-16 .arm-l { animation: cl-claw-snap-l 0.26s ease-in-out infinite alternate; }
+    .c-dance-16 .arm-r { animation: cl-claw-snap-r 0.26s ease-in-out infinite alternate; }
+    @keyframes cl-scuttle-body { 0% { transform: translateX(-8px) rotate(-8deg); } 100% { transform: translateX(8px) rotate(8deg); } }
+    @keyframes cl-claw-snap-l { 0% { transform: rotate(-30deg); } 100% { transform: rotate(30deg); } }
+    @keyframes cl-claw-snap-r { 0% { transform: rotate(30deg); } 100% { transform: rotate(-30deg); } }
+
+    .c-dance-17 .tail-wiggle { animation: mm-fan-tail 0.25s ease-in-out infinite alternate; }
+    .c-dance-17 .body-base { animation: mm-paper-waltz 0.5s ease-in-out infinite alternate; }
+    @keyframes mm-fan-tail { 0% { transform: rotate(-40deg) scale(1.1); } 100% { transform: rotate(35deg) scale(0.9); } }
+    @keyframes mm-paper-waltz { 0% { transform: rotate(-10deg) translateY(-4px); } 100% { transform: rotate(10deg) translateY(4px); } }
+
+    .c-dance-18 .body-base { animation: fz-boogie-shake 0.22s ease-in-out infinite alternate; }
+    .c-dance-18 .arm-l { animation: fz-hand-l 0.22s ease-in-out infinite alternate; }
+    .c-dance-18 .arm-r { animation: fz-hand-r 0.22s ease-in-out infinite alternate; }
+    @keyframes fz-boogie-shake { 0% { transform: rotate(-15deg) scale(1.08, 0.92); } 100% { transform: rotate(15deg) scale(0.92, 1.08); } }
+    @keyframes fz-hand-l { 0% { transform: rotate(-70deg); } 100% { transform: rotate(30deg); } }
+    @keyframes fz-hand-r { 0% { transform: rotate(30deg); } 100% { transform: rotate(-70deg); } }
+
+    .c-dance-19 .party-tongue { display: block !important; animation: snp-tongue-flick 0.3s ease-in-out infinite alternate; }
+    .c-dance-19 .tail-wiggle { animation: snp-tail-swirl 0.3s ease-in-out infinite alternate; }
+    .c-dance-19 .body-base { animation: snp-disco-bounce 0.3s ease-in-out infinite alternate; }
+    @keyframes snp-tongue-flick { 0% { transform: scaleX(0.7); } 100% { transform: scaleX(1.4); } }
+    @keyframes snp-tail-swirl { 0% { transform: rotate(-35deg); } 100% { transform: rotate(35deg); } }
+    @keyframes snp-disco-bounce { 0% { transform: translateY(-5px) rotate(-6deg); } 100% { transform: translateY(3px) rotate(6deg); } }
+
+    .c-dance-20 .clock-hands { animation: bm-hands-fast 0.6s linear infinite; }
+    .c-dance-20 .body-base { animation: bm-tick-body 0.3s steps(2) infinite alternate; }
+    .c-dance-20 .clock-bell-l { animation: bm-bell-vibe-l 0.15s ease-in-out infinite alternate; }
+    .c-dance-20 .clock-bell-r { animation: bm-bell-vibe-r 0.15s ease-in-out infinite alternate; }
+    @keyframes bm-hands-fast { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+    @keyframes bm-tick-body { 0% { transform: rotate(-10deg); } 100% { transform: rotate(10deg); } }
+    @keyframes bm-bell-vibe-l { 0% { transform: rotate(-35deg); } 100% { transform: rotate(-25deg); } }
+    @keyframes bm-bell-vibe-r { 0% { transform: rotate(25deg); } 100% { transform: rotate(35deg); } }
+
+    .c-dance-21 .body-base { animation: pb-waddle-dance 0.34s ease-in-out infinite alternate; }
+    .c-dance-21 .arm-l { animation: pb-flipper-l 0.34s ease-in-out infinite alternate; }
+    .c-dance-21 .arm-r { animation: pb-flipper-r 0.34s ease-in-out infinite alternate; }
+    @keyframes pb-waddle-dance { 0% { transform: rotate(-16deg) translateX(-6px); } 100% { transform: rotate(16deg) translateX(6px); } }
+    @keyframes pb-flipper-l { 0% { transform: rotate(-45deg); } 100% { transform: rotate(20deg); } }
+    @keyframes pb-flipper-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-45deg); } }
+
+    .c-dance-22 .body-base { animation: gl-glitch-hop 0.24s steps(3) infinite alternate; }
+    .c-dance-22 .arm-l { animation: gl-arm-glitch-l 0.24s steps(2) infinite alternate; }
+    .c-dance-22 .arm-r { animation: gl-arm-glitch-r 0.24s steps(2) infinite alternate; }
+    @keyframes gl-glitch-hop { 0% { transform: translateY(0) skewX(-12deg); } 50% { transform: translateY(-8px) skewX(12deg); } 100% { transform: translateY(2px) skewX(0); } }
+    @keyframes gl-arm-glitch-l { 0% { transform: rotate(0); } 100% { transform: rotate(-90deg); } }
+    @keyframes gl-arm-glitch-r { 0% { transform: rotate(0); } 100% { transform: rotate(-90deg); } }
+
+    .c-dance-23 .body-base { animation: ct-sway-groove 0.4s ease-in-out infinite alternate; }
+    .c-dance-23 .arm-l { animation: ct-arm-sway-l 0.4s ease-in-out infinite alternate; }
+    .c-dance-23 .arm-r { animation: ct-arm-sway-r 0.4s ease-in-out infinite alternate; }
+    @keyframes ct-sway-groove { 0% { transform: rotate(-12deg); } 100% { transform: rotate(12deg); } }
+    @keyframes ct-arm-sway-l { 0% { transform: rotate(-30deg); } 100% { transform: rotate(30deg); } }
+    @keyframes ct-arm-sway-r { 0% { transform: rotate(30deg); } 100% { transform: rotate(-30deg); } }
+
+    .c-dance-24 .body-base { animation: nc-cha-cha 0.3s ease-in-out infinite alternate; }
+    .c-dance-24 .arm-l { animation: nc-wing-flap-l 0.3s ease-in-out infinite alternate; }
+    .c-dance-24 .arm-r { animation: nc-wing-flap-r 0.3s ease-in-out infinite alternate; }
+    @keyframes nc-cha-cha { 0% { transform: rotate(-14deg) translateY(-4px); } 100% { transform: rotate(14deg) translateY(2px); } }
+    @keyframes nc-wing-flap-l { 0% { transform: rotate(-45deg); } 100% { transform: rotate(20deg); } }
+    @keyframes nc-wing-flap-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-45deg); } }
+
+    .c-dance-25 .leg-l { animation: pip-tap-l 0.28s ease-in-out infinite alternate; }
+    .c-dance-25 .leg-r { animation: pip-tap-r 0.28s ease-in-out infinite alternate; }
+    .c-dance-25 .arm-r { animation: pip-wand-flourish 0.28s ease-in-out infinite alternate; }
+    @keyframes pip-tap-l { 0% { transform: translateY(-8px) rotate(-15deg); } 100% { transform: translateY(0); } }
+    @keyframes pip-tap-r { 0% { transform: translateY(0); } 100% { transform: translateY(-8px) rotate(15deg); } }
+    @keyframes pip-wand-flourish { 0% { transform: rotate(-30deg); } 100% { transform: rotate(45deg); } }
+
+    .c-dance-26 .leg-l { animation: wd-stomp-boot-l 0.3s ease-in-out infinite alternate; }
+    .c-dance-26 .leg-r { animation: wd-stomp-boot-r 0.3s ease-in-out infinite alternate; }
+    .c-dance-26 .body-base { animation: wd-waddle-stomp 0.3s ease-in-out infinite alternate; }
+    @keyframes wd-stomp-boot-l { 0% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
+    @keyframes wd-stomp-boot-r { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
+    @keyframes wd-waddle-stomp { 0% { transform: rotate(-10deg); } 100% { transform: rotate(10deg); } }
+
+    .c-dance-27 .body-base { animation: yo-tumble-spin 0.6s ease-in-out infinite alternate; }
+    .c-dance-27 .tail-wiggle { animation: yo-tail-whip 0.3s ease-in-out infinite alternate; }
+    @keyframes yo-tumble-spin { 0% { transform: rotate(-25deg) translateY(-6px); } 100% { transform: rotate(25deg) translateY(4px); } }
+    @keyframes yo-tail-whip { 0% { transform: scaleX(0.8) rotate(-20deg); } 100% { transform: scaleX(1.3) rotate(30deg); } }
+
+    .c-dance-28 .body-base { animation: tb-drift-donut 0.4s ease-in-out infinite alternate; }
+    .c-dance-28 .turbo-flame { display: block !important; animation: tb-flame-burst 0.2s ease-in-out infinite alternate; }
+    @keyframes tb-drift-donut { 0% { transform: rotate(-16deg) translateX(-8px); } 100% { transform: rotate(16deg) translateX(8px); } }
+    @keyframes tb-flame-burst { 0% { transform: scale(0.8); } 100% { transform: scale(1.5); } }
+
+    .c-dance-29 .body-base { animation: lm-abyss-waltz 0.5s ease-in-out infinite alternate; }
+    .c-dance-29 .angler-lantern { animation: lm-lantern-pulse 0.25s ease-in-out infinite alternate; }
+    @keyframes lm-abyss-waltz { 0% { transform: rotate(-15deg) translateY(-8px); } 100% { transform: rotate(15deg) translateY(4px); } }
+    @keyframes lm-lantern-pulse { 0% { transform: scale(0.9); } 100% { transform: scale(1.4); } }
+
+    .c-dance-30 .body-base { animation: um-glide-body 0.4s ease-in-out infinite alternate; }
+    .c-dance-30 .candle-flame { animation: um-flame-flare 0.2s ease-in-out infinite alternate; }
+    @keyframes um-glide-body { 0% { transform: rotate(-14deg) translateY(-6px); } 100% { transform: rotate(14deg) translateY(4px); } }
+    @keyframes um-flame-flare { 0% { transform: scale(0.8) rotate(-10deg); } 100% { transform: scale(1.4) rotate(10deg); } }
+
+    .c-dance-31 .chest-lid { animation: gj-lid-clack 0.24s steps(2) infinite alternate; transform-origin: 50px 44px; }
+    .c-dance-31 .mimic-tongue { animation: gj-tongue-wave 0.24s ease-in-out infinite alternate; }
+    .c-dance-31 .body-base { animation: gj-dance-body 0.24s ease-in-out infinite alternate; }
+    @keyframes gj-lid-clack { 0% { transform: rotate(0); } 100% { transform: rotate(-35deg); } }
+    @keyframes gj-tongue-wave { 0% { transform: scaleX(0.7) rotate(-20deg); } 100% { transform: scaleX(1.3) rotate(20deg); } }
+    @keyframes gj-dance-body { 0% { transform: translateY(-4px) rotate(-6deg); } 100% { transform: translateY(2px) rotate(6deg); } }
+
+    .c-dance-32 .saturn-rings { animation: as-orbit-spin 0.5s linear infinite; transform-origin: 50px 22px; }
+    .c-dance-32 .galaxy-spiral { animation: as-galaxy-spin 0.8s linear infinite; }
+    .c-dance-32 .body-base { animation: as-dance-fox 0.35s ease-in-out infinite alternate; }
+    @keyframes as-orbit-spin { 0% { transform: rotate(-15deg) scaleX(1); } 50% { transform: rotate(165deg) scaleX(0.8); } 100% { transform: rotate(345deg) scaleX(1); } }
+    @keyframes as-galaxy-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+    @keyframes as-dance-fox { 0% { transform: translateY(-6px) rotate(-8deg); } 100% { transform: translateY(2px) rotate(8deg); } }
+
+    .c-dance-33 .arm-l { animation: ar-wing-l 0.28s ease-in-out infinite alternate; }
+    .c-dance-33 .arm-r { animation: ar-wing-r 0.28s ease-in-out infinite alternate; }
+    .c-dance-33 .body-base { animation: ar-tome-twist 0.28s ease-in-out infinite alternate; }
+    @keyframes ar-wing-l { 0% { transform: scaleX(0.8) rotate(-30deg); } 100% { transform: scaleX(1.2) rotate(20deg); } }
+    @keyframes ar-wing-r { 0% { transform: scaleX(0.8) rotate(30deg); } 100% { transform: scaleX(1.2) rotate(-20deg); } }
+    @keyframes ar-tome-twist { 0% { transform: rotate(-10deg) scale(0.96); } 100% { transform: rotate(10deg) scale(1.04); } }
+
+    .c-dance-34 .head-node { animation: zp-head-twist 0.6s steps(3) infinite alternate; }
+    .c-dance-34 .arm-l { animation: zp-wing-sway-l 0.3s ease-in-out infinite alternate; }
+    .c-dance-34 .arm-r { animation: zp-wing-sway-r 0.3s ease-in-out infinite alternate; }
+    @keyframes zp-head-twist { 0% { transform: rotate(0); } 50% { transform: rotate(-90deg); } 100% { transform: rotate(180deg); } }
+    @keyframes zp-wing-sway-l { 0% { transform: rotate(-40deg); } 100% { transform: rotate(20deg); } }
+    @keyframes zp-wing-sway-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-40deg); } }
+
+    .c-dance-35 .arm-l, .c-dance-35 .leg-l { animation: sp-skitter-l 0.14s ease-in-out infinite alternate; }
+    .c-dance-35 .arm-r, .c-dance-35 .leg-r { animation: sp-skitter-r 0.14s ease-in-out infinite alternate; }
+    .c-dance-35 .body-base { animation: sp-body-shimmy 0.14s ease-in-out infinite alternate; }
+    @keyframes sp-skitter-l { 0% { transform: translateY(-6px) rotate(-15deg); } 100% { transform: translateY(0); } }
+    @keyframes sp-skitter-r { 0% { transform: translateY(0); } 100% { transform: translateY(-6px) rotate(15deg); } }
+    @keyframes sp-body-shimmy { 0% { transform: rotate(-8deg) translateX(-4px); } 100% { transform: rotate(8deg) translateX(4px); } }
+
+    /* =========================================================================
+       36 LEBENDIGE SCHLAF-POSEN (💤) - KEINE STATISCHEN BILDER MEHR!
+       JEDES WESEN ATMET, BEWEGT SICH UND SCHLÄFT CHARAKTERTYPISCH
+       ========================================================================= */
+    .sleep-0 .body-base { animation: p-melt-flat 2.2s ease-in-out infinite; }
+    @keyframes p-melt-flat { 0%, 100% { transform: scale(1.4, 0.35) translateY(45px); } 50% { transform: scale(1.45, 0.3) translateY(48px); } }
+
+    .sleep-1 .body-base { animation: s-sleep-breathe 2.4s ease-in-out infinite; }
+    .sleep-1 .tail-wiggle { animation: s-tail-sleep 2.4s ease-in-out infinite; }
+    @keyframes s-sleep-breathe { 0%, 100% { transform: translateY(6px) scale(1, 0.96); } 50% { transform: translateY(11px) scale(1.03, 0.93); } }
+    @keyframes s-tail-sleep { 0%, 100% { transform: rotate(-30deg) translateY(4px); } 50% { transform: rotate(-20deg) translateY(2px); } }
+
+    .sleep-2 .body-base { animation: f-hide-under-cap 2.2s ease-in-out infinite; }
+    @keyframes f-hide-under-cap { 0%, 100% { transform: scaleY(0.6) translateY(24px); } 50% { transform: scaleY(0.55) translateY(26px); } }
+
+    .sleep-3 .body-base { animation: b-sink-deep 2.4s ease-in-out infinite; }
+    @keyframes b-sink-deep { 0%, 100% { transform: translateY(18px) scale(0.9); } 50% { transform: translateY(12px) scale(0.94); } }
+
+    .sleep-4 .snot-bubble-node { display: block !important; animation: snot-expand 2.5s ease-in-out infinite; transform-origin: 54px 54px; }
+    .sleep-4 .body-base { animation: bear-sleep-heave 2.5s ease-in-out infinite; }
+    @keyframes snot-expand { 0%, 100% { transform: scale(0.2); opacity: 0.2; } 50% { transform: scale(1.8); opacity: 0.95; } }
+    @keyframes bear-sleep-heave { 0%, 100% { transform: translateY(8px) scale(1, 0.96); } 50% { transform: translateY(13px) scale(1.04, 0.92); } }
+
+    .sleep-5 .screen-text { display: block !important; }
+    .sleep-5 .eye-normal { display: none !important; }
+    .sleep-5 .body-base { animation: bp-standby-vibe 2s ease-in-out infinite; }
+    @keyframes bp-standby-vibe { 0%, 100% { transform: translateY(6px); } 50% { transform: translateY(10px); } }
+
+    .sleep-6 .wing-l { animation: d-sleep-wing-l 2.4s ease-in-out infinite; }
+    .sleep-6 .wing-r { animation: d-sleep-wing-r 2.4s ease-in-out infinite; }
+    .sleep-6 .body-base { animation: d-sleep-breathe 2.4s ease-in-out infinite; }
+    @keyframes d-sleep-breathe { 0%, 100% { transform: translateY(8px) scale(0.96); } 50% { transform: translateY(13px) scale(0.94); } }
+    @keyframes d-sleep-wing-l { 0%, 100% { transform: rotate(35deg) scaleX(1.3) translateX(8px); } 50% { transform: rotate(28deg) scaleX(1.25) translateX(6px); } }
+    @keyframes d-sleep-wing-r { 0%, 100% { transform: rotate(20deg) scaleX(1.2) translateX(4px); } 50% { transform: rotate(15deg) scaleX(1.15) translateX(3px); } }
+
+    .sleep-7 .body-base { animation: n-cloud-nap 2.5s ease-in-out infinite; }
+    @keyframes n-cloud-nap { 0%, 100% { transform: translateY(14px) scale(0.85); opacity: 0.55; } 50% { transform: translateY(8px) scale(0.9); opacity: 0.75; } }
+
+    .sleep-8 .body-base { animation: z-sleep 2.2s ease-in-out infinite; }
+    @keyframes z-sleep { 0%, 100% { transform: scale(1.1, 0.6) translateY(24px); } 50% { transform: scale(1.15, 0.55) translateY(26px); } }
+
+    .sleep-9 .body-base { animation: axo-aquarium-float 2.8s ease-in-out infinite alternate; }
+    @keyframes axo-aquarium-float { 0% { transform: translateY(10px) rotate(4deg); } 100% { transform: translateY(18px) rotate(-4deg); } }
+
+    .sleep-10 .body-base { animation: gr-sleep-heave 2.6s ease-in-out infinite; }
+    @keyframes gr-sleep-heave { 0%, 100% { transform: translateY(16px) scale(1.05, 0.85); } 50% { transform: translateY(22px) scale(1.08, 0.8); } }
+
+    .sleep-11 .body-base { animation: mo-sleep-deflate 2.4s ease-in-out infinite; }
+    @keyframes mo-sleep-deflate { 0%, 100% { transform: scale(1.2, 0.6) translateY(22px); } 50% { transform: scale(1.26, 0.54) translateY(25px); } }
+
+    .sleep-12 .body-base { animation: sp-root-sleep 2.5s ease-in-out infinite; }
+    .sleep-12 .leaf-top { animation: sp-leaf-droop-sleep 2.5s ease-in-out infinite; }
+    @keyframes sp-root-sleep { 0%, 100% { transform: translateY(14px) scale(0.92); } 50% { transform: translateY(18px) scale(0.96); } }
+    @keyframes sp-leaf-droop-sleep { 0%, 100% { transform: rotate(-10deg) scale(0.9); } 50% { transform: rotate(10deg) scale(0.95); } }
+
+    .sleep-13 .body-base { animation: bz-sleep-bob 2.4s ease-in-out infinite; }
+    .sleep-13 .wing-pair { animation: bz-sleep-twitch 1.8s ease-in-out infinite; }
+    @keyframes bz-sleep-bob { 0%, 100% { transform: translateY(12px); } 50% { transform: translateY(20px); } }
+    @keyframes bz-sleep-twitch { 0%, 80%, 100% { transform: scaleY(0.5); } 85%, 95% { transform: scaleY(0.9); } }
+
+    .sleep-14 .body-base { animation: cr-sleep-hum 2.4s ease-in-out infinite; }
+    @keyframes cr-sleep-hum { 0%, 100% { transform: translateY(10px) scale(0.96); } 50% { transform: translateY(14px) scale(0.98); } }
+
+    .sleep-15 .body-base { animation: tk-sleep-rock 2.6s ease-in-out infinite alternate; }
+    @keyframes tk-sleep-rock { 0% { transform: translateY(12px) rotate(-6deg); } 100% { transform: translateY(16px) rotate(6deg); } }
+
+    .sleep-16 .body-base { animation: cl-cup-sleep 2.5s ease-in-out infinite; }
+    .sleep-16 .arm-l { animation: cl-claw-snooze-l 2.5s ease-in-out infinite; }
+    .sleep-16 .arm-r { animation: cl-claw-snooze-r 2.5s ease-in-out infinite; }
+    @keyframes cl-cup-sleep { 0%, 100% { transform: translateY(12px) scale(0.92); } 50% { transform: translateY(16px) scale(0.95); } }
+    @keyframes cl-claw-snooze-l { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+    @keyframes cl-claw-snooze-r { 0%, 100% { transform: rotate(10deg); } 50% { transform: rotate(-10deg); } }
+
+    .sleep-17 .body-base { animation: mm-origami-sleep 2.5s ease-in-out infinite; }
+    .sleep-17 .tail-wiggle { animation: mm-tail-sleep 2.5s ease-in-out infinite; }
+    @keyframes mm-origami-sleep { 0%, 100% { transform: translateY(10px) scaleY(0.85); } 50% { transform: translateY(15px) scaleY(0.8); } }
+    @keyframes mm-tail-sleep { 0%, 100% { transform: rotate(20deg); } 50% { transform: rotate(35deg); } }
+
+    .sleep-18 .body-base { animation: fz-sleep-ball 2.2s ease-in-out infinite; }
+    @keyframes fz-sleep-ball { 0%, 100% { transform: translateY(12px) scale(0.9); } 50% { transform: translateY(18px) scale(0.94); } }
+
+    .sleep-19 .body-base { animation: snp-sleep-breathe 2.5s ease-in-out infinite; }
+    .sleep-19 .tail-wiggle { animation: snp-tail-sleep 2.5s ease-in-out infinite; }
+    @keyframes snp-sleep-breathe { 0%, 100% { transform: translateY(12px) scale(0.94); } 50% { transform: translateY(16px) scale(0.98); } }
+    @keyframes snp-tail-sleep { 0%, 100% { transform: rotate(15deg); } 50% { transform: rotate(35deg); } }
+
+    .sleep-20 .clock-hands { transform: rotate(180deg); }
+    .sleep-20 .body-base { animation: bm-sleep-tick 2s ease-in-out infinite; }
+    @keyframes bm-sleep-tick { 0%, 100% { transform: translateY(8px) scale(0.96); } 50% { transform: translateY(12px) scale(1); } }
+
+    .sleep-21 .body-base { animation: pb-sleep-sway 2.6s ease-in-out infinite alternate; }
+    @keyframes pb-sleep-sway { 0% { transform: translateY(10px) rotate(-4deg); } 100% { transform: translateY(15px) rotate(4deg); } }
+
+    .sleep-22 .body-base { animation: gl-sleep-crt 1.8s steps(3) infinite; }
+    @keyframes gl-sleep-crt { 0%, 100% { transform: translateY(10px) scaleY(0.7); } 50% { transform: translateY(14px) scaleY(0.65); } }
+
+    .sleep-23 .body-base { animation: ct-sleep-nod 2.5s ease-in-out infinite alternate; }
+    .sleep-23 .flower-crown { animation: ct-flower-sleep 2.5s ease-in-out infinite; }
+    @keyframes ct-sleep-nod { 0% { transform: translateY(8px) rotate(-4deg); } 100% { transform: translateY(12px) rotate(4deg); } }
+    @keyframes ct-flower-sleep { 0%, 100% { transform: scale(0.85); } 50% { transform: scale(0.7); } }
+
+    .sleep-24 .arm-l { transform: rotate(45deg); }
+    .sleep-24 .arm-r { transform: rotate(-45deg); }
+    .sleep-24 .body-base { animation: nc-sleep-snore 2.5s ease-in-out infinite; }
+    @keyframes nc-sleep-snore { 0%, 100% { transform: translateY(10px) scale(0.94); } 50% { transform: translateY(15px) scale(0.98); } }
+
+    .sleep-25 .top-hat { transform: translateY(14px); }
+    .sleep-25 .body-base { animation: pip-sleep-pulse 2.5s ease-in-out infinite; }
+    @keyframes pip-sleep-pulse { 0%, 100% { transform: translateY(8px) scale(0.95); } 50% { transform: translateY(13px) scale(1); } }
+
+    .sleep-26 .body-base { animation: wd-sleep-heave 2.5s ease-in-out infinite; }
+    @keyframes wd-sleep-heave { 0%, 100% { transform: translateY(12px) scale(0.94); } 50% { transform: translateY(16px) scale(0.98); } }
+
+    .sleep-27 .body-base { animation: yo-sleep-purr 2.2s ease-in-out infinite; }
+    .sleep-27 .tail-wiggle { animation: yo-thread-sleep 2.2s ease-in-out infinite; }
+    @keyframes yo-sleep-purr { 0%, 100% { transform: translateY(12px) scale(1.05, 0.9); } 50% { transform: translateY(16px) scale(1.08, 0.86); } }
+    @keyframes yo-thread-sleep { 0%, 100% { transform: scale(0.9); } 50% { transform: scale(1.1); } }
+
+    .sleep-28 .body-base { animation: tb-sleep-rumble 2s ease-in-out infinite; }
+    @keyframes tb-sleep-rumble { 0%, 100% { transform: translateY(6px); } 50% { transform: translateY(10px); } }
+
+    .sleep-29 .body-base { animation: lm-sleep-glow 2.5s ease-in-out infinite; }
+    .sleep-29 .angler-lantern { animation: lm-lantern-sleep 2.5s ease-in-out infinite; }
+    @keyframes lm-sleep-glow { 0%, 100% { transform: translateY(12px); opacity: 0.7; } 50% { transform: translateY(18px); opacity: 1; } }
+    @keyframes lm-lantern-sleep { 0%, 100% { transform: scale(0.65); opacity: 0.3; } 50% { transform: scale(1.1); opacity: 0.9; } }
+
+    .sleep-30 .body-base { animation: um-sleep-smoke 2.5s ease-in-out infinite; }
+    .sleep-30 .candle-flame { animation: um-sleep-flame 2.5s ease-in-out infinite; }
+    @keyframes um-sleep-smoke { 0%, 100% { transform: translateY(14px) scale(1.15, 0.65); } 50% { transform: translateY(19px) scale(1.2, 0.6); } }
+    @keyframes um-sleep-flame { 0%, 100% { transform: scale(0.3) translateY(4px); opacity: 0.3; } 50% { transform: scale(0.6) translateY(2px); opacity: 0.8; } }
+
+    .sleep-31 .mimic-tongue { display: none !important; }
+    .sleep-31 .body-base { animation: gj-sleep-creak 2.6s ease-in-out infinite; }
+    @keyframes gj-sleep-creak { 0%, 100% { transform: translateY(10px) scale(0.96); } 50% { transform: translateY(15px) scale(0.99); } }
+
+    .sleep-32 .saturn-rings { animation: as-sleep-rings 2.5s ease-in-out infinite; }
+    .sleep-32 .body-base { animation: as-sleep-breathe 2.5s ease-in-out infinite; }
+    @keyframes as-sleep-rings { 0%, 100% { transform: rotate(-5deg) scale(0.75) translateY(10px); } 50% { transform: rotate(5deg) scale(0.9) translateY(14px); } }
+    @keyframes as-sleep-breathe { 0%, 100% { transform: translateY(10px) scale(0.95); } 50% { transform: translateY(15px) scale(0.99); } }
+
+    .sleep-33 .body-base { animation: ar-sleep-levitate 2.5s ease-in-out infinite; }
+    @keyframes ar-sleep-levitate { 0%, 100% { transform: translateY(12px) scale(0.95); } 50% { transform: translateY(17px) scale(0.98); } }
+
+    .sleep-34 .arm-l { transform: rotate(45deg) translateX(8px); }
+    .sleep-34 .body-base { animation: zp-sleep-feather 2.6s ease-in-out infinite; }
+    @keyframes zp-sleep-feather { 0%, 100% { transform: translateY(10px) scale(0.95); } 50% { transform: translateY(15px) scale(0.99); } }
+
+    .sleep-35 .arm-l, .sleep-35 .leg-l { animation: sp-sleep-leg-l 2.4s ease-in-out infinite; }
+    .sleep-35 .arm-r, .sleep-35 .leg-r { animation: sp-sleep-leg-r 2.4s ease-in-out infinite; }
+    .sleep-35 .body-base { animation: sp-sleep-breathing 2.4s ease-in-out infinite; }
+    @keyframes sp-sleep-leg-l { 0%, 100% { transform: scale(0.7) rotate(20deg); } 50% { transform: scale(0.85) rotate(10deg); } }
+    @keyframes sp-sleep-leg-r { 0%, 100% { transform: scale(0.7) rotate(-20deg); } 50% { transform: scale(0.85) rotate(-10deg); } }
+    @keyframes sp-sleep-breathing { 0%, 100% { transform: translateY(12px) scale(0.9); } 50% { transform: translateY(16px) scale(0.96); } }
+
+    /* =========================================================================
+       36 DYNAMISCH PUMPENDE JUBEL-REAKTIONEN (🎉) - JEDES WESEN PUMPT & JUBELT!
+       ========================================================================= */
+    .cheer-0 .body-base { animation: p-cheer-pump 0.3s ease-in-out infinite alternate; }
+    .cheer-0 .arm-l { animation: p-cheer-arm-l 0.3s ease-in-out infinite alternate; }
+    .cheer-0 .arm-r { animation: p-cheer-arm-r 0.3s ease-in-out infinite alternate; }
+    @keyframes p-cheer-pump { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-14px); } }
+    @keyframes p-cheer-arm-l { 0% { transform: rotate(110deg); } 100% { transform: rotate(150deg); } }
+    @keyframes p-cheer-arm-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-150deg); } }
+
+    .cheer-1 .arm-l { animation: s-paw-l 0.25s ease-in-out infinite alternate; }
+    .cheer-1 .arm-r { animation: s-paw-r 0.25s ease-in-out infinite alternate; }
+    .cheer-1 .body-base { animation: s-cheer-body 0.25s ease-in-out infinite alternate; }
+    @keyframes s-paw-l { 0% { transform: rotate(110deg); } 100% { transform: rotate(155deg) translateY(-8px); } }
+    @keyframes s-paw-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-155deg) translateY(-8px); } }
+    @keyframes s-cheer-body { 0% { transform: translateY(0); } 100% { transform: translateY(-12px) scale(1.15); } }
+
+    .cheer-2 .frog-throat { display: block !important; }
+    .cheer-2 .arm-l { animation: f-cheer-arm-l 0.28s ease-in-out infinite alternate; }
+    .cheer-2 .arm-r { animation: f-cheer-arm-r 0.28s ease-in-out infinite alternate; }
+    .cheer-2 .body-base { animation: f-cheer-body 0.28s ease-in-out infinite alternate; }
+    @keyframes f-cheer-arm-l { 0% { transform: rotate(110deg); } 100% { transform: rotate(145deg); } }
+    @keyframes f-cheer-arm-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-145deg); } }
+    @keyframes f-cheer-body { 0% { transform: translateY(0); } 100% { transform: translateY(-14px) scale(1.18); } }
+
+    .cheer-3 .bubbles-burst { display: block !important; }
+    .cheer-3 .body-base { animation: b-bounce 0.26s ease-in-out infinite alternate; }
+    @keyframes b-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-16px); } }
+
+    .cheer-4 .arm-l { animation: bear-clap-l 0.22s ease-in-out infinite alternate; transform-origin: 28px 52px; }
+    .cheer-4 .arm-r { animation: bear-clap-r 0.22s ease-in-out infinite alternate; transform-origin: 72px 52px; }
+    .cheer-4 .body-base { animation: bear-cheer-body 0.22s ease-in-out infinite alternate; }
+    @keyframes bear-clap-l { 0% { transform: rotate(20deg); } 100% { transform: rotate(70deg) translateX(12px); } }
+    @keyframes bear-clap-r { 0% { transform: rotate(-20deg); } 100% { transform: rotate(-70deg) translateX(-12px); } }
+    @keyframes bear-cheer-body { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
+
+    .cheer-5 .ears-spin { animation: prop-spin 0.2s linear infinite; transform-origin: 50px 20px; }
+    .cheer-5 .screen-win { display: block !important; }
+    .cheer-5 .eye-normal { display: none !important; }
+    .cheer-5 .body-base { animation: bp-cheer-hop 0.2s ease-in-out infinite alternate; }
+    @keyframes prop-spin { 0% { transform: rotateY(0); } 100% { transform: rotateY(360deg); } }
+    @keyframes bp-cheer-hop { 0% { transform: translateY(0); } 100% { transform: translateY(-12px) scale(1.15); } }
+
+    .cheer-6 .fire-blast { display: block !important; animation: fire-flicker 0.18s ease-in-out infinite alternate; }
+    .cheer-6 .arm-r { animation: ch-cheer-arm 0.22s ease-in-out infinite alternate; }
+    .cheer-6 .body-base { animation: ch-cheer-hop 0.22s ease-in-out infinite alternate; }
+    @keyframes fire-flicker { 0% { transform: scale(0.9); } 100% { transform: scale(1.4) translateY(-5px); } }
+    @keyframes ch-cheer-arm { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-140deg); } }
+    @keyframes ch-cheer-hop { 0% { transform: translateY(0); } 100% { transform: translateY(-12px); } }
+
+    .cheer-7 .sun-glow { transform: scale(1.8); }
+    .cheer-7 .body-base { animation: n-pop 0.3s ease-in-out infinite alternate; }
+    @keyframes n-pop { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-20px); } }
+
+    .cheer-8 .disco-eye { display: block !important; }
+    .cheer-8 .eye-normal { display: none !important; }
+    .cheer-8 .body-base { animation: z-cheer-bounce 0.28s ease-in-out infinite alternate; }
+    @keyframes z-cheer-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.22) translateY(-14px); } }
+
+    .cheer-9 .body-base { animation: axo-twirl-cheer 0.5s ease-in-out infinite alternate; }
+    .cheer-9 .star-sparkles { display: block !important; }
+    @keyframes axo-twirl-cheer { 0% { transform: rotateY(0) translateY(0); } 100% { transform: rotateY(180deg) translateY(-22px) scale(1.2); } }
+
+    .cheer-10 .arm-l { animation: gr-cheer-l 0.25s ease-in-out infinite alternate; }
+    .cheer-10 .arm-r { animation: gr-cheer-r 0.25s ease-in-out infinite alternate; }
+    .cheer-10 .body-base { animation: gr-cheer-bounce 0.25s ease-in-out infinite alternate; }
+    @keyframes gr-cheer-l { 0% { transform: rotate(100deg); } 100% { transform: rotate(145deg); } }
+    @keyframes gr-cheer-r { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-145deg); } }
+    @keyframes gr-cheer-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.2) translateY(-12px); } }
+
+    .cheer-11 .arm-r { animation: mo-cheer-arm 0.24s ease-in-out infinite alternate; }
+    .cheer-11 .body-base { animation: mo-cheer-puff 0.24s ease-in-out infinite alternate; }
+    @keyframes mo-cheer-arm { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-160deg); } }
+    @keyframes mo-cheer-puff { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-15px); } }
+
+    .cheer-12 .arm-l { animation: sp-cheer-l 0.26s ease-in-out infinite alternate; }
+    .cheer-12 .arm-r { animation: sp-cheer-r 0.26s ease-in-out infinite alternate; }
+    .cheer-12 .leaf-top { animation: sp-leaf-spin 0.22s linear infinite; }
+    .cheer-12 .body-base { animation: sp-cheer-bounce 0.26s ease-in-out infinite alternate; }
+    @keyframes sp-cheer-l { 0% { transform: rotate(100deg); } 100% { transform: rotate(140deg); } }
+    @keyframes sp-cheer-r { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-140deg); } }
+    @keyframes sp-leaf-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+    @keyframes sp-cheer-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.22) translateY(-14px); } }
+
+    .cheer-13 .wing-pair { animation: bz-wing-buzz 0.06s linear infinite alternate; }
+    .cheer-13 .body-base { animation: bz-cheer-loop 0.35s ease-in-out infinite alternate; }
+    @keyframes bz-cheer-loop { 0% { transform: translateY(0); } 100% { transform: translateY(-18px) scale(1.25); } }
+
+    .cheer-14 .toast-popup { display: block !important; animation: cr-toast-pop 0.25s ease-in-out infinite alternate; }
+    .cheer-14 .body-base { animation: cr-cheer-jump 0.25s ease-in-out infinite alternate; }
+    @keyframes cr-toast-pop { 0% { transform: translateY(0); } 100% { transform: translateY(-14px); } }
+    @keyframes cr-cheer-jump { 0% { transform: scale(1); } 100% { transform: scale(1.15) translateY(-12px); } }
+
+    .cheer-15 .arm-l { animation: tk-cheer-l 0.24s ease-in-out infinite alternate; }
+    .cheer-15 .arm-r { animation: tk-cheer-r 0.24s ease-in-out infinite alternate; }
+    .cheer-15 .feather-mid { animation: tk-feather-puff 0.24s ease-in-out infinite alternate; }
+    .cheer-15 .body-base { animation: tk-cheer-hop 0.24s ease-in-out infinite alternate; }
+    @keyframes tk-cheer-l { 0% { transform: rotate(100deg); } 100% { transform: rotate(145deg); } }
+    @keyframes tk-cheer-r { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-145deg); } }
+    @keyframes tk-feather-puff { 0% { transform: scale(1); } 100% { transform: scale(1.5) translateY(-8px); } }
+    @keyframes tk-cheer-hop { 0% { transform: scale(1); } 100% { transform: scale(1.2) translateY(-14px); } }
+
+    .cheer-16 .arm-l { animation: cl-claw-cheer-l 0.2s ease-in-out infinite alternate; }
+    .cheer-16 .arm-r { animation: cl-claw-cheer-r 0.2s ease-in-out infinite alternate; }
+    .cheer-16 .body-base { animation: cl-cheer-hop 0.2s ease-in-out infinite alternate; }
+    @keyframes cl-claw-cheer-l { 0% { transform: rotate(-40deg); } 100% { transform: rotate(30deg) translateY(-10px); } }
+    @keyframes cl-claw-cheer-r { 0% { transform: rotate(40deg); } 100% { transform: rotate(-30deg) translateY(-10px); } }
+    @keyframes cl-cheer-hop { 0% { transform: scale(1); } 100% { transform: scale(1.2) translateY(-12px); } }
+
+    .cheer-17 .tail-wiggle { animation: mm-fan-tail 0.16s ease-in-out infinite alternate; }
+    .cheer-17 .body-base { animation: mm-paper-spin 0.4s ease-in-out infinite alternate; }
+    @keyframes mm-paper-spin { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-16px) rotate(14deg); } }
+
+    .cheer-18 .arm-l { animation: fz-cheer-l 0.22s ease-in-out infinite alternate; }
+    .cheer-18 .arm-r { animation: fz-cheer-r 0.22s ease-in-out infinite alternate; }
+    .cheer-18 .body-base { animation: fz-cheer-pop 0.22s ease-in-out infinite alternate; }
+    @keyframes fz-cheer-l { 0% { transform: rotate(110deg); } 100% { transform: rotate(155deg); } }
+    @keyframes fz-cheer-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-155deg); } }
+    @keyframes fz-cheer-pop { 0% { transform: scale(1); } 100% { transform: scale(1.35) translateY(-18px); } }
+
+    .cheer-19 .party-tongue { display: block !important; }
+    .cheer-19 .body-base { animation: snp-cheer-jump 0.26s ease-in-out infinite alternate; }
+    @keyframes snp-cheer-jump { 0% { transform: scale(1); } 100% { transform: scale(1.22) translateY(-14px); } }
+
+    .cheer-20 .alarm-rings { display: block !important; }
+    .cheer-20 .clock-bell-l { animation: bm-bell-vibe-l 0.08s ease-in-out infinite alternate; }
+    .cheer-20 .clock-bell-r { animation: bm-bell-vibe-r 0.08s ease-in-out infinite alternate; }
+    .cheer-20 .arm-l { animation: bm-cheer-l 0.22s ease-in-out infinite alternate; }
+    .cheer-20 .arm-r { animation: bm-cheer-r 0.22s ease-in-out infinite alternate; }
+    .cheer-20 .body-base { animation: bm-cheer-bounce 0.22s ease-in-out infinite alternate; }
+    @keyframes bm-cheer-l { 0% { transform: rotate(100deg); } 100% { transform: rotate(145deg); } }
+    @keyframes bm-cheer-r { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-145deg); } }
+    @keyframes bm-cheer-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.2) translateY(-14px); } }
+
+    .cheer-21 .arm-l { animation: pb-flipper-l 0.2s ease-in-out infinite alternate; }
+    .cheer-21 .arm-r { animation: pb-flipper-r 0.2s ease-in-out infinite alternate; }
+    .cheer-21 .body-base { animation: pb-cheer-belly 0.26s ease-in-out infinite alternate; }
+    @keyframes pb-cheer-belly { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-16px); } }
+
+    .cheer-22 .body-base { animation: gl-glitch-win 0.18s steps(2) infinite alternate; }
+    @keyframes gl-glitch-win { 0% { transform: scale(1) translateY(0); } 100% { transform: scale(1.3) translateY(-16px); } }
+
+    .cheer-23 .flower-crown { animation: ct-flower-bloom 0.25s ease-in-out infinite alternate; }
+    .cheer-23 .arm-l { animation: ct-cheer-l 0.25s ease-in-out infinite alternate; }
+    .cheer-23 .arm-r { animation: ct-cheer-r 0.25s ease-in-out infinite alternate; }
+    .cheer-23 .body-base { animation: ct-cheer-hop 0.25s ease-in-out infinite alternate; }
+    @keyframes ct-flower-bloom { 0% { transform: scale(1); } 100% { transform: scale(1.5) translateY(-6px); } }
+    @keyframes ct-cheer-l { 0% { transform: rotate(90deg); } 100% { transform: rotate(135deg); } }
+    @keyframes ct-cheer-r { 0% { transform: rotate(-90deg); } 100% { transform: rotate(-135deg); } }
+    @keyframes ct-cheer-hop { 0% { transform: scale(1); } 100% { transform: scale(1.2) translateY(-12px); } }
+
+    .cheer-24 .arm-l { animation: nc-cheer-l 0.25s ease-in-out infinite alternate; }
+    .cheer-24 .arm-r { animation: nc-cheer-r 0.25s ease-in-out infinite alternate; }
+    .cheer-24 .body-base { animation: nc-cheer-pump 0.25s ease-in-out infinite alternate; }
+    @keyframes nc-cheer-l { 0% { transform: rotate(20deg); } 100% { transform: rotate(60deg); } }
+    @keyframes nc-cheer-r { 0% { transform: rotate(-20deg); } 100% { transform: rotate(-60deg); } }
+    @keyframes nc-cheer-pump { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-16px); } }
+
+    .cheer-25 .arm-r { animation: pip-cheer-wand 0.26s ease-in-out infinite alternate; }
+    .cheer-25 .body-base { animation: pip-cheer-twist 0.35s ease-in-out infinite alternate; }
+    @keyframes pip-cheer-wand { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-160deg); } }
+    @keyframes pip-cheer-twist { 0% { transform: scale(1) rotate(0); } 100% { transform: scale(1.25) rotate(18deg) translateY(-15px); } }
+
+    .cheer-26 .arm-l { animation: wd-cheer-l 0.25s ease-in-out infinite alternate; }
+    .cheer-26 .arm-r { animation: wd-cheer-r 0.25s ease-in-out infinite alternate; }
+    .cheer-26 .body-base { animation: wd-cheer-hop 0.25s ease-in-out infinite alternate; }
+    @keyframes wd-cheer-l { 0% { transform: rotate(100deg); } 100% { transform: rotate(145deg); } }
+    @keyframes wd-cheer-r { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-145deg); } }
+    @keyframes wd-cheer-hop { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-16px); } }
+
+    .cheer-27 .arm-l { animation: yo-cheer-l 0.25s ease-in-out infinite alternate; }
+    .cheer-27 .arm-r { animation: yo-cheer-r 0.25s ease-in-out infinite alternate; }
+    .cheer-27 .body-base { animation: yo-cheer-bounce 0.25s ease-in-out infinite alternate; }
+    @keyframes yo-cheer-l { 0% { transform: rotate(110deg); } 100% { transform: rotate(155deg); } }
+    @keyframes yo-cheer-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-155deg); } }
+    @keyframes yo-cheer-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-16px); } }
+
+    .cheer-28 .turbo-flame { display: block !important; animation: tb-flame-burst 0.15s ease-in-out infinite alternate; }
+    .cheer-28 .body-base { animation: tb-cheer-rev 0.22s ease-in-out infinite alternate; }
+    @keyframes tb-cheer-rev { 0% { transform: scale(1); } 100% { transform: scale(1.22) translateY(-12px) rotate(-14deg); } }
+
+    .cheer-29 .angler-lantern { animation: lm-cheer-lantern 0.3s ease-in-out infinite alternate; }
+    .cheer-29 .body-base { animation: lm-cheer-twirl 0.35s ease-in-out infinite alternate; }
+    @keyframes lm-cheer-lantern { 0% { transform: scale(1.2); } 100% { transform: scale(2.2); } }
+    @keyframes lm-cheer-twirl { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-16px) rotate(12deg); } }
+
+    .cheer-30 .candle-flame { animation: um-cheer-flame 0.2s ease-in-out infinite alternate; }
+    .cheer-30 .body-base { animation: um-cheer-billow 0.26s ease-in-out infinite alternate; }
+    @keyframes um-cheer-flame { 0% { transform: scale(1.5) translateY(-4px); } 100% { transform: scale(2.8) translateY(-12px); } }
+    @keyframes um-cheer-billow { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-16px); } }
+
+    .cheer-31 .chest-lid { animation: gj-cheer-lid 0.22s ease-in-out infinite alternate; }
+    .cheer-31 .body-base { animation: gj-cheer-burst 0.22s ease-in-out infinite alternate; }
+    @keyframes gj-cheer-lid { 0% { transform: rotate(-30deg); } 100% { transform: rotate(-70deg) translateY(-10px); } }
+    @keyframes gj-cheer-burst { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-15px); } }
+
+    .cheer-32 .saturn-rings { animation: as-cheer-rings 0.25s ease-in-out infinite alternate; }
+    .cheer-32 .body-base { animation: as-cheer-burst 0.25s ease-in-out infinite alternate; }
+    @keyframes as-cheer-rings { 0% { transform: scale(1.2) rotate(15deg); } 100% { transform: scale(1.8) rotate(45deg); } }
+    @keyframes as-cheer-burst { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-18px); } }
+
+    .cheer-33 .rune-orb-1, .cheer-33 .rune-orb-2, .cheer-33 .rune-orb-3 { animation: ar-cheer-orbs 0.25s ease-in-out infinite alternate; }
+    .cheer-33 .body-base { animation: ar-cheer-levitate 0.25s ease-in-out infinite alternate; }
+    @keyframes ar-cheer-orbs { 0% { transform: scale(1.2); } 100% { transform: scale(2.2); } }
+    @keyframes ar-cheer-levitate { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-20px); } }
+
+    .cheer-34 .moon-crown { animation: zp-cheer-moon 0.25s ease-in-out infinite alternate; }
+    .cheer-34 .arm-l { animation: zp-cheer-wing-l 0.25s ease-in-out infinite alternate; }
+    .cheer-34 .arm-r { animation: zp-cheer-wing-r 0.25s ease-in-out infinite alternate; }
+    .cheer-34 .body-base { animation: zp-cheer-soar 0.25s ease-in-out infinite alternate; }
+    @keyframes zp-cheer-moon { 0% { transform: scale(1.4); } 100% { transform: scale(2.4) translateY(-8px); } }
+    @keyframes zp-cheer-wing-l { 0% { transform: rotate(-30deg) scale(1.1); } 100% { transform: rotate(-70deg) scale(1.35); } }
+    @keyframes zp-cheer-wing-r { 0% { transform: rotate(30deg) scale(1.1); } 100% { transform: rotate(70deg) scale(1.35); } }
+    @keyframes zp-cheer-soar { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-18px); } }
+
+    .cheer-35 .arm-l, .cheer-35 .arm-r { animation: sp-cheer-threat 0.2s ease-in-out infinite alternate; }
+    .cheer-35 .body-base { animation: sp-cheer-jump 0.2s ease-in-out infinite alternate; }
+    @keyframes sp-cheer-threat { 0% { transform: rotate(-30deg); } 100% { transform: rotate(30deg); } }
+    @keyframes sp-cheer-jump { 0% { transform: scale(1) translateY(0); } 100% { transform: scale(1.3) translateY(-22px); } }
+
+    /* =========================================================================
+       36 DYNAMISCH SCHLUCHZENDE & ZITTERNDE TRAUER-POSEN (💧)
+       JEDES WESEN WEINT, ZITTERT UND SCHLUCHZT RYTHMISCH
+       ========================================================================= */
+    .sad-0 .cap-group { transform: translateY(12px) rotate(-10deg); }
+    .sad-0 .body-base { animation: p-sad-sag 1.5s ease-in-out infinite; }
+    @keyframes p-sad-sag { 0%, 100% { transform: scale(1.3, 0.5) translateY(24px); } 50% { transform: scale(1.35, 0.45) translateY(26px); } }
+
+    .sad-1 .ear-l { transform: rotate(-35deg) translateY(6px); }
+    .sad-1 .ear-r { transform: rotate(35deg) translateY(6px); }
+    .sad-1 .tail-wiggle { transform: rotate(80deg) translateY(6px); }
+    .sad-1 .head-node { animation: s-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes s-sob { 0% { transform: translateY(6px); } 100% { transform: translateY(10px); } }
+
+    .sad-2 .body-base { animation: f-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes f-sob { 0% { transform: translateY(12px) scale(0.88); } 100% { transform: translateY(16px) scale(0.84); } }
+
+    .sad-3 .body-base { animation: b-sob 0.7s ease-in-out infinite alternate; }
+    @keyframes b-sob { 0% { transform: scale(0.82) translateY(14px); opacity: 0.7; } 100% { transform: scale(0.78) translateY(18px); opacity: 0.55; } }
+
+    .sad-4 .arm-l { transform: rotate(45deg) translate(8px, -12px); }
+    .sad-4 .arm-r { transform: rotate(-45deg) translate(-8px, -12px); }
+    .sad-4 .body-base { animation: bear-sob 0.5s ease-in-out infinite alternate; }
+    @keyframes bear-sob { 0% { transform: translateY(6px); } 100% { transform: translateY(11px); } }
+
+    .sad-5 .screen-err { display: block !important; }
+    .sad-5 .eye-normal { display: none !important; }
+    .sad-5 .body-base { animation: bp-sad-shiver 0.3s steps(2) infinite; }
+    @keyframes bp-sad-shiver { 0%, 100% { transform: translateX(-2px) translateY(6px); } 50% { transform: translateX(2px) translateY(8px); } }
+
+    .sad-6 .wing-l { transform: rotate(40deg) translateY(12px); }
+    .sad-6 .wing-r { transform: rotate(35deg) translateY(10px); }
+    .sad-6 .body-base { animation: d-sad-droop 0.6s ease-in-out infinite alternate; }
+    @keyframes d-sad-droop { 0% { transform: translateY(5px); } 100% { transform: translateY(9px); } }
+
+    .sad-7 .cloud-mesh { fill: #64748b !important; }
+    .sad-7 .cloud-rain-drops { display: block !important; }
+    .sad-7 .body-base { animation: n-sad-rain 0.5s ease-in-out infinite alternate; }
+    @keyframes n-sad-rain { 0% { transform: translateY(6px); } 100% { transform: translateY(10px); } }
+
+    .sad-8 .antenna-stem { transform: rotate(45deg); }
+    .sad-8 .body-base { animation: z-sad-sag 0.6s ease-in-out infinite alternate; }
+    @keyframes z-sad-sag { 0% { transform: translateY(8px) scale(0.95); } 100% { transform: translateY(13px) scale(0.9); } }
+
+    .sad-9 .gills { transform: rotate(25deg) translateY(8px); }
+    .sad-9 .body-base { animation: axo-sad-shiver 0.5s ease-in-out infinite alternate; }
+    @keyframes axo-sad-shiver { 0% { transform: translateY(7px) rotate(-2deg); } 100% { transform: translateY(11px) rotate(2deg); } }
+
+    .sad-10 .body-base { animation: gr-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes gr-sob { 0% { transform: translateY(10px) scale(0.94); } 100% { transform: translateY(14px) scale(0.9); } }
+
+    .sad-11 .chef-hat { transform: rotate(-20deg) translateY(6px); }
+    .sad-11 .body-base { animation: mo-sob 0.5s ease-in-out infinite alternate; }
+    @keyframes mo-sob { 0% { transform: translateY(8px) scale(0.94); } 100% { transform: translateY(13px) scale(0.88); } }
+
+    .sad-12 .leaf-top { transform: rotate(45deg) translateY(8px); }
+    .sad-12 .body-base { animation: sp-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes sp-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-13 .wing-pair { transform: scale(0.6) rotate(30deg); }
+    .sad-13 .body-base { animation: bz-sob 0.5s ease-in-out infinite alternate; }
+    @keyframes bz-sob { 0% { transform: translateY(10px); } 100% { transform: translateY(14px); } }
+
+    .sad-14 .arm-r { transform: rotate(40deg); }
+    .sad-14 .body-base { animation: cr-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes cr-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-15 .feather-mid { transform: rotate(30deg); }
+    .sad-15 .body-base { animation: tk-sob 0.5s ease-in-out infinite alternate; }
+    @keyframes tk-sob { 0% { transform: translateY(8px) scale(0.95); } 100% { transform: translateY(12px) scale(0.9); } }
+
+    .sad-16 .arm-l { transform: rotate(-20deg) translateY(8px); }
+    .sad-16 .arm-r { transform: rotate(20deg) translateY(8px); }
+    .sad-16 .body-base { animation: cl-sob 0.5s ease-in-out infinite alternate; }
+    @keyframes cl-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-17 .tail-wiggle { transform: rotate(45deg) translateY(10px); }
+    .sad-17 .body-base { animation: mm-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes mm-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-18 .nerd-glasses { transform: translateY(8px) rotate(-8deg); }
+    .sad-18 .body-base { animation: fz-sob 0.5s ease-in-out infinite alternate; }
+    @keyframes fz-sob { 0% { transform: translateY(8px) scale(0.92); } 100% { transform: translateY(12px) scale(0.86); } }
+
+    .sad-19 .tail-wiggle { transform: rotate(60deg) translateY(12px); }
+    .sad-19 .body-base { animation: snp-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes snp-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-20 .body-base { animation: bm-sob 0.5s ease-in-out infinite alternate; }
+    @keyframes bm-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-21 .arm-l { transform: rotate(30deg); }
+    .sad-21 .arm-r { transform: rotate(-30deg); }
+    .sad-21 .body-base { animation: pb-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes pb-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-22 .body-base { animation: gl-sob 0.3s steps(2) infinite; }
+    @keyframes gl-sob { 0% { transform: translateY(8px) skewX(6deg); } 100% { transform: translateY(12px) skewX(-6deg); } }
+
+    .sad-23 .arm-l { transform: rotate(-60deg); }
+    .sad-23 .arm-r { transform: rotate(60deg); }
+    .sad-23 .body-base { animation: ct-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes ct-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-24 .arm-l { transform: rotate(30deg); }
+    .sad-24 .arm-r { transform: rotate(-30deg); }
+    .sad-24 .body-base { animation: nc-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes nc-sob { 0% { transform: translateY(9px); } 100% { transform: translateY(13px); } }
+
+    .sad-25 .top-hat { transform: rotate(-25deg) translateY(8px); }
+    .sad-25 .body-base { animation: pip-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes pip-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-26 .body-base { animation: wd-sob 0.5s ease-in-out infinite alternate; }
+    @keyframes wd-sob { 0% { transform: translateY(9px) scale(0.93); } 100% { transform: translateY(13px) scale(0.89); } }
+
+    .sad-27 .tail-wiggle { transform: translateY(12px) scaleY(0.6); }
+    .sad-27 .body-base { animation: yo-sob 0.5s ease-in-out infinite alternate; }
+    @keyframes yo-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-28 .body-base { animation: tb-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes tb-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-29 .angler-lantern { transform: translateY(8px) scale(0.7); }
+    .sad-29 .body-base { animation: lm-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes lm-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-30 .candle-flame { animation: um-sad-flicker 0.4s ease-in-out infinite alternate; }
+    .sad-30 .body-base { animation: um-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes um-sad-flicker { 0% { transform: scale(0.4) rotate(20deg); } 100% { transform: scale(0.2) rotate(35deg); } }
+    @keyframes um-sob { 0% { transform: translateY(10px) scale(0.93); } 100% { transform: translateY(15px) scale(0.88); } }
+
+    .sad-31 .mimic-tongue { animation: gj-sad-tongue 0.5s ease-in-out infinite alternate; }
+    .sad-31 .body-base { animation: gj-sob 0.5s ease-in-out infinite alternate; }
+    @keyframes gj-sad-tongue { 0% { transform: translateY(6px) scaleY(0.6); } 100% { transform: translateY(10px) scaleY(0.4); } }
+    @keyframes gj-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-32 .saturn-rings { animation: as-sad-rings 0.6s ease-in-out infinite alternate; }
+    .sad-32 .body-base { animation: as-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes as-sad-rings { 0% { transform: rotate(20deg) translateY(4px); } 100% { transform: rotate(35deg) translateY(8px); } }
+    @keyframes as-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-33 .rune-orb-1, .sad-33 .rune-orb-2, .sad-33 .rune-orb-3 { animation: ar-sad-orbs 0.6s ease-in-out infinite alternate; }
+    .sad-33 .body-base { animation: ar-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes ar-sad-orbs { 0% { transform: translateY(10px) scale(0.7); } 100% { transform: translateY(16px) scale(0.5); } }
+    @keyframes ar-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-34 .moon-crown { animation: zp-sad-moon 0.6s ease-in-out infinite alternate; }
+    .sad-34 .body-base { animation: zp-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes zp-sad-moon { 0% { transform: rotate(25deg) translateY(3px); } 100% { transform: rotate(40deg) translateY(6px); } }
+    @keyframes zp-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
+
+    .sad-35 .arm-l, .sad-35 .leg-l { animation: sp-sad-leg-l 0.5s ease-in-out infinite alternate; }
+    .sad-35 .arm-r, .sad-35 .leg-r { animation: sp-sad-leg-r 0.5s ease-in-out infinite alternate; }
+    .sad-35 .body-base { animation: sp-sob 0.5s ease-in-out infinite alternate; }
+    @keyframes sp-sad-leg-l { 0% { transform: rotate(15deg); } 100% { transform: rotate(25deg); } }
+    @keyframes sp-sad-leg-r { 0% { transform: rotate(-15deg); } 100% { transform: rotate(-25deg); } }
+    @keyframes sp-sob { 0% { transform: translateY(9px) scale(0.93); } 100% { transform: translateY(14px) scale(0.88); } }
+
+  

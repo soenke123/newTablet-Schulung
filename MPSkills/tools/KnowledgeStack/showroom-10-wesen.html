@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lobby-Wesen Labor: 10 Ikonische Wesen mit Seele, Tänzen & Emotionen</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;900&family=JetBrains+Mono:wght@800&family=Unbounded:wght@800;900&display=swap');
+    
+    .font-brand { font-family: 'Unbounded', 'Space Grotesk', system-ui, sans-serif; }
+    .font-mono-tech { font-family: 'JetBrains Mono', monospace; }
+
+    .brutal-card { box-shadow: 6px 6px 0px 0px #000000; }
+    .brutal-card-sm { box-shadow: 3px 3px 0px 0px #000000; }
+    .btn-tactile:active {
+      transform: translate(3px, 3px) !important;
+      box-shadow: 0px 0px 0px 0px currentColor !important;
+    }
+
+    /* Transform Origins */
+    .origin-c { transform-origin: 50px 50px; }
+    .origin-r-arm { transform-origin: 68px 50px; }
+    .origin-l-arm { transform-origin: 32px 50px; }
+    .origin-r-leg { transform-origin: 62px 72px; }
+    .origin-l-leg { transform-origin: 38px 72px; }
+    .origin-hip-l { transform-origin: 34px 74px; }
+    .origin-hip-r { transform-origin: 66px 74px; }
+    .origin-shoulder-l { transform-origin: 30px 48px; }
+    .origin-shoulder-r { transform-origin: 70px 48px; }
+    .origin-head { transform-origin: 50px 45px; }
+    .origin-tail { transform-origin: 24px 64px; }
+    .origin-r-wing { transform-origin: 66px 44px; }
+    .origin-l-wing { transform-origin: 34px 44px; }
+    .origin-wing-r { transform-origin: 40px 42px; }
+    .origin-wing-l { transform-origin: 28px 46px; }
+
+    /* =========================================================================
+       LEBENDIGES IDLE (Atmen & Blinzeln)
+       ========================================================================= */
+    @keyframes idle-squish {
+      0%, 100% { transform: scale(1, 1) translateY(0); }
+      50% { transform: scale(1.03, 0.97) translateY(-2px); }
+    }
+    @keyframes blink-eye {
+      0%, 92%, 96%, 100% { transform: scaleY(1); }
+      94% { transform: scaleY(0.08); }
+    }
+    @keyframes tail-swish {
+      0%, 100% { transform: rotate(-8deg); }
+      50% { transform: rotate(14deg); }
+    }
+    .c-idle .body-base { animation: idle-squish 2.6s ease-in-out infinite; }
+    .c-idle .eye-pupil { animation: blink-eye 3.8s ease-in-out infinite; transform-origin: center; }
+    .c-idle .tail-wiggle { animation: tail-swish 1.8s ease-in-out infinite alternate; }
+
+    /* =========================================================================
+       10 INDIVIDUELLE WINKEN-BEWEGUNGEN (👋)
+       ========================================================================= */
+    /* Puddl: Dehnbarer Glibber-Arm schnipst hin und her */
+    .wave-0 .arm-r { animation: p-wave 0.35s ease-in-out infinite alternate; transform-origin: 70px 48px; }
+    @keyframes p-wave { 0% { transform: rotate(-120deg) scaleX(1.3); } 100% { transform: rotate(-50deg) scaleX(0.9); } }
+
+    /* Spark: Maneki-Neko schnelles Katzenpfötchen */
+    .wave-1 .arm-r { animation: s-wave 0.25s ease-in-out infinite alternate; transform-origin: 68px 50px; }
+    .wave-1 .head-node { animation: s-tilt 0.5s ease-in-out infinite alternate; }
+    @keyframes s-wave { 0% { transform: rotate(-95deg) translateY(-4px); } 100% { transform: rotate(-45deg); } }
+    @keyframes s-tilt { 0% { transform: rotate(-6deg); } 100% { transform: rotate(6deg); } }
+
+    /* Plop: Frosch winkt mit der Schwimmhaut, anderes Bein wippt */
+    .wave-2 .arm-r { animation: f-wave 0.4s ease-in-out infinite alternate; transform-origin: 70px 52px; }
+    .wave-2 .leg-l { animation: f-leg-wiggle 0.4s ease-in-out infinite alternate; }
+    @keyframes f-wave { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-40deg); } }
+    @keyframes f-leg-wiggle { 0% { transform: rotate(-8deg); } 100% { transform: rotate(8deg); } }
+
+    /* Bubbles: 3 Tentakel winken in La-Ola Welle */
+    .wave-3 .t-wave-1 { animation: b-w1 0.4s ease-in-out infinite alternate; transform-origin: 74px 50px; }
+    .wave-3 .t-wave-2 { animation: b-w2 0.4s ease-in-out 0.1s infinite alternate; transform-origin: 68px 65px; }
+    @keyframes b-w1 { 0% { transform: rotate(-70deg); } 100% { transform: rotate(10deg); } }
+    @keyframes b-w2 { 0% { transform: rotate(40deg); } 100% { transform: rotate(-40deg); } }
+
+    /* Snooze: Gemütliches schweres Bären-Tatzenwinken */
+    .wave-4 .arm-r { animation: b-bear-wave 0.6s ease-in-out infinite alternate; transform-origin: 72px 50px; }
+    .wave-4 .body-base { animation: b-bear-lean 0.6s ease-in-out infinite alternate; }
+    @keyframes b-bear-wave { 0% { transform: rotate(-90deg); } 100% { transform: rotate(-35deg); } }
+    @keyframes b-bear-lean { 0% { transform: rotate(-4deg); } 100% { transform: rotate(4deg); } }
+
+    /* Beep: Mechanischer steifer 90-Grad Roboter-Gruß */
+    .wave-5 .arm-r { animation: robo-wave 0.3s steps(3) infinite alternate; transform-origin: 72px 48px; }
+    @keyframes robo-wave { 0% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } 100% { transform: rotate(-130deg); } }
+
+    /* Chompy (Drache 3/4): Spannt Schwingen auf & winkt mit Klauenhand */
+    .wave-6 .wing-l { animation: d-wing-spread 0.5s ease-in-out infinite alternate; transform-origin: 28px 46px; }
+    .wave-6 .arm-r { animation: d-claw-wave 0.28s ease-in-out infinite alternate; transform-origin: 62px 56px; }
+    @keyframes d-wing-spread { 0% { transform: scale(1) rotate(0deg); } 100% { transform: scale(1.3) rotate(18deg); } }
+    @keyframes d-claw-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-35deg); } }
+
+    /* Nubi: Schwebende Wolkenpfote winkt sanft */
+    .wave-7 .arm-r { animation: n-cloud-wave 0.5s ease-in-out infinite alternate; transform-origin: 76px 52px; }
+    .wave-7 .body-base { animation: n-float 1s ease-in-out infinite alternate; }
+    @keyframes n-cloud-wave { 0% { transform: translateY(-8px) rotate(-35deg); } 100% { transform: translateY(4px) rotate(25deg); } }
+    @keyframes n-float { 0% { transform: translateY(-8px); } 100% { transform: translateY(4px); } }
+
+    /* Zorp: Winkt mit zwei Armen gleichzeitig in Gegenrichtung */
+    .wave-8 .arm-l { animation: z-wave-l 0.25s linear infinite alternate; transform-origin: 26px 48px; }
+    .wave-8 .arm-r { animation: z-wave-r 0.25s linear infinite alternate; transform-origin: 74px 48px; }
+    @keyframes z-wave-l { 0% { transform: rotate(-80deg); } 100% { transform: rotate(20deg); } }
+    @keyframes z-wave-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-80deg); } }
+
+    /* Lotti: Axolotl paddelt mit Kiemen & winkt mit Hand */
+    .wave-9 .gills { animation: axo-gills-wave 0.3s ease-in-out infinite alternate; }
+    .wave-9 .arm-r { animation: axo-hand-wave 0.3s ease-in-out infinite alternate; transform-origin: 70px 52px; }
+    @keyframes axo-gills-wave { 0% { transform: rotate(-8deg) scaleY(1.1); } 100% { transform: rotate(8deg) scaleY(0.9); } }
+    @keyframes axo-hand-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-35deg); } }
+
+    /* =========================================================================
+       10 INDIVIDUELLE SPRÜNGE (🚀)
+       ========================================================================= */
+    /* Puddl: Zieht sich superflach zusammen, schnellt wie eine Kugel hoch */
+    .jump-0 { animation: p-bounce 0.65s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
+    @keyframes p-bounce { 0%, 100% { transform: translateY(0) scale(1.4, 0.6); } 35% { transform: translateY(-55px) scale(0.75, 1.4); } }
+
+    /* Spark: Schlägt einen 360-Grad-Salto in der Luft! */
+    .jump-1 { animation: s-flip 0.75s ease-in-out infinite; }
+    @keyframes s-flip { 0% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-50px) rotate(180deg); } 100% { transform: translateY(0) rotate(360deg); } }
+
+    /* Plop: Frosch-Explosionssprung (Beine federn harmonisch ein und strecken sich ab!) */
+    .jump-2 { animation: f-hop 0.65s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
+    .jump-2 .leg-l { animation: f-leg-leap-l 0.65s ease-in-out infinite; transform-origin: 32px 70px; }
+    .jump-2 .leg-r { animation: f-leg-leap-r 0.65s ease-in-out infinite; transform-origin: 68px 70px; }
+    .jump-2 .arm-l { animation: f-arm-reach-l 0.65s ease-in-out infinite; transform-origin: 28px 58px; }
+    .jump-2 .arm-r { animation: f-arm-reach-r 0.65s ease-in-out infinite; transform-origin: 72px 58px; }
+    @keyframes f-hop {
+      0%, 100% { transform: translateY(0) scale(1.12, 0.88); }
+      18% { transform: translateY(4px) scale(1.22, 0.78); } /* Hocke */
+      48% { transform: translateY(-56px) scale(0.92, 1.15); } /* Absprung */
+      75% { transform: translateY(-16px) scale(1, 1); }
+    }
+    @keyframes f-leg-leap-l {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      18% { transform: rotate(16deg) scaleY(0.85); }
+      48% { transform: rotate(-22deg) scaleY(1.3) translateY(4px); }
+      75% { transform: rotate(-6deg) scale(1); }
+    }
+    @keyframes f-leg-leap-r {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      18% { transform: rotate(-16deg) scaleY(0.85); }
+      48% { transform: rotate(22deg) scaleY(1.3) translateY(4px); }
+      75% { transform: rotate(6deg) scale(1); }
+    }
+    @keyframes f-arm-reach-l { 0%, 100% { transform: rotate(0); } 48% { transform: rotate(105deg); } }
+    @keyframes f-arm-reach-r { 0%, 100% { transform: rotate(0); } 48% { transform: rotate(-105deg); } }
+
+    /* Bubbles: Zieht sich zusammen & schießt wie ein Pfeil nach oben */
+    .jump-3 { animation: b-rocket 0.7s ease-in-out infinite; }
+    @keyframes b-rocket { 0%, 100% { transform: translateY(0) scale(1.2, 0.8); } 45% { transform: translateY(-52px) scale(0.8, 1.25) rotate(12deg); } }
+
+    /* Snooze: Schafft nur einen Mini-Hüpfer, aber der Boden bebt! */
+    .jump-4 { animation: bear-heavy-jump 0.7s ease-in-out infinite; }
+    @keyframes bear-heavy-jump { 0%, 100% { transform: translateY(0) scale(1.2, 0.8); } 30% { transform: translateY(4px) scale(1.3, 0.7); } 55% { transform: translateY(-24px) scale(0.95, 1.05); } }
+
+    /* Beep: Raketenantrieb an den Füßen zündet! */
+    .jump-5 { animation: robo-rocket 0.5s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
+    .jump-5 .arm-l { transform: rotate(45deg); }
+    .jump-5 .arm-r { transform: rotate(-45deg); }
+    @keyframes robo-rocket { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-46px); } }
+
+    /* Chompy: Mächtiger Flügelschlag & Drachenflug! */
+    .jump-6 { animation: d-dragon-fly 0.7s ease-in-out infinite; }
+    .jump-6 .wing-l { animation: d-wings-beat-l 0.22s ease-in-out infinite alternate; transform-origin: 28px 46px; }
+    .jump-6 .wing-r { animation: d-wings-beat-r 0.22s ease-in-out infinite alternate; transform-origin: 40px 42px; }
+    @keyframes d-dragon-fly { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-48px); } }
+    @keyframes d-wings-beat-l { 0% { transform: scale(0.8) rotate(-20deg); } 100% { transform: scale(1.25) rotate(22deg); } }
+    @keyframes d-wings-beat-r { 0% { transform: scale(0.8) rotate(-15deg); } 100% { transform: scale(1.25) rotate(18deg); } }
+
+    /* Nubi: Löst sich fast auf und schwebt schwerelos nach oben */
+    .jump-7 { animation: n-teleport-float 0.8s ease-in-out infinite; }
+    @keyframes n-teleport-float { 0%, 100% { transform: translateY(0) scale(1); opacity: 1; } 50% { transform: translateY(-55px) scale(1.3); opacity: 0.5; } }
+
+    /* Zorp: Schnalzt wie ein Gummiband in die Höhe */
+    .jump-8 { animation: z-snap 0.55s ease-in-out infinite; }
+    @keyframes z-snap { 0%, 100% { transform: translateY(0) scaleX(1.2); } 50% { transform: translateY(-50px) scaleX(0.4); } }
+
+    /* Lotti: Hechtet wie ein Delfin im Unterwasser-Bogen */
+    .jump-9 { animation: axo-dolphin-arc 0.75s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
+    @keyframes axo-dolphin-arc { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-50px) rotate(25deg); } }
+
+    /* =========================================================================
+       10 INDIVIDUELLE KULT-TÄNZE (🕺) - JETZT VOLL FUNKTIONSFÄHIG!
+       ========================================================================= */
+    /* 0: Puddl - "Jelly Wiggle" (Körper wabbelt wie Götterspeise, Disco-Arme) */
+    .c-dance-0 .body-base { animation: p-dance-jelly 0.38s ease-in-out infinite alternate; }
+    .c-dance-0 .arm-l { animation: p-dance-arm-l 0.38s ease-in-out infinite alternate; transform-origin: 30px 50px; }
+    .c-dance-0 .arm-r { animation: p-dance-arm-r 0.38s ease-in-out infinite alternate; transform-origin: 70px 50px; }
+    @keyframes p-dance-jelly { 0% { transform: skewX(-16deg) scaleY(1.08); } 100% { transform: skewX(16deg) scaleY(0.92); } }
+    @keyframes p-dance-arm-l { 0% { transform: rotate(-80deg); } 100% { transform: rotate(30deg); } }
+    @keyframes p-dance-arm-r { 0% { transform: rotate(30deg); } 100% { transform: rotate(-80deg); } }
+
+    /* 1: Spark - "Cat Paw Shuffle" (Katzen-Boxen & peitschender Schweif) */
+    .c-dance-1 .arm-l { animation: s-dance-paw-l 0.22s ease-in-out infinite alternate; transform-origin: 32px 50px; }
+    .c-dance-1 .arm-r { animation: s-dance-paw-r 0.22s ease-in-out infinite alternate; transform-origin: 68px 50px; }
+    .c-dance-1 .tail-wiggle { animation: s-dance-tail 0.22s ease-in-out infinite alternate; }
+    .c-dance-1 .body-base { animation: s-dance-bounce 0.22s ease-in-out infinite alternate; }
+    @keyframes s-dance-paw-l { 0% { transform: rotate(-60deg) translateY(-6px); } 100% { transform: rotate(20deg); } }
+    @keyframes s-dance-paw-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-60deg) translateY(-6px); } }
+    @keyframes s-dance-tail { 0% { transform: rotate(-35deg); } 100% { transform: rotate(45deg); } }
+    @keyframes s-dance-bounce { 0% { transform: translateY(-6px) rotate(-4deg); } 100% { transform: translateY(0) rotate(4deg); } }
+
+    /* 2: Plop - "Frosch-Kasatschok" (Geht in die Hocke, kickt Beine abwechselnd) */
+    .c-dance-2 .leg-l { animation: f-dance-kick-l 0.32s ease-in-out infinite alternate; transform-origin: 32px 70px; }
+    .c-dance-2 .leg-r { animation: f-dance-kick-r 0.32s ease-in-out infinite alternate; transform-origin: 68px 70px; }
+    .c-dance-2 .body-base { animation: f-dance-squat 0.32s ease-in-out infinite alternate; }
+    @keyframes f-dance-kick-l { 0% { transform: rotate(-45deg) scaleX(1.3); } 100% { transform: rotate(10deg); } }
+    @keyframes f-dance-kick-r { 0% { transform: rotate(10deg); } 100% { transform: rotate(45deg) scaleX(1.3); } }
+    @keyframes f-dance-squat { 0% { transform: translateY(6px); } 100% { transform: translateY(-6px); } }
+
+    /* 3: Bubbles - "Tentacle Tornado" (Wirbelt im Kreis, Tentakel wehen) */
+    .c-dance-3 .body-base { animation: b-dance-tornado 0.65s linear infinite; }
+    .c-dance-3 .t-wave-1 { animation: b-dance-t1 0.32s ease-in-out infinite alternate; }
+    .c-dance-3 .t-wave-2 { animation: b-dance-t2 0.32s ease-in-out infinite alternate; }
+    @keyframes b-dance-tornado { 0% { transform: rotate(0deg) scale(1.05); } 50% { transform: rotate(180deg) scale(0.95); } 100% { transform: rotate(360deg) scale(1.05); } }
+    @keyframes b-dance-t1 { 0% { transform: rotate(-40deg); } 100% { transform: rotate(40deg); } }
+    @keyframes b-dance-t2 { 0% { transform: rotate(40deg); } 100% { transform: rotate(-40deg); } }
+
+    /* 4: Snooze - "Belly Floss" (Wampe schunkelt, dicke Tatzen schwingen) */
+    .c-dance-4 .body-base { animation: sn-dance-belly 0.36s ease-in-out infinite alternate; }
+    .c-dance-4 .arm-l, .c-dance-4 .arm-r { animation: sn-dance-arms 0.36s ease-in-out infinite alternate; transform-origin: 50px 50px; }
+    @keyframes sn-dance-belly { 0% { transform: rotate(-12deg) translateX(-8px); } 100% { transform: rotate(12deg) translateX(8px); } }
+    @keyframes sn-dance-arms { 0% { transform: rotate(-40deg); } 100% { transform: rotate(40deg); } }
+
+    /* 5: Beep - "Pop & Lock Robot" (Mechanische 90-Grad Staccato-Moves) */
+    .c-dance-5 .arm-l { animation: bp-dance-arm-l 0.36s steps(3) infinite alternate; transform-origin: 28px 48px; }
+    .c-dance-5 .arm-r { animation: bp-dance-arm-r 0.36s steps(3) infinite alternate; transform-origin: 72px 48px; }
+    .c-dance-5 .body-base { animation: bp-dance-body 0.36s steps(2) infinite alternate; }
+    @keyframes bp-dance-arm-l { 0% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } 100% { transform: rotate(-140deg); } }
+    @keyframes bp-dance-arm-r { 0% { transform: rotate(90deg); } 50% { transform: rotate(0deg); } 100% { transform: rotate(-90deg); } }
+    @keyframes bp-dance-body { 0% { transform: translateY(0); } 100% { transform: translateY(-7px) rotate(5deg); } }
+
+    /* 6: Chompy - "Dino Rock & Stomp" (Stampft rythmisch, Flügel schlagen, Kopf nickt) */
+    .c-dance-6 .leg-l { animation: ch-stomp-l 0.28s ease-in-out infinite alternate; transform-origin: 34px 74px; }
+    .c-dance-6 .leg-r { animation: ch-stomp-r 0.28s ease-in-out infinite alternate; transform-origin: 58px 74px; }
+    .c-dance-6 .wing-l { animation: ch-wings-beat-l 0.14s ease-in-out infinite alternate; transform-origin: 28px 46px; }
+    .c-dance-6 .wing-r { animation: ch-wings-beat-r 0.14s ease-in-out infinite alternate; transform-origin: 40px 42px; }
+    .c-dance-6 .body-base { animation: ch-headbang 0.28s ease-in-out infinite alternate; }
+    .c-dance-6 .tail-wiggle { animation: ch-tail-thrash 0.28s ease-in-out infinite alternate; }
+    @keyframes ch-stomp-l { 0% { transform: translateY(-10px) rotate(-15deg); } 100% { transform: translateY(0); } }
+    @keyframes ch-stomp-r { 0% { transform: translateY(0); } 100% { transform: translateY(-10px) rotate(15deg); } }
+    @keyframes ch-wings-beat-l { 0% { transform: scale(0.9) rotate(-10deg); } 100% { transform: scale(1.2) rotate(15deg); } }
+    @keyframes ch-wings-beat-r { 0% { transform: scale(0.9) rotate(-10deg); } 100% { transform: scale(1.2) rotate(15deg); } }
+    @keyframes ch-headbang { 0% { transform: rotate(-6deg) translateY(-4px); } 100% { transform: rotate(6deg) translateY(2px); } }
+    @keyframes ch-tail-thrash { 0% { transform: rotate(-25deg); } 100% { transform: rotate(25deg); } }
+
+    /* 7: Nubi - "Cloud Pirouette" (Schwebt im Bogen und tanzt federleicht) */
+    .c-dance-7 .body-base { animation: nb-dance-waltz 0.55s ease-in-out infinite alternate; }
+    .c-dance-7 .arm-l, .c-dance-7 .arm-r { animation: nb-dance-paws 0.55s ease-in-out infinite alternate; }
+    @keyframes nb-dance-waltz { 0% { transform: rotate(-18deg) translateY(-12px); } 100% { transform: rotate(18deg) translateY(6px); } }
+    @keyframes nb-dance-paws { 0% { transform: rotate(-35deg); } 100% { transform: rotate(35deg); } }
+
+    /* 8: Zorp - "Spacewalk Windmill" (Propeller-Arme und Alien-Jitter) */
+    .c-dance-8 .arm-l { animation: zp-windmill-l 0.24s linear infinite; transform-origin: 26px 48px; }
+    .c-dance-8 .arm-r { animation: zp-windmill-r 0.24s linear infinite; transform-origin: 74px 48px; }
+    .c-dance-8 .body-base { animation: zp-jitter 0.24s linear infinite alternate; }
+    @keyframes zp-windmill-l { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes zp-windmill-r { 0% { transform: rotate(360deg); } 100% { transform: rotate(0deg); } }
+    @keyframes zp-jitter { 0% { transform: skewX(-15deg) translateY(-4px); } 100% { transform: skewX(15deg) translateY(4px); } }
+
+    /* 9: Lotti - "Axolotl Wave" (Schlängelt geschmeidig, Kiemen fächeln) */
+    .c-dance-9 .body-base { animation: lt-wave-swim 0.6s ease-in-out infinite alternate; }
+    .c-dance-9 .arm-l { animation: lt-fin-l 0.3s ease-in-out infinite alternate; transform-origin: 30px 52px; }
+    .c-dance-9 .arm-r { animation: lt-fin-r 0.3s ease-in-out infinite alternate; transform-origin: 70px 52px; }
+    .c-dance-9 .gills { animation: lt-gills-flutter 0.3s ease-in-out infinite alternate; }
+    @keyframes lt-wave-swim { 0% { transform: rotate(-14deg) scaleX(1); } 100% { transform: rotate(14deg) scaleX(0.94); } }
+    @keyframes lt-fin-l { 0% { transform: rotate(-70deg); } 100% { transform: rotate(20deg); } }
+    @keyframes lt-fin-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-70deg); } }
+    @keyframes lt-gills-flutter { 0% { transform: scale(0.9); } 100% { transform: scale(1.15); } }
+
+    /* =========================================================================
+       10 INDIVIDUELLE SCHLAF-POSEN (💤)
+       ========================================================================= */
+    /* Puddl: Schmilzt flach auf den Boden zu einer Pfütze */
+    .sleep-0 .body-base { animation: p-melt-flat 2.5s ease-in-out infinite; }
+    @keyframes p-melt-flat { 0%, 100% { transform: scale(1.4, 0.35) translateY(45px); } 50% { transform: scale(1.45, 0.3) translateY(48px); } }
+
+    /* Spark: Gemütlicher Kätzchen-Schlaf - KOPF BLEIBT VOLLSTÄNDIG ZENTRIERT IN DER MITTE! */
+    .sleep-1 .body-base { animation: s-sleep-breathe 2.5s ease-in-out infinite; }
+    .sleep-1 .ear-l { transform: rotate(-12deg); transform-origin: 26px 34px; }
+    .sleep-1 .ear-r { transform: rotate(12deg); transform-origin: 74px 34px; }
+    .sleep-1 .tail-wiggle { transform: rotate(-30deg) translateY(4px); }
+    @keyframes s-sleep-breathe {
+      0%, 100% { transform: translateY(6px) scale(1, 0.96); }
+      50% { transform: translateY(10px) scale(1.03, 0.93); }
+    }
+
+    /* Plop: Zieht den Kopf komplett unter seinen Pilzhut ein! */
+    .sleep-2 .body-base { animation: f-hide-under-cap 2.2s ease-in-out infinite; }
+    @keyframes f-hide-under-cap { 0%, 100% { transform: scaleY(0.6) translateY(24px); } 50% { transform: scaleY(0.55) translateY(26px); } }
+
+    /* Bubbles: Alle Tentakel rollen sich wie Schnecken ein */
+    .sleep-3 .body-base { animation: b-sink-deep 2.5s ease-in-out infinite; }
+    @keyframes b-sink-deep { 0%, 100% { transform: translateY(18px) scale(0.9); } 50% { transform: translateY(12px) scale(0.92); } }
+
+    /* Snooze: Schnarcht tief mit riesiger Anime-Schlafblase */
+    .sleep-4 .snot-bubble-node { display: block !important; animation: snot-expand 2.5s ease-in-out infinite; transform-origin: 54px 54px; }
+    @keyframes snot-expand { 0%, 100% { transform: scale(0.2); opacity: 0.2; } 50% { transform: scale(1.8); opacity: 0.95; } }
+
+    /* Beep: Standby-Bluescreen Z_Z, LED geht aus */
+    .sleep-5 .led-light { fill: #334155 !important; }
+    .sleep-5 .screen-text { display: block !important; }
+    .sleep-5 .eye-normal { display: none !important; }
+
+    /* Chompy: Faltet seine Schwingen schützend um sich wie eine Decke! */
+    .sleep-6 .wing-l { transform: rotate(35deg) scaleX(1.3) translateX(8px); }
+    .sleep-6 .wing-r { transform: rotate(20deg) scaleX(1.2) translateX(4px); }
+    .sleep-6 .body-base { animation: d-sleep-breathe 2.4s ease-in-out infinite; }
+    @keyframes d-sleep-breathe { 0%, 100% { transform: translateY(8px) scale(0.96); } 50% { transform: translateY(12px) scale(0.94); } }
+
+    /* Nubi: Zieht sich zu einem kleinen Wolkenkissen zusammen */
+    .sleep-7 .body-base { animation: n-cloud-nap 2.5s ease-in-out infinite; }
+    @keyframes n-cloud-nap { 0%, 100% { transform: translateY(14px) scale(0.85); opacity: 0.5; } 50% { transform: translateY(10px) scale(0.88); opacity: 0.7; } }
+
+    /* Zorp: Zieht das Riesenauge ein, Fühler blinkt grün */
+    .sleep-8 .body-base { animation: z-sleep 2s ease-in-out infinite; }
+    @keyframes z-sleep { 0%, 100% { transform: scale(1.1, 0.6) translateY(24px); } 50% { transform: scale(1.15, 0.55) translateY(26px); } }
+
+    /* Lotti: Schläft schwebend im Wasser, Kiemen wiegen sanft */
+    .sleep-9 .body-base { animation: axo-aquarium-float 2.8s ease-in-out infinite alternate; }
+    @keyframes axo-aquarium-float { 0% { transform: translateY(10px) rotate(4deg); } 100% { transform: translateY(16px) rotate(-4deg); } }
+
+    /* =========================================================================
+       10 INDIVIDUELLE JUBEL-REAKTIONEN (🎉)
+       ========================================================================= */
+    /* Puddl: Bläht sich riesig auf und jubelt */
+    .cheer-0 .body-base { animation: p-cheer-pump 0.35s ease-in-out infinite alternate; }
+    .cheer-0 .arm-l { transform: rotate(135deg); }
+    .cheer-0 .arm-r { transform: rotate(-135deg); }
+    @keyframes p-cheer-pump { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-14px); } }
+
+    /* Spark: Doppelte Siegesfaust, Funken aus dem Horn */
+    .cheer-1 .arm-l { animation: s-paw-l 0.3s ease-in-out infinite alternate; transform-origin: 32px 50px; }
+    .cheer-1 .arm-r { animation: s-paw-r 0.3s ease-in-out infinite alternate; transform-origin: 68px 50px; }
+    .cheer-1 .spark-effect { display: block !important; }
+    @keyframes s-paw-l { 0% { transform: rotate(110deg); } 100% { transform: rotate(150deg) translateY(-8px); } }
+    @keyframes s-paw-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-150deg) translateY(-8px); } }
+
+    /* Plop: Bläht Schallblase auf & macht Freudensprünge */
+    .cheer-2 .frog-throat { display: block !important; animation: throat-puff 0.35s ease-in-out infinite alternate; }
+    .cheer-2 .arm-l { transform: rotate(130deg); }
+    .cheer-2 .arm-r { transform: rotate(-130deg); }
+    @keyframes throat-puff { 0% { transform: scale(1); } 100% { transform: scale(1.4); } }
+
+    /* Bubbles: Bunte Blasenfontäne schießt nach oben */
+    .cheer-3 .bubbles-burst { display: block !important; }
+    .cheer-3 .body-base { animation: b-bounce 0.3s ease-in-out infinite alternate; }
+    @keyframes b-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-16px); } }
+
+    /* Snooze: Klatscht mit beiden Bärentatzen begeistert Beifall! */
+    .cheer-4 .arm-l { animation: bear-clap-l 0.25s ease-in-out infinite alternate; transform-origin: 28px 52px; }
+    .cheer-4 .arm-r { animation: bear-clap-r 0.25s ease-in-out infinite alternate; transform-origin: 72px 52px; }
+    @keyframes bear-clap-l { 0% { transform: rotate(20deg); } 100% { transform: rotate(70deg) translateX(12px); } }
+    @keyframes bear-clap-r { 0% { transform: rotate(-20deg); } 100% { transform: rotate(-70deg) translateX(-12px); } }
+
+    /* Beep: Propeller-Ohren drehen sich, Screen zeigt WIN! */
+    .cheer-5 .ears-spin { animation: prop-spin 0.2s linear infinite; transform-origin: 50px 20px; }
+    .cheer-5 .screen-win { display: block !important; }
+    .cheer-5 .eye-normal { display: none !important; }
+    @keyframes prop-spin { 0% { transform: rotateY(0); } 100% { transform: rotateY(360deg); } }
+
+    /* Chompy: Spuckt vor Freude ein echtes Feuerbällchen nach oben! */
+    .cheer-6 .fire-blast { display: block !important; animation: fire-flicker 0.2s ease-in-out infinite alternate; }
+    .cheer-6 .wing-l { transform: rotate(20deg) scale(1.2); }
+    .cheer-6 .wing-r { transform: rotate(15deg) scale(1.15); }
+    .cheer-6 .arm-r { transform: rotate(-120deg); }
+    @keyframes fire-flicker { 0% { transform: scale(0.9); } 100% { transform: scale(1.3) translateY(-4px); } }
+
+    /* Nubi: Minisonne strahlt, Wolke leuchtet golden auf */
+    .cheer-7 .sun-glow { transform: scale(1.8); }
+    .cheer-7 .body-base { animation: n-pop 0.35s ease-in-out infinite alternate; }
+    @keyframes n-pop { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-20px); } }
+
+    /* Zorp: Riesenauge wird zum rotierenden Disko-Stern */
+    .cheer-8 .disco-eye { display: block !important; animation: z-eye-spin 0.4s linear infinite; transform-origin: 50px 50px; }
+    .cheer-8 .eye-normal { display: none !important; }
+    @keyframes z-eye-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+
+    /* Lotti: Dreht eine Sieger-Rolle, Glitzersterne sprühen */
+    .cheer-9 .body-base { animation: axo-twirl-cheer 0.6s ease-in-out infinite alternate; }
+    .cheer-9 .star-sparkles { display: block !important; }
+    @keyframes axo-twirl-cheer { 0% { transform: rotateY(0) translateY(0); } 100% { transform: rotateY(180deg) translateY(-22px) scale(1.2); } }
+
+    /* =========================================================================
+       10 INDIVIDUELLE TRAUER-REAKTIONEN (💧 - AUGEN BLEIBEN SICHTBAR + TRÄNENFLUSS!)
+       ========================================================================= */
+    /* Puddl: Schmilzt traurig in sich zusammen, zieht Kappe tief über die Augen */
+    .sad-0 .cap-group { transform: translateY(12px) rotate(-10deg); }
+    .sad-0 .body-base { animation: p-sad-sag 1.8s ease-in-out infinite; }
+    @keyframes p-sad-sag { 0%, 100% { transform: scale(1.3, 0.5) translateY(24px); } 50% { transform: scale(1.35, 0.45) translateY(26px); } }
+
+    /* Spark: Flugzeug-Ohren (flach angelegt), Schwanz eingeklemmt */
+    .sad-1 .ear-l { transform: rotate(-35deg) translateY(6px); }
+    .sad-1 .ear-r { transform: rotate(35deg) translateY(6px); }
+    .sad-1 .tail-wiggle { transform: rotate(80deg) translateY(6px); }
+    .sad-1 .head-node { transform: translateY(8px); }
+
+    /* Plop: Verkriecht sich im Pilz, zieht Knie an */
+    .sad-2 .body-base { transform: translateY(14px) scale(0.85); }
+
+    /* Bubbles: Zieht sich ganz klein zusammen, wird blass */
+    .sad-3 .body-base { transform: scale(0.8) translateY(16px); opacity: 0.65; }
+
+    /* Snooze: Hält sich beide Pfoten vors Gesicht und schluchzt */
+    .sad-4 .arm-l { transform: rotate(45deg) translate(8px, -12px); }
+    .sad-4 .arm-r { transform: rotate(-45deg) translate(-8px, -12px); }
+    .sad-4 .body-base { animation: bear-sob 0.6s ease-in-out infinite alternate; }
+    @keyframes bear-sob { 0% { transform: translateY(6px); } 100% { transform: translateY(10px); } }
+
+    /* Beep: Crying Pixel Face (T_T) auf dem Bildschirm & kleiner Rauchfaden */
+    .sad-5 .screen-err { display: block !important; }
+    .sad-5 .eye-normal { display: none !important; }
+    .sad-5 .smoke-puff { display: block !important; animation: smoke-rise 1s linear infinite; }
+    @keyframes smoke-rise { 0% { opacity: 0; transform: translateY(0); } 50% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px); } }
+
+    /* Chompy: Schwingen hängen schlaff bis zum Boden, Rauchkringel aus Nase */
+    .sad-6 .wing-l { transform: rotate(40deg) translateY(12px); }
+    .sad-6 .wing-r { transform: rotate(35deg) translateY(10px); }
+    .sad-6 .body-base { transform: translateY(6px); }
+    .sad-6 .smoke-nose { display: block !important; }
+
+    /* Nubi: Wird grau (Gewitter) und lässt echten Regen herabregnen! */
+    .sad-7 .cloud-mesh { fill: #64748b !important; }
+    .sad-7 .cloud-rain-drops { display: block !important; }
+
+    /* Zorp: Riesenauge blickt deprimiert nach unten, Fühler knickt welk ab */
+    .sad-8 .antenna-stem { transform: rotate(45deg); transform-origin: 50px 24px; }
+
+    /* Lotti: Kiemenäste hängen schlaff wie welke Blüten nach unten */
+    .sad-9 .gills { transform: rotate(25deg) translateY(8px); }
+    .sad-9 .body-base { transform: translateY(8px); }
+
+    /* Gesichtsausdrucks-Zustände */
+    .state-cheer .eye-happy { display: block !important; }
+    .state-cheer .eye-normal { display: none !important; }
+    .state-cheer .mouth-open { display: block !important; }
+    .state-cheer .mouth-normal { display: none !important; }
+
+    .state-sleep .eye-sleep { display: block !important; }
+    .state-sleep .eye-normal { display: none !important; }
+    .state-sleep .eye-happy { display: none !important; }
+    .state-sleep .mouth-sleep { display: block !important; }
+    .state-sleep .mouth-normal { display: none !important; }
+
+    /* TRAUER: Augen schalten auf traurig (kein Verschwinden mehr!) + fließende Tränen! */
+    .state-sad .eye-sad { display: block !important; }
+    .state-sad .eye-normal { display: none !important; }
+    .state-sad .mouth-sad { display: block !important; }
+    .state-sad .mouth-normal { display: none !important; }
+    .state-sad .mouth-open { display: none !important; }
+    .state-sad .sad-tears { display: block !important; animation: tear-stream 1.2s ease-in-out infinite; }
+    @keyframes tear-stream {
+      0% { opacity: 0; transform: translateY(-2px) scale(0.6); }
+      25% { opacity: 1; transform: translateY(2px) scale(1); }
+      75% { opacity: 0.95; transform: translateY(8px) scale(1.05); }
+      100% { opacity: 0; transform: translateY(14px) scale(0.6); }
+    }
+
+    /* Particle float */
+    .float-particle {
+      position: absolute;
+      pointer-events: none;
+      font-size: 26px;
+      animation: float-rise 1.1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+      z-index: 30;
+    }
+    @keyframes float-rise {
+      0% { opacity: 0; transform: translateY(10px) scale(0.5); }
+      30% { opacity: 1; transform: translateY(-15px) scale(1.3); }
+      100% { opacity: 0; transform: translateY(-65px) scale(0.9); }
+    }
+  </style>
+</head>
+<body id="showroom-body" class="bg-[#10121a] text-white p-4 md:p-8 min-h-screen font-sans selection:bg-pink-500 selection:text-white transition-colors duration-300">
+
+  <!-- ================= TOP HEADER ================= -->
+  <header class="max-w-6xl mx-auto mb-8 border-b-2 border-slate-800 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg border-2 border-yellow-400 bg-yellow-400 text-black text-xs font-mono-tech font-black uppercase mb-2 brutal-card-sm">
+        👑 Next-Level Charakter Labor v3
+      </div>
+      <h1 class="text-3xl md:text-5xl font-brand font-black tracking-tight text-white">
+        10 Wesen mit Seele, Tänzen & Emotionen
+      </h1>
+      <p class="text-slate-400 text-sm mt-1">
+        Echte Tänze, fließende Tränen, harmonische Frosch-Sprünge, cleane Wolke & Drache im perfekten 3/4-Profil!
+      </p>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex items-center gap-3">
+      <button id="btn-sound" onclick="toggleSound()" class="btn-tactile px-3.5 py-2 rounded-2xl border-2 border-black bg-cyan-400 text-black font-mono-tech font-black text-xs brutal-card-sm flex items-center gap-1.5">
+        <span id="sound-icon">🔊</span> Sound: AN
+      </button>
+
+      <div class="flex items-center bg-black p-1.5 rounded-2xl border-2 border-slate-700">
+        <button id="btn-theme-dark" onclick="setTheme('dark')" class="px-3 py-1.5 rounded-xl text-xs font-mono-tech font-black transition-all bg-yellow-400 text-black shadow-hard-black-sm border-2 border-black">
+          🌙 Dark
+        </button>
+        <button id="btn-theme-light" onclick="setTheme('light')" class="px-3 py-1.5 rounded-xl text-xs font-mono-tech font-bold transition-all text-slate-400 hover:text-white">
+          ☀️ Light
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= GLOBAL ACTION TOOLBAR ================= -->
+  <section id="global-bar" class="max-w-6xl mx-auto mb-8 bg-[#181b26] p-5 rounded-3xl border-[3px] border-black brutal-card transition-colors">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-3">
+      <div class="flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-pink-500 animate-ping"></span>
+        <h3 class="font-mono-tech text-xs font-black uppercase text-yellow-400 tracking-wider">
+          Globale Emote-Steuerung (Alle 10 gleichzeitig testen):
+        </h3>
+      </div>
+      <div class="text-xs font-mono-tech text-slate-400">
+        Aktiv: <span id="current-emote-label" class="text-pink-400 font-bold">✨ NORMAL (IDLE)</span>
+      </div>
+    </div>
+
+    <!-- The 6 Emote Buttons + Reset -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2.5">
+      <button onclick="triggerGlobal('wave')" class="btn-tactile p-3 rounded-2xl border-2 border-black bg-cyan-400 text-black font-mono-tech font-black text-xs md:text-sm brutal-card-sm flex items-center justify-center gap-1.5 hover:bg-cyan-300">
+        <span>👋</span> Winken
+      </button>
+
+      <button onclick="triggerGlobal('jump')" class="btn-tactile p-3 rounded-2xl border-2 border-black bg-yellow-400 text-black font-mono-tech font-black text-xs md:text-sm brutal-card-sm flex items-center justify-center gap-1.5 hover:bg-yellow-300">
+        <span>🚀</span> Springen
+      </button>
+
+      <button onclick="triggerGlobal('dance')" class="btn-tactile p-3 rounded-2xl border-2 border-black bg-pink-500 text-white font-mono-tech font-black text-xs md:text-sm brutal-card-sm flex items-center justify-center gap-1.5 hover:bg-pink-400">
+        <span>🕺</span> Tanzen
+      </button>
+
+      <button onclick="triggerGlobal('cheer')" class="btn-tactile p-3 rounded-2xl border-2 border-black bg-emerald-400 text-black font-mono-tech font-black text-xs md:text-sm brutal-card-sm flex items-center justify-center gap-1.5 hover:bg-emerald-300">
+        <span>🎉</span> Jubeln
+      </button>
+
+      <button onclick="triggerGlobal('sleep')" class="btn-tactile p-3 rounded-2xl border-2 border-black bg-indigo-400 text-white font-mono-tech font-black text-xs md:text-sm brutal-card-sm flex items-center justify-center gap-1.5 hover:bg-indigo-300">
+        <span>💤</span> Schlafen
+      </button>
+
+      <button onclick="triggerGlobal('sad')" class="btn-tactile p-3 rounded-2xl border-2 border-black bg-rose-500 text-white font-mono-tech font-black text-xs md:text-sm brutal-card-sm flex items-center justify-center gap-1.5 hover:bg-rose-400">
+        <span>💧</span> Traurig
+      </button>
+
+      <button onclick="triggerGlobal('idle')" class="btn-tactile p-3 rounded-2xl border-2 border-black bg-white text-black font-mono-tech font-black text-xs md:text-sm brutal-card-sm flex items-center justify-center gap-1.5 hover:bg-slate-200">
+        <span>✨</span> Idle Reset
+      </button>
+    </div>
+  </section>
+
+  <!-- ================= SPOTLIGHT INSPECTOR STAGE ================= -->
+  <section id="spotlight-section" class="max-w-6xl mx-auto mb-10 p-6 md:p-8 rounded-3xl border-[4px] border-black bg-[#161824] brutal-card relative overflow-hidden transition-all">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-8">
+      
+      <!-- Big Creature Visualizer Stage -->
+      <div class="relative w-52 h-52 md:w-60 md:h-60 flex items-center justify-center bg-[#0d0e15] rounded-3xl border-2 border-white/20 p-4">
+        <span class="absolute top-2 left-3 font-mono-tech text-[10px] font-black text-yellow-400 uppercase tracking-widest">
+          SPOTLIGHT VIEW
+        </span>
+        <div id="spotlight-avatar-box" class="w-48 h-48 flex items-center justify-center">
+          <!-- Cloned SVG inserted here dynamically -->
+        </div>
+      </div>
+
+      <!-- Creature Details & Direct Remote Controller -->
+      <div class="flex-1 w-full text-center md:text-left">
+        <div class="flex flex-wrap items-center gap-2 justify-center md:justify-start mb-2">
+          <span class="px-3 py-0.5 rounded-md bg-pink-500 text-black font-mono-tech font-black text-xs border border-black">
+            CHARAKTER <span id="spotlight-id">#07</span>
+          </span>
+          <span id="spotlight-quirk" class="px-2.5 py-0.5 rounded-md bg-yellow-400 text-black font-mono-tech font-bold text-xs border border-black">
+            👑 3/4-Profil Drache mit Hörnern & Schwingen
+          </span>
+        </div>
+        <h2 id="spotlight-name" class="text-3xl md:text-5xl font-brand font-black text-white">Chompy</h2>
+        <p id="spotlight-desc" class="text-slate-300 text-sm mt-1 max-w-lg leading-relaxed">
+          Kombiniert den beliebten Seiten-Blick mit geschwungenen Hörnern, großen Schwingen und gelbem Schuppenbauch!
+        </p>
+
+        <!-- Direct Controller for the Selected Creature -->
+        <div class="mt-6 pt-5 border-t border-slate-700/60 flex flex-wrap items-center justify-center md:justify-start gap-2">
+          <span class="text-xs font-mono-tech font-bold text-slate-400 mr-1">Solo-Aktion:</span>
+          <button onclick="triggerSolo('wave')" class="btn-tactile px-3 py-1.5 rounded-xl border border-black bg-cyan-400 text-black font-mono-tech font-bold text-xs">👋 Winken</button>
+          <button onclick="triggerSolo('jump')" class="btn-tactile px-3 py-1.5 rounded-xl border border-black bg-yellow-400 text-black font-mono-tech font-bold text-xs">🚀 Springen</button>
+          <button onclick="triggerSolo('dance')" class="btn-tactile px-3 py-1.5 rounded-xl border border-black bg-pink-500 text-white font-mono-tech font-bold text-xs">🕺 Tanzen</button>
+          <button onclick="triggerSolo('cheer')" class="btn-tactile px-3 py-1.5 rounded-xl border border-black bg-emerald-400 text-black font-mono-tech font-bold text-xs">🎉 Jubeln</button>
+          <button onclick="triggerSolo('sleep')" class="btn-tactile px-3 py-1.5 rounded-xl border border-black bg-indigo-400 text-white font-mono-tech font-bold text-xs">💤 Schlafen</button>
+          <button onclick="triggerSolo('sad')" class="btn-tactile px-3 py-1.5 rounded-xl border border-black bg-rose-500 text-white font-mono-tech font-bold text-xs">💧 Traurig</button>
+          <button onclick="triggerSolo('idle')" class="btn-tactile px-3 py-1.5 rounded-xl border border-black bg-slate-700 text-white font-mono-tech font-bold text-xs">✨ Idle</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 10 CHARACTERS INTERACTIVE GRID ================= -->
+  <main class="max-w-6xl mx-auto">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6">
+
+      <!-- ================= 01. PUDDL ================= -->
+      <div onclick="selectCreature(0)" id="card-0" class="creature-card relative bg-[#181a26] border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-pink-500 transition-all select-none">
+        <span class="absolute top-3 left-3 text-[10px] font-mono-tech font-black px-2 py-0.5 rounded bg-pink-500 text-black border border-black">01</span>
+        <div class="w-32 h-32 flex items-center justify-center my-1">
+          <svg id="svg-0" class="creature-svg c-idle w-28 h-28 overflow-visible" viewBox="0 0 100 100">
+            <!-- Feet -->
+            <g class="leg-l origin-hip-l"><ellipse cx="38" cy="85" rx="7" ry="4" fill="#ff007f" stroke="#000" stroke-width="2"/></g>
+            <g class="leg-r origin-hip-r"><ellipse cx="62" cy="85" rx="7" ry="4" fill="#ff007f" stroke="#000" stroke-width="2"/></g>
+            <!-- Arms -->
+            <g class="arm-l origin-l-arm"><path d="M 28 54 Q 14 58 18 68" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="18" cy="68" r="3.5" fill="#00f0ff" stroke="#000" stroke-width="1.5"/></g>
+            <g class="arm-r origin-r-arm"><path d="M 72 54 Q 86 58 82 68" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="82" cy="68" r="3.5" fill="#00f0ff" stroke="#000" stroke-width="1.5"/></g>
+            <!-- Slime Body -->
+            <g class="body-base head-node origin-head">
+              <!-- Golden Key -->
+              <g class="key-embedded"><circle cx="70" cy="36" r="3.5" fill="#ffe600" stroke="#000" stroke-width="1.5"/><line x1="72" y1="38" x2="78" y2="44" stroke="#000" stroke-width="2"/><line x1="76" y1="42" x2="79" y2="41" stroke="#000" stroke-width="1.5"/></g>
+              <!-- Body Mesh -->
+              <path class="slime-main" d="M 50 20 C 78 20 84 45 84 68 C 84 82 72 84 50 84 C 28 84 16 82 16 68 C 16 45 22 20 50 20 Z" fill="#ff007f" stroke="#000" stroke-width="3.5"/>
+              <!-- Jelly Glanz -->
+              <ellipse cx="36" cy="34" rx="8" ry="4" fill="#ff80bf" opacity="0.8" transform="rotate(-25 36 34)"/>
+              <!-- Skater Cap -->
+              <g class="cap-group">
+                <path d="M 32 24 C 32 12 68 12 68 24 Z" fill="#00f0ff" stroke="#000" stroke-width="2.5"/>
+                <path d="M 58 24 L 84 27 L 78 32 L 56 26 Z" fill="#ffe600" stroke="#000" stroke-width="2"/>
+                <circle cx="50" cy="14" r="2" fill="#fff" stroke="#000" stroke-width="1"/>
+              </g>
+              <!-- Eyes Normal -->
+              <g class="eye-normal">
+                <ellipse cx="37" cy="46" rx="6.5" ry="8" fill="#fff" stroke="#000" stroke-width="2"/><ellipse class="eye-pupil" cx="37" cy="46" rx="3.5" ry="6" fill="#000"/><circle cx="38" cy="44" r="1.5" fill="#fff"/>
+                <ellipse cx="63" cy="46" rx="6.5" ry="8" fill="#fff" stroke="#000" stroke-width="2"/><ellipse class="eye-pupil" cx="63" cy="46" rx="3.5" ry="6" fill="#000"/><circle cx="64" cy="44" r="1.5" fill="#fff"/>
+              </g>
+              <!-- Eye Happy -->
+              <g class="eye-happy" style="display:none;"><path d="M 31 46 Q 37 40 43 46" stroke="#000" stroke-width="3" fill="none"/><path d="M 57 46 Q 63 40 69 46" stroke="#000" stroke-width="3" fill="none"/></g>
+              <!-- Eye Sleep -->
+              <g class="eye-sleep" style="display:none;"><path d="M 30 48 Q 37 54 44 48" fill="none" stroke="#000" stroke-width="3.5" stroke-linecap="round"/><path d="M 56 48 Q 63 54 70 48" fill="none" stroke="#000" stroke-width="3.5" stroke-linecap="round"/></g>
+              <!-- Eye Sad: Traurige Kulleraugen -->
+              <g class="eye-sad" style="display:none;">
+                <ellipse cx="37" cy="48" rx="6.5" ry="7" fill="#fff" stroke="#000" stroke-width="2"/>
+                <ellipse cx="37" cy="50" rx="3.5" ry="4.5" fill="#000"/><circle cx="39" cy="48" r="1.5" fill="#fff"/>
+                <path d="M 30 42 Q 37 46 44 42" stroke="#000" stroke-width="2.5" fill="none"/>
+                <ellipse cx="63" cy="48" rx="6.5" ry="7" fill="#fff" stroke="#000" stroke-width="2"/>
+                <ellipse cx="63" cy="50" rx="3.5" ry="4.5" fill="#000"/><circle cx="65" cy="48" r="1.5" fill="#fff"/>
+                <path d="M 56 42 Q 63 46 70 42" stroke="#000" stroke-width="2.5" fill="none"/>
+              </g>
+              <!-- Tränen -->
+              <g class="sad-tears" style="display:none;">
+                <path d="M 37 54 C 34 60 32 62 37 65 C 41 62 39 60 37 54 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+                <path d="M 63 54 C 60 60 58 62 63 65 C 67 62 65 60 63 54 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+              </g>
+              <!-- Mouth States -->
+              <path class="mouth-normal" d="M 44 60 Q 50 66 56 60" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+              <ellipse class="mouth-open" style="display:none;" cx="50" cy="62" rx="5" ry="6" fill="#ffe600" stroke="#000" stroke-width="2"/>
+              <path class="mouth-sad" style="display:none;" d="M 44 65 Q 50 58 56 65" stroke="#000" stroke-width="2.5" fill="none"/>
+              <line class="mouth-sleep" style="display:none;" x1="46" y1="62" x2="54" y2="62" stroke="#000" stroke-width="2.5"/>
+            </g>
+          </svg>
+        </div>
+        <div class="text-center w-full mt-1">
+          <h4 class="font-brand font-black text-sm text-white group-hover:text-pink-400">Puddl</h4>
+          <span class="text-[10px] font-mono-tech text-yellow-400">🧢 Cap & Schlüssel</span>
+        </div>
+      </div>
+
+      <!-- ================= 02. SPARK ================= -->
+      <div onclick="selectCreature(1)" id="card-1" class="creature-card relative bg-[#181a26] border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-purple-400 transition-all select-none">
+        <span class="absolute top-3 left-3 text-[10px] font-mono-tech font-black px-2 py-0.5 rounded bg-purple-400 text-black border border-black">02</span>
+        <div class="w-32 h-32 flex items-center justify-center my-1">
+          <svg id="svg-1" class="creature-svg c-idle w-28 h-28 overflow-visible" viewBox="0 0 100 100">
+            <!-- Tail -->
+            <g class="tail-wiggle origin-tail"><path d="M 22 65 Q 4 60 8 44 Q 10 32 18 36" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round"/><path d="M 22 65 Q 4 60 8 44 Q 10 32 18 36" fill="none" stroke="#a855f7" stroke-width="3.5" stroke-linecap="round"/><polygon points="18,36 14,28 24,32" fill="#ffe600" stroke="#000" stroke-width="1.5"/></g>
+            <!-- Feet with White Socks -->
+            <g class="leg-l origin-hip-l"><ellipse cx="36" cy="85" rx="7" ry="5" fill="#fff" stroke="#000" stroke-width="2"/><line x1="33" y1="83" x2="33" y2="87" stroke="#000" stroke-width="1.5"/><line x1="39" y1="83" x2="39" y2="87" stroke="#000" stroke-width="1.5"/></g>
+            <g class="leg-r origin-hip-r"><ellipse cx="64" cy="85" rx="7" ry="5" fill="#fff" stroke="#000" stroke-width="2"/><line x1="61" y1="83" x2="61" y2="87" stroke="#000" stroke-width="1.5"/><line x1="67" y1="83" x2="67" y2="87" stroke="#000" stroke-width="1.5"/></g>
+            <!-- Arms -->
+            <g class="arm-l origin-l-arm"><path d="M 28 54 Q 18 60 22 68" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="22" cy="68" r="4" fill="#fff" stroke="#000" stroke-width="1.5"/></g>
+            <g class="arm-r origin-r-arm"><path d="M 72 54 Q 82 60 78 68" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="78" cy="68" r="4" fill="#fff" stroke="#000" stroke-width="1.5"/></g>
+            <!-- Head & Ears & Electric Unicorn Horn! -->
+            <g class="body-base head-node origin-head">
+              <polygon class="ear-l" points="26,38 16,12 42,26" fill="#a855f7" stroke="#000" stroke-width="3"/><polygon points="26,34 20,18 36,28" fill="#ff77b4"/>
+              <polygon class="ear-r" points="74,38 84,12 58,26" fill="#a855f7" stroke="#000" stroke-width="3"/><polygon points="74,34 80,18 64,28" fill="#ff77b4"/>
+              <!-- Electric Lightning Unicorn Horn -->
+              <polygon points="50,4 44,22 56,22" fill="#ffe600" stroke="#000" stroke-width="2.5"/>
+              <line x1="47" y1="10" x2="53" y2="10" stroke="#000" stroke-width="1.5"/>
+              <line x1="45" y1="16" x2="55" y2="16" stroke="#000" stroke-width="1.5"/>
+              <ellipse cx="50" cy="52" rx="32" ry="28" fill="#c084fc" stroke="#000" stroke-width="3.5"/>
+              <ellipse cx="50" cy="62" rx="16" ry="12" fill="#f3e8ff"/>
+              <!-- Cheek Bandage -->
+              <g transform="rotate(-15 65 58)"><rect x="61" y="55" width="10" height="5" rx="1.5" fill="#fef08a" stroke="#000" stroke-width="1.5"/><line x1="66" y1="55" x2="66" y2="60" stroke="#d97706" stroke-width="1"/></g>
+              <!-- Eyes with Gorgeous Anime Sparkle -->
+              <g class="eye-normal">
+                <ellipse cx="37" cy="48" rx="7.5" ry="9.5" fill="#000"/><circle cx="35" cy="45" r="3" fill="#fff"/><circle cx="39" cy="52" r="1.5" fill="#00f0ff"/>
+                <ellipse cx="63" cy="48" rx="7.5" ry="9.5" fill="#000"/><circle cx="61" cy="45" r="3" fill="#fff"/><circle cx="65" cy="52" r="1.5" fill="#00f0ff"/>
+              </g>
+              <g class="eye-happy" style="display:none;"><path d="M 30 48 Q 37 40 44 48" fill="none" stroke="#000" stroke-width="3.5" stroke-linecap="round"/><path d="M 56 48 Q 63 40 70 48" fill="none" stroke="#000" stroke-width="3.5" stroke-linecap="round"/></g>
+              <g class="eye-sleep" style="display:none;"><line x1="30" y1="50" x2="44" y2="50" stroke="#000" stroke-width="3.5" stroke-linecap="round"/><line x1="56" y1="50" x2="70" y2="50" stroke="#000" stroke-width="3.5" stroke-linecap="round"/></g>
+              <!-- Eye Sad: Große weinende Anime-Augen -->
+              <g class="eye-sad" style="display:none;">
+                <ellipse cx="37" cy="50" rx="7.5" ry="8.5" fill="#000"/><circle cx="35" cy="48" r="2.5" fill="#fff"/><circle cx="39" cy="53" r="1.5" fill="#00f0ff"/>
+                <path d="M 29 42 Q 37 46 45 42" stroke="#000" stroke-width="2.5" fill="none"/>
+                <ellipse cx="63" cy="50" rx="7.5" ry="8.5" fill="#000"/><circle cx="61" cy="48" r="2.5" fill="#fff"/><circle cx="65" cy="53" r="1.5" fill="#00f0ff"/>
+                <path d="M 55 42 Q 63 46 71 42" stroke="#000" stroke-width="2.5" fill="none"/>
+              </g>
+              <!-- Tränen -->
+              <g class="sad-tears" style="display:none;">
+                <path d="M 37 56 C 34 62 32 64 37 67 C 41 64 39 62 37 56 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+                <path d="M 63 56 C 60 62 58 64 63 67 C 67 64 65 62 63 56 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+              </g>
+              <polygon points="50,56 47,53 53,53" fill="#ff007f"/>
+              <path class="mouth-normal" d="M 45 61 Q 50 63 55 61" stroke="#000" stroke-width="2" fill="none"/>
+              <path class="mouth-open" style="display:none;" d="M 45 59 Q 50 69 55 59 Z" fill="#ffe600" stroke="#000" stroke-width="2"/>
+              <path class="mouth-sad" style="display:none;" d="M 45 64 Q 50 59 55 64" stroke="#000" stroke-width="2" fill="none"/>
+              <!-- Sparks on cheer -->
+              <g class="spark-effect" style="display:none;"><path d="M 50 20 L 52 12 L 56 18 L 62 10 L 58 20" stroke="#ffe600" stroke-width="2.5" fill="none"/></g>
+            </g>
+          </svg>
+        </div>
+        <div class="text-center w-full mt-1">
+          <h4 class="font-brand font-black text-sm text-white group-hover:text-purple-300">Spark</h4>
+          <span class="text-[10px] font-mono-tech text-yellow-400">🦄 Einhorn & Söckchen</span>
+        </div>
+      </div>
+
+      <!-- ================= 03. PLOP ================= -->
+      <div onclick="selectCreature(2)" id="card-2" class="creature-card relative bg-[#181a26] border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-emerald-400 transition-all select-none">
+        <span class="absolute top-3 left-3 text-[10px] font-mono-tech font-black px-2 py-0.5 rounded bg-emerald-400 text-black border border-black">03</span>
+        <div class="w-32 h-32 flex items-center justify-center my-1">
+          <svg id="svg-2" class="creature-svg c-idle w-28 h-28 overflow-visible" viewBox="0 0 100 100">
+            <!-- Frog Legs -->
+            <g class="leg-l origin-hip-l"><path d="M 30 68 Q 10 72 14 85 Q 26 86 34 82" fill="#00c853" stroke="#000" stroke-width="3"/></g>
+            <g class="leg-r origin-hip-r"><path d="M 70 68 Q 90 72 86 85 Q 74 86 66 82" fill="#00c853" stroke="#000" stroke-width="3"/></g>
+            <!-- Arms -->
+            <g class="arm-l origin-l-arm"><path d="M 28 58 Q 12 62 14 74" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="14" cy="74" r="3.5" fill="#ffe600" stroke="#000" stroke-width="1.5"/></g>
+            <g class="arm-r origin-r-arm"><path d="M 72 58 Q 88 62 86 74" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="86" cy="74" r="3.5" fill="#ffe600" stroke="#000" stroke-width="1.5"/></g>
+            <!-- Body -->
+            <g class="body-base head-node origin-head">
+              <ellipse cx="50" cy="62" rx="30" ry="22" fill="#00e676" stroke="#000" stroke-width="3.5"/>
+              <ellipse cx="50" cy="68" rx="16" ry="10" fill="#b9f6ca"/>
+              <!-- Bowtie -->
+              <polygon points="44,70 50,74 44,78" fill="#ffe600" stroke="#000" stroke-width="1.5"/><polygon points="56,70 50,74 56,78" fill="#ffe600" stroke="#000" stroke-width="1.5"/><circle cx="50" cy="74" r="2.5" fill="#ff0055" stroke="#000" stroke-width="1"/>
+              <!-- Eyes Normal -->
+              <g class="eye-normal">
+                <circle cx="32" cy="42" r="10" fill="#00e676" stroke="#000" stroke-width="2.5"/><circle cx="32" cy="42" r="7" fill="#fff"/><circle class="eye-pupil" cx="32" cy="42" r="4" fill="#000"/>
+                <circle cx="68" cy="42" r="10" fill="#00e676" stroke="#000" stroke-width="2.5"/><circle cx="68" cy="42" r="7" fill="#fff"/><circle class="eye-pupil" cx="68" cy="42" r="4" fill="#000"/>
+              </g>
+              <g class="eye-happy" style="display:none;"><path d="M 26 42 Q 32 36 38 42" stroke="#000" stroke-width="3.5" fill="none"/><path d="M 62 42 Q 68 36 74 42" stroke="#000" stroke-width="3.5" fill="none"/></g>
+              <g class="eye-sleep" style="display:none;"><line x1="26" y1="44" x2="38" y2="44" stroke="#000" stroke-width="3.5"/><line x1="62" y1="44" x2="74" y2="44" stroke="#000" stroke-width="3.5"/></g>
+              <!-- Eye Sad: Große weinende Froschaugen -->
+              <g class="eye-sad" style="display:none;">
+                <circle cx="32" cy="42" r="10" fill="#00e676" stroke="#000" stroke-width="2.5"/><circle cx="32" cy="42" r="7" fill="#fff"/><circle cx="32" cy="44" r="4" fill="#000"/><circle cx="34" cy="41" r="1.5" fill="#fff"/>
+                <path d="M 25 38 Q 32 42 39 38" stroke="#000" stroke-width="2.5" fill="none"/>
+                <circle cx="68" cy="42" r="10" fill="#00e676" stroke="#000" stroke-width="2.5"/><circle cx="68" cy="42" r="7" fill="#fff"/><circle cx="68" cy="44" r="4" fill="#000"/><circle cx="70" cy="41" r="1.5" fill="#fff"/>
+                <path d="M 61 38 Q 68 42 75 38" stroke="#000" stroke-width="2.5" fill="none"/>
+              </g>
+              <!-- Tränen -->
+              <g class="sad-tears" style="display:none;">
+                <path d="M 32 50 C 29 56 27 58 32 61 C 36 58 34 56 32 50 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+                <path d="M 68 50 C 65 56 63 58 68 61 C 72 58 70 56 68 50 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+              </g>
+              <!-- Throat Sac on Cheer -->
+              <circle class="frog-throat" cx="50" cy="62" r="14" fill="#76ff03" stroke="#000" stroke-width="2" style="display:none;"/>
+              <!-- Mushroom Cap Hat -->
+              <path d="M 18 36 C 18 10 82 10 82 36 Z" fill="#ff1744" stroke="#000" stroke-width="3.5"/>
+              <circle cx="34" cy="22" r="4.5" fill="#fff"/><circle cx="66" cy="22" r="5" fill="#fff"/><circle cx="50" cy="16" r="4" fill="#fff"/>
+              <path class="mouth-normal" d="M 34 64 Q 50 74 66 64" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+              <path class="mouth-open" style="display:none;" d="M 34 64 Q 50 82 66 64 Z" fill="#ff5252" stroke="#000" stroke-width="2.5"/>
+              <path class="mouth-sad" style="display:none;" d="M 36 70 Q 50 62 64 70" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+            </g>
+          </svg>
+        </div>
+        <div class="text-center w-full mt-1">
+          <h4 class="font-brand font-black text-sm text-white group-hover:text-emerald-300">Plop</h4>
+          <span class="text-[10px] font-mono-tech text-yellow-400">🎀 Pilz & Fliege</span>
+        </div>
+      </div>
+
+      <!-- ================= 04. BUBBLES ================= -->
+      <div onclick="selectCreature(3)" id="card-3" class="creature-card relative bg-[#181a26] border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-cyan-400 transition-all select-none">
+        <span class="absolute top-3 left-3 text-[10px] font-mono-tech font-black px-2 py-0.5 rounded bg-cyan-400 text-black border border-black">04</span>
+        <div class="w-32 h-32 flex items-center justify-center my-1">
+          <svg id="svg-3" class="creature-svg c-idle w-28 h-28 overflow-visible" viewBox="0 0 100 100">
+            <!-- Tentacle Legs -->
+            <g class="leg-l t-wave-2"><path d="M 36 68 Q 30 86 36 88" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><path d="M 36 68 Q 30 86 36 88" fill="none" stroke="#00f0ff" stroke-width="2.5" stroke-linecap="round"/><circle cx="34" cy="80" r="2" fill="#fff"/></g>
+            <g class="leg-r"><path d="M 64 68 Q 70 86 64 88" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><path d="M 64 68 Q 70 86 64 88" fill="none" stroke="#00f0ff" stroke-width="2.5" stroke-linecap="round"/><circle cx="66" cy="80" r="2" fill="#fff"/></g>
+            <!-- Arms wearing Orange Swimmies -->
+            <g class="arm-l origin-l-arm"><ellipse cx="18" cy="50" rx="6" ry="8" fill="#ff6d00" stroke="#000" stroke-width="2"/><path d="M 24 56 Q 8 60 12 45" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><path d="M 24 56 Q 8 60 12 45" fill="none" stroke="#00f0ff" stroke-width="2.5" stroke-linecap="round"/></g>
+            <g class="arm-r origin-r-arm t-wave-1"><ellipse cx="82" cy="50" rx="6" ry="8" fill="#ff6d00" stroke="#000" stroke-width="2"/><path d="M 76 56 Q 92 60 88 45" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><path d="M 76 56 Q 92 60 88 45" fill="none" stroke="#00f0ff" stroke-width="2.5" stroke-linecap="round"/></g>
+            <!-- Dome Head with Sailor Hat -->
+            <g class="body-base head-node origin-head">
+              <path d="M 42 22 L 58 22 L 62 14 L 38 14 Z" fill="#fff" stroke="#000" stroke-width="2"/><ellipse cx="50" cy="14" rx="12" ry="3" fill="#00f0ff"/><circle cx="50" cy="18" r="2" fill="#ff0055"/>
+              <path d="M 24 55 C 22 26 78 26 76 55 C 76 66 70 72 50 72 C 30 72 24 66 24 55 Z" fill="#00f0ff" stroke="#000" stroke-width="3.5"/>
+              <ellipse cx="50" cy="42" rx="14" ry="8" fill="#e0f7fa" opacity="0.6"/>
+              <!-- Eyes Normal -->
+              <g class="eye-normal">
+                <circle cx="38" cy="48" r="6" fill="#000"/><circle cx="36" cy="46" r="2.5" fill="#fff"/>
+                <circle cx="62" cy="48" r="6" fill="#000"/><circle cx="60" cy="46" r="2.5" fill="#fff"/>
+              </g>
+              <g class="eye-happy" style="display:none;"><path d="M 32 48 Q 38 42 44 48" stroke="#000" stroke-width="3" fill="none"/><path d="M 56 48 Q 62 42 68 48" stroke="#000" stroke-width="3" fill="none"/></g>
+              <g class="eye-sleep" style="display:none;"><line x1="32" y1="48" x2="44" y2="48" stroke="#000" stroke-width="3"/><line x1="56" y1="48" x2="68" y2="48" stroke="#000" stroke-width="3"/></g>
+              <!-- Eye Sad -->
+              <g class="eye-sad" style="display:none;">
+                <circle cx="38" cy="48" r="6" fill="#000"/><circle cx="39" cy="46" r="2" fill="#fff"/>
+                <path d="M 32 43 Q 38 47 44 43" stroke="#000" stroke-width="2" fill="none"/>
+                <circle cx="62" cy="48" r="6" fill="#000"/><circle cx="63" cy="46" r="2" fill="#fff"/>
+                <path d="M 56 43 Q 62 47 68 43" stroke="#000" stroke-width="2" fill="none"/>
+              </g>
+              <!-- Tränen -->
+              <g class="sad-tears" style="display:none;">
+                <path d="M 38 54 C 35 60 33 62 38 65 C 42 62 40 60 38 54 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+                <path d="M 62 54 C 59 60 57 62 62 65 C 66 62 64 60 62 54 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+              </g>
+              <circle class="mouth-normal" cx="50" cy="58" r="4.5" fill="#ff007f" stroke="#000" stroke-width="2"/>
+              <circle class="mouth-open" style="display:none;" cx="50" cy="58" r="7" fill="#ff007f" stroke="#000" stroke-width="2.5"/>
+              <path class="mouth-sad" style="display:none;" d="M 44 63 Q 50 58 56 63" stroke="#000" stroke-width="2.5" fill="none"/>
+              <!-- Cheer bubbles -->
+              <g class="bubbles-burst" style="display:none;"><circle cx="50" cy="20" r="4" fill="#00f0ff" opacity="0.8"/><circle cx="40" cy="14" r="3" fill="#ffe600" opacity="0.8"/><circle cx="60" cy="12" r="3.5" fill="#ff007f" opacity="0.8"/></g>
+            </g>
+          </svg>
+        </div>
+        <div class="text-center w-full mt-1">
+          <h4 class="font-brand font-black text-sm text-white group-hover:text-cyan-300">Bubbles</h4>
+          <span class="text-[10px] font-mono-tech text-yellow-400">🤿 Schwimmflügel</span>
+        </div>
+      </div>
+
+      <!-- ================= 05. SNOOZE ================= -->
+      <div onclick="selectCreature(4)" id="card-4" class="creature-card relative bg-[#181a26] border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-amber-400 transition-all select-none">
+        <span class="absolute top-3 left-3 text-[10px] font-mono-tech font-black px-2 py-0.5 rounded bg-amber-400 text-black border border-black">05</span>
+        <div class="w-32 h-32 flex items-center justify-center my-1">
+          <svg id="svg-4" class="creature-svg c-idle w-28 h-28 overflow-visible" viewBox="0 0 100 100">
+            <!-- Bear Feet -->
+            <g class="leg-l origin-hip-l"><ellipse cx="36" cy="86" rx="9" ry="6" fill="#f59e0b" stroke="#000" stroke-width="2.5"/><circle cx="33" cy="85" r="1.5" fill="#000"/><circle cx="36" cy="83" r="1.5" fill="#000"/><circle cx="39" cy="85" r="1.5" fill="#000"/></g>
+            <g class="leg-r origin-hip-r"><ellipse cx="64" cy="86" rx="9" ry="6" fill="#f59e0b" stroke="#000" stroke-width="2.5"/><circle cx="61" cy="85" r="1.5" fill="#000"/><circle cx="64" cy="83" r="1.5" fill="#000"/><circle cx="67" cy="85" r="1.5" fill="#000"/></g>
+            <!-- Bear Arms -->
+            <g class="arm-l origin-l-arm"><path d="M 28 54 Q 14 60 16 72" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round"/><path d="M 28 54 Q 14 60 16 72" fill="none" stroke="#fbbf24" stroke-width="3.5" stroke-linecap="round"/><circle cx="16" cy="72" r="5" fill="#f59e0b" stroke="#000" stroke-width="2"/></g>
+            <g class="arm-r origin-r-arm"><path d="M 72 54 Q 86 60 84 72" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round"/><path d="M 72 54 Q 86 60 84 72" fill="none" stroke="#fbbf24" stroke-width="3.5" stroke-linecap="round"/><circle cx="84" cy="72" r="5" fill="#f59e0b" stroke="#000" stroke-width="2"/></g>
+            <!-- Body -->
+            <g class="body-base head-node origin-head">
+              <!-- Nightcap -->
+              <path d="M 45 26 Q 75 10 82 28" fill="none" stroke="#000" stroke-width="8" stroke-linecap="round"/><path d="M 45 26 Q 75 10 82 28" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round"/><circle cx="82" cy="28" r="4.5" fill="#ffe600" stroke="#000" stroke-width="2"/>
+              <circle cx="26" cy="30" r="8" fill="#f59e0b" stroke="#000" stroke-width="2.5"/><circle cx="26" cy="30" r="3.5" fill="#fbbf24"/>
+              <circle cx="50" cy="56" r="32" fill="#fbbf24" stroke="#000" stroke-width="3.5"/>
+              <ellipse cx="50" cy="62" rx="18" ry="14" fill="#fef3c7"/>
+              <ellipse cx="50" cy="70" rx="3" ry="4" fill="#f59e0b" opacity="0.8"/>
+              <!-- Eyes Normal -->
+              <g class="eye-normal">
+                <path d="M 34 46 Q 39 50 44 46" fill="none" stroke="#000" stroke-width="3.5" stroke-linecap="round"/>
+                <path d="M 56 46 Q 61 50 66 46" fill="none" stroke="#000" stroke-width="3.5" stroke-linecap="round"/>
+              </g>
+              <g class="eye-happy" style="display:none;"><path d="M 34 46 Q 39 40 44 46" fill="none" stroke="#000" stroke-width="3.5"/><path d="M 56 46 Q 61 40 66 46" fill="none" stroke="#000" stroke-width="3.5"/></g>
+              <g class="eye-sleep" style="display:none;"><line x1="34" y1="48" x2="44" y2="48" stroke="#000" stroke-width="3.5"/><line x1="56" y1="48" x2="66" y2="48" stroke="#000" stroke-width="3.5"/></g>
+              <!-- Eye Sad -->
+              <g class="eye-sad" style="display:none;">
+                <path d="M 34 47 Q 39 43 44 47" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+                <path d="M 56 47 Q 61 43 66 47" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+              </g>
+              <!-- Tränen -->
+              <g class="sad-tears" style="display:none;">
+                <path d="M 36 50 C 33 56 31 58 36 61 C 40 58 38 56 36 50 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+                <path d="M 64 50 C 61 56 59 58 64 61 C 68 58 66 56 64 50 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+              </g>
+              <!-- Anime Snot Bubble -->
+              <circle class="snot-bubble-node" cx="54" cy="54" r="5" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5" opacity="0.8" style="display:none;"/>
+              <circle cx="50" cy="55" r="4" fill="#000"/>
+              <path class="mouth-normal" d="M 50 59 L 50 64" stroke="#000" stroke-width="2.5"/>
+              <path class="mouth-open" style="display:none;" d="M 46 60 Q 50 68 54 60 Z" fill="#f87171" stroke="#000" stroke-width="2"/>
+              <path class="mouth-sad" style="display:none;" d="M 46 65 Q 50 60 54 65" stroke="#000" stroke-width="2.5" fill="none"/>
+            </g>
+          </svg>
+        </div>
+        <div class="text-center w-full mt-1">
+          <h4 class="font-brand font-black text-sm text-white group-hover:text-amber-300">Snooze</h4>
+          <span class="text-[10px] font-mono-tech text-yellow-400">💤 Schlafmütze & Honig</span>
+        </div>
+      </div>
+
+      <!-- ================= 06. BEEP ================= -->
+      <div onclick="selectCreature(5)" id="card-5" class="creature-card relative bg-[#181a26] border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-slate-300 transition-all select-none">
+        <span class="absolute top-3 left-3 text-[10px] font-mono-tech font-black px-2 py-0.5 rounded bg-slate-300 text-black border border-black">06</span>
+        <div class="w-32 h-32 flex items-center justify-center my-1">
+          <svg id="svg-5" class="creature-svg c-idle w-28 h-28 overflow-visible" viewBox="0 0 100 100">
+            <!-- Spring Feet -->
+            <g class="leg-l origin-hip-l"><path d="M 38 76 L 35 80 L 41 84 L 38 88" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/><ellipse cx="38" cy="90" rx="7" ry="3.5" fill="#00f0ff" stroke="#000" stroke-width="2"/></g>
+            <g class="leg-r origin-hip-r"><path d="M 62 76 L 59 80 L 65 84 L 62 88" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/><ellipse cx="62" cy="90" rx="7" ry="3.5" fill="#00f0ff" stroke="#000" stroke-width="2"/></g>
+            <!-- Claws -->
+            <g class="arm-l origin-l-arm"><rect x="14" y="48" width="14" height="6" rx="2" fill="#94a3b8" stroke="#000" stroke-width="2"/><path d="M 12 46 Q 6 51 12 56" fill="none" stroke="#000" stroke-width="3"/></g>
+            <g class="arm-r origin-r-arm"><rect x="72" y="48" width="14" height="6" rx="2" fill="#94a3b8" stroke="#000" stroke-width="2"/><path d="M 88 46 Q 94 51 88 56" fill="none" stroke="#000" stroke-width="3"/></g>
+            <!-- Body -->
+            <g class="body-base head-node origin-head">
+              <g class="ears-spin">
+                <rect x="28" y="8" width="8" height="24" rx="3" fill="#94a3b8" stroke="#000" stroke-width="2.5"/><rect x="30" y="12" width="4" height="14" fill="#38bdf8"/>
+                <rect x="64" y="8" width="8" height="24" rx="3" fill="#94a3b8" stroke="#000" stroke-width="2.5"/><rect x="66" y="12" width="4" height="14" fill="#38bdf8"/>
+                <line x1="50" y1="28" x2="50" y2="16" stroke="#000" stroke-width="2.5"/><circle class="led-light" cx="50" cy="14" r="4.5" fill="#ef4444" stroke="#000" stroke-width="1.5"/>
+              </g>
+              <rect x="24" y="30" width="52" height="46" rx="12" fill="#e2e8f0" stroke="#000" stroke-width="3.5"/>
+              <rect x="42" y="70" width="16" height="4" rx="1" fill="#000"/><rect x="43" y="71" width="10" height="2" fill="#00e676"/>
+              <!-- Screen -->
+              <rect x="28" y="38" width="44" height="24" rx="6" fill="#0f172a" stroke="#000" stroke-width="2"/>
+              <!-- Screen Eyes Normal -->
+              <g class="eye-normal">
+                <rect class="eye-pupil" x="34" y="44" width="10" height="10" rx="2" fill="#00f0ff"/>
+                <rect class="eye-pupil" x="56" y="44" width="10" height="10" rx="2" fill="#00f0ff"/>
+              </g>
+              <text class="screen-text font-mono-tech" x="35" y="54" font-size="10" fill="#64748b" font-weight="bold" style="display:none;">Z_Z</text>
+              <text class="screen-win font-mono-tech" x="34" y="54" font-size="10" fill="#ffe600" font-weight="bold" style="display:none;">WIN!</text>
+              <text class="screen-err font-mono-tech" x="32" y="54" font-size="9" fill="#38bdf8" font-weight="bold" style="display:none;">(T_T)</text>
+              <!-- Pixel Tränen -->
+              <g class="sad-tears" style="display:none;">
+                <rect x="38" y="56" width="3" height="4" rx="1" fill="#38bdf8"/>
+                <rect x="59" y="56" width="3" height="4" rx="1" fill="#38bdf8"/>
+              </g>
+              <line class="mouth-normal" x1="42" y1="58" x2="58" y2="58" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+              <!-- Error Smoke -->
+              <path class="smoke-puff" d="M 50 10 Q 45 4 52 0" stroke="#94a3b8" stroke-width="2" fill="none" style="display:none;"/>
+            </g>
+          </svg>
+        </div>
+        <div class="text-center w-full mt-1">
+          <h4 class="font-brand font-black text-sm text-white group-hover:text-cyan-300">Beep</h4>
+          <span class="text-[10px] font-mono-tech text-yellow-400">🤖 CRT & Stoßdämpfer</span>
+        </div>
+      </div>
+
+      <!-- ================= 07. CHOMPY (3/4 SEITEN-PROFIL MIT HÖRNERN & FLÜGELN!) ================= -->
+      <div onclick="selectCreature(6)" id="card-6" class="creature-card relative bg-[#181a26] border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-orange-500 transition-all select-none">
+        <span class="absolute top-3 left-3 text-[10px] font-mono-tech font-black px-2 py-0.5 rounded bg-orange-500 text-black border border-black">07</span>
+        <div class="w-32 h-32 flex items-center justify-center my-1">
+          <svg id="svg-6" class="creature-svg c-idle w-28 h-28 overflow-visible" viewBox="0 0 100 100">
+            <!-- Hinterer Flügel in Perspektive -->
+            <g class="wing-r origin-wing-r">
+              <path d="M 40 40 L 16 18 L 24 32 L 18 42 L 34 46 Z" fill="#f59e0b" stroke="#000" stroke-width="2.5"/>
+              <line x1="16" y1="18" x2="34" y2="46" stroke="#000" stroke-width="1.5"/>
+              <line x1="24" y1="32" x2="34" y2="46" stroke="#000" stroke-width="1.5"/>
+            </g>
+            <!-- Großer Stachelschwanz nach links gebogen -->
+            <g class="tail-wiggle origin-tail">
+              <path d="M 28 66 Q 10 70 8 52 Q 8 38 18 42" fill="none" stroke="#000" stroke-width="7" stroke-linecap="round"/>
+              <path d="M 28 66 Q 10 70 8 52 Q 8 38 18 42" fill="none" stroke="#ff3d00" stroke-width="4" stroke-linecap="round"/>
+              <!-- Stacheln -->
+              <polygon points="12,48 6,40 16,44" fill="#ffe600" stroke="#000" stroke-width="1.5"/>
+              <polygon points="18,42 14,34 22,36" fill="#ffe600" stroke="#000" stroke-width="1.5"/>
+              <polygon points="25,50 20,44 28,44" fill="#ffe600" stroke="#000" stroke-width="1.5"/>
+            </g>
+            <!-- Drachenbeine mit Krallen (3/4 Stand) -->
+            <g class="leg-l origin-hip-l"><ellipse cx="34" cy="85" rx="8" ry="5.5" fill="#d84315" stroke="#000" stroke-width="2.5"/><polygon points="30,88 28,92 32,90" fill="#fff" stroke="#000" stroke-width="1"/><polygon points="34,89 34,93 36,90" fill="#fff" stroke="#000" stroke-width="1"/><polygon points="38,88 40,92 39,89" fill="#fff" stroke="#000" stroke-width="1"/></g>
+            <g class="leg-r origin-hip-r"><ellipse cx="58" cy="85" rx="8" ry="5.5" fill="#d84315" stroke="#000" stroke-width="2.5"/><polygon points="54,88 52,92 56,90" fill="#fff" stroke="#000" stroke-width="1"/><polygon points="58,89 58,93 60,90" fill="#fff" stroke="#000" stroke-width="1"/><polygon points="62,88 64,92 63,89" fill="#fff" stroke="#000" stroke-width="1"/></g>
+            <!-- Vorderer großer Flügel -->
+            <g class="wing-l origin-wing-l">
+              <path d="M 32 46 L 8 22 L 14 36 L 6 48 L 24 54 Z" fill="#ffb703" stroke="#000" stroke-width="2.5"/>
+              <line x1="8" y1="22" x2="24" y2="54" stroke="#000" stroke-width="1.5"/>
+              <line x1="14" y1="36" x2="24" y2="54" stroke="#000" stroke-width="1.5"/>
+            </g>
+            <!-- Drachenarme mit Klauen -->
+            <g class="arm-l origin-l-arm"><path d="M 38 56 Q 30 64 36 70" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="36" cy="70" r="3.5" fill="#ffb703" stroke="#000" stroke-width="1.5"/></g>
+            <g class="arm-r origin-r-arm"><path d="M 62 56 Q 74 60 72 70" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="72" cy="70" r="3.5" fill="#ffb703" stroke="#000" stroke-width="1.5"/></g>
+            <!-- Drachen-Körper & Kopf im 3/4 Seiten-Profil -->
+            <g class="body-base head-node origin-head">
+              <!-- Majestätische geschwungene goldene Hörner -->
+              <path d="M 44 26 Q 36 14 30 6 Q 40 14 48 22 Z" fill="#f59e0b" stroke="#000" stroke-width="2"/>
+              <path d="M 36 28 Q 22 14 14 4 Q 28 14 42 22 Z" fill="#ffe600" stroke="#000" stroke-width="2.5"/>
+              <!-- Rumpf & Kopf (Schnauze blickt nach rechts) -->
+              <path d="M 26 56 C 24 36 40 24 56 24 C 68 24 74 34 78 44 C 82 49 80 58 74 60 C 70 61 68 59 66 59 C 64 68 62 76 56 80 C 44 82 28 82 26 56 Z" fill="#ff3d00" stroke="#000" stroke-width="3.5"/>
+              <!-- Gelber Schuppen-Bauch -->
+              <path d="M 44 54 C 54 54 62 58 64 66 C 60 76 52 80 44 80 C 38 80 38 72 40 64 Z" fill="#ffe600" stroke="#000" stroke-width="2"/>
+              <line x1="42" y1="62" x2="62" y2="62" stroke="#000" stroke-width="1.5"/>
+              <line x1="43" y1="70" x2="58" y2="70" stroke="#000" stroke-width="1.5"/>
+              <!-- Expressives Drachenauge im Profil -->
+              <g class="eye-normal">
+                <ellipse cx="54" cy="40" rx="7.5" ry="9" fill="#fff" stroke="#000" stroke-width="2.5"/>
+                <ellipse class="eye-pupil" cx="56" cy="40" rx="4" ry="7" fill="#000"/>
+                <circle cx="58" cy="38" r="2" fill="#fff"/>
+              </g>
+              <g class="eye-happy" style="display:none;"><path d="M 48 42 Q 54 34 60 42" stroke="#000" stroke-width="3.5" fill="none"/></g>
+              <g class="eye-sleep" style="display:none;"><line x1="48" y1="42" x2="60" y2="42" stroke="#000" stroke-width="3.5"/></g>
+              <!-- Eye Sad: Trauriges großes Kullerauge mit Kummerschnitt -->
+              <g class="eye-sad" style="display:none;">
+                <ellipse cx="54" cy="40" rx="7.5" ry="9" fill="#fff" stroke="#000" stroke-width="2.5"/>
+                <ellipse cx="54" cy="43" rx="4" ry="5" fill="#000"/><circle cx="56" cy="40" r="1.5" fill="#fff"/>
+                <path d="M 47 34 Q 54 38 61 35" stroke="#000" stroke-width="2.5" fill="none"/>
+              </g>
+              <!-- Große fließende Träne an der Schnauze -->
+              <g class="sad-tears" style="display:none;">
+                <path d="M 58 48 C 55 54 53 56 58 59 C 63 56 61 54 58 48 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+              </g>
+              <!-- Nüster -->
+              <ellipse cx="74" cy="46" rx="2" ry="2.5" fill="#000"/>
+              <circle class="smoke-nose" cx="74" cy="42" r="3" fill="#94a3b8" opacity="0.7" style="display:none;"/>
+              <!-- Weißes Zähnchen -->
+              <polygon points="68,54 71,59 74,54" fill="#fff" stroke="#000" stroke-width="1.5"/>
+              <path class="mouth-normal" d="M 56 54 Q 64 58 72 53" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+              <path class="mouth-open" style="display:none;" d="M 56 54 Q 66 66 76 53 Z" fill="#ffe600" stroke="#000" stroke-width="2"/>
+              <path class="mouth-sad" style="display:none;" d="M 56 57 Q 64 52 72 56" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+              <!-- Feuerball bei Jubel -->
+              <g class="fire-blast" style="display:none;">
+                <path d="M 74 46 Q 84 32 94 24 Q 88 34 94 18 Q 80 28 78 38 Z" fill="#ffe600" stroke="#ff0055" stroke-width="2"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <div class="text-center w-full mt-1">
+          <h4 class="font-brand font-black text-sm text-white group-hover:text-orange-400">Chompy</h4>
+          <span class="text-[10px] font-mono-tech text-yellow-400">👑 3/4-Blick & Schwingen</span>
+        </div>
+      </div>
+
+      <!-- ================= 08. NUBI (CLEANE FLOCKIGE WOLKE OHNE VERWIRRENDE SEITENKREISE!) ================= -->
+      <div onclick="selectCreature(7)" id="card-7" class="creature-card relative bg-[#181a26] border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-sky-400 transition-all select-none">
+        <span class="absolute top-3 left-3 text-[10px] font-mono-tech font-black px-2 py-0.5 rounded bg-sky-300 text-black border border-black">08</span>
+        <div class="w-32 h-32 flex items-center justify-center my-1">
+          <svg id="svg-7" class="creature-svg c-idle w-28 h-28 overflow-visible" viewBox="0 0 100 100">
+            <!-- Feet -->
+            <g class="leg-l origin-hip-l"><circle cx="40" cy="80" r="5" fill="#38bdf8" stroke="#000" stroke-width="2"/></g>
+            <g class="leg-r origin-hip-r"><circle cx="60" cy="80" r="5" fill="#38bdf8" stroke="#000" stroke-width="2"/></g>
+            <!-- Arms / Fluff Paws -->
+            <g class="arm-l origin-l-arm"><circle cx="24" cy="58" r="4.5" fill="#e0f2fe" stroke="#000" stroke-width="2"/></g>
+            <g class="arm-r origin-r-arm"><circle cx="76" cy="58" r="4.5" fill="#e0f2fe" stroke="#000" stroke-width="2"/></g>
+            <!-- Regen bei Trauer -->
+            <g class="cloud-rain-drops" style="display:none;">
+              <line x1="36" y1="82" x2="32" y2="94" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="2,2"/>
+              <line x1="50" y1="82" x2="48" y2="96" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="2,2"/>
+              <line x1="64" y1="82" x2="60" y2="94" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="2,2"/>
+            </g>
+            <!-- Body: Wunderschöne fluffige Wolke mit Mini-Sonne -->
+            <g class="body-base head-node origin-head">
+              <circle class="sun-glow" cx="72" cy="24" r="8" fill="#facc15" stroke="#000" stroke-width="2"/>
+              <path class="cloud-mesh" d="M 26 66 C 14 66 12 50 24 44 C 22 30 38 22 50 26 C 62 20 78 28 78 42 C 88 46 88 66 74 66 C 66 74 34 74 26 66 Z" fill="#e0f2fe" stroke="#000" stroke-width="3.5"/>
+              <!-- Rosige Bäckchen -->
+              <circle cx="33" cy="53" r="3.5" fill="#f43f5e" opacity="0.4"/>
+              <circle cx="67" cy="53" r="3.5" fill="#f43f5e" opacity="0.4"/>
+              <!-- Eyes Normal -->
+              <g class="eye-normal">
+                <circle cx="40" cy="46" r="4.5" fill="#000"/><circle cx="39" cy="44" r="1.5" fill="#fff"/>
+                <circle cx="60" cy="46" r="4.5" fill="#000"/><circle cx="59" cy="44" r="1.5" fill="#fff"/>
+              </g>
+              <g class="eye-happy" style="display:none;"><path d="M 35 46 Q 40 40 45 46" stroke="#000" stroke-width="3" fill="none"/><path d="M 55 46 Q 60 40 65 46" stroke="#000" stroke-width="3" fill="none"/></g>
+              <g class="eye-sleep" style="display:none;"><line x1="35" y1="46" x2="45" y2="46" stroke="#000" stroke-width="3"/><line x1="55" y1="46" x2="65" y2="46" stroke="#000" stroke-width="3"/></g>
+              <!-- Eye Sad -->
+              <g class="eye-sad" style="display:none;">
+                <circle cx="40" cy="46" r="4.5" fill="#000"/><circle cx="41" cy="44" r="1.5" fill="#fff"/>
+                <path d="M 35 42 Q 40 45 45 42" stroke="#000" stroke-width="2" fill="none"/>
+                <circle cx="60" cy="46" r="4.5" fill="#000"/><circle cx="61" cy="44" r="1.5" fill="#fff"/>
+                <path d="M 55 42 Q 60 45 65 42" stroke="#000" stroke-width="2" fill="none"/>
+              </g>
+              <!-- Tränen -->
+              <g class="sad-tears" style="display:none;">
+                <path d="M 40 52 C 38 56 36 58 40 60 C 44 58 42 56 40 52 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+                <path d="M 60 52 C 58 56 56 58 60 60 C 64 58 62 56 60 52 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+              </g>
+              <path class="mouth-normal" d="M 46 54 Q 50 58 54 54" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+              <ellipse class="mouth-open" style="display:none;" cx="50" cy="56" rx="4" ry="5" fill="#f43f5e" stroke="#000" stroke-width="1.5"/>
+              <path class="mouth-sad" style="display:none;" d="M 46 58 Q 50 54 54 58" stroke="#000" stroke-width="2.5" fill="none"/>
+            </g>
+          </svg>
+        </div>
+        <div class="text-center w-full mt-1">
+          <h4 class="font-brand font-black text-sm text-white group-hover:text-sky-300">Nubi</h4>
+          <span class="text-[10px] font-mono-tech text-yellow-400">☀️ Mini-Sonne & Regen</span>
+        </div>
+      </div>
+
+      <!-- ================= 09. ZORP ================= -->
+      <div onclick="selectCreature(8)" id="card-8" class="creature-card relative bg-[#181a26] border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-lime-400 transition-all select-none">
+        <span class="absolute top-3 left-3 text-[10px] font-mono-tech font-black px-2 py-0.5 rounded bg-lime-400 text-black border border-black">09</span>
+        <div class="w-32 h-32 flex items-center justify-center my-1">
+          <svg id="svg-8" class="creature-svg c-idle w-28 h-28 overflow-visible" viewBox="0 0 100 100">
+            <!-- Alien Legs -->
+            <g class="leg-l origin-hip-l"><ellipse cx="38" cy="88" rx="8" ry="4.5" fill="#65a30d" stroke="#000" stroke-width="2.5"/></g>
+            <g class="leg-r origin-hip-r"><ellipse cx="62" cy="88" rx="8" ry="4.5" fill="#65a30d" stroke="#000" stroke-width="2.5"/></g>
+            <!-- Arms -->
+            <g class="arm-l origin-l-arm"><path d="M 28 54 Q 10 58 12 70" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="12" cy="70" r="4" fill="#a3e635" stroke="#000" stroke-width="2"/></g>
+            <g class="arm-r origin-r-arm"><path d="M 72 54 Q 90 58 88 70" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="88" cy="70" r="4" fill="#a3e635" stroke="#000" stroke-width="2"/></g>
+            <!-- Body -->
+            <g class="body-base head-node origin-head">
+              <g class="antenna-stem">
+                <line x1="50" y1="28" x2="50" y2="10" stroke="#000" stroke-width="3"/><circle cx="50" cy="8" r="5" fill="#facc15" stroke="#000" stroke-width="2"/>
+              </g>
+              <path d="M 50 26 C 70 26 78 48 78 68 C 78 86 68 88 50 88 C 32 88 22 86 22 68 C 22 48 30 26 50 26 Z" fill="#84cc16" stroke="#000" stroke-width="3.5"/>
+              <!-- Monokel-Rahmen -->
+              <circle cx="50" cy="50" r="18" fill="none" stroke="#facc15" stroke-width="2.5"/>
+              <line x1="68" y1="50" x2="76" y2="60" stroke="#facc15" stroke-width="1.5"/>
+              <!-- Eyes Normal -->
+              <g class="eye-normal">
+                <circle cx="50" cy="50" r="16" fill="#fff" stroke="#000" stroke-width="2.5"/><circle class="eye-pupil" cx="50" cy="50" r="9" fill="#000"/><circle cx="53" cy="47" r="4" fill="#00f0ff"/><circle cx="54" cy="46" r="1.5" fill="#fff"/>
+              </g>
+              <g class="eye-happy" style="display:none;"><path d="M 38 52 Q 50 38 62 52" stroke="#000" stroke-width="4" fill="none"/></g>
+              <g class="eye-sleep" style="display:none;"><line x1="36" y1="52" x2="64" y2="52" stroke="#000" stroke-width="4"/></g>
+              <!-- Eye Sad: Riesiges trübes Alienauge blickt deprimiert nach unten -->
+              <g class="eye-sad" style="display:none;">
+                <circle cx="50" cy="50" r="16" fill="#fff" stroke="#000" stroke-width="2.5"/>
+                <ellipse cx="50" cy="54" rx="8" ry="6" fill="#000"/><circle cx="53" cy="52" r="2.5" fill="#00f0ff"/><circle cx="54" cy="51" r="1" fill="#fff"/>
+                <path d="M 38 42 Q 50 48 62 42" stroke="#000" stroke-width="3" fill="none"/>
+              </g>
+              <!-- Tränen -->
+              <g class="sad-tears" style="display:none;">
+                <path d="M 50 64 C 46 72 43 75 50 78 C 57 75 54 72 50 64 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1.5"/>
+              </g>
+              <g class="disco-eye" style="display:none;">
+                <circle cx="50" cy="50" r="16" fill="#00f0ff" stroke="#000" stroke-width="2"/>
+                <polygon points="50,38 54,46 62,50 54,54 50,62 46,54 38,50 46,46" fill="#ffe600"/>
+              </g>
+              <path class="mouth-normal" d="M 40 74 Q 50 80 60 74" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+              <rect x="47" y="72" width="6" height="4" fill="#fff" stroke="#000" stroke-width="1.5"/>
+              <path class="mouth-open" style="display:none;" d="M 40 72 Q 50 86 60 72 Z" fill="#ffe600" stroke="#000" stroke-width="2"/>
+              <path class="mouth-sad" style="display:none;" d="M 40 78 Q 50 70 60 78" stroke="#000" stroke-width="3" fill="none"/>
+            </g>
+          </svg>
+        </div>
+        <div class="text-center w-full mt-1">
+          <h4 class="font-brand font-black text-sm text-white group-hover:text-lime-300">Zorp</h4>
+          <span class="text-[10px] font-mono-tech text-yellow-400">🧐 Monokel & Goldkugel</span>
+        </div>
+      </div>
+
+      <!-- ================= 10. LOTTI ================= -->
+      <div onclick="selectCreature(9)" id="card-9" class="creature-card relative bg-[#181a26] border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-pink-300 transition-all select-none">
+        <span class="absolute top-3 left-3 text-[10px] font-mono-tech font-black px-2 py-0.5 rounded bg-pink-300 text-black border border-black">10</span>
+        <div class="w-32 h-32 flex items-center justify-center my-1">
+          <svg id="svg-9" class="creature-svg c-idle w-28 h-28 overflow-visible" viewBox="0 0 100 100">
+            <!-- Tail -->
+            <g class="tail-wiggle origin-tail"><path d="M 22 62 Q 8 68 12 50 Q 14 42 24 54" fill="#f43f5e" stroke="#000" stroke-width="2.5"/></g>
+            <!-- Feet -->
+            <g class="leg-l origin-hip-l"><ellipse cx="36" cy="85" rx="7" ry="4.5" fill="#f43f5e" stroke="#000" stroke-width="2"/></g>
+            <g class="leg-r origin-hip-r"><ellipse cx="64" cy="85" rx="7" ry="4.5" fill="#f43f5e" stroke="#000" stroke-width="2"/></g>
+            <!-- Arms -->
+            <g class="arm-l origin-l-arm"><circle cx="24" cy="62" r="2" fill="#fff" stroke="#000" stroke-width="1"/><path d="M 30 55 Q 16 60 18 70" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="18" cy="70" r="3.5" fill="#fbcfe8" stroke="#000" stroke-width="1.5"/></g>
+            <g class="arm-r origin-r-arm"><circle cx="76" cy="62" r="2" fill="#fff" stroke="#000" stroke-width="1"/><path d="M 70 55 Q 84 60 82 70" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round"/><circle cx="82" cy="70" r="3.5" fill="#fbcfe8" stroke="#000" stroke-width="1.5"/></g>
+            <!-- Head & Gills -->
+            <g class="body-base head-node origin-head">
+              <g class="gills">
+                <path d="M 24 40 Q 8 35 12 46 Q 10 56 24 52" fill="#f43f5e" stroke="#000" stroke-width="2.5"/>
+                <path d="M 76 40 Q 92 35 88 46 Q 90 56 76 52" fill="#f43f5e" stroke="#000" stroke-width="2.5"/>
+              </g>
+              <polygon points="42,28 46,20 50,26 54,20 58,28" fill="#ffe600" stroke="#000" stroke-width="1.5"/><circle cx="50" cy="22" r="1.5" fill="#00f0ff"/>
+              <ellipse cx="50" cy="54" rx="30" ry="26" fill="#fbcfe8" stroke="#000" stroke-width="3.5"/>
+              <ellipse cx="50" cy="62" rx="14" ry="10" fill="#fdf2f8"/>
+              <!-- Schleife -->
+              <polygon points="50,28 52,33 57,33 53,36 55,41 50,38 45,41 47,36 43,33 48,33" fill="#ff007f" stroke="#000" stroke-width="1.5"/>
+              <!-- Eyes Normal -->
+              <g class="eye-normal">
+                <circle cx="36" cy="49" r="5" fill="#000"/><circle cx="34" cy="47" r="1.5" fill="#fff"/><line x1="32" y1="44" x2="30" y2="42" stroke="#000" stroke-width="1.5"/>
+                <circle cx="64" cy="49" r="5" fill="#000"/><circle cx="62" cy="47" r="1.5" fill="#fff"/><line x1="68" y1="44" x2="70" y2="42" stroke="#000" stroke-width="1.5"/>
+              </g>
+              <g class="eye-happy" style="display:none;"><path d="M 31 49 Q 36 43 41 49" stroke="#000" stroke-width="3" fill="none"/><path d="M 59 49 Q 64 43 69 49" stroke="#000" stroke-width="3" fill="none"/></g>
+              <g class="eye-sleep" style="display:none;"><line x1="31" y1="50" x2="41" y2="50" stroke="#000" stroke-width="3"/><line x1="59" y1="50" x2="69" y2="50" stroke="#000" stroke-width="3"/></g>
+              <!-- Eye Sad: Schluchzende Anime-Augen mit Wimpern -->
+              <g class="eye-sad" style="display:none;">
+                <circle cx="36" cy="50" r="5" fill="#000"/><circle cx="37" cy="48" r="1.5" fill="#fff"/><line x1="31" y1="45" x2="41" y2="48" stroke="#000" stroke-width="1.5"/>
+                <circle cx="64" cy="50" r="5" fill="#000"/><circle cx="65" cy="48" r="1.5" fill="#fff"/><line x1="69" y1="45" x2="59" y2="48" stroke="#000" stroke-width="1.5"/>
+              </g>
+              <!-- Tränen -->
+              <g class="sad-tears" style="display:none;">
+                <path d="M 36 56 C 33 62 31 64 36 67 C 40 64 38 62 36 56 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+                <path d="M 64 56 C 61 62 59 64 64 67 C 68 64 66 62 64 56 Z" fill="#38bdf8" stroke="#0284c7" stroke-width="1"/>
+              </g>
+              <path class="mouth-normal" d="M 45 60 Q 50 64 55 60" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round"/>
+              <path class="mouth-open" style="display:none;" d="M 44 60 Q 50 68 56 60 Z" fill="#f43f5e" stroke="#000" stroke-width="1.5"/>
+              <path class="mouth-sad" style="display:none;" d="M 45 64 Q 50 59 55 64" stroke="#000" stroke-width="2.5" fill="none"/>
+              <circle cx="28" cy="57" r="4.5" fill="#fb7185" opacity="0.7"/>
+              <circle cx="72" cy="57" r="4.5" fill="#fb7185" opacity="0.7"/>
+              <!-- Stars on Cheer -->
+              <g class="star-sparkles" style="display:none;">
+                <text x="20" y="30" font-size="12">✨</text>
+                <text x="74" y="30" font-size="12">✨</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <div class="text-center w-full mt-1">
+          <h4 class="font-brand font-black text-sm text-white group-hover:text-pink-300">Lotti</h4>
+          <span class="text-[10px] font-mono-tech text-yellow-400">👑 Tiara & Perlen</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'jump') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(120, now);
+          osc.frequency.exponentialRampToValueAtTime(750, now + 0.32);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.32);
+          osc.start(now);
+          osc.stop(now + 0.32);
+        } else if (type === 'cheer') {
+          const notes = [330, 440, 554, 659];
+          notes.forEach((freq, idx) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = 'square';
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.frequency.setValueAtTime(freq, now + idx * 0.07);
+            g.gain.setValueAtTime(0.08, now + idx * 0.07);
+            g.gain.linearRampToValueAtTime(0.01, now + idx * 0.07 + 0.16);
+            o.start(now + idx * 0.07);
+            o.stop(now + idx * 0.07 + 0.16);
+          });
+        } else if (type === 'dance') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(280, now);
+          osc.frequency.setValueAtTime(420, now + 0.08);
+          osc.frequency.setValueAtTime(560, now + 0.16);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.28);
+          osc.start(now);
+          osc.stop(now + 0.28);
+        } else if (type === 'wave') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(560, now);
+          osc.frequency.exponentialRampToValueAtTime(840, now + 0.15);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else if (type === 'sleep') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(130, now + 0.6);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
+          osc.start(now);
+          osc.stop(now + 0.6);
+        } else if (type === 'sad') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(380, now);
+          osc.frequency.exponentialRampToValueAtTime(110, now + 0.5);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        }
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      const btn = document.getElementById('btn-sound');
+      if (soundEnabled) {
+        btn.innerHTML = '<span>🔊</span> Sound: AN';
+        btn.classList.add('bg-cyan-400');
+        btn.classList.remove('bg-slate-700', 'text-white');
+      } else {
+        btn.innerHTML = '<span>🔇</span> Sound: AUS';
+        btn.classList.remove('bg-cyan-400');
+        btn.classList.add('bg-slate-700', 'text-white');
+      }
+    }
+
+    const creaturesData = [
+      { id: 0, name: 'Puddl', quirk: '🧢 Skater-Cap & Schlüssel', desc: 'Schleimling aus Neon-Gelatine. Trägt eine schiefe Schirmmütze und hat einen goldenen Schlüssel im Wackelpudding stecken!' },
+      { id: 1, name: 'Spark', quirk: '🦄 Blitz-Einhorn & Söckchen', desc: 'Magische Blitz-Katze mit goldenem Einhorn, rosa Innenohren und Anime-Sternenaugen. Schnurrt im Schlaf tiefenentspannt in der Mitte!' },
+      { id: 2, name: 'Plop', quirk: '🎀 Pilz & Fliege', desc: 'Gourmet-Frosch mit rot-weiß gepunktetem Fliegenpilz-Hut und gelber Gentleman-Fliege. Federt tief in die Hocke für weite Sprünge!' },
+      { id: 3, name: 'Bubbles', quirk: '🤿 Schwimmflügel', desc: 'Tiefsee-Oktopus mit Matrosenmütze und neongelben Schwimmflügeln an den Tentakeln. Dreht sich wie ein Propeller-Tornado!' },
+      { id: 4, name: 'Snooze', quirk: '💤 Schlafmütze & Honig', desc: 'Chonky Bär mit blau-gestreifter Zipfelmütze. Beim Schlafen bläht sich eine echte Cartoon-Rotzblase auf!' },
+      { id: 5, name: 'Beep', quirk: '🤖 CRT & Stoßdämpfer', desc: 'Retro-Konsole mit Antennen-Propeller und Federungs-Beinen. Sein Bauch-Screen zeigt Akkuladestand und (T_T) Emotionen an!' },
+      { id: 6, name: 'Chompy', quirk: '👑 3/4-Blick & Schwingen', desc: 'Feuer-Drache im charmanten 3/4-Seitenblick mit geschwungenen Hörnern am Schädel, großen Fledermausschwingen und Stachelschwanz!' },
+      { id: 7, name: 'Nubi', quirk: '☀️ Mini-Sonne & Regen', desc: 'Fluffige Schönwetter-Wolke mit eigener Mini-Sonne. Wenn er traurig wird, zieht ein persönlicher Regenschauer auf!' },
+      { id: 8, name: 'Zorp', quirk: '🧐 Monokel & Goldkugel', desc: 'Einäugiger Alien-Professor mit goldenem Monokel-Rahmen und Radar-Kugel auf dem Kopf.' },
+      { id: 9, name: 'Lotti', quirk: '👑 Tiara & Perlen', desc: 'Diva-Axolotl mit glitzernder Mini-Krone und Perlenarmbändern an den Vorderpfötchen.' }
+    ];
+
+    const emoteLabels = {
+      idle: '✨ NORMAL (IDLE)',
+      wave: '👋 WINKEN (INDIVIDUELL)',
+      jump: '🚀 SPRINGEN (DYNAMISCH)',
+      dance: '🕺 TANZEN (10 KULT-TÄNZE)',
+      cheer: '🎉 JUBELN (SPEZIAL-EFFEKTE)',
+      sleep: '💤 SCHLAFEN (CHARAKTER-POSEN)',
+      sad: '💧 TRAURIG (TRÄNEN & REGEN)'
+    };
+
+    const emoteEmojis = {
+      wave: '👋',
+      jump: '⭐',
+      dance: '🎵',
+      cheer: '🎉',
+      sleep: '💤',
+      sad: '💧'
+    };
+
+    let selectedCreatureIndex = 6; // Default to Chompy in Spotlight!
+    let currentGlobalEmote = 'idle';
+
+    function triggerGlobal(emote) {
+      currentGlobalEmote = emote;
+      document.getElementById('current-emote-label').innerText = emoteLabels[emote];
+      playSound(emote);
+
+      for (let i = 0; i < 10; i++) {
+        applyEmote(i, emote);
+      }
+      updateSpotlightVisual(emote);
+    }
+
+    function applyEmote(index, emote) {
+      const svg = document.getElementById('svg-' + index);
+      const card = document.getElementById('card-' + index);
+      if (!svg) return;
+
+      // Reset all animation classes
+      svg.setAttribute('class', 'creature-svg w-28 h-28 overflow-visible');
+
+      if (emote === 'idle') {
+        svg.classList.add('c-idle');
+      } else if (emote === 'dance') {
+        svg.classList.add('c-dance-' + index);
+        svg.classList.add('state-dance');
+        if (card) spawnParticle(card, emoteEmojis.dance);
+      } else {
+        svg.classList.add(emote + '-' + index);
+        svg.classList.add('state-' + emote);
+        if (card && emoteEmojis[emote]) spawnParticle(card, emoteEmojis[emote]);
+      }
+    }
+
+    function triggerSolo(emote) {
+      playSound(emote);
+      applyEmote(selectedCreatureIndex, emote);
+      updateSpotlightVisual(emote);
+    }
+
+    function selectCreature(index) {
+      selectedCreatureIndex = index;
+      const data = creaturesData[index];
+
+      for (let i = 0; i < 10; i++) {
+        const c = document.getElementById('card-' + i);
+        if (i === index) {
+          c.classList.add('border-yellow-400', 'scale-[1.03]');
+        } else {
+          c.classList.remove('border-yellow-400', 'scale-[1.03]');
+        }
+      }
+
+      document.getElementById('spotlight-id').innerText = '#' + (index < 9 ? '0' + (index + 1) : (index + 1));
+      document.getElementById('spotlight-name').innerText = data.name;
+      document.getElementById('spotlight-quirk').innerText = data.quirk;
+      document.getElementById('spotlight-desc').innerText = data.desc;
+
+      updateSpotlightVisual(currentGlobalEmote);
+      playSound('wave');
+    }
+
+    function updateSpotlightVisual(emote) {
+      const box = document.getElementById('spotlight-avatar-box');
+      const originalSvg = document.getElementById('svg-' + selectedCreatureIndex);
+      if (!originalSvg) return;
+
+      const clone = originalSvg.cloneNode(true);
+      clone.id = 'spotlight-svg-active';
+      clone.setAttribute('class', 'creature-svg w-44 h-44 overflow-visible');
+
+      if (emote === 'idle') {
+        clone.classList.add('c-idle');
+      } else if (emote === 'dance') {
+        clone.classList.add('c-dance-' + selectedCreatureIndex);
+        clone.classList.add('state-dance');
+      } else {
+        clone.classList.add(emote + '-' + selectedCreatureIndex);
+        clone.classList.add('state-' + emote);
+      }
+
+      box.innerHTML = '';
+      box.appendChild(clone);
+    }
+
+    function spawnParticle(container, emoji) {
+      const p = document.createElement('span');
+      p.className = 'float-particle';
+      p.innerText = emoji;
+      p.style.left = (Math.random() * 40 + 30) + '%';
+      p.style.top = '30%';
+      container.appendChild(p);
+      setTimeout(() => p.remove(), 1050);
+    }
+
+    function setTheme(theme) {
+      const body = document.getElementById('showroom-body');
+      const globalBar = document.getElementById('global-bar');
+      const spotlight = document.getElementById('spotlight-section');
+      const btnDark = document.getElementById('btn-theme-dark');
+      const btnLight = document.getElementById('btn-theme-light');
+      const cards = document.querySelectorAll('.creature-card');
+
+      if (theme === 'dark') {
+        body.className = "bg-[#10121a] text-white p-4 md:p-8 min-h-screen font-sans selection:bg-pink-500 selection:text-white transition-colors duration-300";
+        globalBar.className = "max-w-6xl mx-auto mb-8 bg-[#181b26] p-5 rounded-3xl border-[3px] border-black brutal-card transition-colors";
+        spotlight.className = "max-w-6xl mx-auto mb-10 p-6 md:p-8 rounded-3xl border-[4px] border-black bg-[#161824] brutal-card relative overflow-hidden transition-all text-white";
+        cards.forEach(c => {
+          c.className = "creature-card relative bg-[#181a26] border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-pink-500 transition-all select-none";
+        });
+        btnDark.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-black transition-all bg-yellow-400 text-black shadow-hard-black-sm border-2 border-black";
+        btnLight.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-bold transition-all text-slate-400 hover:text-white";
+      } else {
+        body.className = "bg-[#faf8f5] text-slate-950 p-4 md:p-8 min-h-screen font-sans selection:bg-pink-500 selection:text-white transition-colors duration-300";
+        globalBar.className = "max-w-6xl mx-auto mb-8 bg-white p-5 rounded-3xl border-[3px] border-black brutal-card transition-colors text-slate-950";
+        spotlight.className = "max-w-6xl mx-auto mb-10 p-6 md:p-8 rounded-3xl border-[4px] border-black bg-white brutal-card relative overflow-hidden transition-all text-slate-950";
+        cards.forEach(c => {
+          c.className = "creature-card relative bg-white border-[3px] border-black rounded-3xl p-4 flex flex-col items-center justify-between brutal-card group cursor-pointer hover:border-pink-500 transition-all select-none text-slate-950";
+        });
+        btnLight.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-black transition-all bg-yellow-400 text-black shadow-hard-black-sm border-2 border-black";
+        btnDark.className = "px-3 py-1.5 rounded-xl text-xs font-mono-tech font-bold transition-all text-slate-400 hover:text-white";
+      }
+    }
+
+    // Default to Chompy in Spotlight!
+    selectCreature(6);
+  </script>
+</body>
+</html>

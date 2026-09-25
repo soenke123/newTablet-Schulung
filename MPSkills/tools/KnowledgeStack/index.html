@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arcade Pop Quiz – Showroom Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;900&family=JetBrains+Mono:wght@800&family=Unbounded:wght@800;900&display=swap');
+    
+    .font-brand { font-family: 'Unbounded', 'Space Grotesk', system-ui, sans-serif; }
+    .font-mono-tech { font-family: 'JetBrains Mono', monospace; }
+
+    .brutal-card {
+      box-shadow: 6px 6px 0px 0px #000;
+    }
+    .brutal-card-sm {
+      box-shadow: 3px 3px 0px 0px #000;
+    }
+    .btn-act:active {
+      transform: translate(3px, 3px);
+      box-shadow: 0px 0px 0px 0px #000 !important;
+    }
+  </style>
+</head>
+<body class="bg-[#0e1017] text-white p-6 md:p-12 min-h-screen font-sans flex flex-col justify-between">
+
+  <div class="max-w-4xl mx-auto w-full">
+    <!-- Header -->
+    <header class="mb-10 text-center md:text-left">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg border-2 border-yellow-400 bg-yellow-400 text-black text-xs font-mono-tech font-black uppercase mb-3 brutal-card-sm">
+        ⚡ Arcade Pop Quiz Projekt
+      </div>
+      <h1 class="text-4xl md:text-5xl font-brand font-black tracking-tight text-white">
+        Showroom Übersicht
+      </h1>
+      <p class="text-slate-400 text-base mt-2">
+        Wähle eine der drei interaktiven Showroom-Dateien aus, um sie im Browser zu testen:
+      </p>
+    </header>
+
+    <!-- 3 Showroom Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+      
+      <!-- Card 1: 36 Wesen (Featured) -->
+      <a href="showroom-36-wesen.html" class="group block p-6 md:p-8 rounded-3xl bg-[#1e1b4b] border-[4px] border-yellow-400 brutal-card hover:border-yellow-300 transition-all hover:-translate-y-1 relative overflow-hidden">
+        <span class="absolute top-0 right-0 bg-yellow-400 text-black font-mono-tech font-black text-[10px] px-3 py-1 rounded-bl-xl border-l-2 border-b-2 border-black">NEU • 108 SKINS</span>
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-3xl">✨</span>
+          <span class="font-mono-tech text-xs font-black px-2.5 py-1 rounded-md bg-yellow-400 text-black border border-black">36 WESEN</span>
+        </div>
+        <h2 class="text-2xl font-brand font-black text-white group-hover:text-yellow-400">
+          Die 36 Wesen & 108 Skins
+        </h2>
+        <p class="text-slate-300 text-xs md:text-sm mt-2 leading-relaxed">
+          Das erweiterte Avatar-Universum: <strong>36 Wesen</strong> mit je <strong>3 Farb-Schemata (108 Skins)</strong>, 6 Kategorien (inkl. Düster & Spuk, Kosmisch, Tier-Magie), 216 Custom-Emotes, 8-Bit Sounds & Spotlight-Inspector.
+        </p>
+        <div class="mt-6 flex items-center gap-2 font-mono-tech text-xs font-black text-yellow-400 group-hover:translate-x-1 transition-transform">
+          <span>Öffnen ➔</span>
+        </div>
+      </a>
+
+      <!-- Card 2: 10 Wesen -->
+      <a href="showroom-10-wesen.html" class="group block p-6 md:p-8 rounded-3xl bg-[#181a26] border-[4px] border-black brutal-card hover:border-pink-500 transition-all hover:-translate-y-1">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-3xl">👾</span>
+          <span class="font-mono-tech text-xs font-black px-2.5 py-1 rounded-md bg-pink-500 text-black border border-black">10 WESEN</span>
+        </div>
+        <h2 class="text-2xl font-brand font-black text-white group-hover:text-pink-400">
+          Die 10 Core Wesen
+        </h2>
+        <p class="text-slate-400 text-xs md:text-sm mt-2 leading-relaxed">
+          Die ursprünglichen 10 Charaktere (Puddl, Spark, Plop, Bubbles etc.) mit Winken, Springen, Tanzen, Jubeln, Schlafen, Traurig & 8-Bit Synthesizer-Sounds.
+        </p>
+        <div class="mt-6 flex items-center gap-2 font-mono-tech text-xs font-black text-pink-400 group-hover:translate-x-1 transition-transform">
+          <span>Öffnen ➔</span>
+        </div>
+      </a>
+
+      <!-- Card 3: Beamer / Mobile / Tablet -->
+      <a href="showroom-beamer-mobile.html" class="group block p-6 md:p-8 rounded-3xl bg-[#181a26] border-[4px] border-black brutal-card hover:border-cyan-400 transition-all hover:-translate-y-1">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-3xl">🕹️</span>
+          <span class="font-mono-tech text-xs font-black px-2.5 py-1 rounded-md bg-cyan-400 text-black border border-black">QUIZ LAYOUT</span>
+        </div>
+        <h2 class="text-2xl font-brand font-black text-white group-hover:text-cyan-300">
+          Beamer, Tablet & Handy
+        </h2>
+        <p class="text-slate-400 text-xs md:text-sm mt-2 leading-relaxed">
+          Das responsive Arcade-Pop Quiz-Design. Reduzierte 1-Spalten-Handyansicht (nur Frage + 4 Buttons), 2x2 Tablet-Grid und Beamer-Ansicht für die Lehrkraft.
+        </p>
+        <div class="mt-6 flex items-center gap-2 font-mono-tech text-xs font-black text-cyan-400 group-hover:translate-x-1 transition-transform">
+          <span>Öffnen ➔</span>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <footer class="max-w-4xl mx-auto w-full text-center text-xs font-mono-tech text-slate-500 border-t border-slate-800 pt-6">
+    Dateien liegen lokal in deinem Projektordner bereit zur Weiterentwicklung &bull; Keine externen Server nötig
+  </footer>
+
+</body>
+</html>
