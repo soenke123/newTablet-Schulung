@@ -67,7 +67,7 @@
 (function () {
   'use strict';
 
-  const ASSET_V = '20260926a';
+  const ASSET_V = '20260926b';
 
   /* Takt je Phase, in Millisekunden. Während der Frage muss der
      Beamer zügig mitzählen („17 von 28 haben geantwortet") — in der
@@ -81,13 +81,19 @@
   };
 
   const LABELS  = ['A', 'B', 'C', 'D'];
+  /* Fünf Knöpfe, und der Sprung ist der fünfte. Er lag von Anfang
+     an fertig da — creatures.css hat 36 eigene Sprünge, ks_emote
+     lässt 'jump' durch (Migration 0175), und das Zeichen stand
+     unten in EMOTE_ICON. Nur in dieser Liste fehlte er, also gab es
+     keinen Knopf dafür. Nachgetragen am 26.09.2026. */
   const EMOTES  = [
     { id: 'wave',  icon: '👋', title: 'Winken' },
+    { id: 'jump',  icon: '🚀', title: 'Springen' },
     { id: 'cheer', icon: '🎉', title: 'Jubeln' },
     { id: 'dance', icon: '🕺', title: 'Tanzen' },
     { id: 'sleep', icon: '😴', title: 'Schlafen' }
   ];
-  const EMOTE_ICON = { wave: '👋', cheer: '🎉', dance: '🕺', sleep: '😴', sad: '💧', jump: '⬆️' };
+  const EMOTE_ICON = { wave: '👋', jump: '🚀', cheer: '🎉', dance: '🕺', sleep: '😴', sad: '💧' };
 
   /* Wie lange ein Emote zu sehen ist. MUSS zu den 3,5 Sekunden in
      Migration 0175 passen: der Server gibt ein älteres Emote nicht
@@ -158,12 +164,21 @@
       + (sizeCss ? ' style="--ks-wsize:' + sizeCss + '"' : '') + '>' + inner + '</span>';
   }
 
-  // Ein bestehendes Wesen umschalten, ohne das SVG neu zu bauen —
-  // sonst fängt das Atmen bei jedem Takt von vorn an.
+  /* Ein bestehendes Wesen umschalten, ohne das SVG neu zu bauen —
+     sonst fängt das Atmen bei jedem Takt von vorn an.
+
+     `host` ist immer das FENSTER, in dem das Wesen steht (.ks-kpic,
+     .ks-spic, .ks-npic, .ks-ipic, .ks-tme, die Vorschau) und nie das
+     SVG selbst. Daran hängt `ks-springt`: nur während eines Sprungs
+     darf das Fenster offen sein, damit das Wesen darüber
+     hinauskommt (siehe tool.css). Die Zeile steht VOR dem Vergleich
+     der SVG-Klasse — sonst bliebe das Fenster offen, wenn das Emote
+     sich nicht geändert hat. */
   function setEmote(host, emote, cid) {
     if (!host) return;
     const svg = host.matches && host.matches('svg') ? host : host.querySelector('svg');
     if (!svg) return;
+    if (host.classList) host.classList.toggle('ks-springt', emote === 'jump');
     const want = 'creature-svg ' + emoteClass(emote, cid);
     if (svg.getAttribute('class') !== want) svg.setAttribute('class', want);
   }
@@ -578,9 +593,8 @@
       if (pic && Number(slot.dataset.cid) !== cid) {
         slot.dataset.cid = String(cid);
         pic.innerHTML = wesen(cid, p.skin_idx, wanted);
-      } else {
-        setEmote(pic, wanted, cid);
       }
+      setEmote(pic, wanted, cid);
     }
   }
 
@@ -617,9 +631,8 @@
         card.dataset.cid = String(cid);
         card.dataset.skin = String(p.skin_idx | 0);
         card.querySelector('.ks-kpic').innerHTML = wesen(cid, p.skin_idx, p.emote || 'idle');
-      } else {
-        setEmote(card.querySelector('.ks-kpic'), p.emote || 'idle', cid);
       }
+      setEmote(card.querySelector('.ks-kpic'), p.emote || 'idle', cid);
 
       const nm = card.querySelector('.ks-kname');
       if (nm.textContent !== p.nickname) nm.textContent = p.nickname;
@@ -809,6 +822,9 @@
         <div class="ks-npic">${wesen(p.creature_id, p.skin_idx, p.emote || 'idle')}</div>
         <span class="ks-nname">${esc(p.nickname)}</span>
         <span class="ks-npkt">${pkt(p.score)}</span>`;
+      // Auch am frisch gebauten Kasten: setEmote setzt nicht nur die
+      // Bewegung, sondern auch `ks-springt` am Fenster.
+      setEmote(box.querySelector('.ks-npic'), p.emote || 'idle', p.creature_id | 0);
       return;
     }
     box.querySelector('.ks-nnr').textContent = '#' + p.rank;
@@ -971,7 +987,18 @@
     setEmote(ziel, e, cid);
     localEmoteT = setTimeout(() => {
       localEmote = null;
-      if (!destroyed && view) flickeTab(view);
+      if (destroyed || !view) return;
+      /* In der Lobby flickt niemand — dort gibt es keine Punkte und
+         keine Nachbarn, also kennt flickeTab die Phase gar nicht.
+         Ohne diese Zeile bliebe das Wesen in der Vorschau ewig in
+         der letzten Bewegung stehen (und bei einem Sprung bliebe
+         auch `ks-springt` am Fenster hängen). Zurück auf das
+         Winken, mit dem die Vorschau gebaut wird. */
+      if (view.phase === 'lobby' || (view.phase === 'ended' && pickerOffen)) {
+        setEmote(stage.querySelector('[data-ks=vorschau]'), 'wave', myCreature);
+        return;
+      }
+      flickeTab(view);
     }, EMOTE_MS);
   }
 

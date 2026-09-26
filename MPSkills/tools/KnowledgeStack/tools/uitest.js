@@ -301,7 +301,7 @@ async function bereichEmote() {
   /* 1) Die Klassen, die es geben MUSS. Reine Datenprüfung an
         creatures.css, ohne tool.js: sie sagt, was überhaupt
         möglich ist. */
-  const familien = ['wave', 'cheer', 'sad', 'sleep'];
+  const familien = ['wave', 'cheer', 'sad', 'sleep', 'jump'];
   let fehlend = [];
   for (let id = 0; id < 36; id++) {
     for (const f of familien) if (!css.includes('.' + f + '-' + id + ' ')) fehlend.push(f + '-' + id);
@@ -320,7 +320,7 @@ async function bereichEmote() {
   /* 3) Was die tool.js wirklich ausgibt, steht in creatures.css.
         Geprüft über die Auflösung am Beamer: jedes Wesen im Podest
         bekommt ein Emote mitgegeben. */
-  const emotes = ['wave', 'cheer', 'dance', 'sleep', 'sad'];
+  const emotes = ['wave', 'cheer', 'dance', 'sleep', 'sad', 'jump'];
   const lb = emotes.map((e, i) => spieler(i + 1, { rank: i + 1, creature_id: i * 7, emote: e }));
   const v = Object.assign(beamAufl(), { leaderboard: lb });
   const t = await starte('presenter', v);
@@ -356,7 +356,8 @@ async function bereichEmote() {
   const tab = await starte('participant', tabAufl());
   const vorher = klassen(tab.root.querySelector('.ks-ipic svg')).join(' ');
   const knopf = tab.root.querySelector('.ks-emo[data-emote=dance]');
-  ok('vier Emote-Knöpfe unten', tab.root.querySelectorAll('.ks-emo').length === 4);
+  ok('fünf Emote-Knöpfe unten', tab.root.querySelectorAll('.ks-emo').length === 5,
+     String(tab.root.querySelectorAll('.ks-emo').length));
   click(knopf, tab.doc);
   const sofort = klassen(tab.root.querySelector('.ks-ipic svg'));
   ok('Tanz-Knopf bewegt das eigene Wesen im selben Augenblick',
@@ -365,6 +366,49 @@ async function bereichEmote() {
   ok('… und schickt ks_emote an den Server',
      tab.rufe.some(r => r.fn === 'ks_emote' && r.args.p_emote === 'dance'),
      JSON.stringify(tab.rufe.filter(r => r.fn === 'ks_emote')));
+
+  /* 5b) Der Sprung. Er lag fertig da (36 Bewegungen in creatures.css,
+         'jump' in ks_emote, ein Zeichen in EMOTE_ICON) und hatte nur
+         keinen Knopf — der Vorwurf „du hast das Sprung-Emote
+         vergessen" vom 26.09.2026 stimmte genau so.
+
+         Zwei Dinge gehören dazu, und das zweite ist das, was man
+         sieht: die Bewegung UND das offene Fenster. Der Sprung geht
+         über die halbe eigene Höhe hinaus; in einem Kasten mit
+         `overflow: hidden` wäre er ein Verschwinden nach oben. */
+  const spr = await starte('participant', tabAufl());
+  const sprKnopf = spr.root.querySelector('.ks-emo[data-emote=jump]');
+  ok('es gibt einen Sprung-Knopf', !!sprKnopf);
+  click(sprKnopf, spr.doc);
+  const sprCls = klassen(spr.root.querySelector('.ks-ipic svg'));
+  ok('Springen heißt „jump-<nr> state-jump"',
+     sprCls.includes('jump-7') && sprCls.includes('state-jump'), sprCls.join(' '));
+  ok('… und das Fenster geht dafür auf (ks-springt)',
+     spr.root.querySelector('.ks-ipic').classList.contains('ks-springt'));
+  await wait(20);
+  ok('… und der Server erfährt davon',
+     spr.rufe.some(r => r.fn === 'ks_emote' && r.args.p_emote === 'jump'));
+
+  /* Und es geht auch wieder zu. Ein Fenster, das offen bleibt,
+     schneidet später nichts mehr ab — dann ragt ein ruhendes Wesen
+     aus seiner Karte (feedback_hidden_attribute_loses_to_display,
+     dieselbe Klasse von Fehler). */
+  const zu = await starte('presenter', Object.assign(beamLobby(2), {
+    players: [spieler(1, { emote: 'jump' }), spieler(2, { emote: null })]
+  }));
+  ok('wer springt, hat ein offenes Fenster',
+     zu.root.querySelector('.ks-karte .ks-kpic').classList.contains('ks-springt'));
+  ok('wer nicht springt, hat ein zu',
+     !zu.root.querySelectorAll('.ks-karte .ks-kpic')[1].classList.contains('ks-springt'));
+  zu.zustand.view = Object.assign(beamLobby(2), {
+    players: [spieler(1, { emote: null }), spieler(2, { emote: null })]
+  });
+  zu.zustand.sig = 'b';
+  await zu.impl.update();
+  await wait(40);
+  ok('… und wenn der Sprung vorbei ist, geht es wieder zu',
+     !zu.root.querySelector('.ks-karte .ks-kpic').classList.contains('ks-springt'),
+     zu.root.querySelector('.ks-karte .ks-kpic').getAttribute('class'));
 
   /* 6) Auch die Nachbarn emoten — sonst winkt man ins Leere. */
   const nb = await starte('participant', tabAufl({
@@ -507,8 +551,8 @@ async function bereichTab() {
      txt(rv.root.querySelector('.ks-ich .ks-delta')));
   ok('Auflösung: auch hier steht die Frage NICHT',
      !txt(rv.root).includes('Was ist das Tablet'));
-  ok('Auflösung: vier Emote-Knöpfe ganz unten',
-     rv.root.querySelector('.ks-emobar')?.querySelectorAll('.ks-emo').length === 4);
+  ok('Auflösung: fünf Emote-Knöpfe ganz unten',
+     rv.root.querySelector('.ks-emobar')?.querySelectorAll('.ks-emo').length === 5);
   // Die Emote-Leiste ist das LETZTE im Bild — „ganz unten".
   const kinder = Array.from(rv.root.querySelector('.ks-stage').children);
   ok('… und die Leiste ist das Letzte im Bild',
@@ -541,7 +585,7 @@ async function bereichTab() {
      && txt(end.root.querySelector('.ks-urteil')).includes('20'),
      txt(end.root.querySelector('.ks-urteil')));
   ok('Siegerehrung: emoten geht auch hier',
-     end.root.querySelectorAll('.ks-emo').length === 4);
+     end.root.querySelectorAll('.ks-emo').length === 5);
   ok('Siegerehrung: alle jubeln',
      klassen(end.root.querySelector('.ks-ipic svg')).includes('cheer-7'));
 
@@ -846,8 +890,92 @@ async function bereichFluss() {
      !ab2.env.document.body.classList.contains('tool-fill'));
 }
 
+/* ══════════════════════════════════════════════════════════
+   HELL/DUNKEL
+   ══════════════════════════════════════════════════════════
+   Eine reine Textprüfung an tool.css, und sie fängt genau den
+   Fehler, der am 26.09.2026 gemeldet wurde: der Umschalter in der
+   Kopfzeile tat am Quiz nichts, weil das Werkzeug seine Farben fest
+   eingebaut hatte.
+
+   Geprüft wird nicht, wie es AUSSIEHT (das kann nur ein Auge) und
+   auch nicht der Kontrast (den misst fitcheck.js im echten
+   Browser), sondern die eine Bedingung, unter der Umschalten
+   überhaupt funktionieren KANN: jede Farbe steht in einer Variablen,
+   und die gibt es in beiden Sätzen.                               */
+async function bereichTheme() {
+  console.log('\n── Hell und dunkel ─────────────────────────────────\n');
+  const css = fs.readFileSync(path.join(DIR, 'tool.css'), 'utf8');
+
+  const blockVon = (kopf) => {
+    const i = css.indexOf(kopf);
+    if (i < 0) return null;
+    return css.slice(i, css.indexOf('}', i));
+  };
+  const dunkel = blockVon('.ks-frame {');
+  const hell   = blockVon(':root[data-theme="light"] .ks-frame {');
+  ok('es gibt einen hellen Satz', !!hell);
+  if (!dunkel || !hell) return;
+
+  const varsIn = t => new Set((t.match(/--ks-[a-z0-9-]+(?=\s*:)/g) || []));
+  const dSet = varsIn(dunkel), hSet = varsIn(hell);
+  ok('der dunkle Satz erklärt die Farben', dSet.size >= 20, String(dSet.size));
+
+  /* Der helle Satz überschreibt nur, was anders ist — was in beiden
+     gleich aussieht (die vier Antwortfarben), steht nur einmal da.
+     Umgekehrt darf er NICHTS erfinden: eine Variable, die nur hier
+     steht, gilt im Dunkeln nicht und fällt auf `unset` zurück. */
+  const erfunden = [...hSet].filter(v => !dSet.has(v));
+  ok('der helle Satz erfindet keine Variable', erfunden.length === 0, erfunden.join(', '));
+
+  /* Die Flächen, die sich ändern MÜSSEN. Ohne sie wäre das Quiz im
+     hellen Modus schwarz mit hellen Rändern — schlimmer als gar
+     kein Umschalten. */
+  const pflicht = ['--ks-bg', '--ks-flaeche', '--ks-karte', '--ks-tief',
+                   '--ks-ink', '--ks-soft', '--ks-linie', '--ks-kante', '--ks-punkt'];
+  const fehlt = pflicht.filter(v => !hSet.has(v));
+  ok('… und dreht jede tragende Fläche um', fehlt.length === 0, fehlt.join(', '));
+
+  /* Jede benutzte Variable ist auch erklärt. Ein Tippfehler in
+     var(--ks-golt) fällt sonst nirgends auf: der Browser nimmt die
+     Erbfarbe und es sieht nur „irgendwie falsch" aus. */
+  const benutzt = new Set((css.match(/var\(--ks-[a-z0-9-]+/g) || [])
+    .map(s => s.slice(4)));
+  const unbekannt = [...benutzt].filter(v => !dSet.has(v) && v !== '--ks-h' && v !== '--ks-wsize');
+  ok('jede benutzte Variable ist auch erklärt', unbekannt.length === 0, unbekannt.join(', '));
+
+  /* Und keine Fläche steht mehr fest im Blatt. Erlaubt bleibt genau
+     das, was AUF einer der vier Antwortfarben oder auf einem
+     farbigen Knopf liegt: die Kachel ist in beiden Fassungen
+     dieselbe, also auch ihre Schrift, ihr Füllstand und ihre Kante.
+     `.ks-k(?![a-z])` trennt die Kachel von `.ks-karte`, `.ks-kpic`
+     und `.ks-kname` — die sind Fläche und müssen umschlagen. */
+  const erlaubt = /\.ks-k(?![a-z])|\.ks-(kk|kt|kn|kmein|fuell|go|now|fertig)\b|\.ks-delta--(up|down)|\.ks-urteil--(ok|nein|end)|\.ks-skin\.is-on|@keyframes ks-richtig/;
+  const ohneKommentar = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const feste = [];
+  let regel = null, aussen = null;
+  for (const zeile of ohneKommentar.split('\n')) {
+    if (zeile.includes('{')) {
+      const sel = zeile.slice(0, zeile.indexOf('{')).trim();
+      // @keyframes und @media umschließen weitere Regeln. Für die
+      // Zuordnung zählt dann der äußere Kopf („from" sagt nichts).
+      if (sel.startsWith('@')) { aussen = sel; regel = sel; }
+      else regel = (aussen && /^(from|to|[\d.]+%)/.test(sel)) ? aussen : sel;
+    }
+    if (zeile.includes('}') && !zeile.includes('{')) { if (regel === aussen) aussen = null; }
+    if (/--ks-[a-z0-9-]+\s*:/.test(zeile)) continue;          // die Farbsätze selbst
+    if (regel && erlaubt.test(regel)) continue;
+    if (/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(zeile)) {
+      feste.push((regel || '?').trim() + ' → ' + zeile.trim());
+    }
+  }
+  ok('keine feste Farbe außerhalb der beiden Sätze', feste.length === 0,
+     feste.slice(0, 4).join(' | '));
+}
+
 /* ══════════════════════════════════════════════════════════ */
-const BEREICHE = { emote: bereichEmote, tab: bereichTab, beam: bereichBeam, fluss: bereichFluss };
+const BEREICHE = { emote: bereichEmote, tab: bereichTab, beam: bereichBeam,
+                   fluss: bereichFluss, theme: bereichTheme };
 const wahl = process.argv[2];
 const lauf = wahl ? [wahl] : Object.keys(BEREICHE);
 

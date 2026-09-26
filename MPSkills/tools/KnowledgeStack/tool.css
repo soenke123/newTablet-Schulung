@@ -1,11 +1,19 @@
 /* ══════════════════════════════════════════════════════════════
    Knowledge Stack — tool.css
    ══════════════════════════════════════════════════════════════
-   Ein Quiz ist ein Bild und keine Seite: dunkel, kontraststark,
-   harte Kanten. Es kippt deshalb NICHT mit hell/dunkel — genau wie
-   die Insel von Wordisland bringt es seine Farben selbst mit. Die
-   Seite darum (Kopfzeile, Reiterleiste, Code) bleibt Oberfläche und
-   nimmt die Variablen aus style.css.
+   Ein Quiz ist ein Bild und keine Seite: kontraststark, harte
+   Kanten, ein eigener Farbsatz. Aber es kippt sehr wohl mit
+   hell/dunkel — und zwar JE GERÄT: der Beamer im abgedunkelten Raum
+   steht auf dunkel, das Tablet in der Hand am Fenster auf hell, und
+   beide zeigen dasselbe Quiz. Die Wahl steht im localStorage
+   (lib/theme.js), nicht im Profil, also entscheidet sie jedes Gerät
+   für sich.
+
+   Bis zum 26.09.2026 stand hier das Gegenteil („kippt NICHT mit
+   hell/dunkel"), und der Umschalter in der Kopfzeile tat am Quiz
+   nichts — die Seite drumherum wurde hell, das Werkzeug blieb
+   schwarz. Das sah nicht nach Absicht aus, sondern nach einem
+   kaputten Schalter.
 
    ── Die eine Regel, die alles trägt ───────────────────────────
    --ks-h ist die GEMESSENE Höhe des Rahmens (tool.js, fit()). Jede
@@ -34,17 +42,47 @@
    umbenannt und von hier nichts hineingeschrieben.
    ══════════════════════════════════════════════════════════════ */
 
-/* ─── Farben ──────────────────────────────────────────────── */
+/* ─── Farben ──────────────────────────────────────────────────
+   ZWEI Sätze derselben Namen, sonst nichts: hier der dunkle, unten
+   unter :root[data-theme="light"] der helle. KEINE Farbe steht
+   irgendwo sonst in dieser Datei — wer eine neue braucht, legt sie
+   in BEIDEN Sätzen an. uitest.js („theme") zählt nach und meldet
+   jede Variable, die nur in einem der beiden steht.
+
+   Ausgenommen sind die vier Antwortfarben und was direkt auf ihnen
+   liegt (weiße Schrift, schwarze Schatten): die Kacheln sehen in
+   beiden Fassungen gleich aus. Das ist Absicht — „die blaue B" muss
+   dasselbe heißen, egal wer wie eingestellt ist.                  */
 .ks-frame {
-  --ks-bg:     #0c0e15;
-  --ks-flaeche:#171a26;
-  --ks-linie:  #2b3148;
-  --ks-ink:    #ffffff;
-  --ks-soft:   #94a3b8;
-  --ks-gold:   #facc15;
+  --ks-bg:      #0c0e15;   /* die Fläche hinter allem              */
+  --ks-punkt:   rgba(255, 255, 255, .09);   /* das Punktraster darauf */
+  --ks-flaeche: #171a26;   /* gehobene Kästen (Fragekasten)        */
+  --ks-erhoben: #1f2437;   /* Bedienteile (Pille, Auswahl, Knöpfe) */
+  --ks-karte:   #131726;   /* Kästen, in denen ein WESEN steht     */
+  --ks-tief:    #101422;   /* versenkt (Wesenwahl, Zeitbalken)     */
+  --ks-neutral: #2a3145;   /* stummgeschaltet (keine Antwort, –)   */
+  --ks-linie:   #2b3148;
+  --ks-linie2:  #3a4260;   /* die kräftigere Linie an Karten       */
+  --ks-trenner: rgba(255, 255, 255, .12);   /* unter der Kopfzeile  */
+  --ks-hover:   rgba(255, 255, 255, .07);
+  --ks-schimmer: rgba(255, 255, 255, .05);  /* Verlauf im Podestplatz */
+  --ks-kante:   #000000;   /* die harte Kante: Rahmen UND Schatten */
+  --ks-qrahmen: #ffffff;   /* der Rahmen um den Fragekasten        */
+  --ks-ink:     #ffffff;
+  --ks-soft:    #94a3b8;
+
+  --ks-gold:   #facc15;    /* als FLÄCHE (Knopf, Rahmen)           */
+  --ks-goldt:  #facc15;    /* als SCHRIFT — auf Weiß eine andere   */
+  --ks-goldf:  rgba(250, 204, 21, .12);     /* als zarte Fläche     */
   --ks-cyan:   #22d3ee;
+  --ks-cyant:  #22d3ee;
   --ks-gruen:  #10b981;
+  --ks-gruenf: rgba(16, 185, 129, .13);
+  --ks-gruent: #a7f3d0;    /* die Erklärung in der Auflösung       */
   --ks-rot:    #ef4444;
+  --ks-silber: #cbd5e1;    /* Platz 2                              */
+  --ks-bronze: #d97706;    /* Platz 3                              */
+  --ks-ichbg:  #1b1d3a;    /* der eigene Kasten in der Auflösung   */
 
   /* Die vier Antwortfarben. Bewusst nicht die Ampel: „richtig" darf
      nicht an der Farbe der Kachel hängen, sonst rät die Klasse nach
@@ -58,6 +96,51 @@
   color: var(--ks-ink);
 }
 
+/* ── Die helle Fassung ───────────────────────────────────────
+   Zwei Entscheidungen, die nicht offensichtlich sind:
+
+   1. Die Kästen, in denen ein WESEN steht (--ks-karte), sind NICHT
+      weiß, sondern leicht blaugrau. Ein knappes Dutzend der 36
+      Wesen ist selbst fast weiß (Nubi, Momo, der Geist) — auf einer
+      weißen Karte verschwinden sie bis auf die Augen. Die Fläche
+      hinter allem ist dafür heller als die Karten: die Tiefe kehrt
+      sich um, das Bild bleibt lesbar.
+
+   2. Die harte Kante bleibt hart. Statt Schwarz steht dort
+      Schiefer (#0f172a) — auf Weiß ist reines Schwarz ein Loch,
+      und der Stil („harte Kanten, versetzter Schatten") lebt
+      trotzdem.                                                   */
+:root[data-theme="light"] .ks-frame {
+  --ks-bg:      #f7f9fc;
+  --ks-punkt:   rgba(15, 23, 42, .085);
+  --ks-flaeche: #ffffff;
+  --ks-erhoben: #ffffff;
+  --ks-karte:   #e8edf6;
+  --ks-tief:    #e4e9f2;
+  --ks-neutral: #dde3ee;
+  --ks-linie:   #c9d3e2;
+  --ks-linie2:  #a9b6c9;
+  --ks-trenner: rgba(15, 23, 42, .16);
+  --ks-hover:   rgba(15, 23, 42, .06);
+  --ks-schimmer: rgba(15, 23, 42, .05);
+  --ks-kante:   #0f172a;
+  --ks-qrahmen: #0f172a;
+  --ks-ink:     #0b1020;
+  --ks-soft:    #4b5a72;
+
+  /* Dunkler als es „golden" aussieht, und das mit Grund: dieselbe
+     Farbe trägt die Punktzahl unter einem Wesen (10 px, fett) auf
+     der hellen Karte. Bei #9a6400 waren das 4,1 : 1 — fitcheck.js
+     misst gegen 4,5 und hatte recht. */
+  --ks-goldt:  #8a5700;
+  --ks-goldf:  rgba(250, 204, 21, .3);
+  --ks-cyant:  #0e7490;
+  --ks-gruenf: rgba(16, 185, 129, .16);
+  --ks-gruent: #065f46;
+  --ks-silber: #8b98ab;
+  --ks-ichbg:  #fffaeb;
+}
+
 /* ─── Der gemessene Rahmen ────────────────────────────────── */
 .ks-frame {
   position: relative;
@@ -67,9 +150,9 @@
   border-radius: 20px;
   overflow: hidden;
   background: var(--ks-bg);
-  background-image: radial-gradient(rgba(255, 255, 255, .09) 1.4px, transparent 1.4px);
+  background-image: radial-gradient(var(--ks-punkt) 1.4px, transparent 1.4px);
   background-size: 22px 22px;
-  border: 1px solid #000;
+  border: 1px solid var(--ks-kante);
 }
 
 /* Die Bühne füllt den Rahmen und teilt ihn in Zeilen. `min-height:0`
@@ -154,6 +237,25 @@
 .ks-vorschau > .ks-wesen,
 .ks-tme > .ks-wesen { position: absolute; inset: 0; }
 
+/* ── Der Sprung darf hinaus ───────────────────────────────────
+   Die Sprünge in creatures.css heben das Wesen über die halbe
+   eigene Höhe an — „SPRINGEN VOLLSTÄNDIG AUS DEM KASTEN HERAUS"
+   steht da, und genau das ist der Witz daran. Im Kasten mit
+   `overflow: hidden` wäre davon nur ein verschwindender Kopf zu
+   sehen.
+
+   Deshalb macht tool.js das Fenster auf, solange gesprungen wird
+   (Klasse `ks-springt`, gesetzt in setEmote) — und nur dann. Der
+   Rest der Zeit bleibt es zu, denn dafür ist es da.
+
+   z-index, weil die Karten nebeneinanderliegen: ohne ihn malt die
+   NÄCHSTE Karte ihren Hintergrund über das Wesen, das gerade in
+   ihre Zeile hineinspringt.                                     */
+.ks-springt {
+  overflow: visible;
+  z-index: 20;
+}
+
 .ks-pill {
   display: inline-flex;
   align-items: center;
@@ -163,12 +265,12 @@
   font-weight: 700;
   padding: .3em .7em;
   border-radius: 10px;
-  background: #1f2437;
-  border: 2px solid #000;
+  background: var(--ks-erhoben);
+  border: 2px solid var(--ks-kante);
   color: var(--ks-ink);
   white-space: nowrap;
 }
-.ks-pill b { color: var(--ks-gold); }
+.ks-pill b { color: var(--ks-goldt); }
 
 .ks-go,
 .ks-now,
@@ -177,9 +279,9 @@
   font: inherit;
   font-weight: 800;
   cursor: pointer;
-  border: 2px solid #000;
+  border: 2px solid var(--ks-kante);
   border-radius: 12px;
-  box-shadow: 3px 3px 0 0 #000;
+  box-shadow: 3px 3px 0 0 var(--ks-kante);
   padding: .5em 1.1em;
   white-space: nowrap;
   transition: transform .08s, box-shadow .08s, filter .12s;
@@ -187,8 +289,8 @@
 .ks-go:active,
 .ks-now:active,
 .ks-fertig:active,
-.ks-wechsel:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 #000; }
-.ks-go:disabled { opacity: .45; cursor: not-allowed; box-shadow: 3px 3px 0 0 #000; }
+.ks-wechsel:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 var(--ks-kante); }
+.ks-go:disabled { opacity: .45; cursor: not-allowed; box-shadow: 3px 3px 0 0 var(--ks-kante); }
 
 .ks-go     { background: var(--ks-gruen); color: #04130d;
              font-size: clamp(13px, calc(var(--ks-h) * .028), 21px); }
@@ -200,7 +302,7 @@
 /* Beide sind Fingerziele und tragen deshalb das Fingermaß — der
    Prüfstand fitcheck.js hat sie am 26.09.2026 mit 38 px erwischt. */
 .ks-fertig { background: var(--ks-cyan);  color: #04181c; font-size: 14px; min-height: 44px; }
-.ks-wechsel{ background: #232838; color: var(--ks-soft); font-size: 13px;
+.ks-wechsel{ background: var(--ks-neutral); color: var(--ks-soft); font-size: 13px;
              align-self: center; box-shadow: none; border-color: var(--ks-linie);
              min-height: 44px; }
 
@@ -214,7 +316,7 @@
 }
 .ks-delta--up   { background: var(--ks-gruen); color: #04130d; }
 .ks-delta--down { background: var(--ks-rot);   color: #fff; }
-.ks-delta--same { background: #37405c;         color: var(--ks-soft); }
+.ks-delta--same { background: var(--ks-neutral); color: var(--ks-soft); }
 
 /* ══════════════════════════════════════════════════════════
    Kopfzeilen
@@ -225,7 +327,7 @@
   align-items: center;
   gap: clamp(8px, calc(var(--ks-h) * .02), 18px);
   padding-bottom: clamp(5px, calc(var(--ks-h) * .014), 12px);
-  border-bottom: 2px solid rgba(255, 255, 255, .12);
+  border-bottom: 2px solid var(--ks-trenner);
 }
 .ks-headl { display: flex; align-items: baseline; gap: 14px; min-width: 0; flex: 1 1 auto; }
 .ks-headr { display: flex; align-items: center; gap: 10px; margin-left: auto; flex: 0 0 auto; }
@@ -248,7 +350,7 @@
   font: inherit;
   font-size: clamp(11px, calc(var(--ks-h) * .021), 15px);
   font-weight: 600;
-  background: #1f2437;
+  background: var(--ks-erhoben);
   color: var(--ks-ink);
   border: 2px solid var(--ks-linie);
   border-radius: 10px;
@@ -265,7 +367,7 @@
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: clamp(11px, calc(var(--ks-h) * .024), 18px);
   font-weight: 800;
-  color: var(--ks-cyan);
+  color: var(--ks-cyant);
   white-space: nowrap;
 }
 .ks-qnr i { font-style: normal; color: var(--ks-soft); }
@@ -275,8 +377,8 @@
   min-width: 40px;
   height: clamp(8px, calc(var(--ks-h) * .018), 16px);
   border-radius: 999px;
-  background: #212637;
-  border: 2px solid #000;
+  background: var(--ks-tief);
+  border: 2px solid var(--ks-kante);
   overflow: hidden;
 }
 /* Auf dem Tablet steht der Balken als eigene Zeile unter dem Kopf
@@ -300,7 +402,7 @@
   font-size: clamp(16px, calc(var(--ks-h) * .05), 40px);
   font-weight: 800;
   line-height: 1;
-  color: var(--ks-gold);
+  color: var(--ks-goldt);
   min-width: 2.2ch;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -339,9 +441,9 @@
   justify-content: center;
   padding: clamp(8px, calc(var(--ks-h) * .025), 26px) clamp(12px, calc(var(--ks-h) * .03), 34px);
   background: var(--ks-flaeche);
-  border: 3px solid #fff;
+  border: 3px solid var(--ks-qrahmen);
   border-radius: 18px;
-  box-shadow: 5px 5px 0 0 #fff;
+  box-shadow: 5px 5px 0 0 var(--ks-qrahmen);
   overflow: hidden;
 }
 .ks-q {
@@ -377,9 +479,9 @@
   margin: 0;
   padding: .5em .8em;
   border-radius: 12px;
-  background: rgba(16, 185, 129, .14);
+  background: var(--ks-gruenf);
   border-left: 4px solid var(--ks-gruen);
-  color: #a7f3d0;
+  color: var(--ks-gruent);
   font-size: clamp(11px, calc(var(--ks-h) * .023), 17px);
   font-weight: 600;
   overflow: hidden;
@@ -422,6 +524,8 @@
   border: 3px solid #000;
   border-radius: 16px;
   box-shadow: 4px 4px 0 0 #000;
+  /* Schwarz und nicht --ks-kante: die Kachel trägt in BEIDEN
+     Fassungen dieselbe Farbe, also auch denselben Rand. */
   box-sizing: border-box;
   overflow: hidden;
   font: inherit;
@@ -449,6 +553,20 @@ button.ks-k:disabled { cursor: default; }
    sollen zurücktreten, aber aus der letzten Reihe noch lesbar sein —
    die Klasse bespricht sie ja gerade. */
 .ks-k.is-blass { opacity: .62; }
+
+/* … und im Hellen geht das NICHT mit opacity. Dieselbe Zahl, das
+   andere Ergebnis: auf Schwarz blendet .62 nach dunkel ab und die
+   weiße Schrift wird KONTRASTREICHER, auf Weiß blendet sie nach
+   hell ab und die weiße Schrift verschwindet fast. fitcheck.js hat
+   für „Ein Arbeitsgerät" 1,91 : 1 gemessen — unter jeder Grenze.
+
+   Zurücktreten kann eine Kachel auch anders: weniger Farbe statt
+   weniger Deckung. Die Schrift bleibt, wo sie war.               */
+:root[data-theme="light"] .ks-k.is-blass,
+:root[data-theme="light"] .ks-k.is-still {
+  opacity: 1;
+  filter: grayscale(.5) brightness(.94);
+}
 
 .ks-k.is-meine { outline: 4px solid #fff; outline-offset: -8px; }
 .ks-k.is-richtig {
@@ -579,20 +697,20 @@ button.ks-k:disabled { cursor: default; }
   min-width: 0;
   padding: clamp(4px, calc(var(--ks-h) * .012), 12px) 4px;
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, 0));
+  background: linear-gradient(180deg, var(--ks-schimmer), transparent);
   border: 2px solid var(--ks-linie);
   overflow: hidden;
 }
 /* Platz 1 hebt sich ab, ohne die Reihe zu verbiegen: derselbe
    Kasten, nur Gold. Eine echte Treppe (verschiedene Höhen) kostet
    bei fünf Plätzen genau die Höhe, die das Wesen bräuchte. */
-.ks-slot--1 { border-color: var(--ks-gold); background: rgba(250, 204, 21, .12); }
+.ks-slot--1 { border-color: var(--ks-gold); background: var(--ks-goldf); }
 /* Die Krone sitzt im CSS und nicht im HTML: sie gehört zum PLATZ und
    nicht zum Kind, und beim Flicken wechseln die Kinder, die Plätze
    nicht. */
 .ks-slot--1 .ks-sname::before { content: '👑 '; }
-.ks-slot--2 { border-color: #cbd5e1; }
-.ks-slot--3 { border-color: #d97706; }
+.ks-slot--2 { border-color: var(--ks-silber); }
+.ks-slot--3 { border-color: var(--ks-bronze); }
 
 .ks-sname {
   font-size: clamp(9px, calc(var(--ks-h) * .022), 17px);
@@ -616,7 +734,7 @@ button.ks-k:disabled { cursor: default; }
   font-weight: 800;
   color: var(--ks-soft);
 }
-.ks-slot--1 .ks-srank { color: var(--ks-gold); }
+.ks-slot--1 .ks-srank { color: var(--ks-goldt); }
 .ks-spkt {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: clamp(10px, calc(var(--ks-h) * .024), 19px);
@@ -629,21 +747,44 @@ button.ks-k:disabled { cursor: default; }
    ══════════════════════════════════════════════════════════
    auto-fit mit einer Mindestbreite aus --ks-h: bei 28 Kindern
    entstehen von selbst so viele Spalten, dass alle hineinpassen,
-   ohne dass irgendwo eine Zahl steht, die bei 29 falsch wäre. */
+   ohne dass irgendwo eine Zahl steht, die bei 29 falsch wäre.
+
+   ⚠️ Die Spalte hat eine OBERgrenze, und das ist keine Feinheit.
+   Bis zum 26.09.2026 stand dort `minmax(…, 1fr)`: `auto-fit` wirft
+   leere Spalten weg, die eine verbliebene bekam mit `1fr` die ganze
+   Breite — und weil die Karte darunter ein Quadrat ist, stand beim
+   ERSTEN Kind, das den Raum betrat, ein 700 Punkte hohes Wesen am
+   Beamer. Es sah aus wie ein Fehler in der Anzeige, war aber genau
+   das, was dort stand. Mit einer Obergrenze ist die Karte immer so
+   groß wie eine Karte, und 1 Kind sieht aus wie 28 minus 27.
+
+   Und sie stehen UNTEN (`safe end`): die Wesen sollen auf dem Boden
+   des Bildes stehen und nicht in der Mitte schweben. Darüber ist
+   Luft — genau die, in die sie beim Springen hineinkommen.       */
 .ks-wall {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(clamp(64px, calc(var(--ks-h) * .17), 132px), 1fr));
+  grid-template-columns: repeat(auto-fit,
+    minmax(clamp(56px, calc(var(--ks-h) * .12), 92px),
+           clamp(72px, calc(var(--ks-h) * .15), 118px)));
   gap: clamp(5px, calc(var(--ks-h) * .015), 14px);
-  /* `safe center`: solange alle hineinpassen, steht die Klasse in
-     der Mitte der Fläche; sobald es mehr werden als Platz ist,
-     fällt es auf `start` zurück. Ein blankes `center` würde beim
-     Überlaufen die ERSTE Reihe nach oben aus dem Kasten schieben —
-     und die wäre dann nicht mehr erreichbar. */
-  align-content: safe center;
+  /* `safe end`: solange alle hineinpassen, stehen sie unten; sobald
+     es mehr werden als Platz ist, fällt es auf `start` zurück. Ein
+     blankes `end` würde beim Überlaufen die ERSTE Reihe nach oben
+     aus dem Kasten schieben — und die wäre dann nicht mehr
+     erreichbar. */
+  align-content: safe end;
   justify-content: center;
   min-height: 0;
   overflow-y: auto;
+  /* Waagerecht wird abgeschnitten und NICHT gerollt. Ein Wesen, das
+     springt, darf über seine Karte hinaus (siehe `ks-springt`) —
+     und wenn es sich dabei dreht, ragt es am rechten Rand ein Stück
+     heraus. Mit `auto` (das `overflow-y` sonst erzwingt) käme dafür
+     eine Rollleiste ins Bild und schöbe die ganze Wand. `clip`
+     kennen ältere Geräte nicht; dort bleibt es beim alten Verhalten,
+     kaputt ist damit nichts. */
+  overflow-x: clip;
   padding: 2px;
 }
 
@@ -655,8 +796,8 @@ button.ks-k:disabled { cursor: default; }
   gap: 1px;
   padding: clamp(4px, calc(var(--ks-h) * .012), 10px) 4px;
   border-radius: 14px;
-  background: #131726;
-  border: 2px solid #252b40;
+  background: var(--ks-karte);
+  border: 2px solid var(--ks-linie);
   overflow: visible;
   animation: ks-rein .32s cubic-bezier(.2, .9, .3, 1.3);
 }
@@ -666,7 +807,7 @@ button.ks-k:disabled { cursor: default; }
 }
 /* Wer schon geantwortet hat, leuchtet grün — das ist am Beamer die
    ehrlichste Fortschrittsanzeige, die es gibt. */
-.ks-karte.is-fertig { border-color: var(--ks-gruen); background: rgba(16, 185, 129, .12); }
+.ks-karte.is-fertig { border-color: var(--ks-gruen); background: var(--ks-gruenf); }
 
 .ks-kpic {
   width: 100%;
@@ -687,7 +828,7 @@ button.ks-k:disabled { cursor: default; }
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: clamp(8px, calc(var(--ks-h) * .017), 13px);
   font-weight: 700;
-  color: var(--ks-gold);
+  color: var(--ks-goldt);
 }
 .ks-kbubble {
   position: absolute;
@@ -718,7 +859,7 @@ button.ks-k:disabled { cursor: default; }
   align-items: center;
   gap: 10px;
   padding-bottom: 6px;
-  border-bottom: 2px solid rgba(255, 255, 255, .12);
+  border-bottom: 2px solid var(--ks-trenner);
 }
 .ks-thead--q { gap: clamp(8px, calc(var(--ks-h) * .022), 16px); }
 
@@ -747,7 +888,7 @@ button.ks-k:disabled { cursor: default; }
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: clamp(10px, calc(var(--ks-h) * .022), 16px);
   font-weight: 700;
-  color: var(--ks-gold);
+  color: var(--ks-goldt);
 }
 .ks-twait { margin-left: auto; color: var(--ks-soft); font-size: 13px; font-weight: 600; }
 
@@ -757,7 +898,7 @@ button.ks-k:disabled { cursor: default; }
   text-align: center;
   font-size: clamp(11px, calc(var(--ks-h) * .022), 16px);
   font-weight: 700;
-  color: var(--ks-gold);
+  color: var(--ks-goldt);
 }
 
 /* ─── Auflösung auf dem Tablet ────────────────────────────── */
@@ -778,13 +919,13 @@ button.ks-k:disabled { cursor: default; }
   line-height: 1.15;
   padding: .3em .6em;
   border-radius: 14px;
-  border: 3px solid #000;
-  box-shadow: 4px 4px 0 0 #000;
+  border: 3px solid var(--ks-kante);
+  box-shadow: 4px 4px 0 0 var(--ks-kante);
 }
 .ks-urteil i { font-style: normal; font-size: .72em; opacity: .85; }
 .ks-urteil--ok   { background: var(--ks-gruen); color: #04130d; }
 .ks-urteil--nein { background: var(--ks-rot);   color: #fff; }
-.ks-urteil--weg  { background: #2a3145; color: var(--ks-soft); }
+.ks-urteil--weg  { background: var(--ks-neutral); color: var(--ks-soft); }
 .ks-urteil--end  { background: var(--ks-gold);  color: #1a1400; }
 
 /* Ich in der Mitte, größer; links der vor mir, rechts der hinter
@@ -832,8 +973,8 @@ button.ks-k:disabled { cursor: default; }
   min-height: 0;
   padding: 6px 3px;
   border-radius: 16px;
-  background: #131726;
-  border: 2px dashed #39405a;
+  background: var(--ks-karte);
+  border: 2px dashed var(--ks-linie2);
   opacity: .9;
   overflow: hidden;
 }
@@ -871,9 +1012,9 @@ button.ks-k:disabled { cursor: default; }
   min-height: 0;
   padding: clamp(6px, calc(var(--ks-h) * .018), 16px) 6px;
   border-radius: 20px;
-  background: #1b1d3a;
+  background: var(--ks-ichbg);
   border: 3px solid var(--ks-gold);
-  box-shadow: 5px 5px 0 0 #000;
+  box-shadow: 5px 5px 0 0 var(--ks-kante);
   overflow: hidden;
 }
 .ks-ipic {
@@ -884,7 +1025,7 @@ button.ks-k:disabled { cursor: default; }
 .ks-inr {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: clamp(14px, calc(var(--ks-h) * .04), 30px);
-  font-weight: 800; color: var(--ks-gold); line-height: 1;
+  font-weight: 800; color: var(--ks-goldt); line-height: 1;
 }
 .ks-iname {
   font-size: clamp(11px, calc(var(--ks-h) * .024), 18px);
@@ -899,14 +1040,22 @@ button.ks-k:disabled { cursor: default; }
 }
 
 /* ─── Emote-Leiste ────────────────────────────────────────── */
-/* Ganz unten, vier Knöpfe, volle Breite. Sie gibt KEINEN Platz her
-   (`flex: 0 0 auto`): ein Knopf, der auf einem flachen Gerät zu
-   40 px schrumpft, ist keiner mehr. */
+/* Ganz unten, volle Breite, ein Knopf je Emote. Sie gibt KEINEN
+   Platz her (`flex: 0 0 auto`): ein Knopf, der auf einem flachen
+   Gerät zu 40 px schrumpft, ist keiner mehr.
+
+   Die Spalten kommen aus der ANZAHL und nicht aus einer Zahl im
+   CSS (`grid-auto-flow: column`): hier stand `repeat(4, 1fr)`, und
+   als der Sprung dazukam, wäre der fünfte Knopf in eine zweite
+   Zeile gerutscht. `minmax(0, 1fr)` statt `1fr`, sonst wird die
+   Spalte nie schmaler als das Zeichen darin
+   (feedback_grid_min_content_blowout).                           */
 .ks-emobar {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: clamp(6px, calc(var(--ks-h) * .016), 14px);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: clamp(5px, calc(var(--ks-h) * .014), 12px);
 }
 .ks-emo {
   font: inherit;
@@ -915,17 +1064,17 @@ button.ks-k:disabled { cursor: default; }
   min-height: 52px;
   padding: .3em 0;
   cursor: pointer;
-  background: #1d2235;
-  color: #fff;
-  border: 2px solid #3a4260;
+  background: var(--ks-erhoben);
+  color: var(--ks-ink);
+  border: 2px solid var(--ks-linie2);
   border-radius: 14px;
-  box-shadow: 3px 3px 0 0 #000;
+  box-shadow: 3px 3px 0 0 var(--ks-kante);
   transition: transform .1s, box-shadow .1s, background-color .15s, border-color .15s;
 }
 .ks-emo:active,
 .ks-emo.is-gedrueckt {
   transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 0 #000;
+  box-shadow: 1px 1px 0 0 var(--ks-kante);
   background: var(--ks-gold);
   border-color: var(--ks-gold);
 }
@@ -948,7 +1097,7 @@ button.ks-k:disabled { cursor: default; }
   text-align: center;
   font-size: clamp(13px, calc(var(--ks-h) * .03), 22px);
   font-weight: 800;
-  color: var(--ks-gold);
+  color: var(--ks-goldt);
   letter-spacing: -.01em;
 }
 
@@ -961,8 +1110,8 @@ button.ks-k:disabled { cursor: default; }
   min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   cursor: pointer;
-  background: #1d2235; color: var(--ks-soft);
-  border: 2px solid #3a4260; border-radius: 11px;
+  background: var(--ks-erhoben); color: var(--ks-soft);
+  border: 2px solid var(--ks-linie2); border-radius: 11px;
 }
 .ks-skin.is-on { background: var(--ks-gold); color: #1a1400; border-color: var(--ks-gold); }
 
@@ -981,8 +1130,8 @@ button.ks-k:disabled { cursor: default; }
   min-height: 0;
   overflow-y: auto;
   padding: 6px;
-  background: #101422;
-  border: 2px solid #252b40;
+  background: var(--ks-tief);
+  border: 2px solid var(--ks-linie);
   border-radius: 14px;
   -webkit-overflow-scrolling: touch;
 }
@@ -1007,8 +1156,8 @@ button.ks-k:disabled { cursor: default; }
 }
 .ks-pick.is-on {
   border-color: var(--ks-gold);
-  background: rgba(250, 204, 21, .16);
-  color: var(--ks-gold);
+  background: var(--ks-goldf);
+  color: var(--ks-goldt);
 }
 
 .ks-twarte {
@@ -1072,7 +1221,7 @@ button.ks-k:disabled { cursor: default; }
    hängenbleiben, bis man woanders hintippt. */
 @media (hover: hover) and (pointer: fine) {
   .ks-karte:hover { transform: translateY(-2px); }
-  .ks-pick:hover  { background: rgba(255, 255, 255, .07); }
+  .ks-pick:hover  { background: var(--ks-hover); }
   .ks-emo:hover   { border-color: var(--ks-gold); }
 }
 

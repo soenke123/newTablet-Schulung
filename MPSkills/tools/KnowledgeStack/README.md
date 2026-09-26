@@ -18,6 +18,38 @@ Die Frage steht **nicht** auf dem Schülergerät — weder in der Anzeige noch i
 der Serverantwort (`ks_view` gibt `question.text = null`, solange die Frage
 läuft). Sonst sehen 28 Köpfe nach unten statt nach vorn.
 
+## Die fünf Emotes
+
+👋 Winken · 🚀 Springen · 🎉 Jubeln · 🕺 Tanzen · 😴 Schlafen — dazu 💧 Trauer,
+die niemand drückt (die setzt der Server bei einer falschen Antwort).
+
+Jedes der 36 Wesen hat seine eigene Fassung davon; die Klassen heißen
+`wave-7 state-wave`, `c-dance-7 state-dance`, `jump-7 state-jump`. Der Sprung
+geht **über den Kasten hinaus** — dafür öffnet `setEmote` das Fenster um das
+Wesen (Klasse `ks-springt`) und nur für die Dauer des Sprungs. Seine Höhe steht
+in Prozent der eigenen Wesengröße und nicht in Pixeln: dieselbe Bewegung muss in
+einer 90 Punkte breiten Karte am Beamer und in einer 250 Punkte großen Vorschau
+auf dem Tablet gleich aussehen.
+
+## Hell und dunkel
+
+Das Quiz bringt seine Farben selbst mit, kippt aber mit dem Umschalter in der
+Kopfzeile — **je Gerät**: der Beamer im abgedunkelten Raum steht auf dunkel, das
+Tablet am Fenster auf hell. Gesetzt wird `data-theme` von `lib/theme.js`, und
+`tool.css` hat dafür zwei Sätze derselben Variablen. Gleich bleiben in beiden
+Fassungen die vier Antwortfarben — „die blaue B" muss dasselbe heißen, egal wer
+wie eingestellt ist.
+
+Zwei Fallen stecken darin, beide am 26.09.2026 gefunden:
+
+* Wesen, die selbst fast weiß sind, verschwinden auf einer weißen Karte. Die
+  Kästen, in denen ein Wesen steht (`--ks-karte`), sind im Hellen deshalb
+  leicht blaugrau und **dunkler** als die Fläche dahinter.
+* `opacity` blendet im Dunkeln nach Schwarz ab und im Hellen nach Weiß. Die
+  abgeblendeten falschen Antworten waren damit im Hellen bei 1,9 : 1 — im
+  Hellen treten sie über weniger Farbe zurück (`grayscale`), nicht über
+  weniger Deckung.
+
 ## Wie der Ablauf läuft
 
 ```
@@ -38,12 +70,23 @@ und Rangliste stehen zusammen im Auflösungsbild. Im CHECK der Tabelle steht
 der Wert weiter (kein DROP), und ein Brett, das noch darin hängt, verhält
 sich wie in `reveal`.
 
+## Die Wesenwand
+
+Am Beamer stehen die Wesen **unten** in der Fläche, nicht mittig — darüber ist
+die Luft, in die sie springen. Die Spalte hat eine Ober- *und* eine
+Untergrenze: `auto-fit` wirft leere Spalten weg, und mit `1fr` bekam die eine
+verbliebene die ganze Breite. Beim ersten Kind, das den Raum betrat, stand
+damit ein Wesen über den halben Beamer („viel zu groß", 26.09.2026). Die
+Obergrenze ist so gewählt, dass eine volle Klasse ohne Rollen hineinpasst —
+`fitcheck.js` prüft beides: die Karte bleibt kartengroß, und alle 28 sind zu
+sehen.
+
 ## Dateien
 
 | Datei | Was drinsteht |
 |---|---|
 | `tool.js` | Beide Rollen, ein Modul. Takt, gemessene Höhe, Bild bauen und flicken. |
-| `tool.css` | Alles rechnet aus `--ks-h` (der gemessenen Rahmenhöhe), nichts aus `vh`. |
+| `tool.css` | Alles rechnet aus `--ks-h` (der gemessenen Rahmenhöhe), nichts aus `vh`. Alle Farben stehen in zwei Sätzen ganz oben. |
 | `creatures.js` | Die 36 Wesen: Liste, 108 Paletten, SVG-Körper. |
 | `creatures.css` | Ihre Bewegungen: `wave-7`, `cheer-7`, `c-dance-7`, `state-sad` … |
 | `showroom-*.html` | Entwurfsstand, **eingefroren** (siehe `feedback_showrooms_frozen`). Quelle der Wesen-Daten, wird nicht mitgezogen. |
@@ -56,7 +99,7 @@ und dessen eigener an vier weiteren Stellen (Kopf von `lib/tool.js`).
 
 ```
 node MPSkills/tools/KnowledgeStack/tools/uitest.js            # alle Bereiche
-node MPSkills/tools/KnowledgeStack/tools/uitest.js emote      # nur einer
+node MPSkills/tools/KnowledgeStack/tools/uitest.js emote      # emote|tab|beam|fluss|theme
 node MPSkills/tools/KnowledgeStack/tools/fitcheck.js          # echter Browser
 node MPSkills/tools/KnowledgeStack/tools/fitcheck.js --shots  # …mit Bildern
 node supabase/tests/0175_knowledgestack_flow.mjs              # SQL in pglite
@@ -64,13 +107,17 @@ node supabase/tests/0175_knowledgestack_flow.mjs              # SQL in pglite
 
 * **uitest.js** (linkedom, kein Browser) — *was* im Bild steht: die echten
   Emote-Klassen, kein Fragetext auf dem Tablet, die Reihenfolge 1…5, dass ein
-  Takt ohne Phasenwechsel das Bild **nicht** neu baut.
+  Takt ohne Phasenwechsel das Bild **nicht** neu baut. Der Bereich `theme`
+  prüft dazu am Blatt selbst, dass **keine Farbe** außerhalb der beiden Sätze
+  steht — genau daran lag es, dass der Umschalter am Quiz nichts tat.
 * **fitcheck.js** (Chromium) — ob es *hineinpasst*: kein Überlauf, der Rahmen
   endet an der Bildschirmkante, nichts ragt heraus, Tippflächen ≥ 44 px,
-  Schrift lesbar. Über elf Bildschirmgrößen × beide Rollen × vier Bilder. Die
-  Seite drumherum (Kopfzeile, Reiterleiste) wird dabei echt aufgebaut — ohne
-  sie wäre die gemessene Höhe zu groß und der Prüfstand grün, wo der Beamer
-  rot ist.
+  Schrift lesbar. Über elf Bildschirmgrößen × beide Rollen × fünf Bilder
+  (darunter die Lobby mit **einem** Kind — der Fall, in dem eine Karte sonst
+  den halben Beamer füllt). Am Ende beide Fassungen hell/dunkel mit
+  Kontrastmessung nach WCAG. Die Seite drumherum (Kopfzeile, Reiterleiste)
+  wird dabei echt aufgebaut — ohne sie wäre die gemessene Höhe zu groß und der
+  Prüfstand grün, wo der Beamer rot ist.
 * **0175_…mjs** (pglite) — der Ablauf, die Serveruhr, die Punkte, die Rechte.
 
 ## Migrationen

@@ -309,22 +309,35 @@
 
     /* =========================================================================
        36 EXPLOSIVE HIGH JUMPS (🚀) - SPRINGEN VOLLSTÄNDIG AUS DEM KASTEN HERAUS!
+       =========================================================================
+       Die Sprunghöhe steht in PROZENT und nicht in Pixeln. Im Showroom
+       war ein Wesen 200 Punkte groß, und -120px waren „gut die halbe
+       eigene Höhe". Im Quiz ist dasselbe Wesen in der Wesenwand 90
+       Punkte groß — dort sprang es mit derselben Zahl weit über den
+       Bildrand hinaus und war nur noch als Verschwinden zu sehen.
+       Prozent bei translateY rechnet gegen die EIGENE Höhe des
+       Elements, also springt jedes Wesen in jeder Größe gleich hoch
+       (feedback_limit_in_wrong_unit). Umgestellt am 26.09.2026,
+       -120px → -60%.
+
+       Damit der Sprung auch zu sehen ist, macht tool.js das Fenster
+       um das Wesen auf, solange er läuft (Klasse `ks-springt`).
        ========================================================================= */
     .jump-0 { animation: jump-blast-0 0.8s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
     @keyframes jump-blast-0 {
       0%, 100% { transform: translateY(0) scale(1.35, 0.65); }
-      18% { transform: translateY(8px) scale(1.5, 0.5); } /* Tiefes Einknicken */
-      45% { transform: translateY(-118px) scale(0.7, 1.45); } /* WEIT AUS DEM KASTEN! */
-      68% { transform: translateY(-108px) scale(1.05, 0.95); }
+      18% { transform: translateY(4%) scale(1.5, 0.5); } /* Tiefes Einknicken */
+      45% { transform: translateY(-59%) scale(0.7, 1.45); } /* WEIT AUS DEM KASTEN! */
+      68% { transform: translateY(-54%) scale(1.05, 0.95); }
       85% { transform: translateY(0) scale(1.4, 0.6); }
     }
 
     .jump-1 { animation: jump-blast-1 0.85s cubic-bezier(0.2, 0.8, 0.3, 1.2) infinite; }
     @keyframes jump-blast-1 {
       0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-      18% { transform: translateY(6px) scale(1.2, 0.8); }
-      48% { transform: translateY(-120px) rotate(180deg) scale(0.85, 1.25); }
-      75% { transform: translateY(-70px) rotate(300deg); }
+      18% { transform: translateY(3%) scale(1.2, 0.8); }
+      48% { transform: translateY(-60%) rotate(180deg) scale(0.85, 1.25); }
+      75% { transform: translateY(-35%) rotate(300deg); }
       92% { transform: translateY(0) rotate(360deg) scale(1.3, 0.7); }
     }
 
@@ -333,34 +346,34 @@
     .jump-2 .leg-r { animation: f-leg-leap-r 0.8s ease-in-out infinite; transform-origin: 68px 70px; }
     @keyframes jump-blast-2 {
       0%, 100% { transform: translateY(0) scale(1.2, 0.8); }
-      18% { transform: translateY(10px) scale(1.45, 0.6); }
-      48% { transform: translateY(-125px) scale(0.8, 1.35); }
-      72% { transform: translateY(-90px) scale(1, 1); }
+      18% { transform: translateY(5%) scale(1.45, 0.6); }
+      48% { transform: translateY(-62.5%) scale(0.8, 1.35); }
+      72% { transform: translateY(-45%) scale(1, 1); }
       88% { transform: translateY(0) scale(1.35, 0.7); }
     }
-    @keyframes f-leg-leap-l { 0%, 100% { transform: rotate(0); } 48% { transform: rotate(-26deg) scaleY(1.4) translateY(4px); } }
-    @keyframes f-leg-leap-r { 0%, 100% { transform: rotate(0); } 48% { transform: rotate(26deg) scaleY(1.4) translateY(4px); } }
+    @keyframes f-leg-leap-l { 0%, 100% { transform: rotate(0); } 48% { transform: rotate(-26deg) scaleY(1.4) translateY(2%); } }
+    @keyframes f-leg-leap-r { 0%, 100% { transform: rotate(0); } 48% { transform: rotate(26deg) scaleY(1.4) translateY(2%); } }
 
     .jump-3 { animation: jump-blast-3 0.8s cubic-bezier(0.15, 0.9, 0.25, 1.2) infinite; }
     @keyframes jump-blast-3 {
       0%, 100% { transform: translateY(0) scale(1.25, 0.75); }
-      45% { transform: translateY(-122px) scale(0.7, 1.4) rotate(16deg); }
+      45% { transform: translateY(-61%) scale(0.7, 1.4) rotate(16deg); }
       88% { transform: translateY(0) scale(1.3, 0.7); }
     }
 
     .jump-4 { animation: jump-blast-4 0.82s cubic-bezier(0.2, 0.8, 0.3, 1.2) infinite; }
     @keyframes jump-blast-4 {
       0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
-      20% { transform: translateY(10px) scale(1.5, 0.55); }
-      50% { transform: translateY(-105px) scale(0.85, 1.25); }
+      20% { transform: translateY(5%) scale(1.5, 0.55); }
+      50% { transform: translateY(-52.5%) scale(0.85, 1.25); }
       85% { transform: translateY(0) scale(1.4, 0.6); }
     }
 
     .jump-5 { animation: jump-blast-5 0.75s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
     @keyframes jump-blast-5 {
       0%, 100% { transform: translateY(0); }
-      15% { transform: translateY(6px); }
-      42% { transform: translateY(-120px) scale(0.8, 1.3); }
+      15% { transform: translateY(3%); }
+      42% { transform: translateY(-60%) scale(0.8, 1.3); }
       85% { transform: translateY(0) scale(1.3, 0.7); }
     }
 
@@ -369,7 +382,7 @@
     .jump-6 .wing-r { animation: d-wings-beat-r 0.2s ease-in-out infinite alternate; transform-origin: 40px 42px; }
     @keyframes jump-blast-6 {
       0%, 100% { transform: translateY(0) scale(1); }
-      48% { transform: translateY(-124px) scale(0.9, 1.2); }
+      48% { transform: translateY(-62%) scale(0.9, 1.2); }
       88% { transform: translateY(0) scale(1.2, 0.8); }
     }
     @keyframes d-wings-beat-l { 0% { transform: scale(0.7) rotate(-25deg); } 100% { transform: scale(1.35) rotate(25deg); } }
@@ -378,210 +391,210 @@
     .jump-7 { animation: jump-blast-7 0.9s ease-in-out infinite; }
     @keyframes jump-blast-7 {
       0%, 100% { transform: translateY(0) scale(1); opacity: 1; }
-      50% { transform: translateY(-130px) scale(1.4); opacity: 0.5; }
+      50% { transform: translateY(-65%) scale(1.4); opacity: 0.5; }
     }
 
     .jump-8 { animation: jump-blast-8 0.75s cubic-bezier(0.18, 0.9, 0.25, 1.2) infinite; }
     @keyframes jump-blast-8 {
       0%, 100% { transform: translateY(0) scaleX(1.3); }
-      48% { transform: translateY(-120px) scaleX(0.4) scaleY(1.4); }
+      48% { transform: translateY(-60%) scaleX(0.4) scaleY(1.4); }
       88% { transform: translateY(0) scaleX(1.4) scaleY(0.6); }
     }
 
     .jump-9 { animation: jump-blast-9 0.85s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
     @keyframes jump-blast-9 {
       0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-122px) rotate(30deg) scale(0.9, 1.2); }
+      50% { transform: translateY(-61%) rotate(30deg) scale(0.9, 1.2); }
       88% { transform: translateY(0) scale(1.3, 0.7); }
     }
 
     .jump-10 { animation: jump-blast-10 0.85s ease-in-out infinite; }
     @keyframes jump-blast-10 {
       0%, 100% { transform: translateY(0) scale(1.35, 0.65); }
-      20% { transform: translateY(12px) scale(1.5, 0.5); }
-      48% { transform: translateY(-110px) scale(0.8, 1.3); }
+      20% { transform: translateY(6%) scale(1.5, 0.5); }
+      48% { transform: translateY(-55%) scale(0.8, 1.3); }
       85% { transform: translateY(0) scale(1.45, 0.55); }
     }
 
     .jump-11 { animation: jump-blast-11 0.78s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
     @keyframes jump-blast-11 {
       0%, 100% { transform: translateY(0) scale(1.4, 0.6); }
-      18% { transform: translateY(8px) scale(1.6, 0.45); }
-      46% { transform: translateY(-122px) scale(0.65, 1.5); }
+      18% { transform: translateY(4%) scale(1.6, 0.45); }
+      46% { transform: translateY(-61%) scale(0.65, 1.5); }
       88% { transform: translateY(0) scale(1.45, 0.55); }
     }
 
     .jump-12 { animation: jump-blast-12 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
     @keyframes jump-blast-12 {
       0%, 100% { transform: translateY(0) scale(1); }
-      20% { transform: translateY(12px) scale(1.3, 0.7); }
-      48% { transform: translateY(-125px) scale(0.75, 1.35); }
+      20% { transform: translateY(6%) scale(1.3, 0.7); }
+      48% { transform: translateY(-62.5%) scale(0.75, 1.35); }
       85% { transform: translateY(0) scale(1.35, 0.65); }
     }
 
     .jump-13 { animation: jump-blast-13 0.85s ease-in-out infinite; }
     @keyframes jump-blast-13 {
       0%, 100% { transform: translateY(0) rotate(0); }
-      30% { transform: translateY(-120px) rotate(-18deg) scale(1.1); }
-      70% { transform: translateY(-90px) rotate(18deg) scale(0.95); }
+      30% { transform: translateY(-60%) rotate(-18deg) scale(1.1); }
+      70% { transform: translateY(-45%) rotate(18deg) scale(0.95); }
       92% { transform: translateY(0) scale(1.2, 0.8); }
     }
 
     .jump-14 { animation: jump-blast-14 0.78s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
     @keyframes jump-blast-14 {
       0%, 100% { transform: translateY(0); }
-      15% { transform: translateY(8px) scale(1.2, 0.8); }
-      42% { transform: translateY(-120px) scale(0.75, 1.35); }
+      15% { transform: translateY(4%) scale(1.2, 0.8); }
+      42% { transform: translateY(-60%) scale(0.75, 1.35); }
       85% { transform: translateY(0) scale(1.3, 0.7); }
     }
 
     .jump-15 { animation: jump-blast-15 0.82s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
     @keyframes jump-blast-15 {
       0%, 100% { transform: translateY(0) scale(1.2, 0.8); }
-      46% { transform: translateY(-118px) scale(0.8, 1.3) rotate(8deg); }
+      46% { transform: translateY(-59%) scale(0.8, 1.3) rotate(8deg); }
       88% { transform: translateY(0) scale(1.3, 0.7); }
     }
 
     .jump-16 { animation: jump-blast-16 0.78s ease-in-out infinite; }
     @keyframes jump-blast-16 {
       0%, 100% { transform: translateY(0) rotate(0); }
-      46% { transform: translateY(-115px) rotate(-18deg) scale(0.85, 1.25); }
+      46% { transform: translateY(-57.5%) rotate(-18deg) scale(0.85, 1.25); }
       88% { transform: translateY(0) scale(1.25, 0.75); }
     }
 
     .jump-17 { animation: jump-blast-17 0.88s ease-in-out infinite; }
     @keyframes jump-blast-17 {
       0%, 100% { transform: translateY(0) rotate(0deg); }
-      45% { transform: translateY(-126px) rotate(22deg) scale(0.9, 1.2); }
-      75% { transform: translateY(-75px) rotate(-12deg); }
+      45% { transform: translateY(-63%) rotate(22deg) scale(0.9, 1.2); }
+      75% { transform: translateY(-37.5%) rotate(-12deg); }
       92% { transform: translateY(0) scale(1.2, 0.8); }
     }
 
     .jump-18 { animation: jump-blast-18 0.75s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
     @keyframes jump-blast-18 {
       0%, 100% { transform: translateY(0) scale(1.4, 0.6); }
-      18% { transform: translateY(10px) scale(1.6, 0.45); }
-      44% { transform: translateY(-125px) scale(0.7, 1.45); }
+      18% { transform: translateY(5%) scale(1.6, 0.45); }
+      44% { transform: translateY(-62.5%) scale(0.7, 1.45); }
       88% { transform: translateY(0) scale(1.45, 0.55); }
     }
 
     .jump-19 { animation: jump-blast-19 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
     @keyframes jump-blast-19 {
       0%, 100% { transform: translateY(0) scale(1.25, 0.75); }
-      45% { transform: translateY(-120px) scale(0.75, 1.35); }
+      45% { transform: translateY(-60%) scale(0.75, 1.35); }
       88% { transform: translateY(0) scale(1.35, 0.65); }
     }
 
     .jump-20 { animation: jump-blast-20 0.78s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
     @keyframes jump-blast-20 {
       0%, 100% { transform: translateY(0); }
-      15% { transform: translateY(8px); }
-      42% { transform: translateY(-118px) rotate(10deg) scale(0.85, 1.25); }
+      15% { transform: translateY(4%); }
+      42% { transform: translateY(-59%) rotate(10deg) scale(0.85, 1.25); }
       88% { transform: translateY(0) scale(1.3, 0.7); }
     }
 
     .jump-21 { animation: jump-blast-21 0.85s ease-in-out infinite; }
     @keyframes jump-blast-21 {
       0%, 100% { transform: translateY(0) rotate(0); }
-      48% { transform: translateY(-116px) rotate(28deg) scale(0.9, 1.2); }
+      48% { transform: translateY(-58%) rotate(28deg) scale(0.9, 1.2); }
       88% { transform: translateY(0) scale(1.3, 0.7); }
     }
 
     .jump-22 { animation: jump-blast-22 0.75s steps(4) infinite; }
     @keyframes jump-blast-22 {
       0%, 100% { transform: translateY(0); }
-      42% { transform: translateY(-118px); }
+      42% { transform: translateY(-59%); }
       85% { transform: translateY(0); }
     }
 
     .jump-23 { animation: jump-blast-23 0.8s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
     @keyframes jump-blast-23 {
       0%, 100% { transform: translateY(0) scale(1.2, 0.8); }
-      45% { transform: translateY(-115px) scale(0.8, 1.3); }
+      45% { transform: translateY(-57.5%) scale(0.8, 1.3); }
       88% { transform: translateY(0) scale(1.35, 0.65); }
     }
 
     .jump-24 { animation: jump-blast-24 0.8s ease-in-out infinite; }
     @keyframes jump-blast-24 {
       0%, 100% { transform: translateY(0); }
-      46% { transform: translateY(-122px) rotate(-14deg) scale(0.85, 1.25); }
+      46% { transform: translateY(-61%) rotate(-14deg) scale(0.85, 1.25); }
       88% { transform: translateY(0) scale(1.25, 0.75); }
     }
 
     .jump-25 { animation: jump-blast-25 0.88s ease-in-out infinite; }
     @keyframes jump-blast-25 {
       0% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-125px) rotate(180deg) scale(0.8, 1.3); }
+      50% { transform: translateY(-62.5%) rotate(180deg) scale(0.8, 1.3); }
       100% { transform: translateY(0) rotate(360deg); }
     }
 
     .jump-26 { animation: jump-blast-26 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
     @keyframes jump-blast-26 {
       0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
-      45% { transform: translateY(-120px) scale(0.75, 1.35); }
+      45% { transform: translateY(-60%) scale(0.75, 1.35); }
       88% { transform: translateY(0) scale(1.4, 0.6); }
     }
 
     .jump-27 { animation: jump-blast-27 0.78s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
     @keyframes jump-blast-27 {
       0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
-      45% { transform: translateY(-124px) scale(0.75, 1.4); }
+      45% { transform: translateY(-62%) scale(0.75, 1.4); }
       88% { transform: translateY(0) scale(1.35, 0.65); }
     }
 
     .jump-28 { animation: jump-blast-28 0.78s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
     @keyframes jump-blast-28 {
       0%, 100% { transform: translateY(0) rotate(0); }
-      45% { transform: translateY(-118px) rotate(-26deg) scale(0.8, 1.3); }
+      45% { transform: translateY(-59%) rotate(-26deg) scale(0.8, 1.3); }
       88% { transform: translateY(0) scale(1.3, 0.7); }
     }
 
     .jump-29 { animation: jump-blast-29 0.88s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
     @keyframes jump-blast-29 {
       0%, 100% { transform: translateY(0) rotate(0); }
-      48% { transform: translateY(-124px) rotate(24deg) scale(0.85, 1.25); }
+      48% { transform: translateY(-62%) rotate(24deg) scale(0.85, 1.25); }
       88% { transform: translateY(0) scale(1.3, 0.7); }
     }
 
     .jump-30 { animation: jump-blast-30 0.82s ease-in-out infinite; }
     @keyframes jump-blast-30 {
       0%, 100% { transform: translateY(0); }
-      48% { transform: translateY(-126px) scale(0.8, 1.35); }
+      48% { transform: translateY(-63%) scale(0.8, 1.35); }
       88% { transform: translateY(0) scale(1.2, 0.8); }
     }
 
     .jump-31 { animation: jump-blast-31 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
     @keyframes jump-blast-31 {
       0%, 100% { transform: translateY(0) scale(1.25, 0.75); }
-      45% { transform: translateY(-118px) scale(0.8, 1.3); }
+      45% { transform: translateY(-59%) scale(0.8, 1.3); }
       88% { transform: translateY(0) scale(1.35, 0.65); }
     }
 
     .jump-32 { animation: jump-blast-32 0.88s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
     @keyframes jump-blast-32 {
       0%, 100% { transform: translateY(0) rotate(0); }
-      48% { transform: translateY(-128px) rotate(18deg) scale(0.8, 1.3); }
+      48% { transform: translateY(-64%) rotate(18deg) scale(0.8, 1.3); }
       88% { transform: translateY(0) scale(1.25, 0.75); }
     }
 
     .jump-33 { animation: jump-blast-33 0.82s ease-in-out infinite; }
     @keyframes jump-blast-33 {
       0%, 100% { transform: translateY(0) rotate(0); }
-      50% { transform: translateY(-122px) rotate(-16deg) scale(0.85, 1.25); }
+      50% { transform: translateY(-61%) rotate(-16deg) scale(0.85, 1.25); }
       88% { transform: translateY(0) scale(1.2, 0.8); }
     }
 
     .jump-34 { animation: jump-blast-34 0.88s ease-in-out infinite; }
     @keyframes jump-blast-34 {
       0%, 100% { transform: translateY(0); }
-      48% { transform: translateY(-128px) scale(0.85, 1.3); }
+      48% { transform: translateY(-64%) scale(0.85, 1.3); }
       88% { transform: translateY(0) scale(1.25, 0.75); }
     }
 
     .jump-35 { animation: jump-blast-35 0.75s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
     @keyframes jump-blast-35 {
       0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
-      45% { transform: translateY(-126px) scale(0.75, 1.4); }
+      45% { transform: translateY(-63%) scale(0.75, 1.4); }
       88% { transform: translateY(0) scale(1.35, 0.65); }
     }
 

@@ -810,6 +810,16 @@ function isReady(toolId) {
   return !!(window.TOOLS_OVERLAY?.[toolId]?.ready);
 }
 
+// Kachel und Verlinkung weg, ohne dass die Datenbankzeile oder der
+// Ordner angerührt werden (Entscheidung 26.09.2026, siehe tools.js).
+function isHidden(toolId) {
+  return !!(window.TOOLS_OVERLAY?.[toolId]?.hidden);
+}
+
+function isBeta(toolId) {
+  return !!(window.TOOLS_OVERLAY?.[toolId]?.beta);
+}
+
 /* Eine Kachel sagt, wie ein Skill heißt und wozu er da ist — was
    dabei an der Wand entsteht, sagt sie nicht. Genau das ist aber
    die Frage von jemandem, der überlegt, ob er damit eine Stunde
@@ -828,7 +838,11 @@ function toolCard(t, guest) {
   const ready = isReady(t.id);
   const badges = [
     ready ? '' : '<span class="tag tag--soon">Skill in Vorbereitung</span>',
-    t.active ? '' : '<span class="tag tag--off">Abgeschaltet</span>'
+    t.active ? '' : '<span class="tag tag--off">Abgeschaltet</span>',
+    // Neutral und nicht tag--soon/tag--off: „Beta" ist keine Warnung
+    // und kein „noch nicht da" — der Skill läuft, ist nur noch nicht
+    // rund. Die unveränderte .tag-Grundfarbe sagt genau das.
+    isBeta(t.id) ? '<span class="tag">Beta</span>' : ''
   ].filter(Boolean).join('');
 
   // Ein abgeschalteter Skill bekommt keine neuen Räume mehr
@@ -969,7 +983,11 @@ document.addEventListener('click', ev => {
    Lesefluss soll nicht zweimal durch die Rollenweiche. */
 async function renderTools(host, guest) {
   if (!host) return;
-  const tools = await loadTools();
+  const loaded = await loadTools();
+  // hidden herausgefiltert und nicht erst in toolCard() übersprungen:
+  // sonst zählte die Kachel noch beim Gruppieren nach Fach mit und
+  // risse dort eine Lücke, wo keine Kachel steht.
+  const tools = loaded ? loaded.filter(t => !isHidden(t.id)) : loaded;
 
   if (!tools) {
     // Häufigster Fall beim Ausrollen: Migration 0078 ist noch nicht
@@ -1018,7 +1036,46 @@ async function renderTools(host, guest) {
     + `<div class="tile-grid">${s.items.map(t => toolCard(t, guest)).join('')}</div>`
   ).join('');
   wireToolButtons(host);
+
+  // Nur der echte Lehrkraft-Reiter bricht aus .wrap aus (siehe
+  // fitToolsWide) — die Kacheln im Gast-Fenster sitzen in einem Modal
+  // mit eigener, bewusst engerer Breite (.modal--wide).
+  if (host.id === 'paneTools') fitToolsWide();
 }
+
+/* Der Reiter „Alle Skills" ist der einzige Ort auf der Seite, an dem
+   vier Kacheln in eine Zeile passen sollen — überall sonst in .wrap
+   sitzt die „Code von der Tafel"-Box, die genau auf 860 px ausgelegt
+   ist (sie WÄCHST mit ihrem Rahmen und würde bei mehr Breite zu einem
+   ausgeleierten Eingabefeld). Deshalb bricht nur #paneTools aus dem
+   Rahmen aus, symmetrisch über negative Außenränder, und nicht der
+   ganze .wrap (Entscheidung 26.09.2026).
+
+   Kein vw-Trick (100vw/-50vw): der zählt die Breite der Bildlaufleiste
+   mit und reißt auf Windows-Rechnern mit klassischer (nicht
+   überlagerter) Bildlaufleiste einen echten horizontalen Scrollbalken
+   auf. clientWidth zählt sie nicht mit — deshalb die Messung statt der
+   üblichen CSS-Formel. */
+function fitToolsWide() {
+  const pane = document.getElementById('paneTools');
+  const wrap = pane?.closest('.wrap');
+  if (!pane || !wrap) return;
+
+  const padX = parseFloat(getComputedStyle(wrap).paddingLeft) || 0;
+  const contentW = wrap.getBoundingClientRect().width - padX * 2;
+  // 1360 reicht für vier Kacheln à mind. 320 px plus Lücken (siehe
+  // .tile-grid); auf schmaleren Fenstern bleiben 16 px Luft zum Rand,
+  // damit die Kacheln nie an die Bildlaufleiste stoßen.
+  const cap = Math.min(1360, document.documentElement.clientWidth - 32);
+  const extra = Math.max(0, cap - contentW);
+  pane.style.marginLeft = pane.style.marginRight = extra ? `-${extra / 2}px` : '';
+}
+
+let toolsWideResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(toolsWideResizeTimer);
+  toolsWideResizeTimer = setTimeout(fitToolsWide, 120);
+});
 
 /* ─── Das Sortiment für alle ohne eigene Räume ────────────────
    Derselbe Aufruf, anderes Fach: das Modal hinter dem Knopf neben

@@ -212,6 +212,21 @@ const BILDER = {
       question: null, answers_dist: {}, answers_total: 0, leaderboard: [],
       players: Array.from({ length: 28 }, (_, i) => spieler(i + 1, { answered: false, score: 0 }))
     }),
+    /* EIN Kind. Der Fall, der am 26.09.2026 gemeldet wurde: „der
+       eine Avatar war viel zu groß". `auto-fit` wirft leere Spalten
+       weg, `1fr` gab der letzten die ganze Breite, und die Karte
+       darunter ist ein Quadrat — also stand am Beamer ein 700
+       Punkte hohes Wesen. Die Prüfung dazu steht unten
+       (`karte`): eine Karte ist eine Karte, egal wie viele es
+       sind. */
+    lobby1: () => ({
+      phase: 'lobby', current_q_idx: 0, question_count: 12, phase_ends_at: null,
+      server_now: new Date().toISOString(), catalog_id: 'k1',
+      catalog_title: 'Tablet-Schulung: Grundlagen',
+      catalogs: [{ id: 'k1', title: 'Tablet-Schulung: Grundlagen', count: 12, mine: false }],
+      question: null, answers_dist: {}, answers_total: 0, leaderboard: [],
+      players: [spieler(1, { answered: false, score: 0, emote: 'jump' })]
+    }),
     question: () => ({
       phase: 'question', current_q_idx: 4, question_count: 12,
       phase_ends_at: new Date(Date.now() + 14000).toISOString(),
@@ -341,16 +356,142 @@ function messe(touch) {
     }
   }
 
+  /* Die größte Wesen-Karte und ihr Abstand zum Boden der Wand.
+     Beides gehört zusammen: die Karte darf nicht wachsen, nur weil
+     sie allein dasteht, und die Klasse steht UNTEN in der Wand und
+     schwebt nicht in der Mitte. */
+  let karte = null;
+  const wand = document.querySelector('.ks-wall');
+  const karten = Array.from(document.querySelectorAll('.ks-karte')).filter(sichtbar);
+  if (wand && karten.length) {
+    const w = wand.getBoundingClientRect();
+    const boxen = karten.map(k => k.getBoundingClientRect());
+    karte = {
+      n: karten.length,
+      breit: Math.round(Math.max(...boxen.map(b => b.width))),
+      hoch: Math.round(Math.max(...boxen.map(b => b.height))),
+      // Abstand der untersten Karte zum unteren Rand der Wand.
+      boden: Math.round(w.bottom - Math.max(...boxen.map(b => b.bottom)))
+    };
+  }
+
   return {
     seitenUeberlauf: de.scrollWidth - de.clientWidth,
     rahmenUnten: Math.round(fr.bottom - window.innerHeight),
     rahmenHoehe: Math.round(fr.height),
     buehneUeber: Math.round(stage.scrollHeight - stage.clientHeight),
     raus: raus.map(r => r.sel + (r.unten ? ' unten+' + r.unten : '') + (r.rechts ? ' rechts+' + r.rechts : '')),
-    klein, zuKlein,
+    klein, zuKlein, karte,
     wandScrollt: Math.round((document.querySelector('.ks-wall')?.scrollHeight || 0)
                - (document.querySelector('.ks-wall')?.clientHeight || 0))
   };
+}
+
+/* ── Kontrast, in beiden Fassungen ─────────────────────────────
+   Hell/dunkel ist keine Frage der Größe, sondern der Lesbarkeit —
+   und die kann nur der Browser beantworten, weil erst er die
+   Variablen auflöst und durchsichtige Flächen übereinanderlegt.
+
+   Gemessen wird nach WCAG: die Schriftfarbe gegen die Fläche, auf
+   der sie WIRKLICH liegt. Dafür wird nach oben gelaufen, bis eine
+   Fläche deckend ist, und alles Durchsichtige darüber
+   daraufgerechnet. Ohne das käme bei jedem zweiten Element
+   „rgba(0,0,0,0) gegen Weiß" heraus — also immer grün.          */
+function messeKontrast() {
+  const zahlen = s => (s.match(/[\d.]+/g) || []).map(Number);
+  const lum = ([r, g, b]) => {
+    const f = c => { c /= 255; return c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); };
+    return .2126 * f(r) + .7152 * f(g) + .0722 * f(b);
+  };
+  const ueber = (vorn, hinten) => {
+    const a = vorn[3] === undefined ? 1 : vorn[3];
+    return [0, 1, 2].map(i => vorn[i] * a + hinten[i] * (1 - a));
+  };
+  /* Die Durchsichtigkeit ÜBER dem Element zählt mit. Das ist keine
+     Feinheit: die falschen Antworten in der Auflösung stehen auf
+     `opacity: .62`, und was im Dunkeln dunkler wird, wird im Hellen
+     blasser — dieselbe Zahl, das andere Ergebnis. Ohne diese Zeile
+     misst der Prüfstand Farben, die so nie auf dem Schirm sind. */
+  const durchsicht = (el) => {
+    let o = 1;
+    for (let n = el; n && n.nodeType === 1; n = n.parentElement) o *= +getComputedStyle(n).opacity;
+    return o;
+  };
+  const flaeche = (el) => {
+    const stapel = [];
+    for (let n = el; n; n = n.parentElement) {
+      const c = zahlen(getComputedStyle(n).backgroundColor);
+      if (c.length < 3) continue;
+      if (c[3] === 0) continue;
+      c[3] = (c[3] === undefined ? 1 : c[3]) * durchsicht(n);
+      stapel.push(c);
+      if (c[3] >= 1) break;
+    }
+    let unten = [255, 255, 255];
+    for (let i = stapel.length - 1; i >= 0; i--) unten = ueber(stapel[i], unten);
+    return unten;
+  };
+
+  const ziele = ['.ks-q', '.ks-kt', '.ks-clock', '.ks-sname', '.ks-spkt', '.ks-kname',
+                 '.ks-kpkt', '.ks-tname', '.ks-trang', '.ks-qnr', '.ks-qsmall', '.ks-expl',
+                 '.ks-twarte', '.ks-leer', '.ks-antz', '.ks-nname', '.ks-iname', '.ks-inr',
+                 '.ks-wname', '.ks-skin', '.ks-pick', '.ks-urteil', '.ks-catwrap',
+                 // Die abgeblendeten Kacheln: in der Auflösung wird
+                 // über sie geredet, also müssen sie lesbar bleiben.
+                 '.ks-k.is-blass .ks-kt', '.ks-k.is-blass .ks-kn', '.ks-k.is-still .ks-kt',
+                 '.ks-nb .ks-nname', '.ks-nb .ks-npkt'];
+  const schwach = [];
+  for (const sel of ziele) {
+    const el = document.querySelector(sel);
+    if (!el) continue;
+    const s = getComputedStyle(el);
+    if (s.display === 'none' || s.visibility === 'hidden' || +s.opacity === 0) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < .5 || r.height < .5) continue;
+    const farbe = zahlen(s.color);
+    farbe[3] = (farbe[3] === undefined ? 1 : farbe[3]) * durchsicht(el);
+    const vorn = ueber(farbe, flaeche(el));
+    const a = lum(vorn), b = lum(flaeche(el));
+    const v = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+    // 3.0 für große/fette Schrift (ab 24 px), sonst 4.5 — die
+    // Grenzen aus WCAG AA. Das Zeichen in den Emote-Knöpfen ist ein
+    // Bild und steht nicht in der Liste.
+    const grenze = parseFloat(s.fontSize) >= 24 ? 3 : 4.5;
+    if (v < grenze) {
+      schwach.push(sel + ' ' + v.toFixed(2) + ' < ' + grenze
+        + ' (' + s.color + ' auf rgb(' + flaeche(el).map(Math.round) + ')'
+        + ', Deckung ' + durchsicht(el).toFixed(2) + ')');
+    }
+  }
+  const rahmen = document.querySelector('.ks-frame');
+  return { schwach, grund: Math.round(lum(flaeche(rahmen)) * 100) / 100 };
+}
+
+/* Warten, bis das Bild steht — und zwar auf die Bewegungen selbst
+   und nicht auf eine Zahl. Eine feste Wartezeit war hier zweimal
+   falsch: die Karten kommen mit `ks-rein` herein (0,32 s, mit
+   Überschwingen über 1,0), und wer mittendrin misst, misst einmal
+   121 px, wo 118 stehen, und einmal eine halb durchsichtige Karte —
+   was dann als „schwacher Kontrast" gemeldet wird, obwohl die Farbe
+   stimmt. Mit 160 ms war es immer falsch, mit 400 ms nur manchmal,
+   und „manchmal rot" ist das Schlimmste, was ein Prüfstand sein
+   kann.
+
+   Gewartet wird auf die Bewegungen, die ein ENDE haben. Die Wesen
+   atmen, winken und springen endlos — auf die zu warten, hieße
+   ewig. */
+async function ruhe(page) {
+  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() => Promise.all(
+    document.getAnimations()
+      .filter(a => {
+        try { return a.effect.getComputedTiming().iterations !== Infinity; }
+        catch (e) { return false; }
+      })
+      .map(a => a.finished.catch(() => {}))
+  ));
+  // Ein Bild obendrauf: die Füllstände haben eine Übergangszeit.
+  await page.waitForTimeout(80);
 }
 
 /* ── Lauf ──────────────────────────────────────────────────────── */
@@ -380,10 +521,7 @@ for (const s of SCHIRME) {
       });
       await page.evaluate(() => window.__mount());
       await page.waitForSelector('.ks-stage > :not(.ks-booting)', { timeout: 5000 }).catch(() => {});
-      // Ein Bild abwarten: die Füllstände haben eine Übergangszeit,
-      // und die Schriften kommen aus dem Netz.
-      await page.evaluate(() => document.fonts.ready);
-      await page.waitForTimeout(160);
+      await ruhe(page);
 
       const m = await page.evaluate(messe, s.touch);
       const wo = `${s.name} · ${role} · ${phase}`;
@@ -401,12 +539,85 @@ for (const s of SCHIRME) {
       ok(`${wo}: Schrift lesbar`, m.zuKlein.length === 0, m.zuKlein.slice(0, 4).join(' | '));
       ok(`${wo}: keine Ausnahme im Browser`, kaputt.length === 0, kaputt.slice(0, 2).join(' | '));
 
+      /* Eine Karte ist eine Karte — auch wenn nur ein Kind da ist.
+         152 px ist die Obergrenze aus tool.css plus Rand; ohne sie
+         stand hier bei einem einzigen Kind eine Karte über den
+         halben Beamer. Und sie steht unten: mehr als 12 px Luft
+         unter der untersten Karte heißt, die Wand hat wieder
+         mittig ausgerichtet. */
+      if (m.karte) {
+        ok(`${wo}: die Wesen-Karte bleibt kartengroß (${m.karte.n} Kind(er))`,
+           m.karte.breit <= 152, m.karte.breit + '×' + m.karte.hoch + ' px');
+        // Nur wenn alle hineinpassen. Läuft die Wand über, ist sie
+        // ein Rollfeld und fängt oben an — das ist so gewollt
+        // (`safe end`), und die unterste Karte liegt dann unter dem
+        // sichtbaren Rand.
+        if (m.wandScrollt <= 1) {
+          ok(`${wo}: die Wesen stehen unten in der Wand`,
+             m.karte.boden >= -1 && m.karte.boden <= 12,
+             m.karte.boden + ' px Luft darunter');
+        }
+        /* Und in der Lobby ist die ganze Klasse zu sehen. Das ist
+           der Sinn der Wand: wer hereinkommt, taucht auf, und man
+           sieht auf einen Blick, wer noch fehlt. Eine Wand, die
+           rollt, versteckt die letzte Reihe — am Beamer scrollt
+           niemand. In der Siegerehrung gilt das nicht: dort steht
+           das Podest darüber und bekommt den Platz zuerst. */
+        if (phase.startsWith('lobby') && role === 'presenter') {
+          ok(`${wo}: alle ${m.karte.n} passen ohne Rollen hinein`,
+             m.wandScrollt <= 1, m.wandScrollt + ' px zu viel');
+        }
+      }
+
       if (MIT_BILDERN) {
         await page.screenshot({ path: path.join(SHOTS, `${role}-${phase}-${s.name}.png`) });
       }
     }
     await ctxB.close();
   }
+}
+
+/* ── Hell und dunkel ───────────────────────────────────────────
+   Zwei Bildschirme reichen: die Lesbarkeit hängt an den Farben und
+   nicht an der Breite. Geprüft werden beide Rollen in allen Bildern
+   und in beiden Fassungen — die helle ist die neue (26.09.2026),
+   und sie ist die, in der ein übersehener dunkler Rest auffällt.  */
+console.log('\n── Hell und dunkel ─────────────────────────────────\n');
+for (const [role, s] of [['presenter', { name: 'beamer-720', w: 1280, h: 720, touch: false }],
+                         ['participant', { name: 'iphone-14-hoch', w: 390, h: 844, touch: true }]]) {
+  const ctxB = await browser.newContext({
+    viewport: { width: s.w, height: s.h }, deviceScaleFactor: 1, hasTouch: s.touch
+  });
+  const page = await ctxB.newPage();
+  await page.goto(`http://127.0.0.1:${port}/MPSkills/__fit_${role}.html`, { waitUntil: 'load' });
+
+  for (const thema of ['dark', 'light']) {
+    await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), thema);
+    for (const [phase, bau] of Object.entries(BILDER[role])) {
+      await page.evaluate(v => { window.__V = v; }, bau());
+      await page.evaluate(() => {
+        if (window.__impl) { try { window.__impl.unmount(); } catch (e) {} }
+        document.getElementById('host').innerHTML = '';
+      });
+      await page.evaluate(() => window.__mount());
+      await page.waitForSelector('.ks-stage > :not(.ks-booting)', { timeout: 5000 }).catch(() => {});
+      await ruhe(page);
+
+      const k = await page.evaluate(messeKontrast);
+      const wo = `${thema} · ${role} · ${phase}`;
+      ok(`${wo}: alles lesbar`, k.schwach.length === 0, k.schwach.slice(0, 4).join(' | '));
+      // Und die Fassung schlägt wirklich um: dunkel ist dunkel,
+      // hell ist hell. Ohne diese Zeile wären beide Läufe derselbe,
+      // und „alles lesbar" hieße nichts.
+      ok(`${wo}: der Grund passt zur Fassung`,
+         thema === 'dark' ? k.grund < .2 : k.grund > .7, 'Helligkeit ' + k.grund);
+
+      if (MIT_BILDERN) {
+        await page.screenshot({ path: path.join(SHOTS, `${thema}-${role}-${phase}.png`) });
+      }
+    }
+  }
+  await ctxB.close();
 }
 
 await browser.close();

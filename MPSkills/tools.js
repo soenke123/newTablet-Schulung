@@ -15,6 +15,15 @@
               Rollback des Frontends würde Kacheln zeigen, die ins
               Leere führen.
 
+     hidden — Kachel und Verlinkung komplett weg, ohne die Zeile in
+              skill_tools anzurühren. Für einen Skill, der im
+              Hintergrund weiterleben, aber niemandem mehr angeboten
+              werden soll — anders als ready:false, das die Kachel
+              als „in Vorbereitung" zeigt.
+
+     beta   — Zeigt einen „Beta"-Sticker: der Skill läuft, ist aber
+              noch nicht rund.
+
    Ein Tool, das hier nicht steht, gilt als ready:false. Ein Tool,
    das hier steht, aber nicht in der Datenbank, wird nicht
    angezeigt — die Registry entscheidet, was es gibt.
@@ -55,8 +64,15 @@ window.TOOLS_OVERLAY = {
   // daneben, damit das Alleine-Lernen später auf denselben Listen
   // üben kann.
   wordisland: { ready: true },
-  // Siebter Skill (Migration 0174) — Live-Quiz mit 36 Wesen & Leaderboard
-  knowledgestack: { ready: true },
+  // Siebter Skill (Migration 0174) — Live-Quiz mit 36 Wesen & Leaderboard.
+  // beta: zeigt einen „Beta"-Sticker auf der Kachel (26.09.2026) — der
+  // Skill läuft, ist aber noch nicht rund; das ist eine Auskunft über die
+  // Auslieferung, nicht über die Datenbankzeile, gehört also hierher.
+  knowledgestack: { ready: true, beta: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
-  poll:      { ready: false }
+  // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
+  // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet
+  // die Kachel komplett aus renderTools() aus — anders als `ready:false`,
+  // das die Kachel nur als „in Vorbereitung" zeigt, aber sichtbar lässt.
+  poll:      { ready: false, hidden: true }
 };
