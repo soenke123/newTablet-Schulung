@@ -9,6 +9,9 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="manifest" href="site.webmanifest" />
   <meta name="theme-color" content="#1a0e05" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #1a0e05;
@@ -72,27 +75,112 @@
     }
 
     /* Fuß — trägt genau einen Link: den Übergang zu MPSkills.
-       Bewusst dezent und keine Kachel: MPSkills ist ein eigener
-       Bereich für den Unterricht und gehört nicht in den Ablauf
-       der Schulung (siehe Konzept_MPSkills_v1.html, Abschnitt 02). */
+       Dezenter Rahmen, Drachen-Logo und MPSkills Wordmark im Originalstil. */
     .site-foot {
       width: 100%;
-      margin: 34px auto 0;
-      padding: 18px 12px 4px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      margin: 36px auto 0;
+      padding: 20px 12px 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
       text-align: center;
-      font-size: 0.84rem;
     }
-    .site-foot a {
-      color: rgba(255, 255, 255, 0.62);
+
+    .mpskills-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 18px 8px 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
       text-decoration: none;
-      transition: color var(--transition);
+      color: #f5e6c8;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      transition:
+        background var(--transition),
+        border-color var(--transition),
+        transform var(--transition),
+        box-shadow var(--transition);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
-    .site-foot a:hover {
-      color: rgba(255, 255, 255, 0.95);
-      text-decoration: underline;
+
+    .mpskills-link:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(46, 232, 165, 0.45);
+      transform: translateY(-2px);
+      box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.35),
+        0 0 16px rgba(46, 232, 165, 0.15);
     }
-    .site-foot .foot-arrow { opacity: 0.6; }
+
+    .mpskills-link-logo {
+      height: 34px;
+      width: auto;
+      display: block;
+      flex-shrink: 0;
+      filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.4));
+      transition: transform var(--transition);
+    }
+
+    .mpskills-link:hover .mpskills-link-logo {
+      transform: scale(1.08) rotate(-2deg);
+    }
+
+    .mpskills-link-content {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mpskills-wordmark {
+      font-family: 'Outfit', Inter, system-ui, sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      line-height: 1;
+    }
+
+    .mpskills-wordmark span {
+      color: #2ee8a5;
+    }
+
+    .mpskills-link-sub {
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: rgba(245, 230, 200, 0.75);
+    }
+
+    .mpskills-link-arrow {
+      color: #2ee8a5;
+      font-size: 1rem;
+      font-weight: 600;
+      opacity: 0.8;
+      transition: transform var(--transition), opacity var(--transition);
+      margin-left: 2px;
+    }
+
+    .mpskills-link:hover .mpskills-link-arrow {
+      opacity: 1;
+      transform: translateX(4px);
+    }
+
+    @media (max-width: 520px) {
+      .mpskills-link {
+        padding: 7px 14px 7px 10px;
+        gap: 9px;
+      }
+      .mpskills-link-logo {
+        height: 28px;
+      }
+      .mpskills-wordmark {
+        font-size: 1.05rem;
+      }
+      .mpskills-link-sub {
+        font-size: 0.8rem;
+      }
+    }
 
     /* Überschrift */
     h1 {
@@ -983,7 +1071,14 @@
          mit Reihen-Richtung, ein Geschwister-Element von main landet
          daneben statt darunter. -->
     <footer class="site-foot">
-      <a href="MPSkills/index.html">MPSkills — Werkzeuge für den Unterricht <span class="foot-arrow" aria-hidden="true">→</span></a>
+      <a class="mpskills-link" href="MPSkills/index.html">
+        <img class="mpskills-link-logo" src="LogoMPSkills.png" alt="MPSkills Drache" />
+        <span class="mpskills-link-content">
+          <span class="mpskills-wordmark">MP<span>Skills</span></span>
+          <span class="mpskills-link-sub">— Werkzeuge für den Unterricht</span>
+        </span>
+        <span class="mpskills-link-arrow" aria-hidden="true">→</span>
+      </a>
     </footer>
 
   </main>

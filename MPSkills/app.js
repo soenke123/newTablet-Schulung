@@ -1138,6 +1138,9 @@ function showTab(which) {
   // eine Behauptung ohne Gegenüber.
   const pitch = document.getElementById('pitch');
   if (pitch) pitch.hidden = (which !== 'rooms');
+
+  const schulung = document.getElementById('schulungCard');
+  if (schulung) schulung.hidden = (which !== 'rooms');
 }
 
 function roleOf(s) {
@@ -1186,6 +1189,12 @@ function renderState() {
     if (pitch) {
       pitch.hidden = false;
       join.insertAdjacentElement('afterend', pitch);
+    }
+
+    const schulung = document.getElementById('schulungCard');
+    if (schulung) {
+      schulung.hidden = false;
+      (pitch || join).insertAdjacentElement('afterend', schulung);
     }
   }
 

@@ -67,7 +67,7 @@
 (function () {
   'use strict';
 
-  const ASSET_V = '20260926b';
+  const ASSET_V = '20260927a';
 
   /* Takt je Phase, in Millisekunden. Während der Frage muss der
      Beamer zügig mitzählen („17 von 28 haben geantwortet") — in der
@@ -137,6 +137,13 @@
      nächsten Takt wieder zu — und sie muss auch dann stehenbleiben,
      wenn nebenher noch Punkte und Emotes hereinkommen. */
   let pickerOffen = false;
+  /* ─── Editor-Zustand ────────────────────────────────────── */
+  // null = Editor zu, 'list' = Katalog-Übersicht, 'edit' = Fragen-Editor,
+  // 'preview' = Beamer-Vorschau einer Frage.
+  let editorMode = null;
+  let editorData = null;      // { catalog_id, title, subject, questions: [] }
+  let editorPreviewIdx = 0;   // welche Frage in der Vorschau
+  let editorDirty = false;    // ungespeicherte Änderungen?
 
   /* ══════════════════════════════════════════════════════════
      Bausteine
@@ -370,6 +377,8 @@
      Zeichnen: einmal bauen je Bild, danach flicken
      ══════════════════════════════════════════════════════════ */
   function frameKey(v) {
+    if (editorMode) return 'editor|' + editorMode
+      + '|' + (editorMode === 'preview' ? editorPreviewIdx : '-');
     const ph = v.phase || 'lobby';
     return role + '|' + ph
       + '|' + (ph === 'question' || ph === 'reveal' ? v.current_q_idx : '-')
@@ -409,6 +418,7 @@
      BEAMER
      ══════════════════════════════════════════════════════════ */
   function baueBeam(v) {
+    if (editorMode && window.KSEditor) return baueEditor(v);
     if (v.phase === 'lobby')    return beamLobby(v);
     if (v.phase === 'question') return beamFrage(v);
     if (v.phase === 'reveal')   return beamAufloesung(v);
@@ -432,6 +442,8 @@
         </div>
         <div class="ks-headr">
           <span class="ks-pill"><b data-ks="total">${n}</b> dabei</span>
+          <button type="button" class="ks-go ks-go--edit" data-act="editor"
+                  title="Eigene Quizze erstellen und verwalten">📚 Editor</button>
           <button type="button" class="ks-go" data-act="start"
                   ${v.question_count > 0 ? '' : 'disabled'}>Quiz starten</button>
         </div>
@@ -834,6 +846,136 @@
   }
 
   /* ══════════════════════════════════════════════════════════
+     EDITOR (nur Presenter, nur in der Lobby)
+     ══════════════════════════════════════════════════════════ */
+  function ladeEditor() {
+    if (window.KSEditor) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'tools/KnowledgeStack/editor.js?v=' + ASSET_V;
+      s.onload = () => {
+        // CSS einmalig einfügen
+        if (!document.getElementById('kse-css')) {
+          const st = document.createElement('style');
+          st.id = 'kse-css';
+          st.textContent = window.KSEditor.CSS;
+          document.head.appendChild(st);
+        }
+        resolve();
+      };
+      s.onerror = () => reject(new Error('editor.js konnte nicht geladen werden'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function baueEditor() {
+    const E = window.KSEditor;
+    if (editorMode === 'list')    return E.buildList(catalogs);
+    if (editorMode === 'edit')    return E.buildEditor(editorData || { questions: [] });
+    if (editorMode === 'preview') {
+      const qs = (editorData && editorData.questions) || [];
+      const q = qs[editorPreviewIdx] || { question_text: '', options: ['','','',''], correct_idx: 0 };
+      return E.buildPreview(q, editorPreviewIdx, qs.length);
+    }
+    return '<p>Editor wird geladen…</p>';
+  }
+
+  /* Frageninhalte aus den DOM-Feldern sammeln */
+  function sammleEditorDaten() {
+    if (!editorData || !stage) return;
+    const el = stage;
+    // Titel & Fach
+    const tInp = el.querySelector('[data-ed-field=title]');
+    if (tInp) editorData.title = tInp.value;
+    const sInp = el.querySelector('[data-ed-field=subject]');
+    if (sInp) editorData.subject = sInp.value;
+    // Fragen
+    for (let i = 0; i < editorData.questions.length; i++) {
+      const q = editorData.questions[i];
+      const ft = el.querySelector('[data-qi="' + i + '"][data-field=question_text]');
+      if (ft) q.question_text = ft.value;
+      for (let oi = 0; oi < 4; oi++) {
+        const oinp = el.querySelector('[data-qi="' + i + '"][data-oi="' + oi + '"][data-field=option]');
+        if (oinp && Array.isArray(q.options)) q.options[oi] = oinp.value;
+      }
+      const tl = el.querySelector('[data-qi="' + i + '"][data-field=time_limit_sec]');
+      if (tl) q.time_limit_sec = Math.max(5, Math.min(120, parseInt(tl.value, 10) || 20));
+      const expl = el.querySelector('[data-qi="' + i + '"][data-field=explanation]');
+      if (expl) q.explanation = expl.value || null;
+    }
+  }
+
+  /* In der Vorschau editierte Texte (contenteditable) zurückschreiben */
+  function sammleVorschauAenderungen() {
+    if (!editorData || !editorData.questions || !stage) return;
+    const q = editorData.questions[editorPreviewIdx];
+    if (!q) return;
+    const qEl = stage.querySelector('[data-ed-pv=text]');
+    if (qEl) q.question_text = qEl.textContent.trim();
+    const optEls = stage.querySelectorAll('[data-ed-pv=opt]');
+    optEls.forEach(el => {
+      const oi = parseInt(el.dataset.oi, 10);
+      if (!isNaN(oi) && Array.isArray(q.options)) {
+        q.options[oi] = el.textContent.trim();
+      }
+    });
+    editorDirty = true;
+  }
+
+  /* Drag & Drop für Fragen-Reihenfolge */
+  function bindeEditorDnD() {
+    const list = stage.querySelector('[data-ed-list=questions]');
+    if (!list) return;
+    let dragIdx = null;
+
+    list.addEventListener('dragstart', ev => {
+      const card = ev.target.closest('.kse-frage');
+      if (!card) return;
+      dragIdx = parseInt(card.dataset.qi, 10);
+      card.classList.add('is-dragging');
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('text/plain', String(dragIdx));
+    });
+
+    list.addEventListener('dragover', ev => {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+      const card = ev.target.closest('.kse-frage');
+      list.querySelectorAll('.kse-frage').forEach(c => c.classList.remove('is-over'));
+      if (card) card.classList.add('is-over');
+    });
+
+    list.addEventListener('dragleave', ev => {
+      const card = ev.target.closest('.kse-frage');
+      if (card) card.classList.remove('is-over');
+    });
+
+    list.addEventListener('drop', ev => {
+      ev.preventDefault();
+      list.querySelectorAll('.kse-frage').forEach(c =>
+        c.classList.remove('is-dragging', 'is-over'));
+      const card = ev.target.closest('.kse-frage');
+      if (!card || dragIdx == null || !editorData) return;
+      const dropIdx = parseInt(card.dataset.qi, 10);
+      if (dragIdx === dropIdx) return;
+      // Erst aus DOM-Feldern lesen, dann verschieben
+      sammleEditorDaten();
+      const qs = editorData.questions;
+      const [moved] = qs.splice(dragIdx, 1);
+      qs.splice(dropIdx, 0, moved);
+      editorDirty = true;
+      // Neu zeichnen
+      lastFrame = null; zeichne();
+    });
+
+    list.addEventListener('dragend', () => {
+      dragIdx = null;
+      list.querySelectorAll('.kse-frage').forEach(c =>
+        c.classList.remove('is-dragging', 'is-over'));
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════
      Bedienung
      ══════════════════════════════════════════════════════════ */
   function binde() {
@@ -845,6 +987,8 @@
       lastSig = null;
       poll();
     });
+    // Editor Drag & Drop
+    if (editorMode === 'edit') bindeEditorDnD();
   }
 
   /* Ein Listener je Bild und fünf getrennte Fragen danach, WAS
@@ -852,18 +996,217 @@
      zusammen: `.ks-wesen` trägt selbst ein data-cid, und ein Klick
      mitten auf ein Wesen in der Wesenwahl fand dann das SVG statt
      des Knopfes darum. */
-  async function onClick(ev) {
+   async function onClick(ev) {
     if (!ctx || !view) return;
     const act  = ev.target.closest('[data-act]');
+    const ed   = ev.target.closest('[data-ed]');
     const emo  = ev.target.closest('[data-emote]');
     const tile = ev.target.closest('.ks-k');
     const pick = ev.target.closest('.ks-pick');
     const skin = ev.target.closest('.ks-skin');
 
+    /* ─── Editor-Aktionen (data-ed) ──────────────────────── */
+    if (ed) {
+      const a = ed.dataset.ed;
+
+      // Katalog-Übersicht → Editor schließen
+      if (a === 'close') {
+        editorMode = null; editorData = null; editorDirty = false;
+        lastFrame = null; zeichne(); return;
+      }
+
+      // Neues Quiz anlegen
+      if (a === 'new') {
+        editorData = {
+          catalog_id: null, title: '', subject: 'Alles Mögliche',
+          questions: [{ question_text: '', options: ['','','',''], correct_idx: 0,
+                        correct_indices: [0], time_limit_sec: 20, explanation: null }]
+        };
+        editorMode = 'edit'; editorDirty = true;
+        lastFrame = null; zeichne(); return;
+      }
+
+      // Katalog zum Bearbeiten laden
+      if (a === 'edit') {
+        const catId = ed.dataset.cat;
+        ed.disabled = true;
+        const r = await ctx.actions.call('ks_catalog_get', { p_catalog_id: catId });
+        ed.disabled = false;
+        if (!r.ok) { ctx.toast(fehlerText(r.error), true); return; }
+        editorData = r; editorMode = 'edit'; editorDirty = false;
+        lastFrame = null; zeichne(); return;
+      }
+
+      // Katalog direkt zum Spielen auswählen
+      if (a === 'play') {
+        const catId = ed.dataset.cat;
+        ed.disabled = true;
+        const r = await ctx.actions.call('ks_room_setup', { p_catalog: catId });
+        ed.disabled = false;
+        if (!r.ok) { ctx.toast(fehlerText(r.error), true); return; }
+        editorMode = null; editorData = null; editorDirty = false;
+        lastSig = null; lastFrame = null; poll(); return;
+      }
+
+      // Katalog löschen
+      if (a === 'del') {
+        const title = ed.dataset.title || 'Quiz';
+        const ok = await ctx.confirm('„' + title + '" wirklich löschen?');
+        if (!ok) return;
+        ed.disabled = true;
+        const r = await ctx.actions.call('ks_catalog_delete', { p_catalog_id: ed.dataset.cat });
+        ed.disabled = false;
+        if (!r.ok) { ctx.toast(fehlerText(r.error), true); return; }
+        ctx.toast('"' + title + '" gelöscht.');
+        // Katalogliste neu laden
+        lastSig = null; await poll();
+        lastFrame = null; zeichne(); return;
+      }
+
+      // Zurück zur Katalog-Liste (aus dem Editor)
+      if (a === 'back') {
+        if (editorDirty) {
+          const ok = await ctx.confirm('Ungespeicherte Änderungen gehen verloren. Trotzdem zurück?');
+          if (!ok) return;
+        }
+        editorMode = 'list'; editorData = null; editorDirty = false;
+        lastFrame = null; zeichne(); return;
+      }
+
+      // Vorschau öffnen
+      if (a === 'preview') {
+        if (!editorData || !editorData.questions.length) {
+          ctx.toast('Erst mindestens eine Frage eingeben.', true); return;
+        }
+        sammleEditorDaten();
+        editorPreviewIdx = 0; editorMode = 'preview';
+        lastFrame = null; zeichne(); return;
+      }
+
+      // Vorschau: Fragen blättern
+      if (a === 'prev-q') {
+        sammleVorschauAenderungen();
+        editorPreviewIdx = Math.max(0, editorPreviewIdx - 1);
+        lastFrame = null; zeichne(); return;
+      }
+      if (a === 'next-q') {
+        sammleVorschauAenderungen();
+        const max = (editorData && editorData.questions) ? editorData.questions.length - 1 : 0;
+        editorPreviewIdx = Math.min(max, editorPreviewIdx + 1);
+        lastFrame = null; zeichne(); return;
+      }
+
+      // Zurück zum Editor (aus der Vorschau)
+      if (a === 'back-edit') {
+        sammleVorschauAenderungen();
+        editorMode = 'edit'; lastFrame = null; zeichne(); return;
+      }
+
+      // Frage hinzufügen
+      if (a === 'addq') {
+        sammleEditorDaten();
+        editorData.questions.push({
+          question_text: '', options: ['','','',''], correct_idx: 0,
+          correct_indices: [0], time_limit_sec: 20, explanation: null
+        });
+        editorDirty = true;
+        lastFrame = null; zeichne();
+        // Ans Ende scrollen
+        setTimeout(() => {
+          const cards = stage ? stage.querySelectorAll('.kse-frage') : [];
+          if (cards.length && typeof cards[cards.length - 1].scrollIntoView === 'function') {
+            cards[cards.length - 1].scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 50);
+        return;
+      }
+
+      // Frage löschen
+      if (a === 'delq') {
+        sammleEditorDaten();
+        const qi = parseInt(ed.dataset.qi, 10);
+        editorData.questions.splice(qi, 1);
+        editorDirty = true;
+        lastFrame = null; zeichne(); return;
+      }
+
+      // Richtig-Haken umschalten
+      if (a === 'toggle') {
+        sammleEditorDaten();
+        const qi = parseInt(ed.dataset.qi, 10);
+        const oi = parseInt(ed.dataset.oi, 10);
+        const q = editorData.questions[qi];
+        if (!q) return;
+        let ci = Array.isArray(q.correct_indices) ? [...q.correct_indices] : [q.correct_idx || 0];
+        if (ci.includes(oi)) {
+          ci = ci.filter(x => x !== oi);
+          if (ci.length === 0) ci = [oi]; // mindestens einer bleibt
+        } else {
+          ci.push(oi);
+        }
+        q.correct_indices = ci;
+        q.correct_idx = ci[0];
+        editorDirty = true;
+        // Nur den Haken-Button aktualisieren, nicht alles neu bauen
+        ed.classList.toggle('is-richtig', ci.includes(oi));
+        ed.textContent = ci.includes(oi) ? '✅' : '⬜';
+        return;
+      }
+
+      // Speichern
+      if (a === 'save') {
+        sammleEditorDaten();
+        if (!editorData.title || !editorData.title.trim()) {
+          ctx.toast('Bitte einen Titel eingeben.', true); return;
+        }
+        if (!editorData.questions.length) {
+          ctx.toast('Mindestens eine Frage ist nötig.', true); return;
+        }
+        // Fragen für den Server aufbereiten
+        const qs = editorData.questions.map((q, i) => ({
+          question_text:   q.question_text || '',
+          options:         q.options || ['','','',''],
+          correct_idx:     (Array.isArray(q.correct_indices) && q.correct_indices.length)
+                             ? q.correct_indices[0] : (q.correct_idx || 0),
+          correct_indices: q.correct_indices || [q.correct_idx || 0],
+          time_limit_sec:  q.time_limit_sec || 20,
+          explanation:     q.explanation || null
+        }));
+
+        ed.disabled = true; ed.textContent = '⏳ …';
+        const r = await ctx.actions.call('ks_catalog_save', {
+          p_catalog_id: editorData.catalog_id || null,
+          p_title:      editorData.title.trim(),
+          p_subject:    editorData.subject || 'Alles Mögliche',
+          p_questions:  qs
+        });
+        ed.disabled = false; ed.textContent = '💾 Speichern';
+
+        if (!r.ok) { ctx.toast(fehlerText(r.error), true); return; }
+        editorData.catalog_id = r.catalog_id;
+        editorDirty = false;
+        ctx.toast('✅ Quiz gespeichert! (' + r.count + ' Fragen)');
+        // Katalogliste im Hintergrund aktualisieren
+        lastSig = null; poll();
+        return;
+      }
+
+      return; // alle data-ed Aktionen sind abgehandelt
+    }
+
     /* ─── Pult: weiterschalten ───────────────────────────── */
     if (act) {
       if (act.dataset.act === 'wechsel') { pickerOffen = true; lastFrame = null; zeichne(); return; }
       if (act.dataset.act === 'fertig')  { pickerOffen = false; lastFrame = null; zeichne(); return; }
+
+      // Editor öffnen (Lobby-Button)
+      if (act.dataset.act === 'editor') {
+        await ladeEditor();
+        editorMode = 'list';
+        lastFrame = null; zeichne();
+        return;
+      }
+
       act.disabled = true;
       // p_from: aus WELCHER Phase heraus geklickt wurde. Ist die Uhr
       // im selben Augenblick abgelaufen, verpufft der Klick statt
@@ -1039,6 +1382,7 @@
       lastSig = null; lastFrame = null; view = null;
       els = {}; catalogs = []; skew = 0;
       localEmote = null; answering = false; pickerOffen = false;
+      editorMode = editorData = null; editorDirty = false;
 
       root.innerHTML = '<div class="ks-frame"><div class="ks-stage">'
         + '<p class="ks-booting">Quiz wird geladen …</p></div></div>';
@@ -1086,6 +1430,7 @@
       role = null; view = null; els = {};
       lastSig = lastFrame = null;
       pickerOffen = false; localEmote = null;
+      editorMode = editorData = null; editorDirty = false;
       zeigeFehler.last = null;
     }
   });

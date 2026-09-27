@@ -43,6 +43,7 @@ const DIR  = path.join(HERE, '..');
 const TOOL = path.join(DIR, 'tool.js');
 const CSS  = path.join(DIR, 'creatures.css');
 const CRE  = path.join(DIR, 'creatures.js');
+const ED   = path.join(DIR, 'editor.js');
 
 let fails = 0;
 const ok = (label, cond, extra = '') => {
@@ -126,6 +127,7 @@ function makeEnv(hoehe = 700) {
   // Unterschied: die Wesen-Nummern 0…35 und ihre Namen kommen von
   // dort, und genau daran hängen die Emote-Klassen.
   vm.runInContext(fs.readFileSync(CRE, 'utf8'), sandbox, { filename: 'creatures.js' });
+  vm.runInContext(fs.readFileSync(ED, 'utf8'), sandbox, { filename: 'editor.js' });
   vm.runInContext(fs.readFileSync(TOOL, 'utf8'), sandbox, { filename: 'tool.js' });
 
   return { window, document, impls, sandbox };
@@ -973,9 +975,86 @@ async function bereichTheme() {
      feste.slice(0, 4).join(' | '));
 }
 
+/* ══════════════════════════════════════════════════════════
+   EDITOR (Kataloge, Fragenkacheln, Beamer-Vorschau)
+   ══════════════════════════════════════════════════════════ */
+async function bereichEditor() {
+  console.log('\n── Editor ──────────────────────────────────────────\n');
+
+  const lob = await starte('presenter', beamLobby(2));
+
+  // 1) Editor-Button in der Lobby
+  const btnEd = lob.root.querySelector('[data-act=editor]');
+  ok('Lobby: Button für den Editor ist da', !!btnEd);
+
+  // 2) Klick auf Editor öffnet die Katalogliste
+  click(btnEd, lob.doc);
+  await wait(30);
+
+  ok('Editor geöffnet: Überschrift da', !!lob.root.querySelector('.kse-h1'));
+  ok('Kataloge nach Fächern gruppiert', lob.root.querySelectorAll('.kse-gruppe').length >= 1);
+  ok('Neues Quiz Button vorhanden', !!lob.root.querySelector('[data-ed=new]'));
+
+  // 3) Klick auf "Neues Quiz" öffnet den visuellen Fragen-Editor
+  click(lob.root.querySelector('[data-ed=new]'), lob.doc);
+  await wait(30);
+
+  ok('Fragen-Editor geöffnet: Titel-Input da', !!lob.root.querySelector('[data-ed-field=title]'));
+  ok('Fach-Auswahl da', !!lob.root.querySelector('[data-ed-field=subject]'));
+  ok('Eine leere Fragekachel als Start vorhanden', lob.root.querySelectorAll('.kse-frage').length === 1);
+  ok('Drag-Griff an der Fragekachel da', !!lob.root.querySelector('.kse-frage-griff'));
+  ok('4 Antwort-Inputs (A, B, C, D) da', lob.root.querySelectorAll('.kse-oinput').length === 4);
+  ok('4 Haken-Buttons da', lob.root.querySelectorAll('.kse-haken').length === 4);
+  ok('Knopf + Frage hinzufügen da', !!lob.root.querySelector('[data-ed=addq]'));
+  ok('Vorschau-Knopf da', !!lob.root.querySelector('[data-ed=preview]'));
+  ok('Speichern-Knopf da', !!lob.root.querySelector('[data-ed=save]'));
+
+  // 4) Frage hinzufügen
+  click(lob.root.querySelector('[data-ed=addq]'), lob.doc);
+  await wait(30);
+  ok('Nach + Frage hinzufügen: 2 Kacheln', lob.root.querySelectorAll('.kse-frage').length === 2);
+
+  // 5) Frage löschen
+  click(lob.root.querySelector('[data-ed=delq][data-qi="1"]'), lob.doc);
+  await wait(30);
+  ok('Nach Löschen: wieder 1 Kachel', lob.root.querySelectorAll('.kse-frage').length === 1);
+
+  // 6) Haken umschalten (Multi-Choice)
+  const hakenB = lob.root.querySelector('[data-ed=toggle][data-qi="0"][data-oi="1"]');
+  ok('Haken B anfangs nicht gesetzt', !hakenB.classList.contains('is-richtig'));
+  click(hakenB, lob.doc);
+  await wait(10);
+  ok('Nach Klick auf B: Haken B gesetzt', hakenB.classList.contains('is-richtig'));
+
+  // 7) Vorschau testen
+  const fText = lob.root.querySelector('.kse-ftext');
+  fText.value = 'Testfrage für Beamer';
+  click(lob.root.querySelector('[data-ed=preview]'), lob.doc);
+  await wait(30);
+
+  ok('Vorschau geöffnet', !!lob.root.querySelector('.kse-wrap--preview'));
+  ok('Fragetext in Beamer-Vorschau sichtbar', txt(lob.root.querySelector('.kse-pv-q')).includes('Testfrage'));
+  ok('4 Beamer-Kacheln in Vorschau da', lob.root.querySelectorAll('.kse-pv-k').length === 4);
+
+  // 8) Zurück zum Editor
+  click(lob.root.querySelector('[data-ed=back-edit]'), lob.doc);
+  await wait(30);
+  ok('Aus Vorschau zurück zum Editor', !!lob.root.querySelector('.kse-fragen'));
+
+  // 9) Zurück zur Katalogliste
+  click(lob.root.querySelector('[data-ed=back]'), lob.doc);
+  await wait(30);
+  ok('Zurück zur Katalogliste', !!lob.root.querySelector('.kse-list'));
+
+  // 10) Editor schließen -> zurück zur Lobby
+  click(lob.root.querySelector('[data-ed=close]'), lob.doc);
+  await wait(30);
+  ok('Editor geschlossen: zurück in der Beamer-Lobby', !!lob.root.querySelector('.ks-wall'));
+}
+
 /* ══════════════════════════════════════════════════════════ */
 const BEREICHE = { emote: bereichEmote, tab: bereichTab, beam: bereichBeam,
-                   fluss: bereichFluss, theme: bereichTheme };
+                   fluss: bereichFluss, editor: bereichEditor, theme: bereichTheme };
 const wahl = process.argv[2];
 const lauf = wahl ? [wahl] : Object.keys(BEREICHE);
 
