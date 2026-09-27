@@ -113,6 +113,7 @@
     not_active:         'Diese Frage ist schon vorbei.',
     time_up:            'Die Zeit war um.',
     already_answered:   'Du hast schon geantwortet.',
+    reading_phase:      'Die Frage wird noch vorgelesen — gleich geht es los!',
     question_not_found: 'Diese Frage gibt es nicht mehr — der Katalog hat sich geändert.',
     phase_locked:       'Das geht nur zwischen zwei Fragen.'
   };
@@ -269,25 +270,88 @@
   }
 
   /* ══════════════════════════════════════════════════════════
-     Die Uhr
+     Die Uhr & Vorlesezeit (5 Sekunden)
      ══════════════════════════════════════════════════════════ */
+  const READ_TIME_SEC = 5;
+
   function restMs() {
     if (!view || !view.phase_ends_at) return null;
     return new Date(view.phase_ends_at).getTime() - (Date.now() + skew);
   }
 
+  function isReadingPhase() {
+    if (!view || view.phase !== 'question' || !view.phase_ends_at) return false;
+    const ms = restMs();
+    if (ms == null) return false;
+    const lim = ((view.question && view.question.time_limit) || 20) * 1000;
+    return ms > lim;
+  }
+
+  function readingRestSec() {
+    const ms = restMs();
+    if (ms == null) return 0;
+    const lim = ((view.question && view.question.time_limit) || 20) * 1000;
+    return Math.max(0, Math.ceil((ms - lim) / 1000));
+  }
+
   function clockTick() {
     const ms = restMs();
     if (ms == null) return;
-    const sek = Math.max(0, Math.ceil(ms / 1000));
     const lim = (view.question && view.question.time_limit) || 20;
-    if (els.clock) els.clock.textContent = String(sek);
+    const reading = view.phase === 'question' && ms > (lim * 1000);
+
+    if (reading) {
+      const rSek = Math.max(1, Math.ceil((ms - (lim * 1000)) / 1000));
+      if (els.clock) {
+        els.clock.textContent = String(rSek);
+        els.clock.classList.add('ks-clock--reading');
+        els.clock.classList.remove('ks-clock--eilig');
+      }
+      if (els.bar) {
+        const anteil = Math.max(0, Math.min(1, (ms - (lim * 1000)) / (READ_TIME_SEC * 1000)));
+        els.bar.style.width = (anteil * 100).toFixed(1) + '%';
+        els.bar.classList.remove('ks-bar--eilig');
+      }
+      const rCounts = stage.querySelectorAll('[data-ks=reading-count]');
+      rCounts.forEach(c => { c.textContent = String(rSek); });
+      return;
+    }
+
+    // Reguläre Antwortzeit / nicht in der Vorlesezeit
+    const sek = Math.max(0, Math.ceil(ms / 1000));
+    if (els.clock) {
+      els.clock.textContent = String(sek);
+      els.clock.classList.remove('ks-clock--reading');
+      els.clock.classList.toggle('ks-clock--eilig', sek <= 5);
+    }
     if (els.bar) {
       const anteil = Math.max(0, Math.min(1, ms / (lim * 1000)));
       els.bar.style.width = (anteil * 100).toFixed(1) + '%';
       els.bar.classList.toggle('ks-bar--eilig', sek <= 5);
     }
-    if (els.clock) els.clock.classList.toggle('ks-clock--eilig', sek <= 5);
+
+    // Wenn gerade von Vorlesezeit auf Antwortzeit umgeschaltet wurde: Kacheln aufdecken
+    if (view.phase === 'question') {
+      const rBox = stage.querySelector('[data-ks=reading]');
+      if (rBox && !rBox.hidden) {
+        rBox.hidden = true;
+        const kacheln = stage.querySelector('.ks-kacheln');
+        if (kacheln && kacheln.hidden) {
+          kacheln.hidden = false;
+          kacheln.classList.add('ks-popin');
+        }
+        const meta = stage.querySelector('.ks-meta');
+        if (meta && meta.hidden) meta.hidden = false;
+        // Auf dem Tablet: Kacheln entsperren (sofern noch nicht geantwortet)
+        if (role === 'participant') {
+          const gesperrt = !!view.my_answer || answering;
+          els.tiles.forEach(t => {
+            t.disabled = gesperrt;
+            t.classList.toggle('is-still', gesperrt);
+          });
+        }
+      }
+    }
 
     // Bei 0 einmal nachfragen: geschlossen hat die Frage der Server
     // (ks_ensure_board), hier wird es nur sichtbar gemacht.
@@ -457,6 +521,8 @@
   function beamFrage(v) {
     const q = v.question || {};
     const opts = Array.isArray(q.options) ? q.options : [];
+    const reading = isReadingPhase();
+    const rSek = readingRestSec();
     return `
       <header class="ks-head ks-head--q">
         <span class="ks-qnr">Frage ${(v.current_q_idx | 0) + 1} <i>/ ${v.question_count}</i></span>
@@ -464,11 +530,18 @@
         <span class="ks-clock" data-ks="clock">–</span>
       </header>
       <div class="ks-qbox"><h2 class="ks-q">${esc(q.text)}</h2></div>
-      <div class="ks-meta">
+      <div class="ks-reading-banner" data-ks="reading" ${reading ? '' : 'hidden'}>
+        <span class="ks-reading-icon">📖</span>
+        <div class="ks-reading-info">
+          <span class="ks-reading-title">Frage vorlesen …</span>
+          <span class="ks-reading-sub">Antworten erscheinen in <b data-ks="reading-count">${rSek}</b> s</span>
+        </div>
+      </div>
+      <div class="ks-meta" ${reading ? 'hidden' : ''}>
         <span class="ks-antz"><b data-ks="count">0</b> von <b data-ks="total">0</b> haben geantwortet</span>
         <button type="button" class="ks-now" data-act="now">Jetzt auflösen</button>
       </div>
-      ${kachelnHTML(opts, { modus: 'still' })}`;
+      ${kachelnHTML(opts, { modus: 'still', hidden: reading })}`;
   }
 
   function beamAufloesung(v) {
@@ -483,7 +556,7 @@
           ${letzte ? 'Siegerehrung' : 'Nächste Frage'}</button>
       </header>
       ${podestHTML(v.leaderboard || [], 'rv')}
-      ${kachelnHTML(opts, { modus: 'fuell', correct: q.correct_idx })}
+      ${kachelnHTML(opts, { modus: 'fuell', correct: q.correct_idx, correct_indices: q.correct_indices })}
       ${q.explanation ? '<p class="ks-expl">' + esc(q.explanation) + '</p>' : ''}`;
   }
 
@@ -529,9 +602,11 @@
        fuell   Auflösung: Füllstand + absolute Zahl              */
   function kachelnHTML(opts, o) {
     const n = opts.length || 4;
-    return '<div class="ks-kacheln" data-n="' + n + '" data-modus="' + o.modus + '">'
+    return '<div class="ks-kacheln"' + (o.hidden ? ' hidden' : '') + ' data-n="' + n + '" data-modus="' + o.modus + '">'
       + opts.map((t, i) => {
-        const richtig = o.correct != null && i === o.correct;
+        const richtig = (Array.isArray(o.correct_indices) && o.correct_indices.length > 0)
+          ? o.correct_indices.includes(i)
+          : (o.correct != null && i === o.correct);
         const gewaehlt = o.chosen != null && i === o.chosen;
         const cls = ['ks-k', 'ks-k--' + i];
         /* Am Beamer bekommt die Kachel KEINE Abblendung. `is-still`
@@ -544,7 +619,7 @@
         return `
           <${o.modus === 'wahl' ? 'button type="button"' : 'div'} class="${cls.join(' ')}" data-idx="${i}">
             ${o.modus === 'fuell' ? '<span class="ks-fuell" data-fuell="' + i + '"></span>' : ''}
-            <span class="ks-kk">${richtig ? '✓' : LABELS[i]}</span>
+            <span class="ks-kk ${richtig ? 'ks-kk--richtig' : ''}">${richtig ? '✓' : LABELS[i]}</span>
             <span class="ks-kt">${esc(t)}</span>
             ${o.modus === 'fuell' ? '<span class="ks-kn" data-kn="' + i + '">0</span>' : ''}
             ${gewaehlt ? '<span class="ks-kmein">deine Wahl</span>' : ''}
@@ -716,6 +791,8 @@
     const opts = Array.isArray(q.options) ? q.options : [];
     const me = v.me || {};
     const my = v.my_answer;
+    const reading = isReadingPhase();
+    const rSek = readingRestSec();
     return `
       <header class="ks-thead ks-thead--q">
         <div class="ks-tme" data-ks="tme" data-cid="${me.creature_id | 0}">
@@ -728,8 +805,13 @@
         <span class="ks-clock" data-ks="clock">–</span>
       </header>
       <div class="ks-barwrap"><div class="ks-bar" data-ks="bar"></div></div>
-      ${kachelnHTML(opts, { modus: 'wahl', chosen: my ? my.chosen_idx : null })}
-      <p class="ks-gesperrt" data-ks="lock" ${my ? '' : 'hidden'}>
+      <div class="ks-reading-card" data-ks="reading" ${reading ? '' : 'hidden'}>
+        <div class="ks-reading-pic">👀</div>
+        <h3 class="ks-reading-title">Blick nach vorn zum Beamer!</h3>
+        <p class="ks-reading-sub">Die Frage wird vorgelesen. Die Antworten erscheinen in <b data-ks="reading-count">${rSek}</b> s …</p>
+      </div>
+      ${kachelnHTML(opts, { modus: 'wahl', chosen: my ? my.chosen_idx : null, hidden: reading })}
+      <p class="ks-gesperrt" data-ks="lock" ${my && !reading ? '' : 'hidden'}>
         Antwort abgegeben — jetzt zum Beamer sehen.</p>`;
   }
 
@@ -792,17 +874,18 @@
   /* ─── Tablet flicken ────────────────────────────────────── */
   function flickeTab(v) {
     if (v.phase === 'question') {
+      const reading = isReadingPhase();
       const lock = stage.querySelector('[data-ks=lock]');
-      const gesperrt = !!v.my_answer || answering;
-      if (lock) lock.hidden = !gesperrt;
+      const gesperrt = !!v.my_answer || answering || reading;
+      if (lock) lock.hidden = !v.my_answer || reading;
       els.tiles.forEach(t => {
         const mein = v.my_answer && v.my_answer.chosen_idx === Number(t.dataset.idx);
         t.classList.toggle('is-meine', !!mein);
         t.disabled = gesperrt;
-        t.classList.toggle('is-still', gesperrt && !mein);
+        t.classList.toggle('is-still', (gesperrt && !reading) && !mein);
       });
       const tme = stage.querySelector('[data-ks=tme]');
-      if (tme) setEmote(tme, localEmote || (gesperrt ? 'sleep' : 'idle'), v.me.creature_id | 0);
+      if (tme) setEmote(tme, localEmote || (gesperrt && !reading ? 'sleep' : 'idle'), v.me.creature_id | 0);
       return;
     }
 
@@ -1234,6 +1317,7 @@
 
     /* ─── Antwort ────────────────────────────────────────── */
     if (tile && role === 'participant' && view.phase === 'question') {
+      if (isReadingPhase()) return;
       const el = tile;
       if (answering || view.my_answer) return;
       answering = true;

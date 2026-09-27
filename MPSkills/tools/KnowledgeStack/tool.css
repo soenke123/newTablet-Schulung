@@ -468,12 +468,104 @@
   justify-content: space-between;
   gap: 10px;
 }
+.ks-meta[hidden] { display: none !important; }
 .ks-antz {
   font-size: clamp(11px, calc(var(--ks-h) * .024), 18px);
   font-weight: 600;
   color: var(--ks-soft);
 }
 .ks-antz b { color: var(--ks-ink); font-weight: 800; }
+
+/* ─── 5-Sekunden Vorlesezeit ────────────────────────────── */
+.ks-reading-banner {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, calc(var(--ks-h) * .025), 20px);
+  padding: clamp(12px, calc(var(--ks-h) * .03), 22px);
+  margin: clamp(8px, calc(var(--ks-h) * .018), 16px) 0;
+  border-radius: 16px;
+  background: var(--ks-flaeche);
+  border: 3px solid var(--ks-linie2);
+  box-shadow: 4px 4px 0 0 var(--ks-kante);
+}
+.ks-reading-banner[hidden] { display: none !important; }
+.ks-reading-icon {
+  font-size: clamp(24px, calc(var(--ks-h) * .055), 44px);
+  animation: ks-pulse-scale 1.6s ease-in-out infinite alternate;
+}
+.ks-reading-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ks-reading-title {
+  font-size: clamp(15px, calc(var(--ks-h) * .032), 24px);
+  font-weight: 800;
+  color: var(--ks-ink);
+}
+.ks-reading-sub {
+  font-size: clamp(12px, calc(var(--ks-h) * .022), 17px);
+  color: var(--ks-soft);
+}
+.ks-reading-sub b {
+  color: var(--ks-goldt);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 1.18em;
+}
+
+.ks-reading-card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: clamp(10px, calc(var(--ks-h) * .025), 18px);
+  padding: clamp(14px, calc(var(--ks-h) * .035), 28px);
+  margin: clamp(8px, calc(var(--ks-h) * .018), 16px) 0;
+  border-radius: 18px;
+  background: var(--ks-flaeche);
+  border: 3px solid var(--ks-linie2);
+  box-shadow: 4px 4px 0 0 var(--ks-kante);
+  min-height: 0;
+}
+.ks-reading-card[hidden] { display: none !important; }
+.ks-reading-pic {
+  font-size: clamp(34px, calc(var(--ks-h) * .085), 64px);
+  animation: ks-pulse-scale 1.8s ease-in-out infinite alternate;
+}
+.ks-reading-card h3 {
+  margin: 0;
+  font-size: clamp(16px, calc(var(--ks-h) * .036), 25px);
+  font-weight: 800;
+  color: var(--ks-ink);
+}
+.ks-reading-card p {
+  margin: 0;
+  font-size: clamp(12px, calc(var(--ks-h) * .023), 16px);
+  color: var(--ks-soft);
+  max-width: 32ch;
+  line-height: 1.35;
+}
+.ks-reading-card p b {
+  color: var(--ks-goldt);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 1.25em;
+}
+
+.ks-popin {
+  animation: ks-popin .35s cubic-bezier(.2, .8, .25, 1);
+}
+@keyframes ks-popin {
+  from { opacity: 0; transform: scale(.96) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes ks-pulse-scale {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
+}
 
 .ks-expl {
   flex: 0 0 auto;
@@ -513,6 +605,7 @@
   gap: clamp(6px, calc(var(--ks-h) * .018), 16px);
   min-height: 0;
 }
+.ks-kacheln[hidden] { display: none !important; }
 .ks-kacheln[data-n="2"] { grid-template-columns: 1fr; }
 .ks-kacheln[data-n="3"] { grid-template-columns: 1fr 1fr; }
 
@@ -550,20 +643,20 @@ button.ks-k:disabled { cursor: default; }
 
 /* Nur auf dem Tablet: „du hast schon geantwortet". */
 .ks-k.is-still { opacity: .5; }
-/* In der Auflösung die falschen Antworten. .62 und nicht .38: sie
-   sollen zurücktreten, aber aus der letzten Reihe noch lesbar sein —
-   die Klasse bespricht sie ja gerade. */
-.ks-k.is-blass { opacity: .62; }
+/* In der Auflösung die falschen Antworten: deutlich entsättigt und verblasst,
+   sodass die richtige(n) Antwort(en) sofort und unübersehbar hervorstechen. */
+.ks-k.is-blass {
+  opacity: .36;
+  filter: grayscale(.88) brightness(.88);
+  transform: scale(.98);
+  transition: opacity .35s, filter .35s, transform .35s;
+}
 
-/* … und im Hellen geht das NICHT mit opacity. Dieselbe Zahl, das
-   andere Ergebnis: auf Schwarz blendet .62 nach dunkel ab und die
-   weiße Schrift wird KONTRASTREICHER, auf Weiß blendet sie nach
-   hell ab und die weiße Schrift verschwindet fast. fitcheck.js hat
-   für „Ein Arbeitsgerät" 1,91 : 1 gemessen — unter jeder Grenze.
-
-   Zurücktreten kann eine Kachel auch anders: weniger Farbe statt
-   weniger Deckung. Die Schrift bleibt, wo sie war.               */
-:root[data-theme="light"] .ks-k.is-blass,
+:root[data-theme="light"] .ks-k.is-blass {
+  opacity: .38;
+  filter: grayscale(.88) brightness(.92);
+  transform: scale(.98);
+}
 :root[data-theme="light"] .ks-k.is-still {
   opacity: 1;
   filter: grayscale(.5) brightness(.94);
@@ -571,13 +664,16 @@ button.ks-k:disabled { cursor: default; }
 
 .ks-k.is-meine { outline: 4px solid #fff; outline-offset: -8px; }
 .ks-k.is-richtig {
-  outline: 4px solid var(--ks-cyan);
-  outline-offset: -8px;
-  animation: ks-richtig 1s ease-in-out infinite alternate;
+  outline: 5px solid var(--ks-gruen);
+  outline-offset: -4px;
+  box-shadow: 4px 4px 0 0 #000, 0 0 22px rgba(16, 185, 129, .75);
+  transform: scale(1.02);
+  z-index: 2;
+  animation: ks-richtig 1.2s ease-in-out infinite alternate;
 }
 @keyframes ks-richtig {
-  from { box-shadow: 4px 4px 0 0 #000, 0 0 0 0 rgba(34, 211, 238, .55); }
-  to   { box-shadow: 4px 4px 0 0 #000, 0 0 0 14px rgba(34, 211, 238, 0); }
+  from { box-shadow: 4px 4px 0 0 #000, 0 0 14px rgba(16, 185, 129, .6); }
+  to   { box-shadow: 4px 4px 0 0 #000, 0 0 30px rgba(16, 185, 129, .95); }
 }
 
 .ks-kk {
@@ -593,6 +689,18 @@ button.ks-k:disabled { cursor: default; }
   font-size: clamp(14px, calc(var(--ks-h) * .04), 32px);
   font-weight: 800;
   line-height: 1;
+  transition: transform .2s, background .2s;
+}
+.ks-k.is-richtig .ks-kk,
+.ks-kk--richtig {
+  background: var(--ks-gruen) !important;
+  color: #ffffff !important;
+  border: 3px solid #ffffff !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, .85), 0 2px 5px rgba(0, 0, 0, .4);
+  transform: scale(1.15);
+  font-size: clamp(16px, calc(var(--ks-h) * .048), 34px) !important;
+  font-weight: 900 !important;
+  z-index: 2;
 }
 .ks-kt {
   flex: 1 1 auto;
@@ -607,24 +715,39 @@ button.ks-k:disabled { cursor: default; }
   overflow-wrap: anywhere;
 }
 
-/* Der Füllstand. Waagerecht und nicht senkrecht: die Kacheln sind
-   breiter als hoch, und vier Balken, die alle links anfangen, lassen
-   sich mit einem Blick vergleichen. Die Prozentzahl steht deshalb
-   NICHT dabei — sie steht im Balken. Daneben die absolute Zahl, denn
-   „60 %" bei drei Antwortenden ist etwas anderes als bei 28. */
+/* Der Füllstand. Waagerecht mit starkem Kontrast im jeweiligen Farbraum
+   der Kachel und leuchtender Kante. */
 .ks-fuell {
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 0;
-  background: rgba(255, 255, 255, .3);
-  border-right: 3px solid rgba(255, 255, 255, .75);
   transition: width .7s cubic-bezier(.2, .8, .25, 1);
   pointer-events: none;
 }
-.ks-k--2 .ks-fuell { background: rgba(0, 0, 0, .22); border-right-color: rgba(0, 0, 0, .55); }
+.ks-k--0 .ks-fuell {
+  background: linear-gradient(90deg, rgba(88, 12, 34, .75), rgba(136, 19, 55, .82));
+  border-right: 4px solid #fff1f2;
+  box-shadow: 2px 0 12px rgba(225, 29, 72, .7), inset 0 2px 0 rgba(255, 255, 255, .25);
+}
+.ks-k--1 .ks-fuell {
+  background: linear-gradient(90deg, rgba(15, 35, 100, .75), rgba(30, 58, 138, .82));
+  border-right: 4px solid #eff6ff;
+  box-shadow: 2px 0 12px rgba(37, 99, 235, .7), inset 0 2px 0 rgba(255, 255, 255, .25);
+}
+.ks-k--2 .ks-fuell {
+  background: linear-gradient(90deg, rgba(120, 53, 15, .72), rgba(161, 98, 7, .8));
+  border-right: 4px solid #fefce8;
+  box-shadow: 2px 0 12px rgba(202, 138, 4, .7), inset 0 2px 0 rgba(255, 255, 255, .35);
+}
+.ks-k--3 .ks-fuell {
+  background: linear-gradient(90deg, rgba(4, 55, 38, .75), rgba(6, 78, 59, .82));
+  border-right: 4px solid #ecfdf5;
+  box-shadow: 2px 0 12px rgba(5, 150, 105, .7), inset 0 2px 0 rgba(255, 255, 255, .25);
+}
 
 .ks-kn {
   position: relative;
+  z-index: 2;
   flex: 0 0 auto;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: clamp(15px, calc(var(--ks-h) * .045), 36px);

@@ -503,6 +503,20 @@ async function bereichTab() {
   ok('Frage: eine Uhr läuft', Number(txt(q.root.querySelector('[data-ks=clock]'))) > 0,
      txt(q.root.querySelector('[data-ks=clock]')));
 
+  /* ─── 5s Vorlese-Phase Tablet ───────────────────────────── */
+  const tabRead = await starte('participant', Object.assign(tabFrage(), {
+    phase_ends_at: new Date(Date.now() + 20000).toISOString(),
+    question: { text: FRAGE, options: OPTS, time_limit: 15, correct_idx: null, explanation: null }
+  }));
+  ok('Vorlese-Phase Tablet: Fokus-Karte ist sichtbar',
+     tabRead.root.querySelector('[data-ks=reading]') && !tabRead.root.querySelector('[data-ks=reading]').hidden);
+  ok('Vorlese-Phase Tablet: Kacheln sind noch ausgeblendet',
+     tabRead.root.querySelector('.ks-kacheln')?.hidden === true);
+  click(tabRead.root.querySelectorAll('.ks-k')[1], tabRead.doc);
+  await wait(20);
+  ok('Vorlese-Phase Tablet: Klick während Vorlesezeit ruft kein ks_answer',
+     tabRead.rufe.filter(r => r.fn === 'ks_answer').length === 0);
+
   /* ─── Antworten ─────────────────────────────────────────── */
   const kachel = q.root.querySelectorAll('.ks-k')[1];
   click(kachel, q.doc);
@@ -680,6 +694,20 @@ async function bereichBeam() {
   ok('Frage: der Balken steht auf einem Anteil, nicht auf 100 %',
      /^\d/.test(breite) && parseFloat(breite) > 80 && parseFloat(breite) <= 100, breite);
 
+  /* ─── 5s Vorlese-Phase Beamer ───────────────────────────── */
+  const beamRead = await starte('presenter', Object.assign(beamFrage(), {
+    phase_ends_at: new Date(Date.now() + 20000).toISOString(),
+    question: { text: FRAGE, options: OPTS, correct_idx: null, explanation: null, time_limit: 15 }
+  }));
+  ok('Vorlese-Phase Beamer: Lese-Banner ist sichtbar',
+     beamRead.root.querySelector('[data-ks=reading]') && !beamRead.root.querySelector('[data-ks=reading]').hidden);
+  ok('Vorlese-Phase Beamer: Kacheln sind noch ausgeblendet',
+     beamRead.root.querySelector('.ks-kacheln')?.hidden === true);
+  ok('Vorlese-Phase Beamer: Zwischenstand ist noch ausgeblendet',
+     beamRead.root.querySelector('.ks-meta')?.hidden === true);
+  ok('Vorlese-Phase Beamer: Countdown zeigt Vorlese-Sekunden',
+     Number(txt(beamRead.root.querySelector('[data-ks=reading-count]'))) > 0);
+
   /* ─── Auflösung ─────────────────────────────────────────── */
   const rv = await starte('presenter', beamAufl());
   const slots = Array.from(rv.root.querySelectorAll('.ks-slot'));
@@ -718,6 +746,8 @@ async function bereichBeam() {
   ok('Auflösung: die richtige Kachel trägt ein Häkchen',
      txt(rv.root.querySelectorAll('.ks-kk')[1]) === '✓',
      txt(rv.root.querySelectorAll('.ks-kk')[1]));
+  ok('Auflösung: die richtige Kachel trägt die grüne Haken-Klasse',
+     rv.root.querySelectorAll('.ks-kk')[1].classList.contains('ks-kk--richtig'));
   ok('Auflösung: die Antworten stehen noch an derselben Stelle',
      Array.from(rv.root.querySelectorAll('.ks-kt')).map(e => txt(e)).join('|') === OPTS.join('|'));
   ok('Auflösung: die Erklärung steht da',
