@@ -363,8 +363,8 @@ a { text-decoration: none; color: inherit; }
   letter-spacing: 0.02em;
 }
 
-/* Mobiler Highscore-Button innerhalb der HUD-Bar (auf Desktop ausgeblendet) */
-.hud-highscore-btn {
+/* Mobiler Highscore-Button innerhalb der HUD-Bar (auf Desktop und Tablet ausgeblendet) */
+.hud-btn.hud-highscore-btn {
   display: none;
   text-decoration: none;
   color: var(--clr-gold, #f0b429);
@@ -2248,21 +2248,19 @@ body.s2-active .hud-kristalle { display: flex; }
   }
   .hud-bar {
     top: 10px;
-    left: 10px;
+    left: auto;
     right: 10px;
     width: auto;
     max-width: calc(100vw - 20px);
     transform: none;
-    justify-content: flex-end;
     padding: 3px 6px;
     gap: 2px;
     box-sizing: border-box;
   }
-  .hud-highscore-btn {
+  .hud-btn.hud-highscore-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: auto;
     width: 34px;
     height: 34px;
     font-size: 1.15rem;
