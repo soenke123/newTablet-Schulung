@@ -501,7 +501,7 @@ a.btn {
   border: 1px solid rgba(240, 180, 41, 0.4);
   border-radius: var(--r-xl);
   padding: clamp(22px, 3vw, 30px) clamp(20px, 3.5vw, 34px);
-  margin: 0 0 34px;
+  margin: 34px 0;
   position: relative;
   overflow: hidden;
   box-shadow: 0 12px 32px rgba(16, 8, 4, 0.35), 0 0 24px rgba(240, 180, 41, 0.1);
@@ -743,6 +743,7 @@ a.btn {
   border-radius: 18px;
   padding: 24px 26px;
   box-shadow: var(--shadow);
+  margin-bottom: 34px;
 }
 .access[hidden] { display: none; }
 .access-h { margin: 0 0 8px; font-size: 1.18rem; letter-spacing: -0.01em; }
