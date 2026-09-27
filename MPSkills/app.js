@@ -1194,7 +1194,8 @@ function renderState() {
     const schulung = document.getElementById('schulungCard');
     if (schulung) {
       schulung.hidden = false;
-      (pitch || join).insertAdjacentElement('afterend', schulung);
+      const info = document.getElementById('infobar');
+      if (info) info.insertAdjacentElement('beforebegin', schulung);
     }
   }
 

@@ -28,7 +28,7 @@ insert into skill_tools (id, title, blurb, icon, folder, subject,
   ('knowledgestack', 'Knowledge Stack',
    'Live-Quiz für die ganze Klasse: Fragen am Beamer, Antworten auf dem Tablet — '
    'wer schnell und richtig liegt, klettert im Leaderboard.',
-   '🧠', 'KnowledgeStack', 'Fächerübergreifend', false,
+   '🧠', 'KnowledgeStack', 'Fächerübergreifend', true,
    '{}'::jsonb, true, 70)
 on conflict (id) do update set
   title      = excluded.title,
