@@ -120,7 +120,8 @@
       "Bash(sed -n '/create table if not exists wi_round_words/,/\\);/p' supabase/migrations/0153_wordisland_round_words.sql)",
       "Bash(node supabase/tests/migrationscheck.mjs)",
       "Bash(rm -f .mc.log)",
-      "Bash(grep -E \"^FAIL|Fehler\\\\.$|^ok\" .0166g.log)"
+      "Bash(grep -E \"^FAIL|Fehler\\\\.$|^ok\" .0166g.log)",
+      "Bash(node supabase/tests/0179_feedback.mjs)"
     ]
   }
 }
