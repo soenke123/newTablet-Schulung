@@ -20,8 +20,15 @@
 </head>
 <body class="hub-page">
 
-  <!-- ═══ HUD (fixiert oben rechts) — enthält Menü + Profil-Pill ═══ -->
+  <!-- ═══ Highscore-Pill (fixiert oben links auf PC & Tablet) ═══ -->
+  <a href="../highscores.html" class="hub-highscore-pill" id="hubHighscorePill" title="Highscores & Bestenlisten">
+    <span class="hub-highscore-pill__icon">🏆</span>
+    <span class="hub-highscore-pill__label">Highscores</span>
+  </a>
+
+  <!-- ═══ HUD (fixiert oben rechts / mobil gesamte Leiste) ═══ -->
   <div class="hud-bar">
+    <a href="../highscores.html" class="hud-btn hud-highscore-btn" id="hudHighscoreBtn" title="Highscores & Bestenlisten">🏆</a>
     <button class="hud-btn" id="bookBtn" title="Buch der Monster" hidden>📜</button>
     <!-- Atari5 · Enter 2-7-1-8 -->
     <button class="hud-btn" id="shopBtn" title="Shop">🛒</button>
@@ -50,7 +57,6 @@
         <a id="hubHomeLink" href="../index.html">Startseite</a>
         <a id="hubGamehubLink" href="index.html" class="is-active">GameHub</a>
         <a id="hubMpskillsLink" href="../MPSkills/index.html" hidden>MPSkills</a>
-        <a id="hubHighscoresLink" href="../highscores.html">Highscores</a>
         <button type="button" id="hubLogoutBtn">Ausloggen</button>
       </div>
     </div>
