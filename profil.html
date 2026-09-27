@@ -556,6 +556,7 @@
       <div class="auth-user-menu" id="authUserMenu" hidden>
         <a id="adminLink" href="admin/index.html" hidden>Admin-Bereich</a>
         <a id="profileLink" href="profil.html" class="is-active">Profil</a>
+        <button type="button" id="feedbackLink" hidden>Feedback &amp; Fragen</button>
         <a id="homeLink" href="index.html">Startseite</a>
         <a id="gamehubLink" href="GameHub/index.html" hidden>GameHub</a>
         <a id="mpskillsLink" href="MPSkills/index.html" hidden>MPSkills</a>
@@ -628,6 +629,7 @@
   <script src="supabase-config.js"></script>
   <script src="session.js?v=20260811"></script>
   <script src="avatars.js?v=20260709"></script>
+  <script src="feedback.js?v=20260927"></script>
   <script>
     'use strict';
 
@@ -710,6 +712,8 @@
       if (gamehubLink) gamehubLink.hidden = !hasSeason;
       const mpskillsLink = document.getElementById('mpskillsLink');
       if (mpskillsLink) mpskillsLink.hidden = !hasMPSkills;
+      const feedbackLink = document.getElementById('feedbackLink');
+      if (feedbackLink) feedbackLink.hidden = !window.MPSFeedback?.canSend(user);
       authUser.hidden = false;
     }
 
@@ -946,6 +950,10 @@
     });
     document.getElementById('profileLink')?.addEventListener('click', () => {
       userMenu.hidden = true;
+    });
+    document.getElementById('feedbackLink')?.addEventListener('click', () => {
+      userMenu.hidden = true;
+      window.MPSFeedback?.open();
     });
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
       await window.pushLocalHighscoresToServer?.().catch(() => {});

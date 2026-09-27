@@ -22,6 +22,7 @@
    Wer was im Menü sieht:
      Hell / Dunkel   — alle Angemeldeten, ganz oben (lib/theme.js)
      Profil          — alle Angemeldeten
+     Feedback & Fragen — Admin, Lehrkraft, Kurs mit Schalter (../feedback.js)
      Admin-Bereich   — Admin
      Tablet-Schulung — alle (ein Konto, zwei Bereiche)
      Abmelden        — alle Angemeldeten
@@ -46,6 +47,35 @@
   // Auf der Landing sind das die Modals, überall sonst gibt es keine
   // — dort führt der Weg zur Landing, wo sie stehen.
   let opts = {};
+
+  // ../feedback.js wird erst beim ersten Klick geladen — so muss
+  // keine MPSkills-Seite ein weiteres <script> mitschleppen. Der Pfad
+  // hängt an dieser Datei, nicht an der Seite, die sie einbindet.
+  const FEEDBACK_SRC = new URL('../../feedback.js?v=20260927',
+    document.currentScript?.src || location.href).href;
+  let feedbackLoading = null;
+
+  // Dieselbe Regel wie can_send_feedback() (Migration 0179) und
+  // MPSFeedback.canSend — hier gespiegelt, weil feedback.js beim
+  // Zeichnen des Menüs noch nicht geladen ist.
+  function canFeedback(s) {
+    return !!(s && (s.is_admin || s.is_superadmin
+      || s.teacher_status === 'approved' || s.cluster_feedback_enabled));
+  }
+
+  function openFeedback() {
+    if (window.MPSFeedback) { window.MPSFeedback.open(); return; }
+    if (!feedbackLoading) {
+      feedbackLoading = new Promise((resolve, reject) => {
+        const tag = document.createElement('script');
+        tag.src = FEEDBACK_SRC;
+        tag.onload = resolve;
+        tag.onerror = () => { feedbackLoading = null; reject(new Error('feedback.js')); };
+        document.head.appendChild(tag);
+      });
+    }
+    feedbackLoading.then(() => window.MPSFeedback?.open()).catch(() => {});
+  }
 
   function roleOf(s) {
     if (!s)                              return 'guest';
@@ -114,6 +144,7 @@
           ${themeHTML()}
           ${isAdmin ? '<a class="ub-admin" href="../admin/index.html">Admin-Bereich</a>' : ''}
           <a href="profil.html"${isProfilActive ? ' class="is-active"' : ''}>Profil</a>
+          ${canFeedback(s) ? '<button type="button" data-ub="feedback">Feedback &amp; Fragen</button>' : ''}
           <a href="../index.html">Startseite</a>
           ${hasSeason ? '<a href="../GameHub/index.html">GameHub</a>' : ''}
           ${hasMPSkills ? `<a href="index.html"${isMPSkillsActive ? ' class="is-active"' : ''}>MPSkills</a>` : ''}
@@ -228,6 +259,10 @@
            Umschalten will man sehen, was passiert, und notfalls
            sofort zurück. */
         case 'theme':
+          break;
+        case 'feedback':
+          closeMenu();
+          openFeedback();
           break;
         case 'logout':
           closeMenu();

@@ -21,6 +21,7 @@ let gameTitleById   = null;   // { game1: 'Zahlenduell', ... }, lazy geladen aus
 let userCache       = [];     // profiles rows (angereichert mit progress-Daten wenn geladen)
 let adminCache      = [];     // profiles rows aller Admins (Volladmin-Reiter)
 let teacherCache    = [];     // profiles rows mit teacher_status <> 'none' (MPSkills-Reiter)
+let ticketCache     = [];     // feedback_tickets rows (Tickets-Reiter, nur Volladmin)
 let progressLoaded  = false;  // game_state/wallets/user_collectibles einmal nachgeladen?
 let startupLoaded   = false;  // user_game_saves (game18) einmal nachgeladen?
 
@@ -151,6 +152,7 @@ function validateClusterWindow(opensAt, closesAt) {
 
   if (isVolladmin) {
     document.getElementById('tabAdmins').hidden = false;
+    document.getElementById('tabTickets').hidden = false;
   }
 
   wireUserMenu();
@@ -174,12 +176,14 @@ function validateClusterWindow(opensAt, closesAt) {
   wireAdminsTab();
   wireTeachersTab();
   wireSkillRoomsTab();
+  wireTicketsTab();
 
   await initSchoolSwitcher();  // lädt alle Schulen (nur Volladmin) und rendert Header-Label
 
   await loadClusters();  // erst Cluster (User-Dropdowns brauchen sie)
   await loadUsers();
   loadDashboard(currentSchoolId);  // fire-and-forget — Dashboard ist default-Tab
+  if (isVolladmin) loadTickets();  // fire-and-forget — füllt den Zähler „neu" am Reiter
 
   bootMask.classList.add('hidden');
   setTimeout(() => bootMask.remove(), 250);
@@ -216,7 +220,7 @@ function wireUserMenu() {
 }
 
 // ─── Tabs ────────────────────────────────────────────────────
-const TAB_PANELS = ['dashboard', 'clusters', 'users', 'teachers', 'skillrooms', 'admins'];
+const TAB_PANELS = ['dashboard', 'clusters', 'users', 'teachers', 'skillrooms', 'admins', 'tickets'];
 
 function wireTabs() {
   document.querySelectorAll('.tab').forEach(tab => {
@@ -240,6 +244,9 @@ function wireTabs() {
       }
       if (target === 'skillrooms') {
         loadSkillRooms();
+      }
+      if (target === 'tickets') {
+        loadTickets();
       }
     });
   });
@@ -369,6 +376,19 @@ async function loadClusters() {
       console.warn('[admin] cluster_unlocked_games laden fehlgeschlagen:', e.message);
     }
 
+    // Feedback-Schalter (Migration 0179). Eigene Abfrage, damit ein
+    // fehlendes Deployment nicht die ganze Cluster-Liste kippt — dann
+    // bleibt feedback_enabled undefined und der Schalter unsichtbar.
+    try {
+      const flags = await api('GET',
+        `clusters?select=id,feedback_enabled&school_id=eq.${currentSchoolId}`);
+      const byId = {};
+      for (const f of flags) byId[f.id] = !!f.feedback_enabled;
+      for (const c of rows) c.feedback_enabled = byId[c.id] ?? false;
+    } catch (e) {
+      console.warn('[admin] clusters.feedback_enabled laden fehlgeschlagen:', e.message);
+    }
+
     if (rows.length === 0) {
       tbody.innerHTML = '<tr><td colspan="9" class="empty">Noch keine Cluster.</td></tr>';
     } else {
@@ -436,7 +456,7 @@ function renderClusterRow(c, memberCount) {
 
   return `
     <tr>
-      <td>${escapeHtml(c.name)}</td>
+      <td>${escapeHtml(c.name)}${c.feedback_enabled ? ' <span class="badge lehrkraft" title="Feedback &amp; Fragen erlaubt">💬 Feedback</span>' : ''}</td>
       <td>${c.season}</td>
       <td>${fmtDT(c.opens_at)}</td>
       <td>${fmtDT(c.closes_at)}</td>
@@ -635,6 +655,13 @@ function wireClusterEditModal() {
     const winErr = validateClusterWindow(opensLocal, closesLocal);
     if (winErr) { feedback.textContent = winErr; feedback.classList.add('error'); return; }
 
+    // Feedback-Schalter nur für den Volladmin und nur, wenn die Spalte
+    // geladen werden konnte (Migration 0179 deployed).
+    const editing = clusterCache.find(x => x.id === editingClusterId);
+    if (isVolladmin && typeof editing?.feedback_enabled === 'boolean') {
+      patch.feedback_enabled = document.getElementById('edClFeedbackEnabled').checked;
+    }
+
     btn.disabled = true;
     try {
       await api('PATCH', `clusters?id=eq.${editingClusterId}`, patch);
@@ -664,6 +691,9 @@ function openClusterEdit(id) {
   bonbonWrap.hidden = !isS3;
   bonbonInp.required = isS3;
   bonbonInp.value = c.bonbon_target ?? '';
+  const fbWrap = document.getElementById('edClFeedbackWrap');
+  fbWrap.hidden = !(isVolladmin && typeof c.feedback_enabled === 'boolean');
+  document.getElementById('edClFeedbackEnabled').checked = !!c.feedback_enabled;
   document.getElementById('edClFeedback').textContent = '';
   document.getElementById('clusterEditModal').hidden = false;
 }
@@ -3620,5 +3650,232 @@ function renderSkillRooms() {
     sum.textContent = `${live} laufende ${live === 1 ? 'Raum' : 'Räume'} · `
       + `${ppl} ${ppl === 1 ? 'Teilnehmer' : 'Teilnehmer'} · `
       + `${skillRoomCache.length} insgesamt (mit Testräumen und abgelaufenen).`;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Tickets-Tab — „Feedback & Fragen" (nur Volladmin, Migration 0179)
+   ══════════════════════════════════════════════════════════════
+   Alle Tickets auf einmal laden und im Client filtern/sortieren —
+   es sind Dutzende, nicht Tausende, und so reagieren Filter sofort.
+   RLS lässt ohnehin nur den Volladmin lesen, schreiben und löschen.
+   ══════════════════════════════════════════════════════════════ */
+const TICKET_CATEGORY = {
+  question: { label: 'Frage',   icon: '❓' },
+  bug:      { label: 'Fehler',  icon: '🐞' },
+  idea:     { label: 'Idee',    icon: '💡' },
+  other:    { label: 'Anderes', icon: '💬' }
+};
+const TICKET_PRIORITY = {
+  high:   { label: 'Wichtig',   rank: 0 },
+  medium: { label: 'Mittel',    rank: 1 },
+  low:    { label: 'Unwichtig', rank: 2 }
+};
+const TICKET_PREVIEW = 180;
+const ticketExpanded = new Set();
+let editingTicketId  = null;
+
+function wireTicketsTab() {
+  ['ticketPrioFilter', 'ticketCatFilter', 'ticketSort'].forEach(id =>
+    document.getElementById(id)?.addEventListener('change', renderTickets));
+  document.getElementById('ticketSearch')?.addEventListener('input', renderTickets);
+  document.getElementById('ticketReload')?.addEventListener('click', loadTickets);
+
+  const tbody = document.getElementById('ticketTbody');
+  // Delegiert: renderTickets() ersetzt das ganze tbody.
+  tbody?.addEventListener('click', e => {
+    const more = e.target.closest('.js-ticket-more');
+    if (more) {
+      const id = more.dataset.id;
+      if (ticketExpanded.has(id)) ticketExpanded.delete(id); else ticketExpanded.add(id);
+      renderTickets();
+      return;
+    }
+    const edit = e.target.closest('.js-ticket-edit');
+    if (edit) { openTicketEdit(edit.dataset.id); return; }
+    const del = e.target.closest('.js-ticket-delete');
+    if (del) deleteTicket(del.dataset.id);
+  });
+  tbody?.addEventListener('change', e => {
+    const sel = e.target.closest('.js-ticket-prio');
+    if (sel) setTicketPriority(sel.dataset.id, sel.value || null, sel);
+  });
+
+  const overlay = document.getElementById('ticketEditModal');
+  const doClose = () => { overlay.hidden = true; editingTicketId = null; };
+  document.getElementById('ticketEditClose')?.addEventListener('click', doClose);
+  overlay?.addEventListener('click', e => { if (e.target === overlay) doClose(); });
+  document.getElementById('tkDelete')?.addEventListener('click', async () => {
+    if (!editingTicketId) return;
+    if (await deleteTicket(editingTicketId)) doClose();
+  });
+  document.getElementById('ticketEditForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!editingTicketId) return;
+    const feedback = document.getElementById('tkFeedback');
+    const btn      = document.getElementById('tkSubmit');
+    const body     = document.getElementById('tkBody').value.trim();
+    feedback.className = 'form-feedback';
+    feedback.textContent = '';
+    if (!body) { feedback.textContent = 'Inhalt fehlt.'; feedback.classList.add('error'); return; }
+    const patch = {
+      category: document.getElementById('tkCategory').value,
+      priority: document.getElementById('tkPriority').value || null,
+      body
+    };
+    btn.disabled = true;
+    try {
+      const rows = await api('PATCH', `feedback_tickets?id=eq.${editingTicketId}`, patch);
+      const t = ticketCache.find(x => x.id === editingTicketId);
+      if (t) Object.assign(t, patch, rows?.[0] ? { updated_at: rows[0].updated_at } : {});
+      doClose();
+      renderTickets();
+      showToast('Ticket gespeichert.');
+    } catch (err) {
+      feedback.textContent = err.message;
+      feedback.classList.add('error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+async function loadTickets() {
+  if (!isVolladmin) return;
+  const tbody = document.getElementById('ticketTbody');
+  try {
+    ticketCache = await api('GET',
+      'feedback_tickets?select=*,schools(name),clusters(name)&order=created_at.desc');
+    renderTickets();
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function updateTicketCount() {
+  const el = document.getElementById('ticketCount');
+  if (!el) return;
+  const n = ticketCache.filter(t => !t.priority).length;
+  el.textContent = String(n);
+  el.hidden = n === 0;
+  el.title = `${n} neue${n === 1 ? 's' : ''} Ticket${n === 1 ? '' : 's'}`;
+}
+
+function ticketWho(t) {
+  const parts = [];
+  if (t.schools?.name) parts.push(t.schools.name);
+  if (t.clusters?.name) parts.push(`Kurs ${t.clusters.name}`);
+  let tag = '';
+  if (t.is_teacher) tag = ' <span class="badge lehrkraft">Lehrkraft</span>';
+  if (!t.user_id)   tag += ' <span class="badge closed">gelöscht</span>';
+  return `<strong>${escapeHtml(t.author_name)}</strong>${tag}`
+    + (parts.length ? `<br><small class="muted">${escapeHtml(parts.join(' · '))}</small>` : '');
+}
+
+function renderTickets() {
+  updateTicketCount();
+  const tbody = document.getElementById('ticketTbody');
+  if (!tbody) return;
+
+  const prio = document.getElementById('ticketPrioFilter')?.value || 'all';
+  const cat  = document.getElementById('ticketCatFilter')?.value  || 'all';
+  const sort = document.getElementById('ticketSort')?.value       || 'new';
+  const q    = (document.getElementById('ticketSearch')?.value || '').trim().toLowerCase();
+
+  let rows = ticketCache.slice();
+  if (prio === 'none')     rows = rows.filter(t => !t.priority);
+  else if (prio !== 'all') rows = rows.filter(t => t.priority === prio);
+  if (cat !== 'all')       rows = rows.filter(t => t.category === cat);
+  if (q) rows = rows.filter(t =>
+    [t.body, t.author_name, t.schools?.name, t.clusters?.name, t.page]
+      .some(v => (v || '').toLowerCase().includes(q)));
+
+  const time = t => new Date(t.created_at).getTime();
+  if (sort === 'old') rows.sort((a, b) => time(a) - time(b));
+  else if (sort === 'prio') {
+    // Unmarkiert zuerst — das ist die Liste, die noch zu sichten ist —,
+    // danach wichtig → mittel → unwichtig, innerhalb jeweils neueste oben.
+    const rank = t => t.priority ? TICKET_PRIORITY[t.priority].rank + 1 : 0;
+    rows.sort((a, b) => rank(a) - rank(b) || time(b) - time(a));
+  } else rows.sort((a, b) => time(b) - time(a));
+
+  if (rows.length === 0) {
+    const msg = ticketCache.length === 0 ? 'Noch keine Tickets.' : 'Keine Tickets für diesen Filter.';
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">${msg}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(t => {
+    const c = TICKET_CATEGORY[t.category] || { label: t.category, icon: '•' };
+    const long = t.body.length > TICKET_PREVIEW;
+    const open = ticketExpanded.has(t.id);
+    const text = long && !open ? t.body.slice(0, TICKET_PREVIEW).trimEnd() + ' …' : t.body;
+    const more = long
+      ? `<button type="button" class="linkish js-ticket-more" data-id="${t.id}">${open ? 'weniger' : 'mehr anzeigen'}</button>`
+      : '';
+    const page = t.page ? `<small class="muted">gesendet von ${escapeHtml(t.page)}</small>` : '';
+    const opts = ['<option value="">Neu</option>']
+      .concat(Object.entries(TICKET_PRIORITY).map(([k, v]) =>
+        `<option value="${k}"${t.priority === k ? ' selected' : ''}>${v.label}</option>`))
+      .join('');
+    return `<tr class="ticket-row prio-${t.priority || 'none'}">
+      <td class="nowrap">${fmtDT(t.created_at)}<br><small class="muted">${fmtRelative(t.created_at)}</small></td>
+      <td>${ticketWho(t)}</td>
+      <td class="nowrap"><span class="badge ticket-cat cat-${escapeHtml(t.category)}">${c.icon} ${escapeHtml(c.label)}</span></td>
+      <td class="ticket-body"><div class="ticket-text">${escapeHtml(text)}</div>${more}${page}</td>
+      <td><select class="ticket-prio js-ticket-prio" data-id="${t.id}" aria-label="Markierung">${opts}</select></td>
+      <td><div class="actions">
+        <button type="button" class="btn small js-ticket-edit" data-id="${t.id}">Bearbeiten</button>
+        <button type="button" class="btn small danger js-ticket-delete" data-id="${t.id}">Löschen</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+async function setTicketPriority(id, priority, selectEl) {
+  const t = ticketCache.find(x => x.id === id);
+  const before = t?.priority ?? null;
+  if (selectEl) selectEl.disabled = true;
+  try {
+    await api('PATCH', `feedback_tickets?id=eq.${id}`, { priority });
+    if (t) t.priority = priority;
+    renderTickets();
+  } catch (err) {
+    if (selectEl) { selectEl.value = before || ''; selectEl.disabled = false; }
+    showToast('Markierung nicht gespeichert: ' + err.message, 'error');
+  }
+}
+
+function openTicketEdit(id) {
+  const t = ticketCache.find(x => x.id === id);
+  if (!t) return;
+  editingTicketId = id;
+  document.getElementById('tkCategory').value = t.category;
+  document.getElementById('tkPriority').value = t.priority || '';
+  document.getElementById('tkBody').value     = t.body;
+  document.getElementById('ticketEditMeta').textContent =
+    `${t.author_name} · ${fmtDT(t.created_at)}`
+    + (t.updated_at && t.updated_at !== t.created_at ? ` · zuletzt bearbeitet ${fmtDT(t.updated_at)}` : '');
+  const fb = document.getElementById('tkFeedback');
+  fb.className = 'form-feedback';
+  fb.textContent = '';
+  document.getElementById('ticketEditModal').hidden = false;
+}
+
+async function deleteTicket(id) {
+  const t = ticketCache.find(x => x.id === id);
+  if (!t) return false;
+  const preview = t.body.length > 80 ? t.body.slice(0, 80) + ' …' : t.body;
+  if (!confirm(`Ticket von ${t.author_name} endgültig löschen?\n\n„${preview}"`)) return false;
+  try {
+    await api('DELETE', `feedback_tickets?id=eq.${id}`);
+    ticketCache = ticketCache.filter(x => x.id !== id);
+    ticketExpanded.delete(id);
+    renderTickets();
+    showToast('Ticket gelöscht.');
+    return true;
+  } catch (err) {
+    showToast('Löschen fehlgeschlagen: ' + err.message, 'error');
+    return false;
   }
 }

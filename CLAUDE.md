@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Webauftrtitt/
 ├── index.html          → Landing page: links to GameHub, PDF downloads, and workshop slides
 ├── viewport.js         → sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen
+├── feedback.js         → Dialog „Feedback & Fragen“ (Profil-Menü) → RPC submit_feedback; Tickets im Admin-Reiter „Tickets“ (nur Volladmin, Migration 0179)
 ├── PROJEKTBRIEFING.md  → Migrationsplan Frontend-only → Supabase-Backend (v2, 2026-07-04)
 ├── Dokumente/          → PDF handouts for students (e.g. Handout_Tablet-Schulung.pdf)
 ├── supabase/           → Datenbank-Schema, Seed, Blacklist, Setup-Doku

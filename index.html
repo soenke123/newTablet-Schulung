@@ -1000,6 +1000,7 @@
       <div class="auth-user-menu" id="authUserMenu" hidden>
         <a id="adminLink" href="admin/index.html" hidden>Admin-Bereich</a>
         <a id="profileLink" href="profil.html">Profil<span class="new-dot" id="menuNewDot" hidden></span></a>
+        <button type="button" id="feedbackLink" hidden>Feedback &amp; Fragen</button>
         <a id="homeLink" href="index.html" class="is-active">Startseite</a>
         <a id="gamehubLink" href="GameHub/index.html" hidden>GameHub</a>
         <a id="mpskillsLink" href="MPSkills/index.html" hidden>MPSkills</a>
@@ -1271,6 +1272,7 @@
   <script src="supabase-config.js"></script>
   <script src="session.js?v=20260811"></script>
   <script src="avatars.js?v=20260709"></script>
+  <script src="feedback.js?v=20260927"></script>
   <script src="GameHub/config.js?v=20260623"></script>
 
   <script>
@@ -1385,6 +1387,8 @@
         if (gamehubLink) gamehubLink.hidden = !hasSeason;
         const mpskillsLink = document.getElementById('mpskillsLink');
         if (mpskillsLink) mpskillsLink.hidden = !hasMPSkills;
+        const feedbackLink = document.getElementById('feedbackLink');
+        if (feedbackLink) feedbackLink.hidden = !window.MPSFeedback?.canSend(user);
 
         if (pendingAdminRedirect && user.is_admin) {
           pendingAdminRedirect = false;
@@ -1689,6 +1693,10 @@
     });
     document.getElementById('homeLink')?.addEventListener('click', () => {
       userMenu.hidden = true;
+    });
+    document.getElementById('feedbackLink')?.addEventListener('click', () => {
+      userMenu.hidden = true;
+      window.MPSFeedback?.open();
     });
 
     loginForm?.addEventListener('submit', async e => {

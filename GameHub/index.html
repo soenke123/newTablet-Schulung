@@ -54,6 +54,7 @@
       <div class="hub-auth-menu" id="hubAuthMenu" hidden>
         <a id="hubAdminLink" href="../admin/index.html" hidden>Admin-Bereich</a>
         <a id="hubProfileLink" href="../profil.html">Profil<span class="new-dot" id="hubMenuNewDot" hidden></span></a>
+        <button type="button" id="hubFeedbackLink" hidden>Feedback &amp; Fragen</button>
         <a id="hubHomeLink" href="../index.html">Startseite</a>
         <a id="hubGamehubLink" href="index.html" class="is-active">GameHub</a>
         <a id="hubMpskillsLink" href="../MPSkills/index.html" hidden>MPSkills</a>
@@ -310,6 +311,7 @@
   <script src="../supabase-config.js"></script>
   <script src="../session.js?v=20260811"></script>
   <script src="../avatars.js?v=20260724b"></script>
+  <script src="../feedback.js?v=20260927"></script>
 
   <script src="config.js?v=20260816b"></script>
   <script src="creatures.js?v=20260816b"></script>
@@ -534,6 +536,8 @@
       document.getElementById('hubAdminLink').hidden = !isAdmin;
       const mpskillsLink = document.getElementById('hubMpskillsLink');
       if (mpskillsLink) mpskillsLink.hidden = !hasMPSkills;
+      const feedbackLink = document.getElementById('hubFeedbackLink');
+      if (feedbackLink) feedbackLink.hidden = !window.MPSFeedback?.canSend(user);
       box.hidden = false;
       refreshHubAvatarNewBadges();
     }
@@ -578,6 +582,10 @@
       });
       document.getElementById('hubGamehubLink')?.addEventListener('click', () => {
         authMenu.hidden = true;
+      });
+      document.getElementById('hubFeedbackLink')?.addEventListener('click', () => {
+        authMenu.hidden = true;
+        window.MPSFeedback?.open();
       });
       document.getElementById('hubLogoutBtn')?.addEventListener('click', async () => {
         authMenu.hidden = true;

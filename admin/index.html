@@ -6,7 +6,7 @@
   <title>Admin · Lernwelt</title>
   <link rel="icon" type="image/png" sizes="64x64" href="../icons/favicon-64.png" />
   <link rel="icon" type="image/png" sizes="256x256" href="../icons/favicon-256.png" />
-  <link rel="stylesheet" href="style.css?v=20260925" />
+  <link rel="stylesheet" href="style.css?v=20260927" />
 
 <!-- Schreibt den sichtbaren Bereich (Tastatur, Adressleiste) als
      CSS-Variablen an <html>. Blockierend im <head>, damit ein Modal
@@ -58,6 +58,7 @@
     <button type="button" class="tab" data-tab="teachers">Lehrkräfte</button>
     <button type="button" class="tab" data-tab="skillrooms">MPSkills-Räume</button>
     <button type="button" class="tab" data-tab="admins" id="tabAdmins" hidden>Admins (alle Schulen)</button>
+    <button type="button" class="tab" data-tab="tickets" id="tabTickets" hidden>Tickets <span class="tab-count" id="ticketCount" hidden></span></button>
   </nav>
 
   <main class="content" id="content" hidden>
@@ -164,6 +165,73 @@
               </tr>
             </thead>
             <tbody id="adminTbody">
+              <tr><td colspan="6" class="empty">Lade …</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Tickets-Tab (nur Volladmin) ─────────────────────
+         Nachrichten aus „Feedback & Fragen" (feedback.js, Migration
+         0179). Markierung wichtig/mittel/unwichtig setzt nur der
+         Volladmin; ohne Markierung gilt ein Ticket als „neu". -->
+    <section class="panel" id="panel-tickets" hidden>
+      <div class="panel-head">
+        <h2>Tickets <span style="color:var(--a-muted);font-weight:400;font-size:0.7em">(Feedback &amp; Fragen)</span></h2>
+        <p class="panel-sub">
+          Fragen, Fehlermeldungen und Ideen aus dem Menüpunkt „Feedback &amp; Fragen". Senden dürfen
+          freigeschaltete Lehrkräfte, Admins und Kurse, bei denen du es unter <strong>Cluster → Bearbeiten</strong>
+          erlaubt hast. Ohne Markierung gilt ein Ticket als <strong>neu</strong>.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="filter-row">
+          <label>Markierung
+            <select id="ticketPrioFilter">
+              <option value="all" selected>Alle</option>
+              <option value="none">Neu (unmarkiert)</option>
+              <option value="high">Wichtig</option>
+              <option value="medium">Mittel</option>
+              <option value="low">Unwichtig</option>
+            </select>
+          </label>
+          <label>Kategorie
+            <select id="ticketCatFilter">
+              <option value="all" selected>Alle</option>
+              <option value="question">Frage</option>
+              <option value="bug">Fehler</option>
+              <option value="idea">Idee</option>
+              <option value="other">Anderes</option>
+            </select>
+          </label>
+          <label>Sortierung
+            <select id="ticketSort">
+              <option value="new" selected>Neueste zuerst</option>
+              <option value="old">Älteste zuerst</option>
+              <option value="prio">Nach Wichtigkeit</option>
+            </select>
+          </label>
+          <label>Suche
+            <input type="search" id="ticketSearch" placeholder="Text, User, Schule, Kurs" />
+          </label>
+          <button type="button" class="btn" id="ticketReload">Neu laden</button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="dtable ticket-table" id="ticketTable">
+            <thead>
+              <tr>
+                <th>Zeitpunkt</th>
+                <th>User</th>
+                <th>Kategorie</th>
+                <th>Inhalt</th>
+                <th>Markierung</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="ticketTbody">
               <tr><td colspan="6" class="empty">Lade …</td></tr>
             </tbody>
           </table>
@@ -358,6 +426,14 @@
           <input type="number" id="edClBonbonTarget" min="1" step="1" />
           <small class="field-hint">Ändern hat keinen Einfluss auf bereits gesammelte Bonbons.</small>
         </label>
+        <!-- Nur Volladmin — ein Trigger (Migration 0179) weist das Flag
+             für alle anderen ab. -->
+        <label class="check-row" id="edClFeedbackWrap" hidden>
+          <input type="checkbox" id="edClFeedbackEnabled" />
+          <span>„Feedback &amp; Fragen" für Kursteilnehmer erlauben
+            <small class="field-hint">Teilnehmer dieses Kurses sehen dann im Profil-Menü den Punkt und können dir Nachrichten schicken.</small>
+          </span>
+        </label>
         <div class="form-actions">
           <button type="submit" class="btn primary" id="edClSubmit">Speichern</button>
           <span class="form-feedback" id="edClFeedback"></span>
@@ -535,6 +611,41 @@
     </div>
   </div>
 
+  <!-- ─── Ticket-Bearbeiten-Modal (Volladmin) ──────────────── -->
+  <div class="modal-overlay" id="ticketEditModal" hidden>
+    <div class="modal-box modal-wide">
+      <button type="button" class="modal-close" id="ticketEditClose">×</button>
+      <h3>Ticket bearbeiten</h3>
+      <p class="modal-hint" id="ticketEditMeta"></p>
+      <form id="ticketEditForm" class="grid-form">
+        <label>Kategorie
+          <select id="tkCategory" required>
+            <option value="question">Frage</option>
+            <option value="bug">Fehler</option>
+            <option value="idea">Idee</option>
+            <option value="other">Anderes</option>
+          </select>
+        </label>
+        <label>Markierung
+          <select id="tkPriority">
+            <option value="">Neu (unmarkiert)</option>
+            <option value="high">Wichtig</option>
+            <option value="medium">Mittel</option>
+            <option value="low">Unwichtig</option>
+          </select>
+        </label>
+        <label class="span-all">Inhalt
+          <textarea id="tkBody" rows="8" maxlength="4000" required></textarea>
+        </label>
+        <div class="form-actions">
+          <button type="submit" class="btn primary" id="tkSubmit">Speichern</button>
+          <button type="button" class="btn danger" id="tkDelete">Löschen</button>
+          <span class="form-feedback" id="tkFeedback"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ─── User-Schule-Verschieben-Modal (Volladmin) ────────── -->
   <div class="modal-overlay" id="moveSchoolModal" hidden>
     <div class="modal-box">
@@ -560,6 +671,6 @@
   <!-- Die Skill-Zeichen. Dieselbe Datei wie in MPSkills: die Räume
        in der Raumtabelle sollen dort dasselbe tragen wie drüben. -->
   <script src="../MPSkills/lib/icons.js?v=20260925"></script>
-  <script src="app.js?v=20260925"></script>
+  <script src="app.js?v=20260927"></script>
 </body>
 </html>
