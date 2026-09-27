@@ -94,6 +94,13 @@
                : role === 'teacher' ? '<span class="ub-role">Lehrkraft</span>'
                : '';
 
+    const isAdmin = role === 'admin';
+    const hasSeason = Boolean(isAdmin || ((s?.season || (window.getUserSeason ? window.getUserSeason() : 0)) >= 1));
+    const hasMPSkills = Boolean(isAdmin || s?.teacher_status === 'approved');
+    const pathname = window.location.pathname.toLowerCase();
+    const isProfilActive = pathname.endsWith('profil.html');
+    const isMPSkillsActive = !isProfilActive;
+
     host.innerHTML = `
       <div class="ub">
         <button type="button" class="ub-btn" data-ub="toggle"
@@ -105,10 +112,12 @@
         </button>
         <div class="ub-menu" data-ub-menu hidden>
           ${themeHTML()}
-          <a href="profil.html">Profil</a>
-          ${role === 'admin' ? '<a class="ub-admin" href="../admin/index.html">Admin-Bereich</a>' : ''}
-          <a href="../index.html">Tablet-Schulung</a>
-          <button type="button" data-ub="logout">Abmelden</button>
+          ${isAdmin ? '<a class="ub-admin" href="../admin/index.html">Admin-Bereich</a>' : ''}
+          <a href="profil.html"${isProfilActive ? ' class="is-active"' : ''}>Profil</a>
+          <a href="../index.html">Startseite</a>
+          ${hasSeason ? '<a href="../GameHub/index.html">GameHub</a>' : ''}
+          ${hasMPSkills ? `<a href="index.html"${isMPSkillsActive ? ' class="is-active"' : ''}>MPSkills</a>` : ''}
+          <button type="button" data-ub="logout">Ausloggen</button>
         </div>
       </div>`;
   }

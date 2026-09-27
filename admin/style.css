@@ -136,15 +136,23 @@ html, body {
 .user-pill-menu button {
   display: block; text-align: left;
   background: none; border: none;
+  border-left: 3px solid transparent;
   color: var(--a-text);
   padding: 8px 10px;
   border-radius: 4px;
   font-size: 13px;
   cursor: pointer;
   text-decoration: none;
+  box-sizing: border-box;
 }
 .user-pill-menu a:hover,
 .user-pill-menu button:hover { background: var(--a-gold-soft); }
+.user-pill-menu a.is-active {
+  background: var(--a-gold-soft);
+  color: var(--a-gold);
+  font-weight: 600;
+  border-left-color: var(--a-gold);
+}
 .user-pill-menu hr {
   border: none;
   border-top: 1px solid var(--a-border);

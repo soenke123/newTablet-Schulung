@@ -60,6 +60,97 @@
     }
     .back-link:hover { opacity: 1; }
 
+    /* ─── Auth-User-Menü oben rechts ─────────────────────── */
+    .auth-user {
+      position: relative;
+    }
+    .auth-user-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      padding: 0.35rem 0.85rem 0.35rem 0.4rem;
+      color: #f5e6c8;
+      font-family: inherit;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition);
+    }
+    .auth-user-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+    .auth-user-avatar {
+      position: relative;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface-soft);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .auth-user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .auth-user-name {
+      font-weight: 500;
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .auth-user-caret {
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+    .auth-user-menu {
+      position: absolute;
+      top: calc(100% + 0.4rem);
+      right: 0;
+      background: white;
+      color: var(--text);
+      border-radius: var(--radius-medium);
+      box-shadow: var(--shadow);
+      min-width: 160px;
+      overflow: hidden;
+      z-index: 50;
+    }
+    .auth-user-menu button,
+    .auth-user-menu a {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: 0;
+      border-left: 3px solid transparent;
+      padding: 0.8rem 1rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      cursor: pointer;
+      color: var(--text);
+      text-decoration: none;
+      box-sizing: border-box;
+      transition: background 120ms ease;
+    }
+    .auth-user-menu button:hover,
+    .auth-user-menu a:hover {
+      background: var(--surface-soft);
+    }
+    .auth-user-menu a.is-active {
+      background: var(--surface-soft);
+      color: var(--accent);
+      font-weight: 600;
+      border-left-color: var(--accent);
+    }
+    .auth-user-menu a[hidden],
+    .auth-user-menu button[hidden] { display: none; }
+    #adminLink { color: var(--accent); font-weight: 600; }
+
     main {
       max-width: 900px;
       margin: 0 auto;
@@ -454,7 +545,23 @@
 
   <div class="topbar">
     <a class="back-link" href="index.html">← Zurück zur Startseite</a>
-    <a class="back-link" href="GameHub/index.html" id="hubBackLink" style="display:none">Zum Game Hub →</a>
+    <div class="auth-user" id="authUser" hidden>
+      <button class="auth-user-btn" id="userMenuBtn" type="button">
+        <span class="auth-user-avatar">
+          <img id="authUserAvatar" alt="" />
+        </span>
+        <span class="auth-user-name" id="authUserName">…</span>
+        <span class="auth-user-caret">▼</span>
+      </button>
+      <div class="auth-user-menu" id="authUserMenu" hidden>
+        <a id="adminLink" href="admin/index.html" hidden>Admin-Bereich</a>
+        <a id="profileLink" href="profil.html" class="is-active">Profil</a>
+        <a id="homeLink" href="index.html">Startseite</a>
+        <a id="gamehubLink" href="GameHub/index.html" hidden>GameHub</a>
+        <a id="mpskillsLink" href="MPSkills/index.html" hidden>MPSkills</a>
+        <button type="button" id="logoutBtn">Ausloggen</button>
+      </div>
+    </div>
   </div>
 
   <div class="loading" id="loadingState">Lade Profil…</div>
@@ -581,8 +688,34 @@
       frameNewDot.hidden = newSet.size === 0;
     }
 
+    /* ─── Topbar-Auth ────────────────────────────────────────── */
+    function renderTopbarAuth(user) {
+      const authUser = document.getElementById('authUser');
+      if (!authUser) return;
+      if (!user) {
+        authUser.hidden = true;
+        return;
+      }
+      document.getElementById('authUserName').textContent = user.display_name || user.account_name || 'Angemeldet';
+      const avatarEl = document.getElementById('authUserAvatar');
+      if (avatarEl && window.getAvatarUrl) {
+        avatarEl.src = window.getAvatarUrl(user.avatar_id, '');
+      }
+      const isAdmin = Boolean(user.is_admin || user.is_superadmin);
+      const hasSeason = Boolean(isAdmin || ((user.season || window.getUserSeason?.() || 0) >= 1));
+      const hasMPSkills = Boolean(isAdmin || user.teacher_status === 'approved');
+
+      document.getElementById('adminLink').hidden = !isAdmin;
+      const gamehubLink = document.getElementById('gamehubLink');
+      if (gamehubLink) gamehubLink.hidden = !hasSeason;
+      const mpskillsLink = document.getElementById('mpskillsLink');
+      if (mpskillsLink) mpskillsLink.hidden = !hasMPSkills;
+      authUser.hidden = false;
+    }
+
     /* ─── Render Profil-Infos + Avatar ──────────────────────── */
     function renderProfile(user) {
+      renderTopbarAuth(user);
       document.getElementById('infoDisplayName').textContent = user.display_name || '–';
       document.getElementById('infoAccountName').textContent = user.account_name  || '–';
       document.getElementById('infoSchool').textContent      = user.school_name   || '–';
@@ -736,11 +869,15 @@
         // Session-Objekt lokal aktuell halten, damit andere Screens es
         // sofort sehen (falls sie window.__session lesen).
         if (window.__session) window.__session.avatar_id = id;
+        const topbarAvatar = document.getElementById('authUserAvatar');
+        if (topbarAvatar && window.getAvatarUrl) topbarAvatar.src = window.getAvatarUrl(id, '');
         closePicker();
       } catch (e) {
         console.warn('[profil] avatar update failed:', e.message);
         currentAvatarId = prev;
         avatarImg.src = window.getAvatarUrl(prev, '');
+        const topbarAvatar = document.getElementById('authUserAvatar');
+        if (topbarAvatar && window.getAvatarUrl) topbarAvatar.src = window.getAvatarUrl(prev, '');
         renderPickerGrid();
         alert('Speichern fehlgeschlagen. Bitte erneut versuchen.');
       }
@@ -794,6 +931,27 @@
         pwSubmit.disabled = false;
         pwSubmit.textContent = 'Passwort speichern';
       }
+    });
+
+    /* ─── Topbar User-Menü Event-Handling ───────────────────── */
+    const userMenuBtn = document.getElementById('userMenuBtn');
+    const userMenu    = document.getElementById('authUserMenu');
+    const authUserBox = document.getElementById('authUser');
+    userMenuBtn?.addEventListener('click', e => {
+      e.stopPropagation();
+      userMenu.hidden = !userMenu.hidden;
+    });
+    document.addEventListener('click', e => {
+      if (!authUserBox?.contains(e.target)) userMenu.hidden = true;
+    });
+    document.getElementById('profileLink')?.addEventListener('click', () => {
+      userMenu.hidden = true;
+    });
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+      await window.pushLocalHighscoresToServer?.().catch(() => {});
+      window.clearLocalGameState?.();
+      await window.supabaseClient?.auth?.signOut();
+      location.replace('index.html');
     });
 
   </script>

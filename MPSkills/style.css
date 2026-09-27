@@ -2650,13 +2650,22 @@ body.tool-fill #pagefoot { display: none; }
   font-size: .9rem;
   padding: 10px 15px;
   border: 0;
+  border-left: 3px solid transparent;
   background: none;
   color: var(--ink);
   text-decoration: none;
   cursor: pointer;
+  box-sizing: border-box;
+  transition: background 120ms ease;
 }
 .ub-menu a:hover,
 .ub-menu button:hover { background: var(--paper-2); }
+.ub-menu a.is-active {
+  background: var(--paper-2);
+  color: var(--accent-ink, #b56a3c);
+  font-weight: 600;
+  border-left-color: var(--accent-ink, #b56a3c);
+}
 .ub-menu .ub-admin { color: var(--accent-ink); font-weight: 600; }
 .ub-menu button[data-ub="logout"] {
   border-top: 1px solid var(--line-soft);
