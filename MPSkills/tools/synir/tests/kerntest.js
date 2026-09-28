@@ -3114,7 +3114,18 @@ function heimNeu(netz, x, y, b) {
 {
   const { netz } = heimBau(3);
   const hr = netz.addNode('heimrouter', 100, 100);
-  ok('fünf Anschlüsse: 1 × WAN + 4 × LAN', hr.nics.length === 5, hr.nics.length);
+  ok('neun Anschlüsse: 1 × WAN + 8 × LAN, fest', hr.nics.length === 9
+     && netz.KIND.heimrouter.maxPorts === 9, hr.nics.length);
+  ok('anbauen geht nicht', !netz.addNic(hr.id).ok);
+  {
+    // Ein Stand von vorher (WAN + 4 LAN) lädt mit allen neun Buchsen.
+    const alt = netz.toJSON();
+    const h = alt.nodes.find(n => n.id === hr.id);
+    h.nics = h.nics.slice(0, 5);
+    netz.fromJSON(alt);
+    ok('ein alter Heimrouter wird auf 9 Buchsen aufgefüllt',
+       netz.get(hr.id).nics.filter(k => !k.funkPort).length === 9);
+  }
   ok('WAN ist Karte 0 und holt sich die Adresse beim Anbieter',
      netz.istWan(hr, 0) && hr.nics[0].dhcp === true);
   /* Eine Maske im gesperrten WAN-Feld wäre die Behauptung, der
@@ -3494,8 +3505,8 @@ section('Kopieren und Einfügen');
   ok('der kopierte Router hat drei Anschlüsse', rk.nics.length === 3, rk.nics.length);
   ok('und die Adressen stehen an denselben Karten',
      rk.nics[0].ip === '10.1.0.1' && rk.nics[2].ip === '10.3.0.1');
-  ok('der kopierte Heimrouter hat WAN + vier LAN',
-     hk.nics.filter(k => !k.funkPort).length === 5,
+  ok('der kopierte Heimrouter hat WAN + acht LAN',
+     hk.nics.filter(k => !k.funkPort).length === 9,
      hk.nics.filter(k => !k.funkPort).length);
   ok('sein DHCP-Server kommt mit', !!hk.dhcpServer && hk.dhcpServer.on === true);
   ok('sein WLAN-Name auch', hk.wlan.ssid === 'Heimnetz', hk.wlan.ssid);

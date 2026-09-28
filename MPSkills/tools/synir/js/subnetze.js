@@ -440,7 +440,9 @@
       const auf = refs.aufgabe;
       const s = refs.box.parentElement.getBoundingClientRect();
       let top = 18;
-      if (auf && !auf.hidden) {
+      /* Nur, solange der Auftrag an seinem Platz liegt. Wer ihn
+         weggezogen hat (`body.auf-frei`), hat die Ecke frei gemacht. */
+      if (auf && !auf.hidden && !document.body.classList.contains('auf-frei')) {
         const a = auf.getBoundingClientRect();
         if (a.height) top = Math.round(a.bottom - s.top + 10);
       }

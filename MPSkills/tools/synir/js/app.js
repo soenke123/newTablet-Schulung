@@ -798,6 +798,7 @@
       const t = TEMPI[+speedEl.value];
       engine.speed = t.v;
       speedLabel.textContent = t.label;
+      speedEl.title = 'Tempo: ' + t.label;
     }
     speedEl.addEventListener('input', applySpeed);
     speedEl.value = String(TEMPO_VORGABE);
@@ -888,6 +889,7 @@
         // DHCP-Server, der während des Verkabelns Adressen
         // verteilt, verteilt sie ins Halbfertige.
         dienste.stop();
+        traceZeigen(false);
         if (!still) toast('Entwurf — bauen, verkabeln, Adressen eintragen. Die Uhr steht.');
       } else {
         // Aktion schaltet nur der Mensch (alle Aufrufe von hier aus
@@ -920,6 +922,7 @@
         }
         setRunning(true);
         dienste.start();
+        traceZeigen(traceWunsch);
       }
 
       panels.renderKarte();
@@ -930,14 +933,24 @@
       b.addEventListener('click', () => setModus(b.dataset.modus));
     });
 
-    /* ─── Mitschnitt-Leiste ───────────────────────────────────*/
-    $('traceToggle').addEventListener('click', () => {
-      const open = document.body.classList.toggle('trace-open');
-      $('traceToggle').textContent = open ? 'Mitschnitt ausblenden' : 'Mitschnitt einblenden';
+    /* ─── Mitschnitt-Leiste ───────────────────────────────────
+       Ein Knopf oben neben „Subnetze", nur im Aktionsmodus. Die
+       Leiste unten gibt es nur, solange er an ist — im Entwurf gar
+       nicht (dort läuft nichts, was man mitschneiden könnte). Der
+       Wunsch überlebt den Umweg über den Entwurf: `traceWunsch`. */
+    let traceWunsch = false;
+    function traceZeigen(an) {
+      const open = !!an && modus === 'aktion';
+      document.body.classList.toggle('trace-open', open);
+      $('traceBtn').classList.toggle('is-on', open);
       if (open) panels.renderTrace();
       // Der Mitschnitt macht die Fläche niedriger — das Kärtchen
       // hing danach halb darunter.
       setTimeout(() => panels.placeKarte(), 260);
+    }
+    $('traceBtn').addEventListener('click', () => {
+      traceWunsch = !document.body.classList.contains('trace-open');
+      traceZeigen(traceWunsch);
     });
 
     // Fenstergröße geändert: das SVG wird neu eingepasst, also
@@ -1166,13 +1179,41 @@
       }
     });
 
+    /* ─── Der Auftrag ─────────────────────────────────────────
+       Frei verschiebbar (am Kopf festhalten) und minimierbar. Vom
+       Nutzer: „Das Aufgaben Fenster soll frei verschiebbar sein …
+       Wenn ich auf ‚minimieren' klicke, dann springt die Aufgabe als
+       kleine gelbe Kachel ‚Aufgabe' links neben Szenario." Ein ×
+       gibt es nicht mehr — weg ist ein Auftrag nur, wenn ein anderer
+       kommt. */
+    const aufBox = $('aufgabe'), aufKachel = $('aufgabeKachel');
+    let aufFrei = null;               // { left, top } nach dem Ziehen
+
+    function aufLage() {
+      if (aufFrei) {
+        aufBox.style.left = aufFrei.left + 'px';
+        aufBox.style.top = aufFrei.top + 'px';
+      } else {
+        aufBox.style.left = '';
+        aufBox.style.top = '';
+      }
+      document.body.classList.toggle('auf-frei', !!aufFrei);
+    }
+
+    function aufZeigen(auf) {
+      aufBox.hidden = !auf;
+      aufKachel.hidden = auf;
+      subnetze.platzieren();
+    }
+
     function showAufgabe(s) {
-      const box = $('aufgabe');
-      if (!s || !s.aufgabe) { box.hidden = true; return; }
-      box.hidden = false;
-      // Ein neuer Auftrag kommt immer aufgeklappt — er will
-      // gelesen werden, bevor jemand anfängt.
-      box.classList.remove('is-fold');
+      if (!s || !s.aufgabe) { aufBox.hidden = true; aufKachel.hidden = true; subnetze.platzieren(); return; }
+      // Ein neuer Auftrag kommt immer offen und an seinem Platz —
+      // er will gelesen werden, bevor jemand anfängt.
+      aufFrei = null;
+      aufLage();
+      aufBox.hidden = false;
+      aufKachel.hidden = true;
       $('aufgabeTitel').textContent = s.titel || '';
       /* Durch den Türsteher, immer: im Raum kommt dieser Text vom
          Server auf das Tablet eines Kindes (aufgabe.js). */
@@ -1181,28 +1222,39 @@
       // noch so hoch wie der vorige Auftrag.
       requestAnimationFrame(() => subnetze.platzieren());
     }
-    /* Ein- und Ausklappen statt nur Schließen: der Auftrag steht
-       über der Fläche und würde sonst dauerhaft die Geräte in der
-       linken oberen Ecke verdecken. Beim Prüfen im Browser war
-       genau das der Fall — Rechner 1 lag unter der Karte und war
-       nicht anklickbar. Die Szenarien halten die Ecke jetzt frei,
-       aber selbst gebaute Netze tun das nicht. */
-    /* Die Liste der Adressräume liegt UNTER dem Auftrag. Ändert
-       sich dessen Höhe, muss sie nachrücken — sonst klafft eine
-       Lücke oder, schlimmer, sie verschwindet halb darunter. */
-    function fold() {
-      $('aufgabe').classList.toggle('is-fold');
-      subnetze.platzieren();
-    }
-    $('aufgabeHead').addEventListener('click', (ev) => {
-      if (ev.target.id === 'aufgabeClose') return;
-      fold();
-    });
-    $('aufgabeClose').addEventListener('click', (ev) => {
+
+    $('aufgabeMin').addEventListener('click', (ev) => {
       ev.stopPropagation();
-      $('aufgabe').hidden = true;
-      subnetze.platzieren();
+      aufZeigen(false);
     });
+    aufKachel.addEventListener('click', () => aufZeigen(true));
+
+    /* Ziehen wie bei den Kärtchen (panels.js): am Kopf festhalten,
+       innerhalb der Bühne bleiben. */
+    (function () {
+      const kopf = $('aufgabeHead');
+      let zieh = null;
+      kopf.addEventListener('pointerdown', (ev) => {
+        if (ev.target.closest('button')) return;
+        const r = aufBox.getBoundingClientRect();
+        const b = aufBox.parentElement.getBoundingClientRect();
+        zieh = { dx: ev.clientX - r.left, dy: ev.clientY - r.top, b, w: r.width };
+        kopf.setPointerCapture(ev.pointerId);
+        aufBox.classList.add('is-zieh');
+      });
+      kopf.addEventListener('pointermove', (ev) => {
+        if (!zieh) return;
+        aufFrei = {
+          left: Math.round(U.clamp(ev.clientX - zieh.dx - zieh.b.left, 8, Math.max(8, zieh.b.width - zieh.w - 8))),
+          top:  Math.round(U.clamp(ev.clientY - zieh.dy - zieh.b.top, 8, Math.max(8, zieh.b.height - 46)))
+        };
+        aufLage();
+        subnetze.platzieren();
+      });
+      const ende = () => { zieh = null; aufBox.classList.remove('is-zieh'); };
+      kopf.addEventListener('pointerup', ende);
+      kopf.addEventListener('pointercancel', ende);
+    })();
 
     $('neuBtn').addEventListener('click', () => {
       if (netz.count && !window.confirm('Alles löschen und neu anfangen?')) return;

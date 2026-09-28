@@ -81,30 +81,6 @@
         bauen: bauTerminal, schliessen: schliessTerminal
       },
       {
-        /* ⚠️ KEINE Kachel auf einem Bildschirm mehr — `fuer` nennt
-           nur die drei Geräte OHNE Bildschirm. Vom Nutzer gesetzt:
-           „Einstellungen kann weg."
-
-           Und damit ist es wieder Filius' Modell: dort ist die
-           Adresse eines Rechners nicht Sache eines Programms auf
-           dem Desktop, sondern des Konfigurationsdialogs am
-           Netzplan (`JHostKonfiguration`). Am Gerät bleibt sie im
-           Aktionsmodus LESBAR — in der Kopfzeile des Bildschirms
-           und über `ipconfig` —, geändert wird sie im Entwurf am
-           Kärtchen.
-
-           Der Eintrag bleibt trotzdem hier stehen, denn beim
-           Router, Heimrouter und Switch IST das Formular der
-           Inhalt des Gerätefensters (siehe OHNE_SCHIRM). Gelöscht
-           fiele `rendereOhneSchirm` in seinen Notnagel
-           `{ name: id, ic: 'gear' }` und der Reiter stünde ohne
-           Wort da. */
-        id: 'einstellungen', name: 'Einstellungen', ic: 'gear',
-        fuer: ['router', 'heimrouter', 'switch'],
-        hint: 'Adresse, Netzmaske, Gateway, DHCP',
-        bauen: bauEinstellungen
-      },
-      {
         /* ⚠️ OHNE `install: true` — der Datei-Explorer ist von
            Anfang an da. In Filius ist er eine der dreizehn
            Anwendungen, die man erst aufspielt; vom Nutzer zum
@@ -228,30 +204,16 @@
        stehen die Kacheln eines Bildschirms, und genau die gibt es
        hier nicht mehr (`fuer` nennt deshalb nur noch die drei
        Bilder des Endgeräts). */
-    const OHNE_SCHIRM = {
-      switch: {
-        /* ⚠️ Kurz, und mit Absicht ohne den Satz über Schicht 2:
-           den sagt das Formular darunter selbst (konfig.js). Zwei
-           Kästen übereinander, die dasselbe erklären, liest kein
-           Kind zweimal — es liest keinen davon. */
-        titel: 'Ein Switch hat keine Oberfläche.',
-        text: 'Kein Betriebssystem, kein Bildschirm. Was hier steht, ist ein '
-            + 'Blick von außen in sein Gedächtnis.',
-        knoepfe: []
-      },
-      router: {
-        titel: 'Ein Router hat keinen Bildschirm.',
-        text: 'Kein Betriebssystem und keine Programme. Man richtet ihn ein und '
-            + 'sieht ihm zu, wie er Pakete zwischen seinen Netzen weitergibt.',
-        knoepfe: ['einstellungen', 'terminal']
-      },
-      heimrouter: {
-        titel: 'Ein Heimrouter hat keinen Bildschirm.',
-        text: 'Zu Hause richtet man ihn über den Browser ein. Hier steht die '
-            + 'Einrichtung gleich da — WAN nach draußen, LAN ins Haus.',
-        knoepfe: ['einstellungen', 'terminal']
-      }
-    };
+    /* ⚠️ Seit 2026-09-28 ohne Sätze, ohne Terminal und ohne
+       Einstellen. Vom Nutzer: „Ein Router hat keinen Bildschirm …
+       Raus! Einstellungen kann ich jetzt nicht mehr ändern!
+       Terminal brauche ich hier nicht. Alle Infos aus den Modalen
+       werden in einer kompakten Ansicht dargestellt." — und für den
+       Switch: „das WLAN [lässt sich im Aktionsmodus] nicht mehr an
+       und aus machen. Das bleibt jetzt so." Der Heimrouter geht
+       denselben Weg. Eingestellt wird im Entwurf; im Aktionsmodus
+       sieht man zu (konfig.kompakt). */
+    const OHNE_SCHIRM = { switch: {}, router: {}, heimrouter: {} };
     const ohneSchirm = (n) => OHNE_SCHIRM[n.kind] || null;
 
     /* ═══ Was sich aufspielen lässt ══════════════════════════
@@ -398,7 +360,7 @@
 
       const kein = ohneSchirm(n);
       refs.desktop.classList.toggle('dt--kein', !!kein);
-      if (kein) { rendereOhneSchirm(n, kein); return; }
+      if (kein) { rendereOhneSchirm(n); return; }
 
       /* ─ Programme ─ */
       const progs = programmeFuer(n);
@@ -492,48 +454,13 @@
        zweiten Szenarios („der Switch lernt"). Sie muss zu sehen
        sein, WÄHREND es läuft; seit die Inspektorspalte weg ist,
        gäbe es sonst im Aktionsmodus keine Stelle dafür. */
-    function rendereOhneSchirm(n, kein) {
-      /* Ein ausgeschaltetes Gerät kann man einstellen, aber nicht
-         bedienen — das Terminal eines toten Routers nähme Befehle
-         an, auf die nie etwas antwortet. */
-      const knoepfe = kein.knoepfe.filter(k => n.on || k !== 'terminal');
-      if (knoepfe.indexOf(appId) < 0) {
-        closeAppQuiet();
-        appId = knoepfe.length ? knoepfe[0] : null;
-      }
-
+    function rendereOhneSchirm(n) {
+      closeAppQuiet();
       refs.dtDock.innerHTML = '';
-      refs.dtApps.innerHTML =
-        '<div class="dt-kein">'
-        + '<span class="dt-kein-ic">' + U.icon((netz.KIND[n.kind] || {}).icon || 'router') + '</span>'
-        + '<p><strong>' + esc(kein.titel) + '</strong> ' + esc(kein.text) + '</p>'
-        + '</div>'
-        + (knoepfe.length > 1
-            ? '<div class="dt-reg">' + knoepfe.map(id => {
-                const p = PROGRAMME.find(x => x.id === id) || { name: id, ic: 'gear' };
-                return '<button class="dt-reg-b' + (appId === id ? ' is-on' : '')
-                  + '" data-app="' + id + '" title="' + esc(p.hint || p.name) + '">'
-                  + U.icon(p.ic) + '<span>' + esc(p.name) + '</span></button>';
-              }).join('') + '</div>'
-            : '');
-
-      /* Kein `openApp`: dort heißt ein zweiter Klick auf denselben
-         Knopf „Programm schließen", und das ergibt auf einem
-         Bildschirm Sinn (dahinter liegen die Symbole). Hier läge
-         dahinter nichts. */
-      refs.dtApps.querySelectorAll('[data-app]').forEach(b =>
-        b.addEventListener('click', () => {
-          if (appId === b.dataset.app) return;
-          closeApp();
-          appId = b.dataset.app;
-          refs.dtWin.dataset.seite = '';
-          render();
-        }));
-
+      refs.dtApps.innerHTML = '';
       fenster(true, '', '', true);
       refs.dtWin.innerHTML = '';
-      if (appId === 'terminal') bauTerminal(n, refs.dtWin);
-      else bauEinstellungen(n, refs.dtWin);
+      bauKompakt(n, refs.dtWin);
     }
 
     /* Das Programmfenster auf- oder zudecken und ihm eine
@@ -598,39 +525,24 @@
       document.body.appendChild(refs.term);
     }
 
-    /* ═══ Programm: Einstellungen ════════════════════════════
-       Dasselbe wie im Inspektor, aber aus der Sicht des Geräts.
-       Das ist kein Doppel ohne Grund: im Aktionsmodus ist der
-       Inspektor nur zum Lesen da, und eine Adresse ändert man
-       dort, wo man sie im echten Leben ändert — auf dem Rechner
-       selbst. */
+    /* ═══ Router, Heimrouter, Switch im Aktionsmodus ═════════
+       Nur lesen, alles auf einer Seite (konfig.kompakt). Hier
+       stand das volle Einstellformular samt Reitern und daneben
+       ein Terminal — vom Nutzer gestrichen, siehe OHNE_SCHIRM. */
+    function bauKompakt(n, box) {
+      konfig.kompakt(n, box);
 
-    function bauEinstellungen(n, box) {
-      konfig.bauen(n, box, {
-        /* Auf dem Gerät selbst gibt es keine kleine Ansicht: wer
-           ein Gerät aufmacht, will alles sehen, was darauf
-           eingestellt ist — die Fläche ist dabei ohnehin nur zur
-           Hälfte verdeckt. Der Name steht in der Fensterkopfzeile
-           und ist kein Feld mehr; Gerätenamen sind nicht änderbar. */
-        mehr: true,
-        onDirty: opts.onDirty,
-        redraw: () => {
-          if (opts.redraw) opts.redraw();
-          untertitel(n);
-        },
-        rebuild: () => { if (appId === 'einstellungen') render(); },
-        toast: opts.toast
-      });
-
-      /* „Alles vergessen" saß vorher in einem eigenen Programm. Es
-         gehört hierher: es ist eine Handlung am Gerät, kein
-         Fenster. Und es ist der kürzeste Weg, einer Klasse ARP
-         zweimal zu zeigen. */
+      /* „Tabellen vergessen" bleibt: es ist keine Einstellung,
+         sondern eine Handlung am laufenden Gerät — und der kürzeste
+         Weg, einer Klasse ARP zweimal zu zeigen. Die Erklärung
+         steht im Tooltip. */
       const acts = document.createElement('div');
       acts.className = 'k-acts';
       const b = document.createElement('button');
       b.className = 'btn btn--ghost';
       b.textContent = 'Tabellen vergessen';
+      b.title = 'Leert ARP-Tabelle und Zwischenspeicher — danach lässt sich '
+        + 'die Adressauflösung noch einmal von vorn zeigen.';
       b.addEventListener('click', () => {
         stack.clearTables(n);
         render();
@@ -638,11 +550,6 @@
       });
       acts.appendChild(b);
       box.appendChild(acts);
-      const hint = document.createElement('div');
-      hint.className = 'k-hint';
-      hint.textContent = 'Leert ARP-Tabelle und Zwischenspeicher — danach lässt sich '
-        + 'die Adressauflösung noch einmal von vorn zeigen.';
-      box.appendChild(hint);
     }
 
     /* ═══ Programm: Software-Installation ════════════════════
@@ -704,14 +611,13 @@
           + ' title="' + esc(p.name + ' — ' + p.hint) + '">'
           + '<span class="sw-k-ic">' + U.icon(p.ic) + '</span>'
           + '<span class="sw-k-n">' + esc(p.name) + '</span>'
-          + '<span class="sw-k-h">' + esc(p.hint) + '</span>'
+          /* Die Beschreibung unter dem Namen ist weg (vom Nutzer
+             gestrichen) — sie steht im Tooltip. */
           + (drauf ? '<span class="sw-k-ok">' + U.icon('haken') + '</span>' : '')
           + '</button>';
       };
 
-      box.innerHTML = '<div class="sw">' + alle.map(kachel).join('') + '</div>'
-        + '<div class="k-hint">Ein installiertes Programm liegt danach als Kachel auf dem '
-        + 'Bildschirm. Ein Serverprogramm muss dort noch <em>gestartet</em> werden.</div>';
+      box.innerHTML = '<div class="sw">' + alle.map(kachel).join('') + '</div>';
 
       /* Ein Klick auf eine ruhige Kachel spielt auf, ein Klick auf
          eine mit Haken stellt die Frage. Ein Klick auf eine ANDERE

@@ -17,6 +17,21 @@ const ok = (n, c, x) => { if (c) { pass++; console.log('  ok   ' + n); }
    (js/szmenue.js): aufklappen, Eintrag antippen. Die Nachfrage
    „Das aktuelle Netz wird ersetzt" beantwortet der Dialog-Zuhörer
    unten mit Ja. */
+/* ─── Den Mitschnitt auf- oder zumachen ───────────────────────
+   Seit 2026-09-28 ein Knopf oben neben „Subnetze", nur im
+   Aktionsmodus; die Leiste unten gibt es nur, solange er an ist. */
+async function mitschnitt(page, an) {
+  const ist = await page.evaluate(() => document.body.classList.contains('trace-open'));
+  if (ist !== an) await page.locator('#traceBtn').click();
+}
+
+/* Das Kärtchen groß oder klein — „Mehr ›" ist ein Umschalter, und
+   der Wunsch bleibt für das nächste Kärtchen stehen. */
+async function gross(page, an) {
+  const ist = await page.evaluate(() => document.querySelector('#karte').classList.contains('is-mehr'));
+  if (ist !== an) { await page.locator('#karteMehr').click(); await page.waitForTimeout(250); }
+}
+
 async function szenarioWaehlen(page, key) {
   await page.locator('#szenarioBtn').click();
   await page.locator('.szm-item[data-id="builtin:' + key + '"] .szm-name').click();
@@ -501,7 +516,7 @@ async function markenAn(page, name, art) {
   ok('Erfolgszeilen sind grün markiert', await page.locator('.tl--ok').count() >= 3);
 
   console.log('\n── Mitschnitt ──────────────────────────────────────');
-  await page.locator('#traceToggle').click();
+  await mitschnitt(page, true);
   await page.waitForTimeout(400);
   const trCount = await page.locator('.tr').count();
   ok('Mitschnitt hat Zeilen', trCount > 5, String(trCount));
@@ -529,10 +544,12 @@ async function markenAn(page, name, art) {
   ok('TTL wird erklärt', felder.some(f => /TTL/.test(f) && /Router/.test(f)), felder.join(' | ').slice(0, 200));
 
   // Filter
+  await mitschnitt(page, true);
   await page.locator('[data-proto="ARP"]').click();
   await page.waitForTimeout(250);
   const protos = await page.locator('.tr-p').allTextContents();
   ok('ARP-Filter greift', protos.length > 0 && protos.every(p => p === 'ARP'), protos.join(','));
+  await mitschnitt(page, true);
   await page.locator('[data-proto=""]').click();
   await page.waitForTimeout(200);
 
@@ -1458,8 +1475,9 @@ async function markenAn(page, name, art) {
      dhcpZeilen.slice(0, 4).join(' | '));
 
   // Der Filter kennt DHCP jetzt auch.
-  await page.locator('#traceToggle').click();
+  await mitschnitt(page, true);
   await page.waitForTimeout(400);
+  await mitschnitt(page, true);
   await page.locator('[data-proto="DHCP"]').click();
   await page.waitForTimeout(300);
   const nurDhcp = await page.locator('.tr-p').allTextContents();
@@ -1500,8 +1518,9 @@ async function markenAn(page, name, art) {
   const dhcpFelder = await page.locator('.tr-det .tr-f').allTextContents();
   ok('das Angebot nennt die MAC, für die es gilt',
      dhcpFelder.some(f => /gilt für/.test(f)), dhcpFelder.join(' | ').slice(0, 200));
+  await mitschnitt(page, true);
   await page.locator('[data-proto=""]').click();
-  await page.locator('#traceToggle').click();
+  await mitschnitt(page, false);
   await page.waitForTimeout(300);
 
   console.log('\n── DNS: Namen statt Zahlen ─────────────────────────');
@@ -1686,6 +1705,8 @@ async function markenAn(page, name, art) {
      tcpZeilen.some(t => /\[SYN\]/.test(t)) && tcpZeilen.some(t => /\[SYN, ACK\]/.test(t)),
      tcpZeilen.slice(0, 4).join(' | '));
 
+  await mitschnitt(page, true);
+
   await page.locator('[data-proto="TCP"]').click();
   await page.waitForTimeout(300);
   const chipProtos = await page.locator('.tr-p').allTextContents();
@@ -1705,6 +1726,7 @@ async function markenAn(page, name, art) {
   ok('und sagt bei der Bestätigungsnummer dazu, dass sie die nächste erwartete ist',
      tcpFelder.some(f => /als Nächstes erwartet/.test(f)) || tcpFelder.some(f => /Bestätigt bis/.test(f)),
      tcpFelder.join(' | ').slice(0, 240));
+  await mitschnitt(page, true);
   await page.locator('[data-proto=""]').click();
   await page.waitForTimeout(200);
 
@@ -2565,6 +2587,7 @@ async function markenAn(page, name, art) {
 
   /* Einschränkung lösen: das Chip in der Leiste. Geprüft wird der
      Weg, den eine Hand nimmt, und nicht `setGeraet` von innen. */
+  await mitschnitt(page, true);
   await page.locator('#traceGeraet').click();
   await page.waitForTimeout(250);
   ok('das Chip in der Leiste löst sie wieder',
@@ -3617,10 +3640,10 @@ async function markenAn(page, name, art) {
      defaultmäßig ausgefüllt." Er kommt jetzt leer — die WAN-Seite
      fragt den Anbieter (das ist keine Angabe, sondern was ein
      WAN-Anschluss tut), alles andere trägt die Klasse ein. */
-  ok('mit fünf Anschlüssen, leer und mit fragender WAN-Seite',
+  ok('mit neun Anschlüssen (WAN + 8 LAN), leer und mit fragender WAN-Seite',
      await page.evaluate(() => {
        const n = window.SIM.netz.list()[0];
-       return n.kind === 'heimrouter' && n.nics.length === 5
+       return n.kind === 'heimrouter' && n.nics.length === 9
          && !n.nics[1].ip && !n.nics[0].ip && n.nics[0].dhcp === true;
      }));
   ok('und unter der Kachel steht „keine IP", keine Anbieteradresse',
@@ -3674,9 +3697,24 @@ async function markenAn(page, name, art) {
   ok('und dort steht die LAN-Adresse, nicht die vom Anbieter',
      await page.evaluate(() =>
        [...document.querySelectorAll('#karte input.f')].some(i => i.value === '192.168.1.1')));
-  ok('die Buchsenreihe zeigt vier Löcher',
-     await page.locator('#karte .k-port').count() === 4,
+  /* ⭐ Klein steht nur LAN 1 — „nur LAN1 und nicht der Rest".
+     Buchsen, WLAN und DHCP-Server gibt es erst groß. */
+  ok('⭐ klein: keine Buchsenreihe, kein WLAN, kein Erklärsatz',
+     await page.locator('#karte .k-port').count() === 0
+     && await page.locator('#karte [data-k="wlan"]').count() === 0
+     && await page.locator('#karte .k-note:not([hidden])').count() === 0);
+  await gross(page, true);
+  ok('groß zeigt die Buchsenreihe acht Löcher',
+     await page.locator('#karte .k-port').count() === 8,
      String(await page.locator('#karte .k-port').count()));
+  ok('⭐ und keinen Knopf „Schnittstelle hinzufügen" — die Buchsen sind fest',
+     await page.locator('#karteBody [data-k="addnic"]').count() === 0);
+  ok('die Erklärung steht hinter einem „i", zugeklappt',
+     await page.locator('#karte .k-i[data-info="hr-lan"]').count() === 1
+     && await page.locator('#karte [data-infotext="hr-lan"]').isHidden());
+  await page.locator('#karte .k-i[data-info="hr-lan"]').click();
+  ok('und geht auf Tipp auf',
+     await page.locator('#karte [data-infotext="hr-lan"]').isVisible());
 
   await page.locator('#karte [data-k="wlan"]').check();
   await page.waitForTimeout(300);
@@ -3821,14 +3859,15 @@ async function markenAn(page, name, art) {
      (netz.js, `freieNic`). Vom Nutzer: „Erweiterung der Zugänge, die
      müssen simpel und einfach sein." Geprüft wird in der GROSSEN
      Ansicht, denn nur dort stand er je. */
-  await page.locator('#karteMehr').click();
-  await page.waitForTimeout(250);
+  await gross(page, true);
   ok('⭐ am Switch gibt es keinen Knopf „Schnittstelle hinzufügen"',
      await page.locator('#karteBody [data-k="addnic"]').count() === 0);
-  ok('dafür sagt der Satz, dass eine Buchse von selbst dazukommt',
-     (await page.locator('#karteBody').textContent()).includes('von selbst dazu'));
-  await page.locator('#karteMehr').click();
-  await page.waitForTimeout(250);
+  /* ⭐ Und seit 2026-09-28 auch keinen Satz über Schicht 2 und keine
+     Buchsenreihe mehr — vom Nutzer gestrichen. */
+  ok('⭐ kein Erklärsatz und keine Anschlussreihe am Switch',
+     !(await page.locator('#karteBody').textContent()).includes('Schicht 2')
+     && await page.locator('#karteBody .k-port').count() === 0);
+  await gross(page, false);
 
   // Und der Router kann es NICHT — er vermittelt, er strahlt nicht.
   await geraetZiehen(page, 'router');
@@ -3866,13 +3905,21 @@ async function markenAn(page, name, art) {
   ok('und kein Schnellzugriff unten',
      await page.evaluate(() =>
        getComputedStyle(document.querySelector('#dtDock')).display === 'none'));
-  ok('dafür steht der Satz da, warum das so ist',
-     (await page.locator('#desktop .dt-kein').textContent()).includes('keinen Bildschirm'));
-  ok('mit Terminal und Einstellungen als Reiter',
-     await page.locator('.dt-reg-b[data-app="terminal"]').count() === 1
-     && await page.locator('.dt-reg-b[data-app="einstellungen"]').count() === 1);
-  ok('aufgeschlagen sind die Einstellungen',
-     await page.locator('.dt-reg-b.is-on[data-app="einstellungen"]').count() === 1);
+  /* ⭐ Seit 2026-09-28: kein Satz, kein Terminal, keine Reiter, und
+     nichts zum Einstellen — eine kompakte Leseansicht. Vom Nutzer
+     wie beim Router gewollt. */
+  ok('⭐ kein Erklärsatz, keine Reiter, kein Terminal',
+     await page.locator('#desktop .dt-kein').count() === 0
+     && await page.locator('#desktop .dt-reg-b').count() === 0
+     && await page.evaluate(() => !document.querySelector('#dtWin #term')));
+  ok('⭐ nur lesen: kein Eingabefeld, kein Schalter',
+     await page.locator('#dtWin input, #dtWin select').count() === 0,
+     String(await page.locator('#dtWin input, #dtWin select').count()));
+  ok('die kompakte Ansicht nennt WAN, LAN und WLAN',
+     await page.evaluate(() => {
+       const t = document.querySelector('#dtWin .kk').textContent;
+       return t.includes('WAN') && t.includes('LAN') && t.includes('WLAN');
+     }));
   /* Die Unterzeile nennt beide Seiten mit Namen. Zwei Adressen
      nebeneinander ohne Wörter wären an diesem Gerät genau die
      Auskunft, die fehlt: welche zeigt nach draußen? */
@@ -3882,8 +3929,8 @@ async function markenAn(page, name, art) {
        return t.indexOf('WAN') === 0 && t.includes('LAN 192.168.1.1');
      }), await page.locator('#dtSub').textContent());
 
-  await programmAuf(page, 'terminal');
-  await page.waitForTimeout(200);
+  /* Das Terminal gibt es an diesem Gerät in der Oberfläche nicht
+     mehr — die Befehle selbst bleiben (Prüfstand, Lehrkraft). */
   await page.evaluate(() => {
     const S = window.SIM;
     S.term.submit(S.netz.list().find(n => n.kind === 'heimrouter').id, 'ipconfig');
@@ -3893,9 +3940,13 @@ async function markenAn(page, name, art) {
      fünf Karten da, läse man drei Blöcke „— keine —" unter einem
      mit Adresse — und schlösse daraus, dass an diesem Gerät drei
      Karten kaputt sind. */
-  const ipc = await page.evaluate(() => document.querySelector('#dtWin').textContent);
-  ok('ipconfig nennt WAN und LAN, nicht fünf Netzwerkkarten',
-     ipc.includes('WAN') && ipc.includes('LAN 1   (4 Buchsen)')
+  const ipc = await page.evaluate(() => {
+    const S = window.SIM;
+    return S.term.linesOf(S.netz.list().find(n => n.kind === 'heimrouter').id)
+      .map(l => l.text).join('\n');
+  });
+  ok('ipconfig nennt WAN und LAN, nicht neun Netzwerkkarten',
+     ipc.includes('WAN') && ipc.includes('LAN 1   (8 Buchsen)')
      && !ipc.includes('LAN 2'), ipc.replace(/\s+/g, ' ').slice(0, 160));
 
   await page.screenshot({ path: path.join(OUT, 'shot-heimrouter.png') });
@@ -4461,25 +4512,25 @@ async function markenAn(page, name, art) {
      await page.locator('#desktop .dt-app').count() === 0);
   ok('und ohne zweite Kopfzeile im Fenster',
      await page.locator('.dt-winh').count() === 0);
-  ok('der Satz nennt das Gerät beim Namen',
-     (await page.locator('#desktop .dt-kein').textContent()).includes('Router'));
-  ok('Einstellungen sind offen, das Terminal ist zu holen',
-     await page.locator('.dt-reg-b.is-on[data-app="einstellungen"]').count() === 1
-     && await page.locator('.dt-reg-b[data-app="terminal"]').count() === 1);
-  ok('und die Reiter des Routers stehen darin',
-     await page.locator('#dtWin .k-reiter-b').count() === 2,
-     String(await page.locator('#dtWin .k-reiter-b').count()));
-  await page.locator('.dt-reg-b[data-app="terminal"]').click();
-  await page.waitForTimeout(300);
-  ok('das Terminal zieht in dieses Fenster ein',
-     await page.evaluate(() => !!document.querySelector('#dtWin #term')));
-  /* Ein zweiter Klick auf denselben Reiter darf NICHT zumachen:
-     dahinter läge nichts. Auf einem Bildschirm ist das anders,
-     dort liegen die Symbole darunter. */
-  await page.locator('.dt-reg-b[data-app="terminal"]').click();
-  await page.waitForTimeout(250);
-  ok('ein zweiter Klick auf denselben Reiter lässt ihn offen',
-     await page.evaluate(() => !!document.querySelector('#dtWin #term')));
+  /* ⭐ Seit 2026-09-28 eine kompakte Leseansicht. Vom Nutzer: „Ein
+     Router hat keinen Bildschirm … Raus! Einstellungen kann ich
+     jetzt nicht mehr ändern! Terminal brauche ich hier nicht. Alle
+     Infos aus den Modalen werden in einer kompakten Ansicht
+     dargestellt." */
+  ok('⭐ kein Satz über das Gerät, keine Reiter, kein Terminal',
+     await page.locator('#desktop .dt-kein').count() === 0
+     && await page.locator('.dt-reg-b').count() === 0
+     && await page.locator('#dtWin .k-reiter-b').count() === 0
+     && await page.evaluate(() => !document.querySelector('#dtWin #term')));
+  ok('⭐ nichts zum Einstellen: kein Feld, kein Haken',
+     await page.locator('#dtWin input, #dtWin select').count() === 0);
+  ok('alle Karten, Gateway und Weiterleitungstabelle auf einer Seite',
+     await page.evaluate(() => {
+       const w = document.querySelector('#dtWin');
+       const t = w.textContent;
+       return w.querySelectorAll('.kk-nic').length === 2 && t.includes('Gateway')
+         && t.includes('Weiterleitungstabelle') && !!w.querySelector('[data-tabellen]');
+     }));
 
   await auf('switch');
   await page.waitForTimeout(350);
@@ -4490,6 +4541,8 @@ async function markenAn(page, name, art) {
      await page.locator('#dtWin [data-tabellen]').count() === 1);
   ok('er bekommt kein Terminal',
      await page.locator('[data-app="terminal"]').count() === 0);
+  ok('⭐ und sein WLAN lässt sich hier nicht schalten',
+     await page.locator('#dtWin input').count() === 0);
 
   /* ⚠️ Die Gegenprobe: ein Endgerät IST ein Rechner und behält
      seinen Bildschirm samt Kacheln und Schnellzugriff. */
@@ -5156,25 +5209,14 @@ async function markenAn(page, name, art) {
     S.geraet.open(S.netz.byName('Router 1').id);
   });
   await page.waitForTimeout(400);
-  await page.locator('.dt-reg-b[data-app="terminal"]').click();
-  await page.waitForTimeout(300);
 
   await page.evaluate(() => { window.SIM.engine.speed = 4; window.SIM.engine.start(); });
   await page.waitForTimeout(2500);
 
-  /* Das Terminal des Routers muss mitgeschrieben haben, was er
-     gelernt hat — sonst stehen dort Wege, die niemand eingetragen
-     hat, und das ist genau die Magie, die dieses Programm meidet. */
-  const term = await page.locator('#dtWin #term').textContent();
-  ok('⭐ das Terminal hat mitgeschrieben, was gelernt wurde',
-     /Weg zu 192\.168\.3\.0 über 192\.168\.2\.2/.test(term), term.slice(-200));
-
-  /* Und im selben Fenster die Tabelle. Der Router schlägt mit
-     „Netzwerkkarten" auf — die Tabellen stehen unter „Allgemein". */
-  await page.locator('.dt-reg-b[data-app="einstellungen"]').click();
-  await page.waitForTimeout(350);
-  await page.locator('#dtWin .k-reiter-b', { hasText: 'Allgemein' }).click();
-  await page.waitForTimeout(400);
+  /* Das Terminal im Routerfenster gibt es seit 2026-09-28 nicht mehr
+     (vom Nutzer gestrichen). Was er gelernt hat, steht in der
+     kompakten Ansicht in der RIP-Tabelle — die frischt sich beim
+     Laufen selbst auf. */
   const fenster = await page.locator('#dtWin').textContent();
   ok('im Gerätefenster steht die RIP-Tabelle', fenster.includes('RIP —'), fenster.slice(0, 120));
   ok('mit dem fernen Netz und seiner Entfernung',
@@ -5210,10 +5252,9 @@ async function markenAn(page, name, art) {
   /* Die Liste muss aufgeschlagen sein — eingeklappt gibt es keine
      Zeilen, und eine Prüfung auf „alle Zeilen sind RIP" wäre bei
      null Zeilen wahr, ohne etwas zu wissen. */
-  if ((await page.locator('#traceToggle').textContent()).includes('einblenden')) {
-    await page.locator('#traceToggle').click();
-    await page.waitForTimeout(400);
-  }
+  await mitschnitt(page, true);
+  await page.waitForTimeout(400);
+  await mitschnitt(page, true);
   await page.locator('.chip[data-proto="RIP"]').click();
   await page.waitForTimeout(400);
   const nurRip = await page.evaluate(() =>
@@ -5238,9 +5279,10 @@ async function markenAn(page, name, art) {
   });
   ok('sie trägt die Farbe von --rip',
      ripFarbe && ripFarbe.ist === ripFarbe.sollRgb, JSON.stringify(ripFarbe));
+  await mitschnitt(page, true);
   await page.locator('.chip[data-proto="RIP"]').click();
   await page.waitForTimeout(250);
-  await page.locator('#traceToggle').click();
+  await mitschnitt(page, false);
   await page.waitForTimeout(250);
 
   await page.evaluate(() => window.SIM.engine.stop());
@@ -5324,8 +5366,8 @@ async function markenAn(page, name, art) {
      await page.locator('#karteBody [data-k="freineu"]').count() === 1);
   ok('und noch keiner Zeile',
      await page.locator('#karteBody .k-frei').count() === 0);
-  ok('stattdessen steht da, was das bedeutet',
-     koerper.includes('Von außen kommt nichts herein'));
+  ok('stattdessen steht da: keine Freigabe',
+     koerper.includes('keine Freigabe'));
 
   await page.locator('#karteBody [data-k="freineu"]').click();
   await page.waitForTimeout(300);
@@ -5463,48 +5505,33 @@ async function markenAn(page, name, art) {
     await page.locator('[data-modus="aktion"]').click();
     await page.waitForTimeout(400);
 
+    /* ⭐ Seit 2026-09-28 steht im Gerätefenster kein Formular mehr,
+       sondern die kompakte Leseansicht — Weiterleitungszeilen und
+       Freigaben als Text. Geprüft wird, dass sie dastehen und nichts
+       über den Rand ragt. */
     const imFenster = async (name) => {
       await page.evaluate((nm) => window.SIM.geraet.open(window.SIM.netz.byName(nm).id), name);
       await page.waitForTimeout(400);
-      await page.locator('#dtWin .k-reiter-b', { hasText: 'Allgemein' }).click();
-      await page.waitForTimeout(400);
       return page.evaluate(() => {
         const win = document.querySelector('#dtWin');
-        const mess = (el) => el ? {
-          breite: Math.round(el.getBoundingClientRect().width),
-          hoehe: Math.round(el.getBoundingClientRect().height),
-          felder: [...el.querySelectorAll('input,select')].map(f => Math.round(f.getBoundingClientRect().width))
-        } : null;
         return {
-          fenster: Math.round(win.clientWidth),
-          ueberlauf: win.scrollWidth > win.clientWidth + 1,
-          weg: mess(win.querySelector('.k-weg-f')),
-          frei: mess(win.querySelector('.k-frei')),
-          auskunft: (win.querySelector('.k-weg-w') || {}).textContent || ''
+          text: win.textContent,
+          felder: win.querySelectorAll('input,select').length,
+          ueberlauf: win.scrollWidth > win.clientWidth + 1
         };
       });
     };
 
     const rm = await imFenster('Router 1');
-    ok('die Weiterleitungszeile steht auch im Gerätefenster', !!rm.weg, JSON.stringify(rm));
-    ok('sie ragt nicht über das Fenster hinaus',
-       rm.weg && rm.weg.breite <= rm.fenster + 1 && !rm.ueberlauf,
-       rm.weg && (rm.weg.breite + ' in ' + rm.fenster + ' · Überlauf ' + rm.ueberlauf));
-    ok('bricht nicht um', rm.weg && rm.weg.hoehe < 44, rm.weg && String(rm.weg.hoehe));
-    ok('und jedes Feld bleibt breit genug für eine Adresse (≥ 90 px)',
-       rm.weg && Math.min(...rm.weg.felder) >= 90, rm.weg && rm.weg.felder.join(' / '));
-    ok('die Auskunft nennt dort dieselbe Karte',
-       rm.auskunft.includes('Netzwerkkarte 2'), rm.auskunft);
+    ok('die Weiterleitungszeile steht im Gerätefenster, als Text',
+       rm.text.includes('192.168.3.0') && rm.text.includes('192.168.2.2') && rm.felder === 0,
+       rm.text.slice(0, 160));
+    ok('und nichts ragt über das Fenster hinaus', !rm.ueberlauf);
 
     const hm = await imFenster('Heimrouter 1');
-    ok('die Freigabe-Zeile steht auch im Gerätefenster', !!hm.frei, JSON.stringify(hm));
-    ok('sie ragt nicht über das Fenster hinaus',
-       hm.frei && hm.frei.breite <= hm.fenster + 1 && !hm.ueberlauf,
-       hm.frei && (hm.frei.breite + ' in ' + hm.fenster + ' · Überlauf ' + hm.ueberlauf));
-    /* Das Adressfeld ist das lange von den vieren — die anderen drei
-       tragen zwei Wörter und zwei Portnummern. */
-    ok('und das Adressfeld ist dort breiter als die Portfelder',
-       hm.frei && Math.max(...hm.frei.felder) >= 140, hm.frei && hm.frei.felder.join(' / '));
+    ok('die Freigabe steht im Gerätefenster, als Text',
+       hm.text.includes('TCP 80 → 192.168.178.20:80') && hm.felder === 0, hm.text.slice(0, 200));
+    ok('auch dort ragt nichts hinaus', !hm.ueberlauf);
 
     await page.evaluate(() => window.SIM.geraet.close());
     await page.locator('[data-modus="entwurf"]').click();
@@ -5513,6 +5540,141 @@ async function markenAn(page, name, art) {
 
   ok('keine Konsolenfehler nach den Portfreigaben',
      errs.length === 0, errs.slice(0, 3).join(' | '));
+  }
+
+  /* ═══ Die Runde vom 2026-09-28 ═══════════════════════════════
+     Aufgabe verschiebbar und minimierbar, Mitschnitt als Knopf,
+     kleines und großes Kärtchen getrennt, weniger Text. */
+  console.log('\n── Aufgabe, Mitschnitt, weniger Text ───────────────');
+  {
+  await page.evaluate(() => window.SIM.setModus('entwurf'));
+  await szenarioWaehlen(page, 'router');
+  await page.waitForTimeout(800);
+
+  // ─ Die Aufgabe ─
+  ok('die Aufgabe ist offen, ohne ×',
+     await page.locator('#aufgabe').isVisible()
+     && await page.locator('#aufgabe .auf-x, #aufgabeClose').count() === 0);
+  ok('die gelbe Kachel ist noch nicht da', await page.locator('#aufgabeKachel').isHidden());
+  const vor = await page.locator('#aufgabe').boundingBox();
+  const kopf = await page.locator('#aufgabeHead').boundingBox();
+  await page.mouse.move(kopf.x + 60, kopf.y + kopf.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(kopf.x + 260, kopf.y + 140, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(200);
+  const nach = await page.locator('#aufgabe').boundingBox();
+  ok('⭐ die Aufgabe lässt sich am Kopf verschieben',
+     Math.abs(nach.x - vor.x - 200) < 6 && nach.y - vor.y > 60,
+     JSON.stringify({ vor, nach }));
+  await page.locator('#aufgabeMin').click();
+  await page.waitForTimeout(200);
+  ok('⭐ minimieren: die Aufgabe geht zu, die gelbe Kachel erscheint',
+     await page.locator('#aufgabe').isHidden() && await page.locator('#aufgabeKachel').isVisible());
+  ok('die Kachel steht links neben dem Szenario-Menü',
+     await page.evaluate(() => {
+       const k = document.querySelector('#aufgabeKachel').getBoundingClientRect();
+       const m = document.querySelector('#szenario').getBoundingClientRect();
+       return k.right <= m.left + 1 && Math.abs((k.top + k.bottom) / 2 - (m.top + m.bottom) / 2) < 12;
+     }));
+  await page.locator('#aufgabeKachel').click();
+  await page.waitForTimeout(200);
+  const wieder = await page.locator('#aufgabe').boundingBox();
+  ok('ein Tipp auf die Kachel holt sie zurück, an ihren Platz',
+     await page.locator('#aufgabeKachel').isHidden()
+     && Math.abs(wieder.x - nach.x) < 2 && Math.abs(wieder.y - nach.y) < 2);
+
+  // ─ Kleines Kärtchen am Router ─
+  await page.evaluate(() => window.SIM.flaeche.select(window.SIM.netz.byName('Router 1').id));
+  await page.waitForTimeout(300);
+  await gross(page, false);
+  await page.locator('.k-reiter-b', { hasText: 'Allgemein' }).click();
+  await page.waitForTimeout(250);
+  ok('⭐ klein: am Router keine Weiterleitungstabelle',
+     !(await page.locator('#karteBody').textContent()).includes('Weiterleitungstabelle'));
+  ok('und kein Erklärsatz', await page.locator('#karteBody .k-hint:not(.dim)').count() === 0,
+     await page.locator('#karteBody .k-hint:not(.dim)').allTextContents().then(a => a.join(' | ')));
+  await gross(page, true);
+  await page.locator('.k-reiter-b', { hasText: 'Allgemein' }).click();
+  await page.waitForTimeout(250);
+  ok('groß steht sie da, mit einem „i"',
+     (await page.locator('#karteBody').textContent()).includes('Weiterleitungstabelle')
+     && await page.locator('#karteBody .k-i[data-info="wege"]').count() === 1);
+  await gross(page, false);
+  await page.locator('#karteClose').click();
+
+  // ─ Texte, die weg sind ─
+  ok('⭐ in der Seitenleiste steht kein Satz über Ziehen und Mausrad',
+     await page.locator('.rail-zhint').count() === 0);
+
+  // ─ Der Mitschnitt ─
+  ok('⭐ im Entwurf gibt es keinen Mitschnitt-Knopf und keine Leiste',
+     await page.locator('#traceBtn').isHidden() && await page.locator('.trace').isHidden());
+  await page.locator('.mbtn[data-modus="aktion"]').click();
+  await page.waitForTimeout(300);
+  ok('in der Aktion steht der Knopf neben „Subnetze"',
+     await page.locator('#traceBtn').isVisible()
+     && await page.evaluate(() =>
+       document.querySelector('#subBtn').nextElementSibling === document.querySelector('#traceBtn')));
+  await mitschnitt(page, false);
+  ok('die Leiste unten nur, wenn er an ist', await page.locator('.trace').isHidden());
+  await mitschnitt(page, true);
+  ok('an: die Leiste ist da', await page.locator('.trace').isVisible());
+  // Filter von vorher lösen: alle Protokolle, kein Suchwort, kein Gerät.
+  await page.locator('[data-proto=""]').click();
+  await page.locator('#traceFilter').fill('');
+  if (await page.locator('#traceGeraet').isVisible()) await page.locator('#traceGeraet').click();
+
+  // Viele Rahmen, dann hochrollen, dann kommen neue: nichts springt.
+  // Ins eigene Netz gepingt (an den Router) — ein Gateway hat
+  // Endgerät 1 in diesem Szenario noch nicht.
+  const pingen = () => page.evaluate(() => {
+    const S = window.SIM;
+    S.engine.speed = 4;
+    S.term.submit(S.netz.byName('Endgerät 1').id,
+      'ping ' + S.netz.byName('Router 1').nics[0].ip);
+  });
+  for (let i = 0; i < 3; i++) { await pingen(); await page.waitForTimeout(1500); }
+  await page.evaluate(() => { const b = document.querySelector('#traceBody'); b.scrollTop = 0; });
+  const ersteVor = await page.evaluate(() => {
+    const b = document.querySelector('#traceBody');
+    const d = b.querySelector('[data-n]');
+    return { top: b.scrollTop, n: d && d.dataset.n, text: d ? '' : b.textContent.slice(0, 80) };
+  });
+  await pingen();
+  await page.waitForTimeout(1500);
+  const ersteNach = await page.evaluate(() => {
+    const b = document.querySelector('#traceBody');
+    const r = b.getBoundingClientRect();
+    const d = [...b.querySelectorAll('[data-n]')].find(x => x.getBoundingClientRect().bottom > r.top + 1);
+    return { top: b.scrollTop, n: d && d.dataset.n, mehr: b.scrollHeight > b.clientHeight };
+  });
+  ok('⭐ wer hochgerollt hat, bleibt stehen, wenn neue Rahmen kommen',
+     ersteNach.mehr && ersteNach.n === ersteVor.n && ersteNach.top < 5,
+     JSON.stringify({ ersteVor, ersteNach }));
+
+  // Schichtenansicht: farbig hinterlegt.
+  await page.locator('#traceModus').click();
+  await page.waitForTimeout(250);
+  ok('⭐ in der Schichtenansicht ist jede Zeile in ihrer Schichtfarbe hinterlegt',
+     await page.evaluate(() => {
+       const z = document.querySelector('.trs.l--vermittlung');
+       return !!z && getComputedStyle(z).backgroundColor !== 'rgba(0, 0, 0, 0)';
+     }));
+  await page.locator('#traceModus').click();
+  await mitschnitt(page, false);
+
+  // ─ Software-Installation: nur Name und Bild ─
+  await page.evaluate(() => window.SIM.geraet.open(window.SIM.netz.byName('Endgerät 1').id));
+  await page.waitForTimeout(300);
+  await programmAuf(page, 'software');
+  await page.waitForTimeout(250);
+  ok('⭐ Software-Installation: keine Beschreibung unter den Kacheln, kein Hinweis darunter',
+     await page.locator('#dtWin .sw-k:not(.is-frage) .sw-k-h').count() === 0
+     && await page.locator('#dtWin .k-hint').count() === 0);
+  await page.evaluate(() => { window.SIM.geraet.close(); window.SIM.setModus('entwurf'); });
+  await page.waitForTimeout(300);
+  ok('keine Konsolenfehler in dieser Runde', errs.length === 0, errs.slice(0, 3).join(' | '));
   }
 
   console.log('\n── Bilder ──────────────────────────────────────────');
@@ -5560,9 +5722,9 @@ async function markenAn(page, name, art) {
   await page.locator('[data-modus="aktion"]').click();
   await page.locator('#speed').fill('3');
   await page.waitForTimeout(2500);
-  if (!(await page.evaluate(() => document.body.classList.contains('trace-open'))))
-    await page.locator('#traceToggle').click();
+  await mitschnitt(page, true);
   await page.waitForTimeout(400);
+  await mitschnitt(page, true);
   await page.locator('[data-proto="DHCP"]').click();
   await page.waitForTimeout(400);
   await page.evaluate(() => {
@@ -5571,8 +5733,9 @@ async function markenAn(page, name, art) {
   });
   await page.waitForTimeout(400);
   await page.screenshot({ path: path.join(OUT, 'shot-dhcp.png') });
+  await mitschnitt(page, true);
   await page.locator('[data-proto=""]').click();
-  await page.locator('#traceToggle').click();
+  await mitschnitt(page, false);
   await szenarioWaehlen(page, 'router');
   await page.waitForTimeout(700);
   // .mbtn davor, weil auch <body> ein data-modus trägt.
@@ -5598,7 +5761,7 @@ async function markenAn(page, name, art) {
   });
   await page.locator('#speed').fill('4');
   await page.waitForTimeout(2600);
-  await page.locator('#traceToggle').click();
+  await mitschnitt(page, true);
   await page.waitForTimeout(500);
   await page.locator('.tr').filter({ hasText: 'Ping-Anfrage' }).first().click();
   await page.waitForTimeout(400);

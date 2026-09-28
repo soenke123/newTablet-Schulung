@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
-<link rel="stylesheet" href="css/app.css?v=20260928b">
+<link rel="stylesheet" href="css/app.css?v=20260928c">
 </head>
 <body>
 
@@ -215,6 +215,14 @@
       <span class="mbtn-ic">◎</span>Subnetze
     </button>
 
+    <!-- Der Mitschnitt: nur im Aktionsmodus (CSS), und die Leiste
+         unten steht nur da, wenn dieser Knopf an ist. Vom Nutzer:
+         „einen Button neben Subnetze (nur im Aktionsmodus) und nur
+         dann wird diese Leiste unten angezeigt". -->
+    <button class="mbtn mbtn--trace" id="traceBtn" title="Mitschnitt ein- und ausblenden">
+      <span class="mbtn-ic">≋</span>Mitschnitt
+    </button>
+
     <!-- Hier stand eine Anzeige der Simulationszeit („1,203 s")
          samt Länge der Ereigniswarteschlange. Sie ist weg. Für die
          Fehlersuche war sie nützlich, für den Unterricht war sie
@@ -236,6 +244,10 @@
     <!-- Das Szenario-Menü (js/szmenue.js). Ein eigenes Aufklapp-
          menü statt <select>: im Raum hat es Reiter (Öffentlich /
          Eigene) und hinter jedem Eintrag den Schalter „geteilt". -->
+    <!-- Die minimierte Aufgabe: eine gelbe Kachel links neben dem
+         Szenario-Menü. Ein Tipp holt sie zurück. -->
+    <button type="button" class="auf-kachel" id="aufgabeKachel" hidden
+            title="Aufgabe wieder öffnen">Aufgabe</button>
     <div class="szm" id="szenario">
       <button type="button" class="sel szm-btn" id="szenarioBtn" aria-haspopup="true" aria-expanded="false"
               title="vorbereitetes Netz laden">Szenario laden … <span class="szm-pfeil">▾</span></button>
@@ -427,16 +439,9 @@
       </div>
       <button class="zbtn zbtn--w" data-zoom="fit" title="alles einpassen">
         <svg viewBox="0 0 24 24"><use href="#ic-passen"/></svg><span class="zbtn-t">Einpassen</span></button>
-      <!-- Wie man das Feld sonst noch bewegt. Steht hier und
-           nicht im Tooltip: das Verschieben durch Ziehen hat
-           keinen Knopf, an dem ein Tooltip hängen könnte.
-
-           Ziehen verschiebt das Feld; das Rechteck zum Markieren
-           hängt an Strg — das steht hier, weil eine Taste, die
-           nirgends geschrieben steht, niemand drückt. -->
-      <span class="tools-hint rail-hint rail-zhint">Ziehen verschiebt das Feld,
-        Mausrad rollt, Strg + Mausrad zoomt. Strg + Ziehen spannt ein Rechteck
-        auf und markiert mehrere Geräte.</span>
+      <!-- Hier stand „Ziehen verschiebt das Feld, Mausrad rollt …".
+           Vom Nutzer ersatzlos gestrichen; die Tasten stehen in der
+           LIESMICH und in den Tooltips der Zoomknöpfe. -->
     </div>
   </nav>
 
@@ -470,11 +475,13 @@
          und nicht daneben: er gehört zur Aufgabe, nicht zum
          Programm — und er lässt sich wegklicken. -->
     <aside class="aufgabe" id="aufgabe" hidden>
-      <div class="auf-h" id="aufgabeHead" title="ein- und ausklappen">
+      <!-- Am Kopf festhalten und hinschieben. Kein × mehr (vom
+           Nutzer gestrichen): „minimieren" legt die Aufgabe als
+           gelbe Kachel oben neben das Szenario-Menü. -->
+      <div class="auf-h" id="aufgabeHead" title="zum Verschieben hier festhalten">
         <span class="auf-tag">Auftrag</span>
         <strong id="aufgabeTitel"></strong>
-        <button class="auf-fold" id="aufgabeFold" title="einklappen">▾</button>
-        <button class="auf-x" id="aufgabeClose" title="schließen">×</button>
+        <button class="auf-min" id="aufgabeMin" title="minimieren">–</button>
       </div>
       <div class="auf-b" id="aufgabeText"></div>
     </aside>
@@ -668,7 +675,6 @@
 <!-- ═══ Mitschnitt ══════════════════════════════════════════════ -->
 <section class="trace">
   <div class="trace-h">
-    <button class="tbtn" id="traceToggle">Mitschnitt einblenden</button>
     <span class="trace-c" id="traceCount">nichts aufgezeichnet</span>
 
     <!-- Das gewählte Gerät. Steht nur da, wenn eines gewählt ist —
@@ -734,34 +740,34 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="js/util.js?v=20260928b"></script>
-<script src="js/engine.js?v=20260928b"></script>
-<script src="js/netz.js?v=20260928b"></script>
-<script src="js/verlauf.js?v=20260928b"></script>
-<script src="js/nat.js?v=20260928b"></script>
-<script src="js/tcp.js?v=20260928b"></script>
-<script src="js/rip.js?v=20260928b"></script>
-<script src="js/dateien.js?v=20260928b"></script>
-<script src="js/http.js?v=20260928b"></script>
-<script src="js/mail.js?v=20260928b"></script>
-<script src="js/schichten.js?v=20260928b"></script>
-<script src="js/dienste.js?v=20260928b"></script>
-<script src="js/mitschnitt.js?v=20260928b"></script>
-<script src="js/terminal.js?v=20260928b"></script>
-<script src="js/subnetze.js?v=20260928b"></script>
-<script src="js/flaeche.js?v=20260928b"></script>
-<script src="js/konfig.js?v=20260928b"></script>
-<script src="js/panels.js?v=20260928b"></script>
-<script src="js/weiterleitung.js?v=20260928b"></script>
-<script src="js/prog-dateien.js?v=20260928b"></script>
-<script src="js/prog-web.js?v=20260928b"></script>
-<script src="js/prog-mail.js?v=20260928b"></script>
-<script src="js/geraet.js?v=20260928b"></script>
-<script src="js/szenarien.js?v=20260928b"></script>
-<script src="js/szmenue.js?v=20260928b"></script>
-<script src="js/aufgabe.js?v=20260928b"></script>
-<script src="js/app.js?v=20260928b"></script>
+<script src="js/util.js?v=20260928c"></script>
+<script src="js/engine.js?v=20260928c"></script>
+<script src="js/netz.js?v=20260928c"></script>
+<script src="js/verlauf.js?v=20260928c"></script>
+<script src="js/nat.js?v=20260928c"></script>
+<script src="js/tcp.js?v=20260928c"></script>
+<script src="js/rip.js?v=20260928c"></script>
+<script src="js/dateien.js?v=20260928c"></script>
+<script src="js/http.js?v=20260928c"></script>
+<script src="js/mail.js?v=20260928c"></script>
+<script src="js/schichten.js?v=20260928c"></script>
+<script src="js/dienste.js?v=20260928c"></script>
+<script src="js/mitschnitt.js?v=20260928c"></script>
+<script src="js/terminal.js?v=20260928c"></script>
+<script src="js/subnetze.js?v=20260928c"></script>
+<script src="js/flaeche.js?v=20260928c"></script>
+<script src="js/konfig.js?v=20260928c"></script>
+<script src="js/panels.js?v=20260928c"></script>
+<script src="js/weiterleitung.js?v=20260928c"></script>
+<script src="js/prog-dateien.js?v=20260928c"></script>
+<script src="js/prog-web.js?v=20260928c"></script>
+<script src="js/prog-mail.js?v=20260928c"></script>
+<script src="js/geraet.js?v=20260928c"></script>
+<script src="js/szenarien.js?v=20260928c"></script>
+<script src="js/szmenue.js?v=20260928c"></script>
+<script src="js/aufgabe.js?v=20260928c"></script>
+<script src="js/app.js?v=20260928c"></script>
 <!-- Die Brücke in den Raum. Tut ohne Rahmen nichts. -->
-<script src="js/bruecke.js?v=20260928b"></script>
+<script src="js/bruecke.js?v=20260928c"></script>
 </body>
 </html>

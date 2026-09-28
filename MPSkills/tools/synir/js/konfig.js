@@ -265,11 +265,11 @@
       } else if (!zeig('karten')) {
         /* nichts — die Karten stehen im anderen Reiter */
       } else if (node.kind === 'switch') {
-        h += '<div class="k-note">Ein Switch arbeitet auf Schicht 2 — er braucht keine '
-          + 'IP-Adresse. Er merkt sich nur, welche MAC-Adresse an welchem Anschluss hängt. '
-          + 'Eine Buchse kommt von selbst dazu, sobald ein Kabel eine braucht.</div>';
-        h += buchsen(node, netz.feste(node).map(k => k.i));
-        h += wlanBlock(node, ro);
+        /* ⚠️ Kein Erklärsatz und keine Buchsenreihe mehr — vom
+           Nutzer gestrichen („die Anschlüsse brauch ich nicht").
+           Beim Switch gibt es nichts einzustellen außer dem WLAN;
+           die Buchse kommt ohnehin von selbst mit dem Kabel. */
+        h += wlanBlock(node, ro, mehr);
       } else {
         node.nics.forEach((nic, i) => { h += nicBlock(node, nic, i, ro, mehr, sn); });
       }
@@ -341,13 +341,12 @@
              verschwindet, ist die FRAGE: ein echtes Gerät stellt sie
              nicht, und ein Haken, den niemand jemals wegnimmt, ist
              eine Einladung zu einem Fehler ohne Lehrwert. */
-          h += natBlock(node);
           /* Und direkt darunter die Ausnahme von genau diesem
              letzten Satz. Nur in der großen Ansicht: eine
              Portfreigabe ist nichts, was man beim Eintragen einer
              Adresse nebenbei anklickt — dieselbe Regel wie beim
              DHCP-Server. */
-          if (mehr) h += freiBlock(node, ro);
+          if (mehr) h += natBlock(node) + freiBlock(node, ro);
         } else if (K.routes) {
           /* ⚠️ `!heim`: der Heimrouter hat keine
              Weiterleitungstabelle mehr (vom Nutzer gestrichen — er
@@ -356,9 +355,11 @@
              `true`: daran entscheidet `schichten.js`, ob ein Gerät
              überhaupt weiterleitet. Geändert ist die Oberfläche,
              nicht das Gerät. */
-          h += netzeBlock(node, sn);
-          h += ripBlock(node, ro);
-          h += wegeBlock(node, ro);
+          h += netzeBlock(node, sn, mehr);
+          h += ripBlock(node, ro, mehr);
+          /* Die Weiterleitungstabelle nur groß — vom Nutzer so
+             getrennt: „Router: Weiterleitung nur im großen Modal". */
+          if (mehr) h += wegeBlock(node, ro);
         }
       }
 
@@ -420,6 +421,41 @@
        ein viertes Bild soll hier nichts zu ändern haben. Filius
        gibt dem Vermittlungsrechner ebenfalls keine
        DHCP-Einstellungen. */
+    /* ═══ Das „i" ════════════════════════════════════════════
+       Vom Nutzer: „Die Oberfläche sollte mit weniger Texten
+       auskommen. Baue lieber i-Buttons ein, die die Erklärungen
+       enthalten." Eine Überschrift mit einem runden „i" daneben;
+       der Satz steht darunter, aber erst auf Tipp.
+
+       Welche offen sind, merkt sich `offenInfo` über das Neubauen
+       hinweg — sonst klappte jede Eingabe im Formular die gerade
+       gelesene Erklärung wieder zu. `ohneTitel`: nur das „i", für
+       eine Stelle, die schon eine Überschrift hat. */
+    const offenInfo = new Set();
+    function sec(titel, key, info, ohneTitel) {
+      const auf = offenInfo.has(key);
+      return '<div class="k-sec k-sec--i' + (ohneTitel ? ' k-sec--nur-i' : '') + '">'
+        + '<span>' + titel + '</span>'
+        + '<button type="button" class="k-i' + (auf ? ' is-on' : '') + '" data-info="' + key + '" '
+        +   'title="Erklärung" aria-label="Erklärung" aria-expanded="' + auf + '">i</button></div>'
+        + '<div class="k-note k-info" data-infotext="' + key + '"' + (auf ? '' : ' hidden') + '>'
+        + info + '</div>';
+    }
+    function infoVerdrahten(box) {
+      box.querySelectorAll('[data-info]').forEach(b =>
+        b.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          const k = b.dataset.info;
+          const auf = !offenInfo.has(k);
+          if (auf) offenInfo.add(k); else offenInfo.delete(k);
+          b.classList.toggle('is-on', auf);
+          b.setAttribute('aria-expanded', String(auf));
+          const t = box.querySelector('[data-infotext="' + k + '"]');
+          if (t) t.hidden = !auf;
+        }));
+    }
+
     const dhcpFaehig = (node) => node.kind !== 'switch' && node.kind !== 'router';
 
     /* ═══ Der Heimrouter: eine Seite je Seite des Geräts ══════
@@ -430,11 +466,14 @@
        einem Satz, was sie ist. Ohne den Satz sind es zwei
        Adressfelder, und niemand weiß, welches wohin zeigt.      */
     function heimSeite(node, seite, ro, mehr, sn) {
+      /* ⚠️ Die Sätze über die beiden Seiten stehen seit dieser Runde
+         hinter einem „i" und nur in der großen Ansicht. Vom Nutzer:
+         „Die Oberfläche sollte mit weniger Texten auskommen" und
+         „Heimrouter: keine Erklärungen im kleinen Modal". */
       if (seite === 'wan') {
         const wan = node.nics[netz.WAN];
-        let h = '<div class="k-note">Die Seite zum <b>Anbieter</b>. Hier kommt das '
-          + 'Internet herein — genau ein Anschluss, genau eine Adresse. Zu Hause '
-          + 'steckt in dieser Buchse das Kabel vom Modem.</div>';
+        let h = mehr ? sec('WAN', 'hr-wan', 'Die Seite zum <b>Anbieter</b>. Hier kommt das '
+          + 'Internet herein — genau ein Anschluss, genau eine Adresse.') : '';
         h += nicBlock(node, wan, netz.WAN, ro, mehr, sn);
         /* Der Haken sitzt AUF dieser Seite und nicht in einem
            eigenen Abschnitt weiter unten: „wer gibt mir meine
@@ -447,25 +486,25 @@
             +      (wan.dhcp ? ' checked' : '') + '>'
             +    '<span>DHCP zur Konfiguration verwenden</span>'
             + '</label>';
-          h += '<div class="k-hint">Angekreuzt holt sich der Heimrouter seine '
-            + 'Adresse beim Anbieter — so läuft es zu Hause. Ohne Haken trägst du '
-            + 'sie selbst ein.</div>';
         }
         return h;
       }
 
       if (seite === 'lan') {
         const lan = node.nics[netz.LAN];
+        /* Klein: nur LAN 1 mit seiner Adresse — „nur LAN1 und nicht
+           der Rest". Buchsen, WLAN und DHCP-Server stehen groß. */
+        if (!mehr) return nicBlock(node, lan, netz.LAN, ro, mehr, sn);
+
         const buchsenListe = netz.bruecke(node, netz.LAN).filter(i => !node.nics[i].funkPort);
-        let h = '<div class="k-note">Die Seite zum <b>Haus</b>. Die '
+        /* ⚠️ Kein „Schnittstelle hinzufügen" mehr: die acht
+           LAN-Buchsen sind fest eingebaut (netz.js, KIND.heimrouter). */
+        let h = sec('LAN', 'hr-lan', 'Die Seite zum <b>Haus</b>. Die '
           + buchsenListe.length + ' LAN-Buchsen sind ein eingebauter <b>Switch</b>: '
-          + 'sie liegen in EINEM Netz und teilen sich diese eine Adresse.</div>';
+          + 'ein Netz, eine Adresse.');
         h += nicBlock(node, lan, netz.LAN, ro, mehr, sn);
         h += buchsen(node, buchsenListe);
-        if (!ro && buchsenListe.length + 1 < netz.KIND[node.kind].maxPorts) {
-          h += '<button class="k-add" data-k="addnic">Schnittstelle hinzufügen</button>';
-        }
-        h += wlanBlock(node, ro);
+        h += wlanBlock(node, ro, mehr);
 
         const an = !!(node.dhcpServer && node.dhcpServer.on);
         h += '<div class="k-sec">DHCP-Server</div>';
@@ -592,12 +631,13 @@
        Hälfte jeder Weiterleitungstabelle.
 
        Dieselben Farben wie draußen am Ring und am Kabel. */
-    function netzeBlock(node, sn) {
+    function netzeBlock(node, sn, mehr) {
       const meine = (sn && sn.vonNode.get(node.id)) || [];
       let h = '<div class="k-sec">Netze an diesem Gerät</div>';
       if (!meine.length) {
-        return h + '<div class="k-hint">Noch keins. Ein Netz entsteht erst, wenn an einer '
-          + 'Karte etwas hängt, das dieselbe Netzadresse trägt.</div>';
+        return h + '<div class="k-hint dim">noch keins</div>'
+          + (mehr ? sec('', 'netze', 'Ein Netz entsteht erst, wenn an einer Karte etwas '
+              + 'hängt, das dieselbe Netzadresse trägt.', true) : '');
       }
       h += '<div class="k-netze">';
       for (const s of meine) {
@@ -618,10 +658,10 @@
        zu viel Text." */
     function natBlock(node) {
       netz.natConf(node);          // legt an, falls es das noch nicht gibt
-      return '<div class="k-sec">NAT</div>'
-        + '<div class="k-hint">Ein Heimrouter übersetzt <b>immer</b>: innen viele '
+      return sec('NAT', 'nat', 'Ein Heimrouter übersetzt <b>immer</b>: innen viele '
         + 'Adressen, außen die eine vom Anbieter. Deshalb kann von außen niemand '
-        + 'anfangen.</div>';
+        + 'anfangen.')
+        + '<div class="k-hint">immer an</div>';
     }
 
     /* ═══ Automatisches Routing ═══════════════════════════════
@@ -629,21 +669,20 @@
        nicht in der Gateway-Konfiguration (siehe rip.js), und das
        ist auch sachlich richtig: ein Heimrouter, der dem Anbieter
        die Netze im Haus zuruft, stellt nichts nach, was es gibt. */
-    function ripBlock(node, ro) {
+    function ripBlock(node, ro, mehr) {
       if (netz.istHeim(node) || !stack.ripKann || !stack.ripKann(node)) return '';
       const c = netz.ripConf(node);
-      let h = '<div class="k-sec">Automatisches Routing</div>';
+      let h = mehr
+        ? sec('Automatisches Routing', 'rip', 'Die Router sagen sich im Takt gegenseitig, '
+            + 'welche Netze sie kennen und wie weit sie weg sind — <b>läuft nur im '
+            + 'Aktionsmodus</b>.')
+        : '<div class="k-sec">Automatisches Routing</div>';
       h += '<label class="k-switch">'
         +    '<input type="checkbox" data-k="rip"' + (c.on ? ' checked' : '')
         +      (ro ? ' disabled' : '') + '>'
         +    '<span>Automatisches Routing (RIP)</span>'
         + '</label>';
-      /* Auch hier nur noch ein Satz. Was wegfiel („wer zuhört,
-         zählt einen Sprung dazu"), steht im Aktionsmodus in der
-         RIP-Tabelle weiter unten mit Zahlen da — und dort ist es
-         zu sehen statt nur behauptet. */
-      h += '<div class="k-hint">Die Router sagen sich im Takt gegenseitig, welche Netze '
-        + 'sie kennen und wie weit sie weg sind — <b>läuft nur im Aktionsmodus</b>.</div>';
+      /* Der Erklärsatz steht hinter dem „i" (siehe `sec`). */
       return h;
     }
 
@@ -651,7 +690,10 @@
       const rs = node.routes || (node.routes = []);
       const ripAn = !!(stack.ripKann && stack.ripKann(node) && netz.ripConf(node).on);
 
-      let h = '<div class="k-sec">Weiterleitungstabelle</div>';
+      let h = sec('Weiterleitungstabelle', 'wege', ripAn
+        ? 'Die eingetragenen Zeilen bleiben gültig und gehen vor.'
+        : 'Für jedes Netz, das nicht an seinen eigenen Karten hängt, braucht ein '
+          + 'Router eine Zeile.');
 
       /* ─ Haken gesetzt ─
          Dann steht hier ein Satz und sonst nichts. Wortlaut vom
@@ -660,20 +702,10 @@
          nur dass ein ausgegrauter Reiter nicht sagt, WARUM. */
       if (ripAn) {
         h += '<div class="k-hint">Wird beim automatischen Routing nicht benötigt.</div>';
-        /* ⚠️ Der Satz muss dastehen, und zwar hier und nicht in
-           einer Fußnote: die eingetragenen Zeilen bleiben gültig
-           und gehen VOR. In Filius ist es umgekehrt — dort schaltet
-           ein eingeschaltetes RIP die Tabelle von Hand komplett aus
-           (Weiterleitungstabelle.holeWeiterleitungsEintrag), und
-           wer das nicht weiß, sucht den Fehler bei sich.
-           Eine Zeile, die noch dasteht und still weiterwirkt, wäre
-           genau der Fehler, den niemand findet. */
-        if (rs.length)
-          h += '<div class="k-hint dim">Die ' + rs.length + ' eingetragene'
-            + (rs.length === 1 ? ' Zeile' : 'n Zeilen') + ' '
-            + (rs.length === 1 ? 'bleibt' : 'bleiben') + ' gültig und '
-            + (rs.length === 1 ? 'geht' : 'gehen') + ' vor: was von Hand dasteht, '
-            + 'schlägt das, was ein Nachbar gesagt hat.</div>';
+        /* ⚠️ Der Satz „die eingetragenen Zeilen bleiben gültig und
+           gehen vor" stand hier sichtbar. Vom Nutzer gestrichen; er
+           steht jetzt hinter dem „i" der Überschrift. Wichtig bleibt
+           er: in Filius schaltet RIP die Tabelle von Hand aus. */
         return h;
       }
 
@@ -688,9 +720,6 @@
          unter der Tabelle, und der Absatz „Keine Zeile
          eingetragen…". Sie standen alle in einem Kasten von 340 px
          Breite und ergaben zusammen mehr Text als Tabelle. */
-      h += '<div class="k-hint">Für jedes Netz, das nicht an seinen eigenen Karten hängt, '
-        + 'braucht ein Router eine Zeile.</div>';
-
       if (rs.length) {
         h += '<div class="k-recs">';
         rs.forEach((r, i) => {
@@ -760,10 +789,10 @@
     function freiBlock(node, ro) {
       const fs = netz.natConf(node).frei;
 
-      let h = '<div class="k-sec">Portfreigaben</div>';
-
-      h += '<div class="k-hint">Die Ausnahme: eine Zeile, die <b>dasteht, bevor das erste '
-        + 'Paket kommt</b>. Nur so kann von außen jemand anfangen.</div>';
+      let h = sec('Portfreigaben', 'frei', 'Die Ausnahme von NAT: eine Zeile, die '
+        + '<b>dasteht, bevor das erste Paket kommt</b>. Nur so kann von außen jemand '
+        + 'anfangen. Spalten: Protokoll · Portfreigabe · LAN-Adresse · LAN-Port — '
+        + 'leerer LAN-Port heißt: derselbe.');
 
       if (fs.length) {
         h += '<div class="k-recs">';
@@ -791,11 +820,8 @@
             + '</div>';
         });
         h += '</div>';
-        h += '<div class="k-hint dim">Protokoll &middot; Portfreigabe &middot; LAN-Adresse '
-          + '&middot; LAN-Port. Leerer LAN-Port heißt: derselbe.</div>';
       } else {
-        h += '<div class="k-hint dim">Keine Freigabe. Von außen kommt nichts herein, worum '
-          + 'nicht aus dem Haus gefragt wurde.</div>';
+        h += '<div class="k-hint dim">keine Freigabe</div>';
       }
 
       if (!ro) h += '<button class="k-add" data-k="freineu">Neuer Eintrag</button>';
@@ -837,12 +863,15 @@
        Namen löschen", und beim Wiedereinschalten ist er weg.
        Hier bleibt der Name stehen, wenn man das Netz ausmacht,
        genau wie an einem echten Gerät.                          */
-    function wlanBlock(node, ro) {
+    function wlanBlock(node, ro, mehr) {
       if (!netz.KIND[node.kind].wlan) return '';
       const c = netz.wlanConf(node);
       const gaeste = node.nics.filter(k => k.funkPort && k.cable).length;
 
-      let h = '<div class="k-sec">WLAN</div>';
+      let h = mehr
+        ? sec('WLAN', 'wlan', 'Ein Endgerät verbindet sich, wenn dort <em>Drahtlos (WLAN)</em> '
+            + 'eingestellt und dieser Name gewählt ist.')
+        : '<div class="k-sec">WLAN</div>';
       h += '<label class="k-switch">'
         +    '<input type="checkbox" data-k="wlan"' + (c.on ? ' checked' : '')
         +      (ro ? ' disabled' : '') + '>'
@@ -859,13 +888,11 @@
         + (ro || !c.on ? ' disabled' : '') + '></label>';
 
       if (c.on && !c.ssid) {
-        h += '<div class="k-err">Ohne Namen findet dich niemand. Gib dem Netz einen — '
-          + 'genau den wählen die Geräte dann aus.</div>';
+        h += '<div class="k-err">Ohne Namen findet dich niemand.</div>';
       } else if (c.on) {
-        h += '<div class="k-hint">' + (gaeste
-          ? gaeste + (gaeste === 1 ? ' Gerät ist' : ' Geräte sind') + ' über Funk verbunden.'
-          : 'Noch kein Gerät verbunden. Stell bei einem Endgerät '
-            + '<em>Drahtlos (WLAN)</em> ein und wähle diesen Namen.') + '</div>';
+        h += '<div class="k-hint dim">' + (gaeste
+          ? gaeste + (gaeste === 1 ? ' Gerät' : ' Geräte') + ' verbunden'
+          : 'noch kein Gerät verbunden') + '</div>';
       }
       return h;
     }
@@ -1413,6 +1440,7 @@
       const sync = () => { if (dienste) dienste.sync(); };
 
       betonungVerdrahten(node, box, opts);
+      infoVerdrahten(box);
 
       /* ─ Textfelder ─ */
       box.querySelectorAll('input.f, select.f').forEach(inp => {
@@ -1859,8 +1887,104 @@
       if (t) t.innerHTML = tabellen(node);
     }
 
+    /* ═══ Die kompakte Leseansicht (Aktionsmodus) ══════════════
+       Für Router, Heimrouter und Switch — die Geräte ohne
+       Bildschirm. Vom Nutzer gesetzt: „Einstellungen kann ich jetzt
+       nicht mehr ändern! Terminal brauche ich hier nicht. Alle Infos
+       aus den Modalen werden in einer kompakten Ansicht dargestellt."
+
+       Also KEIN Formular mit gesperrten Feldern (ein ausgegrautes
+       Feld sieht aus wie ein Fehler), keine Reiter, sondern eine
+       Seite aus Zeilen „Angabe · Wert". Eingestellt wird im Entwurf.
+       Darunter die Tabellen, die das Gerät sich baut — im selben
+       `data-tabellen`-Kasten wie groß, damit `malenTabellen` sie
+       beim Laufen auffrischt. */
+    function kompakt(node, box) {
+      const sn = window.Subnetze ? window.Subnetze.berechnen(netz) : null;
+      const leer = '<span class="dim">—</span>';
+      const z = (l, v) => '<div class="kk-z"><span class="kk-l">' + esc(l) + '</span>'
+        + '<span class="kk-v">' + (v || leer) + '</span></div>';
+      const ipz = (nic) => nic.ip
+        ? '<span class="mono">' + ipInnenHtml(nic.ip, nic.mask) + '</span>'
+        : (nic.dhcp ? '<span class="dim">vom DHCP-Server</span>' : '');
+      const mono = (t) => t ? '<span class="mono">' + esc(t) + '</span>' : '';
+      const anAus = (an, zusatz) => an
+        ? '<b class="kk-an">an</b>' + (zusatz ? ' · ' + zusatz : '')
+        : '<span class="dim">aus</span>';
+
+      const karte = (nic, titel, extra) => {
+        const sub = sn ? sn.vonNic.get(node.id + '#' + nic.i) : null;
+        return '<div class="kk-nic' + (sub ? ' has-sub' : '') + '"'
+          + (sub ? ' style="--sub: var(--sn-' + sub.slot + ')"' : '') + ' data-nicbox="' + nic.i + '">'
+          + '<div class="kk-t">' + esc(titel) + '</div>'
+          + z('IP-Adresse', ipz(nic))
+          + z('Netzmaske', mono(nic.mask))
+          + z('MAC-Adresse', mono(nic.mac))
+          + (extra || '')
+          + '</div>';
+      };
+
+      let h = '<div class="kk">';
+      const K = netz.KIND[node.kind] || {};
+
+      if (netz.istHeim(node)) {
+        const wan = node.nics[netz.WAN], lan = node.nics[netz.LAN];
+        const buchsenListe = netz.bruecke(node, netz.LAN).filter(i => !node.nics[i].funkPort);
+        const belegt = buchsenListe.filter(i => netz.peerOf(node.id, i)).length;
+        h += karte(wan, 'WAN');
+        h += karte(lan, 'LAN', z('Buchsen', belegt + ' von ' + buchsenListe.length + ' belegt'));
+      } else if (node.kind !== 'switch') {
+        netz.feste(node).forEach(nic => { h += karte(nic, netz.portLabel(node, nic.i)); });
+      }
+
+      if (node.kind !== 'switch') {
+        h += '<div class="kk-g">'
+          + z('Gateway', mono(node.gateway))
+          + z('DNS', mono(node.dns));
+        if (K.routes && !netz.istHeim(node) && stack.ripKann && stack.ripKann(node))
+          h += z('Automatisches Routing', anAus(netz.ripConf(node).on));
+        h += '</div>';
+      }
+
+      if (K.wlan) {
+        const c = netz.wlanConf(node);
+        const gaeste = node.nics.filter(k => k.funkPort && k.cable).length;
+        h += '<div class="kk-g">'
+          + z('WLAN', anAus(c.on, c.ssid ? esc(c.ssid) : '')
+              + (c.on ? ' <span class="dim">· ' + gaeste + ' verbunden</span>' : ''))
+          + '</div>';
+      }
+
+      if (netz.istHeim(node)) {
+        const ds = node.dhcpServer;
+        const fs = netz.natConf(node).frei || [];
+        h += '<div class="kk-g">'
+          + z('NAT', '<b class="kk-an">immer an</b>')
+          + z('DHCP-Server', anAus(ds && ds.on, ds && ds.on && ds.von
+              ? '<span class="mono">' + esc(ds.von) + ' – ' + esc(ds.bis || '') + '</span>' : ''))
+          + z('Portfreigaben', fs.length ? '' : '<span class="dim">keine</span>')
+          + fs.map(f => '<div class="kk-zeile mono">' + esc(String(f.proto || 'tcp').toUpperCase())
+              + ' ' + esc(f.port || '?') + ' → ' + esc(f.lanIp || '?') + ':' + esc(f.lanPort || f.port || '?')
+              + '</div>').join('')
+          + '</div>';
+      } else if (K.routes) {
+        const rs = node.routes || [];
+        h += '<div class="k-sec">Weiterleitungstabelle</div>';
+        h += rs.length
+          ? '<table class="tbl"><tr><th>Ziel</th><th>Netzmaske</th><th>Gateway</th></tr>'
+            + rs.map(r => '<tr><td class="mono">' + esc(r.net || '') + '</td><td class="mono">'
+              + esc(r.mask || '') + '</td><td class="mono">' + esc(r.gateway || '') + '</td></tr>').join('')
+            + '</table>'
+          : '<div class="k-hint dim">keine Zeile von Hand</div>';
+      }
+
+      h += '</div>';
+      h += '<div class="k-tab" data-tabellen>' + tabellen(node) + '</div>';
+      box.innerHTML = h;
+    }
+
     return {
-      bauen, ipInnenHtml, malenTabellen,
+      bauen, kompakt, ipInnenHtml, malenTabellen,
       dhcpVorgabe: (node) => dhcpVorgabe(netz, node),
       /* Das Weiterleitungsfenster entsteht in app.js NACH dieser
          Instanz und meldet sich hier an. Ohne Anmeldung gibt es den

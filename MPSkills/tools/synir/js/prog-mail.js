@@ -102,7 +102,8 @@
     + 'Programm <em>E-Mail-Server</em>, unter <em>Neues Konto</em>. Dort stehen auch '
     + 'die <em>Maildomain</em> und der Benutzername, die du hier brauchst. '
     + 'Der <em>POP3-Server</em> und der <em>SMTP-Server</em> sind der Name oder die '
-    + 'Adresse des Geräts, auf dem der Server läuft — beides dasselbe Gerät.';
+    + 'Adresse des Geräts, auf dem der Server läuft — beides dasselbe Gerät. '
+    + '<br><strong>Ports sind fest:</strong> 110 holt Post ab (POP3), 25 schickt sie los (SMTP).';
 
   function bauProgramm(node, box, ctx) {
     if (st.node !== node.id) frisch(node.id);
@@ -222,10 +223,9 @@
            Vorher ist sie dagegen nötig: sie zeigt beim Tippen,
            was aus Benutzername und Maildomain wird. */
         + (k.angemeldet ? '' : adressZeile(k))
-        + anmeldeBlock(k)
-        + '<div class="k-hint">Die zwei Portnummern sind festgelegt: <strong>110</strong> holt '
-        + 'Post ab (POP3), <strong>25</strong> schickt sie los (SMTP). Wer sie vertauscht, '
-        + 'sieht im Mitschnitt, was passiert.</div>';
+        + anmeldeBlock(k);
+        /* Der Satz über die zwei Portnummern steht seit dieser Runde
+           im „i" oben (INFO_TEXT) — vom Nutzer gekürzt. */
 
     } else if (st.seite === 'neu') {
       const e = st.entwurf || { an: '', betreff: '', text: '' };
