@@ -9,9 +9,12 @@
    localStorage. In MPSkills wird daraus ohne eine einzige
    Änderung am Format:
 
-     · was die Lehrkraft an die Klasse schickt  (skill_room_state.data)
-     · was ein Kind zurückmeldet                (skill_entry_upsert)
+     · was die Lehrkraft als Szenario speichert (synir_scenarios)
+     · was ein Kind zurückmeldet                (synir_work)
      · was der Beamer anzeigt, wenn er zusieht
+
+   So ist es seit dem 2026-09-28 auch gekommen (Migration 0180,
+   js/bruecke.js, tool.js; siehe LIESMICH „Im Raum").
 
    Genau das Muster von Wild Clusters. Deshalb wird hier nichts
    an Objekte gebunden, was nicht durch JSON.stringify passt.
@@ -20,7 +23,24 @@
 (function () {
   'use strict';
   const U = window.NetUtil;
-  const KEY = 'netzsim.stand.v1';
+
+  /* ─── Im Raum oder für sich ─────────────────────────────────
+     Dieselbe Seite läuft zweimal: für sich (index.html direkt
+     geöffnet) und eingerahmt in MPSkills (tools/synir/tool.js).
+     Eingerahmt steht in der Adresse, in welchem Raum und in
+     welcher Rolle — und dann bekommt jeder Raum seinen EIGENEN
+     Platz im Gerätespeicher. Sonst läge auf dem Tablet nach der
+     Stunde in 7b das Netz aus 8c, und die Lehrkraft fände am
+     Beamer das, woran sie gestern zu Hause gebaut hat.        */
+  const PARAM   = new URLSearchParams(location.search);
+  const IM_RAUM = window.parent !== window && !!PARAM.get('raum');
+  const ROLLE   = !IM_RAUM ? 'solo'
+                : (PARAM.get('rolle') === 'presenter' ? 'presenter' : 'participant');
+  const KEY = 'netzsim.stand.v1' + (IM_RAUM ? ':' + ROLLE + ':' + PARAM.get('raum') : '');
+  /* Das Schaufenster auf der MPSkills-Startseite (preview/synir.js):
+     dort darf nichts im Gerät hängenbleiben und nichts von früher
+     hereinragen — und keine Rückfrage das Drehbuch anhalten. */
+  const VORSCHAU = IM_RAUM && PARAM.get('vorschau') === '1';
 
   /* ─── Tempostufen ───────────────────────────────────────────
      Geeicht an der Kabellaufzeit (100 ms, siehe KABEL_MS in
@@ -145,7 +165,42 @@
       save();
       if (umbau) gebaut();
       if (verlauf) verlauf.merken(label);
+      gemeldet('netz');
     }
+
+    /* ─── Türen nach draußen ────────────────────────────────────
+       Für die Brücke in den Raum (bruecke.js). Ohne Rahmen hängt
+       hier niemand, und alles läuft wie vorher.
+
+       `gemeldet` läuft nach JEDER Änderung, die der Mensch vor dem
+       Bildschirm gemacht hat — am Netz, am Auftrag, oder weil er
+       auf Aktion geschaltet hat. Das ist genau die Frage, die die
+       Spiegelung stellt: „hat die Lehrkraft hier selbst etwas
+       getan?" (dann gehört der Beamer ihr) bzw. „hat das Kind
+       etwas getan?" (dann geht der Stand nach vorn).
+
+       `extern.pick` usw. sind die Rückwege des Szenario-Menüs.
+       Ohne Raum bleiben sie leer, und das Menü lädt selbst. */
+    const extern = {
+      beiAenderung: [],
+      pick: null,          // (id, eintrag) → true, wenn draußen erledigt
+      share: null,         // (id, an, eintrag)
+      loeschen: null,      // (id, eintrag)
+      alsSzenario: null    // ({ id, name, titel, aufgabe, stand, neu })
+    };
+    function gemeldet(was) {
+      for (const f of extern.beiAenderung) {
+        try { f(was); } catch (e) { console.warn('[app] Rückruf:', e.message); }
+      }
+    }
+
+    /* Welches Szenario gerade aufliegt, und sein Auftrag. Beides
+       gehört zum Stand (standJson) — vorher ging der Auftrag beim
+       Speichern auf dem PC und beim Neuladen verloren, und wer ein
+       gespeichertes Netz wieder öffnete, hatte die Aufgabe nicht
+       mehr dazu. `id` ist „builtin:<schlüssel>", eine uuid (eigenes
+       Szenario im Raum) oder null (selbst gebaut). */
+    const aktuell = { id: null, titel: '', aufgabe: '' };
 
     const konfig = new window.Konfig(netz, stack, dienste);
 
@@ -334,6 +389,7 @@
         if (modus === 'aktion') vonVorn();
         neuZeichnen();
         save();
+        gemeldet('netz');
         toast((richtung === 'zurueck' ? 'Rückgängig' : 'Wiederhergestellt')
           + (was ? ': ' + was : '') + ' · Strg+'
           + (richtung === 'zurueck' ? 'Y' : 'Z') + ' dreht es zurück.');
@@ -834,6 +890,10 @@
         dienste.stop();
         if (!still) toast('Entwurf — bauen, verkabeln, Adressen eintragen. Die Uhr steht.');
       } else {
+        // Aktion schaltet nur der Mensch (alle Aufrufe von hier aus
+        // setzen den Entwurf) — und am Beamer heißt das „die
+        // Lehrkraft macht selbst weiter".
+        gemeldet('modus');
         panels.closeKarte();
         /* ⭐ JEDES Mal von vorn, nicht nur nach einem Umbau. Vom
            Nutzer verlangt: „Jedes Mal, wenn der Actions-Modus
@@ -953,7 +1013,23 @@
         const b = D.blobsBenutzt(netz);
         if (Object.keys(b).length) j.blobs = b;
       }
+      // Der Auftrag reist mit (siehe `aktuell`). netz.fromJSON liest
+      // diese Felder nicht — alte Programmstände stören sie also nicht.
+      if (aktuell.id) j.szenario = aktuell.id;
+      if (aktuell.titel) j.titel = aktuell.titel;
+      if (aktuell.aufgabe) j.aufgabe = aktuell.aufgabe;
       return j;
+    }
+
+    /* Den Auftrag aus einem Stand übernehmen und anzeigen. Ein
+       Stand ohne Auftrag (selbst gebaut, oder aus der Zeit vor
+       diesem Feld) räumt den alten weg — er gehörte zu einem
+       anderen Netz. */
+    function auftragAus(data) {
+      aktuell.id = (data && data.szenario) || null;
+      aktuell.titel = (data && data.titel) || '';
+      aktuell.aufgabe = (data && data.aufgabe) || '';
+      showAufgabe(aktuell.aufgabe ? aktuell : null);
     }
 
     /* ⚠️ Ein voller localStorage scheiterte hier bis zum
@@ -968,8 +1044,13 @@
        250 ms wäre selbst der Fehler. */
     let vollGemeldet = false;
     let saveTimer = null;
+    /* Beim Zusehen (Spiegelung am Beamer) liegt das Netz eines
+       Kindes auf — das gehört nicht in den Speicher der Lehrkraft.
+       bruecke.js schaltet das Sichern dafür ab und danach wieder an. */
+    let nichtSpeichern = VORSCHAU;
     function save() {
       clearTimeout(saveTimer);
+      if (nichtSpeichern) return;
       saveTimer = setTimeout(() => {
         try {
           localStorage.setItem(KEY, JSON.stringify(standJson()));
@@ -986,6 +1067,7 @@
     }
 
     function load() {
+      if (VORSCHAU) return false;
       try {
         const raw = localStorage.getItem(KEY);
         if (!raw) return false;
@@ -994,7 +1076,8 @@
         // schon beim Aufbauen auf sie.
         if (D) { D.blobsLeeren(); D.blobsLaden(data.blobs); }
         netz.fromJSON(data);
-        return netz.count > 0;
+        auftragAus(data);
+        return netz.count > 0 || !!aktuell.aufgabe;
       } catch (e) {
         console.warn('[app] Gespeicherter Stand ist unlesbar:', e.message);
         return false;
@@ -1007,41 +1090,80 @@
        ein Text. */
     const SZENARIEN = window.SZENARIEN || {};
 
-    $('szenario').addEventListener('change', (e) => {
-      const key = e.target.value;
-      if (!key) return;
-      const s = SZENARIEN[key];
-      if (!s) return;
-      if (netz.count && !window.confirm('Das aktuelle Netz wird ersetzt. Weiter?')) {
-        e.target.value = ''; return;
-      }
+    /* Ein Szenario auflegen — egal woher es kommt: aus dem Code
+       (die mitgelieferten), vom Server (ein eigenes, im Raum) oder
+       von der Lehrkraft vorn (Spiegelung: dann ist `s` der Stand
+       eines Kindes, mitsamt seiner Dateien).
+
+       `s` = { id, titel, aufgabe, netz } oder ein ganzer Stand
+       (dann ist `s.netz` leer und `s` selbst das Netz).
+
+       `opt.fragen`: vorher nachfragen, wenn schon etwas daliegt.
+       `opt.still`:  ohne Kurzmeldung und ohne `gemeldet` — das
+                     Laden kam von draußen und ist keine Handlung
+                     des Menschen hier (siehe bruecke.js). */
+    function szenarioLaden(s, opt) {
+      opt = opt || {};
+      if (!s) return false;
+      if (opt.fragen && !VORSCHAU && netz.count && !window.confirm('Das aktuelle Netz wird ersetzt. Weiter?')) return false;
+      const data = s.netz ? U.deepCopy(s.netz) : U.deepCopy(s);
       engine.reset();
       /* Ein Szenario bringt seine eigenen Dateien mit (oder
          keine). Was das vorige Netz eingeführt hatte, wird hier
          weggeräumt — es ist die einzige Stelle neben „Neu" und
          „Öffnen", an der das gefahrlos geht, denn der Verlauf
          fängt gleich darunter ebenfalls von vorn an. */
-      if (D) D.blobsLeeren();
-      netz.fromJSON(U.deepCopy(s.netz));
+      if (D) { D.blobsLeeren(); D.blobsLaden(data.blobs || s.blobs); }
+      netz.fromJSON(data);
       mit.clear();
       flaeche.clearDots();
       flaeche.select(null);
       geraet.close();
+      panels.closeKarte();
       // Eine neue Aufgabe fängt im Entwurf an: erst lesen und
       // einrichten, dann laufen lassen. Wer nur zusehen will,
       // schaltet mit einem Klick auf Aktion.
       setModus('entwurf', true);
       umgebaut = false;
       neuZeichnen();
-      save();
       /* ⚠️ Der Verlauf fängt VON VORN an, er wird nicht fortgesetzt.
          Ein Strg+Z, das über ein geladenes Szenario hinweg in das
          vorige Netz zurückführt, wäre keine Rücknahme, sondern ein
          Sprung in eine andere Aufgabe — und würde die gerade
          verteilte Aufgabe der Lehrkraft lautlos wegnehmen. */
       verlauf.leeren();
-      showAufgabe(s);
-      e.target.value = '';
+      auftragAus({
+        szenario: s.id !== undefined ? s.id : s.szenario,
+        titel: s.titel, aufgabe: s.aufgabe
+      });
+      save();
+      if (!opt.still) gemeldet('szenario');
+      return true;
+    }
+
+    /* Das Menü (szmenue.js). Ohne Raum lädt es die mitgelieferten
+       selbst; im Raum fragt es erst draußen (extern.pick) — dort
+       wird entschieden, ob der Inhalt vom Server kommt, und dort
+       endet eine laufende Spiegelung. */
+    function eingebaut(id) {
+      const k = String(id || '').replace(/^builtin:/, '');
+      const s = SZENARIEN[k];
+      return s ? { id: 'builtin:' + k, titel: s.titel, aufgabe: s.aufgabe, netz: s.netz } : null;
+    }
+    const menue = window.SzMenue({
+      knopf: $('szenarioBtn'),
+      pop: $('szenarioPop'),
+      onPick: (id, it) => {
+        if (extern.pick && extern.pick(id, it)) return;
+        const s = eingebaut(id);
+        if (s) szenarioLaden(s, { fragen: true });
+      },
+      onShare: (id, an, it) => { if (extern.share) extern.share(id, an, it); },
+      onLoeschen: (id, it) => {
+        if (!extern.loeschen) return;
+        if (!window.confirm('„' + ((it && it.titel) || 'Szenario') + '" endgültig löschen?')) return;
+        extern.loeschen(id, it);
+      }
     });
 
     function showAufgabe(s) {
@@ -1051,8 +1173,10 @@
       // Ein neuer Auftrag kommt immer aufgeklappt — er will
       // gelesen werden, bevor jemand anfängt.
       box.classList.remove('is-fold');
-      $('aufgabeTitel').textContent = s.titel;
-      $('aufgabeText').innerHTML = s.aufgabe;
+      $('aufgabeTitel').textContent = s.titel || '';
+      /* Durch den Türsteher, immer: im Raum kommt dieser Text vom
+         Server auf das Tablet eines Kindes (aufgabe.js). */
+      $('aufgabeText').innerHTML = window.Aufgabe ? window.Aufgabe.reinigen(s.aufgabe) : s.aufgabe;
       // Erst messen, wenn der Text steht — vorher ist die Karte
       // noch so hoch wie der vorige Auftrag.
       requestAnimationFrame(() => subnetze.platzieren());
@@ -1086,24 +1210,72 @@
       if (D) D.blobsLeeren();
       netz.fromJSON({ nodes: [], cables: [] });
       mit.clear(); flaeche.clearDots(); flaeche.select(null); geraet.close();
-      $('aufgabe').hidden = true;
+      auftragAus(null);
       setModus('entwurf', true);
       umgebaut = false;
       neuZeichnen();
       save();
       verlauf.leeren();
+      gemeldet('neu');
     });
 
     /* Export/Import als Datei — im Prototyp der Ersatz für „die
        Lehrkraft schickt" und zugleich das, was eine Klasse
        abgeben kann. */
-    $('exportBtn').addEventListener('click', () => {
+    function aufPcSpeichern() {
       const blob = new Blob([JSON.stringify(standJson(), null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'netz.json';
+      // Der Dateiname sagt, was drin ist — zwanzig „netz (7).json"
+      // im Download-Ordner sagen es nicht.
+      const name = (aktuell.titel || 'netz').replace(/^\s*\d+\s*·\s*/, '')
+        .replace(/[^\wäöüÄÖÜß -]+/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'netz';
+      a.download = name + '.json';
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }
+
+    /* „Speichern". Die Lehrkraft im Raum hat zwei Ziele (PC oder
+       eigenes Szenario), alle anderen nur eines — die sehen gar
+       keine Frage, sondern bekommen die Datei. */
+    $('exportBtn').addEventListener('click', async () => {
+      if (!extern.alsSzenario) { aufPcSpeichern(); return; }
+      const wohin = await window.Aufgabe.frage({
+        titel: 'Speichern',
+        knoepfe: [
+          { id: 'pc', label: 'Auf dem PC speichern', sub: 'als Datei — zum Weitergeben oder Abgeben' },
+          { id: 'sz', label: 'Als Szenario speichern', sub: 'unter „Eigene" — in jedem Raum wieder da', prim: true }
+        ]
+      });
+      if (wohin === 'pc') { aufPcSpeichern(); return; }
+      if (wohin !== 'sz') return;
+      const eigen = !!aktuell.id && !/^builtin:/.test(aktuell.id)
+        && menue.cfg.private.some(x => x.id === aktuell.id);
+      const n = await window.Aufgabe.name({
+        vorschlag: aktuell.titel || '',
+        ueberschreiben: eigen
+      });
+      if (!n) return;
+      extern.alsSzenario({
+        id: (eigen && !n.neu) ? aktuell.id : null,
+        name: n.name,
+        titel: aktuell.titel || n.name,
+        aufgabe: aktuell.aufgabe || '',
+        stand: standJson()
+      });
+    });
+
+    /* Der Aufgabentext (nur die Lehrkraft im Raum sieht den Knopf).
+       Bearbeitet wird der Auftrag, der gerade aufliegt — oder, wenn
+       keiner da ist, ein neuer. */
+    $('aufgabeBtn').addEventListener('click', async () => {
+      const r = await window.Aufgabe.editor({ titel: aktuell.titel, aufgabe: aktuell.aufgabe });
+      if (!r) return;
+      aktuell.titel = r.titel;
+      aktuell.aufgabe = r.aufgabe;
+      showAufgabe(aktuell.aufgabe || aktuell.titel ? aktuell : null);
+      save();
+      gemeldet('auftrag');
     });
 
     $('importInput').addEventListener('change', (e) => {
@@ -1123,7 +1295,9 @@
           flaeche.select(null); panels.closeKarte();
           setModus('entwurf', true);
           umgebaut = false;
+          auftragAus(data);
           neuZeichnen(); save(); verlauf.leeren();
+          gemeldet('geoeffnet');
           toast('Netz geladen.');
         } catch (err) { toast('Diese Datei konnte ich nicht lesen.'); }
       };
@@ -1387,20 +1561,21 @@
     });
 
     /* ─── Los ─────────────────────────────────────────────────*/
-    // Szenarienliste füllen
-    const selSz = $('szenario');
-    for (const k in SZENARIEN) {
-      const o = document.createElement('option');
-      o.value = k; o.textContent = SZENARIEN[k].titel;
-      selSz.appendChild(o);
-    }
+    // Szenarienliste füllen — die mitgelieferten sind „public".
+    menue.setzen({
+      rolle: ROLLE,
+      public: Object.keys(SZENARIEN).map(k => ({ id: 'builtin:' + k, titel: SZENARIEN[k].titel }))
+    });
+    document.body.dataset.rolle = ROLLE;
 
-    if (!load()) {
+    if (!load() && !IM_RAUM) {
       // Erster Besuch: das kleinste sinnvolle Netz steht schon da.
       // Eine leere Fläche ist der schlechteste Anfang — man weiß
       // nicht, was das Programm überhaupt kann.
-      const s = SZENARIEN['zwei'];
-      if (s) { netz.fromJSON(U.deepCopy(s.netz)); showAufgabe(s); }
+      // (Im Raum nicht: dort entscheidet die Lehrkraft, womit
+      // angefangen wird, und bis dahin ist die Fläche leer.)
+      const s = eingebaut('zwei');
+      if (s) { netz.fromJSON(U.deepCopy(s.netz)); auftragAus({ szenario: s.id, titel: s.titel, aufgabe: s.aufgabe }); }
     }
 
     // Anfangen wird immer im Entwurf — wie in Filius. Das Netz
@@ -1421,6 +1596,11 @@
                    dienste, konfig, save, TEMPI, subnetze, subnetzeZeigen,
                    setModus, leisteSetzen, verlauf,
                    kopieren, einfuegen, loeschenAuswahl,
+                   // Für den Raum (bruecke.js) und die Prüfstände.
+                   standJson, szenarioLaden, eingebaut, showAufgabe, toast,
+                   setRunning, menue, extern, aktuell, ROLLE, IM_RAUM,
+                   speichern(an) { nichtSpeichern = !an || VORSCHAU; if (!nichtSpeichern) save(); },
+                   VORSCHAU,
                    get ablage() { return ablage; },
                    get modus() { return modus; },
                    get leisteZu() { return rail.classList.contains('is-zu'); } };

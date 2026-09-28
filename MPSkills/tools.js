@@ -69,6 +69,11 @@ window.TOOLS_OVERLAY = {
   // Skill läuft, ist aber noch nicht rund; das ist eine Auskunft über die
   // Auslieferung, nicht über die Datenbankzeile, gehört also hierher.
   knowledgestack: { ready: true, beta: true },
+  // Achter Skill (Migration 0180) — Netzwerksimulator, dritter
+  // eingerahmter nach NeuroLab und Wild Clusters. Die Lehrkraft gibt
+  // Szenarien frei, holt Netze auf den Beamer und schaltet die
+  // Tablets blind. beta: die Integration ist frisch (28.09.2026).
+  synir: { ready: true, beta: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

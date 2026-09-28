@@ -3577,3 +3577,163 @@ body.trace-open .term-o { height: clamp(96px, 20vh, 252px); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ═══ Im Raum (MPSkills) ═════════════════════════════════════
+   Alles darunter gehört zur Einbindung: Szenario-Menü, Dialoge,
+   der Aufgabentext-Editor, der Hinweis auf leerer Fläche und der
+   Schleier für „blind". Ohne Raum sieht man davon nur das Menü —
+   und das sieht aus wie das frühere Auswahlfeld. */
+
+/* Was nur die Lehrkraft im Raum hat. Die Rolle setzt app.js
+   (body[data-rolle]); ohne sie bleibt der Knopf weg. */
+.nur-lehrer { display: none; }
+body[data-rolle="presenter"] .nur-lehrer { display: inline-block; }
+
+.tbtn--prim {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-in);
+  font-weight: 600;
+}
+.tbtn--prim:hover { background: var(--accent); filter: brightness(1.06); border-color: var(--accent); }
+
+/* ─── Szenario-Menü ─────────────────────────────────────────── */
+.szm { position: relative; }
+.szm-btn { display: inline-flex; align-items: center; gap: 6px; max-width: none; white-space: nowrap; }
+.szm-pfeil { font-size: 11px; color: var(--ink-3); }
+.szm-pop {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 70;
+  width: min(360px, calc(100vw - 24px)); max-height: min(460px, 70vh); overflow: auto;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--r2);
+  box-shadow: var(--e3); padding: 6px;
+}
+.szm-tabs {
+  display: flex; gap: 4px; padding: 3px; margin-bottom: 6px;
+  background: var(--surface-2); border-radius: var(--r1);
+}
+.szm-tab {
+  flex: 1; border: 0; background: transparent; color: var(--ink-2);
+  font: inherit; font-size: 13px; font-weight: 600; padding: 7px 8px;
+  border-radius: calc(var(--r1) - 3px); cursor: pointer;
+}
+.szm-tab.is-on { background: var(--surface); color: var(--ink); box-shadow: var(--e1); }
+.szm-sub { font-weight: 400; font-size: 11px; color: var(--ink-3); margin-left: 3px; }
+.szm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.szm-item {
+  display: flex; align-items: center; gap: 4px;
+  border-radius: var(--r1); border: 1px solid transparent;
+}
+.szm-item:hover { background: var(--surface-2); }
+/* Geteilt = grün hinterlegt. Man sieht im Vorbeigehen, was die
+   Klasse gerade hat, ohne ein Symbol zu entziffern. */
+.szm-item.is-shared { background: var(--accent-sh); border-color: rgba(15,179,137,.45); }
+.szm-name {
+  flex: 1; min-width: 0; text-align: left; border: 0; background: transparent;
+  font: inherit; font-size: 13.5px; color: inherit; padding: 9px 10px; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.szm-share {
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-3);
+  border-radius: 999px; padding: 4px 10px 4px 8px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.szm-share:hover { color: var(--ink); border-color: var(--line-2); }
+.szm-share.is-on { background: var(--accent); border-color: var(--accent); color: var(--accent-in); }
+.szm-del {
+  flex: none; width: 28px; height: 28px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--ink-3); font-size: 17px; cursor: pointer; margin-right: 3px;
+}
+.szm-del:hover { background: var(--bg); color: #c0392b; }
+.szm-leer { margin: 8px 10px 10px; font-size: 13px; color: var(--ink-2); }
+
+/* ─── Auftrag: Listen und die drei Schriftgrößen ─────────────── */
+.auf-b ul, .auf-b ol { margin: 8px 0; padding-left: 22px; }
+.auf-b li { margin: 3px 0; }
+.auf-b .fs-s { font-size: 12px; }
+.auf-b .fs-l { font-size: 16.5px; line-height: 1.4; }
+
+/* ─── Dialoge ───────────────────────────────────────────────── */
+.sy-dlg {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(10,13,24,.38); backdrop-filter: blur(2px);
+}
+.sy-dlg-box {
+  width: min(420px, 100%); max-height: calc(100vh - 32px); overflow: auto;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--r3); box-shadow: var(--e3);
+  padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 12px;
+}
+.sy-dlg-box--breit { width: min(620px, 100%); }
+.sy-dlg-h { display: flex; align-items: center; gap: 8px; }
+.sy-dlg-h strong { font-size: 16px; }
+.sy-dlg-x {
+  margin-left: auto; width: 30px; height: 30px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--ink-3); font-size: 19px; cursor: pointer;
+}
+.sy-dlg-x:hover { background: var(--bg); color: var(--ink); }
+.sy-dlg-l { display: grid; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.sy-dlg-in {
+  font: inherit; font-size: 14px; font-weight: 400; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r1);
+  padding: 8px 11px;
+}
+.sy-dlg-in:focus { outline: 2px solid var(--accent-sh); border-color: var(--accent); }
+.sy-dlg-in.is-err { border-color: #c0392b; }
+.sy-dlg-t { margin: 0; font-size: 13px; color: var(--ink-2); }
+.sy-dlg-t.dim { color: var(--ink-3); }
+.sy-dlg-f { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.sy-dlg-wahl { display: grid; gap: 8px; }
+.sy-wahl {
+  display: grid; gap: 2px; text-align: left; cursor: pointer;
+  font: inherit; color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: var(--r2); padding: 12px 14px;
+}
+.sy-wahl:hover, .sy-wahl:focus-visible { border-color: var(--accent); background: var(--surface); }
+.sy-wahl strong { font-size: 14px; }
+.sy-wahl span { font-size: 12.5px; color: var(--ink-3); }
+.sy-wahl.is-prim { border-color: rgba(15,179,137,.5); }
+
+/* ─── Editor „Aufgabentext" ─────────────────────────────────── */
+.aed-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+.aed-b {
+  min-width: 36px; height: 34px; padding: 0 10px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font: inherit; font-size: 14px; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r1);
+  box-shadow: var(--e1); cursor: pointer;
+}
+.aed-b:hover { background: var(--surface-2); border-color: var(--line-2); }
+.aed-gr span { font-size: 12px; color: var(--ink-3); min-width: 40px; text-align: left; }
+/* Das Feld trägt `.auf-b`, damit es genau so aussieht wie der
+   Auftrag später auf der Fläche — nur ohne dessen Höhendeckel. */
+.aed-feld.auf-b {
+  max-height: none; min-height: 200px; height: min(340px, 45vh); overflow: auto;
+  background: var(--auf-bg); border: 1px solid var(--auf-line); border-radius: var(--r2);
+  padding: 6px 16px 14px; outline: none;
+}
+.aed-feld.auf-b:focus { border-color: var(--accent); }
+
+/* ─── Leere Fläche im Raum ──────────────────────────────────── */
+.leerhinweis {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+  width: min(420px, calc(100% - 48px)); z-index: 4; pointer-events: none;
+  text-align: center; font-size: 14.5px; line-height: 1.55; color: var(--ink-2);
+  background: var(--glas); border: 1px solid var(--line); border-radius: var(--r3);
+  padding: 18px 22px; box-shadow: var(--e1);
+}
+
+/* ─── Blind ─────────────────────────────────────────────────── */
+/* Über allem, auch über Dialogen und Kurzmeldungen. Er fängt jeden
+   Zeiger; die Tasten fängt bruecke.js. */
+.blind-schleier {
+  position: fixed; inset: 0; z-index: 9999;
+  display: none; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+  background: var(--bg); color: var(--ink); text-align: center; padding: 24px;
+  user-select: none;
+}
+.blind-schleier.is-on { display: flex; }
+.blind-schleier p { margin: 0; font-size: clamp(18px, 3vw, 26px); font-weight: 600; color: var(--ink-2); }
+.blind-logo { width: min(340px, 70vw); height: auto; pointer-events: none; -webkit-user-drag: none; }
+.blind-logo--dunkel { display: none; }
+:root[data-theme="dark"] .blind-logo--hell   { display: none; }
+:root[data-theme="dark"] .blind-logo--dunkel { display: block; }

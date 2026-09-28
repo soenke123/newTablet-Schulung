@@ -458,18 +458,70 @@ Klassische `<script>`-Einbindung mit globalen Namen, kein Modulsystem — diesel
 Bauweise wie MPSkills, damit der Ordner später ohne Umbau nach
 `MPSkills/tools/…/` wandern kann.
 
-## Der Weg nach MPSkills
+## Im Raum (MPSkills)
 
-Ein Szenario ist bereits reines JSON (`netz.toJSON()`). Daraus wird ohne
-Formatänderung:
+Seit dem 2026-09-28 ist SYNIR ein Skill in MPSkills (Migration `0180_synir.sql`,
+Eintrag `synir` in `MPSkills/tools.js`). Die Anwendung läuft dabei **eingerahmt** in
+einem `<iframe>`, genau wie Wild Clusters. Dieselbe `index.html` geht weiterhin auch
+für sich.
 
-* was die Lehrkraft an die Klasse schickt → `skill_room_state.data`
-* was ein Kind zurückmeldet → `skill_entry_upsert`
-* was der Beamer zeigt, wenn er bei jemandem zusieht
+| Datei | Rolle |
+|---|---|
+| `tool.js` / `tool.css` | Die Tür auf der MPSkills-Seite. Sie baut das Pult der Lehrkraft, ruft den Server und schickt Befehle in den Rahmen. |
+| `js/bruecke.js` | Die Gegenseite im Rahmen (`synir:cmd` rein, `synir:event` raus). **Ohne Rahmen tut sie nichts.** |
+| `js/szmenue.js` | Das Szenario-Menü: ohne Raum nur die mitgelieferten, bei der Lehrkraft Reiter *Öffentlich (public)* / *Eigene (private)* mit Teilen-Schalter, auf dem Tablet nur die geteilten. |
+| `js/aufgabe.js` | `reinigen()` (der Türsteher für jeden Aufgabentext), der Editor „Aufgabentext" und die Speichern-Dialoge. |
 
-Das ist das Muster von Wild Clusters. Zu bauen bleiben `mount/update/unmount`
-gegen `lib/tool.js`, die Rollen `participant`/`presenter`, und der „Stand der
-Klasse" am Beamer.
+**Was die Lehrkraft hat:**
+
+* **Teilen.** Das Symbol hinter jedem Szenario schaltet die Freigabe. Geteilte Szenarien
+  sind grün hinterlegt. Die Freigabe steht in `skill_room_state.data.shared`
+  (`[{id, t}]`); mitgelieferte tragen die ID `builtin:<schlüssel>`.
+* **Eigene Szenarien.** Unter **Speichern → Als Szenario speichern** fragt ein Dialog nach
+  einem Namen. Ist das geladene Szenario schon ein eigenes, gibt es „Überschreiben" und
+  „Als neues speichern". Eigene Szenarien liegen in `synir_scenarios`, hängen an der
+  Lehrkraft und nicht am Raum, und stehen in jedem neuen Raum unter **Eigene**.
+* **Aufgabentext.** Der Editor bietet F, K, Aufzählung und einen Knopf für die
+  Schriftgröße (normal → groß → klein, als Klassen `fs-l`/`fs-s` am Absatz). Jedes
+  Szenario hat genau einen Auftrag.
+* **Stand der Klasse und Spiegelung.** Jedes Tablet meldet seinen Stand
+  (gebremst auf 1,5 s, in `synir_work`). Ein Tipp auf eine Person legt deren Netz auf
+  den Beamer, und der Beamer folgt, solange das Kind arbeitet.
+  * Sobald die Lehrkraft **selbst** etwas tut (Netz, Auftrag oder Umschalten auf Aktion),
+    wird es ihre Kopie. Der Hinweis wechselt dann auf „Kopie von …".
+  * Die Lehrkraft schreibt nie in den Stand eines Kindes.
+  * „Beenden" legt das eigene Netz der Lehrkraft zurück.
+* **Schüler blind.** Legt auf jedes Tablet das Logo mit „Wir machen jetzt am Beamer
+  weiter.". Der Schleier fängt Zeiger und Tasten ab, und `synir_work_put` lehnt ab,
+  solange er liegt.
+
+**Was die Klasse hat:**
+
+* Nur die geteilten Szenarien.
+* Die Meldung „Neues Szenario verfügbar", sobald etwas dazukommt.
+* Speichern nur auf dem PC. Die Datei trägt jetzt auch den Auftrag (`titel`, `aufgabe`,
+  `szenario` im Stand); vorher ging er beim Speichern verloren.
+
+**Der Gerätespeicher** ist eingerahmt je Raum und Rolle getrennt
+(`netzsim.stand.v1:<rolle>:<raumcode>`).
+
+**Große Dateien:** Ein Stand über ca. 250 KB geht ohne seine hochgeladenen Dateien nach
+vorn. Am Beamer steht dann ein Schild „Datei liegt nur auf dem Tablet".
+
+**Prüfstände:**
+
+| Aufruf | Was er prüft |
+|---|---|
+| `node tests/raumtest.js` | Lehrkraft und Tablet im Browser gegen die echte Migration in pglite |
+| `node supabase/tests/0180_synir.mjs` (aus der Wurzel) | die RPCs allein |
+
+Ohne installiertes Chrome den Pfad in `CHROME_PATH` setzen (gilt auch für `uitest.js`).
+
+⚠️ **Cache-Stempel.**
+* Wer `tool.js` oder `tool.css` anfasst, zieht den Stempel in `MPSkills/lib/tool.js`
+  (und die fünf Stellen, die dort stehen).
+* Wer `index.html`, `css/` oder `js/` anfasst, zieht zusätzlich `V` in `tool.js` **und**
+  die `?v=` in `index.html`.
 
 ## Das Tempo — und was daran hängt
 
