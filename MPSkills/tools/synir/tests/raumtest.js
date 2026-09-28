@@ -15,6 +15,9 @@
      · Spiegelung: Beamer folgt dem Kind; tut die Lehrkraft selbst
        etwas, wird es ihre Kopie, und das Kind bleibt unberührt
      · Blind: Schleier auf dem Tablet, Server nimmt nichts an
+     · Class Wide Web (0181): zwei Tablets pingen sich über den
+       Server an, 8.8.8.8 kennt den Namen des anderen, eine Webseite
+       lädt über den Raum, die Lehrkraft sieht, wem was gehört
 
    Start:  CHROME_PATH=/pfad/zu/chrome node tests/raumtest.js
    (ohne CHROME_PATH wird das installierte Chrome genommen)
@@ -125,11 +128,13 @@ function server() {
   const db = new PGlite();
   await db.exec(STUBS);
   await db.exec(fs.readFileSync(path.join(REPO, 'supabase/migrations/0180_synir.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.join(REPO, 'supabase/migrations/0181_synir_cww.sql'), 'utf8'));
   const L = (await db.query(`insert into profiles default values returning id`)).rows[0].id;
   const room = (await db.query(
     `insert into skill_rooms (code, tool_id, owner_id, title) values ('RAUM77','synir',$1,'7b') returning id`, [L])).rows[0].id;
   const pid = (await db.query(
     `insert into skill_participants (room_id, token, seat, name) values ($1,'tok-mia',1,'Mia') returning id`, [room])).rows[0].id;
+  await db.query(`insert into skill_participants (room_id, token, seat, name) values ($1,'tok-ben',2,'Ben')`, [room]);
 
   // Ein Aufruf, als käme er über PostgREST: benannte Argumente.
   let dbLock = Promise.resolve();
@@ -203,8 +208,8 @@ function server() {
   ok('Reiter heißen public / private',
      /Öffentlich.*public/.test(await lf.locator('.szm-tab').nth(0).textContent())
      && /Eigene.*private/.test(await lf.locator('.szm-tab').nth(1).textContent()));
-  ok('Öffentlich: die sieben mitgelieferten, je mit Teilen-Symbol',
-     await lf.locator('.szm-item').count() === 7 && await lf.locator('.szm-share').count() === 7);
+  ok('Öffentlich: die acht mitgelieferten, je mit Teilen-Symbol',
+     await lf.locator('.szm-item').count() === 8 && await lf.locator('.szm-share').count() === 8);
   await lf.locator('.szm-item[data-id="builtin:router"] .szm-share').click();
   await warte(300);
   ok('Geteilt: grün hinterlegt', await lf.locator('.szm-item[data-id="builtin:router"]').evaluate(e => e.classList.contains('is-shared')));
@@ -287,7 +292,7 @@ function server() {
   await L1.page.locator('#syList').click();
   await warte(600);
   ok('Stand der Klasse: Mia mit Stand', /Mia/.test(await L1.page.locator('#syPeople').textContent())
-     && await L1.page.locator('.sy-person:not([disabled])').count() === 1);
+     && await L1.page.locator('#syPeople .sy-person:not([disabled])').count() === 1);
   await L1.page.locator('.sy-person[data-pid="' + pid + '"]').click();
   await warte(1200);
   ok('Beamer zeigt Mias Netz', await lf.evaluate(() => window.SIM.netz.count) === 3);
@@ -341,6 +346,131 @@ function server() {
   ok('Aufgehoben: Schleier weg', await sf.locator('.blind-schleier.is-on').count() === 0);
 
   await L1.page.screenshot({ path: path.join(OUT, 'shot-raum-lehrer.png') });
+
+  console.log('\n── Class Wide Web ──────────────────────────────────');
+  const S2 = await seite('participant', '&token=tok-ben');
+  const bf = S2.fr;
+  await warte(800);
+  const pL = await lf.evaluate(() => window.SIM.netz.internetConf().prefix);
+  const pM = await sf.evaluate(() => window.SIM.netz.internetConf().prefix);
+  const pB = await bf.evaluate(() => window.SIM.netz.internetConf().prefix);
+  ok('Lehrkraft hat 100', pL === 100, String(pL));
+  ok('Mia und Ben: zwei verschiedene /8 aus 50…150',
+     pM >= 50 && pM <= 150 && pB >= 50 && pB <= 150 && pM !== pB && pM !== 100 && pB !== 100, pM + ' / ' + pB);
+  const bbB = await bf.evaluate(() => window.SIM.netz.internetConf().backbone);
+
+  // Mia: ein Rechner am cww. Ben: Server mit DNS und Webserver.
+  await sf.evaluate((p) => {
+    const S = window.SIM;
+    S.netz.fromJSON({ v: 2, nodes: [], cables: [] });
+    const c = S.netz.addNode('cww', 400, 200);
+    const e = S.netz.addNode('host', 400, 420);
+    c.nics[1].ip = p + '.0.0.1';
+    e.nics[0].ip = p + '.0.0.10'; e.gateway = p + '.0.0.1'; e.dns = '8.8.8.8';
+    S.netz.addCable(e.id, 0, c.id, 1);
+    S.neuZeichnen();
+  }, pM);
+  await bf.evaluate((p) => {
+    const S = window.SIM;
+    S.netz.fromJSON({ v: 2, nodes: [], cables: [] });
+    const c = S.netz.addNode('cww', 400, 200);
+    const sv = S.netz.addNode('server', 400, 420);
+    c.nics[1].ip = p + '.0.0.1';
+    sv.nics[0].ip = p + '.0.0.20'; sv.gateway = p + '.0.0.1'; sv.dns = '8.8.8.8';
+    sv.software = ['dns', 'webserver'];
+    const d = S.netz.dnsConf(sv); d.on = true; d.records = [{ name: 'www.ben.de', ip: p + '.0.0.20' }];
+    S.dienste.http.standardDateien(sv);
+    S.netz.webConf(sv).on = true;
+    S.netz.addCable(sv.id, 0, c.id, 1);
+    S.neuZeichnen();
+  }, pB);
+  for (const f of [sf, bf]) {
+    await f.locator('.mbtn[data-modus="aktion"]').click();
+    await f.evaluate(() => { window.SIM.engine.speed = 2; });
+  }
+  await warte(3500);
+  const namen = (await db.query(`select name, wert, prefix from synir_cww_name where room_id = $1`, [room])).rows;
+  ok('Bens Name steht beim Server', namen.some(n => n.name === 'www.ben.de' && n.prefix === pB), JSON.stringify(namen));
+
+  const ping = await sf.evaluate((ziel) => new Promise(res => {
+    const S = window.SIM;
+    const e = S.netz.list().find(n => n.kind === 'host');
+    S.stack.ping(e, ziel, 1, S.stack.PING_FRIST, res);
+  }), pB + '.0.0.20');
+  ok('⭐ Mia pingt Bens Server — über den Raum', ping && ping.ok && ping.from === pB + '.0.0.20', JSON.stringify(ping));
+  ok('TTL: zwei cwws unterwegs', ping && ping.ttl === 62, ping && String(ping.ttl));
+  ok('Ben sieht die Anfrage in seinem Mitschnitt',
+     await bf.evaluate((von) => window.SIM.mit.view().some(z => z.proto === 'ICMP' && /Ping-Anfrage/.test(z.info)
+       && z.info.indexOf(von) === 0), pM + '.0.0.10'));
+
+  const dns = await sf.evaluate(() => new Promise(res => {
+    const S = window.SIM;
+    S.dienste.resolve(S.netz.list().find(n => n.kind === 'host'), 'www.ben.de', res);
+  }));
+  ok('⭐ 8.8.8.8 kennt Bens Namen', dns && dns.ok && dns.ip === pB + '.0.0.20', JSON.stringify(dns));
+
+  const webseite = await sf.evaluate((ziel) => new Promise(res => {
+    const S = window.SIM;
+    S.dienste.http.seiteHolen(S.netz.list().find(n => n.kind === 'host'), ziel, res);
+  }), pB + '.0.0.20');
+  ok('⭐ Bens Webseite lädt auf Mias Tablet', webseite && webseite.ok && webseite.status === 200 && webseite.teile.length === 3,
+     webseite && (webseite.grund || webseite.status));
+
+  const tr = await sf.evaluate(() => new Promise(res => {
+    const S = window.SIM;
+    S.stack.ping(S.netz.list().find(n => n.kind === 'host'), '147.0.0.1', 9, S.stack.PING_FRIST, res);
+  }));
+  const frei = !(pM === 147 || pB === 147 || pL === 147);
+  ok('ein /8 ohne Besitzer: „nicht erreichbar"', !frei || (tr && !tr.ok && /nicht erreichbar/.test(tr.error)), JSON.stringify(tr));
+
+  // Im Aktionsmodus: das Kärtchen des cww, klein.
+  await sf.evaluate(() => { const S = window.SIM; S.flaeche.select(S.netz.cwwVon().id); });
+  await warte(500);
+  await S1.page.screenshot({ path: path.join(OUT, 'shot-raum-cww-aktion.png') });
+  {
+    const t = await sf.evaluate(() => document.querySelector('#karte').textContent);
+    ok('das Kärtchen im Aktionsmodus nennt den Bereich', t.includes(pM + '.0.0.0'), t.replace(/\s+/g, ' ').slice(0, 200));
+  }
+
+  // Im Entwurf: das Kärtchen, groß.
+  await sf.locator('.mbtn[data-modus="entwurf"]').click();
+  await warte(300);
+  await sf.evaluate(() => { const S = window.SIM; S.flaeche.select(null); S.flaeche.select(S.netz.cwwVon().id); });
+  await warte(400);
+  if (!(await sf.evaluate(() => document.querySelector('#karte').classList.contains('is-mehr')))) {
+    await sf.locator('#karteMehr').click();
+    await warte(400);
+  }
+  const karteText = await sf.locator('#karteBody').textContent();
+  ok('Mias Kärtchen: eigener Bereich, kein „Kein Raum"',
+     karteText.includes(pM + '.0.0.0') && !karteText.includes('Kein Raum'), karteText.slice(0, 160));
+  ok('Mias 8.8.8.8 zeigt Bens Namen als fremd',
+     await sf.evaluate(() => [...document.querySelectorAll('#karteBody .k-dns-z')]
+       .some(z => z.textContent.includes('www.ben.de') && z.textContent.includes('aus einem anderen Netz'))));
+  ok('… ohne zu verraten, wem er gehört', !(await sf.locator('#karteBody').textContent()).includes('Ben'));
+  await S1.page.screenshot({ path: path.join(OUT, 'shot-raum-cww.png') });
+
+  await L1.page.locator('#syCww').click();
+  await warte(1200);
+  {
+    const t = await L1.page.locator('#syCwwList').textContent();
+    ok('⭐ Lehrkraft: „Internet der Klasse" nennt, wem welches /8 gehört',
+       t.includes(pM + '.0.0.0/8') && t.includes('Mia') && t.includes(pB + '.0.0.0/8') && t.includes('Ben')
+       && t.includes('100.0.0.0/8'), t.slice(0, 200));
+    ok('… samt 8er-Adresse', t.includes(bbB));
+  }
+  await L1.page.screenshot({ path: path.join(OUT, 'shot-raum-cww-lehrer.png') });
+  await L1.page.locator('#syCww').click();
+
+  // Spiegelung: die Lehrkraft sieht Mia zu — ihr Rahmen funkt dabei nicht.
+  await warte(2500);
+  await L1.page.locator('.sy-person[data-pid="' + pid + '"]').click();
+  await warte(1500);
+  ok('In der Spiegelung ist der Anschluss aus', await lf.evaluate(() => window.SIM.internet.modus) === 'aus');
+  await L1.page.locator('#syStop').click();
+  await warte(400);
+  ok('Nach der Spiegelung wieder im Raum', await lf.evaluate(() => window.SIM.internet.modus) === 'raum');
+  ok('keine Fehler (Ben)', S2.errs.length === 0, S2.errs.slice(0, 3).join(' | '));
 
   console.log('\n── Neuer Raum ──────────────────────────────────────');
   await db.query('insert into _who values ($1)', [L]);

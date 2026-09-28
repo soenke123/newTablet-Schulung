@@ -98,6 +98,16 @@
       if (paused) return;
       if (e.kind === 'wire') add(e, false, e.dir === 'in' ? 'rein' : 'raus');
       else if (e.kind === 'drop') add(e, true, 'raus');
+      /* Durch die Internet-Karte des cww geht kein Rahmen über ein
+         Kabel — aber ein Paket, und das gehört in den Mitschnitt
+         wie jedes andere. Statt der MAC-Adressen steht „Wolke" da:
+         im 8er-Netz gibt es hier keine Leitung, die man zeigen
+         könnte. */
+      else if (e.kind === 'inet-raus' || e.kind === 'inet-rein') {
+        add({ t: e.t, node: e.node, nic: netz.INET,
+              frame: { src: 'Wolke', dst: 'Wolke', type: 'ip', payload: e.pkt } },
+            false, e.kind === 'inet-rein' ? 'rein' : 'raus');
+      }
     });
 
     /* Der Fingerabdruck eines Rahmens. Einmal gerechnet und an der

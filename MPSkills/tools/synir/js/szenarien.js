@@ -422,5 +422,70 @@
     }
   };
 
-  window.SZENARIEN = { zwei, lernen, router, fehler, automatisch, namen, web };
+  /* ═══ 8 · Ins Internet ═══════════════════════════════════════
+     Das erste Szenario, das über die eigene Fläche hinausreicht:
+     das Class Wide Web verbindet die Netze der ganzen Klasse.
+
+     ⚠️ Die öffentlichen Adressen stehen hier NICHT drin — und das
+     muss so sein: jedes Kind hat ein anderes /8, und welches, sagt
+     erst der Raum (js/internet.js). Ein Szenario mit „67.0.0.20"
+     wäre für genau ein Kind richtig und für alle anderen ein Netz,
+     das nicht ins Internet kommt. Also trägt jedes Kind die Zahlen
+     selbst ein — und genau das ist der Auftrag: nachsehen, welcher
+     Bereich mir gehört, und ihn benutzen.
+
+     Was schon steht, ist das, was man zu Hause vorfindet: ein
+     Heimrouter mit Laptop dahinter, der sich seine WAN-Adresse
+     holen will. Der Server daneben hat Webserver und DNS schon
+     installiert und gestartet — die Lektion ist die Adresse, nicht
+     das Aufspielen. */
+  macN = 700; cabN = 700;
+  const internet = {
+    titel: '8 · Ins Internet',
+    aufgabe:
+      '<p>Oben steht dein Anschluss ans <strong>Class Wide Web</strong> (CWW1). Öffne ihn: '
+      + 'im Reiter <em>Internet</em> steht <strong>dein Adressbereich</strong> — nur Adressen '
+      + 'daraus kommen hinaus. Im Beispiel unten heißt er <code>X.0.0.0/8</code>.</p>'
+      + '<p><strong>Auftrag 1:</strong> Gib der Netzwerkkarte des cww die Adresse '
+      + '<code>X.0.0.1</code> und dem Server <code>X.0.0.20</code> (Gateway <code>X.0.0.1</code>).</p>'
+      + '<p><strong>Auftrag 2:</strong> Richte am cww den <em>DHCP-Server</em> ein '
+      + '(<code>X.0.0.100</code> bis <code>X.0.0.150</code>, Gateway <code>X.0.0.1</code>, '
+      + 'DNS <code>8.8.8.8</code>). So bekommt der Heimrouter seine Adresse — wie zu Hause vom Anbieter.</p>'
+      + '<p><strong>Auftrag 3:</strong> Trag am <strong>Server</strong> im DNS einen eigenen Namen ein, '
+      + 'etwa <code>www.deinname.de</code> → <code>X.0.0.20</code>. Schau nach, ob 8.8.8.8 ihn kennt.</p>'
+      + '<p><strong>Auftrag 4:</strong> Schalte auf <em>Aktion</em>. Öffne am Laptop den Browser '
+      + 'und besuche eine Seite, die in der Liste von 8.8.8.8 steht — aus einem <em>anderen</em> Netz.</p>'
+      + '<p class="dim">Wem ein Adressbereich gehört, verrät dir niemand. Aber '
+      + '<code>traceroute</code> zeigt dir den Weg.</p>',
+    netz: {
+      v: 2,
+      nodes: [
+        dev('i1', 'cww',        'Class Wide Web 1', 720, 190, { ports: 2 }),
+        dev('i2', 'switch',     'Switch 1',          720, 360),
+        dev('i3', 'server',     'Server 1',          980, 520, {
+          dns: '8.8.8.8',
+          software: ['dns', 'webserver'], webServer: { on: true },
+          dnsServer: { records: [] },
+          dateien: {
+            '/webserver': { ordner: true },
+            '/webserver/index.html': { text: window.Http ? window.Http.SEITE : '' },
+            '/webserver/stil.css':   { text: window.Http ? window.Http.STIL : '' },
+            '/webserver/logo.png':   { bild: '@schule' }
+          }
+        }),
+        dev('i4', 'heimrouter', 'Heimrouter 1',      460, 520, {
+          ports: 9, nics: [{ dhcp: true }, { ip: '192.168.1.1' }]
+        }),
+        dev('i5', 'host',       'Endgerät 1',        460, 700, {
+          nics: [{ ip: '192.168.1.10' }], gateway: '192.168.1.1', dns: '8.8.8.8',
+          software: ['browser']
+        })
+      ],
+      cables: [
+        cab('i1', 1, 'i2', 0), cab('i2', 1, 'i3', 0), cab('i2', 2, 'i4', 0), cab('i4', 1, 'i5', 0)
+      ]
+    }
+  };
+
+  window.SZENARIEN = { zwei, lernen, router, fehler, automatisch, namen, web, internet };
 })();

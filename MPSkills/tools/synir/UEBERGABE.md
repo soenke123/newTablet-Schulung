@@ -6,7 +6,83 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
-## 00 · Eine Tabelle statt zwei — und das Router-Kärtchen wird still (diese Runde)
+## 000 · Das Class Wide Web (diese Runde)
+
+**808 kopflose + 839 Browser-Prüfungen + 67 im Raum + 34 RPC-Prüfungen grün.**
+Neu: `js/internet.js`, `supabase/migrations/0181_synir_cww.sql`,
+`supabase/tests/0181_synir_cww.mjs`. Berührt: `js/netz.js`, `js/schichten.js`,
+`js/engine.js`, `js/tcp.js`, `js/dienste.js`, `js/rip.js`, `js/mitschnitt.js`,
+`js/subnetze.js`, `js/flaeche.js`, `js/konfig.js`, `js/weiterleitung.js`,
+`js/geraet.js`, `js/app.js`, `js/bruecke.js`, `js/szenarien.js`, `tool.js`,
+`tool.css`, `index.html`, `css/app.css`, alle drei Prüfstände, alle drei Blätter.
+Die Beschreibung steht in LIESMICH, Abschnitt *Das Class Wide Web*.
+
+Der Auftrag, zusammengefasst: *ein Modem wie in Filius, das alle Geräte im Raum
+verbindet. Als Wolke mit „cww". Jedes Kind bekommt einen Adressbereich (erste Zahl
+50…150), ohne zu erfahren, wem welcher gehört. Ein öffentlicher DNS unter 8.8.8.8,
+in den man hineinsehen, aber nichts eintragen kann. Nur wer sein Subnetz wirklich
+benutzt, ist verbunden. Das cww als Gateway, nach innen eine Weiterleitungstabelle
+nur für das eigene Netz.* Entschieden mit dem Nutzer: Namen gehören dem, der zuerst
+kommt; die Lehrkraft hat fest 100; ohne Raum ein Übungsnetz 50 mit 8.8.8.8 lokal;
+nach innen von Hand plus RIP-Haken.
+
+### 1 · ⚠️ Ein alter Fehler in der Engine, den erst das cww gezeigt hat
+
+`runUntil` sah vorn in der Schlange ein **abgesagtes** Ereignis, prüfte dessen
+Zeit gegen das Ziel — und `step` übersprang es und führte das NÄCHSTE aus, ohne
+dessen Zeit je zu prüfen. Bisher fiel das nicht auf, weil die Fristen kurz waren.
+Mit der 30-s-Frist eines Pings in ein fremdes Netz lief die Frist nach 0,9 s ab,
+und die Uhr sprang vor und wieder zurück. Jetzt räumt `runUntil` tote Ereignisse
+selbst ab; eine Prüfung im Abschnitt *Engine* wacht darüber.
+
+### 2 · Die Uhren — die eigentliche Schwierigkeit
+
+Jedes Tablet rechnet in seiner eigenen virtuellen Zeit, mit seinem eigenen Tempo.
+Ein Paket in ein anderes Netz wartet dazwischen auf echte Sekunden (die Abfrage
+des Raums). Gelöst mit `FERN_FAKTOR = 10` für alles, was auf eine Antwort aus
+einem fremden Netz wartet (`stack.fern`: kein Gerät auf der Fläche hat die
+Adresse, und sie ist nicht privat). Wer das ändert: bei Turbo (Tempo 2) sind 30 s
+Frist 15 echte Sekunden — gut für ein paar Abfragen hin und zurück, nicht für mehr.
+
+### 3 · Was nicht in die Datei gehört
+
+Der Adressbereich hängt am **Kind im Raum**, nicht am Netz. `toJSON` schreibt die
+Adresse der Internet-Karte deshalb leer, und `fromJSON` setzt sie aus
+`netz.setInternet` wieder ein. Eine Datei aus einem anderen Raum hat danach innen
+die falschen Adressen — das cww zeigt dann ein „!" mit dem Satz, dass das Netz so
+nicht verbunden ist. Genau so ist es gemeint.
+
+Deshalb hat **Szenario 8** auch keine öffentlichen Adressen: `X.0.0.1` steht im
+Auftrag, die Zahl findet das Kind im Reiter *Internet*.
+
+### 4 · ⚠️ Was wieder nur das BILD gezeigt hat
+
+* Die 8.8.8.8-Liste als Tabelle mit vier Spalten brach im Kärtchen
+  „drucker.anna.de" mitten im Wort. Jetzt zwei Zeilen je Eintrag.
+* Im Aktionsmodus schloss das Auffrischen der Liste (im Takt des Raums) das
+  Kärtchen — `panels.renderKarte` räumt dort Gerätekärtchen ab. Aufgefrischt wird
+  nur noch im Entwurf.
+* Szenario 8 hatte den Laptop unter dem Bildrand.
+
+### 5 · Offen geblieben
+
+* **Der Beamer zeigt kein Gesamtbild.** Die Lehrkraft sieht in *Internet der
+  Klasse* eine Liste (Bereich · Name · 8er-Adresse · Namen), aber keine Karte aller
+  Netze. Eine Fläche mit allen cwws als Wolken wäre der naheliegende nächste Schritt.
+* **Lokale DNS-Server fragen 8.8.8.8 nicht weiter** (keine Weiterleitung). Wer
+  draußen etwas finden will, trägt am Gerät 8.8.8.8 als DNS ein. Ein
+  „Forwarder"-Haken am DNS-Server wäre echt und klein.
+* **Nur A- und MX-Einträge.** Keine Delegation, keine Wurzelserver — siehe die
+  Vereinfachung in LIESMICH.
+* Im Aktionsmodus füllt sich die 8.8.8.8-Liste nicht von selbst nach (nur beim
+  Öffnen des Kärtchens) — siehe 4.
+* **Last:** jedes Tablet mit cww fragt alle 0,7–3 s. Bei 30 Tablets sind das in
+  Ruhe 10 Aufrufe je Sekunde an Supabase. Ist das zu viel, ist Supabase Realtime
+  (Broadcast) der Weg — dann aber mit eigener Anmeldung für Teilnehmer.
+
+---
+
+## 00 · Eine Tabelle statt zwei — und das Router-Kärtchen wird still (vorige Runde)
 
 **760 kopflose + 779 Browser-Prüfungen grün.** Berührt: `js/weiterleitung.js`,
 `js/konfig.js`, `js/schichten.js`, `js/app.js`, `index.html`, `css/app.css`,

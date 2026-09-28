@@ -798,6 +798,9 @@ body[data-modus="aktion"]  .tools-bau  { display: none; }
    er hier nur im Sinne von „erklärt mir das". */
 .add--geraet { cursor: grab; }
 .add--geraet:active { cursor: grabbing; }
+/* Schon eines da (das cww): grau, aber antippbar — das Kärtchen
+   erklärt dann, warum. */
+.add--geraet.is-aus { opacity: .45; cursor: not-allowed; }
 
 /* Das Schattengerät am Finger. Liegt über allem (auch über den
    Fenstern), nimmt aber keine Zeigerereignisse an — sonst fände
@@ -1201,6 +1204,11 @@ body.is-ziehen, body.is-ziehen * {
 .nf-ic--dot   { fill: var(--accent); stroke: none; }
 .nf-ic--arrow { stroke: var(--accent); stroke-width: 1.9; }
 .nf-node.is-sel .nf-ic { stroke: var(--ink); }
+/* Die drei Buchstaben in der Wolke des cww. */
+.nf-cww {
+  fill: var(--accent); font-size: 9.5px; font-weight: 800; text-anchor: middle;
+  font-family: var(--fs); pointer-events: none; letter-spacing: .02em;
+}
 
 /* Das Kürzel in der Kachel. Groß und fett: es ist das, was man
    aus zehn Metern liest und wonach man im Unterricht ruft. */
@@ -3794,3 +3802,22 @@ body[data-rolle="presenter"] .nur-lehrer { display: inline-block; }
 .blind-logo--dunkel { display: none; }
 :root[data-theme="dark"] .blind-logo--hell   { display: none; }
 :root[data-theme="dark"] .blind-logo--dunkel { display: block; }
+
+/* ═══ Das cww: Reiter „Internet" ═══════════════════════════════
+   Der eigene Adressbereich groß — er ist die eine Zahl, die dem
+   Kind gehört. Darunter die Liste von 8.8.8.8, nur zum Lesen. */
+.k-cww-bereich { font-size: 22px; font-weight: 700; color: var(--ink); margin: 2px 0 2px; }
+.k-cww-bereich .dim { font-weight: 500; }
+.k-hint.warn { color: var(--warn); }
+.k-dns { display: grid; gap: 6px; margin-top: 4px; }
+.k-dns-z {
+  display: grid; grid-template-columns: 1fr auto; column-gap: 10px; row-gap: 1px;
+  padding: 6px 8px; border-radius: 8px; background: var(--surface-2);
+}
+.k-dns-n { font-size: 13.5px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.k-dns-w { font-size: 13px; color: var(--ink); text-align: right; white-space: nowrap; }
+.k-dns-w i { font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--ink-2);
+             margin-right: 6px; letter-spacing: .04em; }
+.k-dns-st { grid-column: 1 / -1; font-size: 12px; color: var(--ink-2); }
+.k-dns-z.is-nicht { background: transparent; border: 1px dashed var(--line, rgba(127,127,127,.35)); }
+.k-dns-z.is-nicht .k-dns-n, .k-dns-z.is-nicht .k-dns-w { color: var(--ink-2); }

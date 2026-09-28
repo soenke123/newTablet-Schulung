@@ -179,6 +179,27 @@
       hint: 'Dasselbe Endgerät, nur mit anderem Bild und einem eigenen '
         + 'Bildschirmlayout — Raster statt Schreibtisch. Es geht ausschließlich '
         + 'über WLAN ins Netz; eine Kabelbuchse hat es nicht.'
+    },
+    /* ⭐ Das Class Wide Web — das Modem aus Filius, nur dass am
+       anderen Ende nicht dasselbe Netz liegt, sondern die Netze
+       der ganzen Klasse (siehe js/internet.js).
+
+       Ein Vermittlungsgerät wie der Router, mit EINER festen
+       Besonderheit: Karte 0 ist der Anschluss ins Internet. An ihr
+       steckt nie ein Kabel, sie hängt fest in der Wolke, und ihre
+       Adresse (8.x.y.z) vergibt der Raum. Die Karten ab 1 zeigen
+       ins eigene Netz.
+
+       `einmalig`: ein Anschluss je Haushalt, und ein Adressbereich
+       je Kind. Zwei Wolken auf einer Fläche wären zwei Wege in
+       dasselbe /8 — und die Frage „welcher gilt?" hat keine
+       Antwort, die sich im Unterricht lohnt. */
+    cww: {
+      id: 'cww', label: 'Class Wide Web', kurz: 'CWW', ports: 2, maxPorts: 8, routes: true,
+      icon: 'cww', einmalig: true,
+      hint: 'Der Anschluss ans Internet der Klasse. Oben hängt es fest in der Wolke, '
+        + 'unten gehen Kabel ins eigene Netz. Es leitet alles nach draußen, was nicht '
+        + 'in deinem Adressbereich liegt.'
     }
   };
 
@@ -220,6 +241,12 @@
   const istWan  = (node, i) => istHeim(node) && (i | 0) === WAN;
   const istLan  = (node, i) => istHeim(node) && (i | 0) >= LAN;
 
+  /* Dasselbe für das cww: welche Karte ist der Anschluss ins
+     Internet? Eine Frage, eine Stelle — wie bei `istWan`. */
+  const INET = 0;
+  const istCww      = (node) => !!node && node.kind === 'cww';
+  const istInternet = (node, i) => istCww(node) && (i | 0) === INET;
+
   /* Welche Netzwerkkarte trägt Adresse und MAC für diese Buchse?
      Auf der LAN-Seite eines Heimrouters immer dieselbe: die
      Buchsen sind ein Switch, und ein Switch hat keine eigenen
@@ -242,6 +269,7 @@
      auch auf dem Gehäuse stehen. */
   function portLabel(node, i) {
     if (istHeim(node)) return (i | 0) === WAN ? 'WAN' : 'LAN ' + (i | 0);
+    if (istCww(node)) return (i | 0) === INET ? 'Internet' : 'Netzwerkkarte ' + (i | 0);
     if (node && node.kind === 'switch') return 'Anschluss ' + ((i | 0) + 1);
     return 'Netzwerkkarte ' + ((i | 0) + 1);
   }
@@ -310,6 +338,52 @@
   function Netz(engine) {
     const nodes  = new Map();   // id → Gerät
     const cables = new Map();   // id → Kabel
+
+    /* ─── Der eigene Adressbereich im Class Wide Web ───────────
+       Er hängt am KIND (am Teilnehmer im Raum), nicht an der
+       Datei: dieselbe Datei in einem anderen Raum bekommt ein
+       anderes /8. Deshalb steht er hier als Laufzeitwert und nicht
+       in `toJSON` — und deshalb trägt auch die Internet-Karte des
+       cww ihre Adresse nicht in die Datei (siehe toJSON).
+
+       Ohne Raum gilt das Übungsnetz 50.0.0.0/8. */
+    const inet = { prefix: 50, backbone: '8.0.0.50' };
+
+    function internetAnwenden(node) {
+      if (!istCww(node)) return;
+      const k = node.nics[INET];
+      if (!k) return;
+      k.ip = inet.backbone; k.mask = '255.0.0.0'; k.dhcp = false; k.funk = false; k.up = true;
+    }
+    function setInternet(conf) {
+      conf = conf || {};
+      const p = conf.prefix | 0;
+      if (p >= 1 && p <= 223 && p !== 8 && p !== 10 && p !== 127) inet.prefix = p;
+      if (conf.backbone && U.ip2int(conf.backbone) !== null
+          && (U.ip2int(conf.backbone) >>> 24) === 8) inet.backbone = conf.backbone;
+      for (const n of nodes.values()) internetAnwenden(n);
+      changed();
+    }
+    const internetConf = () => ({ prefix: inet.prefix, backbone: inet.backbone });
+    /* Liegt diese Adresse in MEINEM /8? Die eine Frage, an der
+       Weiterleitung, Absenderprüfung und das Verzeichnis hängen. */
+    const imEigenenNetz = (ip) => {
+      const v = typeof ip === 'number' ? ip : U.ip2int(ip);
+      return v !== null && (v >>> 24) === inet.prefix;
+    };
+    const cwwVon = () => list().find(istCww) || null;
+
+    /* Darf ein Gerät dieser Art noch dazu? Beim cww nur, solange
+       keines da ist. Die Fläche fragt VOR dem Anlegen, damit der
+       Satz beim Kind ankommt und nicht als Fehler in der Konsole. */
+    function darfAnlegen(kind) {
+      const k = KIND[kind];
+      if (!k) return { ok: false, error: 'Unbekannte Geräteart.' };
+      if (k.einmalig && list().some(n => n.kind === kind))
+        return { ok: false, error: 'Es gibt schon ein ' + k.label + ' in deinem Netz. '
+          + 'Jedes Netz hat genau einen Anschluss ans Internet.' };
+      return { ok: true };
+    }
 
     /* Ein Anschluss ist kein eigenes Objekt in der Map, sondern
        lebt in seinem Gerät: { i, mac, ip, mask, cable }.
@@ -396,6 +470,8 @@
     function addNode(kind, x, y, name) {
       const k = KIND[kind];
       if (!k) throw new Error('Unbekannte Geräteart: ' + kind);
+      const darf = darfAnlegen(kind);
+      if (!darf.ok) throw new Error(darf.error);
       const id = U.nextId('n');
       const nics = [];
       for (let i = 0; i < k.ports; i++) nics.push(makeNic(i));
@@ -415,6 +491,7 @@
         state: {}           // Platz für Protokollzustand (arp, macTable, …)
       };
       if (kind === 'heimrouter') heimVorgabe(node);
+      internetAnwenden(node);
       funkErzwingen(node);
       /* ⭐ Der Ordner `/Bilder` ab Werk — nur bei Geräten mit
          Bildschirm (`dateien: true`), denn Router, Switch und
@@ -592,7 +669,7 @@
          dessen fester Anschluss belegt ist, die FUNKBUCHSE. Aus
          `addCable` kam dann „… funkt": eine Auskunft über die Karte,
          wo die über das Gerät gebraucht wird. */
-      const frei = () => node.nics.findIndex(k => !k.cable && !k.funkPort);
+      const frei = () => node.nics.findIndex(k => !k.cable && !k.funkPort && !istInternet(node, k.i));
       const i = frei();
       if (i >= 0) return i;
       if (!KIND[node.kind].waechst) return -1;
@@ -618,6 +695,7 @@
       const nic = node.nics[i];
       if (!nic) return { ok: false, error: 'Diesen Anschluss gibt es nicht.' };
       if (nic.funkPort) return { ok: false, error: 'Eine Funkverbindung baut man am Gerät ab, nicht hier.' };
+      if (istInternet(node, i)) return { ok: false, error: 'Der Anschluss ins Internet bleibt dran.' };
       if (nic.cable) return { ok: false, error: 'Hier steckt noch ein Kabel.' };
       const min = KIND[node.kind].ports === 1 ? 1 : 2;
       if (feste(node).length <= min)
@@ -926,6 +1004,9 @@
       if (!na || !nb) return { ok: false, error: 'Diesen Anschluss gibt es nicht.' };
       if (na.cable)   return { ok: false, error: 'An diesem Anschluss steckt schon ein Kabel.' };
       if (nb.cable)   return { ok: false, error: 'An diesem Anschluss steckt schon ein Kabel.' };
+      if (istInternet(A, aNic) || istInternet(B, bNic))
+        return { ok: false, error: 'Der Internet-Anschluss des cww hängt fest in der Wolke — '
+          + 'Kabel gehen nur an die Karten darunter.' };
       /* Ein Kabel in eine Karte, die funkt — oder in die Funkbuchse
          eines Zugangspunkts. Beides gibt es nicht, und beides ist
          ein Missverständnis, das man benennen muss: sonst zieht
@@ -1154,10 +1235,13 @@
                keinem Gerät, sondern einer Verbindung, und die baut
                funkAbgleich beim Laden neu — sonst wüchse der Switch
                bei jedem Sichern um die Buchsen des letzten Mals. */
+            /* Die Internet-Karte des cww trägt ihre Adresse nicht in
+               die Datei: sie kommt vom Raum, genau wie der eigene
+               Adressbereich (siehe `inet` oben). */
             nics: n.nics.filter(k => !k.funkPort).map(k => ({
               i: k.i, mac: k.mac,
-              ip:   k.dhcp ? '' : k.ip,
-              mask: k.dhcp ? '' : k.mask,
+              ip:   k.dhcp || istInternet(n, k.i) ? '' : k.ip,
+              mask: k.dhcp || istInternet(n, k.i) ? '' : k.mask,
               dhcp: !!k.dhcp, up: k.up,
               // Was die Karte SUCHT, gehört zur Bauanleitung.
               funk: !!k.funk, ssid: k.funk ? (k.ssid || '') : ''
@@ -1230,6 +1314,10 @@
         // Fehlende Anschlüsse auffüllen, falls eine Geräteart
         // später mehr Ports bekommt als die Datei kennt.
         while (node.nics.length < k.ports) node.nics.push(makeNic(node.nics.length));
+        /* Ein zweites cww aus einer (von Hand gebauten) Datei wird
+           nicht angelegt — die Regel gilt beim Laden wie beim Ziehen. */
+        if (k.einmalig && [...nodes.values()].some(n => n.kind === d.kind)) continue;
+        internetAnwenden(node);
         /* Alte Stände nachziehen: ein gespeichertes Handy hat
            vielleicht noch eine Kabelkarte. Die wird hier zur
            Funkkarte; das Kabel dazu wird weiter unten gar nicht
@@ -1260,6 +1348,7 @@
            Funkkarte wäre ein Strich auf der Fläche, den kein
            Formular mehr erklärt und den niemand lösen kann. */
         if (na.funk || nb.funk) continue;
+        if (istInternet(nodes.get(c.a.node), c.a.nic) || istInternet(nodes.get(c.b.node), c.b.nic)) continue;
         cables.set(c.id, c);
         na.cable = c.id; nb.cable = c.id;
         maxN = Math.max(maxN, num(d.id));
@@ -1328,6 +1417,10 @@
 
       for (const d of data.nodes) {
         const k = KIND[d.kind] || KIND.host;
+        /* Ein zweites cww gibt es nicht — auch nicht über die
+           Zwischenablage. Das Gerät bleibt weg, seine Kabel damit
+           auch (sie finden unten keine neue Kennung). */
+        if (!darfAnlegen(d.kind).ok) continue;
         const node = addNode(d.kind, (d.x || 0) + dx, (d.y || 0) + dy);
         neuId.set(d.id, node.id);
 
@@ -1368,6 +1461,7 @@
           nic.ssid = s.ssid || '';
           nic.up = s.up !== false;
         });
+        internetAnwenden(node);
         // Eine kopierte Kabelkarte macht aus einem Handy kein
         // Gerät mit Buchse.
         funkErzwingen(node);
@@ -1411,6 +1505,7 @@
       nurFunk,
       funkAbgleich, zugangspunkte,
       istHeim, istWan, istLan, brueckeNic, bruecke, portLabel, strahlt,
+      INET, istCww, istInternet, setInternet, internetConf, imEigenenNetz, cwwVon, darfAnlegen,
       dienstLaeuft, laufendeDienste,
       feste: (node) => feste(node),
       peerOf, sendFrame, nicOf,
@@ -1427,6 +1522,9 @@
   Netz.istHeim = istHeim;
   Netz.istWan = istWan;
   Netz.istLan = istLan;
+  Netz.INET = INET;
+  Netz.istCww = istCww;
+  Netz.istInternet = istInternet;
   Netz.brueckeNic = brueckeNic;
   Netz.bruecke = bruecke;
   Netz.portLabel = portLabel;

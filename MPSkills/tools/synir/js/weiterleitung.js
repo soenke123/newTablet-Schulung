@@ -107,11 +107,15 @@
        hat genau zwei Seiten und schickt alles Fremde nach draußen.
        Filius sieht es genauso: `JGatewayConfiguration` hat weder
        den Reiter noch den Haken. */
-    const router = () => netz.list().filter(n => n.kind === 'router');
+    /* Das cww bekommt auch einen: nach innen ist es ein Router,
+       und die feste Zeile „alles andere → Internet" gehört genau
+       hierher (schichten.js, routingTable). */
+    const hatTabelle = (n) => !!n && (n.kind === 'router' || n.kind === 'cww');
+    const router = () => netz.list().filter(hatTabelle);
 
     function gewaehlt() {
       const n = aktiv ? netz.get(aktiv) : null;
-      if (n && n.kind === 'router') return n;
+      if (hatTabelle(n)) return n;
       const rs = router();
       aktiv = rs.length ? rs[0].id : null;
       return rs.length ? rs[0] : null;
@@ -312,7 +316,7 @@
     function folgeAuswahl(id) {
       if (!offen || !id) return;
       const n = netz.get(id);
-      if (!n || n.kind !== 'router' || n.id === aktiv) return;
+      if (!hatTabelle(n) || n.id === aktiv) return;
       aktiv = n.id;
       render();
     }

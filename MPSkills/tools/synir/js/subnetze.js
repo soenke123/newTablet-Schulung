@@ -156,6 +156,9 @@
     for (const n of nodes) {
       if (n.kind === 'switch') continue;             // hat keine Adresse
       for (const nic of n.nics) {
+        /* Die Internet-Karte des cww liegt im 8er-Netz der Wolke,
+           nicht auf dieser Fläche — sie bekommt keinen Ring. */
+        if (window.Netz && window.Netz.istInternet(n, nic.i)) continue;
         const ip = U.ip2int(nic.ip), mask = U.ip2int(nic.mask);
         if (ip === null || mask === null) continue;
         if (U.mask2prefix(mask) === null) continue;  // krumme Maske: kein Netz

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
-<link rel="stylesheet" href="css/app.css?v=20260928c">
+<link rel="stylesheet" href="css/app.css?v=20260928d">
 </head>
 <body>
 
@@ -51,6 +51,13 @@
       <rect x="2.5" y="11" width="19" height="7.5" rx="1.5"/>
       <path d="M6 18.5v2M10 18.5v2M14 18.5v2M18 18.5v2"/>
       <path d="M17 11V6.5"/><path d="M14.6 4.6a3.4 3.4 0 0 1 4.8 0"/>
+    </g>
+    <!-- Das Class Wide Web: eine Wolke mit „cww" darin. Keines der
+         anderen Geräte ist rund UND breit — so ist es aus der
+         letzten Reihe zu erkennen. -->
+    <g id="ic-cww" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6.5 18.5h11a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.4 9.2 4.7 4.7 0 0 0 6.5 18.5z"/>
+      <text x="12" y="16.3" text-anchor="middle" font-size="5.2" font-weight="700" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">cww</text>
     </g>
     <!-- Funkwellen. Stehen an zwei Orten für dieselbe Aussage:
          am Gerät, das ausstrahlt, und vor dem Namen des Netzes. -->
@@ -386,6 +393,18 @@
             <span class="add-n">Heimrouter</span>
           </button>
         </div>
+      </div>
+
+      <!-- Das Class Wide Web steht für sich: es ist kein Gerät, das
+           man mehrfach hinstellt, sondern DER Anschluss nach draußen.
+           Ist eines da, ist der Knopf grau (app.js, cwwKnopf). -->
+      <div class="rail-g">
+        <span class="tools-t rail-t">Internet</span>
+        <button class="add add--geraet" data-add="cww"
+                title="Class Wide Web — der Anschluss ans Internet der Klasse">
+          <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-cww"/></svg></span>
+          <span class="add-n">cww</span>
+        </button>
       </div>
 
       <div class="rail-g">
@@ -740,34 +759,35 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="js/util.js?v=20260928c"></script>
-<script src="js/engine.js?v=20260928c"></script>
-<script src="js/netz.js?v=20260928c"></script>
-<script src="js/verlauf.js?v=20260928c"></script>
-<script src="js/nat.js?v=20260928c"></script>
-<script src="js/tcp.js?v=20260928c"></script>
-<script src="js/rip.js?v=20260928c"></script>
-<script src="js/dateien.js?v=20260928c"></script>
-<script src="js/http.js?v=20260928c"></script>
-<script src="js/mail.js?v=20260928c"></script>
-<script src="js/schichten.js?v=20260928c"></script>
-<script src="js/dienste.js?v=20260928c"></script>
-<script src="js/mitschnitt.js?v=20260928c"></script>
-<script src="js/terminal.js?v=20260928c"></script>
-<script src="js/subnetze.js?v=20260928c"></script>
-<script src="js/flaeche.js?v=20260928c"></script>
-<script src="js/konfig.js?v=20260928c"></script>
-<script src="js/panels.js?v=20260928c"></script>
-<script src="js/weiterleitung.js?v=20260928c"></script>
-<script src="js/prog-dateien.js?v=20260928c"></script>
-<script src="js/prog-web.js?v=20260928c"></script>
-<script src="js/prog-mail.js?v=20260928c"></script>
-<script src="js/geraet.js?v=20260928c"></script>
-<script src="js/szenarien.js?v=20260928c"></script>
-<script src="js/szmenue.js?v=20260928c"></script>
-<script src="js/aufgabe.js?v=20260928c"></script>
-<script src="js/app.js?v=20260928c"></script>
+<script src="js/util.js?v=20260928d"></script>
+<script src="js/engine.js?v=20260928d"></script>
+<script src="js/netz.js?v=20260928d"></script>
+<script src="js/verlauf.js?v=20260928d"></script>
+<script src="js/nat.js?v=20260928d"></script>
+<script src="js/tcp.js?v=20260928d"></script>
+<script src="js/rip.js?v=20260928d"></script>
+<script src="js/dateien.js?v=20260928d"></script>
+<script src="js/http.js?v=20260928d"></script>
+<script src="js/mail.js?v=20260928d"></script>
+<script src="js/schichten.js?v=20260928d"></script>
+<script src="js/dienste.js?v=20260928d"></script>
+<script src="js/internet.js?v=20260928d"></script>
+<script src="js/mitschnitt.js?v=20260928d"></script>
+<script src="js/terminal.js?v=20260928d"></script>
+<script src="js/subnetze.js?v=20260928d"></script>
+<script src="js/flaeche.js?v=20260928d"></script>
+<script src="js/konfig.js?v=20260928d"></script>
+<script src="js/panels.js?v=20260928d"></script>
+<script src="js/weiterleitung.js?v=20260928d"></script>
+<script src="js/prog-dateien.js?v=20260928d"></script>
+<script src="js/prog-web.js?v=20260928d"></script>
+<script src="js/prog-mail.js?v=20260928d"></script>
+<script src="js/geraet.js?v=20260928d"></script>
+<script src="js/szenarien.js?v=20260928d"></script>
+<script src="js/szmenue.js?v=20260928d"></script>
+<script src="js/aufgabe.js?v=20260928d"></script>
+<script src="js/app.js?v=20260928d"></script>
 <!-- Die Brücke in den Raum. Tut ohne Rahmen nichts. -->
-<script src="js/bruecke.js?v=20260928c"></script>
+<script src="js/bruecke.js?v=20260928d"></script>
 </body>
 </html>

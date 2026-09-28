@@ -186,8 +186,32 @@
       pick: null,          // (id, eintrag) → true, wenn draußen erledigt
       share: null,         // (id, an, eintrag)
       loeschen: null,      // (id, eintrag)
-      alsSzenario: null    // ({ id, name, titel, aufgabe, stand, neu })
+      alsSzenario: null,   // ({ id, name, titel, aufgabe, stand, neu })
+      cwwRaus: null        // () → ein Paket wartet am cww auf den Raum
     };
+
+    /* ─── Das Class Wide Web ────────────────────────────────────
+       Der Anschluss hinter der Internet-Karte des cww (internet.js).
+       Ohne Raum im Übungsbetrieb („solo"); im Raum schaltet ihn die
+       Brücke um, sobald der Server einen Adressbereich vergeben hat. */
+    const inet = window.Internet ? window.Internet.erzeugen(engine, netz, stack, {
+      senden: () => { if (extern.cwwRaus) extern.cwwRaus(); }
+    }) : null;
+    /* Was 8.8.8.8 weiß, hat sich geändert: ein offenes Kärtchen auf
+       dem Reiter „Internet" zeigt es gleich. Nur dann — ein Formular,
+       in dem gerade jemand tippt, bleibt, wie es ist. */
+    function internetNeu() {
+      /* ⚠️ Nur im Entwurf: im Aktionsmodus räumt renderKarte die
+         Gerätekärtchen ab (dort öffnet ein Gerät seine Oberfläche) —
+         ein Auffrischen im Takt des Raums schloss dann das Kärtchen
+         unter den Fingern. Aufgefallen im Raum-Prüfstand. */
+      if (modus !== 'entwurf') return;
+      const box = refs.karteBody;
+      if (box && box.querySelector('.k-cww-bereich')
+          && !(document.activeElement && box.contains(document.activeElement))) {
+        panels.renderKarte();
+      }
+    }
     function gemeldet(was) {
       for (const f of extern.beiAenderung) {
         try { f(was); } catch (e) { console.warn('[app] Rückruf:', e.message); }
@@ -203,6 +227,7 @@
     const aktuell = { id: null, titel: '', aufgabe: '' };
 
     const konfig = new window.Konfig(netz, stack, dienste);
+    konfig.setInternet(inet);
 
     /* Die Liste der Adressräume steht hier oben, weil die Fläche
        sie beim Auswählen mitziehen muss — sie hebt das Netz des
@@ -314,7 +339,13 @@
        ändert ein Subnetz, und dann müssen beide es wissen. Diese
        eine Zeile steht überall dort, wo bisher `flaeche.draw()`
        allein stand. */
-    function neuZeichnen() { flaeche.draw(); subnetze.render(); weiterleitung.render(); }
+    function neuZeichnen() { flaeche.draw(); subnetze.render(); weiterleitung.render(); cwwKnopf(); }
+    /* Ist schon ein cww da, wird der Knopf grau — und erklärt
+       sich beim Antippen trotzdem (das Kärtchen bleibt). */
+    function cwwKnopf() {
+      const b = document.querySelector('[data-add="cww"]');
+      if (b) b.classList.toggle('is-aus', !netz.darfAnlegen('cww').ok);
+    }
 
     panels = new window.Panels(refs, engine, netz, stack, mit, term, konfig, dienste, {
       problemOf: flaeche.problemOf,
@@ -610,7 +641,17 @@
             + 'EINE Adresse) und ein WLAN-Zugangspunkt. Mit NAT übersetzt er '
             + 'die vielen Adressen innen auf die eine außen. Er kommt leer: '
             + 'die WAN-Seite fragt den Anbieter, alles andere trägst du ein. '
-            + 'In Filius heißt er ebenfalls Heimrouter.' }
+            + 'In Filius heißt er ebenfalls Heimrouter.' },
+      /* Das Modem aus Filius — nur dass am anderen Ende die Netze
+         der ganzen Klasse liegen. */
+      cww: { name: 'Class Wide Web', ic: 'cww',
+        text: 'Dein Anschluss ans Internet der Klasse. Du bekommst einen eigenen '
+            + 'Adressbereich (ein /8, z. B. 67.0.0.0 bis 67.255.255.255) — nur '
+            + 'Adressen daraus kommen hinaus. Alles, was nicht in deinem Bereich '
+            + 'liegt, schickt das cww in die Wolke; nach innen trägst du die Wege '
+            + 'selbst ein (oder schaltest RIP an). In der Wolke steht 8.8.8.8, ein '
+            + 'öffentlicher DNS, der alle Namen kennt, die von draußen erreichbar '
+            + 'sind. Jedes Netz hat höchstens ein cww. In Filius heißt es Modem.' }
     };
 
     /* Das Erklärkärtchen. Es hängt unter dem Knopf, den es
@@ -710,6 +751,8 @@
 
         const p = flaeche.ablegen(ev.clientX, ev.clientY);
         if (!p) { toast('Dorthin kann kein Gerät. Auf die Fläche ziehen.'); return; }
+        const darf = netz.darfAnlegen(kind);
+        if (!darf.ok) { toast(darf.error); return; }
         const n = netz.addNode(kind, p.x, p.y);
         neuZeichnen();
         flaeche.select(n.id);
@@ -1650,6 +1693,7 @@
                    kopieren, einfuegen, loeschenAuswahl,
                    // Für den Raum (bruecke.js) und die Prüfstände.
                    standJson, szenarioLaden, eingebaut, showAufgabe, toast,
+                   internet: inet, internetNeu, neuZeichnen,
                    setRunning, menue, extern, aktuell, ROLLE, IM_RAUM,
                    speichern(an) { nichtSpeichern = !an || VORSCHAU; if (!nichtSpeichern) save(); },
                    VORSCHAU,

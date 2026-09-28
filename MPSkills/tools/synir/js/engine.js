@@ -129,6 +129,15 @@
       while (n < cap) {
         const head = queue.peek();
         if (!head) { now = Math.max(now, t); return n; }
+        /* ⚠️ Ein abgesagtes Ereignis vorn in der Schlange wird HIER
+           weggeräumt und nicht in `step`. Sonst sah die Prüfung
+           unten die Zeit des toten Ereignisses, `step` übersprang
+           es und führte das NÄCHSTE aus — ohne dessen Zeit je mit
+           `t` verglichen zu haben. Aufgefallen mit dem cww: eine
+           abgesagte ARP-Wiederholung bei 0,8 s ließ die 30-s-Frist
+           eines Pings sofort ablaufen, und die Uhr sprang dabei
+           vor und wieder zurück. */
+        if (head.dead) { queue.pop(); continue; }
         if (head.t > t) { now = t; return n; }
         step(); n++;
       }

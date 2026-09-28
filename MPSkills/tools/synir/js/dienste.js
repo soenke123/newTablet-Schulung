@@ -728,7 +728,7 @@
         melde('dns-frage', node, { name: name, typ: mx ? 'MX' : 'A', server: node.dns, try: tries });
         stack.sendUdp(node, node.dns, sport, P.dns,
           mx ? { art: 'frage', typ: 'MX', name: name } : { art: 'frage', name: name });
-        const ev = engine.at(DNS_WAIT, () => {
+        const ev = engine.at(DNS_WAIT * (stack.fern(node, node.dns) ? stack.FERN_FAKTOR : 1), () => {
           if (!s.dnsOpen.has(sport)) return;
           if (tries < DNS_TRIES) { s.dnsOpen.get(sport).ev = null; frage(); }
           else fertig({ ok: false, name: name,

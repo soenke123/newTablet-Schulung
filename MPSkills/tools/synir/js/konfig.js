@@ -82,6 +82,8 @@
      vorfinden und nicht vier leere Felder. */
   function dhcpVorgabe(netz, node) {
     const conf = netz.dhcpConf(node);
+    // Das cww verteilt nach innen, nie in die Wolke.
+    if (netz.istInternet(node, conf.nic | 0)) conf.nic = 1;
     const nic = node.nics[conf.nic | 0] || node.nics[0];
 
     /* Die Netzmaske steht IMMER da — auch bei einem Server, der
@@ -139,6 +141,10 @@
        meldet es über `setWeiterleitung` an). Im kopflosen Prüfstand
        und auf der Geräteoberfläche gibt es keins. */
     let fenster = null;
+    /* Das Anschlussstück ans Class Wide Web (js/internet.js), für
+       die Liste von 8.8.8.8 im Reiter „Internet". app.js meldet es
+       über `setInternet` an. */
+    let inet = null;
 
     /* ═══ Bauen ══════════════════════════════════════════════
        opts:
@@ -225,7 +231,13 @@
          sagt, wohin etwas gehört, nicht, womit man anfängt. */
       const REITER = {
         router:     { auf: 'karten', liste: [['allgemein', 'Allgemein'], ['karten', 'Netzwerkkarten']] },
-        heimrouter: { auf: 'lan',    liste: [['allgemein', 'Allgemein'], ['wan', 'WAN'], ['lan', 'LAN']] }
+        heimrouter: { auf: 'lan',    liste: [['allgemein', 'Allgemein'], ['wan', 'WAN'], ['lan', 'LAN']] },
+        /* Das cww: wie der Router, dazu ein Reiter für das, was
+           es nach draußen hat — den eigenen Adressbereich und 8.8.8.8.
+           Aufgeschlagen ist „Internet": beim ersten Öffnen ist die
+           wichtigste Auskunft, welche Adressen einem gehören. */
+        cww:        { auf: 'internet', liste: [['allgemein', 'Allgemein'], ['internet', 'Internet'],
+                                               ['karten', 'Netzwerkkarten']] }
       };
       const rDef = REITER[node.kind] || null;
       const reiter = !!rDef;
@@ -262,6 +274,8 @@
       /* ─ Anschlüsse ─ */
       if (heim) {
         h += heimSeite(node, seite, ro, mehr, sn);
+      } else if (netz.istCww(node) && seite === 'internet') {
+        h += internetSeite(node, mehr);
       } else if (!zeig('karten')) {
         /* nichts — die Karten stehen im anderen Reiter */
       } else if (node.kind === 'switch') {
@@ -271,7 +285,12 @@
            die Buchse kommt ohnehin von selbst mit dem Kabel. */
         h += wlanBlock(node, ro, mehr);
       } else {
-        node.nics.forEach((nic, i) => { h += nicBlock(node, nic, i, ro, mehr, sn); });
+        /* Die Internet-Karte des cww steht im Reiter „Internet",
+           nicht hier: an ihr gibt es nichts einzutragen. */
+        node.nics.forEach((nic, i) => {
+          if (netz.istInternet(node, i)) return;
+          h += nicBlock(node, nic, i, ro, mehr, sn);
+        });
       }
 
       /* Wortlaut wie in Filius (jvermittlungsrechnerkonfiguration_
@@ -318,7 +337,26 @@
          und erst danach die Weiterleitungstabelle. Vorher stand die
          Tabelle oben und der Haken darunter; das ist die falsche
          Richtung: der Haken ENTSCHEIDET, ob es die Tabelle braucht. */
-      if (node.kind !== 'switch' && zeig('allgemein')) {
+      if (netz.istCww(node) && zeig('allgemein')) {
+        /* Das cww hat kein Gateway und fragt keinen DNS-Server: es
+           IST das Gateway, und draußen steht 8.8.8.8. Es hat die
+           Netze, den RIP-Haken, die Tabelle — und einen DHCP-Server,
+           denn beim Anbieter holt sich der Heimrouter seine Adresse. */
+        h += netzeBlock(node, sn, mehr);
+        h += ripBlock(node, ro, mehr);
+        if (mehr) h += wegeBlock(node, ro);
+        if (mehr) {
+          const an = !!(node.dhcpServer && node.dhcpServer.on);
+          h += sec('DHCP-Server', 'cww-dhcp', 'Wie beim echten Anbieter: ein Heimrouter, '
+            + 'dessen WAN-Seite hier hängt, holt sich seine Adresse vom cww.');
+          if (!ro) {
+            h += '<button class="k-add" data-k="dhcpseite">'
+              + 'DHCP-Server einrichten' + (an ? ' · <b>aktiv</b>' : '') + '</button>';
+          } else if (an) {
+            h += '<div class="k-hint">Dieses cww verteilt Adressen.</div>';
+          }
+        }
+      } else if (node.kind !== 'switch' && zeig('allgemein')) {
         const gwRo = ro || dhcpIrgendwo;
         // Bei DHCP dieselbe blasse Herkunftsangabe wie in den zwei
         // Feldern der Netzwerkkarte — vier Felder, eine Auskunft.
@@ -456,7 +494,54 @@
         }));
     }
 
-    const dhcpFaehig = (node) => node.kind !== 'switch' && node.kind !== 'router';
+    const dhcpFaehig = (node) => node.kind !== 'switch' && node.kind !== 'router' && node.kind !== 'cww';
+
+    /* ═══ Das cww: der Reiter „Internet" ══════════════════════
+       Oben die zwei Zahlen, die dem Kind gehören und die es nicht
+       ändern kann: der Adressbereich und die Adresse in der Wolke.
+       Darunter, groß, was 8.8.8.8 weiß — nur lesen. */
+    function internetSeite(node, mehr) {
+      const c = netz.internetConf();
+      let h = sec('Dein Adressbereich', 'cww-bereich', 'Nur Adressen aus diesem Bereich '
+        + 'kommen ins Internet. Wem die anderen Bereiche gehören, weiß niemand — auch 8.8.8.8 nicht.');
+      h += '<div class="k-cww-bereich mono">' + c.prefix + '.0.0.0<span class="dim"> /8</span></div>'
+        + '<div class="k-hint dim">von ' + c.prefix + '.0.0.1 bis ' + c.prefix + '.255.255.254</div>';
+      h += '<div class="k-sec">In der Wolke</div>'
+        + '<div class="k-hint"><span class="mono">' + esc(c.backbone) + '</span> · Netzmaske '
+        + '<span class="mono">255.0.0.0</span></div>';
+      const m = inet ? inet.modus : 'solo';
+      if (m === 'solo') {
+        h += '<div class="k-hint warn">Kein Raum – andere Netze nicht erreichbar. '
+          + '8.8.8.8 kennt nur deine eigenen Namen.</div>';
+      } else if (m === 'aus') {
+        h += '<div class="k-hint warn">Gespiegeltes Netz – hier geht nichts ins Internet.</div>';
+      }
+      if (!mehr) return h;
+
+      h += sec('8.8.8.8 · öffentlicher DNS', 'cww-dns', 'Hier steht jeder Name, den ein '
+        + '<b>DNS-Server im Internet</b> kennt: er muss laufen, eine Adresse aus seinem '
+        + 'Bereich haben und vom cww erreichbar sein. Wer einen Namen zuerst anmeldet, '
+        + 'bekommt ihn. Eintragen kann man hier nichts — das geht nur am eigenen DNS-Server.');
+      const rows = inet ? inet.liste() : [];
+      if (!rows.length) {
+        h += '<div class="k-hint dim">8.8.8.8 kennt noch keinen Namen.</div>';
+        return h;
+      }
+      const T = (window.Internet && window.Internet.STATUS_TEXT) || {};
+      /* Zwei Zeilen je Eintrag statt vier Spalten: im Kärtchen ist
+         kein Platz für Name, Typ, Adresse UND Grund nebeneinander —
+         in der ersten Fassung brach „drucker.anna.de" mitten im Wort. */
+      h += '<div class="k-dns">';
+      for (const r of rows) {
+        const gut = r.status === 'eigen' || r.status === 'fremd';
+        h += '<div class="k-dns-z' + (gut ? '' : ' is-nicht') + '">'
+          + '<span class="k-dns-n mono">' + esc(r.name) + '</span>'
+          + '<span class="k-dns-w mono"><i>' + esc(r.typ) + '</i>' + esc(r.wert) + '</span>'
+          + '<span class="k-dns-st">' + esc(T[r.status] || r.status) + '</span></div>';
+      }
+      h += '</div>';
+      return h;
+    }
 
     /* ═══ Der Heimrouter: eine Seite je Seite des Geräts ══════
        WAN und LAN sind nicht zwei Netzwerkkarten unter vielen,
@@ -613,6 +698,11 @@
          dass eine Zeile für „alles Übrige" als kaputt gilt. */
       if (U.mask2prefix(r.mask) === null)
         return { text: 'diese Netzmaske gibt es nicht', stand: 'bad' };
+      /* Am cww nur Ziele im eigenen /8 — nach draußen entscheidet
+         die Wolke (schichten.js, routeFor übergeht solche Zeilen). */
+      if (netz.istCww(node) && !netz.imEigenenNetz(r.net))
+        return { text: 'nur Ziele in deinem Bereich (' + netz.internetConf().prefix
+          + '.0.0.0/8) — alles andere geht ohnehin ins Internet', stand: 'bad' };
       const nic = ueberKarte(node, r.gateway);
       if (!nic)
         return { text: r.gateway + ' liegt in keinem Netz dieses Geräts', stand: 'bad' };
@@ -1330,10 +1420,15 @@
         h += '<div class="k-hint">Verteilt wird auf der <b>LAN-Seite</b> — ins Haus. '
           + 'Zum Anbieter hin kann ein Heimrouter keine Adressen vergeben.</div>';
       } else if (node.nics.length > 1) {
+        /* Beim cww nie die Internet-Karte: Adressen verteilt der
+           Anbieter an seine Kunden, nicht in die Wolke. */
+        if (netz.istInternet(node, c.nic | 0)) c.nic = 1;
+        const cww = netz.istCww(node);
         h += '<label class="k-f"><span class="k-f-l">Netzwerkkarte:</span>'
           + '<select class="f" data-f="dhcpnic">'
-          + node.nics.map((nic, i) => '<option value="' + i + '"'
-              + ((c.nic | 0) === i ? ' selected' : '') + '>Netzwerkkarte ' + (i + 1)
+          + node.nics.map((nic, i) => netz.istInternet(node, i) ? '' : '<option value="' + i + '"'
+              + ((c.nic | 0) === i ? ' selected' : '') + '>'
+              + (cww ? esc(netz.portLabel(node, i)) : 'Netzwerkkarte ' + (i + 1))
               + (nic.ip ? ' · ' + esc(nic.ip) : ' · ohne Adresse') + '</option>').join('')
           + '</select></label>';
       }
@@ -1937,7 +2032,12 @@
         netz.feste(node).forEach(nic => { h += karte(nic, netz.portLabel(node, nic.i)); });
       }
 
-      if (node.kind !== 'switch') {
+      if (netz.istCww(node)) {
+        h += '<div class="kk-g">'
+          + z('Adressbereich', mono(netz.internetConf().prefix + '.0.0.0/8'))
+          + z('Automatisches Routing', anAus(netz.ripConf(node).on))
+          + '</div>';
+      } else if (node.kind !== 'switch') {
         h += '<div class="kk-g">'
           + z('Gateway', mono(node.gateway))
           + z('DNS', mono(node.dns));
@@ -1991,6 +2091,7 @@
          Knopf „Zur Weiterleitungstabelle" nicht — ein Knopf, der ins
          Leere führt, ist schlechter als keiner. */
       setWeiterleitung(f) { fenster = f || null; },
+      setInternet(i) { inet = i || null; },
       /* Dieselbe Frage darf nur an EINER Stelle beantwortet werden:
          das Fenster zeichnet dieselben Zeilen wie das Kärtchen und
          muss dazu dieselbe Auskunft geben. Ständen die zwei Funktionen
