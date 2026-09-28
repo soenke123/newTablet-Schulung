@@ -393,6 +393,11 @@ js/
   dienste.js         DHCP (Server und Client) · DNS (Server und
                      Auflöser) · und das An/Aus von Webserver,
                      Mailserver und RIP
+  internet.js        ⭐ das Class Wide Web: was hinter der
+                     Internet-Karte des cww liegt — der Ausgang in
+                     den Raum, 8.8.8.8 und das Verzeichnis. Die
+                     EINZIGE Datei im Kern, die weiß, dass es andere
+                     Tablets gibt
   mitschnitt.js      Paketaufzeichnung und ihre Beschreibung
   terminal.js        Kommandozeile
   subnetze.js        ⭐ wer liegt mit wem im Netz — Farben, Adressräume
@@ -416,7 +421,7 @@ js/
   prog-dateien.js    Datei-Explorer, Editor, Bildbetrachter
   prog-web.js        Webserver- und Webbrowser-Fenster
   prog-mail.js       E-Mail-Programm und E-Mail-Server-Fenster
-  szenarien.js       sieben vorbereitete Netze mit Auftrag
+  szenarien.js       acht vorbereitete Netze mit Auftrag
   app.js             Zusammenbau, localStorage
 ```
 
@@ -525,6 +530,77 @@ Ohne installiertes Chrome den Pfad in `CHROME_PATH` setzen (gilt auch für `uite
 * Wer `index.html`, `css/` oder `js/` anfasst, zieht zusätzlich `V` in `tool.js` **und**
   die `?v=` in `index.html`.
 
+## Das Class Wide Web (cww)
+
+Das Modem aus Filius — nur dass am anderen Ende nicht **eine** zweite Instanz
+hängt, sondern die Netze **aller Tablets im Raum**. Seit dem 2026-09-28.
+
+**Das Bild, das dahintersteht.**
+
+| Im cww | Im echten Internet |
+|---|---|
+| jedes Kind hat ein /8 aus 50…150 (z. B. `67.0.0.0/8`), die Lehrkraft immer `100.0.0.0/8` | ein Adressblock, den eine Vergabestelle zuteilt |
+| das cww | der Grenzrouter des Anbieters |
+| das 8er-Netz (`8.x.y.z`), in dem alle cwws hängen | der Knoten, an dem sich Anbieter treffen |
+| nur Absender aus dem eigenen /8 kommen hinaus | Ingress-Filtering (BCP 38) |
+| 8.8.8.8 | der öffentliche DNS — hier als Sammelverzeichnis |
+
+Wem welches /8 gehört, sieht nur die Lehrkraft (Pult → *Internet der Klasse*).
+Die Klasse soll es herausfinden müssen — mit `traceroute`, mit 8.8.8.8, mit Fragen.
+
+**Das Gerät** (`netz.js`, KIND `cww`, `einmalig`). Höchstens eines je Netz. Karte 0
+ist der Anschluss ins Internet (`istInternet`) — kein Kabel, feste Adresse im
+8er-Netz, vom Raum vergeben und **nicht** in der Datei (`toJSON` schreibt sie leer,
+genau wie den eigenen Bereich: der hängt am Kind, nicht am Netz). Karten ab 1 zeigen
+nach innen. Das Einstellfenster hat drei Reiter: *Allgemein* (Netze, RIP,
+Weiterleitungstabelle, DHCP-Server), *Internet* (Bereich, 8er-Adresse, 8.8.8.8 —
+nur lesen), *Netzwerkkarten*.
+
+**Die Weiterleitung** (`schichten.js`, `routeFor`). Ein neuer Rang `Internet`
+(nach dem Standardgateway): alles außerhalb des eigenen /8 geht an Karte 0.
+Eingetragene und gelernte Wege gelten am cww nur für Ziele im eigenen /8 — sonst
+holte ein Eintrag fremde Pakete ins eigene Netz. In `onIp` die zwei Regeln der
+Haustür: hinaus nur mit eigenem Absender, herein nur, was ins eigene /8 will
+(`drop-quelle` im Ereignisstrom).
+
+**Wie ein Paket zu einem anderen Tablet kommt.**
+
+1. Das cww übergibt es `internet.raus` (statt ARP und Kabel).
+2. Die Brücke holt den Ausgang ab (`cww`-Ereignis, 30 ms gebündelt).
+3. `tool.js` tauscht mit dem Server: `synir_cww_tausch` nimmt, was hinaus soll,
+   und gibt zurück, was für dieses /8 da ist — **ein** Aufruf, alle 0,7 s solange
+   etwas fließt, sonst alle 3 s, und gar nicht, solange kein cww auf der Fläche liegt.
+4. Beim Empfänger speist `stack.vonInternet` es an SEINER Karte 0 ein, 200 ms
+   später in seiner eigenen Uhr.
+
+Jedes Tablet rechnet dabei mit seiner eigenen Uhr weiter. Deshalb warten **alle
+Fristen für fremde Ziele zehnmal so lang** (`FERN_FAKTOR`: Ping, DNS, TCP) — sonst
+liefe bei „Turbo" die Frist ab, während das Paket nur auf die nächste Abfrage des
+Raums wartet. Ein Tablet, das seit 20 s nicht gefragt hat (zugeklappt, Reiter im
+Hintergrund), ist „nicht erreichbar" — gewollt realistisch.
+
+**8.8.8.8** steht in der Wolke und nicht auf der Fläche. Es beantwortet Pings und
+DNS-Fragen (A und MX). Was es weiß, melden die Tablets mit jedem Tausch: jeder
+Eintrag eines DNS-Servers, der läuft, eine Adresse im eigenen /8 hat und vom cww
+erreichbar ist — und nur A-Einträge, die ins **eigene** /8 zeigen (auch das prüft
+der Server). Private Adressen erscheinen im Fenster grau mit Grund. Ein Name gehört
+dem, der ihn zuerst anmeldet; wer später kommt, sieht „vergeben". ⚠️ Die bewusste
+Vereinfachung: der echte 8.8.8.8 fragt rekursiv (Wurzel → .de → Server der Domain);
+hier ist er ein Verzeichnis, in das man hineinsehen kann.
+
+**Ohne Raum** läuft das cww im Übungsbetrieb: Bereich `50.0.0.0/8`, 8.8.8.8 kennt
+nur die eigenen Namen, alles andere ist „nicht erreichbar". **In der Spiegelung**
+(Beamer sieht einem Kind zu) ist der Anschluss aus — die Lehrkraft funkt nie im
+Namen eines Kindes.
+
+**Szenario 8 „Ins Internet"** hat bewusst **keine** öffentlichen Adressen: jedes
+Kind hat ein anderes /8, und das Eintragen aus dem eigenen Bereich ist der Auftrag.
+
+**Prüfstände:** `tests/kerntest.js` (Abschnitte „Class Wide Web" — zwei Tablets in
+einem Prozess, die Wolke ist dort eine Schleife), `supabase/tests/0181_synir_cww.mjs`
+(die RPCs), `tests/raumtest.js` (zwei Tablets und die Lehrkraft im Browser gegen
+pglite: Ping, 8.8.8.8, Webseite über den Raum).
+
 ## Das Tempo — und was daran hängt
 
 Der Regler hat fünf Stufen. Rechts steht, wie lange ein Paket dann für **ein
@@ -619,8 +695,8 @@ Kabel im Raum gegen Leitung über Land. Der Hilfetext am Kabel sagt das seit dem
 **Echo-Server und Einfacher Client** (das Paar, das „Port" erklärt),
 **Firewall**, **Gnutella**, **NS-Einträge im DNS**, das
 **Sequenzdiagramm** des Datenaustauschs, der **Dokumentationsmodus** und der
-Bildexport, pcap-Export. Modem erst, wenn das Ganze online läuft — im Raum
-macht das MPSkills.
+Bildexport, pcap-Export. *(Das Modem gibt es seit dem 2026-09-28 — als Class
+Wide Web, siehe unten.)*
 
 *(Heimrouter, NAT und WLAN standen bis zum 2026-09-25 auf dieser Liste; TCP,
 Dateisystem, Web, E-Mail bis zum 2026-09-26; **`traceroute`** und die
