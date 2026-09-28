@@ -1,0 +1,1327 @@
+<title>Optik-Showroom — Netzwerk-Simulator</title>
+
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   Optik-Showroom · fünf Entwürfe für dieselbe Oberfläche
+   Reine Schaufenster-Seite. Kein Code des Prototyps wird berührt:
+   die Attrappen hier sind HTML+CSS, keine Simulation.
+   Aufbau: EIN Gerüst (.mock / .screen) — fünf Häute (.v1 … .v5).
+   Dass die Struktur identisch ist, ist der Sinn der Sache: was sich
+   unterscheidet, ist ausschließlich die Optik.
+   ══════════════════════════════════════════════════════════════════ */
+
+*,*::before,*::after{ box-sizing:border-box; }
+
+:root{
+  /* Hülle der Seite: ruhig, kühl, leicht grünstichiges Grau.
+     Absichtlich zurückhaltend — die Varianten sollen laut sein,
+     nicht das Schaufenster. */
+  --bg:#EDF0EE; --sheet:#FBFCFB; --ink:#141A19; --mut:#59645F;
+  --line:#D2D9D5; --line2:#E3E8E5; --acc:#0E6A5B; --acc-w:#0A4E43;
+  --shadow:0 1px 2px rgba(18,32,28,.06), 0 12px 32px -18px rgba(18,32,28,.28);
+  --f-disp:"Bahnschrift SemiCondensed","Bahnschrift","DIN Alternate","Oswald",system-ui,sans-serif;
+  --f-body:"Sitka Text",Cambria,"Iowan Old Style",Georgia,serif;
+  --f-ui:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-mono:"Cascadia Mono",Consolas,"SF Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0F1413; --sheet:#161D1B; --ink:#E7EDEA; --mut:#97A39E;
+    --line:#26302D; --line2:#1D2624; --acc:#57C6AD; --acc-w:#8FDFCB;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 34px -18px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1413; --sheet:#161D1B; --ink:#E7EDEA; --mut:#97A39E;
+  --line:#26302D; --line2:#1D2624; --acc:#57C6AD; --acc-w:#8FDFCB;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 34px -18px rgba(0,0,0,.7);
+}
+:root[data-theme="light"]{
+  --bg:#EDF0EE; --sheet:#FBFCFB; --ink:#141A19; --mut:#59645F;
+  --line:#D2D9D5; --line2:#E3E8E5; --acc:#0E6A5B; --acc-w:#0A4E43;
+  --shadow:0 1px 2px rgba(18,32,28,.06), 0 12px 32px -18px rgba(18,32,28,.28);
+}
+
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--f-body); font-size:16.5px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{ max-width:1180px; margin:0 auto; padding:0 24px 96px; }
+
+/* ── Kopf der Seite ───────────────────────────────────────────── */
+.head{ padding:64px 0 28px; border-bottom:1px solid var(--line); }
+.kicker{
+  font-family:var(--f-disp); text-transform:uppercase; letter-spacing:.16em;
+  font-size:12.5px; color:var(--acc-w); margin:0 0 14px;
+}
+h1{
+  font-family:var(--f-disp); font-weight:600; letter-spacing:-.005em;
+  font-size:clamp(34px,5.4vw,58px); line-height:1.02; margin:0 0 18px;
+  text-wrap:balance;
+}
+.lede{ font-size:19px; max-width:62ch; margin:0 0 6px; }
+.lede + .lede{ margin-top:14px; color:var(--mut); font-size:17px; }
+.head-meta{
+  display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:26px;
+  font-family:var(--f-mono); font-size:12.5px; color:var(--mut);
+}
+.head-meta b{ color:var(--ink); font-weight:600; }
+
+/* ── Die Prämisse: drei Arten von Flächen ─────────────────────── */
+.premise{ margin:40px 0 8px; }
+.premise h2, .cmp h2, .open h2{
+  font-family:var(--f-disp); font-size:13px; text-transform:uppercase;
+  letter-spacing:.14em; color:var(--mut); margin:0 0 18px; font-weight:600;
+}
+.three{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+.three > div{
+  background:var(--sheet); border:1px solid var(--line); border-radius:3px;
+  padding:16px 18px 18px;
+}
+.three h3{
+  font-family:var(--f-ui); font-size:15px; margin:0 0 6px; font-weight:650;
+  display:flex; align-items:center; gap:9px;
+}
+.three p{ margin:0; font-size:14.5px; color:var(--mut); line-height:1.5; }
+.dot{ width:11px; height:11px; border-radius:2px; flex:none; }
+.dot--a{ background:#E0A32E; }
+.dot--k{ background:#3E7FB8; }
+.dot--d{ background:#4B4FC8; border-radius:50%; }
+
+/* ── Sprungleiste ─────────────────────────────────────────────── */
+.nav{
+  position:sticky; top:0; z-index:40; margin:44px 0 0;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:blur(10px) saturate(1.2);
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  padding:9px 0; display:flex; gap:7px; flex-wrap:wrap; align-items:center;
+}
+.nav b{
+  font-family:var(--f-disp); text-transform:uppercase; letter-spacing:.12em;
+  font-size:11.5px; color:var(--mut); margin-right:6px; font-weight:600;
+}
+.nav a{
+  font-family:var(--f-ui); font-size:13px; text-decoration:none; color:var(--ink);
+  border:1px solid var(--line); border-radius:2px; padding:5px 11px;
+  background:var(--sheet); transition:border-color .14s, color .14s;
+}
+.nav a:hover{ border-color:var(--acc); color:var(--acc-w); }
+.nav a:focus-visible{ outline:2px solid var(--acc); outline-offset:2px; }
+.nav a i{ font-style:normal; font-family:var(--f-mono); color:var(--mut); margin-right:6px; }
+
+/* ── Variantenblock ───────────────────────────────────────────── */
+.variant{ padding:56px 0 8px; border-bottom:1px solid var(--line2); scroll-margin-top:60px; }
+.v-head{ display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:40px; align-items:end; margin-bottom:22px; }
+.v-num{
+  font-family:var(--f-mono); font-size:12px; color:var(--mut);
+  letter-spacing:.06em; margin:0 0 8px;
+}
+.variant h2.v-name{
+  font-family:var(--f-disp); font-size:clamp(26px,3.4vw,38px); line-height:1.05;
+  margin:0 0 10px; font-weight:600; letter-spacing:-.01em;
+}
+.v-thesis{ margin:0; font-size:17.5px; max-width:56ch; }
+.v-tags{ display:flex; flex-direction:column; gap:7px; font-family:var(--f-ui); font-size:13.5px; }
+.v-tags span{ display:flex; gap:9px; align-items:baseline; color:var(--mut); }
+.v-tags span::before{
+  content:attr(data-l); font-family:var(--f-mono); font-size:10.5px;
+  text-transform:uppercase; letter-spacing:.08em; color:var(--acc-w);
+  flex:none; width:52px; padding-top:2px;
+}
+
+/* Attrappen brauchen Breite. Auf engen Fenstern darf man schieben,
+   die Seite selbst rollt nie seitwärts. */
+.frame{ overflow-x:auto; padding-bottom:6px; }
+.frame > *{ min-width:1060px; }
+.cap{
+  font-family:var(--f-mono); font-size:12px; color:var(--mut);
+  margin:10px 0 0; display:flex; gap:16px; flex-wrap:wrap;
+}
+.cap b{ color:var(--ink); font-weight:600; }
+.v-below{ display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:26px; margin-top:26px; align-items:start; }
+.screens{ display:flex; gap:22px; align-items:flex-start; }
+
+/* ── Legende: woran man sieht, was was ist ────────────────────── */
+.legend{ background:var(--sheet); border:1px solid var(--line); border-radius:3px; padding:16px 17px 17px; }
+.legend h3{
+  font-family:var(--f-disp); font-size:12px; text-transform:uppercase;
+  letter-spacing:.13em; color:var(--mut); margin:0 0 14px; font-weight:600;
+}
+.legend dl{ margin:0; display:grid; gap:13px; }
+.legend dt{ font-family:var(--f-ui); font-size:13.5px; font-weight:650; display:flex; align-items:center; gap:8px; }
+.legend dd{ margin:3px 0 0; font-size:14px; color:var(--mut); line-height:1.45; }
+.legend .swatch{ width:34px; height:20px; flex:none; border-radius:2px; }
+
+/* ── Vergleich und offene Fragen ──────────────────────────────── */
+.cmp{ padding:60px 0 0; }
+.tbl-scroll{ overflow-x:auto; }
+table{ border-collapse:collapse; width:100%; min-width:760px; font-family:var(--f-ui); font-size:14px; }
+th,td{ text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+thead th{
+  font-family:var(--f-disp); font-size:11.5px; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--mut); border-bottom:1.5px solid var(--ink); font-weight:600;
+}
+tbody th{ font-weight:650; white-space:nowrap; }
+td small{ display:block; color:var(--mut); font-size:12.5px; }
+.open{ padding:56px 0 0; }
+.open ol{ margin:0; padding:0; list-style:none; counter-reset:q; display:grid; gap:20px; max-width:74ch; }
+.open li{ counter-increment:q; padding-left:44px; position:relative; }
+.open li::before{
+  content:counter(q); position:absolute; left:0; top:1px;
+  font-family:var(--f-mono); font-size:12px; color:var(--acc-w);
+  border:1px solid var(--line); border-radius:2px; width:26px; height:26px;
+  display:grid; place-items:center; background:var(--sheet);
+}
+.open b{ font-family:var(--f-ui); font-size:15px; }
+.open p{ margin:3px 0 0; color:var(--mut); font-size:15px; }
+.foot{ margin-top:56px; padding-top:22px; border-top:1px solid var(--line); font-family:var(--f-mono); font-size:12px; color:var(--mut); }
+
+@media (max-width:900px){
+  .v-head,.v-below{ grid-template-columns:1fr; gap:20px; }
+  .three{ grid-template-columns:1fr; }
+  .screens{ flex-wrap:wrap; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   GERÜST  —  gilt für alle fünf Varianten gleich
+   ══════════════════════════════════════════════════════════════════ */
+.mock{
+  --nw:104px;
+  font-family:var(--m-ui); color:var(--m-ink); background:var(--m-bg);
+  border:1px solid var(--m-line); border-radius:var(--m-rad,10px);
+  overflow:hidden; position:relative; box-shadow:var(--shadow);
+}
+.mock svg{ display:block; }
+.mock button{ font:inherit; color:inherit; cursor:pointer; }
+
+/* Kopfzeile */
+.m-top{
+  display:flex; align-items:center; gap:14px; padding:9px 14px;
+  background:var(--m-top); color:var(--m-topink);
+  border-bottom:1px solid var(--m-topline,var(--m-line));
+}
+.m-logo{ color:var(--m-acc); font-size:15px; }
+.m-brand{ font-family:var(--m-disp); font-size:16px; letter-spacing:.01em; }
+.m-badge{
+  font-family:var(--m-mono); font-size:9.5px; text-transform:uppercase;
+  letter-spacing:.1em; padding:2px 6px; border:1px solid currentColor;
+  border-radius:2px; opacity:.55;
+}
+.m-modus{ display:flex; gap:3px; margin-left:8px; }
+.m-mbtn{
+  display:flex; align-items:center; gap:6px; font-size:12.5px;
+  padding:5px 11px; border-radius:var(--m-rad-s,6px);
+  border:1px solid transparent; background:var(--m-btn); opacity:.72;
+}
+.m-mbtn svg{ width:13px; height:13px; }
+.m-mbtn.is-on{ opacity:1; background:var(--m-acc); color:var(--m-on,#fff); border-color:var(--m-acc); }
+.m-run{ margin-left:auto; display:flex; align-items:center; gap:6px; }
+.m-rbtn{
+  width:27px; height:27px; display:grid; place-items:center; font-size:11px;
+  border-radius:var(--m-rad-s,6px); border:1px solid var(--m-topline,var(--m-line));
+  background:var(--m-btn); opacity:.85;
+}
+.m-speed{ font-family:var(--m-mono); font-size:10.5px; opacity:.6; letter-spacing:.06em; }
+.m-sel{
+  font-size:12px; padding:5px 10px; border-radius:var(--m-rad-s,6px);
+  border:1px solid var(--m-topline,var(--m-line)); background:var(--m-btn); opacity:.85;
+}
+
+/* Werkzeugleiste */
+.m-tools{
+  display:flex; align-items:center; gap:12px; padding:9px 14px;
+  background:var(--m-tools); border-bottom:1px solid var(--m-line); min-height:52px;
+}
+.m-tl{
+  font-family:var(--m-disp); font-size:10px; text-transform:uppercase;
+  letter-spacing:.13em; color:var(--m-mut);
+}
+.m-sep{ width:1px; align-self:stretch; background:var(--m-line); margin:0 4px; }
+.m-add{
+  display:flex; align-items:center; gap:7px; font-size:13px;
+  padding:7px 12px; border-radius:var(--m-rad-s,6px);
+  border:1px solid var(--m-line); background:var(--m-card); color:var(--m-ink);
+}
+.m-add svg{ width:17px; height:17px; }
+.m-add.is-on{ border-color:var(--m-acc); color:var(--m-acc-w,var(--m-acc)); }
+.m-caret{ font-size:9px; opacity:.55; margin-left:1px; }
+.m-hint{ font-size:12.5px; color:var(--m-mut); }
+.m-tools[data-role="lauf"]{ display:none; }
+.mock[data-modus="aktion"] .m-tools[data-role="bau"]{ display:none; }
+.mock[data-modus="aktion"] .m-tools[data-role="lauf"]{ display:flex; }
+
+/* Der Aufklapper am Knopf „Endgerät" — in allen fünf Varianten
+   dieselbe Mechanik, nur anders angemalt. */
+.m-dev{ position:relative; }
+.m-fly{
+  position:absolute; top:calc(100% + 7px); left:0; z-index:8; width:212px;
+  display:none; padding:6px; background:var(--m-card);
+  border:1px solid var(--m-line); border-radius:var(--m-rad-s,8px);
+  box-shadow:0 18px 40px -22px rgba(0,0,0,.5);
+}
+.m-dev.is-open .m-fly{ display:block; }
+.m-fly-t{
+  font-family:var(--m-mono); font-size:9.5px; text-transform:uppercase;
+  letter-spacing:.09em; color:var(--m-mut); padding:4px 8px 7px;
+}
+.m-fi{
+  display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  padding:8px 9px; border:1px solid transparent; border-radius:var(--m-rad-s,6px);
+  background:none; font-size:13.5px;
+}
+.m-fi:hover{ background:var(--m-hover); border-color:var(--m-line); }
+.m-fi svg{ width:19px; height:19px; flex:none; color:var(--m-acc); }
+.m-fi em{ display:block; font-style:normal; font-size:11px; color:var(--m-mut); }
+.m-fi .grab{ margin-left:auto; font-family:var(--m-mono); font-size:9.5px; color:var(--m-mut); letter-spacing:.06em; }
+
+/* Fläche */
+.m-stage{ position:relative; height:474px; background:var(--m-stage); overflow:hidden; }
+.m-grid{ position:absolute; inset:0; }
+.m-cables{ position:absolute; inset:0; width:100%; height:100%; }
+.m-cables line{ stroke:var(--m-cable); stroke-width:2.5; vector-effect:non-scaling-stroke; }
+
+/* Gerät auf der Fläche */
+.node{
+  position:absolute; left:calc(var(--x) * 1%); top:calc(var(--y) * 1%);
+  transform:translate(-50%,-50%); width:var(--nw);
+  display:flex; flex-direction:column; align-items:center; gap:5px;
+}
+.node-box{
+  position:relative; width:62px; height:50px; display:grid; place-items:center;
+  background:var(--m-card); border:1px solid var(--m-nline,var(--m-line));
+  border-radius:var(--m-rad-s,8px); color:var(--m-nink,var(--m-ink));
+}
+.node-box svg{ width:26px; height:26px; }
+.node-k{
+  position:absolute; top:-8px; left:-8px; font-family:var(--m-mono);
+  font-size:9.5px; padding:1px 5px; border-radius:2px;
+  background:var(--m-acc); color:var(--m-on,#fff); letter-spacing:.04em;
+}
+.node-nm{ font-size:11.5px; color:var(--m-mut); }
+.ip{ font-family:var(--m-mono); font-size:12px; letter-spacing:-.01em; white-space:nowrap; }
+.ip b{ font-weight:600; }
+.ip .n{ color:var(--m-netz); }
+.ip .h{ color:var(--m-host); }
+.node[data-kind="switch"] .node-box{ width:74px; height:40px; }
+.node[data-kind="handy"] .node-box{ width:40px; height:56px; }
+.node[data-kind="server"] .node-box{ width:52px; height:58px; }
+
+/* Aufgabe und Einstellungen — die zwei Fenster auf der Fläche */
+.pnl{ position:absolute; z-index:5; }
+/* Der Auftrag liegt unten links — dort, wo der Aufklapper am Knopf
+   „Endgerät" ihn nicht verdeckt. */
+.pnl-auf{ left:16px; bottom:16px; width:262px; }
+.pnl-kon{ right:16px; top:14px; width:298px; }
+.p-card{
+  background:var(--m-card); border:1px solid var(--m-line);
+  border-radius:var(--m-rad-s,8px); overflow:hidden;
+}
+.p-h{
+  display:flex; align-items:center; gap:9px; padding:9px 11px;
+  border-bottom:1px solid var(--m-line);
+}
+.p-h svg{ width:17px; height:17px; }
+.p-tag{
+  font-family:var(--m-disp); font-size:9.5px; text-transform:uppercase;
+  letter-spacing:.14em; color:var(--m-mut);
+}
+.p-t{ font-size:13.5px; font-weight:650; }
+.p-t .p-tag{ display:block; margin-bottom:2px; }
+.p-t small{ display:block; font-weight:400; font-size:11px; color:var(--m-mut); }
+.p-x{ margin-left:auto; display:flex; gap:5px; align-items:center; }
+.p-x button{ background:none; border:0; font-size:12px; color:var(--m-mut); padding:2px 4px; }
+.p-x button svg{ width:13px; height:13px; display:block; }
+.p-mehr{ font-size:11px; border:1px solid var(--m-line)!important; border-radius:4px; padding:2px 7px!important; }
+.p-b{ padding:11px; }
+
+/* Auftrag */
+.auf-txt{ font-size:13px; line-height:1.5; color:var(--m-ink); margin:0; }
+.auf-txt b{ font-family:var(--m-mono); font-size:12px; font-weight:600; }
+.auf-step{
+  display:flex; align-items:center; gap:8px; margin-top:11px;
+  font-family:var(--m-mono); font-size:10px; color:var(--m-mut); letter-spacing:.05em;
+}
+.auf-bar{ flex:1; height:4px; border-radius:2px; background:var(--m-hover); overflow:hidden; }
+.auf-bar i{ display:block; width:50%; height:100%; background:var(--m-auf); }
+
+/* Einstellformular */
+.row{ display:flex; align-items:center; gap:10px; padding:5px 0; }
+.row + .row{ border-top:1px dotted var(--m-line); }
+.row label{ font-size:12px; color:var(--m-mut); width:108px; flex:none; }
+.fld{
+  flex:1; font-family:var(--m-mono); font-size:12px; padding:4px 7px;
+  background:var(--m-fld); border:1px solid var(--m-line); border-radius:4px;
+  color:var(--m-ink); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.fld--ro{ background:none; border-color:transparent; color:var(--m-mut); }
+.fld--focus{ border-color:var(--m-acc); box-shadow:0 0 0 2px color-mix(in srgb,var(--m-acc) 22%,transparent); }
+.chk{ display:flex; align-items:center; gap:8px; font-size:12px; margin-top:9px; color:var(--m-ink); }
+.chk i{ width:13px; height:13px; border:1px solid var(--m-line); border-radius:3px; background:var(--m-fld); flex:none; }
+.p-f{
+  display:flex; gap:14px; padding:8px 11px; border-top:1px solid var(--m-line);
+  font-family:var(--m-mono); font-size:10px; color:var(--m-mut); background:var(--m-foot,transparent);
+}
+.p-f b{ color:var(--m-ink); font-weight:600; }
+
+/* Deko-Haken: je Haut sichtbar oder nicht */
+.dec{ display:none; }
+
+/* ══ Bildschirme: Laptop und Handy ═══════════════════════════════ */
+.screen{ position:relative; font-family:var(--m-ui); color:var(--m-sink,var(--m-ink)); }
+.scr{
+  width:520px; flex:none; border-radius:var(--m-srad,12px); overflow:hidden;
+  background:var(--m-wall); border:1px solid var(--m-sline,var(--m-line));
+  box-shadow:var(--shadow);
+}
+.scr-bar{
+  display:flex; align-items:center; gap:10px; padding:6px 11px; font-size:11.5px;
+  background:var(--m-sbar); color:var(--m-sbarink); border-bottom:1px solid var(--m-sline,var(--m-line));
+}
+.scr-bar .nm{ font-weight:650; display:flex; align-items:center; gap:7px; }
+.scr-bar .nm svg{ width:14px; height:14px; }
+.scr-bar .ip{ font-size:11px; opacity:.8; }
+.scr-bar .rt{ margin-left:auto; display:flex; align-items:center; gap:9px; font-family:var(--m-mono); font-size:10.5px; opacity:.8; }
+.scr-bar .rt svg{ width:13px; height:13px; display:block; }
+.scr-body{ position:relative; height:318px; padding:16px; }
+.apps{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px 8px; width:186px; }
+.app{ display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
+.app-i{
+  width:44px; height:44px; display:grid; place-items:center;
+  border-radius:var(--m-irad,11px); background:var(--m-icon); color:var(--m-iconink);
+  border:1px solid var(--m-iline,transparent);
+}
+.app-i svg{ width:22px; height:22px; }
+.app span{ font-size:10.5px; line-height:1.2; max-width:60px; }
+/* Ein offenes Programmfenster — der Beweis, dass es Programme sind
+   und keine Knöpfe. */
+.win{
+  position:absolute; right:14px; top:14px; width:282px;
+  border-radius:var(--m-wrad,10px); overflow:hidden; background:var(--m-win);
+  border:1px solid var(--m-winline,var(--m-sline)); box-shadow:0 22px 50px -22px rgba(0,0,0,.55);
+}
+.win-h{
+  display:flex; align-items:center; gap:8px; padding:7px 10px; font-size:11.5px;
+  background:var(--m-winh); color:var(--m-winhink); border-bottom:1px solid var(--m-winline,var(--m-sline));
+}
+.win-h svg{ width:13px; height:13px; }
+.win-h .sp{ margin-left:auto; display:flex; gap:5px; }
+.win-h .sp i{ width:9px; height:9px; border-radius:50%; background:currentColor; opacity:.3; }
+.win-b{
+  font-family:var(--m-mono); font-size:11px; line-height:1.65; padding:11px 12px;
+  color:var(--m-winink); white-space:pre-wrap;
+}
+.win-b .pr{ color:var(--m-acc); }
+.win-b .ok{ color:var(--m-okc,var(--m-acc)); }
+.dock{
+  position:absolute; left:50%; bottom:12px; transform:translateX(-50%);
+  display:flex; gap:9px; padding:7px 10px; border-radius:var(--m-drad,14px);
+  background:var(--m-dock); border:1px solid var(--m-dline,transparent);
+}
+.dock span{
+  width:32px; height:32px; display:grid; place-items:center;
+  border-radius:var(--m-irad,9px); background:var(--m-icon); color:var(--m-iconink);
+}
+.dock span svg{ width:17px; height:17px; }
+
+/* Handy */
+.phone{
+  width:196px; flex:none; border-radius:var(--m-prad,26px); overflow:hidden;
+  background:var(--m-pwall,var(--m-wall)); border:var(--m-pbez,1px solid var(--m-sline));
+  box-shadow:var(--shadow); padding:0;
+}
+.ph-st{
+  display:flex; align-items:center; gap:7px; padding:8px 14px 4px;
+  font-family:var(--m-mono); font-size:9.5px; color:var(--m-sbarink);
+  background:var(--m-pbar,transparent);
+}
+.ph-st .rt{ margin-left:auto; display:flex; gap:6px; align-items:center; }
+.ph-nm{ padding:2px 14px 10px; font-size:11px; background:var(--m-pbar,transparent); color:var(--m-sbarink); }
+.ph-nm b{ font-weight:650; }
+.ph-body{ padding:14px 14px 10px; }
+.ph-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px 10px; }
+.ph-grid .app-i{ width:42px; height:42px; margin:0 auto; }
+.ph-grid .app span{ font-size:9.5px; }
+.ph-dock{
+  margin:16px 6px 0; display:flex; justify-content:center; gap:12px;
+  padding:9px; border-radius:var(--m-drad,16px); background:var(--m-dock);
+  border:1px solid var(--m-dline,transparent);
+}
+.ph-dock span{ width:34px; height:34px; display:grid; place-items:center; border-radius:var(--m-irad,10px); background:var(--m-icon); color:var(--m-iconink); }
+.ph-dock span svg{ width:18px; height:18px; }
+.ph-home{ height:20px; display:grid; place-items:center; }
+.ph-home i{ display:block; width:62px; height:4px; border-radius:2px; background:currentColor; opacity:.25; }
+.scr-cap{
+  font-family:var(--f-mono); font-size:11px; color:var(--mut);
+  margin-top:9px; max-width:520px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   HAUT 1 · WERKBANK — technische Zeichnung
+   Papier, Hairlines, DIN-Schrift, kein Schatten, kein Rund.
+   Der Bildschirm eines Geräts ist das EINZIGE runde, bunte,
+   schwebende Ding auf dem ganzen Blatt.
+   ══════════════════════════════════════════════════════════════════ */
+.v1{
+  --m-ui:"Bahnschrift SemiCondensed","Bahnschrift","DIN Alternate","Roboto Condensed",system-ui,sans-serif;
+  --m-disp:"Bahnschrift SemiCondensed","Bahnschrift","DIN Alternate",system-ui,sans-serif;
+  --m-mono:"Cascadia Mono",Consolas,monospace;
+  --m-bg:#EDEFE8; --m-ink:#1A2226; --m-mut:#6C7671; --m-line:#BEC5BB;
+  --m-top:#F6F7F2; --m-topink:#1A2226; --m-topline:#1A2226;
+  --m-tools:#F6F7F2; --m-stage:#EDEFE8; --m-card:#FCFDFA; --m-hover:#E7EADF;
+  --m-btn:transparent; --m-fld:#FFFFFF; --m-acc:#1F5F7A; --m-on:#fff;
+  --m-cable:#8C9A93; --m-netz:#1F5F7A; --m-host:#9A5A22; --m-auf:#B03A26;
+  --m-rad:2px; --m-rad-s:0px; --m-nline:#1A2226;
+  --m-wall:#F2F4EF; --m-sline:#1A2226; --m-sbar:#FFFFFF; --m-sbarink:#1A2226;
+  --m-icon:#E8EDE9; --m-iconink:#1F5F7A; --m-iline:#C7CFC6; --m-irad:3px;
+  --m-win:#FFFFFF; --m-winh:#1F5F7A; --m-winhink:#fff; --m-winink:#1A2226;
+  --m-dock:#FFFFFFEE; --m-dline:#1A2226; --m-drad:2px; --m-srad:2px; --m-wrad:2px;
+  --m-prad:3px; --m-pbez:1px solid #1A2226; --m-pbar:#FFFFFF;
+}
+.v1 .m-stage .m-grid{
+  background-image:
+    linear-gradient(to right,#C9D2C8 1px,transparent 1px),
+    linear-gradient(to bottom,#C9D2C8 1px,transparent 1px),
+    linear-gradient(to right,#DCE2D8 1px,transparent 1px),
+    linear-gradient(to bottom,#DCE2D8 1px,transparent 1px);
+  background-size:80px 80px,80px 80px,16px 16px,16px 16px;
+  opacity:.85;
+}
+.v1 .m-top{ border-bottom-width:1.5px; }
+.v1 .m-brand{ text-transform:uppercase; letter-spacing:.1em; font-size:14px; }
+.v1 .m-mbtn.is-on{ border-radius:0; }
+.v1 .node-box{ border-width:1.2px; box-shadow:none; }
+.v1 .node-k{ background:#FCFDFA; color:#1A2226; border:1px solid #1A2226; border-radius:0; }
+.v1 .node-nm{ text-transform:uppercase; letter-spacing:.08em; font-size:10px; }
+.v1 .p-card{ border-color:#1A2226; border-width:1.2px; border-radius:0; }
+.v1 .pnl-kon .p-h{ background:#1A2226; color:#F6F7F2; }
+.v1 .pnl-kon .p-tag{ color:#9FB4AE; }
+.v1 .pnl-kon .p-x button{ color:#D6DDD6; }
+/* Schriftfeld wie auf einer Zeichnung: unten rechts, gerastert */
+.v1 .pnl-kon .p-f{ background:#F1F3EC; justify-content:flex-end; text-align:right; }
+.v1 .dec--stamp{
+  display:block; position:absolute; left:-9px; top:-13px; transform:rotate(-6deg);
+  font-family:var(--m-disp); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:#B03A26; border:2px solid #B03A26; border-radius:2px; padding:3px 8px;
+  background:#FCFDFA;
+}
+.v1 .pnl-auf{ padding-top:10px; }
+.v1 .pnl-auf .p-tag{ display:none; }
+.v1 .pnl-auf .p-h{ padding-top:15px; }
+.v1 .pnl-auf .p-card{ position:relative; overflow:visible; }
+.v1 .auf-bar i{ background:#B03A26; }
+.v1 .m-add{ border-width:1.2px; }
+/* der Bildschirm: bewusst aus der Welt des Blattes herausgehoben */
+.v1 .scr{ border-width:1.2px; }
+.v1 .scr-body{ background:linear-gradient(150deg,#DCE6EA,#EEF1E9 60%,#E4E2D6); }
+.v1 .app-i{ box-shadow:inset 0 0 0 1px #FFF; }
+.v1 .win-b{ background:#FFFFFF; }
+.v1 .ph-body{ background:linear-gradient(160deg,#DCE6EA,#EEF1E9); }
+
+/* ══════════════════════════════════════════════════════════════════
+   HAUT 2 · LEUCHTPULT — dunkles Labor
+   Das Netz liegt im Dunkeln und leuchtet. Der Bildschirm eines
+   Geräts ist HELL: das Gerät ist an, das Werkzeug drumherum nicht.
+   ══════════════════════════════════════════════════════════════════ */
+.v2{
+  --m-ui:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  --m-disp:"Segoe UI Variable Display","Segoe UI Semibold","Segoe UI",system-ui,sans-serif;
+  --m-mono:"Cascadia Mono",Consolas,monospace;
+  --m-bg:#0B1317; --m-ink:#E4EFF1; --m-mut:#7E9298; --m-line:#1F2E34;
+  --m-top:#070E11; --m-topink:#E4EFF1; --m-topline:#1A272C;
+  --m-tools:#0D171B; --m-stage:#081114; --m-card:#101E23; --m-hover:#16272D;
+  --m-btn:#16262B; --m-fld:#0A1519; --m-acc:#2FD3BC; --m-acc-w:#66E6D3; --m-on:#04211D;
+  --m-cable:#2E6E72; --m-netz:#43D8C1; --m-host:#F0B441; --m-auf:#F0B441;
+  --m-rad:12px; --m-rad-s:8px;
+  --m-wall:#F4F7F8; --m-sink:#0C1418; --m-sline:#233238; --m-sbar:#FFFFFF; --m-sbarink:#0C1418;
+  --m-icon:#E7EFF1; --m-iconink:#0E4C48; --m-iline:#D5E2E4; --m-irad:10px;
+  --m-win:#FFFFFF; --m-winh:#F0F4F5; --m-winhink:#0C1418; --m-winink:#12242A;
+  --m-okc:#0B8F7C; --m-dock:#FFFFFFD9; --m-dline:#D7E3E5; --m-prad:24px;
+  --m-pbez:6px solid #0A1418; --m-pbar:#FFFFFF;
+}
+.v2 .m-grid{
+  background-image:radial-gradient(circle,#1C3238 1.1px,transparent 1.1px);
+  background-size:26px 26px; opacity:.7;
+}
+.v2 .m-stage::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(ellipse at 38% 58%, rgba(47,211,188,.10), transparent 62%);
+}
+.v2 .m-cables line{ stroke-width:2.5; filter:drop-shadow(0 0 5px rgba(47,211,188,.55)); stroke:#3FA69E; }
+.v2 .node-box{
+  box-shadow:0 0 0 1px rgba(47,211,188,.16), 0 10px 26px -14px rgba(0,0,0,.9);
+  background:linear-gradient(#142429,#0F1E23);
+}
+.v2 .node-box svg{ color:#7FE6D6; }
+.v2 .node[data-kind="router"] .node-box svg{ color:#9D8CF5; }
+.v2 .node[data-kind="switch"] .node-box svg{ color:#F0B441; }
+.v2 .node-k{ background:#0B3A36; color:#7FE6D6; border:1px solid #1C6B62; }
+.v2 .p-card{ box-shadow:0 20px 50px -26px #000; }
+.v2 .pnl-kon .p-card{ border-top:2px solid var(--m-acc); }
+.v2 .pnl-kon .p-tag{ color:var(--m-acc-w); }
+.v2 .pnl-auf .p-card{ border-left:3px solid #F0B441; }
+.v2 .pnl-auf .p-tag{ color:#F0B441; }
+.v2 .app span{ color:#123036; }
+.v2 .scr-body{ background:linear-gradient(155deg,#FFFFFF,#EAF1F2 55%,#DCE8EA); }
+.v2 .ph-body{ background:#FFFFFF; }
+.v2 .win-h .sp i{ opacity:.45; }
+
+/* ══════════════════════════════════════════════════════════════════
+   HAUT 3 · HEFT & MARKER — Schulheft
+   Karopapier, Klemmbrett, Klebestreifen. Die Handschrift gehört
+   der Lehrkraft; das Programm schreibt gedruckt.
+   ══════════════════════════════════════════════════════════════════ */
+.v3{
+  --m-ui:Candara,Corbel,"Segoe UI",Optima,system-ui,sans-serif;
+  --m-disp:"Candara Light",Candara,Corbel,system-ui,sans-serif;
+  --m-mono:Consolas,"Cascadia Mono",monospace;
+  --m-bg:#FBFBF4; --m-ink:#232830; --m-mut:#6E7580; --m-line:#D6DACE;
+  --m-top:#FFFFFF; --m-topink:#232830; --m-topline:#D6DACE;
+  --m-tools:#FDFDF8; --m-stage:#FCFCF5; --m-card:#FFFFFF; --m-hover:#F0F2E8;
+  --m-btn:#F6F7F0; --m-fld:#FFFFFF; --m-acc:#2E6BB8; --m-on:#fff;
+  --m-cable:#9AA3AC; --m-netz:#2E6BB8; --m-host:#B5651D; --m-auf:#E9B949;
+  --m-rad:6px; --m-rad-s:7px;
+  --m-wall:#FFFFFF; --m-sline:#D6DACE; --m-sbar:#F4F6EE; --m-sbarink:#232830;
+  --m-icon:#EAF0F8; --m-iconink:#2E6BB8; --m-irad:12px;
+  --m-win:#FFFFFF; --m-winh:#F4F6EE; --m-winhink:#232830; --m-winink:#232830;
+  --m-okc:#3E8E41; --m-dock:#F4F6EEE6; --m-dline:#DFE3D8; --m-prad:20px;
+  --m-pbez:1px solid #D6DACE; --m-pbar:#F4F6EE;
+}
+.v3 .m-grid{
+  background-image:
+    linear-gradient(to right,#DCE6F2 1px,transparent 1px),
+    linear-gradient(to bottom,#DCE6F2 1px,transparent 1px);
+  background-size:22px 22px;
+}
+.v3 .node-box{ box-shadow:0 2px 0 #E3E7DC, 0 10px 22px -16px rgba(40,50,40,.5); }
+.v3 .node-k{ background:#2E6BB8; border-radius:4px; }
+/* Markerstrich unter der Adresse — Subnetz als Farbe, wie im Heft */
+.v3 .node .ip{ position:relative; padding:0 3px; }
+.v3 .node .ip::after{
+  content:""; position:absolute; left:0; right:0; bottom:1px; height:7px;
+  background:#F5E27A; opacity:.75; z-index:-1; border-radius:2px;
+}
+.v3 .node[data-kind="router"] .ip::after{ background:#CFE8A8; }
+/* Auftrag: Zettel, schräg, mit Klebestreifen und Handschrift */
+.v3 .pnl-auf{ transform:rotate(-1.4deg); }
+.v3 .pnl-auf .p-card{ box-shadow:0 12px 28px -18px rgba(40,50,40,.6); border-color:#E2E6D9; }
+.v3 .pnl-auf .p-h{ background:#FFF8DC; border-bottom-color:#EDE3B8; }
+.v3 .pnl-auf .auf-txt{
+  font-family:"Ink Free","Segoe Print","Bradley Hand",cursive; font-size:15px; line-height:1.35;
+}
+.v3 .pnl-auf .auf-txt b{ font-family:inherit; font-size:15px; }
+.v3 .dec--tape{
+  display:block; position:absolute; width:56px; height:17px; background:#E8E4C8;
+  opacity:.72; top:-8px; left:22px; transform:rotate(-5deg);
+}
+/* Einstellungen: Klemmbrett */
+.v3 .pnl-kon{ padding-top:16px; }
+.v3 .pnl-kon .p-card{
+  background:#C9B999; border-color:#A79878; padding:16px 9px 9px;
+  border-radius:8px; box-shadow:0 16px 34px -20px rgba(40,50,40,.7);
+}
+.v3 .pnl-kon .p-h, .v3 .pnl-kon .p-b, .v3 .pnl-kon .p-f{ background:#fff; }
+.v3 .pnl-kon .p-h{ border-radius:3px 3px 0 0; }
+.v3 .pnl-kon .p-f{ border-radius:0 0 3px 3px; }
+.v3 .dec--clip{
+  display:block; position:absolute; left:50%; top:2px; transform:translateX(-50%);
+  width:76px; height:20px; border-radius:4px; background:linear-gradient(#EDEFE9,#BFC4BA);
+  border:1px solid #9AA095; z-index:6;
+}
+.v3 .app-i{ box-shadow:0 2px 0 rgba(46,107,184,.14); }
+.v3 .scr-body{ background:#FFFFFF; }
+
+/* ══════════════════════════════════════════════════════════════════
+   HAUT 4 · RASTER — Plakat
+   Null Rundung, 2 px Schwarz, Flächenfarbe je Geräteart. Aus der
+   letzten Reihe lesbar; der Bildschirm ist eine Kachelwand.
+   ══════════════════════════════════════════════════════════════════ */
+.v4{
+  --m-ui:"Franklin Gothic Book","Franklin Gothic Medium",Verdana,Tahoma,system-ui,sans-serif;
+  --m-disp:"Franklin Gothic Demi","Franklin Gothic Medium","Arial Narrow",Impact,sans-serif;
+  --m-mono:Consolas,"Cascadia Mono",monospace;
+  --m-bg:#F4F2EC; --m-ink:#111111; --m-mut:#5C5C58; --m-line:#111111;
+  --m-top:#111111; --m-topink:#F4F2EC; --m-topline:#111111;
+  --m-tools:#F4F2EC; --m-stage:#FAF9F5; --m-card:#FFFFFF; --m-hover:#EDEBE4;
+  --m-btn:transparent; --m-fld:#FFFFFF; --m-acc:#2440B8; --m-on:#fff;
+  --m-cable:#111111; --m-netz:#2440B8; --m-host:#D8402A; --m-auf:#F2C230;
+  --m-rad:0px; --m-rad-s:0px;
+  --m-wall:#FAF9F5; --m-sline:#111111; --m-sbar:#111111; --m-sbarink:#F4F2EC;
+  --m-icon:#2440B8; --m-iconink:#FFFFFF; --m-irad:0px;
+  --m-win:#FFFFFF; --m-winh:#F2C230; --m-winhink:#111111; --m-winink:#111111;
+  --m-okc:#1B7A3D; --m-dock:#111111; --m-dline:#111111; --m-drad:0px;
+  --m-srad:0px; --m-wrad:0px; --m-prad:0px; --m-pbez:2px solid #111111; --m-pbar:#111111;
+}
+.v4{ border-width:2px; }
+.v4 .m-top{ border-bottom-width:2px; }
+.v4 .m-tools{ border-bottom-width:2px; }
+.v4 .m-brand{ text-transform:uppercase; letter-spacing:.06em; }
+.v4 .m-tl{ color:#111; }
+.v4 .m-add{ border-width:2px; font-weight:600; }
+.v4 .m-fly{ border-width:2px; }
+.v4 .m-cables line{ stroke-width:3.5; }
+.v4 .m-grid{ background:none; }
+.v4 .node-box{ border-width:2px; border-radius:0; }
+.v4 .node[data-kind="host"] .node-box{ background:#2440B8; color:#fff; }
+.v4 .node[data-kind="handy"] .node-box{ background:#fff; color:#2440B8; border-color:#2440B8; border-width:3px; }
+.v4 .node[data-kind="server"] .node-box{ background:#111; color:#F4F2EC; }
+.v4 .node[data-kind="switch"] .node-box{ background:#F2C230; color:#111; }
+.v4 .node[data-kind="router"] .node-box{ background:#D8402A; color:#fff; }
+.v4 .node-k{ background:#111; border-radius:0; top:-9px; left:-9px; font-weight:700; }
+.v4 .node-nm{ text-transform:uppercase; font-size:10px; letter-spacing:.06em; color:#111; }
+.v4 .p-card{ border-width:2px; }
+/* Einstellungen: Beschriftungsspalte als schwarzes Band */
+.v4 .pnl-kon .p-h{ background:#fff; border-bottom:2px solid #111; }
+.v4 .row{ padding:0; gap:0; }
+.v4 .row + .row{ border-top:1px solid #111; }
+.v4 .row label{
+  background:#111; color:#F4F2EC; padding:6px 8px; width:112px; font-size:11px;
+  text-transform:uppercase; letter-spacing:.04em;
+}
+.v4 .fld{ border:0; border-radius:0; padding:6px 9px; background:#fff; }
+.v4 .fld--focus{ box-shadow:inset 0 0 0 2px #2440B8; }
+.v4 .p-b{ padding:0; }
+.v4 .chk{ padding:8px 10px; border-top:1px solid #111; margin:0; }
+.v4 .p-f{ border-top:2px solid #111; background:#F2C230; color:#111; }
+.v4 .p-f b{ color:#111; }
+/* Auftrag: schwarzes Feld, gelbe Nummer */
+.v4 .pnl-auf .p-card{ background:#111; color:#F4F2EC; }
+.v4 .pnl-auf .p-h{ border-bottom:0; padding-bottom:0; }
+.v4 .pnl-auf .p-tag{ background:#F2C230; color:#111; padding:2px 6px; letter-spacing:.1em; align-self:flex-start; width:max-content; }
+.v4 .pnl-auf .p-t, .v4 .pnl-auf .auf-txt{ color:#F4F2EC; }
+.v4 .pnl-auf .p-x button{ color:#8C8C88; }
+.v4 .auf-bar{ background:#3A3A36; border-radius:0; }
+.v4 .auf-bar i{ background:#F2C230; }
+/* Bildschirm: Kachelwand */
+.v4 .scr-body{ padding:0; height:318px; }
+.v4 .apps{ width:auto; grid-template-columns:repeat(3,1fr); gap:2px; background:#111; padding:2px; }
+.v4 .app{ background:#2440B8; color:#fff; padding:11px 8px 9px; gap:7px; }
+.v4 .app:nth-child(2){ background:#111; }
+.v4 .app:nth-child(3){ background:#D8402A; }
+.v4 .app:nth-child(4){ background:#F2C230; color:#111; }
+.v4 .app:nth-child(5){ background:#1B7A3D; }
+.v4 .app:nth-child(6){ background:#6B2FA8; }
+.v4 .app-i{ background:none; border:0; width:auto; height:auto; color:inherit; }
+.v4 .app-i svg{ width:26px; height:26px; }
+.v4 .app span{ font-size:10px; text-transform:uppercase; letter-spacing:.05em; max-width:74px; }
+.v4 .win{ right:0; top:auto; bottom:36px; width:100%; border-radius:0; border:0; border-top:2px solid #111; }
+.v4 .win-h{ border-bottom:2px solid #111; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+.v4 .dock{ left:0; right:0; bottom:0; transform:none; width:100%; justify-content:flex-start; gap:2px; padding:2px; }
+.v4 .dock span{ background:#2440B8; color:#fff; border-radius:0; }
+.v4 .ph-grid{ gap:2px; background:#111; padding:2px; }
+.v4 .ph-grid .app{ padding:10px 3px 8px; }
+.v4 .ph-grid .app-i{ width:auto; height:auto; }
+.v4 .ph-grid .app span{ font-size:7.5px; max-width:100%; letter-spacing:0; }
+.v4 .ph-grid .app-i svg{ width:21px; height:21px; }
+.v4 .ph-body{ padding:8px; }
+.v4 .ph-dock{ border-radius:0; margin:8px 0 0; gap:2px; padding:2px; }
+.v4 .ph-dock span{ border-radius:0; background:#2440B8; color:#fff; }
+
+/* ══════════════════════════════════════════════════════════════════
+   HAUT 5 · GLASTISCH — Tiefe als Ordnung
+   Drei Höhen: der Auftrag liegt FLACH auf dem Tisch, das Werkzeug
+   schwebt ein wenig, der Bildschirm eines Geräts schwebt hoch und
+   hat einen Rahmen. Man sieht die Art am Schattenwurf.
+   ══════════════════════════════════════════════════════════════════ */
+.v5{
+  --m-ui:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  --m-disp:"Segoe UI Variable Display","Segoe UI Semibold",system-ui,sans-serif;
+  --m-mono:"Cascadia Mono",Consolas,monospace;
+  --m-bg:#E9EBF1; --m-ink:#171B24; --m-mut:#666E80; --m-line:#D3D7E2;
+  --m-top:#FFFFFFD9; --m-topink:#171B24; --m-topline:#DCE0E9;
+  --m-tools:#F4F5F9; --m-stage:#E9EBF1; --m-card:#FFFFFF; --m-hover:#EFF1F7;
+  --m-btn:#FFFFFF; --m-fld:#F6F7FB; --m-acc:#4A5BD6; --m-acc-w:#3644B8; --m-on:#fff;
+  --m-cable:#A9B0C6; --m-netz:#4A5BD6; --m-host:#1E9E86; --m-auf:#E0A32E;
+  --m-rad:16px; --m-rad-s:11px;
+  --m-wall:#101426; --m-sink:#EEF0F8; --m-sline:#0A0D18; --m-sbar:#0D1120E6; --m-sbarink:#E7EAF6;
+  --m-icon:#FFFFFF1F; --m-iconink:#EDEFF8; --m-iline:#FFFFFF2E; --m-irad:12px;
+  --m-win:#FFFFFFF2; --m-winh:#FFFFFF; --m-winhink:#171B24; --m-winink:#1B2030;
+  --m-okc:#1E9E86; --m-dock:#FFFFFF24; --m-dline:#FFFFFF33; --m-drad:18px;
+  --m-srad:16px; --m-wrad:13px; --m-prad:30px; --m-pbez:7px solid #0A0D18; --m-pbar:transparent;
+}
+.v5 .m-top{ backdrop-filter:blur(14px) saturate(1.3); }
+.v5 .m-grid{
+  background:
+    radial-gradient(60% 55% at 22% 20%, rgba(74,91,214,.09), transparent 70%),
+    radial-gradient(50% 50% at 78% 82%, rgba(30,158,134,.10), transparent 70%);
+}
+.v5 .m-cables line{ stroke-linecap:round; stroke-width:3; }
+.v5 .node-box{
+  background:#FFFFFF; border-color:#E2E5EE;
+  box-shadow:0 1px 1px rgba(23,27,36,.05), 0 10px 22px -14px rgba(23,27,36,.35);
+}
+.v5 .node-box svg{ color:#4A5BD6; }
+.v5 .node[data-kind="server"] .node-box svg{ color:#1E9E86; }
+.v5 .node[data-kind="router"] .node-box svg{ color:#C2612A; }
+.v5 .node-k{ border-radius:6px; font-weight:600; }
+/* Auftrag: flach, direkt auf dem Tisch, halbtransparent, geklammert */
+.v5 .pnl-auf .p-card{
+  background:#FFFFFFB8; backdrop-filter:blur(3px); box-shadow:none;
+  border-color:#CBD0DE; border-style:solid;
+}
+.v5 .pnl-auf .p-card{ overflow:visible; }
+.v5 .pnl-auf .p-h{ background:#FBF4E4; border-bottom-color:#EFE2C4; border-radius:11px 11px 0 0; }
+.v5 .pnl-auf .p-tag{ color:#9A6C12; }
+.v5 .dec--pin{
+  display:block; position:absolute; left:14px; top:-7px; width:26px; height:14px;
+  border-radius:3px; background:linear-gradient(#EDEFF5,#C7CCDC); border:1px solid #B3B9CC;
+}
+/* Werkzeug: schwebt, hat eine Griffleiste */
+.v5 .pnl-kon .p-card{
+  box-shadow:0 2px 4px rgba(23,27,36,.06), 0 26px 54px -26px rgba(23,27,36,.5);
+  padding-left:14px; position:relative;
+}
+.v5 .dec--grip{
+  display:block; position:absolute; left:0; top:0; bottom:0; width:14px;
+  background:
+    radial-gradient(circle,#C2C8D8 1.3px,transparent 1.3px) center/6px 9px repeat-y,
+    linear-gradient(#F4F5F9,#EAECF3);
+  border-right:1px solid #E2E5EE;
+}
+.v5 .pnl-kon .p-h{ border-bottom-color:#ECEEF5; }
+.v5 .p-f{ background:#F7F8FC; }
+/* Bildschirm: Rahmen, Tapete, Dock aus Glas */
+.v5 .scr{ border-width:7px; }
+.v5 .scr-bar{ backdrop-filter:blur(12px); }
+.v5 .scr-body{
+  background:
+    radial-gradient(52% 46% at 18% 14%, rgba(94,110,236,.55), transparent 65%),
+    radial-gradient(48% 44% at 84% 78%, rgba(30,158,134,.45), transparent 62%),
+    linear-gradient(155deg,#151A30,#0C1020 70%);
+}
+.v5 .app-i{ backdrop-filter:blur(8px); box-shadow:inset 0 1px 0 rgba(255,255,255,.22); }
+.v5 .app span{ color:#D9DDEE; text-shadow:0 1px 2px rgba(0,0,0,.5); }
+.v5 .dock{ backdrop-filter:blur(16px) saturate(1.4); box-shadow:0 14px 34px -18px rgba(0,0,0,.7); }
+.v5 .win{ backdrop-filter:blur(18px) saturate(1.3); }
+.v5 .ph-body{
+  background:
+    radial-gradient(60% 40% at 25% 10%, rgba(94,110,236,.55), transparent 65%),
+    linear-gradient(170deg,#151A30,#0B0F1C);
+  padding:12px 12px 8px;
+}
+.v5 .ph-st, .v5 .ph-nm{
+  background:linear-gradient(#151A30,#151A30); color:#E7EAF6;
+}
+.v5 .ph-home{ background:#0B0F1C; color:#fff; }
+
+@media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
+</style>
+
+<!-- Zeichensatz: EIN Satz Symbole, von allen fünf Häuten benutzt.
+     Die Häute färben und füllen sie unterschiedlich — das Symbol
+     selbst bleibt dasselbe, damit der Vergleich ehrlich ist. -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <defs>
+    <g id="ic-laptop" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3.5" y="5" width="17" height="10.5" rx="1"/><path d="M2 18.5h20"/>
+    </g>
+    <g id="ic-server" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="3.5" width="14" height="7" rx="1"/><rect x="5" y="13.5" width="14" height="7" rx="1"/>
+      <path d="M8 7h.01M8 17h.01"/>
+    </g>
+    <g id="ic-handy" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M10.5 19h3"/>
+    </g>
+    <g id="ic-switch" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="7.5" width="19" height="8" rx="1"/><path d="M6.5 15.5v3M11 15.5v3M15.5 15.5v3M20 15.5v3"/>
+    </g>
+    <g id="ic-router" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="10" width="19" height="7.5" rx="1.5"/>
+      <path d="M6 6.5h5M6 6.5l2.2-2.2M6 6.5l2.2 2.2M18 3.5h-5M18 3.5l-2.2-2.2M18 3.5l-2.2 2.2"/>
+    </g>
+    <g id="ic-term" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="4" width="19" height="16" rx="1.6"/><path d="M6.5 9.5 9 12l-2.5 2.5M12 15h5.5"/>
+    </g>
+    <g id="ic-gear" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3.2"/>
+      <path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>
+    </g>
+    <g id="ic-box" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/>
+    </g>
+    <g id="ic-globe" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.7 3.2 2.7 14.8 0 18M12 3c-2.7 3.2-2.7 14.8 0 18"/>
+    </g>
+    <g id="ic-doc" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2.8h8l4 4v14.4H6z"/><path d="M14 2.8v4h4M9 12h6M9 16h6"/>
+    </g>
+    <g id="ic-folder" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2.8 6.5h6l2 2.6h10.4v11H2.8z"/>
+    </g>
+    <g id="ic-mail" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="5" width="19" height="14" rx="1.6"/><path d="m3.6 6.6 8.4 6.9 8.4-6.9"/>
+    </g>
+    <g id="ic-pen" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 20h4L20 8l-4-4L4 16z"/>
+    </g>
+    <g id="ic-play" fill="currentColor" stroke="none"><path d="M6 3.5 20 12 6 20.5z"/></g>
+    <g id="ic-power" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+      <path d="M12 3v8"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0"/>
+    </g>
+    <g id="ic-grab" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+      <path d="M4 9h16M4 15h16"/>
+    </g>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header class="head">
+  <p class="kicker">Schaufenster · fünf Entwürfe · nichts davon ist eingebaut</p>
+  <h1>Fünf Optiken für denselben Netzwerksimulator</h1>
+  <p class="lede">Gleiche Struktur, fünf Häute. Jede Variante zeigt dasselbe: die Kopfzeile mit
+  <em>Entwurf / Aktion</em>, die Werkzeugleiste mit dem neuen Aufklapper <em>Endgerät</em>
+  (Laptop · Server · Handy zum Herausziehen), die Fläche mit einem Auftrag und einem
+  Einstellfenster — und darunter den <strong>Bildschirm</strong> eines Laptops und den eines Handys.</p>
+  <p class="lede">Der Prüfstein ist überall derselbe: Sieht man <em>ohne zu lesen</em>, ob man
+  gerade eine Aufgabe, ein Werkzeug oder das Gerät selbst vor sich hat? Und wirken die Programme
+  auf dem Desktop wie Programme — nicht wie Knöpfe einer Web-Oberfläche?</p>
+  <div class="head-meta">
+    <span><b>Stand</b> 25.09.2026</span>
+    <span><b>Datei</b> synir/showroom-optik.html</span>
+    <span><b>Eingriff in den Code</b> keiner</span>
+    <span><b>Wortlaut</b> aus der deutschen Filius-Oberfläche</span>
+  </div>
+</header>
+
+<section class="premise">
+  <h2>Die Prämisse: drei Arten von Flächen, drei Bauweisen</h2>
+  <div class="three">
+    <div>
+      <h3><i class="dot dot--a"></i>Aufgabe</h3>
+      <p>Kommt von der Lehrkraft, gehört nicht zum Programm. Liegt <em>auf</em> der Fläche,
+      lässt sich wegklicken, hat nie ein Eingabefeld. In jeder Variante aus anderem
+      „Material“ als alles andere.</p>
+    </div>
+    <div>
+      <h3><i class="dot dot--k"></i>Einstellungen</h3>
+      <p>Werkzeug am Gerät: MAC-Adresse, IP-Adresse, Netzmaske, Gateway, Domain Name Server.
+      Steht neben dem Gerät, nicht in der Bildmitte. Erkennbar als Formular — Griff, Zeilen, Felder.</p>
+    </div>
+    <div>
+      <h3><i class="dot dot--d"></i>Bildschirm des Geräts</h3>
+      <p>Kein Knopfbrett, sondern ein Desktop mit Programmen: Terminal, Webbrowser,
+      Software-Installation. Hat einen Rahmen, eine Leiste, eine Tapete — und beim Handy
+      ein anderes Layout.</p>
+    </div>
+  </div>
+</section>
+
+<nav class="nav" aria-label="Zu einer Variante springen">
+  <b>Springen zu</b>
+  <a href="#v1"><i>01</i>Werkbank</a>
+  <a href="#v2"><i>02</i>Leuchtpult</a>
+  <a href="#v3"><i>03</i>Heft &amp; Marker</a>
+  <a href="#v4"><i>04</i>Raster</a>
+  <a href="#v5"><i>05</i>Glastisch</a>
+  <a href="#vergleich"><i>→</i>Vergleich</a>
+</nav>
+
+<main id="varianten"></main>
+
+<section class="cmp" id="vergleich">
+  <h2>Nebeneinander</h2>
+  <div class="tbl-scroll">
+    <table>
+      <thead>
+        <tr><th>Variante</th><th>Woran man die Art sieht</th><th>Für Schüler</th><th>Beamer, letzte Reihe</th><th>Risiko</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>01 Werkbank</th>
+          <td>Material: Zeichnung vs. Datenblatt vs. Bildschirm<small>Nur der Desktop ist rund, bunt, schwebend.</small></td>
+          <td>ernst genommen, „Ingenieurbüro“<small>wenig verspielt</small></td>
+          <td>gut — Hairlines bei kleinem Zoom heikel</td>
+          <td>kann trocken wirken; Papieroptik braucht sauberen Druckkontrast</td>
+        </tr>
+        <tr>
+          <th>02 Leuchtpult</th>
+          <td>Helligkeit: Werkzeug dunkel, Gerätebildschirm hell<small>Das eingeschaltete Gerät leuchtet.</small></td>
+          <td>stark — kommt aus der Spielwelt</td>
+          <td>sehr gut, Kabel und Pakete leuchten</td>
+          <td>dunkle Flächen am Beamer im hellen Raum flau; Dauerbetrieb ermüdet</td>
+        </tr>
+        <tr>
+          <th>03 Heft &amp; Marker</th>
+          <td>Gegenstand: Zettel, Klemmbrett, Bildschirm<small>Auftrag in Handschrift der Lehrkraft.</small></td>
+          <td>vertraut, niedrige Schwelle</td>
+          <td>gut, Markerfarbe trägt weit</td>
+          <td>Metaphern-Kitsch, wenn zu viel davon; Handschrift muss selten bleiben</td>
+        </tr>
+        <tr>
+          <th>04 Raster</th>
+          <td>Farbe und Form: jede Geräteart hat ihre Fläche<small>Auftrag schwarz, Werkzeug weiß, Desktop Kachelwand.</small></td>
+          <td>klar, plakativ, sehr schnell erfassbar</td>
+          <td>am besten — aus zehn Metern lesbar</td>
+          <td>laut; Farbe ist als Bedeutung schon für Netz-/Geräteteil vergeben</td>
+        </tr>
+        <tr>
+          <th>05 Glastisch</th>
+          <td>Höhe: Auftrag liegt, Werkzeug schwebt, Bildschirm hat Rahmen<small>Die Ordnung steckt im Schatten.</small></td>
+          <td>gut — sieht aus wie ihre eigenen Geräte</td>
+          <td>ordentlich, aber Schatten tragen nicht weit</td>
+          <td>nah an gängiger Systemoptik; Glaseffekte kosten Rechenzeit</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="open">
+  <h2>Was ich dazu wissen müsste</h2>
+  <ol>
+    <li><b>Welche Haut wird gebaut — oder welche Kreuzung?</b>
+      <p>Naheliegende Kreuzung: die Ordnung von <em>04 Raster</em> für die Fläche (Geräteart = Fläche
+      und Form, aus der letzten Reihe lesbar) mit den Bildschirmen von <em>05 Glastisch</em>
+      (Rahmen, Tapete, Dock). Dann trägt Farbe die Geräteart, Tiefe die Fensterart.</p></li>
+    <li><b>Was bedeutet Farbe künftig?</b>
+      <p>Netzteil und Geräteteil der Adresse sind schon farbig, Subnetze sollen es werden.
+      Wenn zusätzlich die Geräteart Farbe bekommt (04), sind es drei Farbbedeutungen auf einer
+      Fläche. Eine muss weichen — meine Empfehlung: Geräteart über die <em>Form</em>, Farbe bleibt
+      dem Adressraum.</p></li>
+    <li><b>Wird „Handy“ eine eigene Geräteart oder ein Bildschirm?</b>
+      <p>In den Attrappen ist es ein Endgerät mit anderem Bildschirm — gleiche Fähigkeiten,
+      anderes Layout, so wie Filius Rechner und Notebook behandelt. Das hält die Regel, dass
+      nichts im Code die Geräteart abfragt. Ein Handy ohne WLAN hängt allerdings am Kabel;
+      das erklärt sich nicht von selbst.</p></li>
+    <li><b>Server: eigener Knopf oder im Aufklapper?</b>
+      <p>Hier steckt er im Aufklapper <em>Endgerät</em> — richtig, solange Server und Endgerät
+      dasselbe Gerät mit anderem Bild sind. Wer im Unterricht oft Server baut, will ihn
+      vielleicht trotzdem außen haben.</p></li>
+    <li><b>Wie viele Programme liegen auf einem neuen Desktop?</b>
+      <p>Die Attrappen zeigen sechs. Filius startet mit wenigen und lässt aufspielen. Sechs von
+      Anfang an sieht nach Arbeit aus; drei plus Software-Installation wäre die ehrlichere Vorgabe.</p></li>
+  </ol>
+</section>
+
+<p class="foot">Attrappen ohne Funktion: nur der Moduswechsel und der Aufklapper „Endgerät“ reagieren.
+Keine Datei des Prototyps ist verändert.</p>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   Ein Bauplan, fünf Häute. Das Markup entsteht EINMAL und wird
+   fünfmal mit anderer Klasse eingesetzt — sonst wäre der Vergleich
+   nicht ehrlich, weil sich unbemerkt auch die Struktur ändert.
+   ══════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  var ic = function (id, cls) {
+    return '<svg viewBox="0 0 24 24"' + (cls ? ' class="' + cls + '"' : '') +
+           ' aria-hidden="true"><use href="#ic-' + id + '"/></svg>';
+  };
+  var ip = function (netz, host) {
+    return '<span class="ip"><b class="n">' + netz + '</b><b class="h">' + host + '</b></span>';
+  };
+
+  /* ── Die Attrappe der Anwendung ───────────────────────────────── */
+  function mock() {
+    return '' +
+    '<div class="mock" data-modus="entwurf">' +
+
+      /* Kopfzeile */
+      '<div class="m-top">' +
+        '<span class="m-logo">◆</span><span class="m-brand">Netzwerk</span>' +
+        '<span class="m-badge">Entwurf</span>' +
+        '<div class="m-modus">' +
+          '<button class="m-mbtn is-on" data-modus="entwurf">' + ic('pen') + 'Entwurf</button>' +
+          '<button class="m-mbtn" data-modus="aktion">' + ic('play') + 'Aktion</button>' +
+        '</div>' +
+        '<div class="m-run">' +
+          '<button class="m-rbtn" title="anhalten">❚❚</button>' +
+          '<button class="m-rbtn" title="ein Ereignis weiter">›</button>' +
+          '<button class="m-rbtn" title="von vorn">↺</button>' +
+          '<span class="m-speed">NORMAL</span>' +
+          '<span class="m-sel">Szenario laden …</span>' +
+          '<span class="m-sel">Sichern</span>' +
+        '</div>' +
+      '</div>' +
+
+      /* Werkzeugleiste, Entwurf */
+      '<div class="m-tools" data-role="bau">' +
+        '<span class="m-tl">Geräte</span>' +
+        '<div class="m-dev is-open">' +
+          '<button class="m-add m-devbtn">' + ic('laptop') + 'Endgerät<span class="m-caret">▾</span></button>' +
+          '<div class="m-fly">' +
+            '<div class="m-fly-t">auf die Fläche ziehen</div>' +
+            '<button class="m-fi">' + ic('laptop') + '<span>Laptop<em>Bildschirm mit Programmen</em></span><span class="grab">ziehen</span></button>' +
+            '<button class="m-fi">' + ic('server') + '<span>Server<em>gleiches Gerät, anderes Bild</em></span><span class="grab">ziehen</span></button>' +
+            '<button class="m-fi">' + ic('handy') + '<span>Handy<em>eigenes Bildschirmlayout</em></span><span class="grab">ziehen</span></button>' +
+          '</div>' +
+        '</div>' +
+        '<button class="m-add">' + ic('switch') + 'Switch</button>' +
+        '<button class="m-add">' + ic('router') + 'Router</button>' +
+        '<span class="m-sep"></span>' +
+        '<span class="m-tl">Werkzeug</span>' +
+        '<button class="m-add is-on">↖ Zeiger</button>' +
+        '<button class="m-add">╱ Kabel</button>' +
+        '<span class="m-hint">Geräte verschieben und auswählen.</span>' +
+      '</div>' +
+
+      /* Werkzeugleiste, Aktion */
+      '<div class="m-tools" data-role="lauf">' +
+        '<span class="m-tl">Aktion</span>' +
+        '<span class="m-hint">Tippe ein Gerät an — es öffnet seinen Bildschirm. Zum Umbauen zurück auf <em>Entwurf</em>.</span>' +
+      '</div>' +
+
+      /* Fläche */
+      '<div class="m-stage">' +
+        '<div class="m-grid"></div>' +
+        '<svg class="m-cables" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+          '<line x1="34" y1="22" x2="46" y2="36"/>' +
+          '<line x1="34" y1="52" x2="46" y2="36"/>' +
+          '<line x1="46" y1="36" x2="58" y2="18"/>' +
+          '<line x1="46" y1="36" x2="60" y2="54"/>' +
+        '</svg>' +
+
+        node('host',   'laptop', 'E1',  'Laptop 1',   34, 22, '192.168.1.', '10') +
+        node('handy',  'handy',  'H1',  'Handy 1',    34, 52, '192.168.1.', '23') +
+        node('switch', 'switch', 'SW1', 'Switch 1',   46, 36, '', '') +
+        node('server', 'server', 'S1',  'Server 1',   58, 18, '192.168.1.', '20') +
+        node('router', 'router', 'R1',  'Router 1',   60, 54, '192.168.1.', '1') +
+
+        /* Aufgabe */
+        '<div class="pnl pnl-auf">' +
+          '<span class="dec dec--tape"></span>' +
+          '<div class="p-card">' +
+            '<span class="dec dec--stamp">Aufgabe 3</span>' +
+            '<span class="dec dec--pin"></span>' +
+            '<div class="p-h">' +
+              '<div class="p-t"><span class="p-tag">Auftrag 3</span>Zwei Netze verbinden</div>' +
+              '<span class="p-x"><button title="einklappen">▾</button><button title="schließen">×</button></span>' +
+            '</div>' +
+            '<div class="p-b">' +
+              '<p class="auf-txt">Gib Laptop und Handy je eine Adresse aus <b>192.168.1.__</b>, ' +
+              'trage bei beiden das Gateway <b>192.168.1.1</b> ein und prüfe mit <b>ping</b>, ' +
+              'ob das Handy den Server erreicht.</p>' +
+              '<div class="auf-step"><span>SCHRITT 2 VON 4</span><i class="auf-bar"><i></i></i></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        /* Einstellungen */
+        '<div class="pnl pnl-kon">' +
+          '<div class="p-card">' +
+            '<span class="dec dec--clip"></span>' +
+            '<span class="dec dec--grip"></span>' +
+            '<div class="p-h">' +
+              ic('laptop') +
+              '<div class="p-t">Laptop 1<small>Einstellungen · E1</small></div>' +
+              '<span class="p-x">' +
+                '<button title="ausschalten">' + ic('power') + '</button>' +
+                '<button class="p-mehr">Mehr ›</button>' +
+                '<button title="schließen">×</button>' +
+              '</span>' +
+            '</div>' +
+            '<div class="p-b">' +
+              row('MAC-Adresse', '00:1A:4B:2C:9F:03', 'ro') +
+              row('IP-Adresse', '192.168.1.10', 'focus') +
+              row('Netzmaske', '255.255.255.0') +
+              row('Gateway', '192.168.1.1') +
+              row('Domain Name Server', '192.168.1.20') +
+              '<label class="chk"><i></i>DHCP zur Konfiguration verwenden</label>' +
+            '</div>' +
+            '<div class="p-f"><span>NETZ <b>192.168.1.0</b></span><span>ADRESSEN <b>254</b></span></div>' +
+          '</div>' +
+        '</div>' +
+
+      '</div>' +
+    '</div>';
+  }
+
+  function node(kind, icon, kurz, name, x, y, netz, host) {
+    return '<div class="node" data-kind="' + kind + '" style="--x:' + x + ';--y:' + y + '">' +
+      '<div class="node-box"><span class="node-k">' + kurz + '</span>' + ic(icon) + '</div>' +
+      (netz ? ip(netz, host) : '<span class="node-nm">' + name + '</span>') +
+      (netz ? '<span class="node-nm">' + name + '</span>' : '') +
+    '</div>';
+  }
+
+  function row(label, val, mod) {
+    var cls = 'fld' + (mod === 'ro' ? ' fld--ro' : mod === 'focus' ? ' fld--focus' : '');
+    return '<div class="row"><label>' + label + '</label><span class="' + cls + '">' + val + '</span></div>';
+  }
+
+  /* ── Die zwei Bildschirme ─────────────────────────────────────── */
+  var APPS = [
+    ['term',   'Terminal'],
+    ['gear',   'Einstellungen'],
+    ['box',    'Software'],
+    ['globe',  'Webbrowser'],
+    ['doc',    'Texteditor'],
+    ['folder', 'Dateien']
+  ];
+  var PH_APPS = [
+    ['globe', 'Browser'], ['term', 'Terminal'], ['gear', 'Einstellungen'],
+    ['box', 'Software'], ['mail', 'E-Mail'], ['folder', 'Dateien']
+  ];
+
+  function apps(list, cls) {
+    return list.map(function (a) {
+      return '<div class="app"><span class="app-i">' + ic(a[0]) + '</span><span>' + a[1] + '</span></div>';
+    }).join('');
+  }
+
+  function laptopScreen() {
+    return '<div class="screen"><div class="scr">' +
+      '<div class="scr-bar">' +
+        '<span class="nm">' + ic('laptop') + 'Laptop 1</span>' +
+        '<span class="ip">192.168.1.10</span>' +
+        '<span class="rt"><span>4 PROGRAMME</span><span>' + ic('power') + '</span></span>' +
+      '</div>' +
+      '<div class="scr-body">' +
+        '<div class="apps">' + apps(APPS) + '</div>' +
+        '<div class="win">' +
+          '<div class="win-h">' + ic('term') + 'Terminal — Laptop 1<span class="sp"><i></i><i></i><i></i></span></div>' +
+          '<div class="win-b"><span class="pr">&gt;</span> ping 192.168.1.20\n' +
+            '<span class="ok">Antwort von 192.168.1.20: Zeit 0,21 s</span>\n' +
+            '<span class="ok">Antwort von 192.168.1.20: Zeit 0,02 s</span>\n' +
+            '<span class="pr">&gt;</span> <span style="opacity:.55">_</span></div>' +
+        '</div>' +
+        '<div class="dock"><span>' + ic('term') + '</span><span>' + ic('globe') + '</span>' +
+          '<span>' + ic('gear') + '</span><span>' + ic('box') + '</span></div>' +
+      '</div>' +
+    '</div>' +
+    '<p class="scr-cap">Bildschirm eines Endgeräts. Programme liegen auf der Fläche und öffnen ' +
+    'Fenster — Terminal, Webbrowser und Software-Installation sind Anwendungen, keine Reiter.</p>' +
+    '</div>';
+  }
+
+  function phoneScreen() {
+    return '<div class="screen"><div class="phone">' +
+      '<div class="ph-st"><span>09:41</span><span class="rt"><span>LAN</span><span>■■■</span></span></div>' +
+      '<div class="ph-nm"><b>Handy 1</b> · 192.168.1.23</div>' +
+      '<div class="ph-body">' +
+        '<div class="ph-grid">' + apps(PH_APPS) + '</div>' +
+        '<div class="ph-dock"><span>' + ic('globe') + '</span><span>' + ic('term') + '</span><span>' + ic('gear') + '</span></div>' +
+      '</div>' +
+      '<div class="ph-home"><i></i></div>' +
+    '</div>' +
+    '<p class="scr-cap" style="max-width:196px">Gleiches Gerät, anderes Layout: Raster statt ' +
+    'Schreibtisch, Leiste unten, ein Programm im Vollbild.</p>' +
+    '</div>';
+  }
+
+  /* ── Die fünf Häute ───────────────────────────────────────────── */
+  var V = [
+    {
+      id:'v1', nr:'01', name:'Werkbank',
+      thesis:'Die Fläche ist eine technische Zeichnung: Millimeterpapier, Hairlines, DIN-Schrift, ' +
+             'kein Schatten, keine Rundung. Genau deshalb sticht der Bildschirm eines Geräts heraus — ' +
+             'er ist das einzige runde, bunte, schwebende Ding auf dem Blatt.',
+      tags:[['Stärke','Werkzeug und Gerät sind zwei Welten, ohne ein Wort zu lesen'],
+            ['Risiko','wirkt erwachsen bis trocken; Hairlines am Beamer heikel'],
+            ['Schrift','Bahnschrift (DIN) · Cascadia Mono']],
+      legend:[['Aufgabe','gestempeltes Papier, rot, schräg','#FCFDFA'],
+              ['Einstellungen','Datenblatt: schwarzer Kopf, Schriftfeld unten rechts','#1A2226'],
+              ['Bildschirm','das einzige gerundete Fenster mit Tapete und Dock','#DCE6EA']]
+    },
+    {
+      id:'v2', nr:'02', name:'Leuchtpult',
+      thesis:'Das Netz liegt im Dunkeln und leuchtet: Kabel glimmen, Geräte haben eine Lichtkante. ' +
+             'Der Bildschirm eines Geräts ist dagegen hell — das eingeschaltete Gerät strahlt, ' +
+             'das Werkzeug drumherum nicht.',
+      tags:[['Stärke','Helligkeit trennt Werkzeug von Gerät; Pakete sind sichtbar'],
+            ['Risiko','im hellen Klassenraum flau; dunkel auf Dauer anstrengend'],
+            ['Schrift','Segoe UI Variable · Cascadia Mono']],
+      legend:[['Aufgabe','dunkle Karte, bernsteinfarbene Kante','#F0B441'],
+              ['Einstellungen','dunkle Karte, türkise Oberkante, Laborschrift','#2FD3BC'],
+              ['Bildschirm','helles Fenster in dunkler Welt','#F4F7F8']]
+    },
+    {
+      id:'v3', nr:'03', name:'Heft & Marker',
+      thesis:'Karopapier wie im Heft. Jede Art Fläche ist ein anderer Gegenstand: die Aufgabe ein ' +
+             'angeklebter Zettel in der Handschrift der Lehrkraft, die Einstellungen ein Klemmbrett, ' +
+             'der Desktop ein Bildschirm. Der Marker unter der Adresse zeigt das Subnetz.',
+      tags:[['Stärke','niedrigste Schwelle; alles ist schon bekannt'],
+            ['Risiko','Metaphern-Kitsch, wenn mehr davon kommt'],
+            ['Schrift','Candara · Ink Free (nur Lehrkraft) · Consolas']],
+      legend:[['Aufgabe','Zettel mit Klebestreifen, Handschrift','#FFF8DC'],
+              ['Einstellungen','Klemmbrett mit Klammer, Formular darauf','#C9B999'],
+              ['Bildschirm','weißes Gerät, farbige Programmsymbole','#EAF0F8']]
+    },
+    {
+      id:'v4', nr:'04', name:'Raster',
+      thesis:'Plakat statt Oberfläche: null Rundung, 2 px Schwarz, Flächenfarbe je Geräteart. ' +
+             'Die Aufgabe ist ein schwarzes Feld, das Werkzeug ein weißes Formular mit schwarzer ' +
+             'Beschriftungsspalte, der Bildschirm eine Kachelwand. Aus der letzten Reihe lesbar.',
+      tags:[['Stärke','schnellste Erfassung, beamertauglich bis zehn Meter'],
+            ['Risiko','laut; Farbe ist für Netz-/Geräteteil schon vergeben'],
+            ['Schrift','Franklin Gothic · Consolas']],
+      legend:[['Aufgabe','schwarzes Feld, gelbe Nummer','#111111'],
+              ['Einstellungen','weißes Feld, Beschriftungen im schwarzen Band','#FFFFFF'],
+              ['Bildschirm','Kachelwand, Leiste unten, Fenster über volle Breite','#2440B8']]
+    },
+    {
+      id:'v5', nr:'05', name:'Glastisch',
+      thesis:'Die Ordnung steckt in der Höhe. Der Auftrag liegt flach auf dem Tisch und ist ' +
+             'angeklammert, das Werkzeug schwebt ein wenig und hat eine Griffleiste, der Bildschirm ' +
+             'des Geräts schwebt hoch und hat einen Rahmen. Handy und Laptop sind echte Geräte.',
+      tags:[['Stärke','wirkt wie die Geräte, die die Klasse täglich benutzt'],
+            ['Risiko','nah an gängiger Systemoptik; Glaseffekte kosten Rechenzeit'],
+            ['Schrift','Segoe UI Variable · Cascadia Mono']],
+      legend:[['Aufgabe','flach, halbtransparent, mit Klammer — kein Schatten','#FBF4E4'],
+              ['Einstellungen','schwebende Karte mit Griffleiste links','#FFFFFF'],
+              ['Bildschirm','Rahmen, Tapete, Glas-Dock — höchste Ebene','#4A5BD6']]
+    }
+  ];
+
+  var host = document.getElementById('varianten');
+  host.innerHTML = V.map(function (v) {
+    var m = mock().replace('class="mock"', 'class="mock ' + v.id + '"');
+    var screens = '<div class="screens ' + v.id + '">' + laptopScreen() + phoneScreen() + '</div>';
+    return '<article class="variant" id="' + v.id + '">' +
+      '<div class="v-head">' +
+        '<div>' +
+          '<p class="v-num">Variante ' + v.nr + ' von 05</p>' +
+          '<h2 class="v-name">' + v.name + '</h2>' +
+          '<p class="v-thesis">' + v.thesis + '</p>' +
+        '</div>' +
+        '<div class="v-tags">' + v.tags.map(function (t) {
+          return '<span data-l="' + t[0] + '">' + t[1] + '</span>';
+        }).join('') + '</div>' +
+      '</div>' +
+      '<div class="frame">' + m + '</div>' +
+      '<p class="cap"><span><b>Entwurf</b> · umschaltbar auf Aktion</span>' +
+        '<span><b>Endgerät ▾</b> · anklickbar</span>' +
+        '<span>Fläche, Auftrag und Einstellfenster in derselben Anordnung wie im Prototyp</span></p>' +
+      '<div class="v-below">' +
+        '<div class="frame"><div style="min-width:760px">' + screens + '</div></div>' +
+        '<div class="legend ' + v.id + '">' +
+          '<h3>Woran man sieht, was was ist</h3><dl>' +
+          v.legend.map(function (l) {
+            return '<dt><span class="swatch" style="background:' + l[2] + '; border:1px solid var(--line)"></span>' +
+                   l[0] + '</dt><dd>' + l[1] + '</dd>';
+          }).join('') + '</dl></div>' +
+      '</div>' +
+    '</article>';
+  }).join('');
+
+  /* ── Das Wenige, was reagiert ─────────────────────────────────── */
+  document.addEventListener('click', function (e) {
+    var mb = e.target.closest ? e.target.closest('.m-mbtn') : null;
+    if (mb) {
+      var mk = mb.closest('.mock');
+      mk.setAttribute('data-modus', mb.getAttribute('data-modus'));
+      mk.querySelectorAll('.m-mbtn').forEach(function (b) { b.classList.toggle('is-on', b === mb); });
+      var badge = mk.querySelector('.m-badge');
+      if (badge) badge.textContent = mb.getAttribute('data-modus') === 'aktion' ? 'Aktion' : 'Entwurf';
+      return;
+    }
+    var db = e.target.closest ? e.target.closest('.m-devbtn') : null;
+    if (db) { db.closest('.m-dev').classList.toggle('is-open'); return; }
+    if (!(e.target.closest && e.target.closest('.m-fly'))) {
+      document.querySelectorAll('.m-dev.is-open').forEach(function (d) {
+        if (!d.contains(e.target)) d.classList.remove('is-open');
+      });
+    }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.m-dev.is-open').forEach(function (d) { d.classList.remove('is-open'); });
+    }
+  });
+})();
+</script>

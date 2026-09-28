@@ -1,0 +1,3579 @@
+/* ══════════════════════════════════════════════════════════════
+   Netzwerk-Prototyp — app.css
+   ══════════════════════════════════════════════════════════════
+   Optik „Glastisch". Die Ordnung steckt in der HÖHE, nicht in der
+   Farbe. Drei Arten von Flächen, drei Höhen — und man sieht ohne
+   ein Wort zu lesen, welche man vor sich hat:
+
+     Auftrag        liegt FLACH auf dem Tisch. Kein Schatten,
+                    halbdurchscheinend, oben eine Klammer. Er
+                    gehört der Lehrkraft, nicht dem Programm.
+     Gerätefenster  SCHWEBT ein wenig (--e2) und hat links eine
+                    Griffleiste. Das ist Werkzeug: man fasst es an
+                    und stellt damit etwas ein.
+     Geräteoberfl.  SCHWEBT HOCH (--e3) und hat einen RAHMEN, eine
+                    Tapete und unten ein Dock. Das ist kein Fenster
+                    des Programms, das ist ein Bildschirm.
+
+   Vorher war das hier die Richtung „Rund" aus MPSkills: dunkle
+   Kopfzeile durchgehend, alles gleich hoch, Unterschiede nur über
+   Farbe. Drei Fenster nebeneinander sahen aus wie dreimal dasselbe.
+
+   ── Was NICHT Glastisch geworden ist, mit Absicht ─────────────
+   Der Akzent bleibt Mint (hell) bzw. Violett (dunkel). Der Entwurf
+   im Schaufenster hatte Indigo — und Indigo liegt genau auf
+   --sn-0, der Subnetzfarbe Blau. Ein leuchtendes Kabel wäre dann
+   von einem Kabel im blauen Netz nicht mehr zu unterscheiden.
+   Farbe heißt auf dieser Fläche „Netz"; sie ist vergeben.
+   Indigo kommt deshalb nur dort vor, wo es kein Netz gibt: im
+   Tisch und in der Tapete der Geräteoberfläche.
+
+   Keine eingebundenen Schriften: der Prototyp soll per Doppelklick
+   aus dem Dateisystem laufen, und eine Schrift von einem fremden
+   Server täte das nicht. Der Stapel unten sieht auf Windows, Mac
+   und Android jeweils sauber aus.
+   ══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Der Tisch: kühles Schiefergrau mit einem Stich ins Blaue.
+     Kein neutrales Grau — ein Grau, das gewählt wurde. */
+  --bg:        #e9ebf1;
+  --surface:   #ffffff;
+  --surface-2: #f4f5fa;
+  --line:      #dfe2ec;
+  --line-2:    #c6cbdb;
+  --ink:       #171b24;
+  --ink-2:     #5a6376;
+  --ink-3:     #8891a6;
+
+  /* Bleibt dunkel: Terminal und Kurzmeldung. Die Kopfzeile ist
+     jetzt hell (siehe --leiste) — ein durchgehend schwarzer
+     Balken über einem Glastisch sieht aus wie ein Fremdkörper. */
+  --head:      #12151f;
+  --head-ink:  #eef0f8;
+
+  /* ── Glas ────────────────────────────────────────────────────
+     Leisten und schwebende Flächen sind durchscheinend: man soll
+     ahnen, was darunter liegt. Nur ahnen — lesbar muss oben sein. */
+  --leiste:    rgba(255,255,255,.82);
+  --glas:      rgba(255,255,255,.92);
+  --glas-line: rgba(255,255,255,.60);
+
+  /* Der Auftrag: einziger warmer Ton im ganzen Programm. Er ist
+     Papier, und Papier ist hier nichts anderes. */
+  --auf-bg:    rgba(255,255,255,.74);
+  --auf-kopf:  #fbf4e4;
+  --auf-line:  #efe2c4;
+  --auf-tag:   #9a6c12;
+
+  /* Zwei sehr blasse Lichter auf dem Tisch, damit die Fläche kein
+     toter grauer Block ist. Blass genug, dass keine Adresse
+     darunter ihre Farbe ändert — Farbe heißt hier „Netz". */
+  --tisch-1:   rgba(74,91,214,.10);
+  --tisch-2:   rgba(30,158,134,.09);
+
+  /* Die Tapete der Geräteoberfläche und ihr Rahmen. */
+  --wall:
+    radial-gradient(52% 46% at 18% 14%, rgba(94,110,236,.55), transparent 65%),
+    radial-gradient(48% 44% at 84% 78%, rgba(30,158,134,.45), transparent 62%),
+    linear-gradient(155deg, #151a30, #0c1020 70%);
+  --wall-1:    rgba(94,110,236,.55);
+  --wall-2:    rgba(30,158,134,.45);
+  --bezel:     #0a0d18;
+
+  /* ── Die drei Höhen ──────────────────────────────────────────
+     Der ganze Entwurf hängt an diesen drei Zeilen. Wer eine
+     vierte einführt, nimmt der Anordnung ihre Aussage. */
+  --e1: 0 1px 2px rgba(23,27,36,.05), 0 8px 20px -12px rgba(23,27,36,.28);
+  --e2: 0 2px 4px rgba(23,27,36,.06), 0 26px 54px -26px rgba(23,27,36,.50);
+  --e3: 0 3px 8px rgba(23,27,36,.10), 0 40px 70px -30px rgba(23,27,36,.62);
+
+  --accent:    #0fb389;
+  --accent-in: #ffffff;
+  --accent-sh: rgba(15,179,137,.22);
+
+  /* ── Die Farbe des Modus ─────────────────────────────────────
+     Entwurf und Aktion sind zwei verschiedene Tätigkeiten, und
+     man muss im Vorbeigehen sehen, in welcher man steckt — ohne
+     den Schalter zu suchen und ohne ein Wort zu lesen. Bisher sah
+     beides gleich aus: derselbe Balken, dieselbe Leiste, nur eine
+     andere Hälfte des Umschalters war hell.
+
+       Entwurf  Indigo. Blaupause, Bleistift, Reißbrett.
+       Aktion   Mint/Grün. Es läuft.
+
+     ⚠️ Beide Farben bleiben in der RAHMUNG — Kopfleiste,
+     Werkzeugleiste, Umschalter. Auf der Fläche heißt Farbe
+     ausschließlich „Netz"; ein indigofarbener Ring an einem Gerät
+     wäre eine Aussage über ein Subnetz. Indigo darf hier genau
+     deshalb vorkommen, wo es schon vorkommt (Tisch, Tapete): dort
+     gibt es kein Netz.
+
+     Die Anzeige selbst ist bewusst klein gehalten — ein 3-px-
+     Streifen über der ganzen Breite, ein Hauch Farbe in beiden
+     Leisten, der Umschalter. Zusammen ist das eindeutig, einzeln
+     schreit nichts. */
+  --m-ent:     #4a5bd6;
+  --m-ent-bg:  rgba(74,91,214,.085);
+  --m-ent-in:  #ffffff;
+  --m-ent-sh:  rgba(74,91,214,.26);
+
+  --m-akt:     #0fb389;
+  --m-akt-bg:  rgba(15,179,137,.10);
+  --m-akt-in:  #ffffff;
+  --m-akt-sh:  rgba(15,179,137,.24);
+
+  /* Das Millimeterpapier des Entwurfsmodus. Kein Farbton, nur
+     Tinte mit wenig Deckung: ein Raster darf die Subnetzfarben
+     nicht anfassen. */
+  --raster:    rgba(23,27,36,.055);
+
+  --warn:      #d9642a;
+  --bad:       #d2344b;
+  --ok:        #0fb389;
+
+  --arp:       #7c5cff;
+  --ping:      #0fb389;
+  --pong:      #2a8fe0;
+  --dhcp:      #c2731f;
+  --dns:       #2a8fe0;
+  --tcp:       #c0399a;
+  /* RIP. Ein Grünton, und zwar bewusst neben --ping: die Ansagen
+     laufen im Takt durch das Netz wie Pings, und es ist der einzige
+     Verkehr, den niemand angestoßen hat. Nicht --dhcp und nicht
+     --dns, denn RIP redet nicht über Adressen, sondern über Wege. */
+  --rip:       #3f8f52;
+  /* Hervorhebung im Texteditor. Drei Farben, nicht acht: Marke,
+     Eigenschaft, Wert — mehr Sorten unterscheidet ein Kind beim
+     Schreiben ohnehin nicht, und jede weitere Farbe nimmt den
+     dreien ihre Aussage. */
+  --sy-tag:    #2a6df4;
+  --sy-attr:   #9a5bd0;
+  --sy-wert:   #b3591e;
+
+  /* ── Die Marken an einer Gerätekachel ───────────────────────
+     Fünf Aussagen über das, was ein Gerät TUT: DHCP („ich verteile
+     Adressen"), DNS („ich beantworte Namen"), Web („ich liefere
+     Seiten aus"), Mail („ich nehme Post an") und WLAN („ich
+     strahle ein Funknetz aus"). Mehrere können am selben Gerät
+     gleichzeitig stehen — an einem Heimrouter ist DHCP + WLAN der
+     Normalfall, ein Schulserver ist leicht DNS + Web + Mail —,
+     also braucht jede ihre eigene Farbe.
+
+     Drei davon gab es schon als PROTOKOLLFARBE im Mitschnitt
+     (--dhcp, --dns, und --tcp für alles auf TCP). Die Marke nimmt
+     dieselbe: die blauen Pakete laufen zum blauen Gerät, und das
+     ist keine Spielerei, sondern die Antwort auf „wer hat das
+     beantwortet". --web und --mail sind dafür neu und stehen dem
+     Mitschnitt offen, wenn er HTTP und SMTP einmal eigene Chips
+     gibt.
+
+     ⚠️ Warum das die Regel „Farbe heißt Netz" nicht bricht:
+     die gilt für RINGE und KABEL, also für das, was ein Subnetz
+     zeichnet. Marken sind eine andere Sorte Zeichen — Pille,
+     weiße Schrift, fest an einer Kachel — und in dieser Sorte
+     bedeutet Farbe „welche Marke". Dieselbe Trennung gilt schon
+     für --dhcp, das dem Orange von --sn-1 nahekommt und trotzdem
+     nie mit ihm verwechselt wird. */
+  --wlan:      #6d4fd8;
+  --web:       #0e7c8c;
+  --mail:      #b03a86;
+
+  /* Netzteil und Geräteteil einer Adresse. Zwei Farben, die sich
+     in Hell UND Dunkel unterscheiden und beide auf hellem wie
+     dunklem Grund lesbar bleiben — deshalb nicht der Akzent (der
+     wechselt zwischen Mint und Violett) und nicht Rot (das heißt
+     hier Fehler). Blau = Netz, Braun/Orange = Gerät. */
+  --netzteil:  #1f5fbf;
+  --hostteil:  #a8560c;
+  --netzbg:    rgba(31,95,191,.11);
+  --hostbg:    rgba(168,86,12,.12);
+
+  /* ── Die Subnetzfarben ──────────────────────────────────────
+     Sechs Plätze, vergeben nach der Netzadresse (subnetze.js). Sie
+     sagen NICHT „gut" oder „schlecht", sondern nur „diese gehören
+     zusammen".
+
+     ⚠️ Warum SECHS und nicht acht: Acht waren es, und zwei davon
+     (Ocker und Schiefer) haben beim Prüfen im Bild genau das
+     kaputtgemacht, wofür es sie gibt. Ein schiefergraues Subnetz
+     sieht aus wie ein ungefärbtes — die Aussage „diese Kabel
+     gehören zusammen" war von „diese Kabel gehören zu nichts"
+     nicht zu unterscheiden. Und Ocker neben Orange sind zwei
+     Farben, die niemand über die Breite eines Netzplans
+     auseinanderhält.
+
+     Sechs kräftige Töne, gleichmäßig über den Farbkreis, sind
+     mehr wert als acht, von denen zwei nicht tragen. Ein Netzplan
+     mit sieben Subnetzen kommt in einer Schulstunde nicht vor;
+     käme er vor, wäre eine wiederholte Farbe der kleinere
+     Schaden.
+
+     Keiner der sechs liegt bei Rot (heißt hier Fehler) oder beim
+     Akzent Mint/Violett (heißt hier „ausgewählt").
+
+     Dass das Blau hier nicht das Blau des Netzanteils ist, ist
+     Absicht: die beiden Systeme beantworten verschiedene Fragen.
+     Netz-/Geräteteil färbt ZIFFERN innerhalb einer Adresse;
+     Subnetzfarben färben RÄNDER um Geräte. Nie beides an
+     derselben Stelle.
+
+     Die Werte stehen hier und nicht im JavaScript, weil sie in
+     Hell und Dunkel verschieden sein müssen — und die
+     Umschaltung kennt nur das Stylesheet. */
+  --sn-0: #2563eb;   /* Blau      */
+  --sn-1: #e2660b;   /* Orange    */
+  --sn-2: #0f8a44;   /* Grün      */
+  --sn-3: #8b35d8;   /* Violett   */
+  --sn-4: #d01a63;   /* Pink      */
+  --sn-5: #0d8fa6;   /* Türkis    */
+
+  /* Höhe des Mitschnitts — an EINER Stelle, weil das Terminal
+     sich danach richten muss. Stand vorher zweimal im Stylesheet,
+     und prompt lag das Terminal beim Prüfen auf den Zeilen des
+     Mitschnitts. Ausgerechnet diese beiden braucht man zusammen:
+     man schickt einen Ping und sieht zu, was auf der Leitung
+     passiert. */
+  --trace-h: clamp(140px, 26vh, 300px);
+  --trace-head: 50px;
+
+  /* Die Weiterleitungstabelle unten. Etwas höher als der
+     Mitschnitt: dort liest man eine Zeile je Rahmen, hier stehen
+     zwei Tabellen untereinander (die von Hand eingetragene und
+     die, die der Router daraus benutzt). */
+  --wlt-h: clamp(150px, 28vh, 320px);
+  --wlt-head: 44px;
+
+  /* Etwas enger als vorher (12/18/24). Ein Glastisch lebt von
+     Kanten, die man sieht; 24 px Radius an einem 280-px-Fenster
+     runden die Ecke weg, an der man es packt. */
+  --r1: 11px; --r2: 14px; --r3: 18px;
+  --sh: var(--e1);
+
+  --fs: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI",
+        Roboto, "Helvetica Neue", Arial, sans-serif;
+  --fm: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root[data-theme="dark"] {
+  /* ⚠️ --bg muss im Bereich rgb(1x, 1x, 2x) bleiben: eine Prüfung
+     im Browser fragt genau das ab („Hintergrund ist wirklich
+     dunkel", tests/uitest.js): rot und grün 10–19, blau 20–29.
+     #12131c = rgb(18, 19, 28) — kühles Schiefer, kein Neutralgrau. */
+  --bg:        #12131c;
+  --surface:   #1a1f2a;
+  --surface-2: #222836;
+  --line:      #2c3442;
+  --line-2:    #3d465a;
+  --ink:       #e9ecf1;
+  --ink-2:     #a3abb8;
+  --ink-3:     #757d8a;
+
+  --head:      #0b0d12;
+  --head-ink:  #e9ecf1;
+
+  /* Im Dunkeln ist Glas nicht weiß, sondern helles Grau mit wenig
+     Deckung — weißes Glas auf dunklem Grund wird milchig. */
+  --leiste:    rgba(26,31,42,.84);
+  --glas:      rgba(26,31,42,.94);
+  --glas-line: rgba(255,255,255,.07);
+
+  --auf-bg:    rgba(26,31,42,.76);
+  --auf-kopf:  #2a2517;
+  --auf-line:  #3d3421;
+  --auf-tag:   #e0b968;
+
+  --tisch-1:   rgba(94,110,236,.12);
+  --tisch-2:   rgba(30,158,134,.10);
+
+  --wall:
+    radial-gradient(52% 46% at 18% 14%, rgba(94,110,236,.42), transparent 65%),
+    radial-gradient(48% 44% at 84% 78%, rgba(30,158,134,.34), transparent 62%),
+    linear-gradient(155deg, #10142a, #070914 70%);
+  --wall-1:    rgba(94,110,236,.42);
+  --wall-2:    rgba(30,158,134,.34);
+  --bezel:     #05070e;
+
+  --e1: 0 1px 2px rgba(0,0,0,.44), 0 8px 20px -12px rgba(0,0,0,.66);
+  --e2: 0 2px 4px rgba(0,0,0,.46), 0 26px 54px -26px rgba(0,0,0,.82);
+  --e3: 0 3px 8px rgba(0,0,0,.52), 0 40px 70px -30px rgba(0,0,0,.90);
+
+  --accent:    #9b7bff;
+  --accent-in: #14101f;
+  --accent-sh: rgba(155,123,255,.26);
+
+  /* Im Dunkeln müssen beide Modusfarben heller sein als der Grund,
+     sonst ist der Streifen oben ein schwarzer Strich. Die Schrift
+     auf ihnen wird dafür dunkel — weiß auf hellem Mint ist nicht
+     lesbar, das war beim Akzent schon so. */
+  --m-ent:     #8b98ff;
+  --m-ent-bg:  rgba(139,152,255,.13);
+  --m-ent-in:  #10142a;
+  --m-ent-sh:  rgba(139,152,255,.30);
+
+  --m-akt:     #3ecf9a;
+  --m-akt-bg:  rgba(62,207,154,.12);
+  --m-akt-in:  #08170f;
+  --m-akt-sh:  rgba(62,207,154,.28);
+
+  --raster:    rgba(255,255,255,.05);
+
+  --warn:      #e9944f;
+  --bad:       #ef5f74;
+  --ok:        #3ecf9a;
+
+  --arp:       #b79bff;
+  --ping:      #3ecf9a;
+  --pong:      #5cb4f0;
+  --dhcp:      #e9a14f;
+  --dns:       #5cb4f0;
+  --tcp:       #ef82c6;
+  --rip:       #6fc785;
+  --sy-tag:    #77a9ff;
+  --sy-attr:   #c79bf0;
+  --sy-wert:   #e8a86a;
+  --wlan:      #a98bff;
+  /* ⚠️ Beide dunkler als der erste Versuch (#3fc2d4 / #f088cc).
+     Die Marken tragen WEISSE Schrift, und auf dem Bild war die
+     Mail-Pille rosa mit weiß darauf kaum noch zu lesen — auf einem
+     Beamer erst recht nicht. Jetzt liegen sie in der Helligkeit
+     bei --wlan, wo Weiß trägt. */
+  --web:       #2fa9bb;
+  --mail:      #e067b0;
+
+  --netzteil:  #7ab5ff;
+  --hostteil:  #f0a862;
+  --netzbg:    rgba(122,181,255,.14);
+  --hostbg:    rgba(240,168,98,.14);
+
+  /* Dieselben sechs Töne, heller und satter: auf #101319 müssen
+     sie leuchten, nicht sich einfügen. */
+  --sn-0: #6a9bff;
+  --sn-1: #fb9236;
+  --sn-2: #3fd07c;
+  --sn-3: #c18cff;
+  --sn-4: #ff7aae;
+  --sn-5: #34c8dd;
+
+  --sh: var(--e1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%; margin: 0;
+  background: var(--bg); color: var(--ink);
+  font-family: var(--fs); font-size: 15px; line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Drei Zeilen, nicht mehr vier: die Werkzeugleiste ist keine
+   eigene Zeile mehr, sondern steht senkrecht am linken Rand IN
+   der Arbeitsfläche. Das gibt dem Netzplan eine ganze Zeile Höhe
+   zurück — und macht die Leiste einklappbar, was ein waagerechtes
+   Band nicht sein kann, ohne dass darunter alles springt. */
+/* Kopfzeile · Fläche · Weiterleitungstabelle · Mitschnitt.
+   Die neue Zeile steht ZWISCHEN Fläche und Mitschnitt und nicht
+   darunter: der Mitschnitt läuft während einer Übertragung mit und
+   gehört an den unteren Rand, wo das Auge ihn sucht. Die
+   Weiterleitungstabelle gehört zur Fläche — man trägt dort ein,
+   was man oben sieht. Ist sie zu, nimmt `hidden` die Zeile ganz
+   weg und es ändert sich nichts. */
+body {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  overflow: hidden;
+}
+
+/* ⚠️ Ohne min-width: 0 wächst eine Gitterzeile auf die Breite
+   ihres breitesten Inhalts — und zieht damit die ganze Seite in
+   die Breite, statt dass der Inhalt umbricht. Beim Prüfen auf
+   820 px war das Dokument 979 px breit: die Kopfleiste passte
+   nicht und schob alles mit. Auf einem Tablet ist das der
+   Unterschied zwischen bedienbar und unbrauchbar. */
+body > * { min-width: 0; }
+
+/* ─── Symbole ─────────────────────────────────────────────────
+   Der Zeichensatz steht EINMAL in index.html als <defs>; geholt
+   wird er über NetUtil.icon(). Alles, was er braucht, ist eine
+   Grundgröße und `currentColor` — gefärbt wird er von dem
+   Element, in dem er liegt, genau wie ein Buchstabe.
+
+   Das ist der Grund, warum es ihn gibt: die Emoji, die hier
+   vorher standen (🖥 🗄 ⚙ ⬓), sind eine Schriftart. Sie tragen
+   ihre eigene Farbe, sehen auf jedem Betriebssystem anders aus
+   und lassen sich nicht auf eine Kachel legen. */
+.ico { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -.18em; }
+
+.mono { font-family: var(--fm); font-size: .92em; }
+.dim  { color: var(--ink-3); }
+code {
+  font-family: var(--fm); font-size: .9em;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 1px 5px;
+}
+
+/* ═══ Kopfzeile ══════════════════════════════════════════════ */
+
+/* Glas, nicht Schwarz. Der Balken war einmal durchgehend dunkel —
+   in einem Programm, dessen Fläche hell ist, liegt darüber dann
+   ein Riegel, der mit nichts darunter zu tun hat. Jetzt ist die
+   Leiste durchscheinend: sie gehört zum Tisch, sie liegt nur
+   darüber. */
+/* ─── Woran man den Modus sieht, ohne hinzuschauen ─────────────
+   Eine Farbe, vier Stellen. Der Vorrat steht oben bei den
+   Grundfarben, hier wird nur entschieden, welcher der beiden
+   Sätze gerade gilt.
+
+   Die Vorgabe auf <body> ist Entwurf: das Stylesheet ist da,
+   bevor app.js das Attribut setzt, und drei Bilder lang eine
+   Leiste ohne Streifen wäre ein Zucken beim Laden. */
+body                      { --modus: var(--m-ent); --modus-bg: var(--m-ent-bg);
+                            --modus-in: var(--m-ent-in); --modus-sh: var(--m-ent-sh); }
+body[data-modus="entwurf"]{ --modus: var(--m-ent); --modus-bg: var(--m-ent-bg);
+                            --modus-in: var(--m-ent-in); --modus-sh: var(--m-ent-sh); }
+body[data-modus="aktion"] { --modus: var(--m-akt); --modus-bg: var(--m-akt-bg);
+                            --modus-in: var(--m-akt-in); --modus-sh: var(--m-akt-sh); }
+
+.top {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; row-gap: 9px;
+  padding: 10px 16px;
+  color: var(--ink);
+
+  /* Zwei Schichten: das Glas als Farbe, der Hauch Modusfarbe als
+     Bild darüber. Ein einzelnes `background` mit beidem ginge
+     nicht — das Glas ist selbst durchscheinend und muss unten
+     bleiben, sonst deckt es den Ton wieder zu. */
+  background-color: var(--leiste);
+  background-image: linear-gradient(var(--modus-bg), var(--modus-bg));
+
+  /* Der Streifen über der ganzen Breite. 3 px, ganz oben am
+     Bildschirmrand — er hat keinen Nachbarn, mit dem er
+     verwechselt werden könnte, und er ist auch auf dem Beamer aus
+     der letzten Reihe zu sehen. */
+  border-top: 3px solid var(--modus);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(16px) saturate(1.4);
+  position: relative; z-index: 8;
+
+  /* Ein Übergang, kein Umschlag: der Streifen wandert von Indigo
+     nach Mint. Der Hauch in der Fläche springt (Verläufe lassen
+     sich nicht überblenden) — bei 8 % Deckung sieht das niemand. */
+  transition: border-color .22s;
+}
+.top-l { display: flex; align-items: center; gap: 10px; }
+
+/* ─── Die Marke ────────────────────────────────────────────────
+   Hier stand ein Rautenzeichen und das Wort „Netzwerk". Jetzt
+   steht dort das Wort-Bild-Zeichen SYNIR — Class Wide Web.
+
+   Die HÖHE ist das Maß, nicht die Breite: der Zusatz „Class Wide
+   Web" sitzt unter dem Schriftzug, und wie gut er zu lesen ist,
+   hängt allein daran, wie hoch das Ganze sein darf. 40 px ist das
+   Meiste, was in die 64 px hohe Leiste passt, ohne sie
+   auseinanderzudrücken (10 px Polster oben und unten). Die Breite
+   folgt aus dem Seitenverhältnis — `width:auto` mit
+   `height:100%`.
+
+   Die beiden Bilder liegen ÜBEREINANDER in einem Rahmen mit
+   fester Höhe. Würden sie nebeneinander im Fluss liegen und eins
+   davon nur `display:none` bekommen, änderte sich beim
+   Moduswechsel nichts — aber der Rahmen müsste beide Male neu
+   messen. So ist die Höhe von außen gesetzt und der Wechsel
+   bewegt kein einziges Pixel daneben. */
+.marke {
+  display: block; height: 40px; flex: none;
+  /* Keine Breite und kein `aspect-ratio` hier: die Breite kommt
+     vom Bild. Dass die Leiste beim Laden trotzdem nicht springt,
+     besorgen die Maße im `<img>` (width/height) — daraus kennt
+     der Browser das Verhältnis, bevor ein Byte des Bildes da
+     ist. Ein zweites Verhältnis an dieser Stelle wäre eins, das
+     man beim nächsten Zuschnitt vergisst nachzuziehen. */
+}
+.marke-b {
+  display: block; height: 100%; width: auto;
+  /* Ein Logo ist kein Bedienelement: es darf nicht markiert,
+     nicht gezogen und nicht angetippt werden. */
+  user-select: none; -webkit-user-drag: none; pointer-events: none;
+}
+/* Hell ist die Vorgabe — das Stylesheet gilt, bevor app.js das
+   Attribut setzt, und im Dunkeln wäre ein kurz aufblitzendes
+   helles Logo das Einzige, was beim Laden zuckt. Umgekehrt (dunkel
+   als Vorgabe) wäre es im Hellen genauso. Hell gewinnt, weil das
+   Dokument mit `data-theme="light"` ausgeliefert wird. */
+.marke-b--dunkel { display: none; }
+:root[data-theme="dark"] .marke-b--hell   { display: none; }
+:root[data-theme="dark"] .marke-b--dunkel { display: block; }
+
+.badge-proto {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .09em;
+  border: 1px solid var(--line); color: var(--ink-3);
+  border-radius: 999px; padding: 2px 9px;
+}
+
+.top-c { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; min-width: 0; }
+.top-r { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; min-width: 0; }
+
+/* ─── Entwurf ⇄ Aktion ─────────────────────────────────────────
+   Der wichtigste Schalter im Programm, also sieht er auch danach
+   aus: zwei Hälften, eine davon hell. Ein Umschalter, der nur aus
+   einem Wort besteht, wird auf dem Beamer nicht als Schalter
+   erkannt — und dann sucht eine Klasse zehn Minuten, warum sich
+   nichts bewegt. */
+.modus {
+  display: flex; gap: 3px; padding: 3px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--r1); margin-right: 6px;
+}
+.mbtn {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 0; background: transparent; color: var(--ink-2);
+  border-radius: 8px; padding: 6px 14px;
+  font: inherit; font-size: 13px; cursor: pointer;
+  transition: background .13s, color .13s;
+}
+.mbtn:hover { color: var(--ink); background: var(--surface); }
+.mbtn-ic { font-size: 12px; opacity: .85; }
+
+/* Die eingeschaltete Hälfte trägt die Farbe IHRES Modus, nicht
+   den Akzent. Vorher waren beide Hälften mintgrün, wenn sie dran
+   waren — der Schalter sagte damit „hier", aber nicht „was".
+   Jetzt ist der Umschalter selbst die Legende für den Streifen
+   oben: dieselbe Farbe, dieselbe Aussage. */
+.mbtn.is-on {
+  background: var(--modus); color: var(--modus-in);
+  box-shadow: 0 1px 6px var(--modus-sh);
+}
+.mbtn.is-on:hover { background: var(--modus); filter: brightness(1.07); }
+
+/* Und beim Überfahren zeigt die andere Hälfte schon, wohin es
+   ginge. Das lehrt die Zuordnung Farbe ↔ Modus ganz nebenbei,
+   ohne sie irgendwo hinzuschreiben. */
+.mbtn[data-modus="entwurf"]:not(.is-on):hover { color: var(--m-ent); }
+.mbtn[data-modus="aktion"]:not(.is-on):hover  { color: var(--m-akt); }
+
+/* Der Subnetzknopf steht neben dem Moduswechsel, gehört aber
+   nicht dazu: Entwurf und Aktion schließen sich gegenseitig aus,
+   „Subnetze" gilt in beiden. Deshalb außerhalb der grauen Wanne
+   und mit eigenem Rahmen — und eingeschaltet nicht im Akzent,
+   sondern mit den Subnetzfarben selbst. Ein Schalter, der zeigt,
+   was er einschaltet. */
+.mbtn--sub {
+  margin-right: 6px;
+  border: 1px solid var(--line); background: var(--surface);
+}
+.mbtn--sub.is-on {
+  color: #fff; border-color: transparent;
+  background: linear-gradient(105deg, var(--sn-0), var(--sn-2) 45%, var(--sn-3));
+  box-shadow: none;
+}
+.mbtn--sub.is-on:hover { filter: brightness(1.1); }
+
+/* Im Entwurf steht die Uhr, also gibt es auch keine Knöpfe für
+   sie. Sie auszublenden statt sie auszugrauen ist Absicht: ein
+   grauer Knopf lädt zum Draufklicken ein, ein fehlender nicht. */
+body[data-modus="entwurf"] .rbtn,
+body[data-modus="entwurf"] .speedbox { display: none; }
+
+body[data-modus="entwurf"] .tools-lauf { display: none; }
+body[data-modus="aktion"]  .tools-bau  { display: none; }
+.tools-bau, .tools-lauf { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; min-width: 0; }
+
+.rbtn {
+  width: 36px; height: 36px; border-radius: var(--r1);
+  border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink-2);
+  font-size: 14px; cursor: pointer; transition: background .13s, transform .08s;
+  box-shadow: var(--e1);
+}
+.rbtn:hover  { background: var(--surface-2); color: var(--ink); }
+.rbtn:active { transform: scale(.94); }
+/* Den Knopf gibt es nur im Aktionsmodus, also trägt er dessen
+   Farbe statt des Akzents. In Hell ist das dasselbe Mint wie
+   bisher; in Dunkel war er violett und ist jetzt grün — und
+   violett gibt es dort als Subnetzfarbe. */
+.rbtn--play  { background: var(--modus); color: var(--modus-in); border-color: transparent; font-size: 12px; }
+.rbtn--play:hover { background: var(--modus); filter: brightness(1.1); }
+
+.speedbox { display: flex; align-items: center; gap: 9px; margin-left: 2px; }
+.speedbox input[type=range] { width: 110px; accent-color: var(--accent); }
+.speed-l {
+  font-size: 12px; color: var(--ink-3);
+  min-width: 56px; text-align: left;
+}
+
+.sel, .tbtn {
+  border-radius: var(--r1); border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink);
+  padding: 7px 13px; font: inherit; font-size: 13px; cursor: pointer;
+  transition: background .13s, border-color .13s;
+  box-shadow: var(--e1);
+}
+.sel:hover, .tbtn:hover { background: var(--surface-2); border-color: var(--line-2); }
+.sel { max-width: 180px; }
+.tbtn--ic { width: 36px; padding: 7px 0; text-align: center; }
+
+/* ═══ Werkzeugleiste ═════════════════════════════════════════ */
+
+/* ─── Die Leiste steht SENKRECHT am linken Rand ───────────────
+   So wie in Filius. Zwei Breiten:
+
+     offen        186 px — Symbol und Wort
+     eingeklappt   58 px — nur das Symbol, das Wort im Tooltip
+
+   Sie verschwindet nie ganz. Eine Leiste, die weg ist, muss man
+   wiederfinden, und auf einem Tablet gibt es dafür keinen Rand,
+   an den man mit der Maus fahren könnte.
+
+   Die RECHTE Kante trägt die Modusfarbe (vorher die untere): sie
+   ist die Grenze zwischen dem, was das Programm anbietet, und der
+   Fläche, auf der man arbeitet — genau die Linie, an der der
+   Modus entscheidet, was ein Klick bedeutet. */
+.tools {
+  min-width: 0; position: relative; z-index: 7;
+
+  /* Dieselben zwei Schichten wie in der Kopfleiste. */
+  background-color: var(--surface-2);
+  background-image: linear-gradient(var(--modus-bg), var(--modus-bg));
+  transition: border-color .22s;
+}
+.rail {
+  width: 186px; flex: none;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 8px 10px 10px;
+  border-right: 1px solid var(--modus-sh);
+  overflow-y: auto; overflow-x: hidden;
+  transition: width .18s, padding .18s, border-color .22s;
+}
+.rail.is-zu { width: 58px; padding-left: 5px; padding-right: 5px; }
+
+/* Der Griff. Rechtsbündig, damit der Pfeil dort sitzt, wohin die
+   Leiste verschwindet — eingeklappt rückt er in die Mitte. */
+.rail-fold {
+  display: flex; align-items: center; gap: 7px; align-self: flex-end;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--ink-3);
+  padding: 4px 11px 4px 9px; font: inherit; font-size: 11.5px;
+  cursor: pointer; margin-bottom: 4px;
+}
+.rail-fold:hover { color: var(--ink); border-color: var(--line-2); }
+.rail-fold-ic { font-size: 15px; line-height: 1; }
+.rail.is-zu .rail-fold { align-self: center; padding: 4px 8px; }
+.rail.is-zu .rail-fold-t { display: none; }
+
+.rail-g { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.tools-t {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--ink-3);
+}
+.rail-t { padding: 6px 2px 1px; }
+/* Eingeklappt ist kein Platz für Überschriften — aber auch kein
+   Bedarf: drei Symbole, eine Lücke, zwei Symbole ist schon die
+   Gruppierung. Der Trennstrich ersetzt das Wort. */
+.rail.is-zu .rail-t { display: none; }
+.rail.is-zu .rail-g + .rail-g { border-top: 1px solid var(--line); padding-top: 9px; }
+.tools-hint { font-size: 12.5px; color: var(--ink-3); }
+.rail-hint { padding: 2px 2px 0; line-height: 1.4; }
+.rail.is-zu .rail-hint { display: none; }
+
+/* ── Der Cluster „Endgeräte" ──────────────────────────────────
+   Drei Kacheln NEBENEINANDER, nicht untereinander. Das ist die
+   Aussage: ein Gerät, drei Bilder. Untereinander in einer Liste
+   sähen sie aus wie drei Gerätearten, und dann fängt jede Klasse
+   wieder an zu fragen, was ein Server denn anders kann.
+
+   Eingeklappt bricht die Reihe von selbst in eine Spalte um
+   (flex-wrap) — bei 58 px ist für eine Kachel Platz und für drei
+   nicht. Das ist kein Sonderfall im Stylesheet, sondern dieselbe
+   Regel mit weniger Raum. */
+.rail-cluster { display: flex; flex-wrap: wrap; gap: 5px; }
+.add--kachel {
+  flex: 1 1 46px; min-width: 46px;
+  flex-direction: column; gap: 4px;
+  padding: 8px 4px 7px; font-size: 11px; text-align: center;
+}
+.add--kachel .add-ic { opacity: .9; }
+.rail.is-zu .rail-cluster { gap: 4px; }
+
+/* ── Ausschnitt ───────────────────────────────────────────────
+   Ganz unten und in beiden Modi da: das Feld ist größer als das
+   Fenster, und das gilt beim Bauen wie beim Zusehen. */
+.rail-zoom {
+  margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 5px;
+}
+.rail-zrow { display: flex; gap: 4px; align-items: stretch; }
+.zbtn {
+  flex: none; width: 34px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+  border-radius: var(--r1); cursor: pointer; padding: 0;
+  transition: border-color .13s, color .13s, background .13s;
+}
+.zbtn--w { width: 100%; padding: 0 8px; font: inherit; font-size: 11.5px; }
+.zbtn:hover { border-color: var(--line-2); color: var(--ink); background: var(--bg); }
+.zbtn svg { width: 16px; height: 16px; flex: none; }
+.rail.is-zu .zbtn-t { display: none; }
+.rail.is-zu .rail-zrow { flex-wrap: wrap; justify-content: center; }
+.rail.is-zu .zbtn--w { width: 34px; padding: 0; margin: 0 auto; }
+/* Die Prozentzahl IST der Knopf „wieder normal groß". Das spart
+   einen vierten Knopf und steht genau dort, wo man hinsieht,
+   wenn man sich verzoomt hat — neben den beiden Lupen. */
+.zoom-l {
+  flex: 1 1 auto; min-width: 0;
+  border: 0; background: none; cursor: pointer; padding: 1px 2px;
+  font-family: var(--fm); font-size: 11.5px; color: var(--ink-3); text-align: center;
+}
+.zoom-l:hover { color: var(--ink); text-decoration: underline; }
+.rail.is-zu .zoom-l { flex: 0 0 100%; }
+.rail-zhint { font-size: 11px; }
+
+/* Die beiden Modusfassungen der Leiste. Unverändert die Regel:
+   im Aktionsmodus wird nicht gebaut — welche der beiden sichtbar
+   ist, steht weiter oben bei body[data-modus]. */
+.rail-bau, .rail-lauf {
+  flex-direction: column; align-items: stretch; flex-wrap: nowrap;
+  gap: 0; min-width: 0;
+}
+.rail-lauf { gap: 4px; }
+
+/* ── Die Knöpfe in der senkrechten Leiste ─────────────────────
+   Über die ganze Breite und linksbündig: so steht das Symbol
+   bei allen an derselben Stelle, und die Wörter bilden eine
+   Spalte statt einer Treppe. */
+.rail .add { width: 100%; justify-content: flex-start; padding: 8px 10px; }
+.rail .add--kachel { justify-content: center; padding: 8px 4px 7px; }
+.add-ic svg { width: 18px; height: 18px; display: block; }
+.add-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Eingeklappt: nur noch das Symbol, mittig. Das Wort steht im
+   `title` und kommt als Tooltip — auf einem Tablet reicht dafür
+   ein langer Druck, und wer die Leiste eingeklappt hat, kennt sie
+   ohnehin schon. */
+.rail.is-zu .add { justify-content: center; padding: 9px 0; }
+.rail.is-zu .add-n { display: none; }
+.rail.is-zu .add-ic { opacity: 1; }
+
+/* Große Knöpfe mit Bild UND Wort — ein Bildchen allein ist auf
+   dem Beamer nicht zu erkennen und für eine 7. Klasse nicht zu
+   erraten. */
+/* Die Knöpfe liegen auf der Leiste wie Werkzeug auf einer Bank:
+   weiß, mit dem kleinen Schatten der ersten Höhe. Sie waren
+   vorher grau in grau und damit vom Untergrund nicht zu trennen. */
+.add {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink); border-radius: var(--r2);
+  padding: 8px 15px 8px 11px; font: inherit; font-size: 13.5px;
+  cursor: pointer; box-shadow: var(--e1);
+  transition: border-color .13s, background .13s, transform .08s, box-shadow .13s;
+}
+.add:hover  { border-color: var(--line-2); transform: translateY(-1px); }
+.add:active { transform: scale(.97); }
+.add-ic { font-size: 16px; line-height: 1; opacity: .78; }
+/* Wie beim Play-Knopf: die Werkzeuge gibt es nur im Entwurf, also
+   sind sie indigo. Damit ist in jeder der beiden Leisten alles,
+   was gerade „an" ist, in EINER Farbe — und das ist die Farbe des
+   Modus. Wer das zurückdrehen will, setzt hier wieder --accent;
+   die Aussage des Streifens oben bleibt davon unberührt. */
+.add--tool.is-on {
+  background: var(--modus); color: var(--modus-in);
+  border-color: transparent; box-shadow: 0 0 0 4px var(--modus-sh);
+}
+.add--tool.is-on .add-ic { opacity: 1; }
+
+/* ─── Die Geräte werden GEZOGEN ───────────────────────────────
+   Deshalb tragen sie den Greifzeiger und nicht den Zeigefinger:
+   der Zeigefinger verspricht „ein Klick tut etwas", und das tut
+   er hier nur im Sinne von „erklärt mir das". */
+.add--geraet { cursor: grab; }
+.add--geraet:active { cursor: grabbing; }
+
+/* Das Schattengerät am Finger. Liegt über allem (auch über den
+   Fenstern), nimmt aber keine Zeigerereignisse an — sonst fände
+   flaeche.ablegen() darunter nie die Fläche. */
+.gdrag {
+  position: fixed; z-index: 90; pointer-events: none;
+  transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 15px 8px 11px; font-size: 13.5px;
+  border: 1px solid var(--line-2); border-radius: var(--r2);
+  background: var(--surface); color: var(--ink);
+  box-shadow: var(--e2); opacity: .9;
+}
+/* Über der Fläche: hier kann abgelegt werden. Sonst blass — eine
+   Geste, die nichts bewirkt, soll das vorher sagen und nicht
+   hinterher. */
+.gdrag.is-ok {
+  border-color: transparent; opacity: 1;
+  box-shadow: var(--e2), 0 0 0 4px var(--modus-sh);
+}
+.gdrag:not(.is-ok) { opacity: .45; }
+
+/* ─── Was ein Gerät ist ───────────────────────────────────────
+   Hängt unter dem Knopf, den es erklärt. Absichtlich schmal: das
+   sind drei bis vier Sätze, keine Seite. */
+.ginfo {
+  position: absolute; z-index: 30; width: 330px; max-width: calc(100vw - 32px);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r2); box-shadow: var(--e3);
+  padding: 11px 13px 12px;
+}
+.ginfo[hidden] { display: none; }
+.ginfo-h { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.ginfo-ic { line-height: 1; flex: none; }
+.ginfo-ic svg { width: 19px; height: 19px; display: block; }
+.ginfo-h strong { font-size: 14px; }
+.ginfo-x {
+  margin-left: auto; border: 0; background: none; cursor: pointer;
+  color: var(--ink-3); font-size: 17px; line-height: 1; padding: 0 2px;
+}
+.ginfo-x:hover { color: var(--ink); }
+.ginfo-b { font-size: 12.8px; line-height: 1.55; color: var(--ink-2); margin: 0; }
+.ginfo-f {
+  margin: 9px 0 0; padding-top: 8px; border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-3);
+}
+
+/* ═══ Arbeitsfläche ══════════════════════════════════════════ */
+
+/* Eine Spalte. Hier standen einmal zwei — Fläche und Inspektor —
+   und die zweite war 340 px breit, immer, auch wenn nichts
+   ausgewählt war. Ein Netz aus sieben Geräten hat dadurch auf
+   einem Tablet quer nicht mehr nebeneinandergepasst. */
+/* Zwei Spalten: die Werkzeugleiste am linken Rand (Filius) und
+   die Fläche. Die Leiste ist `auto` breit, weil sie zwischen 58
+   und 186 px umschaltet — eine feste Spalte müsste denselben Wert
+   ein zweites Mal kennen. */
+.main {
+  display: grid; grid-template-columns: auto 1fr;
+  min-height: 0; overflow: hidden;
+}
+
+/* Der Tisch. Zwei sehr blasse Lichter darauf — eines indigo, eines
+   mintgrün —, damit die Fläche nicht als toter grauer Block
+   dasteht. Blass genug, dass keine Kachel und kein Kabel davor
+   die Farbe wechselt: das wäre eine Aussage über ein Netz, und
+   die darf hier nichts machen. */
+.stage {
+  position: relative; min-width: 0; overflow: hidden;
+  background:
+    radial-gradient(58% 52% at 22% 18%, var(--tisch-1), transparent 70%),
+    radial-gradient(52% 48% at 80% 84%, var(--tisch-2), transparent 70%),
+    var(--bg);
+}
+
+/* ─── Das Reißbrett ────────────────────────────────────────────
+   Im Entwurf liegt ein Raster auf dem Tisch, in der Aktion nicht.
+   Das ist das zweite Zeichen für den Modus und das wichtigere:
+   der Streifen oben hilft nur dem, der hinsieht: die Augen sind
+   aber auf der FLÄCHE, wenn man ein Gerät anklickt und sich
+   wundert, warum nichts passiert.
+
+   ⚠️ Deshalb ausdrücklich KEINE Farbe, sondern Tinte mit 5 %
+   Deckung. Ein eingefärbter Untergrund würde hier heißen „diese
+   Fläche gehört zu einem Netz" — und die Fläche gehört zu allen.
+   Millimeterpapier sagt „hier wird gebaut", ohne einen Ton zu
+   vergeben.
+
+   ⚠️ Das Raster ist nicht mehr hier, sondern IM SVG (flaeche.js,
+   `nf-raster`). Es musste umziehen, als das Feld größer wurde als
+   das Fenster: ein Muster auf der Bühne bleibt stehen, während
+   die Geräte darüber wandern — das Netz sähe aus, als schwebe es
+   über dem Tisch. Jetzt gehört es zum Feld, wandert und zoomt
+   mit, und seine Maschen sind eine Länge auf dem FELD und nicht
+   auf dem Bildschirm. Damit sagt es beiläufig auch, wie weit man
+   herangezoomt hat.
+
+   Geblieben ist nur die Regel, WANN es zu sehen ist. */
+.nf-raster-l {
+  fill: none; stroke: var(--raster); stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.nf-raster { opacity: 0; transition: opacity .22s; pointer-events: none; }
+body[data-modus="entwurf"] .nf-raster { opacity: 1; }
+
+/* Das Ende des Feldes. Ohne diesen Rahmen zieht man ein Gerät
+   gegen eine unsichtbare Wand und weiß nicht, warum es nicht
+   weitergeht. Er ist blass wie das Raster: eine Grenze, keine
+   Aussage über ein Netz. */
+.nf-rand {
+  fill: none; stroke: var(--line); stroke-width: 2;
+  vector-effect: non-scaling-stroke; pointer-events: none;
+}
+
+.canvas { position: absolute; inset: 0; transition: left .18s; }
+
+/* ⚠️ Die Liste der Subnetze liegt NICHT über dem Netz, sie macht
+   ihm Platz. Beim ersten Prüfen im Bild lag sie über E1 und E2
+   des dritten Szenarios — also über genau den Geräten, deren
+   Farbe sie erklärt, und die Adresse darunter war halb
+   abgeschnitten.
+
+   Das ist derselbe Fehler, den einmal die Auftragskarte über
+   Rechner 1 gemacht hat, und er ist hier schlimmer: die Karte
+   kann man wegklicken, diese Liste will man ja offen haben.
+
+   Das SVG passt sich selbst ein (preserveAspectRatio), also
+   reicht es, die Fläche schmaler zu machen — das Netz rückt
+   mit und wird nur ein wenig kleiner. Nichts verschwindet. */
+body.sub-open .canvas { left: 292px; }
+/* Der Greifzeiger auf dem leeren Feld sagt, dass man es
+   verschieben kann — dieselbe Geste wie bei jedem Stadtplan.
+   `touch-action: none` gibt es schon länger (sonst scrollt das
+   Tablet die Seite statt das Netz); es ist zugleich das, was die
+   Zwei-Finger-Geste überhaupt erst bei uns ankommen lässt. */
+.nf { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.nf.is-cable { cursor: crosshair; }
+
+/* ─── Beim Ziehen wird nichts markiert ────────────────────────
+   Wer ein Kabel quer über die Fläche zieht, zog bisher eine blaue
+   Textmarkierung hinter sich her: über den Auftrag, über die
+   Beschriftungen der Leiste, über das Gerätefenster. Auf einem
+   Tablet war das beim Verkabeln das Auffälligste am Bildschirm —
+   und es blieb stehen, wenn das Kabel längst hing.
+
+   Zwei Schichten, weil eine nicht reicht:
+     · die Fläche selbst ist NIE markierbar. Dort steht kein Text,
+       den jemand kopieren will — nur Adressen, und die stehen im
+       Gerätefenster noch einmal in einem Feld.
+     · während eines Zugs (body.is-ziehen, gesetzt von flaeche.js
+       und von der Geräteleiste) gilt das für die ganze Seite. Der
+       Zeiger ist dann auf die Fläche gefangen, aber die Markierung
+       wandert trotzdem über alles, was darunter liegt.
+   Dazu ruft flaeche.js preventDefault() beim Aufsetzen — das
+   verhindert, dass die Markierung überhaupt anfängt. */
+.nf, .nf * { -webkit-user-select: none; user-select: none; }
+body.is-ziehen, body.is-ziehen * {
+  -webkit-user-select: none !important; user-select: none !important;
+}
+
+/* ─── Kabel ───────────────────────────────────────────────── */
+.nf-cable-hit  { stroke: transparent; stroke-width: 18; cursor: pointer; }
+.nf-cable-line { stroke: var(--line-2); stroke-width: 3.5; stroke-linecap: round; pointer-events: none; }
+.nf-cable:hover .nf-cable-line { stroke: var(--accent); }
+.nf-cable.is-down .nf-cable-line { stroke: var(--bad); stroke-dasharray: 3 9; }
+
+/* Das Kabel leuchtet genau so lange, wie es überträgt — nicht
+   länger. Der fliegende Punkt sagt WAS unterwegs ist, das
+   leuchtende Kabel sagt WO, und das sieht man auch aus der
+   letzten Reihe. Kein Übergang: ein Aufleuchten mit 150 ms
+   Nachlauf würde bei schnellem Tempo wieder mehrere Kabel
+   gleichzeitig hell machen, und genau das soll weg. */
+.nf-cable.is-busy .nf-cable-line {
+  stroke: var(--accent); stroke-width: 5;
+  filter: drop-shadow(0 0 5px var(--accent-sh));
+}
+/* „Zu dieser Netzwerkkarte gehört DIESES Kabel." Es tritt hervor,
+   solange im Gerätefenster eine Netzwerkkarte angefasst wird — mit
+   Zeigen oder mit dem Schreibstrich im Feld.
+
+   ⚠️ Das war einmal ein Strich, der von 3,5 auf 5 Punkte wuchs und
+   dabei die AKZENTFARBE annahm. Beides falsch, und das zweite
+   schlimmer als das erste:
+
+     · Zu dünn. Bei einem Router mit drei Karten fragt man „welches
+       Kabel ist das denn nun" — und wenn zwei der drei in ihrer
+       Netzfarbe ohnehin 4,5 Punkte dick sind, ist ein halber Punkt
+       mehr keine Antwort.
+     · Die falsche Aussage. Der Akzent ist hell Mint, und Mint ist
+       auf dieser Fläche eine Netzfarbe (--sn-2). Im Bild sah man
+       es sofort: wer beim Router auf Netzwerkkarte 1 zeigt (Netz
+       192.168.1., blau), bekam ihr Kabel in Mint — der Farbe des
+       ANDEREN Netzes. Dieselbe Regel wie bei der Geräteauswahl:
+       Farbe heißt hier ausschließlich „Netz", und wer etwas
+       hervorheben will, muss ohne sie auskommen.
+
+   Also behält das Kabel seine eigene Farbe und bekommt zwei
+   farblose Merkmale dazu:
+
+     · einen HOF in der Schriftfarbe. Die Treffzone (.nf-cable-hit)
+       ist 18 Punkte breit und sonst unsichtbar; hier bekommt sie
+       Deckkraft. Das ist die Breite, die man aus der letzten Reihe
+       sieht — dieselbe Tinte, in der auch das ausgewählte Gerät
+       gefasst ist.
+     · einen PULS, langsam und flach. Bewegung ist das einzige
+       Merkmal, das auf dieser Fläche noch keine andere Bedeutung
+       trägt: Farbe heißt Netz, Leuchten heißt „überträgt gerade",
+       ein gestrichelter Strich heißt „gezogen".
+
+   Vom Übertragen bleibt es dadurch sauber getrennt: ein sendendes
+   Kabel leuchtet hart auf und geht hart wieder aus, dieses hier
+   atmet und bleibt in seiner Netzfarbe. */
+.nf-cable.is-betont .nf-cable-hit {
+  stroke: var(--ink); opacity: .16;
+  animation: kabelHof 1.3s ease-in-out infinite;
+}
+/* Trägt das Kabel eine Netzfarbe, leuchtet der Hof in DERSELBEN —
+   nicht in Tinte. Auch das ist keine neue Aussage, sondern die
+   alte lauter: das Kabel gehört weiterhin zu genau diesem Netz.
+   Ein grauer Hof um ein blaues Kabel sah dagegen aus, als wäre das
+   Kabel abgeblendet; im Bild war das der Eindruck „ausgegraut"
+   statt „gemeint". */
+.nf-cable.is-betont.is-sub .nf-cable-hit { stroke: var(--sub); }
+.nf-cable.is-betont .nf-cable-line {
+  stroke-width: 6.5;
+  transition: stroke-width .12s;
+  animation: kabelPuls 1.3s ease-in-out infinite;
+}
+@keyframes kabelPuls {
+  0%, 100% { stroke-width: 5; }
+  50%      { stroke-width: 9.5; }
+}
+@keyframes kabelHof {
+  0%, 100% { opacity: .12; }
+  50%      { opacity: .34; }
+}
+/* Wer Bewegung abgestellt hat, bekommt sie nicht — Dicke und Hof
+   bleiben aber, sonst wäre die Hervorhebung für ihn wieder so
+   schwach wie vorher. */
+@media (prefers-reduced-motion: reduce) {
+  .nf-cable.is-betont .nf-cable-line,
+  .nf-cable.is-betont .nf-cable-hit { animation: none; }
+  .nf-cable.is-betont .nf-cable-line { stroke-width: 8.5; }
+  .nf-cable.is-betont .nf-cable-hit { opacity: .22; }
+}
+
+/* ─── Das ANGEKLICKTE Kabel ──────────────────────────────────
+   Derselbe Hof wie beim Hervorheben, aber OHNE Puls. Das ist der
+   ganze Unterschied, und er ist der richtige: die zwei Zustände
+   bedeuten Verschiedenes und treten trotzdem an denselben Kabeln
+   auf.
+
+     is-betont  „das gehört zu der Netzwerkkarte, die du gerade
+                anfasst" — kommt und geht von selbst, während man
+                im Fenster arbeitet. Etwas, das von allein
+                aufhört, darf sich bewegen.
+     is-sel     „das hast du ausgewählt, Entf löscht es" — bleibt
+                stehen, bis man etwas anderes anklickt. Ein Kabel,
+                das dauerhaft pulsiert, zappelt im Bild herum,
+                während die Klasse etwas ganz anderes ansieht.
+
+   Farbe kommt auch hier keine dazu: sie heißt auf dieser Fläche
+   ausschließlich „Netz". Der Hof trägt die Netzfarbe mit, wenn es
+   eine gibt — dieselbe Regel wie beim Hervorheben. */
+.nf-cable.is-sel .nf-cable-hit { stroke: var(--ink); opacity: .22; }
+.nf-cable.is-sel.is-sub .nf-cable-hit { stroke: var(--sub); }
+/* ─── Kabel in der Farbe ihres Subnetzes ──────────────────────
+   Nur, wenn beide Enden zu demselben Netz gehören (subnetze.js).
+   Etwas dicker als ein graues Kabel, damit die Farbe auf dem
+   Beamer trägt — aber dünner als „überträgt gerade": die beiden
+   dürfen nie zu verwechseln sein. Wer gerade sendet, gewinnt
+   deshalb auch in der Reihenfolge weiter unten. */
+.nf-cable.is-sub .nf-cable-line { stroke: var(--sub); stroke-width: 4.5; }
+.nf-cable.is-sub:hover .nf-cable-line { stroke: var(--accent); }
+
+/* Und erst danach das Übertragen und das Hervorheben — sonst
+   bliebe ein gefärbtes Kabel beim Senden in seiner Netzfarbe, und
+   man sähe nicht mehr, wo gerade etwas läuft. */
+.nf-cable.is-busy .nf-cable-line { stroke: var(--accent); stroke-width: 5; }
+/* Die Auswahl liegt in der Dicke ZWISCHEN „überträgt gerade" (5)
+   und „hervorgehoben" (6,5). Beides ist Absicht: sie muss über dem
+   gefärbten Kabel liegen, damit sie neben laufendem Verkehr nicht
+   verschwindet — und unter dem hervorgehobenen, denn wer im
+   Gerätefenster auf eine Netzwerkkarte zeigt, stellt gerade genau
+   diese Frage. */
+.nf-cable.is-sel .nf-cable-line { stroke-width: 6; }
+/* Hier steht bewusst KEINE Farbe für das hervorgehobene Kabel: es
+   behält seine eigene. Nur die Dicke zieht nach — sie muss über
+   der des gefärbten (4,5) und der des sendenden (5) liegen,
+   sonst verschwände die Hervorhebung ausgerechnet dann, wenn
+   nebenan etwas läuft. */
+.nf-cable.is-betont .nf-cable-line { stroke-width: 6.5; }
+.nf-cable.is-down .nf-cable-line { stroke: var(--bad); stroke-width: 3.5; }
+
+/* ─── Funk statt Draht ────────────────────────────────────────
+   Gestrichelt, und das heißt auf dieser Fläche genau eines:
+   diese Verbindung steckt niemand, sie entsteht aus einem
+   Netznamen. Filius zeichnet sie ebenso (JCablePanel, dash 10)
+   und zusätzlich grau — grau bleibt hier weg, denn eine
+   Funkverbindung gehört zu einem Subnetz wie jede andere, und
+   sie soll dessen Farbe tragen.
+
+   Der Strich steht GANZ am Ende der Kabelregeln, damit er auch
+   für ein gefärbtes, ein sendendes und ein hervorgehobenes
+   Funkkabel gilt: was durch die Luft geht, geht durch die Luft,
+   egal was gerade sonst noch los ist.
+
+   9 zu 7 und nicht 3 zu 9 wie beim gezogenen Kabel (.is-down):
+   die beiden dürfen sich nicht ähneln. Ein gezogenes Kabel ist
+   ein Fehler, eine Funkverbindung ist keiner — und aus der
+   letzten Reihe unterscheidet man sie nur an der Länge der
+   Striche. */
+.nf-cable.is-funk .nf-cable-line { stroke-dasharray: 9 7; stroke-linecap: butt; }
+.nf-cable.is-funk.is-down .nf-cable-line { stroke-dasharray: 3 9; }
+
+.nf-cable-mark { fill: var(--warn); opacity: .7; pointer-events: none; }
+.nf-ghostline  { stroke: var(--accent); stroke-width: 3; stroke-dasharray: 7 6; opacity: .75; }
+
+/* ─── Das aufgezogene Rechteck ────────────────────────────────
+   Die Spur einer Hand, kein Teil des Netzes — und genau das muss
+   es aussprechen.
+
+   Deshalb TINTE und nicht der Akzent: der Akzent ist in Hell Mint
+   und in Dunkel Violett, und beides gibt es als Subnetzfarbe. Ein
+   grünes Rechteck über einem Netzplan würde für eine Zehntelsekunde
+   behaupten, hier entstünde ein Netz. Dieselbe Überlegung hat schon
+   die Auswahlkante auf `--ink` gebracht: auf dieser Fläche heißt
+   Farbe „Netz", ausnahmslos.
+
+   Die Strichelung ist die vierte auf dieser Fläche und die feinste
+   (2 zu 4): durchgezogen = Kabel, 9 zu 7 = Funk, 3 zu 9 = Kabel im
+   Entstehen. Fein heißt hier „flüchtig", und das ist es auch — beim
+   Loslassen ist es weg.
+
+   `vector-effect` hält die Kante gleich dünn, egal wie weit
+   herangezoomt ist. Ohne das wäre das Rechteck bei 40 % ein
+   Haarstrich und bei 250 % ein Balken. */
+.nf-rahmen { pointer-events: none; }
+.nf-rahmen-f { fill: var(--ink); opacity: .07; }
+.nf-rahmen-k {
+  fill: none; stroke: var(--ink); stroke-width: 1.4;
+  stroke-dasharray: 2 4; opacity: .55;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ─── Geräte ──────────────────────────────────────────────── */
+.nf-node { cursor: grab; }
+.nf-node:active { cursor: grabbing; }
+
+.nf-plate {
+  fill: var(--surface); stroke: var(--line); stroke-width: 1.5;
+  filter: drop-shadow(0 2px 6px rgba(20,24,31,.09));
+  transition: stroke .13s;
+}
+:root[data-theme="dark"] .nf-plate { filter: drop-shadow(0 3px 10px rgba(0,0,0,.5)); }
+.nf-node:hover .nf-plate { stroke: var(--line-2); }
+
+/* ─── Der Subnetzring ─────────────────────────────────────────
+   Liegt außen um die Kachel, einer je Netz. Ein Endgerät hat
+   einen; ein Router hat so viele, wie er Netze verbindet, in so
+   vielen Farben — und damit steht die Antwort auf „was macht ein
+   Router" auf der Fläche statt in einem Satz.
+
+   Nur Strich, keine Füllung: die Kachel darunter muss ihre eigene
+   Farbe behalten (weiß bzw. dunkel), sonst sähe ein Gerät in
+   einem Netz anders aus als dasselbe Gerät ohne Netz. */
+.nf-ring {
+  fill: none; stroke: var(--sub); stroke-width: 2.6;
+  opacity: .9; pointer-events: none;
+}
+
+/* Das ausgewählte Gerät. Die Ringe sagen, WO es liegt; das hier
+   sagt, worüber gerade gesprochen wird.
+
+   ⚠️ Hier stand der Akzent, und das war ein Fehler, den erst das
+   Bild gezeigt hat: der Akzent ist in Hell Mint und in Dunkel
+   Violett — und beide Töne gibt es auch als Subnetzfarbe
+   (--sn-2, --sn-3). Ein ausgewählter Router sah damit aus, als
+   läge er in einem grünen Netz.
+
+   Die Auswahl ist auch gar keine Kategorie, sondern ein Fokus.
+   Deshalb jetzt in der Schriftfarbe: kräftig, neutral, und in
+   keinem Farbkreis, in dem ein Subnetz liegt. Farbe heißt auf
+   dieser Fläche ab sofort ausschließlich „Netz". */
+.nf-node.is-sel  .nf-plate {
+  stroke: var(--ink); stroke-width: 3;
+  filter: drop-shadow(0 0 8px rgba(20,24,31,.28)) drop-shadow(0 2px 6px rgba(20,24,31,.09));
+}
+:root[data-theme="dark"] .nf-node.is-sel .nf-plate {
+  filter: drop-shadow(0 0 9px rgba(233,236,241,.30)) drop-shadow(0 3px 10px rgba(0,0,0,.5));
+}
+.nf-node.is-target .nf-plate { stroke: var(--accent); stroke-width: 3; }
+.nf-node.is-warn .nf-plate { stroke: var(--warn); }
+.nf-node.is-off  { opacity: .45; }
+
+.nf-ic {
+  fill: none; stroke: var(--ink-2); stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.nf-ic--fill  { fill: var(--surface-2); }
+.nf-ic--dot   { fill: var(--accent); stroke: none; }
+.nf-ic--arrow { stroke: var(--accent); stroke-width: 1.9; }
+.nf-node.is-sel .nf-ic { stroke: var(--ink); }
+
+/* Das Kürzel in der Kachel. Groß und fett: es ist das, was man
+   aus zehn Metern liest und wonach man im Unterricht ruft. */
+.nf-kurz {
+  fill: var(--ink); font-size: 15px; font-weight: 700;
+  text-anchor: middle; font-family: var(--fs); pointer-events: none;
+  letter-spacing: .02em;
+}
+/* Das Kürzel des ausgewählten Geräts stand einmal im Akzent —
+   aus demselben Grund wie oben nicht mehr: Farbe heißt auf dieser
+   Fläche „Netz". Kräftiger wird es trotzdem. */
+.nf-node.is-sel .nf-kurz { fill: var(--ink); font-weight: 800; }
+
+/* Die Adresse unter der Kachel. Größer als der Gerätename früher
+   war — sie ist die Zahl, über die gesprochen wird. */
+.nf-ip {
+  fill: var(--ink-2); font-size: 15px; text-anchor: middle;
+  font-family: var(--fm); font-weight: 700; pointer-events: none;
+}
+/* „2 IP-Adressen" am Vermittlungsgerät. Keine Adresse, also auch
+   nicht die Adressschrift: Textschrift, leichter, grau. Nicht
+   kursiv wie `--none` — das ist kein Mangel, sondern eine Auskunft. */
+.nf-ip--zahl {
+  fill: var(--ink-3); font-family: var(--fs); font-weight: 500; font-size: 12px;
+}
+.nf-ip--none {
+  fill: var(--ink-3); font-style: italic; font-family: var(--fs);
+  font-weight: 400; font-size: 11.5px;
+}
+
+/* Dieselben zwei Farben wie im Kärtchen, nur auf der Fläche.
+   Damit ist von zehn Metern zu sehen, welche Geräte im selben Netz
+   liegen: gleicher blauer Anfang, verschiedene braune Enden. */
+.nf-ip-netz    { fill: var(--netzteil); }
+.nf-ip-host    { fill: var(--hostteil); }
+.nf-ip-geteilt { fill: var(--ink); text-decoration: underline; }
+.nf-ip-d       { fill: var(--ink-3); }
+.nf-ip-mehr    { fill: var(--ink-3); font-size: 11px; font-weight: 400; }
+
+/* Und derselbe getönte Grund wie im Feld. SVG kennt keinen
+   Hintergrund für Text — die Rechtecke werden in flaeche.js
+   gemessen und dahintergelegt. Dieselben Farbwerte wie .ipp,
+   damit Feld und Fläche nicht auseinanderlaufen. */
+.nf-ipbg        { pointer-events: none; }
+.nf-ipbg-netz   { fill: var(--netzbg); }
+.nf-ipbg-host   { fill: var(--hostbg); }
+.nf-ipbg-geteilt { fill: var(--netzbg); }
+
+/* Das Schloss hinter der Adresse: diese Adresse ist geliehen.
+   Gedeckt, nicht laut — es ist kein Fehler, sondern ein Hinweis
+   darauf, wer sie vergeben hat. */
+.nf-lock        { fill: var(--ink-3); pointer-events: none; }
+.nf-lock-b      { stroke: var(--ink-3); stroke-width: 1.1; fill: none; }
+
+/* ─── Die Marken unter der Kachel ─────────────────────────────
+   Was ein Gerät TUT: DHCP („ich verteile Adressen"), DNS („ich
+   beantworte Namen"), Web („ich liefere Seiten aus"), Mail („ich
+   nehme Post an") und WLAN („ich strahle dieses Netz aus"). Sie
+   stehen in einer Reihe unter der Adresse, bei mehr als einer
+   Reihenbreite in zweien (flaeche.js); die zwei Ecken der Kachel
+   bleiben den Zeichen, die einen ZUSTAND melden („!" und „aus").
+
+   ⚠️ Eine Marke steht nur da, wenn der Dienst LÄUFT — installiert
+   allein genügt nicht (netz.dienstLaeuft).
+
+   Der Netzname steht in der Schrift der Oberfläche und nicht in
+   der der Adressen: er IST kein Adressbestandteil, und die
+   Schreibmaschinenschrift würde ihn zu einem machen. */
+.nf-mark { pointer-events: none; }
+.nf-mark text { fill: #fff; font-family: var(--fs); }
+
+/* Die vier Dienstmarken teilen ihre Schrift: sie sind ein SATZ von
+   Zeichen und sollen als solcher zu erkennen sein — die Farbe
+   unterscheidet, die Form nicht. */
+.nf-dhcp text, .nf-dns text, .nf-web text, .nf-mail text {
+  font-size: 8.5px; font-weight: 700; letter-spacing: .06em;
+  text-anchor: middle;
+}
+.nf-dhcp rect { fill: var(--dhcp); }
+.nf-dns  rect { fill: var(--dns); }
+.nf-web  rect { fill: var(--web); }
+.nf-mail rect { fill: var(--mail); }
+
+.nf-wlan rect { fill: var(--wlan); }
+.nf-wlan text { font-size: 9.5px; font-weight: 650; text-anchor: start; }
+.nf-wlan-ic path   { stroke: #fff; stroke-width: 1.5; fill: none; stroke-linecap: round; }
+.nf-wlan-dot       { fill: #fff; }
+
+/* ─── WAN oder LAN? Das Schildchen am Kabelende ───────────────
+   Nur am Heimrouter, und dort an jedem Kabel. Es benutzt als
+   einziges Merkmal ein WORT — Farbe heißt hier „Netz", Dicke
+   „hervorgehoben", gestrichelt „Funk"; alle drei waren vergeben.
+
+   WAN ist gefüllt, LAN nur umrandet: es gibt genau EIN WAN und
+   mehrere LAN, und die eine Ausnahme soll die sein, die ins Auge
+   springt. Wer „wo kommt das Internet herein" fragt, muss nicht
+   lesen können, um die Antwort zu sehen. */
+.nf-port { pointer-events: none; }
+.nf-port rect {
+  fill: var(--surface); stroke: var(--ink-3); stroke-width: 1.2;
+}
+.nf-port text {
+  fill: var(--ink-2); font-size: 8px; font-weight: 700; letter-spacing: .03em;
+  text-anchor: middle; font-family: var(--fs);
+}
+.nf-port--wan rect { fill: var(--ink); stroke: var(--ink); }
+.nf-port--wan text { fill: var(--surface); }
+
+.nf-badge circle { fill: var(--warn); }
+.nf-badge text {
+  fill: #fff; font-size: 13px; font-weight: 700;
+  text-anchor: middle; font-family: var(--fs);
+}
+.nf-off circle { fill: var(--ink-3); }
+.nf-off path   { stroke: var(--surface); stroke-width: 1.6; fill: none; stroke-linecap: round; }
+
+/* ─── Fliegende Pakete ────────────────────────────────────── */
+.nf-dot { fill: var(--ink-2); }
+.nf-dot--arp  { fill: var(--arp); }
+.nf-dot--ping { fill: var(--ping); }
+.nf-dot--pong { fill: var(--pong); }
+.nf-dot--err  { fill: var(--bad); }
+.nf-dot--dhcp { fill: var(--dhcp); }
+.nf-dot--dns  { fill: var(--dns); }
+/* RIP: HOHL, wie das SYN unten — und aus demselben Grund. Eine
+   Ansage trägt keine Nutzdaten; sie sagt etwas über das Netz statt
+   etwas durch das Netz zu schicken. Und sie kommt im Takt, ohne
+   dass jemand etwas angestoßen hat: ein Ring, der alle fünf
+   Sekunden über die Kabel läuft, ist als Grundrhythmus zu erkennen
+   und drängt sich nicht vor die Pakete, um die es gerade geht. */
+.nf-dot--rip  { fill: var(--surface); stroke: var(--rip); stroke-width: 2; }
+/* TCP: gefüllt, wenn Daten drin sind — HOHL beim Handschlag und
+   beim Abbau. Das ist keine zweite Farbe, sondern dieselbe in
+   einer anderen Form, und sie behauptet genau das Richtige: ein
+   SYN und ein FIN tragen kein einziges Byte. Damit sieht man auf
+   der Fläche „erst reden die beiden dreimal, dann fließt etwas",
+   ohne den Mitschnitt aufzuschlagen. */
+.nf-dot--tcp     { fill: var(--tcp); }
+.nf-dot--tcpauf  { fill: var(--surface); stroke: var(--tcp); stroke-width: 2; }
+
+/* ─── Auftrag ─────────────────────────────────────────────── */
+/* ── Die erste Höhe: gar keine ───────────────────────────────
+   Der Auftrag LIEGT auf dem Tisch. Kein Schatten, halb
+   durchscheinend, oben eine Klammer — und als einziges Stück im
+   ganzen Programm ein warmer Ton. Er ist Papier von der
+   Lehrkraft, kein Teil der Anwendung, und genau das soll man
+   sehen, bevor man ein Wort gelesen hat.
+
+   ⚠️ `overflow: visible`, damit die Klammer über den oberen Rand
+   ragen darf. Die Ecken runden deshalb die Kinder selbst. */
+.aufgabe {
+  position: absolute; left: 18px; top: 18px; width: min(370px, calc(100% - 36px));
+  background: var(--auf-bg); backdrop-filter: blur(4px);
+  border: 1px solid var(--auf-line);
+  border-radius: var(--r3); box-shadow: none;
+  overflow: visible;
+}
+/* Die Klammer. Sie hält den Zettel auf dem Tisch fest — das ist
+   die ganze Aussage: der Auftrag liegt DA, er schwebt nicht. */
+.aufgabe::before {
+  content: ""; position: absolute; left: 20px; top: -8px;
+  width: 30px; height: 15px; border-radius: 4px;
+  background: linear-gradient(var(--surface-2), var(--line-2));
+  border: 1px solid var(--line-2);
+}
+.auf-h {
+  display: flex; align-items: center; gap: 9px;
+  padding: 12px 12px 12px 16px; border-bottom: 1px solid var(--auf-line);
+  background: var(--auf-kopf); border-radius: calc(var(--r3) - 1px) calc(var(--r3) - 1px) 0 0;
+  cursor: pointer;
+}
+.auf-h:hover { filter: brightness(.985); }
+.auf-tag {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em;
+  font-weight: 700; color: var(--auf-tag);
+  border-radius: 999px; padding: 3px 0;
+}
+.auf-h strong { font-size: 14px; }
+.auf-fold, .auf-x {
+  width: 28px; height: 28px; flex: none; border: 0; border-radius: 50%;
+  background: transparent; color: var(--ink-3); font-size: 16px; cursor: pointer;
+}
+.auf-fold { margin-left: auto; transition: transform .18s; }
+.auf-x { font-size: 18px; }
+.auf-fold:hover, .auf-x:hover { background: var(--bg); color: var(--ink); }
+
+/* Eingeklappt bleibt nur die Kopfzeile stehen — der Auftrag ist
+   noch da, nimmt aber keine Geräte mehr in Beschlag. Der Zustand
+   überlebt einen Szenarienwechsel nicht: ein neuer Auftrag will
+   gelesen werden. */
+.aufgabe.is-fold .auf-b  { display: none; }
+.aufgabe.is-fold .auf-h  { border-bottom: 0; border-radius: calc(var(--r3) - 1px); }
+.aufgabe.is-fold .auf-fold { transform: rotate(-90deg); }
+.aufgabe.is-fold { width: auto; max-width: min(370px, calc(100% - 36px)); }
+
+/* Bei offener Subnetzliste rückt der Auftrag auf deren Breite
+   zusammen: beide stehen dann in derselben linken Spalte und
+   ragen nicht mehr über die Fläche. */
+body.sub-open .aufgabe { width: 258px; }
+
+/* Gedeckelt, damit die Karte nie tiefer reicht als die Ecke, die
+   die Szenarien für sie freihalten (SVG: x < 430, y < 280). */
+.auf-b {
+  padding: 4px 16px 14px; font-size: 13.5px;
+  max-height: min(240px, 30vh); overflow: auto;
+  border-radius: 0 0 calc(var(--r3) - 1px) calc(var(--r3) - 1px);
+}
+.auf-b p { margin: 10px 0; }
+.auf-b p:first-child { margin-top: 6px; }
+
+/* ═══ Die Adressräume ════════════════════════════════════════
+   Links, unter dem Auftrag (die Höhe rechnet subnetze.js aus, weil
+   sie von dessen Inhalt abhängt). Schmaler als das Gerätefenster:
+   hier stehen nur Zahlen, keine Eingaben.
+
+   Sie ist eine Legende und kein Werkzeug — deshalb leicht
+   durchscheinend über der Fläche. Man soll sehen, was sie verdeckt,
+   ohne sie wegzuschieben. */
+/* ⚠️ `display: flex` schlägt das `hidden`-Attribut. Ohne diese
+   Zeile ist die Liste zwar unsichtbar gemeint, liegt aber weiter
+   über der Fläche und fängt jeden Klick ab — beim Prüfen im
+   Browser waren dadurch die Geräte in der linken Hälfte nicht
+   mehr anklickbar. Derselbe Fehler wie einst mit der
+   Auftragskarte über Rechner 1. */
+.sn[hidden] { display: none; }
+.sn {
+  position: absolute; left: 18px; width: 258px;
+  max-height: calc(100% - 36px);
+  display: flex; flex-direction: column;
+  background: color-mix(in srgb, var(--surface) 93%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line); border-radius: var(--r3);
+  box-shadow: var(--sh); overflow: hidden;
+}
+.sn-h {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  padding: 10px 8px 10px 14px; border-bottom: 1px solid var(--line);
+}
+.sn-tag {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em;
+  font-weight: 700; color: var(--ink-2);
+}
+.sn-c { font-size: 11.5px; color: var(--ink-3); margin-left: auto; }
+.sn-x {
+  width: 26px; height: 26px; flex: none; border: 0; border-radius: 50%;
+  background: transparent; color: var(--ink-3); font-size: 17px; cursor: pointer;
+}
+.sn-x:hover { background: var(--bg); color: var(--ink); }
+.sn-b { padding: 8px; overflow-y: auto; min-height: 0; }
+
+/* Ein Netz. Der farbige Balken links ist dieselbe Farbe wie der
+   Ring draußen — er ist die Brücke zwischen „das da ist grün" und
+   „grün heißt 192.168.2.__". */
+.sn-e {
+  border: 1px solid var(--line); border-left: 4px solid var(--sub);
+  border-radius: var(--r1); padding: 8px 10px 9px; margin-bottom: 7px;
+  background: var(--surface);
+}
+.sn-e.is-sel { border-color: var(--accent); border-left-color: var(--sub); }
+.sn-e-h { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.sn-dot {
+  width: 11px; height: 11px; flex: none; border-radius: 50%;
+  background: var(--sub);
+}
+.sn-kurz { line-height: 1.2; }
+.sn-kurz .ipp { font-size: 13.5px; }
+.sn-kurz .ipd { font-size: 13.5px; }
+.sn-n { margin-left: auto; font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+
+/* Beschriftung links, Wert rechts — dasselbe Raster wie im
+   Gerätefenster, damit „Netz" und „Netzmaske" an beiden Orten
+   gleich aussehen. */
+.sn-f {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 11.5px; color: var(--ink-2); margin-top: 2px;
+}
+.sn-f > span:first-child { width: 68px; flex: none; color: var(--ink-3); }
+.sn-f .mono { font-size: 11.5px; color: var(--ink); }
+.sn-f--klein .mono { color: var(--ink-3); }
+
+.sn-g { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.sn-chip {
+  border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface-2); color: var(--ink-2);
+  padding: 2px 9px; font: inherit; font-size: 11px; font-weight: 650;
+  cursor: pointer;
+}
+.sn-chip:hover { border-color: var(--sub); color: var(--sub); }
+
+.sn-leer { padding: 10px 6px; font-size: 12.5px; color: var(--ink-2); }
+.sn-warn {
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--line));
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
+  border-radius: var(--r1); padding: 8px 10px;
+  font-size: 11.5px; color: var(--ink-2);
+}
+
+/* ═══ Felder und Tabellen ═══════════════════════════════════
+   Die Inspektorspalte am rechten Rand ist weg (siehe panels.js).
+   Was von ihr bleibt, sind die Bausteine, die jetzt im
+   Gerätefenster stehen: Eingabefelder, Tabellen, Hinweiskästen. */
+
+/* Gesperrte Felder: lesbar bleiben, aber erkennbar nicht
+   anfassbar sein. Ausgegraut bis zur Unleserlichkeit wäre falsch —
+   bei DHCP steht in genau diesen Feldern die Adresse, die man
+   wissen will. Gestrichelter Rand heißt „kommt von außen". */
+input:disabled, select:disabled {
+  background: var(--surface-2); color: var(--ink-2);
+  cursor: default; border-style: dashed;
+}
+/* ⚠️ `textarea` stand hier lange NICHT — und war damit das einzige
+   Feld im ganzen Programm ohne Rahmen, ohne Hintergrund und vor
+   allem ohne Breite. Ein Textfeld ohne CSS ist rund zwanzig
+   Zeichen breit, egal wie breit das Fenster ist; im Mailprogramm
+   sah das aus wie ein Fehler und war auch einer. Der Editor hat
+   sich seinerzeit mit einer eigenen Regel beholfen (`.ed-in`) —
+   deshalb ist es erst im zweiten Programm mit Textfeld
+   aufgefallen. */
+input.f, select.f, textarea.f {
+  display: block; width: 100%; margin-top: 4px;
+  border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface); color: var(--ink);
+  padding: 8px 11px; font: inherit; font-family: var(--fm); font-size: 13px;
+  transition: border-color .13s, box-shadow .13s;
+}
+input.f:focus, select.f:focus, textarea.f:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-sh);
+}
+.has-err input.f { border-color: color-mix(in srgb, var(--bad) 55%, var(--line)); }
+
+.k-f input[type=range] {
+  width: 100%; margin: 2px 0 0; accent-color: var(--accent);
+}
+.rangeval { font-family: var(--fm); font-size: 12px; color: var(--ink-2); }
+
+/* ═══ Netzteil und Geräteteil einer Adresse ══════════════════
+   Die eine Darstellung, die in diesem Programm an vier Stellen
+   gleich aussehen muss: im Gerätefenster, auf der Fläche
+   und in der Legende. Ein Kind, das die Farben einmal gelernt hat,
+   soll sie überall wiedererkennen — sonst sind sie Dekoration. */
+.ipp {
+  font-family: var(--fm); font-size: 15px; font-weight: 650;
+  padding: 1px 3px; border-radius: 4px;
+}
+.ipp--netz    { color: var(--netzteil); background: var(--netzbg); }
+.ipp--host    { color: var(--hostteil); background: var(--hostbg); }
+/* Der Block, in dem die Grenze liegt (bei /26 zum Beispiel): aus
+   beiden Farben schräg gestreift. Ihn einer Seite zuzuschlagen
+   wäre die bequeme Lüge — dort liegt gerade der Lernstoff. */
+.ipp--geteilt {
+  color: var(--ink); cursor: help;
+  background: repeating-linear-gradient(115deg,
+    var(--netzbg) 0 5px, var(--hostbg) 5px 10px);
+  box-shadow: inset 0 -2px 0 var(--hostteil), inset 0 2px 0 var(--netzteil);
+}
+.ipp--leer { color: var(--ink-3); font-style: italic; font-family: var(--fs); font-weight: 400; font-size: 13px; }
+/* Eine Adresse, die noch getippt wird: sichtbar, aber ungefärbt.
+   Kein Grund dahinter — eine halbe Färbung unter einer halben Zahl
+   wäre eine Aussage über eine Grenze, die noch gar nicht feststeht. */
+.ipp--offen { color: var(--ink); background: none; }
+.ipd { font-family: var(--fm); font-size: 15px; color: var(--ink-3); }
+
+.kl { display: flex; align-items: center; gap: 7px; margin: 0 0 8px; }
+.kl-i i { font-style: normal; font-size: 10.5px; padding: 1px 6px; }
+.kl-t { font-size: 11px; color: var(--ink-3); }
+
+/* ═══ Das Gerätefenster ══════════════════════════════════════
+   Zwei Größen, ein Fenster:
+
+     klein (320 px)  neben dem Gerät. Fünf Zeilen, sonst nichts.
+     groß  (400 px)  am rechten Rand, wo bis eben der Inspektor
+                     stand. Volle Höhe, eigene Bildlaufleiste.
+
+   Beide sind seit der Umstellung auf die linke Werkzeugleiste um
+   40 bzw. 54 px breiter. Das kostet nichts: die Leiste hat der
+   Fläche keine Breite genommen, sondern ihr eine Zeile HÖHE
+   zurückgegeben — und in den Feldern standen Netzmaske und
+   Gateway bis dahin knapp.
+
+   Beide lassen sich am Kopf packen und hinlegen.               */
+
+/* ── Die zweite Höhe: es schwebt ─────────────────────────────
+   Werkzeug. Es schwebt über dem Tisch (--e2) und trägt links eine
+   Griffleiste — dieselbe Geste wie bei einem Lineal, das man
+   anfasst und hinlegt. Die Leiste ist nicht Zierde: sie ist der
+   Unterschied zum Auftrag, der daneben flach liegt, und zur
+   Geräteoberfläche, die einen Rahmen hat.
+
+   Die 14 px Polsterung links machen ihr Platz. */
+.karte {
+  position: absolute; left: 16px; top: 16px;
+  width: 320px; max-height: calc(100% - 24px);
+  display: flex; flex-direction: column; overflow: hidden;
+  padding-left: 14px;
+  background: var(--glas); backdrop-filter: blur(14px) saturate(1.3);
+  border: 1px solid var(--line);
+  border-radius: var(--r3); box-shadow: var(--e2);
+  z-index: 6;
+}
+.karte::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 14px;
+  background:
+    radial-gradient(circle, var(--line-2) 1.3px, transparent 1.3px) center / 6px 9px repeat-y,
+    var(--surface-2);
+  border-right: 1px solid var(--line);
+  pointer-events: none;
+}
+.karte[hidden] { display: none; }
+
+/* Groß. Die Breite ist die der alten Spalte minus ein bisschen —
+   die Tabellen darin sind dafür gebaut. */
+.karte.is-mehr { width: 400px; height: calc(100% - 24px); }
+
+/* Beim Ziehen keine weichen Kanten und kein Textmarkieren: sonst
+   zieht man auf einem Tablet den Namen statt des Fensters. */
+.karte.is-zieh { user-select: none; box-shadow: var(--e3); }
+
+.karte-h {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 8px 9px 11px;
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  border-bottom: 1px solid var(--line);
+  cursor: grab; touch-action: none;
+}
+.karte-h:active { cursor: grabbing; }
+.karte-ic { line-height: 1; flex: none; }
+.karte-ic svg { width: 19px; height: 19px; display: block; }
+.karte-t { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+
+/* Das Kürzel trägt die Kopfzeile, der ausgeschriebene Name steht
+   klein darunter — dieselbe Rangfolge wie auf der Fläche, damit
+   der Blick zwischen Gerät und Fenster nicht umlernen muss. */
+.karte-kurz {
+  font-size: 17px; font-weight: 700; color: var(--ink);
+  line-height: 1.1; letter-spacing: .01em;
+}
+.karte-name {
+  font-size: 11px; color: var(--ink-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.karte-pw, .karte-x {
+  flex: none; width: 27px; height: 27px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink-3); font-size: 13px; cursor: pointer;
+}
+.karte-x { border-color: transparent; background: transparent; font-size: 18px; }
+.karte-pw.is-on { color: var(--ok); border-color: var(--ok); }
+.karte-pw:hover, .karte-x:hover { border-color: var(--line-2); color: var(--ink); }
+
+/* „Mehr ›" — der einzige Weg in die große Ansicht, also sichtbar
+   als Knopf und nicht als Zeichen. */
+.karte-mehr {
+  flex: none; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--ink-2);
+  font: inherit; font-size: 11.5px; padding: 5px 10px; cursor: pointer;
+  white-space: nowrap;
+}
+.karte-mehr:hover { border-color: var(--accent); color: var(--accent); }
+.karte.is-mehr .karte-mehr {
+  background: var(--accent); color: var(--accent-in); border-color: transparent;
+}
+
+.karte-warn {
+  background: color-mix(in srgb, var(--warn) 13%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+  color: var(--warn); padding: 8px 13px; font-size: 12.5px;
+}
+.karte-b { padding: 11px 12px 12px; overflow-y: auto; min-height: 0; }
+
+/* ═══ Das Einstellformular (konfig.js) ═══════════════════════ */
+
+.k-sec {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--ink-3); margin: 12px 0 6px; padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.k-hint { font-size: 11px; color: var(--ink-3); margin: 5px 0 8px; line-height: 1.4; }
+.k-note {
+  background: var(--surface-2); border-radius: var(--r1);
+  padding: 9px 11px; font-size: 12px; color: var(--ink-2); margin: 0 0 10px;
+}
+.k-err { font-size: 12px; color: var(--bad); margin-top: 6px; }
+
+/* Kompakt heißt kompakt: ein Router mit drei Anschlüssen muss
+   ohne Bildlauf lesbar bleiben. Jede Zeile hier war einmal
+   luftiger und ist zusammengeschoben worden, nachdem das Kärtchen
+   im Bild die ganze Fläche hoch war. */
+.k-nic {
+  border: 1px solid var(--line); border-radius: var(--r2);
+  padding: 7px 9px 8px; margin-bottom: 6px; background: var(--surface-2);
+}
+/* In der Farbe ihres Netzes. Dieselbe wie der Ring um das Gerät
+   und das Kabel daran — die drei Orte, an denen dieselbe Frage
+   gestellt wird: „welche Karte liegt in welchem Netz?"
+
+   Der Fehler schlägt sie: eine Adresse, die es nicht geben kann,
+   ist wichtiger als die Auskunft, wo sie läge. */
+.k-nic.has-sub { border-color: var(--sub); box-shadow: inset 0 0 0 1px var(--sub); }
+.k-nic.has-err, .k-nic.has-err.has-sub { border-color: var(--bad); box-shadow: none; }
+.k-nic-h { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+.k-nic-t { font-size: 11.5px; font-weight: 650; }
+.k-nic-sub {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--fm); font-size: 10.5px; color: var(--sub);
+  cursor: help;
+}
+.k-nic-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--sub); flex: none;
+}
+
+/* ─── Netze an diesem Gerät ───────────────────────────────────
+   Eine Zeile im Reiter „Allgemein" des Routers. Sie umbricht, weil
+   ein Router mit vier Netzen sonst das Kärtchen in die Breite zieht
+   — und ein Kärtchen, das breiter wird als sein Gerät, deckt die
+   Fläche zu. Farbe kommt wie überall über `--sub` von außen. */
+.k-netze { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 9px; }
+.k-netz {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--sub); border-radius: 999px;
+  background: color-mix(in srgb, var(--sub) 12%, transparent);
+  padding: 3px 9px 3px 7px; font-size: 11.5px;
+}
+
+/* ─── Reiter im Gerätefenster ─────────────────────────────────
+   Nur beim Router: „Allgemein" und „Netzwerkkarten", wie in
+   Filius (JVermittlungsrechnerKonfiguration ist dort ebenfalls
+   ein JTabbedPane). Zwei Knöpfe in einer Wanne — dieselbe Form
+   wie der Moduswechsel oben, damit man sie ohne Erklärung als
+   Umschalter erkennt. */
+.k-reiter {
+  display: flex; gap: 3px; padding: 3px; margin-bottom: 9px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--r1);
+}
+.k-reiter-b {
+  flex: 1; border: 0; background: transparent; color: var(--ink-2);
+  border-radius: 9px; padding: 5px 8px;
+  font: inherit; font-size: 12px; cursor: pointer;
+  transition: background .13s, color .13s;
+}
+.k-reiter-b:hover { color: var(--ink); background: var(--bg); }
+.k-reiter-b.is-on {
+  background: var(--surface); color: var(--ink); font-weight: 650;
+  box-shadow: 0 1px 3px rgba(20,24,31,.1);
+}
+
+/* ─── Eine Zeile je Angabe ───────────────────────────────────
+   „MAC-Adresse: …", „IP-Adresse: …", eine unter der anderen. Die
+   Beschriftung stand einmal ÜBER dem Feld; bei fünf Angaben waren
+   das fünf zusätzliche Zeilen, und das kleine Fenster war höher
+   als das Netz darunter.
+
+   Die Spalte hat eine feste Breite — nur so stehen die Felder
+   aller Zeilen untereinander, obwohl jede Zeile ihr eigenes
+   Gitter ist. Klein ist sie knapp (darum heißt das letzte Feld
+   dort „DNS"), groß hat sie Platz für „Domain Name System". */
+.k-f {
+  display: grid; grid-template-columns: var(--k-lab, 78px) minmax(0, 1fr);
+  align-items: center; column-gap: 8px;
+  font-size: 11px; color: var(--ink-2); margin-bottom: 5px; position: relative;
+}
+.k-f:last-child { margin-bottom: 0; }
+.k-f input.f, .k-f select.f { margin-top: 0; padding: 5px 9px; }
+
+/* Groß ist Platz: die volle Beschriftung, und der Zusatz
+   „automatisch gesetzt" darf danebenstehen. */
+.karte.is-mehr .k-f, .dt-win .k-f { --k-lab: 112px; }
+
+/* Die Beschriftung links. Das Schloss gehört zu ihr, nicht ins
+   Feld: es sagt, dass die Sperre Absicht ist und wer den
+   Schlüssel hat. */
+.k-f-l {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0 4px;
+  line-height: 1.25; align-self: center;
+}
+/* „automatisch gesetzt" — der Zusatz zur MAC-Adresse. Er steht
+   UNTER der Beschriftung, nicht daneben: neben ihr drängt er die
+   zwei Wörter „MAC-Adresse" in zwei Zeilen. */
+.k-f-l em {
+  font-style: normal; color: var(--ink-3); font-size: 10px;
+  flex: 0 0 100%; letter-spacing: .01em;
+}
+
+/* Der Feldteil der Zeile. Er umschließt das Eingabefeld, damit
+   die farbige Schicht darunter passen kann (siehe .k-ipin), und
+   trägt dessen Hintergrund — das Feld selbst ist durchsichtig. */
+.k-f-in { position: relative; display: block; min-width: 0; }
+
+/* ─── Die Adresse im Feld, zweifarbig ────────────────────────
+   Die Schicht liegt hinter dem Feld und trägt dieselben Zeichen.
+   Damit sie unter den getippten liegen — Zeichen für Zeichen —
+   muss alles übereinstimmen, was die Zeichenbreite bestimmt:
+   Schrift, Größe, Fettung, Polsterung. Jede Änderung an einem
+   dieser Werte gehört auf BEIDE Seiten.
+
+   1 px Abstand nach innen, weil der Rahmen am Eingabefeld hängt
+   und nicht an dieser Schicht. */
+.k-ipin {
+  position: absolute; inset: 1px; z-index: 0;
+  display: flex; align-items: center; padding: 0 9px;
+  font-family: var(--fm); font-size: 13px; font-weight: 700;
+  white-space: pre; overflow: hidden; pointer-events: none;
+  border-radius: calc(var(--r1) - 1px);
+}
+/* Im Feld ohne seitliche Polsterung: sie würde die Zeichen gegen
+   die des Eingabefelds verschieben. */
+.k-ipin .ipp { font-size: inherit; font-weight: inherit; padding: 1px 0; border-radius: 3px; }
+.k-ipin .ipd { font-size: inherit; }
+
+/* Durchsichtig geschrieben, damit die Farbe darunter durchkommt —
+   aber mit sichtbarem Schreibstrich, sonst tippt man ins Blinde.
+   Markierter Text wird wieder sichtbar: sonst verschwindet er
+   beim Überschreiben ganz. */
+input.f--farbig {
+  background: transparent; color: transparent; caret-color: var(--ink);
+  font-weight: 700; position: relative; z-index: 1;
+}
+input.f--farbig::selection { color: var(--ink); background: var(--accent-sh); }
+/* Den Grund trägt jetzt die Umhüllung, weil das Feld darüber
+   durchsichtig ist — derselbe wie bei jedem anderen Feld, auch
+   wenn es gesperrt ist. Dass es gesperrt ist, sagt das Schloss
+   an der Beschriftung. */
+.k-f-in:has(input.f--farbig) { background: var(--surface); border-radius: var(--r1); }
+
+/* ─── Vorgaben sind Vorgaben ─────────────────────────────────
+   Der Platzhalter zeigt, wie so eine Angabe aussieht — er ist
+   nichts, was eingetragen wäre. Vorher war er kaum blasser als
+   ein echter Wert, und dann steht im Feld eine Adresse, die es
+   gar nicht gibt. */
+input.f::placeholder,
+textarea.f::placeholder { color: var(--ink-3); opacity: .45; font-weight: 400; }
+
+/* ─── Ein Platzhalter, der keine Adresse ist ─────────────────
+   In den vier Feldern eines Geräts mit DHCP steht im Platzhalter
+   keine Beispieladresse, sondern eine Herkunft: „— kommt vom
+   DHCP-Server —". In der Schreibmaschinenschrift der Adressen
+   passt dieser Satz nicht ins Feld und bricht mitten im Wort ab
+   („— kommt vom DHCP-"), und ein abgeschnittener Hinweis ist
+   schlechter als gar keiner. In der Textschrift passt er.
+
+   `.k-f.is-zu` trifft genau diese Felder: gesperrt ist hier nur,
+   was vom Server kommt. */
+.k-f.is-zu input.f::placeholder {
+  font-family: var(--fs); font-size: 12px; letter-spacing: 0;
+}
+
+/* Das Schloss vor einem gesperrten Feld. Es sagt, was ein grauer
+   Rahmen allein nicht sagt: dass das Absicht ist und wer den
+   Schlüssel hat (der DHCP-Server). */
+.k-lock { width: 11px; height: 11px; flex: none; color: var(--ink-3); }
+.k-f.is-zu .k-f-l { color: var(--ink-3); }
+
+/* Eine Zeile, die aussieht wie ein Feld, aber keines ist: die
+   MAC-Adresse. Ein ausgegrautes Eingabefeld wäre hier falsch —
+   es lädt zum Klicken ein und tut dann nichts. */
+.k-ro {
+  margin-top: 0; padding: 5px 9px;
+  border: 1px dashed var(--line); border-radius: var(--r1);
+  background: var(--surface); color: var(--ink-2);
+  font-size: 12px; cursor: help;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.k-link { font-size: 11px; color: var(--ink-2); margin-top: 6px; }
+
+/* Ein Schalter, der wie ein Schalter aussieht — und dessen Text
+   anklickbar ist. Auf einem Tablet ist ein 13-px-Kästchen alleine
+   nicht zu treffen. */
+.k-switch {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 8px; margin: 0 0 7px;
+  border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface); font-size: 11.5px; cursor: pointer;
+}
+.k-switch:hover { border-color: var(--line-2); }
+.k-switch input { width: 16px; height: 16px; accent-color: var(--accent); flex: none; cursor: pointer; }
+.k-switch:has(input:checked) {
+  border-color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+.k-switch:has(input:disabled) { cursor: default; opacity: .7; }
+.k-switch em { font-style: normal; color: var(--ink-3); }
+
+.k-dhcp {
+  font-size: 11.5px; color: var(--ok); margin-top: 7px;
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+  border-radius: 8px; padding: 6px 9px;
+}
+.k-dhcp.is-warten { color: var(--warn); background: color-mix(in srgb, var(--warn) 11%, transparent); }
+
+.k-add {
+  display: block; width: 100%; margin: 0 0 10px;
+  border: 1px dashed var(--line-2); border-radius: var(--r1);
+  background: transparent; color: var(--ink-2);
+  padding: 8px 10px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.k-add:hover { border-color: var(--accent); color: var(--accent); }
+
+/* „Zur Weiterleitungstabelle" — kein gestrichelter Rahmen wie
+   „Neue Zeile", sondern ein gezogener: der eine Knopf legt eine
+   leere Zeile an (etwas entsteht), der andere macht ein Fenster
+   auf (etwas ist schon da). Zwei gleich aussehende Knöpfe
+   übereinander wären zwei Angebote, die dasselbe versprechen. */
+.k-add--gross {
+  border-style: solid; border-color: var(--line-2);
+  background: var(--surface-2); color: var(--ink);
+  font-weight: 600;
+}
+
+.k-lnk {
+  border: 0; background: transparent; color: var(--accent);
+  font: inherit; font-size: 11.5px; padding: 5px 0 0; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.k-lnk--weg { color: var(--ink-3); }
+.k-lnk--weg:hover { color: var(--bad); }
+
+.k-acts { display: flex; gap: 7px; margin: 14px 0 4px; }
+
+/* Der Tabellenkasten. Er wird während der Simulation für sich
+   allein neu gefüllt (konfig.malenTabellen) — deshalb steht er
+   als eigenes Element da und nicht nur als Folge von Zeilen. */
+.k-tab { margin-top: 2px; }
+
+/* Anschlüsse eines Switches als Reihe von Kästchen: belegt oder
+   frei. Fünf Felder mit IP-Adresse wären beim Switch eine Lüge. */
+.k-ports { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+.k-port {
+  width: 30px; height: 26px; border-radius: 7px;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink-3); font-family: var(--fm); font-size: 11px;
+  display: flex; align-items: center; justify-content: center; cursor: help;
+}
+.k-port.is-on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+
+/* ─── Kabelgebunden (LAN) oder Drahtlos (WLAN) ────────────────
+   Zwei Knöpfe nebeneinander, von denen immer genau einer an ist.
+   Als echte Radioknöpfe wären es zwei Kreise mit langem Text
+   dahinter — im 320 px schmalen Kärtchen zwei Zeilen, und die
+   Entscheidung sähe aus wie eine Liste. So ist sie ein Schalter
+   mit zwei Stellungen, und das IST sie.
+
+   Wortlaut aus Filius (jhostkonfiguration_msg13/14), dort steht
+   dasselbe an derselben Stelle — nur eben als Radioknöpfe. */
+.k-wahl {
+  display: flex; gap: 3px; padding: 3px; margin: 2px 0 7px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--r1);
+}
+.k-wahl-b {
+  flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink-3);
+  border-radius: 9px; padding: 5px 4px;
+  font: inherit; font-size: 11px; line-height: 1.2; cursor: pointer;
+  transition: background .13s, color .13s;
+}
+.k-wahl-b:hover:not(:disabled) { color: var(--ink); background: var(--bg); }
+.k-wahl-b:disabled { cursor: default; }
+.k-wahl-b.is-on {
+  background: var(--surface); color: var(--ink); font-weight: 650;
+  box-shadow: 0 1px 3px rgba(20,24,31,.1);
+}
+
+/* „Verbunden mit Heimrouter 1" — dieselbe Sprache wie die
+   geliehene DHCP-Adresse: grün heißt „steht". */
+.k-wlan-ok {
+  font-size: 11.5px; color: var(--ok); margin: 0 0 6px;
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+  border-radius: 8px; padding: 6px 9px;
+}
+/* Das Namensfeld bei ausgeschaltetem WLAN. Es bleibt stehen und
+   wird nur blass — ein Feld, das beim Ankreuzen erst erscheint,
+   lässt das Fenster springen, und man sieht vorher nicht, dass
+   ein Name dazugehört. */
+.k-f.is-aus { opacity: .55; }
+
+/* Der Weg zurück von einer Unterseite (DHCP-Server einrichten).
+   In Filius ist das ein eigener Dialog mit OK-Knopf; hier bleibt
+   es im Kärtchen, damit das Netz sichtbar bleibt. */
+.k-zurueck {
+  border: 0; background: transparent; color: var(--accent);
+  font: inherit; font-size: 12px; padding: 0 0 6px; cursor: pointer;
+}
+.k-zurueck:hover { text-decoration: underline; }
+
+.k-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex: none;
+  background: var(--line-2);
+}
+.k-dot.is-on { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+
+/* ═══ Software-Installation ══════════════════════════════════
+   Ein Kachelraster wie in einem Appstore. Hier standen zwei
+   Spalten („Verfügbar" / „Installiert") wie in Filius; ein Haken
+   auf der Kachel sagt dasselbe, ohne dass ein Eintrag beim
+   Klicken die Spalte wechselt und man ihm mit den Augen folgen
+   muss.
+
+   ⚠️ Dieselbe Form wie `.dt-app` auf dem Bildschirm (Symbol im
+   abgerundeten Quadrat, Name darunter), aber in den HELLEN
+   Farbtoken: diese Kacheln liegen in einem Programmfenster und
+   nicht auf der dunklen Tapete. Gleiche Form, gleicher Ort im
+   Kopf — andere Umgebung, andere Farbe.                        */
+
+.sw {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px; margin-bottom: 2px;
+}
+.sw-k {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  min-width: 0; padding: 10px 6px 9px;
+  border: 1px solid var(--line); border-radius: var(--r2);
+  background: var(--surface); color: var(--ink);
+  font: inherit; text-align: center; cursor: pointer;
+  transition: border-color .13s, background .13s, transform .08s;
+}
+.sw-k:hover { border-color: var(--accent); }
+.sw-k:active { transform: scale(.97); }
+.sw-k-ic {
+  width: 40px; height: 40px; flex: none; display: grid; place-items: center;
+  border-radius: 11px; background: var(--surface-2);
+  border: 1px solid var(--line); color: var(--ink-2);
+  transition: background .13s, color .13s, border-color .13s;
+}
+.sw-k-ic svg { width: 21px; height: 21px; display: block; }
+.sw-k-n {
+  font-size: 11.5px; font-weight: 600; line-height: 1.2;
+  max-width: 100%; overflow-wrap: break-word; hyphens: auto;
+}
+.sw-k-h { font-size: 10px; color: var(--ink-3); line-height: 1.25; }
+
+/* Aufgespielt: getönte Kachel, Symbol im Akzent, Haken in der
+   Ecke. Drei Zeichen für dieselbe Aussage, weil die Kachel auch
+   auf einem Beamer aus zehn Metern lesbar sein soll. */
+.sw-k.is-drauf { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.sw-k.is-drauf .sw-k-ic {
+  background: var(--accent); color: var(--accent-in); border-color: transparent;
+}
+.sw-k-ok {
+  position: absolute; top: 6px; right: 6px;
+  width: 16px; height: 16px; display: grid; place-items: center;
+  border-radius: 50%; background: var(--accent); color: var(--accent-in);
+}
+.sw-k-ok svg { width: 11px; height: 11px; display: block; }
+
+/* Die fragende Kachel. Sie wird um die Höhe der Knopfreihe höher
+   als die anderen — im Bild nachgemessen, rund 25 px. Das ist
+   hingenommen und nicht behoben: ein Mindestabstand an ALLEN
+   Kacheln kostet dauerhaft Platz (auf einem Handy hochkant eine
+   halbe Reihe), und die Frage steht nur einen Wimpernschlag lang.
+   Waagerecht rückt nichts. */
+.sw-k.is-frage {
+  border-color: var(--bad); background: color-mix(in srgb, var(--bad) 7%, var(--surface));
+  cursor: default;
+}
+.sw-k.is-frage .sw-k-h { color: var(--bad); font-weight: 600; }
+.sw-k-wahl { display: flex; gap: 5px; margin-top: 2px; }
+.sw-ja, .sw-nein {
+  border: 1px solid var(--line); border-radius: var(--r1);
+  padding: 4px 10px; font: inherit; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: filter .13s, border-color .13s;
+}
+/* ⚠️ Rot heißt auf dieser Oberfläche „nimmt etwas weg" — und
+   sonst nichts. `.sw-ja` beantwortet deshalb ausschließlich
+   Fragen, bei denen etwas verschwindet (deinstallieren, löschen).
+   Wer etwas ANLEGT, bekommt `.sw-ok` in der Akzentfarbe. Das
+   hat nur das Bild gezeigt: „Anlegen" stand eine Runde lang in
+   Rot und sah damit aus, als würde es etwas kaputtmachen. */
+.sw-ja { background: var(--bad); color: #fff; border-color: transparent; }
+.sw-ja:hover { filter: brightness(1.08); }
+.sw-ok { background: var(--accent); color: var(--accent-in); border-color: transparent; }
+.sw-ok:hover { filter: brightness(1.07); }
+.sw-nein { background: var(--surface); color: var(--ink-2); }
+.sw-nein:hover { border-color: var(--ink-3); }
+
+/* ═══ Datei-Explorer, Texteditor, Bildbetrachter ═════════════
+   Drei Ansichten EINES Programms (siehe prog-dateien.js). Sie
+   teilen sich deshalb eine Leiste und dieselben Maße; was sie
+   unterscheidet, ist allein der Inhalt darunter.            */
+
+/* Der Pfad als Brotkrumen. Jede Stufe ist anklickbar — das ist
+   der kürzeste Weg zurück und zugleich die Antwort auf „wo bin
+   ich". Die Wurzel heißt „Gerät" und nicht „/": ein Kind liest
+   einen Schrägstrich nicht als Ort. */
+.fx-kopf {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 2px;
+  padding-bottom: 8px; margin-bottom: 2px; border-bottom: 1px solid var(--line);
+}
+.fx-krume {
+  border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 12px;
+  padding: 3px 6px; border-radius: var(--r1); cursor: pointer;
+}
+.fx-krume:hover { background: var(--surface-2); color: var(--ink); }
+.fx-pfeil { color: var(--ink-3); font-size: 12px; }
+
+.fx-liste { display: flex; flex-direction: column; margin: 4px 0 10px; }
+.fx-zeile {
+  display: flex; align-items: center; gap: 4px;
+  border-bottom: 1px solid var(--line); min-height: 38px;
+}
+.fx-zeile:last-child { border-bottom: 0; }
+.fx-auf {
+  flex: 1; display: flex; align-items: center; gap: 9px; min-width: 0;
+  border: 0; background: none; color: var(--ink); font: inherit; font-size: 12.5px;
+  padding: 7px 6px; text-align: left; cursor: pointer; border-radius: var(--r1);
+}
+.fx-auf:hover { background: var(--surface-2); }
+.fx-ic { flex: none; color: var(--ink-3); display: grid; place-items: center; }
+.fx-ic svg { width: 18px; height: 18px; display: block; }
+.fx-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fx-art { flex: none; font-size: 10.5px; color: var(--ink-3); }
+.fx-x {
+  flex: none; width: 26px; height: 26px; border: 0; background: none;
+  color: var(--ink-3); font-size: 14px; border-radius: var(--r1); cursor: pointer;
+}
+.fx-x:hover { background: var(--surface-2); color: var(--ink); }
+.fx-zeile.is-frage { background: color-mix(in srgb, var(--bad) 7%, transparent); }
+.fx-frage { flex: 1; font-size: 12px; color: var(--bad); font-weight: 600; }
+.fx-feld { flex: 1; min-width: 0; }
+.fx-leer { margin: 10px 0 12px; }
+.fx-fehler { font-size: 11.5px; color: var(--bad); margin-top: 6px; }
+
+/* ⚠️ `.k-add` ist als **Blockknopf über die ganze Breite**
+   gebaut (`display:block; width:100%`) — so steht er im
+   Einstellformular unter einer Liste. In einer Reihe muss das
+   zurückgenommen werden, sonst nimmt EIN Knopf die ganze Zeile
+   und schiebt alles andere auf Breite null.
+
+   Das hat zweimal nur das BILD gezeigt: in der Editorleiste war
+   der Dateiname weg und „Speichern" so breit wie das Fenster,
+   und eine Stufe später verschwand die ganze Adresszeile des
+   Browsers hinter „Start". Deshalb steht die Rücknahme hier an
+   EINER Stelle und sammelt die Reihen — wer eine neue Reihe mit
+   `.k-add` baut, trägt sie hier ein. */
+.fx-knoepfe { display: flex; flex-wrap: wrap; gap: 6px; }
+/* „Datei hochladen" ist ein <label> um ein verstecktes
+   <input type=file> — es soll aussehen wie die zwei Knöpfe
+   daneben und sich auch so anfassen lassen. */
+.fx-einfuhr { display: inline-flex; align-items: center; cursor: pointer; }
+
+/* Wie voll der Platz für hochgeladene Dateien ist. Ein Balken und
+   ein Satz: die Zahl allein („2,1 MB") beantwortet nicht, ob das
+   viel ist. Rot erst ab 85 % — davor ist es eine Auskunft und
+   keine Warnung. */
+.fx-platz { margin-top: 9px; font-size: 11px; color: var(--ink-3); }
+.fx-platz-b {
+  height: 4px; border-radius: 999px; background: var(--surface-2);
+  border: 1px solid var(--line); overflow: hidden; margin-bottom: 4px;
+}
+.fx-platz-b i { display: block; height: 100%; background: var(--ink-3); }
+.fx-platz.is-eng { color: var(--warn); }
+.fx-platz.is-eng .fx-platz-b i { background: var(--warn); }
+.fx-knoepfe .k-add,
+.fx-leiste .k-add,
+.wb-leiste .k-add { width: auto; flex: none; margin: 0; }
+.fx-neu {
+  border: 1px solid var(--line); border-radius: var(--r2);
+  background: var(--surface-2); padding: 10px;
+}
+.fx-neu-t {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--ink-3); margin-bottom: 8px;
+}
+.fx-neu-r { display: flex; gap: 6px; align-items: center; }
+.fx-neu-r .f { flex: 1; min-width: 0; }
+
+/* Hier stand die Galerie der eingebauten Bilder (`.fx-galerie`,
+   `.fx-bild`). Sie ist am 2026-09-28 weggefallen: die Bilder liegen
+   jetzt als Ordner `/Bilder` auf dem Gerät und werden wie jede
+   andere Datei angeklickt — ein Raster, das nur beim Anlegen
+   erschien, war der Umweg dorthin. */
+
+/* Die Leiste über Editor und Bildbetrachter. Sie ersetzt die
+   Brotkrumen, solange eine Datei offen ist — zwei Wege zurück
+   nebeneinander wären einer zu viel. */
+.fx-leiste {
+  display: flex; align-items: center; gap: 8px;
+  padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--line);
+}
+.fx-zurueck {
+  flex: none; border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface); color: var(--ink-2);
+  font: inherit; font-size: 12px; padding: 4px 9px; cursor: pointer;
+}
+.fx-zurueck:hover { border-color: var(--ink-3); color: var(--ink); }
+.fx-titel {
+  flex: 1; min-width: 0; font-family: var(--fm); font-size: 12.5px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fx-leiste .k-add { flex: none; }
+
+/* ─── Der Texteditor ──────────────────────────────────────────
+   Ein durchsichtiges Eingabefeld ÜBER einem eingefärbten
+   Spiegel. ⚠️ Beide müssen in Schrift, Zeilenhöhe, Innenabstand
+   und Umbruchverhalten Zeichen für Zeichen übereinstimmen —
+   sonst wandert der Textcursor von seiner Farbe weg, und zwar
+   umso weiter, je länger der Text ist. Dasselbe Verfahren liegt
+   hinter der zweifarbigen IP-Adresse (`konfig.malen`).        */
+.ed {
+  position: relative; border: 1px solid var(--line); border-radius: var(--r2);
+  background: var(--surface-2); overflow: hidden;
+  height: clamp(180px, 38vh, 420px);
+}
+.ed-spiegel, .ed-in {
+  margin: 0; border: 0; padding: 10px 12px;
+  font-family: var(--fm); font-size: 12.5px; line-height: 1.55;
+  white-space: pre-wrap; overflow-wrap: break-word; tab-size: 2;
+}
+.ed-spiegel {
+  position: absolute; inset: 0; overflow: hidden;
+  pointer-events: none; color: var(--ink);
+}
+.ed-in {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  background: transparent; color: transparent; caret-color: var(--ink);
+  resize: none; outline: none; overflow: auto;
+}
+.ed-in::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+/* Die vier Sorten, die man beim Schreiben verwechselt. */
+.sy--tag  { color: var(--sy-tag); }
+.sy--attr { color: var(--sy-attr); }
+.sy--wert { color: var(--sy-wert); }
+.sy--txt  { color: var(--ink); }
+.sy--kom  { color: var(--ink-3); font-style: italic; }
+/* JavaScript: durchgestrichen und blass. Es steht da, es wird
+   gespeichert, es wird nur nicht ausgeführt — und genau das
+   soll man sehen, statt den Fehler im eigenen Skript zu suchen. */
+.sy--js   { color: var(--ink-3); text-decoration: line-through; }
+
+/* ─── Der Bildbetrachter ────────────────────────────────────── */
+.bv {
+  display: grid; place-items: center; padding: 14px;
+  border: 1px solid var(--line); border-radius: var(--r2);
+  background: var(--surface-2); min-height: 160px;
+}
+.bv img { max-width: 100%; max-height: 300px; display: block; border-radius: var(--r1); }
+
+/* ═══ Webbrowser und Webserver ═══════════════════════════════ */
+
+.wb-leiste { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; }
+.wb-zurueck {
+  flex: none; width: 28px; height: 30px; border: 1px solid var(--line);
+  border-radius: var(--r1); background: var(--surface); color: var(--ink-2);
+  font-size: 15px; line-height: 1; cursor: pointer;
+}
+.wb-zurueck:disabled { opacity: .4; cursor: default; }
+/* Der Vorsatz „http://" steht VOR dem Feld und gehört mit ihm in
+   einen Rahmen — so liest es sich als eine Adresszeile und nicht
+   als Beschriftung mit Feld daneben. */
+.wb-adr {
+  flex: 1; min-width: 0; display: flex; align-items: center;
+  border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface); overflow: hidden;
+}
+.wb-vor {
+  flex: none; padding: 0 2px 0 8px; font-family: var(--fm);
+  font-size: 12px; color: var(--ink-3);
+}
+.wb-adr .f { flex: 1; min-width: 0; border: 0; background: none; }
+.wb-adr .f:focus { outline: none; }
+
+/* Die Seite selbst. Fester Rahmen mit weißem Grund — auch im
+   Dunkelmodus: eine Seite, die ein Kind geschrieben hat, sieht
+   so aus, wie es sie geschrieben hat, und nicht, wie der
+   Simulator gerade eingestellt ist. */
+.wb-seite {
+  border: 1px solid var(--line); border-radius: var(--r2);
+  background: #fff; overflow: hidden;
+  height: clamp(170px, 34vh, 380px);
+}
+.wb-rahmen { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+.wb-leer, .wb-fehler {
+  padding: 16px; font-size: 12.5px; color: var(--ink-3); line-height: 1.5;
+}
+.wb-fehler { color: var(--bad); }
+.wb-leer code { font-family: var(--fm); }
+
+/* ⭐ Was für EINE Seite alles geholt wurde. Im echten Browser
+   steht das in einem Werkzeug, das kein Kind je aufmacht. */
+.wb-fuss { margin-top: 8px; }
+.wb-teile { display: flex; flex-wrap: wrap; gap: 5px; }
+.wb-teil {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 3px 9px; font-family: var(--fm); font-size: 10.5px; color: var(--ink-2);
+  background: var(--surface-2);
+}
+.wb-teil em { font-style: normal; font-weight: 700; color: var(--ok); }
+.wb-teil.is-bad { border-color: var(--bad); }
+.wb-teil.is-bad em { color: var(--bad); }
+
+.ws-fakten { display: flex; gap: 8px; margin: 8px 0 2px; }
+.ws-fakten > div {
+  flex: 1; border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface-2); padding: 7px 9px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.ws-fakten span { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); }
+.ws-fakten code { font-family: var(--fm); font-size: 12.5px; color: var(--ink); }
+
+.ws-dateien { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
+.ws-datei {
+  border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface); color: var(--ink-2);
+  font-family: var(--fm); font-size: 11.5px; padding: 4px 9px; cursor: pointer;
+}
+.ws-datei:hover { border-color: var(--accent); color: var(--accent); }
+.ws-log {
+  border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface-2); padding: 7px 9px;
+  font-family: var(--fm); font-size: 11px; color: var(--ink-2);
+  max-height: 120px; overflow: auto;
+}
+.ws-log > div { padding: 1px 0; }
+
+/* ═══ E-Mail-Programm und E-Mail-Server ══════════════════════ */
+
+.ml-leiste { display: flex; gap: 4px; margin-bottom: 9px; flex-wrap: wrap; }
+.ml-reg {
+  border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface); color: var(--ink-2);
+  font: inherit; font-size: 11.5px; padding: 5px 10px; cursor: pointer;
+}
+.ml-reg.is-on { border-color: var(--accent); color: var(--ink); background: var(--surface-2); }
+.ml-reg em {
+  font-style: normal; font-weight: 700; color: var(--accent-in);
+  background: var(--accent); border-radius: 999px; padding: 0 5px; margin-left: 4px;
+  font-size: 10px;
+}
+/* ⭐ Der Haken am Reiter „Konto einrichten", solange angemeldet
+   ist. NICHT in der Pillenform von `.ml-reg em` — die trägt am
+   Posteingang die ANZAHL, und ein Haken in derselben Form liest
+   sich als Zahl, die man nicht entziffern kann. Ein nackter Haken
+   in der Bestätigungsfarbe sagt „erledigt" und sonst nichts. */
+.ml-hk { color: var(--ok); margin-left: 5px; }
+.ml-hk .ico { width: .95em; height: .95em; vertical-align: -.1em; }
+
+/* Beschriftung ÜBER dem Feld, nicht daneben: das Fenster ist
+   schmal, und „Vorname und Nachname:" neben einem Feld lässt für
+   das Feld dreißig Punkte übrig. Auf einem Telefon ist es
+   ohnehin die einzige Anordnung, die trägt. */
+.ml-f { display: flex; flex-direction: column; gap: 3px; margin-bottom: 7px; }
+.ml-f > span { font-size: 10.5px; color: var(--ink-3); }
+.ml-f--breit { margin-top: 9px; }
+.ml-konto { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0 8px; }
+/* ⚠️ Das hat erst das BILD gezeigt: bei der Breite des
+   Mailfensters ergibt `auto-fit` DREI Spalten — Name ·
+   Benutzername · Passwort, und „Maildomain" stand allein in der
+   Zeile darunter, mit zwei leeren Feldern daneben. Das liest sich
+   als Nachtrag statt als vierte Angabe.
+
+   Mit zwei festen Spalten sind es zwei saubere Blöcke: oben die
+   vier Angaben zum KONTO (2 × 2), darunter die zwei Zeilen zu den
+   SERVERN. Die Gruppierung ist selbst die Auskunft — dieselbe
+   Entscheidung wie bei den Marken unter der Kachel, wo die Zahl
+   der Zeilen vor der Aufteilung feststeht.
+
+   `max(130px, 40%)` deckelt bei zwei Spalten (drei wären 120 %)
+   und fällt unter ~270 px Fensterbreite trotzdem auf eine zurück —
+   auf dem Handy ist das die einzige Anordnung, die trägt. Das
+   Serverfenster („Neues Konto") behält seine drei Spalten. */
+.ml-konto--zwei { grid-template-columns: repeat(auto-fit, minmax(max(130px, 40%), 1fr)); }
+
+/* ─── Server und Port: ZWEI Zeilen, POP3 über SMTP ────────────
+   ⚠️ Feste zwei Spalten, nicht `auto-fit` wie darüber. Mit
+   `auto-fit` wurden es bei 520 Punkten Fensterbreite drei Spalten,
+   und dann stand „SMTP-Server" unter „Maildomain" statt unter
+   „POP3-Server" — vom Nutzer beanstandet.
+
+   ⭐ Der Grund, warum das Gitter hier fest sein MUSS: die zwei
+   Zeilen sind dieselbe Angabe zweimal (Rechner · Tür). Als Paar
+   untereinander sieht man auf einen Blick, dass beide Male
+   derselbe Rechner steht und nur die Nummer verschieden ist. Eine
+   Anordnung, die das nur bei bestimmten Fensterbreiten zeigt, ist
+   keine Anordnung — dieselbe Lehre wie bei den Netzwerkkarten des
+   Routers, die alle in EINEN Reiter gehören. */
+.ml-paar { display: grid; grid-template-columns: 1fr 86px; gap: 0 8px; }
+
+.ml-text {
+  min-height: 90px; resize: vertical; font-family: var(--fs); line-height: 1.45;
+  padding: 8px 10px;
+}
+.ml-knoepfe { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+/* Beim Verfassen steht darüber das Schreibfeld — ohne Abstand
+   berührten „Senden" und „Abbrechen" dessen Unterkante und sahen
+   damit aus wie ein Teil des Felds. Im Brief (`.ml-brief`) steht
+   darüber ein `<pre>` mit eigenem Abstand; dort bleibt es. */
+.ml-neu .ml-knoepfe { margin-top: 13px; }
+
+/* ─── Die eigene Adresse ──────────────────────────────────────
+   Sie wird nicht mehr getippt, sondern ergibt sich aus
+   Benutzername und Maildomain. Deshalb steht sie als ANGABE da
+   und nicht als Feld — genau wie der Ordner beim Webserver und
+   die Portnummern, die keine Entscheidung sind. */
+.ml-adresse {
+  margin: 4px 0 2px; padding: 7px 9px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--r1); font-size: 11.5px; color: var(--ink-2);
+}
+.ml-adresse strong { font-family: var(--fm); color: var(--ink); }
+/* Solange sie sich noch nicht bilden lässt, steht dort ein Satz
+   und keine halbe Adresse — deshalb die Textschrift. Dieselbe
+   Entscheidung wie beim Platzhalter „— vom DHCP-Server". */
+.ml-adresse.is-leer strong { font-family: var(--fs); font-weight: 400; color: var(--ink-3); }
+
+/* ─── Anmelden / Abgemeldet ───────────────────────────────── */
+.ml-an { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0 2px; }
+.ml-an .k-hint { flex: 1 1 140px; margin: 0; }
+.ml-an--ok {
+  padding: 8px 10px; border-radius: var(--r1);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ok) 40%, var(--line));
+  font-size: 12px;
+}
+.ml-an--ok > span:nth-child(2) { flex: 1 1 auto; }
+.ml-an--ok strong { font-family: var(--fm); }
+/* Gesperrte Kontofelder: lesbar bleiben, erkennbar nicht
+   anfassbar sein — dieselbe Behandlung wie bei den Feldern, die
+   der DHCP-Server füllt. */
+.ml-f.is-zu > span { color: var(--ink-3); }
+.ml-f.is-zu input.f { background: var(--surface-2); color: var(--ink-2); }
+
+/* Das (i) neben „Konto einrichten". Rund, klein, in der
+   Schriftfarbe — es soll nach Nachschlagen aussehen und nicht
+   nach Warnung. */
+.ml-i {
+  flex: none; width: 21px; height: 21px; align-self: center;
+  border: 1px solid var(--line); border-radius: 50%;
+  background: var(--surface); color: var(--ink-3);
+  font: inherit; font-size: 11.5px; font-style: italic; font-weight: 700;
+  line-height: 1; cursor: pointer;
+}
+.ml-i:hover { border-color: var(--accent); color: var(--accent); }
+.ml-i.is-on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+/* ─── Die zwei Tätigkeiten im Posteingang ─────────────────────
+   Sie trugen `.k-add` — die gestrichelte Fläche für „hier kann
+   noch etwas dazukommen". Die ist absichtlich leise; diese zwei
+   sind aber das, worum es im ganzen Programm geht, und der leere
+   Posteingang nennt „E-Mails abrufen" zwei Zeilen darüber
+   namentlich. Vom Nutzer beanstandet: „etwas deutlicher".
+
+   ⭐ Gefüllt ist nur EINER, und zwar der, den dieser Satz nennt.
+   Zwei gefüllte Knöpfe nebeneinander heben sich gegenseitig auf —
+   dieselbe Regel wie bei `.sw-ok` neben `.sw-nein`. */
+.ml-aktionen { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.ml-akt {
+  flex: 1 1 140px; display: flex; align-items: center; justify-content: center; gap: 7px;
+  border: 1px solid var(--line-2); border-radius: var(--r1);
+  background: var(--surface-2); color: var(--ink);
+  padding: 11px 12px; font: inherit; font-size: 12.5px; font-weight: 600;
+  cursor: pointer; transition: filter .13s, border-color .13s, color .13s;
+}
+.ml-akt .ico { flex: none; width: 16px; height: 16px; vertical-align: 0; }
+.ml-akt:hover  { border-color: var(--accent); color: var(--accent); }
+.ml-akt:active { transform: scale(.985); }
+.ml-akt--ruf {
+  background: var(--accent); color: var(--accent-in); border-color: transparent;
+}
+.ml-akt--ruf:hover {
+  filter: brightness(1.07); color: var(--accent-in); border-color: transparent;
+}
+
+.ml-meldung {
+  border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface-2); padding: 7px 10px; margin-bottom: 8px;
+  font-size: 11.5px; color: var(--ink-2);
+}
+
+.ml-liste { display: flex; flex-direction: column; margin-bottom: 4px; }
+.ml-zeile {
+  display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center;
+  border: 0; border-bottom: 1px solid var(--line); background: none;
+  color: var(--ink); font: inherit; font-size: 12px; text-align: left;
+  padding: 7px 4px; cursor: pointer; width: 100%;
+}
+.ml-zeile span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ml-zeile:hover { background: var(--surface-2); }
+.ml-zeile--kopf {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--ink-3); cursor: default;
+}
+.ml-zeile--kopf:hover { background: none; }
+.ml-zeile--srv { cursor: default; }
+.ml-zeile--srv:hover { background: none; }
+
+.ml-brief { display: flex; flex-direction: column; gap: 6px; }
+.ml-kopf { display: flex; gap: 8px; font-size: 12px; color: var(--ink); }
+.ml-kopf > span:first-child {
+  flex: none; width: 62px; font-size: 10.5px; color: var(--ink-3); padding-top: 1px;
+}
+.ml-body {
+  border: 1px solid var(--line); border-radius: var(--r2);
+  background: var(--surface-2); padding: 10px 12px; margin: 4px 0;
+  font-family: var(--fs); font-size: 12.5px; line-height: 1.5;
+  white-space: pre-wrap; overflow-wrap: break-word;
+}
+.ml-brief .fx-zurueck { align-self: flex-start; }
+
+/* ═══ DNS-Server-Fenster ═════════════════════════════════════ */
+.dns-kopf {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; margin-bottom: 4px;
+  border: 1px solid var(--line); border-radius: var(--r2);
+  background: var(--surface-2);
+}
+.dns-stand { font-size: 12px; color: var(--ink-2); }
+.dns-kopf .btn { flex: none; margin-left: auto; padding: 6px 14px; font-size: 12.5px; }
+
+.k-recs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.k-rec { display: flex; gap: 5px; align-items: center; }
+.k-rec input.f { margin-top: 0; padding: 6px 8px; font-size: 12px; }
+.k-rec input.f:first-child { flex: 1.4; font-family: var(--fs); }
+.k-rec input.f:nth-child(2) { flex: 1; }
+/* Bei der statischen DHCP-Zuweisung stehen zwei Adressen
+   nebeneinander — beide in der Schreibmaschinenschrift, und die
+   MAC braucht mehr Platz als die IP. Ohne das erbt die erste
+   Spalte die Textschrift der DNS-Namen, und aus einer MAC-Adresse
+   wird ein Wort. */
+.k-rec input.f.mono:first-child { font-family: var(--fm); flex: 1.5; }
+
+/* Die Kürzel der Geräte im Netz, zum Antippen. Dieselben Chips
+   wie in der Subnetzliste (.sn-chip) — es ist dieselbe Geste
+   („dieses Gerät meine ich") und soll deshalb gleich aussehen. */
+.k-macs { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px; }
+.k-x {
+  flex: none; width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink-3); font-size: 14px; cursor: pointer; line-height: 1;
+}
+.k-x:hover { border-color: var(--bad); color: var(--bad); }
+
+/* ─── Eine Zeile der Weiterleitungstabelle ────────────────────
+   Zwei Etagen, und das ist der Unterschied zu .k-rec: oben die
+   drei Felder, die ein Mensch ausfüllt, unten in einer Zeile das,
+   was daraus FOLGT („über LAN 1 · 192.168.2.1"). Die zweite Etage
+   ist keine Verzierung — sie ist die Antwort auf die Frage, die
+   Filius' viertes Eingabefeld stellt, ohne sie beantworten zu
+   können (siehe konfig.js, wegeBlock).
+
+   Alle drei Felder gleich breit: sie tragen alle drei eine
+   IP-Adresse, und eine davon schmaler zu machen behauptete, dort
+   stehe etwas Kürzeres. */
+.k-weg { display: flex; flex-direction: column; gap: 2px; }
+.k-weg-f { display: flex; gap: 5px; align-items: center; }
+.k-weg-f input.f { flex: 1 1 0; min-width: 0; margin-top: 0; padding: 6px 7px; font-size: 11.5px; }
+.k-weg-w { font-size: 10.5px; line-height: 1.3; padding: 0 2px 2px; }
+.k-weg-w.is-ok  { color: var(--ok); }
+.k-weg-w.is-bad { color: var(--bad); }
+.k-weg-w.is-dim { color: var(--ink-3); }
+
+/* ─── Eine Portfreigabe ───────────────────────────────────────
+   Vier Felder in einer Zeile, und ihre Breiten sagen, was drin
+   steht: Protokoll kurz, Port kurz, Adresse lang. Im schmalen
+   Gerätefenster (rund 330 px) wird es eng — deshalb umbrechend
+   statt waagerecht scrollend: eine Adresse, die halb abgeschnitten
+   ist, liest niemand, zwei Zeilen schon. */
+.k-frei { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.k-frei .f { margin-top: 0; padding: 6px 7px; font-size: 11.5px; }
+.k-frei select.f { flex: 0 0 62px; }
+.k-frei input.f[data-f="freiport"], .k-frei input.f[data-f="freilanport"] { flex: 0 0 52px; }
+.k-frei input.f[data-f="freiip"] { flex: 1 1 110px; min-width: 0; }
+
+/* Ein abgelaufener RIP-Weg. Er steht noch da (das ist Absicht,
+   siehe rip.js) und er soll als vergangen zu lesen sein — blass,
+   nicht rot: es ist kein Fehler, sondern eine Auskunft. */
+.tbl tr.is-weg td { color: var(--ink-3); }
+
+.tbl-t { font-size: 12px; color: var(--ink-2); margin: 12px 0 5px; }
+.tbl {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+  border: 1px solid var(--line); border-radius: var(--r1); overflow: hidden;
+}
+.tbl th {
+  text-align: left; font-weight: 600; font-size: 11px;
+  color: var(--ink-3); background: var(--surface-2);
+  padding: 6px 9px; border-bottom: 1px solid var(--line);
+}
+.tbl td { padding: 5px 9px; border-bottom: 1px solid var(--line); }
+.tbl tr:last-child td { border-bottom: 0; }
+
+.btn {
+  flex: 1; border: 1px solid transparent; border-radius: var(--r2);
+  background: var(--accent); color: var(--accent-in);
+  padding: 10px 14px; font: inherit; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; transition: filter .13s, transform .08s;
+}
+.btn:hover  { filter: brightness(1.07); }
+.btn:active { transform: scale(.98); }
+.btn--ghost {
+  background: transparent; color: var(--ink-2); border-color: var(--line);
+  font-weight: 500;
+}
+.btn--ghost:hover { border-color: var(--bad); color: var(--bad); filter: none; }
+
+/* ═══ Weiterleitungstabelle ══════════════════════════════════
+   Gebaut wie der Mitschnitt und nicht wie ein Kärtchen: ein
+   Fenster über die ganze Breite braucht keine Platzsuche, sondern
+   eine Gitterzeile. Wird es höher, wird die FLÄCHE kürzer — das
+   SVG rechnet seinen Maßstab selbst neu. */
+
+.wlt {
+  background: var(--surface); border-top: 1px solid var(--line);
+  display: grid; grid-template-rows: auto 0fr;
+  transition: grid-template-rows .22s ease;
+}
+body.wlt-open .wlt { grid-template-rows: auto 1fr; }
+/* ⚠️ `<section hidden>` mit `display: grid` ist NICHT versteckt —
+   dieselbe Falle wie bei der Subnetzliste (`.sn[hidden]`). Ohne
+   diese Zeile bliebe unten eine leere Zeile mit Rahmen stehen. */
+.wlt[hidden] { display: none; }
+
+/* ⚠️ EINE Zeile, feste Höhe, notfalls waagerecht scrollen — aus
+   demselben Grund wie bei `.trace-h`: bricht die Leiste um, wird
+   die Fläche kürzer und die Geräte springen unter dem Finger weg. */
+.wlt-h {
+  display: flex; align-items: center; gap: 9px; flex-wrap: nowrap;
+  height: var(--wlt-head); padding: 0 14px;
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: thin;
+  border-bottom: 1px solid var(--line);
+}
+.wlt-h > * { flex: 0 0 auto; }
+.wlt-h .sp { flex: 1 1 auto; min-width: 0; }
+.wlt-t { font-size: 13px; font-weight: 600; }
+.wlt-tabs { display: flex; gap: 5px; margin-left: 8px; }
+
+/* Der Reiter trägt das Kürzel, das auch auf der Fläche unter der
+   Kachel steht (R1), und dahinter den Namen. Beides, weil das
+   Kürzel allein auf der Fläche gesucht werden müsste und der Name
+   allein in einer Reihe von fünf Reitern zu lang ist. */
+.wlt-tab {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface-2); color: var(--ink-2);
+  padding: 4px 12px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.wlt-tab:hover { border-color: var(--line-2); }
+.wlt-tab.is-on { background: var(--ink); color: var(--surface); border-color: transparent; }
+.wlt-tab b { font-family: var(--fm); font-size: 11px; font-weight: 700; }
+.wlt-tab span { color: inherit; opacity: .78; }
+
+.wlt-b {
+  overflow-y: auto; min-height: 0;
+  height: var(--wlt-h);
+  padding: 12px 14px 16px;
+}
+body:not(.wlt-open) .wlt-b { height: 0; padding: 0; }
+
+/* Der EINE Satz unter der Tabelle. Er steht darunter und nicht
+   darüber: gelesen wird er, wenn eine Frage aufkommt, und bis
+   dahin soll die Tabelle oben anfangen. */
+.wlt-hint {
+  font-size: 11.5px; color: var(--ink-3); margin: 10px 0 0;
+  line-height: 1.4; max-width: 1040px;
+}
+
+/* Der Haken in der Kopfleiste. Kleiner als ein Formularhaken —
+   er gehört zur Leiste und nicht zum Inhalt. */
+.wlt-alle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--ink-2); cursor: pointer; user-select: none;
+}
+.wlt-alle input { margin: 0; cursor: pointer; }
+
+/* Fünf Spalten und eine für das ×. „Über Schnittstelle" bekommt
+   mehr Platz als die drei Adressspalten: dort steht ein Satz
+   („über Netzwerkkarte 2 · 192.168.2.1") und keine Adresse.
+   „Herkunft" ist schmal — dort stehen vier Wörter, die sich
+   wiederholen.
+
+   ⚠️ `max-width` — und das hat nur das BILD gezeigt: das FENSTER
+   geht über die ganze Breite (so verlangt), die TABELLE darf es
+   nicht. Auf 1500 px war ein Feld für eine IP-Adresse 310 px
+   breit, das × stand einen halben Bildschirm von seiner Zeile
+   entfernt, und zwischen der Überschrift „Ziel" und dem Wert
+   darunter lag mehr Weiß als zwischen zwei Spalten. Filius' Dialog
+   ist 600 px; 1040 ist die Fassung, in der die vier Spalten
+   nebeneinander noch als eine Zeile zu lesen sind. */
+.wlt-tbl {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1.5fr .9fr 30px;
+  gap: 6px 8px; max-width: 1040px;
+}
+.wlt-b .tbl { max-width: 1040px; }
+.wlt-tbl > .wlt-th {
+  font-size: 11px; font-weight: 600; color: var(--ink-3);
+  padding: 0 2px 2px; border-bottom: 1px solid var(--line);
+}
+.wlt-tbl input.f { margin-top: 0; padding: 7px 8px; font-size: 12.5px; width: 100%; }
+.wlt-w { font-size: 11.5px; line-height: 1.35; align-self: center; padding: 0 2px; }
+.wlt-w.is-ok  { color: var(--ok); }
+.wlt-w.is-bad { color: var(--bad); }
+.wlt-w.is-dim { color: var(--ink-3); }
+.wlt-tbl .k-x { align-self: center; }
+
+/* Eine Zelle, die kein Feld ist. `is-auto` ist das Grau, um das
+   der Nutzer gebeten hat: „die Standards stehen auch drin, nur
+   grau und nicht bearbeitbar."
+
+   ⚠️ Die Höhe ist dieselbe wie bei einer Zeile mit Feldern
+   (`min-height`), sonst rutscht die Tabelle an jeder Grenze
+   zwischen grau und tippbar um ein paar Pixel zusammen und liest
+   sich nicht mehr als eine Tabelle. */
+.wlt-c {
+  font-size: 12.5px; line-height: 1.3; align-self: center;
+  padding: 0 2px; min-height: 31px; display: flex; align-items: center;
+}
+.wlt-c.is-auto { color: var(--ink-3); }
+
+.wlt-leer { font-size: 12px; color: var(--ink-3); padding: 10px 2px; }
+
+/* ═══ Mitschnitt ═════════════════════════════════════════════ */
+
+.trace {
+  background: var(--surface); border-top: 1px solid var(--line);
+  display: grid; grid-template-rows: auto 0fr;
+  transition: grid-template-rows .22s ease;
+}
+body.trace-open .trace { grid-template-rows: auto 1fr; }
+
+/* ⚠️ EINE Zeile, feste Höhe, notfalls waagerecht scrollen — und
+   das ist keine Kosmetik. Die Leiste steht mit der Zeichenfläche
+   in einem Raster: wird sie höher, wird die FLÄCHE kürzer, und
+   damit rechnet das SVG seinen Maßstab neu. Jedes Gerät liegt
+   danach ein paar Pixel woanders auf dem Bildschirm.
+
+   Mit `flex-wrap: wrap` ist genau das passiert, als das
+   Geräte-Chip dazukam: ein Gerät antippen ließ das Chip
+   erscheinen, die Leiste umbrechen, die Fläche um 44 px
+   schrumpfen — und das gerade angetippte Gerät sprang unter dem
+   Finger weg. Der Browser-Prüfstand hat es gefunden (der
+   Strg-Klick traf danach ins Leere), mit dem Auge wäre es als
+   „ruckelt manchmal" durchgegangen.
+
+   `--trace-head` war ohnehin schon als feste Größe gedacht — das
+   Terminal rechnet seinen Abstand damit. Bisher war das eine
+   Behauptung; jetzt ist es wahr. */
+.trace-h {
+  display: flex; align-items: center; gap: 9px; flex-wrap: nowrap;
+  height: var(--trace-head); padding: 0 16px;
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: thin;
+}
+/* Nichts schrumpft und nichts wächst — sonst quetscht die Leiste
+   bei schmalem Fenster die Chips zu Strichen zusammen, statt
+   scrollbar zu werden. */
+.trace-h > * { flex: 0 0 auto; }
+.trace-h .tbtn {
+  border-color: var(--line); background: var(--surface-2); color: var(--ink);
+}
+.trace-h .tbtn:hover { background: var(--bg); }
+.trace-c { font-size: 12px; color: var(--ink-3); }
+.trace-f { display: flex; gap: 5px; margin-left: 6px; }
+/* Der Abstandhalter darf als einziger wachsen — er drückt
+   „Kopieren" und „Leeren" nach rechts, solange Platz ist, und
+   verschwindet, sobald die Leiste scrollt. */
+.trace-h .sp { flex: 1 1 auto; min-width: 0; }
+.sp { flex: 1; }
+
+.chip {
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2);
+  border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.chip:hover { border-color: var(--line-2); }
+.chip.is-on { background: var(--accent); color: var(--accent-in); border-color: transparent; }
+
+.trace-s {
+  border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface-2); color: var(--ink);
+  padding: 6px 11px; font: inherit; font-size: 12.5px; width: 160px;
+}
+.trace-s:focus { outline: none; border-color: var(--accent); }
+
+.trace-b {
+  overflow-y: auto; min-height: 0;
+  height: var(--trace-h);
+  border-top: 1px solid var(--line);
+}
+body:not(.trace-open) .trace-b { height: 0; border-top: 0; }
+
+.tr-empty { padding: 26px 18px; color: var(--ink-3); font-size: 13px; text-align: center; }
+
+/* Eine Zeile je Rahmen. Zeit und Gerät in fester Breite, damit
+   das Auge die Spalten findet — bei einem Mitschnitt liest man
+   senkrecht, nicht waagerecht. */
+.tr {
+  display: grid; grid-template-columns: 88px 14px 110px 54px 1fr;
+  gap: 10px; align-items: baseline;
+  padding: 4px 16px; font-size: 12.5px; cursor: pointer;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
+}
+.tr:hover { background: var(--surface-2); }
+.tr.is-open { background: var(--surface-2); }
+.tr.is-lost { opacity: .6; }
+.tr-t { font-family: var(--fm); font-size: 11px; color: var(--ink-3); text-align: right; }
+.tr-n { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Die Richtung. ↑ ging hinaus, ↓ kam an — und das Ankommen ist
+   blasser, weil es die Folge des Abgangs ist und nicht die
+   Handlung. Wer die Spalte senkrecht liest, sieht an den Pfeilen
+   allein, wo ein Rahmen umgestiegen ist. */
+.tr-d {
+  font-family: var(--fm); font-size: 12px; text-align: center;
+  color: var(--ink-2); cursor: help; user-select: none;
+}
+.tr-d--rein { color: var(--ink-3); opacity: .8; }
+.tr-p {
+  font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  text-align: center; border-radius: 5px; padding: 1px 0;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2);
+}
+.tr-p--arp  { color: var(--arp);  border-color: color-mix(in srgb, var(--arp) 40%, transparent); }
+.tr-p--icmp { color: var(--ping); border-color: color-mix(in srgb, var(--ping) 40%, transparent); }
+.tr-p--dhcp { color: var(--dhcp); border-color: color-mix(in srgb, var(--dhcp) 45%, transparent); }
+.tr-p--dns  { color: var(--dns);  border-color: color-mix(in srgb, var(--dns) 45%, transparent); }
+.tr-p--rip  { color: var(--rip);  border-color: color-mix(in srgb, var(--rip) 45%, transparent); }
+.tr-p--udp  { color: var(--ink-2); }
+.tr-i { color: var(--ink); font-family: var(--fm); font-size: 11.5px; }
+.tr-i em { color: var(--bad); font-style: normal; }
+.tr-x {
+  font-size: 10px; font-weight: 700; color: var(--ink-3);
+  border: 1px solid var(--line); border-radius: 5px;
+  padding: 0 5px; margin-left: 6px; cursor: help;
+}
+
+.tr-det {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  padding: 10px 16px 14px 114px; background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.tr-lay {
+  flex: 1 1 220px; border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface); padding: 9px 11px;
+}
+.tr-lay-h {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--accent); margin-bottom: 7px; font-weight: 700;
+}
+.tr-f {
+  display: flex; justify-content: space-between; gap: 12px;
+  font-size: 12px; padding: 2px 0;
+}
+.tr-f span:first-child { color: var(--ink-3); }
+
+/* ── Ansicht „Schichten" ──────────────────────────────────────
+   Filius' Datenaustausch-Fenster: eine Zeile je Schicht, nach
+   Schicht eingefärbt. Die Farben sind Filius' eigene
+   (`AggregatedMessageTable.LayerColorVar`, die Stufe
+   `backgroundColorUltraFine`) — wer beide Programme kennt, soll
+   die Schichten an derselben Farbe wiedererkennen.
+
+   ⚠️ Als LINKER RAND, nicht als Flächenfüllung. Filius färbt die
+   ganze Zeile; bei fünf Rahmen übereinander wird daraus ein
+   Streifenmuster, in dem man den Text schlechter liest als die
+   Farbe. Ein 3 px breiter Rand sagt dasselbe und lässt die Zeile
+   in Ruhe — und er funktioniert im dunklen Thema mit, wo eine
+   pastellfarbene Fläche mit dunkler Schrift nicht geht.       */
+.trs {
+  display: grid;
+  grid-template-columns: 42px 76px 14px 104px minmax(120px, 1fr) minmax(120px, 1fr) 76px 92px minmax(200px, 2.4fr);
+  gap: 10px; align-items: baseline;
+  padding: 3px 16px 3px 13px;
+  font-size: 12px; cursor: pointer;
+  border-left: 3px solid transparent;
+}
+.trs:hover { background: var(--surface-2); }
+/* Der Strich trennt RAHMEN, nicht Zeilen — er sitzt darum nur an
+   der ersten Zeile eines Rahmens. Genau das ist in Filius die
+   Aufgabe der wiederholten Nummer. */
+.trs.is-first { border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.trs.is-sel { background: var(--surface-2); }
+.trs.is-lost { opacity: .6; }
+
+.trs.l--netzzugang  { border-left-color: #C9C9C9; }
+.trs.l--vermittlung { border-left-color: #8FAADC; }
+.trs.l--transport   { border-left-color: #F4B183; }
+.trs.l--anwendung   { border-left-color: #FFD966; }
+
+.trs--kopf {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+  border-left-color: transparent;
+  font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-3);
+  padding-top: 7px; padding-bottom: 7px; cursor: default;
+}
+.trs--kopf:hover { background: var(--surface); }
+
+.trs-n { font-family: var(--fm); font-size: 11px; color: var(--ink-3); text-align: right; }
+.trs-t { font-family: var(--fm); font-size: 11px; color: var(--ink-3); text-align: right; }
+.trs-g { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Quelle und Ziel einfarbig und in gleicher Schrift, weil hier
+   der VERGLEICH die Aussage ist: MAC, dann IP, dann Portnummer,
+   senkrecht untereinander. Jede Schicht eigens einzufärben würde
+   genau die Spalte zerreißen, um die es geht. */
+.trs-q, .trs-z { font-family: var(--fm); font-size: 11px; color: var(--ink); }
+.trs-p { font-weight: 700; font-size: 10.5px; letter-spacing: .03em; color: var(--ink-2); }
+.trs-s { font-size: 11px; font-style: italic; color: var(--ink-3); }
+.trs-b { font-family: var(--fm); font-size: 11px; color: var(--ink); }
+.trs-b em { color: var(--bad); font-style: normal; }
+
+/* Neun Spalten passen nicht in jede Leiste. Waagerecht scrollen
+   darf die LISTE, nicht die Seite — darum eine Mindestbreite hier
+   und `overflow-x` am Rahmen darum. */
+body.trace-schichten .trace-b { overflow-x: auto; }
+body.trace-schichten .trs { min-width: 940px; }
+
+/* Das gewählte Gerät in der Leiste. Trägt die Akzentfarbe, weil
+   es der einzige Filter ist, den man nicht angeklickt hat — er
+   ist beim Antippen eines Geräts mitgekommen, und das muss man
+   sehen, um ihn wieder loszuwerden. */
+.chip--geraet { background: var(--accent); color: var(--accent-in); border-color: transparent; }
+.chip--geraet b { margin-left: 4px; opacity: .75; }
+.chip--geraet:hover b { opacity: 1; }
+
+/* ═══ Geräteoberfläche ═══════════════════════════════════════
+   Das Fenster, das im Aktionsmodus aufgeht, wenn man ein Gerät
+   antippt. Es liegt AUF der Fläche, aber rechts unten und nur
+   360 px breit: das Netz muss daneben sichtbar bleiben. Genau
+   daran krankt Filius — dort verdeckt der Desktop den Netzplan,
+   und man kann nicht gleichzeitig tippen und zusehen.         */
+
+/* ── Die dritte Höhe: ein Bildschirm ─────────────────────────
+   Hier ist der Unterschied am größten, und er soll es sein. Das
+   ist kein Fenster des Programms, sondern das Gerät selbst: ein
+   RAHMEN aus dunklem Kunststoff, eine TAPETE, oben eine Leiste
+   mit dem Gerätenamen, unten ein DOCK mit den Programmen.
+
+   Filius hat dafür recht: ein Rechner ist im Unterricht nicht ein
+   Kästchen im Netzplan, sondern das Ding, auf dem man etwas TUT.
+   Vorher standen die Programme hier als graue Knöpfe in einer
+   Leiste — das sah aus wie Reiter einer Webseite und nicht wie
+   ein Bildschirm, auf dem Programme liegen.
+
+   Was Filius falsch macht, bleibt auch hier verboten: der
+   Bildschirm deckt die Fläche nicht zu. Er ist 400 px breit und
+   liegt am Rand; das Netz bleibt daneben sichtbar.             */
+
+/* Breiter als vorher (400 → 560). Der Grund ist der neue Aufbau:
+   auf der Tapete liegen jetzt die SYMBOLE der Programme, und
+   daneben — nicht darunter — steht das offene Fenster. Bei 400 px
+   wäre für beides zusammen kein Platz, und aus dem Bildschirm
+   würde wieder eine Liste von Knöpfen mit einem Kasten darunter.
+
+   Es bleibt trotzdem die Regel, an der Filius scheitert: der
+   Bildschirm deckt die Fläche nicht zu. Bei 560 px und einem
+   Fenster von 1500 px bleibt das Netz daneben sichtbar; auf
+   schmalen Geräten greift weiter unten die Deckelung. */
+.dt {
+  /* ⚠️ Die Breite hängt an der FLÄCHE, nicht an einer festen
+     Zahl: 560 px sind auf einem Tablet hochkant zwei Drittel des
+     Bildes, und dann ist die Regel gebrochen, an der Filius
+     scheitert. 56 % halten sie auf jedem Gerät ein; 300 px ist
+     die Grenze, unter der das Symbolraster nicht mehr lesbar
+     wäre, und 560 px die, über der das Fenster nur noch leer
+     würde. */
+  position: absolute; right: 16px; top: 16px;
+  width: min(560px, max(300px, 56%), calc(100% - 32px));
+  max-height: calc(100% - 32px); min-height: min(360px, calc(100% - 32px));
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--wall);
+  border: 7px solid var(--bezel);
+  border-radius: 24px; box-shadow: var(--e3);
+  z-index: 5;
+}
+.dt[hidden] { display: none; }
+
+/* ⚠️ Und sobald ein Programm läuft, wird der Bildschirm höher.
+   Das ist die Kehrseite davon, dass das Fenster jetzt ÜBER den
+   Kacheln liegt statt daneben: ein absolut gesetzter Kasten
+   trägt nichts zur Höhe bei. Vorher stand `.dt-win` im Fluss und
+   zog den Bildschirm mit; danach blieb er bei seinen 360 px
+   stehen, und der Datei-Explorer hatte 155 px für seine Liste
+   UND die Knöpfe darunter — sie waren nur noch durch Scrollen zu
+   erreichen. Gemessen, nicht geschätzt.
+
+   Nicht `height`, sondern `min-height`: der Bildschirm soll
+   wachsen können, wenn ein Programm mehr braucht, aber nicht
+   jedes Fenster auf volle Höhe aufblasen.
+
+   ⚠️ Und NICHT bei `.dt--kein`. Dort steht der Inhalt weiter im
+   Fluss (siehe `.dt--kein .dt-fenster`), das Fenster misst sich
+   also selbst — ein Switch mit vier Zeilen bekäme sonst 560 px
+   Höhe mit 400 px Luft darin. */
+.dt.is-app:not(.dt--kein) { min-height: min(560px, calc(100% - 32px)); }
+
+/* ── Das Handy ────────────────────────────────────────────────
+   Dasselbe Fenster, andere Maße: schmal und hoch, stärker
+   gerundet, mit dem Strich unten. Kein einziges anderes Bauteil
+   — es sind dieselben Symbole, dasselbe Dock, dasselbe
+   Programmfenster.
+
+   Genau das ist die Aussage: ein Handy ist ein Rechner. Wäre es
+   hier ein eigenes Bauteil, stünde im Stylesheet das Gegenteil
+   von dem, was der Unterricht sagen will. */
+.dt--handy {
+  width: min(320px, calc(100% - 32px));
+  min-height: min(540px, calc(100% - 32px));
+  border-width: 9px; border-radius: 34px;
+}
+.dt-home { display: none; }
+.dt--handy .dt-home {
+  display: grid; place-items: center; flex: none;
+  height: 20px; background: rgba(8,11,22,.92);
+}
+.dt--handy .dt-home i {
+  display: block; width: 92px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,.34);
+}
+
+/* Die Leiste des Geräts. Dunkles Glas auf der Tapete — sie gehört
+   zum Bildschirm, nicht zum Programm drumherum. */
+/* ⚠️ Hier stand `order: 1`. Das war nötig, solange das Dock per
+   `order: 3` unter das Fenster geschoben wurde; jetzt steht alles
+   im Markup in der Reihenfolge, in der es erscheint, und ein
+   `order` an EINEM Kind würde es ans Ende werfen. */
+.dt-h {
+  flex: none;
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 10px 10px 14px;
+  background: rgba(13,17,32,.72); backdrop-filter: blur(12px);
+  color: #e7eaf6; border-bottom: 1px solid rgba(255,255,255,.10);
+  cursor: grab; touch-action: none;
+}
+.dt-h:active { cursor: grabbing; }
+.dt-ic { line-height: 1; flex: none; }
+.dt-ic svg { width: 19px; height: 19px; display: block; }
+.dt-t { display: flex; flex-direction: column; min-width: 0; }
+.dt-t strong { font-size: 13.5px; }
+.dt-sub { font-size: 11px; color: rgba(231,234,246,.62); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.dt-pw, .dt-x {
+  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.10);
+  color: #e7eaf6; font-size: 14px; cursor: pointer;
+}
+.dt-pw { margin-left: auto; }
+.dt-x  { border-color: transparent; background: transparent; font-size: 18px; }
+.dt-pw.is-on { color: #6ce3bf; border-color: rgba(108,227,191,.55); }
+.dt-pw:hover, .dt-x:hover { background: rgba(255,255,255,.22); color: #fff; }
+.dt.is-off .dt-ic, .dt.is-off .dt-t { opacity: .45; }
+
+/* ═══ Der Bildschirm selbst ══════════════════════════════════
+   Drei Dinge liegen auf der Tapete, und ihre Anordnung ist die
+   ganze Aussage:
+
+     links oben   die SYMBOLE der Programme, in einem Raster
+     rechts       das offene PROGRAMMFENSTER
+     unten        der SCHNELLZUGRIFF aus Glas
+
+   Vorher gab es nur eine Reihe Knöpfe und darunter einen Kasten.
+   Das sah aus wie Reiter einer Webseite — und genau daran hängt,
+   ob ein Kind versteht, dass es gerade AUF einem Rechner
+   arbeitet und nicht mit einem weiteren Formular des Simulators.
+
+   ⚠️ Die Symbole nehmen IMMER die ganze Breite ein — auch
+   während ein Programm läuft. Sie rücken nicht und verschwinden
+   nicht; das Fenster liegt einfach darauf.
+
+   Bis zum 2026-09-27 stand hier das Gegenteil, und zwar in zwei
+   verschiedenen Fassungen: Laptop und Server schoben die Symbole
+   in eine 176-px-Spalte nach links, das Handy blendete sie ganz
+   aus. Beanstandet mit „die App-Kacheln sollen trotzdem weiterhin
+   vorhanden sein … die Programmfenster einfach über den Kacheln
+   geöffnet werden". Der Gewinn ist nicht nur Einheitlichkeit: eine
+   Spalte, die auf 176 px zusammenschnurrt, sieht aus wie ein
+   Bedienelement der Anwendung. Ein Fenster, das auf den Symbolen
+   LIEGT, sieht aus wie ein Bildschirm — und das war von Anfang an
+   der ganze Zweck dieses Aufbaus.
+
+   Gewechselt wird dann über den Schnellzugriff unten. Der lag
+   ohnehin schon absolut über der Tapete und ist damit die
+   Schablone, nach der das Fenster jetzt gebaut ist. */
+.dt-scr {
+  position: relative; flex: 1 1 auto; min-height: 0;
+  display: grid; grid-template-columns: 1fr; grid-template-rows: auto 1fr;
+  gap: 0 12px; padding: 14px 14px 76px;
+}
+
+/* ─── Die Symbole ─────────────────────────────────────────────
+   Symbol über dem Wort, nicht daneben: so sind die Kacheln gleich
+   breit, und aus vier Programmen wird ein Raster statt einer
+   Treppe. Dieselbe Anordnung wie auf jedem echten Bildschirm. */
+/* ⚠️ Das Raster füllt die Breite mit Spalten von mindestens
+   78 px — und zwar immer, seit das Fenster darüber liegt statt
+   daneben. Die 78 sind nicht gegriffen: eine Zeitlang standen die
+   Kacheln bei offenem Programm in einer 176 px schmalen Spalte zu
+   zweit, also in 58 px, und aus „Einstellungen" wurde dort
+   „Einstellun…". Ein abgeschnittener Programmname ist auf einem
+   Bildschirm, den man lesen soll, keine Kleinigkeit.
+
+   Auf der Kachel steht `kurz` (siehe PROGRAMME in geraet.js), der
+   volle Name im Fensterkopf und im Tooltip — „E-Mail-Programm"
+   und „E-Mail-Server" passen auch in 78 px nicht. */
+.dt-apps {
+  grid-column: 1; grid-row: 1 / span 2; align-self: start;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 14px 4px;
+  min-width: 0;
+}
+.dt-apps:empty { display: none; }
+
+.dt-app {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-start; gap: 6px;
+  padding: 4px 2px; min-width: 0;
+  border: 0; background: none; color: #d9ddee;
+  font: inherit; font-size: 10.5px; line-height: 1.2; text-align: center;
+  cursor: pointer; border-radius: 10px;
+  transition: background .13s, transform .08s;
+}
+.dt-app:hover { background: rgba(255,255,255,.10); }
+.dt-app:active { transform: scale(.96); }
+/* Die Kachel unter dem Symbol ist das Programm; der Text
+   darunter ist nur sein Name und bekommt deshalb keinen Rahmen.
+   Der leichte Schattenriss hält ihn auf jeder Tapete lesbar. */
+.dt-app-n {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0,0,0,.55);
+}
+.dt-app-ic {
+  width: 46px; height: 46px; flex: none; display: grid; place-items: center;
+  border-radius: 13px;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18);
+  color: #edeff8;
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22);
+  transition: background .13s, border-color .13s;
+}
+.dt-app-ic svg { width: 23px; height: 23px; display: block; }
+.dt-app:hover .dt-app-ic { background: rgba(255,255,255,.24); border-color: rgba(255,255,255,.34); }
+/* Das laufende Programm ist markiert — sonst sucht man auf einem
+   Handy, wo das Fenster alles verdeckt, welches denn offen ist. */
+.dt-app.is-on .dt-app-ic {
+  background: var(--accent); color: var(--accent-in); border-color: transparent;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.20);
+}
+
+/* ─── Der Schnellzugriff unten ────────────────────────────────
+   Aus Glas, mittig, über allem. Dass er UNTEN steht und nicht
+   oben, ist der halbe Unterschied zwischen „Bildschirm" und
+   „Reiterleiste" — und es ist die Anordnung, die jedes Kind von
+   seinem eigenen Gerät kennt.
+
+   Er zeigt dieselben Programme noch einmal, nur ohne Wort. Das
+   ist keine Doppelung ohne Grund, sondern seit dem 2026-09-27 der
+   EINZIGE Weg von einem Programm zum nächsten: das Fenster liegt
+   über den Symbolen, also sind sie verdeckt und nicht anklickbar.
+   Daher auch `z-index: 3` — er muss über dem Fenster liegen. */
+.dt-dock {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+  z-index: 3;
+  display: flex; gap: 9px; padding: 7px 10px; max-width: calc(100% - 24px);
+  border-radius: 18px;
+  background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22);
+  backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: 0 14px 34px -18px rgba(0,0,0,.7);
+  overflow-x: auto;
+}
+.dt-dock:empty { display: none; }
+.dt-dapp {
+  position: relative; flex: none;
+  width: 36px; height: 36px; display: grid; place-items: center;
+  border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.12);
+  color: #edeff8; border-radius: 11px; cursor: pointer; padding: 0;
+  transition: background .13s, border-color .13s, transform .08s;
+}
+.dt-dapp svg { width: 19px; height: 19px; display: block; }
+.dt-dapp:hover { background: rgba(255,255,255,.28); border-color: rgba(255,255,255,.36); }
+.dt-dapp:active { transform: scale(.94); }
+.dt-dapp.is-on { background: var(--accent); color: var(--accent-in); border-color: transparent; }
+/* Der Punkt unter dem laufenden Programm — dieselbe Auskunft wie
+   auf jedem Gerät, das die Klasse kennt, und sie kostet keinen
+   Platz. */
+.dt-dpunkt {
+  position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%);
+  width: 4px; height: 4px; border-radius: 50%; background: transparent;
+}
+.dt-dapp.is-on .dt-dpunkt { background: rgba(255,255,255,.85); }
+
+/* ─── Das Programmfenster ─────────────────────────────────────
+   Es liegt AUF der Tapete, hell und mit eigenem Schatten. Die
+   Kopfzeile gehört dazu und sitzt darüber: ohne sie wäre auf dem
+   Handy, wo das Fenster den ganzen Bildschirm füllt, nicht mehr
+   zu sehen, WELCHES Programm läuft — und der Weg zurück fehlte
+   auch.
+
+   ⭐ `.dt-fenster` ist der Kasten, in dem beide liegen, und er ist
+   das Stück, das aus „daneben" ein „darüber" macht: absolut
+   gesetzt über der Tapete, mit demselben Rand wie `.dt-scr`
+   (14 px) und unten 76 px frei für den Schnellzugriff.
+
+   Die Reihenfolge in der dritten Dimension ist die Aussage:
+
+     dt-apps     0   die Symbole liegen auf der Tapete
+     dt-fenster  2   das Programm liegt darauf
+     dt-dock     3   der Schnellzugriff über allem
+
+   Der Schnellzugriff MUSS oben liegen: bei offenem Fenster sind
+   die Kacheln verdeckt, und er ist dann der einzige Weg zu einem
+   anderen Programm. Läge er darunter, gäbe es keinen. */
+.dt-fenster {
+  position: absolute; inset: 14px 14px 76px;
+  z-index: 2;
+  display: flex; flex-direction: column; min-height: 0;
+}
+.dt-fenster[hidden] { display: none; }
+
+.dt-winh {
+  flex: none;
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 8px 8px 12px; font-size: 12px;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-bottom: 0;
+  border-radius: var(--r2) var(--r2) 0 0;
+  box-shadow: 0 -2px 18px -12px rgba(0,0,0,.6);
+}
+.dt-winh svg { width: 15px; height: 15px; flex: none; opacity: .7; }
+.dt-winh-t { font-weight: 650; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dt-winh-x {
+  margin-left: auto; flex: none; width: 24px; height: 24px; border: 0;
+  border-radius: 50%; background: transparent; color: var(--ink-3);
+  font-size: 17px; line-height: 1; cursor: pointer;
+}
+.dt-winh-x:hover { background: var(--bg); color: var(--ink); }
+
+.dt-win {
+  flex: 1 1 auto; min-height: 0;
+  padding: 13px;
+  background: var(--glas); backdrop-filter: blur(18px) saturate(1.3);
+  border: 1px solid var(--line); border-radius: 0 0 var(--r2) var(--r2);
+  box-shadow: 0 18px 40px -20px rgba(0,0,0,.6);
+  overflow-y: auto;
+}
+/* Kein Programm offen heißt: kein Fenster. Was früher hier stand
+   („Wähle unten ein Programm") ist weg — ein eingeschalteter
+   Bildschirm mit Symbolen darauf sagt dasselbe ohne einen Satz,
+   und der Kasten verdeckte ausgerechnet die Symbole, auf die er
+   hinwies. */
+.dt-win[hidden] { display: none; }
+
+/* Das Terminal bringt sein eigenes Gehäuse mit — es braucht kein
+   zweites drumherum. */
+.dt-win:has(> .term) {
+  background: none; border: 0; box-shadow: none; backdrop-filter: none; padding: 0;
+}
+.dt-win > .term.term--in {
+  box-shadow: 0 18px 40px -20px rgba(0,0,0,.75);
+  border: 1px solid rgba(255,255,255,.18);
+}
+
+/* ═══ Geräte ohne Bildschirm ═════════════════════════════════
+   Router, Heimrouter, Switch. Vom Nutzer gesetzt: „Router, Switch
+   und Heimrouter haben keine Desktop-Oberfläche."
+
+   Der Kopf dieser Datei nennt drei Höhen, und sie sind hier die
+   ganze Antwort: eine Geräteoberfläche SCHWEBT HOCH, hat einen
+   Rahmen, eine Tapete und ein Dock — „das ist kein Fenster des
+   Programms, das ist ein Bildschirm". Wer keinen Bildschirm hat,
+   fällt eine Stufe tiefer auf --e2, also auf Werkzeug: helle
+   Fläche, dünne Kante, kein Rahmen, keine Tapete.
+
+   ⚠️ Es ist KEIN eigenes Bauteil, sondern dasselbe mit anderen
+   Maßen — genau wie beim Handy. Ein zweites Fenster im Markup
+   hieße, dass jede spätere Änderung an zwei Stellen gemacht
+   werden muss, und eine davon wird vergessen. */
+.dt--kein {
+  width: min(420px, calc(100% - 32px));
+  min-height: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r2); box-shadow: var(--e2);
+}
+/* Die Kopfzeile ist am Bildschirm dunkles Glas — sie gehört dort
+   zum Gerät. Hier gibt es kein Glas, über dem sie liegen könnte. */
+.dt--kein .dt-h {
+  background: var(--surface-2); color: var(--ink);
+  border-bottom: 1px solid var(--line); backdrop-filter: none;
+}
+.dt--kein .dt-sub { color: var(--ink-2); }
+.dt--kein .dt-pw, .dt--kein .dt-x {
+  border-color: var(--line-2); background: transparent; color: var(--ink-2);
+}
+.dt--kein .dt-pw.is-on { color: var(--ok); border-color: currentColor; }
+.dt--kein .dt-pw:hover, .dt--kein .dt-x:hover { background: var(--bg); color: var(--ink); }
+
+/* Kein Raster, keine Tapete: untereinander, wie in einem Formular.
+   Das Rasterlayout des Bildschirms wird von `display:flex` still
+   überstimmt — die Spalten- und Zeilenangaben an den Kindern
+   wirken in einem Flexkasten nicht. */
+.dt--kein .dt-scr {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px; background: none;
+}
+.dt--kein .dt-dock { display: none; }
+.dt--kein .dt-winh { display: none; }
+.dt--kein .dt-apps { display: block; flex: none; }
+/* ⚠️ Und hier MUSS der Fensterkasten zurück in den Fluss. Auf dem
+   Bildschirm liegt er absolut über den Kacheln; in diesem
+   Flexkasten hier gibt es keine Kacheln, über die er liegen
+   könnte — er risse das Formular schlicht aus der Anordnung und
+   legte es über die Reiter. Ein Router hätte dann ein Fenster,
+   das über seinem eigenen Kopf hängt. */
+.dt--kein .dt-fenster {
+  position: static; flex: 1 1 auto; min-height: 0;
+}
+
+/* Der Satz über dem Fenster. Er steht nicht DARIN, weil er vom
+   Gerät handelt und nicht vom Inhalt — wer aufs Terminal
+   umschaltet, soll ihn behalten. */
+.dt-kein {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 10px 11px; margin-bottom: 8px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--r1);
+  font-size: 12px; line-height: 1.45; color: var(--ink-2);
+}
+.dt-kein strong { color: var(--ink); }
+.dt-kein p { margin: 0; }
+.dt-kein-ic { flex: none; color: var(--ink-3); line-height: 1; }
+.dt-kein-ic svg { width: 20px; height: 20px; display: block; }
+
+/* Die Reiter. Schmal und in der Fläche liegend — sie sollen nicht
+   nach Programmkacheln aussehen, denn genau das sind sie nicht. */
+.dt-reg { display: flex; gap: 6px; }
+.dt-reg-b {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 11px; font: inherit; font-size: 12px; font-weight: 600;
+  color: var(--ink-2); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 999px; cursor: pointer;
+}
+.dt-reg-b svg { width: 14px; height: 14px; opacity: .75; }
+.dt-reg-b:hover { background: var(--bg); color: var(--ink); }
+.dt-reg-b.is-on {
+  background: var(--ink); color: var(--surface); border-color: var(--ink);
+}
+.dt-reg-b.is-on svg { opacity: 1; }
+
+/* Das Fenster ist hier der ganze Rest — ohne eigene Kante, denn
+   es liegt nicht mehr AUF einer Tapete, sondern im Gerät. */
+.dt--kein .dt-win {
+  flex: 1 1 auto; padding: 0;
+  background: none; border: 0; border-radius: 0;
+  box-shadow: none; backdrop-filter: none;
+}
+
+/* ─── Und dasselbe auf dem Handy ──────────────────────────────
+   Dieselbe Regel, andere Maße: das Raster dreispaltig und mittig,
+   etwas mehr Luft. Keine neuen Bauteile.
+
+   ⚠️ Hier stand `.dt--handy.is-app .dt-apps { display: none }` —
+   das Handy blendete seine Symbole aus, statt das Fenster
+   darüberzulegen. Seit beide Geräte dasselbe tun, ist die Zeile
+   weg: das Fenster deckt den Bildschirm ohnehin fast vollständig
+   zu, das Bild bleibt also dasselbe. Was sich ändert, ist die
+   Zahl der Regeln, die man kennen muss, bevor man hier etwas
+   anfasst — von drei (Laptop, Handy, schmal) auf eine. */
+.dt--handy .dt-scr { padding: 16px 14px 72px; }
+.dt--handy .dt-fenster { inset: 16px 14px 72px; }
+.dt--handy .dt-apps {
+  grid-template-columns: repeat(3, 1fr); gap: 16px 8px; justify-items: center;
+}
+.dt--handy .dt-app { width: 100%; }
+.dt--handy .dt-dock { bottom: 10px; gap: 12px; }
+
+/* ⚠️ Auf dem Handy steht die Beschriftung ÜBER dem Feld, nicht
+   daneben. Bei 320 px Gerätebreite blieben neben „Netzmaske:"
+   noch 144 px für den Wert — und darin stand `255.255.255`
+   statt `255.255.255.0`. Eine abgeschnittene Netzmaske ist genau
+   die Zahl, um die es im Unterricht geht.
+
+   Dass ein schmales Formular seine Beschriftungen nach oben legt,
+   ist zudem das, was jedes Kind von seinem Telefon kennt. */
+.dt--handy .dt-win .k-f {
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 3px; margin-bottom: 9px;
+}
+.dt--handy .dt-win .k-f-l { color: var(--ink-3); }
+.dt-sec {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--ink-3); margin: 4px 0 8px;
+}
+.dt-win .dt-sec:not(:first-child) { margin-top: 18px; }
+.dt-acts { margin-top: 14px; }
+.dt-leer { text-align: center; padding: 20px 10px; color: var(--ink-2); font-size: 13px; }
+/* Wenn unter dem Text noch etwas kommt (beim Switch die Tabelle),
+   darf der Text nicht die halbe Fensterhöhe fressen. */
+.dt-leer--knapp { padding: 8px 6px 4px; }
+.dt-leer p { margin: 6px 0; }
+.dt-leer-ic { opacity: .4; margin-bottom: 8px; }
+.dt-leer-ic svg { width: 28px; height: 28px; display: inline-block; }
+
+/* Das Terminal, wenn es im Gerätefenster steckt: kein eigenes
+   Fenster mehr, sondern Inhalt. Nur die Lage ändert sich — es
+   ist dasselbe Element mit denselben Ereignisbehandlern. */
+.term.term--in {
+  position: static; width: 100%; right: auto; bottom: auto;
+  border-radius: var(--r2); box-shadow: none; transition: none;
+}
+.term.term--in .term-h { display: none; }
+.term.term--in .term-o { height: clamp(120px, 24vh, 260px); }
+body.trace-open .term.term--in { bottom: auto; }
+
+/* Im Aktionsmodus ist jedes Gerät anklickbar — das muss der
+   Mauszeiger sagen. */
+.nf.is-aktion .nf-node { cursor: pointer; }
+
+/* ═══ Terminal ═══════════════════════════════════════════════ */
+
+.term {
+  position: fixed; right: 16px; bottom: 16px; width: min(460px, calc(100vw - 40px));
+  background: var(--head); color: var(--head-ink);
+  border-radius: var(--r3); box-shadow: 0 18px 50px rgba(0,0,0,.35);
+  display: none; flex-direction: column; overflow: hidden;
+  border: 1px solid rgba(255,255,255,.1);
+  transition: bottom .22s ease;
+}
+.term.is-open { display: flex; }
+
+/* Der Mitschnitt schiebt das Terminal hoch, statt von ihm
+   verdeckt zu werden.
+
+   ⚠️ Seit es unten ZWEI Leisten gibt (Mitschnitt und
+   Weiterleitungstabelle), rechnet das Terminal nicht mehr gegen
+   eine von beiden, sondern gegen `--unten` — die Summe dessen, was
+   unten steht. Vorher stand hier `var(--trace-h) + …`, und mit
+   offener Weiterleitungstabelle lag das Terminal darauf. Die vier
+   Fälle einzeln zu schreiben ist hässlicher als eine Formel, aber
+   es ist die einzige Fassung, die nicht beim dritten Fenster
+   stillschweigend wieder falsch wird: hier steht jede Kombination
+   da und lässt sich lesen. */
+body { --unten: 0px; }
+body.trace-open { --unten: calc(var(--trace-h) + var(--trace-head)); }
+body.wlt-open   { --unten: calc(var(--wlt-h) + var(--wlt-head)); }
+body.trace-open.wlt-open {
+  --unten: calc(var(--trace-h) + var(--trace-head) + var(--wlt-h) + var(--wlt-head));
+}
+.term { bottom: calc(var(--unten) + 16px); }
+
+/* Wenn beides offen ist, wird es oben eng — dann schrumpft die
+   Ausgabe, nicht das Fenster. Das Eingabefeld muss sichtbar
+   bleiben, sonst ist das Terminal nutzlos. */
+body.trace-open .term-o { height: clamp(96px, 20vh, 252px); }
+
+.term-h {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 12px 11px 15px; border-bottom: 1px solid rgba(255,255,255,.1);
+}
+.term-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
+.term-h strong { font-size: 13.5px; }
+.term-x {
+  margin-left: auto; width: 26px; height: 26px; border: 0; border-radius: 50%;
+  background: transparent; color: rgba(255,255,255,.5); font-size: 17px; cursor: pointer;
+}
+.term-x:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+.term-o {
+  font-family: var(--fm); font-size: 12px; line-height: 1.55;
+  padding: 11px 15px; height: 252px; overflow-y: auto;
+  white-space: pre-wrap; word-break: break-word;
+}
+.tl        { color: rgba(255,255,255,.82); min-height: 1.55em; }
+.tl--sys   { color: #fff; font-weight: 600; }
+.tl--head  { color: var(--accent); }
+.tl--dim   { color: rgba(255,255,255,.42); }
+.tl--echo  { color: rgba(255,255,255,.55); }
+.tl--ok    { color: var(--ok); }
+.tl--warn  { color: var(--warn); }
+.tl--fail  { color: var(--bad); }
+.tl--hint  { color: #6fb6f0; }
+
+.term-q {
+  display: flex; gap: 5px; flex-wrap: wrap;
+  padding: 9px 13px; border-top: 1px solid rgba(255,255,255,.1);
+}
+.term-q .chip {
+  background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.14);
+  color: rgba(255,255,255,.75);
+}
+.term-q .chip:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+.term-i {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 15px; border-top: 1px solid rgba(255,255,255,.1);
+}
+.term-p { font-family: var(--fm); color: var(--accent); }
+.term-i input {
+  flex: 1; border: 0; background: transparent; color: var(--head-ink);
+  font-family: var(--fm); font-size: 12.5px; outline: none;
+}
+.term-i input::placeholder { color: rgba(255,255,255,.3); }
+
+/* ═══ Kurzmeldung ════════════════════════════════════════════ */
+
+.toast {
+  position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 14px);
+  background: var(--head); color: var(--head-ink);
+  border-radius: 999px; padding: 10px 20px; font-size: 13px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.3);
+  opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s;
+  z-index: 60;
+}
+.toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
+/* ═══ Schmale Bildschirme ════════════════════════════════════
+     Die Fläche nimmt jetzt immer die ganze Breite ein — die
+     Inspektorspalte, die hier früher zur Schublade von unten
+     wurde, gibt es nicht mehr. Zu regeln bleibt das Fenster: es
+     darf auf einem schmalen Gerät nie mehr als knapp die halbe
+     Fläche belegen, sonst steht man wieder vor einem Dialog, der
+     das Netz verdeckt.                                          */
+
+@media (max-width: 1080px) {
+  /* Groß ist hier so breit wie klein: 400 px wären auf einem
+     Tablet hochkant die halbe Fläche, und die Tabellen darin
+     brechen lieber um, als das Netz zuzudecken. */
+  .karte.is-mehr { width: 330px; }
+  /* Für den Bildschirm des Geräts stand hier eine schmalere
+     Symbolspalte (136 px). Es gibt keine Spalte mehr — die
+     Symbole füllen die Breite und das Fenster liegt darauf; das
+     Raster (`auto-fill minmax(78px, 1fr)`) rechnet sich seine
+     Spaltenzahl ohnehin selbst aus. */
+}
+
+@media (max-width: 860px) {
+  /* Das Terminal steht frei, seit die Spalte weg ist. */
+  .term { right: 12px; left: 12px; bottom: calc(var(--unten) + 12px); width: auto; z-index: 50; }
+  .term-o { height: 170px; }
+  body.trace-open .term-o { height: 110px; }
+  /* Die Leiste rückt zusammen, statt zu verschwinden: auf einem
+     Tablet quer bleibt sie der einzige Weg zu den Geräten.
+
+     ⚠️ Die Erklärzeilen bleiben stehen. Sie fielen hier einmal
+     weg (`.tools-hint { display: none }`) — das stammte aus der
+     Zeit, als die Leiste ein waagerechtes Band war und jeder
+     Satz BREITE kostete. Senkrecht kostet er Höhe, und davon ist
+     auf einem Tablet hochkant reichlich da. Ohne sie stand im
+     Aktionsmodus nur noch das Wort „AKTION" in einer leeren
+     Spalte. */
+  .rail { width: 148px; padding: 6px 7px 8px; }
+  .top { padding: 8px 12px; gap: 10px; }
+  .karte, .karte.is-mehr { width: min(300px, calc(100% - 24px)); }
+  .tr { grid-template-columns: 70px 13px 88px 48px 1fr; gap: 7px; padding-left: 12px; }
+  .tr-det { padding-left: 14px; }
+  .aufgabe { left: 12px; top: 12px; }
+}
+
+/* Handy oder sehr schmales Fenster. Der Simulator ist kein
+   Handy-Programm — aber er darf auch dort nicht zerfallen, sonst
+   sieht ein Kind, das zufällig mit dem Telefon draufgeht, einen
+   kaputten Bildschirm. Weg kommt, was zweitrangig ist. */
+@media (max-width: 620px) {
+  /* Das Wort „Netzwerk" fiel hier weg — die Marke tut das nicht.
+     Sie ist das Einzige in der Leiste, woran man sieht, WAS man
+     da vor sich hat, und sie kostet klein gerechnet 81 px. Der
+     Zusatz „Class Wide Web" ist bei dieser Höhe nicht mehr zu
+     lesen; das ist hinnehmbar, der Schriftzug darüber schon. */
+  .marke { height: 28px; }
+  .badge-proto { display: none; }
+  #exportBtn, #neuBtn, .tbtn:has(#importInput) { display: none; }
+  .sel { max-width: 130px; }
+  .speedbox input[type=range] { width: 64px; }
+  .speed-l { display: none; }
+  .tools-t { display: none; }
+  .add { padding: 8px 11px 8px 9px; font-size: 12.5px; }
+  /* Auf einem Telefon hat die Leiste offen keinen Platz mehr
+     neben der Fläche. Sie bleibt trotzdem stehen — nur eben
+     schmal. Die Symbole allein reichen; die Wörter stehen im
+     Tooltip und kommen zurück, sobald das Fenster breiter ist. */
+  .rail { width: 54px; padding: 6px 5px 8px; }
+  .rail .rail-t, .rail .add-n, .rail .rail-fold-t, .rail .zbtn-t { display: none; }
+  .rail .add { justify-content: center; padding: 9px 0; }
+  .rail .zbtn--w { flex: none; width: 34px; padding: 0; }
+  .rail-cluster { gap: 4px; }
+  /* Der Bildschirm nimmt hier die volle Breite. Mehr braucht es
+     nicht mehr: seit das Fenster über den Symbolen liegt statt
+     neben ihnen, gibt es keine zweite Spalte, die auf einem
+     schmalen Gerät zusammenbrechen könnte — das Layout ist auf
+     jeder Breite dasselbe. Hier standen dafür früher drei
+     Sonderregeln. */
+  .dt { width: calc(100% - 24px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

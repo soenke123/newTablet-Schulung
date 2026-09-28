@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SYNIR — Class Wide Web</title>
+<link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- ═══ Zeichensatz ═════════════════════════════════════════════
+     EIN Satz Symbole für die ganze Anwendung: die Geräteleiste am
+     linken Rand, die Programme auf dem Bildschirm eines Geräts,
+     die Kopfzeilen der Fenster.
+
+     Warum gezeichnet und nicht als Emoji (🖥 🗄 ⚙): ein Emoji ist
+     eine Schriftart, und die sieht auf jedem Betriebssystem
+     anders aus — auf Windows bunt und klobig, auf Linux oft gar
+     nicht. Ein <symbol> nimmt `currentColor` an, bleibt in jeder
+     Größe scharf und sieht auf dem Beamer aus wie hier.
+
+     Übernommen aus showroom-optik.html (Haut 05 „Glastisch"),
+     damit die Anwendung genau so aussieht wie die Musterseite,
+     nach der sie ausgesucht wurde.                              -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute" id="sprite">
+  <defs>
+    <g id="ic-host" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3.5" y="5" width="17" height="10.5" rx="1"/><path d="M2 18.5h20"/>
+    </g>
+    <g id="ic-server" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="3.5" width="14" height="7" rx="1"/><rect x="5" y="13.5" width="14" height="7" rx="1"/>
+      <path d="M8 7h.01M8 17h.01"/>
+    </g>
+    <g id="ic-handy" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M10.5 19h3"/>
+    </g>
+    <g id="ic-switch" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="7.5" width="19" height="8" rx="1"/><path d="M6.5 15.5v3M11 15.5v3M15.5 15.5v3M20 15.5v3"/>
+    </g>
+    <g id="ic-router" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="10" width="19" height="7.5" rx="1.5"/>
+      <path d="M6 6.5h5M6 6.5l2.2-2.2M6 6.5l2.2 2.2M18 3.5h-5M18 3.5l-2.2-2.2M18 3.5l-2.2 2.2"/>
+    </g>
+    <!-- Der Heimrouter: flacher Kasten mit Buchsenreihe UNTEN und
+         einer Antenne. Er muss sich vom Router unterscheiden lassen,
+         ohne dass man hinsehen muss — deshalb die Antenne (der
+         Router hat Pfeile) und die vier Buchsen (der Switch hat
+         seine oben). -->
+    <g id="ic-heimrouter" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="11" width="19" height="7.5" rx="1.5"/>
+      <path d="M6 18.5v2M10 18.5v2M14 18.5v2M18 18.5v2"/>
+      <path d="M17 11V6.5"/><path d="M14.6 4.6a3.4 3.4 0 0 1 4.8 0"/>
+    </g>
+    <!-- Funkwellen. Stehen an zwei Orten für dieselbe Aussage:
+         am Gerät, das ausstrahlt, und vor dem Namen des Netzes. -->
+    <g id="ic-wlan" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+      <path d="M4.2 9.2a11 11 0 0 1 15.6 0"/><path d="M7.4 12.6a6.5 6.5 0 0 1 9.2 0"/>
+      <circle cx="12" cy="17.4" r="1.3" fill="currentColor" stroke="none"/>
+    </g>
+    <g id="ic-term" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="4" width="19" height="16" rx="1.6"/><path d="M6.5 9.5 9 12l-2.5 2.5M12 15h5.5"/>
+    </g>
+    <g id="ic-gear" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3.2"/>
+      <path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/>
+    </g>
+    <g id="ic-box" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/>
+    </g>
+    <g id="ic-globe" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.7 3.2 2.7 14.8 0 18M12 3c-2.7 3.2-2.7 14.8 0 18"/>
+    </g>
+    <g id="ic-power" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+      <path d="M12 3v8"/><path d="M6.6 6.6a8 8 0 1 0 10.8 0"/>
+    </g>
+    <g id="ic-zeiger" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5.5 3.2 18 12.4l-5.3.7 3 5.9-2.4 1.2-2.9-5.9-3.9 3.6z"/>
+    </g>
+    <g id="ic-kabel" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="5" cy="19" r="2.4"/><circle cx="19" cy="5" r="2.4"/><path d="M6.9 17.1 17.1 6.9"/>
+    </g>
+    <g id="ic-lupe-auf" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+      <circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.3 15.3 21 21M10.5 7.6v5.8M7.6 10.5h5.8"/>
+    </g>
+    <g id="ic-lupe-zu" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+      <circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.3 15.3 21 21M7.6 10.5h5.8"/>
+    </g>
+    <g id="ic-passen" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3.5 9V3.5H9M15 3.5h5.5V9M20.5 15v5.5H15M9 20.5H3.5V15"/>
+    </g>
+    <!-- Der Haken sitzt auf der Kachel eines aufgespielten
+         Programms. Dicker als die übrigen Zeichen (2.6 statt 1.6),
+         weil er klein dargestellt wird und trotzdem das Erste sein
+         muss, was man auf der Kachel sieht. -->
+    <g id="ic-haken" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4.5 12.8 9.5 17.8 19.5 6.6"/>
+    </g>
+    <!-- Die drei Zeichen des Datei-Explorers. Ordner, Blatt,
+         Bild — dieselben drei Formen, die jedes Kind von seinem
+         eigenen Gerät kennt. -->
+    <g id="ic-ordner" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7.5a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+    </g>
+    <g id="ic-datei" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 3h7l5 5v13H6z"/><path d="M13 3v5h5"/><path d="M9 13h6M9 17h6"/>
+    </g>
+    <!-- Webbrowser: ein Fenster mit Adresszeile. Nicht der
+         Erdball — den trägt schon der DNS-Server, und zwei
+         Programme mit demselben Zeichen sind zwei, die man
+         verwechselt. -->
+    <g id="ic-browser" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>
+      <circle cx="6.2" cy="6.5" r=".8" fill="currentColor" stroke="none"/><path d="M9.5 6.5h8"/>
+    </g>
+    <!-- Webserver: das Gehäuse mit Funkbogen — es BIETET etwas
+         an, es fragt nicht. -->
+    <g id="ic-webserver" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="12" width="18" height="8" rx="2"/><path d="M6.5 16h.01M9.5 16h4"/>
+      <path d="M8 8.5a5.5 5.5 0 0 1 8 0M10.5 6a9 9 0 0 1 3 0"/>
+    </g>
+    <!-- E-Mail-Programm: der Umschlag. E-Mail-Server: derselbe
+         Umschlag auf dem Servergehäuse — man soll auf einen Blick
+         sehen, dass das eine die Post BEKOMMT und das andere sie
+         VERWALTET. -->
+    <g id="ic-mail" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 7l9 6.5L21 7"/>
+    </g>
+    <g id="ic-mailserver" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="13" width="18" height="7.5" rx="1.8"/><path d="M6.5 16.8h.01M9.5 16.8h4"/>
+      <rect x="6" y="3.5" width="12" height="7.5" rx="1.5"/><path d="M6.5 5l5.5 3.8L17.5 5"/>
+    </g>
+    <!-- Die zwei Tätigkeiten im Postfach. „Abrufen" ist ein Pfeil
+         NACH UNTEN in eine Ablage — die Post liegt beim Server und
+         kommt von dort herunter; das ist genau der Satz, den der
+         leere Posteingang daneben sagt („eine Nachricht kommt nicht
+         von selbst"). „Verfassen" ist der Stift. Kein Pfeil nach
+         oben fürs Senden: gesendet wird mit dem Knopf „Senden",
+         und zwei Pfeile in entgegengesetzte Richtungen wären die
+         eine Stelle, an der man sich vergreift. -->
+    <g id="ic-abrufen" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v10.5"/><path d="M8 10l4 4 4-4"/>
+      <path d="M4 15.5v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+    </g>
+    <g id="ic-verfassen" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16.5 3.7a1.7 1.7 0 0 1 2.4 0l1.4 1.4a1.7 1.7 0 0 1 0 2.4L9.4 18.4 4.5 19.9l1.5-4.9z"/>
+      <path d="M15.2 5l3.8 3.8"/>
+    </g>
+    <g id="ic-bild" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2"/>
+      <circle cx="8.5" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/>
+    </g>
+  </defs>
+</svg>
+
+<!-- ═══ Kopfzeile ═══════════════════════════════════════════════
+     Dunkel durchgehend, wie in MPSkills. Links, was das Netz
+     verändert; rechts, was die Uhr steuert. Die Trennung ist
+     Absicht: Bauen und Laufenlassen sind zwei Tätigkeiten.
+
+     In der Mitte steht seit Neuem der Moduswechsel — die eine
+     Entscheidung, die Filius richtig getroffen hat: ENTWURF ist
+     bauen und einstellen, AKTION ist laufen lassen und benutzen.
+     Ohne diese Trennung fragt jedes Kind „warum passiert nichts,
+     wenn ich auf den Rechner klicke" — weil derselbe Klick im
+     Entwurf etwas anderes bedeuten muss als im Betrieb.        -->
+<header class="top">
+  <!-- Die Marke. Zwei Bilder, EIN Logo: das Wort-Bild-Zeichen hat
+       zwei Farben, und die dunkle davon (Marine) verschwindet auf
+       dunklem Grund. Deshalb liegt eine zweite Fassung bereit, in
+       der das Marine zu Hellblaugrau umgefärbt ist; das Himmelblau
+       trägt in beiden Modi und bleibt, wie es ist.
+
+       Warum zwei <img> und nicht ein <img>, dessen src das
+       JavaScript beim Moduswechsel austauscht: das Stylesheet ist
+       vor dem Skript da. Ein getauschtes src heißt, dass beim
+       Laden im Dunkelmodus für einen Wimpernschlag das helle Logo
+       steht — und ein Nachladen bei jedem Druck auf ☾/☀. Beide
+       Fassungen liegen im Dokument, das Stylesheet zeigt eine.
+
+       Der Rahmen trägt die Beschriftung (role/aria-label), die
+       beiden Bilder sind leer beschriftet — sonst liest ein
+       Vorleseprogramm den Namen doppelt.                       -->
+  <div class="top-l">
+    <span class="marke" role="img" aria-label="SYNIR — Class Wide Web">
+      <img class="marke-b marke-b--hell"   src="bilder/synir-logo.png"
+           alt="" width="480" height="165" draggable="false">
+      <img class="marke-b marke-b--dunkel" src="bilder/synir-logo-dunkel.png"
+           alt="" width="480" height="165" draggable="false">
+    </span>
+    <span class="badge-proto">Prototyp</span>
+  </div>
+
+  <div class="top-c">
+    <div class="modus" id="modus">
+      <button class="mbtn" data-modus="entwurf">
+        <span class="mbtn-ic">✎</span>Entwurf
+      </button>
+      <button class="mbtn" data-modus="aktion">
+        <span class="mbtn-ic">▶</span>Aktion
+      </button>
+    </div>
+
+    <!-- Der Knopf für die Neuerung gegenüber Filius: Subnetze
+         sichtbar machen. Er steht neben dem Moduswechsel, weil er
+         dieselbe Art Schalter ist — er ändert nicht das Netz,
+         sondern was man davon sieht, und er gilt in Entwurf wie
+         in Aktion.
+
+         Ohne ihn zeigt die Fläche das Netz des ANGETIPPTEN Geräts;
+         mit ihm alle auf einmal, dazu die Liste der Adressräume
+         am linken Rand. -->
+    <button class="mbtn mbtn--sub" id="subBtn"
+            title="Subnetze anzeigen — alle Adressräume farbig">
+      <span class="mbtn-ic">◎</span>Subnetze
+    </button>
+
+    <!-- Hier stand eine Anzeige der Simulationszeit („1,203 s")
+         samt Länge der Ereigniswarteschlange. Sie ist weg. Für die
+         Fehlersuche war sie nützlich, für den Unterricht war sie
+         ein Zahlenfeld, das sich unablässig bewegt und nichts
+         beantwortet: kein Auftrag in diesem Programm lautet „wie
+         viele Mikrosekunden". Wer die Zeit braucht, findet sie im
+         Mitschnitt an jedem Rahmen — dort steht sie bei dem
+         Ereignis, zu dem sie gehört. -->
+    <button class="rbtn rbtn--play" id="play" title="anhalten">❚❚</button>
+    <button class="rbtn" id="stepBtn" title="ein Ereignis weiter (Taste .)">›</button>
+    <button class="rbtn" id="resetBtn" title="von vorn">↺</button>
+    <label class="speedbox">
+      <input type="range" id="speed" min="0" max="4" step="1" value="2">
+      <span class="speed-l" id="speedLabel">normal</span>
+    </label>
+  </div>
+
+  <div class="top-r">
+    <select id="szenario" class="sel" title="vorbereitetes Netz laden">
+      <option value="">Szenario laden …</option>
+    </select>
+    <button class="tbtn" id="neuBtn">Neu</button>
+    <button class="tbtn" id="exportBtn" title="als Datei sichern">Sichern</button>
+    <label class="tbtn" title="Datei laden">Öffnen
+      <input type="file" id="importInput" accept="application/json,.json" hidden>
+    </label>
+    <button class="tbtn tbtn--ic" id="themeBtn" title="hell / dunkel">☾</button>
+  </div>
+</header>
+
+<!-- ═══ Arbeitsfläche ═══════════════════════════════════════════ -->
+<main class="main">
+
+<!-- ═══ Werkzeugleiste ══════════════════════════════════════════
+     Am LINKEN RAND, senkrecht — so wie in Filius. Sie stand
+     vorher als waagerechtes Band über der Fläche; das kostete auf
+     jedem Bildschirm eine Zeile Höhe, und Höhe ist genau das, was
+     einem Netzplan fehlt.
+
+     Der zweite Grund ist der wichtigere: eine Leiste am Rand kann
+     man EINKLAPPEN. Ein Band über der Fläche kann das nicht, ohne
+     dass darunter alles springt. Wer sein Netz fertig gebaut hat
+     und nur noch zusehen will, schiebt sie weg und hat die ganze
+     Fläche.
+
+     Geräte als Knöpfe mit Bild UND Wort — Filius hat hier eine
+     Leiste aus Bildchen ohne Beschriftung, und die ist auf einem
+     Beamer aus zehn Metern nicht zu erkennen. Eingeklappt bleibt
+     nur das Bild; dann steht das Wort im Tooltip.              -->
+  <nav class="tools rail" id="rail">
+
+    <!-- Der Griff zum Ein- und Ausklappen. Ganz oben, weil er der
+         einzige Knopf ist, der auch eingeklappt etwas anderes tut
+         als „Gerät anlegen". -->
+    <button class="rail-fold" id="railFold" title="Leiste einklappen"
+            aria-expanded="true" aria-controls="rail">
+      <span class="rail-fold-ic">‹</span><span class="rail-fold-t">Leiste</span>
+    </button>
+
+    <!-- Nur im Entwurfsmodus. Im Aktionsmodus ist die Leiste eine
+         Einladung zum Falschen: wer dort ein Gerät einwirft, hat
+         ein unkonfiguriertes Gerät in einem laufenden Netz. -->
+    <div class="tools-bau rail-bau">
+      <!-- ── Die Geräte ─────────────────────────────────────────
+           Man ZIEHT sie auf die Fläche, man klickt sie nicht an.
+           Beides ging einmal, und das war der Fehler: ein Klick
+           legte das Gerät irgendwohin („freie Stelle"), und wer
+           wissen wollte, was ein Switch überhaupt ist, hatte danach
+           einen Switch.
+
+           Jetzt hat jede Geste genau eine Bedeutung:
+             ziehen   legt das Gerät dort ab, wo man es hinzieht
+             tippen   erklärt, was dieses Gerät tut
+
+           Filius macht es mit Ziehen genauso; das Erklärkärtchen ist
+           eine Zutat, weil dort eine Klasse sonst raten muss. -->
+
+      <!-- ── Endgeräte: DREI BILDER, EIN GERÄT ─────────────────
+           Laptop, Server und Handy können genau dasselbe: eine
+           Netzwerkkarte, eine IP-Adresse, ein Terminal, Software
+           zum Installieren. Nichts in diesem Programm fragt ab,
+           welches der drei es ist, um etwas zu erlauben oder zu
+           verbieten.
+
+           Genau so hält es Filius mit Rechner und Notebook. Der
+           Unterschied ist das Bild auf der Fläche — und beim Handy
+           zusätzlich das Layout seines Bildschirms.
+
+           Sie stehen in EINER Gruppe NEBENEINANDER und nicht
+           untereinander: das ist die Aussage. Drei Einträge in
+           einer Liste sähen aus wie drei Gerätearten. -->
+      <div class="rail-g">
+        <span class="tools-t rail-t">Endgeräte</span>
+        <div class="rail-cluster">
+          <button class="add add--geraet add--kachel" data-add="host"
+                  title="Laptop — ein Rechner am Netz">
+            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-host"/></svg></span>
+            <span class="add-n">Laptop</span>
+          </button>
+          <button class="add add--geraet add--kachel" data-add="server"
+                  title="Server — dasselbe Gerät, anderes Bild">
+            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-server"/></svg></span>
+            <span class="add-n">Server</span>
+          </button>
+          <button class="add add--geraet add--kachel" data-add="handy"
+                  title="Handy — dasselbe Gerät, eigener Bildschirm">
+            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-handy"/></svg></span>
+            <span class="add-n">Handy</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Verteilen und Vermitteln: ZWEI Gruppen, nicht eine ──
+           Die Gliederung dieser Leiste ist selbst schon
+           Unterricht. Ein Switch VERTEILT innerhalb eines Netzes
+           (Schicht 2, er hat keine IP-Adresse); ein Router
+           VERMITTELT zwischen Netzen (Schicht 3, jede Karte hat
+           eine). Stünden beide unter einer Überschrift, wäre der
+           Unterschied, um den es in der ganzen Einheit geht,
+           genau da weggeräumt, wo man ihn zum ersten Mal sieht.
+
+           Filius hat hier eine flache Liste ohne Gruppen
+           (GUIDesignSidebar). Das ist die Abweichung, und sie ist
+           gewollt: eine Leiste aus acht gleich aussehenden
+           Bildchen sortiert niemand im Kopf. -->
+      <div class="rail-g">
+        <span class="tools-t rail-t">Verteilen</span>
+        <button class="add add--geraet" data-add="switch" title="Switch">
+          <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-switch"/></svg></span>
+          <span class="add-n">Switch</span>
+        </button>
+      </div>
+
+      <!-- Router und Heimrouter NEBENEINANDER, genau wie die drei
+           Endgeräte: beide vermitteln zwischen Netzen, und der
+           Heimrouter ist der, den die Klasse zu Hause stehen hat.
+           Die Kachelform sagt „zwei von derselben Sorte", die
+           getrennte Gruppe sagt „nicht dasselbe wie ein Switch". -->
+      <div class="rail-g">
+        <span class="tools-t rail-t">Vermittlungsgeräte</span>
+        <div class="rail-cluster">
+          <button class="add add--geraet add--kachel" data-add="router"
+                  title="Router — verbindet zwei Netze">
+            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-router"/></svg></span>
+            <span class="add-n">Router</span>
+          </button>
+          <button class="add add--geraet add--kachel" data-add="heimrouter"
+                  title="Heimrouter — Router, Switch und WLAN in einem">
+            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-heimrouter"/></svg></span>
+            <span class="add-n">Heimrouter</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rail-g">
+        <span class="tools-t rail-t">Werkzeug</span>
+        <button class="add add--tool is-on" data-tool="zeiger" title="Zeiger">
+          <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-zeiger"/></svg></span>
+          <span class="add-n">Zeiger</span>
+        </button>
+        <button class="add add--tool" data-tool="kabel" title="Kabel">
+          <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-kabel"/></svg></span>
+          <span class="add-n">Kabel</span>
+        </button>
+        <span class="tools-hint rail-hint" id="toolHint">Geräte verschieben und auswählen.</span>
+      </div>
+    </div>
+
+    <!-- Und das steht stattdessen im Aktionsmodus da. Eine leere
+         Leiste wäre schlechter als gar keine: sie sieht aus wie
+         ein Fehler. -->
+    <div class="tools-lauf rail-lauf">
+      <span class="tools-t rail-t">Aktion</span>
+      <!-- „es öffnet sich" und nicht mehr „es öffnet seinen
+           Bildschirm": einen Bildschirm haben nur Rechner, Server
+           und Handy. Router, Heimrouter und Switch bekommen ein
+           Gerätefenster — sie haben keinen. -->
+      <span class="tools-hint rail-hint">Tippe ein Gerät an — es öffnet sich.
+        Zum Umbauen zurück auf <em>Entwurf</em>.</span>
+    </div>
+
+    <!-- ── Ausschnitt ─────────────────────────────────────────
+         Ganz unten, weil es in beiden Modi gilt: die Fläche ist
+         größer als das Fenster, und man muss sie verschieben und
+         größer ziehen können.
+
+         Hier und nicht auf der Fläche selbst: rechts oben liegt
+         der Bildschirm eines Geräts, links oben der Auftrag und
+         die Subnetzliste, rechts unten das Terminal. Die Leiste
+         ist der einzige Platz, der immer frei ist. -->
+    <div class="rail-zoom">
+      <span class="tools-t rail-t">Ausschnitt</span>
+      <!-- Größer und kleiner nebeneinander, „Einpassen" darunter
+           über die ganze Breite. Drei gleichrangige Knöpfe in
+           einer Reihe hätten für das Wort keinen Platz gelassen —
+           es brach um, und aus der Reihe wurde eine Treppe. -->
+      <div class="rail-zrow">
+        <button class="zbtn" data-zoom="in" title="größer (auch: Strg + Mausrad)">
+          <svg viewBox="0 0 24 24"><use href="#ic-lupe-auf"/></svg></button>
+        <button class="zbtn" data-zoom="out" title="kleiner (auch: Strg + Mausrad)">
+          <svg viewBox="0 0 24 24"><use href="#ic-lupe-zu"/></svg></button>
+        <button class="zoom-l" id="zoomLabel" title="zurück zum Startausschnitt">100 %</button>
+      </div>
+      <button class="zbtn zbtn--w" data-zoom="fit" title="alles einpassen">
+        <svg viewBox="0 0 24 24"><use href="#ic-passen"/></svg><span class="zbtn-t">Einpassen</span></button>
+      <!-- Wie man das Feld sonst noch bewegt. Steht hier und
+           nicht im Tooltip: das Verschieben durch Ziehen hat
+           keinen Knopf, an dem ein Tooltip hängen könnte.
+
+           Ziehen verschiebt das Feld; das Rechteck zum Markieren
+           hängt an Strg — das steht hier, weil eine Taste, die
+           nirgends geschrieben steht, niemand drückt. -->
+      <span class="tools-hint rail-hint rail-zhint">Ziehen verschiebt das Feld,
+        Mausrad rollt, Strg + Mausrad zoomt. Strg + Ziehen spannt ein Rechteck
+        auf und markiert mehrere Geräte.</span>
+    </div>
+  </nav>
+
+  <section class="stage">
+
+    <!-- Was ein angetipptes Gerät der Leiste über sich erzählt.
+         Der Inhalt steht in js/app.js (GERAETE_INFO), damit die
+         fünf Texte an einer Stelle liegen und nicht im Markup
+         verstreut.
+
+         Es liegt in der BÜHNE und nicht in der Leiste: die ist
+         eingeklappt keine 60 px breit, ein Kärtchen von 330 px
+         hätte darin keinen Platz. Es fliegt nach rechts heraus,
+         auf gleicher Höhe mit dem Knopf, den es erklärt. -->
+    <div class="ginfo" id="ginfo" hidden>
+      <div class="ginfo-h">
+        <span class="ginfo-ic" id="ginfoIcon"></span>
+        <strong id="ginfoName">Endgerät</strong>
+        <button class="ginfo-x" id="ginfoClose" title="schließen">×</button>
+      </div>
+      <p class="ginfo-b" id="ginfoText"></p>
+      <p class="ginfo-f">Zum Anlegen auf die Fläche ziehen.</p>
+    </div>
+    <div class="canvas" id="canvas"></div>
+
+    <!-- Der Auftrag der Lehrkraft. Liegt bewusst AUF der Fläche
+         und nicht daneben: er gehört zur Aufgabe, nicht zum
+         Programm — und er lässt sich wegklicken. -->
+    <aside class="aufgabe" id="aufgabe" hidden>
+      <div class="auf-h" id="aufgabeHead" title="ein- und ausklappen">
+        <span class="auf-tag">Auftrag</span>
+        <strong id="aufgabeTitel"></strong>
+        <button class="auf-fold" id="aufgabeFold" title="einklappen">▾</button>
+        <button class="auf-x" id="aufgabeClose" title="schließen">×</button>
+      </div>
+      <div class="auf-b" id="aufgabeText"></div>
+    </aside>
+
+    <!-- ── Die Adressräume ───────────────────────────────────
+         Was der Knopf „Subnetze" aufschlägt. Eine Farbe allein
+         sagt „diese gehören zusammen"; sie sagt nicht, WELCHER
+         Adressraum das ist. Genau das steht hier — und zwar in
+         drei Zeilen je Netz, weil eine nicht reicht, sobald die
+         Netzmaske nicht auf einer Blockgrenze endet:
+
+           die Kurzform   192.168.1.__
+           Netz + Maske   192.168.1.0 · 255.255.255.0
+           die Adressen   192.168.1.1 – 192.168.1.254
+
+         Die letzte Zeile stimmt immer, auch bei 255.255.255.192.
+         Die erste ist dann eine Näherung, und der Block, in dem
+         die Grenze liegt, steht gestreift da — dieselbe
+         Darstellung wie im Eingabefeld.
+
+         Links, weil rechts das Gerätefenster steht; unter dem
+         Auftrag, weil der zuerst gelesen wird. -->
+    <aside class="sn" id="subnetze" hidden>
+      <div class="sn-h">
+        <span class="sn-tag">Subnetze</span>
+        <span class="sn-c" id="subnetzeCount"></span>
+        <button class="sn-x" id="subnetzeClose" title="schließen">×</button>
+      </div>
+      <div class="sn-b" id="subnetzeBody"></div>
+    </aside>
+
+    <!-- ── Das Gerätefenster ─────────────────────────────────
+         Die Einstellungen eines Geräts, im Entwurfsmodus, DIREKT
+         NEBEN dem Gerät. Filius öffnet dafür einen modalen Dialog
+         in der Fenstermitte: man sieht dann die Adresse und sonst
+         nichts mehr — nicht das Gerät, nicht den Nachbarn, mit dem
+         sie sich streitet, nicht die Fläche.
+
+         Es hat ZWEI Größen:
+
+           klein  neben dem Gerät. Nur die sechs Zeilen, die Filius
+                  in JHostKonfiguration oben hat: MAC-Adresse,
+                  IP-Adresse, Netzmaske, Gateway, Domain Name
+                  System. Mehr braucht das Einrichten nicht.
+           groß   am rechten Rand, dort wo früher der Inspektor
+                  stand. Alles Weitere: die Erklärung von Netz-
+                  und Geräteteil, DHCP, die Tabellen, die das
+                  Gerät sich selbst gebaut hat.
+
+         Der Knopf dazwischen heißt „Mehr". Dass beides DASSELBE
+         Fenster ist und nicht zwei, ist der Punkt: es gibt keine
+         zweite Stelle, an der eine Adresse steht.
+
+         Beide Größen lassen sich am Kopf packen und frei
+         hinlegen. -->
+    <aside class="karte" id="karte" hidden>
+      <div class="karte-h" id="karteHead" title="zum Verschieben hier festhalten">
+        <span class="karte-ic" id="karteIcon">🖥</span>
+        <div class="karte-t">
+          <span class="karte-kurz" id="karteKurz">E1</span>
+          <span class="karte-name" id="karteName">Endgerät 1</span>
+        </div>
+        <button class="karte-pw" id="kartePower" title="ausschalten">⏻</button>
+        <button class="karte-mehr" id="karteMehr" title="mehr Einstellungen">Mehr ›</button>
+        <button class="karte-x" id="karteClose" title="schließen">×</button>
+      </div>
+      <div class="karte-warn" id="karteWarn" hidden></div>
+      <div class="karte-b" id="karteBody"></div>
+    </aside>
+
+    <!-- ── Die Oberfläche eines Geräts ────────────────────────
+         Im Aktionsmodus klickt man ein Gerät an und schaut ihm
+         gewissermaßen auf den Bildschirm. Filius nennt das den
+         Desktop; dort ist es ein eigenes Fenster, das die
+         Fläche verdeckt. Hier liegt es auf der Fläche, aber nur
+         auf einer Hälfte: man soll das Netz weiter sehen,
+         während man auf einem Gerät etwas tut.
+
+         Der Inhalt kommt aus js/geraet.js — welche Programme
+         ein Gerät hat, steht dort in EINER Liste. Ein neues
+         Programm ist ein Eintrag, kein Umbau.
+
+         ── Der Aufbau ist der eines echten Bildschirms ─────────
+         Genau so, wie er im Showroom unter „05 Glastisch" steht,
+         und in dieser Reihenfolge von hinten nach vorn:
+
+           dt-scr      die Tapete — der eingeschaltete Bildschirm
+           dt-apps     die SYMBOLE darauf, im Raster über die
+                       ganze Breite — immer, auch wenn ein
+                       Programm läuft
+           dt-fenster  das offene PROGRAMMFENSTER, LIEGT DARAUF
+                       (Kopfzeile dt-winh + Inhalt dt-win)
+           dt-dock     der SCHNELLZUGRIFF unten, aus Glas, über
+                       allem
+
+         Dass es Symbole auf einer Fläche UND ein Dock unten gibt
+         (und nicht nur eine Reihe Knöpfe), ist der ganze Punkt:
+         daran erkennt ein Kind ohne ein Wort zu lesen, dass es
+         hier auf einen Rechner schaut und nicht auf ein weiteres
+         Formular der Anwendung.
+
+         ⚠️ Das Fenster LIEGT über den Kacheln, es verdrängt sie
+         nicht. Vorher taten Laptop und Server etwas anderes als
+         das Handy und beide etwas anderes als ein Bildschirm:
+         die Kacheln schrumpften in eine schmale Spalte daneben
+         (Laptop/Server) oder verschwanden ganz (Handy). Vom
+         Nutzer beanstandet — „die App-Kacheln sollen trotzdem
+         weiterhin vorhanden sein, die Programmfenster einfach
+         darüber geöffnet werden". Jetzt gilt für alle Geräte
+         dasselbe, und das Dock unten ist damit der Weg von einem
+         Programm zum nächsten: bei offenem Fenster liegen die
+         Kacheln darunter und sind nicht anklickbar. Genau
+         deshalb bleibt es stehen.
+
+         Beim HANDY sitzt dieselbe Leiste unten, das Raster ist
+         aber mittig und dreispaltig, und das Fenster deckt die
+         Kacheln praktisch vollständig zu. Dazu der Strich unten.
+         Ein Gerät, zwei Maßstäbe — dieselbe Regel.           -->
+    <aside class="dt" id="desktop" hidden>
+      <div class="dt-h" id="dtHead">
+        <span class="dt-ic" id="dtIcon"></span>
+        <div class="dt-t">
+          <strong id="dtName">Gerät</strong>
+          <span class="dt-sub mono" id="dtSub"></span>
+        </div>
+        <button class="dt-pw" id="dtPower" title="ausschalten">⏻</button>
+        <button class="dt-x" id="dtClose" title="schließen">×</button>
+      </div>
+      <div class="dt-scr" id="dtScreen">
+        <div class="dt-apps" id="dtApps"></div>
+        <!-- Kopfzeile und Inhalt in EINEM Kasten: als zwei
+             Geschwister müssten beide einzeln über den Kacheln
+             ausgerichtet werden, und die Kopfzeile wüsste nichts
+             davon, wie hoch der Inhalt gerade ist. Die Kopfzeile
+             selbst baut js/geraet.js hier hinein. -->
+        <div class="dt-fenster" id="dtFenster">
+          <div class="dt-win" id="dtWin"></div>
+        </div>
+        <div class="dt-dock" id="dtDock"></div>
+      </div>
+      <!-- Nur beim Handy sichtbar (CSS). Der Strich, den jedes
+           Kind von seinem eigenen Telefon kennt — er sagt „das
+           hier ist ein Handy" schneller als jede Beschriftung. -->
+      <div class="dt-home"><i></i></div>
+    </aside>
+  </section>
+</main>
+
+<!-- Hier stand die Inspektorspalte am rechten Rand. Sie ist weg.
+     Sie zeigte, was beim ausgewählten Gerät ohnehin schon im
+     Kärtchen stand — dieselbe Adresse zweimal, einmal zum Ändern
+     und einmal zum Lesen — und nahm der Fläche 340 px Breite ab,
+     dauerhaft, auch wenn gar nichts ausgewählt war. Was daran
+     wirklich nur sie konnte (die Tabellen, die ein Gerät sich
+     selbst baut), steht jetzt hinter „Mehr" im selben Fenster,
+     an derselben Stelle des Bildschirms. -->
+
+<!-- ═══ Weiterleitungstabelle ═══════════════════════════════════
+     Filius hat an dieser Stelle „Als Fenster öffnen"
+     (jvermittlungsrechnerkonfiguration_msg14) und macht daraus
+     einen 600×400-Dialog. Hier liegt sie unten über die ganze
+     Breite wie der Mitschnitt, mit einem Reiter je Router — das ist
+     der Unterschied, um den es geht: drei Router nacheinander
+     einrichten, ohne jedes Mal ein Fenster zu suchen, und dabei
+     immer sehen, welcher gerade gemeint ist (er ist auf der Fläche
+     markiert und zeigt dort seine Netze).
+
+     Dass hier `hidden` steht UND die Klasse `wlt-open` am body
+     schaltet, ist kein doppelt gemoppelt: `hidden` nimmt die
+     Gitterzeile ganz weg (auch ihren Rahmen), die Klasse fährt die
+     Höhe. Ohne `hidden` bliebe unten ein 1-px-Strich stehen. -->
+<section class="wlt" id="wlt" hidden>
+  <div class="wlt-h">
+    <span class="wlt-t">Weiterleitungstabelle</span>
+    <!-- Ein Reiter je Router. Sie entstehen beim Zeichnen, denn
+         wie viele es gibt, steht erst auf der Fläche fest. -->
+    <span class="wlt-tabs" id="wltTabs"></span>
+    <span class="sp"></span>
+    <!-- Der Haken aus Filius (jvermittlungsrechnerkonfiguration_msg11)
+         und wie dort ZUERST GESETZT. Er steht in der Leiste und
+         nicht im Körper: der Körper wird bei jedem Zeichnen neu
+         geschrieben, ein Haken darin verlöre dabei seinen Stand. -->
+    <label class="wlt-alle"><input type="checkbox" id="wltAlle" checked>
+      <span>Alle Einträge anzeigen</span></label>
+    <button class="tbtn" id="wltNeu">Neue Zeile</button>
+    <button class="k-x" id="wltClose" title="Schließen">&times;</button>
+  </div>
+  <div class="wlt-b" id="wltBody"></div>
+</section>
+
+<!-- ═══ Mitschnitt ══════════════════════════════════════════════ -->
+<section class="trace">
+  <div class="trace-h">
+    <button class="tbtn" id="traceToggle">Mitschnitt einblenden</button>
+    <span class="trace-c" id="traceCount">nichts aufgezeichnet</span>
+
+    <!-- Das gewählte Gerät. Steht nur da, wenn eines gewählt ist —
+         ein dauerhaft leerer Platzhalter „alle Geräte" wäre ein
+         Knopf, der nichts tut. Das × löst die Einschränkung. -->
+    <button class="chip chip--geraet" id="traceGeraet" hidden></button>
+
+    <!-- Richtung und Ansicht. Beide sind Schalter mit zwei
+         Zuständen, und beide schreiben ihren aktuellen Zustand
+         hin statt ihn zu verstecken: „↑ gesendet" heißt, dass
+         gerade nur Gesendetes zu sehen ist, nicht dass ein Klick
+         dorthin führt. Der ganze Satz steht im Tooltip — die
+         Leiste ist eine Zeile fester Höhe, und was hier zu lang
+         wird, drückt „Kopieren" aus dem Bild (siehe
+         `kopfAbgleich` in panels.js). -->
+    <button class="tbtn" id="traceDir">↑ gesendet</button>
+    <button class="tbtn" id="traceModus">Zeilen</button>
+
+    <span class="trace-f">
+      <button class="chip is-on" data-proto="">alle</button>
+      <button class="chip" data-proto="ARP">ARP</button>
+      <button class="chip" data-proto="ICMP">ICMP</button>
+      <button class="chip" data-proto="DHCP">DHCP</button>
+      <button class="chip" data-proto="DNS">DNS</button>
+      <button class="chip" data-proto="RIP">RIP</button>
+      <button class="chip" data-proto="TCP">TCP</button>
+      <button class="chip" data-proto="HTTP">HTTP</button>
+      <button class="chip" data-proto="SMTP">SMTP</button>
+      <button class="chip" data-proto="POP3">POP3</button>
+    </span>
+    <input class="trace-s" id="traceFilter" placeholder="suchen …" spellcheck="false">
+    <span class="sp"></span>
+    <button class="tbtn" id="traceCopy">Kopieren</button>
+    <button class="tbtn" id="traceClear">Leeren</button>
+  </div>
+  <div class="trace-b" id="traceBody"></div>
+</section>
+
+<!-- ═══ Terminal ════════════════════════════════════════════════
+     Schwebt über allem, aber schmal — das Netz bleibt sichtbar.
+     In Filius ist das Terminal ein eigenes Fenster, das die
+     Fläche verdeckt; genau dann, wenn man beides braucht.       -->
+<section class="term" id="term">
+  <div class="term-h">
+    <span class="term-dot"></span>
+    <strong id="termTitle">Terminal</strong>
+    <button class="term-x" id="termClose">×</button>
+  </div>
+  <div class="term-o" id="termOut"></div>
+  <div class="term-q" id="termQuick">
+    <button class="chip" data-cmd="ping">ping …</button>
+    <button class="chip" data-cmd="ipconfig">ipconfig</button>
+    <button class="chip" data-cmd="nslookup">nslookup …</button>
+    <button class="chip" data-cmd="arp">arp</button>
+    <button class="chip" data-cmd="route">route</button>
+    <button class="chip" data-cmd="leeren">leeren</button>
+  </div>
+  <div class="term-i">
+    <span class="term-p">&gt;</span>
+    <input id="termInput" autocomplete="off" spellcheck="false" placeholder="Befehl eingeben, Enter drücken">
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/util.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/netz.js"></script>
+<script src="js/verlauf.js"></script>
+<script src="js/nat.js"></script>
+<script src="js/tcp.js"></script>
+<script src="js/rip.js"></script>
+<script src="js/dateien.js"></script>
+<script src="js/http.js"></script>
+<script src="js/mail.js"></script>
+<script src="js/schichten.js"></script>
+<script src="js/dienste.js"></script>
+<script src="js/mitschnitt.js"></script>
+<script src="js/terminal.js"></script>
+<script src="js/subnetze.js"></script>
+<script src="js/flaeche.js"></script>
+<script src="js/konfig.js"></script>
+<script src="js/panels.js"></script>
+<script src="js/weiterleitung.js"></script>
+<script src="js/prog-dateien.js"></script>
+<script src="js/prog-web.js"></script>
+<script src="js/prog-mail.js"></script>
+<script src="js/geraet.js"></script>
+<script src="js/szenarien.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
