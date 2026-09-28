@@ -201,6 +201,11 @@
        dem Reiter „Internet" zeigt es gleich. Nur dann — ein Formular,
        in dem gerade jemand tippt, bleibt, wie es ist. */
     function internetNeu() {
+      /* ⚠️ Nur im Entwurf: im Aktionsmodus räumt renderKarte die
+         Gerätekärtchen ab (dort öffnet ein Gerät seine Oberfläche) —
+         ein Auffrischen im Takt des Raums schloss dann das Kärtchen
+         unter den Fingern. Aufgefallen im Raum-Prüfstand. */
+      if (modus !== 'entwurf') return;
       const box = refs.karteBody;
       if (box && box.querySelector('.k-cww-bereich')
           && !(document.activeElement && box.contains(document.activeElement))) {
