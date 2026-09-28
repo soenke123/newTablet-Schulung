@@ -1,0 +1,7 @@
+{
+  "name": "synir",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Nur fuer die Pruefstaende unter tests/ (kerntest.js, uitest.js). Die package.json der Wurzel stellt das Repository auf ES-Module um; die Pruefstaende sind CommonJS (require). Dieselbe Loesung wie bei Wild Clusters. Keine Abhaengigkeiten - playwright-core kommt aus der Wurzel."
+}

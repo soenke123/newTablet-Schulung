@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
-<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/app.css?v=20260928a">
 </head>
 <body>
 
@@ -233,11 +233,18 @@
   </div>
 
   <div class="top-r">
-    <select id="szenario" class="sel" title="vorbereitetes Netz laden">
-      <option value="">Szenario laden …</option>
-    </select>
+    <!-- Das Szenario-Menü (js/szmenue.js). Ein eigenes Aufklapp-
+         menü statt <select>: im Raum hat es Reiter (Öffentlich /
+         Eigene) und hinter jedem Eintrag den Schalter „geteilt". -->
+    <div class="szm" id="szenario">
+      <button type="button" class="sel szm-btn" id="szenarioBtn" aria-haspopup="true" aria-expanded="false"
+              title="vorbereitetes Netz laden">Szenario laden … <span class="szm-pfeil">▾</span></button>
+      <div class="szm-pop" id="szenarioPop" hidden></div>
+    </div>
+    <!-- Nur die Lehrkraft im Raum (body[data-rolle=presenter]). -->
+    <button class="tbtn nur-lehrer" id="aufgabeBtn" title="Aufgabentext schreiben oder bearbeiten">Aufgabentext</button>
     <button class="tbtn" id="neuBtn">Neu</button>
-    <button class="tbtn" id="exportBtn" title="als Datei sichern">Sichern</button>
+    <button class="tbtn" id="exportBtn" title="speichern">Speichern</button>
     <label class="tbtn" title="Datei laden">Öffnen
       <input type="file" id="importInput" accept="application/json,.json" hidden>
     </label>
@@ -454,6 +461,10 @@
       <p class="ginfo-f">Zum Anlegen auf die Fläche ziehen.</p>
     </div>
     <div class="canvas" id="canvas"></div>
+
+    <!-- Im Raum, solange die Fläche leer ist: was jetzt zu tun ist.
+         Schaltet bruecke.js; ohne Raum bleibt er zu. -->
+    <div class="leerhinweis" id="leerHinweis" hidden></div>
 
     <!-- Der Auftrag der Lehrkraft. Liegt bewusst AUF der Fläche
          und nicht daneben: er gehört zur Aufgabe, nicht zum
@@ -723,30 +734,34 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="js/util.js"></script>
-<script src="js/engine.js"></script>
-<script src="js/netz.js"></script>
-<script src="js/verlauf.js"></script>
-<script src="js/nat.js"></script>
-<script src="js/tcp.js"></script>
-<script src="js/rip.js"></script>
-<script src="js/dateien.js"></script>
-<script src="js/http.js"></script>
-<script src="js/mail.js"></script>
-<script src="js/schichten.js"></script>
-<script src="js/dienste.js"></script>
-<script src="js/mitschnitt.js"></script>
-<script src="js/terminal.js"></script>
-<script src="js/subnetze.js"></script>
-<script src="js/flaeche.js"></script>
-<script src="js/konfig.js"></script>
-<script src="js/panels.js"></script>
-<script src="js/weiterleitung.js"></script>
-<script src="js/prog-dateien.js"></script>
-<script src="js/prog-web.js"></script>
-<script src="js/prog-mail.js"></script>
-<script src="js/geraet.js"></script>
-<script src="js/szenarien.js"></script>
-<script src="js/app.js"></script>
+<script src="js/util.js?v=20260928a"></script>
+<script src="js/engine.js?v=20260928a"></script>
+<script src="js/netz.js?v=20260928a"></script>
+<script src="js/verlauf.js?v=20260928a"></script>
+<script src="js/nat.js?v=20260928a"></script>
+<script src="js/tcp.js?v=20260928a"></script>
+<script src="js/rip.js?v=20260928a"></script>
+<script src="js/dateien.js?v=20260928a"></script>
+<script src="js/http.js?v=20260928a"></script>
+<script src="js/mail.js?v=20260928a"></script>
+<script src="js/schichten.js?v=20260928a"></script>
+<script src="js/dienste.js?v=20260928a"></script>
+<script src="js/mitschnitt.js?v=20260928a"></script>
+<script src="js/terminal.js?v=20260928a"></script>
+<script src="js/subnetze.js?v=20260928a"></script>
+<script src="js/flaeche.js?v=20260928a"></script>
+<script src="js/konfig.js?v=20260928a"></script>
+<script src="js/panels.js?v=20260928a"></script>
+<script src="js/weiterleitung.js?v=20260928a"></script>
+<script src="js/prog-dateien.js?v=20260928a"></script>
+<script src="js/prog-web.js?v=20260928a"></script>
+<script src="js/prog-mail.js?v=20260928a"></script>
+<script src="js/geraet.js?v=20260928a"></script>
+<script src="js/szenarien.js?v=20260928a"></script>
+<script src="js/szmenue.js?v=20260928a"></script>
+<script src="js/aufgabe.js?v=20260928a"></script>
+<script src="js/app.js?v=20260928a"></script>
+<!-- Die Brücke in den Raum. Tut ohne Rahmen nichts. -->
+<script src="js/bruecke.js?v=20260928a"></script>
 </body>
 </html>

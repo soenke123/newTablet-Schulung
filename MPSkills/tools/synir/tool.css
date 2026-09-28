@@ -1,0 +1,191 @@
+/* ══════════════════════════════════════════════════════════════
+   MPSkills — Skill „SYNIR"  ·  tool.css
+   ══════════════════════════════════════════════════════════════
+   Wie bei Wild Clusters: der RAHMEN und das PULT gehören der
+   MPSkills-Seite und tragen ihre Variablen; der Simulator darin
+   bringt sein eigenes Aussehen mit (css/app.css). Was am Pult
+   gedrückt wird, wirkt auf den RAUM — deshalb sieht es aus wie
+   MPSkills und nicht wie SYNIR.
+   ══════════════════════════════════════════════════════════════ */
+
+.sy-host {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg, 18px);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.sy-stage { position: relative; }
+
+.sy-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  height: 70vh;          /* nur bis zur ersten Messung (tool.js fit) */
+}
+
+/* `hidden` gegen jede eigene display-Regel — siehe Wild Clusters. */
+.sy-note[hidden],
+.sy-list[hidden] { display: none !important; }
+
+/* ─────────────────────────────────────────── Pult (Beamer) */
+
+.sy-desk {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.sy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sy-sp { flex: 1; }
+
+.sy-btn {
+  min-height: 38px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm, 12px);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sy-btn:hover { background: var(--paper-2, var(--surface-2)); }
+
+.sy-btn[aria-expanded="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent, #fff);
+}
+
+.sy-ghost { color: var(--ink-soft, var(--ink)); }
+
+/* Blind ist ein Zustand der ganzen Klasse und muss aus fünf Metern
+   zu sehen sein: solange er gilt, ist der Knopf rot. */
+.sy-blind[aria-pressed="true"] {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+}
+
+.sy-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+}
+
+.sy-note::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: sy-puls 1.6s ease-in-out infinite;
+}
+
+/* Übernommen: keine Live-Anzeige mehr, nur noch der Hinweis. */
+.sy-note.is-kopie { border-color: var(--line); }
+.sy-note.is-kopie::before { background: var(--ink-faint, #999); animation: none; }
+
+.sy-note-x {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+@keyframes sy-puls { 50% { opacity: .35; } }
+
+/* ─────────────────────────────────────── Stand der Klasse */
+
+.sy-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 6px;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.sy-person {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "dot name live" "dot info info";
+  align-items: center;
+  column-gap: 8px;
+  text-align: left;
+  font: inherit;
+  padding: 8px 12px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm, 12px);
+  cursor: pointer;
+}
+
+.sy-person:hover:not(:disabled) { border-color: var(--accent); }
+.sy-person:disabled { cursor: default; opacity: .6; }
+.sy-person.is-on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+
+.sy-dot {
+  grid-area: dot;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.sy-dot.is-off { background: var(--ink-faint, #aaa); }
+.sy-person strong { grid-area: name; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sy-info { grid-area: info; font-size: 12px; color: var(--ink-soft, #666); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sy-live {
+  grid-area: live;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--on-accent, #fff);
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.sy-empty { margin: 4px 2px; font-size: 13px; color: var(--ink-soft, #666); }
+
+/* ──────────────────────────────────────────────── Vollbild */
+
+.sy-host:fullscreen {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+.sy-host:fullscreen .sy-stage { flex: 1; }
+.sy-host:fullscreen .sy-frame { height: 100% !important; }

@@ -145,6 +145,16 @@
       '<path d="M3.1 12 12 16.4l8.9-4.4"/>' +
       '<path d="M3.1 16.4 12 20.8l8.9-4.4"/>',
 
+    /* SYNIR — ein kleines Netz: zwei Endgeräte oben, verkabelt mit
+       einem Switch darunter. Die Kabel sind das Wesentliche (dass
+       Geräte VERBUNDEN werden), deshalb laufen sie sichtbar bis in
+       die Kästen hinein und nicht nur bis an ihren Rand. */
+    synir:
+      '<rect x="2.8" y="3.4" width="6.8" height="5" rx="1.2"/>' +
+      '<rect x="14.4" y="3.4" width="6.8" height="5" rx="1.2"/>' +
+      '<rect x="7.4" y="15.4" width="9.2" height="4.8" rx="1.2"/>' +
+      '<path d="M6.2 8.4v3.4h11.6V8.4M12 11.8v3.6"/>',
+
     /* Abstimmung — Balken in Echtzeit, genau wie es im Text steht.
        Sie stehen auf einer Linie, sonst schwebten sie. */
     poll:

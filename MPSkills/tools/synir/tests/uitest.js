@@ -12,6 +12,16 @@ let pass = 0, fail = 0;
 const ok = (n, c, x) => { if (c) { pass++; console.log('  ok   ' + n); }
                           else { fail++; console.log('  FAIL ' + n + (x ? '  → ' + x : '')); } };
 
+/* ─── Ein Szenario über das Menü laden ─────────────────────────
+   Seit dem Einzug in MPSkills ist das Auswahlfeld ein eigenes Menü
+   (js/szmenue.js): aufklappen, Eintrag antippen. Die Nachfrage
+   „Das aktuelle Netz wird ersetzt" beantwortet der Dialog-Zuhörer
+   unten mit Ja. */
+async function szenarioWaehlen(page, key) {
+  await page.locator('#szenarioBtn').click();
+  await page.locator('.szm-item[data-id="builtin:' + key + '"] .szm-name').click();
+}
+
 /* ─── Ein Gerät aus der Leiste auf die Fläche ziehen ───────────
    Anklicken legt seit der Umstellung KEIN Gerät mehr an — es
    erklärt das Gerät. Der Prüfstand muss also dieselbe Geste machen
@@ -91,7 +101,10 @@ async function markenAn(page, name, art) {
 }
 
 (async () => {
-  const browser = await pw.chromium.launch({ channel: 'chrome' });
+  // Erst das installierte Chrome, sonst ein Chromium, dessen Pfad in
+  // CHROME_PATH steht (etwa im Container ohne Chrome).
+  const browser = await pw.chromium.launch({ channel: 'chrome' })
+    .catch(() => pw.chromium.launch({ executablePath: process.env.CHROME_PATH || undefined }));
   const page = await browser.newPage({ viewport: { width: 1500, height: 950 } });
 
   /* ⚠️ Der Startwert wird festgenagelt. Seit dem 2026-09-27
@@ -1041,7 +1054,7 @@ async function markenAn(page, name, art) {
      Netzwerkkarten, und die Frage „welches Kabel ist Karte 1?".
      Also auch mit der echten Geste geprüft — auf den Kartenblock
      zeigen —, nicht nur über betonen(). */
-  await page.selectOption('#szenario', 'router');
+  await szenarioWaehlen(page, 'router');
   await page.waitForTimeout(700);
   await page.evaluate(() => {
     const r = window.SIM.netz.list().find(n => n.kind === 'router');
@@ -1118,7 +1131,7 @@ async function markenAn(page, name, art) {
      await page.locator('.nf-cable.is-betont').count() === 0);
 
   console.log('\n── Szenario 4 komplett lösen ───────────────────────');
-  await page.selectOption('#szenario', 'fehler');
+  await szenarioWaehlen(page, 'fehler');
   await page.waitForTimeout(600);
   ok('Fehler-Szenario geladen', await page.evaluate(() => window.SIM.netz.count) === 7);
   /* ⚠️ Hier stand `>= 3`. Zwei der Zeichen hingen an der doppelt
@@ -1157,7 +1170,7 @@ async function markenAn(page, name, art) {
   ok('Warnzeichen sind weg', await page.locator('.nf-badge').count() === 0);
 
   console.log('\n── DHCP: Adressen kommen von selbst ────────────────');
-  await page.selectOption('#szenario', 'automatisch');
+  await szenarioWaehlen(page, 'automatisch');
   await page.waitForTimeout(600);
   ok('DHCP-Szenario geladen', await page.evaluate(() => window.SIM.netz.count) === 6);
   /* Der DHCP-Server sitzt auf einem RECHNER, nicht auf dem Router
@@ -1492,7 +1505,7 @@ async function markenAn(page, name, art) {
   await page.waitForTimeout(300);
 
   console.log('\n── DNS: Namen statt Zahlen ─────────────────────────');
-  await page.selectOption('#szenario', 'namen');
+  await szenarioWaehlen(page, 'namen');
   await page.waitForTimeout(600);
   ok('DNS-Szenario geladen', await page.evaluate(() => window.SIM.netz.count) === 7);
   await page.locator('[data-modus="aktion"]').click();
@@ -2976,7 +2989,7 @@ async function markenAn(page, name, art) {
   console.log('\n── Subnetze ────────────────────────────────────────');
   await page.setViewportSize({ width: 1500, height: 950 });
   await page.evaluate(() => { document.documentElement.dataset.theme = 'light'; });
-  await page.selectOption('#szenario', 'router');
+  await szenarioWaehlen(page, 'router');
   await page.waitForTimeout(700);
   await page.locator('.mbtn[data-modus="entwurf"]').click();
   await page.waitForTimeout(300);
@@ -3263,7 +3276,7 @@ async function markenAn(page, name, art) {
      den Platz bekommt. */
   console.log('\n── Die Leiste am linken Rand ───────────────────────');
   await page.setViewportSize({ width: 1500, height: 950 });
-  await page.selectOption('#szenario', 'zwei');
+  await szenarioWaehlen(page, 'zwei');
   await page.waitForTimeout(700);
   await page.evaluate(() => { if (window.SIM.leisteZu) window.SIM.leisteSetzen(false); });
   await page.waitForTimeout(400);
@@ -3912,7 +3925,7 @@ async function markenAn(page, name, art) {
      in kerntest.js. Hier steht, ob eine Hand daran kommt.        */
   console.log('\n── Bürokürzel ──────────────────────────────────────');
   {
-  await page.selectOption('#szenario', 'router');
+  await szenarioWaehlen(page, 'router');
   await page.waitForTimeout(800);
 
   const lagen = () => page.evaluate(() =>
@@ -4251,7 +4264,7 @@ async function markenAn(page, name, art) {
      vorhin (neun Geräte, Kabel woanders). Deshalb erst ein
      anderes Szenario. Das gilt für jedes Stück, das hier
      dazukommt. */
-  await page.selectOption('#szenario', 'zwei');
+  await szenarioWaehlen(page, 'zwei');
   await page.waitForTimeout(600);
 
   /* Ein Kabel treffen, ohne zu raten. Die sichtbare Linie hat
@@ -4369,7 +4382,7 @@ async function markenAn(page, name, art) {
      darüber („An:"), denn genau der Vergleich fiel im Bild auf. */
   console.log('\n── Das Schreibfeld geht über die ganze Breite ──────');
   {
-  await page.selectOption('#szenario', 'router');
+  await szenarioWaehlen(page, 'router');
   await page.waitForTimeout(600);
   /* Das E-Mail-Programm muss erst aufgespielt werden (`install:
      true` in PROGRAMME) — und das Konto eingerichtet sein, sonst
@@ -4430,7 +4443,7 @@ async function markenAn(page, name, art) {
      Änderung zufrieden, die ALLEN den Bildschirm nimmt. */
   console.log('\n── Geräte ohne Bildschirm ──────────────────────────');
   {
-  await page.selectOption('#szenario', 'router');
+  await szenarioWaehlen(page, 'router');
   await page.waitForTimeout(800);
   await page.locator('[data-modus="aktion"]').click();
   await page.waitForTimeout(300);
@@ -5505,7 +5518,7 @@ async function markenAn(page, name, art) {
   console.log('\n── Bilder ──────────────────────────────────────────');
   await page.setViewportSize({ width: 1500, height: 950 });
   await page.evaluate(() => { document.documentElement.dataset.theme = 'light'; });
-  await page.selectOption('#szenario', 'router');
+  await szenarioWaehlen(page, 'router');
   await page.waitForTimeout(900);
   // Das erste Bild zeigt den Entwurf mit offenem Kärtchen am
   // Router — das ist die Stelle, an der sich dieser Simulator von
@@ -5542,7 +5555,7 @@ async function markenAn(page, name, art) {
   });
 
   // Und ein drittes: DHCP im Lauf, mit Mitschnitt.
-  await page.selectOption('#szenario', 'automatisch');
+  await szenarioWaehlen(page, 'automatisch');
   await page.waitForTimeout(600);
   await page.locator('[data-modus="aktion"]').click();
   await page.locator('#speed').fill('3');
@@ -5560,7 +5573,7 @@ async function markenAn(page, name, art) {
   await page.screenshot({ path: path.join(OUT, 'shot-dhcp.png') });
   await page.locator('[data-proto=""]').click();
   await page.locator('#traceToggle').click();
-  await page.selectOption('#szenario', 'router');
+  await szenarioWaehlen(page, 'router');
   await page.waitForTimeout(700);
   // .mbtn davor, weil auch <body> ein data-modus trägt.
   await page.locator('.mbtn[data-modus="entwurf"]').click();
@@ -5608,6 +5621,83 @@ async function markenAn(page, name, art) {
 
   console.log('  Bilder: shot-hell.png, shot-karten.png, shot-karten-dunkel.png, '
             + 'shot-dhcp.png, shot-dunkel.png, shot-schichten.png, shot-dateien.png');
+
+  console.log('\n── Szenario-Menü, Auftrag, Raum-Türen ──────────────');
+  /* Ohne Raum: nur die mitgelieferten, keine Reiter, keine
+     Teilen-Schalter, kein Knopf „Aufgabentext". */
+  await page.keyboard.press('Escape');
+  await page.locator('#szenarioBtn').click();
+  ok('Menü zeigt die sieben mitgelieferten',
+     await page.locator('#szenarioPop .szm-item').count() === 7);
+  ok('ohne Raum: keine Reiter', await page.locator('#szenarioPop .szm-tabs').count() === 0);
+  ok('ohne Raum: keine Teilen-Schalter', await page.locator('#szenarioPop .szm-share').count() === 0);
+  await page.keyboard.press('Escape');
+  ok('Menü geht mit Esc zu', await page.locator('#szenarioPop').isHidden());
+  ok('ohne Raum: kein Knopf „Aufgabentext"', await page.locator('#aufgabeBtn').isHidden());
+  ok('ohne Raum: kein Hinweis auf leerer Fläche', await page.locator('#leerHinweis').isHidden());
+  ok('ohne Raum: kein Schleier', await page.locator('.blind-schleier').count() === 0);
+
+  await szenarioWaehlen(page, 'router');
+  await page.waitForTimeout(500);
+  const st = await page.evaluate(() => window.SIM.standJson());
+  ok('Stand kennt sein Szenario', st.szenario === 'builtin:router');
+  ok('Stand trägt den Auftrag (Titel + Text)', !!st.titel && /<p>/.test(st.aufgabe || ''));
+
+  /* Der Auftrag überlebt das Neuladen — vorher war er danach weg. */
+  await page.waitForTimeout(400);
+  await page.reload();
+  await page.waitForTimeout(700);
+  ok('Auftrag nach dem Neuladen wieder da', await page.locator('#aufgabe').isVisible());
+  ok('… mit seinem Titel', (await page.locator('#aufgabeTitel').textContent()) === st.titel);
+
+  /* Der Türsteher für Aufgabentexte. */
+  const rein = await page.evaluate(() => window.Aufgabe.reinigen(
+    '<p class="dim fs-l x" onclick="alert(1)">a<b>b</b><i>c</i><script>alert(2)</script></p>'
+    + '<ul><li class="fs-s">d</li></ul><div>e</div><img src=x onerror=alert(3)><a href="javascript:1">f</a>'));
+  ok('reinigen: fett/kursiv werden strong/em', /<strong>b<\/strong><em>c<\/em>/.test(rein), rein);
+  ok('reinigen: script, img, Ereignisse und Links sind weg',
+     !/script|img|onclick|onerror|href|alert\(2/.test(rein), rein);
+  ok('reinigen: erlaubte Klassen bleiben, fremde gehen', /class="dim fs-l"/.test(rein) && !/ x"/.test(rein), rein);
+  ok('reinigen: Liste und div→p', /<ul><li class="fs-s">d<\/li><\/ul><p>e<\/p>/.test(rein), rein);
+  ok('reinigen: Text von Links bleibt', /f$/.test(rein), rein);
+
+  /* Der Editor (im Raum nur für die Lehrkraft sichtbar — die
+     Funktion dahinter ist dieselbe). */
+  await page.evaluate(() => document.getElementById('aufgabeBtn').click());
+  await page.waitForTimeout(200);
+  ok('Editor geht auf', await page.locator('.sy-dlg .aed-feld').isVisible());
+  ok('Editor bringt den laufenden Auftrag mit',
+     (await page.locator('.sy-dlg [data-titel]').inputValue()) === st.titel);
+  await page.locator('.sy-dlg [data-titel]').fill('Mein Auftrag');
+  await page.evaluate(() => {
+    const f = document.querySelector('.sy-dlg .aed-feld');
+    f.innerHTML = '<p>Erstens</p>';
+    const r = document.createRange(); r.selectNodeContents(f.firstChild);
+    const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  });
+  await page.locator('.aed-b[data-cmd="bold"]').click();
+  await page.locator('.aed-b[data-cmd="groesse"]').click();
+  ok('Größenknopf zeigt die Stufe', (await page.locator('.aed-gr [data-stufe]').textContent()) === 'groß');
+  await page.locator('.sy-dlg [data-ok]').click();
+  await page.waitForTimeout(200);
+  const auf = await page.evaluate(() => window.SIM.aktuell.aufgabe);
+  ok('Übernehmen: fett + groß im Auftrag', /<p class="fs-l"><strong>Erstens<\/strong><\/p>/.test(auf), auf);
+  ok('Übernehmen: Titel auf der Karte', (await page.locator('#aufgabeTitel').textContent()) === 'Mein Auftrag');
+  ok('Übernehmen: groß ist auf der Karte größer',
+     await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('#aufgabeText .fs-l')).fontSize) > 15));
+
+  /* Ohne Raum fragt „Speichern" nicht, sondern lädt die Datei. */
+  const dl = page.waitForEvent('download', { timeout: 3000 }).catch(() => null);
+  await page.locator('#exportBtn').click();
+  const d = await dl;
+  ok('Speichern ohne Raum: Datei, keine Frage', !!d && (await page.locator('.sy-dlg').count()) === 0);
+  if (d) {
+    const fs = require('fs');
+    const pfad = await d.path();
+    const j = pfad ? JSON.parse(fs.readFileSync(pfad, 'utf8')) : {};
+    ok('Datei trägt den Auftrag', j.titel === 'Mein Auftrag' && /Erstens/.test(j.aufgabe || ''));
+    ok('Dateiname nach dem Auftrag', d.suggestedFilename() === 'Mein-Auftrag.json', d.suggestedFilename());
+  }
 
   ok('am Ende immer noch keine Konsolenfehler', errs.length === 0, errs.slice(0, 3).join(' | '));
 
