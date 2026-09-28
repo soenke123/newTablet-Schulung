@@ -186,8 +186,27 @@
       pick: null,          // (id, eintrag) → true, wenn draußen erledigt
       share: null,         // (id, an, eintrag)
       loeschen: null,      // (id, eintrag)
-      alsSzenario: null    // ({ id, name, titel, aufgabe, stand, neu })
+      alsSzenario: null,   // ({ id, name, titel, aufgabe, stand, neu })
+      cwwRaus: null        // () → ein Paket wartet am cww auf den Raum
     };
+
+    /* ─── Das Class Wide Web ────────────────────────────────────
+       Der Anschluss hinter der Internet-Karte des cww (internet.js).
+       Ohne Raum im Übungsbetrieb („solo"); im Raum schaltet ihn die
+       Brücke um, sobald der Server einen Adressbereich vergeben hat. */
+    const inet = window.Internet ? window.Internet.erzeugen(engine, netz, stack, {
+      senden: () => { if (extern.cwwRaus) extern.cwwRaus(); }
+    }) : null;
+    /* Was 8.8.8.8 weiß, hat sich geändert: ein offenes Kärtchen auf
+       dem Reiter „Internet" zeigt es gleich. Nur dann — ein Formular,
+       in dem gerade jemand tippt, bleibt, wie es ist. */
+    function internetNeu() {
+      const box = refs.karteBody;
+      if (box && box.querySelector('.k-cww-bereich')
+          && !(document.activeElement && box.contains(document.activeElement))) {
+        panels.renderKarte();
+      }
+    }
     function gemeldet(was) {
       for (const f of extern.beiAenderung) {
         try { f(was); } catch (e) { console.warn('[app] Rückruf:', e.message); }
@@ -203,6 +222,7 @@
     const aktuell = { id: null, titel: '', aufgabe: '' };
 
     const konfig = new window.Konfig(netz, stack, dienste);
+    konfig.setInternet(inet);
 
     /* Die Liste der Adressräume steht hier oben, weil die Fläche
        sie beim Auswählen mitziehen muss — sie hebt das Netz des
@@ -1668,6 +1688,7 @@
                    kopieren, einfuegen, loeschenAuswahl,
                    // Für den Raum (bruecke.js) und die Prüfstände.
                    standJson, szenarioLaden, eingebaut, showAufgabe, toast,
+                   internet: inet, internetNeu, neuZeichnen,
                    setRunning, menue, extern, aktuell, ROLLE, IM_RAUM,
                    speichern(an) { nichtSpeichern = !an || VORSCHAU; if (!nichtSpeichern) save(); },
                    VORSCHAU,

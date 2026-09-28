@@ -5862,6 +5862,127 @@ async function markenAn(page, name, art) {
     ok('Dateiname nach dem Auftrag', d.suggestedFilename() === 'Mein-Auftrag.json', d.suggestedFilename());
   }
 
+  /* ═══ Class Wide Web ═══════════════════════════════════════ */
+  console.log('\n── Class Wide Web ──');
+  {
+    const modusBtn = page.locator('.mbtn[data-modus="entwurf"]');
+    if (await modusBtn.isVisible()) await modusBtn.click();
+    await page.evaluate(() => {
+      const S = window.SIM;
+      S.netz.fromJSON({ v: 2, nodes: [], cables: [] });
+      S.neuZeichnen();
+    });
+    await page.waitForTimeout(250);
+    ok('der Knopf „cww" steht in der Leiste', await page.locator('[data-add="cww"]').isVisible());
+    await geraetZiehen(page, 'cww');
+    ok('ein cww liegt auf der Fläche',
+       await page.evaluate(() => window.SIM.netz.list().filter(n => n.kind === 'cww').length === 1));
+    ok('danach ist der Knopf grau',
+       await page.evaluate(() => document.querySelector('[data-add="cww"]').classList.contains('is-aus')));
+    await geraetZiehen(page, 'cww');
+    ok('⭐ ein zweites cww gibt es nicht',
+       await page.evaluate(() => window.SIM.netz.list().filter(n => n.kind === 'cww').length === 1));
+    ok('und die Kurzmeldung sagt, warum',
+       (await page.locator('#toast').textContent()).includes('schon ein Class Wide Web'),
+       await page.locator('#toast').textContent());
+    ok('auf der Fläche steht „cww" in der Wolke',
+       await page.evaluate(() => [...document.querySelectorAll('.nf .nf-cww')].some(t => t.textContent === 'cww')));
+
+    /* Ein kleines Netz: Rechner und Server am cww, der Server mit
+       DNS — einmal mit öffentlicher, einmal mit privater Adresse. */
+    await page.evaluate(() => {
+      const S = window.SIM;
+      const c = S.netz.cwwVon();
+      c.x = 600; c.y = 240;
+      const sw = S.netz.addNode('switch', 600, 420);
+      const e = S.netz.addNode('host', 420, 600);
+      const sv = S.netz.addNode('server', 780, 600);
+      c.nics[1].ip = '50.0.1.1';
+      e.nics[0].ip = '50.0.1.10'; e.gateway = '50.0.1.1'; e.dns = '8.8.8.8';
+      sv.nics[0].ip = '50.0.1.20'; sv.gateway = '50.0.1.1'; sv.dns = '8.8.8.8';
+      sv.software = ['dns'];
+      const d = S.netz.dnsConf(sv); d.on = true;
+      d.records = [{ name: 'www.anna.de', ip: '50.0.1.20' }, { name: 'drucker.anna.de', ip: '192.168.1.9' }];
+      S.netz.addCable(c.id, 1, sw.id, 0);
+      S.netz.addCable(e.id, 0, sw.id, 1);
+      S.netz.addCable(sv.id, 0, sw.id, 2);
+      S.neuZeichnen();
+      S.flaeche.select(c.id);
+    });
+    await page.waitForTimeout(350);
+    await gross(page, true);
+    {
+      const t = await page.locator('#karteBody').textContent();
+      ok('⭐ das Kärtchen geht auf „Internet" auf und nennt den Bereich',
+         t.includes('Dein Adressbereich') && t.includes('50.0.0.0'), t.slice(0, 120));
+      ok('ohne Raum: „andere Netze nicht erreichbar"', t.includes('Kein Raum'));
+      ok('8.8.8.8 kennt den öffentlichen Namen',
+         await page.evaluate(() => [...document.querySelectorAll('#karteBody .k-dns-z')]
+           .some(r => r.textContent.includes('www.anna.de') && r.textContent.includes('aus deinem Netz'))));
+      ok('und sagt, warum der private fehlt',
+         await page.evaluate(() => [...document.querySelectorAll('#karteBody .k-dns-z')]
+           .some(r => r.textContent.includes('drucker.anna.de') && r.textContent.includes('private Adresse'))));
+      ok('die Internet-Karte hat kein Eingabefeld',
+         await page.locator('#karteBody input[data-nic="0"]').count() === 0);
+    }
+    await page.locator('#karte').screenshot({ path: path.join(OUT, 'shot-cww-internet.png') });
+
+    await page.locator('.k-reiter-b', { hasText: 'Netzwerkkarten' }).click();
+    await page.waitForTimeout(250);
+    ok('im Reiter „Netzwerkkarten" steht nur die Karte nach innen',
+       await page.locator('#karteBody input[data-f="ip"]').count() === 1);
+    await page.locator('.k-reiter-b', { hasText: 'Allgemein' }).click();
+    await page.waitForTimeout(250);
+    {
+      const t = await page.locator('#karteBody').textContent();
+      ok('„Allgemein" ohne Gateway-Feld, mit Routing und DHCP-Server',
+         !t.includes('Gateway') && t.includes('Automatisches Routing') && t.includes('DHCP-Server'), t.slice(0, 160));
+    }
+
+    /* Eine Adresse außerhalb des Bereichs: das cww warnt. */
+    await page.evaluate(() => { const S = window.SIM; S.netz.cwwVon().nics[1].ip = '10.0.0.1'; S.neuZeichnen(); });
+    await page.waitForTimeout(200);
+    ok('⭐ eine Karte außerhalb des Bereichs bekommt ein „!"',
+       await page.evaluate(() => {
+         const id = window.SIM.netz.cwwVon().id;
+         return document.querySelector('.nf [data-node="' + id + '"]').classList.contains('is-warn');
+       }));
+    await page.evaluate(() => { const S = window.SIM; S.netz.cwwVon().nics[1].ip = '50.0.1.1'; S.neuZeichnen(); });
+
+    /* Aktion: ping 8.8.8.8 — und im Mitschnitt stehen die Pakete,
+       die in die Wolke gehen und aus ihr kommen. */
+    await page.locator('.mbtn[data-modus="aktion"]').click();
+    await page.waitForTimeout(300);
+    await mitschnitt(page, true);
+    const r = await page.evaluate(() => new Promise(res => {
+      const S = window.SIM;
+      const e = S.netz.list().find(n => n.kind === 'host');
+      S.stack.ping(e, '8.8.8.8', 1, S.stack.PING_FRIST, res);
+      S.engine.runUntil(S.engine.now + 20e6);
+    }));
+    ok('ping 8.8.8.8 geht auch ohne Raum', r && r.ok, JSON.stringify(r));
+    await page.waitForTimeout(300);
+    ok('der Mitschnitt zeigt das Paket in die Wolke und zurück',
+       await page.evaluate(() => {
+         window.SIM.mit.setFilter({ dir: 'beide' });
+         const v = window.SIM.mit.view().filter(z => z.frame && z.frame.src === 'Wolke');
+         return v.some(z => z.dir === 'raus') && v.some(z => z.dir === 'rein');
+       }));
+    const r2 = await page.evaluate(() => new Promise(res => {
+      const S = window.SIM;
+      const e = S.netz.list().find(n => n.kind === 'host');
+      S.stack.ping(e, '67.0.0.1', 1, S.stack.PING_FRIST, res);
+      S.engine.runUntil(S.engine.now + 20e6);
+    }));
+    ok('ein anderes Netz ohne Raum: „nicht erreichbar"', r2 && !r2.ok && /nicht erreichbar/.test(r2.error), JSON.stringify(r2));
+    await page.evaluate(() => window.SIM.flaeche.select(null));
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: path.join(OUT, 'shot-cww.png') });
+    await mitschnitt(page, false);
+    await page.locator('.mbtn[data-modus="entwurf"]').click();
+    await page.waitForTimeout(200);
+  }
+
   ok('am Ende immer noch keine Konsolenfehler', errs.length === 0, errs.slice(0, 3).join(' | '));
 
   console.log('\n' + '═'.repeat(58));

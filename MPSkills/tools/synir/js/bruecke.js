@@ -17,6 +17,9 @@
      blind:   true | false                       Schleier (Tablet)
      gespeichert: { id }                         „Als Szenario" ging durch
      toast:   '…'
+     cwwNetz: { prefix, backbone }               Adressbereich vom Server
+     cwwRein: { pakete, unzustellbar,            Antwort auf einen Tausch
+                verzeichnis, vergeben }
 
    ── Nach außen (type 'synir:event', Feld ev) ──────────────────
      ready                                       Brücke steht
@@ -27,6 +30,16 @@
      stand    { stand }                          (Tablet, gebremst)
      selbst                                      Lehrkraft übernimmt
                                                  beim Zusehen
+     cww      { pakete, namen?, aktiv }          was hinaus soll; `namen`
+                                                 nur, wenn sie sich geändert
+                                                 haben; `aktiv` = ein cww
+                                                 liegt auf der Fläche
+
+   ── Das Class Wide Web ────────────────────────────────────────
+   Die Brücke trägt nur: Pakete aus dem Ausgang von internet.js
+   hinaus, die Antwort des Servers hinein. Getauscht wird in
+   tool.js. In der Spiegelung (Beamer sieht einem Kind zu) ist der
+   Anschluss AUS — die Lehrkraft funkt nie im Namen eines Kindes.
 
    ── Die Spiegelung ────────────────────────────────────────────
    Das Muster von Wild Clusters (watchEid / sentGroups / takeover):
@@ -192,6 +205,7 @@
       eigenerStand = null;
       if (zurueck && alt) laden(alt);
       SIM.speichern(true);
+      cwwModus();
     }
     function zusehen(w) {
       if (!w) { if (watching) zuseheEnde(true); return; }
@@ -200,7 +214,53 @@
         SIM.speichern(false);
       }
       watching = { name: w.name };
+      cwwModus();
       if (w.stand) laden(platzhalter(w.stand));
+    }
+
+    /* ─── Das Class Wide Web ───────────────────────────────── */
+    const INET = SIM.internet;
+    let cwwConf = null;            // { prefix, backbone }, sobald der Server ihn vergeben hat
+    let cwwTimer = 0;
+    let lastNamen = '';
+    let lastAktiv = null;
+
+    function cwwModus() {
+      if (!INET) return;
+      INET.setModus(!cwwConf || SIM.VORSCHAU ? 'solo' : watching ? 'aus' : 'raum');
+    }
+    /* Ein kleiner Aufschub (30 ms): ein Ping-Paar, ein TCP-Handschlag
+       oder ein Rundruf gehen dann in EINER Nachricht hinaus statt in
+       fünf. */
+    function cwwMelden(sofort) {
+      if (!INET || !cwwConf || watching || SIM.VORSCHAU) return;
+      if (cwwTimer && !sofort) return;
+      clearTimeout(cwwTimer);
+      cwwTimer = setTimeout(() => {
+        cwwTimer = 0;
+        if (watching) return;
+        const namen = INET.veroeffentlicht();
+        const nk = JSON.stringify(namen);
+        const aktiv = !!SIM.netz.cwwVon();
+        const extra = { pakete: INET.nehmen(), aktiv };
+        if (nk !== lastNamen) extra.namen = namen;
+        lastNamen = nk;
+        lastAktiv = aktiv;
+        post('cww', extra);
+      }, sofort ? 0 : 30);
+    }
+    if (INET) {
+      SIM.extern.cwwRaus = () => cwwMelden(false);
+      /* Namen und „liegt ein cww da?" ändern sich ohne Paket — ein
+         DNS-Eintrag, ein Dienst, der startet, ein cww, das gelöscht
+         wird. Einmal je anderthalb Sekunden nachsehen ist billiger
+         als an jeder dieser Stellen einen Haken anzubringen. */
+      setInterval(() => {
+        if (!cwwConf || watching || blind) return;
+        const nk = JSON.stringify(INET.veroeffentlicht());
+        const aktiv = !!SIM.netz.cwwVon();
+        if (nk !== lastNamen || aktiv !== lastAktiv) cwwMelden(true);
+      }, 1500);
     }
 
     /* ─── Schleier ─────────────────────────────────────────── */
@@ -269,6 +329,21 @@
         SIM.save();
       }
       if (m.toast) SIM.toast(m.toast);
+
+      if (m.cwwNetz && INET) {
+        cwwConf = { prefix: m.cwwNetz.prefix | 0, backbone: String(m.cwwNetz.backbone || '') };
+        SIM.netz.setInternet(cwwConf);
+        cwwModus();
+        lastNamen = '';
+        lastAktiv = null;
+        SIM.neuZeichnen();
+        SIM.internetNeu();
+        cwwMelden(true);
+      }
+      if (m.cwwRein && INET && cwwConf && !watching) {
+        INET.rein(m.cwwRein);
+        SIM.internetNeu();
+      }
     });
 
     leerZeigen();

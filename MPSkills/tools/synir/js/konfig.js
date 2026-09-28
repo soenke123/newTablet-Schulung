@@ -528,16 +528,18 @@
         return h;
       }
       const T = (window.Internet && window.Internet.STATUS_TEXT) || {};
-      h += '<table class="k-dns"><thead><tr><th>Name</th><th>Typ</th><th>Adresse</th><th></th></tr></thead><tbody>';
+      /* Zwei Zeilen je Eintrag statt vier Spalten: im Kärtchen ist
+         kein Platz für Name, Typ, Adresse UND Grund nebeneinander —
+         in der ersten Fassung brach „drucker.anna.de" mitten im Wort. */
+      h += '<div class="k-dns">';
       for (const r of rows) {
         const gut = r.status === 'eigen' || r.status === 'fremd';
-        h += '<tr class="' + (gut ? '' : 'is-nicht') + '">'
-          + '<td class="mono">' + esc(r.name) + '</td>'
-          + '<td>' + esc(r.typ) + '</td>'
-          + '<td class="mono">' + esc(r.wert) + '</td>'
-          + '<td class="k-dns-st">' + esc(T[r.status] || r.status) + '</td></tr>';
+        h += '<div class="k-dns-z' + (gut ? '' : ' is-nicht') + '">'
+          + '<span class="k-dns-n mono">' + esc(r.name) + '</span>'
+          + '<span class="k-dns-w mono"><i>' + esc(r.typ) + '</i>' + esc(r.wert) + '</span>'
+          + '<span class="k-dns-st">' + esc(T[r.status] || r.status) + '</span></div>';
       }
-      h += '</tbody></table>';
+      h += '</div>';
       return h;
     }
 

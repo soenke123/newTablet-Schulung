@@ -189,3 +189,8 @@
 
 .sy-host:fullscreen .sy-stage { flex: 1; }
 .sy-host:fullscreen .sy-frame { height: 100% !important; }
+
+/* Internet der Klasse: welches /8 gehört wem (nur Lehrkraft). */
+.sy-cww-row { cursor: default; }
+.sy-cww-row > span:not(.sy-dot):not(.sy-info) { grid-area: live; font-size: 13px; font-weight: 600; }
+.sy-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }

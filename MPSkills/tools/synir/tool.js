@@ -28,6 +28,11 @@
      ihre Kopie (die Brücke meldet `selbst`).
    · Blind: data.blind legt auf jedem Tablet den Schleier auf, und
      synir_work_put lehnt ab, solange er liegt.
+   · Das Class Wide Web (Migration 0181): jedes Tablet bekommt beim
+     Öffnen ein /8 (die Lehrkraft 100), und solange ein cww auf der
+     Fläche liegt, tauscht es Pakete mit dem Server — alle 0,7 s,
+     solange etwas fließt, sonst alle 3 s. Die Lehrkraft sieht unter
+     „Internet der Klasse", welches /8 wem gehört; die Klasse nicht.
 
    ⚠️ Wer tool.js oder tool.css anfasst, zieht den Cache-Stempel in
    MPSkills/lib/tool.js hoch — und wer an index.html oder js/
@@ -37,7 +42,7 @@
 (function () {
   'use strict';
 
-  const V = '?v=20260928b';
+  const V = '?v=20260928d';
   const TAKT_MS = 3000;          // Stand der Klasse / Spiegelung
   const GAP = 12;
   const MIN = 440;
@@ -58,6 +63,14 @@
   let workTimer = 0;
   let watch = null;              // { pid, name, since }
   let takeover = null;           // Name, wenn die Lehrkraft übernommen hat
+
+  /* Das Class Wide Web. `raus` sammelt, was der Rahmen hinaus
+     schickt, bis der nächste Tausch es mitnimmt; `namen` ist die
+     Liste für 8.8.8.8, solange sie noch nicht beim Server ist. */
+  const CWW_SCHNELL = 700, CWW_RUHIG = 3000, CWW_NACHLAUF = 6;
+  let cww = null;                // { conf, raus, namen, aktiv, timer, busy, nachlauf }
+  let cwwOpen = false;           // Lehrkraft: Liste „Internet der Klasse"
+  let karte = [];
 
   const isPresenter = () => !!ctx && ctx.role === 'presenter';
   const $ = (id) => root && root.querySelector('#' + id);
@@ -206,7 +219,7 @@
   function takt() {
     clearTimeout(workTimer);
     workTimer = 0;
-    if (!isPresenter() || !(listOpen || watch)) return;
+    if (!isPresenter() || !(listOpen || watch || cwwOpen)) return;
     workTimer = setTimeout(async () => {
       await tick();
       takt();
@@ -219,6 +232,7 @@
       if (res.ok) { work = res.items || []; paintPeople(); }
     }
     if (watch) await holeWatch();
+    if (cwwOpen) await holeKarte();
   }
 
   async function holeWatch() {
@@ -252,6 +266,99 @@
   }
 
   /* ══════════════════════════════════════════════════════════
+     Das Class Wide Web
+     ══════════════════════════════════════════════════════════ */
+
+  function cwwNeu() {
+    return { conf: null, raus: [], namen: null, aktiv: false, timer: 0, busy: false, nachlauf: 0 };
+  }
+
+  /* Einmal je Rahmen: welches /8 habe ich? Fehlt die Migration auf
+     dem Server, bleibt SYNIR einfach ohne Internet — das cww läuft
+     dann im Übungsbetrieb, und niemand bekommt eine Fehlermeldung
+     über etwas, das er nicht benutzt hat. */
+  async function cwwAnmelden() {
+    if (!ctx || ctx.preview) return;
+    if (!cww) cww = cwwNeu();
+    const res = await call(isPresenter() ? 'synir_cww_anmelden_lehrer' : 'synir_cww_anmelden');
+    if (!cww) return;
+    if (!res.ok) {
+      if (res.error === 'fn_missing') console.warn('[synir] Migration 0181 fehlt — cww ohne Raum.');
+      else if (res.error === 'cww_voll') post({ toast: 'Das Class Wide Web ist voll — alle 100 Adressbereiche sind vergeben.' });
+      else fehler(res);
+      return;
+    }
+    cww.conf = { prefix: res.prefix, backbone: res.backbone };
+    post({ cwwNetz: cww.conf });
+    cwwPlanen(0);
+  }
+
+  function cwwPlanen(ms) {
+    if (!cww || !cww.conf) return;
+    clearTimeout(cww.timer);
+    cww.timer = setTimeout(cwwTick, ms);
+  }
+
+  async function cwwTick() {
+    const c = cww;
+    if (!c || !c.conf || c.busy) return;
+    /* Ohne cww auf der Fläche und ohne etwas zu sagen: nur
+       nachsehen, nicht fragen. Ein Reiter im Hintergrund fragt gar
+       nicht — dann gilt das Tablet nach 20 s als weg, und genau das
+       ist es ja auch. */
+    if (document.hidden || (!c.aktiv && !c.raus.length && !c.namen)) { cwwPlanen(CWW_RUHIG); return; }
+
+    // Höchstens 200 Pakete und rund 280 KB je Tausch; der Rest geht beim nächsten.
+    const mit = [];
+    let groesse = 0;
+    while (c.raus.length && mit.length < 200) {
+      const len = JSON.stringify(c.raus[0]).length;
+      if (mit.length && groesse + len > 280000) break;
+      groesse += len;
+      mit.push(c.raus.shift());
+    }
+    const namen = c.namen;
+    c.namen = null;
+    c.busy = true;
+    const res = await call(isPresenter() ? 'synir_cww_tausch_lehrer' : 'synir_cww_tausch',
+      { p_raus: mit.length ? mit : null, p_namen: namen });
+    c.busy = false;
+    if (cww !== c) return;
+
+    if (!res.ok) {
+      if (namen && !c.namen) c.namen = namen;     // beim nächsten Mal noch einmal
+      if (res.error !== 'blind' && res.error !== 'blocked' && res.error !== 'network') fehler(res);
+      cwwPlanen(CWW_RUHIG);
+      return;
+    }
+    post({ cwwRein: {
+      pakete: res.pakete || [], unzustellbar: res.unzustellbar || [],
+      verzeichnis: res.verzeichnis || [], vergeben: res.vergeben || []
+    } });
+    const verkehr = mit.length || (res.pakete && res.pakete.length) || c.raus.length;
+    c.nachlauf = verkehr ? CWW_NACHLAUF : Math.max(0, c.nachlauf - 1);
+    cwwPlanen(c.raus.length ? 0 : c.nachlauf ? CWW_SCHNELL : CWW_RUHIG);
+  }
+
+  function cwwVomRahmen(m) {
+    if (!cww) return;
+    if (Array.isArray(m.pakete) && m.pakete.length) {
+      for (const p of m.pakete) cww.raus.push(p);
+      // Nicht grenzenlos: was ein Tablet in einer Sekunde nicht
+      // loswird, ist ein Kreis im Netz und kein Gespräch.
+      if (cww.raus.length > 1000) cww.raus.splice(0, cww.raus.length - 1000);
+    }
+    if (Array.isArray(m.namen)) cww.namen = m.namen;
+    cww.aktiv = !!m.aktiv;
+    if (!cww.busy && (cww.raus.length || cww.namen)) cwwPlanen(cww.raus.length ? 0 : 50);
+  }
+
+  async function holeKarte() {
+    const res = await call('synir_cww_karte');
+    if (res.ok) { karte = res.items || []; paintKarte(); }
+  }
+
+  /* ══════════════════════════════════════════════════════════
      Nachrichten aus dem Rahmen
      ══════════════════════════════════════════════════════════ */
 
@@ -265,6 +372,11 @@
         bridgeReady = true;
         pushAll();
         if (isPresenter() && watch) { watch.since = null; holeWatch(); }
+        // Neu geladener Rahmen: er kennt sein /8 noch nicht.
+        if (cww && cww.conf) post({ cwwNetz: cww.conf }); else cwwAnmelden();
+        break;
+      case 'cww':
+        cwwVomRahmen(m);
         break;
       case 'pick':
         if (isPresenter()) {
@@ -312,6 +424,8 @@
     <div class="sy-desk" id="syDesk">
       <div class="sy-row">
         <button type="button" class="sy-btn" id="syList" aria-expanded="false">Stand der Klasse</button>
+        <button type="button" class="sy-btn" id="syCww" aria-expanded="false"
+                title="Welches /8 gehört wem? Das sieht nur die Lehrkraft.">Internet der Klasse</button>
         <span class="sy-note" id="syNote" hidden>
           <span id="syNoteText"></span>
           <button type="button" class="sy-note-x" id="syStop">Beenden</button>
@@ -322,6 +436,7 @@
         <button type="button" class="sy-btn sy-ghost" id="syFull" title="Vollbild">⛶</button>
       </div>
       <div class="sy-list" id="syPeople" hidden></div>
+      <div class="sy-list sy-cww" id="syCwwList" hidden></div>
     </div>`;
   }
 
@@ -335,6 +450,8 @@
     }
     const lb = $('syList');
     if (lb) lb.setAttribute('aria-expanded', String(listOpen));
+    const cb = $('syCww');
+    if (cb) cb.setAttribute('aria-expanded', String(cwwOpen));
     const note = $('syNote');
     if (note) {
       const txt = watch ? 'Ansicht von ' + watch.name
@@ -391,6 +508,30 @@
     }).join('');
   }
 
+  /* Die Karte des Class Wide Web: wem gehört welches /8. Nur hier,
+     nur für die Lehrkraft — die Klasse soll es herausfinden müssen
+     (mit traceroute, mit 8.8.8.8, mit Fragen). */
+  function paintKarte() {
+    const box = $('syCwwList');
+    if (!box) return;
+    box.hidden = !cwwOpen;
+    if (!cwwOpen) return;
+    if (!karte.length) {
+      box.innerHTML = '<p class="sy-empty">Noch hat niemand ein Class Wide Web geöffnet.</p>';
+      return;
+    }
+    box.innerHTML = karte.map(k => {
+      const frisch = k.seen_at && (Date.now() - new Date(k.seen_at).getTime()) < 20000;
+      return '<div class="sy-person sy-cww-row">'
+        + '<span class="sy-dot' + (frisch ? '' : ' is-off') + '"></span>'
+        + '<strong class="sy-mono">' + ctx.esc(k.prefix + '.0.0.0/8') + '</strong>'
+        + '<span>' + ctx.esc(k.name || '—') + '</span>'
+        + '<span class="sy-info">' + ctx.esc(k.backbone + ' · ' + (k.namen || 0)
+          + (k.namen === 1 ? ' Name' : ' Namen') + ' · ' + alter(k.seen_at)) + '</span>'
+        + '</div>';
+    }).join('');
+  }
+
   function isFull() { return !!root && document.fullscreenElement === root.querySelector('.sy-host'); }
   function toggleFull() {
     const host = root && root.querySelector('.sy-host');
@@ -406,6 +547,14 @@
       listOpen = !listOpen;
       paintDesk(); paintPeople();
       if (listOpen) { await tick(); }
+      takt();
+      fit();
+      return;
+    }
+    if (b.id === 'syCww') {
+      cwwOpen = !cwwOpen;
+      paintDesk(); paintKarte();
+      if (cwwOpen) await holeKarte();
       takt();
       fit();
       return;
@@ -492,6 +641,9 @@
       work = [];
       watch = null;
       takeover = null;
+      cww = cwwNeu();
+      cwwOpen = false;
+      karte = [];
 
       const pres = isPresenter();
       root.innerHTML =
@@ -545,6 +697,8 @@
     unmount() {
       clearTimeout(workTimer);
       workTimer = 0;
+      if (cww) clearTimeout(cww.timer);
+      cww = null;
       if (isFull() && document.exitFullscreen) { try { document.exitFullscreen(); } catch (e) { /* egal */ } }
       if (onMsg) window.removeEventListener('message', onMsg);
       if (onResize) window.removeEventListener('resize', onResize);
