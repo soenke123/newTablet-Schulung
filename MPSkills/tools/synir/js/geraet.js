@@ -213,7 +213,7 @@
        und aus machen. Das bleibt jetzt so." Der Heimrouter geht
        denselben Weg. Eingestellt wird im Entwurf; im Aktionsmodus
        sieht man zu (konfig.kompakt). */
-    const OHNE_SCHIRM = { switch: {}, router: {}, heimrouter: {} };
+    const OHNE_SCHIRM = { switch: {}, router: {}, heimrouter: {}, cww: {} };
     const ohneSchirm = (n) => OHNE_SCHIRM[n.kind] || null;
 
     /* ═══ Was sich aufspielen lässt ══════════════════════════

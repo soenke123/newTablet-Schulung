@@ -1116,8 +1116,13 @@
       if (rip) for (const r of rip.wege(node))
         rows.push({ net: r.net, mask: r.mask, gateway: r.gw, nic: r.nic,
                     kind: 'RIP', hops: r.hops });
-      if (node.gateway)
+      if (node.gateway && !netz.istCww(node))
         rows.push({ net: '0.0.0.0', mask: '0.0.0.0', gateway: node.gateway, nic: nicTowards(node, U.ip2int(node.gateway)), kind: 'Standard' });
+      /* Die feste Zeile des cww: alles, was nicht in meinem /8
+         liegt, geht in die Wolke. Niemand trägt sie ein, niemand
+         kann sie löschen. */
+      if (netz.istCww(node))
+        rows.push({ net: '0.0.0.0', mask: '0.0.0.0', gateway: 'Wolke', nic: netz.INET, kind: 'Internet' });
       return rows;
     }
 

@@ -314,7 +314,13 @@
        ändert ein Subnetz, und dann müssen beide es wissen. Diese
        eine Zeile steht überall dort, wo bisher `flaeche.draw()`
        allein stand. */
-    function neuZeichnen() { flaeche.draw(); subnetze.render(); weiterleitung.render(); }
+    function neuZeichnen() { flaeche.draw(); subnetze.render(); weiterleitung.render(); cwwKnopf(); }
+    /* Ist schon ein cww da, wird der Knopf grau — und erklärt
+       sich beim Antippen trotzdem (das Kärtchen bleibt). */
+    function cwwKnopf() {
+      const b = document.querySelector('[data-add="cww"]');
+      if (b) b.classList.toggle('is-aus', !netz.darfAnlegen('cww').ok);
+    }
 
     panels = new window.Panels(refs, engine, netz, stack, mit, term, konfig, dienste, {
       problemOf: flaeche.problemOf,
@@ -610,7 +616,17 @@
             + 'EINE Adresse) und ein WLAN-Zugangspunkt. Mit NAT übersetzt er '
             + 'die vielen Adressen innen auf die eine außen. Er kommt leer: '
             + 'die WAN-Seite fragt den Anbieter, alles andere trägst du ein. '
-            + 'In Filius heißt er ebenfalls Heimrouter.' }
+            + 'In Filius heißt er ebenfalls Heimrouter.' },
+      /* Das Modem aus Filius — nur dass am anderen Ende die Netze
+         der ganzen Klasse liegen. */
+      cww: { name: 'Class Wide Web', ic: 'cww',
+        text: 'Dein Anschluss ans Internet der Klasse. Du bekommst einen eigenen '
+            + 'Adressbereich (ein /8, z. B. 67.0.0.0 bis 67.255.255.255) — nur '
+            + 'Adressen daraus kommen hinaus. Alles, was nicht in deinem Bereich '
+            + 'liegt, schickt das cww in die Wolke; nach innen trägst du die Wege '
+            + 'selbst ein (oder schaltest RIP an). In der Wolke steht 8.8.8.8, ein '
+            + 'öffentlicher DNS, der alle Namen kennt, die von draußen erreichbar '
+            + 'sind. Jedes Netz hat höchstens ein cww. In Filius heißt es Modem.' }
     };
 
     /* Das Erklärkärtchen. Es hängt unter dem Knopf, den es
@@ -710,6 +726,8 @@
 
         const p = flaeche.ablegen(ev.clientX, ev.clientY);
         if (!p) { toast('Dorthin kann kein Gerät. Auf die Fläche ziehen.'); return; }
+        const darf = netz.darfAnlegen(kind);
+        if (!darf.ok) { toast(darf.error); return; }
         const n = netz.addNode(kind, p.x, p.y);
         neuZeichnen();
         flaeche.select(n.id);

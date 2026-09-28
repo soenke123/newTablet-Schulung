@@ -459,6 +459,16 @@
          Die Antenne steht da, auch wenn das WLAN aus ist: sie
          gehört zum Gerät, nicht zu seiner Einstellung. Ob es funkt,
          sagt die Marke unter der Kachel. */
+      /* Das cww: eine Wolke mit den drei Buchstaben darin. Rund
+         UND breit — so ist keines der anderen Geräte. */
+      if (kind === 'cww') {
+        el('path', { class: c,
+          d: 'M -13 11 L 13 11 A 8.5 8.5 0 0 0 14.5 -5.8 A 11.5 11.5 0 0 0 -7 -8.5 '
+           + 'A 10 10 0 0 0 -13 11 Z' }, g);
+        const t = el('text', { class: 'nf-cww', x: 0.5, y: 6.2 }, g);
+        t.textContent = 'cww';
+        return;
+      }
       if (kind === 'heimrouter') {
         el('rect', { class: c, x: -18, y: -4, width: 36, height: 15, rx: 2.5 }, g);
         for (let i = 0; i < 4; i++)
@@ -915,8 +925,11 @@
          wo sie hingehört; leer bleibt die Zeile, solange die
          LAN-Seite keine hat — das ist dann die Wahrheit über
          dieses Gerät und nicht eine Lücke. */
+      /* Beim cww dasselbe: die 8er-Adresse gehört der Wolke und
+         steht im Fenster, unter der Kachel steht die nach innen. */
       const mitIp = netz.istHeim(n)
         ? n.nics.filter(k => k.ip && k.i !== netz.WAN)
+        : netz.istCww(n) ? n.nics.filter(k => k.ip && !netz.istInternet(n, k.i))
         : n.nics.filter(k => k.ip);
       /* „Holt gerade seine Adresse" gilt für dieselben Karten, über
          die diese Zeile überhaupt spricht. Sonst stünde unter einem
@@ -1204,9 +1217,23 @@
       /* Ein Gerät mit Kabel, aber ohne Adresse, kommt hier nur noch
          an, wenn es sie von Hand bekommen soll — der DHCP-Fall ist
          oben schon heraus. */
-      const hasIp = n.nics.some(k => k.ip);
+      const hasIp = n.nics.some(k => k.ip && !netz.istInternet(n, k.i));
       const hasCable = n.nics.some(k => k.cable);
       if (hasCable && !hasIp) return 'Dieses Gerät hat noch keine IP-Adresse.';
+
+      /* Das cww nimmt nur Adressen aus dem eigenen /8. Eine andere
+         ist kein Tippfehler, den das Netz verzeiht: so ist dieses
+         Netz nicht mit dem Internet verbunden — und das soll dort
+         stehen, wo man hinsieht. */
+      if (netz.istCww(n)) {
+        const p = netz.internetConf().prefix;
+        for (const nic of n.nics) {
+          if (!nic.ip || netz.istInternet(n, nic.i)) continue;
+          if (!netz.imEigenenNetz(nic.ip))
+            return netz.portLabel(n, nic.i) + ': ' + nic.ip + ' liegt nicht in deinem Adressbereich ('
+              + p + '.0.0.0/8). So ist dein Netz nicht mit dem Internet verbunden.';
+        }
+      }
 
       return null;
     }
