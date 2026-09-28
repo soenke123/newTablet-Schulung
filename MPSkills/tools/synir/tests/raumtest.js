@@ -208,8 +208,8 @@ function server() {
   ok('Reiter heißen public / private',
      /Öffentlich.*public/.test(await lf.locator('.szm-tab').nth(0).textContent())
      && /Eigene.*private/.test(await lf.locator('.szm-tab').nth(1).textContent()));
-  ok('Öffentlich: die sieben mitgelieferten, je mit Teilen-Symbol',
-     await lf.locator('.szm-item').count() === 7 && await lf.locator('.szm-share').count() === 7);
+  ok('Öffentlich: die acht mitgelieferten, je mit Teilen-Symbol',
+     await lf.locator('.szm-item').count() === 8 && await lf.locator('.szm-share').count() === 8);
   await lf.locator('.szm-item[data-id="builtin:router"] .szm-share').click();
   await warte(300);
   ok('Geteilt: grün hinterlegt', await lf.locator('.szm-item[data-id="builtin:router"]').evaluate(e => e.classList.contains('is-shared')));

@@ -334,7 +334,7 @@ section('Speicherformat');
 section('Szenarien');
 {
   const S = sandbox.SZENARIEN;
-  ok('sieben Szenarien vorhanden', Object.keys(S).length === 7, Object.keys(S).join(','));
+  ok('acht Szenarien vorhanden', Object.keys(S).length === 8, Object.keys(S).join(','));
 
   for (const k in S) {
     const { engine, netz } = bau();
@@ -4731,6 +4731,44 @@ section('Class Wide Web: Verzeichnis');
   ok('und den eigenen', l.some(x => x.name === 'www.anna.de' && x.status === 'eigen'));
   ok('keine Spalte „wem gehört das"', l.every(x => !('prefix' in x) && !('tablet' in x)));
   void bs;
+}
+
+section('Class Wide Web: Szenario 8 auf zwei Tablets');
+{
+  /* Beide Kinder laden dasselbe Szenario, jedes trägt SEINEN Bereich
+     ein (die Aufträge 1–3), und dann ruft das eine die Seite des
+     anderen über den Namen auf (Auftrag 4). */
+  const loesen = (t, name) => {
+    t.netz.fromJSON(JSON.parse(JSON.stringify(sandbox.SZENARIEN.internet.netz)));
+    const X = t.prefix;
+    const c = t.netz.cwwVon(), sv = t.netz.byName('Server 1');
+    ok(name + ': das cww trägt nach dem Laden die 8er-Adresse des Raums', c.nics[0].ip === t.backbone);
+    c.nics[1].ip = X + '.0.0.1';
+    sv.nics[0].ip = X + '.0.0.20'; sv.gateway = X + '.0.0.1';
+    Object.assign(t.netz.dhcpConf(c), { on: true, nic: 1, von: X + '.0.0.100', bis: X + '.0.0.150',
+      mask: '255.255.255.0', gateway: X + '.0.0.1', dns: '8.8.8.8' });
+    t.netz.dnsConf(sv).records = [{ name: 'www.' + name + '.de', ip: X + '.0.0.20' }];
+    t.dienste.reset(); t.dienste.start(); t.dienste.sync();
+  };
+  const A = tablet(21, 50, '8.0.7.1');
+  const B = tablet(22, 67, '8.0.9.4');
+  loesen(A, 'anna'); loesen(B, 'ben');
+  laufen([A, B], 20 * SEC);
+  const hrA = A.netz.byName('Heimrouter 1');
+  ok('Szenario 8: der Heimrouter holt seine WAN-Adresse vom cww', /^50\.0\.0\.1\d\d$/.test(hrA.nics[0].ip), hrA.nics[0].ip);
+  ok('Szenario 8: 8.8.8.8 kennt beide Namen',
+     A.inet.liste().some(e => e.name === 'www.ben.de' && e.status === 'fremd')
+     && A.inet.liste().some(e => e.name === 'www.anna.de' && e.status === 'eigen'), JSON.stringify(A.inet.liste()));
+  let ip = null;
+  const lap = A.netz.byName('Endgerät 1');
+  A.dienste.resolve(lap, 'www.ben.de', x => ip = x);
+  laufen([A, B], 30 * SEC);
+  ok('Szenario 8: der Laptop hinter dem Heimrouter findet www.ben.de', ip && ip.ok && ip.ip === '67.0.0.20', JSON.stringify(ip));
+  let seite = null;
+  A.dienste.http.seiteHolen(lap, '67.0.0.20', x => seite = x);
+  laufen([A, B], 150 * SEC);
+  ok('⭐ Szenario 8: Bens Seite lädt bei Anna — durch NAT, zwei cwws und die Wolke',
+     seite && seite.ok && seite.status === 200, seite && (seite.grund || seite.status));
 }
 
 /* ═══ Ergebnis ═══ */

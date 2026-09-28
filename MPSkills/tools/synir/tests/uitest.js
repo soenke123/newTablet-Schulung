@@ -5790,8 +5790,8 @@ async function markenAn(page, name, art) {
      Teilen-Schalter, kein Knopf „Aufgabentext". */
   await page.keyboard.press('Escape');
   await page.locator('#szenarioBtn').click();
-  ok('Menü zeigt die sieben mitgelieferten',
-     await page.locator('#szenarioPop .szm-item').count() === 7);
+  ok('Menü zeigt die acht mitgelieferten',
+     await page.locator('#szenarioPop .szm-item').count() === 8);
   ok('ohne Raum: keine Reiter', await page.locator('#szenarioPop .szm-tabs').count() === 0);
   ok('ohne Raum: keine Teilen-Schalter', await page.locator('#szenarioPop .szm-share').count() === 0);
   await page.keyboard.press('Escape');
@@ -5981,6 +5981,18 @@ async function markenAn(page, name, art) {
     await mitschnitt(page, false);
     await page.locator('.mbtn[data-modus="entwurf"]').click();
     await page.waitForTimeout(200);
+
+    /* Szenario 8: die öffentlichen Adressen fehlen mit Absicht — sie
+       hängen am Bereich des Kindes. Im Bild muss trotzdem alles
+       dastehen, und ohne ein „!" an Geräten, die nur noch leer sind. */
+    await szenarioWaehlen(page, 'internet');
+    await page.waitForTimeout(500);
+    ok('Szenario 8 lädt mit cww, Heimrouter, Server und Laptop',
+       await page.evaluate(() => ['cww', 'heimrouter', 'server', 'host']
+         .every(k => window.SIM.netz.list().some(n => n.kind === k))));
+    ok('der Auftrag nennt den Adressbereich',
+       (await page.locator('#aufgabeText').textContent()).includes('Adressbereich'));
+    await page.screenshot({ path: path.join(OUT, 'shot-szenario-internet.png') });
   }
 
   ok('am Ende immer noch keine Konsolenfehler', errs.length === 0, errs.slice(0, 3).join(' | '));
