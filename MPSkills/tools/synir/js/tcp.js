@@ -191,7 +191,11 @@
     }
 
     function planen(conn, e) {
-      e.ev = engine.at(TCP_FRIST, () => {
+      /* Durch die Wolke wartet TCP länger (siehe FERN_FAKTOR in
+         schichten.js) — sonst wiederholt es Segmente, die nur auf
+         die Abfrage des Raums warten. */
+      const frist = TCP_FRIST * (api.fern && api.fern(conn.node, conn.fernIp) ? 10 : 1);
+      e.ev = engine.at(frist, () => {
         if (conn.zustand === 'zu') return;
         if (conn.offen.indexOf(e) < 0) return;      // inzwischen bestätigt
         if (e.versuche >= TCP_WIEDER) {

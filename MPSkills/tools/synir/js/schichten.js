@@ -56,6 +56,25 @@
   const MAC_TTL      = 60 * U.SEC;   // Switch vergisst nach einer Minute
   const DEFAULT_TTL  = 64;
   const PROC         = 50;           // µs, die ein Gerät fürs Denken braucht
+  /* ─── Das Internet der Klasse ───────────────────────────────
+     Wie lange ein Paket „in der Wolke" unterwegs ist, bevor es
+     beim cww ankommt — zwei Kabellängen, damit man es fliegen
+     sieht. Die echte Wartezeit (der Raum fragt alle paar hundert
+     Millisekunden nach) kommt noch obendrauf und steht NICHT in
+     der simulierten Uhr, denn die läuft auf jedem Tablet für sich.
+
+     Genau deshalb der FERN_FAKTOR: jede Frist, die auf eine
+     Antwort aus einem fremden Netz wartet (Ping, DNS, TCP), ist
+     zehnmal so lang. Bei Tempo „normal" merkt das niemand, bei
+     „Turbo" ist es der Unterschied zwischen „Antwort von …" und
+     einer Zeitüberschreitung, die in Wahrheit nur die Abfrage
+     des Raums war. */
+  const INET_MS      = 200000;       // µs
+  const FERN_FAKTOR  = 10;
+  /* Größer geht nicht durch die Wolke. Ein ganzes Bild über HTTP
+     ist hier EIN Paket (siehe LIESMICH, „Drei Zahlen") — und der
+     Raum trägt nicht beliebig viel. */
+  const INET_DECKEL  = 250000;       // Zeichen JSON
 
   function Stack(engine, netz) {
 
@@ -76,8 +95,13 @@
        ⚠️ `sendIp` und `say` sind Funktions-DEKLARATIONEN weiter
        unten und stehen hier deshalb schon zur Verfügung. */
     const tcp = window.Tcp
-      ? window.Tcp.erzeugen(engine, netz, { sendIp: sendIp, say: say, PROC: PROC })
+      ? window.Tcp.erzeugen(engine, netz, { sendIp: sendIp, say: say, PROC: PROC, fern: fern })
       : null;
+
+    /* Der Anschluss ans Internet der Klasse (js/internet.js). Ohne
+       ihn verhält sich das cww wie ein Router, der draußen niemanden
+       kennt: „Ziel nicht erreichbar". */
+    let internet = null;
 
     /* Und das automatische Routing. Es sitzt eine Etage HÖHER als
        die beiden darüber — RIP ist ein Anwendungsprotokoll über
@@ -452,10 +476,16 @@
        macht und danach das automatische Routing anschaltet, sieht
        seinen Eintrag stillschweigend außer Kraft treten. Das ist
        genau die Sorte Fehler, die eine Klasse nicht findet. */
-    const RANG = { direkt: 0, eingetragen: 1, RIP: 2, Standardgateway: 3 };
+    const RANG = { direkt: 0, eingetragen: 1, RIP: 2, Standardgateway: 3, Internet: 4 };
 
     function routeFor(node, dstInt) {
       let best = null;
+      /* Beim cww gelten eingetragene und gelernte Wege nur für das
+         EIGENE /8 — nach draußen entscheidet die Wolke, nicht das
+         Kind. Ein Eintrag „67.0.0.0 über 50.1.1.2" würde sonst
+         fremde Pakete ins eigene Netz holen. */
+      const cww = netz.istCww(node);
+      const innen = (net) => !cww || netz.imEigenenNetz(net);
 
       /* Besser als das Bisherige? Erst die Maske, dann der Rang.
          In EINER Funktion, damit die Regel an einer Stelle steht
@@ -477,6 +507,7 @@
         const net = U.ip2int(r.net), mask = U.ip2int(r.mask), gw = U.ip2int(r.gateway);
         if (net === null || mask === null || gw === null) continue;
         if (U.netOf(dstInt, mask) !== net) continue;
+        if (!innen(net)) continue;
         const out = nicTowards(node, gw);
         if (out === null) continue;
         nimm({ nic: out, nextHop: gw, prefix: U.mask2prefix(mask) || 0, why: 'eingetragen' });
@@ -490,6 +521,7 @@
         const net = U.ip2int(r.net), mask = U.ip2int(r.mask), gw = U.ip2int(r.gw);
         if (net === null || mask === null || gw === null) continue;
         if (U.netOf(dstInt, mask) !== net) continue;
+        if (!innen(net)) continue;
         const out = nicTowards(node, gw);
         if (out === null) continue;
         nimm({ nic: out, nextHop: gw, prefix: U.mask2prefix(mask) || 0, why: 'RIP', hops: r.hops });
@@ -500,10 +532,19 @@
          `if (!best)` — das ergab dasselbe Ergebnis (eine Maske
          kürzer als /0 gibt es nicht), aber es war eine zweite
          Regel neben der Rangfolge. */
-      if (node.gateway) {
+      if (node.gateway && !cww) {
         const gw = U.ip2int(node.gateway);
         const out = gw === null ? null : nicTowards(node, gw);
         if (out !== null) nimm({ nic: out, nextHop: gw, prefix: 0, why: 'Standardgateway' });
+      }
+
+      /* ⭐ Die eine Zeile, die das cww ausmacht: alles, was NICHT
+         in meinem /8 liegt, geht hinaus in die Wolke. Das ist das
+         Standardgateway des Anbieters — nur dass hier niemand eines
+         einträgt, weil es keine Wahl gibt. */
+      if (cww && !netz.imEigenenNetz(dstInt)) {
+        const k = node.nics[netz.INET];
+        if (k && k.ip && k.up) nimm({ nic: netz.INET, nextHop: dstInt, prefix: 0, why: 'Internet' });
       }
 
       return best;
@@ -592,6 +633,10 @@
         why: route.why, proto: pkt.proto
       });
 
+      /* Durch die Internet-Karte: kein ARP, kein Kabel — das Paket
+         geht an den Anschluss in die Wolke. */
+      if (netz.istInternet(node, route.nic)) { internetRaus(node, pkt, opts); return; }
+
       resolveThen(node, route.nic, route.nextHop, (mac, why) => {
         if (!mac) {
           say('unreachable', node, {
@@ -649,6 +694,31 @@
         return;
       }
 
+      /* ─ Die Haustür des Anbieters ─ Zwei Regeln, und beide gibt
+         es im echten Internet genauso:
+
+         1. Von innen nach draußen nur mit einem Absender aus MEINEM
+            /8. Sonst könnte jedes Kind im Namen eines anderen
+            senden — oder mit einer privaten Adresse, auf die nie
+            eine Antwort zurückfindet. Echte Anbieter filtern genau
+            das (BCP 38, „Ingress Filtering").
+         2. Von draußen nur, was in mein /8 will. Das cww ist ein
+            Anschluss, kein Durchgang. */
+      if (netz.istCww(node)) {
+        if (netz.istInternet(node, nicIndex)) {
+          if (!netz.imEigenenNetz(dst)) {
+            say('drop-quelle', node, { dst: pkt.dst, src: pkt.src, level: 'warn',
+              why: pkt.dst + ' liegt nicht in deinem Adressbereich — das cww ist kein Durchgang.' });
+            return;
+          }
+        } else if (!netz.imEigenenNetz(dst) && !netz.imEigenenNetz(pkt.src)) {
+          say('drop-quelle', node, { dst: pkt.dst, src: pkt.src, level: 'warn',
+            why: 'Absender ' + pkt.src + ' liegt nicht in deinem Adressbereich ('
+              + netz.internetConf().prefix + '.0.0.0/8). Das cww lässt es nicht hinaus.' });
+          return;
+        }
+      }
+
       pkt.ttl--;
       if (pkt.ttl <= 0) {
         say('ttl', node, { dst: pkt.dst, level: 'warn' });
@@ -676,6 +746,74 @@
     }
 
     /* ═══ ICMP ═══════════════════════════════════════════════ */
+
+    /* ═══ Die Wolke ═══════════════════════════════════════════
+       Hinaus: das Paket verlässt dieses Tablet. Was danach
+       passiert, weiß js/internet.js — hier steht nur, dass es
+       geht und dass es nicht zu groß ist. */
+    function internetRaus(node, pkt, opts) {
+      let text;
+      try { text = JSON.stringify(pkt); } catch (e) { text = null; }
+      if (!text || text.length > INET_DECKEL) {
+        say('unreachable', node, { dst: pkt.dst, level: 'warn',
+          why: 'Das Paket ist zu groß für das Class Wide Web (höchstens '
+            + Math.round(INET_DECKEL / 1000) + ' KB).' });
+        if (opts && opts.onFail) opts.onFail('zu_gross', 'Paket zu groß für das Internet.');
+        return;
+      }
+      say('inet-raus', node, { dst: pkt.dst, src: pkt.src, proto: pkt.proto, pkt: JSON.parse(text) });
+      if (!internet) {
+        internetUnzustellbar(node, pkt);
+        return;
+      }
+      internet.raus(node, JSON.parse(text));
+    }
+
+    /* Herein: ein Paket aus der Wolke kommt an der Internet-Karte an
+       und läuft ab dort wie jedes andere (onIp). */
+    function vonInternet(pkt) {
+      const node = netz.cwwVon();
+      if (!node || !pkt || typeof pkt !== 'object') return false;
+      engine.at(INET_MS, () => {
+        if (!node.on || !netz.get(node.id)) return;
+        say('inet-rein', node, { dst: pkt.dst, src: pkt.src, proto: pkt.proto, pkt: U.deepCopy(pkt) });
+        onIp(node, netz.INET, { payload: pkt });
+      }, 'wolke', node.id);
+      return true;
+    }
+
+    /* Niemand da draußen nimmt es an: das cww meldet es dem
+       Absender, so wie ein echter Anbieter-Router. */
+    function internetUnzustellbar(node, pkt) {
+      node = node || netz.cwwVon();
+      if (!node || !pkt) return;
+      engine.at(INET_MS, () => {
+        if (!node.on) return;
+        say('unreachable', node, { dst: pkt.dst, level: 'warn',
+          why: 'Im Class Wide Web gibt es niemanden unter ' + pkt.dst + '.' });
+        /* Keine Fehlermeldung auf eine Fehlermeldung — die Regel
+           aus RFC 1122, sonst schaukelt es sich auf. */
+        if (pkt.proto === 'icmp' && pkt.payload && (pkt.payload.type === 3 || pkt.payload.type === 11)) return;
+        sendIcmp(node, pkt.src, 3, 0, { orig: origKopf(pkt) });
+      }, 'wolke', node.id);
+    }
+
+    /* Geht eine Frage an dieses Ziel voraussichtlich durch die
+       Wolke? Dann warten die Fristen länger (FERN_FAKTOR). Kein
+       Gerät auf der eigenen Fläche trägt die Adresse, und sie ist
+       keine private — mehr lässt sich von einem Endgerät aus nicht
+       sagen, und mehr braucht es auch nicht. */
+    function fern(node, dstIp) {
+      if (!netz.cwwVon()) return false;
+      const v = typeof dstIp === 'number' ? dstIp : U.ip2int(dstIp);
+      if (v === null) return false;
+      if (privat(v)) return false;
+      return !netz.findByIp(U.int2ip(v));
+    }
+    function privat(v) {
+      const a = v >>> 24, b = (v >>> 16) & 255;
+      return a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+    }
 
     function sendIcmp(node, dstIp, type, code, extra) {
       sendIp(node, dstIp, 'icmp', Object.assign({ type: type, code: code }, extra || {}));
@@ -899,7 +1037,8 @@
       const key = id + ':' + seq;
       const sent = engine.now;
 
-      const ev = engine.at(timeoutUs || PING_FRIST, () => {
+      const frist = (timeoutUs || PING_FRIST) * (fern(node, dstIp) ? FERN_FAKTOR : 1);
+      const ev = engine.at(frist, () => {
         if (!s.pings.has(key)) return;
         s.pings.delete(key);
         cb({ ok: false, error: 'Zeitüberschreitung — keine Antwort.', seq: seq });
@@ -985,6 +1124,10 @@
     return {
       deliver, sendIp, ping, clearTables, arpTable, macTable, routingTable, routeFor,
       sendUdp, listen, unlisten, listens, sockets, PORT, PING_FRIST,
+
+      /* Das Internet der Klasse (js/internet.js). */
+      setInternet: (a) => { internet = a || null; },
+      vonInternet, internetUnzustellbar, fern, FERN_FAKTOR, INET_MS, INET_DECKEL,
 
       /* TCP nach außen. Die Namen sagen, dass es TCP ist — ein
          `listen`, das mal das eine und mal das andere meint, wäre

@@ -20,7 +20,7 @@ vm.createContext(sandbox);
    und ungenauer. Das geht nur, weil die Datei beim LADEN kein
    DOM anfasst; wer das ändert, muss sie hier herausnehmen. */
 for (const f of ['util.js', 'engine.js', 'netz.js', 'verlauf.js', 'nat.js', 'tcp.js', 'rip.js', 'dateien.js',
-                 'http.js', 'mail.js', 'schichten.js', 'dienste.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
+                 'http.js', 'mail.js', 'schichten.js', 'dienste.js', 'internet.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
                  'prog-dateien.js', 'szenarien.js']) {
   vm.runInContext(fs.readFileSync(path.join(BASE, f), 'utf8'), sandbox, { filename: f });
 }
@@ -76,6 +76,14 @@ const e4 = new sandbox.Engine({ seed: 1 });
 e4.at(10, () => {}, 'a');
 e4.runUntil(5);
 ok('runUntil hält vor der Zeit an', e4.now === 5 && e4.pending === 1, e4.now + '/' + e4.pending);
+
+/* Ein abgesagtes Ereignis vorn darf das nächste nicht vorziehen. */
+const e5 = new sandbox.Engine({ seed: 1 });
+let spaet = 0;
+e5.cancel(e5.at(10, () => {}, 'tot'));
+e5.at(1000, () => spaet++, 'spät');
+e5.runUntil(50);
+ok('abgesagtes Ereignis vorn zieht das nächste nicht vor', spaet === 0 && e5.now === 50, spaet + '/' + e5.now);
 
 /* ═══ Hilfsbau ═══ */
 function bau(seed) {
@@ -4467,6 +4475,262 @@ function freiBau(seed) {
   const t = stack.natTabelle(hr);
   ok('nach „von vorn" bleibt die Freigabe', t.length === 1 && t[0].frei === true,
      JSON.stringify(t));
+}
+
+/* ═══ Class Wide Web ═══ */
+section('Class Wide Web: das Gerät');
+{
+  const { netz } = bau();
+  const c = netz.addNode('cww', 100, 100);
+  ok('das cww hat Internet + eine Karte nach innen', c.nics.length === 2);
+  ok('Karte 0 heißt „Internet"', netz.portLabel(c, 0) === 'Internet' && netz.istInternet(c, 0));
+  ok('und trägt die Adresse im 8er-Netz', c.nics[0].ip === '8.0.0.50' && c.nics[0].mask === '255.0.0.0',
+     c.nics[0].ip + '/' + c.nics[0].mask);
+  let wurf = null;
+  try { netz.addNode('cww', 300, 100); } catch (e) { wurf = e.message; }
+  ok('ein zweites cww gibt es nicht', wurf && /schon ein Class Wide Web/.test(wurf), wurf);
+  ok('darfAnlegen sagt es vorher', !netz.darfAnlegen('cww').ok && netz.darfAnlegen('router').ok);
+  const h = netz.addNode('host', 100, 300);
+  const r1 = netz.addCable(h.id, 0, c.id, 0);
+  ok('kein Kabel in die Internet-Karte', !r1.ok && /Wolke/.test(r1.error), r1.error);
+  ok('das nächste freie Loch ist Karte 1', netz.freieNic(c.id) === 1);
+  ok('die Internet-Karte lässt sich nicht abbauen', !netz.removeNic(c.id, 0).ok);
+
+  netz.setInternet({ prefix: 67, backbone: '8.41.3.9' });
+  ok('der Raum setzt Bereich und 8er-Adresse', c.nics[0].ip === '8.41.3.9' && netz.imEigenenNetz('67.1.2.3')
+     && !netz.imEigenenNetz('50.1.2.3'));
+  const j = netz.toJSON();
+  const cj = j.nodes.find(n => n.kind === 'cww');
+  ok('die 8er-Adresse steht NICHT in der Datei', cj.nics[0].ip === '', JSON.stringify(cj.nics[0]));
+  netz.fromJSON(j);
+  ok('beim Laden kommt sie aus dem Raum', netz.cwwVon().nics[0].ip === '8.41.3.9');
+  const n2 = netz.einfuegen(netz.ausschnitt([netz.cwwVon().id]), 40, 40);
+  ok('Einfügen legt kein zweites cww an', n2.length === 0 && netz.list().filter(n => n.kind === 'cww').length === 1);
+}
+
+/* Zwei Tablets in einem Prozess. Die „Wolke" ist hier eine
+   Schleife, die Pakete vom einen Ausgang zum anderen Eingang
+   trägt — genau das, was im Raum Server und Abfrage tun. */
+function tablet(seed, prefix, backbone) {
+  const b = bau(seed);
+  b.netz.setInternet({ prefix, backbone });
+  b.dienste = new sandbox.Dienste(b.engine, b.netz, b.stack, {});
+  b.inet = sandbox.Internet.erzeugen(b.engine, b.netz, b.stack, {});
+  b.inet.setModus('raum');
+  b.prefix = prefix; b.backbone = backbone;
+  return b;
+}
+function wolke(tabs, opt) {
+  opt = opt || {};
+  const namen = [];
+  const besitz = new Map();
+  for (const t of tabs) for (const e of t.inet.veroeffentlicht()) {
+    const k = e.typ + '|' + e.name;
+    if (!besitz.has(k)) { besitz.set(k, t); namen.push(e); }
+  }
+  for (const t of tabs) {
+    const raus = t.inet.nehmen();
+    const unzu = [];
+    for (const p of raus) {
+      if (opt.schlucken) continue;
+      const v = sandbox.NetUtil.ip2int(p.dst);
+      const ziel = tabs.find(x => x !== t && (x.backbone === p.dst || (v >>> 24) === x.prefix));
+      if (ziel) ziel.inet.rein({ pakete: [p] });
+      else unzu.push(p);
+    }
+    const vergeben = t.inet.veroeffentlicht().filter(e => besitz.get(e.typ + '|' + e.name) !== t);
+    t.inet.rein({ unzustellbar: unzu, verzeichnis: namen, vergeben });
+  }
+}
+function laufen(tabs, bis, opt) {
+  const start = tabs[0].engine.now;
+  for (let t = start; t <= start + bis; t += 100000) {
+    for (const x of tabs) x.engine.runUntil(t);
+    wolke(tabs, opt);
+  }
+}
+function zweiTablets() {
+  const A = tablet(11, 50, '8.0.7.1');
+  const B = tablet(12, 67, '8.0.9.4');
+  // A: ein Rechner direkt am cww
+  const ac = A.netz.addNode('cww', 100, 100);
+  const a1 = A.netz.addNode('host', 100, 300);
+  konf(ac, 1, '50.0.1.1'); konf(a1, 0, '50.0.1.10');
+  a1.gateway = '50.0.1.1'; a1.dns = '8.8.8.8';
+  A.netz.addCable(a1.id, 0, ac.id, 1);
+  // B: ein Server mit DNS und Webserver am cww
+  const bc = B.netz.addNode('cww', 100, 100);
+  const bs = B.netz.addNode('server', 100, 300);
+  konf(bc, 1, '67.0.0.1'); konf(bs, 0, '67.0.0.10');
+  bs.gateway = '67.0.0.1'; bs.dns = '8.8.8.8';
+  B.netz.addCable(bs.id, 0, bc.id, 1);
+  bs.software = ['dns', 'webserver'];
+  const dc = B.netz.dnsConf(bs); dc.on = true;
+  dc.records = [{ name: 'www.bernd.de', ip: '67.0.0.10' }, { name: 'intern.bernd.de', ip: '192.168.1.5' }];
+  B.dienste.http.standardDateien(bs);
+  B.netz.webConf(bs).on = true;
+  for (const t of [A, B]) { t.dienste.start(); t.dienste.sync(); }
+  return { A, B, ac, a1, bc, bs };
+}
+
+section('Class Wide Web: zwei Tablets');
+{
+  const { A, B, a1, bs } = zweiTablets();
+  let r = null;
+  A.stack.ping(a1, '67.0.0.10', 1, 3 * SEC, x => r = x);
+  laufen([A, B], 20 * SEC);
+  ok('Ping in das Netz eines anderen Tablets kommt an', r && r.ok, JSON.stringify(r));
+  ok('TTL: zwei cwws unterwegs', r && r.ttl === 62, r && r.ttl);
+  ok('B sieht das Paket in SEINEM Mitschnitt', B.mit.view().some(z => z.proto === 'ICMP'));
+
+  let p8 = null;
+  A.stack.ping(a1, '8.8.8.8', 2, 3 * SEC, x => p8 = x);
+  laufen([A, B], 10 * SEC);
+  ok('ping 8.8.8.8 geht', p8 && p8.ok && p8.from === '8.8.8.8', JSON.stringify(p8));
+
+  let dns = null;
+  A.dienste.resolve(a1, 'www.bernd.de', x => dns = x);
+  laufen([A, B], 20 * SEC);
+  ok('8.8.8.8 kennt den Namen aus dem anderen Netz', dns && dns.ok && dns.ip === '67.0.0.10', JSON.stringify(dns));
+
+  let dns2 = null;
+  A.dienste.resolve(a1, 'intern.bernd.de', x => dns2 = x);
+  laufen([A, B], 20 * SEC);
+  ok('ein Name auf eine private Adresse wird nicht veröffentlicht', dns2 && !dns2.ok, JSON.stringify(dns2));
+  const st = B.inet.eigene().find(e => e.name === 'intern.bernd.de');
+  ok('und B sieht, warum', st && st.status === 'privat', JSON.stringify(st));
+
+  let seite = null;
+  A.dienste.http.seiteHolen(a1, '67.0.0.10', x => seite = x);
+  laufen([A, B], 120 * SEC);
+  ok('eine Webseite aus dem anderen Netz lädt', seite && seite.ok && seite.status === 200,
+     seite && (seite.grund || seite.status));
+
+  let weg = null;
+  A.stack.ping(a1, '99.0.0.1', 3, 3 * SEC, x => weg = x);
+  laufen([A, B], 20 * SEC);
+  ok('ein /8, das niemandem gehört: „nicht erreichbar"', weg && !weg.ok && /nicht erreichbar/.test(weg.error),
+     JSON.stringify(weg));
+  ok('gemeldet vom eigenen cww (seine Karte nach innen)', weg && weg.from === '50.0.1.1', weg && weg.from);
+}
+
+section('Class Wide Web: Haustür');
+{
+  const { A, B, ac } = zweiTablets();
+  // Ein Rechner mit fremdem Absender direkt am cww
+  const sw = A.netz.addNode('switch', 300, 300);
+  const cab = A.netz.cableList()[0];
+  A.netz.removeCable(cab.id);
+  const a1 = A.netz.list().find(n => n.kind === 'host');
+  A.netz.addCable(a1.id, 0, sw.id, 0);
+  A.netz.addCable(ac.id, 1, sw.id, 1);
+  const fremd = A.netz.addNode('host', 400, 300);
+  A.netz.addCable(fremd.id, 0, sw.id, 2);
+  konf(ac, 1, '50.0.1.1', '255.255.255.0');
+  // Zweite Adresse im selben Kabelnetz geht nicht — also ein Router-Trick:
+  // der fremde Rechner behauptet eine Adresse aus B's Bereich.
+  konf(fremd, 0, '50.0.1.66'); fremd.gateway = '50.0.1.1';
+  let r = null;
+  A.stack.sendIp(fremd, '67.0.0.10', 'icmp', { type: 8, code: 0, id: 99, seq: 1, data: 32 }, { src: '67.0.0.77' });
+  laufen([A, B], 10 * SEC);
+  ok('ein fremder Absender kommt nicht hinaus',
+     A.mit.view().length >= 0 && B.mit.view().every(z => z.proto !== 'ICMP'));
+  const ev = [];
+  A.engine.on('event', e => { if (e.kind === 'drop-quelle') ev.push(e); });
+  A.stack.sendIp(fremd, '67.0.0.10', 'icmp', { type: 8, code: 0, id: 98, seq: 1, data: 32 }, { src: '192.168.9.9' });
+  laufen([A, B], 10 * SEC);
+  ok('und das cww sagt, warum', ev.length === 1 && /Absender 192\.168\.9\.9/.test(ev[0].why), JSON.stringify(ev));
+
+  // Von draußen nur, was ins eigene /8 will
+  const ev2 = [];
+  A.engine.on('event', e => { if (e.kind === 'drop-quelle') ev2.push(e); });
+  A.stack.vonInternet({ src: '67.0.0.10', dst: '99.1.1.1', ttl: 60, proto: 'icmp',
+                        id: 1, payload: { type: 8, code: 0, id: 1, seq: 1 } });
+  laufen([A, B], 2 * SEC);
+  ok('das cww ist kein Durchgang', ev2.length === 1, JSON.stringify(ev2));
+  void r;
+}
+
+section('Class Wide Web: Fristen und ohne Raum');
+{
+  const { A, B, a1 } = zweiTablets();
+  let r = null;
+  A.stack.ping(a1, '67.0.0.10', 1, A.stack.PING_FRIST, x => r = x);
+  laufen([A, B], 10 * SEC, { schlucken: true });
+  ok('fremdes Ziel: nach 10 s noch keine Zeitüberschreitung', r === null, JSON.stringify(r));
+  laufen([A, B], 30 * SEC, { schlucken: true });
+  ok('aber irgendwann doch', r && !r.ok && /Zeitüberschreitung/.test(r.error), JSON.stringify(r));
+
+  A.inet.setModus('solo');
+  let s = null;
+  A.stack.ping(a1, '67.0.0.10', 2, A.stack.PING_FRIST, x => s = x);
+  laufen([A], 10 * SEC);
+  ok('ohne Raum: sofort „nicht erreichbar"', s && !s.ok && /nicht erreichbar/.test(s.error), JSON.stringify(s));
+  let d = null;
+  A.stack.ping(a1, '8.8.8.8', 3, A.stack.PING_FRIST, x => d = x);
+  laufen([A], 10 * SEC);
+  ok('8.8.8.8 antwortet auch ohne Raum', d && d.ok, JSON.stringify(d));
+
+  A.inet.setModus('aus');
+  let m = null;
+  A.stack.ping(a1, '67.0.0.10', 4, 3 * SEC, x => m = x);
+  laufen([A, B], 5 * SEC);
+  ok('in der Spiegelung geht nichts hinaus', A.inet.wartend === 0 && !B.mit.view().some(z => z.proto === 'ICMP'));
+  void m;
+}
+
+section('Class Wide Web: Heimrouter dahinter');
+{
+  const { A, B } = zweiTablets();
+  const ac = A.netz.cwwVon();
+  const a1 = A.netz.list().find(n => n.kind === 'host');
+  A.netz.removeNode(a1.id);
+  const hr = A.netz.addNode('heimrouter', 100, 300);
+  const lap = A.netz.addNode('host', 100, 500);
+  A.netz.addCable(ac.id, 1, hr.id, 0);
+  A.netz.addCable(lap.id, 0, hr.id, 1);
+  const dc = A.netz.dhcpConf(ac);
+  Object.assign(dc, { on: true, nic: 1, von: '50.0.1.100', bis: '50.0.1.110', mask: '255.255.255.0',
+                      gateway: '50.0.1.1', dns: '8.8.8.8' });
+  konf(hr, 1, '192.168.1.1');
+  konf(lap, 0, '192.168.1.20'); lap.gateway = '192.168.1.1'; lap.dns = '8.8.8.8';
+  A.dienste.reset(); A.dienste.start(); A.dienste.sync();
+  laufen([A, B], 20 * SEC);
+  ok('der Heimrouter holt seine WAN-Adresse vom cww', /^50\.0\.1\.1\d\d$/.test(hr.nics[0].ip), hr.nics[0].ip);
+  let r = null;
+  A.dienste.resolve(lap, 'www.bernd.de', x => r = x);
+  laufen([A, B], 30 * SEC);
+  ok('der Laptop im Heimnetz findet den Namen über 8.8.8.8', r && r.ok && r.ip === '67.0.0.10', JSON.stringify(r));
+  let p = null;
+  A.stack.ping(lap, '67.0.0.10', 1, A.stack.PING_FRIST, x => p = x);
+  laufen([A, B], 30 * SEC);
+  ok('und erreicht den Server im anderen Netz (NAT)', p && p.ok, JSON.stringify(p));
+}
+
+section('Class Wide Web: Verzeichnis');
+{
+  const { A, B, bs } = zweiTablets();
+  // A meldet denselben Namen an — B war zuerst (steht in der Liste vorn)
+  const as = A.netz.addNode('server', 300, 300);
+  const ac = A.netz.cwwVon();
+  const sw = A.netz.addNode('switch', 300, 500);
+  const a1 = A.netz.list().find(n => n.kind === 'host');
+  A.netz.removeCable(A.netz.cableList()[0].id);
+  A.netz.addCable(a1.id, 0, sw.id, 0); A.netz.addCable(ac.id, 1, sw.id, 1); A.netz.addCable(as.id, 0, sw.id, 2);
+  konf(as, 0, '50.0.1.20'); as.gateway = '50.0.1.1';
+  as.software = ['dns'];
+  const dc = A.netz.dnsConf(as); dc.on = true;
+  dc.records = [{ name: 'www.bernd.de', ip: '50.0.1.20' }, { name: 'www.anna.de', ip: '50.0.1.20' }];
+  A.dienste.sync();
+  laufen([B, A], 2 * SEC);
+  const e = A.inet.eigene().find(x => x.name === 'www.bernd.de');
+  ok('wer später kommt, sieht „vergeben"', e && e.status === 'vergeben', JSON.stringify(e));
+  const l = A.inet.liste();
+  ok('8.8.8.8 zeigt den Namen des anderen', l.some(x => x.name === 'www.bernd.de' && x.wert === '67.0.0.10' && x.status === 'fremd'),
+     JSON.stringify(l));
+  ok('und den eigenen', l.some(x => x.name === 'www.anna.de' && x.status === 'eigen'));
+  ok('keine Spalte „wem gehört das"', l.every(x => !('prefix' in x) && !('tablet' in x)));
+  void bs;
 }
 
 /* ═══ Ergebnis ═══ */

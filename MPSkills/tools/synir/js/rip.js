@@ -127,7 +127,10 @@
        wird nach der Geräteart und nicht nach `KIND[…].routes`:
        Letzteres trifft den Heimrouter mit, und der soll es
        ausdrücklich nicht können. */
-    const kannRip = (node) => !!(node && node.kind === 'router');
+    /* Das cww darf es auch: nach innen ist es ein Router wie jeder
+       andere. Seine Internet-Karte hat kein Kabel und sagt deshalb
+       von selbst nichts an (`ansagen` fragt nach `nic.cable`). */
+    const kannRip = (node) => !!(node && (node.kind === 'router' || node.kind === 'cww'));
     const aktiv   = (node) => !!(kannRip(node) && node.rip && node.rip.on && node.on);
 
     /* ─── Die eigenen Netze ───────────────────────────────────
