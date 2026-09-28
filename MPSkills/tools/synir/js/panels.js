@@ -749,8 +749,32 @@
       const schichten = mit.modus === 'schichten';
       const show = rows.slice(schichten ? -120 : -300);
 
+      /* ⚠️ Nur ans Ende rollen, wenn man schon am Ende WAR. Vom
+         Nutzer: „Wenn ich scrolle und ein neuer Eintrag kommt, soll
+         sich die Leiste nicht verschieben." Vorher sprang die Liste
+         bei jedem Rahmen nach unten, und wer weiter oben las, verlor
+         seine Zeile. Sonst bleibt die oberste sichtbare Zeile, wo sie
+         war — gemessen an ihrer Nummer und nicht an `scrollTop`,
+         denn oben fallen beim Kappen (`slice`) Zeilen weg. */
+      const unten = !body.clientHeight
+        || body.scrollHeight - body.scrollTop - body.clientHeight < 24;
+      let anker = null;
+      if (!unten) {
+        const oben = body.getBoundingClientRect().top;
+        for (const d of body.querySelectorAll('[data-n]')) {
+          const r = d.getBoundingClientRect();
+          if (r.bottom > oben + 1) { anker = { n: d.dataset.n, dy: r.top - oben }; break; }
+        }
+      }
+
       body.innerHTML = schichten ? malenSchichten(show) : malenZeilen(show);
-      body.scrollTop = body.scrollHeight;
+
+      const ziel = anker && body.querySelector('[data-n="' + anker.n + '"]');
+      if (ziel) {
+        body.scrollTop += ziel.getBoundingClientRect().top - body.getBoundingClientRect().top - anker.dy;
+      } else {
+        body.scrollTop = body.scrollHeight;
+      }
 
       body.querySelectorAll('[data-n]').forEach(d => {
         d.addEventListener('click', () => {
@@ -875,7 +899,7 @@
             + '<span class="trs-q">' + esc(l.quelle) + '</span>'
             + '<span class="trs-z">' + esc(l.ziel) + '</span>'
             + '<span class="trs-p">' + esc(l.proto) + '</span>'
-            + '<span class="trs-s">' + esc(l.schicht) + '</span>'
+            + '<span class="trs-s"><i>' + esc(l.schicht) + '</i></span>'
             + '<span class="trs-b">' + esc(l.details)
             + (i === 0 && r.mal > 1 ? ' <b class="tr-x" title="derselbe Rahmen ging über '
                 + r.mal + ' Anschlüsse gleichzeitig hinaus">× ' + r.mal + '</b>' : '')
@@ -893,7 +917,10 @@
       const ls = mit.layers(r);
       let h = '<div class="tr-det">';
       for (const l of ls) {
-        h += '<div class="tr-lay"><div class="tr-lay-h">Schicht ' + l.n + ' · ' + esc(l.name) + '</div>';
+        // Dieselbe Farbe je Schicht wie in der Schichtenansicht.
+        h += '<div class="tr-lay l--' + esc(String(l.schicht).toLowerCase()) + '">'
+          + '<div class="tr-lay-h">Schicht ' + l.n + ' · ' + esc(l.name)
+          + ' <span class="tr-lay-s">' + esc(l.schicht) + '</span></div>';
         for (const [k, v] of l.fields)
           h += '<div class="tr-f"><span>' + esc(k) + '</span><span class="mono">' + esc(v) + '</span></div>';
         h += '</div>';

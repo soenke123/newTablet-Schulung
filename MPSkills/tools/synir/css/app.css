@@ -569,6 +569,17 @@ body[data-modus="aktion"] { --modus: var(--m-akt); --modus-bg: var(--m-akt-bg);
 }
 .mbtn--sub.is-on:hover { filter: brightness(1.1); }
 
+/* Der Mitschnitt-Knopf: gleiche Form wie „Subnetze", aber nur im
+   Aktionsmodus — im Entwurf läuft nichts, was man mitschneiden
+   könnte. Eingeschaltet in der Modusfarbe (Mint), denn er gehört
+   zum Laufen. */
+.mbtn--trace {
+  margin-right: 6px;
+  border: 1px solid var(--line); background: var(--surface);
+}
+.mbtn--trace.is-on { color: #fff; background: var(--m-akt); border-color: transparent; box-shadow: none; }
+body:not([data-modus="aktion"]) .mbtn--trace { display: none; }
+
 /* Im Entwurf steht die Uhr, also gibt es auch keine Knöpfe für
    sie. Sie auszublenden statt sie auszugrauen ist Absicht: ein
    grauer Knopf lädt zum Draufklicken ein, ein fehlender nicht. */
@@ -726,7 +737,6 @@ body[data-modus="aktion"]  .tools-bau  { display: none; }
 }
 .zoom-l:hover { color: var(--ink); text-decoration: underline; }
 .rail.is-zu .zoom-l { flex: 0 0 100%; }
-.rail-zhint { font-size: 11px; }
 
 /* Die beiden Modusfassungen der Leiste. Unverändert die Regel:
    im Aktionsmodus wird nicht gebaut — welche der beiden sichtbar
@@ -1360,8 +1370,10 @@ body.is-ziehen, body.is-ziehen * {
   display: flex; align-items: center; gap: 9px;
   padding: 12px 12px 12px 16px; border-bottom: 1px solid var(--auf-line);
   background: var(--auf-kopf); border-radius: calc(var(--r3) - 1px) calc(var(--r3) - 1px) 0 0;
-  cursor: pointer;
+  cursor: grab; touch-action: none; user-select: none;
 }
+.aufgabe.is-zieh .auf-h { cursor: grabbing; }
+.aufgabe.is-zieh { z-index: 8; }
 .auf-h:hover { filter: brightness(.985); }
 .auf-tag {
   font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em;
@@ -1369,22 +1381,24 @@ body.is-ziehen, body.is-ziehen * {
   border-radius: 999px; padding: 3px 0;
 }
 .auf-h strong { font-size: 14px; }
-.auf-fold, .auf-x {
+.auf-min {
   width: 28px; height: 28px; flex: none; border: 0; border-radius: 50%;
-  background: transparent; color: var(--ink-3); font-size: 16px; cursor: pointer;
+  margin-left: auto;
+  background: transparent; color: var(--ink-3); font-size: 18px; font-weight: 700;
+  line-height: 1; cursor: pointer;
 }
-.auf-fold { margin-left: auto; transition: transform .18s; }
-.auf-x { font-size: 18px; }
-.auf-fold:hover, .auf-x:hover { background: var(--bg); color: var(--ink); }
+.auf-min:hover { background: var(--bg); color: var(--ink); }
 
-/* Eingeklappt bleibt nur die Kopfzeile stehen — der Auftrag ist
-   noch da, nimmt aber keine Geräte mehr in Beschlag. Der Zustand
-   überlebt einen Szenarienwechsel nicht: ein neuer Auftrag will
-   gelesen werden. */
-.aufgabe.is-fold .auf-b  { display: none; }
-.aufgabe.is-fold .auf-h  { border-bottom: 0; border-radius: calc(var(--r3) - 1px); }
-.aufgabe.is-fold .auf-fold { transform: rotate(-90deg); }
-.aufgabe.is-fold { width: auto; max-width: min(370px, calc(100% - 36px)); }
+/* Die minimierte Aufgabe: eine gelbe Kachel oben links neben dem
+   Szenario-Menü. Gelb, weil der Auftrag das einzige warme Stück im
+   Programm ist — man erkennt ihn wieder, ohne das Wort zu lesen. */
+.auf-kachel {
+  font: inherit; font-size: 12.5px; font-weight: 700; letter-spacing: .02em;
+  padding: 6px 13px; border-radius: var(--r1); cursor: pointer;
+  background: #ffd966; color: #5a4000; border: 1px solid #e9bf3c;
+}
+.auf-kachel:hover { filter: brightness(1.05); }
+.auf-kachel[hidden] { display: none; }
 
 /* Bei offener Subnetzliste rückt der Auftrag auf deren Breite
    zusammen: beide stehen dann in derselben linken Spalte und
@@ -1675,6 +1689,43 @@ input.f:focus, select.f:focus, textarea.f:focus {
   padding: 9px 11px; font-size: 12px; color: var(--ink-2); margin: 0 0 10px;
 }
 .k-err { font-size: 12px; color: var(--bad); margin-top: 6px; }
+
+/* ─── Das „i" an einer Überschrift ───────────────────────────
+   Erklärungen stehen nicht mehr offen im Formular, sondern
+   hinter diesem Knopf (konfig.js, `sec`). Gleiche Form wie das (i)
+   im E-Mail-Programm (`.ml-i`). */
+.k-sec--i { display: flex; align-items: center; gap: 6px; }
+.k-sec--nur-i { border-bottom: 0; margin: -2px 0 4px; padding: 0; }
+.k-i {
+  flex: none; width: 18px; height: 18px; margin-left: auto; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%;
+  background: var(--surface); color: var(--ink-3);
+  font: inherit; font-size: 10.5px; font-style: italic; font-weight: 700;
+  text-transform: none; letter-spacing: 0; line-height: 1; cursor: pointer;
+}
+.k-i:hover { border-color: var(--accent); color: var(--accent); }
+.k-i.is-on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.k-info { margin-top: 2px; }
+
+/* ─── Die kompakte Leseansicht (Aktionsmodus) ────────────────
+   Router, Heimrouter, Switch: Zeilen „Angabe · Wert", keine
+   Felder. Je Netzwerkkarte ein Kasten in der Farbe ihres Netzes,
+   wie im Einstellformular. */
+.kk { display: flex; flex-direction: column; gap: 6px; }
+.kk-nic, .kk-g {
+  border: 1px solid var(--line); border-radius: var(--r2);
+  padding: 6px 9px; background: var(--surface-2);
+}
+.kk-nic.has-sub { border-color: var(--sub); box-shadow: inset 3px 0 0 var(--sub); }
+.kk-t { font-size: 11px; font-weight: 700; color: var(--ink-2); margin-bottom: 2px; }
+.kk-z {
+  display: flex; justify-content: space-between; gap: 10px;
+  font-size: 12px; padding: 1px 0;
+}
+.kk-l { color: var(--ink-3); }
+.kk-v { text-align: right; }
+.kk-an { color: var(--ok); }
+.kk-zeile { font-size: 11.5px; text-align: right; }
 
 /* Kompakt heißt kompakt: ein Router mit drei Anschlüssen muss
    ohne Bildlauf lesbar bleiben. Jede Zeile hier war einmal
@@ -2710,6 +2761,9 @@ body:not(.wlt-open) .wlt-b { height: 0; padding: 0; }
   transition: grid-template-rows .22s ease;
 }
 body.trace-open .trace { grid-template-rows: auto 1fr; }
+/* Die ganze Leiste — auch ihre Kopfzeile — gibt es nur, solange der
+   Knopf „Mitschnitt" oben an ist (und das geht nur in Aktion). */
+body:not(.trace-open) .trace { display: none; }
 
 /* ⚠️ EINE Zeile, feste Höhe, notfalls waagerecht scrollen — und
    das ist keine Kosmetik. Die Leiste steht mit der Zeichenfläche
@@ -2827,7 +2881,14 @@ body:not(.trace-open) .trace-b { height: 0; border-top: 0; }
 }
 .tr-lay-h {
   font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em;
-  color: var(--accent); margin-bottom: 7px; font-weight: 700;
+  color: var(--ink-2); margin-bottom: 7px; font-weight: 700;
+}
+/* Jede Schale in der Farbe ihrer Schicht — dieselben Farben wie in
+   der Schichtenansicht (siehe --l-* unten). */
+.tr-lay { border-left: 4px solid var(--l, var(--line)); }
+.tr-lay-s {
+  float: right; text-transform: none; letter-spacing: 0; font-weight: 700;
+  padding: 1px 7px; border-radius: 999px; color: #2b2b2b; background: var(--l, var(--line));
 }
 .tr-f {
   display: flex; justify-content: space-between; gap: 12px;
@@ -2864,10 +2925,25 @@ body:not(.trace-open) .trace-b { height: 0; border-top: 0; }
 .trs.is-sel { background: var(--surface-2); }
 .trs.is-lost { opacity: .6; }
 
-.trs.l--netzzugang  { border-left-color: #C9C9C9; }
-.trs.l--vermittlung { border-left-color: #8FAADC; }
-.trs.l--transport   { border-left-color: #F4B183; }
-.trs.l--anwendung   { border-left-color: #FFD966; }
+/* ⚠️ Seit 2026-09-28 wieder deutlich farbig — vom Nutzer: „Die
+   Schichten aus dem Schichtenmodell sollen farblich markiert sein."
+   Der Rand ist breiter, die Zeile trägt einen Hauch ihrer Farbe
+   (hell wie dunkel lesbar, weil gemischt statt gesetzt), und die
+   Spalte „Schicht" wird zur Pille in voller Farbe. */
+.l--netzzugang  { --l: #C9C9C9; }
+.l--vermittlung { --l: #8FAADC; }
+.l--transport   { --l: #F4B183; }
+.l--anwendung   { --l: #FFD966; }
+.trs[class*="l--"] {
+  border-left: 5px solid var(--l);
+  background: color-mix(in srgb, var(--l) 16%, transparent);
+}
+.trs[class*="l--"]:hover { background: color-mix(in srgb, var(--l) 28%, transparent); }
+.trs.is-sel[class*="l--"] { background: color-mix(in srgb, var(--l) 34%, transparent); }
+.trs-s i {
+  font-style: normal; font-weight: 700; color: #2b2b2b;
+  padding: 1px 8px; border-radius: 999px; background: var(--l, var(--line));
+}
 
 .trs--kopf {
   position: sticky; top: 0; z-index: 2;
@@ -3287,7 +3363,7 @@ body.trace-schichten .trs { min-width: 940px; }
 }
 .dt--kein .dt-dock { display: none; }
 .dt--kein .dt-winh { display: none; }
-.dt--kein .dt-apps { display: block; flex: none; }
+.dt--kein .dt-apps { display: none; }
 /* ⚠️ Und hier MUSS der Fensterkasten zurück in den Fluss. Auf dem
    Bildschirm liegt er absolut über den Kacheln; in diesem
    Flexkasten hier gibt es keine Kacheln, über die er liegen
@@ -3297,37 +3373,6 @@ body.trace-schichten .trs { min-width: 940px; }
 .dt--kein .dt-fenster {
   position: static; flex: 1 1 auto; min-height: 0;
 }
-
-/* Der Satz über dem Fenster. Er steht nicht DARIN, weil er vom
-   Gerät handelt und nicht vom Inhalt — wer aufs Terminal
-   umschaltet, soll ihn behalten. */
-.dt-kein {
-  display: flex; gap: 10px; align-items: flex-start;
-  padding: 10px 11px; margin-bottom: 8px;
-  background: var(--surface-2); border: 1px solid var(--line);
-  border-radius: var(--r1);
-  font-size: 12px; line-height: 1.45; color: var(--ink-2);
-}
-.dt-kein strong { color: var(--ink); }
-.dt-kein p { margin: 0; }
-.dt-kein-ic { flex: none; color: var(--ink-3); line-height: 1; }
-.dt-kein-ic svg { width: 20px; height: 20px; display: block; }
-
-/* Die Reiter. Schmal und in der Fläche liegend — sie sollen nicht
-   nach Programmkacheln aussehen, denn genau das sind sie nicht. */
-.dt-reg { display: flex; gap: 6px; }
-.dt-reg-b {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 11px; font: inherit; font-size: 12px; font-weight: 600;
-  color: var(--ink-2); background: var(--surface-2);
-  border: 1px solid var(--line); border-radius: 999px; cursor: pointer;
-}
-.dt-reg-b svg { width: 14px; height: 14px; opacity: .75; }
-.dt-reg-b:hover { background: var(--bg); color: var(--ink); }
-.dt-reg-b.is-on {
-  background: var(--ink); color: var(--surface); border-color: var(--ink);
-}
-.dt-reg-b.is-on svg { opacity: 1; }
 
 /* Das Fenster ist hier der ganze Rest — ohne eigene Kante, denn
    es liegt nicht mehr AUF einer Tapete, sondern im Gerät. */
@@ -3503,6 +3548,19 @@ body.trace-open .term-o { height: clamp(96px, 20vh, 252px); }
      Fläche belegen, sonst steht man wieder vor einem Dialog, der
      das Netz verdeckt.                                          */
 
+/* Seit Mitschnitt-Knopf und Aufgabe-Kachel mit in der Kopfzeile
+   stehen, wird sie im Aktionsmodus breiter. Das Wort unter dem
+   Tempo-Schieber steht dann im Tooltip (`speed.title`), damit die
+   Zeile auf einem Beamer (1280–1600 px) nicht umbricht. */
+@media (max-width: 1700px) {
+  .speed-l { display: none; }
+}
+/* Und unter 1500 px weicht das Schildchen „Prototyp", sonst bricht
+   die Zeile bei 1400 px mit minimierter Aufgabe um. */
+@media (max-width: 1500px) {
+  .badge-proto { display: none; }
+}
+
 @media (max-width: 1080px) {
   /* Groß ist hier so breit wie klein: 400 px wären auf einem
      Tablet hochkant die halbe Fläche, und die Tabellen darin
@@ -3549,7 +3607,6 @@ body.trace-open .term-o { height: clamp(96px, 20vh, 252px); }
      Zusatz „Class Wide Web" ist bei dieser Höhe nicht mehr zu
      lesen; das ist hinnehmbar, der Schriftzug darüber schon. */
   .marke { height: 28px; }
-  .badge-proto { display: none; }
   #exportBtn, #neuBtn, .tbtn:has(#importInput) { display: none; }
   .sel { max-width: 130px; }
   .speedbox input[type=range] { width: 64px; }

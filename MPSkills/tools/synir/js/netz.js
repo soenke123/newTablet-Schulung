@@ -132,10 +132,12 @@
        Router: an ihm lässt sich zeigen, dass „der Router" zu Hause
        gar kein Router ist, sondern vier Geräte in einem Gehäuse.
 
-       `ports: 5` = 1 × WAN + 4 × LAN, wie an der Rückseite eines
-       echten Geräts. `maxPorts: 8` = WAN + 7 LAN. */
+       `ports: 9` = 1 × WAN + 8 × LAN, FEST eingebaut — vom Nutzer
+       gesetzt: „1 WAN und 8 LAN. Aber die sind fest drin alle."
+       Anbauen gibt es nicht (maxPorts = ports), und ältere Stände
+       mit weniger Buchsen füllt `fromJSON` auf. */
     heimrouter: {
-      id: 'heimrouter', label: 'Heimrouter', kurz: 'HR', ports: 5, maxPorts: 8, routes: true,
+      id: 'heimrouter', label: 'Heimrouter', kurz: 'HR', ports: 9, maxPorts: 9, routes: true,
       icon: 'heimrouter', wlan: true,
       hint: 'Router, Switch und WLAN-Zugangspunkt in einem Gehäuse. Oben ein '
         + 'WAN-Anschluss zum Anbieter, unten mehrere LAN-Buchsen fürs Heimnetz. '
