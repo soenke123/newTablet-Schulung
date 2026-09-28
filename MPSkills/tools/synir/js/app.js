@@ -37,6 +37,10 @@
   const ROLLE   = !IM_RAUM ? 'solo'
                 : (PARAM.get('rolle') === 'presenter' ? 'presenter' : 'participant');
   const KEY = 'netzsim.stand.v1' + (IM_RAUM ? ':' + ROLLE + ':' + PARAM.get('raum') : '');
+  /* Das Schaufenster auf der MPSkills-Startseite (preview/synir.js):
+     dort darf nichts im Gerät hängenbleiben und nichts von früher
+     hereinragen — und keine Rückfrage das Drehbuch anhalten. */
+  const VORSCHAU = IM_RAUM && PARAM.get('vorschau') === '1';
 
   /* ─── Tempostufen ───────────────────────────────────────────
      Geeicht an der Kabellaufzeit (100 ms, siehe KABEL_MS in
@@ -1043,7 +1047,7 @@
     /* Beim Zusehen (Spiegelung am Beamer) liegt das Netz eines
        Kindes auf — das gehört nicht in den Speicher der Lehrkraft.
        bruecke.js schaltet das Sichern dafür ab und danach wieder an. */
-    let nichtSpeichern = false;
+    let nichtSpeichern = VORSCHAU;
     function save() {
       clearTimeout(saveTimer);
       if (nichtSpeichern) return;
@@ -1063,6 +1067,7 @@
     }
 
     function load() {
+      if (VORSCHAU) return false;
       try {
         const raw = localStorage.getItem(KEY);
         if (!raw) return false;
@@ -1100,7 +1105,7 @@
     function szenarioLaden(s, opt) {
       opt = opt || {};
       if (!s) return false;
-      if (opt.fragen && netz.count && !window.confirm('Das aktuelle Netz wird ersetzt. Weiter?')) return false;
+      if (opt.fragen && !VORSCHAU && netz.count && !window.confirm('Das aktuelle Netz wird ersetzt. Weiter?')) return false;
       const data = s.netz ? U.deepCopy(s.netz) : U.deepCopy(s);
       engine.reset();
       /* Ein Szenario bringt seine eigenen Dateien mit (oder
@@ -1594,7 +1599,8 @@
                    // Für den Raum (bruecke.js) und die Prüfstände.
                    standJson, szenarioLaden, eingebaut, showAufgabe, toast,
                    setRunning, menue, extern, aktuell, ROLLE, IM_RAUM,
-                   speichern(an) { nichtSpeichern = !an; if (an) save(); },
+                   speichern(an) { nichtSpeichern = !an || VORSCHAU; if (!nichtSpeichern) save(); },
+                   VORSCHAU,
                    get ablage() { return ablage; },
                    get modus() { return modus; },
                    get leisteZu() { return rail.classList.contains('is-zu'); } };

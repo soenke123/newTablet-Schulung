@@ -37,7 +37,7 @@
 (function () {
   'use strict';
 
-  const V = '?v=20260928a';
+  const V = '?v=20260928b';
   const TAKT_MS = 3000;          // Stand der Klasse / Spiegelung
   const GAP = 12;
   const MIN = 440;
@@ -68,14 +68,16 @@
     return Array.isArray(s) ? s.filter(x => x && typeof x.id === 'string') : [];
   }
 
+  /* Auch im Schaufenster über ctx.actions: dort beantwortet das
+     Drehbuch die Aufrufe selbst (preview/synir.js, show.server). */
   async function call(fn, args) {
-    if (!ctx || ctx.preview) return { ok: false, error: 'preview' };
+    if (!ctx) return { ok: false, error: 'network' };
     return ctx.actions.call(fn, args || {});
   }
 
   function fehler(res) {
     if (!res || res.ok) return;
-    if (res.error === 'network' || res.error === 'preview') return;
+    if (res.error === 'network' || res.error === 'unknown_fn') return;
     if (res.error === lastErr) return;
     lastErr = res.error;
     setTimeout(() => { if (lastErr === res.error) lastErr = ''; }, 8000);
@@ -454,7 +456,9 @@
     code = c;
     const src = 'tools/synir/index.html' + V
       + '&raum=' + encodeURIComponent(c)
-      + '&rolle=' + (isPresenter() ? 'presenter' : 'participant');
+      + '&rolle=' + (isPresenter() ? 'presenter' : 'participant')
+      // Schaufenster: kein Gerätespeicher, keine Rückfragen (app.js).
+      + (ctx.preview ? '&vorschau=1' : '');
     stage.innerHTML = '<iframe class="sy-frame" src="' + src + '" title="SYNIR" loading="eager" '
       + 'allow="fullscreen"></iframe>';
     frame = stage.querySelector('.sy-frame');

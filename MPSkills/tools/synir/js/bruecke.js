@@ -143,7 +143,7 @@
         if (SIM.szenarioLaden(lokal, { fragen: true })) post('pick', { id, lokal: true });
         return true;
       }
-      if (SIM.netz.count && !window.confirm('Das aktuelle Netz wird ersetzt. Weiter?')) return true;
+      if (!SIM.VORSCHAU && SIM.netz.count && !window.confirm('Das aktuelle Netz wird ersetzt. Weiter?')) return true;
       if (watching) zuseheEnde(false);
       post('pick', { id });
       return true;
