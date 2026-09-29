@@ -3968,3 +3968,67 @@ body.cm-locked { overflow: hidden; }
 /* Die Sammel-Knöpfe der Oberkategorie sind kleiner: sie setzen etwas,
    sie zeigen nichts an, was nicht auch eine Zeile tiefer stünde. */
 .cm-poolseg--all button { font-size: .75rem; padding: 3px 10px; }
+
+/* ── Handy-Kopf mit Mini-Karte ───────────────────────────────────
+   Links die Figur (ca. 20 % kleiner als vorher), daneben oben die
+   Mini-Karte, darunter Anteil/Serien/Balken und rechts unten der
+   Karten-Knopf. Steht als Letztes in der Datei, damit es die älteren
+   .cm-phero-Regeln übersteuert. */
+.cm-phero {
+  flex: 0 0 32%;
+  min-height: 116px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas: "unit mini" "stats btn";
+  gap: 6px 10px;
+}
+.cm-phero .cm-pherounit { grid-area: unit; max-width: 27vw; min-height: 0; height: 100%; }
+.cm-phero .cm-pherounit img { max-height: 100%; }
+.cm-minimap {
+  grid-area: mini;
+  min-width: 0; min-height: 0;
+  display: flex; align-items: center; justify-content: flex-end;
+}
+.cm-minisvg { max-width: 100%; max-height: 100%; width: 100%; height: 100%; }
+.cm-mh {
+  fill: color-mix(in srgb, var(--raw) 60%, var(--raw-base, #8a9a5c));
+  stroke: rgba(58,38,12,.5);
+  stroke-width: .08;
+}
+.cm-mh--mine { fill: color-mix(in srgb, var(--raw) 40%, #fff); stroke: #fff; stroke-width: .16; }
+.cm-mcrown { font-size: 1.5px; pointer-events: none; }
+.cm-phero .cm-pherostats { grid-area: stats; justify-content: flex-end; gap: 5px; }
+.cm-phero .cm-pmapbtn { grid-area: btn; align-self: end; }
+.cm-phero .cm-pshare b { font-size: clamp(1.3rem, 5.5vw, 1.9rem); }
+.cm-phero .cm-psharelab:empty { display: none; }
+
+/* ── PC / Tablet quer: links Aufgabe + Eingabe, rechts die Karte ──
+   Dieselbe Karte wie das Overlay, nur dauerhaft angedockt. Die
+   Abfrage steht auch in tool.js (dockMQ) — beide müssen gleich sein. */
+@media (min-width: 900px) and (orientation: landscape) {
+  .cm-pinner { flex: 0 0 42%; }
+  .cm-mapov {
+    position: relative;
+    inset: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    z-index: 1;
+    padding: 8px 10px 10px 0;
+    background: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .cm-mapovbox { max-width: none; width: 100%; margin: 0; }
+  .cm-mapovclose, .cm-pmapbtn, .cm-minimap { display: none; }
+  .cm-phero {
+    flex: 0 0 26%;
+    min-height: 84px;
+    grid-template-columns: minmax(0, 30%) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "unit stats";
+  }
+  .cm-phero .cm-pherounit { max-width: none; }
+  .cm-phero .cm-pherounit img { height: auto; max-height: 100%; }
+  .cm-phero .cm-pherostats { justify-content: center; }
+}

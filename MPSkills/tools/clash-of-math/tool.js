@@ -2462,7 +2462,7 @@
   function onHardwareKey(e) {
     if (!els.game || els.game.classList.contains('cm-hide')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (mapOpen) { if (e.key === 'Escape') { closeMap(); e.preventDefault(); } return; }
+    if (mapOpen && !isDocked()) { if (e.key === 'Escape') { closeMap(); e.preventDefault(); } return; }
     // Der Punkt des Ziffernblocks meint dasselbe wie das Komma (0118):
     // wer auf einer echten Tastatur „12.5" tippt, meint 12,5.
     const k = (e.key === '.') ? ',' : e.key;
@@ -2689,36 +2689,33 @@
             // Aufgabe wäre er eine Fußnote.
             '<div class="cm-streakbar cm-hide" id="cmStreakBar"></div>' +
             '<div class="cm-phero">' +
+              // Handy-Kopf (Sönkes Vorgabe): links die Figur, daneben oben
+              // die Mini-Karte (nur Farbfelder + Krone), darunter Anteil,
+              // Serien und Balken, der Karten-Knopf rechts unten. „des
+              // Spielfelds · X von Y" entfällt hier (siehe renderStandings).
               '<div class="cm-pherounit"><img id="cmPUnit" src="" alt=""></div>' +
+              '<div class="cm-minimap" id="cmMiniWrap" aria-hidden="true">' +
+                '<svg class="cm-minisvg" id="cmMiniSvg" xmlns="http://www.w3.org/2000/svg"></svg>' +
+              '</div>' +
               '<div class="cm-pherostats">' +
                 '<div class="cm-pstatline">' +
                   '<div class="cm-pshare">' +
                     '<b id="cmPShare">0 %</b>' +
-                    '<span class="cm-psharelab" id="cmPShareLab">des Spielfelds</span>' +
+                    '<span class="cm-psharelab" id="cmPShareLab"></span>' +
                   '</div>' +
-                  // Zwei Serien-Anzeigen, beide vom Server gefüttert
-                  // (me.streak und team_streak seit 0106).
-                  //
-                  // 0123: Sie zeigen nicht mehr nur den Zählerstand,
-                  // sondern das ZIEL dazu — „3/7" statt „3". Eine nackte
-                  // 3 ist keine Information, solange niemand weiß, wann
-                  // etwas passiert; genau daran sind die Boni in der
-                  // Klasse vorbeigelaufen. Das Ziel steht als eigenes
-                  // Element, damit es kleiner und ruhiger sein kann als
-                  // die Zahl davor (setStreak/setTeamStreak füllen beide).
                   '<div class="cm-pstreaks">' +
                     '<span class="cm-pstreak" id="cmStreak" title="Deine Serie richtiger Antworten">' +
-                      '<span class="cm-pstreakico">🔥</span><b>0</b>' +
+                      '<span class="cm-pstreakico">\uD83D\uDD25</span><b>0</b>' +
                       '<i class="cm-pstreakgoal"></i></span>' +
                     '<span class="cm-pstreak cm-pstreak--team" id="cmTeamStreak" title="Serie deines Volkes">' +
-                      '<span class="cm-pstreakico">⚔️</span><b>–</b>' +
+                      '<span class="cm-pstreakico">\u2694\uFE0F</span><b>\u2013</b>' +
                       '<i class="cm-pstreakgoal"></i></span>' +
                   '</div>' +
                 '</div>' +
                 '<div class="cm-pbar"><i id="cmPBar"></i></div>' +
               '</div>' +
               '<button type="button" class="cm-pmapbtn" id="cmMapBtn">' +
-                '<span class="cm-pmapico">🗺️</span><span>Karte</span></button>' +
+                '<span class="cm-pmapico">\uD83D\uDDFA\uFE0F</span><span>Karte</span></button>' +
             '</div>' +
             '<div class="cm-pask">' +
               // Die Anweisung („kürze", „binom rückwärts") steht als
@@ -2814,6 +2811,7 @@
       ruinBar: root.querySelector('#cmRuinBar'),
       streakBar: root.querySelector('#cmStreakBar'),
       mapBtn: root.querySelector('#cmMapBtn'),
+      miniSvg: root.querySelector('#cmMiniSvg'),
       mapOv: root.querySelector('#cmMapOv'),
       pickBanner: root.querySelector('#cmPickBanner'),
       mapFoot: root.querySelector('#cmMapFoot'),
@@ -2875,6 +2873,22 @@
   // selbst öffnet (nicht der 🗺️-Knopf) — bekommt eine auffälligere
   // Umrandung (.cm-mapov--forced), die zeigt, dass hier eine Aktion
   // erwartet wird, kein bloßes Nachschauen.
+  // Breit (PC/Tablet quer): die Karte steht dauerhaft als rechte Spalte
+  // neben Aufgabe und Eingabe — dieselbe Fläche wie das Overlay, nur per
+  // CSS angedockt (gleiche Abfrage wie in tool.css).
+  const dockMQ = window.matchMedia ? window.matchMedia('(min-width: 900px) and (orientation: landscape)') : null;
+  const isDocked = () => !!(dockMQ && dockMQ.matches);
+  let mapDocked = false;
+  function syncDock() {
+    if (!els.mapOv || !els.game || els.game.classList.contains('cm-hide')) return;
+    if (isDocked()) {
+      mapDocked = true;
+      if (!mapOpen) openMap(myPendingPicks > 0);
+    } else if (mapDocked) {
+      mapDocked = false;
+      if (myPendingPicks <= 0) closeMap(true, true);
+    }
+  }
   function openMap(forced) {
     if (!els.mapOv) return;
     mapOpen = true;
@@ -2890,13 +2904,49 @@
   // sich die Karte nicht wegtippen (✕/Backdrop) — sie muss erst
   // beantwortet oder abgelaufen sein. applyPendingPicks/show() rufen
   // hier mit force=true durch, wenn das wirklich gewollt ist.
-  function closeMap(force) {
+  function closeMap(force, leave) {
     if (!force && myPendingPicks > 0) return;
     if (mapCloseTimer) { clearTimeout(mapCloseTimer); mapCloseTimer = null; }
+    // Angedockt bleibt die Karte stehen; nur beim Verlassen des
+    // Spielbildschirms (leave) geht sie wirklich zu.
+    if (!leave && isDocked()) {
+      if (els.mapOv) els.mapOv.classList.toggle('cm-mapov--forced', myPendingPicks > 0);
+      return;
+    }
     mapOpen = false;
     if (els.mapOv) els.mapOv.classList.add('cm-hide');
   }
+  function renderMiniMap(v) {
+    const svg = els.miniSvg;
+    if (!svg || !v) return;
+    const tiles = v.tiles || [];
+    if (!tiles.length) { svg.innerHTML = ''; return; }
+    const myTeam = v.me && v.me.team;
+    const ext = boardExtent(tiles);
+    const x0 = ext.minX, x1 = ext.minX + ext.spanX;
+    let y0 = Infinity, y1 = -Infinity;
+    tiles.forEach(t => { const u = hexUnit(t.r, t.c); y0 = Math.min(y0, u.y - 1); y1 = Math.max(y1, u.y + 1); });
+    svg.setAttribute('viewBox', x0.toFixed(2) + ' ' + y0.toFixed(2) + ' ' + (x1 - x0).toFixed(2) + ' ' + (y1 - y0).toFixed(2));
+    let out = '', crowns = '';
+    tiles.forEach(t => {
+      const u = hexUnit(t.r, t.c);
+      const pts = [];
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 3 * i - Math.PI / 6;
+        pts.push((u.x + 0.97 * Math.cos(a)).toFixed(2) + ',' + (u.y + 0.97 * Math.sin(a)).toFixed(2));
+      }
+      out += '<polygon class="cm-mh' + (myTeam != null && t.team === myTeam ? ' cm-mh--mine' : '') +
+        '" points="' + pts.join(' ') + '" style="--raw:' + fStroke(t.team) + '"></polygon>';
+      if (t.castle && t.team >= 0) {
+        crowns += '<text class="cm-mcrown" x="' + u.x.toFixed(2) + '" y="' + (u.y + 0.05).toFixed(2) +
+          '" text-anchor="middle" dominant-baseline="central">\uD83D\uDC51</text>';
+      }
+    });
+    svg.innerHTML = out + crowns;
+  }
   function renderPlayerMap() {
+    renderMiniMap(lastView);
+    syncDock();
     if (!mapOpen || !lastView || !els.pmap) return;
     const myTeam = lastView.me && lastView.me.team;
     // Nur während eines offenen Einzel-Bonus (0106) markiert die Karte
@@ -3687,7 +3737,7 @@
     pct = (own > 0 && pct < 1) ? 1 : (own < total && pct > 99) ? 99 : Math.round(pct);
     if (els.share)    els.share.textContent = pct + ' %';
     if (els.shareBar) els.shareBar.style.width = pct + '%';
-    if (els.shareLab) els.shareLab.textContent = 'des Spielfelds · ' + own + ' von ' + total;
+    if (els.shareLab) els.shareLab.textContent = '';   // Sönkes Vorgabe: „des Spielfelds · X von Y“ entfällt
   }
 
   /* Der Banner über dem Spielbildschirm. Er sagt in drei Sätzen, warum
@@ -3852,7 +3902,7 @@
     // force=true (0106): ein Phasenwechsel (Runde vorbei, ausgeschieden…)
     // muss die Karte auch mitten in einem offenen Serien-Bonus schließen.
     if (which !== 'game') {
-      closeMap(true);
+      closeMap(true, true);
       resetAnswer();
       // Auch der Fingerabdruck der Aufgabe: nach einem Phasenwechsel
       // ist die nächste Frage in jedem Fall eine neue, selbst wenn sie
