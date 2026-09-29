@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
-<link rel="stylesheet" href="css/app.css?v=20260929f">
+<link rel="stylesheet" href="css/app.css?v=20260929g">
 </head>
 <body>
 
@@ -800,55 +800,68 @@
   <div class="term-h">
     <span class="term-dot"></span>
     <strong id="termTitle">Terminal</strong>
+    <!-- Die Befehle stehen nicht mehr als Knopfreihe unter der
+         Ausgabe (das kostete eine ganze Zeile Platz), sondern in
+         einem kleinen Menü. Kurz erklärt, dezent. -->
+    <button class="term-cmds" id="termCmds" type="button" aria-expanded="false"
+            aria-controls="termMenu">Befehle <span aria-hidden="true">▾</span></button>
     <button class="term-x" id="termClose">×</button>
   </div>
-  <div class="term-o" id="termOut"></div>
-  <div class="term-q" id="termQuick">
-    <button class="chip" data-cmd="ping">ping …</button>
-    <button class="chip" data-cmd="ipconfig">ipconfig</button>
-    <button class="chip" data-cmd="nslookup">nslookup …</button>
-    <button class="chip" data-cmd="arp">arp</button>
-    <button class="chip" data-cmd="route">route</button>
-    <button class="chip" data-cmd="leeren">leeren</button>
+  <div class="term-body">
+    <div class="term-o" id="termOut"></div>
+    <div class="term-menu" id="termMenu" role="menu" hidden>
+      <button type="button" role="menuitem" data-cmd="ping" data-fill><b>ping …</b><span>Erreichbar?</span></button>
+      <button type="button" role="menuitem" data-cmd="traceroute" data-fill><b>traceroute …</b><span>Weg zum Ziel</span></button>
+      <button type="button" role="menuitem" data-cmd="nslookup" data-fill><b>nslookup …</b><span>Name → Adresse</span></button>
+      <button type="button" role="menuitem" data-cmd="ipconfig"><b>ipconfig</b><span>Meine Adressen</span></button>
+      <button type="button" role="menuitem" data-cmd="arp"><b>arp</b><span>Bekannte MACs</span></button>
+      <button type="button" role="menuitem" data-cmd="route"><b>route</b><span>Wegetabelle</span></button>
+      <button type="button" role="menuitem" data-cmd="dhcp"><b>dhcp</b><span>Adresse holen</span></button>
+      <button type="button" role="menuitem" data-cmd="netstat"><b>netstat</b><span>Offene Ports</span></button>
+      <button type="button" role="menuitem" data-cmd="ls"><b>ls</b><span>Dateien zeigen</span></button>
+      <button type="button" role="menuitem" data-cmd="hilfe"><b>hilfe</b><span>Alle Befehle</span></button>
+      <button type="button" role="menuitem" data-cmd="leeren"><b>leeren</b><span>Ausgabe löschen</span></button>
+    </div>
   </div>
   <div class="term-i">
     <span class="term-p">&gt;</span>
     <input id="termInput" autocomplete="off" spellcheck="false" placeholder="Befehl eingeben, Enter drücken">
+    <button class="term-stop" id="termStop" type="button" hidden title="Bricht den laufenden Befehl ab (Esc)">■ Abbrechen</button>
   </div>
 </section>
 
 <div class="toast" id="toast"></div>
 
-<script src="js/util.js?v=20260929f"></script>
-<script src="js/engine.js?v=20260929f"></script>
-<script src="js/netz.js?v=20260929f"></script>
-<script src="js/verlauf.js?v=20260929f"></script>
-<script src="js/nat.js?v=20260929f"></script>
-<script src="js/tcp.js?v=20260929f"></script>
-<script src="js/rip.js?v=20260929f"></script>
-<script src="js/dateien.js?v=20260929f"></script>
-<script src="js/http.js?v=20260929f"></script>
-<script src="js/mail.js?v=20260929f"></script>
-<script src="js/schichten.js?v=20260929f"></script>
-<script src="js/dienste.js?v=20260929f"></script>
-<script src="js/internet.js?v=20260929f"></script>
-<script src="js/mitschnitt.js?v=20260929f"></script>
-<script src="js/terminal.js?v=20260929f"></script>
-<script src="js/subnetze.js?v=20260929f"></script>
-<script src="js/flaeche.js?v=20260929f"></script>
-<script src="js/konfig.js?v=20260929f"></script>
-<script src="js/panels.js?v=20260929f"></script>
-<script src="js/weiterleitung.js?v=20260929f"></script>
-<script src="js/prog-dateien.js?v=20260929f"></script>
-<script src="js/prog-web.js?v=20260929f"></script>
-<script src="js/prog-mail.js?v=20260929f"></script>
-<script src="js/geraet.js?v=20260929f"></script>
-<script src="js/szenarien.js?v=20260929f"></script>
-<script src="js/szmenue.js?v=20260929f"></script>
-<script src="js/menuleiste.js?v=20260929f"></script>
-<script src="js/aufgabe.js?v=20260929f"></script>
-<script src="js/app.js?v=20260929f"></script>
+<script src="js/util.js?v=20260929g"></script>
+<script src="js/engine.js?v=20260929g"></script>
+<script src="js/netz.js?v=20260929g"></script>
+<script src="js/verlauf.js?v=20260929g"></script>
+<script src="js/nat.js?v=20260929g"></script>
+<script src="js/tcp.js?v=20260929g"></script>
+<script src="js/rip.js?v=20260929g"></script>
+<script src="js/dateien.js?v=20260929g"></script>
+<script src="js/http.js?v=20260929g"></script>
+<script src="js/mail.js?v=20260929g"></script>
+<script src="js/schichten.js?v=20260929g"></script>
+<script src="js/dienste.js?v=20260929g"></script>
+<script src="js/internet.js?v=20260929g"></script>
+<script src="js/mitschnitt.js?v=20260929g"></script>
+<script src="js/terminal.js?v=20260929g"></script>
+<script src="js/subnetze.js?v=20260929g"></script>
+<script src="js/flaeche.js?v=20260929g"></script>
+<script src="js/konfig.js?v=20260929g"></script>
+<script src="js/panels.js?v=20260929g"></script>
+<script src="js/weiterleitung.js?v=20260929g"></script>
+<script src="js/prog-dateien.js?v=20260929g"></script>
+<script src="js/prog-web.js?v=20260929g"></script>
+<script src="js/prog-mail.js?v=20260929g"></script>
+<script src="js/geraet.js?v=20260929g"></script>
+<script src="js/szenarien.js?v=20260929g"></script>
+<script src="js/szmenue.js?v=20260929g"></script>
+<script src="js/menuleiste.js?v=20260929g"></script>
+<script src="js/aufgabe.js?v=20260929g"></script>
+<script src="js/app.js?v=20260929g"></script>
 <!-- Die Brücke in den Raum. Tut ohne Rahmen nichts. -->
-<script src="js/bruecke.js?v=20260929f"></script>
+<script src="js/bruecke.js?v=20260929g"></script>
 </body>
 </html>

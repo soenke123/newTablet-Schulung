@@ -3433,7 +3433,9 @@ body.trace-schichten .trs { min-width: 940px; }
   position: static; width: 100%; right: auto; bottom: auto;
   border-radius: var(--r2); box-shadow: none; transition: none;
 }
-.term.term--in .term-h { display: none; }
+.term.term--in .term-h { padding: 3px 8px; border-bottom: 0; justify-content: flex-end; }
+.term.term--in .term-dot, .term.term--in .term-h strong, .term.term--in .term-x { display: none; }
+.term.term--in .term-cmds { margin-left: 0; }
 .term.term--in .term-o { height: clamp(120px, 24vh, 260px); }
 body.trace-open .term.term--in { bottom: auto; }
 
@@ -3505,15 +3507,39 @@ body.trace-open .term-o { height: clamp(96px, 20vh, 252px); }
 .tl--fail  { color: var(--bad); }
 .tl--hint  { color: #6fb6f0; }
 
-.term-q {
-  display: flex; gap: 5px; flex-wrap: wrap;
-  padding: 9px 13px; border-top: 1px solid rgba(255,255,255,.1);
+/* Befehle-Menü: klein und still. Es liegt über der Ausgabe
+   (siehe panels.js), nicht über dem Terminal. */
+.term-cmds {
+  margin-left: 4px; padding: 3px 8px; border: 0; border-radius: 6px;
+  background: transparent; color: rgba(255,255,255,.5);
+  font: inherit; font-size: 12px; cursor: pointer;
 }
-.term-q .chip {
-  background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.14);
-  color: rgba(255,255,255,.75);
+.term-cmds:hover, .term-cmds[aria-expanded="true"] { background: rgba(255,255,255,.1); color: #fff; }
+.term-cmds + .term-x { margin-left: auto; }
+
+.term-body { position: relative; }
+.term-menu {
+  position: absolute; inset: 0; z-index: 2; overflow-y: auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  align-content: start; gap: 0 6px; padding: 6px 8px;
+  background: var(--head); border-bottom: 1px solid rgba(255,255,255,.1);
 }
-.term-q .chip:hover { background: rgba(255,255,255,.15); color: #fff; }
+.term-menu[hidden] { display: none; }
+.term-menu button {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 4px 8px; border: 0; border-radius: 6px; text-align: left;
+  background: transparent; color: rgba(255,255,255,.8); cursor: pointer; font: inherit;
+}
+.term-menu button:hover, .term-menu button:focus-visible { background: rgba(255,255,255,.1); outline: none; }
+.term-menu b { font-family: var(--fm); font-size: 12px; font-weight: 600; flex: none; min-width: 6.4em; }
+.term-menu span { font-size: 11px; color: rgba(255,255,255,.42); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.term-stop {
+  flex: none; padding: 3px 10px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px;
+  background: rgba(255,255,255,.08); color: var(--warn); font: inherit; font-size: 12px; cursor: pointer;
+}
+.term-stop[hidden] { display: none; }
+.term-stop:hover { background: rgba(255,255,255,.16); }
 
 .term-i {
   display: flex; align-items: center; gap: 9px;

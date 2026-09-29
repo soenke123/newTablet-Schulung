@@ -33,6 +33,11 @@
      Fläche liegt, tauscht es Pakete mit dem Server — alle 0,7 s,
      solange etwas fließt, sonst alle 3 s. Die Lehrkraft sieht unter
      „Internet der Klasse", welches /8 wem gehört; die Klasse nicht.
+   · Die Karte (Knopf „Karte"): großer Netzplan der ganzen Klasse —
+     die Wolke in der Mitte, je Schülernetz ein Kabel, Farbe und
+     Adressbereich je Subnetz, Geräte klein wie im Netzwerkplan.
+     Zoombar und verschiebbar; die Daten kommen aus Abfragen, die es
+     schon gibt (synir_cww_karte, synir_work_list/-get).
 
    ⚠️ Wer tool.js oder tool.css anfasst, zieht den Cache-Stempel in
    MPSkills/lib/tool.js hoch — und wer an index.html oder js/
@@ -42,7 +47,7 @@
 (function () {
   'use strict';
 
-  const V = '?v=20260929f';
+  const V = '?v=20260929g';
   const TAKT_MS = 3000;          // Stand der Klasse / Spiegelung
   const GAP = 12;
   const MIN = 440;
@@ -219,7 +224,7 @@
   function takt() {
     clearTimeout(workTimer);
     workTimer = 0;
-    if (!isPresenter() || !(listOpen || watch || cwwOpen)) return;
+    if (!isPresenter() || !(listOpen || watch || cwwOpen || mapOpen)) return;
     workTimer = setTimeout(async () => {
       await tick();
       takt();
@@ -232,7 +237,8 @@
       if (res.ok) { work = res.items || []; paintPeople(); }
     }
     if (watch) await holeWatch();
-    if (cwwOpen) await holeKarte();
+    if (mapOpen) await holeMap();
+    else if (cwwOpen) await holeKarte();
   }
 
   async function holeWatch() {
@@ -360,6 +366,465 @@
   }
 
   /* ══════════════════════════════════════════════════════════
+     Die Karte (nur Lehrkraft)
+     ══════════════════════════════════════════════════════════
+     Ein reduzierter Plan des ganzen Netzes: in der Mitte die Wolke
+     des Class Wide Web, von ihr geht je Schülernetz EIN Kabel ab.
+     Jedes Netz trägt seine Farbe, darüber steht der Adressbereich
+     (das Subnetz), und die Geräte sind klein wie im Netzwerkplan —
+     ohne die Bilder aus dem Simulator.
+
+     Woher die Daten kommen: `synir_cww_karte` sagt, welches /8 wem
+     gehört; `synir_work_list` / `synir_work_get` liefern den Stand
+     jedes Tablets (Geräte, Kabel, Adressen). Beides gibt es schon
+     für „Stand der Klasse" und „Internet der Klasse" — die Karte
+     braucht keine neue Migration. Zusammengeführt wird über den
+     Namen, den beide Abfragen aus derselben Stelle nehmen.
+
+     ⚠️ Adressen, die per DHCP kommen, stehen NICHT im gespeicherten
+     Stand (siehe netz.js toJSON). Das Subnetz solcher Geräte wird
+     deshalb aus ihrer Umgebung gelesen: dem Gerät am anderen Ende
+     des Kabels, durch Switches hindurch, oder dem DHCP-Bereich. */
+
+  let mapOpen = false;
+  const mapStand = new Map();            // Teilnehmer → { updated_at, stand }
+  let mapGeo = null;                     // { minx, miny, maxx, maxy } der letzten Zeichnung
+  let mapKey = '';
+  const mapView = { x: 0, y: 0, k: 1, fitted: false };
+  let mapKeyFn = null;
+
+  const PAL = ['#2f80ed', '#e0592a', '#2a9d5c', '#9b51e0', '#d4a017',
+               '#0e9aa7', '#d6336c', '#6b7f1a', '#5c6bc0', '#c2571a'];
+  const KZ = { host: 'E', switch: 'SW', router: 'R', heimrouter: 'HR', server: 'S', handy: 'H', cww: 'CWW' };
+
+  const ip2n = (s) => {
+    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(s || '').trim());
+    if (!m) return null;
+    const p = m.slice(1).map(Number);
+    if (p.some(x => x > 255)) return null;
+    return ((p[0] << 24) >>> 0) + (p[1] << 16) + (p[2] << 8) + p[3];
+  };
+  const n2ip = (n) => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
+  function netKey(ip, mask) {
+    const a = ip2n(ip), m = ip2n(mask);
+    if (a === null || m === null) return null;
+    let len = 0;
+    for (let i = 31; i >= 0 && ((m >>> i) & 1); i--) len++;
+    const bits = len === 0 ? 0 : (0xFFFFFFFF << (32 - len)) >>> 0;
+    return n2ip((a & bits) >>> 0) + '/' + len;
+  }
+  function kurzName(n) {
+    const k = KZ[n.kind] || '?';
+    const m = /(\d+)\s*$/.exec(String(n.name || ''));
+    return k + (m ? m[1] : '');
+  }
+
+  /* Alle Subnetze, in denen ein Gerät selbst eine Adresse hat. Die
+     Internet-Karte des cww (Karte 0) zählt nicht — sie gehört der
+     Wolke, nicht dem Netz des Kindes. */
+  function eigeneNetze(n) {
+    const out = [];
+    for (const k of (n.nics || [])) {
+      if (n.kind === 'cww' && k.i === 0) continue;
+      const x = k.ip && k.mask ? netKey(k.ip, k.mask) : null;
+      if (x && out.indexOf(x) < 0) out.push(x);
+    }
+    return out;
+  }
+  function dhcpNetz(n) {
+    const d = n.dhcpServer;
+    return d && d.mask && (d.von || d.bis) ? netKey(d.von || d.bis, d.mask) : null;
+  }
+
+  /* Ein Netz aus dem Stand eines Tablets: Geräte mit Lage, Kabel,
+     und je Gerät das Subnetz, in dem es sitzt (`sn`, oder null bei
+     Geräten, die zwischen Netzen stehen). */
+  function analysiere(stand) {
+    const nodes = ((stand && stand.nodes) || []).filter(n => n && n.id != null && isFinite(+n.x) && isFinite(+n.y));
+    const byId = new Map(nodes.map(n => [n.id, n]));
+    const kabel = [];
+    const nachbarn = new Map(nodes.map(n => [n.id, []]));   // id → [{ o, oi }]
+    for (const c of ((stand && stand.cables) || [])) {
+      if (!c || !c.a || !c.b || !byId.has(c.a.node) || !byId.has(c.b.node)) continue;
+      kabel.push([c.a.node, c.b.node]);
+      nachbarn.get(c.a.node).push({ o: byId.get(c.b.node), oi: c.b.nic });
+      nachbarn.get(c.b.node).push({ o: byId.get(c.a.node), oi: c.a.nic });
+    }
+
+    const netVonNachbar = (start) => {
+      const gesehen = new Set([start.id]);
+      const q = [start];
+      while (q.length) {
+        const cur = q.shift();
+        for (const nb of nachbarn.get(cur.id)) {
+          const o = nb.o;
+          if (o.kind === 'switch') {
+            if (!gesehen.has(o.id)) { gesehen.add(o.id); q.push(o); }
+            continue;
+          }
+          const k = (o.nics || [])[nb.oi];
+          const x = k && k.ip && k.mask ? netKey(k.ip, k.mask) : dhcpNetz(o);
+          if (x) return x;
+        }
+      }
+      return null;
+    };
+
+    for (const n of nodes) {
+      const eigen = eigeneNetze(n);
+      const zwischen = n.kind === 'router' || n.kind === 'cww';
+      n.sn = zwischen ? null
+        : eigen.length ? eigen[0]
+        : (n.kind === 'switch' || !n.nics || !n.nics.some(k => k.ip)) ? netVonNachbar(n) : null;
+    }
+    const netze = [];
+    for (const n of nodes) if (n.sn && netze.indexOf(n.sn) < 0) netze.push(n.sn);
+    // Router: seine Netze mit aufzählen, damit der Bereich auch dann
+    // dasteht, wenn nur ein Router Adressen trägt.
+    for (const n of nodes) if (n.kind === 'router') for (const x of eigeneNetze(n)) if (netze.indexOf(x) < 0) netze.push(x);
+    netze.sort((a, b) => ip2n(a.split('/')[0]) - ip2n(b.split('/')[0]));
+    return { nodes, kabel, netze };
+  }
+
+  /* Ein Kästchen der Karte samt Innenleben, in eigenen Koordinaten
+     (0,0 = links oben). Die Geräte behalten ihre Lage aus dem
+     Simulator, nur skaliert — so erkennt ein Kind sein Netz wieder. */
+  function baueCluster(k, idx, w, live) {
+    const a = w ? analysiere(w) : null;
+    const farbe = PAL[idx % PAL.length];
+    const c = { k, idx, farbe, a, live, w: 260, h: 120, cwwPos: null, teile: '' };
+    if (!a || !a.nodes.length) return c;
+
+    let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+    for (const n of a.nodes) {
+      minx = Math.min(minx, +n.x); maxx = Math.max(maxx, +n.x);
+      miny = Math.min(miny, +n.y); maxy = Math.max(maxy, +n.y);
+    }
+    let dmin = Infinity;
+    for (let i = 0; i < a.nodes.length; i++)
+      for (let j = i + 1; j < a.nodes.length; j++)
+        dmin = Math.min(dmin, Math.hypot(a.nodes[i].x - a.nodes[j].x, a.nodes[i].y - a.nodes[j].y));
+    const bw = Math.max(1, maxx - minx), bh = Math.max(1, maxy - miny);
+    const fit = Math.min(520 / bw, 300 / bh);
+    const need = isFinite(dmin) ? 66 / Math.max(dmin, 1) : 1;
+    const s = Math.min(fit, Math.max(need, 0.2), 1.2);
+    // Kopf: eine Zeile je Adressbereich (höchstens vier), dann Name.
+    const zeilen = Math.max(1, Math.min(4, a.netze.length));
+    const PADX = 40, PADT = 22 + 21 * zeilen + 34, PADB = 34;
+    c.w = Math.max(230, Math.round(bw * s) + 2 * PADX);
+    c.h = Math.round(bh * s) + PADT + PADB;
+    const ox = (c.w - bw * s) / 2, oy = PADT;
+    const pos = new Map();
+    for (const n of a.nodes) pos.set(n.id, { x: ox + (n.x - minx) * s, y: oy + (n.y - miny) * s });
+    const cww = a.nodes.find(n => n.kind === 'cww');
+    if (cww) c.cwwPos = pos.get(cww.id);
+    c.pos = pos;
+    return c;
+  }
+
+  const neutral = 'var(--ink-soft, #667)';
+
+  function iconSvg(kind, col) {
+    const st = 'fill="var(--surface, #fff)" stroke="' + col + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"';
+    switch (kind) {
+      case 'server':
+        return '<rect x="-8" y="-10" width="16" height="6" rx="1.5" ' + st + '/><rect x="-8" y="-3" width="16" height="6" rx="1.5" ' + st + '/><rect x="-8" y="4" width="16" height="6" rx="1.5" ' + st + '/>';
+      case 'switch':
+        return '<rect x="-11" y="-5" width="22" height="10" rx="2" ' + st + '/><path d="M-6 0h.1M-2 0h.1M2 0h.1M6 0h.1" stroke="' + col + '" stroke-width="2.4" stroke-linecap="round"/>';
+      case 'router':
+        return '<circle r="10" ' + st + '/><path d="M-5 0h10M2 -3l3 3-3 3M-2 -3l-3 3 3 3" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>';
+      case 'heimrouter':
+        return '<rect x="-11" y="-3" width="22" height="10" rx="2" ' + st + '/><path d="M-6 -3l-2-7M6 -3l2-7" stroke="' + col + '" stroke-width="2" stroke-linecap="round"/>';
+      case 'handy':
+        return '<rect x="-5.5" y="-10" width="11" height="20" rx="2.5" ' + st + '/><path d="M-1.5 6.5h3" stroke="' + col + '" stroke-width="1.8" stroke-linecap="round"/>';
+      case 'cww':
+        return '<path d="M-9 5a5 5 0 0 1 .5-9.5a6.5 6.5 0 0 1 12 1.5a4.5 4.5 0 0 1 .5 8z" ' + st + '/>';
+      default:   // host
+        return '<rect x="-9" y="-9" width="18" height="12" rx="2" ' + st + '/><path d="M-5 8h10M0 3v5" stroke="' + col + '" stroke-width="2" stroke-linecap="round"/>';
+    }
+  }
+
+  function malCluster(c, x, y) {
+    const esc = ctx.esc;
+    let h = '<g transform="translate(' + Math.round(x) + ' ' + Math.round(y) + ')" class="sy-mp-cl' + (c.live ? '' : ' is-off') + '">';
+    h += '<rect class="sy-mp-box" width="' + c.w + '" height="' + c.h + '" rx="14" style="stroke:' + c.farbe + ';fill:' + c.farbe + '16"/>';
+    // Kopf: die Adressbereiche zuerst — darüber wird das Netz erkannt.
+    const netze = c.a ? c.a.netze : [];
+    const zeilen = Math.max(1, Math.min(4, netze.length));
+    if (netze.length) {
+      netze.slice(0, 4).forEach((x2, j) => {
+        const mehr = j === 3 && netze.length > 4 ? '  … +' + (netze.length - 3) : '';
+        h += '<text class="sy-mp-ip" x="14" y="' + (26 + j * 21) + '"><tspan fill="' + PAL[(c.idx + j) % PAL.length]
+          + '">● </tspan>' + esc(x2 + mehr) + '</text>';
+      });
+    } else {
+      h += '<text class="sy-mp-ip sy-mp-dim" x="14" y="26">kein Adressbereich</text>';
+    }
+    const ny = 26 + zeilen * 21 + 4;
+    h += '<text class="sy-mp-name" x="14" y="' + ny + '">' + esc(c.k.name || '—') + '</text>';
+    h += '<text class="sy-mp-dim sy-mp-r" x="' + (c.w - 14) + '" y="' + ny + '" text-anchor="end">' + esc(c.k.prefix + '.0.0.0/8') + '</text>';
+
+    if (!c.a || !c.a.nodes.length) {
+      h += '<text class="sy-mp-dim" x="' + c.w / 2 + '" y="' + (c.h - 26) + '" text-anchor="middle">'
+        + (c.k.name === 'Lehrkraft' ? 'Netz der Lehrkraft nicht abrufbar' : 'noch nichts gebaut') + '</text>';
+      return h + '</g>';
+    }
+    const farbeVon = (n) => {
+      if (!n.sn) return neutral;
+      const j = c.a.netze.indexOf(n.sn);
+      return PAL[(c.idx + Math.max(0, j)) % PAL.length];
+    };
+    const byId = new Map(c.a.nodes.map(n => [n.id, n]));
+    for (const [p, q] of c.a.kabel) {
+      const A = byId.get(p), B = byId.get(q), pa = c.pos.get(p), pb = c.pos.get(q);
+      const gleich = A.sn && A.sn === B.sn;
+      h += '<line class="sy-mp-wire" x1="' + pa.x.toFixed(1) + '" y1="' + pa.y.toFixed(1) + '" x2="' + pb.x.toFixed(1)
+        + '" y2="' + pb.y.toFixed(1) + '" style="stroke:' + (gleich ? farbeVon(A) : neutral) + '"/>';
+    }
+    for (const n of c.a.nodes) {
+      const p = c.pos.get(n.id);
+      const ip = (n.nics || []).filter(k => k.ip && !(n.kind === 'cww' && k.i === 0)).map(k => k.ip)[0];
+      h += '<g transform="translate(' + p.x.toFixed(1) + ' ' + p.y.toFixed(1) + ')">'
+        + iconSvg(n.kind, farbeVon(n))
+        + '<text class="sy-mp-lbl" y="22" text-anchor="middle">' + esc(kurzName(n)) + '</text>'
+        + (ip ? '<text class="sy-mp-ipl" y="31" text-anchor="middle">' + esc(ip) + '</text>' : '')
+        + '</g>';
+    }
+    return h + '</g>';
+  }
+
+  /* Die Cluster auf Ringen um die Wolke, danach auseinander
+     geschoben, bis sich keine zwei Kästchen mehr berühren. */
+  function ordne(cs) {
+    const CW = 330, CH = 210;                 // die Wolke (gesperrt)
+    const gap = 28;
+    const n = cs.length;
+    const maxw = cs.reduce((m, c) => Math.max(m, c.w), 0);
+    const maxh = cs.reduce((m, c) => Math.max(m, c.h), 0);
+    let i = 0, ring = 0;
+    while (i < n) {
+      const r = 300 + (Math.max(maxw, maxh) * 0.5) + ring * (maxh + 90);
+      const cap = Math.max(4, Math.floor((2 * Math.PI * r * 1.25) / (maxw + gap)));
+      const anz = Math.min(cap, n - i);
+      for (let j = 0; j < anz; j++, i++) {
+        const ang = -Math.PI / 2 + (j / anz) * 2 * Math.PI + (ring % 2 ? Math.PI / anz : 0);
+        cs[i].cx = Math.cos(ang) * r * 1.25;
+        cs[i].cy = Math.sin(ang) * r;
+      }
+      ring++;
+    }
+    for (let it = 0; it < 120; it++) {
+      let bewegt = false;
+      for (let a = 0; a < n; a++) {
+        const A = cs[a];
+        // gegen die Wolke
+        let dx = A.cx, dy = A.cy;
+        let ox = (A.w + CW) / 2 + gap - Math.abs(dx), oy = (A.h + CH) / 2 + gap - Math.abs(dy);
+        if (ox > 0 && oy > 0) {
+          if (ox < oy) A.cx += (dx >= 0 ? 1 : -1) * ox; else A.cy += (dy >= 0 ? 1 : -1) * oy;
+          bewegt = true;
+        }
+        for (let b = a + 1; b < n; b++) {
+          const B = cs[b];
+          dx = B.cx - A.cx; dy = B.cy - A.cy;
+          ox = (A.w + B.w) / 2 + gap - Math.abs(dx);
+          oy = (A.h + B.h) / 2 + gap - Math.abs(dy);
+          if (ox > 0 && oy > 0) {
+            bewegt = true;
+            if (ox < oy) { const s = (dx >= 0 ? 1 : -1) * ox / 2; A.cx -= s; B.cx += s; }
+            else { const s = (dy >= 0 ? 1 : -1) * oy / 2; A.cy -= s; B.cy += s; }
+          }
+        }
+      }
+      if (!bewegt) break;
+    }
+  }
+
+  function wolkeSvg() {
+    return '<g class="sy-mp-cloud">'
+      + '<path transform="translate(46 -8)" d="M-120 60c-42 0-70-22-70-54 0-30 26-52 58-50 8-42 46-68 88-60 30 6 50 24 58 48 40-12 84 12 84 48 0 40-32 68-78 68z" />'
+      + '<text class="sy-mp-cl1" y="-6" text-anchor="middle">Class Wide Web</text>'
+      + '<text class="sy-mp-cl2" y="22" text-anchor="middle">das Internet der Klasse</text>'
+      + '</g>';
+  }
+
+  function baueKarte() {
+    const sorted = karte.slice().sort((a, b) => a.prefix - b.prefix);
+    const cs = sorted.map((k, i) => {
+      const w = work.find(x => x.name === k.name);
+      const s = w ? mapStand.get(w.participant) : null;
+      const live = !!(k.seen_at && (Date.now() - new Date(k.seen_at).getTime()) < 20000);
+      return baueCluster(k, i, s ? s.stand : null, live);
+    });
+    ordne(cs);
+    let minx = -190, miny = -110, maxx = 190, maxy = 110;
+    let kabel = '', boxen = '';
+    for (const c of cs) {
+      const x = c.cx - c.w / 2, y = c.cy - c.h / 2;
+      minx = Math.min(minx, x); miny = Math.min(miny, y);
+      maxx = Math.max(maxx, x + c.w); maxy = Math.max(maxy, y + c.h);
+      // Das Kabel endet am cww des Netzes; fehlt es, an der Oberkante.
+      const ex = c.cwwPos ? x + c.cwwPos.x : c.cx, ey = c.cwwPos ? y + c.cwwPos.y : y;
+      kabel += '<line class="sy-mp-cable' + (c.live ? '' : ' is-off') + '" x1="0" y1="0" x2="' + ex.toFixed(1) + '" y2="' + ey.toFixed(1)
+        + '" style="stroke:' + c.farbe + '"/>';
+      boxen += malCluster(c, x, y);
+    }
+    mapGeo = { minx, miny, maxx, maxy };
+    return { svg: kabel + wolkeSvg() + boxen, n: cs.length };
+  }
+
+  function malKarte() {
+    const g = $('syMapG');
+    if (!g || !mapOpen) return;
+    const sub = $('syMapSub');
+    if (!karte.length) {
+      g.innerHTML = '';
+      mapKey = '';
+      $('syMapEmpty').hidden = false;
+      if (sub) sub.textContent = '';
+      return;
+    }
+    $('syMapEmpty').hidden = true;
+    const r = baueKarte();
+    if (sub) sub.textContent = r.n + (r.n === 1 ? ' Netz' : ' Netze');
+    if (r.svg !== mapKey) { mapKey = r.svg; g.innerHTML = r.svg; }
+    if (!mapView.fitted) mapAnpassen();
+  }
+
+  /* Zoom und Verschieben: ein Umrechnungsfeld (x, y, k) auf der
+     Zeichengruppe. Rad und Zwei-Finger-Geste zoomen um die Stelle
+     unter dem Zeiger, Ziehen verschiebt. */
+  function mapSetzen() {
+    const g = $('syMapG');
+    if (g) g.setAttribute('transform', 'translate(' + mapView.x.toFixed(1) + ' ' + mapView.y.toFixed(1) + ') scale(' + mapView.k.toFixed(4) + ')');
+  }
+  function mapAnpassen() {
+    const v = $('syMapView');
+    if (!v || !mapGeo) return;
+    const w = v.clientWidth, h = v.clientHeight;
+    if (!w || !h) return;
+    const bw = mapGeo.maxx - mapGeo.minx, bh = mapGeo.maxy - mapGeo.miny;
+    const k = Math.max(0.05, Math.min(3, Math.min(w / (bw + 80), h / (bh + 80))));
+    mapView.k = k;
+    mapView.x = w / 2 - ((mapGeo.minx + mapGeo.maxx) / 2) * k;
+    mapView.y = h / 2 - ((mapGeo.miny + mapGeo.maxy) / 2) * k;
+    mapView.fitted = true;
+    mapSetzen();
+  }
+  function mapZoom(faktor, cx, cy) {
+    const v = $('syMapView');
+    if (!v) return;
+    if (cx == null) { cx = v.clientWidth / 2; cy = v.clientHeight / 2; }
+    const k = Math.max(0.05, Math.min(8, mapView.k * faktor));
+    mapView.x = cx - (cx - mapView.x) * (k / mapView.k);
+    mapView.y = cy - (cy - mapView.y) * (k / mapView.k);
+    mapView.k = k;
+    mapSetzen();
+  }
+
+  function mapBinden() {
+    const v = $('syMapView');
+    if (!v || v.dataset.gebunden) return;
+    v.dataset.gebunden = '1';
+    const zeiger = new Map();
+    let pinch = 0;
+    const lokal = (e) => { const r = v.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    v.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const [x, y] = lokal(e);
+      mapZoom(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0018)), x, y);
+    }, { passive: false });
+    v.addEventListener('pointerdown', (e) => {
+      zeiger.set(e.pointerId, [e.clientX, e.clientY]);
+      try { v.setPointerCapture(e.pointerId); } catch (x) { /* egal */ }
+      v.classList.add('is-drag');
+      pinch = 0;
+    });
+    v.addEventListener('pointermove', (e) => {
+      const alt = zeiger.get(e.pointerId);
+      if (!alt) return;
+      zeiger.set(e.pointerId, [e.clientX, e.clientY]);
+      if (zeiger.size === 1) {
+        mapView.x += e.clientX - alt[0];
+        mapView.y += e.clientY - alt[1];
+        mapSetzen();
+      } else if (zeiger.size === 2) {
+        const [p, q] = [...zeiger.values()];
+        const d = Math.hypot(p[0] - q[0], p[1] - q[1]);
+        const r = v.getBoundingClientRect();
+        if (pinch) mapZoom(d / pinch, (p[0] + q[0]) / 2 - r.left, (p[1] + q[1]) / 2 - r.top);
+        pinch = d;
+      }
+    });
+    const los = (e) => {
+      zeiger.delete(e.pointerId);
+      pinch = 0;
+      if (!zeiger.size) v.classList.remove('is-drag');
+    };
+    v.addEventListener('pointerup', los);
+    v.addEventListener('pointercancel', los);
+    v.addEventListener('dblclick', (e) => { const [x, y] = lokal(e); mapZoom(2, x, y); });
+  }
+
+  async function holeMap() {
+    const [k, w] = await Promise.all([call('synir_cww_karte'), call('synir_work_list')]);
+    if (!mapOpen) return;
+    if (k.ok) karte = k.items || [];
+    if (w.ok) { work = w.items || []; if (listOpen) paintPeople(); }
+    if (cwwOpen) paintKarte();
+    // Nur die Stände holen, die neuer sind als das, was wir haben.
+    await Promise.all(work.map(async (it) => {
+      const c = mapStand.get(it.participant);
+      if (c && it.updated_at && new Date(c.updated_at) >= new Date(it.updated_at)) return;
+      const r = await call('synir_work_get', { p_participant: it.participant, p_since: c ? c.updated_at : null });
+      if (r.ok && r.stand) mapStand.set(it.participant, { updated_at: r.updated_at, stand: r.stand });
+    }));
+    malKarte();
+  }
+
+  function mapAuf(an) {
+    mapOpen = an;
+    const m = $('syMapModal');
+    if (!m) return;
+    m.hidden = !an;
+    const b = $('syMap');
+    if (b) b.setAttribute('aria-expanded', String(an));
+    if (an) {
+      mapBinden();
+      mapView.fitted = false;
+      mapKey = '';
+      mapKeyFn = (e) => { if (e.key === 'Escape') { e.preventDefault(); mapAuf(false); } };
+      document.addEventListener('keydown', mapKeyFn);
+      malKarte();
+      holeMap();
+      takt();
+    } else if (mapKeyFn) {
+      document.removeEventListener('keydown', mapKeyFn);
+      mapKeyFn = null;
+    }
+  }
+
+  function mapHTML() {
+    return `
+    <div class="sy-map" id="syMapModal" role="dialog" aria-modal="true" aria-label="Karte des Class Wide Web" hidden>
+      <div class="sy-map-bar">
+        <strong>Karte der Klasse</strong>
+        <span class="sy-map-sub" id="syMapSub"></span>
+        <span class="sy-sp"></span>
+        <button type="button" class="sy-btn" data-mz="out" aria-label="Verkleinern">−</button>
+        <button type="button" class="sy-btn" data-mz="in" aria-label="Vergrößern">+</button>
+        <button type="button" class="sy-btn" data-mz="fit">Alles zeigen</button>
+        <button type="button" class="sy-btn" data-mz="close">✕ Schließen</button>
+      </div>
+      <div class="sy-map-view" id="syMapView">
+        <svg class="sy-map-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Netzplan der ganzen Klasse"><g id="syMapG"></g></svg>
+        <p class="sy-map-empty" id="syMapEmpty" hidden>Noch hat niemand ein Class Wide Web geöffnet.</p>
+        <p class="sy-map-hint">Mausrad oder zwei Finger: zoomen · Ziehen: verschieben · Doppelklick: hineinzoomen</p>
+      </div>
+    </div>`;
+  }
+
+  /* ══════════════════════════════════════════════════════════
      Nachrichten aus dem Rahmen
      ══════════════════════════════════════════════════════════ */
 
@@ -427,6 +892,8 @@
         <button type="button" class="sy-btn" id="syList" aria-expanded="false">Stand der Klasse</button>
         <button type="button" class="sy-btn" id="syCww" aria-expanded="false"
                 title="Welches /8 gehört wem? Das sieht nur die Lehrkraft.">Internet der Klasse</button>
+        <button type="button" class="sy-btn" id="syMap" aria-expanded="false"
+                title="Der ganze Netzplan der Klasse: alle Netze rund um die Wolke.">Karte</button>
         <span class="sy-note" id="syNote" hidden>
           <span id="syNoteText"></span>
           <button type="button" class="sy-note-x" id="syStop">Beenden</button>
@@ -453,6 +920,8 @@
     if (lb) lb.setAttribute('aria-expanded', String(listOpen));
     const cb = $('syCww');
     if (cb) cb.setAttribute('aria-expanded', String(cwwOpen));
+    const mb = $('syMap');
+    if (mb) mb.setAttribute('aria-expanded', String(mapOpen));
     const note = $('syNote');
     if (note) {
       const txt = watch ? 'Ansicht von ' + watch.name
@@ -560,10 +1029,22 @@
       fit();
       return;
     }
+    if (b.id === 'syMap') { mapAuf(!mapOpen); return; }
     if (b.id === 'syStop') { zuseheEnde(); return; }
     if (b.id === 'syBlind') { await setData({ blind: !data().blind }); return; }
     if (b.id === 'syFull') { toggleFull(); return; }
     if (b.dataset.pid) zusehen(b.dataset.pid, b.dataset.name || 'jemand');
+  }
+
+  function onMapClick(e) {
+    const b = e.target.closest('button');
+    if (!b || !b.dataset.mz) return;
+    switch (b.dataset.mz) {
+      case 'in':    mapZoom(1.4); break;
+      case 'out':   mapZoom(1 / 1.4); break;
+      case 'fit':   mapAnpassen(); break;
+      case 'close': mapAuf(false); break;
+    }
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -645,17 +1126,23 @@
       cww = cwwNeu();
       cwwOpen = false;
       karte = [];
+      mapOpen = false;
+      mapStand.clear();
+      mapKey = '';
 
       const pres = isPresenter();
       root.innerHTML =
         '<div class="sy-host">'
         + (pres ? deskHTML() : '')
         + '<div class="sy-stage" id="syStage"></div>'
+        + (pres ? mapHTML() : '')
         + '</div>';
 
       if (pres) {
         const desk = $('syDesk');
         if (desk) desk.addEventListener('click', onDeskClick);
+        const mm = $('syMapModal');
+        if (mm) mm.addEventListener('click', onMapClick);
         loadEigene();
       }
 
@@ -704,6 +1191,8 @@
       if (onMsg) window.removeEventListener('message', onMsg);
       if (onResize) window.removeEventListener('resize', onResize);
       if (onFs) document.removeEventListener('fullscreenchange', onFs);
+      if (mapKeyFn) { document.removeEventListener('keydown', mapKeyFn); mapKeyFn = null; }
+      mapOpen = false;
       onMsg = onResize = onFs = null;
       document.body.classList.remove('tool-fill');
       frame = null;

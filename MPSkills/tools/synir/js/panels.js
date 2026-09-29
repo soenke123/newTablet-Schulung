@@ -934,6 +934,7 @@
       const n = netz.get(nodeId);
       if (!n) return;
       termNode = nodeId;
+      menuZu();
       refs.term.classList.add('is-open');
       refs.termTitle.textContent = n.name;
       if (unTerm) unTerm();
@@ -944,6 +945,8 @@
 
     function closeTerminal() {
       termNode = null;
+      menuZu();
+      refs.termStop.hidden = true;
       refs.term.classList.remove('is-open');
       if (unTerm) { unTerm(); unTerm = null; }
     }
@@ -955,10 +958,17 @@
         .map(l => '<div class="tl ' + (l.cls ? 'tl--' + l.cls : '') + '">' + esc(l.text || ' ') + '</div>')
         .join('');
       refs.termOut.scrollTop = refs.termOut.scrollHeight;
+      refs.termStop.hidden = !term.isBusy(termNode);
     }
 
     refs.termInput.addEventListener('keydown', (ev) => {
       if (!termNode) return;
+      if (ev.key === 'Escape') {
+        // Erst das Menü, dann den laufenden Befehl.
+        if (!refs.termMenu.hidden) { menuZu(); ev.stopPropagation(); return; }
+        if (term.abort(termNode)) ev.stopPropagation();
+        return;
+      }
       if (ev.key === 'Enter') {
         const v = refs.termInput.value;
         refs.termInput.value = '';
@@ -973,21 +983,44 @@
     });
     refs.termClose.addEventListener('click', closeTerminal);
 
-    /* Schnellzugriff: die Befehle, die eine Klasse tatsächlich
-       braucht, als Knöpfe. Tippen auf einem Tablet ist mühsam,
-       und „ipconfig" schreibt sich in der 8. Klasse nicht von
-       selbst. */
-    refs.termQuick.querySelectorAll('[data-cmd]').forEach(b => {
+    /* Die Befehle in einem kleinen Menü oben im Terminal, statt
+       als Knopfreihe unter der Ausgabe (die nahm eine ganze Zeile
+       weg). Tippen auf einem Tablet ist mühsam, und „ipconfig"
+       schreibt sich in der 8. Klasse nicht von selbst — deshalb
+       bleibt es ein Tippen und kein Nachschlagen.
+
+       ⚠️ Das Menü liegt ÜBER der Ausgabe und nicht als Ausklapper
+       über dem Terminal: das Terminal hat `overflow: hidden`, und
+       im Gerätefenster würde ein Ausklapper abgeschnitten. */
+    function menuZu() {
+      refs.termMenu.hidden = true;
+      refs.termCmds.setAttribute('aria-expanded', 'false');
+    }
+    refs.termCmds.addEventListener('click', () => {
+      const auf = refs.termMenu.hidden;
+      refs.termMenu.hidden = !auf;
+      refs.termCmds.setAttribute('aria-expanded', String(auf));
+    });
+    refs.termMenu.querySelectorAll('[data-cmd]').forEach(b => {
       b.addEventListener('click', () => {
+        menuZu();
         if (!termNode) return;
         const c = b.dataset.cmd;
-        if (c === 'ping' || c === 'nslookup') {
+        if (b.hasAttribute('data-fill')) {
           refs.termInput.value = c + ' ';
           refs.termInput.focus();
         } else {
           term.submit(termNode, c);
+          refs.termInput.focus();
         }
       });
+    });
+
+    // Läuft ein Befehl, gibt es einen Knopf zum Abbrechen — auf dem
+    // Tablet gibt es kein Esc.
+    refs.termStop.addEventListener('click', () => {
+      if (termNode) term.abort(termNode);
+      refs.termInput.focus();
     });
 
     /* Während die Uhr läuft: nur die Tabellen im Fenster

@@ -27,6 +27,22 @@
      dabei zu bleiben. */
   const PING_TAKT = 200 * U.MS;
 
+  /* ⚠️ Die Frist des Netzes zählt in SIMULIERTER Zeit (3 s, bei
+     einem Ziel hinter der Wolke das Zehnfache). Bei Tempo 0,1
+     wartet ein Kind damit eine halbe Minute auf EINE Zeile, und
+     steht das Netz still, wartet es ewig. Deshalb gibt es zusätzlich
+     eine Frist in ECHTER Zeit: ist nach ECHT_FRIST (6 s) nichts
+     angekommen, gilt die Anfrage als verloren. Zwei verlorene
+     Anfragen hintereinander beenden den Befehl — vier weitere
+     wären nur eine Wiederholung der Antwort. Abbrechen geht
+     außerdem jederzeit (Esc oder Knopf, siehe abort). */
+  const ECHT_FRIST = 6000;
+  const ECHT_STILL = 2;
+  /* Der Kerntest läuft ohne Browser und ohne Uhr in echter Zeit
+     (kein setTimeout) — dort gilt allein die simulierte Frist. */
+  const echtFrist = (fn) => typeof setTimeout === 'function' ? setTimeout(fn, ECHT_FRIST) : 0;
+  const echtEnde  = (t) => { if (t && typeof clearTimeout === 'function') clearTimeout(t); };
+
   /* `opts.onDirty` meldet, dass sich am Stand etwas geändert hat
      — seit es Dateibefehle gibt, kann das Terminal das nämlich.
      Vorher war es ein reines Auskunftsprogramm (ping, arp, route)
@@ -55,6 +71,71 @@
       s.lines.push({ text: String(text), cls: cls || '' });
       if (s.lines.length > 400) s.lines = s.lines.slice(-400);
       for (const w of s.watchers.slice()) { try { w(); } catch (e) {} }
+    }
+
+    /* ─── Läuft gerade etwas? ─────────────────────────────────
+       Ein Lauf ist ein Ping, ein Traceroute oder eine Namensfrage.
+       Er trägt ein `stop`, das jede Antwort vor dem Schreiben
+       prüft: nach dem Abbrechen darf keine späte Zeile mehr
+       auftauchen. */
+    function meldeAenderung(s) {
+      for (const w of s.watchers.slice()) { try { w(); } catch (e) {} }
+    }
+    function beginRun(node) {
+      const s = session(node.id);
+      s.run = { stop: false, still: 0 };
+      s.busy = true;
+      meldeAenderung(s);
+      return s.run;
+    }
+    function endRun(nodeId) {
+      const s = session(nodeId);
+      s.busy = false; s.run = null;
+      meldeAenderung(s);
+    }
+    function abort(nodeId) {
+      const s = sessions.get(nodeId);
+      if (!s || !s.busy || !s.run) return false;
+      s.run.stop = true;
+      endRun(nodeId);
+      write(nodeId, '^C   abgebrochen', 'warn');
+      return true;
+    }
+    const isBusy = (nodeId) => { const s = sessions.get(nodeId); return !!(s && s.busy); };
+
+    /* Ein Ping mit Frist in echter Zeit (siehe ECHT_FRIST). */
+    function anfrage(node, run, target, seq, ttl, cb) {
+      let fertig = false;
+      const timer = echtFrist(() => {
+        if (fertig || run.stop) return;
+        fertig = true;
+        run.still++;
+        cb({ ok: false, seq: seq, echt: true,
+             error: 'Zeitüberschreitung — keine Antwort.' });
+      });
+      stack.ping(node, target, seq, stack.PING_FRIST, (r) => {
+        if (fertig) return;
+        fertig = true; echtEnde(timer);
+        if (run.stop) return;
+        run.still = 0;
+        cb(r);
+      }, ttl);
+    }
+
+    // Dasselbe für die Namensfrage an den DNS-Server.
+    function aufloesen(node, run, name, cb) {
+      let fertig = false;
+      const timer = echtFrist(() => {
+        if (fertig || run.stop) return;
+        fertig = true;
+        cb({ ok: false, why: 'Zeitüberschreitung — der DNS-Server antwortet nicht.' });
+      });
+      dienste.resolve(node, name, (r) => {
+        if (fertig) return;
+        fertig = true; echtEnde(timer);
+        if (run.stop) return;
+        cb(r);
+      });
     }
 
     /* ─── Befehle ─────────────────────────────────────────────*/
@@ -118,7 +199,7 @@
         if (!ziel) { write(node.id, 'Wohin? Beispiel:  ping 192.168.1.2', 'warn'); return; }
 
         const s = session(node.id);
-        if (s.busy) { write(node.id, 'Es läuft schon ein Ping.', 'warn'); return; }
+        if (s.busy) { write(node.id, 'Es läuft schon etwas — „Abbrechen" (oder Esc) stoppt es.', 'warn'); return; }
 
         // Kein eigenes Netz, kein Ping. Das früh und deutlich zu
         // sagen erspart vier Zeitüberschreitungen und die falsche
@@ -143,10 +224,10 @@
           if (!dienste) { write(node.id, 'Namen kann dieses Netz nicht auflösen.', 'warn'); return; }
           write(node.id, '', '');
           write(node.id, 'Erst der Name: frage ' + (node.dns || '—') + ' nach ' + ziel + ' …', 'head');
-          s.busy = true;
-          dienste.resolve(node, ziel, (r) => {
-            s.busy = false;
+          const run = beginRun(node);
+          aufloesen(node, run, ziel, (r) => {
             if (!r.ok) {
+              endRun(node.id);
               write(node.id, '   ⚠ ' + r.why, 'fail');
               if (!node.dns)
                 write(node.id, 'Tipp: Ein DNS-Server muss im Kärtchen des Geräts eingetragen sein.', 'hint');
@@ -154,7 +235,7 @@
             }
             write(node.id, '   ' + ziel + ' ist ' + r.ip
               + (r.cached ? '   (schon bekannt, keine Frage nötig)' : ''), 'ok');
-            los(node, r.ip, ziel);
+            los(node, r.ip, ziel, run);
           });
           return;
         }
@@ -192,7 +273,7 @@
           return;
         }
         const s = session(node.id);
-        if (s.busy) { write(node.id, 'Es läuft schon etwas.', 'warn'); return; }
+        if (s.busy) { write(node.id, 'Es läuft schon etwas — „Abbrechen" (oder Esc) stoppt es.', 'warn'); return; }
         if (!node.nics.some(k => k.ip)) {
           write(node.id, 'Dieses Gerät hat noch keine IP-Adresse.', 'warn');
           return;
@@ -202,12 +283,11 @@
           if (!dienste) { write(node.id, 'Namen kann dieses Netz nicht auflösen.', 'warn'); return; }
           write(node.id, '', '');
           write(node.id, 'Erst der Name: frage ' + (node.dns || '—') + ' nach ' + ziel + ' …', 'head');
-          s.busy = true;
-          dienste.resolve(node, ziel, (r) => {
-            s.busy = false;
-            if (!r.ok) { write(node.id, '   ⚠ ' + r.why, 'fail'); return; }
+          const run = beginRun(node);
+          aufloesen(node, run, ziel, (r) => {
+            if (!r.ok) { endRun(node.id); write(node.id, '   ⚠ ' + r.why, 'fail'); return; }
             write(node.id, '   ' + ziel + ' ist ' + r.ip, 'ok');
-            spur(node, r.ip, ziel);
+            spur(node, r.ip, ziel, run);
           });
           return;
         }
@@ -219,9 +299,8 @@
       run: (n, a) => CMDS.traceroute.run(n, a)
     };
 
-    function spur(node, target, name) {
-      const s = session(node.id);
-      s.busy = true;
+    function spur(node, target, name, run) {
+      run = run || beginRun(node);
       write(node.id, '', '');
       write(node.id, 'Weg zu ' + (name ? name + ' [' + target + ']' : target)
         + ' — höchstens ' + TRACE_MAX + ' Stationen', 'head');
@@ -230,20 +309,21 @@
       let seq = 1;
 
       const fertig = (satz, cls) => {
-        s.busy = false;
+        endRun(node.id);
         write(node.id, '', '');
         if (satz) write(node.id, satz, cls || 'ok');
         write(node.id, '', '');
       };
 
       const stufe = () => {
+        if (run.stop) return;
         if (ttl > TRACE_MAX) {
           fertig('Nach ' + TRACE_MAX + ' Stationen immer noch nicht da. Läuft das '
             + 'Paket im Kreis?', 'warn');
           return;
         }
         const meine = ttl;
-        stack.ping(node, target, seq++, stack.PING_FRIST, (r) => {
+        anfrage(node, run, target, seq++, meine, (r) => {
           /* Drei Ausgänge, und sie sind der ganze Befehl:
                ok           → das ZIEL hat geantwortet, fertig
                icmp 11      → eine Station unterwegs, weiter
@@ -271,7 +351,7 @@
           write(node.id, '  ' + String(meine).padStart(2) + '  '
             + (r.error || 'keine Antwort'), 'fail');
           fertig('Weiter kommt das Paket nicht.', 'fail');
-        }, meine);
+        });
       };
 
       stufe();
@@ -280,19 +360,20 @@
     /* Der eigentliche Ping. Herausgezogen, weil er zweimal
        angestoßen wird: gleich (bei einer Adresse) oder nach der
        Namensauflösung. */
-    function los(node, target, name) {
-        const s = session(node.id);
-        s.busy = true;
+    function los(node, target, name, run) {
+        run = run || beginRun(node);
         write(node.id, '', '');
         write(node.id, 'Ping an ' + (name ? name + ' [' + target + ']' : target) + ' …', 'head');
 
-        let seq = 1, ok = 0, sum = 0;
+        let seq = 1, ok = 0, sum = 0, gesendet = 0;
         const N = 4;
 
         const next = () => {
-          if (seq > N) { finish(); return; }
+          if (run.stop) return;
+          if (seq > N || run.still >= ECHT_STILL) { finish(); return; }
           const mySeq = seq++;
-          stack.ping(node, target, mySeq, stack.PING_FRIST, (r) => {
+          gesendet++;
+          anfrage(node, run, target, mySeq, undefined, (r) => {
             if (r.ok) {
               ok++; sum += r.rtt;
               write(node.id, '   Antwort von ' + r.from + ': Nr. ' + r.seq
@@ -306,16 +387,22 @@
                halten, und vier Fehlschläge hintereinander sagen
                nicht mehr als einer. Wer auf eine falsche Adresse
                pingt, hat schon gewartet. */
-            engine.at(r.ok ? PING_TAKT : 0, next, 'ping-takt', node.id);
+            /* Nach einer Frist in echter Zeit geht es DIREKT weiter:
+               steht die Uhr des Netzes (Pause, Tempo 0), käme ein
+               Ereignis der simulierten Zeit nie. */
+            if (r.echt) next();
+            else engine.at(r.ok ? PING_TAKT : 0, next, 'ping-takt', node.id);
           });
         };
 
         const finish = () => {
-          s.busy = false;
+          endRun(node.id);
           write(node.id, '', '');
-          write(node.id, 'Ergebnis: ' + ok + ' von ' + N + ' angekommen'
+          if (gesendet < N)
+            write(node.id, 'Nach ' + gesendet + ' Anfragen ohne Antwort beendet (Zeitlimit).', 'dim');
+          write(node.id, 'Ergebnis: ' + ok + ' von ' + gesendet + ' angekommen'
             + (ok ? ', im Schnitt ' + U.fmtTime(Math.round(sum / ok)) : ''),
-            ok === N ? 'ok' : ok ? 'warn' : 'fail');
+            ok === gesendet ? 'ok' : ok ? 'warn' : 'fail');
           if (!ok) hint(node, target);
           write(node.id, '', '');
         };
@@ -672,9 +759,9 @@
       const s = session(nodeId); s.watchers.push(fn);
       return () => { const i = s.watchers.indexOf(fn); if (i >= 0) s.watchers.splice(i, 1); };
     };
-    const forget = (nodeId) => sessions.delete(nodeId);
+    const forget = (nodeId) => { abort(nodeId); sessions.delete(nodeId); };
 
-    return { submit, linesOf, onChange, historyStep, write, forget, CMDS };
+    return { submit, linesOf, onChange, historyStep, write, forget, abort, isBusy, CMDS };
   }
 
   window.Terminal = Terminal;
