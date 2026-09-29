@@ -80,7 +80,7 @@
     if (fn === 'synir_work_get') {
       const w = frameWin();
       const S = w && w.SZENARIEN;
-      const key = args.p_participant === 'pv-mia' ? 'fehler' : 'router';
+      const key = args.p_participant === 'pv-mia' ? 'i5' : 'i2';
       const s = S && S[key];
       if (!s) return { ok: false, error: 'not_found' };
       // Nur beim ersten Mal „neu" — sonst legte jeder Takt das Netz
@@ -114,12 +114,12 @@
     if (!await api.wait(500)) return;
     api.click('#szenarioBtn');
     if (!await api.wait(1400)) return;
-    api.click('.szm-item[data-id="builtin:router"] .szm-share');
+    api.click('.szm-item[data-id="builtin:i2"] .szm-share');
     if (!await api.wait(1800)) return;
 
     // 2 · Laden. Der Auftrag liegt über der Fläche — erst lesen
     // lassen, dann einklappen, damit das Netz darunter zu sehen ist.
-    api.click('.szm-item[data-id="builtin:router"] .szm-name');
+    api.click('.szm-item[data-id="builtin:i2"] .szm-name');
     if (!await api.wait(3200)) return;
     api.click('#aufgabeHead');
     if (!await api.wait(1800)) return;
@@ -153,7 +153,7 @@
     api.click('#dateiBtn');
     api.click('#szenarioBtn');
     if (!await api.wait(700)) return;
-    api.click('.szm-item[data-id="builtin:router"] .szm-share');
+    api.click('.szm-item[data-id="builtin:i2"] .szm-share');
     if (!await api.wait(900)) return;
     api.click('#szenarioBtn');
     await api.wait(1200);

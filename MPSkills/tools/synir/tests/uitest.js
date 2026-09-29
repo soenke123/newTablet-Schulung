@@ -4,6 +4,7 @@
 const PW_ALT = 'C:/Users/snke/OneDrive/ClaudeProjekte/MPS TabletSchlung/Webauftrtitt/node_modules/playwright-core';
 let pw; try { pw = require('playwright-core'); } catch (e) { pw = require(PW_ALT); }
 const path = require('path');
+const fs = require('fs');
 
 const URL = 'file:///' + path.join(__dirname, '..', 'index.html').split(path.sep).join('/');
 const OUT = __dirname;   // Bilder landen neben den Tests
@@ -45,7 +46,19 @@ async function gross(page, an) {
   if (ist !== an) { await page.locator('#karteMehr').click(); await page.waitForTimeout(250); }
 }
 
+/* Die acht Szenarien vor der Gliederung in Sek I / Sek II stehen nicht mehr im
+   Menü. Viele Prüfungen brauchen aber genau ihre Netze — sie liegen als Daten
+   unter tests/fixtures und werden hier über dieselbe Ladefunktion aufgelegt,
+   die auch das Menü benutzt (SIM.szenarioLaden). Alles andere geht wie eine
+   Hand über das Menü. */
+const FIXTURES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'alt-szenarien.json'), 'utf8'));
 async function szenarioWaehlen(page, key) {
+  const f = FIXTURES[key];
+  if (f) {
+    await page.evaluate(({ k, f }) => window.SIM.szenarioLaden(
+      { id: 'builtin:' + k, titel: f.titel, aufgabe: f.aufgabe, netz: f.netz }), { k: key, f });
+    return;
+  }
   await mk(page, '#szenarioBtn');
   await page.locator('.szm-item[data-id="builtin:' + key + '"] .szm-name').click();
 }
@@ -164,9 +177,18 @@ async function markenAn(page, name, art) {
 
   console.log('\n── Aufbau ──────────────────────────────────────────');
   ok('keine Fehler in der Konsole', errs.length === 0, errs.slice(0, 3).join(' | '));
-  ok('Startnetz steht da', await page.evaluate(() => window.SIM.netz.count) === 3);
-  ok('drei Geräte gezeichnet', await page.locator('.nf-node').count() === 3);
-  ok('zwei Kabel gezeichnet', await page.locator('.nf-cable').count() === 2);
+  // Der erste Besuch beginnt mit I.1: zwei Endgeräte, nichts verkabelt.
+  ok('Startnetz steht da (I.1)', await page.evaluate(() => window.SIM.netz.count) === 2);
+  ok('zwei Geräte gezeichnet', await page.locator('.nf-node').count() === 2);
+  ok('kein Kabel gezeichnet', await page.locator('.nf-cable').count() === 0);
+  ok('Startauftrag ist I.1', /I\.1/.test(await page.locator('#aufgabeTitel').textContent()));
+  /* Alles Weitere in diesem Prüfstand setzt das kleine Netz aus zwei
+     Endgeräten und einem Switch voraus (das frühere Startnetz). Es liegt als
+     Datei unter tests/fixtures und wird hier aufgelegt. */
+  await szenarioWaehlen(page, 'zwei');
+  await page.waitForTimeout(300);
+  ok('Testnetz: drei Geräte, zwei Kabel', await page.evaluate(() => window.SIM.netz.count) === 3
+     && await page.locator('.nf-cable').count() === 2);
   ok('Auftrag sichtbar', await page.locator('#aufgabe').isVisible());
 
   // Angefangen wird im Entwurf, und dort steht die Uhr still.
@@ -5803,10 +5825,10 @@ async function markenAn(page, name, art) {
      Teilen-Schalter, kein Knopf „Aufgabentext". */
   await page.keyboard.press('Escape');
   await mk(page, '#szenarioBtn');
-  ok('Menü zeigt alle mitgelieferten (15 neue, 8 bisherige)',
-     await page.locator('#szenarioPop .szm-item').count() === 23);
+  ok('Menü zeigt alle 15 mitgelieferten Szenarien',
+     await page.locator('#szenarioPop .szm-item').count() === 15);
   ok('Sek I und Sek II stehen als Überschriften in einer Liste',
-     await page.locator('#szenarioPop .szm-head').count() === 3);
+     await page.locator('#szenarioPop .szm-head').count() === 2);
   ok('ohne Raum: keine Reiter', await page.locator('#szenarioPop .szm-tabs').count() === 0);
   ok('ohne Raum: keine Teilen-Schalter', await page.locator('#szenarioPop .szm-share').count() === 0);
   await page.keyboard.press('Escape');
@@ -5870,7 +5892,7 @@ async function markenAn(page, name, art) {
   const d = await dl;
   ok('Speichern ohne Raum: Datei, keine Frage', !!d && (await page.locator('.sy-dlg').count()) === 0);
   if (d) {
-    const fs = require('fs');
+
     const pfad = await d.path();
     const j = pfad ? JSON.parse(fs.readFileSync(pfad, 'utf8')) : {};
     ok('Datei trägt den Auftrag', j.titel === 'Mein Auftrag' && /Erstens/.test(j.aufgabe || ''));

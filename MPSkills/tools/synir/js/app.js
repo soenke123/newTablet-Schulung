@@ -1797,7 +1797,7 @@
       // nicht, was das Programm überhaupt kann.
       // (Im Raum nicht: dort entscheidet die Lehrkraft, womit
       // angefangen wird, und bis dahin ist die Fläche leer.)
-      const s = eingebaut('zwei');
+      const s = eingebaut('i1');
       if (s) { netz.fromJSON(U.deepCopy(s.netz)); auftragAus({ szenario: s.id, titel: s.titel, aufgabe: s.aufgabe }); }
     }
 

@@ -25,6 +25,12 @@ for (const f of ['util.js', 'engine.js', 'netz.js', 'verlauf.js', 'nat.js', 'tcp
   vm.runInContext(fs.readFileSync(path.join(BASE, f), 'utf8'), sandbox, { filename: f });
 }
 
+/* Die acht Szenarien aus der Zeit vor der Gliederung in Sek I / Sek II sind
+   nicht mehr im Programm. Viele Prüfungen brauchen aber genau ihre Netze
+   (ein Router mit Gateway-Fehler, ein DHCP-Netz …) — sie liegen deshalb als
+   reine Daten unter tests/fixtures und stehen hier als FIX bereit. */
+const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'alt-szenarien.json'), 'utf8'));
+
 const U = sandbox.NetUtil;
 const SEC = U.SEC;
 
@@ -336,7 +342,7 @@ section('Szenarien');
   const S = sandbox.SZENARIEN;
   /* Übergang: die neuen Sek-I-Szenarien (i1…) stehen vor den acht
      bisherigen, die nach und nach ersetzt werden. */
-  ok('Szenarien vorhanden (Sek I und Sek II neu, acht bisherige)', Object.keys(S).length === 23, Object.keys(S).join(','));
+  ok('Szenarien vorhanden (Sek I: 7, Sek II: 8)', Object.keys(S).length === 15, Object.keys(S).join(','));
   ok('jedes Szenario trägt eine Gruppe', Object.keys(S).every(k => !!S[k].gruppe));
 
   for (const k in S) {
@@ -355,7 +361,7 @@ section('Szenarien');
   // Szenario 3 muss nach Eintragen der Gateways laufen
   {
     const { engine, netz, stack } = bau();
-    netz.fromJSON(JSON.parse(JSON.stringify(S.router.netz)));
+    netz.fromJSON(JSON.parse(JSON.stringify(FIX.router.netz)));
     const a = netz.byName('Endgerät 1'), b = netz.byName('Server 1');
     let vorher = null;
     stack.ping(a, '192.168.2.20', 1, 5 * SEC, x => vorher = x);
@@ -405,7 +411,7 @@ section('Szenarien');
   // Szenario 4: genau die drei geplanten Fehler, und lösbar
   {
     const { engine, netz, stack } = bau();
-    netz.fromJSON(JSON.parse(JSON.stringify(S.fehler.netz)));
+    netz.fromJSON(JSON.parse(JSON.stringify(FIX.fehler.netz)));
     ok('Szenario 4: doppelte Adresse vorhanden', netz.duplicateIps().length === 1);
 
     const r = netz.byName('Router 1');
@@ -1459,7 +1465,7 @@ function webNetz(seed) {
 {
   const { engine, netz, stack, mit } = bau(4);
   const dienste = new sandbox.Dienste(engine, netz, stack, {});
-  netz.fromJSON(JSON.parse(JSON.stringify(sandbox.SZENARIEN.web.netz)));
+  netz.fromJSON(JSON.parse(JSON.stringify(FIX.web.netz)));
   dienste.start();
   dienste.sync();
   const e1 = netz.byName('Endgerät 1');
@@ -1469,7 +1475,7 @@ function webNetz(seed) {
   ok('Szenario 7: der DNS-Server ist LEER — der Name ist die Aufgabe',
      netz.byName('DNS-Server').dnsServer.records.length === 0);
   ok('Szenario 7: die Auftragsecke bleibt frei (x<430, y<280)',
-     sandbox.SZENARIEN.web.netz.nodes.every(n => !(n.x < 430 && n.y < 280)));
+     FIX.web.netz.nodes.every(n => !(n.x < 430 && n.y < 280)));
 
   let seite = null;
   dienste.http.seiteHolen(e1, '192.168.2.30', (r) => seite = r);
@@ -2523,7 +2529,7 @@ section('DHCP im Entwurf');
   /* Szenario 5 ist der Ort, an dem eine Klasse das zuerst sieht:
      drei Endgeräte mit DHCP, und im Entwurf steht bei allen dreien
      dasselbe da — nämlich nichts. */
-  const s = sandbox.SZENARIEN.automatisch;
+  const s = FIX.automatisch;
   ok('es gibt ein DHCP-Szenario', !!s, Object.keys(sandbox.SZENARIEN).join(','));
   if (s) {
     const clients = s.netz.nodes.filter(n => (n.nics || []).some(k => k.dhcp));
@@ -2623,7 +2629,7 @@ section('DNS über einen Router');
   const { engine, netz, stack, mit } = bau();
   const dienste = new sandbox.Dienste(engine, netz, stack, {});
   const term = new sandbox.Terminal(engine, netz, stack, dienste);
-  netz.fromJSON(U.deepCopy(sandbox.SZENARIEN.namen.netz));
+  netz.fromJSON(U.deepCopy(FIX.namen.netz));
   dienste.start();
   const r1 = netz.byName('Endgerät 1');
 
@@ -2671,7 +2677,7 @@ section('Fristen');
   const { engine, netz, stack } = bau();
   const dienste = new sandbox.Dienste(engine, netz, stack, {});
   const term = new sandbox.Terminal(engine, netz, stack, dienste);
-  netz.fromJSON(U.deepCopy(sandbox.SZENARIEN.router.netz));
+  netz.fromJSON(U.deepCopy(FIX.router.netz));
   netz.byName('Endgerät 1').gateway = '192.168.1.1';
   netz.byName('Server 1').gateway = '192.168.2.1';
   term.submit(netz.byName('Endgerät 1').id, 'ping 192.168.2.20');
@@ -3257,7 +3263,7 @@ section('Subnetze');
   {
     const engine = new sandbox.Engine({ seed: 1 });
     const netz = new sandbox.Netz(engine);
-    netz.fromJSON(JSON.parse(JSON.stringify(sandbox.SZENARIEN['router'].netz)));
+    netz.fromJSON(JSON.parse(JSON.stringify(FIX['router'].netz)));
     const sn = SN.berechnen(netz);
     ok('Szenario „Zwei Netze, ein Router" findet genau zwei Netze',
        sn.liste.length === 2, sn.liste.map(s => s.netStr).join(' '));
@@ -5067,7 +5073,7 @@ section('Class Wide Web: Szenario 8 auf zwei Tablets');
      ein (die Aufträge 1–3), und dann ruft das eine die Seite des
      anderen über den Namen auf (Auftrag 4). */
   const loesen = (t, name) => {
-    t.netz.fromJSON(JSON.parse(JSON.stringify(sandbox.SZENARIEN.internet.netz)));
+    t.netz.fromJSON(JSON.parse(JSON.stringify(FIX.internet.netz)));
     const X = t.prefix;
     const c = t.netz.cwwVon(), sv = t.netz.byName('Server 1');
     ok(name + ': das cww trägt nach dem Laden die 8er-Adresse des Raums', c.nics[0].ip === t.backbone);

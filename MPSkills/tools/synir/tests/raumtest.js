@@ -222,13 +222,13 @@ async function rpc(fn, args, role) {
   ok('Reiter heißen public / private',
      /Öffentlich.*public/.test(await lf.locator('.szm-tab').nth(0).textContent())
      && /Eigene.*private/.test(await lf.locator('.szm-tab').nth(1).textContent()));
-  ok('Öffentlich: die acht mitgelieferten, je mit Teilen-Symbol',
-     await lf.locator('.szm-item').count() === 8 && await lf.locator('.szm-share').count() === 8);
-  await lf.locator('.szm-item[data-id="builtin:router"] .szm-share').click();
+  ok('Öffentlich: die 15 mitgelieferten, je mit Teilen-Symbol',
+     await lf.locator('.szm-item').count() === 15 && await lf.locator('.szm-share').count() === 15);
+  await lf.locator('.szm-item[data-id="builtin:i2"] .szm-share').click();
   await warte(300);
-  ok('Geteilt: grün hinterlegt', await lf.locator('.szm-item[data-id="builtin:router"]').evaluate(e => e.classList.contains('is-shared')));
+  ok('Geteilt: grün hinterlegt', await lf.locator('.szm-item[data-id="builtin:i2"]').evaluate(e => e.classList.contains('is-shared')));
   const d1 = (await db.query(`select data from skill_room_state where room_id = $1`, [room])).rows[0].data;
-  ok('Raumzustand trägt die Freigabe', d1.shared && d1.shared[0].id === 'builtin:router' && /Router|router/i.test(d1.shared[0].t), JSON.stringify(d1));
+  ok('Raumzustand trägt die Freigabe', d1.shared && d1.shared[0].id === 'builtin:i2' && /Router|router/i.test(d1.shared[0].t), JSON.stringify(d1));
   await mk(lf, '#szenarioBtn');          // zu
 
   await warte(1500);
@@ -244,12 +244,15 @@ async function rpc(fn, args, role) {
   ok('Tablet: Hinweis weg', await sf.locator('#leerHinweis').isHidden());
   await warte(2200);
   const w1 = (await db.query(`select stand from synir_work where participant_id = $1`, [pid])).rows[0];
-  ok('Tablet meldet seinen Stand', w1 && w1.stand.szenario === 'builtin:router' && w1.stand.nodes.length > 0);
+  ok('Tablet meldet seinen Stand', w1 && w1.stand.szenario === 'builtin:i2' && w1.stand.nodes.length > 0);
 
   console.log('\n── Aufgabentext und eigenes Szenario ───────────────');
   await mk(lf, '#szenarioBtn');
-  await lf.locator('.szm-item[data-id="builtin:zwei"] .szm-name').click();
+  await lf.locator('.szm-item[data-id="builtin:i1"] .szm-name').click();
   await warte(300);
+  // I.1 hat zwei Endgeräte; die folgenden Prüfungen rechnen mit dreien — also
+  // baut die Lehrkraft, wie im Unterricht, ein Gerät dazu.
+  await lf.evaluate(() => { window.SIM.netz.addNode('host', 700, 560); window.SIM.neuZeichnen(); });
   await mk(lf, '#aufgabeBtn');
   await lf.locator('.sy-dlg [data-titel]').fill('Pingen über den Switch');
   await lf.evaluate(() => {
@@ -299,7 +302,7 @@ async function rpc(fn, args, role) {
   // Die Lehrkraft baut vorher an ihrem eigenen Netz etwas anderes.
   await mk(lf, '#szenarioBtn');
   await lf.locator('.szm-tab[data-tab="public"]').click();
-  await lf.locator('.szm-item[data-id="builtin:router"] .szm-name').click();
+  await lf.locator('.szm-item[data-id="builtin:i2"] .szm-name').click();
   await warte(300);
   const eigenN = await lf.evaluate(() => window.SIM.netz.count);
   await warte(2500);
@@ -333,7 +336,7 @@ async function rpc(fn, args, role) {
 
   // Zusehen ohne Übernahme und beenden: das eigene Netz kommt zurück.
   await mk(lf, '#szenarioBtn');
-  await lf.locator('.szm-item[data-id="builtin:router"] .szm-name').click();
+  await lf.locator('.szm-item[data-id="builtin:i2"] .szm-name').click();
   await warte(300);
   await L1.page.locator('.sy-person[data-pid="' + pid + '"]').click();
   await warte(1200);
