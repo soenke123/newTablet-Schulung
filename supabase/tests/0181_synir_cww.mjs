@@ -66,6 +66,11 @@ async function run() {
   await db.exec(mig);
   await db.exec(mig);
   ok('Migration läuft zweimal durch', true);
+  // 0182 ersetzt nur synir_cww_tausch_intern und fügt `bereiche` an.
+  const mig2 = readFileSync(`${REPO}/supabase/migrations/0182_synir_cww_bereiche.sql`, 'utf8');
+  await db.exec(mig2);
+  await db.exec(mig2);
+  ok('Migration 0182 läuft zweimal durch', true);
 
   const L = (await db.query(`insert into profiles default values returning id`)).rows[0].id;
   const room = (await db.query(
@@ -131,6 +136,16 @@ async function run() {
   await db.query(`update synir_cww_netz set seen_at = now() - interval '30 seconds' where prefix = $1 and room_id = $2`, [c.prefix, room]);
   r = await q1(`select synir_cww_tausch('tA', $1, null) as r`, [[ping(A_IP, c.prefix + '.0.0.1')]]);
   ok('ein Tablet, das nicht mehr fragt: unzustellbar', r.unzustellbar.length === 1);
+
+  // ── Die Bereiche der anderen (0182) ───────────────────────
+  r = await q1(`select synir_cww_tausch('tA', null, null) as r`);
+  ok('A sieht die Bereiche von B und der Lehrkraft', Array.isArray(r.bereiche)
+     && r.bereiche.includes(b.prefix) && r.bereiche.includes(100), JSON.stringify(r.bereiche));
+  ok('nicht den eigenen', !r.bereiche.includes(a.prefix));
+  ok('nicht den von C, der nicht mehr fragt', !r.bereiche.includes(c.prefix));
+  ok('nicht den aus einem anderen Raum', !r.bereiche.includes(x.prefix));
+  ok('nur Zahlen, sortiert', r.bereiche.every(n => typeof n === 'number')
+     && r.bereiche.join() === [...r.bereiche].sort((m, n) => m - n).join());
 
   r = await q1(`select synir_cww_tausch('tA', $1, null) as r`, [Array.from({ length: 201 }, () => ping(A_IP, B_IP))]);
   ok('mehr als 200 Pakete: abgelehnt', r.error === 'payload_too_big');

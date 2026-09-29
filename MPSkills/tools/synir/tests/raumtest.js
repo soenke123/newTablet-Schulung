@@ -129,6 +129,7 @@ function server() {
   await db.exec(STUBS);
   await db.exec(fs.readFileSync(path.join(REPO, 'supabase/migrations/0180_synir.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.join(REPO, 'supabase/migrations/0181_synir_cww.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.join(REPO, 'supabase/migrations/0182_synir_cww_bereiche.sql'), 'utf8'));
   const L = (await db.query(`insert into profiles default values returning id`)).rows[0].id;
   const room = (await db.query(
     `insert into skill_rooms (code, tool_id, owner_id, title) values ('RAUM77','synir',$1,'7b') returning id`, [L])).rows[0].id;
@@ -455,12 +456,30 @@ async function rpc(fn, args, role) {
     await warte(400);
   }
   const karteText = await sf.locator('#karteBody').textContent();
-  ok('Mias Kärtchen: eigener Bereich, kein „Kein Raum"',
-     karteText.includes(pM + '.0.0.0') && !karteText.includes('Kein Raum'), karteText.slice(0, 160));
+  ok('Mias Kärtchen „Internet": kein „Kein Raum"', !karteText.includes('Kein Raum'), karteText.slice(0, 160));
+  {
+    const b = await sf.evaluate(() => [...document.querySelectorAll('#karteBody .k-bereich')].map(e => e.textContent.replace(/\s+/g, '')));
+    ok('⭐ Bens und der Lehrkraft Bereich stehen dort, Mias eigener nicht',
+       b.includes(pB + '.0.0.0/8') && b.includes('100.0.0.0/8') && !b.includes(pM + '.0.0.0/8'), b.join('|'));
+  }
+  await sf.locator('.k-reiter-b', { hasText: 'Netzwerkkarten' }).click();
+  await warte(250);
+  ok('Mias Kärtchen „Netzwerkkarten" nennt den eigenen Bereich',
+     (await sf.locator('#karteBody .k-cww-bereich').textContent()).replace(/\s+/g, '') === pM + '.0.0.0/8');
+  await sf.locator('.k-reiter-b', { hasText: 'Allgemein' }).click();
+  await warte(250);
+  ok('die Weiterleitungstabelle führt Bens Bereich schon',
+     await sf.evaluate((b) => [...document.querySelectorAll('#karteBody .tbl-cww td')].some(t => t.textContent === b + '.0.0.0'), pB));
+  await sf.locator('[data-k="dnsseite"]').click();
+  await warte(250);
   ok('Mias 8.8.8.8 zeigt Bens Namen als fremd',
      await sf.evaluate(() => [...document.querySelectorAll('#karteBody .k-dns-z')]
        .some(z => z.textContent.includes('www.ben.de') && z.textContent.includes('aus einem anderen Netz'))));
   ok('… ohne zu verraten, wem er gehört', !(await sf.locator('#karteBody').textContent()).includes('Ben'));
+  await sf.locator('[data-k="zurueck"]').click();
+  await warte(200);
+  await sf.locator('.k-reiter-b', { hasText: 'Internet' }).click();
+  await warte(200);
   await S1.page.screenshot({ path: path.join(OUT, 'shot-raum-cww.png') });
 
   await L1.page.locator('#syCww').click();

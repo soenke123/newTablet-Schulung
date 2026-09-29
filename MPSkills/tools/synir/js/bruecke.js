@@ -19,7 +19,7 @@
      toast:   '…'
      cwwNetz: { prefix, backbone }               Adressbereich vom Server
      cwwRein: { pakete, unzustellbar,            Antwort auf einen Tausch
-                verzeichnis, vergeben }
+                verzeichnis, vergeben, bereiche }
 
    ── Nach außen (type 'synir:event', Feld ev) ──────────────────
      ready                                       Brücke steht

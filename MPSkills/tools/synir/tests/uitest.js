@@ -5925,32 +5925,82 @@ async function markenAn(page, name, art) {
     await page.waitForTimeout(350);
     await gross(page, true);
     {
+      const reiter = (await page.locator('.k-reiter-b').allTextContents()).join('|');
+      ok('⭐ das cww hat drei Reiter: Internet, Netzwerkkarten, Allgemein',
+         reiter === 'Internet|Netzwerkkarten|Allgemein', reiter);
+      ok('aufgeschlagen ist „Internet"',
+         (await page.locator('.k-reiter-b.is-on').textContent()) === 'Internet');
       const t = await page.locator('#karteBody').textContent();
-      ok('⭐ das Kärtchen geht auf „Internet" auf und nennt den Bereich',
-         t.includes('Dein Adressbereich') && t.includes('50.0.0.0'), t.slice(0, 120));
-      ok('ohne Raum: „andere Netze nicht erreichbar"', t.includes('Kein Raum'));
-      ok('8.8.8.8 kennt den öffentlichen Namen',
-         await page.evaluate(() => [...document.querySelectorAll('#karteBody .k-dns-z')]
-           .some(r => r.textContent.includes('www.anna.de') && r.textContent.includes('aus deinem Netz'))));
-      ok('und sagt, warum der private fehlt',
-         await page.evaluate(() => [...document.querySelectorAll('#karteBody .k-dns-z')]
-           .some(r => r.textContent.includes('drucker.anna.de') && r.textContent.includes('private Adresse'))));
+      ok('⭐ „Internet" nennt die Adresse in der Wolke und die Netzmaske',
+         t.includes('Deine Adresse in der Wolke') && t.includes('8.0.0.50') && t.includes('255.0.0.0'), t.slice(0, 160));
+      ok('der Adressbereich steht dort NICHT (er gehört zu den Netzwerkkarten)', !t.includes('Dein Adressbereich'));
+      ok('ohne Raum: „Kein Raum – keine anderen Bereiche"', t.includes('Kein Raum'));
+      ok('die DNS-Liste steht nicht mehr im Reiter „Internet"',
+         await page.locator('#karteBody .k-dns-z').count() === 0);
       ok('die Internet-Karte hat kein Eingabefeld',
          await page.locator('#karteBody input[data-nic="0"]').count() === 0);
     }
     await page.locator('#karte').screenshot({ path: path.join(OUT, 'shot-cww-internet.png') });
 
+    /* Die Bereiche der anderen: nur im Raum, und nur die Zahlen. */
+    await page.evaluate(() => { const S = window.SIM; S.internet.setModus('raum'); S.internet.rein({ bereiche: [14, 13, 50, 8, 300, 13] }); });
+    await page.locator('.k-reiter-b', { hasText: 'Netzwerkkarten' }).click();
+    await page.locator('.k-reiter-b', { hasText: 'Internet' }).click();
+    await page.waitForTimeout(250);
+    {
+      ok('⭐ im Raum stehen die Bereiche der anderen, sortiert und ohne den eigenen',
+         (await page.locator('#karteBody .k-bereich').allTextContents()).join('|') === '13.0.0.0 /8|14.0.0.0 /8',
+         (await page.locator('#karteBody .k-bereich').allTextContents()).join('|'));
+    }
+
     await page.locator('.k-reiter-b', { hasText: 'Netzwerkkarten' }).click();
     await page.waitForTimeout(250);
-    ok('im Reiter „Netzwerkkarten" steht nur die Karte nach innen',
-       await page.locator('#karteBody input[data-f="ip"]').count() === 1);
+    {
+      const t = await page.locator('#karteBody').textContent();
+      ok('⭐ „Netzwerkkarten": oben der eigene Bereich, groß',
+         t.includes('Dein Adressbereich') && await page.locator('#karteBody .k-cww-bereich').textContent() === '50.0.0.0 /8');
+      ok('darunter nur die Karte nach innen',
+         await page.locator('#karteBody input[data-f="ip"]').count() === 1);
+      ok('und der Bereich steht vor der Karte',
+         await page.evaluate(() => {
+           const b = document.querySelector('#karteBody .k-cww-bereich');
+           const i = document.querySelector('#karteBody input[data-f="ip"]');
+           return !!(b && i && (b.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING));
+         }));
+    }
+
     await page.locator('.k-reiter-b', { hasText: 'Allgemein' }).click();
     await page.waitForTimeout(250);
     {
       const t = await page.locator('#karteBody').textContent();
-      ok('„Allgemein" ohne Gateway-Feld, mit Routing und DHCP-Server',
-         !t.includes('Gateway') && t.includes('Automatisches Routing') && t.includes('DHCP-Server'), t.slice(0, 160));
+      ok('„Allgemein" ohne Gateway-Feld, mit DHCP-Server, DNS und Routing',
+         await page.locator('#karteBody input[data-f="gateway"]').count() === 0
+         && t.includes('Automatisches Routing') && t.includes('DHCP-Server')
+         && t.includes('DNS-Liste öffnen'), t.slice(0, 200));
+      ok('⭐ die Reihenfolge: DHCP, DNS, Routing',
+         t.indexOf('DHCP-Server') < t.indexOf('DNS') && t.indexOf('DNS-Liste') < t.indexOf('Automatisches Routing'));
+      ok('⭐ die Weiterleitungstabelle führt die Bereiche der anderen schon, vom CWW',
+         await page.evaluate(() => {
+           const z = [...document.querySelectorAll('#karteBody .tbl-cww tr')].map(r => r.textContent);
+           return z.some(x => x.includes('13.0.0.0') && x.includes('255.0.0.0') && x.includes('Internet'))
+               && z.some(x => x.includes('14.0.0.0'));
+         }) && t.includes('vom CWW'));
     }
+    await page.locator('[data-k="dnsseite"]').click();
+    await page.waitForTimeout(250);
+    {
+      ok('⭐ „DNS-Liste öffnen" zeigt die Liste von 8.8.8.8 mit dem öffentlichen Namen',
+         await page.evaluate(() => [...document.querySelectorAll('#karteBody .k-dns-z')]
+           .some(r => r.textContent.includes('www.anna.de') && r.textContent.includes('aus deinem Netz'))));
+      ok('und sagt, warum der private fehlt',
+         await page.evaluate(() => [...document.querySelectorAll('#karteBody .k-dns-z')]
+           .some(r => r.textContent.includes('drucker.anna.de') && r.textContent.includes('private Adresse'))));
+      ok('die Liste hat kein Eingabefeld', await page.locator('#karteBody input').count() === 0);
+    }
+    await page.locator('[data-k="zurueck"]').click();
+    await page.waitForTimeout(250);
+    ok('„Zurück" führt zu „Allgemein"', (await page.locator('.k-reiter-b.is-on').textContent()) === 'Allgemein');
+    await page.evaluate(() => window.SIM.internet.setModus('solo'));
 
     /* Eine Adresse außerhalb des Bereichs: das cww warnt. */
     await page.evaluate(() => { const S = window.SIM; S.netz.cwwVon().nics[1].ip = '10.0.0.1'; S.neuZeichnen(); });

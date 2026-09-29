@@ -58,6 +58,7 @@
     let modus = 'solo';
     let fremd = [];                 // Verzeichnis vom Server: [{ typ, name, wert }]
     let vergeben = new Set();       // "typ|name", die jemand anderes hat
+    let bereiche = [];              // die /8 der anderen Tablets im Raum: [13, 14, …]
     const ausgang = [];             // Pakete, die noch hinaus müssen
     let ipId = 1;
 
@@ -104,7 +105,9 @@
          pakete        an mein /8 (oder an meine 8er-Adresse)
          unzustellbar  meine eigenen, die niemand nehmen wollte
          verzeichnis   alle Namen, die 8.8.8.8 kennt
-         vergeben      meine Namen, die schon jemand anderes hat */
+         vergeben      meine Namen, die schon jemand anderes hat
+         bereiche      die /8 der anderen Tablets, die gerade da sind —
+                       nur die Zahlen, nie, wem sie gehören */
     function rein(d) {
       d = d || {};
       if (modus !== 'raum') return;
@@ -118,6 +121,11 @@
         fremd = d.verzeichnis
           .filter(e => e && TYPEN[e.typ] && typeof e.name === 'string' && typeof e.wert === 'string')
           .map(e => ({ typ: e.typ, name: e.name.toLowerCase().slice(0, 120), wert: e.wert.slice(0, 120) }));
+      }
+      if (Array.isArray(d.bereiche)) {
+        bereiche = Array.from(new Set(d.bereiche.map(b => b | 0)))
+          .filter(b => b >= 1 && b <= 223 && b !== 8 && b !== 10 && b !== 127)
+          .sort((a, b) => a - b);
       }
       if (Array.isArray(d.vergeben)) {
         vergeben = new Set(d.vergeben.filter(e => e && TYPEN[e.typ])
@@ -278,12 +286,20 @@
     /* ─── Einstellen ──────────────────────────────────────────*/
     function setModus(m) {
       modus = m === 'raum' || m === 'aus' ? m : 'solo';
-      if (modus !== 'raum') { fremd = []; vergeben = new Set(); ausgang.length = 0; }
+      if (modus !== 'raum') { fremd = []; vergeben = new Set(); bereiche = []; ausgang.length = 0; }
+    }
+
+    /* Die Bereiche der anderen, die über das cww erreichbar sind —
+       ohne den eigenen. Ohne Raum (und in der Spiegelung) ist die
+       Liste leer: dann gibt es niemanden. */
+    function andere() {
+      const eigen = netz.internetConf().prefix;
+      return modus === 'raum' ? bereiche.filter(b => b !== eigen) : [];
     }
 
     const api = {
       DNS_IP,
-      raus, nehmen, rein, eigene, veroeffentlicht, liste, setModus,
+      raus, nehmen, rein, eigene, veroeffentlicht, liste, andere, setModus,
       get modus() { return modus; },
       get wartend() { return ausgang.length; }
     };

@@ -4614,6 +4614,26 @@ section('Class Wide Web: zwei Tablets');
   ok('gemeldet vom eigenen cww (seine Karte nach innen)', weg && weg.from === '50.0.1.1', weg && weg.from);
 }
 
+section('Class Wide Web: die Bereiche der anderen');
+{
+  const { A } = zweiTablets();
+  A.inet.rein({ bereiche: [67, 14, 50, 8, 10, 127, 300, 0, 14, 'x'] });
+  ok('⭐ nur gültige Zahlen, sortiert, jede einmal, ohne den eigenen Bereich und ohne 8/10/127',
+     A.inet.andere().join() === '14,67', A.inet.andere().join());
+  A.inet.rein({ verzeichnis: [] });
+  ok('eine Antwort ohne `bereiche` lässt die Liste stehen', A.inet.andere().join() === '14,67');
+  A.inet.rein({ bereiche: [] });
+  ok('eine leere Liste leert sie', A.inet.andere().length === 0);
+  A.inet.rein({ bereiche: [14] });
+  A.inet.setModus('solo');
+  ok('ohne Raum gibt es keine anderen', A.inet.andere().length === 0);
+  A.inet.setModus('raum');
+  ok('und nach dem Zurückschalten keine alte Liste', A.inet.andere().length === 0);
+  A.inet.setModus('aus');
+  A.inet.rein({ bereiche: [14] });
+  ok('in der Spiegelung nimmt sie nichts an', A.inet.andere().length === 0);
+}
+
 section('Class Wide Web: Haustür');
 {
   const { A, B, ac } = zweiTablets();

@@ -333,7 +333,8 @@
     }
     post({ cwwRein: {
       pakete: res.pakete || [], unzustellbar: res.unzustellbar || [],
-      verzeichnis: res.verzeichnis || [], vergeben: res.vergeben || []
+      verzeichnis: res.verzeichnis || [], vergeben: res.vergeben || [],
+      bereiche: res.bereiche || []
     } });
     const verkehr = mit.length || (res.pakete && res.pakete.length) || c.raus.length;
     c.nachlauf = verkehr ? CWW_NACHLAUF : Math.max(0, c.nachlauf - 1);

@@ -555,9 +555,21 @@ Die Klasse soll es herausfinden müssen — mit `traceroute`, mit 8.8.8.8, mit F
 ist der Anschluss ins Internet (`istInternet`) — kein Kabel, feste Adresse im
 8er-Netz, vom Raum vergeben und **nicht** in der Datei (`toJSON` schreibt sie leer,
 genau wie den eigenen Bereich: der hängt am Kind, nicht am Netz). Karten ab 1 zeigen
-nach innen. Das Einstellfenster hat drei Reiter: *Allgemein* (Netze, RIP,
-Weiterleitungstabelle, DHCP-Server), *Internet* (Bereich, 8er-Adresse, 8.8.8.8 —
-nur lesen), *Netzwerkkarten*.
+nach innen. Das Einstellfenster hat drei Reiter (seit 2026-09-29, in dieser
+Reihenfolge — außen, innen, Einstellungen):
+
+| Reiter | Inhalt |
+|---|---|
+| *Internet* | der Weg nach draußen: Adresse in der Wolke (`8.x.y.z`) und Netzmaske; darunter die **Bereiche der anderen** im Raum (`13.0.0.0/8`, `14.0.0.0/8`, …) — nur die Zahlen, nur lesen |
+| *Netzwerkkarten* | der eigene Adressbereich, groß; darunter die Karten nach innen |
+| *Allgemein* | DHCP-Server, DNS (Knopf „DNS-Liste öffnen" → Unterseite mit der Liste von 8.8.8.8, auch im Aktionsmodus lesbar), Routing: RIP-Haken und Weiterleitungstabelle, in der die Bereiche der anderen **schon voreingetragen** stehen („vom CWW", nur lesen; eigene Zeilen kommen darunter) |
+
+Bearbeiten geht nur im Entwurf. Im Aktionsmodus zeigt `konfig.kompakt` dieselben
+Blöcke in derselben Reihenfolge als Zeilen, ohne Reiter — Lehrkraft und Kinder sehen
+dasselbe. Die Bereiche der anderen kommen mit jedem Tausch vom Server
+(`bereiche`, Migration 0182: alle anderen /8 im Raum, die in den letzten 20 s gefragt
+haben) und stehen in `internet.andere()`; ohne Raum und in der Spiegelung ist die
+Liste leer. Sie sind reine Anzeige: beim Routen ändern sie nichts.
 
 **Die Weiterleitung** (`schichten.js`, `routeFor`). Ein neuer Rang `Internet`
 (nach dem Standardgateway): alles außerhalb des eigenen /8 geht an Karte 0.
@@ -601,7 +613,7 @@ Kind hat ein anderes /8, und das Eintragen aus dem eigenen Bereich ist der Auftr
 
 **Prüfstände:** `tests/kerntest.js` (Abschnitte „Class Wide Web" — zwei Tablets in
 einem Prozess, die Wolke ist dort eine Schleife), `supabase/tests/0181_synir_cww.mjs`
-(die RPCs), `tests/raumtest.js` (zwei Tablets und die Lehrkraft im Browser gegen
+(die RPCs, auch 0182), `tests/raumtest.js` (zwei Tablets und die Lehrkraft im Browser gegen
 pglite: Ping, 8.8.8.8, Webseite über den Raum).
 
 ## Das Tempo — und was daran hängt

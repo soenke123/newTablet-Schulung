@@ -198,7 +198,7 @@
       senden: () => { if (extern.cwwRaus) extern.cwwRaus(); }
     }) : null;
     /* Was 8.8.8.8 weiß, hat sich geändert: ein offenes Kärtchen auf
-       dem Reiter „Internet" zeigt es gleich. Nur dann — ein Formular,
+       dem Reiter „Internet" (oder der DNS-Liste) zeigt es gleich. Nur dann — ein Formular,
        in dem gerade jemand tippt, bleibt, wie es ist. */
     function internetNeu() {
       /* ⚠️ Nur im Entwurf: im Aktionsmodus räumt renderKarte die
@@ -207,7 +207,7 @@
          unter den Fingern. Aufgefallen im Raum-Prüfstand. */
       if (modus !== 'entwurf') return;
       const box = refs.karteBody;
-      if (box && box.querySelector('.k-cww-bereich')
+      if (box && box.querySelector('[data-cww-live]')
           && !(document.activeElement && box.contains(document.activeElement))) {
         panels.renderKarte();
       }

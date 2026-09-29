@@ -6,6 +6,22 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 000a · Das cww-Fenster neu gegliedert (2026-09-29)
+
+Auf Wunsch des Nutzers drei Reiter *Internet · Netzwerkkarten · Allgemein* (Beschreibung
+in LIESMICH, Abschnitt *Das Class Wide Web*). Neu: `supabase/migrations/0182_synir_cww_bereiche.sql`
+(die Antwort von `synir_cww_tausch` trägt `bereiche`), `internet.andere()`, die
+Weiterleitungstabelle am cww mit voreingetragenen Bereichen, die DNS-Liste als Unterseite.
+Berührt: `js/konfig.js`, `js/internet.js`, `js/bruecke.js`, `js/app.js`, `tool.js`, `css/app.css`,
+`tests/uitest.js`, `tests/raumtest.js`, `supabase/tests/0181_synir_cww.mjs`.
+**Vor dem Einsatz im Raum muss 0182 auf dem Server laufen** — ohne sie bleibt die Liste
+leer („Noch niemand sonst im Raum"), sonst geht alles wie bisher.
+Offen: im Aktionsmodus frischt sich das offene Kärtchen nicht im Takt des Raums auf
+(`internetNeu` läuft nur im Entwurf, siehe dort); wer neu dazukommt, sieht es beim
+nächsten Öffnen.
+
+---
+
 ## 000 · Das Class Wide Web (diese Runde)
 
 **808 kopflose + 839 Browser-Prüfungen + 67 im Raum + 34 RPC-Prüfungen grün.**

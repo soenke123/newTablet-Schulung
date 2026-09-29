@@ -3798,6 +3798,11 @@ body[data-rolle="presenter"] .nur-lehrer { display: inline-block; }
    Kind gehört. Darunter die Liste von 8.8.8.8, nur zum Lesen. */
 .k-cww-bereich { font-size: 22px; font-weight: 700; color: var(--ink); margin: 2px 0 2px; }
 .k-cww-bereich .dim { font-weight: 500; }
+.k-bereiche { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 2px; }
+.k-bereich { padding: 3px 8px; border: 1px solid var(--line-2, var(--line)); border-radius: 8px;
+  font-size: 13px; color: var(--ink); }
+.k-bereich .dim { font-weight: 500; }
+.tbl-cww td:last-child { color: var(--ink-3); }
 .k-hint.warn { color: var(--warn); }
 .k-dns { display: grid; gap: 6px; margin-top: 4px; }
 .k-dns-z {
