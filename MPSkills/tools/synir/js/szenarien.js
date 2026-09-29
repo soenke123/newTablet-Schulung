@@ -513,7 +513,8 @@
       '/webserver': { ordner: true },
       '/webserver/index.html': { text: window.Http ? window.Http.SEITE : '' },
       '/webserver/stil.css':   { text: window.Http ? window.Http.STIL : '' },
-      '/webserver/logo.png':   { bild: '@schule' }
+      '/webserver/mpskills-logo.png': { bild: '@drache' },
+      '/webserver/synir-logo.png':    { bild: '@synir' }
     })
   });
   Object.assign(nach(i6netz, 'DNS-Server'), { software: ['dns'], dnsServer: { on: true, records: [] } });
@@ -589,7 +590,8 @@
             '/webserver': { ordner: true },
             '/webserver/index.html': { text: window.Http ? window.Http.SEITE : '' },
             '/webserver/stil.css':   { text: window.Http ? window.Http.STIL : '' },
-            '/webserver/logo.png':   { bild: '@schule' }
+            '/webserver/mpskills-logo.png': { bild: '@drache' },
+            '/webserver/synir-logo.png':    { bild: '@synir' }
           }
         }),
         dev('c4', 'host', 'Endgerät 1', 460, 540, { software: ['browser'] }),
@@ -756,7 +758,8 @@
             '/webserver': { ordner: true },
             '/webserver/index.html': { text: window.Http ? window.Http.SEITE : '' },
             '/webserver/stil.css':   { text: window.Http ? window.Http.STIL : '' },
-            '/webserver/logo.png':   { bild: '@schule' }
+            '/webserver/mpskills-logo.png': { bild: '@drache' },
+            '/webserver/synir-logo.png':    { bild: '@synir' }
           }
         }),
         dev('h8', 'host', 'Fremder Rechner', 940, 620, { nics: [{ ip: '84.12.6.30' }] })         // Fehler 3: kein Gateway
@@ -838,7 +841,8 @@
             '/webserver': { ordner: true },
             '/webserver/index.html': { text: window.Http ? window.Http.SEITE : '' },
             '/webserver/stil.css':   { text: window.Http ? window.Http.STIL : '' },
-            '/webserver/logo.png':   { bild: '@schule' }
+            '/webserver/mpskills-logo.png': { bild: '@drache' },
+            '/webserver/synir-logo.png':    { bild: '@synir' }
           }
         }),
         dev('j5', 'handy', 'Handy 1', 1130, 500, { nics: [{ dhcp: true, funk: true, ssid: 'Heim-WLAN' }] })
@@ -1049,7 +1053,8 @@
             '/webserver': { ordner: true },
             '/webserver/index.html': { text: window.Http ? window.Http.SEITE : '' },
             '/webserver/stil.css':   { text: window.Http ? window.Http.STIL : '' },
-            '/webserver/logo.png':   { bild: '@schule' }
+            '/webserver/mpskills-logo.png': { bild: '@drache' },
+            '/webserver/synir-logo.png':    { bild: '@synir' }
           } } }] }
     ][i]
   });

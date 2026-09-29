@@ -19,7 +19,7 @@ vm.createContext(sandbox);
    heraus. Ihn durch einen echten Browser zu prüfen wäre teurer
    und ungenauer. Das geht nur, weil die Datei beim LADEN kein
    DOM anfasst; wer das ändert, muss sie hier herausnehmen. */
-for (const f of ['util.js', 'engine.js', 'netz.js', 'verlauf.js', 'nat.js', 'tcp.js', 'rip.js', 'dateien.js',
+for (const f of ['util.js', 'engine.js', 'netz.js', 'verlauf.js', 'nat.js', 'tcp.js', 'rip.js', 'logos.js', 'dateien.js',
                  'http.js', 'mail.js', 'schichten.js', 'dienste.js', 'internet.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
                  'prog-dateien.js', 'szenarien.js']) {
   vm.runInContext(fs.readFileSync(path.join(BASE, f), 'utf8'), sandbox, { filename: f });
@@ -982,12 +982,12 @@ section('Dateisystem');
      Antwort. */
   ok('ein neues Endgerät hat genau den Ordner /Bilder',
      D.list(a, '/').length === 1 && D.list(a, '/')[0].name === 'Bilder');
-  ok('und darin die vier eingebauten Bilder',
-     D.list(a, '/Bilder').length === 4
+  ok('und darin die sechs eingebauten Bilder',
+     D.list(a, '/Bilder').length === 6
      && D.list(a, '/Bilder').every(e => D.art(a, '/Bilder/' + e.name) === 'bild'));
   ok('sie sind anzeigbar',
      D.list(a, '/Bilder').every(e =>
-       /^data:image\/svg/.test(D.bildQuelle(D.lesen(a, '/Bilder/' + e.name).bild))));
+       /^data:image\/(svg|png)/.test(D.bildQuelle(D.lesen(a, '/Bilder/' + e.name).bild))));
   /* ⚠️ Der Punkt, an dem der Ordner überhaupt vertretbar ist: die
      Bilder sind VERWEISE (`bild: '@schule'`) und liegen nicht im
      Inhaltsspeicher. Vier Bilder auf zwanzig Geräten kosten nichts. */
@@ -997,7 +997,7 @@ section('Dateisystem');
   ok('ein Router auch nicht',
      D.list(netz.addNode('router', 400, 100), '/').length === 0);
   ok('ein Handy dagegen schon',
-     D.list(netz.addNode('handy', 500, 100), '/Bilder').length === 4);
+     D.list(netz.addNode('handy', 500, 100), '/Bilder').length === 6);
 
   /* Ab hier auf einem Gerät, das wirklich nichts hat — sonst zählt
      jede Prüfung auf „genau ein Eintrag" die Bilder mit. */
@@ -1083,7 +1083,7 @@ section('Dateisystem');
   ok('auch das Bild', D.lesen(a2, '/webserver/logo.png').bild === '@logo');
   ok('und der leere Ordner ebenfalls', D.art(a2, '/webserver') === 'ordner');
   ok('die eingebauten Bilder überleben das Speichern',
-     D.list(a2, '/Bilder').length === 4);
+     D.list(a2, '/Bilder').length === 6);
   ok('⭐ ein weggeworfenes /Bilder kommt beim Laden NICHT wieder',
      !D.gibt(netz2.list()[1], '/Bilder'));
 
@@ -1330,7 +1330,7 @@ function webNetz(seed) {
   ok('die Installation legt den Ordner an', D.art(srv, '/webserver') === 'ordner');
   ok('mit Seite, Stildatei und Bild',
      D.gibt(srv, '/webserver/index.html') && D.gibt(srv, '/webserver/stil.css')
-     && D.gibt(srv, '/webserver/logo.png'));
+     && D.gibt(srv, '/webserver/mpskills-logo.png') && D.gibt(srv, '/webserver/synir-logo.png'));
   ok('der Server hört auf 80',
      stack.sockets(srv).some(r => r.proto === 'TCP' && /:80$/.test(r.lokal)
        && r.programm === 'Webserver'), JSON.stringify(stack.sockets(srv)));
@@ -1341,19 +1341,19 @@ function webNetz(seed) {
 
   ok('die Seite kommt an', seite && seite.ok && seite.status === 200,
      seite && (seite.grund || seite.status));
-  /* ⭐ Die Lernaussage: EINE Seite, DREI Anfragen. */
-  ok('eine Seite sind drei Anfragen', seite && seite.teile.length === 3,
+  /* ⭐ Die Lernaussage: EINE Seite, VIER Anfragen. */
+  ok('eine Seite sind vier Anfragen', seite && seite.teile.length === 4,
      seite && JSON.stringify(seite.teile.map(t => t.pfad)));
   ok('und „/" meint die Startseite',
      seite && seite.teile[0].pfad === '/', seite && seite.teile[0].pfad);
-  ok('alle drei mit Status 200',
+  ok('alle vier mit Status 200',
      seite && seite.teile.every(t => t.status === 200),
      seite && JSON.stringify(seite.teile));
 
   ok('die Stildatei steckt danach IN der Seite',
      /<style>/.test(seite.html) && /font-family/.test(seite.html));
   ok('und das Bild als Daten-URI',
-     /<img[^>]+src="data:image\/svg/.test(seite.html), seite.html.slice(0, 300));
+     /<img[^>]+src="data:image\/png/.test(seite.html), seite.html.slice(0, 300));
   ok('die Quelle bleibt daneben erhalten (zum Anzeigen im Editor)',
      /<link/.test(seite.quelle) && !/<style>/.test(seite.quelle));
 
@@ -1366,7 +1366,7 @@ function webNetz(seed) {
      http1.some(r => /200 OK\s+text\/css/.test(r.info)),
      http1.map(r => r.info).join(' | ').slice(0, 300));
   ok('der Server führt Protokoll über die Zugriffe',
-     http.zugriffe(srv).length === 3, JSON.stringify(http.zugriffe(srv)));
+     http.zugriffe(srv).length === 4, JSON.stringify(http.zugriffe(srv)));
 }
 
 /* Eine Datei, die es nicht gibt: EINE 404, und der Rest der
@@ -1374,12 +1374,12 @@ function webNetz(seed) {
    nur als kaputtes Bildsymbol, ohne zu wissen warum. */
 {
   const { engine, netz, stack, cli, srv, http } = webNetz(5);
-  sandbox.Dateien.loeschen(srv, '/webserver/logo.png');
+  sandbox.Dateien.loeschen(srv, '/webserver/synir-logo.png');
   let seite = null;
   http.seiteHolen(cli, '192.168.1.20', (r) => seite = r);
   engine.runUntil(20 * SEC);
   ok('die Seite kommt trotzdem', seite && seite.ok && seite.status === 200);
-  ok('genau eine der drei Anfragen ist eine 404',
+  ok('genau eine der vier Anfragen ist eine 404',
      seite && seite.teile.filter(t => t.status === 404).length === 1,
      seite && JSON.stringify(seite.teile));
   ok('und die Stildatei ist trotzdem drin', /<style>/.test(seite.html));

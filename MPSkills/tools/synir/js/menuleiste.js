@@ -86,6 +86,18 @@
 
     m.pop.addEventListener('click', (e) => {
       e.stopPropagation();
+      // Das kleine „i" hinter einem Tool klappt die Kurzerklärung auf
+      // und wählt nichts.
+      const i = e.target.closest('.mi-i');
+      if (i) {
+        const z = i.closest('.mi-zeile');
+        const t = z && z.nextElementSibling;
+        if (t && t.classList.contains('mi-info')) {
+          t.hidden = !t.hidden;
+          i.setAttribute('aria-expanded', String(!t.hidden));
+        }
+        return;
+      }
       const b = e.target.closest('.mi');
       if (!b || b.disabled) return;
       // Das Untermenü bleibt offen, bis dort etwas gewählt ist.

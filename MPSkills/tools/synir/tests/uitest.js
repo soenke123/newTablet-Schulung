@@ -2109,8 +2109,8 @@ async function markenAn(page, name, art) {
   ok('das Webserver-Fenster zeigt Ordner und Port als feste Angabe',
      (await page.locator('#dtWin .ws-fakten').textContent()).includes('/webserver')
      && (await page.locator('#dtWin .ws-fakten').textContent()).includes('80'));
-  ok('und die drei Dateien, die die Installation angelegt hat',
-     await page.locator('#dtWin .ws-datei').count() === 3);
+  ok('und die vier Dateien, die die Installation angelegt hat',
+     await page.locator('#dtWin .ws-datei').count() === 4);
   ok('der Stand sagt „läuft"',
      (await page.locator('#dtWin .dns-stand').textContent()) === 'läuft');
 
@@ -2153,7 +2153,7 @@ async function markenAn(page, name, art) {
      im Browser NICHT laufen. */
   await page.locator('#dtWin .ed-in').fill(
     '<html><head><link rel="stylesheet" href="stil.css"></head><body>'
-    + '<h1 id="k">Hallo aus der 7b</h1><img src="logo.png">'
+    + '<h1 id="k">Hallo aus der 7b</h1><img src="synir-logo.png">'
     + '<script>document.getElementById("k").textContent = "GEKAPERT";'
     + 'window.name = "gelaufen";</' + 'script></body></html>');
   await page.waitForTimeout(250);

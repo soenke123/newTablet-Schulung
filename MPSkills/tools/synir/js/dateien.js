@@ -202,6 +202,14 @@
     }
   };
 
+  /* Die zwei Logos der Plattform (MPSkills und SYNIR) sind PNG und
+     tragen deshalb eine fertige Daten-URI (`uri`) statt SVG-Quelltext;
+     sie stammen aus `js/logos.js`. Sie sind die Bilder der
+     Standard-Webseite (http.js). */
+  const LOGOS = window.Logos || {};
+  SAMMLUNG['@synir'] = { name: 'SYNIR', uri: LOGOS.synir };
+  SAMMLUNG['@drache'] = { name: 'MPSkills', uri: LOGOS.schneckendrache };
+
   const datenUri = (svg) => 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
 
   /* ─── Pfade ───────────────────────────────────────────────────
@@ -396,7 +404,7 @@
       const w = String(wert);
       if (w.charAt(0) === '@') {
         const b = SAMMLUNG[w];
-        return b ? datenUri(b.svg) : null;
+        return b ? (b.uri || datenUri(b.svg)) : null;
       }
       if (w.indexOf('blob:') === 0) return blobs[w.slice(5)] || null;
       return w;
@@ -562,7 +570,9 @@
       ['schule.svg',      '@schule'],
       ['landschaft.svg',  '@foto'],
       ['marke.svg',       '@logo'],
-      ['smiley.svg',      '@smiley']
+      ['smiley.svg',      '@smiley'],
+      ['synir-logo.png',  '@synir'],
+      ['mpskills-logo.png', '@drache']
     ];
 
     function grundbestand(node) {

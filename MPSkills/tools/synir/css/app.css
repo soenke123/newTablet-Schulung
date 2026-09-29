@@ -3966,6 +3966,22 @@ body[data-rolle="presenter"] .nur-lehrer { display: inline-block; }
 .mi--wahl .mi-l { flex: 0 1 auto; }
 .mi--wahl .mi-h { margin-left: auto; }
 
+/* Das kleine „i" hinter einem Tool: klappt eine Kurzerklärung auf. */
+.mi-zeile { display: flex; align-items: center; gap: 2px; }
+.mi-zeile .mi { flex: 1 1 auto; width: auto; min-width: 0; }
+.mi-i {
+  flex: none; width: 28px; height: 28px; margin-right: 6px; padding: 0;
+  border: 1.5px solid var(--ink-3); border-radius: 50%; background: transparent;
+  color: var(--ink-2); font: italic 700 14px/1 Georgia, serif; cursor: pointer;
+}
+.mi-i:hover, .mi-i[aria-expanded="true"] { background: var(--surface-2); color: var(--ink); border-color: var(--ink-2); }
+.mi-i:focus-visible { outline: 3px solid var(--modus); outline-offset: 1px; }
+.mi-info {
+  margin: 0 8px 4px 34px; padding: 6px 10px; font-size: 13px; line-height: 1.35;
+  color: var(--ink-2); background: var(--surface-2); border-radius: 8px;
+}
+.mi-info[hidden] { display: none; }
+
 /* Nur die Lehrkraft im Raum. `.nur-lehrer` allein wäre falsch: `.mi`
    setzt display:flex und käme später im Blatt. */
 .mi.nur-lehrer { display: none; }
@@ -3980,6 +3996,8 @@ body[data-rolle="presenter"] .mi.nur-lehrer { display: flex; }
 .szm-pop[hidden] { display: none; }
 .mn-abschnitt { position: relative; }
 @media (max-width: 820px) {
+  /* Das ganze Menü bleibt im Bild und scrollt, wenn es zu hoch wird. */
+  .mn-pop { max-height: calc(100vh - 90px); max-height: calc(100dvh - 90px); overflow-y: auto; }
   /* Kein Platz links davon: das Untermenü klappt unter dem Eintrag auf. */
   .mn-sub .szm-pop {
     position: static; width: auto; margin: 4px 0 2px; box-shadow: none; max-height: 40vh;

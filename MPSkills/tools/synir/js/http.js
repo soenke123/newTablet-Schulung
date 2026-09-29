@@ -9,9 +9,9 @@
 
    ── Eine Seite sind MEHRERE Anfragen ──────────────────────────
    Das ist die Lernaussage dieser Datei, und sie ist der Grund,
-   warum die Standardseite aus DREI Dateien besteht: `index.html`
+   warum die Standardseite aus VIER Dateien besteht: `index.html`
    holt sich über `<link>` noch die Stildatei und über `<img>` das
-   Bild. Im Mitschnitt stehen drei GET-Zeilen untereinander. Fehlt
+   Bild. Im Mitschnitt stehen vier GET-Zeilen untereinander. Fehlt
    das Bild, sagt genau EINE davon `404` — und der Rest der Seite
    steht trotzdem da. Diese Erfahrung hat ein Kind sonst nur als
    kaputtes Bildsymbol im echten Browser, ohne zu wissen, warum.
@@ -71,12 +71,13 @@
      die Eigenschaft des Programms: sie beantwortet „läuft der
      Server überhaupt", nicht eine Aufgabe.
 
-     ⚠️ Eigener Text und eigenes Bild, nicht der von Filius
+     ⚠️ Eigener Text und eigene Bilder (die Logos von MPSkills und
+     SYNIR), nicht der von Filius
      abgeschrieben: eine mitgelieferte Seite ist Inhalt und nicht
      Bedienmodell, und GPL-Text gehört nicht in unsere
      Auslieferung.
 
-     Drei Dateien statt Filius' zwei — die Stildatei ist der Grund,
+     Vier Dateien statt Filius' zwei — die Stildatei ist der Grund,
      aus dem der Browser ein zweites Mal fragt. */
   const SEITE =
     '<html>\n'
@@ -85,18 +86,32 @@
     + '    <link rel="stylesheet" href="stil.css">\n'
     + '  </head>\n'
     + '  <body>\n'
-    + '    <h1>Der Webserver läuft.</h1>\n'
-    + '    <p>Diese Seite liegt als Datei auf diesem Rechner, im Ordner\n'
-    + '       <b>/webserver</b>. Öffne sie im Datei-Explorer und schreib sie um.</p>\n'
-    + '    <p><img src="logo.png" alt="Schule"></p>\n'
+    + '    <div class="karte">\n'
+    + '      <div class="logos">\n'
+    + '        <img class="drache" src="mpskills-logo.png" alt="MPSkills">\n'
+    + '        <span class="mal">&times;</span>\n'
+    + '        <img class="synir" src="synir-logo.png" alt="SYNIR">\n'
+    + '      </div>\n'
+    + '      <h1>Der Webserver läuft.</h1>\n'
+    + '      <p>Diese Seite liegt als Datei auf diesem Rechner, im Ordner\n'
+    + '         <b>/webserver</b>. Öffne sie im Datei-Explorer und schreib sie um.</p>\n'
+    + '      <p class="fuss">Eine Startseite von MPSkills und SYNIR</p>\n'
+    + '    </div>\n'
     + '  </body>\n'
     + '</html>\n';
 
   const STIL =
-    'body  { font-family: sans-serif; background: #eef3fb; color: #1e2536;\n'
-    + '        margin: 24px; }\n'
-    + 'h1    { color: #2a6df4; }\n'
-    + 'img   { border: 4px solid #ffffff; border-radius: 8px; }\n';
+    'body   { font-family: sans-serif; color: #1e2536; margin: 0; padding: 24px;\n'
+    + '         background: linear-gradient(160deg, #e6f7fb, #eef3fb 55%, #f5eefb); }\n'
+    + '.karte { max-width: 560px; margin: 0 auto; padding: 24px 28px; text-align: center;\n'
+    + '         background: #ffffff; border-radius: 16px; border-top: 6px solid #2ad0c9;\n'
+    + '         box-shadow: 0 6px 20px rgba(30, 37, 54, 0.12); }\n'
+    + '.logos { display: flex; align-items: center; justify-content: center; gap: 18px; }\n'
+    + '.drache { height: 110px; }\n'
+    + '.synir { height: 60px; }\n'
+    + '.mal   { font-size: 28px; color: #9aa3b5; }\n'
+    + 'h1     { color: #1b2a5c; margin: 18px 0 8px; }\n'
+    + '.fuss  { font-size: 13px; color: #6b7488; margin-bottom: 0; }\n';
 
   function erzeugen(engine, netz, stack, dienste) {
     const D = window.Dateien;
@@ -400,7 +415,8 @@
       if (!D.gibt(node, ORDNER)) D.ordnerAnlegen(node, '/', ORDNER.slice(1));
       if (!D.gibt(node, ORDNER + '/' + START)) D.anlegen(node, ORDNER, START, { text: SEITE });
       if (!D.gibt(node, ORDNER + '/stil.css')) D.anlegen(node, ORDNER, 'stil.css', { text: STIL });
-      if (!D.gibt(node, ORDNER + '/logo.png')) D.anlegen(node, ORDNER, 'logo.png', { bild: '@schule' });
+      if (!D.gibt(node, ORDNER + '/mpskills-logo.png')) D.anlegen(node, ORDNER, 'mpskills-logo.png', { bild: '@drache' });
+      if (!D.gibt(node, ORDNER + '/synir-logo.png')) D.anlegen(node, ORDNER, 'synir-logo.png', { bild: '@synir' });
     }
 
     return {

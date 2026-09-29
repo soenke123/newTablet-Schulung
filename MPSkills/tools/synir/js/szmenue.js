@@ -104,10 +104,30 @@
         html += '</ul>';
       }
       pop.innerHTML = html;
+      if (!pop.hidden) platzieren();
+    }
+
+    /* Das Menü klappt neben dem Eintrag auf und beginnt in Höhe des
+       Eintrags — der sitzt weit unten im Datei-Menü. Mit vielen
+       Szenarien ragte die Liste unten aus dem Bild. Darum: Höhe auf
+       den sichtbaren Bereich begrenzen (sie scrollt dann) und das
+       Menü nach oben schieben, bis es hineinpasst. Auf schmalen
+       Schirmen liegt es im Fluss unter dem Eintrag (CSS) und
+       braucht das nicht. */
+    function platzieren() {
+      pop.style.top = ''; pop.style.maxHeight = '';
+      if (getComputedStyle(pop).position !== 'absolute' || !pop.closest('.mn-sub')) return;
+      const rand = 8, hoch = window.innerHeight - 2 * rand;
+      pop.style.maxHeight = Math.min(hoch, 560) + 'px';
+      const r = pop.getBoundingClientRect();
+      let schub = 0;
+      if (r.bottom > window.innerHeight - rand) schub = window.innerHeight - rand - r.bottom;
+      if (r.top + schub < rand) schub = rand - r.top;
+      if (schub) pop.style.top = schub + 'px';
     }
 
     function offen() { return !pop.hidden; }
-    function auf() { render(); pop.hidden = false; knopf.setAttribute('aria-expanded', 'true'); }
+    function auf() { render(); pop.hidden = false; knopf.setAttribute('aria-expanded', 'true'); platzieren(); }
     function zu()  { pop.hidden = true; knopf.setAttribute('aria-expanded', 'false'); }
 
     knopf.addEventListener('click', (e) => { e.stopPropagation(); if (offen()) zu(); else auf(); });
@@ -127,6 +147,7 @@
       else if (b.dataset.act === 'del') { if (opts.onLoeschen) opts.onLoeschen(id, it); }
     });
 
+    window.addEventListener('resize', () => { if (offen()) platzieren(); });
     document.addEventListener('click', () => { if (offen()) zu(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && offen()) zu(); });
 
