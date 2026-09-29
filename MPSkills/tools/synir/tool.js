@@ -47,7 +47,7 @@
 (function () {
   'use strict';
 
-  const V = '?v=20260929g';
+  const V = '?v=20260929h';
   const TAKT_MS = 3000;          // Stand der Klasse / Spiegelung
   const GAP = 12;
   const MIN = 440;
@@ -392,6 +392,7 @@
   let mapKey = '';
   const mapView = { x: 0, y: 0, k: 1, fitted: false };
   let mapKeyFn = null;
+  let lehrerStand = null;                // eigener Stand der Lehrkraft, vom Rahmen gemeldet
 
   const PAL = ['#2f80ed', '#e0592a', '#2a9d5c', '#9b51e0', '#d4a017',
                '#0e9aa7', '#d6336c', '#6b7f1a', '#5c6bc0', '#c2571a'];
@@ -652,7 +653,8 @@
     const sorted = karte.slice().sort((a, b) => a.prefix - b.prefix);
     const cs = sorted.map((k, i) => {
       const w = work.find(x => x.name === k.name);
-      const s = w ? mapStand.get(w.participant) : null;
+      const s = w ? mapStand.get(w.participant)
+              : k.name === 'Lehrkraft' && lehrerStand ? { stand: lehrerStand } : null;
       const live = !!(k.seen_at && (Date.now() - new Date(k.seen_at).getTime()) < 20000);
       return baueCluster(k, i, s ? s.stand : null, live);
     });
@@ -861,6 +863,12 @@
         break;
       case 'alsSzenario':
         if (isPresenter()) alsSzenario(m);
+        break;
+      case 'lehrerstand':
+        if (isPresenter() && m.stand) {
+          lehrerStand = m.stand;
+          if (mapOpen) malKarte();
+        }
         break;
       case 'selbst':
         if (isPresenter() && watch) {
@@ -1127,6 +1135,7 @@
       cwwOpen = false;
       karte = [];
       mapOpen = false;
+      lehrerStand = null;
       mapStand.clear();
       mapKey = '';
 

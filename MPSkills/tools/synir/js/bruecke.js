@@ -28,6 +28,7 @@
      loeschen { id }                             (Lehrkraft)
      alsSzenario { id, name, titel, aufgabe, stand }  (Lehrkraft)
      stand    { stand }                          (Tablet, gebremst)
+     lehrerstand { stand }                       (Lehrkraft, gebremst; nur für die Karte)
      selbst                                      Lehrkraft übernimmt
                                                  beim Zusehen
      cww      { pakete, namen?, aktiv }          was hinaus soll; `namen`
@@ -122,14 +123,19 @@
     }
     function senden() {
       sendTimer = 0;
-      if (ROLLE !== 'participant' || blind) return;
+      /* Die Lehrkraft meldet ihren eigenen Stand unter anderem Namen
+         (`lehrerstand`): er landet NICHT in synir_work, sondern nur
+         beim Pult — für die Karte. Beim Zusehen zeigt die Fläche das
+         Netz eines Kindes, und das ist nicht ihr eigenes. */
+      const teil = ROLLE === 'participant' && !blind;
+      const lehr = ROLLE === 'presenter' && !watching;
+      if (!teil && !lehr) return;
       const txt = standText();
       if (!txt || txt === lastSent) return;
       lastSent = txt;
-      post('stand', { stand: JSON.parse(txt) });
+      post(teil ? 'stand' : 'lehrerstand', { stand: JSON.parse(txt) });
     }
     function spaeterSenden() {
-      if (ROLLE !== 'participant') return;
       clearTimeout(sendTimer);
       sendTimer = setTimeout(senden, TAKT_MS);
     }
@@ -145,6 +151,8 @@
         eigenerStand = null;
         SIM.speichern(true);
         post('selbst', { was });
+      } else if (ROLLE === 'presenter') {
+        spaeterSenden();
       }
     });
 
@@ -206,6 +214,7 @@
       if (zurueck && alt) laden(alt);
       SIM.speichern(true);
       cwwModus();
+      spaeterSenden();
     }
     function zusehen(w) {
       if (!w) { if (watching) zuseheEnde(true); return; }
@@ -351,6 +360,6 @@
     // Der Stand, der beim Öffnen schon auf dem Gerät lag, gehört
     // gleich nach vorn — sonst sieht der Beamer ihn erst nach der
     // ersten Änderung.
-    if (ROLLE === 'participant') spaeterSenden();
+    spaeterSenden();
   });
 })();
