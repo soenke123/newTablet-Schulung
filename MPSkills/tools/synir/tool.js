@@ -47,7 +47,7 @@
 (function () {
   'use strict';
 
-  const V = '?v=20260929h';
+  const V = '?v=20260929i';
   const TAKT_MS = 3000;          // Stand der Klasse / Spiegelung
   const GAP = 12;
   const MIN = 440;
@@ -665,10 +665,13 @@
       const x = c.cx - c.w / 2, y = c.cy - c.h / 2;
       minx = Math.min(minx, x); miny = Math.min(miny, y);
       maxx = Math.max(maxx, x + c.w); maxy = Math.max(maxy, y + c.h);
-      // Das Kabel endet am cww des Netzes; fehlt es, an der Oberkante.
-      const ex = c.cwwPos ? x + c.cwwPos.x : c.cx, ey = c.cwwPos ? y + c.cwwPos.y : y;
-      kabel += '<line class="sy-mp-cable' + (c.live ? '' : ' is-off') + '" x1="0" y1="0" x2="' + ex.toFixed(1) + '" y2="' + ey.toFixed(1)
-        + '" style="stroke:' + c.farbe + '"/>';
+      // Das Kabel geht nur zum cww des Netzes. Ohne cww hängt das Netz
+      // nicht an der Wolke — dann gibt es kein Kabel.
+      if (c.cwwPos) {
+        const ex = x + c.cwwPos.x, ey = y + c.cwwPos.y;
+        kabel += '<line class="sy-mp-cable' + (c.live ? '' : ' is-off') + '" x1="0" y1="0" x2="' + ex.toFixed(1) + '" y2="' + ey.toFixed(1)
+          + '" style="stroke:' + c.farbe + '"/>';
+      }
       boxen += malCluster(c, x, y);
     }
     mapGeo = { minx, miny, maxx, maxy };
