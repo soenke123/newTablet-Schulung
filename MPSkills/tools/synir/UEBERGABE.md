@@ -16,9 +16,10 @@ Berührt: `js/konfig.js`, `js/internet.js`, `js/bruecke.js`, `js/app.js`, `tool.
 `tests/uitest.js`, `tests/raumtest.js`, `supabase/tests/0181_synir_cww.mjs`.
 **Vor dem Einsatz im Raum muss 0182 auf dem Server laufen** — ohne sie bleibt die Liste
 leer („Noch niemand sonst im Raum"), sonst geht alles wie bisher.
-Offen: im Aktionsmodus frischt sich das offene Kärtchen nicht im Takt des Raums auf
-(`internetNeu` läuft nur im Entwurf, siehe dort); wer neu dazukommt, sieht es beim
-nächsten Öffnen.
+Von selbst aktuell: Bereiche der anderen, DNS-Liste, Zähler am DNS-Knopf und die Zeilen
+vom CWW in der Tabelle frischen sich alle 3 s und bei jeder Antwort des Raums auf — in beiden
+Modi, auch in der kompakten Ansicht (`konfig.cwwAuffrischen`, Kästen mit `data-live`; getauscht
+wird nur deren Inhalt, kein Neubau, Eingabefelder behalten den Fokus).
 
 ---
 

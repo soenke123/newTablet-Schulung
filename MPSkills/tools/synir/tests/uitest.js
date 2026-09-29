@@ -6000,6 +6000,37 @@ async function markenAn(page, name, art) {
     await page.locator('[data-k="zurueck"]').click();
     await page.waitForTimeout(250);
     ok('„Zurück" führt zu „Allgemein"', (await page.locator('.k-reiter-b.is-on').textContent()) === 'Allgemein');
+
+    /* ⭐ Von selbst: ohne Klick, nur mit Warten. */
+    await page.locator('.k-reiter-b', { hasText: 'Internet' }).click();
+    await page.waitForTimeout(250);
+    await page.evaluate(() => window.SIM.internet.rein({ bereiche: [13, 14, 15] }));
+    await page.waitForTimeout(3600);
+    ok('⭐ ein neuer Bereich erscheint nach wenigen Sekunden von selbst',
+       (await page.locator('#karteBody .k-bereich').allTextContents()).join('|') === '13.0.0.0 /8|14.0.0.0 /8|15.0.0.0 /8');
+    await page.locator('.k-reiter-b', { hasText: 'Allgemein' }).click();
+    await page.locator('[data-k="dnsseite"]').click();
+    await page.waitForTimeout(250);
+    await page.evaluate(() => {
+      const sv = window.SIM.netz.list().find(n => n.kind === 'server');
+      window.SIM.netz.dnsConf(sv).records.push({ name: 'neu.anna.de', ip: '50.0.1.20' });
+    });
+    await page.waitForTimeout(3600);
+    ok('⭐ ein neuer DNS-Eintrag erscheint in der Liste von selbst',
+       await page.evaluate(() => [...document.querySelectorAll('#karteBody .k-dns-z')]
+         .some(r => r.textContent.includes('neu.anna.de'))));
+    await page.locator('[data-k="zurueck"]').click();
+    await page.waitForTimeout(250);
+    ok('der Zähler am Knopf „DNS-Liste öffnen" zählt mit',
+       (await page.locator('[data-k="dnsseite"]').textContent()).includes('3'),
+       await page.locator('[data-k="dnsseite"]').textContent());
+    /* Wer gerade tippt, wird nicht gestört. */
+    await page.locator('.k-reiter-b', { hasText: 'Netzwerkkarten' }).click();
+    await page.locator('#karteBody input[data-f="ip"]').focus();
+    await page.evaluate(() => window.SIM.internet.rein({ bereiche: [13] }));
+    await page.waitForTimeout(3600);
+    ok('⭐ das Auffrischen nimmt dem Eingabefeld den Fokus nicht',
+       await page.evaluate(() => document.activeElement && document.activeElement.dataset.f === 'ip'));
     await page.evaluate(() => window.SIM.internet.setModus('solo'));
 
     /* Eine Adresse außerhalb des Bereichs: das cww warnt. */

@@ -569,7 +569,9 @@ Blöcke in derselben Reihenfolge als Zeilen, ohne Reiter — Lehrkraft und Kinde
 dasselbe. Die Bereiche der anderen kommen mit jedem Tausch vom Server
 (`bereiche`, Migration 0182: alle anderen /8 im Raum, die in den letzten 20 s gefragt
 haben) und stehen in `internet.andere()`; ohne Raum und in der Spiegelung ist die
-Liste leer. Sie sind reine Anzeige: beim Routen ändern sie nichts.
+Liste leer. Sie sind reine Anzeige: beim Routen ändern sie nichts. Bereiche, DNS-Liste
+und die voreingetragenen Zeilen frischen sich alle 3 s selbst auf (`data-live`-Kästen,
+`konfig.cwwAuffrischen`, ohne Neubau des Fensters).
 
 **Die Weiterleitung** (`schichten.js`, `routeFor`). Ein neuer Rang `Internet`
 (nach dem Standardgateway): alles außerhalb des eigenen /8 geht an Karte 0.

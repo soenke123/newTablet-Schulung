@@ -523,6 +523,30 @@
        `kompakt` dieselben drei Blöcke als Zeilen. */
     const andereBereiche = () => (inet && inet.andere ? inet.andere() : []);
 
+    /* ─ Was sich von selbst auffrischt ─
+       Die Bereiche der anderen, die Liste von 8.8.8.8 und die Zeilen
+       vom CWW ändern sich, ohne dass jemand etwas tut: ein Kind
+       kommt in den Raum, ein DNS-Server meldet einen Namen. Jede
+       dieser Stellen steht in einem Kasten mit `data-live`, und
+       `cwwAuffrischen` tauscht NUR dessen Inhalt aus — Felder, in
+       denen jemand tippt, und ein offenes Fenster bleiben, wie sie
+       sind. Gilt in beiden Modi, auch in der kompakten Ansicht. */
+    const live = (art, inhalt) => '<div data-live="' + art + '">' + inhalt + '</div>';
+    function liveHtml(art) {
+      if (art === 'bereiche') return bereicheListe();
+      if (art === 'dns') return dnsListe();
+      if (art === 'dnsn') { const n = inet ? inet.liste().length : 0; return n ? ' · <b>' + n + '</b>' : ''; }
+      if (art === 'wege') return cwwWegeZeilen();
+      return null;
+    }
+    function cwwAuffrischen(box) {
+      if (!box) return;
+      box.querySelectorAll('[data-live]').forEach(el => {
+        const h = liveHtml(el.dataset.live);
+        if (h !== null && el.innerHTML !== h) el.innerHTML = h;
+      });
+    }
+
     /* Die Bereiche der anderen als Liste. Nur die Zahlen: wem sie
        gehören, weiß niemand (internet.js). Ohne Raum ist die Liste
        leer, und dann steht dort, WARUM — eine leere Liste sieht
@@ -549,16 +573,14 @@
     /* Reiter „Internet": der Weg nach draußen. */
     function internetSeite(node, mehr) {
       const c = netz.internetConf();
-      let h = '<div data-cww-live>';
-      h += sec('Deine Adresse in der Wolke', 'cww-wolke', 'So erreichen dich die anderen: '
+      let h = sec('Deine Adresse in der Wolke', 'cww-wolke', 'So erreichen dich die anderen: '
         + 'alle Class Wide Webs hängen in einem gemeinsamen Netz (8.0.0.0/8) zusammen.');
       h += '<div class="k-hint"><span class="mono">' + esc(c.backbone) + '</span> · Netzmaske '
         + '<span class="mono">255.0.0.0</span></div>';
       h += sec('Erreichbare Bereiche', 'cww-erreichbar', 'Die Adressbereiche der anderen im Raum. '
         + 'Was in ihnen steht, weißt du nicht — nur, dass es sie gibt. Die Weiterleitungstabelle '
         + 'unter „Allgemein" führt sie schon.');
-      h += bereicheListe();
-      return h + '</div>';
+      return h + live('bereiche', bereicheListe());
     }
 
     /* Die Liste von 8.8.8.8 — nur lesen, in beiden Modi. */
@@ -585,20 +607,18 @@
 
     /* „Allgemein": DNS — ein Knopf, hinter dem die Liste steht. */
     function dnsBlock() {
-      const n = inet ? inet.liste().length : 0;
       return sec('DNS', 'cww-dns', 'Das cww fragt keinen DNS-Server, es ist selbst das Gateway — '
           + 'draußen steht 8.8.8.8, der öffentliche DNS.')
         + '<button class="k-add" data-k="dnsseite">DNS-Liste öffnen'
-        + (n ? ' · <b>' + n + '</b>' : '') + '</button>';
+        + '<span data-live="dnsn">' + liveHtml('dnsn') + '</span></button>';
     }
 
     /* Die Unterseite mit der Liste, wie die DHCP-Seite mit Zurück-Knopf.
        Anders als jene auch im Aktionsmodus: lesen darf jeder. */
     function bauDnsSeite(node, box, opts) {
       box.innerHTML = '<button class="k-zurueck" data-k="zurueck">‹ Zurück</button>'
-        + '<div data-cww-live>'
         + sec('8.8.8.8 · öffentlicher DNS', 'cww-dnsliste', DNS_INFO)
-        + dnsListe() + '</div>';
+        + live('dns', dnsListe());
       wire(node, box, opts);
     }
 
@@ -860,7 +880,7 @@
           + 'Router eine Zeile.');
       /* Am cww stehen die Bereiche der anderen schon drin, auch bei
          RIP: sie kommen vom Class Wide Web, nicht von einem Nachbarn. */
-      if (netz.istCww(node)) h += cwwWegeZeilen();
+      if (netz.istCww(node)) h += live('wege', cwwWegeZeilen());
 
       /* ─ Haken gesetzt ─
          Dann steht hier ein Satz und sonst nichts. Wortlaut vom
@@ -2116,7 +2136,7 @@
           +   z('Adresse in der Wolke', mono(c.backbone))
           +   z('Netzmaske', mono('255.0.0.0'))
           + '</div>'
-          + '<div class="k-sec">Erreichbare Bereiche</div>' + bereicheListe();
+          + '<div class="k-sec">Erreichbare Bereiche</div>' + live('bereiche', bereicheListe());
 
         h += '<div class="k-sec">Netzwerkkarten</div>'
           + '<div class="k-cww-bereich mono">' + c.prefix + '.0.0.0<span class="dim"> /8</span></div>'
@@ -2134,8 +2154,8 @@
                 ? '<span class="mono">' + esc(ds.von) + ' – ' + esc(ds.bis || '') + '</span>' : ''))
           +   z('Automatisches Routing', anAus(netz.ripConf(node).on))
           + '</div>'
-          + '<div class="k-sec">DNS · 8.8.8.8</div>' + dnsListe()
-          + '<div class="k-sec">Weiterleitungstabelle</div>' + cwwWegeZeilen();
+          + '<div class="k-sec">DNS · 8.8.8.8</div>' + live('dns', dnsListe())
+          + '<div class="k-sec">Weiterleitungstabelle</div>' + live('wege', cwwWegeZeilen());
         const rs = node.routes || [];
         if (rs.length) {
           h += '<table class="tbl"><tr><th>Ziel</th><th>Netzmaske</th><th>Gateway</th></tr>'
@@ -2211,7 +2231,7 @@
     }
 
     return {
-      bauen, kompakt, ipInnenHtml, malenTabellen,
+      bauen, kompakt, ipInnenHtml, malenTabellen, cwwAuffrischen,
       dhcpVorgabe: (node) => dhcpVorgabe(netz, node),
       /* Das Weiterleitungsfenster entsteht in app.js NACH dieser
          Instanz und meldet sich hier an. Ohne Anmeldung gibt es den

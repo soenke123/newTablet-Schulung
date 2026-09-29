@@ -197,21 +197,16 @@
     const inet = window.Internet ? window.Internet.erzeugen(engine, netz, stack, {
       senden: () => { if (extern.cwwRaus) extern.cwwRaus(); }
     }) : null;
-    /* Was 8.8.8.8 weiß, hat sich geändert: ein offenes Kärtchen auf
-       dem Reiter „Internet" (oder der DNS-Liste) zeigt es gleich. Nur dann — ein Formular,
-       in dem gerade jemand tippt, bleibt, wie es ist. */
+    /* Was das Class Wide Web weiß (Bereiche der anderen, Liste von
+       8.8.8.8, Zeilen vom CWW), hat sich geändert: ein offenes
+       Kärtchen oder Gerätefenster frischt genau diese Kästen auf.
+       ⚠️ Kein Neubau mehr: der räumte im Aktionsmodus das Kärtchen ab
+       und nahm einem, der gerade tippt, das Feld unter den Fingern.
+       `cwwAuffrischen` tauscht nur den Inhalt der `data-live`-Kästen. */
     function internetNeu() {
-      /* ⚠️ Nur im Entwurf: im Aktionsmodus räumt renderKarte die
-         Gerätekärtchen ab (dort öffnet ein Gerät seine Oberfläche) —
-         ein Auffrischen im Takt des Raums schloss dann das Kärtchen
-         unter den Fingern. Aufgefallen im Raum-Prüfstand. */
-      if (modus !== 'entwurf') return;
-      const box = refs.karteBody;
-      if (box && box.querySelector('[data-cww-live]')
-          && !(document.activeElement && box.contains(document.activeElement))) {
-        panels.renderKarte();
-      }
+      for (const box of [refs.karteBody, refs.dtWin]) konfig.cwwAuffrischen(box);
     }
+    const INET_TAKT_MS = 3000;
     function gemeldet(was) {
       for (const f of extern.beiAenderung) {
         try { f(was); } catch (e) { console.warn('[app] Rückruf:', e.message); }
@@ -228,6 +223,9 @@
 
     const konfig = new window.Konfig(netz, stack, dienste);
     konfig.setInternet(inet);
+    /* Auch ohne Nachricht aus dem Raum: ein DNS-Eintrag, ein Dienst,
+       der startet — alle paar Sekunden von selbst. */
+    setInterval(internetNeu, INET_TAKT_MS);
 
     /* Die Liste der Adressräume steht hier oben, weil die Fläche
        sie beim Auswählen mitziehen muss — sie hebt das Netz des
