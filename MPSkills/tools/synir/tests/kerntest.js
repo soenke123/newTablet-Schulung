@@ -336,7 +336,7 @@ section('Szenarien');
   const S = sandbox.SZENARIEN;
   /* Übergang: die neuen Sek-I-Szenarien (i1…) stehen vor den acht
      bisherigen, die nach und nach ersetzt werden. */
-  ok('Szenarien vorhanden (i1 bis i7 neu, acht bisherige)', Object.keys(S).length === 15, Object.keys(S).join(','));
+  ok('Szenarien vorhanden (Sek I und Sek II neu, acht bisherige)', Object.keys(S).length === 23, Object.keys(S).join(','));
   ok('jedes Szenario trägt eine Gruppe', Object.keys(S).every(k => !!S[k].gruppe));
 
   for (const k in S) {
@@ -344,8 +344,9 @@ section('Szenarien');
     netz.fromJSON(JSON.parse(JSON.stringify(S[k].netz)));
     const n = S[k].netz.nodes.length, c = S[k].netz.cables.length;
     ok(k + ': lädt vollständig',
-       netz.list().length === n && netz.cableList().length === c,
-       netz.list().length + '/' + n + ' Geräte, ' + netz.cableList().length + '/' + c + ' Kabel');
+       // Funkverbindungen (Handy im WLAN) zählen nicht zu den gezogenen Kabeln.
+       netz.list().length === n && netz.cableList().filter(x => !x.funk).length === c,
+       netz.list().length + '/' + n + ' Geräte, ' + netz.cableList().filter(x => !x.funk).length + '/' + c + ' Kabel');
     // Keine doppelten MAC-Adressen
     const macs = netz.list().flatMap(x => x.nics.map(y => y.mac));
     ok(k + ': MAC-Adressen eindeutig', new Set(macs).size === macs.length);
@@ -1829,11 +1830,11 @@ section('Kennungen in den Programmfenstern');
 }
 
 /* ═══ 10b · Sek I: die neuen Szenarien I.1 bis I.3 ═══ */
-section('Sek I · I.1 bis I.7');
+section('Sek I und II · neue Szenarien');
 {
   const S = sandbox.SZENARIEN;
   // Die Auftragskarte liegt links oben — dort steht kein Gerät.
-  for (const k of ['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7']) {
+  for (const k of ['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'ii1', 'ii2', 'ii3', 'ii4', 'ii5', 'ii6', 'ii7', 'ii8']) {
     ok(k + ': keine Geräte unter der Auftragskarte',
        S[k].netz.nodes.every(n => !(n.x < 430 && n.y < 280)));
     ok(k + ': Auftrag hat Kontext, Aufgaben und Hilfe',
@@ -2018,6 +2019,118 @@ section('Sek I · I.1 bis I.7');
        z.netz.list().some(n => n.kind === 'cww')
        && z.netz.list().filter(n => n.kind !== 'cww' && n.kind !== 'switch').every(n => !n.nics[0].ip));
   }
+  // ─── Sek II ───
+  // II.1: fünf Fehler, darunter eine doppelte Adresse.
+  {
+    const z = lade('ii1');
+    z.dienste.start();
+    z.engine.runUntil(20 * SEC);
+    const hosts = z.netz.list().filter(n => n.kind === 'host' || n.kind === 'handy');
+    const gleich = z.netz.list().filter(n => n.kind === 'host' && n.nics[0].ip === '192.168.1.10');
+    ok('II.1: dieselbe Adresse steht zweimal im Netz', gleich.length === 2);
+    ok('II.1: zwei Router, ein Kabel dazwischen',
+       z.netz.list().filter(n => n.kind === 'router').length === 2
+       && z.netz.cableList().filter(c => /^er/.test(c.a.node) && /^er/.test(c.b.node)).length === 1);
+    ok('II.1: die DHCP-Geräte bekommen zu Beginn eine Adresse im falschen Netz',
+       z.netz.list().filter(n => n.nics[0].dhcp && n.kind === 'host').every(n => /^192\.168\.3\./.test(n.nics[0].ip) || !n.nics[0].ip),
+       hosts.map(x => x.nics[0].ip).join(','));
+    // Reparaturen
+    const dup = gleich.find(n => n.name !== z.netz.byName('Endgerät 1').name) || gleich[1];
+    dup.nics[0].ip = '192.168.1.11';
+    const g = z.netz.list().find(n => n.kind === 'host' && n.gateway === '192.168.1.1' && /^192\.168\.2\./.test(n.nics[0].ip));
+    g.gateway = '192.168.2.1';
+    const srv = z.netz.byName('DHCP-Server');
+    srv.dhcpServer.von = '192.168.2.100'; srv.dhcpServer.bis = '192.168.2.150';
+    z.netz.setFunk(z.netz.byName('Handy 1'), 0, true, 'Schul-WLAN');
+    const lose = z.netz.list().find(n => n.kind === 'host' && !n.nics[0].cable);
+    z.netz.addCable(lose.id, 0, z.netz.byName('Switch 1').id, 4);
+    // Im Terminal des Endgeräts: „dhcp neu“ — so holen die Kinder sich die Adresse noch einmal.
+    for (const h of z.netz.list().filter(n => (n.kind === 'host' || n.kind === 'handy') && n.nics[0].dhcp)) z.term.submit(h.id, 'dhcp neu');
+    z.engine.runUntil(z.engine.now + 60 * SEC);
+    const alle = z.netz.list().filter(n => n.kind === 'host' || n.kind === 'handy');
+    ok('II.1: nach fünf Reparaturen hat jedes Gerät eine Adresse', alle.every(x => x.nics[0].ip),
+       alle.map(x => x.name + ':' + x.nics[0].ip).join(' '));
+    const q = z.netz.list().find(n => n.kind === 'host' && n.nics[0].ip === '192.168.1.10');
+    const schlecht = [];
+    for (const x of alle) {
+      if (x === q) continue;
+      if (!ankommt(ping(z, q, x.nics[0].ip, 40))) schlecht.push(x.name + ' ' + x.nics[0].ip);
+    }
+    ok('II.1: und dann erreicht E1 alle', schlecht.length === 0, schlecht.join(', '));
+  }
+
+  // II.2 und II.3: Heimrouter am cww; Heimserver mit drei Diensten.
+  {
+    const z2 = lade('ii2');
+    ok('II.2: Heimrouter, cww und zwei Laptops',
+       z2.netz.list().some(n => n.kind === 'heimrouter') && z2.netz.list().some(n => n.kind === 'cww')
+       && z2.netz.list().filter(n => n.kind === 'host').length === 2);
+    const hr = z2.netz.list().find(n => n.kind === 'heimrouter');
+    ok('II.2: das WLAN des Heimrouters ist an (Name Heim-WLAN)', z2.netz.strahlt(hr) && hr.wlan.ssid === 'Heim-WLAN');
+    const z3 = lade('ii3');
+    const sv = z3.netz.byName('Heimserver');
+    ok('II.3: der Heimserver bringt Web, DNS und Mail mit, alles gestartet',
+       z3.netz.laufendeDienste(sv).join(',') === 'dns,web,mail', z3.netz.laufendeDienste(sv).join(','));
+    ok('II.3: DNS und Mail sind leer', sv.dnsServer.records.length === 0 && sv.mailServer.konten.length === 0);
+    z3.dienste.start();
+    ok('II.3: Laptop 1 erreicht die Seite im Heimnetz', ankommt(ping(z3, z3.netz.byName('Laptop 1'), '192.168.1.20', 30)));
+  }
+
+  // II.4, II.5, II.7: am cww, ohne Adressen.
+  {
+    for (const k of ['ii4', 'ii5', 'ii7']) {
+      const z = lade(k);
+      ok(k.toUpperCase() + ': am cww, keine Adresse gesetzt',
+         z.netz.list().some(n => n.kind === 'cww')
+         && z.netz.list().filter(n => n.kind !== 'cww' && n.kind !== 'switch').every(n => !n.nics[0].ip));
+    }
+    const z5 = lade('ii5');
+    const kurz = z5.netz.list().filter(n => n.kind === 'host').map(n => z5.netz.kurzName(n));
+    ok('II.5: die Kurznamen der Endgeräte sind eindeutig', new Set(kurz).size === kurz.length, kurz.join(','));
+    ok('II.4: nichts ist installiert', z5.netz.list().every(n => !(n.software || []).length)
+       && (lade('ii4').netz.list().every(n => !(n.software || []).length)));
+    const z7 = lade('ii7');
+    ok('II.7: leeres Feld — nur das cww', z7.netz.list().length === 1 && z7.netz.cableList().length === 0);
+  }
+
+  // II.6: kein automatisches Routing; von Hand ist es fertig.
+  {
+    const z = lade('ii6');
+    const rs = z.netz.list().filter(n => n.kind === 'router');
+    ok('II.6: drei eingerichtete Router, ohne automatisches Routing',
+       rs.length === 3 && rs.every(r => r.nics.every(k => k.ip) && !(r.rip && r.rip.on)));
+    z.dienste.start();
+    z.engine.runUntil(20 * SEC);
+    const E1 = z.netz.list().find(n => n.kind === 'host' && n.nics[0].ip === '192.168.1.10');
+    ok('II.6: ohne Routen kommt nichts nach Haus 2', !ankommt(ping(z, E1, '192.168.2.10', 20)));
+    const R = (i) => z.netz.byName('Router ' + i);
+    const m = '255.255.255.0';
+    R(1).routes.push({ net: '192.168.2.0', mask: m, gateway: '192.168.101.2' },
+                     { net: '192.168.3.0', mask: m, gateway: '192.168.101.2' },
+                     { net: '192.168.102.0', mask: m, gateway: '192.168.101.2' });
+    R(2).routes.push({ net: '192.168.1.0', mask: m, gateway: '192.168.101.1' },
+                     { net: '192.168.3.0', mask: m, gateway: '192.168.102.2' });
+    ok('II.6: Hinweg und Rückweg — Haus 2 kommt, Haus 3 noch nicht (Rückroute fehlt an R3)',
+       ankommt(ping(z, E1, '192.168.2.10', 30)) && !ankommt(ping(z, E1, '192.168.3.10', 30)));
+    R(3).routes.push({ net: '0.0.0.0', mask: '0.0.0.0', gateway: '192.168.102.1' });
+    ok('II.6: mit der Standardroute an Router 3 auch Haus 3', ankommt(ping(z, E1, '192.168.3.10', 40)),
+       zeilen(z.term, E1).slice(-200));
+  }
+
+  // II.8: alles läuft, Name wird aufgelöst, Handy im WLAN.
+  {
+    const z = lade('ii8');
+    z.dienste.start();
+    z.engine.runUntil(40 * SEC);
+    const E1 = z.netz.list().find(n => n.kind === 'host' && n.nics[0].ip === '192.168.1.10');
+    ok('II.8: der Name www.schule.de wird aufgelöst und erreicht', ankommt(ping(z, E1, 'www.schule.de', 40)),
+       zeilen(z.term, E1).slice(-200));
+    const handy = z.netz.byName('Handy 1');
+    ok('II.8: das Handy hat sich im WLAN eine Adresse geholt', /^192\.168\.2\.1\d\d$/.test(handy.nics[0].ip), handy.nics[0].ip);
+    ok('II.8: der Webserver liefert eine Seite',
+       !!z.netz.byName('Webserver').dateien['/webserver/index.html']);
+  }
+
 }
 
 /* ═══ 15 · DHCP ═══ */

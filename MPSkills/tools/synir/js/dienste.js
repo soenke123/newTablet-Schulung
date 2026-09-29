@@ -556,10 +556,20 @@
       }
 
       /* ─── 2. Dieselbe MAC wie vorhin ───────────────────────*/
-      const hat = s.leases.get(mac);
-      if (hat) return hat.ip;
-
       const von = U.ip2int(conf.von), bis = U.ip2int(conf.bis);
+      const hat = s.leases.get(mac);
+      /* ⚠️ Nur, wenn die alte Adresse noch in den Bereich passt. Wer den
+         Bereich ändert (II.1: DHCP verteilt Adressen aus dem falschen Netz),
+         soll danach eine passende bekommen — sonst hielte der Server dem
+         Gerät die Adresse aus dem alten Bereich für immer hin, und der Fehler
+         ließe sich nicht mehr beheben. Ein echter DHCP-Server lehnt eine
+         solche Verlängerung ebenfalls ab. */
+      if (hat) {
+        const alt = U.ip2int(hat.ip);
+        if (von !== null && bis !== null && alt !== null && alt >= von && alt <= bis) return hat.ip;
+        s.leases.delete(mac);
+      }
+
       if (von === null || bis === null || bis < von) {
         melde('note', node, { text: 'Der Adressbereich des DHCP-Servers ist nicht gültig.', level: 'warn' });
         return null;
