@@ -1089,29 +1089,36 @@
   };
 
   /* ═══ II.9 · DHCP-Spoofing ══════════════════════════════════════
-     Ein WLAN mit vier Geräten am selben Switch: ein echter
-     DHCP-Server, zwei „Opfer" — und ein Gerät, das AUCH einen
-     DHCP-Server anbietet, mit eigenem DNS-Eintrag für denselben
-     Namen und einer eigenen, GLEICH AUSSEHENDEN Webseite. Jenseits
-     eines Routers steht das echte Portal (eigener DNS- und
-     Webserver) — das Netz funktioniert vollständig, nichts ist
-     kaputt.
+     Ein öffentliches WLAN mit vier Geräten am selben Switch: ein
+     echter, per Kabel angeschlossener DHCP-Server, zwei „normale"
+     Endgeräte (E1, E2 — eines davon ein Handy) — und ein drittes
+     Gerät (E3), das AUCH einen DHCP-Server anbietet, mit eigenem
+     DNS-Eintrag für denselben Namen und einer eigenen, GLEICH
+     AUSSEHENDEN Webseite. Jenseits eines Routers steht das echte
+     Portal (eigener DNS- und Webserver) — das Netz funktioniert
+     vollständig, nichts ist kaputt.
+
+     ⚠️ Bewusst neutral benannt: E1, E2, E3 — keine „Opfer", kein
+     „Angreifer". Vom Nutzer verlangt: das Netz soll harmlos
+     aussehen, nicht wie eine Aufgabe über Hacking angekündigt
+     werden. Die Klasse soll die Rollen selbst herausfinden.
 
      Der Lerneffekt entsteht aus dem Zufall, der in dienste.js
      absichtlich eingebaut ist (siehe dort: „bei zwei Servern …
      wessen OFFER zuerst ankommt und gewinnt"): jeder Wechsel nach
      <em>Aktion</em> vergibt neu, und manchmal gewinnt der echte
-     Server, manchmal der andere. Deshalb sieht ein Opfer mal die
-     eine, mal die andere — optisch identische — Seite, ohne dass
-     am Netz irgendjemand etwas verändert hat.
+     Server, manchmal der andere. Deshalb sieht E1 mal die eine,
+     mal die andere — optisch identische — Seite, ohne dass am Netz
+     irgendjemand etwas verändert hat.
 
      Die Aufgabe nennt das Wort „Angriff" absichtlich nicht: Die
-     Klasse soll erst beobachten, dann erklären. Das Formularfeld
-     auf der Seite ist reine Kulisse — dieser Simulator kennt kein
-     POST (siehe Kopf von http.js), es gibt nichts, das eine
-     Eingabe irgendwohin schicken könnte. Beide Seiten benutzen das
-     Logo und den Namen des Projekts selbst (`@drache`) und keine
-     echte Marke. */
+     Klasse soll erst beobachten, dann beschreiben, dann erläutern
+     (die Operatoren aus dem Unterricht). Das Formularfeld auf der
+     Seite ist reine Kulisse — dieser Simulator kennt kein POST
+     (siehe Kopf von http.js), es gibt nichts, das eine Eingabe
+     irgendwohin schicken könnte. Beide Seiten benutzen das Logo
+     und den Namen des Projekts selbst (`@drache`) und keine echte
+     Marke. */
   const spoofSeite =
     '<html>\n'
     + '  <head>\n'
@@ -1155,18 +1162,21 @@
   const ii9 = {
     titel: 'II.9 · DHCP-Spoofing', gruppe: SEK2,
     aufgabe: auftrag({
-      kontext: 'Ein WLAN mit vier Geräten am selben Switch, dazu über einen Router ein zweites Netz mit dem '
-        + '<strong>DNS-Server</strong> und dem <strong>Webserver</strong> des „MPS-Portals". Das Netz ist vollständig eingerichtet — '
-        + 'nichts fehlt, nichts ist abgeschaltet. Die vier WLAN-Geräte holen sich ihre Adresse per <strong>DHCP</strong>.',
+      kontext: 'Ein <strong>öffentliches WLAN</strong> — vier Geräte hängen am selben Switch, eines per Kabel, drei über Funk (<strong>E1</strong>, '
+        + '<strong>E2</strong>, <strong>E3</strong>). Dazu, über einen Router, ein zweites Netz mit dem <strong>DNS-Server</strong> und dem '
+        + '<strong>Webserver</strong> des „MPS-Portals". Das Netz ist vollständig eingerichtet — nichts fehlt, nichts ist abgeschaltet. Die drei '
+        + 'WLAN-Geräte holen sich ihre Adresse per <strong>DHCP</strong>.',
       aufgaben: [
         { typ: 'benutzen', text: 'Schalte mehrmals hintereinander zwischen <em>Entwurf</em> und <em>Aktion</em> hin und her (immer ein paar Sekunden warten). '
-          + 'Öffne nach jedem Wechsel die Fenster von <strong>Opfer 1</strong> und <strong>Opfer 2</strong>: Welche IP-Adresse, welches Gateway, welcher '
-          + 'DNS-Server steht dort? Schreib es dir für drei Durchgänge auf.' },
-        { typ: 'benutzen', text: 'Ruf nach jedem Wechsel im Browser von Opfer 1 <code>portal.schule.de</code> auf und mach einen Screenshot oder eine Notiz. '
-          + 'Sieht die Seite immer gleich aus? Prüfe genau: Titel, Logo, Text.' },
-        { typ: 'veraendern', text: 'Erkläre, <strong>was hier passiert</strong>. Ist das ein Fehler im Programm? Schau dir dazu die Geräte am Switch an: '
-          + 'Gibt es dort etwas, das es eigentlich nur <em>einmal</em> geben sollte? Vergleiche die Gerätefenster von „DHCP-Server" und dem vierten Gerät genau — '
-          + 'auch dort, wo du zuerst nicht hinschaust (DHCP-Server-Einrichtung, DNS-Einträge).' }
+          + 'Öffne nach jedem Wechsel die Fenster von <strong>E1</strong> und <strong>E2</strong>: Welche IP-Adresse, welches Gateway, welcher '
+          + 'DNS-Server steht dort?' },
+        { typ: 'benutzen', text: 'Ruf nach jedem Wechsel im Browser von <strong>E1</strong> <code>portal.schule.de</code> auf. Sieht die Seite immer gleich aus? '
+          + 'Prüfe genau: Titel, Logo, Text.' },
+        { typ: 'veraendern', text: 'Öffne den <em>Mitschnitt</em>, leere ihn und ruf die Seite bei E1 noch einmal auf: '
+          + '<strong>Verfolge den Weg der Pakete</strong> — wer fragt, wer antwortet, in welcher Reihenfolge? <strong>Beschreibe</strong>, was du siehst. '
+          + 'Schau dir dazu auch die Geräte am Switch genau an: Gibt es dort etwas, das es eigentlich nur <em>einmal</em> geben sollte? Vergleiche die '
+          + 'Gerätefenster von „DHCP-Server" und <strong>E3</strong> genau — auch dort, wo du zuerst nicht hinschaust (DHCP-Server-Einrichtung, '
+          + 'DNS-Einträge). <strong>Erläutere</strong>, was hier passieren könnte.' }
       ],
       hilfe: [
         { begriff: 'DHCP', text: 'Ein Dienst, der Geräten automatisch eine Adresse zuteilt. Ein Gerät fragt beim Start ins Netz hinein, ohne zu wissen, '
@@ -1177,22 +1187,22 @@
           + 'Woher weiß das fragende Gerät, welche Antwort die „richtige" ist?' },
         WERKZEUG_MITSCHNITT, WERKZEUG_LERN
       ],
-      stern: 'Wie könnte man dafür sorgen, dass im Schulnetz nur ein bestimmtes, bekanntes Gerät auf DHCP-Anfragen antworten darf? '
+      stern: 'Wie könnte man dafür sorgen, dass in einem Netz nur ein bestimmtes, bekanntes Gerät auf DHCP-Anfragen antworten darf? '
         + 'Recherchiere den Begriff <em>DHCP-Snooping</em>.'
     }),
     netz: {
       v: 2,
       nodes: [
-        dev('g1', 'switch', 'Switch 1', 700, 400, { ports: 6, wlan: { on: true, ssid: 'Schul-WLAN' } }),
+        dev('g1', 'switch', 'Switch 1', 700, 400, { ports: 6, wlan: { on: true, ssid: 'Frei-WLAN' } }),
         dev('g2', 'server', 'DHCP-Server', 470, 260, {
           nics: [{ ip: '192.168.1.5' }], gateway: '192.168.1.1', dns: '192.168.2.10',
           dhcpServer: { von: '192.168.1.100', bis: '192.168.1.150', mask: '255.255.255.0',
                         gateway: '192.168.1.1', dns: '192.168.2.10' }
         }),
-        dev('g3', 'host', 'Opfer 1', 470, 560, { nics: [{ dhcp: true, funk: true, ssid: 'Schul-WLAN' }], software: ['browser'] }),
-        dev('g4', 'host', 'Opfer 2', 930, 560, { nics: [{ dhcp: true, funk: true, ssid: 'Schul-WLAN' }], software: ['browser'] }),
-        dev('g5', 'host', 'Viertes Gerät', 930, 260, {
-          nics: [{ ip: '192.168.1.6', funk: true, ssid: 'Schul-WLAN' }], gateway: '192.168.1.1', dns: '192.168.1.6',
+        dev('g3', 'host', 'E1', 470, 560, { nics: [{ dhcp: true, funk: true, ssid: 'Frei-WLAN' }], software: ['browser'] }),
+        dev('g4', 'handy', 'E2', 930, 560, { nics: [{ dhcp: true, funk: true, ssid: 'Frei-WLAN' }], software: ['browser'] }),
+        dev('g5', 'host', 'E3', 930, 260, {
+          nics: [{ ip: '192.168.1.6', funk: true, ssid: 'Frei-WLAN' }], gateway: '192.168.1.1', dns: '192.168.1.6',
           software: ['dns', 'webserver'], webServer: { on: true },
           dhcpServer: { von: '192.168.1.200', bis: '192.168.1.210', mask: '255.255.255.0',
                         gateway: '192.168.1.1', dns: '192.168.1.6' },

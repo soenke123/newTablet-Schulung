@@ -2219,25 +2219,27 @@ section('Sek I und II · neue Szenarien');
     const dhcpNodes = z.netz.list().filter(n => n.dhcpServer && n.dhcpServer.on);
     ok('II.9: zwei aktive DHCP-Server im selben Netz (192.168.1.0/24)',
        dhcpNodes.length === 2 && dhcpNodes.every(n => n.dhcpServer.gateway === '192.168.1.1'));
+    ok('II.9: E2 ist ein Handy, E1 und E3 sind Rechner',
+       N('E2').kind === 'handy' && N('E1').kind === 'host' && N('E3').kind === 'host');
     ok('II.9: ihre Adressbereiche überschneiden sich nicht (kein Test-Artefakt)',
-       U.ip2int(N('DHCP-Server').dhcpServer.bis) < U.ip2int(N('Viertes Gerät').dhcpServer.von));
-    ok('II.9: der echte Server nennt den echten DNS-Server, das vierte Gerät sich selbst',
-       N('DHCP-Server').dhcpServer.dns === '192.168.2.10' && N('Viertes Gerät').dhcpServer.dns === '192.168.1.6');
+       U.ip2int(N('DHCP-Server').dhcpServer.bis) < U.ip2int(N('E3').dhcpServer.von));
+    ok('II.9: der echte Server nennt den echten DNS-Server, E3 sich selbst',
+       N('DHCP-Server').dhcpServer.dns === '192.168.2.10' && N('E3').dhcpServer.dns === '192.168.1.6');
     ok('II.9: beide Seiten sind wortgleich (dieselbe Kulisse)',
-       N('Webserver').dateien['/webserver/index.html'].text === N('Viertes Gerät').dateien['/webserver/index.html'].text
+       N('Webserver').dateien['/webserver/index.html'].text === N('E3').dateien['/webserver/index.html'].text
        && /MPS-Portal/.test(N('Webserver').dateien['/webserver/index.html'].text));
     ok('II.9: der echte DNS-Server kennt den Namen nur mit der echten Adresse',
        N('DNS-Server').dnsServer.records[0].ip === '192.168.2.20');
-    ok('II.9: das vierte Gerät kennt denselben Namen mit seiner eigenen Adresse',
-       N('Viertes Gerät').dnsServer.records[0].ip === '192.168.1.6');
+    ok('II.9: E3 kennt denselben Namen mit seiner eigenen Adresse',
+       N('E3').dnsServer.records[0].ip === '192.168.1.6');
     z.dienste.start();
     z.engine.runUntil(60 * SEC);
-    ok('II.9: nach einem Durchgang haben beide Opfer eine Adresse aus 192.168.1.0/24',
-       ['Opfer 1', 'Opfer 2'].every(x => /^192\.168\.1\.\d+$/.test(N(x).nics[0].ip)),
-       ['Opfer 1', 'Opfer 2'].map(x => N(x).nics[0].ip).join(','));
+    ok('II.9: nach einem Durchgang haben E1 und E2 eine Adresse aus 192.168.1.0/24',
+       ['E1', 'E2'].every(x => /^192\.168\.1\.\d+$/.test(N(x).nics[0].ip)),
+       ['E1', 'E2'].map(x => N(x).nics[0].ip).join(','));
     ok('II.9: beide erreichen das Ziel, wer auch immer geantwortet hat',
-       ankommt(ping(z, N('Opfer 1'), 'portal.schule.de', 30))
-       && ankommt(ping(z, N('Opfer 2'), 'portal.schule.de', 30)));
+       ankommt(ping(z, N('E1'), 'portal.schule.de', 30))
+       && ankommt(ping(z, N('E2'), 'portal.schule.de', 30)));
   }
 
 }
