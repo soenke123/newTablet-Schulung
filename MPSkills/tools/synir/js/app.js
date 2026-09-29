@@ -459,6 +459,16 @@
     /* Geräte-Lerninformationen: der Block „Was dieses Gerät gelernt
        hat". Aus, bis die Lehrkraft ihn einschaltet; die Wahl bleibt
        auf diesem Gerät stehen. */
+    /* Gerätebilder: schematisch (Vorgabe) oder als PNG (sprites/). */
+    const BILD_KEY = 'netzsim.bilder';
+    function bilderSetzen(an, still) {
+      flaeche.setBilder(an);
+      $('bilderBtn').setAttribute('aria-checked', String(an));
+      $('bilderBtn').classList.toggle('is-on', an);
+      try { localStorage.setItem(BILD_KEY, an ? '1' : '0'); } catch (e) {}
+    }
+    $('bilderBtn').addEventListener('click', () => bilderSetzen(!flaeche.bilder));
+
     const LERN_KEY = 'netzsim.lerninfo';
     function lernSetzen(an, still) {
       konfig.setLernInfo(an);
@@ -1477,6 +1487,7 @@
     }
     themeAnzeigen();
     try { lernSetzen(localStorage.getItem(LERN_KEY) === '1', true); } catch (e) {}
+    try { if (localStorage.getItem(BILD_KEY) === '1') bilderSetzen(true); } catch (e) {}
 
     /* ═══ Die Zwischenablage ═════════════════════════════════════
        Verlangt waren „Copy Paste mit Strg V/C", und zwar ohne

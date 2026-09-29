@@ -3952,3 +3952,14 @@ body[data-rolle="presenter"] .mi.nur-lehrer { display: flex; }
 /* Die großen Dialoge (Speichern, Aufgabentext …): dieselbe Klarheit. */
 .sy-dlg { background: rgba(10,13,24,.55); }
 .sy-dlg-box { border: 2px solid var(--line-2); }
+
+
+/* ═══ Bildansicht der Geräte (Ansicht → Gerätebilder) ════════════
+   Das PNG steht statt der Kachel; die Kachel bleibt als unsichtbare
+   Trefffläche, zeigt aber Auswahl, Ziel und Warnung weiter an. Das
+   Kürzel sitzt oben rechts neben dem Bild. */
+.nf-node--bild .nf-plate { fill: transparent; filter: none; stroke: transparent; }
+.nf-node--bild:hover .nf-plate { stroke: var(--line-2); }
+.nf-node--bild.is-sel .nf-plate, .nf-node--bild.is-target .nf-plate, .nf-node--bild.is-warn .nf-plate { fill: transparent; }
+.nf-bild { filter: drop-shadow(0 3px 5px rgba(20,24,31,.22)); }
+.nf-kurz--bild { text-anchor: start; paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }

@@ -846,6 +846,20 @@
       });
     }
 
+    /* ─── Bildansicht ─────────────────────────────────────────
+       Statt der gezeichneten Kachel steht das PNG des Geräts
+       (sprites/, je Gerät eines, 711 × 575). Die Kachel bleibt als
+       unsichtbare Trefffläche und Auswahlrahmen stehen — Kabel,
+       Ringe und Adressen liegen dadurch dort, wo sie immer lagen.
+       Das Kürzel wandert oben rechts neben das Bild. */
+    const SPRITE = {
+      host: 'laptop', server: 'Server', handy: 'Handy', switch: 'Switch',
+      router: 'Router', heimrouter: 'Heimrouter', cww: 'cww'
+    };
+    const BILD_W = 100, BILD_H = Math.round(BILD_W * 575 / 711);
+    let bilder = false;
+    function bildUrl(kind) { return 'sprites/' + SPRITE[kind] + '.png'; }
+
     function drawNode(n, auswahl) {
       const g = el('g', {
         class: 'nf-node'
@@ -891,11 +905,23 @@
          E1, R1, S1, SW1. Er liegt in der Kachel, nicht darunter:
          darunter ist jetzt die Adresse, und die ist das, was beim
          Aufbauen eines Netzes verglichen wird. */
-      const tk = el('text', { class: 'nf-kurz', x: 0, y: -H / 2 + 17 }, g);
+      const bild = bilder && SPRITE[n.kind];
+      if (bild) g.classList.add('nf-node--bild');
+      const tk = bild
+        ? el('text', { class: 'nf-kurz nf-kurz--bild', x: BILD_W / 2 - 6, y: -H / 2 + 4 }, g)
+        : el('text', { class: 'nf-kurz', x: 0, y: -H / 2 + 17 }, g);
       tk.textContent = netz.kurzName(n);
 
-      const gi = el('g', { class: 'nf-icon', transform: 'translate(0,9)' }, g);
-      icon(n.kind, gi);
+      if (bild) {
+        el('image', {
+          class: 'nf-bild', href: bildUrl(n.kind),
+          x: -BILD_W / 2, y: -BILD_H / 2 - 2, width: BILD_W, height: BILD_H,
+          preserveAspectRatio: 'xMidYMid meet'
+        }, g);
+      } else {
+        const gi = el('g', { class: 'nf-icon', transform: 'translate(0,9)' }, g);
+        icon(n.kind, gi);
+      }
 
       /* ─ Die Adresse, groß, unter der Kachel ─
          Zweifarbig: was die Netzmaske zum Netz zählt, in der einen
@@ -1003,7 +1029,7 @@
 
       const prob = problemOf(n);
       if (prob) {
-        const b = el('g', { class: 'nf-badge', transform: 'translate(' + (W / 2 - 8) + ',' + (-H / 2 + 8) + ')' }, g);
+        const b = el('g', { class: 'nf-badge', transform: 'translate(' + (bild ? -W / 2 + 4 : W / 2 - 8) + ',' + (-H / 2 + 8) + ')' }, g);
         el('circle', { r: 10 }, b);
         const tx = el('text', { y: 4 }, b);
         tx.textContent = '!';
@@ -2028,6 +2054,14 @@
          müssen entstehen und vergehen. */
       setSubnetze(an) { zeigeAlle = !!an; draw(); },
       get zeigtSubnetze() { return zeigeAlle; },
+      get bilder() { return bilder; },
+      setBilder(an) {
+        bilder = !!an;
+        // Vorladen: ein Bild, das erst beim Zeichnen geholt wird,
+        // blitzt bei jedem Neuzeichnen kurz leer auf.
+        if (bilder) Object.keys(SPRITE).forEach(k => { const i = new Image(); i.src = bildUrl(k); });
+        draw();
+      },
       // Für die Liste am Rand und für das Gerätefenster: dieselbe
       // Rechnung, damit dort dieselben Farben herauskommen.
       get subnetze() { return sn; },
