@@ -448,10 +448,26 @@
        sonst ließe er sich nach dem Wechsel in den Entwurf nicht mehr
        ausschalten. */
     function ansichtSync() {
-      const entwurf = modus === 'entwurf';
-      refs.subBtn.disabled = entwurf && !flaeche.zeigtSubnetze;
-      $('traceBtn').disabled = entwurf;
+      $('wltBtn').setAttribute('aria-checked', String(!!weiterleitung.offen));
+      $('wltBtn').classList.toggle('is-on', !!weiterleitung.offen);
     }
+    $('ansichtBtn').addEventListener('click', ansichtSync);
+    $('wltBtn').addEventListener('click', () => {
+      if (weiterleitung.offen) weiterleitung.schliessen(); else weiterleitung.oeffnen();
+    });
+
+    /* Geräte-Lerninformationen: der Block „Was dieses Gerät gelernt
+       hat". Aus, bis die Lehrkraft ihn einschaltet; die Wahl bleibt
+       auf diesem Gerät stehen. */
+    const LERN_KEY = 'netzsim.lerninfo';
+    function lernSetzen(an, still) {
+      konfig.setLernInfo(an);
+      $('lernBtn').setAttribute('aria-checked', String(an));
+      $('lernBtn').classList.toggle('is-on', an);
+      try { localStorage.setItem(LERN_KEY, an ? '1' : '0'); } catch (e) {}
+      if (!still) { panels.renderKarte(); if (geraet) geraet.render(); }
+    }
+    $('lernBtn').addEventListener('click', () => lernSetzen(!konfig.lernInfo));
 
     function subnetzeZeigen(an) {
       /* Erst die Klasse am body: sie macht die Fläche schmaler
@@ -1460,6 +1476,7 @@
       themeMq.addEventListener('change', () => { if (!themeGewaehlt()) themeAnzeigen(); });
     }
     themeAnzeigen();
+    try { lernSetzen(localStorage.getItem(LERN_KEY) === '1', true); } catch (e) {}
 
     /* ═══ Die Zwischenablage ═════════════════════════════════════
        Verlangt waren „Copy Paste mit Strg V/C", und zwar ohne

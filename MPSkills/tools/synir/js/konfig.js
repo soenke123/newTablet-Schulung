@@ -1240,7 +1240,13 @@
        was dauerhaft danebenstehen muss: gefragt wird nach ihnen
        an zwei Stellen der Stunde, und dann sind sie einen Klick
        entfernt.                                                 */
+    /* ⚠️ Nur auf Wunsch: für eine 8. Klasse ist dieser Block zu viel.
+       Der Schalter „Geräte-Lerninformationen" im Menü Ansicht & Tools
+       setzt `lernInfo` (app.js); ohne ihn bleibt der Kasten leer. */
+    let lernInfo = false;
+
     function tabellen(node) {
+      if (!lernInfo) return '';
       let h = '<div class="k-sec">Was dieses Gerät gelernt hat</div>';
 
       if (node.kind === 'switch') {
@@ -2091,6 +2097,8 @@
          Knopf „Zur Weiterleitungstabelle" nicht — ein Knopf, der ins
          Leere führt, ist schlechter als keiner. */
       setWeiterleitung(f) { fenster = f || null; },
+      setLernInfo(an) { lernInfo = !!an; },
+      get lernInfo() { return lernInfo; },
       setInternet(i) { inet = i || null; },
       /* Dieselbe Frage darf nur an EINER Stelle beantwortet werden:
          das Fenster zeichnet dieselben Zeilen wie das Kärtchen und

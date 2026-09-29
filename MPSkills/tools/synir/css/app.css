@@ -458,7 +458,7 @@ body[data-modus="aktion"] { --modus: var(--m-akt); --modus-bg: var(--m-akt-bg);
   border-top: 3px solid var(--modus);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(16px) saturate(1.4);
-  position: relative; z-index: 8;
+  position: relative; z-index: 65;  /* über den Kärtchen (6 + n) und dem Terminal (60): die Menüs klappen darüber auf */
 
   /* Ein Übergang, kein Umschlag: der Streifen wandert von Indigo
      nach Mint. Der Hauch in der Fläche springt (Verläufe lassen

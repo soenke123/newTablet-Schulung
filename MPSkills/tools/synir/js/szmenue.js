@@ -69,9 +69,9 @@
       if (lehrer) {
         html += '<div class="szm-tabs" role="tablist">'
           + '<button type="button" role="tab" class="szm-tab' + (cfg.tab === 'public' ? ' is-on' : '')
-          + '" data-tab="public">Öffentlich <span class="szm-sub">public</span></button>'
+          + '" data-tab="public">Public</button>'
           + '<button type="button" role="tab" class="szm-tab' + (cfg.tab === 'private' ? ' is-on' : '')
-          + '" data-tab="private">Eigene <span class="szm-sub">private</span></button>'
+          + '" data-tab="private">Private</button>'
           + '</div>';
       }
       const l = liste();
