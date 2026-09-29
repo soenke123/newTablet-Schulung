@@ -1303,7 +1303,10 @@ async function renderNew() {
     return;
   }
 
-  S.tools = data.tools || {};
+  // Ausgeblendete Skills (tools.js, `hidden`) tauchen auch im Dropdown
+  // für neue Räume nicht auf — wie auf der Landing.
+  S.tools = Object.fromEntries(Object.entries(data.tools || {})
+    .filter(([id]) => !window.TOOLS_OVERLAY?.[id]?.hidden));
   const usable = Object.keys(S.tools).filter(id => S.tools[id].active);
   if (!usable.length) {
     host().innerHTML = `<main class="wrap"><div class="card"><div class="msg msg--warn">Es ist
