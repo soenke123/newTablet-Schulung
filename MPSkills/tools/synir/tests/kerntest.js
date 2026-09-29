@@ -342,7 +342,7 @@ section('Szenarien');
   const S = sandbox.SZENARIEN;
   /* Übergang: die neuen Sek-I-Szenarien (i1…) stehen vor den acht
      bisherigen, die nach und nach ersetzt werden. */
-  ok('Szenarien vorhanden (Sek I: 7, Sek II: 8)', Object.keys(S).length === 15, Object.keys(S).join(','));
+  ok('Szenarien vorhanden (Sek I: 7, Sek II: 9)', Object.keys(S).length === 16, Object.keys(S).join(','));
   ok('jedes Szenario trägt eine Gruppe', Object.keys(S).every(k => !!S[k].gruppe));
 
   for (const k in S) {
@@ -1854,7 +1854,7 @@ section('Sek I und II · neue Szenarien');
 {
   const S = sandbox.SZENARIEN;
   // Die Auftragskarte liegt links oben — dort steht kein Gerät.
-  for (const k of ['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'ii1', 'ii2', 'ii3', 'ii4', 'ii5', 'ii6', 'ii7', 'ii8']) {
+  for (const k of ['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'ii1', 'ii2', 'ii3', 'ii4', 'ii5', 'ii6', 'ii7', 'ii8', 'ii9']) {
     ok(k + ': keine Geräte unter der Auftragskarte',
        S[k].netz.nodes.every(n => !(n.x < 430 && n.y < 280)));
     ok(k + ': Auftrag hat Kontext, Aufgaben und Hilfe',
@@ -2210,6 +2210,34 @@ section('Sek I und II · neue Szenarien');
     ok('II.8: das Handy hat sich im WLAN eine Adresse geholt', /^192\.168\.2\.1\d\d$/.test(handy.nics[0].ip), handy.nics[0].ip);
     ok('II.8: der Webserver liefert eine Seite',
        !!z.netz.byName('Webserver').dateien['/webserver/index.html']);
+  }
+
+  // II.9: DHCP-Spoofing — zwei DHCP-Server im selben Netz, ein zweiter DNS-Eintrag.
+  {
+    const z = lade('ii9');
+    const N = (n) => z.netz.byName(n);
+    const dhcpNodes = z.netz.list().filter(n => n.dhcpServer && n.dhcpServer.on);
+    ok('II.9: zwei aktive DHCP-Server im selben Netz (192.168.1.0/24)',
+       dhcpNodes.length === 2 && dhcpNodes.every(n => n.dhcpServer.gateway === '192.168.1.1'));
+    ok('II.9: ihre Adressbereiche überschneiden sich nicht (kein Test-Artefakt)',
+       U.ip2int(N('DHCP-Server').dhcpServer.bis) < U.ip2int(N('Viertes Gerät').dhcpServer.von));
+    ok('II.9: der echte Server nennt den echten DNS-Server, das vierte Gerät sich selbst',
+       N('DHCP-Server').dhcpServer.dns === '192.168.2.10' && N('Viertes Gerät').dhcpServer.dns === '192.168.1.6');
+    ok('II.9: beide Seiten sind wortgleich (dieselbe Kulisse)',
+       N('Webserver').dateien['/webserver/index.html'].text === N('Viertes Gerät').dateien['/webserver/index.html'].text
+       && /MPS-Portal/.test(N('Webserver').dateien['/webserver/index.html'].text));
+    ok('II.9: der echte DNS-Server kennt den Namen nur mit der echten Adresse',
+       N('DNS-Server').dnsServer.records[0].ip === '192.168.2.20');
+    ok('II.9: das vierte Gerät kennt denselben Namen mit seiner eigenen Adresse',
+       N('Viertes Gerät').dnsServer.records[0].ip === '192.168.1.6');
+    z.dienste.start();
+    z.engine.runUntil(60 * SEC);
+    ok('II.9: nach einem Durchgang haben beide Opfer eine Adresse aus 192.168.1.0/24',
+       ['Opfer 1', 'Opfer 2'].every(x => /^192\.168\.1\.\d+$/.test(N(x).nics[0].ip)),
+       ['Opfer 1', 'Opfer 2'].map(x => N(x).nics[0].ip).join(','));
+    ok('II.9: beide erreichen das Ziel, wer auch immer geantwortet hat',
+       ankommt(ping(z, N('Opfer 1'), 'portal.schule.de', 30))
+       && ankommt(ping(z, N('Opfer 2'), 'portal.schule.de', 30)));
   }
 
 }

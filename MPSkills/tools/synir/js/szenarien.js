@@ -1088,5 +1088,134 @@
     netz: { v: 2, nodes: ii8netz.nodes, cables: ii8netz.cables }
   };
 
-  window.SZENARIEN = { i1, i2, i3, i4, i5, i6, i7, ii1, ii2, ii3, ii4, ii5, ii6, ii7, ii8 };
+  /* ═══ II.9 · DHCP-Spoofing ══════════════════════════════════════
+     Ein WLAN mit vier Geräten am selben Switch: ein echter
+     DHCP-Server, zwei „Opfer" — und ein Gerät, das AUCH einen
+     DHCP-Server anbietet, mit eigenem DNS-Eintrag für denselben
+     Namen und einer eigenen, GLEICH AUSSEHENDEN Webseite. Jenseits
+     eines Routers steht das echte Portal (eigener DNS- und
+     Webserver) — das Netz funktioniert vollständig, nichts ist
+     kaputt.
+
+     Der Lerneffekt entsteht aus dem Zufall, der in dienste.js
+     absichtlich eingebaut ist (siehe dort: „bei zwei Servern …
+     wessen OFFER zuerst ankommt und gewinnt"): jeder Wechsel nach
+     <em>Aktion</em> vergibt neu, und manchmal gewinnt der echte
+     Server, manchmal der andere. Deshalb sieht ein Opfer mal die
+     eine, mal die andere — optisch identische — Seite, ohne dass
+     am Netz irgendjemand etwas verändert hat.
+
+     Die Aufgabe nennt das Wort „Angriff" absichtlich nicht: Die
+     Klasse soll erst beobachten, dann erklären. Das Formularfeld
+     auf der Seite ist reine Kulisse — dieser Simulator kennt kein
+     POST (siehe Kopf von http.js), es gibt nichts, das eine
+     Eingabe irgendwohin schicken könnte. Beide Seiten benutzen das
+     Logo und den Namen des Projekts selbst (`@drache`) und keine
+     echte Marke. */
+  const spoofSeite =
+    '<html>\n'
+    + '  <head>\n'
+    + '    <title>MPS-Portal — Anmeldung</title>\n'
+    + '    <link rel="stylesheet" href="stil.css">\n'
+    + '  </head>\n'
+    + '  <body>\n'
+    + '    <div class="kasten">\n'
+    + '      <img src="logo.png" alt="MPS-Portal" class="logo">\n'
+    + '      <h1>MPS-Portal</h1>\n'
+    + '      <p class="u">Anmeldung</p>\n'
+    + '      <label>Benutzername<input type="text" disabled placeholder="deinname"></label>\n'
+    + '      <label>Kennwort<input type="password" disabled placeholder="••••••••"></label>\n'
+    + '      <button disabled>Anmelden</button>\n'
+    + '      <p class="hinweis">Die Felder sind hier ohne Funktion — es gibt in diesem Programm '
+    + '        kein Formular, das etwas verschickt.</p>\n'
+    + '    </div>\n'
+    + '  </body>\n'
+    + '</html>\n';
+  const spoofStil =
+    'body  { font-family: sans-serif; background: #eef1fb; color: #1e2536;\n'
+    + '        margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }\n'
+    + '.kasten { background: #fff; border-radius: 14px; padding: 32px 36px; width: 260px;\n'
+    + '        box-shadow: 0 4px 24px rgba(30,37,54,.12); text-align: center; }\n'
+    + '.logo { width: 64px; height: 64px; border-radius: 12px; }\n'
+    + 'h1    { font-size: 20px; margin: 10px 0 2px; color: #2a3050; }\n'
+    + '.u    { color: #6b7290; margin: 0 0 18px; font-size: 13px; }\n'
+    + 'label { display: block; text-align: left; font-size: 12px; color: #555; margin: 10px 0 4px; }\n'
+    + 'input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccd; border-radius: 8px; }\n'
+    + 'button{ width: 100%; margin-top: 16px; padding: 9px; border: 0; border-radius: 8px;\n'
+    + '        background: #4a5fd9; color: #fff; font-weight: 600; }\n'
+    + '.hinweis { font-size: 10.5px; color: #9aa; margin-top: 14px; }\n';
+  const spoofDateien = () => ({
+    '/webserver': { ordner: true },
+    '/webserver/index.html': { text: spoofSeite },
+    '/webserver/stil.css':   { text: spoofStil },
+    '/webserver/logo.png':   { bild: '@drache' }
+  });
+
+  macN = 2300; cabN = 2300;
+  const ii9 = {
+    titel: 'II.9 · DHCP-Spoofing', gruppe: SEK2,
+    aufgabe: auftrag({
+      kontext: 'Ein WLAN mit vier Geräten am selben Switch, dazu über einen Router ein zweites Netz mit dem '
+        + '<strong>DNS-Server</strong> und dem <strong>Webserver</strong> des „MPS-Portals". Das Netz ist vollständig eingerichtet — '
+        + 'nichts fehlt, nichts ist abgeschaltet. Die vier WLAN-Geräte holen sich ihre Adresse per <strong>DHCP</strong>.',
+      aufgaben: [
+        { typ: 'benutzen', text: 'Schalte mehrmals hintereinander zwischen <em>Entwurf</em> und <em>Aktion</em> hin und her (immer ein paar Sekunden warten). '
+          + 'Öffne nach jedem Wechsel die Fenster von <strong>Opfer 1</strong> und <strong>Opfer 2</strong>: Welche IP-Adresse, welches Gateway, welcher '
+          + 'DNS-Server steht dort? Schreib es dir für drei Durchgänge auf.' },
+        { typ: 'benutzen', text: 'Ruf nach jedem Wechsel im Browser von Opfer 1 <code>portal.schule.de</code> auf und mach einen Screenshot oder eine Notiz. '
+          + 'Sieht die Seite immer gleich aus? Prüfe genau: Titel, Logo, Text.' },
+        { typ: 'veraendern', text: 'Erkläre, <strong>was hier passiert</strong>. Ist das ein Fehler im Programm? Schau dir dazu die Geräte am Switch an: '
+          + 'Gibt es dort etwas, das es eigentlich nur <em>einmal</em> geben sollte? Vergleiche die Gerätefenster von „DHCP-Server" und dem vierten Gerät genau — '
+          + 'auch dort, wo du zuerst nicht hinschaust (DHCP-Server-Einrichtung, DNS-Einträge).' }
+      ],
+      hilfe: [
+        { begriff: 'DHCP', text: 'Ein Dienst, der Geräten automatisch eine Adresse zuteilt. Ein Gerät fragt beim Start ins Netz hinein, ohne zu wissen, '
+          + '<em>wer genau</em> antwortet — es nimmt die erste Antwort, die ankommt.' },
+        { begriff: 'DNS', text: 'Übersetzt einen Namen (<code>portal.schule.de</code>) in eine Adresse. Welcher DNS-Server gefragt wird, steht im '
+          + 'Gerätefenster — und diese Angabe kommt bei DHCP-Geräten automatisch mit.' },
+        { begriff: 'Zwei Server, eine Frage', text: 'Was passiert, wenn im selben Netz <em>zwei</em> Geräte auf dieselbe Anfrage antworten können? '
+          + 'Woher weiß das fragende Gerät, welche Antwort die „richtige" ist?' },
+        WERKZEUG_MITSCHNITT, WERKZEUG_LERN
+      ],
+      stern: 'Wie könnte man dafür sorgen, dass im Schulnetz nur ein bestimmtes, bekanntes Gerät auf DHCP-Anfragen antworten darf? '
+        + 'Recherchiere den Begriff <em>DHCP-Snooping</em>.'
+    }),
+    netz: {
+      v: 2,
+      nodes: [
+        dev('g1', 'switch', 'Switch 1', 700, 400, { ports: 6, wlan: { on: true, ssid: 'Schul-WLAN' } }),
+        dev('g2', 'server', 'DHCP-Server', 470, 260, {
+          nics: [{ ip: '192.168.1.5' }], gateway: '192.168.1.1', dns: '192.168.2.10',
+          dhcpServer: { von: '192.168.1.100', bis: '192.168.1.150', mask: '255.255.255.0',
+                        gateway: '192.168.1.1', dns: '192.168.2.10' }
+        }),
+        dev('g3', 'host', 'Opfer 1', 470, 560, { nics: [{ dhcp: true, funk: true, ssid: 'Schul-WLAN' }], software: ['browser'] }),
+        dev('g4', 'host', 'Opfer 2', 930, 560, { nics: [{ dhcp: true, funk: true, ssid: 'Schul-WLAN' }], software: ['browser'] }),
+        dev('g5', 'host', 'Viertes Gerät', 930, 260, {
+          nics: [{ ip: '192.168.1.6', funk: true, ssid: 'Schul-WLAN' }], gateway: '192.168.1.1', dns: '192.168.1.6',
+          software: ['dns', 'webserver'], webServer: { on: true },
+          dhcpServer: { von: '192.168.1.200', bis: '192.168.1.210', mask: '255.255.255.0',
+                        gateway: '192.168.1.1', dns: '192.168.1.6' },
+          dnsServer: { records: [{ name: 'portal.schule.de', ip: '192.168.1.6' }] },
+          dateien: spoofDateien()
+        }),
+        dev('g6', 'router', 'Router 1', 700, 660, { nics: [{ ip: '192.168.1.1' }, { ip: '192.168.2.1' }] }),
+        dev('g7', 'switch', 'Switch 2', 700, 800, { ports: 4 }),
+        dev('g8', 'server', 'DNS-Server', 520, 880, {
+          nics: [{ ip: '192.168.2.10' }], gateway: '192.168.2.1', dns: '192.168.2.10',
+          software: ['dns'], dnsServer: { records: [{ name: 'portal.schule.de', ip: '192.168.2.20' }] }
+        }),
+        dev('g9', 'server', 'Webserver', 880, 880, {
+          nics: [{ ip: '192.168.2.20' }], gateway: '192.168.2.1', dns: '192.168.2.10',
+          software: ['webserver'], webServer: { on: true }, dateien: spoofDateien()
+        })
+      ],
+      cables: [
+        cab('g2', 0, 'g1', 0), cab('g1', 1, 'g6', 0),
+        cab('g6', 1, 'g7', 0), cab('g7', 1, 'g8', 0), cab('g7', 2, 'g9', 0)
+      ]
+    }
+  };
+
+  window.SZENARIEN = { i1, i2, i3, i4, i5, i6, i7, ii1, ii2, ii3, ii4, ii5, ii6, ii7, ii8, ii9 };
 })();
