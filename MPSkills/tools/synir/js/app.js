@@ -1292,6 +1292,66 @@
       document.body.classList.toggle('auf-frei', !!aufFrei);
     }
 
+    /* ─── Die Größe ───────────────────────────────────────────
+       Am Griff unten rechts ziehen: die Karte wird größer oder
+       kleiner, und der Wunsch bleibt für die nächsten Aufträge (und
+       den nächsten Besuch) stehen. So liegen Auftrag und Netz
+       zugleich auf dem Feld — nach Wunsch klein in der Ecke oder groß
+       zum Lesen. Doppeltipp auf den Griff: zurück zur Ausgangsgröße. */
+    let aufGroesse = null;            // { w, h } nach dem Ziehen
+    try { aufGroesse = JSON.parse(localStorage.getItem('synir_auf_groesse') || 'null'); } catch (e) { aufGroesse = null; }
+    if (!aufGroesse || !(aufGroesse.w > 0) || !(aufGroesse.h > 0)) aufGroesse = null;
+
+    function aufMass() {
+      if (aufGroesse) {
+        aufBox.style.width = aufGroesse.w + 'px';
+        aufBox.style.height = aufGroesse.h + 'px';
+      } else {
+        aufBox.style.width = '';
+        aufBox.style.height = '';
+      }
+      aufBox.classList.toggle('is-gross', !!aufGroesse);
+    }
+    aufMass();
+
+    (function () {
+      const grip = $('aufgabeGrip');
+      let z = null;
+      grip.addEventListener('pointerdown', (ev) => {
+        const r = aufBox.getBoundingClientRect();
+        const b = aufBox.parentElement.getBoundingClientRect();
+        z = { x: ev.clientX, y: ev.clientY, w: r.width, h: r.height, b, r };
+        grip.setPointerCapture(ev.pointerId);
+        aufBox.classList.add('is-groesse');
+        ev.preventDefault();
+      });
+      grip.addEventListener('pointermove', (ev) => {
+        if (!z) return;
+        const maxW = Math.max(240, z.b.right - z.r.left - 8);
+        const maxH = Math.max(120, z.b.bottom - z.r.top - 8);
+        aufGroesse = {
+          w: Math.round(U.clamp(z.w + ev.clientX - z.x, 240, maxW)),
+          h: Math.round(U.clamp(z.h + ev.clientY - z.y, 110, maxH))
+        };
+        aufMass();
+        subnetze.platzieren();
+      });
+      const ende = () => {
+        if (!z) return;
+        z = null;
+        aufBox.classList.remove('is-groesse');
+        try { localStorage.setItem('synir_auf_groesse', JSON.stringify(aufGroesse)); } catch (e) { /* egal */ }
+      };
+      grip.addEventListener('pointerup', ende);
+      grip.addEventListener('pointercancel', ende);
+      grip.addEventListener('dblclick', () => {
+        aufGroesse = null;
+        aufMass();
+        try { localStorage.removeItem('synir_auf_groesse'); } catch (e) { /* egal */ }
+        subnetze.platzieren();
+      });
+    })();
+
     function aufZeigen(auf) {
       aufBox.hidden = !auf;
       aufKachel.hidden = auf;

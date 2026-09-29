@@ -288,6 +288,270 @@
     }
   };
 
+  /* ─── Baukasten für Netze mit mehreren Routern ─────────────────
+     I.4 bis I.6 (und später Sek II) haben dieselbe Bauart: eine
+     Reihe von Häusern, je ein Router mit einem Switch und ein paar
+     Geräten daran, dazwischen Kabel von Router zu Router. Damit die
+     Adressen in jedem Szenario dieselbe Logik haben (und ein Kind
+     den Plan nur einmal lernen muss), entstehen sie hier aus einer
+     Vorschrift:
+
+       Haus i        192.168.i.0    Router-Karte zum Haus: .1
+       Geräte        .10, .11, …    Server .20
+       Verbindung k  192.168.(100+k).0   niedrigerer Router .1, anderer .2
+
+     Die Router stehen im Zickzack (gerade Nummern oben, ungerade
+     etwas tiefer), damit die Querverbindungen zwischen Nachbarn
+     nicht durch einen dritten Router laufen. */
+  function vermascht(o) {
+    const n = o.n, P = o.p || '';
+    const nodes = [], cables = [];
+    const xr = (i) => n === 1 ? 600 : Math.round(160 + i * 880 / (n - 1));
+    const grad = Array.from({ length: n }, () => 0);
+    o.links.forEach(([a, b]) => { grad[a]++; grad[b]++; });
+    const karte = Array.from({ length: n }, () => 1);     // nächste freie Karte je Router
+    const rnics = Array.from({ length: n }, (_, i) =>
+      [{ ip: o.leer ? '' : '192.168.' + (i + 1) + '.1' }]);
+    o.links.forEach(([a, b], k) => {
+      rnics[a].push({ ip: o.leer ? '' : '192.168.' + (101 + k) + '.1' });
+      rnics[b].push({ ip: o.leer ? '' : '192.168.' + (101 + k) + '.2' });
+    });
+    let hn = 0;
+    for (let i = 0; i < n; i++) {
+      const x = xr(i), gerade = i % 2 === 0;
+      const yr = gerade ? 440 : 520, ys = yr + 90, yh = yr + 180;
+      const lan = (o.lan && o.lan(i)) || { hosts: [] };
+      const rid = P + 'r' + (i + 1), sid = P + 's' + (i + 1);
+      nodes.push(dev(rid, 'router', 'Router ' + (i + 1), x, yr, {
+        ports: 1 + grad[i], nics: rnics[i], rip: o.rip !== false
+      }));
+      const draht = lan.hosts.filter(h => h.kind !== 'handy' && !h.ohneKabel);
+      nodes.push(dev(sid, 'switch', 'Switch ' + (i + 1), x, ys, {
+        ports: Math.max(5, draht.length + 1), wlan: lan.wlan ? { on: true, ssid: lan.wlan } : undefined
+      }));
+      cables.push(cab(rid, 0, sid, 0));
+      const k = lan.hosts.length;
+      let port = 1;
+      lan.hosts.forEach((h, j) => {
+        const id = P + 'h' + (++hn);
+        const kind = h.kind || 'host';
+        const name = h.name || (kind === 'handy' ? 'Handy ' : 'Endgerät ') + hn;
+        const cfg = Object.assign({}, h.cfg || {});
+        const gw = h.dhcp ? '' : '192.168.' + (i + 1) + '.1';
+        cfg.nics = [h.dhcp ? { dhcp: true } : { ip: '192.168.' + (i + 1) + '.' + (h.ip || 10 + j) }];
+        if (h.funk) cfg.nics = [{ dhcp: true, funk: true, ssid: h.funk }];
+        if (!h.dhcp && !h.funk) cfg.gateway = cfg.gateway !== undefined ? cfg.gateway : gw;
+        if (h.dhcpServer) cfg.dhcpServer = { nic: 0, von: '192.168.' + (i + 1) + '.100', bis: '192.168.' + (i + 1) + '.150',
+          mask: '255.255.255.0', gateway: '192.168.' + (i + 1) + '.1', dns: h.dhcpServer.dns || '' };
+        nodes.push(dev(id, kind, name, Math.round(x + (j - (k - 1) / 2) * (k > 3 ? 120 : 105)), yh, cfg));
+        if (kind !== 'handy' && !h.ohneKabel) cables.push(cab(id, 0, sid, port++));
+      });
+    }
+    // Die Kabel zwischen den Routern, in der Reihenfolge der Adressen.
+    o.links.forEach(([a, b]) => {
+      cables.push(cab(P + 'r' + (a + 1), karte[a]++, P + 'r' + (b + 1), karte[b]++));
+    });
+    return { nodes, cables };
+  }
+  const nach = (netz, name) => netz.nodes.find(n => n.name === name);
+
+  /* ═══ I.4 · Mehrere Router ══════════════════════════════════════
+     Drei Häuser in einer Reihe. Alles steht schon da — nur die
+     Router sind leer: keine Adressen. Das automatische Routing ist
+     an: das Kind trägt nur die Adressen ein und sieht, dass die
+     Router die Wege selbst finden. */
+  macN = 1100; cabN = 1100;
+  const i4netz = vermascht({
+    p: 'm', n: 3, links: [[0, 1], [1, 2]], leer: true,
+    lan: (i) => [
+      { hosts: [{}, {}] },
+      { hosts: [{ kind: 'server', name: 'DHCP-Server', ip: 20, dhcpServer: {} }, { dhcp: true }, { dhcp: true }] },
+      { hosts: [{}, {}] }
+    ][i]
+  });
+  const i4 = {
+    titel: 'I.4 · Mehrere Router', gruppe: SEK1,
+    aufgabe: auftrag({
+      kontext: 'Die Schule hat drei Häuser, jedes mit eigenem Netz und eigenem Router. Die Router sind mit einem Kabel '
+        + 'in einer Reihe verbunden — aber noch <strong>leer</strong>: sie haben keine Adressen.',
+      aufgaben: [
+        { typ: 'benutzen', text: 'Schick einen Ping von <strong>E1</strong> (Haus 1) zu E2 im selben Haus, dann zu einem '
+          + 'Endgerät in Haus 3. Was klappt, was nicht? Schau dir auch an, welche Adresse die Geräte in Haus 2 bekommen haben.' },
+        { typ: 'veraendern', text: 'Trag die Adressen der drei Router nach dem <strong>Adressplan</strong> ein (siehe Hilfe). '
+          + 'Warte ein paar Sekunden und teste den Ping von Haus 1 nach Haus 3 noch einmal. Wie viele Router liegen auf dem Weg?' },
+        { typ: 'erweitern', text: 'Baue ein <strong>viertes Haus</strong> an Router 3: Router, Switch und zwei Endgeräte, '
+          + 'Adressen nach demselben Plan. Jedes Gerät soll jedes andere erreichen.' }
+      ],
+      hilfe: [
+        { begriff: 'Adressplan', text: 'Haus 1 hat das Netz <code>192.168.1.x</code>, Haus 2 <code>192.168.2.x</code>, Haus 3 '
+          + '<code>192.168.3.x</code>. Die Router-Karte zum Haus hat immer die Endung <code>.1</code>. Die Kabel zwischen den '
+          + 'Routern sind eigene kleine Netze: R1–R2 ist <code>192.168.101.x</code> (R1 = <code>.1</code>, R2 = <code>.2</code>), '
+          + 'R2–R3 ist <code>192.168.102.x</code> (R2 = <code>.1</code>, R3 = <code>.2</code>).' },
+        { begriff: 'Automatisches Routing', text: 'Ein Router kennt zuerst nur die Netze, an denen er selbst hängt. Beim automatischen '
+          + 'Routing rufen sich die Router im Takt zu, welche Netze sie kennen, und lernen so den ganzen Weg. Das dauert einen '
+          + 'Moment — bei Router 3 kommt Haus 1 erst nach zwei Runden an.' },
+        { begriff: 'Weg', text: 'Ein Paket geht von Router zu Router, bis es im Zielnetz ankommt. Jeder Router, den es dabei '
+          + 'durchläuft, ist ein „Sprung“.' }
+      ],
+      stern: 'Ziehe das Kabel zwischen Router 1 und Router 2 heraus. Was geht noch, was nicht mehr? Und wie könntest du das '
+        + 'Netz so bauen, dass trotzdem alles weiterläuft?'
+    }),
+    netz: { v: 2, nodes: i4netz.nodes, cables: i4netz.cables }
+  };
+
+  /* ═══ I.5 · Fehler finden ═══════════════════════════════════════
+     Vier Häuser, teilvermascht: zwischen den Routern gibt es mehr
+     als einen Weg. WLAN und DHCP laufen — eigentlich. Sechs Dinge
+     sind falsch oder leer. Keins davon steckt in einer Netzmaske:
+     in Sek I gibt es nur die eine. */
+  macN = 1200; cabN = 1200;
+  const i5netz = vermascht({
+    p: 'f', n: 4, links: [[0, 1], [1, 2], [2, 3], [0, 2], [1, 3]],
+    lan: (i) => [
+      { hosts: [{}, { ohneKabel: true }] },                                            // Fehler 6: Kabel fehlt
+      { wlan: 'Schul-WLAN', hosts: [{ kind: 'server', name: 'DHCP-Server', ip: 20, dhcpServer: {} },
+                                    { dhcp: true }, { dhcp: true },
+                                    { kind: 'handy', name: 'Handy 1', funk: 'Schule-WLAN' }] },   // Fehler 4: SSID
+      { hosts: [{}, {}] },
+      { hosts: [{ cfg: { gateway: '192.168.1.1' } }, {}] }                             // Fehler 2: Gateway
+    ][i]
+  });
+  nach(i5netz, 'Router 3').nics[0].ip = '';                                           // Fehler 1: leer
+  nach(i5netz, 'DHCP-Server').dhcpServer.on = false;                                  // Fehler 3: Dienst aus
+  nach(i5netz, 'Router 4').rip = { on: false };                                       // Fehler 5: kein Routing
+  const i5 = {
+    titel: 'I.5 · Fehler finden', gruppe: SEK1,
+    aufgabe: auftrag({
+      kontext: 'Die Schule hat vier Häuser mit einem Netz aus vier Routern, Kabeln in mehr als einer Richtung, WLAN und DHCP. '
+        + 'Beim Umbau ist einiges schiefgegangen. Manches ist nicht falsch, sondern einfach <strong>leer</strong>.',
+      aufgaben: [
+        { typ: 'benutzen', text: 'Teste, welche Geräte sich erreichen. Ping von <strong>E1</strong> zu jedem anderen Gerät, auch '
+          + 'zum Handy. Schreib auf, was <em>nicht</em> klappt — das sind deine Spuren.' },
+        { typ: 'veraendern', text: 'Es stecken <strong>sechs Fehler</strong> im Netz. Finde sie und behebe sie, bis jedes Gerät '
+          + 'jedes andere erreicht (Ausnahme: ein Gerät, das gar nicht gebraucht wird, darf fehlen).' },
+        { typ: 'erweitern', text: 'Baue ein <strong>fünftes Haus</strong>: Router, Switch, zwei Endgeräte. Verbinde den Router '
+          + 'mit <em>zwei</em> anderen Routern. Adressen nach dem Plan (Hilfe).' }
+      ],
+      hilfe: [
+        { begriff: 'Fehlersuche', text: 'Geh von innen nach außen vor: Kommt ein Ping zu einem Gerät im <em>selben</em> Netz? '
+          + 'Dann zum Router im eigenen Haus? Dann zum Nachbarhaus? Die Stelle, an der es aufhört, ist der Ort des Fehlers.' },
+        { begriff: 'Adressplan', text: 'Haus <em>n</em> hat das Netz <code>192.168.n.x</code>, die Router-Karte zum Haus hat die '
+          + 'Endung <code>.1</code>. Kabel zwischen zwei Routern haben eigene Netze <code>192.168.101.x</code>, '
+          + '<code>192.168.102.x</code>, … — die Nummer zählt die Kabel durch.' },
+        { begriff: 'Was leer sein kann', text: 'Eine Adresse, ein Gateway, ein Dienst, der nicht läuft, ein Häkchen bei „Automatisches Routing“ '
+          + 'oder ein Kabel, das gar nicht steckt. Auch ein WLAN-Name muss <em>genau</em> stimmen.' }
+      ],
+      stern: 'Ziehe zwei Kabel zwischen Routern heraus. Wann bricht das Netz auseinander — und wann nicht? Was ist der '
+        + 'Vorteil davon, dass die Router mehr als einen Weg haben?'
+    }),
+    netz: { v: 2, nodes: i5netz.nodes, cables: i5netz.cables }
+  };
+
+  /* ═══ I.6 · Webseiten und DNS ═══════════════════════════════════
+     Fünf Häuser, alles läuft. Neu ist der Inhalt: Ein Haus hat den
+     Webserver, eines den DNS-Server. Das Kind ruft die Seite erst
+     mit der Adresse auf und holt dann den Namen dazu. */
+  macN = 1300; cabN = 1300;
+  const i6dns = '192.168.4.20';
+  const i6netz = vermascht({
+    p: 'w', n: 5, links: [[0, 1], [1, 2], [2, 3], [3, 4], [0, 2], [2, 4], [1, 3]],
+    lan: (i) => [
+      { hosts: [{ cfg: { dns: i6dns, software: ['browser'] } }, { cfg: { dns: i6dns, software: ['browser'] } }] },
+      { hosts: [{ kind: 'server', name: 'DHCP-Server', ip: 20, dhcpServer: { dns: i6dns } },
+                { dhcp: true, cfg: { software: ['browser'] } }] },
+      { hosts: [{ kind: 'server', name: 'Webserver', ip: 20, cfg: { dns: i6dns } }] },
+      { hosts: [{ kind: 'server', name: 'DNS-Server', ip: 20, cfg: { dns: i6dns } }] },
+      { hosts: [{ cfg: { dns: i6dns, software: ['browser'] } }] }
+    ][i]
+  });
+  Object.assign(nach(i6netz, 'Webserver'), {
+    software: ['webserver'], webServer: { on: true },
+    dateien: Object.assign(nach(i6netz, 'Webserver').dateien || {}, {
+      '/webserver': { ordner: true },
+      '/webserver/index.html': { text: window.Http ? window.Http.SEITE : '' },
+      '/webserver/stil.css':   { text: window.Http ? window.Http.STIL : '' },
+      '/webserver/logo.png':   { bild: '@schule' }
+    })
+  });
+  Object.assign(nach(i6netz, 'DNS-Server'), { software: ['dns'], dnsServer: { on: true, records: [] } });
+  const i6 = {
+    titel: 'I.6 · Webseiten und DNS', gruppe: SEK1,
+    aufgabe: auftrag({
+      kontext: 'Das Schulnetz mit fünf Häusern läuft. Jetzt kommt Inhalt dazu: In Haus 3 steht der '
+        + '<strong>Webserver</strong>, in Haus 4 der <strong>DNS-Server</strong>. Auf den Endgeräten liegt ein Webbrowser.',
+      aufgaben: [
+        { typ: 'benutzen', text: 'Schalte auf <em>Aktion</em>, öffne bei <strong>E1</strong> den Webbrowser und ruf den Webserver '
+          + 'über seine <em>Adresse</em> auf: <code>192.168.3.20</code>.' },
+        { typ: 'veraendern', text: 'Trag beim DNS-Server den Namen <code>www.schule.de</code> für die Adresse des Webservers ein '
+          + 'und ruf die Seite jetzt über den Namen auf. Öffne dann auf dem Webserver den Datei-Explorer, bearbeite '
+          + '<code>/webserver/index.html</code> (schreib deine eigene Überschrift hinein) und lade die Seite neu.' },
+        { typ: 'erweitern', text: 'Baue in <strong>Haus 5</strong> einen zweiten Webserver mit einer eigenen Seite und gib '
+          + 'ihm einen eigenen Namen im DNS, zum Beispiel <code>mensa.schule.de</code>. Beide Seiten sollen von allen Endgeräten '
+          + 'erreichbar sein.' }
+      ],
+      hilfe: [
+        { begriff: 'Webserver', text: 'Ein Programm, das Webseiten ausliefert. Die Seite ist eine Datei auf dem Server '
+          + '(<code>index.html</code>). Der Browser fragt sie ab und zeigt sie an.' },
+        { begriff: 'DNS', text: 'Das Namensverzeichnis des Netzes. Menschen merken sich Namen, Geräte brauchen Adressen — der '
+          + 'DNS-Server übersetzt. Ein Name existiert nur, wenn jemand ihn eingetragen hat.' },
+        { begriff: 'Adresse des DNS', text: 'Ein Gerät muss wissen, <em>wo</em> der DNS-Server steht. Bei den Endgeräten steht seine '
+          + 'Adresse im Feld „DNS-Server“, per DHCP kommt sie von selbst mit.' }
+      ],
+      stern: 'Schalte den DNS-Server aus. Was geht noch, was nicht mehr? Was sagt dir das darüber, wovon eine Webseite abhängt?'
+    }),
+    netz: { v: 2, nodes: i6netz.nodes, cables: i6netz.cables }
+  };
+
+  /* ═══ I.7 · Class Wide Web ══════════════════════════════════════
+     Dein eigenes Netz im Internet der Klasse. Der öffentliche DNS
+     (8.8.8.8) steht schon; alles andere ist leer, auch jede
+     Adresse — denn welcher Bereich dir gehört, sagt erst der Raum
+     (siehe Szenario „Ins Internet“ unten). */
+  macN = 1400; cabN = 1400;
+  const i7 = {
+    titel: 'I.7 · Class Wide Web', gruppe: SEK1,
+    aufgabe: auftrag({
+      kontext: 'Dein Netz hängt jetzt am <strong>Class Wide Web</strong>, dem Internet der Klasse. Der öffentliche DNS '
+        + '<code>8.8.8.8</code> steht schon. Alles andere ist noch leer — auch alle Adressen.',
+      aufgaben: [
+        { typ: 'benutzen', text: 'Öffne das <strong>cww</strong> oben: Im Reiter <em>Internet</em> steht <strong>dein Adressbereich</strong> '
+          + '(zum Beispiel <code>X.0.0.0/8</code>). Nur Adressen daraus kommen ins Internet. Trag ihn dir auf.' },
+        { typ: 'veraendern', text: 'Gib dem cww, dem Switch-Netz und allen Geräten Adressen aus deinem Bereich. Der Server bekommt '
+          + '<code>X.0.0.20</code> mit dem Gateway <code>X.0.0.1</code> (die Adresse des cww). Trag als DNS <code>8.8.8.8</code> ein '
+          + 'und melde einen Namen an, zum Beispiel <code>www.deinname.de</code>.' },
+        { typ: 'erweitern', text: 'Baue deine Webseite auf dem Server und erweitere dein Netz: weitere Endgeräte, ein zweiter Raum. '
+          + 'Dann <strong>besuche die Seite von jemand anderem</strong> aus der Klasse — und lass ihn deine besuchen.' }
+      ],
+      hilfe: [
+        { begriff: 'Adressbereich', text: 'Jeder hat einen eigenen Bereich, wie ein Internetanbieter ihn bekommt. Nur er kommt ins '
+          + 'Internet. Den anderer kennst du nicht — du findest sie über den Namen.' },
+        { begriff: '8.8.8.8', text: 'Ein öffentlicher DNS-Server, der viele Namen kennt. Wenn dein Name dort steht, findet ihn '
+          + 'jeder. Steht er nicht dort, kennt dich niemand.' },
+        { begriff: 'traceroute', text: 'Im Terminal zeigt <code>traceroute</code> die Stationen auf dem Weg zu einem Ziel.' }
+      ],
+      stern: 'Welche Adresse hat die Seite deines Nachbarn? Wem gehört sie — und wie könntest du das herausfinden?'
+    }),
+    netz: {
+      v: 2,
+      nodes: [
+        dev('c1', 'cww',    'Class Wide Web 1', 720, 190, { ports: 2 }),
+        dev('c2', 'switch', 'Switch 1',          720, 380),
+        dev('c3', 'server', 'Server 1',          980, 540, {
+          software: ['dns', 'webserver'], webServer: { on: true }, dnsServer: { records: [] },
+          dateien: {
+            '/webserver': { ordner: true },
+            '/webserver/index.html': { text: window.Http ? window.Http.SEITE : '' },
+            '/webserver/stil.css':   { text: window.Http ? window.Http.STIL : '' },
+            '/webserver/logo.png':   { bild: '@schule' }
+          }
+        }),
+        dev('c4', 'host', 'Endgerät 1', 460, 540, { software: ['browser'] }),
+        dev('c5', 'host', 'Endgerät 2', 720, 640, { software: ['browser'] })
+      ],
+      cables: [cab('c1', 1, 'c2', 0), cab('c2', 1, 'c3', 0), cab('c2', 2, 'c4', 0), cab('c2', 3, 'c5', 0)]
+    }
+  };
+
   /* ═══ 1 · Zwei Endgeräte ═══════════════════════════════════════
      Das kleinste Netz, das es gibt. Bewusst OHNE Adressen: die
      erste Erfahrung soll sein, dass ein Kabel allein nichts
@@ -688,5 +952,5 @@
     }
   };
 
-  window.SZENARIEN = { i1, i2, i3, zwei, lernen, router, fehler, automatisch, namen, web, internet };
+  window.SZENARIEN = { i1, i2, i3, i4, i5, i6, i7, zwei, lernen, router, fehler, automatisch, namen, web, internet };
 })();

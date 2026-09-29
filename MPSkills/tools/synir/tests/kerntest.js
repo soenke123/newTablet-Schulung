@@ -336,7 +336,7 @@ section('Szenarien');
   const S = sandbox.SZENARIEN;
   /* Übergang: die neuen Sek-I-Szenarien (i1…) stehen vor den acht
      bisherigen, die nach und nach ersetzt werden. */
-  ok('Szenarien vorhanden (i1 bis i3 neu, acht bisherige)', Object.keys(S).length === 11, Object.keys(S).join(','));
+  ok('Szenarien vorhanden (i1 bis i7 neu, acht bisherige)', Object.keys(S).length === 15, Object.keys(S).join(','));
   ok('jedes Szenario trägt eine Gruppe', Object.keys(S).every(k => !!S[k].gruppe));
 
   for (const k in S) {
@@ -1829,11 +1829,11 @@ section('Kennungen in den Programmfenstern');
 }
 
 /* ═══ 10b · Sek I: die neuen Szenarien I.1 bis I.3 ═══ */
-section('Sek I · I.1 bis I.3');
+section('Sek I · I.1 bis I.7');
 {
   const S = sandbox.SZENARIEN;
   // Die Auftragskarte liegt links oben — dort steht kein Gerät.
-  for (const k of ['i1', 'i2', 'i3']) {
+  for (const k of ['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7']) {
     ok(k + ': keine Geräte unter der Auftragskarte',
        S[k].netz.nodes.every(n => !(n.x < 430 && n.y < 280)));
     ok(k + ': Auftrag hat Kontext, Aufgaben und Hilfe',
@@ -1909,6 +1909,114 @@ section('Sek I · I.1 bis I.3');
        ips.every(ip => U.ip2int(ip) >= U.ip2int('192.168.1.100') && U.ip2int(ip) <= U.ip2int('192.168.1.150')));
     const sw = netz.byName('Switch 1');
     ok('I.3: der Switch kann ein WLAN ausstrahlen', sandbox.Netz.KIND.switch.wlan === true && !netz.strahlt(sw));
+  }
+
+  /* Hilfen für die Netze mit mehreren Routern (I.4 bis I.6). */
+  const lade = (k) => {
+    const { engine, netz, stack } = bau();
+    const dienste = new sandbox.Dienste(engine, netz, stack, {});
+    const term = new sandbox.Terminal(engine, netz, stack, dienste);
+    netz.fromJSON(U.deepCopy(S[k].netz));
+    return { engine, netz, stack, dienste, term };
+  };
+  const zeilen = (term, n) => term.linesOf(n.id).map(l => l.text).join('\n');
+  const ping = (z, von, ziel, sek) => {
+    z.term.submit(von.id, 'ping ' + ziel);
+    z.engine.runUntil(z.engine.now + (sek || 30) * SEC);
+    return zeilen(z.term, von);
+  };
+  const ankommt = (txt) => /Antwort von/.test(txt.split('\n').slice(-6).join('\n'));
+
+  // I.4: leere Router; nach dem Eintragen findet RIP den Weg.
+  {
+    const z = lade('i4');
+    const rs = z.netz.list().filter(n => n.kind === 'router');
+    ok('I.4: drei Router, alle leer und mit automatischem Routing',
+       rs.length === 3 && rs.every(r => r.nics.every(k => !k.ip) && r.rip && r.rip.on));
+    z.dienste.start();
+    const e1 = z.netz.byName('Endgerät 1');
+    const ferne = z.netz.byName('Endgerät 6');
+    ok('I.4: vor dem Eintragen kommt nichts nach Haus 3', !ankommt(ping(z, e1, '192.168.3.10', 20)));
+    // Der Adressplan aus der Hilfe.
+    const R = (i) => z.netz.byName('Router ' + i);
+    konf(R(1), 0, '192.168.1.1'); konf(R(1), 1, '192.168.101.1');
+    konf(R(2), 0, '192.168.2.1'); konf(R(2), 1, '192.168.101.2'); konf(R(2), 2, '192.168.102.1');
+    konf(R(3), 0, '192.168.3.1'); konf(R(3), 1, '192.168.102.2');
+    z.engine.runUntil(z.engine.now + 30 * SEC);
+    ok('I.4: nach dem Adressplan reicht der Ping über zwei Router', ankommt(ping(z, e1, '192.168.3.10', 40)),
+       zeilen(z.term, e1).slice(-300));
+    const h = z.netz.list().filter(n => n.nics[0] && n.nics[0].dhcp);
+    ok('I.4: die DHCP-Geräte in Haus 2 haben eine Adresse in ihrem Netz',
+       h.length === 2 && h.every(x => /^192\.168\.2\.1\d\d$/.test(x.nics[0].ip)), h.map(x => x.nics[0].ip).join(','));
+    ok('I.4: sie tragen den Router als Gateway', h.every(x => x.gateway === '192.168.2.1'));
+  }
+
+  // I.5: sechs Fehler, einer nach dem anderen behoben.
+  {
+    const z = lade('i5');
+    z.dienste.start();
+    z.engine.runUntil(20 * SEC);
+    const E = (n) => z.netz.byName('Endgerät ' + n);
+    const R = (i) => z.netz.byName('Router ' + i);
+    const alleEnden = () => z.netz.list().filter(n => n.kind === 'host' || n.kind === 'handy');
+    ok('I.5: vier Router, Vermaschung (mehr Kabel als für eine Reihe nötig)',
+       z.netz.list().filter(n => n.kind === 'router').length === 4
+       && z.netz.cableList().filter(c => /^fr/.test(c.a.node) && /^fr/.test(c.b.node)).length === 5);
+    ok('I.5: zu Beginn erreicht E1 nicht alle', !ankommt(ping(z, E(1), '192.168.3.10', 30)) || !ankommt(ping(z, E(1), '192.168.4.10', 30)));
+    // 1 · Router 3 ohne Adresse
+    konf(R(3), 0, '192.168.3.1');
+    // 2 · Gateway in Haus 4
+    const haus4 = z.netz.list().filter(n => n.nics[0] && /^192\.168\.4\./.test(n.nics[0].ip) && n.kind === 'host');
+    haus4.forEach(x => { x.gateway = '192.168.4.1'; });
+    // 3 · DHCP-Dienst
+    z.netz.dhcpConf(z.netz.byName('DHCP-Server')).on = true;
+    // 4 · WLAN-Name
+    const handy = z.netz.byName('Handy 1');
+    z.netz.setFunk(handy, 0, true, 'Schul-WLAN');
+    // 5 · Routing an Router 4
+    z.netz.ripConf(R(4)).on = true;
+    // 6 · das fehlende Kabel
+    const lose = z.netz.list().find(n => n.kind === 'host' && !n.nics[0].cable && n.nics[0].ip);
+    ok('I.5: ein Endgerät hat kein Kabel', !!lose);
+    z.netz.addCable(lose.id, 0, z.netz.byName('Switch 1').id, 3);
+    z.dienste.start();
+    z.engine.runUntil(z.engine.now + 60 * SEC);
+    const ende = alleEnden();
+    ok('I.5: nach sechs Reparaturen hat jedes Endgerät eine Adresse',
+       ende.every(x => x.nics[0].ip), ende.map(x => x.name + ':' + x.nics[0].ip).join(' '));
+    const quelle = E(1);
+    const nichtOk = [];
+    for (const x of ende) {
+      if (x === quelle) continue;
+      if (!ankommt(ping(z, quelle, x.nics[0].ip, 40))) nichtOk.push(x.name + ' ' + x.nics[0].ip);
+    }
+    ok('I.5: und E1 erreicht danach alle', nichtOk.length === 0, nichtOk.join(', '));
+  }
+
+  // I.6: Webserver und DNS im Fünf-Häuser-Netz.
+  {
+    const z = lade('i6');
+    ok('I.6: fünf Router, teilvermascht',
+       z.netz.list().filter(n => n.kind === 'router').length === 5);
+    z.dienste.start();
+    z.engine.runUntil(30 * SEC);
+    const E1 = z.netz.list().find(n => n.kind === 'host' && /^192\.168\.1\./.test(n.nics[0].ip));
+    ok('I.6: E1 erreicht den Webserver über die Adresse', ankommt(ping(z, E1, '192.168.3.20', 40)),
+       zeilen(z.term, E1).slice(-200));
+    const dns = z.netz.byName('DNS-Server');
+    dns.dnsServer.records.push({ name: 'www.schule.de', ip: '192.168.3.20' });
+    ok('I.6: über den Namen erst, wenn er eingetragen ist', ankommt(ping(z, E1, 'www.schule.de', 40)),
+       zeilen(z.term, E1).slice(-200));
+    ok('I.6: der Webserver bringt seine Seite mit',
+       !!z.netz.byName('Webserver').dateien['/webserver/index.html']);
+  }
+
+  // I.7: alles leer bis auf den öffentlichen DNS.
+  {
+    const z = lade('i7');
+    ok('I.7: cww, kein Gerät hat eine Adresse',
+       z.netz.list().some(n => n.kind === 'cww')
+       && z.netz.list().filter(n => n.kind !== 'cww' && n.kind !== 'switch').every(n => !n.nics[0].ip));
   }
 }
 

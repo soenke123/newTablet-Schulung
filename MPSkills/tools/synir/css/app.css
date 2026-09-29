@@ -1350,7 +1350,8 @@ body.is-ziehen, body.is-ziehen * {
    ⚠️ `overflow: visible`, damit die Klammer über den oberen Rand
    ragen darf. Die Ecken runden deshalb die Kinder selbst. */
 .aufgabe {
-  position: absolute; left: 18px; top: 18px; width: min(370px, calc(100% - 36px));
+  position: absolute; left: 18px; top: 18px; width: min(430px, calc(100% - 36px));
+  display: flex; flex-direction: column;
   background: var(--auf-bg); backdrop-filter: blur(4px);
   border: 1px solid var(--auf-line);
   border-radius: var(--r3); box-shadow: none;
@@ -1402,14 +1403,31 @@ body.is-ziehen, body.is-ziehen * {
    zusammen: beide stehen dann in derselben linken Spalte und
    ragen nicht mehr über die Fläche. */
 body.sub-open .aufgabe { width: 258px; }
+/* Hat jemand die Karte selbst in der Größe gezogen, gilt sein Maß
+   (inline) — dann darf der Körper die ganze Höhe füllen. */
+.aufgabe[hidden] { display: none; }   /* display:flex schlägt sonst das Attribut */
+.aufgabe.is-gross { min-width: 240px; }
+.aufgabe.is-gross .auf-b { max-height: none; flex: 1 1 auto; }
 
 /* Gedeckelt, damit die Karte nie tiefer reicht als die Ecke, die
    die Szenarien für sie freihalten (SVG: x < 430, y < 280). */
 .auf-b {
   padding: 4px 16px 14px; font-size: 13.5px;
-  max-height: min(240px, 30vh); overflow: auto;
+  max-height: min(290px, 38vh); overflow: auto; min-height: 0; flex: 0 1 auto;
   border-radius: 0 0 calc(var(--r3) - 1px) calc(var(--r3) - 1px);
 }
+/* Der Griff unten rechts: zwei Schrägstriche, wie überall. */
+.auf-grip {
+  position: absolute; right: 2px; bottom: 2px; width: 22px; height: 22px;
+  cursor: nwse-resize; touch-action: none; z-index: 2;
+  border-radius: 0 0 calc(var(--r3) - 2px) 0;
+  background: linear-gradient(135deg, transparent 0 52%, var(--ink-3) 52% 58%, transparent 58% 70%,
+                              var(--ink-3) 70% 76%, transparent 76%);
+  opacity: .55;
+}
+.auf-grip:hover, .aufgabe.is-groesse .auf-grip { opacity: 1; }
+.aufgabe.is-groesse { user-select: none; }
+.auf-b { padding-right: 24px; }
 .auf-b p { margin: 10px 0; }
 .auf-b p:first-child { margin-top: 6px; }
 
