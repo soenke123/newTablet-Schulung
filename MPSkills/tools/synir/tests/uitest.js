@@ -5986,6 +5986,18 @@ async function markenAn(page, name, art) {
                && z.some(x => x.includes('14.0.0.0'));
          }) && t.includes('vom CWW'));
     }
+    ok('⭐ „Allgemein" nennt die DNS-Adresse 8.8.8.8, gesperrt',
+       await page.evaluate(() => { const i = document.querySelector('#karteBody input[data-f="dnsfest"]');
+         return !!i && i.value === '8.8.8.8' && i.disabled; }));
+    await gross(page, false);
+    ok('⭐ auch im kleinen Kärtchen steht 8.8.8.8, gesperrt',
+       await page.evaluate(() => { const i = document.querySelector('#karteBody input[data-f="dnsfest"]');
+         return !!i && i.value === '8.8.8.8' && i.disabled; }));
+    await gross(page, true);
+    ok('⭐ im Aktionsmodus (kompakte Ansicht) steht die DNS-Adresse ebenfalls',
+       await page.evaluate(() => { const S = window.SIM; const d = document.createElement('div');
+         S.konfig.kompakt(S.netz.cwwVon(), d);
+         return [...d.querySelectorAll('.kk-z')].some(z => z.textContent.includes('DNS') && z.textContent.includes('8.8.8.8')); }));
     await page.locator('[data-k="dnsseite"]').click();
     await page.waitForTimeout(250);
     {

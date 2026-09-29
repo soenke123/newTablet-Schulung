@@ -562,7 +562,7 @@ Reihenfolge — außen, innen, Einstellungen):
 |---|---|
 | *Internet* | der Weg nach draußen: Adresse in der Wolke (`8.x.y.z`) und Netzmaske; darunter die **Bereiche der anderen** im Raum (`13.0.0.0/8`, `14.0.0.0/8`, …) — nur die Zahlen, nur lesen |
 | *Netzwerkkarten* | der eigene Adressbereich, groß; darunter die Karten nach innen |
-| *Allgemein* | DHCP-Server, DNS (Knopf „DNS-Liste öffnen" → Unterseite mit der Liste von 8.8.8.8, auch im Aktionsmodus lesbar), Routing: RIP-Haken und Weiterleitungstabelle, in der die Bereiche der anderen **schon voreingetragen** stehen („vom CWW", nur lesen; eigene Zeilen kommen darunter) |
+| *Allgemein* | DHCP-Server, DNS (die Adresse `8.8.8.8` fest und gesperrt, auch im kleinen Kärtchen und im Aktionsmodus; Knopf „DNS-Liste öffnen" → Unterseite mit der Liste von 8.8.8.8, auch im Aktionsmodus lesbar), Routing: RIP-Haken und Weiterleitungstabelle, in der die Bereiche der anderen **schon voreingetragen** stehen („vom CWW", nur lesen; eigene Zeilen kommen darunter) |
 
 Bearbeiten geht nur im Entwurf. Im Aktionsmodus zeigt `konfig.kompakt` dieselben
 Blöcke in derselben Reihenfolge als Zeilen, ohne Reiter — Lehrkraft und Kinder sehen

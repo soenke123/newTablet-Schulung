@@ -359,6 +359,8 @@
             h += '<div class="k-hint dim">aus</div>';
           }
           h += dnsBlock();
+        } else {
+          h += dnsFeld(false);
         }
         h += netzeBlock(node, sn, mehr);
         h += ripBlock(node, ro, mehr);
@@ -606,9 +608,14 @@
       + 'zuerst anmeldet, bekommt ihn. Eintragen kann man hier nichts — das geht nur am eigenen DNS-Server.';
 
     /* „Allgemein": DNS — ein Knopf, hinter dem die Liste steht. */
+    /* Die Adresse selbst, gesperrt: sie steht fest und lässt sich nicht
+       ändern — groß wie klein (auch im Kärtchen und im Aktionsmodus). */
+    const DNS_IP = (window.Internet && window.Internet.DNS_IP) || '8.8.8.8';
+    const dnsFeld = (mehr) => feld(mehr ? 'Domain Name System (DNS)' : 'DNS', 'dnsfest', DNS_IP, true, '', true);
     function dnsBlock() {
       return sec('DNS', 'cww-dns', 'Das cww fragt keinen DNS-Server, es ist selbst das Gateway — '
           + 'draußen steht 8.8.8.8, der öffentliche DNS.')
+        + dnsFeld(true)
         + '<button class="k-add" data-k="dnsseite">DNS-Liste öffnen'
         + '<span data-live="dnsn">' + liveHtml('dnsn') + '</span></button>';
     }
@@ -2152,6 +2159,7 @@
           + '<div class="kk-g">'
           +   z('DHCP-Server', anAus(ds && ds.on, ds && ds.on && ds.von
                 ? '<span class="mono">' + esc(ds.von) + ' – ' + esc(ds.bis || '') + '</span>' : ''))
+          +   z('DNS', mono(DNS_IP))
           +   z('Automatisches Routing', anAus(netz.ripConf(node).on))
           + '</div>'
           + '<div class="k-sec">DNS · 8.8.8.8</div>' + live('dns', dnsListe())
