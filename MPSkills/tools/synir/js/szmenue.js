@@ -79,7 +79,14 @@
         html += '<p class="szm-leer">' + leerText() + '</p>';
       } else {
         html += '<ul class="szm-list">';
+        let gruppe;
         for (const it of l) {
+          /* Überschriften zwischen den Szenarien (Sek I / Sek II) —
+             keine Reiter: alles steht in EINER Liste untereinander. */
+          if (it.gruppe && it.gruppe !== gruppe) {
+            gruppe = it.gruppe;
+            html += '<li class="szm-head" role="presentation">' + esc(gruppe) + '</li>';
+          }
           const an = lehrer && istGeteilt(it.id);
           html += '<li class="szm-item' + (an ? ' is-shared' : '') + '" data-id="' + esc(it.id) + '">'
             + '<button type="button" class="szm-name" data-act="pick">' + esc(it.titel) + '</button>';

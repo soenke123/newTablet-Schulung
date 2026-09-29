@@ -48,6 +48,8 @@
         mask: c.mask || (c.dhcp ? '' : '255.255.255.0'),
         dhcp: !!c.dhcp, up: true
       });
+      // Eine Karte, die ein Funknetz sucht (Handy): nur setzen, wenn gewollt.
+      if (c.funk) { nics[i].funk = true; nics[i].ssid = c.ssid || ''; }
     }
     const d = {
       id, kind, name, x, y,
@@ -56,6 +58,8 @@
     };
     // Dienste nur, wenn das Szenario sie braucht — sonst stünde in
     // jedem gespeicherten Netz bei jedem Gerät ein leerer Dienst.
+    if (cfg.wlan) d.wlan = Object.assign({ on: true, ssid: '' }, cfg.wlan);
+    if (cfg.rip)  d.rip  = { on: true };   // Sek I: die Router lernen die Wege selbst
     if (cfg.dhcpServer) d.dhcpServer = Object.assign({ on: true, nic: 0, lease: 600 }, cfg.dhcpServer);
     if (cfg.dnsServer)  d.dnsServer  = Object.assign({ on: true, records: [] }, cfg.dnsServer);
     if (cfg.webServer)  d.webServer  = Object.assign({ on: true }, cfg.webServer);
@@ -89,11 +93,200 @@
     return d;
   }
 
+  /* ─── Der Aufbau eines Auftrags ────────────────────────────────
+     Jeder Auftrag hat dieselben Bausteine, damit man sich in jedem
+     Szenario auf Anhieb zurechtfindet:
+
+       kontext    2–3 Sätze: was ist das für ein Netz, warum gibt es das
+       aufgaben   [{ typ, text, label? }]  nach „Benutzen – Verändern –
+                  Erweitern" (Use – Modify – Create). `bauen` steht dort,
+                  wo das Netz am Anfang noch leer ist.
+       hilfe      [{ begriff, text }]  eingeklappt. Erklärt das NEUE
+                  Element, keine Klickfolge: es soll nicht am Wort
+                  scheitern, aber die Aufgabe bleibt die des Kindes.
+       stern      eine offene Frage für die Schnellen (optional)
+
+     Das Ergebnis ist ein HTML-Text — dieselbe Form wie zuvor, damit
+     Speichern, Teilen im Raum und der Aufgaben-Editor unverändert
+     weiterarbeiten. Alle Klassen kennt der Türsteher (aufgabe.js). */
+  const AUFG = {
+    benutzen:   { k: 'aufg-b', label: 'Benutzen.' },
+    veraendern: { k: 'aufg-v', label: 'Verändern.' },
+    erweitern:  { k: 'aufg-e', label: 'Erweitern.' },
+    bauen:      { k: 'aufg-e', label: 'Bauen.' }
+  };
+  function auftrag(o) {
+    let h = '<p class="kontext">' + o.kontext + '</p>';
+    for (const a of o.aufgaben) {
+      const t = AUFG[a.typ];
+      h += '<p class="' + t.k + '"><strong>' + (a.label || t.label) + '</strong> ' + a.text + '</p>';
+    }
+    if (o.hilfe && o.hilfe.length) {
+      h += '<details><summary>Hilfe: ' + o.hilfe.map(x => x.begriff).join(' · ') + '</summary>'
+        + o.hilfe.map(x => '<p><strong>' + x.begriff + '.</strong> ' + x.text + '</p>').join('')
+        + '</details>';
+    }
+    if (o.stern) h += '<p class="stern">★ <strong>Für Schnelle:</strong> ' + o.stern + '</p>';
+    return h;
+  }
+
+  const SEK1 = 'Sek I · Klasse 8';
+  const ALT  = 'Bisherige Szenarien (werden ersetzt)';
+
   let cabN = 0;
   const cab = (an, ai, bn, bi, opt) => Object.assign({
     id: 'c' + (++cabN), a: { node: an, nic: ai }, b: { node: bn, nic: bi },
     delay: 100000, loss: 0, up: true   // 100 ms, siehe KABEL_MS in netz.js
   }, opt || {});
+
+  /* ═══════════════════════════════════════════════════════════════
+     SEK I · KLASSE 8 — ein Netz wächst
+     Kein Routing von Hand, keine unterschiedlichen Masken (immer
+     255.255.255.0). Wo mehrere Router im Spiel sind (I.4 ff.), ist
+     das automatische Routing eingeschaltet: die Router lernen die
+     Wege selbst, und ein Kind sieht davon nichts.
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* ═══ I.1 · Zwei Geräte ═════════════════════════════════════════
+     Nichts ist verbunden. Kein Kabel, kein Switch: das Kind zieht
+     das erste Kabel selbst. Weil ein Endgerät nur EINE Buchse hat,
+     scheitert das Erweitern auf fünf Geräte von allein — und der
+     Switch ist keine Erklärung mehr, sondern die Lösung. */
+  macN = 800; cabN = 800;
+  const i1 = {
+    titel: 'I.1 · Zwei Geräte', gruppe: SEK1,
+    aufgabe: auftrag({
+      kontext: 'Im Computerraum stehen zwei Rechner, aber sie sind nicht verbunden. '
+        + 'Du baust das kleinste Netzwerk der Welt.',
+      aufgaben: [
+        { typ: 'bauen', text: 'Verbinde <strong>E1</strong> und <strong>E2</strong> mit einem Kabel und gib '
+          + 'beiden eine IP-Adresse aus demselben Netz, zum Beispiel <code>192.168.1.10</code> und '
+          + '<code>192.168.1.11</code> (Netzmaske <code>255.255.255.0</code>). Prüfe mit einem Ping, ob sie sich erreichen.' },
+        { typ: 'veraendern', text: 'Gib E2 die Adresse <code>192.168.2.11</code>. Sag vorher voraus, ob der Ping noch '
+          + 'klappt — und warum (nicht). Teste, dann stell es wieder richtig ein.' },
+        { typ: 'erweitern', text: 'Jetzt sollen <strong>fünf</strong> Geräte miteinander reden. Baue E3 bis E5 dazu, '
+          + 'sodass jedes Gerät jedes andere erreicht. Prüfe mit Pings.' }
+      ],
+      hilfe: [
+        { begriff: 'IP-Adresse', text: 'Die „Hausnummer“ eines Geräts im Netz: vier Zahlen von 0 bis 255, durch Punkte '
+          + 'getrennt. Zwei Geräte im selben Netz dürfen nie dieselbe haben.' },
+        { begriff: 'Netzmaske', text: 'Sie sagt, welcher Teil der Adresse zum Netz gehört. Bei <code>255.255.255.0</code> '
+          + 'sind es die ersten drei Zahlen: <code>192.168.1.x</code> liegt im selben Netz, <code>192.168.2.x</code> nicht.' },
+        { begriff: 'Ping', text: 'Ein „Bist du da?“ an eine Adresse. Kommt die Antwort zurück, funktioniert die Verbindung. '
+          + 'Im Modus <em>Aktion</em> tippst du das Gerät an und schreibst im Terminal <code>ping</code> und die Adresse.' },
+        { begriff: 'Switch', text: 'Ein Verteiler mit vielen Buchsen. Alle Geräte stecken am Switch, und er leitet '
+          + 'jede Nachricht an das Gerät weiter, für das sie gedacht ist. Ein Endgerät selbst hat nur eine Buchse.' }
+      ],
+      stern: 'Schick einen Ping an eine Adresse, die es im Netz nicht gibt. Was passiert — und woher weiß dein Gerät, '
+        + 'dass niemand antwortet?'
+    }),
+    netz: {
+      v: 2,
+      nodes: [
+        dev('p1', 'host', 'Endgerät 1', 500, 460),
+        dev('p2', 'host', 'Endgerät 2', 900, 460)
+      ],
+      cables: []
+    }
+  };
+
+  /* ═══ I.2 · Zwei Netze, ein Router ══════════════════════════════
+     Zwei Netze, die für sich funktionieren. Der Router fehlt — und
+     mit ihm das Gateway. Wer beides einträgt, hat den Sprung vom
+     Raum zum Netz der Netze gemacht. */
+  macN = 900; cabN = 900;
+  const i2 = {
+    titel: 'I.2 · Zwei Netze, ein Router', gruppe: SEK1,
+    aufgabe: auftrag({
+      kontext: 'Die Klassen 8b und 8c haben je ein eigenes Netz. Jedes funktioniert für sich, '
+        + 'aber die beiden wissen nichts voneinander.',
+      aufgaben: [
+        { typ: 'benutzen', text: 'Schick Pings von <strong>E1</strong> zu E2 und von <strong>E3</strong> zu E4. '
+          + 'Dann von E1 zu E3. Was klappt, was nicht?' },
+        { typ: 'veraendern', text: 'Baue einen <strong>Router</strong> zwischen die beiden Switches. Gib ihm in jedem Netz '
+          + 'eine Adresse (<code>192.168.1.1</code> und <code>192.168.2.1</code>). Der Ping von E1 zu E3 klappt noch '
+          + 'nicht. Finde heraus, was den Endgeräten noch fehlt, und trag es ein.' },
+        { typ: 'erweitern', text: 'Baue ein <strong>drittes Netz</strong> für den Serverraum (<code>192.168.3.x</code>) an '
+          + 'denselben Router: ein Switch und ein Server. Der Server soll von allen Endgeräten erreichbar sein.' }
+      ],
+      hilfe: [
+        { begriff: 'Router', text: 'Verbindet Netze miteinander. Er hat in jedem Netz, an dem er hängt, eine eigene Adresse.' },
+        { begriff: 'Gateway', text: 'Ein Endgerät kennt nur sein eigenes Netz. Alles, was woanders hin soll, schickt es an das '
+          + '<em>Gateway</em> — das ist die Adresse des Routers in seinem eigenen Netz.' },
+        { begriff: 'Selbes Netz?', text: 'Bei der Netzmaske <code>255.255.255.0</code> gehören Adressen zusammen, wenn die '
+          + 'ersten drei Zahlen gleich sind.' }
+      ],
+      stern: 'Lösche bei E1 das Gateway wieder. Was geht dann noch, was nicht mehr? Sag es vorher voraus.'
+    }),
+    netz: {
+      v: 2,
+      nodes: [
+        dev('q1', 'host',   'Endgerät 1', 175, 450, { nics: [{ ip: '192.168.1.10' }] }),
+        dev('q2', 'host',   'Endgerät 2', 175, 680, { nics: [{ ip: '192.168.1.11' }] }),
+        dev('q3', 'switch', 'Switch 1',  420, 565),
+        dev('q4', 'switch', 'Switch 2',  790, 565),
+        dev('q5', 'host',   'Endgerät 3', 1030, 450, { nics: [{ ip: '192.168.2.10' }] }),
+        dev('q6', 'host',   'Endgerät 4', 1030, 680, { nics: [{ ip: '192.168.2.11' }] })
+      ],
+      cables: [
+        cab('q1', 0, 'q3', 0), cab('q2', 0, 'q3', 1),
+        cab('q4', 0, 'q5', 0), cab('q4', 1, 'q6', 0)
+      ]
+    }
+  };
+
+  /* ═══ I.3 · DHCP und WLAN ═══════════════════════════════════════
+     Ein Raum mit zehn Geräten: von Hand wäre das ein Nachmittag.
+     Der Server steht schon da und teilt Adressen aus; das Kind
+     stellt um. Danach kommt das WLAN — und mit ihm die Handys, die
+     keine Buchse haben und ohne DHCP gar nicht ins Netz fänden. */
+  macN = 1000; cabN = 1000;
+  const i3nodes = [], i3cables = [];
+  for (let k = 0; k < 10; k++) {
+    const links = k < 5;
+    // Versetzt in zwei Spalten, damit fünf Geräte übereinander nicht
+    // aufeinander sitzen und die Marke „keine IP" lesbar bleibt.
+    const y = 440 + (k % 5) * 75, versatz = (k % 2) * 150;
+    i3nodes.push(dev('s' + (k + 1), 'host', 'Endgerät ' + (k + 1), links ? 170 + versatz : 1100 - versatz, y));
+    i3cables.push(cab('s' + (k + 1), 0, 's0', k));
+  }
+  const i3 = {
+    titel: 'I.3 · DHCP und WLAN', gruppe: SEK1,
+    aufgabe: auftrag({
+      kontext: 'Im Computerraum stehen zehn Endgeräte am Switch, noch ohne Adresse. Jedem von Hand eine zu geben '
+        + 'wäre mühsam — auf dem <strong>Server</strong> läuft deshalb ein DHCP-Server, der Adressen verteilt.',
+      aufgaben: [
+        { typ: 'benutzen', text: 'Schau dir den DHCP-Server am Server an: Welcher Adressbereich ist eingestellt? '
+          + 'Stell dann <strong>E1</strong> auf <em>DHCP zur Konfiguration verwenden</em> und schau, welche Adresse es bekommt.' },
+        { typ: 'veraendern', text: 'Ändere am DHCP-Server den Bereich auf <code>192.168.1.50</code> bis <code>192.168.1.70</code> '
+          + 'und lass E1 eine neue Adresse holen. Sag vorher voraus, welche es bekommt.' },
+        { typ: 'erweitern', text: 'Binde <strong>alle zehn</strong> Endgeräte per DHCP ein. Ein Ping von E1 zu E10 muss klappen.' },
+        { typ: 'erweitern', label: 'Weiter erweitern.', text: 'Lass den Switch ein <strong>WLAN</strong> ausstrahlen und bring drei '
+          + '<strong>Handys</strong> ins Netz. Auch sie sollen ihre Adresse per DHCP bekommen und E1 anpingen können.' }
+      ],
+      hilfe: [
+        { begriff: 'DHCP', text: 'Ein Dienst, der Geräten automatisch eine Adresse zuteilt — aus einem festen Bereich. '
+          + 'Ein Gerät ruft beim Start „Ich brauche eine Adresse!“ ins Netz, und der Server antwortet.' },
+        { begriff: 'Feste Adresse', text: 'Was andere finden müssen, wie der Server selbst, darf seine Adresse nicht '
+          + 'wechseln. Deshalb liegt seine Adresse außerhalb des Bereichs, den er verteilt.' },
+        { begriff: 'WLAN', text: 'Ein Switch kann zusätzlich ein Funknetz ausstrahlen. Es hat einen Namen (SSID), '
+          + 'den Handys auswählen. Ein Handy hat keine Kabelbuchse — es kommt nur über WLAN ins Netz.' }
+      ],
+      stern: 'Der Server verteilt nur 51 Adressen (.100 bis .150). Was passiert, wenn der Raum mit 60 Handys voll ist? '
+        + 'Was würdest du ändern?'
+    }),
+    netz: {
+      v: 2,
+      nodes: i3nodes.concat([
+        dev('s0', 'switch', 'Switch 1', 600, 570, { ports: 12 }),
+        dev('sv', 'server', 'Server', 600, 400, {
+          nics: [{ ip: '192.168.1.20' }],
+          dhcpServer: { nic: 0, von: '192.168.1.100', bis: '192.168.1.150', mask: '255.255.255.0', gateway: '', dns: '' }
+        })
+      ]),
+      cables: i3cables.concat([cab('sv', 0, 's0', 10)])
+    }
+  };
 
   /* ═══ 1 · Zwei Endgeräte ═══════════════════════════════════════
      Das kleinste Netz, das es gibt. Bewusst OHNE Adressen: die
@@ -101,6 +294,7 @@
      nützt. */
   macN = 0; cabN = 0;
   const zwei = {
+    gruppe: ALT,
     titel: '1 · Zwei Endgeräte',
     aufgabe:
       '<p>Zwei Endgeräte hängen an einem Switch. Die Kabel stecken — aber ein Ping kommt nicht an.</p>'
@@ -127,6 +321,7 @@
      zweite nur noch dorthin, wo er hingehört. */
   macN = 100; cabN = 100;
   const lernen = {
+    gruppe: ALT,
     titel: '2 · Der Switch lernt',
     aufgabe:
       '<p>Vier Endgeräte an einem Switch, alles ist eingerichtet.</p>'
@@ -158,6 +353,7 @@
      Klasse an dieser Stelle macht. */
   macN = 200; cabN = 200;
   const router = {
+    gruppe: ALT,
     titel: '3 · Zwei Netze, ein Router',
     aufgabe:
       /* Keine Präfixschreibweise („/24") — sie kommt in Filius
@@ -199,6 +395,7 @@
      gemeinsam suchen kann. */
   macN = 300; cabN = 300;
   const fehler = {
+    gruppe: ALT,
     titel: '4 · Fehlersuche',
     aufgabe:
       '<p>Dieses Netz ist fast richtig eingerichtet. <strong>Drei Fehler</strong> sind drin.</p>'
@@ -267,6 +464,7 @@
      werden muss, darf sich nicht jeden Tag ändern. */
   macN = 400; cabN = 400;
   const automatisch = {
+    gruppe: ALT,
     titel: '5 · Adressen automatisch (DHCP)',
     aufgabe:
       '<p>Drei Endgeräte ohne Adresse. Auf <strong>S1</strong> läuft ein DHCP-Server, der welche '
@@ -311,6 +509,7 @@
      jemand sitzt, der ihn eingetragen hat. */
   macN = 500; cabN = 500;
   const namen = {
+    gruppe: ALT,
     titel: '6 · Namen statt Zahlen (DNS)',
     aufgabe:
       '<p>Auf <strong>S2</strong> rechts unten ist das Programm <em>DNS-Server</em> installiert und '
@@ -367,6 +566,7 @@
      Auftrag sind eine zu viel. */
   macN = 600; cabN = 600;
   const web = {
+    gruppe: ALT,
     titel: '7 · Eine Seite im Schulnetz',
     aufgabe:
       '<p>Auf <strong>S1</strong> läuft ein <em>Webserver</em>, auf <strong>E1</strong> liegt '
@@ -441,6 +641,7 @@
      das Aufspielen. */
   macN = 700; cabN = 700;
   const internet = {
+    gruppe: ALT,
     titel: '8 · Ins Internet',
     aufgabe:
       '<p>Oben steht dein Anschluss ans <strong>Class Wide Web</strong> (CWW1). Öffne ihn: '
@@ -487,5 +688,5 @@
     }
   };
 
-  window.SZENARIEN = { zwei, lernen, router, fehler, automatisch, namen, web, internet };
+  window.SZENARIEN = { i1, i2, i3, zwei, lernen, router, fehler, automatisch, namen, web, internet };
 })();

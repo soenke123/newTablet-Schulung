@@ -3732,6 +3732,37 @@ body[data-rolle="presenter"] .nur-lehrer { display: inline-block; }
 .auf-b .fs-s { font-size: 12px; }
 .auf-b .fs-l { font-size: 16.5px; line-height: 1.4; }
 
+/* ─── Strukturierter Auftrag ─────────────────────────────────
+   Kontext, dann Benutzen · Verändern · Erweitern, darunter die
+   Hilfe (eingeklappt) und eine Sternfrage. Die drei Aufgaben
+   tragen je einen Farbstreifen, damit man beim Wiederfinden nicht
+   lesen muss, wo man war. */
+.auf-b .kontext { color: var(--ink-2); }
+.auf-b .aufg-b, .auf-b .aufg-v, .auf-b .aufg-e {
+  padding-left: 9px; border-left: 3px solid var(--line-2);
+}
+.auf-b .aufg-b { border-left-color: #4a90d9; }
+.auf-b .aufg-v { border-left-color: #e0a030; }
+.auf-b .aufg-e { border-left-color: #0fb389; }
+.auf-b .stern  { color: var(--ink-2); }
+.auf-b details {
+  margin: 10px 0; border: 1px solid var(--line-2); border-radius: var(--r1);
+  background: var(--surface-2);
+}
+.auf-b summary {
+  cursor: pointer; padding: 6px 10px; font-weight: 700; font-size: 12.5px;
+  list-style-position: inside;
+}
+.auf-b details[open] summary { border-bottom: 1px solid var(--line-2); }
+.auf-b details p { margin: 8px 10px; }
+
+/* Überschrift zwischen den Szenarien im Menü (Sek I / Sek II). */
+.szm-head {
+  list-style: none; margin: 8px 6px 2px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+}
+.szm-head:first-child { margin-top: 2px; }
+
 /* ─── Dialoge ───────────────────────────────────────────────── */
 .sy-dlg {
   position: fixed; inset: 0; z-index: 80;

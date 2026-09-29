@@ -334,7 +334,10 @@ section('Speicherformat');
 section('Szenarien');
 {
   const S = sandbox.SZENARIEN;
-  ok('acht Szenarien vorhanden', Object.keys(S).length === 8, Object.keys(S).join(','));
+  /* Übergang: die neuen Sek-I-Szenarien (i1…) stehen vor den acht
+     bisherigen, die nach und nach ersetzt werden. */
+  ok('Szenarien vorhanden (i1 bis i3 neu, acht bisherige)', Object.keys(S).length === 11, Object.keys(S).join(','));
+  ok('jedes Szenario trägt eine Gruppe', Object.keys(S).every(k => !!S[k].gruppe));
 
   for (const k in S) {
     const { engine, netz } = bau();
@@ -1822,6 +1825,90 @@ section('Kennungen in den Programmfenstern');
     const doppelt = [...zaehler].filter(([, n]) => n > 1).map(([id, n]) => id + '×' + n);
     ok('⚠️ ' + f + ': jede Kennung gehört genau einem Element',
        doppelt.length === 0, doppelt.join(', '));
+  }
+}
+
+/* ═══ 10b · Sek I: die neuen Szenarien I.1 bis I.3 ═══ */
+section('Sek I · I.1 bis I.3');
+{
+  const S = sandbox.SZENARIEN;
+  // Die Auftragskarte liegt links oben — dort steht kein Gerät.
+  for (const k of ['i1', 'i2', 'i3']) {
+    ok(k + ': keine Geräte unter der Auftragskarte',
+       S[k].netz.nodes.every(n => !(n.x < 430 && n.y < 280)));
+    ok(k + ': Auftrag hat Kontext, Aufgaben und Hilfe',
+       /class="kontext"/.test(S[k].aufgabe) && /class="aufg-/.test(S[k].aufgabe) && /<details>/.test(S[k].aufgabe));
+  }
+
+  // I.1: nichts ist verbunden — und ein Endgerät hat nur eine Buchse.
+  ok('I.1: keine Kabel, kein Switch', S.i1.netz.cables.length === 0
+     && S.i1.netz.nodes.every(n => n.kind === 'host'));
+  {
+    const { engine, netz, stack } = bau();
+    const dienste = new sandbox.Dienste(engine, netz, stack, {});
+    const term = new sandbox.Terminal(engine, netz, stack, dienste);
+    netz.fromJSON(U.deepCopy(S.i1.netz));
+    const e1 = netz.byName('Endgerät 1'), e2 = netz.byName('Endgerät 2');
+    konf(e1, 0, '192.168.1.10'); konf(e2, 0, '192.168.1.11');
+    ok('I.1: ein Kabel zwischen zwei Endgeräten geht', netz.addCable(e1.id, 0, e2.id, 0).ok);
+    term.submit(e1.id, 'ping 192.168.1.11');
+    engine.runUntil(60 * SEC);
+    const txt = term.linesOf(e1.id).map(l => l.text).join('\n');
+    ok('I.1: Ping ohne Switch, nur mit Kabel', /4 von 4 angekommen/.test(txt), txt.slice(-300));
+    const e3 = netz.addNode('host', 600, 600);
+    ok('I.1: ein drittes Gerät hat am Endgerät keine freie Buchse mehr',
+       !netz.addCable(e1.id, 0, e3.id, 0).ok);
+  }
+
+  // I.2: zwei Netze, die für sich laufen; über die Grenze kommt nichts.
+  {
+    const { engine, netz, stack } = bau();
+    const dienste = new sandbox.Dienste(engine, netz, stack, {});
+    const term = new sandbox.Terminal(engine, netz, stack, dienste);
+    netz.fromJSON(U.deepCopy(S.i2.netz));
+    const E = (n) => netz.byName('Endgerät ' + n);
+    ok('I.2: kein Router am Start', !netz.list().some(n => n.kind === 'router'));
+    term.submit(E(1).id, 'ping 192.168.1.11');
+    engine.runUntil(30 * SEC);
+    ok('I.2: im eigenen Netz klappt der Ping',
+       /4 von 4 angekommen/.test(term.linesOf(E(1).id).map(l => l.text).join('\n')));
+    term.submit(E(1).id, 'ping 192.168.2.10');
+    engine.runUntil(120 * SEC);
+    ok('I.2: über die Grenze nicht',
+       /0 von 4 angekommen/.test(term.linesOf(E(1).id).map(l => l.text).join('\n')));
+    // Router dazwischen, Gateways eintragen — so löst ein Kind es.
+    const r = netz.addNode('router', 600, 465);
+    const sw1 = netz.byName('Switch 1'), sw2 = netz.byName('Switch 2');
+    konf(r, 0, '192.168.1.1'); konf(r, 1, '192.168.2.1');
+    ok('I.2: Router lässt sich zwischen die Switches bauen',
+       netz.addCable(r.id, 0, sw1.id, 4).ok && netz.addCable(r.id, 1, sw2.id, 4).ok);
+    E(1).gateway = '192.168.1.1'; E(3).gateway = '192.168.2.1';
+    term.submit(E(1).id, 'ping 192.168.2.10');
+    engine.runUntil(240 * SEC);
+    ok('I.2: mit Router und Gateway kommt der Ping durch',
+       /Antwort von 192\.168\.2\.10/.test(term.linesOf(E(1).id).map(l => l.text).join('\n')));
+  }
+
+  // I.3: zehn Endgeräte und ein DHCP-Server — alle holen sich eine Adresse.
+  {
+    const { engine, netz, stack } = bau();
+    const dienste = new sandbox.Dienste(engine, netz, stack, {});
+    netz.fromJSON(U.deepCopy(S.i3.netz));
+    const hosts = netz.list().filter(n => n.kind === 'host');
+    ok('I.3: zehn Endgeräte, alle noch ohne Adresse',
+       hosts.length === 10 && hosts.every(h => !h.nics[0].ip && !h.nics[0].dhcp));
+    ok('I.3: der Server hat eine feste Adresse außerhalb des Bereichs',
+       netz.byName('Server').nics[0].ip === '192.168.1.20');
+    for (const h of hosts) netz.setDhcp(h, 0, true);
+    dienste.start();
+    engine.runUntil(60 * SEC);
+    const ips = hosts.map(h => h.nics[0].ip);
+    ok('I.3: alle zehn bekommen eine Adresse', ips.every(Boolean), ips.join(','));
+    ok('I.3: alle verschieden', new Set(ips).size === 10);
+    ok('I.3: alle im Bereich .100–.150',
+       ips.every(ip => U.ip2int(ip) >= U.ip2int('192.168.1.100') && U.ip2int(ip) <= U.ip2int('192.168.1.150')));
+    const sw = netz.byName('Switch 1');
+    ok('I.3: der Switch kann ein WLAN ausstrahlen', sandbox.Netz.KIND.switch.wlan === true && !netz.strahlt(sw));
   }
 }
 

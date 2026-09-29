@@ -1727,7 +1727,7 @@
     // Szenarienliste füllen — die mitgelieferten sind „public".
     menue.setzen({
       rolle: ROLLE,
-      public: Object.keys(SZENARIEN).map(k => ({ id: 'builtin:' + k, titel: SZENARIEN[k].titel }))
+      public: Object.keys(SZENARIEN).map(k => ({ id: 'builtin:' + k, titel: SZENARIEN[k].titel, gruppe: SZENARIEN[k].gruppe }))
     });
     document.body.dataset.rolle = ROLLE;
 

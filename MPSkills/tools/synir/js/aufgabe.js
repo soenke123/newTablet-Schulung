@@ -32,10 +32,16 @@
   /* ─── 1. Reinigen ─────────────────────────────────────────── */
   const ERLAUBT = {
     P: 'p', DIV: 'p', STRONG: 'strong', B: 'strong', EM: 'em', I: 'em',
-    CODE: 'code', UL: 'ul', OL: 'ol', LI: 'li', BR: 'br'
+    CODE: 'code', UL: 'ul', OL: 'ol', LI: 'li', BR: 'br',
+    /* Die Hilfe eines Auftrags klappt auf und zu (auftrag() in
+       szenarien.js). <details> braucht kein Skript — genau deshalb
+       darf es durch den Türsteher, ein Klick-Handler dürfte es nicht. */
+    DETAILS: 'details', SUMMARY: 'summary'
   };
   const WEG = { SCRIPT: 1, STYLE: 1, IFRAME: 1, OBJECT: 1, TEMPLATE: 1, NOSCRIPT: 1 };
-  const KLASSEN = ['dim', 'fs-s', 'fs-l'];
+  /* `aufg-*` und `stern` sind die Bausteine eines strukturierten
+     Auftrags: Kontext, Benutzen, Verändern, Erweitern, Stern. */
+  const KLASSEN = ['dim', 'fs-s', 'fs-l', 'kontext', 'aufg-b', 'aufg-v', 'aufg-e', 'stern'];
 
   function reinigen(html) {
     if (!html) return '';
@@ -49,7 +55,7 @@
         if (!tag) { walk(n, dst); continue; }
         const el = document.createElement(tag);
         if (tag !== 'br') {
-          if (tag === 'p' || tag === 'li') {
+          if (tag === 'p' || tag === 'li' || tag === 'details') {
             const k = (n.getAttribute('class') || '').split(/\s+/).filter(c => KLASSEN.indexOf(c) >= 0);
             if (k.length) el.className = k.join(' ');
           }
