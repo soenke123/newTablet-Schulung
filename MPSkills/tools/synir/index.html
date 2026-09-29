@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
-<link rel="stylesheet" href="css/app.css?v=20260928d">
+<link rel="stylesheet" href="css/app.css?v=20260929a">
 </head>
 <body>
 
@@ -199,36 +199,21 @@
   </div>
 
   <div class="top-c">
-    <div class="modus" id="modus">
+    <!-- Der Moduswechsel ist die zentrale Umschaltfläche des ganzen
+         Programms — deshalb GROSS: zwei Kacheln mit Zeichen, Wort
+         und einer Zeile darunter, was in diesem Modus geschieht.
+         Wer nur ein Wort liest, muss raten; wer „Bauen und
+         verkabeln" liest, weiß, wo er ist. -->
+    <div class="modus" id="modus" role="group" aria-label="Modus">
       <button class="mbtn" data-modus="entwurf">
-        <span class="mbtn-ic">✎</span>Entwurf
+        <span class="mbtn-ic">✎</span>
+        <span class="mbtn-t">Entwurf<small>bauen &amp; einstellen</small></span>
       </button>
       <button class="mbtn" data-modus="aktion">
-        <span class="mbtn-ic">▶</span>Aktion
+        <span class="mbtn-ic">▶</span>
+        <span class="mbtn-t">Aktion<small>ausprobieren &amp; testen</small></span>
       </button>
     </div>
-
-    <!-- Der Knopf für die Neuerung gegenüber Filius: Subnetze
-         sichtbar machen. Er steht neben dem Moduswechsel, weil er
-         dieselbe Art Schalter ist — er ändert nicht das Netz,
-         sondern was man davon sieht, und er gilt in Entwurf wie
-         in Aktion.
-
-         Ohne ihn zeigt die Fläche das Netz des ANGETIPPTEN Geräts;
-         mit ihm alle auf einmal, dazu die Liste der Adressräume
-         am linken Rand. -->
-    <button class="mbtn mbtn--sub" id="subBtn"
-            title="Subnetze anzeigen — alle Adressräume farbig">
-      <span class="mbtn-ic">◎</span>Subnetze
-    </button>
-
-    <!-- Der Mitschnitt: nur im Aktionsmodus (CSS), und die Leiste
-         unten steht nur da, wenn dieser Knopf an ist. Vom Nutzer:
-         „einen Button neben Subnetze (nur im Aktionsmodus) und nur
-         dann wird diese Leiste unten angezeigt". -->
-    <button class="mbtn mbtn--trace" id="traceBtn" title="Mitschnitt ein- und ausblenden">
-      <span class="mbtn-ic">≋</span>Mitschnitt
-    </button>
 
     <!-- Hier stand eine Anzeige der Simulationszeit („1,203 s")
          samt Länge der Ereigniswarteschlange. Sie ist weg. Für die
@@ -248,26 +233,88 @@
   </div>
 
   <div class="top-r">
-    <!-- Das Szenario-Menü (js/szmenue.js). Ein eigenes Aufklapp-
-         menü statt <select>: im Raum hat es Reiter (Öffentlich /
-         Eigene) und hinter jedem Eintrag den Schalter „geteilt". -->
-    <!-- Die minimierte Aufgabe: eine gelbe Kachel links neben dem
-         Szenario-Menü. Ein Tipp holt sie zurück. -->
+    <!-- Die minimierte Aufgabe: eine gelbe Kachel. Ein Tipp holt sie
+         zurück. Sie bleibt, wie sie ist. -->
     <button type="button" class="auf-kachel" id="aufgabeKachel" hidden
             title="Aufgabe wieder öffnen">Aufgabe</button>
-    <div class="szm" id="szenario">
-      <button type="button" class="sel szm-btn" id="szenarioBtn" aria-haspopup="true" aria-expanded="false"
-              title="vorbereitetes Netz laden">Szenario laden … <span class="szm-pfeil">▾</span></button>
-      <div class="szm-pop" id="szenarioPop" hidden></div>
-    </div>
-    <!-- Nur die Lehrkraft im Raum (body[data-rolle=presenter]). -->
-    <button class="tbtn nur-lehrer" id="aufgabeBtn" title="Aufgabentext schreiben oder bearbeiten">Aufgabentext</button>
-    <button class="tbtn" id="neuBtn">Neu</button>
-    <button class="tbtn" id="exportBtn" title="speichern">Speichern</button>
-    <label class="tbtn" title="Datei laden">Öffnen
-      <input type="file" id="importInput" accept="application/json,.json" hidden>
-    </label>
-    <button class="tbtn tbtn--ic" id="themeBtn" title="hell / dunkel">☾</button>
+
+    <!-- ═══ Menüleiste ═══════════════════════════════════════════
+         Zwei Reiter wie in klassischen Programmen (Datei, Ansicht),
+         nur moderner: Ein Klick klappt die Liste auf, danach wechselt
+         schon das Darüberfahren von einem Reiter zum anderen; Esc
+         und ein Klick daneben schließen, ↑ ↓ ← → gehen durch die
+         Einträge (js/menuleiste.js).
+
+         Die Einträge behalten die alten Kennungen (#neuBtn,
+         #exportBtn, #subBtn …): app.js hängt seine Zuhörer an sie,
+         ganz gleich, wo sie stehen.
+
+         ⚠️ „Speichern" ist aufgeteilt: „Sichern" legt eine Datei auf
+         den PC, „Als Szenario speichern" (nur Lehrkraft) legt das
+         Netz unter „Eigene" ab. -->
+    <nav class="mbar" id="mbar" aria-label="Menü">
+
+      <div class="mn" data-menu>
+        <button type="button" class="mn-btn" id="dateiBtn" aria-haspopup="true" aria-expanded="false">
+          Datei <span class="mn-pfeil" aria-hidden="true">▾</span>
+        </button>
+        <div class="mn-pop" role="menu" hidden>
+          <button type="button" class="mi" role="menuitem" id="neuBtn">
+            <span class="mi-l">Neu</span><span class="mi-h">leere Fläche</span></button>
+          <button type="button" class="mi" role="menuitem" id="importBtn">
+            <span class="mi-l">Öffnen …</span><span class="mi-h">Datei vom PC</span></button>
+          <input type="file" id="importInput" accept="application/json,.json" hidden>
+          <button type="button" class="mi" role="menuitem" id="exportBtn">
+            <span class="mi-l">Sichern</span><span class="mi-h">als Datei auf den PC</span></button>
+
+          <!-- Der Szenario-Bereich liegt optisch für sich (getönter Kasten):
+               er gehört nicht zur Datei des Kindes, sondern zu dem, was die
+               Lehrkraft vorbereitet. -->
+          <div class="mn-abschnitt" role="group" aria-label="Szenarien">
+          <div class="mn-gruppe" role="presentation">Szenarien</div>
+          <!-- Das Szenario-Menü (js/szmenue.js) klappt als Untermenü
+               neben diese Zeile auf. Im Raum hat es Reiter (Öffentlich /
+               Eigene) und hinter jedem Eintrag den Schalter „geteilt". -->
+          <div class="szm mn-sub" id="szenario">
+            <button type="button" class="mi mi--sub" role="menuitem" id="szenarioBtn"
+                    aria-haspopup="true" aria-expanded="false" title="vorbereitetes Netz laden">
+              <span class="mi-l">Szenarien …</span><span class="mi-h">Auswahl</span><span class="mi-pf" aria-hidden="true">›</span></button>
+            <div class="szm-pop" id="szenarioPop" hidden></div>
+          </div>
+          <!-- Nur die Lehrkraft im Raum (body[data-rolle=presenter]). -->
+          <button type="button" class="mi nur-lehrer" role="menuitem" id="szSaveBtn">
+            <span class="mi-l">Als Szenario speichern</span><span class="mi-h">unter „Eigene"</span></button>
+          <button type="button" class="mi nur-lehrer" role="menuitem" id="aufgabeBtn"
+                  title="Aufgabentext schreiben oder bearbeiten">
+            <span class="mi-l">Aufgabentext …</span><span class="mi-h">schreiben</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mn" data-menu>
+        <button type="button" class="mn-btn" id="ansichtBtn" aria-haspopup="true" aria-expanded="false">
+          Ansicht &amp; Tools <span class="mn-pfeil" aria-hidden="true">▾</span>
+        </button>
+        <div class="mn-pop" role="menu" hidden>
+          <div class="mn-gruppe" role="presentation">Darstellung</div>
+          <button type="button" class="mi mi--wahl" role="menuitemcheckbox" aria-checked="false" id="themeBtn"
+                  title="hell / dunkel — gilt für die ganze Seite">
+            <span class="mi-ck" aria-hidden="true"></span>
+            <span class="mi-l">Dark Mode</span><span class="mi-h">für die ganze Seite</span></button>
+
+          <div class="mn-sep" role="separator"></div>
+          <div class="mn-gruppe" role="presentation">Ansichten</div>
+          <button type="button" class="mi mi--wahl" role="menuitemcheckbox" aria-checked="false" id="subBtn"
+                  title="Subnetze anzeigen — alle Adressräume farbig">
+            <span class="mi-ck" aria-hidden="true"></span>
+            <span class="mi-l">Subnetze</span><span class="mi-h">nur im Aktionsmodus</span></button>
+          <button type="button" class="mi mi--wahl" role="menuitemcheckbox" aria-checked="false" id="traceBtn"
+                  title="Mitschnitt ein- und ausblenden">
+            <span class="mi-ck" aria-hidden="true"></span>
+            <span class="mi-l">Mitschnitt</span><span class="mi-h">nur im Aktionsmodus</span></button>
+        </div>
+      </div>
+    </nav>
   </div>
 </header>
 
@@ -759,35 +806,36 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="js/util.js?v=20260928d"></script>
-<script src="js/engine.js?v=20260928d"></script>
-<script src="js/netz.js?v=20260928d"></script>
-<script src="js/verlauf.js?v=20260928d"></script>
-<script src="js/nat.js?v=20260928d"></script>
-<script src="js/tcp.js?v=20260928d"></script>
-<script src="js/rip.js?v=20260928d"></script>
-<script src="js/dateien.js?v=20260928d"></script>
-<script src="js/http.js?v=20260928d"></script>
-<script src="js/mail.js?v=20260928d"></script>
-<script src="js/schichten.js?v=20260928d"></script>
-<script src="js/dienste.js?v=20260928d"></script>
-<script src="js/internet.js?v=20260928d"></script>
-<script src="js/mitschnitt.js?v=20260928d"></script>
-<script src="js/terminal.js?v=20260928d"></script>
-<script src="js/subnetze.js?v=20260928d"></script>
-<script src="js/flaeche.js?v=20260928d"></script>
-<script src="js/konfig.js?v=20260928d"></script>
-<script src="js/panels.js?v=20260928d"></script>
-<script src="js/weiterleitung.js?v=20260928d"></script>
-<script src="js/prog-dateien.js?v=20260928d"></script>
-<script src="js/prog-web.js?v=20260928d"></script>
-<script src="js/prog-mail.js?v=20260928d"></script>
-<script src="js/geraet.js?v=20260928d"></script>
-<script src="js/szenarien.js?v=20260928d"></script>
-<script src="js/szmenue.js?v=20260928d"></script>
-<script src="js/aufgabe.js?v=20260928d"></script>
-<script src="js/app.js?v=20260928d"></script>
+<script src="js/util.js?v=20260929a"></script>
+<script src="js/engine.js?v=20260929a"></script>
+<script src="js/netz.js?v=20260929a"></script>
+<script src="js/verlauf.js?v=20260929a"></script>
+<script src="js/nat.js?v=20260929a"></script>
+<script src="js/tcp.js?v=20260929a"></script>
+<script src="js/rip.js?v=20260929a"></script>
+<script src="js/dateien.js?v=20260929a"></script>
+<script src="js/http.js?v=20260929a"></script>
+<script src="js/mail.js?v=20260929a"></script>
+<script src="js/schichten.js?v=20260929a"></script>
+<script src="js/dienste.js?v=20260929a"></script>
+<script src="js/internet.js?v=20260929a"></script>
+<script src="js/mitschnitt.js?v=20260929a"></script>
+<script src="js/terminal.js?v=20260929a"></script>
+<script src="js/subnetze.js?v=20260929a"></script>
+<script src="js/flaeche.js?v=20260929a"></script>
+<script src="js/konfig.js?v=20260929a"></script>
+<script src="js/panels.js?v=20260929a"></script>
+<script src="js/weiterleitung.js?v=20260929a"></script>
+<script src="js/prog-dateien.js?v=20260929a"></script>
+<script src="js/prog-web.js?v=20260929a"></script>
+<script src="js/prog-mail.js?v=20260929a"></script>
+<script src="js/geraet.js?v=20260929a"></script>
+<script src="js/szenarien.js?v=20260929a"></script>
+<script src="js/szmenue.js?v=20260929a"></script>
+<script src="js/menuleiste.js?v=20260929a"></script>
+<script src="js/aufgabe.js?v=20260929a"></script>
+<script src="js/app.js?v=20260929a"></script>
 <!-- Die Brücke in den Raum. Tut ohne Rahmen nichts. -->
-<script src="js/bruecke.js?v=20260928d"></script>
+<script src="js/bruecke.js?v=20260929a"></script>
 </body>
 </html>

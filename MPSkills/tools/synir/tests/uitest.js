@@ -17,12 +17,25 @@ const ok = (n, c, x) => { if (c) { pass++; console.log('  ok   ' + n); }
    (js/szmenue.js): aufklappen, Eintrag antippen. Die Nachfrage
    „Das aktuelle Netz wird ersetzt" beantwortet der Dialog-Zuhörer
    unten mit Ja. */
+/* Seit 2026-09-29 stehen Neu, Sichern, Szenarien, Dark Mode, Subnetze
+   und Mitschnitt in den Menüs „Datei" / „Ansicht & Tools". Ist der
+   Eintrag nicht sichtbar, klappt der Prüfstand erst sein Menü auf —
+   wie eine Hand. */
+async function mk(page, sel) {
+  const l = page.locator(sel);
+  if (!(await l.isVisible())) {
+    const ansicht = ['#subBtn', '#traceBtn', '#themeBtn'].includes(sel);
+    await page.locator(ansicht ? '#ansichtBtn' : '#dateiBtn').click();
+  }
+  await l.click();
+}
+
 /* ─── Den Mitschnitt auf- oder zumachen ───────────────────────
    Seit 2026-09-28 ein Knopf oben neben „Subnetze", nur im
    Aktionsmodus; die Leiste unten gibt es nur, solange er an ist. */
 async function mitschnitt(page, an) {
   const ist = await page.evaluate(() => document.body.classList.contains('trace-open'));
-  if (ist !== an) await page.locator('#traceBtn').click();
+  if (ist !== an) await mk(page, '#traceBtn');
 }
 
 /* Das Kärtchen groß oder klein — „Mehr ›" ist ein Umschalter, und
@@ -33,7 +46,7 @@ async function gross(page, an) {
 }
 
 async function szenarioWaehlen(page, key) {
-  await page.locator('#szenarioBtn').click();
+  await mk(page, '#szenarioBtn');
   await page.locator('.szm-item[data-id="builtin:' + key + '"] .szm-name').click();
 }
 
@@ -2916,7 +2929,7 @@ async function markenAn(page, name, art) {
   ok('die Bilddatei ist wirklich da', mHell.geladen);
   ok('das Logo hat eine Breite', mHell.breite > 60, mHell.breite + ' px');
 
-  await page.locator('#themeBtn').click();
+  await mk(page, '#themeBtn');
   await page.waitForTimeout(250);
   ok('Dunkelmodus schaltet um',
      await page.evaluate(() => document.documentElement.dataset.theme) === 'dark');
@@ -3190,7 +3203,7 @@ async function markenAn(page, name, art) {
   /* ─ Der Knopf und die Liste ─ */
   await page.locator('#karteClose').click();
   await page.waitForTimeout(200);
-  await page.locator('#subBtn').click();
+  await mk(page, '#subBtn');
   await page.waitForTimeout(400);
   ok('der Knopf schlägt die Liste der Adressräume auf',
      await page.locator('#subnetze').isVisible());
@@ -3270,7 +3283,7 @@ async function markenAn(page, name, art) {
   ok('und die richtige Adresse holt es zurück',
      wieder.drin === 1 && wieder.kabel === true, JSON.stringify(wieder));
 
-  await page.locator('#subBtn').click();
+  await mk(page, '#subBtn');
   await page.waitForTimeout(300);
   ok('der Knopf schaltet die Liste wieder aus',
      !(await page.locator('#subnetze').isVisible()));
@@ -5789,7 +5802,7 @@ async function markenAn(page, name, art) {
   /* Ohne Raum: nur die mitgelieferten, keine Reiter, keine
      Teilen-Schalter, kein Knopf „Aufgabentext". */
   await page.keyboard.press('Escape');
-  await page.locator('#szenarioBtn').click();
+  await mk(page, '#szenarioBtn');
   ok('Menü zeigt die acht mitgelieferten',
      await page.locator('#szenarioPop .szm-item').count() === 8);
   ok('ohne Raum: keine Reiter', await page.locator('#szenarioPop .szm-tabs').count() === 0);
@@ -5851,7 +5864,7 @@ async function markenAn(page, name, art) {
 
   /* Ohne Raum fragt „Speichern" nicht, sondern lädt die Datei. */
   const dl = page.waitForEvent('download', { timeout: 3000 }).catch(() => null);
-  await page.locator('#exportBtn').click();
+  await mk(page, '#exportBtn');
   const d = await dl;
   ok('Speichern ohne Raum: Datei, keine Frage', !!d && (await page.locator('.sy-dlg').count()) === 0);
   if (d) {

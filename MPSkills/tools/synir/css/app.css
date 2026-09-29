@@ -40,11 +40,15 @@
   --bg:        #e9ebf1;
   --surface:   #ffffff;
   --surface-2: #f4f5fa;
-  --line:      #dfe2ec;
-  --line-2:    #c6cbdb;
-  --ink:       #171b24;
-  --ink-2:     #5a6376;
-  --ink-3:     #8891a6;
+  /* Kontrast: --ink-2 und --ink-3 waren zu hell (3,4 : 1 bzw. 2,9 : 1
+     auf Weiß) — Beschriftungen in den großen Fenstern verschwanden.
+     Jetzt 9,7 : 1 und 5,9 : 1; die Linien sind dunkel genug, dass
+     man einen Abschnitt vom nächsten trennen SIEHT. */
+  --line:      #ccd1e0;
+  --line-2:    #a9b1c6;
+  --ink:       #12161f;
+  --ink-2:     #3b4457;
+  --ink-3:     #5a6479;
 
   /* Bleibt dunkel: Terminal und Kurzmeldung. Die Kopfzeile ist
      jetzt hell (siehe --leiste) — ein durchgehend schwarzer
@@ -56,7 +60,7 @@
      Leisten und schwebende Flächen sind durchscheinend: man soll
      ahnen, was darunter liegt. Nur ahnen — lesbar muss oben sein. */
   --leiste:    rgba(255,255,255,.82);
-  --glas:      rgba(255,255,255,.92);
+  --glas:      rgba(255,255,255,.98);
   --glas-line: rgba(255,255,255,.60);
 
   /* Der Auftrag: einziger warmer Ton im ganzen Programm. Er ist
@@ -88,7 +92,7 @@
   --e2: 0 2px 4px rgba(23,27,36,.06), 0 26px 54px -26px rgba(23,27,36,.50);
   --e3: 0 3px 8px rgba(23,27,36,.10), 0 40px 70px -30px rgba(23,27,36,.62);
 
-  --accent:    #0fb389;
+  --accent:    #0a8a69;
   --accent-in: #ffffff;
   --accent-sh: rgba(15,179,137,.22);
 
@@ -118,7 +122,7 @@
   --m-ent-in:  #ffffff;
   --m-ent-sh:  rgba(74,91,214,.26);
 
-  --m-akt:     #0fb389;
+  --m-akt:     #0a8a69;
   --m-akt-bg:  rgba(15,179,137,.10);
   --m-akt-in:  #ffffff;
   --m-akt-sh:  rgba(15,179,137,.24);
@@ -130,7 +134,7 @@
 
   --warn:      #d9642a;
   --bad:       #d2344b;
-  --ok:        #0fb389;
+  --ok:        #0a8a69;
 
   --arp:       #7c5cff;
   --ping:      #0fb389;
@@ -263,11 +267,11 @@
   --bg:        #12131c;
   --surface:   #1a1f2a;
   --surface-2: #222836;
-  --line:      #2c3442;
-  --line-2:    #3d465a;
-  --ink:       #e9ecf1;
-  --ink-2:     #a3abb8;
-  --ink-3:     #757d8a;
+  --line:      #38414f;
+  --line-2:    #4f5a70;
+  --ink:       #f1f3f7;
+  --ink-2:     #c6cdd9;
+  --ink-3:     #9ba4b5;
 
   --head:      #0b0d12;
   --head-ink:  #e9ecf1;
@@ -275,7 +279,7 @@
   /* Im Dunkeln ist Glas nicht weiß, sondern helles Grau mit wenig
      Deckung — weißes Glas auf dunklem Grund wird milchig. */
   --leiste:    rgba(26,31,42,.84);
-  --glas:      rgba(26,31,42,.94);
+  --glas:      rgba(26,31,42,.98);
   --glas-line: rgba(255,255,255,.07);
 
   --auf-bg:    rgba(26,31,42,.76);
@@ -515,25 +519,36 @@ body[data-modus="aktion"] { --modus: var(--m-akt); --modus-bg: var(--m-akt-bg);
 .top-r { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; min-width: 0; }
 
 /* ─── Entwurf ⇄ Aktion ─────────────────────────────────────────
-   Der wichtigste Schalter im Programm, also sieht er auch danach
-   aus: zwei Hälften, eine davon hell. Ein Umschalter, der nur aus
-   einem Wort besteht, wird auf dem Beamer nicht als Schalter
-   erkannt — und dann sucht eine Klasse zehn Minuten, warum sich
-   nichts bewegt. */
+   Die zentrale Umschaltfläche des Programms, also sieht sie auch
+   danach aus: zwei GROSSE Kacheln (52 px hoch, Zeichen, Wort und
+   eine Zeile darunter, was in diesem Modus geschieht). Die aktive
+   trägt die Farbe ihres Modus und einen Schatten; die andere ist
+   deutlich als Knopf zu erkennen, nicht als Beschriftung.
+   Ein Umschalter, der nur aus einem Wort besteht, wird auf dem
+   Beamer nicht als Schalter erkannt — und dann sucht eine Klasse
+   zehn Minuten, warum sich nichts bewegt. */
 .modus {
-  display: flex; gap: 3px; padding: 3px;
-  background: var(--surface-2); border: 1px solid var(--line);
-  border-radius: var(--r1); margin-right: 6px;
+  display: flex; gap: 4px; padding: 4px;
+  background: var(--surface-2); border: 2px solid var(--line-2);
+  border-radius: 16px; margin-right: 6px;
 }
 .mbtn {
-  display: inline-flex; align-items: center; gap: 7px;
-  border: 0; background: transparent; color: var(--ink-2);
-  border-radius: 8px; padding: 6px 14px;
-  font: inherit; font-size: 13px; cursor: pointer;
-  transition: background .13s, color .13s;
+  display: inline-flex; align-items: center; gap: 11px;
+  border: 0; background: transparent; color: var(--ink);
+  border-radius: 12px; padding: 7px 22px 7px 16px; min-height: 52px;
+  font: inherit; font-size: 17px; font-weight: 700; cursor: pointer;
+  text-align: left;
+  transition: background .13s, color .13s, box-shadow .13s;
 }
-.mbtn:hover { color: var(--ink); background: var(--surface); }
-.mbtn-ic { font-size: 12px; opacity: .85; }
+.mbtn:hover { background: var(--surface); }
+.mbtn-ic {
+  display: grid; place-items: center; flex: none;
+  width: 30px; height: 30px; border-radius: 50%;
+  font-size: 15px; line-height: 1;
+  background: var(--line); color: var(--ink);
+}
+.mbtn-t { display: flex; flex-direction: column; line-height: 1.15; }
+.mbtn-t small { font-size: 12px; font-weight: 500; color: var(--ink-2); margin-top: 1px; }
 
 /* Die eingeschaltete Hälfte trägt die Farbe IHRES Modus, nicht
    den Akzent. Vorher waren beide Hälften mintgrün, wenn sie dran
@@ -542,8 +557,10 @@ body[data-modus="aktion"] { --modus: var(--m-akt); --modus-bg: var(--m-akt-bg);
    oben: dieselbe Farbe, dieselbe Aussage. */
 .mbtn.is-on {
   background: var(--modus); color: var(--modus-in);
-  box-shadow: 0 1px 6px var(--modus-sh);
+  box-shadow: 0 3px 12px var(--modus-sh);
 }
+.mbtn.is-on .mbtn-ic { background: rgba(255,255,255,.28); color: inherit; }
+.mbtn.is-on .mbtn-t small { color: inherit; opacity: .9; }
 .mbtn.is-on:hover { background: var(--modus); filter: brightness(1.07); }
 
 /* Und beim Überfahren zeigt die andere Hälfte schon, wohin es
@@ -551,34 +568,7 @@ body[data-modus="aktion"] { --modus: var(--m-akt); --modus-bg: var(--m-akt-bg);
    ohne sie irgendwo hinzuschreiben. */
 .mbtn[data-modus="entwurf"]:not(.is-on):hover { color: var(--m-ent); }
 .mbtn[data-modus="aktion"]:not(.is-on):hover  { color: var(--m-akt); }
-
-/* Der Subnetzknopf steht neben dem Moduswechsel, gehört aber
-   nicht dazu: Entwurf und Aktion schließen sich gegenseitig aus,
-   „Subnetze" gilt in beiden. Deshalb außerhalb der grauen Wanne
-   und mit eigenem Rahmen — und eingeschaltet nicht im Akzent,
-   sondern mit den Subnetzfarben selbst. Ein Schalter, der zeigt,
-   was er einschaltet. */
-.mbtn--sub {
-  margin-right: 6px;
-  border: 1px solid var(--line); background: var(--surface);
-}
-.mbtn--sub.is-on {
-  color: #fff; border-color: transparent;
-  background: linear-gradient(105deg, var(--sn-0), var(--sn-2) 45%, var(--sn-3));
-  box-shadow: none;
-}
-.mbtn--sub.is-on:hover { filter: brightness(1.1); }
-
-/* Der Mitschnitt-Knopf: gleiche Form wie „Subnetze", aber nur im
-   Aktionsmodus — im Entwurf läuft nichts, was man mitschneiden
-   könnte. Eingeschaltet in der Modusfarbe (Mint), denn er gehört
-   zum Laufen. */
-.mbtn--trace {
-  margin-right: 6px;
-  border: 1px solid var(--line); background: var(--surface);
-}
-.mbtn--trace.is-on { color: #fff; background: var(--m-akt); border-color: transparent; box-shadow: none; }
-body:not([data-modus="aktion"]) .mbtn--trace { display: none; }
+.mbtn:focus-visible { outline: 3px solid var(--modus); outline-offset: 2px; }
 
 /* Im Entwurf steht die Uhr, also gibt es auch keine Knöpfe für
    sie. Sie auszublenden statt sie auszugrauen ist Absicht: ein
@@ -3821,3 +3811,144 @@ body[data-rolle="presenter"] .nur-lehrer { display: inline-block; }
 .k-dns-st { grid-column: 1 / -1; font-size: 12px; color: var(--ink-2); }
 .k-dns-z.is-nicht { background: transparent; border: 1px dashed var(--line, rgba(127,127,127,.35)); }
 .k-dns-z.is-nicht .k-dns-n, .k-dns-z.is-nicht .k-dns-w { color: var(--ink-2); }
+
+
+/* ═══ Menüleiste: „Datei" und „Ansicht & Tools" ══════════════════
+   Zwei Reiter wie in klassischen Programmen, nur mit Rundungen,
+   Luft und lesbarer Schrift (js/menuleiste.js). Die Einträge sind
+   groß genug für einen Finger (44 px), die Gruppen tragen eine
+   Überschrift, der Szenario-Bereich liegt in einem getönten Kasten
+   für sich. */
+.mbar { display: flex; gap: 6px; align-items: center; }
+.mn { position: relative; }
+.mn-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 16px;
+  font: inherit; font-size: 15px; font-weight: 650; color: var(--ink);
+  background: var(--surface); border: 1.5px solid var(--line-2);
+  border-radius: 12px; cursor: pointer; box-shadow: var(--e1);
+  transition: background .13s, border-color .13s;
+}
+.mn-btn:hover { background: var(--surface-2); }
+.mn.is-offen .mn-btn, .mn-btn[aria-expanded="true"] {
+  background: var(--surface-2); border-color: var(--modus);
+  box-shadow: 0 0 0 3px var(--modus-sh);
+}
+.mn-btn:focus-visible { outline: 3px solid var(--modus); outline-offset: 2px; }
+.mn-pfeil { font-size: 11px; color: var(--ink-2); transition: transform .15s; }
+.mn-btn[aria-expanded="true"] .mn-pfeil { transform: rotate(180deg); }
+
+.mn-pop {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 70;
+  width: 320px; max-width: calc(100vw - 24px);
+  padding: 8px; background: var(--surface); color: var(--ink);
+  border: 1.5px solid var(--line-2); border-radius: 16px; box-shadow: var(--e3);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.mn-pop[hidden] { display: none; }
+
+.mn-gruppe {
+  font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--ink-2); padding: 8px 12px 4px;
+}
+.mn-sep { height: 1px; background: var(--line-2); margin: 6px 4px; }
+.mn-abschnitt {
+  margin-top: 6px; padding: 2px 4px 4px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 12px; display: flex; flex-direction: column; gap: 2px;
+}
+
+.mi {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  min-height: 44px; padding: 8px 12px; text-align: left;
+  font: inherit; font-size: 15px; color: var(--ink);
+  background: transparent; border: 0; border-radius: 10px; cursor: pointer;
+}
+.mi-l { font-weight: 650; flex: 1 1 auto; min-width: 0; }
+.mi-h { font-size: 12px; color: var(--ink-2); flex: none; }
+.mi:hover:not(:disabled) { background: var(--surface-2); }
+.mn-abschnitt .mi:hover:not(:disabled) { background: var(--surface); }
+.mi:focus-visible { outline: 3px solid var(--modus); outline-offset: -2px; }
+.mi:disabled { opacity: .42; cursor: not-allowed; }
+.mi-pf { font-size: 20px; line-height: 1; color: var(--ink-2); flex: none; }
+.mi--sub[aria-expanded="true"] { background: var(--surface); box-shadow: inset 0 0 0 2px var(--modus); }
+
+/* Umschalter mit Haken: „Dark Mode", „Subnetze", „Mitschnitt". */
+.mi-ck {
+  flex: none; width: 20px; height: 20px; border-radius: 6px;
+  border: 2px solid var(--ink-3); background: var(--surface); position: relative;
+}
+.mi[aria-checked="true"] .mi-ck { background: var(--accent); border-color: var(--accent); }
+.mi[aria-checked="true"] .mi-ck::after {
+  content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px;
+  border: solid var(--accent-in); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
+}
+.mi--wahl .mi-l { flex: 0 1 auto; }
+.mi--wahl .mi-h { margin-left: auto; }
+
+/* Nur die Lehrkraft im Raum. `.nur-lehrer` allein wäre falsch: `.mi`
+   setzt display:flex und käme später im Blatt. */
+.mi.nur-lehrer { display: none; }
+body[data-rolle="presenter"] .mi.nur-lehrer { display: flex; }
+
+/* Das Szenario-Menü klappt als Untermenü NEBEN die Liste auf. */
+.mn-sub { position: static; }
+.mn-sub .szm-pop {
+  right: calc(100% + 14px); left: auto; top: 0; width: 360px;
+  border: 1.5px solid var(--line-2); border-radius: 16px;
+}
+.szm-pop[hidden] { display: none; }
+.mn-abschnitt { position: relative; }
+@media (max-width: 820px) {
+  /* Kein Platz links davon: das Untermenü klappt unter dem Eintrag auf. */
+  .mn-sub .szm-pop {
+    position: static; width: auto; margin: 4px 0 2px; box-shadow: none; max-height: 40vh;
+  }
+}
+@media (max-width: 560px) {
+  .mn-pop { position: fixed; left: 12px; right: 12px; top: 72px; width: auto; max-width: none; }
+}
+
+
+/* ═══ Klarheit in den Fenstern ═══════════════════════════════════
+   Vom Nutzer: „Der Kontrast zwischen Hintergrund und Schrift ist zu
+   gering, vor allem in den großen Modalen. Man sieht nicht, wo ein
+   Abschnitt anfängt und der nächste aufhört."
+
+   Zwei Handgriffe:
+     1. Die Schrift ist dunkler bzw. heller geworden (die Variablen
+        --ink-2/--ink-3 und die Linien oben im Blatt).
+     2. Jeder Abschnitt hat jetzt einen KOPF: ein getönter Balken mit
+        farbigem Streifen links, fett, in voller Tinte, und mehr Luft
+        davor. Vorher war es eine kleine graue Zeile mit Haarlinie.
+   Die Erklärtexte (`.k-hint`, `.k-note`) sind größer geworden. */
+.k-sec {
+  font-size: 12px; font-weight: 700; letter-spacing: .07em;
+  color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line); border-left: 4px solid var(--modus);
+  border-radius: 8px; padding: 7px 10px; margin: 20px 0 10px;
+}
+.k-sec:first-child, .karte-b > .k-sec:first-child { margin-top: 2px; }
+.k-sec--nur-i { background: none; border: 0; border-radius: 0; padding: 0; margin: -2px 0 4px; }
+.k-hint { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+.k-note { font-size: 12.5px; color: var(--ink); border: 1px solid var(--line); }
+.k-f { font-size: 12.5px; color: var(--ink); }
+.k-f-l em { font-size: 11px; color: var(--ink-2); }
+.karte { border-color: var(--line-2); }
+.karte-name { color: var(--ink-2); font-size: 12px; }
+.karte-h { border-bottom-color: var(--line-2); }
+.k-nic, .kk-nic, .kk-g { border-color: var(--line-2); }
+.k-nic-t, .kk-t { color: var(--ink); }
+.kk-l { color: var(--ink-2); }
+.kk-z { font-size: 12.5px; }
+.kl-t, .k-i, .sn-c { color: var(--ink-2); }
+.dt-sec {
+  font-size: 11.5px; font-weight: 700; color: var(--ink-2);
+  border-bottom: 1px solid var(--line-2); padding-bottom: 4px;
+}
+.fx-neu-t, .tools-t, .tr-lay-h { color: var(--ink-2); font-weight: 700; }
+.tools-hint, .speed-l, .badge-proto, .dim, .auf-b .dim { color: var(--ink-2); }
+
+/* Die großen Dialoge (Speichern, Aufgabentext …): dieselbe Klarheit. */
+.sy-dlg { background: rgba(10,13,24,.55); }
+.sy-dlg-box { border: 2px solid var(--line-2); }

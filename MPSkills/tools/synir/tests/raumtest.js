@@ -138,7 +138,20 @@ function server() {
 
   // Ein Aufruf, als käme er über PostgREST: benannte Argumente.
   let dbLock = Promise.resolve();
-  async function rpc(fn, args, role) {
+  
+/* Seit 2026-09-29 stehen Neu, Sichern, Szenarien, Dark Mode, Subnetze
+   und Mitschnitt in den Menüs „Datei" / „Ansicht & Tools". Ist der
+   Eintrag nicht sichtbar, klappt der Prüfstand erst sein Menü auf —
+   wie eine Hand. */
+async function mk(page, sel) {
+  const l = page.locator(sel);
+  if (!(await l.isVisible())) {
+    const ansicht = ['#subBtn', '#traceBtn', '#themeBtn'].includes(sel);
+    await page.locator(ansicht ? '#ansichtBtn' : '#dateiBtn').click();
+  }
+  await l.click();
+}
+async function rpc(fn, args, role) {
     const run = async () => {
       if (fn === '__view') {
         const st = (await db.query(`select data from skill_room_state where room_id = $1`, [room])).rows[0];
@@ -203,7 +216,7 @@ function server() {
      || await sf.evaluate(() => window.SIM.IM_RAUM));
 
   console.log('\n── Szenarien teilen ────────────────────────────────');
-  await lf.locator('#szenarioBtn').click();
+  await mk(lf, '#szenarioBtn');
   ok('Lehrkraft: zwei Reiter', await lf.locator('.szm-tab').count() === 2);
   ok('Reiter heißen public / private',
      /Öffentlich.*public/.test(await lf.locator('.szm-tab').nth(0).textContent())
@@ -215,11 +228,11 @@ function server() {
   ok('Geteilt: grün hinterlegt', await lf.locator('.szm-item[data-id="builtin:router"]').evaluate(e => e.classList.contains('is-shared')));
   const d1 = (await db.query(`select data from skill_room_state where room_id = $1`, [room])).rows[0].data;
   ok('Raumzustand trägt die Freigabe', d1.shared && d1.shared[0].id === 'builtin:router' && /Router|router/i.test(d1.shared[0].t), JSON.stringify(d1));
-  await lf.locator('#szenarioBtn').click();          // zu
+  await mk(lf, '#szenarioBtn');          // zu
 
   await warte(1500);
   ok('Tablet: „Neues Szenario verfügbar"', /Neues Szenario verfügbar/.test(await sf.locator('#toast').textContent()));
-  await sf.locator('#szenarioBtn').click();
+  await mk(sf, '#szenarioBtn');
   ok('Tablet: nur das Geteilte, ohne Reiter und Symbole',
      await sf.locator('.szm-item').count() === 1 && await sf.locator('.szm-tab').count() === 0
      && await sf.locator('.szm-share').count() === 0);
@@ -233,10 +246,10 @@ function server() {
   ok('Tablet meldet seinen Stand', w1 && w1.stand.szenario === 'builtin:router' && w1.stand.nodes.length > 0);
 
   console.log('\n── Aufgabentext und eigenes Szenario ───────────────');
-  await lf.locator('#szenarioBtn').click();
+  await mk(lf, '#szenarioBtn');
   await lf.locator('.szm-item[data-id="builtin:zwei"] .szm-name').click();
   await warte(300);
-  await lf.locator('#aufgabeBtn').click();
+  await mk(lf, '#aufgabeBtn');
   await lf.locator('.sy-dlg [data-titel]').fill('Pingen über den Switch');
   await lf.evaluate(() => {
     document.querySelector('.sy-dlg .aed-feld').innerHTML =
@@ -244,7 +257,7 @@ function server() {
   });
   await lf.locator('.sy-dlg [data-ok]').click();
   ok('Lehrkraft: Auftrag geändert', (await lf.locator('#aufgabeTitel').textContent()) === 'Pingen über den Switch');
-  await lf.locator('#exportBtn').click();
+  await mk(lf, '#exportBtn');
   ok('Speichern fragt: PC oder Szenario', await lf.locator('.sy-wahl').count() === 2);
   await lf.locator('.sy-wahl[data-id="sz"]').click();
   await lf.locator('.sy-dlg [data-name]').fill('Mein Ping');
@@ -255,7 +268,7 @@ function server() {
      && /<ul><li>erst ipconfig/.test(row[0].aufgabe) && row[0].netz.nodes.length === 3, JSON.stringify(row.map(r => r.title)));
   ok('… mit der Überschrift im Netz, ohne alte Kennung', row[0] && row[0].netz.titel === 'Pingen über den Switch' && !row[0].netz.szenario);
   ok('Rahmen kennt jetzt die neue ID', await lf.evaluate(() => window.SIM.aktuell.id) === (row[0] && row[0].id));
-  await lf.locator('#szenarioBtn').click();
+  await mk(lf, '#szenarioBtn');
   await lf.locator('.szm-tab[data-tab="private"]').click();
   ok('Eigene: das neue Szenario, mit Löschen', await lf.locator('.szm-item').count() === 1
      && (await lf.locator('.szm-item .szm-name').textContent()) === 'Mein Ping' && await lf.locator('.szm-del').count() === 1);
@@ -263,16 +276,16 @@ function server() {
   await warte(300);
   await lf.locator('.szm-tab[data-tab="public"]').click();
   await L1.page.screenshot({ path: path.join(OUT, 'shot-raum-menue.png'), clip: { x: 700, y: 140, width: 700, height: 460 } });
-  await lf.locator('#szenarioBtn').click();
+  await mk(lf, '#szenarioBtn');
 
   // Noch einmal speichern: jetzt gibt es „Überschreiben".
-  await lf.locator('#exportBtn').click();
+  await mk(lf, '#exportBtn');
   await lf.locator('.sy-wahl[data-id="sz"]').click();
   ok('Eigenes Szenario: Überschreiben wird angeboten', await lf.locator('.sy-dlg [data-ok="ueber"]').count() === 1);
   await lf.locator('.sy-dlg [data-x]').first().click();
 
   await warte(1500);
-  await sf.locator('#szenarioBtn').click();
+  await mk(sf, '#szenarioBtn');
   ok('Tablet: jetzt zwei freigegeben', await sf.locator('.szm-item').count() === 2);
   await sf.locator('.szm-item[data-id="' + row[0].id + '"] .szm-name').click();
   await warte(800);
@@ -283,7 +296,7 @@ function server() {
 
   console.log('\n── Spiegelung ──────────────────────────────────────');
   // Die Lehrkraft baut vorher an ihrem eigenen Netz etwas anderes.
-  await lf.locator('#szenarioBtn').click();
+  await mk(lf, '#szenarioBtn');
   await lf.locator('.szm-tab[data-tab="public"]').click();
   await lf.locator('.szm-item[data-id="builtin:router"] .szm-name').click();
   await warte(300);
@@ -318,7 +331,7 @@ function server() {
   ok('Nach der Übernahme folgt der Beamer nicht mehr', await lf.evaluate(() => window.SIM.netz.count) === 1);
 
   // Zusehen ohne Übernahme und beenden: das eigene Netz kommt zurück.
-  await lf.locator('#szenarioBtn').click();
+  await mk(lf, '#szenarioBtn');
   await lf.locator('.szm-item[data-id="builtin:router"] .szm-name').click();
   await warte(300);
   await L1.page.locator('.sy-person[data-pid="' + pid + '"]').click();

@@ -443,6 +443,16 @@
       waehlen: (id) => { flaeche.select(id); }
     });
 
+    /* Im Menü „Ansicht & Tools" sind Subnetze und Mitschnitt im
+       Entwurf grau. Ein Eintrag, der gerade AN ist, bleibt bedienbar:
+       sonst ließe er sich nach dem Wechsel in den Entwurf nicht mehr
+       ausschalten. */
+    function ansichtSync() {
+      const entwurf = modus === 'entwurf';
+      refs.subBtn.disabled = entwurf && !flaeche.zeigtSubnetze;
+      $('traceBtn').disabled = entwurf;
+    }
+
     function subnetzeZeigen(an) {
       /* Erst die Klasse am body: sie macht die Fläche schmaler
          (body.sub-open im Stylesheet). Die Fläche muss DANACH neu
@@ -452,6 +462,8 @@
       flaeche.setSubnetze(an);
       subnetze.setOffen(an);
       refs.subBtn.classList.toggle('is-on', an);
+      refs.subBtn.setAttribute('aria-checked', String(an));
+      ansichtSync();
       refs.subBtn.title = an
         ? 'Subnetze ausblenden'
         : 'Subnetze anzeigen — alle Adressräume farbig';
@@ -920,6 +932,13 @@
         b => b.classList.toggle('is-on', b.dataset.modus === m));
       flaeche.setModus(m);
 
+      /* Die Geräteleiste folgt dem Modus: im Entwurf ist sie draußen
+         (dort wird gebaut), in der Aktion eingeklappt (dort stünde
+         nur ein Hinweis). Wer sie danach von Hand umlegt, behält das
+         bis zum nächsten Wechsel. */
+      leisteSetzen(m === 'aktion');
+      ansichtSync();
+
       // Die Erklärung gehört zur Geräteleiste, und die gibt es nur
       // im Entwurf. Bliebe sie offen, hinge sie über einer Leiste,
       // die gar nicht mehr da ist.
@@ -986,6 +1005,7 @@
       const open = !!an && modus === 'aktion';
       document.body.classList.toggle('trace-open', open);
       $('traceBtn').classList.toggle('is-on', open);
+      $('traceBtn').setAttribute('aria-checked', String(open));
       if (open) panels.renderTrace();
       // Der Mitschnitt macht die Fläche niedriger — das Kärtchen
       // hing danach halb darunter.
@@ -1210,6 +1230,7 @@
       knopf: $('szenarioBtn'),
       pop: $('szenarioPop'),
       onPick: (id, it) => {
+        if (window.MenuLeiste) window.MenuLeiste.zu();
         if (extern.pick && extern.pick(id, it)) return;
         const s = eingebaut(id);
         if (s) szenarioLaden(s, { fragen: true });
@@ -1330,20 +1351,14 @@
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     }
 
-    /* „Speichern". Die Lehrkraft im Raum hat zwei Ziele (PC oder
-       eigenes Szenario), alle anderen nur eines — die sehen gar
-       keine Frage, sondern bekommen die Datei. */
-    $('exportBtn').addEventListener('click', async () => {
-      if (!extern.alsSzenario) { aufPcSpeichern(); return; }
-      const wohin = await window.Aufgabe.frage({
-        titel: 'Speichern',
-        knoepfe: [
-          { id: 'pc', label: 'Auf dem PC speichern', sub: 'als Datei — zum Weitergeben oder Abgeben' },
-          { id: 'sz', label: 'Als Szenario speichern', sub: 'unter „Eigene" — in jedem Raum wieder da', prim: true }
-        ]
-      });
-      if (wohin === 'pc') { aufPcSpeichern(); return; }
-      if (wohin !== 'sz') return;
+    /* „Sichern" legt das Netz als Datei auf den PC — für alle. Das
+       Ablegen als eigenes Szenario ist ein zweiter Eintrag, den nur
+       die Lehrkraft im Raum sieht („Als Szenario speichern"). Vorher
+       stand hier eine Frage „wohin?" hinter EINEM Knopf. */
+    $('exportBtn').addEventListener('click', aufPcSpeichern);
+
+    $('szSaveBtn').addEventListener('click', async () => {
+      if (!extern.alsSzenario) return;
       const eigen = !!aktuell.id && !/^builtin:/.test(aktuell.id)
         && menue.cfg.private.some(x => x.id === aktuell.id);
       const n = await window.Aufgabe.name({
@@ -1373,6 +1388,7 @@
       gemeldet('auftrag');
     });
 
+    $('importBtn').addEventListener('click', () => $('importInput').click());
     $('importInput').addEventListener('change', (e) => {
       const f = e.target.files && e.target.files[0];
       if (!f) return;
@@ -1410,18 +1426,40 @@
       toastTimer = setTimeout(() => t.classList.remove('is-on'), 2600);
     }
 
-    /* ─── Hell / Dunkel ───────────────────────────────────────*/
-    const THEME_KEY = 'netzsim.theme';
-    function setTheme(t) {
+    /* ─── Hell / Dunkel ───────────────────────────────────────
+       Dieselbe Wahl wie in ganz MPSkills: Schlüssel und Werte sind
+       die von MPSkills/lib/theme.js. Wer hier umschaltet, schaltet
+       die Seite um (auch den Rahmen, in dem SYNIR im Raum steckt) —
+       und umgekehrt: ändert sich der Eintrag von außen, zieht die
+       Anwendung über das storage-Ereignis mit. Ohne Wahl gilt das
+       Gerät (prefers-color-scheme). */
+    const THEME_KEY = 'mpskills_theme';
+    const themeMq = window.matchMedia && matchMedia('(prefers-color-scheme: dark)');
+    function themeGewaehlt() {
+      try {
+        const v = localStorage.getItem(THEME_KEY);
+        return (v === 'dark' || v === 'light') ? v : null;
+      } catch (e) { return null; }
+    }
+    function themeAnzeigen() {
+      const t = themeGewaehlt() || (themeMq && themeMq.matches ? 'dark' : 'light');
       document.documentElement.dataset.theme = t;
-      try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
-      $('themeBtn').textContent = t === 'dark' ? '☀' : '☾';
+      $('themeBtn').setAttribute('aria-checked', String(t === 'dark'));
+      $('themeBtn').classList.toggle('is-on', t === 'dark');
     }
     $('themeBtn').addEventListener('click', () => {
-      setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+      const neu = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem(THEME_KEY, neu); } catch (e) {}
+      /* Das storage-Ereignis feuert nur in ANDEREN Dokumenten: im Raum
+         zieht so der Rahmen von MPSkills mit; die eigene Anzeige
+         ziehen wir hier selbst nach. */
+      themeAnzeigen();
     });
-    setTheme(localStorage.getItem(THEME_KEY)
-      || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    window.addEventListener('storage', (e) => { if (e.key === THEME_KEY) themeAnzeigen(); });
+    if (themeMq && themeMq.addEventListener) {
+      themeMq.addEventListener('change', () => { if (!themeGewaehlt()) themeAnzeigen(); });
+    }
+    themeAnzeigen();
 
     /* ═══ Die Zwischenablage ═════════════════════════════════════
        Verlangt waren „Copy Paste mit Strg V/C", und zwar ohne

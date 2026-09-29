@@ -110,6 +110,8 @@
     if (!await api.wait(900)) return;
 
     // 1 · Teilen
+    api.click('#dateiBtn');            // erst das Menue Datei, dann das Untermenue
+    if (!await api.wait(500)) return;
     api.click('#szenarioBtn');
     if (!await api.wait(1400)) return;
     api.click('.szm-item[data-id="builtin:router"] .szm-share');
@@ -123,6 +125,8 @@
     if (!await api.wait(1800)) return;
 
     // 3 · Aufgabentext
+    api.click('#dateiBtn');
+    if (!await api.wait(400)) return;
     api.click('#aufgabeBtn');
     if (!await api.wait(2800)) return;
     api.click('.sy-dlg [data-x]');
@@ -146,6 +150,7 @@
     api.click('#syStop');
     if (!await api.wait(600)) return;
     api.click('#syList');
+    api.click('#dateiBtn');
     api.click('#szenarioBtn');
     if (!await api.wait(700)) return;
     api.click('.szm-item[data-id="builtin:router"] .szm-share');
