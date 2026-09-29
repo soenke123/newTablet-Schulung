@@ -135,6 +135,18 @@
       .join('<span class="ipd">.</span>');
   }
 
+  /* Zwei Zeilen Binärzahl unter einer Adresse: die Adresse selbst und
+     die Netzmaske. Nur, wenn das Werkzeug Binärdarstellung an ist
+     (siehe `binaer` in Konfig). Leer, solange die Adresse noch nicht
+     vollständig getippt ist. */
+  function binBlockHtml(ip, mask) {
+    const a = U.binHtml(ip, mask), m = U.binHtml(mask, mask);
+    if (!a || !m) return '';
+    return '<div class="bin-z"><span class="bin-l">IP-Adresse</span><span class="bin-w">' + a + '</span></div>'
+      + '<div class="bin-z"><span class="bin-l">Netzmaske</span><span class="bin-w">' + m + '</span></div>'
+      + '<div class="bin-h">Wo die Netzmaske <b>1</b> hat, gehört das Bit zum Netz.</div>';
+  }
+
   function Konfig(netz, stack, dienste) {
 
     /* Das Weiterleitungsfenster unten, sofern es eines gibt (app.js
@@ -1189,6 +1201,7 @@
 
       h += eingabe('Netzmaske', 'mask', nic.mask, feldRo, i,
                    holt || '255.255.255.0', nic.dhcp);
+      if (binaer) h += '<div class="bin" data-bin="' + i + '">' + binBlockHtml(nic.ip, nic.mask) + '</div>';
 
       /* Der Platz für die Fehlermeldung steht IMMER da (leer und
          verborgen, wenn alles stimmt). Vorher wurde er beim
@@ -1348,6 +1361,8 @@
        Der Schalter „Geräte-Lerninformationen" im Menü Ansicht & Tools
        setzt `lernInfo` (app.js); ohne ihn bleibt der Kasten leer. */
     let lernInfo = false;
+    // Werkzeug Binärdarstellung: Adresse und Maske als Bits (app.js schaltet).
+    let binaer = false;
 
     function tabellen(node) {
       if (!lernInfo) return '';
@@ -2022,6 +2037,8 @@
       if (!nic) return;
       const show = box.querySelector('[data-show="' + i + '"]');
       if (show) show.innerHTML = ipInnenHtml(nic.ip, nic.mask);
+      const bin = box.querySelector('[data-bin="' + i + '"]');
+      if (bin) bin.innerHTML = binBlockHtml(nic.ip, nic.mask);
       const fehler = nic.ip ? U.checkHostAddress(nic.ip, nic.mask) : null;
       const eb = box.querySelector('[data-err="' + i + '"]');
       if (eb) { eb.textContent = fehler || ''; eb.hidden = !fehler; }
@@ -2125,6 +2142,7 @@
           + '<div class="kk-t">' + esc(titel) + '</div>'
           + z('IP-Adresse', ipz(nic))
           + z('Netzmaske', mono(nic.mask))
+          + (binaer && nic.ip ? '<div class="bin">' + binBlockHtml(nic.ip, nic.mask) + '</div>' : '')
           + z('MAC-Adresse', mono(nic.mac))
           + (extra || '')
           + '</div>';
@@ -2248,6 +2266,8 @@
       setWeiterleitung(f) { fenster = f || null; },
       setLernInfo(an) { lernInfo = !!an; },
       get lernInfo() { return lernInfo; },
+      setBinaer(an) { binaer = !!an; },
+      get binaer() { return binaer; },
       setInternet(i) { inet = i || null; },
       /* Dieselbe Frage darf nur an EINER Stelle beantwortet werden:
          das Fenster zeichnet dieselben Zeilen wie das Kärtchen und

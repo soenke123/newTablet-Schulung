@@ -397,6 +397,12 @@
              und genau so schreibt es eine Klasse ins Heft. */
           +    '<div class="sn-f"><span>Netz</span><span class="mono">' + esc(b.netz) + '</span></div>'
           +    '<div class="sn-f"><span>Netzmaske</span><span class="mono">' + esc(b.maske) + '</span></div>'
+          + (opts.binaer && opts.binaer()
+              ? '<div class="bin bin--sn">'
+                + '<div class="bin-z"><span class="bin-l">Netz</span><span class="bin-w">' + U.binHtml(b.netz, b.maske) + '</span></div>'
+                + '<div class="bin-z"><span class="bin-l">Maske</span><span class="bin-w">' + U.binHtml(b.maske, b.maske) + '</span></div>'
+                + '</div>'
+              : '')
           +    '<div class="sn-f"><span>Adressen</span><span class="mono">'
           +      esc(b.von) + ' – ' + esc(b.bis) + '</span></div>'
           + (b.rundruf

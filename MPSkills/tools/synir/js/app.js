@@ -439,7 +439,8 @@
       // Ein Kürzel in der Liste anzutippen wählt das Gerät aus —
       // „welches ist denn E3?" ist beim Suchen eines Fehlers die
       // häufigste Frage, und sie wird an der Liste gestellt.
-      waehlen: (id) => { flaeche.select(id); }
+      waehlen: (id) => { flaeche.select(id); },
+      binaer: () => konfig.binaer
     });
 
     /* Im Menü „Ansicht & Tools" sind Subnetze und Mitschnitt im
@@ -480,6 +481,19 @@
       if (!still) { panels.renderKarte(); if (geraet) geraet.render(); }
     }
     $('lernBtn').addEventListener('click', () => lernSetzen(!konfig.lernInfo));
+
+    /* Binärdarstellung: IP-Adressen und Netzmasken als Bits, in den
+       Gerätefenstern und in der Liste der Subnetze. Die Färbung in
+       Netz- und Geräteteil bleibt, sie gilt dann je Bit. */
+    const BIN_KEY = 'netzsim.binaer';
+    function binSetzen(an, still) {
+      konfig.setBinaer(an);
+      $('binBtn').setAttribute('aria-checked', String(an));
+      $('binBtn').classList.toggle('is-on', an);
+      try { localStorage.setItem(BIN_KEY, an ? '1' : '0'); } catch (e) {}
+      if (!still) { panels.renderKarte(); if (geraet) geraet.render(); subnetze.render(); }
+    }
+    $('binBtn').addEventListener('click', () => binSetzen(!konfig.binaer));
 
     function subnetzeZeigen(an) {
       /* Erst die Klasse am body: sie macht die Fläche schmaler
@@ -1549,6 +1563,7 @@
     }
     themeAnzeigen();
     try { lernSetzen(localStorage.getItem(LERN_KEY) === '1', true); } catch (e) {}
+    try { binSetzen(localStorage.getItem(BIN_KEY) === '1', true); } catch (e) {}
     try { bilderSetzen(localStorage.getItem(BILD_KEY) !== '0', true); } catch (e) { bilderSetzen(true, true); }
 
     /* ═══ Die Zwischenablage ═════════════════════════════════════

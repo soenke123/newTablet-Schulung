@@ -101,9 +101,13 @@
      Szenario auf Anhieb zurechtfindet:
 
        kontext    2–3 Sätze: was ist das für ein Netz, warum gibt es das
-       aufgaben   [{ typ, text, label? }]  nach „Benutzen – Verändern –
-                  Erweitern" (Use – Modify – Create). `bauen` steht dort,
-                  wo das Netz am Anfang noch leer ist.
+       aufgaben   [{ typ, text, eigen?, label? }]  Die Aufgaben heißen
+                  „Aufgabe 1.", „Aufgabe 2." … — nicht „Benutzen",
+                  „Verändern", „Erweitern" (vom Nutzer so verlangt: die
+                  Schüler sollen Aufgaben abarbeiten, keine Fachwörter
+                  der Didaktik lesen). `typ` bleibt im Modell: er
+                  bestimmt nur die Farbe des Randes (aufg-b/v/e).
+                  Nur mit `eigen: true` gilt `label` (II.7: Muss/Kann).
        hilfe      [{ begriff, text }]  eingeklappt. Erklärt das NEUE
                   Element, keine Klickfolge: es soll nicht am Wort
                   scheitern, aber die Aufgabe bleibt die des Kindes.
@@ -120,9 +124,11 @@
   };
   function auftrag(o) {
     let h = '<p class="kontext">' + o.kontext + '</p>';
+    let nr = 0;
     for (const a of o.aufgaben) {
       const t = AUFG[a.typ];
-      h += '<p class="' + t.k + '"><strong>' + (a.label || t.label) + '</strong> ' + a.text + '</p>';
+      const name = a.eigen && a.label ? a.label : 'Aufgabe ' + (++nr) + '.';
+      h += '<p class="' + t.k + '"><strong>' + name + '</strong> ' + a.text + '</p>';
     }
     if (o.hilfe && o.hilfe.length) {
       h += '<details><summary>Hilfe: ' + o.hilfe.map(x => x.begriff).join(' · ') + '</summary>'
@@ -152,34 +158,50 @@
      ═══════════════════════════════════════════════════════════════ */
 
   /* ═══ I.1 · Zwei Geräte ═════════════════════════════════════════
-     Nichts ist verbunden. Kein Kabel, kein Switch: das Kind zieht
-     das erste Kabel selbst. Weil ein Endgerät nur EINE Buchse hat,
-     scheitert das Erweitern auf fünf Geräte von allein — und der
-     Switch ist keine Erklärung mehr, sondern die Lösung. */
+     Nichts ist verbunden. Kein Kabel, kein Switch: das Kind holt den
+     Switch selbst aufs Feld und steckt beide Geräte daran — so, wie
+     jedes Netz im Raum gebaut ist. Weil ein Endgerät nur EINE Buchse
+     hat, ist der Switch keine Erklärung mehr, sondern die Lösung.
+     Danach kommt das neue Gerät und der Ping in Zeitlupe: an ihm
+     sieht man, wie der Switch lernt. Über die Netzmaske wird hier
+     nicht geredet — sie ist in Klasse 8 kein Unterrichtsgegenstand;
+     „selbes Netz" heißt hier: die ersten drei Zahlen sind gleich. */
   macN = 800; cabN = 800;
   const i1 = {
     titel: 'I.1 · Zwei Geräte', gruppe: SEK1,
     aufgabe: auftrag({
       kontext: 'Im Computerraum stehen zwei Rechner, aber sie sind nicht verbunden. '
-        + 'Du baust das kleinste Netzwerk der Welt.',
+        + 'Du baust das kleinste Netzwerk der Welt — und lernst dabei, was ein Switch kann.',
       aufgaben: [
-        { typ: 'bauen', text: 'Verbinde <strong>E1</strong> und <strong>E2</strong> mit einem Kabel und gib '
-          + 'beiden eine IP-Adresse aus demselben Netz, zum Beispiel <code>192.168.1.10</code> und '
-          + '<code>192.168.1.11</code> (Netzmaske <code>255.255.255.0</code>). Prüfe mit einem Ping, ob sie sich erreichen.' },
-        { typ: 'veraendern', text: 'Gib E2 die Adresse <code>192.168.2.11</code>. Sag vorher voraus, ob der Ping noch '
-          + 'klappt — und warum (nicht). Teste, dann stell es wieder richtig ein.' },
-        { typ: 'erweitern', text: 'Jetzt sollen <strong>fünf</strong> Geräte miteinander reden. Baue E3 bis E5 dazu, '
-          + 'sodass jedes Gerät jedes andere erreicht. Prüfe mit Pings.' }
+        { typ: 'bauen', text: 'Hol einen <strong>Switch</strong> aufs Feld und verbinde <strong>E1</strong> und <strong>E2</strong> '
+          + 'über den Switch: je ein Kabel von jedem Endgerät zum Switch. Gib beiden eine IP-Adresse aus demselben Netz, '
+          + 'zum Beispiel <code>192.168.1.10</code> und <code>192.168.1.11</code> (die Netzmaske ist schon eingetragen, '
+          + 'lass sie so). Prüfe mit einem Ping, ob sie sich erreichen.' },
+        { typ: 'erweitern', text: 'Jetzt sollen <strong>fünf</strong> Geräte miteinander reden. Baue E3 bis E5 dazu und stecke sie an den Switch. '
+          + '<strong>Jedes Gerät braucht eine eigene Adresse</strong> — passe die IP-Adressen an, zum Beispiel '
+          + '<code>192.168.1.12</code>, <code>192.168.1.13</code> und <code>192.168.1.14</code>. Zwei Geräte mit derselben Adresse '
+          + 'stören sich. Prüfe mit Pings, dass jedes Gerät jedes andere erreicht.' },
+        { typ: 'benutzen', text: 'Schau dem Switch beim <strong>Lernen</strong> zu: Baue ein <strong>neues Gerät</strong> (E6) an den Switch, '
+          + 'gib ihm eine freie Adresse, schalte auf <em>Aktion</em> und drehe unten das <strong>Tempo</strong> auf <em>Zeitlupe</em>. '
+          + 'Schick von E6 einen Ping an E1 und sieh dir an, wohin die Nachricht läuft. Beim ersten Mal kennt der Switch E6 noch nicht — '
+          + 'wohin schickt er die Nachricht? Schick den Ping gleich noch einmal: Was ist jetzt anders?' }
       ],
       hilfe: [
         { begriff: 'IP-Adresse', text: 'Die „Hausnummer“ eines Geräts im Netz: vier Zahlen von 0 bis 255, durch Punkte '
           + 'getrennt. Zwei Geräte im selben Netz dürfen nie dieselbe haben.' },
-        { begriff: 'Netzmaske', text: 'Sie sagt, welcher Teil der Adresse zum Netz gehört. Bei <code>255.255.255.0</code> '
-          + 'sind es die ersten drei Zahlen: <code>192.168.1.x</code> liegt im selben Netz, <code>192.168.2.x</code> nicht.' },
+        { begriff: 'Selbes Netz?', text: 'Geräte können sich direkt erreichen, wenn die <strong>ersten drei Zahlen</strong> ihrer Adresse gleich sind: '
+          + '<code>192.168.1.10</code> und <code>192.168.1.11</code> gehören zusammen, <code>192.168.2.11</code> nicht. Nur die letzte '
+          + 'Zahl ist bei jedem Gerät anders.' },
         { begriff: 'Ping', text: 'Ein „Bist du da?“ an eine Adresse. Kommt die Antwort zurück, funktioniert die Verbindung. '
           + 'Im Modus <em>Aktion</em> tippst du das Gerät an und schreibst im Terminal <code>ping</code> und die Adresse.' },
         { begriff: 'Switch', text: 'Ein Verteiler mit vielen Buchsen. Alle Geräte stecken am Switch, und er leitet '
-          + 'jede Nachricht an das Gerät weiter, für das sie gedacht ist. Ein Endgerät selbst hat nur eine Buchse.' }
+          + 'jede Nachricht an das Gerät weiter, für das sie gedacht ist. Ein Endgerät selbst hat nur eine Buchse. '
+          + 'Ein Switch <em>lernt</em>: Er merkt sich, an welcher Buchse welches Gerät hängt. Kennt er das Ziel noch nicht, '
+          + 'schickt er die Nachricht an alle — danach nur noch dorthin, wo das Ziel steckt.' },
+        { begriff: 'Tempo', text: 'Der Regler unten in der Mitte stellt ein, wie schnell die Nachrichten über die Kabel laufen. '
+          + 'Auf <em>Zeitlupe</em> siehst du jede Nachricht einzeln wandern.' },
+        { begriff: 'Was der Switch gelernt hat', text: 'Wer es genau sehen will: <em>Ansicht &amp; Tools → Geräte-Lerninformationen</em> einschalten und den Switch '
+          + 'antippen. Dort steht, welches Gerät an welcher Buchse hängt.' }
       ],
       stern: 'Schick einen Ping an eine Adresse, die es im Netz nicht gibt. Was passiert — und woher weiß dein Gerät, '
         + 'dass niemand antwortet?'
@@ -217,8 +239,8 @@
         { begriff: 'Router', text: 'Verbindet Netze miteinander. Er hat in jedem Netz, an dem er hängt, eine eigene Adresse.' },
         { begriff: 'Gateway', text: 'Ein Endgerät kennt nur sein eigenes Netz. Alles, was woanders hin soll, schickt es an das '
           + '<em>Gateway</em> — das ist die Adresse des Routers in seinem eigenen Netz.' },
-        { begriff: 'Selbes Netz?', text: 'Bei der Netzmaske <code>255.255.255.0</code> gehören Adressen zusammen, wenn die '
-          + 'ersten drei Zahlen gleich sind.' }
+        { begriff: 'Selbes Netz?', text: 'Adressen gehören zusammen, wenn die ersten drei Zahlen gleich sind: '
+          + '<code>192.168.1.10</code> und <code>192.168.1.11</code> ja, <code>192.168.1.10</code> und <code>192.168.2.10</code> nein.' }
       ],
       stern: 'Lösche bei E1 das Gateway wieder. Was geht dann noch, was nicht mehr? Sag es vorher voraus.'
     }),
@@ -265,7 +287,7 @@
         { typ: 'veraendern', text: 'Ändere am DHCP-Server den Bereich auf <code>192.168.1.50</code> bis <code>192.168.1.70</code> '
           + 'und lass E1 eine neue Adresse holen. Sag vorher voraus, welche es bekommt.' },
         { typ: 'erweitern', text: 'Binde <strong>alle zehn</strong> Endgeräte per DHCP ein. Ein Ping von E1 zu E10 muss klappen.' },
-        { typ: 'erweitern', label: 'Weiter erweitern.', text: 'Lass den Switch ein <strong>WLAN</strong> ausstrahlen und bring drei '
+        { typ: 'erweitern', text: 'Lass den Switch ein <strong>WLAN</strong> ausstrahlen und bring drei '
           + '<strong>Handys</strong> ins Netz. Auch sie sollen ihre Adresse per DHCP bekommen und E1 anpingen können.' }
       ],
       hilfe: [
@@ -405,8 +427,12 @@
 
   /* ═══ I.5 · Fehler finden ═══════════════════════════════════════
      Vier Häuser, teilvermascht: zwischen den Routern gibt es mehr
-     als einen Weg. WLAN und DHCP laufen — eigentlich. Sechs Dinge
-     sind falsch oder leer. Keins davon steckt in einer Netzmaske:
+     als einen Weg. WLAN und DHCP laufen — eigentlich. Neun Dinge
+     sind falsch oder leer, und zwei davon stecken zwischen den
+     Routern, wo ein zweiter Weg sie verdeckt: wer nur pingt, findet
+     sie nicht — wer die Subnetze anschaut, schon. Die Schüler
+     bekommen keine Zahl genannt; sie sollen ALLE finden und jede
+     Korrektur aufschreiben. Keins davon steckt in einer Netzmaske:
      in Sek I gibt es nur die eine. */
   macN = 1200; cabN = 1200;
   const i5netz = vermascht({
@@ -423,18 +449,23 @@
   nach(i5netz, 'Router 3').nics[0].ip = '';                                           // Fehler 1: leer
   nach(i5netz, 'DHCP-Server').dhcpServer.on = false;                                  // Fehler 3: Dienst aus
   nach(i5netz, 'Router 4').rip = { on: false };                                       // Fehler 5: kein Routing
+  nach(i5netz, 'Endgerät 8').nics[0].ip = '192.168.2.11';                             // Fehler 7: Adresse aus dem Nachbarnetz
+  nach(i5netz, 'Router 4').nics[2].ip = '192.168.150.2';                              // Fehler 8: Tippfehler am Kabel R2–R4 (105)
+  i5netz.cables.find(c => c.a.node === 'fr1' && c.b.node === 'fr3').up = false;       // Fehler 9: Kabel R1–R3 gezogen
   const i5 = {
     titel: 'I.5 · Fehler finden', gruppe: SEK1,
     aufgabe: auftrag({
       kontext: 'Die Schule hat vier Häuser mit einem Netz aus vier Routern, Kabeln in mehr als einer Richtung, WLAN und DHCP. '
-        + 'Beim Umbau ist einiges schiefgegangen. Manches ist nicht falsch, sondern einfach <strong>leer</strong>.',
+        + 'Beim Umbau ist einiges schiefgegangen. Manches ist nicht falsch, sondern einfach <strong>leer</strong> — und manches '
+        + 'fällt nicht auf, weil das Netz einen zweiten Weg hat.',
       aufgaben: [
         { typ: 'benutzen', text: 'Teste, welche Geräte sich erreichen. Ping von <strong>E1</strong> zu jedem anderen Gerät, auch '
           + 'zum Handy. Schreib auf, was <em>nicht</em> klappt — das sind deine Spuren.' },
-        { typ: 'veraendern', text: 'Es stecken <strong>sechs Fehler</strong> im Netz. Finde sie und behebe sie, bis jedes Gerät '
-          + 'jedes andere erreicht (Ausnahme: ein Gerät, das gar nicht gebraucht wird, darf fehlen).' },
-        { typ: 'erweitern', text: 'Baue ein <strong>fünftes Haus</strong>: Router, Switch, zwei Endgeräte. Verbinde den Router '
-          + 'mit <em>zwei</em> anderen Routern. Adressen nach dem Plan (Hilfe).' }
+        { typ: 'veraendern', text: 'Finde <strong>alle Fehler</strong> im Netz und behebe sie. Es sind mehr als drei, und sie stecken an '
+          + 'ganz verschiedenen Stellen: bei Endgeräten, bei Diensten, bei den Routern und zwischen den Routern. '
+          + '<strong>Dokumentiere jede Korrektur</strong>: Wo war der Fehler, was war falsch, was hast du geändert? '
+          + 'Am Ende muss <strong>jedes Gerät erreichbar</strong> sein (Ausnahme: ein Gerät, das gar nicht gebraucht wird, darf fehlen) '
+          + 'und in deiner Liste darf kein Fehler fehlen, den du gefunden hast.' }
       ],
       hilfe: [
         { begriff: 'Fehlersuche', text: 'Geh von innen nach außen vor: Kommt ein Ping zu einem Gerät im <em>selben</em> Netz? '
@@ -442,11 +473,16 @@
         { begriff: 'Adressplan', text: 'Haus <em>n</em> hat das Netz <code>192.168.n.x</code>, die Router-Karte zum Haus hat die '
           + 'Endung <code>.1</code>. Kabel zwischen zwei Routern haben eigene Netze <code>192.168.101.x</code>, '
           + '<code>192.168.102.x</code>, … — die Nummer zählt die Kabel durch.' },
-        { begriff: 'Werkzeuge zum Erkunden', text: 'Unter <em>Ansicht &amp; Tools</em> kannst du Hilfsmittel einschalten, zum Beispiel '
-          + '<em>Subnetze</em> (färbt die Netze) und <em>Mitschnitt</em> (zeigt jede Nachricht, nur im Modus Aktion). '
-          + 'Probier sie aus — sie ändern nichts am Netz.' },
-        { begriff: 'Was leer sein kann', text: 'Eine Adresse, ein Gateway, ein Dienst, der nicht läuft, ein Häkchen bei „Automatisches Routing“ '
-          + 'oder ein Kabel, das gar nicht steckt. Auch ein WLAN-Name muss <em>genau</em> stimmen.' }
+        { begriff: 'Werkzeug: Subnetze', text: 'Unter <em>Ansicht &amp; Tools → Subnetze</em> färbt sich jedes Netz in einer eigenen Farbe, '
+          + 'und links steht eine Liste aller Netze mit den Geräten darin. Alles in einer Farbe kann sich direkt erreichen. '
+          + 'Ein Gerät, das nicht zu den Farben seiner Nachbarn passt, oder ein Kabel, das grau bleibt, ist verdächtig — '
+          + 'dort stimmt eine Adresse nicht oder ein Kabel fehlt. Auch die Kabel <em>zwischen den Routern</em> siehst du hier. '
+          + 'Zum Suchen sehr nützlich; es ändert nichts am Netz.' },
+        { begriff: 'Weitere Werkzeuge', text: 'Ebenfalls unter <em>Ansicht &amp; Tools</em>: der <em>Mitschnitt</em> (zeigt jede Nachricht, '
+          + 'nur im Modus Aktion). Probier sie aus — sie ändern nichts am Netz.' },
+        { begriff: 'Was leer oder falsch sein kann', text: 'Eine Adresse, die fehlt oder aus einem anderen Netz stammt, ein Gateway, ein Dienst, der nicht läuft, ein Häkchen '
+          + 'bei „Automatisches Routing“, ein Kabel, das gar nicht steckt oder herausgezogen ist. Auch ein WLAN-Name muss <em>genau</em> stimmen. '
+          + 'Ein zweiter Weg zwischen den Routern kann einen Fehler verstecken: Das Netz läuft, aber ein Kabel tut nichts.' }
       ],
       stern: 'Ziehe zwei Kabel zwischen Routern heraus. Wann bricht das Netz auseinander — und wann nicht? Was ist der '
         + 'Vorteil davon, dass die Router mehr als einen Weg haben?'
@@ -494,13 +530,17 @@
           + '<code>/webserver/index.html</code> (schreib deine eigene Überschrift hinein) und lade die Seite neu.' },
         { typ: 'erweitern', text: 'Baue in <strong>Haus 5</strong> einen zweiten Webserver mit einer eigenen Seite und gib '
           + 'ihm einen eigenen Namen im DNS, zum Beispiel <code>mensa.schule.de</code>. Beide Seiten sollen von allen Endgeräten '
-          + 'erreichbar sein.' }
+          + 'erreichbar sein. Gib der neuen Seite außerdem ein <strong>eigenes Bild</strong>: Tausche das Bild aus (ein anderes aus dem Ordner '
+          + '<code>/Bilder</code>) oder <strong>lade ein eigenes Bild hoch</strong> (im Datei-Explorer: <em>Datei hochladen</em>), lege es in den '
+          + 'Ordner <code>/webserver</code> und schreib den Namen der Bilddatei in die <code>index.html</code> (bei <code>&lt;img src=…&gt;</code>).' }
       ],
       hilfe: [
         { begriff: 'Webserver', text: 'Ein Programm, das Webseiten ausliefert. Die Seite ist eine Datei auf dem Server '
           + '(<code>index.html</code>). Der Browser fragt sie ab und zeigt sie an.' },
         { begriff: 'DNS', text: 'Das Namensverzeichnis des Netzes. Menschen merken sich Namen, Geräte brauchen Adressen — der '
           + 'DNS-Server übersetzt. Ein Name existiert nur, wenn jemand ihn eingetragen hat.' },
+        { begriff: 'Bild auf der Seite', text: 'Ein Bild ist eine Datei im Ordner des Webservers, die die Seite mit <code>&lt;img src="dateiname.png"&gt;</code> einbindet. '
+          + 'Ein anderes Bild heißt also: Datei in <code>/webserver</code> legen und den Namen in <code>index.html</code> ändern.' },
         { begriff: 'Adresse des DNS', text: 'Ein Gerät muss wissen, <em>wo</em> der DNS-Server steht. Bei den Endgeräten steht seine '
           + 'Adresse im Feld „DNS-Server“, per DHCP kommt sie von selbst mit.' }
       ],
@@ -562,7 +602,8 @@
   /* ═══════════════════════════════════════════════════════════════
      SEK II · KLASSE 12 — vom Heimnetz zum Schichtenmodell
      Das Programm ist überall dasselbe: Mitschnitt, Subnetze,
-     Weiterleitungstabellen und Geräte-Lerninformationen liegen in
+     Weiterleitungstabellen, Geräte-Lerninformationen und
+     Binärdarstellung liegen in
      jedem Szenario unter „Ansicht & Tools" und werden von den
      Schülern selbst eingeschaltet. Die Aufträge sagen nur, wo sie
      zu finden sind — und jedes Kind darf sie überall erkunden.
@@ -575,12 +616,21 @@
     + 'welche Adresse an welcher Buchse des Switches hängt.' };
   const WERKZEUG_WLT = { begriff: 'Werkzeug: Weiterleitungstabellen', text: 'Menü <em>Ansicht &amp; Tools → Weiterleitungstabellen</em>. '
     + 'Unten erscheint je Router eine Tabelle: welches Netz erreicht er über welchen Nachbarn.' };
+  const WERKZEUG_BIN = { begriff: 'Werkzeug: Binärdarstellung', text: 'Menü <em>Ansicht &amp; Tools → Binärdarstellung</em>. '
+    + 'IP-Adressen und Netzmasken stehen dann als Nullen und Einsen da, vier Gruppen zu je acht. Die Farben bleiben: '
+    + '<strong>blau</strong> ist der Netzteil (dort hat die Netzmaske eine 1), <strong>braun</strong> der Geräteteil (dort hat sie eine 0). '
+    + 'Auch die Grenze mitten in einer Zahl, etwa bei <code>255.255.255.192</code>, ist so zu sehen. Ein- und ausschaltbar.' };
   const WERKZEUG_SUB = { begriff: 'Werkzeug: Subnetze', text: 'Menü <em>Ansicht &amp; Tools → Subnetze</em>. '
     + 'Die Fläche zeigt alle Adressräume in Farbe, dazu eine Liste mit Netzadresse, Maske und Größe.' };
 
-  /* ═══ II.1 · Fehler finden und wieder rein ══════════════════════
-     Wie I.5, aber kleiner (zwei Router) und mit einem Fehler, den
-     man nur im Mitschnitt findet: dieselbe Adresse zweimal. */
+  /* ═══ II.1 · Fehler finden und wieder rein ═════════════════════
+     Wie I.5, aber kleiner (zwei Router) — und der Wiedereinstieg in
+     Klasse 12: die Schüler kennen die Begriffe aus der Mittelstufe
+     nur noch halb. Deshalb steht hier nichts Neues (kein Mitschnitt,
+     keine Lerninformationen), dafür eine Anleitung Schritt für
+     Schritt und eine Auffrischung der Begriffe. Ein Fehler trägt
+     keine Warnung: dieselbe Adresse zweimal — er fällt auf, wenn man
+     die Adressen der Geräte eines Hauses nebeneinanderlegt. */
   macN = 1500; cabN = 1500;
   const ii1netz = vermascht({
     p: 'e', n: 2, links: [[0, 1]],
@@ -598,115 +648,190 @@
     titel: 'II.1 · Fehler finden und wieder rein', gruppe: SEK2,
     aufgabe: auftrag({
       kontext: 'Zwei Häuser, zwei Router, WLAN, DHCP und ein paar Kabelgeräte: ein Netz, das eigentlich laufen sollte. Nach einem Umbau '
-        + 'geht einiges nicht. Diesmal gibt es auch Fehler, die keine Warnung tragen.',
+        + 'geht einiges nicht. Die Begriffe kennst du aus der 8. Klasse — hier frischst du sie auf, indem du das Netz '
+        + 'wieder zum Laufen bringst. Unten in der <em>Hilfe</em> stehen die Begriffe und eine Anleitung.',
       aufgaben: [
-        { typ: 'benutzen', text: 'Teste von <strong>E1</strong> aus, welche Geräte sich erreichen (Ping zu jedem Gerät, auch zum Handy). '
-          + 'Notiere, wo es aufhört.' },
-        { typ: 'veraendern', text: 'Es stecken <strong>fünf Fehler</strong> im Netz. Finde sie mit dem Mitschnitt und den Gerätefenstern '
-          + 'und behebe sie, bis jedes Gerät jedes andere erreicht. Schreib zu jedem Fehler auf: Woran hast du ihn erkannt?' },
-        { typ: 'erweitern', text: 'Bau ein Gästenetz dazu: ein zweites WLAN mit eigenem Netz (eigener Router-Anschluss, eigene Adressen), '
-          + 'das die Endgeräte im Haus 1 <em>nicht</em> erreichen können sollen — oder begründe, warum das mit diesem Netz nicht '
-          + 'geht.' }
+        { typ: 'benutzen', text: 'Schau dir das Netz an: Welche Geräte gibt es (Endgeräte, Switch, Router, DHCP-Server, Handy)? '
+          + 'Schalte auf <em>Aktion</em> und schick von <strong>E1</strong> aus Pings: erst an ein Gerät im <em>selben</em> Haus, dann an den '
+          + 'Router, dann ins <em>andere</em> Haus, zuletzt an das Handy. Notiere zu jedem Ziel: klappt / klappt nicht.' },
+        { typ: 'veraendern', text: 'Im Netz stecken <strong>fünf Fehler</strong>. Geh nach der Anleitung „Vorgehen“ vor: Immer dort nachsehen, wo der Ping '
+          + 'aufhört — bei Adresse, Gateway, Kabel, DHCP-Server und WLAN-Name. Behebe die Fehler, bis jedes Gerät jedes andere erreicht. '
+          + 'Schreib zu jedem Fehler auf: Wo war er, was war falsch, wie hast du ihn behoben?' },
+        { typ: 'erweitern', text: 'Baue selbst <strong>einen neuen Fehler</strong> ein (zum Beispiel ein falsches Gateway) und lass jemanden neben dir ihn suchen. '
+          + 'Tauscht danach die Rollen.' }
       ],
       hilfe: [
-        WERKZEUG_MITSCHNITT,
-        { begriff: 'Doppelte Adresse', text: 'Fragt ein Gerät per ARP „Wer hat <code>192.168.1.10</code>?“ und <em>zwei</em> Geräte antworten, '
-          + 'steht dieselbe IP zweimal im Netz. Im Mitschnitt siehst du zwei Antworten auf eine Frage.' },
-        WERKZEUG_LERN,
-        { begriff: 'Vorgehen', text: 'Von innen nach außen: dasselbe Netz → der eigene Router → das andere Haus. Wo der Ping aufhört, '
-          + 'liegt der Fehler in der Nähe.' }
+        { begriff: 'Begriffe zum Auffrischen', text: 'Das kennst du:', liste: [
+          '<strong>IP-Adresse</strong> — die „Hausnummer“ eines Geräts. Im selben Netz hat jedes Gerät eine andere.',
+          '<strong>Switch</strong> — verbindet Geräte <em>innerhalb</em> eines Netzes.',
+          '<strong>Router</strong> — verbindet <em>verschiedene</em> Netze und hat in jedem Netz eine eigene Adresse.',
+          '<strong>Gateway</strong> — die Adresse des Routers im eigenen Netz. Alles, was in ein anderes Netz soll, schickt ein Gerät dorthin.',
+          '<strong>DHCP</strong> — ein Dienst, der Adressen verteilt. Sein Adressbereich muss zu dem Netz passen, in dem er steht.',
+          '<strong>WLAN-Name (SSID)</strong> — der Name des Funknetzes. Er muss beim Handy <em>genau</em> so stehen wie am Switch.'
+        ] },
+        { begriff: 'Vorgehen', text: 'Von innen nach außen:', liste: [
+          'Klappt der Ping zu einem Gerät im <em>selben</em> Netz? Wenn nicht: Kabel, Adresse (Netz stimmt? Adresse doppelt?), WLAN-Name.',
+          'Klappt der Ping zum <em>Router</em> im eigenen Haus? Wenn nicht: hat der Router dort eine Adresse?',
+          'Klappt der Ping ins <em>andere Haus</em>? Wenn nicht: Gateway des Geräts prüfen.',
+          'Bekommt ein Gerät gar keine oder eine seltsame Adresse? Dann schau in den <em>DHCP-Server</em>: Passt sein Bereich zum Netz?',
+          'Hilfreich: <em>Ansicht &amp; Tools → Subnetze</em> färbt die Netze. Ein Gerät in der falschen Farbe hat eine Adresse aus dem falschen Netz.'
+        ] },
+        { begriff: 'Doppelte Adresse', text: 'Haben zwei Geräte im selben Netz dieselbe IP-Adresse, stören sie sich: mal klappt ein Ping, mal nicht. '
+          + 'Lege dazu die Adressen der Geräte eines Hauses nebeneinander (Gerätefenster öffnen) und vergleiche.' }
       ],
       stern: 'Ein Fehler lässt sich auf zwei Wegen beheben (am Gerät oder am Server). Welcher ist besser, und warum?'
     }),
     netz: { v: 2, nodes: ii1netz.nodes, cables: ii1netz.cables }
   };
 
-  /* ═══ II.2 · Heimrouter ═════════════════════════════════════════
-     Zwei Laptops an einem Heimrouter, der am Class Wide Web hängt.
-     Alles ist leer, was von der Adresse des Kindes abhängt: die
-     Adresse des Anbieters kennt erst das cww. */
+  /* ═══ II.2 · Heimnetz und Internet ══════════════════════════════
+     Links ein Heimnetz mit Heimrouter (zwei Laptops, ein Handy im
+     WLAN), rechts ein ganz normales öffentliches Netz: ein Router
+     des Anbieters, ein Switch, ein Webserver und ein fremder
+     Rechner, alle mit öffentlichen Adressen (84.12.x.x). Vom Heimnetz
+     nach draußen pingen, von draußen wieder hinein — und dabei die
+     Fehler finden:
+
+       1 · der Heimrouter hat ein falsches Gateway (.11 statt .1)
+       2 · Laptop 2 hat gar kein Gateway
+       3 · der fremde Rechner hat kein Gateway: der Ping kommt an,
+           aber die Antwort findet nicht zurück (hin ja, zurück nein)
+
+     Erst danach kommt das Class Wide Web: es ersetzt den Anbieter
+     (letzte Aufgabe). */
   macN = 1600; cabN = 1600;
   const ii2 = {
-    titel: 'II.2 · Heimrouter', gruppe: SEK2,
+    titel: 'II.2 · Heimnetz und Internet', gruppe: SEK2,
     aufgabe: auftrag({
-      kontext: 'Zu Hause steht kein Router, sondern ein Heimrouter: Router, Switch und WLAN in einem Gehäuse. Am Kabel nach oben hängt der '
-        + 'Anbieter, das <strong>cww</strong>. Zwei Laptops sind schon angeschlossen — noch kommt keiner ins Internet.',
+      kontext: 'Links steht ein <strong>Heimnetz</strong>: ein Heimrouter (Router, Switch und WLAN in einem Gehäuse) mit zwei Laptops und einem Handy. '
+        + 'Rechts liegt das <strong>öffentliche Netz</strong> des Anbieters mit einem Webserver und einem fremden Rechner. '
+        + 'Das Heimnetz benutzt private Adressen (<code>192.168.1.x</code>), das öffentliche Netz Adressen wie <code>84.12.6.20</code>.',
       aufgaben: [
         { typ: 'benutzen', text: 'Öffne den Heimrouter. Welche Anschlüsse hat er (WAN, LAN)? Welche Adresse steht auf welcher Seite? '
-          + 'Schick von <strong>Laptop 1</strong> einen Ping an <code>8.8.8.8</code> und lies die Fehlermeldung.' },
-        { typ: 'veraendern', text: 'Spiele den Anbieter: gib dem cww eine Adresse aus deinem Bereich (steht im Reiter <em>Internet</em>) und richte dort einen '
-          + '<em>DHCP-Server</em> ein. Der Heimrouter soll seine WAN-Adresse per DHCP bekommen. Dann geht der Ping. Sieh dir im Mitschnitt an, '
-          + 'welche <em>Absenderadresse</em> die Nachricht beim Laptop und welche sie <em>hinter</em> dem Heimrouter hat.' },
-        { typ: 'erweitern', text: 'Verbinde ein <strong>Handy</strong> über das WLAN des Heimrouters. Es braucht eine Adresse aus dem Heimnetz — '
-          + 'gib sie ihm von Hand oder richte am Heimrouter DHCP ein. Beweise mit einem Ping, dass es ins Internet kommt.' }
+          + 'Schalte auf <em>Aktion</em> und schick von <strong>Laptop 1</strong> Pings an Laptop 2 und an das Handy — beide im Heimnetz.' },
+        { typ: 'veraendern', text: '<strong>Raus:</strong> Schick von <strong>Laptop 1</strong> und von <strong>Laptop 2</strong> je einen Ping an den '
+          + '<strong>Webserver</strong> (<code>84.12.6.20</code>) und an den <strong>fremden Rechner</strong> (<code>84.12.6.30</code>). '
+          + 'Nicht alles klappt: Im Netz stecken <strong>Fehler</strong>. Finde sie und behebe sie, bis beide Laptops beide Ziele erreichen. '
+          + 'Notiere zu jedem Fehler, woran du ihn erkannt hast. Tipp: Bei einem Ping muss auch die <em>Antwort</em> zurückfinden.' },
+        { typ: 'veraendern', text: '<strong>Wieder hinein:</strong> Schick vom <strong>fremden Rechner</strong> einen Ping an die WAN-Adresse des Heimrouters '
+          + '(<code>84.12.5.2</code>) und dann an <strong>Laptop 1</strong> (<code>192.168.1.10</code>). Was klappt, was nicht? '
+          + 'Schau in der NAT-Tabelle des Heimrouters nach und im Mitschnitt: Welche Absenderadresse sieht der Webserver, wenn Laptop 1 ihn anpingt? '
+          + 'Erkläre, warum ein Ping an den Laptop von draußen nicht ankommt.' },
+        { typ: 'erweitern', text: '<strong>Jetzt das Class Wide Web:</strong> Ziehe ein <strong>cww</strong> aufs Feld und ersetze damit den Anbieter. '
+          + 'Verbinde es mit dem Heimrouter, gib ihm eine Adresse aus deinem Bereich (steht im Reiter <em>Internet</em>) und richte dort einen '
+          + '<em>DHCP-Server</em> ein. Stelle die WAN-Seite des Heimrouters auf <em>DHCP zur Konfiguration verwenden</em>. '
+          + 'Beweise mit einem Ping an <code>8.8.8.8</code>, dass Laptop 1 im Internet der Klasse ist.' }
       ],
       hilfe: [
         { begriff: 'Heimrouter', text: 'Drei Geräte in einem Gehäuse: ein <em>Router</em> (verbindet Heimnetz und Anbieter), ein <em>Switch</em> '
           + '(die LAN-Buchsen) und ein <em>Zugangspunkt</em> (das WLAN). Oben die Buchse WAN zum Anbieter, unten die LAN-Buchsen.' },
-        { begriff: 'NAT', text: 'Das Heimnetz benutzt private Adressen (<code>192.168.x.x</code>), die es im Internet nicht gibt. Der Heimrouter tauscht deshalb '
-          + 'beim Hinausgehen den Absender gegen seine eigene öffentliche WAN-Adresse aus und merkt sich, wer gefragt hat. Die Merktabelle '
-          + 'heißt <em>NAT-Tabelle</em> und steht im Fenster des Heimrouters.' },
+        { begriff: 'Hin und zurück', text: 'Ein Ping braucht zwei Wege: hin <em>und</em> zurück. Damit die Antwort ein anderes Netz erreicht, braucht jedes Gerät '
+          + 'ein <em>Gateway</em>, auch der Server draußen. Kommt die Anfrage an, aber keine Antwort, fehlt oft ein Gateway am Ziel.' },
+        { begriff: 'Öffentliches und privates Netz', text: 'Adressen wie <code>192.168.x.x</code> sind <em>privat</em>: es gibt sie in jedem Heimnetz, und die Router im Internet '
+          + 'leiten sie nicht weiter. Im öffentlichen Netz hat jedes Gerät eine Adresse, die es nur einmal gibt.' },
+        { begriff: 'NAT', text: 'Der Heimrouter tauscht beim Hinausgehen den Absender gegen seine eigene öffentliche WAN-Adresse aus und merkt sich, wer gefragt hat. '
+          + 'Die Merktabelle heißt <em>NAT-Tabelle</em> und steht im Fenster des Heimrouters. Von außen kommt nur an, wozu es einen Eintrag gibt.' },
+        WERKZEUG_SUB,
         WERKZEUG_MITSCHNITT
       ],
-      stern: 'Kann jemand aus dem Internet einen Ping an deinen Laptop schicken? Probier es aus (ein Mitschüler aus dem cww) — und erkläre, warum das nicht geht.'
+      stern: 'Zwei Laptops rufen gleichzeitig denselben Webserver auf. Woran erkennt der Heimrouter, welche Antwort zu welchem Laptop gehört? (Tipp: NAT-Tabelle, Ports)'
     }),
     netz: {
       v: 2,
       nodes: [
-        dev('h0', 'cww',        'Class Wide Web 1', 720, 190, { ports: 2 }),
-        dev('h1', 'heimrouter', 'Heimrouter 1',     720, 400, {
-          ports: 9, nics: [{ dhcp: true }, { ip: '192.168.1.1' }], wlan: { on: true, ssid: 'Heim-WLAN' }
+        dev('h1', 'heimrouter', 'Heimrouter 1', 470, 440, {
+          ports: 9, nics: [{ ip: '84.12.5.2' }, { ip: '192.168.1.1' }], gateway: '84.12.5.11',   // Fehler 1
+          wlan: { on: true, ssid: 'Heim-WLAN' }
         }),
-        dev('h2', 'host', 'Laptop 1', 520, 600, { nics: [{ ip: '192.168.1.10' }], gateway: '192.168.1.1', dns: '8.8.8.8' }),
-        dev('h3', 'host', 'Laptop 2', 920, 600, { nics: [{ ip: '192.168.1.11' }], gateway: '192.168.1.1', dns: '8.8.8.8' })
+        dev('h2', 'host', 'Laptop 1', 240, 620, { nics: [{ ip: '192.168.1.10' }], gateway: '192.168.1.1' }),
+        dev('h3', 'host', 'Laptop 2', 470, 680, { nics: [{ ip: '192.168.1.11' }] }),            // Fehler 2: kein Gateway
+        dev('h4', 'handy', 'Handy 1', 700, 620, {
+          nics: [{ ip: '192.168.1.12', funk: true, ssid: 'Heim-WLAN' }], gateway: '192.168.1.1'
+        }),
+        dev('h5', 'router', 'Anbieter-Router', 780, 440, { nics: [{ ip: '84.12.5.1' }, { ip: '84.12.6.1' }] }),
+        dev('h6', 'switch', 'Switch 1', 1030, 440),
+        dev('h7', 'server', 'Webserver', 1170, 600, {
+          nics: [{ ip: '84.12.6.20' }], gateway: '84.12.6.1', software: ['webserver'], webServer: { on: true },
+          dateien: {
+            '/webserver': { ordner: true },
+            '/webserver/index.html': { text: window.Http ? window.Http.SEITE : '' },
+            '/webserver/stil.css':   { text: window.Http ? window.Http.STIL : '' },
+            '/webserver/logo.png':   { bild: '@schule' }
+          }
+        }),
+        dev('h8', 'host', 'Fremder Rechner', 940, 620, { nics: [{ ip: '84.12.6.30' }] })         // Fehler 3: kein Gateway
       ],
-      cables: [cab('h0', 1, 'h1', 0), cab('h1', 1, 'h2', 0), cab('h1', 2, 'h3', 0)]
+      cables: [
+        cab('h1', 0, 'h5', 0), cab('h1', 1, 'h2', 0), cab('h1', 2, 'h3', 0),
+        cab('h5', 1, 'h6', 0), cab('h6', 1, 'h7', 0), cab('h6', 2, 'h8', 0)
+      ]
     }
   };
 
   /* ═══ II.3 · Webseiten und E-Mail ═══════════════════════════════
-     Ein Heimserver mit Webserver, DNS und Mailserver — alles
-     installiert und gestartet, alles leer. Erst im Heimnetz, dann
-     nach draußen: die Portfreigabe ist der Schritt, an dem ein
-     privates Netz öffentlich wird. */
+     Ein Heimnetz, in dem ALLES dynamisch ist: der Heimrouter teilt
+     per DHCP Adressen aus (.100 bis .150), auch der Server holt sich
+     seine Adresse so. Die Falle steht im DHCP: es verteilt als
+     DNS-Server schon die Adresse 192.168.1.20 — die der Server erst
+     bekommt, wenn ein Kind ihn auf eine feste Adresse stellt. Wer
+     den Namen im DNS einträgt, merkt: geht nicht. Erst mit der
+     statischen Adresse klappt er. Das E-Mail-System ist die
+     Sprinter-Aufgabe (★). Danach nach draußen: die Portfreigabe ist
+     der Schritt, an dem ein privates Netz öffentlich wird. */
   macN = 1700; cabN = 1700;
   const ii3 = {
     titel: 'II.3 · Webseiten und E-Mail', gruppe: SEK2,
     aufgabe: auftrag({
-      kontext: 'Im Heimnetz steht ein Server, der eine Webseite ausliefern, Namen auflösen und E-Mails verwalten kann. Alle drei Programme '
-        + 'sind installiert und gestartet — aber noch leer. Auf den Laptops liegen Browser und E-Mail-Programm.',
+      kontext: 'Im Heimnetz holen sich alle Geräte ihre Adresse <strong>dynamisch</strong> per DHCP vom Heimrouter — auch der Server, '
+        + 'der eine Webseite ausliefern, Namen auflösen und E-Mails verwalten kann. Alle drei Programme sind installiert und gestartet, '
+        + 'aber noch leer. Auf den Laptops liegen Browser und E-Mail-Programm.',
       aufgaben: [
-        { typ: 'benutzen', text: 'Ruf die Seite des Servers von <strong>Laptop 1</strong> über seine Adresse <code>192.168.1.20</code> auf. '
-          + 'Welche Nachrichten gehen dabei über das Netz? (Mitschnitt, Filter HTTP und TCP.)' },
-        { typ: 'veraendern', text: 'Trag im DNS-Server den Namen <code>www.heim.de</code> ein, ruf die Seite darüber auf und schreib sie um. Lege dann im Mailserver '
-          + 'zwei Konten an (<code>anna@heim.de</code>, <code>ben@heim.de</code>), richte die E-Mail-Programme ein und schick eine Mail von Anna an Ben.' },
+        { typ: 'benutzen', text: 'Schalte auf <em>Aktion</em> und warte, bis alle Geräte eine Adresse haben. Schau am <strong>Heimserver</strong> nach, welche '
+          + 'Adresse er bekommen hat, und ruf seine Seite von <strong>Laptop 1</strong> im Browser über diese Adresse auf. '
+          + 'Welche Nachrichten gehen dabei über das Netz? (Mitschnitt, Filter DHCP, HTTP und TCP.)' },
+        { typ: 'veraendern', text: 'Trag im DNS-Server den Namen <code>www.heim.de</code> für die Adresse des Servers ein und versuche, die Seite '
+          + 'über den <em>Namen</em> aufzurufen. Es klappt <strong>nicht</strong>. Finde den Grund: Welchen DNS-Server kennt Laptop 1 '
+          + '(Gerätefenster) — und unter welcher Adresse steht der DNS-Server in Wirklichkeit?' },
+        { typ: 'erweitern', text: '<strong>Dynamisch oder statisch?</strong> Gib dem Heimserver eine <em>feste</em> Adresse: <code>192.168.1.20</code> '
+          + '(DHCP aus, Gateway <code>192.168.1.1</code>, DNS-Server <code>192.168.1.20</code>) — sie liegt außerhalb des DHCP-Bereichs. '
+          + 'Lass die Laptops ihre Adresse neu holen und trag den Namen im DNS mit der neuen Adresse neu ein. Jetzt muss <code>www.heim.de</code> gehen. '
+          + 'Schreib dann die Seite um. Warum sollte ein Server eine feste Adresse haben — und ein Laptop lieber nicht?' },
         { typ: 'erweitern', text: '<strong>Nach draußen:</strong> Richte das cww als Anbieter ein (Adresse, DHCP wie in II.2). Gib am Heimrouter den Port 80 '
           + 'für den Server frei (<em>Portfreigabe</em>) und melde deinen Namen bei <code>8.8.8.8</code> an. Ein Mitschüler soll deine Seite '
           + 'aus <em>seinem</em> Netz aufrufen.' }
       ],
       hilfe: [
-        { begriff: 'E-Mail', text: 'Zwei Protokolle mit zwei Aufgaben: <em>SMTP</em> (Port 25) bringt eine Nachricht zum Server, <em>POP3</em> (Port 110) holt sie '
-          + 'ab. Eine Mail wird nicht zugestellt, sie wird <em>abgeholt</em>: sie liegt auf dem Server, bis der Empfänger fragt.' },
+        { begriff: 'Dynamisch und statisch', text: '<em>Dynamisch</em> heißt: Die Adresse kommt vom DHCP-Server und kann sich ändern (wenn die Leihzeit abläuft oder das Gerät neu startet). '
+          + '<em>Statisch</em> heißt: Du trägst sie selbst ein, und sie bleibt. Was andere <em>finden</em> müssen — ein Server, ein DNS-Server — braucht eine '
+          + 'statische Adresse, denn Namen im DNS und Einstellungen an anderen Geräten verweisen auf sie.' },
+        { begriff: 'Adresse außerhalb des Bereichs', text: 'Der DHCP-Server verteilt nur Adressen aus seinem Bereich (hier <code>.100</code> bis <code>.150</code>). Eine feste Adresse '
+          + 'wählst du <em>außerhalb</em>, sonst könnte er sie noch einmal an ein anderes Gerät vergeben.' },
+        { begriff: 'Neue Adresse holen', text: 'Ein Gerät, das per DHCP kommt, behält seine Angaben, bis es sie neu holt: im Gerätefenster <em>Adresse neu holen</em> '
+          + 'oder im Terminal <code>dhcp neu</code>. Erst dann kennt es einen geänderten DNS-Server.' },
         { begriff: 'Portfreigabe', text: 'Von außen kommt an der WAN-Adresse nur an, was ein Gerät im Heimnetz selbst angefragt hat. Damit ein Server von außen '
           + 'erreichbar ist, sagt eine Portfreigabe am Heimrouter: „Was auf Port 80 hereinkommt, geht an <code>192.168.1.20</code>.“ '
           + 'Sie steht im Fenster des Heimrouters.' },
-        WERKZEUG_MITSCHNITT
+        WERKZEUG_MITSCHNITT,
+        { begriff: 'E-Mail', text: 'Zwei Protokolle mit zwei Aufgaben: <em>SMTP</em> (Port 25) bringt eine Nachricht zum Server, <em>POP3</em> (Port 110) holt sie '
+          + 'ab. Eine Mail wird nicht zugestellt, sie wird <em>abgeholt</em>: sie liegt auf dem Server, bis der Empfänger fragt.' }
       ],
-      stern: 'Ein Mitschüler schickt dir eine Mail. Was muss außer dem Konto noch stimmen, damit sie bei dir ankommt?'
+      stern: '<strong>E-Mail:</strong> Lege im Mailserver zwei Konten an (<code>anna@heim.de</code>, <code>ben@heim.de</code>), richte auf den Laptops die '
+        + 'E-Mail-Programme ein und schick eine Mail von Anna an Ben. Und dann: Was muss außer dem Konto noch stimmen, damit auch eine Mail '
+        + 'von einem Mitschüler bei dir ankommt?'
     }),
     netz: {
       v: 2,
       nodes: [
         dev('j0', 'cww',        'Class Wide Web 1', 720, 190, { ports: 2 }),
         dev('j1', 'heimrouter', 'Heimrouter 1',     720, 400, {
-          ports: 9, nics: [{ dhcp: true }, { ip: '192.168.1.1' }], wlan: { on: true, ssid: 'Heim-WLAN' }
+          ports: 9, nics: [{ dhcp: true }, { ip: '192.168.1.1' }], wlan: { on: true, ssid: 'Heim-WLAN' },
+          dhcpServer: { nic: 1, von: '192.168.1.100', bis: '192.168.1.150', mask: '255.255.255.0',
+                        gateway: '192.168.1.1', dns: '192.168.1.20' }
         }),
-        dev('j2', 'host', 'Laptop 1', 500, 610, { nics: [{ ip: '192.168.1.10' }], gateway: '192.168.1.1', dns: '192.168.1.20',
-          software: ['browser', 'mail'] }),
-        dev('j3', 'host', 'Laptop 2', 720, 660, { nics: [{ ip: '192.168.1.11' }], gateway: '192.168.1.1', dns: '192.168.1.20',
-          software: ['browser', 'mail'] }),
-        dev('j4', 'server', 'Heimserver', 950, 610, {
-          nics: [{ ip: '192.168.1.20' }], gateway: '192.168.1.1', dns: '192.168.1.20',
+        dev('j2', 'host', 'Laptop 1', 470, 610, { nics: [{ dhcp: true }], software: ['browser', 'mail'] }),
+        dev('j3', 'host', 'Laptop 2', 690, 670, { nics: [{ dhcp: true }], software: ['browser', 'mail'] }),
+        dev('j4', 'server', 'Heimserver', 930, 610, {
+          nics: [{ dhcp: true }],
           software: ['dns', 'webserver', 'mailserver'], webServer: { on: true },
           dnsServer: { records: [] }, mailServer: { on: true, domain: 'heim.de', konten: [] },
           dateien: {
@@ -715,7 +840,8 @@
             '/webserver/stil.css':   { text: window.Http ? window.Http.STIL : '' },
             '/webserver/logo.png':   { bild: '@schule' }
           }
-        })
+        }),
+        dev('j5', 'handy', 'Handy 1', 1130, 500, { nics: [{ dhcp: true, funk: true, ssid: 'Heim-WLAN' }] })
       ],
       cables: [cab('j0', 1, 'j1', 0), cab('j1', 1, 'j2', 0), cab('j1', 2, 'j3', 0), cab('j1', 3, 'j4', 0)]
     }
@@ -734,7 +860,7 @@
       aufgaben: [
         { typ: 'bauen', text: 'Gib dem cww, dem Server und den beiden Endgeräten Adressen aus deinem Bereich (steht im cww). '
           + 'Installiere auf dem Server Webserver, DNS-Server und E-Mail-Server und auf den Endgeräten Browser und E-Mail-Programm.' },
-        { typ: 'bauen', label: 'Weiter bauen.', text: 'Schreib deine Seite, trag Namen im DNS ein und melde sie bei <code>8.8.8.8</code> an. '
+        { typ: 'bauen', text: 'Schreib deine Seite, trag Namen im DNS ein und melde sie bei <code>8.8.8.8</code> an. '
           + 'Lege zwei Mailkonten an. Schick eine Mail an einen Mitschüler und ruf seine Seite auf.' },
         { typ: 'erweitern', text: 'Erweitere dein Netz: ein zweiter Server (zum Beispiel nur für die Mail), ein zweites Netz mit eigenem Switch und weiteren '
           + 'Endgeräten. Alles soll weiter funktionieren, und alle Namen sollen im Mitschnitt nachvollziehbar sein.' }
@@ -764,32 +890,56 @@
   /* ═══ II.5 · Subnetzmasken ══════════════════════════════════════
      Aus dem Class Wide Web: der eigene Bereich ist ein /8 —
      16 Millionen Adressen für ein paar Rechner. Das Kind teilt ihn
-     auf, mit Masken, die zur Größe des Bedarfs passen. */
+     auf, mit Masken, die zur Größe des Bedarfs passen.
+
+     Die Erklärung hängt am Bild, nicht an Rechenregeln: Adresse =
+     Netzteil (blau) + Geräteteil (braun), die Maske setzt die
+     Grenze. Die Verbindung zur Praxis: braucht ein Netz mehr als
+     250 Geräte, wandern die letzten ZWEI Zahlen in den Geräteteil
+     (255.255.0.0). Das Werkzeug „Binärdarstellung" zeigt dieselbe
+     Grenze als Nullen und Einsen. */
   macN = 1900; cabN = 1900;
   const ii5 = {
     titel: 'II.5 · Subnetzmasken', gruppe: SEK2,
     aufgabe: auftrag({
       kontext: 'Das cww hat dir einen riesigen Bereich gegeben: <code>X.0.0.0</code> mit der Netzmaske <code>255.0.0.0</code> — über 16 Millionen '
-        + 'Adressen. Deine Schule braucht nur ein paar hundert. Bisher hängt alles in <em>einem</em> Netz.',
+        + 'Adressen. Deine Schule braucht nur ein paar hundert. Bisher hängt alles in <em>einem</em> Netz. Die <strong>Netzmaske</strong> '
+        + 'legt fest, wie groß ein Netz ist und wie viele Geräte hineinpassen.',
       aufgaben: [
         { typ: 'benutzen', text: 'Gib allen Geräten Adressen aus deinem Bereich (<code>X.0.0.n</code>, Maske <code>255.0.0.0</code>) und prüfe, dass alle sich '
-          + 'erreichen. Schalte dann <em>Subnetze</em> ein: Wie groß ist das eine Netz, in dem alles liegt?' },
+          + 'erreichen. Öffne ein Gerätefenster: Ein Teil der Adresse ist <strong>blau</strong> (Netzteil), der Rest <strong>braun</strong> (Geräteteil). '
+          + 'Wie viele Zahlen gehören zum Netz, wie viele zum Gerät? Schalte <em>Subnetze</em> ein: Wie groß ist das eine Netz, in dem alles liegt?' },
+        { typ: 'benutzen', text: 'Schalte <em>Ansicht &amp; Tools → Binärdarstellung</em> ein. Adresse und Netzmaske stehen jetzt als Nullen und Einsen da: '
+          + 'Wo die Netzmaske eine <strong>1</strong> hat, gehört das Bit zum Netz (blau), wo sie eine <strong>0</strong> hat, zum Gerät (braun). '
+          + 'Ändere bei <em>allen</em> Geräten (auch beim cww) die Netzmaske auf <code>255.255.0.0</code> und dann auf <code>255.255.255.0</code>. '
+          + 'Wie verschiebt sich die Grenze zwischen blau und braun? Wie viele Geräte passen jeweils hinein?' },
         { typ: 'veraendern', text: 'Teile es auf. Verwaltung (bis <strong>50</strong> Geräte), Unterricht (bis <strong>200</strong>) und Server (bis <strong>10</strong>) '
           + 'bekommen je ein eigenes Netz, verbunden über einen Router. Wähle für jedes die <em>kleinste</em> Maske, in die es passt, und schreib '
-          + 'einen Adressplan (Netz, Maske, erste und letzte Adresse).' },
+          + 'einen Adressplan (Netz, Maske, erste und letzte Adresse). Prüfe dich mit <em>Subnetze</em> und der Binärdarstellung.' },
         { typ: 'erweitern', text: 'Ein viertes Netz: das Gäste-WLAN für bis zu <strong>100</strong> Handys, ohne Zugriff auf Verwaltung und Server. '
           + 'Schaffst du es, dass das nur an der Aufteilung liegt?' }
       ],
       hilfe: [
-        { begriff: 'Netzmaske', text: 'Die Maske legt fest, wie viele Bits zum Netz gehören. Eine „/24“ hat 24 Bits Netz und 8 Bits für Geräte: '
-          + '<code>255.255.255.0</code>. Von den Adressen im Netz sind zwei reserviert: die <em>Netzadresse</em> (alles Geräte-Bits 0) und die '
-          + '<em>Broadcastadresse</em> (alles 1).' },
-        { begriff: 'Größen', text: 'Wie viele Geräte passen in ein Netz?', liste: [
-          '<code>/24</code> = <code>255.255.255.0</code> → 254 Geräte',
-          '<code>/25</code> = <code>255.255.255.128</code> → 126',
-          '<code>/26</code> = <code>255.255.255.192</code> → 62',
-          '<code>/27</code> = <code>255.255.255.224</code> → 30',
-          '<code>/28</code> = <code>255.255.255.240</code> → 14'
+        { begriff: 'Netzteil und Geräteteil', text: 'Jede Adresse hat zwei Teile: vorne den <em>Netzteil</em> (in welchem Netz liegt das Gerät?), hinten den <em>Geräteteil</em> '
+          + '(welches Gerät in diesem Netz?). Die Netzmaske legt die Grenze fest. Im Gerätefenster ist der Netzteil blau und der Geräteteil braun. '
+          + 'Je mehr Zahlen im Geräteteil stehen, desto mehr Geräte passen ins Netz:', liste: [
+          '<code>255.255.255.0</code> → <strong>eine</strong> Zahl Geräteteil (<code>192.168.1.<b>n</b></code>) → bis zu 254 Geräte',
+          '<code>255.255.0.0</code> → <strong>zwei</strong> Zahlen Geräteteil (<code>192.168.<b>n.n</b></code>) → bis zu 65 534 Geräte',
+          '<code>255.0.0.0</code> → <strong>drei</strong> Zahlen Geräteteil → über 16 Millionen Geräte'
+        ] },
+        { begriff: 'Wozu die große Maske?', text: 'Sollen <strong>mehr als 250 Geräte</strong> in ein Netz (eine Firma, eine große Schule), reicht die letzte Zahl nicht: Sie kann nur 254 Geräte zählen. '
+          + 'Dann gehören die <em>letzten beiden</em> Zahlen zum Geräteteil, also <code>255.255.0.0</code>. Umgekehrt ist ein Netz mit 10 Geräten in einer '
+          + '<code>255.255.255.0</code> verschwendet — dafür gibt es kleinere Netze.' },
+        { begriff: 'Mitten in einer Zahl', text: 'Die Grenze muss nicht zwischen zwei Zahlen liegen. Bei <code>255.255.255.192</code> gehört ein Teil der letzten Zahl noch zum Netz — '
+          + 'im Gerätefenster ist sie gestreift. Die genaue Grenze zeigt die Binärdarstellung.' },
+        WERKZEUG_BIN,
+        { begriff: 'Größen', text: 'Wie viele Geräte passen in ein Netz? Hat der Geräteteil <em>n</em> Bit, sind es 2<sup>n</sup> − 2 Geräte (zwei Adressen sind reserviert: '
+          + 'die <em>Netzadresse</em> mit lauter Nullen im Geräteteil und die <em>Broadcastadresse</em> mit lauter Einsen).', liste: [
+          '<code>255.255.255.0</code> → 254 Geräte',
+          '<code>255.255.255.128</code> → 126',
+          '<code>255.255.255.192</code> → 62',
+          '<code>255.255.255.224</code> → 30',
+          '<code>255.255.255.240</code> → 14'
         ] },
         WERKZEUG_SUB
       ],
@@ -858,14 +1008,14 @@
       kontext: 'Du bist der Netzwerkadministrator einer Schule und baust das Netz <strong>ganz allein</strong>. Nur der Anschluss ans '
         + 'Class Wide Web steht schon. Was das Netz können muss, steht unten — wie du es baust, entscheidest du.',
       aufgaben: [
-        { typ: 'bauen', label: 'Muss.', text: 'Mindestens <strong>drei Netze</strong> (Verwaltung, Unterricht, Server), verbunden über Router, mit '
+        { typ: 'bauen', eigen: true, label: 'Muss.', text: 'Mindestens <strong>drei Netze</strong> (Verwaltung, Unterricht, Server), verbunden über Router, mit '
           + 'passend gewählten Subnetzmasken und einem Adressplan.' },
-        { typ: 'bauen', label: 'Muss.', text: 'Mindestens <strong>15 Geräte</strong>; die Geräte im Unterricht bekommen ihre Adresse per <strong>DHCP</strong>, '
+        { typ: 'bauen', eigen: true, label: 'Muss.', text: 'Mindestens <strong>15 Geräte</strong>; die Geräte im Unterricht bekommen ihre Adresse per <strong>DHCP</strong>, '
           + 'im Unterrichtsnetz gibt es zusätzlich ein <strong>WLAN</strong> mit Handys.' },
-        { typ: 'bauen', label: 'Muss.', text: 'Ein Webserver mit eigener Seite und ein Mailserver mit zwei Konten. Beide Namen stehen im DNS und sind bei '
+        { typ: 'bauen', eigen: true, label: 'Muss.', text: 'Ein Webserver mit eigener Seite und ein Mailserver mit zwei Konten. Beide Namen stehen im DNS und sind bei '
           + '<code>8.8.8.8</code> angemeldet. Jedes Gerät erreicht jedes andere und ruft deine Seite über den Namen auf.' },
-        { typ: 'bauen', label: 'Kann.', text: 'Ein zweiter Weg zwischen zwei Routern, damit das Netz ein Kabelbruch überlebt.' },
-        { typ: 'benutzen', label: 'Danach.', text: 'Schick <code>traceroute</code> zum Server eines Mitschülers. Was siehst du von seinem Netz — und was nicht?' }
+        { typ: 'bauen', eigen: true, label: 'Kann.', text: 'Ein zweiter Weg zwischen zwei Routern, damit das Netz ein Kabelbruch überlebt.' },
+        { typ: 'benutzen', eigen: true, label: 'Danach.', text: 'Schick <code>traceroute</code> zum Server eines Mitschülers. Was siehst du von seinem Netz — und was nicht?' }
       ],
       hilfe: [
         { begriff: 'Abnahme', text: 'Ein Netz ist fertig, wenn die Liste oben stimmt <em>und</em> du es beweisen kannst: mit Pings, einem Mitschnitt und '

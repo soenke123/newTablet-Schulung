@@ -576,6 +576,20 @@ section('Adresse aufteilen');
   ok('ohne gültige Maske gilt alles als Geräteteil',
      d.every(p => p.teil === 'host'));
   ok('Unsinn ergibt keine Aufteilung', U.ipParts('nix', '255.255.255.0') === null);
+
+  /* Werkzeug „Binärdarstellung": dieselbe Grenze, Bit für Bit. */
+  const txt = (h) => h.replace(/<[^>]+>/g, '');
+  ok('binär: 192.168.1.10 als vier Achtergruppen', txt(U.binHtml('192.168.1.10', '255.255.255.0')) === '11000000.10101000.00000001.00001010');
+  ok('binär: die Netzmaske als Einsen und Nullen', txt(U.binHtml('255.255.255.0', '255.255.255.0')) === '11111111.11111111.11111111.00000000');
+  {
+    const h = U.binHtml('192.168.1.70', '255.255.255.192');
+    ok('binär: bei /26 liegt die Grenze mitten im letzten Block (2 Bit Netz, 6 Bit Gerät)',
+       /ipp--netz">01</.test(h) && /ipp--host">000110</.test(h), h);
+    ok('binär: ganze Blöcke davor sind Netzteil', /ipp--netz">11000000</.test(h));
+  }
+  ok('binär: ohne gültige Maske bleibt es ungefärbt, aber sichtbar',
+     /ipp--offen/.test(U.binHtml('10.0.0.1', 'quatsch')) && !/ipp--netz/.test(U.binHtml('10.0.0.1', 'quatsch')));
+  ok('binär: keine Adresse, nichts zu zeigen', U.binHtml('nix', '255.255.255.0') === '');
 }
 
 /* ═══ 13 · Anschlüsse anbauen und abbauen ═══ */
@@ -1958,7 +1972,7 @@ section('Sek I und II · neue Szenarien');
     ok('I.4: sie tragen den Router als Gateway', h.every(x => x.gateway === '192.168.2.1'));
   }
 
-  // I.5: sechs Fehler, einer nach dem anderen behoben.
+  // I.5: neun Fehler, einer nach dem anderen behoben.
   {
     const z = lade('i5');
     z.dienste.start();
@@ -1969,6 +1983,11 @@ section('Sek I und II · neue Szenarien');
     ok('I.5: vier Router, Vermaschung (mehr Kabel als für eine Reihe nötig)',
        z.netz.list().filter(n => n.kind === 'router').length === 4
        && z.netz.cableList().filter(c => /^fr/.test(c.a.node) && /^fr/.test(c.b.node)).length === 5);
+    ok('I.5: zwei der Fehler stecken zwischen den Routern (Tippfehler-Adresse, gezogenes Kabel)',
+       R(4).nics[2].ip === '192.168.150.2'
+       && z.netz.cableList().some(c => c.a.node === 'fr1' && c.b.node === 'fr3' && c.up === false));
+    ok('I.5: ein Endgerät trägt eine Adresse aus dem Nachbarnetz',
+       E(8).nics[0].ip === '192.168.2.11' && E(8).gateway === '192.168.3.1');
     ok('I.5: zu Beginn erreicht E1 nicht alle', !ankommt(ping(z, E(1), '192.168.3.10', 30)) || !ankommt(ping(z, E(1), '192.168.4.10', 30)));
     // 1 · Router 3 ohne Adresse
     konf(R(3), 0, '192.168.3.1');
@@ -1986,10 +2005,16 @@ section('Sek I und II · neue Szenarien');
     const lose = z.netz.list().find(n => n.kind === 'host' && !n.nics[0].cable && n.nics[0].ip);
     ok('I.5: ein Endgerät hat kein Kabel', !!lose);
     z.netz.addCable(lose.id, 0, z.netz.byName('Switch 1').id, 3);
+    // 7 · Endgerät mit Adresse aus dem Nachbarnetz
+    konf(E(8), 0, '192.168.3.11');
+    // 8 · Tippfehler an der Router-Karte des Kabels R2–R4
+    konf(R(4), 2, '192.168.105.2');
+    // 9 · das herausgezogene Kabel R1–R3
+    z.netz.cableList().find(c => c.a.node === 'fr1' && c.b.node === 'fr3').up = true;
     z.dienste.start();
     z.engine.runUntil(z.engine.now + 60 * SEC);
     const ende = alleEnden();
-    ok('I.5: nach sechs Reparaturen hat jedes Endgerät eine Adresse',
+    ok('I.5: nach neun Reparaturen hat jedes Endgerät eine Adresse',
        ende.every(x => x.nics[0].ip), ende.map(x => x.name + ':' + x.nics[0].ip).join(' '));
     const quelle = E(1);
     const nichtOk = [];
@@ -2065,21 +2090,71 @@ section('Sek I und II · neue Szenarien');
     ok('II.1: und dann erreicht E1 alle', schlecht.length === 0, schlecht.join(', '));
   }
 
-  // II.2 und II.3: Heimrouter am cww; Heimserver mit drei Diensten.
+  // II.2: Heimnetz und öffentliches Netz; drei Fehler, der Reihe nach behoben.
   {
-    const z2 = lade('ii2');
-    ok('II.2: Heimrouter, cww und zwei Laptops',
-       z2.netz.list().some(n => n.kind === 'heimrouter') && z2.netz.list().some(n => n.kind === 'cww')
-       && z2.netz.list().filter(n => n.kind === 'host').length === 2);
-    const hr = z2.netz.list().find(n => n.kind === 'heimrouter');
-    ok('II.2: das WLAN des Heimrouters ist an (Name Heim-WLAN)', z2.netz.strahlt(hr) && hr.wlan.ssid === 'Heim-WLAN');
+    const z = lade('ii2');
+    const N = (n) => z.netz.byName(n);
+    ok('II.2: Heimrouter, Anbieter-Router, Webserver, fremder Rechner — und noch kein cww',
+       z.netz.list().some(n => n.kind === 'heimrouter') && z.netz.list().some(n => n.kind === 'router')
+       && !z.netz.list().some(n => n.kind === 'cww')
+       && !!N('Webserver') && !!N('Fremder Rechner') && !!N('Handy 1'));
+    const hr = z.netz.list().find(n => n.kind === 'heimrouter');
+    ok('II.2: das WLAN des Heimrouters ist an (Name Heim-WLAN)', z.netz.strahlt(hr) && hr.wlan.ssid === 'Heim-WLAN');
+    ok('II.2: der Webserver bringt seine Seite mit', !!N('Webserver').dateien['/webserver/index.html']);
+    z.dienste.start();
+    z.engine.runUntil(10 * SEC);
+    const L1 = N('Laptop 1'), L2 = N('Laptop 2'), H = N('Handy 1'), F = N('Fremder Rechner');
+    ok('II.2: im Heimnetz erreichen sich alle (Laptop 2, Handy)',
+       ankommt(ping(z, L1, '192.168.1.11', 20)) && ankommt(ping(z, L1, '192.168.1.12', 20)));
+    ok('II.2: Fehler 1 — mit dem falschen Gateway am Heimrouter kommt nichts nach draußen',
+       !ankommt(ping(z, L1, '84.12.6.20', 30)));
+    hr.gateway = '84.12.5.1';
+    ok('II.2: nach Fehler 1 erreicht Laptop 1 den Webserver', ankommt(ping(z, L1, '84.12.6.20', 30)),
+       zeilen(z.term, L1).slice(-200));
+    ok('II.2: Fehler 3 — der fremde Rechner hat kein Gateway: hin ja, zurück nein',
+       !ankommt(ping(z, L1, '84.12.6.30', 30)));
+    ok('II.2: Fehler 2 — Laptop 2 ohne Gateway kommt nicht hinaus', !ankommt(ping(z, L2, '84.12.6.20', 30)));
+    L2.gateway = '192.168.1.1';
+    F.gateway = '84.12.6.1';
+    ok('II.2: danach erreichen beide Laptops beide Ziele',
+       ankommt(ping(z, L1, '84.12.6.30', 30)) && ankommt(ping(z, L2, '84.12.6.20', 30))
+       && ankommt(ping(z, L2, '84.12.6.30', 30)));
+    ok('II.2: das Handy im WLAN kommt auch hinaus', ankommt(ping(z, H, '84.12.6.20', 30)),
+       zeilen(z.term, H).slice(-200));
+    ok('II.2: von draußen erreicht man die WAN-Adresse des Heimrouters', ankommt(ping(z, F, '84.12.5.2', 30)),
+       zeilen(z.term, F).slice(-200));
+    ok('II.2: aber nicht den Laptop dahinter (NAT: von außen kann niemand anfangen)',
+       !ankommt(ping(z, F, '192.168.1.10', 30)));
+  }
+
+  // II.3: alles dynamisch; der Name geht erst mit der festen Adresse.
+  {
     const z3 = lade('ii3');
     const sv = z3.netz.byName('Heimserver');
+    const L1 = z3.netz.byName('Laptop 1');
     ok('II.3: der Heimserver bringt Web, DNS und Mail mit, alles gestartet',
        z3.netz.laufendeDienste(sv).join(',') === 'dns,web,mail', z3.netz.laufendeDienste(sv).join(','));
     ok('II.3: DNS und Mail sind leer', sv.dnsServer.records.length === 0 && sv.mailServer.konten.length === 0);
+    ok('II.3: der Server steht auf DHCP, ebenso die Laptops und das Handy',
+       sv.nics[0].dhcp && L1.nics[0].dhcp && z3.netz.byName('Handy 1').nics[0].dhcp);
     z3.dienste.start();
-    ok('II.3: Laptop 1 erreicht die Seite im Heimnetz', ankommt(ping(z3, z3.netz.byName('Laptop 1'), '192.168.1.20', 30)));
+    z3.engine.runUntil(60 * SEC);
+    const dyn = sv.nics[0].ip;
+    ok('II.3: der Server hat eine Adresse aus dem DHCP-Bereich',
+       /^192\.168\.1\.(1[0-4]\d|150)$/.test(dyn), dyn);
+    ok('II.3: Laptop 1 erreicht die Seite über die dynamische Adresse', ankommt(ping(z3, L1, dyn, 30)));
+    sv.dnsServer.records.push({ name: 'www.heim.de', ip: dyn });
+    ok('II.3: über den Namen geht es zunächst nicht (der DNS-Server, den DHCP nennt, steht woanders)',
+       L1.dns === '192.168.1.20' && !ankommt(ping(z3, L1, 'www.heim.de', 30)));
+    // Statisch: feste Adresse außerhalb des Bereichs.
+    z3.netz.setDhcp(sv, 0, false);
+    konf(sv, 0, '192.168.1.20', '255.255.255.0');
+    sv.gateway = '192.168.1.1'; sv.dns = '192.168.1.20';
+    sv.dnsServer.records[0].ip = '192.168.1.20';
+    z3.term.submit(L1.id, 'dhcp neu');
+    z3.engine.runUntil(z3.engine.now + 30 * SEC);
+    ok('II.3: mit der festen Adresse geht der Name', ankommt(ping(z3, L1, 'www.heim.de', 40)),
+       zeilen(z3.term, L1).slice(-200));
   }
 
   // II.4, II.5, II.7: am cww, ohne Adressen.

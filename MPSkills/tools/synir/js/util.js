@@ -217,6 +217,40 @@
     return grp;
   }
 
+  /* ─── Dieselbe Aufteilung, aber Bit für Bit ─────────────────
+     Das Werkzeug „Binärdarstellung" (Ansicht & Tools). Die Farben
+     sind dieselben wie bei ipGruppen — Netzteil blau, Geräteteil
+     braun —, aber sie gelten hier je BIT und nicht je Block. Erst
+     so sieht man, wo die Grenze bei einer Maske wie 255.255.254.0
+     wirklich liegt: mitten in einem Block, ohne Streifen.
+
+     `wertStr` ist die Zahl, die dargestellt wird (eine IP, die
+     Netzadresse oder die Maske selbst), `maskStr` bestimmt die
+     Färbung. Ohne gültige Maske stehen die Bits ungefärbt da. */
+  function binHtml(wertStr, maskStr) {
+    const v = ip2int(wertStr);
+    if (v === null) return '';
+    const m = ip2int(maskStr);
+    const p = m === null ? null : mask2prefix(m);
+    const okt = [];
+    for (let o = 0; o < 4; o++) {
+      let html = '', lauf = '', art = null;
+      for (let b = 0; b < 8; b++) {
+        const pos = o * 8 + b;
+        const teil = p === null ? 'offen' : pos < p ? 'netz' : 'host';
+        if (art !== null && teil !== art) {
+          html += '<span class="ipp ipp--' + art + '">' + lauf + '</span>';
+          lauf = '';
+        }
+        art = teil;
+        lauf += (v >>> (31 - pos)) & 1;
+      }
+      html += '<span class="ipp ipp--' + art + '">' + lauf + '</span>';
+      okt.push('<span class="bo">' + html + '</span>');
+    }
+    return okt.join('<span class="ipd">.</span>');
+  }
+
   // Wie viele führende Einsen hat dieses Maskenbyte?
   function bitsOf(b) {
     let n = 0;
@@ -286,7 +320,7 @@
   window.NetUtil = {
     rng, Heap,
     ip2int, int2ip, isIp, mask2prefix, prefix2mask,
-    netOf, bcastOf, sameNet, checkHostAddress, ipParts, ipGruppen,
+    netOf, bcastOf, sameNet, checkHostAddress, ipParts, ipGruppen, binHtml,
     MAC_BROADCAST, macFrom, isBroadcastMac,
     MS, SEC, fmtTime,
     nextId, bumpId, clamp, escapeHtml, deepCopy, icon

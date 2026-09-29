@@ -25,7 +25,7 @@ const ok = (n, c, x) => { if (c) { pass++; console.log('  ok   ' + n); }
 async function mk(page, sel) {
   const l = page.locator(sel);
   if (!(await l.isVisible())) {
-    const ansicht = ['#subBtn', '#traceBtn', '#themeBtn'].includes(sel);
+    const ansicht = ['#subBtn', '#traceBtn', '#themeBtn', '#binBtn'].includes(sel);
     await page.locator(ansicht ? '#ansichtBtn' : '#dateiBtn').click();
   }
   await l.click();
