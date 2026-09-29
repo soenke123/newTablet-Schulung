@@ -3963,3 +3963,11 @@ body[data-rolle="presenter"] .mi.nur-lehrer { display: flex; }
 .nf-node--bild.is-sel .nf-plate, .nf-node--bild.is-target .nf-plate, .nf-node--bild.is-warn .nf-plate { fill: transparent; }
 .nf-bild { filter: drop-shadow(0 3px 5px rgba(20,24,31,.22)); }
 .nf-kurz--bild { text-anchor: start; paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+
+/* Geräteleiste: dieselben Bilder wie auf der Fläche (body.bilder-an),
+   sonst die schematischen Zeichen. */
+.add-bild { display: none; }
+body.bilder-an .add-ic:has(.add-bild) svg { display: none; }
+body.bilder-an .add-bild { display: block; width: 44px; height: auto; margin: -3px auto; pointer-events: none; }
+body.bilder-an .rail.is-zu .add-bild { width: 42px; }
+body.bilder-an .rail .add--geraet:not(.add--kachel) .add-bild { width: 36px; margin: -3px 0; }

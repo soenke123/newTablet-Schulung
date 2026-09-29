@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
-<link rel="stylesheet" href="css/app.css?v=20260929e">
+<link rel="stylesheet" href="css/app.css?v=20260929f">
 </head>
 <body>
 
@@ -303,9 +303,9 @@
             <span class="mi-l">Dark Mode</span></button>
 
           <button type="button" class="mi mi--wahl" role="menuitemcheckbox" aria-checked="false" id="bilderBtn"
-                  title="Geräte als Bilder statt als schematische Kacheln zeichnen">
+                  title="Geräte schematisch (Kacheln) statt als Bilder zeichnen">
             <span class="mi-ck" aria-hidden="true"></span>
-            <span class="mi-l">Gerätebilder (PNG)</span></button>
+            <span class="mi-l">Netzwerkplan</span></button>
 
           <div class="mn-sep" role="separator"></div>
           <div class="mn-gruppe" role="presentation">Tools</div>
@@ -397,17 +397,17 @@
         <div class="rail-cluster">
           <button class="add add--geraet add--kachel" data-add="host"
                   title="Laptop — ein Rechner am Netz">
-            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-host"/></svg></span>
+            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-host"/></svg><img class="add-bild" src="sprites/laptop.png" alt="" draggable="false"></span>
             <span class="add-n">Laptop</span>
           </button>
           <button class="add add--geraet add--kachel" data-add="server"
                   title="Server — dasselbe Gerät, anderes Bild">
-            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-server"/></svg></span>
+            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-server"/></svg><img class="add-bild" src="sprites/Server.png" alt="" draggable="false"></span>
             <span class="add-n">Server</span>
           </button>
           <button class="add add--geraet add--kachel" data-add="handy"
                   title="Handy — dasselbe Gerät, eigener Bildschirm">
-            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-handy"/></svg></span>
+            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-handy"/></svg><img class="add-bild" src="sprites/Handy.png" alt="" draggable="false"></span>
             <span class="add-n">Handy</span>
           </button>
         </div>
@@ -429,7 +429,7 @@
       <div class="rail-g">
         <span class="tools-t rail-t">Verteilen</span>
         <button class="add add--geraet" data-add="switch" title="Switch">
-          <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-switch"/></svg></span>
+          <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-switch"/></svg><img class="add-bild" src="sprites/Switch.png" alt="" draggable="false"></span>
           <span class="add-n">Switch</span>
         </button>
       </div>
@@ -444,12 +444,12 @@
         <div class="rail-cluster">
           <button class="add add--geraet add--kachel" data-add="router"
                   title="Router — verbindet zwei Netze">
-            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-router"/></svg></span>
+            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-router"/></svg><img class="add-bild" src="sprites/Router.png" alt="" draggable="false"></span>
             <span class="add-n">Router</span>
           </button>
           <button class="add add--geraet add--kachel" data-add="heimrouter"
                   title="Heimrouter — Router, Switch und WLAN in einem">
-            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-heimrouter"/></svg></span>
+            <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-heimrouter"/></svg><img class="add-bild" src="sprites/Heimrouter.png" alt="" draggable="false"></span>
             <span class="add-n">Heimrouter</span>
           </button>
         </div>
@@ -462,7 +462,7 @@
         <span class="tools-t rail-t">Internet</span>
         <button class="add add--geraet" data-add="cww"
                 title="Class Wide Web — der Anschluss ans Internet der Klasse">
-          <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-cww"/></svg></span>
+          <span class="add-ic"><svg viewBox="0 0 24 24"><use href="#ic-cww"/></svg><img class="add-bild" src="sprites/cww.png" alt="" draggable="false"></span>
           <span class="add-n">cww</span>
         </button>
       </div>
@@ -819,36 +819,36 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="js/util.js?v=20260929e"></script>
-<script src="js/engine.js?v=20260929e"></script>
-<script src="js/netz.js?v=20260929e"></script>
-<script src="js/verlauf.js?v=20260929e"></script>
-<script src="js/nat.js?v=20260929e"></script>
-<script src="js/tcp.js?v=20260929e"></script>
-<script src="js/rip.js?v=20260929e"></script>
-<script src="js/dateien.js?v=20260929e"></script>
-<script src="js/http.js?v=20260929e"></script>
-<script src="js/mail.js?v=20260929e"></script>
-<script src="js/schichten.js?v=20260929e"></script>
-<script src="js/dienste.js?v=20260929e"></script>
-<script src="js/internet.js?v=20260929e"></script>
-<script src="js/mitschnitt.js?v=20260929e"></script>
-<script src="js/terminal.js?v=20260929e"></script>
-<script src="js/subnetze.js?v=20260929e"></script>
-<script src="js/flaeche.js?v=20260929e"></script>
-<script src="js/konfig.js?v=20260929e"></script>
-<script src="js/panels.js?v=20260929e"></script>
-<script src="js/weiterleitung.js?v=20260929e"></script>
-<script src="js/prog-dateien.js?v=20260929e"></script>
-<script src="js/prog-web.js?v=20260929e"></script>
-<script src="js/prog-mail.js?v=20260929e"></script>
-<script src="js/geraet.js?v=20260929e"></script>
-<script src="js/szenarien.js?v=20260929e"></script>
-<script src="js/szmenue.js?v=20260929e"></script>
-<script src="js/menuleiste.js?v=20260929e"></script>
-<script src="js/aufgabe.js?v=20260929e"></script>
-<script src="js/app.js?v=20260929e"></script>
+<script src="js/util.js?v=20260929f"></script>
+<script src="js/engine.js?v=20260929f"></script>
+<script src="js/netz.js?v=20260929f"></script>
+<script src="js/verlauf.js?v=20260929f"></script>
+<script src="js/nat.js?v=20260929f"></script>
+<script src="js/tcp.js?v=20260929f"></script>
+<script src="js/rip.js?v=20260929f"></script>
+<script src="js/dateien.js?v=20260929f"></script>
+<script src="js/http.js?v=20260929f"></script>
+<script src="js/mail.js?v=20260929f"></script>
+<script src="js/schichten.js?v=20260929f"></script>
+<script src="js/dienste.js?v=20260929f"></script>
+<script src="js/internet.js?v=20260929f"></script>
+<script src="js/mitschnitt.js?v=20260929f"></script>
+<script src="js/terminal.js?v=20260929f"></script>
+<script src="js/subnetze.js?v=20260929f"></script>
+<script src="js/flaeche.js?v=20260929f"></script>
+<script src="js/konfig.js?v=20260929f"></script>
+<script src="js/panels.js?v=20260929f"></script>
+<script src="js/weiterleitung.js?v=20260929f"></script>
+<script src="js/prog-dateien.js?v=20260929f"></script>
+<script src="js/prog-web.js?v=20260929f"></script>
+<script src="js/prog-mail.js?v=20260929f"></script>
+<script src="js/geraet.js?v=20260929f"></script>
+<script src="js/szenarien.js?v=20260929f"></script>
+<script src="js/szmenue.js?v=20260929f"></script>
+<script src="js/menuleiste.js?v=20260929f"></script>
+<script src="js/aufgabe.js?v=20260929f"></script>
+<script src="js/app.js?v=20260929f"></script>
 <!-- Die Brücke in den Raum. Tut ohne Rahmen nichts. -->
-<script src="js/bruecke.js?v=20260929e"></script>
+<script src="js/bruecke.js?v=20260929f"></script>
 </body>
 </html>

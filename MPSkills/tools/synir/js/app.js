@@ -459,12 +459,15 @@
     /* Geräte-Lerninformationen: der Block „Was dieses Gerät gelernt
        hat". Aus, bis die Lehrkraft ihn einschaltet; die Wahl bleibt
        auf diesem Gerät stehen. */
-    /* Gerätebilder: schematisch (Vorgabe) oder als PNG (sprites/). */
+    /* Gerätebilder (sprites/) sind die Vorgabe — auf der Fläche UND in
+       der Geräteleiste. Der Haken „Netzwerkplan" schaltet auf die
+       schematische Darstellung um. */
     const BILD_KEY = 'netzsim.bilder';
     function bilderSetzen(an, still) {
       flaeche.setBilder(an);
-      $('bilderBtn').setAttribute('aria-checked', String(an));
-      $('bilderBtn').classList.toggle('is-on', an);
+      document.body.classList.toggle('bilder-an', an);
+      $('bilderBtn').setAttribute('aria-checked', String(!an));
+      $('bilderBtn').classList.toggle('is-on', !an);
       try { localStorage.setItem(BILD_KEY, an ? '1' : '0'); } catch (e) {}
     }
     $('bilderBtn').addEventListener('click', () => bilderSetzen(!flaeche.bilder));
@@ -1487,7 +1490,7 @@
     }
     themeAnzeigen();
     try { lernSetzen(localStorage.getItem(LERN_KEY) === '1', true); } catch (e) {}
-    try { if (localStorage.getItem(BILD_KEY) === '1') bilderSetzen(true); } catch (e) {}
+    try { bilderSetzen(localStorage.getItem(BILD_KEY) !== '0', true); } catch (e) { bilderSetzen(true, true); }
 
     /* ═══ Die Zwischenablage ═════════════════════════════════════
        Verlangt waren „Copy Paste mit Strg V/C", und zwar ohne

@@ -856,8 +856,8 @@
       host: 'laptop', server: 'Server', handy: 'Handy', switch: 'Switch',
       router: 'Router', heimrouter: 'Heimrouter', cww: 'cww'
     };
-    const BILD_W = 100, BILD_H = Math.round(BILD_W * 575 / 711);
-    let bilder = false;
+    const BILD_W = 110, BILD_H = Math.round(BILD_W * 575 / 711);
+    let bilder = true;
     function bildUrl(kind) { return 'sprites/' + SPRITE[kind] + '.png'; }
 
     function drawNode(n, auswahl) {
