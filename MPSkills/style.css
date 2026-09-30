@@ -1900,6 +1900,15 @@ label.field .rule {
   font-size: .76rem;
   color: var(--ink-faint);
 }
+label.field input.is-invalid {
+  border-color: var(--warn-ink);
+  background: var(--warn-dim);
+}
+label.field input.is-invalid:focus { outline-color: var(--warn-ink); }
+label.field .rule.is-invalid {
+  color: var(--warn-ink);
+  font-weight: 600;
+}
 
 .modal .actions {
   display: flex;

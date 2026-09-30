@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260928a" />
+<link rel="stylesheet" href="style.css?v=20260930" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -243,8 +243,9 @@
             </label>
             <label class="field">Accountname
               <input type="text" id="regAccount" autocomplete="username"
-                     autocapitalize="none" spellcheck="false" required />
-              <span class="rule">2–20 Zeichen · a–z, 0–9, . _ -</span>
+                     autocapitalize="none" autocorrect="off" spellcheck="false" required
+                     aria-describedby="regAccountHint" />
+              <span class="rule" id="regAccountHint">2–20 Zeichen · nur Kleinbuchstaben (a–z), Ziffern und . _ - · keine Großbuchstaben, Umlaute oder Leerzeichen</span>
             </label>
             <label class="field">Anzeigename
               <input type="text" id="regDisplayName" autocomplete="name" required />
@@ -521,6 +522,7 @@
 <script src="../supabase-config.js"></script>
 <script src="../session.js?v=20260817"></script>
 <script src="../avatars.js?v=20260709"></script>
+<script src="../account-name.js?v=20260930"></script>
 <script src="lib/userbar.js?v=20260927"></script>
 <script src="lib/room.js?v=20260923"></script>
 <script src="lib/icons.js?v=20260928"></script>
@@ -542,6 +544,6 @@
 <script src="preview/wildclusters.js?v=20260923"></script>
 <script src="preview/wordisland.js?v=20260910"></script>
 <script src="preview/synir.js?v=20260928"></script>
-<script src="app.js?v=20260927a"></script>
+<script src="app.js?v=20260930"></script>
 </body>
 </html>

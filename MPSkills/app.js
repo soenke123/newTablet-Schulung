@@ -1490,6 +1490,8 @@ async function doRegister(e) {
   const password     = document.getElementById('regPassword').value;
   const password2    = document.getElementById('regPassword2').value;
 
+  if (!regAccountCheck.check()) return;
+
   if (password !== password2) {
     errBox.textContent = 'Die beiden Passwörter stimmen nicht überein.';
     errBox.hidden = false;
@@ -1519,6 +1521,8 @@ async function doRegister(e) {
         || `Anmeldung fehlgeschlagen (HTTP ${res.status}${body?.error ? ' · ' + body.error : ''}).`;
       errBox.hidden = false;
       btn.disabled = false;
+      // Liegt's am Accountnamen, das Feld selbst rot markieren
+      if (body?.error?.startsWith('account_name_')) regAccountCheck.showProblem(errBox.textContent);
       return;
     }
 
@@ -1550,6 +1554,9 @@ document.getElementById('accessToggle').addEventListener('click', () => {
   if (accessOpen()) closeAccess(); else openAccess();
 });
 document.getElementById('loginForm').addEventListener('submit', doLogin);
+const regAccountCheck = AccountName.attach(
+  document.getElementById('regAccount'),
+  document.getElementById('regAccountHint'));
 document.getElementById('registerForm').addEventListener('submit', doRegister);
 
 // Ein Listener am Kasten statt an jedem Reiter — EINMAL, außerhalb

@@ -865,6 +865,18 @@
       color: var(--muted);
       margin-top: 0.15rem;
     }
+    .reg-hint.is-invalid {
+      color: #b32020;
+      font-weight: 600;
+    }
+    .login-modal-box input.is-invalid,
+    .login-modal-box input.is-invalid:hover {
+      border-color: #d93025;
+      background: #fdecea;
+    }
+    .login-modal-box input.is-invalid:focus {
+      outline-color: #d93025;
+    }
     .register-success {
       margin: 0;
       padding: 0.6rem 0.8rem;
@@ -1240,8 +1252,9 @@
         <label>
           Accountname (zum Einloggen)
           <input type="text" id="regAccount" required autocomplete="username"
-                 pattern="[a-z0-9._\-]{2,20}" title="2–20 Zeichen, nur Kleinbuchstaben, Ziffern, . _ -" />
-          <small class="reg-hint">2–20 Zeichen, nur Kleinbuchstaben, Ziffern, . _ -</small>
+                 autocapitalize="none" autocorrect="off" spellcheck="false"
+                 aria-describedby="regAccountHint" />
+          <small class="reg-hint" id="regAccountHint">2–20 Zeichen · nur Kleinbuchstaben (a–z), Ziffern und . _ - · keine Großbuchstaben, Umlaute oder Leerzeichen</small>
         </label>
         <label>
           Anzeigename (in der Bestenliste)
@@ -1273,6 +1286,7 @@
   <script src="session.js?v=20260811"></script>
   <script src="avatars.js?v=20260709"></script>
   <script src="feedback.js?v=20260927"></script>
+  <script src="account-name.js?v=20260930"></script>
   <script src="GameHub/config.js?v=20260623"></script>
 
   <script>
@@ -1484,11 +1498,16 @@
     const switchToRegister = document.getElementById('switchToRegister');
     const switchToLogin = document.getElementById('switchToLogin');
 
+    const regAccountCheck = AccountName.attach(
+      document.getElementById('regAccount'),
+      document.getElementById('regAccountHint'));
+
     async function openRegisterModal() {
       registerError.hidden = true;
       registerSuccess.hidden = true;
       registerSubmit.disabled = false;
       registerForm.reset();
+      regAccountCheck.reset();
       registerModal.classList.add('active');
       registerModal.setAttribute('aria-hidden', 'false');
       await fillSchoolSelect(regSchool);
@@ -1594,6 +1613,8 @@
       const password     = document.getElementById('regPassword').value;
       const password2    = document.getElementById('regPassword2').value;
 
+      if (!regAccountCheck.check()) return;
+
       if (password !== password2) {
         registerError.textContent = 'Die beiden Passwörter stimmen nicht überein.';
         registerError.hidden = false;
@@ -1640,6 +1661,8 @@
             : fallback;
           registerError.hidden = false;
           registerSubmit.disabled = false;
+          // Liegt's am Accountnamen, das Feld selbst rot markieren
+          if (body?.error?.startsWith('account_name_')) regAccountCheck.showProblem(mapped || fallback);
           return;
         }
 
