@@ -1050,12 +1050,13 @@
         <!-- Untere Doppel-Buttons -->
         <div class="bottom-row">
 
-          <!-- PDF Download -->
+          <!-- PDF-Handout: öffnet die Online-Ansicht im neuen Tab -->
           <a
             id="handoutLink"
             class="card-button pdf-button"
             href="Dokumente/Handout_Tablet-Schulung.pdf"
-            download
+            target="_blank"
+            rel="noopener"
           >
             <span class="pdf-icon" aria-hidden="true"></span>
             <span>Handout</span>
@@ -1346,8 +1347,7 @@
       const handoutFile = season >= 3
         ? 'Handout_Tablet-Schulung v3.pdf'
         : (s2 ? 'Handout_Tablet-Schulung v2.pdf' : 'Handout_Tablet-Schulung.pdf');
-      handoutLink.href = 'Dokumente/' + handoutFile;
-      handoutLink.download = handoutFile;
+      handoutLink.href = 'Dokumente/' + encodeURIComponent(handoutFile);
     }
 
     // Klick auf GameHub-Button abfangen wenn nicht eingeloggt oder noch pending
