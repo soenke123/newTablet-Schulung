@@ -342,7 +342,7 @@ section('Szenarien');
   const S = sandbox.SZENARIEN;
   /* Übergang: die neuen Sek-I-Szenarien (i1…) stehen vor den acht
      bisherigen, die nach und nach ersetzt werden. */
-  ok('Szenarien vorhanden (Sek I: 7, Sek II: 9)', Object.keys(S).length === 16, Object.keys(S).join(','));
+  ok('Szenarien vorhanden (Sek I: 7, Sek II: 8, Andere: 2)', Object.keys(S).length === 17, Object.keys(S).join(','));
   ok('jedes Szenario trägt eine Gruppe', Object.keys(S).every(k => !!S[k].gruppe));
 
   for (const k in S) {
@@ -1854,7 +1854,7 @@ section('Sek I und II · neue Szenarien');
 {
   const S = sandbox.SZENARIEN;
   // Die Auftragskarte liegt links oben — dort steht kein Gerät.
-  for (const k of ['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'ii1', 'ii2', 'ii3', 'ii4', 'ii5', 'ii6', 'ii7', 'ii8', 'ii9']) {
+  for (const k of ['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'ii1', 'ii2', 'ii3', 'ii4', 'ii5', 'ii6', 'ii7', 'ii8', 'ii9', 'handschlag']) {
     ok(k + ': keine Geräte unter der Auftragskarte',
        S[k].netz.nodes.every(n => !(n.x < 430 && n.y < 280)));
     ok(k + ': Auftrag hat Kontext, Aufgaben und Hilfe',
@@ -2210,6 +2210,52 @@ section('Sek I und II · neue Szenarien');
     ok('II.8: das Handy hat sich im WLAN eine Adresse geholt', /^192\.168\.2\.1\d\d$/.test(handy.nics[0].ip), handy.nics[0].ip);
     ok('II.8: der Webserver liefert eine Seite',
        !!z.netz.byName('Webserver').dateien['/webserver/index.html']);
+  }
+
+  // Andere: DHCP-Spoofing und Handschlag stehen unter „Andere“, durchgezählt.
+  ok('Andere: DHCP-Spoofing und Handschlag in eigener Gruppe, 1. und 2.',
+     S.ii9.gruppe === 'Andere' && S.handschlag.gruppe === 'Andere'
+     && /^1\. /.test(S.ii9.titel) && /^2\. /.test(S.handschlag.titel),
+     S.ii9.gruppe + ' / ' + S.ii9.titel + ' / ' + S.handschlag.titel);
+  ok('Andere: die Gruppe steht zusammen am Ende der Liste',
+     Object.keys(S).slice(-2).join(',') === 'ii9,handschlag');
+
+  // 2. Der Handschlag: genau EIN Handschlag vor der Seite, RST am Mailserver.
+  {
+    const z = lade('handschlag');
+    const mit = new sandbox.Mitschnitt(z.engine, z.netz);
+    z.dienste.start(); z.dienste.sync();
+    const anna = z.netz.byName('Anna');
+    let seite = null;
+    z.dienste.http.seiteHolen(anna, '192.168.1.20', (r) => seite = r);
+    z.engine.runUntil(z.engine.now + 20 * SEC);
+    ok('Handschlag: die Seite kommt, und zwar als EIN Teil (eine Verbindung)',
+       seite && seite.ok && seite.teile.length === 1, seite && (seite.grund || JSON.stringify(seite.teile)));
+    // Nur Absender, nicht den Switch: der gibt jeden Rahmen noch einmal ab.
+    const sw = z.netz.byName('Switch 1').id;
+    const tcp = mit.view().filter(r => r.proto === 'TCP' && r.node !== sw).map(r => r.info.replace(/.*\[/, '[').replace(/\].*/, ']'));
+    ok('Handschlag: die ersten drei TCP-Zeilen sind SYN · SYN,ACK · ACK',
+       tcp.slice(0, 3).join(' ') === '[SYN] [SYN, ACK] [ACK]', tcp.join(' '));
+    // Die Aufgabe lässt Anna antippen: dann stehen genau ihre drei Zeilen da (↑ ↓ ↑).
+    mit.setGeraet(anna.id);
+    const bei = mit.view().filter(r => r.proto === 'TCP').slice(0, 3);
+    ok('Handschlag: bei Anna ↑ SYN · ↓ SYN,ACK · ↑ ACK',
+       bei.map(r => r.dir + r.info.replace(/.*\[/, '[').replace(/\].*/, ']')).join(' ')
+         === 'raus[SYN] rein[SYN, ACK] raus[ACK]',
+       bei.map(r => r.dir + ' ' + r.info).join(' | '));
+    mit.setGeraet(null);
+    ok('Handschlag: vor dem ersten SYN steht nur ARP (kein DNS, kein DHCP)',
+       (() => { const v = mit.view(); const i = v.findIndex(r => r.proto === 'TCP');
+                return i > 0 && v.slice(0, i).every(r => r.proto === 'ARP'); })(),
+       mit.view().slice(0, 6).map(r => r.proto).join(','));
+    ok('Handschlag: der Abbau ist zu sehen (FIN)', tcp.some(t => /FIN/.test(t)), tcp.join(' '));
+
+    let zweite = null;
+    z.dienste.http.seiteHolen(anna, '192.168.1.30', (r) => zweite = r);
+    z.engine.runUntil(z.engine.now + 20 * SEC);
+    ok('Handschlag: am Mailserver hört niemand auf Port 80 — RST, keine Seite',
+       zweite && !zweite.ok && mit.view().some(r => r.proto === 'TCP' && /RST/.test(r.info)),
+       zweite && JSON.stringify(zweite));
   }
 
   // II.9: DHCP-Spoofing — zwei DHCP-Server im selben Netz, ein zweiter DNS-Eintrag.

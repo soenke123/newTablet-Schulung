@@ -1,8 +1,10 @@
 /* ══════════════════════════════════════════════════════════════
    Netzwerk-Prototyp — szenarien.js   ·   Vorbereitete Netze
    ══════════════════════════════════════════════════════════════
-   Fünfzehn Ausgangslagen in zwei Spuren: Sek I (Klasse 8, I.1 bis
-   I.7) und Sek II (Klasse 12, II.1 bis II.8). Jede ist ein Netz
+   Siebzehn Ausgangslagen in drei Spuren: Sek I (Klasse 8, I.1 bis
+   I.7), Sek II (Klasse 12, II.1 bis II.8) und „Andere“ (schlicht
+   1., 2., … durchgezählt — Themen, die in keine der beiden
+   Klassenstufen-Reihen gehören). Jede ist ein Netz
    plus ein Auftrag — und
    genau in dieser Form wird die Lehrkraft sie später an die
    Klasse schicken (Muster Wild Clusters: die Lehrkraft setzt den
@@ -142,6 +144,7 @@
 
   const SEK1 = 'Sek I · Klasse 8';
   const SEK2 = 'Sek II · Klasse 12';
+  const ANDERE = 'Andere';
 
   let cabN = 0;
   const cab = (an, ai, bn, bi, opt) => Object.assign({
@@ -1088,7 +1091,7 @@
     netz: { v: 2, nodes: ii8netz.nodes, cables: ii8netz.cables }
   };
 
-  /* ═══ II.9 · DHCP-Spoofing ══════════════════════════════════════
+  /* ═══ 1. · DHCP-Spoofing (früher II.9) ══════════════════════════
      Ein öffentliches WLAN mit vier Geräten am selben Switch: ein
      echter, per Kabel angeschlossener DHCP-Server, zwei „normale"
      Endgeräte (E1, E2 — eines davon ein Handy) — und ein drittes
@@ -1158,9 +1161,13 @@
     '/webserver/logo.png':   { bild: '@drache' }
   });
 
+  /* ⚠️ Der Schlüssel bleibt `ii9`, obwohl das Szenario jetzt unter
+     „Andere“ steht: die ID `builtin:ii9` steht in Räumen, in denen
+     die Lehrkraft es schon geteilt hat. Ein neuer Schlüssel ließe
+     die Freigabe ins Leere zeigen. */
   macN = 2300; cabN = 2300;
   const ii9 = {
-    titel: 'II.9 · DHCP-Spoofing', gruppe: SEK2,
+    titel: '1. DHCP-Spoofing', gruppe: ANDERE,
     aufgabe: auftrag({
       kontext: 'Ein <strong>öffentliches WLAN</strong> — vier Geräte hängen am selben Switch, eines per Kabel, drei über Funk (<strong>E1</strong>, '
         + '<strong>E2</strong>, <strong>E3</strong>). Dazu, über einen Router, ein zweites Netz mit dem <strong>DNS-Server</strong> und dem '
@@ -1227,5 +1234,102 @@
     }
   };
 
-  window.SZENARIEN = { i1, i2, i3, i4, i5, i6, i7, ii1, ii2, ii3, ii4, ii5, ii6, ii7, ii8, ii9 };
+  /* ═══ 2. · Der Handschlag ═══════════════════════════════════════
+     Drei Geräte an einem Switch, ein Netz, kein Router, kein DNS,
+     kein DHCP. Das ist Absicht: im Mitschnitt soll vor den drei
+     TCP-Zeilen nur ARP stehen, damit der Handschlag nicht zwischen
+     DNS-Fragen und DHCP-Rundrufen verschwindet. Die Seite des
+     Webservers hat KEIN Bild und KEIN Stylesheet — jedes davon wäre
+     eine eigene Verbindung (http.js holt erst das HTML, dann alles,
+     was darin steht), und aus einem Handschlag würden drei.
+
+     Der „Mailserver“ ist ein Server, auf dem nichts läuft: auf
+     Port 80 hört niemand, also kommt sofort ein RST zurück
+     (tcp.js, Punkt 4 im Kopf). Der Name ist die Falle — ein Rechner
+     heißt, wie er will; ob dort ein Webserver hört, sagt `netstat`.
+
+     Der Paketverlust (Aufgabe 5) sitzt auf dem Kabel Switch –
+     Webserver. Höchstens 50 %: bei einem verlorenen SYN wiederholt
+     TCP genau einmal (TCP_WIEDER), dann gibt der Browser auf — auch
+     das ist eine Beobachtung und kein Fehler. */
+  const hsSeite =
+    '<html>\n'
+    + '  <head><title>Hallo</title></head>\n'
+    + '  <body>\n'
+    + '    <h1>Verbunden!</h1>\n'
+    + '    <p>Bevor du diesen Satz lesen konntest, haben dein Gerät und der Webserver\n'
+    + '       sich dreimal etwas zugerufen. Schau in den Mitschnitt.</p>\n'
+    + '  </body>\n'
+    + '</html>\n';
+
+  macN = 2400; cabN = 2400;
+  const handschlag = {
+    titel: '2. Der Handschlag', gruppe: ANDERE,
+    aufgabe: auftrag({
+      kontext: 'Bevor zwei Rechner Daten austauschen, vergewissern sie sich — wie am Telefon: <em>„Hallo, hörst du mich?“ – '
+        + '„Ja, ich höre dich. Hörst du mich auch?“ – „Ja.“</em> Erst dann wird geredet. Bei <strong>TCP</strong> heißt das '
+        + '<strong>Dreiwege-Handschlag</strong>. Das Netz ist fertig: <strong>Anna</strong> (E1), ein <strong>Webserver</strong> (S1) und ein '
+        + '<strong>Mailserver</strong> (S2) an einem Switch. Auf dem Feld stehen die Kürzel, im Gerätefenster die Namen.',
+      aufgaben: [
+        { typ: 'benutzen', text: 'Schalte auf <em>Aktion</em>, öffne den <em>Mitschnitt</em>, leere ihn und stell das <strong>Tempo</strong> auf '
+          + '<em>Zeitlupe</em>. Tippe <strong>Anna (E1)</strong> an — der Mitschnitt zeigt dann nur noch ihre Nachrichten (↑ gesendet, ↓ empfangen). '
+          + 'Ruf bei Anna im Browser <code>192.168.1.20</code> auf. Schreib die ersten drei '
+          + '<strong>TCP</strong>-Zeilen ab: Wer schickt an wen? Welche Flags stehen in den Klammern? Welche Zahlen stehen bei '
+          + '<em>Seq</em> und <em>Ack</em>? Wie viele Nachrichten fliegen, bevor das erste Byte der Webseite unterwegs ist?' },
+        { typ: 'benutzen', text: '<strong>Rechne nach:</strong> Wie hängt das <em>Ack</em> der zweiten Zeile mit der <em>Seq</em> der ersten zusammen — '
+          + 'und das <em>Ack</em> der dritten mit der <em>Seq</em> der zweiten? Sag dann <strong>vorher</strong>, welche Seq die HTTP-Anfrage '
+          + '(<code>GET /</code>) tragen wird, und prüfe es im Mitschnitt.' },
+        { typ: 'benutzen', text: 'Leere den Mitschnitt und ruf die Seite noch einmal auf — diesmal <strong>Schritt für Schritt</strong>: '
+          + 'Leertaste hält die Uhr an, der <strong>Punkt</strong> macht einen Einzelschritt. Gib zwischendurch im Terminal von Anna und '
+          + 'vom Webserver <code>netstat</code> ein. Welchen <em>Zustand</em> hat die Verbindung nach dem SYN, welchen nach dem letzten ACK?' },
+        { typ: 'veraendern', text: 'Ruf bei Anna jetzt <code>192.168.1.30</code> auf, den <strong>Mailserver (S2)</strong>. Was kommt statt '
+          + '<em>SYN, ACK</em> zurück — und wie schnell? Gib am Mailserver <code>netstat</code> ein und erkläre, was du siehst.' },
+        { typ: 'veraendern', text: 'Tippe auf das <strong>Kabel zwischen Switch und Webserver (S1)</strong> und stell den <em>Paketverlust</em> auf '
+          + '<strong>50 %</strong>. Ruf die Seite mehrmals auf. Wann steht ein <strong>SYN zweimal</strong> im Mitschnitt? Warum wartet Anna, '
+          + 'bevor sie es noch einmal schickt — und was passiert, wenn auch das zweite verloren geht?' },
+        { typ: 'erweitern', text: 'Stell den Paketverlust wieder auf 0 %. Such am Ende einer Übertragung den <strong>Abbau</strong> der Verbindung '
+          + '(Zeilen mit <em>FIN</em>). Zeichne Aufbau und Abbau als <strong>Pfeildiagramm</strong>: Anna links, Webserver rechts, die Zeit '
+          + 'läuft nach unten, jeder Pfeil mit Flags, Seq und Ack.' }
+      ],
+      hilfe: [
+        { begriff: 'Die Flags', text: 'Kurze Kennzeichen im TCP-Kopf. Sie behalten ihre englischen Namen:', liste: [
+          '<strong>SYN</strong> — „synchronisieren“: Ich möchte eine Verbindung und fange bei dieser Nummer an zu zählen.',
+          '<strong>ACK</strong> — „bestätigt“: Bis hierhin habe ich alles bekommen.',
+          '<strong>FIN</strong> — „fertig“: Ich habe nichts mehr zu sagen.',
+          '<strong>RST</strong> — „zurücksetzen“: Abgelehnt, hier ist niemand.'
+        ] },
+        { begriff: 'Seq und Ack', text: '<em>Seq</em> (Sequenznummer) zählt die Bytes, die ein Gerät schickt. Die Startzahl wird '
+          + 'ausgewürfelt. <em>Ack</em> sagt der Gegenseite: „Als Nächstes erwarte ich diese Nummer.“ Ein SYN und ein FIN zählen dabei '
+          + 'wie <strong>ein</strong> Byte, obwohl sie keine Daten tragen.' },
+        { begriff: 'Port', text: 'Die Adresse bringt ein Paket zum Rechner, der <strong>Port</strong> zum Programm: 80 ist der Webserver. '
+          + 'Der Browser bekommt für jede Verbindung eine zufällige Nummer ab 49152.' },
+        { begriff: 'netstat', text: 'Ein Befehl im Terminal. Er zeigt, welches Programm auf welchem Port hört und in welchem '
+          + '<em>Zustand</em> eine Verbindung gerade ist.' },
+        { begriff: 'Werkzeug: Mitschnitt', text: 'Menü <em>Ansicht &amp; Tools → Mitschnitt</em> (sichtbar im Modus Aktion). Mit dem Filter '
+          + '<strong>TCP</strong> oben siehst du nur Aufbau, Bestätigungen und Abbau; die Webseite selbst steht unter <strong>HTTP</strong>. '
+          + 'Ohne gewähltes Gerät steht jede Nachricht zweimal da: einmal vom Absender, einmal vom Switch, der sie weitergibt. '
+          + 'Ein hohler Punkt auf dem Kabel trägt keine Daten (Handschlag), ein gefüllter schon. Vor dem ersten SYN fragt Anna per '
+          + '<strong>ARP</strong> nach der MAC-Adresse des Webservers.' }
+      ],
+      stern: 'Warum reichen für den Aufbau <strong>drei</strong> Nachrichten, für den Abbau braucht es aber <strong>vier</strong>? '
+        + 'Und was würde schiefgehen, wenn man den Handschlag weglässt und gleich die Daten schickt?'
+    }),
+    netz: {
+      v: 2,
+      nodes: [
+        dev('h1', 'host',   'Anna',       520, 480, { nics: [{ ip: '192.168.1.10' }], software: ['browser'] }),
+        dev('h2', 'switch', 'Switch 1',   800, 480, { ports: 4 }),
+        dev('h3', 'server', 'Webserver', 1080, 360, {
+          nics: [{ ip: '192.168.1.20' }], software: ['webserver'], webServer: { on: true },
+          dateien: { '/webserver': { ordner: true }, '/webserver/index.html': { text: hsSeite } }
+        }),
+        dev('h4', 'server', 'Mailserver', 1080, 620, { nics: [{ ip: '192.168.1.30' }] })
+      ],
+      cables: [
+        cab('h1', 0, 'h2', 0), cab('h2', 1, 'h3', 0), cab('h2', 2, 'h4', 0)
+      ]
+    }
+  };
+
+  window.SZENARIEN = { i1, i2, i3, i4, i5, i6, i7, ii1, ii2, ii3, ii4, ii5, ii6, ii7, ii8, ii9, handschlag };
 })();

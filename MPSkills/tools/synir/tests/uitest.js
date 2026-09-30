@@ -5825,10 +5825,10 @@ async function markenAn(page, name, art) {
      Teilen-Schalter, kein Knopf „Aufgabentext". */
   await page.keyboard.press('Escape');
   await mk(page, '#szenarioBtn');
-  ok('Menü zeigt alle 15 mitgelieferten Szenarien',
-     await page.locator('#szenarioPop .szm-item').count() === 15);
-  ok('Sek I und Sek II stehen als Überschriften in einer Liste',
-     await page.locator('#szenarioPop .szm-head').count() === 2);
+  ok('Menü zeigt alle 17 mitgelieferten Szenarien',
+     await page.locator('#szenarioPop .szm-item').count() === 17);
+  ok('Sek I, Sek II und Andere stehen als Überschriften in einer Liste',
+     await page.locator('#szenarioPop .szm-head').count() === 3);
   ok('ohne Raum: keine Reiter', await page.locator('#szenarioPop .szm-tabs').count() === 0);
   ok('ohne Raum: keine Teilen-Schalter', await page.locator('#szenarioPop .szm-share').count() === 0);
   await page.keyboard.press('Escape');
