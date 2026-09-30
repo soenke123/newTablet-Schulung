@@ -133,6 +133,12 @@
         bauen: (n, box) => window.ProgWeb.bauServer(n, box, webCtx())
       },
       {
+        id: 'streamingserver', name: 'Streaming-Server', kurz: 'Streaming', ic: 'streamingserver',
+        fuer: ['host', 'server', 'handy'], install: true,
+        hint: 'Filme hinter einer Anmeldung (Port 80)',
+        bauen: (n, box) => window.ProgWeb.bauStream(n, box, webCtx())
+      },
+      {
         id: 'mail', name: 'E-Mail-Programm', kurz: 'E-Mail', ic: 'mail',
         fuer: ['host', 'server', 'handy'], install: true,
         hint: 'Post senden (SMTP) und abholen (POP3)',
@@ -167,6 +173,7 @@
        Stelle, damit die beiden Einträge oben einzeilig bleiben. */
     const webCtx = () => ({
       http: dienste && dienste.http,
+      stream: dienste && dienste.stream,
       mail: dienste && dienste.mail,
       netz: netz,
       render: render,
@@ -238,7 +245,8 @@
        Webserver und E-Mail-Server wären das drei gleichlautende
        Zeilen, und die dritte vergisst man. Jede weitere Anwendung
        mit einem Dienst trägt sich hier mit einer Zeile ein. */
-    const STOPPT = { dns: 'dnsServer', webserver: 'webServer', mailserver: 'mailServer' };
+    const STOPPT = { dns: 'dnsServer', webserver: 'webServer', mailserver: 'mailServer',
+                     streamingserver: 'streamServer' };
 
     /* Und das Gegenstück: was beim AUFSPIELEN entsteht. Filius
        legt bei der Installation des Webservers Ordner und

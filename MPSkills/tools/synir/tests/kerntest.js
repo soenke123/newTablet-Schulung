@@ -20,7 +20,7 @@ vm.createContext(sandbox);
    und ungenauer. Das geht nur, weil die Datei beim LADEN kein
    DOM anfasst; wer das ändert, muss sie hier herausnehmen. */
 for (const f of ['util.js', 'engine.js', 'netz.js', 'verlauf.js', 'nat.js', 'tcp.js', 'rip.js', 'logos.js', 'dateien.js',
-                 'http.js', 'mail.js', 'schichten.js', 'dienste.js', 'internet.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
+                 'http.js', 'mail.js', 'stream.js', 'schichten.js', 'dienste.js', 'internet.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
                  'prog-dateien.js', 'szenarien.js']) {
   vm.runInContext(fs.readFileSync(path.join(BASE, f), 'utf8'), sandbox, { filename: f });
 }
@@ -5318,6 +5318,150 @@ section('Fund-Filter: Zugangsdaten im Mitschnitt');
      inetZ && A.mit.layers(inetZ).some(l => l.fields.some(f => f[0] === 'Ort' && /Internet/.test(f[1]))));
   ok('B liest das Passwort im eigenen Mitschnitt mit',
      B.mit.view().some(r => r.zugang && r.zugang.passwort === 'geheim'));
+}
+
+/* ═══ Streaming-Server (PLAN-SICHERHEIT, Schritt 2) ═══ */
+section('Streaming-Server');
+{
+  const { engine, netz, stack, mit, dienste, a, sw, ms } = mailNetz();
+  const st = netz.addNode('server', 600, 300);
+  konf(st, 0, '192.168.1.30');
+  netz.addCable(st.id, 0, sw.id, 3);
+  st.software = ['streamingserver'];
+  const conf = netz.streamConf(st);
+  conf.on = true; conf.name = 'Annas Flix'; conf.mailserver = '192.168.1.20';
+  dienste.sync();
+  const http = dienste.http;
+
+  /* Eine Seite holen und abwarten. */
+  const hol = (adr, opt) => {
+    let r = null;
+    http.seiteHolen(a, adr, (x) => r = x, opt);
+    engine.runUntil(engine.now + 30 * SEC);
+    return r;
+  };
+  const post = (adr, felder) => hol(adr, { methode: 'POST', body: http.formSchreiben(felder) });
+
+  ok('der Streaming-Server lauscht auf Port 80',
+     stack.sockets(st).some(r => r.proto === 'TCP' && /:80$/.test(r.lokal)));
+  ok('die Marke „stream" steht am Gerät', netz.dienstLaeuft(st, 'stream'));
+
+  const start = hol('192.168.1.30');
+  ok('Startseite: Dienstname und Anmelden/Registrieren',
+     start && start.ok && /Annas Flix/.test(start.html) && /href="\/anmelden"/.test(start.html)
+     && /href="\/registrieren"/.test(start.html), start && (start.grund || start.html.slice(0, 100)));
+
+  const ohne = hol('192.168.1.30/filme');
+  ok('ohne Anmeldung: /filme führt zurück auf die Startseite (Weiterleitung)',
+     ohne && ohne.ok && ohne.ziel.pfad === '/' && ohne.teile.some(t => t.pfad === '/filme' && t.status === 303),
+     ohne && JSON.stringify(ohne.teile));
+  ok('… und die Filme stehen NICHT darin', ohne && !/plakat/.test(ohne.html));
+
+  // Registrieren: Fehlerfälle
+  const leer = post('192.168.1.30/registrieren', { name: 'Bernd', email: '', iban: '', bic: '' });
+  ok('Registrieren: leere Felder → 400 mit Hinweis', leer && leer.status === 400 && /alle Felder/.test(leer.html), leer && String(leer.status));
+  const krumm = post('192.168.1.30/registrieren', { name: 'Bernd', email: 'bernd', iban: 'DE1', bic: 'X' });
+  ok('Registrieren: keine gültige Adresse → 400', krumm && krumm.status === 400 && /gültige E-Mail/.test(krumm.html));
+
+  conf.mailserver = '';
+  const keinMs = post('192.168.1.30/registrieren', { name: 'Bernd', email: 'bernd@schule.de', iban: 'DE12 3456', bic: 'ABCDDEFF' });
+  ok('Registrieren ohne Mailserver: die Seite sagt WARUM, kein Konto entsteht',
+     keinMs && keinMs.status === 500 && /keinen Mailserver/.test(keinMs.html) && conf.konten.length === 0,
+     keinMs && keinMs.html.slice(0, 200));
+  conf.mailserver = '192.168.1.20';
+
+  const reg = post('192.168.1.30/registrieren', { name: 'Bernd Beispiel', email: 'Bernd@Schule.de', iban: 'DE12 3456 7890', bic: 'ABCDDEFF' });
+  ok('Registrieren: „Fast geschafft"', reg && reg.ok && reg.status === 200 && /Fast geschafft/.test(reg.html),
+     reg && (reg.grund || reg.html.slice(0, 200)));
+  ok('das Konto steht auf dem Server (E-Mail klein geschrieben)',
+     conf.konten.length === 1 && conf.konten[0].email === 'bernd@schule.de' && conf.konten[0].iban === 'DE12 3456 7890');
+  const post1 = netz.mailConf(ms).konten[1].posteingang;
+  ok('⭐ das Passwort liegt als E-Mail im Postfach des Kunden',
+     post1.length === 1 && /Dein Passwort: \S+/.test(post1[0].text), JSON.stringify(post1));
+  const pw = /Dein Passwort: (\S+)/.exec(post1[0].text)[1];
+  ok('die Mail kommt vom Dienst', /@annasflix\.de$/.test(post1[0].von), post1[0].von);
+
+  const dop = post('192.168.1.30/registrieren', { name: 'X', email: 'bernd@schule.de', iban: 'DE1', bic: 'B' });
+  ok('dieselbe E-Mail zweimal → abgelehnt', dop && dop.status === 400 && /schon ein Konto/.test(dop.html));
+
+  // Anmelden
+  const falsch = post('192.168.1.30/anmelden', { email: 'bernd@schule.de', passwort: 'falsch' });
+  ok('falsches Passwort → 401, man bleibt auf der Anmeldung', falsch && falsch.status === 401 && /stimmt nicht/.test(falsch.html));
+  const gut = post('192.168.1.30/anmelden', { email: 'bernd@schule.de', passwort: pw });
+  ok('richtiges Passwort → Weiterleitung auf /filme', gut && gut.ok && gut.ziel.pfad === '/filme'
+     && gut.teile[0].methode === 'POST' && gut.teile[0].status === 303, gut && JSON.stringify(gut.teile));
+  ok('die Filmseite begrüßt mit dem Namen', gut && /Hallo Bernd Beispiel/.test(gut.html));
+  ok('genau ZWEI Plakate (die Wahl des Betreibers)', gut && (gut.html.match(/class="film"/g) || []).length === 2);
+  ok('Plakate kommen als eigene Anfragen (Bilder sind Dateien)', gut && gut.teile.filter(t => /plakat/.test(t.pfad)).length === 2);
+  ok('der Browser hat sich das Cookie gemerkt', /^[a-z0-9]{12}$/.test(((http.cookies(a)['192.168.1.30:80']) || {}).sid || ''), JSON.stringify(http.cookies(a)));
+
+  // Wahl ändern
+  conf.filme = [3, 4];
+  const andere = hol('192.168.1.30/filme');
+  ok('der Betreiber wählt andere Filme: Film 3 und 4 stehen da',
+     andere && /Film 3/.test(andere.html) && /Film 4/.test(andere.html) && !/Film 1/.test(andere.html));
+  conf.filme = [1, 2];
+
+  // Like und Kommentar
+  const like = post('192.168.1.30/like', { film: '1' });
+  ok('Like: zählt 1 und „gefällt dir"', like && /♥ 1 · gefällt dir/.test(like.html), like && like.html.slice(0, 80));
+  const like2 = post('192.168.1.30/like', { film: '1' });
+  ok('zweiter Tipp nimmt den Like zurück', like2 && /♥ 0/.test(like2.html));
+  const kom = post('192.168.1.30/kommentar', { film: '1', text: 'Super <b>Film</b>!' });
+  ok('Kommentar erscheint unter dem Film — entschärft',
+     kom && /Bernd Beispiel:<\/b> Super &lt;b&gt;Film&lt;\/b&gt;!/.test(kom.html), kom && kom.html.slice(0, 80));
+  const fremdFilm = post('192.168.1.30/like', { film: '3' });
+  ok('ein Film, der nicht angeboten wird, nimmt keine Likes', !(conf.likes[3] || []).length);
+
+  // Mein Konto
+  const konto = hol('192.168.1.30/konto');
+  ok('Mein Konto zeigt die Bankdaten und das Passwort',
+     konto && /DE12 3456 7890/.test(konto.html) && /ABCDDEFF/.test(konto.html) && new RegExp(pw).test(konto.html));
+
+  // Mitschnitt: alles im Klartext
+  const daten = mit.view().map(r => { const p = r.frame && r.frame.payload; const t = p && p.payload; return (t && t.data) || ''; }).join('\n');
+  ok('⭐ im Mitschnitt stehen IBAN, Passwort und Cookie im Klartext',
+     /iban=DE12\+3456\+7890/.test(daten) && new RegExp('passwort=' + pw).test(daten) && /Cookie: sid=/.test(daten),
+     daten.slice(0, 200));
+  ok('der Mitschnitt nennt POST in der Zeile', mit.view().some(r => /HTTP\s+POST \/anmelden/.test(r.info)));
+
+  // Fund-Filter: Formularfelder und Cookies
+  const funde = mit.view().filter(r => r.zugang && /^HTTP/.test(r.zugang.verfahren));
+  ok('⭐ der Fund-Filter erkennt das Passwort im Anmelde-Formular',
+     funde.some(r => r.zugang.passwort === pw && r.zugang.benutzer === 'bernd@schule.de'),
+     JSON.stringify(funde.map(r => r.zugang)).slice(0, 200));
+  ok('… die Bankdaten bei der Registrierung',
+     funde.some(r => r.zugang.felder.some(x => x[0] === 'iban' && x[1] === 'DE12 3456 7890')));
+  ok('… und das Cookie der Sitzung',
+     funde.some(r => r.zugang.felder.some(x => x[0] === 'Cookie' && /^sid=/.test(x[1]))));
+  ok('Seiten ohne Geheimnis sind keine Funde',
+     !mit.view().some(r => r.zugang && /^HTTP\s+GET \/(plakat|anmelden|registrieren)/.test(r.info)
+       && !r.zugang.felder.some(x => x[0] === 'Cookie')));
+
+  // Abmelden
+  const weg = post('192.168.1.30/abmelden', {});
+  ok('Abmelden: zurück auf die Startseite, /filme ist wieder zu',
+     weg && weg.ziel.pfad === '/' && hol('192.168.1.30/filme').ziel.pfad === '/');
+
+  // Port 80 gehört einem von beiden
+  st.software.push('webserver');
+  netz.webConf(st).on = true;
+  dienste.http.standardDateien(st);
+  dienste.sync();
+  const nochStream = hol('192.168.1.30');
+  ok('läuft auch der Webserver, antwortet der Streaming-Server (Vorrang)', nochStream && /Annas Flix/.test(nochStream.html));
+  conf.on = false;
+  dienste.sync();
+  const nunWeb = hol('192.168.1.30');
+  ok('Streaming-Server aus → der Webserver übernimmt Port 80', nunWeb && /Der Webserver läuft/.test(nunWeb.html),
+     nunWeb && (nunWeb.grund || nunWeb.html.slice(0, 80)));
+
+  // Speicherformat
+  const kopie = JSON.parse(JSON.stringify(netz.toJSON()));
+  const sp = kopie.nodes.find(n => n.id === st.id);
+  ok('Konten, Likes und Kommentare stehen im Speicherformat',
+     sp && sp.streamServer && sp.streamServer.konten.length === 1 && sp.streamServer.kommentare.length === 1
+     && sp.streamServer.name === 'Annas Flix', sp && JSON.stringify(sp.streamServer).slice(0, 120));
 }
 
 /* ═══ Ergebnis ═══ */

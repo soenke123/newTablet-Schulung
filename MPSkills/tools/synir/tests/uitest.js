@@ -2206,16 +2206,29 @@ async function markenAn(page, name, art) {
   /* ⭐ Die Sicherung: der Rahmen ist eine Sandkiste OHNE
      `allow-scripts`. Das Skript steht in der Datei, es wurde
      gespeichert — und es hat nichts getan. */
-  ok('der Rahmen ist eine Sandkiste ohne allow-scripts', await page.evaluate(() => {
+  /* Seit 2026-09-30 (PLAN-SICHERHEIT 2): `allow-scripts allow-forms`
+     für die Brücke des Simulators — aber OHNE `allow-same-origin`,
+     und mit einer Richtlinie, die nur den Einmalschlüssel der Brücke
+     zulässt. Das Skript der Seite hat ihn nicht. */
+  ok('der Rahmen ist eine Sandkiste: Skripte und Formulare, aber nie allow-same-origin', await page.evaluate(() => {
     const f = document.querySelector('#dtWin .wb-rahmen');
-    return f.getAttribute('sandbox') === '';
+    const sb = f.getAttribute('sandbox');
+    return sb === 'allow-scripts allow-forms' && sb.indexOf('allow-same-origin') < 0;
+  }));
+  ok('und in der Seite steht eine Richtlinie, die nur den Einmalschlüssel zulässt', await page.evaluate(() => {
+    const f = document.querySelector('#dtWin .wb-rahmen');
+    const m = /script-src 'nonce-([0-9a-f]{24})'/.exec(f.srcdoc);
+    return !!m && f.srcdoc.indexOf('nonce="' + m[1] + '"') > 0 && /default-src 'none'/.test(f.srcdoc);
   }));
   ok('das Skript hat die Überschrift NICHT verändert',
      (await rahmen.locator('h1').textContent()) !== 'GEKAPERT');
   ok('und steht gar nicht erst in der gezeigten Seite',
      await page.evaluate(() => {
        const f = document.querySelector('#dtWin .wb-rahmen');
-       return !/<script/i.test(f.srcdoc) && /nicht ausgeführt/.test(f.srcdoc);
+       /* Genau EIN Skript steht in der Seite: die Brücke. Das der Seite
+          ist durch einen Kommentar ersetzt. */
+       return (f.srcdoc.match(/<script/gi) || []).length === 1 && /nicht ausgeführt/.test(f.srcdoc)
+         && !/GEKAPERT/.test(f.srcdoc);
      }));
 
   // Eine Adresse, hinter der nichts ist.
@@ -4540,6 +4553,166 @@ async function markenAn(page, name, art) {
   await page.waitForTimeout(300);
   ok('keine Konsolenfehler im Mailfenster', errs.length === 0,
      errs.slice(0, 3).join(' | '));
+  }
+
+  /* ═══ Streaming-Server: echte Formulare im Browser ═══════════
+     PLAN-SICHERHEIT, Schritt 2. Die Protokollseite prüft der
+     kopflose Prüfstand; hier geht es um das, was nur ein Browser
+     zeigt: dass ein Kind in einem Formular TIPPT, abschickt, ein
+     Link die Seite wechselt und die Brücke (Sandbox + Einmal-
+     schlüssel) das alles durchlässt — und sonst nichts. */
+  console.log('\n── Streaming-Server ────────────────────────────────');
+  {
+  await szenarioWaehlen(page, 'router');
+  await page.waitForTimeout(600);
+  await page.locator('[data-modus="aktion"]').click();
+  await page.waitForTimeout(300);
+  await page.locator('#speed').fill('4');
+  const sv = await page.evaluate(() => {
+    const S = window.SIM;
+    const cli = S.netz.byName('Endgerät 1');
+    /* Ein Gerät im SELBEN Netz wie der Kunde: hier geht es um die
+       Seiten, nicht um Wegewahl (dafür hat das Szenario einen Router). */
+    const pre = ((cli.nics.find(k => k.ip) || {}).ip || '').split('.').slice(0, 3).join('.') + '.';
+    const srv = S.netz.list().find(n => n !== cli && (n.kind === 'server' || n.kind === 'host')
+      && n.nics.some(k => k.ip && k.ip.indexOf(pre) === 0));
+    const ip = (srv.nics.find(k => k.ip) || {}).ip;
+    srv.software = ['streamingserver', 'mailserver', 'webserver'];
+    const m = S.netz.mailConf(srv);
+    m.on = true; m.domain = 'schule.de';
+    m.konten = [{ benutzer: 'bernd', name: 'Bernd', passwort: 'x', posteingang: [] }];
+    const s = S.netz.streamConf(srv);
+    s.on = true; s.name = 'Annas Flix'; s.mailserver = ip;
+    cli.software = (cli.software || []).concat(['browser']);
+    S.dienste.sync();
+    return { srv: srv.name, ip: ip, cli: cli.id };
+  });
+  ok('Aufbau: Server mit Streaming- und Mailserver', !!sv.ip, JSON.stringify(sv));
+  await page.evaluate(() => window.SIM.flaeche.draw());
+  ok('die Kachel trägt die Marke „Stream"', await markenAn(page, sv.srv, 'stream') === 1,
+     String(await markenAn(page, sv.srv, 'stream')));
+
+  // Serverfenster
+  await page.evaluate((nm) => window.SIM.geraet.open(window.SIM.netz.byName(nm).id), sv.srv);
+  await page.waitForTimeout(350);
+  await programmAuf(page, 'streamingserver');
+  await page.waitForTimeout(350);
+  ok('das Serverfenster zeigt den Dienstnamen und den Mailserver',
+     (await page.locator('#dtWin #stName').inputValue()) === 'Annas Flix'
+     && (await page.locator('#dtWin #stMail').inputValue()) === sv.ip);
+  ok('zwei von vier Filmen sind gewählt', await page.locator('#dtWin .st-film.is-on').count() === 2
+     && await page.locator('#dtWin .st-film').count() === 4);
+  await page.locator('#dtWin [data-film="4"]').click();
+  await page.waitForTimeout(200);
+  ok('ein dritter Tipp ersetzt den ältesten: es bleiben genau zwei (2 und 4)',
+     await page.evaluate((nm) => JSON.stringify(window.SIM.netz.byName(nm).streamServer.filme), sv.srv) === '[2,4]');
+  await page.locator('#dtWin [data-film="1"]').click();
+  await page.waitForTimeout(200);
+  ok('und wieder 4 und 1', await page.evaluate((nm) => JSON.stringify(window.SIM.netz.byName(nm).streamServer.filme), sv.srv) === '[4,1]');
+  await page.locator('#dtWin [data-film="2"]').click();
+  await page.locator('#dtWin [data-film="1"]').click().catch(() => {});
+  await page.waitForTimeout(200);
+  await page.evaluate((nm) => { window.SIM.netz.byName(nm).streamServer.filme = [1, 2]; window.SIM.geraet.render(); }, sv.srv);
+
+  // Der Webserver kann nicht zusätzlich starten
+  await page.evaluate((nm) => { window.SIM.netz.byName(nm).webServer = { on: false }; window.SIM.geraet.render(); }, sv.srv);
+  await programmAuf(page, 'webserver');
+  await page.waitForTimeout(300);
+  ok('Port 80 belegt: der Webserver lässt sich nicht starten',
+     await page.locator('#dtWin #wsStart').isDisabled());
+  await programmAuf(page, 'streamingserver');
+  await page.waitForTimeout(300);
+
+  // Der Kunde
+  await page.evaluate((id) => window.SIM.geraet.open(id), sv.cli);
+  await page.waitForTimeout(350);
+  await programmAuf(page, 'browser');
+  await page.waitForTimeout(300);
+  await page.locator('#dtWin #wbAdr').click();
+  await page.keyboard.type(sv.ip);
+  await page.keyboard.press('Enter');
+  const rahmen = page.frameLocator('#dtWin .wb-rahmen');
+  await rahmen.locator('h1', { hasText: 'Annas Flix' }).waitFor({ timeout: 60000 }).catch(async (e) => {
+    console.log('  DIAG seite:', (await page.locator('#dtWin .wb-seite').textContent()).slice(0, 200),
+      '| cli:', JSON.stringify(await page.evaluate((id) => window.SIM.netz.get(id).nics.map(k => k.ip + '/' + k.mask + ' gw ' + k.gw), sv.cli)),
+      '| srv:', sv.ip);
+    throw e;
+  });
+  ok('die Startseite zeigt den Dienstnamen des Betreibers', true);
+  ok('die Kopfzeile und zwei Knöpfe stehen da',
+     await rahmen.locator('a.knopf').count() === 2);
+
+  // Ein Link wechselt die Seite (Brücke)
+  await rahmen.locator('a[href="/registrieren"]').click();
+  await rahmen.locator('h1', { hasText: 'Registrieren' }).waitFor({ timeout: 60000 });
+  ok('⭐ ein Link im Rahmen führt auf die nächste Seite', (await page.locator('#dtWin #wbAdr').inputValue()).endsWith('/registrieren'),
+     await page.locator('#dtWin #wbAdr').inputValue());
+
+  // Formular ausfüllen — wie ein Kind: antippen und tippen
+  const tipp = async (id, text) => { await rahmen.locator('#f-' + id).click(); await page.keyboard.type(text); };
+  await tipp('name', 'Bernd Beispiel');
+  await tipp('email', 'bernd@schule.de');
+  await tipp('iban', 'DE12 3456 7890 1234');
+  await tipp('bic', 'ABCDDEFF');
+  await rahmen.locator('button', { hasText: 'Konto anlegen' }).click();
+  await rahmen.locator('h1', { hasText: 'Fast geschafft' }).waitFor({ timeout: 90000 });
+  ok('⭐ Registrieren: das Formular kam an, „Fast geschafft"', true);
+  const pw = await page.evaluate((nm) => {
+    const p = window.SIM.netz.mailConf(window.SIM.netz.byName(nm)).konten[0].posteingang;
+    const m = p.length ? /Dein Passwort: (\S+)/.exec(p[0].text) : null;
+    return m ? m[1] : '';
+  }, sv.srv);
+  ok('das Passwort liegt als Mail im Postfach', pw.length >= 5, pw);
+
+  // Anmelden
+  await rahmen.locator('a', { hasText: 'Zur Anmeldung' }).click();
+  await rahmen.locator('#f-email').waitFor({ timeout: 60000 });
+  await tipp('email', 'bernd@schule.de');
+  await tipp('passwort', 'falsch');
+  await page.keyboard.press('Enter');                       // Enter im Feld schickt ab
+  await rahmen.locator('.fehler').waitFor({ timeout: 60000 });
+  ok('falsches Passwort: rote Meldung, man bleibt auf der Anmeldung', /stimmt nicht/.test(await rahmen.locator('.fehler').textContent()));
+  await rahmen.locator('#f-passwort').click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type(pw);
+  await rahmen.locator('button', { hasText: 'Anmelden' }).click();
+  await rahmen.locator('h1', { hasText: 'Hallo Bernd Beispiel' }).waitFor({ timeout: 60000 });
+  ok('⭐ Anmelden: die Filmseite begrüßt den Kunden', true);
+  ok('die Adresszeile zeigt nach der Weiterleitung /filme', (await page.locator('#dtWin #wbAdr').inputValue()).endsWith('/filme'),
+     await page.locator('#dtWin #wbAdr').inputValue());
+  ok('genau zwei Plakate, und sie sind geladen', await rahmen.locator('.film img').count() === 2
+     && await rahmen.locator('.film img').first().evaluate(e => e.complete && e.naturalWidth > 0));
+
+  // Like und Kommentar
+  await rahmen.locator('.film').first().locator('form.gefaellt button').click();
+  await rahmen.locator('.film').first().locator('form.gefaellt button', { hasText: '♥ 1' }).waitFor({ timeout: 60000 });
+  ok('Like zählt', true);
+  await rahmen.locator('.film').first().locator('input[name=text]').click();
+  await page.keyboard.type('Sehr gut!');
+  await page.keyboard.press('Enter');
+  await rahmen.locator('.kommentare li', { hasText: 'Sehr gut!' }).waitFor({ timeout: 60000 });
+  ok('⭐ der Kommentar steht unter dem Film', true);
+
+  // Mein Konto
+  await rahmen.locator('a', { hasText: 'Mein Konto' }).click();
+  await rahmen.locator('td', { hasText: 'DE12 3456 7890 1234' }).waitFor({ timeout: 60000 });
+  ok('Mein Konto zeigt die Bankdaten', true);
+  await page.screenshot({ path: path.join(OUT, 'shot-streaming.png') });
+
+  // Mitschnitt: alles im Klartext
+  const klar = await page.evaluate(() => window.SIM.mit.view().map(r => {
+    const p = r.frame && r.frame.payload; const t = p && p.payload; return (t && t.data) || '';
+  }).join('\n'));
+  ok('⭐ im Mitschnitt: iban, passwort und Cookie im Klartext',
+     /iban=DE12\+3456\+7890\+1234/.test(klar) && /passwort=/.test(klar) && /Cookie: sid=/.test(klar));
+
+  // Die Sicherung gilt weiter: die Brücke ist das einzige Skript
+  ok('in der gezeigten Seite läuft nur die Brücke', await page.evaluate(() => {
+    const f = document.querySelector('#dtWin .wb-rahmen');
+    return (f.srcdoc.match(/<script/gi) || []).length === 1;
+  }));
+  ok('keine Konsolenfehler beim Streaming-Server', errs.length === 0, errs.slice(0, 3).join(' | '));
+  await page.evaluate(() => { window.SIM.geraet.close(); window.SIM.setModus('entwurf'); });
   }
 
   /* ═══ Geräte ohne Bildschirm ═════════════════════════════════

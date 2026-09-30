@@ -31,12 +31,22 @@
 
    ── Was bewusst fehlt ─────────────────────────────────────────
    Virtuelle Hosts (mehrere Domains auf einer Adresse — Filius
-   kann das), die Plug-in-Schnittstelle, POST und Formulare,
-   Umleitungen, Zwischenspeicher, Keks-Krümel. Der `Host:`-Kopf
+   kann das), die Plug-in-Schnittstelle, Zwischenspeicher. Der
+   `Host:`-Kopf
    wird mitgeschickt und angezeigt, aber nicht ausgewertet: er ist
    die Antwort auf „woher weiß der Server, welche Seite gemeint
    ist, wenn er mehrere hat" — und diese Frage stellt sich erst
    mit virtuellen Hosts.
+
+   ── POST, Cookies, Weiterleitungen (seit 2026-09-30) ──────────
+   Der BROWSER kann jetzt Formulare abschicken (`POST` mit Körper
+   `feld=wert&…`), sich Cookies merken und einer Weiterleitung
+   (301/302/303 mit `Location`) folgen. Der WEBSERVER aus dieser
+   Datei bleibt bei GET; POST und Cookies beantwortet der
+   Streaming-Server (`stream.js`), der dafür `anfrageLesen`,
+   `formLesen` und `senden` von hier benutzt. Grund:
+   PLAN-SICHERHEIT, Schritt 2 — es soll im Mitschnitt etwas
+   Geheimes geben, das über HTTP läuft.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -61,8 +71,8 @@
     svg: 'image/svg+xml', gif: 'image/gif', webp: 'image/webp'
   };
 
-  const STATUS_TEXT = { 200: 'OK', 400: 'Bad Request', 404: 'Not Found',
-                        501: 'Not Implemented' };
+  const STATUS_TEXT = { 200: 'OK', 302: 'Found', 303: 'See Other', 400: 'Bad Request',
+                        401: 'Unauthorized', 404: 'Not Found', 501: 'Not Implemented' };
 
   /* ─── Die Standardseite ───────────────────────────────────────
      Sie entsteht bei der INSTALLATION, wie in Filius („Diese Seite
@@ -216,6 +226,94 @@
       return kopf;
     }
 
+
+    /* ═══ Hilfen, die auch der Streaming-Server braucht ══════ */
+
+    /* Eine vollständige Anfrage aus dem Puffer — oder nichts, solange
+       noch etwas fehlt (Kopf nicht zu Ende, Körper kürzer als
+       `Content-Length`). Die Cookies stehen als Tabelle da. */
+    function anfrageLesen(roh) {
+      const text = String(roh);
+      const i = text.indexOf('\r\n\r\n');
+      if (i < 0) return null;
+      const zeilen = text.slice(0, i).split('\r\n');
+      const m = /^([A-Z]+)\s+(\S+)\s+HTTP\/[\d.]+$/.exec(zeilen[0] || '');
+      if (!m) return { fehler: true };
+      const a = { methode: m[1], pfad: m[2], host: '', cookies: {}, laenge: 0, body: '' };
+      for (const z of zeilen.slice(1)) {
+        const h = /^([A-Za-z-]+):\s*(.*)$/.exec(z);
+        if (!h) continue;
+        const k = h[1].toLowerCase();
+        if (k === 'host') a.host = h[2].trim();
+        else if (k === 'content-length') a.laenge = parseInt(h[2], 10) || 0;
+        else if (k === 'cookie') h[2].split(/;\s*/).forEach((c) => {
+          const g = c.indexOf('=');
+          if (g > 0) a.cookies[c.slice(0, g)] = c.slice(g + 1);
+        });
+      }
+      const body = text.slice(i + 4);
+      if (body.length < a.laenge) return null;
+      a.body = body.slice(0, a.laenge);
+      return a;
+    }
+
+    /* `user=anna&pass=geheim%21` ↔ { user: 'anna', pass: 'geheim!' }.
+       Leerzeichen als „+", wie es ein Browser schickt. */
+    const kodiere = (t) => encodeURIComponent(String(t)).replace(/%20/g, '+');
+    const dekodiere = (t) => {
+      try { return decodeURIComponent(String(t).replace(/\+/g, ' ')); }
+      catch (e) { return String(t); }
+    };
+    function formSchreiben(felder) {
+      return Object.keys(felder).map(k => kodiere(k) + '=' + kodiere(felder[k])).join('&');
+    }
+    function formLesen(text) {
+      const out = {};
+      String(text || '').split('&').forEach((p) => {
+        if (!p) return;
+        const g = p.indexOf('=');
+        out[dekodiere(g < 0 ? p : p.slice(0, g))] = g < 0 ? '' : dekodiere(p.slice(g + 1));
+      });
+      return out;
+    }
+
+    /* Die Antwort eines Servers als Text. `kopf` sind zusätzliche
+       Zeilen (Location, Set-Cookie). */
+    function antwortText(status, typ, koerper, kopf) {
+      return 'HTTP/1.1 ' + status + ' ' + (STATUS_TEXT[status] || '') + '\r\n'
+        + 'Content-Type: ' + typ + '\r\n'
+        + (kopf || []).map(z => z + '\r\n').join('')
+        + 'Content-Length: ' + koerper.length + '\r\n'
+        + '\r\n' + koerper;
+    }
+
+    /* ─── Cookies ─────────────────────────────────────────────
+       Der Browser eines Geräts merkt sich je Server (Name bzw.
+       Adresse und Port), was der ihm mit `Set-Cookie` gegeben hat,
+       und schickt es bei JEDER weiteren Anfrage mit. Das steht auf
+       `node.state` wie das Zugriffsprotokoll: Laufzeit, nicht
+       Speicherformat — wer einen Stand lädt, ist wieder abgemeldet. */
+    function cookies(node) {
+      const s = node.state || (node.state = {});
+      if (!s.cookies) s.cookies = {};
+      return s.cookies;
+    }
+    const cookieKey = (ziel) => String(ziel.host).toLowerCase() + ':' + ziel.port;
+    function cookieText(node, ziel) {
+      const c = cookies(node)[cookieKey(ziel)] || {};
+      return Object.keys(c).map(k => k + '=' + c[k]).join('; ');
+    }
+    function cookieMerken(node, ziel, setCookie) {
+      const teile = String(setCookie).split(';')[0];
+      const g = teile.indexOf('=');
+      if (g <= 0) return;
+      const k = cookieKey(ziel);
+      const jar = cookies(node);
+      const name = teile.slice(0, g).trim(), wert = teile.slice(g + 1).trim();
+      if (!jar[k]) jar[k] = {};
+      if (wert === '') delete jar[k][name]; else jar[k][name] = wert;
+    }
+
     /* ─── Die Fehlerseite ─────────────────────────────────────
        Aufbau aus Filius' Vorlage `tmpl/http_fehler_de_DE.txt`:
        die Meldung als Überschrift, darunter ein Satz mit dem
@@ -259,8 +357,12 @@
       });
     }
 
-    /* EINE Datei holen: Verbindung, GET, Antwort, fertig. */
-    function holen(node, ziel, cb) {
+    /* EINE Datei holen: Verbindung, Frage, Antwort, fertig.
+       `opt` (alles freiwillig): `methode` ('GET' oder 'POST') und
+       `body` (der fertige Formulartext `feld=wert&…`). Cookies des
+       Geräts für diesen Server gehen von selbst mit. */
+    function holen(node, ziel, cb, opt) {
+      opt = opt || {};
       aufloesen(node, ziel.host, (fehler, ip) => {
         if (fehler) { cb({ ok: false, grund: fehler }); return; }
         let fertig = false;
@@ -277,12 +379,20 @@
             if (fertig) return;
             fertig = true;
             c.schliessen();
+            if (antwort.cookie) antwort.cookie.forEach(z => cookieMerken(node, ziel, z));
             cb({ ok: true, status: antwort.status, typ: antwort.typ,
-                 koerper: antwort.koerper, von: ip });
+                 koerper: antwort.koerper, von: ip, ort: antwort.ort });
           });
-          c.senden('GET ' + ziel.pfad + ' HTTP/1.1\r\n'
+          const methode = opt.methode === 'POST' ? 'POST' : 'GET';
+          const body = methode === 'POST' ? String(opt.body || '') : '';
+          const ck = cookieText(node, ziel);
+          c.senden(methode + ' ' + ziel.pfad + ' HTTP/1.1\r\n'
                  + 'Host: ' + ziel.host + '\r\n'
-                 + 'Connection: close\r\n\r\n');
+                 + (ck ? 'Cookie: ' + ck + '\r\n' : '')
+                 + (methode === 'POST'
+                     ? 'Content-Type: application/x-www-form-urlencoded\r\n'
+                       + 'Content-Length: ' + body.length + '\r\n' : '')
+                 + 'Connection: close\r\n\r\n' + body);
         });
         if (conn) conn.onZu((grund) => {
           if (fertig) return;
@@ -298,8 +408,13 @@
       const kopf = roh.slice(0, i).split('\r\n');
       const m = /^HTTP\/[\d.]+\s+(\d+)/.exec(kopf[0] || '');
       if (!m) return null;
-      let typ = 'text/plain', laenge = null;
+      let typ = 'text/plain', laenge = null, ort = '';
+      const cookie = [];
       for (const z of kopf.slice(1)) {
+        const lo = /^Location:\s*(.+)$/i.exec(z);
+        if (lo) ort = lo[1].trim();
+        const sc = /^Set-Cookie:\s*(.+)$/i.exec(z);
+        if (sc) cookie.push(sc[1].trim());
         const t = /^Content-Type:\s*(.+)$/i.exec(z);
         if (t) typ = t[1].trim();
         const l = /^Content-Length:\s*(\d+)$/i.exec(z);
@@ -307,20 +422,32 @@
       }
       const koerper = roh.slice(i + 4);
       if (laenge != null && koerper.length < laenge) return null;   // noch unterwegs
-      return { status: parseInt(m[1], 10), typ: typ, koerper: koerper };
+      return { status: parseInt(m[1], 10), typ: typ, koerper: koerper, ort: ort, cookie: cookie };
     }
 
     /* ═══ Eine ganze SEITE holen ═════════════════════════════
        Erst das HTML, dann alles, was darin steht. Der Rückruf
        bekommt eine fertige Seite und die Liste dessen, was dafür
        geholt wurde — die Liste ist im Unterricht die halbe Miete. */
-    function seiteHolen(node, adresse, cb) {
+    /* `opt` wie bei `holen`. Eine Weiterleitung (301/302/303 mit
+       `Location`) folgt der Browser selbst — mit GET und höchstens
+       viermal —, und die Liste der Anfragen zeigt jede einzelne. */
+    function seiteHolen(node, adresse, cb, opt) {
       const ziel = zerlegeAdresse(adresse);
       if (!ziel) { cb({ ok: false, grund: 'Das ist keine gültige Adresse.' }); return; }
+      seite(node, ziel, opt || {}, 0, [], cb);
+    }
 
+    function seite(node, ziel, opt, sprung, teile, cb) {
       holen(node, ziel, (r) => {
         if (!r.ok) { cb({ ok: false, grund: r.grund, ziel: ziel }); return; }
-        const teile = [{ pfad: ziel.pfad, status: r.status, typ: r.typ, laenge: r.koerper.length }];
+        teile.push({ pfad: ziel.pfad, status: r.status, typ: r.typ, laenge: r.koerper.length,
+                     methode: opt.methode === 'POST' ? 'POST' : 'GET' });
+
+        if ((r.status === 301 || r.status === 302 || r.status === 303) && r.ort && sprung < 4) {
+          const neu = zerlegeAdresse(adresseAufloesen(adresseVon(ziel), r.ort) || '');
+          if (neu) { seite(node, neu, {}, sprung + 1, teile, cb); return; }
+        }
 
         if (r.status !== 200 || !/text\/html/.test(r.typ)) {
           cb({ ok: true, status: r.status, ziel: ziel, teile: teile,
@@ -348,7 +475,27 @@
             if (--rest === 0) cb(fertigeSeite(r.koerper, geholt, teile, ziel));
           });
         }
-      });
+      }, opt);
+    }
+
+    /* Die Adresse, wie sie oben im Browser steht (ohne `http://`). */
+    const adresseVon = (z) => z.host + (z.port !== PORT ? ':' + z.port : '') + z.pfad;
+
+    /* Wohin zeigt ein Verweis, gesehen von der Seite `von` aus?
+       Absolut (`/filme`), relativ (`konto`) oder mit Adresse
+       (`http://…`). Alles andere (`javascript:`, `mailto:` …) ist
+       keine Seite in diesem Netz und gibt nichts zurück. */
+    function adresseAufloesen(von, href) {
+      const h = String(href || '').trim();
+      if (!h || h.charAt(0) === '#') return null;
+      if (/^https?:\/\//i.test(h)) return h.replace(/^https?:\/\//i, '');
+      if (/^[a-z][a-z0-9+.-]*:/i.test(h)) return null;
+      const z = zerlegeAdresse(von);
+      if (!z) return null;
+      const pfad = h.charAt(0) === '/' ? h
+        : window.Dateien.normieren(
+            (z.pfad.slice(0, z.pfad.lastIndexOf('/') + 1) || '/') + h);
+      return adresseVon({ host: z.host, port: z.port, pfad: pfad });
     }
 
     const fertigeSeite = (quelle, geholt, teile, ziel) => ({
@@ -423,6 +570,8 @@
       PORT, ORDNER, START,
       laeuft, serverAn, serverAus, holen, seiteHolen, zerlegeAdresse,
       zerlegeAnfrage, zerlegeAntwort, verweise, einsetzen, fehlerSeite,
+      anfrageLesen, formLesen, formSchreiben, antwortText, cookies,
+      adresseVon, adresseAufloesen,
       standardDateien, zugriffe: log
     };
   }

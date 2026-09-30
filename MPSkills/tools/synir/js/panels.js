@@ -930,7 +930,9 @@
           + '<div class="tr-lay-h">Zugangsdaten <span class="tr-lay-s" title="' + ZUG_TIP + '">i</span></div>'
           + '<div class="tr-f"><span>Verfahren</span><span class="mono">' + esc(z.verfahren) + '</span></div>'
           + '<div class="tr-f"><span>Benutzer</span><span class="mono">' + esc(z.benutzer == null ? '—' : z.benutzer) + '</span></div>'
-          + '<div class="tr-f"><span>Passwort</span><span class="mono">' + esc(z.passwort) + '</span></div>'
+          + (z.passwort != null ? '<div class="tr-f"><span>Passwort</span><span class="mono">' + esc(z.passwort) + '</span></div>' : '')
+          + (z.felder || []).map(([k, v]) =>
+              '<div class="tr-f"><span>' + esc(k) + '</span><span class="mono">' + esc(v) + '</span></div>').join('')
           + '</div>';
       }
       for (const l of ls) {

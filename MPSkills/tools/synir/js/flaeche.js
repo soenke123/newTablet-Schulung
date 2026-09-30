@@ -765,7 +765,8 @@
       dhcp: { text: 'DHCP', ttl: 'Dieses Gerät verteilt Adressen (DHCP-Server).' },
       dns:  { text: 'DNS',  ttl: 'Auf diesem Gerät läuft ein DNS-Server: er beantwortet Namen.' },
       web:  { text: 'Web',  ttl: 'Auf diesem Gerät läuft ein Webserver: er liefert Seiten aus.' },
-      mail: { text: 'Mail', ttl: 'Auf diesem Gerät läuft ein E-Mail-Server: er nimmt Post an und gibt sie heraus.' }
+      mail: { text: 'Mail', ttl: 'Auf diesem Gerät läuft ein E-Mail-Server: er nimmt Post an und gibt sie heraus.' },
+      stream: { text: 'Stream', ttl: 'Auf diesem Gerät läuft ein Streaming-Server: Filme hinter einer Anmeldung.' }
     };
 
     function marken(g, n, mitAdresse) {

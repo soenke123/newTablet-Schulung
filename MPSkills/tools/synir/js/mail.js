@@ -561,7 +561,7 @@
 
     return {
       SMTP, POP3, laeuft, serverAn, serverAus, senden, abholen,
-      anmelden, abmelden, adresseVon,
+      anmelden, abmelden, adresseVon, smtpSenden, zumServer,
       alsText, ausText, konten, konto, domainVon, benutzerVon
     };
   }

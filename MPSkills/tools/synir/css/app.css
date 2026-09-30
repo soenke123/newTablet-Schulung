@@ -182,6 +182,7 @@
   --wlan:      #6d4fd8;
   --web:       #0e7c8c;
   --mail:      #b03a86;
+  --stream:    #c2410c;
 
   /* Netzteil und Geräteteil einer Adresse. Zwei Farben, die sich
      in Hell UND Dunkel unterscheiden und beide auf hellem wie
@@ -344,6 +345,7 @@
      bei --wlan, wo Weiß trägt. */
   --web:       #2fa9bb;
   --mail:      #e067b0;
+  --stream:    #fb923c;
 
   --netzteil:  #7ab5ff;
   --hostteil:  #f0a862;
@@ -1273,7 +1275,7 @@ body.is-ziehen, body.is-ziehen * {
 /* Die vier Dienstmarken teilen ihre Schrift: sie sind ein SATZ von
    Zeichen und sollen als solcher zu erkennen sein — die Farbe
    unterscheidet, die Form nicht. */
-.nf-dhcp text, .nf-dns text, .nf-web text, .nf-mail text {
+.nf-dhcp text, .nf-dns text, .nf-web text, .nf-mail text, .nf-stream text {
   font-size: 8.5px; font-weight: 700; letter-spacing: .06em;
   text-anchor: middle;
 }
@@ -1281,6 +1283,7 @@ body.is-ziehen, body.is-ziehen * {
 .nf-dns  rect { fill: var(--dns); }
 .nf-web  rect { fill: var(--web); }
 .nf-mail rect { fill: var(--mail); }
+.nf-stream rect { fill: var(--stream); }
 
 .nf-wlan rect { fill: var(--wlan); }
 .nf-wlan text { font-size: 9.5px; font-weight: 650; text-anchor: start; }
@@ -2366,6 +2369,7 @@ textarea.f::placeholder { color: var(--ink-3); opacity: .45; font-weight: 400; }
   font-family: var(--fm); font-size: 11.5px; padding: 4px 9px; cursor: pointer;
 }
 .ws-datei:hover { border-color: var(--accent); color: var(--accent); }
+.st-film.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .ws-log {
   border: 1px solid var(--line); border-radius: var(--r1);
   background: var(--surface-2); padding: 7px 9px;

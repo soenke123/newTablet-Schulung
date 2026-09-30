@@ -321,7 +321,8 @@
     dhcp: { conf: 'dhcpServer', sw: null },
     dns:  { conf: 'dnsServer',  sw: 'dns' },
     web:  { conf: 'webServer',  sw: 'webserver' },
-    mail: { conf: 'mailServer', sw: 'mailserver' }
+    mail: { conf: 'mailServer', sw: 'mailserver' },
+    stream: { conf: 'streamServer', sw: 'streamingserver' }
   };
   function dienstLaeuft(node, art) {
     const d = DIENSTE[art];
@@ -761,6 +762,22 @@
        Eine E-Mail, die nach dem Neuladen weg ist, wäre der eine
        Fehler, den ein Kind persönlich nimmt — und sie liegt ja
        auch im echten Leben auf dem Server, bis jemand sie abholt. */
+    /* Der Streaming-Server (stream.js): Dienstname, Mailserver für
+       die Passwort-Mails, die zwei angebotenen Filme — und die Daten
+       der Kunden: Konten (mit den ausgedachten Bankdaten), Likes und
+       Kommentare. Alles im Speicherformat; nur die Sitzungen nicht. */
+    function streamConf(node) {
+      if (!node.streamServer) node.streamServer = { on: false };
+      const s = node.streamServer;
+      if (s.name == null) s.name = '';
+      if (s.mailserver == null) s.mailserver = '';
+      if (!Array.isArray(s.filme)) s.filme = [1, 2];
+      if (!Array.isArray(s.konten)) s.konten = [];
+      if (!s.likes) s.likes = {};
+      if (!Array.isArray(s.kommentare)) s.kommentare = [];
+      return s;
+    }
+
     function mailConf(node) {
       if (!node.mailServer) node.mailServer = { on: false, domain: '', konten: [] };
       return node.mailServer;
@@ -1224,6 +1241,7 @@
             dnsServer:  n.dnsServer  ? U.deepCopy(n.dnsServer)  : undefined,
             webServer:  n.webServer  ? U.deepCopy(n.webServer)  : undefined,
             mailServer: n.mailServer ? U.deepCopy(n.mailServer) : undefined,
+            streamServer: n.streamServer ? U.deepCopy(n.streamServer) : undefined,
             mailKonto:  n.mailKonto  ? U.deepCopy(n.mailKonto)  : undefined,
             nat:  n.nat  ? U.deepCopy(n.nat)  : undefined,
             /* Nur der Schalter. Die gelernten Wege stehen in
@@ -1306,6 +1324,7 @@
         if (d.dnsServer)  node.dnsServer  = U.deepCopy(d.dnsServer);
         if (d.webServer)  node.webServer  = U.deepCopy(d.webServer);
         if (d.mailServer) node.mailServer = U.deepCopy(d.mailServer);
+        if (d.streamServer) node.streamServer = U.deepCopy(d.streamServer);
         if (d.mailKonto)  node.mailKonto  = U.deepCopy(d.mailKonto);
         natLaden(node, k.id, d);
         if (d.rip)  node.rip  = { on: !!d.rip.on };
@@ -1433,6 +1452,7 @@
         if (d.dnsServer)  node.dnsServer  = U.deepCopy(d.dnsServer);
         if (d.webServer)  node.webServer  = U.deepCopy(d.webServer);
         if (d.mailServer) node.mailServer = U.deepCopy(d.mailServer);
+        if (d.streamServer) node.streamServer = U.deepCopy(d.streamServer);
         if (d.mailKonto)  node.mailKonto  = U.deepCopy(d.mailKonto);
         natLaden(node, node.kind, d);
         if (d.rip)  node.rip  = { on: !!d.rip.on };
@@ -1497,7 +1517,7 @@
       KIND, WAN, LAN,
       kurzName: (node) => kurzName(node, list()),
       addNode, removeNode, addCable, removeCable,
-      addNic, removeNic, freieNic, keinAnschlussSatz, dhcpConf, dnsConf, webConf, mailConf, mailKonto, natConf, ripConf, wlanConf,
+      addNic, removeNic, freieNic, keinAnschlussSatz, dhcpConf, dnsConf, webConf, mailConf, streamConf, mailKonto, natConf, ripConf, wlanConf,
       dhcpLeeren, setDhcp, setFunk,
       // „Hat dieses Gerät überhaupt eine Kabelbuchse?" — wie
       // `istWan` und `strahlt` eine Frage, die NUR hier

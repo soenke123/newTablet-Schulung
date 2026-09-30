@@ -6,6 +6,29 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 000d · Streaming-Server — Schritt 2 des Sicherheitsplans (2026-09-30)
+
+Berührt: neu `js/stream.js`; `js/http.js` (POST, Cookies, Weiterleitung, `anfrageLesen`, `formLesen`,
+`antwortText`, `adresseAufloesen`), `js/prog-web.js` (Brücke, Sandbox, `bauStream`), `js/mail.js`
+(exportiert `smtpSenden`, `zumServer`), `js/netz.js` (`streamConf`, Dienst `stream`, Speicherformat),
+`js/dienste.js` (Port-80-Vorrang), `js/geraet.js`, `js/flaeche.js`, `js/mitschnitt.js`/`js/panels.js`
+(Fund-Filter für Formulare und Cookies), `css/app.css`, `index.html` (Skript, Symbol, `?v=…e`),
+`tests/kerntest.js` (1005 grün), `tests/uitest.js`, `PLAN-SICHERHEIT.md`. Neues Bild `tests/shot-streaming.png`.
+
+* ⭐ **Sandbox geändert:** `allow-scripts allow-forms` (nie `allow-same-origin`) plus CSP mit
+  Einmalschlüssel; nur das Brückenskript läuft. Der alte Satz „sandbox ohne allow-scripts" gilt
+  nicht mehr, die zwei Prüfungen dazu in `uitest.js` wurden angepasst. Siehe Kopfkommentar `prog-web.js`.
+* Streaming-Server: Landing → Registrieren (Name, E-Mail, IBAN, BIC) → Passwort per Mail (SMTP über den
+  Mailserver, den der Betreiber einträgt) → Anmelden → Filmseite (2 von 4 Filmen, Likes, Kommentare)
+  → „Mein Konto". Alles im Klartext im Mitschnitt.
+* ⚠️ **Offen:** echte Titel und Plakate (PNG) vom Nutzer; `FILME` in `js/stream.js`.
+* ⚠️ Browser-Prüfstand: wie zuvor 14 umgebungsbedingte Fehlschläge (Fenster auf dem Gerät, NAT/RIP,
+  Wolke), keine neuen. In dieser Umgebung: `NODE_PATH=/opt/node22/lib/node_modules/playwright/node_modules`
+  und `CHROME_PATH=/opt/pw-browsers/chromium`.
+* Nächster Schritt laut Plan: 3 · WLAN-Lauschen (erst `schichten.js`/`netz.js` zur WLAN-Zustellung lesen).
+
+---
+
 ## 000c · Fund-Filter im Mitschnitt — Schritt 1 des Sicherheitsplans (2026-09-30)
 
 Berührt: `js/mitschnitt.js`, `js/panels.js`, `index.html`, `css/app.css`,

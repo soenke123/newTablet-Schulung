@@ -213,8 +213,42 @@
         if (z.slice(0, wort.length + 1) === wort + ' ') return z.slice(wort.length + 1);
       return null;
     }
+    /* HTTP: Formularfelder (`passwort=`, `iban=` …) und Cookies. Die
+       Felder stehen im Körper einer POST-Anfrage, `Cookie:` in jeder
+       weiteren Anfrage, `Set-Cookie:` in der Antwort auf die
+       Anmeldung. Nur Anfragen und Antworten — Handschlag und
+       Bestätigungen tragen keine Daten und fallen vorher heraus. */
+    const FORM_GEHEIM = ['iban', 'bic', 'karte', 'kartennummer', 'pin'];
+    function httpZugang(data) {
+      const d = String(data);
+      const post = /^POST\s/.test(d);
+      if (!post && !/^GET\s/.test(d) && !/^HTTP\/[\d.]+\s/.test(d)) return null;
+      const teile = d.split('\r\n\r\n');
+      const f = {};
+      if (post) String(teile[1] || '').split('&').forEach((p) => {
+        const g = p.indexOf('=');
+        if (g < 0) return;
+        try {
+          f[decodeURIComponent(p.slice(0, g).replace(/\+/g, ' ')).toLowerCase()] =
+            decodeURIComponent(p.slice(g + 1).replace(/\+/g, ' '));
+        } catch (e) { /* kaputte Kodierung: kein Fund */ }
+      });
+      const pw = f.passwort != null ? f.passwort : f.password != null ? f.password : f.pass != null ? f.pass : null;
+      const felder = [];
+      FORM_GEHEIM.forEach(k => { if (f[k]) felder.push([k, f[k]]); });
+      const ck = /^Cookie:\s*(.+)$/im.exec(teile[0]);
+      if (ck) felder.push(['Cookie', ck[1].trim()]);
+      const sc = /^Set-Cookie:\s*(.+)$/im.exec(teile[0]);
+      if (sc && /=\s*[^;\s]/.test(sc[1])) felder.push(['Set-Cookie', sc[1].trim()]);
+      if (pw == null && !felder.length) return null;
+      return { verfahren: (pw != null || post) ? 'HTTP-Formular' : 'HTTP-Cookie',
+               benutzer: f.email || f.benutzer || f.user || f.name || null,
+               passwort: pw, felder: felder };
+    }
+
     function zugangVon(f, nodeId) {
       const t = tcpVon(f);
+      if (t && t.s.data && (t.s.sport === 80 || t.s.dport === 80)) return httpZugang(t.s.data);
       if (!t || !t.s.data || !(t.s.sport === 110 || t.s.dport === 110)) return null;
       const pw = zeileMit(t.s.data, 'PASS');
       if (pw == null) return null;

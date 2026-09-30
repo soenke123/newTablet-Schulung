@@ -145,8 +145,16 @@
         /* Der Webserver, nach demselben Muster: installiert UND
            gestartet. `http` steht am Ende dieser Datei — erzeugt
            ist es, bevor `sync` je gerufen wird. */
+        /* ⚠️ Webserver UND Streaming-Server wollen Port 80 — es
+           lauscht genau einer, der Streaming-Server hat Vorrang (die
+           Fenster lassen den zweiten gar nicht erst starten; das
+           hier ist die Sicherung im Netz). Ausgeschaltet wird EINMAL:
+           zwei getrennte `Aus`-Aufrufe würden sich gegenseitig das
+           Ohr abdrehen. */
         if (http) {
-          if (laeuft && http.laeuft(node)) http.serverAn(node);
+          const streamAn = !!(laeuft && stream && stream.laeuft(node));
+          if (streamAn) stream.serverAn(node);
+          else if (laeuft && http.laeuft(node)) http.serverAn(node);
           else http.serverAus(node);
         }
 
@@ -828,9 +836,16 @@
       ? window.Mail.erzeugen(engine, netz, stack, { resolve: resolve })
       : null;
 
+    /* Der Streaming-Server braucht beide: den Browser-Teil von
+       `http` (Anfragen lesen, Antworten schreiben) und den
+       Mailversand. */
+    const stream = window.Stream && http && mail
+      ? window.Stream.erzeugen(engine, netz, stack, { http: http, mail: mail })
+      : null;
+
     return {
       start, stop, sync, reset, resolve, erneuern,
-      leaseOf, fragtGerade, leases, dnsCache, http, mail,
+      leaseOf, fragtGerade, leases, dnsCache, http, mail, stream,
       get laeuft() { return laeuft; }
     };
   }

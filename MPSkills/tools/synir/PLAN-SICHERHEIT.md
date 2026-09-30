@@ -49,7 +49,7 @@ dann bauen, dann hier abhaken. **Nicht drei Schritte vorausdenken.**
 | # | Schritt | Abhängig von | Größe | Status |
 |---|---|---|---|---|
 | 1 | **Fund-Filter im Mitschnitt** (erst für E-Mail) | nichts | klein | ☑ 2026-09-30 |
-| 2 | **Web-Anwendung mit Anmeldung** | nichts (macht 1 und 4 lohnender) | mittel | ☐ |
+| 2 | **Web-Anwendung mit Anmeldung** | nichts (macht 1 und 4 lohnender) | mittel | ☑ 2026-09-30 |
 | 3 | **WLAN-Lauschen** | nichts | klein bis mittel | ☐ |
 | 4 | **HTTPS / TLS-Schale** (und Mail-Haken) | 2 | mittel | ☐ |
 | 5 | **VPN** | 4 (Verschlüsselung), NAT | groß | ☐ |
@@ -124,6 +124,44 @@ Beiträge), damit es im Mitschnitt etwas Geheimes gibt, das über HTTP läuft.
   beides?) Name des Programms.
 * Kontenanlage: Selbstregistrierung auf der Seite oder nur durch den Betreiber im Fenster?
 * Sitzung per Cookie: im Mitschnitt sichtbar machen (Cookie-Diebstahl = Schritt 1).
+
+**Entschieden (2026-09-30):**
+* **Anmeldung per Formular (CSP-Weg), Test bestanden** (Chromium, Probeseite im Scratchpad):
+  `<iframe sandbox="allow-scripts allow-forms">` (**ohne** `allow-same-origin`) + im `srcdoc`
+  `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';
+  img-src data:; script-src 'nonce-…'">` + ein Brückenskript mit demselben Nonce. Schülerskripte,
+  `onerror`/`onclick`, `javascript:` und erfundener Nonce laufen **nicht**; nur die Brücke läuft, fängt
+  `submit` (auch per Enter) und Linkklicks ab und meldet per `postMessage` an den Simulator.
+  ⚠️ `allow-forms` ist nötig, sonst blockt Chromium das Absenden schon **vor** dem `submit`-Ereignis.
+  Der Simulator nimmt Nachrichten nur von `iframe.contentWindow` mit dem passenden Nonce an und
+  lehnt `javascript:`-Ziele ab.
+* **Programm „Streaming-Server"** (Netflix-/Spotify-artig). Der Betreiber vergibt im Serverfenster
+  einen **Dienstnamen** (steht als Kopfzeile im Browser) und wählt aus **4 Filmen genau 2**, die
+  angezeigt werden (Plakate = PNG vom Nutzer, Titel reicht er nach).
+* **Seiten:** Landing mit Anmelden/Registrieren → nach Anmeldung die Filmseite (Kacheln, Like,
+  Kommentar; alle Angemeldeten sehen alles) → **„Mein Konto"** mit den gespeicherten Bankdaten.
+  Ohne Anmeldung kommt man an die Filmseite nicht heran.
+* **Registrierung im Browser:** Name, E-Mail, **Bankdaten (ausgedacht)**. Das **Passwort kommt per
+  Mail** (`smtpSenden` in `js/mail.js`), abgeholt per POP3. Anmeldung und Registrierung laufen
+  im Klartext über HTTP — genau das, was Schritt 4 (HTTPS) später schließt.
+* **Fund-Filter** (Schritt 1) wird um Formularfelder (`passwort=`, `iban=` …) erweitert.
+
+**Umgesetzt (2026-09-30):** Programm **Streaming-Server** (`js/stream.js`, Fenster `bauStream` in
+`js/prog-web.js`, Kennung `streamingserver`, Dienst `stream`, Marke „Stream"). Port 80 teilt er sich
+mit dem Webserver: nur einer läuft (Streaming-Server hat Vorrang; beide Fenster sperren „Starten",
+`dienste.sync` sichert im Netz). Seiten: `/`, `/anmelden`, `/registrieren`, `/filme`, `/konto`,
+`/plakat/N.svg`; POST auf `/anmelden`, `/registrieren`, `/like`, `/kommentar`, `/abmelden`.
+Sitzung per Cookie `sid` (Laufzeit, nicht im Speicherformat); Konten/Likes/Kommentare/Filmwahl/
+Dienstname/Mailserver im Speicherformat (`node.streamServer`, `netz.streamConf`).
+Der Browser (`js/http.js`, `js/prog-web.js`) kann jetzt `POST`, Cookies (Laufzeit, je Gerät und
+Server), Weiterleitungen (301/302/303, höchstens 4) und Links im Rahmen.
+* **Noch Platzhalter:** Titel „Film 1–4" und Verlaufs-Plakate (`FILME` in `js/stream.js`; ein Eintrag
+  bekommt ein PNG über `bild: 'data:image/png;base64,…'`). Die echten Plakate und Titel reicht der
+  Nutzer nach.
+* Registrierung ohne Mailserver oder mit abgelehnter Mail: Seite sagt warum (500), kein Konto.
+* **Fund-Filter** erweitert (`httpZugang` in `js/mitschnitt.js`): `passwort=`, `iban=`/`bic=`/`karte=`/
+  `pin=`, `Cookie:` und `Set-Cookie:` — Schale zeigt die Felder (`z.felder`).
+* Nicht gebaut: Base64, Konto ändern/löschen, eigene Filme.
 
 **Achtung beim Bauen:** Kennungen in Programmfenstern sind **eindeutig** (siehe
 UEBERGABE, Abschnitt 0ab — kopflose Prüfung „Kennungen in den Programmfenstern", neue
