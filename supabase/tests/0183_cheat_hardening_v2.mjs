@@ -131,8 +131,10 @@ const sync = async (uid, state) =>
   ok('4d Bubble Bounce 500 000 geht durch', r4.ok === true, JSON.stringify(r4));
   const r5 = await as(U2, async () => (await one(`select upsert_highscore('game17', 500001) r`)).r);
   ok('4e Bubble Bounce 500 001 abgelehnt', r5.error === 'score_out_of_range', JSON.stringify(r5));
-  const r6 = await as(U2, async () => (await one(`select upsert_highscore('game18', 2147483647) r`)).r);
-  ok('4f Startup Story bis int-Maximum geht durch', r6.ok === true, JSON.stringify(r6));
+  const r6 = await as(U2, async () => (await one(`select upsert_highscore('game18', 35000000) r`)).r);
+  ok('4f Startup Story 3,5 Mrd. Nutzer (35 Mio.) geht durch', r6.ok === true, JSON.stringify(r6));
+  const r7 = await as(U2, async () => (await one(`select upsert_highscore('game18', 100000001) r`)).r);
+  ok('4g Startup Story über 10 Mrd. Nutzer abgelehnt', r7.error === 'score_out_of_range', JSON.stringify(r7));
 }
 
 /* 5–7: Shop-Pumpen wie im echten Fall (906 💎, 95 600 🪙, 30+ Items) */
