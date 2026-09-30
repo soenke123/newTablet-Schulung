@@ -4086,3 +4086,98 @@ body.bilder-an .rail .add--geraet:not(.add--kachel) .add-bild { width: 36px; mar
 .bin--sn { margin: 5px 0 2px; padding: 3px 5px; }
 .bin--sn .ipp, .bin--sn .ipd { font-size: 9px; }
 .bin--sn .ipd { padding: 0; }
+
+
+/* ═══ Tablet-Feinschliff ═════════════════════════════════════════
+   Aus dem Prüflauf auf iPad mini / iPad / Galaxy Tab, hoch und quer
+   (Bericht 2026-09-30). Alles hier ist ausdrücklich für Finger
+   gedacht und steht deshalb am Ende: es ändert Maße, keine Regeln.
+
+   ── 1. Tippflächen: 44 × 44 px (Apple HIG; WCAG 2.2 verlangt
+      mindestens 24). Das SYMBOL im Knopf bleibt klein — nur die
+      Fläche, die der Finger treffen muss, wird groß. Gilt nur für
+      grobe Zeiger, damit die Maus-Ansicht am Beamer unverändert
+      bleibt. */
+@media (pointer: coarse) {
+  :root { --trace-head: 58px; --wlt-head: 52px; }
+
+  .add, .rail-fold, .zbtn, .zoom-l, .auf-min, .auf-kachel,
+  .karte-pw, .karte-x, .karte-mehr, .dt-pw, .dt-x, .dt-winh-x,
+  .ginfo-x, .sn-x, .term-x, .k-x, .rbtn, .tbtn, .chip, .mi-i {
+    min-width: 44px; min-height: 44px;
+  }
+  .rbtn, .zbtn, .karte-pw, .karte-x, .dt-pw, .dt-x, .auf-min, .ginfo-x,
+  .sn-x, .term-x, .dt-winh-x, .mi-i { width: 44px; height: 44px; }
+  .zbtn--w, .rail-fold, .zoom-l, .karte-mehr, .add { width: auto; }
+  .rail .add, .rail .zbtn--w { width: 100%; }
+  .rail.is-zu .rail-fold, .rail.is-zu .zbtn--w { width: 44px; }
+  .chip { padding-top: 0; padding-bottom: 0; }
+  .sn-chip { min-height: 36px; padding: 0 12px; }
+
+  /* Kabelgebunden / Drahtlos: zwei Hälften eines Schalters. */
+  .k-wahl-b { min-height: 44px; }
+  /* Eingabefelder im Kärtchen und auf dem Gerätebildschirm. */
+  .f, .trace-s { min-height: 44px; }
+
+  /* Tempo-Regler: die Spur ist 4 px dünn, der Griff soll 44 sein. */
+  .speedbox input[type=range] { height: 44px; }
+  .speedbox input[type=range]::-webkit-slider-thumb { width: 26px; height: 26px; }
+  .speedbox input[type=range]::-moz-range-thumb { width: 26px; height: 26px; }
+
+  /* Das Dock im Gerätebildschirm wird höher — das Programmfenster
+     muss ihm Platz lassen, sonst liegt es darauf. */
+  .dt-dapp { width: 44px; height: 44px; }
+  .dt-scr { padding-bottom: 92px; }
+  .dt-fenster { inset: 14px 14px 92px; }
+  .dt--handy .dt-fenster { inset: 16px 14px 92px; }
+}
+
+/* ── 2. Das Terminal im Gerätebildschirm passt sich der Höhe an.
+   Es hatte eine Ausgabe von mindestens 120 px. War der Bildschirm
+   niedriger (Tablet quer mit Tastatur: ~400 px), ragte es unten
+   aus dem Fenster und die Eingabezeile war nicht mehr zu sehen.
+   Jetzt füllt es das Fenster, und SCHRUMPFEN darf die Ausgabe —
+   die Eingabezeile nie. */
+.dt-win:has(> .term) { display: flex; flex-direction: column; overflow: hidden; }
+.dt-win > .term.term--in { flex: 1 1 auto; min-height: 0; }
+.term.term--in .term-o,
+body.trace-open .term.term--in .term-o { flex: 1 1 auto; height: auto; min-height: 0; }
+.term.term--in > :not(.term-o) { flex: none; }
+/* Niedriger Bildschirm (Tablet quer mit Tastatur, ≤ 520 px): das
+   Fenster nimmt die ganze Höhe des Bildschirms, das Dock macht Platz.
+   Es kommt mit der Tastatur wieder. */
+@media (max-height: 520px) {
+  .dt-scr { padding-bottom: 14px; }
+  .dt-fenster, .dt--handy .dt-fenster { inset: 6px 12px; }
+  .dt-dock { display: none; }
+  .dt-winh { padding-top: 2px; padding-bottom: 2px; }
+}
+
+/* ── 3. Kopfzeile auf schmalen Tablets (hochkant) ───────────────
+   Die Unterzeile der Modus-Kacheln fällt weg (das Wort und das
+   Zeichen reichen), damit Marke, Modus und Menüs in EINE Zeile
+   passen. Im Aktionsmodus kommen Wiedergabeknöpfe dazu: dort
+   stehen Marke und Menüs oben, Modus und Knöpfe eine Reihe
+   darunter — immer dieselben zwei Zeilen statt eines Zufalls. */
+@media (max-width: 900px) {
+  .mbtn-t small { display: none; }
+  .mbtn { padding-top: 6px; padding-bottom: 6px; }
+  body[data-modus="aktion"] .top-l { order: 0; }
+  body[data-modus="aktion"] .top-r { order: 1; margin-left: auto; }
+  body[data-modus="aktion"] .top-c { order: 2; flex: 1 0 100%; justify-content: center; margin-left: 0; }
+}
+
+/* ── 4. Geräteleiste: lange Wörter ──────────────────────────────
+   „VERMITTLUNGSGERÄTE" lief bei 148 px Breite über den Rand,
+   „Heimrouter" füllte seine Kachel bis zum Anschlag. */
+@media (max-width: 860px) {
+  .rail .tools-t { letter-spacing: .04em; font-size: 10px; overflow-wrap: anywhere; hyphens: auto; }
+  .rail .add--kachel { min-width: 0; padding-left: 2px; padding-right: 2px; font-size: 10.5px; letter-spacing: -.01em; }
+}
+
+/* ── 5. Mitschnitt hochkant: weniger Höhe ──────────────────────
+   Auf dem Hochformat ist die Fläche ohnehin schmal; ein Drittel
+   der Höhe für die Zeilen ließ dem Netz zu wenig. */
+@media (orientation: portrait) {
+  :root { --trace-h: clamp(120px, 20vh, 240px); --wlt-h: clamp(130px, 22vh, 260px); }
+}

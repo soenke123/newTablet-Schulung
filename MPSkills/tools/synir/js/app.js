@@ -1387,7 +1387,17 @@
       // Erst messen, wenn der Text steht — vorher ist die Karte
       // noch so hoch wie der vorige Auftrag.
       requestAnimationFrame(() => subnetze.platzieren());
+      /* Tablet hochkant: die Fläche ist schmal, und die Karte deckt
+         genau die Geräte zu, die man antippen soll (ein Tipp auf E1
+         traf die Karte). Dort beginnt der Auftrag als gelbe Kachel;
+         ein Tipp darauf klappt ihn auf. Quer bleibt er offen. */
+      if (window.matchMedia && matchMedia('(orientation: portrait) and (max-width: 900px)').matches) aufZeigen(false);
     }
+
+    /* Wächst oder schrumpft die Karte (Text bricht anders um, Größe
+       gezogen, Kachel), rückt die Subnetzliste darunter nach —
+       vorher lag sie auf schmalen Flächen halb auf dem Auftrag. */
+    if (window.ResizeObserver) new ResizeObserver(() => subnetze.platzieren()).observe(aufBox);
 
     $('aufgabeMin').addEventListener('click', (ev) => {
       ev.stopPropagation();
@@ -1828,6 +1838,32 @@
        das Laden zurückgenommen, und das ist kein Schritt, den
        jemand getan hat. */
     verlauf.leeren();
+
+    /* ─── Langer Druck zeigt den Tooltip ──────────────────────
+       Symbolknöpfe (Pause, Schritt, Schließen …) erklären sich nur
+       über `title` — und das erscheint auf dem Tablet nie. Wer einen
+       Knopf ~0,5 s festhält, sieht den Text als Hinweis unten; der
+       Tipp beim Loslassen löst dann NICHT aus. */
+    (function () {
+      let t = null, lang = false;
+      const weg = () => { clearTimeout(t); t = null; };
+      document.addEventListener('pointerdown', (ev) => {
+        if (ev.pointerType !== 'touch') return;
+        const b = ev.target.closest && ev.target.closest('button[title], [role="button"][title]');
+        weg(); lang = false;
+        if (!b || !b.title) return;
+        t = setTimeout(() => { lang = true; toast(b.title); }, 500);
+      }, true);
+      ['pointerup', 'pointercancel'].forEach(n => document.addEventListener(n, () => {
+        weg();
+        if (lang) setTimeout(() => { lang = false; }, 400);   // das Click-Ereignis kommt gleich, sonst nie
+      }, true));
+      document.addEventListener('click', (ev) => {
+        if (!lang) return;
+        lang = false;
+        ev.stopPropagation(); ev.preventDefault();
+      }, true);
+    })();
 
     // Für die Fehlersuche von der Konsole aus.
     window.SIM = { engine, netz, stack, mit, term, flaeche, panels, geraet,
