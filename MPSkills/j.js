@@ -135,27 +135,19 @@ function renderTabs(code, room) {
   tabHost().querySelectorAll('.rtab').forEach(b => {
     b.addEventListener('click', () => showJPane(b.dataset.pane));
   });
-  // Ohne Vollbild-Schnittstelle (iPhone) gäbe es nichts zu drücken.
-  const fs = document.getElementById('fsBtn');
-  const el = document.documentElement;
-  if (!(el.requestFullscreen || el.webkitRequestFullscreen)) fs.hidden = true;
-  else fs.addEventListener('click', toggleFullscreen);
-}
-
-function toggleFullscreen() {
-  const el = document.documentElement;
-  try {
-    const p = !(document.fullscreenElement || document.webkitFullscreenElement)
-      ? (el.requestFullscreen || el.webkitRequestFullscreen).call(el)
-      : (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-    if (p && p.catch) p.catch(() => {});
-  } catch (e) { /* abgelehnt: bleibt, wie es ist */ }
+  // ⛶ holt nur den Skill ins Vollbild (lib/tool.js) — wie bei der
+  // Lehrkraft. Steht gerade „Raum" offen, geht es erst zum Skill.
+  document.getElementById('fsBtn').addEventListener('click', () => {
+    showJPane('tool');
+    window.MPTool.vollbild(toolHost());
+  });
 }
 
 /* Verlassen wir den Raum, muss die Leiste weg und die schmale Spalte
    zurück — sonst stünden über der Code-Eingabe zwei Reiter, die ins
    Leere zeigen. */
 function clearTabs() {
+  window.MPTool.vollbildAus();
   jPane = null;
   tabHost().innerHTML = '';
   mainWrap().hidden = false;

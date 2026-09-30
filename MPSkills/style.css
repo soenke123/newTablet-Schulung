@@ -3025,7 +3025,36 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   color: var(--ink-soft); cursor: pointer;
 }
 .rtabs-fs:hover { background: var(--paper-2); color: var(--ink); }
-.rtabs-fs[hidden] { display: none; }
+
+/* Der Skill im Vollbild (lib/tool.js · MPTool.vollbild). Echtes
+   Vollbild und Notbehelf sehen gleich aus: der Kasten füllt den
+   Bildschirm, ohne Rand. Der ✕ oben in der Mitte ersetzt die
+   Leiste, die jetzt außerhalb des Bildes liegt. */
+.mpfs-on {
+  box-sizing: border-box;
+  width: 100%; max-width: none;
+  margin: 0; padding: 0;
+  background: var(--paper);
+  overflow: auto;
+}
+.mpfs-on:fullscreen { width: 100vw; height: 100vh; }
+.mpfs-on:-webkit-full-screen { width: 100vw; height: 100vh; }
+.is-mpfs {
+  position: fixed; inset: 0;
+  height: 100vh; height: 100dvh;
+  z-index: 5000;
+}
+body.mpfs-body { overflow: hidden; }
+.mpfs-x {
+  position: fixed; top: 6px; left: 50%; transform: translateX(-50%);
+  z-index: 5001;
+  width: 34px; height: 34px; border-radius: 50%;
+  font: inherit; font-size: 1rem; line-height: 1;
+  color: var(--ink); background: var(--paper-2);
+  border: 1px solid var(--line); cursor: pointer;
+  opacity: .55; transition: opacity .15s;
+}
+.mpfs-x:hover, .mpfs-x:focus-visible { opacity: 1; }
 
 .rpane {
   width: 100%; max-width: 1500px;

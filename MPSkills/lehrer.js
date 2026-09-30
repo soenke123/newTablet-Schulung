@@ -1345,17 +1345,16 @@ async function renderNew() {
    blendet den Seitenfuß aus und geben ihn nicht wieder her. */
 function stop() {
   if (poller) { poller.stop(); poller = null; }
+  window.MPTool.vollbildAus();
   unmountTool();
   document.body.classList.remove('roomview', 'beamer', 'pane-tool');
 }
 
+/* ⛶ holt nur den Skill ins Vollbild (lib/tool.js). Steht gerade
+   ein anderes Fach offen, geht es erst auf das Skill-Fach. */
 function toggleFullscreen() {
-  const el = document.documentElement;
-  if (!(document.fullscreenElement || document.webkitFullscreenElement)) {
-    (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
-  } else {
-    (document.exitFullscreen || document.webkitExitFullscreen || (() => {})).call(document);
-  }
+  showPane('tool');
+  window.MPTool.vollbild($('paneTool'));
 }
 
 function route() {

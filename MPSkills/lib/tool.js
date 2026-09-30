@@ -105,7 +105,7 @@
        neue Reliefkarte von Wordisland unter — der Umbau war fertig,
        auf dem Bildschirm stand die alte Karte, und es sah aus, als
        wäre nichts geschehen. */
-    const v = '?v=20260930c';
+    const v = '?v=20260930d';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf
@@ -348,8 +348,67 @@
     return out;
   }
 
+  /* ─── Vollbild ──────────────────────────────────────────────
+     Der Knopf ⛶ in der Raum-Leiste (Lehrer- UND Schülerseite) holt
+     nur den Kasten des Skills ins Vollbild, nicht die Seite drum
+     herum. Die Skills bringen dafür keinen eigenen Knopf mehr mit.
+
+     Die Leiste liegt dann außerhalb des Bildes — darum trägt der
+     Kasten solange einen eigenen kleinen ✕ (.mpfs-x). Tablets ohne
+     Vollbild für einen Kasten (iPhone, ältere iPads) bekommen einen
+     Notbehelf: der Kasten legt sich per CSS über die ganze Seite
+     (.is-mpfs). Die Werkzeuge rechnen ihre Höhe beim `resize` neu
+     aus — darum wird nach jedem Wechsel einer ausgelöst. */
+  let fsBox = null, fsPseudo = false;
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+
+  function fsSync() {
+    const on = !!fsBox && (fsPseudo || fsEl() === fsBox);
+    if (fsBox) {
+      fsBox.classList.toggle('is-mpfs', fsPseudo);
+      fsBox.classList.toggle('mpfs-on', on);
+      let x = fsBox.querySelector(':scope > .mpfs-x');
+      if (on && !x) {
+        x = document.createElement('button');
+        x.type = 'button';
+        x.className = 'mpfs-x';
+        x.title = 'Vollbild beenden';
+        x.setAttribute('aria-label', 'Vollbild beenden');
+        x.textContent = '✕';
+        x.addEventListener('click', () => vollbild(fsBox));
+        fsBox.appendChild(x);
+      } else if (!on && x) x.remove();
+    }
+    document.body.classList.toggle('mpfs-body', fsPseudo);
+    if (!on) { fsBox = null; fsPseudo = false; }
+    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+  }
+  document.addEventListener('fullscreenchange', fsSync);
+  document.addEventListener('webkitfullscreenchange', fsSync);
+
+  function vollbild(box) {
+    if (!box) return;
+    if (fsBox) {                       // läuft schon → beenden
+      if (fsPseudo) { fsPseudo = false; fsBox.classList.remove('is-mpfs'); fsSync(); return; }
+      const aus = document.exitFullscreen || document.webkitExitFullscreen;
+      try { const p = aus && aus.call(document); if (p && p.catch) p.catch(() => {}); } catch (e) { /* egal */ }
+      return;
+    }
+    fsBox = box;
+    const pseudo = () => { fsBox = box; fsPseudo = true; fsSync(); };
+    const req = box.requestFullscreen || box.webkitRequestFullscreen;
+    if (!req) { pseudo(); return; }
+    try {
+      const p = req.call(box);
+      if (p && p.catch) p.catch(pseudo);
+    } catch (e) { pseudo(); }
+  }
+
+  // Beim Verlassen des Raums: kein Vollbild mitnehmen.
+  function vollbildAus() { if (fsBox) vollbild(fsBox); }
+
   window.MPTool = {
-    register, get, load, defaultSettings,
+    register, get, load, defaultSettings, vollbild, vollbildAus,
     participantActions, presenterActions, soloActions,
     makeCtx, errText, ERRORS
   };
