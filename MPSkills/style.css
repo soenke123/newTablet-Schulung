@@ -3025,6 +3025,7 @@ body.roomview .wrap { flex: 0 0 auto; padding: 16px 22px 10px; }
   color: var(--ink-soft); cursor: pointer;
 }
 .rtabs-fs:hover { background: var(--paper-2); color: var(--ink); }
+.rtabs-fs[hidden] { display: none; }
 
 .rpane {
   width: 100%; max-width: 1500px;

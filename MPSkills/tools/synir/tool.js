@@ -47,14 +47,14 @@
 (function () {
   'use strict';
 
-  const V = '?v=20260930b';
+  const V = '?v=20260930c';
   const TAKT_MS = 3000;          // Stand der Klasse / Spiegelung
   const GAP = 12;
   const MIN = 440;
 
   let root = null, ctx = null, view = null, frame = null;
   let bridgeReady = false;
-  let onMsg = null, onResize = null, onFs = null;
+  let onMsg = null, onResize = null;
   let code = null;
 
   let eigene = [];               // Lehrkraft: [{ id, titel }]
@@ -873,9 +873,6 @@
           if (mapOpen) malKarte();
         }
         break;
-      case 'vollbild':
-        toggleFull();
-        break;
       case 'selbst':
         if (isPresenter() && watch) {
           takeover = watch.name;
@@ -915,7 +912,6 @@
         <span class="sy-sp"></span>
         <button type="button" class="sy-btn sy-blind" id="syBlind" aria-pressed="false"
                 title="Legt auf jedes Tablet das SYNIR-Logo: „Wir machen jetzt am Beamer weiter.“">Schüler blind</button>
-        <button type="button" class="sy-btn sy-ghost" id="syFull" title="Vollbild">⛶</button>
       </div>
       <div class="sy-list" id="syPeople" hidden></div>
       <div class="sy-list sy-cww" id="syCwwList" hidden></div>
@@ -946,8 +942,6 @@
       $('syNoteText').textContent = txt;
       $('syStop').textContent = watch ? 'Beenden' : 'OK';
     }
-    const fb = $('syFull');
-    if (fb) fb.textContent = isFull() ? '✕ Vollbild' : '⛶';
   }
 
   function alter(ts) {
@@ -1016,43 +1010,6 @@
     }).join('');
   }
 
-  /* Vollbild für beide Rollen: die Lehrkraft drückt ⛶ am Pult, die
-     Tablets den Knopf „Vollbild" oben im Rahmen (bruecke.js meldet
-     `vollbild`). Ältere iPads kennen nur `webkit…`, und manche
-     Tablets gar kein Vollbild für einen Kasten — dann legt sich der
-     Kasten per CSS über die ganze Seite (`is-vollbild`). Das ist
-     kein echtes Vollbild (die Adressleiste bleibt), aber von der
-     Raum-Seite ist nichts mehr zu sehen, und darum ging es. */
-  let pseudoFull = false;
-  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
-  function isFull() {
-    if (!root) return false;
-    return pseudoFull || (!!fsEl() && fsEl() === root.querySelector('.sy-host'));
-  }
-  function pseudoSetzen(an) {
-    const host = root && root.querySelector('.sy-host');
-    pseudoFull = !!an && !!host;
-    if (host) host.classList.toggle('is-vollbild', pseudoFull);
-    document.body.classList.toggle('sy-vollbild', pseudoFull);
-    if (onFs) onFs();
-  }
-  function toggleFull() {
-    const host = root && root.querySelector('.sy-host');
-    if (!host) return;
-    if (isFull()) {
-      if (pseudoFull) { pseudoSetzen(false); return; }
-      const aus = document.exitFullscreen || document.webkitExitFullscreen;
-      if (aus) { try { const p = aus.call(document); if (p && p.catch) p.catch(() => {}); } catch (e) { /* egal */ } }
-      return;
-    }
-    const req = host.requestFullscreen || host.webkitRequestFullscreen;
-    if (!req) { pseudoSetzen(true); return; }
-    try {
-      const p = req.call(host);
-      if (p && p.catch) p.catch(() => pseudoSetzen(true));
-    } catch (e) { pseudoSetzen(true); }
-  }
-
   async function onDeskClick(e) {
     const b = e.target.closest('button');
     if (!b) return;
@@ -1075,7 +1032,6 @@
     if (b.id === 'syMap') { mapAuf(!mapOpen); return; }
     if (b.id === 'syStop') { zuseheEnde(); return; }
     if (b.id === 'syBlind') { await setData({ blind: !data().blind }); return; }
-    if (b.id === 'syFull') { toggleFull(); return; }
     if (b.dataset.pid) zusehen(b.dataset.pid, b.dataset.name || 'jemand');
   }
 
@@ -1114,7 +1070,6 @@
 
   function fit() {
     if (!frame) return;
-    if (isFull()) { frame.style.height = ''; return; }
     const top = frame.getBoundingClientRect().top;
     const h = Math.max(MIN, window.innerHeight - top - spaceBelow(frame) - GAP);
     frame.style.height = h + 'px';
@@ -1190,10 +1145,6 @@
         loadEigene();
       }
 
-      pseudoFull = false;
-      onFs = () => { paintDesk(); fit(); post({ vollbild: isFull() }); };
-      document.addEventListener('fullscreenchange', onFs);
-      document.addEventListener('webkitfullscreenchange', onFs);
       if (!ctx.preview) document.body.classList.add('tool-fill');
 
       onMsg = handle;
@@ -1233,20 +1184,11 @@
       workTimer = 0;
       if (cww) clearTimeout(cww.timer);
       cww = null;
-      if (pseudoFull) pseudoSetzen(false);
-      else if (isFull()) {
-        const aus = document.exitFullscreen || document.webkitExitFullscreen;
-        if (aus) { try { const p = aus.call(document); if (p && p.catch) p.catch(() => {}); } catch (e) { /* egal */ } }
-      }
       if (onMsg) window.removeEventListener('message', onMsg);
       if (onResize) window.removeEventListener('resize', onResize);
-      if (onFs) {
-        document.removeEventListener('fullscreenchange', onFs);
-        document.removeEventListener('webkitfullscreenchange', onFs);
-      }
       if (mapKeyFn) { document.removeEventListener('keydown', mapKeyFn); mapKeyFn = null; }
       mapOpen = false;
-      onMsg = onResize = onFs = null;
+      onMsg = onResize = null;
       document.body.classList.remove('tool-fill');
       frame = null;
       root = null;

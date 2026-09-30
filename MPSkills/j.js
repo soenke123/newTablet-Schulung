@@ -115,8 +115,9 @@ function showJPane(which) {
   if (which === 'tool') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
 }
 
-/* Anders als auf der Lehrerseite trägt die Leiste hier NICHTS am
-   rechten Rand: dort steht der Code, und der gehört der Tafel. */
+/* Anders als auf der Lehrerseite steht rechts in der Leiste kein
+   Code (der gehört der Tafel) — nur der Vollbild-Knopf. Er gilt für
+   jeden Skill; die Skills bringen keinen eigenen mehr mit. */
 function renderTabs(code, room) {
   tabHost().innerHTML = `
     <nav class="rtabs" aria-label="Raum">
@@ -127,10 +128,28 @@ function renderTabs(code, room) {
           <span class="rtab-t" id="jToolName">${
             window.MPIcons.label(room?.tool_id, room?.tool_title || 'Skill')}</span></button>
       </div>
+      <div class="rtabs-side">
+        <button type="button" class="rtabs-fs" id="fsBtn" title="Vollbild" aria-label="Vollbild">⛶</button>
+      </div>
     </nav>`;
   tabHost().querySelectorAll('.rtab').forEach(b => {
     b.addEventListener('click', () => showJPane(b.dataset.pane));
   });
+  // Ohne Vollbild-Schnittstelle (iPhone) gäbe es nichts zu drücken.
+  const fs = document.getElementById('fsBtn');
+  const el = document.documentElement;
+  if (!(el.requestFullscreen || el.webkitRequestFullscreen)) fs.hidden = true;
+  else fs.addEventListener('click', toggleFullscreen);
+}
+
+function toggleFullscreen() {
+  const el = document.documentElement;
+  try {
+    const p = !(document.fullscreenElement || document.webkitFullscreenElement)
+      ? (el.requestFullscreen || el.webkitRequestFullscreen).call(el)
+      : (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    if (p && p.catch) p.catch(() => {});
+  } catch (e) { /* abgelehnt: bleibt, wie es ist */ }
 }
 
 /* Verlassen wir den Raum, muss die Leiste weg und die schmale Spalte

@@ -17,7 +17,6 @@
      blind:   true | false                       Schleier (Tablet)
      gespeichert: { id }                         „Als Szenario" ging durch
      toast:   '…'
-     vollbild: true | false                      Stand des Vollbilds (Knopf)
      cwwNetz: { prefix, backbone }               Adressbereich vom Server
      cwwRein: { pakete, unzustellbar,            Antwort auf einen Tausch
                 verzeichnis, vergeben, bereiche }
@@ -32,7 +31,6 @@
      lehrerstand { stand }                       (Lehrkraft, gebremst; nur für die Karte)
      selbst                                      Lehrkraft übernimmt
                                                  beim Zusehen
-     vollbild                                    Knopf „Vollbild“ gedrückt
      cww      { pakete, namen?, aktiv }          was hinaus soll; `namen`
                                                  nur, wenn sie sich geändert
                                                  haben; `aktiv` = ein cww
@@ -311,12 +309,6 @@
       document.addEventListener(t, schlucken, { capture: true, passive: false }));
 
     /* ─── Befehle von draußen ──────────────────────────────── */
-    /* Vollbild: schalten tut der Rahmen draußen (tool.js). Er
-       nimmt den ganzen Kasten ins Vollbild und hat einen Notbehelf
-       für Tablets, die gar kein Vollbild können. */
-    const vollBtn = $('vollBtn');
-    if (vollBtn) vollBtn.addEventListener('click', () => post('vollbild'));
-
     window.addEventListener('message', (e) => {
       if (e.source !== window.parent || e.origin !== location.origin) return;
       const m = e.data;
@@ -346,14 +338,6 @@
         SIM.save();
       }
       if (m.toast) SIM.toast(m.toast);
-      if ('vollbild' in m) {
-        const vb = $('vollBtn');
-        if (vb) {
-          vb.setAttribute('aria-pressed', String(!!m.vollbild));
-          vb.title = m.vollbild ? 'Vollbild beenden' : 'Vollbild — nur SYNIR zeigen';
-        }
-      }
-
       if (m.cwwNetz && INET) {
         cwwConf = { prefix: m.cwwNetz.prefix | 0, backbone: String(m.cwwNetz.backbone || '') };
         SIM.netz.setInternet(cwwConf);

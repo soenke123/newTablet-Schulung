@@ -176,46 +176,6 @@
 
 .sy-empty { margin: 4px 2px; font-size: 13px; color: var(--ink-soft, #666); }
 
-/* ──────────────────────────────────────────────── Vollbild */
-
-.sy-host:fullscreen {
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  display: flex;
-  flex-direction: column;
-  background: #000;
-}
-
-.sy-host:fullscreen .sy-stage { flex: 1; }
-.sy-host:fullscreen .sy-frame { height: 100% !important; }
-
-.sy-host:-webkit-full-screen {
-  margin: 0; border: 0; border-radius: 0;
-  display: flex; flex-direction: column;
-  width: 100%; height: 100%;
-  background: #000;
-}
-.sy-host:-webkit-full-screen .sy-stage { flex: 1; }
-.sy-host:-webkit-full-screen .sy-frame { height: 100% !important; }
-
-/* Notbehelf ohne Vollbild-Schnittstelle (tool.js pseudoSetzen):
-   der Kasten legt sich über die ganze Seite. `dvh`, damit die
-   Adressleiste des Tablets nichts abschneidet. */
-.sy-host.is-vollbild {
-  position: fixed;
-  inset: 0;
-  height: 100vh;
-  height: 100dvh;
-  z-index: 5000;
-  margin: 0; border: 0; border-radius: 0;
-  display: flex; flex-direction: column;
-  background: #000;
-}
-.sy-host.is-vollbild .sy-stage { flex: 1; min-height: 0; }
-.sy-host.is-vollbild .sy-frame { height: 100% !important; }
-body.sy-vollbild { overflow: hidden; }
-
 /* Internet der Klasse: welches /8 gehört wem (nur Lehrkraft). */
 .sy-cww-row { cursor: default; }
 .sy-cww-row > span:not(.sy-dot):not(.sy-info) { grid-area: live; font-size: 13px; font-weight: 600; }
