@@ -104,7 +104,7 @@
          im 8er-Netz gibt es hier keine Leitung, die man zeigen
          könnte. */
       else if (e.kind === 'inet-raus' || e.kind === 'inet-rein') {
-        add({ t: e.t, node: e.node, nic: netz.INET,
+        add({ t: e.t, node: e.node, nic: netz.INET, inet: true,
               frame: { src: 'Wolke', dst: 'Wolke', type: 'ip', payload: e.pkt } },
             false, e.kind === 'inet-rein' ? 'rein' : 'raus');
       }
@@ -133,7 +133,9 @@
         mal: 1,
         frame: e.frame,
         proto: protoOf(e.frame),
-        info: describe(e.frame)
+        info: describe(e.frame),
+        inet: !!e.inet,
+        zugang: zugangVon(e.frame, e.node)
       };
 
       /* ─── Fluten zusammenfassen ───────────────────────────────
@@ -187,6 +189,45 @@
       rows.push(row);
       if (rows.length > MAX) rows = rows.slice(-MAX);
       fire();
+    }
+
+    /* ─── Zugangsdaten finden ─────────────────────────────────
+       Der Fund-Filter (PLAN-SICHERHEIT, Schritt 1). Erkannt wird am
+       INHALT, nicht an der Schicht darüber: was als Zeile
+       `PASS …` auf Port 110 läuft, ist ein Passwort im Klartext —
+       gleich, wer mitliest. Heute gibt es nur POP3 (SMTP kennt hier
+       kein AUTH, siehe mail.js); neue Verfahren (HTTP Basic,
+       Formularfelder, Cookies) kommen HIER dazu, und Chip, Marke und
+       Schale ziehen von selbst mit.
+
+       Der Benutzer steht in einem ANDEREN Segment davor (`USER anna`
+       und `PASS geheim` gehen einzeln hinaus). Er wird in den
+       letzten Zeilen desselben Geräts und derselben Verbindung
+       gesucht — Adressen und Ports gleich, nur die Zeile anders. */
+    function tcpVon(f) {
+      if (!f || f.type !== 'ip' || !f.payload || f.payload.proto !== 'tcp') return null;
+      return { ip: f.payload, s: f.payload.payload || {} };
+    }
+    function zeileMit(data, wort) {
+      for (const z of String(data || '').split('\r\n'))
+        if (z.slice(0, wort.length + 1) === wort + ' ') return z.slice(wort.length + 1);
+      return null;
+    }
+    function zugangVon(f, nodeId) {
+      const t = tcpVon(f);
+      if (!t || !t.s.data || !(t.s.sport === 110 || t.s.dport === 110)) return null;
+      const pw = zeileMit(t.s.data, 'PASS');
+      if (pw == null) return null;
+      let user = zeileMit(t.s.data, 'USER');
+      for (let i = rows.length - 1; user == null && i >= 0 && i > rows.length - 200; i--) {
+        const r = rows[i];
+        if (r.node !== nodeId) continue;
+        const v = tcpVon(r.frame);
+        if (v && v.ip.src === t.ip.src && v.ip.dst === t.ip.dst
+            && v.s.sport === t.s.sport && v.s.dport === t.s.dport)
+          user = zeileMit(v.s.data, 'USER');
+      }
+      return { verfahren: 'POP3 (Port 110)', benutzer: user, passwort: pw };
     }
 
     /* ─── Beschreiben ─────────────────────────────────────────
@@ -461,7 +502,7 @@
           ['Absender (MAC)', f.src],
           ['Empfänger (MAC)', rundruf ? f.dst + '  (an alle)' : f.dst],
           ['Inhalt', f.type === 'arp' ? 'ARP' : 'IP-Paket']
-        ]
+        ].concat(row.inet ? [['Ort', 'Ausgang ins Internet — alles, was dein Netz verlässt']] : [])
       });
 
       if (f.type === 'arp') {
@@ -750,7 +791,11 @@
       const f = filter;
       let r = rows;
       if (f.node)  r = r.filter(x => x.node === f.node);
-      if (f.proto) r = r.filter(x => x.proto === f.proto);
+      /* „ZUGANG" ist kein Protokoll, sondern ein Fund — der Chip
+         läuft durch denselben Schalter, damit es nur EINEN Filter
+         für die Protokollleiste gibt. */
+      if (f.proto === 'ZUGANG') r = r.filter(x => x.zugang);
+      else if (f.proto) r = r.filter(x => x.proto === f.proto);
       if (f.text) {
         const q = f.text.toLowerCase();
         r = r.filter(x => (x.info + ' ' + x.nodeName).toLowerCase().includes(q));

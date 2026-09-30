@@ -2886,6 +2886,15 @@ body:not(.trace-open) .trace-b { height: 0; border-top: 0; }
   padding: 0 5px; margin-left: 6px; cursor: help;
 }
 
+.tr-w, .tr-z {
+  font-size: 10px; font-weight: 700; font-family: var(--fs, inherit);
+  border: 1px solid var(--line); border-radius: 5px;
+  padding: 0 5px; margin-right: 6px; cursor: help; color: var(--ink-2);
+}
+.tr-z { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
+.tr-lay--zug { --l: var(--warn); }
+.tr-lay--zug .tr-lay-s { cursor: help; }
+
 .tr-det {
   display: flex; gap: 10px; flex-wrap: wrap;
   padding: 10px 16px 14px 114px; background: var(--surface-2);

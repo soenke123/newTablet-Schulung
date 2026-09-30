@@ -6,6 +6,23 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 000c · Fund-Filter im Mitschnitt — Schritt 1 des Sicherheitsplans (2026-09-30)
+
+Berührt: `js/mitschnitt.js`, `js/panels.js`, `index.html`, `css/app.css`,
+`tests/kerntest.js` (970 grün), `tests/uitest.js`, `PLAN-SICHERHEIT.md` (Schritt 1 abgehakt,
+Entscheidungen dort unter „Umgesetzt"). Neues Bild: `tests/shot-zugangsdaten.png`.
+
+* `zugangVon()` erkennt `PASS …` auf Port 110 (Benutzer aus dem `USER`-Segment derselben
+  Verbindung davor). Jede Zeile trägt `row.zugang`. Neue Verfahren kommen an diese eine Stelle.
+* Chip **🔑 Zugangsdaten** (`data-proto="ZUGANG"`, Sonderfall in `gefiltert()`), Pille in der
+  Infospalte, Schale *Zugangsdaten* beim Aufklappen. Farbe `--warn`, keine Netzfarbe.
+* CWW-Zeilen (`row.inet`) tragen die Pille **☁ Internet**; Ethernet-Schale mit Zeile *Ort*.
+* ⚠️ Der Browser-Prüfstand hatte in dieser Umgebung (Linux, Headless-Chromium) 14 Fehlschläge
+  in Abschnitten, die diese Runde nicht berührt (Fenster auf dem Gerät, NAT-/RIP-Tabellen, Wolke).
+  Die drei neuen Prüfungen sind grün.
+
+---
+
 ## 000b · Gerätefenster in der Größe ziehbar · Löschen räumt die Klasse auf (2026-09-30)
 
 * **Gerätebildschirm (`#desktop`)** hat unten rechts denselben Griff wie die Auftragskarte

@@ -5256,6 +5256,70 @@ section('Class Wide Web: Szenario 8 auf zwei Tablets');
      seite && seite.ok && seite.status === 200, seite && (seite.grund || seite.status));
 }
 
+section('Fund-Filter: Zugangsdaten im Mitschnitt');
+{
+  /* PLAN-SICHERHEIT, Schritt 1. Über Kabel: das Passwort aus
+     `PASS birne` wird als Fund erkannt, mit dem Benutzer aus dem
+     Segment davor. */
+  const { engine, mit, c, mail } = mailNetz(5);
+  mail.abholen(c, () => {});
+  engine.runUntil(30 * SEC);
+
+  const fund = mit.view().filter(r => r.zugang);
+  ok('der Mitschnitt findet die Zugangsdaten', fund.length >= 1, String(fund.length));
+  ok('⭐ mit Benutzer UND Passwort',
+     fund.some(r => r.zugang.benutzer === 'bernd' && r.zugang.passwort === 'birne'),
+     JSON.stringify(fund.map(r => r.zugang)));
+  ok('der Fund ist POP3', fund.every(r => r.proto === 'POP3'), fund.map(r => r.proto).join(','));
+  ok('andere Zeilen (USER, +OK, Handschlag) sind keine Funde',
+     mit.view().filter(r => !r.zugang).every(r => !/PASS /.test(r.info)));
+
+  mit.setFilter({ proto: 'ZUGANG' });
+  ok('der Chip „Zugangsdaten" zeigt nur Funde',
+     mit.view().length === fund.length && mit.view().every(r => r.zugang),
+     String(mit.view().length));
+  mit.setFilter({ proto: 'POP3' });
+  ok('der Chip POP3 zeigt weiter das ganze Gespräch', mit.view().length > fund.length);
+  mit.setFilter({ proto: null });
+
+  // Nichts gefunden, wo nichts Geheimes läuft.
+  const n = mailNetz(6);
+  n.mail.senden(n.a, { an: 'bernd@schule.de', betreff: 'x', text: 'y' }, () => {});
+  n.engine.runUntil(30 * SEC);
+  ok('SMTP allein (ohne Anmeldung) ergibt keinen Fund',
+     !n.mit.view().some(r => r.zugang));
+}
+{
+  /* Durch das CWW: Anna holt Post von Bens Mailserver. Der Fund
+     steht im Mitschnitt des Absenders, in der Wolke des cww (dort
+     als Internet-Zeile) und beim Empfänger. */
+  const { A, B, a1, bs } = zweiTablets();
+  bs.software = (bs.software || []).concat(['mailserver']);
+  const s = B.netz.mailConf(bs);
+  s.on = true; s.domain = 'ben.de';
+  s.konten = [{ benutzer: 'anna', name: 'Anna', passwort: 'geheim', posteingang: [] }];
+  Object.assign(A.netz.mailKonto(a1), { name: 'Anna', adresse: 'anna@ben.de',
+    pop3: '67.0.0.10', smtp: '67.0.0.10', benutzer: 'anna', passwort: 'geheim' });
+  a1.software = (a1.software || []).concat(['mail']);
+  A.dienste.sync(); B.dienste.sync();
+  A.dienste.mail.abholen(a1, () => {});
+  laufen([A, B], 60 * SEC);
+
+  const beiA = A.mit.view().filter(r => r.zugang);
+  ok('CWW: Annas Mitschnitt findet ihr Passwort',
+     beiA.some(r => r.zugang.benutzer === 'anna' && r.zugang.passwort === 'geheim'),
+     JSON.stringify(beiA.map(r => r.zugang)));
+  A.mit.setGeraet(A.netz.cwwVon().id);
+  const ausA = A.mit.view().filter(r => r.zugang);
+  const inetZ = ausA.find(r => r.inet);
+  ok('⭐ CWW: auch am Ausgang ins Internet steht der Fund — als Internet-Zeile',
+     !!inetZ, ausA.map(r => r.inet).join(','));
+  ok('CWW: die Ethernet-Schale der Internet-Zeile sagt, was der Ausgang ist',
+     inetZ && A.mit.layers(inetZ).some(l => l.fields.some(f => f[0] === 'Ort' && /Internet/.test(f[1]))));
+  ok('B liest das Passwort im eigenen Mitschnitt mit',
+     B.mit.view().some(r => r.zugang && r.zugang.passwort === 'geheim'));
+}
+
 /* ═══ Ergebnis ═══ */
 console.log('\n' + '═'.repeat(62));
 console.log(fail === 0

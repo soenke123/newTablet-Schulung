@@ -48,7 +48,7 @@ dann bauen, dann hier abhaken. **Nicht drei Schritte vorausdenken.**
 
 | # | Schritt | Abhängig von | Größe | Status |
 |---|---|---|---|---|
-| 1 | **Fund-Filter im Mitschnitt** (erst für E-Mail) | nichts | klein | ☐ |
+| 1 | **Fund-Filter im Mitschnitt** (erst für E-Mail) | nichts | klein | ☑ 2026-09-30 |
 | 2 | **Web-Anwendung mit Anmeldung** | nichts (macht 1 und 4 lohnender) | mittel | ☐ |
 | 3 | **WLAN-Lauschen** | nichts | klein bis mittel | ☐ |
 | 4 | **HTTPS / TLS-Schale** (und Mail-Haken) | 2 | mittel | ☐ |
@@ -77,6 +77,20 @@ Mit E-Mail geht es sofort, weil `PASS geheim` schon im Klartext durchläuft.
   der Fläche „Netz" — **keine neue Farbe für Netze belegen**.
 * Schlägt der Filter nur im Mitschnitt an, oder auch eine Marke am Gerät?
 * Wortlaut: Filius hat dafür nichts; eigenen knappen Begriff wählen.
+
+**Umgesetzt (2026-09-30), so entschieden:**
+* **Hervorhebung:** Pille **🔑 Zugangsdaten** vor dem Text der Zeile (Klasse `.tr-z`, Farbe `--warn`,
+  keine Netzfarbe) und eine eigene Schale *Zugangsdaten* (Verfahren · Benutzer · Passwort) beim
+  Aufklappen; der Satz dazu steht im Kurzhinweis (`title`) am **i** der Schale.
+* **Nur im Mitschnitt**, keine Marke am Gerät.
+* **Wortlaut:** *Zugangsdaten*. Chip in der Leiste (`data-proto="ZUGANG"`, läuft durch den
+  Protokollfilter `filter.proto`).
+* **CWW:** Zeilen der Internet-Karte tragen die Pille **☁ Internet** (Kurzhinweis: *Ausgang ins
+  Internet — alles, was dein Netz verlässt*) und in der Ethernet-Schale die Zeile *Ort*.
+* Erkennung: `zugangVon()` in `js/mitschnitt.js` — heute nur POP3 `PASS`; der Benutzer wird aus
+  dem `USER`-Segment davor derselben Verbindung geholt. SMTP kennt kein AUTH. Neue Verfahren
+  (Basic, Formular, Cookie) kommen in Schritt 2 **an derselben Stelle** dazu.
+* Nicht gebaut: Base64-Dekodierung (es gibt noch kein Base64-Verfahren).
 
 **Prüfen:** `tests/kerntest.js` (kopflos, Mail-Anmeldung über Kabel und über das CWW),
 `tests/uitest.js` (Browser), Bild-Prüfung wie in UEBERGABE beschrieben.

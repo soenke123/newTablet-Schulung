@@ -728,6 +728,14 @@
       ? '<span class="tr-d tr-d--rein" title="hier angekommen">↓</span>'
       : '<span class="tr-d" title="von hier hinausgegangen">↑</span>';
 
+    /* Marken in der Infospalte: ☁ für den Ausgang ins Internet,
+       🔑 für gefundene Zugangsdaten. Text statt Farbe — Farbe
+       heißt auf der Fläche „Netz". */
+    const INET_TIP = 'Ausgang ins Internet — alles, was dein Netz verlässt';
+    const ZUG_TIP = 'Zugangsdaten im Klartext — wer hier mitliest, kennt sie';
+    const marken = (r) => (r.inet ? '<b class="tr-w" title="' + INET_TIP + '">☁ Internet</b>' : '')
+      + (r.zugang ? '<b class="tr-z" title="' + ZUG_TIP + '">🔑 Zugangsdaten</b>' : '');
+
     function renderTrace() {
       const rows = mit.view();
       const body = refs.traceBody;
@@ -848,7 +856,7 @@
           + pfeil(r)
           + '<span class="tr-n">' + esc(r.nodeName) + '</span>'
           + '<span class="tr-p tr-p--' + esc(r.proto.toLowerCase()) + '">' + esc(r.proto) + '</span>'
-          + '<span class="tr-i">' + esc(r.info)
+          + '<span class="tr-i">' + marken(r) + esc(r.info)
           //  „× 4" heißt: derselbe Rahmen ging gleichzeitig über
           //  vier Anschlüsse hinaus. So sieht man das Fluten eines
           //  Switches, ohne dass es die Liste zuschüttet.
@@ -900,7 +908,7 @@
             + '<span class="trs-z">' + esc(l.ziel) + '</span>'
             + '<span class="trs-p">' + esc(l.proto) + '</span>'
             + '<span class="trs-s"><i>' + esc(l.schicht) + '</i></span>'
-            + '<span class="trs-b">' + esc(l.details)
+            + '<span class="trs-b">' + (i === 0 ? marken(r) : '') + esc(l.details)
             + (i === 0 && r.mal > 1 ? ' <b class="tr-x" title="derselbe Rahmen ging über '
                 + r.mal + ' Anschlüsse gleichzeitig hinaus">× ' + r.mal + '</b>' : '')
             + (i === 0 && r.lost ? ' <em>— verloren</em>' : '') + '</span>'
@@ -916,6 +924,15 @@
     function renderLayers(r) {
       const ls = mit.layers(r);
       let h = '<div class="tr-det">';
+      if (r.zugang) {
+        const z = r.zugang;
+        h += '<div class="tr-lay tr-lay--zug">'
+          + '<div class="tr-lay-h">Zugangsdaten <span class="tr-lay-s" title="' + ZUG_TIP + '">i</span></div>'
+          + '<div class="tr-f"><span>Verfahren</span><span class="mono">' + esc(z.verfahren) + '</span></div>'
+          + '<div class="tr-f"><span>Benutzer</span><span class="mono">' + esc(z.benutzer == null ? '—' : z.benutzer) + '</span></div>'
+          + '<div class="tr-f"><span>Passwort</span><span class="mono">' + esc(z.passwort) + '</span></div>'
+          + '</div>';
+      }
       for (const l of ls) {
         // Dieselbe Farbe je Schicht wie in der Schichtenansicht.
         h += '<div class="tr-lay l--' + esc(String(l.schicht).toLowerCase()) + '">'

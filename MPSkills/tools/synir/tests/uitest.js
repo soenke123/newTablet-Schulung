@@ -2537,6 +2537,27 @@ async function markenAn(page, name, art) {
     return srv.mailServer.konten[1].posteingang.length === 0;
   }));
 
+  /* ─── Fund-Filter: Zugangsdaten im Mitschnitt ───────────────
+     PLAN-SICHERHEIT, Schritt 1. Bernd hat eben per POP3 abgeholt —
+     sein Passwort lief im Klartext über die Leitung. */
+  await mitschnitt(page, true);
+  await page.waitForTimeout(300);
+  ok('⭐ der Chip „Zugangsdaten" steht in der Leiste',
+     await page.locator('[data-proto="ZUGANG"]').count() === 1);
+  await page.locator('[data-proto="ZUGANG"]').click();
+  await page.waitForTimeout(250);
+  const funde = await page.locator('#traceBody .tr').count();
+  ok('er zeigt nur die Fundzeilen, und jede trägt die 🔑-Marke',
+     funde >= 1 && await page.locator('#traceBody .tr .tr-z').count() === funde, String(funde));
+  await page.locator('#traceBody .tr').first().click();
+  await page.waitForTimeout(250);
+  const zug = await page.locator('#traceBody .tr-lay--zug').first().textContent();
+  ok('aufgeklappt stehen Benutzer und Passwort da',
+     /bernd/.test(zug) && /birne/.test(zug), zug);
+  await page.locator('.trace').screenshot({ path: path.join(OUT, 'shot-zugangsdaten.png') });
+  await page.locator('[data-proto=""]').click();
+  await mitschnitt(page, false);
+
   await page.locator('#dtWin [data-mail="0"]').click();
   await page.waitForTimeout(350);
   const brief = await page.locator('#dtWin .ml-brief').textContent();
