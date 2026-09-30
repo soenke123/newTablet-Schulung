@@ -303,3 +303,60 @@ searchInput.addEventListener('keydown', e => {
     performSearch('');
   }
 });
+
+// ── Prompt-Vorlagen kopieren (Kapitel 17c) ──────────────────
+// Baut den Prompt als Klartext zusammen: Absätze bleiben Absätze,
+// Listenpunkte bekommen ein „* “ davor.
+function promptAsText(box) {
+  const parts = [];
+  box.querySelectorAll('.prompt-text > p, .prompt-text > ul').forEach(el => {
+    if (el.tagName === 'UL') {
+      parts.push(Array.from(el.children).map(li => '* ' + li.textContent.trim()).join('\n'));
+    } else {
+      parts.push(el.innerText.trim());
+    }
+  });
+  return parts.join('\n\n');
+}
+
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text);
+  }
+  // Rückfall für Browser ohne Clipboard-API (z. B. per file:// geöffnet)
+  return new Promise((resolve, reject) => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    ta.remove();
+    ok ? resolve() : reject();
+  });
+}
+
+// Delegiert statt direkt am Button: Die Suche baut den Kapitelinhalt per
+// innerHTML neu auf, dabei gingen direkt angehängte Listener verloren.
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.prompt-copy');
+  if (!btn || btn.dataset.busy) return;
+  btn.dataset.busy = '1';
+  const label = btn.textContent;
+  copyText(promptAsText(btn.closest('.prompt-box')))
+    .then(() => {
+      btn.textContent = 'Kopiert ✓';
+      btn.classList.add('copied');
+    })
+    .catch(() => { btn.textContent = 'Bitte markieren & kopieren'; })
+    .finally(() => {
+      setTimeout(() => {
+        btn.textContent = label;
+        btn.classList.remove('copied');
+        delete btn.dataset.busy;
+      }, 2000);
+    });
+});

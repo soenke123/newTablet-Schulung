@@ -538,6 +538,66 @@ tbody td strong { display: block; margin-bottom: 0.15rem; }
   margin-bottom: 0;
 }
 
+/* Warnhinweis: kurz und eindeutig rot */
+.warn-box {
+  background: var(--red-light);
+  border-left: 4px solid var(--red);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.2rem;
+  margin: 1.1rem 0;
+}
+.warn-box .box-label { color: #b91c1c; }
+.warn-box p { margin-bottom: 0.4rem; }
+.warn-box p:last-child { margin-bottom: 0; }
+
+/* ==========================================
+   Prompt-Vorlagen mit Kopier-Button
+   ========================================== */
+.prompt-box {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--season-2);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.2rem;
+  margin: 1.1rem 0;
+}
+
+.prompt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+.prompt-head .box-label { color: var(--season-2); margin-bottom: 0; }
+
+.prompt-copy {
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--season-2);
+  border: none;
+  border-radius: var(--radius-xs);
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+.prompt-copy:hover { opacity: 0.85; }
+.prompt-copy.copied { background: var(--green); }
+
+.prompt-text {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 0.85rem 1rem;
+  font-size: 0.93rem;
+}
+.prompt-text p { margin-bottom: 0.5rem; }
+.prompt-text ul { margin-bottom: 0.5rem; }
+.prompt-text li { margin-bottom: 0.3rem; }
+
 /* ==========================================
    Code / Monospace Boxes
    ========================================== */
