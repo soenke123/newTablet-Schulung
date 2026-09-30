@@ -47,7 +47,7 @@
 (function () {
   'use strict';
 
-  const V = '?v=20260930c';
+  const V = '?v=20260930d';
   const TAKT_MS = 3000;          // Stand der Klasse / Spiegelung
   const GAP = 12;
   const MIN = 440;
@@ -170,14 +170,28 @@
     const res = await call('synir_scenarios_list');
     if (!res.ok) { fehler(res); return; }
     eigene = (res.items || []).map(i => ({ id: i.id, titel: i.title }));
-    pushMenue();
+    /* Freigegeben, aber nicht mehr da (anderswo gelöscht, oder ein
+       Löschen, dessen Freigabe nicht mehr zurückkam): aus der Liste
+       der Klasse nehmen — sonst steht auf den Tablets ein Eintrag,
+       der beim Antippen nur noch „nicht gefunden" sagt. */
+    const da = new Set(eigene.map(x => x.id));
+    const list = sharedList();
+    const rest = list.filter(x => x.id.indexOf('builtin:') === 0 || da.has(x.id));
+    if (rest.length !== list.length) await setData({ shared: rest });
+    else pushMenue();
   }
 
+  /* Löschen nimmt das Szenario auch aus der Klasse: es verschwindet
+     aus dem Menü jedes Tablets. Wer es gerade offen hat, behält sein
+     Netz auf der Fläche — gelöscht wird nur der Eintrag, nicht die
+     Arbeit. Die Freigabe geht ZUERST zurück: kommt die Antwort des
+     Servers nicht an, bleibt sonst ein toter Eintrag stehen.
+     `not_found` heißt: schon weg — dann ebenso aufräumen. */
   async function loeschen(id) {
-    const res = await call('synir_scenario_delete', { p_id: id });
-    if (!res.ok) { fehler(res); return; }
-    eigene = eigene.filter(x => x.id !== id);
     if (sharedList().some(x => x.id === id)) await share(id, false);
+    const res = await call('synir_scenario_delete', { p_id: id });
+    if (!res.ok && res.error !== 'not_found') { fehler(res); return; }
+    eigene = eigene.filter(x => x.id !== id);
     pushMenue();
     post({ toast: 'Szenario gelöscht.' });
   }

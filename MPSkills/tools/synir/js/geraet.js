@@ -268,6 +268,7 @@
       if (nodeId !== id) refs.dtWin.dataset.seite = '';
       nodeId = id;
       refs.desktop.hidden = false;
+      massSetzen();
       platziere(n);
       render();
       // Der Mitschnitt folgt mit — siehe `close()`.
@@ -844,6 +845,71 @@
     });
     refs.dtHead.addEventListener('pointerup', () => { zieh = null; });
     refs.dtHead.addEventListener('pointercancel', () => { zieh = null; });
+
+    /* ─── Die Größe ───────────────────────────────────────────
+       Am Griff unten rechts ziehen, wie an der Auftragskarte. Die
+       Proportionen bleiben NICHT stehen — breit für eine lange
+       Tabelle, hoch für das Terminal. Das Maß gilt je Bildschirm
+       (Rechner oder Handy) und bleibt für den nächsten Besuch
+       stehen. Doppeltipp auf den Griff: zurück zur Ausgangsgröße. */
+    const MASS_KEY = 'synir_dt_groesse';
+    let masse = {};
+    try { masse = JSON.parse(localStorage.getItem(MASS_KEY) || '{}') || {}; } catch (e) { masse = {}; }
+    const massArt = (n) => (n && n.kind === 'handy') ? 'handy' : 'pc';
+
+    function massSetzen() {
+      const g = masse[massArt(netz.get(nodeId))];
+      const gut = g && g.w > 0 && g.h > 0;
+      refs.desktop.style.width = gut ? g.w + 'px' : '';
+      refs.desktop.style.height = gut ? g.h + 'px' : '';
+      refs.desktop.classList.toggle('is-gross', !!gut);
+    }
+    function massMerken() {
+      try { localStorage.setItem(MASS_KEY, JSON.stringify(masse)); } catch (e) { /* egal */ }
+    }
+
+    if (refs.dtGrip) {
+      let gz = null;
+      refs.dtGrip.addEventListener('pointerdown', (ev) => {
+        const r = refs.desktop.getBoundingClientRect();
+        const s = refs.desktop.parentElement.getBoundingClientRect();
+        /* Die linke obere Ecke bleibt stehen, wo sie ist — sonst
+           wüchse ein rechts angeschlagenes Fenster nach links, weg
+           vom Finger. */
+        refs.desktop.style.left = (r.left - s.left) + 'px';
+        refs.desktop.style.top = (r.top - s.top) + 'px';
+        refs.desktop.style.right = 'auto';
+        refs.desktop.style.bottom = 'auto';
+        selbstVerschoben = true;
+        gz = { x: ev.clientX, y: ev.clientY, w: r.width, h: r.height, s, r };
+        refs.dtGrip.setPointerCapture(ev.pointerId);
+        refs.desktop.classList.add('is-groesse');
+        ev.preventDefault();
+      });
+      refs.dtGrip.addEventListener('pointermove', (ev) => {
+        if (!gz) return;
+        const maxW = Math.max(260, gz.s.right - gz.r.left - 4);
+        const maxH = Math.max(200, gz.s.bottom - gz.r.top - 4);
+        masse[massArt(netz.get(nodeId))] = {
+          w: Math.round(U.clamp(gz.w + ev.clientX - gz.x, 260, maxW)),
+          h: Math.round(U.clamp(gz.h + ev.clientY - gz.y, 200, maxH))
+        };
+        massSetzen();
+      });
+      const ende = () => {
+        if (!gz) return;
+        gz = null;
+        refs.desktop.classList.remove('is-groesse');
+        massMerken();
+      };
+      refs.dtGrip.addEventListener('pointerup', ende);
+      refs.dtGrip.addEventListener('pointercancel', ende);
+      refs.dtGrip.addEventListener('dblclick', () => {
+        delete masse[massArt(netz.get(nodeId))];
+        massSetzen();
+        massMerken();
+      });
+    }
 
     /* Während die Uhr läuft: nur den Tabellenkasten in den
        Einstellungen nachziehen. Ein voller `render()` würde hier

@@ -6,6 +6,19 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 000b · Gerätefenster in der Größe ziehbar · Löschen räumt die Klasse auf (2026-09-30)
+
+* **Gerätebildschirm (`#desktop`)** hat unten rechts denselben Griff wie die Auftragskarte
+  (`#dtGrip`, `js/geraet.js`). Breite und Höhe frei, ohne feste Proportionen; die linke obere
+  Ecke bleibt stehen. Das Maß gilt je Bildschirmart (`pc` / `handy`) und steht in
+  `localStorage.synir_dt_groesse`. Doppeltipp auf den Griff: zurück zur Ausgangsgröße.
+* **Szenario löschen (Lehrkraft)** nimmt die Freigabe jetzt ZUERST zurück und dann erst den
+  Datensatz; `not_found` gilt als „schon weg". `loadEigene` räumt außerdem freigegebene
+  eigene Szenarien aus `shared`, die es nicht mehr gibt. Auf den Tablets verschwindet der
+  Eintrag aus dem Menü — ein gerade geöffnetes Netz bleibt auf der Fläche.
+
+---
+
 ## 000a · Das cww-Fenster neu gegliedert (2026-09-29)
 
 Auf Wunsch des Nutzers drei Reiter *Internet · Netzwerkkarten · Allgemein* (Beschreibung

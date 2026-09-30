@@ -120,7 +120,7 @@
       desktop: $('desktop'), dtHead: $('dtHead'), dtIcon: $('dtIcon'),
       dtName: $('dtName'), dtSub: $('dtSub'), dtPower: $('dtPower'),
       dtClose: $('dtClose'), dtApps: $('dtApps'), dtDock: $('dtDock'),
-      dtWin: $('dtWin'), dtFenster: $('dtFenster'), dtScreen: $('dtScreen'),
+      dtWin: $('dtWin'), dtFenster: $('dtFenster'), dtScreen: $('dtScreen'), dtGrip: $('dtGrip'),
       karte: $('karte'), karteHead: $('karteHead'), karteIcon: $('karteIcon'),
       karteKurz: $('karteKurz'), karteName: $('karteName'),
       kartePower: $('kartePower'), karteMehr: $('karteMehr'), karteClose: $('karteClose'),
