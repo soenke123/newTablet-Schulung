@@ -1417,6 +1417,69 @@
     const finger = new Map();
     let pinch = null;
 
+    /* ─── Zwei Finger: zusammenziehen ─────────────────────────
+       ⚠️ Das Zoomen mit zwei Fingern ging auf dem Tablet „nicht
+       richtig", und zwar aus zwei Gründen:
+
+       1. Es kam nur zustande, wenn BEIDE Finger auf leerem Grund
+          lagen. Geräte halten ihr Ereignis auf (stopPropagation),
+          und auf einem vollen Netzplan landet fast immer ein Finger
+          auf einem Gerät — dann wurde das Gerät verschoben statt
+          gezoomt. Deshalb hört dieser Zuhörer in der EINFANGPHASE
+          mit: er sieht jeden Finger, bevor das Gerät ihn bekommt.
+
+       2. Die Rechnung lief davon. Gezoomt wurde um einen Faktor
+          relativ zum AKTUELLEN Ausschnitt, der aber schon den
+          vorigen Schritt enthielt — jeder Zug wurde mit sich selbst
+          multipliziert, das Bild sprang. Jetzt gilt: Breite beim
+          Aufsetzen × Abstand beim Aufsetzen ÷ Abstand jetzt, und
+          der Feldpunkt, der beim Aufsetzen zwischen den Fingern
+          lag, bleibt zwischen den Fingern. Wandern beide Finger
+          zusammen, wandert das Feld mit. */
+    function pinchStart() {
+      const m = fingerMitte();
+      const r = svg.getBoundingClientRect();
+      const u = (m.x - r.left) / Math.max(1, r.width);
+      const v = (m.y - r.top) / Math.max(1, r.height);
+      pinch = { d: fingerAbstand(), w: view.w,
+                wx: view.x + u * view.w, wy: view.y + v * view.h };
+    }
+    function pinchBewegen() {
+      const d = fingerAbstand();
+      if (d < 4 || pinch.d < 4) return;
+      const m = fingerMitte();
+      const r = svg.getBoundingClientRect();
+      const u = (m.x - r.left) / Math.max(1, r.width);
+      const v = (m.y - r.top) / Math.max(1, r.height);
+      view.w = pinch.w * pinch.d / d;
+      klemmen();
+      view.x = pinch.wx - u * view.w;
+      view.y = pinch.wy - v * view.h;
+      selbstGewaehlt = true;
+      anwenden();
+      if (opts.onDrag) opts.onDrag();
+    }
+
+    svg.addEventListener('pointerdown', (ev) => {
+      if (ev.pointerType !== 'touch') return;
+      finger.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (finger.size < 2) return;
+      /* Ab dem zweiten Finger wird gezoomt, nicht gebaut: das Gerät
+         unter dem ersten bleibt stehen, eine halbe Kabellinie
+         verschwindet. Was schon verschoben war, ist verschoben —
+         das melden wir wie ein gewöhnliches Loslassen. */
+      ev.stopPropagation();
+      ev.preventDefault();
+      svg.setPointerCapture && svg.setPointerCapture(ev.pointerId);
+      if (drag && drag.mode === 'move' && drag.zug && opts.onMoved) opts.onMoved('verschoben');
+      drag = null;
+      gGhost.textContent = '';
+      rahmenWeg();
+      for (const g of gNodes.children) g.classList.remove('is-target');
+      ziehAus();
+      pinchStart();
+    }, true);
+
     function fingerMitte() {
       let x = 0, y = 0, n = 0;
       for (const p of finger.values()) { x += p.x; y += p.y; n++; }
@@ -1442,15 +1505,7 @@
       if (ev.button === 1) ev.preventDefault();
       finger.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
       svg.setPointerCapture && svg.setPointerCapture(ev.pointerId);
-
-      if (finger.size === 2) {
-        // Zwei Finger: ab jetzt wird gezoomt, nicht verschoben.
-        drag = null;
-        pinch = { d: fingerAbstand(), w: view.w };
-        ziehAus();
-        return;
-      }
-      if (finger.size > 2) return;
+      if (finger.size > 1) return;       // der Zweite ist schon beim Zoomen (s. o.)
 
       const istFinger = ev.pointerType === 'touch' || ev.pointerType === 'pen';
 
@@ -1522,14 +1577,7 @@
     svg.addEventListener('pointermove', (ev) => {
       if (finger.has(ev.pointerId)) finger.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
 
-      if (pinch && finger.size >= 2) {
-        const d = fingerAbstand();
-        if (d > 4 && pinch.d > 4) {
-          const m = fingerMitte();
-          zoomAn((pinch.w / view.w) * (d / pinch.d), m.x, m.y);
-        }
-        return;
-      }
+      if (pinch && finger.size >= 2) { pinchBewegen(); return; }
 
       if (!drag) return;
 
@@ -1615,6 +1663,7 @@
     svg.addEventListener('pointerup', (ev) => {
       finger.delete(ev.pointerId);
       if (finger.size < 2) pinch = null;
+      else if (pinch) pinchStart();   // von drei auf zwei: neu ansetzen, sonst springt es
 
       if (!drag) return;
       const d = drag;
@@ -1701,6 +1750,7 @@
     svg.addEventListener('pointercancel', (ev) => {
       finger.delete(ev.pointerId);
       if (finger.size < 2) pinch = null;
+      else if (pinch) pinchStart();
       gGhost.textContent = '';
       rahmenWeg();
       for (const g of gNodes.children) g.classList.remove('is-target');

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
-<link rel="stylesheet" href="css/app.css?v=20260930a">
+<link rel="stylesheet" href="css/app.css?v=20260930b">
 </head>
 <body>
 
@@ -237,6 +237,15 @@
          zurück. Sie bleibt, wie sie ist. -->
     <button type="button" class="auf-kachel" id="aufgabeKachel" hidden
             title="Aufgabe wieder öffnen">Aufgabe</button>
+
+    <!-- Vollbild: nur SYNIR, ohne die Raum-Seite drumherum. Im Raum
+         schaltet tool.js (der Rahmen draußen), sonst die Seite selbst
+         (app.js). Gibt es gar kein Vollbild, verschwindet der Knopf. -->
+    <button type="button" class="vollbtn" id="vollBtn" aria-pressed="false"
+            title="Vollbild — nur SYNIR zeigen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="vb-auf" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><path class="vb-zu" d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>
+      <span class="vollbtn-t">Vollbild</span>
+    </button>
 
     <!-- ═══ Menüleiste ═══════════════════════════════════════════
          Zwei Reiter wie in klassischen Programmen (Datei, Ansicht),
@@ -859,37 +868,37 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="js/util.js?v=20260930a"></script>
-<script src="js/engine.js?v=20260930a"></script>
-<script src="js/netz.js?v=20260930a"></script>
-<script src="js/verlauf.js?v=20260930a"></script>
-<script src="js/nat.js?v=20260930a"></script>
-<script src="js/tcp.js?v=20260930a"></script>
-<script src="js/rip.js?v=20260930a"></script>
-<script src="js/logos.js?v=20260930a"></script>
-<script src="js/dateien.js?v=20260930a"></script>
-<script src="js/http.js?v=20260930a"></script>
-<script src="js/mail.js?v=20260930a"></script>
-<script src="js/schichten.js?v=20260930a"></script>
-<script src="js/dienste.js?v=20260930a"></script>
-<script src="js/internet.js?v=20260930a"></script>
-<script src="js/mitschnitt.js?v=20260930a"></script>
-<script src="js/terminal.js?v=20260930a"></script>
-<script src="js/subnetze.js?v=20260930a"></script>
-<script src="js/flaeche.js?v=20260930a"></script>
-<script src="js/konfig.js?v=20260930a"></script>
-<script src="js/panels.js?v=20260930a"></script>
-<script src="js/weiterleitung.js?v=20260930a"></script>
-<script src="js/prog-dateien.js?v=20260930a"></script>
-<script src="js/prog-web.js?v=20260930a"></script>
-<script src="js/prog-mail.js?v=20260930a"></script>
-<script src="js/geraet.js?v=20260930a"></script>
-<script src="js/szenarien.js?v=20260930a"></script>
-<script src="js/szmenue.js?v=20260930a"></script>
-<script src="js/menuleiste.js?v=20260930a"></script>
-<script src="js/aufgabe.js?v=20260930a"></script>
-<script src="js/app.js?v=20260930a"></script>
+<script src="js/util.js?v=20260930b"></script>
+<script src="js/engine.js?v=20260930b"></script>
+<script src="js/netz.js?v=20260930b"></script>
+<script src="js/verlauf.js?v=20260930b"></script>
+<script src="js/nat.js?v=20260930b"></script>
+<script src="js/tcp.js?v=20260930b"></script>
+<script src="js/rip.js?v=20260930b"></script>
+<script src="js/logos.js?v=20260930b"></script>
+<script src="js/dateien.js?v=20260930b"></script>
+<script src="js/http.js?v=20260930b"></script>
+<script src="js/mail.js?v=20260930b"></script>
+<script src="js/schichten.js?v=20260930b"></script>
+<script src="js/dienste.js?v=20260930b"></script>
+<script src="js/internet.js?v=20260930b"></script>
+<script src="js/mitschnitt.js?v=20260930b"></script>
+<script src="js/terminal.js?v=20260930b"></script>
+<script src="js/subnetze.js?v=20260930b"></script>
+<script src="js/flaeche.js?v=20260930b"></script>
+<script src="js/konfig.js?v=20260930b"></script>
+<script src="js/panels.js?v=20260930b"></script>
+<script src="js/weiterleitung.js?v=20260930b"></script>
+<script src="js/prog-dateien.js?v=20260930b"></script>
+<script src="js/prog-web.js?v=20260930b"></script>
+<script src="js/prog-mail.js?v=20260930b"></script>
+<script src="js/geraet.js?v=20260930b"></script>
+<script src="js/szenarien.js?v=20260930b"></script>
+<script src="js/szmenue.js?v=20260930b"></script>
+<script src="js/menuleiste.js?v=20260930b"></script>
+<script src="js/aufgabe.js?v=20260930b"></script>
+<script src="js/app.js?v=20260930b"></script>
 <!-- Die Brücke in den Raum. Tut ohne Rahmen nichts. -->
-<script src="js/bruecke.js?v=20260930a"></script>
+<script src="js/bruecke.js?v=20260930b"></script>
 </body>
 </html>

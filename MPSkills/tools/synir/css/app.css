@@ -3910,6 +3910,28 @@ body[data-rolle="presenter"] .nur-lehrer { display: inline-block; }
   transition: background .13s, border-color .13s;
 }
 .mn-btn:hover { background: var(--surface-2); }
+
+/* Vollbild (oben rechts, neben den Menüs): gleiche Höhe wie die
+   Reiter, damit er dazugehört. Schmal wird er zum reinen Zeichen. */
+.vollbtn {
+  display: inline-flex; align-items: center; gap: 7px;
+  min-height: 44px; padding: 0 14px;
+  font: inherit; font-size: 15px; font-weight: 650; color: var(--ink);
+  background: var(--surface); border: 1.5px solid var(--line-2);
+  border-radius: 12px; cursor: pointer; box-shadow: var(--e1);
+  transition: background .13s, border-color .13s;
+}
+.vollbtn[hidden] { display: none; }
+.vollbtn:hover { background: var(--surface-2); }
+.vollbtn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.vollbtn .vb-zu { display: none; }
+.vollbtn[aria-pressed="true"] { border-color: var(--modus); box-shadow: 0 0 0 3px var(--modus-sh); }
+.vollbtn[aria-pressed="true"] .vb-auf { display: none; }
+.vollbtn[aria-pressed="true"] .vb-zu { display: inline; }
+@media (max-width: 1100px) {
+  .vollbtn { padding: 0 11px; }
+  .vollbtn-t { display: none; }
+}
 .mn.is-offen .mn-btn, .mn-btn[aria-expanded="true"] {
   background: var(--surface-2); border-color: var(--modus);
   box-shadow: 0 0 0 3px var(--modus-sh);

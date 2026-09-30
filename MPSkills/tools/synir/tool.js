@@ -47,7 +47,7 @@
 (function () {
   'use strict';
 
-  const V = '?v=20260929i';
+  const V = '?v=20260930b';
   const TAKT_MS = 3000;          // Stand der Klasse / Spiegelung
   const GAP = 12;
   const MIN = 440;
@@ -873,6 +873,9 @@
           if (mapOpen) malKarte();
         }
         break;
+      case 'vollbild':
+        toggleFull();
+        break;
       case 'selbst':
         if (isPresenter() && watch) {
           takeover = watch.name;
@@ -1013,12 +1016,41 @@
     }).join('');
   }
 
-  function isFull() { return !!root && document.fullscreenElement === root.querySelector('.sy-host'); }
+  /* Vollbild für beide Rollen: die Lehrkraft drückt ⛶ am Pult, die
+     Tablets den Knopf „Vollbild" oben im Rahmen (bruecke.js meldet
+     `vollbild`). Ältere iPads kennen nur `webkit…`, und manche
+     Tablets gar kein Vollbild für einen Kasten — dann legt sich der
+     Kasten per CSS über die ganze Seite (`is-vollbild`). Das ist
+     kein echtes Vollbild (die Adressleiste bleibt), aber von der
+     Raum-Seite ist nichts mehr zu sehen, und darum ging es. */
+  let pseudoFull = false;
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  function isFull() {
+    if (!root) return false;
+    return pseudoFull || (!!fsEl() && fsEl() === root.querySelector('.sy-host'));
+  }
+  function pseudoSetzen(an) {
+    const host = root && root.querySelector('.sy-host');
+    pseudoFull = !!an && !!host;
+    if (host) host.classList.toggle('is-vollbild', pseudoFull);
+    document.body.classList.toggle('sy-vollbild', pseudoFull);
+    if (onFs) onFs();
+  }
   function toggleFull() {
     const host = root && root.querySelector('.sy-host');
     if (!host) return;
-    if (isFull()) { if (document.exitFullscreen) document.exitFullscreen(); }
-    else if (host.requestFullscreen) host.requestFullscreen().catch(() => {});
+    if (isFull()) {
+      if (pseudoFull) { pseudoSetzen(false); return; }
+      const aus = document.exitFullscreen || document.webkitExitFullscreen;
+      if (aus) { try { const p = aus.call(document); if (p && p.catch) p.catch(() => {}); } catch (e) { /* egal */ } }
+      return;
+    }
+    const req = host.requestFullscreen || host.webkitRequestFullscreen;
+    if (!req) { pseudoSetzen(true); return; }
+    try {
+      const p = req.call(host);
+      if (p && p.catch) p.catch(() => pseudoSetzen(true));
+    } catch (e) { pseudoSetzen(true); }
   }
 
   async function onDeskClick(e) {
@@ -1102,7 +1134,7 @@
       // Schaufenster: kein Gerätespeicher, keine Rückfragen (app.js).
       + (ctx.preview ? '&vorschau=1' : '');
     stage.innerHTML = '<iframe class="sy-frame" src="' + src + '" title="SYNIR" loading="eager" '
-      + 'allow="fullscreen"></iframe>';
+      + 'allow="fullscreen" allowfullscreen></iframe>';
     frame = stage.querySelector('.sy-frame');
     fit();
     requestAnimationFrame(fit);
@@ -1158,8 +1190,10 @@
         loadEigene();
       }
 
-      onFs = () => { paintDesk(); fit(); };
+      pseudoFull = false;
+      onFs = () => { paintDesk(); fit(); post({ vollbild: isFull() }); };
       document.addEventListener('fullscreenchange', onFs);
+      document.addEventListener('webkitfullscreenchange', onFs);
       if (!ctx.preview) document.body.classList.add('tool-fill');
 
       onMsg = handle;
@@ -1199,10 +1233,17 @@
       workTimer = 0;
       if (cww) clearTimeout(cww.timer);
       cww = null;
-      if (isFull() && document.exitFullscreen) { try { document.exitFullscreen(); } catch (e) { /* egal */ } }
+      if (pseudoFull) pseudoSetzen(false);
+      else if (isFull()) {
+        const aus = document.exitFullscreen || document.webkitExitFullscreen;
+        if (aus) { try { const p = aus.call(document); if (p && p.catch) p.catch(() => {}); } catch (e) { /* egal */ } }
+      }
       if (onMsg) window.removeEventListener('message', onMsg);
       if (onResize) window.removeEventListener('resize', onResize);
-      if (onFs) document.removeEventListener('fullscreenchange', onFs);
+      if (onFs) {
+        document.removeEventListener('fullscreenchange', onFs);
+        document.removeEventListener('webkitfullscreenchange', onFs);
+      }
       if (mapKeyFn) { document.removeEventListener('keydown', mapKeyFn); mapKeyFn = null; }
       mapOpen = false;
       onMsg = onResize = onFs = null;

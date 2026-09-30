@@ -889,6 +889,35 @@
     });
     $('zoomLabel').addEventListener('click', () => flaeche.zoomZurueck());
 
+    /* ─── Vollbild ────────────────────────────────────────────
+       Auf dem Tablet frisst die Raum-Seite (Kopfzeile, Rand) ein
+       gutes Stück vom Netzplan. Der Knopf oben rechts zeigt nur
+       noch SYNIR. Im Raum schaltet der Rahmen draußen (tool.js,
+       über bruecke.js) — der kennt auch den Notbehelf für Geräte
+       ohne Vollbild. Hier steht nur der Fall ohne Raum. */
+    (function () {
+      const b = $('vollBtn');
+      if (!b || IM_RAUM) return;
+      const d = document, h = d.documentElement;
+      const req = h.requestFullscreen || h.webkitRequestFullscreen;
+      const aus = d.exitFullscreen || d.webkitExitFullscreen;
+      if (!req || !aus) { b.hidden = true; return; }
+      const an = () => !!(d.fullscreenElement || d.webkitFullscreenElement);
+      b.addEventListener('click', () => {
+        try {
+          const p = an() ? aus.call(d) : req.call(h);
+          if (p && p.catch) p.catch(() => {});
+        } catch (e) { /* abgelehnt: bleibt, wie es ist */ }
+      });
+      const zeigen = () => {
+        const v = an();
+        b.setAttribute('aria-pressed', String(v));
+        b.title = v ? 'Vollbild beenden' : 'Vollbild — nur SYNIR zeigen';
+      };
+      d.addEventListener('fullscreenchange', zeigen);
+      d.addEventListener('webkitfullscreenchange', zeigen);
+    })();
+
     /* ─── Steuerung der Uhr ───────────────────────────────────*/
     const speedEl = $('speed'), speedLabel = $('speedLabel');
     function applySpeed() {
