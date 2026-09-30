@@ -94,13 +94,14 @@ revoke all on function log_cheat_flag(uuid, text, text, jsonb) from anon, authen
 --   game9  Fokusflow       8 Checkpoints × 100 + Zielbonus ≤ ~1 600
 --   game10 The Algorithm   Ingame-Minuten, bester ehrlicher Wert 720
 --   game11 Tip Turbo Kids  Cap aus 0144
---   game17 Bubble Bounce   endlos, bester ehrlicher Wert ~61 000
---   game18 Startup Story   Idle-Spiel, Score = Nutzer/100, nicht sinnvoll
---                          zu begrenzen → alter Sabotage-Cap
+--   game17 Bubble Bounce   endlos, bester ehrlicher Wert ~61 000 → 500 000
+--   game18 Startup Story   Idle-Spiel, Score = Nutzer/100 → 10 Mrd.
+--                          (max_score ist bigint; game_highscores.best_score
+--                          ist int und endet bei 2 147 483 647)
 -- Anpassen per SQL: update highscore_caps set max_score = … where game_id = …;
 create table if not exists highscore_caps (
   game_id    text primary key references games(id) on delete cascade,
-  max_score  int  not null check (max_score > 0),
+  max_score  bigint not null check (max_score > 0),
   updated_at timestamptz not null default now()
 );
 
@@ -123,8 +124,8 @@ select g.id, c.max_score
     ('game9',       2000),
     ('game10',      2880),
     ('game11',      1000),
-    ('game17',    250000),
-    ('game18', 1000000000)
+    ('game17',      500000),
+    ('game18', 10000000000)
   ) as c(game_id, max_score)
   join games g on g.id = c.game_id
 on conflict (game_id) do nothing;
@@ -141,7 +142,7 @@ declare
   v_status   text;
   v_season   int;
   v_game     record;
-  v_cap      int;
+  v_cap      bigint;
   v_new_best int;
 begin
   if v_user_id is null then

@@ -78,7 +78,9 @@ await run(`
   insert into games (id, season, folder, active) values
     ('game3', 1, 'S1 DateiformatQuiz', true),
     ('game9', 1, 'S1 Fokusflow', true),
-    ('game12', 2, 'S2 Quellen Tinder', true);
+    ('game12', 2, 'S2 Quellen Tinder', true),
+    ('game17', 2, 'S2 BubbleBounce', true),
+    ('game18', 3, 'S3 Startup Story', true);
 `, 'Bühne');
 // 0183 wurde vor den Spielen eingespielt → Caps jetzt nachziehen wie auf Prod
 await run(mig('0183_cheat_hardening_v2.sql'), '0183 (idempotent, 2. Lauf)');
@@ -124,6 +126,13 @@ const sync = async (uid, state) =>
   ok('4b Flag highscore_cap geloggt', await flags(U1, 'highscore_cap') === 1);
   const r3 = await as(U2, async () => (await one(`select upsert_highscore('game9', 1275) r`)).r);
   ok('4c ehrlicher game9-Score 1275 geht durch', r3.ok === true && r3.best_score === 1275, JSON.stringify(r3));
+
+  const r4 = await as(U2, async () => (await one(`select upsert_highscore('game17', 500000) r`)).r);
+  ok('4d Bubble Bounce 500 000 geht durch', r4.ok === true, JSON.stringify(r4));
+  const r5 = await as(U2, async () => (await one(`select upsert_highscore('game17', 500001) r`)).r);
+  ok('4e Bubble Bounce 500 001 abgelehnt', r5.error === 'score_out_of_range', JSON.stringify(r5));
+  const r6 = await as(U2, async () => (await one(`select upsert_highscore('game18', 2147483647) r`)).r);
+  ok('4f Startup Story bis int-Maximum geht durch', r6.ok === true, JSON.stringify(r6));
 }
 
 /* 5–7: Shop-Pumpen wie im echten Fall (906 💎, 95 600 🪙, 30+ Items) */
