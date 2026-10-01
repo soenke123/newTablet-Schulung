@@ -16,7 +16,9 @@
    ALLES im Klartext: `POST /registrieren` mit `iban=DE…`, `POST
    /anmelden` mit `passwort=…`, danach bei jeder Anfrage das
    `Cookie: sid=…`. Das ist Absicht und die Lernaussage: wer an der
-   Leitung sitzt, liest mit. Schritt 4 (HTTPS) schließt genau das.
+   Leitung sitzt, liest mit. Schritt 4 (HTTPS) schließt genau das:
+   mit Haken und Zertifikat lauscht der Server zusätzlich auf Port 443
+   (`http.httpsSchalten`) — Port 80 bleibt daneben offen.
 
    ── Das Passwort kommt per E-Mail ─────────────────────────────
    Der Server wählt es selbst und schickt es über den Mailserver,
@@ -248,8 +250,8 @@
 
     /* ═══ Der Server ═════════════════════════════════════════ */
 
-    function serverAn(node) {
-      stack.tcpHoeren(node, PORT, (conn) => {
+    function annahme(node) {
+      return (conn) => {
         let puffer = '';
         conn.onDaten((text) => {
           puffer += text;
@@ -260,9 +262,18 @@
           try { behandeln(node, conn, a); }
           catch (e) { senden(node, conn, 500, 'text/plain', 'Interner Fehler.'); }
         });
-      }, 'Streaming-Server');
+      };
     }
-    const serverAus = (node) => stack.tcpNichtHoeren(node, PORT);
+    /* Port 80 immer; Port 443 nur mit Haken und Zertifikat
+       (`http.httpsSchalten`) — dieselbe Regel wie beim Webserver. */
+    function serverAn(node) {
+      stack.tcpHoeren(node, PORT, annahme(node), 'Streaming-Server');
+      http.httpsSchalten(node, conf(node), annahme(node), 'Streaming-Server (HTTPS)');
+    }
+    const serverAus = (node) => {
+      stack.tcpNichtHoeren(node, PORT);
+      stack.tcpNichtHoeren(node, http.HTTPS_PORT);
+    };
 
     function senden(node, conn, status, typ, koerper, kopf, kurz) {
       const l = http.zugriffe(node);
@@ -283,6 +294,9 @@
       const c = conf(node);
 
       if (a.methode === 'GET') {
+        // Prüfbesuch der Zertifizierungsstelle (zs.js) — vor allem anderen.
+        const pruef = http.pruefAntwort(node, a.pfad);
+        if (pruef) return senden(node, conn, 200, 'text/plain', pruef, null, 'GET ' + a.pfad + '  (Prüfbesuch der Zertifizierungsstelle)');
         const m = /^\/plakat\/(\d+)\.svg$/.exec(pfad);
         if (m) {
           const f = film(m[1]);

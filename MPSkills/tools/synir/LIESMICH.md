@@ -388,8 +388,18 @@ js/
                      und ⭐ der INHALTSSPEICHER für hochgeladene
                      Dateien — er liegt NEBEN dem Netz, nicht
                      darin, damit der Verlauf klein bleibt
-  http.js            HTTP/1.0 und der Webserver-Dienst
-  mail.js            SMTP · POP3 · Postfächer
+  http.js            HTTP/1.0 und der Webserver-Dienst; der Browser-Teil
+                     (auch POST, Cookies, https:// und „Trotzdem fortfahren")
+  stream.js          Streaming-Server: Konten, Filme, Anmeldung per Cookie
+  tls.js             ⭐ die TLS-Schale zwischen TCP und Programm: Handschlag
+                     (ClientHello/ServerHello, Diffie-Hellman, Zertifikat,
+                     Beweis) und der verschlüsselte Datenstrom. Dazu die
+                     reinen Rechenfunktionen (`Tls.Krypto`) — Spielzeug, siehe
+                     Dateikopf; Schritt 5 (VPN) benutzt sie wieder
+  zs.js              ⭐ die Zertifizierungsstelle (Port 8200): Antrag,
+                     Prüfbesuch, Freigabe, Abholen — und die Seite des
+                     Antragstellers; Vertrauensliste eines Geräts
+  mail.js            SMTP · POP3 · Postfächer (mit TLS: 465 und 995)
   schichten.js       Ethernet · ARP · IP · ICMP · UDP mit Ports.
                      `routeFor` entscheidet den Weg: längste Maske,
                      bei Gleichstand die Herkunft (direkt · eingetragen
@@ -425,6 +435,9 @@ js/
                      Heimrouter, Switch) und was stattdessen dasteht
   prog-dateien.js    Datei-Explorer, Editor, Bildbetrachter
   prog-web.js        Webserver- und Webbrowser-Fenster
+  prog-zert.js       ⭐ Zertifikate in der Oberfläche: der Kasten
+                     „Verschlüsselung" in den Serverfenstern, das Fenster
+                     der Zertifizierungsstelle, die Vertrauensliste im Browser
   prog-mail.js       E-Mail-Programm und E-Mail-Server-Fenster
   szenarien.js       acht vorbereitete Netze mit Auftrag
   app.js             Zusammenbau, localStorage

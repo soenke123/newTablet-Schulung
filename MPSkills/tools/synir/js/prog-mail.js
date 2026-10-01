@@ -103,7 +103,10 @@
     + 'die <em>Maildomain</em> und der Benutzername, die du hier brauchst. '
     + 'Der <em>POP3-Server</em> und der <em>SMTP-Server</em> sind der Name oder die '
     + 'Adresse des Geräts, auf dem der Server läuft — beides dasselbe Gerät. '
-    + '<br><strong>Ports sind fest:</strong> 110 holt Post ab (POP3), 25 schickt sie los (SMTP).';
+    + '<br><strong>Ports sind fest:</strong> 110 holt Post ab (POP3), 25 schickt sie los (SMTP).'
+    + '<br><strong>Verschlüsselt</strong> (SSL/TLS) sind es 995 und 465 — dafür braucht der Server ein '
+    + 'Zertifikat, und dieses Gerät muss der ausstellenden Zertifizierungsstelle vertrauen '
+    + '(im Webbrowser unter „Zertifikate").';
 
   function bauProgramm(node, box, ctx) {
     if (st.node !== node.id) frisch(node.id);
@@ -214,6 +217,14 @@
         + f('smtp', 'SMTP-Server:', k.smtp, 'mail.schule.de')
         + f('smtpPort', 'SMTP-Port:', k.smtpPort, '', 'zahl')
         + '</div>'
+        /* ⭐ Der Haken schaltet die zwei Ports mit um — von Hand
+           tippen kann man sie weiter. HTTP-Seiten und Mail sind
+           verschlüsselt NUR, wenn dieser Haken sitzt UND der Server
+           ein Zertifikat hat, dem dieses Gerät glaubt. */
+        + '<label class="zt-haken ml-tls' + (zu ? ' is-zu' : '') + '">'
+        +   '<input type="checkbox" data-tls' + (k.tls ? ' checked' : '') + (zu ? ' disabled' : '') + '>'
+        +   '<span><strong>Verschlüsselte Verbindung (SSL/TLS)</strong>'
+        +   '<small>POP3S 995 und SMTPS 465 statt 110 und 25. Der Server braucht dafür ein Zertifikat.</small></span></label>'
         /* ⚠️ Die abgeleitete Adresse steht nur, solange man NICHT
            angemeldet ist. Danach sagt der grüne Balken darunter
            dasselbe („Angemeldet als anna@schule.de") — und zwei
@@ -349,6 +360,18 @@
     const info = box.querySelector('#mlInfo');
     if (info) info.addEventListener('click', () => { st.info = !st.info; ctx.render(); });
 
+    const tlsBox = box.querySelector('[data-tls]');
+    if (tlsBox) tlsBox.addEventListener('change', () => {
+      /* Die Ports gehen mit — aber nur, wenn sie noch die der alten
+         Einstellung sind. Wer 2525 getippt hat, behält 2525. */
+      const alt = !!k.tls;
+      k.tls = tlsBox.checked;
+      if (k.pop3Port === (alt ? 995 : 110) || !k.pop3Port) k.pop3Port = k.tls ? 995 : 110;
+      if (k.smtpPort === (alt ? 465 : 25) || !k.smtpPort) k.smtpPort = k.tls ? 465 : 25;
+      if (ctx.onDirty) ctx.onDirty();
+      ctx.render();
+    });
+
     box.querySelectorAll('[data-k]').forEach(inp => inp.addEventListener('input', () => {
       const feld = inp.dataset.k;
       k[feld] = /Port$/.test(feld) ? (parseInt(inp.value, 10) || 0) : inp.value.trim();
@@ -465,6 +488,9 @@
   let srvMeldung = '';
   let srvNode = null;
 
+  const ZERT_MAIL = { titel: 'Verschlüsselung (SSL/TLS)', haken: 'Verschlüsselte Ports anbieten (465 und 995)',
+                      hakenHinweis: 'Die Ports 25 und 110 bleiben daneben offen.' };
+
   function bauServer(node, box, ctx) {
     const c = ctx.netz.mailConf(node);
     const konten = c.konten || [];
@@ -504,7 +530,10 @@
                 + '<button class="fx-x" data-weg="' + i + '" title="Konto entfernen">×</button>'
                 + '</div>').join('')
             + '</div>'
-          : '<div class="k-hint">Noch kein Konto. Ohne Konto kann niemand Post bekommen.</div>');
+          : '<div class="k-hint">Noch kein Konto. Ohne Konto kann niemand Post bekommen.</div>')
+      + window.ProgZert.abschnitt(node, ctx, c, ZERT_MAIL);
+
+    window.ProgZert.bindAbschnitt(box, node, ctx, c, ZERT_MAIL);
 
     box.querySelector('#msStart').addEventListener('click', () => {
       c.on = !c.on;

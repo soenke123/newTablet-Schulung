@@ -149,6 +149,19 @@
         fuer: ['host', 'server', 'handy'], install: true,
         hint: 'nimmt Post an (25) und gibt sie heraus (110)',
         bauen: (n, box) => window.ProgMail.bauServer(n, box, webCtx())
+      },
+      {
+        /* PLAN-SICHERHEIT, Schritt 4: die Stelle, die „dieser Name
+           gehört diesem Server" unterschreibt. Läuft auf jedem
+           Gerät, auch auf dem eines Mitschülers — es gibt keine
+           eingebaute. */
+        /* Das weiche Trennzeichen (\u00AD) lässt die Kachel in der
+           Software-Installation zwischen „Zertifizierungs" und „stelle"
+           umbrechen statt mitten im Wort. */
+        id: 'zertstelle', name: 'Zertifizierungs\u00ADstelle', kurz: 'Zert.-Stelle', ic: 'zertstelle',
+        fuer: ['host', 'server', 'handy'], install: true,
+        hint: 'stellt Zertifikate aus (Port 8200)',
+        bauen: (n, box) => window.ProgZert.bauZS(n, box, webCtx())
       }
     ];
 
@@ -175,6 +188,8 @@
       http: dienste && dienste.http,
       stream: dienste && dienste.stream,
       mail: dienste && dienste.mail,
+      zs: dienste && dienste.zs,
+      laeuft: () => !!(dienste && dienste.laeuft),
       netz: netz,
       render: render,
       sync: () => dienstGeschaltet(),
@@ -246,7 +261,7 @@
        Zeilen, und die dritte vergisst man. Jede weitere Anwendung
        mit einem Dienst trägt sich hier mit einer Zeile ein. */
     const STOPPT = { dns: 'dnsServer', webserver: 'webServer', mailserver: 'mailServer',
-                     streamingserver: 'streamServer' };
+                     streamingserver: 'streamServer', zertstelle: 'zsServer' };
 
     /* Und das Gegenstück: was beim AUFSPIELEN entsteht. Filius
        legt bei der Installation des Webservers Ordner und

@@ -363,6 +363,8 @@
        49151 auch sehen. */
     const PORT_NAMEN = { 20: 'FTP-Daten', 21: 'FTP', 25: 'SMTP', 53: 'DNS',
                          67: 'DHCP-Server', 68: 'DHCP-Client', 80: 'HTTP', 110: 'POP3',
+                         443: 'HTTPS = HTTP mit TLS', 465: 'SMTPS = SMTP mit TLS',
+                         995: 'POP3S = POP3 mit TLS', 8200: 'Zertifizierungsstelle',
                          520: 'RIP', 521: 'RIP-Absender' };
     const portWem = (p) => PORT_NAMEN[p] ? '  (' + PORT_NAMEN[p] + ')' : '';
 
@@ -397,8 +399,50 @@
        Nur bei gesetztem ACK, denn nur dann trägt das Feld eine
        Bedeutung. Beim ersten SYN steht dort nichts — es gibt noch
        nichts zu bestätigen. */
+    /* ─── TLS und die Zertifizierungsstelle (PLAN-SICHERHEIT, 4) ──
+       Ein TLS-Datensatz steht als eine Zeile JSON im Segment
+       (`{"tls":"ClientHello", …}`, siehe tls.js). Erkannt wird er am
+       Anfang des INHALTS, nicht am Port — 443, 465 und 995 sind
+       nur Verabredungen. Für die Zeile reicht der Anfang; der
+       ganze Satz wird erst beim Aufklappen gelesen, denn ein
+       Datensatz mit einer ganzen Seite darin ist 100 KB lang. */
+    const TLS_ANFANG = '{"tls":"';
+    const tlsArt = (s) => {
+      if (!s || typeof s.data !== 'string' || s.data.indexOf(TLS_ANFANG) !== 0) return null;
+      const m = /^\{"tls":"(\w+)"/.exec(s.data);
+      return m ? m[1] : null;
+    };
+    function tlsSatz(s) {
+      if (!tlsArt(s)) return null;
+      try { return JSON.parse(String(s.data).replace(/\n$/, '')); } catch (e) { return null; }
+    }
+    const ZS_PORT = 8200;
+    const zsPort = (s) => !!(s && s.data && !tlsArt(s) && (s.sport === ZS_PORT || s.dport === ZS_PORT));
+    const kurz = (t, n) => String(t).length > n ? String(t).slice(0, n - 1) + '…' : String(t);
+
+    function tlsText(s) {
+      const art = tlsArt(s);
+      if (!art) return null;
+      if (art === 'Daten') {
+        const m = /"laenge":(\d+)/.exec(s.data);
+        return 'TLS  🔒 verschlüsselt' + (m ? ', ' + m[1] + ' Byte' : '');
+      }
+      const o = tlsSatz(s) || {};
+      if (art === 'ClientHello')
+        return 'TLS  🔒 ClientHello — Servername: ' + (o.sni ? o.sni : '(keiner, Zahlenadresse)');
+      if (art === 'ServerHello') {
+        const z = o.zertifikat || {};
+        return 'TLS  🔒 ServerHello — Zertifikat für ' + (z.name || '?') + ', ausgestellt von ' + (z.aussteller || '?');
+      }
+      if (art === 'Alert') return 'TLS  Alert: ' + (o.grund || '');
+      return 'TLS  ' + art;
+    }
+
     function tcpText(s) {
       const f = flagText(s.fl);
+      const tl = tlsText(s);
+      if (tl) return tl;
+      if (zsPort(s)) return 'ZS  ' + kurz(String(s.data).split('\r\n')[0], 90);
       /* Trägt das Segment eine HTTP-Nachricht, steht DIE in der
          Zeile — „GET /logo.png" beantwortet die Frage, die man an
          den Mitschnitt hat, und „TCP 49152 → 80 [ACK] 42 Byte"
@@ -462,6 +506,8 @@
            (Handschlag, Bestätigungen, Abbau). */
         if (p && p.proto === 'tcp') {
           const s = p.payload || {};
+          if (tlsArt(s)) return 'TLS';
+          if (zsPort(s)) return 'ZS';
           if (httpErsteZeile(s)) return 'HTTP';
           /* SMTP und POP3 stehen in der Spalte, weil das die
              Wörter sind, die ein Kind sucht. Erkannt am PORT und
@@ -514,6 +560,55 @@
        Netzzugang = OSI 1+2, Vermittlung = 3, Transport = 4,
        Anwendung = 5–7. Beide stehen da, weil beide unterrichtet
        werden. */
+    /* Die TLS-Schale: was im Klartext steht (Servername, Zertifikat),
+       steht da; was nicht, sagt es. Aufgeklappt sieht man genau das,
+       worum es geht: der Inhalt ist weg, der Rest nicht. */
+    function tlsSchale(o, s, vonPort, nachPort) {
+      const art = o.tls;
+      let fields, details;
+      if (art === 'ClientHello') {
+        details = 'ClientHello — Servername: ' + (o.sni || '(keiner)');
+        fields = [
+          ['Art', 'ClientHello — „ich möchte verschlüsselt reden"'],
+          ['Version', String(o.version || '—')],
+          ['Servername', (o.sni || '— (Zahlenadresse)') + '   (steht im KLARTEXT)'],
+          ['Zufallszahl', String(o.zufall || '—')],
+          ['Schlüsselanteil A', String(o.dh || '—') + '   (g^a mod p — a bleibt geheim)']
+        ];
+      } else if (art === 'ServerHello') {
+        const z = o.zertifikat || {};
+        details = 'ServerHello — Zertifikat für ' + (z.name || '?');
+        fields = [
+          ['Art', 'ServerHello — Zertifikat und Beweis'],
+          ['Zufallszahl', String(o.zufall || '—')],
+          ['Schlüsselanteil B', String(o.dh || '—') + '   (g^b mod p)'],
+          ['Zertifikat für', String(z.name || '—') + '   (Nr. ' + (z.nr == null ? '—' : z.nr) + ')'],
+          ['Ausgestellt von', String(z.aussteller || '—')],
+          ['Fingerabdruck der ZS', String(z.ausstellerFp || '—')],
+          ['Schlüssel des Servers', kurz((z.besitzer && z.besitzer.n) || '—', 24)],
+          ['Unterschrift der ZS', kurz(z.signatur || '—', 24)],
+          ['Beweis des Servers', kurz(o.beweis || '—', 24) + '   (mit dem privaten Schlüssel)']
+        ];
+      } else if (art === 'Daten') {
+        const ch = String(o.chiffre || '');
+        details = '🔒 verschlüsselt, ' + (o.laenge == null ? '?' : o.laenge) + ' Byte';
+        fields = [
+          ['Art', 'Daten — verschlüsselt'],
+          ['Länge', (o.laenge == null ? '?' : o.laenge) + ' Byte Klartext'],
+          ['Inhalt', '🔒 nicht lesbar — nur die beiden Enden haben den Schlüssel'],
+          ['Chiffre (Anfang)', ch ? kurz(ch, 28) : '—'],
+          ['Prüfsumme', String(o.tag || '—')]
+        ];
+      } else {
+        details = 'Alert: ' + (o.grund || '');
+        fields = [['Art', 'Alert — Abbruch'], ['Grund', String(o.grund || '—')]];
+      }
+      return {
+        n: 6, name: 'TLS', schicht: ANWENDUNG, proto: 'TLS',
+        quelle: vonPort, ziel: nachPort, details: details, fields: fields
+      };
+    }
+
     function layers(row) {
       const out = [];
       const f = row && row.frame;
@@ -635,7 +730,10 @@
              besteht, den man lesen kann. */
           const erste = String(s.data || '').split('\r\n')[0] || '';
           const vonPort = p.src + ':' + s.sport, nachPort = p.dst + ':' + s.dport;
-          if (/^(GET|POST|HEAD)\s+\S+\s+HTTP\//.test(erste)) {
+          const tlsS = tlsArt(s) ? (tlsSatz(s) || { tls: tlsArt(s) }) : null;
+          if (tlsS) {
+            out.push(tlsSchale(tlsS, s, vonPort, nachPort));
+          } else if (/^(GET|POST|HEAD)\s+\S+\s+HTTP\//.test(erste)) {
             const teile = erste.split(/\s+/);
             const host = /Host:\s*([^\r\n]+)/i.exec(s.data);
             out.push({
@@ -666,6 +764,18 @@
                    Frage nicht, ob wirklich die Seite ankommt. */
                 ['Anfang', koerper.slice(0, 60).replace(/\s+/g, ' ') + (koerper.length > 60 ? ' …' : '')]
               ]
+            });
+          } else if (zsPort(s)) {
+            /* Der Zeilendialog mit der Zertifizierungsstelle (zs.js):
+               ANTRAG, +AUFGABE, BEREIT, +GEPRUEFT, ABHOLEN,
+               +ZERTIFIKAT. Lesbar wie SMTP — man liest mit, wie ein
+               Name geprüft wird. */
+            const zeilen = String(s.data).split('\r\n').filter(z => z !== '');
+            out.push({
+              n: 7, name: 'ZS', schicht: ANWENDUNG, proto: 'ZS',
+              quelle: vonPort, ziel: nachPort,
+              details: kurz(zeilen[0], 80),
+              fields: zeilen.slice(0, 4).map((z, i) => [i === 0 ? 'Gesagt' : '', kurz(z, 90)])
             });
           } else if (s.data && (s.sport === 25 || s.dport === 25 ||
                                 s.sport === 110 || s.dport === 110)) {

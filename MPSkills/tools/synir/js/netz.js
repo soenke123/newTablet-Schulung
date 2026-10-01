@@ -322,7 +322,8 @@
     dns:  { conf: 'dnsServer',  sw: 'dns' },
     web:  { conf: 'webServer',  sw: 'webserver' },
     mail: { conf: 'mailServer', sw: 'mailserver' },
-    stream: { conf: 'streamServer', sw: 'streamingserver' }
+    stream: { conf: 'streamServer', sw: 'streamingserver' },
+    zs: { conf: 'zsServer', sw: 'zertstelle' }
   };
   function dienstLaeuft(node, art) {
     const d = DIENSTE[art];
@@ -784,6 +785,54 @@
       return node.mailServer;
     }
 
+    /* ─── Zertifikate (PLAN-SICHERHEIT, Schritt 4) ────────────────
+       DREI Dinge, die nichts miteinander zu tun haben, außer dass
+       sie zusammen HTTPS ergeben:
+
+       `zsServer`    die Zertifizierungsstelle (Programm „Zertifizierungs-
+                     stelle"): Name, Schlüsselpaar, der DNS, den sie zur
+                     Prüfung fragt, und die Anträge.
+       `zertifikat`  was ein SERVER braucht: sein Schlüsselpaar, den
+                     Antrag und — wenn die ZS ihn freigegeben hat — das
+                     Zertifikat. Pro Gerät eines, für Webserver,
+                     Streaming-Server und Mailserver zusammen.
+       `vertrauen`   die Vertrauensliste eines CLIENTS (Browser und
+                     Mail-Programm teilen sie): Zertifizierungsstellen,
+                     denen dieses Gerät glaubt. Am Anfang LEER.
+
+       ⚠️ Der private Schlüssel steht im Speicherformat — ein
+       Server, der nach dem Laden sein Zertifikat nicht mehr
+       benutzen kann, wäre ein Fehler, den man nicht versteht.
+       Es ist ein Spielzeugschlüssel (siehe tls.js). */
+    function zsConf(node) {
+      if (!node.zsServer) node.zsServer = { on: false };
+      const z = node.zsServer;
+      if (z.name == null || z.name === '') z.name = 'Zertifizierungsstelle';
+      if (z.dns == null) z.dns = '';
+      if (!z.schluessel) z.schluessel = null;
+      if (!(z.serial > 0)) z.serial = 1;
+      if (!Array.isArray(z.antraege)) z.antraege = [];
+      return z;
+    }
+
+    function zertConf(node) {
+      if (!node.zertifikat) node.zertifikat = { name: '', zs: '', schluessel: null, zert: null, antrag: null };
+      return node.zertifikat;
+    }
+
+    function vertrauen(node) {
+      if (!Array.isArray(node.vertrauen)) node.vertrauen = [];
+      return node.vertrauen;
+    }
+
+    /* Hat dieses Gerät ein Zertifikat, mit dem es HTTPS sprechen
+       kann? Genau dann wird der Haken „HTTPS" im Serverfenster frei
+       (und nur dann lauscht ein Server auf 443, 465 und 995). */
+    function zertGueltig(node) {
+      const z = node && node.zertifikat;
+      return !!(z && z.zert && z.schluessel);
+    }
+
     /* Genau EIN Konto je Gerät, wie in Filius. Die Ports stehen
        darin, weil Filius sie als Feld führt (110 und 25,
        vorbelegt) — es ist die einzige Stelle im ganzen Programm,
@@ -803,6 +852,8 @@
          damit das Konto nach dem Laden nicht halb leer aussieht. */
       const k = node.mailKonto;
       if (k.domain == null) k.domain = '';
+      // Verschlüsselte Verbindung (SSL/TLS, Ports 995 und 465) — seit 2026-10-01.
+      if (k.tls == null) k.tls = false;
       if (!k.domain && k.adresse && k.adresse.indexOf('@') > 0) {
         k.domain = k.adresse.split('@').pop().toLowerCase();
         if (!k.benutzer) k.benutzer = k.adresse.split('@')[0];
@@ -1243,6 +1294,9 @@
             webServer:  n.webServer  ? U.deepCopy(n.webServer)  : undefined,
             mailServer: n.mailServer ? U.deepCopy(n.mailServer) : undefined,
             streamServer: n.streamServer ? U.deepCopy(n.streamServer) : undefined,
+            zsServer: n.zsServer ? U.deepCopy(n.zsServer) : undefined,
+            zertifikat: n.zertifikat ? U.deepCopy(n.zertifikat) : undefined,
+            vertrauen: n.vertrauen && n.vertrauen.length ? U.deepCopy(n.vertrauen) : undefined,
             mailKonto:  n.mailKonto  ? U.deepCopy(n.mailKonto)  : undefined,
             nat:  n.nat  ? U.deepCopy(n.nat)  : undefined,
             /* Nur der Schalter. Die gelernten Wege stehen in
@@ -1326,6 +1380,9 @@
         if (d.webServer)  node.webServer  = U.deepCopy(d.webServer);
         if (d.mailServer) node.mailServer = U.deepCopy(d.mailServer);
         if (d.streamServer) node.streamServer = U.deepCopy(d.streamServer);
+        if (d.zsServer) node.zsServer = U.deepCopy(d.zsServer);
+        if (d.zertifikat) node.zertifikat = U.deepCopy(d.zertifikat);
+        if (Array.isArray(d.vertrauen)) node.vertrauen = U.deepCopy(d.vertrauen);
         if (d.mailKonto)  node.mailKonto  = U.deepCopy(d.mailKonto);
         natLaden(node, k.id, d);
         if (d.rip)  node.rip  = { on: !!d.rip.on };
@@ -1454,6 +1511,9 @@
         if (d.webServer)  node.webServer  = U.deepCopy(d.webServer);
         if (d.mailServer) node.mailServer = U.deepCopy(d.mailServer);
         if (d.streamServer) node.streamServer = U.deepCopy(d.streamServer);
+        if (d.zsServer) node.zsServer = U.deepCopy(d.zsServer);
+        if (d.zertifikat) node.zertifikat = U.deepCopy(d.zertifikat);
+        if (Array.isArray(d.vertrauen)) node.vertrauen = U.deepCopy(d.vertrauen);
         if (d.mailKonto)  node.mailKonto  = U.deepCopy(d.mailKonto);
         natLaden(node, node.kind, d);
         if (d.rip)  node.rip  = { on: !!d.rip.on };
@@ -1518,7 +1578,7 @@
       KIND, WAN, LAN,
       kurzName: (node) => kurzName(node, list()),
       addNode, removeNode, addCable, removeCable,
-      addNic, removeNic, freieNic, keinAnschlussSatz, dhcpConf, dnsConf, webConf, mailConf, streamConf, mailKonto, natConf, ripConf, wlanConf,
+      addNic, removeNic, freieNic, keinAnschlussSatz, dhcpConf, dnsConf, webConf, mailConf, streamConf, zsConf, zertConf, zertGueltig, vertrauen, mailKonto, natConf, ripConf, wlanConf,
       dhcpLeeren, setDhcp, setFunk,
       // „Hat dieses Gerät überhaupt eine Kabelbuchse?" — wie
       // `istWan` und `strahlt` eine Frage, die NUR hier

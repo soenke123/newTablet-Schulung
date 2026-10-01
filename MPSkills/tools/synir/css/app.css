@@ -183,6 +183,7 @@
   --web:       #0e7c8c;
   --mail:      #b03a86;
   --stream:    #c2410c;
+  --zs:        #0f766e;
 
   /* Netzteil und Geräteteil einer Adresse. Zwei Farben, die sich
      in Hell UND Dunkel unterscheiden und beide auf hellem wie
@@ -346,6 +347,7 @@
   --web:       #2fa9bb;
   --mail:      #e067b0;
   --stream:    #fb923c;
+  --zs:        #2dd4bf;
 
   --netzteil:  #7ab5ff;
   --hostteil:  #f0a862;
@@ -1275,7 +1277,7 @@ body.is-ziehen, body.is-ziehen * {
 /* Die vier Dienstmarken teilen ihre Schrift: sie sind ein SATZ von
    Zeichen und sollen als solcher zu erkennen sein — die Farbe
    unterscheidet, die Form nicht. */
-.nf-dhcp text, .nf-dns text, .nf-web text, .nf-mail text, .nf-stream text {
+.nf-dhcp text, .nf-dns text, .nf-web text, .nf-mail text, .nf-stream text, .nf-zs text {
   font-size: 8.5px; font-weight: 700; letter-spacing: .06em;
   text-anchor: middle;
 }
@@ -1284,6 +1286,7 @@ body.is-ziehen, body.is-ziehen * {
 .nf-web  rect { fill: var(--web); }
 .nf-mail rect { fill: var(--mail); }
 .nf-stream rect { fill: var(--stream); }
+.nf-zs rect { fill: var(--zs); }
 
 .nf-wlan rect { fill: var(--wlan); }
 .nf-wlan text { font-size: 9.5px; font-weight: 650; text-anchor: start; }
@@ -2321,7 +2324,10 @@ textarea.f::placeholder { color: var(--ink-3); opacity: .45; font-weight: 400; }
   font-size: 12px; color: var(--ink-3);
 }
 .wb-adr .f { flex: 1; min-width: 0; border: 0; background: none; }
-.wb-adr .f:focus { outline: none; }
+.wb-adr .f:focus { outline: none; box-shadow: none; }
+/* Der Leuchtrand gehört um die ganze Adresszeile (Vorsatz, Feld, Schloss),
+   nicht um das Feld allein — sonst ragt er in den Vorsatz hinein. */
+.wb-adr:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-sh); }
 
 /* Die Seite selbst. Fester Rahmen mit weißem Grund — auch im
    Dunkelmodus: eine Seite, die ein Kind geschrieben hat, sieht
@@ -2889,6 +2895,8 @@ body:not(.trace-open) .trace-b { height: 0; border-top: 0; }
 .tr-p--dns  { color: var(--dns);  border-color: color-mix(in srgb, var(--dns) 45%, transparent); }
 .tr-p--rip  { color: var(--rip);  border-color: color-mix(in srgb, var(--rip) 45%, transparent); }
 .tr-p--udp  { color: var(--ink-2); }
+.tr-p--tls  { color: var(--ok);   border-color: color-mix(in srgb, var(--ok) 50%, transparent); }
+.tr-p--zs   { color: var(--zs);   border-color: color-mix(in srgb, var(--zs) 50%, transparent); }
 .tr-i { color: var(--ink); font-family: var(--fm); font-size: 11.5px; }
 .tr-i em { color: var(--bad); font-style: normal; }
 .tr-x {
@@ -4221,3 +4229,131 @@ body.trace-open .term.term--in .term-o { flex: 1 1 auto; height: auto; min-heigh
 @media (orientation: portrait) {
   :root { --trace-h: clamp(120px, 20vh, 240px); --wlt-h: clamp(130px, 22vh, 260px); }
 }
+
+
+/* ═══ HTTPS und Zertifikate (PLAN-SICHERHEIT, Schritt 4) ══════════
+   Drei Orte: die Adresszeile des Browsers (Schloss, Warnseite), der
+   Kasten „Verschlüsselung" in den Serverfenstern und das Fenster der
+   Zertifizierungsstelle. Grün heißt hier „sicher", Bernstein „nicht
+   sicher", Rot „Warnung" — dieselben Farben wie überall im Programm
+   für ok / warn / bad. */
+
+/* Der Vorsatz ist ein Knopf: Tippen wechselt http ⇄ https. */
+button.wb-vor {
+  border: 0; background: none; cursor: pointer; align-self: stretch;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 0 2px 0 8px; font-family: var(--fm); font-size: 12px; color: var(--ink-3);
+}
+button.wb-vor:hover { color: var(--ink); }
+button.wb-vor--https { color: var(--ok); font-weight: 700; }
+button.wb-vor .ico { width: 1em; height: 1em; vertical-align: 0; }
+
+/* Das Schloss HINTER der Adresse — die Auskunft zur geladenen Seite. */
+.wb-sl {
+  flex: none; display: inline-flex; align-items: center; gap: 4px;
+  border: 0; border-left: 1px solid var(--line); background: var(--surface-2);
+  align-self: stretch; padding: 0 9px; font: inherit; font-size: 11.5px; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+}
+.wb-sl .ico { width: 1em; height: 1em; vertical-align: 0; }
+.wb-sl--sicher { color: var(--ok); }
+.wb-sl--http { color: var(--warn); }
+.wb-sl--ausnahme { color: var(--bad); }
+.wb-sl:hover { filter: brightness(1.1); }
+
+.wb-zert {
+  flex: none; width: 30px; height: 30px; padding: 0; display: inline-flex;
+  align-items: center; justify-content: center;
+  border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface); color: var(--ink-2); cursor: pointer;
+}
+.wb-zert:hover { border-color: var(--accent); color: var(--accent); }
+.wb-zert.is-on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.wb-zert .ico { width: 1.15em; height: 1.15em; }
+.dt-win > .wb-info { flex: none; }
+
+.wb-info {
+  font-size: 12px; line-height: 1.45; color: var(--ink);
+  border: 1px solid var(--line); border-left-width: 4px; border-radius: var(--r1);
+  background: var(--surface-2); padding: 8px 10px; margin-bottom: 8px;
+}
+.wb-info--sicher { border-left-color: var(--ok); }
+.wb-info--http { border-left-color: var(--warn); }
+.wb-info--ausnahme { border-left-color: var(--bad); }
+
+/* Die Warnseite — im Fenster des Browsers, nicht in der Seite. */
+.wb-warn { padding: 16px 18px; color: #1d1d22; background: #fff; height: 100%; box-sizing: border-box; overflow: auto; }
+.wb-warn-k { display: flex; align-items: center; gap: 10px; }
+.wb-warn-k h3 { margin: 0; font-size: 18px; color: #b3261e; }
+.wb-warn-ic { font-size: 26px; line-height: 1; color: #b3261e; }
+.wb-warn p { margin: 10px 0; font-size: 13px; line-height: 1.5; }
+.wb-warn-f { border: 1px solid #e0e0e6; border-radius: 8px; background: #f7f7fa; padding: 4px 10px; margin: 10px 0 14px; }
+.wb-warn-f > div { display: flex; gap: 10px; align-items: baseline; padding: 4px 0; font-size: 12px; }
+.wb-warn-f > div + div { border-top: 1px solid #ececf1; }
+.wb-warn-f span { flex: 0 0 150px; color: #5b5b66; }
+.wb-warn-f code { font-family: var(--fm); font-size: 12px; word-break: break-all; color: #1d1d22; }
+.wb-warn-b { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.wb-weiter {
+  border: 0; background: none; color: #b3261e; font: inherit; font-size: 12px;
+  text-decoration: underline; cursor: pointer; padding: 6px 4px;
+}
+
+/* Der Kasten „Verschlüsselung" im Serverfenster. */
+.zt-kopf { display: flex; align-items: center; gap: 6px; }
+.zt-kopf .ml-i { margin-left: auto; }
+.zt-karte {
+  display: flex; gap: 10px; align-items: flex-start; margin: 6px 0 8px;
+  border: 1px solid var(--line); border-left-width: 4px; border-radius: var(--r1);
+  background: var(--surface-2); padding: 8px 10px;
+}
+.zt-karte > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.zt-karte strong { font-size: 12.5px; color: var(--ink); overflow-wrap: anywhere; }
+.zt-karte small { font-size: 11.5px; color: var(--ink-2); line-height: 1.4; }
+.zt-sl { font-size: 18px; line-height: 1.1; flex: none; }
+.zt-karte--ok { border-left-color: var(--ok); }
+.zt-karte--wart { border-left-color: var(--warn); }
+.zt-karte--bad { border-left-color: var(--bad); }
+.zt-knoepfe { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 8px; }
+.zt-meld {
+  border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface-2);
+  padding: 7px 10px; margin: 8px 0; font-size: 11.5px; color: var(--ink-2); line-height: 1.45;
+}
+.zt-meld--fehler { border-color: var(--bad); color: var(--ink); }
+
+/* Der Haken: ausgegraut, solange das Zertifikat fehlt — und er sagt warum. */
+.zt-haken {
+  display: flex; gap: 10px; align-items: flex-start; margin: 10px 0 4px;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r1);
+  background: var(--surface); cursor: pointer;
+}
+.zt-haken input { margin-top: 3px; width: 18px; height: 18px; flex: none; accent-color: var(--accent); }
+.zt-haken span { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; color: var(--ink); }
+.zt-haken small { font-size: 11.5px; color: var(--ink-2); line-height: 1.4; }
+.zt-haken.is-zu { cursor: default; background: var(--surface-2); }
+.zt-haken.is-zu span { color: var(--ink-3); }
+.zt-haken.ml-tls { margin-top: 2px; }
+
+/* Anträge in der Zertifizierungsstelle und die Vertrauensliste. */
+.zt-liste { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+.zt-antrag { border: 1px solid var(--line); border-radius: var(--r1); background: var(--surface-2); padding: 8px 10px; }
+.zt-ak { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.zt-ak strong { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--ink); }
+.zt-st { flex: none; font-size: 11px; font-weight: 700; color: var(--ink-2); }
+.zt-st--ok { color: var(--ok); }
+.zt-st--bad { color: var(--bad); }
+.zt-as { font-size: 11.5px; color: var(--ink-2); margin: 4px 0 0; line-height: 1.45; }
+.zt-as code, .zt-fund code { font-family: var(--fm); font-size: 11.5px; }
+.zt-leer { font-size: 12px; color: var(--ink-3); padding: 8px 2px; line-height: 1.45; }
+
+/* Die Vertrauensliste im Browser — steht auf dem weißen Seitenrahmen,
+   deshalb feste dunkle Schrift. */
+.zt-vert { padding: 12px 14px; background: var(--surface); color: var(--ink); height: 100%; box-sizing: border-box; overflow: auto; }
+.zt-v-kopf { display: flex; align-items: center; gap: 8px; }
+.zt-v-kopf h3 { margin: 0; font-size: 15px; flex: 1; }
+.zt-fund { border: 1px solid var(--accent); border-radius: var(--r1); padding: 9px 10px; margin: 8px 0; background: var(--surface-2); }
+.zt-warn { font-size: 12px; color: var(--ink); border-left: 3px solid var(--warn); padding: 4px 8px; margin: 8px 0; line-height: 1.45; }
+
+/* Die wichtigen Knöpfe in diesem Block sind größer als das übliche
+   Auswahlknöpfchen — es ist die Hauptsache im Fenster, und auf einem
+   Tablet muss man sie treffen. */
+.zt-b { padding: 8px 16px; font-size: 12.5px; min-height: 36px; }

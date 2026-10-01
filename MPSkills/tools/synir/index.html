@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
-<link rel="stylesheet" href="css/app.css?v=20261001d">
+<link rel="stylesheet" href="css/app.css?v=20261001g">
 </head>
 <body>
 
@@ -142,6 +142,22 @@
     <g id="ic-mailserver" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="13" width="18" height="7.5" rx="1.8"/><path d="M6.5 16.8h.01M9.5 16.8h4"/>
       <rect x="6" y="3.5" width="12" height="7.5" rx="1.5"/><path d="M6.5 5l5.5 3.8L17.5 5"/>
+    </g>
+    <!-- Zertifizierungsstelle: das Servergehäuse mit einem Siegel
+         (Rosette mit Haken) — es BESTÄTIGT etwas, es bietet keine
+         Dateien an. -->
+    <g id="ic-zertstelle" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="14" width="18" height="6.5" rx="1.8"/><path d="M6.5 17.2h.01M9.5 17.2h3"/>
+      <circle cx="12" cy="7.4" r="3.9"/><path d="M10.3 7.5l1.3 1.3 2.3-2.6"/>
+    </g>
+    <!-- Schloss (zu) und Schild: das Schloss steht vor https:// und
+         hinter einer sicheren Seite; das Schild öffnet die Liste der
+         Zertifizierungsstellen, denen das Gerät glaubt. -->
+    <g id="ic-schloss" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>
+    </g>
+    <g id="ic-schild" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3l7.5 2.8v5.6c0 4.5-3.1 8.2-7.5 9.6-4.4-1.4-7.5-5.1-7.5-9.6V5.8z"/><path d="M8.8 12l2.2 2.2 4.2-4.4"/>
     </g>
     <!-- Die zwei Tätigkeiten im Postfach. „Abrufen" ist ein Pfeil
          NACH UNTEN in eine Ablage — die Post liegt beim Server und
@@ -818,6 +834,8 @@
       <button class="chip" data-proto="HTTP">HTTP</button>
       <button class="chip" data-proto="SMTP">SMTP</button>
       <button class="chip" data-proto="POP3">POP3</button>
+      <button class="chip" data-proto="TLS" title="Verschlüsselte Verbindungen: Handschlag mit Servername und Zertifikat, danach nur noch Salat">🔒 TLS</button>
+      <button class="chip" data-proto="ZS" title="Gespräche mit einer Zertifizierungsstelle">ZS</button>
       <button class="chip" data-proto="ZUGANG" title="Nur Zeilen mit Zugangsdaten im Klartext">🔑 Zugangsdaten</button>
     </span>
     <input class="trace-s" id="traceFilter" placeholder="suchen …" spellcheck="false">
@@ -870,31 +888,34 @@
 
 <script src="js/util.js?v=20260930e"></script>
 <script src="js/engine.js?v=20260930e"></script>
-<script src="js/netz.js?v=20261001d"></script>
+<script src="js/netz.js?v=20261001g"></script>
 <script src="js/verlauf.js?v=20260930e"></script>
 <script src="js/nat.js?v=20260930e"></script>
 <script src="js/tcp.js?v=20260930e"></script>
 <script src="js/rip.js?v=20260930e"></script>
 <script src="js/logos.js?v=20260930e"></script>
 <script src="js/dateien.js?v=20260930e"></script>
-<script src="js/http.js?v=20260930e"></script>
-<script src="js/mail.js?v=20260930e"></script>
+<script src="js/http.js?v=20261001g"></script>
+<script src="js/mail.js?v=20261001g"></script>
 <script src="js/filme.js?v=20261001a"></script>
-<script src="js/stream.js?v=20261001d"></script>
+<script src="js/stream.js?v=20261001g"></script>
+<script src="js/tls.js?v=20261001g"></script>
+<script src="js/zs.js?v=20261001g"></script>
 <script src="js/schichten.js?v=20260930e"></script>
-<script src="js/dienste.js?v=20260930e"></script>
+<script src="js/dienste.js?v=20261001g"></script>
 <script src="js/internet.js?v=20260930e"></script>
-<script src="js/mitschnitt.js?v=20260930e"></script>
+<script src="js/mitschnitt.js?v=20261001g"></script>
 <script src="js/terminal.js?v=20260930e"></script>
 <script src="js/subnetze.js?v=20260930e"></script>
-<script src="js/flaeche.js?v=20260930e"></script>
+<script src="js/flaeche.js?v=20261001g"></script>
 <script src="js/konfig.js?v=20260930e"></script>
-<script src="js/panels.js?v=20260930e"></script>
+<script src="js/panels.js?v=20261001g"></script>
 <script src="js/weiterleitung.js?v=20260930e"></script>
 <script src="js/prog-dateien.js?v=20260930e"></script>
-<script src="js/prog-web.js?v=20261001d"></script>
-<script src="js/prog-mail.js?v=20260930e"></script>
-<script src="js/geraet.js?v=20260930e"></script>
+<script src="js/prog-web.js?v=20261001g"></script>
+<script src="js/prog-mail.js?v=20261001g"></script>
+<script src="js/prog-zert.js?v=20261001g"></script>
+<script src="js/geraet.js?v=20261001g"></script>
 <script src="js/szenarien.js?v=20261001a"></script>
 <script src="js/szmenue.js?v=20260930e"></script>
 <script src="js/menuleiste.js?v=20260930e"></script>

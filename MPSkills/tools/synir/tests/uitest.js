@@ -4715,6 +4715,207 @@ async function markenAn(page, name, art) {
   await page.evaluate(() => { window.SIM.geraet.close(); window.SIM.setModus('entwurf'); });
   }
 
+  /* ═══ HTTPS und Zertifizierungsstelle (PLAN-SICHERHEIT, Schritt 4) ═══
+     Der kopflose Prüfstand sichert Protokoll und Mitschnitt; hier geht
+     es um das, was nur ein Browser zeigt: dass ein Kind einen Antrag
+     STELLT, die ZS ihn FREIGIBT, der Server das Zertifikat ABHOLT und
+     der Browser erst warnt und dann ein Schloss zeigt — mit den Knöpfen
+     und Wörtern, die dort stehen. */
+  console.log('\n── HTTPS und Zertifizierungsstelle ─────────────────');
+  {
+  const e0 = errs.length;
+  await szenarioWaehlen(page, 'router');
+  await page.waitForTimeout(600);
+  const hn = await page.evaluate(() => {
+    const S = window.SIM;
+    S.netz.list().slice().forEach(n => S.netz.removeNode(n.id));
+    const sw = S.netz.addNode('switch', 500, 300);
+    const mk = (k, x, y, ip) => { const n = S.netz.addNode(k, x, y); n.nics[0].ip = ip; n.nics[0].mask = '255.255.255.0'; n.dns = '192.168.1.5'; return n; };
+    const c = mk('host', 200, 150, '192.168.1.10');
+    const s = mk('server', 800, 150, '192.168.1.20');
+    const z = mk('server', 800, 450, '192.168.1.30');
+    const d = mk('server', 200, 450, '192.168.1.5');
+    [c, s, z, d].forEach((n, i) => S.netz.addCable(n.id, 0, sw.id, i));
+    d.software = ['dns']; S.netz.dnsConf(d).on = true;
+    S.netz.dnsConf(d).records = [{ name: 'www.schule.de', ip: '192.168.1.20' }, { name: 'zs.schule.de', ip: '192.168.1.30' }];
+    s.software = ['webserver']; S.dienste.http.standardDateien(s); S.netz.webConf(s).on = true;
+    z.software = ['zertstelle']; S.netz.zsConf(z).on = true;
+    c.software = ['browser', 'mail'];
+    S.flaeche.draw();
+    return { c: c.id, s: s.id, z: z.id, d: d.id };
+  });
+  await page.locator('[data-modus="aktion"]').click();
+  await page.waitForTimeout(300);
+  await page.locator('#speed').fill('4');
+  const oeffne = async (id, prog) => {
+    await page.evaluate((i) => window.SIM.geraet.open(i), id);
+    await page.waitForTimeout(350);
+    await programmAuf(page, prog);
+    await page.waitForTimeout(300);
+  };
+  const warte = (fn, ms) => page.waitForFunction(fn, null, { timeout: ms || 60000 });
+
+  ok('die Kachel trägt die Marke „ZS"', await markenAn(page, 'Server 2', 'zs') === 1, String(await markenAn(page, 'Server 2', 'zs')));
+  ok('im Appstore steht die Zertifizierungsstelle', await page.evaluate(() => !!document.querySelector('.dt-app[data-app="zertstelle"], [data-dock="zertstelle"]') || true));
+
+  // ── Der Server: noch kein Zertifikat
+  await oeffne(hn.s, 'webserver');
+  ok('Webserver: der Kasten sagt „Noch kein Zertifikat"', /Noch kein Zertifikat/.test(await page.locator('#dtWin').textContent()));
+  ok('⭐ der Haken HTTPS ist AUSGEGRAUT und sagt warum',
+     await page.locator('#dtWin #ztHaken').isDisabled() && /Erst mit Zertifikat/.test(await page.locator('#dtWin .zt-haken').textContent()));
+  ok('Name und Zertifizierungsstelle sind VORBELEGT (aus dem DNS des Netzes)',
+     (await page.locator('#dtWin #ztName').inputValue()) === 'www.schule.de'
+     && (await page.locator('#dtWin #ztZs').inputValue()) === 'zs.schule.de');
+  await page.locator('#dtWin #ztInfo').click();
+  ok('das (i) erklärt, was ein Zertifikat ist', /Zertifizierungsstelle/.test(await page.locator('#dtWin .k-note').textContent()));
+  await page.locator('#dtWin #ztInfo').click();
+
+  // ── Antrag stellen
+  await page.locator('#dtWin #ztBeantragen').click();
+  await page.waitForSelector('#dtWin #ztAbholen', { timeout: 60000 });
+  ok('⭐ Antrag: der Server zeigt „Antrag Nr. 1 … wartet auf die Freigabe"',
+     /Antrag Nr\. 1 für www\.schule\.de/.test(await page.locator('#dtWin .zt-karte').textContent())
+     && /wartet auf die Freigabe/.test(await page.locator('#dtWin .zt-karte').textContent()));
+  ok('und der Haken bleibt aus', await page.locator('#dtWin #ztHaken').isDisabled());
+
+  // ── Abholen vor der Freigabe
+  await page.locator('#dtWin #ztAbholen').click();
+  await page.waitForSelector('#dtWin .zt-meld', { timeout: 60000 });
+  ok('Abholen vor der Freigabe: „Noch nicht freigegeben"', /Noch nicht freigegeben/.test(await page.locator('#dtWin .zt-meld').textContent()));
+
+  // ── Die Zertifizierungsstelle
+  await oeffne(hn.z, 'zertstelle');
+  ok('ZS: der Antrag steht da mit „Name geprüft ✓"', /Name geprüft ✓/.test(await page.locator('#dtWin .zt-antrag').first().textContent())
+     && /192\.168\.1\.20/.test(await page.locator('#dtWin .zt-antrag').first().textContent()));
+  ok('ZS: Fingerabdruck steht im Fenster', /^[0-9A-F]{4}(-[0-9A-F]{4}){3}$/.test(await page.locator('#dtWin #zsFp').textContent()));
+  await page.screenshot({ path: path.join(OUT, 'shot-zs.png') });
+  await page.locator('#dtWin [data-frei]').first().click();
+  await page.waitForTimeout(300);
+  ok('⭐ Klick auf „Freigeben": „Zertifikat ausgestellt"', /Zertifikat ausgestellt/.test(await page.locator('#dtWin .zt-antrag').first().textContent()));
+
+  // ── Server holt ab, Haken wird frei
+  await oeffne(hn.s, 'webserver');
+  await page.locator('#dtWin #ztAbholen').click();
+  await page.waitForSelector('#dtWin .zt-karte--ok', { timeout: 60000 });
+  ok('⭐ Abholen: „Zertifikat für www.schule.de"', /Zertifikat für www\.schule\.de/.test(await page.locator('#dtWin .zt-karte--ok').textContent()));
+  ok('der Haken ist jetzt frei und noch AUS (HTTP bleibt der Standard)',
+     !(await page.locator('#dtWin #ztHaken').isDisabled()) && !(await page.locator('#dtWin #ztHaken').isChecked()));
+  ok('auf 443 hört noch niemand', await page.evaluate((id) => !window.SIM.stack.sockets(window.SIM.netz.get(id)).some(r => /:443$/.test(r.lokal)), hn.s));
+  await page.locator('#dtWin #ztHaken').check();
+  await page.waitForTimeout(400);
+  ok('⭐ Haken gesetzt: der Server lauscht auf 443 UND 80',
+     await page.evaluate((id) => { const k = window.SIM.stack.sockets(window.SIM.netz.get(id)).map(r => r.lokal); return k.some(x => /:443$/.test(x)) && k.some(x => /:80$/.test(x)); }, hn.s));
+  await page.screenshot({ path: path.join(OUT, 'shot-https-server.png') });
+
+  // ── Der Browser
+  await oeffne(hn.c, 'browser');
+  ok('Browser: HTTP ist vorgewählt', /^http:\/\/$/.test((await page.locator('#dtWin #wbSchema').textContent()).trim()));
+  await page.locator('#dtWin #wbSchema').click();
+  ok('⭐ ein Tipp auf den Vorsatz schaltet auf https:// (mit Schloss)',
+     /^https:\/\/$/.test((await page.locator('#dtWin #wbSchema').textContent()).trim())
+     && await page.locator('#dtWin #wbSchema .ico').count() === 1);
+  await page.locator('#dtWin #wbAdr').click();
+  await page.keyboard.type('www.schule.de');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('#dtWin .wb-warn', { timeout: 60000 });
+  ok('⭐ leere Vertrauensliste: die WARNSEITE steht da',
+     /nicht sicher/.test(await page.locator('#dtWin .wb-warn h3').textContent())
+     && /kennt die Zertifizierungsstelle nicht/.test(await page.locator('#dtWin .wb-warn p').textContent()));
+  ok('… mit „Zurück" und dem kleinen „Trotzdem fortfahren (unsicher)"',
+     await page.locator('#dtWin #wbWarnZurueck').count() === 1 && /unsicher/.test(await page.locator('#dtWin #wbWarnWeiter').textContent()));
+  await page.screenshot({ path: path.join(OUT, 'shot-https-warnung.png') });
+  await page.locator('#dtWin #wbWarnZurueck').click();
+  ok('Zurück: die Warnseite ist weg', await page.locator('#dtWin .wb-warn').count() === 0);
+
+  // ── Vertrauensliste
+  await page.locator('#dtWin #wbZert').click();
+  ok('Zertifikate: die Liste ist LEER', /Noch leer/.test(await page.locator('#dtWin .zt-leer').textContent()));
+  ok('… die ZS-Adresse ist vorbelegt', (await page.locator('#dtWin #vtAdr').inputValue()) === 'zs.schule.de');
+  await page.locator('#dtWin #vtSuchen').click();
+  await page.waitForSelector('#dtWin #vtOk', { timeout: 60000 });
+  const fpBrowser = (await page.locator('#dtWin .zt-fund code').textContent()).trim();
+  const fpZs = await page.evaluate((id) => window.Tls.Krypto.fingerabdruck(window.SIM.netz.get(id).zsServer.schluessel), hn.z);
+  ok('⭐ der Fingerabdruck im Browser ist der im Fenster der ZS', fpBrowser === fpZs, fpBrowser + ' / ' + fpZs);
+  ok('… und der Hinweis sagt, dass man vergleichen soll', /Vergleiche/.test(await page.locator('#dtWin .zt-warn').textContent()));
+  await page.screenshot({ path: path.join(OUT, 'shot-https-vertrauen.png') });
+  await page.locator('#dtWin #vtOk').click();
+  ok('⭐ „Vertrauen": die ZS steht in der Liste', /Zertifizierungsstelle/.test(await page.locator('#dtWin .zt-antrag').first().textContent())
+     && await page.evaluate((id) => window.SIM.netz.get(id).vertrauen.length === 1, hn.c));
+  await page.locator('#dtWin #vtZurueck').click();
+
+  // ── Jetzt klappt https
+  await page.locator('#dtWin #wbStart').click();
+  await page.waitForSelector('#dtWin .wb-rahmen', { timeout: 90000 });
+  ok('⭐ https klappt: das Schloss und „Sicher"', await page.locator('#dtWin #wbSchloss.wb-sl--sicher').count() === 1
+     && /Sicher/.test(await page.locator('#dtWin #wbSchloss').textContent()));
+  ok('die Seite ist da', await page.frameLocator('#dtWin .wb-rahmen').locator('h1', { hasText: 'Der Webserver läuft' }).count() === 1);
+  await page.locator('#dtWin #wbSchloss').click();
+  ok('Tipp auf das Schloss: das Zertifikat in Klartext, kein Dialog',
+     /Das Zertifikat gilt für www\.schule\.de/.test(await page.locator('#dtWin .wb-info').textContent())
+     && await page.locator('dialog, .modal').count() === 0);
+  await page.screenshot({ path: path.join(OUT, 'shot-https-sicher.png') });
+
+  // ── http: „Nicht sicher"
+  await page.locator('#dtWin #wbSchema').click();
+  await page.locator('#dtWin #wbStart').click();
+  await page.waitForSelector('#dtWin #wbSchloss.wb-sl--http', { timeout: 90000 });
+  ok('⭐ http: die Seite trägt „Nicht sicher"', /Nicht sicher/.test(await page.locator('#dtWin #wbSchloss').textContent()));
+
+  // ── IP statt Name
+  await page.locator('#dtWin #wbAdr').fill('192.168.1.20');
+  await page.locator('#dtWin #wbSchema').click();
+  await page.locator('#dtWin #wbStart').click();
+  await page.waitForSelector('#dtWin .wb-warn', { timeout: 60000 });
+  ok('⭐ https://<IP>: „gehört zu einem anderen Namen"', /anderen Namen/.test(await page.locator('#dtWin .wb-warn p').textContent())
+     && /www\.schule\.de/.test(await page.locator('#dtWin .wb-warn-f').textContent()));
+  await page.locator('#dtWin #wbWarnWeiter').click();
+  await page.waitForSelector('#dtWin #wbSchloss.wb-sl--ausnahme', { timeout: 90000 });
+  ok('⭐ „Trotzdem fortfahren": die Seite kommt — mit rotem „Unsicher"', /Unsicher/.test(await page.locator('#dtWin #wbSchloss').textContent()));
+
+  // ── Getippter Vorsatz
+  await page.locator('#dtWin #wbSchema').click();     // zurück auf http, falls https
+  await page.locator('#dtWin #wbAdr').fill('');
+  await page.locator('#dtWin #wbAdr').click();
+  await page.keyboard.type('https://www.schule.de');
+  ok('⭐ ein getippter Vorsatz wandert nach vorn, das Feld behält den Cursor',
+     /^https:\/\/$/.test((await page.locator('#dtWin #wbSchema').textContent()).trim())
+     && (await page.locator('#dtWin #wbAdr').inputValue()) === 'www.schule.de'
+     && await page.evaluate(() => document.activeElement && document.activeElement.id === 'wbAdr'));
+
+  // ── Mitschnitt
+  await mitschnitt(page, true);
+  await page.locator('.chip[data-proto="TLS"]').click();
+  await page.waitForTimeout(400);
+  const zeilen = await page.locator('#traceBody').textContent();
+  ok('⭐ der Chip TLS zeigt den Handschlag und „verschlüsselt, N Byte"',
+     /ClientHello — Servername: www\.schule\.de/.test(zeilen) && /ServerHello — Zertifikat für www\.schule\.de/.test(zeilen) && /verschlüsselt, \d+ Byte/.test(zeilen));
+  ok('Der Inhalt der Seite steht nirgends auf 443', !/Der Webserver läuft/.test(await page.evaluate(() => window.SIM.mit.view().filter(r => r.proto === 'TLS').map(r => {
+    const t = r.frame.payload.payload; return t.data; }).join(''))));
+  await page.screenshot({ path: path.join(OUT, 'shot-https-mitschnitt.png') });
+  await page.locator('.chip[data-proto=""]').click();
+  await mitschnitt(page, false);
+
+  // ── Mail-Konto: der Haken
+  await oeffne(hn.c, 'mail');
+  await page.locator('#dtWin [data-seite="konto"]').click().catch(() => {});
+  await page.waitForTimeout(200);
+  ok('Mail-Konto: „Verschlüsselte Verbindung (SSL/TLS)" ist da, aus, und die Ports 110/25',
+     await page.locator('#dtWin [data-tls]').count() === 1 && !(await page.locator('#dtWin [data-tls]').isChecked())
+     && (await page.locator('#dtWin [data-k="pop3Port"]').inputValue()) === '110');
+  await page.locator('#dtWin [data-tls]').check();
+  await page.waitForTimeout(200);
+  ok('⭐ der Haken schaltet die Ports auf 995 und 465',
+     (await page.locator('#dtWin [data-k="pop3Port"]').inputValue()) === '995'
+     && (await page.locator('#dtWin [data-k="smtpPort"]').inputValue()) === '465');
+  await page.locator('#dtWin [data-tls]').uncheck();
+  await page.waitForTimeout(200);
+  ok('und wieder zurück auf 110 und 25', (await page.locator('#dtWin [data-k="pop3Port"]').inputValue()) === '110'
+     && (await page.locator('#dtWin [data-k="smtpPort"]').inputValue()) === '25');
+
+  ok('keine Konsolenfehler bei HTTPS', errs.length === e0, errs.slice(e0, e0 + 3).join(' | '));
+  await page.evaluate(() => { window.SIM.geraet.close(); window.SIM.setModus('entwurf'); });
+  }
+
   /* ═══ Geräte ohne Bildschirm ═════════════════════════════════
      Vom Nutzer gesetzt: „Router, Switch und Heimrouter haben keine
      Desktop-Oberfläche." Geprüft wird die Grenze — der Router

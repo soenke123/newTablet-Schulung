@@ -159,10 +159,17 @@
         }
 
         // Der E-Mail-Server ist zwei Dienste auf zwei Ports (25
-        // und 110) und wird trotzdem mit EINEM Schalter geschaltet.
+        // und 110, mit TLS 465 und 995) und wird trotzdem mit EINEM
+        // Schalter geschaltet.
         if (mail) {
           if (laeuft && mail.laeuft(node)) mail.serverAn(node);
           else mail.serverAus(node);
+        }
+
+        // Die Zertifizierungsstelle: ein Port (8200), ein Schalter.
+        if (zs) {
+          if (laeuft && zs.laeuft(node)) zs.serverAn(node);
+          else zs.serverAus(node);
         }
 
         /* Das automatische Routing (RIP). Nach demselben stumpfen
@@ -218,6 +225,9 @@
         const s = node.state || {};
         if (s.dhcpS) s.dhcpS.leases.clear();
         if (s.dnsCache) s.dnsCache.clear();
+        /* Warnungen, die jemand weggeklickt hat („Trotzdem fortfahren"),
+           gelten nur für diesen Durchgang — von vorn heißt von vorn. */
+        if (s.tlsAusnahmen) s.tlsAusnahmen = {};
         if (s.dhcpC) { for (const c of s.dhcpC.values()) engine.cancel(c.ev); s.dhcpC.clear(); }
         if (s.dnsOpen) { for (const o of s.dnsOpen.values()) engine.cancel(o.ev); s.dnsOpen.clear(); }
         /* Auch die NAT-Tabelle. Sie ist Laufzeitwissen wie alles
@@ -680,21 +690,27 @@
     /* `typ` ist 'A' (Vorgabe) oder 'MX'. Ein eigener Auflöser für
        MX wäre dieselbe Funktion mit einem anderen Feldnamen —
        dieselbe Frist, dieselbe Wiederholung, derselbe Port. */
-    function resolve(node, name, cb, typ) {
+    /* `server` (freiwillig): FRAGE DIESEN DNS und nicht den des
+       Geräts. So fragt die Zertifizierungsstelle — sie sucht sich den
+       DNS aus, dem sie glaubt (zs.js). Dann gilt auch kein
+       Zwischenspeicher: ein anderer DNS könnte etwas anderes wissen,
+       und genau das soll die Prüfung merken. */
+    function resolve(node, name, cb, typ, server) {
       name = String(name || '').trim().toLowerCase();
       const mx = typ === 'MX';
       const s = dnsv(node);
+      const dnsIp = server || node.dns;
 
       /* Der Zwischenspeicher gilt nur für A. Ein MX-Ergebnis ist
          ein NAME und keine Adresse; beides in einer Tabelle wäre
          der Fehler, bei dem später „www.schule.de" als Mailserver
          herauskommt. */
-      const c = mx ? null : s.dnsCache.get(name);
+      const c = (mx || server) ? null : s.dnsCache.get(name);
       if (c && c.exp > engine.now) {
         cb({ ok: true, ip: c.ip, name: name, cached: true });
         return;
       }
-      if (!node.dns) {
+      if (!dnsIp) {
         cb({ ok: false, name: name,
              why: 'Dieses Gerät kennt keinen DNS-Server. Trag einen bei den Einstellungen ein.' });
         return;
@@ -733,7 +749,7 @@
           return;
         }
         if (d.ip) {
-          s.dnsCache.set(name, { ip: d.ip, exp: engine.now + DNS_CACHE });
+          if (!server) s.dnsCache.set(name, { ip: d.ip, exp: engine.now + DNS_CACHE });
           fertig({ ok: true, ip: d.ip, name: name, from: m.from });
         } else {
           fertig({ ok: false, name: name,
@@ -743,14 +759,14 @@
 
       const frage = () => {
         tries++;
-        melde('dns-frage', node, { name: name, typ: mx ? 'MX' : 'A', server: node.dns, try: tries });
-        stack.sendUdp(node, node.dns, sport, P.dns,
+        melde('dns-frage', node, { name: name, typ: mx ? 'MX' : 'A', server: dnsIp, try: tries });
+        stack.sendUdp(node, dnsIp, sport, P.dns,
           mx ? { art: 'frage', typ: 'MX', name: name } : { art: 'frage', name: name });
-        const ev = engine.at(DNS_WAIT * (stack.fern(node, node.dns) ? stack.FERN_FAKTOR : 1), () => {
+        const ev = engine.at(DNS_WAIT * (stack.fern(node, dnsIp) ? stack.FERN_FAKTOR : 1), () => {
           if (!s.dnsOpen.has(sport)) return;
           if (tries < DNS_TRIES) { s.dnsOpen.get(sport).ev = null; frage(); }
           else fertig({ ok: false, name: name,
-                        why: 'Der DNS-Server ' + node.dns + ' hat nicht geantwortet.' });
+                        why: 'Der DNS-Server ' + dnsIp + ' hat nicht geantwortet.' });
         }, 'dns-frist', node.id);
         const o = s.dnsOpen.get(sport);
         if (o) o.ev = ev; else s.dnsOpen.set(sport, { ev: ev, cb: cb });
@@ -824,8 +840,14 @@
        zwar eine Funktionsdeklaration und damit schon da, aber
        hier unten sieht man, dass er nichts anderes von dieser
        Datei bekommt als den Auflöser. */
+    /* TLS zuerst: Browser, Mail und Zertifizierungsstelle stecken
+       alle darauf. */
+    const tls = window.Tls
+      ? window.Tls.erzeugen(engine, netz, stack, {})
+      : null;
+
     const http = window.Http
-      ? window.Http.erzeugen(engine, netz, stack, { resolve: resolve })
+      ? window.Http.erzeugen(engine, netz, stack, { resolve: resolve, tls: tls })
       : null;
 
     /* Und E-Mail, nach demselben Muster. Es bekommt denselben
@@ -833,7 +855,7 @@
        seines eigenen Servers, einmal für den MX-Eintrag einer
        fremden Domain. */
     const mail = window.Mail
-      ? window.Mail.erzeugen(engine, netz, stack, { resolve: resolve })
+      ? window.Mail.erzeugen(engine, netz, stack, { resolve: resolve, tls: tls })
       : null;
 
     /* Der Streaming-Server braucht beide: den Browser-Teil von
@@ -843,9 +865,16 @@
       ? window.Stream.erzeugen(engine, netz, stack, { http: http, mail: mail })
       : null;
 
+    /* Die Zertifizierungsstelle (zs.js): sie fragt DNS (`resolve` mit
+       eigenem Server), besucht Webserver (`http.holen`) und redet
+       selbst auf Port 8200. */
+    const zs = window.Zs && http
+      ? window.Zs.erzeugen(engine, netz, stack, { resolve: resolve, http: http, tls: tls })
+      : null;
+
     return {
       start, stop, sync, reset, resolve, erneuern,
-      leaseOf, fragtGerade, leases, dnsCache, http, mail, stream,
+      leaseOf, fragtGerade, leases, dnsCache, http, mail, stream, tls, zs,
       get laeuft() { return laeuft; }
     };
   }

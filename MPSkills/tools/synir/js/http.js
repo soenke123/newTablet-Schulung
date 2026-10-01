@@ -47,12 +47,26 @@
    `formLesen` und `senden` von hier benutzt. Grund:
    PLAN-SICHERHEIT, Schritt 2 — es soll im Mitschnitt etwas
    Geheimes geben, das über HTTP läuft.
+
+   ── https:// (seit 2026-10-01, PLAN-SICHERHEIT Schritt 4) ─────
+   Dieselbe Anfrage, nur durch die TLS-Schale (`tls.js`): `holen`
+   verbindet mit `tls.verbinde`, wenn die Adresse `https://` hat
+   (Port 443). Ein Fehler im Handschlag kommt als `{ ok: false,
+   tls: { code, text, zertifikat } }` zurück — der Browser macht
+   daraus die Warnseite. `ausnahmeMerken` ist „Trotzdem fortfahren".
+   Server: `httpsSchalten` öffnet 443 NUR mit Haken UND Zertifikat.
+   `pruefAntwort` beantwortet den Prüfbesuch der Zertifizierungsstelle.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
   'use strict';
 
   const PORT = 80;
+  const HTTPS_PORT = 443;
+  /* Unter diesem Pfad antwortet ein Server beim Antrag auf ein
+     Zertifikat mit dem Einmalwort der Zertifizierungsstelle
+     (zs.js) — damit beweist er, dass der Name auf SEIN Gerät zeigt. */
+  const PRUEF_PFAD = '/.well-known/zs-pruefung';
   const ORDNER = '/webserver';          // wie in Filius (`WebServer.java`)
   const START = 'index.html';
 
@@ -125,6 +139,7 @@
 
   function erzeugen(engine, netz, stack, dienste) {
     const D = window.Dateien;
+    const tls = dienste && dienste.tls;
 
     /* Installiert UND gestartet UND das Gerät an — die Bedingung
        steht in `netz.dienstLaeuft`, weil die Fläche dieselbe
@@ -148,8 +163,8 @@
 
     /* ═══ Der Server ═════════════════════════════════════════ */
 
-    function serverAn(node) {
-      stack.tcpHoeren(node, PORT, (conn) => {
+    function annahme(node) {
+      return (conn) => {
         let puffer = '';
         conn.onDaten((text) => {
           puffer += text;
@@ -159,14 +174,50 @@
           puffer = '';
           antworten(node, conn, anfrage);
         });
-      }, 'Webserver');
+      };
     }
 
-    const serverAus = (node) => stack.tcpNichtHoeren(node, PORT);
+    function serverAn(node) {
+      stack.tcpHoeren(node, PORT, annahme(node), 'Webserver');
+      httpsSchalten(node, netz.webConf(node), annahme(node), 'Webserver (HTTPS)');
+    }
+
+    /* ─── Port 443 ────────────────────────────────────────────────
+       Für Webserver UND Streaming-Server dieselbe Regel: HTTPS läuft
+       NUR, wenn der Betreiber den Haken gesetzt hat UND das Gerät ein
+       Zertifikat hat. Ohne beides hört auf 443 niemand — HTTP ist der
+       Standard, HTTPS muss man sich verdienen. Port 80 bleibt in
+       jedem Fall offen: man soll beides vergleichen können. */
+    function httpsSchalten(node, conf, handler, programm) {
+      if (tls && conf && conf.https && netz.zertGueltig(node)) tls.hoeren(node, HTTPS_PORT, handler, programm);
+      else stack.tcpNichtHoeren(node, HTTPS_PORT);
+    }
+
+    /* Läuft gerade ein Antrag auf ein Zertifikat, lauscht das Gerät
+       VORÜBERGEHEND selbst auf Port 80 (zs.js) — `sync()` darf ihm
+       das Ohr nicht abdrehen. */
+    function serverAus(node) {
+      const s = node.state || {};
+      if (!s.zsAufgabe) stack.tcpNichtHoeren(node, PORT);
+      stack.tcpNichtHoeren(node, HTTPS_PORT);
+    }
+
+    /* Das Einmalwort der Zertifizierungsstelle — oder `null`, wenn
+       gerade kein Antrag läuft oder der Pfad ein anderer ist. */
+    function pruefAntwort(node, pfad) {
+      const s = node.state;
+      return s && s.zsAufgabe && String(pfad).split('?')[0] === PRUEF_PFAD ? s.zsAufgabe : null;
+    }
 
     function antworten(node, conn, roh) {
       const kopf = zerlegeAnfrage(roh);
       if (!kopf) { senden(node, conn, 400, 'text/plain', 'Diese Anfrage verstehe ich nicht.'); return; }
+      const pruef = kopf.methode === 'GET' ? pruefAntwort(node, kopf.pfad) : null;
+      if (pruef) {
+        notieren(node, 'GET ' + kopf.pfad + '  →  200  (Prüfbesuch der Zertifizierungsstelle)');
+        senden(node, conn, 200, 'text/plain', pruef);
+        return;
+      }
       if (kopf.methode !== 'GET') {
         notieren(node, kopf.methode + ' ' + kopf.pfad + '  →  501');
         senden(node, conn, 501, 'text/plain', 'Nur GET kann dieser Server.');
@@ -330,19 +381,27 @@
     /* `www.schule.de:8080/unterordner/seite.html` in seine drei
        Teile. Ohne Port ist es 80 — das ist eine Eigenschaft von
        HTTP und keine Entscheidung, die jemand treffen müsste. */
-    function zerlegeAdresse(text) {
+    /* `vorgabe` ('https') gilt, wenn die Adresse keinen Vorsatz hat —
+       der Browser trägt ihn aus dem Schloss-Feld vor dem Eingabefeld
+       ein. `schema` steht NUR bei https im Ergebnis: http ist der
+       Normalfall und braucht kein Feld. */
+    function zerlegeAdresse(text, vorgabe) {
       let s = String(text || '').trim();
       if (!s) return null;
-      s = s.replace(/^https?:\/\//i, '');
+      let https = vorgabe === 'https';
+      const v = /^(https?):\/\//i.exec(s);
+      if (v) { https = v[1].toLowerCase() === 'https'; s = s.slice(v[0].length); }
       const schraeg = s.indexOf('/');
       const wirt = schraeg < 0 ? s : s.slice(0, schraeg);
       const pfad = schraeg < 0 ? '/' : s.slice(schraeg);
       const doppel = wirt.lastIndexOf(':');
       const host = doppel > 0 ? wirt.slice(0, doppel) : wirt;
-      const port = doppel > 0 ? parseInt(wirt.slice(doppel + 1), 10) : PORT;
+      const port = doppel > 0 ? parseInt(wirt.slice(doppel + 1), 10) : (https ? HTTPS_PORT : PORT);
       if (!host) return null;
       if (!(port > 0 && port < 65536)) return null;
-      return { host: host, port: port, pfad: pfad || '/' };
+      const z = { host: host, port: port, pfad: pfad || '/' };
+      if (https) z.schema = 'https';
+      return z;
     }
 
     /* Name oder Adresse? Eine Zahlenadresse geht direkt, ein Name
@@ -361,14 +420,25 @@
        `opt` (alles freiwillig): `methode` ('GET' oder 'POST') und
        `body` (der fertige Formulartext `feld=wert&…`). Cookies des
        Geräts für diesen Server gehen von selbst mit. */
+    /* `opt.ip` (die Zertifizierungsstelle) überspringt die Auflösung:
+       sie hat den Namen schon bei IHREM DNS nachgeschlagen und will
+       genau diese Adresse besuchen. */
     function holen(node, ziel, cb, opt) {
       opt = opt || {};
-      aufloesen(node, ziel.host, (fehler, ip) => {
+      const https = ziel.schema === 'https';
+      const los = (fehler, ip) => {
         if (fehler) { cb({ ok: false, grund: fehler }); return; }
         let fertig = false;
-        const conn = stack.tcpVerbinde(node, ip, ziel.port, 'Webbrowser', (err, c) => {
+        const verbunden = (err, c, info) => {
           if (err) {
-            if (!fertig) { fertig = true; cb({ ok: false, grund: 'Server konnte nicht erreicht werden!' }); }
+            /* Ein Fehler im Handschlag trägt seinen Grund (`info`) —
+               die Seite zeigt dafür die Warnung. Alles andere ist
+               „nicht erreichbar", wie bei Filius. */
+            if (!fertig) {
+              fertig = true;
+              cb(info ? { ok: false, grund: err, tls: info }
+                      : { ok: false, grund: 'Server konnte nicht erreicht werden!' });
+            }
             return;
           }
           let puffer = '';
@@ -381,7 +451,7 @@
             c.schliessen();
             if (antwort.cookie) antwort.cookie.forEach(z => cookieMerken(node, ziel, z));
             cb({ ok: true, status: antwort.status, typ: antwort.typ,
-                 koerper: antwort.koerper, von: ip, ort: antwort.ort });
+                 koerper: antwort.koerper, von: ip, ort: antwort.ort, tls: c.tls || null });
           });
           const methode = opt.methode === 'POST' ? 'POST' : 'GET';
           const body = methode === 'POST' ? String(opt.body || '') : '';
@@ -393,13 +463,35 @@
                      ? 'Content-Type: application/x-www-form-urlencoded\r\n'
                        + 'Content-Length: ' + body.length + '\r\n' : '')
                  + 'Connection: close\r\n\r\n' + body);
-        });
+        };
+        const conn = https && tls
+          ? tls.verbinde(node, ip, ziel.port, 'Webbrowser',
+                         { sni: ziel.host, ausnahme: ausnahme(node, ziel) }, verbunden)
+          : stack.tcpVerbinde(node, ip, ziel.port, 'Webbrowser', verbunden);
         if (conn) conn.onZu((grund) => {
           if (fertig) return;
           fertig = true;
           cb({ ok: false, grund: grund || 'Die Verbindung wurde geschlossen, bevor etwas kam.' });
         });
-      });
+      };
+      if (opt.ip) los(null, opt.ip); else aufloesen(node, ziel.host, los);
+    }
+
+    /* ─── „Trotzdem fortfahren" ───────────────────────────────────
+       Wer eine Zertifikatswarnung wegklickt, bekommt für diesen
+       Server (Name und Port) eine Ausnahme — nur auf diesem Gerät
+       und nur, solange das Netz läuft (node.state, nicht im
+       Speicherformat). Verschlüsselt wird dann weiter; man weiß
+       nur nicht mehr, MIT WEM. */
+    const ausnahmeKey = (ziel) => String(ziel.host).toLowerCase() + ':' + ziel.port;
+    function ausnahme(node, ziel) {
+      const s = node.state || (node.state = {});
+      return !!(s.tlsAusnahmen && s.tlsAusnahmen[ausnahmeKey(ziel)]);
+    }
+    function ausnahmeMerken(node, ziel) {
+      const s = node.state || (node.state = {});
+      if (!s.tlsAusnahmen) s.tlsAusnahmen = {};
+      s.tlsAusnahmen[ausnahmeKey(ziel)] = true;
     }
 
     function zerlegeAntwort(roh) {
@@ -440,9 +532,9 @@
 
     function seite(node, ziel, opt, sprung, teile, cb) {
       holen(node, ziel, (r) => {
-        if (!r.ok) { cb({ ok: false, grund: r.grund, ziel: ziel }); return; }
+        if (!r.ok) { cb({ ok: false, grund: r.grund, ziel: ziel, tls: r.tls || null }); return; }
         teile.push({ pfad: ziel.pfad, status: r.status, typ: r.typ, laenge: r.koerper.length,
-                     methode: opt.methode === 'POST' ? 'POST' : 'GET' });
+                     methode: opt.methode === 'POST' ? 'POST' : 'GET', https: ziel.schema === 'https' });
 
         if ((r.status === 301 || r.status === 302 || r.status === 303) && r.ort && sprung < 4) {
           const neu = zerlegeAdresse(adresseAufloesen(adresseVon(ziel), r.ort) || '');
@@ -450,7 +542,7 @@
         }
 
         if (r.status !== 200 || !/text\/html/.test(r.typ)) {
-          cb({ ok: true, status: r.status, ziel: ziel, teile: teile,
+          cb({ ok: true, status: r.status, ziel: ziel, teile: teile, tls: r.tls || null,
                html: r.status === 200 ? alsSeite(r.typ, r.koerper) : r.koerper });
           return;
         }
@@ -464,22 +556,26 @@
         }));
 
         let rest = offen.length;
-        if (!rest) { cb(fertigeSeite(r.koerper, [], teile, ziel)); return; }
+        if (!rest) { cb(fertigeSeite(r.koerper, [], teile, ziel, r.tls)); return; }
 
         const geholt = [];
         for (const o of offen) {
-          holen(node, { host: ziel.host, port: ziel.port, pfad: o.pfad }, (t) => {
+          holen(node, { host: ziel.host, port: ziel.port, pfad: o.pfad, schema: ziel.schema }, (t) => {
             geholt.push({ v: o.v, ok: t.ok && t.status === 200, inhalt: t.ok ? t.koerper : '' });
             teile.push({ pfad: o.pfad, status: t.ok ? t.status : 0,
-                         typ: t.ok ? t.typ : '—', laenge: t.ok ? t.koerper.length : 0 });
-            if (--rest === 0) cb(fertigeSeite(r.koerper, geholt, teile, ziel));
+                         typ: t.ok ? t.typ : '—', laenge: t.ok ? t.koerper.length : 0,
+                         https: ziel.schema === 'https' });
+            if (--rest === 0) cb(fertigeSeite(r.koerper, geholt, teile, ziel, r.tls));
           });
         }
       }, opt);
     }
 
     /* Die Adresse, wie sie oben im Browser steht (ohne `http://`). */
-    const adresseVon = (z) => z.host + (z.port !== PORT ? ':' + z.port : '') + z.pfad;
+    /* Bei https steht der Vorsatz dabei, bei http nicht — http ist
+       der Normalfall (und so lauteten alle Adressen bisher). */
+    const adresseVon = (z) => (z.schema === 'https' ? 'https://' : '') + z.host
+      + (z.port !== (z.schema === 'https' ? HTTPS_PORT : PORT) ? ':' + z.port : '') + z.pfad;
 
     /* Wohin zeigt ein Verweis, gesehen von der Seite `von` aus?
        Absolut (`/filme`), relativ (`konto`) oder mit Adresse
@@ -488,18 +584,19 @@
     function adresseAufloesen(von, href) {
       const h = String(href || '').trim();
       if (!h || h.charAt(0) === '#') return null;
-      if (/^https?:\/\//i.test(h)) return h.replace(/^https?:\/\//i, '');
+      if (/^https:\/\//i.test(h)) return h;
+      if (/^http:\/\//i.test(h)) return h.replace(/^http:\/\//i, '');
       if (/^[a-z][a-z0-9+.-]*:/i.test(h)) return null;
       const z = zerlegeAdresse(von);
       if (!z) return null;
       const pfad = h.charAt(0) === '/' ? h
         : window.Dateien.normieren(
             (z.pfad.slice(0, z.pfad.lastIndexOf('/') + 1) || '/') + h);
-      return adresseVon({ host: z.host, port: z.port, pfad: pfad });
+      return adresseVon({ schema: z.schema, host: z.host, port: z.port, pfad: pfad });
     }
 
-    const fertigeSeite = (quelle, geholt, teile, ziel) => ({
-      ok: true, status: 200, ziel: ziel, teile: teile,
+    const fertigeSeite = (quelle, geholt, teile, ziel, tlsInfo) => ({
+      ok: true, status: 200, ziel: ziel, teile: teile, tls: tlsInfo || null,
       quelle: quelle, html: einsetzen(quelle, geholt)
     });
 
@@ -568,6 +665,7 @@
 
     return {
       PORT, ORDNER, START,
+      HTTPS_PORT, PRUEF_PFAD, httpsSchalten, pruefAntwort, ausnahme, ausnahmeMerken,
       laeuft, serverAn, serverAus, holen, seiteHolen, zerlegeAdresse,
       zerlegeAnfrage, zerlegeAntwort, verweise, einsetzen, fehlerSeite,
       anfrageLesen, formLesen, formSchreiben, antwortText, cookies,
@@ -576,5 +674,5 @@
     };
   }
 
-  window.Http = { erzeugen: erzeugen, SEITE: SEITE, STIL: STIL, PORT: PORT, ORDNER: ORDNER };
+  window.Http = { erzeugen: erzeugen, SEITE: SEITE, STIL: STIL, PORT: PORT, HTTPS_PORT: HTTPS_PORT, ORDNER: ORDNER };
 })();

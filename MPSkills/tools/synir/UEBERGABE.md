@@ -6,6 +6,49 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 000e · HTTPS und Zertifizierungsstelle — Schritt 4 des Sicherheitsplans (2026-10-01)
+
+Berührt: neu `js/tls.js`, `js/zs.js`, `js/prog-zert.js`; `js/http.js` (https://, 443, `holen` mit TLS und
+`opt.ip`, Ausnahmen, `pruefAntwort`), `js/stream.js`, `js/mail.js` (465/995, Konto-Haken), `js/dienste.js`
+(`resolve` mit eigenem DNS-Server, `tls`/`zs` erzeugen, sync), `js/netz.js` (`zsConf`, `zertConf`,
+`zertGueltig`, `vertrauen`, Speicherformat, Dienst `zs`), `js/mitschnitt.js` (TLS/ZS), `js/prog-web.js`
+(Browser, Warnseite), `js/prog-mail.js`, `js/geraet.js` (Programm `zertstelle`), `js/flaeche.js` (Marke „ZS"),
+`css/app.css`, `index.html` (Skripte, Symbole `schloss` `schild` `zertstelle`, Chips TLS/ZS, `?v=…g`),
+`tests/kerntest.js` (1139 grün), `tests/uitest.js` (Abschnitt *HTTPS und Zertifizierungsstelle*, 39 Prüfungen; gesamt 911 ok, 14 bekannte),
+`PLAN-SICHERHEIT.md` (Schritt 4 abgehakt, Entscheidungen und Abweichungen dort), `LIESMICH.md` (Aufbau).
+Neue Bilder: `tests/shot-zs.png`, `shot-https-server.png`, `shot-https-warnung.png`, `shot-https-vertrauen.png`,
+`shot-https-sicher.png`, `shot-https-mitschnitt.png`.
+
+* ⭐ **Das Modell (so vom Nutzer entschieden):** HTTP ist der Standard. Ein Server bekommt HTTPS nur mit
+  Zertifikat einer **Zertifizierungsstelle (ZS)** — ein Programm auf jedem Gerät, **keine eingebaute**. Der
+  Browser hat eine **leere Vertrauensliste** und KENNT eine ZS erst, wenn man sie unter „Zertifikate" einträgt
+  (Fingerabdruck vergleichen). Antrag → Prüfbesuch (DNS **der ZS**, Einmalwort auf Port 80) → **Klick** des
+  ZS-Betreibers → „Zertifikat abholen" → Haken HTTPS. Ablauf, Wörter und Abweichungen: PLAN-SICHERHEIT Schritt 4.
+* ⭐ **Fachlich:** TLS-1.3-Form (ClientHello mit Servername im Klartext → ServerHello mit Zertifikat und Beweis →
+  verschlüsselte Datensätze), Diffie-Hellman (p = 2³¹−1), RSA-Unterschriften (≈ 58 Bit, `BigInt`), Stromchiffre mit
+  Prüfsumme. **Spielzeug** — steht im Kopf von `tls.js`. Geprüft wird in dieser Reihenfolge: Aussteller bekannt ·
+  Unterschrift der ZS · Name · Beweis (privater Schlüssel). Fehlercodes: `unbekannt` `signatur` `name` `beweis`
+  `kaputt` `kein-tls` `alert`. Kein Zertifikat für Zahlenadressen. Unter einer IP kein SNI.
+* ⚠️ **Eine TLS-Verbindung = ein Handschlag.** Eine Seite mit drei Bildern macht vier Handschläge (keine
+  Sitzungswiederaufnahme, HTTP/1.0). Im Mitschnitt viele Zeilen — das ist gewollt und erklärt sich im Plan.
+* Zustandslose Hilfe für Schritt 5 (VPN): `Tls.Krypto.versiegeln(text, schlüssel, richtung, nr)` / `oeffnen(…)`,
+  `dhAnteil`, `dhGeheim`, `sitzungsschluessel`, `schluesselpaar`, `unterschreiben`, `unterschriftPasst`.
+* Mail: Haken im Konto schaltet 995/465 (nur, wenn die Ports noch die der alten Einstellung sind). Mailserver:
+  465/995 nur mit Haken **und** Zertifikat. Der Fehlertext bei unbekanntem Aussteller nennt den Weg
+  („Webbrowser → Zertifikate"). Ein Mail-Programm kennt kein „Trotzdem fortfahren".
+* ⚠️ Nicht verschlüsselt, bewusst: Passwort-Mails des Streaming-Servers, Weitergabe zwischen Mailservern.
+* Browser: der Vorsatz ist ein Knopf (auch getippter Vorsatz wandert nach vorn, **ohne neu zu zeichnen**), `br.geladen`
+  ist die letzte geholte Adresse (Verlauf und relative Links), `br.adresse` der Text im Feld. Schloss
+  `wb-sl--sicher|http|ausnahme`, Warnseite `.wb-warn`, Vertrauensliste in `prog-zert.js`.
+* ⚠️ Prüfstände: kerntest 1139 grün. Browser-Prüfstand: wie zuvor **14 umgebungsbedingte Fehlschläge** (Liste
+  unverändert, siehe 000d), in dieser Umgebung `NODE_PATH=/opt/node-tools/node_modules` und
+  `CHROME_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. Der Lauf schreibt alle `shot-*.png` neu;
+  eingecheckt sind nur die, die zu dieser Runde gehören.
+* Nächster Schritt laut Plan: 3 · WLAN-Lauschen (erst `schichten.js`/`netz.js` zur WLAN-Zustellung lesen),
+  dann 5 · VPN (braucht `tls.js`).
+
+---
+
 ## 000d · Streaming-Server — Schritt 2 des Sicherheitsplans (2026-09-30)
 
 Berührt: neu `js/stream.js`; `js/http.js` (POST, Cookies, Weiterleitung, `anfrageLesen`, `formLesen`,

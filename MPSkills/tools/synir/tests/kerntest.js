@@ -20,7 +20,7 @@ vm.createContext(sandbox);
    und ungenauer. Das geht nur, weil die Datei beim LADEN kein
    DOM anfasst; wer das ändert, muss sie hier herausnehmen. */
 for (const f of ['util.js', 'engine.js', 'netz.js', 'verlauf.js', 'nat.js', 'tcp.js', 'rip.js', 'logos.js', 'dateien.js',
-                 'http.js', 'mail.js', 'filme.js', 'stream.js', 'schichten.js', 'dienste.js', 'internet.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
+                 'http.js', 'mail.js', 'filme.js', 'stream.js', 'tls.js', 'zs.js', 'schichten.js', 'dienste.js', 'internet.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
                  'prog-dateien.js', 'szenarien.js']) {
   vm.runInContext(fs.readFileSync(path.join(BASE, f), 'utf8'), sandbox, { filename: f });
 }
@@ -5500,6 +5500,460 @@ section('Streaming-Server');
   ok('Konten, Likes und Kommentare stehen im Speicherformat',
      sp && sp.streamServer && sp.streamServer.konten.length === 1 && sp.streamServer.kommentare.length === 1
      && sp.streamServer.name === 'Annas Flix', sp && JSON.stringify(sp.streamServer).slice(0, 120));
+}
+
+/* ═══ HTTPS und Zertifizierungsstelle (PLAN-SICHERHEIT, Schritt 4) ═══ */
+section('TLS: die Rechenwerkzeuge');
+{
+  const K = sandbox.Tls.Krypto;
+  const istPrim = (n) => { if (n < 2) return false; for (let d = 2; d * d <= n; d++) if (n % d === 0) return false; return true; };
+  ok('alle 24 Primzahlen sind Primzahlen und nicht ≡ 1 (mod 65537)',
+     K.PRIMZAHLEN.length === 24 && K.PRIMZAHLEN.every(p => istPrim(p) && p % 65537 !== 1));
+  ok('p = 2³¹−1 ist prim', istPrim(2147483647) && K.P === '2147483647');
+
+  let zaehler = 5;
+  const zuf = (n) => (zaehler = (zaehler * 7919 + 13) % 100003) % n;
+  const k = K.schluesselpaar(zuf);
+  ok('RSA: ein Schlüsselpaar mit etwa 58 Bit', k && BigInt(k.n) > (BigInt(1) << BigInt(56)) && k.e === '65537', JSON.stringify(k));
+  const sig = K.unterschreiben('Hallo Welt', k);
+  ok('Unterschrift passt zum Text', K.unterschriftPasst('Hallo Welt', sig, k));
+  ok('… und nur zu DIESEM Text', !K.unterschriftPasst('Hallo Welt!', sig, k));
+  const k2 = K.schluesselpaar((n) => (zuf(n) + 3) % n);
+  ok('… und nur zu DIESEM Schlüssel', !K.unterschriftPasst('Hallo Welt', sig, { n: k2.n, e: k2.e }));
+  ok('Unsinn als Unterschrift wirft nicht', !K.unterschriftPasst('x', 'kein Zahl', k) && !K.unterschriftPasst('x', '-5', k));
+  ok('Fingerabdruck sieht aus wie A3F2-91BC-77D0-14EE', /^[0-9A-F]{4}(-[0-9A-F]{4}){3}$/.test(K.fingerabdruck(k)));
+
+  // Diffie-Hellman: beide kommen auf dasselbe Geheimnis, der Mitleser nicht
+  const A = K.dhAnteil(123457), B = K.dhAnteil(987651);
+  ok('Diffie-Hellman: g^(ab) auf beiden Seiten gleich', K.dhGeheim(B, 123457) === K.dhGeheim(A, 987651));
+  ok('… und nicht gleich dem, was auf der Leitung steht', K.dhGeheim(B, 123457) !== A && K.dhGeheim(B, 123457) !== B);
+
+  const key = K.sitzungsschluessel('4711', 'aa', 'bb');
+  const text = 'Grüße 🔒 — Passwort=geheim\r\n\r\nÄÖÜ';
+  const v = K.versiegeln(text, key, 'c', 0);
+  ok('Datenstrom: Klartext → Chiffre → Klartext (auch Umlaute und Emoji)', K.oeffnen(v, key, 'c', 0) === text);
+  ok('die Chiffre enthält den Klartext nicht', v.chiffre.indexOf('geheim') < 0 && v.chiffre.indexOf('Pass') < 0);
+  ok('falscher Schlüssel → null (Prüfsumme)', K.oeffnen(v, K.sitzungsschluessel('4712', 'aa', 'bb'), 'c', 0) === null);
+  ok('falsche Richtung → null', K.oeffnen(v, key, 's', 0) === null);
+  ok('falsche laufende Nummer → null', K.oeffnen(v, key, 'c', 1) === null);
+  ok('verändertes Byte → null', K.oeffnen({ chiffre: 'A' + v.chiffre.slice(1), tag: v.tag }, key, 'c', 0) === null);
+  ok('dieselbe Nachricht, andere Nummer → andere Chiffre',
+     K.versiegeln(text, key, 'c', 1).chiffre !== v.chiffre);
+  const gross = 'x'.repeat(100000);
+  ok('100 000 Zeichen gehen durch', K.oeffnen(K.versiegeln(gross, key, 's', 7), key, 's', 7) === gross);
+}
+
+section('HTTPS: Zertifizierungsstelle, Browser, Server');
+function httpsNetz(seed) {
+  const b = bau(seed);
+  const dienste = new sandbox.Dienste(b.engine, b.netz, b.stack, {});
+  const sw = b.netz.addNode('switch', 300, 200);
+  const c  = b.netz.addNode('host',   100, 100);   // Browser
+  const s  = b.netz.addNode('server', 500, 100);   // Webserver
+  const z  = b.netz.addNode('server', 500, 300);   // Zertifizierungsstelle
+  const d  = b.netz.addNode('server', 100, 300);   // DNS
+  const x  = b.netz.addNode('server', 300, 400);   // der Angreifer
+  konf(c, 0, '192.168.1.10'); konf(s, 0, '192.168.1.20'); konf(z, 0, '192.168.1.30');
+  konf(d, 0, '192.168.1.5'); konf(x, 0, '192.168.1.40');
+  [c, s, z, d, x].forEach((n, i) => { b.netz.addCable(n.id, 0, sw.id, i); n.dns = '192.168.1.5'; });
+  d.software = ['dns'];
+  const dc = b.netz.dnsConf(d); dc.on = true;
+  dc.records = [{ name: 'www.schule.de', ip: '192.168.1.20' }, { name: 'fremd.schule.de', ip: '192.168.1.40' },
+                { name: 'zs.schule.de', ip: '192.168.1.30' }];
+  s.software = ['webserver'];
+  dienste.http.standardDateien(s);
+  b.netz.webConf(s).on = true;
+  z.software = ['zertstelle'];
+  c.software = ['browser', 'mail']; x.software = ['webserver'];
+  dienste.http.standardDateien(x);
+  b.netz.webConf(x).on = true;
+  dienste.start();
+  dienste.sync();
+  return Object.assign(b, { dienste, c, s, z, d, x, http: dienste.http, zs: dienste.zs });
+}
+{
+  const { engine, netz, stack, mit, dienste, c, s, z, d, x, http, zs } = httpsNetz();
+  const K = sandbox.Tls.Krypto;
+  const laufe = (s_) => engine.runUntil(engine.now + (s_ || 30) * SEC);
+  const lauscht = (n, p) => stack.sockets(n).some(r => r.proto === 'TCP' && new RegExp(':' + p + '$').test(r.lokal));
+  const hol = (adr, opt) => { let r = null; http.seiteHolen(c, adr, (q) => r = q, opt); laufe(40); return r; };
+
+  // ── Vorher: nur HTTP
+  ok('ohne Zertifizierungsstelle: nichts hört auf 8200', !lauscht(z, 8200));
+  netz.zsConf(z).on = true;
+  dienste.sync();
+  ok('die Zertifizierungsstelle lauscht auf 8200 — als eigenes Programm', lauscht(z, 8200)
+     && stack.sockets(z).some(r => r.programm === 'Zertifizierungsstelle'));
+  ok('die Marke „zs" steht am Gerät', netz.dienstLaeuft(z, 'zs'));
+  ok('der Schlüssel der ZS entstand beim Start', !!netz.zsConf(z).schluessel);
+
+  netz.webConf(s).https = true;
+  dienste.sync();
+  ok('Haken ohne Zertifikat: auf 443 hört NIEMAND', !lauscht(s, 443) && !netz.zertGueltig(s));
+  const ohne = hol('https://www.schule.de');
+  ok('https ohne Zertifikat: die Seite sagt, dass die Verbindung nicht zustande kam',
+     ohne && !ohne.ok, ohne && JSON.stringify(ohne).slice(0, 150));
+  ok('http geht trotzdem', (() => { const r = hol('www.schule.de'); return r && r.ok && /Der Webserver läuft/.test(r.html); })());
+
+  // ── Antrag
+  let antr = 'nicht gerufen';
+  zs.beantragen(s, 'www.schule.de', '192.168.1.30', (f) => antr = f);
+  laufe(60);
+  ok('⭐ Antrag: die Prüfung besteht (DNS → IP → Einmalwort)', antr === null, String(antr));
+  const zc = netz.zertConf(s);
+  ok('der Server hat einen Schlüssel und einen Antrag Nr. 1 (wartet)',
+     zc.schluessel && zc.antrag && zc.antrag.nr === 1 && zc.antrag.status === 'wartet', JSON.stringify(zc.antrag));
+  const zsa = netz.zsConf(z).antraege;
+  ok('bei der ZS: Name geprüft, IP des Namens notiert, wartet auf den Klick',
+     zsa.length === 1 && zsa[0].status === 'wartet' && zsa[0].ip === '192.168.1.20' && zsa[0].name === 'www.schule.de', JSON.stringify(zsa));
+  ok('der Server hat nicht selbst auf Port 80 gelauscht, während der Webserver lief', !node_hat80(s));
+  function node_hat80(n) { return !!(n.state && n.state.zsEigenerPort); }
+  ok('nach dem Antrag ist das Einmalwort weg', !(s.state && s.state.zsAufgabe));
+  ok('Zertifikat gibt es noch nicht — und HTTPS auch nicht', !zc.zert && !netz.zertGueltig(s));
+
+  let st = null;
+  zs.abholen(s, (f, q) => st = f || q);
+  laufe(30);
+  ok('Abholen vor der Freigabe: „wartet"', st === 'wartet', String(st));
+
+  ok('ZS-Betreiber klickt „Freigeben"', zs.freigeben(z, 1));
+  zs.abholen(s, (f, q) => st = f || q);
+  laufe(30);
+  ok('Abholen nach der Freigabe: „ausgestellt"', st === 'ausgestellt', String(st));
+  ok('der Server hat jetzt ein Zertifikat', netz.zertGueltig(s) && zc.zert.name === 'www.schule.de'
+     && zc.zert.aussteller === 'Zertifizierungsstelle', JSON.stringify(zc.zert));
+  ok('das Zertifikat trägt die Unterschrift der ZS (gegen deren Schlüssel geprüft)',
+     K.unterschriftPasst(K.zertText(zc.zert), zc.zert.signatur, netz.zsConf(z).schluessel));
+  ok('der private Schlüssel steht NICHT im Zertifikat', JSON.stringify(zc.zert).indexOf(zc.schluessel.d) < 0);
+  dienste.sync();
+  ok('Haken + Zertifikat: jetzt lauscht der Server auf 443 UND weiter auf 80', lauscht(s, 443) && lauscht(s, 80));
+
+  // ── Browser: leere Vertrauensliste
+  ok('die Vertrauensliste ist am Anfang leer', netz.vertrauen(c).length === 0);
+  const unb = hol('https://www.schule.de');
+  ok('⭐ https mit leerer Vertrauensliste: Warnung „unbekannt" — mit Zertifikat und Grund',
+     unb && !unb.ok && unb.tls && unb.tls.code === 'unbekannt' && unb.tls.zertifikat
+     && /Vertrauensliste/.test(unb.grund) && unb.tls.zertifikat.name === 'www.schule.de',
+     unb && JSON.stringify(unb.tls).slice(0, 200));
+
+  // ── Die ZS in die Vertrauensliste holen: Fingerabdruck vergleichen
+  let eintrag = null;
+  zs.zsHolen(c, 'zs.schule.de', (f, e) => eintrag = f || e);
+  laufe(30);
+  ok('Vertrauensliste: die ZS wird über ihren NAMEN gefunden, Eintrag mit Fingerabdruck',
+     eintrag && eintrag.fp === K.fingerabdruck(netz.zsConf(z).schluessel) && eintrag.name === 'Zertifizierungsstelle', JSON.stringify(eintrag));
+  ok('der Fingerabdruck im Eintrag ist derselbe wie im Fenster der ZS', eintrag.fp === zs.eintragVon(z).fp);
+  zs.vertrauenAufnehmen(c, eintrag);
+  ok('Aufnehmen: ein Eintrag; zweimal aufnehmen ändert nichts', netz.vertrauen(c).length === 1 && !zs.vertrauenAufnehmen(c, eintrag));
+  ok('der private Schlüssel der ZS gelangt NICHT zum Browser', !/"d"/.test(JSON.stringify(netz.vertrauen(c))));
+
+  // ── Jetzt klappt https
+  const mitHttp = mit.view().length;
+  const sicher = hol('https://www.schule.de');
+  ok('⭐ https: die Seite kommt an — und trägt ein Schloss (tls-Info)',
+     sicher && sicher.ok && sicher.status === 200 && /Der Webserver läuft/.test(sicher.html)
+     && sicher.tls && !sicher.tls.fehler && sicher.tls.name === 'www.schule.de' && sicher.tls.version === 'TLS 1.3',
+     sicher && (sicher.grund || JSON.stringify(sicher.tls)));
+  ok('alle Anfragen der Seite (Seite, Stil, Bilder) gingen über https',
+     sicher && sicher.teile.length >= 3 && sicher.teile.every(t => t.https));
+  ok('die Adresse behält den Vorsatz', sicher && http.adresseVon(sicher.ziel) === 'https://www.schule.de/');
+
+  // ── Mitschnitt: Inhalt weg, wer mit wem bleibt
+  const neu = mit.view().slice(mitHttp);
+  const tcpDaten = (r) => { const p = r.frame && r.frame.payload; const t = p && p.payload; return (t && t.data) || ''; };
+  const auf443 = neu.filter(r => { const p = r.frame && r.frame.payload; const t = p && p.payload; return t && (t.dport === 443 || t.sport === 443); });
+  const alles443 = auf443.map(tcpDaten).join('\n');
+  ok('⭐ auf Port 443 steht die Seite NICHT im Klartext', alles443.length > 0
+     && !/Der Webserver läuft|<html|HTTP\/1\.1|GET \//.test(alles443));
+  ok('… aber der Servername im ClientHello (wer mit wem bleibt sichtbar)',
+     /"tls":"ClientHello"[^\n]*"sni":"www\.schule\.de"/.test(alles443));
+  ok('… und das Zertifikat im ServerHello (im Klartext, zum Lesen)',
+     /"tls":"ServerHello"[^\n]*"zertifikat":\{[^\n]*"name":"www\.schule\.de"/.test(alles443));
+  ok('… und der Rest sind „Daten"-Sätze', /"tls":"Daten"/.test(alles443));
+  ok('Zeilen auf 443 heißen TLS und tragen das Schloss',
+     auf443.some(r => r.proto === 'TLS' && /🔒/.test(r.info)), auf443.map(r => r.proto + '/' + r.info).slice(0, 6).join(' || '));
+  ok('Ports im Kopf: 443 hat einen Namen', (() => {
+     const r = auf443.find(q => q.proto === 'TLS');
+     const ls = r && mit.layers(r);
+     return ls && ls.some(l => l.fields.some(f => f[0] === 'Zielport' && /HTTPS/.test(f[1])) || l.fields.some(f => f[0] === 'Absenderport' && /HTTPS/.test(f[1])));
+  })());
+  ok('⭐ der Fund-Filter findet auf Port 443 nichts', !auf443.some(r => r.zugang));
+
+  // ── Name passt nicht
+  const ip = hol('https://192.168.1.20');
+  ok('⭐ https://<IP>: das Zertifikat gilt für den NAMEN → Warnung „name"',
+     ip && !ip.ok && ip.tls && ip.tls.code === 'name' && /www\.schule\.de/.test(ip.grund) && /192\.168\.1\.20/.test(ip.grund), ip && ip.grund);
+  ok('http://<IP> geht natürlich', (() => { const r = hol('http://192.168.1.20'); return r && r.ok; })());
+
+  // ── Trotzdem fortfahren
+  http.ausnahmeMerken(c, { host: '192.168.1.20', port: 443 });
+  const trotz = hol('https://192.168.1.20');
+  ok('⭐ „Trotzdem fortfahren": die Seite kommt, aber die Info sagt „name" und „ausnahme"',
+     trotz && trotz.ok && trotz.tls && trotz.tls.ausnahme === true && trotz.tls.fehler === 'name', trotz && (trotz.grund || JSON.stringify(trotz.tls)));
+  ok('die Ausnahme gilt nur für diesen Server (nicht für den Namen)', (() => {
+     const r = hol('https://www.schule.de'); return r && r.ok && r.tls && r.tls.ausnahme === false; })());
+  const nachNeustart = JSON.parse(JSON.stringify(netz.toJSON()));
+  ok('Ausnahmen stehen NICHT im Speicherformat', !/tlsAusnahmen/.test(JSON.stringify(nachNeustart)));
+
+  // ── Ein Angreifer: kopiert das Zertifikat, hat aber den Schlüssel nicht
+  const xc = netz.zertConf(x);
+  xc.schluessel = K.schluesselpaar((n) => (engine.randInt(n) + 1) % n);
+  xc.zert = JSON.parse(JSON.stringify(zc.zert));
+  netz.webConf(x).https = true;
+  netz.dnsConf(d).records[0].ip = '192.168.1.40';     // der Name zeigt jetzt auf den Angreifer
+  dienste.sync();
+  // das DNS-Ergebnis steht noch im Zwischenspeicher des Browsers
+  c.state.dnsCache.clear();
+  const falsch = hol('https://www.schule.de');
+  ok('⭐ kopiertes Zertifikat, falscher Schlüssel → „beweis" — Unterschrift und Name stimmen ja',
+     falsch && !falsch.ok && falsch.tls && falsch.tls.code === 'beweis', falsch && (falsch.grund || JSON.stringify(falsch.tls)));
+  ok('der Server kann es nicht beweisen — der Satz sagt es', falsch && /beweisen/.test(falsch.grund));
+  netz.dnsConf(d).records[0].ip = '192.168.1.20';
+  c.state.dnsCache.clear();
+
+  // ── Gefälschte Unterschrift
+  zc.zert.signatur = String(BigInt(zc.zert.signatur) + BigInt(1));
+  const geaendert = hol('https://www.schule.de');
+  ok('verändertes Zertifikat → „signatur"', geaendert && !geaendert.ok && geaendert.tls && geaendert.tls.code === 'signatur',
+     geaendert && geaendert.grund);
+  zc.zert.signatur = String(BigInt(zc.zert.signatur) - BigInt(1));
+  ok('… und wieder heil: es geht wieder', (() => { const r = hol('https://www.schule.de'); return r && r.ok; })());
+
+  // ── https auf einen Port, auf dem kein TLS gesprochen wird
+  const kein = hol('https://www.schule.de:80');
+  ok('⭐ https auf Port 80 (Webserver spricht kein TLS): Fehler „kein-tls" statt ewigem Warten',
+     kein && !kein.ok && kein.tls && kein.tls.code === 'kein-tls', kein && (kein.grund || JSON.stringify(kein.tls)));
+
+  // ── Ein falscher Haken: nur HTTP-Haken aus → 443 zu
+  netz.webConf(s).https = false;
+  dienste.sync();
+  ok('Haken wieder raus: 443 ist zu, 80 bleibt', !lauscht(s, 443) && lauscht(s, 80));
+  netz.webConf(s).https = true;
+  dienste.sync();
+
+  // ── Speicherformat
+  const sp = JSON.parse(JSON.stringify(netz.toJSON()));
+  const sS = sp.nodes.find(n => n.id === s.id), sZ = sp.nodes.find(n => n.id === z.id), sC = sp.nodes.find(n => n.id === c.id);
+  ok('Speicherformat: Zertifikat und Schlüssel des Servers', sS.zertifikat && sS.zertifikat.zert.name === 'www.schule.de'
+     && sS.zertifikat.schluessel && sS.zertifikat.antrag.status === 'ausgestellt');
+  ok('Speicherformat: die ZS mit Schlüssel und Anträgen', sZ.zsServer && sZ.zsServer.schluessel && sZ.zsServer.antraege.length === 1
+     && sZ.zsServer.on === true);
+  ok('Speicherformat: die Vertrauensliste des Browsers', sC.vertrauen && sC.vertrauen.length === 1 && sC.vertrauen[0].name === 'Zertifizierungsstelle');
+  ok('Speicherformat: HTTPS-Haken des Servers', sS.webServer.https === true);
+}
+
+section('HTTPS: Anträge, die scheitern');
+{
+  const { engine, netz, stack, mit, dienste, c, s, z, d, x, http, zs } = httpsNetz();
+  const laufe = (s_) => engine.runUntil(engine.now + (s_ || 30) * SEC);
+  netz.zsConf(z).on = true;
+  dienste.sync();
+  const antrag = (n, name, zsAdr) => { let r = 'nicht gerufen'; zs.beantragen(n, name, zsAdr === undefined ? '192.168.1.30' : zsAdr, (f) => r = f); laufe(60); return r; };
+
+  ok('kein Name → sagt es', /Namen ein/.test(antrag(s, '')));
+  ok('eine Zahlenadresse als Name → keine Zertifikate für IPs', /Zahlenadresse/.test(antrag(s, '192.168.1.20')));
+  ok('keine ZS eingetragen → sagt es', /Adresse der Zertifizierungsstelle/.test(antrag(s, 'www.schule.de', '')));
+  ok('ZS-Adresse, unter der keine ZS läuft → freundlicher Satz', /läuft keine Zertifizierungsstelle/.test(antrag(s, 'www.schule.de', '192.168.1.5')),
+     antrag(s, 'www.schule.de', '192.168.1.5'));
+  ok('ein Name, den der DNS der ZS nicht kennt → Grund steht da',
+     /gibt es den Namen „unbekannt\.schule\.de" nicht/.test(antrag(s, 'unbekannt.schule.de')), antrag(s, 'unbekannt.schule.de'));
+
+  // Name gehört dem Angreifer: x fragt nach dem Namen von s
+  const f1 = antrag(x, 'www.schule.de');
+  ok('⭐ ein Name, der auf einen ANDEREN zeigt: der Prüfbesuch scheitert am Einmalwort',
+     /kennt das Einmalwort nicht/.test(f1) && /192\.168\.1\.20/.test(f1), f1);
+  ok('bei der ZS steht er als „fehler" — ohne Freigabe-Knopf', netz.zsConf(z).antraege.some(a => a.status === 'fehler' && a.name === 'www.schule.de'));
+  ok('der Angreifer hat kein Zertifikat', !netz.zertConf(x).zert && !netz.zertGueltig(x));
+  ok('… und sein Antrag liegt nicht bei der ZS zur Freigabe', !netz.zertConf(x).antrag);
+  ok('der Server unter dem Namen hört das Einmalwort nur als Antwort auf den Besuch (kein Dauerzustand)', !(x.state && x.state.zsAufgabe));
+
+  // Webserver aus: der Antragsteller lauscht kurz selbst auf Port 80
+  netz.webConf(s).on = false;
+  dienste.sync();
+  ok('ohne Server auf Port 80: noch niemand auf 80', !stack.sockets(s).some(r => /:80$/.test(r.lokal)));
+  const f2 = antrag(s, 'www.schule.de');
+  ok('⭐ ohne Webserver geht der Antrag trotzdem (das Gerät lauscht kurz selbst auf 80)', f2 === null, String(f2));
+  ok('… und danach ist Port 80 wieder zu', !stack.sockets(s).some(r => /:80$/.test(r.lokal)));
+  ok('der Prüfbesuch steht im Zugriffsprotokoll des Geräts', http.zugriffe(s).some(l => /Prüfbesuch/.test(l)));
+
+  // Ablehnen
+  const nr = netz.zertConf(s).antrag.nr;
+  ok('ZS-Betreiber klickt „Ablehnen"', zs.ablehnen(z, nr));
+  let st = null; zs.abholen(s, (f, q) => st = f || q); laufe(30);
+  ok('Abholen: „abgelehnt" — mit Grund', st === 'abgelehnt' && /abgelehnt/.test(netz.zertConf(s).antrag.grund));
+  ok('ein abgelehnter Antrag lässt sich nicht freigeben', zs.freigeben(z, nr) === false);
+  ok('kein Zertifikat → kein HTTPS', !netz.zertGueltig(s));
+
+  // Gleichzeitig zwei Anträge: Nummern zählen hoch
+  const f3 = antrag(s, 'www.schule.de');
+  ok('ein zweiter Antrag bekommt eine neue Nummer', f3 === null && netz.zertConf(s).antrag.nr > nr, String(f3));
+  // Die ZS ist aus → niemand zu Hause
+  netz.zsConf(z).on = false; dienste.sync();
+  ok('ZS aus → Antrag scheitert freundlich', /keine Zertifizierungsstelle/.test(antrag(s, 'www.schule.de')));
+}
+
+section('HTTPS: Streaming-Server und E-Mail (TLS-Ports)');
+{
+  const { engine, netz, stack, mit, dienste, c, s, z, d, x, http, zs } = httpsNetz(5);
+  const K = sandbox.Tls.Krypto;
+  const laufe = (s_) => engine.runUntil(engine.now + (s_ || 30) * SEC);
+  const lauscht = (n, p) => stack.sockets(n).some(r => r.proto === 'TCP' && new RegExp(':' + p + '$').test(r.lokal));
+
+  // Der Server s: Streaming + Mail, mit Zertifikat für www.schule.de (dns für mail.schule.de dazu)
+  netz.webConf(s).on = false;
+  s.software = ['streamingserver', 'mailserver'];
+  const dc = netz.dnsConf(d); dc.records.push({ name: 'mail.schule.de', ip: '192.168.1.20' });
+  const sc = netz.streamConf(s); sc.on = true; sc.name = 'Annas Flix'; sc.mailserver = '192.168.1.20';
+  const ms = netz.mailConf(s); ms.on = true; ms.domain = 'schule.de';
+  ms.konten = [{ benutzer: 'anna', name: 'Anna', passwort: 'apfel', posteingang: [] },
+               { benutzer: 'bernd', name: 'Bernd', passwort: 'birne', posteingang: [] }];
+  netz.zsConf(z).on = true; dienste.sync();
+  // das Zertifikat gilt für den Namen, unter dem man den Server erreicht: wir nehmen mail.schule.de,
+  // der Streaming-Server wird über www.schule.de angesprochen — dafür braucht er ein zweites; also
+  // beantragen wir für www.schule.de und prüfen Mail über die IP als Ausnahme nicht, sondern über den Namen:
+  dc.records.push({ name: 'flix.schule.de', ip: '192.168.1.20' });
+  let r = 'nicht gerufen';
+  zs.beantragen(s, 'flix.schule.de', '192.168.1.30', (f) => r = f); laufe(60);
+  ok('Antrag für den Streaming-Server (Name flix.schule.de) besteht', r === null, String(r));
+  zs.freigeben(z, 1);
+  zs.abholen(s, () => {}); laufe(30);
+  ok('Zertifikat da', netz.zertGueltig(s));
+  let eintrag = null; zs.zsHolen(c, '192.168.1.30', (f, e) => eintrag = f || e); laufe(30);
+  zs.vertrauenAufnehmen(c, eintrag);
+
+  sc.https = true; ms.https = true;
+  dienste.sync();
+  ok('Streaming-Server: 80 UND 443', lauscht(s, 80) && lauscht(s, 443)
+     && stack.sockets(s).some(q => /:443$/.test(q.lokal) && q.programm === 'Streaming-Server (HTTPS)'));
+  ok('Mailserver: 25, 110 UND 465, 995', [25, 110, 465, 995].every(p => lauscht(s, p)));
+
+  const mitStart = mit.view().length;
+  const hol = (adr, opt) => { let q = null; http.seiteHolen(c, adr, (v) => q = v, opt); laufe(40); return q; };
+  const reg = hol('https://flix.schule.de/registrieren', null);
+  ok('Streaming-Server über https: die Registrierungsseite', reg && reg.ok && /Konto anlegen/.test(reg.html), reg && (reg.grund || ''));
+  const gesendet = hol('https://flix.schule.de/registrieren', { methode: 'POST', body: http.formSchreiben({
+    name: 'Anna', email: 'anna@schule.de', iban: 'DE12 3456 7890', bic: 'ABCDDEFF' }) });
+  ok('⭐ Registrierung über https (POST mit Bankdaten): „Fast geschafft"', gesendet && gesendet.ok && /Fast geschafft/.test(gesendet.html),
+     gesendet && (gesendet.grund || gesendet.html.slice(0, 100)));
+  ok('das Konto steht auf dem Server', sc.konten.length === 1 && sc.konten[0].iban === 'DE12 3456 7890');
+  const pw = (netz.mailConf(s).konten[0].posteingang[0] || {}).text;
+  const passwort = /Dein Passwort: (\S+)/.exec(pw || '');
+  ok('die Passwort-Mail kam an (auf dem Klartextweg, wie vorher)', !!passwort, pw);
+  const anm = hol('https://flix.schule.de/anmelden', { methode: 'POST', body: http.formSchreiben({ email: 'anna@schule.de', passwort: passwort ? passwort[1] : '' }) });
+  ok('Anmelden über https: die Filmseite', anm && anm.ok && /Hallo Anna/.test(anm.html));
+  const sidKey = Object.keys(http.cookies(c)).find(k => /:443$/.test(k));
+  ok('das Cookie gehört zu https (eigener Schlüssel Host:443)', !!sidKey && !!http.cookies(c)[sidKey].sid, JSON.stringify(http.cookies(c)));
+
+  const viewNeu = mit.view().slice(mitStart);
+  const tcp443 = viewNeu.filter(r => { const t = r.frame && r.frame.payload && r.frame.payload.payload; return t && (t.dport === 443 || t.sport === 443); });
+  const bytes443 = tcp443.map(r => { const t = r.frame.payload.payload; return t.data || ''; }).join('\n');
+  ok('⭐ im Mitschnitt: kein IBAN, kein Passwort, kein Cookie auf 443',
+     bytes443.length > 0 && !/DE12|iban=|passwort=|Cookie|Set-Cookie|sid=/.test(bytes443));
+  ok('⭐ und der Fund-Filter findet bei https NICHTS',
+     !tcp443.some(r => r.zugang));
+
+  // Mail über TLS
+  const k = netz.mailKonto(c);
+  Object.assign(k, { name: 'Bernd', domain: 'schule.de', benutzer: 'bernd', passwort: 'birne',
+                     pop3: 'mail.schule.de', smtp: 'mail.schule.de', tls: false });
+  // (der Mailserver hat sein Zertifikat für flix.schule.de — also passt mail.schule.de NICHT)
+  let rn = null;
+  const m0 = mit.view().length;
+  k.tls = true; k.pop3Port = 995; k.smtpPort = 465;
+  dienste.mail.anmelden(c, (f, adr) => rn = f || adr); laufe(60);
+  ok('⭐ Mail über TLS mit falschem Namen (mail.schule.de, Zertifikat für flix.schule.de): „gilt für"',
+     /gilt für „flix\.schule\.de"/.test(String(rn)), String(rn));
+  k.pop3 = 'flix.schule.de'; k.smtp = 'flix.schule.de';
+  rn = null; dienste.mail.anmelden(c, (f, adr) => rn = f || adr); laufe(60);
+  ok('⭐ Mail über TLS (995 und 465) mit dem richtigen Namen: Anmeldung gelingt', rn === 'bernd@schule.de', String(rn));
+  ok('der Fund-Filter findet kein PASS — es ist verschlüsselt',
+     !mit.view().slice(m0).some(r => r.zugang && /POP3/.test(r.zugang.verfahren)));
+  const klar = mit.view().slice(m0).map(r => { const t = r.frame && r.frame.payload && r.frame.payload.payload; return (t && t.data) || ''; }).join('\n');
+  ok('„PASS birne" steht nirgends im Mitschnitt', !/PASS birne|USER bernd/.test(klar));
+
+  let ab = null;
+  dienste.mail.senden(c, { an: 'anna@schule.de', betreff: 'Hallo', text: 'Streng geheim' }, (f) => ab = f); laufe(60);
+  ok('Senden über 465 (SMTPS)', ab === null, String(ab));
+  ok('die Post liegt bei Anna', netz.mailConf(s).konten[0].posteingang.some(m => m.betreff === 'Hallo' && /Streng geheim/.test(m.text)));
+  ok('„Streng geheim" steht nicht im Mitschnitt', !/Streng geheim/.test(mit.view().slice(m0).map(r => { const t = r.frame && r.frame.payload && r.frame.payload.payload; return (t && t.data) || ''; }).join('\n')));
+
+  // ohne Vertrauen: Mail meldet, wo man es einträgt
+  netz.vertrauen(c).length = 0;
+  k.passwort = 'birne';
+  rn = null; dienste.mail.anmelden(c, (f, adr) => rn = f || adr); laufe(60);
+  ok('Mail ohne Vertrauen: „Aussteller" und der Weg dorthin (Webbrowser → Zertifikate)',
+     /Zertifizierungsstelle/.test(String(rn)) && /Webbrowser/.test(String(rn)) && /Zertifikate/.test(String(rn)), String(rn));
+
+  // Mailserver: Haken raus → 465/995 zu
+  ms.https = false; dienste.sync();
+  ok('Mailserver ohne Haken: 465 und 995 sind zu', !lauscht(s, 465) && !lauscht(s, 995) && lauscht(s, 25) && lauscht(s, 110));
+}
+
+section('HTTPS: durch das Class Wide Web (zwei Tablets)');
+{
+  const A = tablet(21, 50, '8.0.7.1');
+  const B = tablet(22, 67, '8.0.9.4');
+  const ac = A.netz.addNode('cww', 100, 100);
+  const a1 = A.netz.addNode('host', 100, 300);
+  konf(ac, 1, '50.0.1.1'); konf(a1, 0, '50.0.1.10');
+  a1.gateway = '50.0.1.1'; a1.dns = '8.8.8.8';
+  A.netz.addCable(a1.id, 0, ac.id, 1);
+  a1.software = ['browser'];
+
+  const bc = B.netz.addNode('cww', 100, 100);
+  const bsw = B.netz.addNode('switch', 100, 200);
+  const bs = B.netz.addNode('server', 50, 300);
+  const bz = B.netz.addNode('server', 200, 300);
+  konf(bc, 1, '67.0.0.1'); konf(bs, 0, '67.0.0.10'); konf(bz, 0, '67.0.0.11');
+  [bs, bz].forEach(n => { n.gateway = '67.0.0.1'; n.dns = '8.8.8.8'; });
+  B.netz.addCable(bc.id, 1, bsw.id, 0);
+  B.netz.addCable(bs.id, 0, bsw.id, 1);
+  B.netz.addCable(bz.id, 0, bsw.id, 2);
+  bs.software = ['dns', 'webserver']; bz.software = ['zertstelle'];
+  const dc = B.netz.dnsConf(bs); dc.on = true;
+  dc.records = [{ name: 'www.bernd.de', ip: '67.0.0.10' }, { name: 'zs.bernd.de', ip: '67.0.0.11' }];
+  B.dienste.http.standardDateien(bs);
+  B.netz.webConf(bs).on = true;
+  B.netz.zsConf(bz).on = true;
+  for (const t of [A, B]) { t.dienste.start(); t.dienste.sync(); }
+  laufen([A, B], 20 * SEC);          // das Verzeichnis kommt bei A an
+
+  let antr = 'nicht gerufen';
+  B.dienste.zs.beantragen(bs, 'www.bernd.de', '67.0.0.11', (f) => antr = f);
+  laufen([A, B], 60 * SEC);
+  ok('Tablet B: die ZS prüft über 8.8.8.8 und besucht den Server (alles in B)', antr === null, String(antr));
+  B.dienste.zs.freigeben(bz, 1);
+  B.dienste.zs.abholen(bs, () => {});
+  laufen([A, B], 30 * SEC);
+  ok('Tablet B: der Server hat sein Zertifikat', B.netz.zertGueltig(bs));
+  B.netz.webConf(bs).https = true; B.dienste.sync();
+
+  let ohne = null;
+  A.dienste.http.seiteHolen(a1, 'https://www.bernd.de', (r) => ohne = r);
+  laufen([A, B], 90 * SEC);
+  ok('Tablet A, noch ohne Vertrauen: Warnung „unbekannt" — durch die Wolke',
+     ohne && !ohne.ok && ohne.tls && ohne.tls.code === 'unbekannt', ohne && (ohne.grund || ''));
+
+  let eintrag = null;
+  A.dienste.zs.zsHolen(a1, 'zs.bernd.de', (f, e) => eintrag = f || e);
+  laufen([A, B], 90 * SEC);
+  ok('⭐ Tablet A holt das Zertifikat der ZS von Tablet B (Name über 8.8.8.8, Fingerabdruck)',
+     eintrag && eintrag.fp && eintrag.fp === B.dienste.zs.eintragVon(bz).fp, JSON.stringify(eintrag));
+  A.dienste.zs.vertrauenAufnehmen(a1, eintrag);
+
+  let r = null;
+  A.dienste.http.seiteHolen(a1, 'https://www.bernd.de', (x) => r = x);
+  laufen([A, B], 120 * SEC);
+  ok('⭐ Tablet A: https://www.bernd.de kommt durch das Class Wide Web an — mit Schloss',
+     r && r.ok && r.status === 200 && r.tls && r.tls.name === 'www.bernd.de' && !r.tls.fehler && /Der Webserver läuft/.test(r.html),
+     r && (r.grund || JSON.stringify(r.tls)));
+
+  const tlsA = A.mit.view().filter(z => z.proto === 'TLS');
+  ok('im Mitschnitt von A stehen TLS-Zeilen (auch an der Internet-Karte)', tlsA.length > 0 && tlsA.some(z => z.inet), String(tlsA.length));
+  ok('⭐ der Inhalt der Seite steht in keinem Paket, das die Wolke sieht',
+     !JSON.stringify(A.mit.view().filter(z => z.inet).map(z => z.frame.payload.payload)).includes('Der Webserver läuft'));
+  ok('der Servername steht im ClientHello (wer mit wem bleibt sichtbar)',
+     tlsA.some(z => /Servername: www\.bernd\.de/.test(z.info)));
 }
 
 /* ═══ Ergebnis ═══ */

@@ -766,7 +766,8 @@
       dns:  { text: 'DNS',  ttl: 'Auf diesem Gerät läuft ein DNS-Server: er beantwortet Namen.' },
       web:  { text: 'Web',  ttl: 'Auf diesem Gerät läuft ein Webserver: er liefert Seiten aus.' },
       mail: { text: 'Mail', ttl: 'Auf diesem Gerät läuft ein E-Mail-Server: er nimmt Post an und gibt sie heraus.' },
-      stream: { text: 'Stream', ttl: 'Auf diesem Gerät läuft ein Streaming-Server: Filme hinter einer Anmeldung.' }
+      stream: { text: 'Stream', ttl: 'Auf diesem Gerät läuft ein Streaming-Server: Filme hinter einer Anmeldung.' },
+      zs: { text: 'ZS', ttl: 'Auf diesem Gerät läuft eine Zertifizierungsstelle: sie stellt Zertifikate aus.' }
     };
 
     function marken(g, n, mitAdresse) {

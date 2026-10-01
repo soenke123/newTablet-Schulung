@@ -29,14 +29,19 @@
    vorkommt.
 
    ── Was bewusst fehlt ─────────────────────────────────────────
-   Adressbuch, CC und BCC, Anhänge, APOP, TLS, mehrere Konten je
-   Gerät (Filius hat auch nur eines), `TOP`, `NOOP`, `RSET`.
+   Adressbuch, CC und BCC, Anhänge, APOP, STARTTLS (TLS gibt es nur
+   „implizit": Port 465 und 995, siehe `tls.js`), TLS zwischen zwei
+   Mailservern, mehrere Konten je Gerät (Filius hat auch nur eines), `TOP`, `NOOP`, `RSET`.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
   'use strict';
 
   const SMTP = 25, POP3 = 110;
+  /* Dieselben Dienste mit TLS von der ersten Zeile an („implizites
+     TLS", wie es SMTPS und POP3S heißen): 465 und 995. Die Zeilen
+     darin sind die alten — nur dass sie verschlüsselt gehen. */
+  const SMTPS = 465, POP3S = 995;
   const EOL = '\r\n';
 
   /* Eine Nachricht als Text — das Format, das auch durch die
@@ -60,6 +65,7 @@
   }
 
   function erzeugen(engine, netz, stack, api) {
+    const tls = api && api.tls;
 
     /* Ein Leser, der aus dem Strom einzelne ZEILEN macht. TCP
        kennt keine Zeilen — es kann zwei davon in einem Segment
@@ -90,8 +96,8 @@
 
     /* ═══ Der SMTP-Server (Port 25) ══════════════════════════ */
 
-    function smtpAn(node) {
-      stack.tcpHoeren(node, SMTP, (conn) => {
+    function smtpHandler(node) {
+      return (conn) => {
         const z = { von: '', an: [], daten: false, text: [] };
         const sag = (s) => conn.senden(s + EOL);
         sag('220 ' + (node.mailServer.domain || 'mailserver') + ' Willkommen');
@@ -143,7 +149,7 @@
           if (gross === 'QUIT') { sag('221 Tschüss'); conn.schliessen(); return; }
           sag('500 Kenne ich nicht');
         });
-      }, 'E-Mail-Server');
+      };
     }
 
     const adresse = (zeile) => {
@@ -215,8 +221,8 @@
 
     /* ═══ Der POP3-Server (Port 110) ═════════════════════════ */
 
-    function popAn(node) {
-      stack.tcpHoeren(node, POP3, (conn) => {
+    function popHandler(node) {
+      return (conn) => {
         const z = { benutzer: '', angemeldet: false, weg: [] };
         const sag = (s) => conn.senden(s + EOL);
         sag('+OK POP3 bereit');
@@ -277,13 +283,24 @@
           }
           sag('-ERR Kenne ich nicht');
         });
-      }, 'E-Mail-Server');
+      };
     }
 
-    function serverAn(node) { smtpAn(node); popAn(node); }
+    /* Vier Ports, zwei Sorten: 25 und 110 immer; 465 und 995 nur mit
+       Haken UND Zertifikat — wie bei den Webservern (`http.httpsSchalten`). */
+    function serverAn(node) {
+      stack.tcpHoeren(node, SMTP, smtpHandler(node), 'E-Mail-Server');
+      stack.tcpHoeren(node, POP3, popHandler(node), 'E-Mail-Server');
+      if (tls && netz.mailConf(node).https && netz.zertGueltig(node)) {
+        tls.hoeren(node, SMTPS, smtpHandler(node), 'E-Mail-Server (TLS)');
+        tls.hoeren(node, POP3S, popHandler(node), 'E-Mail-Server (TLS)');
+      } else {
+        stack.tcpNichtHoeren(node, SMTPS);
+        stack.tcpNichtHoeren(node, POP3S);
+      }
+    }
     function serverAus(node) {
-      stack.tcpNichtHoeren(node, SMTP);
-      stack.tcpNichtHoeren(node, POP3);
+      for (const p of [SMTP, POP3, SMTPS, POP3S]) stack.tcpNichtHoeren(node, p);
     }
 
     /* ═══ Die Client-Seite ═══════════════════════════════════
@@ -291,7 +308,14 @@
        Antwort hin jene Zeile. Das ist kurz genug zu lesen und
        zeigt zugleich, was ein Protokoll ist — eine verabredete
        Reihenfolge. */
-    function gespraech(node, ip, port, programm, schritte, cb) {
+    /* `opt.tls` verschlüsselt das Gespräch (Servername in `opt.sni`).
+       Ein Fehler im Handschlag kommt als Klartext zurück — mit dem
+       Hinweis, wo die Vertrauensliste liegt, wenn der Aussteller
+       unbekannt ist. */
+    const tlsFehler = (err, info) => (info && info.code === 'unbekannt')
+      ? err + ' (Die Vertrauensliste verwaltest du im Webbrowser unter „Zertifikate".)' : err;
+
+    function gespraech(node, ip, port, programm, schritte, cb, opt) {
       let i = 0;
       let fertig = false;
       const ende = (fehler) => {
@@ -299,7 +323,7 @@
         fertig = true;
         cb(fehler || null);
       };
-      const conn = stack.tcpVerbinde(node, ip, port, programm, (err, c) => {
+      const verbunden = (err, c) => {
         if (err) { ende(err); return; }
         zeilen(c, (zeile) => {
           if (fertig || i >= schritte.length) return;
@@ -325,13 +349,17 @@
           if (s.sende) for (const z of [].concat(s.sende())) c.senden(z + EOL);
           if (s.ende) ende(null);
         });
-      });
+      };
+      const conn = opt && opt.tls && tls
+        ? tls.verbinde(node, ip, port, programm, { sni: opt.sni },
+            (err, c, info) => verbunden(err && tlsFehler(err, info), c))
+        : stack.tcpVerbinde(node, ip, port, programm, verbunden);
       if (conn) conn.onZu(() => ende(fertig ? null : 'Die Verbindung ging zu.'));
       return conn;
     }
 
     /* Eine Nachricht abschicken: das SMTP-Gespräch von oben. */
-    function smtpSenden(node, ip, port, m, cb, programm) {
+    function smtpSenden(node, ip, port, m, cb, programm, opt) {
       const schritte = [
         { erwartet: /^220/, sende: () => 'HELO ' + (node.name || 'rechner') },
         { erwartet: /^250/, sende: () => 'MAIL FROM: <' + m.von + '>' },
@@ -341,8 +369,13 @@
         { erwartet: /^250/, sende: () => 'QUIT' },
         { erwartet: /^221/, ende: true }
       ];
-      return gespraech(node, ip, port, programm || 'E-Mail-Programm', schritte, cb);
+      return gespraech(node, ip, port, programm || 'E-Mail-Programm', schritte, cb, opt);
     }
+
+    /* Wie spricht dieses Konto — und mit wem (Servername für TLS)? */
+    const tlsOpt = (k, wirt) => k.tls ? { tls: true, sni: wirt } : null;
+    const portSmtp = (k) => k.smtpPort || (k.tls ? SMTPS : SMTP);
+    const portPop  = (k) => k.pop3Port || (k.tls ? POP3S : POP3);
 
     /* ─── Was die Oberfläche ruft ─────────────────────────────*/
 
@@ -350,7 +383,7 @@
       const k = netz.mailKonto(node);
       if (!k.adresse || !k.smtp) { cb('Es ist noch kein Konto eingerichtet.'); return; }
       const brief = { von: k.adresse, an: m.an, betreff: m.betreff, text: m.text };
-      zumServer(node, k.smtp, k.smtpPort || SMTP, (fehler, ip, port) => {
+      zumServer(node, k.smtp, portSmtp(k), (fehler, ip, port, wirt) => {
         if (fehler) { cb(fehler); return; }
         smtpSenden(node, ip, port, brief, (f) => {
           if (!f) {
@@ -358,7 +391,7 @@
             k.gesendet.push(Object.assign({ zeit: engine.now }, brief));
           }
           cb(f);
-        });
+        }, null, tlsOpt(k, wirt));
       });
     }
 
@@ -406,7 +439,7 @@
 
       const adresse = adresseVon(k);
 
-      zumServer(node, k.pop3, k.pop3Port || POP3, (f1, ip1, port1) => {
+      zumServer(node, k.pop3, portPop(k), (f1, ip1, port1, wirt1) => {
         if (f1) { cb(f1); return; }
         gespraech(node, ip1, port1, 'E-Mail-Programm', [
           { erwartet: /^\+OK/, sende: () => 'USER ' + k.benutzer },
@@ -415,7 +448,7 @@
           { erwartet: /^\+OK/, ende: true }
         ], (f2) => {
           if (f2) { cb(f2); return; }
-          zumServer(node, k.smtp, k.smtpPort || SMTP, (f3, ip2, port2) => {
+          zumServer(node, k.smtp, portSmtp(k), (f3, ip2, port2, wirt2) => {
             if (f3) { cb(f3); return; }
             gespraech(node, ip2, port2, 'E-Mail-Programm', [
               /* ⭐ Die Begrüßung eines SMTP-Servers nennt seine
@@ -442,9 +475,9 @@
               if (f4) { cb(f4); return; }
               k.angemeldet = true;
               cb(null, adresse);
-            });
+            }, tlsOpt(k, wirt2));
           });
-        });
+        }, tlsOpt(k, wirt1));
       });
     }
 
@@ -476,14 +509,14 @@
     function abholen(node, cb) {
       const k = netz.mailKonto(node);
       if (!k.adresse || !k.pop3) { cb('Es ist noch kein Konto eingerichtet.'); return; }
-      zumServer(node, k.pop3, k.pop3Port || POP3, (fehler, ip, port) => {
+      zumServer(node, k.pop3, portPop(k), (fehler, ip, port, wirt) => {
         if (fehler) { cb(fehler); return; }
         holeSchleife(node, ip, port, k, (f, neue) => {
           if (!f && neue && neue.length) {
             k.posteingang = (k.posteingang || []).concat(neue);
           }
           cb(f, neue ? neue.length : 0);
-        });
+        }, tlsOpt(k, wirt));
       });
     }
 
@@ -496,12 +529,12 @@
        hat. Der erste Versuch hat das in die Liste gezwängt — und
        verschluckte dabei die Zeile „+OK Nachricht folgt", die
        daraufhin als erste Zeile IM Brief stand. */
-    function holeSchleife(node, ip, port, k, cb) {
+    function holeSchleife(node, ip, port, k, cb, opt) {
       const neue = [];
       let gesamt = 0, geholt = 0, zustand = 'start', sammeln = null, fertig = false;
       const ende = (f) => { if (!fertig) { fertig = true; cb(f, neue); } };
 
-      const conn = stack.tcpVerbinde(node, ip, port, 'E-Mail-Programm', (err, c) => {
+      const verbunden = (err, c) => {
         if (err) { ende(err); return; }
         const sag = (s) => c.senden(s + EOL);
         zeilen(c, (zeile) => {
@@ -544,27 +577,31 @@
             case 'quit': ende(null); break;
           }
         });
-      });
+      };
+      const conn = opt && opt.tls && tls
+        ? tls.verbinde(node, ip, port, 'E-Mail-Programm', { sni: opt.sni },
+            (err, c, info) => verbunden(err && tlsFehler(err, info), c))
+        : stack.tcpVerbinde(node, ip, port, 'E-Mail-Programm', verbunden);
       if (conn) conn.onZu(() => ende(null));
       return conn;
     }
 
     /* Name oder Adresse — wie beim Browser. */
     function zumServer(node, wirt, port, cb) {
-      if (window.NetUtil.ip2int(wirt) !== null) { cb(null, wirt, port); return; }
+      if (window.NetUtil.ip2int(wirt) !== null) { cb(null, wirt, port, wirt); return; }
       if (!api.resolve) { cb('Dieses Gerät kann keine Namen auflösen.'); return; }
       api.resolve(node, wirt, (r) => {
-        if (r.ok) cb(null, r.ip, port);
+        if (r.ok) cb(null, r.ip, port, wirt);
         else cb(r.why || ('Der Name „' + wirt + '" ist nicht aufzulösen.'));
       });
     }
 
     return {
-      SMTP, POP3, laeuft, serverAn, serverAus, senden, abholen,
+      SMTP, POP3, SMTPS, POP3S, laeuft, serverAn, serverAus, senden, abholen,
       anmelden, abmelden, adresseVon, smtpSenden, zumServer,
       alsText, ausText, konten, konto, domainVon, benutzerVon
     };
   }
 
-  window.Mail = { erzeugen: erzeugen, SMTP: SMTP, POP3: POP3 };
+  window.Mail = { erzeugen: erzeugen, SMTP: SMTP, POP3: POP3, SMTPS: SMTPS, POP3S: POP3S };
 })();

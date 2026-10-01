@@ -51,7 +51,7 @@ dann bauen, dann hier abhaken. **Nicht drei Schritte vorausdenken.**
 | 1 | **Fund-Filter im Mitschnitt** (erst für E-Mail) | nichts | klein | ☑ 2026-09-30 |
 | 2 | **Web-Anwendung mit Anmeldung** | nichts (macht 1 und 4 lohnender) | mittel | ☑ 2026-09-30 |
 | 3 | **WLAN-Lauschen** | nichts | klein bis mittel | ☐ |
-| 4 | **HTTPS / TLS-Schale** (und Mail-Haken) | 2 | mittel | ☐ |
+| 4 | **HTTPS / TLS-Schale** (und Mail-Haken) | 2 | mittel | ☑ 2026-10-01 |
 | 5 | **VPN** | 4 (Verschlüsselung), NAT | groß | ☐ |
 
 Reihenfolge ist Empfehlung; jede Stufe ist einzeln nutzbar.
@@ -213,6 +213,82 @@ den Servernamen). Danach liest der Fund-Filter aus Schritt 1 nichts mehr.
 
 **Zu klären:** nur Browser oder gleich Mail; Stufe mit Zertifizierungsstelle jetzt oder
 später; wie zeigt der Mitschnitt „das Schloss" (Pille, Schale).
+
+**Entschieden (2026-10-01), Gespräch mit dem Nutzer — das ersetzt die „Bausteine (Vorschlag)" oben:**
+
+* **HTTP bleibt der Standard.** HTTPS bekommt ein Server erst, wenn ihm eine
+  **Zertifizierungsstelle (ZS)** ein Zertifikat ausgestellt hat. Vorher ist der Haken „HTTPS" im
+  Serverfenster ausgegraut („Zertifikat fehlt"). Das gilt für **Webserver, Streaming-Server und
+  E-Mail-Server** (Mail: SMTPS 465, POP3S 995, im Mail-Konto der Haken „Verschlüsselte Verbindung").
+  Ist HTTPS an, laufen **beide** Ports (80 und 443) — HTTP geht weiter, damit man es vergleichen kann.
+* **Die ZS ist ein Programm** (Appstore, Kennung `zertstelle`), das auf **jedem** Gerät laufen kann
+  (lokal im Schulnetz, im Internet-Bereich, auf dem Tablet des Nachbarn). Es gibt **keine
+  fest eingebaute globale ZS.** Die ZS hat einen **Namen**, ein **Schlüsselpaar** und eine Einstellung
+  **„DNS-Server für die Prüfung"** (die ZS sucht sich den DNS aus, dem sie glaubt).
+* **Antrag (wie bei ACME / HTTP-01):** Der Betreiber trägt im Serverfenster den **Namen** (vorbelegt,
+  wenn ein DNS im Netz auf dieses Gerät zeigt) und die **Adresse der ZS** ein (vorbelegt, wenn genau
+  eine ZS im Netz läuft). Die ZS fragt **ihren DNS** nach dem Namen, bekommt eine IP, **besucht diese
+  IP auf Port 80** (`/.well-known/zs-pruefung`) und prüft ein Einmalwort, das nur der echte Betreiber
+  ausliefern kann. Beim Antrag lauscht das Gerät kurz selbst auf Port 80, falls kein Webserver dort
+  hängt (wie `certbot --standalone`) — so geht es auch für den Mailserver.
+  ⚠️ Hinter einem Heimrouter muss Port 80 weitergeleitet sein, sonst scheitert die Prüfung — und
+  Port 443 für den Betrieb. Das ist gewollt (steht dann im Mitschnitt).
+* **Freigabe mit Klick:** Der Antrag liegt bei der ZS als *„Name geprüft ✓ / ✗"*; erst der **Klick des
+  ZS-Betreibers** („Freigeben" / „Ablehnen") stellt das Zertifikat aus. Der Antragsteller holt es mit
+  **„Zertifikat abholen"** (wie Post bei POP3: es wird abgeholt, nicht zugestellt). Drei Zustände im
+  Serverfenster: *kein Zertifikat · Antrag bei <ZS> wartet · Zertifikat gültig für <Name>*.
+* **Ein Zertifikat gilt für einen Namen.** Wer `https://<IP>` tippt, bekommt die Warnung „Zertifikat
+  gehört zu <Name>, nicht zu dieser Adresse".
+* **Browser findet die ZS nicht — er KENNT sie.** Er hat eine **Vertrauensliste (am Anfang leer)**.
+  Ein Eintrag entsteht, indem der Nutzer im Browser unter **„Zertifikate"** eine ZS-Adresse eingibt;
+  der Browser holt deren ZS-Zertifikat und zeigt den **Fingerabdruck** (der steht auch im ZS-Fenster —
+  vergleichen!) mit dem Knopf „Vertrauen". Die Liste gilt für das ganze Gerät (Browser **und**
+  Mail-Programm). Ohne Eintrag: Warnung „Aussteller unbekannt".
+* **Browser:** `http://` bleibt immer möglich. Die Adresszeile zeigt den Vorsatz: bei HTTP „Nicht
+  sicher", bei gültigem HTTPS **🔒** (Tipp auf das Schloss: Zertifikat in Klartext, kein modaler
+  Dialog). Bei Fehler: **Warnseite** (Name passt nicht · Aussteller unbekannt · Unterschrift ungültig ·
+  Besitz nicht bewiesen · Gegenstelle spricht kein TLS) mit **„Zurück"** und dem kleinen
+  **„Trotzdem fortfahren (unsicher)"**. Nach dem Fortfahren verschlüsselt die Verbindung trotzdem —
+  aber vielleicht an den Falschen. Die Ausnahme gilt nur für dieses Gerät und diese Sitzung.
+* **TLS-Ablauf (TLS-1.3-Form, vereinfacht):** `ClientHello` (Servername **im Klartext**, Zufall,
+  Schlüsselanteil) → `ServerHello` (Zufall, Schlüsselanteil, **Zertifikat**, **Beweis** = Unterschrift
+  über den Ablauf mit dem privaten Schlüssel) → ab da nur noch `🔒 verschlüsselt, N Byte`.
+  Das Zertifikat bleibt der Anschaulichkeit halber offen (echtes TLS 1.3 verschlüsselt es).
+* **Fachlich richtig, aber winzig:** Schlüsselaustausch **Diffie-Hellman** (p = 2³¹−1, ablesbar),
+  Zertifikat und Beweis **RSA-Unterschrift** (≈ 60 Bit, `BigInt`), Datenstrom als Stromchiffre mit
+  Prüfsumme. Alles **Spielzeug** (echt: 2048 Bit, SHA-256, AES-GCM) — es geht um die Struktur, nicht um
+  Sicherheit; das steht im Kopf von `js/tls.js`. Zufall nur aus `engine.randInt` (wiederholbar).
+  Die Funktion zum Ver- und Entschlüsseln ist eine gemeinsame Hilfe — **Schritt 5 (VPN) benutzt sie.**
+* **Mitschnitt:** Chip **TLS** (Port 443/465/995), Pille **🔒**, Schale *TLS* (Handschlag mit
+  Servername und Zertifikat bzw. `verschlüsselt, N Byte`). Der Fund-Filter findet bei HTTPS **nichts**
+  mehr (die Lehre). Auch der ZS-Verkehr (Port 8200) steht lesbar im Mitschnitt.
+* **Umgesetzt (2026-10-01):** `js/tls.js` (Schale + Rechenwerkzeuge `Tls.Krypto`), `js/zs.js`
+  (Zertifizierungsstelle, Programm `zertstelle`, Port 8200), `js/prog-zert.js` (Oberfläche). Anpassungen in
+  `http.js` (https://, 443, `holen` mit TLS und `opt.ip`, Ausnahmen, Prüfantwort), `stream.js`, `mail.js`
+  (465/995, Konto-Haken `tls`), `dienste.js` (`resolve` mit eigenem DNS-Server), `netz.js` (`zsConf`,
+  `zertConf`, `vertrauen`, Speicherformat), `mitschnitt.js` (Chip **TLS**/**ZS**, Schale, Ports),
+  `prog-web.js` (Vorsatz-Knopf, Schloss, Info-Fläche, Warnseite, „Zertifikate"), `prog-mail.js`.
+  **Wichtig beim Weiterbauen (für VPN):** `Tls.Krypto.versiegeln/oeffnen` sind zustandslos (Schlüssel,
+  Richtung `c`/`s`, laufende Nummer); `sitzungsschluessel` + `dhAnteil/dhGeheim` für einen Tunnelaufbau.
+* **Abweichungen vom Vorschlag oben, so entschieden beim Bauen:**
+  — Der Browser holt das ZS-Zertifikat **direkt von der ZS** (`ZS-ZERTIFIKAT`) und zeigt den Fingerabdruck;
+  es gibt keine Datei zum Herumtragen (es gibt keinen Weg, Dateien zwischen Geräten zu schicken).
+  — Der Prüfbesuch läuft auf Port 80 **mit dem Einmalwort der ZS**; das Gerät lauscht dafür selbst, wenn dort
+  kein Server hängt (auch für reine Mailserver).
+  — Wer eine Zahlenadresse als Namen beantragt, wird abgewiesen: **kein Zertifikat für IPs.**
+  — Unter einer Zahlenadresse sendet der Client **keinen Servernamen** (SNI) mit; geprüft wird trotzdem gegen
+  die getippte Adresse (Warnung „name").
+  — Eine **Ausnahme** („Trotzdem fortfahren") gilt je Name und Port, nur auf diesem Gerät, nur im laufenden
+  Netz (`node.state.tlsAusnahmen`; „von vorn" löscht sie) und nur bei Zertifikatsfehlern — nicht bei
+  `kein-tls`.
+  — Die Passwort-Mails des Streaming-Servers und die Weitergabe zwischen Mailservern bleiben unverschlüsselt.
+* **Prüfen:** `tests/kerntest.js` (Abschnitte *TLS: die Rechenwerkzeuge*, *HTTPS: Zertifizierungsstelle,
+  Browser, Server*, *Anträge, die scheitern*, *Streaming-Server und E-Mail (TLS-Ports)*), `tests/uitest.js`
+  (*HTTPS und Zertifizierungsstelle*); Bilder `tests/shot-zs.png`, `shot-https-*.png`.
+* **Bewusst nicht gebaut:** Ablaufdatum und Widerruf von Zertifikaten, Zertifikatsketten
+  (Zwischenstellen), STARTTLS, Umleitung 80 → 443, Sitzungswiederaufnahme (jede Verbindung macht den
+  Handschlag neu — im Mitschnitt gut zu sehen), TLS zwischen Mailservern beim Weiterreichen, TLS für die
+  Passwort-Mails des Streaming-Servers.
 
 ---
 
