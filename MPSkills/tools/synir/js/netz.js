@@ -772,6 +772,7 @@
       if (s.name == null) s.name = '';
       if (s.mailserver == null) s.mailserver = '';
       if (!Array.isArray(s.filme)) s.filme = [1, 2];
+      if (!s.farbe) s.farbe = 'kino';
       if (!Array.isArray(s.konten)) s.konten = [];
       if (!s.likes) s.likes = {};
       if (!Array.isArray(s.kommentare)) s.kommentare = [];

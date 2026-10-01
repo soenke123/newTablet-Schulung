@@ -317,6 +317,11 @@
           '<button class="ws-datei st-film' + (c.filme.indexOf(f.id) >= 0 ? ' is-on' : '')
           + '" data-film="' + f.id + '">' + esc(f.titel) + '</button>').join('') + '</div>'
       + '<div class="k-hint">Genau zwei Filme sind auf deiner Seite zu sehen.</div>'
+      + '<div class="dt-sec">Farbschema</div>'
+      + '<div class="ws-dateien">' + window.Stream.FARBEN.map(f =>
+          '<button class="ws-datei st-farbe' + (c.farbe === f.id ? ' is-on' : '')
+          + '" data-farbe="' + f.id + '"><span class="st-sw" style="background:' + f.akz
+          + ';border-color:' + f.fl + '"></span>' + esc(f.name) + '</button>').join('') + '</div>'
       + '<div class="dt-sec">Kunden</div>'
       + (c.konten.length
           ? '<div class="ml-liste">' + c.konten.map((k, i) =>
@@ -351,6 +356,11 @@
       const id = +b.dataset.film;
       if (c.filme.indexOf(id) >= 0) return;
       c.filme = c.filme.concat([id]).slice(-2);
+      if (ctx.onDirty) ctx.onDirty();
+      ctx.render();
+    }));
+    box.querySelectorAll('[data-farbe]').forEach(b => b.addEventListener('click', () => {
+      c.farbe = b.dataset.farbe;
       if (ctx.onDirty) ctx.onDirty();
       ctx.render();
     }));

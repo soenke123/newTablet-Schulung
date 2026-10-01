@@ -2374,7 +2374,9 @@ textarea.f::placeholder { color: var(--ink-3); opacity: .45; font-weight: 400; }
   font-family: var(--fm); font-size: 11.5px; padding: 4px 9px; cursor: pointer;
 }
 .ws-datei:hover { border-color: var(--accent); color: var(--accent); }
-.st-film.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.st-farbe { display: inline-flex; align-items: center; gap: 6px; }
+.st-sw { width: 14px; height: 14px; border-radius: 50%; border: 3px solid #000; box-sizing: border-box; flex: none; }
+.st-film.is-on, .st-farbe.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .ws-log {
   border: 1px solid var(--line); border-radius: var(--r1);
   background: var(--surface-2); padding: 7px 9px;

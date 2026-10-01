@@ -81,39 +81,63 @@
   /* ─── Aussehen der Seiten ─────────────────────────────────────
      Eine Stildatei im Kopf jeder Seite (kein eigener Abruf): die
      Seiten sind dynamisch, eine Datei im Ordner gibt es nicht. */
-  const STIL =
-    'body{margin:0;background:#141414;color:#f2f2f2;font-family:sans-serif;font-size:15px}'
-    + '.kopf{display:flex;align-items:center;gap:6px 14px;padding:8px 14px;background:#0b0b0b;'
-    +   'border-bottom:2px solid #e50914;flex-wrap:wrap}'
-    + '.marke{font-size:22px;font-weight:800;color:#e50914;margin-right:auto}'
-    + '.kopf a{color:#f2f2f2;text-decoration:none;padding:8px 4px}'
+  /* Drei Farbschemata zur Wahl des Betreibers (`streamServer.farbe`).
+     Jedes ist nur eine Reihe von Farbwerten; die Form der Seiten
+     bleibt gleich. `akz` = Hauptfarbe (Marke, Knöpfe), `akzT` = Schrift
+     darauf, `fl` = Seitengrund, `kopf` = Kopfzeile, `kart` = Kacheln,
+     `t` / `t2` = Schrift / blasse Schrift, `lin` = Linien, `ein` =
+     Eingabefelder, `grau` = zweite Knöpfe. */
+  const FARBEN = [
+    { id: 'kino',  name: 'Kino-Rot',    akz: '#e50914', akzT: '#fff',    fl: '#141414', kopf: '#0b0b0b', kart: '#1f1f1f',
+      t: '#f2f2f2', t2: '#c8c8c8', lin: '#333', ein: '#2b2b2b', einL: '#444', grau: '#3a3a3a', grauT: '#fff',
+      feh: '#4a1518', ok: '#14361f' },
+    { id: 'ozean', name: 'Ozean-Blau',  akz: '#22b8e0', akzT: '#04202b', fl: '#0b1a2e', kopf: '#071222', kart: '#13294a',
+      t: '#eaf4ff', t2: '#a9c3df', lin: '#24406a', ein: '#0f2340', einL: '#35588a', grau: '#2a4670', grauT: '#fff',
+      feh: '#4a1a2a', ok: '#103a38' },
+    { id: 'hell',  name: 'Hell & Lila', akz: '#7c3aed', akzT: '#fff',    fl: '#f6f3fb', kopf: '#ffffff', kart: '#ffffff',
+      t: '#231a36', t2: '#5b5170', lin: '#ddd6ec', ein: '#ffffff', einL: '#b9aedb', grau: '#e7e1f3', grauT: '#3b2d63',
+      feh: '#fde2e4', ok: '#dcf5e3' }
+  ];
+  const farbe = (id) => FARBEN.find(f => f.id === id) || FARBEN[0];
+
+  /* ─── Aussehen der Seiten ─────────────────────────────────────
+     Eine Stildatei im Kopf jeder Seite (kein eigener Abruf): die
+     Seiten sind dynamisch, eine Datei im Ordner gibt es nicht. */
+  const stil = (f) =>
+    'body{margin:0;background:' + f.fl + ';color:' + f.t + ';font-family:sans-serif;font-size:15px}'
+    + '.kopf{display:flex;align-items:center;gap:6px 14px;padding:8px 14px;background:' + f.kopf + ';'
+    +   'border-bottom:2px solid ' + f.akz + ';flex-wrap:wrap}'
+    + '.marke{font-size:22px;font-weight:800;color:' + f.akz + ';margin-right:auto}'
+    + '.kopf a{color:' + f.t + ';text-decoration:none;padding:8px 4px}'
     + '.kopf form{margin:0}'
     + '.inhalt{max-width:980px;margin:0 auto;padding:12px 14px}'
     + 'h1{margin:4px 0 10px;font-size:24px}'
     + '.held{text-align:center;padding:28px 14px}'
-    + '.held h1{font-size:34px;color:#e50914}'
-    + '.held p{color:#c8c8c8}'
-    + '.knopf,button{display:inline-block;background:#e50914;color:#fff;border:0;border-radius:6px;'
+    + '.held h1{font-size:34px;color:' + f.akz + '}'
+    + '.held p{color:' + f.t2 + '}'
+    + '.knopf,button{display:inline-block;background:' + f.akz + ';color:' + f.akzT + ';border:0;border-radius:6px;'
     +   'padding:9px 16px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;'
     +   'min-height:40px;box-sizing:border-box}'
-    + '.knopf--grau,button.grau{background:#3a3a3a}'
-    + '.karte{background:#1f1f1f;border-radius:10px;padding:14px 18px;max-width:440px;margin:10px auto}'
-    + 'label{display:block;margin:8px 0 3px;color:#c8c8c8}'
-    + 'input{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid #444;'
-    +   'background:#2b2b2b;color:#fff;font-size:15px;min-height:40px}'
-    + '.fehler{background:#4a1518;border-left:5px solid #e50914;padding:12px 14px;margin:12px 0;border-radius:4px}'
-    + '.ok{background:#14361f;border-left:5px solid #2ea043;padding:12px 14px;margin:12px 0;border-radius:4px}'
+    + '.knopf--grau,button.grau{background:' + f.grau + ';color:' + f.grauT + '}'
+    + '.karte{background:' + f.kart + ';border-radius:10px;padding:14px 18px;max-width:440px;margin:10px auto;'
+    +   'border:1px solid ' + f.lin + '}'
+    + '.karte a{color:' + f.akz + '}'
+    + 'label{display:block;margin:8px 0 3px;color:' + f.t2 + '}'
+    + 'input{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:6px;border:1px solid ' + f.einL + ';'
+    +   'background:' + f.ein + ';color:' + f.t + ';font-size:15px;min-height:40px}'
+    + '.fehler{background:' + f.feh + ';border-left:5px solid ' + f.akz + ';padding:12px 14px;margin:12px 0;border-radius:4px}'
+    + '.ok{background:' + f.ok + ';border-left:5px solid #2ea043;padding:12px 14px;margin:12px 0;border-radius:4px}'
     + '.filme{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}'
-    + '.film{background:#1f1f1f;border-radius:10px;padding:10px}'
+    + '.film{background:' + f.kart + ';border-radius:10px;padding:10px;border:1px solid ' + f.lin + '}'
     + '.film img{width:100%;border-radius:8px;display:block}'
     + '.film h2{margin:8px 0 4px;font-size:17px}'
     + '.film .gefaellt{margin:4px 0 6px}'
-    + '.kommentare{margin:6px 0;padding:0;list-style:none;color:#d8d8d8;font-size:13px}'
-    + '.kommentare li{padding:4px 0;border-top:1px solid #333}'
-    + '.kommentare b{color:#fff}'
-    + 'table{border-collapse:collapse;width:100%}td{padding:7px 8px;border-top:1px solid #333}'
-    + 'td:first-child{color:#c8c8c8;width:38%}'
-    + '.klein{color:#9a9a9a;font-size:13px}';
+    + '.kommentare{margin:6px 0;padding:0;list-style:none;color:' + f.t2 + ';font-size:13px}'
+    + '.kommentare li{padding:4px 0;border-top:1px solid ' + f.lin + '}'
+    + '.kommentare b{color:' + f.t + '}'
+    + 'table{border-collapse:collapse;width:100%}td{padding:7px 8px;border-top:1px solid ' + f.lin + '}'
+    + 'td:first-child{color:' + f.t2 + ';width:38%}'
+    + '.klein{color:' + f.t2 + ';font-size:13px}';
 
   function erzeugen(engine, netz, stack, api) {
     const http = api.http;
@@ -140,7 +164,7 @@
     function seite(node, titel, inhalt, konto) {
       const name = esc(dienstName(node));
       return '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(titel) + ' – ' + name
-        + '</title><style>' + STIL + '</style></head><body>'
+        + '</title><style>' + stil(farbe(conf(node).farbe)) + '</style></head><body>'
         + '<div class="kopf"><span class="marke">' + name + '</span>'
         + (konto
             ? '<a href="/filme">Filme</a><a href="/konto">Mein Konto</a>'
@@ -168,7 +192,7 @@
       + feld('email', 'E-Mail', email, 'text', 'anna@schule.de')
       + feld('passwort', 'Passwort', '', 'password', '')
       + '<p><button>Anmelden</button></p></form>'
-      + '<p class="klein">Noch kein Konto? <a href="/registrieren" style="color:#fff">Registrieren</a></p></div>');
+      + '<p class="klein">Noch kein Konto? <a href="/registrieren">Registrieren</a></p></div>');
 
     const registerSeite = (node, fehler, w) => { w = w || {}; return seite(node, 'Registrieren',
       '<div class="karte"><h1>Registrieren</h1>' + meldung('fehler', fehler)
@@ -359,5 +383,5 @@
     return { PORT, laeuft, serverAn, serverAus, conf, FILME };
   }
 
-  window.Stream = { erzeugen: erzeugen, FILME: FILME, PORT: PORT };
+  window.Stream = { erzeugen: erzeugen, FILME: FILME, FARBEN: FARBEN, PORT: PORT };
 })();

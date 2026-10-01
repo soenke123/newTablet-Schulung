@@ -2241,6 +2241,17 @@ section('Sek I und II · neue Szenarien');
       const r = seite(von, url);
       ok('Großes Netz: ' + von + ' ruft ' + url + ' auf', r && r.ok, r && r.grund);
     }
+    {
+      const sv = by('MPSflix');
+      const stil = (f) => { sv.streamServer.farbe = f; let r = null;
+        z.dienste.http.seiteHolen(by('Laptop 1'), 'mpsflix.de', (x) => r = x);
+        z.engine.runUntil(z.engine.now + 40 * SEC); return r && r.html; };
+      const rot = stil('kino'), blau = stil('ozean'), hell = stil('hell');
+      ok('Großes Netz: MPSflix hat drei Farbschemata, die sich auf der Seite zeigen',
+         /#e50914/.test(rot) && /#22b8e0/.test(blau) && /#7c3aed/.test(hell) && !/#e50914/.test(blau),
+         [!!rot, !!blau, !!hell].join());
+      sv.streamServer.farbe = 'kino';
+    }
     const ben = by('Laptop 2'); let m = null;
     z.dienste.mail.abholen(ben, (f, n) => m = [f, n]);
     z.engine.runUntil(z.engine.now + 40 * SEC);
