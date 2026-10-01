@@ -389,6 +389,19 @@ async function loadClusters() {
       console.warn('[admin] clusters.feedback_enabled laden fehlgeschlagen:', e.message);
     }
 
+    // GameHub-Pause (Migration 0184). Eigene Abfrage aus demselben Grund:
+    // ohne Deployment bleibt paused_at undefined und der Button wirkt
+    // nur als „Pause", ohne die Liste zu kippen.
+    try {
+      const pauses = await api('GET',
+        `clusters?select=id,paused_at&school_id=eq.${currentSchoolId}`);
+      const byId = {};
+      for (const f of pauses) byId[f.id] = f.paused_at || null;
+      for (const c of rows) c.paused_at = byId[c.id] ?? null;
+    } catch (e) {
+      console.warn('[admin] clusters.paused_at laden fehlgeschlagen:', e.message);
+    }
+
     if (rows.length === 0) {
       tbody.innerHTML = '<tr><td colspan="9" class="empty">Noch keine Cluster.</td></tr>';
     } else {
@@ -398,6 +411,9 @@ async function loadClusters() {
       });
       tbody.querySelectorAll('.js-cluster-games').forEach(btn => {
         btn.addEventListener('click', () => openClusterGames(btn.dataset.id));
+      });
+      tbody.querySelectorAll('.js-cluster-pause').forEach(btn => {
+        btn.addEventListener('click', () => toggleClusterPause(btn.dataset.id, btn.dataset.paused !== '1'));
       });
       tbody.querySelectorAll('.js-cluster-bonus').forEach(btn => {
         btn.addEventListener('click', () => openClusterBonus(btn.dataset.id));
@@ -456,7 +472,7 @@ function renderClusterRow(c, memberCount) {
 
   return `
     <tr>
-      <td>${escapeHtml(c.name)}${c.feedback_enabled ? ' <span class="badge lehrkraft" title="Feedback &amp; Fragen erlaubt">💬 Feedback</span>' : ''}</td>
+      <td>${escapeHtml(c.name)}${c.paused_at ? ' <span class="badge closed" title="GameHub ist für diesen Kurs pausiert">⏸ pausiert</span>' : ''}${c.feedback_enabled ? ' <span class="badge lehrkraft" title="Feedback &amp; Fragen erlaubt">💬 Feedback</span>' : ''}</td>
       <td>${c.season}</td>
       <td>${fmtDT(c.opens_at)}</td>
       <td>${fmtDT(c.closes_at)}</td>
@@ -467,10 +483,35 @@ function renderClusterRow(c, memberCount) {
       <td>
         <button class="btn small js-cluster-edit"   data-id="${c.id}">Bearbeiten</button>
         <button class="btn small js-cluster-games"  data-id="${c.id}">Spiele</button>
+        <button class="btn small js-cluster-pause${c.paused_at ? ' primary' : ''}" data-id="${c.id}" data-paused="${c.paused_at ? '1' : '0'}"
+                title="GameHub für diesen Kurs anhalten bzw. fortsetzen">${c.paused_at ? '▶ Fortsetzen' : '⏸ Pause'}</button>
         <button class="btn small js-cluster-bonus"  data-id="${c.id}">${bonusLabel}</button>
         <button class="btn small danger js-cluster-delete" data-id="${c.id}">Löschen</button>
       </td>
     </tr>`;
+}
+
+/* ─── GameHub-Pause pro Kurs (Migration 0184) ─────────────────
+   Legt über Hub und alle Spiele des Kurses ein Overlay; die Spiele
+   stehen still und laufen beim Fortsetzen an derselben Stelle weiter
+   (GameHub/pause.js). Die RPC prüft, ob die Lehrkraft den Kurs
+   schalten darf.                                                */
+async function toggleClusterPause(clusterId, pause) {
+  const c = (clusterCache || []).find(x => x.id === clusterId);
+  const name = c ? c.name : 'diesen Kurs';
+  if (pause && !confirm(`GameHub für „${name}" pausieren?\n\nAlle Spiele des Kurses stehen still, bis du fortsetzt.`)) return;
+  try {
+    const res = await api('POST', 'rpc/set_cluster_pause', {
+      p_cluster_id: clusterId, p_paused: pause });
+    if (!res?.ok) {
+      alert(`Konnte nicht schalten: ${res?.error ?? 'unbekannt'}`);
+      return;
+    }
+  } catch (err) {
+    alert(`Konnte nicht schalten: ${err.message}`);
+    return;
+  }
+  loadClusters();
 }
 
 /* ─── Spiele-Freischaltung pro Kurs (Migration 0070) ──────────

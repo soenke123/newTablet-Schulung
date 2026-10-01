@@ -24,6 +24,7 @@ Webauftrtitt/
 └── GameHub/            → All game logic (see GameHub/CLAUDE.md for detailed docs)
     ├── index.html      → Game selection hub with creature gallery
     ├── script.js       → Hub-only logic: GAMES_CONFIG, renderHub, shop modal, gallery
+    ├── pause.js        → Kurs-Pause (Admin-Button „⏸ Pause", Migration 0184): Overlay + Einfrieren aller Spiele; erstes <script> jeder Spielseite
     ├── creatures.js    → Shared: creature images, egg SVGs, localStorage read/write
     ├── style.css       → Fantasy/adventure theme (CSS variables, Cinzel + Nunito fonts)
     ├── config.js       → GAME_ACCESS: nur noch Not-Aus (`locked`). Freischaltung läuft über cluster_unlocked_games

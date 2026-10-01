@@ -28,6 +28,7 @@ Es enthält technische API-Referenz, visuelle Standards, bekannte Fehlerquellen 
 ## 1. Schnellstart-Checkliste
 
 ```
+[ ] pause.js als ERSTES <script> im <head> laden (Kurs-Pause, siehe unten) + supabase-config.js
 [ ] CREATURE_IMAGE_BASE vor creatures.js setzen
 [ ] creatures.js laden
 [ ] gameId + eggType aus URL-Params lesen
@@ -50,6 +51,26 @@ Es enthält technische API-Referenz, visuelle Standards, bekannte Fehlerquellen 
 [ ] Ausgewachsen (growth ≥ 21): computeRoundResult gibt +5 Bonus. Vollendet (growth ≥ 100): +10.
 [ ] renderBoostIndicators(containerId, gameId) IMMER mit gameId aufrufen, damit das Bonus-Badge angezeigt wird
 ```
+
+---
+
+## 1b. pause.js — Kurs-Pause (Pflicht für jede Spielseite)
+
+Lehrkräfte können im Admin-Panel (Kurs-Tabelle, Button „⏸ Pause") das GameHub für einen
+Kurs anhalten. `pause.js` legt dann ein Overlay über die Seite und friert Timer, Zeit,
+`requestAnimationFrame`, Audio und Animationen ein — das Spiel muss dafür nichts tun.
+
+```html
+<head>
+  <meta charset="UTF-8">
+  <script src="../pause.js?v=20261001"></script>   <!-- ERSTES Skript, sonst sieht es die Timer nicht -->
+  <script src="../../supabase-config.js"></script> <!-- für den Abruf des Pausenstatus -->
+```
+
+Gilt auch für Unterseiten (Editor, Showroom …). Kein Hook nötig; optional gibt es
+`window.MPSPause.isPaused()` sowie die Window-Events `mps:pause` / `mps:resume`.
+Eigene Pausen (z. B. Startup Story `js/pause.js`) bleiben unabhängig davon.
+Nicht eingefroren werden Web Worker, Promises und laufende Netzwerkanfragen.
 
 ---
 
