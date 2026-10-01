@@ -4273,6 +4273,15 @@ button.wb-vor .ico { width: 1em; height: 1em; vertical-align: 0; }
 .wb-zert:hover { border-color: var(--accent); color: var(--accent); }
 .wb-zert.is-on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
 .wb-zert .ico { width: 1.15em; height: 1.15em; }
+/* Orange = keine Zertifizierungsstelle in der Vertrauensliste, grün = mindestens eine. */
+.wb-zert--leer { color: var(--warn); border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, var(--surface)); }
+.wb-zert--ok { color: var(--ok); border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
+.wb-zert--leer:hover { color: var(--warn); border-color: var(--warn); filter: brightness(1.08); }
+.wb-zert--ok:hover { color: var(--ok); border-color: var(--ok); filter: brightness(1.08); }
+.wb-zert.is-on.wb-zert--leer { background: var(--warn); color: #fff; }
+.wb-zert.is-on.wb-zert--ok { background: var(--ok); color: #fff; }
 .dt-win > .wb-info { flex: none; }
 
 .wb-info {

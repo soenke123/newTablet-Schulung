@@ -135,6 +135,7 @@
 
     /* Wie sicher war die Seite, die gerade dasteht? `null` = keine
        Seite da (leer, lädt, Fehler, Warnung). */
+    const vertraut = ctx.netz.vertrauen(node).length;
     const sicher = (br.ansicht === 'seite' && br.seite && br.seite.ziel)
       ? (br.seite.ziel.schema === 'https'
           ? (br.seite.tls && br.seite.tls.ausnahme ? 'ausnahme' : 'sicher') : 'http')
@@ -178,8 +179,15 @@
                          : sicher === 'ausnahme' ? '⚠ Unsicher' : 'Nicht sicher') + '</button>' : '')
       +   '</div>'
       +   '<button class="k-add" id="wbStart">Start</button>'
-      +   '<button class="wb-zert' + (br.ansicht === 'zert' ? ' is-on' : '') + '" id="wbZert" '
-      +     'title="Zertifikate — welchen Zertifizierungsstellen glaubt dieses Gerät?" aria-label="Zertifikate">'
+      /* Das Schild sagt auf einen Blick, ob dieses Gerät irgendeiner
+         Zertifizierungsstelle glaubt: orange, solange die Vertrauensliste
+         leer ist (dann zeigt jede HTTPS-Seite eine Warnung), grün, sobald
+         mindestens eine drinsteht. */
+      +   '<button class="wb-zert ' + (vertraut ? 'wb-zert--ok' : 'wb-zert--leer')
+      +     (br.ansicht === 'zert' ? ' is-on' : '') + '" id="wbZert" '
+      +     'title="' + (vertraut ? 'Zertifikate — dieses Gerät vertraut ' + vertraut + ' Zertifizierungsstelle' + (vertraut === 1 ? '' : 'n')
+                                  : 'Zertifikate — noch keiner Zertifizierungsstelle vertraut: HTTPS-Seiten zeigen eine Warnung')
+      +     '" aria-label="Zertifikate">'
       +     U.icon('schild') + '</button>'
       + '</div>'
       + (sicher && br.infoOffen ? '<div class="wb-info wb-info--' + sicher + '">' + sicherheitsText(sicher) + '</div>' : '')
