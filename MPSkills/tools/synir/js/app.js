@@ -119,7 +119,7 @@
       termCmds: $('termCmds'), termMenu: $('termMenu'), termStop: $('termStop'),
       desktop: $('desktop'), dtHead: $('dtHead'), dtIcon: $('dtIcon'),
       dtName: $('dtName'), dtSub: $('dtSub'), dtPower: $('dtPower'),
-      dtClose: $('dtClose'), dtApps: $('dtApps'), dtDock: $('dtDock'),
+      dtClose: $('dtClose'), dtMin: $('dtMin'), miniBox: $('railMini'), miniListe: $('railMiniL'), dtApps: $('dtApps'), dtDock: $('dtDock'),
       dtWin: $('dtWin'), dtFenster: $('dtFenster'), dtScreen: $('dtScreen'), dtGrip: $('dtGrip'),
       karte: $('karte'), karteHead: $('karteHead'), karteIcon: $('karteIcon'),
       karteKurz: $('karteKurz'), karteName: $('karteName'),
@@ -988,7 +988,9 @@
 
       if (m === 'entwurf') {
         setRunning(false);
-        geraet.close();
+        // Offener Desktop und minimierte Kürzel bleiben erhalten und
+        // kommen mit der Aktion wieder.
+        geraet.pausieren();
         // Die Dienste stehen still, solange gebaut wird. Ein
         // DHCP-Server, der während des Verkabelns Adressen
         // verteilt, verteilt sie ins Halbfertige.
@@ -1027,6 +1029,7 @@
         setRunning(true);
         dienste.start();
         traceZeigen(traceWunsch);
+        geraet.wiederaufnehmen();
       }
 
       panels.renderKarte();
@@ -1279,7 +1282,7 @@
       mit.clear();
       flaeche.clearDots();
       flaeche.select(null);
-      geraet.close();
+      geraet.vergessen();
       panels.closeKarte();
       // Eine neue Aufgabe fängt im Entwurf an: erst lesen und
       // einrichten, dann laufen lassen. Wer nur zusehen will,
@@ -1448,6 +1451,12 @@
     });
     aufKachel.addEventListener('click', () => aufZeigen(true));
 
+    /* Wer den Auftrag antippt, will ihn sehen: liegt er hinter einem
+       Desktop, kommt er nach vorn. Ein Tipp auf den Desktop holt
+       diesen wieder nach vorn. */
+    aufBox.addEventListener('pointerdown', () => aufBox.classList.add('is-vorn'));
+    refs.desktop.addEventListener('pointerdown', () => aufBox.classList.remove('is-vorn'), true);
+
     /* Ziehen wie bei den Kärtchen (panels.js): am Kopf festhalten,
        innerhalb der Bühne bleiben. */
     (function () {
@@ -1480,7 +1489,7 @@
       engine.reset();
       if (D) D.blobsLeeren();
       netz.fromJSON({ nodes: [], cables: [] });
-      mit.clear(); flaeche.clearDots(); flaeche.select(null); geraet.close();
+      mit.clear(); flaeche.clearDots(); flaeche.select(null); geraet.vergessen();
       auftragAus(null);
       setModus('entwurf', true);
       umgebaut = false;
@@ -1557,7 +1566,7 @@
           // Einfuhr — dann bleibt der Speicher eben leer.
           if (D) { D.blobsLeeren(); D.blobsLaden(data.blobs); }
           netz.fromJSON(data);
-          mit.clear(); flaeche.clearDots(); geraet.close();
+          mit.clear(); flaeche.clearDots(); geraet.vergessen();
           flaeche.select(null); panels.closeKarte();
           setModus('entwurf', true);
           umgebaut = false;

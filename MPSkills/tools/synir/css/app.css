@@ -1378,7 +1378,7 @@ body.is-ziehen, body.is-ziehen * {
   cursor: grab; touch-action: none; user-select: none;
 }
 .aufgabe.is-zieh .auf-h { cursor: grabbing; }
-.aufgabe.is-zieh { z-index: 8; }
+.aufgabe.is-zieh, .aufgabe.is-vorn { z-index: 8; }  /* über dem Desktop (5) */
 .auf-h:hover { filter: brightness(.985); }
 .auf-tag {
   font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em;
@@ -3163,7 +3163,7 @@ body.trace-schichten .trs { min-width: 940px; }
 .dt-t strong { font-size: 13.5px; }
 .dt-sub { font-size: 11px; color: rgba(231,234,246,.62); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.dt-pw, .dt-x {
+.dt-pw, .dt-x, .dt-min {
   flex: none; width: 28px; height: 28px; border-radius: 50%;
   border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.10);
   color: #e7eaf6; font-size: 14px; cursor: pointer;
@@ -3171,7 +3171,8 @@ body.trace-schichten .trs { min-width: 940px; }
 .dt-pw { margin-left: auto; }
 .dt-x  { border-color: transparent; background: transparent; font-size: 18px; }
 .dt-pw.is-on { color: #6ce3bf; border-color: rgba(108,227,191,.55); }
-.dt-pw:hover, .dt-x:hover { background: rgba(255,255,255,.22); color: #fff; }
+.dt-min { font-weight: 700; line-height: 1; padding-bottom: 6px; }
+.dt-pw:hover, .dt-x:hover, .dt-min:hover { background: rgba(255,255,255,.22); color: #fff; }
 .dt.is-off .dt-ic, .dt.is-off .dt-t { opacity: .45; }
 
 /* ═══ Der Bildschirm selbst ══════════════════════════════════
@@ -3412,11 +3413,11 @@ body.trace-schichten .trs { min-width: 940px; }
   border-bottom: 1px solid var(--line); backdrop-filter: none;
 }
 .dt--kein .dt-sub { color: var(--ink-2); }
-.dt--kein .dt-pw, .dt--kein .dt-x {
+.dt--kein .dt-pw, .dt--kein .dt-x, .dt--kein .dt-min {
   border-color: var(--line-2); background: transparent; color: var(--ink-2);
 }
 .dt--kein .dt-pw.is-on { color: var(--ok); border-color: currentColor; }
-.dt--kein .dt-pw:hover, .dt--kein .dt-x:hover { background: var(--bg); color: var(--ink); }
+.dt--kein .dt-pw:hover, .dt--kein .dt-x:hover, .dt--kein .dt-min:hover { background: var(--bg); color: var(--ink); }
 
 /* Kein Raster, keine Tapete: untereinander, wie in einem Formular.
    Das Rasterlayout des Bildschirms wird von `display:flex` still
@@ -4378,4 +4379,25 @@ body.hgriff-drag .wlt, body.hgriff-drag .trace { transition: none; }
 @media (pointer: coarse) {
   .hgriff { top: -14px; height: 28px; }
   .hgriff::after { top: 12px; width: 56px; height: 5px; }
+}
+
+
+/* ═══ Minimierte Desktops ════════════════════════════════════
+   Kürzel (E1, R1 …) in der linken Leiste. Beim Minimieren
+   blinkt das neue Kürzel kurz auf, damit sichtbar wird, wohin
+   der Desktop gegangen ist. */
+.rail-mini { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+.rail-mini[hidden] { display: none; }
+.rail-mini-l { display: flex; flex-wrap: wrap; gap: 5px; }
+.rail.is-zu .rail-mini-l { justify-content: center; }
+.mini-chip {
+  min-width: 40px; height: 36px; padding: 0 9px; border-radius: 10px;
+  border: 1px solid var(--line-2); background: var(--surface-2); color: var(--ink);
+  font: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
+}
+.mini-chip:hover { border-color: var(--ink-3); }
+.mini-chip.is-neu { animation: mini-blink .5s ease-in-out 3; }
+@keyframes mini-blink {
+  0%, 100% { background: var(--surface-2); transform: scale(1); }
+  50% { background: var(--accent, #4f8cff); color: #fff; transform: scale(1.18); }
 }

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
-<link rel="stylesheet" href="css/app.css?v=20261001h">
+<link rel="stylesheet" href="css/app.css?v=20261001i">
 </head>
 <body>
 
@@ -538,6 +538,12 @@
            Gerätefenster — sie haben keinen. -->
       <span class="tools-hint rail-hint">Tippe ein Gerät an — es öffnet sich.
         Zum Umbauen zurück auf <em>Entwurf</em>.</span>
+      <!-- Minimierte Desktops. Ein Tipp auf das Kürzel holt genau
+           den Desktop zurück, wie er war (js/geraet.js). -->
+      <div class="rail-mini" id="railMini" hidden>
+        <span class="tools-t rail-t">Offene Geräte</span>
+        <div class="rail-mini-l" id="railMiniL"></div>
+      </div>
     </div>
 
     <!-- ── Ausschnitt ─────────────────────────────────────────
@@ -736,6 +742,9 @@
           <span class="dt-sub mono" id="dtSub"></span>
         </div>
         <button class="dt-pw" id="dtPower" title="ausschalten">⏻</button>
+        <!-- Minimieren: der Desktop behält Programm und Platz und
+             liegt als Kürzel (E1) links in der Leiste. -->
+        <button class="dt-min" id="dtMin" title="minimieren (links in der Leiste)">_</button>
         <button class="dt-x" id="dtClose" title="schließen">×</button>
       </div>
       <div class="dt-scr" id="dtScreen">
@@ -916,12 +925,12 @@
 <script src="js/prog-web.js?v=20261001g"></script>
 <script src="js/prog-mail.js?v=20261001g"></script>
 <script src="js/prog-zert.js?v=20261001g"></script>
-<script src="js/geraet.js?v=20261001g"></script>
+<script src="js/geraet.js?v=20261001i"></script>
 <script src="js/szenarien.js?v=20261001a"></script>
 <script src="js/szmenue.js?v=20260930e"></script>
 <script src="js/menuleiste.js?v=20260930e"></script>
 <script src="js/aufgabe.js?v=20260930e"></script>
-<script src="js/app.js?v=20261001h"></script>
+<script src="js/app.js?v=20261001i"></script>
 <!-- Die Brücke in den Raum. Tut ohne Rahmen nichts. -->
 <script src="js/bruecke.js?v=20260930e"></script>
 </body>

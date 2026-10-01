@@ -281,10 +281,12 @@
 
     /* ═══ Öffnen und schließen ═══════════════════════════════ */
 
-    function open(id) {
+    function open(id, stand) {
       const n = netz.get(id);
       if (!n) return;
       if (nodeId && nodeId !== id) closeApp();
+      // Ein minimierter Desktop kommt genau so zurück, wie er war.
+      if (!stand) stand = miniNehmen(id);
       // Ein anderes Gerät fängt wieder auf der Hauptseite der
       // Einstellungen an, nicht auf der DHCP-Unterseite des
       // vorigen.
@@ -293,6 +295,7 @@
       refs.desktop.hidden = false;
       massSetzen();
       platziere(n);
+      if (stand) standHerstellen(n, stand);
       render();
       // Der Mitschnitt folgt mit — siehe `close()`.
       if (opts.onGeraet) opts.onGeraet(id);
@@ -321,6 +324,97 @@
       refs.desktop.style.right = '16px';
       refs.desktop.style.top = untenDrin ? '16px' : 'auto';
       refs.desktop.style.bottom = untenDrin ? 'auto' : '16px';
+    }
+
+    /* ═══ Minimieren ═════════════════════════════════════════
+       Ein minimierter Desktop behält Programm, Seite und Platz und
+       liegt als Kürzel (E1) in der linken Leiste (`railMini`).
+       Beim Wechsel in den Entwurf wird der offene Desktop nur
+       „pausiert" und kommt mit der Aktion zurück; die Kürzel
+       bleiben stehen und sind im Entwurf ausgeblendet. */
+    let mini = [];        // [{ id, appId, seite, pos, verschoben }]
+    let pausiert = null;  // der Desktop, der beim Moduswechsel offen war
+    let neuId = null;     // das Kürzel, das gerade aufblinken soll
+
+    function standMerken() {
+      const st = refs.desktop.style;
+      return {
+        id: nodeId, appId: appId, seite: refs.dtWin.dataset.seite || '',
+        pos: { left: st.left, top: st.top, right: st.right, bottom: st.bottom },
+        verschoben: selbstVerschoben
+      };
+    }
+
+    function standHerstellen(n, stand) {
+      selbstVerschoben = stand.verschoben;
+      if (stand.verschoben) {
+        const st = refs.desktop.style;
+        st.left = stand.pos.left; st.top = stand.pos.top;
+        st.right = stand.pos.right; st.bottom = stand.pos.bottom;
+      }
+      refs.dtWin.dataset.seite = stand.seite || '';
+      if (stand.appId && programmeFuer(n).some(p => p.id === stand.appId)) appId = stand.appId;
+    }
+
+    function miniNehmen(id) {
+      const i = mini.findIndex(m => m.id === id);
+      if (i < 0) return null;
+      const st = mini.splice(i, 1)[0];
+      miniZeichnen();
+      return st;
+    }
+
+    function miniZeichnen() {
+      mini = mini.filter(m => netz.get(m.id));
+      if (!refs.miniListe) return;
+      refs.miniListe.innerHTML = '';
+      mini.forEach(m => {
+        const n = netz.get(m.id);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'mini-chip' + (m.id === neuId ? ' is-neu' : '');
+        b.textContent = netz.kurzName(n);
+        b.title = n.name + ' — Desktop wieder öffnen';
+        b.addEventListener('click', () => open(m.id));
+        refs.miniListe.appendChild(b);
+      });
+      neuId = null;
+      if (refs.miniBox) refs.miniBox.hidden = !mini.length || !!pausiertAktiv;
+    }
+
+    let pausiertAktiv = false;  // Entwurf: Kürzel ausgeblendet
+
+    function minimieren() {
+      if (!nodeId) return;
+      const st = standMerken();
+      mini = mini.filter(m => m.id !== st.id);
+      mini.push(st);
+      neuId = st.id;
+      close();
+      miniZeichnen();
+    }
+
+    // Moduswechsel in den Entwurf: Desktop zur Seite, Kürzel weg.
+    function pausieren() {
+      pausiert = nodeId ? standMerken() : null;
+      pausiertAktiv = true;
+      close();
+      miniZeichnen();
+    }
+
+    function wiederaufnehmen() {
+      pausiertAktiv = false;
+      miniZeichnen();
+      const st = pausiert;
+      pausiert = null;
+      if (st && netz.get(st.id)) open(st.id, st);
+    }
+
+    // Alles vergessen: neues Netz, anderes Szenario, Zurücksetzen.
+    function vergessen() {
+      mini = []; pausiert = null;
+      close();
+      miniZeichnen();
     }
 
     function close() {
@@ -828,6 +922,7 @@
     /* ═══ Kopfzeile des Fensters ═════════════════════════════ */
 
     refs.dtClose.addEventListener('click', close);
+    if (refs.dtMin) refs.dtMin.addEventListener('click', minimieren);
 
     refs.dtPower.addEventListener('click', () => {
       const n = netz.get(nodeId);
@@ -949,7 +1044,7 @@
     }
 
     return {
-      open, close, render, tabellenAuffrischen,
+      open, close, render, tabellenAuffrischen, minimieren, pausieren, wiederaufnehmen, vergessen,
       get nodeId() { return nodeId; },
       get isOpen() { return !!nodeId; }
     };
