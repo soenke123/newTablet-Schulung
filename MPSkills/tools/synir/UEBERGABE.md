@@ -6,6 +6,34 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 000f · Mitlesende — Schritt 3 des Sicherheitsplans (2026-10-01)
+
+Berührt: `js/netz.js` (`funkAbgleich`: **eine** Funkbuchse je Zugangspunkt, `funkSenden`, `addCable`/`removeCable`
+für Funk), `js/schichten.js` (`switchIt`: kein Echo auf demselben Anschluss), `js/mitschnitt.js` (`mitleserArt`,
+`hatInhalt`, `mitlesende`, Filter `MITLESER`), `js/panels.js` (Pille, Schale *Mitlesende*), `index.html` (Chip
+**👁 Mitlesende** statt 🔑 Zugangsdaten), `css/app.css`, `tests/kerntest.js` (1153 grün), `tests/uitest.js`
+(Fund-Filter-Abschnitt auf den neuen Chip umgestellt — **nicht lauffähig geprüft**, siehe unten), `PLAN-SICHERHEIT.md`.
+
+* ⭐ **Funk ist jetzt ein gemeinsames Medium.** Es gibt keine Buchse mehr je Gast. Der Zugangspunkt hat EINE
+  Antenne (`funkPort`, nie gespeichert). Was ein Gast sendet, bekommen der Zugangspunkt UND alle anderen Gäste
+  derselben SSID; was der Zugangspunkt sendet, alle Gäste. Ob der Rahmen „für mich" ist, entscheidet erst die
+  Karte (`deliver`) — der Mitschnitt hat ihn vorher gesehen. Die gestrichelten Striche (`cables`, `funk: true`)
+  sind nur noch die Zuordnung Gast → Name; die Antenne trägt kein Kabel (`nic.cable` bleibt leer).
+* ⭐ **Mitlesende** (Zeilenfeld `mit`): `funk` = Gast empfängt einen Rahmen, der nicht an seine MAC ging;
+  `weg` = Paket läuft durch Router / Heimrouter (nur was geroutet wird) / cww. **Switch zählt nicht.**
+  Der Chip **Mitlesende** zeigt nur Zeilen mit `mit` UND Inhalt (TCP/UDP mit Nutzdaten; Verschlüsseltes zählt,
+  man liest nur Salat). Pille `👁 📡 Funk` / `👁 ↔ Unterwegs`, aufgeklappt Schale *Mitlesende* (alle Geräte, die
+  dasselbe Paket gesehen haben — verglichen am IP-Paket ohne TTL). Auch Annas eigene Zeile nennt ihre Mitleser.
+* Der Fund-Filter (Chip 🔑) ist ersetzt. `zugang` (Benutzer/Passwort, Schale *Zugangsdaten*) bleibt; die Pille
+  heißt jetzt **🔓 Zugangsdaten** (Schloss offen = lesbar, Gegenstück zu 🔒).
+* ⚠️ Der Mitschnitt zeigt **ohne Gerätewahl nur gesendete Zeilen** (`dir: 'raus'`). Wer Funk-Mithören prüfen
+  will, muss ein Gerät antippen (setzt `beide`) oder `setFilter({ dir: 'beide' })`.
+* ⚠️ `tests/uitest.js` bricht in dieser Container-Umgebung schon **vor** diesem Schritt ab (Zeile ~1625, auch am
+  unveränderten Stand). Ein Bild des Mitschnitts bei Ben und der Fläche wurde stattdessen mit einem
+  Einmal-Skript geprüft.
+
+---
+
 ## 000e · HTTPS und Zertifizierungsstelle — Schritt 4 des Sicherheitsplans (2026-10-01)
 
 Berührt: neu `js/tls.js`, `js/zs.js`, `js/prog-zert.js`; `js/http.js` (https://, 443, `holen` mit TLS und

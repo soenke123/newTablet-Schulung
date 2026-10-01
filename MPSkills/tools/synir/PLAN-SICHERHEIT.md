@@ -50,7 +50,7 @@ dann bauen, dann hier abhaken. **Nicht drei Schritte vorausdenken.**
 |---|---|---|---|---|
 | 1 | **Fund-Filter im Mitschnitt** (erst für E-Mail) | nichts | klein | ☑ 2026-09-30 |
 | 2 | **Web-Anwendung mit Anmeldung** | nichts (macht 1 und 4 lohnender) | mittel | ☑ 2026-09-30 |
-| 3 | **WLAN-Lauschen** | nichts | klein bis mittel | ☐ |
+| 3 | **WLAN-Lauschen** (jetzt: **Mitlesende**) | nichts | mittel | ☑ 2026-10-01 |
 | 4 | **HTTPS / TLS-Schale** (und Mail-Haken) | 2 | mittel | ☑ 2026-10-01 |
 | 5 | **VPN** | 4 (Verschlüsselung), NAT | groß | ☐ |
 
@@ -186,6 +186,21 @@ Fluten bei unbekanntem Ziel).
 **Zu klären:** Wie schaltet man das Mithören ein (Haken am Endgerät? nur im Entwurf?),
 wie sieht es im Mitschnitt aus (Marke „nicht für mich"), und wie bleibt die Bedeutung von
 „gestrichelt = Funk" erhalten.
+
+
+**Entschieden und umgesetzt (2026-10-01), Gespräch mit dem Nutzer — ersetzt die „Idee" oben:**
+
+* **Mithören ist immer an**, kein Schalter am Gerät. Auch am Heimrouter-WLAN.
+* **Funk ist ein gemeinsames Medium, keine virtuelle Buchse je Gast.** Der Zugangspunkt hat eine Antenne; alles,
+  was gesendet wird, empfangen alle in der Zelle (`netz.funkSenden`). Die Karte verwirft Fremdes erst danach.
+* **Ein Chip „Mitlesende" ersetzt den Fund-Filter** (🔑 Zugangsdaten entfällt als Chip). Zwei Wege, ein Gedanke:
+  **📡 Funk** (Rundruf) und **↔ Unterwegs** (Router, Heimrouter-Routing, cww). Der **Switch zählt nicht** — er
+  schaut nur auf die MAC. Der Chip zeigt nur Pakete **mit Inhalt**. Was ein Mitleser sieht, ist im Klartext
+  lesbar, bei HTTPS sieht er nur Salat (🔒).
+* **Anzeige:** Pille `👁 📡 Funk` bzw. `👁 ↔ Unterwegs` in der Zeile, `🔓 Zugangsdaten` bei Klartext-Zugang,
+  aufgeklappt Schale *Mitlesende* (wer dasselbe Paket gesehen hat). Auch die Zeile des Absenders nennt seine Mitleser.
+* **Prüfen:** `tests/kerntest.js` (*Mitlesende: Funk ist ein Rundruf*, Mitlesende im Abschnitt *Router*, *WLAN*).
+* **Nicht gebaut:** Mithör-Schalter, Feldstärke/Reichweite, WLAN-Verschlüsselung (WPA).
 
 ---
 

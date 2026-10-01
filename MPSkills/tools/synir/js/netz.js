@@ -999,6 +999,19 @@
         const ap = new Map();                 // ssid → Gerät
         for (const z of zugangspunkte()) if (!ap.has(z.ssid)) ap.set(z.ssid, z.node);
 
+        /* Ein Zugangspunkt hat EINEN Funkanschluss — eine Antenne,
+           egal wie viele Gäste in Reichweite sind. Alle Gäste teilen
+           sich diesen Anschluss: was dort gesendet wird, empfangen
+           alle (siehe `funkSenden`). Die gestrichelten Striche sind
+           nur die Zuordnung „dieser Gast hängt an diesem Namen". */
+        const antenne = new Map();            // Zugangspunkt-id → Funkbuchse
+        for (const z of ap.values()) {
+          const buchse = makeNic(z.nics.length);
+          buchse.funkPort = true;
+          z.nics.push(buchse);
+          antenne.set(z.id, buchse);
+        }
+
         let neu = 0;
         const fehler = [];
         for (const n of list()) {
@@ -1011,13 +1024,9 @@
               continue;
             }
             if (ziel.id === n.id) continue;
-            // Die Funkbuchse am Zugangspunkt — je Gast eine.
-            const buchse = makeNic(ziel.nics.length);
-            buchse.funkPort = true;
-            ziel.nics.push(buchse);
-            const r = addCable(n.id, nic.i, ziel.id, buchse.i, { funk: true });
+            const r = addCable(n.id, nic.i, ziel.id, antenne.get(ziel.id).i, { funk: true });
             if (r.ok) neu++;
-            else { ziel.nics.pop(); fehler.push({ node: n, nic: nic.i, why: r.error }); }
+            else fehler.push({ node: n, nic: nic.i, why: r.error });
           }
         }
         return { neu, fehler };
@@ -1084,7 +1093,8 @@
       const na = A.nics[aNic], nb = B.nics[bNic];
       if (!na || !nb) return { ok: false, error: 'Diesen Anschluss gibt es nicht.' };
       if (na.cable)   return { ok: false, error: 'An diesem Anschluss steckt schon ein Kabel.' };
-      if (nb.cable)   return { ok: false, error: 'An diesem Anschluss steckt schon ein Kabel.' };
+      if (nb.cable && !(opts && opts.funk))
+                      return { ok: false, error: 'An diesem Anschluss steckt schon ein Kabel.' };
       if (istInternet(A, aNic) || istInternet(B, bNic))
         return { ok: false, error: 'Der Internet-Anschluss des cww hängt fest in der Wolke — '
           + 'Kabel gehen nur an die Karten darunter.' };
@@ -1141,7 +1151,10 @@
         up: true
       };
       cables.set(id, cable);
-      na.cable = id; nb.cable = id;
+      na.cable = id;
+      /* Die Antenne gehört keinem einzelnen Gast: sie trägt kein
+         Kabel. Wer an ihr hängt, steht in `cables` (funk: true). */
+      if (!cable.funk) nb.cable = id;
       changed();
       return { ok: true, cable };
     }
@@ -1151,7 +1164,7 @@
       if (!c) return;
       const na = nicOf(c.a), nb = nicOf(c.b);
       if (na) na.cable = null;
-      if (nb) nb.cable = null;
+      if (nb && !c.funk) nb.cable = null;
       cables.delete(id);
       changed();
     }
@@ -1187,10 +1200,67 @@
        Quelle nachträglich verfälschen. Filius macht dasselbe mit
        SerializationUtils.clone(); wir nehmen JSON, weil unsere
        Rahmen reine Daten sind. */
+    /* ─── Funk: ein Rundruf an alle in der Zelle ──────────────
+       Luft hat keine Buchsen. Was ein Gast sendet, empfangen der
+       Zugangspunkt UND alle anderen Gäste desselben Namens; was der
+       Zugangspunkt sendet, empfangen alle Gäste. Ob ein Rahmen „für
+       mich" ist, entscheidet erst die Karte (deliver) — der
+       Mitschnitt hat ihn dann schon gesehen. Das ist der ganze
+       Unterschied zum Switch: dort bekommt nur der Empfänger etwas.
+
+       Wie beim Kabel entsteht die Verzögerung hier und nur hier;
+       sie kommt vom Strich des jeweiligen Gastes. */
+    function funkSenden(src, fromNic, frame, onArrive) {
+      const nic = src.nics[fromNic];
+      let zelle;                              // [{ node, nic, cable }]
+      if (nic.funkPort) {
+        zelle = cableList().filter(c => c.funk && c.b.node === src.id)
+          .map(c => ({ node: nodes.get(c.a.node), nic: c.a.nic, cable: c }));
+      } else {
+        const mein = cables.get(nic.cable);
+        if (!mein) return { ok: false, why: 'no_cable' };
+        const ap = nodes.get(mein.b.node);
+        zelle = [{ node: ap, nic: mein.b.nic, cable: mein }];
+        for (const c of cableList()) {
+          if (c.funk && c.b.node === mein.b.node && c.id !== mein.id) {
+            zelle.push({ node: nodes.get(c.a.node), nic: c.a.nic, cable: c });
+          }
+        }
+      }
+      engine.emit('event', {
+        kind: 'wire', dir: 'out', node: src.id, nic: fromNic,
+        cable: nic.cable || (zelle[0] && zelle[0].cable.id), frame: frame, t: engine.now
+      });
+      for (const z of zelle) {
+        if (!z.node || z.node === src) continue;
+        if (z.cable.loss > 0 && engine.rand() < z.cable.loss) {
+          engine.at(z.cable.delay, () => {
+            engine.emit('event', { kind: 'drop', cable: z.cable.id, frame: frame, t: engine.now });
+          }, 'verlust', src.id);
+          continue;
+        }
+        const copy = U.deepCopy(frame);
+        engine.at(z.cable.delay, () => {
+          if (!z.node.on) return;
+          const dnic = z.node.nics[z.nic];
+          if (!dnic || !dnic.up) return;
+          engine.emit('event', {
+            kind: 'wire', dir: 'in', node: z.node.id, nic: z.nic,
+            cable: z.cable.id, frame: copy, funk: true, t: engine.now
+          });
+          if (onArrive) onArrive(z.node, z.nic, copy);
+        }, 'kabel', src.id);
+      }
+      return { ok: true };
+    }
+
     function sendFrame(fromNodeId, fromNic, frame, onArrive) {
-      const link = peerOf(fromNodeId, fromNic);
       const src = nodes.get(fromNodeId);
       const nic = src && src.nics[fromNic];
+      if (src && src.on && nic && nic.up && (nic.funkPort || (nic.funk && nic.cable))) {
+        return funkSenden(src, fromNic, frame, onArrive);
+      }
+      const link = peerOf(fromNodeId, fromNic);
 
       if (!src || !src.on) return { ok: false, why: 'off' };
       if (!nic || !nic.up)  return { ok: false, why: 'nic_down' };

@@ -733,8 +733,14 @@
        heißt auf der Fläche „Netz". */
     const INET_TIP = 'Ausgang ins Internet — alles, was dein Netz verlässt';
     const ZUG_TIP = 'Zugangsdaten im Klartext — wer hier mitliest, kennt sie';
+    const MIT_TIP = {
+      funk: 'Funk ist ein Rundruf: dieses Paket war nicht für dieses Gerät, kam aber trotzdem an',
+      weg: 'Dieses Paket läuft durch dieses Gerät hindurch — wer es betreibt, kann es mitlesen'
+    };
+    const MIT_TXT = { funk: '👁 📡 Funk', weg: '👁 ↔ Unterwegs' };
     const marken = (r) => (r.inet ? '<b class="tr-w" title="' + INET_TIP + '">☁ Internet</b>' : '')
-      + (r.zugang ? '<b class="tr-z" title="' + ZUG_TIP + '">🔑 Zugangsdaten</b>' : '');
+      + (r.mit && r.inhalt ? '<b class="tr-m" title="' + MIT_TIP[r.mit] + '">' + MIT_TXT[r.mit] + '</b>' : '')
+      + (r.zugang ? '<b class="tr-z" title="' + ZUG_TIP + '">🔓 Zugangsdaten</b>' : '');
 
     function renderTrace() {
       const rows = mit.view();
@@ -924,6 +930,14 @@
     function renderLayers(r) {
       const ls = mit.layers(r);
       let h = '<div class="tr-det">';
+      const mitl = mit.mitlesende(r);
+      if (mitl.length) {
+        h += '<div class="tr-lay tr-lay--mit">'
+          + '<div class="tr-lay-h">Mitlesende <span class="tr-lay-s" title="Jeder, der ein Paket sieht, sieht auch seinen Inhalt, wenn es nicht verschlüsselt ist.">i</span></div>'
+          + mitl.map(m => '<div class="tr-f"><span>' + esc(m.name) + '</span><span class="mono">'
+              + (m.art === 'funk' ? '📡 Funk' : '↔ Unterwegs') + '</span></div>').join('')
+          + '</div>';
+      }
       if (r.zugang) {
         const z = r.zugang;
         h += '<div class="tr-lay tr-lay--zug">'

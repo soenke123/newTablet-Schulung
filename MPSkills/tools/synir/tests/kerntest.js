@@ -209,6 +209,16 @@ section('Router');
   ok('Rechner kennt eigenes Netz + Standardweg', wege.length === 2, JSON.stringify(wege));
   ok('Standardweg als solcher benannt', wege.some(w => w.kind === 'Standard'));
 
+  /* Mitlesende (PLAN-SICHERHEIT, Schritt 3): der Router sieht, was
+     durch ihn läuft — der Switch nicht als Mitleser, und ein Ping hat
+     keinen Inhalt, der im Chip „Mitlesende" stünde. */
+  mit.setFilter({ dir: 'beide' });
+  const alle = mit.view();
+  ok('⭐ der Router liest mit: Zeilen „weg" an seinen Karten', alle.some(x => x.node === r.id && x.mit === 'weg'));
+  ok('die Switches und die Endgeräte nicht', !alle.some(x => (x.node === s1.id || x.node === s2.id || x.node === a.id || x.node === b.id) && x.mit));
+  ok('ein Ping trägt keinen Inhalt für den Chip', alle.filter(x => x.mit).every(x => !x.inhalt));
+  mit.setFilter({ dir: 'raus' });
+
   // Ohne Gateway auf der Gegenseite: Anfrage kommt an, Antwort nicht zurück
   b.gateway = '';
   stack.clearTables(a); stack.clearTables(b); stack.clearTables(r);
@@ -3868,7 +3878,7 @@ section('WLAN');
      fünf Anschlüsse, wäre ein Switch mit drei Handys plötzlich
      fast voll — und das behauptet über die Hardware etwas
      Falsches. */
-  ok('der Switch hat dafür eine Funkbuchse bekommen',
+  ok('der Switch hat dafür EINE Funkbuchse (die Antenne) bekommen',
      sw.nics.length === 6 && sw.nics[5].funkPort === true, sw.nics.length);
   ok('seine festen Anschlüsse sind unverändert', netz.feste(sw).length === 5);
 
@@ -3885,7 +3895,7 @@ section('WLAN');
   sw.wlan.ssid = 'Anderer Name';
   netz.funkAbgleich();
   ok('wird das Netz umbenannt, ist die Verbindung weg', !handy.nics[0].cable);
-  ok('und die Funkbuchse verschwindet mit ihr', sw.nics.length === 5);
+  ok('die Antenne bleibt, solange der Switch ausstrahlt', sw.nics.length === 6);
 
   handy.nics[0].ssid = 'Anderer Name';
   netz.funkAbgleich();
@@ -3894,6 +3904,7 @@ section('WLAN');
   sw.wlan.on = false;
   netz.funkAbgleich();
   ok('WLAN aus trennt ebenfalls', !handy.nics[0].cable);
+  ok('und nimmt die Antenne mit', sw.nics.length === 5);
   ok('der Name bleibt dabei stehen', sw.wlan.ssid === 'Anderer Name');
   sw.wlan.on = true;
   netz.funkAbgleich();
@@ -5301,6 +5312,52 @@ section('Class Wide Web: Szenario 8 auf zwei Tablets');
      seite && seite.ok && seite.status === 200, seite && (seite.grund || seite.status));
 }
 
+section('Mitlesende: Funk ist ein Rundruf');
+{
+  /* PLAN-SICHERHEIT, Schritt 3. Anna holt per POP3 Post; Ben sitzt im
+     selben WLAN und tut nichts. Carl hängt per Kabel am Switch. */
+  const b = bau(21);
+  const dienste = new sandbox.Dienste(b.engine, b.netz, b.stack, {});
+  const sw = b.netz.addNode('switch', 300, 200);
+  b.netz.wlanConf(sw); sw.wlan.on = true; sw.wlan.ssid = 'Klasse';
+  const a = b.netz.addNode('host', 100, 100), ben = b.netz.addNode('host', 100, 300);
+  const carl = b.netz.addNode('host', 300, 400), ms = b.netz.addNode('server', 500, 200);
+  konf(a, 0, '192.168.1.10'); konf(ben, 0, '192.168.1.11');
+  konf(carl, 0, '192.168.1.12'); konf(ms, 0, '192.168.1.20');
+  b.netz.addCable(carl.id, 0, sw.id, 0); b.netz.addCable(ms.id, 0, sw.id, 1);
+  b.netz.setFunk(a, 0, true, 'Klasse'); b.netz.setFunk(ben, 0, true, 'Klasse');
+  ms.software = ['mailserver'];
+  const s = b.netz.mailConf(ms); s.on = true; s.domain = 'schule.de';
+  s.konten = [{ benutzer: 'anna', name: 'Anna', passwort: 'apfel', posteingang: [] }];
+  Object.assign(b.netz.mailKonto(a), { name: 'Anna', adresse: 'anna@schule.de',
+    pop3: '192.168.1.20', smtp: '192.168.1.20', benutzer: 'anna', passwort: 'apfel' });
+  a.software = ['mail'];
+  dienste.start(); dienste.sync();
+  dienste.mail.abholen(a, () => {});
+  b.engine.runUntil(40 * SEC);
+
+  b.mit.setFilter({ dir: 'beide' });
+  const vonBen = b.mit.view().filter(r => r.node === ben.id && r.mit === 'funk' && r.inhalt);
+  ok('⭐ Ben liest im Funknetz mit: sein Mitschnitt hat Zeilen „funk" mit Inhalt', vonBen.length >= 1, String(vonBen.length));
+  ok('⭐ und darunter Annas Passwort im Klartext',
+     vonBen.some(r => /PASS apfel/.test(r.info)), vonBen.map(r => r.info).join(' | ').slice(0, 200));
+  ok('der Fund trägt Benutzer und Passwort',
+     vonBen.some(r => r.zugang && r.zugang.passwort === 'apfel'));
+  ok('Ben hat NICHT an seiner Karte ausgewertet: kein Echo, keine Antwort von Ben',
+     !b.mit.view().some(r => r.node === ben.id && r.dir === 'raus' && r.proto !== 'ARP'));
+  ok('Carl am Kabel liest nichts mit', !b.mit.view().some(r => r.node === carl.id && r.mit));
+  ok('Mitgelesen werden nur Pakete mit Inhalt im Chip',
+     (b.mit.setFilter({ proto: 'MITLESER' }), b.mit.view().every(r => r.mit && r.inhalt)));
+  b.mit.setFilter({ proto: null });
+
+  const pass = b.mit.view().find(r => r.node === a.id && r.dir === 'raus' && /PASS apfel/.test(r.info));
+  const wer = pass ? b.mit.mitlesende(pass) : [];
+  ok('⭐ Annas eigene Zeile nennt, wer mitgelesen hat: Ben (Funk)',
+     wer.some(m => m.node === ben.id && m.art === 'funk'), JSON.stringify(wer));
+  ok('Funk: ein Zugangspunkt hat nur EINE Antenne, egal wie viele Gäste',
+     sw.nics.filter(k => k.funkPort).length === 1);
+}
+
 section('Fund-Filter: Zugangsdaten im Mitschnitt');
 {
   /* PLAN-SICHERHEIT, Schritt 1. Über Kabel: das Passwort aus
@@ -5319,12 +5376,8 @@ section('Fund-Filter: Zugangsdaten im Mitschnitt');
   ok('andere Zeilen (USER, +OK, Handschlag) sind keine Funde',
      mit.view().filter(r => !r.zugang).every(r => !/PASS /.test(r.info)));
 
-  mit.setFilter({ proto: 'ZUGANG' });
-  ok('der Chip „Zugangsdaten" zeigt nur Funde',
-     mit.view().length === fund.length && mit.view().every(r => r.zugang),
-     String(mit.view().length));
   mit.setFilter({ proto: 'POP3' });
-  ok('der Chip POP3 zeigt weiter das ganze Gespräch', mit.view().length > fund.length);
+  ok('der Chip POP3 zeigt das ganze Gespräch', mit.view().length > fund.length);
   mit.setFilter({ proto: null });
 
   // Nichts gefunden, wo nichts Geheimes läuft.

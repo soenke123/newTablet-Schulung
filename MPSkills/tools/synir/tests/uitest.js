@@ -2555,14 +2555,10 @@ async function markenAn(page, name, art) {
      sein Passwort lief im Klartext über die Leitung. */
   await mitschnitt(page, true);
   await page.waitForTimeout(300);
-  ok('⭐ der Chip „Zugangsdaten" steht in der Leiste',
-     await page.locator('[data-proto="ZUGANG"]').count() === 1);
-  await page.locator('[data-proto="ZUGANG"]').click();
-  await page.waitForTimeout(250);
-  const funde = await page.locator('#traceBody .tr').count();
-  ok('er zeigt nur die Fundzeilen, und jede trägt die 🔑-Marke',
-     funde >= 1 && await page.locator('#traceBody .tr .tr-z').count() === funde, String(funde));
-  await page.locator('#traceBody .tr').first().click();
+  ok('⭐ der Chip „Mitlesende" steht in der Leiste (und „Zugangsdaten" nicht mehr)',
+     await page.locator('[data-proto="MITLESER"]').count() === 1
+     && await page.locator('[data-proto="ZUGANG"]').count() === 0);
+  await page.locator('#traceBody .tr .tr-z').first().click();
   await page.waitForTimeout(250);
   const zug = await page.locator('#traceBody .tr-lay--zug').first().textContent();
   ok('aufgeklappt stehen Benutzer und Passwort da',

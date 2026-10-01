@@ -317,7 +317,10 @@
             if (i === inNic) continue;
             netz.sendFrame(node.id, i, frame, deliver);
           }
-        } else {
+        } else if (entry.nic !== inNic) {
+          /* Dasselbe Ziel am selben Anschluss: bei Funk heißt das „der
+             Rahmen ging von Gast zu Gast", und der Empfänger hat ihn
+             schon aus der Luft. Ihn zurückzuschicken wäre ein Echo. */
           say('forward', node, { dst: frame.dst, nic: entry.nic });
           netz.sendFrame(node.id, entry.nic, frame, deliver);
         }
