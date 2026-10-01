@@ -6020,7 +6020,7 @@ async function markenAn(page, name, art) {
   await page.keyboard.press('Escape');
   await mk(page, '#szenarioBtn');
   ok('Menü zeigt alle 17 mitgelieferten Szenarien',
-     await page.locator('#szenarioPop .szm-item').count() === 17);
+     await page.locator('#szenarioPop .szm-item').count() === 18);
   ok('Sek I, Sek II und Andere stehen als Überschriften in einer Liste',
      await page.locator('#szenarioPop .szm-head').count() === 3);
   ok('ohne Raum: keine Reiter', await page.locator('#szenarioPop .szm-tabs').count() === 0);
