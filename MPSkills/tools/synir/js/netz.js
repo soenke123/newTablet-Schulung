@@ -612,8 +612,13 @@
     function autoName(kind) {
       const base = KIND[kind].label;
       let n = 1;
-      const taken = new Set([...nodes.values()].map(x => x.name));
-      while (taken.has(base + ' ' + n)) n++;
+      const all = [...nodes.values()];
+      const taken = new Set(all.map(x => x.name));
+      /* Auch das Kürzel darf nicht doppelt sein: „Webserver" aus einem
+         Szenario ist S1 (nach Position), „Laptop 1" ist E1 (nach Zahl) —
+         ein neues „Server 1" bzw. „Endgerät 1" wäre sonst ein Zwilling. */
+      const kurze = new Set(all.filter(x => x.kind === kind).map(x => kurzName(x, all)));
+      while (taken.has(base + ' ' + n) || kurze.has(KIND[kind].kurz + n)) n++;
       return base + ' ' + n;
     }
 

@@ -3139,6 +3139,13 @@ section('Kurznamen');
   ok('Webserver → S1, DNS-Server → S2',
      n2.kurzName(web) === 'S1' && n2.kurzName(dns) === 'S2',
      n2.kurzName(web) + ' / ' + n2.kurzName(dns));
+
+  // Neue Geräte zählen weiter: kein zweites S1 / E1 neben Szenariogeräten.
+  const sv3 = n2.addNode('server', 300, 100);
+  ok('neuer Server neben Webserver/DNS-Server ist S3', n2.kurzName(sv3) === 'S3', n2.kurzName(sv3));
+  const lap = n2.addNode('host', 100, 200, 'Laptop 1');
+  const neu = n2.addNode('host', 200, 200);
+  ok('neues Endgerät neben „Laptop 1" ist E2', n2.kurzName(neu) === 'E2', n2.kurzName(neu));
 }
 
 /* ═══ 16h · Alte Stände werden nachgezogen ═══
