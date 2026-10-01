@@ -20,7 +20,7 @@ vm.createContext(sandbox);
    und ungenauer. Das geht nur, weil die Datei beim LADEN kein
    DOM anfasst; wer das ändert, muss sie hier herausnehmen. */
 for (const f of ['util.js', 'engine.js', 'netz.js', 'verlauf.js', 'nat.js', 'tcp.js', 'rip.js', 'logos.js', 'dateien.js',
-                 'http.js', 'mail.js', 'filme.js', 'stream.js', 'tls.js', 'zs.js', 'schichten.js', 'dienste.js', 'internet.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
+                 'http.js', 'mail.js', 'filme.js', 'stream.js', 'tls.js', 'zs.js', 'vpn.js', 'schichten.js', 'dienste.js', 'internet.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
                  'prog-dateien.js', 'szenarien.js']) {
   vm.runInContext(fs.readFileSync(path.join(BASE, f), 'utf8'), sandbox, { filename: f });
 }
@@ -1846,7 +1846,7 @@ section('Kennungen in den Programmfenstern');
 {
   /* Alle Dateien, die ein Fenster mit mehreren Seiten in dieselbe
      Box zeichnen. Wer eine neue dazulegt, gehört in diese Liste. */
-  for (const f of ['prog-mail.js', 'prog-web.js', 'prog-dateien.js', 'konfig.js', 'geraet.js',
+  for (const f of ['prog-mail.js', 'prog-web.js', 'prog-zert.js', 'prog-vpn.js', 'prog-dateien.js', 'konfig.js', 'geraet.js',
                    'weiterleitung.js']) {
     const quelle = fs.readFileSync(path.join(BASE, f), 'utf8');
     const zaehler = new Map();
@@ -6016,6 +6016,194 @@ section('HTTPS: durch das Class Wide Web (zwei Tablets)');
      !JSON.stringify(A.mit.view().filter(z => z.inet).map(z => z.frame.payload.payload)).includes('Der Webserver läuft'));
   ok('der Servername steht im ClientHello (wer mit wem bleibt sichtbar)',
      tlsA.some(z => /Servername: www\.bernd\.de/.test(z.info)));
+}
+
+/* ═══ VPN ═══
+   PLAN-SICHERHEIT, Schritt 5. Anna (c) baut einen Tunnel zum VPN-Server
+   (x, Zertifikat von der ZS) und ruft dann Webserver und DNS auf. */
+section('VPN: Tunnel, Anmeldung, Übersetzung');
+{
+  const { engine, netz, stack, mit, dienste, c, s, z, d, x, http, zs } = httpsNetz(31);
+  const K = sandbox.Tls.Krypto, U = sandbox.NetUtil;
+  const laufe = (s_) => engine.runUntil(engine.now + (s_ || 30) * SEC);
+  const vpn = dienste.vpn;
+  ok('der VPN-Teil ist da', !!vpn);
+
+  // Vorbereitung: ZS, Zertifikat für den VPN-Server, Vertrauen beim Client.
+  netz.dnsConf(d).records.push({ name: 'vpn.schule.de', ip: '192.168.1.40' });
+  netz.zsConf(z).on = true; dienste.sync();
+  x.software = (x.software || []).concat(['vpnserver']);
+  const vc = netz.vpnServerConf(x);
+  vc.on = true;
+  vc.konten = [{ benutzer: 'anna', pwHash: U.pseudoHash('apfel') }];
+  zs.beantragen(x, 'vpn.schule.de', '192.168.1.30', () => {}); laufe(60);
+  zs.freigeben(z, 1); zs.abholen(x, () => {}); laufe(30);
+  dienste.sync();
+  ok('der VPN-Server hat ein Zertifikat', netz.zertGueltig(x));
+  ok('⭐ er lauscht auf 1194 — als eigenes Programm',
+     stack.sockets(x).some(r => r.proto === 'TCP' && /:1194$/.test(r.lokal) && r.programm === 'VPN-Server'));
+  ok('die Marke „vpn" steht am Gerät', netz.dienstLaeuft(x, 'vpn'));
+
+  // Ohne Vertrauen: Warnung, kein Tunnel.
+  const cf = netz.vpnClientConf(c);
+  Object.assign(cf, { server: 'vpn.schule.de', benutzer: 'anna', passwort: 'apfel' });
+  let r = 'nicht gerufen', info = null;
+  vpn.verbinden(c, {}, (f, i) => { r = f; info = i; }); laufe(30);
+  ok('⭐ ohne Vertrauen in die ZS: Warnung „unbekannt", kein Tunnel',
+     r && info && info.code === 'unbekannt' && !vpn.aktiv(c), String(r));
+  let eintrag = null;
+  zs.zsHolen(c, 'zs.schule.de', (f, e) => eintrag = f || e); laufe(30);
+  zs.vertrauenAufnehmen(c, eintrag);
+
+  // Falsches Passwort.
+  cf.passwort = 'falsch';
+  vpn.verbinden(c, {}, (f) => { r = f; }); laufe(30);
+  ok('falsches Passwort: abgelehnt, kein Tunnel', /stimmt nicht/.test(String(r)) && !vpn.aktiv(c), String(r));
+
+  // Richtig.
+  cf.passwort = 'apfel';
+  const m0 = mit.view().length;
+  r = 'nicht gerufen';
+  vpn.verbinden(c, {}, (f) => { r = f; }); laufe(30);
+  ok('⭐ Anmeldung gelingt: der Tunnel steht, mit einer Tunnel-Adresse', r === null && vpn.aktiv(c)
+     && /^10\.8\.0\.\d+$/.test(vpn.stand(c).ip), String(r) + JSON.stringify(vpn.stand(c) && vpn.stand(c).ip));
+  ok('der Server kennt den Teilnehmer', vpn.teilnehmer(x).length === 1 && vpn.teilnehmer(x)[0].benutzer === 'anna');
+
+  // Ping durch den Tunnel.
+  let pr = null;
+  stack.ping(c, '192.168.1.20', 1, 8 * SEC, (q) => pr = q); laufe(20);
+  ok('⭐ ein Ping DURCH den Tunnel kommt an', pr && pr.ok, JSON.stringify(pr));
+  mit.setFilter({ dir: 'beide' });
+  const zeilen = mit.view();
+  const beiWww = zeilen.filter(q => q.node === s.id && /ICMP|Echo|ping/i.test(q.proto + q.info) && q.dir === 'rein');
+  ok('⭐ der Webserver sieht als Absender den VPN-SERVER (192.168.1.40), nicht Anna',
+     beiWww.length > 0 && beiWww.every(q => q.frame.payload.src === '192.168.1.40'),
+     beiWww.map(q => q.frame.payload.src).join(','));
+  const nachVerbinden = zeilen.slice(m0);
+  ok('im Mitschnitt von Anna gibt es das innere Paket als „Tunnel"-Zeile (Absender 10.8.0.x)',
+     zeilen.some(q => q.node === c.id && q.tun && q.frame.payload.src === vpn.stand(c).ip));
+
+  // Webseite (DNS + HTTP) durch den Tunnel.
+  const dnsVorher = zeilen.length;
+  let seite = null;
+  http.seiteHolen(c, 'www.schule.de', (q) => seite = q); laufe(60);
+  ok('⭐ Name und Webseite gehen durch den Tunnel (DNS inklusive)', seite && seite.ok && /Der Webserver läuft/.test(seite.html),
+     seite && (seite.grund || ''));
+  const dnsRaus = mit.view().slice(dnsVorher).filter(q => q.node === c.id && !q.tun && q.dir === 'raus' && q.frame.type === 'ip');
+  ok('⭐ Auf Annas Leitung geht NUR noch Verkehr zum VPN-Server (192.168.1.40)',
+     dnsRaus.length > 0 && dnsRaus.every(q => q.frame.payload && q.frame.payload.dst === '192.168.1.40'),
+     dnsRaus.filter(q => q.frame.payload && q.frame.payload.dst !== '192.168.1.40').map(q => q.info).slice(0, 3).join(' | '));
+  ok('und das ist TLS (verschlüsselt, Port 1194)', dnsRaus.some(q => q.proto === 'TLS' || /1194/.test(q.info)));
+
+  // Speicherformat: Konten (nur als Hash) und Zugang bleiben, der Tunnel nicht.
+  const daten = JSON.parse(JSON.stringify(netz.toJSON()));
+  const xd = daten.nodes.find(n => n.id === x.id), cd = daten.nodes.find(n => n.id === c.id);
+  ok('⭐ im Speicherformat steht das Konto des Servers — mit Hash, ohne Passwort im Klartext',
+     xd.vpnServer && xd.vpnServer.konten[0].benutzer === 'anna' && !/apfel/.test(JSON.stringify(xd.vpnServer)));
+  ok('der Zugang des Clients wird gespeichert', cd.vpnClient && cd.vpnClient.server === 'vpn.schule.de');
+  ok('der laufende Tunnel steht NICHT im Speicherformat', !/10\.8\.0/.test(JSON.stringify(daten)));
+
+  // Trennen.
+  vpn.trennen(c); laufe(10);
+  ok('Trennen: kein Tunnel mehr, der Server hat keinen Teilnehmer', !vpn.aktiv(c) && vpn.teilnehmer(x).length === 0);
+  let pr2 = null;
+  stack.ping(c, '192.168.1.20', 2, 8 * SEC, (q) => pr2 = q); laufe(20);
+  ok('danach geht der Ping wieder direkt', pr2 && pr2.ok);
+}
+
+section('VPN: durch das Class Wide Web (zwei Tablets)');
+{
+  /* Tablet A (Anna) baut einen Tunnel zum VPN-Server in Tablet B und
+     ruft dann den Webserver von B und den DNS der Wolke auf. */
+  const A = tablet(41, 50, '8.0.7.1');
+  const B = tablet(42, 67, '8.0.9.4');
+  const U = sandbox.NetUtil;
+  const ac = A.netz.addNode('cww', 100, 100);
+  const a1 = A.netz.addNode('host', 100, 300);
+  konf(ac, 1, '50.0.1.1'); konf(a1, 0, '50.0.1.10');
+  a1.gateway = '50.0.1.1'; a1.dns = '8.8.8.8';
+  A.netz.addCable(a1.id, 0, ac.id, 1);
+  a1.software = ['browser', 'vpnclient'];
+
+  const bc = B.netz.addNode('cww', 100, 100);
+  const bsw = B.netz.addNode('switch', 100, 200);
+  const bs = B.netz.addNode('server', 50, 300);
+  const bz = B.netz.addNode('server', 200, 300);
+  const bv = B.netz.addNode('server', 350, 300);
+  konf(bc, 1, '67.0.0.1'); konf(bs, 0, '67.0.0.10'); konf(bz, 0, '67.0.0.11'); konf(bv, 0, '67.0.0.12');
+  [bs, bz, bv].forEach(n => { n.gateway = '67.0.0.1'; n.dns = '8.8.8.8'; });
+  B.netz.addCable(bc.id, 1, bsw.id, 0);
+  B.netz.addCable(bs.id, 0, bsw.id, 1);
+  B.netz.addCable(bz.id, 0, bsw.id, 2);
+  B.netz.addCable(bv.id, 0, bsw.id, 3);
+  bs.software = ['dns', 'webserver']; bz.software = ['zertstelle']; bv.software = ['vpnserver'];
+  const dc = B.netz.dnsConf(bs); dc.on = true;
+  dc.records = [{ name: 'www.bernd.de', ip: '67.0.0.10' }, { name: 'zs.bernd.de', ip: '67.0.0.11' },
+                { name: 'vpn.bernd.de', ip: '67.0.0.12' }];
+  B.dienste.http.standardDateien(bs);
+  B.netz.webConf(bs).on = true;
+  B.netz.zsConf(bz).on = true;
+  const vc = B.netz.vpnServerConf(bv); vc.on = true;
+  vc.konten = [{ benutzer: 'anna', pwHash: U.pseudoHash('apfel') }];
+  for (const t of [A, B]) { t.dienste.start(); t.dienste.sync(); }
+  laufen([A, B], 20 * SEC);
+
+  B.dienste.zs.beantragen(bv, 'vpn.bernd.de', '67.0.0.11', () => {});
+  laufen([A, B], 60 * SEC);
+  B.dienste.zs.freigeben(bz, 1);
+  B.dienste.zs.abholen(bv, () => {});
+  laufen([A, B], 30 * SEC);
+  B.dienste.sync();
+  ok('Tablet B: der VPN-Server hat sein Zertifikat', B.netz.zertGueltig(bv));
+
+  let eintrag = null;
+  A.dienste.zs.zsHolen(a1, 'zs.bernd.de', (f, e) => eintrag = f || e);
+  laufen([A, B], 90 * SEC);
+  A.dienste.zs.vertrauenAufnehmen(a1, eintrag);
+
+  Object.assign(A.netz.vpnClientConf(a1), { server: 'vpn.bernd.de', benutzer: 'anna', passwort: 'apfel' });
+  let r = 'nicht gerufen';
+  A.dienste.vpn.verbinden(a1, {}, (f) => { r = f; });
+  laufen([A, B], 120 * SEC);
+  ok('⭐ Tablet A baut den Tunnel zu Tablet B auf (Name über 8.8.8.8, durch die Wolke)',
+     r === null && A.dienste.vpn.aktiv(a1), String(r));
+
+  A.mit.setFilter({ dir: 'beide' });
+  const m0 = A.mit.view().length;
+  let seite = null;
+  A.dienste.http.seiteHolen(a1, 'www.bernd.de', (q) => seite = q);
+  laufen([A, B], 150 * SEC);
+  ok('⭐ durch den Tunnel: der Name (DNS in der Wolke) und die Seite von Tablet B kommen an',
+     seite && seite.ok && /Der Webserver läuft/.test(seite.html), seite && (seite.grund || ''));
+
+  A.mit.setFilter({ dir: 'beide' });
+  const neu = A.mit.view().slice(m0);
+  const wolke = neu.filter(q => q.inet && !q.tun);
+  ok('in der Wolke von A stehen nur noch Pakete zum VPN-Server (67.0.0.12)',
+     wolke.length > 0 && wolke.every(q => [q.frame.payload.src, q.frame.payload.dst].includes('67.0.0.12')),
+     wolke.map(q => q.frame.payload.src + '>' + q.frame.payload.dst).filter(x => !/67\.0\.0\.12/.test(x)).slice(0, 3).join(' | '));
+  ok('⭐ weder die Zieladresse des Webservers (67.0.0.10) noch 8.8.8.8 steht dort',
+     !JSON.stringify(wolke.map(q => q.frame.payload)).match(/67\.0\.0\.10|8\.8\.8\.8/));
+  ok('⭐ der Inhalt der Seite steht in keinem Paket der Wolke',
+     !JSON.stringify(wolke.map(q => q.frame.payload)).includes('Der Webserver läuft'));
+  const mitA = neu.filter(q => q.mit && q.inhalt && !q.tun);
+  ok('Mitlesende an der Wolke sehen nur Salat: kein Klartext-Zugangsfund', !neu.some(q => q.zugang && !q.tun));
+
+  // Beim VPN-Server (B): das innere Paket im Klartext, als „Unterwegs".
+  B.mit.setFilter({ dir: 'beide' });
+  const beiV = B.mit.view().filter(q => q.node === bv.id && q.tun);
+  const innen = beiV.filter(q => q.mit === 'weg' && q.inhalt);
+  ok('⭐ der VPN-Server liest alles mit (Zeilen „Unterwegs" mit Inhalt) — der Preis des Tunnels',
+     innen.length > 0 && innen.some(q => /GET|HTTP|DNS|Frage/i.test(q.info)), String(innen.length));
+  ok('der Server sieht die Webanfrage im Klartext',
+     B.mit.view().some(q => q.node === bv.id && q.tun && /GET /.test(q.info)));
+  const www = B.mit.view().filter(q => q.node === bs.id && q.dir === 'rein' && /GET /.test(q.info));
+  ok('⭐ der Webserver von B sieht als Absender den VPN-Server (67.0.0.12), nicht Anna',
+     www.length > 0 && www.every(q => q.frame.payload.src === '67.0.0.12'), www.map(q => q.frame.payload.src).join(','));
+
+  A.dienste.vpn.trennen(a1);
+  laufen([A, B], 20 * SEC);
+  ok('Trennen beendet den Tunnel auch bei B', B.dienste.vpn.teilnehmer(bv).length === 0 && !A.dienste.vpn.aktiv(a1));
 }
 
 /* ═══ Ergebnis ═══ */

@@ -103,6 +103,16 @@
          wie jedes andere. Statt der MAC-Adressen steht „Wolke" da:
          im 8er-Netz gibt es hier keine Leitung, die man zeigen
          könnte. */
+      /* Der Tunnel (vpn.js): das innere Paket, im Klartext — auf dem
+         Client, bevor es verschlüsselt wird bzw. nachdem es
+         ausgepackt ist, und auf dem VPN-Server, der es weiterträgt.
+         Über ein Kabel geht es so nie; deshalb steht „Tunnel" statt
+         der MAC-Adressen da. */
+      else if (e.kind === 'tun') {
+        add({ t: e.t, node: e.node, nic: 0, tun: true, tunServer: !!e.server,
+              frame: { src: 'Tunnel', dst: 'Tunnel', type: 'ip', payload: e.pkt } },
+            false, e.dir === 'rein' ? 'rein' : 'raus');
+      }
       else if (e.kind === 'inet-raus' || e.kind === 'inet-rein') {
         add({ t: e.t, node: e.node, nic: netz.INET, inet: true,
               frame: { src: 'Wolke', dst: 'Wolke', type: 'ip', payload: e.pkt } },
@@ -135,6 +145,7 @@
         proto: protoOf(e.frame),
         info: describe(e.frame),
         inet: !!e.inet,
+        tun: !!e.tun,
         zugang: zugangVon(e.frame, e.node),
         mit: mitleserArt(e, node, dir)
       };
@@ -270,6 +281,10 @@
       const ip = e.frame.payload;
       if (!ip || !ip.dst) return null;
       if (e.inet) return 'weg';
+      /* Der Tunnel: wer ihn WEITERTRÄGT (der VPN-Server), liest das
+         innere Paket im Klartext — das ist „unterwegs". Der Client
+         sieht nur seine eigenen Pakete. */
+      if (e.tun) return e.tunServer ? 'weg' : null;
       if (dir !== 'rein') return null;
       const nic = node.nics[e.nic];
       if (!nic) return null;
@@ -440,6 +455,7 @@
                          67: 'DHCP-Server', 68: 'DHCP-Client', 80: 'HTTP', 110: 'POP3',
                          443: 'HTTPS = HTTP mit TLS', 465: 'SMTPS = SMTP mit TLS',
                          995: 'POP3S = POP3 mit TLS', 8200: 'Zertifizierungsstelle',
+                         1194: 'VPN-Tunnel (TLS)',
                          520: 'RIP', 521: 'RIP-Absender' };
     const portWem = (p) => PORT_NAMEN[p] ? '  (' + PORT_NAMEN[p] + ')' : '';
 
@@ -707,6 +723,7 @@
           ['Empfänger (MAC)', rundruf ? f.dst + '  (an alle)' : f.dst],
           ['Inhalt', f.type === 'arp' ? 'ARP' : 'IP-Paket']
         ].concat(row.inet ? [['Ort', 'Ausgang ins Internet — alles, was dein Netz verlässt']] : [])
+         .concat(row.tun ? [['Ort', 'Im Tunnel (VPN) — auf der Leitung ist das verschlüsselt']] : [])
       });
 
       if (f.type === 'arp') {

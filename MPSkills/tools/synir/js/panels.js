@@ -738,7 +738,9 @@
       weg: 'Dieses Paket läuft durch dieses Gerät hindurch — wer es betreibt, kann es mitlesen'
     };
     const MIT_TXT = { funk: '👁 📡 Funk', weg: '👁 ↔ Unterwegs' };
-    const marken = (r) => (r.inet ? '<b class="tr-w" title="' + INET_TIP + '">☁ Internet</b>' : '')
+    const TUN_TIP = 'Das Paket im Tunnel, im Klartext: nur hier an den Enden sichtbar. Auf der Leitung steht es verschlüsselt.';
+    const marken = (r) => (r.tun ? '<b class="tr-t" title="' + TUN_TIP + '">◯ Tunnel</b>' : '')
+      + (r.inet ? '<b class="tr-w" title="' + INET_TIP + '">☁ Internet</b>' : '')
       + (r.mit && r.inhalt ? '<b class="tr-m" title="' + MIT_TIP[r.mit] + '">' + MIT_TXT[r.mit] + '</b>' : '')
       + (r.zugang ? '<b class="tr-z" title="' + ZUG_TIP + '">🔓 Zugangsdaten</b>' : '');
 

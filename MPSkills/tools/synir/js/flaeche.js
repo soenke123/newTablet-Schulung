@@ -767,7 +767,8 @@
       web:  { text: 'Web',  ttl: 'Auf diesem Gerät läuft ein Webserver: er liefert Seiten aus.' },
       mail: { text: 'Mail', ttl: 'Auf diesem Gerät läuft ein E-Mail-Server: er nimmt Post an und gibt sie heraus.' },
       stream: { text: 'Stream', ttl: 'Auf diesem Gerät läuft ein Streaming-Server: Filme hinter einer Anmeldung.' },
-      zs: { text: 'ZS', ttl: 'Auf diesem Gerät läuft eine Zertifizierungsstelle: sie stellt Zertifikate aus.' }
+      zs: { text: 'ZS', ttl: 'Auf diesem Gerät läuft eine Zertifizierungsstelle: sie stellt Zertifikate aus.' },
+      vpn: { text: 'VPN', ttl: 'Auf diesem Gerät läuft ein VPN-Server: er nimmt Tunnel an und leitet alles weiter.' }
     };
 
     function marken(g, n, mitAdresse) {
@@ -1961,7 +1962,8 @@
         // Laufzeit des Kabels, in echte Millisekunden umgerechnet.
         dur: Math.max(ONE_FRAME, (c.delay / U.MS) / Math.max(engine.speed, 0.0001)),
         cable: c.id,
-        cls: dotClass(e.frame)
+        cls: dotClass(e.frame),
+        ring: tunnelPaket(e.frame)
       });
       setBusy(c.id, +1);
     });
@@ -1977,6 +1979,16 @@
       if (n > 0) busy.set(id, n); else busy.delete(id);
       const g = gCables.querySelector('[data-cable="' + id + '"]');
       if (g) g.classList.toggle('is-busy', n > 0);
+    }
+
+    /* Ein Paket des VPN-Tunnels (TCP von oder zu Port 1194) trägt einen
+       Ring: außen sieht man nur, DASS etwas durch den Tunnel geht — der
+       Ring ist dasselbe Zeichen wie die Pille „VPN aktiv". */
+    function tunnelPaket(f) {
+      const p = f && f.type === 'ip' ? f.payload : null;
+      if (!p || p.proto !== 'tcp' || !window.Vpn) return false;
+      const s = p.payload || {};
+      return s.sport === window.Vpn.PORT || s.dport === window.Vpn.PORT;
     }
 
     function dotClass(f) {
@@ -2036,7 +2048,16 @@
         }, gDots);
         // Am Anfang und Ende leicht ausblenden — sonst springt
         // der Punkt aus dem Gerät heraus und wieder hinein.
-        c.setAttribute('opacity', String(Math.min(1, Math.min(k, 1 - k) * 6 + 0.25)));
+        const dunkel = String(Math.min(1, Math.min(k, 1 - k) * 6 + 0.25));
+        c.setAttribute('opacity', dunkel);
+        if (d.ring) {
+          const r = el('circle', {
+            class: 'nf-ring', r: 11,
+            cx: d.x0 + (d.x1 - d.x0) * k,
+            cy: d.y0 + (d.y1 - d.y0) * k
+          }, gDots);
+          r.setAttribute('opacity', dunkel);
+        }
       }
       dots = keep;
     }

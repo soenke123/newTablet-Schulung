@@ -6,6 +6,36 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 0010 · VPN — Schritt 5 des Sicherheitsplans (2026-10-01)
+
+Berührt: neu `js/vpn.js`, `js/prog-vpn.js`; `js/schichten.js` (⟨VPN⟩-Haken in `sendIp`/`onIp`, `setVpn`, `ipLokal`,
+`ipWeiter`, `ipKennung`), `js/dienste.js` (`vpn` erzeugen, `sync`), `js/netz.js` (`vpnServerConf`, `vpnClientConf`,
+Dienst `vpn`, Speicherformat), `js/geraet.js` (Programme `vpnserver`/`vpnclient`, Pille „VPN aktiv", Neuzeichnen bei
+`kind: 'vpn'`), `js/flaeche.js` (Ring um Tunnelpakete, Marke „VPN"), `js/mitschnitt.js` (Ereignis `tun`, Zeilen
+`◯ Tunnel`, Mitlesende am Server), `js/panels.js`, `js/prog-zert.js` (`ohneHaken`, `info`, `ohne`), `index.html`
+(Skripte, Symbole `vpnserver` `vpnclient`, `?v=…k`), `css/app.css` (`--vpn`, `.dt-vpn`, `.nf-ring`),
+`tests/kerntest.js` (1185 grün), `PLAN-SICHERHEIT.md` (Schritt 5 abgehakt, Entscheidungen dort), `LIESMICH.md`.
+
+* ⭐ **Modell (so vom Nutzer entschieden):** VPN-Server mit Konten und **Zertifikat von einer ZS**, VPN-Client mit
+  Server/Konto/Passwort. **Alles** geht durch den Tunnel, auch DNS. Mitleser an der Leitung sehen nur Client ↔
+  Server; der VPN-Server selbst sieht alles („das Vertrauen wandert"). Läuft auch durch das CWW.
+* ⭐ **Technik:** der Tunnel ist eine **TLS-Verbindung auf TCP 1194** (kein eigenes UDP-Protokoll) — Zertifikat,
+  Handschlag, Warnungen und Ausnahme kommen aus `tls.js`. Innere Pakete als JSON-Sätze `{vpn:'Paket', pkt}`.
+  Client: `vpn.umleiten` in `sendIp` (alles außer Gespräch mit dem Server, eigene Adressen, 127.*). Server:
+  `ausTunnel` → TTL → Weg suchen → eigene NAT-Tabelle (Außenports 40000–49000) → `ipWeiter`; Antworten fängt
+  `vpn.herein` in `onIp` VOR „für mich?" ab.
+* Zustand: `node.state.vpn` (Client, nicht gespeichert), `node.state.vpnSrv` (Server: Sitzungen, NAT). Gespeichert
+  werden nur `vpnServer` (Konten mit **Hash**) und `vpnClient` (Server, Benutzer, Passwort).
+* Mitschnitt: Ereignis `kind: 'tun'` → Zeile mit `tun: true`, Rahmen `Tunnel → Tunnel`. Am **Server** ist sie
+  „Unterwegs" (`mit: 'weg'`), am Client nicht. Außen steht normaler TLS-Verkehr auf Port 1194.
+* ⚠️ **`tests/uitest.js` ist für VPN nicht erweitert** und bricht in dieser Container-Umgebung schon vorher ab
+  (Zeile ~1625, auch am unveränderten Stand). Oberfläche geprüft mit einem Einmal-Skript (Server-/Client-Fenster,
+  Pille, Ring, Mitschnitt).
+* ⚠️ Während ein Tunnel steht, geht auch das, was ein Client **anbietet**, nicht mehr nach außen (Antworten gehen in
+  den Tunnel). Gewollt („Alles durch den Tunnel"), steht im Plan.
+
+---
+
 ## 000f · Mitlesende — Schritt 3 des Sicherheitsplans (2026-10-01)
 
 Berührt: `js/netz.js` (`funkAbgleich`: **eine** Funkbuchse je Zugangspunkt, `funkSenden`, `addCable`/`removeCable`

@@ -323,7 +323,8 @@
     web:  { conf: 'webServer',  sw: 'webserver' },
     mail: { conf: 'mailServer', sw: 'mailserver' },
     stream: { conf: 'streamServer', sw: 'streamingserver' },
-    zs: { conf: 'zsServer', sw: 'zertstelle' }
+    zs: { conf: 'zsServer', sw: 'zertstelle' },
+    vpn: { conf: 'vpnServer', sw: 'vpnserver' }
   };
   function dienstLaeuft(node, art) {
     const d = DIENSTE[art];
@@ -825,6 +826,21 @@
       if (!(z.serial > 0)) z.serial = 1;
       if (!Array.isArray(z.antraege)) z.antraege = [];
       return z;
+    }
+
+    /* ─── VPN (PLAN-SICHERHEIT, Schritt 5) ─────────────────────
+       Server: Konten (Passwort nur als Hash, wie beim Streaming-
+       Server). Client: wohin und mit welchem Konto. Der laufende
+       Tunnel steht in node.state.vpn und wird nicht gespeichert. */
+    function vpnServerConf(node) {
+      if (!node.vpnServer) node.vpnServer = { on: false };
+      const v = node.vpnServer;
+      if (!Array.isArray(v.konten)) v.konten = [];
+      return v;
+    }
+    function vpnClientConf(node) {
+      if (!node.vpnClient) node.vpnClient = { server: '', benutzer: '', passwort: '' };
+      return node.vpnClient;
     }
 
     function zertConf(node) {
@@ -1377,6 +1393,8 @@
             mailServer: n.mailServer ? U.deepCopy(n.mailServer) : undefined,
             streamServer: n.streamServer ? U.deepCopy(n.streamServer) : undefined,
             zsServer: n.zsServer ? U.deepCopy(n.zsServer) : undefined,
+            vpnServer: n.vpnServer ? U.deepCopy(n.vpnServer) : undefined,
+            vpnClient: n.vpnClient ? U.deepCopy(n.vpnClient) : undefined,
             zertifikat: n.zertifikat ? U.deepCopy(n.zertifikat) : undefined,
             vertrauen: n.vertrauen && n.vertrauen.length ? U.deepCopy(n.vertrauen) : undefined,
             mailKonto:  n.mailKonto  ? U.deepCopy(n.mailKonto)  : undefined,
@@ -1463,6 +1481,8 @@
         if (d.mailServer) node.mailServer = U.deepCopy(d.mailServer);
         if (d.streamServer) node.streamServer = U.deepCopy(d.streamServer);
         if (d.zsServer) node.zsServer = U.deepCopy(d.zsServer);
+        if (d.vpnServer) node.vpnServer = U.deepCopy(d.vpnServer);
+        if (d.vpnClient) node.vpnClient = U.deepCopy(d.vpnClient);
         if (d.zertifikat) node.zertifikat = U.deepCopy(d.zertifikat);
         if (Array.isArray(d.vertrauen)) node.vertrauen = U.deepCopy(d.vertrauen);
         if (d.mailKonto)  node.mailKonto  = U.deepCopy(d.mailKonto);
@@ -1594,6 +1614,8 @@
         if (d.mailServer) node.mailServer = U.deepCopy(d.mailServer);
         if (d.streamServer) node.streamServer = U.deepCopy(d.streamServer);
         if (d.zsServer) node.zsServer = U.deepCopy(d.zsServer);
+        if (d.vpnServer) node.vpnServer = U.deepCopy(d.vpnServer);
+        if (d.vpnClient) node.vpnClient = U.deepCopy(d.vpnClient);
         if (d.zertifikat) node.zertifikat = U.deepCopy(d.zertifikat);
         if (Array.isArray(d.vertrauen)) node.vertrauen = U.deepCopy(d.vertrauen);
         if (d.mailKonto)  node.mailKonto  = U.deepCopy(d.mailKonto);
@@ -1660,7 +1682,7 @@
       KIND, WAN, LAN,
       kurzName: (node) => kurzName(node, list()),
       addNode, removeNode, addCable, removeCable,
-      addNic, removeNic, freieNic, keinAnschlussSatz, dhcpConf, dnsConf, webConf, mailConf, streamConf, zsConf, zertConf, zertGueltig, vertrauen, mailKonto, natConf, ripConf, wlanConf,
+      addNic, removeNic, freieNic, keinAnschlussSatz, dhcpConf, dnsConf, webConf, mailConf, streamConf, zsConf, zertConf, zertGueltig, vertrauen, mailKonto, vpnServerConf, vpnClientConf, natConf, ripConf, wlanConf,
       dhcpLeeren, setDhcp, setFunk,
       // „Hat dieses Gerät überhaupt eine Kabelbuchse?" — wie
       // `istWan` und `strahlt` eine Frage, die NUR hier

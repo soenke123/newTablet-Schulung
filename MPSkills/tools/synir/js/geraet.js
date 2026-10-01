@@ -55,6 +55,13 @@
     let nodeId = null;     // welches Gerät ist offen
     let appId  = null;     // welches Programm darin
 
+    /* Ein Tunnel geht auf oder zu (auch von der Gegenseite aus, etwa
+       wenn der Server beendet wird): die Pille hinter dem Namen und
+       ein offenes VPN-Fenster müssen es mitbekommen. */
+    engine.on('event', (ev) => {
+      if (ev.kind === 'vpn' && nodeId && ev.node === nodeId) render();
+    });
+
     /* ═══ Die Programme ══════════════════════════════════════
        `fuer` nennt die Gerätearten, bei denen das Programm auf
        dem Desktop liegt. `bauen` bekommt das Gerät und ein
@@ -171,6 +178,20 @@
         fuer: ['host', 'server', 'handy'], install: true,
         hint: 'stellt Zertifikate aus (Port 8200)',
         bauen: (n, box) => window.ProgZert.bauZS(n, box, webCtx())
+      },
+      {
+        /* PLAN-SICHERHEIT, Schritt 5: der Tunnel. Server mit Konten
+           und Zertifikat, Client mit Anmeldung. */
+        id: 'vpnserver', name: 'VPN-Server', kurz: 'VPN-Server', ic: 'vpnserver',
+        fuer: ['host', 'server', 'handy'], install: true,
+        hint: 'nimmt Tunnel an (Port 1194)',
+        bauen: (n, box) => window.ProgVpn.bauServer(n, box, webCtx())
+      },
+      {
+        id: 'vpnclient', name: 'VPN-Client', kurz: 'VPN', ic: 'vpnclient',
+        fuer: ['host', 'server', 'handy'], install: true,
+        hint: 'schickt alles verschlüsselt durch einen VPN-Server',
+        bauen: (n, box) => window.ProgVpn.bauClient(n, box, webCtx())
       }
     ];
 
@@ -198,6 +219,7 @@
       stream: dienste && dienste.stream,
       mail: dienste && dienste.mail,
       zs: dienste && dienste.zs,
+      vpn: dienste && dienste.vpn,
       laeuft: () => !!(dienste && dienste.laeuft),
       netz: netz,
       render: render,
@@ -270,7 +292,7 @@
        Zeilen, und die dritte vergisst man. Jede weitere Anwendung
        mit einem Dienst trägt sich hier mit einer Zeile ein. */
     const STOPPT = { dns: 'dnsServer', webserver: 'webServer', mailserver: 'mailServer',
-                     streamingserver: 'streamServer', zertstelle: 'zsServer' };
+                     streamingserver: 'streamServer', zertstelle: 'zsServer', vpnserver: 'vpnServer' };
 
     /* Und das Gegenstück: was beim AUFSPIELEN entsteht. Filius
        legt bei der Installation des Webservers Ordner und
@@ -403,7 +425,11 @@
       refs.dtIcon.innerHTML = U.icon((netz.KIND[n.kind] || {}).icon || 'host');
       // Kürzel zuerst, ausgeschrieben dahinter — dieselbe Rangfolge
       // wie auf der Fläche und im Entwurfsfenster.
-      refs.dtName.textContent = netz.kurzName(n) + ' · ' + n.name;
+      /* Steht ein Tunnel, hängt die Pille „VPN aktiv" hinter dem Namen:
+         alles, was dieses Gerät sendet, geht jetzt durch den Tunnel. */
+      const tunnel = !!(dienste && dienste.vpn && dienste.vpn.aktiv(n));
+      refs.dtName.innerHTML = esc(netz.kurzName(n) + ' · ' + n.name)
+        + (tunnel ? ' <span class="dt-vpn" title="Alles, was dieses Gerät sendet, geht verschlüsselt durch den VPN-Tunnel">◯ VPN aktiv</span>' : '');
 
       untertitel(n);
       refs.dtPower.classList.toggle('is-on', !!n.on);

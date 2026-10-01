@@ -175,6 +175,15 @@
           else zs.serverAus(node);
         }
 
+        /* Der VPN-Server (Port 1194). Und der Client-Tunnel: er gilt
+           nur, solange das Gerät an ist und die Uhr läuft — sonst
+           stünde ein Tunnel da, durch den nichts mehr fährt. */
+        if (vpn) {
+          if (laeuft && vpn.laeuft(node)) vpn.serverAn(node);
+          else vpn.serverAus(node);
+          if (!laeuft || !node.on) vpn.aufraeumen(node);
+        }
+
         /* Das automatische Routing (RIP). Nach demselben stumpfen
            Muster: `ripAn` stellt her, was dastehen soll, `ripAus`
            räumt weg. Die Bedingung steckt in `stack.ripAktiv` —
@@ -875,9 +884,16 @@
       ? window.Zs.erzeugen(engine, netz, stack, { resolve: resolve, http: http, tls: tls })
       : null;
 
+    /* Der VPN-Tunnel (vpn.js): TLS für die Verbindung, der Auflöser für
+       den Namen des Servers — und eingehängt in den Netzstapel. */
+    const vpn = window.Vpn && tls
+      ? window.Vpn.erzeugen(engine, netz, stack, { resolve: resolve, tls: tls, onDirty: geaendert })
+      : null;
+    if (vpn) stack.setVpn(vpn);
+
     return {
       start, stop, sync, reset, resolve, erneuern,
-      leaseOf, fragtGerade, leases, dnsCache, http, mail, stream, tls, zs,
+      leaseOf, fragtGerade, leases, dnsCache, http, mail, stream, tls, zs, vpn,
       get laeuft() { return laeuft; }
     };
   }

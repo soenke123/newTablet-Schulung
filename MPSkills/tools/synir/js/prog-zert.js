@@ -96,7 +96,7 @@
 
     let h = '<div class="dt-sec zt-kopf">' + esc(was.titel)
       + '<button class="ml-i' + (s.info ? ' is-on' : '') + '" id="ztInfo" title="Was ist ein Zertifikat?" aria-label="Erklärung">i</button></div>';
-    if (s.info) h += '<div class="k-note">' + INFO_ABSCHNITT + '</div>';
+    if (s.info) h += '<div class="k-note">' + (was.info || INFO_ABSCHNITT) + '</div>';
 
     // 1 · Das Zertifikat — oder was ihm fehlt
     if (hat) {
@@ -119,7 +119,7 @@
     } else {
       h += '<div class="zt-karte"><span class="zt-sl">🔓</span><div>'
         + '<strong>Noch kein Zertifikat</strong>'
-        + '<small>Ohne Zertifikat spricht dieser Server nur HTTP — unverschlüsselt.</small></div></div>';
+        + '<small>' + (was.ohne || 'Ohne Zertifikat spricht dieser Server nur HTTP — unverschlüsselt.') + '</small></div></div>';
     }
 
     // 2 · Das Formular
@@ -140,6 +140,7 @@
     if (s.meldung) h += '<div class="zt-meld' + (s.fehler ? ' zt-meld--fehler' : '') + '">' + esc(s.meldung) + '</div>';
 
     // 3 · Der Haken
+    if (was.ohneHaken) return h;
     h += '<label class="zt-haken' + (hat ? '' : ' is-zu') + '">'
       + '<input type="checkbox" id="ztHaken"' + (conf.https && hat ? ' checked' : '') + (hat ? '' : ' disabled') + '>'
       + '<span><strong>' + esc(was.haken) + '</strong>'

@@ -52,7 +52,7 @@ dann bauen, dann hier abhaken. **Nicht drei Schritte vorausdenken.**
 | 2 | **Web-Anwendung mit Anmeldung** | nichts (macht 1 und 4 lohnender) | mittel | ☑ 2026-09-30 |
 | 3 | **WLAN-Lauschen** (jetzt: **Mitlesende**) | nichts | mittel | ☑ 2026-10-01 |
 | 4 | **HTTPS / TLS-Schale** (und Mail-Haken) | 2 | mittel | ☑ 2026-10-01 |
-| 5 | **VPN** | 4 (Verschlüsselung), NAT | groß | ☐ |
+| 5 | **VPN** | 4 (Verschlüsselung), NAT | groß | ☑ 2026-10-01 |
 
 Reihenfolge ist Empfehlung; jede Stufe ist einzeln nutzbar.
 
@@ -326,6 +326,39 @@ VPN-Server*. Das Vertrauen verlagert sich auf den VPN-Server, der alles sieht.
 **Zu klären:** Protokoll/Port des Tunnels, wie viel vom inneren Paket der Mitschnitt
 außen verraten darf, DNS durch den Tunnel, Fristen bei `FERN_FAKTOR` (Abschnitt *Das
 Class Wide Web* in der LIESMICH).
+
+
+**Entschieden und umgesetzt (2026-10-01), Gespräch mit dem Nutzer — das ersetzt „Bausteine" und „Zu klären" oben:**
+
+* **Zwei Programme** (Appstore): **VPN-Server** (`vpnserver`, Port **1194**, Konten, Zertifikat) und **VPN-Client**
+  (`vpnclient`: Server · Benutzer · Passwort · Verbinden). Der Server **startet erst mit Zertifikat** von einer ZS
+  (derselbe Kasten wie bei Web- und Mailserver, `ProgZert.abschnitt` mit `ohneHaken`). Der Client prüft es gegen die
+  Vertrauensliste seines Geräts — mit denselben Warnungen und dem Knopf „Trotzdem verbinden (unsicher)"; Knopf
+  „Zertifikate" öffnet die Vertrauensliste.
+* ⭐ **Der Tunnel ist eine TLS-Verbindung (TCP 1194), kein eigenes Protokoll auf UDP** — so gibt es Zertifikat,
+  Handschlag, Warnungen und `🔒 verschlüsselt` ohne zweite Implementierung (wie ein „SSL-VPN": OpenVPN über TCP,
+  SSTP). Die Anmeldung (Konto, Passwort) läuft erst **nach** dem Handschlag, verschlüsselt. Innen sind es JSON-Sätze:
+  `Anmelden` · `OK {ip, gateway}` · `Fehler` · `Paket {pkt}` (siehe Kopf von `js/vpn.js`).
+* **Alles durch den Tunnel, auch DNS.** Ausgenommen nur das Gespräch mit dem VPN-Server selbst (sonst eine
+  Schleife), die eigenen Adressen und `127.*`. Der Client bekommt vom Server eine **Tunnel-Adresse** (`10.8.0.x`;
+  Server `10.8.0.1`), mit der er sendet. Der Haken im Netzstapel: `schichten.js` ⟨VPN⟩ in `sendIp` (Hinweg) und `onIp`
+  (Rückweg), eingehängt von `dienste.js` über `stack.setVpn`.
+* **Der Server tauscht den Absender (NAT, eigene kleine Tabelle, Außenports 40000–49000)** und schickt weiter; die
+  Antwort wird vor „für mich?" erkannt und in den Tunnel gepackt. Für Webseiten ist der Absender der VPN-Server.
+* ⭐ **Das Vertrauen wandert:** im Mitschnitt des **VPN-Servers** stehen die inneren Pakete im Klartext, mit den
+  Pillen `◯ Tunnel` und `👁 ↔ Unterwegs` (er liest mit). Wer dazwischen sitzt (Router, Wolke), sieht nur
+  `🔒 verschlüsselt` zwischen Client und Server — kein Ziel, keinen Inhalt, keinen Namen aus dem DNS.
+* **Oberfläche:** Pille **◯ VPN aktiv** hinter dem Gerätenamen im Desktop; **Ring um jedes Tunnelpaket** auf den
+  Kabeln (TCP von/zu Port 1194, Klasse `nf-ring`, Farbe `--vpn`; **kein Schloss**); am Server die Marke **VPN**
+  unter der Kachel; im Mitschnitt Zeilen `◯ Tunnel` (inneres Paket am Client und am Server).
+* **Geht durch das CWW** (zwei Tablets: Tunnel zu Tablet B, Name und DNS über 8.8.8.8, dann Webseite aus B). In der
+  Wolke von A stehen nur noch Pakete zu/von dem VPN-Server.
+* **Prüfen:** `tests/kerntest.js` (*VPN: Tunnel, Anmeldung, Übersetzung*, *VPN: durch das Class Wide Web*);
+  Bilder wurden mit einem Einmal-Skript geprüft (Fenster, Pille, Ring, Mitschnitt bei Server und Client).
+* **Bewusst nicht gebaut:** mehrere Tunnel je Gerät, „nur dieses Netz durch den Tunnel", Wiederaufbau nach
+  Abbruch, Ablauf von NAT-Zeilen, Ausnahmen für Dienste auf dem Client (wer Server im Heimnetz betreibt, während der
+  Tunnel steht, wird nicht mehr erreicht — das ist ehrlich so), ICMP-Fehler aus dem Netz hinter dem Server werden
+  nicht zurückübersetzt (wie bei `nat.js`).
 
 ---
 
