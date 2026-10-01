@@ -5426,7 +5426,7 @@ section('Streaming-Server');
   conf.filme = [3, 4];
   const andere = hol('192.168.1.30/filme');
   ok('der Betreiber wählt andere Filme: Film 3 und 4 stehen da',
-     andere && /Film 3/.test(andere.html) && /Film 4/.test(andere.html) && !/Film 1/.test(andere.html));
+     andere && /König der Möwen/.test(andere.html) && /Titanic 3/.test(andere.html) && !/Chicken Park/.test(andere.html));
   conf.filme = [1, 2];
 
   // Like und Kommentar
