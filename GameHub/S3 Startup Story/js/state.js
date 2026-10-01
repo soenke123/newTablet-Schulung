@@ -1318,6 +1318,46 @@
       return t ? t.cost : 0;
     },
 
+    // ── Verkaufen ────────────────────────────────────────────────────────────
+    // Zurück gibt es SELL_RATE des Eingezahlten: Kaufpreis plus bezahlte
+    // Upgrades (inst.paid, gepflegt von placeBuilding/upgradeFarm). Ältere
+    // Spielstände kennen paid nicht und werden aus Preis + Stufen geschätzt.
+    SELL_RATE: 0.8,
+    investedIn: function (inst) {
+      if (typeof inst.paid === 'number') return inst.paid;
+      var sum = this.buildingCost(inst.id);
+      if (inst.id === 'farm') {
+        var idx = this.tierIndex((inst.state && inst.state.tierId) || 'kueken');
+        for (var i = 0; i < idx && i < TIERS.length; i++) sum += TIER_UPGRADE_COST[TIERS[i].id] || 0;
+      }
+      return sum;
+    },
+    sellValue: function (inst) {
+      return Math.floor(this.investedIn(inst) * this.SELL_RATE);
+    },
+    // Text, warum ein Gebäude gerade nicht verkauft werden kann — oder null.
+    sellBlocker: function (inst) {
+      var st = inst.state || {};
+      if (inst.id === 'hq') return 'Das HQ kann nicht verkauft werden';
+      if (inst.id === 'farm') {
+        if (this.instancesByType('farm').length <= 1) return 'Die letzte Serverfarm kannst du nicht verkaufen';
+        if (st.stacks > 0) return 'Erst die Ernte abholen';
+      }
+      if (inst.id === 'werbe' && (st.deal || st.moneyReady > 0)) return 'Erst den Werbedeal abschließen und das Geld abholen';
+      if (inst.id === 'marketing' && (st.active || st.ready > 0)) return 'Erst die Kampagne beenden und die User abholen';
+      if (inst.id === 'kilabor' && (st.conv || st.modelsReady > 0)) return 'Erst die Umwandlung beenden und die Modelle abholen';
+      if (inst.id === 'buero') {
+        var tt = this.current.techtree || {};
+        for (var nid in tt) {
+          if (tt[nid] && (tt[nid].status === 'in_progress' || tt[nid].status === 'ready') &&
+              RT.techtree && RT.techtree.slotOf && RT.techtree.slotOf(tt[nid]) === inst.instanceId) {
+            return 'Hier läuft gerade eine Entwicklung';
+          }
+        }
+      }
+      return null;
+    },
+
     // ── Die erste Werbeagentur ist Pflicht, bevor es weitergeht ─────────────
     //
     // Phase 2 beginnt mit 50.000 € vom Investor und OHNE Werbeagentur — sie ist
@@ -1363,10 +1403,12 @@
 
     defaultInstanceState: defaultInstanceState,
 
-    isOccupied: function (col, row) {
+    // ignoreId: Gebäude, das beim Verschieben sein eigenes Feld nicht blockiert.
+    isOccupied: function (col, row, ignoreId) {
       var pb = this.current.placedBuildings;
       for (var i = 0; i < pb.length; i++) {
         var b = pb[i];
+        if (ignoreId && b.instanceId === ignoreId) continue;
         for (var dc = 0; dc < b.size; dc++) {
           for (var dr = 0; dr < b.size; dr++) {
             if (b.col + dc === col && b.row + dr === row) return true;
@@ -1375,7 +1417,7 @@
       }
       return false;
     },
-    canPlace: function (typeId, col, row) {
+    canPlace: function (typeId, col, row, ignoreId) {
       var type = BUILDING_TYPES[typeId];
       if (!type) return false;
       // Baubar ist jedes Feld, das dem Spieler gehört — Start-Freizone oder
@@ -1383,7 +1425,7 @@
       for (var dc = 0; dc < type.size; dc++) {
         for (var dr = 0; dr < type.size; dr++) {
           if (!this.isTileOwned(col + dc, row + dr)) return false;
-          if (this.isOccupied(col + dc, row + dr))  return false;
+          if (this.isOccupied(col + dc, row + dr, ignoreId)) return false;
         }
       }
       return true;

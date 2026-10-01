@@ -1082,6 +1082,7 @@
       var cost = RT.state.TIER_UPGRADE_COST[fs.tierId];
       if (s.money < cost) return false;
       s.money  -= cost;
+      inst.paid = RT.state.investedIn(inst) + cost;
       fs.tierId = next.id;
       var stufe = RT.state.tierStufe(next.id);
       RT.bus.emit('effect', { where: instanceId, icon: '⬆️', text: 'Stufe ' + stufe });
@@ -1217,10 +1218,38 @@
         col:   col,
         row:   row,
         size:  type.size,
+        paid:  cost,
         state: instState
       });
       RT.bus.emit('state:changed');
       RT.bus.emit('effect', { where: instanceId, icon: '✨', text: '-' + cost + '€' });
+      return { ok: true };
+    },
+
+    // Verkauft ein Gebäude für 80 % des Eingezahlten (Kauf + Upgrades).
+    sellBuilding: function (instanceId) {
+      var s = RT.state.current;
+      var inst = RT.state.getInstance(instanceId);
+      if (!inst) return { ok: false, msg: 'Gebäude nicht gefunden' };
+      var why = RT.state.sellBlocker(inst);
+      if (why) return { ok: false, msg: why };
+      var refund = RT.state.sellValue(inst);
+      s.money += refund;
+      s.placedBuildings = s.placedBuildings.filter(function (b) { return b.instanceId !== instanceId; });
+      RT.bus.emit('state:changed');
+      RT.bus.emit('toast', (RT.state.BUILDING_TYPES[inst.id] || {}).name + ' verkauft (+' + refund + ' €)');
+      return { ok: true, refund: refund };
+    },
+
+    // Setzt ein Gebäude kostenlos auf ein anderes freies Feld. Zustand,
+    // Stufe und laufende Arbeit bleiben erhalten.
+    moveBuilding: function (instanceId, col, row) {
+      var inst = RT.state.getInstance(instanceId);
+      if (!inst) return { ok: false, msg: 'Gebäude nicht gefunden' };
+      if (!RT.state.canPlace(inst.id, col, row, instanceId)) return { ok: false, msg: 'Kein Platz' };
+      inst.col = col;
+      inst.row = row;
+      RT.bus.emit('state:changed');
       return { ok: true };
     },
 

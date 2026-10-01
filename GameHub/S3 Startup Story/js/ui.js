@@ -21,7 +21,7 @@
   // die gewählte STUFE (1…5), nicht der Trend-Wert.
   var creatorStep    = null;
   var shopPreTile   = null;   // { col, row } wenn Shop aus Tile-Klick geöffnet wurde
-  var placementMode = null;   // { typeId } — aktiviert Tile-Highlighting
+  var placementMode = null;   // { typeId, moveId? } — aktiviert Tile-Highlighting; moveId = Gebäude wird nur verschoben
 
   // ---- Helpers ----
   // Kurzform für Buttons auf den Gebäuden und die Ressourcen-Bar — dort ist der
@@ -1089,6 +1089,7 @@
     });
 
     el.modalClose.addEventListener('click', closeModal);
+    el.modal.addEventListener('click', onManageClick);
     el.modalBackdrop.addEventListener('click', function (e) {
       if (e.target === el.modalBackdrop) closeModal();
     });
@@ -1160,14 +1161,16 @@
     // Das Werk hat kein eigenes Modal — es tut nur eine Sache, und die sitzt
     // auf dem Knopf davor. Der Klick aufs Gebäude zeigt deshalb dasselbe wie
     // der Stufen-Knopf im Serverkapazitäts-Panel: worum es hier geht.
-    else if (inst.id === 'energie') showServerUpkeepModal();
+    else if (inst.id === 'energie') showServerUpkeepModal(inst);
   }
 
   function onTileClick(e) {
     var c = parseInt(e.currentTarget.dataset.col, 10);
     var r = parseInt(e.currentTarget.dataset.row, 10);
     if (placementMode) {
-      var res = RT.actions.placeBuilding(placementMode.typeId, c, r);
+      var res = placementMode.moveId
+        ? RT.actions.moveBuilding(placementMode.moveId, c, r)
+        : RT.actions.placeBuilding(placementMode.typeId, c, r);
       if (res.ok) exitPlacement();
       else toast(res.msg);
       return;
@@ -1220,6 +1223,18 @@
     el.placementBar.classList.add('show');
     updateTileHighlights();
   }
+  // Verschieben: derselbe Platzierungs-Modus wie beim Neukauf, nur kostenlos.
+  function enterMove(instanceId) {
+    var inst = RT.state.getInstance(instanceId);
+    if (!inst) return;
+    var t = RT.state.BUILDING_TYPES[inst.id];
+    if (!t) return;
+    closeModal();
+    placementMode = { typeId: inst.id, moveId: instanceId };
+    el.placementLabel.textContent = t.icon + ' ' + t.name + ' verschieben — grünes Feld anklicken';
+    el.placementBar.classList.add('show');
+    updateTileHighlights();
+  }
   function exitPlacement() {
     placementMode = null;
     el.placementBar.classList.remove('show');
@@ -1233,7 +1248,7 @@
       var r = parseInt(t.dataset.row, 10);
       t.classList.remove('tile-valid', 'tile-invalid');
       if (placementMode) {
-        if (RT.state.canPlace(placementMode.typeId, c, r)) t.classList.add('tile-valid');
+        if (RT.state.canPlace(placementMode.typeId, c, r, placementMode.moveId)) t.classList.add('tile-valid');
         else t.classList.add('tile-invalid');
       }
     }
@@ -1604,6 +1619,55 @@
     }
     el.modalBackdrop.classList.add('open');
     wireModalButtons();
+    renderManage(context && context.instanceId);
+  }
+
+  // ---- Gebäude verwalten: Verschieben / Verkaufen ----
+  // Steht in einem eigenen Element unter #modal-body, damit die Modale ihren
+  // Inhalt beliebig neu bauen dürfen, ohne es mitzureißen. Das HQ ist fest.
+  var manageConfirm = false;
+  function renderManage(instanceId) {
+    var box = document.getElementById('modal-manage');
+    if (!box) return;
+    var inst = instanceId ? RT.state.getInstance(instanceId) : null;
+    if (!inst || inst.id === 'hq' || !RT.state.BUILDING_TYPES[inst.id]) {
+      box.hidden = true; box.innerHTML = ''; manageConfirm = false; return;
+    }
+    var old  = box.querySelector('details');
+    var open = old ? old.open : false;
+    var why  = RT.state.sellBlocker(inst);
+    var val  = RT.state.sellValue(inst);
+    var sell = manageConfirm && !why
+      ? '<button type="button" class="modal-manage__btn modal-manage__btn--confirm" data-manage="sell-ok">Wirklich verkaufen (+' + fmtMoney(val) + ')</button>'
+        + '<button type="button" class="modal-manage__btn" data-manage="sell-cancel">Abbrechen</button>'
+      : '<button type="button" class="modal-manage__btn modal-manage__btn--danger" data-manage="sell"' + (why ? ' disabled' : '') + '>💰 Verkaufen (+' + fmtMoney(val) + ')</button>';
+    box.innerHTML =
+      '<details' + (open ? ' open' : '') + '>' +
+        '<summary>⋯ Gebäude verwalten</summary>' +
+        '<div class="modal-manage__body">' +
+          '<button type="button" class="modal-manage__btn" data-manage="move">↔ Verschieben (kostenlos)</button>' +
+          sell +
+          '<div class="modal-manage__note">' + (why ? why : 'Verkaufen bringt 80 % des Kaufpreises' + (inst.id === 'farm' ? ' und der Upgrades' : '') + ' zurück.') + '</div>' +
+        '</div>' +
+      '</details>';
+    box.hidden = false;
+    box.setAttribute('data-instance-id', inst.instanceId);
+  }
+  function onManageClick(e) {
+    var btn = e.target && e.target.closest ? e.target.closest('[data-manage]') : null;
+    if (!btn) return;
+    var box = document.getElementById('modal-manage');
+    var id  = box && box.getAttribute('data-instance-id');
+    var act = btn.getAttribute('data-manage');
+    if (act === 'move') { manageConfirm = false; enterMove(id); return; }
+    if (act === 'sell') { manageConfirm = true; renderManage(id); return; }
+    if (act === 'sell-cancel') { manageConfirm = false; renderManage(id); return; }
+    if (act === 'sell-ok') {
+      manageConfirm = false;
+      var res = RT.actions.sellBuilding(id);
+      if (!res.ok) { toast(res.msg); renderManage(id); return; }
+      closeModal();
+    }
   }
   function closeModal() {
     modalContext = null;
@@ -1615,6 +1679,9 @@
     creatorStep    = null;
     shopPreTile   = null;
     el.modalBackdrop.classList.remove('open');
+    manageConfirm = false;
+    var mg = document.getElementById('modal-manage');
+    if (mg) { mg.hidden = true; mg.innerHTML = ''; }
     el.modal.classList.remove('modal-lg');
     // Das Techtree-Modal setzt seine Klassen selbst und läuft nicht über
     // openModal — ohne das hier bliebe modal-tt aus dem Werbe-Modal hängen.
@@ -1641,6 +1708,8 @@
         modalContext.type === 'serverUpkeep') return;
     var inst = RT.state.getInstance(modalContext.instanceId);
     if (!inst) { closeModal(); return; }
+    var mgBox = document.getElementById('modal-manage');
+    if (mgBox && !mgBox.hidden && !manageConfirm) renderManage(inst.instanceId);
     if (modalContext.type === 'farm')      renderFarmBody(inst);
     else if (modalContext.type === 'werbe')     renderWerbeBody(inst);
     else if (modalContext.type === 'marketing') renderMarketingBody(inst);
@@ -2332,7 +2401,7 @@
     return '<div><span class="rt-srv-now__lbl">' + label + '</span>'
          +      '<b class="rt-srv-now__val">' + value + '</b></div>';
   }
-  function showServerUpkeepModal() {
+  function showServerUpkeepModal(inst) {
     var F     = RT.ledger.fmt;
     var tiers = RT.state.SERVER_UPKEEP_TIERS;
     var cur   = RT.state.serverUpkeepTier();
@@ -2393,7 +2462,8 @@
           + '</div>'
         : '');
 
-    openModal(RT.assets.iconHtml('stromWasser') + ' Serverkosten', html, { type: 'serverUpkeep' });
+    openModal(RT.assets.iconHtml('stromWasser') + ' Serverkosten', html,
+      { type: 'serverUpkeep', instanceId: inst && inst.instanceId });
   }
 
   // KI-Labor — gebaut wie die Werbeagentur: oben die laufende Umwandlung mit
@@ -3246,6 +3316,7 @@
     if (RT.techtree && RT.techtree.open) {
       RT.techtree.open(inst ? inst.instanceId : null);
     }
+    renderManage(inst ? inst.instanceId : null);
   }
 
   // ---- Shop ----
