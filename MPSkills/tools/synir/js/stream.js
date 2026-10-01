@@ -44,13 +44,14 @@
   const PORT = 80;
   const esc = (t) => window.NetUtil.escapeHtml(t);
 
-  /* Die vier Filme. Plakat = Bild als Daten-URI (`bild`); solange
-     keines da ist, zeichnet `plakat()` einen Verlauf mit dem Titel. */
+  /* Die vier Filme. Plakat = Bild als Daten-URI (`bild`, aus filme.js);
+     fehlt die Datei, zeichnet `plakat()` einen Verlauf mit dem Titel. */
+  const PL = window.FilmPlakate || {};
   const FILME = [
-    { id: 1, titel: 'Film 1', farben: ['#6d28d9', '#ec4899'] },
-    { id: 2, titel: 'Film 2', farben: ['#0284c7', '#22d3ee'] },
-    { id: 3, titel: 'Film 3', farben: ['#d97706', '#ef4444'] },
-    { id: 4, titel: 'Film 4', farben: ['#059669', '#a3e635'] }
+    { id: 1, titel: 'Chicken Park',     bild: PL[1], farben: ['#d97706', '#ef4444'] },
+    { id: 2, titel: 'Herr der Dinge',   bild: PL[2], farben: ['#6d28d9', '#ec4899'] },
+    { id: 3, titel: 'König der Möwen',  bild: PL[3], farben: ['#0284c7', '#22d3ee'] },
+    { id: 4, titel: 'Titanic 3',        bild: PL[4], farben: ['#059669', '#a3e635'] }
   ];
   const film = (id) => FILME.find(f => f.id === +id) || null;
 
@@ -262,7 +263,7 @@
         if (m) {
           const f = film(m[1]);
           if (!f) return html(node, conn, a, 404, nichtGefunden(node));
-          return senden(node, conn, 200, 'image/svg+xml', plakat(f), null, 'GET ' + a.pfad);
+          return senden(node, conn, 200, f.bild ? 'image/jpeg' : 'image/svg+xml', plakat(f), null, 'GET ' + a.pfad);
         }
         if (pfad === '/') return konto ? weiter(node, conn, a, '/filme') : html(node, conn, a, 200, startSeite(node));
         if (pfad === '/anmelden') return konto ? weiter(node, conn, a, '/filme') : html(node, conn, a, 200, anmeldeSeite(node));

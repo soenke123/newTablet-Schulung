@@ -20,7 +20,7 @@ vm.createContext(sandbox);
    und ungenauer. Das geht nur, weil die Datei beim LADEN kein
    DOM anfasst; wer das ändert, muss sie hier herausnehmen. */
 for (const f of ['util.js', 'engine.js', 'netz.js', 'verlauf.js', 'nat.js', 'tcp.js', 'rip.js', 'logos.js', 'dateien.js',
-                 'http.js', 'mail.js', 'stream.js', 'schichten.js', 'dienste.js', 'internet.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
+                 'http.js', 'mail.js', 'filme.js', 'stream.js', 'schichten.js', 'dienste.js', 'internet.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
                  'prog-dateien.js', 'szenarien.js']) {
   vm.runInContext(fs.readFileSync(path.join(BASE, f), 'utf8'), sandbox, { filename: f });
 }
