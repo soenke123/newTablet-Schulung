@@ -4614,6 +4614,27 @@ async function markenAn(page, name, art) {
   await page.waitForTimeout(200);
   await page.evaluate((nm) => { window.SIM.netz.byName(nm).streamServer.filme = [1, 2]; window.SIM.geraet.render(); }, sv.srv);
 
+  // Reiter „Datenbank": Tabellen, Hash statt Passwort
+  await page.evaluate((nm) => { const c = window.SIM.netz.byName(nm).streamServer;
+    c.konten.push({ name: 'Anna', email: 'anna@schule.de', iban: 'DE99 0000', bic: 'XXXXDEFF', pwHash: window.NetUtil.pseudoHash('Fuchs42') });
+    c.likes = { 1: ['anna@schule.de'] }; c.kommentare.push({ film: 1, von: 'Anna', email: 'anna@schule.de', text: 'Tolles Huhn' });
+    window.SIM.geraet.render(); }, sv.srv);
+  await page.locator('#dtWin [data-tab="db"]').click();
+  await page.waitForTimeout(200);
+  ok('Reiter „Datenbank": vier Tabellen', await page.locator('#dtWin .db-tab').count() === 4);
+  ok('⭐ die Datenbank zeigt den Hash, kein Klartext-Passwort',
+     (await page.locator('#dtWin .db-tab').first().textContent()).includes(await page.evaluate(() => window.NetUtil.pseudoHash('Fuchs42')))
+     && !(await page.locator('#dtWin').textContent()).includes('Fuchs42'));
+  await page.locator('#dtWin tr[data-kunde="anna@schule.de"]').click();
+  await page.waitForTimeout(150);
+  ok('Tipp auf einen Kunden hebt Like, Kommentar und Film hervor',
+     await page.locator('#dtWin tr.is-hell').count() === 4, String(await page.locator('#dtWin tr.is-hell').count()));
+  await page.screenshot({ path: path.join(OUT, 'shot-streaming-db.png') });
+  await page.locator('#dtWin [data-tab="verwaltung"]').click();
+  await page.waitForTimeout(150);
+  await page.evaluate((nm) => { const c = window.SIM.netz.byName(nm).streamServer;
+    c.konten = c.konten.filter(k => k.email !== 'anna@schule.de'); c.likes = {}; c.kommentare = []; window.SIM.geraet.render(); }, sv.srv);
+
   // Der Webserver kann nicht zusätzlich starten
   await page.evaluate((nm) => { window.SIM.netz.byName(nm).webServer = { on: false }; window.SIM.geraet.render(); }, sv.srv);
   await programmAuf(page, 'webserver');

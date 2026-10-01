@@ -455,7 +455,7 @@
   function stTabs() {
     return '<div class="ws-dateien st-tabs">'
       + [['verwaltung', 'Verwaltung'], ['db', 'Datenbank']].map(t =>
-          '<button class="ws-datei st-film' + (stTab === t[0] ? ' is-on' : '') + '" data-tab="' + t[0] + '">'
+          '<button class="ws-datei st-tab' + (stTab === t[0] ? ' is-on' : '') + '" data-tab="' + t[0] + '">'
           + t[1] + '</button>').join('') + '</div>';
   }
 
