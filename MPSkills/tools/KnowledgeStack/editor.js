@@ -319,6 +319,8 @@
           Fragen nummerieren (<code>1.</code> <code>2.</code> …), Antworten mit Buchstaben
           (<code>a)</code> <code>b)</code> …). Die richtige Antwort mit <code>*</code> oder <code>✓</code>
           dahinter, oder als Zeile <code>Lösung: b</code>.
+          Eine Erklärung (wird nach der Antwort am Beamer gezeigt) kommt als eigene Zeile
+          darunter: <code>Erklärung: …</code>.
           <span class="kse-imp-offen">Aber nichts davon ist Pflicht: Der Text wird großzügig gelesen —
           fehlende Nummern, andere Zeichen, Zeilenumbrüche oder nur Fragen ohne Antworten gehen auch.
           Nach dem Übernehmen kannst du alles noch Feld für Feld anpassen.</span>
