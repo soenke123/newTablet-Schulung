@@ -1234,6 +1234,12 @@
       var why = RT.state.sellBlocker(inst);
       if (why) return { ok: false, msg: why };
       var refund = RT.state.sellValue(inst);
+      // Laufende Entwicklung im Büro geht mit verloren — sonst wanderte sie
+      // still auf einen anderen Platz (slotOf-Fallback).
+      if (inst.id === 'buero') {
+        RT.state.sellDevNodes(inst).forEach(function (nid) { delete s.techtree[nid]; });
+      }
+      if (inst.id === 'werbe') RT.state.removeTrendMod(adTrendModId(instanceId));
       s.money += refund;
       s.placedBuildings = s.placedBuildings.filter(function (b) { return b.instanceId !== instanceId; });
       RT.bus.emit('state:changed');

@@ -1335,27 +1335,34 @@
     sellValue: function (inst) {
       return Math.floor(this.investedIn(inst) * this.SELL_RATE);
     },
-    // Text, warum ein Gebäude gerade nicht verkauft werden kann — oder null.
+    // Text, warum ein Gebäude nicht verkauft werden kann — oder null.
+    // Nur das HQ ist fest; alles andere geht immer (sellLoss warnt vorher).
     sellBlocker: function (inst) {
-      var st = inst.state || {};
       if (inst.id === 'hq') return 'Das HQ kann nicht verkauft werden';
-      if (inst.id === 'farm') {
-        if (this.instancesByType('farm').length <= 1) return 'Die letzte Serverfarm kannst du nicht verkaufen';
-        if (st.stacks > 0) return 'Erst die Ernte abholen';
-      }
-      if (inst.id === 'werbe' && (st.deal || st.moneyReady > 0)) return 'Erst den Werbedeal abschließen und das Geld abholen';
-      if (inst.id === 'marketing' && (st.active || st.ready > 0)) return 'Erst die Kampagne beenden und die User abholen';
-      if (inst.id === 'kilabor' && (st.conv || st.modelsReady > 0)) return 'Erst die Umwandlung beenden und die Modelle abholen';
-      if (inst.id === 'buero') {
-        var tt = this.current.techtree || {};
-        for (var nid in tt) {
-          if (tt[nid] && (tt[nid].status === 'in_progress' || tt[nid].status === 'ready') &&
-              RT.techtree && RT.techtree.slotOf && RT.techtree.slotOf(tt[nid]) === inst.instanceId) {
-            return 'Hier läuft gerade eine Entwicklung';
-          }
-        }
-      }
       return null;
+    },
+    // Was beim Verkauf mit im Gebäude verloren geht, als Satzteil — oder null.
+    sellLoss: function (inst) {
+      var st = inst.state || {};
+      var lost = [];
+      if (inst.id === 'farm' && st.stacks > 0)            lost.push('die noch nicht abgeholte Ernte');
+      if (inst.id === 'werbe' && st.deal)                  lost.push('den laufenden Werbedeal');
+      if (inst.id === 'werbe' && st.moneyReady > 0)        lost.push('das bereitliegende Geld');
+      if (inst.id === 'marketing' && st.active)            lost.push('die laufende Kampagne');
+      if (inst.id === 'marketing' && st.ready > 0)         lost.push('die wartenden User');
+      if (inst.id === 'kilabor' && st.conv)                lost.push('die laufende Umwandlung');
+      if (inst.id === 'kilabor' && st.modelsReady > 0)     lost.push('die fertigen Modelle');
+      if (inst.id === 'buero' && this.sellDevNodes(inst).length) lost.push('die laufende Entwicklung');
+      return lost.length ? lost.join(' und ') : null;
+    },
+    // Techtree-Nodes, die gerade auf diesem Bürogebäude laufen oder abholbereit sind.
+    sellDevNodes: function (inst) {
+      var out = [], tt = this.current.techtree || {};
+      for (var nid in tt) {
+        if (tt[nid] && (tt[nid].status === 'in_progress' || tt[nid].status === 'ready') &&
+            RT.techtree && RT.techtree.slotOf && RT.techtree.slotOf(tt[nid]) === inst.instanceId) out.push(nid);
+      }
+      return out;
     },
 
     // ── Die erste Werbeagentur ist Pflicht, bevor es weitergeht ─────────────

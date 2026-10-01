@@ -2479,3 +2479,4 @@ html, body {
 .modal-manage__btn--confirm { background: var(--red); border-color: var(--red); color: #fff; }
 .modal-manage__btn--confirm:hover:not(:disabled) { background: var(--red); filter: brightness(.92); }
 .modal-manage__note { flex-basis: 100%; font-size: 12px; color: #888; }
+.modal-manage__note--warn { color: var(--red); font-weight: 700; }

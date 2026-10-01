@@ -1637,6 +1637,7 @@
     var open = old ? old.open : false;
     var why  = RT.state.sellBlocker(inst);
     var val  = RT.state.sellValue(inst);
+    var loss = RT.state.sellLoss(inst);
     var sell = manageConfirm && !why
       ? '<button type="button" class="modal-manage__btn modal-manage__btn--confirm" data-manage="sell-ok">Wirklich verkaufen (+' + fmtMoney(val) + ')</button>'
         + '<button type="button" class="modal-manage__btn" data-manage="sell-cancel">Abbrechen</button>'
@@ -1647,6 +1648,9 @@
         '<div class="modal-manage__body">' +
           '<button type="button" class="modal-manage__btn" data-manage="move">↔ Verschieben (kostenlos)</button>' +
           sell +
+          (manageConfirm && !why
+            ? '<div class="modal-manage__note modal-manage__note--warn">⚠️ Alles in diesem Gebäude geht verloren' + (loss ? ': ' + loss : '') + '.</div>'
+            : '') +
           '<div class="modal-manage__note">' + (why ? why : 'Verkaufen bringt 80 % des Kaufpreises' + (inst.id === 'farm' ? ' und der Upgrades' : '') + ' zurück.') + '</div>' +
         '</div>' +
       '</details>';
