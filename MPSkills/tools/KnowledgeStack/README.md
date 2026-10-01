@@ -133,3 +133,16 @@ räumt den Ablauf auf. Beide spielt Sönke selbst im Supabase-Dashboard ein.
   Ohne sie ist das Quiz auf die 12 Seed-Fragen der Tablet-Schulung begrenzt.
 * **Ein Schaufenster** (`MPSkills/preview/knowledgestack.js`), damit die
   Kachel auf der Landing etwas zeigt.
+
+## Quiz aus Text (Copy & Paste)
+
+Zusätzlich zum Fragen-Editor: Im Katalog (📋 „Aus Text") oder im Editor
+(„Aus Text" → hängt an) lässt sich ein Quiz als Text einfügen oder tippen.
+`parse.js` (`window.KSParse.parse`, auch in Node ladbar) erkennt Fragen,
+Antworten, Richtig-Markierungen (`*` `✓` `(richtig)` `**fett**`, `Lösung: b`,
+Schlüssel `1-b`), Erklärungen und einen Titel; Nummern/Buchstaben dürfen
+fehlen oder falsch sein, Zeilenumbrüche werden zusammengefügt. Fragen ohne
+Antworten bleiben „nur Frage". Das Textfeld liegt über einer deckungsgleichen
+Zweitschicht (`.kse-imp-back`), die Zeilen einfärbt — dafür darf die
+Rückseite keine Schriftbreite ändern (kein Padding, kein Fettdruck). „Übernehmen"
+öffnet den normalen Editor mit dem Erkannten.

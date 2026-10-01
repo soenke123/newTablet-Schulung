@@ -67,7 +67,7 @@
 (function () {
   'use strict';
 
-  const ASSET_V = '20260927a';
+  const ASSET_V = '20261001a';
 
   /* Takt je Phase, in Millisekunden. Während der Frage muss der
      Beamer zügig mitzählen („17 von 28 haben geantwortet") — in der
@@ -145,6 +145,7 @@
   let editorData = null;      // { catalog_id, title, subject, questions: [] }
   let editorPreviewIdx = 0;   // welche Frage in der Vorschau
   let editorDirty = false;    // ungespeicherte Änderungen?
+  let editorImport = null;    // Text-Import: { text, mode: 'new'|'append', title, subject }
 
   /* ══════════════════════════════════════════════════════════
      Bausteine
@@ -931,9 +932,20 @@
   /* ══════════════════════════════════════════════════════════
      EDITOR (nur Presenter, nur in der Lobby)
      ══════════════════════════════════════════════════════════ */
-  function ladeEditor() {
-    if (window.KSEditor) return Promise.resolve();
+  function ladeSkript(src) {
     return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'tools/KnowledgeStack/' + src + '?v=' + ASSET_V;
+      s.onload = resolve;
+      s.onerror = () => reject(new Error(src + ' konnte nicht geladen werden'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function ladeEditor() {
+    if (window.KSEditor && window.KSParse) return Promise.resolve();
+    return (window.KSParse ? Promise.resolve() : ladeSkript('parse.js')).then(() => new Promise((resolve, reject) => {
+      if (window.KSEditor) { resolve(); return; }
       const s = document.createElement('script');
       s.src = 'tools/KnowledgeStack/editor.js?v=' + ASSET_V;
       s.onload = () => {
@@ -948,13 +960,14 @@
       };
       s.onerror = () => reject(new Error('editor.js konnte nicht geladen werden'));
       document.head.appendChild(s);
-    });
+    }));
   }
 
   function baueEditor() {
     const E = window.KSEditor;
     if (editorMode === 'list')    return E.buildList(catalogs);
     if (editorMode === 'edit')    return E.buildEditor(editorData || { questions: [] });
+    if (editorMode === 'import')  return E.buildImport(editorImport, window.KSParse.parse(editorImport.text));
     if (editorMode === 'preview') {
       const qs = (editorData && editorData.questions) || [];
       const q = qs[editorPreviewIdx] || { question_text: '', options: ['','','',''], correct_idx: 0 };
@@ -1058,11 +1071,75 @@
     });
   }
 
+  /* Text-Import: bei jedem Tastendruck neu erkennen und NUR die
+     Einfärbung und die Ergebnisliste flicken — das Textfeld bleibt
+     unangetastet (Cursor, Auswahl, Tastatur). */
+  function onEditorInput(ev) {
+    if (editorMode !== 'import' || !editorImport) return;
+    const f = ev.target.closest('[data-imp]');
+    if (!f) return;
+    const k = f.dataset.imp;
+    if (k === 'title')   { editorImport.title = f.value; return; }
+    if (k === 'subject') { editorImport.subject = f.value; return; }
+    if (k !== 'text') return;
+    editorImport.text = f.value;
+    importAktualisieren();
+  }
+
+  function importAktualisieren() {
+    const E = window.KSEditor, P = window.KSParse;
+    if (!E || !P || !stage) return;
+    const parsed = P.parse(editorImport.text);
+    const ov = stage.querySelector('[data-imp=overlay]');
+    if (ov) ov.innerHTML = E.importOverlay(editorImport.text, parsed);
+    const res = stage.querySelector('[data-imp=result]');
+    if (res) res.innerHTML = E.importResult(parsed);
+    const ap = stage.querySelector('[data-imp=apply]');
+    if (ap) {
+      const n = parsed.stats.questions;
+      ap.disabled = !n;
+      ap.textContent = '✔ Übernehmen' + (n ? ' (' + n + ')' : '');
+    }
+  }
+
+  /* Erkanntes übernehmen: neu → Editor mit neuen Fragen,
+     ergänzen → hinten anhängen (eine leere Startfrage entfällt). */
+  function importUebernehmen() {
+    const P = window.KSParse;
+    const parsed = P.parse(editorImport.text);
+    if (!parsed.questions.length) { ctx.toast('Noch keine Fragen erkannt.', true); return; }
+    const qs = parsed.questions.map(q => ({
+      question_text: q.question_text, options: q.options,
+      correct_idx: q.correct_idx, correct_indices: q.correct_indices,
+      time_limit_sec: q.time_limit_sec, explanation: q.explanation
+    }));
+    if (editorImport.mode === 'append' && editorData) {
+      const leer = x => !x.question_text && !(x.options || []).some(Boolean);
+      editorData.questions = editorData.questions.filter(x => !leer(x)).concat(qs);
+      if (!editorData.title && parsed.title) editorData.title = parsed.title;
+    } else {
+      editorData = {
+        catalog_id: null,
+        title: (editorImport.title || '').trim() || parsed.title || '',
+        subject: editorImport.subject || 'Alles Mögliche',
+        questions: qs
+      };
+    }
+    editorDirty = true;
+    editorImport = null;
+    editorMode = 'edit';
+    lastFrame = null; zeichne();
+    const nur = parsed.stats.onlyQuestions;
+    ctx.toast('✅ ' + qs.length + (qs.length === 1 ? ' Frage' : ' Fragen') + ' übernommen'
+      + (nur ? ' — ' + nur + ' noch ohne Antworten.' : '.'));
+  }
+
   /* ══════════════════════════════════════════════════════════
      Bedienung
      ══════════════════════════════════════════════════════════ */
   function binde() {
     stage.addEventListener('click', onClick);
+    stage.addEventListener('input', onEditorInput);
     const sel = stage.querySelector('[data-ks=cat]');
     if (sel) sel.addEventListener('change', async () => {
       const r = await ctx.actions.call('ks_room_setup', { p_catalog: sel.value });
@@ -1094,9 +1171,40 @@
 
       // Katalog-Übersicht → Editor schließen
       if (a === 'close') {
-        editorMode = null; editorData = null; editorDirty = false;
+        editorMode = null; editorData = null; editorDirty = false; editorImport = null;
         lastFrame = null; zeichne(); return;
       }
+
+      // Text-Import öffnen (neues Quiz bzw. an das geöffnete anhängen)
+      if (a === 'imp-open' || a === 'imp-open-append') {
+        await ladeEditor();
+        const append = a === 'imp-open-append';
+        if (append) sammleEditorDaten();
+        if (!editorImport || editorImport.mode !== (append ? 'append' : 'new')) {
+          editorImport = { text: '', mode: append ? 'append' : 'new', title: '', subject: 'Alles Mögliche' };
+        }
+        editorMode = 'import';
+        lastFrame = null; zeichne(); return;
+      }
+      if (a === 'imp-example') {
+        editorImport.text = window.KSParse.EXAMPLE;
+        lastFrame = null; zeichne(); return;
+      }
+      if (a === 'imp-clear') {
+        editorImport.text = '';
+        lastFrame = null; zeichne(); return;
+      }
+      if (a === 'imp-back') {
+        if (editorImport.text.trim()) {
+          const ok = await ctx.confirm('Der eingefügte Text geht verloren. Trotzdem zurück?');
+          if (!ok) return;
+        }
+        const append = editorImport.mode === 'append' && editorData;
+        editorImport = null;
+        editorMode = append ? 'edit' : 'list';
+        lastFrame = null; zeichne(); return;
+      }
+      if (a === 'imp-apply') { importUebernehmen(); return; }
 
       // Neues Quiz anlegen
       if (a === 'new') {
@@ -1127,7 +1235,7 @@
         const r = await ctx.actions.call('ks_room_setup', { p_catalog: catId });
         ed.disabled = false;
         if (!r.ok) { ctx.toast(fehlerText(r.error), true); return; }
-        editorMode = null; editorData = null; editorDirty = false;
+        editorMode = null; editorData = null; editorDirty = false; editorImport = null;
         lastSig = null; lastFrame = null; poll(); return;
       }
 
@@ -1466,7 +1574,7 @@
       lastSig = null; lastFrame = null; view = null;
       els = {}; catalogs = []; skew = 0;
       localEmote = null; answering = false; pickerOffen = false;
-      editorMode = editorData = null; editorDirty = false;
+      editorMode = editorData = editorImport = null; editorDirty = false;
 
       root.innerHTML = '<div class="ks-frame"><div class="ks-stage">'
         + '<p class="ks-booting">Quiz wird geladen …</p></div></div>';
@@ -1514,7 +1622,7 @@
       role = null; view = null; els = {};
       lastSig = lastFrame = null;
       pickerOffen = false; localEmote = null;
-      editorMode = editorData = null; editorDirty = false;
+      editorMode = editorData = editorImport = null; editorDirty = false;
       zeigeFehler.last = null;
     }
   });

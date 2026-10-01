@@ -50,6 +50,10 @@
             <button type="button" class="kse-btn kse-btn--gruen" data-ed="new">
               + Neues Quiz
             </button>
+            <button type="button" class="kse-btn kse-btn--cyan" data-ed="imp-open"
+                    title="Fragen aus Text einfügen — Copy &amp; Paste">
+              📋 Aus Text
+            </button>
             <button type="button" class="kse-btn kse-btn--soft" data-ed="close">
               ← Zurück
             </button>
@@ -125,6 +129,8 @@
             </select>
           </div>
           <div class="kse-headr">
+            <button type="button" class="kse-btn kse-btn--cyan" data-ed="imp-open-append"
+                    title="Weitere Fragen aus Text einfügen">📋 Aus Text</button>
             <button type="button" class="kse-btn kse-btn--soft" data-ed="preview"
                     title="Vorschau">👁️ Vorschau</button>
             <button type="button" class="kse-btn kse-btn--gruen" data-ed="save"
@@ -238,6 +244,113 @@
       </div>`;
   }
 
+
+
+  /* ═══════════════════════════════════════════════════════════
+     3b) TEXT-IMPORT (import) — Copy & Paste, live erkannt
+     ═══════════════════════════════════════════════════════════ */
+  /* Deckungsgleiche Zweitschicht hinter dem Textfeld: jede Rohzeile in
+     einem Span, nur Hintergrund (kein Padding, keine Schrift — sonst
+     verrutscht der Umbruch gegenüber dem Textfeld). */
+  function importOverlay(text, parsed) {
+    const raw = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+    const qs = parsed.questions;
+    return raw.map((ln, i) => {
+      const info = parsed.lines[i] || { kind: 'n', qi: -1 };
+      const q = info.qi >= 0 ? qs[info.qi] : null;
+      let cls = 'kse-hl-' + info.kind;
+      if (q && q.status !== 'ok' && (info.kind === 'q')) cls += ' kse-hl-warn';
+      return '<span class="' + cls + '">' + esc(ln) + '</span>';
+    }).join('\n') + '\n​';
+  }
+
+  function importResult(parsed) {
+    const st = parsed.stats;
+    if (!st.questions) {
+      return '<p class="kse-leer kse-leer--klein">Hier erscheint, was erkannt wurde, sobald du etwas eingibst.</p>';
+    }
+    let h = '<div class="kse-imp-sum">'
+      + '<span class="kse-chip">' + st.questions + (st.questions === 1 ? ' Frage' : ' Fragen') + '</span>'
+      + '<span class="kse-chip">' + st.answers + (st.answers === 1 ? ' Antwort' : ' Antworten') + '</span>';
+    if (st.onlyQuestions) h += '<span class="kse-chip kse-chip--info">' + st.onlyQuestions + ' nur Frage</span>';
+    if (st.noCorrect) h += '<span class="kse-chip kse-chip--warn">' + st.noCorrect + ' ohne Richtig-Markierung</span>';
+    h += '</div>';
+    h += parsed.questions.map((q, i) => {
+      const filled = q.options.map((o, oi) => ({ o, oi })).filter(x => x.o);
+      return '<div class="kse-imp-q' + (q.status === 'ok' ? '' : ' is-hinweis') + '">'
+        + '<div class="kse-imp-qt"><b>' + (i + 1) + '.</b> '
+        + (q.question_text ? esc(q.question_text) : '<i>(Fragetext fehlt)</i>') + '</div>'
+        + (filled.length
+          ? '<ul class="kse-imp-ans">' + filled.map(x =>
+              '<li class="' + (q.correct_indices.includes(x.oi) && q.status !== 'keine-richtige' ? 'is-richtig' : '') + '">'
+              + '<span class="kse-olabel">' + LABELS[x.oi] + '</span>' + esc(x.o)
+              + (q.correct_indices.includes(x.oi) && q.status !== 'keine-richtige' ? ' ✅' : '') + '</li>').join('')
+            + '</ul>'
+          : '')
+        + (q.explanation ? '<div class="kse-imp-ex">💡 ' + esc(q.explanation) + '</div>' : '')
+        + q.notes.map(n => '<div class="kse-imp-note">⚠ ' + esc(n) + '</div>').join('')
+        + '</div>';
+    }).join('');
+    return h;
+  }
+
+  function buildImport(state, parsed) {
+    const isNew = state.mode === 'new';
+    const subject = state.subject || 'Alles Mögliche';
+    const fachOpts = FAECHER.map(f =>
+      '<option value="' + esc(f) + '"' + (f === subject ? ' selected' : '') + '>' + esc(f) + '</option>').join('');
+    const n = parsed.stats.questions;
+
+    return `
+      <div class="kse-wrap kse-wrap--import">
+        <header class="kse-head">
+          <h1 class="kse-h1">📋 Quiz aus Text${isNew ? '' : ' ergänzen'}</h1>
+          <div class="kse-headr">
+            <button type="button" class="kse-btn kse-btn--gruen" data-ed="imp-apply"
+                    data-imp="apply" ${n ? '' : 'disabled'}>
+              ✔ Übernehmen${n ? ' (' + n + ')' : ''}
+            </button>
+            <button type="button" class="kse-btn kse-btn--soft" data-ed="imp-back">← Zurück</button>
+          </div>
+        </header>
+
+        <div class="kse-imp-info">
+          <b>So klappt's am besten:</b>
+          Fragen nummerieren (<code>1.</code> <code>2.</code> …), Antworten mit Buchstaben
+          (<code>a)</code> <code>b)</code> …). Die richtige Antwort mit <code>*</code> oder <code>✓</code>
+          dahinter, oder als Zeile <code>Lösung: b</code>.
+          <span class="kse-imp-offen">Aber nichts davon ist Pflicht: Der Text wird großzügig gelesen —
+          fehlende Nummern, andere Zeichen, Zeilenumbrüche oder nur Fragen ohne Antworten gehen auch.
+          Nach dem Übernehmen kannst du alles noch Feld für Feld anpassen.</span>
+        </div>
+
+        <div class="kse-imp-meta">
+          ${isNew ? `
+            <input type="text" class="kse-input kse-input--titel" data-imp="title"
+                   value="${esc(state.title || '')}" placeholder="Quiz-Titel (oder oben im Text: „Quiz: …")" />
+            <select class="kse-select" data-imp="subject">${fachOpts}</select>` : ''}
+          <button type="button" class="kse-btn kse-btn--small kse-btn--soft" data-ed="imp-example">Beispiel einfügen</button>
+          <button type="button" class="kse-btn kse-btn--small kse-btn--soft" data-ed="imp-clear">Leeren</button>
+        </div>
+
+        <div class="kse-imp-grid">
+          <div class="kse-imp-edit">
+            <div class="kse-imp-legende">
+              <span class="kse-hl-q">Frage</span>
+              <span class="kse-hl-a">Antwort</span>
+              <span class="kse-hl-c">richtig</span>
+              <span class="kse-hl-expl">Erklärung</span>
+            </div>
+            <div class="kse-imp-box">
+              <div class="kse-imp-back" data-imp="overlay" aria-hidden="true">${importOverlay(state.text, parsed)}</div>
+              <textarea class="kse-imp-ta" data-imp="text" spellcheck="false" rows="12"
+                        placeholder="Hier Text einfügen oder tippen …&#10;&#10;1. Wie heißt die Hauptstadt von Frankreich?&#10;a) Berlin&#10;b) Paris *&#10;c) Rom">${esc(state.text || '')}</textarea>
+            </div>
+          </div>
+          <div class="kse-imp-out" data-imp="result">${importResult(parsed)}</div>
+        </div>
+      </div>`;
+  }
 
   /* ═══════════════════════════════════════════════════════════
      4) CSS (eingefügt in <style> bei Bedarf)
@@ -430,6 +543,72 @@
   font-size: 15px; font-weight: 600; color: var(--ks-gruent);
   background: var(--ks-gruenf); padding: 10px 16px; border-radius: 12px;
 }
+/* ── Text-Import ── */
+.kse-wrap--import { max-width: 1100px; }
+.kse-imp-info {
+  background: var(--ks-goldf); color: var(--ks-ink); border: 2px solid var(--ks-gold);
+  border-radius: 12px; padding: 10px 14px; font-size: 13px; line-height: 1.5;
+}
+.kse-imp-info code {
+  font-family: 'JetBrains Mono', monospace; background: rgba(0,0,0,.12);
+  padding: 0 5px; border-radius: 5px;
+}
+.kse-imp-offen { display: block; margin-top: 4px; color: var(--ks-soft); }
+.kse-imp-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.kse-imp-meta .kse-input--titel { flex: 1; min-width: 200px; font-size: 15px; }
+.kse-imp-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; align-items: start; }
+@media (max-width: 800px) { .kse-imp-grid { grid-template-columns: 1fr; } }
+.kse-imp-legende { display: flex; gap: 6px; font-size: 11px; font-weight: 800; margin-bottom: 6px; flex-wrap: wrap; }
+.kse-imp-legende span { padding: 1px 8px; border-radius: 6px; color: var(--ks-ink); }
+
+/* Zwei Schichten in EINER Gitterzelle: Rückseite bestimmt die Höhe,
+   das Textfeld füllt sie. Gleiche Schrift, gleiche Ränder, kein Scrollen. */
+.kse-imp-box {
+  display: grid; background: var(--ks-tief); border: 2px solid var(--ks-linie);
+  border-radius: 12px; overflow: hidden; min-height: 280px;
+}
+.kse-imp-box:focus-within { border-color: var(--ks-gold); }
+.kse-imp-back, .kse-imp-ta {
+  grid-area: 1 / 1; margin: 0; padding: 12px 14px; border: 0; box-sizing: border-box;
+  font: 600 14px/1.65 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0; tab-size: 4;
+  white-space: pre-wrap; overflow-wrap: break-word; word-break: normal;
+  width: 100%;
+}
+.kse-imp-back { color: transparent; pointer-events: none; }
+.kse-imp-ta {
+  background: transparent; color: var(--ks-ink); resize: none; overflow: hidden;
+  outline: none; height: 100%; caret-color: var(--ks-gold);
+}
+.kse-hl-q, .kse-hl-title { background: rgba(37,99,235,.28); }
+.kse-hl-a    { background: rgba(168,85,247,.20); }
+.kse-hl-c    { background: rgba(5,150,105,.35); }
+.kse-hl-expl { background: rgba(234,179,8,.25); }
+.kse-hl-sol, .kse-hl-key { background: rgba(5,150,105,.20); }
+.kse-hl-title { background: rgba(37,99,235,.14); }
+.kse-hl-warn { text-decoration: underline wavy rgba(225,29,72,.9); text-decoration-color: rgba(225,29,72,.9); }
+
+.kse-imp-out { display: flex; flex-direction: column; gap: 8px; }
+.kse-leer--klein { font-size: 13px; padding: 20px 0; }
+.kse-imp-sum { display: flex; gap: 6px; flex-wrap: wrap; }
+.kse-chip {
+  font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px;
+  background: var(--ks-gruenf); color: var(--ks-gruent);
+}
+.kse-chip--info { background: rgba(37,99,235,.2); color: var(--ks-ink); }
+.kse-chip--warn { background: rgba(225,29,72,.2); color: var(--ks-ink); }
+.kse-imp-q {
+  background: var(--ks-flaeche); border: 2px solid var(--ks-linie); border-radius: 12px;
+  padding: 8px 12px; font-size: 13px;
+}
+.kse-imp-q.is-hinweis { border-color: var(--ks-gold); }
+.kse-imp-qt { font-weight: 800; color: var(--ks-ink); }
+.kse-imp-ans { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.kse-imp-ans li { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ks-ink); }
+.kse-imp-ans li.is-richtig { color: var(--ks-gruent); font-weight: 800; }
+.kse-imp-ans .kse-olabel { width: 22px; height: 22px; font-size: 12px; }
+.kse-imp-ex { margin-top: 4px; font-size: 12px; color: var(--ks-gruent); }
+.kse-imp-note { margin-top: 4px; font-size: 12px; color: var(--ks-soft); }
 `;
 
 
@@ -440,6 +619,9 @@
     buildList:    buildList,
     buildEditor:  buildEditor,
     buildPreview: buildPreview,
+    buildImport:  buildImport,
+    importOverlay: importOverlay,
+    importResult: importResult,
     frageKarte:   frageKarte,
     CSS:          CSS
   };
