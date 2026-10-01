@@ -2332,6 +2332,11 @@ textarea.f::placeholder { color: var(--ink-3); opacity: .45; font-weight: 400; }
   background: #fff; overflow: hidden;
   height: clamp(170px, 34vh, 380px);
 }
+/* Die Seite füllt den Rest des Fensters: vorher blieb unter dem
+   Rahmen viel leerer Platz, und die Seite wirkte winzig. */
+.dt-win:has(> .wb-seite) { display: flex; flex-direction: column; overflow: hidden; }
+.dt-win > .wb-seite { flex: 1 1 auto; height: auto; min-height: 170px; }
+.dt-win > .wb-leiste, .dt-win > .wb-fuss { flex: none; }
 .wb-rahmen { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
 .wb-leer, .wb-fehler {
   padding: 16px; font-size: 12.5px; color: var(--ink-3); line-height: 1.5;
@@ -3053,7 +3058,7 @@ body.trace-schichten .trs { min-width: 940px; }
      wäre, und 560 px die, über der das Fenster nur noch leer
      würde. */
   position: absolute; right: 16px; top: 16px;
-  width: min(560px, max(300px, 56%), calc(100% - 32px));
+  width: min(640px, max(300px, 56%), calc(100% - 32px));
   max-height: calc(100% - 32px); min-height: min(360px, calc(100% - 32px));
   display: flex; flex-direction: column; overflow: hidden;
   background: var(--wall);
@@ -3080,7 +3085,7 @@ body.trace-schichten .trs { min-width: 940px; }
    Fluss (siehe `.dt--kein .dt-fenster`), das Fenster misst sich
    also selbst — ein Switch mit vier Zeilen bekäme sonst 560 px
    Höhe mit 400 px Luft darin. */
-.dt.is-app:not(.dt--kein) { min-height: min(560px, calc(100% - 32px)); }
+.dt.is-app:not(.dt--kein) { min-height: min(700px, calc(100% - 32px)); }
 
 /* Selbst gezogen (js/geraet.js): dann gilt das Maß inline, und
    keine Mindesthöhe von oben darf es wieder aufblasen. Der Griff
