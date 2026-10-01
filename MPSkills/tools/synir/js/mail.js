@@ -189,6 +189,7 @@
       if (!k) return false;
       k.posteingang = k.posteingang || [];
       k.posteingang.push({ von: m.von, an: an, betreff: m.betreff, text: m.text, zeit: engine.now });
+      if (api && api.onDirty) api.onDirty();
       return true;
     }
 

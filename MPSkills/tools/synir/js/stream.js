@@ -341,6 +341,7 @@
           const l = c.likes[fi.id] = c.likes[fi.id] || [];
           const i = l.indexOf(konto.email);
           if (i >= 0) l.splice(i, 1); else l.push(konto.email);
+          if (api.onDirty) api.onDirty();
         }
         return weiter(node, conn, a, '/filme');
       }
@@ -351,6 +352,7 @@
         if (fi && c.filme.indexOf(fi.id) >= 0 && text) {
           c.kommentare.push({ film: fi.id, von: konto.name, email: konto.email, text: text });
           if (c.kommentare.length > 100) c.kommentare.splice(0, c.kommentare.length - 100);
+          if (api.onDirty) api.onDirty();
         }
         return weiter(node, conn, a, '/filme');
       }

@@ -79,6 +79,9 @@
 
     // Die Oberfläche muss eine geliehene Adresse sofort zeigen.
     const frisch = () => { if (opts.onUpdate) opts.onUpdate(); };
+    /* Ein Dienst hat Daten verändert, die ins Speicherformat gehören
+       (Konten, Likes, Kommentare, Post): speichern. */
+    const geaendert = () => { if (opts.onDirty) opts.onDirty(); };
 
     /* ═══ Zustand ════════════════════════════════════════════
        Alles Laufzeitwissen, nichts davon in der gespeicherten
@@ -855,14 +858,14 @@
        seines eigenen Servers, einmal für den MX-Eintrag einer
        fremden Domain. */
     const mail = window.Mail
-      ? window.Mail.erzeugen(engine, netz, stack, { resolve: resolve, tls: tls })
+      ? window.Mail.erzeugen(engine, netz, stack, { resolve: resolve, tls: tls, onDirty: geaendert })
       : null;
 
     /* Der Streaming-Server braucht beide: den Browser-Teil von
        `http` (Anfragen lesen, Antworten schreiben) und den
        Mailversand. */
     const stream = window.Stream && http && mail
-      ? window.Stream.erzeugen(engine, netz, stack, { http: http, mail: mail })
+      ? window.Stream.erzeugen(engine, netz, stack, { http: http, mail: mail, onDirty: geaendert })
       : null;
 
     /* Die Zertifizierungsstelle (zs.js): sie fragt DNS (`resolve` mit

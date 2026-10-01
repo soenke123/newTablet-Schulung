@@ -96,6 +96,9 @@
        die weiter unten entstehen — sie laufen erst, wenn alles
        gebaut ist. */
     const dienste = new window.Dienste(engine, netz, stack, {
+      // Likes, Kommentare, Konten und angekommene Post sind Stand:
+      // nur sichern (kein Verlaufseintrag je Like).
+      onDirty: () => save(),
       onUpdate: () => {
         neuZeichnen();
         if (panels) panels.renderKarte();
