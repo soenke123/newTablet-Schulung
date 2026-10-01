@@ -342,7 +342,7 @@ section('Szenarien');
   const S = sandbox.SZENARIEN;
   /* Übergang: die neuen Sek-I-Szenarien (i1…) stehen vor den acht
      bisherigen, die nach und nach ersetzt werden. */
-  ok('Szenarien vorhanden (Sek I: 7, Sek II: 8, Andere: 2)', Object.keys(S).length === 17, Object.keys(S).join(','));
+  ok('Szenarien vorhanden (Sek I: 7, Sek II: 8, Andere: 3)', Object.keys(S).length === 18, Object.keys(S).join(','));
   ok('jedes Szenario trägt eine Gruppe', Object.keys(S).every(k => !!S[k].gruppe));
 
   for (const k in S) {
@@ -1854,7 +1854,7 @@ section('Sek I und II · neue Szenarien');
 {
   const S = sandbox.SZENARIEN;
   // Die Auftragskarte liegt links oben — dort steht kein Gerät.
-  for (const k of ['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'ii1', 'ii2', 'ii3', 'ii4', 'ii5', 'ii6', 'ii7', 'ii8', 'ii9', 'handschlag']) {
+  for (const k of ['i1', 'i2', 'i3', 'i4', 'i5', 'i6', 'i7', 'ii1', 'ii2', 'ii3', 'ii4', 'ii5', 'ii6', 'ii7', 'ii8', 'ii9', 'handschlag', 'grossesnetz']) {
     ok(k + ': keine Geräte unter der Auftragskarte',
        S[k].netz.nodes.every(n => !(n.x < 430 && n.y < 280)));
     ok(k + ': Auftrag hat Kontext, Aufgaben und Hilfe',
@@ -2218,7 +2218,34 @@ section('Sek I und II · neue Szenarien');
      && /^1\. /.test(S.ii9.titel) && /^2\. /.test(S.handschlag.titel),
      S.ii9.gruppe + ' / ' + S.ii9.titel + ' / ' + S.handschlag.titel);
   ok('Andere: die Gruppe steht zusammen am Ende der Liste',
-     Object.keys(S).slice(-2).join(',') === 'ii9,handschlag');
+     Object.keys(S).slice(-3).join(',') === 'ii9,handschlag,grossesnetz');
+
+  // 3. Das große Netz: alles läuft ohne Einrichtung.
+  ok('Andere: „3. Das große Netz“ steht in der Gruppe',
+     S.grossesnetz.gruppe === 'Andere' && /^3\. /.test(S.grossesnetz.titel));
+  {
+    const z = lade('grossesnetz');
+    const k = (art) => z.netz.list().filter(n => n.kind === art);
+    ok('Großes Netz: 6 Router, 2 Heimrouter, 1 cww', k('router').length === 6 && k('heimrouter').length === 2 && k('cww').length === 1);
+    z.dienste.start(); z.dienste.sync();
+    z.engine.runUntil(z.engine.now + 120 * SEC);
+    const by = (n) => z.netz.byName(n);
+    ok('Großes Netz: Laptop 1 hat seine reservierte Adresse', by('Laptop 1').nics[0].ip === '50.0.4.50', by('Laptop 1').nics[0].ip);
+    ok('Großes Netz: Heimrouter 1 bekommt immer 50.0.6.10', by('Heimrouter 1').nics[0].ip === '50.0.6.10', by('Heimrouter 1').nics[0].ip);
+    ok('Großes Netz: Heimrouter 2 und die Heimgeräte holen sich Adressen',
+       /^50\.0\.6\.1\d\d$/.test(by('Heimrouter 2').nics[0].ip) && /^192\.168\.2\.1\d\d$/.test(by('Laptop 4').nics[0].ip));
+    const seite = (von, url) => { let r = null; z.dienste.http.seiteHolen(by(von), url, (x) => r = x);
+      z.engine.runUntil(z.engine.now + 40 * SEC); return r; };
+    for (const [von, url] of [['Laptop 1', 'www.mps-schule.de'], ['Laptop 1', 'www.heimseite.de'],
+                              ['Laptop 4', 'www.heimseite.de'], ['Handy 3', 'mpsflix.de'], ['Laptop 3', '192.168.1.20']]) {
+      const r = seite(von, url);
+      ok('Großes Netz: ' + von + ' ruft ' + url + ' auf', r && r.ok, r && r.grund);
+    }
+    const ben = by('Laptop 2'); let m = null;
+    z.dienste.mail.abholen(ben, (f, n) => m = [f, n]);
+    z.engine.runUntil(z.engine.now + 40 * SEC);
+    ok('Großes Netz: Ben holt zwei Mails ab', m && !m[0] && m[1] === 2, JSON.stringify(m));
+  }
 
   // 2. Der Handschlag: genau EIN Handschlag vor der Seite, RST am Mailserver.
   {

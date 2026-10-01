@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════
    Netzwerk-Prototyp — szenarien.js   ·   Vorbereitete Netze
    ══════════════════════════════════════════════════════════════
-   Siebzehn Ausgangslagen in drei Spuren: Sek I (Klasse 8, I.1 bis
+   Achtzehn Ausgangslagen in drei Spuren: Sek I (Klasse 8, I.1 bis
    I.7), Sek II (Klasse 12, II.1 bis II.8) und „Andere“ (schlicht
    1., 2., … durchgezählt — Themen, die in keine der beiden
    Klassenstufen-Reihen gehören). Jede ist ein Netz
@@ -68,6 +68,9 @@
     if (cfg.dnsServer)  d.dnsServer  = Object.assign({ on: true, records: [] }, cfg.dnsServer);
     if (cfg.mailServer) d.mailServer = Object.assign({ on: true, domain: '', konten: [] }, cfg.mailServer);
     if (cfg.webServer)  d.webServer  = Object.assign({ on: true }, cfg.webServer);
+    if (cfg.streamServer) d.streamServer = Object.assign({ on: true }, JSON.parse(JSON.stringify(cfg.streamServer)));
+    if (cfg.mailKonto)  d.mailKonto  = JSON.parse(JSON.stringify(cfg.mailKonto));
+    if (cfg.nat)        d.nat        = JSON.parse(JSON.stringify(cfg.nat));
     /* ⭐ Der Ordner `/Bilder` auch hier. Ein Szenario geht durch
        `netz.fromJSON` und nicht durch `addNode` — der Grundbestand
        käme sonst NICHT mit, und ein Kind hätte im ersten Szenario
@@ -1331,5 +1334,329 @@
     }
   };
 
-  window.SZENARIEN = { i1, i2, i3, i4, i5, i6, i7, ii1, ii2, ii3, ii4, ii5, ii6, ii7, ii8, ii9, handschlag };
+
+  /* ═══ 3. · Das große Netz ═══════════════════════════════════════
+     Das Schaufenster: alles, was SYNIR kann, in einem einzigen,
+     fertig eingerichteten Netz — zum Vorführen und zum Testen, damit
+     niemand erst eine Stunde einrichten muss. Neue Funktionen
+     kommen hier dazu, wenn es sie gibt.
+
+     ── Der Plan ──────────────────────────────────────────────────
+     Sechs Router in einem Teilgitter (Ring plus Querverbindungen,
+     fällt ein Kabel aus, geht es auf anderen Wegen weiter), das cww
+     an zwei Routern. Die Router lernen die Wege selbst (RIP).
+
+       Verbindung        50.0.10x.0   (Router .1 / .2, nach Nummer)
+       cww – Router      50.0.110.0 und 50.0.111.0
+       Büro (Router 4)   50.0.4.0     Geräte per DHCP, Lehrer-PC fest
+       Serverraum (R5)   50.0.5.0     alles feste Adressen
+       Anbieter (R6)     50.0.6.0     DHCP für die zwei Heimrouter
+       Heimnetz 1        192.168.1.0  Heimrouter 1, Webseite mit Portfreigabe
+       Heimnetz 2        192.168.2.0  Heimrouter 2
+
+     ⚠️ Alle öffentlichen Adressen beginnen mit 50. — das ist der
+     Bereich des Übungsnetzes (ohne Raum). Wer im Raum einen anderen
+     Bereich hat, ersetzt überall die 50 durch seine Zahl. Deshalb
+     gibt es keine einzige Adresse, die sich nicht aus 50.0.x.y
+     ergibt, und die Heimnetze bleiben ohnehin privat.
+
+     Zwei Dinge sind Absicht und stehen im Auftrag:
+       · Heimrouter 1 bekommt vom Anbieter immer 50.0.6.10 (feste
+         Zuweisung über die MAC-Adresse) — sonst wüsste der DNS-Eintrag
+         der Heimseite nach einem Neustart nicht mehr, wohin.
+       · Der Streaming-Server und der Webserver wollen beide Port 80.
+         Deshalb haben sie zwei Geräte. */
+  const grPraefix = '50.0.';
+  const grMacHeim1 = '02:00:5e:77:00:01';
+  const grMacAnna  = '02:00:5e:77:00:02';
+  const grDns = grPraefix + '5.53';
+
+  const grStilSchule =
+    'body { margin: 0; font-family: sans-serif; background: #eef3fb; color: #1e2536; }\n'
+    + 'header { background: #1b2a5c; color: #fff; padding: 22px 28px; }\n'
+    + 'header img { height: 54px; vertical-align: middle; margin-right: 14px; }\n'
+    + 'header h1 { display: inline; font-size: 26px; vertical-align: middle; }\n'
+    + 'main { max-width: 640px; margin: 24px auto; padding: 0 20px; }\n'
+    + '.kachel { background: #fff; border-left: 6px solid #2ad0c9; border-radius: 10px;\n'
+    + '          padding: 14px 20px; margin-bottom: 14px; }\n'
+    + 'h2 { color: #1b2a5c; margin: 0 0 6px; }\n'
+    + 'footer { text-align: center; color: #6b7488; font-size: 13px; padding: 18px; }\n';
+  const grSeiteSchule =
+    '<html>\n'
+    + '  <head>\n'
+    + '    <title>MPS Schulportal</title>\n'
+    + '    <link rel="stylesheet" href="stil.css">\n'
+    + '  </head>\n'
+    + '  <body>\n'
+    + '    <header>\n'
+    + '      <img src="mpskills-logo.png" alt="MPSkills">\n'
+    + '      <h1>MPS Schulportal</h1>\n'
+    + '    </header>\n'
+    + '    <main>\n'
+    + '      <div class="kachel"><h2>Willkommen</h2>\n'
+    + '        <p>Die Webseite der Schule. Sie liegt auf dem <b>Webserver</b> im Serverraum '
+    + '(feste Adresse 50.0.5.80), und du hast sie über den Namen <b>www.mps-schule.de</b> gefunden.</p></div>\n'
+    + '      <div class="kachel"><h2>Aktuelles</h2>\n'
+    + '        <p>Tablet-Schulung für alle Klassen. Ein Konto für den Schulserver bekommst du bei Frau Meier.</p></div>\n'
+    + '      <div class="kachel"><h2>Auch im Netz</h2>\n'
+    + '        <p>Filme gibt es bei <b>mpsflix.de</b>, die Heimseite der Familie unter <b>www.heimseite.de</b>.</p></div>\n'
+    + '    </main>\n'
+    + '    <footer>Schulportal · Serverraum · Router 5</footer>\n'
+    + '  </body>\n'
+    + '</html>\n';
+
+  const grStilHeim =
+    'body { margin: 0; font-family: Georgia, serif; background: #fff4e0; color: #4a3320; text-align: center; }\n'
+    + 'h1 { font-size: 40px; color: #c2410c; margin: 36px 0 4px; }\n'
+    + '.unter { color: #9a6b3d; font-style: italic; margin-bottom: 28px; }\n'
+    + '.zettel { display: inline-block; width: 280px; margin: 10px; padding: 18px; vertical-align: top;\n'
+    + '          background: #fffdf7; border: 2px dashed #e0a458; border-radius: 4px; }\n'
+    + '.zettel h2 { color: #c2410c; margin-top: 0; }\n'
+    + 'p.fuss { margin-top: 30px; font-size: 13px; color: #9a6b3d; }\n';
+  const grSeiteHeim =
+    '<html>\n'
+    + '  <head>\n'
+    + '    <title>Familie Beispiel</title>\n'
+    + '    <link rel="stylesheet" href="stil.css">\n'
+    + '  </head>\n'
+    + '  <body>\n'
+    + '    <h1>Familie Beispiel</h1>\n'
+    + '    <div class="unter">Unsere kleine Seite — gehostet im Wohnzimmer</div>\n'
+    + '    <div class="zettel"><h2>Omas Rezepte</h2>\n'
+    + '      <p>Pfannkuchen, Rübenkraut und der berühmte Apfelkuchen.</p></div>\n'
+    + '    <div class="zettel"><h2>Urlaubsfotos</h2>\n'
+    + '      <p>Dieses Jahr: Ostsee. Bilder folgen, sobald der Drucker wieder geht.</p></div>\n'
+    + '    <p class="fuss">Diese Seite liegt hinter einem Heimrouter. Von draußen kommt man nur '
+    + 'hierher, weil am Router der Port 80 freigegeben ist (192.168.1.20).</p>\n'
+    + '  </body>\n'
+    + '</html>\n';
+
+  const grMailAnna = [
+    { von: 'frau.meier@mps-schule.de', an: 'anna@mps-schule.de', betreff: 'Willkommen im Schulnetz',
+      text: 'Hallo Anna,\nschön, dass du dabei bist. Dein Postfach liegt auf dem Mailserver im Serverraum.\nViele Grüße\nFrau Meier', zeit: 0 },
+    { von: 'ben@mps-schule.de', an: 'anna@mps-schule.de', betreff: 'Hausaufgaben',
+      text: 'Hi Anna,\nweißt du, bis wann wir das Netzwerkblatt abgeben müssen?\nBen', zeit: 0 },
+    { von: 'service@mpsflix.de', an: 'anna@mps-schule.de', betreff: 'Willkommen bei MPSflix',
+      text: 'Hallo Anna,\nwillkommen bei MPSflix!\nDein Passwort: Fuchs42\nMelde dich mit deiner E-Mail-Adresse und diesem Passwort an.', zeit: 0 }
+  ];
+  const grKonto = (name, benutzer, passwort, posteingang) => ({
+    name: name, adresse: benutzer + '@mps-schule.de', domain: 'mps-schule.de',
+    pop3: 'mail.mps-schule.de', pop3Port: 110, smtp: 'mail.mps-schule.de', smtpPort: 25,
+    benutzer: benutzer, passwort: passwort, angemeldet: false,
+    posteingang: posteingang || [], gesendet: []
+  });
+
+  macN = 2500; cabN = 2500;
+  const grHeim1 = dev('n21', 'heimrouter', 'Heimrouter 1', 1800, 1000, {
+    ports: 9, nics: [{ dhcp: true }, { ip: '192.168.1.1' }], wlan: { on: true, ssid: 'Heim-WLAN' },
+    dhcpServer: { nic: 1, von: '192.168.1.100', bis: '192.168.1.150', mask: '255.255.255.0',
+                  gateway: '192.168.1.1', dns: grDns },
+    nat: { on: true, frei: [{ proto: 'tcp', port: 80, lanIp: '192.168.1.20', lanPort: 80 }] }
+  });
+  grHeim1.nics[0].mac = grMacHeim1;
+  const grAnna = dev('n12', 'host', 'Laptop 1', 480, 1100, {
+    nics: [{ dhcp: true }], software: ['browser', 'mail'],
+    mailKonto: grKonto('Anna', 'anna', 'Sonne2026', grMailAnna)
+  });
+  grAnna.nics[0].mac = grMacAnna;
+
+  const grNetz = {
+    v: 2,
+    nodes: [
+      // Das Class Wide Web: Karte 0 = Internet, Karten 1 und 2 zu Router 1 und Router 3
+      dev('n0', 'cww', 'Class Wide Web 1', 1200, 230, {
+        ports: 3, rip: true, nics: [{}, { ip: grPraefix + '110.1' }, { ip: grPraefix + '111.1' }]
+      }),
+      // Sechs Router, Teilgitter
+      dev('n1', 'router', 'Router 1', 780, 420, { ports: 3, rip: true,
+        nics: [{ ip: grPraefix + '110.2' }, { ip: grPraefix + '101.1' }, { ip: grPraefix + '103.1' }] }),
+      dev('n2', 'router', 'Router 2', 1200, 560, { ports: 3, rip: true,
+        nics: [{ ip: grPraefix + '101.2' }, { ip: grPraefix + '102.1' }, { ip: grPraefix + '104.1' }] }),
+      dev('n3', 'router', 'Router 3', 1620, 420, { ports: 3, rip: true,
+        nics: [{ ip: grPraefix + '111.2' }, { ip: grPraefix + '102.2' }, { ip: grPraefix + '105.1' }] }),
+      dev('n4', 'router', 'Router 4', 780, 800, { ports: 3, rip: true,
+        nics: [{ ip: grPraefix + '103.2' }, { ip: grPraefix + '106.1' }, { ip: grPraefix + '4.1' }] }),
+      dev('n5', 'router', 'Router 5', 1200, 880, { ports: 4, rip: true,
+        nics: [{ ip: grPraefix + '104.2' }, { ip: grPraefix + '106.2' }, { ip: grPraefix + '107.1' }, { ip: grPraefix + '5.1' }] }),
+      dev('n6', 'router', 'Router 6', 1620, 800, { ports: 3, rip: true,
+        nics: [{ ip: grPraefix + '105.2' }, { ip: grPraefix + '107.2' }, { ip: grPraefix + '6.1' }] }),
+
+      // Büro: Geräte holen sich ihre Adresse (Anna: reserviert), der Lehrer-PC ist fest
+      dev('n7', 'switch', 'Switch 1', 540, 900, { ports: 6, wlan: { on: true, ssid: 'MPS-WLAN' } }),
+      dev('n8', 'server', 'DHCP-Server', 300, 820, {
+        nics: [{ ip: grPraefix + '4.5' }], gateway: grPraefix + '4.1', dns: grDns,
+        dhcpServer: { von: grPraefix + '4.100', bis: grPraefix + '4.150', mask: '255.255.255.0',
+                      gateway: grPraefix + '4.1', dns: grDns,
+                      statisch: [{ mac: grMacAnna, ip: grPraefix + '4.50' }] }
+      }),
+      dev('n9', 'host', 'Lehrer-PC', 300, 1000, {
+        nics: [{ ip: grPraefix + '4.10' }], gateway: grPraefix + '4.1', dns: grDns,
+        software: ['browser', 'mail'], mailKonto: grKonto('Frau Meier', 'frau.meier', 'Komet2026')
+      }),
+      grAnna,
+      dev('n13', 'host', 'Laptop 2', 680, 1100, {
+        nics: [{ dhcp: true }], software: ['browser', 'mail'],
+        mailKonto: grKonto('Ben', 'ben', 'Mond2026')
+      }),
+      dev('n14', 'handy', 'Handy 1', 880, 1060, {
+        nics: [{ dhcp: true, funk: true, ssid: 'MPS-WLAN' }], software: ['browser', 'mail']
+      }),
+
+      // Serverraum: alles feste Adressen
+      dev('n15', 'switch', 'Switch 2', 1200, 1080, { ports: 6 }),
+      dev('n16', 'server', 'DNS-Server', 880, 1280, {
+        nics: [{ ip: grDns }], gateway: grPraefix + '5.1', dns: grDns, software: ['dns'],
+        dnsServer: {
+          records: [
+            { name: 'www.mps-schule.de',  ip: grPraefix + '5.80' },
+            { name: 'mail.mps-schule.de', ip: grPraefix + '5.25' },
+            { name: 'dns.mps-schule.de',  ip: grDns },
+            { name: 'mpsflix.de',         ip: grPraefix + '5.90' },
+            { name: 'www.mpsflix.de',     ip: grPraefix + '5.90' },
+            { name: 'www.heimseite.de',   ip: grPraefix + '6.10' }
+          ],
+          mx: [{ domain: 'mps-schule.de', server: 'mail.mps-schule.de' }]
+        }
+      }),
+      dev('n17', 'server', 'Webserver Schule', 1090, 1330, {
+        nics: [{ ip: grPraefix + '5.80' }], gateway: grPraefix + '5.1', dns: grDns, software: ['webserver'],
+        webServer: { on: true },
+        dateien: {
+          '/webserver': { ordner: true },
+          '/webserver/index.html': { text: grSeiteSchule },
+          '/webserver/stil.css': { text: grStilSchule },
+          '/webserver/mpskills-logo.png': { bild: '@drache' }
+        }
+      }),
+      dev('n18', 'server', 'Mailserver', 1310, 1330, {
+        nics: [{ ip: grPraefix + '5.25' }], gateway: grPraefix + '5.1', dns: grDns, software: ['mailserver'],
+        mailServer: {
+          domain: 'mps-schule.de',
+          konten: [
+            { benutzer: 'anna', passwort: 'Sonne2026', posteingang: [] },
+            { benutzer: 'ben', passwort: 'Mond2026', posteingang: [
+              { von: 'anna@mps-schule.de', an: 'ben@mps-schule.de', betreff: 'Re: Hausaufgaben',
+                text: 'Hi Ben,\nFreitag, glaube ich. Frag Frau Meier lieber noch einmal.\nAnna', zeit: 0 },
+              { von: 'frau.meier@mps-schule.de', an: 'ben@mps-schule.de', betreff: 'Netzwerkblatt',
+                text: 'Hallo Ben,\ndas Arbeitsblatt zum Netzwerk liegt im Schulportal (www.mps-schule.de).\nFrau Meier', zeit: 0 }
+            ] },
+            { benutzer: 'frau.meier', passwort: 'Komet2026', posteingang: [
+              { von: 'ben@mps-schule.de', an: 'frau.meier@mps-schule.de', betreff: 'Frage zur Abgabe',
+                text: 'Guten Tag Frau Meier,\nbis wann muss das Netzwerkblatt fertig sein?\nBen', zeit: 0 }
+            ] }
+          ]
+        }
+      }),
+      dev('n19', 'server', 'MPSflix', 1520, 1280, {
+        nics: [{ ip: grPraefix + '5.90' }], gateway: grPraefix + '5.1', dns: grDns, software: ['streamingserver'],
+        streamServer: {
+          name: 'MPSflix', mailserver: 'mail.mps-schule.de', filme: [1, 2],
+          konten: [{ name: 'Anna', email: 'anna@mps-schule.de', iban: 'DE02 1203 0000 0000 2020 51',
+                     bic: 'BYLADEM1001', passwort: 'Fuchs42' }]
+        }
+      }),
+
+      // Anbieter: verteilt die Adressen für die Heimrouter, Heimrouter 1 immer dieselbe
+      dev('n20', 'switch', 'Switch 3', 1900, 780, { ports: 5 }),
+      dev('n22', 'server', 'Anbieter-DHCP', 1900, 580, {
+        nics: [{ ip: grPraefix + '6.5' }], gateway: grPraefix + '6.1', dns: grDns,
+        dhcpServer: { von: grPraefix + '6.100', bis: grPraefix + '6.150', mask: '255.255.255.0',
+                      gateway: grPraefix + '6.1', dns: grDns,
+                      statisch: [{ mac: grMacHeim1, ip: grPraefix + '6.10' }] }
+      }),
+
+      // Heimnetz 1: Webseite hinter Portfreigabe
+      grHeim1,
+      dev('n23', 'server', 'Webserver Heim', 1640, 1250, {
+        nics: [{ ip: '192.168.1.20' }], gateway: '192.168.1.1', dns: grDns, software: ['webserver'],
+        webServer: { on: true },
+        dateien: {
+          '/webserver': { ordner: true },
+          '/webserver/index.html': { text: grSeiteHeim },
+          '/webserver/stil.css': { text: grStilHeim }
+        }
+      }),
+      dev('n24', 'host', 'Laptop 3', 1820, 1270, { nics: [{ dhcp: true }], software: ['browser', 'mail'] }),
+      dev('n25', 'handy', 'Handy 2', 1990, 1140, {
+        nics: [{ dhcp: true, funk: true, ssid: 'Heim-WLAN' }], software: ['browser']
+      }),
+
+      // Heimnetz 2
+      dev('n26', 'heimrouter', 'Heimrouter 2', 2200, 900, {
+        ports: 9, nics: [{ dhcp: true }, { ip: '192.168.2.1' }], wlan: { on: true, ssid: 'Familie-WLAN' },
+        dhcpServer: { nic: 1, von: '192.168.2.100', bis: '192.168.2.150', mask: '255.255.255.0',
+                      gateway: '192.168.2.1', dns: grDns }
+      }),
+      dev('n27', 'host', 'Laptop 4', 2150, 1180, { nics: [{ dhcp: true }], software: ['browser', 'mail'] }),
+      dev('n28', 'handy', 'Handy 3', 2330, 1080, {
+        nics: [{ dhcp: true, funk: true, ssid: 'Familie-WLAN' }], software: ['browser']
+      })
+    ],
+    cables: [
+      // cww – Router 1 und Router 3
+      cab('n0', 1, 'n1', 0), cab('n0', 2, 'n3', 0),
+      // Teilgitter
+      cab('n1', 1, 'n2', 0), cab('n2', 1, 'n3', 1), cab('n1', 2, 'n4', 0),
+      cab('n2', 2, 'n5', 0), cab('n3', 2, 'n6', 0), cab('n4', 1, 'n5', 1), cab('n5', 2, 'n6', 1),
+      // Büro, Serverraum, Anbieter
+      cab('n4', 2, 'n7', 0), cab('n7', 1, 'n8', 0), cab('n7', 2, 'n9', 0),
+      cab('n7', 3, 'n12', 0), cab('n7', 4, 'n13', 0),
+      cab('n5', 3, 'n15', 0), cab('n15', 1, 'n16', 0), cab('n15', 2, 'n17', 0),
+      cab('n15', 3, 'n18', 0), cab('n15', 4, 'n19', 0),
+      cab('n6', 2, 'n20', 0), cab('n20', 1, 'n22', 0), cab('n20', 2, 'n21', 0), cab('n20', 3, 'n26', 0),
+      // Heimnetze (WAN = Buchse 0, LAN ab 1)
+      cab('n21', 1, 'n23', 0), cab('n21', 2, 'n24', 0),
+      cab('n26', 1, 'n27', 0)
+    ]
+  };
+
+  const grListen =
+    '<p><strong>Was hier alles läuft</strong></p><ul>'
+    + '<li><strong>6 Router</strong> im Teilgitter mit automatischem Routing (RIP); das <strong>cww</strong> hängt an Router 1 und Router 3.</li>'
+    + '<li><strong>2 Heimrouter</strong> mit NAT und WLAN, per DHCP vom Anbieter versorgt. Heimrouter 1 bekommt immer <code>50.0.6.10</code> (feste Zuweisung).</li>'
+    + '<li><strong>DHCP</strong> im Büro (Bereich .100 bis .150, Laptop 1 hat eine Reservierung auf <code>50.0.4.50</code>), beim Anbieter und in beiden Heimnetzen. Statisch: der Lehrer-PC, alle Server.</li>'
+    + '<li><strong>2 Webseiten</strong> mit festen Adressen und verschiedenem Aussehen: das Schulportal im Serverraum und die Heimseite von Familie Beispiel hinter Heimrouter 1 (Portfreigabe Port 80 auf <code>192.168.1.20</code>).</li>'
+    + '<li><strong>DNS-Server</strong> mit allen Namen unten und einem MX-Eintrag für die Post.</li>'
+    + '<li><strong>E-Mail:</strong> Mailserver mit drei Konten und Post darin; auf Laptop 1, Laptop 2 und dem Lehrer-PC ist das Mailprogramm eingerichtet.</li>'
+    + '<li><strong>MPSflix:</strong> der Streaming-Server, mit einem fertigen Konto.</li>'
+    + '<li>WLAN: <em>MPS-WLAN</em> (Büro), <em>Heim-WLAN</em> und <em>Familie-WLAN</em>.</li></ul>'
+    + '<p><strong>E-Mail-Konten</strong> (Mailserver <code>mail.mps-schule.de</code>)</p><ul>'
+    + '<li><code>anna@mps-schule.de</code> · Passwort <code>Sonne2026</code> (Laptop 1, drei Mails schon im Postfach)</li>'
+    + '<li><code>ben@mps-schule.de</code> · Passwort <code>Mond2026</code> (Laptop 2, zwei Mails warten auf dem Server)</li>'
+    + '<li><code>frau.meier@mps-schule.de</code> · Passwort <code>Komet2026</code> (Lehrer-PC, eine Mail wartet auf dem Server)</li></ul>'
+    + '<p><strong>MPSflix-Konto:</strong> <code>anna@mps-schule.de</code> · Passwort <code>Fuchs42</code></p>'
+    + '<p><strong>Namen im DNS</strong> (DNS-Server <code>50.0.5.53</code>)</p><ul>'
+    + '<li><code>www.mps-schule.de</code> → <code>50.0.5.80</code> (Schulportal)</li>'
+    + '<li><code>mail.mps-schule.de</code> → <code>50.0.5.25</code> (Mailserver, MX von <code>mps-schule.de</code>)</li>'
+    + '<li><code>dns.mps-schule.de</code> → <code>50.0.5.53</code></li>'
+    + '<li><code>mpsflix.de</code> und <code>www.mpsflix.de</code> → <code>50.0.5.90</code> (Streaming-Server)</li>'
+    + '<li><code>www.heimseite.de</code> → <code>50.0.6.10</code> (Heimrouter 1, weiter an <code>192.168.1.20</code>)</li></ul>';
+
+  const grossesnetz = {
+    titel: '3. Das große Netz', gruppe: ANDERE,
+    aufgabe: auftrag({
+      kontext: 'Ein <strong>fertig eingerichtetes</strong> Netz, in dem alles läuft, was SYNIR kann — zum Ausprobieren und Testen, ohne dass du etwas einrichten musst. '
+        + 'Es hat keine Aufgabe außer: <strong>probier etwas aus</strong>. Unten steht, was wo läuft, mit allen Konten, Passwörtern und Namen zum Nachlesen.',
+      aufgaben: [
+        { typ: 'benutzen', text: 'Schalte auf <em>Aktion</em> und ruf auf <strong>Laptop 1</strong> im Browser <code>www.mps-schule.de</code>, '
+          + '<code>www.heimseite.de</code> und <code>mpsflix.de</code> auf. Hol dann im Mailprogramm die Post ab.' }
+      ],
+      hilfe: [
+        { begriff: 'Adressplan', text: 'Alle öffentlichen Adressen beginnen mit <code>50.0.</code>:', liste: [
+          'Verbindungen zwischen den Routern: <code>50.0.101.0</code> bis <code>50.0.107.0</code>; cww – Router: <code>50.0.110.0</code> und <code>50.0.111.0</code>',
+          'Büro (Router 4): <code>50.0.4.0</code> · Serverraum (Router 5): <code>50.0.5.0</code> · Anbieter (Router 6): <code>50.0.6.0</code>',
+          'Heimnetze: <code>192.168.1.0</code> (Heimrouter 1) und <code>192.168.2.0</code> (Heimrouter 2)'
+        ] },
+        { begriff: 'Auf dein cww umstellen', text: 'Im Raum hat dein cww einen eigenen Bereich (Fenster des cww, Reiter <em>Internet</em>). Ersetze in diesem Netz die erste Zahl <code>50</code> '
+          + 'durch deine: an allen Routern und am cww, an den festen Adressen der Server, im DHCP-Bereich, bei Gateway und DNS, bei den DNS-Einträgen, '
+          + 'bei der festen Zuweisung für Heimrouter 1 und bei den Mail-Einstellungen (dort stehen nur Namen, die brauchen nichts).' },
+        { begriff: 'Die Heimseite von innen', text: 'Aus <em>Heimnetz 1</em> selbst klappt <code>www.heimseite.de</code> nicht: Der Name führt zur öffentlichen Adresse des Heimrouters, '
+          + 'und der übersetzt nur, was von <em>außen</em> hereinkommt. Wer im Heimnetz sitzt, ruft <code>192.168.1.20</code> auf.' },
+        WERKZEUG_MITSCHNITT, WERKZEUG_LERN
+      ]
+    }).replace('<details>', grListen + '<details>'),
+    netz: grNetz
+  };
+
+  window.SZENARIEN = { i1, i2, i3, i4, i5, i6, i7, ii1, ii2, ii3, ii4, ii5, ii6, ii7, ii8, ii9, handschlag, grossesnetz };
 })();
