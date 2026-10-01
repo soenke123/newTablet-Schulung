@@ -443,6 +443,96 @@
      als Kopfzeile auf jeder Seite) und der Mailserver, über den die
      Passwörter verschickt werden — und die Wahl der zwei Filme. */
 
+  /* ─── Die Datenbank des Streaming-Servers ─────────────────────
+     Der Betreiber sieht, was der Server speichert: vier Tabellen.
+     „Likes" ist die Zwischentabelle der n:m-Beziehung Kunde ↔ Film.
+     Ein Klick auf eine Zeile in „Kunden" oder „Filme" hebt in allen
+     Tabellen die Zeilen hervor, die dazu gehören. Das Passwort steht
+     NUR als Hash da. */
+  let stTab = 'verwaltung';
+  let stAuswahl = null;   // { art: 'kunde' | 'film', id }
+
+  function stTabs() {
+    return '<div class="ws-dateien st-tabs">'
+      + [['verwaltung', 'Verwaltung'], ['db', 'Datenbank']].map(t =>
+          '<button class="ws-datei st-film' + (stTab === t[0] ? ' is-on' : '') + '" data-tab="' + t[0] + '">'
+          + t[1] + '</button>').join('') + '</div>';
+  }
+
+  function stTabelle(titel, kopf, zeilen, hinweis) {
+    return '<div class="dt-sec">' + titel + '</div>'
+      + (hinweis ? '<div class="k-hint">' + hinweis + '</div>' : '')
+      + '<div class="db-tab"><table><thead><tr>' + kopf.map(k => '<th>' + k + '</th>').join('')
+      + '</tr></thead><tbody>'
+      + (zeilen.length ? zeilen.map(z =>
+          '<tr' + (z.attr ? ' ' + z.attr : '') + ' class="' + (z.hell ? 'is-hell' : '')
+          + (z.attr ? ' db-klick' : '') + '">'
+          + z.zellen.map(x => '<td>' + x + '</td>').join('') + '</tr>').join('')
+        : '<tr><td colspan="' + kopf.length + '" class="db-leer">leer</td></tr>')
+      + '</tbody></table></div>';
+  }
+
+  function bauStreamDb(node, box, ctx, c) {
+    const filme = window.Stream.FILME;
+    const filmTitel = (id) => { const f = filme.find(x => x.id === +id); return f ? f.titel : '?'; };
+    const sel = stAuswahl;
+    const likes = [];
+    Object.keys(c.likes).forEach(fid => (c.likes[fid] || []).forEach(em => likes.push({ film: +fid, email: em })));
+    const istKunde = (em) => sel && sel.art === 'kunde' && sel.id === em;
+    const istFilm = (id) => sel && sel.art === 'film' && sel.id === +id;
+    const kundenHell = (em) => istKunde(em) || (sel && sel.art === 'film'
+      && (likes.some(l => l.email === em && l.film === sel.id)
+          || c.kommentare.some(k => k.email === em && k.film === sel.id)));
+    const filmeHell = (id) => istFilm(id) || (sel && sel.art === 'kunde'
+      && (likes.some(l => l.email === sel.id && l.film === +id)
+          || c.kommentare.some(k => k.email === sel.id && k.film === +id)));
+
+    box.innerHTML = stTabs()
+      + '<div class="k-hint">So sieht der Betreiber, was der Server speichert. Tippe auf einen Kunden oder '
+      + 'einen Film: Die dazugehörigen Zeilen leuchten auf.</div>'
+      + stTabelle('Kunden', ['name', 'email', 'iban', 'bic', 'pwHash'],
+          c.konten.map(k => ({
+            attr: 'data-kunde="' + esc(k.email) + '"', hell: kundenHell(k.email),
+            zellen: [esc(k.name), esc(k.email), esc(k.iban), esc(k.bic), '<code>' + esc(k.pwHash) + '</code>']
+          })),
+          'Das Passwort steht nur als <strong>Hash</strong> hier — nie im Klartext.')
+      + stTabelle('Filme', ['id', 'titel'],
+          filme.map(f => ({
+            attr: 'data-film="' + f.id + '"', hell: filmeHell(f.id),
+            zellen: [f.id, esc(f.titel) + (c.filme.indexOf(f.id) >= 0 ? '' : ' <span class="db-aus">(nicht angeboten)</span>')]
+          })))
+      + stTabelle('Likes', ['kunde (email)', 'film'],
+          likes.map(l => ({
+            hell: istKunde(l.email) || istFilm(l.film),
+            zellen: [esc(l.email), l.film + ' · ' + esc(filmTitel(l.film))]
+          })),
+          'Zwischentabelle: Ein Kunde kann viele Filme liken, ein Film viele Kunden (n : m).')
+      + stTabelle('Kommentare', ['kunde (email)', 'film', 'text'],
+          c.kommentare.map(k => ({
+            hell: istKunde(k.email) || istFilm(k.film),
+            zellen: [esc(k.email || k.von), k.film + ' · ' + esc(filmTitel(k.film)), esc(k.text)]
+          })));
+
+    bindTabs(box, ctx);
+    box.querySelectorAll('tr[data-kunde]').forEach(r => r.addEventListener('click', () => {
+      const id = r.dataset.kunde;
+      stAuswahl = istKunde(id) ? null : { art: 'kunde', id: id };
+      ctx.render();
+    }));
+    box.querySelectorAll('tr[data-film]').forEach(r => r.addEventListener('click', () => {
+      const id = +r.dataset.film;
+      stAuswahl = istFilm(id) ? null : { art: 'film', id: id };
+      ctx.render();
+    }));
+  }
+
+  function bindTabs(box, ctx) {
+    box.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
+      stTab = b.dataset.tab;
+      ctx.render();
+    }));
+  }
+
   function bauStream(node, box, ctx) {
     const c = ctx.netz.streamConf(node);
     const http = ctx.http;
@@ -450,8 +540,10 @@
     const zugriffe = http.zugriffe(node);
     const belegt = ctx.netz.dienstLaeuft(node, 'web');
 
-    box.innerHTML =
-      '<div class="dns-kopf">'
+    if (stTab === 'db') return bauStreamDb(node, box, ctx, c);
+
+    box.innerHTML = stTabs()
+      + '<div class="dns-kopf">'
       +   '<span class="k-dot' + (c.on ? ' is-on' : '') + '"></span>'
       +   '<span class="dns-stand">' + (c.on ? 'läuft' : 'gestoppt') + '</span>'
       +   '<button class="btn' + (c.on ? ' btn--ghost' : '') + '" id="stStart"'
@@ -492,6 +584,7 @@
           : '<div class="k-hint">Noch hat niemand gefragt.</div>');
 
     window.ProgZert.bindAbschnitt(box, node, ctx, c, ZERT_WEB);
+    bindTabs(box, ctx);
 
     box.querySelector('#stStart').addEventListener('click', () => {
       c.on = !c.on;

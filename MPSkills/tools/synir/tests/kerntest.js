@@ -5460,8 +5460,10 @@ section('Streaming-Server');
 
   // Mein Konto
   const konto = hol('192.168.1.30/konto');
-  ok('Mein Konto zeigt die Bankdaten und das Passwort',
-     konto && /DE12 3456 7890/.test(konto.html) && /ABCDDEFF/.test(konto.html) && new RegExp(pw).test(konto.html));
+  ok('Mein Konto zeigt die Bankdaten, aber nicht das Passwort',
+     konto && /DE12 3456 7890/.test(konto.html) && /ABCDDEFF/.test(konto.html) && !new RegExp(pw).test(konto.html));
+  ok('⭐ in der Datenbank steht nur der Hash, kein Klartext-Passwort',
+     conf.konten.every(k => k.passwort === undefined && /^[0-9a-f]{16}$/.test(k.pwHash)) && JSON.stringify(conf).indexOf(pw) < 0);
 
   // Mitschnitt: alles im Klartext
   const daten = mit.view().map(r => { const p = r.frame && r.frame.payload; const t = p && p.payload; return (t && t.data) || ''; }).join('\n');

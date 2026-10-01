@@ -303,6 +303,24 @@
 
   const deepCopy = (o) => JSON.parse(JSON.stringify(o));
 
+  /* ─── Ein Pseudo-Hash ─────────────────────────────────────────
+     KEINE echte Kryptografie — nur das Verhalten, das zählt: aus
+     demselben Text wird immer dieselbe Zeichenfolge, und aus der
+     Zeichenfolge kommt man nicht zurück zum Text. Zwei FNV-1a-Läufe
+     mit verschiedenem Startwert, 16 Hex-Zeichen. */
+  function pseudoHash(text) {
+    const t = 'synir|' + String(text == null ? '' : text);
+    let a = 0x811c9dc5, b = 0x9747b28c;
+    for (let i = 0; i < t.length; i++) {
+      const c = t.charCodeAt(i);
+      a = Math.imul(a ^ c, 0x01000193) >>> 0;
+      b = Math.imul(b ^ (c + i), 0x85ebca6b) >>> 0;
+      b = (b ^ (b >>> 13)) >>> 0;
+    }
+    const hex = (n) => ('00000000' + n.toString(16)).slice(-8);
+    return hex(a) + hex(b);
+  }
+
   /* ─── Ein Symbol aus dem Zeichensatz ────────────────────────
      Der Satz steht EINMAL in index.html als <defs> und wird von
      überall her geholt. Vorher standen an drei Stellen im Code
@@ -323,6 +341,6 @@
     netOf, bcastOf, sameNet, checkHostAddress, ipParts, ipGruppen, binHtml,
     MAC_BROADCAST, macFrom, isBroadcastMac,
     MS, SEC, fmtTime,
-    nextId, bumpId, clamp, escapeHtml, deepCopy, icon
+    nextId, bumpId, clamp, escapeHtml, deepCopy, pseudoHash, icon
   };
 })();

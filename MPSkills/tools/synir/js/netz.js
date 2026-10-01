@@ -770,7 +770,8 @@
        auch im echten Leben auf dem Server, bis jemand sie abholt. */
     /* Der Streaming-Server (stream.js): Dienstname, Mailserver für
        die Passwort-Mails, die zwei angebotenen Filme — und die Daten
-       der Kunden: Konten (mit den ausgedachten Bankdaten), Likes und
+       der Kunden: Konten (mit den ausgedachten Bankdaten und dem
+       Passwort-HASH), Likes und
        Kommentare. Alles im Speicherformat; nur die Sitzungen nicht. */
     function streamConf(node) {
       if (!node.streamServer) node.streamServer = { on: false };
@@ -780,6 +781,12 @@
       if (!Array.isArray(s.filme)) s.filme = [1, 2];
       if (!s.farbe) s.farbe = 'kino';
       if (!Array.isArray(s.konten)) s.konten = [];
+      /* In der Datenbank steht KEIN Passwort im Klartext, nur der Hash
+         (`pwHash`). Alte Stände und Szenarien mit `passwort` werden
+         hier einmal umgestellt. */
+      s.konten.forEach((k) => {
+        if (k.passwort != null) { k.pwHash = U.pseudoHash(k.passwort); delete k.passwort; }
+      });
       if (!s.likes) s.likes = {};
       if (!Array.isArray(s.kommentare)) s.kommentare = [];
       return s;

@@ -9,7 +9,8 @@
      /registrieren     Formular: Name, E-Mail, IBAN, BIC (ausgedacht!)
      /anmelden         Formular: E-Mail und Passwort
      /filme            die Filme des Betreibers — nur mit Anmeldung
-     /konto            „Mein Konto": die gespeicherten Bankdaten
+     /konto            „Mein Konto": die gespeicherten Bankdaten (das Passwort
+                       steht nur als Hash in der Datenbank, nie im Klartext)
      /plakat/N.svg     die Plakate (ohne Anmeldung, wie Bilder so sind)
 
    ── Was dabei im Mitschnitt steht ─────────────────────────────
@@ -241,7 +242,7 @@
       + '<tr><td>E-Mail</td><td>' + esc(konto.email) + '</td></tr>'
       + '<tr><td>IBAN</td><td>' + esc(konto.iban) + '</td></tr>'
       + '<tr><td>BIC</td><td>' + esc(konto.bic) + '</td></tr>'
-      + '<tr><td>Passwort</td><td>' + esc(konto.passwort) + '</td></tr></table>'
+      + '<tr><td>Passwort</td><td>●●●●●●●● <span class="klein">(wir speichern nur einen Hash)</span></td></tr></table>'
       + '<p class="klein">Diese Daten sind geheim. Nur du siehst sie hier.</p></div>', konto);
 
     const nichtGefunden = (node) => seite(node, 'Nicht gefunden',
@@ -316,7 +317,7 @@
 
       if (pfad === '/anmelden') {
         const k = kontoVon(node, f.email);
-        if (!k || k.passwort !== String(f.passwort || '')) {
+        if (!k || k.pwHash !== window.NetUtil.pseudoHash(f.passwort)) {
           return html(node, conn, a, 401, anmeldeSeite(node, 'E-Mail oder Passwort stimmt nicht.', f.email));
         }
         const sid = neueSitzung();
@@ -348,7 +349,7 @@
         const fi = film(f.film);
         const text = String(f.text || '').trim().slice(0, 140);
         if (fi && c.filme.indexOf(fi.id) >= 0 && text) {
-          c.kommentare.push({ film: fi.id, von: konto.name, text: text });
+          c.kommentare.push({ film: fi.id, von: konto.name, email: konto.email, text: text });
           if (c.kommentare.length > 100) c.kommentare.splice(0, c.kommentare.length - 100);
         }
         return weiter(node, conn, a, '/filme');
@@ -387,7 +388,7 @@
             + 'Dein Passwort: ' + pw + '\r\nMelde dich mit deiner E-Mail-Adresse und diesem Passwort an.'
         }, (f2) => {
           if (f2) return kaputt('Die E-Mail wurde nicht angenommen: ' + f2);
-          c.konten.push({ name: w.name, email: w.email, iban: w.iban, bic: w.bic, passwort: pw });
+          c.konten.push({ name: w.name, email: w.email, iban: w.iban, bic: w.bic, pwHash: window.NetUtil.pseudoHash(pw) });
           if (api.onDirty) api.onDirty();
           html(node, conn, a, 200, fertigSeite(node, w.email));
         }, 'Streaming-Server');
