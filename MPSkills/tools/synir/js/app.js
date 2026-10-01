@@ -205,7 +205,7 @@
        und nahm einem, der gerade tippt, das Feld unter den Fingern.
        `cwwAuffrischen` tauscht nur den Inhalt der `data-live`-Kästen. */
     function internetNeu() {
-      for (const box of [refs.karteBody, refs.dtWin]) konfig.cwwAuffrischen(box);
+      for (const box of [refs.karteBody].concat(geraet ? geraet.fensterBoxen : [refs.dtWin])) konfig.cwwAuffrischen(box);
     }
     const INET_TAKT_MS = 3000;
     function gemeldet(was) {
@@ -285,7 +285,7 @@
           /* Der Mitschnitt schränkt sich mit ein — das meldet
              `geraet.js` selbst über `onGeraet`, weil `close()`
              aus neun Richtungen gerufen wird. */
-          if (geraet.isOpen && geraet.nodeId === id) geraet.close();
+          if (geraet.istOffen(id)) geraet.schliesse(id);
           else geraet.open(id);
           return;
         }
@@ -404,7 +404,7 @@
        Zeichnen die letzte Handlung sein muss. */
     verlauf = new window.Verlauf(netz, {
       onApply: (was, richtung) => {
-        geraet.close();
+        geraet.vergessen();
         flaeche.clearDots();
         /* Die Kärtchen gehen NICHT alle zu: wer eine Adresse
            zurücknimmt, will das Feld noch sehen, in dem sie stand.
@@ -565,7 +565,7 @@
        nicht dieser Rückruf. */
     const termOffen = (id) =>
       (panels && panels.termNode === id)
-      || (geraet && geraet.isOpen && geraet.nodeId === id);
+      || (geraet && geraet.istOffen(id));
 
     engine.on('event', (e) => {
       if (!e.node || !termOffen(e.node)) return;
@@ -1455,7 +1455,9 @@
        Desktop, kommt er nach vorn. Ein Tipp auf den Desktop holt
        diesen wieder nach vorn. */
     aufBox.addEventListener('pointerdown', () => aufBox.classList.add('is-vorn'));
-    refs.desktop.addEventListener('pointerdown', () => aufBox.classList.remove('is-vorn'), true);
+    document.addEventListener('pointerdown', (ev) => {
+      if (ev.target.closest && ev.target.closest('.dt')) aufBox.classList.remove('is-vorn');
+    }, true);
 
     /* Ziehen wie bei den Kärtchen (panels.js): am Kopf festhalten,
        innerhalb der Bühne bleiben. */
@@ -1727,7 +1729,7 @@
       if (!ids.length) return;
       for (const id of ids) {
         if (panels.termNode === id) panels.closeTerminal();
-        if (geraet.isOpen && geraet.nodeId === id) geraet.close();
+        geraet.schliesse(id);
         netz.removeNode(id);
       }
       panels.closeKarte();

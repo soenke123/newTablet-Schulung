@@ -4396,8 +4396,6 @@ body.hgriff-drag .wlt, body.hgriff-drag .trace { transition: none; }
   font: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
 }
 .mini-chip:hover { border-color: var(--ink-3); }
-.mini-chip.is-neu { animation: mini-blink .5s ease-in-out 3; }
-@keyframes mini-blink {
-  0%, 100% { background: var(--surface-2); transform: scale(1); }
-  50% { background: var(--accent, #4f8cff); color: #fff; transform: scale(1.18); }
-}
+.mini-chip.is-flug { visibility: hidden; }  /* erscheint, wenn das Fenster angekommen ist */
+.dt.is-front { z-index: 6; }
+.dt-geist { pointer-events: none; z-index: 20; }

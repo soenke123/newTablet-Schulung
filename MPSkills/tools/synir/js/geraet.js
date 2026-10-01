@@ -40,8 +40,17 @@
   const U = window.NetUtil;
   const esc = U.escapeHtml;
 
-  function Geraet(refs, engine, netz, stack, term, panels, konfig, dienste, opts) {
+  /* Maße der Bildschirme: für beide Fenster gemeinsam, damit sich
+     zwei Fenster beim Speichern nicht gegenseitig überschreiben. */
+  const MASS_KEY = 'synir_dt_groesse';
+  let masse = {};
+  try { masse = JSON.parse(localStorage.getItem(MASS_KEY) || '{}') || {}; } catch (e) { masse = {}; }
+
+  /* EIN Gerätefenster. Es gibt davon zwei (siehe Geraete unten):
+     höchstens zwei Desktops liegen gleichzeitig offen. */
+  function Fenster(refs, engine, netz, stack, term, panels, konfig, dienste, opts) {
     opts = opts || {};
+    let versatz = 0;       // 1 = zweites Fenster, rückt gestaffelt ein
 
     let nodeId = null;     // welches Gerät ist offen
     let appId  = null;     // welches Programm darin
@@ -281,12 +290,11 @@
 
     /* ═══ Öffnen und schließen ═══════════════════════════════ */
 
-    function open(id, stand) {
+    function open(id, stand, vers) {
       const n = netz.get(id);
       if (!n) return;
       if (nodeId && nodeId !== id) closeApp();
-      // Ein minimierter Desktop kommt genau so zurück, wie er war.
-      if (!stand) stand = miniNehmen(id);
+      versatz = vers || 0;
       // Ein anderes Gerät fängt wieder auf der Hauptseite der
       // Einstellungen an, nicht auf der DHCP-Unterseite des
       // vorigen.
@@ -321,21 +329,15 @@
          lässt, sagt diese Zahl nichts mehr über das Bild. */
       const untenDrin = opts.untenImBild ? opts.untenImBild(n) : n.y > 380;
       refs.desktop.style.left = 'auto';
-      refs.desktop.style.right = '16px';
-      refs.desktop.style.top = untenDrin ? '16px' : 'auto';
-      refs.desktop.style.bottom = untenDrin ? 'auto' : '16px';
+      refs.desktop.style.right = (16 + versatz * 56) + 'px';
+      refs.desktop.style.top = untenDrin ? (16 + versatz * 44) + 'px' : 'auto';
+      refs.desktop.style.bottom = untenDrin ? 'auto' : (16 + versatz * 44) + 'px';
     }
 
-    /* ═══ Minimieren ═════════════════════════════════════════
-       Ein minimierter Desktop behält Programm, Seite und Platz und
-       liegt als Kürzel (E1) in der linken Leiste (`railMini`).
-       Beim Wechsel in den Entwurf wird der offene Desktop nur
-       „pausiert" und kommt mit der Aktion zurück; die Kürzel
-       bleiben stehen und sind im Entwurf ausgeblendet. */
-    let mini = [];        // [{ id, appId, seite, pos, verschoben }]
-    let pausiert = null;  // der Desktop, der beim Moduswechsel offen war
-    let neuId = null;     // das Kürzel, das gerade aufblinken soll
-
+    /* ═══ Stand merken ═══════════════════════════════════════
+       Minimieren und Moduswechsel verwalten die Geräte (Geraete
+       unten); hier nur: was ein Fenster sich merken muss, um
+       genau so zurückzukommen. */
     function standMerken() {
       const st = refs.desktop.style;
       return {
@@ -354,67 +356,6 @@
       }
       refs.dtWin.dataset.seite = stand.seite || '';
       if (stand.appId && programmeFuer(n).some(p => p.id === stand.appId)) appId = stand.appId;
-    }
-
-    function miniNehmen(id) {
-      const i = mini.findIndex(m => m.id === id);
-      if (i < 0) return null;
-      const st = mini.splice(i, 1)[0];
-      miniZeichnen();
-      return st;
-    }
-
-    function miniZeichnen() {
-      mini = mini.filter(m => netz.get(m.id));
-      if (!refs.miniListe) return;
-      refs.miniListe.innerHTML = '';
-      mini.forEach(m => {
-        const n = netz.get(m.id);
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'mini-chip' + (m.id === neuId ? ' is-neu' : '');
-        b.textContent = netz.kurzName(n);
-        b.title = n.name + ' — Desktop wieder öffnen';
-        b.addEventListener('click', () => open(m.id));
-        refs.miniListe.appendChild(b);
-      });
-      neuId = null;
-      if (refs.miniBox) refs.miniBox.hidden = !mini.length || !!pausiertAktiv;
-    }
-
-    let pausiertAktiv = false;  // Entwurf: Kürzel ausgeblendet
-
-    function minimieren() {
-      if (!nodeId) return;
-      const st = standMerken();
-      mini = mini.filter(m => m.id !== st.id);
-      mini.push(st);
-      neuId = st.id;
-      close();
-      miniZeichnen();
-    }
-
-    // Moduswechsel in den Entwurf: Desktop zur Seite, Kürzel weg.
-    function pausieren() {
-      pausiert = nodeId ? standMerken() : null;
-      pausiertAktiv = true;
-      close();
-      miniZeichnen();
-    }
-
-    function wiederaufnehmen() {
-      pausiertAktiv = false;
-      miniZeichnen();
-      const st = pausiert;
-      pausiert = null;
-      if (st && netz.get(st.id)) open(st.id, st);
-    }
-
-    // Alles vergessen: neues Netz, anderes Szenario, Zurücksetzen.
-    function vergessen() {
-      mini = []; pausiert = null;
-      close();
-      miniZeichnen();
     }
 
     function close() {
@@ -630,6 +571,8 @@
     /* ═══ Programm: Terminal ═════════════════════════════════ */
 
     function bauTerminal(n, box) {
+      // Es gibt nur EIN Terminal: ein anderes Fenster gibt es ab.
+      if (opts.vorTerminal) opts.vorTerminal(api);
       box.appendChild(refs.term);
       refs.term.classList.add('term--in', 'is-open');
       panels.openTerminal(n.id);
@@ -922,7 +865,7 @@
     /* ═══ Kopfzeile des Fensters ═════════════════════════════ */
 
     refs.dtClose.addEventListener('click', close);
-    if (refs.dtMin) refs.dtMin.addEventListener('click', minimieren);
+    if (refs.dtMin) refs.dtMin.addEventListener('click', () => { if (opts.onMinimieren) opts.onMinimieren(api); });
 
     refs.dtPower.addEventListener('click', () => {
       const n = netz.get(nodeId);
@@ -970,9 +913,6 @@
        Tabelle, hoch für das Terminal. Das Maß gilt je Bildschirm
        (Rechner oder Handy) und bleibt für den nächsten Besuch
        stehen. Doppeltipp auf den Griff: zurück zur Ausgangsgröße. */
-    const MASS_KEY = 'synir_dt_groesse';
-    let masse = {};
-    try { masse = JSON.parse(localStorage.getItem(MASS_KEY) || '{}') || {}; } catch (e) { masse = {}; }
     const massArt = (n) => (n && n.kind === 'handy') ? 'handy' : 'pc';
 
     function massSetzen() {
@@ -1043,12 +983,238 @@
       if (n) konfig.malenTabellen(n, refs.dtWin);
     }
 
-    return {
-      open, close, render, tabellenAuffrischen, minimieren, pausieren, wiederaufnehmen, vergessen,
+    const api = {
+      open, close, render, tabellenAuffrischen, standMerken,
+      schliesseApp() { if (appId) { closeApp(); render(); } },
+      zeit: 0,
+      get appId() { return appId; },
       get nodeId() { return nodeId; },
-      get isOpen() { return !!nodeId; }
+      get isOpen() { return !!nodeId; },
+      get el() { return refs.desktop; },
+      get win() { return refs.dtWin; },
+      get kopf() { return refs.dtHead; },
+      get griff() { return refs.dtGrip; }
+    };
+    return api;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Geraete — bis zu ZWEI Desktops gleichzeitig
+     ══════════════════════════════════════════════════════════
+     Zwei Fenster (das zweite ist eine Kopie des ersten im DOM).
+     Tippt man ein drittes Gerät an, wird das ältere an den Rand
+     „gemorpht": es schrumpft zu einem Kürzel (E1) in der linken
+     Leiste und kommt per Tipp darauf genauso zurück — mit Programm,
+     Unterseite und Platz, wie es war.
+
+     ⚠️ Programme wie Datei-Explorer oder Mail halten ihren Zustand
+     in EINEM Modul-Objekt. Deshalb ist immer das vordere Fenster
+     das, an das sie gebunden sind: es wird zuletzt gezeichnet, und
+     der erste Tipp auf ein hinteres Fenster holt es nur nach vorn.
+     Das Terminal gibt es nur einmal; wer es öffnet, bekommt es vom
+     anderen Fenster. */
+  function Geraete(refs, engine, netz, stack, term, panels, konfig, dienste, opts) {
+    opts = opts || {};
+    const d1 = refs.desktop;
+    const d2 = d1.cloneNode(true);
+    const refs2 = Object.assign({}, refs, { desktop: d2 });
+    ['dtHead', 'dtIcon', 'dtName', 'dtSub', 'dtPower', 'dtClose', 'dtMin',
+     'dtApps', 'dtDock', 'dtWin', 'dtFenster', 'dtScreen', 'dtGrip'].forEach(k => {
+      if (refs[k] && refs[k].id) refs2[k] = d2.querySelector('#' + refs[k].id);
+    });
+    d2.querySelectorAll('[id]').forEach(e => { e.id += '2'; });
+    d2.id = 'desktop2';
+    d2.hidden = true;
+    d1.parentNode.insertBefore(d2, d1.nextSibling);
+
+    const wins = [];
+    let mini = [];          // minimierte Desktops: [{ id, appId, seite, pos, verschoben }]
+    let stash = null;       // Entwurf: was beim Moduswechsel offen war
+    let entwurf = false;    // Entwurf: Kürzel ausgeblendet
+    let zaehler = 0;
+
+    const offene = () => wins.filter(w => w.isOpen);
+    const vordere = () => offene().reduce((a, b) => (!a || b.zeit > a.zeit) ? b : a, null);
+
+    function aktivMelden() {
+      const f = vordere();
+      wins.forEach(w => w.el.classList.toggle('is-front', w === f));
+      if (opts.onGeraet) opts.onGeraet(f ? f.nodeId : null);
+    }
+
+    const fopts = Object.assign({}, opts, {
+      onGeraet: aktivMelden,
+      vorTerminal: (self) => wins.forEach(w => { if (w !== self && w.appId === 'terminal') w.schliesseApp(); }),
+      onMinimieren: (w) => minimiere(w)
+    });
+    wins.push(new Fenster(refs, engine, netz, stack, term, panels, konfig, dienste, fopts));
+    wins.push(new Fenster(refs2, engine, netz, stack, term, panels, konfig, dienste, fopts));
+    wins.forEach(w => { w.seit = 0; });
+
+    function vorn(w) { w.zeit = ++zaehler; }
+
+    function renderAlle() {
+      offene().sort((a, b) => a.zeit - b.zeit).forEach(w => w.render());
+    }
+
+    wins.forEach(w => {
+      w.el.addEventListener('pointerdown', (ev) => {
+        if (!w.isOpen || vordere() === w) return;
+        vorn(w); renderAlle(); aktivMelden();
+        // Der erste Tipp holt nur nach vorn (Kopf und Griff gehen weiter: Ziehen).
+        if (!ev.target.closest('.dt-h, .dt-grip')) { ev.stopPropagation(); ev.preventDefault(); }
+      }, true);
+    });
+
+    /* ─── Kürzel in der Leiste ─────────────────────────────── */
+    function chipsZeichnen(flugId) {
+      mini = mini.filter(m => netz.get(m.id));
+      if (!refs.miniListe) return;
+      refs.miniListe.innerHTML = '';
+      mini.forEach(m => {
+        const n = netz.get(m.id);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'mini-chip' + (m.id === flugId ? ' is-flug' : '');
+        b.dataset.id = m.id;
+        b.textContent = netz.kurzName(n);
+        b.title = n.name + ' — Desktop wieder öffnen';
+        b.addEventListener('click', () => open(m.id));
+        refs.miniListe.appendChild(b);
+      });
+      if (refs.miniBox) refs.miniBox.hidden = !mini.length || entwurf;
+    }
+    const chipEl = (id) => refs.miniListe && refs.miniListe.querySelector('[data-id="' + id + '"]');
+
+    /* ─── Morph ────────────────────────────────────────────────
+       Fenster und Kürzel verwandeln sich ineinander: dieselbe
+       Bewegung (verschieben + skalieren) vorwärts und rückwärts. */
+    const ruhig = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function ts(von, nach) {   // lässt Rechteck `von` aussehen wie `nach`
+      return 'translate(' + (nach.left - von.left) + 'px,' + (nach.top - von.top) + 'px) scale('
+        + (nach.width / von.width) + ',' + (nach.height / von.height) + ')';
+    }
+    function fliegen(el, keys, fertig) {
+      if (ruhig() || !el.animate) { fertig(); return; }
+      el.style.transformOrigin = '0 0';
+      const a = el.animate(keys, { duration: 300, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
+      const ende = () => { el.style.transformOrigin = ''; fertig(); };
+      a.onfinish = ende; a.oncancel = ende;
+    }
+
+    // Ein Abbild des Fensters, das fliegt, während das echte Fenster
+    // schon frei ist (so kann es sofort ein anderes Gerät zeigen).
+    function geist(el, r) {
+      const s = el.parentElement.getBoundingClientRect();
+      const g = el.cloneNode(true);
+      g.removeAttribute('id');
+      g.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+      g.classList.add('dt-geist');
+      Object.assign(g.style, {
+        left: (r.left - s.left) + 'px', top: (r.top - s.top) + 'px',
+        right: 'auto', bottom: 'auto', margin: '0',
+        width: r.width + 'px', height: r.height + 'px', maxHeight: 'none'
+      });
+      el.parentElement.appendChild(g);
+      return g;
+    }
+
+    function minimiere(w) {
+      if (!w.isOpen) return;
+      const st = w.standMerken();
+      const von = w.el.getBoundingClientRect();
+      const g = geist(w.el, von);
+      mini = mini.filter(m => m.id !== st.id);
+      mini.push(st);
+      w.close();
+      chipsZeichnen(st.id);
+      const chip = chipEl(st.id);
+      const nach = chip.getBoundingClientRect();
+      fliegen(g, [{ transform: 'none', opacity: 1 }, { transform: ts(von, nach), opacity: 0.2 }], () => {
+        g.remove();
+        chip.classList.remove('is-flug');
+      });
+    }
+
+    /* ─── Öffnen und schließen ─────────────────────────────── */
+    function open(id) {
+      if (!netz.get(id)) return;
+      const da = wins.find(w => w.nodeId === id);
+      if (da) { vorn(da); renderAlle(); aktivMelden(); return; }
+
+      // Ein Fenster suchen; sind beide belegt, geht das ältere an den Rand.
+      let w = wins.find(x => !x.isOpen);
+      if (!w) {
+        w = wins.reduce((a, b) => a.seit <= b.seit ? a : b);
+        minimiere(w);
+      }
+
+      let stand = null, chipR = null;
+      const i = mini.findIndex(m => m.id === id);
+      if (i >= 0) {
+        const c = chipEl(id);
+        chipR = c ? c.getBoundingClientRect() : null;
+        stand = mini.splice(i, 1)[0];
+        chipsZeichnen();
+      }
+
+      const vers = wins.indexOf(w);   // Fenster 2 sitzt versetzt, die beiden decken sich nie ganz
+      vorn(w);
+      w.seit = zaehler;
+      w.open(id, stand, vers);
+      if (chipR) {
+        const r = w.el.getBoundingClientRect();
+        fliegen(w.el, [{ transform: ts(r, chipR), opacity: 0.2 }, { transform: 'none', opacity: 1 }], () => {});
+      }
+    }
+
+    function schliesse(id) {
+      const w = wins.find(x => x.nodeId === id);
+      if (w) w.close();
+    }
+    function close() { const f = vordere(); if (f) f.close(); }
+
+    // Neues Netz, anderes Szenario, Zurücksetzen: alles vergessen.
+    function vergessen() {
+      mini = []; stash = null;
+      wins.forEach(w => w.close());
+      chipsZeichnen();
+    }
+
+    // Wechsel in den Entwurf: offene Desktops zur Seite, Kürzel weg.
+    function pausieren() {
+      const f = vordere();
+      stash = offene().sort((a, b) => a.seit - b.seit).map(w => w.standMerken());
+      stash.front = f ? f.nodeId : null;
+      wins.forEach(w => w.close());
+      entwurf = true;
+      chipsZeichnen();
+    }
+    function wiederaufnehmen() {
+      entwurf = false;
+      chipsZeichnen();
+      const st = stash; stash = null;
+      if (!st) return;
+      st.filter(s => netz.get(s.id)).forEach((s) => {
+        const w = wins.find(x => !x.isOpen);
+        if (!w) return;
+        vorn(w); w.seit = zaehler;
+        w.open(s.id, s, wins.indexOf(w));
+      });
+      const f = wins.find(x => x.nodeId === st.front);
+      if (f) { vorn(f); renderAlle(); aktivMelden(); }
+    }
+
+    return {
+      open, close, schliesse, vergessen, pausieren, wiederaufnehmen,
+      render: renderAlle,
+      tabellenAuffrischen: () => wins.forEach(w => w.tabellenAuffrischen()),
+      istOffen: (id) => wins.some(w => w.nodeId === id),
+      get isOpen() { return offene().length > 0; },
+      get nodeId() { const f = vordere(); return f ? f.nodeId : null; },
+      get fensterBoxen() { return wins.map(w => w.win); }
     };
   }
 
-  window.Geraet = Geraet;
+  window.Geraet = Geraete;
 })();
