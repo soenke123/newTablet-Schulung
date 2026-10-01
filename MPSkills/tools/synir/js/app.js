@@ -1058,6 +1058,49 @@
       traceZeigen(traceWunsch);
     });
 
+    $('traceClose').addEventListener('click', () => {
+      traceWunsch = false;
+      traceZeigen(false);
+    });
+
+    /* ─── Höhe der unteren Fenster ziehen ─────────────────────
+       Griff am oberen Rand; gezogen wird die CSS-Variable des
+       Fensters. Der Rest (Fläche, Terminal) hängt an `--unten`. */
+    function hoehenGriff(el, prop, min) {
+      const g = document.createElement('div');
+      g.className = 'hgriff';
+      g.setAttribute('role', 'separator');
+      g.setAttribute('aria-orientation', 'horizontal');
+      g.title = 'Höhe ziehen';
+      el.prepend(g);
+      g.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        const body = el.querySelector('[id$="Body"]');
+        const y0 = e.clientY, h0 = body.getBoundingClientRect().height;
+        g.setPointerCapture(e.pointerId);
+        g.classList.add('is-drag');
+        document.body.classList.add('hgriff-drag');
+        const move = (ev) => {
+          const max = Math.round(window.innerHeight * 0.7);
+          const h = Math.max(min, Math.min(max, Math.round(h0 + (y0 - ev.clientY))));
+          document.documentElement.style.setProperty(prop, h + 'px');
+        };
+        const ende = () => {
+          g.classList.remove('is-drag');
+          document.body.classList.remove('hgriff-drag');
+          g.removeEventListener('pointermove', move);
+          g.removeEventListener('pointerup', ende);
+          g.removeEventListener('pointercancel', ende);
+          panels.placeKarte();
+        };
+        g.addEventListener('pointermove', move);
+        g.addEventListener('pointerup', ende);
+        g.addEventListener('pointercancel', ende);
+      });
+    }
+    hoehenGriff(document.querySelector('.trace'), '--trace-h', 80);
+    hoehenGriff($('wlt'), '--wlt-h', 80);
+
     // Fenstergröße geändert: das SVG wird neu eingepasst, also
     // liegt das Gerät woanders — und das Kärtchen mit ihm.
     window.addEventListener('resize', () => {

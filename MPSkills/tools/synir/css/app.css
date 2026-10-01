@@ -2680,6 +2680,7 @@ textarea.f::placeholder { color: var(--ink-3); opacity: .45; font-weight: 400; }
   background: var(--surface); border-top: 1px solid var(--line);
   display: grid; grid-template-rows: auto 0fr;
   transition: grid-template-rows .22s ease;
+  position: relative;
 }
 body.wlt-open .wlt { grid-template-rows: auto 1fr; }
 /* ⚠️ `<section hidden>` mit `display: grid` ist NICHT versteckt —
@@ -2792,6 +2793,7 @@ body:not(.wlt-open) .wlt-b { height: 0; padding: 0; }
   background: var(--surface); border-top: 1px solid var(--line);
   display: grid; grid-template-rows: auto 0fr;
   transition: grid-template-rows .22s ease;
+  position: relative;
 }
 body.trace-open .trace { grid-template-rows: auto 1fr; }
 /* Die ganze Leiste — auch ihre Kopfzeile — gibt es nur, solange der
@@ -4357,3 +4359,23 @@ button.wb-vor .ico { width: 1em; height: 1em; vertical-align: 0; }
    Auswahlknöpfchen — es ist die Hauptsache im Fenster, und auf einem
    Tablet muss man sie treffen. */
 .zt-b { padding: 8px 16px; font-size: 12.5px; min-height: 36px; }
+
+/* ═══ Höhe der unteren Fenster ziehen ════════════════════════
+   Ein Griff am oberen Rand von Mitschnitt und Weiterleitungstabelle.
+   Gezogen wird `--trace-h` bzw. `--wlt-h` (inline am <html>), alles
+   andere — Fläche, Terminal (`--unten`) — richtet sich danach. */
+.hgriff {
+  position: absolute; left: 0; right: 0; top: -8px; height: 16px;
+  cursor: ns-resize; touch-action: none; z-index: 7;
+}
+.hgriff::after {
+  content: ""; position: absolute; left: 50%; top: 5px; width: 44px; height: 4px;
+  transform: translateX(-50%); border-radius: 2px; background: var(--line-2);
+}
+.hgriff:hover::after, .hgriff.is-drag::after { background: var(--accent); }
+body.hgriff-drag { user-select: none; cursor: ns-resize; }
+body.hgriff-drag .wlt, body.hgriff-drag .trace { transition: none; }
+@media (pointer: coarse) {
+  .hgriff { top: -14px; height: 28px; }
+  .hgriff::after { top: 12px; width: 56px; height: 5px; }
+}
