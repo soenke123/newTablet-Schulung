@@ -626,11 +626,14 @@ und die voreingetragenen Zeilen frischen sich alle 3 s selbst auf (`data-live`-K
 `konfig.cwwAuffrischen`, ohne Neubau des Fensters).
 
 **Die Weiterleitung** (`schichten.js`, `routeFor`). Ein neuer Rang `Internet`
-(nach dem Standardgateway): alles außerhalb des eigenen /8 geht an Karte 0.
-Eingetragene und gelernte Wege gelten am cww nur für Ziele im eigenen /8 — sonst
-holte ein Eintrag fremde Pakete ins eigene Netz. In `onIp` die zwei Regeln der
-Haustür: hinaus nur mit eigenem Absender, herein nur, was ins eigene /8 will
-(`drop-quelle` im Ereignisstrom).
+(nach dem Standardgateway, Maske /0): was außerhalb des eigenen /8 liegt und
+wofür das cww innen keinen Weg kennt, geht an Karte 0. ⚠️ Eingetragene und
+gelernte Wege gelten am cww für **jedes** Ziel (seit 2026-10-02, vom Nutzer als
+Fehler erkannt: im Raum schickte das cww den Weg zwischen zwei 50er-Netzen, die
+beide innen an ihm hingen, in die Wolke). In `onIp` die zwei Regeln der Haustür:
+herein nur, was ins eigene /8 will (vor der Wegewahl), hinaus nur mit eigenem
+Absender — geprüft **nach** der Wegewahl und nur, wenn der Weg wirklich in die
+Wolke führt (`drop-quelle` im Ereignisstrom).
 
 **Wie ein Paket zu einem anderen Tablet kommt.**
 

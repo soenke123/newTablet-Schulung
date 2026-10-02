@@ -6,6 +6,21 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 0013 · Das cww folgt seiner Tabelle (2026-10-02)
+
+Berührt: `js/schichten.js` (`routeFor`, Haustür in `onIp`), `js/konfig.js` (Zeile am cww nicht mehr rot, wenn das Ziel
+außerhalb des eigenen /8 liegt), `tests/kerntest.js` (1262 grün, Abschnitt „cww im Bereich 67"), `LIESMICH.md`,
+`FILIUS-ABGLEICH.md`, Cache-Stempel `20261002m`.
+
+* ⭐ **Vom Nutzer als struktureller Fehler erkannt:** „cww hat zwei Subnetze mit 50 an sich hängen — dann sollte es ins
+  andere 50er gehen. Nur was es nicht kennt, geht ins cww [die Wolke]." Vorher galten am cww eingetragene und
+  gelernte Wege nur im eigenen /8, und die Absenderprüfung lief VOR der Wegewahl. Im Raum (Bereich ≠ 50) ging deshalb
+  50.0.7.x → 50.0.6.x in die Wolke bzw. wurde als „fremder Absender" verworfen, obwohl beide Netze innen am cww hingen.
+* Jetzt: die Tabelle gilt für jedes Ziel (längste Maske gewinnt; die Wolke ist /0). „Herein nur ins eigene /8" bleibt
+  vor der Wegewahl; „hinaus nur mit eigenem Absender" steht NACH der Wegewahl und greift nur, wenn der Weg in die Wolke führt.
+* Der Umbau des großen Netzes aus 0012 (Firewall-Router an Router 4) bleibt — er ist auch so der kürzere Weg.
+* `raumtest.js` braucht `@electric-sql/pglite` und lief in diesem Container nicht; `fwuitest` 66, `hilfetest` 90 grün.
+
 ## 0012 · Das große Netz bekommt die Sicherheit (2026-10-02)
 
 Berührt: `js/szenarien.js` (Szenario `grossesnetz`, `dev()` übernimmt `firewall`, `zsServer`, `zertifikat`,

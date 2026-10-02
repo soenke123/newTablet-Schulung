@@ -496,12 +496,17 @@
 
     function routeFor(node, dstInt) {
       let best = null;
-      /* Beim cww gelten eingetragene und gelernte Wege nur für das
-         EIGENE /8 — nach draußen entscheidet die Wolke, nicht das
-         Kind. Ein Eintrag „67.0.0.0 über 50.1.1.2" würde sonst
-         fremde Pakete ins eigene Netz holen. */
+      /* ⚠️ Auch beim cww gilt die Tabelle — für JEDES Ziel. Was es
+         nach innen kennt (direkt, eingetragen, gelernt), bleibt innen;
+         in die Wolke geht nur, wofür es keinen Weg hat (die feste
+         Zeile unten, /0). Früher zählten eingetragene und gelernte
+         Wege hier nur im eigenen /8: im Raum (eigener Bereich ≠ 50)
+         schickte das cww im großen Netz den Weg 50.0.7.x → 50.0.6.x
+         in die Wolke, obwohl beide Netze innen an ihm hingen — vom
+         Nutzer als Fehler erkannt. Fremde Pakete holt so ein Eintrag
+         trotzdem nicht herein: was von DRAUSSEN kommt, muss ins
+         eigene /8 wollen (Haustür in `onIp`). */
       const cww = netz.istCww(node);
-      const innen = (net) => !cww || netz.imEigenenNetz(net);
 
       /* Besser als das Bisherige? Erst die Maske, dann der Rang.
          In EINER Funktion, damit die Regel an einer Stelle steht
@@ -523,7 +528,6 @@
         const net = U.ip2int(r.net), mask = U.ip2int(r.mask), gw = U.ip2int(r.gateway);
         if (net === null || mask === null || gw === null) continue;
         if (U.netOf(dstInt, mask) !== net) continue;
-        if (!innen(net)) continue;
         const out = nicTowards(node, gw);
         if (out === null) continue;
         nimm({ nic: out, nextHop: gw, prefix: U.mask2prefix(mask) || 0, why: 'eingetragen' });
@@ -537,7 +541,6 @@
         const net = U.ip2int(r.net), mask = U.ip2int(r.mask), gw = U.ip2int(r.gw);
         if (net === null || mask === null || gw === null) continue;
         if (U.netOf(dstInt, mask) !== net) continue;
-        if (!innen(net)) continue;
         const out = nicTowards(node, gw);
         if (out === null) continue;
         nimm({ nic: out, nextHop: gw, prefix: U.mask2prefix(mask) || 0, why: 'RIP', hops: r.hops });
@@ -729,22 +732,16 @@
             /8. Sonst könnte jedes Kind im Namen eines anderen
             senden — oder mit einer privaten Adresse, auf die nie
             eine Antwort zurückfindet. Echte Anbieter filtern genau
-            das (BCP 38, „Ingress Filtering").
+            das (BCP 38, „Ingress Filtering"). Geprüft wird das erst
+            NACH der Wegewahl (unten): nur was wirklich in die Wolke
+            geht, muss durch diese Tür. Was das cww zwischen zwei
+            eigenen Karten weiterreicht, ist kein Weg nach draußen.
          2. Von draußen nur, was in mein /8 will. Das cww ist ein
             Anschluss, kein Durchgang. */
-      if (netz.istCww(node)) {
-        if (netz.istInternet(node, nicIndex)) {
-          if (!netz.imEigenenNetz(dst)) {
-            say('drop-quelle', node, { dst: pkt.dst, src: pkt.src, level: 'warn',
-              why: pkt.dst + ' liegt nicht in deinem Adressbereich — das cww ist kein Durchgang.' });
-            return;
-          }
-        } else if (!netz.imEigenenNetz(dst) && !netz.imEigenenNetz(pkt.src)) {
-          say('drop-quelle', node, { dst: pkt.dst, src: pkt.src, level: 'warn',
-            why: 'Absender ' + pkt.src + ' liegt nicht in deinem Adressbereich ('
-              + netz.internetConf().prefix + '.0.0.0/8). Das cww lässt es nicht hinaus.' });
-          return;
-        }
+      if (netz.istCww(node) && netz.istInternet(node, nicIndex) && !netz.imEigenenNetz(dst)) {
+        say('drop-quelle', node, { dst: pkt.dst, src: pkt.src, level: 'warn',
+          why: pkt.dst + ' liegt nicht in deinem Adressbereich — das cww ist kein Durchgang.' });
+        return;
       }
 
       pkt.ttl--;
@@ -758,6 +755,14 @@
       if (!route) {
         say('unreachable', node, { dst: pkt.dst, why: 'Dieser Router kennt keinen Weg dorthin.', level: 'warn' });
         sendIcmp(node, pkt.src, 3, 0, { orig: origKopf(pkt) });
+        return;
+      }
+
+      // Haustür, Regel 1 (siehe oben): hinaus nur mit eigenem Absender.
+      if (netz.istCww(node) && netz.istInternet(node, route.nic) && !netz.imEigenenNetz(pkt.src)) {
+        say('drop-quelle', node, { dst: pkt.dst, src: pkt.src, level: 'warn',
+          why: 'Absender ' + pkt.src + ' liegt nicht in deinem Adressbereich ('
+            + netz.internetConf().prefix + '.0.0.0/8). Das cww lässt es nicht hinaus.' });
         return;
       }
 

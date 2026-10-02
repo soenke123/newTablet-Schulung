@@ -656,8 +656,8 @@
        mitbringt: je ein Bereich der anderen, Netzmaske /8, Weg über
        die Internet-Karte. Nur lesen — der Nutzer wollte „die aus dem
        cww schon voreingetragen". Beim Routen ändern sie nichts: das
-       cww schickt alles Fremde ohnehin hinaus (schichten.js, routeFor
-       übergeht Zeilen außerhalb des eigenen /8). */
+       cww schickt ohnehin alles hinaus, wofür es innen keinen Weg
+       kennt (schichten.js, routeFor: feste Zeile „Internet", /0). */
     function cwwWegeZeilen() {
       const liste = andereBereiche();
       if (!liste.length) return '<div class="k-hint dim">Keine anderen Bereiche im Raum.</div>';
@@ -822,11 +822,10 @@
          dass eine Zeile für „alles Übrige" als kaputt gilt. */
       if (U.mask2prefix(r.mask) === null)
         return { text: 'diese Netzmaske gibt es nicht', stand: 'bad' };
-      /* Am cww nur Ziele im eigenen /8 — nach draußen entscheidet
-         die Wolke (schichten.js, routeFor übergeht solche Zeilen). */
-      if (netz.istCww(node) && !netz.imEigenenNetz(r.net))
-        return { text: 'nur Ziele in deinem Bereich (' + netz.internetConf().prefix
-          + '.0.0.0/8) — alles andere geht ohnehin ins Internet', stand: 'bad' };
+      /* Am cww gilt eine Zeile für JEDES Ziel (schichten.js, routeFor):
+         was es innen kennt, bleibt innen. Früher stand hier „nur Ziele
+         in deinem Bereich" — das cww schickte alles Fremde in die Wolke,
+         auch wenn das Netz innen an ihm hing. */
       const nic = ueberKarte(node, r.gateway);
       if (!nic)
         return { text: r.gateway + ' liegt in keinem Netz dieses Geräts', stand: 'bad' };

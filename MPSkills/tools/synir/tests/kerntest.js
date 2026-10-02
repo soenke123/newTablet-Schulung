@@ -2338,6 +2338,30 @@ section('Sek I und II · neue Szenarien');
     }
   }
 
+  // ⭐ Das cww folgt seiner Tabelle, auch wenn die Netze innen nicht in seinem /8 liegen (Raum: Bereich 67).
+  {
+    const z = lade('grossesnetz');
+    z.netz.setInternet({ prefix: 67 });
+    // Router 1 nur noch über das cww erreichbar: seine Kabel zu Router 2 und Router 4 weg.
+    for (const c of z.netz.cableList().filter(c => c.a.node === 'n1' && (c.b.node === 'n2' || c.b.node === 'n4')))
+      z.netz.removeCable(c.id);
+    const quelle = [];
+    z.engine.on('event', e => { if (e.kind === 'drop-quelle') quelle.push(e); });
+    z.dienste.start(); z.dienste.sync();
+    z.engine.runUntil(z.engine.now + 120 * SEC);
+    const r1 = z.netz.byName('Router 1');
+    let r = null;
+    z.stack.ping(r1, '50.0.6.20', 1, 8 * SEC, (x) => r = x);
+    z.engine.runUntil(z.engine.now + 10 * SEC);
+    ok('⭐ cww im Bereich 67: zwischen zwei 50er-Netzen innen reicht es weiter (Ping Router 1 → VPN-Server)',
+       r && r.ok, JSON.stringify(r) + ' ' + JSON.stringify(quelle.slice(0, 2)));
+    ok('und die Haustür hat dabei nichts weggeworfen', quelle.length === 0, JSON.stringify(quelle.slice(0, 2)));
+    const w = z.stack.routeFor(z.netz.byName('Class Wide Web 1'), U.ip2int('50.0.6.20'));
+    ok('der Weg des cww zu 50.0.6.20 ist der gelernte, nicht die Wolke', w && w.why === 'RIP', JSON.stringify(w));
+    const raus = z.stack.routeFor(z.netz.byName('Class Wide Web 1'), U.ip2int('99.1.1.1'));
+    ok('was es nicht kennt, geht weiter in die Wolke', raus && raus.why === 'Internet', JSON.stringify(raus));
+  }
+
   // 2. Der Handschlag: genau EIN Handschlag vor der Seite, RST am Mailserver.
   {
     const z = lade('handschlag');
