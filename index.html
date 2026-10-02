@@ -1050,7 +1050,8 @@
         <!-- Untere Doppel-Buttons -->
         <div class="bottom-row">
 
-          <!-- PDF-Handout: öffnet die Online-Ansicht im neuen Tab -->
+          <!-- Handout & Quellen: Season 1 öffnet das PDF direkt,
+               ab Season 2 ein Modal mit Handout + Quellenverzeichnissen -->
           <a
             id="handoutLink"
             class="card-button pdf-button"
@@ -1059,7 +1060,7 @@
             rel="noopener"
           >
             <span class="pdf-icon" aria-hidden="true"></span>
-            <span>Handout</span>
+            <span id="handoutLinkLabel">Handout</span>
           </a>
 
           <!-- Präsentationen -->
@@ -1178,27 +1179,11 @@
             <span class="pdf-icon" aria-hidden="true"></span>
             <span class="presentation-name">Schulung 2 – Recherche &amp; KI</span>
           </a>
-
-          <a
-            class="presentation-link"
-            href="Dokumente/Quellenverzeichnis.pdf"
-          >
-            <span class="pdf-icon" aria-hidden="true"></span>
-            <span class="presentation-name">Quellenverzeichnis</span>
-          </a>
         </div>
 
         <!-- ── Season 3 / Schulung 3 (sichtbar wenn Session-Season >= 3) ── -->
         <div class="season3-only" style="display:none">
           <div class="schulung-divider">Schulung 3</div>
-
-          <a
-            class="presentation-link"
-            href="Dokumente/Quellenverzeichnis_Tabletschulung%20S3.pdf"
-          >
-            <span class="pdf-icon" aria-hidden="true"></span>
-            <span class="presentation-name">Quellenverzeichnis</span>
-          </a>
 
           <div class="presentation-placeholder">
             Die Präsentation zu Schulung 3 folgt in Kürze.
@@ -1209,6 +1194,25 @@
 
     </div>
 
+  </div>
+
+  <!-- Modal: Handout & Quellen (ab Season 2; Inhalt baut applySeasonUI) -->
+  <div
+    class="modal-overlay"
+    id="handoutModal"
+    aria-hidden="true"
+  >
+    <div
+      class="modal"
+      role="dialog"
+      aria-labelledby="handoutModalTitle"
+    >
+      <div class="modal-header">
+        <div class="modal-title" id="handoutModalTitle">Handout &amp; Quellen</div>
+        <button class="close-button" id="closeHandoutModalButton" aria-label="Schließen">×</button>
+      </div>
+      <div class="presentation-list" id="handoutList"></div>
+    </div>
   </div>
 
   <!-- ═══ LOGIN-MODAL ═══ -->
@@ -1348,6 +1352,25 @@
         ? 'Handout_Tablet-Schulung v3.pdf'
         : (s2 ? 'Handout_Tablet-Schulung v2.pdf' : 'Handout_Tablet-Schulung.pdf');
       handoutLink.href = 'Dokumente/' + encodeURIComponent(handoutFile);
+
+      // Ab Season 2 öffnet der Button ein Modal mit Handout + Quellen.
+      handoutLink.dataset.modal = s2 ? '1' : '';
+      document.getElementById('handoutLinkLabel').textContent =
+        s2 ? 'Handout & Quellen' : 'Handout';
+      const entries = [[`Handout v${season >= 3 ? 3 : (s2 ? 2 : 1)}`, handoutFile]];
+      if (s2) entries.push(['Quellenverzeichnis v2', 'Quellenverzeichnis.pdf']);
+      if (season >= 3) entries.push(['Quellenverzeichnis v3', 'Quellenverzeichnis_Tabletschulung S3.pdf']);
+      const list = document.getElementById('handoutList');
+      list.replaceChildren(...entries.map(([name, file]) => {
+        const a = document.createElement('a');
+        a.className = 'presentation-link';
+        a.href = 'Dokumente/' + encodeURIComponent(file);
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.innerHTML = '<span class="pdf-icon" aria-hidden="true"></span><span class="presentation-name"></span>';
+        a.querySelector('.presentation-name').textContent = name;
+        return a;
+      }));
     }
 
     // Klick auf GameHub-Button abfangen wenn nicht eingeloggt oder noch pending
@@ -1790,34 +1813,47 @@
       });
     });
 
-    // Modal
-    const modal = document.getElementById("presentationModal");
-    const openButton = document.getElementById("openModalButton");
-    const closeButton = document.getElementById("closeModalButton");
-
-    openButton.addEventListener("click", () => {
+    // Modals: Präsentationen + Handout & Quellen
+    function openModal(modal) {
       modal.classList.add("active");
       modal.setAttribute("aria-hidden", "false");
-    });
+    }
 
-    closeButton.addEventListener("click", closeModal);
-
-    modal.addEventListener("click", (event) => {
-      if (event.target === modal) {
-        closeModal();
-      }
-    });
-
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        closeModal();
-      }
-    });
-
-    function closeModal() {
+    function closeModal(modal) {
       modal.classList.remove("active");
       modal.setAttribute("aria-hidden", "true");
     }
+
+    function wireModal(modalId, closeId) {
+      const modal = document.getElementById(modalId);
+      document.getElementById(closeId).addEventListener("click", () => closeModal(modal));
+      modal.addEventListener("click", (event) => {
+        if (event.target === modal) {
+          closeModal(modal);
+        }
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeModal(modal);
+        }
+      });
+      return modal;
+    }
+
+    const presentationModal = wireModal("presentationModal", "closeModalButton");
+    const handoutModal = wireModal("handoutModal", "closeHandoutModalButton");
+
+    document.getElementById("openModalButton").addEventListener("click", () => {
+      openModal(presentationModal);
+    });
+
+    // Season 1: Link öffnet das Handout direkt; ab Season 2 das Modal.
+    document.getElementById("handoutLink").addEventListener("click", (event) => {
+      if (event.currentTarget.dataset.modal) {
+        event.preventDefault();
+        openModal(handoutModal);
+      }
+    });
   </script>
 
 </body>
