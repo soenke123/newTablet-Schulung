@@ -47,7 +47,7 @@
 (function () {
   'use strict';
 
-  const V = '?v=20261002h';
+  const V = '?v=20261002i';
   const TAKT_MS = 3000;          // Stand der Klasse / Spiegelung
   const GAP = 12;
   const MIN = 440;

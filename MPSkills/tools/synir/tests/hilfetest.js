@@ -199,6 +199,7 @@ async function klick(page, sel) {
   await page.waitForTimeout(800);
   await tipp(page, 'Laptop 1');
   ok('Laptop → Endgerät', await aktiv(page) === 'endgeraet', await aktiv(page));
+  await page.waitForSelector('.dt.is-front', { timeout: 3000 }).catch(() => {});
   {
     const r = await page.evaluate(() => {
       const d = document.querySelector('.dt.is-front').getBoundingClientRect();
@@ -279,12 +280,76 @@ async function klick(page, sel) {
   await page.evaluate(() => { document.body.dataset.rolle = 'presenter'; });
   ok('bei der Lehrkraft ist er da', await page.locator('#hilfeBtn').isVisible());
 
+  console.log('\n── Breite ziehen');
+  const hb = () => page.evaluate(() => ({ w: document.querySelector('#hilfe').getBoundingClientRect().width,
+    main: document.querySelector('.main').getBoundingClientRect().right, cls: document.body.className,
+    toc: document.querySelector('.hi-toc').getBoundingClientRect().width }));
+  async function ziehe(sel, nachX) {
+    const g = await page.locator(sel).boundingBox();
+    await page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(nachX, g.y + g.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForTimeout(350);
+  }
+  await ziehe('.hi-griff', 840);
+  {
+    const r = await hb();
+    ok('am linken Rand schmaler ziehen', Math.abs(r.w - 600) < 6, JSON.stringify(r));
+    ok('… die Arbeitsfläche wächst mit', Math.abs(r.main - 840) < 8, JSON.stringify(r));
+  }
+  await ziehe('.hi-griff', 5);
+  {
+    const r = await hb();
+    ok('ganz nach links: die Hilfe ist eine ganze Seite', r.w >= 1439, JSON.stringify(r));
+    ok('… und liegt über SYNIR, statt es auf null zu quetschen', /hilfe-voll/.test(r.cls) && r.main > 1400, JSON.stringify(r));
+  }
+  await ziehe('.hi-griff', 1300);
+  {
+    const r = await hb();
+    ok('ganz nach rechts: nicht schmaler als 300 px', Math.abs(r.w - 300) < 3, JSON.stringify(r));
+  }
+  await page.reload();
+  await page.waitForTimeout(400);
+  await klick(page, '#hilfeBtn');
+  ok('die Breite bleibt nach dem Neuladen', Math.abs((await hb()).w - 300) < 3, (await hb()).w);
+  await page.locator('.hi-griff').dblclick();
+  await page.waitForTimeout(300);
+  ok('Doppelklick auf den Rand: zurück zur halben Breite', Math.abs((await hb()).w - 720) < 3, (await hb()).w);
+  await klick(page, '.hi-breit');
+  ok('Knopf ⤢: ganze Breite', (await hb()).w >= 1439);
+  await klick(page, '.hi-breit');
+  ok('… noch einmal: zurück', Math.abs((await hb()).w - 720) < 3, (await hb()).w);
+
+  console.log('\n── Verzeichnis schmal');
+  await klick(page, '.hi-toc-klapp');
+  {
+    const r = await hb();
+    ok('Knopf ‹ macht das Verzeichnis schmal', r.toc < 60, r.toc);
+    ok('… nur noch Nummern: Kapitelnamen weg', await page.locator('.hi-toc-kt').first().isHidden());
+  }
+  await klick(page, '.hi-toc-kb:has-text("5")');
+  ok('… und die Nummern springen', (await aktiv(page)) === 'mitschnitt', await aktiv(page));
+  await klick(page, '.hi-toc-klapp');
+  ok('Knopf › macht es wieder breit', (await hb()).toc > 150);
+  {
+    const vor = (await hb()).toc;
+    const t = await page.locator('.hi-toc-griff').boundingBox();
+    await ziehe('.hi-toc-griff', t.x + 80);
+    ok('Griff zwischen Verzeichnis und Text: breiter ziehen', (await hb()).toc > vor + 60, (await hb()).toc);
+    await ziehe('.hi-toc-griff', t.x - 160);
+    ok('weit nach links: rastet auf „nur Nummern" ein', (await hb()).toc < 60, (await hb()).toc);
+    await page.locator('.hi-toc-griff').dblclick();
+    await page.waitForTimeout(250);
+    ok('Doppelklick: Vorgabe', Math.abs((await hb()).toc - vor) < 3, (await hb()).toc);
+  }
+
   console.log('\n── Schmaler Bildschirm');
-  await page.setViewportSize({ width: 820, height: 1100 });
+  await page.setViewportSize({ width: 520, height: 1000 });
   await page.waitForTimeout(400);
   {
     const g = await page.evaluate(() => document.querySelector('#hilfe').getBoundingClientRect().width);
-    ok('unter 900 px nimmt die Hilfe die ganze Breite', g >= 818, g);
+    ok('unter 900 px nimmt die Hilfe die ganze Breite', g >= 518, g);
   }
   ok('das Verzeichnis klappt über den Knopf „Inhalt" auf', await page.locator('.hi-toc-auf').isVisible());
   await klick(page, '.hi-toc-auf');

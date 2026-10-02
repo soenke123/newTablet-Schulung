@@ -501,6 +501,13 @@ Prüfstand `tests/hilfetest.js`)*
   aufgehen (Gerätebildschirm, großes Kärtchen), nicht darunter verschwinden, rücken `.main`,
   Weiterleitungstabelle, Mitschnitt, Terminal und Kurzmeldung zur Seite (`body.hilfe-offen`).
   Unter 900 px Breite liegt die Hilfe über allem (`hilfe-schmal`).
+* **Breite:** am **linken Rand ziehen** — von 300 px bis zur ganzen Seite; bleibt für SYNIR weniger
+  als 380 px übrig, liegt die Hilfe darüber (`hilfe-voll`) statt die Fläche auf null zu drücken.
+  Knopf ⤢ im Kopf: ganze/halbe Breite; Doppeltipp auf den Rand: zurück. Das **Verzeichnis** hat
+  einen eigenen Griff (Mitte) und den Knopf ‹/›: schmal = nur Kapitelnummern. Beides bleibt im
+  Gerät gemerkt (`localStorage` `synir.hilfe.breite` als Anteil, `synir.hilfe.toc` in px). Ob das
+  Verzeichnis über den Text klappt, entscheidet die Breite des **Blatts** (Container-Abfrage
+  `@container hilfe`), nicht die des Bildschirms.
 * **Klick → Abschnitt:** `zielVon(el)` in `hilfe.js`, vom Speziellen zum Allgemeinen (Knöpfe
   und Reiter, Felder `data-k`/`data-f`, Überschriften `.k-sec` im Kärtchen, Programm des
   Bildschirms, Geräteart auf der Fläche). Gelesen wird pointerdown/-up im Einfangen, nie

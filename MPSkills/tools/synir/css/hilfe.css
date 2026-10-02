@@ -41,17 +41,23 @@
 body[data-rolle="participant"] .hilfe-btn { display: none; }
 
 /* ─── Platz machen ──────────────────────────────────────────── */
-body.hilfe-offen:not(.hilfe-schmal) > .main,
-body.hilfe-offen:not(.hilfe-schmal) > .wlt,
-body.hilfe-offen:not(.hilfe-schmal) > .trace { margin-right: var(--hi-w); }
-body.hilfe-offen:not(.hilfe-schmal) .term { right: calc(var(--hi-w) + 16px); }
-body.hilfe-offen:not(.hilfe-schmal) .toast { left: calc((100vw - var(--hi-w)) / 2); }
+/* Bleibt zu wenig Fläche übrig (hilfe-voll) oder ist der Bildschirm
+   schmal, liegt die Hilfe darüber wie eine ganze Seite. */
+body.hilfe-offen:not(.hilfe-schmal):not(.hilfe-voll) > .main,
+body.hilfe-offen:not(.hilfe-schmal):not(.hilfe-voll) > .wlt,
+body.hilfe-offen:not(.hilfe-schmal):not(.hilfe-voll) > .trace { margin-right: var(--hi-w); }
+body.hilfe-offen:not(.hilfe-schmal):not(.hilfe-voll) .term { right: calc(var(--hi-w) + 16px); }
+body.hilfe-offen:not(.hilfe-schmal):not(.hilfe-voll) .toast { left: calc((100vw - var(--hi-w)) / 2); }
+
+/* Beim Ziehen: kein Markieren von Text, keine Übergänge, die nachhinken. */
+body.hilfe-ziehen, body.hilfe-ziehen * { user-select: none !important; cursor: ew-resize !important; }
 
 /* ─── Das Blatt ─────────────────────────────────────────────── */
 .hilfe {
   position: fixed; z-index: 62;   /* über Kärtchen und Bildschirmen, unter den Menüs (65) und Dialogen */
   top: var(--hi-top); right: 0; bottom: 0;
-  width: var(--hi-w); max-width: 100vw;
+  width: var(--hi-w); max-width: 100vw; min-width: min(300px, 100vw);
+  container: hilfe / inline-size;   /* das Innere richtet sich nach der Breite des Blatts */
   display: flex; flex-direction: column;
   background: var(--surface); color: var(--ink);
   border-left: 1px solid var(--line-2);
@@ -60,6 +66,24 @@ body.hilfe-offen:not(.hilfe-schmal) .toast { left: calc((100vw - var(--hi-w)) / 
 }
 .hilfe[hidden] { display: none; }
 body.hilfe-schmal .hilfe { width: 100vw; border-left: 0; }
+body.hilfe-voll .hilfe { border-left: 0; box-shadow: none; }
+
+/* Der Griff am linken Rand: ziehen = breiter/schmaler, bis ganz links. */
+.hi-griff {
+  position: absolute; left: -6px; top: 0; bottom: 0; width: 12px; z-index: 3;
+  cursor: ew-resize; touch-action: none;
+  display: grid; place-items: center;
+}
+.hi-griff i {
+  width: 5px; height: 46px; border-radius: 3px;
+  background: var(--line-2); opacity: .8;
+  transition: background .13s, height .13s;
+}
+.hi-griff:hover i, .hi-griff:focus-visible i, body.hilfe-ziehen .hi-griff i { background: var(--modus); height: 72px; opacity: 1; }
+.hi-griff:focus-visible { outline: none; }
+body.hilfe-schmal .hi-griff { display: none; }
+@media (pointer: coarse) { .hi-griff { width: 26px; left: -13px; } .hi-toc-griff { min-width: 14px; } }
+body.hilfe-voll .hi-griff { left: 0; }
 @keyframes hi-rein { from { transform: translateX(24px); opacity: 0; } }
 
 .hi-kopf {
@@ -74,12 +98,14 @@ body.hilfe-schmal .hilfe { width: 100vw; border-left: 0; }
   color: var(--modus-in, #fff); background: var(--modus, var(--accent));
 }
 .hi-titel { font-size: 16px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hi-x, .hi-toc-auf {
+.hi-breit { width: 36px; height: 36px; font-size: 18px; line-height: 1; }
+body.hilfe-schmal .hi-breit { display: none; }
+.hi-x, .hi-toc-auf, .hi-breit {
   font: inherit; cursor: pointer; color: var(--ink-2);
   background: transparent; border: 1px solid transparent; border-radius: 10px;
 }
 .hi-x { width: 36px; height: 36px; font-size: 22px; line-height: 1; }
-.hi-x:hover, .hi-toc-auf:hover { background: var(--surface); border-color: var(--line); }
+.hi-x:hover, .hi-toc-auf:hover, .hi-breit:hover { background: var(--surface); border-color: var(--line); }
 .hi-toc-auf { display: none; height: 36px; padding: 0 12px; font-size: 14px; font-weight: 600; }
 
 /* Suche */
@@ -109,15 +135,52 @@ body.hilfe-schmal .hilfe { width: 100vw; border-left: 0; }
 /* Rumpf: Inhaltsverzeichnis links, Text rechts */
 .hi-rumpf {
   flex: 1; min-height: 0;
-  display: grid; grid-template-columns: minmax(170px, 30%) 1fr;
+  display: grid; grid-template-columns: var(--hi-toc-w, minmax(170px, 30%)) 8px 1fr;
   border-top: 1px solid var(--line);
 }
 
 /* ─── Inhaltsverzeichnis ────────────────────────────────────── */
+.hi-toc-kopf {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  padding: 0 2px 6px 8px;
+  font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+}
+.hi-toc-klapp {
+  width: 28px; height: 28px; flex: none;
+  font: inherit; font-size: 17px; font-weight: 700; line-height: 1; cursor: pointer;
+  color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+}
+.hi-toc-klapp:hover { border-color: var(--modus); color: var(--modus); }
+
+/* Der Griff zwischen Verzeichnis und Text */
+.hi-toc-griff {
+  cursor: ew-resize; touch-action: none; position: relative;
+  background: var(--surface-2); border-right: 1px solid var(--line);
+}
+.hi-toc-griff::after {
+  content: ""; position: absolute; left: 2px; top: 50%; width: 4px; height: 40px; margin-top: -20px;
+  border-radius: 2px; background: var(--line-2); opacity: .7;
+}
+.hi-toc-griff:hover::after, .hi-toc-griff:focus-visible::after { background: var(--modus); opacity: 1; }
+.hi-toc-griff:focus-visible { outline: none; }
+
+/* Schmal: nur noch die Kapitelnummern, untereinander */
+@container hilfe (min-width: 561px) {
+  .hilfe.hi-toc-schmal .hi-toc { padding: 8px 4px; }
+  .hilfe.hi-toc-schmal .hi-toc-kopf { justify-content: center; padding: 0 0 8px; }
+  .hilfe.hi-toc-schmal .hi-toc-kopf > span,
+  .hilfe.hi-toc-schmal .hi-toc-kt,
+  .hilfe.hi-toc-schmal .hi-toc-k > ol { display: none; }
+  .hilfe.hi-toc-schmal .hi-toc-kb { justify-content: center; padding: 8px 0; }
+  .hilfe.hi-toc-schmal .hi-toc-kb .hi-nr {
+    display: grid; place-items: center; width: 30px; height: 30px; min-width: 0; border-radius: 50%;
+    font-size: 13px; color: var(--ink-2); border: 1.5px solid var(--line);
+  }
+  .hilfe.hi-toc-schmal .hi-toc-k.is-auf .hi-nr { color: var(--modus-in, #fff); background: var(--modus); border-color: var(--modus); }
+}
 .hi-toc {
   overflow-y: auto; overscroll-behavior: contain;
   padding: 10px 8px 24px;
-  border-right: 1px solid var(--line);
   background: var(--surface-2);
   font-size: 13.5px;
 }
@@ -256,6 +319,9 @@ body.hilfe-schmal .hilfe { width: 100vw; border-left: 0; }
 .hi-pult i { flex: 1; }
 .hi-pult .hi-pult-rot { color: #b42318; border-color: #f2b8b5; }
 
+/* Als ganze Seite: Zeilen nicht endlos lang werden lassen. */
+.hi-alles, .hi-ergebnisse { max-width: 900px; }
+
 .hi-ende { margin: 30px 0 0; font-size: 12px; color: var(--ink-3); text-align: center; }
 
 /* Suchergebnisse */
@@ -302,19 +368,22 @@ body.hilfe-schmal .hilfe { width: 100vw; border-left: 0; }
 }
 @keyframes hi-puls { from { transform: scale(1); opacity: 1; } to { transform: scale(1.06); opacity: .55; } }
 
-/* ─── Schmal: das Verzeichnis klappt über den Text ──────────── */
-@media (max-width: 1100px) {
+/* ─── Schmal: das Verzeichnis klappt über den Text ──────────────
+   Gemessen am BLATT, nicht am Bildschirm — seit es sich ziehen lässt,
+   ist eine schmale Hilfe auch auf einem breiten Bildschirm möglich. */
+@container hilfe (max-width: 560px) {
   .hi-rumpf { grid-template-columns: 1fr; position: relative; }
+  .hi-toc-griff, .hi-toc-klapp { display: none; }
   .hi-toc-auf { display: inline-flex; align-items: center; }
   .hi-toc {
     display: none; position: absolute; inset: 0 auto 0 0; z-index: 1;
     width: min(320px, 85%);
     box-shadow: 12px 0 30px -18px rgba(23,27,36,.5);
   }
-  .hilfe.hi-toc-zeigen .hi-toc { display: block; }
+  .hi-toc-zeigen .hi-toc { display: block; }
   .hi-text { padding-left: 20px; padding-right: 20px; }
 }
-@media (max-width: 520px) {
+@container hilfe (max-width: 420px) {
   .hi-hinweis { display: none; }
   .hi-titel { font-size: 15px; }
 }

@@ -28,6 +28,11 @@ Stylesheet, `?v=…h`), `js/bruecke.js` (Befehl `hilfe`), `tool.js` (Pult schick
   Bild antippen = groß, **F1** öffnet/schließt.
 * Prüfstände: `kerntest` 1239 grün, `fwuitest` 66 grün, `hilfetest` 74 grün; `uitest` bricht wie zuvor bei
   „DNS-Server" ab (dieselben drei FAIL, umgebungsbedingt).
+* **Nachtrag (gleicher Tag):** Breite am linken Rand ziehbar (300 px … ganze Seite, Knopf ⤢, Doppeltipp = zurück),
+  Verzeichnis schmal machbar (Knopf ‹/›, eigener Griff, rastet auf „nur Nummern" ein); beides gemerkt.
+  ⚠️ Keine Regel darf die Einblend-Animation der `.hilfe` während des Ziehens ab- und wieder anschalten — sie
+  startete sonst nach jedem Zug neu und schob das Blatt 0,2 s lang weg (der zweite Tipp eines Doppeltipps ging ins Leere).
+  `hilfetest` jetzt 90 Prüfungen.
 * Offen: die Bilder zeigen den hellen Modus — im Dark Mode stehen helle Bilder im dunklen Blatt (bewusst gelassen).
 
 ---

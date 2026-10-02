@@ -122,8 +122,8 @@
     inhalt.forEach((k, ki) => {
       const kn = ki + 1;
       toc += '<li class="hi-toc-k" data-kap="' + k.id + '">'
-        + '<button type="button" class="hi-toc-kb" data-geh="' + k.abschnitte[0].id + '">'
-        + '<span class="hi-nr">' + kn + '</span>' + esc(k.titel) + '</button><ol>';
+        + '<button type="button" class="hi-toc-kb" data-geh="' + k.abschnitte[0].id + '" title="' + esc(kn + ' · ' + k.titel) + '">'
+        + '<span class="hi-nr">' + kn + '</span><span class="hi-toc-kt">' + esc(k.titel) + '</span></button><ol>';
       text += '<div class="hi-kap" id="hi-kap-' + k.id + '"><h2 class="hi-kap-t"><span class="hi-nr">' + kn + '</span>'
         + esc(k.titel) + '</h2>';
       k.abschnitte.forEach((a, ai) => {
@@ -144,6 +144,7 @@
       +   '<span class="hi-tag">Hilfe</span>'
       +   '<strong class="hi-titel">Anleitung für Lehrkräfte</strong>'
       +   '<button type="button" class="hi-toc-auf" aria-expanded="false" title="Inhaltsverzeichnis">☰ Inhalt</button>'
+      +   '<button type="button" class="hi-breit" title="Ganze Breite / halbe Breite (Doppelklick auf den Rand: zurück)" aria-label="Breite umschalten">⤢</button>'
       +   '<button type="button" class="hi-x" title="Hilfe schließen (F1)" aria-label="Hilfe schließen">×</button>'
       + '</div>'
       + '<div class="hi-such">'
@@ -153,13 +154,20 @@
       + '</div>'
       + '<p class="hi-hinweis"><b>Tipp:</b> Klicken Sie links auf ein Gerät, Fenster oder einen Knopf — die Anleitung springt zur passenden Stelle.</p>'
       + '<div class="hi-rumpf">'
-      +   '<nav class="hi-toc" aria-label="Inhaltsverzeichnis"><ol>' + toc + '</ol></nav>'
+      +   '<nav class="hi-toc" aria-label="Inhaltsverzeichnis">'
+      +     '<div class="hi-toc-kopf"><span>Inhalt</span>'
+      +     '<button type="button" class="hi-toc-klapp" title="Verzeichnis schmal machen" aria-label="Verzeichnis schmal machen">‹</button></div>'
+      +     '<ol>' + toc + '</ol></nav>'
+      +   '<div class="hi-toc-griff" role="separator" aria-orientation="vertical" tabindex="0" '
+      +     'title="Ziehen: Verzeichnis breiter oder schmaler (Doppelklick: zurück)"></div>'
       +   '<div class="hi-text" tabindex="-1">'
       +     '<div class="hi-ergebnisse" hidden></div>'
       +     '<div class="hi-alles">' + text
       +       '<p class="hi-ende">SYNIR · Anleitung für Lehrkräfte · Bilder zeigen die echte Oberfläche.</p></div>'
       +   '</div>'
       + '</div>'
+      + '<div class="hi-griff" role="separator" aria-orientation="vertical" tabindex="0" '
+      +   'aria-label="Breite der Hilfe" title="Ziehen: Hilfe breiter oder schmaler — bis ganz links (Doppelklick: zurück)"><i></i></div>'
       + '<div class="hi-lupe" hidden><img alt=""><span class="hi-lupe-t"></span></div>';
 
     document.body.appendChild(panel);
@@ -177,6 +185,9 @@
     document.body.appendChild(chip);
 
     panel.addEventListener('click', klickImPanel);
+    griffeBinden();
+    breiteSetzen(gemerkt('breite'), true);
+    tocSetzen(gemerkt('toc'), true);
     sucheEl.addEventListener('input', () => suchen(sucheEl.value));
     sucheEl.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') {
@@ -244,7 +255,7 @@
     offen = true;
     panel.hidden = false;
     document.body.classList.add('hilfe-offen');
-    document.body.classList.toggle('hilfe-schmal', window.innerWidth < SCHMAL);
+    platzSync();
     knopfSync();
     nachLayout();
     if (ziel) springe(ziel);
@@ -257,7 +268,7 @@
     offen = false;
     panel.hidden = true;
     chip.hidden = true;
-    document.body.classList.remove('hilfe-offen', 'hilfe-schmal');
+    document.body.classList.remove('hilfe-offen', 'hilfe-schmal', 'hilfe-voll');
     ringeWeg();
     knopfSync();
     nachLayout();
@@ -280,6 +291,129 @@
   function nachLayout() {
     requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
     setTimeout(() => window.dispatchEvent(new Event('resize')), 260);
+  }
+
+  /* ═══ Breite: am linken Rand ziehen ══════════════════════════
+     Von schmal am Rand bis zur ganzen Seite. Bleibt für die Arbeits-
+     fläche zu wenig übrig (MIN_REST), rückt sie nicht mehr zur Seite —
+     die Hilfe liegt dann darüber wie eine ganze Seite (hilfe-voll).
+     Gemerkt wird der Anteil an der Fensterbreite, nicht die Pixel:
+     dieselbe Hilfe soll am Beamer und am Tablet gleich „halb" sein. */
+
+  const MIN_B = 300, MIN_REST = 380, EINRASTEN = 48;
+  const TOC_SCHMAL = 54, TOC_MIN = 140, TOC_MAX = 0.6;
+  let breite = null;          // px, null = Vorgabe (CSS: halbe Breite)
+  let tocBreite = null;       // px, null = Vorgabe; TOC_SCHMAL = nur Nummern
+
+  function gemerkt(k) {
+    try { const v = parseFloat(localStorage.getItem('synir.hilfe.' + k)); return isFinite(v) ? v : null; }
+    catch (e) { return null; }
+  }
+  function merken(k, v) {
+    try { if (v == null) localStorage.removeItem('synir.hilfe.' + k); else localStorage.setItem('synir.hilfe.' + k, String(v)); }
+    catch (e) { /* privat: dann eben nicht */ }
+  }
+
+  /* `w` in Pixeln — oder beim Laden (`still`) der gemerkte Anteil. */
+  function breiteSetzen(w, still) {
+    const vw = window.innerWidth;
+    if (w != null && still && w <= 1) w = w * vw;
+    if (w != null) {
+      w = Math.max(Math.min(MIN_B, vw), Math.min(vw, w));
+      if (vw - w < EINRASTEN) w = vw;
+    }
+    breite = w;
+    const root = document.documentElement.style;
+    if (w == null) root.removeProperty('--hi-w'); else root.setProperty('--hi-w', Math.round(w) + 'px');
+    if (!still) merken('breite', w == null ? null : +(w / vw).toFixed(4));
+    platzSync();
+  }
+  const panelBreite = () => (panel ? panel.getBoundingClientRect().width : 0);
+  const istVoll = () => panel && panelBreite() >= window.innerWidth - 1;
+
+  function platzSync() {
+    if (!offen) return;
+    const vw = window.innerWidth;
+    document.body.classList.toggle('hilfe-schmal', vw < SCHMAL);
+    const rest = vw - panelBreite();
+    document.body.classList.toggle('hilfe-voll', vw >= SCHMAL && rest < MIN_REST);
+    const b = $('.hi-breit', panel);
+    if (b) b.textContent = istVoll() ? '⤡' : '⤢';
+  }
+
+  function tocSetzen(w, still) {
+    tocBreite = w;
+    const schmal = w != null && w <= TOC_SCHMAL;
+    panel.classList.toggle('hi-toc-schmal', schmal);
+    if (w == null) panel.style.removeProperty('--hi-toc-w');
+    else panel.style.setProperty('--hi-toc-w', Math.round(schmal ? TOC_SCHMAL : w) + 'px');
+    const k = $('.hi-toc-klapp', panel);
+    if (k) {
+      k.textContent = schmal ? '›' : '‹';
+      k.title = schmal ? 'Verzeichnis breit machen' : 'Verzeichnis schmal machen';
+      k.setAttribute('aria-label', k.title);
+    }
+    if (!still) merken('toc', w);
+  }
+  const istTocSchmal = () => panel.classList.contains('hi-toc-schmal');
+
+  /* Ein Griff, zwei Verwendungen: `beiZug(x)` bekommt die Zeigerposition. */
+  /* Doppeltipp erkennt der Griff selbst: `dblclick` kommt nach einem
+     abgefangenen pointerdown nicht zuverlässig, und auf dem Tablet gar nicht. */
+  function ziehbar(el, beiZug, zurueck, fertig) {
+    let letzt = 0;
+    el.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0) return;
+      ev.preventDefault();
+      if (ev.timeStamp - letzt < 380) { letzt = 0; zurueck(); return; }
+      letzt = ev.timeStamp;
+      el.setPointerCapture(ev.pointerId);
+      document.body.classList.add('hilfe-ziehen');
+      const zug = (e) => beiZug(e.clientX);
+      const los = () => {
+        el.removeEventListener('pointermove', zug);
+        el.removeEventListener('pointerup', los);
+        el.removeEventListener('pointercancel', los);
+        document.body.classList.remove('hilfe-ziehen');
+        fertig();
+      };
+      el.addEventListener('pointermove', zug);
+      el.addEventListener('pointerup', los);
+      el.addEventListener('pointercancel', los);
+    });
+  }
+
+  function griffeBinden() {
+    const g = $('.hi-griff', panel);
+    ziehbar(g, (x) => breiteSetzen(window.innerWidth - x, true),
+      () => { breiteSetzen(null); nachLayout(); },
+      () => { breiteSetzen(breite); nachLayout(); });
+    g.addEventListener('keydown', (ev) => {
+      const d = ev.key === 'ArrowLeft' ? 40 : ev.key === 'ArrowRight' ? -40 : 0;
+      if (!d) return;
+      ev.preventDefault();
+      breiteSetzen(panelBreite() + d);
+      nachLayout();
+    });
+
+    const t = $('.hi-toc-griff', panel);
+    const tocAus = (x) => {
+      const links = $('.hi-rumpf', panel).getBoundingClientRect().left;
+      let w = x - links;
+      const max = panelBreite() * TOC_MAX;
+      // Unter der Mindestbreite rastet es auf „nur Nummern" ein.
+      w = w < TOC_MIN * 0.75 ? TOC_SCHMAL : Math.max(TOC_MIN, Math.min(max, w));
+      tocSetzen(w, true);
+    };
+    ziehbar(t, tocAus, () => tocSetzen(null), () => tocSetzen(tocBreite));
+    t.addEventListener('keydown', (ev) => {
+      const d = ev.key === 'ArrowLeft' ? -30 : ev.key === 'ArrowRight' ? 30 : 0;
+      if (!d) return;
+      ev.preventDefault();
+      const ist = $('.hi-toc', panel).getBoundingClientRect().width;
+      tocAus($('.hi-rumpf', panel).getBoundingClientRect().left + ist + d);
+      tocSetzen(tocBreite);
+    });
   }
 
   /* ═══ Springen ════════════════════════════════════════════════ */
@@ -392,6 +526,14 @@
     const b = ev.target.closest('button');
     if (!b) { if (ev.target.closest('.hi-lupe')) lupe.hidden = true; return; }
     if (b.classList.contains('hi-x')) { schliessen(); return; }
+    if (b.classList.contains('hi-breit')) {
+      breiteSetzen(istVoll() ? null : window.innerWidth);
+      return;
+    }
+    if (b.classList.contains('hi-toc-klapp')) {
+      tocSetzen(istTocSchmal() ? null : TOC_SCHMAL);
+      return;
+    }
     if (b.classList.contains('hi-toc-auf')) {
       const an = !panel.classList.contains('hi-toc-zeigen');
       panel.classList.toggle('hi-toc-zeigen', an);
@@ -663,7 +805,7 @@
     window.addEventListener('resize', () => {
       if (!offen) return;
       kopfHoehe();
-      document.body.classList.toggle('hilfe-schmal', window.innerWidth < SCHMAL);
+      breiteSetzen(breite, true);
     });
   }
 
@@ -674,6 +816,7 @@
     window.SynirHilfe = {
       get offen() { return offen; },
       get aktiv() { return aktiv; },
+      breiteSetzen, tocSetzen,
       get ids() { if (!panel) baue(); return [...abschnitte.keys()]; },
       oeffnen, schliessen, springe, zielVon,
       /* Von draußen (tool.js, das Pult der Lehrkraft): nur springen,
